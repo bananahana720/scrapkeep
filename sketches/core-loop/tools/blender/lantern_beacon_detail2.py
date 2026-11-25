@@ -27,7 +27,6 @@ tone, ring, stud = d1.tone, d1.ring, d1.stud
 
 
 def band(s, a, b, r, n, color):
-    # An open n-sided sleeve around the segment a-b (no caps; its ends sit on the tube it wraps).
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
     u = Vector((0, 1, 0)) if abs(d.y) < .9 else Vector((1, 0, 0))
@@ -39,7 +38,6 @@ def band(s, a, b, r, n, color):
 
 
 def plate(s, a, b, out, w, h):
-    # A copper tongue lying on the leg's outer face: width across the leg (tangential), thickness along the leg's normal.
     d = (b - a).normalized()
     side = d.cross(out).normalized() * w / 2
     lift = side.cross(d).normalized()
@@ -85,8 +83,6 @@ def legs(s):
         top, shoulder, knee, foot = pts
         down = (shoulder - top).normalized()
         out = Vector((math.sin(a), 0, math.cos(a)))
-        # No rivet on the plate since BEACON-CLAMP: the bowed shoulder exports 20 more vertices per leg, and the
-        # three rivets were the cheapest way back under the landmark row's 2000.
         plate(s, top + down * .15, top + down * 1.0, out, .42, .14)
         shin = (knee - shoulder).normalized()
         band(s, knee - shin * .45, knee - shin * .1, lb.LEG_R + .07, 6, tone("leg"))

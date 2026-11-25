@@ -40,26 +40,25 @@ import bpy
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
-import common  # noqa: E402
+import common
 
 MODELS = Path(common.SKETCH) / "assets/models/park"
 
 SHELF_Y = 2.5
 LANDFORM_TRIS = 8000
 DETAIL_TRIS = 1500
-DETAIL_VERTS = 3000        # assets/asset_budgets.json class detail; flat shading splits vertices, so about 3 per triangle
+DETAIL_VERTS = 3000
 MIN_DEPTH = 8.0
-CLEAR_ABOVE = 5.5          # nothing solid over the lane lower than this: ball top 2 m + a full jump (13^2 / (2 * 26) = 3.25 m, tuning.gd) + 0.25 m
+CLEAR_ABOVE = 5.5
 LANE_PAD = 0.6
 
-# Tones (top face, side face, underside), sRGB hex.
 RED = ("a65f43", "9b513a", "6a3626")
 CREAM = ("e3d4b0", "d2c5a5", "a39373")
 SANDTOP = ("d0b88c", "c6a274", "8a6c48")
 MASONRY = ("d9c9a8", "c9ad7e", "8a6e4a")
 ADOBE = ("c6a97c", "b89a6e", "7c6445")
 VARNISH = ("3a3027", "3a3027", "2b241d")
-REDS = [RED, ("b3694a", "a85b3e", "78432d"), ("86513c", "7a4733", "52301f")]      # the last: varnish-stained red
+REDS = [RED, ("b3694a", "a85b3e", "78432d"), ("86513c", "7a4733", "52301f")]
 CREAMS = [CREAM, ("ead8b4", "dac9a6", "a99a78")]
 SANDS = [SANDTOP, ("d4b98c", "c19d6b", "86684a")]
 SHADOW = ("2b2420", "2b2420", "1f1a17")
@@ -79,7 +78,6 @@ def mixf(a, b, t):
 
 
 def xyz(v):
-    # Godot (x, y up, z ride) to Blender (x, -z, y); the exporter turns it back.
     return (v[0], -v[2], v[1])
 
 
@@ -346,13 +344,12 @@ def shelf_col(c, length, ramp, x_lo, x_hi):
     c.prism_x(profile(length, ramp, 3.0), x_lo, x_hi, SANDTOP)
 
 
-# ---------------------------------------------------------------------------------------------------------------- recipe A
 A_LEN, A_RAMP, A_W = 60.0, 12.0, 14.0
 ROOM_Z0, ROOM_STEP, ROOM_W, ROOMS = 12.5, 6.0, 5.0, 6
-ROOM_FRONT = -3.5            # lane edge: x from here to +7 is clear
-ROOM_H = 3.2                 # roof slab bottom above SHELF_Y
+ROOM_FRONT = -3.5
+ROOM_H = 3.2
 UPPER_FRONT = -4.8
-VIGA_LOW = SHELF_Y + 2.55    # centre height of a lower beam
+VIGA_LOW = SHELF_Y + 2.55
 VIGA_R = .17
 
 
@@ -370,13 +367,11 @@ def cliff_dwelling_row(base, col, d1, d2):
     r = base.rng
     strata(base, r, poly, -hx, hx, [(-8.0, -5.6, REDS), (-5.6, -3.2, CREAMS), (-3.2, -.5, REDS), (-.5, SHELF_Y + .1, SANDS)])
     shelf_col(col, A_LEN, A_RAMP, -hx, hx)
-    # The cliff behind the rooms: three bands in z windows, and the ragged brow over them.
     cliff(base, col, r, -14.0, -hx, 3.0, A_LEN - 3.0, -8.0, SHELF_Y + 8.5, [REDS, CREAMS, REDS], col_front=-hx - 1.3)
     for za, zb in segments(r, 4.0, A_LEN - 4.0, 3.0, 7.0):
         top = SHELF_Y + 11.0 + r.uniform(-.5, 1.0)
         base.box((-14.0, SHELF_Y + 8.3 + r.uniform(-.3, .3), za), (-5.4 + r.uniform(-.9, .6), top, zb), pick(r, CREAMS + SANDS, None))
     col.box((-14.0, SHELF_Y + 8.5, 4.0), (-6.2, SHELF_Y + 11.0, A_LEN - 4.0))
-    # The rooms: a low masonry box against the cliff, a roof slab, doorway, upper room on every second one.
     for i in range(ROOMS):
         z0 = room_z(i)
         base.box((-hx - 1.5, SHELF_Y, z0), (ROOM_FRONT, SHELF_Y + ROOM_H, z0 + ROOM_W), MASONRY, mottle=.08)
@@ -384,7 +379,6 @@ def cliff_dwelling_row(base, col, d1, d2):
         col.box((-hx, SHELF_Y, z0), (ROOM_FRONT, SHELF_Y + ROOM_H, z0 + ROOM_W))
         col.box((-hx, SHELF_Y + ROOM_H, z0 - .12), (ROOM_FRONT + .2, SHELF_Y + ROOM_H + .3, z0 + ROOM_W + .12))
         zc = z0 + ROOM_W / 2
-        # T doorway: the dark shape stands 4 cm proud of the wall face.
         base.box((ROOM_FRONT, SHELF_Y, zc - .5), (ROOM_FRONT + .04, SHELF_Y + 1.5, zc + .5), SHADOW, mottle=0)
         base.box((ROOM_FRONT, SHELF_Y + 1.5, zc - .8), (ROOM_FRONT + .04, SHELF_Y + 2.0, zc + .8), SHADOW, mottle=0)
         for dz in (1.0, 2.5, 4.0):
@@ -404,11 +398,9 @@ def cliff_dwelling_row(base, col, d1, d2):
                 yb = ytop + 2.2
                 base.rod_x(yb, z, UPPER_FRONT - .1, UPPER_FRONT + 1.2, VIGA_R * .9, LOG, sides=6)
                 col.box((UPPER_FRONT - .1, yb - VIGA_R, z - VIGA_R), (UPPER_FRONT + 1.2, yb + VIGA_R, z + VIGA_R))
-    # Fallen stone at the ends of the row and below the edge (visual only).
     for k in range(7):
         base.rock((r.uniform(-6.5, -3.9), SHELF_Y + .2, r.choice([r.uniform(8.0, 11.5), r.uniform(48.5, 52.0)])), (r.uniform(.8, 1.6), r.uniform(.6, 1.1), r.uniform(.8, 1.6)), SANDTOP)
 
-    # detail 1: lintels over the doors, window sills, parapet caps, ladder, talus on the cliff foot, sage.
     d = d1
     for i in range(ROOMS):
         z0 = room_z(i)
@@ -419,13 +411,12 @@ def cliff_dwelling_row(base, col, d1, d2):
         d.box((-hx, SHELF_Y + ROOM_H + .3, z0 - .12), (ROOM_FRONT + .22, SHELF_Y + ROOM_H + .62, z0 + .14), CREAM)
         d.box((-hx, SHELF_Y + ROOM_H + .3, z0 + ROOM_W - .14), (ROOM_FRONT + .22, SHELF_Y + ROOM_H + .62, z0 + ROOM_W + .12), CREAM)
         d.box((ROOM_FRONT - .05, SHELF_Y + ROOM_H + .3, z0 - .12), (ROOM_FRONT + .22, SHELF_Y + ROOM_H + .62, z0 + ROOM_W + .12), CREAM)
-        d.box((ROOM_FRONT + .0, SHELF_Y + ROOM_H - .35, zc + 1.6), (ROOM_FRONT + .55, SHELF_Y + ROOM_H - .15, zc + 1.9), ADOBE)   # roof drain
+        d.box((ROOM_FRONT + .0, SHELF_Y + ROOM_H - .35, zc + 1.6), (ROOM_FRONT + .55, SHELF_Y + ROOM_H - .15, zc + 1.9), ADOBE)
         if upper_room(i):
             ytop = SHELF_Y + ROOM_H + .3
             d.box((UPPER_FRONT - .05, ytop + .5, zc - .5), (UPPER_FRONT + .03, ytop + .6, zc + .5), CREAM)
             for dz in (-1.6, 1.6):
                 d.rock((UPPER_FRONT + .15, ytop + 2.8 + .1, zc + dz), (.5, .22, .5), CREAM)
-    # ladder from the first lower roof up against its upper room
     zl = room_z(0) + 4.4
     ytop0 = SHELF_Y + ROOM_H + .3
     foot, head = (ROOM_FRONT - .4, ytop0), (UPPER_FRONT + .12, ytop0 + 2.6)
@@ -444,7 +435,6 @@ def cliff_dwelling_row(base, col, d1, d2):
     for k in range(10):
         d.rock((hx - r.uniform(.2, 1.0), -r.uniform(.2, 3.5), r.uniform(10.0, 50.0)), (r.uniform(.7, 1.4), r.uniform(.4, .8), r.uniform(.7, 1.4)), RED)
 
-    # detail 2: courses on the room faces, sherds and chips on the lane's back edge.
     d = d2
     cr = random.Random(77)
     for i in range(ROOMS):
@@ -460,7 +450,6 @@ def cliff_dwelling_row(base, col, d1, d2):
     return "cliff_dwelling_row"
 
 
-# ---------------------------------------------------------------------------------------------------------------- recipe B
 B_LEN, B_RAMP, B_W = 60.0, 12.0, 18.0
 
 
@@ -470,8 +459,6 @@ def mesa_rim_ledge(base, col, d1, d2):
     poly = profile(B_LEN, B_RAMP)
     strata(base, r, poly, -hx, hx, [(-8.0, -6.0, REDS), (-6.0, -3.6, CREAMS), (-3.6, -1.2, REDS), (-1.2, SHELF_Y + .1, SANDS)], recede=(-1.8, .3))
     shelf_col(col, B_LEN, B_RAMP, -hx, hx)
-    # The banked lip on the open edge: it rises 0.8 m over the last 2 m of x. Its ends taper to the shelf line over 4 m of z
-    # (no step face toward the fall line), so a ball banking along the edge meets a slope, never a wall.
     lip_a, lip_d = B_RAMP + 2.0, B_LEN - B_RAMP - 2.0
     lip_b, lip_c = lip_a + 4.0, lip_d - 4.0
     lip_pts = [(hx - 2.0, SHELF_Y, lip_a), (hx, SHELF_Y, lip_a), (hx - 2.0, SHELF_Y, lip_d), (hx, SHELF_Y, lip_d),
@@ -479,8 +466,6 @@ def mesa_rim_ledge(base, col, d1, d2):
     lip_faces = [(0, 1, 3, 2), (1, 3, 5, 4), (0, 2, 5, 4), (0, 1, 4), (2, 3, 5)]
     base.add(lip_pts, lip_faces, CREAM)
     col.add(lip_pts, lip_faces, CREAM)
-    # The mesa behind: three terraces per z window (red, cream, sand); the collider is the same boxes, so what the picture
-    # shows is what the ball meets. Each bench is kept for the shell's stones and sage.
     benches = []
     for za, zb in segments(r, 0.0, B_LEN, 3.5, 8.0):
         f1 = -hx + r.uniform(0.0, 1.2)
@@ -506,7 +491,7 @@ def mesa_rim_ledge(base, col, d1, d2):
         d.rock((hx - r.uniform(.1, 1.2), -r.uniform(.2, 4.2), r.uniform(6.0, 54.0)), (r.uniform(.7, 1.5), r.uniform(.4, .9), r.uniform(.7, 1.5)), r.choice([RED, CREAM]))
     for k in range(6):
         z = 14.0 + k * 6.4
-        d.box((hx - 2.0, SHELF_Y + .01, z), (hx - .2, SHELF_Y + .05, z + .5), VARNISH, mottle=.2)   # dark polish stripes on the banked lip
+        d.box((hx - 2.0, SHELF_Y + .01, z), (hx - .2, SHELF_Y + .05, z + .5), VARNISH, mottle=.2)
     d = d2
     for k in range(44):
         x, z = r.uniform(-hx + 1.6, hx - .4), r.uniform(1.0, B_LEN - 1.0)
@@ -522,10 +507,9 @@ def mesa_rim_ledge(base, col, d1, d2):
     return "mesa_rim_ledge"
 
 
-# ---------------------------------------------------------------------------------------------------------------- recipe C
 C_LEN, C_RAMP, C_W = 36.0, 8.0, 12.0
 C_WALL_FRONT = -3.5
-C_BEAM_Y = SHELF_Y + 6.1      # beam underside 5.82 m over the shelf, above CLEAR_ABOVE
+C_BEAM_Y = SHELF_Y + 6.1
 C_BEAM_R = .28
 C_BEAM_ZS = (11.5, 16.0, 20.5, 25.0)
 C_BEAM_TIP = 8.0
@@ -538,12 +522,10 @@ def viga_pivot(base, col, d1, d2):
     strata(base, r, poly, -hx, hx, [(-8.0, -5.6, REDS), (-5.6, -3.2, CREAMS), (-3.2, -.5, REDS), (-.5, SHELF_Y + .1, SANDS)])
     shelf_col(col, C_LEN, C_RAMP, -hx, hx)
     cliff(base, col, r, -12.0, -hx, 3.0, C_LEN - 3.0, -8.0, SHELF_Y + 8.2, [REDS, CREAMS], col_front=-hx - 1.3)
-    # The wall the beams grow from: a dry-laid masonry block on the shelf's back, a parapet on top.
     base.box((-hx - 1.5, SHELF_Y, C_BEAM_ZS[0] - 3.0), (C_WALL_FRONT, SHELF_Y + 6.5, C_BEAM_ZS[-1] + 3.0), MASONRY, mottle=.08)
     base.box((-hx, SHELF_Y + 6.5, C_BEAM_ZS[0] - 3.1), (C_WALL_FRONT + .2, SHELF_Y + 6.85, C_BEAM_ZS[-1] + 3.1), ADOBE, mottle=.06)
     col.box((-hx, SHELF_Y, C_BEAM_ZS[0] - 3.0), (C_WALL_FRONT, SHELF_Y + 6.85, C_BEAM_ZS[-1] + 3.0))
     for z in C_BEAM_ZS:
-        # a corbel stone under each beam, the beam, and a worn rope-polish band near the tip (a darker ring)
         base.box((C_WALL_FRONT - .5, C_BEAM_Y - C_BEAM_R - .45, z - .4), (C_WALL_FRONT, C_BEAM_Y - C_BEAM_R, z + .4), CREAM)
         base.rod_x(C_BEAM_Y, z, C_WALL_FRONT - .05, C_BEAM_TIP, C_BEAM_R, LOG)
         base.rod_x(C_BEAM_Y, z, C_BEAM_TIP - .06, C_BEAM_TIP + .02, C_BEAM_R * .9, LOGEND)
@@ -554,7 +536,7 @@ def viga_pivot(base, col, d1, d2):
 
     d = d1
     for z in C_BEAM_ZS:
-        d.box((C_WALL_FRONT - .05, C_BEAM_Y + C_BEAM_R - .02, z - .5), (C_WALL_FRONT + .02, C_BEAM_Y + C_BEAM_R + .55, z + .5), CREAM)   # lintel stone over the beam
+        d.box((C_WALL_FRONT - .05, C_BEAM_Y + C_BEAM_R - .02, z - .5), (C_WALL_FRONT + .02, C_BEAM_Y + C_BEAM_R + .55, z + .5), CREAM)
         d.box((C_WALL_FRONT - .6, C_BEAM_Y - C_BEAM_R - .52, z - .5), (C_WALL_FRONT - .02, C_BEAM_Y - C_BEAM_R - .45, z + .5), ADOBE)
     d.box((-hx, SHELF_Y + 6.85, C_BEAM_ZS[0] - 3.1), (C_WALL_FRONT + .22, SHELF_Y + 7.2, C_BEAM_ZS[0] - 2.8), CREAM)
     d.box((-hx, SHELF_Y + 6.85, C_BEAM_ZS[-1] + 2.8), (C_WALL_FRONT + .22, SHELF_Y + 7.2, C_BEAM_ZS[-1] + 3.1), CREAM)
@@ -570,7 +552,7 @@ def viga_pivot(base, col, d1, d2):
     courses_front(d, C_WALL_FRONT, C_BEAM_ZS[0] - 2.9, C_BEAM_ZS[-1] + 2.9, SHELF_Y + .02, C_BEAM_Y - C_BEAM_R - .5, cr, MASONRY, 6, 7)
     courses_front(d, C_WALL_FRONT, C_BEAM_ZS[0] - 2.9, C_BEAM_ZS[-1] + 2.9, C_BEAM_Y + C_BEAM_R + .6, SHELF_Y + 6.48, cr, MASONRY, 1, 7)
     for z in C_BEAM_ZS:
-        for k in range(6):          # wear nicks along the top of each beam (visible as pale bite marks)
+        for k in range(6):
             xk = cr.uniform(0.0, C_BEAM_TIP - 1.0)
             d.box((xk, C_BEAM_Y + C_BEAM_R - .01, z - .08), (xk + cr.uniform(.12, .3), C_BEAM_Y + C_BEAM_R + .015, z + .08), CREAM, mottle=.1)
     for k in range(40):
@@ -587,7 +569,6 @@ RECIPES = {
 }
 
 
-# ---------------------------------------------------------------------------------------------------------------- checks
 def check_recipe(rid, length, base, col, d1, d2):
     """Fails loud on anything the contract names."""
     lo, hi = col.bounds()
@@ -598,8 +579,6 @@ def check_recipe(rid, length, base, col, d1, d2):
     for name, s, cap in (("base+col", None, LANDFORM_TRIS), ("detail1", d1, DETAIL_TRIS), ("detail2", d2, DETAIL_TRIS)):
         n = len(base.tris) + len(col.tris) if s is None else len(s.tris)
         assert 0 < n <= cap, (rid, name, n, cap)
-    # Clear lane: no col triangle with a vertex over the lane x in [LANE_X, hx] sits between SHELF_Y + .02 and CLEAR_ABOVE above the
-    # shelf (the shelf top itself is the floor); the beams of A and C stand above CLEAR_ABOVE or outside the lane.
     lane = LANE[rid]
     for t in col.tris:
         pts = [col.verts[i] for i in t]
@@ -616,7 +595,6 @@ LANE = {"cliff_dwelling_row": (ROOM_FRONT + 1.5, A_W / 2), "mesa_rim_ledge": (-B
 
 
 def length_zone(rid, pts):
-    # Only the shelf's level run is held to the lane rule (the ramps are lower than SHELF_Y).
     return all(p[2] >= 0 for p in pts)
 
 

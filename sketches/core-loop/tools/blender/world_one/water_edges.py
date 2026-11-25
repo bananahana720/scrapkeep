@@ -1,13 +1,3 @@
-# G05 water and shoreline: the four spill sheets and the tailrace, replacing the five boxes in
-# spillway_scenery.gd (4 x Vector3(14, 90, 0.5) at x -103/-47/37/93 y 75 z 227, and
-# Vector3(276, 0.4, 28) at (0, 28, 217)). Authored in world metres so the runtime
-# spill_water.gdshader, which reads world position, sees the same values it did on the boxes.
-# Every vertex stays inside its box: edges only pull inward, so the visible water never grows.
-# Provenance: procedural bmesh in this repository; no external meshes or textures.
-#
-#   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
-#     blender -b --factory-startup -P water_edges.py -- [--out file.glb]
-
 import os
 import random
 import sys
@@ -21,12 +11,12 @@ import common
 FALL_X = [-103.0, -47.0, 37.0, 93.0]
 FALL_Y = (30.0, 120.0)
 FALL_HALF = 7.0
-FALL_Z = 227.0          # sheet plane; belly stays within the old 0.5 m slab (226.75 .. 227.25)
-FALL_ROWS = 5           # 6 rings of 3 vertices: 18 V, 20 T per sheet
+FALL_Z = 227.0
+FALL_ROWS = 5
 POOL_X = 138.0
 POOL_Z = (203.0, 231.0)
 POOL_Y = (27.8, 28.2)
-POOL_QUADS = 16         # 34 V, 32 T
+POOL_QUADS = 16
 
 CEILING = {"V": 180, "T": 120, "D": 2}
 
@@ -50,7 +40,6 @@ def make(name, verts, faces, normal_up):
     bmesh.ops.triangulate(bm, faces=list(bm.faces))
     bm.to_mesh(mesh)
     bm.free()
-    # Smooth shading keeps the exported vertices shared: flat faces would triple V after import.
     mesh.polygons.foreach_set("use_smooth", [True] * len(mesh.polygons))
     obj = bpy.data.objects.new(name, mesh)
     bpy.context.scene.collection.objects.link(obj)
@@ -81,7 +70,6 @@ def fall_sheet(fx, seed):
     for i, y in enumerate(ys):
         top = i == 0
         bottom = i == len(ys) - 1
-        # The lip and the foot are notched hardest; the middle rings breathe.
         bite = 1.9 if (top or bottom) else 1.2
         left = -FALL_HALF + rng.uniform(0.0, bite)
         right = FALL_HALF - rng.uniform(0.0, bite)
@@ -121,7 +109,6 @@ for k, fx in enumerate(FALL_X):
     v, f = fall_sheet(fx, 500 + k)
     parts = make("SpillSheet%d" % k, v, f, (0, 1, 0))
     parts.parent = root
-# One mesh object per runtime node: join the four sheets so the runtime sees one batch.
 sheets = [o for o in bpy.data.objects if o.name.startswith("SpillSheet")]
 for o in bpy.data.objects:
     o.select_set(o in sheets)

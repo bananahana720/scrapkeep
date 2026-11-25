@@ -47,7 +47,7 @@ bone_rows += [("SkipPlateLeft", at(-0.64, -2.665, 0.95)), ("SkipPlateRight", at(
 def body_paint(c, n):
     z = c.z + HALF
     if z > 1.15:
-        return "petrol"  # hoist uprights and crossbar
+        return "petrol"
     return WEAR if n.z > 0.7 else "charcoal"
 
 
@@ -57,7 +57,7 @@ def bucket_paint(c, n):
         return LIP
     inward = n.x * c.x + n.y * (c.y - 0.2) < 0 and z > 1.25
     if inward or (n.z > 0.6 and z < 2.85):
-        return INSIDE  # tailings-stained inside of the tub
+        return INSIDE
     return "oxide"
 
 
@@ -83,7 +83,6 @@ for side in (-1, 1):
 hull.box(SLOT, (1.28, 0.02, 0.68), loc=at(0, -2.575, 0.95), color="charcoal")
 hull.box(SLOT, (0.14, 0.1, 0.14), loc=at(0, -2.74, 0.56), color=WORN)
 hull.ring(SLOT, 0.12, 0.2, 0.07, segs=12, loc=at(0, -2.76, 0.4), rot=(math.pi / 2, 0, 0), color=WORN)
-# The route receiver, crushed in the slump, with the Mind's command line cut below it.
 hull.box(SLOT, (0.4, 0.2, 0.1), loc=at(-2.42, -2.25, 3.25), color="charcoal")
 receiver = hull.box(SLOT, (0.38, 0.32, 0.44), loc=at(-2.42, -2.25, 2.55), color=WORN)
 rng = random.Random(31)
@@ -107,7 +106,6 @@ armour = Part("HaulSkipArmour")
 armour.bevel = 0.02
 bind_plate = kit.weights(armour)
 for side, index in [(-1, 6), (1, 7)]:
-    # Square doors hinged at their outer edges, swinging out off the rear housing.
     armour.box("part_state", (0.62, 0.06, 0.66), loc=at(side * 0.325, -2.665, 0.95), color=SLATE)
     armour.box("part_state", (0.05, 0.05, 0.5), loc=at(side * 0.6, -2.71, 0.95), color="brass")
     armour.box("part_state", (0.06, 0.04, 0.2), loc=at(side * 0.1, -2.71, 0.95), color="charcoal")

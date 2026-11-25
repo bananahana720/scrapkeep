@@ -56,7 +56,6 @@ def path(polys, dx=0.0, dy=0.0, rot=0.0, scale=1.0):
 
 
 def letters(seed=7):
-    # Stamped a little off true: each letter sits up to 5 units off the line and 3 degrees off level.
     rng = random.Random(seed)
     rows = []
     for i, ch in enumerate(WORD):
@@ -86,7 +85,6 @@ def halftone(x0, y0, w, h, step, color, fade_from_bottom=True, rng=None):
 
 
 def poster():
-    # Thick ink, a hard ink drop, a halftone drop behind that, letters stamped a little off true.
     rows = letters()
     W, H = 900, 240
     ox, oy, s = 40, 50, 1.0
@@ -99,7 +97,6 @@ def poster():
         '<path d="%s" fill="%s" stroke="%s" stroke-width="16" stroke-linejoin="round"/>' % (word_paths(rows, ox + 11, oy + 11, s), INK, INK),
         '<path d="%s" fill="%s" stroke="%s" stroke-width="16" stroke-linejoin="round" fill-rule="evenodd"/>' % (d, INK, INK),
         '<path d="%s" fill="%s" fill-rule="evenodd"/>' % (d, AMBER),
-        # The poster's second ink pass: a bone cut along each letter's lit top-left edge.
         '<defs><clipPath id="face"><path d="%s" clip-rule="evenodd" fill-rule="evenodd"/></clipPath></defs>' % d,
         '<path d="%s" fill="none" stroke="%s" stroke-width="5" clip-path="url(#face)" transform="translate(4,4)" fill-rule="evenodd"/>' % (word_paths(rows, ox - 4, oy - 4, s), BONE),
     ]

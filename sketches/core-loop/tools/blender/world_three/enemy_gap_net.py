@@ -66,13 +66,11 @@ def G(*p):
 
 
 post = Part("GapNetPost")
-# The bowed mast: three segments leaning out over the drop, an outrigger to the batten foot.
 MAST = [(0.0, FLOOR + 0.1, 0), (0.0, 0.9, 0), (0.3, 2.15, 0), (0.85, 3.05, 0), (BATTEN_X, 3.2, 0)]
 POST_SOCKETS = gap_net_post.build(post, MAST, outrigger=BATTEN_X, net_low=NET_LOW)
 bmesh.ops.recalc_face_normals(post.bm, faces=post.bm.faces[:])
 post_obj = post.to_object(parent=root)
 
-# Batten: the upright at the net's edge, with spring tensioners top and bottom.
 batten = Part("GapNetBatten")
 batten.beam("working_tool", G(BATTEN_X, NET_LOW - 0.1, 0), G(BATTEN_X, NET_HIGH + 0.1, 0), 0.12, 0.12, color=WORN)
 for y in (NET_LOW, NET_HIGH):
@@ -85,14 +83,11 @@ for y in (0.5, 1.6):
 bmesh.ops.recalc_face_normals(batten.bm, faces=batten.bm.faces[:])
 batten_obj = batten.to_object(origin=g(BATTEN_X, 0, 0), parent=root)
 
-# Net tile: top and bottom ropes, zigzag strands between them (diamonds), all thin and opaque
-# so the ball reads through the gaps. Local X 0..TILE from the batten.
 span = Part("GapNetSpan")
-# Thin net strands: smooth shading only, no bevel or subdivision.
 span.bevel = 0
 span.subsurf = 0
 H = NET_HIGH - NET_LOW
-ROWS = 4  # even, so the zigzag rows mirror into diamonds and tiles join
+ROWS = 4
 COLS = 4
 for y in (NET_LOW, NET_HIGH):
     span.beam("requisition_tag", G(BATTEN_X, y, 0), G(BATTEN_X + TILE, y, 0), 0.07, 0.07, color="brass")
@@ -131,7 +126,6 @@ if opts["render"]:
     tiles = []
 
     def far_side():
-        # Preview only: three more net tiles and the far post, an 8 m gap, as placed in play.
         for k in range(1, 4):
             t = span_obj.copy()
             t.data = span_obj.data
@@ -149,7 +143,6 @@ if opts["render"]:
             bpy.context.scene.collection.objects.link(c)
             c.parent = far
             c.location = o.location
-        # A floor gap: the preview floor is cut away between the rims.
         bpy.data.objects["PreviewFloor"].location.z = -40
         for x0, x1 in ((-30, 1.15), (2 * BATTEN_X + 4 * TILE - 1.15, 40)):
             bpy.ops.mesh.primitive_cube_add(size=1, location=((x0 + x1) / 2, 0, FLOOR - 3))
@@ -158,7 +151,6 @@ if opts["render"]:
             isle.data.materials.append(common._flat("Island", "9aa7a0"))
 
     def tell():
-        # The live net: requisition_tag lit white, as the runtime does.
         mat = bpy.data.materials.get("requisition_tag")
         bsdf = mat.node_tree.nodes.get("Principled BSDF")
         bsdf.inputs["Emission Color"].default_value = (1.0, 0.97, 0.9, 1.0)

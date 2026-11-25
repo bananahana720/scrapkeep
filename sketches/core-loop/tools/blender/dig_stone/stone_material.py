@@ -63,7 +63,6 @@ shader_parameter/bed_orange = Color(0.721, 0.576, 0.411, 1)
 shader_parameter/bed_cream = Color(0.8235294, 0.772549, 0.6470588, 1)
 shader_parameter/bed_rust = Color(0.696, 0.55, 0.385, 1)
 ''' % json.dumps(shader)
-    # Godot resource strings use literal escaped newlines, as emitted by json.dumps.
     path.write_text(text)
     print("MDS_MATERIAL", path)
 

@@ -6,11 +6,6 @@ const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const Anchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const Cable := preload("res://src/presentation/world_fx/world_fx_cable.gd")
 
-# World and event effect stills (WORLD-FX.md). Greybox stand-ins for the props (the landmark GLBs
-# land with PRs #26 and #28), the world's own effects on top, one PNG per shot. Software Vulkan
-# renders it in the cloud container:
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --path sketches/core-loop --fixed-fps 30 --resolution 1280x720 \
-#     --script res://tools/world_fx_capture.gd -- --out=/abs/dir [--only=name,name]
 
 var _out := ""
 var _only: Array = []
@@ -113,8 +108,6 @@ func _environment(shot: Dictionary) -> void:
 	ground.mesh = plane
 	ground.material_override = _mat(shot.get("ground", Palette.SANDSTONE))
 	_stage.add_child(ground)
-	# The Highdraft has no ground in reach: the floor drops away so the cloud sea shows, and a deck
-	# holds the ball up.
 	if shot.get("deck", false):
 		ground.position.y = -160.0
 		_box(_stage, Vector3(60, 2, 60), Vector3(0, -1, -10), shot.get("deck_colour", Color("8b8f8a")))

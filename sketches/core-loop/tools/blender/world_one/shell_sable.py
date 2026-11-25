@@ -1,46 +1,3 @@
-# PD-SABLE (wave 13): Sable's Hoberman mecha on shell_base.hoberman(). The lattice, gimbal,
-# cockpit and weapon ring come from PD-0's helper; this recipe adds her machinery. E1-10b (wave 46,
-# ruling en) rebuilt it for the solid cutaway ball, the single hero look, against
-# artifacts/local/w46-concept-art/heroic-cutaway/02-sable-heroic-cutaway.jpg:
-#   - the crown arc emitter on the WeaponRing, so it turns with the aim: two copper yoke arms rise
-#     from the band at 3 and 9 o'clock, hug the plating and carry two chunky emitter heads at Z
-#     CROWN_Z that face each other across the crown gap (bone insulator discs, a copper housing
-#     with a rubber strap, a bone front collar and a twin-prong copper fork). Emitter.L and .R sit
-#     in the fork mouths, so player_fx hangs the ChargeHalo at their midpoint, in the gap above
-#     the crown; a heavy rubber cable loops from the band to each head's back. It spends the ring's
-#     copper, paint and rubber surfaces, so no draw;
-#   - two ribbed copper coil masts on the upper flanks at X -/+MAST_X (11 and 1 o'clock from
-#     behind), each on a charcoal boot and a bone insulator drum, with a bone top insulator. They
-#     are SpoolKit geometry (a bracket part, see below), so the carrier bank leans them with the
-#     ring and only the aim's yaw separates them from the crown: every crown part stays outside
-#     the masts in (horizontal radius, height), so no aim clips them. The left mast's mint tip is
-#     the `CoilMast` node, the mast's only class_accent surface; the right mast ends in copper;
-#   - the winch spool on a gap bracket at 3 o'clock (rest pose: Hub.26), a 0.12 m round bump,
-#     with the ratchet pawl, the stake hatch under it and `RopeExit` at the rope mouth. Spool and
-#     masts are one mesh, `SpoolKit`, under Pod; hero_assets banks it with the carrier (BRACKET_PARTS);
-#   - the four-wrench rack on the seat back, the rear tell: one mesh, `WrenchRack`, on one
-#     class_accent surface. Its lit count is a per-instance shader parameter (`lit_count`) read
-#     by the material code, never a material_override. COLOR.r carries each piece's index in
-#     linear units: 0.0 the rail, 0.25, 0.5, 0.75 and 1.0 the wrenches left to right from behind,
-#     so a shader lights wrench k when lit_count >= k.
-# Nothing outboard is baked into the level Pod mesh: past the 0.985 plating it is all WeaponRing,
-# SpoolKit or CoilMast, so the carrier bank leans it off walls and slopes.
-# Seat bone, lattice petrol (ROSTER-LOOK 0.2, 6). Controls per PILOT-CLIPS 5: twin yokes
-# (Control.Grip.L/R, Control.Trigger), GaugeLever (slot 2) and SpoolBrake (slot 3) in the bank,
-# the copper lap bar, two pedals.
-# The Felt Rig variant (CUSTOMIZE section 8, shell_sable_felt) swaps structure only: felt pads
-# (rubber) on every scissor pivot instead of copper pins, and rounder eight-sided felt tread caps;
-# same lattice and the machinery stays where it is.
-# One X-pair per hub-to-hub link (LATTICE_PAIRS): ROSTER-LOOK section 3 rule 1 names it the first
-# cut when the lattice hides the pilot. The cutaway look replaces the whole Core mesh with plating
-# (ball_looks.replate), so the lattice only shows under the old "today" look: its hub drums and
-# tread caps are three-sided (HUB_SIDES, CAP_SIDES), and the triangles they free pay for the crown
-# and masts inside hero_six_pilot_budget_test's class V row.
-# Heft layers c2 to c5 come from world_one/shell_sable_plates.py.
-#
-#   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
-#     --python world_one/shell_sable.py -- [--out <file.glb>] [--variant felt]
-
 import math
 import os
 import sys
@@ -52,12 +9,10 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
-from common import Part  # noqa: E402
+import common
+import shell_base as sb
+from common import Part
 
-# hero_assets_test holds every world-one pilot shell to 3,000..6,500 tris without the pilot;
-# the shell class caps the variant at 11,000 (assets/asset_budgets.json).
 BASE_BAND = (3000, 6500)
 VARIANT_BAND = (3000, 11000)
 LATTICE_OUT = sb.LATTICE_OUTER
@@ -68,15 +23,10 @@ FELT_CAP_SIDES = 8
 RING_SEGMENTS = 32
 
 HUBS, _, GAPS = sb.lattice_layout()
-MAST_HUB = 14            # (-0.607, 0, 0.795): the upper hub at 11; the c4 panel beside it is cut back
-SPOOL_HUB = 26           # (0.982, 0, -0.188): 3.4 o'clock, the side hub at 3
+MAST_HUB = 14
+SPOOL_HUB = 26
 SPOOL_DIR = HUBS[SPOOL_HUB].normalized()
 
-# Coil masts: vertical lathes on X -/+MAST_X (Y 0), rising from inside the plating (0.983) at
-# MAST_PROFILE's first ring and topping out under the emitter heads. (Z, radius) rings bottom to top, and each band's paint:
-# a charcoal boot (paint alpha 0, as the spool's dark parts), a bone insulator drum, three copper
-# ribs, a bone top insulator. The left mast's mint tip (CoilMast) and the right mast's copper tip
-# run from MAST_TIP[0] to MAST_TIP[1].
 MAST_X = 0.48
 MAST_SIDES = 6
 MAST_PROFILE = [(0.80, 0.080), (0.905, 0.095), (0.905, 0.112), (0.950, 0.112), (0.958, 0.070),
@@ -88,25 +38,18 @@ COPPER = ("copper", None, 1.0)
 RUBBER = ("rubber", None, 1.0)
 MAST_BANDS = [CHARCOAL, BONE, BONE, BONE] + [COPPER] * 6 + [BONE, BONE, BONE]
 MAST_CAPS = (CHARCOAL, BONE)
-MAST_TIP = (1.13, 1.18, 0.05, 0.012)      # from Z, to Z, base radius, point radius
+MAST_TIP = (1.13, 1.18, 0.05, 0.012)
 MAST_DIR = Vector((-MAST_X, 0.0, MAST_TIP[1])).normalized()
 
-# Spool: drum on a fore-aft axle, centred on SPOOL_DIR at radius 1.0; flange radius 0.095, so it
-# reaches 1.095, 0.12 m past the lattice, and its top (Z -0.093) clears the ring collar (-0.07).
 SPOOL_C = SPOOL_DIR * 1.0
 SPOOL_R = 0.095
 SPOOL_HALF = 0.075
 SPOOL_ARM_FROM = Vector((0.30, -0.02, -0.26))
 ROPE_EXIT = SPOOL_C + Vector((-0.03, SPOOL_HALF + 0.06, 0.0))
-# Rack on the seat back (back face Y -0.24 with the DecalPlate), under the sight cone.
 RACK_Y = -0.258
 RACK_TOP = -0.062
 RACK_X = (-0.0825, -0.0275, 0.0275, 0.0825)
 
-# Crown arc emitter, on the WeaponRing (ring frame: +Y the aim). Each head is a closed lathe on the
-# X axis at Z CROWN_Z, (|X|, radius) rings from its back (outboard) to its front (toward the gap),
-# with each band's paint: bone back insulator discs, a copper core, the copper housing with a rubber
-# strap, a bone front collar. The ring reaches at most CROWN_REACH (ruling en: 1.70 m).
 CROWN_Z = 1.40
 HEAD_SIDES = 8
 HEAD_PROFILE = [(0.715, 0.090), (0.690, 0.125), (0.650, 0.125), (0.650, 0.090), (0.620, 0.090),
@@ -114,23 +57,14 @@ HEAD_PROFILE = [(0.715, 0.090), (0.690, 0.125), (0.650, 0.125), (0.650, 0.090), 
                 (0.390, 0.150), (0.390, 0.128), (0.355, 0.128)]
 HEAD_BANDS = [BONE, BONE, BONE, COPPER, COPPER, COPPER, RUBBER, RUBBER, RUBBER, COPPER, BONE, BONE]
 HEAD_CAPS = (BONE, BONE)
-# The fork: an upper and a lower copper prong per head, from inside the front collar (|X| PRONG_X[0])
-# to the gap (PRONG_X[1]); Z offsets from the head axis and (Z, Y) half-sizes at root and point.
-# Emitter.L and .R sit in each fork's mouth, on the head axis at |X| PRONG_X[1].
 PRONG_X = (0.40, 0.19)
 PRONG_Z = (0.085, 0.075)
 PRONG_HALF = ((0.032, 0.060), (0.022, 0.045))
-# The yoke arm: a closed 8-sided copper tube through these (|X|, Z) points in the Y 0 plane, from
-# inside the band to inside the head's housing, with a bone insulator collar at ARM_COLLAR and a
-# rubber shoe clamped over the band. It stays ARM_R plus 0.03 m off the plating, and outside the
-# masts: at every height it passes them it is 0.12 m or more further out than their ribs.
 ARM = [(1.050, 0.02), (1.040, 0.33), (0.945, 0.62), (0.840, 0.90), (0.770, 1.15), (0.580, 1.38)]
 ARM_R = 0.06
 ARM_SIDES = 8
-ARM_COLLAR = (2, 0.5, 0.09, 0.07)         # on segment 2 at its middle: radius, length
-ARM_SHOE = ((0.09, 0.11, 0.13), 1.055, 0.01)   # size (radial, tangent, Z), radius, Z
-# The heavy cable: a closed 5-sided rubber tube behind each arm, from the band out round it and
-# into the head's back.
+ARM_COLLAR = (2, 0.5, 0.09, 0.07)
+ARM_SHOE = ((0.09, 0.11, 0.13), 1.055, 0.01)
 CABLE = [(1.065, -0.06, 0.03), (1.15, -0.08, 0.40), (1.10, -0.09, 0.80), (0.95, -0.09, 1.15),
          (0.78, -0.07, 1.38), (0.66, -0.04, 1.42)]
 CABLE_R = 0.03
@@ -209,11 +143,8 @@ def spool_kit(p):
     p.cyl("paint", 0.072, 0.072, 2 * SPOOL_HALF - 0.02, 8, loc=c, rot=(math.pi / 2, 0, 0), color="bone")
     p.rod("paint", c + Vector((0, -SPOOL_HALF - 0.03, 0)), c + Vector((0, SPOOL_HALF + 0.03, 0)), 0.02, 4, color="charcoal", alpha=0)
     p.beam("paint", SPOOL_ARM_FROM, c + Vector((-0.04, 0, 0)), 0.04, color="charcoal", alpha=0)
-    # Stake hatch under the spool (the stakes ride inside it).
     p.box("paint", (0.10, 0.12, 0.05), loc=c + Vector((-0.04, 0.0, -SPOOL_R - 0.035)), color="charcoal", alpha=0)
-    # Ratchet pawl on the rear flange (it clacks when Bank Shot locks the line).
     p.box("copper", (0.02, 0.012, 0.06), loc=c + Vector((0.0, -SPOOL_HALF - 0.016, SPOOL_R - 0.01)), rot=(0, 0.5, 0))
-    # Fairlead: the rope mouth at the front, where RopeExit sits.
     p.beam("paint", c + Vector((-0.03, SPOOL_HALF, 0.0)), ROPE_EXIT, 0.035, color="charcoal", alpha=0)
 
 
@@ -299,8 +230,6 @@ def pilot():
     for side in (-1, 1):
         sb.ear(f, (side * 0.08, -0.01, 0.27), 0.13, 0.09, side * -0.26, "oxide", inner="bone", tip="charcoal")
         sb.eye(f, (side * 0.05, 0.12, 0.19), 0.022)
-    # Smooth shading shares vertices across the round parts, which keeps the shell inside the
-    # class's 11,600-vertex cap (the hidden placeholder still counts there).
     sb._sharpen(f)
     return f
 
@@ -348,9 +277,6 @@ def build(variant=""):
     pod, ring = shell["pod"], shell["ring"]
     if felt:
         print("FELT_PADS %d pivot triangles moved from copper to rubber" % felt_pads(shell["core"]))
-    # The spool and the masts are one mesh, SpoolKit (copper and paint, its dark parts in charcoal vertex
-    # colour: two draws), which hero_assets banks with the carrier, so nothing stands level past the ball
-    # on a wall and the masts lean with the crown.
     spool = Part("SpoolKit")
     spool_kit(spool)
     for side in (-1, 1):
@@ -360,7 +286,6 @@ def build(variant=""):
     tip = coil_tip().to_object((-MAST_X, 0, MAST_TIP[0]), pod)
     common.empty("RopeExit", ROPE_EXIT, pod)
     wrench_rack().to_object((0, RACK_Y, RACK_TOP), pod)
-    # Swap the ring mesh for Sable's; the WeaponMount empty and the node stay.
     new_ring = sable_ring().to_object((0, 0, 0), None)
     old = ring.data
     ring.data = new_ring.data

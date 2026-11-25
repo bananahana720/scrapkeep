@@ -21,7 +21,7 @@ from kicker_wedge_detail1 import ROW_LOW, ROW_HIGH, SKIRT_BOLTS, PATCH, DETAIL, 
 from ore_cart import strut
 
 INNER = HALF - CHEEK
-POST = (6.55, 6.85, .34, 1.42)          # end post on each cheek: z0, z1, y0, y1 (under the riding edge at z 6.55: 1.497)
+POST = (6.55, 6.85, .34, 1.42)
 SIZE = {"kicker_wedge_detail2": [6.21, 1.447, 6.802]}
 
 
@@ -37,13 +37,10 @@ def build(s):
         s.box((.04, y1 - y0, z1 - z0), (side * (HALF + .02), (y0 + y1) / 2, (z0 + z1) / 2), tone("body"))
         for y in (y0 + .18, (y0 + y1) / 2, y1 - .18):
             dome(s, (side * (HALF + .04), y, (z0 + z1) / 2), (side, 0, 0), .06, .035, rivet)
-        # Rail under the riding edge, outside the plate: its top stays under the plane.
         strut(s, (side * (HALF + .03), plane_y(.6) - .07, .6), (side * (HALF + .03), plane_y(6.5) - .07, 6.5), .06, .08, tone("body"))
-    # Clasp on the patch's top edge.
     y, z, h, l = PATCH
     s.box((.07, .12, .16), (HALF + .04, y + h / 2 + .03, z - .2), tone("rivet"))
     dome(s, (HALF + .075, y + h / 2 + .03, z - .2), (1, 0, 0), .035, .025, tone("body"))
-    # Nose strip across the foot of the riding face.
     slab(s, [(-INNER, .05), (INNER, .05), (INNER, .16), (-INNER, .16)], -.004, RIDE_PROUD * .3, tone("body"))
 
 
@@ -70,7 +67,7 @@ def export(out_dir):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **kit.BAKE)
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))

@@ -13,8 +13,6 @@ import warden_mantle_meltdown as mwa
 
 def ribs(parent):
     p = mwa.common.Part("BroodRibs")
-    # Each inverted U is an extruded continuous profile, .18 m thick.
-    # Two vertical feet blend into a low elliptical arch; no front crossbar.
     for x in (-1.35, -.05):
         rows = []
         for k in range(13):
@@ -27,7 +25,6 @@ def ribs(parent):
         mwa.strip(p, rows, ["ancient_enamel"]*4, [mwa.ENAMEL]*4)
         for row in (rows[0][:-1], list(reversed(rows[-1][:-1]))):
             mwa.face(p, row, "ancient_enamel", mwa.ENAMEL)
-        # The blue seam follows the crown, within a twice-width dark groove.
         for slot, lo, hi, behind in (("rubber", .04, .14, .094), ("ancient_light", .065, .115, .096)):
             for k in range(5):
                 points = []
@@ -37,7 +34,6 @@ def ribs(parent):
                     points.append((x-behind, .35+(2.12+t)*math.sin(angle), (2.22+t)*math.cos(angle)))
                 mwa.face(p, points, slot)
     mwa.box(p, "ancient_enamel", (1.48, .18, .18), (-.70, .44, 2.28), mwa.ENAMEL)
-    # Cast dust is sparse on top, subordinate to the dark enamel mass.
     mwa.bmesh.ops.recalc_face_normals(p.bm, faces=list(p.bm.faces))
     upper = [f for f in p.bm.faces if f.material_index == p.slots.index("ancient_enamel")
              and f.normal.z > .8 and f.calc_center_median().z > 2.2]
@@ -48,13 +44,10 @@ def ribs(parent):
 
 def rail(parent):
     p = mwa.common.Part("BroodLaunchRail")
-    # The queen aperture centred at (1.485,1.215,0) has >=1.30m daylight.
-    # The central slot survives below the aperture; only side rails rise to .85.
     for sign in (-1, 1):
         mwa.box(p, "ancient_enamel", (.24, .35, 1.16), (.53, .85, sign*1.32), mwa.ENAMEL)
     mwa.box(p, "ancient_enamel", (.24, .16, 1.48), (.53, .265, 0), mwa.ENAMEL)
     for z, y in ((-1.1, .85), (0, .29), (1.1, .85)):
-        # Recessed .55 x .20 throat on X-forward face, neutral enamel border.
         for sign in (-1, 1):
             mwa.box(p, "ancient_enamel", (.07, .025, .62), (.655, y+sign*.1125, z), mwa.ENAMEL)
             mwa.box(p, "ancient_enamel", (.07, .20, .035), (.655, y, z+sign*.2925), mwa.ENAMEL)
@@ -73,7 +66,7 @@ def main():
     rail(mount)
     opts = mwa.common.args()
     path = opts["out"] or mwa.common.default_out("warden_mantle_brood")
-    mwa.export_checked(root, path, (1300, 1400, 5))  # polished caps (POLISH.md, 18 Oct)
+    mwa.export_checked(root, path, (1300, 1400, 5))
     if opts["render"]:
         mwa.preview(path, opts["render"], "hive", "brood")
 

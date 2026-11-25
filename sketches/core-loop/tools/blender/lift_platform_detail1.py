@@ -26,13 +26,11 @@ def perp(n):
 
 
 def stud(s, at, normal, r, h, color, n=6):
-    # A short post standing on a surface along its normal; its root sinks 5 cm into the part.
     f = Frame(s, at, normal, perp(normal))
     frustum(f, r, r * .7, -.05, h, n, color, caps=(False, True))
 
 
 def band(f, r0, r1, t0, t1, n, color):
-    # A closed rectangular-section hoop round a frame's axis.
     ring(f, [(r0, t0), (r1, t0), (r1, t1), (r0, t1), (r0, t0)], n, color)
 
 
@@ -46,49 +44,39 @@ def dome_point(f, r, t, nr, nt, a):
 def build(s):
     for z in lp.TANK_Z:
         f = lp.tank_frame(s, z)
-        # A1 rivets on the outer dome, A2 the strap band at the dome seam.
         for a in around(10, .3):
             p, nrm = dome_point(f, .95, -1.71, .51, -.86, a)
             stud(s, p, nrm, .09, .1, tone("copper"))
         band(f, 1.27, 1.38, -1.3, -1.12, lp.NT, tone("iron"))
-        # A6 splayed corner brackets from the base edge up to the tank's flank.
         side = 1.0 if z > 0 else -1.0
         for x in lp.CRADLE_X:
             strut(s, pump((x, .35, z + side * 1.25)), pump((x * .9, 1.6, z + side * 1.15)), .16, .16, tone("iron"))
-    # A3 filler cap on the left tank.
     frustum(s, .24, .2, 3.15, 3.45, 6, tone("iron"), at=(lp.PUMP_AT[0] - .7, lp.TANK_Z[0]))
-    # A4 ribbed collar on the riser, A5 flange bolts.
     rx, rz = lp.PUMP_AT[0] + lp.RISER_AT[0], lp.RISER_AT[1]
     for y in (3.6, 3.78):
         ring(s, [(.58, y), (.72, y), (.72, y + .1), (.58, y + .1), (.58, y)], 6, tone("iron"), at=(rx, rz))
     for a in around(6, .5):
         stud(s, (rx + .8 * math.sin(a), 3.45, rz + .8 * math.cos(a)), (0.0, 1.0, 0.0), .07, .07, tone("copper"))
-    # A7 base plate bolts.
     (cx, cy, cz), (hx, hy, hz) = lp.BASE
     for x in (-hx + .2, hx - .2):
         for zz in (-hz + .2, -hz / 3, hz / 3, hz - .2):
             stud(s, pump((cx + x, cy + hy, cz + zz)), (0.0, 1.0, 0.0), .09, .08, tone("iron"))
-    # A8 the elbow valve's union nut and handwheel.
     (vx, vz), (r0, y0, y1), (r1, y2, y3) = lp.ELBOW_VALVE
     at = (lp.PUMP_AT[0] + vx, vz)
     ring(s, [(r0 - .02, 2.2), (r0 + .05, 2.2), (r0 + .05, 2.35), (r0 - .02, 2.35), (r0 - .02, 2.2)], 6, tone("copper"), at=at)
     ring(s, [(.26, y3), (.38, y3), (.38, y3 + .07), (.26, y3 + .07), (.26, y3)], 8, tone("iron"), at=at)
     frustum(s, .05, .05, y3 - .05, y3 + .1, 4, tone("iron"), at=at)
-    # A9 bands on the safety valve.
     (hx2, hz2), (pr, p0, p1), _ = lp.CHIMNEY
     for y in (p0 + .2, p0 + .55):
         ring(s, [(pr - .02, y), (pr + .05, y), (pr + .05, y + .08), (pr - .02, y + .08), (pr - .02, y)], 6, tone("copper"),
              at=(lp.PUMP_AT[0] + hx2, hz2))
-    # A10 the big gauge's housing drum behind its bezel.
     g = lp.GAUGES[0]
     gf = lp.gauge_frame(s, g)
     ring(gf, [(.02, -.32), (g[1] * .92, -.32), (g[1] * .92, -.02), (.02, -.02)], 8, tone("iron"))
-    # A11 lever and top fitting on the valve block.
     (bx, by, bz), (bhx, bhy, bhz) = lp.VALVE_BLOCK
     strut(s, pump((bx + bhx - .05, by + .1, bz)), pump((bx + bhx + .35, by + .55, bz)), .08, .08, tone("iron"))
     stud(s, pump((bx + bhx + .35, by + .55, bz)), (1.0, 0.0, 0.0), .1, .1, tone("iron"))
     frustum(s, .14, .14, by + bhy - .05, by + bhy + .22, 6, tone("copper"), at=(lp.PUMP_AT[0] + bx - .2, bz))
-    # A12 flanges at the U pipe's bends.
     for p in lp.U_PIPE[1:4]:
         ring(s, [(lp.PIPE_R - .02, p[1] - .2), (lp.PIPE_R + .07, p[1] - .2), (lp.PIPE_R + .07, p[1] - .1),
                  (lp.PIPE_R - .02, p[1] - .1), (lp.PIPE_R - .02, p[1] - .2)], 6, tone("copper"),

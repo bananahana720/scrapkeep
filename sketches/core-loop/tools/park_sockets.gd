@@ -1,10 +1,5 @@
 extends SceneTree
 
-# SQ15's paired seeded laboratory. These layouts are separate from the six authored parks.
-# godot --headless --path sketches/core-loop --script res://tools/park_sockets.gd -- --sockets=1000
-# --sockets defaults to 1,000 seeds; --sockets-out=<path> writes both arms' per-stage metrics.
-# Gates: 95% success, 3..8 pockets, off-route guarantees and fillers, <10% and <=half-fixed
-# re-rolls, and <=3.0 complete full-visit ratio.
 
 const Sockets := preload("res://src/world/park/sockets.gd")
 

@@ -2,12 +2,6 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Raw data files the game opens with FileAccess are not imported resources, so the export drops
-// them unless the preset's include_filter lists them (wave-14 release: park ground.bin and
-// apron.bin were missing and `--table=park` printed park_terrain errors). This check finds every
-// string literal in src/ that names such a file, resolves it to the project's files, and fails for
-// each file no include_filter pattern covers. Godot's String.match: `*` spans any characters.
-// Run: node scripts/export-include-check.mjs [--preset "Linux x64"]
 export const RAW_EXTENSIONS = ["bin", "dat", "csv", "txt", "tsv", "raw", "ndjson"];
 const literal = new RegExp(`"([^"\\n]*\\.(?:${RAW_EXTENSIONS.join("|")}))"`, "g");
 
@@ -31,8 +25,6 @@ export function covered(file, patterns) {
   return patterns.some((pattern) => globToRegExp(pattern).test(file));
 }
 
-// Literals in GDScript source text: {text, res} where res is the path below res:// when the
-// literal starts with it, else null (a fragment such as "/ground.bin").
 export function rawLiterals(source) {
   const found = [];
   for (const match of source.matchAll(literal)) {
@@ -42,10 +34,6 @@ export function rawLiterals(source) {
   return found;
 }
 
-// Project files (relative to the sketch, "/" separators) a literal can name. A fragment matches by
-// its tail; a res:// literal matches by its pattern with each %s as a wildcard. A res:// literal
-// that names nothing is returned in `unresolved`; bare names such as "runs.ndjson" are the game's
-// own user:// writes and are skipped.
 export function resolveLiterals(literals, projectFiles) {
   const files = new Set();
   const unresolved = [];
@@ -78,7 +66,9 @@ function walk(dir, base, out) {
 }
 
 export function checkPreset({ sketch, presetText, presetName = "Linux x64" }) {
-  const block = new RegExp(`\\[preset\\.\\d+\\]\\s*\\nname="${presetName}"[\\s\\S]*?(?=\\n\\[preset\\.\\d+\\.options\\])`).exec(presetText);
+  const block = new RegExp(
+    `\\[preset\\.\\d+\\]\\s*\\nname="${presetName}"[\\s\\S]*?(?=\\n\\[preset\\.\\d+\\.options\\])`,
+  ).exec(presetText);
   if (!block) return { problems: [`preset "${presetName}" not found`], files: [] };
   const field = (name) => new RegExp(`^${name}=(.*)$`, "m").exec(block[0])?.[1] ?? '""';
   const include = filterList(field("include_filter"));
@@ -106,7 +96,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   let bad = 0;
   for (const presetName of presets) {
     const { problems, files } = checkPreset({ sketch, presetText: text, presetName });
-    console.log(`export include check "${presetName}": ${files.length} raw files read by the game, ${problems.length} problems`);
+    console.log(
+      `export include check "${presetName}": ${files.length} raw files read by the game, ${problems.length} problems`,
+    );
     for (const problem of problems) console.log("  " + problem);
     bad += problems.length;
   }

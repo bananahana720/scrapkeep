@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Print a compact review block for one finished unit: verdict lines, changed files, previews.
-# Usage: unit_review.sh <wave> <unit> <worktree>
 set -u
 here="$(cd "$(dirname "$0")" && pwd)"
 repo="$(cd "$here/../../../.." && pwd)"

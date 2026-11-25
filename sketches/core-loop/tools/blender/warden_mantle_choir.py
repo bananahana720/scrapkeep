@@ -25,9 +25,6 @@ from warden_mantle_hand import (
 )
 import polish
 
-# Comb and shoes: 3 cm chamfers on real corners, smooth shading, baked AO (POLISH.md). Horns skip
-# the bevel so their exact .7 m diameters and stepped heights hold. No edge
-# lightening and softer AO keep ancient enamel under the section 11 cap.
 polish.enable(detail=1, bevel=0.03, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
 
 
@@ -118,14 +115,11 @@ def build():
                 polygon,
                 lambda a, b, center=center, u=u, v=v: center + u * a + v * b,
             )
-        # Horns 1 and 3 retain a dark open bore, with no working material.
     horns.to_object(parent=body)
     for side, sign in (("L", -1), ("R", 1)):
         mount = common.empty("MountArm" + side, parent=root)
         shoe = Part("ChoirShoe" + side)
         box(shoe, "ancient_enamel", (0.28, 0.35, 0.3), (0, 0, 0), PETROL)
-        # Route behind the kit below the 1.3m lens spheres before ascending.
-        # Three sections remain one narrow support per side, in the shoe mesh.
         route = [(0, 0, 0), (-3.2, 0, 0), (-3.2, 2.8425, sign * (1.95 - 0.6075))]
         for a, b in zip(route, route[1:]):
             shoe.rod("ancient_enamel", xyz(a), xyz(b), 0.055, segs=4, color=PETROL)
@@ -137,7 +131,6 @@ if __name__ == "__main__":
     options = common.args()
     output = options["out"] or common.default_out("warden_mantle_choir")
     root = build()
-    # Polished caps (POLISH.md, 18 Oct).
     assert common.tri_total(root) <= 1100
     hand.finish(root, output, (1100, 1700, 7))
     if options["render"]:

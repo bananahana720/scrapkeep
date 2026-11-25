@@ -1,15 +1,12 @@
-# VD-01 Sable pilot and class equipment. shell_base.spherical() seats the
-# pilot inside the clear rolling hull. Authored here from Blender primitives.
-
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
-from common import Part  # noqa: E402
+import common
+import shell_base as sb
+from common import Part
 
 DOME_C = (0.0, 0.0, 0.84)
 DOME_R = 0.6
@@ -38,7 +35,6 @@ def pod():
         p.ring("rubber", 0.128, 0.142, 0.02, 10, loc=(sx - 0.04 + k * 0.04, 0.0, sz), rot=(0, math.pi / 2, 0))
     p.beam("bare_metal", (sx, 0.12, sz - 0.12), (sx, 0.3, sz - 0.08), 0.04)
     p.ring("bare_metal", 0.035, 0.065, 0.05, 8, loc=(sx, 0.32, sz - 0.08), rot=(math.pi / 2, 0, 0))
-    # Off-centre, so the chase camera sees the pilot past it.
     base = (-0.42, -0.46, 0.74)
     tip = (-0.56, -0.6, 1.24)
     p.box("paint", (0.2, 0.2, 0.1), loc=base, color="oxide")

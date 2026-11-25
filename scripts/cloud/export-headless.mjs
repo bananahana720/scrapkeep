@@ -3,14 +3,16 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { WIN_PROOFS, playProofTries, proofLibraries, releaseGateFailures, winProofBotArgs, winProofFailures, winProofLine, winProofTimeoutMs } from "../sketch-export.mjs";
-
-// node scripts/cloud/export-headless.mjs [--win-proof]: the part of npm run sketch:export a cloud
-// container can run. It imports, runs the release gate, exports the "Linux x64" preset, boots it
-// headless on both tables and, with --win-proof, plays the same skipper bot runs on the
-// "Linux x64 proof" pack. It skips the two steps that need Andrew's machine: the ACE stems
-// (gitignored) and the Vulkan boss smoke (no GPU). The result is a test build under
-// artifacts/local/cloud-export/<stamp>/, not a shippable package; sketch:export still cuts those.
+import {
+  WIN_PROOFS,
+  playProofTries,
+  proofLibraries,
+  releaseGateFailures,
+  winProofBotArgs,
+  winProofFailures,
+  winProofLine,
+  winProofTimeoutMs,
+} from "../sketch-export.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const project = path.join(root, "sketches/core-loop");
@@ -19,7 +21,11 @@ const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 const winProof = process.argv.includes("--win-proof");
 
 function run(command, args, options = {}) {
-  const result = spawnSync(command, args, { encoding: "utf8", maxBuffer: 256 * 1024 * 1024, ...options });
+  const result = spawnSync(command, args, {
+    encoding: "utf8",
+    maxBuffer: 256 * 1024 * 1024,
+    ...options,
+  });
   return { status: result.status, text: (result.stdout ?? "") + (result.stderr ?? "") };
 }
 
@@ -32,16 +38,22 @@ function step(label, result, extra = []) {
   const problems = [...extra];
   if (result.status !== 0) problems.push("exit " + result.status);
   if (errorLine.test(result.text)) problems.push("SCRIPT ERROR or ERROR line in the output");
-  if (problems.length > 0) fail(label + ": " + problems.join("; ") + "\n" + result.text.slice(-2000));
+  if (problems.length > 0)
+    fail(label + ": " + problems.join("; ") + "\n" + result.text.slice(-2000));
   console.log("PASS " + label);
 }
 
-if (!binary || !existsSync(binary)) fail("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
+if (!binary || !existsSync(binary))
+  fail("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
 
 step("editor import", run(binary, ["--headless", "--path", project, "--editor", "--import"]));
-const gate = run(binary, ["--headless", "--path", project, "--script", "res://tests/release_gate_placeholder_test.gd"], {
-  env: { ...process.env, SCRAPKEEP_RELEASE_GATE: "1" },
-});
+const gate = run(
+  binary,
+  ["--headless", "--path", project, "--script", "res://tests/release_gate_placeholder_test.gd"],
+  {
+    env: { ...process.env, SCRAPKEEP_RELEASE_GATE: "1" },
+  },
+);
 const gateFailures = releaseGateFailures(gate.text, gate.status);
 if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 console.log("PASS release gate");
@@ -50,19 +62,31 @@ const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
 const outDir = path.join(root, "artifacts/local/cloud-export", stamp);
 await mkdir(outDir, { recursive: true });
 const exe = path.join(outDir, "core-loop.x86_64");
-step("export Linux x64", run(binary, ["--headless", "--path", project, "--export-release", "Linux x64", exe]), existsSync(exe) ? [] : ["no executable"]);
+step(
+  "export Linux x64",
+  run(binary, ["--headless", "--path", project, "--export-release", "Linux x64", exe]),
+  existsSync(exe) ? [] : ["no executable"],
+);
 step("boot 300 frames", run(exe, ["--headless", "--quit-after", "300"], { cwd: outDir }));
-step("park table boot 600 frames", run(exe, ["--headless", "--table=park", "--quit-after", "600"], { cwd: outDir }));
+step(
+  "park table boot 600 frames",
+  run(exe, ["--headless", "--table=park", "--quit-after", "600"], { cwd: outDir }),
+);
 
 const lines = [];
 if (winProof) {
   const proofDir = outDir + "-win-proof";
   await mkdir(proofDir, { recursive: true });
   const pack = path.join(proofDir, "proof.pck");
-  step("export Linux x64 proof pack", run(binary, ["--headless", "--path", project, "--export-pack", "Linux x64 proof", pack]));
+  step(
+    "export Linux x64 proof pack",
+    run(binary, ["--headless", "--path", project, "--export-pack", "Linux x64 proof", pack]),
+  );
   const addons = path.join(project, "addons");
   const addonFiles = existsSync(addons)
-    ? readdirSync(addons, { recursive: true }).map((rel) => path.join("addons", String(rel)).split(path.sep).join("/"))
+    ? readdirSync(addons, { recursive: true }).map((rel) =>
+        path.join("addons", String(rel)).split(path.sep).join("/"),
+      )
     : [];
   for (const rel of proofLibraries(addonFiles)) {
     await mkdir(path.join(proofDir, path.dirname(rel)), { recursive: true });
@@ -80,12 +104,20 @@ if (winProof) {
 
   async function playOnce(base, proof) {
     const state = path.join(base, "state");
-    for (const dir of ["data", "config", "cache"]) await mkdir(path.join(state, dir), { recursive: true });
+    for (const dir of ["data", "config", "cache"])
+      await mkdir(path.join(state, dir), { recursive: true });
     const out = path.join(base, "run");
     const bot = run(
       binary,
       [
-        "--headless", "--fixed-fps", "90", "--main-pack", pack, "--script", "res://tools/bot_run.gd", "--",
+        "--headless",
+        "--fixed-fps",
+        "90",
+        "--main-pack",
+        pack,
+        "--script",
+        "res://tools/bot_run.gd",
+        "--",
         ...winProofBotArgs(proof, out),
       ],
       {
@@ -103,7 +135,11 @@ if (winProof) {
     const rowsText = existsSync(rowsPath) ? await readFile(rowsPath, "utf8") : "";
     const failures = winProofFailures(bot.text, bot.status, rowsText);
     if (failures.length > 0)
-      return { ok: false, failure: failures.join("\n") + "\n" + bot.text.slice(-2000), summary: failures[0] };
+      return {
+        ok: false,
+        failure: failures.join("\n") + "\n" + bot.text.slice(-2000),
+        summary: failures[0],
+      };
     return { ok: true, line: winProofLine(JSON.parse(rowsText.trim()), pack, proof) };
   }
 }

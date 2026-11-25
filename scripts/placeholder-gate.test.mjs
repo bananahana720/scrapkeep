@@ -54,7 +54,10 @@ test("marker words in shown text are found, log lines and sentinels are not", ()
     'var fine := "Spillway: the top shelf"',
   ].join("\n");
   const found = markedText(source, "src/x.gd");
-  assert.deepEqual(found.map((f) => f.where), ["src/x.gd:1", "src/x.gd:4"]);
+  assert.deepEqual(
+    found.map((f) => f.where),
+    ["src/x.gd:1", "src/x.gd:4"],
+  );
 });
 
 test("a word that only contains a marker is not one", () => {
@@ -62,12 +65,18 @@ test("a word that only contains a marker is not one", () => {
 });
 
 test("sceneText reads text properties of a scene", () => {
-  const found = sceneText('[node name="A" type="Label"]\ntext = "Coming soon"\ntext = "Play"\n', "main.tscn");
+  const found = sceneText(
+    '[node name="A" type="Label"]\ntext = "Coming soon"\ntext = "Play"\n',
+    "main.tscn",
+  );
   assert.deepEqual(found, [{ kind: "text", where: "main.tscn:2", what: '"Coming soon"' }]);
 });
 
 test("mapIds lists each map a defs file uses once", () => {
-  assert.deepEqual(mapIds('{"map": "park_dam"}, {"map": "park_flume"}, {"map": "park_dam"}'), ["park_dam", "park_flume"]);
+  assert.deepEqual(mapIds('{"map": "park_dam"}, {"map": "park_flume"}, {"map": "park_dam"}'), [
+    "park_dam",
+    "park_flume",
+  ]);
 });
 
 test("glbPath sends contraptions to their skin folder", () => {
@@ -98,7 +107,11 @@ test("parkGreybox groups greybox recipes and recipes with no GLB, and passes bui
 });
 
 test("parkGreybox passes an anchors kit row only when all three variants have landed", () => {
-  assert.deepEqual(recipeGlbs("anchor_cairn"), ["anchor_cairn_a", "anchor_cairn_b", "anchor_cairn_c"]);
+  assert.deepEqual(recipeGlbs("anchor_cairn"), [
+    "anchor_cairn_a",
+    "anchor_cairn_b",
+    "anchor_cairn_c",
+  ]);
   assert.deepEqual(recipeGlbs("flume_span"), ["flume_span"]);
   const doc = {
     park_rows: [
@@ -106,7 +119,13 @@ test("parkGreybox passes an anchors kit row only when all three variants have la
       { id: "cairns", element: "anchor_field", recipe: "anchor_cairn" },
     ],
   };
-  const built = new Set(["anchor_hoodoo_a", "anchor_hoodoo_b", "anchor_hoodoo_c", "anchor_cairn_a", "anchor_cairn_b"]);
+  const built = new Set([
+    "anchor_hoodoo_a",
+    "anchor_hoodoo_b",
+    "anchor_hoodoo_c",
+    "anchor_cairn_a",
+    "anchor_cairn_b",
+  ]);
   const found = parkGreybox("park_islands", doc, (recipe) => built.has(recipe));
   assert.deepEqual(
     found.map((f) => [f.what, f.count]),
@@ -116,17 +135,37 @@ test("parkGreybox passes an anchors kit row only when all three variants have la
 
 test("parkGreybox counts a mesa edge spanning the play rect as terrain and keeps narrower lips", () => {
   const rect = [-800, -800, 1600, 1600];
-  const edge = { id: "fan_step_lip_1", element: "kicker", recipe: "greybox:kicker", stamp: "plateau", y: null, yaw_deg: 0, size: [12, 0.01, 1600] };
+  const edge = {
+    id: "fan_step_lip_1",
+    element: "kicker",
+    recipe: "greybox:kicker",
+    stamp: "plateau",
+    y: null,
+    yaw_deg: 0,
+    size: [12, 0.01, 1600],
+  };
   const narrow = { ...edge, id: "fin_nose_kicker", size: [12, 0.01, 56] };
   const unstamped = { ...edge, id: "loose_lip", stamp: "" };
   assert.equal(isMesaEdge(edge, rect), true);
   assert.equal(isMesaEdge(narrow, rect), false);
   assert.equal(isMesaEdge(unstamped, rect), false);
-  // coordinator ruling (a) 2026-10-21: any element, not only a kicker
-  assert.equal(isMesaEdge({ ...edge, id: "run", element: "flow_line", recipe: "greybox:flow_line" }, rect), true);
-  assert.equal(isMesaEdge({ ...edge, id: "dressed", element: "flow_line", recipe: "isle_ride_x" }, rect), false);
-  const found = parkGreybox("park_islands", { play_rect: rect, park_rows: [edge, narrow, unstamped] }, () => false);
-  assert.deepEqual(found.map((f) => [f.what, f.count]), [["2 greybox kicker: fin_nose_kicker, loose_lip", 2]]);
+  assert.equal(
+    isMesaEdge({ ...edge, id: "run", element: "flow_line", recipe: "greybox:flow_line" }, rect),
+    true,
+  );
+  assert.equal(
+    isMesaEdge({ ...edge, id: "dressed", element: "flow_line", recipe: "isle_ride_x" }, rect),
+    false,
+  );
+  const found = parkGreybox(
+    "park_islands",
+    { play_rect: rect, park_rows: [edge, narrow, unstamped] },
+    () => false,
+  );
+  assert.deepEqual(
+    found.map((f) => [f.what, f.count]),
+    [["2 greybox kicker: fin_nose_kicker, loose_lip", 2]],
+  );
 });
 
 test("parkGreybox counts a stamped plain slope as terrain and keeps ride pieces and unstamped slopes", () => {
@@ -167,11 +206,15 @@ test("parkGreybox counts a landmark-dressed row only until the landmark's GLB la
       "1 greybox ledge (dressed by landmark landmark_sinkhole, which has no GLB): deck",
     ],
   );
-  assert.deepEqual(parkGreybox("park_sinkhole", doc, (recipe) => recipe === "landmark_sinkhole"), []);
+  assert.deepEqual(
+    parkGreybox("park_sinkhole", doc, (recipe) => recipe === "landmark_sinkhole"),
+    [],
+  );
 });
 
 test("dictKeys reads the keys of one dictionary block and skips comments", () => {
-  const source = 'const IDS := {\n\t"cls_a": "x", # "not_a": "y"\n\t"cls_b": "z",\n}\nconst EXTRA := {"e": "f"}\n';
+  const source =
+    'const IDS := {\n\t"cls_a": "x", # "not_a": "y"\n\t"cls_b": "z",\n}\nconst EXTRA := {"e": "f"}\n';
   assert.deepEqual(dictKeys(source, "IDS"), ["cls_a", "cls_b"]);
   assert.deepEqual(dictKeys(source, "EXTRA"), ["e"]);
   assert.deepEqual(dictKeys(source, "MISSING"), []);
@@ -182,18 +225,19 @@ test("iconIds joins the contract, literal texture calls and ability icons only",
   const other = 'Icons.texture("res_c")\nvar row := {"icon": "damage"}';
   const ids = iconIds(icons, [other], '"line": {"icon": "ab_d"}');
   assert.deepEqual(ids, ["ab_b", "ab_d", "cls_a", "res_c"]);
-  assert.deepEqual(missingIcons(ids, (id) => id !== "ab_d").map((f) => f.what), [
-    "ab_d.svg missing; Icons.texture draws its glyph placeholder",
-  ]);
+  assert.deepEqual(
+    missingIcons(ids, (id) => id !== "ab_d").map((f) => f.what),
+    ["ab_d.svg missing; Icons.texture draws its glyph placeholder"],
+  );
 });
 
 test("pendingEntries lists every entry of a PENDING list, typed or not, and nothing of an empty one", () => {
-  const source = 'const PENDING_ART := ["a", "b"]\nconst SIDE_CONTENT_PENDING: Array = []\nconst DETECTOR_PENDING := ["c"]\nconst OTHER := ["d"]\n';
-  assert.deepEqual(pendingEntries(source, "f.gd").map((f) => `${f.where} ${f.what}`), [
-    "f.gd PENDING_ART a",
-    "f.gd PENDING_ART b",
-    "f.gd DETECTOR_PENDING c",
-  ]);
+  const source =
+    'const PENDING_ART := ["a", "b"]\nconst SIDE_CONTENT_PENDING: Array = []\nconst DETECTOR_PENDING := ["c"]\nconst OTHER := ["d"]\n';
+  assert.deepEqual(
+    pendingEntries(source, "f.gd").map((f) => `${f.where} ${f.what}`),
+    ["f.gd PENDING_ART a", "f.gd PENDING_ART b", "f.gd DETECTOR_PENDING c"],
+  );
 });
 
 test("cosmetics with no art: missing asset, unknown asset, missing file; paint and pending rows skipped", () => {
@@ -208,11 +252,19 @@ test("cosmetics with no art: missing asset, unknown asset, missing file; paint a
   const rows = cosmeticRows(source);
   assert.equal(rows.length, 6);
   const paths = assetPaths(
-    { assets: [{ id: "trail_ok", path: "res://a/ok.glb" }, { id: "trail_gone", path: "res://a/gone.glb" }] },
+    {
+      assets: [
+        { id: "trail_ok", path: "res://a/ok.glb" },
+        { id: "trail_gone", path: "res://a/gone.glb" },
+      ],
+    },
     { trails: [] },
   );
   const found = cosmeticsWithoutArt(rows, paths, (p) => p === "res://a/ok.glb", ["shell_owed"]);
-  assert.deepEqual(found.map((f) => f.where), ["trail_gone", "trail_unknown", "outfit_none"]);
+  assert.deepEqual(
+    found.map((f) => f.where),
+    ["trail_gone", "trail_unknown", "outfit_none"],
+  );
 });
 
 test("assetPaths adds the cosmetics manifest under assets/cosmetics", () => {
@@ -225,12 +277,19 @@ test("unwiredAssets names unshipped assets whose loader says they wait for wirin
   const registry = {
     assets: [
       { id: "a", ships: false, loader: "none (delivered model; runtime integration pending)" },
-      { id: "b", ships: false, loader: "none (forge promote x/v001; wire it in and set ships true)" },
+      {
+        id: "b",
+        ships: false,
+        loader: "none (forge promote x/v001; wire it in and set ships true)",
+      },
       { id: "c", ships: false, loader: "none (route proof, wave 12)" },
       { id: "d", ships: true, loader: "hero_assets.gd" },
     ],
   };
-  assert.deepEqual(unwiredAssets(registry).map((f) => f.where), ["a", "b"]);
+  assert.deepEqual(
+    unwiredAssets(registry).map((f) => f.where),
+    ["a", "b"],
+  );
 });
 
 test("openAttackRows lists rows with open fields across lines", () => {
@@ -240,15 +299,19 @@ test("openAttackRows lists rows with open fields across lines", () => {
     '\t"E19": {"label": "Burst", "group": "enemy",',
     '\t\t"pose": "p", "floor": PLACEHOLDER, "open": ["pose", "floor"]},',
   ].join("\n");
-  assert.deepEqual(openAttackRows(source).map((f) => `${f.where}: ${f.what}`), ["ATTACK_ROWS E19: Burst: pose, floor open"]);
+  assert.deepEqual(
+    openAttackRows(source).map((f) => `${f.where}: ${f.what}`),
+    ["ATTACK_ROWS E19: Burst: pose, floor open"],
+  );
 });
 
 test("standInAbilities finds a pilot on the shared line or ultimate", () => {
-  const source = '"line_id": "bank_shot", "ultimate_id": "cable_run",\n"line_id": "line_reel", "ultimate_id": "ult_default",\n';
-  assert.deepEqual(standInAbilities(source).map((f) => f.what), [
-    "line_id is the shared stand-in line_reel",
-    "ultimate_id is the shared stand-in ult_default",
-  ]);
+  const source =
+    '"line_id": "bank_shot", "ultimate_id": "cable_run",\n"line_id": "line_reel", "ultimate_id": "ult_default",\n';
+  assert.deepEqual(
+    standInAbilities(source).map((f) => f.what),
+    ["line_id is the shared stand-in line_reel", "ultimate_id is the shared stand-in ult_default"],
+  );
 });
 
 test("report passes on no findings and sums park counts on a failure", () => {
@@ -287,11 +350,15 @@ function project(files) {
 test("scan passes a finished project and fails each kind of placeholder", () => {
   const clean = {
     "src/core/park_defs.gd": '{"map": "park_a"}',
-    "src/world/park/park_a.json": JSON.stringify({ landmark: { id: "l", recipe: "land" }, park_rows: [] }),
+    "src/world/park/park_a.json": JSON.stringify({
+      landmark: { id: "l", recipe: "land" },
+      park_rows: [],
+    }),
     "assets/models/park/land.glb": "",
     "src/ui/icons.gd": 'const IDS := {"cls_a": "x"}\nconst EXTRA := {}\n',
     "assets/icons/cls_a.svg": "<svg/>",
-    "src/core/cosmetics.gd": 'const PENDING_ART := []\n\t"paint_a": {"slot": "paint", "name": "A"},\n',
+    "src/core/cosmetics.gd":
+      'const PENDING_ART := []\n\t"paint_a": {"slot": "paint", "name": "A"},\n',
     "assets/registry.json": JSON.stringify({ assets: [] }),
     "src/core/event_kinds.gd": '"E01": {"label": "L", "open": []},',
     "src/core/class_def.gd": '"line_id": "bank_shot",',
@@ -305,17 +372,36 @@ test("scan passes a finished project and fails each kind of placeholder", () => 
   }
   const bad = project({
     ...clean,
-    "src/world/park/park_a.json": JSON.stringify({ landmark: { id: "l", recipe: "land" }, park_rows: [{ id: "r", recipe: "greybox:bank" }] }),
+    "src/world/park/park_a.json": JSON.stringify({
+      landmark: { id: "l", recipe: "land" },
+      park_rows: [{ id: "r", recipe: "greybox:bank" }],
+    }),
     "src/ui/icons.gd": 'const IDS := {"cls_a": "x", "cls_b": "y"}\nconst EXTRA := {}\n',
-    "src/core/cosmetics.gd": 'const PENDING_ART := ["trail_x"]\n\t"trail_y": {"slot": "trail", "name": "Y", "asset": "y"},\n',
-    "assets/registry.json": JSON.stringify({ assets: [{ id: "z", path: "res://z", ships: false, loader: "none (runtime integration pending)" }] }),
+    "src/core/cosmetics.gd":
+      'const PENDING_ART := ["trail_x"]\n\t"trail_y": {"slot": "trail", "name": "Y", "asset": "y"},\n',
+    "assets/registry.json": JSON.stringify({
+      assets: [
+        { id: "z", path: "res://z", ships: false, loader: "none (runtime integration pending)" },
+      ],
+    }),
     "src/core/event_kinds.gd": '"E01": {"label": "L", "open": ["pose"]},',
     "src/core/class_def.gd": '"ultimate_id": "ult_default",',
     "main.tscn": 'text = "TODO title"\n',
   });
   try {
-    const kinds = scan(bad).map((f) => f.kind).sort();
-    assert.deepEqual(kinds, ["ability", "attack", "cosmetic", "icon", "park", "pending", "registry", "text"]);
+    const kinds = scan(bad)
+      .map((f) => f.kind)
+      .sort();
+    assert.deepEqual(kinds, [
+      "ability",
+      "attack",
+      "cosmetic",
+      "icon",
+      "park",
+      "pending",
+      "registry",
+      "text",
+    ]);
   } finally {
     rmSync(bad, { recursive: true, force: true });
   }
@@ -328,7 +414,14 @@ test("primStandIns counts the census pin's stand-in rows by BACKLOG row and skip
     mkdirSync(path.join(dir, "tools"));
     writeFileSync(
       path.join(dir, "tools/prim_census_pin.tsv"),
-      ["# owner\tmesh\tshape\tkind\trow\twhy", "beacon.gd\t*\tBeacon/*\tcode\t-\tthe beacon", "radio_cache.gd\t*\t*\tstand-in\tW1-23\tradio", "none\tBoxMesh\tFind_*\tstand-in\tW1-22\tfinds", "x\ty\tz\tstand-in\tW1-22\tcache", "scrap_field.gd\t*\tScrap/*\tstand-in-live\tW1-21\tcogs"].join("\n"),
+      [
+        "# owner\tmesh\tshape\tkind\trow\twhy",
+        "beacon.gd\t*\tBeacon/*\tcode\t-\tthe beacon",
+        "radio_cache.gd\t*\t*\tstand-in\tW1-23\tradio",
+        "none\tBoxMesh\tFind_*\tstand-in\tW1-22\tfinds",
+        "x\ty\tz\tstand-in\tW1-22\tcache",
+        "scrap_field.gd\t*\tScrap/*\tstand-in-live\tW1-21\tcogs",
+      ].join("\n"),
     );
     assert.deepEqual(primStandIns(dir), { "W1-23": 1, "W1-22": 2, "W1-21": 1 });
   } finally {

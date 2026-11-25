@@ -1,54 +1,26 @@
-import {
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-// node scripts/crash-harvest.mjs [--out=<dir>] [--fail-on=blocker|major|minor] [--ignore=<regex>]...
-//   [--wave=<n>] [--commit=<sha>] <log or dir>...
-// Reads Godot output saved by bot, red team and export runs (log.txt, export.txt, *.log, *.out,
-// *.err; folders are walked) and groups every crash, SCRIPT ERROR and ERROR by a stable
-// signature: kind, the first res:// frame (or the engine's file:line), and the message with
-// numbers taken out. Twelve runs hitting one bug read as one finding with twelve runs.
-// Severity follows sketches/core-loop/BUG-BAR.md and the red team's grading: a crash is always a
-// blocker, a script error (parse errors and scripts that fail to load included) is a major, an
-// engine ERROR is a minor. WARNING lines are not findings. The findings use the red team's
-// findings.json shape, so scripts/redteam/merge.mjs can join them with a pass. A pass grades its
-// own logs coarsely (err: keys); harvesting that pass's logs too lists each error under both keys.
-// Output: a summary on stdout; with --out, findings.json and findings.md in that folder.
-// Exit 0, or 1 when --fail-on names a severity and a finding at or above it was found, or 2 when
-// no log was read.
 
 export const SEVERITIES = ["blocker", "major", "minor", "watch"];
 const LOG_FILE = /(^log$|\.(txt|log|out|err)$)/i;
 const MAX_BYTES = 256 * 1024 * 1024;
 const ANSI = /\x1b\[[0-9;]*m/g;
-const HEADER =
-  /^\s*(SCRIPT ERROR|USER SCRIPT ERROR|ERROR|USER ERROR|WARNING|USER WARNING): (.*)$/;
+const HEADER = /^\s*(SCRIPT ERROR|USER SCRIPT ERROR|ERROR|USER ERROR|WARNING|USER WARNING): (.*)$/;
 const AT = /^\s*at: (.*?) \((.+?:\d+)\)\s*$/;
 const FRAME = /^\s*\[\d+\] (.*?) \((res:\/\/.+?:\d+)\)\s*$/;
 const CRASH = /Program crashed with signal (\d+)/;
 const NATIVE_FRAME = /^\s*\[\d+\] \S+ \(([^)+]+\+[0-9a-f]+)\)/;
 const SAMPLE_LINES = 12;
 
-// Numbers, hex and instance ids change from run to run; the bug does not. A res:// path names
-// the asset or script, so its digits stay.
 export function normalize(message) {
   return message
-    .replace(
-      /(res:\/\/[^\s'"]+)|0x[0-9a-f]+|\d+(\.\d+)?/gi,
-      (m, res) => res ?? "#",
-    )
+    .replace(/(res:\/\/[^\s'"]+)|0x[0-9a-f]+|\d+(\.\d+)?/gi, (m, res) => res ?? "#")
     .replace(/\s+/g, " ")
     .trim()
     .slice(0, 200);
 }
 
-// One block per header line: the header, its at: line and its GDScript frames.
 export function parseLog(text) {
   const lines = (text ?? "").replace(ANSI, "").split("\n");
   const events = [];
@@ -64,8 +36,6 @@ export function parseLog(text) {
   };
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    // stdout and stderr share one buffer, so a stdout line can land between a header and its
-    // at: line; the at: or frame line right after it still belongs to that header.
     const last = events.at(-1);
     if (
       !open &&
@@ -93,7 +63,6 @@ export function parseLog(text) {
     const head = line.match(HEADER);
     if (head) {
       if (open?.kind === "crash") {
-        // An error printed after the crash header belongs to the dying engine, not a new bug.
         open.sample.push(line);
         continue;
       }
@@ -102,8 +71,7 @@ export function parseLog(text) {
         lastError = null;
         continue;
       }
-      const script =
-        head[1].includes("SCRIPT") || /^Failed to load script/.test(head[2]);
+      const script = head[1].includes("SCRIPT") || /^Failed to load script/.test(head[2]);
       open = {
         kind: script ? "script" : "error",
         message: head[2].trim(),
@@ -141,8 +109,6 @@ export function parseLog(text) {
   return events;
 }
 
-// Where a block points: the first game frame, else the at: line, else (a crash with no script
-// frame) the first three native frames, which are stable for one build.
 export function where(event) {
   const gameAt = event.at?.startsWith("res://") ? event.at : null;
   return (
@@ -155,11 +121,8 @@ export function where(event) {
   );
 }
 
-// A crash's cause (the ERROR printed just before it) is shown, not keyed: what happened to print
-// nearby varies by run, while the frame pins the bug.
 export function signature(event) {
-  const message =
-    event.kind === "crash" ? event.message : normalize(event.message);
+  const message = event.kind === "crash" ? event.message : normalize(event.message);
   return {
     kind: event.kind,
     where: where(event),
@@ -168,7 +131,6 @@ export function signature(event) {
   };
 }
 
-// A red team job folder is jobs/<persona>-<pilot>-<seed>/; anything else is named by its path.
 export function runOf(file, base) {
   const rel = path.relative(base, file) || path.basename(file);
   const parts = rel.split(path.sep);
@@ -191,13 +153,11 @@ const SEVERITY = { crash: "blocker", script: "major", error: "minor" };
 const AREA = "stability";
 const FEEL = {
   crash: "The game closes or dies mid-run.",
-  script:
-    "Something in the game logic broke; the effect may be invisible or may not be.",
+  script: "Something in the game logic broke; the effect may be invisible or may not be.",
   error: "Usually nothing on screen; worth a look if it repeats.",
 };
 const TITLE = { crash: "Crash", script: "Script error", error: "Engine error" };
 
-// logs: [{ file, text }]; base is what run paths are shown relative to.
 export function harvest(logs, { base = process.cwd(), ignore = [] } = {}) {
   const found = new Map();
   for (const { file, text } of logs) {
@@ -212,9 +172,7 @@ export function harvest(logs, { base = process.cwd(), ignore = [] } = {}) {
     }
     for (const { sig, event, count } of perKey.values()) {
       const shownMessage =
-        sig.kind === "crash" && event.cause
-          ? `${event.message}: ${event.cause}`
-          : event.message;
+        sig.kind === "crash" && event.cause ? `${event.message}: ${event.cause}` : event.message;
       const f = found.get(sig.key) ?? {
         severity: SEVERITY[sig.kind],
         area: AREA,
@@ -273,15 +231,13 @@ export function renderMarkdown({ inputs, logs, findings, skipped = [] }) {
     `${logs} log(s) read from ${inputs.join(", ")}. ${count("blocker")} blocker, ${count("major")} major, ${count("minor")} minor.`,
     "",
   ];
-  if (!findings.length)
-    out.push("No crash, SCRIPT ERROR or ERROR lines found.", "");
+  if (!findings.length) out.push("No crash, SCRIPT ERROR or ERROR lines found.", "");
   findings.forEach((f, i) => {
     const runs =
       f.runs
         .slice(0, 5)
         .map((r) => r.id)
-        .join(", ") +
-      (f.runs.length > 5 ? `, and ${f.runs.length - 5} more` : "");
+        .join(", ") + (f.runs.length > 5 ? `, and ${f.runs.length - 5} more` : "");
     out.push(
       `${i + 1}. **${f.severity.toUpperCase()}** · ${f.area} · ${f.title}`,
       `   ${f.count}x in ${f.runs.length} run(s): ${runs}`,
@@ -303,11 +259,9 @@ export function collect(inputs) {
     if (!st) return skipped.push(`${p} (missing)`);
     if (st.isDirectory()) {
       for (const name of readdirSync(p).sort())
-        if (!["node_modules", ".git", ".godot"].includes(name))
-          walk(path.join(p, name));
+        if (!["node_modules", ".git", ".godot"].includes(name)) walk(path.join(p, name));
     } else if (LOG_FILE.test(path.basename(p)) || inputs.includes(p)) {
-      if (st.size > MAX_BYTES)
-        skipped.push(`${p} (over ${MAX_BYTES / 1024 / 1024} MB)`);
+      if (st.size > MAX_BYTES) skipped.push(`${p} (over ${MAX_BYTES / 1024 / 1024} MB)`);
       else files.push(p);
     }
   };
@@ -329,8 +283,7 @@ export function parseArgs(argv) {
     else if (arg.startsWith("--fail-on=")) args.failOn = arg.slice(10);
     else if (arg.startsWith("--wave=")) args.wave = Number(arg.slice(7));
     else if (arg.startsWith("--commit=")) args.commit = arg.slice(9);
-    else if (arg.startsWith("--ignore="))
-      args.ignore.push(new RegExp(arg.slice(9)));
+    else if (arg.startsWith("--ignore=")) args.ignore.push(new RegExp(arg.slice(9)));
     else if (arg.startsWith("--")) throw new Error(`unknown option ${arg}`);
     else args.inputs.push(arg);
   }
@@ -353,8 +306,7 @@ export function main(argv, log = console.log) {
   }
   const { files, skipped } = collect(args.inputs);
   const base =
-    args.inputs.length === 1 &&
-    statSync(args.inputs[0], { throwIfNoEntry: false })?.isDirectory()
+    args.inputs.length === 1 && statSync(args.inputs[0], { throwIfNoEntry: false })?.isDirectory()
       ? args.inputs[0]
       : process.cwd();
   const logs = [];
@@ -401,16 +353,11 @@ export function main(argv, log = console.log) {
   if (!logs.length) return 2;
   if (
     args.failOn &&
-    findings.some(
-      (f) => SEVERITIES.indexOf(f.severity) <= SEVERITIES.indexOf(args.failOn),
-    )
+    findings.some((f) => SEVERITIES.indexOf(f.severity) <= SEVERITIES.indexOf(args.failOn))
   )
     return 1;
   return 0;
 }
 
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
   process.exitCode = main(process.argv.slice(2));

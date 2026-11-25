@@ -43,16 +43,14 @@ import math
 import pathlib
 
 PARK = pathlib.Path(__file__).resolve().parent.parent / "src/world/park/park_sinkhole.json"
-SAMPLE = 0.81  # of the half width: 10.5 m on a 26 m wash, inside the carve band (8.9 to 13 m)
-FAN = (0.72, 0.90)  # the channel crossing's two rings per wall
-# site: (rope ids, rings per wall, floor speed)
+SAMPLE = 0.81
+FAN = (0.72, 0.90)
 ROPES = {
     "lava_channel_14": ("tube_rope", FAN, 24.0),
     "main_tube_lower_4": ("main_tube_lower_rope", (SAMPLE,), 26.0),
     "east_haulage_4": ("east_haulage_rope", (SAMPLE,), 18.0),
     "west_breakthrough_6": ("west_breakthrough_rope", (SAMPLE,), 24.0),
 }
-# recipe by (element, landform, short) for the wash rows; short is under 40.5 m (the seat fit's 0.75 of 54 m)
 WASH = {
     ("tunnel", "lava_tube", False): ("lava_wash", "bank", "ancient"),
     ("tunnel", "lava_tube", True): ("lava_wash_short", "bank", "ancient"),
@@ -66,28 +64,19 @@ SLABS = {
     "great_room_floor": "great_room_deck", "haulage_rails": "haulage_bed",
 }
 SCATTER = ["cinder_cone", "machine_vault"]
-# row id: (recipe, fit) for the rows a kit piece already dresses
 KIT = {"trench_granaries": ("cliff_dwelling_row", "tile")}
-# row id: (society, fragment); the text is the stage page's (design-v3/park/stages/4-park_sinkhole.md section 11)
 FRAGMENTS = {
     "main_tube_upper_1": ("ancient", "ancient_polish_band"),
     "cannon_tube_2": ("ancient", "ancient_vent_mouths"),
     "main_tube_lower_1": ("mining", "mining_wall_rule"),
     "main_tube_lower_4": ("mining", "mining_rope_rings"),
 }
-# home id: counter text, now naming the Dig floor rule: a ball carving a wall is off the floor and out of reach
 COUNTERS = {
     "cinder_burrowers": "Carve the channel wall: a ball on the wall band is off the floor and the burrow can't reach it (floor_rule.gd), and the rope fan's rings hang on the band; or slam the marker, and the codex burrow_lane pays for the side roll.",
     "drift_drill_crews": "Ride the drift wall: the rig's ring bores the floor and a carving ball is off it (floor_rule.gd); the wall ropes carry you past, the timber sets every 6 m are claw and harpoon anchors, or smash the rig mid-bore.",
 }
-# The cinder floor ("Wall pays", card 2026-10-17 23:08Z, default while it waits): one contraption whose strips cover the
-# flat middle 40% of every lava tube floor (the lava channel keeps its speed: the run's opening blazing tier needs it); drag is the share of planar speed a rolling ball loses per
-# second (contraptions.gd _on_cinder). The drifts (the drill crews' floor) and the flooded gallery keep theirs.
 CINDER_DRAG = 0.08
 CINDER_RECIPES = ("lava_wash", "lava_wash_short")
-# The glazed walls: the polish band on every tube wall, from 0.62 to 0.98 of the half width (the carve band starts near
-# 0.68), pushes a carving ball GLAZE_PUSH m/s/s along its travel up to GLAZE_CAP m/s (contraptions.gd _on_glaze). Measured
-# with #61's grip: push 4 won four pilots of six, push 7 with Tally's line on its other wall won all six.
 GLAZE_PUSH = 7.0
 GLAZE_CAP = 36.0
 GLAZE_RECIPES = ("lava_wash", "lava_wash_short", "gallery_wash", "drift_wash")
@@ -110,7 +99,6 @@ def glaze_row(park_rows):
     return {"id": "tube_glaze", "kind": "glaze", "site": "lava_channel_1", "recipe": "", "strips": strips, "push": GLAZE_PUSH, "cap": GLAZE_CAP}
 
 
-# vent id: (on the wall, charge s)
 VENTS = {
     "main_tube_upper_vent": (True, 2.0),
     "skylight_chain_vent": (True, 3.0),
@@ -146,7 +134,6 @@ def side_axis(row):
 def rope_rows(site, old, row):
     prefix, rings, floor = ROPES[site]
     fan = [c for c in old if c["id"].startswith(prefix + "_")]
-    # the fan runs across the tube; its two middle ropes ride the floor
     mid = sorted(fan, key=lambda c: c["id"])[1:3]
     def centre(key):
         return [sum(c[key][k] for c in mid) / len(mid) for k in range(3)]
@@ -176,7 +163,6 @@ def vent_row(c, row):
     c["charge"] = charge
     if not wall:
         return c
-    # onto the wall on the target's side of the tube
     ax, az = row["at"]
     sx, sz = side_axis(row)
     yaw = math.radians(row["yaw_deg"])
@@ -214,7 +200,6 @@ def dress(row):
 
 
 def tag(row):
-    # the lava channel's walls carry the rope fan, so its skill is the carve too (its piece is the ride pieces thread's)
     carved = row["recipe"] in ("lava_wash", "lava_wash_short", "gallery_wash") and row["verb"] in ("roll", "swing")
     if carved or (row["element"] == "half_pipe" and row["id"].startswith("lava_channel_") and row["verb"] == "pump"):
         row = dict(row)
@@ -262,7 +247,6 @@ def main():
             new.append(vent_row(c, rows[c["site"]]))
             continue
         new.append(c)
-    # the park rows, line by line: dress, then tag
     head_rows = lines.index(' "park_rows": [')
     k = head_rows + 1
     while lines[k].startswith("  {"):

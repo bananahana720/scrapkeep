@@ -74,8 +74,7 @@ export class OrchardScene {
       antialias: true,
       powerPreference: "high-performance",
     });
-    this.low =
-      new URLSearchParams(location.search).has("low") || innerWidth < 760;
+    this.low = new URLSearchParams(location.search).has("low") || innerWidth < 760;
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.low ? 1 : 1.6));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -159,16 +158,9 @@ export class OrchardScene {
     for (let i = 0; i < positions.count; i++) {
       const x = positions.getX(i),
         z = positions.getZ(i);
-      positions.setY(
-        i,
-        groundHeight(x, z) - 0.07 + (Math.abs(x) > 19 ? random() * 0.14 : 0),
-      );
+      positions.setY(i, groundHeight(x, z) - 0.07 + (Math.abs(x) > 19 ? random() * 0.14 : 0));
       const inPath = Math.abs(x) < 18.9;
-      const c = inPath
-        ? Math.abs(x) < 7
-          ? palette.path
-          : palette.soil
-        : palette.sage;
+      const c = inPath ? (Math.abs(x) < 7 ? palette.path : palette.soil) : palette.sage;
       a.setHex(c).multiplyScalar(0.96 + random() * 0.08);
       colors.push(a.r, a.g, a.b);
     }
@@ -201,8 +193,7 @@ export class OrchardScene {
         for (const dz of [-1.9, 1.9])
           for (const dx of [-1.3, 1.3])
             box(deco, wood, side * 22 + dx, y + 0.3, z + dz, 0.15, 0.6, 0.15);
-        for (let i = 0; i < 4; i++)
-          box(deco, wood, side * 22, y + 0.86, z - 1.5 + i, 3, 0.35, 0.7);
+        for (let i = 0; i < 4; i++) box(deco, wood, side * 22, y + 0.86, z - 1.5 + i, 3, 0.35, 0.7);
       }
       for (let z = -18; z < 24; z += 14) {
         const x = side * 18.7,
@@ -310,10 +301,7 @@ export class OrchardScene {
     const group = new THREE.Group();
     group.position.set(x, y, z);
     group.rotation.y = rotation;
-    const board = new THREE.Mesh(
-      new THREE.BoxGeometry(5, 0.75, 0.14),
-      material(palette.cream),
-    );
+    const board = new THREE.Mesh(new THREE.BoxGeometry(5, 0.75, 0.14), material(palette.cream));
     board.position.y = 2;
     group.add(board);
     const front = new THREE.Mesh(
@@ -322,8 +310,7 @@ export class OrchardScene {
     );
     front.position.set(0, 2, 0.08);
     group.add(front);
-    for (const xx of [-1.8, 1.8])
-      box(group, material(0x776449), xx, 1, 0, 0.1, 2, 0.1);
+    for (const xx of [-1.8, 1.8]) box(group, material(0x776449), xx, 1, 0, 0.1, 2, 0.1);
     this.scene.add(group);
   }
   makeTracks() {
@@ -346,12 +333,7 @@ export class OrchardScene {
         points.push(new THREE.Vector3(x, groundHeight(x, z) + 0.018, z));
       }
       const curve = new THREE.CatmullRomCurve3(points);
-      this.scene.add(
-        new THREE.Mesh(
-          new THREE.TubeGeometry(curve, 80, 0.038, 3, false),
-          mats,
-        ),
-      );
+      this.scene.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 80, 0.038, 3, false), mats));
     }
   }
   resize() {
@@ -361,18 +343,12 @@ export class OrchardScene {
   }
   setView({ aiming, sensitivity, impactShake } = {}) {
     if (aiming !== undefined) this.view.aiming = !!aiming;
-    if (Number.isFinite(sensitivity))
-      this.view.sensitivity = clamp(sensitivity, 0.2, 3);
-    if (Number.isFinite(impactShake))
-      this.view.impactShake = clamp(impactShake, 0, 1);
+    if (Number.isFinite(sensitivity)) this.view.sensitivity = clamp(sensitivity, 0.2, 3);
+    if (Number.isFinite(impactShake)) this.view.impactShake = clamp(impactShake, 0, 1);
   }
   orbit(dx, dy) {
     this.yaw += dx * 0.003 * this.view.sensitivity;
-    this.pitch = clamp(
-      this.pitch + dy * 0.002 * this.view.sensitivity,
-      -1.22,
-      1.22,
-    );
+    this.pitch = clamp(this.pitch + dy * 0.002 * this.view.sensitivity, -1.22, 1.22);
     if (this.lastPlayer) this.frameCamera(this.lastPlayer, 0);
   }
   resetCamera() {
@@ -405,8 +381,7 @@ export class OrchardScene {
       this.cameraReady = true;
     }
     this.follow.lerp(focus, 1 - Math.exp(-dt * 22));
-    this.focusBlend +=
-      ((this.view.aiming ? 1 : 0) - this.focusBlend) * (1 - Math.exp(-dt * 12));
+    this.focusBlend += ((this.view.aiming ? 1 : 0) - this.focusBlend) * (1 - Math.exp(-dt * 12));
     const distance = (6.4 + p.radius * 1.2 - this.focusBlend * 2.4) * this.zoom;
     const pivot = this.follow.clone().addScaledVector(right, 1.05);
     const desired = pivot.clone().addScaledVector(direction, -distance);
@@ -415,18 +390,14 @@ export class OrchardScene {
     this.raycaster.far = delta.length();
     const hit = this.raycaster.intersectObjects(this.blockers, false)[0];
     if (hit)
-      desired
-        .copy(this.follow)
-        .addScaledVector(delta.normalize(), Math.max(1, hit.distance - 0.5));
+      desired.copy(this.follow).addScaledVector(delta.normalize(), Math.max(1, hit.distance - 0.5));
     desired.y = Math.max(desired.y, groundHeight(desired.x, desired.z) + 0.65);
     this.camera.position.copy(desired);
     this.target.copy(pivot).addScaledVector(direction, 30);
     if (this.shake > 0 && this.view.impactShake > 0) {
       const shake = this.shake * this.view.impactShake;
-      this.camera.position.x +=
-        Math.sin(performance.now() * 0.079) * shake * 0.045;
-      this.camera.position.y +=
-        Math.cos(performance.now() * 0.06) * shake * 0.03;
+      this.camera.position.x += Math.sin(performance.now() * 0.079) * shake * 0.045;
+      this.camera.position.y += Math.cos(performance.now() * 0.06) * shake * 0.03;
     }
     this.shake = Math.max(0, this.shake - dt * 5);
     this.camera.fov = 65 - this.focusBlend * 12;
@@ -441,10 +412,7 @@ export class OrchardScene {
       x: (this.tmp.x * 0.5 + 0.5) * innerWidth,
       y: (-0.5 * this.tmp.y + 0.5) * innerHeight,
       visible:
-        this.tmp.z < 1 &&
-        this.tmp.z > -1 &&
-        Math.abs(this.tmp.x) <= 1 &&
-        Math.abs(this.tmp.y) <= 1,
+        this.tmp.z < 1 && this.tmp.z > -1 && Math.abs(this.tmp.x) <= 1 && Math.abs(this.tmp.y) <= 1,
       behind: this.tmp.z > 1,
     };
   }
@@ -460,9 +428,7 @@ export class OrchardScene {
       const model = this.enemies.get(e.id);
       updateEnemy(model, e, game.time);
     }
-    const ids = new Set(
-      game.enemies.filter((e) => e.state !== "dead").map((e) => e.id),
-    );
+    const ids = new Set(game.enemies.filter((e) => e.state !== "dead").map((e) => e.id));
     for (const [id, m] of this.enemies)
       if (!ids.has(id)) {
         this.poolEnemy(m);
@@ -485,16 +451,12 @@ export class OrchardScene {
       const m = this.pickups.get(p.id);
       m.position.set(
         p.x,
-        (p.y ?? groundHeight(p.x, p.z)) +
-          0.35 +
-          Math.sin(game.time * 2 + p.x) * 0.12,
+        (p.y ?? groundHeight(p.x, p.z)) + 0.35 + Math.sin(game.time * 2 + p.x) * 0.12,
         p.z,
       );
       m.rotation.y = game.time * 0.7 + p.x;
     }
-    const pids = new Set(
-      game.pickups.filter((p) => !p.collected).map((p) => p.id),
-    );
+    const pids = new Set(game.pickups.filter((p) => !p.collected).map((p) => p.id));
     for (const [id, m] of this.pickups)
       if (!pids.has(id)) {
         this.poolPickup(m);
@@ -508,10 +470,7 @@ export class OrchardScene {
       if (this.companion.userData.shears) {
         const s = this.companion.userData.shears;
         if (Array.isArray(s))
-          s.forEach(
-            (g, i) =>
-              (g.rotation.y = (i ? 1 : -1) * (0.18 + (buddy.flash || 0) * 0.5)),
-          );
+          s.forEach((g, i) => (g.rotation.y = (i ? 1 : -1) * (0.18 + (buddy.flash || 0) * 0.5)));
       }
     }
     this.updateConductors(game.conductors || []);
@@ -527,10 +486,7 @@ export class OrchardScene {
       0.6,
       0x74ffe3,
     );
-    this.updateAttackVisual(
-      this.preview,
-      game.mode === "playing" ? game.targeting : null,
-    );
+    this.updateAttackVisual(this.preview, game.mode === "playing" ? game.targeting : null);
     this.updateHazards(game.hazards || []);
     this.updateEffects(dt);
     this.frameCamera(game.player, dt);
@@ -567,9 +523,7 @@ export class OrchardScene {
     const ringGeometry = new THREE.BufferGeometry();
     ringGeometry.setAttribute(
       "position",
-      new THREE.BufferAttribute(new Float32Array(64 * 6 * 3), 3).setUsage(
-        THREE.DynamicDrawUsage,
-      ),
+      new THREE.BufferAttribute(new Float32Array(64 * 6 * 3), 3).setUsage(THREE.DynamicDrawUsage),
     );
     const ring = new THREE.Mesh(ringGeometry, mat);
     ring.material.side = THREE.DoubleSide;
@@ -624,8 +578,7 @@ export class OrchardScene {
     record.group.visible = !!attack;
     if (!attack) return;
     record.mat.color.setHex(
-      color ??
-        (attack.valid ? (attack.blocked ? 0xffc471 : 0xb9ffff) : 0xff705b),
+      color ?? (attack.valid ? (attack.blocked ? 0xffc471 : 0xb9ffff) : 0xff705b),
     );
     record.mat.opacity = opacity;
     record.backingMaterial.opacity = Math.min(1, opacity + 0.15);
@@ -638,15 +591,8 @@ export class OrchardScene {
       const { from, to } = segment;
       const delta = this.tmp.set(to.x - from.x, to.y - from.y, to.z - from.z);
       const length = delta.length();
-      mesh.position.set(
-        (from.x + to.x) / 2,
-        (from.y + to.y) / 2,
-        (from.z + to.z) / 2,
-      );
-      mesh.quaternion.setFromUnitVectors(
-        UP,
-        delta.multiplyScalar(1 / Math.max(length, 1e-8)),
-      );
+      mesh.position.set((from.x + to.x) / 2, (from.y + to.y) / 2, (from.z + to.z) / 2);
+      mesh.quaternion.setFromUnitVectors(UP, delta.multiplyScalar(1 / Math.max(length, 1e-8)));
       mesh.scale.set(0.025, length, 0.025);
       record.halos[i].position.copy(mesh.position);
       record.halos[i].quaternion.copy(mesh.quaternion);
@@ -655,11 +601,7 @@ export class OrchardScene {
     const point = attack.point;
     record.marker.visible = !!point;
     if (point)
-      record.marker.position.set(
-        point.x,
-        point.y + (attack.kind === "bolt" ? 0 : 0.1),
-        point.z,
-      );
+      record.marker.position.set(point.x, point.y + (attack.kind === "bolt" ? 0 : 0.1), point.z);
     record.ring.visible = !!point && attack.radius > 0;
     record.ringBacking.visible = record.ring.visible;
     if (record.ring.visible) {
@@ -703,8 +645,7 @@ export class OrchardScene {
       for (let cap = 0; cap < 2; cap++) {
         const point = cap ? to : from;
         for (let step = 0; step <= 20; step++) {
-          const a =
-            angle + (cap ? -Math.PI / 2 : Math.PI / 2) + (step * Math.PI) / 20;
+          const a = angle + (cap ? -Math.PI / 2 : Math.PI / 2) + (step * Math.PI) / 20;
           perimeter.push({
             x: point.x + Math.cos(a) * radius,
             z: point.z + Math.sin(a) * radius,
@@ -761,12 +702,7 @@ export class OrchardScene {
         ])
           outline.setXYZ(at++, point.x, y, point.z);
       }
-      for (const mesh of [
-        visual.body,
-        visual.footprint,
-        visual.footprintBacking,
-        visual.outline,
-      ]) {
+      for (const mesh of [visual.body, visual.footprint, visual.footprintBacking, visual.outline]) {
         mesh.geometry.attributes.position.needsUpdate = true;
         mesh.geometry.computeBoundingSphere();
       }
@@ -792,9 +728,7 @@ export class OrchardScene {
       }
       const model = this.conductors.get(c.id);
       model.position.set(c.x, c.y, c.z);
-      model.userData.electrode.scale.setScalar(
-        0.22 * (1 + Math.max(0, c.flash || 0) * 0.7),
-      );
+      model.userData.electrode.scale.setScalar(0.22 * (1 + Math.max(0, c.flash || 0) * 0.7));
     }
   }
   makeHazard(h) {
@@ -846,11 +780,7 @@ export class OrchardScene {
           }
         }
       }
-      geo.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(vertices, 3),
-      );
-      // A single depth-writing pass keeps the sampled capsules from darkening each other.
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
       fill.depthWrite = true;
       fill.depthFunc = THREE.LessDepth;
       group.add(new THREE.Mesh(geo, fill));
@@ -868,12 +798,8 @@ export class OrchardScene {
       const contour = h.telegraph.map((p) => new THREE.Vector2(p.x, p.z));
       const triangles = THREE.ShapeUtils.triangulateShape(contour, []).flat(),
         vertices = [];
-      for (const p of h.telegraph)
-        vertices.push(p.x, groundHeight(p.x, p.z) + 0.045, p.z);
-      geo.setAttribute(
-        "position",
-        new THREE.Float32BufferAttribute(vertices, 3),
-      );
+      for (const p of h.telegraph) vertices.push(p.x, groundHeight(p.x, p.z) + 0.045, p.z);
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(vertices, 3));
       geo.setIndex(triangles);
       geo.computeVertexNormals();
       group.add(new THREE.Mesh(geo, fill));
@@ -881,12 +807,7 @@ export class OrchardScene {
         (p) => new THREE.Vector3(p.x, groundHeight(p.x, p.z) + 0.06, p.z),
       );
       points.push(points[0].clone());
-      group.add(
-        new THREE.Line(
-          new THREE.BufferGeometry().setFromPoints(points),
-          outline,
-        ),
-      );
+      group.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points), outline));
     }
     const pieces = [];
     for (let i = 0; i < 6; i++) {
@@ -920,9 +841,7 @@ export class OrchardScene {
     const heightGeometry = new THREE.BufferGeometry();
     heightGeometry.setAttribute(
       "position",
-      new THREE.BufferAttribute(new Float32Array(6 * 6 * 3), 3).setUsage(
-        THREE.DynamicDrawUsage,
-      ),
+      new THREE.BufferAttribute(new Float32Array(6 * 6 * 3), 3).setUsage(THREE.DynamicDrawUsage),
     );
     const heightMaterial = new THREE.LineBasicMaterial({
       color: 0xff447c,
@@ -947,16 +866,14 @@ export class OrchardScene {
       record.fill.opacity = active ? 0.1 : 0.2 + h.phase * 0.12;
       record.outline.opacity = active ? 0.65 : 0.95;
       record.height.visible =
-        h.jumpable === false &&
-        Number.isFinite(h.yMin) &&
-        Number.isFinite(h.yMax);
+        h.jumpable === false && Number.isFinite(h.yMin) && Number.isFinite(h.yMax);
       if (record.height.visible) {
         const positions = record.height.geometry.attributes.position;
         let index = 0;
-        for (const segment of (h.segments?.length
-          ? h.segments
-          : h.previewSegments || []
-        ).slice(0, 6)) {
+        for (const segment of (h.segments?.length ? h.segments : h.previewSegments || []).slice(
+          0,
+          6,
+        )) {
           for (const [x, y, z] of [
             [segment.x1, h.yMin, segment.z1],
             [segment.x1, h.yMax, segment.z1],
@@ -1029,10 +946,8 @@ export class OrchardScene {
             ? 0x74ffe3
             : 0xc8ffff;
       this.updateAttackVisual(visual, e.attack, 1, color);
-      for (const piece of visual.pieces)
-        piece.scale.x = piece.scale.z = e.echo ? 0.035 : 0.055;
-      for (const halo of visual.halos)
-        halo.scale.x = halo.scale.z = e.echo ? 0.06 : 0.085;
+      for (const piece of visual.pieces) piece.scale.x = piece.scale.z = e.echo ? 0.035 : 0.055;
+      for (const halo of visual.halos) halo.scale.x = halo.scale.z = e.echo ? 0.06 : 0.085;
       this.effects.push({
         visual,
         life: e.attack.kind === "strike" ? 0.4 : 0.18,
@@ -1040,16 +955,7 @@ export class OrchardScene {
       });
     }
     if (
-      [
-        "hit",
-        "hurt",
-        "ram",
-        "collect",
-        "companion",
-        "land",
-        "bounce",
-        "spawn",
-      ].includes(e.type)
+      ["hit", "hurt", "ram", "collect", "companion", "land", "bounce", "spawn"].includes(e.type)
     ) {
       const color =
         e.type === "collect"
@@ -1060,11 +966,7 @@ export class OrchardScene {
               ? 0xaaffff
               : 0xffd87e;
       for (let i = 0; i < (e.type === "collect" ? 9 : 14); i++)
-        if (
-          this.particles.length < 220 &&
-          Number.isFinite(e.x) &&
-          Number.isFinite(e.z)
-        )
+        if (this.particles.length < 220 && Number.isFinite(e.x) && Number.isFinite(e.z))
           this.particles.push({
             x: e.x,
             y: e.y ?? 1,
@@ -1112,8 +1014,7 @@ export class OrchardScene {
     });
     this.particleMesh.count = this.particles.length;
     this.particleMesh.instanceMatrix.needsUpdate = true;
-    if (this.particleMesh.instanceColor)
-      this.particleMesh.instanceColor.needsUpdate = true;
+    if (this.particleMesh.instanceColor) this.particleMesh.instanceColor.needsUpdate = true;
   }
   clear() {
     for (const m of this.pickups.values()) this.poolPickup(m);

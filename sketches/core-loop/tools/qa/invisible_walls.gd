@@ -1,29 +1,6 @@
 extends SceneTree
 
-# Invisible-wall sweep: finds where the ball's colliders and what the player sees disagree, headless,
-# no render. It boots a park stage like the game does (table "park"), or the Brindle arena (--arena,
-# stage 2 finished into the Slag Bowl), then copies every visible mesh into a second physics space
-# (trimesh per mesh, every MultiMesh instance) and probes both spaces:
-#   wall    horizontal rays at ball-centre height (ground + RADIUS) from a grid of points the ball fits
-#           on, DIRS directions each; a hit on a ball-blocking collider (layer 1) with no visible
-#           surface within TOL of the hit point is an invisible wall sample.
-#   floor   downward rays from above the map; a ball collider hit more than TOL above the first
-#           visible surface under it is an invisible floor or step.
-#   Ground tiles (Stage<N>/Ground/Tiles, our trimesh collider) are drawn by Terrain3D, not a mesh: their hits
-#           are checked against Terrain3D's own drawn height there instead (terrain_wall, terrain_floor).
-# Per-shape surface coverage of placed colliders is tools/qa/collision_sweep.gd's job; run both.
-#   reach   a flood fill over the grid from the ball's start (sphere sweeps between neighbours, a
-#           climb cap), walkable-looking cells it never reaches, as a hint, not a gate.
-# Samples are grouped per collider shape (node path), so one row names one thing to fix.
-#
 # It needs a real renderer (xvfb-run, opengl3): under --headless the dummy RenderingServer keeps no MultiMesh
-# instance transforms, so every instance would read as the identity and the visual copy would be wrong.
-#
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --resolution 640x360 --script res://tools/qa/invisible_walls.gd -- \
-#     --map=park_flume|--arena --out=<file.json> [--seed=1] [--step=4] [--range=24] [--md=<file.md>]
-#
-# Writes the JSON report (rows sorted by samples) and, with --md, a markdown table.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -35,7 +12,6 @@ const DIRS := 16
 const TOL := 0.6
 const CLIMB := 2.5
 const SKY := 400.0
-# Ruling (a), #241 6327976830: a ball may stop at most 1.0 m short of the drawn surface (anchor_fit.py LIMIT_M).
 const AIR_LIMIT := 1.0
 const AIR_CAP := 8.0
 
@@ -159,7 +135,6 @@ func _run() -> void:
 	await _physics(2)
 	var colliders := _census()
 	if half == 0.0:
-		# A park samples its whole play rect.
 		var pr: Array = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/%s.json" % map_id))["play_rect"]
 		rect = Rect2(pr[0], pr[1], pr[2], pr[3])
 		centre = rect.get_center()
@@ -195,7 +170,6 @@ func _tile(hit: Dictionary) -> bool:
 	return obj is Node and (obj as Node).get_parent() != null and String((obj as Node).get_parent().name) == "Tiles"
 
 
-# Terrain3D's drawn height at a point, NAN where it draws nothing (a hole, no region, no node).
 func _drawn_height(p: Vector3) -> float:
 	if drawn == null:
 		return NAN
@@ -222,7 +196,6 @@ func _walk(n: Node, out: Array) -> void:
 		_walk(c, out)
 
 
-# Every enabled shape on a non-Area body the ball collides with (layer 1), with its world AABB.
 func _census() -> Array:
 	var nodes := []
 	_walk(root, nodes)
@@ -271,7 +244,6 @@ func _trimesh(mesh: Mesh) -> Shape3D:
 	return shape_cache[key]
 
 
-# One static body per drawn node (Jolt caps a run at 10240 bodies, so MultiMesh instances are sub-shapes, not bodies).
 func _add_visual(shape: Shape3D, xfs: Array) -> void:
 	if shape == null or xfs.is_empty():
 		return
@@ -284,7 +256,6 @@ func _add_visual(shape: Shape3D, xfs: Array) -> void:
 		vis_bodies.append(b)
 
 
-# Everything drawn: mesh instances and every MultiMesh instance, as trimeshes in their own space.
 func _build_visual_space() -> void:
 	vis_space = PhysicsServer3D.space_create()
 	PhysicsServer3D.space_set_active(vis_space, true)
@@ -352,7 +323,6 @@ func _path_of(hit: Dictionary) -> String:
 	return "<rid %s>" % str(hit.get("rid"))
 
 
-# air: metres of empty view past the collider along the probe (AIR_CAP when nothing is drawn that far), -1 unmeasured.
 func _note(kind: String, hit: Dictionary, p: Vector3, air := -1.0) -> void:
 	var path := _path_of(hit)
 	var key := kind + "|" + path
@@ -367,7 +337,6 @@ func _note(kind: String, hit: Dictionary, p: Vector3, air := -1.0) -> void:
 		r["points"].append([snappedf(p.x, 0.1), snappedf(p.y, 0.1), snappedf(p.z, 0.1)])
 
 
-# Grid cells where the ball fits resting on the collision ground.
 func _grid(centre: Vector2, half: float) -> Dictionary:
 	var cells := {}
 	var n := int(ceil(half / step))
@@ -445,8 +414,6 @@ func _floors(centre: Vector2, half: float) -> void:
 			_note("floor", hit, p)
 
 
-# Rolling reachability: neighbour cells joined when a ball-sized sweep between them is clear and the
-# climb is under CLIMB. Launchers, grapple and boosts reach more; this only names candidates.
 func _reach(cells: Dictionary, start: Vector3) -> Dictionary:
 	if cells.is_empty():
 		return {"cells": 0, "reached": 0, "islands": []}
@@ -484,7 +451,6 @@ func _reach(cells: Dictionary, start: Vector3) -> Dictionary:
 				continue
 			seen[m] = true
 			queue.append(m)
-	# Unreached cells that sit on visible ground, grouped into 8-connected islands.
 	var left := {}
 	for k in cells:
 		if not seen.has(k):

@@ -22,15 +22,14 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from arrival_sfx import metal_hit, place  # noqa: E402
-from jolt_layer_sfx import SR, bandpass_noise, buzz, env, sweep, t_of, write  # noqa: E402
+from arrival_sfx import metal_hit, place
+from jolt_layer_sfx import SR, bandpass_noise, buzz, env, sweep, t_of, write
 
 G1, G2, D3, G3, B3, D4, G4, G5 = 49.0, 98.0, 146.83, 196.0, 246.94, 293.66, 392.0, 783.99
 rng = np.random.default_rng(72)
 
 
 def claw(pitch):
-    # One brake claw biting the deck: a short metal clunk with a thud under it.
     t = t_of(0.35)
     hit = metal_hit(0.35, [(pitch, 1.0, 0.09), (pitch * 2.02, 0.5, 0.06), (pitch * 3.1, 0.25, 0.04)], 1.0)
     thud = np.sin(2 * np.pi * G1 * 2 * t) * np.exp(-t / 0.05)
@@ -43,7 +42,6 @@ def ballast_brace_tell():
     hiss = bandpass_noise(n, 1500, 7000) * np.linspace(0.05, 0.6, n) ** 1.6
     hum = buzz(sweep(G2, D3, 1.1, 1.8), 6) * np.linspace(0.05, 0.4, n) ** 1.4
     out = hiss * 0.5 + hum
-    # The claws drop in G, D, G, B across the brace, closer together toward the slam.
     for at, pitch, gain in ((0.10, G3, 0.7), (0.42, D3, 0.8), (0.66, G3, 0.9), (0.84, B3, 1.0)):
         out += place(n, at, claw(pitch)) * gain
     return out * (1 + 0.15 * np.sin(2 * np.pi * 11 * t))
@@ -63,7 +61,6 @@ def gap_net_charge_tell():
     n = round(1.0 * SR)
     t = t_of(1.0)
     whine = buzz(sweep(G3, G5, 1.0, 2.2), 4) * np.linspace(0.05, 0.6, n) ** 1.5
-    # The charge ticks faster as it fills: crackle bursts gated by a rising pulse rate.
     rate = 8 + 30 * t
     gate = (np.sin(np.cumsum(2 * np.pi * rate / SR)) > 0.7).astype(float)
     crackle = bandpass_noise(n, 3000, 12000) * gate * np.linspace(0.1, 0.7, n)
@@ -90,8 +87,6 @@ def ring_out_fall():
     n = int(1.6 * SR)
     t = t_of(1.6)
     fall = 1.05
-    # The whistle: G6 down two octaves, the fall speeding up like a drop, a wobble on it, quieter
-    # and duller as it goes (a lowpass by mixing in less of the bright partial).
     ft = t_of(fall)
     curve = (ft / fall) ** 1.6
     pitch = 1567.98 * 2 ** (-2 * curve) * (1 + 0.012 * np.sin(2 * np.pi * 6.5 * ft))
@@ -100,11 +95,9 @@ def ring_out_fall():
     whistle = (np.sin(phase) + 0.25 * (1 - ft / fall) * np.sin(2 * phase)) * recede
     breath = bandpass_noise(len(ft), 1500, 5000) * recede * 0.06
     out = place(n, 0.0, whistle * 0.8 + breath)
-    # The far-off poof: a soft low thump and a puff, small because it is far below.
     pt = t_of(0.35)
     poof = np.sin(2 * np.pi * G2 * pt) * np.exp(-pt / 0.06) * 0.35 + bandpass_noise(len(pt), 300, 2500) * np.exp(-pt / 0.08) * 0.2
     out += place(n, fall, poof)
-    # The twinkle: two bell pings on G6 and D7, the "gone" wink.
     for at, f, g in ((fall + 0.14, 1567.98, 0.45), (fall + 0.24, 2349.32, 0.32)):
         bt = t_of(0.45)
         ping = (np.sin(2 * np.pi * f * bt) + 0.3 * np.sin(2 * np.pi * f * 2.76 * bt) * np.exp(-bt / 0.05)) * np.exp(-bt / 0.18)

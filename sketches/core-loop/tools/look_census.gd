@@ -1,31 +1,10 @@
 extends RefCounted
 
-# The look census: every look a scan of the tree finds drawn, keyed the way a renderer keys the
-# pipelines it builds, so a look first drawn in play (a pipeline the 4080 builds on that frame, a
-# hitch) is named with its tick and owner. Headless, no GPU.
-#
-# A look is one surface of one visible GeometryInstance3D: the node's class, its mesh's vertex
-# format (or its kind, for a mesh made in code), skinned or not, whether it casts a shadow, whether
-# it fades through instance transparency, and its material's shader-relevant state (class, every
-# switch and mode, which texture slots are set; a ShaderMaterial is its shader). Colours and energies
-# are not part of a look: changing them builds nothing. A script that flips a switch in play
-# (emission_enabled on a hit flash) makes a new look.
-#
-# Forward+ (the PC) builds a surface's pipelines when the instance is registered, out of sight or
-# not, so a look counts from the scan it is in the tree visible, wherever it stands. Only the PC
-# confirms a pipeline; this names the candidates.
-#
-# Use: `var census := LookCensus.new()`, then `census.scan(root, tick)` as often as the moment
-# needs; it returns the new looks as rows {tick, path, owner, key} and keeps them in `rows`.
-# tools/look_census_run.gd runs it over a bot run; tests/look_after_warm_test.gd holds the warm to it.
 
-# Material properties that are state, not look: a texture's presence is a look, its pixels are not.
 const SKIP := {"resource_local_to_scene": true, "resource_name": true, "render_priority": true}
 
 var seen := {}
 var rows: Array[Dictionary] = []
-# A material's look by its instance, for one scan: a material shared by many surfaces is read once
-# a scan, and every scan reads it fresh (a dress or a flash flips switches in place).
 var _by_material := {}
 
 
@@ -46,7 +25,6 @@ func scan(root: Node, tick: int) -> Array[Dictionary]:
 	return found
 
 
-# Marks every look under `root` seen, without a row: what a moment drew before the census watched.
 func absorb(root: Node, tick: int = 0) -> void:
 	_by_material.clear()
 	for node in root.find_children("*", "GeometryInstance3D", true, false):
@@ -62,7 +40,6 @@ func keys_of(geo: GeometryInstance3D) -> Array[String]:
 		var mi := geo as MeshInstance3D
 		if mi.mesh == null:
 			return out
-		# Skinned when the mesh carries bones and its skeleton path finds a skeleton.
 		var skinned := int(mi.mesh is ArrayMesh and _has_bones(mi.mesh) and mi.get_node_or_null(mi.skeleton) is Skeleton3D)
 		for i in mi.mesh.get_surface_count():
 			out.append("%s|%s|skin=%d|%s" % [head, _format(mi.mesh, i), skinned, look(mi.get_active_material(i))])
@@ -83,7 +60,6 @@ func keys_of(geo: GeometryInstance3D) -> Array[String]:
 				var mat: Material = geo.material_override if geo.material_override != null else mesh.surface_get_material(i)
 				out.append("%s|%s|%s" % [head, _format(mesh, i), look(mat)])
 	elif geo is Label3D or geo is SpriteBase3D:
-		# These build their own material from their switches.
 		var parts := [head]
 		for prop in ["billboard", "shaded", "double_sided", "no_depth_test", "fixed_size", "alpha_cut", "texture_filter", "transparent"]:
 			if prop in geo:
@@ -137,7 +113,6 @@ static func _has_bones(mesh: ArrayMesh) -> bool:
 	return false
 
 
-# The nearest scripted node above `node`, by its script's file: who drew it.
 static func owner_of(node: Node) -> String:
 	var at := node
 	while at != null and at.get_script() == null:

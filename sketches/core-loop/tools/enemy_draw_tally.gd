@@ -1,12 +1,5 @@
 extends "res://tools/bot_run.gd"
 
-# Headless stand-in for the live roster's draw cost: tools/bot_run.gd (same flags) plus, every
-# SAMPLE_TICKS, the mesh surfaces of every live enemy, once for the colour pass and again for each
-# surface that casts a shadow. It ignores the frustum and the shadow split count, so it is an upper
-# bound to compare heads with, not a frame-time; the draws themselves come from the capture lane.
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/enemy_draw_tally.gd \
-#     -- --out=<dir> --policy=skipper --seeds=1,2,3,4 --table=park --stages=2 --gate=1
-# Prints one "enemy_draw_tally:" JSON line per stage: p50, p99 and max of colour + shadow surfaces.
 
 const SAMPLE_TICKS := 9
 
@@ -31,8 +24,6 @@ func _physics_process(delta: float) -> bool:
 	return out
 
 
-# --whole=1: every visible geometry surface in the tree, by the nearest scripted owner, and the
-# breakdown of the stage's worst sample.
 var _worst := {}
 
 

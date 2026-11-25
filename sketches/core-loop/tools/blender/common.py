@@ -1,15 +1,3 @@
-# Shared material slots, palette mirror and bmesh helpers for the core-loop hero assets
-# (VISUAL-LANGUAGE.md section 9). Provenance: authored procedurally in this repository
-# from Blender primitives and bmesh operators; no external meshes, textures or scans.
-#
-# Colours here only drive Blender previews and the vertex colours baked into `paint`,
-# `pilot` and `ancient_enamel`. At runtime src/presentation/hero_assets.gd maps every
-# slot name to a Palette role, so palette.gd stays the one source for slot colours.
-#
-# Run a recipe headless and memory-capped:
-#   systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
-#     blender -b --factory-startup -P <recipe>.py -- [--out file.glb] [--render dir]
-
 import array
 import contextlib
 import json
@@ -27,9 +15,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKETCH = os.path.normpath(os.path.join(HERE, "..", ".."))
 MODELS = os.path.join(SKETCH, "assets", "models")
 
-# Mirror of src/core/palette.gd under the kit's paint names (tools/palette_gd.py ALIASES), kept as a
-# literal because tools/asset-forge reads it with ast inside a sandbox that sees only this folder.
-# tools/palette_gd.py --check (scripts/palette-gd.test.mjs) fails when it drifts from palette.gd.
 HEX = {
     "bone": "d2c5a5",
     "sandstone": "c6a274",
@@ -45,7 +30,6 @@ HEX = {
     "ancient": "9dff3c",
 }
 
-# The section 9 slot names, exactly. `vc` slots take their colour from vertex colours.
 SLOTS = {
     "paint": {"vc": True, "rough": 0.8},
     "bare_metal": {"color": "bone", "lighten": 0.25, "metal": 0.6, "rough": 0.45},
@@ -64,8 +48,6 @@ SLOTS = {
 
 PAINT_SET = ("petrol", "oxide", "bone")
 
-# Set by polish.enable(): a segment multiplier for curved primitives and the polish options.
-# At 1 and None every recipe builds exactly as before.
 DETAIL = 1
 POLISH = None
 
@@ -168,7 +150,6 @@ class Part:
         self.bm = bmesh.new()
         self.col = self.bm.loops.layers.float_color.new("Color")
         self.slots = []
-        # Per-part bevel width and subdivision levels under polish; None takes the defaults.
         self.bevel = None
         self.subsurf = None
         self.regions = []
@@ -217,8 +198,6 @@ class Part:
                 loop[self.col] = c
         return faces
 
-    # BMesh elements hash by identity, so set order changes between runs; sorting by
-    # creation index keeps every recipe byte-for-byte deterministic.
     def _faces(self, verts):
         self.bm.faces.index_update()
         return sorted({f for v in verts for f in v.link_faces}, key=lambda f: f.index)
@@ -314,17 +293,12 @@ class Part:
             import polish
             self.bm = polish.finish(self.bm, POLISH, self.bevel, self.subsurf, self.regions)
             self.col = self.bm.loops.layers.float_color["Color"]
-        # Triangulation ties (the diagonal of a quad, the ear of a regular hexagon) break
-        # differently per run, so convex ngons fan from their first corner and quads
-        # split on a fixed diagonal; only concave outlines are left to ear clipping.
         self.bm.normal_update()
         for f in list(self.bm.faces):
             if len(f.verts) > 4 and _convex(f):
                 vs = [loop.vert for loop in f.loops]
                 color = tuple(f.loops[0][self.col])
                 if POLISH is not None:
-                    # Polish starts faces at their lowest corner, which can sit on a straight run
-                    # of corners and fan a zero-area triangle; start at the first corner that can't.
                     def flat(k):
                         w = vs[k:] + vs[:k]
                         return any((w[i].co - w[0].co).cross(w[i + 1].co - w[0].co).length < 1e-9
@@ -341,9 +315,6 @@ class Part:
         if POLISH is None:
             bmesh.ops.triangulate(self.bm, faces=self.bm.faces[:], quad_method="FIXED", ngon_method="EAR_CLIP")
         else:
-            # A face's first loop can differ between runs, and with it the fixed diagonal, which
-            # shifts smooth normals. Polished quads split on their shorter diagonal instead,
-            # ties going to the diagonal through the lowest corner.
             fixed, alternate = [], []
             for f in self.bm.faces:
                 if len(f.verts) != 4:
@@ -359,7 +330,6 @@ class Part:
             bmesh.ops.triangulate(self.bm, faces=fixed, quad_method="FIXED", ngon_method="EAR_CLIP")
             bmesh.ops.triangulate(self.bm, faces=alternate, quad_method="ALTERNATE", ngon_method="EAR_CLIP")
             # Bevel leaves faces in a run-dependent order and Blender sums vertex normals in
-            # face order, so lay the triangles out by vertex once more.
             self.bm = polish._canonical(self.bm)
         mesh = bpy.data.meshes.new(self.name)
         self.bm.to_mesh(mesh)
@@ -464,8 +434,6 @@ def canonical_indices(path, vertices=False):
     if vertices:
         data = _unshare_accessors(gltf, data, bin_start)
     def vertex_accessors(prim):
-        # Morph targets are per-vertex arrays too: they sort and match with the vertices.
-        # Unpolished exports keep their old layout byte for byte.
         ids = [a for _, a in sorted(prim["attributes"].items())]
         if not vertices:
             return ids
@@ -614,8 +582,6 @@ def default_out(name):
     return os.path.join(MODELS, name + ".glb")
 
 
-# --- preview renders ------------------------------------------------------------------
-
 def _look(cam, target):
     d = Vector(target) - cam.location
     cam.rotation_euler = d.to_track_quat("-Z", "Y").to_euler()
@@ -650,8 +616,6 @@ def render_turntable(root, name, outdir, views, ground_z=0.0, target=(0, 0, 0), 
     paths = []
     for label, dist, pitch, vfov, res, *crop in views:
         scene.render.resolution_x, scene.render.resolution_y = res
-        # A crop keeps the full frame's pixel density: 1080p cropped to its centre half
-        # shows the asset at the size a 1080p screen does.
         c = crop[0] if crop else 1.0
         scene.render.use_border = c < 1.0
         scene.render.use_crop_to_border = c < 1.0

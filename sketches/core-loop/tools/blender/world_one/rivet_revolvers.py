@@ -1,107 +1,55 @@
-# E1-09b (wave 46, ruling en): Rivet's twin side-sponson rotary rivet cannons, rivet_revolvers.glb.
-# Two mirrored cannons hung outboard at 3 and 9 o'clock on stout bolted clamp sponsons that wrap the
-# weapon ring band, bores parallel and forward, sized against the solid cutaway ball (ruling dm) so
-# both silhouette beside it from the 7.5 m chase camera. hero_assets.gd mounts the file at identity
-# under the shell's WeaponRing (its origin is the ball centre), so the cannons yaw to the aim and
-# bank with the ring. Concept: artifacts/local/w46-concept-art/heroic-cutaway/
-# 01-rivet-heroic-cutaway.png (bone clamp sponsons, a bone receiver with copper straps, a fat
-# six-barrel cluster behind a fluted six-chamber drum, heavy copper band collars, a copper motor cap).
-# E1-09's revolvers (ruling ek) sat at 34 degrees and 1.315 m and hid behind the cutaway ball.
-#
-#   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
-#     --python world_one/rivet_revolvers.py -- [--out <file.glb>]
-#
-# Node tree (Blender axes, +Y forward, +Z up; glTF and Godot +Y up, -Z forward):
-#   RivetRevolvers (empty) > RevolverRig (armature) > Revolvers (skinned mesh: paint, copper)
-#   bones  mount (the ball centre)
-#          tool.L > slide.L (the copper breech block on the receiver's back, recoils along the bore)
-#                 > crane.L (the yoke hinge, inboard and below the cluster, axis along the bore)
-#                   > drum.L (the rotary cluster: fluted drum, six barrels, collars, centre hub)
-#          and the same for R (x > 0). Bones point along the bore with no roll, so in a bone's own
-#          rest frame Y is the bore (Blender +Y), X is +X and Z is up: the cluster indexes and the
-#          yoke swings about its bone's Y, a cannon bucks about its bone's X, the breech recoils -Y.
-#          The bone names and hierarchy are E1-09's, so hero_assets.gd and the rivet.json rows
-#          (mecha_motion.gd) drive the cannons unchanged: a shot bucks the cannon, kicks the breech
-#          and indexes the cluster one barrel; a reload swings the cluster outboard and down on its
-#          yoke and spins it one turn.
-# Every vertex is weighted whole to one bone (PILOT-RIG.md): the clamp sponson, its jaws and bolts
-# to mount; the receiver, straps, side plate, motor cap and hinge lug to tool; the breech block and
-# its knob to slide; the yoke and hinge pin to crane; the drum, barrels, collars and hub to drum.
-# Paint faces carry vertex alpha 0, so an equipped paint never recolours the cannons (hero_assets.gd
-# PAINT_TAKE); copper is the one metal (SIGHT-PERSONA rule 5). Every piece is a closed island; the
-# build fails on an open, non-manifold or inside-out island, or a pose that reaches past REACH,
-# drops below FLOOR_Z or comes within CLEAR of the lattice, band or collar.
-# shell_rivet.py reads MUZZLES for its LaserMuzzle.L/R markers, so the flash sits on the hub crowns;
-# combat/bolts.gd RIVET_MUZZLE_SIDE_M and player_fx.gd SIDE_M carry SIDE_X.
-
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
-from mathutils import Matrix, Vector  # noqa: E402
+import bmesh
+import bpy
+from mathutils import Matrix, Vector
 
-import common  # noqa: E402
-import polish  # noqa: E402
-import shell_base as sb  # noqa: E402  (also registers the copper slot)
-from common import Part  # noqa: E402
+import common
+import polish
+import shell_base as sb
+from common import Part
 
-# Budgets: the detail class (assets/asset_budgets.json) is 4,000 tris and 2 draws. REACH is ruling
-# en's visual weapon reach (1.65 to 1.75 m from the ball centre); FLOOR_Z its ground clearance.
 TRIS = (2400, 3900)
 DRAWS = 2
 REACH = 1.75
 FLOOR_Z = -0.55
 CLEAR = 0.01
-# Ring band (Blender metres): radius 1.03 to 1.08, 0.08 m tall at Z 0; the collar under it.
 BAND = sb.RING_BAND
 COLLAR = sb.RING_COLLAR
 LATTICE = sb.LATTICE_OUTER
-# One cannon, the left (x < 0); the right is its mirror. u is the distance outboard of the centre
-# line, so a point sits at x = side * u. The cluster axis runs along +Y at u SIDE_X, Z AXIS_Z.
 SIDE_X = 1.26
 AXIS_Z = 0.0
-# Clamp sponson (mount): a bone block straddling the band at 3 or 9 o'clock, charcoal jaws top and
-# bottom, four copper bolt heads on the top jaw. (u0, u1, y half, z0, z1)
 CLAMP = (0.998, 1.14, 0.13, -0.10, 0.10)
-JAW = (0.998, 1.15, 0.15, 0.035)                     # u0, u1, y half, thickness
-JAW_BOLT = (0.02, 0.03, (1.03, 1.11), 0.10)          # radius, height, u, y offset
-# Receiver (tool): the bone housing, two copper straps round it, a charcoal plate on its outboard
-# face, the copper motor cap and charcoal end cap behind it, the hinge lug under its front.
-HOUSING = (1.10, 1.42, -0.36, 0.30, -0.16, 0.18)    # u0, u1, y0, y1, z0, z1
+JAW = (0.998, 1.15, 0.15, 0.035)
+JAW_BOLT = (0.02, 0.03, (1.03, 1.11), 0.10)
+HOUSING = (1.10, 1.42, -0.36, 0.30, -0.16, 0.18)
 STRAPS = (-0.20, 0.12)
-STRAP = (0.025, 0.012)                              # y half, proud
+STRAP = (0.025, 0.012)
 SIDE_PLATE = (1.42, 1.445, -0.26, 0.20, -0.10, 0.12)
 MOTOR = ((-0.36, 0.0), (-0.36, 0.14), (-0.40, 0.14), (-0.40, 0.125), (-0.46, 0.125), (-0.46, 0.0))
 END_CAP = ((-0.455, 0.0), (-0.455, 0.09), (-0.50, 0.09), (-0.50, 0.035), (-0.53, 0.035), (-0.53, 0.0))
 LUG = (1.10, 1.18, 0.26, 0.30, -0.17, -0.07)
-# Breech block (slide) on the receiver's back, the copper knob on its rear.
-BREECH = (0.065, -0.30, 0.06, 0.17, 0.25)           # u half, y0, y1, z0, z1
-KNOB = (-0.25, 0.25, 0.31, 0.028)                    # y, z0, z1, radius
-# Yoke (crane): the hinge pin inboard and below the cluster, a plate from it to a disc round the
-# axle in front of the receiver. HINGE (u inboard of the axis, z below it).
+BREECH = (0.065, -0.30, 0.06, 0.17, 0.25)
+KNOB = (-0.25, 0.25, 0.31, 0.028)
 HINGE = (0.12, 0.12)
-PIN = (0.25, 0.352, 0.03)                            # y0, y1, radius
-YOKE = (0.30, 0.352, 0.12, 0.075)                    # y0, y1, disc radius, plate width
-# The rotary cluster (drum): a fluted drum, six barrels round a copper hub, a copper band on the
-# drum, a mid collar and a heavy front collar, all charcoal but the copper.
+PIN = (0.25, 0.352, 0.03)
+YOKE = (0.30, 0.352, 0.12, 0.075)
 DRUM_Y = (0.355, 0.52)
-DRUM_R = (0.215, 0.188)                              # crest, valley
-DRUM_BAND = (0.455, 0.495, 0.226)                    # y0, y1, radius
+DRUM_R = (0.215, 0.188)
+DRUM_BAND = (0.455, 0.495, 0.226)
 BARRELS = 6
 PITCH = 0.12
-BARREL = (0.50, 0.91, 0.05)                          # y0, y1, radius
+BARREL = (0.50, 0.91, 0.05)
 BARREL_SIDES = 10
-BARREL_BORE = (0.026, 0.03)                          # radius, depth
-MUZZLE_RING = (0.86, 0.056)                          # y where the barrel swells (charcoal), radius
-COLLARS = ((0.62, 0.66, 0.185), (0.77, 0.85, 0.205))  # y0, y1, radius
+BARREL_BORE = (0.026, 0.03)
+MUZZLE_RING = (0.86, 0.056)
+COLLARS = ((0.62, 0.66, 0.185), (0.77, 0.85, 0.205))
 COLLAR_SIDES = 16
-HUB = (0.50, 0.90, 0.055, 0.028, 0.03)               # y0, y1, radius, bore radius, bore depth
-# Poses the rivet.json rows reach (left cannon; the right mirrors): the buck, the breech stroke,
-# a half index, and the reload swing with a full spin.
+HUB = (0.50, 0.90, 0.055, 0.028, 0.03)
 BUCK_DEG = 6.0
 STROKE_M = -0.035
 SWING_DEG = -80.0
@@ -130,11 +78,7 @@ def heads(side):
     }
 
 
-# Muzzle markers (shell_rivet.py LaserMuzzle.L/R): 1 cm past each hub's crown, on the cluster axis.
 MUZZLES = {"L": (-SIDE_X, HUB[1] + 0.01, AXIS_Z), "R": (SIDE_X, HUB[1] + 0.01, AXIS_Z)}
-
-
-# --- closed builders -------------------------------------------------------------------------
 
 
 class Kit:
@@ -312,9 +256,6 @@ def cannon(kit, side):
     cluster(kit, side)
 
 
-# --- poses and clearance -----------------------------------------------------------------------
-
-
 def about(head, axis, deg):
     return Matrix.Translation(head) @ Matrix.Rotation(math.radians(deg), 4, axis) @ Matrix.Translation(-head)
 
@@ -375,9 +316,6 @@ def clearance(obj):
     return lines, ok
 
 
-# --- checks ------------------------------------------------------------------------------------
-
-
 def islands(bm):
     bm.faces.index_update()
     seen, out = set(), []
@@ -425,9 +363,6 @@ def closed_report(obj):
 def reach_of(obj):
     mw = obj.matrix_world
     return max((mw @ v.co).length for v in obj.data.vertices)
-
-
-# --- rig and export ----------------------------------------------------------------------------
 
 
 def rig(root, obj):

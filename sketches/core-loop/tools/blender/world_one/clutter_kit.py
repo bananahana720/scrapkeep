@@ -1,6 +1,3 @@
-# CK: small cut stone, bent scrap and dry blades, in metres, Z-up in Blender.
-# Procedural bmesh only; no external mesh, texture, collision or runtime placement.
-# blender -b --factory-startup -P sketches/core-loop/tools/blender/world_one/clutter_kit.py -- --out /tmp/clutter.glb
 import math
 import os
 import random
@@ -29,8 +26,6 @@ def finish(part, tone=None, tilt=0.0, straw=False):
         v.co.z -= bottom
     bm.normal_update()
     if tone is not None:
-        # Shade in linear light: multiplying sRGB first made the stone nearly black.
-        # Straw follows the former runtime lift, capped below sand, with darker roots.
         linear = common.to_linear(tone)
         top = max(v.co.z for v in bm.verts)
         for face in bm.faces:
@@ -46,7 +41,6 @@ def rock(name, size, seed):
     rng = random.Random(seed)
     part = common.Part(name)
     pts = []
-    # Unequal, offset lower and upper rings make a cut stone, rather than a round pebble.
     for height, radius, shift in [(0.0, 0.84, 0.0), (0.28, 1.0, 0.0), (1.0, 0.55, 0.18)]:
         for i in range(5):
             angle = i * math.tau / 5 + shift
@@ -70,7 +64,6 @@ def slab(name, size, tilt):
                (0.37, 0.37), (0.02, 0.50), (-0.45, 0.30)]
     outline = [(x * size[0], y * size[1]) for x, y in outline]
     part.prism("paint", outline, size[2])
-    # Broad strata planes share the map's stone hue; darker than the smaller stones.
     return finish(part, common.mix("sandstone", "bone", 0.08), tilt)
 
 
@@ -80,8 +73,6 @@ def plate(name, flipped=False):
                (0.24, 0.17), (-0.10, 0.21), (-0.30, 0.08)]
     if flipped:
         outline = [(-x * 0.82, -y * 1.08) for x, y in reversed(outline)]
-    # Matching cap triangles preserve a uniform sheet across the fold. Independent ngon
-    # triangulations would interpolate the folded top and underside differently.
     lo = [part.bm.verts.new((x, y, -PLATE_THICKNESS / 2)) for x, y in outline]
     hi = [part.bm.verts.new((x, y, PLATE_THICKNESS / 2)) for x, y in outline]
     for i in range(1, len(outline) - 1):
@@ -91,15 +82,12 @@ def plate(name, flipped=False):
         j = (i + 1) % len(outline)
         part.paint([part.bm.faces.new((lo[i], lo[j], hi[j], hi[i]))], "bare_metal")
     for v in part.bm.verts:
-        # A folded lip is continuous with the plate and preserves the extrusion thickness.
         v.co.z += max(0.0, v.co.x - 0.10) * (0.48 if flipped else 0.62)
     return finish(part, tilt=math.radians(-11 if flipped else 9))
 
 
 def stub():
     part = common.Part("stub_a")
-    # Six-sided open pipe with a broad foot flange, narrow shaft and broken rim.
-    # The flange stays inside the existing 0.21 m placement footprint; 72 triangles.
     rings = []
     for radius, height in [(0.105, 0.0), (0.105, 0.045), (0.080, 0.090),
                            (0.080, 0.515), (0.050, 0.0), (0.050, 0.515)]:
@@ -123,7 +111,6 @@ def tuft(name, height, blades, seed):
     for i in range(blades):
         angle = i * math.pi / blades + rng.uniform(-0.12, 0.12)
         rot = Matrix.Rotation(angle, 3, "Z")
-        # Closed tapered blades have a broad face, a narrow side and an actual base.
         h = height if i == 0 else height * rng.uniform(0.78, 0.94)
         coords = [(-0.055, -0.006, 0), (0.055, -0.006, 0),
                   (0.055, 0.006, 0), (-0.055, 0.006, 0),
@@ -136,12 +123,7 @@ def tuft(name, height, blades, seed):
 
 def main():
     common.reset()
-    # Polish (POLISH.md): clutter_kit_asset_test pins per-piece triangle caps of 24 to 72, so smooth shading and the
-    # AO/wear bake only (detail 1, bevel 0). The recipe writes its own GLB, so each piece is baked on its own.
-    # edge=0: the wear bake would lighten tuft tips past the sand-brightness cap (clutter_kit_asset_test CK-3, KC-1).
-    # sharp_angle=5: plates stay flat-shaded so their caps keep exact opposite normals (CK-4 physical thickness).
     polish.enable(detail=1, bevel=0, edge=0, sharp_angle=5)
-    # The shared bare-metal preview is polished bone; this dry clutter uses dull exposed steel.
     metal = common.material("bare_metal").node_tree.nodes.get("Principled BSDF")
     metal.inputs["Base Color"].default_value = common.rgba(common.mix("charcoal", "bone", 0.36))
     metal.inputs["Roughness"].default_value = 0.82
@@ -161,7 +143,6 @@ def main():
         obj.select_set(True)
     out = common.args()["out"] or os.path.join(common.MODELS, "world_one", "clutter_kit.glb")
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
-    # Ten independent scene nodes; no extra authored root or layout transform.
     bpy.ops.export_scene.gltf(filepath=out, export_format="GLB", use_selection=True,
                               export_apply=True, export_yup=True, export_materials="EXPORT",
                               export_vertex_color="ACTIVE", export_extras=False,

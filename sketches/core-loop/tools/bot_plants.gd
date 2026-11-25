@@ -1,46 +1,5 @@
 extends RefCounted
 
-# Test-only plants for the anti-kiting gates' controls (card G-A; scrapkeep#241 comment 6367573974): a planted positive
-# must read PASS and a held-out negative FAIL, or the gate is broken. Plants live in the bot tool layer only, behind
-# `--plant=name=value[,name=value]` on tools/bot_run.gd; nothing ships. Without the flag no plant object exists, and
-# bot_run touches nothing of it.
-#
-#   pack_damage=K          Pack damage to the ball x K: the mobs.damage_mult dial (src/core/challenge_dials.gd), set as a
-#                          programmatic override, so the Warden, the vault and the Mind's hand keep their damage.
-#   damage=K               Every hit on the ball x K, whatever its source: the run's defend_hook is wrapped to scale the
-#                          hit before the set piece's own defence reads it. Used on one arm of an A/B control.
-#   packs_passive=1        Pack units never commit an attack. Each tick every enemy but the Warden is clocked out of the
-#                          attacker budget (attack_budget.gd clock_out), which is the gate every counter and Dispatcher
-#                          chaser asks before an attack; and mobs.damage_mult is 0, so a unit that does not ask (a
-#                          shooter) cannot hurt the ball either. The Warden still fights.
-#   hide_pack_telegraphs=1 The driver cannot see the telegraphs of units other than the Warden (bot_driver.gd
-#                          _hazards); the game still draws them.
-#   rut=K                  A stand-in for the approved rut meter, gate 1's positive control: once a game second, a ball
-#                          whose net flat travel over the last RUT_WINDOW_S is under RUT_SPAN_M (it is circling or
-#                          shuttling over the same ground) takes K x RUT_SHARE of its max hull, through run.damage as
-#                          source "rut_plant", so it counts as a hit; scrap armour is bypassed for it. Pack damage x4 could not make circling lose:
-#                          the circling arm stalled to the cap on all six stages, on stage 2 without one hit.
-#
-#   drain=K                An untelegraphed drain, the telegraph-share number's positive control (fairness.telegraph_share):
-#                          once a game second on a stage after the game's own first hit, whatever the ball is doing, it takes
-#                          K x DRAIN_SHARE of its max hull, source "drain_plant". rut above does the same only to a ball that circles, which a skipper
-#                          never does, so it cannot move the number on an ordinary run.
-#   fast_tax=K             A stand-in for a world that taxes a rolling ball, the stop-against-move number's positive control
-#                          (the bot record's fairness.stop_tax): once a game second, a ball at or above cruise speed takes
-#                          K x FAST_TAX_SHARE of its max hull, source "fast_tax_plant", so the hull is lost while moving.
-#   ringless=K             A pack that spawns with no arrival ring, the first-hit number's positive control (fairness.
-#                          first_hit_s): the tick a stage's contact opens (bot_driver.contact_open), the ball takes K x
-#                          RINGLESS_SHARE of its max hull, source "ringless_plant", as the ambush an unringed spawn would land.
-#
-#   scrap=K                An untelegraphed theft, the scrap-loss lines' positive control (fairness.telegraph_share reads scrap
-#                          taken through run.lose_scrap beside the hull): once every SCRAP_EVERY_S game seconds on a stage after the
-#                          game's own first hit, the ball loses K x SCRAP_PER_S scrap through run.lose_scrap, cause "scrap_plant", as a
-#                          world hazard with no mark would take it.
-#
-# rut, drain, fast_tax and ringless drain the hull straight through run.damage, which is a hit that no telegraph announced, so
-# they also move the telegraph share (fairness.telegraph_share) down.
-#
-# pack_damage and packs_passive both own mobs.damage_mult, so they cannot be combined.
 
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 
@@ -51,7 +10,6 @@ const RINGLESS_SHARE := 0.05
 const SCRAP_PER_S := 10.0
 const SCRAP_EVERY_S := 10.0
 const RUT_WINDOW_S := 10.0
-# Wider than the orbit ring at the outer edge of its band (2 x (14 + 3) m), so a full lap never clears it.
 const RUT_SPAN_M := 36.0
 const RUT_SHARE := 0.05
 
@@ -59,7 +17,6 @@ var values := {}
 var _wrapped := Callable()
 var _game
 var _driver
-# rut: one flat ball position per game second, oldest first, and the stage they belong to.
 var _rut_trail: Array = []
 var _rut_clock := 0.0
 var _rut_stage := -1
@@ -73,7 +30,6 @@ var _scrap_stage := -1
 var _hurt := false
 
 
-# "a=1,b=2" -> {a: 1.0, b: 2.0}. An error string in "error" when a name or a value is not accepted.
 static func parse(text: String) -> Dictionary:
 	var out := {}
 	for pair in text.split(",", false):
@@ -107,7 +63,6 @@ func attach(game, driver, planted: Dictionary) -> void:
 	step()
 
 
-# Once a tick, before the driver's. Idempotent.
 func step() -> void:
 	if values.has("rut"):
 		_rut(float(values["rut"]))
@@ -127,7 +82,6 @@ func step() -> void:
 				AttackBudget.clock_out(node, 1.0)
 
 
-# The ultimate re-sets the hook whenever it is rebuilt, so the wrap is checked every tick.
 func _wrap_damage(scale: float) -> void:
 	var run = _game.run
 	if run == null or (_wrapped.is_valid() and run.defend_hook == _wrapped):
@@ -156,15 +110,12 @@ func _rut(scale: float) -> void:
 	if _rut_trail.size() <= int(RUT_WINDOW_S):
 		return
 	if (_rut_trail.back() as Vector2).distance_to(_rut_trail.front()) < RUT_SPAN_M:
-		# The drain goes to the hull: scrap armour would absorb it and the circling ball picks the spill back up
-		# (the pit, seed 1: 1,577 drained, 59 reached the hull).
 		var armored: bool = run.armor_mode
 		run.armor_mode = false
 		run.damage(scale * RUT_SHARE * float(run.max_hp), "rut_plant")
 		run.armor_mode = armored
 
 
-# Hull straight off the ball, past scrap armour (armour would absorb it and the spill be picked back up).
 func _drain(share: float, source: String) -> void:
 	var run = _game.run
 	var armored: bool = run.armor_mode
@@ -173,7 +124,6 @@ func _drain(share: float, source: String) -> void:
 	run.armor_mode = armored
 
 
-# drain and fast_tax start with the first hit the game itself landed, so the first-hit reading stays the game's own.
 func _after_first_hit() -> bool:
 	var run = _game.run
 	if run != null and float(run.hp) < float(run.max_hp) - 0.001:

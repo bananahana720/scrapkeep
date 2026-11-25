@@ -18,7 +18,7 @@ from cannon_launcher_detail1 import stud, on_barrel, perp, DETAIL
 
 NAME = "cannon_launcher_detail2"
 SIZE = [6.981, 7.898, 10.148]
-STRAP = (1.2, .28, .09)                         # t, width along the axis, height over the barrel
+STRAP = (1.2, .28, .09)
 
 
 def barrel_r(t):
@@ -31,21 +31,18 @@ def barrel_r(t):
 
 def build(s):
     b = cl.barrel_frame(s)
-    # C1 the patch plate's corner bolts.
     t, (along, around_) = cl.PATCH
     r = barrel_r(t) + .1
     for dt in (-along / 2 + .1, along / 2 - .1):
         for dz in (-around_ / 2 + .1, around_ / 2 - .1):
             p = b.at((r, t + dt, dz))
             stud(s, p, b.u, .07, .06, tone("iron"))
-    # C2 gauge pivot and long quarter ticks.
     g = cl.gauge_frame(s)
     frustum(g, .07, .05, .1, .17, 6, tone("patch"), caps=(False, True))
     face = cl.GAUGE[3]
     for a in around(4, 0.0):
         slab(g, ((face - .15) * math.cos(a), .07, (face - .15) * math.sin(a)),
              (.05 + .05 * abs(math.cos(a)), .02, .05 + .05 * abs(math.sin(a))), tone("iron"))
-    # C3 barrel flank rivet rows, C4 boiler shoulder ring, C8 lip front rivets.
     for side in (math.pi / 2, -math.pi / 2):
         for t in (.0, .5, 1.6, 2.1):
             p, nrm = on_barrel(b, barrel_r(t), t, side)
@@ -57,20 +54,16 @@ def build(s):
     for a in around(10, .4):
         p, nrm = on_barrel(b, lr, l1 - .12, a)
         stud(s, p, nrm, .11, .09, tone("copper"))
-    # C5 the flywheel's hub plate.
     f = cl.flywheel_frame(s)
     _, ro, ri, hw = cl.FLY
     ring(f, [(.75, hw + .02), (1.05, hw + .02), (1.05, hw + .08), (.75, hw + .08)], 10, tone("copper"))
-    # C6 hex nuts at the pipe bases.
     for x, z, _, sleeve, _, _ in cl.PIPES:
         rr, y0, y1 = sleeve
         frustum(s, rr + .14, rr + .14, y0 - .02, y0 + .2, 6, tone("iron"), caps=(False, True), at=(x, z))
-    # C7 mounting bolts at the body's foot.
     zc, pr, (y0, y1), dr, (d0, d1) = cl.PLATE
     for a in around(6, .5):
         p = (2.4 * math.sin(a), d1, zc + 2.4 * math.cos(a))
         frustum(s, .16, .16, d1 - .03, d1 + .16, 6, tone("iron"), caps=(False, True), at=(p[0], p[2]))
-    # C9 the pinned strap band (Redjaw: a load-bearing clamp left in plain sight) and its pin block.
     t, w, h = STRAP
     r = barrel_r(t)
     ring(b, [(r - .02, t - w / 2), (r + h, t - w / 2), (r + h, t + w / 2), (r - .02, t + w / 2)], cl.N, tone("iron"))
@@ -82,7 +75,7 @@ def build(s):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **cl.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **cl.kit.BAKE)
     cl.export(NAME, [("Detail2", "steel", False, build)], {}, cl.out_dir(), budget=DETAIL, tag="CANNON_D2", size=SIZE)
 
 

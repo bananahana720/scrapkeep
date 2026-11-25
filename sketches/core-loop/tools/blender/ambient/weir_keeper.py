@@ -16,46 +16,39 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+from _life import Critter
 
 life = Critter("weir_keeper")
 
-# --- bucket: a plum soft cylinder with a soft flare at the base and a lilac rim band, same mesh
 life.tube("root", "hat", [(0, 0.03, 0), (0, 0.14, 0), (0, 0.27, 0)], [0.26, 0.215, 0.215], sides=8, subsurf=1, cap=0.4)
 life.tube("root", "bucket", [(0, 0.255, 0), (0, 0.295, 0)], [0.23, 0.23], sides=8, subsurf=1, cap=0.5)
 
-# --- legs and rounded feet, short, resting forward of the bucket
 for s in (-1, 1):
     life.capsule("root", "overalls", (0.11 * s, 0.34, -0.06), (0.115 * s, 0.1, -0.22), 0.085, 0.07, subsurf=1, u=6, v=4)
     life.ellipsoid("root", "tail", (0.115 * s, 0.06, -0.26), (0.08, 0.06, 0.11), subsurf=1, u=6, v=4)
 
-# --- body: a short chubby pear, wide hips
 life.ellipsoid("body", "overalls", (0, 0.42, 0.0), (0.23, 0.14, 0.215), subsurf=1, u=9, v=5)
 life.ellipsoid("body", "overalls", (0, 0.5, -0.01), (0.165, 0.11, 0.15), subsurf=1, u=8, v=4)
-life.ellipsoid("body", "bucket", (0, 0.45, -0.17), (0.08, 0.06, 0.03), subsurf=1, u=6, v=4)  # bib pocket
+life.ellipsoid("body", "bucket", (0, 0.45, -0.17), (0.08, 0.06, 0.03), subsurf=1, u=6, v=4)
 for s in (-1, 1):
     life.tube("body", "hat", [(0.07 * s, 0.57, -0.08), (0.085 * s, 0.5, -0.15), (0.085 * s, 0.46, -0.16)],
               [0.016, 0.016, 0.016], sides=4, subsurf=1)
 
-# --- tail: a broad flat paddle drooping behind the bucket, round-ended
 life.ellipsoid("tail", "tail", (0, 0.22, 0.38), (0.13, 0.032, 0.2), rot=(18, 0, 0), subsurf=1, u=8, v=4)
 
-# --- head: big and round, chubby cheeks, muzzle, big nose, two buck teeth, eyes, small round ears
 life.ellipsoid("head", "cream", (0, 0.72, -0.015), (0.2, 0.17, 0.18), subsurf=1, u=10, v=5)
 life.ellipsoid("head", "cream", (0, 0.675, -0.17), (0.085, 0.06, 0.06), subsurf=1, u=6, v=4)
 life.ellipsoid("head", "eye", (0, 0.7, -0.225), (0.038, 0.028, 0.026), subsurf=1, u=6, v=4)
 for s in (-1, 1):
-    life.ellipsoid("head", "cream", (0.125 * s, 0.655, -0.1), (0.085, 0.075, 0.08), subsurf=1, u=6, v=4)  # cheeks
+    life.ellipsoid("head", "cream", (0.125 * s, 0.655, -0.1), (0.085, 0.075, 0.08), subsurf=1, u=6, v=4)
     life.ellipsoid("head", "cream", (0.02 * s, 0.615, -0.205), (0.02, 0.032, 0.014), subsurf=1, u=6, v=4)
     life.ellipsoid("head", "eye", (0.085 * s, 0.745, -0.15), (0.024, 0.028, 0.016), subsurf=1, u=6, v=4)
-    life.ellipsoid("head", "tail", (0.195 * s, 0.8, 0.0), (0.055, 0.055, 0.03), rot=(0, 20 * s, 0), subsurf=1, u=6, v=4)  # ears
+    life.ellipsoid("head", "tail", (0.195 * s, 0.8, 0.0), (0.055, 0.055, 0.03), rot=(0, 20 * s, 0), subsurf=1, u=6, v=4)
 
-# --- hat: wide floppy brim, rounded crown, band
 life.ellipsoid("hat", "hat", (0, 0.89, -0.01), (0.3, 0.03, 0.3), subsurf=1, u=9, v=4)
 life.ellipsoid("hat", "hat", (0, 0.96, 0.0), (0.17, 0.1, 0.17), subsurf=1, u=8, v=4)
 life.ellipsoid("hat", "tail", (0, 0.925, 0.0), (0.178, 0.022, 0.178), subsurf=1, u=8, v=4)
 
-# --- arms: right holds the rod, left rests on the knee and waves
 life.capsule("arm_r", "bucket", (0.2, 0.55, -0.02), (0.17, 0.43, -0.17), 0.06, 0.055, subsurf=1, u=6, v=4)
 life.ellipsoid("arm_r", "cream", (0.17, 0.425, -0.19), (0.06, 0.055, 0.06), subsurf=1, u=6, v=4)
 life.tube("rod", "hat", [(0.16, 0.44, -0.14), (0.19, 0.33, -0.36), (0.22, 0.2, -0.58)], [0.013, 0.01, 0.008], sides=4, subsurf=1)
@@ -76,7 +69,6 @@ life.rig([
 
 REST = {}
 
-# --- idle, 2.5 s: breathe, bob the rod, tilt the head toward a doze
 life.cycle("idle", 2.5, {
     "body": [(0, REST), (0.6, {"scale": (1, 1.025, 1)}), (1.25, REST), (1.85, {"scale": (1, 1.025, 1)})],
     "head": [(0, REST), (0.7, {"rot": (4, 0, 0)}), (1.2, {"rot": (9, 0, 9), "loc": (0, -0.006, 0)}),
@@ -87,7 +79,6 @@ life.cycle("idle", 2.5, {
     "tail": [(0, REST), (1.0, {"rot": (-4, 0, 0)}), (1.8, {"rot": (2, 0, 0)})],
 })
 
-# --- move, 1.8 s: a friendly wave with the free paw
 UP = 75
 life.cycle("move", 1.8, {
     "arm_l": [(0, REST), (0.35, {"rot": (UP, 0, 0)}), (0.6, {"rot": (UP, 0, 20)}), (0.85, {"rot": (UP, 0, -20)}),
@@ -99,7 +90,6 @@ life.cycle("move", 1.8, {
     "tail": [(0, REST), (0.7, {"rot": (0, 0, 8)}), (1.1, {"rot": (0, 0, -8)})],
 })
 
-# --- react, 2.0 s: startled straighten, hat down over the face, hunch low behind the bucket
 HUNCH = {
     "body": {"loc": (0, -0.1, 0.09), "rot": (-14, 0, 0), "scale": (1.05, 0.88, 1.05)},
     "head": {"loc": (0, -0.04, 0.0), "rot": (-24, 0, 0)},

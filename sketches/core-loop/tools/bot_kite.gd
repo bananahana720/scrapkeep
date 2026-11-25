@@ -1,54 +1,22 @@
 extends RefCounted
 
-# The anti-kiting gates' two measuring policies (card G-A; rules in scrapkeep#241 comment 6367573974).
-# Bot-tool only: nothing here ships. They steer through the driver's own hands (bot_driver.gd _act and _drive), so a
-# gate measures the game and not a blind spot.
-#
-#   orbit    rolls to the nearest live pack enemy or Warden until first contact, fixes an anchor there (the centroid of
-#            the live pack within the contact radius of the ball, else the nearest enemy's position) and circles that
-#            fixed ground at ORBIT_RADIUS at the tuned cruise speed (src/movement/speed_tier.gd CRUISE), never
-#            re-anchoring. It never aims a ram and it does not dodge (_act with evade false, so _threats and _escape
-#            are skipped). Ranged units hold 20 to 40 m and retreat, so a ring on an enemy cannot be held; a ring on
-#            fixed ground can ("circle or shuttle over the same ground in the open").
-#   terrain  the same anchor and ring with the driver's default dodging, but it breaks the circle onto the nearest
-#            line within TERRAIN_LINE_REACH and rides it when a read telegraph would hit, or after CIRCLE_BREAK_S of
-#            continuous circling, then returns to the ring. A line is a cable contraption on the map, a park grind
-#            line (a row whose ride fact is ride_grapple_line), or an anchor post (an anchor_field row) it swings past.
-#            It takes only lines that end within LINE_HOME of the anchor; with none it keeps circling. It never perches: the perch field does not exist yet.
-#
-# Stage-note fields both write (the gates read them): fight_s, circle_s, circle_share, line_rides, lines_in_reach,
-# line_misses. The contact fields (first_contact_s, first_hit_s, hull_lost_120s, alive_120s, telegraph_reads) are kept
-# for every policy by the driver itself.
-#
-# circle_s: the seconds within ORBIT_BAND of the ring, from first contact to the window's end (CONTACT_WINDOW_S);
-# the driver divides it by alive_120s (first contact to the window's end or death) for circle_share. fight_s, kept as a
-# field, is the seconds the nearest enemy stood within the contact radius. A stage with no line within reach reports
-# lines_in_reach 0: the instrument is void for that stage and the harness says so; a ride is never faked.
 
 const ORBIT_RADIUS := 14.0
 const ORBIT_BAND := 3.0
-# How far round the ring (radians) the steering point leads the ball.
 const ORBIT_LEAD := 0.5
-# The anchor search (_make_anchor): candidate spacing, the band's largest height range, samples per radius, rings of
-# candidates.
 const ANCHOR_STEP := 7.0
 const RING_RISE := 3.0
 const RING_SAMPLES := 24
 const ANCHOR_RINGS := 4
 const CIRCLE_BREAK_S := 6.0
-# A ball out of the band for this long no longer counts as circling continuously.
 const CIRCLE_GAP_S := 1.0
 const TERRAIN_LINE_REACH := 60.0
-# A line the terrain arm takes must end (a cable) or stand (a park line) within this of the anchor.
 const LINE_HOME := 45.0
-# How close the terrain arm rolls to an anchor post before it swings past it.
 const POST_SWING_AT := 18.0
-# The line a break heads for is given this long to take the ball, the swing hand this long to bite.
 const LINE_TRY_S := 8.0
 const SWING_TRY_S := 1.5
 const LINE_GAP_S := 1.0
 const RIDE_REST_S := 3.0
-# The cable fact and the park's grind-line fact: both are a line ride.
 const LINE_FACTS := ["ride_grapple_line"]
 const PARK_LINE_ELEMENTS := ["grind_line", "elevated_line", "flow_line", "rail"]
 
@@ -64,7 +32,6 @@ var _circle_gap := 0.0
 var _line_gap := 0.0
 var _line_goal := Vector3.INF
 var _line_kind := ""
-# The anchor post a swing heads past.
 var _swing_toward := Vector3.ZERO
 var _hook_counted := false
 var _swung := false
@@ -77,14 +44,12 @@ func _init(driver_ref) -> void:
 	_dir = 1.0 if int(driver.seed_value) % 2 == 0 else -1.0
 
 
-# The instrument check asks for a ride per 30 s of the contact window, so only rides inside it count.
 func _count_ride() -> void:
 	var first_contact = driver._note.get("first_contact_s")
 	if first_contact != null and float(driver.game.run.stage_time) - float(first_contact) <= driver.CONTACT_WINDOW_S:
 		driver._count("line_rides")
 
 
-# A line ride happened (a world_fact the driver forwards): count it, and rest the break.
 func on_ride_fact(fact: String) -> void:
 	if fact not in LINE_FACTS:
 		return
@@ -109,7 +74,6 @@ func step(delta: float, terrain: bool) -> void:
 	if _anchor == Vector3.INF and first_contact != null:
 		_anchor = _make_anchor(ball)
 	if _anchor == Vector3.INF:
-		# Before contact: roll to the nearest enemy, as a bot looking for a fight would.
 		driver._goal = "orbit approach"
 		_circle_clock = 0.0
 		var heading: Vector3 = game.flow.beacon.global_position if _target == null else _target.global_position
@@ -123,7 +87,6 @@ func step(delta: float, terrain: bool) -> void:
 	var in_band := absf(d - ORBIT_RADIUS) <= ORBIT_BAND
 	if _target != null and driver._flat(ball, _target.global_position) <= driver.CONTACT_RADIUS:
 		driver._count("fight_s", delta)
-	# circle_share's numerator: seconds on the ring, from first contact to the window's end.
 	if in_band and float(game.run.stage_time) - float(first_contact) <= driver.CONTACT_WINDOW_S:
 		driver._count("circle_s", delta)
 	if in_band:
@@ -142,12 +105,6 @@ func step(delta: float, terrain: bool) -> void:
 	_circle(delta, at, radial, d, terrain)
 
 
-# The anchor, fixed at first contact for the rest of the stage. Its ring must be open ground a ball at cruise can
-# hold: a pack often stands on a mound, and a 14 m ring round it climbs 10 m or more, which the coasting ball cannot
-# roll (stage 1 seed 1: circle_share 0.05). The wanted centre is the centroid of the live pack units within the
-# contact radius of the ball at that tick, else the nearest live enemy. Candidates are that centre, the ball's own
-# position and points ANCHOR_STEP apart on ANCHOR_RINGS rings round both; the first, nearest the wanted centre, whose
-# band rises less than RING_RISE wins, else the flattest. The band is sampled at RING_SAMPLES points on three radii.
 func _make_anchor(ball: Vector3) -> Vector3:
 	var sum := Vector3.ZERO
 	var n := 0
@@ -188,8 +145,6 @@ func _make_anchor(ball: Vector3) -> Vector3:
 	return driver._ground_point(best.x, best.z)
 
 
-# The height range of the terrain under the band ORBIT_RADIUS +- ORBIT_BAND round `at` (a ledge just off the ring
-# drops a coasting ball off it: stage 5 seed 1 rolled off its plateau and 200 m downhill).
 func _ring_rise(at: Vector3) -> float:
 	var terrain = driver.game.ctx.terrain
 	var lo := INF
@@ -203,7 +158,6 @@ func _ring_rise(at: Vector3) -> float:
 	return hi - lo
 
 
-# The circle: a steering point a little ahead round the ring, the gun on the nearest enemy, boost off and the stick held to cruise.
 func _circle(delta: float, at: Vector3, radial: Vector3, d: float, evade: bool) -> void:
 	var r := radial / d if d > 0.5 else Vector3.BACK
 	var angle := atan2(r.x, r.z) + _dir * ORBIT_LEAD
@@ -213,7 +167,6 @@ func _circle(delta: float, at: Vector3, radial: Vector3, d: float, evade: bool) 
 	driver._act(steer, _target, delta, null, evade)
 
 
-# The terrain arm's break. Returns true when it steered this tick.
 func _terrain(delta: float, ball: Vector3, at: Vector3) -> bool:
 	var game = driver.game
 	_state_clock -= delta
@@ -230,15 +183,12 @@ func _terrain(delta: float, ball: Vector3, at: Vector3) -> bool:
 				_state = "line"
 				_state_clock = LINE_TRY_S
 				return false
-			# No line home: keep circling. A swing outward from the ring finds open ground or carries the ball
-			# 100 m off (stage 1 seed 1), which measures the swing, not terrain against circling.
 			_line_gap = LINE_GAP_S
 			return false
 		"line":
 			if _state_clock <= 0.0:
 				_miss()
 				return false
-			# An anchor post is not ridden but swung round: close in, then bite it on the way past.
 			if _line_kind == "post" and driver._flat(ball, _line_goal) <= POST_SWING_AT:
 				_start_swing(_line_goal)
 				return false
@@ -296,7 +246,6 @@ func _miss() -> void:
 	_line_gap = LINE_GAP_S
 
 
-# The nearest live enemy on the flat, a pack unit or the Warden.
 func _pick(ball: Vector3) -> Node3D:
 	var best: Node3D = null
 	var best_d := INF
@@ -312,9 +261,6 @@ func _pick(ball: Vector3) -> Node3D:
 	return best
 
 
-# The nearest cable's high end or park grind line within TERRAIN_LINE_REACH whose ride ends within LINE_HOME of the
-# anchor. {} when there is none. A cable is a held path to its far end, so one that ends far off carries the arm away
-# from the ground it was circling (islands seed 1: a 240 m ride, then no way back to the ring).
 func _nearest_line(ball: Vector3) -> Dictionary:
 	var best := {}
 	var best_d := TERRAIN_LINE_REACH
@@ -332,7 +278,6 @@ func _nearest_line(ball: Vector3) -> Dictionary:
 				best_d = d
 				best = {"at": p, "kind": "cable"}
 	for line in _lines_of_park():
-		# A park line rides its whole length: its far end must be home too.
 		var p: Vector3 = line["at"]
 		if driver._flat(p, _anchor) + float(line["half"]) > LINE_HOME:
 			continue
@@ -343,8 +288,6 @@ func _nearest_line(ball: Vector3) -> Dictionary:
 	return best
 
 
-# This stage's park grind lines and anchor posts (rows whose ride fact is a cable ride): {at: ground point, half: half the
-# longer side (0 for a post, which is swung round, not ridden), kind: park or post}.
 func _lines_of_park() -> Array:
 	var game = driver.game
 	if _park_lines_stage == game.run.stage:

@@ -4,17 +4,6 @@ const Panels := preload("res://src/build/panels.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# Grey panel distance-read stills (IL-01 card section 9). A 1.0 m ball on flat ground with the
-# real PanelShell, seen from straight above and from the gameplay camera (chase_camera.gd: arm
-# 7.5 to 10.5 m, pitch -0.30, fov 65 to 80). Stills:
-#   top-<n>, play-<n> for 3 and 5 mixed panels; play-10, play-32, play-70 for the stack;
-#   lineup-<id>: four of one panel at the gameplay camera, one per row, for the distance read;
-#   play-0: the bare ball; control-play-5--hidden: the five-panel still with the shell hidden.
-# The ball rolls, so every gameplay still is taken at ROLLS orientations (-r0 to -r3). Each is
-# checked against the bare ball: the share of the ball's disc that the plates change. A stack
-# reads when its mean share is at least READ_BUDGET and no roll hides it (MIN_SHARE); the
-# planted control must not read (it proves the check can fail). report.json holds the rows.
-#   xvfb-run -a <godot> --path sketches/core-loop --resolution 1280x720 --script res://tools/panel_capture.gd -- --out=/abs/dir
 
 const SIZE := Vector2i(1280, 720)
 const SETTLE_FRAMES := 40
@@ -136,8 +125,6 @@ func _process(_delta: float) -> bool:
 	return false
 
 
-# Pixels around the ball (from the gameplay camera) that differ from the bare ball by more than
-# a small colour step, as a share of the ball's own disc.
 func _changed(a: Image, b: Image) -> float:
 	var centre := _cam.unproject_position(Vector3.ZERO)
 	var radius := (_cam.unproject_position(Vector3(1.0, 0.0, 0.0)) - centre).x

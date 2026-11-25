@@ -25,7 +25,6 @@ HERE = pathlib.Path(__file__).resolve().parent
 MOJULO = ["npx", "-y", "mojulo@3.0.0"]
 GAMMA = 2.2
 DROP_MESHES = {"static"}
-# mojulo names each mesh after its term id; untagged parts (here the rail sweeps, which take no id) land in "static:pbr".
 RENAME = {"rail_grove": {"static:pbr": "rail:pbr"}}
 
 

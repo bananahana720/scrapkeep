@@ -22,7 +22,6 @@ FLECKS = [(-.8, .52, -.455), (.79, 1.02, -.455), (-.55, 2.3, -.455), (.45, .3, -
 
 
 def arc(s, cy, r0, r1, a0, a1, segs, z0, z1, color, sy=1.0):
-    # An arc strip in the face plane from angle a0 to a1 (radians), front at z0: front, outer and inner edges.
     for i in range(segs):
         b0, b1 = a0 + (a1 - a0) * i / segs, a0 + (a1 - a0) * (i + 1) / segs
         p = [(r * math.sin(b), cy + r * sy * math.cos(b)) if sy != 1.0 else (r * math.cos(b), cy + r * math.sin(b))

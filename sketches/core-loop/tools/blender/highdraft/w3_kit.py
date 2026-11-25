@@ -32,36 +32,34 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
-from mathutils import Euler, Matrix, Vector  # noqa: E402
+import bmesh
+import bpy
+from mathutils import Euler, Matrix, Vector
 
-import common  # noqa: E402
+import common
 
 SKETCH = HERE.parents[2]
 MODELS = SKETCH / "assets/models"
 
-# Palette constants matching src/core/palette.gd.
-PETROL = "365754"       # Palette.VERDIGRIS
-BONE = "d2c5a5"         # Palette.SAND
-SANDSTONE = "c6a274"    # Palette.SANDSTONE
-RUST = "9b513a"         # Palette.RUST
-COPPER = "b77843"       # Palette.COPPER
-CHARCOAL = "242a28"     # Palette.CHARCOAL
-CABLE = "2a3231"        # Palette.CABLE
-STEEL = "9aa0a0"        # Palette.STEEL
-# New Mexico stone and Fleet timber (concept art w3-highdraft-islands-crown.png, g09/g14).
-BASALT_DARK = "1f2427"  # Shiprock dike basalt core
-BASALT_EDGE = "3d4549"  # fractured basalt edge
-DIKE_RUST = "5a3a2e"    # iron-stained dike foot
-MESA_GOLD = "c98a52"    # Acoma golden-hour sandstone band
-HOODOO_RED = "b0603e"   # Chaco red-orange banded hoodoo
-HOODOO_PALE = "d8b48a"  # pale banding
-CAPROCK = "8d7a66"      # hard grey-brown caprock
+PETROL = "365754"
+BONE = "d2c5a5"
+SANDSTONE = "c6a274"
+RUST = "9b513a"
+COPPER = "b77843"
+CHARCOAL = "242a28"
+CABLE = "2a3231"
+STEEL = "9aa0a0"
+BASALT_DARK = "1f2427"
+BASALT_EDGE = "3d4549"
+DIKE_RUST = "5a3a2e"
+MESA_GOLD = "c98a52"
+HOODOO_RED = "b0603e"
+HOODOO_PALE = "d8b48a"
+CAPROCK = "8d7a66"
 TIMBER_DARK = "5b3c26"
 TIMBER_LIGHT = "7d5436"
-OCHRE = "b8873f"        # safety-net ochre (darker than AMBER, far from HAZARD)
-COPPER_MUTED = "8a5f3c" # Palette.COPPER toward charcoal: static trim never competes with HAZARD
+OCHRE = "b8873f"
+COPPER_MUTED = "8a5f3c"
 IRON = "3a403f"
 
 
@@ -229,9 +227,6 @@ def _jag(x, seed):
             + math.sin(x * 2.3 + seed * 0.6) * 0.2)
 
 
-# 1. Shiprock volcanic dike: a jagged black basalt wall fin, 84 m long along X, 3 to 6 m thick,
-# 10 to 34 m tall, with an iron-stained foot. Origin at the middle of its foot, base at z = -2
-# (buried) so it seats on uneven ground.
 def build_shiprock_dike(out_root: Path):
     common.reset()
     root = common.empty("w3_shiprock_dike")
@@ -247,14 +242,12 @@ def build_shiprock_dike(out_root: Path):
         crest = 10.0 + 24.0 * end * (0.72 + 0.28 * _jag(x, 1.3))
         half = (1.5 + 1.6 * end) * (1.0 + 0.12 * _jag(x, 4.1))
         lean = 0.9 * _jag(x, 2.2)
-        # Six-point section: wide foot, shoulder, narrow knife crest.
         prof = [(-half * 1.25, -2.0), (half * 1.25, -2.0), (half, crest * 0.45),
                 (half * 0.35 + lean * 0.3, crest), (-half * 0.35 + lean * 0.3, crest * 0.97), (-half, crest * 0.5)]
         rings.append([(x, py, pz) for py, pz in prof])
         if s < steps:
             colors.append(BASALT_DARK if s % 3 else BASALT_EDGE)
     b.add_tube(rings, colors, closed_ends=True)
-    # Iron-stained talus blocks along the foot.
     for k in range(9):
         x = -36.0 + k * 9.0 + 2.0 * math.sin(k * 1.9)
         side = 1.0 if k % 2 else -1.0
@@ -264,9 +257,6 @@ def build_shiprock_dike(out_root: Path):
     return export_glb(root, out_root / "highdraft/w3_shiprock_dike.glb", (4000, 8000, 1))
 
 
-# 2. Aerial ore tramway tower: a 20 m Fleet timber A-frame on an iron footing with a crossarm and
-# two sheave wheels. The grapple cable runs between the sheaves; the haul rope with its buckets rides the
-# sheave at Blender y -3.6 (Godot z +3.6), sheave centre at Godot y 20.1.
 def build_tram_tower(out_root: Path):
     common.reset()
     root = common.empty("w3_tram_tower")
@@ -282,7 +272,6 @@ def build_tram_tower(out_root: Path):
         b.add_beam((-w, -1.6, z), (w, 1.6, z + 4.6), 0.22, TIMBER_LIGHT)
     b.add_box((2.6, 8.6, 0.6), loc=(0.0, 0.0, top + 0.3), color=TIMBER_LIGHT)
     for sy in (-3.6, 3.6):
-        # Sheave wheel standing in the X-Z plane: a cross of spokes and a hub, axle along Y.
         b.add_box((0.3, 0.6, 1.9), loc=(0.0, sy, top + 0.9), color=CHARCOAL)
         b.add_box((1.9, 0.6, 0.3), loc=(0.0, sy, top + 0.9), color=CHARCOAL)
         b.add_box((0.5, 0.7, 0.5), loc=(0.0, sy, top + 0.9), color=RUST)
@@ -290,8 +279,6 @@ def build_tram_tower(out_root: Path):
     return export_glb(root, out_root / "highdraft/w3_tram_tower.glb", (2400, 4800, 1))
 
 
-# 3. Ore bucket on its carriage: the carriage grips the cable at the origin, the hanger drops 3 m
-# to a riveted rust bucket heaped with copper ore.
 def build_ore_bucket(out_root: Path):
     common.reset()
     root = common.empty("w3_ore_bucket")
@@ -308,8 +295,6 @@ def build_ore_bucket(out_root: Path):
     return export_glb(root, out_root / "highdraft/w3_ore_bucket.glb", (800, 1600, 1))
 
 
-# 4. Chaco balanced hoodoo: a 26 m banded red-orange pillar narrowing to a neck under a wide flat
-# caprock that overhangs it, on a talus skirt.
 def build_balanced_hoodoo(out_root: Path):
     common.reset()
     root = common.empty("w3_balanced_hoodoo")
@@ -325,7 +310,6 @@ def build_balanced_hoodoo(out_root: Path):
         if i < len(levels) - 1:
             colors.append(HOODOO_PALE if i % 3 == 1 else (HOODOO_RED if i % 3 == 0 else mix_hex(HOODOO_RED, RUST, 0.45)))
     b.add_tube(rings, colors, closed_ends=True)
-    # Caprock: a tilted flat slab wider than the neck.
     b.add_box((7.6, 6.4, 1.9), loc=(0.6, -0.3, 23.4), rot=(0.06, -0.08, 0.35), color=CAPROCK)
     b.add_box((6.4, 5.4, 1.0), loc=(0.4, -0.2, 24.6), rot=(0.06, -0.08, 0.35), color=mix_hex(CAPROCK, BONE, 0.3))
     for k in range(6):
@@ -335,9 +319,6 @@ def build_balanced_hoodoo(out_root: Path):
     return export_glb(root, out_root / "highdraft/w3_balanced_hoodoo.glb", (1600, 3200, 1))
 
 
-# 5. Lightning Field grounding rod: a 30 m Fleet lattice mast, muted copper rod tip over bone
-# insulator bells, with four iron ground stays and the grounding line dropping down its west leg to
-# a ground plate. The rod tip is at Godot (0, 31.5, 0).
 def build_lightning_rod(out_root: Path):
     common.reset()
     root = common.empty("w3_lightning_rod")
@@ -361,7 +342,6 @@ def build_lightning_rod(out_root: Path):
         a = k * math.tau / 4 + math.pi / 4
         b.add_beam((math.cos(a) * 0.5, math.sin(a) * 0.5, top * 0.7), (math.cos(a) * 9.0, math.sin(a) * 9.0, 0.0), 0.07, CABLE)
         b.add_box((0.8, 0.8, 0.5), loc=(math.cos(a) * 9.0, math.sin(a) * 9.0, 0.0), color=IRON)
-    # Grounding line: copper strap down a leg to a buried ground plate.
     b.add_beam((0.0, 0.0, top + 2.0), (-0.45, 0.0, top), 0.12, COPPER_MUTED)
     b.add_beam((-0.45, 0.0, top), (-1.6, 0.0, 0.2), 0.12, COPPER_MUTED)
     b.add_box((2.4, 2.4, 0.2), loc=(-2.2, 0.0, 0.05), color=mix_hex(COPPER_MUTED, CHARCOAL, 0.35))
@@ -370,8 +350,6 @@ def build_lightning_rod(out_root: Path):
     return export_glb(root, out_root / "highdraft/w3_lightning_rod.glb", (2400, 4800, 1))
 
 
-# 6. Kite-tether thermal ring: a 14 m hoop of charcoal tube wrapped in ochre sail bands, with four
-# small bone box kites on short tethers flying above it. The ring lies flat at the origin.
 def build_kite_ring(out_root: Path):
     common.reset()
     root = common.empty("w3_kite_ring")
@@ -393,8 +371,6 @@ def build_kite_ring(out_root: Path):
     return export_glb(root, out_root / "highdraft/w3_kite_ring.glb", (2400, 4800, 1))
 
 
-# 7. Crown Sky-Deck bounce-cable post: a 1.6 m dark iron stanchion with a raked cast cap, an ochre
-# cable saddle and a muted copper band; the cable rides at y 1.2. Stands at the deck edge.
 def build_deck_post(out_root: Path):
     common.reset()
     root = common.empty("w3_deck_post")

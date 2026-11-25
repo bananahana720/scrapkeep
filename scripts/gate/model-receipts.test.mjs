@@ -18,14 +18,6 @@ const HEAD = "3adc2fd0e8563b13c87f921b2ae85763467fec03";
 const SKILL = new URL("../../.agents/skills/scrapkeep-verify-formal/", import.meta.url);
 const cfg = (name) => cfgRules(readFileSync(new URL(`models/${name}`, SKILL), "utf8"));
 
-// Real TLC 2.19 output (tla2tools 1.7.4), trimmed by dropping the variable values under each State line and the temp
-// folder paths. Captured on the Mac Studio on 17 November 2026 from the configs each file is named for; the rewards-*
-// files from the W1-117 model (old and new reward keys apart, the save lock), with TLC's Progress lines dropped too;
-// the hazard-* files from HazardCycle.tla the same way. The flood-* files were captured again on 21 November 2026 from
-// ParkFlood.tla with the step past the live time (finding PF-2), and the destructibles-* files the same day from
-// Destructibles.tla (W45), untrimmed but for the temp folder, process and host. The yardlock-*, earnedsave-* and
-// deferred-* files were captured the same way on 21 November 2026 from YardLock.tla, EarnedSave.tla and
-// DeferredEffects.tla at the P7 sync (W45 FV-3); earnedsave-* recaptured on 21 November 2026 after P9 closed ES-2 and ES-3.
 const fixture = (name) =>
   readFileSync(new URL(`fixtures/tlc/${name}.out`, import.meta.url), "utf8");
 const out = {
@@ -385,7 +377,6 @@ test("the flood row checks the step past the live time and no longer names PF-2 
   assert.ok(fl.gaps.every((g) => !/PF-2/.test(g)));
 });
 
-// A row's code configs hold at their pins, every plant breaks the rule it is read for, and the pass flips on a break.
 function checkRow(id, { rules, files }) {
   const row = ROWS[id];
   for (const r of row.real) {
@@ -450,11 +441,9 @@ test("the yard lock row runs the full played game and the storeless flow now tha
   for (const r of row.real)
     assert.ok(cfg(r.cfg).properties.includes("LockAlwaysOpens"), `${r.cfg} checks LockAlwaysOpens`);
   assert.ok(cfg("yardlock-today-nostore.cfg").invariants.includes("NoLockInWardenFight"));
-  // The P7 fixes taken out again are plants now, and neither finding is a gap.
   assert.ok(row.plants.some((p) => p.cfg === "yardlock-broken-lockedyields.cfg"));
   assert.ok(row.plants.some((p) => p.cfg === "yardlock-broken-deadspends.cfg"));
   assert.ok(row.gaps.every((g) => !/YL-1|YL-2/.test(g)));
-  // A ball that rolls in and shoots the Warden from the yard is safe too.
   assert.equal(parseTlc(fixture("yardlock-today-ranged")).outcome, "clean");
   assert.match(held.measured, /yardlock-today: no break in 146,341 distinct states/);
   assert.match(held.measured, /yardlock-broken-lockedyields broke NoLockInWardenFight/);
@@ -475,13 +464,11 @@ test("the earned save row runs the two-refusal and sustained-refusal tables now 
       "earnedsave-today-sustained.cfg",
     ],
   );
-  // The P7 and P9 fixes taken out again are plants now, and neither ES-2 nor ES-3 is a gap.
   assert.ok(row.plants.some((p) => p.cfg === "earnedsave-broken-spendowed.cfg"));
   assert.ok(row.plants.some((p) => p.cfg === "earnedsave-broken-clearflush.cfg"));
   assert.ok(row.plants.some((p) => p.cfg === "earnedsave-broken-newrunflush.cfg"));
   assert.ok(row.gaps.every((g) => !/ES-2|ES-3/.test(g)));
   assert.ok(row.gaps.some((g) => /crash/.test(g)) && row.gaps.some((g) => /allfail/.test(g)));
-  // broken-clearflush breaks by ES-2's path (a refused tombstone, then a quit), broken-newrunflush by ES-3's (a refused restart, no quit).
   assert.match(
     fixture("earnedsave-broken-clearflush"),
     /last = "ClearRefused"[\s\S]*last = "Quit"/,

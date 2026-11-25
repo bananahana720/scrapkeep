@@ -1,7 +1,5 @@
 extends RefCounted
 
-# Two misses on the same owner belong to one place if a chain of samples joins
-# them with gaps no larger than twice the sweep step. Keep the bounds in metres.
 static func cluster(samples_by_owner: Dictionary, step_m: float) -> Array:
 	var places := []
 	var owners := samples_by_owner.keys()

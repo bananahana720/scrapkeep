@@ -1,12 +1,5 @@
 extends RefCounted
 
-# The named capture cameras of the asset sheet ("Cameras and evidence returned by every unit").
-# One table, addressed by name, shared by look_capture.gd and asset_capture.gd.
-#
-# LOOK holds the five look views, world-fixed, as recorded in look-pass-4a final/frames.json.
-# ASSET holds the four asset views, defined against a ground anchor and the asset centre:
-# the eye sits `dist` metres from the anchor along `dir` (anchor-local, the asset faces -z) and
-# `up` metres above it, aimed at the asset centre.
 const SIZE := Vector2i(1920, 1080)
 const THUMB := Vector2i(480, 270)
 
@@ -18,9 +11,6 @@ const LOOK := {
 	"pilot": {"eye": Vector3(-67.6782531738281, 36.8234672546387, -126.02904510498), "target": Vector3(-65.0, 35.476634979248, -130.0), "fov": 39.0},
 }
 
-# BAY holds Moss's approach and dock views, world-fixed, as recorded in geo-moss r2/flat/frames.json.
-# Each also stages the barge (offset from its home at (50, 65, -90)) and the ball; they are never in
-# the default set.
 const BAY_HOME := Vector3(50, 65, -90)
 const BAY := {
 	"approach-in": {"eye": Vector3(68.0, 70.2, -92.0), "target": Vector3(49.0, 69.2, -90.0), "fov": 62.0, "ball": Vector3(59.0, 66.0, -90.0), "barge": Vector3.ZERO},
@@ -39,9 +29,6 @@ const ASSET := {
 }
 
 
-# Orthographic family views (CLIFF-R2 section 4). Each looks at the centre of a world AABB from
-# `dir` (front: 250 m toward the arena along X, sign chosen by which side the AABB is on; side:
-# +Z; top: +Y with camera-up +Z). The vertical span is the largest AABB extent times 1.10.
 const ORTHO := {
 	"ortho-front": {"dir": Vector3(1, 0, 0), "up": Vector3.UP},
 	"ortho-side": {"dir": Vector3(0, 0, 1), "up": Vector3.UP},
@@ -65,7 +52,6 @@ static func is_bay(id: String) -> bool:
 	return BAY.has(id)
 
 
-# {eye, target, fov} for a named camera. Look views ignore anchor and centre.
 static func view(id: String, anchor: Transform3D = Transform3D.IDENTITY, centre := Vector3.ZERO) -> Dictionary:
 	if LOOK.has(id):
 		return LOOK[id].duplicate()
@@ -81,7 +67,6 @@ static func is_ortho(id: String) -> bool:
 	return ORTHO.has(id)
 
 
-# {eye, target, up, size} for an orthographic family view of the world box `box`.
 static func ortho_view(id: String, box: AABB) -> Dictionary:
 	var row: Dictionary = ORTHO[id]
 	var centre := box.get_center()
@@ -109,8 +94,6 @@ static func aim_ortho(camera: Camera3D, v: Dictionary) -> void:
 	camera.look_at(v["target"], v["up"])
 
 
-# TARGET is the renderer experiment's repeatable three-view set. Play coordinates use
-# the sampled ground at ball_xz; the other rows use the Warden site or world coordinates.
 const TARGET := {
 	"play": {"ball_xz": Vector2(-80.0, -93.0), "clearance": 1.2,
 		"eye_offset": Vector3(0.0, 3.0, -8.0), "target_offset": Vector3(0.0, 1.0, 24.0),
@@ -121,8 +104,5 @@ const TARGET := {
 		"target": Vector3(0.0, 44.0, 30.0), "fov": 65.0},
 }
 
-# TARGET_REACH is the chase view on the Cable Reach (the slice table), outside the default
-# set: target_capture.gd takes it when run with --table=slice. The ball stands on the west
-# shelf facing the sweeper; --ball=x,z and --face=x,z override it.
 const TARGET_REACH := {"ball_xz": Vector2(-34.0, -118.0), "face_xz": Vector2(-58.0, -116.8),
 	"clearance": 1.2, "fov": 70.0, "enemies_xz": []}

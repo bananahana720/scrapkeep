@@ -1,20 +1,3 @@
-# Reward gate arch (VISUAL-LANGUAGE.md section 9): two stout posts of mismatched
-# salvaged box sections with angle-iron corners, an I-beam lintel with rarity trim, a
-# diamond keystone with a mint field core, a gantry that hangs the trigger and element
-# glyph plates, and one rarity topper per rarity whose shape matches the section 5
-# frames and src/build/tier_mark.gd (common a bar, rare a bold-rimmed diamond, relic a
-# double-outlined four-point star with bolt heads and a mint heart, evolved a double-outlined
-# crown of five points). 2026-11-12 (W1-26 follow-up): relic was a five-point star and
-# evolved a taller copy of it; both now match the pedestal gems and the ball's part feet.
-# Provenance: authored procedurally here from Blender primitives and bmesh operators;
-# no external assets. Measured tris, arch plus three plates plus one topper (2026-11-12,
-# after the polish pass and the tier shapes): common 2,832, rare 2,832, relic 3,472,
-# evolved 3,436, inside BAND below.
-#
-# Frame: matches reward_gates.gd, ground centre at the origin, posts at x = +-WIDTH/2
-# (8 m apart), lintel at HEIGHT (7 m), topper centre at HEIGHT + 1.2, glyph row at
-# HEIGHT + 2.9. Blender +Y is the travel direction (Godot -Z, the gate's facing).
-
 import math
 import os
 import random
@@ -22,15 +5,12 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import bpy  # noqa: E402
+import bpy
 
-import common  # noqa: E402
-import polish  # noqa: E402
-from common import Part, Vector  # noqa: E402
+import common
+import polish
+from common import Part, Vector
 
-# Polish (POLISH.md): 3 cm bevels on every edge longer than 30 cm (posts, lintel, gantry, plates), hard bolts,
-# smooth shading and the AO/wear bake. rarity and field slots are not vertex-coloured, so the bake leaves the
-# rarity trim bright. The file holds every topper; assets/asset_budgets.json caps it at 6,000 tris.
 polish.enable(detail=1, bevel=0.03, bevel_min=0.3)
 
 HEIGHT = 7.0
@@ -39,7 +19,7 @@ TOPPER_Z = HEIGHT + 1.2
 GLYPH_Z = HEIGHT + 2.9
 GANTRY_Z = GLYPH_Z + 0.95
 PLATE_X = (-1.5, 0.0, 1.5)
-BAND = (1500, 3700)  # polish: was (1500, 2500); hero_assets_test GATE_TRIS matches
+BAND = (1500, 3700)
 RAMP = {"common": "bone", "rare": "amber", "relic": "mint", "evolved": "ancient"}
 
 
@@ -128,11 +108,6 @@ def star(n, outer, inner):
              (outer if k % 2 == 0 else inner) * math.cos(k * math.pi / n)) for k in range(2 * n)]
 
 
-# The evolved crown's outline (x, z about the topper centre): a band and five points.
-# Clockwise, like star(), so the prism's faces point the same way as the star's. Drawn
-# CROWN_RISE times taller than the sketch below and centred on the topper, so the crown
-# stands at least 1.2 times the relic star's height (gate_topper_names_test): the top
-# rung reads as the bigger prize.
 CROWN_RISE = 1.45
 CROWN = [(x, (z - 0.3) * CROWN_RISE) for x, z in [
     (-1.1, -0.6), (-1.1, 0.7), (-0.825, 0.05), (-0.55, 0.95), (-0.275, 0.05), (0.0, 1.2), (0.275, 0.05),
@@ -174,7 +149,6 @@ def topper(rarity):
         rim = [(0.95, 0.0), (0.0, 1.18), (-0.95, 0.0), (0.0, -1.18)]
         outline_loop(t, rim, 0.18)
     elif rarity == "relic":
-        # A four-point star with the gauge bezel's bolts and a mint heart (src/build/tier_mark.gd).
         tall = 1.15
         pts = [(x, y * tall) for x, y in star(4, 1.0, 0.36)]
         t.prism("rarity", pts, 0.34, matrix=upright)
@@ -187,7 +161,6 @@ def topper(rarity):
                        r=0.07, h=0.06, slot="field")
         t.ico("field", 0.36, 2, loc=c, scale=(1, 0.75, 1))
     else:
-        # Evolved: a crown, a band with five points (src/build/tier_mark.gd).
         t.prism("rarity", CROWN, 0.34, matrix=upright)
         outline_loop(t, offset(CROWN, 0.14), 0.07)
         outline_loop(t, offset(CROWN, 0.3), 0.07)

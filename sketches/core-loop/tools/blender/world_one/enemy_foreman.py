@@ -46,7 +46,6 @@ from common import Part
 common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Foreman")
 
@@ -94,45 +93,36 @@ body = Part("ForemanBody")
 signal = Part("ForemanSignal")
 signal.subsurf = 0
 
-# Cart: the lobber's deck and tapered tower, a little squatter, so the chassis reads as kin.
 hull(body, "fleet_paint", block(-1.30, -0.62, 1.0, 1.0, 1.1, 1.1), OXIDE)
 hull(body, "fleet_paint", block(-0.62, 0.95, 0.88, 0.72, 0.9, 0.74), OXIDE)
 hull(body, "fleet_paint", block(0.95, 1.2, 1.2, 1.2, 1.2, 1.2), OXIDE_HI)
 gbox(body, "fleet_paint", (2.05, 0.12, 2.05), loc=g(0, -0.98, 0), color=CHAR)
 gbox(body, "fleet_paint", (1.66, 0.11, 1.4), loc=g(0, 0.3, 0), color=CHAR)
-# Wheels roll along Z; bottoms on the floor. Smoothing pulls an 8-sided rim in by about
-# 7 percent, so the polished wheel starts that much larger and still lands on the floor.
 for sx in (-1, 1):
     for sz in (-1, 1):
         body.cyl("fleet_paint", 0.537, 0.537, 0.28, segs=8, loc=g(sx * 1.05, -1.5, sz * 0.68),
                  rot=(0, math.pi / 2, 0), color=CHAR)
     body.rod("fleet_paint", G(sx * 1.0, -1.5, -0.68), G(sx * 1.0, -1.5, 0.68), 0.1, segs=4, color=CHAR)
 
-# Punch-clock cabinet on the platform: the Foreman himself. Clock face forward.
 hull(body, "fleet_paint", block(1.2, 3.05, 0.68, 0.6, 0.48, 0.42), OXIDE)
 body.cyl("fleet_paint", DIAL_R, DIAL_R, 0.06, segs=12, loc=g(*DIAL), rot=(math.pi / 2, 0, 0), color=BONE)
-# Twelve and six o'clock pips.
 for y in (0.32, -0.32):
     gbox(body, "fleet_paint", (0.04, 0.09, 0.03), loc=g(DIAL[0], DIAL[1] + y, DIAL[2] - 0.04), color=CHAR)
 signal.ring("requisition_tag", DIAL_R - 0.02, DIAL_R + 0.07, 0.09, segs=12, loc=g(*DIAL),
             rot=(math.pi / 2, 0, 0), color=BRASS)
-# Card slot under the dial, and a rack of time cards on the right flank.
 gbox(body, "fleet_paint", (0.5, 0.03, 0.08), loc=g(0, 1.62, -0.49), color=CHAR)
 for i in range(2):
     gbox(body, "fleet_paint", (0.04, 0.42, 0.14), loc=g(0.66, 2.1 + i * 0.05, -0.1 + i * 0.2),
              color=BONE)
 gbox(body, "fleet_paint", (0.06, 0.32, 0.62), loc=g(0.63, 1.95, 0.0), color=CHAR)
-# The moustache: a push-broom bristle bar under the dial, ends turned down.
 body.beam("fleet_paint", G(-0.28, 1.76, -0.5), G(0.28, 1.76, -0.5), 0.1, 0.12, color=CHAR)
 for sx in (-1, 1):
     body.beam("fleet_paint", G(sx * 0.26, 1.78, -0.5), G(sx * 0.42, 1.6, -0.5), 0.08, 0.1, color=CHAR)
 
-# Hard hat: a squashed dome with a brim and a centre ridge, hazard yellow.
 body.uv("fleet_paint", 0.7, u=8, v=5, loc=g(0, 3.05, 0), scale=(1.0, 0.88, 0.62), color=HAT)
 body.cyl("fleet_paint", 0.92, 0.92, 0.06, segs=12, loc=g(0, 3.08, -0.06), color=HAT)
 body.beam("fleet_paint", G(0, 3.44, -0.4), G(0, 3.44, 0.4), 0.14, 0.1, color=common.mix(HAT, "bone", 0.3))
 
-# Horn mast from the rear of the platform, braced, with a steam line beside it.
 MAST_BASE = Vector((0.0, 1.2, 0.72))
 MAST_TOP = Vector((0.0, 4.45, 0.72))
 body.rod("fleet_paint", G(*MAST_BASE), G(*MAST_TOP), 0.11, segs=6, color=CHAR)
@@ -170,12 +160,9 @@ def horn(throat, direction, length, r, segs=8):
     return mouth, d
 
 
-# Twin horns on the mast head, bells up like a factory roof: a big low one leaning forward
-# and left, a smaller one cocked right, the two notes of the tell. A pair from any side.
 HORNS = [horn((-0.1, 4.5, 0.62), (-0.32, 0.84, -0.44), 1.3, 0.11),
          horn((0.14, 4.5, 0.62), (0.5, 0.8, -0.2), 0.95, 0.075)]
 
-# Tether reels on the deck corners, one per crew line, brass caps.
 TETHERS = []
 for name, sx, sz in (("a", -1, -1), ("b", 1, -1), ("c", 1, 1), ("d", -1, 1)):
     c = Vector((sx * 0.94, 1.38, sz * 0.94))
@@ -188,7 +175,6 @@ bmesh.ops.recalc_face_normals(signal.bm, faces=signal.bm.faces[:])
 body_obj = body.to_object(parent=root)
 signal_obj = signal.to_object(parent=root)
 
-# Clock hand: built pointing at twelve round its own origin on the dial centre.
 hand = Part("ForemanHand")
 hand.beam("fleet_paint", G(0, -0.06, 0), G(0, 0.34, 0), 0.06, 0.04, color=CHAR)
 hand.cyl("fleet_paint", 0.06, 0.06, 0.05, segs=6, rot=(math.pi / 2, 0, 0), color=CHAR)
@@ -197,7 +183,6 @@ hand_obj = hand.to_object(origin=g(DIAL[0], DIAL[1], DIAL[2] - 0.06), parent=roo
 
 big_mouth, big_dir = HORNS[0]
 horn_socket = common.empty("HornMouth", G(*big_mouth), parent=root)
-# -Z along the bell, found in Godot axes and conjugated into Blender axes for the empty.
 horn_socket.rotation_euler = (Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0))) @
                               Vector((0, 0, -1)).rotation_difference(big_dir).to_matrix() @
                               Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0)))).to_euler()

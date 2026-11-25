@@ -1,9 +1,5 @@
 extends SceneTree
 
-# Static contract check for the rogue body GLBs, the same rules as
-# tests/enemy_miniboss_asset_test.gd minus the live spawn: budget, opacity, named skeleton
-# bones, the three named meshes and rigid one-bone skin weights on Hull and Armour.
-# godot --headless --path sketches/core-loop --script res://tools/rogue_glb_check.gd
 
 const ROGUES := {
 	"gate_crane": {"prefix": "GateCrane", "bones": ["CraneBody", "CraneJib", "CraneHook", "CraneLeaf",

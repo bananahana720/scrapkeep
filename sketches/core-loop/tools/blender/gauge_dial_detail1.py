@@ -22,14 +22,12 @@ import polish
 from gauge_dial import kit, common, cyl, dial_xy, around, TONES
 
 DETAIL = [1500, 3000, 1]
-# The shell stays inside the base dial's bounds (foot frame, needle excluded) within this margin.
 BASE_BOUNDS = ([-1.14, 0, -.31], [1.14, 4.54, .25])
 MARGIN = .12
 Z_FACE = gd.FACE_Z + .004
 
 
 def lip_ring(s, r0, r1, z0, z1, n, color):
-    # A closed square-section ring about the dial axis.
     pts = [(r0, z0), (r1, z0), (r1, z1), (r0, z1)]
     verts = [(*dial_xy(a, r), z) for r, z in pts for a in around(n)]
     faces = [(k * n + i, k * n + (i + 1) % n, ((k + 1) % 4) * n + (i + 1) % n, ((k + 1) % 4) * n + i)
@@ -38,7 +36,6 @@ def lip_ring(s, r0, r1, z0, z1, n, color):
 
 
 def radial_plate(s, a0, a1, r0, r1, z0, z1, n, color):
-    # A curved plate on the case's outer wall, angles from straight up clockwise as dial_xy.
     aa = [a0 + (a1 - a0) * i / n for i in range(n + 1)]
     m = n + 1
     corners = [(r0, z0), (r1, z0), (r1, z1), (r0, z1)]
@@ -49,45 +46,35 @@ def radial_plate(s, a0, a1, r0, r1, z0, z1, n, color):
 
 
 def build(s):
-    # A1 face screws and A2 the hub seat.
     for a in (math.radians(165), math.radians(195)):
         x, y = dial_xy(a, .46)
         cyl(s, (x, y, Z_FACE - .006), (x, y, Z_FACE + .022), .032, 6, TONES["bolt"], caps=(False, True), start=0.0)
     cyl(s, (0, gd.FACE_Y, Z_FACE - .006), (0, gd.FACE_Y, Z_FACE + .008), .14, 12, TONES["collar"])
-    # A6 a dark raised inner lip where the face meets the bezel.
     lip_ring(s, .875, .905, Z_FACE - .006, Z_FACE + .03, 24, TONES["felt"])
-    # A3 thread rings on the spigot.
     r, y0, y1 = gd.SPIGOT
     for k in range(4):
         y = y0 + .035 + k * .055
         cyl(s, (0, y, 0), (0, y + .022, 0), r + .018, 8, TONES["collar"])
-    # A4 the round arm boss, over the 8-sided base boss.
     r, x0, x1, y = gd.BOSS
     cyl(s, (x0, y, 0), (x1 - .005, y, 0), r + .01, 12, TONES["stem"])
-    # A5 a chamfered service plate on the block front with four bolts (Switchback: the service bolts stay in sight).
     (bx, by, bz), (cx, cy, cz) = gd.BLOCK
     s.box((bx - .12, by - .12, .03), (cx, cy, cz + bz / 2 + .012), TONES["stem"])
     for dx in (-1, 1):
         for dy in (-1, 1):
             px, py = cx + dx * (bx / 2 - .12), cy + dy * (by / 2 - .11)
             cyl(s, (px, py, cz + bz / 2 + .02), (px, py, cz + bz / 2 + .05), .028, 6, TONES["bolt"], caps=(False, True), start=0.0)
-    # A9 the bezel's service bolt row on the crown.
     for a in around(12, math.pi / 12):
         x, y = dial_xy(a, 1.01)
         cyl(s, (x, y, .18), (x, y, .235), .045, 6, TONES["bolt"], caps=(False, True), start=0.0)
-    # A10 a weld bead along the top seam where the arm meets the block (the block's front face hides the arm's front
-    # seam from the hero side).
     (ax, ay, az), (acx, acy, acz) = gd.ARM
     top = acy + ay / 2
     for k in range(6):
         z = -az / 2 + .04 + k * (az - .08) / 5
         cyl(s, (bx / 2 + .02, top - .01, z), (bx / 2 + .02, top + .022, z), .036, 6, TONES["bolt"], caps=(False, True))
-    # A11 a hose clamp on the stem: a band and its screw tab.
     r = gd.STEM[0]
     cyl(s, (0, 1.30, 0), (0, 1.37, 0), r + .02, 12, TONES["felt"])
     s.box((.07, .07, .08), (0, 1.335, r + .05), TONES["felt"])
     cyl(s, (-.06, 1.335, r + .05), (.06, 1.335, r + .05), .022, 6, TONES["bolt"], start=0.0)
-    # A12 a rust patch plate on the case's lower left with four copper rivets.
     a0, a1 = math.radians(240), math.radians(280)
     radial_plate(s, a0, a1, 1.14, 1.18, -.14, .11, 5, TONES["redline"])
     for a in (a0 + .07, a1 - .07):
@@ -118,7 +105,7 @@ def export(name, part, build_fn, out_dir, bounds=BASE_BOUNDS):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **gd.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **gd.kit.BAKE)
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(gd.MODELS))

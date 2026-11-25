@@ -16,25 +16,21 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import bmesh  # noqa: E402
-from mathutils import Vector  # noqa: E402
-from _life import Critter, _B, _m  # noqa: E402
+import bmesh
+from mathutils import Vector
+from _life import Critter, _B, _m
 
 life = Critter("prospector")
 
-# --- legs: a round lap, shins folded back along the ground, soft feet
 life.ellipsoid("legs", "stripe", (0, 0.16, 0.06), (0.21, 0.15, 0.2), subsurf=1, u=8, v=5)
 for s in (-1, 1):
     life.capsule("legs", "stripe", (0.13 * s, 0.075, -0.1), (0.13 * s, 0.07, 0.25), 0.075, 0.062, subsurf=1, u=6, v=4)
     life.ellipsoid("legs", "cream", (0.13 * s, 0.045, 0.31), (0.06, 0.04, 0.075), subsurf=0, u=8, v=4)
 
-# --- torso: a round pear in the violet flannel, plum braces, cream collar
 life.ellipsoid("body", "shirt", (0, 0.5, 0.01), (0.27, 0.3, 0.25), subsurf=1, u=10, v=6)
 life.ellipsoid("body", "cream", (0, 0.72, -0.07), (0.15, 0.06, 0.1), subsurf=1, u=6, v=4)
-# a soft rounded bib panel in plum, proud of the chest
 life.ellipsoid("body", "stripe", (0, 0.5, -0.2), (0.15, 0.17, 0.06), subsurf=1, u=8, v=4)
 
-# --- head: broad cream face, plum stripes running front to back, round ears
 HC, HR = Vector((0, 0.82, -0.08)), (0.175, 0.15, 0.19)
 hp = life.part("head")
 with hp.region(bevel=0, subsurf=1, detail=1):
@@ -44,7 +40,7 @@ with hp.region(bevel=0, subsurf=1, detail=1):
     faces = sorted({f for v in r["verts"] for f in v.link_faces}, key=lambda f: f.index)
     band = []
     for f in faces:
-        c = f.calc_center_median()  # Blender axes; back to Godot (x, bz, -by)
+        c = f.calc_center_median()
         gx, gy = (c.x - HC.x) / HR[0], (c.z - HC.y) / HR[1]
         if 0.3 <= abs(gx) <= 0.72 and gy > -0.3:
             band.append(f)
@@ -56,21 +52,17 @@ for s in (-1, 1):
     life.ellipsoid("head", "eye", (0.09 * s, 0.825, -0.215), (0.026, 0.029, 0.02), subsurf=0, u=6, v=4)
     life.ellipsoid("head", "stripe", (0.145 * s, 0.94, 0.0), (0.045, 0.05, 0.035), subsurf=1, u=6, v=4)
 
-# --- hat: a soft battered crown on a droopy brim, pushed back so the stripes show
 life.ellipsoid("hat", "hat", (0, 1.02, 0.05), (0.14, 0.08, 0.14), rot=(6, 0, 4), subsurf=1, u=8, v=5)
 life.ellipsoid("hat", "hat", (0, 0.965, 0.05), (0.235, 0.025, 0.23), rot=(-6, 0, 0), subsurf=1, u=16, v=4)
-life.ellipsoid("hat", "stripe", (0, 0.985, 0.05), (0.15, 0.025, 0.15), subsurf=0, u=10, v=4)  # band
+life.ellipsoid("hat", "stripe", (0, 0.985, 0.05), (0.15, 0.025, 0.15), subsurf=0, u=10, v=4)
 
-# --- arms (shirt sleeves, cream paws) reaching down to the pan rim
 for s, bone in ((-1, "arm_l"), (1, "arm_r")):
     life.capsule(bone, "shirt", (0.25 * s, 0.65, -0.02), (0.19 * s, 0.42, -0.28), 0.085, 0.07, subsurf=1, u=6, v=4)
     life.ellipsoid(bone, "cream", (0.19 * s, 0.4, -0.3), (0.055, 0.05, 0.055), subsurf=1, u=8, v=4)
 
-# --- pan: wide, shallow, round, with a heap of plum gravel
 life.ellipsoid("pan", "pan", (0, 0.37, -0.3), (0.22, 0.035, 0.22), subsurf=1, u=16, v=6)
 life.ellipsoid("pan", "stripe", (0, 0.395, -0.3), (0.15, 0.02, 0.15), subsurf=0, u=16, v=4)
 
-# --- pick: short, rounded handle and blunt rounded head, lying on the ground to his right
 life.tube("root", "stripe", [(0.52, 0.035, 0.2), (0.5, 0.05, -0.28)], [0.026, 0.024], sides=6, subsurf=1)
 life.ellipsoid("root", "pan", (0.5, 0.07, -0.32), (0.13, 0.05, 0.045), subsurf=1, u=10, v=5)
 
@@ -87,8 +79,7 @@ life.rig([
 
 REST = {}
 
-# --- idle, 2.5 s: swirl the pan (two laps), hum and sway, head bob
-import math  # noqa: E402
+import math
 pan_keys, arm_l, arm_r = [], [], []
 for i in range(10):
     t = round(i * 0.25, 4)
@@ -105,7 +96,6 @@ life.cycle("idle", 2.5, {
     "pan": pan_keys, "arm_l": arm_l, "arm_r": arm_r,
 })
 
-# --- move, 1.8 s: lift the pan to peer at it, lower it, then a small happy nod
 LIFT = 51
 life.cycle("move", 1.8, {
     "arm_l": [(0, REST), (0.4, {"rot": (LIFT, 0, 0)}), (0.9, {"rot": (LIFT, 0, 0)}), (1.2, REST)],
@@ -118,7 +108,6 @@ life.cycle("move", 1.8, {
     "hat": [(0, REST), (1.4, {"rot": (-6, 0, 0)}), (1.6, {"rot": (3, 0, 0)})],
 })
 
-# --- react, 2.0 s: startle (pan flung up, head back), then flat on the belly, hat pulled over the face
 DUCK = {
     "legs": {"scale": (1, 0.45, 1)},
     "body": {"loc": (0, -0.03, 0), "rot": (-80, 0, 0)},

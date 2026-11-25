@@ -1,21 +1,5 @@
 extends SceneTree
 
-# Compares two still sets from tools/still_capture.gd (E1-DENSITY.md section 5.2):
-#   godot --headless --path sketches/core-loop --script res://tools/still_diff.gd -- --ref=/abs/ref --head=/abs/head --out=/abs/diff
-# A still fails when more than MAX_SHARE of its pixels differ by more than CHANNEL_STEP
-# in any channel, or the mean absolute difference over every channel exceeds MAX_MEAN.
-# The same two numbers are also taken inside the telegraph's box (BOX_MAX_SHARE,
-# BOX_MAX_MEAN): the pixels where either still differs from the reference "empty" still
-# (the ground alone), padded by BOX_PAD. A whole-frame share dilutes a defect a tenth of
-# a fill's size below the budget (E1 fix round, finding 2b); the box does not. Calibrated
-# on the E1 set: one-pixel edge seams reach 0.33% of the box (mean 0.13), a 0.4 m band cut
-# from a ring fill 2.57% (mean 0.54). The LANE fill-under-line reorder reaches 2.39%, as
-# large as that defect, so stills with a known look change go in --expect-change and are
-# judged by eye, never passed by this budget.
-# Writes diffs.json, an amplified diff image per still and contact.png (reference, head,
-# diff x8 per row). Stills named in --expect-change are reported but not judged. A still
-# named control-<still>--<defect> is a known-bad head still compared with the reference
-# <still>; it must fail the budget.
 
 const CHANNEL_STEP := 12
 const MAX_SHARE := 0.003
@@ -83,7 +67,6 @@ func _initialize() -> void:
 	quit(0 if failed == 0 else 1)
 
 
-# control-instant-ring-50--band compares with instant-ring-50.
 static func _ref_name(name: String) -> String:
 	if name.begins_with("control-") and "--" in name:
 		return name.substr(8, name.find("--") - 8)
@@ -143,8 +126,6 @@ func _compare(a: Image, b: Image, empty: Image, diff_path: String, sheet: Image,
 		"box_mean": float(box_total) / (box_pixels * 3), "box_pixels": box_over}
 
 
-# The bounding box of every pixel where either still differs from the ground alone by more
-# than CHANNEL_STEP, padded by BOX_PAD; the whole frame when there is no empty still.
 func _box(da: PackedByteArray, db: PackedByteArray, empty: Image, width: int, height: int) -> Rect2i:
 	if empty == null or empty.get_width() != width or empty.get_height() != height:
 		return Rect2i(0, 0, width, height)

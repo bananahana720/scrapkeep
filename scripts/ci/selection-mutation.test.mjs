@@ -22,7 +22,6 @@ test("selection mutation proof: GDScript change reaches ALWAYS pins, direct test
     `expected direct/transitive tests for src/core/palette.gd, got ${selection.picked.size}`,
   );
 
-  // Unreferenced/hidden .gd file still triggers ALWAYS pins + real whole-game canaries.
   const hidden = selectTests(index, ["src/unreferenced_hidden_module.gd"]);
   assert.ok(hidden.unmapped.includes("src/unreferenced_hidden_module.gd"));
   for (const pin of ALWAYS) {
@@ -31,7 +30,6 @@ test("selection mutation proof: GDScript change reaches ALWAYS pins, direct test
   const realCanaries = canaries(index, realTimings);
   assert.ok(realCanaries.length >= 1, "expected real production canaries to be non-empty");
 
-  // Even under the tight 120s PR CI budget, tier-0 ALWAYS pins are never deferred.
   const planned = plan({
     picked: selection.picked,
     timings: realTimings,

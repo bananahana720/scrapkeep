@@ -142,7 +142,6 @@ test("main runs the build under a stand-in mangohud and grades its log", () => {
   mkdirSync(bin);
   const game = path.join(base, "core-loop.x86_64");
   writeFileSync(game, "");
-  // The stand-in writes a log where MANGOHUD_CONFIG's output_folder points, as MangoHud does.
   const fake = path.join(bin, "mangohud");
   const rows = Array.from({ length: 200 }, () => "125,8,1,1,1,1,0").join("\\n");
   writeFileSync(
@@ -301,7 +300,6 @@ function selfPlayRun(exitCode, stdoutLines) {
   }
   const [stampDir] = readdirSync(out);
   const dir = path.join(out, stampDir);
-  // The MangoHud launch takes the quiet hold once and gives it back.
   assert.deepEqual(held, ["taken", "released"]);
   return {
     code,
@@ -348,7 +346,6 @@ test("main --self-play fails the check when the game stalls (3) or lacks tools/ 
   assert.equal(selfPlayRun(2, []).code, 2);
 });
 
-// The engine capture (macOS): src/core/frame_log.gd's CSV, read by the same parser.
 const ENGINE_CSV = (frames) =>
   "scrapkeep_frame_log,engine,driver,adapter,vsync\nscrapkeep_frame_log,4.7.2.stable,metal,Apple M2 Ultra,0\nframetime\n" +
   frames.map((ms) => ms.toFixed(3)).join("\n") +
@@ -455,7 +452,6 @@ test("all direct Mac captures refuse before any executable runs or the machine i
 
 test("main on Linux launches the engine capture with scratch XDG data and grades the game's own log", () => {
   const base = mkdtempSync(path.join(os.tmpdir(), "ft-engine-"));
-  // A stand-in editor: writes the CSV where --frame-log= points, and the scratch XDG data directory it was given.
   const fake = path.join(base, "Godot");
   const rows = Array.from({ length: 200 }, () => "8.000").join("\\n");
   writeFileSync(
@@ -478,13 +474,11 @@ test("main on Linux launches the engine capture with scratch XDG data and grades
   let missing;
   let reused;
   const held = [];
-  // --home lives elsewhere, so the run folder must still be made for the frame log and self-play.log.
   const localRoot = path.resolve(import.meta.dirname, "../artifacts/local");
   mkdirSync(localRoot, { recursive: true });
   const keptHome = mkdtempSync(path.join(localRoot, "frametime-test-home-"));
   const outReused = path.join(base, "out3");
   try {
-    // The launch takes the quiet hold once and gives it back; a run that never launches does not take it.
     const quiet = () => {
       held.push("taken");
       return { release: () => held.push("released") };
@@ -590,7 +584,6 @@ test("--home reuses an existing scratch HOME under artifacts/local and refuses a
     () => engineHome({ home: path.join(local, "missing") }, "/out", local),
     /no folder/,
   );
-  // A link inside artifacts/local that points out of it is refused; one that stays inside is not.
   symlinkSync(outside, path.join(local, "escape"));
   assert.throws(
     () => engineHome({ home: path.join(local, "escape") }, "/out", local),

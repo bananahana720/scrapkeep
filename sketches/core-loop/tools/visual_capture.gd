@@ -143,7 +143,6 @@ func _physics_process(delta: float) -> bool:
 		return false
 	if mode == "warden" and is_instance_valid(game.flow.warden):
 		game.player.body().freeze = true
-		# Inspection uses the existing open-state seam, with no gameplay rule changes.
 		if settings.get("warden-open", "false") == "true":
 			game.flow.warden._open_left = 1.0
 	var position: Vector3 = game.player.ball_position()

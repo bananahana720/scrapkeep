@@ -4,17 +4,6 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 
-# Receipts for the looping workers (work_machines.gd, BACKLOG W1-93): for each machine in a park, a
-# still and a clip from where a pilot sees it: a pilot line point 60 to 140 m out, nearest 90 m, whose
-# sight of the machine is clear over the baked ground and the scatter props (the test's own judge;
-# props have no colliders, so a physics ray misses them). Needs a rendered display (on a GPU-less box, xvfb):
-#
-#   $GODOT_BIN --fixed-fps 15 --path sketches/core-loop --script res://tools/work_machines_capture.gd \
-#     -- --out=<absolute dir> [--park=park_dam] [--id=<row id>] [--seconds=20] [--near=1]
-#
-# --near=1 adds a second clip from the nearest line point with a clear sight, the closest a pilot
-# gets a whole view. Writes
-# <out>/<park>_<id>[_near]/{still.png, frame_####.png, works_<park>_<id>.mp4}.
 
 const FPS := 15.0
 const SIZE := Vector2i(1280, 720)
@@ -121,8 +110,6 @@ func _ride_lines() -> Array:
 	return []
 
 
-# The point of a pilot line between near_m and far_m from the machine, closest to want_m, whose sight of
-# the machine is clear; the nearest line point when none is.
 func _vantage(m: Dictionary, lines: Array, near_m: float, far_m: float, want_m: float) -> Vector2:
 	var at: Vector2 = m.row.at
 	var target := Vector3(at.x, Terrain._grid_height(_heights, at.x, at.y) + MID_M, at.y)

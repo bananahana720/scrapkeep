@@ -45,33 +45,27 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
-import common  # noqa: E402
-from common import Part  # noqa: E402
-import shell_base as sb  # noqa: E402
-import shell_cannon as sc  # noqa: E402
+import common
+from common import Part
+import shell_base as sb
+import shell_cannon as sc
 
 OUTDIR = HERE.parents[2] / "assets/models/world_one"
 LAYER_TRIS = 1500
 LAYER_VERTS = 3000
-# Panel radii (ROSTER-LOOK section 2: outer face 0.92 just inside the lattice's 0.94 inner face).
 R_OUT = 0.92
-R_TOP = 0.928      # the raised cast plateau
-R_IN = 0.89        # inner face; its chords stay outside the gimbal sweep
+R_TOP = 0.928
+R_IN = 0.89
 GIMBAL_CLEAR = sb.GIMBAL_OUTER[1] + 0.003
-# Corner pull toward the gap centre (gnomonic plane): five-way tips, three-way tips, tip clip.
 K5, K3, CLIP = 0.58, 0.74, 0.24
 PLATEAU = 0.72
 FRONT_EYES = tuple(Vector((e.x, -e.y, e.z)) for e in sb.CHASE_EYES)
-# Verdigris under the section 11 enamel cap (HSV value and saturation at most 0.45).
 VERDIGRIS = "47736a"
 RIM = common.mix(VERDIGRIS, "charcoal", 0.30)
 BACK = common.mix(VERDIGRIS, "charcoal", 0.50)
 DUST = common.mix(VERDIGRIS, "736b5a", 0.35)
 CLASSES = (2, 3, 4, 5)
-# Heavy forms at class V: a cast sleeve round each split port, a cast guard round the rush ring.
 GUARD = (sc.RUSH[1] + 0.014, sc.RUSH[1] + 0.036, 0.05, sc.RUSH[3] - 0.015)
-# Tread collar r_in, r_out, low, high (under CORE_LIMIT): 0.002 m off the base tread cap and 0.022 m
-# wide, so it follows shell_base's cap (0.05 m radius since PD-0b; it was 0.072 to 0.094 on 0.07).
 COLLAR = (sb.HUB_CAP[0] + 0.002, sb.HUB_CAP[0] + 0.024, 0.950, 0.979)
 
 
@@ -206,12 +200,10 @@ def heavy_forms(part, pod):
     part.ring("ancient_enamel", r_in, r_out, depth, 12, loc=(0, 0, z), color=RIM)
 
 
-# Barrel-borne scrap (--ring-scrap only, not shipped; see the header). Scrap iron and worn
-# verdigris under the section 11 enamel cap.
 SCRAP_IRON = common.mix("736b5a", "charcoal", 0.45)
 SCRAP_PLATE = common.mix(VERDIGRIS, "736b5a", 0.6)
-JACKET = (1.25, 0.11)          # breech-half jacket centre y and length, clear of the shutter
-SKIRT = (1.062, 0.012, 14)     # radius, thickness, plates round the collar
+JACKET = (1.25, 0.11)
+SKIRT = (1.062, 0.012, 14)
 
 
 def ring_scrap(n):
@@ -334,8 +326,6 @@ def check(n, root, pod, points, bins, count, pod_points=()):
     tris = common.tri_total(root)
     meshes = [o for o in common.tree(root) if o.type == "MESH"]
     draws = sum(len(o.data.materials) for o in meshes)
-    # PortHoods rides the carrier bank as its own one-material mesh (ancient_enamel): one more draw at class V.
-    # The expected count is pinned here, not read from the mesh, so a missing or extra hood fails the draw check.
     hood_draws = 1 if n == 5 else 0
     cone = sb.sight_cone_hits(pod)
     front = sb.sight_cone_hits(pod, eyes=FRONT_EYES)

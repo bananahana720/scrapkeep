@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Wait for a codex-companion job by id and print its status and the tail of its result.
-# Usage: watch_codex.sh <job-id>
 job="$1"
 f=""
 for i in $(seq 1 30); do

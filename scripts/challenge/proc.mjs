@@ -1,5 +1,3 @@
-// The job runner the gate harness shares in shape with run.mjs: one Godot process per job under a wall timeout, a
-// bounded pool, and a private XDG state folder per job. (run.mjs keeps its own copies; the two are the same code.)
 import { spawn } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -20,7 +18,13 @@ export function runProcess(godot, cwd, args, { env, timeout, logFile }) {
     child.on("close", (code, signal) => {
       clearTimeout(timer);
       if (logFile) writeFileSync(logFile, text);
-      resolve({ exit: code ?? (signal ? 128 : 1), signal, timedOut, text, wallS: (Date.now() - t0) / 1000 });
+      resolve({
+        exit: code ?? (signal ? 128 : 1),
+        signal,
+        timedOut,
+        text,
+        wallS: (Date.now() - t0) / 1000,
+      });
     });
   });
 }
@@ -28,16 +32,22 @@ export function runProcess(godot, cwd, args, { env, timeout, logFile }) {
 export async function pool(tasks, slots) {
   const results = new Array(tasks.length);
   let next = 0;
-  await Promise.all(Array.from({ length: Math.min(slots, tasks.length) }, async () => {
-    while (next < tasks.length) {
-      const i = next++;
-      results[i] = await tasks[i]();
-    }
-  }));
+  await Promise.all(
+    Array.from({ length: Math.min(slots, tasks.length) }, async () => {
+      while (next < tasks.length) {
+        const i = next++;
+        results[i] = await tasks[i]();
+      }
+    }),
+  );
   return results;
 }
 
 export function stateEnv(dir) {
   for (const d of ["data", "config", "cache"]) mkdirSync(path.join(dir, d), { recursive: true });
-  return { ...userDataEnv(path.join(dir, "data")), XDG_CONFIG_HOME: path.join(dir, "config"), XDG_CACHE_HOME: path.join(dir, "cache") };
+  return {
+    ...userDataEnv(path.join(dir, "data")),
+    XDG_CONFIG_HOME: path.join(dir, "config"),
+    XDG_CACHE_HOME: path.join(dir, "cache"),
+  };
 }

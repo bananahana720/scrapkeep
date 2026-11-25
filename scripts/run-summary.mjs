@@ -1,13 +1,3 @@
-// One line per run from a core-loop runs.ndjson, so what happened in a sitting can be
-// read without asking the player. Records are cumulative (each line carries the whole
-// run so far), so the last line of a run_id is the run. Keys a record lacks print as "-".
-//
-//   node scripts/run-summary.mjs [--last N] [--file path]
-//
-// With no --file it reads the game's own log. Godot puts user:// for a project with no
-// custom user dir at $XDG_DATA_HOME/godot/app_userdata/<config/name>/ (default
-// ~/.local/share/godot/...); with config/use_custom_user_dir=true it is
-// $XDG_DATA_HOME/<config/custom_user_dir_name>/ instead. Both come from the sketch's project.godot.
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import path from "node:path";
@@ -34,7 +24,11 @@ function projectSetting(key, fallback) {
 export function defaultLog(env = process.env, home = homedir()) {
   const data = env.XDG_DATA_HOME || path.join(home, ".local", "share");
   if (projectSetting("config/use_custom_user_dir", "false") === "true") {
-    return path.join(data, projectSetting("config/custom_user_dir_name", "core-loop"), "runs.ndjson");
+    return path.join(
+      data,
+      projectSetting("config/custom_user_dir_name", "core-loop"),
+      "runs.ndjson",
+    );
   }
   const name = projectSetting("config/name", "core-loop");
   return path.join(data, "godot", "app_userdata", name, "runs.ndjson");
@@ -76,7 +70,6 @@ function seconds(ticks, rate) {
   }
 }
 
-// A pack row is a faction string in old records and {faction, kinds} since wave 13.
 function packLabel(item) {
   if (item && typeof item === "object") {
     const kinds = Array.isArray(item.kinds) ? item.kinds.join("+") : "";
@@ -102,7 +95,9 @@ function tally(items) {
 export function summarize(record, rate = 60) {
   const stages = Array.isArray(record.stages) ? record.stages : [];
   const last = stages.length > 0 ? stages[stages.length - 1] : null;
-  const postureRows = stages.map((row) => row.posture).filter((row) => row && typeof row === "object");
+  const postureRows = stages
+    .map((row) => row.posture)
+    .filter((row) => row && typeof row === "object");
   const sum = (key) => postureRows.reduce((total, row) => total + (Number(row[key]) || 0), 0);
   const causes = new Map();
   for (const row of stages) {
@@ -110,9 +105,13 @@ export function summarize(record, rate = 60) {
       causes.set(id, (causes.get(id) ?? 0) + Number(count));
     }
   }
-  const causeText = causes.size === 0 ? DASH : [...causes].map(([id, count]) => `${id}x${count}`).join(",");
+  const causeText =
+    causes.size === 0 ? DASH : [...causes].map(([id, count]) => `${id}x${count}`).join(",");
   const packs = stages.flatMap((row) => (Array.isArray(row.packs) ? row.packs : []));
-  const posture = postureRows.length === 0 ? `staggers ${DASH} chunks ${DASH}` : `staggers ${sum("staggers")} chunks ${sum("chunks_lost")}`;
+  const posture =
+    postureRows.length === 0
+      ? `staggers ${DASH} chunks ${DASH}`
+      : `staggers ${sum("staggers")} chunks ${sum("chunks_lost")}`;
   return [
     whenOf(record),
     record.class ?? DASH,

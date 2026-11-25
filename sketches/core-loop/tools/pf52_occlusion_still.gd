@@ -1,15 +1,5 @@
 extends SceneTree
 
-# Stills for PF-52 (a threat mark behind a ridge painted the screen flat orange): the game on its
-# park map with the play camera and HUD, a hostile INSTANT landing (the solid flash, crack ring
-# and dust, the layers that draw with the tinted material) laid once behind terrain from the
-# camera, and once in plain view. Each still is taken with the game held on the landing's first
-# frame. frames.json records, per shot, the share of screen pixels within TONE_DISTANCE of the
-# mark's tone (the HUD is in the frame, so compare shots of one build with each other).
-#   gpu-run.sh <worktree> pf52 --path sketches/core-loop --script res://tools/pf52_occlusion_still.gd -- --out=/abs/dir [--ball=x,z] [--heading=deg]
-# Without --ball the ball stays where the run starts. The tool walks sight lines from the camera
-# for a spot the ground hides and a spot it does not, and stops with an error, writing no still,
-# if it finds none or if the landing is not live at the shot.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -20,10 +10,7 @@ const SETTLE := 45
 const WAIT_TICKS := 2400
 const LANDED := 1.6
 const RADIUS := 5.0
-# Colour distance (sRGB, 0 to 1 per channel) under which a pixel counts as the mark's tone.
 const TONE_DISTANCE := 0.12
-# Ground the sight line must clear a point by, metres, for it to count as hidden.
-# Colour distance from the same view with no mark over which a pixel counts as changed.
 const CHANGE_DISTANCE := 0.06
 const HIDE_BY := 1.5
 const SEARCH_FROM := 8.0
@@ -154,8 +141,6 @@ func _run() -> void:
 	quit(0)
 
 
-# How far the ground stands above the camera's sight line to `point`, the most over its length
-# (positive: the ground hides the point; negative: the line clears it).
 func _cover(ground, cam: Vector3, point: Vector3) -> float:
 	var worst := -INF
 	for i in range(1, 40):
@@ -166,11 +151,6 @@ func _cover(ground, cam: Vector3, point: Vector3) -> float:
 	return worst
 
 
-# One still of a mark at `at`. live false: a landing's Flash, held on its first frame. live true:
-# a hostile INSTANT telegraph that has gone live and not landed (no Flash, no crack), so the still
-# shows its own live fill. Each still records two numbers: tone_share, the share of pixels near the
-# mark's tone, and changed_share, the share that differ from the same view with no mark, which is
-# the one that counts for the dark live fill.
 func _shot(id: String, at: Vector3, ball: Vector3, ahead: Vector3, ground, live := false) -> void:
 	if failed != "":
 		return
@@ -228,7 +208,6 @@ func _shot(id: String, at: Vector3, ball: Vector3, ahead: Vector3, ground, live 
 	await _ticks(2)
 
 
-# Whether the centre of a mark at `at` and at least six of eight rim points are clear of the ground from the camera.
 func _in_view(ground, cam: Vector3, at: Vector3) -> bool:
 	if _cover(ground, cam, at) > 0.0:
 		return false
@@ -242,7 +221,6 @@ func _in_view(ground, cam: Vector3, at: Vector3) -> bool:
 	return clear >= 6
 
 
-# How far the ground at `at` bulges over the ground round it at the mark's rim, metres.
 func _bulge(ground, at: Vector3) -> float:
 	var rim := 0.0
 	for i in 8:
@@ -251,7 +229,6 @@ func _bulge(ground, at: Vector3) -> float:
 	return Telegraph.ground_under(ground, at) - rim / 8.0
 
 
-# The landing Flash a mark left under `parent`.
 func _flash(parent: Node):
 	for node in parent.get_children():
 		if node is Threat.Flash:

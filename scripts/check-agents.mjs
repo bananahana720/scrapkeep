@@ -412,7 +412,6 @@ async function checkEntrypointsAndAstack(findings, root) {
       const refDir = path.join(skillsDir, e.name, "references");
       if (await exists(refDir)) {
         for (const r of await readdir(refDir, { withFileTypes: true })) {
-          // lessons.md retains historical provenance (for example VFM-07); check all other references/*.md.
           if (r.isFile() && r.name.endsWith(".md") && r.name !== "lessons.md") {
             liveFiles.push(`.agents/skills/${e.name}/references/${r.name}`);
           }

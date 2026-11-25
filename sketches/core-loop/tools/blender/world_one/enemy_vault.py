@@ -23,7 +23,6 @@ def build():
     common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
     common.SLOTS["part_state"] = {"color": "petrol", "metal": 0.6, "rough": 0.4}
     common.SLOTS["working_tool"] = {"color": "bone", "rough": 0.4}
-    # Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
     polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
     root = common.empty("Vault")
     body = Part("VaultBody")
@@ -33,7 +32,6 @@ def build():
     body.prism("fleet_paint", [(x * 1.04, y * 1.04) for x, y in footprint], 0.16,
                matrix=common.mtx(g(0, 1.14, 0)), color=common.mix("petrol", "bone", 0.14))
     body.prism("fleet_paint", footprint, 0.14, matrix=common.mtx(g(0, -1.20, 0)), color="charcoal")
-    # Repaired faces and latch interrupt the old paint without adding visual noise.
     body.box("fleet_paint", (0.8, 0.05, 0.52), loc=g(-0.48, -0.02, 1.46), color="oxide")
     body.box("fleet_paint", (0.15, 0.10, 1.15), loc=g(0.57, 0.18, 1.49), color="charcoal")
     body.box("fleet_paint", (0.46, 0.13, 0.16), loc=g(0.57, 0.18, 1.55), color="bone")
@@ -54,8 +52,6 @@ def build():
             plate.box("part_state", (3.2, 0.18, 0.35), loc=g(0, y, z))
         for x in (-1.51, 1.51):
             plate.box("part_state", (0.18, 2.84, 0.35), loc=g(x, y, 0))
-    # Each quad fills one cell of enemy.gd's 3-by-2 BoxMesh atlas. Mapping a face
-    # across the whole atlas would paint six little frames across its broad finish.
     uv = plate.bm.loops.layers.uv.new("UVMap")
     for face in plate.bm.faces:
         for loop, point in zip(face.loops, ((0, 0), (1 / 3, 0), (1 / 3, 0.5), (0, 0.5))):

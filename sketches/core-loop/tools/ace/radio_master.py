@@ -26,7 +26,6 @@ from pedalboard import (Compressor, Gain, HighpassFilter, Limiter, LowpassFilter
 from scipy import signal
 
 MUD = (200.0, 500.0)
-# per stem: high-pass Hz, low-pass Hz (None = off), mud share limit, compressor settings
 STEMS = {
     "drums": dict(hp=30, lp=None, mud_limit=0.10, comp=dict(threshold_db=-18, ratio=3.0, attack_ms=12, release_ms=120)),
     "bass": dict(hp=30, lp=6000, mud_limit=0.20, comp=dict(threshold_db=-20, ratio=3.0, attack_ms=25, release_ms=160)),
@@ -98,7 +97,7 @@ def lra(x, sr):
     """EBU R128 loudness range from 3 s short-term blocks (1 s hop), gated at -70 / -20 LU."""
     meter = pyln.Meter(sr)
     y = np.array(x, dtype=np.float64)
-    for _, filt in meter._filters.items():  # pyloudnorm filters are 1-D: one channel at a time
+    for _, filt in meter._filters.items():
         for ch in range(y.shape[1]):
             y[:, ch] = filt.apply_filter(y[:, ch])
     win, hop = int(3 * sr), int(1 * sr)
@@ -158,15 +157,14 @@ def main():
     print("stems (EQ and bus compression)")
     buses = {k: process_stem(k, v, sr, a.drum_db if k == "drums" else 0.0) for k, v in stems.items()}
     buses["bass"] = mono_below(buses["bass"], sr)
-    buses["other"] = mono_below(buses["other"], sr)  # keeps the low end of pads and keys centered
+    buses["other"] = mono_below(buses["other"], sr)
     mix = sum(buses.values())
 
     dry = pyln.Meter(sr).integrated_loudness(mix)
     gain_db = a.target_lufs - dry
-    # the limiter sits after the gain stage; it catches the peaks the gain pushed over the ceiling
     meter = pyln.Meter(sr)
     start_gain = gain_db
-    for _ in range(4):  # the limiter and the peak trim move the level, so close the loop on LUFS
+    for _ in range(4):
         limiter = Pedalboard([Gain(gain_db=gain_db), Limiter(threshold_db=a.tp - 0.5, release_ms=120)])
         out = limiter(mix.T.copy(), sr).T
         tp = true_peak_db(out, sr)
@@ -181,7 +179,6 @@ def main():
     if a.stems_dir:
         import os
         os.makedirs(a.stems_dir, exist_ok=True)
-        # the stems must sum to the master's level: the limiter and the peak trim move it after the gain stage
         stem_gain = gain_db_used + (meter.integrated_loudness(out) - meter.integrated_loudness(mix * 10 ** (gain_db_used / 20)))
         for k, v in buses.items():
             sf.write(os.path.join(a.stems_dir, f"{k}.wav"), v * 10 ** (stem_gain / 20), sr, subtype="PCM_24")

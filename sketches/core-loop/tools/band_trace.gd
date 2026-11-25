@@ -1,16 +1,5 @@
 extends "res://tools/band_run.gd"
 
-# Diagnostic tick-level replay and trace tool for World 1 band runs (PF-48, PF-49, W46-01).
-# Reads BotDriver, Flow and Boss through their public trace_snapshot() calls.
-# Built on tools/band_run.gd and tools/bot_run.gd so a seed replays identically with or without it.
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/band_trace.gd \
-#     -- --seeds=40317 --band=learner --attempt=1 [--every=90] [--from-tick=0] [--to-tick=0] \
-#     [--trace-stage=0] [--trace-state=gates,launch|boss] [--out=<dir>]
-#
-# Without --out, defaults to the w1clear band-table run (--policy=skipper --table=park --gate=1
-# --until=2 --fight-limit=240 --stage-limit=600 --ticks=156600 --qa-log=1) writing under
-# artifacts/local/band-trace/<seed>-<band><attempt>.
 
 var _trace_every := 90
 var _trace_from := 0
@@ -76,7 +65,6 @@ func _reexec_with_defaults(s: Dictionary) -> void:
 func _physics_process(delta: float) -> bool:
 	var over := super._physics_process(delta)
 	if _game == null or _game.flow == null or _driver == null:
-		# bot_run frees the game when a run ends and never returns true.
 		if _game == null and _trace_file != null:
 			_trace_file.flush()
 			_trace_file.close()

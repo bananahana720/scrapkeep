@@ -1,22 +1,5 @@
 extends SceneTree
 
-# PARK-SEAT seat probe (from KD1-DRESS's read-only swap_probe, 2026-10-16): for a park stage, opts each candidate row in
-# to the seat fit (park_recipes.gd seat_fit) with the named recipe, places it through park_recipes.gd place() on the
-# committed bake's ground (terrain.gd's _park_floor_at over ground.bin, holes.bin and under.bin; a cave-in roof is not
-# applied), and reports per row: the stretch, the gap between the GLB's authored entry and exit and the ground under
-# them, the worst gap along the centre line between them, the GLB's width against the row's, whether every view and
-# the collider sit on the one fit transform, or why the row stood in as greybox. Read-only: no park file is written.
-#   godot --headless --path sketches/core-loop --script tools/seat_probe.gd -- <map_id> [fit=tile] [row_id=recipe ...]
-# With no row_id=recipe pairs the candidates are the stage's rows that already name a GLB recipe. Exit 0 when every
-# candidate either seats within SEAT_TOLERANCE_M at entry and exit or states a refusal, 1 otherwise, 2 on bad input.
-#
-# fit=tile (PARK-TILE, ruling TI1) opts the candidates in to the tile fit instead and first prints the tileable report
-# for every recipe of park_recipes.gd ROWS outside the hero landmarks (tile_ends: the -col cross-section at the entry
-# and the exit). Per row it reports the copy count N, the stretch, the worst vertical step between consecutive copies'
-# collider cross-sections at each joint (TILE_JOINT_M at most), the worst gap of each copy's ends to the ground, the
-# worst centre-line gap to the ground over every copy, whether every copy's views and collider sit on its transform,
-# and the nodes and draws the tiled row adds (views x copies). Exit 0 when every candidate tiles within the bounds or
-# states a refusal, 1 otherwise.
 
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraphTool := preload("res://tools/park_graph.gd")
@@ -138,7 +121,6 @@ func _probe(row: Dictionary, parent: Node3D, ground: Callable) -> Dictionary:
 		entry_gap, exit_gap, worst, "yes" if on_fit == "" else on_fit, result]}
 
 
-# The tileable report: every ROWS recipe outside the hero landmarks, its authored length and its -col cross-sections.
 func _tileable_report() -> void:
 	print("seat_probe: tileable report, match within %.2f m, cut %.2f m inside each end" % [ParkRecipes.TILE_MATCH_M, ParkRecipes.TILE_SLICE_IN_M])
 	print("recipe | budget | GLB length m | entry W x H m | exit W x H m | tileable | reason")
@@ -211,7 +193,6 @@ func _probe_tile(row: Dictionary, parent: Node3D, ground: Callable) -> Dictionar
 			var g: float = gap.call(e.lerp(x, s / float(LINE_SAMPLES - 1)))
 			if absf(g) > absf(worst_line):
 				worst_line = g
-	# The collider, copy by copy (each copy adds its -col faces in turn), and each joint's two cross-sections.
 	var on_fit := ""
 	var want := PackedVector3Array()
 	var faces := ParkRecipes.col_faces(scene)
@@ -262,8 +243,6 @@ func _probe_tile(row: Dictionary, parent: Node3D, ground: Callable) -> Dictionar
 		worst_joint, worst_end, worst_line, "yes" if on_fit == "" else on_fit, views, n, views / n, surfaces, shapes, result]}
 
 
-# "" when every base view of scene under node sits at fit times its place in the scene and the collider's faces are
-# the -col trimesh's faces moved by fit, vertex for vertex (within 1 cm), else what is off.
 func _on_fit(node: Node3D, scene: Node, fit: Transform3D) -> String:
 	var want := PackedVector3Array()
 	for source: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):

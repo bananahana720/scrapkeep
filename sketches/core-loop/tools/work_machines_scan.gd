@@ -1,9 +1,5 @@
 extends "res://tests/work_machines_test.gd"
 
-# Finds spots for a looping worker (work_machines.gd) that pass every placement check in
-# tests/work_machines_test.gd: a 20 m grid, eight yaws, 38 to 110 m off the pilot lines, best sight first.
-#   $GODOT_BIN --headless --path sketches/core-loop --script res://tools/work_machines_scan.gd -- <park> <kind>
-# Prints "CAND seen=<share> at=(x,z) yaw=<deg> gap=<m to the nearest line> near=<m to the nearest line point that sees it>".
 
 func _main() -> void:
 	await process_frame

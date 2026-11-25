@@ -4,12 +4,7 @@ const Game := preload("res://src/game.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# One run on a table saves the ring's five states (fresh, one lost, two lost, cracked and
-# closed, open) from three sides at about 12 m, plus the same fifteen stills in a fixed
-# shuffled order under blind/ with a key, for a judge who must count unaided. It writes only
-# under --out and exits 1 when any of its own setup checks fails. Nothing under src/ uses it.
 const SIDES := {"front": Vector3(8.5, 9.0, 0.0), "side": Vector3(0.0, 9.0, 8.5), "rear": Vector3(-8.5, 9.0, 0.0)}
-# What the Warden must read before each state is shot: lit chunks, cracked, staggered.
 const EXPECT := {
 	"fresh": [4, false, false],
 	"open": [4, false, true],
@@ -178,8 +173,6 @@ func _blind() -> void:
 	f.close()
 
 
-# One still from the front while a pulse charges: the ring and the hazard telegraph together.
-# Not part of the blind set. The ball stands inside the Warden's reach so the pulse charges.
 func _charge_shot() -> void:
 	_game.player.reset_to(_ground(14.0))
 	var waited := 0

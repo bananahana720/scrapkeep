@@ -20,7 +20,6 @@ def main():
     common.reset()
     root = common.empty(NAME)
     surface = Surface("ReleaseRim", "steel")
-    # One 15-degree cast key, with a narrow reveal between neighbouring keys.
     angles = [math.radians(.06 + i * 14.88 / 6) for i in range(7)]
     profile = [(35.3, 0), (36, 0), (36, -.65), (35.3, -.65), (35.3, 0)]
     rings = [lambda a, r=r, y=y: (r * math.sin(a), y, -r * math.cos(a)) for r, y in profile]

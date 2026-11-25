@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// Enforces a wall-clock budget on a CI check or job step.
-// Usage: node scripts/ci/check-budget.mjs --label <name> --budget <seconds> -- <cmd> [args...]
-// Exits with the child's exit code if the child fails; exits 1 if the child passes but exceeds
-// the budget (so CI fails fast instead of silently slowing down).
 
 import { spawnSync } from "node:child_process";
 import { appendFileSync, realpathSync } from "node:fs";
@@ -93,9 +89,7 @@ export function runWithBudget(
   if (summaryPath) {
     try {
       appendFileSync(summaryPath, formatSummaryRow(result));
-    } catch {
-      // Do not mask command verdict if summary path is unwritable.
-    }
+    } catch {}
   }
   if (!result.ok) {
     if (result.overBudget && result.exitCode === 0 && !result.signal) {

@@ -31,7 +31,7 @@ import numpy as np
 from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "blender"))
-import polish  # noqa: E402
+import polish
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 if len(argv) % 2 != 0:
@@ -71,7 +71,7 @@ def mesh_node(name, flag):
     return ob
 
 
-def gl_to_blender(p):  # the glTF importer turns Y up into Z up: (x, y, z) -> (x, -z, y)
+def gl_to_blender(p):
     return Vector((p[0], -p[2], p[1]))
 
 
@@ -106,7 +106,7 @@ def add_strut(ob, a, b, radius, slot):
             bm.loops.layers.float_color.active if bm.loops.layers.float_color else None,
         ) if layer is not None
     ]
-    for layer in color_layers:  # a slots-styled node carries white vertex colour: the slot alone colours the rod
+    for layer in color_layers:
         for f in made:
             for l in f.loops:
                 l[layer] = (1.0, 1.0, 1.0, 1.0)
@@ -184,7 +184,6 @@ for item in [x for x in opt["strut"].split(";") if x]:
     add_strut(mesh_node(parts[0], "strut"), a, b, float(parts[3]), parts[4])
     struts.append(parts[0])
 had = {o.name: len(o.data.uv_layers) for o in meshes}
-# polish.bake writes UV2 for a mesh with under two UV sets and leaves vertex colours alone when no slot is named.
 opts = dict(polish.DEFAULTS, bake_slots=())
 for root in roots:
     polish.bake(root, opts)
@@ -196,8 +195,6 @@ bpy.ops.export_scene.gltf(filepath=opt["out"], export_format="GLB", export_image
 gj, _ = read_glb(opt["in"])
 oj, rest = read_glb(opt["out"])
 byname = {m.get("name"): m for m in gj.get("materials", [])}
-# The importer splits a material in two where one mesh uses vertex colour and another does not ("rubber.001"):
-# each name goes back to one authored material, so the slots stay as the input had them.
 names = [m.get("name", "").split(".")[0] for m in oj.get("materials", [])]
 unique = list(dict.fromkeys(names))
 for mesh in oj.get("meshes", []):

@@ -31,9 +31,6 @@ TARGET_LUFS = -16.0
 CEILING_DBTP = -1.0
 STEMS = ("drums", "bass", "other")
 
-# Per cue: stem weights (drums, bass, other), the clips it draws from, how many beats it keeps,
-# the fade-out, an optional low-pass, and the feature weights that rank candidate hits.
-# Feature keys: low (energy under 150 Hz), onset (attack sharpness), bright (centroid), level (RMS).
 DROPS = {
     "drop_flood": {"w": (1.0, 1.0, 1.0), "clips": ("drop",), "beats": 2, "fade": 0.09, "rank": {"low": 1.0, "level": 1.0}},
     "drop_natural": {"w": (1.0, 0.8, 1.2), "clips": ("drop",), "beats": 2, "fade": 0.09, "rank": {"level": 1.0, "onset": 0.8}},
@@ -51,7 +48,6 @@ DROPS = {
     "drop_industrial": {"w": (1.5, 0.8, 0.5), "clips": ("drop", "open"), "beats": 2, "fade": 0.08, "rank": {"onset": 1.0, "bright": 0.8}},
     "drop_boiler": {"w": (1.2, 1.0, 0.8), "clips": ("drop", "open"), "beats": 2, "fade": 0.10, "rank": {"level": 1.0, "low": 0.8}},
 }
-# Risers: last bar of the named clip, with a crescendo from -9 dB to 0 dB across the bar.
 RISERS = {
     "riser_natural": {"w": (1.0, 1.0, 1.0), "clip": "telegraph"},
     "riser_fleet": {"w": (1.5, 0.3, 1.0), "clip": "build"},
@@ -201,19 +197,16 @@ def write_wav(path, x):
     sf.write(path, np.clip(x, -1.0, 1.0), RATE, subtype="PCM_16", format="WAV")
 
 
-# cue -> fingerprints of the windows earlier stages cut for it (cut_stage)
 TAKEN = {}
 
 
 def cut_stage(zone, pack, park, packs_dir, out_dir):
     drops, risers = park_cues(park)
-    import highdraft_stingers  # imported here: it reuses this module's finish and level
+    import highdraft_stingers
     if zone.split("-")[0] == highdraft_stingers.WORLD:
-        # The Highdraft's anvil and boiler are designed (highdraft_stingers.py) and its Mind cues
-        # play the engine's pilot-aware quote, so neither is cut from the pack.
         skip = set(highdraft_stingers.DESIGNED) | set(highdraft_stingers.UNCUT)
         drops, risers = drops - skip, risers - skip
-    import spillway_stingers  # likewise: the Spillway's drops, siren and stings are designed
+    import spillway_stingers
     designed = set(spillway_stingers.BY_ZONE.get(zone.replace("-", "_"), ()))
     drops, risers = drops - designed, risers - designed
     pack_dir = packs_dir / pack
@@ -238,7 +231,6 @@ def cut_stage(zone, pack, park, packs_dir, out_dir):
         report[cue] = {"kind": "riser", "clip": spec["clip"], "bar": meta["bars"], "beat": 1, "samples": len(x),
                        "lufs": round(lufs(x), 2), "dbtp": round(true_peak_db(x), 2)}
 
-    # Candidate drop windows: beats 1 and 3 of every bar of the drop and open clips.
     cands = []
     for clip in ("drop", "open"):
         meta, stems = clips[clip]
@@ -256,8 +248,6 @@ def cut_stage(zone, pack, park, packs_dir, out_dir):
         spec = DROPS[cue]
         ranked = sorted((c for c in cands if (c["clip"], c["bar"], c["beat"]) not in used and c["clip"] in spec["clips"]),
                         key=lambda c: -sum(w * (c["f"][k] - stat[k][0]) / stat[k][1] for k, w in spec["rank"].items()))
-        # Two stages can cut from one source track, so the same hit can rank first in both; each
-        # stage keeps its own sound by skipping a window another stage already took for this cue.
         for best in ranked:
             meta, stems = clips[best["clip"]]
             n = spec["beats"] * meta["beat"]

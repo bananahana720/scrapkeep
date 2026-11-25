@@ -1,27 +1,5 @@
 extends RefCounted
 
-# What built each slow frame of a launched self-play game (tools/self_play.gd --self-play-probe=<file>),
-# for a hitch hunt on a rendering display. Reads only. One ndjson row per drawn frame over SLOW_MS:
-#   t            seconds since launch at the frame's end (the self-play lines' clock)
-#   ms           the drawn frame, post_draw to post_draw (the frame log's ms)
-#   stage, state, stage_time   where the run was
-#   bot_ms       the self-play bot's cost, not the game's: its own physics callbacks (the driver's tick,
-#                at its own priority) plus its subtree's node _process and _physics_process spans
-#   net_ms       ms less bot_ms: read a hitch by this (LESSONS 56)
-#   draw_ms      frame_pre_draw to frame_post_draw: the render server's draw of the frame
-#   split        tools/frame_split.gd's parts: phys_ms, tick_max_ms, proc_ms, pre_proc_ms, post_proc_ms
-#   added        nodes that entered the tree this frame, and the busiest sources by script or scene
-#   freed        nodes that left the tree this frame
-#   d_nodes, d_resources, d_objects   Performance count changes since the last drawn frame
-#   d_pipelines  pipeline compilations this frame: canvas, mesh, surface, draw, specialization
-#   proc_top, phys_top   the subtrees under the game (three levels down) whose node _process and
-#                _physics_process took longest this frame: a marker node stands before each one in
-#                tree order and the span to the next marker is its subtree's. A node with its own
-#                priority runs outside that order and lands on no subtree.
-#   signals      with --self-play-probe-signals=1, each GameEvents signal whose handlers took 5 ms or
-#                more this frame (tools/signal_timer.gd), slowest handler first. It wraps every
-#                handler, so it adds its own cost; leave it off for a frame-time reading.
-# The rows are written as the game quits (write()).
 
 const FrameSplit := preload("res://tools/frame_split.gd")
 const SignalTimer := preload("res://tools/signal_timer.gd")
@@ -79,7 +57,6 @@ class Marker:
 		probe._mark(true, label)
 
 
-# A marker before each child of root and of its children, so each span names one subtree.
 func _place_markers(root: Node, depth: int) -> void:
 	for child in root.get_children():
 		if child is Marker:
@@ -212,8 +189,6 @@ func _on_post_draw() -> void:
 
 
 func write() -> void:
-	# The render server outlives the tree: a frame signal still bound to this probe or its split at
-	# engine shutdown crashed the quit (signal 11), so every connection goes first.
 	for sig in [RenderingServer.frame_pre_draw, RenderingServer.frame_post_draw]:
 		for c in sig.get_connections():
 			if c.callable.get_object() in [self, _split]:

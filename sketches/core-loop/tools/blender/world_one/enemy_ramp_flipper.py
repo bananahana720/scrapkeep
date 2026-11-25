@@ -1,14 +1,3 @@
-# C21: an oxide Fleet animal crew on a squat two-wheel cart, hauling one square floor plate.
-# The plate is 5.76 m square and 0.18 m thick, centred on the runtime's existing tilt pivot.
-# A charcoal underframe and centre hinge divide two broad oxide deck panels; a petrol repair
-# panel, irregular grey edge chips and short hostile-orange lip marks break up the paint.
-# The centre axle ends and three hinge knuckles sit in the dark longitudinal deck recess.
-# RampBody has fleet_paint (crew) and paint (cart, arms, one brass tag).
-# RampPlate has paint only. Three opaque surfaces total, no lights or collision geometry.
-# Blender +Z is up; g() converts Godot coordinates. The carried plate transform and deployed
-# pose come from ramp_flipper.gd, rather than baked transforms in the exported mesh.
-# Provenance: repository procedural primitives and bmesh; no external assets or textures.
-
 import math
 import os
 import sys
@@ -28,7 +17,6 @@ def g(x, y, z):
 
 
 common.reset()
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("RampFlipper")
 b = Part("RampBody")
@@ -45,7 +33,6 @@ for side in (-1, 1):
 b.box("paint", (1.05, .65, .15), loc=g(0, -.88, 0), color="charcoal")
 b.cyl("paint", .635, .635, .10, segs=10, loc=g(0, .02, 0), color="charcoal")
 b.box("paint", (.28, .05, .18), loc=g(0, .43, .60), color="brass")
-# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
 crew.cast_number(b, "paint", "27", (0, -0.507, 0.70), (0, -1, 0), 0.16)
 crew.hired(b, "paint", (0, 0.584, 0.3), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
@@ -53,7 +40,6 @@ b.to_object(parent=root)
 
 p = Part("RampPlate")
 p.subsurf = 0
-# Underframe, panels and rim all remain inside the base box's +/-2.88 m and +/-0.09 m.
 p.box("paint", (5.76, 5.76, .10), loc=g(0, -.04, 0), color="charcoal")
 for side in (-1, 1):
     p.box("paint", (2.46, 5.30, .075), loc=g(side * 1.40, .0475, 0),
@@ -67,7 +53,6 @@ p.rod("paint", g(0, 0, -2.88), g(0, 0, 2.88), .08, segs=8,
 for z in (-1.85, 0, 1.85):
     p.rod("paint", g(0, 0, z - .22), g(0, 0, z + .22), .09, segs=8,
           color=common.mix("oxide", "charcoal", .35))
-# Thin painted polygons on the deck: one repair patch and broken edge scuffs, not a pale wash.
 def mark(outline, color):
     p.prism("paint", [(x, -z) for x, z in outline], .004,
             matrix=common.mtx(g(0, .088, 0)), color=color)

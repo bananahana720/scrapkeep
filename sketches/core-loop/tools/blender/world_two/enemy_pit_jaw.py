@@ -46,7 +46,7 @@ root = common.empty("PitJaw")
 
 FLOOR = -1.1
 HINGE_Y = FLOOR + 0.06
-AX, AZ = 1.3, 2.05  # the jaw oval's semi-axes, outer edge
+AX, AZ = 1.3, 2.05
 BAND = 0.16
 STEEL = "53686d"
 WORN = "a8aaa3"
@@ -65,11 +65,7 @@ def oval(a, sx=AX, sz=AZ):
     return math.cos(a) * sx, math.sin(a) * sz
 
 
-# --- frame -------------------------------------------------------------------------------
 frame = Part("PitJawFrame")
-# Floor plate: an oval collar round the jaws, hazard and charcoal chevrons alternating, so the
-# danger reads from across the bowl. Top face 0.07 m proud of the floor.
-# The collar and pit floor are flat floor paint: no bevel, no subdivision under polish.
 with frame.region(bevel=0, subsurf=0):
     RING = 24
     inner, outer = [], []
@@ -86,21 +82,17 @@ with frame.region(bevel=0, subsurf=0):
         frame.paint([top], "fleet_paint", color)
         frame.paint([frame.bm.faces.new((outer[k][0], outer[n][0], outer[n][1], outer[k][1]))], "fleet_paint", CHAR)
         frame.paint([frame.bm.faces.new((inner[n][0], inner[k][0], inner[k][1], inner[n][1]))], "fleet_paint", CHAR)
-    # The pit under the jaws: a dark floor disc, so the open jaw reads as a hole with teeth.
     pit_ring = []
     for k in range(RING):
         x, z = oval(math.tau * k / RING, AX + 0.03, AZ + 0.03)
         pit_ring.append(frame.bm.verts.new(g(x, FLOOR + 0.01, z)))
     frame.paint([frame.bm.faces.new(list(reversed(pit_ring)))], "fleet_paint", "1a1d1c")
-# Bone pressure plate in the middle: the slam spot, with a charcoal ring and a hazard bullseye.
 with frame.region(bevel=0.012):
     frame.cyl("fleet_paint", 1.0, 1.0, 0.06, segs=8, loc=g(0, FLOOR + 0.04, 0), color=CHAR)
     frame.cyl("fleet_paint", 0.86, 0.86, 0.06, segs=8, loc=g(0, FLOOR + 0.06, 0), color="bone")
     frame.cyl("fleet_paint", 0.3, 0.3, 0.04, segs=8, loc=g(0, FLOOR + 0.09, 0), color="hazard")
-# Spring drums at both hinge ends: steel barrels with charcoal coils, the trap's muscle.
 for side in (-1, 1):
     x = side * (AX + 0.2)
-    # Doubling the drum's six sides would put a corner through the floor; subdividing rounds it inward.
     with frame.region(subsurf=1, detail=1):
         frame.cyl("fleet_paint", 0.2, 0.2, 0.62, segs=6, loc=g(x, HINGE_Y + 0.15, 0), rot=(0, math.pi / 2, 0),
                   color=STEEL)
@@ -108,19 +100,15 @@ for side in (-1, 1):
                   color=CHAR)
     frame.box("fleet_paint", (0.5, 0.9, 0.1), loc=g(x, FLOOR + 0.05, 0), color=WORN)
 
-# Manhole behind the trap with its crew: a russet Fleet miner peeking out, hand on the trip.
 HATCH = (0.0, FLOOR, -(AZ + 0.95))
 hx, _, hz = HATCH
 frame.cyl("fleet_paint", 0.6, 0.6, 0.16, segs=8, loc=g(hx, FLOOR + 0.08, hz), color=CHAR)
 frame.cyl("fleet_paint", 0.46, 0.46, 0.17, segs=8, loc=g(hx, FLOOR + 0.09, hz), color="1a1d1c")
-# The lid, flipped up and leaning back on its hinge, stencilled with a bone stripe.
 frame.cyl("fleet_paint", 0.55, 0.55, 0.07, segs=8, loc=g(hx, FLOOR + 0.54, hz - 0.66),
           rot=(math.radians(-70), 0, 0), color=OXIDE)
 frame.box("fleet_paint", (0.7, 0.12, 0.08), loc=g(hx, FLOOR + 0.57, hz - 0.62), rot=(math.radians(-70), 0, 0),
           color="bone")
-# Crew: shoulders out of the hole, head, snout, ears, a miner's helmet with a headlamp.
 CREW = Vector((hx, FLOOR + 0.62, hz + 0.05))
-# Under polish it is the shared soft crew: body, head and snout subdivide twice, ears and paw once.
 with frame.region(bevel=0, subsurf=2, detail=1):
     frame.cyl("fleet_paint", 0.34, 0.3, 0.42, segs=8, loc=g(CREW.x, FLOOR + 0.3, CREW.z), color=OXIDE)
     frame.uv("fleet_paint", 0.27, u=8, v=5, loc=g(*CREW), color=OXIDE)
@@ -139,7 +127,6 @@ with frame.region(bevel=0, subsurf=1, detail=1):
     for side in (-1, 1):
         frame.cyl("fleet_paint", 0.07, 0.0, 0.18, segs=4, loc=g(CREW.x + side * 0.17, CREW.y + 0.32, CREW.z - 0.04),
                   color=CHAR)
-# Trip lever: a rod from the hatch rim to a bone knob, the crew's paw on it.
 LEVER = Vector((hx + 0.62, FLOOR + 0.95, hz + 0.25))
 with frame.region(bevel=0.01):
     frame.rod("fleet_paint", Vector(g(hx + 0.5, FLOOR + 0.12, hz + 0.1)), Vector(g(*LEVER)), 0.04, segs=5, color=CHAR)
@@ -147,7 +134,6 @@ frame.ico("fleet_paint", 0.1, loc=g(*LEVER), color="hazard")
 with frame.region(bevel=0, subsurf=1, detail=1):
     frame.rod("fleet_paint", Vector(g(CREW.x + 0.22, CREW.y - 0.25, CREW.z + 0.08)),
               Vector(g(LEVER.x - 0.05, LEVER.y - 0.04, LEVER.z)), 0.06, segs=5, color=OXIDE)
-# The trip line from the lever to the near spring drum, along the floor.
 with frame.region(bevel=0.008):
     frame.beam("fleet_paint", Vector(g(hx + 0.5, FLOOR + 0.03, hz + 0.1)), Vector(g(AX + 0.2, FLOOR + 0.03, -0.3)),
                0.04, 0.03, color="brass")
@@ -155,11 +141,9 @@ bmesh.ops.recalc_face_normals(frame.bm, faces=frame.bm.faces[:])
 frame_obj = frame.to_object(parent=root)
 
 
-# --- jaws --------------------------------------------------------------------------------
 def jaw(name, sign):
     """One half oval (sign +1: the +Z half), lying open on the plate, teeth standing up."""
     part = Part(name)
-    # Teeth are 6 cm blades, so the jaw's bevel stays narrow.
     part.bevel = 0.015
     rows = []
     for k in range(SEGS + 1):
@@ -178,7 +162,6 @@ def jaw(name, sign):
             part.paint([part.bm.faces.new(quad)], "working_tool", color)
     for row, flip in ((rows[0], True), (rows[-1], False)):
         part.paint([part.bm.faces.new(list(reversed(row)) if flip == (sign > 0) else row)], "working_tool", CHAR)
-    # Teeth: bone blades on the inner edge, standing up while open; they interlock when shut.
     for t in range(TEETH):
         a = math.pi * (t + 0.5) / TEETH
         cx, cz = oval(a, AX - BAND * 0.5, AZ - BAND * 0.5)
@@ -196,7 +179,6 @@ def jaw(name, sign):
             j = (i + 1) % 3
             faces.append(part.bm.faces.new((lo[i], hi[i], hi[j], lo[j])))
         part.paint(faces, "working_tool", "bone")
-    # Latch tab at the jaw's crown: the red hostile tab the catch trap carried, kept.
     cx, cz = oval(math.pi / 2, AX + 0.02, AZ + 0.02)
     part.box("working_tool", (0.42, 0.16, 0.14), loc=g(cx, FLOOR + 0.09, cz * sign), color="hazard")
     bmesh.ops.recalc_face_normals(part.bm, faces=part.bm.faces[:])

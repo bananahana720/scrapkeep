@@ -1,15 +1,5 @@
 extends SceneTree
 
-# Stills for UA-02: how much of the screen a live hostile ground warning covers in the clear look
-# and in the tape look (hostile stripes back as faint bands), at the play camera on the park map,
-# and a player's own ring beside a hostile ring in each look. frames.json records, per look:
-#   noise_share    (top level) the share two no-mark grabs of the view differ by: the floor;
-#   changed_share  the share of screen pixels that differ from the same view with no warning;
-#   stripe_share   the share of pixels where this look's still differs from the clear look's
-#                  (the stripes alone; 0 for clear itself);
-#   stripe_added   changed_share minus the clear look's changed_share.
-# Pixels are every second row and column; the HUD is in the frame and cancels out of every share.
-#   gpu-run.sh <worktree> stripes --path sketches/core-loop --script res://tools/tape_cover_still.gd -- --out=/abs/dir
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -79,8 +69,6 @@ func _run() -> void:
 	var side := ahead.cross(Vector3.UP)
 	var at := spot + ahead * AHEAD
 	var base := await _grab(spot, ahead)
-	# Two grabs of the same view with no mark: the sky and the dust move, so this share is the floor
-	# a mark's changed_share must clear.
 	var noise := _share(await _grab(spot, ahead), base)
 	var records := []
 	var clear_image: Image = null
@@ -137,7 +125,6 @@ func _run() -> void:
 	quit(0)
 
 
-# The frame with the game held still, so two grabs of one view differ only by the marks.
 func _grab(spot: Vector3, ahead: Vector3) -> Image:
 	await _place(spot, ahead, 10)
 	paused = true
@@ -148,7 +135,6 @@ func _grab(spot: Vector3, ahead: Vector3) -> Image:
 	return image
 
 
-# The share of sampled pixels where two same-size frames differ by more than CHANGE_DISTANCE.
 func _share(a: Image, b: Image) -> float:
 	var changed := 0
 	var total := 0

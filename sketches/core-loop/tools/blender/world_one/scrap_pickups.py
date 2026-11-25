@@ -24,7 +24,7 @@ SLOT = "field"
 LIGHT = "ffffff"
 MID = "c7ccc9"
 DARK = "6c7872"
-STEEL = "9aa0a0"     # the grey panels' steel (item_panels.py); Palette.STEEL in the game
+STEEL = "9aa0a0"
 BONE = "d2c5a5"
 CHARCOAL = "242a28"
 COG_TEETH = 10
@@ -42,13 +42,11 @@ def finish(part, root):
 def build():
     common.reset()
     common.SLOTS[SLOT] = {"vc": True, "rough": 0.8}
-    # Polish (POLISH.md): pickups must stay bright and readable under the runtime tint, so the AO and wear bake
-    # is gentle; each part stays under the 270 T / 610 V prop cap.
     polish.enable(detail=1, bevel=0, bevel_min=0.3, ao_strength=0.3, edge=0.1)
     root = common.empty("ScrapPickups")
 
     plate = Part("BentPlate")
-    plate.bevel = 0.015  # the flat plate takes a chamfer; the round parts have no room under 270 T
+    plate.bevel = 0.015
     plate.prism(SLOT, [(-.38, -.31), (.22, -.31), (.37, -.16),
                       (.34, .29), (-.24, .33), (-.38, .18)], .13,
                 matrix=common.mtx((0, 0, -.08)), color=MID)

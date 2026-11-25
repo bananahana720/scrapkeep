@@ -75,12 +75,10 @@ test("untracked Godot project and asset files invalidate the stamp while temp ou
   try {
     writeImportStamp(dir, "sk");
     assert.equal(checkImportStamp(dir, "sk").ok, true);
-    // Non-asset temp/output files leave the stamp valid.
     writeFileSync(path.join(dir, "sk", "run.log"), "ok\n");
     writeFileSync(path.join(dir, "sk", "bots.ndjson"), "{}\n");
     writeFileSync(path.join(dir, "sk", "notes.txt"), "note\n");
     assert.equal(checkImportStamp(dir, "sk").ok, true);
-    // Untracked Godot scripts/assets invalidate the stamp.
     for (const file of [
       "new_script.gd",
       "scene.tscn",
@@ -118,7 +116,6 @@ test("Godot binary identity mismatch invalidates the stamp while legacy stamps s
     const diff = checkImportStamp(dir, "sk", { godot: "Godot_v4.7.3:200" });
     assert.equal(diff.ok, false);
     assert.match(diff.reason, /imported with Godot Godot_v4\.7\.2:100/);
-    // Legacy stamp with no godot field still validates cleanly.
     writeImportStamp(dir, "sk", { godot: null });
     assert.equal(checkImportStamp(dir, "sk", { godot: "Godot_v4.7.2:100" }).ok, true);
   } finally {
@@ -150,7 +147,6 @@ test("importSketch runs pass 2 when --double is requested or pass 1 has errors, 
   const { dir } = repo();
   try {
     mkdirSync(path.join(dir, "sk", ".godot"), { recursive: true });
-    // Missing uid_cache.bin triggers pass 2; pass 2 writes it.
     const uidCalls = [];
     const rMissing = importSketch(dir, "sk", {
       runPass: (_root, _sketch, pass) => {
@@ -162,7 +158,6 @@ test("importSketch runs pass 2 when --double is requested or pass 1 has errors, 
     assert.deepEqual(uidCalls, [1, 2]);
     assert.deepEqual(rMissing, { passes: 2, skippedSecond: false });
 
-    // --double always runs both passes even when pass 1 is clean.
     const doubleCalls = [];
     const rDouble = importSketch(dir, "sk", {
       doublePass: true,
@@ -174,7 +169,6 @@ test("importSketch runs pass 2 when --double is requested or pass 1 has errors, 
     assert.deepEqual(doubleCalls, [1, 2]);
     assert.deepEqual(rDouble, { passes: 2, skippedSecond: false });
 
-    // Pass 1 SCRIPT ERROR or reimport warning falls back to pass 2.
     for (const bad of [
       { status: 0, stdout: "SCRIPT ERROR: could not preload\n", stderr: "" },
       { status: 0, stdout: "", stderr: "WARNING: Failed to import font.ttf\n" },
@@ -191,7 +185,6 @@ test("importSketch runs pass 2 when --double is requested or pass 1 has errors, 
       assert.equal(res.passes, 2);
     }
 
-    // Pass 2 failure throws and refuses to stamp.
     assert.throws(
       () =>
         importSketch(dir, "sk", {

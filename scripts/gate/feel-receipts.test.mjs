@@ -38,8 +38,6 @@ function repoWith(files) {
   return { repo, head: git("rev-parse", "HEAD").stdout.trim() };
 }
 
-// --- same-seed-same-run ---------------------------------------------------------------------
-
 const SETS = [
   ["heavy+heavy", 2],
   ["heavy+kill+pickup", 6],
@@ -160,8 +158,6 @@ test("contact orders: the producer takes the head from git, runs the plant with 
   assert.throws(() => contactProduce({ cwd: repo, run }), /refusing: uncommitted changes/);
   assert.equal(calls.length, 2, "a dirty checkout never runs the test");
 });
-
-// --- core-feel-tests ------------------------------------------------------------------------
 
 const LEDGER = "test\tkind\tcause\towner\tadded\treview\tcheck\n";
 const ledgerRow = (name, kind) =>

@@ -21,7 +21,6 @@ SIZE = [6.91, 1.108, 6.91]
 
 
 def on_face(d, a, off, y):
-    # A point on the flat face whose centre sits at distance d, angle a; `off` radians along the face.
     return polar(d / math.cos(off), a + off, y)
 
 
@@ -56,7 +55,7 @@ def build(s):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **g.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **g.kit.BAKE)
     g.export(g.NAME + "_detail2", "Detail2", "steel", build, SIZE, {}, g.out_dir(), budget=DETAIL, tag="GEYSER_D2")
 
 

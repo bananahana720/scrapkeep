@@ -29,7 +29,6 @@ def G(*p):
 
 
 def build(post, mast, outrigger=None, net_low=None):
-    # Rim clamp: a deck plate bolted to the island edge with two jaws over the lip at +X.
     post.box("fleet_paint", (2.0, 1.3, 0.16), loc=g(0.05, FLOOR + 0.08, 0), color=CHAR)
     for dz in (-0.5, 0.5):
         post.box("fleet_paint", (0.3, 0.3, 0.42), loc=g(0.95, FLOOR + 0.21, dz), color="hazard")
@@ -41,7 +40,6 @@ def build(post, mast, outrigger=None, net_low=None):
         post.box("fleet_paint", (0.36, 0.36, 0.3), loc=g(*joint), color=OXIDE)
     if outrigger is not None:
         post.beam("fleet_paint", G(0.0, -0.3, 0), G(outrigger, net_low, 0), 0.16, 0.16, color=STEEL)
-    # Back stay: mast to a ground anchor behind, with the hazard sleeve, the cut mark.
     stay_top = Vector(mast[2])
     stay_foot = Vector((-1.75, FLOOR + 0.15, 0))
     with post.region(bevel=0.01):
@@ -50,8 +48,6 @@ def build(post, mast, outrigger=None, net_low=None):
     d = (stay_foot - stay_top).normalized()
     post.rod("fleet_paint", G(*(cut - d * 0.22)), G(*(cut + d * 0.22)), 0.11, segs=6, color="hazard")
     post.box("fleet_paint", (0.36, 0.36, 0.24), loc=g(-1.75, FLOOR + 0.12, 0), color=STEEL)
-    # Speed sign at eye height, facing the player: hazard ring, bone face, a charcoal bar (the
-    # tear speed as a "go at least this fast" roundel; the runtime may paint the number on).
     sign = Vector((-0.02, 1.25, 0.32))
     with post.region(bevel=0.012):
         post.cyl("fleet_paint", 0.48, 0.48, 0.06, segs=8, loc=g(*sign), rot=(math.pi / 2, 0, 0), color="hazard")
@@ -60,7 +56,6 @@ def build(post, mast, outrigger=None, net_low=None):
         for dy in (-0.1, 0.1):
             post.box("fleet_paint", (0.42, 0.08, 0.08), loc=g(sign.x, sign.y + dy, sign.z + 0.05), color=CHAR)
         post.box("fleet_paint", (0.08, 0.08, 0.28), loc=g(sign.x + 0.2, sign.y, sign.z + 0.05), color=CHAR)
-    # Windsock on a short pole at the masthead: the Highdraft's wind, always showing.
     sx, sy = mast[3][0], mast[3][1]
     with post.region(bevel=0.01):
         post.rod("fleet_paint", G(sx, sy, 0), G(sx - 0.2, sy + 0.8, 0), 0.04, segs=5, color=CHAR)
@@ -70,7 +65,6 @@ def build(post, mast, outrigger=None, net_low=None):
             a = Vector((sx - 0.2 - 0.36 * k, sy + 0.7, 0.0))
             b = a + Vector((-0.36, -0.08, 0.0))
             post.rod("fleet_paint", G(*a), G(*b), r0, segs=6, color="hazard" if k % 2 == 0 else "bone", r2=r1)
-    # Capstan the crew winds to tension the net, and the crew on it, in goggles and a long scarf.
     post.cyl("fleet_paint", 0.22, 0.26, 0.55, segs=6, loc=g(-0.55, FLOOR + 0.43, 0.25), color=STEEL)
     post.cyl("fleet_paint", 0.32, 0.32, 0.06, segs=8, loc=g(-0.55, FLOOR + 0.72, 0.25), color=CHAR)
     with post.region(bevel=0.01):

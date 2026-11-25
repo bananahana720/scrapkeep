@@ -43,7 +43,6 @@ common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["working_tool"] = {"vc": True, "rough": 0.48, "metal": 0.55}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Linker")
 
@@ -56,7 +55,7 @@ PIVOT = (0.0, 1.25, 0.0)
 TIP = (3.6, 2.85, 0.75)
 HINGE = (3.6, 2.7, 0.95)
 DISH_R = 1.35
-TILT = math.radians(28)  # the face looks along +Z and this far down, over the partner
+TILT = math.radians(28)
 DISH_C = (3.6, 1.75, 1.65)
 DRUM = (0.42, -0.35, 0.0)
 PARTNER = (3.6, FLOOR, 0.0)
@@ -72,7 +71,6 @@ def G(p):
 
 body = Part("LinkerBody")
 
-# Tripod skid: three splayed legs onto a round foot plate, so it reads planted, not mobile.
 body.cyl("fleet_paint", 0.78, 0.7, 0.12, segs=8, loc=g(0, FLOOR + 0.06, 0), color=CHAR)
 for k in range(3):
     a = math.radians(90 + 120 * k)
@@ -80,7 +78,6 @@ for k in range(3):
     body.rod("fleet_paint", G((0.2 * math.cos(a), -0.3, 0.2 * math.sin(a))), G(foot), 0.09, segs=5, color=CHAR)
     body.box("fleet_paint", (0.3, 0.3, 0.08), loc=g(foot[0], FLOOR + 0.04, foot[2]), color=WORN)
 
-# Short post with a worn band and the winch drum on the boom side.
 body.cyl("fleet_paint", 0.36, 0.3, 1.9, segs=8, loc=g(0, -0.1, 0), color=OXIDE)
 body.cyl("fleet_paint", 0.39, 0.39, 0.16, segs=8, loc=g(0, 0.45, 0), color=WORN)
 body.cyl("fleet_paint", 0.22, 0.22, 0.42, segs=8, loc=g(*DRUM), rot=(math.pi / 2, 0, 0), color=STEEL)
@@ -88,17 +85,14 @@ for dz in (-0.23, 0.23):
     body.cyl("fleet_paint", 0.3, 0.3, 0.05, segs=8, loc=g(DRUM[0], DRUM[1], dz),
              rot=(math.pi / 2, 0, 0), color=CHAR)
 
-# Operator cab on the post top: a squat box with a slot the crew peeks out of, toward the ball.
 body.box("fleet_paint", (0.95, 0.62, 0.8), loc=g(-0.1, 1.08, 0), color=OXIDE)
 body.box("fleet_paint", (1.02, 0.08, 0.86), loc=g(-0.1, 1.42, 0), color=CHAR)
 body.box("fleet_paint", (0.62, 0.2, 0.04), loc=g(-0.12, 1.12, 0.41), color=CHAR)
-# Anonymous russet crew in the slot: head, snout, two ears above the roof line.
 body.uv("fleet_paint", 0.24, u=8, v=5, loc=g(-0.12, 1.2, 0.3), color="oxide")
 body.box("fleet_paint", (0.12, 0.09, 0.1), loc=g(-0.12, 1.16, 0.53), color="bone")
 for side in (-1, 1):
     body.cyl("fleet_paint", 0.09, 0.0, 0.26, segs=4, loc=g(-0.12 + side * 0.14, 1.52, 0.3), color=CHAR)
 
-# Boom: a two-chord truss rising sideways to the tip, braced, with one bone stripe band.
 lo_root, hi_root = (0.3, 1.05, 0.0), (0.3, 1.45, 0.0)
 lo_tip, hi_tip = (TIP[0], TIP[1] - 0.18, TIP[2]), (TIP[0], TIP[1] + 0.12, TIP[2])
 body.beam("fleet_paint", G(lo_root), G(lo_tip), 0.16, 0.16, color=OXIDE)
@@ -113,7 +107,6 @@ body.beam("fleet_paint", G(stripe - Vector((0.15, 0.12, 0))), G(stripe + Vector(
           0.2, 0.2, color="bone")
 body.box("fleet_paint", (0.34, 0.34, 0.5), loc=g(TIP[0], TIP[1] - 0.03, TIP[2]), color=CHAR)
 body.cyl("fleet_paint", 0.22, 0.22, 0.3, segs=8, loc=g(*PIVOT), rot=(math.pi / 2, 0, 0), color=STEEL)
-# Counterweight behind the post, so the lever reads: scrap block on a short tail.
 body.beam("fleet_paint", G((-0.3, 1.25, 0)), G((-1.05, 1.15, 0)), 0.14, 0.14, color=CHAR)
 body.box("fleet_paint", (0.62, 0.6, 0.62), loc=g(-1.2, 1.05, 0), color=STEEL)
 body.box("fleet_paint", (0.66, 0.1, 0.66), loc=g(-1.2, 1.1, 0), color="hazard")
@@ -121,7 +114,6 @@ body.box("fleet_paint", (0.66, 0.1, 0.66), loc=g(-1.2, 1.1, 0), color="hazard")
 bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])
 body_obj = body.to_object(parent=root)
 
-# Dish: concave plate on the dish frame (U right, V up the face, N out of the face).
 dish = Part("LinkerDish")
 dish.subsurf = 0
 N = Vector((0.0, -math.sin(TILT), math.cos(TILT)))
@@ -165,12 +157,10 @@ for rows, flip, color in ((front, False, WORN), (back, True, CHAR)):
             f = dish.bm.faces.new(tuple(reversed(quad)) if flip else quad)
             c = "bone" if (rows is front and j == 1) else color
             dish.paint([f], "working_tool", c)
-# The rim band, hazard and charcoal alternating: the edge the ball rebounds from.
 for k in range(SECT):
     n = (k + 1) % SECT
     f = dish.bm.faces.new((front[-1][k], back[-1][k], back[-1][n], front[-1][n]))
     dish.paint([f], "working_tool", "hazard" if k % 2 == 0 else CHAR)
-# Back hub and hanger up to the hinge under the boom tip.
 hub = C - N * (SKIN + 0.12)
 dish.cyl("working_tool", 0.22, 0.16, 0.18, segs=6, loc=G(hub), color=STEEL,
          rot=Vector((0, 0, 1)).rotation_difference(Vector(g(*N))).to_euler())
@@ -180,7 +170,6 @@ dish.cyl("working_tool", 0.12, 0.12, 0.36, segs=6, loc=g(*HINGE), rot=(0, math.p
 bmesh.ops.recalc_face_normals(dish.bm, faces=dish.bm.faces[:])
 dish_obj = dish.to_object(origin=g(*HINGE), parent=root)
 
-# Slack cable: drum top to the dish's lower back, sagging below the boom, with a coupling.
 cable = Part("LinkerCable")
 cable.subsurf = 0
 start = Vector((DRUM[0] + 0.05, DRUM[1] + 0.22, DRUM[2] + 0.1))
@@ -229,7 +218,6 @@ if opts["render"]:
     import kill_first_preview
 
     def partner():
-        # A chaser under the dish, as the brace is meant to be seen. Preview only.
         bpy.ops.import_scene.gltf(filepath=os.path.join(common.MODELS, "world_one", "enemy_chaser.glb"))
         for o in bpy.context.selected_objects:
             if o.parent is None:

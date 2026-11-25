@@ -13,9 +13,8 @@ import math
 import os
 import sys
 
-# --- Palette: src/core/palette.gd, read by tools/palette_gd.py --------------
 sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))
-import palette_gd  # noqa: E402
+import palette_gd
 
 _P = {name: "#" + value for name, value in palette_gd.HEX.items()}
 CHARCOAL = _P["CHARCOAL"]
@@ -31,7 +30,7 @@ ICE = _P["ICE"]
 ANCIENT = _P["ANCIENT"]
 REDJAW_ASH = _P["REDJAW_ASH"]
 LEDGER_CREAM = _P["LEDGER_CREAM"]
-LEDGER = _P["LEDGER"]  # Tally's own colour: her ability cards are drawn in it
+LEDGER = _P["LEDGER"]
 OLD_VERDIGRIS = _P["OLD_VERDIGRIS"]
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +47,6 @@ def n(x):
     return int(r) if r == int(r) else r
 
 
-# --- Geometry helpers ---------------------------------------------------------
 def polygon_points(cx, cy, r, count, start_deg=-90, inner_r=None):
     pts = []
     for i in range(count * (2 if inner_r else 1)):
@@ -129,7 +127,6 @@ def text(cx, cy, s, size, fill=CHARCOAL, weight=700):
     )
 
 
-# --- Category backplates (VISUAL-LANGUAGE.md section 5, "Category backplates") --
 STRIPE_DEF = (
     '<pattern id="{pid}" width="7" height="7" patternUnits="userSpaceOnUse" '
     'patternTransform="rotate(45)">'
@@ -177,7 +174,6 @@ def plate_triangle(pid):
 
 
 def plate_brackets():
-    # Sits on top of a solid square backplate (obj_ = square base + corner brackets).
     return [
         rect(4, 4, 56, 56, fill=CHARCOAL),
         path("M6 16 V6 H16 M48 6 H58 V16 M58 48 V58 H48 M16 58 H6 V48", stroke=BONE, width=4),
@@ -203,8 +199,6 @@ def plate_none():
     return []
 
 
-# --- Icon registry -----------------------------------------------------------
-# Each entry: id -> (meaning, drawing description, backplate fn or None, glyph fn)
 ICONS = {}
 
 
@@ -217,7 +211,6 @@ def register(icon_id, meaning, drawing, backplate, glyph_fn):
     }
 
 
-# ---- Class emblems and abilities (19) ---------------------------------------
 def g_cls_sable():
     return [
         ring(32, 34, 14, stroke=MINT, width=PRIMARY),
@@ -639,8 +632,6 @@ register(
     plate_rounded_square, g_ab_tarn_smash,
 )
 
-# ---- Tally's ability and program cards (7) ------------------------------------
-
 
 def g_ab_tally_weapon():
     return [
@@ -760,8 +751,6 @@ register(
     plate_rounded_square, g_ab_tally_balance,
 )
 
-# ---- Remembered cannon abilities (4) -----------------------------------------
-
 
 def g_ab_cannon_weapon():
     return [
@@ -823,12 +812,6 @@ register(
     "An ancient-blue ring resting on a bone ground line around its impact dot",
     plate_rounded_square, g_ab_cannon_smash,
 )
-
-
-# ---- Line skills and ultimates (12): ab_<pilot>_line (slot 3) and ab_<pilot>_ult (Q) -------
-# SKILL-BAR.md sections 3 and 4. Same rules as the rest of the bar: rounded-square plate, bone
-# glyph, one accent region in the pilot's own colour, strokes 6 and 4. A mirrored or repeated
-# accent shape (two jaws, two chevrons) counts as one region, as ab_tarn_special already does.
 
 
 def g_ab_sable_line():
@@ -1029,9 +1012,6 @@ register(
 )
 
 
-# ---- Key glyphs (10) ---------------------------------------------------------
-
-
 def g_key_lmb():
     return [
         rect(18, 8, 28, 46, fill=CHARCOAL, rx=13, stroke=BONE, width=3),
@@ -1181,8 +1161,6 @@ def g_key_t():
 
 register("key_t", "Replay stage", 'Keycap "T"', lambda: plate_keycap(), g_key_t)
 
-# ---- Item categories (6) ------------------------------------------------------
-
 
 def g_cat_damage():
     return [path("M32 12 L40 34 L32 52 L24 34 Z", fill=BONE)]
@@ -1256,8 +1234,6 @@ register(
     plate_hex, g_cat_transform,
 )
 
-# ---- Elements (3) --------------------------------------------------------------
-
 
 def g_el_frost():
     els = []
@@ -1304,8 +1280,6 @@ register(
     "A heavy ball with three impact lines at one side", plate_circle, g_el_kinetic,
 )
 
-# ---- Triggers (12) --------------------------------------------------------------
-
 
 def g_trg_on_hit():
     return [
@@ -1341,8 +1315,6 @@ register(
 )
 
 
-# A hop off a floor, never a bare V: three blind readers of three took the V for a tick, and a first-timer
-# took a gate that wore it for a gate already taken (play finding 22).
 def g_trg_on_rebound():
     return [
         line(26, 46, 52, 46, stroke=BONE, width=DETAIL),
@@ -1466,8 +1438,6 @@ register(
     "A clock face with one hand and a small repeat arrow", plate_tag, g_trg_timed,
 )
 
-# ---- Threat types (4) -----------------------------------------------------------
-
 
 def g_thr_instant():
     els = [dot(32, 40, 11, fill=CHARCOAL)]
@@ -1526,8 +1496,6 @@ register(
     "thr_lane", "Lane or beam", "A long bar half filled from its left end, a source dot at left",
     lambda: plate_triangle("thr-lane-stripes"), g_thr_lane,
 )
-
-# ---- Objectives (6) ----------------------------------------------------------
 
 
 def g_obj_beacon():
@@ -1639,8 +1607,6 @@ register(
     plate_brackets, g_obj_stage,
 )
 
-# ---- Resources (6) -------------------------------------------------------------
-
 
 def g_res_scrap():
     return [
@@ -1725,8 +1691,6 @@ register(
     "res_mass", "Mass", "Three ringed scrap balls in a heap: scrap carried as mass", plate_none, g_res_mass,
 )
 
-# ---- Factions (4) ---------------------------------------------------------------
-
 
 def g_fac_fleet():
     return [
@@ -1800,10 +1764,6 @@ register(
 )
 
 
-# ---- Companion pieces (6): one backplate per family, so "one of each kind" reads from the marks ----
-# Conductive primer wears the circle, ram brace the rounded square, escape corridor the hex nut.
-# Purpose note: docs/art/reference/fx_ui/companion-piece-icons.md.
-# The family frame is a verdigris rim on the plate so the shape shows on a charcoal panel too.
 def plate_cmp_circle():
     return [f'<circle cx="32" cy="32" r="28" fill="{CHARCOAL}" stroke="{OLD_VERDIGRIS}" stroke-width="3"/>']
 
@@ -1905,9 +1865,6 @@ register(
 )
 
 
-# ---- The radio take (1): the radio chip's knob, a ring with its needle -----------------------------
-# Purpose note: docs/art/reference/fx_ui/radio-take-icon.md. No backplate and a near-white glyph, so
-# the card tints it (the HUD modulates the texture) the way it tints the drawn shapes.
 def g_radio_take():
     return [
         ring(32, 32, 24, stroke=LEDGER_CREAM, width=PRIMARY),
@@ -1922,7 +1879,6 @@ register(
 )
 
 
-# --- Compose and write --------------------------------------------------------
 def compose(icon_id):
     spec = ICONS[icon_id]
     backplate_els = spec["backplate"]()

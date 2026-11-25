@@ -1,9 +1,5 @@
 extends RefCounted
 
-# Times every handler connected to the named GameEvents signals (bot_run --entry-profile=1).
-# Each connection is replaced, in its original order and with its flags, by a wrapper that
-# calls it and records its main-thread ms. Handlers connected after time_signals() are not timed.
-# Rows: {"signal", "args", "f", "total_ms", "handlers": [[label, ms], ...]} sorted slowest first; signals under MIN_MS in a frame are dropped.
 
 const MIN_MS := 5.0
 
@@ -14,11 +10,9 @@ var _pending := {}
 
 var _events: Object
 var _names: Array = []
-# A connection does not keep its object alive.
 var _wrappers: Array = []
 
 
-# Call again (flush does) to time handlers connected since; the timed ones are kept as they are.
 func time_signals(events: Object, names: Array) -> void:
 	_events = events
 	_names = names
@@ -30,7 +24,6 @@ func time_signals(events: Object, names: Array) -> void:
 			var callable: Callable = c.callable
 			var label := _label(callable)
 			var count: int = events.get_signal_list().filter(func(s): return s.name == signal_name)[0].args.size()
-			# One object per handler: Godot treats one method bound to different arguments as one callable.
 			var timed := Timed.new(self, signal_name, callable, label)
 			_wrappers.append(timed)
 			var arities := [timed.zero, timed.one, timed.two, timed.three, timed.four, timed.five]
@@ -80,7 +73,6 @@ func _timed(args: Array, signal_name: String, callable: Callable, label: String)
 	_pending[key].handlers.append([label, snappedf(ms, 0.01)])
 
 
-# Moves the finished signals into rows; call once a frame.
 func flush() -> void:
 	for key in _pending:
 		var row: Dictionary = _pending[key]

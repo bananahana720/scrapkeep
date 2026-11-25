@@ -1,15 +1,5 @@
 extends SceneTree
 
-# A clip run for a render bench: one GLB on a grey floor under a fixed key light, playing a
-# sequence of its clips with the blend the game uses, so a changed action can be watched or
-# recorded as frames. Nothing under src/ uses it. Record with Godot's movie writer:
-#   xvfb-run -s "-screen 0 1280x800x24" <godot> --path sketches/core-loop --rendering-driver opengl3 \
-#     --fixed-fps 30 --write-movie /abs/out/frames.png --script res://tools/anim_clip_capture.gd -- \
-#     --glb=res://assets/models/warden_reactor.glb --seq=idle:1.0,pulse_warn@0.5:2.0,pulse@0.1:0.3,idle@1.0:1.0 \
-#     [--distance=18] [--height=0.35] [--yaw=35]
-# --seq is clip[@blend]:seconds, played in order; blend defaults to 0. --distance is metres from
-# the model's bounds centre, --height the camera's rise as a share of that distance, --yaw the
-# orbit in degrees. Without --write-movie it plays headless and quits, which checks the arguments.
 
 var _player: AnimationPlayer
 var _steps: Array = []
@@ -92,7 +82,6 @@ func _next() -> void:
 	print("anim_clip_capture: %s blend %.2f for %.2f s" % [step.clip, step.blend, step.seconds])
 
 
-# The tree is not live yet in _initialize, so walk the local transforms up to the model root.
 func _to_model(node: Node3D, model: Node) -> Transform3D:
 	var t := node.transform
 	var up := node.get_parent()

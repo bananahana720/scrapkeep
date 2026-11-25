@@ -1,15 +1,4 @@
 #!/usr/bin/env bash
-# Run one Codex unit in the foreground and leave a receipt folder behind.
-# The coordinator launches it as a background task and is notified on exit.
-#
-# Usage: sol_dispatch.sh --role write|verify|judge --wave W --unit ID --cwd DIR --brief FILE [--add-dir DIR]...
-#
-# Roles:
-#   write   gpt-6.1-sol, high, fast tier, workspace-write in DIR
-#   verify  gpt-6-astra, high, fast tier, workspace-write in DIR, scrapkeep-verifier instructions prepended
-#   judge   gpt-6.1-sol, high, fast tier, read-only
-# Receipts land in artifacts/local/alpha/push/<wave>/<unit>/<role>/ of the alpha worktree:
-# cmd.txt, prompt.md, run.log, report.md, exit, summary.txt.
 
 set -u
 here="$(cd "$(dirname "$0")" && pwd)"
@@ -54,7 +43,6 @@ mkdir -p "$out"
 
 prompt="$out/prompt.md"
 if [ "$role" = "verify" ]; then
-  # The verifier's standing instructions live in the project's Codex agent file.
   python3 -I - "$repo/.codex/agents/scrapkeep-verifier.toml" > "$prompt" <<'EOF'
 import sys, tomllib
 with open(sys.argv[1], "rb") as f:

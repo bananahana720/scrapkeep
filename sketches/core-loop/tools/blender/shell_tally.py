@@ -63,73 +63,44 @@ from mathutils import Matrix, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-import common  # noqa: E402
-from common import Part  # noqa: E402
-import shell_base as sb  # noqa: E402
+import common
+from common import Part
+import shell_base as sb
 
 OUT = os.path.join(common.MODELS, "world_one", "shell_tally.glb")
 ABACUS_OUT = os.path.join(common.MODELS, "world_one", "shell_tally_abacus.glb")
 SHELL_BAND = (3000, 11000)
 TARGET_TRIS = 6600
 
-# Oxblood lattice enamel (Andrew's call 2, 24 Nov 2026; never Kindness purple #D936B0).
 OXBLOOD = "5e232d"
 CREAM = "f7f1e3"
-# Brown oxide magnetic tape (Palette.RUST) and the glass of the capacitor jars (Palette.LEDGER_CREAM).
 TAPE_BROWN = "oxide"
 GLASS = CREAM
-# Copper hub drums: six sides (see the header).
 HUB_SIDES = 6
-# Tape decks (Flywheel.R), heroic and cutaway-first (Andrew, 23 Nov 2026; E2-05 concept sheet
-# 04-tally-heroic-cutaway-v2): 1.01 m across, 0.24 m deep, axis along X, flanking the ball. The
-# inner face stands at DRUM_INNER, past the injector's sweep (1.25 m when the ring aims sideways),
-# the weapon ring's band (1.08 m) and the cutaway plating (0.983 m). The size is the largest the
-# carrier bank's laws allow (carrier_bank_test, MOTION-SPEC row 208): with the 40 mm stamp down, a
-# 30 degree slope still banks 0 at any heading (0.98 m of the 0.99 m support), a vertical wall banks
-# under 60 degrees (49), and the outer top rim reaches 1.697 m. So the centre sits DRUM_Z up, not on
-# the equator: lower and the decks dig into side slopes.
 DRUM_R = 0.505
 DRUM_DEPTH = 0.24
 DRUM_Z = 0.28
-# The tape pack fills the reel to TAPE x DRUM_R, so the brass flanges stand as a lip.
 TAPE = 0.95
 DRUM_INNER = 1.264
 DRUM_X = DRUM_INNER + DRUM_DEPTH / 2
-# Deck details are drawn at REF_R and scale with a deck's radius (light, heavy).
 REF_R = 0.17
 WINDOW_R = 0.032
 WINDOW_AT = 0.095
-# Window index rides vertex colour alpha (see the header).
 WINDOW_ALPHA = (0.2, 0.4, 0.6, 0.8)
-# The index notch (E2-05): its centre angle in the deck's Y-Z plane (0 is +Y, the aim; 90 is up;
-# 180 is the back, toward the chase camera), on the upper rear rim, where the chase camera behind
-# and above sees the notch and the shoe break the deck's outline, between two of the flange's 16
-# corners (the deck keeps its 2 x DRUM_R bounds). NOTCH_HALF is its half-width in degrees and
-# NOTCH_R its floor, well below the tape face (TAPE x DRUM_R): a 0.08 m bite out of the rim,
-# 0.15 m wide.
 NOTCH_AT = 123.75
 NOTCH_HALF = 10.0
 NOTCH_R = DRUM_R * 0.84
-# The index shoe: a chunky charcoal clamp on DrumBrackets, an arm up the deck's inner face and a
-# tooth over the rim at NOTCH_AT, SHOE_GAP clear of it, out to SHOE_R and SHOE_OVER over the deck.
 SHOE_R = DRUM_R + 0.10
 SHOE_GAP = 0.016
 SHOE_WIDTH = 0.14
 SHOE_OVER = 0.04
 PUNCH_AT = (0.3, 1.4, 2.2, 3.5, 4.1, 5.3)
-# The light deck's tape carries bold charcoal timing bands (leader splices): three at quarter
-# turns from the index slot, so the slot and the bands read as four dark beats round the rim and
-# only the notch tells the index one.
 TIMING_AT = (NOTCH_AT + 90.0, NOTCH_AT + 180.0, NOTCH_AT + 270.0)
 TIMING_WIDTH = 0.07
-# Card bays: the three jacks of the patch bay beside the right yoke, front to back, on the bank
-# line (shell_base.BANK); bay 0 is slot 1, bay 1 slot 2, bay 2 slot 3.
 BAY_X = sb.BANK[0][0]
 BAY_YS = (0.42, sb.BANK[0][1], sb.BANK[1][1])
 BAY_Z = -0.262
-# The injector muzzle on the ring's front arc; ReaderExit sits just inside it.
 MAG_FRONT = 1.20
-# Weapon parts stay inside this horizontal reach between the decks' bottom and top (see the header).
 SWEEP = 1.252
 
 
@@ -253,7 +224,7 @@ def drum(name, side, centre, radius=DRUM_R, depth=DRUM_DEPTH, reel=False, part=N
     k = radius / REF_R
     half = depth / 2
     flange = 0.008 * k
-    face = half - 0.003 * k      # outer flange face; the boss and bar stand to half
+    face = half - 0.003 * k
     rot = (0, math.pi / 2, 0)
 
     def at(x):
@@ -272,21 +243,15 @@ def drum(name, side, centre, radius=DRUM_R, depth=DRUM_DEPTH, reel=False, part=N
     if index:
         for deg in TIMING_AT:
             tint_alpha(p, timing_band(p, at((face - flange - half + flange) / 2), radius * TAPE, tape, k, deg), 0.0)
-        # A charcoal bar across the outer face through the hub, level at rest, short of the notch;
-        # kept 1 mm inboard of the outer face so the bone hub boss stands cleanly proud of it.
         bar = half - face - 0.001
         tint_alpha(p, p.box("paint", (bar, 1.6 * radius, 0.016 * k), loc=at(face + bar / 2),
                             color="charcoal"), 0.0)
-    # Splice marks on the heavy deck's tape: a few charcoal slots, unevenly spaced (rule 8).
     for n, a in enumerate(() if index else PUNCH_AT):
         r = radius * TAPE + 0.002 * k
         x, y, z = at((-0.01 + 0.012 * (n % 2)) * k)
-        # Local Z of the box turns to the radial direction (0, sin a, cos a).
         p.box("paint", (0.018 * k, 0.026 * k, 0.010 * k), loc=(x, y + r * math.sin(a), z + r * math.cos(a)),
               rot=(-a, 0, 0), color="charcoal")
     p.cyl("paint", 0.045 * k, 0.045 * k, half - face, 8, loc=at((half + face) / 2), rot=rot, color="bone")
-    # The four window cut-outs: flat dark discs just proud of the outer flange face, so the deck's
-    # outer extent stays at half (pilot_tally_asset_test pins the span).
     for n in range(4):
         a = math.pi / 4 + n * math.pi / 2
         y, z = WINDOW_AT * k * math.cos(a), WINDOW_AT * k * math.sin(a)
@@ -319,8 +284,6 @@ def notched_flange(p, loc, radius, thick):
     ring = [(lo, radius), (lo, NOTCH_R), (hi, NOTCH_R), (hi, radius)]
     ring += [(k * 22.5, radius) for k in range(16) if hi < k * 22.5 < lo + 360] + \
             [(k * 22.5 + 360, radius) for k in range(16) if hi < k * 22.5 + 360 < lo + 360]
-    # prism() extrudes along local Z: local (x, y) = (-z, y) under a quarter turn about Y keeps
-    # the outline counter-clockwise, so its faces point out.
     outline = []
     for deg, r in ring:
         y, z = _yz(deg, r)
@@ -366,7 +329,6 @@ def bracket(p, side):
     weapon band, and an arm level over the band to a broad hub disc on the drum's inner face."""
     inner = DRUM_X - DRUM_DEPTH / 2
     elbow = (side * 1.0, 0, DRUM_Z)
-    # Alpha 0 is the paint take mask (PAINT_SHADER): the brackets keep their charcoal under any paint.
     p.beam("paint", (side * 0.885, 0, 0), elbow, 0.07, color="charcoal", alpha=0.0)
     p.beam("paint", elbow, (side * (inner - 0.004), 0, DRUM_Z), 0.07, color="charcoal", alpha=0.0)
     tint_alpha(p, p.cyl("paint", 0.12, 0.12, 0.02, 8, loc=(side * (inner - 0.012), 0, DRUM_Z),
@@ -381,7 +343,6 @@ def patch_bay(p):
     card-punch keypad beside her left knee: a bone box with two charcoal key rows and a cream
     punched card standing in its slot. Inside the gimbal sweep (radius 0.829, shell_base.cockpit)."""
     p.box("paint", (0.11, 0.34, 0.025), loc=(BAY_X, 0.30, BAY_Z - 0.0125), color="bone")
-    # Bay 0's plug; the bank builds the plugs at bays 1 and 2 (CardTab.1 and .2).
     p.box("copper", (0.03, 0.05, 0.08), loc=(BAY_X, BAY_YS[0], -0.27 + 0.06))
     jacks = ((BAY_X - 0.035, 0.42), (BAY_X - 0.035, 0.24), (BAY_X + 0.035, 0.36), (BAY_X + 0.035, 0.18))
     for x, y in jacks:
@@ -395,7 +356,6 @@ def patch_bay(p):
     for dy in (-0.03, 0.03):
         p.box("paint", (0.08, 0.014, 0.008), loc=(kx, ky + dy, kz + 0.022), color="charcoal")
     p.box("paint", (0.06, 0.005, 0.07), loc=(kx, ky - 0.075, kz + 0.04), rot=(-0.2, 0, 0), color=CREAM)
-    # Return vent low behind the seat: the surge steam leaves through the rear gaps.
     p.box("rubber", (0.18, 0.03, 0.08), loc=(0, -0.255, -0.47))
 
 
@@ -450,19 +410,16 @@ def injector(r):
     r.box("paint", (0.18, 0.09, 0.11), loc=(0, hy, 0), color="charcoal")
     for s in (-1, 1):
         r.box("paint", (0.014, 0.055, 0.06), loc=(s * 0.097, hy, 0), color="brass")
-    # The muzzle: copper barrel, insulated sleeve, copper jaws.
     r.cyl("paint", 0.038, 0.038, 0.07, 6, loc=(0, hy + 0.08, 0), rot=(math.pi / 2, 0, 0), color="copper")
     r.box("paint", (0.09, 0.04, 0.075), loc=(0, MAG_FRONT - 0.015, 0), color="charcoal")
     for s in (-1, 1):
         r.beam("paint", (0, MAG_FRONT + 0.005, s * 0.03), (0, SWEEP - 0.01, s * 0.006), 0.07, 0.018, color="copper")
-    # Receiver, spring rail and three loaded clip-darts, and the card eject slot.
     r.box("paint", (0.20, 0.13, 0.11), loc=(0, hy + 0.02, 0.11), color="bone")
     r.box("paint", (0.19, 0.022, 0.02), loc=(0, hy - 0.025, 0.175), color="charcoal")
     for x in (-0.06, 0.0, 0.06):
         r.box("paint", (0.032, 0.08, 0.026), loc=(x, hy + 0.0, 0.178), color="copper")
     r.box("class_accent", (0.10, 0.012, 0.022), loc=(0, hy + 0.08, 0.158))
     r.box("paint", (0.08, 0.004, 0.05), loc=(0, hy + 0.08, 0.185), rot=(0.25, 0, 0), color=CREAM)
-    # The spring lead spool under the head, and the sheathed patch lead up to the clamp's sleeve.
     sy, sz = hy + 0.06, -0.16
     r.box("paint", (0.03, 0.05, 0.08), loc=(0, sy - 0.02, -0.09), color="charcoal")
     r.cyl("paint", 0.06, 0.06, 0.15, 6, loc=(0, sy, sz), rot=(0, math.pi / 2, 0), color="copper")
@@ -478,8 +435,6 @@ def punch_press(p):
     stamp sole was: a thick copper octagonal die collar round the tread cap, a ring of eight
     charcoal punched holes on its face and the "III" maker mark beside the cap. Inside the Core's
     0.985 m limit."""
-    # The collar's face sits below the copper hub drum (0.975 m) and above the rubber tread cap's
-    # face (0.9824 m), so the cap stands proud as the die's centre punch.
     r, z0, z1 = 0.114, -0.977, -0.945
     outline = [(r * math.cos(math.pi / 8 + k * math.pi / 4), r * math.sin(math.pi / 8 + k * math.pi / 4)) for k in range(8)]
     p.prism("copper", outline, z1 - z0, matrix=common.mtx((0, 0, (z0 + z1) / 2)))
@@ -530,7 +485,6 @@ def fold_rubber(obj):
             moved += 1
     bm.to_mesh(obj.data)
     bm.free()
-    # pop() shifts the face indices above the removed slot down by one.
     obj.data.materials.pop(index=rub)
     return moved
 
@@ -556,15 +510,12 @@ def build(variant=""):
                         cap_sides=caps,
                         bank=(("CardTab.1", "tab"), ("CardTab.2", "tab")))
     root, core, pod, ring = shell["root"], shell["core"], shell["pod"], shell["ring"]
-    # Tally's pilot is its own GLB (pilot_tally_anim.glb); the shell carries no Pilot node.
     bpy.data.objects.remove(shell["pilot"])
     extra = Part("CoreTally")
     punch_press(extra)
     if abacus:
         beads(extra)
     merge(core, extra)
-    # The neutral weapon seat on the front arc gives way to the head and injector, and the bone
-    # band becomes the brown tape.
     dropped = drop_islands(ring, lambda co: co.y > 1.07 and abs(co.x) < 0.1 and abs(co.z) < 0.1)
     shell["taped"] = recolour(ring, "paint", "bone", TAPE_BROWN)
     head = Part("RingTally")
@@ -578,15 +529,11 @@ def build(variant=""):
     sb._sharpen(cab)
     merge(pod, cab)
     shell["folded"] = fold_rubber(pod) + fold_rubber(ring)
-    # The two deck brackets end in discs 1.25 m out, past the ball on a wall, so they are their own
-    # mesh, DrumBrackets, under Pod for hero_assets to bank with the carrier. They paint on the paint
-    # slot in charcoal vertex colour, as the Pod's folded rubber did, so the pair costs one draw.
     brackets = Part("DrumBrackets")
     for side in (1, -1):
         bracket(brackets, side)
     sb._sharpen(brackets)
     brackets.to_object((0, 0, 0), pod)
-    # Both decks in one mesh on the shared X axis, origin at the right deck's centre.
     wheels = Part("Flywheel.R")
     for name, side in (("R", 1), ("L", -1)):
         centre = (side * DRUM_X, 0.0, DRUM_Z)
@@ -599,7 +546,6 @@ def build(variant=""):
     for i, y in enumerate(BAY_YS):
         common.empty("CardBay." + str(i), (BAY_X, y, BAY_Z), reader)
     common.empty("Control.CardTab.0", (BAY_X, BAY_YS[0], -0.27), pod)
-    # Socket local -Z is the outgoing axis after glTF/Godot conversion (as before the mecha).
     for name, pos, parent, rot in [
             ("ReaderExit", (0, MAG_FRONT + 0.012, 0.0), ring, (math.pi / 2, 0, 0)),
             ("ReturnExit", (0, -0.27, -0.47), pod, (math.pi / 2, 0, 0)),

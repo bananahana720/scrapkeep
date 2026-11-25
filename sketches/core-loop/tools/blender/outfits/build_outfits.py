@@ -34,7 +34,7 @@ SMOKED_GLASS = common.mix("charcoal", "petrol", .30)
 MULBERRY = "7a3b5c"
 MULBERRY_DARK = common.mix("7a3b5c", "charcoal", .35)
 STEADY_PETROL = common.mix("petrol", "bone", .12)
-REDJAW = "9b513a"  # Tarn's own oxide stripe (pilot_tarn.fur_stripe), not hazard red
+REDJAW = "9b513a"
 
 
 def lathe(part, slot, profile, segs, loc=(0, 0, 0), color=None):
@@ -150,16 +150,12 @@ class Outfit:
         return tris
 
 
-# --- Welding Hood (Rivet) -------------------------------------------------------------
-
 HOOD_HINGE_UP = math.radians(70)
 
 
 def rivet_hood():
     o = Outfit("outfit_rivet_hood", ITEMS["outfit_rivet_hood"]["rig"])
     face = o.verts["goggles"] + o.verts["head"]
-    # An ellipsoid patch round the goggles: its front sits just off the lens plate, its
-    # crown rows curl back over the brow, and its sides end at the hinge pins.
     rx = max(abs(v.x) for v in face) + .03
     ry = max(v.y for v in o.verts["goggles"]) + .045
     cy, zc, rz = .0, .255, .21
@@ -180,7 +176,6 @@ def rivet_hood():
     for s in (-1, 1):
         hood.cyl("pilot", .028, .028, .022, 10, color="copper", loc=(s * (hinge_x + .008), hinge_y, hinge_z), rot=(0, math.pi / 2, 0))
     obj = o.add("head", hood, pivot=(0, hinge_y, hinge_z))
-    # Rest: lifted. The mesh is authored down over the visor.
     obj.rotation_mode = "XYZ"
     obj.rotation_euler = (HOOD_HINGE_UP, 0, 0)
     scene = bpy.context.scene
@@ -198,7 +193,6 @@ def rivet_hood():
         track = obj.animation_data.nla_tracks.new()
         track.name = clip
         track.strips.new(clip, 1, action)
-        # Muted, so the exported rest pose is the lifted hood, not a clip's frame.
         track.mute = True
     obj.animation_data.action = None
     obj.rotation_euler = (HOOD_HINGE_UP, 0, 0)
@@ -214,8 +208,6 @@ def hood_pose(angle):
                 ob.rotation_euler = (angle, 0, 0)
     return pose
 
-
-# --- Eyeshade (Tally) -----------------------------------------------------------------
 
 def ring_band(part, slot, centre, rx, ry, z0, z1, segs, color, y_shift=0.0, thick=.008):
     """An elliptical band round local Z with real thickness."""
@@ -244,7 +236,6 @@ def tally_eyeshade():
     cy, ry = (front + back) / 2, (front - back) / 2 + .012
     visor = common.Part("Eyeshade")
     ring_band(visor, "pilot", (0, 0, 0), rx, ry, z0, z1, 16, MULBERRY_DARK, y_shift=cy)
-    # The bill: a fan off the front of the band, dipping 22 degrees, mulberry on top.
     cols, span, reach, dip = 9, math.radians(68), .095, math.radians(22)
     grid = []
     for i, d in enumerate((0, reach * .55, reach)):
@@ -256,13 +247,10 @@ def tally_eyeshade():
             row.append(Vector((ex, ey, z1)) + n * d * math.cos(dip) - Vector((0, 0, d * math.sin(dip))))
         grid.append(row)
     sheet(visor, "pilot", grid, .008, MULBERRY)
-    # Copper rim along the bill's front edge.
     rim = grid[-1]
     for a, b in zip(rim, rim[1:]):
         visor.rod("pilot", a, b, .0055, 5, color="copper")
     o.add("head", visor, pivot=o.frames["head"].translation)
-    # Each garter rings its sleeve's edge loop 0.2 m down the arm: centred on the loop,
-    # sized to its outer vertices, square to the bone.
     t = .2
     for side in ("R", "L"):
         bone = "upper_arm." + side
@@ -280,15 +268,9 @@ def tally_eyeshade():
     return o.export()
 
 
-# --- Steady Cap (Tarn) ----------------------------------------------------------------
-
 def tarn_steady_cap():
     o = Outfit("outfit_tarn_steady_cap", ITEMS["outfit_tarn_steady_cap"]["rig"])
     cap = common.Part("SteadyCap")
-    # pilot_tarn.build_cap's crown and brim at the same seat, but puffed up and pressed:
-    # a round clean crown, one Redjaw stripe front to back, a stiff brim and a top button.
-    # The battered cap is a flat disc (crown 0.018 high); this one stands 0.045 high, so the
-    # swap reads from the chase camera.
     crown = cap.uv("pilot", 1, 16, 7, loc=(0, -.005, .402), scale=(.142, .126, .045), color=STEADY_PETROL)
     for f in crown:
         f.smooth = True
@@ -302,13 +284,10 @@ def tarn_steady_cap():
     return o.export()
 
 
-# --- Till Bell (SPIL-9) ---------------------------------------------------------------
-
 def till_bell():
     o = Outfit("companion_skin_till_bell", ITEMS["companion_skin_till_bell"]["rig"])
     deck = o.verts["Deck"]
     top = max(v.z for v in deck)
-    # Off the centre line, behind the socket collars, so the chase camera sees it.
     x, y = .07, -.20
     sockets = o.verts["Socket.01"] + o.verts["Socket.02"]
     assert all(abs(v.y - y) > .09 or abs(v.x - x) > .09 for v in sockets), "bell overlaps a socket collar"

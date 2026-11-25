@@ -1,10 +1,3 @@
-// Usage: node scripts/challenge/worst-window.mjs <run folder> [<run folder> ...]
-// W1-31: the worst 60 s of damage in each fight of a w1clear read, as a share of max hull, from the bot record's
-// worst_60s_hull and worst_60s_hp (tools/bot_driver.gd). A fight a run never reached is left out, so n is the runs
-// that fought it. The dam is stage 1's Warden fight, the flume stage 2's, Brindle the boss note.
-// The share divides by the max hull at that fight, not at the end of the run (max hull grows during a run): the
-// note's worst_60s_max_hp (max hull when the worst window peaked), else the stage note's max_hp (max hull at stage
-// entry; a boss note from before worst_60s_max_hp has none), else the run's end max_hp.
 import fs from "node:fs";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -16,22 +9,18 @@ export const med = (xs) => {
 const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
 const pct = (x) => (x == null ? "-" : (100 * x).toFixed(0) + "%");
 
-// The max hull a fight's shares divide by, and which field gave it.
 export function fightMaxHp(note, row) {
   if (note.worst_60s_max_hp != null) return { maxHp: note.worst_60s_max_hp, from: "window" };
   if (note.max_hp != null) return { maxHp: note.max_hp, from: "entry" };
   return { maxHp: row.max_hp ?? 120, from: "run_end" };
 }
 
-// The note of each fight one bot record fought, or null for a fight it never reached: the dam is stage 1's note once its
-// Warden was engaged, the flume stage 2's, Brindle the boss note.
 export function fightNotes(row) {
   const stage = (n) => (row?.stages ?? []).find((s) => s.stage === n);
   const fought = (n) => (n?.warden_engaged_s != null ? n : null);
   return { dam: fought(stage(1)), flume: fought(stage(2)), brindle: row?.boss ?? null };
 }
 
-// rows: runs.ndjson lines. Returns {column: {dam|flume|brindle: [{hull, hp, from}]}}.
 export function worstWindows(rows) {
   const out = {};
   for (const column of [...new Set(rows.map((r) => r.column))]) {

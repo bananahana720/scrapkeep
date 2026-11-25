@@ -37,15 +37,12 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cut_stingers import PROJECT, RATE, finish, level, lufs, true_peak_db, write_wav  # noqa: E402
+from cut_stingers import PROJECT, RATE, finish, level, lufs, true_peak_db, write_wav
 
-# zone -> semitones above D
 ZONES = {"1_1": 0, "1_2": 2}
 CUES = ("riser_dam_siren", "drop_flood_horn", "drop_flash_flood", "drop_spill_dropship", "drop_relic_wake",
         "drop_spill_boiler", "drop_cracked_wall", "drop_reactor_blow", "drop_sluice_surge")
 STINGS = ("sting_cold_open", "sting_rivet_cage", "sting_warden_reveal", "sting_bowl_handoff", "sting_spillway_clear")
-# Which cues each zone gets: the dam has no cracked wall, reactor or sluice; the flume has no
-# flood horn, siren or boiler. Shared ids (flash flood, dropship, relic) play in both.
 DAM = ("riser_dam_siren", "drop_flood_horn", "drop_flash_flood", "drop_spill_dropship", "drop_relic_wake", "drop_spill_boiler")
 FLUME = ("drop_flash_flood", "drop_spill_dropship", "drop_relic_wake", "drop_cracked_wall", "drop_reactor_blow", "drop_sluice_surge")
 BY_ZONE = {"1_1": DAM + STINGS, "1_2": FLUME}
@@ -108,13 +105,11 @@ def pluck(midi, seconds):
     return tone(midi, seconds, 8, 1.0) * np.exp(-t / 0.18) * np.minimum(t / 0.004, 1.0)
 
 
-# --- Cues. d is the D root in MIDI (D2 = 38) already shifted for the zone. ---------------------------
-
 def riser_dam_siren(s):
     seconds = 1.86
     t = t_of(seconds)
     d4 = 62 + s
-    f = hz(d4) * 2 ** ((7 / 12) * (t / seconds) ** 1.4)  # D up a fifth, accelerating
+    f = hz(d4) * 2 ** ((7 / 12) * (t / seconds) ** 1.4)
     wail = 1 + 0.35 * np.sin(2 * np.pi * (2.0 + 3.0 * t / seconds) * t)
     sir = np.sin(np.cumsum(2 * np.pi * f * wail / RATE)) + 0.4 * np.sin(np.cumsum(4 * np.pi * f / RATE))
     swell = np.minimum(t / 0.5, 1.0)
@@ -123,10 +118,9 @@ def riser_dam_siren(s):
 
 def drop_flood_horn(s):
     n = int(1.6 * RATE)
-    d = 38 + s  # D2
+    d = 38 + s
     low = tone(d + 12, 1.1, 10, 0.9, 0.2) * env(t_of(1.1), 0.05, 0.4, 0.3)
     high = tone(d + 19, 1.2, 10, 0.9, 0.2) * env(t_of(1.2), 0.05, 0.4, 0.3)
-    # A faint detuned copy gives the horn its slow beat.
     beat = tone(d + 12.08, 1.1, 6, 1.0) * env(t_of(1.1), 0.05, 0.4, 0.3)
     x = place(n, 0.0, low + beat * 0.6) + place(n, 0.45, high * 0.9)
     return x + place(n, 0.0, sweep(hz(d - 12) * 1.2, hz(d - 12), 0.4) * np.exp(-t_of(0.4) / 0.15)) * 0.8
@@ -135,9 +129,8 @@ def drop_flood_horn(s):
 def drop_flash_flood(s):
     n = int(1.5 * RATE)
     t = t_of(1.5)
-    d = 50 + s  # D3
+    d = 50 + s
     surge = noise(n, 200, 6000) * np.minimum(t / 0.1, 1.0) * np.exp(-t / 0.7)
-    # The wash sweeps down: a second band that falls from bright to dull.
     fall = noise(n, 1200, 9000) * np.exp(-t / 0.25) * 0.8
     thump = np.sin(2 * np.pi * hz(d - 12) * t) * np.exp(-t / 0.25)
     gurgle = np.sin(2 * np.pi * hz(d) * t + 3 * np.sin(2 * np.pi * 9 * t)) * np.exp(-t / 0.5) * 0.25
@@ -158,7 +151,7 @@ def drop_spill_dropship(s):
 def drop_relic_wake(s):
     n = int(1.9 * RATE)
     t = t_of(1.9)
-    d = 26 + s  # D1
+    d = 26 + s
     sub = np.sin(2 * np.pi * hz(d) * t) * env(t, 0.2, 0.9, 0.3)
     grind = (np.sin(2 * np.pi * hz(d + 12) * t) + np.sin(2 * np.pi * (hz(d + 12) + 3.3) * t)) * env(t, 0.3, 0.7, 0.2) * 0.4
     rise = sweep(hz(d + 24) * 0.6, hz(d + 24), 1.3) * env(t_of(1.3), 0.5, 0.4, 0.2) * 0.25
@@ -169,11 +162,10 @@ def drop_relic_wake(s):
 def drop_spill_boiler(s):
     n = int(1.3 * RATE)
     t = t_of(1.3)
-    d = 62 + s  # D4
+    d = 62 + s
     hiss = noise(n, 2500, 11000) * np.minimum(t / 0.02, 1.0) * np.exp(-t / 0.5) * 0.6
     pop = place(n, 0.08, noise(int(0.04 * RATE), 80, 3000) * np.exp(-t_of(0.04) / 0.008) * 2.0)
     pop += place(n, 0.08, np.sin(2 * np.pi * hz(d - 24) * t_of(0.25)) * np.exp(-t_of(0.25) / 0.07))
-    # The whistle: D, then a bend up a fifth to A with a shake in it (the Highdraft's bends a tritone).
     wt = t_of(1.0)
     pitch = hz(d + 12) * 2 ** ((7 / 12) * np.clip((wt - 0.2) / 0.25, 0, 1)) * (1 + 0.012 * np.sin(2 * np.pi * 14 * wt))
     whistle = np.sin(np.cumsum(2 * np.pi * pitch / RATE)) * np.minimum(wt / 0.05, 1.0) * np.exp(-np.clip(wt - 0.6, 0, None) / 0.2)
@@ -197,7 +189,7 @@ def drop_cracked_wall(s):
 def drop_reactor_blow(s):
     n = int(1.8 * RATE)
     t = t_of(1.8)
-    d = 26 + s  # D1
+    d = 26 + s
     boom = (np.sin(2 * np.pi * hz(d) * t) + 0.5 * np.sin(2 * np.pi * hz(d + 12) * t)) * np.exp(-t / 0.5) * np.minimum(t / 0.01, 1.0)
     whine = sweep(hz(d + 36), hz(d + 60), 1.2) * np.minimum(t_of(1.2) / 0.3, 1.0) * np.exp(-np.clip(t_of(1.2) - 0.6, 0, None) / 0.3)
     shred = noise(n, 300, 5000) * np.exp(-t / 0.35) * np.minimum(t / 0.01, 1.0)
@@ -217,12 +209,10 @@ def drop_sluice_surge(s):
     return place(n, 0.0, grind * 0.9) + place(n, 0.35, clang) + place(n, 0.4, gush * 1.0) + place(n, 0.4, swirl)
 
 
-# --- Story stings (1_1 only, zone shift 0). ------------------------------------------------------
-
 def sting_cold_open(s):
     n = int(1.6 * RATE)
     x = np.zeros(n)
-    for i, m in enumerate((62, 69, 72, 74)):  # D A C D
+    for i, m in enumerate((62, 69, 72, 74)):
         x += place(n, 0.14 * i, pluck(m, 1.0) * (0.7 + 0.1 * i))
     x += place(n, 0.42, bell(86, 1.1, 0.7) * 0.35)
     return x
@@ -232,7 +222,7 @@ def sting_rivet_cage(s):
     n = int(1.6 * RATE)
     clang = bell(50 + s, 0.9, 0.35) * 1.2 + bell(53, 0.9, 0.25) * 0.6
     clang += noise(int(0.9 * RATE), 1200, 9000) * np.exp(-t_of(0.9) / 0.025) * 1.5
-    release = bell(81 + s, 1.0, 0.6) * 0.5  # A
+    release = bell(81 + s, 1.0, 0.6) * 0.5
     rattle = sum(place(n, 0.12 + 0.07 * i, noise(int(0.05 * RATE), 2000, 9000) * np.exp(-t_of(0.05) / 0.01) * (0.6 - 0.12 * i)) for i in range(4))
     return place(n, 0.0, clang) + rattle + place(n, 0.3, release)
 
@@ -240,7 +230,7 @@ def sting_rivet_cage(s):
 def sting_warden_reveal(s):
     n = int(2.0 * RATE)
     brass = (tone(38, 1.8, 10, 0.9, 0.1) + tone(50, 1.8, 10, 0.9, 0.1)) * env(t_of(1.8), 0.12, 0.7, 0.3)
-    flat = (tone(39, 1.4, 10, 0.9, 0.1) + tone(51, 1.4, 10, 0.9, 0.1)) * env(t_of(1.4), 0.1, 0.5, 0.2)  # Eb, the flat second
+    flat = (tone(39, 1.4, 10, 0.9, 0.1) + tone(51, 1.4, 10, 0.9, 0.1)) * env(t_of(1.4), 0.1, 0.5, 0.2)
     fall = sweep(hz(62), hz(38), 0.5) * np.exp(-t_of(0.5) / 0.3) * 0.5
     sub = np.sin(2 * np.pi * hz(26) * t_of(2.0)) * env(t_of(2.0), 0.3, 0.9, 0.3) * 0.9
     return place(n, 0.0, brass * 0.7) + place(n, 0.5, flat * 0.7) + place(n, 0.0, fall) + sub[:n]
@@ -248,8 +238,8 @@ def sting_warden_reveal(s):
 
 def sting_bowl_handoff(s):
     n = int(2.0 * RATE)
-    call1 = tone(57, 0.7, 10, 0.9, 0.15) * env(t_of(0.7), 0.04, 0.4, 0.1)  # A3
-    call2 = tone(50, 1.3, 10, 0.9, 0.15) * env(t_of(1.3), 0.04, 0.6, 0.3)  # D3
+    call1 = tone(57, 0.7, 10, 0.9, 0.15) * env(t_of(0.7), 0.04, 0.4, 0.1)
+    call2 = tone(50, 1.3, 10, 0.9, 0.15) * env(t_of(1.3), 0.04, 0.6, 0.3)
     tail = lowpass(noise(n, 60, 700), 400) * env(t_of(2.0), 0.4, 0.6, 0.2) * 0.15
     return place(n, 0.0, call1) + place(n, 0.5, call2) + tail
 
@@ -257,10 +247,10 @@ def sting_bowl_handoff(s):
 def sting_spillway_clear(s):
     n = int(2.2 * RATE)
     x = np.zeros(n)
-    for i, m in enumerate((62, 64, 65, 67, 69, 71, 74)):  # D E F G A B D, D Dorian up the scale
+    for i, m in enumerate((62, 64, 65, 67, 69, 71, 74)):
         x += place(n, 0.09 * i, bell(m + 12, 1.0, 0.5) * 0.5)
     x += place(n, 0.65, bell(74 + 12, 1.4, 0.9) * 0.6)
-    x += place(n, 0.65, bell(83 + 12, 1.2, 0.6) * 0.25)  # B, the major sixth glint
+    x += place(n, 0.65, bell(83 + 12, 1.2, 0.6) * 0.25)
     x += place(n, 0.0, tone(38, 1.2, 4, 1.5) * env(t_of(1.2), 0.1, 0.5, 0.2) * 0.3)
     return x
 

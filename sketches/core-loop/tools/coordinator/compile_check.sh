@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-# Compile-check every GDScript file changed between a base ref and HEAD.
-# Run it after merging units and before any long test run: a clean textual
-# merge can still leave a script that does not parse (two units adding the
-# same const), and one bad script fails every test that loads game.gd.
-#
-# Usage: compile_check.sh [base-ref]   (default proto/alpha), from any dir in the worktree.
 
 set -u
 base="${1:-proto/alpha}"

@@ -61,7 +61,6 @@ def linear(c):
 
 
 def atlas(signal=False):
-    # Two families share one atlas and primitive. Broad weathering, no bolts.
     size = 128
     im = bpy.data.images.new("M4_signal_atlas" if signal else "M1_M2_cast_atlas",
                             width=size, height=size, alpha=False)
@@ -96,8 +95,6 @@ def materials():
             tex.interpolation = "Linear"
             m.node_tree.links.new(tex.outputs["Color"], p.inputs["Base Color"])
             if len(result) == 1:
-                # glTF cannot multiply emissiveFactor by vertex colour. A shared
-                # texture carries the same hue into both base and emission.
                 m.node_tree.links.new(tex.outputs["Color"], p.inputs["Emission Color"])
                 p.inputs["Emission Strength"].default_value = 0.35
         else:
@@ -117,7 +114,6 @@ class Mesh:
     def add(self, vertices, faces, bone, slot=0, tint="bone", smooth=False, matrix=None):
         base = len(self.verts)
         matrix = matrix if matrix is not None else Matrix.Identity(4)
-        # Each part samples its own quadrant. A shared vertex has one UV.
         region = {"bone": (0, 0), "petrol": (1, 0), "charcoal": (0, 1)}.get(tint, (0, 0))
         if slot == 1:
             region = {"blue": (0, 0), "hazard": (1, 0), "mint": (0, 1), "slate": (1, 1)}[tint]
@@ -143,7 +139,6 @@ class Mesh:
         self.add(vertices, faces, bone, slot, tint, smooth, matrix)
 
     def ring(self, center, inner, outer, depth, n, bone, tint="charcoal", slot=0, stripes=False):
-        # Optical axis is Blender +Y / Godot -Z.
         vertices = [(center[0] + r * math.cos(i * math.tau / n), center[1] + y,
                      center[2] + r * math.sin(i * math.tau / n))
                     for y, r in [(-depth / 2, inner), (-depth / 2, outer),
@@ -174,7 +169,6 @@ class Mesh:
 
     def plate(self, outline, depth, bone, tint="bone", slot=0):
         n = len(outline)
-        # Front/back winding stays outward even on mirrored swept flanks.
         area = sum(outline[i][0] * outline[(i + 1) % n][2]
                    - outline[i][2] * outline[(i + 1) % n][0] for i in range(n))
         if area < 0:
@@ -219,7 +213,6 @@ def rig():
     for name, at, parent in BONES:
         b = arm.data.edit_bones.new(name)
         b.head = at
-        # Pilot convention: short +Y tails make pose XYZ equal to Blender XYZ.
         b.tail = Vector(at) + Vector((0, 0.1, 0))
         if parent:
             b.parent = arm.data.edit_bones[parent]
@@ -231,13 +224,11 @@ def rig():
 
 def geometry():
     m = Mesh()
-    # A single cast foot, not a stack of pads. Broad radial lobes use the atlas.
     m.loft([(-1.8, 1.1), (-1.71, 1.1), (-1.3, 0.5)], 12, "Foot")
     for i, base in enumerate((-1.3, 0.3, 1.9)):
         name = "Segment%d" % i
         m.loft([(base, 0.18), (base + 0.8, 0.165), (base + 1.6, 0.14)], 16, name,
                "petrol" if i == 1 else "bone", phase=math.pi / 16)
-        # The glove's stitched seam ridge down the back of the link, with stitch ticks.
         m.plate([(-0.02, -0.19, base + 0.2), (0.02, -0.19, base + 0.2),
                  (0.02, -0.16, base + 1.4), (-0.02, -0.16, base + 1.4)], 0.03, name, "charcoal")
         for k in range(4):
@@ -245,30 +236,24 @@ def geometry():
             y = -0.188 + 0.025 * (z - base) / 1.6
             m.plate([(-0.06, y, z - 0.012), (0.06, y, z - 0.012), (0.06, y, z + 0.012),
                      (-0.06, y, z + 0.012)], 0.02, name, "charcoal")
-        # Recessed linear groove. It stays blue, independent of combat state.
         m.plate([(-0.014, 0.172, base + 0.18), (0.014, 0.172, base + 0.18),
                  (0.014, 0.143, base + 1.42), (-0.014, 0.143, base + 1.42)],
                 0.004, name, "blue", 1)
-    # Two intermediate cross-axis bearings, with no fasteners.
     for i, z in enumerate((0.3, 1.9)):
         transform = Matrix.Translation((0, 0, z)) @ Matrix.Rotation(math.pi / 2, 4, "Y")
         m.loft([(-0.26, 0.22), (0.26, 0.22)], 8, "Segment%d" % (i + 1),
                "charcoal", matrix=transform)
-    # Swept enamel flanks frame a triangular negative space around the optic.
     for side in (-1, 1):
         m.plate([(side * 0.08, 0.36, 4.1), (side * 0.48, 0.36, 3.98),
                  (side * 0.99, 0.52, 3.46), (side * 0.6, 0.52, 3.50)], 0.24, "LensRoot")
         m.plate([(side * 0.48, 0.495, 3.95), (side * 0.503, 0.495, 3.94),
                  (side * 0.955, 0.66, 3.53), (side * 0.93, 0.66, 3.53)],
                 0.004, "LensRoot", "blue", 1)
-    # The glove's rolled cuff at the lens end of the finger.
     m.loft([(2.86, 0.165), (2.92, 0.215), (3.06, 0.225), (3.14, 0.19)], 16, "Segment2", "bone",
            phase=math.pi / 16)
     m.ring((0, 0.25, 3.4), 0.57, 0.7, 0.15, 12, "LensRoot")
     m.ring((0, 0.44, 3.4), 0.46, 0.7, 0.07, 12, "LensShutter")
     m.ring((0, 0.49, 3.4), 0.49, 0.69, 0.015, 12, "HazardFace", "hazard", 1)
-    # Six iris vanes are skin joints, never six draw calls. In brace they retract
-    # radially by half their radius to expose the only mint target.
     for i in range(6):
         a = i * math.tau / 6
         points = [(r * math.cos(a + offset), 0.52, 3.4 + r * math.sin(a + offset))
@@ -300,7 +285,6 @@ def pose(arm, bend=0, lens_scale=1, aperture=0, hazard=False, mint=False, broken
     reset_pose(arm)
     p = arm.pose.bones
     p["Segment1"].rotation_euler.x = bend
-    # Keep both upper bearings connected without moving the actual target socket.
     end = Vector((0, -math.sin(bend) * 1.6, 0.3 + math.cos(bend) * 1.6))
     vector = Vector((0, 0, 3.5)) - end
     p["Segment2"].location = end - Vector((0, 0, 1.9))
@@ -324,8 +308,6 @@ def pose(arm, bend=0, lens_scale=1, aperture=0, hazard=False, mint=False, broken
 
 
 def actions(arm):
-    # Seconds map to 30 fps, starting at frame one. Key every joint so clips can
-    # play independently after any prior phase; constant masks use STEP keys.
     scene = bpy.context.scene
     scene.render.fps = 30
     arm.animation_data_create()
@@ -394,8 +376,6 @@ def main():
     obj.select_set(True)
     bpy.context.view_layer.objects.active = arm
     args.out.parent.mkdir(parents=True, exist_ok=True)
-    # The exporter writes image sidecars while packing generated images. Keep
-    # those disposable files outside the GLB-only delivery directory.
     with tempfile.TemporaryDirectory(prefix="scrapkeep-mhd-") as scratch:
         packed = Path(scratch) / "mind_hand.glb"
         bpy.ops.export_scene.gltf(filepath=str(packed), export_format="GLB", use_selection=True,
@@ -406,7 +386,6 @@ def main():
         common.canonical_indices(str(packed))
         args.out.write_bytes(packed.read_bytes())
     stats = glb_stats(args.out)
-    # enemy class, raised for polish (POLISH.md); the old ratio of vertices to triangles.
     assert 0 < stats["tris"] <= 4000 and stats["verts"] <= 7600 and stats["draws"] == 3, stats
     assert set(stats["clips"]) == set(CLIPS), stats
     print("MHD_EXPORT", json.dumps(stats, sort_keys=True))

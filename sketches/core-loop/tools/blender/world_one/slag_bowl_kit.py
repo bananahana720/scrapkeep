@@ -1,8 +1,3 @@
-# The Slag Bowl's crane rig and rim vents (src/boss/arena.gd _mast and _vent): a 20 m crane mast,
-# its crossbar boom and a water vent's nozzle. Procedural bmesh; no external assets or physics.
-# Metres; Godot (X,Y,Z) -> Blender (X,-Z,Y). Each part is built about its own centre, where arena.gd
-# placed the old cylinder or box. The mast and boom are painted light: the bowl dress
-# (arena_bowl_dress.gd) wears them in its copper crane material, which the vertex colour tints.
 import math
 import os
 import sys
@@ -32,8 +27,6 @@ light=common.mix("bone","copper",0.15)
 shade=common.mix("bone","charcoal",0.45)
 dark="charcoal"
 
-# The mast: a tapering pole on a bolted foot flange, four riveted collars, a ladder of rungs
-# up its outer face and a cap plate under the boom. 20 m tall about its centre.
 H=20.0
 p=Part("CraneMast")
 cyl(p,1.2,1.0,H,0,light)
@@ -53,8 +46,6 @@ for x in (-0.38,0.38):
 cyl(p,1.25,1.25,0.2,H/2-0.1,shade)
 finish(p)
 
-# The boom: an I-girder 8 m long about its centre, bolted fishplates over the mast and a pulley
-# block hanging from each end.
 L=8.0
 p=Part("CraneBoom")
 box(p,(L,0.14,0.8),(0,0.33,0),light)
@@ -70,8 +61,6 @@ for s in (-1.0,1.0):
     box(p,(0.2,0.3,0.12),(x,-2.3,0),dark)
 finish(p)
 
-# The vent nozzle: a verdigris riser 3 m tall about its centre on a flange, a valve collar and a
-# flared spout ringed with a brass band.
 p=Part("VentNozzle")
 cyl(p,0.9,0.75,2.2,-0.4,"petrol")
 cyl(p,1.15,1.15,0.2,-1.4,common.mix("petrol","charcoal",0.4))

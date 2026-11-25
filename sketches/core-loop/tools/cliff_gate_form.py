@@ -165,8 +165,6 @@ def hull_world(hull, prop_h, levels_y):
     return np.array(tris)
 
 
-# ------------------------------------------------------------------ measures
-
 def slice_polygon(tris, y):
     segs = []
     for t in tris:
@@ -181,7 +179,6 @@ def slice_polygon(tris, y):
                 pts.append((round(a[0] + (b[0] - a[0]) * s, 5), round(a[2] + (b[2] - a[2]) * s, 5)))
             elif a[1] == y and b[1] != y:
                 pts.append((round(a[0], 5), round(a[2], 5)))
-        # de-duplicate
         uniq = []
         for p in pts:
             if not any(abs(p[0] - q[0]) < 1e-7 and abs(p[1] - q[1]) < 1e-7 for q in uniq):
@@ -198,7 +195,6 @@ def slice_polygon(tris, y):
 
 def _runs(poly):
     pts = list(poly.exterior.coords)[:-1]
-    # drop collinear vertices first, then merge edges whose directions differ by < 5 degrees
     n = len(pts)
     edges = []
     for i in range(n):

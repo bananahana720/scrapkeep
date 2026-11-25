@@ -1,29 +1,3 @@
-# PD-SABLE (wave 13): Sable's four heft layers, shell_sable_c2.glb to shell_sable_c5.glb, the
-# detail shells B5's fit_shell_into mounts under HeftC2..HeftC5 (CUSTOMIZE section 6). Each layer
-# has the base's top-level Core and Pod split. Gap panels hang from the upright Pod just inside
-# the lattice (outer face radius 0.92, 0.04 m thick, ROSTER-LOOK sections 0.3 and 5) at the
-# rest-pose gap centres: small rounded plates, bone face over a charcoal felt lining and edge,
-# one paint surface per layer, so the equipped paint carries onto them and the felt stays dark.
-#   c2  six panels in the lower gaps, every vertex below Z -0.35
-#   c3  the side gaps, plus thicker rubber tread caps on Core (never past radius 0.985): 2 draws
-#   c4  every remaining gap; the sight gaps stay open
-#   c5  the coil mast's heavy form, the doubled coil: one open copper winding round the left coil
-#       mast (E1-10b), from its bone drum to its top insulator. It replaces nothing, so the base
-#       CoilMast's mint tip (class_accent, the working device) shows above it; never a second spike.
-#       The winding is its own mesh, `CoilMast`, under the layer's empty Pod: a bracket part, so
-#       hero_assets banks it with the masts it wraps (nothing outboard is baked into a level Pod).
-# Draws (docs/decisions.tsv 2026-10-10, shell cap 16): class III may spend 2, every other layer 1.
-# A copper winding and a paint panel are two surfaces, so fix round 2 moved class V's three top
-# panels (gaps 1, 2, 4) into c4 and left c5 the winding alone, one copper surface.
-# Sight gaps: a panel never puts a vertex inside the 35 degree cone from the head to the chase
-# eyes (shell_base.sight_cone_hits) or to the hero front camera, 20 degrees above the ring plane.
-# Panels next to the module hubs (Hub.14 mast, Hub.26 spool) are cut back at that corner, so the
-# brackets, the spool face and RopeExit stay clear (the class IV horseshoe of pilots/sable.md 5).
-# Concept: artifacts/local/alpha/push/w13/concepts/codex/sable/sheet.png (GAP PANEL, heft I/III/V).
-#
-#   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
-#     --python world_one/shell_sable_plates.py -- [--outdir <dir>]
-
 import math
 import os
 import sys
@@ -34,31 +8,26 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
-from common import Part  # noqa: E402
-import shell_sable as ss  # noqa: E402
+import common
+import shell_base as sb
+from common import Part
+import shell_sable as ss
 
 LAYER_TRIS = 1500
 PANEL_OUT = 0.92
 PANEL_IN = 0.88
-PANEL_INSET = 0.64       # fraction of the way from the gap centre to each diamond corner
-CHAMFER = 0.22           # corner cut, as a fraction of each outline edge
-MODULE_CUT = 0.55        # deeper cut at a corner on a module hub
+PANEL_INSET = 0.64
+CHAMFER = 0.22
+MODULE_CUT = 0.55
 LOW_Z = -0.35
 FRONT_EYE_DIR = Vector((0.0, math.cos(math.radians(20)), math.sin(math.radians(20))))
 MODULE_HUBS = (ss.MAST_HUB, ss.SPOOL_HUB)
-# Thicker tread caps (class III): 6 sides, radius 0.09, wider than the base caps (0.07); the
-# face sits at 0.9806 so the corners stay inside CORE_LIMIT and the base tread shows through.
 THICK_CAP = (0.09, 0.950, 0.9806)
-# The heavy coil: an open helix round the left mast's vertical axis (X -ss.MAST_X, Y 0) from its
-# bone drum's top (Z 0.950, radius 0.112) to under its top insulator (Z 1.086), clear of the drum
-# and the copper ribs (radius 0.100) by 0.007 m or more; the wire is 0.036 m across, the pitch 0.036.
 COIL_Z = (0.952, 1.060)
 COIL_RADIUS = (0.137, 0.125)
 COIL_WIRE = 0.018
 COIL_TURNS = 3
-COIL_SEGS = 9            # per turn
+COIL_SEGS = 9
 
 
 def diamonds():

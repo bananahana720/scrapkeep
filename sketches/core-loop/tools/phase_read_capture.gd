@@ -6,10 +6,6 @@ const Intent := preload("res://src/movement/intent.gd")
 const Panels := preload("res://src/build/panels.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
-# Stills for unit 20, the phase read and the panel read: the Slag Bowl with Brindle's plate in
-# phase one, mid-crack into phase two, and in phase three; then the pause build read holding
-# five mixed panels (three of each). The size is the window's (--resolution).
-#   xvfb-run -a <godot> --path sketches/core-loop --rendering-driver opengl3 --resolution 1280x720 --script res://tools/phase_read_capture.gd -- --out=/abs/dir
 
 const MIXED := ["vent_louvre", "hull_tile", "winch_drum", "splash_skirt", "ram_bumper"]
 

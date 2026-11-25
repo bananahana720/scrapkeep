@@ -76,7 +76,6 @@ def scarf(s):
     band(s, POLE_R + .005, POLE_R + .19, .2, .16, .14, 14, WOOL)
     band(s, POLE_R + .02, POLE_R + .21, .22, 0.0, -.12, 14, WOOL_DK)
     band(s, POLE_R + .01, POLE_R + .19, .2, -.17, .1, 14, WOOL_LT)
-    # The knot on the outside corner, chunky, the two tails leaving it.
     cp.obox(s, (.3, .24, .24), (.28, -.08, .28), WOOL, yaw=math.pi / 4, pitch=.3, roll=.2)
     cp.obox(s, (.22, .2, .2), (.33, -.2, .3), WOOL_DK, yaw=math.pi / 4 + .5, pitch=-.2)
     tail(s, (.36, -.22, .26), math.radians(58), 1.35, .34, .28, 8, 0)
@@ -108,20 +107,17 @@ def shift_board(s):
     for k, (h, length, dx) in enumerate(rows):
         dz, dy = board_frame(0.0, h)
         cp.obox(s, (length, .44, .18), (dx, dy, dz), cp.jitter_tone("timber", k + 3, 0.12), pitch=lean)
-        # Splintered ends: a ragged sliver standing proud of each end.
         for side in (-1, 1):
             cp.obox(s, (.32, .12, .1), (dx + side * (length / 2 - .05), dy + .1 * side, dz + .03), cp.jitter_tone("timber_lt", k, .1),
                     roll=.25 * side, pitch=lean)
         fz, fy = board_frame(.1, h)
         plank_marks(s, fy, dx - length / 2 + .35, dx + length / 2 - .35 - (.7 if k == 1 else 0), fz, k, lean)
-    # The copper plate bolted across all three, its bolt heads proud.
     pz, py = board_frame(.11, .82)
     cp.obox(s, (.7, 1.5, .04), (-.85, py, pz), T["copper"], pitch=lean)
     for bx in (-1.1, -.6):
         for by in (.38, .82, 1.26):
             bz, byy = board_frame(.15, by)
             cp.obox(s, (.1, .1, .05), (bx, byy, bz), T["copper_dk"], pitch=lean)
-    # Two stakes behind, driven into the sand, and a cross batten tying them.
     for x in (-1.15, 1.15):
         top_z, top_y = board_frame(-.14, 1.45)
         cp.obox(s, (.14, 1.6, .14), (x, .78, top_z - .16), cp.jitter_tone("timber", 7, .1), pitch=-.1)

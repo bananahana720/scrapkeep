@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-// Duration-balanced shard planner for Scrapkeep's headless Godot test suite.
-// Uses Longest-Processing-Time-first (LPT) bin packing from scripts/sketch-fast.timings.json
-// instead of alphabetical slicing, so every shard finishes at roughly the same wall clock.
-// Usage:
-//   node scripts/ci/shard-plan.mjs --shards 4
-//   node scripts/ci/shard-plan.mjs --shard 1/4 [--shuffle --seed 42]
 
 import { readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
@@ -30,7 +24,6 @@ export function packDurationShards(items, shardCount) {
     totalMs: 0,
     tests: [],
   }));
-  // Sort longest measured duration first, locale-independent code-point tie-break by test name.
   const sorted = [...items].sort((a, b) => b.ms - a.ms || compareCodePoint(a.name, b.name));
   for (const item of sorted) {
     let lightest = shards[0];

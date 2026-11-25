@@ -3,18 +3,8 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// node scripts/splash-probe.mjs --display=:97 --godot=<bin> [--times=0.1,0.3,0.6,1] [--out=dir]:
-// launches the core-loop project on an existing X display (start Xvfb first, for example
-// Xvfb :97 -screen 0 1600x900x24), grabs root captures at the given seconds and reads the pixel
-// at the screen centre of each, so the boot splash colour (project.godot boot_splash/bg_color,
-// #242a28) is seen on screen before the first game frame. The centre is used because Godot
-// centres its 1600x900 window and a corner can land on the root background on a larger screen.
-// Needs ImageMagick (import, convert). Exit 0 when the colour appears, 1 when it never does,
-// 2 on bad arguments or a tool, display or spawn failure. It kills only the Godot process it started.
-
 export const SPLASH = [36, 42, 40];
 
-// "srgb(36,42,40)" or "gray(0)" from ImageMagick -> [r,g,b], or null when unreadable.
 export function parsePixel(text) {
   const m = /^(srgba?|gray)\(([^)]*)\)/.exec(String(text).trim());
   if (!m) return null;
@@ -48,7 +38,8 @@ export function parseArgs(argv) {
   if (!args.godot) throw new Error("need --godot=<binary>");
   args.times = args.times.split(",").map((entry) => {
     const n = entry.trim() === "" ? NaN : Number(entry);
-    if (!Number.isFinite(n) || n < 0) throw new Error("--times entries must be numbers >= 0, got: " + JSON.stringify(entry));
+    if (!Number.isFinite(n) || n < 0)
+      throw new Error("--times entries must be numbers >= 0, got: " + JSON.stringify(entry));
     return n;
   });
   return args;
@@ -66,13 +57,13 @@ function fail(message) {
   process.exit(2);
 }
 
-// Runs an ImageMagick tool; any spawn error, timeout or nonzero status ends the probe with exit 2.
 function run(tool, args, env, what) {
   const r = spawnSync(tool, args, { env, encoding: "utf8", timeout: TOOL_TIMEOUT_MS });
   const stderr = String(r.stderr ?? "").trim();
   if (r.error) {
     if (r.error.code === "ENOENT") fail(`ImageMagick \`${tool}\` is not installed (${what})`);
-    if (r.error.code === "ETIMEDOUT") fail(`${tool} timed out after ${TOOL_TIMEOUT_MS} ms (${what}): ${stderr}`);
+    if (r.error.code === "ETIMEDOUT")
+      fail(`${tool} timed out after ${TOOL_TIMEOUT_MS} ms (${what}): ${stderr}`);
     fail(`${tool} failed (${what}): ${r.error.message} ${stderr}`);
   }
   if (r.status !== 0) fail(`${tool} exited ${r.status ?? r.signal} (${what}): ${stderr}`);
@@ -93,7 +84,11 @@ async function main() {
   mkdirSync(out, { recursive: true });
   const env = { ...process.env, DISPLAY: display };
   try {
-    child = spawn(godot, ["--path", path.join(root, "sketches/core-loop"), "--rendering-driver", "opengl3"], { env, stdio: "ignore" });
+    child = spawn(
+      godot,
+      ["--path", path.join(root, "sketches/core-loop"), "--rendering-driver", "opengl3"],
+      { env, stdio: "ignore" },
+    );
     child.on("error", (error) => fail(`cannot start Godot \`${godot}\`: ${error.message}`));
     const t0 = Date.now();
     const rows = [];
@@ -104,18 +99,34 @@ async function main() {
       const file = path.join(out, `frame-${t}.png`);
       run("import", ["-window", "root", file], env, `cannot capture display ${display}`);
       if (!centre) {
-        const size = run("convert", [file, "-format", "%w %h", "info:"], env, `cannot read size of ${file}`).trim().split(/\s+/).map(Number);
-        if (size.length !== 2 || !size.every((n) => Number.isInteger(n) && n > 0)) fail(`unexpected root geometry from convert: ${size.join(" ")}`);
+        const size = run(
+          "convert",
+          [file, "-format", "%w %h", "info:"],
+          env,
+          `cannot read size of ${file}`,
+        )
+          .trim()
+          .split(/\s+/)
+          .map(Number);
+        if (size.length !== 2 || !size.every((n) => Number.isInteger(n) && n > 0))
+          fail(`unexpected root geometry from convert: ${size.join(" ")}`);
         centre = [Math.floor(size[0] / 2), Math.floor(size[1] / 2)];
       }
-      const text = run("convert", [file, "-format", `%[pixel:p{${centre[0]},${centre[1]}}]`, "info:"], env, `cannot read pixel of ${file}`);
+      const text = run(
+        "convert",
+        [file, "-format", `%[pixel:p{${centre[0]},${centre[1]}}]`, "info:"],
+        env,
+        `cannot read pixel of ${file}`,
+      );
       const rgb = parsePixel(text);
       if (!rgb) fail(`cannot parse pixel from convert output: ${JSON.stringify(text)}`);
       rows.push({ want: t, at: (Date.now() - t0) / 1000, rgb });
       console.log(`t=${t}s at=${rows.at(-1).at.toFixed(2)}s pixel=${rgb.join(",")}`);
     }
     const s = summarize(rows);
-    console.log(s.seen ? `splash colour seen at ${s.firstAt.toFixed(2)}s` : "splash colour never seen");
+    console.log(
+      s.seen ? `splash colour seen at ${s.firstAt.toFixed(2)}s` : "splash colour never seen",
+    );
     stopChild();
     process.exit(s.seen ? 0 : 1);
   } finally {
@@ -123,4 +134,5 @@ async function main() {
   }
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  await main();

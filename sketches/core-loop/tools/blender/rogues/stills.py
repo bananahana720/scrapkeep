@@ -14,7 +14,7 @@ import bpy
 from mathutils import Vector
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-import cycles_device  # noqa: E402
+import cycles_device
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 src, out = argv[0], argv[1]
@@ -41,8 +41,6 @@ ground = lo.z
 centre = (lo + hi) / 2
 extent = max(hi - lo)
 
-# Vertex colours are the paint: route the colour attribute into every material, with
-# mojulo's sRGB-in-linear decode (gamma 2.2) on raw shells.
 for m in bpy.data.materials:
     if not m.use_nodes:
         continue
@@ -58,8 +56,6 @@ for m in bpy.data.materials:
         nt.links.new(gamma.outputs["Color"], bsdf.inputs["Base Color"])
 
 if "--open" in argv:
-    # The weak window: both hatch plates swing 70 degrees outward about their hinge bones
-    # and the core grows and lights mint, as the runtime pose does.
     from mathutils import Matrix
     arm = next(o for o in scene.objects if o.type == "ARMATURE")
     core = next(o for o in meshes if o.name.endswith("Core"))

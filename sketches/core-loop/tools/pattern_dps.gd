@@ -6,17 +6,11 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 
-# SG14-BAL: real combat ticks and HP removal, with motion and world activity frozen.
-# The target is the ordinary unplated enemy capsule, not a receiver for emitted damage.
-# Near and far runs expose the aim/spread dependence a single scalar cannot express.
-# Run with --headless --path sketches/core-loop --script res://tools/pattern_dps.gd.
-# -- --neighbours=3 adds chain recipients; --arm-only or --proposal-input emits inputs.
 const DT := 1.0 / BuildSheet.POWER_CONTRACT["ticks_per_second"]
 const SECONDS := 30.0
 const WARMUP := 1.0
 const DISTANCES := [5.0, 20.0]
 const BALL := Vector3(0.0, 500.0, 0.0)
-# Freeze the input builds from the 22e7c11 arm before correcting its scoring model.
 const BASELINE_SETS := [
 	{"world": 1, "paired_set": ["cross_split", "sunforged_core"],
 		"unpaired_set": ["cross_split", "chain_arc"]},
@@ -94,7 +88,6 @@ static func prepare(game, class_index := 1) -> void:
 	game.player.source = Intent.Scripted.new()
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
-	# All future simulation advances explicitly below. No wall-clock or rendering cadence.
 	game.process_mode = Node.PROCESS_MODE_DISABLED
 	game.player.reset_to(BALL)
 	game.player.body().global_position = BALL
@@ -160,8 +153,6 @@ static func _measure_one(game, scenario: Dictionary, distance: float, neighbours
 		build.sheet.patterns["chain_arc"] = maxi(0, build.sheet.pattern_level("chain_arc") - 1)
 	combat._rebuild_patterns()
 	if scenario.get("no_lattice", false):
-		# Disable only the lattice bonus. Held parts, base Chain Arc, rate and damage stay.
-		# Production reconstruction above is also exercised by every enabled row.
 		for weapon in Weapons.ALL:
 			combat._patterns[weapon] = Weapons.base(weapon).transformed(combat.active_transformers())
 	var targets: Array = []

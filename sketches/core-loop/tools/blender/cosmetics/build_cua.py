@@ -28,8 +28,6 @@ TRAILS = [
     ("trail_forge_chips", "Chip", "3a6fb0", (.045, .045), .25, "tumble_fade"),
     ("trail_moth_tuft", "PairedTuft", "a39cb3", (.15, .09), .40, "expand_fade"),
     ("trail_rose_wash", "WashPuff", "d68ab0", (.16, .08), .35, "flatten_fade"),
-    # Sizes are (across, along) the ball's travel. Sable's cable is a deep green,
-    # not field mint: mint is reserved for the collection field.
     ("trail_sable_cable", "CableDash", "3f8f6a", (.03, .12), .35, "fade"),
     ("trail_rivet_swarf", "Swarf", "ae7240", (.07, .05), .30, "tumble_fade"),
     ("trail_kest_fuse_smoke", "SmokeWisp", "8c8577", (.07, .16), .40, "expand_fade"),
@@ -38,7 +36,6 @@ TRAILS = [
     ("trail_cannon_recital", "RecitalMarks", "6fb3a6", (.30, .07), .45, "fade"),
     ("trail_any_downbeat", "BeatTick", "8a5a3a", (.10, .025), .30, "fade"),
 ]
-# Atlas cells (column, row) of 128 px. The first six keep their wave 2 cells.
 TRAIL_CELLS = [(0,0),(1,0),(2,0),(0,1),(1,1),(2,1),(3,0),(3,1),(0,2),(1,2),(2,2),(3,2),(0,3)]
 DECALS = [
     ("decal_fern", "d2c5a5", (.44, .55)),
@@ -99,7 +96,6 @@ def polygon(x, y, points):
 
 def trail_shape(index, n=128):
     x, y = grid(n)
-    # The new cards are drawn in metres on the card, so round marks stay round.
     w, h = TRAILS[index][3]
     mx, my = x*w/2, y*h/2
     if index == 0:
@@ -115,31 +111,25 @@ def trail_shape(index, n=128):
     elif index == 5:
         shape = ellipse(x,y,0,0,.87,.52) | ellipse(x,y,-.22,.12,.61,.47)
     elif index == 6:
-        # One rounded rope dash; successive samples string into a stitched line.
         shape = line(mx,my,(0,-.038),(0,.038),.011)
     elif index == 7:
-        # An open swarf curl of about 1.5 turns.
         shape = np.zeros(x.shape, dtype=bool)
         pts = [((.003+.0015*t)*math.cos(t), (.003+.0015*t)*math.sin(t)) for t in np.linspace(0,math.pi*3,90)]
         for a,b in zip(pts,pts[1:]):
             shape |= line(mx,my,a,b,.003)
     elif index == 8:
-        # Two soft lobes with a pinched waist; overlapping cards read as one ribbon.
         shape = ellipse(mx,my,0,-.03,.026,.036) | ellipse(mx,my,0,.03,.026,.036)
     elif index == 9:
-        # Two scored claw lines with ragged, uneven ends.
         shape = np.zeros(x.shape, dtype=bool)
         for side in (-1,1):
             shape |= line(mx,my,(side*.165,-.018),(side*.165,.016),.008)
             shape |= line(mx,my,(side*.165+.007,-.004),(side*.165+.007,.019),.004)
             shape |= line(mx,my,(side*.165-.006,-.020),(side*.165-.006,.002),.004)
     elif index == 10:
-        # Ledger tape with three punched holes on its centre line.
         shape = (abs(mx) <= .021) & (abs(my) <= .058)
         for cy in (-.035,0,.035):
             shape &= ~ellipse(mx,my,0,cy,.0065,.0065)
     elif index == 11:
-        # The Cannon's four family marks in order: bar, V, ring, quarter fan.
         shape = line(mx,my,(-.105,-.02),(-.105,.02),.006)
         shape |= line(mx,my,(-.051,.02),(-.035,-.02),.005) | line(mx,my,(-.035,-.02),(-.019,.02),.005)
         shape |= ellipse(mx,my,.035,0,.02,.02) & ~ellipse(mx,my,.035,0,.011,.011)
@@ -148,9 +138,7 @@ def trail_shape(index, n=128):
             fan &= ~line(mx,my,(.087,-.02),(.087+.05*math.cos(angle),-.02+.05*math.sin(angle)),.0025)
         shape |= fan
     else:
-        # A copper tick laid across the path.
         shape = line(mx,my,(-.034,0),(.034,0),.008)
-    # Soft falloff; a sparse grounded wake is subordinate to committed threats.
     blur = shape.astype(float)
     for _ in range(5):
         blur = (blur*4 + np.roll(blur,1,0) + np.roll(blur,-1,0) + np.roll(blur,1,1) + np.roll(blur,-1,1))/8
@@ -177,7 +165,6 @@ def decal_shape(index, n=256):
         for cx in (-.35,0,.35):
             mark |= line(x,y,(cx-.045,cx*.42-.17),(cx+.045,cx*.42+.17),.061)
     elif index == 2:
-        # A single connected open spiral, never interrupted by artificial wear.
         pts = []
         for t in np.linspace(0,math.pi*4.6,260):
             r = .045 + .045*t
@@ -201,7 +188,6 @@ def decal_shape(index, n=256):
         mark |= polygon(x,y,[(-.70,-.23),(0,-.71),(.70,-.23)])
         for cx in (-.62,-.31,0,.31,.62):
             mark &= ~line(x,y,(cx,.96),(cx*.13,-.52),.023)
-        # Five rib voids stay open at the fan edge.
         mark &= (y < .60 - .05*np.cos(x*15))
     elif index == 7:
         for side in (-1,1):
@@ -214,7 +200,6 @@ def decal_shape(index, n=256):
                 mark |= line(x,y,(cx,cy),(cx+side*.12,cy+.01),.021)
         mark |= ellipse(x,y,0,-.015,.075,.34)
     elif index == 8:
-        # A cable spool side-on, crossed by an open-ended wrench.
         for side in (-1,1):
             mark |= ellipse(x,y,side*.40,0,.075,.52)
         drum = (abs(x) <= .33) & (abs(y) <= .30)
@@ -229,7 +214,6 @@ def decal_shape(index, n=256):
             jaw &= ~line(x,y,(c,c),(c+end*.3,c+end*.3),.075)
             mark |= jaw
     else:
-        # Curtains drawn apart over a Warden core split by a zigzag crack.
         for side in (-1,1):
             drape = polygon(x,y,[(side*.18,.58),(side*.74,.58),(side*.72,-.05),(side*.78,-.62),(side*.50,-.62),(side*.60,-.05)])
             for fold in (.36,.52):
@@ -241,7 +225,6 @@ def decal_shape(index, n=256):
         for a,b in zip(crack,crack[1:]):
             core &= ~line(x,y,a,b,.03)
         mark |= core
-    # Broad outline is transparent beyond the low-key underlay, with clear gutter.
     underlay = ellipse(x,y,0,0,.91,.91)
     result = np.zeros((n,n,4),dtype=np.uint8)
     result[underlay,:3] = [36,42,40]
@@ -337,8 +320,6 @@ def build_trail(index,out,export=True):
             export_force_sampling=True,export_anim_slide_to_zero=True,export_extras=True,
             export_cameras=False,export_lights=False)
         common.canonical_indices(str(dest))
-        # Every trail GLB references the one atlas. Embedded images make Godot create
-        # redundant extracted textures on import.
         data = dest.read_bytes()
         n = struct.unpack_from("<I",data,12)[0]
         gltf = json.loads(data[20:20+n])

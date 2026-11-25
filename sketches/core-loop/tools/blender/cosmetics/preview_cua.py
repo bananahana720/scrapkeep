@@ -75,7 +75,6 @@ def ball(decal=None):
         links.new(image.outputs["Color"],mix.inputs[2])
         links.new(mix.outputs["Color"],p.inputs["Base Color"])
         obj.data.materials[0] = mat
-    # Neutral pole/rim fixture: demonstrates the shell-only exclusion spatially.
     sphere("Cockpit_Neutral_Reference",(0,0,1.57),(.57,.57,.38),material("reference_glass_proxy","929995"))
     return obj
 
@@ -98,7 +97,6 @@ def paint_fixture(index):
     rubber = material("rubber","242a28")
     steel = material("bare_metal","929995")
     bone = material("fixed_bone","d2c5a5")
-    # Dimensioned proxy mirrors only the appearance of the separate hull asset.
     sphere("Hull_PROXY",(1.70,0,.51),(.55,.36,.21),enamel)
     sphere("Deck_PROXY",(1.70,0,.69),(.49,.30,.04),enamel)
     sphere("LiftPlenum_FIXED",(1.70,0,.34),(.41,.25,.05),rubber)
@@ -164,7 +162,6 @@ def import_trail(index,pose=False,count=24):
     bpy.context.scene.render.fps = 120
     bpy.context.scene.frame_set(1+round(duration*120*.4) if pose else 1)
     root.location = (0,-1.04,.04)
-    # Exactly 24 alive in <=1.8 m, not the long dense wake in the generated sheet.
     for i in range(1,count):
         cp = obj.copy()
         cp.data = obj.data
@@ -207,7 +204,6 @@ def main():
                 path = OUT/(ident+"_"+clip+"_key.png")
                 render(cam,path,"front")
                 paths.append(path.name)
-                # Red floor footprint and raised tool are diagnostic threat fixtures.
                 hazard = material("THREAT_FIXTURE_not_cosmetic","ff5a3c")
                 box("Committed_Threat_Footprint",(0,-1.9,.01),(.80,1.20,.012),hazard)
                 box("Threat_Tool",(.45,-1.8,.38),(.12,.12,.75),hazard)

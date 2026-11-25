@@ -68,9 +68,6 @@ async function markdownFiles(root) {
   return files.sort();
 }
 
-// Fenced blocks are blanked rather than removed so findings keep their line numbers.
-// Link scanning drops whole code spans; anchor collection keeps their text and
-// drops only the backticks, matching how GitHub slugs a heading with inline code.
 function visibleLines(content, keepCodeText = false) {
   let fenced = false;
   return content.split("\n").map((line) => {
@@ -199,14 +196,8 @@ async function checkLinks(docs, file) {
   return checked;
 }
 
-// scripts/check-skills.mjs, run as a stage against the same audited root so
-// `npm run check:docs` covers skill staleness too. Its own findings keep
-// their sub-check name in the message; the "skills" check groups them here.
 async function checkSkillsStage(docs) {
   const script = path.join(scriptRoot, "scripts/check-skills.mjs");
-  // Skip on a checkout with no .agents/skills tree at all (a docs-only
-  // fixture, or a worktree that has not built any skills yet): the stage has
-  // nothing to check, and package.json is not otherwise required here.
   if (!(await exists(script))) return 0;
   if (!(await exists(path.join(docs.root, ".agents/skills")))) return 0;
   const timeoutMs = 30_000;
@@ -296,9 +287,6 @@ async function checkAgentsStage(docs) {
   return findings.length;
 }
 
-// The wave facts in STATE.md are checked against git history, so a promotion
-// that nobody recorded fails the next docs check instead of misleading a
-// fresh thread. scripts/wave-state.mjs owns the rules and the repair command.
 async function checkWaveStateStage(docs) {
   const findings = await checkWaveState(docs.root);
   for (const finding of findings) {
@@ -309,11 +297,6 @@ async function checkWaveStateStage(docs) {
   return findings.filter((finding) => finding.level === "failure").length;
 }
 
-// Several threads hand out ruling letters at the same time. Two rows that open
-// with one letter mean two rulings answer to one name, so the later row fails.
-// Only rows written "| Ruling xx," or "| Ruling xx:" carry a letter to check.
-// The "Replaced rulings" section is skipped: its rows open with the old ruling,
-// which may still have a row of its own above.
 const RULINGS_FILE = "project-guide/handoff/DECISIONS.md";
 async function checkRulingLetters(docs) {
   try {
@@ -341,9 +324,6 @@ async function checkRulingLetters(docs) {
   }
 }
 
-// The known-failing ledger is checked for shape here. A row past its review
-// date is only a note in this check; it fails at the promotion gate
-// (scripts/known-failing.mjs --promotion).
 async function checkLedgerStage(docs) {
   const findings = await checkLedger(docs.root, { requireChecks: true });
   for (const finding of findings) {
@@ -351,7 +331,6 @@ async function checkLedgerStage(docs) {
       docs.fail("known-failing", finding.file, finding.line, finding.message);
     else docs.info("known-failing", finding.file, finding.line, finding.message);
   }
-  // The weekly list (ruling ca) sits beside the ledger and is checked with it.
   for (const finding of checkWeekly(docs.root)) {
     findings.push(finding);
     docs.fail("weekly-list", finding.file, finding.line, finding.message);

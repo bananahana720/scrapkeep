@@ -16,35 +16,28 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+from _life import Critter
 
 life = Critter("horned_lizard")
 
-# --- body: a thick round cushion, wider than long, with a cream belly pad underneath
 life.ellipsoid("body", "body", (0, 0.056, 0.0), (0.088, 0.044, 0.095), subsurf=1, u=9, v=5)
 life.ellipsoid("body", "cream", (0, 0.034, -0.004), (0.068, 0.03, 0.078), subsurf=0, u=10, v=5)
-# little round nubs ringing the body edge (front and back pairs skipped; head and tail own those ends)
 for i, z in enumerate((-0.03, 0.03)):
     for s in (-1, 1):
         r = 0.015 - 0.0015 * i
         life.ellipsoid("body", "nubs", (0.083 * s, 0.062, z), (r, r * 0.9, r), subsurf=1, u=6, v=4)
 
-# --- stubby tail, a short round tube pointing back (+Z)
 life.tube("tail", "body", [(0, 0.04, 0.085), (0, 0.037, 0.125), (0, 0.034, 0.152)], [0.026, 0.018, 0.01], sides=6, subsurf=1)
 
-# --- head: wide and round, perched at the front, with a crown of soft nubs
 life.ellipsoid("head", "body", (0, 0.082, -0.092), (0.058, 0.044, 0.05), subsurf=1, u=9, v=5)
 life.ellipsoid("throat", "cream", (0, 0.062, -0.116), (0.038, 0.022, 0.03), subsurf=1, u=5, v=3)
 for s in (-1, 1):
     life.ellipsoid("head", "eye", (0.036 * s, 0.098, -0.122), (0.016, 0.017, 0.013), subsurf=1, u=5, v=3)
-    # eye shine-free cream rim so the eyes sit in soft white pillows
     life.ellipsoid("head", "cream", (0.036 * s, 0.098, -0.117), (0.021, 0.021, 0.013), subsurf=1, u=5, v=3)
-# crown: a rounded arc of nubs across the back of the head, big in the middle
 for x, y, z, r in ((0, 0.122, -0.082, 0.015), (0.03, 0.115, -0.08, 0.0135), (-0.03, 0.115, -0.08, 0.0135),
                    (0.052, 0.103, -0.076, 0.012), (-0.052, 0.103, -0.076, 0.012)):
     life.ellipsoid("head", "nubs", (x, y, z), (r, r, r), subsurf=1, u=6, v=4)
 
-# --- short splayed legs with round toes
 LEGS = {"leg_fl": (-1, -0.052), "leg_fr": (1, -0.052), "leg_bl": (-1, 0.05), "leg_br": (1, 0.05)}
 for bone, (s, z) in LEGS.items():
     life.capsule(bone, "body", (0.07 * s, 0.036, z), (0.112 * s, 0.014, z - 0.01 * (1 if z < 0 else -1)), 0.02, 0.016,
@@ -66,7 +59,6 @@ life.rig([
 
 REST = {}
 
-# --- idle, 2.4 s: basking. A slow breath, the head turns left then right, the throat pulses (three times), tail sways.
 life.cycle("idle", 2.4, {
     "body": [(0, REST), (0.6, {"scale": (1.0, 1.04, 1.0)}), (1.2, REST), (1.8, {"scale": (1.0, 1.04, 1.0)})],
     "head": [(0, REST), (0.4, {"rot": (0, 18, 3)}), (0.8, {"rot": (2, 22, 3)}), (1.2, REST),
@@ -76,10 +68,9 @@ life.cycle("idle", 2.4, {
     "tail": [(0, REST), (0.8, {"rot": (0, 8, 0)}), (1.6, {"rot": (0, -8, 0)})],
 })
 
-# --- move, 1.2 s: waddling scurry. Diagonal leg pairs swing (3 Hz), the body rolls and bobs, the head counter-turns.
 legs = {k: [] for k in LEGS}
 body, head, tail = [], [], []
-step = 0.2  # six keys, a stride every 0.4 s
+step = 0.2
 for i in range(6):
     t = round(i * step, 4)
     a = 1 if i % 2 == 0 else -1
@@ -92,8 +83,6 @@ for i in range(6):
     tail.append((t, {"rot": (0, -14 * a, 0)}))
 life.cycle("move", 1.2, {"body": body, "head": head, "tail": tail, **legs})
 
-# --- react, 2.0 s: puff up round (body x1.25), then flatten and squeeze low like wedging into a crack.
-# The pose at 0.8 s and at 2.0 s is the same flattened pose, so the hold loop closes on itself.
 PUFF = {
     "body": {"scale": (1.25, 1.25, 1.25), "loc": (0, 0.012, 0)},
     "head": {"rot": (-8, 0, 0)},

@@ -24,8 +24,6 @@ import common
 import cycles_device
 import polish
 
-# Cast mantle: 3 cm chamfers on real corners, doubled curves, baked AO (POLISH.md). No edge
-# lightening and softer AO keep ancient enamel under the section 11 cap.
 polish.enable(detail=2, bevel=0.03, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
 
 ENAMEL = "365754"
@@ -57,8 +55,6 @@ def setup():
     multiply.blend_type = "MULTIPLY"
     multiply.inputs[0].default_value = 1
     mat.node_tree.links.new(tex.outputs["Color"], multiply.inputs[1])
-    # Full-colour stripe texture, dim material factor. Future charge wiring may
-    # brighten the factor without fighting a permanently dark vertex tint.
     multiply.inputs[2].default_value = (.004, .004, .004, 1)
     mat.node_tree.links.new(multiply.outputs[0], nodes.get("Principled BSDF").inputs["Base Color"])
 
@@ -103,7 +99,6 @@ def box(part, slot, size, center, color=None):
 
 
 def finish(part, parent):
-    # Weld only identical closing profile vertices, then orient the closed cast.
     bmesh.ops.remove_doubles(part.bm, verts=list(part.bm.verts), dist=.000001)
     bmesh.ops.recalc_face_normals(part.bm, faces=list(part.bm.faces))
     return part.to_object(parent=parent)
@@ -111,19 +106,16 @@ def finish(part, parent):
 
 def make_shell(parent):
     p = common.Part("MeltRearShell")
-    # Rear-only dome: the entire forward 110 degree wedge remains absent.
     rings = []
     steps = 7
     for k in range(steps + 1):
         a = math.radians(55) + math.radians(250) * k / steps
         ca, sa = math.cos(a), math.sin(a)
-        # Cast section, solid .10 m underside; height .85 m before clearance shrink.
         rings.append([(-.55 + 1.35*r*ca, h, 1.70*r*sa)
                       for r, h in ((1, .925), (1, 1.125), (.72, 1.60), (.28, 1.775), (.28, 1.675), (.91, .925), (1, .925))])
     strip(p, rings, ["ancient_enamel"]*6, [ENAMEL]*6)
     for row in (rings[0][:-1], list(reversed(rings[-1][:-1]))):
         face(p, row, "rubber")
-    # Thin blue cast joint sits within a twice-width dark recess, rear face only.
     for slot, lo, hi, offset in (("rubber", 1.30, 1.40, .008), ("ancient_light", 1.325, 1.375, .012)):
         for k in range(6):
             points = []
@@ -133,13 +125,11 @@ def make_shell(parent):
                 points.append((-.55+1.35*r*math.cos(math.radians(a)), h,
                                1.70*r*math.sin(math.radians(a))))
             face(p, points, slot)
-    # Restrained dust on a handful of upward faces, never a second light surface.
     bmesh.ops.recalc_face_normals(p.bm, faces=list(p.bm.faces))
     upper = [f for f in p.bm.faces if f.material_index == p.slots.index("ancient_enamel")
              and f.normal.z > .6 and f.calc_center_median().z > 1.5]
     for f in upper[1::3][:3]:
         p.paint([f], "ancient_enamel", common.mix("petrol", "bone", .42))
-    # One narrow zigzag fracture on the cast slope, within the existing rubber draw.
     p.bm.faces.ensure_lookup_table()
     host = p.bm.faces[1]
     a, b, c, d = [v.co.copy() for v in host.verts]
@@ -157,7 +147,6 @@ def make_shell(parent):
 
 def make_bell(index, parent):
     p = common.Part("MeltVentBell%d" % index)
-    # Circumscribed bore keeps >= .60 m clear even across the polygon flats.
     segments = 10
     inner = .3 / math.cos(math.pi / segments)
     profile = [(.44, -.025), (.475, 1.425), (.475, 1.475), (.44, 1.525),
@@ -170,7 +159,6 @@ def make_bell(index, parent):
           [ENAMEL]+["bone"]*4 + [None, None, None], closed=True,
           uv_length=2*inner*math.sin(math.pi/segments))
     obj = finish(p, parent)
-    # Smooth only the long cylindrical walls; keep the cast lip planar.
     for poly in obj.data.polygons:
         poly.use_smooth = poly.material_index == p.slots.index("mantle_tool")
     return obj
@@ -182,7 +170,6 @@ def export_checked(root, path, ceiling):
     n = struct.unpack_from("<I", data, 12)[0]
     g = json.loads(data[20:20+n])
     # Blender's multiply-node exporter preserves the texture but drops its scalar.
-    # Set the standard glTF closed-state factor explicitly; no mesh bytes change.
     tool = next(m for m in g["materials"] if m["name"] == "mantle_tool")
     tool["pbrMetallicRoughness"]["baseColorFactor"] = [.004, .004, .004, 1]
     encoded = json.dumps(g, separators=(",", ":"), ensure_ascii=False).encode()
@@ -212,7 +199,6 @@ def preview(path, outdir, family, label):
         for i, at in enumerate(VENTS):
             bpy.data.objects["MountVent%d" % i].location = xyz(at)
     bpy.context.view_layer.update()
-    # No preview transform ever feeds back into the delivered GLB.
     objects = [o for o in bpy.context.scene.objects if o.type == "MESH"]
     min_y = min((o.matrix_world @ v.co).z for o in objects for v in o.data.vertices)
     for o in [o for o in bpy.context.scene.objects if o.parent is None]:
@@ -283,7 +269,7 @@ def main():
         make_bell(i, common.empty("MountVent%d" % i, parent=root))
     opts = common.args()
     path = opts["out"] or common.default_out("warden_mantle_meltdown")
-    export_checked(root, path, (1000, 1600, 12))  # polished caps (POLISH.md, 18 Oct)
+    export_checked(root, path, (1000, 1600, 12))
     if opts["render"]:
         preview(path, opts["render"], "reactor", "meltdown")
 

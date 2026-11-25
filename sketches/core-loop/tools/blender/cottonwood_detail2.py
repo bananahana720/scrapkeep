@@ -26,7 +26,6 @@ tone = d1.tone
 
 
 def rootlets(s):
-    # Each root's tip forks into two rootlets; a knot swells at its middle point.
     for k, row in enumerate(d1.ROOTS):
         path = d1.root_path(*row)
         p2, p3 = path[2], path[3]
@@ -41,7 +40,6 @@ def rootlets(s):
 
 
 def plates(s):
-    # Raised bark plates halfway between the detail-1 strands, following the same twist.
     for k in range(4):
         path, radii = [], []
         for j in range(6):
@@ -54,7 +52,6 @@ def plates(s):
 
 
 def fork_wrap(s):
-    # Two strands wrap the fork knot like the re-imagined picture's band.
     x, z, r, _ = d1.bole_at(5.0)
     for k, (y0, lift) in enumerate([(4.8, .6), (5.1, .5)]):
         pts = []
@@ -66,7 +63,6 @@ def fork_wrap(s):
 
 
 def chips(s):
-    # Chipped blocks on the slab rim, alternate vertices of the slab outline.
     for k, (angle, radius) in enumerate(cw.SLAB):
         if k % 2:
             continue
@@ -83,7 +79,6 @@ def chips(s):
         s.add(verts, faces, tone("slab_shadow") if k % 4 else tone("slab_side"))
 
 
-# Twig stubs: (from a point on the base twig rows, a direction), short tapered cones.
 def stubs(s):
     for k, (a, b, w) in enumerate(cw.TWIGS):
         a, b = Vector(a), Vector(b)
@@ -91,20 +86,17 @@ def stubs(s):
             p = a.lerp(b, f)
             d = (b - a).normalized()
             u, v = cw.frame(d)
-            # Hanging below the twig so the stub shows under the crown, not inside it.
             out = (u if k % 2 else -u) * .6 + Vector((0, -.5, 0)) + d * .3
             d1.tube(s, [p, p + out * .8, p + out * 1.5], [.08, .055, 0], 4, tone("limb"), tip=True)
 
 
 def edge_tufts(s):
-    # Three tufts on the outer and lower faces of each low side cluster (the skirt).
     dirs = [Vector(v).normalized() for v in cw.ICO_V]
     for x, y, z, r, yaw in cw.CLUSTERS:
         if y > 7.5:
             continue
         c = Vector((x, y, z))
         out = Vector((c.x - d1.CROWN_CENTRE.x, 0, c.z - d1.CROWN_CENTRE.z)).normalized()
-        # Skip the three vertices detail 1 already tufted (its ranking), then favour the lower outward faces.
         taken = sorted(range(12), key=lambda i: -(dirs[i].dot((c - d1.CROWN_CENTRE).normalized()) + .6 * dirs[i].y))[:3]
         ranked = sorted((i for i in range(12) if i not in taken), key=lambda i: -(.6 * dirs[i].dot(out) - dirs[i].y))
         for i in ranked[:3]:
@@ -123,7 +115,7 @@ def build(s):
 
 
 def main():
-    polish.enable(bevel=0, **cw.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=0, **cw.kit.BAKE)
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(cw.MODELS))

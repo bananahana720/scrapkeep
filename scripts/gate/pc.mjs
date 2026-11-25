@@ -1,19 +1,3 @@
-// A whole promotion gate on one PC, as one resumable command.
-//
-//   node scripts/gate/pc.mjs plan --wave 35 --head <sha> [--root <dir>] [--base <dir>] [--persona <id>] [--budget n] [--no-weekly]
-//   node scripts/gate/pc.mjs run  <the same flags> [--redo <step id>]... [--tally]
-//   add --scoped a_test,b_test for the wave gate (ruling cy): the node suite, the three test windows and one scoped
-//   shard of those bot-tier tests plus world1_run_test, run by name; the bot blocks, the weekly sweep, the bands and
-//   the red team wait for the release gate, and --tally runs tally.mjs --wave. --scoped-from <fast receipt.json> adds
-//   the bot shards a `sketch:fast` receipt for the stage diff names (selection.bot_shards).
-//
-// `plan` prints the steps in order with their Godot-process weights and creates nothing. `run` admits steps
-// against the budget, gives each its own worktree, slot pool and scratch data home, compares the band runs
-// with the last gated head's receipts (--base), and writes <root>/w<N>-<head8>-gate-plan.md for
-// scripts/gate/tally.mjs. Receipts go to <root>/w<N>-<head8>/<step id>/; a step.json there marks a step done.
-// Run it from a checkout of the head: the lists are counted there and every step runs that head's own
-// scripts. It never edits that checkout. project-guide/handoff/GATE.md, "Running shards on one PC", is the recipe.
-
 import { spawn, spawnSync } from "node:child_process";
 import {
   closeSync,
@@ -46,43 +30,34 @@ const BOT_BLOCK = 5;
 const TEST_WINDOWS = 3;
 const SLOT_POOL = 4;
 
-// The load a step puts on the machine, in busy threads, read against `defaultBudget`. Measured on a 32-thread PC:
-// a test window's two lanes hold a 1-minute load of about 5, one bot test at a time about 8 (wave 41 gate, e2770d85).
 export const WEIGHTS = {
-  tests: 6, // a test shard with two lanes: measured load about 5
-  bots: 8, // a bot test starts up to 8 children
-  scoped: 16, // the wave gate's bot shard runs two bot lanes of about 8 each
-  "weekly-tests": 6, // the same shard, on the weekly list
-  "weekly-bots": 8, // the same bot shard, on the weekly list
-  "bands-A": 8, // one test at a time, but its bot tests start up to 8 children
-  "bands-B": 12, // challenge --jobs=12 (PR 786 PC timing: 642 s against 1075 s at 6, same verdicts)
-  "bands-C": 12, // bot smoke tests start up to 8 children, then the rungs at --jobs=12
-  node: 2, // the node suite starts a few Godot tests at a time
-  redteam: 8, // --slots=8; exclusive, because its frame-time readings need a quiet machine
-  retime: 2, // one test at a time; exclusive, because a retime needs a quiet machine
-  compare: 0, // reads files
-  "plan-file": 0, // reads files
+  tests: 6,
+  bots: 8,
+  scoped: 16,
+  "weekly-tests": 6,
+  "weekly-bots": 8,
+  "bands-A": 8,
+  "bands-B": 12,
+  "bands-C": 12,
+  node: 2,
+  redteam: 8,
+  retime: 2,
+  compare: 0,
+  "plan-file": 0,
 };
 
-// Busy threads the gate may hold at once: every thread but four. Until 15 Nov 2026 it was half the threads, and the
-// wave 41 gate's bot shard, the longest step, waited 34 minutes for the test windows while the PC sat at load 8 of 32.
 export function defaultBudget(threads = os.availableParallelism()) {
   return Math.max(1, threads - 4);
 }
 
-// The wave gate's scoped shard always plays world 1 through (GATE.md, "The wave gate and the release gate", step 2).
 export const SCOPED_ALWAYS = ["world1_run_test"];
 
-// The bot shards a sketch:fast receipt names for its diff (scripts/sketch-fast.mjs, selection.bot_shards), as test names.
 export function receiptBotShards(receipt) {
   const shards = receipt?.selection?.bot_shards;
   if (!Array.isArray(shards)) throw new Error("the fast receipt has no selection.bot_shards list");
   return shards.map(testName);
 }
 
-// The scoped shard's names: the asked ones and SCOPED_ALWAYS that are bot tests (on the bot list or the weekly bot
-// list, shard.mjs namedPool), in sorted order. A non-bot name is left out, because the three windows run the whole
-// non-bot list; a name on no list is refused.
 export function scopedNames(asked, lists) {
   const bots = namedPool(lists, { bots: true, weekly: false });
   const tests = new Set(namedPool(lists, { bots: false, weekly: false }));
@@ -93,9 +68,6 @@ export function scopedNames(asked, lists) {
   return bots.filter((name) => want.has(name));
 }
 
-// ---- plan ----
-
-// Every band test must exist, match its --bots flag, and not sit on the weekly list.
 export function checkBands(bands, lists) {
   const problems = [];
   const entries = [
@@ -125,10 +97,6 @@ export function loadBands(lists, file = BANDS_FILE) {
 
 const windowOf = (first, last) => `${first}-${last}`;
 
-// Ordered steps. `weekly` is the weekly lists or null. Exclusive steps come last among the Godot steps, then the
-// two barrier steps that read every receipt.
-// With `scoped` (an array of bot test names) it is the wave gate: the windows, one scoped shard, the node suite and the
-// plan file, and nothing a release gate adds.
 export function gatePlan({
   wave,
   head,
@@ -150,7 +118,6 @@ export function gatePlan({
       needsBase: false,
       ...extra,
     });
-  // The wave gate's bot shard is its longest step, so it starts first and the windows fill the room beside it.
   if (scoped)
     add("scoped", "shard", {
       weightKey: "scoped",
@@ -220,12 +187,6 @@ export function formatPlan(steps, budget) {
   return lines.join("\n");
 }
 
-// ---- scheduler ----
-
-// The spare weight a later step may take while `head` waits, without ever delaying it. The head starts once
-// some set of running steps has finished and freed `need`. A step started in the gap must leave room for
-// the head after ANY such set finishes, so the spare is the smallest freed total that reaches `need`, less `need`.
-// (Wave 35 gate, 10 Nov: two windows at 6 ran, the third at 6 waited, and a 2-weight step sat behind it with 4 idle.)
 export function spareWhileWaiting(runningWeights, headWeight, budget) {
   const used = runningWeights.reduce((sum, weight) => sum + weight, 0);
   const need = used + headWeight - budget;
@@ -239,12 +200,6 @@ export function spareWhileWaiting(runningWeights, headWeight, budget) {
   return least === Infinity ? 0 : least - need;
 }
 
-// Starts steps in plan order, never above `budget` busy threads. A step that does not fit waits at the
-// head of the queue; a later ordinary step may start in the gap only when it cannot delay that head
-// (`spareWhileWaiting`), so none is starved. Exclusive and barrier steps run with nothing else and nothing
-// passes them; a step heavier than the budget runs alone. `isDone(step)` returns a truthy value (or { exit })
-// for a finished step, which is skipped. `onExit(step, exit)` may return steps to add before the first barrier.
-// Returns a Map of step id to exit.
 export async function runPlan(steps, { budget, start, isDone = () => null, onExit = () => [] }) {
   const queue = [...steps];
   const exits = new Map();
@@ -259,7 +214,6 @@ export async function runPlan(steps, { budget, start, isDone = () => null, onExi
   };
   const racers = new Map();
   const solo = (step) => step.exclusive || step.barrier || step.weight > budget;
-  // The first ordinary step behind a waiting head that fits the spare and the budget now. It never looks past a solo step.
   const gapStep = (head) => {
     const spare = Math.min(
       spareWhileWaiting(
@@ -325,12 +279,6 @@ export async function runPlan(steps, { budget, start, isDone = () => null, onExi
   return exits;
 }
 
-// ---- compare ----
-
-// `fairness` (the bot record's F1 to F3 numbers, wave 36 unit measure) is a measurement, not an outcome: it reads what the
-// simulation already published and moves nothing, so a head that adds or refines it must not read as a differing run.
-// It is one key on purpose: its parts (`first_hit_s`, `stop_tax`, `telegraph_share`) would also hide the stage notes' own
-// `first_hit_s` if listed here, because the strip below is by name at any depth.
 const IGNORED = new Set([
   "fairness",
   "wall_seconds",
@@ -385,7 +333,6 @@ function readRuns(text) {
   return runs;
 }
 
-// Runs of two challenge runs.ndjson files, run for run. code 0 identical, 1 some differ, 3 a side is empty or the run sets differ.
 export function compareRuns(baseText, headText) {
   const base = readRuns(baseText);
   const head = readRuns(headText);
@@ -416,7 +363,6 @@ export function compareRuns(baseText, headText) {
   };
 }
 
-// The `->` lines of a smoke log in C order with wall seconds removed, so two heads compare line for line.
 export function sortedLines(logText) {
   return logText
     .split("\n")
@@ -453,7 +399,6 @@ export function compareLines(baseText, headText) {
   };
 }
 
-// Each band against the base. `read(side, relativePath)` returns text or null. With no base, every band reads null.
 export function compareBands(read, bands, hasBase) {
   const result = {
     base: hasBase,
@@ -553,12 +498,8 @@ export function renderCompare(compare, basePath) {
   return lines.join("\n");
 }
 
-// ---- the plan file ----
-
 const cell = (text) => String(text).replaceAll("|", "\\|").replaceAll("\n", " ");
 
-// One row per shard, as scripts/gate/tally.mjs parses them. `results` maps a step id to
-// { exit, verdict?, blockers? }; `compare` is compareBands' result or null.
 export function planFileText({
   wave,
   head,
@@ -652,10 +593,6 @@ export function planFileText({
   return lines.join("\n");
 }
 
-// ---- environment, worktrees ----
-
-// One step's environment. Every step gets its own scratch homes and slot pool, and a data home
-// outside the gate root is refused, so a Godot run cannot reach the owner's real save.
 export function stepEnv({
   root: gateRoot,
   id,
@@ -686,8 +623,6 @@ export function stepEnv({
   };
 }
 
-// Free detached worktrees of one head. A step gets the one it used last time when it is free
-// (a challenge label resumes only in the worktree that holds it), else any free one, else a new one.
 export function worktreePool({ dir, add, existing = [], owners = {}, saveOwners = () => {} }) {
   const entries = new Map(existing.map((name) => [name, false]));
   const claim = (name, stepId) => {
@@ -712,8 +647,6 @@ export function worktreePool({ dir, add, existing = [], owners = {}, saveOwners 
     },
   };
 }
-
-// ---- the real step runner ----
 
 const loadNow = () => Math.round(os.loadavg()[0] * 10) / 10;
 const readIf = (file) => (existsSync(file) ? readFileSync(file, "utf8") : null);
@@ -762,7 +695,6 @@ export function nodeSummary(logText) {
   return { tests: read("tests"), fail: read("fail"), pass: read("pass") };
 }
 
-// Copy a .godot directory using copy-on-write reflinks when the OS/filesystem supports them.
 function copyDirFast(src, dst, platform = process.platform) {
   if (platform === "linux") {
     const res = spawnSync("cp", ["-a", "--reflink=auto", src, dst], { stdio: "ignore" });
@@ -774,9 +706,6 @@ function copyDirFast(src, dst, platform = process.platform) {
   cpSync(src, dst, { recursive: true });
 }
 
-// Seed a freshly added detached worktree's .godot cache from an already-imported sibling or repo root.
-// An exact-tree verified stamp copies with its stamp intact (zero cold import). A nearby-tree .godot
-// copies WITHOUT scrapkeep-import.json so Godot performs a fast incremental reimport and stamps itself.
 export function seedGodotCache({
   targetWt,
   stampedSources = [],
@@ -817,7 +746,6 @@ export function seedGodotCache({
   return { mode: "none", from: null };
 }
 
-// Reuse root/node_modules via symlink when package-lock.json matches byte-for-byte; otherwise cold npm ci.
 export function canLinkNodeModules(wt, repoRoot = root) {
   const rootNm = path.join(repoRoot, "node_modules");
   const rootLock = path.join(repoRoot, "package-lock.json");
@@ -826,12 +754,9 @@ export function canLinkNodeModules(wt, repoRoot = root) {
   return Buffer.compare(readFileSync(rootLock), readFileSync(wtLock)) === 0;
 }
 
-// Per-chunk SMOKE_JOBS for non-bot test windows under pc.mjs so concurrent windows fill the box
-// within defaultBudget() without oversubscribing.
 export function shardSmokeJobs(step, threads = os.availableParallelism()) {
   if (step.kind !== "shard") return null;
   if (!["tests", "weekly-tests"].includes(step.weightKey)) return null;
-  // shard.mjs runs 2 chunk lanes by default; keep each chunk sized to half the step's thread budget.
   return Math.max(2, Math.min(8, Math.floor(Math.min(step.weight, threads) / 2) + 1));
 }
 
@@ -1035,7 +960,6 @@ function readStepResult(step, receipts) {
   return result;
 }
 
-// A shard that came back INCONCLUSIVE names its suspect-load tests; a retime settles them.
 function retimeFor(step, receipts) {
   const summary = readIf(path.join(receipts, step.id, "shard.json"));
   if (!summary) return [];
@@ -1242,7 +1166,6 @@ async function run(options) {
     onExit: (step) => (step.kind === "shard" ? retimeFor(step, receipts) : []),
   });
   console.log(`gate plan: ${planFile}`);
-  // An inconclusive shard (exit 2) that its retime settled reads "PASS after retime" on the plan, so it is not red here.
   const worst = [...exits].some(
     ([id, exit]) => exit !== 0 && !(exit === 2 && exits.get(`retime-${id}`) === 0),
   );

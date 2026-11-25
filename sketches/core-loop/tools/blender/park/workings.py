@@ -45,16 +45,15 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE))
-import common  # noqa: E402
-import anchors  # noqa: E402
+import common
+import anchors
 
 Surface = anchors.Surface
 MODELS = Path(common.SKETCH) / "assets/models/park"
 CLASSES = json.loads((Path(common.SKETCH) / "assets/asset_budgets.json").read_text())["classes"]
-STEEP_NY = 0.7              # the most a -col side face may face up (harpoon bite)
-FOOT_SINK = 0.3             # the bin's sandstone pads sink this far
+STEEP_NY = 0.7
+FOOT_SINK = 0.3
 
-# Tones (top face, side face, underside), sRGB hex.
 STEEL = ("5a5853", "4f4c48", "33312e")
 STEEL_DK = ("45423e", "3b3936", "2b2724")
 RUST = ("8a4e36", "7a4430", "52301f")
@@ -83,12 +82,11 @@ def ring_solid(s, lo, hi, tone, mottle=0.08):
     s.add(pts, faces, tone, mottle)
 
 
-# ---------------------------------------------------------------------------------------------------------------- ore bin
-CRIB = 1.3                  # crib half size
+CRIB = 1.3
 CRIB_LAYERS = 10
 CRIB_TOP = 6.0
 SILL_TOP = 6.6
-HOPPER_BREAK = 9.4          # the sloped plates meet the upper box
+HOPPER_BREAK = 9.4
 GATE_HALF = 1.4
 
 
@@ -96,7 +94,6 @@ def ore_bin_unit(base, s1, s2, cx, cz, hx, hz, top, ladder=True, rivet_step=1.2)
     """One bin over the rectangle cx +- hx, cz +- hz, rim top at `top`."""
     r = base.rng
     corners = [(cx + sx * (hx - CRIB), cz + sz * (hz - CRIB)) for sx in (-1, 1) for sz in (-1, 1)]
-    # sandstone pads and the timber cribs: layers of two timbers crossing alternately along x and z
     t = (CRIB_TOP - 0.4) / CRIB_LAYERS
     for k, (px, pz) in enumerate(corners):
         base.box((px - CRIB, -FOOT_SINK, pz - CRIB), (px + CRIB, 0.4, pz + CRIB), SANDTOP, skip=("-y",), mottle=.12)
@@ -108,14 +105,12 @@ def ore_bin_unit(base, s1, s2, cx, cz, hx, hz, top, ladder=True, rivet_step=1.2)
                     base.box((px - CRIB, y0, pz + off - .25), (px + CRIB, y0 + t, pz + off + .25), tone, mottle=.14)
                 else:
                     base.box((px + off - .25, y0, pz - CRIB), (px + off + .25, y0 + t, pz + CRIB), tone, mottle=.14)
-    # steel sills on the crib tops, along z and across x
     xs = sorted({c[0] for c in corners})
     zs = sorted({c[1] for c in corners})
     for x in xs:
         base.box((x - .3, CRIB_TOP, cz - hz + .1), (x + .3, SILL_TOP, cz + hz - .1), STEEL_DK, mottle=.05)
     for z in zs:
         base.box((cx - hx + .1, CRIB_TOP, z - .3), (cx + hx - .1, SILL_TOP, z + .3), STEEL_DK, mottle=.05)
-    # the hopper: sloped plates from the gate up to the break, the straight box, the rim band
     ux, uz = hx - .15, hz - .15
     ring_solid(base, quad_ring(GATE_HALF, GATE_HALF, SILL_TOP - .2, cx, cz), quad_ring(ux, uz, HOPPER_BREAK, cx, cz), STEEL)
     base.box((cx - ux, HOPPER_BREAK, cz - uz), (cx + ux, top - .45, cz + uz), STEEL, skip=("-y",), mottle=.07)
@@ -126,11 +121,9 @@ def ore_bin_unit(base, s1, s2, cx, cz, hx, hz, top, ladder=True, rivet_step=1.2)
         for sz in (-1, 1):
             x, z = cx + sx * ux, cz + sz * uz
             base.box((x - .14, HOPPER_BREAK, z - .14), (x + .14, top - .45, z + .14), STEEL_DK, mottle=.04)
-    # the ore heap inside the rim, a few green lumps on it
     ring_solid(base, quad_ring(hx - .35, hz - .35, top - .5, cx, cz), quad_ring(1.6, 1.6, top - .12, cx, cz), ORE, mottle=.16)
     for k in range(3):
         base.rock((cx + r.uniform(-1.4, 1.4), top - .25, cz + r.uniform(-1.4, 1.4)), (.55, .3, .55), CHRYSO)
-    # the gate under the hopper, its copper lever hanging out on -z, the chute out to the +x lip
     base.box((cx - GATE_HALF, CRIB_TOP - .5, cz - GATE_HALF), (cx + GATE_HALF, SILL_TOP - .2, cz + GATE_HALF), STEEL_DK, mottle=.05)
     base.box((cx - .5, CRIB_TOP - .4, cz - GATE_HALF - .12), (cx + .5, CRIB_TOP + .1, cz - GATE_HALF), COPPER, skip=("+z",), mottle=.05)
     base.rod((cx + .3, CRIB_TOP - .15, cz - GATE_HALF - .1), (cx + .3, CRIB_TOP - 1.5, cz - GATE_HALF - .9), .07, COPPER, sides=6)
@@ -140,7 +133,6 @@ def ore_bin_unit(base, s1, s2, cx, cz, hx, hz, top, ladder=True, rivet_step=1.2)
     for z0, z1 in ((cz - 1.05, cz - .9), (cz + .9, cz + 1.05)):
         base.prism_z([(cx + GATE_HALF - .2, y_in - .22), (lip, y_out - .22), (lip, y_out + .6), (cx + GATE_HALF - .2, y_in + .6)], z0, z1, STEEL_DK)
     base.box((lip, y_out - .3, cz - 1.05), (cx + hx, y_out + .45, cz + 1.05), RUST, mottle=.05)
-    # shell 1: vertical plate seams on the upper box, a ladder up the -x side between the cribs
     for side in (-1, 1):
         n = max(2, int(2 * hz / 2.5))
         for k in range(1, n):
@@ -160,7 +152,6 @@ def ore_bin_unit(base, s1, s2, cx, cz, hx, hz, top, ladder=True, rivet_step=1.2)
         while y < top - .3:
             s1.box((lx - .04, y, cz - .32), (lx + .04, y + .07, cz + .32), STEEL_DK, skip=("-z", "+z"), mottle=.03)
             y += .6
-    # shell 2: rivet heads along both stiffener bands and the rim on the long (x) faces, bolt heads on the crib ends
     for y in (HOPPER_BREAK + .4, (HOPPER_BREAK + top) / 2 + .15, top - .22):
         for side in (-1, 1):
             out = hx - .07 if y > top - .45 else ux + .08
@@ -170,7 +161,7 @@ def ore_bin_unit(base, s1, s2, cx, cz, hx, hz, top, ladder=True, rivet_step=1.2)
                 s2.box((x - .05 if side > 0 else x - .06, y - .06, z - .06), (x + .06 if side > 0 else x + .05, y + .06, z + .06), STEEL, skip=("-x",) if side > 0 else ("+x",), mottle=.02)
                 z += rivet_step
     for px, pz in corners:
-        f = pz + CRIB if pz < cz else pz - CRIB          # the crib face toward the bin's centre line
+        f = pz + CRIB if pz < cz else pz - CRIB
         for y in (1.5, 4.3):
             s2.box((px - .1, y, min(f, f + (.04 if pz < cz else -.04))), (px + .1, y + .2, max(f, f + (.04 if pz < cz else -.04))), IRON,
                    skip=("-z",) if pz < cz else ("+z",), mottle=.02)
@@ -180,8 +171,8 @@ def ore_bin(base, s1, s2):
     ore_bin_unit(base, s1, s2, 0.0, 0.0, 5.0, 5.0, 14.0)
 
 
-ROW_PITCH = 11.25           # 45 m over four bins
-ROW_TOP = 13.2              # bin rims; the walkway girder rises to 14
+ROW_PITCH = 11.25
+ROW_TOP = 13.2
 
 
 def ore_bin_row(base, s1, s2):
@@ -189,25 +180,21 @@ def ore_bin_row(base, s1, s2):
         cz = -22.5 + ROW_PITCH * (k + .5)
         ore_bin_unit(base, s1, s2, 0.0, cz, 4.0, 5.0, ROW_TOP, ladder=(k == 0), rivet_step=3.0)
         if k:
-            # ties across the 1.25 m gap at rim level, outboard of the walkway
             z0, z1 = cz - ROW_PITCH / 2 - .7, cz - ROW_PITCH / 2 + .7
             for x in (-3.4, 3.4):
                 base.box((x - .25, ROW_TOP - .45, z0), (x + .25, ROW_TOP - .1, z1), STEEL_DK, skip=("-z", "+z"), mottle=.04)
-    # the shared walkway: a box girder down the centre line on the rims, kick plates on its edges
     base.box((-.8, ROW_TOP - .2, -22.5), (.8, 13.88, 22.5), STEEL_DK, mottle=.05)
     for x0, x1 in ((-.8, -.68), (.68, .8)):
         base.box((x0, 13.88, -22.5), (x1, 14.0, 22.5), RUST, skip=("-y",), mottle=.04)
-    # shell 2: grating bars across the walkway every 1.5 m
     z = -21.75
     while z <= 22.0:
         s2.box((-.68, 13.88, z - .04), (.68, 13.94, z + .04), STEEL, skip=("-y",), mottle=.02)
         z += 1.5
 
 
-# ---------------------------------------------------------------------------------------------------------------- portal
-SETS = (-3.6, -1.4, 0.8)    # timber set centres along z
-POST_X = (1.06, 1.42)       # inner and outer x of a post; the side lagging stands outside it to 1.5
-CAP_Y = (5.4, 5.85)         # the cap; roof lagging on it to 6
+SETS = (-3.6, -1.4, 0.8)
+POST_X = (1.06, 1.42)
+CAP_Y = (5.4, 5.85)
 HEADWALL_Z = 1.2
 
 
@@ -226,7 +213,6 @@ def timber_portal(base, s1, s2):
     r = base.rng
     for k, (lo, hi) in enumerate(portal_parts()):
         base.box(lo, hi, TIMBER if k % 3 == 2 else (TIMBER_DARK if k % 2 else TIMBER), mottle=.14)
-    # roof lagging: boards along z over the caps; side lagging: horizontal boards outside the posts
     zl0, zl1 = SETS[0] - .21, HEADWALL_Z
     for k in range(10):
         x0 = -1.5 + k * .3
@@ -236,7 +222,6 @@ def timber_portal(base, s1, s2):
         for k in range(13):
             y0 = k * (CAP_Y[0] / 13)
             base.box((x0, y0 + .02, SETS[0] - .18 + r.uniform(0, .1)), (x1, y0 + CAP_Y[0] / 13, zl1), TIMBER_DARK if k % 2 else TIMBER, skip=(), mottle=.12)
-    # the rock headwall round the opening: jambs, lintel, the dark inside and its floor
     for s in (-1, 1):
         x0, x1 = sorted((s * POST_X[0], s * 1.5))
         base.box((x0, 0.0, HEADWALL_Z), (x1, CAP_Y[0], 4.0), RED, mottle=.18)
@@ -248,7 +233,6 @@ def timber_portal(base, s1, s2):
     for s in (-1, 1):
         base.box((s * POST_X[0] - (.01 if s > 0 else 0), 0.0, HEADWALL_Z), (s * POST_X[0] + (0 if s > 0 else .01), CAP_Y[0], 2.4), DARK, skip=("-z", "+z"), mottle=.02)
     base.box((-POST_X[0], CAP_Y[0] - .01, HEADWALL_Z), (POST_X[0], CAP_Y[0], 2.4), DARK, skip=("-z", "+z"), mottle=.02)
-    # the number board on the front cap and its stencilled "03" (seven-segment strokes)
     zf = SETS[0] - .21
     base.box((-.75, CAP_Y[0] + .03, zf - .06), (.75, CAP_Y[1] - .03, zf), BOARD, skip=("+z",), mottle=.04)
     ys = (CAP_Y[0] + .08, (CAP_Y[0] + CAP_Y[1]) / 2, CAP_Y[1] - .08)
@@ -261,7 +245,6 @@ def timber_portal(base, s1, s2):
         for seg in segs:
             (x0, y0), (x1, y1) = bars[seg]
             base.box((x0, y0, zf - .075), (x1, y1, zf - .06), STENCIL, skip=("+z",), mottle=0.0)
-    # shell 1: dark seams between the roof boards, mine rail on timber ties down the passage
     for k in range(1, 10):
         x = -1.5 + k * .3
         s1.box((x - .015, 5.99, zl0), (x + .015, 6.0, zl1), DARK, skip=("-y",), mottle=0.0)
@@ -271,7 +254,6 @@ def timber_portal(base, s1, s2):
         z += .6
     for x in (-.45, .45):
         s1.box((x - .04, .08, -4.0), (x + .04, .16, 2.4), IRON, skip=("-y",), mottle=.03)
-    # shell 2: iron straps round each post and bolt heads on each cap face
     for z in SETS:
         for s in (-1, 1):
             x0, x1 = sorted((s * POST_X[0], s * POST_X[1]))
@@ -283,8 +265,6 @@ def timber_portal(base, s1, s2):
                        (x + .06, (CAP_Y[0] + CAP_Y[1]) / 2 + .06, z + f + (0 if f < 0 else .04)), IRON, skip=("+z",) if f < 0 else ("-z",), mottle=.02)
 
 
-# ---------------------------------------------------------------------------------------------------------------- recipes
-# id: (builder, seed, class, [length, height, width], collider)
 RECIPES = {
     "ore_bin": (ore_bin, 2101, "landform", (10.0, 14.0, 10.0), "hull"),
     "ore_bin_row": (ore_bin_row, 2111, "landform", (45.0, 14.0, 8.0), "hull"),
@@ -313,7 +293,6 @@ def check_recipe(rid, size, base, col, shells, sink):
 def build_recipe(rid, out_dir, count_only):
     fn, seed, cls, size, kind = RECIPES[rid]
     base = Surface(rid, seed)
-    # Godot's importer strips one "-col" hint from a node name (bowls.py build_recipe); the node carries it twice.
     col = Surface(rid + "-col-col", seed, colored=False)
     shells = [Surface("%s_detail%d" % (rid, k), seed + k) for k in (1, 2)]
     fn(base, *shells)

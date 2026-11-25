@@ -29,44 +29,37 @@ from lantern_beacon import kit, common, frustum
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [3500, 2100, 2]  # polish: was [900, 2000, 2]; class cap 4,000 T
+LANDMARK = [3500, 2100, 2]
 NAME = "barge"
 
-# One row per painted part, palette tones only (src/core/palette.gd; common.HEX names where it has them). The picture's
-# brass latches and hooks are copper (lore rule); its lighter teal is the palette's petrol VERDIGRIS (named gap).
 TONES = {
-    "hull": "petrol",          # VERDIGRIS 365754
+    "hull": "petrol",
     "floor": "petrol",
-    "wall": "e6d9b8",          # LEDGER
-    "rim": "amber",            # AMBER, as contraptions.gd:83 _band_mat
+    "wall": "e6d9b8",
+    "rim": "amber",
     "strake": "charcoal",
     "copper": "copper",
     "pad": "charcoal",
-    "knob_face": "2a3231",     # CABLE
+    "knob_face": "2a3231",
 }
 
-# Metres at game scale, Godot +Y up, origin at the barge body (the collider's centre). Plan rings are rounded squares:
-# (half extent, corner radius, y). SEG arc steps per corner.
 SEG = 4
 DECK_Y = 1.0
 HULL = [(3.4, 2.2, -3.6), (5.4, 2.6, -3.2), (6.6, 2.8, -2.2), (7.2, 2.8, -0.8), (7.42, 2.8, 0.4), (7.5, 2.8, 1.35)]
-STRAKE = (7.36, -0.25, 0.0, .07)             # half extent at mid, y0, y1, proud
+STRAKE = (7.36, -0.25, 0.0, .07)
 RIM = [(7.5, 2.8, 1.35), (7.62, 2.85, 1.45), (7.62, 2.85, 1.95), (7.05, 2.3, 1.95), (7.05, 2.3, 1.8)]
 WALL = (7.05, 2.3, 1.8, DECK_Y)
 SEAM = .001
-LATCH_X = (-2.6, 2.6)                       # on the +Z and -Z long sides
-HOOK_X = (-4.6, 4.6)                        # small hooks on the rim's inner lip, +Z and -Z sides
-PADS = [((-4.6, 1), .7), ((4.6, 1), .7), ((-4.6, -1), .7), ((4.6, -1), .7), ((0, 0), .7)]  # (along, side) at y; (0,0) = +X end
-KNOBS = [(-2.3, -0.55), (2.3, -0.55)]        # (z, y) on the -X end
-KNOB = (.72, 7.0, 7.75, 12)                  # radius, x buried, x outer, sides
-# Polish (tools/blender/POLISH.md): hard machinery with a 4 cm bevel, one subdivision level that rounds the hull rings
-# and the rim, and the kit's AO and wear bake (kit.BAKE).
+LATCH_X = (-2.6, 2.6)
+HOOK_X = (-4.6, 4.6)
+PADS = [((-4.6, 1), .7), ((4.6, 1), .7), ((-4.6, -1), .7), ((4.6, -1), .7), ((0, 0), .7)]
+KNOBS = [(-2.3, -0.55), (2.3, -0.55)]
+KNOB = (.72, 7.0, 7.75, 12)
 FINISH = {"Hull": {"bevel": 0, "subsurf": 1}, "Fenders": {"bevel": .06}}
 SIZE = {"barge": [15.24, 5.55, 15.4], "barge_fenders": [15.41, 2.37, 15.16]}
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     return common.srgb(TONES[name])
 
 
@@ -93,10 +86,6 @@ def bands(s, rings, color, cap_bottom=False, cap_top=False):
 
 
 def shell(s):
-    # One closed shell from the keel up the hull, over the rim, down the inner wall and across the floor, so kit's
-    # normal pass (bmesh recalc on the connected solid) faces the wall and floor into the tub (it1: the open wall and
-    # floor came out facing away and were culled). Each colour change is a pair of rings 1 mm apart, so the tones stay
-    # crisp without splitting the solid.
     rows = [(r, "hull") for r in HULL[:-1]] + [(HULL[-1], "hull"), (HULL[-1][:2] + (HULL[-1][2] + SEAM,), "rim")]
     rows += [(r, "rim") for r in RIM[1:]]
     h, r, y1, y0 = WALL
@@ -119,14 +108,12 @@ def hull(s):
 
 
 def latch(s, x, side):
-    # A bolt-on copper plate on the rim face and a hanging U shackle below it.
     z = side * 7.62
     s.box((.7, .5, .08), (x, 1.62, z + side * .04), tone("copper"))
     s.box((.16, .62, .1), (x, 1.1, z + side * .03), tone("copper"))
 
 
 def hook(s, x, side):
-    # A small J hook over the inner lip.
     z = side * 7.0
     s.box((.08, .42, .08), (x, 1.72, z - side * .06), tone("copper"))
     s.box((.08, .08, .22), (x, 1.53, z - side * .14), tone("copper"))

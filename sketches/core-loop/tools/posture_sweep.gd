@@ -6,22 +6,7 @@ const BotDriver := preload("res://tools/bot_driver.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 
-# The Warden posture sweep (design-v3/LEGIBILITY.md section 4, tools/posture_sweep.md).
-# Every cell of the grid is played by every arm of ARMS over the seeds. Each run is its own
-# process, because a bot run repeats exactly only in a fresh process (tools/bot_run.gd,
-# tests/bot_repeat_test.gd). The seam is ctx.stages: after the game is built the child swaps
-# in a Table whose of() returns the slice row with warden_plating, curve and ram_shatters
-# overridden while keeping the slice's remaining posture fields. No source file changes between cells.
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/posture_sweep.gd \
-#     -- --out=<abs tsv> --runs=<abs tsv> [--procs=6] [--seeds=1,2,3,4,5] [--cap=240]
-#     [--plating=70,90] [--curve=1,2] [--shatter=true,false] [--arms=small,grown]
-#
-# The parent (no --arm) keeps up to --procs child processes going, one run each, and merges
-# their rows. A child (--arm=<name> --run-seed=<n> --result=<file> --home=<folder>) plays that
-# one run and writes one row to --result. A run that never breaks the Warden counts as the cap.
 
-# The arms, one table: name, policy, and the ball's starting mass (the existing --start-mass flag).
 const ARMS := [
 	{"name": "small", "policy": "skipper", "mass": 0.0},
 	{"name": "mid", "policy": "skipper", "mass": 225.0},
@@ -35,16 +20,13 @@ const RUN_HEADER := ["arm", "seed", "plating", "curve", "ram_shatters", "outcome
 		"turn_s", "fight_s", "mass", "heft", "game_s", "note"]
 const CELL_HEAD := ["plating", "curve", "ram_shatters"]
 const CELL_TAIL := ["small_to_grown", "band_grown", "band_small", "band_mid", "band_camper", "pass"]
-# Run column positions.
 const C_BROKE := 6
 const C_FIGHT := 10
 const C_MASS := 11
 const C_HEFT := 12
-# A run still going after this many wall seconds is killed and recorded as not broken.
 const WALL_LIMIT_S := 1500.0
 
 
-# The slice table with one Warden row changed. Every lookup the game makes on ctx.stages.
 class Table extends RefCounted:
 	const BOSS := SliceDefs.BOSS
 	const COUNT := SliceDefs.COUNT
@@ -113,7 +95,6 @@ var _cap := 240.0
 var _parent := false
 var _done := false
 
-# Parent state.
 var _cells: Array = []
 var _arms: Array = []
 var _seeds: Array[int] = []
@@ -124,7 +105,6 @@ var _procs := 6
 var _total := 0
 var _sweep_dir := ""
 
-# Child state.
 var _arm := {}
 var _run_seed := 0
 var _cell := {}
@@ -203,8 +183,6 @@ func _grid() -> Array:
 	return cells
 
 
-# ---- Parent: the pool -------------------------------------------------------------------
-
 func _process(_delta: float) -> bool:
 	if not _parent or _done:
 		return false
@@ -226,7 +204,6 @@ func _process(_delta: float) -> bool:
 
 func _spawn(job: Dictionary) -> void:
 	var cell: Dictionary = _cells[job["cell"]]
-	# Each job owns an isolated result and state folder.
 	var home := _sweep_dir.path_join("job%d" % job["n"])
 	DirAccess.make_dir_recursive_absolute(home)
 	var args := child_args(_settings, job, cell, _cap, home)
@@ -326,9 +303,6 @@ static func cell_header(arms: Array) -> Array:
 	return head
 
 
-# One cell's row: per arm the median, min and max fight seconds (a run that did not break counts
-# as the cap), how many broke the Warden, and the median mass and heft at the first strike;
-# then the small-to-grown ratio and the four bands (pass, miss, or n/a when an arm is not in the run).
 static func cell_row(cell: Dictionary, by_arm: Dictionary, arms: Array) -> Array:
 	var row := [str(cell["plating"]), str(cell["curve"]), str(cell["ram_shatters"])]
 	var stats := {}
@@ -353,7 +327,6 @@ static func cell_row(cell: Dictionary, by_arm: Dictionary, arms: Array) -> Array
 	return row
 
 
-# The ratio and the bands over per-arm stats {median, broke, runs}.
 static func bands(stats: Dictionary) -> Array:
 	if not (stats.has("small") and stats.has("grown")):
 		return ["", "n/a", "n/a", "n/a", "n/a", "n/a"]
@@ -400,8 +373,6 @@ func _write(path: String, lines: Array) -> void:
 	file.close()
 
 
-# ---- Child: one run ---------------------------------------------------------------------
-
 func _begin_child() -> void:
 	_arm = arm_named(String(_settings["arm"]))
 	if _arm.is_empty() or not _settings.has("result") or not _settings.has("home"):
@@ -420,8 +391,6 @@ func _begin_child() -> void:
 	root.add_child(_game)
 
 
-# The two object-ID-dependent choices (a scrap pickup's swirl side, a counter's strafe) take their
-# sign from spawn order, as tools/bot_run.gd does, so a run repeats exactly.
 func _on_node_added(node: Node) -> void:
 	if _game == null or _game.build == null:
 		return
@@ -469,7 +438,6 @@ func _physics_process(_delta: float) -> bool:
 	return false
 
 
-# The first contact of any kind on the Warden: the mass and heft the ball struck with.
 func _on_struck(enemy: Node3D, _kind: String, _force: float) -> void:
 	if _struck_s >= 0.0 or not is_instance_valid(enemy) or _game.flow == null or enemy != _game.flow.warden:
 		return
@@ -478,9 +446,6 @@ func _on_struck(enemy: Node3D, _kind: String, _force: float) -> void:
 	_struck_heft = _game.run.heft()
 
 
-# Fight seconds run from the later of the bot's turn to the Warden (warden_fight_s) and the first
-# contact on it (struck, -1 when none) to the break. With only one of the two, that one; with
-# neither, BotDriver.fight_start_of. A run that did not break counts as the cap.
 static func measure(note: Dictionary, cap: float, struck := -1.0) -> Dictionary:
 	var broke: bool = note.get("warden_broken_s") != null
 	var turned = note.get("warden_fight_s")
@@ -512,8 +477,6 @@ func _record() -> void:
 	file.close()
 
 
-# The run's own anomaly notes (RunState.note_anomaly, such as warden_vanished) and the stall state,
-# so a seal that opened because the Warden left the tree is not read as a break.
 func _anomaly(note: Dictionary) -> String:
 	var parts: Array[String] = []
 	for anomaly in _game.run.anomalies:

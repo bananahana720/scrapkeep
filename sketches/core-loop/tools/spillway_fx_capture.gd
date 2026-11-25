@@ -4,13 +4,6 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 
-# Spillway effect stills in the real parks (unit 14, WORLD-FX.md): the dam's spray curtain, the
-# powerhouse and gatehouse steam, the weir falls and the penstock vent where spillway_fx.gd stands
-# them, the ball's wake through water, and the dam on two run seeds side by side (run grain). One PNG
-# per shot. Software rendering in the cloud container:
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --path sketches/core-loop --rendering-driver opengl3 --resolution 1280x720 \
-#     --script res://tools/spillway_fx_capture.gd -- --out=/abs/dir [--seeds=31,32]
-# Composition, colour and placement only: frame cost and feel are judged on the 4080.
 
 const SIM_FRAMES := 90
 const LANDMARK_FRAMES := 900
@@ -66,8 +59,6 @@ func _run() -> void:
 	quit(0)
 
 
-# A camera stood off the anchor's +Z (the way its effect throws) and to one side, high enough to
-# clear the ground, looking at it; the anchor is forced into its slot so it emits.
 func _shoot(a: Node3D, label: String) -> void:
 	var size: float = {"landmark_dam": 120.0, "landmark_penstock_tower": 90.0, "spill_falls": 45.0}.get(a.set_id, 35.0)
 	var at := a.global_position
@@ -79,7 +70,6 @@ func _shoot(a: Node3D, label: String) -> void:
 
 
 func _frame(eye: Vector3, target: Vector3, each: Callable, label: String) -> void:
-	# The chase camera and the game's own wake step stand down while a shot holds the view.
 	var rig: Node = _game.ctx.camera
 	rig.process_mode = Node.PROCESS_MODE_DISABLED
 	var fx = WorldFx.current
@@ -94,7 +84,6 @@ func _frame(eye: Vector3, target: Vector3, each: Callable, label: String) -> voi
 	cam.make_current()
 	for i in SIM_FRAMES:
 		each.call()
-		# The chase camera takes the view back each frame; hold ours.
 		cam.make_current()
 		await process_frame
 	var image := root.get_viewport().get_texture().get_image()
@@ -106,7 +95,6 @@ func _frame(eye: Vector3, target: Vector3, each: Callable, label: String) -> voi
 	await process_frame
 
 
-# The wake: the ball rolled across the dam's floor as though through water, the spray steered each frame.
 func _wake() -> void:
 	var fx = WorldFx.current
 	var ball: Vector3 = _game.player.ball_position()

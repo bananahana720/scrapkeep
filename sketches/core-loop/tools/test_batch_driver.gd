@@ -104,17 +104,8 @@ func finish(code: int) -> void:
 	_close.call_deferred(code)
 
 
-# A solo run frees the test's nodes as the process exits, and what they print then (an await
-# resumed on a freed node, say) is that test's output. The batch frees them the same way,
-# without removing them first, before it closes the test's output.
-#
 # Godot's SceneTree::process() emits process_frame and flushes deferred calls before sending
 # NOTIFICATION_PROCESS to child nodes and before process_tweens() removes killed tweens. A
-# temporary gate node under tree.root waits in _process() until get_processed_tweens() is empty,
-# detaches and queue_frees itself, and hooks the next real tree.physics_frame (CONNECT_ONE_SHOT).
-# On that physics tick, _fire() runs next() with an empty root and no dead tweens, then forwards
-# tree._physics_process(delta) before child _physics_process() and before _process() — with zero
-# sleeps and zero dependence on MainTimerSync / delta smoothing.
 func _close(code: int) -> void:
 	_reset()
 	print("BATCH END %s exit=%d ms=%d" % [current, code, Time.get_ticks_msec() - started])
@@ -144,7 +135,7 @@ func next() -> void:
 		return
 	var source := FileAccess.get_file_as_string("res://" + rel)
 	var script := GDScript.new()
-	var text := extends_line.sub(source, SHIM_EXTENDS, false)  # first extends SceneTree line, checked by batchable()
+	var text := extends_line.sub(source, SHIM_EXTENDS, false)
 	text = frame_func.sub(quit_call.sub(text, "_batch_quit(", true), "func _batch_$1process(", true)
 	script.source_code = text
 	if script.reload() != OK:
@@ -162,7 +153,6 @@ func _reset() -> void:
 		child.free()
 	for tw in tree.get_processed_tweens():
 		tw.kill()
-	# The process-wide settings a test may change, back to how the process started.
 	tree.paused = false
 	if tree.root.size != root_size:
 		tree.root.size = root_size
@@ -255,8 +245,8 @@ func _reset() -> void:
 	QuietGun.housing_path = QuietGun.HOUSING
 
 
-# Only ever the batch's own scratch folder: never user:// itself, a parent, or Andrew's saves.
 static func _clear_dir(path: String) -> void:
+	assert(path.begins_with("user://test-") and not path.contains(".."), "refusing to clear outside user://test-*")
 	if not path.begins_with("user://test-") or path.contains(".."):
 		return
 	var dir := DirAccess.open(path)

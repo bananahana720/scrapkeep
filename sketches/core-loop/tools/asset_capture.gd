@@ -1,41 +1,5 @@
 extends SceneTree
 
-# The shared asset capture tool: named cameras, frozen state, true silhouettes.
-#
-# Contract: asset sheet, "Cameras and evidence returned by every unit". Cameras come from
-# capture_cameras.gd by name. Every capture pauses the tree after a fixed settle, sets the
-# --freeze nodes to an explicit recorded transform, and writes every camera transform, FOV,
-# exposure and frozen node transform to frames.json so a before/after pair provably uses the
-# same values. `--pair` renders two runs side by side and refuses frames whose recorded
-# camera or frozen state differ.
-#
-# Capture (native window, not headless):
-#   godot --path sketches/core-loop --script res://tools/asset_capture.gd -- --out=<dir>
-#     --subject=<node path>[,<node path>...] [--anchor=<path>] [--anchor-offset=x,y,z]
-#     [--centre=x,y,z] [--mode=lit,subject-black,assembly-black] [--cameras=name,name]
-#     [--freeze=<path>=rx,ry,rz[:px,py,pz] (degrees, local; global position)] [--freeze=<path>@<clip>:<seconds>]
-#     [--hide=<path>]   (subtree omitted from the black modes, e.g. glass)
-#     [--clay=<node path>]   lit mode only: every mesh under that subtree takes one flat neutral shaded material (no bands,
-#       no vertex colour), so broad faces read without the fine surface detail; nothing else changes
-#     [--exposure=<float>]   lit mode only: use this tonemap exposure instead of the scene environment's (masks are always 1.0)
-#     [--class=<index>]   pilot to stage (0 Sable, 1 Rivet, 2 Kest)
-#     [--spawn=<kind>@x,y,z]   spawn one enemy through combat.spawn_enemy before the settle; it is
-#       named Spawn_<kind> under the game, so --subject and --anchor can address /root/Game/Spawn_<kind>
-#     [--glb=<res path>@x,y,z[@yaw degrees]]   instance a GLB at that point before the settle, painted from the park
-#       slot resources and the hero material slots and given the bake look as the game dresses its own models; it is named Glb_<file base name>
-#       under the game (/root/Game/Glb_warden_mantle_brood), for a model no stage-1 run shows (a later stage's mantle,
-#       a park landmark, an anchor kit)
-#     [--call=<node path>:<method>[:<physics frames>[:<JSON array of args>]]]   after the settle, call that method on the
-#       node (for example a hit flash), then run the given physics frames (default 0) before the freeze, so an event
-#       state is captured; e.g. --call=/root/Game/Spawn_plated_brute:on_struck:2:["x","y",{"full":true}]
-#     [--aabb=px,py,pz,sx,sy,sz --isolate=<mesh path> [--isolate-rest]]   keep only the triangles of that mesh inside the
-#       world box; --isolate-rest keeps the other triangles as a sibling mesh, so they draw as grey depth context
-#     --cameras also takes ortho-front, ortho-side, ortho-top: orthographic views of --aabb (never in the default set)
-#   Mode subject-context-depth: subject black, every other mesh flat background grey but still writing depth.
-#   Writes <out>/<mode>/<camera>.png (1920x1080), <camera>.thumb.png (480x270) and <out>/<mode>/frames.json.
-# Pair (headless ok):
-#   godot --headless --path sketches/core-loop --script res://tools/asset_capture.gd -- --pair
-#     --base=<dir> --head=<dir> --out=<dir>     one sheet per mode, exit 4 when a pair mismatches.
 const Cams := preload("res://tools/capture_cameras.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -160,8 +124,6 @@ static func _vec(text: String) -> Vector3:
 	return Vector3(float(p[0]), float(p[1]), float(p[2]))
 
 
-# ---------------------------------------------------------------- capture run
-
 func _run() -> void:
 	seed(SEED)
 	game = Game.new()
@@ -254,7 +216,6 @@ func _run() -> void:
 			rest.layers = isolated.layers
 			isolated.get_parent().add_child(rest)
 		isolated.mesh = filter_mesh(isolated.mesh, isolated.global_transform, aabb_arg)
-	# Plan every camera once, in the lit scene, so all modes share one set of values.
 	var plan := {}
 	var frozen_specs_seen := {}
 	for id in camera_ids:
@@ -283,8 +244,6 @@ func _run() -> void:
 		var dir := out.path_join(mode)
 		DirAccess.make_dir_recursive_absolute(dir)
 		for id in camera_ids:
-			# Stage first, then apply the mode: staging can show nodes (the moss bay), and a mode
-			# applied earlier would leave them lit.
 			var state := await prepare(root, root.get_viewport(), mode, subjects, hides, _stage.bind(id))
 			var records := apply_freeze(root, freeze_specs)
 			var clay_undo := apply_clay(clay_nodes) if mode == "lit" else []
@@ -327,10 +286,6 @@ func _run() -> void:
 	quit()
 
 
-# --glb: one model under the game at a world point, dressed like the game's own. A park recipe
-# (PARK_MODELS) draws as park_recipes.gd's place_parts draws it: shared slot resources and no
-# "<name>-col" mesh. Any other model gets hero_assets' slots (an unknown slot keeps its imported
-# material) and then the bake look.
 static func place_glb(parent: Node, spec: String) -> Node3D:
 	var parts := spec.split("@")
 	var packed := load(parts[0]) as PackedScene if ResourceLoader.exists(parts[0]) else null
@@ -349,8 +304,6 @@ static func place_glb(parent: Node, spec: String) -> Node3D:
 		BakeLook.dress(node)
 		return node
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
-		# Godot keeps the collision mesh as a drawn MeshInstance3D with a live StaticBody3D; placement
-		# builds its own collider and never draws it.
 		if String(view.name).ends_with(ParkRecipes.COL_SUFFIX):
 			view.get_parent().remove_child(view)
 			view.free()
@@ -365,8 +318,6 @@ static func place_glb(parent: Node, spec: String) -> Node3D:
 	return node
 
 
-# Pose the scene for one camera. Asset cameras and the look views that show the pod use the
-# pilot pose from look_capture.gd; launch and moss stage what look_capture stages.
 func _stage(id: String) -> void:
 	var terrain = game.ctx.terrain
 	var ball: Vector3 = terrain.drop_point(-65, -130, 1.2)
@@ -418,8 +369,6 @@ static func _xform(t: Transform3D) -> Array:
 	return _basis(t.basis) + _arr(t.origin)
 
 
-# ---------------------------------------------------------------- modes
-
 static func black_material() -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -440,7 +389,6 @@ static func context_material() -> StandardMaterial3D:
 	return m
 
 
-# The triangles of `mesh` (one surface) whose centroid lies inside the world box `box` after `xf`.
 static func filter_mesh(mesh: Mesh, xf: Transform3D, box: AABB, invert := false) -> ArrayMesh:
 	var arrays := mesh.surface_get_arrays(0)
 	var vertices: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
@@ -475,8 +423,6 @@ static func clay_material() -> StandardMaterial3D:
 	return m
 
 
-# Clay override for a lit frame: every mesh under the given subtrees takes one flat neutral shaded
-# material. Returns [node, previous override] rows for revert_clay.
 static func apply_clay(subtrees: Array) -> Array:
 	var undo := []
 	var material := clay_material()
@@ -521,11 +467,6 @@ static func _is_mesh(n: Node) -> bool:
 	return n is MeshInstance3D or n is MultiMeshInstance3D
 
 
-# Render `mode` into the scene under `scene_root`. subject-black: the subject's visible meshes
-# take one opaque unshaded black material, every other visual node (meshes, lights, particles,
-# labels, decals) is hidden. assembly-black: every visible mesh is black. Both put a flat grey
-# background with fog, sky, glow and the other screen effects off, and no anti-aliasing so the
-# frame holds two values. Returns the undo record for revert().
 static func apply_mode(scene_root: Node, viewport: Viewport, mode: String, subjects: Array, hides: Array) -> Dictionary:
 	var undo := {"nodes": [], "envs": [], "aa": [viewport.msaa_3d, viewport.screen_space_aa, viewport.use_taa], "black": [], "hidden": [], "context": []}
 	var material := black_material()
@@ -572,8 +513,6 @@ static func apply_mode(scene_root: Node, viewport: Viewport, mode: String, subje
 	return undo
 
 
-# Run the stage step (it may show or move nodes), then apply the mode to the scene as staged.
-# Returns the undo record, empty for lit.
 static func prepare(scene_root: Node, viewport: Viewport, mode: String, subjects: Array, hides: Array, stage: Callable) -> Dictionary:
 	await stage.call()
 	if mode == "lit":
@@ -581,12 +520,10 @@ static func prepare(scene_root: Node, viewport: Viewport, mode: String, subjects
 	return apply_mode(scene_root, viewport, mode, subjects, hides)
 
 
-# Lit exposure: the scene environment's unless --exposure gave a positive override.
 static func lit_exposure_for(scene_exposure: float, override: float) -> float:
 	return override if override > 0.0 else scene_exposure
 
 
-# <path>:<method>[:<frames>[:<JSON array>]]; the JSON may itself hold colons.
 static func parse_call(spec: String) -> Dictionary:
 	var parts := spec.split(":", true, 3)
 	var args = JSON.parse_string(parts[3]) if parts.size() > 3 else []
@@ -597,7 +534,6 @@ static func parse_call(spec: String) -> Dictionary:
 	}
 
 
-# Pause the tree so nothing animated moves between frames.
 static func freeze_tree(tree: SceneTree) -> void:
 	tree.paused = true
 
@@ -622,13 +558,6 @@ static func revert(undo: Dictionary) -> void:
 	vp.use_taa = aa[2]
 
 
-# ---------------------------------------------------------------- frozen state
-
-# Specs: "<node path>=rx,ry,rz[:px,py,pz]" sets the node's local rotation to those Euler degrees
-# (scale reset to 1) and, when given, its global position;
-# "<node path>@<clip>:<seconds>" seeks an AnimationPlayer to a clip time and pauses it.
-# Returns one record per spec: {spec, path, found, local, global}. A path that is absent is
-# recorded as found=false so a pair can report the asymmetry.
 static func apply_freeze(scene_root: Node, specs: Array) -> Dictionary:
 	var records := {}
 	for spec: String in specs:
@@ -665,7 +594,6 @@ static func apply_freeze(scene_root: Node, specs: Array) -> Dictionary:
 	return records
 
 
-# Current transform of every recorded frozen node: path -> [12 floats] (global), or [] if absent.
 static func snapshot(records: Dictionary) -> Dictionary:
 	var result := {}
 	var tree := Engine.get_main_loop() as SceneTree
@@ -693,8 +621,6 @@ static func subject_centre(subjects: Array) -> Vector3:
 	return box.get_center()
 
 
-# ---------------------------------------------------------------- pairing
-
 static func _close(a, b) -> bool:
 	if a is Array and b is Array:
 		if a.size() != b.size():
@@ -708,16 +634,12 @@ static func _close(a, b) -> bool:
 	return a == b
 
 
-# Errors that forbid pairing two frames.json documents of the same mode; empty means identical
-# cameras, exposure and frozen state. Notes (returned in "notes") do not refuse: a frozen node
-# that exists on one side only, such as a mechanism the base asset lacks.
 static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 	var errors: Array = []
 	var notes: Array = []
 	for key in ["mode", "class", "spawn", "call", "seed", "size", "freeze_specs", "hide", "anchor_offset", "aabb", "isolate"]:
 		if not _close(a.get(key), b.get(key)):
 			errors.append("%s differs: %s vs %s" % [key, a.get(key), b.get(key)])
-	# --glb placements: a document from before the option has no key and pairs with an empty list.
 	if not _close(a.get("glb", []), b.get("glb", [])):
 		errors.append("glb differs: %s vs %s" % [a.get("glb", []), b.get("glb", [])])
 	var fa := {}
@@ -755,9 +677,6 @@ static func compare(a: Dictionary, b: Dictionary) -> Dictionary:
 	return {"errors": errors, "notes": notes}
 
 
-# Renders one side-by-side sheet per mode (base left, head right, one row per camera, from the
-# thumbnails) into out_dir and pair.json. Returns 0, or 4 without writing a sheet when any mode's
-# frames.json pair mismatches.
 static func pair(base_dir: String, head_dir: String, out_dir: String) -> int:
 	var report := {"base": base_dir, "head": head_dir, "modes": {}}
 	var plans := []

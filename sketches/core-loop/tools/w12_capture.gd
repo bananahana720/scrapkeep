@@ -1,7 +1,4 @@
 extends SceneTree
-# W12 surface capture port of the wave 7 driver (w7_capture.gd): the six P-SURF subjects with
-# the same camera eyes and targets, so frames compare with w11/captures. Native window only.
-#   godot --path sketches/core-loop --script res://tools/w12_capture.gd -- --out=<dir> --scene=<wog|cache|bay|dig|hdr|ending>
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 var out := ""
@@ -140,8 +137,6 @@ func _run() -> void:
 	quit(failures)
 
 
-# Stand-in for VX-GROUND's routing: the batches that wrap the strata map in a plain 6 m triplanar
-# StandardMaterial take Palette.rock_material() instead, the path material_slots.gd publishes.
 func _route_mesas() -> void:
 	var Palette := preload("res://src/core/palette.gd")
 	var strata := Palette.look_texture("sandstone-strata")

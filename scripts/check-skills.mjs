@@ -13,7 +13,6 @@ const limits =
   "matching is a best-effort subset (directory and bare-name patterns, simple " +
   "'*' globs), not full gitignore semantics.";
 
-// DESIGN.md section 4b item 8, applied to the whole directory tree (N7).
 const PORTABLE_SKILL_DIR = "reactive-model-loop";
 const FORBIDDEN_PORTABLE_TOKENS = [
   "scrapkeep",
@@ -33,12 +32,8 @@ const FORBIDDEN_PORTABLE_TOKENS = [
   "npm run",
   "Andrew",
 ];
-// The origin map lives here, and SKL- ids are scoped here, when the project
-// skill exists on this checkout.
 const LAB_SKILL_DIR = "scrapkeep-lab";
 
-// N1: an allowlist (not a blocklist) of imperative openers a frontmatter
-// description may start with, "Use" always included.
 const FRONTMATTER_VERB_ALLOWLIST = new Set([
   "Use",
   "Plan",
@@ -115,8 +110,6 @@ async function exists(file) {
   }
 }
 
-// CRLF normalised at the point of read so every regex and line count downstream
-// (including frontmatter parsing, N1) sees only "\n".
 async function readNormalized(file) {
   return (await readFile(file, "utf8")).replace(/\r\n/g, "\n");
 }
@@ -135,10 +128,6 @@ class Findings {
   }
 }
 
-// Fenced lines are blanked to "" so a code sample is never scanned for a
-// repo-shaped path, matching scripts/check-docs.mjs's convention. Backticks
-// are kept (unlike check-docs' visibleLines) because this check tokenizes on
-// backtick spans itself.
 function fenceBlankedLines(content) {
   let fenced = false;
   return content.split("\n").map((line) => {
@@ -160,8 +149,6 @@ function skillDirOf(relativeFile) {
   const match = /^\.agents\/skills\/([^/]+)\//.exec(relativeFile);
   return match ? ".agents/skills/" + match[1] : null;
 }
-
-// --- Skill discovery -------------------------------------------------------
 
 async function listSkillDirs(root) {
   const skillsRoot = path.join(root, ".agents/skills");
@@ -199,7 +186,6 @@ async function loadSkillFiles(root, name) {
   return files;
 }
 
-// Every file under a directory, recursively, root-relative posix paths.
 async function walkFiles(root, dir) {
   const results = [];
   const absolute = path.join(root, dir);
@@ -212,11 +198,6 @@ async function walkFiles(root, dir) {
   return results;
 }
 
-// --- Check 1: frontmatter + Check 9: size -----------------------------------
-
-// N1: single-quoted, double-quoted, bare, folded (>) and literal (|) YAML
-// scalars. Good enough for a two-field (name, description) frontmatter block,
-// not a YAML parser.
 function parseFrontmatterFields(block) {
   const lines = block.split("\n");
   const fields = {};
@@ -326,8 +307,6 @@ function checkFrontmatterAndSize(findings, skillName, file) {
     );
 }
 
-// --- Check 2: .claude/skills link -------------------------------------------
-
 async function checkLink(findings, root, skillName) {
   const linkFile = ".claude/skills/" + skillName;
   const linkPath = path.join(root, linkFile);
@@ -366,22 +345,16 @@ async function checkLink(findings, root, skillName) {
     findings.fail("link", linkFile, 0, "resolves to " + resolved + ", expected " + expected);
 }
 
-// --- Check 3: paths ----------------------------------------------------------
-
 const PATH_SUFFIX = /\.(mjs|gd|md|json)$/;
 const PATH_PREFIX = /^[a-z0-9_.-]+\//;
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const LINE_SUFFIX = /:\d+(-\d+)?$/;
-const ANCHOR_SUFFIX = /#[^#]*$/; // N8
+const ANCHOR_SUFFIX = /#[^#]*$/;
 
 function looksLikePath(token) {
   return PATH_PREFIX.test(token) || PATH_SUFFIX.test(token);
 }
 
-// N3: a best-effort subset of gitignore matching: directory patterns
-// ("dir/"), path patterns ("a/b"), bare names at any depth ("node_modules"),
-// and a single-level '*' glob within a pattern. Negation ("!...") is not
-// re-included; this only ever turns a failure into a softer warning.
 function parseGitignore(content) {
   return content
     .split("\n")
@@ -417,13 +390,6 @@ function isGitignored(patterns, candidate) {
   return false;
 }
 
-// B4: every whitespace-separated word in a backtick span is checked on its
-// own, so a real path inside a longer command ("node scripts/x.mjs") is
-// caught; only a word carrying "<", "*" or a URL scheme is skipped outright.
-// B5/N8: a path that fails root-relative resolution is retried relative to
-// the citing skill's own directory (covers a bare "SKILL.md" self-reference,
-// or "references/x.md" cited from the skill's own SKILL.md), and an
-// "#anchor" suffix is stripped alongside ":line".
 async function checkPaths(findings, root, file, gitignorePatterns) {
   const lines = fenceBlankedLines(file.content);
   const skillDir = skillDirOf(file.relative);
@@ -451,8 +417,6 @@ async function checkPaths(findings, root, file, gitignorePatterns) {
           );
           continue;
         }
-        // Phase 2 cleanup: scrapkeep-verify-formal is frozen during Phase 1 and
-        // still carries the retired docs/project/README.md boilerplate line.
         if (
           file.relative === ".agents/skills/scrapkeep-verify-formal/SKILL.md" &&
           stripped === "docs/project/README.md"
@@ -470,8 +434,6 @@ async function checkPaths(findings, root, file, gitignorePatterns) {
     }
   }
 }
-
-// --- Check 4: npm scripts -----------------------------------------------------
 
 async function loadPackageScripts(root) {
   const file = path.join(root, "package.json");
@@ -499,8 +461,6 @@ function checkNpmScripts(findings, file, scripts) {
   }
 }
 
-// --- Check 5: CLI verbs, read statically (B2, never imported: N4) -----------
-
 function extractQuotedArray(source, varName) {
   const declaration = new RegExp(
     "(?:const|let|var)\\s+" + varName + "\\s*=\\s*\\[([\\s\\S]*?)\\]",
@@ -527,9 +487,6 @@ function extractObjectKeys(source, varName) {
   return [...keys];
 }
 
-// The `verb === "lab"` style literal comparisons inside labRoute, found
-// generically rather than by hard-coding "lab", so a future case is picked
-// up without editing this script.
 function extractLiteralVerbCases(source) {
   return [...source.matchAll(/\bverb\s*===\s*["'`]([^"'`]+)["'`]/g)].map((m) => m[1]);
 }
@@ -598,13 +555,8 @@ async function checkVerbsStatic(findings, root, allFiles) {
   }
 }
 
-// --- Check 6: lesson ledgers ---------------------------------------------------
-
 const LESSON_STATUSES = new Set(["established", "provisional", "retracted"]);
 
-// B3: a loose match on "- **id**" that fails the strict header shape is a
-// named "malformed lesson header" finding rather than silently swallowed
-// into the previous lesson's body.
 function parseLessons(content) {
   const lines = content.split("\n");
   const start = lines.findIndex((line) => line.trim() === "## Lessons");
@@ -658,9 +610,6 @@ function parseOriginMapIds(content) {
   return ids;
 }
 
-// B1: the newest Changelog row's date must not be earlier than any retracted
-// lesson's Overturned-by date (parsed as the first \d{4}-\d{2}-\d{2} in that
-// field). Returns null when the section is missing entirely.
 function parseChangelogDates(content) {
   const lines = content.split("\n");
   const start = lines.findIndex((line) => line.trim() === "## Changelog");
@@ -705,7 +654,7 @@ function checkChangelog(findings, file, lessons) {
 }
 
 function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
-  const global = new Map(); // id -> {file, line}
+  const global = new Map();
   const allLessons = [];
   for (const file of ledgerFiles) {
     const { lessons, sectionFound, malformed } = parseLessons(file.content);
@@ -736,7 +685,6 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
         );
       else global.set(lesson.id, { file: file.relative, line: lesson.line });
 
-      // B3: RML- only inside the portable skill, SKL- only inside the lab skill.
       if (
         lesson.id.startsWith("RML-") &&
         !file.relative.startsWith(".agents/skills/" + PORTABLE_SKILL_DIR + "/")
@@ -780,8 +728,6 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
     }
   }
 
-  // Every RML id must appear in the scrapkeep-lab origin map, when that skill
-  // exists on this checkout (DESIGN.md 4b item 6/7 + the card's override).
   if (skillDirs.includes(LAB_SKILL_DIR)) {
     const originMapFile = ".agents/skills/" + LAB_SKILL_DIR + "/references/lessons.md";
     const originMapFull = ledgerFiles.find((file) => file.relative === originMapFile);
@@ -810,7 +756,6 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
   return global;
 }
 
-// B3: recognises multi-id citations like "(SKL-15, SKL-32)".
 function checkLessonCitations(findings, file, lessonIds) {
   for (const match of file.content.matchAll(
     /\(((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR)-\d+(?:,\s*(?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR)-\d+)*)\)/g,
@@ -826,8 +771,6 @@ function checkLessonCitations(findings, file, lessonIds) {
         );
   }
 }
-
-// --- Check 8: portability (N7: every file under the portable skill) --------
 
 function checkPortability(findings, file) {
   for (const token of FORBIDDEN_PORTABLE_TOKENS) {
@@ -854,13 +797,11 @@ async function checkPortabilityFull(findings, root, skillDirs) {
     try {
       content = await readNormalized(path.join(root, relative));
     } catch {
-      continue; // unreadable/binary; existence-only scope, skip
+      continue;
     }
     checkPortability(findings, { relative, content });
   }
 }
-
-// --- Main ------------------------------------------------------------------
 
 async function main() {
   let options;

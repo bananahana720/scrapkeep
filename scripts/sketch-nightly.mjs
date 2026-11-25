@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-// ALPHA-PLAN Testing: bounded nightly evidence, never a human play verdict.
 import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -23,7 +22,6 @@ import {
   summarizeRun,
 } from "./checkpoint.mjs";
 
-// Plan thresholds. Perf measurements are recorded, never gated without a baseline.
 export const MAX_WALL_MS = 60 * 60_000;
 export const MAX_FLAKE_RATE = 0.01;
 export const BOT_SEEDS = BANDS.seeds;
@@ -33,7 +31,7 @@ export const FUZZ_SEEDS = 200;
 export const FUZZ_SECONDS = 90;
 const TOOL_TIMEOUT_MS = 15 * 60_000;
 export const EXPORT_TIMEOUT_MS = 20 * 60_000;
-const FINISH_RESERVE_MS = 45_000; // Final read-only git checks and receipt writing.
+const FINISH_RESERVE_MS = 45_000;
 const WIDTH = BANDS.parallel;
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches", "core-loop");
@@ -47,11 +45,7 @@ export function parseArgs(argv) {
     else if (argv[i] === "--export") options.export = true;
     else if (argv[i] === "--runs") {
       const value = argv[++i];
-      if (
-        !/^\d+$/.test(value ?? "") ||
-        !Number.isSafeInteger(Number(value)) ||
-        Number(value) < 1
-      ) {
+      if (!/^\d+$/.test(value ?? "") || !Number.isSafeInteger(Number(value)) || Number(value) < 1) {
         throw new Error("--runs needs a positive integer");
       }
       options.runs = Number(value);
@@ -69,28 +63,19 @@ export function flakePasses(failures, runs) {
   return rate !== null && rate <= MAX_FLAKE_RATE;
 }
 
-// T8's base has no testEntry export. Prefer it when integrated; otherwise use the
-// existing smoke discovery's res:// entry directly, without changing the shared runner.
 export function testEntry(script) {
-  return typeof smoke.testEntry === "function"
-    ? smoke.testEntry(script)
-    : script;
+  return typeof smoke.testEntry === "function" ? smoke.testEntry(script) : script;
 }
 
 export function soloScripts(scripts, baseline, directory = sketch) {
   const prefix = "sketches/core-loop/";
-  const allowed = new Set(
-    (baseline.L1 ?? []).map((file) => `res://${file.replace(prefix, "")}`),
-  );
-  // child_runs is RefCounted, not a launchable SceneTree: its two owning tests run solo.
+  const allowed = new Set((baseline.L1 ?? []).map((file) => `res://${file.replace(prefix, "")}`));
   if (allowed.has("res://tests/trees/child_runs.gd")) {
     allowed.add("res://tests/tree_bot_test.gd");
     allowed.add("res://tests/tree_play_test.gd");
   }
   return new Set(
-    scripts.filter(
-      (script) => allowed.has(script) || smoke.isSoloScript(directory, script),
-    ),
+    scripts.filter((script) => allowed.has(script) || smoke.isSoloScript(directory, script)),
   );
 }
 
@@ -100,10 +85,7 @@ export function buildPlan(
     directory = sketch,
     scripts = smoke.testScripts(directory),
     baseline = JSON.parse(
-      readFileSync(
-        path.join(root, "scripts/sketch-lint.baseline.json"),
-        "utf8",
-      ),
+      readFileSync(path.join(root, "scripts/sketch-lint.baseline.json"), "utf8"),
     ),
     outDir,
     imported = existsSync(path.join(directory, ".godot/imported")),
@@ -123,8 +105,7 @@ export function buildPlan(
     });
   };
   const base = ["--headless", "--path", directory];
-  if (!imported)
-    add("import", "import", [...base, "--import"], { timeout_ms: 600_000 });
+  if (!imported) add("import", "import", [...base, "--import"], { timeout_ms: 600_000 });
   if (options.export)
     add("export win proof", "export", [EXPORT_SCRIPT, "--win-proof"], {
       command: process.execPath,
@@ -204,19 +185,14 @@ export function buildPlan(
       ...scripts.filter((s) => !solo.has(s)),
       ...scripts.filter((s) => solo.has(s)),
     ]) {
-      add(
-        `${script} run ${run}`,
-        "test",
-        [...base, "--script", testEntry(script)],
-        {
-          script,
-          run,
-          solo: solo.has(script),
-          timeout_ms: smoke.testTimeoutMs(
-            readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"),
-          ),
-        },
-      );
+      add(`${script} run ${run}`, "test", [...base, "--script", testEntry(script)], {
+        script,
+        run,
+        solo: solo.has(script),
+        timeout_ms: smoke.testTimeoutMs(
+          readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"),
+        ),
+      });
     }
   }
   return plan;
@@ -237,11 +213,9 @@ function ndjson(file) {
 
 export function artifacts(step, output = "") {
   if (step.kind === "export") {
-    const field = (name) =>
-      output.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1] ?? null;
+    const field = (name) => output.match(new RegExp(`^${name}: (.+)$`, "m"))?.[1] ?? null;
     const winProof = field("win proof");
-    if (!winProof?.startsWith("won "))
-      throw new Error("export ran without a won win proof line");
+    if (!winProof?.startsWith("won ")) throw new Error("export ran without a won win proof line");
     return {
       export: {
         version: field("version"),
@@ -254,43 +228,27 @@ export function artifacts(step, output = "") {
   if (step.kind === "bot") {
     const bots = ndjson(path.join(step.out, "bots.ndjson"));
     const bot = bots[0];
-    if (
-      bots.length !== 1 ||
-      bot.policy !== step.policy ||
-      bot.seed !== step.seed
-    )
+    if (bots.length !== 1 || bot.policy !== step.policy || bot.seed !== step.seed)
       throw new Error("missing or mismatched bot record");
     const line = ndjson(path.join(step.out, "runs.ndjson"))
       .reverse()
       .find((r) => r.run_id === bot.run_id);
-    if (!line || line.table !== TABLE)
-      throw new Error(`missing ${TABLE} run-log record`);
+    if (!line || line.table !== TABLE) throw new Error(`missing ${TABLE} run-log record`);
     return { bot: summarizeRun(bot, line) };
   }
   if (step.kind === "fuzz") {
     const runs = ndjson(path.join(step.out, "fuzz.ndjson"));
     const seeds = new Set(runs.map((r) => r.seed));
-    const hard = new Set([
-      "non_finite_ball",
-      "non_finite_enemy",
-      "bolts",
-      "guard",
-      "reduction",
-    ]);
+    const hard = new Set(["non_finite_ball", "non_finite_enemy", "bolts", "guard", "reduction"]);
     const anomalies = runs.flatMap((r) => r.anomalies);
     const hardCount = anomalies.filter(
-      (a) =>
-        hard.has(a.kind) ||
-        a.kind.startsWith("charges_") ||
-        a.kind.startsWith("floor_"),
+      (a) => hard.has(a.kind) || a.kind.startsWith("charges_") || a.kind.startsWith("floor_"),
     ).length;
     const covered = new Set(runs.flatMap((r) => [...r.natural, ...r.injected]));
     const complete =
       runs.length === FUZZ_SEEDS &&
       seeds.size === FUZZ_SEEDS &&
-      [...seeds].every(
-        (s) => Number.isInteger(s) && s >= 1 && s <= FUZZ_SEEDS,
-      ) &&
+      [...seeds].every((s) => Number.isInteger(s) && s >= 1 && s <= FUZZ_SEEDS) &&
       runs.every((r) => r.ticks >= FUZZ_SECONDS * 90 || Boolean(r.ended));
     if (!complete || covered.size !== 12 || hardCount > 0)
       throw new Error(
@@ -326,8 +284,7 @@ export function runProcess(step, timeoutMs) {
     const state = path.join(step.state_dir, "state");
     const env = { ...process.env };
     if (step.kind === "export") {
-      const realData =
-        process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
+      const realData = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
       const godotData = path.join(state, "data", "godot");
       mkdirSync(godotData, { recursive: true });
       const templates = path.join(godotData, "export_templates");
@@ -336,7 +293,6 @@ export function runProcess(step, timeoutMs) {
     }
     for (const kind of ["DATA", "CONFIG", "CACHE"])
       env[`XDG_${kind}_HOME`] = path.join(state, kind.toLowerCase());
-    // A separate process group lets a timeout also stop Godot's child test processes.
     const child = spawn(launch.command, launch.args, {
       cwd: root,
       env,
@@ -370,22 +326,10 @@ export function runProcess(step, timeoutMs) {
   });
 }
 
-export function buildReceipt({
-  options,
-  plan,
-  results,
-  git,
-  startedAt,
-  wallMs,
-  lockWaitMs = 0,
-}) {
-  const scripts = [
-    ...new Set(plan.filter((s) => s.kind === "test").map((s) => s.script)),
-  ];
+export function buildReceipt({ options, plan, results, git, startedAt, wallMs, lockWaitMs = 0 }) {
+  const scripts = [...new Set(plan.filter((s) => s.kind === "test").map((s) => s.script))];
   const flakes = scripts.map((script) => {
-    const runs = results.filter(
-      (r) => r.script === script && r.exit !== undefined,
-    );
+    const runs = results.filter((r) => r.script === script && r.exit !== undefined);
     const failures = runs.filter((r) => !r.ok).length;
     return {
       script,
@@ -397,11 +341,7 @@ export function buildReceipt({
     };
   });
   const grouped = { completionist: [], skipper: [], camper: [] };
-  for (const row of results)
-    if (row.bot && row.ok) grouped[row.bot.policy].push(row.bot);
-  // 2026-10-04: nightly has no stored pre-chain smash-damage baseline (that comes from
-  // checkpoint --before --baseline). evaluateBots fails that row without one, which
-  // failed every nightly run; report it as ungated "no baseline" like perf instead.
+  for (const row of results) if (row.bot && row.ok) grouped[row.bot.policy].push(row.bot);
   const bands = evaluateBots(grouped).map((row) =>
     row.band === "skipper smash damage per fight"
       ? {
@@ -412,9 +352,7 @@ export function buildReceipt({
         }
       : row,
   );
-  const fullMatrix = Object.values(grouped).every(
-    (runs) => runs.length === BOT_SEEDS,
-  );
+  const fullMatrix = Object.values(grouped).every((runs) => runs.length === BOT_SEEDS);
   const perf = results.filter((r) => r.ok && r.perf).map((r) => r.perf);
   const perfMedians = Object.fromEntries(
     ["process_ms", "frame_ms", "physics_ms", "gpu_ms"].map((key) => [
@@ -422,9 +360,7 @@ export function buildReceipt({
       median(perf.map((b) => b.stats?.[key]?.p50)),
     ]),
   );
-  const failed = results.filter(
-    (r) => r.kind !== "test" && r.kind !== "skip" && !r.ok,
-  );
+  const failed = results.filter((r) => r.kind !== "test" && r.kind !== "skip" && !r.ok);
   const counts = results.reduce(
     (sum, r) => ({
       passes: sum.passes + (r.passes ?? 0),
@@ -436,7 +372,6 @@ export function buildReceipt({
     git.clean === true &&
     Boolean(git.tree) &&
     fullMatrix &&
-    // 2026-10-04: watch rows keep their verdict but do not block, as in checkpoint.
     checkpointPassed(bands) &&
     scripts.length > 0 &&
     flakes.every((r) => r.ok) &&
@@ -533,10 +468,7 @@ export async function runNightly(
     let result;
     let data = {};
     try {
-      result = await runner(
-        { ...step, state_dir: dir },
-        Math.min(step.timeout_ms, remaining),
-      );
+      result = await runner({ ...step, state_dir: dir }, Math.min(step.timeout_ms, remaining));
       const verdict = smoke.judge({
         test: step.kind === "test",
         status: result.code,
@@ -544,13 +476,10 @@ export async function runNightly(
       });
       data = {
         ok: verdict.ok && !result.timed_out,
-        reason: result.timed_out
-          ? "process time limit exceeded"
-          : verdict.reason,
+        reason: result.timed_out ? "process time limit exceeded" : verdict.reason,
         skips: verdict.skips,
       };
-      if (data.ok)
-        Object.assign(data, readArtifacts(step, result.output ?? ""));
+      if (data.ok) Object.assign(data, readArtifacts(step, result.output ?? ""));
     } catch (error) {
       data = { ok: false, reason: error.message };
       result ??= { code: -1, output: error.message };
@@ -578,8 +507,6 @@ export async function runNightly(
       `${data.ok ? "PASS" : "FAIL"} ${step.id} exit=${result.code} ${(results[index].ms / 1000).toFixed(1)}s${data.reason ? `: ${data.reason}` : ""}`,
     );
   }
-  // Batch only bots or non-solo tests of the same repetition. Tools, imports and
-  // wall-clock tests run alone; each repetition completes before the next begins.
   for (let first = 0; first < plan.length;) {
     const step = plan[first];
     let end = first + 1;
@@ -630,10 +557,7 @@ function gitState() {
 }
 
 async function acquireMachine(deadline) {
-  const lock = path.join(
-    process.env.SCRAPKEEP_LOCK_DIR || "/tmp",
-    "scrapkeep-sketch-smoke.lock",
-  );
+  const lock = path.join(process.env.SCRAPKEEP_LOCK_DIR || "/tmp", "scrapkeep-sketch-smoke.lock");
   while (Date.now() < deadline) {
     try {
       mkdirSync(lock);
@@ -653,18 +577,13 @@ async function acquireMachine(deadline) {
       );
     }
   }
-  throw new Error(
-    "nightly wall budget exhausted waiting for the smoke machine lock",
-  );
+  throw new Error("nightly wall budget exhausted waiting for the smoke machine lock");
 }
 
 export function writeReceipt(receipt) {
   const dir = path.join(root, "artifacts/local/receipts");
   mkdirSync(dir, { recursive: true });
-  const file = path.join(
-    dir,
-    smoke.receiptFileName("nightly", receipt.tree, receipt.started_at),
-  );
+  const file = path.join(dir, smoke.receiptFileName("nightly", receipt.tree, receipt.started_at));
   writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
   return file;
 }
@@ -673,11 +592,7 @@ async function main() {
   const options = parseArgs(process.argv.slice(2));
   const startedAt = new Date().toISOString();
   const started = Date.now();
-  const outDir = path.join(
-    root,
-    "artifacts/local/nightly",
-    startedAt.replace(/[:.]/g, "-"),
-  );
+  const outDir = path.join(root, "artifacts/local/nightly", startedAt.replace(/[:.]/g, "-"));
   const plan = buildPlan(options, { outDir });
   if (options.dryRun) {
     await runNightly(options, { plan });

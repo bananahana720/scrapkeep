@@ -1,26 +1,3 @@
-// One shard of the promotion gate, resumable.
-//
-//   node scripts/gate/shard.mjs list                 the numbered non-bot list
-//   node scripts/gate/shard.mjs list --bots          the numbered bot list
-//   node scripts/gate/shard.mjs run --tests 361-720 --out <folder>
-//   node scripts/gate/shard.mjs run --bots 16-20 --out <folder>
-//   node scripts/gate/shard.mjs run --bots a_test,b_test --out <folder>   named tests (the wave gate's scoped shard)
-//   node scripts/gate/shard.mjs retime --tests a_test,b_test --out <folder> [--runs 3] [--bots] [--max-load <n>]
-//   add --weekly to list or run the weekly names instead (WEEKLY.tsv, ruling ca)
-//
-// Exit codes: 0 PASS, 1 RED, 2 INCONCLUSIVE (time-outs under load) or a refusal. `retime` waits for a quiet
-// machine, then runs the named tests alone, and says whether a time-out was the machine's.
-//
-// `run` imports the sketch twice (a third time when the second was not clean), runs its window of the sorted list (non-bot
-// tests in chunks, bot tests one at a time or, with --lanes n, n at a time with the BOT_ALONE tests alone
-// afterwards), reruns every failure alone (once when a check fails alone and the test has no flake row; not at all
-// when the test has a red row and its first run failed a check without timing out: that run's failing checks are
-// read against the row, and a rerun would only cost time), sorts
-// the failures with the known-failing ledger and writes <folder>/receipt.md
-// and <folder>/shard.json. Every step is recorded in <folder>/state.json, so
-// the same command picks up where a killed run stopped. It never edits the
-// checkout, commits or pushes. project-guide/handoff/GATE.md is the recipe.
-
 import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -74,15 +51,13 @@ const CLOUD_GODOT = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
 const IMPORT_TIMEOUT_MS = 900_000;
 const DEFAULT_CHUNK = 90;
 const DEFAULT_SOLO_RUNS = 2;
-// Bot tests that never share the PC with another bot lane: the wall clock decides their result, or they
-// fill the machine alone. Every other bot test is driven by ticks at a fixed frame rate.
 export const BOT_ALONE = new Set([
-  "restart_latency_test", // pass or fail is a wall-time median
-  "world1_run_test", // launches the real game, which runs on the wall clock
-  "run_tier_test", // fresh-process children with a 70 s wall cap
-  "posture_bands_swarm_test", // starts one child per thread pair (48 at once on the PC)
-  "bot_skill_bar_test", // 16 children at once
-  "alpha_posture_bands_w23_test", // 12 children at once
+  "restart_latency_test",
+  "world1_run_test",
+  "run_tier_test",
+  "posture_bands_swarm_test",
+  "bot_skill_bar_test",
+  "alpha_posture_bands_w23_test",
 ]);
 const NEAR_LIMIT = 0.85;
 const DEFAULT_RETIME_RUNS = 3;
@@ -90,12 +65,6 @@ export const QUIET_FACTOR = 0.25;
 export const QUIET_POLL_MS = 20_000;
 export const QUIET_POLLS = 90;
 
-// The two gate lists: every top-level test, sorted as `LC_ALL=C sort` sorts
-// the file names, split by the "# smoke: bots" marker. Names carry no .gd.
-// `tests` and `bots` are what a promotion runs; `weekly` holds the names
-// WEEKLY.tsv takes out of them. A list file that does not parse, or names a
-// test that does not exist, is an error: it never skips nothing, or everything,
-// silently.
 export function gateLists(sketchDir, weeklyFile = path.join(root, WEEKLY_FILE)) {
   const weeklyNames = readWeeklyNames(root, weeklyFile);
   const lists = { tests: [], bots: [], weekly: { tests: [], bots: [] } };
@@ -114,7 +83,6 @@ export function numbered(names) {
   return names.map((name, index) => `${String(index + 1).padStart(6)}\t${name}.gd`).join("\n");
 }
 
-// "361-720" is tests 361 to 720 of the list, counted from 1, both ends included.
 export function parseWindow(text, total) {
   const match = /^(\d+)-(\d+)$/.exec(text ?? "");
   if (!match) throw new Error(`a window is written FIRST-LAST, such as 361-720; got "${text}"`);
@@ -125,23 +93,18 @@ export function parseWindow(text, total) {
   return { first, last };
 }
 
-// A test's name as the lists hold it: no folder, no .gd.
 export const testName = (text) =>
   text
     .trim()
     .replace(/^tests\//, "")
     .replace(/\.gd$/, "");
 
-// The bot or non-bot list a named window draws on: the promotion list and, unless the run is on the weekly list itself,
-// the weekly names too, because the wave gate's scoped shard runs what the diff reaches.
 export function namedPool(lists, { bots, weekly }) {
   const from = weekly ? lists.weekly : lists;
   const list = bots ? from.bots : from.tests;
   return weekly ? list : [...list, ...(bots ? lists.weekly.bots : lists.weekly.tests)].sort();
 }
 
-// The tests a run window names: "361-720" (see parseWindow), or test names joined by commas, each on `list`, in the
-// list's order (the wave gate's scoped shard, ruling cy). `label` says which in the receipt.
 export function windowNames(text, list) {
   if (/^\d+-\d+$/.test(text ?? "")) {
     const { first, last } = parseWindow(text, list.length);
@@ -177,9 +140,6 @@ function readShardTimings(file = TIMINGS_FILE) {
   }
 }
 
-// Order non-bot tests inside a shard window slowest-first (LPT) across chunks of at most `size`,
-// so straggler tests start at the beginning of each chunk and chunks finish together without
-// changing the window's test set.
 export function orderChunksByDuration(names, size, timings = {}) {
   if (names.length === 0) return [];
   const durationOf = (name) => {
@@ -204,7 +164,6 @@ export function orderChunksByDuration(names, size, timings = {}) {
   return bins.filter((bin) => bin.tests.length > 0).map((bin) => bin.tests);
 }
 
-// The runner prints one "PASS|FAIL <sketch> res://tests/<name>.gd exit=<n> <s>s" line per test.
 export function parseSmokeLog(text) {
   const results = [];
   for (const match of text.matchAll(
@@ -220,7 +179,6 @@ export function parseSmokeLog(text) {
   return results;
 }
 
-// Lines the gate greps every log for. An exit-leak ERROR fails a run even when every check passed.
 export function errorCounts(text) {
   const count = (pattern) => (text.match(pattern) ?? []).length;
   return {
@@ -232,21 +190,8 @@ export function errorCounts(text) {
   };
 }
 
-// A headless Godot test wants about two threads, so a run started above half the thread count was not alone.
 export const SUSPECT_LOAD_FACTOR = 0.5;
 
-// What one failed test means for the promotion.
-//   carried       it has a ledger row (a known flake, or a red whose row names everything its failed runs did)
-//   mismatch      its row says flake and it failed every solo run: the run contradicts the
-//                 ledger, so it blocks until someone reads it and re-lists or fixes it
-//   new-flake     no row, and every solo run passed: it does not block yet, and gets no row (ruling dx)
-//   new-red       no row, and it failed alone: it blocks (ruling ai)
-//   suspect-load  would be new-red or mismatch, but every failed solo run timed out with no failing check
-//                 line and one started on an overloaded machine: it blocks, and is neither red nor pass
-// `evidence` is { threads, runs: [{ timedOut, failLines, load }] }, one run per entry of soloResults.
-// `failed` is what every failed run of the test did (`whatFailed`: the first run and each solo run). A red row
-// carries only what it names (ruling dx): any other failing check, and a kill or an error line the row does not
-// name, makes the failure a new red, also when the test passed alone afterwards.
 export function classifyFailure(test, soloResults, ledgerRows, evidence = null, failed = null) {
   const carried = callFailure(test, soloResults, ledgerRows);
   const unnamed =
@@ -261,8 +206,6 @@ export function classifyFailure(test, soloResults, ledgerRows, evidence = null, 
           note: `fails a check its row does not name: ${unnamed.join("; ")}. The row covers only ${carried.row.checks.join("; ")} (ruling dx): fix it, or have the coordinator add the check to the row with its cause`,
         }
       : carried;
-  // A check or an error line the row does not name is a new red whatever the load was: a retime reads neither the
-  // ledger nor the first run, so it must never be what settles one. Only an unnamed kill can be the load's doing.
   const loadCanExplain = unnamed.every((word) => word === TIME_OUT);
   if ((call.call === "new-red" || call.call === "mismatch") && evidence && loadCanExplain) {
     const failed = evidence.runs.filter((_, index) => !soloResults[index]);
@@ -325,15 +268,10 @@ function callFailure(test, soloResults, ledgerRows) {
   };
 }
 
-// The labels of a log's failing checks, once each in the order they first fail: the text between the square
-// brackets of a "[label] ... -> FAIL" line (the runner repeats a failing line with a ">>" mark). A failing line
-// with no label in brackets, or a line that starts with FAIL, is returned whole under "unlabelled failing line",
-// so no ledger row covers it by accident.
 export function failedChecks(text) {
   const labels = [];
   for (const raw of text.split("\n")) {
     const line = raw.replace(/^\s*(?:>> )?/, "").trimEnd();
-    // The last arrow on a line is its verdict, so a detail that quotes the other word does not flip it.
     if (
       (!/-> FAIL\b/.test(line) && !/^FAIL\b/.test(line)) ||
       line.lastIndexOf("-> PASS") > line.lastIndexOf("-> FAIL")
@@ -345,12 +283,6 @@ export function failedChecks(text) {
   return labels;
 }
 
-// What the failed runs of one test did, read together: `runs` is [{ ok, text, timedOut }] for the first run and
-// each solo run, in order. Every failed run counts, so a check that failed once is not dropped because a later
-// run passed or failed another way (ruling dx: a retry never decides a verdict). A passing run is not read. An
-// error line is one at the start of a line, as the runner counts it (sketch-smoke.mjs); a passing check line
-// that carries the words "-> FAIL" is not a failing check.
-// On macOS the engine's shutdown lines are not error lines, as in the runner (withoutTeardownNoise).
 export function whatFailed(runs, platform = process.platform) {
   const failed = runs.filter((run) => !run.ok);
   const labels = [];
@@ -369,12 +301,6 @@ export function whatFailed(runs, platform = process.platform) {
   };
 }
 
-// The failed tests that are rerun alone. A test with a red row whose first run failed a check is not: the first
-// run's failing checks are read against the row (whatFailed), which settles the call without a rerun, and the
-// receipt prints those lines beside the row's cause. A red-row test that timed out, was killed or printed no
-// failing check is still rerun, so the receipt always shows which check failed.
-// `firstRun(test)` is { timedOut, failLines } for the first run, or null when it left no verdict line.
-// (Trial gate on 375fe11a, 15 Nov 2026: two such reruns took 832 s of the bot shard's 6922 s.)
 export function soloTests(failed, ledgerRows, firstRun) {
   const red = new Set(ledgerRows.filter((row) => row.kind === "red").map((row) => row.test));
   return failed.filter((test) => {
@@ -418,7 +344,6 @@ export function shardVerdict(failures) {
   return { ok: true, line: `PASS, no new red${parts.length ? ` (${parts.join(", ")})` : ""}` };
 }
 
-// Tests that finished at or past 85% of their time limit: the next slow box kills them.
 export function nearLimit(results, limitMsOf, threshold = NEAR_LIMIT) {
   return results
     .map((result) => ({ ...result, limit: limitMsOf(result.test) / 1000 }))
@@ -575,7 +500,6 @@ function boxLine() {
   return `${cpus.length} vCPU ${cpus[0]?.model ?? "unknown CPU"}, ${Math.round(os.totalmem() / 2 ** 30)} GB`;
 }
 
-// runToFile reports a signal by name in `exit`; importTry wants the code and the signal apart.
 export function importOutcome(exit, output) {
   return importTry({
     exit: typeof exit === "number" ? exit : null,
@@ -600,7 +524,6 @@ function runToFile(command, args, file, env, timeoutMs) {
   });
 }
 
-// The solo pool lives in the lock folder, so a private folder makes "one slot" mean this shard's own slot.
 export function soloEnvironment(env, out, logDir) {
   const locks = path.join(out, "solo-locks");
   mkdirSync(locks, { recursive: true });
@@ -621,7 +544,6 @@ const smokeArgs = (bots, tests, { noBatch = false } = {}) => [
   ...tests.flatMap((test) => ["--test", test]),
 ];
 
-// What a solo run did, read from the runner's line and the test's own log.
 const failLineCount = (testLog) =>
   existsSync(testLog) ? (readFileSync(testLog, "utf8").match(/-> FAIL/g) ?? []).length : 0;
 function soloOutcome(out, name, logDir, test) {
@@ -638,9 +560,6 @@ function soloOutcome(out, name, logDir, test) {
   };
 }
 
-// The lists are built from the files on disk, so an untracked test or list file changes
-// every window's numbering without changing the head. Checked before each step and once
-// more after the last one.
 function checkoutGuard(head) {
   const problem = () => {
     if (git("rev-parse", "HEAD") !== head) return "the checkout moved during the run";
@@ -712,8 +631,6 @@ export function renderRetimeReceipt({
   return lines.join("\n");
 }
 
-// Reruns the named tests alone, one at a time, each run starting only when the machine is quiet.
-// `runSolo(test, run)` returns { ok, exit, seconds, timedOut, failLines }; the caller owns the engine.
 export async function retime({
   tests,
   known,
@@ -888,7 +805,6 @@ async function run(options) {
   const head = git("rev-parse", "HEAD");
   const refuse = checkoutGuard(head);
   refuse();
-  // Read before the first step, so the calls below use the ledger of the gated head.
   const ledger = parseLedger(readFileSync(path.join(root, LEDGER_FILE), "utf8"));
   if (ledger.problems.length > 0)
     throw new Error(
@@ -944,10 +860,6 @@ async function run(options) {
   const threads = os.availableParallelism();
   state.threads ??= threads;
 
-  // Skip redundant --import passes when .godot already has a verified import stamp for HEAD.
-  // Otherwise run two imports always (the second is quick and is the one that counts), and a third
-  // when the second was not clean. A crashed import is the engine's, so it is tried again; the shard
-  // stops only when the last try was not clean, before any test can print a misleading red.
   const cachedImport =
     process.env.SMOKE_FORCE_IMPORT !== "1"
       ? checkImportStamp(root, SKETCH, { godot: godotIdentity(godot) })
@@ -987,7 +899,7 @@ async function run(options) {
         return { ...ran, outcome, cleanPass };
       });
       const stepInfo = state.steps[`import-${pass}`];
-      imported = stepInfo.outcome ?? "ok"; // a step from before outcomes were recorded
+      imported = stepInfo.outcome ?? "ok";
       if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);
       if (imported === "ok" && (pass >= 2 || stepInfo.cleanPass)) break;
     }
@@ -1028,7 +940,6 @@ async function run(options) {
         firstEnv,
       ),
     );
-  // With more than one bot lane, the bot tests in BOT_ALONE wait and run one at a time after the lanes drain.
   const alone = (index) => options.bots && options.lanes > 1 && BOT_ALONE.has(names[index]);
   const shared = groups.map((_, index) => index).filter((index) => !alone(index));
   let next = 0;
@@ -1083,13 +994,9 @@ async function run(options) {
   for (const test of soloTests(failed, ledger.rows, firstRun)) {
     for (let attempt = 1; attempt <= options.solo; attempt++) {
       await soloRun(test, attempt);
-      // A check that failed alone settles the call (new-red, or carried by a red row), so a second
-      // run adds nothing. A pass, a time-out and a flake row still get every run.
       const last = soloEvidence.get(test).runs.at(-1);
       if (!solo.get(test).at(-1) && !last.timedOut && last.failLines > 0 && !flakeRow(test)) break;
     }
-    // A listed flake that failed every solo run would block as a mismatch. Some flakes fail
-    // alone one run in three, so it gets the same number of runs again before that call.
     if (
       classifyFailure(test, solo.get(test), ledger.rows, soloEvidence.get(test)).call === "mismatch"
     ) {
@@ -1105,10 +1012,8 @@ async function run(options) {
       lastFailed > 0 ? path.join(options.out, `solo-logs-${lastFailed}`, test + ".log") : null;
     const read = (file) => (existsSync(file) ? readFileSync(file, "utf8") : null);
     const firstText = read(path.join(options.out, "logs", test + ".log"));
-    // The receipt shows the last failed solo run, or the first run when no solo run failed.
     const shownText = soloLog ? read(soloLog) : firstText;
     const lines = shownText === null ? [] : failingLines(shownText, 12);
-    // The row is read against every failed run: the first run and each solo run.
     const runs = [
       { ok: false, text: firstText, timedOut: firstRun(test)?.timedOut ?? true },
       ...solo.get(test).map((ok, index) => ({

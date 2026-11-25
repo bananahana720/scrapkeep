@@ -32,17 +32,17 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 SKETCH = HERE.parents[1]
 sys.path.insert(0, str(HERE))
-import common  # noqa: E402
-from common import Part  # noqa: E402
-import shell_base as sb  # noqa: E402
-import shell_tarn as st  # noqa: E402
+import common
+from common import Part
+import shell_base as sb
+import shell_tarn as st
 
-LAYER_CAP = (1500, 3000)      # detail class tris and verts (assets/asset_budgets.json)
+LAYER_CAP = (1500, 3000)
 PANEL_OUT = 0.92
 PANEL_IN = 0.88
-PANEL_SHRINK = 0.80           # corner pull toward the gap centre, so struts frame the slab
+PANEL_SHRINK = 0.80
 LOW_Z = -0.35
-CLAW_GAP = math.radians(24)   # gaps this close to a claw arm stay open for the bracket
+CLAW_GAP = math.radians(24)
 FRONT = Vector((0.0, 1.0, 0.12)).normalized()
 
 
@@ -115,11 +115,9 @@ def slab(p, g, corners, index):
         j = (k + 1) % 4
         faces.append(p.bm.faces.new((inner[k], inner[j], outer[j], outer[k])))
     p.paint(faces, "paint", color)
-    # Make the outer face point outward whatever order the corners came in.
     if faces[0].calc_center_median().dot(faces[0].normal) < 0:
         for f in faces:
             f.normal_flip()
-    # Claw scores: three parallel dark gouges across the face, diagonal to the long axis.
     centre = g * (PANEL_OUT + 0.002)
     e_long = (corners[0] - corners[2]).normalized()
     e_long = (e_long - g * e_long.dot(g)).normalized()
@@ -138,12 +136,9 @@ def slab(p, g, corners, index):
         p.paint([f], "paint", score)
 
 
-# The hook's offset along the hinge pin, to the side away from the chase camera: it lies beside the
-# jaws' swing plane (the jaws are JAW_THICK thick, the ram sits on the camera side), so the jaws
-# open round it at any angle and never pass through it (E2-04).
 HOOK_OFFSET = 0.095
 HOOK_THICK = 0.06
-HOOK_HEIGHT = 2.6      # the hook's depth over the 2026-10 outline, chunky to match the jaws
+HOOK_HEIGHT = 2.6
 
 
 def hook(p, side_sign, reach, teeth=False):
@@ -191,7 +186,6 @@ def guards(p, hooks):
         _, axis, up, hinge, _ = st.claw_points(sign, st.CLAW_REACH[0])
         hooks.rod("paint", hinge - axis * (st.BOSS[1] + 0.02), hinge + axis * (st.BOSS[1] + 0.02), st.BOSS[0] + 0.025, 6, color="petrol")
     c = st.DRUM_CENTRE
-    # Half shell below and behind the drum, inside the gimbal sweep (0.829).
     p.ring("paint", st.DRUM_RADIUS + 0.018, st.DRUM_RADIUS + 0.03, 2 * st.DRUM_HALF + 0.04, 6,
            loc=tuple(c), rot=(0, math.pi / 2, 0), arc=(math.pi * 0.35, math.pi * 1.25), color="bone")
 

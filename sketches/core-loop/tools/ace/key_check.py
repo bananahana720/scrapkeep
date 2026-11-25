@@ -18,8 +18,7 @@ MAJOR = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.
 MINOR = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
 SKETCH = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from package_core_packs import PACKS  # noqa: E402
-# The native (unstretched) stems: a stretch of a few percent moves the key by under half a semitone.
+from package_core_packs import PACKS
 CUE_OF = {pack: row[2] for pack, row in PACKS.items()}
 
 
@@ -58,7 +57,6 @@ def main():
         nominal = PACKS[pack][1]
         near = [r for r in rows if r[1] == nominal]
         top = rows[0]
-        # The same pitch set is also a relative major/minor pair, so a tonic one minor third off counts as a relative.
         rel = {NAMES[(NAMES.index(top[1]) + (3 if top[2] == 'minor' else -3)) % 12]}
         verdict = 'match' if top[1] == nominal else ('relative' if nominal in rel else 'MISMATCH')
         print(f'{pack:16s} nominal {nominal:2s}  best {top[1]} {top[2]} r={top[0]:.2f}  nominal-best {near[0][2]} r={near[0][0]:.2f}  -> {verdict}')

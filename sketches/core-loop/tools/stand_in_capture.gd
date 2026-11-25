@@ -7,20 +7,8 @@ const Arena := preload("res://src/boss/arena.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# Stills of the W1-22 and W1-23 models as the running game builds them, under the game's own light: boots
-# the park, enters each world 1 stage in turn, builds the Slag Bowl where the game places it, and frames
-# the first instance of each model from 6 m-ish (scaled to its size) and from 30 m. Ball frozen out of
-# shot, HUD hidden. The run is not calm (so ambush altars and the bounty are built) and uses the sitting
-# profile (so the first-win rooms are open); it saves nothing. If no bounty brute is standing, its crate
-# is rebuilt with plated_brute.gd carry_bounty's exact parts and transform (marked "rebuilt").
-#
-#   $GODOT_BIN --path sketches/core-loop --script res://tools/stand_in_capture.gd -- --out=<absolute dir> [--only=altar,bay_cabin]
-#
-# Writes <out>/<label>_close.png, <label>_play.png and shots.json (where each was found, its eye, its
-# material class). --dry runs headless and only lists what was found, for the cloud.
 
 const SIZE := Vector2i(1920, 1080)
-# label -> node name (a trailing * matches a prefix).
 const TARGETS := {
 	"altar": "AltarPost", "cache_pocket": "CacheShell", "cache_pedestal": "CachePedestal",
 	"find_board": "RoomBoardFrame", "find_aerial": "FindAerial", "find_seep": "FindSeep*",
@@ -70,8 +58,6 @@ func _main() -> void:
 	while _game.flow == null:
 		await process_frame
 	await process_frame
-	# Not calm: calm mode builds no ambush altar and no bounty. The sitting profile opens the first-win
-	# rooms (their crew boards) without touching a save; it never writes one.
 	_game.tuning.set_option("profile", "sitting")
 	_game.flow.press_start()
 	_game.flow.choose_class(1)
@@ -122,7 +108,6 @@ func _main() -> void:
 	quit(0)
 
 
-# Moss's bay docks beside the gates once a stage clears; dock it at the map's own dock mark instead.
 func _dock_bay(stage: int) -> void:
 	var map = _game.ctx.terrain.map()
 	var bay = _game.world.bay
@@ -172,7 +157,6 @@ func _shoot_stage(stage: int, cam: Camera3D, record: Dictionary) -> void:
 			hit = _find(TARGETS[label], true)
 		if hit.is_empty():
 			continue
-		# A hidden view (a first-win room's board stays hidden until its face breaks) is shown for the shot only.
 		var hidden: Array = []
 		if hit.has("view"):
 			var node: Node = hit["view"]
@@ -192,8 +176,6 @@ func _shoot_stage(stage: int, cam: Camera3D, record: Dictionary) -> void:
 		record[label] = row
 
 
-# The first matching view: its world centre, radius, the horizontal direction it faces and its material.
-# "@kind" names a ground scatter row (a MultiMesh): its first piece.
 func _find(want: String, hidden: bool) -> Dictionary:
 	if want.begins_with("@"):
 		for view: MultiMeshInstance3D in _game.find_children("Scatter_" + want.trim_prefix("@"), "MultiMeshInstance3D", true, false):
@@ -243,7 +225,6 @@ func _shot(cam: Camera3D, id: String, at: Vector3, facing: Vector3, distance: fl
 	return {"eye": _v(eye), "at": _v(at)}
 
 
-# plated_brute.gd carry_bounty's crate, built with the same parts, transform and glow on a stand-in holder.
 func _shoot_rebuilt_crate(cam: Camera3D, record: Dictionary) -> void:
 	var holder := Node3D.new()
 	_game.ctx.root.add_child(holder)

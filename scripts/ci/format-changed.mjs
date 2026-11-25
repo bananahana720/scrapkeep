@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// Checks JS/MJS formatting with oxfmt on changed files only (so every new/edited file is formatted
-// without churning untouched legacy files).
-// Usage: node scripts/ci/format-changed.mjs [--base <ref>] [--write] [--] [files...]
 
 import { spawnSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
@@ -18,8 +15,6 @@ export function filterFormatTargets(files, exists = (file) => existsSync(path.jo
 }
 
 export function changedFilesSince(baseRef, { cwd = root, spawn = spawnSync } = {}) {
-  // --no-renames avoids reading historical blobs from promisor remotes in blobless clones;
-  // a rename emits D <old> + A <new>, so --diff-filter=ACM still captures the destination file.
   const ran = spawn(
     "git",
     ["diff", "--no-renames", "--name-only", "--diff-filter=ACM", `${baseRef}...HEAD`],

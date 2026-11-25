@@ -1,13 +1,7 @@
 extends "res://src/core/play_watch.gd"
 
-# bot_run --qa-log=1 (gameplay QA, 30 Oct): the play watch (src/core/play_watch.gd, which owns
-# the kinds and their limits) on a bot's run. Rows go to qa-<seed>.ndjson, one a line, each with
-# the bot's goal; a stuck or hung row in a boss fight also lists the pickups still on the ground
-# within DETAIL_M. Reads only, so the seed replays exactly with or without it.
 
 const DETAIL_M := 15.0
-# The kinds a run is failed on (world1_run_test). Their rows are printed as well as filed, because
-# the file goes with the run's save folder and a red log then only had a count, not a place.
 const TOLD := ["fell", "wedged"]
 const TOLD_PREFIX := "play-watch: "
 

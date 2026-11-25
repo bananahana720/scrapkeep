@@ -44,7 +44,6 @@ def box_lab(img, box):
         return None
     crop = img.crop((x0, y0, x1, y1))
     pixels = crop.get_flattened_data() if hasattr(crop, "get_flattened_data") else crop.getdata()
-    # Count by colour first: frames repeat colours a lot, and lab() is the slow part.
     counts = {}
     for p in pixels:
         counts[p] = counts.get(p, 0) + 1

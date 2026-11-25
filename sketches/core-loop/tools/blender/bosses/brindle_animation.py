@@ -13,7 +13,6 @@ import bpy
 from mathutils import Euler, Vector
 
 FPS = 30
-# duration, blind-judge key-pose seconds. Slag holds its 2.5 s warning + 6 s live.
 SHIP_CLIPS = {
     "idle_roll": (1.2, .3), "crane_warn": (1.4, 1.4), "crane_sweep": (1.2, .6),
     "magnet_hold_drip": (.2, .1), "enter_furnace": (.6, .6),
@@ -84,8 +83,6 @@ def action(root, name, duration, rows, linear=()):
         strip = track.strips.new(name, 1, act)
         strip.name = name
         strip.extrapolation = "NOTHING"
-        # Eased keys with clamped handles: endpoints stay exact, any overshoot is an authored key.
-        # Rolling drums are constant-rate spin and stay linear so loops have no pulse.
         mode = "LINEAR" if part.startswith("Drum") or part in linear else "BEZIER"
         for layer in act.layers:
             for item in layer.strips:
@@ -111,18 +108,11 @@ def absent(duration):
 def author_ship(root):
     remember(root)
     d = SHIP_CLIPS["idle_roll"][0]
-    # One exact turn per loop: requisition.gd:253 loops this clip, and the authored -4/.75*d
-    # (-6.4 rad) was 6.69 deg past a turn, so it hitched every 1.2 s. Rim speed is now
-    # 2*pi*.75/1.2 = 3.93 m/s against the 4 m/s intent. Presentation only: nothing in src/ scales
-    # drum playback by a speed constant (no speed_scale in src/boss).
     rows = {"Drum%s%d" % (side, k): [(0, {}), (d, {"pitch": -2 * math.pi})]
             for side in ("L", "R") for k in range(4)}
     rows["Hull"] = [(0, {}), (.3, {"up": -.025, "pitch": .004}),
                     (.6, {}), (.9, {"up": -.025, "pitch": -.004}), (d, {})]
     action(root, "idle_roll", d, rows)
-    # Code places the magnet head and cable on a linear path (boss.gd _step_crane), so the crane
-    # arm's yaw stays linear and keyed as on base: no wind-back, no overshoot. The elbow and the
-    # magnet tilt are free to ease, and the warn overshoots them. Sweep starts on the warn end pose.
     warn = math.radians(40)
     for name, duration in (("crane_warn", 1.4), ("crane_sweep", 1.2)):
         rows = {}
@@ -137,15 +127,11 @@ def author_ship(root):
                 elbow = [(0, -.18), (.7, -.2), (1.2, -.18)]
             rows["Crane" + side] = [(t, {"yaw": sign * v}) for t, v in yaw]
             rows["CraneElbow" + side] = [(t, {"pitch": v}) for t, v in elbow]
-            # Only small tilt of the working face. MagnetSocket position is code-owned.
             rows["Magnet" + side] = [(t, {"pitch": v}) for t, v in magnet]
         action(root, name, duration, rows, linear=("CranePort", "CraneStarboard"))
     action(root, "magnet_hold_drip", .2, {
         "Magnet" + s: [(0, {"up": .035}), (.08, {"up": .055}), (.1, {"up": .025}), (.2, {"up": .035})]
         for s in ("Port", "Starboard")})
-    # Phase 2 entry, the Furnace: played straight as an anime power-up. The cranes heave up,
-    # whip round and fold away; the hull clenches, then the caps blow open past their 0.25 m
-    # lift and settle on it. Every end pose is the one the runtime and tests expect.
     rows = {"Cap%d" % k: [(0, {}), (.12, {"up": -.08}), (.24, {"up": .9}), (.36, {"up": .12}),
                           (.46, {"up": .36}), (.54, {"up": .22}), (.6, {"up": .25})] for k in range(3)}
     rows["CraneMasts"] = [(0, {}), (.1, {"scale": 1.06}), (.3, {"scale": .5}), (.45, {"scale": .001}),
@@ -161,13 +147,9 @@ def author_ship(root):
     for k in range(3):
         rows["Cap%d" % k] = [(0, {"up": .25}), (9, {"up": .25})]
     action(root, "slag_warn", 9, rows)
-    # Runtime chooses one off-ball-side hatch and filters this shared clip's tracks.
     action(root, "drone_deploy", 1, {"Hatch" + s: [(0, {}), (.85, {"roll": sign * math.pi / 2}),
                                                       (1, {"roll": sign * math.pi / 2})]
         for s, sign in (("L", -1), ("R", 1))})
-    # Phase 3 entry, the Scuttle: the transformation beat the hype music kicks in on. The hull
-    # crouches, the four armour panels blast off sideways and tumble away, and the cockpit
-    # shield rattles, then flips open past its hinge and settles at 105 degrees.
     rows = {}
     for k in range(4):
         out = -1 if k < 2 else 1
@@ -210,13 +192,9 @@ def author_scooter(root):
     action(root, "eject", 2.5, {
         "ScooterSeat": [(0, {}), (.2, {"up": -.08}), (.35, {"up": .04, "pitch": .035}),
                         (.7, {}), (2.5, {})]})
-    # Root tangent and 11 m/s travel stay in boss.gd. Seat only leans into the turn.
     action(root, "chase", 1, {
         "ScooterSeat": [(0, {"roll": -.05}), (.25, {"roll": -.08, "up": .012}),
                         (.5, {"roll": -.05}), (.75, {"roll": -.08, "up": .012}), (1, {"roll": -.05})],
-        # Eight exact turns per loop (requisition.gd:321 loops it); the authored -11/.22 = -50 rad
-        # was 15.21 deg short of 8 turns. Rim speed 16*pi*.22/1.0 = 11.06 m/s against
-        # SCOOTER_SPEED 11.0 (boss_rules.gd:105); presentation only, travel stays in code.
         "Drums": [(0, {}), (1, {"pitch": -16 * math.pi})]})
     restore(root)
 

@@ -40,13 +40,9 @@ from lantern_beacon import kit, common, frustum, around
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [850, 750, 1]  # polish: was [270, 610, 1]; class cap 2,000 T / 4,600 V
+PROP = [850, 750, 1]
 NAME = "geyser_launcher"
 
-# One row per painted part, palette names or palette hex only (common.HEX mirrors src/core/palette.gd; LEDGER e6d9b8
-# is not in common.HEX, so its hex is written out). "state" is the exact mint steel.gdshader swaps for state_tint.
-# The stone slot multiplies its sandstone beds by the vertex colour, so the blocks take pale LEDGER (the beds show as
-# sandstone) and the basin under the grate takes LEDGER too (it1: a charcoal pit hid the charcoal bars).
 TONES = {
     "block": "e6d9b8",
     "patch": "bone",
@@ -58,39 +54,36 @@ TONES = {
     "pipe": "e6d9b8",
 }
 
-# Metres, Godot +Y up, origin at the mouth point.
 GROUND = -1.0
-R_SPEC = 3.5                           # spec radius, the mouth test (map_gorge.gd:356)
-R_TORUS_IN = 2.9                       # today's torus inner radius (contraptions.gd:430)
-# The clearance rule (the ball, radius 1.0 at the mouth, rolls through; the code's ring stands at ground + 0.2).
-CLEAR_R = 2.2                          # nothing inside this radius rises above WALL_TOP
-WALL_TOP = -.65                        # ground + 0.35
-NOZZLE_CAP = -.7                       # the dome (and its pipe) top out here, ground + 0.3
-RIM_TOP = -.45                         # ground + 0.55: the grate rim; anything above it stands at radius 2.7 or more
+R_SPEC = 3.5
+R_TORUS_IN = 2.9
+CLEAR_R = 2.2
+WALL_TOP = -.65
+NOZZLE_CAP = -.7
+RIM_TOP = -.45
 RIM_CLEAR = 2.7
-POST_TOP = .2                          # ground + 1.2: caps included
+POST_TOP = .2
 EPS = 1e-4
-BLOCKS = (12, R_SPEC, 3.3, GROUND, -.8, .05)   # count, outer, inner core, y0, y1, gap
-SLAB = (32, 3.42, -.8, WALL_TOP)       # segments, outer radius, y0, y1 (the top course)
-PIT_Y = -.95                           # the stone basin under the grate: lit stone, so the charcoal bars read over it
-GRATE_Y = (WALL_TOP, RIM_TOP)          # rim bottom, grate top
+BLOCKS = (12, R_SPEC, 3.3, GROUND, -.8, .05)
+SLAB = (32, 3.42, -.8, WALL_TOP)
+PIT_Y = -.95
+GRATE_Y = (WALL_TOP, RIM_TOP)
 RIM_IN = 2.6
-INNER_RING = (CLEAR_R, 2.34)           # the grate's inner lip, where the open slots start
-SPOKES = ((16, INNER_RING[1], RIM_IN, .3),)   # count, r0, r1, width
+INNER_RING = (CLEAR_R, 2.34)
+SPOKES = ((16, INNER_RING[1], RIM_IN, .3),)
 POST_R = 3.2
 POSTS = [45, 135, 225, 315]
-POST = (.25, WALL_TOP, 0.0)             # radius, y0, y1
+POST = (.25, WALL_TOP, 0.0)
 CAP = (.3, 0.0, POST_TOP)
-SPOUT = (.34, .18, -.25)               # length out of the post, side, centre y
+SPOUT = (.34, .18, -.25)
 NOZZLE = [(1.15, PIT_Y), (1.15, -.9), (.7, -.82), (.7, -.78), (.55, -.74)]
 NOZZLE_TOP = -.72
-PIPE = (.62, .14, -.8)                 # length out of the neck, side, centre y; points at +z
+PIPE = (.62, .14, -.8)
 SOCKETS = {"socket_steam": [0, 4.0, 0]}
 SIZE = {"drum": [7.0, .35, 7.0], "grate": [5.8, .2, 5.8], "fittings": [5.431, 1.15, 5.431]}
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     return common.srgb(TONES[name])
 
 
@@ -113,7 +106,6 @@ def blocks(s):
     for i in range(n):
         a0 = math.tau * i / n + gap / ro
         a1 = math.tau * (i + 1) / n - gap / ro
-        # One block is a later replacement in a paler stone: a repairer's hand.
         c = tone("patch" if i == 7 else "block")
         v = [polar(ro, a0, y0), polar(ro, a1, y0), polar(ro, a1, y1), polar(ro, a0, y1),
              polar(ri, a0, y0), polar(ri, a1, y0), polar(ri, a1, y1), polar(ri, a0, y1)]
@@ -131,7 +123,6 @@ def drum(s):
 
 
 def spoke(s, a, r0, r1, w, y0, y1, color):
-    # A flat bar along the radius: top and both long sides.
     t = (math.cos(a), 0.0, -math.sin(a))
     p = [polar(r, a, 0.0) for r in (r0, r1)]
     v = []
@@ -139,7 +130,6 @@ def spoke(s, a, r0, r1, w, y0, y1, color):
         for k in (-1, 1):
             for q in p:
                 v.append((q[0] + t[0] * k * w / 2, y, q[2] + t[2] * k * w / 2))
-    # v: y0 (-w: r0, r1), (+w: r0, r1), y1 (-w: r0, r1), (+w: r0, r1)
     s.add(v, [(4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3)], color)
 
 
@@ -167,7 +157,6 @@ def lathe(s, profile, top, n, color):
 
 
 def box_along(s, at, out, length, side, y, color):
-    # A square bar from `at` along the unit horizontal `out`, open at its root (it sits in a post or the neck).
     ox, oz = out
     tx, tz = -oz, ox
     h = side / 2
@@ -188,14 +177,12 @@ def fittings(s):
         frustum(s, r, r, y0, y1, 12, tone("post"), caps=(False, False), at=(x, z))
         cr, c0, c1 = CAP
         frustum(s, cr, cr, c0, c1, 12, tone("copper"), caps=(True, True), at=(x, z))
-        # The spout turns along the rim, the way the picture's side valves do.
         t = (math.cos(a), -math.sin(a))
         box_along(s, (x + t[0] * (r - .04), z + t[1] * (r - .04)), t, SPOUT[0], SPOUT[1], SPOUT[2], tone("post"))
     kit.PARTS["Nozzle"] = {"reference_position": [0, NOZZLE_TOP, 0]}
 
 
 def clearance(name, verts):
-    # The footprint rule: print the maxima, then assert them. Radius is horizontal distance from the mouth axis.
     r = [math.hypot(v[0], v[2]) for v in verts]
     inside = [v[1] for v, q in zip(verts, r) if q < CLEAR_R - EPS]
     above = [q for v, q in zip(verts, r) if v[1] > RIM_TOP + EPS]
@@ -210,7 +197,6 @@ def clearance(name, verts):
 
 
 def stone_material():
-    # kit.material has no stone row; the stone slot's GLB material only needs the slot name and vertex colour.
     mat = bpy.data.materials.new("stone")
     mat.use_nodes = True
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
@@ -256,7 +242,6 @@ def out_dir():
 
 def main():
     d = out_dir()
-    # Stone takes the bake too: its sandstone beds multiply the vertex colour. kit.BAKE keeps the mint state key exact.
     polish.enable(bevel=.04, bevel_min=.2, **{**kit.BAKE, "bake_slots": kit.BAKE["bake_slots"] + ("stone",)})
     export(NAME + "_drum", "Drum", "stone", drum, SIZE["drum"], SOCKETS, d)
     export(NAME + "_grate", "Grate", "steel", grate, SIZE["grate"], {}, d)

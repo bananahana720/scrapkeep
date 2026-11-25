@@ -1,28 +1,11 @@
-# PD-0 neutral Hoberman shell: the shared base from shell_base.hoberman() with no pilot
-# machinery, petrol lattice, bone seat and a neutral weapon seat. It is a test fixture
-# (registry ships: false) for cage_contract_test, the look rows and the pilot units' diffs.
-# Concept: artifacts/local/alpha/push/w13/concepts/codex/base/base-hero.png and mechanism.png
-# (the approved base pictures, docs/decisions.tsv w13-look rows).
-#
-#   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
-#     --python world_one/shell_neutral.py -- [--out <file.glb>] [--pairs N] [--cheap] [--count-only]
-#     [--strut W] [--cap D]
-#
-# --strut and --cap set the bar face width and tread cap diameter in metres (defaults
-# shell_base.BAR_WIDTH and CAP_WIDTH, PD-0b's strut table).
-# --pairs sets the X-pairs per hub-to-hub link (default 2), --cheap uses 6-sided hub drums
-# and caps, and --count-only prints the TRIS and HOBERMAN lines without exporting, for the
-# budget table at 2, 3 and 5 pairs (ROSTER-LOOK section 5).
-
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
+import common
+import shell_base as sb
 
-# Shell class cap (assets/asset_budgets.json): 11,000 tris. The 6,600 base target is reported.
 SHELL_BAND = (3000, 11000)
 TARGET_TRIS = 6600
 

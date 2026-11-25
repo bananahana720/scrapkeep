@@ -1,7 +1,4 @@
 extends SceneTree
-# Headless: boot the alpha table, enter each named stage, count distinct active materials on
-# visible geometry under the stage's geometry root and in the whole tree, and print one line each.
-#   godot --headless --path sketches/core-loop --script res://tools/w12_material_count.gd [-- --stages=1,4,5]
 const Game := preload("res://src/game.gd")
 const NAMES := {1: "Spillway", 4: "Dig deep", 5: "Highdraft"}
 var game

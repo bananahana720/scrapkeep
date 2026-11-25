@@ -40,7 +40,6 @@ def rasterise(tris, ids, camera, size=(W, H)):
     z = d @ fwd
     ndc_x = x / (z * tanf * (w / h))
     ndc_y = y / (z * tanf)
-    # Cull whole triangles behind the near plane; the partly clipped ones are handled below.
     front = z.max(axis=1) > NEAR
     idbuf = np.full((h, w), -1, np.int32)
     inv = np.zeros((h, w), np.float64)
@@ -134,13 +133,11 @@ def run_r(mask, e, t):
         s = c
         while c < n and cols[c]:
             c += 1
-        # Split the run where the tall pixels belong to different components.
         seg = mask[:, s:c]
         lab = e["labels"][:, s:c]
         comp_at = []
         for k in range(seg.shape[1]):
             col = seg[:, k]
-            # component of the longest vertical run in this column
             best_run, best_lab, run, run_lab = 0, 0, 0, 0
             for yy in range(col.shape[0]):
                 if col[yy]:

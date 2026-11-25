@@ -48,7 +48,6 @@ if rank>=5:
     bpy.ops.mesh.primitive_uv_sphere_add(radius=0.16,location=(0,-0.05,0.3)); add(bpy.context.object,glow)
     bpy.ops.mesh.primitive_cone_add(radius1=0.12,radius2=0,depth=0.45,location=(0,0.05,0.62),rotation=(math.radians(20),0,0)); add(bpy.context.object,grey)
 root.scale=(s,s,s)
-# floor
 bpy.ops.mesh.primitive_plane_add(size=40,location=(0,0,-0.6)); add_f=bpy.context.object; add_f.data.materials.append(mat('floor',(0.08,0.085,0.1,1)))
 if fx!='none':
     r={'ring':2.6,'big':4.4}[fx]

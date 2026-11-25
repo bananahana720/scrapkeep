@@ -1,15 +1,5 @@
 extends SceneTree
 
-# Stills of a hostile mark landing (FX-05, effects critique E5): the game on its park map, the
-# chase camera and the HUD, the ball standing just outside each mark so the edge is in frame.
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --path sketches/core-loop --rendering-driver opengl3 \
-#     --resolution 1280x720 --script res://tools/landing_capture.gd -- --out=/abs/dir
-# Scenes: ring (an INSTANT ring), lane (a LANE), drawn through the game's own builders with no
-# fight running and stepped on their own clock; crew (a real chaser that lunges at the ball, so
-# the strike flash on its body and its mark's landing are the game's own). Each scene writes
-# <id>-before.png (the warning at 90 percent), <id>-0.png (two ticks after the landing),
-# <id>-1.png (0.15 s) and <id>-2.png (0.35 s), and frames.json says what each holds. The game is
-# held while each still is taken. The cloud's renderer judges size, place and read, not final look.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -99,8 +89,6 @@ func _run() -> void:
 	quit(0)
 
 
-# A staged mark: stepped through its warning, shot at 90 percent, landed, then shot through the
-# landing. An INSTANT is freed on its landing tick, as its owner does; a lane runs live.
 func _staged(id: String, mark: Node3D, free_on_land: bool) -> void:
 	var ticks := roundi(WARN * Engine.physics_ticks_per_second)
 	for i in ticks:
@@ -121,7 +109,6 @@ func _staged(id: String, mark: Node3D, free_on_land: bool) -> void:
 	await _ticks(30)
 
 
-# A real chaser beside the ball: the first strike it lands is shot.
 func _crew(ground, spot: Vector3, ahead: Vector3) -> void:
 	var side := Vector3.UP.cross(ahead).normalized()
 	var crew: Node3D = game.ctx.spawner.spawn_enemy("chaser", _on(ground, spot + ahead * 7.0 + side * 2.0) + Vector3.UP)

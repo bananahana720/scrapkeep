@@ -17,11 +17,7 @@ from common import Part
 
 def build():
     common.reset()
-    # The runtime's instance flash material supplies the enamel colour.
     common.SLOTS["ancient_enamel"] = {"color": "petrol", "rough": 0.55}
-    # Polish (POLISH.md): remnants stay flat, identical triangles. The slab keeps its bevel; sharp_angle 30
-    # splits the 45 degree bevel facets from the faces, so the faces toward the heading keep
-    # flat normals (the runtime's threat stripe surface needs z > 0 on all of them).
     polish.enable(detail=1, subsurf=0, sharp_angle=30.0)
     root = common.empty("SwarmRemnant")
     body = Part("RemnantBody")
@@ -35,7 +31,6 @@ def build():
                matrix=common.mtx((0, 0, 0.106)))
     body.ring("paint", 0.31, 0.43, 0.015, segs=3, loc=(0, 0, 0.125),
               rot=(0, 0, -math.pi / 2), color="charcoal")
-    # Narrow worn bevels below the cast seam; no fabricated fasteners.
     body.ring("paint", 0.65, 0.69, 0.015, segs=3, loc=(0, 0, -0.09),
               rot=(0, 0, -math.pi / 2), color=common.mix("petrol", "charcoal", 0.3))
     bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])

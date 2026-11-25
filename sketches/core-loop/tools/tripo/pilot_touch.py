@@ -1,7 +1,3 @@
-# blender -b --factory-startup -P pilot_touch.py -- --in fit.glb --out out.glb [--head 1.0] [--fwd 0.57] [--tail 1] [--half 0.43] [--lift 0.0] [--cap-hue "0.40 0.56"] [--mount-fit "1.32 0 0.062 0.069"]
-# After pilot_fit.py: enlarge the head by its skin weights, keep the snout inside the cockpit's forward limit, and tuck a tail stub in.
-# --cap-hue splits a modelled cap of that colour into its own Cap mesh, so an outfit's Replace_Cap node can hide it.
-# --mount-fit leaves an MountFit_head marker: the size and the offset (right, forward, up) that seat a head outfit on this head.
 import bpy, sys, json, colorsys, bmesh
 from mathutils import Matrix
 from mathutils import Vector
@@ -27,21 +23,18 @@ for i, c in enumerate(co):
     if w[i] > 0: co[i] = c + w[i] * ((c - p) * s + p - c)
 ex = max(c.y for c in co) - float(opt["--fwd"])
 if ex > 0:
-    for i in range(len(co)): co[i].y -= ex  # the whole pilot slides back, so the skin stays whole
-lift = float(opt.get("--lift", "0"))  # raises the whole pilot in the seat, so more of it shows over the seat back
+    for i in range(len(co)): co[i].y -= ex
+lift = float(opt.get("--lift", "0"))
 for i in range(len(co)): co[i].z += lift
-# a pilot that fits the width but sits off centre slides sideways until it is centred
 xs = [c.x for c in co]; half = float(opt["--half"])
 if max(abs(min(xs)), abs(max(xs))) > half and max(xs) - min(xs) <= 2 * half:
     mid = (max(xs) + min(xs)) / 2
     for i in range(len(co)): co[i].x -= mid
-# a pilot wider than the cockpit narrows evenly about its centre (Kest's elbows: 6 percent)
 xs = [c.x for c in co]
 if max(xs) - min(xs) > 2 * half:
     mid = (max(xs) + min(xs)) / 2; k = 2 * half / (max(xs) - min(xs))
     for i in range(len(co)): co[i].x = (co[i].x - mid) * k
     print("NARROW", round(k, 3))
-# tail stub: pink corners low at the back
 tail = 0
 if opt["--tail"] == "1":
     col = me.color_attributes.active_color
@@ -57,7 +50,6 @@ if opt["--tail"] == "1":
         tgt = cen + Vector((0, 0.12, 0.10))
         ps = set(pick)
         for i in pick: co[i] = tgt + (co[i] - cen) * 0.0
-        # repaint with the nearest non-tail colour
         near = min((i for i in vc if i not in ps and w[i] == 0), key=lambda i: (co[i] - tgt).length)
         for l in me.loops:
             if l.vertex_index in ps and col.domain == "CORNER": col.data[l.index].color = vc[near]
@@ -66,9 +58,6 @@ me.update()
 head_at = arm.matrix_world @ arm.data.bones["head"].head_local
 cap_faces = 0
 if "--cap-hue" in opt:
-    # the cap: faces above the brow whose every corner wears the cap's colour. A copy of them becomes a second skinned mesh
-    # named Cap. In the body the same faces stay, pressed down onto the skull and painted the colour around them, so the head
-    # is whole when the Cap is hidden. (Cutting them out left a hole that would not close.)
     h0, h1 = [float(x) for x in opt["--cap-hue"].split()]
     bm = bmesh.new(); bm.from_mesh(me); cl = bm.loops.layers.color.active
     def capped(lp):
@@ -79,10 +68,10 @@ if "--cap-hue" in opt:
     bmesh.ops.delete(cb, geom=[f for f in cb.faces if f.index not in ids], context="FACES"); cb.to_mesh(cap_me); cb.free()
     key = lambda v: (round(v.co.x, 5), round(v.co.y, 5), round(v.co.z, 5))
     cap_spots = {key(v) for f in pick for v in f.verts}
-    edge = [lp for f in bm.faces if f.index not in ids for lp in f.loops if key(lp.vert) in cap_spots]  # the skin the cap sits on
+    edge = [lp for f in bm.faces if f.index not in ids for lp in f.loops if key(lp.vert) in cap_spots]
     mid = mwi @ Vector((0.0, head_at.y, head_at.z + 0.05))
     reach = sorted((lp.vert.co - mid).length for lp in edge); skull = reach[len(reach) // 2] - 0.012
-    plain = [lp for lp in edge if not capped(lp)] or edge  # the cap's own colour bleeds onto the faces beside it
+    plain = [lp for lp in edge if not capped(lp)] or edge
     fur = [sum(lp[cl][k] for lp in plain) / len(plain) for k in range(4)]
     for v in {v for f in pick for v in f.verts}:
         d = v.co - mid
@@ -96,7 +85,6 @@ if "--mount-fit" in opt:
     fs, fx, fy, fz = [float(x) for x in opt["--mount-fit"].split()]
     mark = bpy.data.objects.new("MountFit_head", None); bpy.context.scene.collection.objects.link(mark)
     mark.parent = arm; mark.parent_type = "BONE"; mark.parent_bone = "head"
-    # placed from the head bone's rest matrix, never from matrix_world: the imported rig is still playing a clip here
     hb = arm.data.bones["head"]; seat = arm.matrix_world @ hb.matrix_local @ Matrix.Translation((0.0, hb.length, 0.0))
     mark.matrix_parent_inverse = Matrix.Identity(4)
     mark.matrix_basis = seat.inverted() @ Matrix.Translation(head_at) @ Matrix.Translation((fx, fy, fz)) @ Matrix.Scale(fs, 4)

@@ -22,9 +22,6 @@ import common
 import polish
 import rig_pilot
 
-# Polish (POLISH.md): the face, ears, muzzle, jaw and hands subdivide once into
-# soft vinyl-toy forms; torso, shoulders, legs, tubes, claws and metal keep their authored
-# topology, smooth shaded with hard creases (no bevel: it doubled the hard-edge count).
 POLISH = {"detail": 1, "bevel": 0}
 SOFT_BONES = ("head", "ear.R", "ear.L", "snout", "jaw", "hand.R", "hand.L")
 
@@ -87,7 +84,6 @@ class TigerSurface:
 
 
 def head_shape(q):
-    # Broad lower jaw, flatter brow and square cheek planes belong to one head surface.
     return (math.copysign(abs(q.x) ** .82, q.x) * (1 - .07 * q.z),
             math.copysign(abs(q.y) ** .88, q.y), math.copysign(abs(q.z) ** .72, q.z))
 
@@ -102,16 +98,11 @@ def build_model():
     t = TigerSurface()
     scalp = t.sculpt("head", (0, .015, .20), (.24, .18, .20), 24, 14,
                      deform=head_shape, stripe=fur_stripe)
-    # Broad painted stripe edges, no raised fur-band geometry.
     for face in scalp:
         q = face.calc_center_median() - Vector((0, .015, .20))
         if q.y > .10 and q.z > .085:
             stripe = abs(q.x) < .026 or (.11 < q.z < .145 and abs(q.x) < .13)
             t.part.paint([face], "pilot", "oxide" if stripe else ASH)
-    # The Bible's battered welding cap takes precedence over its omission on the sheet. It is
-    # its own mesh node, Cap, so the Steady Cap outfit's Replace.Cap can hide it (PD-TARN,
-    # CUSTOMIZE section 8); build_cap makes it with the same shapes this line used to add.
-    # Bone-coloured cheek wedges taper into the same square jaw silhouette.
     for side, sign in (("R", 1), ("L", -1)):
         t.sculpt("head", (sign * .23, .13, .13), (.065, .08, .10), 12, 8, "bone",
                  deform=lambda q: (q.x * (1 + .22 * q.z), q.y, q.z))
@@ -120,7 +111,6 @@ def build_model():
         brow = t.sculpt("head", (sign * .096, .191, .294), (.050, .019, .017), 10, 6, ASH)
         for vertex in t.part.verts_of(brow):
             vertex.co.z += sign * (vertex.co.x - sign * .096) * .16
-        # Whole-ear hinge, rounded cup, no fox points. Outer/inner colours share pilot.
         t.sculpt("ear." + side, (sign * .181, 0, .354), (.043, .025, .044), 10, 6, ASH)
         ear = t.sculpt("ear." + side, (sign * .20, 0, .40), (.065, .025, .065), 16, 10, "charcoal")
         for vertex in t.part.verts_of(ear):
@@ -128,7 +118,6 @@ def build_model():
             if local.y > .010 and abs(local.x) < .045 and abs(local.z) < .046:
                 for loop in vertex.link_loops:
                     loop[t.part.col] = common.rgba("bone")
-    # A continuous bilobed muzzle has a centre crease, rather than two sphere props.
     def muzzle_shape(q):
         return (q.x, q.y * (1 - .13 * math.exp(-q.x * q.x * 45)), q.z)
     t.sculpt("snout", (0, .23, .12), (.115, .075, .060), 20, 10, "bone", deform=muzzle_shape)
@@ -139,12 +128,10 @@ def build_model():
         vertex.co.x *= .72 + .28 * max(0, (vertex.co.z - .134) / .05)
     t.add("snout", "rod", "pilot", (0, .303, .144), (0, .306, .085), .0025, 5, color="charcoal")
 
-    # Overlapping continuous torso panels retain the common rigid spine split.
     t.sculpt("spine_01", (0, -.005, -.20), (.28, .205, .215), 20, 12, ASH)
     t.sculpt("spine_02", (0, .005, -.043), (.235, .155, .113), 16, 10, ASH)
     t.sculpt("spine_01", (0, .155, -.215), (.221, .049, .162), 16, 10, "petrol")
     for side, sign in (("R", 1), ("L", -1)):
-        # Boots and legs use pelvis, keeping their seated contacts fixed in every clip.
         t.sculpt("pelvis", (sign * .18, .18, -.30), (.105, .145, .09), 12, 8, ASH)
         t.sculpt("pelvis", (sign * .19, .31, -.40), (.082, .117, .102), 10, 8, "petrol")
         t.sculpt("pelvis", (sign * .20, .45, -.48), (.10, .14, .06), 12, 8, "charcoal")
@@ -152,21 +139,18 @@ def build_model():
               (sign * .142, .120, .04), .040, .017, color="petrol")
         t.add("spine_02", "box", "bare_metal", (.045, .017, .036), loc=(sign * .154, .175, -.141))
         t.sculpt("shoulder." + side, (sign * .22, .005, -.09), (.095, .086, .104), 12, 8, ASH, stripe=fur_stripe)
-        # Tapered, rounded arm surfaces follow the exact shared chain and elbow.
         for bone, a, b, r0, r1 in [
             ("upper_arm.", (sign * .24, .015, -.09), (sign * .36, .24, -.12), .083, .076),
             ("lower_arm.", (sign * .36, .24, -.12), (sign * .32, .4, .05), .077, .064),
         ]:
             t.arm_surface(bone + side, a, b, r0, r1)
         t.sculpt("hand." + side, (sign * .32, .40, .05), (.09, .07, .06), 12, 8, ASH)
-        # A single three-lobed closed fan, with broad fused roots, on curl only.
         centre = Vector((sign * .32, .446, .046))
         outline = [(-.086, -.038), (-.084, .013), (-.064, .050), (-.043, .014),
                    (-.025, .055), (0, .070), (.025, .055), (.043, .014),
                    (.064, .050), (.084, .013), (.086, -.038)]
         fan = t.add("curl." + side, "prism", "pilot", [(x, -y) for x, y in reversed(outline)], .040,
                     matrix=common.mtx(centre, (math.pi / 2, 0, 0)), color="bone")
-        # Small bevel keeps the silhouette claw-shaped at low triangle count.
         edges = {edge for face in fan for edge in face.edges}
         bevel = bmesh.ops.bevel(t.part.bm, geom=sorted(edges, key=lambda e: (tuple(e.verts[0].co), tuple(e.verts[1].co))),
                                 offset=.006, segments=2, affect="EDGES")
@@ -176,7 +160,6 @@ def build_model():
             for vertex in face.verts:
                 vertex[t.layer] = t.bones.index("curl." + side) + 1
 
-    # Two continuous bent tail tubes, with painted stripes and a buried overlap.
     for bone, start, end, r in [("tail.01", (0, -.16, -.27), (0, -.37, -.23), .05),
                                 ("tail.02", (0, -.37, -.23), (.08, -.57, -.17), .04)]:
         av, bv = Vector(start), Vector(end)
@@ -227,8 +210,6 @@ def build_cap():
 
 
 def make_rig(mesh):
-    # The common schema dispatch only accepts the original three. Reuse its unchanged
-    # Rivet body anchors and fit Tarn's head/ear/tail anchors locally.
     fitted = {"head": (0, .015, .20), "snout": (0, .23, .11),
               "ear.R": (.20, 0, .40), "ear.L": (-.20, 0, .40),
               "jaw": (0, .205, .080), "tail.02": (0, -.37, -.23)}
@@ -282,8 +263,6 @@ def main():
         polish.bake(arm)
         destination = args.out or SKETCH / "assets/models/pilot_tarn_anim.glb"
         animate_and_export(arm, mesh, destination)
-        # animate_and_export exports the body only; export again with the Cap node selected,
-        # with its settings, so the GLB gains exactly the one Cap mesh (PD-TARN).
         bpy.ops.object.select_all(action="DESELECT")
         for obj in (arm, mesh, cap):
             obj.select_set(True)

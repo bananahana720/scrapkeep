@@ -1,28 +1,5 @@
 extends RefCounted
 
-# The attack sheets (AMBITION-BRIEF, "Encounter craft": every boss attack has a frame-data
-# row: tell, active, recovery, punish window, damage as a share of hull). The sheet is
-# generated from the game's own scripts. The only hand-written part is rows() below: for
-# each attack, which script and which constant (or static table cell) gives each column.
-# No number is written here; a renamed or removed constant is recorded in `problems`, never
-# turned into a silent zero. Attack ids and EventKinds.ATTACK_ROWS stay with the Gate lane's
-# fold: this file only reads them.
-#
-# A value spec is one of:
-#   null                       no such column for this attack ("-")
-#   "zero"                     damage only: no direct pilot damage (the row's note says why)
-#   [key, "NAME", sub...]      constant NAME of the script PATHS[key] (or combat/<key>.gd),
-#                              then dictionary or array keys into it
-#   {"sum": [spec...]}         the sum of the specs
-#   {"tight": [base, step, phases, [floor...]]}
-#                              the tightest value reachable: the larger of every floor and
-#                              base - step * (phases - 1), the way mind_attacks.gd and
-#                              waking_attacks.gd tighten a warn by phase and hazard.gd then
-#                              clamps it to MIN_WARN. step and phases may be null (no tightening).
-# A sound spec is {"type": "WAVE"} (a Threat.Type name, for a hazard a boss commits),
-# {"id": "E01"} (an EventKinds.ATTACK_ROWS id), {"elite": "stamp"} or {"none": "why"}.
-# "event": true marks a boss that also publishes boss_attack_telegraphed when it commits;
-# "lag": spec is how long after the body starts to wind up the threat ring commits.
 
 const PATHS := {
 	"rules": "res://src/boss/boss_rules.gd",
@@ -45,8 +22,6 @@ const PATHS := {
 	"audio": "res://src/presentation/audio.gd",
 }
 
-# The Threat.Type each unit's script commits (read from its _commit_ring, _commit_lane or Telegraph call; not a
-# constant, so named here). A kind absent from this table is "declared kind, unverified" on the sheet.
 const MOB_TYPE := {
 	"chaser": "LANE", "lobber": "PROJECTILE", "plated_brute": "INSTANT", "reactor_relic": "INSTANT", "kite_drone": "INSTANT",
 	"swatter": "INSTANT", "drill_crew": "INSTANT", "burrower": "INSTANT", "pit_jaw": "INSTANT", "line_cutter": "PROJECTILE",
@@ -55,19 +30,14 @@ const MOB_TYPE := {
 	"deflector": "LANE", "ramp_flipper": "INSTANT", "catch_trap": "INSTANT", "anchor_crew": "LANE", "gap_net": "LANE",
 	"jolt_layer": "INSTANT", "boom_tender": "LANE",
 }
-# Units that extend enemy.gd, not counter.gd, and set no owner_voice or mechanic_tag.
 const NO_VOICE := ["chaser", "lobber"]
 const DIRECTOR_SCALED := ["Mind hand", "Swarm", "Miniboss", "Elite affixes", "Mobs"]
-# The groups whose hits take the per-stage mob dial at combat's hit door (combat.gd _on_player_hit: every
-# source but the Wardens, the counter-pulse, vaults and the Mind's hand). The table shows the base hit; a stage
-# whose dial is not 1 (the dam's x1.5, ChallengeDials MOBS_DAMAGE_W1) gets its own numbers in stage_damage.
 const STAGE_DIALLED := ["Swarm", "Miniboss", "Elite affixes", "Mobs"]
 const STAGES := 6
 
 const LETHAL_FLAG := "LETHAL TELL < 0.6 s"
 const LETHAL_FLOOR := 0.6
 const EPS := 0.000001
-# Boss groups the test holds to at least three rows each.
 const BOSS_GROUPS := ["Brindle", "Waking", "Mind"]
 const GROUP_ORDER := ["Brindle", "Waking", "Mind", "Mind hand", "Wardens", "Swarm", "Miniboss", "Elite affixes", "Mobs"]
 
@@ -77,15 +47,12 @@ var _scripts := {}
 var _sources: Array = []
 
 
-# --- The map -----------------------------------------------------------------------------
-
 static func _hz(spec: Array) -> Dictionary:
 	return {"tight": [spec, null, null, [["hazard", "MIN_WARN"]]]}
 
 
 static func rows() -> Array:
 	var r: Array = []
-	# Brindle: boss.gd commits each hazard and publishes boss_attack_telegraphed that frame.
 	r.append(["Brindle", "crane sweep (phase 1)", _hz(["rules", "CRANE_WARN"]), ["rules", "CRANE_SWEEP"], null, null, "zero",
 		{"id": "B01", "type": "WAVE", "event": true}, "Steals a share of mass (STEAL_SHARE, clamped) and tugs; no hull damage. Period CRANE_PERIOD.", {"dial": ["brindle", 1]}])
 	r.append(["Brindle", "slag ring (phase 2)", _hz(["rules", "SLAG_WARN"]), ["rules", "SLAG_LIVE"], ["rules", "SLAG_GAP"], ["rules", "QUENCH_SECONDS"], ["rules", "SLAG_DAMAGE"],
@@ -96,7 +63,6 @@ static func rows() -> Array:
 		{"id": "B03", "type": "LANE", "event": true}, "Active is travel over the committed length plus 0.2 s (boss.gd _commit_charge). Punish is the wall stun when the nose buries; CHARGE_REST follows.", {"dial": ["brindle", 3]}])
 	r.append(["Brindle", "eject (finale)", ["rules", "EJECT_FLIGHT"], null, null, null, "zero",
 		{"id": "B05", "none": "published as boss_attack_telegraphed only; no hazard is laid"}, "A 2.5 s arc to the ring then a chase; no direct damage."])
-	# The Waking: three Dig families, then the floor drop.
 	for family in [["burrow", "BURROW_WARN", "BURROW_LIVE", "LANE", "Seam on adds a second lane"],
 			["cave_in", "CAVE_WARN", "CAVE_LIVE", "INSTANT", "three holes, each warning GAP after the last"],
 			["bore", "BORE_WARN", "BORE_LIVE", "INSTANT", "the pit adds a spray of lanes"]]:
@@ -107,7 +73,6 @@ static func rows() -> Array:
 			{"cadence_pit": {"gap": [["waking", "PIT_PERIOD"], {"tight": [["wa", family[1]], ["wa", "PHASE_TIGHTEN"], ["wa", "TIGHTEN_PHASES"], [["hazard", "MIN_WARN"]]]}, ["wa", family[2]]]}}])
 	r.append(["Waking", "floor drop", ["waking", "FLOOR_WARN"], null, null, ["waking", "BREACH_WINDOW"], "zero",
 		{"none": "waking.gd _warned publishes the event; no hazard node, so no threat group sound"}, "Sinks a tier; no damage. Punish is the breach-slam window after the drop."])
-	# The Mind: four families; phase k exposes the first k.
 	for family in [["lane", "LANE_WARN", "LANE_LIVE", "LANE"], ["split_lane", "SPLIT_WARN", "SPLIT_LIVE", "LANE"],
 			["rush", "RUSH_WARN", "RUSH_LIVE", "INSTANT"], ["plate", "PLATE_WARN", "PLATE_LIVE", "WAVE"]]:
 		var punish = ["ma", "PLATE_WINDOW"] if family[0] == "plate" else null
@@ -115,7 +80,6 @@ static func rows() -> Array:
 			["ma", family[2]], {"gap": [["mind", "ATTACK_PERIOD"], {"tight": [["ma", family[1]], ["ma", "PHASE_TIGHTEN"], ["ma", "TIGHTEN_PHASES"], [["ma", "WARN_FLOOR"], ["hazard", "MIN_WARN"]]]}, ["ma", family[2]]]}, punish, ["mind", "ATTACK_DAMAGE"], {"type": family[3], "event": true},
 			"Recovery is the cadence gap (ATTACK_PERIOD minus tell minus active)." + (" Punish is the weak window after the plate (PLATE_WINDOW)." if punish != null else "")])
 	r.append(["Mind hand", "strike", ["hand", "WARN"], null, ["rec", "RECOVERY"], null, ["hand", "STRIKE_DAMAGE"], {"id": "E18", "type": "LANE", "voice": "counter"}, "A roster enemy the Mind sends from phase 2."])
-	# Wardens (combat/warden.gd and its drivers).
 	for w in [["Reactor Warden pulse", "W01", null, "faction"], ["Hive Warden pulse", "W02", null, "faction"], ["Mind Warden pulse", "W04", ["wmind", "ROWS", "pulse", "recovery"], "none"]]:
 		r.append(["Wardens", w[0], ["warden", "PULSE_TELEGRAPH"], null, w[2], ["posture", "STAGGER_SECONDS"], ["warden", "PULSE_DAMAGE"],
 			{"id": w[1], "type": "INSTANT", "voice": w[3]}, "Cycle PULSE_CYCLE. Punish is the stagger that opens the core (STAGGER_SECONDS). Damage only inside the core ring (CORE_RADIUS). Only the Mind driver states a pulse recovery."])
@@ -129,12 +93,9 @@ static func rows() -> Array:
 	r.append(["Swarm", "free remnant dive", ["rec", "ROWS", "E17", "pre_shoot"], ["swarm", "DIVE_TIME"], ["rec", "RECOVERY"], null, ["swarm_remnant", "DIVE_DAMAGE"], {"id": "E17", "type": "LANE", "voice": "remnant"}, "The same formation, free of a Warden."])
 	r.append(["Miniboss", "leap slam", {"sum": [["mini", "SLAM_CROUCH"], ["mini", "SLAM_LEAP"]]}, null, null, ["mini", "WEAK_SECONDS"], ["mini", "SLAM_DAMAGE"], {"id": "E03", "type": "PROJECTILE", "voice": "none"}, "Tell is crouch plus leap; punish is the weak window after either attack."])
 	r.append(["Miniboss", "charge", ["mini", "CHARGE_BRACE"], ["mini", "CHARGE_TIME"], null, ["mini", "WEAK_SECONDS"], ["mini", "CHARGE_DAMAGE"], {"id": "E04", "type": "LANE", "voice": "none"}, ""])
-	# Elite affixes: every row of elite_affixes.gd ROWS.
 	for id in ["stamp", "rail", "rearblast"]:
 		r.append(["Elite affixes", id, ["affix", "ROWS", id, "warn_seconds"], null, ["rec", "RECOVERY"], null, ["affix", "ROWS", id, "damage"], {"elite": id, "owner": "plated_brute"},
 			"A plated brute with this attack added; the affix tightens a stat, not the warn."])
-	# Pack mobs: tell and cooldown from telegraph_record.gd, damage from the unit's own script.
-	# [kind, ATTACK_ROWS id, attack, active, damage, extra tell, lag, note]
 	var mobs := [
 		["chaser", "E01", "lunge", ["chaser", "LUNGE_TIME"], ["chaser", "DAMAGE"], null, null, "The wind-up is the tell; a hard hit in it breaks the lunge."],
 		["lobber", "E02", "shell", null, ["projectile", "DAMAGE"], null, ["lobber", "TELEGRAPH"], "The record's pre_shoot is the shell's flight. The ring commits at release, after the body charge (TELEGRAPH), so sound lags the body's sight."],
@@ -189,8 +150,6 @@ static func rows() -> Array:
 	return r
 
 
-# --- Evaluation --------------------------------------------------------------------------
-
 func _path(key: String) -> String:
 	return String(PATHS[key]) if PATHS.has(key) else "res://src/combat/%s.gd" % key
 
@@ -213,7 +172,6 @@ func _short(path: String) -> String:
 	return path.trim_prefix("res://src/")
 
 
-# A numeric cell, or NAN when the spec names nothing that exists (recorded in problems).
 func value(spec) -> float:
 	if spec == null:
 		return NAN
@@ -282,8 +240,6 @@ func _collect(spec, into: Array) -> void:
 		into.append(label)
 
 
-# --- Hulls, header, sound ----------------------------------------------------------------
-
 func hulls() -> Dictionary:
 	var script = load(_path("class"))
 	var out := {"min": INF, "max": 0.0, "min_id": "", "max_id": ""}
@@ -348,8 +304,6 @@ func _kind_of_type(type_name: String) -> String:
 	return String(kinds[i])
 
 
-# What the node actually commits decides the sound: "type" is the Threat.Type the unit's script commits.
-# Without it the kind is ATTACK_ROWS' declared one and the sheet says so.
 func sound(spec: Dictionary) -> Dictionary:
 	var arow: Dictionary = {}
 	var notices: Array = []
@@ -415,7 +369,6 @@ func sound(spec: Dictionary) -> Dictionary:
 	return {"text": text, "sync": sync, "lag": lag, "detail": "threat kind %s" % kind, "notices": notices}
 
 
-# The Mind plays the pilot's class motif back: roster.gd voiced() maps mind_quote to mind_<motif>.
 func _voiced(id: String) -> String:
 	return "mind_<motif>" if id == "mind_quote" else id
 
@@ -430,7 +383,6 @@ func _counter_voice(owner: String) -> String:
 	return _voiced(String(factions[row["faction"]].get("voice", "")))
 
 
-# counter.gd _voice(): the faction's voice and the row's tag. The sheet only lists a layer a unit sets.
 func _counter_layers(owner: String) -> Array:
 	var roster = load(_path("roster"))
 	var row: Dictionary = roster.row(owner) if roster != null else {}
@@ -439,8 +391,6 @@ func _counter_layers(owner: String) -> Array:
 		return []
 	return [_counter_voice(owner), _voiced(String(row.get("tag", "")))]
 
-
-# --- Build -------------------------------------------------------------------------------
 
 func build() -> Dictionary:
 	problems.clear()
@@ -455,8 +405,6 @@ func build() -> Dictionary:
 		var damage := 0.0 if r[6] is String else value(r[6])
 		var snd := sound(r[7])
 		var extra: Dictionary = r[9] if r.size() > 9 else {}
-		# The tuned values the game ships: a row with a "dial" [boss, phase] reads its tell and damage through
-		# ChallengeDials, the same calls the boss makes, so the lethal check below judges the effective numbers.
 		var base_tell := tell
 		var base_damage := damage
 		if extra.has("dial"):
@@ -505,7 +453,6 @@ func build() -> Dictionary:
 			_collect(extra["cooldown"], refs)
 			row["source"] = ", ".join(refs)
 		if extra.has("wind_up"):
-			# The tell column counts the ring's whole stand (wind-up plus flight); the wind-up alone is shorter.
 			var wind_up := value(extra["wind_up"])
 			row["wind_up_s"] = _num(wind_up)
 			if damage > 0.0 and wind_up < LETHAL_FLOOR - EPS:
@@ -534,8 +481,6 @@ func build() -> Dictionary:
 static func _num(v: float):
 	return null if is_nan(v) else snappedf(v, 0.0001)
 
-
-# --- Output ------------------------------------------------------------------------------
 
 static func _fmt(v, digits := 2) -> String:
 	if v == null:
@@ -612,7 +557,6 @@ static func markdown(sheet: Dictionary) -> String:
 	return "\n".join(lines)
 
 
-# Writes attack-sheet.md and attack-sheet.json into dir; returns the sheet.
 func write(dir: String) -> Dictionary:
 	var sheet := build()
 	DirAccess.make_dir_recursive_absolute(dir)

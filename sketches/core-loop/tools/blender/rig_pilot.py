@@ -23,11 +23,6 @@ import cycles_device
 import polish
 import shell_base as sb
 
-# Polish (POLISH.md): soft-toy organic parts, crisp props. Islands of the Pilot mesh up to
-# SOFT_MAX_TRIS triangles subdivide once (hands, feet, limbs, ears, muzzles); the larger
-# head and torso spheres are already dense. Goggle frames and lenses, boxes and belt
-# beams stay hard. The bevel is under polish.shape's 5 mm floor, so their edges stay as
-# authored; a 6 mm bevel put Kest over the pilot cap.
 POLISH = {"detail": 1, "bevel": .003}
 SOFT_MAX_TRIS = 200
 HARD_PRIMITIVES = ("ring", "box", "beam")
@@ -44,7 +39,6 @@ def soft_toy(part, records, tags):
         primitive, bone = records[index - 1][1], tags[index - 1]
         return primitive not in HARD_PRIMITIVES and bone != "goggles" and size[index] <= SOFT_MAX_TRIS
 
-    # An island softens only when every primitive in it is organic.
     polish.subdivide_where(part.bm, 1, lambda island: all(soft(i) for i in {f.verts[0][layer] for f in island}))
     part.subsurf = 0
 
@@ -52,7 +46,6 @@ def soft_toy(part, records, tags):
 def recipe(pilot="rivet"):
     path = HERE / f"shell_{pilot}.py"
     tree = ast.parse(path.read_text())
-    # This recipe has an unconditional main(). Load definitions without exporting.
     assert isinstance(tree.body[-1], ast.Expr)
     assert isinstance(tree.body[-1].value, ast.Call)
     assert tree.body[-1].value.func.id == "main"
@@ -178,7 +171,6 @@ def build(pilot_name="rivet", out=None, polished=True):
     for name in ("uv", "ring", "rod", "beam", "box", "cyl", "prism"):
         originals[name] = getattr(common.Part, name)
         setattr(common.Part, name, capture(name, originals[name]))
-    # A BMesh integer attribute survives deterministic triangulation and conversion.
     original_to_object = common.Part.to_object
 
     def to_object(part, *args, **kwargs):
@@ -187,7 +179,6 @@ def build(pilot_name="rivet", out=None, polished=True):
         elif part.name == "Pilot":
             soft_toy(part, records, tags)
         else:
-            # The hidden shell context is not exported; leave it unpolished.
             part.bevel, part.subsurf = 0, 0
         return original_to_object(part, *args, **kwargs)
 
@@ -220,7 +211,6 @@ def build(pilot_name="rivet", out=None, polished=True):
     for name, position, parent in spec:
         bone = arm.data.edit_bones.new(name)
         bone.head = position
-        # Common rest axes make the human-authored XYZ pose table unambiguous.
         bone.tail = Vector(position) + Vector((0, .08, 0))
         if parent:
             bone.parent = arm.data.edit_bones[parent]
@@ -259,13 +249,11 @@ def build(pilot_name="rivet", out=None, polished=True):
             meshes.append(obj)
     else:
         meshes.extend(accessories(pilot_name, arm))
-    # Bake AO and edge wear over the rig's own meshes only; the glass and pod are hidden.
     if polished:
         polish.bake(arm)
     for obj in common.tree(root):
         obj.hide_render = True
     root.hide_render = True
-    # The empty shell hierarchy is retained only for the contextual movie.
     pilot.hide_render = False
     arm["pelvis_anchor"] = [0, 0, -.3]
     OUT.mkdir(parents=True, exist_ok=True)

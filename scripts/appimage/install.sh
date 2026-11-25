@@ -1,14 +1,4 @@
 #!/bin/sh
-# Puts Scrapkeep in the app menu for the current user, or takes it out again.
-#   Scrapkeep-<sha>-x86_64.AppImage --install     (AppRun runs this file from inside the image)
-#   Scrapkeep-<sha>-x86_64.AppImage --uninstall
-#   sh install.sh install <AppImage> <AppDir>      (what npm run sketch:appimage runs)
-#   sh install.sh uninstall
-# install copies the AppImage to $XDG_DATA_HOME/scrapkeep/Scrapkeep.AppImage (default
-# ~/.local/share), the icon under icons/hicolor and the AppDir's scrapkeep.desktop, with Exec
-# pointed at the copy (the sitting action's too, keeping its --profile=sitting), to
-# applications/scrapkeep.desktop. uninstall removes those three files and
-# nothing else: saves and settings under ~/.local/share/godot/app_userdata/core-loop stay.
 set -eu
 
 command=${1:-}
@@ -18,7 +8,6 @@ icon="$data/icons/hicolor/scalable/apps/scrapkeep.svg"
 desktop="$data/applications/scrapkeep.desktop"
 
 refresh() {
-	# Optional; launchers that watch the folder pick the entry up without them.
 	update-desktop-database "$data/applications" >/dev/null 2>&1 || true
 	gtk-update-icon-cache -q -t "$data/icons/hicolor" >/dev/null 2>&1 || true
 }
@@ -52,7 +41,6 @@ install)
 	cp "$appdir/scrapkeep.svg" "$icon"
 	exec_line="Exec=$(exec_path "$app")"
 	# TryExec names the file without quotes; launchers hide the entry once the file is gone.
-	# Every Exec keeps its arguments; the main entry's first Exec also gets TryExec.
 	awk -v exec_line="$exec_line" -v try_exec="TryExec=$app" '
 		/^Exec=/ {
 			rest = $0; sub(/^Exec=[^ ]*/, "", rest)

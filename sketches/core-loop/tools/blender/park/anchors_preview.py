@@ -14,8 +14,8 @@ from mathutils import Vector
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
-import common  # noqa: E402
-import cycles_device  # noqa: E402
+import common
+import cycles_device
 
 FAMILIES = ("hoodoo", "basalt", "timber", "saguaro", "cairn")
 SPACING = 11.0

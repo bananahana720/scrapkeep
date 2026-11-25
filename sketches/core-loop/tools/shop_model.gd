@@ -6,34 +6,6 @@ const Activities := preload("res://src/world/activities.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 
-# SG16, the shop price-to-income report (W13-INTEGRATION-3). A report-only model: it logs one
-# reference item's price and a fixed-skill bot's wallet income for every stage of the three
-# worlds, over a run of seeds, so owner item 4 (shop costs, BIBLE.md) decides on measured
-# ratios. It reports and never tunes: it reads PAY_SCRAP (activities.gd) and COG_PRICES
-# (fabricators.gd) and the stage table, and changes none of them. Nothing here is a proposed
-# price.
-#
-#   godot --headless --path sketches/core-loop --script res://tools/shop_model.gd \
-#     -- --seeds=1-20 [--out-dir=<dir>]
-#
-# Writes artifacts/local/shop-model.md and shop-model.tsv (or --out-dir) and prints the table.
-#
-# The model, all of it start values (comps/gunfire/run-pacing-and-economy.md, "Lab measure":
-# 3 regions, 20 seeds, price to income 0.5 to 2.0 as a target band; a model of the economy's
-# data, not a played run, so no human feel and no combat is measured):
-#   - Income is the cog wallet, which is what the shop spends. It sums, per stage: the gears
-#     the map's scrap lines lay (scrap_field.gd COG_LINE_EVERY and COG_LINE_VALUE, n pieces per
-#     line as lay_out computes), kills (a stage-table kill_scrap times a mean kill value, plus the
-#     Warden's 30 x stage), and PAY_SCRAP for every activity site the bot finishes. Activities
-#     and kills pay scrap and the same count of cogs (activities.gd _pay_scrap), so income in
-#     cogs is also the scrap income.
-#   - The fixed-skill bot takes BOT_LINE_SHARE of the gears, finishes each activity site with
-#     probability BOT_ACTIVITY_RATE and makes BOT_KILLS kills a stage, each of the three drawn
-#     from the seed with +-BOT_JITTER spread. It buys nothing, so its parts come from START_PARTS
-#     and one part per finished activity (the activity pays one part).
-#   - The reference item is one tier-2 part, priced by Fabricators.price at the parts the bot holds
-#     on entering the stage, which is when it first stands at a shop.
-#   - A world row sums a world's stages: the price on entering it, the summed income and the ratio.
 
 const BAND := Vector2(0.5, 2.0)
 const REFERENCE_PART := "arc_coil"
@@ -67,7 +39,6 @@ func _initialize() -> void:
 	quit(0)
 
 
-# One row per seed and stage: {seed, stage, world, parts_held, activities, price, income, ratio, in_band}.
 static func stage_rows(seeds: Array) -> Array:
 	var out: Array = []
 	var maps := {}
@@ -99,8 +70,6 @@ static func stage_rows(seeds: Array) -> Array:
 	return out
 
 
-# The gears a map's scrap lines lay: ScrapField.lay_out's piece count per line, one gear of
-# COG_LINE_VALUE beside every COG_LINE_EVERY-th piece.
 static func _line_cogs(map, density: float) -> float:
 	var total := 0
 	for line in map.scrap_lines:
@@ -111,7 +80,6 @@ static func _line_cogs(map, density: float) -> float:
 	return float(total)
 
 
-# One row per seed and world: the price on entering the world, the world's summed income and their ratio.
 static func world_rows(rows: Array) -> Array:
 	var by_key := {}
 	var order: Array = []
@@ -130,8 +98,6 @@ static func world_rows(rows: Array) -> Array:
 	return out
 
 
-# The structural facts the test gates: a nonzero and expected row count, every field filled,
-# every number finite, price and income above zero.
 static func structural_issues(rows: Array, expect_rows: int) -> Array:
 	var issues: Array = []
 	if rows.is_empty():
@@ -152,9 +118,6 @@ static func structural_issues(rows: Array, expect_rows: int) -> Array:
 	return issues
 
 
-# Flag lines: "outside_band" per stage row outside BAND, "price_falls" where a price drops
-# between two stages of one world, "no_boundary_rise" where a world's first price does not rise
-# over the previous world's last.
 static func flags(rows: Array) -> Array:
 	var out: Array = []
 	var prev := {}

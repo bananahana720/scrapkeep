@@ -1,7 +1,4 @@
 #!/bin/bash
-# run_board.sh <board_name>: renders $BOARD_ROOT/boards/<board_name>.json into $BOARD_ROOT/boards/<board_name>/
-# with FLUX.1 schnell on card 0 through the GPU queue. BOARD_ROOT defaults to the repo's
-# artifacts/local/alpha/push/w13/concepts. board_page.py and board_widget.py read the same BOARD_ROOT.
 HERE=$(cd "$(dirname "$0")" && pwd)
 REPO=$(cd "$HERE/../../../.." && pwd)
 B=$1

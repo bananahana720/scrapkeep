@@ -74,8 +74,6 @@ def preview_files(directory=model.MODELS):
         glb_hash = hashlib.sha256(path.read_bytes()).hexdigest()
         bpy.ops.import_scene.gltf(filepath=str(path))
         root = bpy.data.objects[root_name]
-        # Importing GLB animations may activate the first track. Capture the rest
-        # transforms from the unanimated nodes before evaluating any clip.
         for obj in common.tree(root):
             if obj.animation_data:
                 obj.animation_data.action = None
@@ -83,7 +81,6 @@ def preview_files(directory=model.MODELS):
                     track.mute = True
         bpy.context.scene.frame_set(0)
         # Blender's importer can leave the first action's pose on an object after
-        # muting it. Restore the GLB's actual node TRS, rather than that cached pose.
         raw = path.read_bytes()
         gltf = json.loads(raw[20:20 + struct.unpack_from("<I", raw, 12)[0]])
         conversion = Matrix.Rotation(math.pi / 2, 4, "X")
@@ -114,8 +111,6 @@ def preview_files(directory=model.MODELS):
                 anim.preview_pose(root, clip, seconds)
             else:
                 bpy.context.scene.frame_set(0)
-            # Front = bow. Place sphere perpendicular to the horizontal view
-            # direction, with identical depth, never closer to the camera.
             a = math.radians(yaw)
             distance = 34 if is_ship else 10
             direction = Vector((math.sin(a), math.cos(a), .34))

@@ -92,13 +92,10 @@ def spill_splash():
     r = rng("spill_splash")
     n = round(0.8 * SR)
     t = t_of(0.8)
-    # The plop: the ball's hollow, a low sine that drops a little as the cavity closes.
     plop = np.sin(2 * np.pi * np.cumsum(150 - 60 * (1 - np.exp(-t / 0.05))) / SR) * decay(n, 0.07)
-    # The slap of spray: a bright burst at once, then a wash that rains back.
     slap = shaped(n, r, 400, 3800, -2.0) * decay(n, 0.05)
     rain = shaped(n, r, 900, 3600, -3.0) * env(n, 0.06, 0.45) * np.exp(-t / 0.35)
     out = plop * 0.9 + slap * 0.8 + rain * 0.35
-    # Droplets back onto the water on D, A and E (the home key's consonance), uneven gaps.
     for at, freq, gain in ((0.16, D6, 0.30), (0.23, A5, 0.26), (0.31, E5 * 2, 0.20), (0.42, D5 * 2, 0.16),
                            (0.55, A5, 0.10)):
         place(out, at, drop(freq, 0.09, r) * gain)
@@ -110,7 +107,6 @@ def spill_wake():
     n = round(2.0 * SR)
     body = shaped(n, r, 180, 2400, -3.0) * lfo(n, 3, 0.35) * lfo(n, 7, 0.2, 1.3)
     out = body
-    # Small waves slapping the ball: soft bursts at uneven times, wrapped round the loop.
     for at in (0.13, 0.52, 0.81, 1.27, 1.66):
         k = round(0.18 * SR)
         place(out, at, shaped(k, r, 300, 2600, -2.0) * env(k, 0.015, 0.15) * 0.6, wrap=True)
@@ -139,9 +135,7 @@ def steam_breath():
     r = rng("steam_breath")
     n = round(1.6 * SR)
     t = t_of(1.6)
-    # The valve: a soft wooden thunk, no ring.
     thunk = np.sin(2 * np.pi * 95 * t) * decay(n, 0.035) + shaped(n, r, 150, 900) * decay(n, 0.02) * 0.4
-    # The plume: breathy noise that swells in and fades as the puff rises off the roof.
     shape = np.sin(np.pi * np.clip(t / 1.5, 0, 1)) ** 1.4 * np.exp(-t / 1.4)
     plume = shaped(n, r, 350, 3600, -3.5) * shape
     return thunk * 0.7 + plume
@@ -151,9 +145,7 @@ def penstock_vent():
     r = rng("penstock_vent")
     n = round(1.3 * SR)
     t = t_of(1.3)
-    # The chuff: a low pressure thump as the relief valve lifts.
     chuff = np.sin(2 * np.pi * 62 * t) * decay(n, 0.09) + shaped(n, r, 60, 400) * decay(n, 0.06) * 0.7
-    # The jet: firmer than the roof's breath, level then settling (no glide).
     jet = shaped(n, r, 450, 3900, -2.5) * env(n, 0.03, 0.6, 1.6) * np.exp(-t / 0.9)
     return chuff * 0.8 + jet
 
@@ -164,7 +156,6 @@ def flood_foam():
     wash = shaped(n, r, 90, 1400, -3.0) * lfo(n, 2, 0.3)
     fizz = shaped(n, r, 1800, 4200, -1.0) * lfo(n, 5, 0.3, 0.9) * 0.25
     out = wash + fizz
-    # Bubbles: tiny plinks at random pitches round the loop, quiet and dense.
     for _ in range(70):
         at = r.uniform(0, 3.0)
         place(out, at, drop(r.uniform(900, 2600), r.uniform(0.02, 0.05), r) * r.uniform(0.05, 0.18), wrap=True)

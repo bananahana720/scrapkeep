@@ -34,7 +34,6 @@ const rows = JSON.parse(
 const rowOf = (id) => rows.find((r) => r.id === id);
 const script = fileURLToPath(new URL("./band-receipts.mjs", import.meta.url));
 
-// One runs.ndjson line, as scripts/challenge/run.mjs writes it: the job fields, the commit, the bot row and the grade.
 const kindOf = (cell) => (cell === "brindle" ? "boss" : cell === "w1clear" ? "clear" : "warden");
 const run = (cell, column, seed, grade, row = {}) => ({
   id: `${cell}-${column}-${seed}`,
@@ -64,9 +63,6 @@ const fair = (over = {}) => ({
   ...over,
 });
 
-// A whole-clear run's record: the dam's stage note (its Warden fought) and Brindle's boss note, each with its worst 60 s
-// as hull out of 100. dam: a number, "unrecorded" (fought, no window field) or "unfought" (no Warden engaged). boss: a
-// number, "nohit" (hits 0, so no window field), "unrecorded" (no hit count and no window) or null (never reached).
 const clearRow = ({ dam = 20, boss = 30 } = {}) => {
   const damNote =
     dam === "unrecorded"
@@ -96,7 +92,6 @@ const clearRow = ({ dam = 20, boss = 30 } = {}) => {
   };
 };
 
-// A full read: 48 seeds in every column, so every pool has what the plan asks. novice(cell, i) gives the Novice grade.
 const band = ({
   n = 48,
   topParts = 8,
@@ -168,7 +163,6 @@ test("item 1: one run a column, or fewer seeds than the plan asks, is a miss wit
     assert.equal(r.pass, false, id);
     assert.match(r.measured, /too few runs/, id);
   }
-  // 24 seeds is the fairness pool's count (plan lines 59 to 61) but short of the Expert's and the dam Novice's 48.
   const r24 = band({ n: 24 });
   assert.equal(gradeFairness(r24, HEAD).pass, true);
   assert.match(gradeStrongBuild(r24, HEAD).measured, /too few runs: brindle expertTop n=24 of 48/);
@@ -220,7 +214,6 @@ test("item 2: strong-build-shows misses when the top build is not faster, and th
     [swapped.pass, swapped.checks.parts, swapped.checks.faster],
     [false, false, false],
   );
-  // A plant that left the fight time alone would not be caught: same parts gap, swapped fight times only.
   const partsOnly = buildReceipt("strong-build-shows", band({ topFight: 90 }), HEAD);
   assert.equal(partsOnly.pass, false);
   assert.match(rowOf("strong-build-shows").plant, /labels swapped/);
@@ -319,7 +312,6 @@ test("runs from another commit are not this head's read", () => {
 test("item 7: two shard folders that repeat a run count it once, and a short --head is refused", () => {
   const dir = mkdtempSync(path.join(tmpdir(), "band-receipts-"));
   try {
-    // 24 Novice seeds of w1, written to two shards that each carry all of them: still 24, short of the 48 needed.
     const read = band();
     const half = read.runs.filter(
       (r) => !(r.cell === "w1" && r.column === "novice" && r.seed >= 24),
@@ -397,8 +389,6 @@ test("the CLI reads a band read folder and writes one receipt per row", () => {
   }
 });
 
-// --- brindle-worst-minute and brindle-stop-tax (BACKLOG MG-11) -------------------------------------------------------
-
 const worst = (clear) => gradeWorstMinute(band({ clear }), HEAD);
 const cols = (g) => [g.pass, g.checks.learner5, g.checks.expert];
 
@@ -410,11 +400,9 @@ test("brindle-worst-minute: the floor comes from the rows file, the W1-31 read's
 });
 
 test("brindle-worst-minute: a Brindle that deals no damage misses in both columns, and the plant is that Brindle", () => {
-  // No hit landed at Brindle: hits 0 and no window field reads 0%, not no data, and 0% is under every floor.
   const silent = worst(() => clearRow({ boss: "nohit" }));
   assert.deepEqual(cols(silent), [false, false, false]);
   assert.match(silent.measured, /learner5 Brindle 0% \(no hit landed, n=48\) against 27%/);
-  // The plant, against a dam that cost nothing: the floor still holds the bar up.
   const planted = gradeWorstMinute(
     plantWorstMinute(band({ clear: () => clearRow({ dam: 0 }) })),
     HEAD,
@@ -429,12 +417,9 @@ test("brindle-worst-minute: a Brindle that deals no damage misses in both column
 
 test("brindle-worst-minute: the bar is the larger of the dam's median and the floor, so both fights cannot sink together", () => {
   assert.equal(worst(() => clearRow()).pass, true);
-  // The dam sinks to 1% and Brindle to 2%: above the dam, under the floors.
   assert.deepEqual(cols(worst(() => clearRow({ dam: 1, boss: 2 }))), [false, false, false]);
-  // The dam above the floor raises the bar: Brindle 30% passes against a 30% dam and misses against a 40% one.
   assert.equal(worst(() => clearRow({ dam: 30, boss: 30 })).pass, true);
   assert.deepEqual(cols(worst(() => clearRow({ dam: 40, boss: 30 }))), [false, false, false]);
-  // A small positive Brindle at the boundary: exactly the floor passes, a tenth under misses.
   const at = worst((column) => clearRow({ dam: 0, boss: column === "learner5" ? 27 : 7 }));
   assert.equal(at.pass, true, at.measured);
   assert.deepEqual(
@@ -445,7 +430,6 @@ test("brindle-worst-minute: the bar is the larger of the dam's median and the fl
     cols(worst((column) => clearRow({ dam: 0, boss: column === "learner5" ? 27 : 6.9 }))),
     [false, true, false],
   );
-  // The shape of the W1-31 read: Learner 27% at the dam and 0% at Brindle, Expert 7% and 0%.
   const w131 = worst((column) => clearRow({ dam: column === "learner5" ? 27 : 7, boss: 0 }));
   assert.deepEqual(cols(w131), [false, false, false]);
   assert.match(
@@ -470,21 +454,17 @@ test("brindle-worst-minute: too few runs, too few fights on either side, and a c
   );
   assert.equal(SEEDS.worstMinute, 48);
   assert.equal(SEEDS.worstMinuteFights, 24);
-  // 48 runs a column, one reaching Brindle: one fight is not a reading.
   const one = worst((_column, i) => clearRow({ boss: i === 0 ? 90 : null }));
   assert.deepEqual(cols(one), [false, false, false]);
   assert.match(one.measured, /learner5 too few Brindle fights: 1 of 24/);
-  // 23 reach Brindle: one short. 24 do: graded.
   assert.match(
     worst((_c, i) => clearRow({ boss: i < 23 ? 90 : null })).measured,
     /too few Brindle fights: 23 of 24/,
   );
   assert.equal(worst((_c, i) => clearRow({ boss: i < 24 ? 90 : null })).pass, true);
-  // The dam note's shape: stage 1 counts only once its Warden was engaged, and stage 2 never stands in for it.
   const unfought = worst((_c, i) => clearRow({ dam: i < 30 ? "unfought" : 20 }));
   assert.deepEqual(cols(unfought), [false, false, false]);
   assert.match(unfought.measured, /learner5 too few dam fights: 18 of 24/);
-  // Every expert run graded error is left out: that column has no runs.
   const excluded = gradeWorstMinute(
     mapRuns(band(), (r) =>
       r.cell === "w1clear" && r.column === "expert" ? { ...r, grade: { result: "error" } } : r,
@@ -498,47 +478,39 @@ test("brindle-worst-minute: too few runs, too few fights on either side, and a c
 });
 
 test("brindle-worst-minute: no data on either side is a miss, and a dam fight no hit landed in reads 0", () => {
-  // The dam's field is written only when a hit lands inside the Warden fight. One clean dam fight among recorded ones is
-  // a 0, not a hole in the column: 47 fights at 20% and one at 0 keep the median at 20%, and Brindle at 90% passes.
   const oneClean = worst((_c, i) => clearRow({ dam: i === 0 ? "unrecorded" : 20, boss: 90 }));
   assert.deepEqual(cols(oneClean), [true, true, true]);
   assert.match(
     oneClean.measured,
     /learner5 Brindle 90% \(n=48\) against 27% \(dam 20%, n=48, 1 with no hit landed; floor 27%\)/,
   );
-  // The zeros count: with most dam fights clean the dam median is 0 and the floor is the bar.
   const mostClean = worst((_c, i) => clearRow({ dam: i < 40 ? "unrecorded" : 60, boss: 26 }));
   assert.deepEqual(cols(mostClean), [false, false, true]);
   assert.match(
     mostClean.measured,
     /learner5 Brindle 26% \(n=48\) against 27% \(dam 0%, n=48, 40 with no hit landed; floor 27%\)/,
   );
-  // No dam fight carries the field: nothing shows the build records it, so the side is unread and nothing passes.
   const damGap = worst(() => clearRow({ dam: "unrecorded", boss: 90 }));
   assert.deepEqual(cols(damGap), [false, false, false]);
   assert.match(
     damGap.measured,
     /learner5 dam no data \(worst_60s_hull not recorded on any of 48 fights\)/,
   );
-  // The share is of each fight's own max hull, not a fixed 100: 30 lost of 60 is 50%.
   const smallHull = worst(() => ({
     ...clearRow(),
     boss: { entry_parts: 3, hits: 4, worst_60s_hull: 30, worst_60s_max_hp: 60 },
   }));
   assert.match(smallHull.measured, /learner5 Brindle 50% \(n=48\)/);
-  // A boss note with no hit count and no window is no data, not 0.
   const bossGap = worst(() => clearRow({ boss: "unrecorded" }));
   assert.deepEqual(cols(bossGap), [false, false, false]);
   assert.match(
     bossGap.measured,
     /learner5 Brindle no data \(no worst_60s_hull and no hit count of 0 on 48 of 48 fights\)/,
   );
-  // Hits counted but no window is a broken record: no data.
   assert.match(
     worst(() => ({ ...clearRow(), boss: { entry_parts: 3, hits: 5 } })).measured,
     /Brindle no data/,
   );
-  // The dam's rule is not Brindle's: one broken Brindle record among recorded ones is still no data, never a 0.
   const oneBroken = worst((_c, i) =>
     i === 0 ? { ...clearRow(), boss: { entry_parts: 3, hits: 5 } } : clearRow({ boss: 90 }),
   );
@@ -547,7 +519,6 @@ test("brindle-worst-minute: no data on either side is a miss, and a dam fight no
     oneBroken.measured,
     /learner5 Brindle no data \(no worst_60s_hull and no hit count of 0 on 1 of 48 fights\)/,
   );
-  // One column's dam fights all clean: the other column shows the build records the field, so the clean column reads 0.
   const cleanColumn = worst((c) => clearRow({ dam: c === "expert" ? "unrecorded" : 20, boss: 90 }));
   assert.deepEqual(cols(cleanColumn), [true, true, true]);
   assert.match(
@@ -557,7 +528,6 @@ test("brindle-worst-minute: no data on either side is a miss, and a dam fight no
 });
 
 test("brindle-stop-tax: a stopped ball that loses the same as a cruising one misses, and that is the plant", () => {
-  // 30 hull in 30 s below cruise against 30 hull in 30 s at cruise: the same rate, a stop tax of 1.
   const same = gradeBowlStopTax(
     band({ fairness: () => fair({ slow_s: 30, fast_s: 30, slow_hull: 30, fast_hull: 30 }) }),
     HEAD,
@@ -573,7 +543,6 @@ test("brindle-stop-tax: a stopped ball that loses the same as a cruising one mis
     planted.measured,
     /novice 1\.00, learner1 1\.00, learner5 1\.00, expert 1\.00, expertTop 1\.00/,
   );
-  // Runs with uneven times and hull still pool to a stop tax of 1 under the plant.
   const uneven = mapRuns(band(), (r) =>
     r.cell === "brindle"
       ? {
@@ -603,7 +572,6 @@ test("brindle-stop-tax: every default column is a pool of its own, and one under
     COLUMNS.map((c) => c.id),
   );
   assert.equal(gradeBowlStopTax(band(), HEAD).pass, true);
-  // Exactly double passes; just under misses.
   assert.equal(
     gradeBowlStopTax(
       band({ fairness: () => fair({ slow_s: 30, fast_s: 30, slow_hull: 20, fast_hull: 10 }) }),
@@ -618,7 +586,6 @@ test("brindle-stop-tax: every default column is a pool of its own, and one under
     ).pass,
     false,
   );
-  // learner5 at a tax of 1, the rest at 6: pooled the read would hold; per column it misses.
   const one = gradeBowlStopTax(
     mapRuns(band(), (r) =>
       r.cell === "brindle" && r.column === "learner5"
@@ -635,7 +602,6 @@ test("brindle-stop-tax: every default column is a pool of its own, and one under
   );
   assert.deepEqual([one.pass, one.checks.tax], [false, false]);
   assert.match(one.measured, /learner5 1\.00, expert 6\.00, .*; under the line: learner5 \(/);
-  // Only the Brindle cell is read: a Warden cell under the line does not move it.
   assert.equal(
     gradeBowlStopTax(
       mapRuns(band(), (r) =>
@@ -648,7 +614,6 @@ test("brindle-stop-tax: every default column is a pool of its own, and one under
 });
 
 test("brindle-stop-tax: a missing column, too few runs, too few fairness records and no stop tax are each a miss", () => {
-  // A read with the expert column alone at Brindle.
   const lone = gradeBowlStopTax(
     { runs: band().runs.filter((r) => r.cell !== "brindle" || r.column === "expert") },
     HEAD,
@@ -661,7 +626,6 @@ test("brindle-stop-tax: a missing column, too few runs, too few fairness records
   const thin = gradeBowlStopTax(band({ n: 23 }), HEAD);
   assert.match(thin.measured, /too few runs: brindle novice n=23 of 24/);
   assert.equal(SEEDS.fairness, 24);
-  // Every learner1 run excluded as an error.
   const excluded = gradeBowlStopTax(
     mapRuns(band(), (r) =>
       r.cell === "brindle" && r.column === "learner1" ? { ...r, grade: { result: "error" } } : r,
@@ -669,7 +633,6 @@ test("brindle-stop-tax: a missing column, too few runs, too few fairness records
     HEAD,
   );
   assert.match(excluded.measured, /too few runs: brindle learner1 n=0 of 24/);
-  // 48 runs, only 1 carrying a fairness record: one record is not a pool.
   const sparse = gradeBowlStopTax(
     mapRuns(band(), (r) =>
       r.cell === "brindle" && r.column === "expert" && r.seed > 0
@@ -680,7 +643,6 @@ test("brindle-stop-tax: a missing column, too few runs, too few fairness records
   );
   assert.deepEqual([sparse.pass, sparse.checks.tax], [false, false]);
   assert.match(sparse.measured, /too few runs with a fairness record: brindle expert 1 of 24/);
-  // No hull lost at cruise: no stop tax.
   const noFast = gradeBowlStopTax(band({ fairness: () => fair({ fast_hull: 0 }) }), HEAD);
   assert.deepEqual([noFast.pass, noFast.checks.tax], [false, false]);
   assert.match(noFast.measured, /expert no data \(no hull lost at cruise\)/);
@@ -752,7 +714,6 @@ test("each row's producer names this command", () => {
 });
 
 test("F2: a pool with no hull lost at cruise stays a miss, whatever the scrap at cruise reads", () => {
-  // 20 hull in 30 s slow, none at cruise, 1 scrap at cruise in 60 s: the pooled ratio is 40, far over the line.
   const scrapOnly = () =>
     fair({ slow_s: 30, fast_s: 60, slow_hull: 20, fast_hull: 0, slow_scrap: 0, fast_scrap: 1 });
   const g = gradeFairness(band({ fairness: scrapOnly }), HEAD);

@@ -59,7 +59,6 @@ const ledger = parseLedger(
 test("the gate lists split the sorted tests by the bot marker and number from 1", () => {
   const lists = gateLists(path.join(repoRoot, "sketches", "core-loop"));
   assert.ok(lists.tests.length > 1000);
-  // The bot tier as a whole: the weekly list (ruling ca) moves bot tests out of the promotion list, not out of the tree.
   assert.ok(lists.bots.length + lists.weekly.bots.length >= 30);
   assert.deepEqual([...lists.tests].sort(), lists.tests);
   assert.ok(
@@ -122,14 +121,11 @@ test("a failure is carried only with a ledger row, and blocks when it fails alon
 });
 
 test("a failed test with a red row is carried from its first run and is not rerun alone", () => {
-  // The first run already shows which check failed, and that run is read against the row, so a rerun adds only time.
-  // (Trial gate on 375fe11a, 15 Nov: two such reruns took 832 s of the bot shard's 6922 s.)
   const failedACheck = () => ({ timedOut: false, failLines: 1 });
   assert.deepEqual(soloTests(["red_test", "wobble_test", "fresh_test"], ledger, failedACheck), [
     "wobble_test",
     "fresh_test",
   ]);
-  // A time-out, a kill or a run with no failing check does not show which check failed, so it is still rerun.
   assert.deepEqual(
     soloTests(["red_test"], ledger, () => ({ timedOut: true, failLines: 0 })),
     ["red_test"],
@@ -145,10 +141,8 @@ test("a failed test with a red row is carried from its first run and is not reru
   const carried = classifyFailure("red_test", [], ledger);
   assert.equal(carried.call, "carried");
   assert.equal(carried.alone, "not rerun: red row, a check failed in the first run");
-  // By test name alone the call is the same with solo runs; what each failed run did is read separately (whatFailed).
   for (const runs of [[false], [true], [false, false], [true, true]])
     assert.equal(classifyFailure("red_test", runs, ledger).call, "carried");
-  // Without a row, no solo run is never a pass.
   assert.equal(classifyFailure("fresh_test", [], ledger).call, "new-red");
 });
 
@@ -169,12 +163,10 @@ test("a red row carries only the check it names; another failing check in the sa
   assert.equal(second.call, "new-red");
   assert.match(second.note, /fails a check its row does not name: stage 1 draw/);
   assert.deepEqual(shardVerdict([second]), { ok: false, line: "RED: 1 new red (red_test)" });
-  // The same holds when the test was rerun alone.
   assert.equal(
     classifyFailure("red_test", [false], named, null, { labels: ["stage 1 draw"] }).call,
     "new-red",
   );
-  // A killed run is not the named check either.
   assert.equal(
     classifyFailure("red_test", [false], named, null, { labels: [], timedOut: true }).call,
     "new-red",
@@ -196,7 +188,6 @@ test("every failed run of a listed test is read against its row, not only the la
   ).rows;
   const pin = "[pin within 2 s] got 3 -> FAIL\n";
   const other = "[stage 1 draw] got 1 -> FAIL\n";
-  // First run killed after an unnamed check failed; alone it fails only the named check.
   const mixed = whatFailed([
     { ok: false, text: other, timedOut: true },
     { ok: false, text: pin, timedOut: false },
@@ -207,7 +198,6 @@ test("every failed run of a listed test is read against its row, not only the la
     errorLine: false,
   });
   assert.equal(classifyFailure("red_test", [false], named, null, mixed).call, "new-red");
-  // Every solo run passed: the first run is still read, so a retry does not decide the call.
   const retried = whatFailed([
     { ok: false, text: other, timedOut: false },
     { ok: true, text: "[a] 1 -> PASS\n", timedOut: false },
@@ -227,7 +217,6 @@ test("every failed run of a listed test is read against its row, not only the la
     ).call,
     "carried",
   );
-  // A passing run's lines are not read; an ERROR line of a failed run is.
   assert.deepEqual(
     whatFailed([
       { ok: false, text: pin + "ERROR: resumed after await\n", timedOut: false },
@@ -240,7 +229,6 @@ test("every failed run of a listed test is read against its row, not only the la
       .errorLine,
     true,
   );
-  // macOS prints the dummy renderer's shutdown lines on a clean run; only there they are not an error line.
   const shutdown =
     pin +
     "ERROR: 2 RID allocations of type 'N13RendererDummy15MaterialStorage11DummyShaderE' were leaked at exit.\n";
@@ -259,7 +247,6 @@ test("every failed run of a listed test is read against its row, not only the la
     ).errorLine,
     true,
   );
-  // A failed run with no log, and a failing line the pattern cannot label, are never read as nothing.
   assert.deepEqual(whatFailed([{ ok: false, text: null, timedOut: false }]).labels, [
     "a failed run left no log",
   ]);
@@ -283,7 +270,6 @@ test("a load time-out never hides a check the row does not name (PR 1051, second
       { timedOut: true, failLines: 0, load: 20 },
     ],
   };
-  // First run failed an unnamed check and was killed; both solo runs were killed under load with no check.
   const hidden = classifyFailure("red_test", [false, false], named, loaded, {
     labels: ["stage 1 draw"],
     timedOut: true,
@@ -291,7 +277,6 @@ test("a load time-out never hides a check the row does not name (PR 1051, second
   });
   assert.equal(hidden.call, "new-red");
   assert.match(hidden.note, /stage 1 draw/);
-  // Only the kill is unnamed: that is what a retime on a quiet machine can settle.
   assert.equal(
     classifyFailure("red_test", [false, false], named, loaded, {
       labels: ["pin within 2 s"],
@@ -308,9 +293,7 @@ test("a load time-out never hides a check the row does not name (PR 1051, second
     }).call,
     "suspect-load",
   );
-  // A passing check line is not a failing check, and an error line counts as the runner counts it: at column 0.
   assert.deepEqual(failedChecks("[x] expected -> FAIL, got it -> PASS\n"), []);
-  // The last arrow on the line is the verdict: a failing check whose detail quotes "-> PASS" still fails.
   assert.deepEqual(failedChecks('[stage 1 draw] wanted an "a -> PASS" line, got none -> FAIL\n'), [
     "stage 1 draw",
   ]);
@@ -695,7 +678,6 @@ test("tests on the weekly list hold a promotion until a sweep within a week is o
     checkTally(withRow("PASS 2026-11-19, 64 of 64"), weekly).join("\n"),
     /"weekly sweep" names no receipt/,
   );
-  // The newest row wins, as for every shard: an old sweep is cured by a new row, not by editing the old one.
   const rerun =
     plan([...full, "| weekly sweep | PASS 2026-11-01. Receipt old.md |"]) +
     "\n\n## Sweep rerun\n| Shard | Verdict |\n| --- | --- |\n| weekly sweep | PASS 2026-11-20. Receipt new.md |\n";
@@ -704,7 +686,6 @@ test("tests on the weekly list hold a promotion until a sweep within a week is o
   assert.deepEqual(checkWeeklySweep([], { weeklyCount: 0 }), []);
 });
 
-// A sketch folder with these test files, and the weekly list beside it when one is given.
 function listsOf(files) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "gate-weekly-"));
   mkdirSync(path.join(dir, "tests"));
@@ -961,7 +942,6 @@ test("the receipt shows the load of every step, and a dash for a step saved befo
   assert.match(text, /read against 32 threads/);
 });
 
-// retime with a fake runner, load reader and sleep: no engine starts.
 async function retimeWith({
   tests = ["a_test", "b_test"],
   runs = 2,

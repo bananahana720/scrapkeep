@@ -13,9 +13,6 @@ import sys
 
 PENDING = "runtime integration pending"
 
-# Loads built from a name at runtime, so no source file holds the literal path.
-# Each entry is backed by the wiring unit's own test (WCO companion_body_test,
-# WDG dig_scenery_test).
 NAME_BUILT = [
     ("res://assets/models/companion/assembled/", "", "src/presentation/companion_body.gd"),
     ("res://assets/models/dig_mechanical/breach_wedge_", "_12x12.glb", "src/presentation/dig_scenery.gd"),

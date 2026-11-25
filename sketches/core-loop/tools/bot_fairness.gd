@@ -3,35 +3,6 @@ extends RefCounted
 const TelegraphScript := preload("res://src/combat/telegraph.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 
-# The bot record's fairness numbers (project-guide/handoff/shared/world1/difficulty-plan.md rows F1 to F3), read from what the
-# simulation already publishes. It steers nothing, draws no random number and writes nothing in the game: the driver calls
-# tick() once a physics tick, hit() on every player_hit and record() once into the run's row. The pass lines, the tell time and
-# the source lists live once, in scripts/challenge/fairness.json, which scripts/challenge/lib.mjs reads too.
-#
-# F1 splits hull lost by the hit's own source (hit(), classify()). Each bucket has one positive condition; unknown is the rest:
-#   untelegraphed a planted source (plantSources), or a source with a telegraph owner and none of its own over the ball in time
-#   contact       a source on contactSources (body contact and ram, no telegraph by design): beside F1, outside its share
-#   telegraphed   a source with a telegraph owner, and a telegraph of its own covered the ball, up for at least tellS
-#   unknown       anything else: no telegraph owner to match, so F1 loses its mark when this is over unknownMaxShare
-# A source has a telegraph owner when it is a boss attack on bossAttacks (matched to hazards of that attack only), an
-# unownedSources name (matched to telegraphs nothing claims), a kind seen publishing this run, or a TelegraphRecord row.
-# Hit sources carry only the enemy kind, so two machines of one kind share one owner: a chaser hit under another chaser's
-# old lane reads telegraphed.
-# Scrap taken through run.lose_scrap is read the same way (loss()), by the cause lose_scrap carries, into its own buckets beside
-# the hull's: worldCauses (lightning, impact, boiler_burst, reactor_blow, flood, cave_in) are matched to the telegraph of that
-# cause that world events publish (their telegraphs(ball), group world_telegraphs: a natural mark, an industrial Hazard, a
-# rubble fall's disc, a flood's water, the storm's sought ring), and a boss cause (crane) to the boss hazard of that attack. A
-# scrap point counts as one hull point. Nothing pooled may make a line easier (ruling cu), so each line is two readings and
-# fails when either is under it: F1 telegraph_share stays hull only and pooled_share adds scrap; F2 stop_tax stays hull only and
-# pooled_stop_tax adds the scrap lost slow and fast (slow_scrap, fast_scrap); F3 counts a theft as a hit, so a stage's first hit
-# is the earlier of the first hull hit and the first theft. The hull buckets sum to hull_lost; scrap has its own buckets.
-# One cause serves two lightning tells, the fixed strike circle and the storm's sought ring. That is safe: the circle counts
-# only while the ball is inside it, where it has stood drawn since the row's announcement, and a sought ring covers the ball
-# from its own age, so a sought strike under a young ring reads untelegraphed unless the ball stood inside the fixed circle,
-# where it was told anyway.
-# F1 = telegraphed / (telegraphed + untelegraphed). A telegraph's age is how long it has stood, so a lane entered late is judged
-# on the lane's age as it is now. Every published telegraph is read, the steering's own filters (amber, wider than the field
-# radius) do not apply here.
 
 const CONFIG_FILE := "scripts/challenge/fairness.json"
 
@@ -59,7 +30,6 @@ var _segment := ""
 var _segments := {}
 
 
-# The shared lines. A missing or unreadable file is an error, not a default: a reading on guessed lines is worse than none.
 static func config() -> Dictionary:
 	if _config.is_empty():
 		var path := ProjectSettings.globalize_path("res://").path_join("../../" + CONFIG_FILE).simplify_path()
@@ -75,8 +45,6 @@ func setup(game_ref, boss_hazards_call: Callable) -> void:
 	game = game_ref
 	boss_hazards = boss_hazards_call
 
-
-# --- once a tick ---------------------------------------------------------------------------
 
 func tick(delta: float) -> void:
 	_clock += delta
@@ -118,9 +86,6 @@ func _enemy_near() -> bool:
 	return false
 
 
-# Every published telegraph as {id, owner, attack, age_s, covers}. owner is the enemy kind or "lobber" for a shell's ring,
-# "boss" for a boss hazard and "" for one nothing publishes an owner for; attack is a boss hazard's attack_id, else "".
-# mark records first sightings (a hit's scan does not).
 func _scan(mark: bool) -> Array:
 	var out: Array = []
 	var ids := {}
@@ -160,7 +125,6 @@ func _add(out: Array, ids: Dictionary, t: Object, owner: String, ball: Vector3, 
 
 func _add_row(out: Array, ids: Dictionary, id: int, owner: String, attack: String, covers: bool, mark: bool) -> void:
 	if ids.has(id):
-		# An enemy's own telegraph is also a child of the game: the owner read first wins.
 		return
 	ids[id] = true
 	if not _seen.has(id):
@@ -171,8 +135,6 @@ func _add_row(out: Array, ids: Dictionary, id: int, owner: String, attack: Strin
 		_published[owner] = true
 	out.append({"id": id, "owner": owner, "attack": attack, "age_s": _clock - float(_seen[id]), "covers": covers})
 
-
-# --- a hit ---------------------------------------------------------------------------------
 
 func hit(source: String, hull: float) -> void:
 	var now: Array = _scan(false)
@@ -187,7 +149,6 @@ func hit(source: String, hull: float) -> void:
 	_note_first_hit()
 
 
-# The stage's (or boss fight's) first hit: a hull hit or a theft of scrap, whichever comes first.
 func _note_first_hit() -> void:
 	if _segment != "":
 		var seg: Dictionary = _segments[_segment]
@@ -198,8 +159,6 @@ func _note_first_hit() -> void:
 			seg["first_hit_s"] = _clock
 
 
-# Scrap taken from the ball, from the run's scrap_lost fact (amount actually taken, cause). The same rule as a hit, with the cause
-# as the source. Nothing taken is nothing lost.
 func loss(cause: String, amount: float) -> void:
 	if amount <= 0.0:
 		return
@@ -210,19 +169,10 @@ func loss(cause: String, amount: float) -> void:
 		_fast_scrap += amount
 	else:
 		_slow_scrap += amount
-	# A theft counts as a first hit only once a pack has been met: one before contact must not open the segment (that would drop
-	# the stage from F3's median and hide a later fast ambush).
 	if _segment != "" and _segments[_segment]["contact_s"] != null:
 		_note_first_hit()
 
 
-# The bucket for one hit. `now` and `before` are _scan() rows (this tick's read and the last tick's, because a telegraph can
-# free itself as it lands); `published` is the set of owners seen to publish a telegraph this run. `cfg` is the shared file's
-# lines unless a fixture passes its own. Pure: the fixtures call it. The order is the rule (see the file header):
-#   1. a planted source is untelegraphed
-#   2. a source on contactSources is contact
-#   3. a source with a telegraph owner is telegraphed when a row of its own covers the ball and is tellS old, else untelegraphed
-#   4. anything else is unknown
 static func classify(source: String, now: Array, before: Array, published: Dictionary, cfg := {}) -> String:
 	if cfg.is_empty():
 		cfg = config()
@@ -240,9 +190,6 @@ static func classify(source: String, now: Array, before: Array, published: Dicti
 	return "untelegraphed"
 
 
-# (row) -> bool: whether a _scan() row is the hit source's own telegraph, or an invalid Callable when the source has no
-# telegraph owner to match. A boss attack owns only hazards of that attack (bossAttacks: attack_id prefixes), an unowned
-# source owns the telegraphs nothing claims, and an enemy kind owns the rows published under its kind.
 static func _owner_match(source: String, published: Dictionary, cfg: Dictionary) -> Callable:
 	var attacks: Dictionary = cfg.get("bossAttacks", {})
 	if attacks.has(source):
@@ -263,9 +210,6 @@ static func _owner_match(source: String, published: Dictionary, cfg: Dictionary)
 	return Callable()
 
 
-# --- the record ----------------------------------------------------------------------------
-
-# died: whether the run ended in death. The killing hit is null on a death with no hit behind it.
 func record(died: bool) -> Dictionary:
 	var shown: float = float(_hull["telegraphed"])
 	var hidden: float = float(_hull["untelegraphed"])
@@ -299,9 +243,6 @@ func record(died: bool) -> Dictionary:
 	}
 
 
-# The three numbers a plain baseline run must give the planted-fault comparisons. stop_tax is null when the run never spent time
-# slow or never lost hull at cruise, so a null is a run that measured nothing, not a bug in record(); "miss" then names it.
-# Unmeasured share and first hit read -1.0, which no passing line accepts.
 static func baseline(f: Dictionary) -> Dictionary:
 	var tax = f.get("stop_tax")
 	var out := {"share": share_of(f), "stop_tax": -1.0, "first_hit": first_hit_of(f), "miss": ""}

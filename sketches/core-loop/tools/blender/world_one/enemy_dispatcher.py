@@ -44,7 +44,6 @@ from common import Part
 common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Dispatcher")
 
@@ -74,7 +73,6 @@ body = Part("DispatcherBody")
 signal = Part("DispatcherSignal")
 signal.subsurf = 0
 
-# The vault's octagon: petrol box, a lighter lid band and a charcoal skirt.
 FOOT = [(-1.25, -1.44), (1.25, -1.44), (1.44, -1.25), (1.44, 1.25),
         (1.25, 1.44), (-1.25, 1.44), (-1.44, 1.25), (-1.44, -1.25)]
 body.prism("fleet_paint", FOOT, 2.3, color=PETROL)
@@ -82,10 +80,8 @@ body.prism("fleet_paint", [(x * 1.04, y * 1.04) for x, y in FOOT], 0.16,
            matrix=common.mtx(g(0, 1.14, 0)), color=common.mix(PETROL, BONE, 0.14))
 body.prism("fleet_paint", [(x * 1.02, y * 1.02) for x, y in FOOT], 0.14,
            matrix=common.mtx(g(0, -1.2, 0)), color=CHAR)
-# A welded oxide patch on the left flank, as the cache wears it.
 gbox(body, "fleet_paint", (0.05, 0.6, 0.9), loc=g(-1.46, -0.35, 0.35), color=OXIDE)
 
-# Face: two porthole eyes over a ticket printer whose paper tongue curls out and down.
 for sx in (-1, 1):
     body.cyl("fleet_paint", 0.3, 0.3, 0.08, segs=8, loc=g(sx * 0.52, 0.55, -1.47),
              rot=(math.pi / 2, 0, 0), color=CHAR)
@@ -96,7 +92,6 @@ TONGUE = [(-0.1, -0.05, -1.55), (-0.1, -0.3, -1.76), (0.0, -0.8, -1.66)]
 for a, b in zip(TONGUE, TONGUE[1:]):
     body.beam("fleet_paint", G(*a), G(*b), 0.5, 0.025, color=BONE)
 
-# Headset: a band over the lid, a cup on each side and a mic boom round to the mouth.
 body.ring("fleet_paint", 1.42, 1.56, 0.2, segs=8, loc=g(0, 0.4, -0.25), rot=(math.pi / 2, 0, 0),
           arc=(0.0, math.pi), color=CHAR)
 for sx in (-1, 1):
@@ -109,15 +104,12 @@ for a, b in zip(BOOM, BOOM[1:]):
     body.rod("fleet_paint", G(*a), G(*b), 0.05, segs=4, color=CHAR)
 signal.uv("requisition_tag", 0.11, u=6, v=4, loc=g(*BOOM[-1]), color=BRASS)
 
-# Magnet clamps: four splayed legs onto round pads, pad soles on the floor.
 for sx in (-1, 1):
     for sz in (-1, 1):
         body.rod("fleet_paint", G(sx * 0.95, -1.2, sz * 0.95), G(sx * 1.2, -1.36, sz * 1.2), 0.1,
                  segs=4, color=CHAR)
         body.cyl("fleet_paint", 0.3, 0.3, 0.08, segs=6, loc=g(sx * 1.2, FLOOR + 0.04, sz * 1.2), color=CHAR)
 
-# Pneumatic tube: out of the lower front, forward and down off the perch edge. Round elbows,
-# a brass collar past each and a flared brass lip on the mouth.
 TUBE = [(0.62, -0.55, -1.2), (0.62, -0.45, -2.15), (0.62, -0.62, -2.85), (0.62, -0.9, -3.25)]
 for a, b in zip(TUBE, TUBE[1:]):
     body.rod("fleet_paint", G(*a), G(*b), 0.38, segs=8, color=OXIDE)
@@ -134,7 +126,6 @@ signal.rod("requisition_tag", G(*(mouth - out * 0.12)), G(*(mouth + out * 0.14))
            color=BRASS)
 body.rod("fleet_paint", G(*(mouth - out * 0.3)), G(*(mouth + out * 0.12)), 0.2, segs=6, r2=0.46, color=CHAR)
 
-# Radar mast at the rear of the lid, beacon on its tip above the spinning paddle.
 body.rod("fleet_paint", G(0, 1.15, 0.7), G(*PIVOT), 0.11, segs=6, color=CHAR)
 body.rod("fleet_paint", G(*PIVOT), G(PIVOT[0], PIVOT[1] + 0.55, PIVOT[2]), 0.05, segs=4, color=CHAR)
 BEACON = (PIVOT[0], PIVOT[1] + 0.68, PIVOT[2])
@@ -145,7 +136,6 @@ bmesh.ops.recalc_face_normals(signal.bm, faces=signal.bm.faces[:])
 body_obj = body.to_object(parent=root)
 signal_obj = signal.to_object(parent=root)
 
-# Radar paddle round its own origin on the mast head: a slatted bar tipped back, facing -Z.
 radar = Part("DispatcherRadar")
 radar.subsurf = 0
 tilt = (math.radians(-18), 0, 0)
@@ -156,9 +146,7 @@ radar.cyl("fleet_paint", 0.14, 0.14, 0.16, segs=6, loc=g(0, 0.0, 0), color=CHAR)
 bmesh.ops.translate(radar.bm, vec=Vector(g(*PIVOT)), verts=radar.bm.verts)
 radar_obj = radar.to_object(origin=g(*PIVOT), parent=root)
 
-# drop_mouth: -Z (a chaser's lead) along the tube's way out.
 drop = common.empty("drop_mouth", G(*(mouth + out * 0.14)), parent=root)
-# The turn is found in Godot axes, then conjugated into Blender axes for the empty.
 drop.rotation_euler = (Matrix(((1, 0, 0), (0, 0, -1), (0, 1, 0))) @
                        Vector((0, 0, -1)).rotation_difference(out).to_matrix() @
                        Matrix(((1, 0, 0), (0, 0, 1), (0, -1, 0)))).to_euler()

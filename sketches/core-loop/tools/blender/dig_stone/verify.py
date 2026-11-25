@@ -29,8 +29,6 @@ def run(command, label, env, expect=0):
     result = subprocess.run(command, cwd=ROOT, env=env, text=True, capture_output=True, timeout=180)
     output = result.stdout + result.stderr
     (EVIDENCE / (label + ".log")).write_text(output)
-    # The editor creates companion UIDs even when only importing new models.
-    # Remove only those this invocation created, never pre-existing owner files.
     for relative in untracked_uids() - before:
         (ROOT / relative).unlink()
     for match in re.finditer(r"^receipt (.+)$", output, re.M):

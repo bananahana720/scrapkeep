@@ -25,7 +25,6 @@ T = pk.TONES
 SEG = 4
 SEAM = 0.001
 FLOOR = 1.0
-# (half extent, corner radius, y, tone) from the keel up the hull; each tone change doubles its ring SEAM apart.
 HULL = [(3.4, 2.2, -3.6, "concrete_dk"), (5.4, 2.6, -3.2, "concrete"), (6.6, 2.8, -2.2, "concrete_lt"),
         (7.2, 2.8, -0.8, "concrete"), (7.42, 2.8, 0.4, "concrete_lt"), (7.5, 2.8, 1.35, "concrete")]
 RIM = [(7.62, 2.85, 1.45), (7.62, 2.85, 1.95), (7.05, 2.3, 1.95), (7.05, 2.3, 1.8)]
@@ -90,17 +89,17 @@ def hull_at(y):
 
 def base(s):
     shell(s)
-    band(s, 7.36, HULL[3][1], -0.25, 0.0, 0.07, T["copper"])                    # copper strake
-    for y in (-2.6, -1.5, -0.4):                                                # form-board joints round the hull
+    band(s, 7.36, HULL[3][1], -0.25, 0.0, 0.07, T["copper"])
+    for y in (-2.6, -1.5, -0.4):
         h, r = hull_at(y)
         band(s, h, r, y, y + 0.05, 0.05, T["concrete_dk"])
-    for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):                          # corner cleats
+    for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
         pk.frustum(s, 0.34, 0.2, 1.95, 2.15, 6, T["copper"], at=(sx * 6.1, sz * 6.1))
         pk.frustum(s, 0.4, 0.4, 1.95, 2.0, 6, T["iron_hi"], at=(sx * 6.1, sz * 6.1))
-    for z, y in ((-2.3, -0.55), (2.3, -0.55)):                                  # thruster shrouds on the -X end
+    for z, y in ((-2.3, -0.55), (2.3, -0.55)):
         pk.tube(s, (-6.95, y, z), (-7.72, y, z), 0.74, 0.74, 12, T["iron"])
         pk.tube(s, (-7.72, y, z), (-7.78, y, z), 0.54, 0.54, 12, T["charcoal"])
-    for side in (-1, 1):                                                         # tyre fenders on the long sides and the +X end
+    for side in (-1, 1):
         for x in (-4.6, 0.0, 4.6):
             pk.tube(s, (x - 0.35, 0.35, side * 7.35), (x + 0.35, 0.35, side * 7.35), 0.42, 0.42, 10, T["charcoal"])
     for z in (-4.6, 0.0, 4.6):
@@ -108,9 +107,9 @@ def base(s):
 
 
 def detail1(s):
-    for p, nrm in perimeter(7.62, 2.85, 1.72, 30, 0.4):                          # rim bolts
+    for p, nrm in perimeter(7.62, 2.85, 1.72, 30, 0.4):
         pk.hexstud(s, (p[0] - nrm[0] * 0.01, p[1], p[2] - nrm[2] * 0.01), nrm, 0.06, 0.05, T["iron_hi"])
-    for p, nrm in perimeter(7.5, 2.8, 0.9, 16, 0.0):                             # form-tie holes in the upper boards
+    for p, nrm in perimeter(7.5, 2.8, 0.9, 16, 0.0):
         s.box((0.1, 0.1, 0.1), (p[0] + nrm[0] * 0.0, p[1], p[2] + nrm[2] * 0.0), T["charcoal"])
     for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
         for k in range(4):
@@ -123,20 +122,20 @@ def detail1(s):
 
 
 def detail2(s):
-    for k in range(-6, 7):                                                       # deck board lines on the floor
+    for k in range(-6, 7):
         s.box((0.04, 0.012, 11.6), (k * 1.0, FLOOR + 0.006, 0), T["concrete"])
-    for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):                          # floor corner clamps
+    for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
         s.box((0.9, 0.03, 0.9), (sx * 5.6, FLOOR + 0.015, sz * 5.6), T["copper"])
         for dx, dz in ((-0.3, -0.3), (0.3, 0.3)):
             pk.hexstud(s, (sx * 5.6 + dx, FLOOR + 0.03, sz * 5.6 + dz), (0, 1, 0), 0.05, 0.03, T["copper_dk"])
-    for p, nrm in perimeter(7.5, 2.8, -1.2, 18, 0.9):                            # varnish streaks down the boards
+    for p, nrm in perimeter(7.5, 2.8, -1.2, 18, 0.9):
         pk.tube(s, (p[0] + nrm[0] * 0.03, p[1] + 1.4, p[2] + nrm[2] * 0.03), (p[0] + nrm[0] * 0.03, p[1], p[2] + nrm[2] * 0.03), 0.07, 0.04, 4, T["varnish"])
-    for p, nrm in perimeter(7.5, 2.8, 0.2, 10, 2.1):                             # oxide scale patches
+    for p, nrm in perimeter(7.5, 2.8, 0.2, 10, 2.1):
         s.box((0.5, 0.35, 0.05), (p[0] + nrm[0] * 0.02, p[1], p[2] + nrm[2] * 0.02), T["oxide"])
-    for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):                          # mooring chains
+    for sx, sz in ((1, 1), (-1, 1), (1, -1), (-1, -1)):
         a = (sx * 6.1, 1.9, sz * 6.1)
         pk.tube(s, a, (sx * 6.9, 0.6, sz * 6.9), 0.05, 0.05, 6, T["iron_hi"])
-    for p, nrm in perimeter(6.9, 2.2, FLOOR + 0.07, 8, 1.6):                     # scupper grates at the wall foot
+    for p, nrm in perimeter(6.9, 2.2, FLOOR + 0.07, 8, 1.6):
         s.box((0.5, 0.14, 0.5), p, T["charcoal"])
 
 

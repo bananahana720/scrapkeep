@@ -4,12 +4,6 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
-# Walk frames for the crew gait (enemy_gait.gd): the real game, one crew kind at a time beside a
-# still ball, filmed every `--every` seconds from a camera that follows it at a fixed offset while it closes,
-# circles and attacks. `--gait=off` drops the gait so the same seed films the old walk for a
-# side-by-side. Display server needed:
-#   xvfb-run -s "-screen 0 1280x800x24" <godot> --path sketches/core-loop --rendering-driver opengl3 \
-#     --script res://tools/gait_strip.gd -- --out=/abs/dir [--kinds=hooker,swatter] [--gait=off] [--seconds=6] [--every=0.1]
 
 const SIZE := Vector2i(640, 400)
 
@@ -85,7 +79,6 @@ func _run() -> void:
 			if clock >= shot * every:
 				for node in root.find_children("*", "CanvasLayer", true, false):
 					node.visible = false
-				# A fixed offset that follows the crew, so its turn and walk read against the ground.
 				var at: Vector3 = enemy.global_position if is_instance_valid(enemy) else ball
 				camera.look_at_from_position(at + Vector3(-3.0, 4.0, 7.0), at + Vector3.UP * 0.6)
 				await RenderingServer.frame_post_draw

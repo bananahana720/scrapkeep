@@ -22,7 +22,6 @@ common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.75}
 common.SLOTS["part_state"] = {"vc": True, "rough": 0.4, "metal": 0.6}
 common.SLOTS["core_state"] = {"color": "petrol", "rough": 0.4}
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Miniboss")
 GROUND = -3.45
@@ -57,7 +56,6 @@ def weights(part):
 
 
 def front_prism(part, slot, outline, depth, at, color):
-    # Outline is in Godot XY; extrusion points along -Z.
     return part.prism(slot, outline, depth,
                       matrix=common.mtx(g(*at), (math.pi / 2, 0, 0)), color=color)
 
@@ -65,8 +63,6 @@ def front_prism(part, slot, outline, depth, at, color):
 def finish(part):
     bmesh.ops.recalc_face_normals(part.bm, faces=part.bm.faces[:])
     obj = part.to_object(parent=root)
-    # Smoothing averages the weights of faces that span two bones (the telescoping
-    # pistons); give each new vertex wholly to its heaviest bone so the pose stays rigid.
     bm = bmesh.new()
     bm.from_mesh(obj.data)
     layer = bm.verts.layers.deform.active
@@ -97,7 +93,6 @@ def piston(a, end, radius, segments, color):
             vertex[layer][0] = 1.0
 
 
-# Cast press chassis, broad at the shoulder and pinched around its waist.
 b.cyl(SLOT, 1.55, 1.25, 1.4, segs=8, loc=g(0, -0.65, 0.1), color="petrol")
 b.cyl(SLOT, 1.55, 2.05, 2.0, segs=8, loc=g(0, 1.05, 0.1), color="petrol")
 b.cyl(SLOT, 1.58, 1.58, 0.18, segs=8, loc=g(0, -0.1, 0.1), color="charcoal")
@@ -111,7 +106,6 @@ for side in (-1, 1):
     b.cyl(SLOT, .38, .28, 1.3, segs=6, loc=g(side * .8, 1.7, 1.55), color="charcoal")
     b.rod(SLOT, g(side * 1.4, -.9, .55), g(side * 1.5, 1.75, .9), .12, segs=5, color=WORN)
     b.rod(SLOT, g(side * 2.05, -.9, -1.95), g(side * 2.05, 1.7, -1.95), .13, segs=6, color="charcoal")
-# Five uneven crown teeth are cast fins of the press, not decorative glowing spikes.
 for x, height in [(-1.4, .6), (-.72, 1.0), (0, 1.25), (.72, .9), (1.4, .55)]:
     front_prism(b, SLOT, [(-.22, 0), (.22, 0), (.12, height), (-.08, height + .1)],
                 .5, (x, 2.65, .15), "oxide" if x < 0 else WORN)
@@ -123,8 +117,6 @@ for side, index in [(-1, 1), (1, 2)]:
                 1.55, (side * 1.15, -3.15, -.2), "oxide" if side < 0 else "petrol")
     bind(index)
 for side, index in [(-1, 3), (1, 4)]:
-    # The upper rings stay on the shoulder. Lower rings travel with the fist,
-    # making a telescoping piston rather than a floating arm during the leap.
     piston((side * 1.95, 1.5, 0), (side * 2.3, -.95, -.45), .33, 6, "charcoal")
     piston((side * 2.05, 1.25, -.35), (side * 2.2, -.7, -.8), .12, 5, WORN)
     front_prism(b, SLOT, [(-.55, -.65), (.55, -.65), (.7, -.3), (.55, .55), (-.5, .65), (-.7, .15)],
@@ -132,7 +124,6 @@ for side, index in [(-1, 3), (1, 4)]:
     b.box(SLOT, (1.0, .1, .12), loc=g(side * 2.3, -.55, -1.35), color=WORN)
     bind(index)
 b.ring(SLOT, 1.45, 1.65, .14, segs=12, loc=g(0, 4.65, 0), color="mint")
-# A broken three-tooth halo makes its spin visible.
 for angle in (0, 2.1, 4.2):
     b.cyl(SLOT, .12, .0, .4, segs=4,
           loc=g(math.cos(angle) * 1.55, 4.9, math.sin(angle) * 1.55), color="mint")
@@ -143,7 +134,6 @@ p = Part("MinibossArmour")
 p.subsurf = 0
 bind_plate = weights(p)
 for side, index in [(-1, 5), (1, 6)]:
-    # Clipped corners, a shallow outward ridge and a narrow central seam.
     outline = [(-.96, -1.7), (.96, -1.7), (1.03, -.95), (.95, 1.55), (.55, 1.9), (-.7, 1.75), (-1.03, .7)]
     front_prism(p, "part_state", outline, .45, (side * 1.02, .55, -2.0), SLATE)
     p.box("part_state", (.1, .10, 2.65), loc=g(side * 1.8, .45, -2.28), color="000000")
@@ -185,7 +175,6 @@ if triangles > 8800 or draws != 3:
 opts = common.args()
 out = opts["out"] or os.path.join(common.MODELS, "world_one", "enemy_miniboss.glb")
 common.export(root, out)
-# Count the actual exported attributes, including splits at hard edges.
 import json
 import struct
 with open(out, "rb") as stream:

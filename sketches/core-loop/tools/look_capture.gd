@@ -59,7 +59,6 @@ func _run() -> void:
 		var p: Vector3 = target + Vector3(cos(i * 1.3) * 17, 0, sin(i * 1.3) * 17)
 		game.ctx.spawner.spawn_enemy("chaser", terrain.drop_point(p.x, p.z, 1.2))
 	await _shot("warden", target + Vector3(-12, 7, -17), target + Vector3(0, 3, 0), Cams.LOOK["warden"]["fov"])
-	# The real bay is undocked during the fight. Place its authored barge for inspection.
 	var bay = game.world.bay
 	bay.visible = true
 	bay._barge.visible = true

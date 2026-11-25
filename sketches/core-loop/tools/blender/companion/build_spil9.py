@@ -24,10 +24,6 @@ sys.path.insert(0, str(HERE.parent))
 import common
 import polish
 
-# Polish (tools/blender/POLISH.md): smooth shading with hard creases and the AO and wear bake only.
-# dress_spl_assets_test pins 620 T / 1140 V for the body, 240 / 480 per module and 1100 / 2100 per
-# pair, and the sources already sit within a few triangles of them, so no bevel, subdivision or
-# denser curves (detail 1) are added.
 POLISH = dict(detail=1, bevel=0)
 OUT = SKETCH / "assets/models/companion"
 NAMES = ("primer_coil", "primer_mesh", "ram_prow", "ram_spring", "escape_vent", "escape_rail")
@@ -35,11 +31,7 @@ FAMILY = {n: i // 2 for i, n in enumerate(NAMES)}
 HULL_CLIPS = {"idle": 1.6, "follow": .18, "dock": .25, "empty": .25,
               "escape_spent": .14, "escape_rearm": .20,
               "assist_rise": .15, "assist_drop": .15, "assist_return": .45}
-# The called assist (SPIL-9 Grows Up storyboard, beat 4): rise 0.05-0.20 s, drop 0.20-0.35 s
-# with the hit at drop age 0.10 s, return 0.35-0.80 s. Played in order; return ends on rest.
-# Godot resamples clips at 30 fps on import, so each beat's extreme sits on a 1/30 s key.
 ASSIST_CLIPS = ("assist_rise", "assist_drop", "assist_return")
-# Grown-mark add-ons, one mesh per mark, all riding the Hull bone (spil9_marks.glb).
 MARKS = ("Mk1Halo", "Mk2Fins", "Mk3Halo", "Mk4Exhaust", "Mk5CoreCrest")
 MODULE_CLIPS = {
     "primer_coil": {"primer_set": .12, "primer_consume": .16, "primer_expire": .12},
@@ -52,7 +44,6 @@ MODULE_CLIPS = {
 
 def owns_channel(clip, node, path):
     if clip in ASSIST_CLIPS:
-        # A whole-body act: squash, stretch and pitch all ride BodyPose. No held state lives there.
         return node == "BodyPose" and path in ("translation", "rotation", "scale")
     if clip in ("idle", "dock", "empty"):
         return node == "BodyPose" and path == "translation"
@@ -70,8 +61,6 @@ def owns_channel(clip, node, path):
 
 
 def isolate_channels(path):
-    # Forced sampling emits rest tracks for every joint. These would reset unrelated
-    # held states. Keep only the control the resolved gameplay beat owns.
     data=path.read_bytes()
     size=struct.unpack_from("<I",data,12)[0]
     gltf=json.loads(data[20:20+size])
@@ -146,19 +135,16 @@ class Model:
                           loc=self.point(p), rot=rot, caps=caps)
 
     def wedge(self, name, p, size, slot="bare_metal", color=None):
-        # Three blunt socket lugs; triangular extrusion saves hidden box corners.
         x, y, z = size
         outline = [(-x/2, -z/2), (x/2, -z/2), (0, z/2)]
         matrix = Matrix.Translation(self.point(p))
         return self.shape(name, self.part.prism, slot, outline, y, matrix=matrix, color=color)
 
     def foot(self):
-        # Mirror the outward ram adaptor, never the common socket key orientation.
         mirror = self.mirror
         self.mirror = 1
         self.bone("Foot", (0, 0, 0))
         faces = self.cyl("Foot", .09, .055, (0, 0, 0), caps=False)
-        # Closed top, open underside buried in the socket. Same foot on all pieces.
         verts = sorted({v for f in faces for v in f.verts if v.co.z > self.point((0, 0, 0)).z},
                        key=lambda v: math.atan2(v.co.y-self.point((0,0,0)).y, v.co.x-self.point((0,0,0)).x))
         self.part.paint([self.part.bm.faces.new(verts)], "bare_metal")
@@ -177,10 +163,8 @@ class Model:
             ("TrailWitness", (0,-.13,.34)),
         ]:
             self.bone(name, p)
-        # Continuous flattened kidney surface with a shallow service notch at the rear.
         outline = [(-.40,-.36),(.35,-.36),(.55,-.19),(.55,.17),(.39,.36),
                    (.14,.32),(-.06,.27),(-.29,.36),(-.47,.25),(-.55,.08),(-.55,-.18),(-.49,-.28)]
-        # Author horizontal X/Z outline in Blender X/Y, so front -Z becomes +Y.
         def kidney():
             rings=[]
             for height,shrink in [(-.21,.08),(-.14,0),(.12,0),(.21,.065)]:
@@ -268,7 +252,6 @@ class Model:
             self.box("SpringCage", (.52,.045,.07), (.18,.0875,.065), color="petrol")
             self.bone("SpringSlide", (.18,.18,0))
             self.bone("Spring", (.18,.18,0), "SpringSlide")
-            # Five continuous broad turns, triangular wire section >= .025 m.
             points = [(.18-.183+.366*i/20,.18+.052*math.cos(i*math.tau/4),.052*math.sin(i*math.tau/4)) for i in range(21)]
             before = set(self.part.bm.verts)
             rows = []
@@ -337,7 +320,6 @@ class Model:
                 mesh.vertex_groups.new(name=name).add(ids,1,"REPLACE")
         mesh.parent = arm
         mesh.modifiers.new("Rigid machinery", "ARMATURE").object = arm
-        # Actual attachment nodes are retained in addition to the joint names.
         for name,p,parent in self.bones:
             if name in ("Socket.01","Socket.02","TrailWitness"):
                 obj = bpy.data.objects.new(name, None)
@@ -382,7 +364,6 @@ class Model:
                 elif clip=="spring_spend":
                     bone.scale.x=.70+.30*t
             if bone.name=="EscapeWitness":
-                # Open shutter exposes the dark circular aperture at the committed spend.
                 if clip=="escape_spent":
                     bone.rotation_euler.x=-math.pi/2*t
                 elif clip=="escape_rearm":
@@ -403,7 +384,6 @@ class Model:
                 for bone in self.arm.pose.bones:
                     for path in ("location","rotation_euler","scale"):
                         bone.keyframe_insert(path,frame=frame,group=bone.name)
-            # Set hold actions end on the held pose. No loop or extra anticipation.
             actions[clip]=act
         self.arm.animation_data.action=None
         self.reset_pose()
@@ -449,28 +429,23 @@ def assist_pose(clip, t):
     """BodyPose (lift m, pitch deg nose-up, roll deg, width scale, height scale) at clip
     fraction t. The runtime carries SPIL-9 over the ball; these are the body's acting."""
     if clip == "assist_rise":
-        crouch = 4/9  # 0.067 s
+        crouch = 4/9
         if t < crouch:
-            # Crouch and brace, nose up, like a cat about to jump.
             e = t/crouch; e = e*e*(3-2*e)
             return -.07*e, 12*e, 0, 1+.14*e, 1-.18*e
-        # Pop: stretch up through the move and end peering down at the target.
         e = ease_out((t-crouch)/(1-crouch))
         arc = math.sin(math.pi*e)
         return lerp(-.07, .30, e), lerp(12, -22, e), 0, lerp(1.14, 1, e)-.12*arc, lerp(.82, 1, e)+.25*arc
     if clip == "assist_drop":
-        hit, flat = 2/3, 8/9  # 0.10 s and 0.133 s
+        hit, flat = 2/3, 8/9
         if t <= hit:
-            # Falls faster and stretches longer until the hit.
             e = (t/hit)**3
             return lerp(.30, -.10, e), lerp(-22, -38, e), 0, 1-.14*e, 1+.28*e
         if t <= flat:
-            # Snaps flat on the next frame and holds it.
             e = min(1, (t-hit)/(flat-hit)*3)
             return lerp(-.10, -.12, e), -38, 0, lerp(.86, 1.24, e), lerp(1.28, .68, e)
         e = ease_out((t-flat)/(1-flat))
         return lerp(-.12, -.05, e), lerp(-38, -12, e), 0, lerp(1.24, 1.04, e), lerp(.68, .94, e)
-    # Floats home with a sheepish waggle, landing on rest so idle picks up cleanly.
     e = ease_out(t)
     fade = 1-t
     return (lerp(-.05, 0, e)+.06*math.sin(math.pi*t)*fade,
@@ -517,13 +492,10 @@ def build_marks():
 
     def halo(r_in, r_out, z):
         def fn(part):
-            # Hangs behind the sockets like a back halo, tipped toward the chase camera. Seated
-            # modules stand within |z| <= .12 and reach 0.94 m, so a ring over the deck would cut them.
             part.ring("field", r_in, r_out, .02, 16, loc=g((0, .62, z)), rot=(math.radians(65), 0, 0))
         return fn
 
     def slab(part, slot, points, axis, depth, color=None):
-        # A flat plate from a Godot-space outline, thickened along one Godot axis.
         n = Vector(axis)*(depth/2)
         lo = [part.bm.verts.new(g(Vector(q)-n)) for q in points]
         hi = [part.bm.verts.new(g(Vector(q)+n)) for q in points]
@@ -534,20 +506,16 @@ def build_marks():
         part.paint(faces, slot, color)
 
     def fins(part):
-        # Swept back and out from the bumpers, under the ram adaptors and behind the prow blocks.
         for side in (-1, 1):
             slab(part, "paint", [(.55*side, 0, -.05), (.55*side, .06, .30), (.76*side, .14, .44),
                                  (.74*side, .10, .34)], (1, 0, 0), .035, "petrol")
 
     def exhaust(part):
-        # Twin stacks at the rear, clear of the trail witness on the centre line.
         for x in (-.19, .19):
             part.cyl("bare_metal", .055, .045, .18, 8, loc=g((x, -.02, .42)), rot=(math.pi/2, 0, 0))
             part.ring("rubber", .028, .046, .02, 8, loc=g((x, -.02, .515)), rot=(math.pi/2, 0, 0))
 
     def core_crest(part):
-        # Lens on the rear deck under the halo; the crest sweeps up and forward off the front
-        # deck on the centre line, between the ram adaptors.
         part.cyl("field", .055, .045, .05, 6, loc=g((0, .245, .22)))
         slab(part, "paint", [(0, .22, -.10), (0, .22, -.32), (0, .48, -.46), (0, .42, -.30)], (1, 0, 0), .03, "bone")
 

@@ -16,37 +16,6 @@ import { fileURLToPath } from "node:url";
 import { userDataEnv } from "./godot-home.mjs";
 import { holdQuietSync } from "./sketch-smoke.mjs";
 
-// node scripts/frametime-check.mjs: plays the exported build under MangoHud, logs every frame and
-// reports whether frame times stay inside the alpha budget (sketches/core-loop/BUG-BAR.md).
-// It launches, in order: --exe=<path>, the installed AppImage (~/.local/share/scrapkeep/
-// Scrapkeep.AppImage), or core-loop.x86_64 in the newest artifacts/local/core-loop-export/<run>/.
-// Logging starts after --warmup seconds (default 10, past boot) and runs --seconds (default 300);
-// play through, then quit after the log ends. Output: artifacts/local/frametime/<stamp>/ with
-// MangoHud's CSV and summary.json. --log=<csv> skips the launch and reads an existing log.
-// --p99=<ms> (default 16.7) and --hitch=<ms> (default 33) set the budget; --keep-vsync leaves the
-// player's vsync on, --hud shows the overlay. Arguments after -- go to the game.
-// --self-play launches the game with its bot (src/game.gd --self-play; the pack must carry tools/:
-// npm run sketch:export -- --self-play) and any --self-play-<name>=<v> flag goes with it. The game's
-// "self-play:" lines are kept in self-play.log and summary.json (stage entries as seconds since
-// launch and in the MangoHud log's own time, with the worst frame from 1 s before to 5 s after
-// each). Keep the log alive to its end: --self-play-min=<warmup + seconds + 10>. A self-play run is
-// silent; --sound keeps its audio.
-// A self-play game runs on its own XDG data and config under the run folder (xdg-data, xdg-config).
-// A self-play game that exits non-zero (1 run ended early, 2 no tools/ in the pack, 3 stalled)
-// fails the check with exit 1, or 2 for code 2.
-// Exit 0 inside budget, 1 over it, 2 when nothing was measured. Never downloads anything.
-// A reading that launches the game holds the machine quiet for as long as the game runs: it waits (up to 45 min, then
-// exit 2) for sketch:smoke and sketch:fast runs on the shared slot pool to finish, and no runner on this machine
-// takes a slot until the game exits (a new sketch:fast still runs its lint and node checks before it waits). A
-// reading killed by a signal leaves a hold that dies with its process. It does not see a running gate, nightly run, red team, band read or export, so
-// do not start a reading during one. Grading a log (--log=) takes no hold; FRAMETIME_NO_QUIET=1 skips it.
-// Direct capture on macOS is refused before spawn. Use display-run.mjs --offscreen
-// with a qualified probe to draw there. --log=<csv> reads saved captures on every platform.
-// On Linux, --capture=mangohud (the default) uses MangoHud. --capture=engine launches
-// GODOT_BIN or --exe with the game's own frame log, windowed and vsync off unless
-// --keep-vsync. --home=<dir> reuses scratch data under artifacts/local/. The engine has
-// no --hud overlay. Record whether the target is the debug editor or a packed build.
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
 const outRoot = path.join(root, "artifacts/local/frametime");
@@ -114,9 +83,6 @@ export function parseArgs(argv) {
   return args;
 }
 
-// The game's argv: the plain list after -- by default (a person is playing, so sound stays on);
-// with --self-play the run is silent unless --sound, so it never plays over a live session, and
-// the flag and its options follow a leading -- so the game reads them as user args.
 export function gameArgv(args) {
   if (!args.selfPlay) return args.gameArgs;
   const engine = args.sound ? [] : ["--audio-driver", "Dummy"];
@@ -131,8 +97,6 @@ export function selfPlayXdg(outDir) {
   return { XDG_DATA_HOME: data, XDG_CONFIG_HOME: config };
 }
 
-// The "self-play:" lines of a game's stdout, as stage entries (seconds since launch) plus the
-// stall line if any. at is the MangoHud log's own time: launch seconds less the warmup.
 export function parseSelfPlay(text, warmup = 0) {
   const lines = text.split(/\r?\n/).filter((line) => line.startsWith("self-play:"));
   const stages = [];
@@ -158,7 +122,6 @@ export function parseSelfPlay(text, warmup = 0) {
   return { lines, stages, stalled };
 }
 
-// The worst frame (ms) from before s before to after s after a stage entry, on the log's clock.
 export function worstFrameNear(frames, logS, before = 1, after = 5) {
   let elapsed = 0;
   let worst = 0;
@@ -176,14 +139,11 @@ export function findOnPath(name, envPath = process.env.PATH ?? "") {
     try {
       accessSync(file, constants.X_OK);
       if (statSync(file).isFile()) return file;
-    } catch {
-      // not here
-    }
+    } catch {}
   }
   return null;
 }
 
-// The one place the capture is chosen: --capture=, else MangoHud wherever it is installed, else
 // the engine's own log on macOS, where MangoHud does not exist.
 export function captureMode(args, platform = process.platform, envPath = process.env.PATH ?? "") {
   if (args.capture) return args.capture;
@@ -191,8 +151,6 @@ export function captureMode(args, platform = process.platform, envPath = process
   return platform === "darwin" ? "engine" : "mangohud";
 }
 
-// The engine capture's command: the editor binary on the project, or --exe=<packed build binary>;
-// windowed, vsync off unless --keep-vsync, and the frame log's flags first among the user args.
 export function engineLaunch(args, { outDir, godotBin, project = projectDir }) {
   const csv = path.join(outDir, ENGINE_LOG);
   const flags = [
@@ -256,7 +214,6 @@ export function resolveTarget({ exe, dataHome, exports = exportRoot }) {
 
 // MangoHud reads MANGOHUD_CONFIG as comma-separated key=value pairs, so a comma in the folder
 // would split it. log_interval=0 logs every frame; vsync=1 means off (Vulkan only), matching
-// perf_bench's vsync-off bench so the budget measures headroom, not the display's refresh.
 export function mangohudConfig({ outDir, seconds, warmup, keepVsync, hud }) {
   if (outDir.includes(","))
     throw new FrametimeError("the output folder cannot contain a comma: " + outDir);
@@ -273,7 +230,6 @@ export function mangohudConfig({ outDir, seconds, warmup, keepVsync, hud }) {
 
 // MangoHud's CSV opens with a system block (os,cpu,gpu,...), then a header row naming
 // frametime, then one row per frame. Frame time is milliseconds in current MangoHud; a median
-// above 1000 can only be microseconds, so that log is converted.
 export function parseLog(text) {
   const lines = text.split(/\r?\n/);
   const headerAt = lines.findIndex((line) =>
@@ -299,7 +255,6 @@ function percentile(sorted, p) {
 
 const round = (value) => Math.round(value * 100) / 100;
 
-// Each hitch carries its time from the start of the log, so it can be matched to what was on screen.
 export function summarize(
   frames,
   { p99Ms = BUDGET.p99Ms, hitchMs = BUDGET.hitchMs, severeMs = BUDGET.severeMs } = {},
@@ -329,7 +284,6 @@ export function summarize(
   };
 }
 
-// The engine's log opens with its own info row; any other log is MangoHud's.
 export function logLabel(text) {
   return text.startsWith("scrapkeep_frame_log,") ? "Engine frame log" : "MangoHud log";
 }
@@ -370,16 +324,11 @@ function stamp(date = new Date()) {
     .replace(/-\d{3}Z$/, "Z");
 }
 
-// What a reading measured: a packed build or a debug run of the project, on warm or cold caches.
-// With --home on macOS the caches are an earlier run's: "reused", not proven warm.
 export function engineContext(args, platform = process.platform) {
   const cache = platform !== "darwin" ? "shared" : args.home ? "reused (--home)" : "cold";
   return { target: args.exe ? "packed" : "debug-editor", cache };
 }
 
-// The engine capture's scratch HOME: a fresh one in the run folder, or --home=<dir>, which must
-// already exist under artifacts/local/, so a reading never runs on the player's own HOME. Both paths
-// are resolved through links first, so a link inside artifacts/local/ cannot lead out of it.
 export function engineHome(args, outDir, localRoot = path.join(root, "artifacts/local")) {
   if (!args.home) return path.join(outDir, "home");
   if (!existsSync(args.home)) throw new FrametimeError("no folder at --home=" + args.home);
@@ -469,9 +418,6 @@ export function main(
   console.log(
     `Logging starts ${args.warmup} s after launch and runs ${args.seconds} s. Play normally for about ${minutes} min, then quit.`,
   );
-  // A self-play game's stdout is read for its "self-play:" lines and echoed; otherwise it is inherited.
-  // A self-play game saves into its own XDG data and config under the run folder, never the player's
-  // (the cache stays shared, so shader compiles are not part of the measure).
   const launch = {
     env: { ...env, MANGOHUD_CONFIG: config, ...(args.selfPlay ? selfPlayXdg(outDir) : {}) },
   };
@@ -497,7 +443,6 @@ export function main(
   );
 }
 
-// After the game closes, either capture: keep the self-play lines, then grade the run folder's log.
 function collect(run, args, outDir, noLogMessage, context = null) {
   if (run.error) throw new FrametimeError("could not launch: " + run.error.message);
   let selfPlay = null;
@@ -518,8 +463,6 @@ function collect(run, args, outDir, noLogMessage, context = null) {
   return analyse(logFile, args, outDir, selfPlay, context);
 }
 
-// The game runs while this reading holds the machine quiet (holdQuietSync in scripts/sketch-smoke.mjs). The hold is
-// taken only here, after the arguments and the target are checked, and is given back when the game exits.
 function launchQuiet(quiet, launch) {
   if (!quiet) return launch();
   let held;
@@ -555,7 +498,6 @@ function engineCapture(args, env, outDir, platform, quiet) {
   console.log(
     `Logging starts ${args.warmup} s after launch and runs ${args.seconds} s. Play normally for about ${minutes} min, then quit.`,
   );
-  // The game's user:// lives under this HOME on macOS (scripts/godot-home.mjs), never the player's.
   const launch = { env: { ...env, ...userDataEnv(home, platform) } };
   const run = launchQuiet(quiet, () =>
     spawnSync(

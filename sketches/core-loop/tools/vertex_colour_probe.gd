@@ -1,74 +1,6 @@
 extends SceneTree
 
-# How this machine's renderer draws vertex colours, and which of the game's materials that
-# changes (design-v3/SIGHT-PERSONA.md section 7, "Colour on the PC and in the cloud").
-#   <godot> --path sketches/core-loop --script res://tools/vertex_colour_probe.gd \
-#     -- --out=/abs/dir [--boss=0] [--plant=1]
-# A display is needed (xvfb-run with --rendering-driver opengl3 works in the cloud). The stills
-# are the window's own size; the counts are of the still's pixels, so compare runs of one size.
-#
-# The question. A material that takes its colour from the mesh (vertex_color_use_as_albedo) has
 # a second switch, vertex_color_is_srgb. The PC's renderer (Forward+) reads a vertex colour as
-# linear light unless that switch is on; the cloud's (Compatibility) ignores the switch and
-# draws the number as it stands. So a palette colour written straight into a mesh by code is
-# right in the cloud and paler on the PC, and a cast from Blender, whose colours are stored
-# linear (tools/blender/common.py), is right on the PC and darker in the cloud.
-#
-# What it writes.
-#   swatches.png  Palette tones, one row each. Columns: the tone as a plain material colour (the
-#                 reference); the tone written into the mesh, switch off; the same, switch on;
-#                 the tone stored linear, switch off; the same, switch on. Then three tones
-#                 added at half strength over a charcoal strip (how the glows and halos are
-#                 drawn): plain, switch off, switch on.
-#   Three scenes, the game held for each: `lineup` (the Spillway's fourteen kinds standing at
-#   the dam), `marks` (the same, with the ball's own marks drawn by the game's own calls: a
-#   bolt in each weapon colour, and a ring, an arc, a spark and a beam of its attacks) and
-#   `arena` (Brindle's arena; not with --boss=0). For each scene:
-#     <scene>-as-is.png            as the game draws it
-#     <scene>-<family>.png         the switch turned on for one family of candidates (a script,
-#                                  and the view's name where the game gave it one), kept only
-#                                  where the picture changed
-#     <scene>-srgb.png             the switch turned on for every candidate
-#   probe.json    The swatches' measured colours against the palette; per scene the census
-#                 (every material that takes vertex colour, grouped by its owner: the nearest
-#                 script above it in the scene, so the cable arcs and the aura's motes list
-#                 under game.gd and the ball's trail and speed lines under player_ball.gd;
-#                 where its mesh came from, the switch, how far the switch would move its stored
-#                 colours) and, for each family of candidates, how many pixels the switch changed
-#                 and their mean colour before and after, beside the scene's `noise` (what
-#                 changes between two stills with nothing switched).
-#
-# A candidate is a material with the switch off on a mesh built in code that carries colours
-# (a mesh with none draws white whatever the switch says). A mesh loaded from a file, or copied
-# from one (it keeps the importer's names or its shadow mesh), is a cast and is left alone. Meshes that code merges out of casts (the far props) land among the
-# candidates, so the list is where to look, not a verdict: read the script that writes the
-# colour. `nearest` says whether the stored colours sit nearer the palette as written or as
-# linear; near white and near black the two agree and it says nothing.
-#
-# The census reads what stands in the scene at that moment; an effect that is built when it
-# fires is counted only if one is up. `marks` puts the bolts and the attack lines up itself
-# (probe.json's `marks_shots` is how many bolts were in the air for the still); the ball's
-# trail, its aura and a cable's arcs show only if the game happens to be drawing them.
-# While a scene is held the clock runs at a thousandth, so water and mist stand still and
-# `noise` should be next to nothing.
-# --plant=1 greys each script's candidates instead of turning the switch on, to show that the
-# count sees a change on a renderer that ignores the switch.
-#
-# Where the seven code-drawn player marks set their colour (W46-03's hand-off to W46-13): every run
-# writes `mark_sites` into probe.json, and --sites=1 prints them alone, headless, and quits:
-#   <godot> --headless --path sketches/core-loop --script res://tools/vertex_colour_probe.gd -- --sites=1 [--out=/abs/dir]
-# Each row names the file, the line that builds the mark's material and whether that material
-# turns vertex_color_is_srgb on, the line that writes the colour into the mesh, and where the
-# colour comes from. The lines are found by MARK_SITES' text, so they follow the code as it moves;
-# a row whose text is gone says so (tests/world_look_acts_test.gd fails on it).
-#
-# Whether each mark draws its own colour (W46-13): --marks=1 draws, on a display, one row per mark: the mark's tone as a
-# plain material (the reference) beside the same tone written into a mesh with the switch as the mark's own material
-# line sets it (read from the code, as above), added at half strength over charcoal for the marks that add their light.
-# It writes marks-swatches.png and marks.json and prints one MARKSWATCH line per mark: the CIE76 distance between the
-# two, which passes at MARK_DE_MAX or less. --plant-mark=<mark> draws that one mark with the switch off, the washed-out
-# case, which must fail. Every full run writes the same rows into probe.json as `mark_swatches`.
-#   <godot> --path sketches/core-loop --script res://tools/vertex_colour_probe.gd -- --marks=1 --out=/abs/dir [--plant-mark=trail]
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -83,20 +15,15 @@ const KINDS := ["chaser", "lobber", "mag_trapper", "jolt_layer", "catch_trap", "
 const TONES := ["CHARCOAL", "VERDIGRIS", "RUST", "COPPER", "HAZARD", "AMBER", "BRASS", "SAND", "ANCIENT", "ARC", "COBALT"]
 const GLOWS := ["AMBER", "ARC", "BRASS"]
 const GLOW_ALPHA := 0.5
-# Stored colours read from one mesh, and how much nearer one reading must be to count.
 const SAMPLES := 240
 const EDGE := 0.02
-# A pixel that moved more than this (of 255, any channel) between the two stills changed.
 const MOVED := 8
 const WAIT_TICKS := 2400
 const LANDED := 1.6
-# The ball's marks: one bolt for each of these weapons' colours, MARKS_M in front of the camera,
-# flown for MARK_TICKS before the game is held.
 const MARK_WEAPONS := [Weapons.PYLON_TURRET, Weapons.ARC_CASTER, Weapons.RAPID_LASER, Weapons.STICKY_CHARGE, Weapons.CLAW_SWEEP,
 	Weapons.LEDGER_READER, Weapons.CANNON_LANE]
 const MARKS_M := 5.0
 const MARK_TICKS := 4
-# The seven marks: [anchor, text] finds the first line holding `text` at or after the first line holding `anchor`.
 const MAT_LINE := ["", "vertex_color_use_as_albedo = true"]
 const MARK_SITES := [
 	{"mark": "bolts", "file": "res://src/combat/bolts.gd", "material": MAT_LINE,
@@ -116,15 +43,10 @@ const MARK_SITES := [
 	{"mark": "aim", "file": "res://src/movement/indicator.gd", "material": MAT_LINE,
 		"colour": ["", "_tris.surface_set_color(color)"], "source": "the shape's colour: class_color(), SAND when blocked, CHARCOAL keyline", "tone": Palette.SAND, "add": false},
 ]
-# Slower than any weapon's, so the bolts are still in view when the game is held; a bolt's
-# colour does not change with its speed.
 const MARK_SPEED := 20.0
 const ROLL_TICKS := 60
-# The clock while a scene is held, so shader time and particles stand still between stills.
 const HELD := 0.001
 const PLANT := Color(0.5, 0.5, 0.5)
-# A mark drawn within this CIE76 of its plain tone draws its own colour. The switch off moves every mark's tone 10 or
-# more on Forward+ (the planted run's numbers are on the W46-13 pull request); two stills of one tone differ by under 1.
 const MARK_DE_MAX := 3.0
 
 var out := ""
@@ -218,10 +140,6 @@ func _run() -> void:
 	quit(0)
 
 
-# --- Where the marks set their colour ---------------------------------------------------------
-
-# One row per MARK_SITES entry: {mark, file, material_line, srgb, colour_line, source}, or with "error" when its text is gone.
-# srgb is whether the material's function turns vertex_color_is_srgb on.
 static func mark_sites() -> Array:
 	var rows := []
 	for site: Dictionary in MARK_SITES:
@@ -279,8 +197,6 @@ func _print_sites() -> int:
 	return 1 if bad > 0 else 0
 
 
-# --- The marks' own colours -------------------------------------------------------------------
-
 func _marks_only() -> void:
 	var rows := await _mark_swatches()
 	var bad := 0
@@ -296,8 +212,6 @@ func _marks_only() -> void:
 	quit(1 if bad > 0 else 0)
 
 
-# One row per mark: its tone as a plain material, then written into a mesh with the switch its material line sets
-# (an additive mark at half strength over charcoal, both columns). {mark, srgb, planted, tone, plain, drawn, de, ok}.
 func _mark_swatches() -> Array:
 	var sites := mark_sites()
 	var stage := Node3D.new()
@@ -348,8 +262,6 @@ func _mark_swatches() -> Array:
 	stage.free()
 	return result
 
-
-# --- Swatches ---------------------------------------------------------------------------------
 
 func _swatches() -> void:
 	var stage := Node3D.new()
@@ -434,8 +346,6 @@ func _quad(parent: Node3D, color: Color, vertex: bool, srgb: bool, at: Vector2, 
 	parent.add_child(view)
 
 
-# --- The game ---------------------------------------------------------------------------------
-
 func _boot() -> void:
 	game = Game.new()
 	game.test_mode = true
@@ -452,7 +362,6 @@ func _boot() -> void:
 	game.flow.choose_class(0)
 	game.run.set_max_hp(999999.0)
 	game.player.source = Intent.Scripted.new()
-	# The run opens with the ball on its drop.
 	var ground = game.ctx.spawner.ground
 	var down := 0
 	for i in WAIT_TICKS:
@@ -467,7 +376,6 @@ func _boot() -> void:
 		game.hud.first_steps.modulate.a = 0.0
 
 
-# The fourteen kinds in two rows ahead of the ball, then held where they stand.
 func _lineup() -> void:
 	var ground = game.ctx.spawner.ground
 	var spot: Vector3 = game.player.ball_position()
@@ -496,10 +404,6 @@ func _lineup() -> void:
 	await _frames(60)
 
 
-# The ball's own marks, put up by the game's own calls where the camera looks. The ball rolls
-# first, so its trail is drawn if the game draws one at that speed. The bolts fly across the
-# view for a few ticks, then the attack lines go up and the clock all but stops, so the short
-# ones (an arc lives a sixth of a second) are whole in every still.
 func _marks() -> void:
 	if failed != "":
 		return
@@ -532,10 +436,6 @@ func _marks() -> void:
 	_report["marks_shots"] = game.combat.bolts.live()
 
 
-# The census, the still as the game draws it, then the switch turned on for one family of
-# candidates at a time, then for all of them. The game is held and its clock all but stopped
-# throughout. Every count is still taken against a still from a few frames before, and `noise`
-# is the count between two such stills with nothing switched.
 func _pair(label: String) -> void:
 	if failed != "":
 		return
@@ -580,8 +480,6 @@ func _pair(label: String) -> void:
 	_report[label + "_changed"] = _moved(before_all, all)
 
 
-# The switch on or off for a set of materials; with --plant, a grey tint in its place, and the
-# material's own tint put back after.
 func _switch(materials: Array, on: bool) -> void:
 	for material in materials:
 		if not plant:
@@ -594,7 +492,6 @@ func _switch(materials: Array, on: bool) -> void:
 			_tints.erase(material.get_instance_id())
 
 
-# How many pixels moved between two stills, and their mean colour in each.
 static func _moved(before: Image, after: Image) -> Dictionary:
 	var a := before.get_data()
 	var b := after.get_data()
@@ -615,7 +512,6 @@ static func _moved(before: Image, after: Image) -> Dictionary:
 	return row
 
 
-# The picture on screen, saved under `file` unless that is empty.
 func _still(file: String) -> Image:
 	await _frames(3)
 	await RenderingServer.frame_post_draw
@@ -627,8 +523,6 @@ func _still(file: String) -> Image:
 	return image
 
 
-# Every material in the scene that takes vertex colour, grouped. `candidates` collects, by
-# family, the ones with the switch off on a mesh built in code that carries colours.
 func _census(candidates: Dictionary) -> Array:
 	var groups := {}
 	var seen := {}
@@ -682,9 +576,6 @@ func _census(candidates: Dictionary) -> Array:
 	return rows
 
 
-# Where a mesh came from: a file, a copy of an imported mesh, or code. The importer names a
-# mesh and its surfaces and may give it a shadow mesh; a copy keeps all three, and a mesh built
-# here by code has none of them.
 static func _origin(mesh: Mesh) -> String:
 	if mesh.resource_path != "" and not mesh.resource_path.begins_with("local://"):
 		return "cast"
@@ -699,14 +590,11 @@ static func _origin(mesh: Mesh) -> String:
 	return "built in code"
 
 
-# A candidate's family: its owner and, where the game named the view, that name, so two effects
-# under one script (the cable arcs and the aura's motes under game.gd) are switched apart.
 static func _family(owner: String, view: Node) -> String:
 	var named := str(view.name)
 	return owner.get_basename() if named.begins_with("@") else "%s-%s" % [owner.get_basename(), named]
 
 
-# The script that owns a view: its own, or its nearest ancestor's.
 static func _owner(view: Node) -> String:
 	var node := view
 	while node != null:
@@ -717,9 +605,6 @@ static func _owner(view: Node) -> String:
 	return "(no script)"
 
 
-# What a mesh's stored colours look like. `nearest`: "written" (nearer the palette as it stands),
-# "linear" (nearer the palette turned linear), "unplaced" or "not read". `moves`: how far the
-# switch would move the mean stored colour, of 255; white and black do not move.
 func _stored(mesh: Mesh, colours: PackedColorArray) -> Dictionary:
 	if colours.is_empty() and mesh is ArrayMesh:
 		for surface in mesh.get_surface_count():

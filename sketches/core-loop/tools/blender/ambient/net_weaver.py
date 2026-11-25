@@ -19,9 +19,9 @@ import math
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import bmesh  # noqa: E402
-from mathutils import Vector  # noqa: E402
-from _life import Critter, _B, _m  # noqa: E402
+import bmesh
+from mathutils import Vector
+from _life import Critter, _B, _m
 
 life = Critter("net_weaver")
 FUR = "rings"
@@ -44,21 +44,18 @@ def banded_tube(bone, points, radii, first_light=False, sides=6, run=2, start=0)
     return p
 
 
-# --- legs: crossed, folded in front of a round lap, with soft round feet tucked under
 life.ellipsoid("root", "smock", (0, 0.13, 0.0), (0.27, 0.13, 0.24), subsurf=0, u=9, v=5)
 life.capsule("root", FUR, (0.2, 0.1, 0.0), (-0.1, 0.09, -0.24), 0.085, 0.075, subsurf=0, u=6, v=4)
 life.capsule("root", FUR, (-0.2, 0.1, 0.0), (0.1, 0.095, -0.24), 0.085, 0.075, subsurf=0, u=6, v=4)
 life.ellipsoid("root", FUR, (-0.14, 0.085, -0.27), (0.075, 0.065, 0.09), subsurf=0, u=8, v=5)
 life.ellipsoid("root", FUR, (0.14, 0.09, -0.27), (0.075, 0.065, 0.09), subsurf=0, u=8, v=5)
 
-# --- body: a soft round smock, plum sash with a fat knot at the front
 life.ellipsoid("body", "smock", (0, 0.36, 0.0), (0.27, 0.25, 0.25), subsurf=1, u=9, v=5)
 life.ellipsoid("body", "sash", (0, 0.27, 0.0), (0.285, 0.055, 0.265), subsurf=1, u=10, v=3)
 life.ellipsoid("body", "sash", (0, 0.27, -0.27), (0.07, 0.06, 0.05), subsurf=0, u=6, v=4)
 for s in (-1, 1):
     life.ellipsoid("body", "sash", (0.06 * s, 0.22, -0.28), (0.04, 0.08, 0.035), rot=(0, 0, -14 * s), subsurf=0, u=6, v=4)
 
-# --- head: big and round (about 40% of the height); cream eye rings and muzzle painted as a face mask on one mesh
 HC, HR = Vector((0, 0.72, -0.03)), (0.225, 0.2, 0.205)
 hp = life.part("head")
 with hp.region(bevel=0, subsurf=1, detail=1):
@@ -68,7 +65,7 @@ with hp.region(bevel=0, subsurf=1, detail=1):
     faces = sorted({f for v in r["verts"] for f in v.link_faces}, key=lambda f: f.index)
     mask = []
     for f in faces:
-        c = f.calc_center_median()  # Blender axes: x right, y front (Godot -Z), z up
+        c = f.calc_center_median()
         gx, gy, gz = (c.x - HC.x) / HR[0], (c.z - HC.y) / HR[1], (c.y + HC.z) / HR[2]
         if gz < 0.35:
             continue
@@ -78,19 +75,17 @@ with hp.region(bevel=0, subsurf=1, detail=1):
             mask.append(f)
     hp.paint(faces, "critter", life.col(FUR))
     hp.paint(mask, "critter", life.col("cream"))
-life.ellipsoid("head", "eye", (0, 0.665, -0.232), (0.034, 0.025, 0.022), subsurf=0, u=6, v=4)  # nose
+life.ellipsoid("head", "eye", (0, 0.665, -0.232), (0.034, 0.025, 0.022), subsurf=0, u=6, v=4)
 for s in (-1, 1):
-    life.ellipsoid("head", "eye", (0.095 * s, 0.74, -0.19), (0.056, 0.07, 0.034), rot=(0, -8 * s, 0), subsurf=1, u=6, v=3)  # huge eyes
-    life.ellipsoid("head", "cream", (0.078 * s, 0.77, -0.218), (0.022, 0.025, 0.012), subsurf=0, u=6, v=4)  # catchlight
-    life.ellipsoid("head", FUR, (0.15 * s, 0.9, -0.02), (0.095, 0.095, 0.045), rot=(0, 18 * s, 0), subsurf=1, u=6, v=3)  # ears
-    life.ellipsoid("head", "net", (0.153 * s, 0.9, -0.05), (0.06, 0.062, 0.02), rot=(0, 18 * s, 0), subsurf=0, u=6, v=4)  # inner ear
+    life.ellipsoid("head", "eye", (0.095 * s, 0.74, -0.19), (0.056, 0.07, 0.034), rot=(0, -8 * s, 0), subsurf=1, u=6, v=3)
+    life.ellipsoid("head", "cream", (0.078 * s, 0.77, -0.218), (0.022, 0.025, 0.012), subsurf=0, u=6, v=4)
+    life.ellipsoid("head", FUR, (0.15 * s, 0.9, -0.02), (0.095, 0.095, 0.045), rot=(0, 18 * s, 0), subsurf=1, u=6, v=3)
+    life.ellipsoid("head", "net", (0.153 * s, 0.9, -0.05), (0.06, 0.062, 0.02), rot=(0, 18 * s, 0), subsurf=0, u=6, v=4)
 
-# --- arms: smock sleeves down to plum paws working the net in the lap
 for s, bone in ((-1, "arm_l"), (1, "arm_r")):
     life.capsule(bone, "smock", (0.24 * s, 0.52, -0.02), (0.17 * s, 0.33, -0.2), 0.08, 0.07, subsurf=1, u=8, v=5)
     life.ellipsoid(bone, FUR, (0.15 * s, 0.31, -0.25), (0.06, 0.05, 0.06), subsurf=1, u=6, v=4)
 
-# --- hand-net: a soft round disc in the lap with a rim and thick soft cords (never raised or spread)
 NC = Vector((0, 0.25, -0.31))
 life.ellipsoid("net", "net", tuple(NC), (0.17, 0.045, 0.17), rot=(-8, 0, 0), subsurf=1, u=10, v=4)
 ring = [(NC.x + 0.165 * math.cos(math.tau * i / 6), NC.y + 0.03,
@@ -102,7 +97,6 @@ for a in (0, 60, 120):
     life.tube("net", "sash", [(NC.x + c * q, NC.y + 0.04, NC.z + s_ * q) for q in (-0.15, 0, 0.15)],
               [0.017, 0.02, 0.017], sides=5, subsurf=1, cap=0.6)
 
-# --- tail: a long fluffy swept tube curling round the right side, soft horizontal rings (plum, smock lilac)
 TAIL = [(0.12, 0.16, 0.22), (0.24, 0.15, 0.27), (0.38, 0.14, 0.24), (0.5, 0.13, 0.14), (0.55, 0.13, 0.0),
         (0.54, 0.13, -0.14), (0.48, 0.14, -0.27), (0.4, 0.15, -0.37)]
 TR = [0.07, 0.09, 0.105, 0.115, 0.115, 0.11, 0.1, 0.09]
@@ -143,7 +137,6 @@ life.rig([
 
 REST = {}
 
-# --- idle, 2.5 s: weaving paws, head bob, tail sway; the head sinks as if dozing
 life.cycle("idle", 2.5, {
     "body": [(0, REST), (0.6, {"scale": (1, 1.025, 1)}), (1.25, REST), (1.85, {"scale": (1, 1.025, 1)})],
     "head": [(0, REST), (0.5, {"rot": (6, 0, 0)}), (1.0, {"rot": (2, 0, 4), "loc": (0, -0.004, 0)}),
@@ -157,7 +150,6 @@ life.cycle("idle", 2.5, {
     "tail_tip": [(0, REST), (0.6, {"rot": (0, 10, 4)}), (1.3, {"rot": (0, -12, -4)}), (1.9, {"rot": (0, 6, 2)})],
 })
 
-# --- move, 1.8 s: a friendly wave with the right paw and the tail tip
 UP = -150
 life.cycle("move", 1.8, {
     "arm_r": [(0, REST), (0.35, {"rot": (UP, 0, 0), "loc": (0, 0.0, 0)}), (0.6, {"rot": (UP, 0, 22)}), (0.85, {"rot": (UP, 0, -12)}),
@@ -171,7 +163,6 @@ life.cycle("move", 1.8, {
                  (1.05, {"rot": (-8, 0, 18)}), (1.3, {"rot": (-8, 0, -18)}), (1.55, {"rot": (-4, 0, 0)})],
 })
 
-# --- react, 2.0 s: startled upright, then curled into a ball wrapped in its own tail like a hammock
 CURL = {
     "body": {"loc": (0, -0.07, 0.0), "rot": (-34, 0, 0), "scale": (1.1, 0.88, 1.1)},
     "head": {"loc": (0, -0.02, -0.03), "rot": (-38, 0, 0)},

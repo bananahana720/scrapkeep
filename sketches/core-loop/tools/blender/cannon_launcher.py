@@ -36,11 +36,9 @@ from ore_cart import strut
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [3200, 2400, 2]  # polish: was [900, 2000, 2]; class cap 4,000 T / 8,900 V
+LANDMARK = [3200, 2400, 2]
 NAME = "cannon_launcher"
 
-# One row per painted part, palette names or palette hex only (common.HEX mirrors src/core/palette.gd; CABLE 2a3231 and
-# LEDGER e6d9b8 are not in common.HEX, so their hex is written out). No mint: nothing on the cannon carries a state.
 TONES = {
     "body": "petrol",
     "tyre": "2a3231",
@@ -51,39 +49,34 @@ TONES = {
     "face": "e6d9b8",
 }
 
-# Metres, Godot +Y up, origin at the mouth point, +z the aim.
 GROUND = -1.0
-CENTRE = (0.0, 2.0, -5.0)                      # mouth - aim*5 + UP*2 (contraptions.gd:447)
-AXIS = (0.0, .9, 1.0)                          # aim + UP*0.9 (contraptions.gd:448)
-CLEAR = (3.4, 1.0)                             # ring inner radius (radius 4.0 - 0.6, contraptions.gd:430) and ball top
-N = 20                                         # polish: was 10
-NF = 28                                         # the flywheel keeps 16 sides: it is the read at range
-# Lathe rows along the barrel axis: (radius, t) with t in metres from CENTRE, -4 the breech end, +4 the muzzle face.
+CENTRE = (0.0, 2.0, -5.0)
+AXIS = (0.0, .9, 1.0)
+CLEAR = (3.4, 1.0)
+N = 20
+NF = 28
 BOILER = [(.02, -4.0), (2.0, -4.0), (2.75, -3.4), (2.9, -2.9), (2.9, -1.6)]
-COLLAR = (3.2, -1.6, -.8)                      # the dark breech band, where today's copper band sits (:451-459)
+COLLAR = (3.2, -1.6, -.8)
 FLANGE = (2.72, -.8, -.45)
 BARREL = [(1.8, -.45), (1.8, 1.0), (2.22, 2.7)]
 LIP = (2.55, 2.7, 4.0)
-BORE = (1.95, 2.95)                            # bore radius, bore floor t
-PATCH = (1.6, (.9, 1.2))                       # t of the welded plate on the barrel's +x flank, (along axis, around)
-# Pipes stand plumb on the boiler's ridge: x, z, then (radius, y0, y1) for riser, sleeve, pipe, cap.
+BORE = (1.95, 2.95)
+PATCH = (1.6, (.9, 1.2))
 PIPES = [(-.55, -8.0, (.55, 1.5, 3.7), (.42, 3.7, 4.3), (.3, 4.3, 6.9), (.4, 6.9, 7.15)),
          (.75, -9.1, (.5, 1.2, 2.8), (.4, 2.8, 3.4), (.3, 3.4, 5.6), (.4, 5.6, 5.85))]
-GAUGE = ((1.15, 4.25, -9.95), (1.0, 0.0, .45), .8, .66)   # centre, facing, bezel radius, face radius
+GAUGE = ((1.15, 4.25, -9.95), (1.0, 0.0, .45), .8, .66)
 GAUGE_ARM = ((.75, 4.0, -9.1), (1.05, 4.2, -9.88))
-# The flywheel on the left (+x) flank, axle along x, rim on the ground.
-FLY = ((3.6, 1.3, -7.0), 2.3, 1.85, .32)        # hub centre, rim outer, rim inner, half width
+FLY = ((3.6, 1.3, -7.0), 2.3, 1.85, .32)
 FLY_HUB = (.42, .45)
 FLY_WEB = (.75, .12)
 FLY_SPOKES = (6, .28, .22)
-AXLE = (.22, 2.4, 4.2)                         # radius, x0, x1
-PLATE = (-7.2, 3.15, (GROUND, -.62), 2.95, (-.62, -.48))   # centre z, radius, y, deck radius, deck y
+AXLE = (.22, 2.4, 4.2)
+PLATE = (-7.2, 3.15, (GROUND, -.62), 2.95, (-.62, -.48))
 PLATE_OPEN = 1.6
 SIZE = {"cannon_launcher_body": [7.4, 9.368, 10.302], "cannon_launcher_gauge": [.531, 1.183, 1.099]}
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     return common.srgb(TONES[name])
 
 
@@ -115,9 +108,6 @@ def barrel_frame(s):
 
 
 def ring(s, rows, n, color, start=None, tones=None, at=(0.0, 0.0)):
-    # A lathe through (radius, t) rows as one connected piece: kit.Surface.finish recalculates each separate piece's
-    # normals (dig_mechanical/kit.py:120), so steps and caps belong in the profile, never in separate pieces.
-    # A radius of 0 closes the end at the axis. `tones` gives one colour per row.
     aa = around(n, math.pi / n if start is None else start)
     verts = [(at[0] + r * math.sin(a), t, at[1] + r * math.cos(a)) for r, t in rows for a in aa]
     faces = [(k * n + i, k * n + (i + 1) % n, (k + 1) * n + (i + 1) % n, (k + 1) * n + i)
@@ -139,10 +129,7 @@ def disc(s, r, t, n, color, up=True):
     s.add(verts, [tuple(range(n)) if up else tuple(reversed(range(n)))], color)
 
 
-
-
 def slab(s, centre, half, color):
-    # A box in local (x, t, z) coordinates.
     cx, ct, cz = centre
     hx, ht, hz = half
     s.add([(cx + a * hx, ct + b * ht, cz + c * hz) for a, b, c in
@@ -151,7 +138,6 @@ def slab(s, centre, half, color):
 
 
 def flywheel_frame(s):
-    # Axle along +x; local z is up so local angles run round the wheel's face.
     return Frame(s, FLY[0], (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
 
 
@@ -161,7 +147,6 @@ def gauge_frame(s):
 
 
 def lathe_rows():
-    # Breech cap, boiler, flange step, barrel, lip, muzzle face, then the copper bore and its floor: one piece.
     fr, f0, f1 = FLANGE
     lr, l0, l1 = LIP
     br, b0 = BORE
@@ -198,7 +183,6 @@ def steel(s):
     r, t0, t1 = COLLAR
     ring(b, [(BOILER[-1][0], t0), (r, t0), (r, t1), (FLANGE[0], t1)], N, tone("iron"))
     zc, pr, (y0, y1), dr, (d0, d1) = PLATE
-    # The deck's centre stays open: the boiler sits over it (PLATE_OPEN is inside the boiler's footprint on the deck).
     ring(s, [(pr, y0), (pr, y1), (dr, d0), (dr, d1), (PLATE_OPEN, d1)], 28, tone("iron"), at=(0.0, zc),
          tones=[tone("iron")] * 2 + [tone("deck")] * 3)
     for x, z, _, sleeve, pipe, cap in PIPES:
@@ -220,12 +204,10 @@ def steel(s):
 
 def glass(s):
     g = gauge_frame(s)
-    # A closed lens, so kit's normal recalculation sees a solid (an open cone was culled in it2).
     ring(g, [(.02, -.03), (GAUGE[3] - .02, -.03), (GAUGE[3] - .02, .02), (.02, .07)], 8, tone("face"))
 
 
 def clear(name, verts):
-    # The ball rolls across the ring's opening: nothing below its top inside the ring's inner radius.
     r, top = CLEAR
     hits = [v for v in verts if math.hypot(v[0], v[2]) < r and v[1] < top]
     assert not hits, (name, "ring opening", len(hits), hits[:3])

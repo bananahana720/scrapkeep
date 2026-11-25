@@ -49,23 +49,15 @@ def material(slot):
     return mat
 
 
-# Per-surface polish finish by Surface name: {"Hull": {"bevel": 0.06, "subsurf": 1}}. Read only
-# under polish.enable(); a name not listed takes the enable() defaults (POLISH.md).
 FINISH = {}
-# polish.enable(**BAKE) for kit recipes: every vertex-coloured kit slot takes the AO and wear bake
-# (glass has no vertex colour), and the mint state key that steel.gdshader matches within 0.02 stays exact.
 BAKE = {"bake_slots": ("elastomer", "enamel", "steel"), "bake_keep": (common.rgba("mint"),)}
 
 
-# Polish for the dig_mechanical assets only (tools/blender/POLISH.md). The manifest budgets stay
-# 270 T / 610 V, and dress_mdm_assets_test pins exact bounds to 5 mm, so these take smooth shading
-# and the AO and wear bake, plus a small bevel (planar faces keep the extents) where the shape is
-# boxes. Lamps are scenery and stay as they were. Recipes outside dig_mechanical never reach here.
 DIG_POLISH = {n: dict(bevel=0) for n in (
     "impeller_rim_sector", "impeller_hub", "impeller_vane", "impeller_vane_chipped", "intake_petal",
     "intake_throat", "intake_spine_segment", "cart_wheel", "shell_crescent", "shell_saddle",
     "breach_rim_sector", "breach_tab")}
-DIG_POLISH.update({"cart_body": dict(bevel=0),  # its 1.7 x 3.0 m extents shrink under a bevel (5 mm pin)
+DIG_POLISH.update({"cart_body": dict(bevel=0),
                    "strut_tall": dict(bevel=.03, bevel_min=.6), "strut_bent": dict(bevel=.03, bevel_min=.6)})
 
 
@@ -101,7 +93,6 @@ class Surface:
 
     def beam(self, a, b, width, depth, color="petrol"):
         d = Vector(b) - Vector(a)
-        # Flat beams in the Godot XY plane; Z remains axial depth.
         n = Vector((-d.y, d.x, 0)).normalized() * width / 2
         points = []
         for z in [-depth/2, depth/2]:
@@ -110,7 +101,6 @@ class Surface:
         self.add(points, [(0,3,2,1),(4,5,6,7),(0,1,5,4),(1,2,6,5),(2,3,7,6),(3,0,4,7)], color)
 
     def prism(self, outline, thick, color="bone", axis="z", offset=(0,0,0)):
-        # Concave caps are triangulated explicitly by Blender's deterministic tessellator.
         points=[]
         for t in [-thick/2, thick/2]:
             for a,b in outline:
@@ -122,8 +112,6 @@ class Surface:
         self.add(points,faces,color)
 
     def rings(self, rings, angles, color="bone", closed=False, cap_ends=False, palette=None):
-        # Rings are supplied in Godot space by a caller so the same skin builder
-        # supports cast bowls, wheel annuli and tyre profiles.
         n=len(angles)
         verts=[fn(a) for fn in rings for a in angles]
         colors=[palette(r,i) if palette else color for r in range(len(rings)) for i in range(n)]
@@ -146,8 +134,6 @@ class Surface:
 
     def tone(self, vi):
         tone=self.colors[vi]
-        # Broad, repeatable paint/dust wear is baked into this same slot.
-        # No face-by-face material proliferation or image textures.
         if tone in ["bone","petrol"]:
             gain=[0,.025,.06,.11,.035,.015][(vi*7+len(self.name))%6]
             tone=common.mix(tone,"charcoal" if tone=="bone" else "bone",gain)
@@ -164,7 +150,6 @@ class Surface:
         bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces))
         bm.to_mesh(mesh)
         bm.free()
-        # Loop colors are associated after normal correction, before triangulation.
         attr=mesh.color_attributes.new(name="Color",type="FLOAT_COLOR",domain="CORNER")
         for poly in mesh.polygons:
             poly.use_smooth=self.smooth
@@ -175,7 +160,6 @@ class Surface:
         obj=bpy.data.objects.new(self.name,mesh)
         bpy.context.scene.collection.objects.link(obj)
         obj.parent=root
-        # Use a fixed split for every quad. N-gon outlines have deliberately unequal corners.
         tri=obj.modifiers.new("FixedTriangles","TRIANGULATE")
         tri.quad_method="FIXED"
         bpy.context.view_layer.objects.active=obj
@@ -184,8 +168,6 @@ class Surface:
 
 
     def _finish_polished(self, root):
-        # Polish route (POLISH.md): colours go on the loops first so bevels and subdivision
-        # carry them, then common.Part's deterministic triangulation.
         mesh=bpy.data.meshes.new(self.name)
         mesh.from_pydata([xyz(v) for v in self.verts],[],self.faces)
         mesh.update()
@@ -253,14 +235,12 @@ def annulus(s, rin,rout,depth,n=20, arc=(0,math.tau), axis="z"):
         rings=[lambda a,r=r,y=y:(r*math.sin(a),y,r*math.cos(a))
                for r,y in [(rin,0),(rout,0),(rout,depth),(rin,depth),(rin,0)]]
     s.rings(rings,aa,closed=closed,palette=lambda r,i:"petrol" if r in [3,4] else "bone")
-    # A narrow blue inlay on the visible face, never a blue interior wash.
     if axis=="z":
         seam_rings=[lambda a,r=r:(r*math.sin(a),r*math.cos(a),-depth/2-.0005) for r in [rin+.10,rin+.15]]
         s.rings(seam_rings,aa,color="ancient",closed=closed)
 
 
 def cast_vane(s,chipped):
-    # A swept, blunt continuous plate. Unequal crest rings create the cast deformation.
     yy=[0,1.6,3.6,5.8,8]
     centers=[0,.24,.68,.94,.65]
     widths=[1.25,2.4,3.5,3.6,2.75]
@@ -270,7 +250,6 @@ def cast_vane(s,chipped):
             for j,t in enumerate([-1,0,1]):
                 x=centers[i]+t*widths[i]/2
                 h=(.15+.45*(1-abs(t)))*math.sin(math.pi*(i+.8)/5.8)
-                # Last corner is removed as a real missing volume, not a dark painted patch.
                 yp=y-1.5 if chipped and i==4 and j==2 else y
                 xp=x-1.0 if chipped and i==4 and j==2 else x
                 verts.append((xp,yp,(h if not back else h-1.2)))
@@ -283,12 +262,10 @@ def cast_vane(s,chipped):
                 faces.append((k,k+1,k+4,k+3))
     edge=[0,1,2,5,8,11,14,13,12,9,6,3]
     faces += [(edge[i],edge[(i+1)%len(edge)],edge[(i+1)%len(edge)]+15,edge[i]+15) for i in range(len(edge))]
-    # Normalize the authored envelope without changing the root end at Y=0.
     xs=[v[0] for v in verts]; zs=[v[2] for v in verts]
     lo,hi=min(xs),max(xs); zl,zh=min(zs),max(zs)
     verts=[((x-lo)/(hi-lo)*3.6-1.8,y,(z-zl)/(zh-zl)*1.2-.6) for x,y,z in verts]
     s.add(verts,faces,colors=["petrol" if i<15 else "bone" for i in range(30)])
-    # A narrow inlaid seam follows the sculpted crest, within this same material draw.
     seam=[(-.045,y,-.59+.13*math.sin(y*.4)) for y in [0,3.6,8]]+[(.045,y,-.59+.13*math.sin(y*.4)) for y in [0,3.6,8]]
     s.add(seam,[(0,1,4,3),(1,2,5,4)],"ancient")
 
@@ -316,11 +293,9 @@ def build(name,out=None):
     elif name.startswith("impeller_vane"):
         cast_vane(s,name.endswith("chipped"))
     elif name=="intake_petal":
-        # Open cast shell: three petals meet at the throat; hollow underside stays petrol.
         aa=angles(8,-math.pi/3,math.pi/3)
         profile=[(5,0),(4.7,1.9),(3.45,5.0),(1.45,10)]
         def petal_at(a,r,y,inside=False):
-            # Raised edges cut three broad arches into the downward-facing mouth.
             lift=2.7*(1-y/10)**2*math.sin(1.5*a)**2
             radius=r-.35 if inside else r
             return (radius*math.sin(a),y+lift,radius*math.cos(a))
@@ -328,7 +303,6 @@ def build(name,out=None):
         rings += [lambda a,r=r,y=y:petal_at(a,r,y,True) for r,y in reversed(profile)]
         rings += [rings[0]]
         s.rings(rings,aa,palette=lambda r,i:"petrol" if 4<=r<=7 else "bone")
-        # Thin inlay lives in a recessed edge, not a separate emitting material.
         strip=[]
         for r,y in profile:
             for a in [-math.pi/3+.018,-math.pi/3+.030]:
@@ -337,7 +311,6 @@ def build(name,out=None):
     elif name=="intake_throat":
         aa=angles(16,closed=True)
         profile=[(1.5,0),(1.5,.94),(1.46,.98),(1.46,1.06),(1.5,1.10),(1.5,2),(.95,2),(.95,0),(1.5,0)]
-        # 256 triangles before cap: use 12 radial segments to retain the 0.08 m groove.
         aa=angles(12,closed=True)
         s.rings([lambda a,r=r,y=y:(r*math.sin(a),y,r*math.cos(a)) for r,y in profile],aa,closed=True,
                 palette=lambda r,i:"ancient" if r==2 else ("petrol" if r in [3,6,7] else "bone"))
@@ -365,7 +338,6 @@ def build(name,out=None):
             s.box((.09,.09,.02),(x,y,-.285),"b2b4b0")
         rescale(s,(2,2,.6))
     elif name=="cart_body":
-        # Empty, tapered hopper with a real 8 cm wall and an unequal dented lip.
         rings=[[(x*.56,.52,z*1.1) for x,z in [(-1,-1),(1,-1),(1,1),(-1,1)]],
                [(-.85,1.4,-1.5),(.85,1.37,-1.5),(.79,1.4,1.5),(-.85,1.32,1.5)],
                [(-.77,1.4,-1.42),(.77,1.37,-1.42),(.71,1.4,1.42),(-.77,1.32,1.42)],
@@ -392,7 +364,6 @@ def build(name,out=None):
         curved="curve" in name
         length=3 if curved else 2.667
         if curved:
-            # The endpoint contract includes its -0.35 Z displacement.
             path=[(0,0,0),(.75,0,.175),(1.5,0,.175),(2.25,0,0),(3,0,-.35)]
             verts=[]
             for x,y,z in path:
@@ -417,8 +388,6 @@ def build(name,out=None):
         extra.append(lens)
     elif name=="shell_crescent":
         aa=angles(12,-math.pi,0)
-        # Half of an elliptical cast shell: the inward normal offset retains the
-        # physical 0.18 m wall instead of flattening its thickness with the silhouette.
         def shell_at(a,z,inset):
             normal=Vector((math.cos(a)/1.5,math.sin(a)/1.3)).normalized()
             return (1.5*math.cos(a)-normal.x*inset,1.3+1.3*math.sin(a)-normal.y*inset,z)
@@ -453,7 +422,6 @@ def build(name,out=None):
         tops=[(x,.12+(y-low)/(high-low)*.48,z) for x,y,z in verts[:20]]
         verts=tops+[(x,y-.12,z) for x,y,z in tops]
         s.add(verts,faces,colors=["bone"]*20+["petrol"]*20)
-        # A three-centimetre inlay follows the same top interpolation as the shell.
         strip=[]
         for i in range(5):
             for t in [.45,.51]:
@@ -462,11 +430,9 @@ def build(name,out=None):
                 strip.append(tuple(p))
         s.add(strip,[(i,i+1,i+3,i+2) for i in [0,2,4,6]],"ancient")
     elif name=="breach_rim_sector":
-        # Inner straight half-side and chamfered outer corner retain the polygonal drum rim.
         s.prism([(0,-3),(3,-3),(3.6,-3),(3.35,-3.6),(0,-3.6)],.35,"charcoal",axis="y",offset=(0,-.175,0))
         s.box((2.8,.035,.12),(1.4,-.0175,-3.44),"b2b4b0")
     elif name.startswith("breach_wedge"):
-        # Three real separate panels and an open near-edge chip, fixed physical crack width.
         c=name[-1]
         outline=wedge_outline(c,6,6)
         pivot=wedge_pivot(c,6,6)
@@ -475,7 +441,6 @@ def build(name,out=None):
         spec["sockets"]={"socket_membrane":[-pivot[0],0,-pivot[2]]}
     elif name=="breach_tab":
         s.box((.9,.12,.55),(.45,.06,0),"mint")
-        # Radial long axis is +X; rear-edge hinge is the origin, no extra material.
     else:
         raise ValueError(name)
     mesh=s.finish(root)
@@ -535,14 +500,11 @@ def assemblies():
          "cart_assembly":{"instances":cart,"sockets":{}},
          "lamp_straight_assembly":{"instances":[instance("lamp_straight_module",(i*2.667,0,0),name="lamp_%d"%i) for i in range(3)],"sockets":{}},
          "lamp_curve_assembly":{"instances":[instance("lamp_curve_module",(i*3,0,-i*.35),name="lamp_%d"%i) for i in range(2)],"sockets":{}}}
-    # P-R6 allows resizing the KD drum skin to today's rectangular openings.
-    # Panels are baked at each size below, leaving physical crack/chip/thickness values unchanged.
     for width,depth in [(12,12),(14,10)]:
         sx,sz=width/6,depth/6
         rim=[]
         for side in range(4):
             for mirror in [-1,1]:
-                # Rotate square base first, then scale in assembly axes.
                 rim.append({**instance("breach_rim_sector",rotation=(0,side*90,0),scale=(mirror,1,1),name=f"rim_{side}_{mirror}"),"assembly_scale":[sx,1,sz]})
         wedges=[instance(f"breach_wedge_{c}_{width}x{depth}",wedge_pivot(c,width,depth),name="wedge_"+c) for c in "abc"]
         tablocs=[[0,0,-depth/2-.3],[width/2+.3,0,0],[0,0,depth/2+.3],[-width/2-.3,0,0]]
@@ -568,7 +530,6 @@ def wedge_outline(c,width,depth):
 
 
 def baked_wedge(base,width,depth,out=None):
-    # Rebuild the exact rectangular panel rather than scaling cracks, chip or thickness.
     x=width/2; z=depth/2; c=base[-1]
     outline=wedge_outline(c,width,depth)
     pivot=wedge_pivot(c,width,depth)

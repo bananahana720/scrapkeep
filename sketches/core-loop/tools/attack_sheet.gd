@@ -1,10 +1,5 @@
 extends SceneTree
 
-# Attack sheets generated from the game's own scripts (AMBITION-BRIEF, "Encounter craft").
-#   $GODOT_BIN --headless --path sketches/core-loop --script res://tools/attack_sheet.gd -- --out=<dir>
-# Writes <dir>/attack-sheet.md and <dir>/attack-sheet.json. Exit 1 when the map names a
-# constant that no longer exists. The map and the reading live in attack_sheet_core.gd so the
-# test can run the same generator in-process.
 
 const Core := preload("res://tools/attack_sheet_core.gd")
 

@@ -29,8 +29,8 @@ from mathutils import Matrix, Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE.parent / "park" / "contraptions"))
-import _park as pk  # noqa: E402  (frustum, tube, strut, disc_z, ring_y, bar_xy, hexstud, plan, TONES)
-from _park import kit, common  # noqa: E402
+import _park as pk
+from _park import kit, common
 
 SKETCH = kit.SKETCH
 MODELS = SKETCH / "assets/models/camp"
@@ -46,20 +46,19 @@ T.update({
     "petrol": common.HEX["petrol"],
     "petrol_dk": "2a4442",
     "sandstone": common.HEX["sandstone"],
-    "plaza": "dcd0b4",          # pale packed caliche, lighter than the sand round it so the ring reads from the drop
+    "plaza": "dcd0b4",
     "plaza_dk": "b8a580",
-    "canvas": "c9b48a",         # tarp and awning canvas
+    "canvas": "c9b48a",
     "canvas_dk": "a28c63",
-    "timber": "6d4a33",         # weathered plank
+    "timber": "6d4a33",
     "timber_lt": "8c6644",
-    "felt": "4f6b52",           # skee lane baize, a dusty sage so mint still pops on it
-    "glass_lt": "e8f6ef",       # a lit bulb
+    "felt": "4f6b52",
+    "glass_lt": "e8f6ef",
     "ancient": common.HEX["ancient"],
     "ledger": "e6d9b8",
     "brass": common.HEX["brass"],
 })
 
-# class_def.gd: SABLE arc (mint), RIVET copper, KEST amber, TARN rust, TALLY ledger, CANNON ancient.
 PILOTS = [("sable", "mint", "ring"), ("rivet", "copper", "chevron"), ("kest", "amber", "burst"),
           ("tarn", "oxide", "cross"), ("tally", "ledger", "square"), ("remembered_cannon", "ancient", "lane")]
 
@@ -115,8 +114,6 @@ def jitter_tone(name, k, amount=0.06):
     g = 1.0 + amount * (((k * 7919) % 13) / 6.0 - 1.0)
     return "%02x%02x%02x" % tuple(max(0, min(255, int(round(c * g * 255)))) for c in base)
 
-
-# ---------------------------------------------------------------------------------------------------------------- export
 
 def options():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
@@ -236,7 +233,6 @@ def export(name, fn, cls, args, col=None, sockets=None, check=None):
     tris = tri_count(s)
     assert tris <= cap["tris"], (name, "triangles", tris, cap["tris"], cls)
     c = surface(name + "-col", col) if col is not None else None
-    # npm run asset:inspect counts every triangle in the file, so the class cap covers the collision mesh too.
     total = tris + (tri_count(c) if c else 0)
     assert total <= cap["tris"], (name, "triangles incl. collision", total, cap["tris"], cls)
     lo, hi = bounds(s)

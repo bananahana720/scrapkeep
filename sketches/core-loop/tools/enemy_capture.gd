@@ -4,12 +4,6 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 
-# Enemy look stills: the real game, paused, with world 1 enemies spawned in a row on the launch
-# lip and one still each from a fixed close camera, so a change to enemy materials can be compared
-# with the build before it. Display server needed (xvfb-run works):
-#   xvfb-run -s "-screen 0 1280x800x24" <godot> --path sketches/core-loop --rendering-driver opengl3 \
-#     --script res://tools/enemy_capture.gd -- --out=/abs/dir [--kinds=chaser,lobber]
-# frames.json records, per enemy, how many baked surfaces BakeLook dressed (shaded or smoothed).
 
 const SIZE := Vector2i(800, 600)
 const KINDS := ["chaser", "lobber", "catch_trap", "deflector", "plated_brute", "mag_trapper", "swatter", "netcaster", "foreman", "miniboss"]

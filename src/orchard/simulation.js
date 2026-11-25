@@ -127,10 +127,7 @@ const along = (o, d, t) => ({
   z: o.z + d.z * t,
 });
 const inside = (p) =>
-  p.x >= ARENA.minX &&
-  p.x <= ARENA.maxX &&
-  p.z >= ARENA.minZ &&
-  p.z <= ARENA.maxZ;
+  p.x >= ARENA.minX && p.x <= ARENA.maxX && p.z >= ARENA.minZ && p.z <= ARENA.maxZ;
 const center = (enemy) => ({
   x: enemy.x,
   y: enemy.y + enemy.bodyHeight / 2,
@@ -151,18 +148,10 @@ export function groundHeight(x, z) {
 function pointSegmentDistance(x, z, s) {
   const dx = s.x2 - s.x1;
   const dz = s.z2 - s.z1;
-  const t = clamp(
-    ((x - s.x1) * dx + (z - s.z1) * dz) / (dx * dx + dz * dz || 1),
-    0,
-    1,
-  );
+  const t = clamp(((x - s.x1) * dx + (z - s.z1) * dz) / (dx * dx + dz * dz || 1), 0, 1);
   return Math.hypot(x - s.x1 - dx * t, z - s.z1 - dz * t);
 }
 
-// A segment is a world-space capsule from (x1,z1) to (x2,z2), with a round radius.
-// The renderer draws these exact capsules. Collision expands them by player.radius.
-// Windup previewSegments contains the same capsules sampled over the complete stroke.
-// Active segments are the damaging tool position at the current committed phase.
 export function toolSegments(enemy, phase, preparing = false) {
   const c = ENEMY_CONFIG[enemy.kind];
   const segments = [];
@@ -178,12 +167,10 @@ export function toolSegments(enemy, phase, preparing = false) {
   for (const side of [-1, 1]) {
     if (enemy.kind === "spreadleg") {
       const angle = 0.2 + (preparing ? 0 : phase * 0.83);
-      const x =
-        side * (0.37 + 1.5 * Math.sin(angle) + 1.4 * Math.sin(angle * 0.3));
+      const x = side * (0.37 + 1.5 * Math.sin(angle) + 1.4 * Math.sin(angle * 0.3));
       segments.push(capsule({ x, z: -0.185 }, { x, z: -0.155 }, 0.47));
     } else if (enemy.kind === "snipcart") {
-      const angle =
-        side * (preparing ? 0.12 + 0.46 * phase : 0.58 * (1 - phase));
+      const angle = side * (preparing ? 0.12 + 0.46 * phase : 0.58 * (1 - phase));
       segments.push(
         capsule(
           { x: 0, z: -0.73 },
@@ -398,21 +385,14 @@ export class OrchardGame {
         this._pending[action] ||= !!input[action] && !this._held[action];
       for (const action of ["strike", "conductor"]) {
         if (input[action] && !this._held[action]) this.preparedAbility = action;
-        if (
-          !input[action] &&
-          this._held[action] &&
-          this.preparedAbility === action
-        ) {
+        if (!input[action] && this._held[action] && this.preparedAbility === action) {
           this._pending.cast = action;
           this.preparedAbility = null;
         }
       }
     }
     this._held = Object.fromEntries(
-      ["fire", "dash", "jump", "ultimate", "strike", "conductor"].map((key) => [
-        key,
-        !!input[key],
-      ]),
+      ["fire", "dash", "jump", "ultimate", "strike", "conductor"].map((key) => [key, !!input[key]]),
     );
     this._accumulator += Math.min(dt, 0.25);
     while (this._accumulator + 1e-10 >= STEP && this.mode === "playing") {
@@ -475,10 +455,7 @@ export class OrchardGame {
     }
     if (this._pending.dash && p.dashCooldown <= 0) {
       const length = Math.hypot(input.x, input.z);
-      const dir =
-        length > 0.1
-          ? { x: input.x / length, z: input.z / length }
-          : facing(p.yaw);
+      const dir = length > 0.1 ? { x: input.x / length, z: input.z / length } : facing(p.yaw);
       p.vx = dir.x * 19;
       p.vz = dir.z * 19;
       p.dashTime = 0.24;
@@ -490,11 +467,7 @@ export class OrchardGame {
       this._ramHits.clear();
       this._event("ram", p, { text: "Burst", kind: "burst" });
     }
-    if (
-      this._pending.ultimate &&
-      p.ultimateCharge >= 100 &&
-      p.ultimateTime === 0
-    ) {
+    if (this._pending.ultimate && p.ultimateCharge >= 100 && p.ultimateTime === 0) {
       p.ultimateTime = LIGHTNING_CONFIG.ultimate.duration;
       p.ultimateCharge = 0;
       this._event("ultimate", p, { text: "Overstorm · 8 seconds" });
@@ -508,8 +481,7 @@ export class OrchardGame {
       const dz = input.z * speed - p.vz;
       const delta = Math.hypot(dx, dz);
       const acceleration =
-        ((input.brake && p.grounded ? 48 : 25) + p.brace * 4) *
-        (p.grounded ? 1 : 0.85);
+        ((input.brake && p.grounded ? 48 : 25) + p.brace * 4) * (p.grounded ? 1 : 0.85);
       const scale = delta > 0 ? Math.min(1, (acceleration * dt) / delta) : 0;
       p.vx += dx * scale;
       p.vz += dz * scale;
@@ -542,18 +514,10 @@ export class OrchardGame {
     const due = this._echoes.filter((echo) => echo.time <= this.time);
     this._echoes = this._echoes.filter((echo) => echo.time > this.time);
     for (const echo of due)
-      this._executeAttack(
-        this._repeatAttack(echo.attack),
-        echo.amount,
-        echo.source,
-        true,
-      );
+      this._executeAttack(this._repeatAttack(echo.attack), echo.amount, echo.source, true);
     this._updateWaves(dt);
     if (this.mode === "playing")
-      this.targeting = this.previewAttack(
-        this.preparedAbility || "bolt",
-        input.aim,
-      );
+      this.targeting = this.previewAttack(this.preparedAbility || "bolt", input.aim);
   }
 
   _boundPlayer() {
@@ -664,18 +628,12 @@ export class OrchardGame {
           enemy.kind === "pruner" ||
           (this._workerGap <= 0 &&
             this.enemies.filter(
-              (other) =>
-                other !== enemy &&
-                other.kind !== "pruner" &&
-                other.state === "windup",
+              (other) => other !== enemy && other.kind !== "pruner" && other.state === "windup",
             ).length < 2);
-        const attackReach =
-          enemy.kind === "pruner" ? 30 : c.reach + this.player.radius + 0.5;
+        const attackReach = enemy.kind === "pruner" ? 30 : c.reach + this.player.radius + 0.5;
         if (gap <= attackReach && enemy.cooldown <= 0 && workerReady) {
           enemy.attackStyle =
-            enemy.kind === "pruner" && gap > c.reach + this.player.radius + 0.5
-              ? "toss"
-              : "sweep";
+            enemy.kind === "pruner" && gap > c.reach + this.player.radius + 0.5 ? "toss" : "sweep";
           this._transition(enemy, "windup");
           if (enemy.kind !== "pruner") this._workerGap = 0.35;
         }
@@ -684,8 +642,7 @@ export class OrchardGame {
         enemy.phase = clamp(enemy.stateTime / c[enemy.state], 0, 1);
         if (enemy.phase >= 1 - 1e-9) {
           if (enemy.state === "windup") this._transition(enemy, "active");
-          else if (enemy.state === "active")
-            this._transition(enemy, "recovery");
+          else if (enemy.state === "active") this._transition(enemy, "recovery");
           else if (enemy.state === "recovery") {
             this._transition(enemy, "approach");
             enemy.cooldown = 0.35;
@@ -718,15 +675,8 @@ export class OrchardGame {
           width: 1.3,
           radius: 0.65,
           bodyRadius: 0.65,
-          yMin: Math.min(
-            groundHeight(path.x1, path.z1),
-            groundHeight(path.x2, path.z2),
-          ),
-          yMax:
-            Math.max(
-              groundHeight(path.x1, path.z1),
-              groundHeight(path.x2, path.z2),
-            ) + 1.3,
+          yMin: Math.min(groundHeight(path.x1, path.z1), groundHeight(path.x2, path.z2)),
+          yMax: Math.max(groundHeight(path.x1, path.z1), groundHeight(path.x2, path.z2)) + 1.3,
           jumpable: true,
           phase: enemy.phase,
           segments: [path],
@@ -738,12 +688,7 @@ export class OrchardGame {
       ) {
         const hazard = {
           id: `${enemy.id}-${enemy.attackId}`,
-          kind:
-            enemy.kind === "spreadleg"
-              ? "spread"
-              : enemy.kind === "pruner"
-                ? "sweep"
-                : "cut",
+          kind: enemy.kind === "spreadleg" ? "spread" : enemy.kind === "pruner" ? "sweep" : "cut",
           x: enemy.x,
           z: enemy.z,
           yaw: enemy.yaw,
@@ -752,12 +697,7 @@ export class OrchardGame {
           phase: enemy.phase,
           state: enemy.state,
           yMin:
-            enemy.y +
-            (enemy.kind === "spreadleg"
-              ? 0.03
-              : enemy.kind === "snipcart"
-                ? 1.16
-                : 1.4),
+            enemy.y + (enemy.kind === "spreadleg" ? 0.03 : enemy.kind === "snipcart" ? 1.16 : 1.4),
           yMax:
             enemy.y +
             (enemy.kind === "spreadleg"
@@ -870,7 +810,6 @@ export class OrchardGame {
         continue;
       }
       remaining.push(offcut);
-      // The short swept capsule prevents tunneling; x/z remains the visible chunk center.
       this.hazards.push({
         id: offcut.id,
         kind: "offcut",
@@ -964,7 +903,6 @@ export class OrchardGame {
 
   _terrainRay(origin, direction, range) {
     let nearest = null;
-    // The arena surface is three planes joined at z=-14 and z=-23.
     for (const [slope, offset, minZ, maxZ] of [
       [0, 0, -14, Infinity],
       [-2.5 / 9, -35 / 9, -23, -14],
@@ -975,8 +913,7 @@ export class OrchardGame {
       const t = (slope * origin.z + offset - origin.y) / divisor;
       if (t < 0.001 || t > range) continue;
       const point = along(origin, direction, t);
-      if (point.z < minZ - 1e-8 || point.z > maxZ + 1e-8 || !inside(point))
-        continue;
+      if (point.z < minZ - 1e-8 || point.z > maxZ + 1e-8 || !inside(point)) continue;
       if (nearest === null || t < nearest) nearest = t;
     }
     return nearest;
@@ -1008,9 +945,7 @@ export class OrchardGame {
       enter = Math.max(enter, Math.min(y1, y2));
       leave = Math.min(leave, Math.max(y1, y2));
     }
-    return leave + 1e-7 >= enter && enter <= range + 1e-7
-      ? Math.min(enter, range)
-      : null;
+    return leave + 1e-7 >= enter && enter <= range + 1e-7 ? Math.min(enter, range) : null;
   }
 
   _ray(origin, direction, range, bodies = true) {
@@ -1058,8 +993,8 @@ export class OrchardGame {
       );
       candidates.sort(
         (a, b) =>
-          length3(center(source), center(a)) -
-            length3(center(source), center(b)) || a.id.localeCompare(b.id),
+          length3(center(source), center(a)) - length3(center(source), center(b)) ||
+          a.id.localeCompare(b.id),
       );
       if (!candidates.length) break;
       const next = candidates[0];
@@ -1083,12 +1018,7 @@ export class OrchardGame {
     );
     const direction = towards(origin, camera.point);
     const requested = length3(origin, camera.point);
-    const ray = this._ray(
-      origin,
-      direction,
-      Math.min(config.range, requested),
-      kind === "bolt",
-    );
+    const ray = this._ray(origin, direction, Math.min(config.range, requested), kind === "bolt");
     const attack = {
       kind,
       valid: true,
@@ -1105,13 +1035,10 @@ export class OrchardGame {
           attack,
           ray.enemy,
           LIGHTNING_CONFIG.bolt.chainRange *
-            (this.player.ultimateTime > 0
-              ? LIGHTNING_CONFIG.ultimate.chainMultiplier
-              : 1),
+            (this.player.ultimateTime > 0 ? LIGHTNING_CONFIG.ultimate.chainMultiplier : 1),
         );
     } else {
-      const onTerrain =
-        Math.abs(ray.point.y - groundHeight(ray.point.x, ray.point.z)) < 0.03;
+      const onTerrain = Math.abs(ray.point.y - groundHeight(ray.point.x, ray.point.z)) < 0.03;
       attack.valid =
         camera.terrain &&
         requested <= config.range + 0.001 &&
@@ -1141,10 +1068,7 @@ export class OrchardGame {
                 distance(e, attack.point) <= config.radius + e.radius &&
                 e.y + e.bodyHeight >= attack.point.y &&
                 e.y <= attack.point.y + 12 &&
-                this._visible(
-                  { ...attack.point, y: attack.point.y + 1.35 },
-                  center(e),
-                ),
+                this._visible({ ...attack.point, y: attack.point.y + 1.35 }, center(e)),
             )
             .map((e) => e.id);
       }
@@ -1190,24 +1114,17 @@ export class OrchardGame {
             distance(enemy, attack.point) <= attack.radius + enemy.radius &&
             enemy.y + enemy.bodyHeight >= attack.point.y &&
             enemy.y <= attack.point.y + 12 &&
-            this._visible(
-              { ...attack.point, y: attack.point.y + 1.35 },
-              center(enemy),
-            )
+            this._visible({ ...attack.point, y: attack.point.y + 1.35 }, center(enemy))
           );
         if (attack.kind === "conductor")
           return (
             this._visible(attack.origin, center(enemy)) &&
-            (length3(attack.origin, center(enemy)) <=
-              attack.radius + enemy.radius ||
-              (attack.corridors || []).some((corridor) =>
-                this._corridorHits(corridor, enemy),
-              ))
+            (length3(attack.origin, center(enemy)) <= attack.radius + enemy.radius ||
+              (attack.corridors || []).some((corridor) => this._corridorHits(corridor, enemy)))
           );
         return attack.segments.some(
           ({ from, to }) =>
-            this._bodyRay(from, towards(from, to), length3(from, to), enemy) !==
-            null,
+            this._bodyRay(from, towards(from, to), length3(from, to), enemy) !== null,
         );
       })
       .map((enemy) => enemy.id);
@@ -1278,9 +1195,7 @@ export class OrchardGame {
       attack,
       enemy,
       LIGHTNING_CONFIG.bolt.chainRange *
-        (this.player.ultimateTime > 0
-          ? LIGHTNING_CONFIG.ultimate.chainMultiplier
-          : 1),
+        (this.player.ultimateTime > 0 ? LIGHTNING_CONFIG.ultimate.chainMultiplier : 1),
     );
     this._executeAttack(attack, 20, "player");
   }
@@ -1300,10 +1215,8 @@ export class OrchardGame {
           from: { ...from },
           to,
           radius: LIGHTNING_CONFIG.conductor.linkRadius,
-          yMin:
-            Math.min(from.y, to.y) - LIGHTNING_CONFIG.conductor.linkHalfHeight,
-          yMax:
-            Math.max(from.y, to.y) + LIGHTNING_CONFIG.conductor.linkHalfHeight,
+          yMin: Math.min(from.y, to.y) - LIGHTNING_CONFIG.conductor.linkHalfHeight,
+          yMax: Math.max(from.y, to.y) + LIGHTNING_CONFIG.conductor.linkHalfHeight,
         };
       });
   }
@@ -1337,14 +1250,10 @@ export class OrchardGame {
     attack.corridors = this._conductorCorridors(conductor, others);
     attack.segments.push(...attack.corridors);
     for (const enemy of this.enemies) {
-      if (enemy.state === "dead" || !this._visible(origin, center(enemy)))
-        continue;
-      const linked = attack.corridors.some((corridor) =>
-        this._corridorHits(corridor, enemy),
-      );
+      if (enemy.state === "dead" || !this._visible(origin, center(enemy))) continue;
+      const linked = attack.corridors.some((corridor) => this._corridorHits(corridor, enemy));
       if (
-        length3(origin, center(enemy)) <=
-          LIGHTNING_CONFIG.conductor.radius + enemy.radius ||
+        length3(origin, center(enemy)) <= LIGHTNING_CONFIG.conductor.radius + enemy.radius ||
         linked
       ) {
         attack.targetIds.push(enemy.id);
@@ -1366,16 +1275,10 @@ export class OrchardGame {
       const attack = this._conductorAttack(conductor);
       conductor.cooldown =
         LIGHTNING_CONFIG.conductor.interval /
-        (this.player.ultimateTime > 0
-          ? LIGHTNING_CONFIG.ultimate.conductorMultiplier
-          : 1);
+        (this.player.ultimateTime > 0 ? LIGHTNING_CONFIG.ultimate.conductorMultiplier : 1);
       conductor.flash = 0.18;
       if (attack.targetIds.length || attack.segments.length)
-        this._executeAttack(
-          attack,
-          LIGHTNING_CONFIG.conductor.damage,
-          "conductor",
-        );
+        this._executeAttack(attack, LIGHTNING_CONFIG.conductor.damage, "conductor");
     }
   }
 
@@ -1454,11 +1357,7 @@ export class OrchardGame {
     if (this._waveQueue.length && this._entryCooldown <= 0 && room > 0) {
       const kinds = [];
       let admittedWorkers = 0;
-      while (
-        this._waveQueue.length &&
-        kinds.length < 4 &&
-        admittedWorkers < room
-      ) {
+      while (this._waveQueue.length && kinds.length < 4 && admittedWorkers < room) {
         const kind = this._waveQueue.shift();
         kinds.push(kind);
         if (kind !== "pruner") admittedWorkers++;
@@ -1499,8 +1398,7 @@ export class OrchardGame {
               {
                 id: "brace-package",
                 name: "Brace package",
-                description:
-                  "Two Brace parts improve burst recovery and damage protection.",
+                description: "Two Brace parts improve burst recovery and damage protection.",
               },
             ]
           : [
@@ -1526,10 +1424,8 @@ export class OrchardGame {
     )
       return false;
     if (ITEM_CONFIG[id]) {
-      if (!this.inventory.acquired.includes(id))
-        this.inventory.acquired.push(id);
-      if (!this.inventory.equipped.includes(id))
-        this.inventory.equipped.push(id);
+      if (!this.inventory.acquired.includes(id)) this.inventory.acquired.push(id);
+      if (!this.inventory.equipped.includes(id)) this.inventory.equipped.push(id);
     } else if (id === "brace-package") this.player.brace += 2;
     else if (id === "shear-package") {
       this.player.shear += 2;
@@ -1537,10 +1433,7 @@ export class OrchardGame {
     }
     this.player.radius = Math.min(
       1.65,
-      1 +
-        this.player.scrap * 0.022 +
-        this.player.shear * 0.045 +
-        this.player.brace * 0.045,
+      1 + this.player.scrap * 0.022 + this.player.shear * 0.045 + this.player.brace * 0.045,
     );
     this._boundPlayer();
     this.wave.rewardChosen = true;
@@ -1559,11 +1452,8 @@ export class OrchardGame {
   }
 
   setItemEnabled(id, enabled) {
-    if (this.mode !== "intermission" || !this.inventory.acquired.includes(id))
-      return false;
-    this.inventory.equipped = this.inventory.equipped.filter(
-      (item) => item !== id,
-    );
+    if (this.mode !== "intermission" || !this.inventory.acquired.includes(id)) return false;
+    this.inventory.equipped = this.inventory.equipped.filter((item) => item !== id);
     if (enabled) this.inventory.equipped.push(id);
     return true;
   }
@@ -1609,8 +1499,7 @@ export class OrchardGame {
       if (enemy.counteredAttack !== enemy.attackId) {
         enemy.counteredAttack = enemy.attackId;
         this._addPickup("scrap", enemy.weakX, enemy.weakZ);
-        if (enemy.kind === "pruner")
-          this._addPickup("heart", enemy.weakX + 0.7, enemy.weakZ);
+        if (enemy.kind === "pruner") this._addPickup("heart", enemy.weakX + 0.7, enemy.weakZ);
       }
     }
     this._event("hit", enemy, {
@@ -1622,22 +1511,12 @@ export class OrchardGame {
       enemy.state = "dead";
       enemy.phase = 1;
       enemy.active = false;
-      this.hazards = this.hazards.filter(
-        (hazard) => !hazard.id.startsWith(`${enemy.id}-`),
-      );
+      this.hazards = this.hazards.filter((hazard) => !hazard.id.startsWith(`${enemy.id}-`));
       for (let i = 0; i < 4; i++) {
         const angle = this._random() * Math.PI * 2;
-        this._addPickup(
-          "scrap",
-          enemy.x + Math.cos(angle) * 1.3,
-          enemy.z + Math.sin(angle) * 1.3,
-        );
+        this._addPickup("scrap", enemy.x + Math.cos(angle) * 1.3, enemy.z + Math.sin(angle) * 1.3);
       }
-      this._addPickup(
-        enemy.kind === "spreadleg" ? "brace" : "shear",
-        enemy.x,
-        enemy.z,
-      );
+      this._addPickup(enemy.kind === "spreadleg" ? "brace" : "shear", enemy.x, enemy.z);
       this._addPickup("heart", enemy.x + 1, enemy.z);
     }
   }
@@ -1698,10 +1577,7 @@ export class OrchardGame {
       }
       if (pickup.kind === "brace") p.brace++;
       if (pickup.kind === "heart") p.hp = Math.min(p.maxHp, p.hp + 16);
-      p.radius = Math.min(
-        1.65,
-        1 + p.scrap * 0.022 + p.shear * 0.045 + p.brace * 0.045,
-      );
+      p.radius = Math.min(1.65, 1 + p.scrap * 0.022 + p.shear * 0.045 + p.brace * 0.045);
       const labels = {
         scrap: "Scrap fitted",
         shear: "Shear linkage: stronger ram + buddy",
@@ -1741,10 +1617,7 @@ export class OrchardGame {
             y: buddy.y + 0.7,
             z: buddy.z,
           }) < LIGHTNING_CONFIG.companion.range &&
-          this._visible(
-            { x: buddy.x, y: buddy.y + 0.7, z: buddy.z },
-            center(candidate),
-          ),
+          this._visible({ x: buddy.x, y: buddy.y + 0.7, z: buddy.z }, center(candidate)),
       )
       .sort((a, b) => distance(a, buddy) - distance(b, buddy))[0];
     buddy.yaw = enemy ? yawTo(buddy, enemy) : p.yaw;

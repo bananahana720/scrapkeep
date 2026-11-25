@@ -29,11 +29,8 @@ from ore_cart import kit, common
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [800, 700, 1]  # polish: was kit.P [270, 610, 1]; class cap 2,000 T / 4,600 V
+PROP = [800, 700, 1]
 
-# One row per painted part, palette names or palette.gd hex only. The picture's brass bezel line, hub and collar are
-# copper (RECIPE-WAVE lore: brass is the Fleet's requisition colour). The picture's teal is lighter than VERDIGRIS
-# (petrol); the palette has no lighter teal, so the gap is named, not filled. LEDGER is palette.gd's ledger cream.
 TONES = {
     "bezel": "charcoal",
     "face": "e6d9b8",
@@ -48,34 +45,28 @@ TONES = {
     "felt": "charcoal",
 }
 
-# Metres at game scale. Today's dial (contraptions.gd): post r 0.2 h 3.0 at foot + 1.5 (:749-756); face r 1.1,
-# 0.15 deep, centre foot + 3.4, rotated to face +Z (:758-767); needle 0.12 x 0.95 x 0.05 at face + 0.12 Z (:776-781).
 FACE_Y = 3.4
 NEEDLE_Z = .12
-FACE_Z = .06                            # the dial plane; the pointer's back sits 0.04 m in front of it
-# Bezel case profile (radius, z) from the back rim to the inner lip; outer radius 1.15 against today's 1.1.
+FACE_Z = .06
 BEZEL = [(1.00, -.24), (1.15, -.16), (1.15, .13), (1.07, .21), (.94, .19), (.905, FACE_Z - .005)]
-BEZEL_N = 40  # polish: was 20
+BEZEL_N = 40
 FACE_R = .91
-LINE = (.855, .905)                     # copper bezel line (inner, outer radius)
-HAIR = (.815, .835)                     # charcoal hairline inside it
-MAJOR = (9, .64, .80, .055)             # count over the sweep, r0, r1, width
-MINOR = (4, .73, .80, .022)             # between each pair of majors
-SWEEP = math.radians(120)               # `_needle` sweeps -2.1..2.1 rad about Z, about +-120 degrees from straight up
+LINE = (.855, .905)
+HAIR = (.815, .835)
+MAJOR = (9, .64, .80, .055)
+MINOR = (4, .73, .80, .022)
+SWEEP = math.radians(120)
 REDLINE = (math.radians(78), SWEEP, .80, .845)
-# Needle (pivot frame): blade outline in XY, depth, hub radius and depth.
 BLADE = [(-.06, 0), (-.022, .60), (0, .75), (.022, .60), (.06, 0), (.045, -.20), (-.045, -.20)]
 BLADE_D = .035
-HUB = (.10, -.045, .04)                 # radius, back z, front z (pivot frame)
-# Stand: ground flange, threaded spigot, L block with an arm to +X ending in a round boss and bolt, copper collar,
-# stem to inside the case, a VERDIGRIS ring and the hex union nut just under the case (picture order).
+HUB = (.10, -.045, .04)
 FLANGE = (.32, 0, .06)
 SPIGOT = (.15, .06, .30)
 BLOCK = ((.56, .45, .50), (0, .525, 0))
 ARM = ((.62, .30, .40), (.55, .53, 0))
-BOSS = (.25, .80, 1.00, .53)            # radius, x0, x1, y
+BOSS = (.25, .80, 1.00, .53)
 BOSS_BOLT = (.09, 1.00, 1.08)
-PLUG = (.07, -.28, -.37, .56)           # radius, x0, x1, y (the picture's small fitting on the left of the block)
+PLUG = (.07, -.28, -.37, .56)
 COLLAR = (.27, .75, .85)
 STEM = (.20, .85, 2.42)
 RING = (.25, 1.95, 2.03)
@@ -90,7 +81,6 @@ def around(n, start=0.0):
 
 
 def tube(s, a, b, profile, n, colors, caps=(True, True), start=None):
-    # Rings of (radius, t along a->b) around an arbitrary axis; one colour per ring.
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
     u = d.cross(Vector((0, 1, 0)) if abs(d.y) < .9 else Vector((1, 0, 0))).normalized()
@@ -116,7 +106,6 @@ def cyl(s, a, b, r, n, color, caps=(True, True), start=None):
 
 
 def dial_xy(theta, r):
-    # theta from straight up, clockwise as seen from the front (+Z), the way the needle's g rises.
     return r * math.sin(theta), FACE_Y + r * math.cos(theta)
 
 
@@ -168,9 +157,8 @@ def bezel(s):
 
 
 def face(s):
-    # A closed slab, not a lone n-gon: kit.Surface recomputes normals and a lone face can come out backward.
     cyl(s, (0, FACE_Y, FACE_Z - .03), (0, FACE_Y, FACE_Z), FACE_R, BEZEL_N, TONES["face"], start=0.0)
-    n = 48  # polish: was 24
+    n = 48
     z = FACE_Z + .004
     annulus(s, LINE[0], LINE[1], z, n, TONES["line"])
     annulus(s, HAIR[0], HAIR[1], z, n, TONES["tick"])

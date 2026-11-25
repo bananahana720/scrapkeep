@@ -60,9 +60,9 @@ def body_paint(c, n):
 def spool_paint(c, n):
     r = Vector((c.y, c.z + HALF - AXLE)).length
     if abs(c.x) > 1.33 or r > 1.62:
-        return "copper"  # flanges
+        return "copper"
     if r < 0.4:
-        return "charcoal"  # axle
+        return "charcoal"
     return CABLE
 
 
@@ -92,7 +92,6 @@ kit.stencil(hull, SLOT, "HIRED", at(1.2, 1.81, 0.27), (0, 1, 0), 0.16, "bone", r
 kit.cut_line(hull, SLOT, [at(-1.75, 0.45, 3.25), at(-2.0, 0.6, 2.7), at(-2.1, 0.75, 2.2)], radius=0.075)
 bind(0)
 kit.add_shell(hull, meshes["Spool"], SLOT, spool_paint)
-# Loose load-cable ends hang off the spool with their eyes.
 for x in (-0.55, 0.45):
     hull.rod(SLOT, at(x, 0.35, AXLE - 1.45), at(x, 0.45, 1.35), 0.05, segs=6, color=CABLE)
     hull.ring(SLOT, 0.07, 0.13, 0.05, segs=10, loc=at(x, 0.45, 1.22), rot=(0, math.pi / 2, 0), color=WORN)
@@ -110,7 +109,6 @@ armour = Part("CableTenderArmour")
 armour.bevel = 0.02
 bind_plate = kit.weights(armour)
 for side, index in [(1, 4), (-1, 5)]:
-    # Half discs split along the vertical, hinged at their front and back edges.
     outline = [(side * 0.015, 0.64)]
     for k in range(9):
         a = math.pi / 2 - math.pi * k / 8

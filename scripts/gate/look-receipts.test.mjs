@@ -14,7 +14,6 @@ const HEAD = "abc1234";
 const KINDS = render.KINDS;
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-// A committed scratch repo for the dirty-checkout checks.
 function repo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "look-receipts-git-"));
   const git = (...args) =>
@@ -28,8 +27,6 @@ function repo() {
   git("commit", "-q", "-m", "one");
   return { dir, head: git("rev-parse", "HEAD").stdout.trim() };
 }
-
-// --- models-render ---
 
 function compareLog({
   kinds = KINDS,
@@ -216,8 +213,6 @@ test("models-render: no display, or a failed shoot, is a miss that says why", as
     /authored shoot exit 2: x \| model_render_check: a kind drew under 2000 pixels/,
   );
 });
-
-// --- display-run ---
 
 const noSlot =
   (events = []) =>
@@ -455,8 +450,6 @@ test("display-run: no display on Linux, or another platform, is not supported an
   assert.equal(display.displayProblem("linux", { DISPLAY: ":0" }), "");
   assert.equal(started, 0);
 });
-
-// --- no-code-stand-ins ---
 
 const STAKE = {
   file: "stakes.gd",

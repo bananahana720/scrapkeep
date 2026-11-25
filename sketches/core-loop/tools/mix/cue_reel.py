@@ -118,7 +118,6 @@ def main():
     for i, (sound, starts) in enumerate(pick(meta.get("cue_rows", []), opts, n / rate), 1):
         clear = min(starts, key=lambda s: (s[1], s[0]))
         busy = max(starts, key=lambda s: (s[1], -s[0]))
-        # mixsim.py prints a name's first 30 characters.
         led = margin.get(sound[:30])
         for label, (t, others, kind) in (("clear", clear), ("busy", busy)):
             if label == "busy" and busy == clear:

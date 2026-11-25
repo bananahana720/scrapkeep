@@ -110,7 +110,6 @@ test("the weekly steps appear only when weekly is on", () => {
   );
 });
 
-// Records the running weight at every start; each step takes `ms` of real time.
 function harness(budget, steps, { done = new Set() } = {}) {
   const log = { peak: 0, used: 0, running: 0, started: [], aloneViolations: [] };
   const start = async (step) => {
@@ -198,18 +197,13 @@ test("a scheduler that honours weights peaks at 14 on this input, and one that s
 });
 
 test("spareWhileWaiting is the room a later step may take without ever delaying the waiting step", () => {
-  // The wave 35 gate: two windows at 6 running, the third at 6 waiting, budget 16. One finishing frees 6, the head needs 2.
   assert.equal(spareWhileWaiting([6, 6], 6, 16), 4);
-  // With a 2 already in the gap the head needs 4; a 6 finishing still frees 6, so 2 more may start.
   assert.equal(spareWhileWaiting([6, 6, 2], 6, 16), 2);
-  // The lightest set that frees enough decides: an 8 or the two 3s could finish first, and the 3s free exactly 6.
   assert.equal(spareWhileWaiting([8, 3, 3], 8, 16), 0);
-  // A head that already fits has no gap to fill, and one nothing can free room for gets no company.
   assert.equal(spareWhileWaiting([6], 6, 16), 0);
   assert.equal(spareWhileWaiting([], 20, 16), 0);
 });
 
-// Start and end order with real waits, to see who got in and whether the waiting step was held back.
 function timeline(budget, steps) {
   const events = [];
   const start = async (step) => {
@@ -267,8 +261,6 @@ test("a step that could delay the waiting step stays behind it, and nothing pass
     fenced.events.indexOf("+tiny") > fenced.events.indexOf("-x"),
     "tiny sits behind an exclusive step and waits for it",
   );
-  // The case a scheduler that fills any gap that fits gets wrong: `six` fits the raw free room of 6, but with it
-  // running `c` (12) could not start when `a` ends. It must wait, and `c` must start the moment `a` ends.
   assert.equal(spareWhileWaiting([6, 4], 12, 16), 0, "raw free room is 6, the safe spare is 0");
   const tempting = timeline(16, [
     fake("a", 6, { ms: 30 }),
@@ -331,7 +323,6 @@ test("compareRuns ignores wall time, the play watch and naming fields, and names
     runLine({ seed: 2 }),
   ].join("\n");
   assert.equal(compareRuns(base, noisy).code, 0);
-  // The fairness record is a measurement: adding or changing it is not a different run, a moved outcome beside it still is.
   const plain = [runLine({ row: { outcome: "won" } }), runLine({ seed: 2 })].join("\n");
   const measured = [
     runLine({
@@ -866,11 +857,9 @@ test("seedGodotCache copies verified exact-tree stamps and strips stamps on near
     const v2Tree = sketchState(repo, "sketches/core-loop").tree;
     git(repo, "worktree", "add", "--detach", wtSame, v2Head);
     git(repo, "worktree", "add", "--detach", wtSeed, v1Head);
-    // Stamp repo at v2 with a dummy imported file inside .godot.
     mkdirSync(path.join(repo, "sketches/core-loop/.godot"), { recursive: true });
     writeFileSync(path.join(repo, "sketches/core-loop/.godot/cache.bin"), "ok");
     writeImportStamp(repo, "sketches/core-loop");
-    // Exact-tree match copies .godot AND keeps stamp verified.
     const exact = seedGodotCache({
       targetWt: wtSame,
       stampedSources: [repo],
@@ -880,7 +869,6 @@ test("seedGodotCache copies verified exact-tree stamps and strips stamps on near
     assert.equal(exact.mode, "stamped");
     assert.equal(checkImportStamp(wtSame, "sketches/core-loop").ok, true);
     assert.equal(existsSync(path.join(wtSame, "sketches/core-loop/.godot/cache.bin")), true);
-    // Nearby-tree match (repo at v2, wtSeed at v1) copies .godot WITHOUT stamp so Godot reimports cleanly.
     const nearby = seedGodotCache({
       targetWt: wtSeed,
       stampedSources: [repo],
@@ -890,7 +878,6 @@ test("seedGodotCache copies verified exact-tree stamps and strips stamps on near
     assert.equal(nearby.mode, "seed");
     assert.equal(checkImportStamp(wtSeed, "sketches/core-loop").ok, false);
     assert.equal(existsSync(path.join(wtSeed, "sketches/core-loop/.godot/cache.bin")), true);
-    // Re-seeding an already populated worktree is a no-op.
     assert.equal(
       seedGodotCache({ targetWt: wtSame, stampedSources: [repo], headSketchTree: v2Tree }).mode,
       "existing",

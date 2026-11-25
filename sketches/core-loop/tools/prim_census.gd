@@ -1,27 +1,5 @@
 extends RefCounted
 
-# The primitive census: every surface the game draws from a Godot primitive mesh (BoxMesh,
-# CylinderMesh, SphereMesh, TorusMesh, QuadMesh, PrismMesh and the rest of PrimitiveMesh), named
-# by who built it and where it hangs, and judged against a pin of the ones meant to be code.
-# scripts/placeholder-gate.mjs reads files and cannot see a mesh built in code; this can.
-#
-# A surface counts when its node is visible in the tree and its render layers are not 0: the
-# greybox hero_assets.gd hides under a dressed model sets layers to 0 and stays visible_in_tree,
-# so tools/look_census.gd would count it. One row per key, owner|mesh|shape:
-#   owner  the file of the nearest ancestor (or the node) carrying a script with a path
-#   mesh   the primitive's class
-#   shape  the node's last three path names, an engine name @Class@N read as Class and the digits
-#          of a given name dropped, so a key holds across runs and across copies of one object
-#
-# The pin (PIN_PATH, tab separated: owner, mesh, shape glob, kind, row, why) lists every key that
-# may be drawn. kind "code" is a mark, ring, fallback or effect meant to be code; kind "stand-in"
-# is an object a player meets, built with its stage, that still waits for its model, with the
-# BACKLOG row that owes it; "stand-in-live" is the same for an object only play spawns (a drop).
-# judge() sorts a census into keys no pin row covers (a new primitive: fails), stand-ins still
-# drawn, and "stand-in" rows that matched nothing (the model landed: drop the row, the pin falls).
-# A "stand-in-live" row is never stale: a run may simply not spawn it.
-#
-# tools/prim_census_run.gd runs it over a bot run; tests/prim_census_test.gd holds world 1 to it.
 
 const PIN_PATH := "res://tools/prim_census_pin.tsv"
 const KINDS := ["code", "stand-in", "stand-in-live"]
@@ -30,8 +8,6 @@ var rows: Array[Dictionary] = []
 var _seen := {}
 
 
-# Scans the tree under `root` and returns the rows first seen on this scan:
-# {key, owner, mesh, shape, path, tick, stage, size}.
 func scan(root: Node, tick: int, stage: int, station := false) -> Array[Dictionary]:
 	var found: Array[Dictionary] = []
 	for node in root.find_children("*", "GeometryInstance3D", true, false):
@@ -81,8 +57,6 @@ static func shape_of(path: String) -> String:
 	return "/".join(out)
 
 
-# The pin rows, in file order: {owner, mesh, shape, kind, row, why, line}. A malformed line is a
-# row with an "error".
 static func load_pin(path := PIN_PATH) -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	var text := FileAccess.get_file_as_string(path)
@@ -99,8 +73,6 @@ static func load_pin(path := PIN_PATH) -> Array[Dictionary]:
 	return out
 
 
-# The first pin row covering a census row, or {}. Owner and mesh match exactly or by "*"; shape is a
-# glob (String.match).
 static func pin_for(row: Dictionary, pin: Array[Dictionary]) -> Dictionary:
 	for p in pin:
 		if p.has("error"):
@@ -110,9 +82,6 @@ static func pin_for(row: Dictionary, pin: Array[Dictionary]) -> Dictionary:
 	return {}
 
 
-# Sorts census rows against the pin: {unlisted: [row], stand_ins: [row + pin fields], stale: [pin row],
-# errors: [pin row]}. A stand-in pin row matched by no census row is stale; a code row may go unmatched
-# (a mark the run did not happen to draw).
 static func judge(census: Array[Dictionary], pin: Array[Dictionary]) -> Dictionary:
 	var out := {"unlisted": [], "stand_ins": [], "stale": [], "errors": pin.filter(func(p): return p.has("error"))}
 	var used := {}
@@ -143,8 +112,6 @@ static func _mesh_of(geo: GeometryInstance3D) -> Mesh:
 		return (geo as MultiMeshInstance3D).multimesh.mesh
 	return null
 
-# A preview mesh can remain visible inside its viewport after the menu
-# containing that viewport closes. Station scans follow the enclosing UI too.
 static func _visible_in_screen(node: Node) -> bool:
 	var at := node.get_parent()
 	while at != null:

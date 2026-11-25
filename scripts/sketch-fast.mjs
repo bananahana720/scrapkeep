@@ -56,42 +56,19 @@ export {
   takeBatchPacked,
 };
 
-// npm run sketch:fast: the fast PR lane of the tiered gate (ORCHESTRATOR, "Tiered gate").
-// It judges one PR head in about 15 minutes, cheapest and most-often-failing checks first, and
-// stops at the first failure that is the PR's own: red twice on the head and green on the base.
-//   1. static: sketch-lint, placeholder count no higher than the base, check:docs, the node
-//      tests that touch the changed scripts
-//   2. Godot: import (up to three tries), boot, then the tests the diff reaches, cheapest first
-// The full gate runs once per staging head and the red team plays each staging head; the fast
-// lane never replaces them. Bot-tier tests the diff reaches are listed for the bot shards.
-// Every test run that ends red keeps its log beside the receipt (failedRunLog), also when a rerun
-// then passes, so a flaky crash can still be read afterwards.
-// Run: node scripts/sketch-fast.mjs [--base origin/main] [--budget 900] [--width <lanes>] [--dry-run] [--receipt <label>]
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH = "sketches/core-loop";
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
 const RECEIPT_SCHEMA = "scrapkeep-fast-receipt/1";
-// A test with no timings row is priced at 180 s. At 30 s the wave 18 lane ran 2289 s on a 600 s
-// budget: 14 of 86 picked tests had no row, and five of them were bot runs.
 export const DEFAULT_ESTIMATE_MS = 180_000;
-// A test with no row that is named like a bot run or a sweep is listed for the bot shards.
 export const UNKNOWN_BOT_NAME = /^(bot_.*|.*_sweep_.*)\.gd$/;
-// A file more tests than this reach directly is a hub (game.gd, tests/support/t.gd): its own
-// direct tests still run, but nothing is selected through it at the second step.
 export const HUB_TESTS = 25;
 export const CANARY_COUNT = 4;
-// Content pins (music rows, attack rows, world digest, scatter rows) live in unit_suite, which no
-// res:// path reaches from most diffs, so it always runs (cloud gate, 18 Oct). new_world_cost
-// scans every src/ script for a world, map or boss named outright, so no single path reaches it
-// either; it takes about a second (BACKLOG.md SG-01, 12 Nov). colour_meanings scans every src/
-// script for a reserved colour outside its meaning the same way (BACKLOG.md FX-20).
 export const ALWAYS = [
   "tests/unit_suite_test.gd",
   "tests/new_world_cost_test.gd",
   "tests/colour_meanings_test.gd",
 ];
-// Some couplings have no res:// path: one park's recipe change moves other parks' bake hashes.
 export const PATH_RULES = [
   {
     name: "park data",
@@ -105,7 +82,6 @@ export const PATH_RULES = [
     ],
   },
   {
-    // The map standard (ruling ct): a park change faces the checks that read the baked map.
     name: "map standard",
     match: /(^|\/)parks?\/|(^|\/)park_[^/]*$/,
     tests: [
@@ -122,15 +98,12 @@ export const PATH_RULES = [
     ],
   },
 ];
-// Node checks a sketch change must face though no script path reaches them.
 export const NODE_PATH_RULES = [
-  // SG-16: a park prop recipe or file faces the far-mesh fault check.
   {
     name: "park prop far meshes",
     match: /(^|\/)park\/props\/|^tools\/model_audit\.py$/,
     tests: ["scripts/far-faults.test.mjs"],
   },
-  // SG-15: the palette, the kit's mirror of it, its reader and the icon generator stay in step.
   {
     name: "palette",
     match:
@@ -149,7 +122,6 @@ export function nodeTestsForPaths(paths, rules = NODE_PATH_RULES) {
   ].sort();
 }
 
-// Long whole-run proofs a change class must face; they go to the bot shards even past the budget.
 export const SHARD_RULES = [
   {
     name: "movement, boss, posture or damage",
@@ -197,7 +169,6 @@ export function parseArgs(argv) {
   return options;
 }
 
-// Split repo paths into what each stage needs. Godot paths are relative to the sketch.
 export function classify(paths) {
   const out = { godot: [], node: [], docs: [], other: [] };
   const prefix = SKETCH + "/";
@@ -227,7 +198,6 @@ function walk(directory, base, out) {
   return out;
 }
 
-// The index maps each sketch file to its text, so referrers can be found by res:// path.
 export function buildIndex(sketchDir) {
   const files = new Map();
   for (const rel of walk(sketchDir, sketchDir, []))
@@ -247,7 +217,6 @@ export function referrers(index, rel) {
   for (const [file, text] of index.files) {
     if (file === rel) continue;
     const at = text.indexOf(needle);
-    // "res://src/a.gd" must not match "res://src/a.gd.bak" or "res://src/a.gdshader".
     if (at >= 0 && !/[\w.]/.test(text[at + needle.length] ?? "")) found.push(file);
   }
   index.cache.set(rel, found);
@@ -275,8 +244,6 @@ function expand(index, globs) {
   );
 }
 
-// tier 0: a changed test or an ALWAYS test; 1: a test that names the changed file, or is named after it;
-// 2: a test that names a non-hub file which names the changed file.
 export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
   const picked = new Map();
   const hubs = [];
@@ -298,10 +265,6 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
           if (!shards.has(test)) shards.set(test, `${rule.name}: ${rel}`);
     if (isTopLevelTest(rel)) {
       if (index.files.has(rel)) add(rel, 0, "changed");
-      // A test that extends a changed test runs its parent's checks: kest_set_piece_test
-      // went red on main in wave 31 because only its parent, kest_kit_test, was picked.
-      // The walk follows the whole chain, as scripts/gate/carry.mjs does: dress_wog_fallback_test
-      // extends dress_wog_test, which extends dress_material_test.
       const reached = new Set([rel]);
       const queue = [rel];
       while (queue.length > 0) {
@@ -338,8 +301,6 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
   return { picked, hubs, unmapped, shards };
 }
 
-// Canaries: the cheapest tests that load the whole game, so a broad break shows in seconds
-// even when the diff maps to nothing.
 export function canaries(index, timings, count = CANARY_COUNT) {
   const whole = new Set(referrers(index, "src/game.gd").filter(isTopLevelTest));
   return Object.entries(timings)
@@ -353,9 +314,6 @@ export function estimate(timings, test) {
   return timings[test] ?? DEFAULT_ESTIMATE_MS;
 }
 
-// Keep the highest tiers within the budget (changed tests always), then run cheapest first so
-// a failure shows as early as it can. Whatever the budget leaves out is named, never dropped
-// silently; the staging full gate runs it.
 export function plan({
   picked,
   timings,
@@ -397,12 +355,6 @@ export function plan({
   };
 }
 
-// Verdict for one test after its retries. A head failure that passes on rerun is flaky (listed,
-// not blamed); one that also fails on the base is base-red (listed, not blamed).
-// A test red on both sides is base-red only when the head fails no check the base passes:
-// #104 took unit_suite from 6 to 11 failing checks with the same test red on the base.
-// A cached base red is weaker evidence than a fresh one, so a head red that shows no checks
-// (a crash) is never base-red on a cached verdict; it takes a fresh base run to say so.
 export function classifyFailure({
   rerunOk,
   baseOk,
@@ -422,26 +374,18 @@ export function classifyFailure({
   return { kind: "pr-red", newChecks: [] };
 }
 
-// A test the known-failing ledger lists as a flake can fail twice in a row with the base green
-// (audio_bake_cancel_test fails between 1 run in 5 and 1 in 3), and that pair alone would read as the PR's
-// red. So before such a test is the PR's red it gets up to LEDGER_FLAKE_RUNS more head runs:
-// one green makes it flaky, and red on every run makes it the PR's red after all. The row
-// buys more evidence; it never excuses a test the PR really broke.
 export const LEDGER_FLAKE_RUNS = 3;
 
 export function ledgerFlakes(rows) {
   return new Set(rows.filter((row) => row.kind === "flake").map((row) => row.test));
 }
 
-// `verdict` is classifyFailure's "pr-red"; `runs` are the extra head runs, in order.
 export function settleLedgerFlake(verdict, runs) {
   if (runs.some((run) => run.killed)) return { kind: "stopped", newChecks: [] };
   if (runs.some((run) => run.ok)) return { kind: "flaky", newChecks: [], ledger: true };
   return { ...verdict, ledgerRuns: runs.length };
 }
 
-// A check's name is its bracketed label ("[Spillway skipper breaks it in 50 to 90 s] median ..."),
-// so measured values that change run to run do not make a check look new.
 export function failingChecks(output) {
   return [
     ...new Set(
@@ -457,9 +401,6 @@ export function failingChecks(output) {
   ].sort();
 }
 
-// The labels a test file checks: the first argument of each call whose name starts with check, eq, near or report
-// (t.eq, _report, _check_near) when it is a plain string.
-// A label built at run time is not seen, so this reads less than the test runs.
 export function checkLabels(source) {
   const labels = new Set();
   for (const raw of source.split("\n")) {
@@ -472,15 +413,11 @@ export function checkLabels(source) {
   return labels;
 }
 
-// Labels the base version of a test checked that the head no longer does. A test edited to fit new behaviour
-// can drop a check and still pass (GATE.md: a moved tick, pin or floor is a finding even when the test passes).
 export function removedChecks(baseSource, headSource) {
   const head = checkLabels(headSource);
   return [...checkLabels(baseSource)].filter((label) => !head.has(label)).sort();
 }
 
-// The removed checks of a diff, from `git diff --name-status -M` lines and show(ref, file) -> text or null.
-// A renamed test is compared with its old path at the base, a deleted one with nothing, and an added one is skipped.
 export function checksRemoved(nameStatusLines, show, baseRef, headRef) {
   const isTest = (file) => /^sketches\/core-loop\/tests\/(?:[^/]+\/)?[^/]+\.gd$/.test(file);
   return nameStatusLines
@@ -497,14 +434,7 @@ export function checksRemoved(nameStatusLines, show, baseRef, headRef) {
     .filter((row) => row && row.labels.length > 0);
 }
 
-// Added files must not be symlinks, root files or new top-level folders (#104 committed a
-// node_modules symlink, which broke every merge into a tree that has node_modules).
-// .mcp.json and GEMINI.md are the root files a tool requires there: Claude Code reads project MCP
-// servers from .mcp.json (Andrew 12 Nov 2026), and Antigravity discovers GEMINI.md at the repo root.
 export const ROOT_FILES_ALLOWED = new Set([".mcp.json", "GEMINI.md"]);
-// A project skill's link is the one symlink a check requires: `npm run check:skills` fails a
-// skill under .agents/skills/ that has no .claude/skills/<name> link (.agents/skills/README.md),
-// and check:skills is what proves the link points at that skill.
 export const SKILL_LINK = /^\.claude\/skills\/[a-z0-9-]+$/;
 export function hygieneFindings(rawLines, baseTopLevel) {
   const findings = [];
@@ -521,16 +451,12 @@ export function hygieneFindings(rawLines, baseTopLevel) {
   return findings;
 }
 
-// The Godot MCP adds an McpBridge autoload to project.godot while the game runs and removes it
-// on stop; a commit made mid-session, or after a killed session, would ship it.
 export function bridgeFindings(projectGodot) {
   return /McpBridge/.test(projectGodot)
     ? ["project.godot carries the Godot MCP's McpBridge autoload: call stop_project, then commit"]
     : [];
 }
 
-// Merge commits on the PR's first-parent path each carry another branch. A carried PR that has
-// moved on since is stale (#101 and #102 carried #79 without 1f69c639 and failed on old bakes).
 export function mergedBranch(subject) {
   return (
     /\bfrom [\w.-]+\/([\w./-]+)$/.exec(subject)?.[1] ??
@@ -573,7 +499,6 @@ export function nodeTestsFor(changedNode, allNodeTests, readText) {
   return [...picked].sort();
 }
 
-// Placeholder rows grouped by kind and where; an increase in any group fails the lane.
 export function placeholderIncrease(baseRows, headRows) {
   const key = (row) => `${row.kind} ${row.where}`;
   const total = (rows) => {
@@ -603,9 +528,6 @@ function readTimings() {
   }
 }
 
-// Fold passing tests' wall times into the timings file the lane orders by. Three row shapes:
-// a smoke receipt's label ("... res://tests/a_test.gd", ms), a fast-lane row's test
-// ("tests/a_test.gd", ms) and a gate shard's test ("a_test", seconds; scripts/gate/shard.mjs).
 export function timingsFromReceipt(receipt) {
   const tests = {};
   for (const row of receipt.results ?? []) {
@@ -667,8 +589,6 @@ async function placeholderRowsAsync(sketchDir) {
   }
 }
 
-// Seed the base worktree's .godot from head's .godot without scrapkeep-import.json so Godot does
-// a fast incremental reimport of only diffed assets instead of a full cold import. Falls back cleanly.
 export function seedBaseGodot(headSketchDir, baseSketchDir, platform = process.platform) {
   const src = path.join(headSketchDir, ".godot");
   const dst = path.join(baseSketchDir, ".godot");
@@ -690,8 +610,6 @@ export function seedBaseGodot(headSketchDir, baseSketchDir, platform = process.p
   }
 }
 
-// What a red run printed is kept whole up to this many lines. A longer log keeps its first
-// LOG_HEAD_LINES (the engine's start-up) and its last LOG_TAIL_LINES (the failure), with the cut named.
 export const LOG_HEAD_LINES = 200;
 export const LOG_TAIL_LINES = 2000;
 
@@ -706,7 +624,6 @@ export function cappedLog(output, head = LOG_HEAD_LINES, tail = LOG_TAIL_LINES) 
   ].join("\n");
 }
 
-// The log of one red run: what ran, how it ended, then stdout and stderr as they arrived.
 export function failedRunLog({
   test,
   where,
@@ -729,7 +646,6 @@ export function failedRunLog({
   return `${facts.join("\n")}\n--- stdout and stderr ---\n${cappedLog(output)}\n`;
 }
 
-// tests/a/b_test.gd, second red run on the head -> a__b_test.head-2.log
 export function failedRunLogName(test, where, attempt) {
   return `${test
     .replace(/^tests\//, "")
@@ -741,8 +657,6 @@ export function receiptBaseName(label, head, startedAt) {
   return `${label}-${head.slice(0, 12)}-${startedAt.replace(/[:.]/g, "-")}`;
 }
 
-// A run that ended on a signal the lane did not send. SIGKILL is usually the container's memory
-// limit (dmesg "Memory cgroup out of memory"), not the test; any other signal is a crash.
 export function signalReason(signal) {
   if (!signal || signal === "SIGKILL")
     return "killed by a signal before its time limit (often the container's memory limit; see dmesg)";
@@ -865,18 +779,9 @@ function stopRunning() {
   for (const child of running) stopChild(child);
 }
 
-// A headless Godot test uses about one core (1.06 measured on a world 1 bot run, 11 Nov), so the
-// lane takes one lane per idle core, at least 2 and at most 16 (matching high-core machines like
-// the 18-core Mac Studio and 16-core CI runners). --width overrides it.
 export function defaultWidth(cpus = os.cpus().length, load = os.loadavg()[0]) {
   return Math.min(16, Math.max(2, Math.round(cpus - load)));
 }
-
-// Every Godot process the lane starts holds one of `width` lanes, so a confirm's head rerun and
-// base run never push one machine slot past its width (GRAPH caps a 4 vCPU box at 6 lanes).
-// A task holds one lane at a time and never waits for a second, so lanes cannot deadlock.
-// Warm-batching helpers (batchable, takeBatch, takeBatchPacked, splitBatch) are imported from
-// scripts/sketch-smoke.mjs and re-exported above.
 
 export function lanePool(width) {
   let free = width;
@@ -894,14 +799,10 @@ export function lanePool(width) {
   };
 }
 
-// Only a clean base verdict is cached. A timeout or a kill can come from machine load, and a
-// cached one would read every later real red on that test as base-red.
 export function cacheableBaseRun(run) {
   return run.exit !== null && !run.killed && !run.timedOut;
 }
 
-// A base red is trusted from the cache only once two base runs agreed on the same failing
-// checks (a flaky base red then lasts for the run that saw it). A fresh pass replaces the entry.
 export function settleBaseEntry(prior, run) {
   if (run.ok) return { ok: true, checks: [] };
   const same =
@@ -917,12 +818,6 @@ export function trustedBaseEntry(entry) {
   return Boolean(entry) && (entry.ok === true || entry.confirmed === true);
 }
 
-// The base run that may judge this run's verdict. A lane stop says nothing; a base timeout or
-// outside kill (exit null, say the OOM killer) says "red on the base too" only when the head rerun
-// timed out as well, else a crash on the head would hide behind a load failure on the base.
-// One exception: a base that died by a signal keeps its verdict when the head rerun died by the
-// same signal and both fail the same checks (an abort at exit on both sides).
-// SIGKILL is the OOM killer or the lane's own timeout kill, so it never counts.
 export function usableBaseRun(rerun, baseRun) {
   if (!baseRun || baseRun.killed) return null;
   if ((baseRun.timedOut || baseRun.exit === null) && !rerun.timedOut) {
@@ -936,7 +831,6 @@ export function usableBaseRun(rerun, baseRun) {
     const head = [...(rerun.checks ?? [])].sort();
     const base = [...(baseRun.checks ?? [])].sort();
     const sameChecks = head.length === base.length && head.every((check, i) => check === base[i]);
-    // An earlier abort on the head shows as fewer passing checks, so the counts must match too.
     const samePasses = rerun.passes === baseRun.passes;
     return sameSignal && sameChecks && samePasses ? baseRun : null;
   }
@@ -970,8 +864,6 @@ async function main() {
   const started = Date.now();
   const sketchDir = path.join(root, SKETCH);
   const mergeBase = git(["merge-base", options.base, "HEAD"]);
-  // --pre PRs must already be merged into the head; the base gains them too, so their changes
-  // neither count as the PR's diff nor as the PR's reds (#100 needs #91, #78 needs #67).
   for (const pr of options.pre) {
     git(["fetch", "-q", "origin", `+refs/pull/${pr}/head:refs/remotes/pr/${pr}`]);
     if (
@@ -1048,7 +940,6 @@ async function main() {
     `sketch:fast: ${changedPaths.length} changed paths (${changed.godot.length} sketch, ${changed.node.length} node, ${changed.docs.length} docs) since ${diffBase.slice(0, 8)}${options.pre.length ? ` (merge base plus ${options.pre.map((pr) => "#" + pr).join(", ")})` : ""}`,
   );
 
-  // Stage 0: what the head is made of. Hygiene, then any stale branch it carries.
   const baseTop = new Set(git(["ls-tree", "--name-only", diffBase]).split("\n").filter(Boolean));
   const hygiene = [
     ...hygieneFindings(
@@ -1071,7 +962,6 @@ async function main() {
     !options.dryRun
   )
     finish();
-  // Not a stage: a removed check can be right. The receipt lists each so the pull request has to name it.
   const show = (ref, file) => {
     const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], {
       encoding: "utf8",
@@ -1089,7 +979,6 @@ async function main() {
     log(`  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`);
   if (receipt.checks_removed.length > 0)
     log("  name each removed check in the pull request and say what now covers it");
-  // Also a report, not a stage: start the deep sweep asynchronously so it overlaps Stage 0/1 work.
   const deepSweepPromise = spawnText(
     process.execPath,
     [path.join(root, "scripts", "deep-sweep.mjs"), "--base", mergeBase, "--head", "HEAD"],
@@ -1177,7 +1066,6 @@ async function main() {
   }
   await recordDeepSweep();
 
-  // Godot selection first: the dry run and the receipt both need it.
   const index = buildIndex(sketchDir);
   const timings = readTimings();
   const selection = selectTests(index, changed.godot);
@@ -1224,7 +1112,6 @@ async function main() {
     process.exit(0);
   }
 
-  // Stage 1: static checks, run concurrently while emitting verdicts and early-stopping in deterministic order.
   const pathNodeTests = nodeTestsForPaths(changed.godot);
   let nodeTests = [];
   if (changed.node.length > 0 || pathNodeTests.length > 0) {
@@ -1299,7 +1186,6 @@ async function main() {
     finish();
   }
 
-  // Stage 2: Godot. Import in up to three tries, boot, then the selected tests.
   const quarantineEntries = readQuarantineEntries(sketchDir);
   const quarantine = new Set(quarantineEntries.map((entry) => entry.test));
   const expired = expiredQuarantine(quarantineEntries);
@@ -1383,8 +1269,6 @@ async function main() {
     killed: true,
     timedOut: false,
   });
-  // Every run that ends red keeps its log in a folder named after the receipt, and the receipt
-  // lists it. A run the lane stopped is no verdict and keeps nothing.
   receipt.failed_runs = [];
   const redRuns = new Map();
   const keepRed =
@@ -1441,9 +1325,6 @@ async function main() {
           ),
     );
 
-  // A failure is rerun on the head and on the merge base side by side before it is the PR's
-  // (a solo test reruns alone first). Base verdicts are cached per base tree and Godot binary in
-  // the shared git directory, so every worktree reuses them and --pre merges hit the cache too.
   const baseTreeId = git(["rev-parse", `${diffBase}^{tree}`]);
   const baseCacheFile = path.join(
     path.resolve(root, git(["rev-parse", "--git-common-dir"])),
@@ -1475,7 +1356,6 @@ async function main() {
       if (prRed) return false;
       seedBaseGodot(sketchDir, baseSketch);
       const args = ["--headless", "--path", baseSketch];
-      // The base tree is a fresh checkout, where the engine's first import can crash (IMPORT_TRIES).
       for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
         if (prRed) return false;
         if ((await importAsync(args)) === 0) return true;
@@ -1501,7 +1381,6 @@ async function main() {
       () => cancel.cancelled,
     );
     if (cacheableBaseRun(run)) {
-      // Another lane on this base tree may have written since; keep its entries, replace atomically.
       const disk = readBaseCache();
       baseCache[test] = settleBaseEntry(disk[test] ?? baseCache[test], run);
       const merged = { ...disk, ...baseCache };
@@ -1535,14 +1414,12 @@ async function main() {
       const pending = godot(sketchDir, first.test, timeoutMs);
       const basePending = onBase(first.test, timeoutMs, cancel);
       rerun = await pending;
-      // A green rerun makes the base verdict moot: stop the base run and cache nothing from it.
       if (rerun.ok) {
         cancel.cancelled = true;
         if (cancel.child) stopChild(cancel.child);
       }
       baseRun = await basePending;
     }
-    // A run the lane stopped is not a verdict; the PR's red already decides the lane.
     if (rerun.killed) return { kind: "stopped", newChecks: [], rerun };
     baseRun = usableBaseRun(rerun, baseRun);
     const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
@@ -1621,8 +1498,6 @@ async function main() {
   const queue = options.shuffle
     ? shuffleFiles(lanePlan.parallel, shuffleSeed)
     : [...lanePlan.parallel];
-  // A red in a warm batch is rerun alone before anything else sees it, and the alone run is the
-  // verdict: a batch can save time but never adds a red of its own. Each such rerun is listed.
   receipt.batch = { on: options.batch, batches: 0, tests: 0, reruns: [] };
   const canBatch = (row) =>
     options.batch &&

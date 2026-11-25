@@ -56,7 +56,6 @@ def main():
         scene.render.filepath=str(frames/f'{f:04}.png')
         bpy.ops.render.render(write_still=True)
     if '--draft' in sys.argv:return
-    # These labels belong to the evidence video, not the imported game asset.
     labels="drawtext=text='RIVET':fontcolor=white:fontsize=22:x=w/6-tw/2:y=h-36,drawtext=text='SABLE':fontcolor=white:fontsize=22:x=w/2-tw/2:y=h-36,drawtext=text='KEST':fontcolor=white:fontsize=22:x=5*w/6-tw/2:y=h-36"
     subprocess.run(['ffmpeg','-hide_banner','-loglevel','error','-y','-threads','2',
         '-framerate','30','-start_number','0','-i',str(frames/'%04d.png'),'-frames:v',str(count),

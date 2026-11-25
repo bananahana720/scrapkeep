@@ -55,11 +55,11 @@ PARK_FILE = SKETCH / "src/world/park/park_dam.json"
 GROUND_BIN = SKETCH / "assets/park/park_dam/ground.bin"
 BUDGETS = json.loads((SKETCH / "assets/asset_budgets.json").read_text())["classes"]
 
-FLUSH = 0.12                # the most a part with no collider may stand over a surface a ball rolls on
+FLUSH = 0.12
 OFF_BASE, OFF_PAINT, OFF_MARK, OFF_TOP = 0.04, 0.06, 0.08, 0.10
-DETAIL_TRIS = 1000          # 3 unwelded vertices a triangle must stay inside the detail class's 3,000
-GATE_SINK = 0.15           # a survey gate stands this far under its dome's summit (see survey_gate)
-GATE_REACH = 1.9           # and keeps its scattered pebbles this close to the pole
+DETAIL_TRIS = 1000
+GATE_SINK = 0.15
+GATE_REACH = 1.9
 EYE_CLEAR, PORTAL_CLEAR = 18.0, 10.0
 TAU = math.tau
 
@@ -101,7 +101,6 @@ def seed_of(name):
     return zlib.crc32(name.encode())
 
 
-# ------------------------------------------------------------------------------------------------ the ground
 class Ground:
     """ground.bin read as park_terrain.gd does (GCPF header, zstd blocks), sampled as terrain.gd _grid_height does."""
 
@@ -216,8 +215,6 @@ class Frame:
         return (self.ax + lx * self.c + lz * self.s, self.az - lx * self.s + lz * self.c)
 
 
-# ------------------------------------------------------------------------------------------------ polygon kit
-# A polygon is a list of (x, z, y) in world metres; clip() keeps the side of a linear function that is >= 0.
 def clip(poly, f):
     out, n = [], len(poly)
     for k in range(n):
@@ -305,7 +302,7 @@ def covered_by(rid, rows, order):
     they z-fought (clip audit, 30 Oct: spillway_tunnel and cliff_rooms_west 3,570 m2, training_wall_west and
     tailwater_bar 813 m2), so the smaller, more particular row keeps the ground and the larger one leaves it out."""
     mine = footprint_of(rows[rid])
-    size = round(footprint_area(mine), 2)       # rounded, so two rows of one size tie and file order decides
+    size = round(footprint_area(mine), 2)
     mx0, mx1 = min(p[0] for p in mine), max(p[0] for p in mine)
     mz0, mz1 = min(p[1] for p in mine), max(p[1] for p in mine)
     out = []
@@ -349,7 +346,6 @@ def centroid(poly):
     return (sum(p[0] for p in poly) / n, sum(p[1] for p in poly) / n, sum(p[2] for p in poly) / n)
 
 
-# ------------------------------------------------------------------------------------------------ mesh output
 class Out:
     """Polygons in the node's own space (Godot axes) by material slot, with a triangle cap."""
 
@@ -473,7 +469,6 @@ def loft(out, slot, outline, zf, zb, color_of):
         out.add(slot, quad, color_of("wall", quad), up=False)
 
 
-# ------------------------------------------------------------------------------------------------ the row dresser
 class Dress:
     """One row: its frame, the ground triangles clipped to its footprint and the three outputs."""
 
@@ -489,10 +484,6 @@ class Dress:
         if region is None:
             region = self.footprint()
         self.region = region
-        # Ground inside a covering row's footprint is that row's to draw (covered_by): a facet wholly inside goes, and
-        # one straddling the footprint's edge is cut to the part outside it (outside_of), so no ground is drawn twice
-        # and none is left bare. Lowering a straddling facet instead did not part it from the covering skin on a steep
-        # wall (clip audit, 31 Oct: spillway_tunnel and cliff_rooms_west, 167 m2).
         self.facets = []
         for poly, sl in self._facets(region):
             parts = [poly]
@@ -506,7 +497,6 @@ class Dress:
         ys = [p[2] for poly, _ in self.facets for p in poly]
         self.ymin, self.ymax = min(ys), max(ys)
 
-    # -- geometry of the footprint
     def footprint(self):
         hl, hw = self.len / 2, self.wid / 2
         if self.ellipse:
@@ -541,7 +531,6 @@ class Dress:
         lx, lz = self.fr.local(c[0], c[1])
         return {"c": c, "lx": lx, "lz": lz, "y": c[2], "slope": slope_of(poly), "up": c[2] - self.ymin}
 
-    # -- emitting
     def put(self, out, slot, poly, color, off):
         pts = [(self.fr.local(p[0], p[1])[0], p[2] + off - self.fr.y0, self.fr.local(p[0], p[1])[1]) for p in poly]
         out.add(slot, pts, color)
@@ -640,7 +629,6 @@ class Dress:
             self.put(self.base, "enamel", poly, colorfn(self.info(poly)), off)
         return len(use), len(cuts)
 
-    # -- scatter in the detail shells
     def in_region(self, x, z):
         return all(f((x, z, 0.0)) >= 0 for f in convex_hps(self.region)) if not hasattr(self, "_hps") else all(f((x, z, 0.0)) >= 0 for f in self._hps)
 
@@ -725,7 +713,6 @@ class Dress:
         return made
 
 
-# ------------------------------------------------------------------------------------------------ colour kits
 def pick(rng, tones, last):
     choices = [t for t in tones if t != last] or tones
     return rng.choice(choices)
@@ -750,7 +737,6 @@ def strata_plan(d, set_t, band_t):
     for st in sets:
         lo, hi, tl = st["lo"], st["hi"], st["tilt"]
         for e in st["edges"]:
-            # y + tilt * lz = e inside the set; the plane is cut across the whole piece, then the set boundaries confine it
             cuts.append(hp_y(1.0, e + tl * (-fr.ax * fr.s - fr.az * fr.c), tl * fr.s, tl * fr.c))
     return sets, cuts
 
@@ -860,8 +846,6 @@ def stencil(d, out, text, lx0, lz0, unit, color, off=OFF_PAINT, **kw):
         z += 4 * unit
 
 
-# ------------------------------------------------------------------------------------------------ the styles
-# Each style fills d.base (decals first, then the skin so it can take what room is left), d.d1 and d.d2.
 def style_slick_fin(d, pal=SLICK, crest=2.2):
     cracks(d, d.d1, 70, C("varnish"))
     bedding_lines(d, d.d1, 60, C("cream2"), 9.0)
@@ -872,7 +856,6 @@ def style_slick_fin(d, pal=SLICK, crest=2.2):
 
 def style_mesa(d, spine=False):
     if spine:
-        # dam-era concrete spine: rail-tie marks down the crest (the construction incline's track)
         lz = -d.len / 2 + 3
         while lz < d.len / 2 - 3:
             d.rect(d.d1, -1.5, 1.5, lz, lz + 0.28, C("timber"), OFF_MARK, maxslope=1.6)
@@ -893,7 +876,6 @@ def style_canyon(d, hoodoo=False):
     bedding_lines(d, d.d1, 30, C("pale"), 6.0)
     d.chips(d.d2, 220, [C(n) for n in ("ochre", "umber", "pale", "rust")])
     if hoodoo:
-        # a dark caprock band at the top and a narrow waist of paler beds
         top = d.ymax - d.hgt * 0.22
         rng = d.rng
         sets, cuts = strata_plan(d, (3.0, 5.0), (0.9, 2.0))
@@ -908,7 +890,6 @@ def style_canyon(d, hoodoo=False):
 
 
 def style_pool_rock(d):
-    # a wet-stained boulder: dark stain below the splash line, lichen-pale above
     wet = d.ymin + 3.2
     cracks(d, d.d1, 16, C("varnish"))
     d.chips(d.d2, 200, [C(n) for n in ("wetrock", "stone", "basalt", "talus")])
@@ -946,8 +927,6 @@ def style_training_wall(d):
 
 
 def style_rooms(d):
-    # dry-laid sandstone coursing on the ridge flanks (alternating courses 0.9 m deep) and dark doorway shadows painted
-    # flush; the stamp's own raise tells a flank from the mesa wall the ridge sits on
     def flank(poly, sl):
         c = centroid(poly)
         return sl >= 0.8 and stamp_offset(d.row, c[0], c[1]) >= 0.6
@@ -993,7 +972,6 @@ def style_kicker(d, kind):
         d.pass_flat(lambda i: concrete_color(d, i, (2.5, 3.0)))
         return 0
     if kind == "bucket":
-        # the flip bucket: concentric lining joints (chords) and radial joints fanned from the lip
         for k in range(1, 6):
             d.bar(d.d1, (-d.wid / 2, lip - k * 2.6), (d.wid / 2, lip - k * 2.6), 0.1, C("joint"), OFF_PAINT)
         for k in range(-3, 4):
@@ -1001,7 +979,6 @@ def style_kicker(d, kind):
         d.chips(d.d2, 120, [C(n) for n in ("concrete", "concrete_lt", "concrete_dk", "wetrock")])
         d.pass_flat(lambda i: mixc(concrete_color(d, i, (2.6, 3.0)), C("wet"), 0.25 * (1 - min(1, max(0, (i["lz"] + lip) / d.len)))))
         return 0
-    # gravel and cobble lip
     d.pebbles(d.d2, 40, [C(n) for n in ("cobble", "cobble2", "gravel2")])
     d.chips(d.d2, 120, [C(n) for n in ("gravel", "gravel2", "cobble2")])
     for _ in range(26):
@@ -1014,7 +991,6 @@ def style_kicker(d, kind):
 
 
 def style_gallery(d):
-    # concrete gallery ledge: coping edge, stencil-style painted bands, drain slots (all on the flat top)
     hx, hz = d.wid / 2, d.len / 2
     top = dict(maxslope=0.25)
     for lx0, lx1, lz0, lz1 in ((-hx, -hx + 0.7, -hz, hz), (hx - 0.7, hx, -hz, hz), (-hx, hx, -hz, -hz + 0.7), (-hx, hx, hz - 0.7, hz)):
@@ -1056,11 +1032,11 @@ def style_powerhouse(d):
     while z < hz - 1.0:
         d.rect(d.d1, -hx, hx, z, z + 0.35, C("concrete_dk"), OFF_TOP, ylo=y0 + 3.9, yhi=y0 + 16.3, **steep)
         z += 3.0
-    for k in range(6):                                    # louvres under the eaves
+    for k in range(6):
         yy = y0 + 17.4 + 0.45 * k
         d.rect(d.d1, -hx, hx, -hz, hz, C("iron"), OFF_PAINT, ylo=yy, yhi=yy + 0.14, **steep)
     top = dict(maxslope=0.3, ylo=y0 + wall - 0.5)
-    d.rect(d.base, -1.6, 1.6, -hz + 1.5, hz - 1.5, C("copper"), OFF_PAINT, **top)          # turbine-hall stripe
+    d.rect(d.base, -1.6, 1.6, -hz + 1.5, hz - 1.5, C("copper"), OFF_PAINT, **top)
     for k in range(5):
         for lx in (-hx + 7.0, hx - 7.0):
             z = -hz + 8.0 + k * 11.0
@@ -1074,7 +1050,6 @@ def style_powerhouse(d):
 
 
 def style_plunge(d):
-    # concrete coping ring, riprap pattern, a wet tide line
     ring = [(0.5 * d.wid * math.cos(TAU * k / 48), 0.5 * d.len * math.sin(TAU * k / 48)) for k in range(48)]
     inner = [(0.47 * d.wid * math.cos(TAU * k / 48), 0.47 * d.len * math.sin(TAU * k / 48)) for k in range(48)]
     for k in range(48):
@@ -1082,7 +1057,7 @@ def style_plunge(d):
         d.decal(d.base, [a, b, c, e], C("concrete_lt") if k % 2 else C("concrete2"), OFF_TOP)
     tide = d.ymin + 0.9
     d.rect(d.d1, -d.wid / 2, d.wid / 2, -d.len / 2, d.len / 2, C("stain"), OFF_PAINT, ylo=tide - 0.25, yhi=tide + 0.25)
-    for _ in range(90):                                          # riprap: angular blocks, a few metres across
+    for _ in range(90):
         a = d.rng.uniform(0, TAU)
         rr = d.rng.uniform(0.55, 0.9)
         lx, lz = 0.5 * d.wid * rr * math.cos(a), 0.5 * d.len * rr * math.sin(a)
@@ -1097,7 +1072,6 @@ def style_plunge(d):
 
 
 def style_vents(d):
-    # cast plates: large dark hexagonal castings with no bolts or seams of their own; green seams glow between them
     rings = (0.2, 0.42, 0.66, 0.9)
     for k, r in enumerate(rings):
         pts_o = [(0.5 * d.wid * (r + 0.02) * math.cos(TAU * j / 36), 0.5 * d.len * (r + 0.02) * math.sin(TAU * j / 36)) for j in range(36)]
@@ -1107,7 +1081,7 @@ def style_vents(d):
     for j in range(12):
         a = TAU * j / 12
         d.bar(d.base, (0.5 * d.wid * 0.2 * math.cos(a), 0.5 * d.len * 0.2 * math.sin(a)), (0.5 * d.wid * 0.9 * math.cos(a), 0.5 * d.len * 0.9 * math.sin(a)), 0.22, C("lens"), OFF_MARK, slot="ancient_lens")
-    for j in range(24):                                   # polish streaks worn by the venting, radial and faint
+    for j in range(24):
         t = TAU * (j + 0.5) / 24
         r0, r1 = 0.3 + 0.2 * hn(d.id, "s", j), 0.62 + 0.3 * hn(d.id, "e", j)
         d.bar(d.d1, (0.5 * d.wid * r0 * math.cos(t), 0.5 * d.len * r0 * math.sin(t)), (0.5 * d.wid * r1 * math.cos(t), 0.5 * d.len * r1 * math.sin(t)), 0.35, C("steel"), OFF_PAINT)
@@ -1123,7 +1097,6 @@ def style_vents(d):
 
 
 def style_pipeline(d):
-    # steel pipe bands and saddles painted along the ridge crest; "PIPELINE 3" stenciled beside the pipe
     hl = d.len / 2
     top = dict(maxslope=6.0)
     d.bar(d.base, (0.0, -hl + 1.0), (0.0, hl - 1.0), 1.5, C("steel"), OFF_PAINT, **top)
@@ -1133,11 +1106,11 @@ def style_pipeline(d):
         z += 5.0
     z = -hl + 9.0
     while z < hl - 6.0:
-        d.rect(d.d1, -1.5, 1.5, z - 0.5, z + 0.5, C("iron"), OFF_TOP, **top)                  # saddles
+        d.rect(d.d1, -1.5, 1.5, z - 0.5, z + 0.5, C("iron"), OFF_TOP, **top)
         z += 15.0
     stencil(d, d.d1, "PIPELINE 3", 1.0, -hl + 12.0, 0.2, C("paint"), OFF_PAINT, **top)
     z = -hl + 3.0
-    while z < hl - 2.0:                                                                         # weld seams round the pipe
+    while z < hl - 2.0:
         d.bar(d.d1, (-0.8, z), (0.8, z), 0.08, C("iron"), OFF_MARK, **top)
         z += 2.5
     d.chips(d.d2, 120, [C(n) for n in ("concrete", "concrete_dk", "stone", "steel")], maxslope=2.0)
@@ -1150,16 +1123,16 @@ def style_canal(d):
     top = dict(maxslope=6.0)
     z = -hl + 6.0
     while z < hl - 3.0:
-        d.bar(d.base, (-hx, z), (hx, z), 0.12, C("joint"), OFF_PAINT, **top)                   # expansion joints
+        d.bar(d.base, (-hx, z), (hx, z), 0.12, C("joint"), OFF_PAINT, **top)
         z += 6.0
     d.rect(d.base, -hx, -hx + 0.55, -hl, hl, C("concrete_lt"), OFF_TOP, **top)
     d.rect(d.base, hx - 0.55, hx, -hl, hl, C("concrete_lt"), OFF_TOP, **top)
-    d.rect(d.base, -hx + 0.7, hx - 0.7, -hl + 0.3, -hl + 9.0, C("concrete_dk"), OFF_PAINT, **top)            # the headworks: gate recess
+    d.rect(d.base, -hx + 0.7, hx - 0.7, -hl + 0.3, -hl + 9.0, C("concrete_dk"), OFF_PAINT, **top)
     d.rect(d.d1, -2.0, 2.0, -hl + 1.0, -hl + 3.0, C("iron"), OFF_TOP, **top)
-    d.rect(d.d1, -1.4, 1.4, -hl + 3.6, -hl + 4.2, C("copper"), OFF_TOP, **top)                              # the gate winch cover
+    d.rect(d.d1, -1.4, 1.4, -hl + 3.6, -hl + 4.2, C("copper"), OFF_TOP, **top)
     for k in range(4):
         d.chevron(d.d1, 0.0, -hl + 14.0 + k * 2.4, 1, 1.4, 0.3, C("amber"), OFF_MARK, **top)
-    for sgn in (-1, 1):                                                                         # the water's stain down both lips
+    for sgn in (-1, 1):
         d.bar(d.d1, (sgn * (hx - 1.0), -hl + 10.0), (sgn * (hx - 1.0), hl - 2.0), 0.6, C("stain"), OFF_PAINT, **top)
     d.chips(d.d2, 140, [C(n) for n in ("concrete", "concrete_lt", "concrete_dk")], maxslope=1.2)
     d.pass_flat(lambda i: concrete_color(d, i, (6.0, 8.0)))
@@ -1167,7 +1140,6 @@ def style_canal(d):
 
 
 def style_tailwater(d):
-    # a gravel bar: long lens-shaped cobble and gravel patches, flush
     for _ in range(60):
         lx, lz = d.rng.uniform(-d.wid / 2 + 3, d.wid / 2 - 3), d.rng.uniform(-d.len / 2 + 3, d.len / 2 - 3)
         w, h = d.rng.uniform(1.5, 4.0), d.rng.uniform(4.0, 9.0)
@@ -1189,7 +1161,7 @@ def style_tailwater(d):
 def style_crest(d):
     hl = d.len / 2
     top = dict(maxslope=6.0)
-    d.bar(d.base, (0.0, -hl + 0.5), (0.0, hl - 0.5), 0.35, C("amber"), OFF_PAINT, **top)       # the painted safety stripe
+    d.bar(d.base, (0.0, -hl + 0.5), (0.0, hl - 0.5), 0.35, C("amber"), OFF_PAINT, **top)
     z = -hl + 5.0
     while z < hl - 2.0:
         d.bar(d.d1, (-d.wid / 2, z), (d.wid / 2, z), 0.1, C("joint"), OFF_MARK, **top)
@@ -1202,7 +1174,6 @@ def style_crest(d):
 
 
 def style_spillway(d):
-    # concrete chute lining over the wash cut: formwork joints, a high-water stain at the walls, a gauge stripe
     hl, hx = d.len / 2, d.wid / 2
     joint_grid(d, d.d1, 4.0, 6.0, C("joint"), 0.12, OFF_PAINT)
     for sgn in (-1, 1):
@@ -1213,15 +1184,12 @@ def style_spillway(d):
 
 
 def style_eye_floor(d):
-    # the Eye's floor: sandstone worn smooth between the fins, bedding bands across the line of travel
     d.chips(d.d2, 200, [C(n) for n in ("cream", "sand", "red2", "cream3")])
     bedding_lines(d, d.d1, 30, C("cream2"), 8.0, minslope=0.0)
     return strata(d, SLICK, set_t=(1.0, 1.8), band_t=(0.5, 1.2), streak=0.0, crest=0.0, foot=0.0)
 
 
 def style_eye_mouth(d):
-    # the Eye's carved marks continuing onto the canyon floor at the south mouth: rings of glyph grooves cut flush in the
-    # rock, each with a faint green seam in ancient_lens
     groove, lens = C("door"), C("lens")
     for r_out, r_in, seam in ((7.6, 7.2, True), (4.7, 4.3, True), (2.0, 1.7, False)):
         for j in range(36):
@@ -1234,13 +1202,13 @@ def style_eye_mouth(d):
                 q2 = [(mid * 1.02 * math.cos(a0), mid * 1.02 * math.sin(a0)), (mid * 1.02 * math.cos(a1), mid * 1.02 * math.sin(a1)),
                       (mid * 0.98 * math.cos(a1), mid * 0.98 * math.sin(a1)), (mid * 0.98 * math.cos(a0), mid * 0.98 * math.sin(a0))]
                 d.decal(d.base, q2, lens, OFF_MARK, slot="ancient_lens")
-    for j in range(12):                                   # glyph ticks between the two outer rings: a stem and a cross bar
+    for j in range(12):
         t = TAU * (j + 0.5) / 12
         c, s_ = math.cos(t), math.sin(t)
         d.bar(d.base, (4.9 * c, 4.9 * s_), (7.0 * c, 7.0 * s_), 0.28, groove, OFF_PAINT)
         d.bar(d.base, (5.4 * c, 5.4 * s_), (5.4 * c - 0.7 * s_, 5.4 * s_ + 0.7 * c), 0.22, groove, OFF_PAINT)
         d.bar(d.base, (5.1 * c, 5.1 * s_), (6.8 * c, 6.8 * s_), 0.07, lens, OFF_MARK, slot="ancient_lens")
-    for j in range(24):                                   # fainter outer ticks in the mid shell
+    for j in range(24):
         t = TAU * (j + 0.25) / 24
         d.bar(d.d1, (8.4 * math.cos(t), 8.4 * math.sin(t)), (10.2 * math.cos(t), 10.2 * math.sin(t)), 0.18, groove, OFF_PAINT)
     bedding_lines(d, d.d1, 12, C("cream2"), 6.0, minslope=0.0)
@@ -1268,18 +1236,14 @@ STYLES.update({
 STYLES["eye_mouth"] = style_eye_mouth
 ROWS = list(STYLES)
 assert len(ROWS) == 41
-# A row the coordinator adds to the park (not a greybox stand-in): written after `the_eye` by --write-park.
 EXTRA_ROWS = {"eye_mouth": {"id": "eye_mouth", "element": "elevated_line", "landform": "slickrock", "society": "ancient", "at": [0, 205], "y": None,
                             "size": [20, 0, 30], "yaw_deg": 180, "verb": "roll", "ride_fact": "layer_mind_quote_spillway", "home": "",
                             "recipe": "dam_eye_mouth", "fit": "drape", "stamp": "plateau", "hole": False, "budget": "landform", "routes": [], "fragment": ""}}
-LARGE = {"the_eye", "spillway_tunnel", "toe_vent_pits"}          # park_large: two draws (lens or portal) and the arches' colliders
+LARGE = {"the_eye", "spillway_tunnel", "toe_vent_pits"}
 GATES = ("dam_survey_gate_red", "dam_survey_gate_blue", "dam_survey_benchmark")
 HAS_COL = {"the_eye", "spillway_tunnel"}
 
 
-
-
-# ------------------------------------------------------------------------------------------------ the two arches
 def arch_color_fn(d, tones):
     """Strata by world height for the lofted solids; the soffit and walls a shade darker than the faces."""
     def f(kind, pts):
@@ -1326,7 +1290,6 @@ def loft_world(d, out, col, slot, outline, zf, zb, color_of):
         j = (k + 1) % n
         dx, dy = outline[j][0] - outline[k][0], outline[j][1] - outline[k][1]
         quad = [front[k], back[k], back[j], front[j]]
-        # outward for a counter-clockwise outline is (dy, -dx) in (x, y)
         nrm = [(quad[1][i] - quad[0][i]) for i in range(3)]
         e2 = [(quad[2][i] - quad[1][i]) for i in range(3)]
         cr = [nrm[1] * e2[2] - nrm[2] * e2[1], nrm[2] * e2[0] - nrm[0] * e2[2], nrm[0] * e2[1] - nrm[1] * e2[0]]
@@ -1355,7 +1318,7 @@ def build_eye(d, rows, extra, lens, col):
     fin_half = west["size"][2] / 2
     zlo, zhi = zc - fin_half - 2.0, zc + fin_half + 2.0
     F = max(g.h(x, z) for x in np.linspace(-ramp_half, ramp_half, 31) for z in np.linspace(zlo, zhi, 29))
-    span = inner_e + 6.0                                   # the soffit springs from the fins' rising flanks
+    span = inner_e + 6.0
     ysp, apex = F + 8.0, F + 26.0
     thick_a, thick_s = 7.0, 13.0
     leg_out = span + 24.0
@@ -1377,18 +1340,15 @@ def build_eye(d, rows, extra, lens, col):
     hf, hb = fin_half - 0.5, fin_half + 1.5
     zf = [zc - hf - 1.0 * math.sin(k * 1.3) for k in range(len(outline))]
     zb = [zc + hb + 1.0 * math.sin(k * 0.9 + 1.0) for k in range(len(outline))]
-    # a constant front and back plane keeps the carved marks on the face; the ragged edge is the lumps below
     zf0, zb0 = zc - hf, zc + hb
     zf, zb = [zf0] * len(outline), [zb0] * len(outline)
     tones = ["cream", "sand", "red2", "cream2", "red", "sand2"]
     loft_world(d, extra, col, "enamel", outline, zf, zb, arch_color_fn(d, tones))
-    # lumps: weathered blocks on the extrados and legs (visual only)
     for k in range(18):
         x = -leg_out + 2.0 + (2 * leg_out - 4.0) * rng.random()
         ytop = np.interp(x, [p[0] for p in ext], [p[1] for p in ext]) if abs(x) <= ext[-1][0] else yt_out
         lump(extra, rng, node_local(d, (x, ytop - 0.4, zc + rng.uniform(-fin_half, fin_half))), (rng.uniform(2.0, 4.5), rng.uniform(1.2, 2.6), rng.uniform(2.5, 5.0)),
              tint(C(rng.choice(tones)), rng.uniform(0.85, 1.05)))
-    # the faint green carved marks round the rim, front and back: chevron ribs a couple of metres inside the extrados
     rim = [(x, y - 2.4) for x, y in ext]
     for k in range(1, len(rim) - 1):
         x, y = rim[k]
@@ -1400,7 +1360,6 @@ def build_eye(d, rows, extra, lens, col):
                 ln = math.hypot(dx, dy)
                 nx, ny = -dy / ln * 0.09, dx / ln * 0.09
                 face_marks(d, lens, [(a[0] - nx, a[1] - ny), (b[0] - nx, b[1] - ny), (b[0] + nx, b[1] + ny), (a[0] + nx, a[1] + ny)], z, facing, C("lens"), "ancient_lens")
-    # the clearance this recipe promises, measured on the bake: soffit over the ramp footprint
     worst = min(soffit(x) - g.h(x, z) for x in np.linspace(-ramp_half, ramp_half, 61) for z in np.linspace(max(zf0, zc - fin_half), zb0, 41)
                 if zf0 <= z <= zb0)
     assert worst >= EYE_CLEAR + 2.0, ("the_eye soffit clearance", worst)
@@ -1412,11 +1371,11 @@ def build_portal(d, extra, col):
     legs outside the cut and at least PORTAL_CLEAR over the wash floor across the whole width."""
     g = d.g
     cx, hw = d.row["at"][0], d.wid / 2
-    z_up = d.row["at"][1] - d.len / 2 + 2.0                      # the chute falls toward +z; its high, upstream end is -z
+    z_up = d.row["at"][1] - d.len / 2 + 2.0
     if g.h(cx, d.row["at"][1] - d.len / 2) < g.h(cx, d.row["at"][1] + d.len / 2):
         z_up = d.row["at"][1] + d.len / 2 - 2.0
     zf0, zb0 = z_up - 4.0, z_up + 4.0
-    face = hw + 2.0                                              # the legs' inner faces, outside the cut
+    face = hw + 2.0
     leg = 8.0
     xs = np.linspace(cx - face - leg, cx + face + leg, 41)
     zs = np.linspace(zf0, zb0, 9)
@@ -1433,7 +1392,6 @@ def build_portal(d, extra, col):
     outline = [(cx - face - leg, yb), (cx - face, yb)] + soff + [(cx + face, yb), (cx + face + leg, yb), (cx + face + leg, ytop), (cx - face - leg, ytop)]
     tones = ["concrete", "concrete2", "concrete_lt", "concrete"]
     loft_world(d, extra, col, "enamel", outline, [zf0] * len(outline), [zb0] * len(outline), arch_color_fn(d, tones))
-    # formwork and the headwall's painted band, flush on the face toward the chute (-z or +z, whichever is upstream)
     facing = -1 if z_up < d.row["at"][1] else 1
     zface = zf0 if facing < 0 else zb0
     for side in (-1, 1):
@@ -1449,26 +1407,23 @@ def build_portal(d, extra, col):
     return {"clear_m": round(worst, 2), "z": round(z_up, 2)}
 
 
-# ------------------------------------------------------------------------------------------------ dome-summit survey gates
 def build_gate(rid):
     """A survey gate for a dome summit: the cairn's foot at local (0, 16 - GATE_SINK, 0). A `dome_N` row's 16 m spire
     stamp is flat over its inner 40 percent of the radius but rides the shelf's fall (about 6.5 percent along z), so the
     gate sits GATE_SINK under the seat's summit and keeps every stone within 2 m of the pole: the downhill edge stays
     bedded and the uphill stones sink into the rock instead of one side floating. No collider."""
     flag = C("flag_red") if rid.endswith("red") else C("copper") if rid.endswith("benchmark") else C("flag_blue")
-    pole = 6.0 if not rid.endswith("benchmark") else 1.4      # the benchmark (dome_11) is a stake and a brass disc, no flag
+    pole = 6.0 if not rid.endswith("benchmark") else 1.4
     rng = random.Random(seed_of(rid))
     base, d1, d2 = Out(BUDGETS["landform"]["tris"]), Out(DETAIL_TRIS), Out(DETAIL_TRIS)
     foot = 16.0 - GATE_SINK
     stones = ["sand", "sand2", "cream3", "talus", "cream"]
-    # the dry-stacked cairn: four courses of jittered stones round a core, 1.2 m in all
     prism_xz(base, "enamel", [(0.55 * math.cos(TAU * k / 10), 0.55 * math.sin(TAU * k / 10)) for k in range(10)], foot, foot + 1.15, C("sand2"))
     for c, (count, radius, size) in enumerate(((7, 0.78, 0.5), (6, 0.66, 0.46), (5, 0.52, 0.42), (4, 0.36, 0.38))):
         a0 = rng.uniform(0, TAU)
         for k in range(count):
             a = a0 + TAU * k / count + rng.uniform(-0.12, 0.12)
             lump(base, rng, (radius * math.cos(a), foot + 0.17 + 0.3 * c, radius * math.sin(a)), (size, 0.3, size * rng.uniform(0.85, 1.1)), tint(C(rng.choice(stones)), rng.uniform(.88, 1.06)))
-    # the painted band: a flush hoop round the second course in the gate's colour
     ring = 12
     r_in, r_out = 0.86, 0.98
     for k in range(ring):
@@ -1476,8 +1431,8 @@ def build_gate(rid):
         prism_xz(base, "enamel", [(r_in * math.cos(a0), r_in * math.sin(a0)), (r_out * math.cos(a0), r_out * math.sin(a0)),
                                   (r_out * math.cos(a1), r_out * math.sin(a1)), (r_in * math.cos(a1), r_in * math.sin(a1))], foot + 0.5, foot + 0.78, flag)
     top = foot + 1.25
-    prism_xz(base, "enamel", [(0.24 * math.cos(TAU * k / 12), 0.24 * math.sin(TAU * k / 12)) for k in range(12)], top, top + 0.06, C("copper"))     # the station disc
-    rod_solid(base, "steel", (0.0, top + 0.06, 0.0), (0.0, top + 0.06 + pole, 0.0), 0.04, C("steel_lt"))            # the survey pole or stake
+    prism_xz(base, "enamel", [(0.24 * math.cos(TAU * k / 12), 0.24 * math.sin(TAU * k / 12)) for k in range(12)], top, top + 0.06, C("copper"))
+    rod_solid(base, "steel", (0.0, top + 0.06, 0.0), (0.0, top + 0.06 + pole, 0.0), 0.04, C("steel_lt"))
     yp = top + pole
     if pole < 6.0:
         prism_xz(base, "enamel", [(0.09 * math.cos(TAU * k / 8), 0.09 * math.sin(TAU * k / 8)) for k in range(8)], yp, yp + 0.08, C("copper"))
@@ -1485,7 +1440,6 @@ def build_gate(rid):
         convex_solid(base, "enamel", [(0.04, yp - 0.85, -0.012), (0.04, yp - 0.1, -0.012), (1.45, yp - 0.5, -0.012),
                                        (0.04, yp - 0.85, 0.012), (0.04, yp - 0.1, 0.012), (1.45, yp - 0.5, 0.012)],
                      [(0, 1, 2), (3, 4, 5), (0, 1, 4, 3), (1, 2, 5, 4), (2, 0, 3, 5)], flag)
-    # detail 1 (mid): the footing stones, a station tag on the cairn and the pole's collars
     for k in range(10):
         a = TAU * k / 10 + rng.uniform(-0.1, 0.1)
         r = rng.uniform(1.25, 1.9)
@@ -1493,7 +1447,6 @@ def build_gate(rid):
     for yy in [top + h for h in (0.9, 3.0, 5.4) if h < pole]:
         prism_xz(d1, "enamel", [(0.075 * math.cos(TAU * k / 8), 0.075 * math.sin(TAU * k / 8)) for k in range(8)], yy, yy + 0.07, C("steel_lt"))
     box_solid(d1, "enamel", (-0.16, foot + 0.9, 0.9), (0.16, foot + 1.08, 0.94), C("copper"))
-    # detail 2 (near): flakes and pebbles scattered on the flat summit round the cairn
     for k in range(40):
         a, r = rng.uniform(0, TAU), rng.uniform(1.1, GATE_REACH)
         x, z = r * math.cos(a), r * math.sin(a)
@@ -1511,10 +1464,9 @@ def build_gate(rid):
     return base, d1, d2
 
 
-# ------------------------------------------------------------------------------------------------ the crest crane
 CRANE = "dam_crest_crane"
-CRANE_TOP = 28.0           # the slewing ring's height over the crest; the jib mesh turns about the node's y axis
-CRANE_JIB = 34.0           # the jib's reach along local +z, the counter-jib's along -z is CRANE_JIB * 0.3
+CRANE_TOP = 28.0
+CRANE_JIB = 34.0
 
 
 def build_crane():
@@ -1524,9 +1476,9 @@ def build_crane():
     Members are chunky on purpose: the crane reads from the Eye, about 450 m off. No collider."""
     mast, jib, d1, d2 = Out(BUDGETS["landform"]["tris"] // 2), Out(BUDGETS["landform"]["tris"] // 2), Out(DETAIL_TRIS), Out(DETAIL_TRIS)
     paint, paint2, rust = C("ochre"), tint(C("ochre"), 0.82), C("rust")
-    h = 1.6                                                    # half the mast's side
+    h = 1.6
     legs = [(-h, -h), (h, -h), (h, h), (-h, h)]
-    box_solid(mast, "enamel", (-2.6, -0.6, -2.6), (2.6, 0.5, 2.6), C("concrete_dk"))      # the footing block, bedded in the crest
+    box_solid(mast, "enamel", (-2.6, -0.6, -2.6), (2.6, 0.5, 2.6), C("concrete_dk"))
     for x, z in legs:
         rod_solid(mast, "enamel", (x, 0.0, z), (x, CRANE_TOP, z), 0.22, paint, sides=4)
     step = 2.8
@@ -1537,13 +1489,12 @@ def build_crane():
             rod_solid(mast, "enamel", (a[0], y, a[1]), (b[0], y + step, b[1]), 0.1, paint2, sides=4)
             rod_solid(mast, "enamel", (a[0], y + step, a[1]), (b[0], y + step, b[1]), 0.12, paint, sides=4)
         y += step
-    box_solid(mast, "enamel", (-2.0, CRANE_TOP - 0.6, -2.0), (2.0, CRANE_TOP, 2.0), rust)              # the slewing ring
-    # the jib: a triangular truss along +z, a catwalk plate on its top chords, the counter-jib with its blocks along -z
+    box_solid(mast, "enamel", (-2.0, CRANE_TOP - 0.6, -2.0), (2.0, CRANE_TOP, 2.0), rust)
     top = CRANE_TOP
-    box_solid(jib, "enamel", (-1.6, top, -1.6), (1.6, top + 0.4, 1.6), rust)                            # the turntable
-    box_solid(jib, "enamel", (-1.3, top + 0.4, 1.7), (1.3, top + 3.0, 4.5), paint)                      # the cab
-    box_solid(jib, "enamel", (-1.1, top + 1.6, 4.5), (1.1, top + 2.7, 4.56), C("glass"))                # its window, facing out along the jib
-    rod_solid(jib, "enamel", (0.0, top + 0.4, 0.0), (0.0, top + 7.0, 0.0), 0.2, paint, sides=4)         # the tower head
+    box_solid(jib, "enamel", (-1.6, top, -1.6), (1.6, top + 0.4, 1.6), rust)
+    box_solid(jib, "enamel", (-1.3, top + 0.4, 1.7), (1.3, top + 3.0, 4.5), paint)
+    box_solid(jib, "enamel", (-1.1, top + 1.6, 4.5), (1.1, top + 2.7, 4.56), C("glass"))
+    rod_solid(jib, "enamel", (0.0, top + 0.4, 0.0), (0.0, top + 7.0, 0.0), 0.2, paint, sides=4)
     w, d = 0.9, 1.6
     ch = [(-w, top + 0.4), (w, top + 0.4), (0.0, top + 0.4 + d)]
     for x, yy in ch:
@@ -1554,36 +1505,33 @@ def build_crane():
         for i in range(3):
             a, b = ch[i], ch[(i + 1) % 3]
             rod_solid(jib, "enamel", (a[0], a[1], z0), (b[0], b[1], z1), 0.08, paint2, sides=4)
-    box_solid(jib, "enamel", (-0.7, top + 0.32, 4.6), (0.7, top + 0.4, CRANE_JIB - 0.5), C("steel"))    # the catwalk
-    rod_solid(jib, "enamel", (0.0, top + 7.0, 0.0), (0.0, top + 0.4 + d, CRANE_JIB * 0.7), 0.06, C("steel_lt"), sides=4)   # the pendant
+    box_solid(jib, "enamel", (-0.7, top + 0.32, 4.6), (0.7, top + 0.4, CRANE_JIB - 0.5), C("steel"))
+    rod_solid(jib, "enamel", (0.0, top + 7.0, 0.0), (0.0, top + 0.4 + d, CRANE_JIB * 0.7), 0.06, C("steel_lt"), sides=4)
     cj = CRANE_JIB * 0.3
     for x in (-w, w):
         rod_solid(jib, "enamel", (x, top + 0.4, 0.0), (x, top + 0.4, -cj), 0.16, paint, sides=4)
     rod_solid(jib, "enamel", (0.0, top + 7.0, 0.0), (0.0, top + 0.6, -cj), 0.06, C("steel_lt"), sides=4)
-    box_solid(jib, "enamel", (-1.5, top - 1.4, -cj + 0.2), (1.5, top + 0.4, -cj + 3.2), C("concrete"))  # the counterweight blocks
-    box_solid(jib, "enamel", (-1.0, top + 0.1, CRANE_JIB - 9.0), (1.0, top + 0.5, CRANE_JIB - 7.6), rust)  # the trolley, parked out
-    rod_solid(jib, "enamel", (0.0, top + 0.1, CRANE_JIB - 8.3), (0.0, top - 9.0, CRANE_JIB - 8.3), 0.05, C("iron"), sides=4)  # the cable
-    box_solid(jib, "enamel", (-0.5, top - 10.4, CRANE_JIB - 8.8), (0.5, top - 9.0, CRANE_JIB - 7.8), C("amber"))  # the hook block, empty
-    # detail 1 (mid): the mast ladder and the cab's door and hand rails
+    box_solid(jib, "enamel", (-1.5, top - 1.4, -cj + 0.2), (1.5, top + 0.4, -cj + 3.2), C("concrete"))
+    box_solid(jib, "enamel", (-1.0, top + 0.1, CRANE_JIB - 9.0), (1.0, top + 0.5, CRANE_JIB - 7.6), rust)
+    rod_solid(jib, "enamel", (0.0, top + 0.1, CRANE_JIB - 8.3), (0.0, top - 9.0, CRANE_JIB - 8.3), 0.05, C("iron"), sides=4)
+    box_solid(jib, "enamel", (-0.5, top - 10.4, CRANE_JIB - 8.8), (0.5, top - 9.0, CRANE_JIB - 7.8), C("amber"))
     for yy in [0.6 + 0.6 * k for k in range(int((CRANE_TOP - 1.0) / 0.6))]:
         if d1.tris() + 12 > DETAIL_TRIS:
             break
         box_solid(d1, "enamel", (h + 0.05, yy, -0.3), (h + 0.12, yy + 0.05, 0.3), C("steel_lt"))
     for x in (-0.35, 0.35):
         box_solid(d1, "enamel", (h + 0.08, 0.0, x - 0.03), (h + 0.14, CRANE_TOP, x + 0.03), C("steel_lt"))
-    # detail 2 (near): tie-down bolts and grout round the footing
     for k in range(16):
         a = TAU * k / 16
         box_solid(d2, "enamel", (2.2 * math.cos(a) - 0.08, 0.5, 2.2 * math.sin(a) - 0.08), (2.2 * math.cos(a) + 0.08, 0.68, 2.2 * math.sin(a) + 0.08), C("iron"))
     return mast, jib, d1, d2
 
 
-# ------------------------------------------------------------------------------------------------ export
 SLOT_ORDER = ("enamel", "steel", "ancient_lens")
 
 
 def xyz(v):
-    return (v[0], -v[2], v[1])           # Godot (x, y up, z) to Blender (x, -z, y); the exporter turns it back
+    return (v[0], -v[2], v[1])
 
 
 def slot_material(slot):
@@ -1682,7 +1630,6 @@ def export_one(path, name, nodes):
     return gltf_metrics(path)
 
 
-# ------------------------------------------------------------------------------------------------ recipes
 def load_rows():
     park = json.loads(PARK_FILE.read_text())
     return {r["id"]: r for r in park["park_rows"]}
@@ -1752,7 +1699,6 @@ def build(rid, out_dir, rows, ground, count_only=False):
                 "cls": cls, "flush": flush}
         has_col = rid in HAS_COL
         if has_col:
-            # the arch is its own mesh node so the drape's flush contract can be read without it
             base_nodes = [(name, [d.base], True), (name + "_arch", [extra, lens], True), (name + "-col", [col], False)]
         else:
             base_nodes = [(name, [d.base], True)]

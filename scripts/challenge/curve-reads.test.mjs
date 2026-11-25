@@ -3,16 +3,31 @@ import test from "node:test";
 import { flumeOpening } from "./flume-opening.mjs";
 import { fightMaxHp, worstWindows } from "./worst-window.mjs";
 
-// Two runs of one column: run A carries the new worst_60s_max_hp field; run B is an older record without it.
 const rows = [
   {
     column: "head",
     row: {
       max_hp: 200,
       stages: [
-        { stage: 1, warden_engaged_s: 30, max_hp: 120, worst_60s_hull: 60, worst_60s_hp: 72, worst_60s_max_hp: 150 },
-        { stage: 2, warden_engaged_s: 80, max_hp: 160, worst_60s_hull: 40, worst_60s_hp: 40,
-          first_hit_s: 12, hp_lost: 90, hp_lost_45s: 30, hits: 9 },
+        {
+          stage: 1,
+          warden_engaged_s: 30,
+          max_hp: 120,
+          worst_60s_hull: 60,
+          worst_60s_hp: 72,
+          worst_60s_max_hp: 150,
+        },
+        {
+          stage: 2,
+          warden_engaged_s: 80,
+          max_hp: 160,
+          worst_60s_hull: 40,
+          worst_60s_hp: 40,
+          first_hit_s: 12,
+          hp_lost: 90,
+          hp_lost_45s: 30,
+          hits: 9,
+        },
       ],
       boss: { worst_60s_hull: 50, worst_60s_hp: 50, worst_60s_max_hp: 200 },
     },
@@ -32,7 +47,10 @@ const rows = [
 ];
 
 test("fightMaxHp prefers the window's max hull, then stage entry, then run end", () => {
-  assert.deepEqual(fightMaxHp({ worst_60s_max_hp: 150, max_hp: 120 }, { max_hp: 200 }), { maxHp: 150, from: "window" });
+  assert.deepEqual(fightMaxHp({ worst_60s_max_hp: 150, max_hp: 120 }, { max_hp: 200 }), {
+    maxHp: 150,
+    from: "window",
+  });
   assert.deepEqual(fightMaxHp({ max_hp: 120 }, { max_hp: 200 }), { maxHp: 120, from: "entry" });
   assert.deepEqual(fightMaxHp({}, { max_hp: 200 }), { maxHp: 200, from: "run_end" });
   assert.deepEqual(fightMaxHp({}, {}), { maxHp: 120, from: "run_end" });
@@ -44,7 +62,6 @@ test("worstWindows divides each fight by the max hull at that fight, not at the 
     { hull: 60 / 150, hp: 72 / 150, from: "window" },
     { hull: 30 / 120, hp: 30 / 120, from: "entry" },
   ]);
-  // Run B never engaged the flume Warden, so only run A's flume counts.
   assert.deepEqual(head.flume, [{ hull: 40 / 160, hp: 40 / 160, from: "entry" }]);
   assert.deepEqual(head.brindle, [
     { hull: 50 / 200, hp: 50 / 200, from: "window" },

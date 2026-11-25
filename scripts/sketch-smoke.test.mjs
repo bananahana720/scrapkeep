@@ -18,7 +18,6 @@ import path from "node:path";
 import test from "node:test";
 import * as smoke from "./sketch-smoke.mjs";
 
-// Slot tests never see a real frame reading's hold on this machine.
 process.env.SCRAPKEEP_QUIET_DIR = mkdtempSync(path.join(os.tmpdir(), "smoke-no-quiet-"));
 test.after(() => rmSync(process.env.SCRAPKEEP_QUIET_DIR, { recursive: true, force: true }));
 import {
@@ -96,8 +95,6 @@ test("parseArgs selects the bot tier with its own receipt label", () => {
   );
 });
 
-// Run the real CLI with a fake Godot, so selection, serial scheduling and receipts
-// are checked together without playing whole runs in the script suite.
 function botTierFixture(args, check) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-bot-tier-"));
   try {
@@ -368,7 +365,6 @@ test("verdict lines and check counts are detected tolerantly", () => {
   assert.deepEqual(countChecks("x: PASS\n"), { passes: 0, fails: 0 });
 });
 
-// Rule: a child's verdict for another file cannot satisfy the parent's file stem.
 test("a child's other_test PASS does not satisfy the parent", () => {
   const child = spawnSync(process.execPath, ["-e", 'console.log("other_test: PASS")'], {
     encoding: "utf8",
@@ -402,7 +398,6 @@ test("a child's other_test PASS does not satisfy the parent", () => {
   assert.equal(hasVerdictLine("parentXtest: PASS\n", "res://tests/parent.test.gd"), false);
 });
 
-// Rule: all run types share N slots, with a positive integer machine-wide override.
 test("the machine pool defaults to two slots and validates SMOKE_SLOTS", () => {
   assert.equal(machineSlotCount({}), 2);
   assert.equal(machineSlotCount({ SMOKE_SLOTS: "3" }), 3);
@@ -411,7 +406,6 @@ test("the machine pool defaults to two slots and validates SMOKE_SLOTS", () => {
   }
 });
 
-// Rule: two claims fit; a third yields until a slot is released, without a timed assertion.
 test("two runs acquire two slots and a third waits", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-slots-"));
   const leases = [];
@@ -451,7 +445,6 @@ test("two runs acquire two slots and a third waits", async () => {
   }
 });
 
-// Rule: only a dead positive pid is reclaimable; re-use the pid of an exited child.
 test("a dead pid slot is reclaimed without waiting", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-dead-slot-"));
   let lease;
@@ -479,8 +472,6 @@ test("a dead pid slot is reclaimed without waiting", async () => {
   }
 });
 
-// Rule: a sandboxed runner records a namespace pid that answers EPERM on the
-// host; only the claim's heartbeat mtime decides liveness.
 test("a fresh unkillable-pid claim holds its slot", async (t) => {
   const kill = process.kill.bind(process);
   t.mock.method(process, "kill", (pid, signal) => {
@@ -563,7 +554,6 @@ test("a slot published after a long wait is never born stale", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-born-stale-"));
   let lease;
   try {
-    // Simulate a wait longer than the stale window: the owner file's mtime is old at the moment of publication.
     const backdate = () => {
       const claim = readdirSync(directory).find((name) => name.startsWith("claim-"));
       const file = path.join(directory, claim, claim);
@@ -576,7 +566,6 @@ test("a slot published after a long wait is never born stale", async () => {
       heartbeatMs: 3_600_000,
       beforePublish: backdate,
     });
-    // A second runner must see the held slot as live, not reap it.
     assert.equal(namedRunMustWait({ directory, slots: 1 }), true);
     let slept = false;
     const second = acquireSlot({
@@ -625,7 +614,6 @@ test("a stale waiter directory is swept and a fresh one is kept", async () => {
   }
 });
 
-// Rule: named runs acquire a slot, rather than just observing the pool.
 test("waitForMachine claims a slot and records wait duration", async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-named-slot-"));
   const exitsBefore = new Set(process.listeners("exit"));
@@ -648,7 +636,6 @@ test("waitForMachine claims a slot and records wait duration", async () => {
   }
 });
 
-// Rule: independent processes publish complete claims and release them on exit.
 test("independent runs share slots and reclaim a killed holder", { timeout: 10_000 }, async () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-process-slots-"));
   const children = [];
@@ -701,7 +688,6 @@ test("independent runs share slots and reclaim a killed holder", { timeout: 10_0
   }
 });
 
-// Rule: the receipt preserves measured lock_wait_ms for its existing readers.
 test("the receipt keeps a nonzero lock wait", () => {
   const receipt = buildReceipt({
     label: "gate",
@@ -1391,8 +1377,6 @@ test("a test's kept log is named after the test, whatever its sketch", () => {
   assert.equal(logFileName("sketches/core-loop import"), "sketches_core-loop_import.log");
 });
 
-// Rule: a frame reading holds the machine quiet. No runner takes a slot while the hold stands, the reading starts
-// only once the slots are empty, and a hold whose process died or that is too old does not block anyone.
 const quietDir = () => {
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-quiet-"));
   return { directory, quietDirectory: directory, log: () => {} };
@@ -1433,7 +1417,6 @@ test("a runner waits while a frame reading holds the machine quiet", async () =>
   }
 });
 
-// The hold is machine-wide: a runner on a private slot pool (a gate step) finds it through the default hold folder.
 test("a runner on another slot pool waits for the hold", async () => {
   const quietDirectory = process.env.SCRAPKEEP_QUIET_DIR;
   const reading = mkdtempSync(path.join(os.tmpdir(), "smoke-pool-"));
@@ -1464,8 +1447,6 @@ test("a runner on another slot pool waits for the hold", async () => {
   }
 });
 
-// The race: the runner saw no hold, then the reading took the hold and found no slots, then the runner published.
-// The runner checks again after it publishes and gives the slot back.
 test("a runner that published its slot just after the reading took the hold gives it back", async () => {
   const at = quietDir();
   try {
@@ -1476,7 +1457,6 @@ test("a runner that published its slot just after the reading took the hold give
     const lease = await acquireSlot({
       ...at,
       slots: 1,
-      // The claim is touched once per pass before the hold is read; the reading arrives after the first pass's read.
       sleep: async () => {
         sleeps += 1;
         assert.deepEqual(slotNames(at.directory), [], "the slot was given back");
@@ -1546,7 +1526,6 @@ test("a frame reading waits for running tests to finish, and gives up without ho
   }
 });
 
-// A slot whose runner crashed (dead pid) is not a running test.
 test("a frame reading does not wait for a crashed runner's slot", () => {
   const at = quietDir();
   try {
@@ -1586,7 +1565,6 @@ test("a dead or stale quiet hold blocks nobody and is replaced", () => {
     assert.equal(readFileSync(file, "utf8"), String(process.ppid));
     hold.release();
     assert.equal(existsSync(file), false);
-    // Releasing never removes someone else's hold.
     writeFileSync(file, String(process.pid));
     hold.release();
     assert.equal(existsSync(file), true);
@@ -1619,7 +1597,6 @@ test("a second frame reading waits for the first and never replaces a live hold"
     });
     assert.equal(sleeps, 2);
     assert.equal(smoke.quietHolder(at.directory), process.pid);
-    // Taking it again while holding it is not a wait.
     smoke.holdQuietSync({ ...at, sleepSync: () => assert.fail("already ours") });
     second.release();
     assert.throws(() => {
@@ -1631,7 +1608,6 @@ test("a second frame reading waits for the first and never replaces a live hold"
   }
 });
 
-// Six readings start at once: exactly one may hold at any moment.
 test("readings that start together never hold the machine at the same time", async () => {
   const at = quietDir();
   const script = `
@@ -1776,8 +1752,6 @@ test("warm batching in sketch-smoke emits per-test logs and reruns failures or e
     for (const name of ["alpha_test", "beta_test", "gamma_test", "leak_a_test", "leak_b_test"])
       writeFileSync(path.join(sketch, "tests", `${name}.gd`), "extends SceneTree\n");
 
-    // Fake Godot: in batch mode, beta_test fails in-batch (must rerun solo and pass),
-    // and leak_* batch prints an outside exit-leak ERROR (must rerun all tests in that batch solo).
     const fake = path.join(dir, "godot");
     writeFileSync(
       fake,
@@ -1846,7 +1820,6 @@ console.log(stem + ": PASS (1 checks)");
       return { ran, events: readFileSync(logFile, "utf8").trim().split("\n"), outLogs };
     };
 
-    // Case 1: alpha + beta + gamma batch together; beta fails in batch -> reruns solo and passes.
     const r1 = runFixture(["alpha_test", "beta_test", "gamma_test"], "logs1");
     assert.equal(r1.ran.status, 0, r1.ran.stdout + r1.ran.stderr);
     assert.deepEqual(r1.events, [
@@ -1863,7 +1836,6 @@ console.log(stem + ": PASS (1 checks)");
     }
     assert.match(readFileSync(path.join(r1.outLogs, "beta_test.log"), "utf8"), /solo ok/);
 
-    // Case 2: outside exit leak forces solo rerun of EVERY test in the batch.
     const r2 = runFixture(["leak_a_test", "leak_b_test"], "logs2");
     assert.equal(r2.ran.status, 0, r2.ran.stdout + r2.ran.stderr);
     assert.deepEqual(r2.events, [
@@ -1985,7 +1957,6 @@ console.log(stem + ": PASS (1 checks)");
       events.join("\n"),
     );
     assert.ok(events.includes("solo fps=90 fps_solo_test"), events.join("\n"));
-    // With SMOKE_BATCH_SIZE=2, 3 plain tests split into a 2-test batch + 1 solo test.
     assert.ok(
       events.includes("batch fps=none tests/plain_a_test.gd,tests/plain_b_test.gd"),
       events.join("\n"),

@@ -66,7 +66,6 @@ def arc(seconds, decay):
 
 
 def presence():
-    # D2 rounded to 73.5 Hz so 2.0 s holds whole cycles of every partial: the loop has no seam.
     t = t_of(2.0)
     hum = 0.5 * np.sin(2 * np.pi * 73.5 * t) + 0.3 * np.sin(2 * np.pi * 147.0 * t) + 0.06 * np.tanh(4 * np.sin(2 * np.pi * A3 * t))
     wobble = 1 + 0.25 * np.sin(2 * np.pi * 2.0 * t)
@@ -77,7 +76,6 @@ def presence():
 
 
 def tell():
-    # The capacitor whine rises D4 to D5 over the lead and the jolt lands on the last 60 ms.
     n = int(1.0 * SR)
     whine = buzz(sweep(D3, D5, 1.0, 2.0), 6) * np.linspace(0.05, 0.6, n) ** 1.5
     tick = np.zeros(n)

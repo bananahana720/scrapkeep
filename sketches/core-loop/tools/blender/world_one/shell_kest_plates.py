@@ -1,56 +1,29 @@
-# PD-KEST: Kest's parts shared by her base shell and her heft layers, and the recipe for the
-# four heft layers (detail shells shell_kest_c2.glb to shell_kest_c5.glb, ROSTER-LOOK section 5).
-# Concept: artifacts/local/alpha/push/w13/concepts/codex/kest/{hero,chase,sheet}.png with
-# base/base-hero.png and mechanism.png (approved set, docs/decisions.tsv w13-look rows).
-#
-#   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
-#     --python world_one/shell_kest_plates.py -- [--outdir <dir>]
-#
-# Layers hang from the upright Pod just inside the lattice (outer face 0.92 m, 0.04 m thick,
-# ROSTER-LOOK sections 0.3 and 5): light perforated triangles, two per diamond gap, split on the
-# three-way-hub diagonal (kest/sheet.png GAP PANEL), bone on the paint slot with charcoal
-# perforations, one draw. Class III adds thicker tread-cap rims on Core (rubber), its second
-# draw (ROSTER-LOOK veto 3). No panel enters the sight cones (chase eyes to the head, front
-# eyes to the face) or sits within VANE_CLEAR of a vane hinge (pilots/kest.md section 5).
-# Each layer GLB is a root with a Core and a Pod node, as hero_assets._split needs.
-# Class V's wide vents (ROSTER-LOOK section 5) are not in a layer: a layer's Pod hangs under
-# HeroPod, so it cannot follow VaneL/VaneR as they open; they are a per-class vane row for
-# PE-KEST or PE-0's mecha_motion. The class IV satchel rides the WeaponRing (SATCHEL4_CLOCK).
-
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
-from common import Part, Vector  # noqa: E402
-from mathutils.bvhtree import BVHTree  # noqa: E402
+import bmesh
+import bpy
+import common
+import shell_base as sb
+from common import Part, Vector
+from mathutils.bvhtree import BVHTree
 
-# --- the vents (VaneL, VaneR), shared with shell_kest.py ----------------------------------
-#
-# Each vent is three stacked slats (bone outermost, two oxide, kest/sheet.png HUB MODULE) in the
-# Pod's left-right plane, so the chase camera sees its face. It hinges on a fore-aft axis at
-# radius VANE_RH, VANE_BETA degrees from the top, in the side gap. hero_assets._steer_pod turns
-# the node's Godot rotation.z by -side * 90 degrees while gliding, which in Blender is a turn
-# about +Y by side * 90 degrees: folded the slats rise to 2 and 10 o'clock about 0.10 m past
-# the lattice, open they spread level as wings about 0.25 m past it, above the weapon ring.
 VANE_BETA = math.radians(70.0)
-VANE_ALPHA = math.radians(10.0)       # folded span leans this far out from vertical
-VANE_RH = 0.90                        # hinge radius: outside the gimbal sweep (0.862), inside 0.94
-VANE_Y = -0.05                        # the fore-aft plane of the slats, a little aft
+VANE_ALPHA = math.radians(10.0)
+VANE_RH = 0.90
+VANE_Y = -0.05
 VANE_DEPTH = 0.03
 SLAT_SPAN = 0.06
 SLAT_GAP = 0.015
 SLAT_SWEEP = 0.06
-SLAT_W = (-0.06, 0.11)                # across the span: outward (-) to inward (+) when folded
+SLAT_W = (-0.06, 0.11)
 SLAT_ROOT = 0.03
 SLAT_COLORS = ("oxide", "oxide", "bone")
-VANE_CLEAR = 0.15                     # no panel vertex this close to a hinge (metres)
-SLIT_DEPTH = 0.008                    # a louvre slit's buried point, inside the slat
+VANE_CLEAR = 0.15
+SLIT_DEPTH = 0.008
 
 
 def vane_hinge(side):
@@ -82,12 +55,9 @@ def vane_part(name, side):
         faces += [p.bm.faces.new((lo[i], lo[(i + 1) % 4], hi[(i + 1) % 4], hi[i])) for i in range(4)]
         bmesh.ops.recalc_face_normals(p.bm, faces=faces)
         p.paint(faces, "paint", color)
-        # The louvre slit on each face: a charcoal bar across the slat (sheet.png "=" marks).
-        # The slit follows the slat's sweep: its centre line runs from mid-root to mid-tip.
         def at(w, ds):
             s = s0 + SLAT_SPAN / 2 + SLAT_SWEEP * (w - SLAT_W[0]) / (SLAT_W[1] - SLAT_W[0]) + ds
             return h + span * s + across * w
-        # E2-03: each slit closes to a point buried in the slat, so every vent piece is a closed island.
         wa, wb = SLAT_W[0] + 0.03, SLAT_W[1] - 0.03
         for face_y in (-1, 1):
             off = y * face_y * (VANE_DEPTH / 2 + 0.002)
@@ -98,43 +68,24 @@ def vane_part(name, side):
             tip = p.bm.verts.new(sum(quad, Vector()) / 4 - y * face_y * SLIT_DEPTH)
             slit = [p.bm.faces.new(rim)] + [p.bm.faces.new((rim[(k + 1) % 4], rim[k], tip)) for k in range(4)]
             p.paint(slit, "paint", "charcoal")
-    # The hinge barrel on the fore-aft axis.
     p.rod("paint", h - y * 0.07, h + y * 0.07, 0.028, 6, color="charcoal")
     return p
 
-
-# --- heft layers ---------------------------------------------------------------------------
 
 PANEL_OUT = 0.92
 PANEL_IN = 0.88
 PANEL_SHRINK = 0.80
 HOLE = 0.022
-# Inner and outer radius, inner and outer reach. The rim hugs the base's tread cap, so it follows
-# sb.CAP_WIDTH (0.10 m since PD-0b; the rim was 0.070 to 0.088 on the 0.14 m cap).
 CAP_RIM = (sb.CAP_WIDTH / 2, sb.CAP_WIDTH / 2 + 0.018, 0.955, 0.9805)
 FRONT_EYES = tuple(Vector((e.x, -e.y, e.z)) for e in sb.CHASE_EYES)
-# Class rules (ROSTER-LOOK 0.3, pilots/kest.md section 5): II the lowest gaps (at most six) wholly
-# below Z -0.35; III the side gaps, the flanks at 3 and 9 under the hinges included; IV the rest
-# below SPLIT_Z; V the remaining non-sight gaps.
 LOW_Z = -0.35
 SIDE_Z = (-0.6, 0.45)
 SPLIT_Z = 0.35
-# The fourth satchel joins the weapon ring's row at class IV (volley targets 3, 3, 3, 4, 4). It
-# is baked into the base WeaponRing (shell_kest.py, UV2.y = 4), because a layer hangs from the
-# Pod, which turns to the heading, while the ring yaws to the aim (hero_assets._steer_pod).
 SATCHEL4_CLOCK = 225.0
-SATCHEL_INNER = 1.082                 # satchel faces start outside the weapon band (1.08)
-# The band stripe: ochre as kest/hero.png paints it, on the matte paint slot (no glow), kept
-# off brass (d9b44a) by the oxide in the mix.
+SATCHEL_INNER = 1.082
 BAND_COLOR = common.mix("amber", "oxide", 0.3)
 
 
-# C6 (P-UNITS PD common rules): Kest's layers hide no pilot pixel from the chase eyes, or from
-# their mirror on the face side, where the cge look rows put the camera. The pilot is
-# pilot_kest_anim.glb's rig meshes in the rest pose at the Pod origin (its unit Icosphere is not
-# body). A tread-cap rim or a panel stays off when a ray from one of those eyes through one of
-# its sample points goes on to hit the pilot (the pilot-mask measure of the 2026-10-10 fix round
-# found c3 rims and c4 panels in front of pilot pixels).
 PILOT_GLB = os.path.join(common.MODELS, "pilot_kest_anim.glb")
 _PILOT = []
 
@@ -256,14 +207,12 @@ def _panel(p, tri):
     outer = [p.bm.verts.new(v * PANEL_OUT) for v in tri]
     inner = [p.bm.verts.new(v * PANEL_IN) for v in tri]
     n = sum(tri, Vector()).normalized()
-    # Wind the outer face outward.
     if (outer[1].co - outer[0].co).cross(outer[2].co - outer[0].co).dot(n) < 0:
         outer.reverse()
         inner.reverse()
     faces = [p.bm.faces.new(outer), p.bm.faces.new(list(reversed(inner)))]
     faces += [p.bm.faces.new((inner[i], inner[(i + 1) % 3], outer[(i + 1) % 3], outer[i])) for i in range(3)]
     p.paint(faces, "paint", "bone")
-    # Perforations: three charcoal holes on the outer face, toward each corner.
     c = sum((v.co for v in outer), Vector()) / 3
     for v in outer:
         at = c + (v.co - c) * 0.45
@@ -285,8 +234,6 @@ def satchel(p, clock_deg, radius=1.14, z=-0.025):
     body = p.box("paint", (0.22, 0.11, 0.13), loc=loc, rot=(0, 0, yaw), color="oxide")
     flap = p.box("paint", (0.226, 0.03, 0.05), loc=loc + out * 0.05 + Vector((0, 0, 0.045)), rot=(0, 0, yaw), color="petrol")
     p.box("paint", (0.228, 0.118, 0.03), loc=loc + Vector((0, 0, -0.025)), rot=(0, 0, yaw), color=BAND_COLOR)
-    # E2-03: the body and flap stay whole boxes (closed islands); the 16 hidden faces they cost
-    # come out of the lattice pins shell_kest.py drops.
     return body + flap
 
 
@@ -345,7 +292,6 @@ def main():
     print("PLATES Kest %d of 60 gap triangles stay open (sight cones, vent hinges or in front of the pilot)" % excluded)
     ok = True
     for n in (2, 3, 4, 5):
-        # A fresh scene per layer, so every layer's nodes are named Core and Pod, not Pod.001.
         common.reset()
         root, core_obj, pod_obj = layer(n, by_class)
         tris = common.tri_total(root)

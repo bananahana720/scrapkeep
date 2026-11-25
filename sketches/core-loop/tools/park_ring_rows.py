@@ -37,8 +37,6 @@ CUT_R = 66.0
 CUT_Z0 = 399.0
 CUT_EDGES = list(range(-45, 46, 6))
 PUMP_AT = [73, 350]
-# The segments the lower tubes' wash cuts through (bearings 142 to 183 deg from +z on the landmark model, so 0 to
-# 38 deg here): the landmark's deck stops short of them.
 TROUGH = {0, 1, 2}
 
 KEYS = ["id", "element", "landform", "society", "at", "y", "size", "yaw_deg", "verb", "ride_fact", "home",
@@ -61,7 +59,6 @@ def polar(r, deg):
 def ring_rows(old):
     mid = (R_IN + R_OUT) * 0.5
     step = 360.0 / SEGMENTS
-    # The chord at the outer edge plus 0.2 m, so neighbouring segments meet with no gap there.
     length = round(2.0 * R_OUT * math.sin(math.radians(step * 0.5)) + 0.2, 1)
     out = []
     for k in range(SEGMENTS):
@@ -100,7 +97,6 @@ def main():
     old = json.loads(lines[at].rstrip(","))
     new = cut_rows() + ring_rows(old)
     lines[at:at + 1] = ["  " + dumps(r) + "," for r in new]
-    # The last park row has no comma: drop it from the last new row when no row follows.
     if not lines[at + len(new) - 1 + 1].lstrip().startswith("{"):
         lines[at + len(new) - 1] = lines[at + len(new) - 1].rstrip(",")
     pump = next(i for i, ln in enumerate(lines) if ln.startswith('  {"id": "pump_gallery", '))

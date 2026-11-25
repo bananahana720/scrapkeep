@@ -21,14 +21,12 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cut_stingers import DEFAULT_PACKS, PROJECT, RATE, finish, level, lufs, mix, read_clip, true_peak_db, write_wav  # noqa: E402
+from cut_stingers import DEFAULT_PACKS, PROJECT, RATE, finish, level, lufs, mix, read_clip, true_peak_db, write_wav
 
 PACK = "spillway"
 CLIP = "travel"
 FIRST_BAR = 1
 BARS = 2
-# themes.derive for theme K bars 1-2, D Dorian, device invert, raised one octave: (beat, midi, beats).
-# The plain line is D F A C E | D C B A G F; the quote turns it upside down and ends on Bb, not B.
 QUOTE = [(0, 74, 0.5), (0.5, 71, 0.5), (1, 67, 0.5), (1.5, 64, 0.5), (2, 60, 1.5),
          (4, 62, 0.5), (4.5, 64, 0.5), (5, 65, 1), (6, 67, 0.5), (6.5, 69, 0.5), (7, 70, 1)]
 SWING = 2 / 3
@@ -41,7 +39,6 @@ def swung(beat):
 
 
 def chime(midi, seconds):
-    # The Mind's sine chime: a sine with a soft bell partial, a quick strike and a long fall.
     f = 440.0 * 2 ** ((midi - 69) / 12)
     t = np.arange(int(seconds * RATE)) / RATE
     body = np.sin(2 * np.pi * f * t) + 0.25 * np.sin(2 * np.pi * f * 2.76 * t) * np.exp(-t / 0.08)

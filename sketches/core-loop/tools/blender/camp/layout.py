@@ -16,7 +16,6 @@ PLAZA_R = 26.0
 GATE_R = 70.0
 SPOKE_W = 5.0
 
-# id: (bearing, radius). Bearings follow the storyboard ring with the gate at 0.
 STATIONS = {
     "gate": (0.0, GATE_R),
     "pet": (55.0, RING_R),
@@ -27,14 +26,11 @@ STATIONS = {
     "lockers": (305.0, RING_R),
 }
 
-TRIAL_AT = (122.0, 0.0, -20.0)      # the time-trial track's centre, east of the ring
-SANDBOX_AT = (-122.0, 0.0, 10.0)    # the any-enemy sandbox yard's centre, west of the ring
-SHORTCUT_AT = (0.0, 0.0, -36.0)     # the shortcut ramp's centre: its foot sits 1 m past the plaza rim, its lip at the ring walk
+TRIAL_AT = (122.0, 0.0, -20.0)
+SANDBOX_AT = (-122.0, 0.0, 10.0)
+SHORTCUT_AT = (0.0, 0.0, -36.0)
 
 
-# Dressing on the ring walk's outer edge and round the plaza: (glb stem, bearing, radius, yaw offset in degrees from
-# facing the plaza). Lamps light every spoke mouth; the fire pit and benches make the plaza a place to sit, with the
-# keepers' shift board leaning by them (keeper_marks.py); a fence run closes the yard behind Moss's stall.
 DRESSING = [
     *[("camp_lamp_post", b + 14.0, RING_R + 4.2, 0.0) for b in (0.0, 55.0, 120.0, 160.0, 205.0, 250.0, 305.0)],
     ("camp_signpost", 26.0, PLAZA_R + 2.5, 0.0),

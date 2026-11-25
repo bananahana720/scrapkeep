@@ -25,12 +25,11 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cut_stingers import PROJECT, RATE, finish, level, lufs, true_peak_db, write_wav  # noqa: E402
+from cut_stingers import PROJECT, RATE, finish, level, lufs, true_peak_db, write_wav
 
 DESIGNED = ("drop_fleet_anvil", "drop_boiler")
 UNCUT = ("riser_mind_quote", "drop_mind_wrong")
 WORLD = "3"
-# zone -> semitones above G
 ZONES = {"3_1": 0, "3_2": 2}
 rng = np.random.default_rng(83)
 
@@ -77,21 +76,20 @@ def brass(notes, seconds):
 
 def drop_fleet_anvil(shift):
     n = int(1.4 * RATE)
-    g = 43 + shift  # G2
+    g = 43 + shift
     x = place(n, 0.0, anvil(g + 24)) + place(n, 0.17, anvil(g + 31) * 0.85)
     boom = np.sin(2 * np.pi * hz(g - 12) * t_of(1.4)) * np.exp(-t_of(1.4) / 0.2)
-    lydian = [g + 24, g + 28, g + 30, g + 31]  # G B C# D
+    lydian = [g + 24, g + 28, g + 30, g + 31]
     return x + boom * 0.9 + place(n, 0.34, brass(lydian, 1.0)) * 1.2
 
 
 def drop_boiler(shift):
     n = int(1.3 * RATE)
     t = t_of(1.3)
-    g = 67 + shift  # G4
+    g = 67 + shift
     hiss = noise(n, 2500, 11000) * np.minimum(t / 0.02, 1.0) * np.exp(-t / 0.5) * 0.6
     pop = place(n, 0.08, noise(int(0.04 * RATE), 80, 3000) * np.exp(-t_of(0.04) / 0.008) * 2.0)
     pop += place(n, 0.08, np.sin(2 * np.pi * hz(g - 24) * t_of(0.25)) * np.exp(-t_of(0.25) / 0.07))
-    # The whistle: G, then a bend up to the tritone C#, with steam breath through it.
     wt = t_of(1.0)
     pitch = hz(g + 12) * 2 ** ((6 / 12) * np.clip((wt - 0.25) / 0.2, 0, 1))
     whistle = np.sin(np.cumsum(2 * np.pi * pitch / RATE)) * np.minimum(wt / 0.05, 1.0) * np.exp(-np.clip(wt - 0.6, 0, None) / 0.2)

@@ -688,13 +688,11 @@ test("--self-play keeps tools/ in the shipped preset and nothing else changes", 
     exclude(swapped, "Linux x64"),
     'exclude_filter="tests/*, design-v2/*, design-v3/*, perf-lab/*, assets/music_ace/*"',
   );
-  // The other preset, and every other line, are untouched.
   assert.equal(exclude(swapped, "Linux x64 proof"), exclude(presetsText, "Linux x64 proof"));
   const before = presetsText.split("\n");
   const after = swapped.split("\n");
   assert.equal(after.length, before.length);
   assert.equal(after.filter((line, i) => line !== before[i]).length, 1);
-  // The default path never goes through the swap: the committed shipped preset still excludes tools/.
   assert.match(parsePresets(presetsText)["Linux x64"].fields.exclude_filter, /tools\/\*/);
   assert.throws(() => selfPlayPresetText('[preset.9]\nname="other"\n'), /missing/);
 });

@@ -49,18 +49,7 @@ for (const [name, g] of Object.entries(geos)) {
   }
 }
 geos.sphere.computeVertexNormals();
-export function mesh(
-  parent,
-  shape,
-  color,
-  x,
-  y,
-  z,
-  sx = 1,
-  sy = 1,
-  sz = 1,
-  emissive = 0,
-) {
+export function mesh(parent, shape, color, x, y, z, sx = 1, sy = 1, sz = 1, emissive = 0) {
   const o = new THREE.Mesh(geos[shape], mat(color, emissive));
   o.position.set(x, y, z);
   o.scale.set(sx, sy, sz);
@@ -103,9 +92,7 @@ export function consolidate(group) {
     const glowing = o.material.emissive && o.material.emissive.getHex() > 0;
     const source = glowing ? o.material.emissive : o.material.color;
     if (!geometry.getAttribute("color")) {
-      const colors = new Float32Array(
-        geometry.getAttribute("position").count * 3,
-      );
+      const colors = new Float32Array(geometry.getAttribute("position").count * 3);
       for (let i = 0; i < colors.length; i += 3) {
         colors[i] = source.r;
         colors[i + 1] = source.g;
@@ -116,20 +103,14 @@ export function consolidate(group) {
     if (!geometry.getAttribute("uv"))
       geometry.setAttribute(
         "uv",
-        new THREE.BufferAttribute(
-          new Float32Array(geometry.getAttribute("position").count * 2),
-          2,
-        ),
+        new THREE.BufferAttribute(new Float32Array(geometry.getAttribute("position").count * 2), 2),
       );
     bins[glowing ? 1 : 0].push(geometry);
   });
   const result = new THREE.Group();
   bins.forEach((parts, i) => {
     if (!parts.length) return;
-    const merged = new THREE.Mesh(
-      mergeGeometries(parts, false),
-      i ? luminousBatch : opaqueBatch,
-    );
+    const merged = new THREE.Mesh(mergeGeometries(parts, false), i ? luminousBatch : opaqueBatch);
     merged.castShadow = true;
     merged.receiveShadow = true;
     result.add(merged);
@@ -150,10 +131,7 @@ function tube(g, color, a, b, r = 0.07) {
       delta.length(),
       r,
     );
-  o.quaternion.setFromUnitVectors(
-    new THREE.Vector3(0, 1, 0),
-    delta.normalize(),
-  );
+  o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), delta.normalize());
   return o;
 }
 function collar(g, color, x, y, z, r = 0.3, h = 0.08) {
@@ -183,15 +161,7 @@ export function weaponModel(type, ground = false) {
     collar(g, C.copper, 0, 0.964, 0, 0.205, 0.035);
     collar(g, C.dark, 0, 0.985, 0, 0.125, 0.016);
     for (let i = 0; i < 3; i++)
-      collar(
-        g,
-        0x050e12,
-        Math.cos(i * 2.094) * 0.07,
-        1,
-        Math.sin(i * 2.094) * 0.07,
-        0.027,
-        0.01,
-      );
+      collar(g, 0x050e12, Math.cos(i * 2.094) * 0.07, 1, Math.sin(i * 2.094) * 0.07, 0.027, 0.01);
     mesh(g, "box", C.ivory, 0, 0.62, -0.24, 0.3, 0.22, 0.1);
     mesh(g, "box", C.dark, 0, 0.63, -0.295, 0.22, 0.12, 0.016);
     mesh(g, "box", C.mint, 0.06, 0.66, -0.308, 0.075, 0.04, 0.009, C.mint);
@@ -230,23 +200,20 @@ export function weaponModel(type, ground = false) {
     }
     for (const y of [0.66, 0.8, 0.94])
       for (const x of [-0.08, 0.08])
-        mesh(g, "cone", C.light, x, y, 0.13, 0.025, 0.08, 0.025).rotation.x =
-          Math.PI / 2;
+        mesh(g, "cone", C.light, x, y, 0.13, 0.025, 0.08, 0.025).rotation.x = Math.PI / 2;
   }
   if (ground) {
     const base = new THREE.Group();
     mesh(base, "box", C.dark, 0, -0.2, 0, 0.79, 0.25, 0.76);
     mesh(base, "box", C.ivory, 0, -0.085, 0, 0.87, 0.16, 0.83);
-    for (const side of [-1, 1])
-      mesh(base, "box", C.orange, side * 0.38, -0.2, 0, 0.095, 0.18, 0.4);
+    for (const side of [-1, 1]) mesh(base, "box", C.orange, side * 0.38, -0.2, 0, 0.095, 0.18, 0.4);
     if (type === "bolt") {
       g.rotation.z = -0.82;
       g.position.set(-0.12, 0.12, 0);
     }
     if (type === "coil") {
       for (const x of [-0.29, 0.29])
-        for (const z of [-0.29, 0.29])
-          mesh(base, "box", C.petrol, x, 0.65, z, 0.115, 1.04, 0.115);
+        for (const z of [-0.29, 0.29]) mesh(base, "box", C.petrol, x, 0.65, z, 0.115, 1.04, 0.115);
       mesh(base, "box", C.ivory, 0, 1.2, 0, 0.73, 0.13, 0.73);
       mesh(base, "box", C.mint, 0, 0.76, 0.29, 0.41, 0.5, 0.045, C.mint);
     }
@@ -261,17 +228,7 @@ export function enemyModel(type) {
     tank = type === "tank",
     boss = type === "boss";
   mesh(g, "sphere", C.dark, 0, 0.38, 0, 0.42, 0.25, 0.57);
-  mesh(
-    g,
-    "sphere",
-    tank ? C.copper : 0xc94922,
-    0,
-    0.57,
-    -0.025,
-    0.39,
-    0.31,
-    0.49,
-  );
+  mesh(g, "sphere", tank ? C.copper : 0xc94922, 0, 0.57, -0.025, 0.39, 0.31, 0.49);
   mesh(g, "box", 0xe46529, 0, 0.82, -0.06, 0.28, 0.19, 0.46);
   mesh(g, "box", C.dark, 0, 0.77, -0.05, 0.05, 0.17, 0.49);
   mesh(g, "box", C.dark, 0, 0.51, 0.4, 0.44, 0.15, 0.17);
@@ -286,37 +243,11 @@ export function enemyModel(type) {
         spread = (i - 1) * 0.11;
       tube(g, C.dark, [side * 0.28, 0.4, z], [x, 0.56, z + spread], 0.075);
       mesh(g, "sphere", C.orange, x, 0.56, z + spread, 0.11, 0.105, 0.105);
-      tube(
-        g,
-        C.dark,
-        [x, 0.56, z + spread],
-        [side * 0.78, 0.14, z + spread + 0.07],
-        0.065,
-      );
-      mesh(
-        g,
-        "box",
-        C.dark,
-        side * 0.79,
-        0.105,
-        z + spread + 0.11,
-        0.17,
-        0.1,
-        0.2,
-      );
+      tube(g, C.dark, [x, 0.56, z + spread], [side * 0.78, 0.14, z + spread + 0.07], 0.065);
+      mesh(g, "box", C.dark, side * 0.79, 0.105, z + spread + 0.11, 0.17, 0.1, 0.2);
     }
   for (const side of [-1, 1]) {
-    mesh(
-      g,
-      "box",
-      C.ivory,
-      side * 0.255,
-      0.665,
-      0.1,
-      0.115,
-      0.075,
-      0.16,
-    ).rotation.z = side * -0.35;
+    mesh(g, "box", C.ivory, side * 0.255, 0.665, 0.1, 0.115, 0.075, 0.16).rotation.z = side * -0.35;
     collar(g, C.copper, side * 0.2, 0.715, -0.29, 0.06, 0.06);
   }
   if (tank || boss) {
@@ -378,14 +309,9 @@ function ribbon(g, points, width, color, y) {
 }
 function road(g) {
   const edges = roadOffsets(1.13),
-    outline = [
-      ...edges.map((p) => p.left),
-      ...edges.map((p) => p.right).reverse(),
-    ];
+    outline = [...edges.map((p) => p.left), ...edges.map((p) => p.right).reverse()];
   const shape = new THREE.Shape();
-  outline.forEach((p, i) =>
-    i ? shape.lineTo(p[0], -p[1]) : shape.moveTo(p[0], -p[1]),
-  );
+  outline.forEach((p, i) => (i ? shape.lineTo(p[0], -p[1]) : shape.moveTo(p[0], -p[1])));
   shape.closePath();
   const geo = new THREE.ExtrudeGeometry(shape, {
     depth: 0.055,
@@ -497,8 +423,7 @@ function masonry(g, w, rand) {
     }
   for (let x = w.x - w.w / 2 + 0.2; x < w.x + w.w / 2; x += 1.3) {
     mesh(g, "box", C.light, x, 0.23, w.z + w.h / 2, 0.31, 0.35, 0.18);
-    if (rand() > 0.4)
-      mesh(g, "box", C.ivory, x, 1.2, w.z - 0.12, 0.42, 0.32, 0.38);
+    if (rand() > 0.4) mesh(g, "box", C.ivory, x, 1.2, w.z - 0.12, 0.42, 0.32, 0.38);
   }
 }
 function coneCluster(g, x, z, s, rand) {
@@ -550,17 +475,12 @@ function equipment(g, x, z, angle, kind = 0) {
     collar(station, C.orange, 0, 0.71, 0, 0.37, 0.37);
     collar(station, C.dark, 0, 0.95, 0, 0.3, 0.17);
     collar(station, C.ivory, 0, 1.085, 0, 0.42, 0.12);
-    for (let i = 0; i < 3; i++)
-      collar(station, C.mint, 0, 1.19 + i * 0.13, 0, 0.26, 0.035, C.mint);
+    for (let i = 0; i < 3; i++) collar(station, C.mint, 0, 1.19 + i * 0.13, 0, 0.26, 0.035, C.mint);
     collar(station, C.dark, 0, 1.5, 0, 0.2, 0.12);
   }
   station.position.set(
     x,
-    WALLS.some(
-      (w) => Math.abs(x - w.x) < w.w / 2 && Math.abs(z - w.z) < w.h / 2,
-    )
-      ? 1.15
-      : 0,
+    WALLS.some((w) => Math.abs(x - w.x) < w.w / 2 && Math.abs(z - w.z) < w.h / 2) ? 1.15 : 0,
     z,
   );
   station.rotation.y = angle;
@@ -596,17 +516,7 @@ export function buildYard(scene) {
   WALLS.forEach((w) => masonry(g, w, rand));
   for (const z of [-10.86, 10.86])
     for (let x = -13.1; x < 13.7; x += 1.12) {
-      mesh(
-        g,
-        "box",
-        rand() > 0.3 ? C.ivory : C.light,
-        x,
-        0.27,
-        z,
-        1.08,
-        0.28,
-        0.34,
-      );
+      mesh(g, "box", rand() > 0.3 ? C.ivory : C.light, x, 0.27, z, 1.08, 0.28, 0.34);
       for (let row = 0; row < 3; row++) {
         const center = x + (row % 2) * 0.2,
           h = 0.66 + rand() * 0.2;
@@ -623,41 +533,10 @@ export function buildYard(scene) {
         );
       }
       if (rand() < 0.42) {
-        mesh(
-          g,
-          "rock",
-          C.rock,
-          x,
-          -2.82,
-          z + 0.12,
-          0.4 + rand() * 0.5,
-          0.4 + rand() * 0.45,
-          0.53,
-        );
-        const pipe = mesh(
-          g,
-          "cylinder",
-          C.copper,
-          x,
-          -1.53,
-          z * 1.028,
-          0.1,
-          2.1,
-          0.1,
-        );
-        for (const y of [-0.7, -1.4, -2.25])
-          collar(g, C.amber, x, y, z * 1.028, 0.15, 0.065);
-        const elbow = mesh(
-          g,
-          "elbow",
-          C.copper,
-          x + 0.2,
-          -0.5,
-          z * 1.028,
-          0.2,
-          0.2,
-          0.2,
-        );
+        mesh(g, "rock", C.rock, x, -2.82, z + 0.12, 0.4 + rand() * 0.5, 0.4 + rand() * 0.45, 0.53);
+        const pipe = mesh(g, "cylinder", C.copper, x, -1.53, z * 1.028, 0.1, 2.1, 0.1);
+        for (const y of [-0.7, -1.4, -2.25]) collar(g, C.amber, x, y, z * 1.028, 0.15, 0.065);
+        const elbow = mesh(g, "elbow", C.copper, x + 0.2, -0.5, z * 1.028, 0.2, 0.2, 0.2);
         elbow.rotation.y = z > 0 ? Math.PI / 2 : -Math.PI / 2;
       }
     }
@@ -708,13 +587,7 @@ export function buildYard(scene) {
   for (let i = 0; i < 18; i++) {
     const x = (rand() - 0.5) * 25,
       z = (rand() - 0.5) * 19;
-    if (
-      WALLS.some(
-        (w) =>
-          Math.abs(x - w.x) < w.w / 2 + 0.25 &&
-          Math.abs(z - w.z) < w.h / 2 + 0.25,
-      )
-    )
+    if (WALLS.some((w) => Math.abs(x - w.x) < w.w / 2 + 0.25 && Math.abs(z - w.z) < w.h / 2 + 0.25))
       continue;
     mesh(g, "box", C.ivory, x, 0.2, z, 0.36, 0.13, 0.36);
     mesh(g, "cone", C.orange, x, 0.4, z, 0.15, 0.38, 0.15);
@@ -731,19 +604,8 @@ export function buildYard(scene) {
     }
     mesh(g, "box", C.copper, x, 1.72, z, 0.22, 0.21, 2.85);
     for (let i = 0; i < 5; i++)
-      mesh(
-        g,
-        "box",
-        C.orange,
-        x,
-        1.72,
-        z - 1.1 + i * 0.55,
-        0.25,
-        0.24,
-        0.24,
-      ).rotation.x = -0.4;
+      mesh(g, "box", C.orange, x, 1.72, z - 1.1 + i * 0.55, 0.25, 0.24, 0.24).rotation.x = -0.4;
   }
-  // A broad stepped court gives the reactor its own silhouette in the overview.
   for (const [y, r, h, col] of [
     [0.27, 2.25, 0.4, C.dark],
     [0.51, 2.05, 0.27, C.ivory],
@@ -794,10 +656,7 @@ function crystalGeometry(radius, height, seed) {
     faces = 6;
   const baseColor = new THREE.Color(0x57cfa6),
     topColor = new THREE.Color(0xbdffe2);
-  const heights = Array.from(
-    { length: faces },
-    () => height * (0.8 + rnd() * 0.11),
-  );
+  const heights = Array.from({ length: faces }, () => height * (0.8 + rnd() * 0.11));
   const add = (p) => {
     verts.push(...p);
     const color = baseColor.clone().lerp(topColor, Math.min(1, p[1] / height));
@@ -833,23 +692,11 @@ function createCrystal() {
   for (let i = 0; i < 6; i++) {
     const angle = i * 2.39996,
       crystal = new THREE.Mesh(
-        crystalGeometry(
-          i ? 0.27 : 0.48,
-          i ? 1.55 + (i % 3) * 0.35 : 3.65,
-          713 + i,
-        ),
+        crystalGeometry(i ? 0.27 : 0.48, i ? 1.55 + (i % 3) * 0.35 : 3.65, 713 + i),
         crystalMaterial,
       );
-    crystal.position.set(
-      i ? Math.cos(angle) * 0.7 : 0,
-      0,
-      i ? Math.sin(angle) * 0.7 : 0,
-    );
-    crystal.rotation.set(
-      i ? Math.sin(angle) * 0.2 : 0,
-      angle,
-      i ? Math.cos(angle) * -0.2 : 0,
-    );
+    crystal.position.set(i ? Math.cos(angle) * 0.7 : 0, 0, i ? Math.sin(angle) * 0.7 : 0);
+    crystal.rotation.set(i ? Math.sin(angle) * 0.2 : 0, angle, i ? Math.cos(angle) * -0.2 : 0);
     crystal.castShadow = true;
     g.add(crystal);
   }

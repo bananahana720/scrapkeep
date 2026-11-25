@@ -31,7 +31,6 @@ def import_asset(path):
     roots=[obj for obj in imported if obj.parent is None]
     assert len(roots)==1, (path,roots)
     root=roots[0]
-    # Imported NLA tracks preserve the delivered clip names across rigid controls.
     for obj in imported:
         if obj.animation_data:
             obj.animation_data.action=None
@@ -183,8 +182,6 @@ def render(models,out,results=None,reuse_static=None):
         sample(roots,clip,key_seconds)
         view("three_quarter")
         write("assembled_"+clip,filenames,clip,key_seconds)
-    # Floor poses move actor anchors only in this preview scene, from the exact
-    # 12/8/4/0-m floors. The GLB clips never own these transforms.
     for lost,floor in enumerate((12,8,4,0)):
         reset()
         found={obj.name.split(".")[0]:obj for root in roots for obj in all_nodes(root)}

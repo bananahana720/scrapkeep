@@ -45,23 +45,23 @@ T["amber_dk"] = "9a6a16"
 
 LANE_HW, RAIL_T, RAIL_H = 2.75, 0.4, 1.2
 LANE_L, RISE, HUMP_H, HUMP_L = 23.5, 1.2, 1.5, 3.5
-CAB = 6.05                       # cabinet half width, outside of the walls
-W = 5.65                         # clear half width of board, trough and gutter
+CAB = 6.05
+W = 5.65
 TH = math.radians(35.0)
 ST, CT = math.sin(TH), math.cos(TH)
-Z0, Y0, BL = -26.5, 1.65, 14.2   # board foot z, foot height, length up the slope
+Z0, Y0, BL = -26.5, 1.65, 14.2
 Z_END, Y_END = Z0 - BL * CT, Y0 + BL * ST
 DEPTH = 1.5
 NSEG = 16
 
-CUPS = {                          # id: (u, v, opening radius)
+CUPS = {
     "cup_10": (0.0, 2.4, 2.0), "cup_20": (0.0, 6.5, 1.4), "cup_30": (-2.6, 8.8, 1.3), "cup_40": (2.6, 8.8, 1.3),
     "cup_50": (0.0, 10.6, 1.25), "cup_100_l": (-4.0, 12.1, 1.25), "cup_100_r": (4.0, 12.1, 1.25),
 }
 BAND = {"cup_10": "bone", "cup_20": "bone", "cup_30": "sandstone", "cup_40": "sandstone", "cup_50": "amber",
         "cup_100_l": "amber", "cup_100_r": "amber"}
 
-ARCH_Z0, ARCH_Z1 = -35.4, -34.0      # post and header depth
+ARCH_Z0, ARCH_Z1 = -35.4, -34.0
 HEAD_Y0, HEAD_Y1 = 11.6, 14.4
 FACE_Z = ARCH_Z1 + 0.15
 CROWN_R, CROWN_CY = 14.4, 1.5
@@ -84,15 +84,13 @@ def lane_rows():
     return rows
 
 
-# The ball is the player's: gravity 26 m/s^2 and a grounded rolling resistance of 0.30 m/s^2 (tuning.gd). A rolling sphere
-# runs down a fall s at (5/7) g s, so every drain floor falls at least FALL, which beats the resistance by half again.
 G_GAME, RR_GAME = 26.0, 0.30
 FALL = 0.03
-GX = LANE_HW + RAIL_T            # inner edge of the gutter (x), where the trough drains into it
-GUT_END = 3.5                    # the gutter's open end (z), beside the lane's foot
-RET_Z = 2.5                      # return_exit: the ball centre over the gutter's last metre
-GUT = [(Z0, 0.05 + FALL * (GUT_END - Z0)), (GUT_END, 0.05)]       # gutter floor (z, y): one steady fall FALL, head to end
-TROUGH = [(-W, GUT[0][1] + FALL * (GX + W)), (GX, GUT[0][1])]    # trough floor (x, y): falls FALL toward the gutter's head
+GX = LANE_HW + RAIL_T
+GUT_END = 3.5
+RET_Z = 2.5
+GUT = [(Z0, 0.05 + FALL * (GUT_END - Z0)), (GUT_END, 0.05)]
+TROUGH = [(-W, GUT[0][1] + FALL * (GX + W)), (GX, GUT[0][1])]
 
 
 def gut_y(z):
@@ -127,7 +125,7 @@ def thin(s, pts, hint, thick, color):
     plate(s, pts, tuple(-v / m * thick for v in hint), color)
 
 
-TL = 0.04      # thickness of the painted top layer on a layered solid
+TL = 0.04
 
 
 def topped(s, top, bot, w0, w1, topcol, sidecol, axis="x"):
@@ -154,8 +152,6 @@ def topped(s, top, bot, w0, w1, topcol, sidecol, axis="x"):
 def zline(z0, z1, f):
     return [(z0, f(z0)), (z1, f(z1))]
 
-
-# ------------------------------------------------------------------------------------------------------------ the board
 
 def cup_poly(u, v, r):
     return [(u + r * math.cos((k + 0.5) * math.tau / NSEG), v + r * math.sin((k + 0.5) * math.tau / NSEG)) for k in range(NSEG)]
@@ -223,8 +219,6 @@ def cup_decor(s):
         thin(s, [P(x, y, -DEPTH + 0.04) for x, y in cup_poly(u, v, r * 0.45)], (0, CT, ST), 0.04, "amber")
 
 
-# ----------------------------------------------------------------------------------------------------------- structure
-
 def lane_profile():
     return [(-d, lane_h(d)) for d in lane_rows()]
 
@@ -241,22 +235,17 @@ def structure(s, col=False):
         x0, x1 = sorted((sx * LANE_HW, sx * (LANE_HW + RAIL_T)))
         topped(s, side, flat_bot(side), x0, x1, "timber_lt", "timber", "x")
         topped(s, [(z, y + RAIL_H) for z, y in side], side, x0, x1, "copper", "copper", "x")
-    # Trough between the hump and the board: the floor falls FALL toward the gutter (+X) and meets its head at x = 3.15 with
-    # no step; left wall.
     topped(s, TROUGH, flat_bot(TROUGH), Z0, -LANE_L, "iron_hi", "timber", "z")
     topped(s, [(Z0, 3.05), (-LANE_L, 3.05)], flat_bot([(Z0, 0), (-LANE_L, 0)]), -CAB, -W, "timber_lt", "timber", "x")
-    # A cabinet end wall closes the trough's left side where the hump ends, so a ball cannot roll off beside the lane.
     s.box((CAB - 3.15, 3.05, 0.6), (-(CAB + 3.15) / 2, 3.05 / 2, -LANE_L - 0.3 + 0.6), T["timber"])
-    # Return gutter and its outer wall: one steady fall FALL from the trough to its open end beside the lane's foot.
     gz = list(GUT)
     topped(s, gz, flat_bot(gz), 3.15, W, "iron_hi", "timber", "x")
     topped(s, [(z, y + 1.65) for z, y in gz], flat_bot(gz), W, CAB, "timber_lt", "timber", "x")
-    # Board side walls (the plane raised 1.4 m), the backstop, the arch.
     bw = [(Z_END, Y_END + 1.4), (Z0, Y0 + 1.4)]
     for x0, x1 in ((-CAB, -W), (W, CAB)):
         topped(s, bw, flat_bot(bw), x0, x1, "timber_lt", "timber", "x")
     s.box((2 * CAB, Y_END + 2.6, 0.6), (0, (Y_END + 2.6) / 2, Z_END - 0.3), T["timber"])
-    s.box((2 * W, Y0, 0.1), (0, Y0 / 2, Z0 - 0.05), T["timber"])      # the wall under the board's foot
+    s.box((2 * W, Y0, 0.1), (0, Y0 / 2, Z0 - 0.05), T["timber"])
     board_top(s, color=not col)
     cup_body(s)
     zc = (ARCH_Z0 + ARCH_Z1) / 2
@@ -303,7 +292,6 @@ def bulbs():
 def base(s):
     structure(s)
     side = lane_profile()
-    # Lane markings: bone edge lines, mint start bar and arrows, distance bars, a copper lip.
     for sx in (-1, 1):
         strip(s, 0.0, LANE_L - 0.6, sx * 2.45 - 0.07, sx * 2.45 + 0.07, 0.015, "bone")
     strip(s, 1.2, 1.8, -2.3, 2.3, 0.02, "mint")
@@ -314,7 +302,6 @@ def base(s):
     y6, y7 = lane_h(LANE_L - 0.5), lane_h(LANE_L)
     topped(s, [(-(LANE_L - 0.5), y6 + 0.04), (-LANE_L, y7 + 0.04)], [(-(LANE_L - 0.5), y6), (-LANE_L, y7)],
            -LANE_HW, LANE_HW, "copper", "copper_dk", "x")
-    # Iron rail caps, copper wall caps.
     for sx in (-1, 1):
         x0, x1 = sorted((sx * LANE_HW, sx * (LANE_HW + RAIL_T)))
         cap(s, [(z, y + RAIL_H) for z, y in side], x0 - 0.08, x1 + 0.08, 0.1, "iron_hi")
@@ -326,7 +313,6 @@ def base(s):
     cap(s, [(Z0, 3.05), (-LANE_L, 3.05)], -CAB - 0.05, -W + 0.05, 0.12, "copper", "copper_dk")
     s.box((2 * CAB + 0.2, 0.18, 0.8), (0, Y_END + 2.69, Z_END - 0.3), T["copper"])
     cup_decor(s)
-    # Scoreboard: frame, six blank amber panels (runtime draws digits), copper crown with marquee bulbs.
     zc = (ARCH_Z0 + ARCH_Z1) / 2
     s.box((2 * (CAB + 0.7) + 0.2, 0.22, 0.2), (0, HEAD_Y1 + 0.11, ARCH_Z1 - 0.05), T["copper"])
     s.box((2 * (CAB + 0.7) + 0.2, 0.22, 0.2), (0, HEAD_Y0 - 0.11, ARCH_Z1 - 0.05), T["copper"])
@@ -342,7 +328,6 @@ def base(s):
         s.box((0.9, 0.5, 1.6), (sx * (CAB + 0.35), 0.25, zc), T["copper_dk"])
     for x, y, z in bulbs():
         cp.lamp(s, x, y, z, 0.28)
-    # A copper kick strip across the foot of the board.
     thin(s, [P(-W, 0.0, 0.03), P(W, 0.0, 0.03), P(W, 0.25, 0.03), P(-W, 0.25, 0.03)], (0, CT, ST), 0.05, "copper")
 
 

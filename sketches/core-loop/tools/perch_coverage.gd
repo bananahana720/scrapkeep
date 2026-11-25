@@ -1,9 +1,5 @@
 extends SceneTree
 
-# Prints, per park, the Dispatcher's candidate perch tops by source (anchor posts, landform tops) with their
-# rise, and how many of 200 seeded pack points have a perch within 40 m. Read-only:
-#   godot --headless --path sketches/core-loop --script res://tools/perch_coverage.gd
-# Optional user args after `--`: park ids (default: all six shipped parks).
 
 const PerchPoints := preload("res://src/world/perch_points.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
@@ -36,7 +32,6 @@ func _initialize() -> void:
 				before += 1
 			if PerchPoints.pick(posts, packs[i], ground, blocked, i, ledges).is_finite():
 				after += 1
-		# A lower bound on the data change: tops added greedily at pack points until 60 percent are covered.
 		var covered := []
 		for i in packs.size():
 			covered.append(PerchPoints.pick(posts, packs[i], ground, blocked, i, ledges).is_finite())

@@ -4,21 +4,11 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 
-# Clip stills for the field crew (enemy_clips.gd): the real game, paused, one enemy at a time on
-# the launch lip or the Spillway dam apron, posed at each clip's key moments from a fixed three-quarter camera, so the
-# clips can be judged by eye on a phone page. The poses are the clip alone over the rest pose;
-# the scripts' own wind-up poses (the chaser's rear-up and the rest) add to them in play.
-# Display server needed:
-#   xvfb-run -s "-screen 0 1280x800x24" <godot> --path sketches/core-loop --rendering-driver opengl3 \
-#     --script res://tools/enemy_clip_capture.gd -- --out=/abs/dir [--kinds=chaser,lobber]
-# shots.json lists every still with its kind, clip and seconds.
 
 const SIZE := Vector2i(640, 480)
 const KINDS := ["chaser", "lobber", "mag_trapper", "plated_brute", "winch_drone", "jolt_layer"]
-# [clip, share of its length, label]; a null clip is the rest pose.
 const SHOTS := [[null, 0.0, "rest"], ["idle", 0.67, "idle"], ["move", 0.25, "move"], ["windup", 0.5, "windup_half"],
 	["windup", 1.0, "windup_release"], ["attack", 0.08, "attack"], ["hit", 0.12, "hit"], ["death", 1.0, "death"]]
-# Camera distance per kind, metres from the body's centre.
 const DISTANCE := {"chaser": 6.5, "lobber": 9.0, "mag_trapper": 8.5, "plated_brute": 7.0, "winch_drone": 8.0, "jolt_layer": 7.5}
 
 var game
@@ -68,7 +58,6 @@ func _run() -> void:
 	var base: Vector3 = terrain.drop_point(-65.0, -130.0, 0.0)
 	game.player.reset_to(base + Vector3(0, 0, -60))
 	game.player.visible = false
-	# The launch lip hides the feet on the dam; its open apron leaves ground beneath the tools.
 	var at: Vector3 = terrain.drop_point(10.0, 540.0, 1.2) if dam_apron else terrain.drop_point(base.x + 30.0, base.z + 25.0, 1.2)
 	var centre: Vector3 = at + Vector3.UP * (1.6 if dam_apron else 0.6)
 	for kind in kinds:

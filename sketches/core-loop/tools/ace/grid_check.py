@@ -1,4 +1,3 @@
-# Score how well a clip's onsets sit on candidate beat grids (phase-free comb over a spectral-flux envelope).
 import sys, numpy as np, soundfile as sf
 y, sr = sf.read(sys.argv[1]); y = y.mean(axis=1) if y.ndim > 1 else y
 n, hop = 2048, 256

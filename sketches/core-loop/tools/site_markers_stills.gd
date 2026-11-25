@@ -1,20 +1,5 @@
 extends SceneTree
 
-# Stills of the site markers (src/presentation/site_markers.gd): every plume on the dam (stage 1) and the flume
-# (stage 2) of the park table, each from FAR_M, MID_M and NEAR_M away at a rider's eye height, looking at the plume,
-# plus one control still from MID_M with the plumes hidden. A reader is asked "what is over there?" and whether it is
-# something to pick up or something to fight. Needs a rendered display:
-#
-#   xvfb-run -s "-screen 0 1920x1080x24" <godot> --path sketches/core-loop --script res://tools/site_markers_stills.gd \
-#     -- --out=<absolute dir> [--stages=1,2]
-#
-# On Andrew's PC run it only through the scratch launch (the PC lane rule): it writes PNGs under --out and the game
-# writes its user:// test files, so both belong in the scratch folder and never in his saves.
-#
-# Each still is <stage>_<kind>_<site>_<distance>.png; one line a still goes to stills.txt. The eye stands on the side of
-# the site toward the stage's drop-in, the way a rider meets it, turned by up to 180 degrees in 30 degree steps until
-# the ground does not block the line from the eye to the plume's middle at that distance (PC film of 79dcc01b: four of
-# nine sites looked into a wall). stills.txt says the bearing used and whether a clear one was found.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -77,7 +62,6 @@ func _run() -> void:
 		for key in markers.views.keys():
 			var view: MeshInstance3D = markers.views[key]
 			var kind := String(view.get_meta("kind"))
-			# Its site, not where it is drawn: a far kind is drawn pulled in along the eye's ray (site_markers.gd pull).
 			var foot: Vector3 = view.get_meta("at")
 			var toward := Vector2(drop.x - foot.x, drop.z - foot.z)
 			toward = toward.normalized() if toward.length() > 1.0 else Vector2(0.0, 1.0)
@@ -92,7 +76,6 @@ func _run() -> void:
 	quit(0)
 
 
-# The first bearing from toward, turning either way in 30 degree steps, whose eye at d sees look over the ground.
 func _clear_way(foot: Vector3, toward: Vector2, d: float, look: Vector3) -> Vector2:
 	for step in [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, -5, 6]:
 		var way := toward.rotated(deg_to_rad(30.0 * step))
@@ -105,8 +88,6 @@ func _clear_way(foot: Vector3, toward: Vector2, d: float, look: Vector3) -> Vect
 	return toward
 
 
-# Clear when neither the ground nor any collider stands between eye and look. The ray runs both ways and counts a hit
-# from inside, so an eye standing inside a building is never clear (PC film of fa8c5090).
 func _sees(eye: Vector3, look: Vector3) -> bool:
 	var space := root.get_world_3d().direct_space_state
 	for pair in [[eye, look], [look, eye]]:

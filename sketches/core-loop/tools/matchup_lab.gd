@@ -18,29 +18,8 @@ const Dials := preload("res://src/core/challenge_dials.gd")
 const PocketArena := preload("res://tools/pocket_arena.gd")
 const PocketTerrain := preload("res://tools/pocket_terrain.gd")
 
-# MATCHUP LAB (design-v3/ENEMY-PRIORITY.md lever 7; usage and definitions in tools/matchup_lab.md).
-# A headless duel table: each pilot alone against each enemy kind, N seeds, recording time to
-# kill and hull lost. It prints a pilot x kind heatmap, marks the HARD cells, and grades the
-# gate: every pilot has a hard cell, and the brawler bot wins each hard cell once given that
-# cell's answer item (a part whose row carries an `answers` tag for the cell's axis).
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/matchup_lab.gd \
-#     -- --out=<abs ndjson> [--procs=4] [--seeds=1,...,8] [--cap=40] [--dodge=0.65]
-#     [--pilots=a,b] [--kinds=a,b] [--answer=1] [--give=<part id>] [--range=18] [--idle=0]
-#   pack mode: -- --out=<abs ndjson> --packs=<id,id|all> [--table=park|alpha] [--range=12] ...
-#   perched duel: -- --out=<abs ndjson> --kinds=dispatcher --perched=park,mast [--range=15] ...
-#   pocket sweep: -- --out=<abs ndjson> --pocket=<half_pipe|rolling_wall|crevice|hazard_field|rail_grove|all>
-#     [--mobility=ground,flyer,burrower,hop] [--seeds=1,2,3,4,5] [--runs=3] [--plant=pilot_helpless=1|packs_passive=1|pack_damage=4] ...
-#   or: -- --from=<a.ndjson,b.ndjson> [--out=<heatmap txt>]   re-render saved rows
-#
-# Each duel is its own process (a bot run repeats exactly only in a fresh one). The harness is
-# tools/priority_proof.gd's: calm map, bot driver, the dodge share, the settle wait.
 
-# The two kill-first specials are measured by tools/priority_proof.gd: the Linker guards a
-# partner (nothing to duel alone) and the Foreman never attacks (its row is its crew).
 const SKIP_KINDS := ["linker", "foreman"]
-# The axis a kind's answer item must carry (ENEMY-PRIORITY section 5; items/parts tag
-# `answers`: range, spread, fuse, cc, air, plating). A kind not listed answers to range.
 const ANSWER_AXIS := {
 	"plated_brute": "plating", "deflector": "plating", "ballast_heavy": "plating",
 	"swarm_remnant": "spread", "lamp_swarm": "spread", "drill_crew": "spread", "prop_crew": "spread",
@@ -50,70 +29,44 @@ const ANSWER_AXIS := {
 	"kite_drone": "air", "winch_drone": "air",
 }
 const AXES := ["range", "spread", "fuse", "cc", "air", "plating"]
-# HARD: a cell's median time to kill over 2.0 x its row's median (row = that kind across pilots),
-# with the row median floored at MIN_ROW_S so a row of instant kills cannot make a second hard.
 const HARD_RATIO := 2.0
 const MIN_ROW_S := 1.0
-# The answer arm wins a cell when the bot kills in at least this share of seeds and the cell
-# is no longer hard against the unchanged baseline row median.
 const WIN_SHARE := 0.5
 const DODGE := 0.65
 const DUEL_RANGE := 18.0
-# Pack mode (--packs): a named authored pack is the opponent, closer in, spaced like Director._place_pack.
 const PACK_RANGE := 12.0
-# Beacon seconds no duel can reach (the stage's own is 25).
 const BEACON_PIN_S := 1.0e9
 const PACK_PREFIX := "pack:"
 const TABLES := ["park", "alpha"]
-# Perched duel (--perched): the Dispatcher on a park perch top (`park`) or on its own mast (`mast`).
-# The row key is `dispatcher@<mode>`. Both modes play the park table so the two rows share a map.
 const PERCHED_KIND := "dispatcher"
 const PERCHED_MODES := ["park", "mast"]
 const PERCH_SEP := "@"
 const PERCH_RANGE := 15.0
-# A relocated ball stands on ground this flat (height spread over STANDOFF_PROBES) and this clear of landforms.
 const STANDOFF_FLAT_M := 0.12
-# Probe offsets: the spot and 8 points on a 4 m ring, so a gentle slope (which rolls a resting ball) fails.
 const STANDOFF_PROBES := [Vector2(0, 0), Vector2(4, 0), Vector2(-4, 0), Vector2(0, 4), Vector2(0, -4), Vector2(2.8, 2.8), Vector2(-2.8, 2.8), Vector2(2.8, -2.8), Vector2(-2.8, -2.8)]
 const STANDOFF_CLEAR_M := 3.0
 const STANDOFF_BEARINGS := 16
 const STANDOFF_STEP_M := 5.0
 const STANDOFF_REACH_M := 15.0
-# A duel starts at rest: the ball must be grounded and slower than REST_SPEED for SETTLE_S in a
-# row. If it has not come to rest REST_WAIT_S after first landing, it is set to rest where it
-# stands (the player's own set_velocity_now); at SETTLE_MAX_S the duel starts regardless.
 const SETTLE_S := 2.0
 const REST_SPEED := 0.5
 const REST_WAIT_S := 6.0
 const SETTLE_MAX_S := 12.0
-# The hull pool a duel gives the ball, so a lost duel is measured by hull_lost and does not end the run.
 const HULL_POOL := 99999.0
 const WALL_LIMIT_S := 600.0
-# Outcomes that measured nothing: left out of the table and the answer arm.
 const NO_RESULT := ["no_result", "wall_timeout", "stage_changed", "no_perch", "not_perched"]
-# Pocket sweep (--pocket): a lab pocket (tools/lab_pockets) is the arena, a pack of three of one enemy kind is the
-# opponent, and the verdict per cell is the pilot's win rate. The row key is `pocket:<shape>/<enemy>`.
 const POCKET_PREFIX := "pocket:"
 const POCKET_SEP := "/"
 const POCKET_PACK := 3
 const POCKET_SEEDS := [1, 2, 3, 4, 5]
 const POCKET_RUNS := 3
-# A repeat run of one seed reseeds the run stream by this much per run index, so the three runs of a seed differ.
 const POCKET_RUN_STRIDE := 1000
-# The page's mobility kinds. Hop is "my grouping, not a code field": roster.gd MOVE_CLASSES lists only fixed, ground and
-# airborne, so no enemy kind hops and its cells are an explicit n/a.
 const POCKET_COLUMNS := [
 	{"id": "ground", "enemies": ["chaser"], "na": ""},
 	{"id": "flyer", "enemies": ["kite_drone", "winch_drone"], "na": ""},
 	{"id": "burrower", "enemies": ["burrower"], "na": ""},
 	{"id": "hop", "enemies": [], "na": "no enemy kind hops (roster MOVE_CLASSES: fixed, ground, airborne)"},
 ]
-# Test-only plants (the controls): `pilot_helpless=1` stands the pilot still (the --idle duel) and makes every enemy hit
-# HELPLESS_DAMAGE times as hard, so the first hit runs the hull out and the cell must read a 0% flag (idle alone is not
-# enough: a chaser pack blows itself up on a still ball, half_pipe 15 of 15 kills); `packs_passive=1` zeroes the mobs.damage dial (the packs still attack but cannot hurt) and
-# must drive a cell to 100%. `pack_damage=<k>` multiplies every enemy hit through that dial; it is kept as a probe, not
-# a control: pilots kill a pack of three in 1 to 7 s and take 0 or 1 hits, so x4 cannot reach 0%. Absent, nothing
-# changes.
 const PLANT_DIAL := "mobs.damage_mult"
 const HELPLESS_DAMAGE := 50.0
 const PENDING := "answer: pending (no answers tags on this base)"
@@ -122,22 +75,16 @@ const PENDING := "answer: pending (no answers tags on this base)"
 class DuelDriver extends BotDriver:
 	var enemy: Node3D = null
 	var adds: Array = []
-	# Pack mode: the pack's members; the driver fights the nearest live one (or add).
 	var members: Array = []
 	var dodge := 1.0
-	# --idle=1: the pilot stands still and never fights, so the lab's damage path can be shown
-	# (the planted positive control in tests/matchup_lab_test.gd).
 	var idle := false
 	var _dodge_rng := RandomNumberGenerator.new()
 	var _answers := {}
 
 	func _init(game_ref, policy_name: String, seed_number: int) -> void:
 		super(game_ref, policy_name, seed_number)
-		# Arena duels measure pilot combat and weapon cadence, not the explorer's two-hook
-		# traversal chain; keep the one-bite harpoon hand (as on Wardens and bosses).
 		chain_hand_enabled = false
 
-	# Each telegraph is answered or missed once, when first seen, from the run's own stream.
 	func _threats() -> Array:
 		var out: Array = []
 		for h in super._threats():
@@ -187,7 +134,6 @@ var _cap := 40.0
 var _parent := false
 var _done := false
 
-# Parent state.
 var _queue: Array = []
 var _running: Array = []
 var _results: Array = []
@@ -203,7 +149,6 @@ var _seeds: Array[int] = []
 var _answer_plan := {}
 var _out_rows: Array = []
 
-# Child state.
 var _pilot := ""
 var _kind := ""
 var _run_seed := 0
@@ -235,7 +180,6 @@ var _warnings := 0
 var _joined := 0
 var _scrap_serial := 0
 var _counter_serial := 0
-# Perched duel state (child).
 var _perched := ""
 var _perch_chosen := false
 var _early := ""
@@ -255,7 +199,6 @@ var _perch_rise := -1.0
 var _mast_built := false
 var _snap := {}
 var _dispatcher_down_s := -1.0
-# Pocket duel state (child).
 var _pocket := ""
 var _pocket_enemy := ""
 var _arena
@@ -267,7 +210,6 @@ var _hull_out := false
 var _base_seed := 0
 var _run_index := 0
 var _pocket_spots: Array = []
-# Pocket sweep state (parent).
 var _pocket_mode := false
 var _pocket_shapes: Array = []
 var _pocket_columns: Array = []
@@ -340,8 +282,6 @@ func _initialize() -> void:
 	_parent = true
 
 
-# --from=<a.ndjson,b.ndjson>: rebuild the heatmap and baseline gate from saved rows (runs nothing).
-# The answer arm is not replayed, so its cells read pending.
 func _render_from() -> void:
 	var rows := []
 	for path in String(_settings["from"]).split(",", false):
@@ -351,7 +291,6 @@ func _render_from() -> void:
 				rows.append(parsed)
 	var pocket_rows := rows.filter(func(r): return String(r.get("kind", "")).begins_with(POCKET_PREFIX))
 	if not pocket_rows.is_empty():
-		# A control shard pooled with a real shard would read as one cell: refuse a mix of plants.
 		var plants := {}
 		for r in pocket_rows:
 			plants[String(r.get("plant", ""))] = true
@@ -406,7 +345,6 @@ static func _parse(args: PackedStringArray) -> Dictionary:
 	return out
 
 
-# Every spawnable, built kind the director names, bar SKIP_KINDS.
 static func default_kinds() -> Array:
 	var out := []
 	for kind in Director.KIND_NAMES:
@@ -417,13 +355,10 @@ static func default_kinds() -> Array:
 	return out
 
 
-# ---- Pack tables ------------------------------------------------------------------------
-
 static func _defs(table: String) -> Array:
 	return AlphaDefs.DEFS if table == "alpha" else ParkDefs.DEFS
 
 
-# Every distinct pack id on a table, in first-seen stage order: each stage's `packs`, then its `elite`.
 static func pack_ids(table: String) -> Array:
 	var out := []
 	for def in _defs(table):
@@ -436,7 +371,6 @@ static func pack_ids(table: String) -> Array:
 	return out
 
 
-# The member kinds of a pack id: the first stage that names it wins (empty for an unknown id).
 static func pack_kinds(table: String, id: String) -> Array:
 	for def in _defs(table):
 		var entries: Array = (def.get("packs", []) as Array).duplicate()
@@ -448,7 +382,6 @@ static func pack_kinds(table: String, id: String) -> Array:
 	return []
 
 
-# The axis a pack's answer must carry: the most common ANSWER_AXIS among its members, ties by AXES order.
 static func pack_axis(members: Array) -> String:
 	var counts := {}
 	for k in members:
@@ -463,7 +396,6 @@ static func pack_axis(members: Array) -> String:
 	return best
 
 
-# The 9-char heatmap row label: kinds as is, a pack row `+<id>`.
 static func row_label(kind: String) -> String:
 	if PERCH_SEP in kind:
 		var parts := kind.split(PERCH_SEP)
@@ -472,8 +404,6 @@ static func row_label(kind: String) -> String:
 	return text.substr(0, 9)
 
 
-# Heatmap labels for `kinds`: row_label, with a numeric suffix on any label two rows share
-# (`+plate_pr` twice reads `+plate_pr` and `+plate_p2`).
 static func row_labels(kinds: Array) -> Dictionary:
 	var used := {}
 	var out := {}
@@ -489,14 +419,10 @@ static func row_labels(kinds: Array) -> Dictionary:
 	return out
 
 
-# ---- Perched duel ------------------------------------------------------------------------
-
-# The row key of a perched duel: `dispatcher@park` or `dispatcher@mast`.
 static func perched_key(mode: String) -> String:
 	return PERCHED_KIND + PERCH_SEP + mode
 
 
-# The mode of a perched row key, or "" for any other kind.
 static func perched_mode(kind: String) -> String:
 	if not kind.begins_with(PERCHED_KIND + PERCH_SEP):
 		return ""
@@ -504,8 +430,6 @@ static func perched_mode(kind: String) -> String:
 	return mode if mode in PERCHED_MODES else ""
 
 
-# --perched=park,mast against the --kinds list: valid only with dispatcher as the one duel kind
-# (and not in pack mode). {ok, kinds (the row keys, in the order given), error}.
 static func perched_plan(modes_text: String, kinds: Array, packs: bool) -> Dictionary:
 	var modes := Array(modes_text.split(",", false))
 	var bad := {"ok": false, "kinds": [], "error": ""}
@@ -526,14 +450,10 @@ static func perched_plan(modes_text: String, kinds: Array, packs: bool) -> Dicti
 	return {"ok": true, "kinds": keys, "error": ""}
 
 
-# ---- Pocket sweep: pure parts ------------------------------------------------------------
-
-# The row key of one pocket x enemy duel: `pocket:half_pipe/chaser`.
 static func pocket_key(shape: String, enemy: String) -> String:
 	return POCKET_PREFIX + shape + POCKET_SEP + enemy
 
 
-# {shape, enemy} of a row key, or {} for any other kind or an unknown shape.
 static func pocket_parts(key: String) -> Dictionary:
 	if not key.begins_with(POCKET_PREFIX) or POCKET_SEP not in key:
 		return {}
@@ -543,7 +463,6 @@ static func pocket_parts(key: String) -> Dictionary:
 	return {"shape": parts[0], "enemy": parts[1]}
 
 
-# The column an enemy kind sits in ("" when none lists it).
 static func pocket_column_of(enemy: String) -> String:
 	for column in POCKET_COLUMNS:
 		if enemy in column["enemies"]:
@@ -551,18 +470,14 @@ static func pocket_column_of(enemy: String) -> String:
 	return ""
 
 
-# The pilot of run `run` of seed `seed_value`: the band harness's seed rotation (class index = seed modulo the roster),
-# stepped one class per repeat, so the three runs of a seed are three classes, not one run three times.
 static func pocket_pilot(seed_value: int, run: int, roster: Array) -> String:
 	return String(roster[(seed_value + run) % roster.size()])
 
 
-# The rng seed of a run: the seed itself for the first run (so a seed's first run is the plain seed), then stepped.
 static func pocket_rng_seed(seed_value: int, run: int) -> int:
 	return seed_value + POCKET_RUN_STRIDE * run
 
 
-# Every duel job of a sweep, in shape, column, enemy, seed, run order. Hop (no enemies) queues nothing.
 static func pocket_jobs(shapes: Array, columns: Array, seeds: Array, runs: int, roster: Array) -> Array:
 	var jobs := []
 	for shape in shapes:
@@ -577,15 +492,11 @@ static func pocket_jobs(shapes: Array, columns: Array, seeds: Array, runs: int, 
 	return jobs
 
 
-# Who won a pocket duel. The pilot wins iff it killed the whole pack and its hull_lost stayed under the class's real max
-# hull; anything else the enemy wins (the hull ran out first, the cap passed, the pilot died). "void" is a run that
-# measured nothing (no result, wall timeout, stage change, or no real max hull to compare to).
 static func pocket_winner(row: Dictionary) -> String:
 	var outcome := String(row.get("outcome", "no_result"))
 	var cap_hull := float(row.get("real_max_hull", -1.0))
 	if outcome in NO_RESULT or cap_hull <= 0.0:
 		return "void"
-	# A pack that did not spawn whole measured a smaller fight than the cell's.
 	if row.has("spawned") and int(row["spawned"]) != POCKET_PACK:
 		return "void"
 	if outcome == "killed" and float(row.get("hull_lost", 0.0)) < cap_hull:
@@ -593,9 +504,6 @@ static func pocket_winner(row: Dictionary) -> String:
 	return "enemy"
 
 
-# One cell from its rows: the pilot's win rate over the runs that measured something, and the retune flag
-# (0% or 100%, the map page's rule). `flag_kind` is "low" at 0%, "high" at 100%, else "". `wins`, `n` (non-void),
-# `void` and `runs` are counts.
 static func pocket_cell(rows: Array) -> Dictionary:
 	var wins := 0
 	var n := 0
@@ -618,9 +526,6 @@ static func pocket_cell(rows: Array) -> Dictionary:
 	return {"na": false, "win_rate": rate, "wins": wins, "n": n, "void": voided, "runs": rows.size(), "flag": kind != "", "flag_kind": kind}
 
 
-# The table: shapes x columns. A column with no enemy kind is an explicit n/a cell (`na` true, with the reason). A
-# column with several (flyer) carries its sub-rows in `rows`, each its own cell; the column's cell pools them and
-# is flagged when any sub-row is.
 static func pocket_table(rows: Array, shapes: Array, columns: Array = []) -> Dictionary:
 	var out := {"shapes": shapes.duplicate(), "columns": [], "cells": {}}
 	for column in POCKET_COLUMNS:
@@ -680,7 +585,6 @@ static func _rate_text(cell: Dictionary) -> String:
 	return text
 
 
-# The table as markdown lines: pilot win rate per cell, n, and the retune flag.
 static func pocket_markdown(table: Dictionary) -> Array:
 	var lines := ["Pilot win rate per cell (the pilot kills the whole pack of %d inside the cap with hull lost under the class's real max hull). n counts runs that measured something. FLAG marks a 0%% or 100%% cell (retune)." % POCKET_PACK, ""]
 	var head := "| pocket |"
@@ -698,8 +602,6 @@ static func pocket_markdown(table: Dictionary) -> Array:
 	return lines
 
 
-# Parses --plant=<name>=<value>. {ok, name, value, dials (the ChallengeDials override), expect ("low" or "high" for the
-# canonical control values, else ""), error}. No spec is the identity: no dial, no expectation.
 static func pocket_plant(spec: String) -> Dictionary:
 	if spec == "":
 		return {"ok": true, "name": "", "value": 0.0, "dials": {}, "expect": "", "error": ""}
@@ -725,12 +627,9 @@ static func pocket_plant(spec: String) -> Dictionary:
 	return {"ok": false, "name": name, "value": value, "dials": {}, "expect": "", "error": "unknown --plant %s (pilot_helpless=1, packs_passive=1, pack_damage=<k>)" % name}
 
 
-# The control's reading: the planted cell must carry the plant's expected flag (0% for pack_damage, 100% for packs_passive).
 static func pocket_control_ok(plant: Dictionary, cell: Dictionary) -> bool:
 	return String(plant.get("expect", "")) != "" and not bool(cell.get("na", false)) and String(cell["flag_kind"]) == String(plant["expect"])
 
-
-# ---- Pocket sweep: parent ----------------------------------------------------------------
 
 func _begin_pocket_parent() -> void:
 	var shapes := PocketArena.SHAPES.duplicate() if String(_settings["pocket"]) == "all" else Array(String(_settings["pocket"]).split(",", false))
@@ -768,7 +667,6 @@ func _begin_pocket_parent() -> void:
 	_parent = true
 
 
-# Writes the pocket table beside the rows (markdown and JSON) and prints it. `rows` is every pocket row.
 func _write_pocket(rows: Array, columns: Array) -> void:
 	var shapes := []
 	for shape in PocketArena.SHAPES:
@@ -809,9 +707,6 @@ func _write_pocket(rows: Array, columns: Array) -> void:
 	js.close()
 
 
-# ---- Answer lookup ----------------------------------------------------------------------
-
-# The `answers` tags of a part row, as an array; empty when the field is absent.
 static func answers_of(row: Dictionary) -> Array:
 	var raw = row.get("answers", [])
 	if raw is String:
@@ -819,7 +714,6 @@ static func answers_of(row: Dictionary) -> Array:
 	return raw if raw is Array else []
 
 
-# True when any part row carries an `answers` field at all (the Systems lane's branch).
 static func answers_field_exists(rows: Dictionary) -> bool:
 	for id in rows:
 		if rows[id] is Dictionary and (rows[id] as Dictionary).has("answers"):
@@ -827,8 +721,6 @@ static func answers_field_exists(rows: Dictionary) -> bool:
 	return false
 
 
-# The part to hand `pilot` for `kind`'s axis: the first id (sorted) whose answers carry the
-# axis and whose class gate admits the pilot. "" when none, or when the field does not exist.
 static func answer_item(rows: Dictionary, pilot: String, kind: String, members := []) -> String:
 	var axis: String = pack_axis(members) if kind.begins_with(PACK_PREFIX) else ANSWER_AXIS.get(kind, "range")
 	var ids := rows.keys()
@@ -845,8 +737,6 @@ static func answer_item(rows: Dictionary, pilot: String, kind: String, members :
 		return String(id)
 	return ""
 
-
-# ---- Parent: the pool -------------------------------------------------------------------
 
 func _process(_delta: float) -> bool:
 	if not _parent or _done:
@@ -869,9 +759,6 @@ func _process(_delta: float) -> bool:
 	return false
 
 
-# The child's command line. A pack child names its pack list with --pack-table; a bare --table= here
-# would be read by Game._chosen_table() and move the duel onto a park or alpha stage map, away from
-# the legacy map the kind duels play.
 static func child_args(job: Dictionary, cap: float, settings: Dictionary, table_id: String, home: String, project_path: String) -> PackedStringArray:
 	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", project_path,
 			"--script", "res://tools/matchup_lab.gd", "--", "--pilot=" + String(job["pilot"]), "--kind=" + String(job["kind"]),
@@ -884,7 +771,6 @@ static func child_args(job: Dictionary, cap: float, settings: Dictionary, table_
 		args.append("--range=%s" % settings["range"])
 	if settings.has("idle"):
 		args.append("--idle=%s" % settings["idle"])
-	# A game variant behind a ChallengeDials key (the pack pressure experiments): every duel plays it.
 	if settings.has("tune"):
 		args.append("--tune=%s" % settings["tune"])
 	if String(job["kind"]).begins_with(PACK_PREFIX):
@@ -902,7 +788,6 @@ static func child_args(job: Dictionary, cap: float, settings: Dictionary, table_
 	return args
 
 
-# A pack whose members were all skipped (or never spawned) measured nothing: no_result, left out of the table.
 static func pack_outcome(spawned: int, outcome: String) -> String:
 	return "no_result" if spawned <= 0 else outcome
 
@@ -959,9 +844,6 @@ static func _remove_tree(path: String) -> void:
 	DirAccess.remove_absolute(path)
 
 
-# After the baseline table: for each hard cell, look up its answer item and queue the paired
-# duels with it in hand. Returns true when jobs were queued. With no `answers` field on this
-# base's part rows (or no row for a cell's axis) the cell is reported pending and nothing runs.
 func _begin_answer_phase() -> bool:
 	_phase = 2
 	if _pocket_mode:
@@ -1012,16 +894,10 @@ func _finish() -> void:
 	quit(0)
 
 
-# ---- Pure parts: table, hard cells, gate, heatmap ---------------------------------------
-
 static func cell_key(pilot: String, kind: String) -> String:
 	return "%s|%s" % [pilot, kind]
 
 
-# One cell per pilot x kind from baseline result rows: median time to kill over the seeds that
-# produced a result (a duel not won counts the cap), median hull lost, kills and runs. Then each
-# kind's row median (the median of its pilots' cell medians, floored at MIN_ROW_S) and the HARD
-# cells: median above HARD_RATIO x row median.
 static func build_table(results: Array, pilots: Array, kinds: Array, cap: float) -> Dictionary:
 	var cells := {}
 	for pilot in pilots:
@@ -1059,8 +935,6 @@ static func build_table(results: Array, pilots: Array, kinds: Array, cap: float)
 	return {"cells": cells, "pilots": pilots, "kinds": kinds, "row_median": row_median, "hard": hard, "cap": cap, "wall": wall_rows(cells, pilots, kinds)}
 
 
-# WALL rows: at least one pilot ran the row and no pilot killed. Such a
-# row's median is the cap, so the HARD rule (over 2.0 x the row median) can never flag it.
 static func wall_rows(cells: Dictionary, pilots: Array, kinds: Array) -> Array:
 	var out := []
 	for kind in kinds:
@@ -1076,7 +950,6 @@ static func wall_rows(cells: Dictionary, pilots: Array, kinds: Array) -> Array:
 	return out
 
 
-# Hard cells per pilot, in kind order.
 static func hard_by_pilot(table: Dictionary) -> Dictionary:
 	var out := {}
 	for pilot in table["pilots"]:
@@ -1086,7 +959,6 @@ static func hard_by_pilot(table: Dictionary) -> Dictionary:
 	return out
 
 
-# Gate part one: every pilot has at least one hard cell. {ok, missing}.
 static func gate_hard(table: Dictionary) -> Dictionary:
 	var missing := []
 	var by := hard_by_pilot(table)
@@ -1096,9 +968,6 @@ static func gate_hard(table: Dictionary) -> Dictionary:
 	return {"ok": missing.is_empty() and not (table["pilots"] as Array).is_empty(), "missing": missing}
 
 
-# Gate part two, per hard cell: "won" (the answer arm killed in at least WIN_SHARE of its seeds
-# and its median time is no longer hard against the baseline row median), "lost", or "pending"
-# (no answer item exists on this base). `plan` maps cell key to the item given ("" = none).
 static func grade_answers(table: Dictionary, answer_results: Array, plan: Dictionary, cap: float, seeds_per_cell: int, enabled := true) -> Dictionary:
 	var out := {}
 	for cell in table["hard"]:
@@ -1125,8 +994,6 @@ static func grade_answers(table: Dictionary, answer_results: Array, plan: Dictio
 	return out
 
 
-# Overall verdict: PASS needs every pilot hard-celled and every hard cell won; any pending
-# answer makes the second half INCONCLUSIVE rather than a pass.
 static func gate_verdict(table: Dictionary, answers: Dictionary) -> String:
 	if not gate_hard(table)["ok"] or not (table.get("wall", []) as Array).is_empty():
 		return "FAIL"
@@ -1196,7 +1063,6 @@ static func _answer_gate_word(answers: Dictionary) -> String:
 	return "PASS"
 
 
-# True when any row shows the enemy hurting the ball: a hit, damage taken or hull lost.
 static func damage_seen(rows: Array) -> bool:
 	for r in rows:
 		if float(r.get("hits", 0.0)) > 0.0 or float(r.get("damage_taken", 0.0)) > 0.0 or float(r.get("hull_lost", 0.0)) > 0.0:
@@ -1212,8 +1078,6 @@ static func median(values: Array) -> float:
 	var mid := sorted.size() / 2
 	return float(sorted[mid]) if sorted.size() % 2 == 1 else (float(sorted[mid - 1]) + float(sorted[mid])) * 0.5
 
-
-# ---- Child: one duel --------------------------------------------------------------------
 
 func _begin_child() -> void:
 	_pilot = String(_settings.get("pilot", ""))
@@ -1240,7 +1104,6 @@ func _begin_child() -> void:
 		_pocket_enemy = parts["enemy"]
 		_base_seed = int(_settings.get("base-seed", str(_run_seed)))
 		_run_index = int(_settings.get("run", "0"))
-		# A pocket duel is a pack duel of three of one kind on the pocket's far side: the pack bookkeeping is shared.
 		_pack_mode = true
 		_pack_id = _kind
 		_pack_members = []
@@ -1287,17 +1150,12 @@ func _physics_process(delta: float) -> bool:
 		var home := String(_settings["home"])
 		_game.codex.storage_dir = home
 		_game.run_log.storage_dir = home
-		# The brawler bot: the completionist profile, which fights with every verb it has.
 		_driver = DuelDriver.new(_game, "brawler", _run_seed)
 		_driver.class_index = BotDriver.class_index_for(0, _pilot)
 		_driver.dodge = float(_settings.get("dodge", str(DODGE)))
 		_driver.idle = String(_settings.get("idle", "0")) == "1" or String(_plant.get("name", "")) == "pilot_helpless"
 		_driver._dodge_rng.seed = hash(["dodge", _run_seed])
 		_driver.stage_limit = INF
-		# The calm map's beacon charges from the start (the ball begins in its ring; ctx.calm does not
-		# stop beacon.advance) and a full charge runs gates, launch and the next stage, which frees the
-		# duel's enemies (a long pack duel read `killed` with ttk -1 and duel_s -10.61). Pin the
-		# beacon out of reach so no duel can leave its stage; the stage guard below is the backstop.
 		_game.flow.beacon_seconds_override = BEACON_PIN_S
 		_game.presentation.audio.bake_now()
 		_bot_options.apply_audio(_game.presentation.audio)
@@ -1313,13 +1171,9 @@ func _physics_process(delta: float) -> bool:
 		return false
 	if not _spawned:
 		if _pocket != "" and _game.flow.in_stage():
-			# Pocket duel: the pilot starts at rest at the entry whatever the pocket's slope (the half pipe's floor falls 3%
-			# and the drop-in's speed would carry the ball down the channel): hold it still until the spawn.
 			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
 			_held = true
 		if _relocated:
-			# Perched duel: hold the relocated ball at its standoff (it may not be level), zeroing
-			# its velocity every frame with the player's own set_velocity_now until the spawn.
 			_game.player.set_velocity_now(Vector3.ZERO, "matchup_lab")
 			_held = true
 		var down: bool = _game.flow.in_stage() and _game.player.state.grounded
@@ -1335,12 +1189,10 @@ func _physics_process(delta: float) -> bool:
 				_perch_chosen = true
 				var step := _choose_perch()
 				if step == "no_perch" or step == "not_perched":
-					# Ended before the spawn: nothing to fight. not_perched keeps its diagnostic fields on the row.
 					_early = step
 					_end_early()
 					return false
 				if step == "relocated":
-					# The ball was moved: rest-start again from its new spot before spawning.
 					_grounded_s = 0.0
 					_landed_s = 0.0
 					_rest_forced = false
@@ -1357,16 +1209,13 @@ func _physics_process(delta: float) -> bool:
 	var over: bool = _driver.tick(delta)
 	var t := _duel_s()
 	if not over and (_game.run.stage != _spawn_stage or _game.run.stage_time < _start_s):
-		# The stage changed under the duel: its enemies were freed, so "cleared" would be false.
 		_stage_changed = true
 		_driver._end("stage_changed")
 		over = true
 	if not over and _pocket != "" and _spawned and _real_max_hull > 0.0 and _hull_lost() >= _real_max_hull:
-		# The pilot's real hull would have run out: the enemy won. The row says so and the duel ends.
 		_hull_out = true
 		_driver._end("hull_out")
 		over = true
-	# A freed object compares equal to null, so the duel's own flag says the enemy was ever set.
 	if _pack_mode:
 		if _pocket != "":
 			_track_kills(t)
@@ -1402,7 +1251,6 @@ func _physics_process(delta: float) -> bool:
 
 
 func _on_enemy_spawned(enemy: Node3D, _k: String) -> void:
-	# spawn_enemy emits this before it returns, so the duel's own enemy is not yet assigned.
 	if _collecting:
 		if enemy not in _driver.members:
 			_driver.members.append(enemy)
@@ -1416,7 +1264,6 @@ func _duel_s() -> float:
 	return _game.run.stage_time - _start_s
 
 
-# Won means the enemy and anything it made are down and nothing is still to come.
 func _cleared() -> bool:
 	if not _game.get_tree().get_nodes_in_group("enemy_pending").is_empty():
 		return false
@@ -1434,12 +1281,6 @@ func _spawn_duel() -> void:
 	_start_s = _game.run.stage_time
 	_spawn_stage = _game.run.stage
 	_hull_start = float(_game.run.metrics["hull_damage"])
-	# ctx.calm gates the Warden, the director's packs, flood and event pushes, and hit knockback in
-	# combat; it does not gate an enemy's attack or the damage it deals (combat._on_player_hit
-	# always calls run.damage). Turning it off here let director packs join and swamp the duel
-	# (joined 12 to 27 in a 40 s duel), so it stays on and the enemy under test attacks under the
-	# game's own rules. The hull is deep enough to measure a lost duel.
-	# A pocket duel judges the hull against what the pilot class really has, read before the pool replaces it.
 	_real_max_hull = float(_game.run.max_hp)
 	_game.run.set_max_hp(HULL_POOL)
 	if _settings.has("give"):
@@ -1463,11 +1304,6 @@ func _spawn_duel() -> void:
 	_enemy_set = true
 
 
-# ---- Perched duel (child) ---------------------------------------------------------------
-
-# Every perch top of the stage with its source: [{"top": Vector3, "source": "post"|"ledge"}], sorted
-# by position. These are the two sources PerchPoints has on this base (anchor-field post tops and
-# landform tops), filtered by the same validity rules pick() applies. Empty off a ParkMap.
 func _all_tops() -> Array:
 	var terrain = _game.ctx.terrain
 	var m = terrain.map()
@@ -1485,7 +1321,6 @@ func _all_tops() -> Array:
 	return out
 
 
-# Records the early outcome (_early), frees the game (and any enemy already spawned) and quits.
 func _end_early() -> void:
 	_done = true
 	_record()
@@ -1494,11 +1329,6 @@ func _end_early() -> void:
 	quit(0)
 
 
-# Chooses this seed's perch top. "near": the terrain's own pick was within reach of the resting ball.
-# "relocated": none was, so the ball was moved to a standoff `--range` from a top chosen from the whole
-# stage by the seed. "no_perch": the stage has no top at all. "not_perched": the standoff (or the resting
-# ball) is not clear of landforms or not PERCH_MIN under the top, or no spot lies in the play rect; the duel
-# ends before the spawn.
 func _choose_perch() -> String:
 	var terrain = _game.ctx.terrain
 	var tops := _all_tops()
@@ -1530,14 +1360,12 @@ func _choose_perch() -> String:
 		_relocated = true
 	_match_top(tops)
 	if not _relocated and _perch_top.y - float(terrain.height(ball.x, ball.z)) < PerchPoints.PERCH_MIN:
-		# The terrain's own pick is not PERCH_MIN over the resting ball: not a perched duel.
 		_perched_under = false
 		_perch_over_ball = _perch_top.y - float(terrain.height(ball.x, ball.z))
 		return "not_perched"
 	return "relocated" if _relocated else "near"
 
 
-# The chosen top's source and base rise, read from the stage's tops.
 func _match_top(tops: Array) -> void:
 	for entry in tops:
 		if (entry["top"] as Vector3).is_equal_approx(_perch_top):
@@ -1545,12 +1373,6 @@ func _match_top(tops: Array) -> void:
 			_perch_base_rise = float(entry["base_rise"])
 
 
-# A level, landform-clear spot for the ball: bearings (16, from `start`) at `distance`, then the radius
-# stepped out by STANDOFF_STEP_M up to STANDOFF_REACH_M past it. The first spot whose ground spread over
-# STANDOFF_PROBES is within STANDOFF_FLAT_M, clear of landforms and PERCH_MIN under the top wins (ok = true).
-# When none is, the best of: clear of landforms, then under the top, then least spread, is used with
-# ok = false. Spots outside the map's play rect are never candidates; when none lies inside it the result is
-# empty (never an unchecked spot). Returns {p (x, z), dist, ok, clear, under}, or {}.
 func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 	var terrain = _game.ctx.terrain
 	var m = terrain.map()
@@ -1575,13 +1397,9 @@ func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 				lo = minf(lo, h)
 				hi = maxf(hi, h)
 			var clear := not ParkRecipes.in_clear(blocked, p, STANDOFF_CLEAR_M)
-			# The top must stand PERCH_MIN over the ground the ball is held on: stamped landforms are terrain,
-			# not blockers, so a spot can lie on the same plateau as a ledge top (a Dispatcher 2 m over the ball).
 			var under: bool = top.y - float(terrain.height(p.x, p.y)) >= PerchPoints.PERCH_MIN
 			if under and clear and hi - lo <= STANDOFF_FLAT_M:
 				return {"p": p, "dist": dist, "ok": true, "clear": true, "under": true}
-			# Clear first (a ball placed in a solid is wrong whatever the rise), then under, then spread; a
-			# clear spot that is not under the top is flagged by perched_under false.
 			var score := (hi - lo) + (0.0 if under else 1000.0) + (0.0 if clear else 10000.0)
 			if score < best_score:
 				best_score = score
@@ -1589,8 +1407,6 @@ func _standoff(top: Vector3, distance: float, start: float) -> Dictionary:
 	return best
 
 
-# The Dispatcher goes on the chosen top: `park` passes it as the spawn's perch (no mast built);
-# `mast` leaves the arg off so the Dispatcher builds its own mast at the top's flat spot.
 func _spawn_perched(ball: Vector3) -> void:
 	var terrain = _game.ctx.terrain
 	var at: Vector3 = terrain.drop_point(_perch_top.x, _perch_top.z, 1.8)
@@ -1604,20 +1420,15 @@ func _spawn_perched(ball: Vector3) -> void:
 	_perch_over_ball = _driver.enemy.global_position.y - float(terrain.height(ball.x, ball.z))
 	_perched_under = _perch_over_ball >= PerchPoints.PERCH_MIN
 	if not _perched_under:
-		# The real body is not PERCH_MIN over the ball (a mast row on a tall post, or a held ball that drifted
-		# uphill): not a perched duel. The caller ends the run before any fight.
 		_early = "not_perched"
 	_perch_rise = float(_driver.enemy.perch_height()) if _driver.enemy.has_method("perch_height") else -1.0
 	_mast_built = _driver.enemy.get("mast") != null
 
 
-# The Dispatcher's own counters, kept each tick while it lives (it is freed at death).
 func _snapshot(enemy: Node3D) -> void:
 	_snap = {"drops": int(enemy.get("drops")), "landed_hits": int(enemy.get("landed_hits")), "escalation": int(enemy.get("escalation"))}
 
 
-# The pack side by side across the line, centered offsets like Director._place_pack. Members the
-# roster has not built are skipped and recorded. Anything a member makes while it spawns joins the pack.
 func _spawn_pack(center: Vector3, forward: Vector3) -> void:
 	var side := Vector3(-forward.z, 0.0, forward.x)
 	_collecting = true
@@ -1636,11 +1447,6 @@ func _spawn_pack(center: Vector3, forward: Vector3) -> void:
 	_enemy_set = true
 
 
-# ---- Pocket duel (child) ----------------------------------------------------------------
-
-# Stands the lab pocket up as the arena before the run starts: the pocket's colliders over the legacy map, the legacy
-# colliders off, and the live Terrain instance re-scripted (its variables carried across) so every holder of
-# ctx.terrain, and every enemy handed it, reads the pocket for height, drop_point, spawn_point and entry_heading.
 func _install_pocket() -> void:
 	_arena = PocketArena.new()
 	if not _arena.build(_game.ctx.root, _pocket, Vector3(0.0, PocketArena.LIFT, 0.0)):
@@ -1651,7 +1457,6 @@ func _install_pocket() -> void:
 	for body in legacy.find_children("*", "CollisionObject3D", true, false):
 		(body as CollisionObject3D).collision_layer = 0
 	var live = _game.ctx.terrain
-	# set_script drops the instance's variables, so the live Terrain's are carried across by hand.
 	var kept := {}
 	for prop in live.get_property_list():
 		if int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE:
@@ -1662,7 +1467,6 @@ func _install_pocket() -> void:
 	live.arena = _arena
 
 
-# The pack of three on the pocket's far side, each dropped with terrain.drop_point like a pack duel's members.
 func _spawn_pocket_pack() -> void:
 	_collecting = true
 	_pocket_spots = _arena.pack_spots(POCKET_PACK, Director.PACK_SPREAD)
@@ -1681,7 +1485,6 @@ func _hull_lost() -> float:
 	return float(_game.run.metrics["hull_damage"]) - _hull_start
 
 
-# Kill order: the slot (spawn order, left to right across the line) of each pack member as it falls.
 func _track_kills(t: float) -> void:
 	for i in _pocket_slots.size():
 		if not DuelDriver.alive(_pocket_slots[i]) and not _kill_order.any(func(k): return k["slot"] == i):

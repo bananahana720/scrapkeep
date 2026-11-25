@@ -1,6 +1,5 @@
 extends RefCounted
 
-# Opt-in timing only. Scope lifetime covers early returns as well as the full body.
 static var enabled := false
 static var _stack: Array = []
 static var _totals := {}

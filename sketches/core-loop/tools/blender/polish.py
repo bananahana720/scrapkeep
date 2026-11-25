@@ -1,19 +1,3 @@
-# Model polish pass: soft bevels, denser curves, smooth shading with hard creases, and baked
-# ambient occlusion and edge wear in the vertex colours. Andrew's 18 Oct ask: models should
-# read baked and detailed, not as primitives tacked together, while frames stay in budget.
-#
-# A recipe opts in before it builds any Part:
-#
-#     import common, polish
-#     polish.enable(detail=2, bevel=0.03)
-#
-# common.Part then runs `shape` on each part's bmesh before triangulating, and
-# common.export runs `bake` over the whole tree before writing the GLB. A recipe that
-# never calls enable() is untouched, byte for byte.
-#
-# Everything here is deterministic: fixed ray directions, sorted element order and
-# colours rounded to 1/1024, so a rebuild stays byte-identical.
-
 import math
 
 import bmesh
@@ -24,37 +8,21 @@ from mathutils.bvhtree import BVHTree
 import common
 
 DEFAULTS = {
-    # Segment multiplier for cyl, rod, uv and ring; ico gains one subdivision at 2+.
     "detail": 2,
-    # Bevel width in metres on edges sharper than bevel_angle; 0 turns bevels off.
     "bevel": 0.03,
     "bevel_angle": 30.0,
     "bevel_segments": 1,
-    # Edges shorter than this keep hard (no bevel), so bolts and rivets stay cheap while
-    # the big panels round off; 0 bevels every hard edge.
     "bevel_min": 0.0,
-    # Faces are smooth; edges sharper than this stay hard after the bevel.
     "sharp_angle": 50.0,
-    # Catmull-Clark levels for parts (a Part's own .subsurf wins). Hard edges are creased,
-    # so boxes keep their corners and bevels turn into fillets. Each level is about 4x tris.
     "subsurf": 0,
-    # Scale each connected piece back to its unpolished bounding box after bevel and
-    # subdivision, so measured envelopes (core radius, ear tips, bulb size) hold exactly.
     "fit": False,
-    # On subdivided parts only edges sharper than this stay creased; softer ones round off.
     "crease_angle": 70.0,
-    # Ambient occlusion: rays per corner, reach as a fraction of the asset's radius, and
-    # how dark a fully covered corner gets. Only faces in bake_slots take it, because
-    # only vertex-coloured slots show vertex colour in the game.
     "ao": True,
     "ao_rays": 24,
     "ao_reach": 0.18,
     "ao_strength": 0.55,
-    # Convex edges lighten and creases darken by up to this much (curvature bake).
     "edge": 0.18,
     "bake_slots": None,
-    # Linear RGB colours the bake never changes: a state key a shader matches exactly (the
-    # kit steel shader tints loops within 0.02 of mint), so darkening it would break the tint.
     "bake_keep": (),
 }
 
@@ -78,8 +46,6 @@ def options():
     return _opts
 
 
-# --- shape: per part, on the bmesh before triangulation -------------------------------
-
 def _angle(edge):
     if len(edge.link_faces) != 2:
         return 180.0
@@ -95,10 +61,6 @@ def shape(bm, opts=None, bevel=None):
     bm.normal_update()
     bm.edges.index_update()
     if width > 0:
-        # Each loose piece (a kitbashed box, bolt, groove or decal) bevels at most a
-        # quarter of its thinnest side: a full-width bevel on a 1.5 cm groove or a flat
-        # decal folds the faces through each other. Pieces too thin for 5 mm keep their
-        # edges, which also spares triangles on bolts and weld beads.
         groups = {}
         for island in _islands(bm):
             co = [v.co for f in island for v in f.verts]
@@ -117,8 +79,6 @@ def shape(bm, opts=None, bevel=None):
                                 clamp_overlap=True, loop_slide=True, material=-1)
                 bm.normal_update()
                 bm.edges.index_update()
-        # A clamped bevel that meets itself leaves coincident corners: zero-area
-        # triangles the asset tests reject.
         bmesh.ops.dissolve_degenerate(bm, dist=1e-6, edges=sorted(bm.edges, key=lambda e: e.index))
         bm.normal_update()
     for f in bm.faces:
@@ -189,7 +149,6 @@ def subdivide_where(bm, levels, pick):
                     if h.index not in seen:
                         seen.add(h.index)
                         stack.append(h)
-        # Recipes can emit faces in a different order between runs; order by vertex.
         island.sort(key=lambda g: [la.vert.index for la in _loops(g)])
         if pick(island):
             picked.append(island)
@@ -379,7 +338,6 @@ def _append(dst, src):
         for sl, dl in vert_layers:
             nv[dl] = v[sl]
         verts.append(nv)
-    # Faces in a fixed order too: by their vertex indices from the lowest corner.
     for loops in sorted((_loops(f) for f in src.faces), key=lambda ls: [l.vert.index for l in ls]):
         f = loops[0].face
         nf = dst.faces.new([verts[l.vert.index] for l in loops])
@@ -404,8 +362,6 @@ def _avg(points):
 
 
 def _cc(src):
-    # A concave ngon's centroid can fall outside it and fold the corner quads; ear-clip
-    # those first.
     src.normal_update()
     concave = [f for f in src.faces if len(f.verts) > 4 and not common._convex(f)]
     if concave:
@@ -442,9 +398,6 @@ def _cc(src):
                    for kind in ("float_color", "color", "uv") for name in getattr(src.loops.layers, kind).keys()]
     sdef = src.verts.layers.deform.active
     ddef = dst.verts.layers.deform.new() if sdef is not None else None
-    # Integer vertex layers are rig and part tags (pilot_bone, tally_bone, rig_part...):
-    # a new vertex takes the tag most of its source vertices share, the lowest on a tie.
-    # Float vertex layers average.
     ints = [(src.verts.layers.int[n], dst.verts.layers.int.new(n)) for n in src.verts.layers.int.keys()]
     floats = [(src.verts.layers.float[n], dst.verts.layers.float.new(n)) for n in src.verts.layers.float.keys()]
 
@@ -512,8 +465,6 @@ def _cc(src):
     return dst
 
 
-# --- bake: AO and edge wear into vertex colours, over the whole asset ------------------
-
 def _directions(n):
     """n fixed directions over the upper hemisphere (Fibonacci spiral), cosine weighted."""
     out = []
@@ -546,13 +497,11 @@ def bake(root, opts=None):
     if not meshes:
         return
     bpy.context.view_layer.update()
-    # One BVH over every mesh in world space, so parts shade each other.
     verts, polys = [], []
     for ob in meshes:
         mw = ob.matrix_world
         base = len(verts)
         verts += [mw @ v.co for v in ob.data.vertices]
-        # Glass and other see-through slots let light through, so they cast no occlusion.
         clear = {i for i, m in enumerate(ob.data.materials)
                  if m is not None and common.SLOTS.get(m.name, {}).get("alpha", 1.0) < 1.0}
         polys += [[base + i for i in p.vertices] for p in ob.data.polygons if p.material_index not in clear]
@@ -568,23 +517,15 @@ def bake(root, opts=None):
         if attr is not None and attr.domain != "CORNER":
             attr = None
         baked = {i for i, m in enumerate(me.materials) if m is not None and m.name in slots} if attr else set()
-        # UV2 carries the raw bake for every face (x: unoccluded fraction, y: wear with 0.5
-        # neutral), so runtime materials of any slot can opt in. Godot reads TEXCOORD_1 as
-        # UV2; a mesh that already has two UV maps keeps them and gets no UV2 bake.
         uv2 = None
         if len(me.uv_layers) < 2:
             if len(me.uv_layers) == 0:
-                # A new layer starts with per-face unit squares; zero it so it adds no seams.
                 uv1 = me.uv_layers.new(name="UVMap")
                 uv1.data.foreach_set("uv", [0.0] * (2 * len(uv1.data)))
             uv2 = me.uv_layers.new(name="Bake")
         mw = ob.matrix_world
         rot = mw.to_3x3().normalized()
         # Area-weighted vertex normals summed in a fixed order: Blender's own corner normals
-        # differ in the last bits between runs, which would flip rounded bake values.
-        # Polygon normals come from Newell's method in Python doubles, starting each polygon
-        # at its lowest vertex and summing each vertex's polygons in sorted order, since
-        # polygon order and winding start can differ between runs.
         co = [tuple(v.co) for v in me.vertices]
         acc = [[] for _ in me.vertices]
         for poly in me.polygons:
@@ -605,8 +546,6 @@ def bake(root, opts=None):
             pn.append(Vector((math.fsum(t[0] for t in terms), math.fsum(t[1] for t in terms),
                               math.fsum(t[2] for t in terms))))
         pn = [v.normalized() if v.length > 1e-12 else Vector((0, 0, 1)) for v in pn]
-        # Curvature per vertex: how far the neighbours sit below (convex) or above
-        # (concave) the vertex's tangent plane, relative to the edge length.
         terms = [[] for _ in me.vertices]
         for e in me.edges:
             a, b = e.vertices
@@ -635,16 +574,9 @@ def bake(root, opts=None):
                         for d in dirs:
                             w = t * d.x + bt * d.y + n * d.z
                             hit = tree.ray_cast(p, w, reach)
-                            # A back face means the corner sits inside another part
-                            # (kitbashed primitives overlap); that part hides nothing.
-                            # Where a front and a back face meet the ray at one point (a
-                            # shared edge, coplanar overlaps) the BVH returns either by
-                            # run, so any front face at the hit point counts.
                             if hit[0] is not None and (hit[1].dot(w) < 0.0 or any(
                                     f[1].dot(w) < 0.0 for f in tree.find_nearest_range(hit[0], reach * 1e-4))):
                                 occ += 1.0 - (hit[3] / reach) ** 2
-                        # Rays that graze a shared edge can hit either face; rounding
-                        # drops that last-bit noise before the 1/1024 quantisation.
                         occ = round(occ / len(dirs), 6)
                     k = curv[vi]
                     wear = max(-1.0, min(1.0, k * 2.5)) * o["edge"]

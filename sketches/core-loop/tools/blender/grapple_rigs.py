@@ -1,46 +1,3 @@
-# W47-GRAPPLE-3D: the universal grapple rigs (rule G0/G1, Andrew 24 Nov 2026; master bible section 3.1,
-# taste rubric section 6b). Every pilot keeps one line; what differs is the hardware of that line, drawn
-# as four parts: the Head (what bites), the Line (what it is made of), the Drive (what pays out and reels
-# in, and visibly turns) and the Mount (which hub it sits on). One GLB per part, so a build mutation
-# swaps exactly one file (the one-part swap law, bible section 3.2).
-# Concept: artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g10-universal-grapple-rigs-a.png
-# and g11-universal-grapple-rigs-b.png. Tally's rig is W47-TALLY-A-3D's (shell_tally.py), not this file's.
-#
-#   blender -b --factory-startup --python-exit-code 1 -P tools/blender/grapple_rigs.py -- [--out-dir DIR] [--pilot NAME]
-#
-# Files: assets/models/grapple/grapple_<pilot>_<part>.glb for pilot in sable, rivet, kest, tarn, cannon and
-# part in head, line, drive, mount. Detail class (assets/asset_budgets.json: 4,000 tris, 8,000 verts,
-# 2 draws); every part here is one mesh on one surface, so one draw, and a whole rig draws four.
-#
-# Axes: Blender metres, +Y forward, +Z up; glTF and Godot +Y up, -Z forward (Blender (x, y, z) is Godot
-# (x, z, -y)). Shell scale: the ball centre is the origin and the cutaway plating is 0.985 m.
-#
-# Node contract (the binder, W47-GRAPPLE-CODE, finds every node by name):
-#   grapple_<pilot>_mount.glb   GrappleMount (empty, the ball centre) > MountRig (skeleton) > Mount (skinned)
-#       Mount it at identity under the shell node named in FRAME below (Pod, or Pod > WeaponRing for the
-#       pilots whose rig turns with the aim). Sockets (empties under GrappleMount):
-#       socket_drive   the drive's axle centre; its local +X is the axle. Put the drive's root here.
-#       socket_line    the fairlead the line leaves; its local Blender +Y (Godot -Z) is the rest lead.
-#       socket_head    where the head docks at rest, pointing the same way as socket_line.
-#       Bones: mount (root, the ball centre) and the one mount actuator in ACTUATORS.
-#   grapple_<pilot>_drive.glb   GrappleDrive (empty, the axle centre) > Drive. The axle is local X: spin it
-#       about X while the line pays out or reels in (payout positive). Every drive carries a flange tick,
-#       a gear or a spring tab off its axis, so a quarter turn reads at the chase camera.
-#   grapple_<pilot>_line.glb    GrappleLine (empty) > Line. A one-metre tile from the origin along Blender +Y
-#       (Godot -Z): look_at the head from socket_line, then scale local Z to the length or tile it; the
-#       strand twist is a whole number of turns per metre, so tiles meet without a seam.
-#   grapple_<pilot>_head.glb    GrappleHead (empty, the line's attach eye) > HeadRig (skeleton) > Head
-#       (skinned). It bites along Blender +Y (Godot -Z), so look_at aims it. Bones: head (root) and the head
-#       actuators in ACTUATORS.
-# Every actuator bone points along Blender +Y with no roll, so its rest frame is the model frame; ACTUATORS
-# names the axis (Godot frame) each one turns about or slides along, and its bite pose.
-# Paint: palette.gd hexes only (common.HEX and STEEL #9aa0a0), vertex colour on one surface per part:
-# hydraulic (metal, keeps its colours, hero_assets.gd SLOT_SPECS) for the hardware, paint with take mask 0
-# (keeps its colours under any paint) for hemp and braid. No emission and no mint: Sable's petrol lattice
-# stays unlit (Andrew call #1), Tarn has no magnet or coil (call #4), Rivet's drill nose is untouched.
-# The build fails on a part over its class, an open or inside-out island, or a rest assembly that reaches
-# past REACH or hangs below FLOOR_Z outside the ball (the low-reach rule of shell_base.low_reach).
-
 import argparse
 import contextlib
 import hashlib
@@ -57,24 +14,24 @@ from mathutils import Matrix, Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402  (also registers the copper slot)
-from common import Part  # noqa: E402
+import common
+import shell_base as sb
+from common import Part
 
 OUT_DIR = os.path.join(common.MODELS, "grapple")
-CAP = {"tris": 4000, "verts": 8000, "draws": 1}     # detail class tris and verts; one draw per part by design
-REACH = 1.75                                        # ruling en: the visual weapon reach from the ball centre
-FLOOR_Z = -0.55                                     # ruling en: slopes never swallow a pod
-LOW_RADIUS = 1.0                                    # below FLOOR_Z a part must stay inside the ball silhouette
+CAP = {"tris": 4000, "verts": 8000, "draws": 1}
+REACH = 1.75
+FLOOR_Z = -0.55
+LOW_RADIUS = 1.0
 PILOTS = ("sable", "rivet", "kest", "tarn", "cannon")
 PARTS = ("head", "line", "drive", "mount")
 
-STEEL = "9aa0a0"                                    # palette.gd STEEL
+STEEL = "9aa0a0"
 STEEL_DARK = common.mix(STEEL, "charcoal", 0.45)
-STEEL_WORN = common.mix(STEEL, "bone", 0.40)        # bright wear on blade edges
+STEEL_WORN = common.mix(STEEL, "bone", 0.40)
 HEMP = common.mix("sandstone", "bone", 0.35)
 BRAID = common.mix("bone", STEEL, 0.40)
-SATCHEL = common.mix("amber", "oxide", 0.30)        # Kest's amber satchels (master bible section 4)
+SATCHEL = common.mix("amber", "oxide", 0.30)
 SATCHEL_FLAP = common.mix("amber", "oxide", 0.55)
 
 X, Y, Z = Vector((1, 0, 0)), Vector((0, 1, 0)), Vector((0, 0, 1))
@@ -105,12 +62,9 @@ def x_to(axis):
     """Quaternion taking local +X to axis, keeping +Z as near up as it can."""
     a = Vector(axis).normalized()
     up = Z if abs(a.dot(Z)) < 0.95 else Y
-    b = up.cross(a).normalized()          # local Y
-    c = a.cross(b).normalized()           # local Z
+    b = up.cross(a).normalized()
+    c = a.cross(b).normalized()
     return basis((0, 0, 0), a, b, c).to_quaternion()
-
-
-# --- one mesh under construction --------------------------------------------------------------------
 
 
 class Rig:
@@ -121,7 +75,7 @@ class Rig:
         self.part = Part(name)
         self.bm = self.part.bm
         self.slot = slot
-        self.bones = list(bones)                  # (name, head, parent)
+        self.bones = list(bones)
         self.names = [b[0] for b in self.bones]
         self.tag = self.bm.verts.layers.int.new("bone") if self.bones else None
         self.current = self.names[0] if self.bones else None
@@ -285,7 +239,7 @@ class Rig:
             a = k * math.tau / teeth
             s = math.tau / teeth
             out += [(r_root, a), (r_tip, a + s * 0.2), (r_tip, a + s * 0.45), (r_root, a + s * 0.65)]
-        rot = m @ Matrix.Rotation(-math.pi / 2, 4, "X")     # prism depth (local Z) onto local Y
+        rot = m @ Matrix.Rotation(-math.pi / 2, 4, "X")
         pts = [(r * math.cos(a), r * math.sin(a)) for r, a in out]
         return self.prism(pts, depth, rot, color)
 
@@ -300,9 +254,6 @@ class Rig:
 
     def verts(self):
         return [v.co.copy() for v in self.bm.verts]
-
-
-# --- shared drive pieces (axle along local X) ------------------------------------------------------
 
 
 AXLE = frame((0, 0, 0), X)
@@ -336,10 +287,6 @@ def bolts(rig, x, radius, count, color, r=0.011, h=0.012, start=0.0):
         rig.cyl(c - X * sgn * 0.002, c + X * sgn * h, r, 6, color)
 
 
-# --- the five rigs ---------------------------------------------------------------------------------
-# Each pilot: FRAME (the shell node the mount sits under), DRIVE_C and DRIVE_AXIS (world axle centre and
-# direction), LINE_AT (the fairlead), HEAD_AT (the rest dock, or None) and the four builders.
-
 HUBS, _, _ = sb.lattice_layout()
 
 
@@ -351,7 +298,7 @@ class Sable:
     DIR = HUBS[26].normalized()
     DRIVE_C = DIR * 1.06
     DRIVE_AXIS = Y
-    UP = (Z - DIR * Z.dot(DIR)).normalized()          # in the cheek plane, away from the ground
+    UP = (Z - DIR * Z.dot(DIR)).normalized()
     LINE_AT = DRIVE_C + Y * 0.19 + DIR * 0.085 - UP * 0.03
     HEAD_AT = LINE_AT
 
@@ -360,7 +307,6 @@ class Sable:
         rig.lathe(AXLE, [(-0.125, 0.022), (0.17, 0.022)], 8, "charcoal")
         rig.lathe(AXLE, [(-0.076, 0.07), (0.076, 0.07)], 12, STEEL_DARK)
         wraps(rig, -0.06, 0.06, 0.07, 0.013, 5, STEEL)
-        # The brake drum on the shaft outboard of the forward cheek; the mount's brake shoe bears on it.
         rig.lathe(AXLE, [(0.138, 0.05), (0.166, 0.05)], 14, "charcoal")
         flange_ticks(rig, 0.166, 0.012, 0.046, "copper", count=1, w=0.014, h=0.006)
         for s in (-1, 1):
@@ -380,9 +326,7 @@ class Sable:
             for t in (-1, 1):
                 p = c - d * 0.075 + Y * s * 0.09 + up * t * 0.055
                 rig.cyl(p, p + d * 0.012, 0.010, 6, "copper")
-        # Ratchet pawl on the forward cheek, over the gear's teeth.
         rig.beam(c + Y * 0.11 + up * 0.112 - d * 0.03, c + Y * 0.10 + up * 0.10, 0.016, 0.014, "charcoal", up=d)
-        # Fairlead: a copper rope ring on a stub arm off the forward cheek's outer lower corner.
         f = cls.LINE_AT
         rig.beam(c + Y * 0.12 + d * 0.02 - up * 0.065, f - Y * 0.012, 0.024, 0.02, "petrol", up=up)
         rig.torus(f, Y, 0.032, 0.011, 12, 6, "copper")
@@ -465,13 +409,10 @@ class Rivet:
             rig.box((c.x, y, c.z + 0.045), (0.11, 0.02, 0.25), "charcoal")
             rig.cyl((c.x, y - 0.014, c.z), (c.x, y + 0.014, c.z), 0.034, 10, "copper")
         rig.box((c.x, 0.957, c.z + 0.175), (0.05, 0.275, 0.03), "charcoal")
-        # Hanger post up to the ring's bearing collar (sb.RING_COLLAR), copper clamp band at its top.
         top = Vector((c.x * 0.99, c.y * 0.99, -0.065))
         rig.cyl((c.x, c.y, c.z + 0.175), top, 0.026, 8, "charcoal")
         rig.cyl(top - Z * 0.03, top + Z * 0.004, 0.034, 8, "copper")
-        # Level-wind guide bar along the axle, over the drum.
         rig.cyl((c.x, 0.84, -0.29), (c.x, 1.075, -0.29), 0.011, 8, "copper")
-        # Fairlead: four copper rollers framing a square window on the front cheek's top.
         f = cls.LINE_AT
         rig.box((f.x, f.y - 0.006, f.z + 0.01), (0.10, 0.012, 0.08), "charcoal")
         for s in (-1, 1):
@@ -631,8 +572,6 @@ class Tarn:
         rig.cyl((-0.24, -1.13, c.z), (0.24, -1.13, c.z), 0.02, 8, "charcoal")
         for s in (-1, 1):
             rig.beam((s * 0.232, -1.08, c.z), (s * 0.232, -1.13, c.z), 0.03, 0.03, "oxide")
-        # The rope run: the hemp leaves the drum's top, runs round the lower right flank at 1.05 m in
-        # three oxide clips and reaches the fairlead at 3 o'clock.
         start = c + Vector((0.12, 0.02, 0.124))
         run = [start]
         for k in range(1, 10):
@@ -693,7 +632,7 @@ class Tarn:
                 pts, radii = [], []
                 for i in range(9):
                     t = i / 8
-                    ang = math.radians(12 - 70 * t)      # leaves 12 deg outward, curls 58 deg inward
+                    ang = math.radians(12 - 70 * t)
                     along = L * math.sin(math.radians(80) * t) * 0.95
                     off = rad * (L * 0.32 * math.sin(math.pi * t * 0.9) - L * 0.18 * t * t)
                     pts.append(hinge + Y * along + off)
@@ -727,7 +666,6 @@ class Cannon:
             rig.lathe(AXLE, [(a, 0.035), (a, 0.11), (b, 0.11), (b, 0.035)], 16, ["charcoal", "bone", "charcoal"])
         rig.gear(axle_frame(0.095), 0.108, 0.13, 16, 0.014, "copper")
         bolts(rig, -0.088, 0.075, 4, "charcoal", r=0.012)
-        # One dash of the barrel's harmonic green (palette ANCIENT, unlit) on the rear flange: the turn read.
         flange_ticks(rig, -0.088, 0.04, 0.105, "ancient", count=1, w=0.03)
 
     @classmethod
@@ -737,7 +675,6 @@ class Cannon:
             rig.obox(c + Y * s * 0.115 - d * 0.05, (d, Y, up), (0.17, 0.02, 0.12), "petrol")
             rig.cyl(c + Y * s * 0.103, c + Y * s * 0.128, 0.032, 10, "copper")
         rig.obox(c - d * 0.10, (d, Y, up), (0.05, 0.25, 0.15), "petrol")
-        # Pinion and motor on the forward cheek, meshing with the drive's copper gear.
         pin = c + up * 0.152 + Y * 0.095
         rig.cyl(pin - Y * 0.01, pin + Y * 0.02, 0.025, 10, "copper")
         rig.cyl(pin + Y * 0.02, pin + Y * 0.10, 0.034, 10, "charcoal")
@@ -784,8 +721,6 @@ class Cannon:
 
 RIGS = {"sable": Sable, "rivet": Rivet, "kest": Kest, "tarn": Tarn, "cannon": Cannon}
 
-# Actuators the binder drives in bone-local space (Blender frame, matching rivet_revolvers.py:
-# +Y is forward along the line, +X is right, +Z is up; angles in degrees, right-hand rule).
 def vec3(v):
     return [round(v[0], 4), round(v[1], 4), round(v[2], 4)]
 
@@ -826,9 +761,6 @@ def bones_for(pilot, part):
             out.append(("cap", Cannon.CAP_AT, "head"))
         return out
     return []
-
-
-# --- checks, rig, export ---------------------------------------------------------------------------
 
 
 def islands(bm):

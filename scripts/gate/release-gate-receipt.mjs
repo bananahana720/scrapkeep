@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "release-gate" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// Runs scripts/gate/tally.mjs --plan <plan> WITHOUT --wave (full release gate; nothing deferred)
-// and confirms CLEAN (exit 0). Planted check: writes a temp copy of <plan> with the same filename
-// pattern (cleaned up in finally) with one shard row changed to RED, runs the real tally.mjs on it,
-// and confirms it exits non-zero and refuses CLEAN (plant_caught).
-//
-//   node scripts/gate/release-gate-receipt.mjs --plan <gate-plan.md> --head <sha> [--out <file>]
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -36,8 +28,6 @@ export function commitsMatch(a, b) {
   );
 }
 
-// Mutates the newest passing shard row (or the last shard row if none pass) to RED so tally.mjs
-// must reject the mutated plan on that shard.
 export function plantRedShard(planText) {
   const rows = tallyRows(planText, "shard");
   if (rows.length === 0) return { mutated: null, shard: null };

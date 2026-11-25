@@ -149,7 +149,6 @@ def parse_world(path):
             elif "Warden" in text and lvl == 2:
                 stage = ("warden", text); group = text; in_warden = True
             elif lvl == 2 and re.search(r"between the stages|bay between", text, re.I):
-                # the connective section between the two stages: its level-3 headings are beats
                 stage = ("between", text); group = text; in_warden = False
             elif in_warden and lvl == 3:
                 group = text
@@ -409,7 +408,6 @@ def main():
                 if img:
                     shot = f'<img src="{html.escape(img)}" alt="{html.escape(b["title"])}" data-panel="{html.escape(pid)}" loading="lazy">'
                     nres += 1
-                    # a line naming more than one NEW panel ("Stage 5 NEW W-C; stage 6 NEW W-D") shows each
                     for extra in re.findall(r"\bNEW\s+`?([\w.-]*\w)`?", ptext or "")[1:]:
                         more = manifest.get(extra.lower())
                         if more and os.path.exists(more):

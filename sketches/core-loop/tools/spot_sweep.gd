@@ -3,27 +3,6 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# World 1 spot sweep (gameplay QA, 30 Oct): rolls the ball at every authored spot of a park stage
-# from several sides and logs what stops it. A spot is a park row smaller than BIG_M, the landmark,
-# the waymarks, the activity, rescue and contraption sites. Each probe drops the ball on the top
-# surface RUNUP_M outside the spot's footprint, aims it at the spot's centre at cruise and holds the
-# stick for PROBE_S plus a second per 12 m of run-up. Calm (no enemies), so only the map answers.
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/spot_sweep.gd \
-#     -- --out=<file.ndjson> [--camp=1] [--stages=1,2] [--dirs=8] [--shard=0/4] [--only=<id,...>] [--grid=<m>] [--at=x[,y],z;...] [--leave=1]
-#
-# One ndjson row per probe: stage, spot id and kind, the side, where it started, the outcome and,
-# for a stop, where, against which collider (node path) and whether any shown mesh covers the contact
-# (visible false is the invisible-wall read). Outcomes:
-#   reached        came within REACH_PAD of the spot's centre
-#   blocked        held under STOP_SPEED for STOP_S short of the footprint, pressed into a collider
-#   slope          as blocked, against the ground's own tiles (too steep to climb, drawn)
-#   stuck          held under STOP_SPEED for STOP_S on the ground with no wall contact (a pit, a seam)
-#   hung           at rest, off the ground, for HUNG_S (an ungrounded rest, ruling aa); escaped says
-#                  whether a jump and the stick held back then moved it 3 m
-#   fell           the game's fall rescue moved the ball (through the geometry)
-#   short          the probe ran out of time still rolling (slopes, a long way round)
-#   bad_start      no surface under the start, or the start lies off the map
 
 const BIG_M := 160.0
 const RUNUP_M := 14.0
@@ -95,12 +74,10 @@ func _run() -> void:
 		var map = terrain.map_for(stage)
 		_index_meshes(terrain.geometry_root(stage))
 		var spots := _grid(map.park, float(_settings["grid"])) if _settings.has("grid") else _spots(map.park)
-		# --at=x,z[;x,z...]: named points (a bot run's stuck spot) instead.
 		if _settings.has("at"):
 			spots = []
 			for pair in String(_settings["at"]).split(";", false):
 				var xz := pair.split(",")
-				# x,y,z: drop from just above y, under any deck or trestle overhead.
 				if xz.size() == 3:
 					spots.append({"id": "at%s" % pair, "kind": "point", "at": Vector2(float(xz[0]), float(xz[2])), "r": 0.0, "y": float(xz[1])})
 				else:
@@ -123,7 +100,6 @@ func _run() -> void:
 	quit(0)
 
 
-# Every authored spot of the park that a ball can be rolled at, with a footprint radius.
 func _spots(park: Dictionary) -> Array:
 	var out := []
 	for row in park.get("park_rows", []):
@@ -164,7 +140,6 @@ func _probe(stage: int, spot: Dictionary, angle: float, source, from := Vector2.
 	var start2 := centre + side * (float(spot.r) + (CAMP_RUNUP_M if stage == 0 else RUNUP_M))
 	if from != Vector2.INF:
 		start2 = from
-	# --leave=1: from the spot outward instead, for a place a bot run sat stuck (can a ball get out?).
 	if _settings.get("leave", "0") == "1":
 		var out_to := start2
 		start2 = centre
@@ -220,7 +195,6 @@ func _probe(stage: int, spot: Dictionary, angle: float, source, from := Vector2.
 			return row
 		if slow >= STOP_S and t > 0.3:
 			row["outcome"] = "blocked" if _contact(row, ball) else "stuck"
-			# The ground's own tiles: a slope too steep to climb, drawn by the terrain.
 			if row["outcome"] == "blocked" and "/Ground/" in String(row["collider"]):
 				row["outcome"] = "slope"
 			return row
@@ -230,8 +204,6 @@ func _probe(stage: int, spot: Dictionary, angle: float, source, from := Vector2.
 	return row
 
 
-# --camp=1: the camp walk instead of a park, from the title's Camp button. Its spots are the hub's
-# station zones, each rolled at from every side and once from the walk's spawn.
 func _camp(source) -> void:
 	for i in 5:
 		await process_frame
@@ -257,8 +229,6 @@ func _camp(source) -> void:
 		_out.flush()
 
 
-# --grid=<m>: a point every m metres over the play rect instead of the authored spots, for the
-# stretches between them.
 func _grid(park: Dictionary, step: float) -> Array:
 	var r: Array = park["play_rect"]
 	var out := []
@@ -272,7 +242,6 @@ func _grid(park: Dictionary, step: float) -> Array:
 	return out
 
 
-# Whether a player could leave a hung rest: a jump, then the stick held away for ESCAPE_S.
 func _escape(source, ball: Vector3) -> bool:
 	source.press = {"jump_pressed": true}
 	var t := 0.0
@@ -284,7 +253,6 @@ func _escape(source, ball: Vector3) -> bool:
 	return _game.player.ball_position().distance_to(ball) > 3.0
 
 
-# The top collider surface under (x, z): props, overlays and the ground alike.
 func _top(at: Vector3, from_y := 400.0):
 	var space: PhysicsDirectSpaceState3D = _game.player.body().get_world_3d().direct_space_state
 	var q := PhysicsRayQueryParameters3D.create(Vector3(at.x, from_y, at.z), Vector3(at.x, -200.0, at.z))
@@ -293,8 +261,6 @@ func _top(at: Vector3, from_y := 400.0):
 	return null if hit.is_empty() else hit.position
 
 
-# Fills the row with where the ball sits and what it presses against. True when a side contact
-# (a wall, not the floor) holds it.
 func _contact(row: Dictionary, ball: Vector3) -> bool:
 	row["at"] = _v(ball)
 	var body: RigidBody3D = _game.player.body()
@@ -319,7 +285,6 @@ func _contact(row: Dictionary, ball: Vector3) -> bool:
 	return false
 
 
-# Whether any shown mesh's box covers `p` (COVER_PAD out).
 func _shown(p: Vector3) -> bool:
 	var key := Vector2i(floori(p.x / CELL), floori(p.z / CELL))
 	for box: AABB in _meshes.get(key, []):

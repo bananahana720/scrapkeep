@@ -7,7 +7,7 @@ Azimuth 0 points along Godot -Z, the way the chaser leads; azimuths turn toward 
 """
 import math
 
-HALF = math.radians(56.5)  # half the wedge; 7 degrees of seam between neighbours
+HALF = math.radians(56.5)
 LATS = [-78, -55, -30, -8, 14, 36, 58, 78]
 LONS = 5
 OXIDE = "9b513a"
@@ -48,7 +48,6 @@ def build(body, glow, az, r, centre=(0.0, 0.0, 0.0), tally=0, legs=True, back_gl
         for k in range(LONS + 1):
             t = -1.0 + 2.0 * k / LONS
             a = az + t * HALF
-            # Flatter shoulders above the equator so the fuse lamp sits on a deck.
             rr = r * _bulge(t) * (0.93 if lat > 40 else 1.0)
             d = _dir(a, lat)
             row.append(body.bm.verts.new(at((d[0] * rr, d[1] * rr, d[2] * rr))))
@@ -64,7 +63,6 @@ def build(body, glow, az, r, centre=(0.0, 0.0, 0.0), tally=0, legs=True, back_gl
     for k in range(LONS):
         body.paint([body.bm.faces.new((rows[0][k + 1], rows[0][k], spine_lo))], "fleet_paint", CHAR)
         body.paint([body.bm.faces.new((rows[-1][k], rows[-1][k + 1], spine_hi))], "fleet_paint", OXIDE)
-    # Two flat seam walls close the wedge back to its spine; charcoal where they show.
     for side, col in ((0, 0), (1, LONS)):
         wall = [spine_lo] + [rows[j][col] for j in range(len(rows))] + [spine_hi]
         face = body.bm.faces.new(wall if side else list(reversed(wall)))
@@ -80,31 +78,25 @@ def build(body, glow, az, r, centre=(0.0, 0.0, 0.0), tally=0, legs=True, back_gl
         d = _dir(a, lat)
         return (d[0] * rr, d[1] * rr, d[2] * rr)
 
-    # Welded strap round the waist: a charcoal band just proud of the shell.
     strap = [surf(-6, t, 0.03 * r) for t in (-0.92, -0.31, 0.31, 0.92)]
     for a, b in zip(strap, strap[1:]):
         body.beam("fleet_paint", at(a), at(b), 0.09 * r, 0.16 * r, color=CHAR)
 
-    # Stub snout: the piece's lance, folded short while the pod is welded in.
     base = Vector(surf(4, 0, -0.04 * r))
     tip = base + out * (0.36 * r) + up * (-0.04 * r)
     body.rod("fleet_paint", at(base), at(tip), 0.15 * r, segs=6, color=CHAR, r2=0.04 * r)
-    # Eye slit above the snout, lit with the seams.
     eye = Vector(surf(24, 0, 0.0))
     glow.beam("requisition_tag", at(eye - side * 0.17 * r), at(eye + side * 0.17 * r),
               0.08 * r, 0.11 * r, roll=0.0)
 
-    # Tally stencil, I to III, on the upper shell: "three in one", counted.
     for i in range(tally):
         t = (i - (tally - 1) / 2) * 0.16
-        # One outward quad per stroke, painted just proud of the shell: 4 verts, not 24.
         dt = 0.035
         quad = [surf(42, t - dt, 0.014 * r), surf(42, t + dt, 0.014 * r),
                 surf(56, t + dt, 0.014 * r), surf(56, t - dt, 0.014 * r)]
         face = body.bm.faces.new([body.bm.verts.new(at(q)) for q in quad])
         body.paint([face], "fleet_paint", BONE)
 
-    # Seam edges along both walls: what flares white before the split.
     if back_glow:
         for t in (-1.0, 1.0):
             pts = [surf(lat, t, 0.015 * r) for lat in (-60, -20, 20, 60)]
@@ -115,7 +107,6 @@ def build(body, glow, az, r, centre=(0.0, 0.0, 0.0), tally=0, legs=True, back_gl
         for t in (-0.55, 0.55):
             hip = Vector(surf(-48, t, -0.05 * r))
             d = Vector(_dir(az + t * HALF, 0))
-            # Thigh kicks out, shin drops plumb onto a flat pad at the floor (-1.225 r).
             knee = hip + d * (0.4 * r) + up * (-0.08 * r)
             foot = Vector((knee.x, -1.225 * r, knee.z))
             body.rod("fleet_paint", at(hip), at(knee), 0.09 * r, segs=4, color=CHAR)

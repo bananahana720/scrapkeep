@@ -46,7 +46,6 @@ COL.update({
     "stencil": common.mix("bone", "sandstone", .15),
 })
 
-# id: shape, length, height, width, look
 RECIPES = {
     "skylight_lip": {"shape": "wedge", "length": 4.0, "height": 0.5, "width": 18.0, "look": "lip"},
     "tube_mouth_lip": {"shape": "wedge", "length": 4.0, "height": 0.5, "width": 16.0, "look": "mouth"},
@@ -83,7 +82,7 @@ def solid(soup, spec, color_fn):
     inside = Vector((0, spec["height"] * 0.3, -hl * 0.3))
     if spec["shape"] == "wedge":
         p = [soup.add_vert(v) for v in wedge_points(spec)]
-        soup.outward((p[0], p[1], p[5], p[4]), inside, COL["basalt_dark"])  # the near face, where the ball drops off
+        soup.outward((p[0], p[1], p[5], p[4]), inside, COL["basalt_dark"])
         soup.outward((p[0], p[4], p[3]), inside, COL["basalt_dark"])
         soup.outward((p[1], p[2], p[5]), inside, COL["basalt_dark"])
     else:
@@ -120,7 +119,7 @@ def base_mesh(spec):
             z = -hl + 0.4 + k * 0.8
             soup.box(Vector((0, spec["height"] - .04, z)), (spec["width"] - 1.0, .12, .3), tint(COL["timber"], .08, k))
         for x in (-0.75, 0.75):
-            soup.box(Vector((x, spec["height"] + .01, 0)), (.14, .1, spec["length"]), COL["copper"])  # 0.06 m proud of the solid
+            soup.box(Vector((x, spec["height"] + .01, 0)), (.14, .1, spec["length"]), COL["copper"])
     return soup
 
 

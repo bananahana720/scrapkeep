@@ -18,9 +18,6 @@ sys.path.insert(0, str(HERE.parent))
 import common
 import polish
 
-# Polish (tools/blender/POLISH.md): smooth shading with hard creases past 50 degrees and the
-# AO and wear bake on the grayscale wear colour, which stone.tres multiplies into the beds.
-# No bevel or subdivision, so the pinned metre bounds, floor relief and socket throat hold.
 LANDFORM = dict(bevel=0, bake_slots=("stone",))
 
 MODELS = Path(common.MODELS) / "dig_stone"
@@ -71,7 +68,6 @@ def bed_height(x, y, z):
 
 def erosion(x, y, z):
     h = bed_height(x, y, z)
-    # Eight unequal broad beds. Thin lips are erosion within the same surface.
     lo = -11.2
     lips = 0.0
     for _ in range(3):
@@ -100,7 +96,6 @@ def wall(scoop=False):
             x += ca * e
             z += sa * e
             if scoop and sa < 0:
-                # Front (-Z) concavity: 1.2 m undercut, rounded above the toe.
                 z += 1.2 * abs(sa) ** 1.8 * math.sin(math.pi * t) ** 1.7
             verts.append((x, y, z))
     for k in range(rows - 1):
@@ -170,8 +165,6 @@ def floor_surface(name):
 
 
 def rubble_surface():
-    # Polar sampling gives four joined chips an unequal natural footprint, with
-    # no rectangular carrier slab. A thin eroded toe connects the chip surfaces.
     n, rings = 32, 8
     verts = [(0, 0.025 + slab_pile(0, 0), 0)]
     faces = []
@@ -206,7 +199,6 @@ def rubble_surface():
 
 
 def study_wall(recess=False):
-    # A single solid swept profile; the cavity is part of the surface, not a dark plug.
     profile = [(-4, 0), (-4, 1), (-2.6, 1), (-1.2, 1.01), (0.2, 1.04),
                (1.45, 1.45), (1.60, 2.10), (1.46, 2.65), (1.75, 3.35), (1.9, 4), (4, 4), (4, 0)]
     if recess:
@@ -215,7 +207,6 @@ def study_wall(recess=False):
                    (0.1, 3.03), (-0.8, 3.16), (-0.95, 3.62), (-0.45, 4), (4, 4), (4, 0)]
     verts, faces = [], []
     rows = 49
-    # Interpolate each geological profile span without stacking separate beds.
     samples = []
     for k, a in enumerate(profile):
         b = profile[(k + 1) % len(profile)]
@@ -248,7 +239,6 @@ def study_wall(recess=False):
         for j in range(n):
             a, b = i * n + j, i * n + (j + 1) % n
             faces.append((a, b, b + n, a + n))
-    # Concave end caps are triangulated by bmesh, with stable coordinates.
     faces += [tuple(reversed(range(n))), tuple(range((rows - 1) * n, rows * n))]
     return verts, faces
 
@@ -256,8 +246,6 @@ def study_wall(recess=False):
 def socket_surface():
     verts, faces = [], []
     n = 96
-    # A weathered continuous rim: four sculpted top rings, the inner cut and
-    # underside. Unequal corners erode inward; the six-metre throat stays open.
     for ring in range(6):
         for j in range(n):
             a = j * 2 * math.pi / n
@@ -287,14 +275,12 @@ def fit_bounds(verts, size, name):
     lo = [min(p[k] for p in verts) for k in range(3)]
     hi = [max(p[k] for p in verts) for k in range(3)]
     if name == "breach_socket":
-        # Preserve the exact 6 m throat; the socket top remains at nominal Y=0.
         return [(x, (y - hi[1]) / (hi[1] - lo[1]), z) for x, y, z in verts]
     return [tuple((p[k] - lo[k]) * size[k] / (hi[k] - lo[k]) - (size[k] / 2 if k != 1 else 0) for k in range(3)) for p in verts]
 
 
 def make_mesh(name, verts, faces, root):
     mesh = bpy.data.meshes.new(name)
-    # Fixed quad diagonals prevent exporter/triangulator tie-breaking drift.
     triangles = []
     for face in faces:
         if len(face) == 4:
@@ -312,8 +298,6 @@ def make_mesh(name, verts, faces, root):
     polish.shape(bm, bevel=0)
     bm.to_mesh(mesh)
     bm.free()
-    # Neutral micro-wear/occlusion only. Geological albedo is shared world-position shading.
-    # The bake writes corner colours, so the wear colour is per corner.
     attr = mesh.color_attributes.new(name="Color", type="FLOAT_COLOR", domain="CORNER")
     for i, loop in enumerate(mesh.loops):
         x, z, y = mesh.vertices[loop.vertex_index].co

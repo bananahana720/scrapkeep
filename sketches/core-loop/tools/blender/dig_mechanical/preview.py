@@ -21,7 +21,6 @@ OUT=kit.SKETCH.parents[1]/"artifacts/local/dress-preview/MDM"
 
 
 def local_transform(row):
-    # Match Godot's default YXZ Euler order, including each tab's local hinge.
     x,y,z=[math.radians(v) for v in row.get("rotation_degrees",[0,0,0])]
     rot=Matrix.Rotation(y,4,"Y") @ Matrix.Rotation(x,4,"X") @ Matrix.Rotation(z,4,"Z")
     scale=Matrix.Diagonal(Vector((*row.get("scale",[1,1,1]),1)))
@@ -37,7 +36,6 @@ def load_component(name,row=None):
     objects=[o for o in bpy.data.objects if o not in before]
     roots=[o for o in objects if o.parent is None]
     if row:
-        # Godot Y-up to Blender Z-up is a proper rotation, not a reflection.
         frame=Matrix(((1,0,0,0),(0,0,-1,0),(0,1,0,0),(0,0,0,1)))
         transform=frame @ local_transform(row) @ frame.inverted()
         for root in roots:
@@ -67,7 +65,6 @@ def render(name,manifest):
     asset_points=list(corners)
     lo=Vector(tuple(min(v[k] for v in corners) for k in range(3)))
     hi=Vector(tuple(max(v[k] for v in corners) for k in range(3)))
-    # Every preview has exactly a 2 metre diameter reference sphere on the same floor.
     ball_loc=Vector((lo.x-2.6,(lo.y+hi.y)/2,lo.z+1))
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32,ring_count=16,radius=1,location=ball_loc)
     ball=bpy.context.object
@@ -107,14 +104,12 @@ def render(name,manifest):
     cam.data.clip_end=2000
     subject_dir=OUT/name
     subject_dir.mkdir(parents=True,exist_ok=True)
-    # Slight downward pitch exposes floors, dishes and cast undercuts without becoming top views.
     for label,direction in [("front",(0,1,.18)),("side",(1,0,.18)),("three-quarter",(1,1,.65))]:
         d=Vector(direction).normalized()
         cam.rotation_euler=(-d).to_track_quat("-Z","Y").to_euler()
         basis=cam.rotation_euler.to_matrix()
         right=basis @ Vector((1,0,0))
         up=basis @ Vector((0,1,0))
-        # Put the reference beside the subject in every camera, never behind it.
         base=Vector(((lo.x+hi.x)/2,(lo.y+hi.y)/2,lo.z+1))
         leftmost=min(v.dot(right) for v in asset_points)
         ball.location=base+right*(leftmost-base.dot(right)-2.6)

@@ -1,19 +1,5 @@
 extends RefCounted
 
-# The sitting hand: the choices the sitting's loops offer a player and the skipper never makes. Bot-tool
-# only. Each hand acts as a player does: the held brake and the camera for the called shot, rolling into
-# Moss's cradle and up to his counter, then the counter's own plates (ShopCounter.press, the call a click
-# or a key makes). It sets no state a player cannot reach. bot_driver.gd runs it only when the launch has
-# the loops on (--profile=sitting or sitting-earned), and each hand has a switch so a test can show its
-# loop reads as not fired with the hand off (tests/sitting_played_run_test.gd).
-#
-#   marked hull     a trade whose price is health stands in the stage: roll up to its device, hold E (stake_devices.gd).
-#   overtime        the keeper's bell is lit after a won yard: ram it at speed (overtime.gd).
-#   called shot     a Warden wakes: face it, hold the brake past the first stamp and let go (called_shot.gd).
-#   Moss's bay      the break docks the bay: roll into the cradle, up to Moss, use the counter, roll off the pad.
-#   at the counter  stow a core in SPIL-9 when the plate is open to it, then weigh on the sell face.
-#   carry a core    finish one activity (its pay is SPIL-9's first piece), ring the keeper's bell three times and ram
-#                   the pot (its core), so the counter's stow plate opens (shop.gd stow_core).
 
 const Augments := preload("res://src/movement/augments.gd")
 
@@ -62,7 +48,6 @@ func _init(driver, game) -> void:
 	_game = game
 
 
-# Called each tick after the driver has set its own hold, so a hold set here wins the tick.
 func step(delta: float) -> void:
 	_called_shot(delta)
 
@@ -78,12 +63,9 @@ func _called_shot(delta: float) -> void:
 	if shot.state != "window":
 		_line_home = 0
 		return
-	# With the hand off nothing calls: the driver's own brake holds in a fight would, so they are let go.
 	if not hands["called_shot"]:
 		_driver.source.hold.erase("brake_held")
 		return
-	# A missed call burns one of the stage's cores (called_shot.gd settle): a hand that holds one for the counter
-	# lets this window pass, as a player who wants the core to ride would.
 	if hands["carry"] and _game.run.can_stow_core():
 		_driver.source.hold.erase("brake_held")
 		return
@@ -96,22 +78,15 @@ func _called_shot(delta: float) -> void:
 	var look: Vector3 = _game.ctx.aim_forward()
 	var aimed: bool = Vector2(to.x, to.z).length() > 0.01 and Vector2(look.x, look.z).length() > 0.01 \
 			and Vector2(to.x, to.z).normalized().dot(Vector2(look.x, look.z).normalized()) >= shot.AIM_DOT
-	# The call wants the line home (called_shot.gd _line_free): the latch arm is asked to let it go.
 	_driver.hold_off_warden_line(0.3)
-	# A brake held while the line was out is the player's haul and stays claimed until it is let go
-	# (player_ball.gd _ctrl_claimed): the brake waits until the line has been home for a few ticks.
 	var kit = _game.player.kit
 	_line_home = _line_home + 1 if not kit.hooked and kit.line_state == Augments.LINE_IDLE else 0
-	# Held long enough to show the first stamp, then let go: the release is what calls it.
 	if aimed and (_line_home >= LINE_HOME_TICKS or shot.held_s > 0.0) and shot.held_s < HOLD_S:
 		_driver.source.hold["brake_held"] = true
 	elif shot.held_s <= 0.0:
-		# Not yet: a brake held across a hooked tick stays claimed and is dropped (player_ball.gd _ctrl_claimed).
 		_driver.source.hold.erase("brake_held")
 
 
-# The marked hull on the stage's state: before the Warden wakes, a trade whose price is health (it welds the
-# hull, hull_mark.gd) is rolled up to and held with E, as a player does. True when the hand drove this tick.
 func stage(delta: float) -> bool:
 	if _driver._note.get("warden_engaged_s") != null:
 		return false
@@ -122,10 +97,6 @@ func stage(delta: float) -> bool:
 	return _piece(delta)
 
 
-# SPIL-9's first piece, from the stage's enemy camp: the driver's own activity run (its pack fight and pay roll),
-# held only until the companion holds a piece. The finished site pays it (activities.gd _pay_piece). The caches
-# and the hauler stand a kilometre off in the first stage, so they are passed over, as a player would. Time-boxed,
-# and idle once the companion holds a piece.
 func _piece(delta: float) -> bool:
 	if _piece_stage != _game.run.stage:
 		_piece_stage = _game.run.stage
@@ -165,7 +136,6 @@ func _bell(delta: float) -> bool:
 	return true
 
 
-# Three rings fill the pot with a core; a ram at it cashes (overtime.gd cash).
 func _pot(overtime, delta: float) -> bool:
 	_bell_clock += delta
 	if _bell_clock > BELL_S:
@@ -195,7 +165,6 @@ func _trade(delta: float) -> bool:
 		if not _trade_told:
 			_trade_told = true
 			_say("trade %s at %.0f m: %s" % [site.id, _game.player.ball_position().distance_to(site.global_position), str(site.trade_devices.map(func(d): return d.offer.get("cost_kind", "") + ("/marks" if d.offer.get("marks", false) else "")))])
-		# One trade is the loop; a second would only cost another share of the hull.
 		if site.trade_devices.any(func(d): return d.spent):
 			continue
 		for device in site.trade_devices:
@@ -227,8 +196,6 @@ func _trade(delta: float) -> bool:
 				_driver._act(at if _route.is_empty() else _route[0], null, delta)
 			else:
 				_creep(at, ball, delta)
-				# E as a player holds it: a press that the locked device claims, then the key held through
-				# the hold's seconds (interact.gd _consent, _step_hold); a second press would restart it.
 				_driver.source.hold["mount_held"] = true
 				var interact = _game.world.get("interact")
 				_press_gap -= delta
@@ -239,7 +206,6 @@ func _trade(delta: float) -> bool:
 	return false
 
 
-# The bay on the gates' state. True when the hand drove this tick, so the driver skips its run at the gate.
 func gates(delta: float) -> bool:
 	if not hands["bay"]:
 		return false
@@ -295,8 +261,6 @@ func _end_bay(stage: int, why: String) -> void:
 	_say("stage %d bay: %s" % [stage, why])
 
 
-# Rolls to a point at a pace that lets the counter open (it wants under PULL_UP): the stick toward it
-# while slow, the brake while fast.
 func _creep(point: Vector3, ball: Vector3, delta: float) -> void:
 	var to := Vector3(point.x - ball.x, 0.0, point.z - ball.z)
 	var speed: float = _game.player.planar_velocity().length()
@@ -309,8 +273,6 @@ func _creep(point: Vector3, ball: Vector3, delta: float) -> void:
 	_driver.source.hold = hold
 
 
-# The counter's plates in the order a player meets them: the buy face's stow plate, then the sell face's
-# weigh plate, then Leave. One plate each PLATE_GAP_S, so the face has rebuilt before the next press.
 func _counter(workshop: Node, delta: float) -> void:
 	_driver.source.hold = {}
 	_plate_clock -= delta

@@ -56,7 +56,6 @@ const builds = () => Object.fromEntries([2, 3, 4, 5, 6].map((s) => [s, pickBuild
 
 test("the targets are the ruling's numbers", () => {
   assert.equal(TARGETS.fight.novice.max, 0.15);
-  // Learner attempt 1 at bosses and Wardens is information only (DECISIONS section 5, 19 Oct 19:00).
   assert.equal(TARGETS.fight.learner1, undefined);
   assert.equal(TARGETS.fight.learner5.min, 0.6);
   assert.equal(TARGETS.fight.expert.min, 0.85);
@@ -153,7 +152,6 @@ test("a fight carries the comps report: largest hit share and first-45 s damage"
   };
   const g = gradeRun("boss", row);
   assert.deepEqual([g.largestShare, g.largestSource, g.hp45Share], [0.34, "slag", 0.22]);
-  // No hit in the first 45 s is a zero share, not a missing one.
   assert.equal(
     gradeRun("boss", { outcome: "won", max_hp: 80, boss: { defeated_s: 50 } }).hp45Share,
     0,
@@ -169,7 +167,7 @@ test("a fight carries the comps report: largest hit share and first-45 s damage"
     },
     { stage: 2 },
   );
-  assert.equal(w.largestShare, 0.25); // the stage note's max_hp wins over the record's
+  assert.equal(w.largestShare, 0.25);
   const a = aggregate([
     g,
     { ...g, largestShare: 0.5, largestSource: "charge", hp45Share: 0.4 },
@@ -179,7 +177,6 @@ test("a fight carries the comps report: largest hit share and first-45 s damage"
     [a.largestShare, a.largestSource, a.medianHp45Share, a.maxHp45Share],
     [0.5, "charge", 0.31, 0.4],
   );
-  // A Warden the bot never engaged reports nothing, so it cannot pull the 45 s median toward zero.
   const cold = gradeRun(
     "warden",
     {
@@ -209,7 +206,6 @@ test("a fight carries the comps report: largest hit share and first-45 s damage"
   const md = renderTable(buildTable(runs));
   assert.match(md, /## Fight report/);
   assert.match(md, /\| brindle \| 64\.0 \| 34% \(slag\) \| 22% \/ 22% \| - \| - \|/);
-  // Scrap armour: the hull columns show what reached the hull; a pre-hull row reads blank, not zero.
   const armoured = gradeRun("boss", {
     outcome: "won",
     max_hp: 100,
@@ -240,7 +236,6 @@ test("a fight carries the comps report: largest hit share and first-45 s damage"
 test("a park run wins by reaching the Warden", () => {
   assert.equal(gradeRun("world", { outcome: "reached", game_seconds: 90 }).result, "win");
   assert.equal(gradeRun("world", { outcome: "died" }).result, "loss");
-  // run_ended(false) after a death the run cannot survive reads "lost" (bot_driver.gd): a loss, not a stall.
   assert.equal(
     gradeRun("warden", { outcome: "lost", stage_reached: 1, stages: [{ stage: 1 }] }).result,
     "loss",
@@ -278,7 +273,6 @@ test("pickBuilds takes the 40th to 60th and 90th and up, never fewer than three"
   assert.equal(small.top.length, 3);
   assert.equal(pickBuilds(docs(2)).top.length, 2);
   assert.deepEqual(pickBuilds([]).ordinary, []);
-  // Mass first, then parts.
   const tie = pickBuilds([
     { file: "a", mass: 5, parts: 3 },
     { file: "b", mass: 5, parts: 1 },
@@ -353,7 +347,6 @@ test("planCells counts jobs per cell and column, rotates builds and shares seeds
     planCells({ builds: builds(), seeds: 1, only: ["w3"], wardenPersona: "brawler" })[0].policy,
     "brawler",
   );
-  // Parks are the default park measure: park N stops at its own Warden, so a park run never fights a Warden.
   const park1 = all.filter((j) => j.cell === "park1");
   assert.ok(
     park1.length &&
@@ -373,7 +366,6 @@ test("planCells counts jobs per cell and column, rotates builds and shares seeds
   );
   assert.notDeepEqual(park4.seed, all.find((j) => j.cell === "w4").seed);
   assert.ok(!all.some((j) => j.cell === "world1"), "the world chain runs only when asked for");
-  // pilot.* dials need --tune-unruled on the game side; the harness passes it only when asked.
   assert.ok(!all.some((j) => j.args.includes("--tune-unruled")));
   const unruled = planCells({
     builds: builds(),
@@ -497,7 +489,6 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
   assert.equal(cellVerdict(b), "fail");
   const p = table.find((c) => c.cell === "park1");
   assert.equal(p.columns.novice.ok, false);
-  // The world chain is information only (ruling 19 Oct 04:32Z): same runs, no target, no ✓/✗, never failing.
   const w = table.find((c) => c.cell === "world1");
   assert.equal(w.columns.novice.target, null);
   assert.equal(w.columns.novice.ok, null);
@@ -505,7 +496,6 @@ test("the table marks each column ✓ or ✗ against its target and reports the 
   assert.equal(table[0].cell, "brindle");
   const md = renderTable(table, { label: "t" });
   assert.match(md, /\| brindle \| 10% \(20\) \[\d+%-\d+%\] ✓ vs <= 15% \(18 died\) \|/);
-  // Learner a1 at a fight cell prints its rate with no mark and no target.
   assert.match(md, /\| 35% \(20\) \[\d+%-\d+%\] \(13 died\) \|/);
   assert.match(md, /Learner a1 at bosses and Wardens is information only/);
   assert.match(md, /95% \(20\) \[\d+%-\d+%\] ✓ vs >= 85% \(1 capped\)/);
@@ -585,7 +575,6 @@ test("shard libraries join into one index and run folders carry no machine paths
   ]);
   assert.equal(merged.length, 4);
   assert.deepEqual(merged.map((d) => d.from).sort(), ["/a", "/a", "/b", "/b"]);
-  // Grading reads the record only, never the entrance path.
   const runs = [
     {
       id: "x",
@@ -893,8 +882,6 @@ test("the player report gathers the watch's rows by kind and place, worst kind f
   assert.deepEqual(QA_KINDS.slice(0, 3), ["wedged", "fell", "blank"]);
 });
 
-// --- wave 36 unit measure: the whole-World-1 clear and the fairness numbers ---------------------------------------
-
 test("w1clear is selected only by name, never by --only=w1 or the default cells", () => {
   const ids = (jobs) => [...new Set(jobs.map((j) => j.cell))];
   assert.deepEqual(
@@ -929,7 +916,6 @@ test("w1clear is selected only by name, never by --only=w1 or the default cells"
   assert.ok(!args.includes("--to-boss"), "--to-boss would enter Brindle on the first tick");
   assert.match(args, /--ticks=\d+/);
   assert.ok(!args.includes("--from-stage"), "it starts at stage 1");
-  // the same seeds as w1, so the two cells pair on stage 1; the Warden persona drives the whole run
   const w1seeds = planCells({ builds: builds(), only: ["w1"], seeds: 2, columns: ["expert"] }).map(
     (j) => j.seed,
   );
@@ -938,7 +924,6 @@ test("w1clear is selected only by name, never by --only=w1 or the default cells"
     w1seeds,
   );
   assert.ok(jobs.every((j) => j.policy === "skipper"));
-  // the existing w1 plan is unchanged by the new cell's existence
   const w1 = planCells({ builds: builds(), only: ["w1"], seeds: 2, columns: ["expert"] });
   assert.equal(w1.length, 2);
   assert.ok(w1.every((j) => j.kind === "warden" && j.args.some((a) => a === "--until=1")));
@@ -970,7 +955,6 @@ test("a w1clear run is graded by where it ended: cleared, died or capped, with t
     [dead.result, dead.end, dead.stage, dead.gameS, dead.where],
     ["loss", "death", 1, 212.04, "s1"],
   );
-  // a stage 2 death and a boss death read apart
   assert.equal(
     gradeRun("clear", { outcome: "died", stage_reached: 2, game_seconds: 400, boss: null }).where,
     "s2",
@@ -1005,7 +989,6 @@ test("a w1clear run is graded by where it ended: cleared, died or capped, with t
   );
   assert.equal(gradeRun("clear", { outcome: "gave_up", stage_reached: 1 }).result, "error");
   assert.equal(gradeRun("clear", null).result, "error");
-  // in the table: information only, in its own section, never a fail
   const runs = [won, dead, capped].map((grade, i) => ({
     cell: "w1clear",
     kind: "clear",
@@ -1028,7 +1011,6 @@ test("a w1clear run is graded by where it ended: cleared, died or capped, with t
   assert.ok(!text.includes("## World chains"));
 });
 
-// A fixed fake trace: three runs of one cell and arm.
 const seg = (hit, s, extra = {}) => ({
   contact: true,
   hit,
@@ -1081,14 +1063,11 @@ const trace = (cell = "w1", column = "expert") => [
 
 test("the three fairness numbers come out of a fixed trace by the plan's arithmetic", () => {
   const p = fairnessPool(trace());
-  // F1: 50 telegraphed of 100 hull from sources that publish telegraphs = 0.5; contact hull is outside the share.
   assert.equal(p.telegraphShare, 0.5);
   assert.equal(p.hull.contact, 5);
   assert.deepEqual([p.kills, p.killsShown], [2, 1]);
-  // F2: slow 70 hull over 80 s = 0.875 per s; fast 30 hull over 160 s = 0.1875 per s; the ratio is 4.666...
   assert.ok(Math.abs(p.stopTax - 0.875 / 0.1875) < 1e-9);
   assert.equal(p.fastShare, 160 / 240);
-  // F3: readings 6 s, 2 s and one stage with no hit (later than any): the median is 6 s, and the no-hit stage is counted.
   assert.equal(p.firstHitS, 6);
   assert.deepEqual([p.firstHitN, p.noHit], [3, 1]);
 });
@@ -1108,7 +1087,6 @@ test("each fairness number moves the wrong way on a planted unfair trace, so its
   assert.ok(fair.telegraphShare >= FAIRNESS.telegraphShare, "F1 passes when every hit was shown");
   assert.ok(fair.stopTax >= FAIRNESS.stopTax, "F2 passes when the tax falls on the stopped ball");
   assert.ok(fair.firstHitS >= FAIRNESS.firstHitS, "F3 passes when the first hit comes late");
-  // the plants: an untelegraphed drain, a tax on fast balls, a spawn with no ring
   const unfair = fairnessPool([
     fake("w1", "expert", {
       hull: hullOf(20, 30),
@@ -1180,7 +1158,6 @@ test("a fairness field missing from a record reads as not measured, never as 0",
   assert.equal(p.stopTaxNote, "not measured");
   assert.equal(p.firstHitS, null, "an unmeasured first hit is null, not 0 s");
   assert.deepEqual([p.runs, p.measured], [2, 1]);
-  // no hull lost has no share; no hull at cruise has no tax; neither is a pass
   const none = fairnessPool([
     fake("w1", "novice", {
       hull: hullOf(0, 0),
@@ -1216,7 +1193,6 @@ test("fairness lines are per cell and per arm, and leave out error and unresumed
     lines.map((l) => `${l.cell}/${l.column}/${l.measured}`),
     ["w1/learner1/3", "w1/learner5/3", "brindle/learner1/3"],
   );
-  // an error and an unresumed run are not counted behind the line
   const bad = [
     fake("w1", "expert", { hull: hullOf(1, 0) }),
     { ...fake("w1", "expert", { hull: hullOf(0, 9) }), grade: { result: "error" } },
@@ -1245,8 +1221,6 @@ test("F1 carries no mark while unknown hull is over the line, and prints contact
 });
 
 test("an unlisted source's hull lost F1's mark only once it reads unknown (round 3), not contact (round 2)", () => {
-  // One run: 57 hull telegraphed and 4 from a source on no list. Round 2's classifier filed the 4 as contact; round 3 files
-  // them as unknown. 4 of 61 is 6.6%, over unknownMaxShare.
   const round2 = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0, 4, 0), first_hit: {} })]);
   const round3 = fairnessPool([fake("w1", "expert", { hull: hullOf(57, 0, 0, 4), first_hit: {} })]);
   assert.ok(4 / 61 > FAIRNESS.unknownMaxShare);
@@ -1263,7 +1237,6 @@ test("an unlisted source's hull lost F1's mark only once it reads unknown (round
     ),
     "no pass mark on F1",
   );
-  // at the line exactly the mark stays
   const atLine = fairnessPool([fake("w1", "expert", { hull: hullOf(95, 0, 0, 5), first_hit: {} })]);
   assert.equal(atLine.shareMarked, true);
 });
@@ -1308,7 +1281,6 @@ test("F3: a hit that opened contact is its own case, and no-hit stages are count
   assert.equal(p.firstHitS, Infinity === p.firstHitS ? Infinity : (1 + Infinity) / 2);
   const text = renderFairness([{ cell: "w1", column: "expert", ...p }]).join("\n");
   assert.match(text, /1 of 2 took no hit, 1 opened by a hit/);
-  // three stages, two no-hit: the median is a no-hit stage, the best case, and the line holds; one early hit alone fails it
   const quiet = fairnessPool([
     fake("w1", "expert", {
       hull: hullOf(1, 0),
@@ -1336,16 +1308,15 @@ test("the table gains one fairness line per cell and arm", () => {
   const text = renderTable(buildTable(runs), { fairness: fairnessByCell(runs) });
   assert.match(text, /## Fairness/);
   assert.equal((text.match(/^- w1 (novice|expert) /gm) ?? []).length, 2);
-  // the two summary sentences are scoped so a fairness ✗ never sits beside "No cell has a ✗"
   assert.match(text, /(No cell has a ✗|Cells with a ✗) against a win-rate target/);
   assert.match(text, /Fairness lines with a ✗: w1 (novice|expert) F[123]/);
 });
 
 test("the job cap follows cores and memory, never below 6", () => {
   const gib = 2 ** 30;
-  assert.equal(maxJobs(4, 15 * gib), 6); // the cloud box keeps the old cap
-  assert.equal(maxJobs(32, 64 * gib), 32); // one a core when memory allows
-  assert.equal(maxJobs(32, 40 * gib), 20); // memory binds at 2 GiB a job
+  assert.equal(maxJobs(4, 15 * gib), 6);
+  assert.equal(maxJobs(32, 64 * gib), 32);
+  assert.equal(maxJobs(32, 40 * gib), 20);
   assert.equal(maxJobs(2, 4 * gib), 6);
 });
 
@@ -1365,20 +1336,19 @@ test("early stop settles a column only when the seeds left cannot change its mar
     ...Array(errors).fill({ result: "error" }),
   ];
   const expert = { min: 0.85 };
-  assert.equal(settledMark({ grades: g(1, 5), left: 18, target: expert }), false); // 19 of 24 at best: 79%
-  assert.equal(settledMark({ grades: g(20, 0), left: 4, target: expert }), null); // 20 of 24 at worst: 83%
-  assert.equal(settledMark({ grades: g(21, 0), left: 3, target: expert }), true); // 21 of 24 at worst: 87.5%
-  assert.equal(settledMark({ grades: g(4, 6), left: 14, target: { max: 0.15 } }), false); // 4 of 24 at best: 17%
-  assert.equal(settledMark({ grades: g(0, 10), left: 14, target: { max: 0.15 } }), null); // 14 of 24 still possible
-  assert.equal(settledMark({ grades: g(5, 0), left: 19, target: null }), null); // no target: every seed runs
-  assert.equal(settledMark({ grades: g(1, 5), left: 18, target: expert, tellOpen: true }), null); // the 45 s tell is still clean
-  assert.equal(settledMark({ grades: g(1, 5, 1), left: 17, target: expert }), null); // over the excluded share
-  assert.equal(settledMark({ grades: g(3, 0), left: 0, target: expert }), null); // nothing left to skip
+  assert.equal(settledMark({ grades: g(1, 5), left: 18, target: expert }), false);
+  assert.equal(settledMark({ grades: g(20, 0), left: 4, target: expert }), null);
+  assert.equal(settledMark({ grades: g(21, 0), left: 3, target: expert }), true);
+  assert.equal(settledMark({ grades: g(4, 6), left: 14, target: { max: 0.15 } }), false);
+  assert.equal(settledMark({ grades: g(0, 10), left: 14, target: { max: 0.15 } }), null);
+  assert.equal(settledMark({ grades: g(5, 0), left: 19, target: null }), null);
+  assert.equal(settledMark({ grades: g(1, 5), left: 18, target: expert, tellOpen: true }), null);
+  assert.equal(settledMark({ grades: g(1, 5, 1), left: 17, target: expert }), null);
+  assert.equal(settledMark({ grades: g(3, 0), left: 0, target: expert }), null);
   assert.equal(columnTarget("w1", "warden", "expert")?.min, 0.85);
   assert.equal(columnTarget("w1clear", "clear", "expert"), null);
 });
 
-// Scrap taken through lose_scrap (assumption, ruling cu: pooling never makes a line easier; a scrap point counts as a hull point).
 const scrapOf = (telegraphed, untelegraphed, contact = 0, unknown = 0) => ({
   telegraphed,
   untelegraphed,
@@ -1410,7 +1380,6 @@ test("scrap is its own bucket: hull is counted once and the pooled share adds sc
 });
 
 test("F1 fails when either the hull share or the pooled share is under the line, in both directions", () => {
-  // Fails on hull alone (10 of 50 = 0.2); plenty of telegraphed scrap lifts the pooled share to 0.97 and cannot rescue it.
   const rescued = fairnessPool([
     fake("w1", "expert", {
       hull: hullOf(10, 40),
@@ -1421,7 +1390,6 @@ test("F1 fails when either the hull share or the pooled share is under the line,
   ]);
   assert.ok(rescued.pooledShare > 0.95 && rescued.telegraphShare < 0.95);
   assert.ok(fairnessFails(rescued).includes("F1"));
-  // Passes on hull (0.98), fails once untelegraphed scrap is added.
   const hullOnly = fairnessPool([
     fake("w1", "expert", { hull: hullOf(98, 2), killing_hit: null, ...calm }),
   ]);
@@ -1439,7 +1407,6 @@ test("F1 fails when either the hull share or the pooled share is under the line,
 });
 
 test("F2 reads scrap lost beside hull and fails when either ratio is under the line", () => {
-  // Hull alone: 40/30 over 10/60 = 8. Scrap lost at cruise (fast_scrap 30) brings the pooled ratio to (40/30)/(40/60) = 2 - fine; 60 pulls it under.
   const rec = (fastScrap) =>
     fairnessPool([
       fake("w1", "expert", {
@@ -1461,8 +1428,6 @@ test("F2 reads scrap lost beside hull and fails when either ratio is under the l
 });
 
 test("telegraphed scrap cannot dilute unknown hull into F1's mark (ruling cu)", () => {
-  // 57 telegraphed hull and 4 unknown hull is 6.6% unknown, unmarked. 30 telegraphed scrap would read 4.4% pooled; the hull
-  // reading still says unmarked, and the mark drops when either is over the line.
   const hullOnly = fairnessPool([
     fake("w1", "expert", { hull: hullOf(57, 0, 0, 4), first_hit: {} }),
   ]);
@@ -1475,7 +1440,6 @@ test("telegraphed scrap cannot dilute unknown hull into F1's mark (ruling cu)", 
       withScrap.unknownShare > FAIRNESS.unknownMaxShare,
   );
   assert.equal(withScrap.shareMarked, false);
-  // and unknown scrap alone drops the mark too
   const scrapUnknown = fairnessPool([
     fake("w1", "expert", { hull: hullOf(57, 0), scrap: scrapOf(0, 0, 0, 10), first_hit: {} }),
   ]);

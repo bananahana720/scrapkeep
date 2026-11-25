@@ -17,7 +17,6 @@ import sys
 PALETTE_GD = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src", "core", "palette.gd"))
 _CONST = re.compile(r'^const ([A-Z_]+) := Color\("([0-9a-fA-F]{6})"\)', re.M)
 
-# Recipe names that differ from the game's constant names.
 ALIASES = {"bone": "SAND", "oxide": "RUST", "petrol": "VERDIGRIS", "mint": "ARC"}
 
 

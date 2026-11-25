@@ -13,8 +13,6 @@ import common
 import polish
 from common import Part
 
-# Hard cast chunk: soft chamfers read as a folded casting. The hex boss stays six-sided
-# (detail 1), so the chunk keeps its 270-triangle single-draw prop budget.
 polish.enable(detail=1, bevel=0.02)
 
 

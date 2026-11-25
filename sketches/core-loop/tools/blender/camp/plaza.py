@@ -67,18 +67,16 @@ def floor(s, solid=False):
     cp.pk.frustum(s, L.PLAZA_R + CHAMFER, L.PLAZA_R, 0.0, SLAB, 48, T["plaza"])
     cp.pk.ring_y(s, L.RING_R - 3.0, L.RING_R + 3.0, 0.0, SLAB, 96, T["plaza"])
     for bearing, r0, r1 in spoke_segments():
-        slab_strip(s, bearing, r0, r1, L.SPOKE_W, SLAB - 0.004, T["plaza"])   # 4 mm under the plaza top, so the end cap is buried
+        slab_strip(s, bearing, r0, r1, L.SPOKE_W, SLAB - 0.004, T["plaza"])
 
 
 def plaza(s):
     floor(s)
-    # Darker paving bands so the plaza reads as laid stone from the drop-in, not a decal.
     for k, r in enumerate((9.0, 17.0, 24.5)):
         cp.disc_y(s, r - 0.35, r + 0.35, SLAB, SLAB + 0.012, 48, cp.jitter_tone("plaza_dk", k))
     for k in range(12):
         a = math.tau * (k + 0.5) / 12
         cp.obox(s, (0.3, 0.012, 15.0), (math.sin(a) * 16.5, SLAB + 0.006, -math.cos(a) * 16.5), T["plaza_dk"], yaw=-a)
-    # Spawn medallion: copper rim, petrol field, a mint chevron at the gate.
     cp.disc_y(s, 0.0, 4.2, SLAB, SLAB + 0.05, 32, T["copper"])
     cp.disc_y(s, 0.0, 3.7, SLAB + 0.05, SLAB + 0.07, 32, T["petrol"])
     for k in range(8):
@@ -88,12 +86,10 @@ def plaza(s):
     for dz in (-1.2, 0.6):
         pts = [(x, SLAB + 0.09, z + dz) for x, z in chevron]
         s.add(pts, [tuple(range(len(pts)))[::-1]], T["mint"])
-    # Mint threshold bars where each spoke meets the ring (the gate's sits at its pad).
     for sid, bearing, r0, r1 in spokes():
         b = math.radians(bearing)
         r = r1 - 1.0
         cp.obox(s, (L.SPOKE_W - 0.4, 0.03, 0.6), (math.sin(b) * r, SLAB + 0.015, -math.cos(b) * r), T["mint"], yaw=-b)
-    # Copper kerb studs round the ring walk's outer edge, every 7.5 degrees.
     for k in range(48):
         a = math.tau * k / 48
         r = L.RING_R + 3.0 - 0.3
@@ -114,8 +110,6 @@ def check_plaza(s):
     assert hi[2] <= 0.0 + L.RING_R + 3.6 and lo[2] >= -(L.GATE_R + 0.1), ("plaza extent", lo, hi)
 
 
-# ------------------------------------------------------------------------------------------------------------ shortcut
-
 def ramp_profile(t):
     """Deck height along the ramp, t in 0..1 from the foot (+Z end) to the lip: a smooth kicker curve."""
     return RAMP_H * (t * t * (1.5 - 0.5 * t))
@@ -134,11 +128,11 @@ def solid_profile(s, x0, x1, rows, color, sink=0.0):
     faces = []
     for i in range(n - 1):
         a0, a1, b0, b1 = 2 * i, 2 * i + 1, 2 * i + 2, 2 * i + 3
-        faces += [(a0, b0, b1, a1)]                                    # top, faces up
+        faces += [(a0, b0, b1, a1)]
         c0, c1, d0, d1 = base + a0, base + a1, base + b0, base + b1
-        faces += [(c0, c1, d1, d0)]                                    # bottom
-        faces += [(a0, c0, d0, b0), (a1, b1, d1, c1)]                  # the two sides
-    faces += [(base, base + 1, 1, 0), (2 * n - 2, 2 * n - 1, base + 2 * n - 1, base + 2 * n - 2)]   # end caps
+        faces += [(c0, c1, d1, d0)]
+        faces += [(a0, c0, d0, b0), (a1, b1, d1, c1)]
+    faces += [(base, base + 1, 1, 0), (2 * n - 2, 2 * n - 1, base + 2 * n - 1, base + 2 * n - 2)]
     s.add(pts, faces, color)
 
 
@@ -149,22 +143,18 @@ def shortcut(s):
     for i in range(n + 1):
         t = i / n
         rows.append((RAMP_L / 2 - t * RAMP_L, ramp_profile(t)))
-    # Deck slab and two cheek slabs (the cheeks overlap the deck edge, so no two faces are coincident).
     solid_profile(s, -hw, hw, rows, T["mint_dk"])
     for sx in (-1, 1):
         a, b = sorted((sx * (hw - 0.1), sx * (hw + 0.6)))
         solid_profile(s, a, b, rows, T["iron"], sink=0.0)
-    # Mint and dark-mint deck plates: thin closed slabs a hair proud of the deck, one per row of the profile.
     for i in range(n):
         (z0, y0), (z1, y1) = rows[i], rows[i + 1]
         col = T["mint"] if i % 2 == 0 else T["mint_dk"]
         pts = [(x, max(y + dy, 0.0), z) for dy in (-0.05, 0.02) for (z, y) in ((z0, y0), (z1, y1)) for x in (-hw + 0.02, hw - 0.02)]
-        # order: bottom (z0: x-, x+; z1: x-, x+), top (same)
         s.add(pts, [(0, 1, 3, 2)[::-1], (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)], col)
     zl, yl = rows[-1]
-    cp.obox(s, (RAMP_W + 1.2, yl, 0.6), (0, yl / 2, zl + 0.3), T["iron"])          # lip wall, tucked under the lip so nothing reaches the ring walk
-    cp.obox(s, (RAMP_W + 1.4, 0.2, 0.8), (0, yl + 0.05, zl + 0.4), T["copper"])    # copper lip edge
-    # Amber chevrons painted on the deck point up the ramp (toward -Z): thin closed prisms riding the deck.
+    cp.obox(s, (RAMP_W + 1.2, yl, 0.6), (0, yl / 2, zl + 0.3), T["iron"])
+    cp.obox(s, (RAMP_W + 1.4, 0.2, 0.8), (0, yl + 0.05, zl + 0.4), T["copper"])
     chevron = [(-1.3, 0.5), (0.0, -0.8), (1.3, 0.5), (1.3, 1.2), (0.0, -0.1), (-1.3, 1.2)]
     for k in range(3):
         zc = RAMP_L / 2 - (0.22 + 0.24 * k) * RAMP_L

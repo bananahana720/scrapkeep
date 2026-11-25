@@ -4,25 +4,6 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
 
-# The two world 1 stage launches filmed as a player with a hand on the controls sees them: the dam to the flume and the
-# flume to the Slag Bowl. For each seam it saves a 1920x1080 frame every 0.1 s of game time from 2 s before the launch to
-# 1.5 s after the ball touches down in the next place, then one contact sheet, so a person can judge whether the hand-over
-# reads as one move. It needs a rendered display; run it headless on the 3060 with a fixed frame rate, so a frame is
-# exactly 1/60 s of game time whatever the renderer's speed (see seam_strip_capture.md):
-#
-#   source /home/andrew/scratch/world1/env-pc.sh <name> 1 2 <pool>
-#   PULSE_SINK=claude_silent timeout 600 nice -n 10 gamescope --backend headless --prefer-vk-device 10de:2504 \
-#     -W 1920 -H 1080 -w 1920 -h 1080 -- $GODOT_BIN --path sketches/core-loop --gpu-index 1 \
-#     --resolution 1920x1080 --fixed-fps 60 --audio-driver Dummy --script res://tools/seam_strip_capture.gd -- \
-#     --out=<absolute dir> [--seed=0] [--selftest=1]
-#
-# The launch is the game's own: the Warden's seal is lifted as the test path does (flow._unseal), the ball rolls up to the
-# stage's beacon, a reward is chosen (events.reward_chosen) and world.gd fires the ball. The take is forced live
-# (launch_take.force_live), the swipe runs in real frames. Nothing here reads a position or heading: the launch, the swipe's
-# phases, the cut, the touchdown and the return of control all come from signals and the take's own phase.
-# Exit 0 when both strips and sheets are written; 1 naming each seam not reached (a launch that never happens, a flat or
-# under-50 KB frame, no frame between full cover and the reveal's start, no touchdown); 2 on a bad argument.
-# --selftest=1 adds a third seam whose launch is never fired, to show the failure path.
 
 const SEAMS := [
 	{"name": "dam-flume", "from_stage": 1, "what": "Dam to the flume"},
@@ -33,9 +14,7 @@ const SELFTEST_SEAM := {"name": "selftest-never", "from_stage": 0, "what": "Plan
 const STEP_S := 0.1
 const LEAD_S := 2.0
 const TAIL_S := 1.5
-# Game seconds, from the launch, to reach touchdown and the return of control.
 const LIMIT_S := 8.0
-# Game seconds to reach the stage before the launch.
 const READY_LIMIT_S := 20.0
 const SELFTEST_LIMIT_S := 3.0
 const ROLL_SPEED := 8.0
@@ -55,7 +34,6 @@ var _seams: Array = []
 var _clock := 0.0
 var _gt := 0.0
 var _done := false
-# Filled by signals during a seam.
 var _events := {}
 
 
@@ -107,12 +85,10 @@ func _run() -> void:
 		elif not bool(row.get("never", false)):
 			_sheet(result)
 		if result.get("fault", "") != "" and not bool(row.get("never", false)):
-			# A seam that failed leaves the next one nothing sound to start from.
 			break
 	_finish()
 
 
-# A watchdog on wall time: a drive that errors leaves its coroutine stuck, and the clock ends the run naming what is left.
 func _process(delta: float) -> bool:
 	_clock += delta
 	_gt += delta
@@ -129,7 +105,6 @@ func _frames(count: int) -> void:
 		await process_frame
 
 
-# A fresh run of the seed's pilot, calm, with the briefing out of the way (the ui_screens_capture run rows' start).
 func _fresh_run() -> void:
 	_take.force_live = false
 	_game.flow.show_title()
@@ -152,14 +127,12 @@ func _connect_events() -> void:
 	var ev = _game.events
 	ev.launched.connect(func(_v): _events["launch"] = _gt)
 	ev.landed.connect(func(impact: float):
-		# Only a landing after the cut counts; the flight over the old ground never does.
 		if _events.has("cut") and not _events.has("touchdown"):
 			_events["touchdown"] = _gt
 			_events["impact"] = impact)
 	_take.covered.connect(func(): _events["covered"] = _gt)
 
 
-# One seam: the ball rolls up to the beacon, the seal is lifted, a reward is chosen and the launch is filmed.
 func _film(row: Dictionary) -> Dictionary:
 	var name := String(row["name"])
 	var never := bool(row.get("never", false))
@@ -177,10 +150,8 @@ func _film(row: Dictionary) -> Dictionary:
 		result["fault"] = "expected to launch from stage %d, the run is on %d" % [row["from_stage"], from_stage]
 		return result
 	result["from_stage"] = from_stage
-	# Roll the ball up to the stage's beacon (the exit), lift the Warden's seal, then pick a reward 2 s on.
 	var terrain = _game.ctx.terrain
 	if never:
-		# The planted seam fires nothing: it waits out its short limit and is named as not reached.
 		await _frames(int(SELFTEST_LIMIT_S * 60.0))
 		result["fault"] = "the launch was never reached within %.0f s" % SELFTEST_LIMIT_S
 		return result
@@ -214,7 +185,6 @@ func _film(row: Dictionary) -> Dictionary:
 				_events["launch"] = _gt
 		var base: float = _events.get("launch", fire_at)
 		var rel: float = _gt - base
-		# Read the take and the flow every frame, so the times are the game's.
 		if launched:
 			if stats["closed"] < 0.0 and _take.busy() and _take.progress() >= 1.0:
 				stats["closed"] = rel
@@ -225,7 +195,6 @@ func _film(row: Dictionary) -> Dictionary:
 				_events["cut"] = _gt
 			if stats["control"] < 0.0 and stats["cut"] >= 0.0 and not _take.busy() and not _game.player.frozen() and flow.in_play():
 				stats["control"] = rel
-		# A frame is due every STEP_S of game time from the first, whatever the renderer does.
 		var due: float = (fire_at if not launched else base) + float(next_k) * STEP_S
 		if _gt + 1e-6 >= due and next_k <= end_k:
 			await RenderingServer.frame_post_draw
@@ -281,7 +250,6 @@ func _film(row: Dictionary) -> Dictionary:
 	return result
 
 
-# The frame, as the 1920x1080 viewport drew it. Flat means almost every sampled pixel is one colour.
 func _grab(seam: String, index: int, rel: float) -> Dictionary:
 	var image := root.get_texture().get_image()
 	var ms := int(round(rel * 1000.0))
@@ -297,7 +265,6 @@ func _grab(seam: String, index: int, rel: float) -> Dictionary:
 		"size": [image.get_width(), image.get_height()]}
 
 
-# One sheet per seam with ImageMagick's montage: frames in order, left to right, each labelled with its time from the launch.
 func _sheet(result: Dictionary) -> void:
 	var args: PackedStringArray = ["-font", "Adwaita-Sans", "-pointsize", "20"]
 	for f in result["frames"]:
@@ -312,7 +279,6 @@ func _sheet(result: Dictionary) -> void:
 	result["sheet"] = "%s-sheet.png" % result["seam"]
 
 
-# The moment words under a thumbnail, from the times already read.
 func _mark(result: Dictionary, f: Dictionary) -> String:
 	var t: float = f["t"]
 	var times: Dictionary = result["times_s"]
@@ -342,7 +308,6 @@ func _finish() -> void:
 		quit(1)
 
 
-# The seam as capture.json keeps it: the times, then the frames' rows.
 func _brief(s: Dictionary) -> Dictionary:
 	var out := {"seam": s["seam"], "what": s["what"], "fault": s["fault"], "frames": s["frames"]}
 	for key in ["from_stage", "stage_after", "times_s", "landing_impact", "state_after_cut", "sheet"]:

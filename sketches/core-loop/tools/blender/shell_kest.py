@@ -1,15 +1,12 @@
-# VD-01 Kest pilot and class equipment. shell_base.spherical() seats the
-# pilot inside the clear rolling hull. Authored here from Blender primitives.
-
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
-from common import Part, Vector  # noqa: E402
+import common
+import shell_base as sb
+from common import Part, Vector
 
 DOME_C = (0.0, 0.2, 0.8)
 DOME_R = 0.56
@@ -47,7 +44,6 @@ def pod():
         p.rod("bare_metal", base + Vector((side * 0.13, -0.12, -0.06)), base + Vector((side * 0.13, -0.02, 0.2)),
               0.022, 6)
     p.beam("bare_metal", (-0.35, -0.2, 0.8), base, 0.06)
-    # The vane's spine and struts; the blades are separate hinged objects.
     p.beam("bare_metal", (0, -0.2, 0.88), (0, -0.9, 0.9), 0.06, 0.05)
     p.beam("bare_metal", (0, -0.62, 0.9), (0, -0.62, 0.72), 0.05)
     return p

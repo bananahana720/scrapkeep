@@ -3,16 +3,6 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# Stills of the menus and the HUD at one window size, for the UI passes (look, settings,
-# responsive, accessibility). The window is the size given, so a 16:10 or 21:9 run shows what a
-# player on that screen sees; --wide=1 or --wide=0 picks the Wide picture setting for it.
-#   xvfb-run -a <godot> --rendering-driver opengl3 --path sketches/core-loop \
-#     --script res://tools/ui_capture.gd -- --out=<abs dir> [--size=1600x900] [--wide=1]
-# Stills: title, settings on each tab from the title, pilot select, play HUD, pause, help.
-# Beside each still, <name>.audit.txt lists what pass 3 and 4 measure on that screen: every shown
-# button or focusable field smaller than 44 px on the real screen, and every shown button or word
-# that runs past the left or right edge of the window, and every focusable button a screen reader
-# would find with no name.
 
 var _out := ""
 var _game

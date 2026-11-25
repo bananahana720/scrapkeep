@@ -12,7 +12,6 @@ for name in sys.argv[1:]:
     bdir = os.path.join(W, "boards", name)
     os.makedirs(os.path.join(bdir, "img"), exist_ok=True)
     cards = []
-    # One card per subject; with several seeds, one card per take, keyed <subject>_<seed>.
     for key in spec["subjects"]:
         for n, s in enumerate(seeds, 1):
             src = os.path.join(bdir, f"{key}_{s}.png")

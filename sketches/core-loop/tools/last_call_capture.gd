@@ -4,14 +4,6 @@ const Intent := preload("res://src/movement/intent.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const ShopCounter := preload("res://src/ui/shop_counter.gd")
 
-# Stills of Moss's last call (W1-73) and the hook pin (W1-79) on a two-world table: the counter
-# at world 1's last stage with the set piece and the kettle (no pour, then two), and the HUD's
-# cog chip with the hook's class pinned. It needs a rendered display:
-#
-#   xvfb-run -a <godot> --path sketches/core-loop --rendering-driver opengl3 \
-#     --script res://tools/last_call_capture.gd -- --out=<absolute dir>
-#
-# Stills render at 1920x1080 whatever the window's size.
 
 class TwoWorldGame extends "res://src/game.gd":
 	func _chosen_table():
@@ -58,7 +50,6 @@ func _process(_delta: float) -> bool:
 		90:
 			_shot("hud_hook_pin")
 			var shop = _game.ctx.build.shop
-			# Two pieces of a 3-piece set nothing held counts yet (the racked active counts as one).
 			var counts: Dictionary = _game.ctx.build.maker_counts()
 			var pool: Array = []
 			for m in MakerSets.SETS:

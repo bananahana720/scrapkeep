@@ -92,8 +92,6 @@ def solve(pilot, arm, side, at, wrist=None):
     from anim_rivet_drop import world_hand
     bpy.context.view_layer.update()
     solve_arm = solver(pilot)
-    # Full inherited nonuniform scale changes segment lengths as the elbow turns.
-    # Reuse the selected solver until those lengths converge, as Tally's route does.
     for _ in range(16):
         if (arm.pose.bones['hand.' + side].head - at).length < .00001:
             break

@@ -22,7 +22,6 @@ SIZE = [4.0, 3.75, 6.272]
 def build(s):
     for z in lp.TANK_Z:
         f = lp.tank_frame(s, z)
-        # C1 the inner seam band and its rivet ring, C2 studs on the outer band.
         band(f, 1.27, 1.38, 1.12, 1.3, lp.NT, tone("iron"))
         for a in around(10, .3):
             p, nrm = dome_point(f, .95, 1.71, .51, .86, a)
@@ -30,27 +29,23 @@ def build(s):
         for a in around(8, .1):
             p, nrm = dome_point(f, 1.38, -1.21, 1.0, 0.0, a)
             stud(s, p, nrm, .07, .06, tone("copper"))
-        # C5 bolted foot plates under the corner brackets.
         side = 1.0 if z > 0 else -1.0
         for x in lp.CRADLE_X:
             foot = pump((x, .38, z + side * 1.25))
             slab(s, foot, (.22, .03, .16), tone("iron"))
             stud(s, (foot[0] + .12, .41, foot[2]), (0.0, 1.0, 0.0), .05, .05, tone("copper"))
             stud(s, (foot[0] - .12, .41, foot[2]), (0.0, 1.0, 0.0), .05, .05, tone("copper"))
-    # C3 the riser's bolted cap plate.
     rx, rz = lp.PUMP_AT[0] + lp.RISER_AT[0], lp.RISER_AT[1]
     top = lp.RISER[-1][1]
     ring(s, [(.02, top - .05), (.78, top - .05), (.78, top + .07), (.02, top + .07)], 8, tone("iron"), at=(rx, rz))
     for a in around(6, .2):
         stud(s, (rx + .66 * math.sin(a), top + .07, rz + .66 * math.cos(a)), (0.0, 1.0, 0.0), .06, .06, tone("copper"))
-    # C4 ticks and needle on the valve block's gauge.
     g = lp.GAUGES[1]
     gf = lp.gauge_frame(s, g)
     for a in around(8, math.pi / 8):
         r = g[2] - .05
         slab(gf, (r * math.cos(a), .05, r * math.sin(a)), (.02, .015, .02), tone("iron"))
     slab(gf, (.08, .06, 0.0), (.1, .012, .015), tone("iron"))
-    # C6 the base plate's raised edge lip.
     (cx, cy, cz), (hx, hy, hz) = lp.BASE
     y = cy + hy + .04
     for sx in (-1.0, 1.0):

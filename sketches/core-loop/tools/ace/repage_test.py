@@ -50,12 +50,10 @@ def run():
         code, said = quiet(repage.apply, root, None)
         assert code == 0 and '0 of 2' in said, said
         assert all(f.read_bytes() == again[f] for f in again), 'a second pass changes nothing'
-        # A pack cut today is born short-paged.
         t = np.arange(pack.RATE * 3) / pack.RATE
         born = root / 'spillway' / 'calm.bass.ogg'
         pack.encode(np.stack([np.sin(2 * np.pi * 110 * t)] * 2, axis=1) * 0.3, born)
         assert repage.longest_page(born)[0] <= repage.MAX_PAGE_S, 'the encoder writes short pages'
-        # A file that is not an Ogg stops the check by name.
         (root / 'spillway' / 'broken.ogg').write_bytes(b'not an ogg')
         try:
             repage.check(root)

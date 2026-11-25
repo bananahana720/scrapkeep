@@ -1,22 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "map-standard" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// It runs the park tests that print MAPCHECK lines for the dam and the flume itself, through the project's runner
-// (scripts/sketch-smoke.mjs, so Godot's HOME is a scratch folder), on this checkout, and takes the head from cleanHead
-// (sound-recipes-receipt.mjs: git rev-parse HEAD, refusing uncommitted tracked changes and untracked game files).
-// Each MAPCHECK line is `MAPCHECK <map> <measure> ... PASS|FAIL|OWED`; `report INFO` lines carry detail only.
-// The receipt passes only when every test finished with no failed check, the gating lines for park_dam and park_flume
-// number the pinned count, every one of the ten map points (ruling ct) has at least one gating line on each map, every
-// gating line passes or is on WAITING (an item ruled to wait, matched on its status and value, with the line that parks
-// it), no line is a measure this file does not map to a point, no half of a point is left open (OPEN_HALVES: a half no
-// MAPCHECK line checks is a miss unless a ruling parks it; all four Wave 46B non-MAPCHECK halves are verified in
-// VERIFIED_HALVES and recorded in project-guide/handoff/shared/world1/map-audit.md), and the plant was caught: every
-// test printed its pinned number of PLANTED lines, each one judged FAIL (the planted fault failed its pass line). An
-// OWED line not on WAITING, or one whose value moved, is a miss. Optional `--snag-receipt <file>` also verifies the 8c
-// snag-sweep receipt live on the same head.
-//
-//   node scripts/gate/map-standard-receipt.mjs --out <file> [--snag-receipt <snag-sweep.json>]
-//   node scripts/gate/map-standard-receipt.mjs --logs <dir of <test>.log files>   (a test hook: prints, never passes)
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -30,13 +12,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// cleanHead lives in sound-recipes-receipt.mjs until a shared gate module takes it.
 import { cleanHead } from "./sound-recipes-receipt.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const COMMIT = /^[0-9a-f]{7,40}$/;
 export const MAPS = ["park_dam", "park_flume"];
-// Each test that prints MAPCHECK lines for the two maps, with the PLANTED lines it prints that carry a verdict.
 export const TESTS = {
   park_landmark_sight_test: 1,
   park_breath_test: 1,
@@ -48,8 +28,6 @@ export const TESTS = {
   site_markers_test: 0,
   park_scrap_lines_test: 0,
 };
-// The ten points of the map standard (ruling ct; project-guide/handoff/shared/world1/map-audit.md section G) and the
-// MAPCHECK measures that check each one.
 export const POINTS = {
   1: ["open_sight_share", "line_sight_share"],
   2: ["line_quiet_share"],
@@ -62,15 +40,9 @@ export const POINTS = {
   9: ["hub_zones_3_bands"],
   10: ["marker_sight", "furnace_sight", "scrap_on_lines"],
 };
-// Gating MAPCHECK lines for park_dam and park_flume on a full run; a lost or added check moves it.
 export const PINNED_LINES = 42;
-// Items ruled to wait. Empty since W46-02 (PR #1193, cd8fd6154) built the concave flume yard bowl and
-// park_fight_bowl_test.gd pruned OWED := {} (park_flume yard_rim_median_m reads 3.52 m >= 2.0 m PASS).
 export const WAITING = [];
-// Halves of a point that no MAPCHECK line checks. Each is a miss unless `parked` cites the ruling or line that parks
-// it. Empty since Wave 46B closed all four remaining halves (see VERIFIED_HALVES and map-audit.md section G).
 export const OPEN_HALVES = [];
-// Non-MAPCHECK halves closed and verified in Wave 46B, with exact commits, checks, and audit citations.
 export const VERIFIED_HALVES = [
   {
     point: 1,
@@ -189,7 +161,6 @@ function checkSnagReceipt(snagReceipt, head) {
   };
 }
 
-// The gating MAPCHECK lines of one log: {map, measure, value, line, status, text}.
 export function mapLines(text) {
   return text
     .split("\n")
@@ -212,9 +183,6 @@ export function mapLines(text) {
 const plantLines = (text) =>
   text.split("\n").filter((l) => l.startsWith("PLANTED ") && /\b(PASS|FAIL)\s*$/.test(l.trim()));
 
-// logs: {"<test>": "<log text>"}.
-// halves and waiting are seams for the node tests; the receipt itself always judges OPEN_HALVES and WAITING.
-// snagReceipt optionally verifies the 8c snag-sweep receipt live against the same head.
 export function buildReceipt(
   logs,
   head,
@@ -299,7 +267,6 @@ export function buildReceipt(
   return { head, pass, measured, plant_caught: plantCaught };
 }
 
-// Runs every test through the project's runner and returns {"<test>": "<log text>"}.
 export function runTests(cwd) {
   const logs = mkdtempSync(path.join(os.tmpdir(), "map-standard-"));
   try {
@@ -324,7 +291,6 @@ export function runTests(cwd) {
   }
 }
 
-// The receipt for the checkout at cwd. run is injectable so the refusal can be tested without Godot.
 export function produce({ cwd = root, run = runTests, snagReceipt = undefined } = {}) {
   const head = cleanHead(cwd);
   return buildReceipt(run(cwd), head, { snagReceipt });
@@ -377,7 +343,6 @@ function main(argv) {
     return 2;
   }
   if (args.logs) {
-    // A test hook: logs from anywhere judge no commit, so it never writes a passing receipt.
     const logs = {};
     for (const test of Object.keys(TESTS)) {
       const file = path.join(args.logs, `${test}.log`);

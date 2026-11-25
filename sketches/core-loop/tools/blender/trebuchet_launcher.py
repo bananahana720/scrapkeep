@@ -39,8 +39,7 @@ from ore_cart import strut
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [2400, 2000, 2]  # polish: was [900, 2000, 2]
-# Polish (tools/blender/POLISH.md): hard timber-and-steel machinery: bevels only.
+LANDMARK = [2400, 2000, 2]
 FINISH = {"Girders": {"bevel": .04}, "Fittings": {"bevel": .03}, "Arm": {"bevel": .04}, "Glass": {"bevel": .04}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
 
 
@@ -51,8 +50,6 @@ def polish_on():
 
 NAME = "trebuchet_launcher"
 
-# One row per painted part, palette names or palette hex (src/core/palette.gd). common.HEX lacks CABLE 2a3231, LEDGER
-# e6d9b8 and today's ANCIENT 9dff3c (its "ancient" row is an older blue), so those are written out. No mint anywhere.
 TONES = {
     "girder": "petrol",
     "beam": "oxide",
@@ -63,53 +60,49 @@ TONES = {
     "lamp": "9dff3c",
 }
 
-# Metres, Godot +Y up, origin at the mouth point, +z the aim.
 GROUND = -1.0
-FZ = -6.0                                       # the frame plane: mouth - aim*6 (contraptions.gd:488, :495)
-PIVOT = (0.0, 10.5, FZ)                         # mouth - aim*6 + UP*10.5 (:495)
-POST = (3.0, 11.0, .9)                          # x of each post (+-), top y (5 + 6), girder width
-OUTER = ((5.4, GROUND), (4.35, 11.78))          # outer leg foot (x, y) and head (x, y)
-BRACES = (3.2, 7.6)                             # y of the two braces between post and outer leg
-BEAM = (4.75, 11.78, 12.18, .3)                 # top beam half length, bottom y, top y, half depth
-BEARING = (.6, 10.0, 11.0, .55)                 # half width, y0, y1, half depth
-AXLE = (.28, .82, 3.75)                         # radius, x0 (clear of the arm's hub), x1
-FLY = (4.05, 1.2, .28)                          # flywheel centre x on the +x end, rim radius, half width
-HEX_END = (-4.1, .45, .35)                      # hex fitting centre x on the -x end, radius, half length
-STUB = (.14, 11.5)                              # threaded stub radius and bottom y under the beam
-BASE = (5.75, -1.0, -.45, .5)                   # base beam half length, y0, y1, half depth
-SKID = (4.35, (-8.3, -3.95), (-1.0, -.7), .3)   # skid x, z span, y span, half width
+FZ = -6.0
+PIVOT = (0.0, 10.5, FZ)
+POST = (3.0, 11.0, .9)
+OUTER = ((5.4, GROUND), (4.35, 11.78))
+BRACES = (3.2, 7.6)
+BEAM = (4.75, 11.78, 12.18, .3)
+BEARING = (.6, 10.0, 11.0, .55)
+AXLE = (.28, .82, 3.75)
+FLY = (4.05, 1.2, .28)
+HEX_END = (-4.1, .45, .35)
+STUB = (.14, 11.5)
+BASE = (5.75, -1.0, -.45, .5)
+SKID = (4.35, (-8.3, -3.95), (-1.0, -.7), .3)
 SPHERE = ((0.0, 2.08, FZ), 2.2)
-BAND = (2.24, .14)                              # copper band major radius and tube radius, at the sphere's equator
-PLINTH = (2.3, 1.5, (-.75, -.45))               # half x, half z, y span
-PLATE = (1.8, -.45, -.12)                      # base plate radius and y span under the sphere
-GEAR = (.6, .74, 4.15, 4.5, 16)                 # root radius, tip radius (detail1 teeth), y0, y1, teeth
+BAND = (2.24, .14)
+PLINTH = (2.3, 1.5, (-.75, -.45))
+PLATE = (1.8, -.45, -.12)
+GEAR = (.6, .74, 4.15, 4.5, 16)
 PISTON = (.36, 4.5, 6.8)
 ROD = (.15, 6.8, 9.1)
-PULLEY = ((-4.05, .75, FZ + 1.0), .95, .26)     # centre, radius, half width (axle along x)
-PEDESTAL = ((-4.05, FZ + 1.0), .3, .45)         # x, z, half x, half z (ground to the pulley's foot)
+PULLEY = ((-4.05, .75, FZ + 1.0), .95, .26)
+PEDESTAL = ((-4.05, FZ + 1.0), .3, .45)
 BOX = ((2.15, 3.85), (-1.0, 2.75), (FZ + 1.1, FZ + 2.3))
-GAUGES = [((2.6, 2.25), .33), ((3.3, 1.05), .48)]      # (x, y) on the box front, bezel radius
+GAUGES = [((2.6, 2.25), .33), ((3.3, 1.05), .48)]
 KNOB = ((3.0, -.25), .32)
-LAMP = ((1.85, .95, FZ + 1.7), .16, .55)          # base point, radius, height
+LAMP = ((1.85, .95, FZ + 1.7), .16, .55)
 VALVE = ((1.85, .1, FZ + 1.7), .2)
-PIPE = ((2.8, 2.75, FZ + 1.5), 6.2, (3.0, FZ + .5))  # foot, top y, elbow end (x, z) at the post
+PIPE = ((2.8, 2.75, FZ + 1.5), 6.2, (3.0, FZ + .5))
 CABLES = [((-4.5, 11.9, FZ), (-4.35, -.72, -8.2)), ((-4.5, 11.9, FZ), (-4.35, -.72, -3.98)),
           ((4.5, 11.9, FZ), (4.35, -.72, -8.2)), ((4.5, 11.9, FZ), (4.35, -.72, -3.98))]
-# The arm, local to its pivot: pipe radius, half length; hub radius and half width along x; the throwing end's hex
-# fitting (-z) and the copper counterweight drum (+z).
 ARM = (.45, 10.0)
 HUB = (.7, .7)
 ARM_FIT = (.6, -10.0, -9.3)
 ARM_DRUM = (.95, 8.1, 9.7)
-SWING = (-.9, .7)                               # lerp(-0.9, 0.7, g) (contraptions.gd:521)
-CLEAR = 3.6                                     # the ring's outer radius 3.5 (map_gorge.gd:354) and a margin
+SWING = (-.9, .7)
+CLEAR = 3.6
 N = 8
 SIZE = {"trebuchet_launcher_frame": [11.562, 13.211, 4.81], "trebuchet_launcher_arm": [1.755, 1.755, 20.0],
         "trebuchet_launcher_glass": [5.821, 4.4, 4.532]}
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     return common.srgb(TONES[name])
 
 
@@ -137,9 +130,6 @@ class Frame:
 
 
 def ring(s, rows, n, color, start=None, tones=None, at=(0.0, 0.0), radius=None):
-    # A lathe through (radius, t) rows as one connected piece (kit.Surface.finish recalculates each piece's normals,
-    # dig_mechanical/kit.py:120, so caps belong in the profile). A radius near 0 closes the end. `radius(r, i)` lets a
-    # row vary round the axis (gear teeth).
     aa = around(n, math.pi / n if start is None else start)
     rr = radius or (lambda r, i: r)
     verts = [(at[0] + rr(r, i) * math.sin(a), t, at[1] + rr(r, i) * math.cos(a)) for r, t in rows for i, a in enumerate(aa)]
@@ -154,7 +144,6 @@ def cylinder(s, r, t0, t1, n, color):
 
 
 def box(s, lo, hi, color, top=None):
-    # An axis box from corner lo to corner hi; `top` paints the four upper corners another tone (a rust run-down).
     (x0, y0, z0), (x1, y1, z1) = lo, hi
     verts = [(x, y, z) for x, y, z in [(x0, y0, z0), (x1, y0, z0), (x1, y1, z0), (x0, y1, z0),
                                        (x0, y0, z1), (x1, y0, z1), (x1, y1, z1), (x0, y1, z1)]]
@@ -176,12 +165,10 @@ def torus(s, centre, major, minor, seg, sides, color):
 
 
 def along_x(s, centre):
-    # Axis along +x; local z is up.
     return Frame(s, centre, (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
 
 
 def along_z(s, centre):
-    # Axis along +z (out of the box front); local x is +x.
     return Frame(s, centre, (0.0, 0.0, 1.0), (1.0, 0.0, 0.0))
 
 
@@ -189,7 +176,6 @@ def girders(s):
     px, top, w = POST
     (fx, fy), (hx, hy) = OUTER
     for sx in (-1.0, 1.0):
-        # The post runs from the ground to the beam: 12 m to the bearing (the footprint), then a stub to the beam.
         strut(s, (sx * px, GROUND, FZ), (sx * px, BEAM[1], FZ), w, w, tone("girder"))
         strut(s, (sx * fx, fy, FZ), (sx * hx, hy, FZ), w * .85, w * .85, tone("girder"))
         for y in BRACES:
@@ -267,7 +253,6 @@ def glass(s):
 
 
 def arm(s):
-    # Local to the pivot. The pipe, the hub along x, the throwing end's hex fitting (-z) and the copper drum (+z).
     r, hl = ARM
     z = along_z(s, (0.0, 0.0, 0.0))
     fr, f0, f1 = ARM_FIT
@@ -280,7 +265,6 @@ def arm(s):
 
 
 def edge_points(verts, faces, step=.1):
-    # Every vertex and points every `step` metres along every face edge, for the clearance checks.
     pts = list(verts)
     for f in faces:
         for i in range(len(f)):
@@ -293,7 +277,6 @@ def edge_points(verts, faces, step=.1):
 
 
 def in_arm(p):
-    # Is an arm-local point inside the arm's solid (with 5 cm margin)?
     x, y, z = p
     rad = math.hypot(x, y)
     m = .05
@@ -307,8 +290,6 @@ def in_arm(p):
 
 
 def sweep(name, verts, faces):
-    # The arm swings through SWING about the post-top axis; Basis.looking_at maps a world offset p from the pivot to arm
-    # local (-p.x, c p.y - s p.z, -s p.y - c p.z) with s, c the sine and cosine of the angle.
     pts = edge_points(verts, faces)
     hits = 0
     for k in range(161):
@@ -324,7 +305,6 @@ def sweep(name, verts, faces):
 
 
 def clear(name, verts):
-    # The ball rolls through the ring at the mouth: nothing fixed inside the ring's footprint.
     near = min(math.hypot(v[0], v[2]) for v in verts)
     assert near >= CLEAR, (name, "ring footprint", near)
     print("TREBUCHET_CLEAR", name, "nearest_horizontal_to_mouth", round(near, 3))

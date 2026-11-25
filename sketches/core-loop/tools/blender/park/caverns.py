@@ -42,22 +42,20 @@ sys.path.insert(0, str(HERE.parent))
 sys.path.insert(0, str(HERE.parent / "dig_mechanical"))
 
 TAU = math.tau
-LANE = 3.5                 # half width of the clear ride lane (m)
-POOL_DEPTH = 1.1           # dip below the shelf at the pool centre (m); the 1.2 m limit is the check's
+LANE = 3.5
+POOL_DEPTH = 1.1
 POOL_LIMIT = 1.2
-WATER_BELOW_SHELF = 0.04   # the water sheet sits this far under the shelf, so the pool edge is a clean shore
-PARK_LARGE = [16000, 48000]   # tris, verts (assets/asset_budgets.json); draws 2: stone and water; the -col is no draw (KC-INT)
+WATER_BELOW_SHELF = 0.04
+PARK_LARGE = [16000, 48000]
 DETAIL = [1500, 3000]
-COL_NODE = "%s-col-col"   # the Godot importer strips one "-col" from a mesh node's name; park_recipes.gd looks for "-col" in the imported name
-ANCHOR_GAP_MAX = 40.0      # the harpoon's rope range is 45 m (tuning.gd)
+COL_NODE = "%s-col-col"
+ANCHOR_GAP_MAX = 40.0
 
-# Southwest palette. The stone slot multiplies vertex colour by the sandstone beds (stone.tres), so rock is painted in
-# near-white light and shade; dark timber and copper survive the multiply as rust-brown and copper-orange.
 TIMBER = (0.50, 0.37, 0.25)
 TIMBER_DARK = (0.38, 0.27, 0.18)
-COPPER = (0.718, 0.471, 0.263)     # b77843
+COPPER = (0.718, 0.471, 0.263)
 WATER = (0.30, 0.52, 0.50)
-PLATE = (0.34, 0.33, 0.31)         # dam-era grey bolt plate
+PLATE = (0.34, 0.33, 0.31)
 
 
 def smooth(t):
@@ -115,10 +113,6 @@ def path_y(points, z):
     return points[-1][1]
 
 
-# ---------------------------------------------------------------------------------------------------------------------
-# The recipe sections
-# ---------------------------------------------------------------------------------------------------------------------
-
 class Hall:
     """One swept recipe: a ring of N points per station z, lower half a superellipse floor and walls, upper half a roof."""
 
@@ -128,7 +122,7 @@ class Hall:
         self.path, self.n_floor, self.n_roof, self.rise = path, n_floor, n_roof, rise
         self.amp_wall, self.amp_roof, self.seed = amp_wall, amp_roof, seed
         self._half, self._spring, self._open, self.pool = half, spring, roof_open, pool
-        self.rim_lock = rim_lock   # no wall noise at the springline, so an open rim stays flush with the ground
+        self.rim_lock = rim_lock
         assert round(length / dz) % 2 == 0, "an even interval count, so the -col stride 2 lands on the exit ring"
         self.rings = round(length / dz) + 1
 
@@ -239,19 +233,13 @@ def cavern_shell():
 
 HALLS = {"cenote_pool": cenote_pool, "flooded_shaft": flooded_shaft, "cavern_shell": cavern_shell}
 
-# Anchor stalactites (ring station z, ring angle u in radians; the roof is |u| > pi/2): spaced under the rope range and
-# alternating sides. The shaft's anchors hang from its cap beams at the listed stations instead.
 ANCHORS = {
     "cenote_pool": [(20, -2.36), (26, 2.36), (32, -2.36), (38, 2.36), (44, -2.36), (50, 2.36)],
     "cavern_shell": [(10 + 13.3 * k, (2.7 if k % 2 == 0 else -2.7) + (0.35 if k % 3 == 0 else 0.0)) for k in range(14)],
     "flooded_shaft": [(11 + 12 * k, 0.0) for k in range(6)],
 }
-TIMBER_STATIONS = [5 + 6 * k for k in range(13)]     # the shaft's timber sets
+TIMBER_STATIONS = [5 + 6 * k for k in range(13)]
 
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Triangle soup (Godot metres; CCW seen from the visible side, glTF's front)
-# ---------------------------------------------------------------------------------------------------------------------
 
 class Soup:
     def __init__(self):
@@ -303,7 +291,6 @@ class Soup:
             idx.append([self.vert((bx + r * math.cos(spin + TAU * i / sides), by + sign * d, bz + r * math.sin(spin + TAU * i / sides)),
                                   color) for i in range(sides)])
         tip = self.vert((bx, by + sign * length, bz), tip_color or color)
-        # outward faces: with the cone hanging down, viewed from outside, rings run toward the tip.
         for r in range(2):
             for i in range(sides):
                 i1 = (i + 1) % sides
@@ -356,7 +343,7 @@ class Soup:
             d = (q[0] - o[0], q[1] - o[1], q[2] - o[2])
             ln = math.sqrt(d[0] ** 2 + d[1] ** 2 + d[2] ** 2)
             d = (d[0] / ln, d[1] / ln, d[2] / ln)
-            e1 = (1.0, 0.0, 0.0)          # the tube runs along +z mostly; x is perpendicular to it
+            e1 = (1.0, 0.0, 0.0)
             e2 = (d[1] * e1[2] - d[2] * e1[1], d[2] * e1[0] - d[0] * e1[2], d[0] * e1[1] - d[1] * e1[0])
             rows.append([self.vert((p[0] + radius * (math.cos(TAU * s / sides) * e1[0] + math.sin(TAU * s / sides) * e2[0]),
                                     p[1] + radius * (math.cos(TAU * s / sides) * e1[1] + math.sin(TAU * s / sides) * e2[1]),
@@ -381,10 +368,6 @@ class Soup:
                 s1 = (s + 1) % 4
                 self.quad(rows[m][s], rows[m1][s], rows[m1][s1], rows[m][s1])
 
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Building a recipe: the swept shell, the pieces on it, the water, the collider
-# ---------------------------------------------------------------------------------------------------------------------
 
 def ring_rows(hall, soup, stride=1, with_color=True):
     """The swept shell as rows of vertex indices, one row per kept station, plus (z, u) per row and column."""
@@ -413,9 +396,6 @@ def roof_keeper(hall, soup, rows, stations):
     return keep
 
 
-# The harpoon bites what a world-layer ray hits (src/movement/augments.gd _hook_ray), and the loader copies no Anchor
-# empty, so every anchor stalactite and every copper eye also goes to the collider soup; the eye as a solid block the
-# size of the ring, since a ray through the ring's hole would miss it (KC-INT R6).
 EYE_HALF = (0.4, 0.4, 0.15)
 
 
@@ -489,7 +469,6 @@ def water_sheet(hall):
         for i in range(nx):
             xc = -a + (i + 0.5) * cell
             if hall.floor_y(xc, zc) < y - 0.04:
-                # up-facing: row toward +z, column toward +x
                 soup.tri(vid(i, k), vid(i, k + 1), vid(i + 1, k))
                 soup.tri(vid(i + 1, k), vid(i, k + 1), vid(i + 1, k + 1))
     return soup
@@ -554,15 +533,10 @@ def build_shell(name, level):
     return {"hall": hall, "rock": soup}
 
 
-# ---------------------------------------------------------------------------------------------------------------------
-# Checks (fail loud)
-# ---------------------------------------------------------------------------------------------------------------------
-
 def check_base(name, parts):
     hall, rock, col, water = parts["hall"], parts["rock"], parts["col"], parts["water"]
     tris = len(rock.t) + len(col.t) + len(water.t)
     assert tris <= PARK_LARGE[0], (name, "triangles", tris)
-    # Pool: the deepest floor vertex under the sheet, measured on the real mesh, not the formula.
     wy = hall.water_y()
     z0, z1 = hall.pool
     depth = 0.0
@@ -571,8 +545,6 @@ def check_base(name, parts):
             depth = max(depth, wy - y)
     assert 0.5 <= depth <= POOL_LIMIT, (name, "pool depth", depth)
     assert len(water.t) >= 50, (name, "water sheet", len(water.t))
-    # Lane: along the centre line the floor never changes by more than 0.15 m between neighbouring stations beyond the
-    # designed slope, and no ring vertex inside the lane stands off the analytic floor.
     worst = 0.0
     for i in range(hall.rings):
         for j in range(hall.N):
@@ -580,12 +552,10 @@ def check_base(name, parts):
             if math.cos(TAU * j / hall.N) > 0.2 and abs(x) < LANE:
                 worst = max(worst, abs(y - hall.floor_y(x, z)))
     assert worst <= 0.12, (name, "lane noise", worst)
-    # Collider fidelity on the line: the stride 2 sheet within 0.25 m of the render along the centre line.
     for i in range(1, hall.rings - 1, 2):
         z = i * hall.dz
         mid = 0.5 * (hall.floor_y(0.0, z - hall.dz) + hall.floor_y(0.0, z + hall.dz))
         assert abs(mid - hall.floor_y(0.0, z)) <= 0.25, (name, "collider drift", z, mid, hall.floor_y(0.0, z))
-    # Extents.
     xs = [p[0] for p in rock.v[:hall.rings * hall.N]]
     assert max(abs(min(xs)), max(xs)) <= hall.width / 2 + 0.05, (name, "width", min(xs), max(xs))
     gaps, last = [], 0.0
@@ -604,10 +574,6 @@ def check_shell(name, level, parts):
             assert y <= hall.floor_y(x, z) + 0.12 or y > hall.floor_y(x, z) + 3.0, (name, level, "inside the lane", (x, y, z))
     return {}
 
-
-# ---------------------------------------------------------------------------------------------------------------------
-# Blender side
-# ---------------------------------------------------------------------------------------------------------------------
 
 def to_blender(soup_parts, root, bpy, common, kit):
     """Turn Soup objects into Blender mesh objects under root. soup_parts: [(object name, soup, slot or None, smooth)]."""
@@ -665,7 +631,6 @@ def export_all(only, out_dir, count_only):
               "anchors": len(base["anchors"]), **facts}, sort_keys=True))
         if count_only:
             continue
-        # base
         common.reset()
         root = common.empty(name)
         to_blender([("Rock", base["rock"], "stone", True), ("Water", base["water"], "glass", False),
@@ -675,7 +640,6 @@ def export_all(only, out_dir, count_only):
         path = Path(out_dir) / (name + ".glb")
         common.export(root, str(path))
         rows[path.name] = report(name, path, kit, PARK_LARGE, [COL_NODE % name, "Rock", "Water"], len(base["anchors"]))
-        # detail shells
         for k, sh in enumerate(shells, 1):
             common.reset()
             sroot = common.empty("%s_detail%d" % (name, k))

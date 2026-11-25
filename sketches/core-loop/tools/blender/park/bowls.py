@@ -50,13 +50,12 @@ import common
 MODELS = Path(common.MODELS) / "park"
 LANDFORM = {"tris": 8000, "verts": 24000, "draws": 1}
 DETAIL = {"tris": 1500, "verts": 3000, "draws": 1}
-SHELL_PROUD = 0.07          # most a shell feature stands above the ride surface inside the corridor
-APPROACH = 4.0              # level approach before the entry lip
-SLOPE_STEP = 7.0            # degrees per arc segment
-COPING_R = 1.5              # the PARK.md section 4 coping lip radius
+SHELL_PROUD = 0.07
+APPROACH = 4.0
+SLOPE_STEP = 7.0
+COPING_R = 1.5
 
 
-# --------------------------------------------------------------------------------------------------- profiles
 def arc_steps(angle):
     return max(2, math.ceil(angle / SLOPE_STEP))
 
@@ -106,7 +105,6 @@ def smooth(t):
     return t * t * (3 - 2 * t)
 
 
-# ----------------------------------------------------------------------------------------------------- recipes
 def bench_warp(x):
     return (0.8 * math.sin(0.5 * x) + 0.35 * math.sin(1.7 * x + 0.8)) - 0.35 * math.sin(0.8)
 
@@ -164,8 +162,6 @@ RECIPES = {
         "xs": [-15, -14.2, -13.2, -12.2, -11, -8.8, -6.6, -4.4, -2.2, 0, 2.2, 4.4, 6.6, 8.8, 10.0, 11.2, 12.3, 13.4, 14.4, 15],
         "size": [56.0, 5.0, 30.0],
     },
-    # Level: the approach z -4..0 and a 40 m flat, so the authored length (lip z 0 to the -col end) is 40 m. A tile
-    # copy's approach lies over the previous copy's last 4 m at the same height and section.
     "pit_haul_lane": {
         "segs": [("flat", 4.0), ("flat", 40.0)],
         "half": 15.0, "cross": haul_cross, "warp": None, "corridor": 10.0, "lip": False, "draws": 2, "level": True,
@@ -173,11 +169,10 @@ RECIPES = {
         "size": [40.0, 4.0, 30.0],
     },
 }
-POLES = [(-14.6, 12.0), (-14.6, 47.0)]      # trolley poles 35 m apart on the outer berm (x, z)
+POLES = [(-14.6, 12.0), (-14.6, 47.0)]
 RECIPE_POLES = {"pit_haul_ramp": POLES, "pit_haul_lane": [(-14.6, 2.0), (-14.6, 22.0)]}
 
 
-# ------------------------------------------------------------------------------------------------------ surface
 class Skin:
     """The analytic ride surface of a recipe: y(x, z) and the grid the drawn skin and the -col mesh share."""
 
@@ -196,7 +191,6 @@ class Skin:
         return self.warp_fn(x) * smooth((z - self.z_first) / APPROACH)
 
     def y(self, x, z):
-        # The grid rows of column x sit at Z_i + warp(x, Z_i); invert the warp by a short fixed-point loop.
         zp = z
         for _ in range(6):
             zp = z - self.warp(x, zp)
@@ -272,7 +266,6 @@ def rgba_name(name):
     return common.rgba(name)
 
 
-# palette multipliers on the sandstone shader (linear): oxide faces, bone worn lips, varnish berms, copper-green bloom
 OXIDE = lin(0.95, 0.60, 0.48)
 SAND = lin(1.0, 0.95, 0.84)
 BONE = lin(1.0, 0.97, 0.90)
@@ -292,7 +285,7 @@ def skin_color(name, skin, x, y, z, nrm_y):
     u = abs(x)
     if name == "bench_coping":
         if nrm_y < 0.93:
-            return OXIDE if int((y + 40) * 1.7) % 3 else lin(0.78, 0.44, 0.35)   # iron-oxide faces, a darker bed now and then
+            return OXIDE if int((y + 40) * 1.7) % 3 else lin(0.78, 0.44, 0.35)
         if u > 8.0 and skin.cross(x) > 0.3:
             return VARNISH
         return BONE if nrm_y > 0.985 and skin.cross(x) == 0.0 and y > -0.5 else SAND
@@ -300,7 +293,6 @@ def skin_color(name, skin, x, y, z, nrm_y):
         if nrm_y < 0.93:
             return BLOOM if int((y + 40) * 1.3) % 4 == 0 else FINES_RUST
         return VARNISH if u > 10.0 else FINES
-    # haul ramp
     if x > 11.2:
         return CUT
     if x < -11.0:
@@ -327,7 +319,6 @@ def build_base(name, skin):
         for i in range(rows - 1):
             for j in range(cols - 1):
                 mesh.quad(index[i][j], index[i + 1][j], index[i + 1][j + 1], index[i][j + 1], up)
-    # skirts under the drawn skin so a side view reads as ground, not a sheet: down to a plane under the lowest point
     floor = min(p[1] for row in grid for p in row) - 1.5
     edges = [([grid[i][0] for i in range(rows)], (-1, 0, 0)), ([grid[i][-1] for i in range(rows)], (1, 0, 0)),
              (list(grid[-1]), (0, 0, 1))]
@@ -357,7 +348,6 @@ def build_pole(poles, col, skin, px, pz):
         for k in range(1, sides - 1):
             mesh.tri(ring1[0], ring1[k + 1], ring1[k], (0, 1, 0))
         if mesh is poles:
-            # the cross-arm: a copper box from the pole top toward the road centre, and a hanger post under its tip
             arm_y = base_y + height - 0.5
             for (x0, x1, y0, y1, z0, z1, color) in ((px, px + 6.0, arm_y, arm_y + 0.22, pz - 0.11, pz + 0.11, COPPER),
                                                     (px + 5.7, px + 5.9, arm_y - 0.8, arm_y, pz - 0.06, pz + 0.06, COPPER)):
@@ -366,14 +356,12 @@ def build_pole(poles, col, skin, px, pz):
 
 def box(mesh, x0, x1, y0, y1, z0, z1, color):
     corners = [mesh.vert((x, y, z), color) for x in (x0, x1) for y in (y0, y1) for z in (z0, z1)]
-    # corner index = 4*xi + 2*yi + zi
     for axis_pair, out in (((0, 1, 3, 2), (-1, 0, 0)), ((4, 6, 7, 5), (1, 0, 0)), ((0, 4, 5, 1), (0, -1, 0)),
                            ((2, 3, 7, 6), (0, 1, 0)), ((0, 2, 6, 4), (0, 0, -1)), ((1, 5, 7, 3), (0, 0, 1))):
         a, b, c, d = (corners[k] for k in axis_pair)
         mesh.quad(a, b, c, d, out)
 
 
-# ------------------------------------------------------------------------------------------------ detail shells
 def h01(i, seed):
     v = math.sin(i * 12.9898 + seed * 78.233) * 43758.5453
     return v - math.floor(v)
@@ -454,11 +442,9 @@ def build_detail(name, skin, which):
     corridor = skin.spec["corridor"]
     half = skin.spec["half"]
     seed = {"bench_coping": 3, "tailings_lip": 5, "pit_haul_ramp": 7, "pit_haul_lane": 9}[name] * 10 + which
-    # the haul dressing: rut length, rock span from z 2, pebble span from z -3.5 (the lane keeps them inside z 40)
     run, rocks, grit = (54.0, 52.0, 60.0) if name == "pit_haul_ramp" else (skin.profile[-1][0], skin.profile[-1][0] - 4.0, skin.profile[-1][0] + 3.0)
     if name == "bench_coping":
         if which == 1:
-            # bedding ledges across each blasted face, drill collars along each coping crest, toe rubble beside the line
             for (z0, z1) in face_stations(skin):
                 for k in range(3):
                     zp = z0 + (z1 - z0) * (k + 0.8) / 3.8
@@ -473,7 +459,6 @@ def build_detail(name, skin, which):
                 z = [8.0, 13.0, 24.0, 27.0][k % 4] + 2.5 * h01(k + 50, seed) - 1.0
                 boulder(m, skin, x, z + skin.warp(x, z), 0.45 + 0.55 * h01(k + 100, seed), 0.5 + 0.7 * h01(k + 150, seed), 6.0 * h01(k + 200, seed), OXIDE)
         else:
-            # vertical drill scars down each face, crack lines on the coping, pebbles
             for (z0, z1) in face_stations(skin):
                 for k in range(-8, 9):
                     x = k * 1.35
@@ -484,7 +469,6 @@ def build_detail(name, skin, which):
                 pebble(m, skin, x, z + skin.warp(x, z), 0.06 + 0.07 * h01(k + 400, seed), SAND)
     elif name == "tailings_lip":
         if which == 1:
-            # erosion rills down each lift face, spoil crust discs on the flats, toe heaps beside the line
             for (z0, z1) in face_stations(skin):
                 for k in range(-8, 9):
                     x = k * 1.6 + 0.4 * h01(k + int(z0), seed)
@@ -499,7 +483,6 @@ def build_detail(name, skin, which):
                 z = 6.0 + 34.0 * h01(k + 170, seed)
                 boulder(m, skin, x, z + skin.warp(x, z), 0.7 + 0.7 * h01(k + 210, seed), 0.35 + 0.4 * h01(k + 250, seed), 6.0 * h01(k + 290, seed), FINES)
         else:
-            # wind ripples across the flats and faces, copper-green bloom, pebbles
             for zp in [-3.0 + 2.0 * k for k in range(22)]:
                 ridge_across(m, skin, zp, 0.28, 0.03, -corridor, corridor, 2.0, FINES)
             for k in range(24):
@@ -512,7 +495,6 @@ def build_detail(name, skin, which):
                 pebble(m, skin, x, z + skin.warp(x, z), 0.06 + 0.07 * h01(k + 700, seed), SAND)
     else:
         if which == 1:
-            # tyre ruts down the road, large rocks on the windrow and the cut toe, survey stakes
             for rx in (-4.0, 4.0):
                 rill_down(m, skin, rx, 0.0, run, 0.9, 0.0, RUT, lift=0.03)
             for k in range(18):
@@ -527,7 +509,6 @@ def build_detail(name, skin, which):
                 z = 4.0 + 7.0 * k
                 stake(m, skin, -11.8, z)
         else:
-            # gravel on the road, cross-drain scours, pebbles
             for k in range(110):
                 x = (h01(k, seed) - 0.5) * 2 * 10.0
                 z = -3.5 + grit * h01(k + 400, seed)
@@ -542,7 +523,6 @@ def stake(mesh, skin, x, z):
     box(mesh, x - 0.05, x + 0.05, y, y + 0.9, z - 0.05, z + 0.05, lin(0.9, 0.55, 0.3))
 
 
-# ------------------------------------------------------------------------------------------------------ checks
 def circumradius(a, b, c):
     area2 = abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]))
     if area2 < 1e-9:
@@ -594,7 +574,6 @@ def check_shell(name, skin, mesh, which):
     return round(worst, 4)
 
 
-# ----------------------------------------------------------------------------------------------------- export
 def material(slot):
     mat = bpy.data.materials.get(slot)
     if mat is not None:
@@ -679,9 +658,6 @@ def build_recipe(name, out_dir, count_only):
     surface = check_surface(name, skin)
     drawn, col = build_base(name, skin)
     parts = [(name + "_ground", drawn, "stone", True)]
-    # Godot's importer strips one "-col" hint from a node name and keeps the mesh, adding the StaticBody3D child (probed
-    # 2026-10-11 on this build); park_recipes.gd looks for a mesh named "<name>-col" after import, so the node carries the
-    # hint twice and the imported scene's mesh is named "<id>-col".
     parts.append((name + "-col-col", col, None, False))
     caps = {**LANDFORM, "draws": spec["draws"]}
     rows = [export(name, parts, out_dir, caps, count_only)]

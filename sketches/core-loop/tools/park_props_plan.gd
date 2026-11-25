@@ -1,23 +1,8 @@
 extends SceneTree
 
-# Park props spot finder and vignette check (Dressing lane, design-v3/park/DRESSING-KITS.md). Read-only: no file is written.
-#   godot --headless --path sketches/core-loop --script tools/park_props_plan.gd -- --map=park_dam [--line=floor] [--check] [--tier=low|mid|tall] [--file=res://path.json] [--ground-rows=a,b,c] [--low-ground-rows=a,b] [--bench]
-# Without --check it prints candidate vignette spots as JSON lines, ordered along the --line (default the floor line): a
-# spot is in the --tier band (default tall, 20 to 64 m) of some line, clear under park_props.gd validate() for a vignette of VIGNETTE_RADIUS_M, on
-# ground at most MAX_SLOPE_DEG steep, and at least SPACING_M from the spot before it. Each row names the nearest built
-# row (id, society, element, landform) so a writer can fit a story to it. Exit 0.
-# With --check it validates the map's vignette file (schema, kit names, then every expanded instance) and prints every
-# violation as a JSON line (--file checks another vignette file, a fixture, for the map); exit 1 on any violation or schema error, 2 on bad input.
-# --check also fails (rule "row" or "yaw", park_props.gd spot_pattern_errors) a file whose spots form a mechanical row or share one yaw, and
-# (rule "pin") a file whose "pin" differs from the expansion's fingerprint, or has none (a --file fixture without a pin is only noted).
-# Label lint rows (level "lint", label_lint) print but do not fail. The summary's "violations" counts every failing row.
-# "ground_rows" (the explicit surfaces, DRESSING-KITS.md) in the file applies to --check, and to the spot finder, which also takes --ground-rows=a,b,c.
-# "low_ground_rows" (low clutter in area rows, opt-in) likewise; the spot finder takes --low-ground-rows=a,b with --tier=low (its probe is 1.0 m tall).
 
 const ParkProps := preload("res://src/presentation/park_props.gd")
 
-# --tier picks the candidate band (metres from a line), the disc radius and a probe height; the default is the old mid-wide band.
-# Band tops stay at or under ParkProps.Context's LINE_REACH_M: past it line_distance is INF.
 const TIERS := {
 	"low": {"band": [6.0, 30.0], "radius": 4.0, "height": 1.0, "tags": []},
 	"mid": {"band": [10.0, 45.0], "radius": 6.0, "height": 2.0, "tags": []},
@@ -79,7 +64,6 @@ func _initialize() -> void:
 		quit(2)
 		return
 	var c := ParkProps.context(map, world["ground"], world["stage"])
-	# The spot finder honours the surfaces: --ground-rows, else the map's vignette file (--check reads them through expand).
 	if not ground_rows_arg.is_empty():
 		c.use_ground_rows(Array(ground_rows_arg.split(",", false)))
 	else:
@@ -94,9 +78,6 @@ func _initialize() -> void:
 	quit(_check(map_id, map, world, c, not file_arg.is_empty()) if check else _plan(map_id, map, world, c, line_key))
 
 
-# --bench: the vignette file's spots repeated to BENCH_VIGNETTES vignettes, timed in stages (cold meshes, then warm). The
-# context and expansion run on a worker in the game (park_props.gd prepare); the mesh reads and the node build are the
-# main-thread cost, spread over frames at BUILD_SLICE_USEC a frame.
 func _bench(map_id: String, map, world: Dictionary) -> int:
 	var file := ParkProps.load_json(ParkProps.file_path(map_id))
 	var kit := ParkProps.load_json(String(file.get("kit", "")))
@@ -216,8 +197,6 @@ func _plan(map_id: String, map, world: Dictionary, c, line_key: String) -> int:
 	return 0
 
 
-# The whole vignette disc stands clear: ParkSites reads one margin (at most 8 m) at a point, so the centre alone
-# would pass a disc whose edge touches a built footprint. Ring points every 45 degrees at half and full radius.
 func _ring_clear(c, at: Vector2) -> bool:
 	for reach in [VIGNETTE_RADIUS_M * 0.5, VIGNETTE_RADIUS_M]:
 		for k in 8:
@@ -227,7 +206,6 @@ func _ring_clear(c, at: Vector2) -> bool:
 	return true
 
 
-# The arc length along a polyline of the point nearest `at`, and that point's distance.
 func _along(line: PackedVector2Array, at: Vector2) -> Dictionary:
 	var best := {"along": 0.0, "dist": INF}
 	var run := 0.0

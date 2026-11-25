@@ -1,55 +1,22 @@
 extends SceneTree
 
-# Wave 12-D RECIPE-WAVE trebuchet_launcher: a copy of tools/w12_recipe_cart_side.gd (the shared rig stays untouched; the
-# launcher helpers follow the cannon unit's copy) with --subject=trebuchet_launcher: today's trebuchet built by
-# src/world/contraptions.gd itself on the left, the recipe's frame and glass GLBs (tools/blender/trebuchet_launcher.py) on
-# the right at the mouth point 1 m above the ground, the arm GLB at the frame's socket_arm posed by the same
-# Basis.looking_at call as contraptions.gd:519-521, beside the code's own amber ring and dial (a launcher row whose style
-# builds no frame), which stay code-drawn and outside the measured box.
-#   --subject=trebuchet_launcher --body=<frame glb> --lens=<glass glb> --arm=<arm glb> [--pose=<gauge 0..1>]
-# Side mode also shoots the hero view with both arms at gauge 0 and 1 (pose frames), the swap's arm mapping.
-# FADE2_DISTANCES shoots the full stack and the stack without its last layer inside detail2's band.
-
-# Wave 12 RECIPE-CART side-by-side, after tools/w12_gen2_side.gd on wt/w12-gen (same ground, light, ball and
-# arena/near cameras): today's cart on the left, the ore cart built by tools/blender/ore_cart.py on the right,
-# the ball between them, and the FLUX concept picture beside each frame on a sheet. Both carts take their
-# materials through dig_scenery.gd's SLOTS table (GLB material name = slot key) and their tyres at the body's
-# wheel sockets, the runtime route. The ore cart's sockets are read from its own GLB nodes.
-# --subject=beacon does the same for the lantern beacon (tools/blender/lantern_beacon.py) beside today's code-built
-# beacon (src/core/beacon.gd, opened), its lens at the frame's socket_lens, and its steel state key lit through
-# the instance's state_tint from EventKinds' beacon_open and beacon_sealed rows.
-#   godot --path sketches/core-loop --script res://tools/w12_recipe_cart_side.gd -- --out=<abs dir>
-#     --body=<abs ore_cart_body.glb> --wheel=<abs ore_cart_wheel.glb> --ref=<abs png> [--tag=<name>]
-#     [--subject=beacon --body=<abs lantern_beacon_frame.glb> --lens=<abs lantern_beacon_lens.glb>]
-#     [--detail1=<abs detail1 glb> [--detail2=<abs detail2 glb>]] [--mode=side|ranges]
-# Wave 12 DETAIL-CART and DETAIL-BEACON: each detail GLB is an additive shell at the subject's origin and scale, its own
-# draw, dropped by distance through LAYER_RANGE (VISIBILITY_RANGE_FADE_SELF). mode=side shoots each camera with every
-# layer, without the last layer and base only; mode=ranges shoots the stack from the hero direction at the subject's
-# RANGE_DISTANCES, its FADE_DISTANCES (inside the first layer's fade band) and the per-layer toggles.
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Contraptions := preload("res://src/world/contraptions.gd")
-# The trebuchet row of map_gorge.gd:354; the mouth is ground(at, 1.0) (contraptions.gd:423).
 const LAUNCHER_SPEC := {"kind": "launcher", "id": "trebuchet", "style": "trebuchet", "radius": 3.5, "floor": 30.0, "min_flight": 3.2, "charge": 4.0}
-# The arm's pivot in the frame GLB (socket_arm) and its swing, lerp(-0.9, 0.7, g) about the side axis (contraptions.gd:521).
 const SWING := Vector2(-0.9, 0.7)
 const AIM := Vector3(0, 0, 1)
 const MOUTH_LIFT := 1.0
 const CART_SCALE := 2.2
 const TODAY_SOCKETS := [Vector3(-0.74, 0.3, -0.95), Vector3(0.74, 0.3, -0.95), Vector3(-0.74, 0.3, 0.95), Vector3(0.74, 0.3, 0.95)]
-# Per subject: each side's distance from the ball, and camera rows [eye, target]; "hero" is relative to one side.
 const VIEWS := {
 	"cart": {"gap": 9.0, "arena": [Vector3(0, 9, 30), Vector3(0, 1.5, 0)], "hero": [Vector3(7.5, 5.5, -5.0), Vector3(0, 1.9, -1.2)]},
 	"beacon": {"gap": 16.0, "arena": [Vector3(0, 16, 62), Vector3(0, 9, 0)], "hero": [Vector3(14, 12, 24), Vector3(0, 10, 0)]},
 	"trebuchet_launcher": {"gap": 15.0, "arena": [Vector3(34, 20, 44), Vector3(0, 5, -6)], "hero": [Vector3(4.5, 7.0, 12.5), Vector3(0, 5.6, -6)]},
 }
-# Detail layer drop-out per subject, one row per layer: [visibility_range_end, visibility_range_end_margin] in metres,
-# and the range shots (metres from the hero target along the hero direction), the last one the arena distance;
-# TOGGLE_DISTANCE sits between the two layers' ends (detail2 gone, detail1 present); FADE_DISTANCES sit inside
-# detail1's fade band. The beacon's detail2 ends past its 28 m hero view, so pass 2 shows where the picture is framed.
 const LAYER_RANGE := {"cart": [[40.0, 4.0], [15.0, 3.0]], "beacon": [[60.0, 8.0], [35.0, 5.0]], "trebuchet_launcher": [[55.0, 12.0], [30.0, 6.0]]}
 const RANGE_DISTANCES := {"cart": [8.0, 20.0, 45.0], "beacon": [10.0, 30.0, 70.0], "trebuchet_launcher": [10.0, 30.0, 80.0]}
 const TOGGLE_DISTANCE := {"cart": 20.0, "beacon": 45.0, "trebuchet_launcher": 39.0}
@@ -140,7 +107,6 @@ func _bbox(cam: Camera3D, subject: Node3D, layers: Array[Node3D], tag: String) -
 		var p := cam.unproject_position(box.get_endpoint(k))
 		lo = lo.min(p)
 		hi = hi.max(p)
-	# unproject_position answers in the root's visible rect (content-scaled); the saved PNG is the window size.
 	var px := Vector2(get_root().size) / get_root().get_visible_rect().size
 	lo *= px
 	hi *= px
@@ -153,7 +119,6 @@ func _bbox(cam: Camera3D, subject: Node3D, layers: Array[Node3D], tag: String) -
 		" eye_to_origin=", snappedf(cam.global_position.distance_to(subject.global_position), 0.01), to_layers)
 
 
-# Detail shells at the subject's origin and scale, each faded out by its LAYER_RANGE row.
 func _layers(fresh: Node3D, args: Dictionary, subject: String) -> Array[Node3D]:
 	var layers: Array[Node3D] = []
 	var rows: Array = LAYER_RANGE[subject]
@@ -344,7 +309,6 @@ func _init() -> void:
 	quit(0)
 
 
-# Today's cart at its hard-coded sockets on the left; the ore cart and its tyres at its own GLB sockets on the right.
 func _cart(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	var body: Node3D = (load("res://assets/models/dig_mechanical/cart_body.glb") as PackedScene).instantiate()
 	body.scale = Vector3.ONE * CART_SCALE
@@ -371,7 +335,6 @@ func _cart(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	return sockets
 
 
-# Today's beacon, opened, on the left; the lantern beacon frame and its lens at socket_lens on the right.
 func _beacon(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	var old := Beacon.new()
 	old.sealed = false
@@ -392,7 +355,6 @@ func _beacon(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	return sockets
 
 
-# A socket's position in its GLB root's space (the generated scene nests the GLB root under one more node).
 func _local(socket: Node3D, top: Node3D) -> Vector3:
 	var at := Vector3.ZERO
 	var node: Node = socket
@@ -402,7 +364,6 @@ func _local(socket: Node3D, top: Node3D) -> Vector3:
 	return at
 
 
-# The steel shader swaps its mint state key for the instance's state_tint; the beacon state row names the colour.
 func _state(node: Node, id: String) -> void:
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
 		if view.material_override is ShaderMaterial and String(view.material_override.resource_name) == "steel":
@@ -410,7 +371,6 @@ func _state(node: Node, id: String) -> void:
 			print("W12_RC_STATE node=", view.name, " state=", id, " tint=", EventKinds.state_color(id).to_html(false))
 
 
-# A launcher row with the trebuchet's numbers, built by src/world/contraptions.gd; aimed along +z so the dial stands on -x.
 func _launcher(parent: Node3D, style: String) -> Node:
 	var holder := GDScript.new()
 	holder.source_code = "extends RefCounted\nvar contraptions: Array = []\n"
@@ -432,9 +392,6 @@ func _launcher(parent: Node3D, style: String) -> Node:
 var _arms: Array[Node3D] = []
 
 
-# Today's trebuchet (ring, posts, arm, dial) on the left; on the right the recipe's frame and glass at the mouth point, the
-# arm GLB at the frame's socket_arm, and the code's ring and dial alone (a style no branch matches) under a sibling node, so
-# the measured box holds the GLBs only.
 func _trebuchet_launcher(today: Node3D, fresh: Node3D, args: Dictionary, root: Node3D, gap: float) -> int:
 	var old = _launcher(today, "trebuchet")
 	_arms.append(old.launchers[0]["arm"])
@@ -467,7 +424,6 @@ func _trebuchet_launcher(today: Node3D, fresh: Node3D, args: Dictionary, root: N
 	return parts + 1
 
 
-# contraptions.gd:519-521 for every arm: looking_at the aim turned about the side axis by lerp(-0.9, 0.7, g).
 func _pose(g: float) -> void:
 	for arm in _arms:
 		arm.basis = Basis.looking_at(AIM.rotated(AIM.cross(Vector3.UP).normalized(), lerpf(SWING.x, SWING.y, g)), Vector3.UP)

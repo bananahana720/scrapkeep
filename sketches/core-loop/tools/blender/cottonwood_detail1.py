@@ -33,7 +33,6 @@ def tone(name, k=0):
 
 
 def bole_at(y):
-    # Trunk centre (x, z), radius and twist at height y, interpolated from cottonwood.TRUNK.
     rows = cw.TRUNK
     for a, b in zip(rows, rows[1:]):
         if a[1] <= y <= b[1]:
@@ -44,7 +43,6 @@ def bole_at(y):
 
 
 def tube(s, path, radii, sides, color, colors=None, tip=False):
-    # A tube along a polyline; with tip=True the last point closes to a cone. The first ring is open (buried).
     pts = [Vector(p) for p in path]
     rings = []
     last = len(pts) - 1 if tip else len(pts)
@@ -71,7 +69,6 @@ def ico(s, centre, r, squash=(1, 1, 1), shade=None, color=None):
     s.add(verts, cw.ICO_F, color, colors=colors)
 
 
-# Roots: angle from +X toward +Z, reach past the slab edge, start height on the bole.
 ROOTS = [(0, 2.6, 1.3), (55, 2.1, 1.1), (110, 2.4, 1.2), (170, 2.7, 1.4), (230, 2.2, 1.0), (300, 2.5, 1.2)]
 
 
@@ -93,7 +90,6 @@ def roots(s):
 
 
 def strands(s):
-    # Four ridges spiralling with the bole's own twist, laid on its surface.
     for k in range(4):
         path, radii = [], []
         for j in range(7):
@@ -110,7 +106,6 @@ def fork(s):
     ico(s, (x, 5.6, z), .85, squash=(1, .75, 1), color=tone("bark"))
 
 
-# Secondary branches: start on a limb (limb index, fraction along start-elbow-tip), end at the crown edge.
 BRANCHES = [(0, .55, (-5.9, 8.6, -1.4)), (0, .8, (-4.6, 11.0, 1.6)), (1, .6, (1.4, 11.8, 3.0)), (1, .45, (-1.0, 10.6, -2.6)),
             (2, .5, (5.6, 8.4, 1.2)), (2, .75, (4.6, 10.6, -1.8)), (0, .35, (-3.0, 7.0, 2.6)), (2, .3, (2.8, 6.6, -2.4))]
 
@@ -123,14 +118,12 @@ def limb_point(i, f):
 def branches(s):
     for i, f, end in BRANCHES:
         p0 = limb_point(i, f)
-        # Pulled toward the crown centre so the tip ends inside the leaf mass, never through it.
         p2 = CROWN_CENTRE.lerp(Vector(end), .78)
         p1 = p0.lerp(p2, .5) + Vector((0, .7, 0))
         tube(s, [p0, p1, p2], [.11, .08, .04], 4, tone("limb"))
 
 
 def tufts(s):
-    # Three small tufts on each cluster's outward, upper faces (ico vertex directions ranked by outwardness).
     dirs = [Vector(v).normalized() for v in cw.ICO_V]
     for x, y, z, r, yaw in cw.CLUSTERS:
         c = Vector((x, y, z))
@@ -145,7 +138,6 @@ def tufts(s):
 
 
 def slab_rim(s):
-    # A chipped band just outside the base slab's side: alternating facets in the slab tones.
     def ring(y, grow, wobble):
         return [(math.cos(math.radians(a)) * (r + grow + (wobble if k % 2 else 0)), y,
                  math.sin(math.radians(a)) * (r + grow + (wobble if k % 2 else 0))) for k, (a, r) in enumerate(cw.SLAB)]
@@ -194,7 +186,7 @@ def export(name, build_fn, size, out_dir, smooth=True):
 
 
 def main():
-    polish.enable(bevel=0, **cw.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=0, **cw.kit.BAKE)
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(cw.MODELS))

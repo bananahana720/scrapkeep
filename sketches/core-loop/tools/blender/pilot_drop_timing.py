@@ -47,14 +47,11 @@ def action(arm, rows, pilot, reference_dir, apply_row):
                         x, y = key.co
                         left = (x - keys[i-1].co.x) / 3 if i else 1
                         right = (keys[i+1].co.x - x) / 3 if i+1 < len(keys) else 1
-                        # Later acceleration on accessories gives overlap without
-                        # moving any authored key or breaking preen contact.
                         key.handle_left = (x - left * (.65 if secondary else 1), y)
                         key.handle_right = (x + right * (1.55 if secondary else 1), y)
                         if x == peak and i and 'rotation_euler' in curve.data_path:
                             delta = y - keys[i-1].co.y
                             key.handle_left.y += delta * .08
-                        # Compression and rebound are linear two-frame strokes.
                         if x in (frames[3] + 1, frames[4] + 4):
                             key.interpolation = 'LINEAR'
                     curve.update()

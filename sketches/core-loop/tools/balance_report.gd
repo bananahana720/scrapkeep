@@ -4,36 +4,6 @@ const RunState := preload("res://src/core/run_state.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const StageBeats := preload("res://src/core/stage_beats.gd")
 
-# The balance report (DEMO-SPEC, "Balance report"). It reads what the bot runs left in
-# one folder (tools/bot_run.gd): the spine's runs.ndjson and codex-log.ndjson, plus the
-# runner's bots.ndjson and codex-entries.json. It prints per-stage bands, the boss fight,
-# codex rates by policy, the bots' use of their hands, the tuning targets and the flags
-# below, and writes the same Markdown to artifacts/local/balance-<label>.md. It reports
-# and never tunes: tuning stays a human-approved edit to stage_defs, the heft constants
-# or the part catalogue.
-#
-#   godot --headless --path sketches/core-loop --script res://tools/balance_report.gd \
-#     -- --in=<dir> --label=<label> [--out-dir=<dir>]
-#
-# The Warden fight is timed to the break from the later of warden_engaged (the run log's
-# ticks_to_warden_engaged when the spine records it, else the bot's note) and the bot's
-# own commitment to the Warden. Time from stage entry is shown beside it.
-#
-# Flags:
-#   - a Warden fight outside 10 to 90 s, or a Warden never broken (a stalled run);
-#   - heft at stage exit outside the band read from build_power_curve_test's BUILDS table;
-#   - a named synergy (codex category build) found in more than 60% of runs, below the
-#     10% target, or in none;
-#   - any codex entry no run discovered;
-#   - a death cluster: two or more deaths on one stage within 15 m of each other.
-#
-# The heft band: the power-curve table describes end-of-run builds, from the skipper's
-# (3 gate parts, mass 60) to the absurd one (17 parts, mass 700). A stage-s exit is read
-# as s/3 of the way along each: parts and mass scale linearly with stages cleared. That
-# interpolation is this report's assumption, stated in the report.
-#
-# TARGETS are the coordinator's tuning bands for wave 3b (starting values, like every
-# number here); the report says which the runs hit, and changes nothing.
 
 const BREAK_BAND := Vector2(10.0, 90.0)
 const SYNERGY_SHARE := 0.6
@@ -42,15 +12,12 @@ const POLICIES := ["skipper", "completionist", "random"]
 const CURVE_TEST := "res://tests/build_power_curve_test.gd"
 const LOW_BUILD := "skipper"
 const HIGH_BUILD := "absurd"
-# metric: fight (Warden fight s), heft (exit heft), hp (HP lost, % of max), boss (fight s).
-# A band top below zero means the power-curve band's top for that stage.
 const TARGETS := [
 	{"what": "Skipper Warden I fight", "policy": "skipper", "stage": 1, "metric": "fight", "band": Vector2(20.0, 40.0)},
 	{"what": "Skipper Warden II fight", "policy": "skipper", "stage": 2, "metric": "fight", "band": Vector2(35.0, 60.0)},
 	{"what": "Skipper Warden III fight", "policy": "skipper", "stage": 3, "metric": "fight", "band": Vector2(50.0, 90.0)},
 	{"what": "Skipper stage-3 exit heft", "policy": "skipper", "stage": 3, "metric": "heft", "band": Vector2(2.5, 3.5)},
 	{"what": "Completionist Warden III fight", "policy": "completionist", "stage": 3, "metric": "fight", "band": Vector2(10.0, 25.0)},
-	# The band top of the power-curve table at the approved heft constants (1/150 a mass), held fixed.
 	{"what": "Completionist stage-3 exit heft (at or under 9.07)", "policy": "completionist", "stage": 3, "metric": "heft", "band": Vector2(0.0, 9.07)},
 	{"what": "Skipper HP lost, stage 1 (% of max)", "policy": "skipper", "stage": 1, "metric": "hp", "band": Vector2(20.0, 60.0)},
 	{"what": "Skipper HP lost, stage 2 (% of max)", "policy": "skipper", "stage": 2, "metric": "hp", "band": Vector2(20.0, 60.0)},
@@ -112,10 +79,6 @@ static func _ndjson(path: String) -> Array:
 	return rows
 
 
-# --- the report -----------------------------------------------------------------------
-
-# One folder's bot lines, each with its run log record (the run log is cumulative: the
-# last line of a run carries the whole run) and its codex discoveries.
 static func _join(dir: String) -> Array[Dictionary]:
 	var spine := {}
 	for record in _ndjson(dir.path_join("runs.ndjson")):
@@ -138,10 +101,6 @@ static func _join(dir: String) -> Array[Dictionary]:
 	return runs
 
 
-# The folders to join: each bot process's own folder when --in holds them, else --in.
-# run_id is a second stamp plus a draw from the seeded stream, so the same seed started
-# in the same second by two processes shares an id; joining inside one process's folder
-# keeps each policy's run log with its own bot line.
 static func _sources(root: String) -> Array:
 	var dirs := []
 	var listing := DirAccess.open(root)
@@ -217,8 +176,6 @@ func _header(runs: Array[Dictionary]) -> void:
 	_lines.append("")
 
 
-# --- per-run readings -----------------------------------------------------------------
-
 static func _stage_row(run: Dictionary, stage: int) -> Dictionary:
 	for row in (run["spine"] as Dictionary).get("stages", []):
 		if int(row.get("stage", 0)) == stage:
@@ -233,11 +190,6 @@ static func _note(run: Dictionary, stage: int) -> Dictionary:
 	return {}
 
 
-# Seconds of Warden fight: from the later of warden_engaged and the bot's commitment to
-# the Warden (warden_fight_s) to the break. Engagement comes from the run log's
-# ticks_to_warden_engaged when the spine records it, else from the bot's note. The later
-# start keeps a completionist's or a wanderer's detours out of the fight: either can
-# wake the Warden rolling past its ring long before it turns to fight. -1 when unknown.
 static func _fight_seconds(run: Dictionary, stage: int) -> float:
 	var row := _stage_row(run, stage)
 	var note := _note(run, stage)
@@ -430,8 +382,6 @@ static func _weak_hits(hits) -> String:
 	return ", ".join(parts)
 
 
-# What hurt the player: HP lost by source (event_kinds' player_hit source), per policy
-# and stage, summed over runs.
 func _hurt_section(runs: Array[Dictionary]) -> void:
 	_lines.append("## What hurt the player (HP lost by source, summed over runs)")
 	_lines.append("")
@@ -458,9 +408,6 @@ func _hurt_section(runs: Array[Dictionary]) -> void:
 	_lines.append("")
 
 
-# M0's delivered-damage baseline (design-v3/STRATEGY-SPINE.md §7 row M0, §8 row 1): the
-# run log's own ledger (runs.ndjson "delivered_damage"), read as-is and never re-derived
-# here, so the report and the spine's own per-run record can never disagree.
 func _delivered_damage_section(runs: Array[Dictionary]) -> void:
 	_lines.append("## Delivered damage (M0 baseline)")
 	_lines.append("")
@@ -541,7 +488,6 @@ static func _mean(list: Array) -> float:
 	return total / maxf(1.0, float(list.size()))
 
 
-# What broke the Wardens: each strike kind's share of Warden damage, per policy and stage.
 func _damage_section(runs: Array[Dictionary]) -> void:
 	_lines.append("## What broke the Wardens (share of Warden damage by strike kind)")
 	_lines.append("")
@@ -573,7 +519,6 @@ func _damage_section(runs: Array[Dictionary]) -> void:
 	_lines.append("")
 
 
-# How much each policy used the hands the bot has: per stage entered, mean counts.
 func _hands_section(runs: Array[Dictionary]) -> void:
 	_lines.append("## The bots' hands (mean per stage entered)")
 	_lines.append("")
@@ -599,10 +544,6 @@ func _hands_section(runs: Array[Dictionary]) -> void:
 	_lines.append("")
 
 
-# SR13: the stage beats column (src/core/stage_beats.gd). Mean seconds each of the six beats took
-# per stage, and the acceptance lines against their thresholds: every logged stage reached its exit,
-# no beat was skipped, and BEATS_RUNS runs were logged. A run with no beats column (an older bot)
-# is left out; with no logged column at all the section says so and checks nothing.
 const BEATS_RUNS := 50
 
 func _beats_section(runs: Array[Dictionary]) -> void:
@@ -701,8 +642,6 @@ func _codex_section(runs: Array[Dictionary], entries: Array) -> void:
 	_lines.append("")
 
 
-# --- flags ----------------------------------------------------------------------------
-
 func _flag_breaks(runs: Array[Dictionary]) -> void:
 	for run in runs:
 		var b: Dictionary = run["bot"]
@@ -736,7 +675,6 @@ func _flag_heft(runs: Array[Dictionary], band: Dictionary) -> void:
 					% [b.get("policy", "?"), int(b.get("seed", 0)), stage, heft, limits.x, limits.y, (row.get("part_ids_at_exit", []) as Array).size()])
 
 
-# Single-linkage clusters of death positions per stage.
 func _flag_deaths(runs: Array[Dictionary]) -> void:
 	for stage in range(1, StageDefs.COUNT + 1):
 		var points: Array = []
@@ -774,9 +712,6 @@ func _flag_deaths(runs: Array[Dictionary]) -> void:
 				% [stage, members.size(), int(CLUSTER_METRES), centre.x, centre.y, centre.z, ", ".join(who)])
 
 
-# --- helpers --------------------------------------------------------------------------
-
-# Stage index to Vector2(low, high) heft at exit, read from the power-curve table.
 func _heft_band() -> Dictionary:
 	var script: GDScript = load(CURVE_TEST)
 	var builds: Array = script.get_script_constant_map().get("BUILDS", []) if script != null else []

@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Commit a Sol unit's working-tree changes in its worktree (Codex cannot write .git).
-# Stages every changed or new file except .uid/.import files and artifacts/, then commits.
-# Usage: commit_unit.sh <worktree> <unit> "<subject>" "<body line>"
 set -u
 wt="$1" unit="$2" subject="$3" body="$4"
 msg="$(mktemp)"

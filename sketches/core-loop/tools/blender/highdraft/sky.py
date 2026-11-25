@@ -28,14 +28,9 @@ import cycles_device
 import polish
 
 ASSETS = ("sky_cloud", "sky_mesa", "sky_cradle", "sky_loom", "sky_blades")
-# Polish (tools/blender/POLISH.md) for the three hardware pieces. Bevels keep the planar faces,
-# so the bounds that dress_mhs_assets_test pins to a centimetre hold. The cloud and mesa round
-# themselves (spline rings, rounded lips) and rescale to their exact bounds; the mesa takes
-# smoothing and the bake on its stone slot.
 POLISH = {"sky_cradle": dict(bevel=.12, bevel_min=.5), "sky_loom": dict(bevel=.1, bevel_min=.5),
           "sky_blades": dict(bevel=.15, bevel_min=.5), "sky_mesa": dict(bevel=0, bake_slots=("M1_stone",))}
-HARDWARE_CAP = (500, 320, 1)  # polish: was (270, 610, 1); dress_mhs_assets_test caps match
-# polish: was (120, 110, 2); now under the scenery class cap 1500/3000/2 (asset_budgets.json); dress_mhs_assets_test matches
+HARDWARE_CAP = (500, 320, 1)
 LANDFORM_CAP = (1000, 1000, 2)
 PETROL = "53686d"
 CHALK = "c8bda5"
@@ -86,7 +81,6 @@ def spline(points, steps, closed=False):
 
 
 def fit(part, spans):
-    # Exact centre-origin bounds despite the asymmetric lobes and spline overshoot.
     for axis, (low, high) in enumerate(spans):
         lo = min(v.co[axis] for v in part.bm.verts)
         hi = max(v.co[axis] for v in part.bm.verts)
@@ -95,8 +89,6 @@ def fit(part, spans):
 
 
 def cloud(root):
-    # One continuous lobed shell, rather than overlapping sphere primitives: spline rings
-    # through the lobes, each ring a soft puffed ellipse.
     part = common.Part("CloudHull")
     rings = []
     n = 16
@@ -140,8 +132,6 @@ def mesa(root):
                       (27, 12), (12, 20), (-8, 18), (-25, 15), (-29, 6)], 3, closed=True)
     n = len(outline)
     rings = []
-    # Broad lower bench at 29 m, smaller offset crown at 50 m; one closed landform. Two
-    # strata ledges step the lower wall, and the bench lip and crown top roll over.
     for y, scale, shift in [(0, 1, 0), (5, .97, .3), (11, .94, .1), (11.8, .955, .05),
                             (19, .91, -.3), (19.8, .925, -.35), (27, .87, -.7),
                             (28.4, .905, -.9), (29, .89, -1.0), (29, .86, -.6),
@@ -156,7 +146,6 @@ def mesa(root):
             face(part, [rings[row][i], rings[row][j], rings[row + 1][j], rings[row + 1][i]], CHALK)
     face(part, rings[-1], CHALK)
     fit(part, ((-30, 30), (-20, 20), (0, 50)))
-    # Height gain plus a faint banding; the bake adds the occlusion under ledges.
     linear = common.to_linear(common.srgb(CHALK))
     for f in part.bm.faces:
         for loop in f.loops:
@@ -174,14 +163,12 @@ def mesa(root):
 
 def cradle(root):
     part = common.Part("CradleHull")
-    # Chamfered working deck: no pointed nose or anchor eye.
     outline = [(-13, -11), (13, -11), (15, -9), (15, 9),
                (13, 11), (-13, 11), (-15, 9), (-15, -9)]
     deck_faces = part.prism("paint", outline, 2, matrix=common.mtx((0, 0, -1)),
                             color=common.srgb(PETROL), side_color=common.srgb("charcoal"), side_slot="paint")
     for i in (0, 4):
         part.paint([deck_faces[2 + i]], "paint", common.srgb("bone"))
-    # A continuous sloping keel beneath the deck, 12 x 6 x 10 m.
     points = [(-6, -2, -5), (6, -2, -5), (6, -2, 5), (-6, -2, 5),
               (-3, -8, -3), (3, -8, -3), (3, -8, 3), (-3, -8, 3)]
     hull(part, points, [(3, 2, 1, 0), (0, 1, 5, 4), (1, 2, 6, 5),
@@ -200,7 +187,6 @@ def cradle(root):
 
 def loom(root):
     part = common.Part("LoomHull")
-    # Three legs from a triangular footprint to a capped apex. Envelope 50 x 60 x 20.
     apex = (0, 58.5, 0)
     for foot, name in [((-23.5, 0, -8.5), "Beam_l"), ((23.5, 0, -8.5), "Beam_r"),
                        ((0, 0, 8.5), "Beam_back")]:
@@ -209,17 +195,14 @@ def loom(root):
         box(part, (3, 3, 3), (foot[0], 1.5, foot[2]), "charcoal")
         socket(root, name, foot)
     box(part, (5, 3, 4), (0, 58.5, 0), "bone")
-    # Two dark suspension straps explain the static weight without a target-like hole.
     for x in (-2, 2):
         part.beam("paint", xyz((x, 58.5, 0)), xyz((x, 45, 0)), .30, color=common.srgb("charcoal"))
-    # Bands define the exact 8 x 6 silhouette; the inset core avoids coplanar faces.
     box(part, (7.94, 10, 5.94), (0, 40, 0), PETROL)
     box(part, (8, .6, 6), (0, 42, 0), "bone")
     box(part, (8, .6, 6), (0, 37, 0), "charcoal")
     socket(root, "Weight", (0, 40, 0))
     socket(root, "weight_hang", (0, 45, 0))
     obj = part.to_object(parent=root)
-    # Fit the leg cross-section as well as its centreline into the specified envelope.
     for axis, span in [(0, 50), (1, 20)]:
         lo = min(v.co[axis] for v in obj.data.vertices)
         hi = max(v.co[axis] for v in obj.data.vertices)
@@ -230,7 +213,6 @@ def loom(root):
 
 def blades(root):
     part = common.Part("BladeHull")
-    # Each cast shell is one closed extruded silhouette, with a blunt sloping crown.
     profile = [(-4, 0), (3.2, 0), (4, 18), (3.4, 58), (1.2, 80),
                (-1.8, 80), (-3.5, 63), (-4, 20)]
     for x, node in [(-8, "Blade_l"), (8, "Blade_r")]:

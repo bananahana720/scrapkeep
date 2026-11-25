@@ -1,16 +1,3 @@
-# C20 Swatter: an oxide animal crew behind a long charcoal shaft and a flat welded paddle.
-# The paddle's two broad oxide faces have dark inset panel seams, rubbed corner patches and
-# a narrow hostile-orange top edge. The shaft and blade form one continuous thin YZ plane.
-# No spikes, rings, dish, gate, rotor or extra reach. The crew has charcoal straps
-# and gloves, and one brass requisition tag. Paint is rough, with dark recesses and small wear.
-#
-# Coordinates use Godot metres, converted by g(): Blender +Z is up, -Y exports to Godot +Z.
-# SwatterBody has fleet_paint (flashing crew only) and paint (vertex colour). SwatterPaddle has
-# paint only. Its origin is the existing pivot (0, -0.6, 0); the 5.5 m shaft stays centred at
-# local (0, 0, 2.9), the 1.6 m blade at (0, 0.2, 5.4). The runtime's existing pose turns both
-# as one rigid mesh. Three colour-pass surfaces, no alpha, no textures or added lights.
-# Procedural bmesh only; run headless under common.py's memory-capped command.
-
 import os
 import sys
 
@@ -25,7 +12,6 @@ import polish
 from common import Part
 
 common.reset()
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Swatter")
 PIVOT = -0.6
@@ -46,11 +32,9 @@ crew.brush_head(b, g(0, 1.10, 0.08), 0.33)
 b.cyl("paint", 0.66, 0.66, 0.12, segs=10, loc=g(0, -0.12, 0), color=CHAR)
 b.box("paint", (0.46, 0.20, 0.52), loc=g(0, 0.16, -0.62), color=CHAR)
 b.box("paint", (0.28, 0.05, 0.18), loc=g(0, 0.28, 0.55), color="brass")
-# Short sleeves and gloves reach the heel of the rail inside the crew's 0.8 m footprint.
 for side in (-1, 1):
     b.rod("paint", g(side * 0.42, 0.36, 0.14), g(side * 0.20, -0.45, 0.42), 0.10, segs=6, color=PLATE)
     b.box("paint", (0.18, 0.26, 0.20), loc=g(side * 0.13, -0.53, 0.50), color=CHAR)
-# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED.
 crew.cast_number(b, "paint", "29", (0, -0.527, 0.58), (0, -1, 0), 0.18)
 crew.hired(b, "paint", (0, 0.725, 0.16), (0, 1, 0), 0.08)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
@@ -59,13 +43,11 @@ body = b.to_object(parent=root)
 p = Part("SwatterPaddle")
 p.bevel = 0
 p.subsurf = 0
-# The unbroken 5.5 m square rail and its inset oxide spine.
 p.box("paint", (0.2, 5.5, 0.2), loc=g(0, PIVOT, 2.9), color=CHAR)
 p.box("paint", (0.09, 3.8, 0.018), loc=g(0, PIVOT + 0.090, 2.70), color=PLATE)
 for z in (0.55, 3.85):
     p.box("paint", (0.20, 0.13, 0.03), loc=g(0, PIVOT + 0.085, z), color=IRON)
 
-# An eight-corner closed plate. Broad sides are dark under the two oxide repair panels.
 outline = [(-0.30, 4.72), (-0.18, 4.60), (0.58, 4.60), (0.70, 4.72),
            (0.70, 6.08), (0.58, 6.20), (-0.18, 6.20), (-0.30, 6.08)]
 rows = [[p.bm.verts.new(Vector(g(x, PIVOT + y, z))) for y, z in outline] for x in (-0.15, 0.15)]
@@ -75,18 +57,15 @@ for i in range(len(outline)):
     p.paint([p.bm.faces.new((rows[0][i], rows[0][j], rows[1][j], rows[1][i]))], "paint", PLATE)
 
 for side in (-1, 1):
-    # Flush oxide panels leave a charcoal seam and a dark perimeter on each broad face.
     x = side * 0.151
     for z0, z1, col in ((4.70, 5.36, PLATE), (5.41, 6.10, "oxide")):
         face = [p.bm.verts.new(Vector(g(x, PIVOT + y, z))) for y, z in
                 ((-0.20, z0), (0.55, z0), (0.62, z0 + 0.07), (0.62, z1), (-0.20, z1))]
         p.paint([p.bm.faces.new(tuple(face if side > 0 else reversed(face)))], "paint", col)
-    # Small diagonal wear patches sit at the leading lower corner, within the plate outline.
     for coords, col in ((((-0.19, 5.82), (-0.19, 6.07), (-0.06, 6.07)), IRON),
                         (((0.43, 4.71), (0.56, 4.78), (0.43, 5.08)), HI)):
         vs = [p.bm.verts.new(Vector(g(side * 0.152, PIVOT + y, z))) for y, z in coords]
         p.paint([p.bm.faces.new(tuple(vs if side > 0 else reversed(vs)))], "paint", col)
-# The hostile top strip remains within the original 0.32 x 0.18 x 1.62 m strip envelope.
 p.box("paint", (0.32, 1.62, 0.10), loc=g(0, PIVOT + 0.66, 5.4), color="hazard")
 bmesh.ops.recalc_face_normals(p.bm, faces=p.bm.faces[:])
 paddle = p.to_object(origin=g(0, PIVOT, 0), parent=root)

@@ -1,13 +1,4 @@
 extends SceneTree
-# The consumed purple across the run's day (L-W19-consumed): one frame per stage time (dawn to
-# dusk, each on its stage's park world row), then the Waking pit row and the Mind arena row, under the game's AgX tonemap and glow. Each
-# frame holds four balls on a grey floor: the true purple unlit (the target), the purple as a plain
-# lit surface (the sun tints it), the purple as WorldLook.consumed_material dresses it, and a lilac
-# life colour for the band it must stay apart from. Writes <out>/<n>-<look>.png, sheet.png and
-# hues.json, the on-screen median hue and saturation of each ball's centre patch.
-# Needs a display (Xvfb with the opengl3 driver works):
-#   godot --path sketches/core-loop --rendering-driver opengl3 --resolution 960x540 --script res://tools/consumed_swatch_capture.gd -- --out=<dir>
-# Evidence limit: colour only, on the compatibility renderer; the 3060 bench has the last word.
 const Model := preload("res://tests/consumed_light_test.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
@@ -81,7 +72,6 @@ func _run() -> void:
 		var e := Environment.new()
 		for key in WorldLook.environment(look, false):
 			e.set(key, WorldLook.environment(look, false)[key])
-		# The game's tonemap and glow (graphics_preset.gd), so the on-screen hue includes AgX's compression.
 		e.tonemap_mode = Environment.TONE_MAPPER_AGX
 		e.tonemap_agx_white = 16.29
 		e.tonemap_agx_contrast = 1.25
@@ -92,7 +82,7 @@ func _run() -> void:
 		for row in WorldLook.lights(look, sun) + WorldLook.sky_rows(look):
 			for key in row.values:
 				row.object.set(key, row.values[key])
-		sun.visible = true  # the Waking hides its sun in game; here the row's sun stands in for its key
+		sun.visible = true
 		fill.visible = true
 		cam.position = Vector3(0.0, 2.2, 6.0)
 		cam.look_at(Vector3(0.0, 1.0, 0.0))
@@ -118,8 +108,6 @@ func _run() -> void:
 	quit(0)
 
 
-# The on-screen hue of a ball: the median hue and saturation over a 9 x 9 pixel patch at its centre,
-# with the darkest and brightest hue spread across the patch. {hue, sat, lo, hi}.
 func _disc_hue(img: Image, at: Vector2) -> Dictionary:
 	var hues := []
 	var sats := []

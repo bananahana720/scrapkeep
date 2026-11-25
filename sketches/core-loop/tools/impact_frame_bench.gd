@@ -1,22 +1,5 @@
 extends SceneTree
 
-# Timing for the impact frame (lighting L7, #241); the checks live in tests/impact_frame_cost_test.gd,
-# which may not read the clock. Headless, one run, numbers for a quiet box only (cloud timing
-# does not count):
-#   $GODOT_BIN --headless --path sketches/core-loop --script res://tools/impact_frame_bench.gd
-# It times the frame's refresh (apply_rects, the upload the live refresh uses) and `_shapes`
-# apart at 0, 4, 16 and 64 hostile rects, with the per-fire figure (one shapes call plus
-# FRAME_FRAMES refreshes, the rect source not in it), then warning_rects on 4 and 16 real
-# hostile marks three ways: the old per-mesh projection, the per-warning mesh walk
-# (use_bounds false, the fallback) and the cached box (the default, lighting L7 #297). At each
-# count it also prints a per-fire figure that INCLUDES the rect walk: real ImpactFrame fires
-# (rect_source = warning_rects, walk and box) over FIRES fires, each fire's shape and rect
-# microseconds from the frame's own counters, and the refreshes counted per fire (rect_calls).
-# A last section times the work screen_bound_box does at COMMIT (the descriptor, the ground
-# mesh read and the box, no ground calls; the whole commit beside it) on a typical ring, a lane and the largest
-# hazards the repo commits, over the real park ground (Terrain.height of the park table's
-# stage 1) built here. Exit 0, or 1 when a sanity check fails (sample count,
-# p99 >= mean >= 0, mean under SANITY_MEAN_USEC); the 0.2 ms bar is judged from the lines.
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
@@ -29,7 +12,6 @@ const CALLS := 1000
 const WARM_UP := 50
 const FIRES := 200
 const SCREEN := Vector2(1920.0, 1080.0)
-# Far past any real run; a hang or an accidental O(n^3) trips it, a slow box does not.
 const SANITY_MEAN_USEC := 100000.0
 
 var _failures := 0
@@ -60,7 +42,6 @@ func _check(label: String, ok: bool, detail := "") -> void:
 		print("[%s] %s -> FAIL" % [label, detail])
 
 
-# Sorted samples to [mean, p99, max], failing the sanity checks.
 func _summary(label: String, usec: Array) -> Array:
 	usec.sort()
 	var sum := 0
@@ -74,9 +55,6 @@ func _summary(label: String, usec: Array) -> Array:
 	return [mean, p99, usec.back()]
 
 
-# Hostile rects hug the screen edge so each one reaches the edge band: `count` rects of
-# 140 x 100 px, four to a side per 16, spread along the side and set 20 px in from the edge,
-# overlapping as hostile marks do.
 func _hostile(count: int) -> Array[Rect2]:
 	var rects: Array[Rect2] = []
 	for i in count:
@@ -94,9 +72,6 @@ func _hostile(count: int) -> Array[Rect2]:
 	return rects
 
 
-# A fire builds the shapes once and refreshes the rects on each of FRAME_FRAMES live frames,
-# so the refresh and `_shapes` are timed apart, and the per-fire figure is one shapes call
-# plus FRAME_FRAMES refreshes. The rect source is not in this bench (see _rects_bench).
 func _bench() -> void:
 	var frame := PlayerFx.ImpactFrame.new()
 	frame._focus = Vector2(960.0, 540.0)
@@ -138,9 +113,6 @@ class FlatGround:
 		return 0.0
 
 
-# warning_rects as it was before the per-warning merge (one projection of 8 corners per
-# mesh), kept here as the before number (the test keeps its own copy as the containment
-# reference).
 static func _old_rects(tree: SceneTree, cam: Camera3D, margin: float) -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	for node in tree.get_nodes_in_group(Threat.GROUP):
@@ -177,10 +149,6 @@ func _rects_pass(pass_name: String, tree: SceneTree, cam: Camera3D, margin: floa
 		PlayerFx.warning_rects(tree, cam, margin, pass_name == "box")
 
 
-# Real fires of a live ImpactFrame over the scene's marks: per fire, the shapes it built
-# plus the rect refreshes it made (the frame times both itself), so the walk is inside the
-# figure. FRAME_FRAMES refreshes a fire: fire() sends once and each of the next
-# FRAME_FRAMES - 1 live frames sends again; the count printed is measured, not assumed.
 func _fire_bench(count: int, tree: SceneTree, cam: Camera3D, use_bounds: bool) -> void:
 	var frame := PlayerFx.ImpactFrame.new()
 	frame.rect_source = func() -> Array[Rect2]: return PlayerFx.warning_rects(tree, cam, 0.0, use_bounds)
@@ -211,9 +179,6 @@ func _fire_bench(count: int, tree: SceneTree, cam: Camera3D, use_bounds: bool) -
 	await _frames(1)
 
 
-# warning_rects on a scene of real hostile marks: committed Telegraph rings and boss Hazard
-# annuli on a ground grid in front of a camera, both versions timed over CALLS calls and
-# printed, old first.
 func _rects_bench() -> void:
 	var world := Node3D.new()
 	root.add_child(world)
@@ -262,24 +227,9 @@ func _rects_bench() -> void:
 	world.free()
 
 
-# --- Commit cost ---------------------------------------------------------------------------
-
 const COMMIT_CALLS := 1000
-# Whole commits are built and freed, so fewer.
 const WHOLE_CALLS := 200
 
-# The cost of the box at commit: the descriptor, the painter's mesh box and the xz span. The
-# ground is the real park terrain (stage 1 of ParkDefs, the table the game launches) under each
-# mark's own drawing. Cases, with the
-# repo's own numbers:
-#   ring INSTANT r 6   the stress and bench ring (stress_capture.gd _commit_threats)
-#   lane 24 x 4        a lane from a Telegraph (the shipped ones run 14 to 24 long)
-#   annulus r 44       the largest circle a hazard takes: MindAttacks clamps a band to its
-#                      radius (mind_attacks.gd:155, :167), default Arena.FLOOR_R = 44 (arena.gd:14)
-#   charge lane 105    the largest lane: Brindle's charge runs rim to rim, up to 2 x CHARGE_STOP_R
-#                      (49, boss_rules.gd:101) plus the hull half length 7 behind and ahead of
-#                      the run (boss.gd:737, Requisition.HULL 9 x 5 x 14, requisition.gd:14), half
-#                      width 9 * 0.5 + 1
 func _commit_bench() -> void:
 	var holder := Node3D.new()
 	root.add_child(holder)
@@ -349,11 +299,6 @@ func _summary_n(label: String, usec: Array, want: int) -> Array:
 	return [mean, p99, usec.back()]
 
 
-# --- Read after step ----------------------------------------------------------------------
-
-# Per read: a hostile hazard stepped since its last read takes its painter's meshes in (one mesh
-# walk); a telegraph's read is a cache hit. Only the reads are timed; the steps between them
-# are not. Marks sit on flat ground, so the figure is the read, not the ground.
 func _read_bench() -> void:
 	var world := Node3D.new()
 	root.add_child(world)

@@ -1,21 +1,14 @@
-# Preview only (writes no asset): a shell wearing a full accretion build, placed the way
-# src/build/accretion.gd does (golden-spiral slots at radius 1.02 times the heft-class
-# shell scale, +Y out of the ball) and sized the way src/presentation/hero_assets.gd
-# picks chunks (index bands) and tucks them under the pod saddle. It shows the grown
-# ball at gameplay distance, which no single-asset turntable can.
-#   blender -b --factory-startup -P preview_growth.py -- --render <dir> [--class rivet]
-
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import bpy  # noqa: E402
+import bpy
 
-import common  # noqa: E402
-from common import Vector  # noqa: E402
-from mathutils import Quaternion  # noqa: E402
+import common
+from common import Vector
+from mathutils import Quaternion
 
 MAX_CHUNKS = 36
 BANDS = ((12, "small"), (24, "medium"), (36, "large"))

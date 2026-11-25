@@ -1,15 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "six-pilots-clear" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// Grades the output of sketches/core-loop/tests/world1_run_test.gd (either from --log with --head,
-// or by running world1_run_test via scripts/sketch-smoke.mjs on a clean checkout). Passes only when
-// world1_run_test printed PASS with 0 skipped checks, all six pilots passed every required milestone
-// and error check, 0 "-> FAIL" lines exist, and 0 ERROR / SCRIPT ERROR lines exist.
-// Planted check: injects a SCRIPT ERROR into one pilot on a copy of the log and feeds it through the
-// exact same grader, requiring it to fail (plant_caught).
-//
-//   node scripts/gate/six-pilots-receipt.mjs --head <sha> --log <world1_run_test.log> [--out <file>]
-//   node scripts/gate/six-pilots-receipt.mjs [--out <file>]
 import { spawnSync } from "node:child_process";
 import {
   existsSync,

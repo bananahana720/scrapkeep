@@ -56,21 +56,18 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
-from mathutils import Matrix, Vector  # noqa: E402
+import bmesh
+import bpy
+from mathutils import Matrix, Vector
 
-import common  # noqa: E402
-import cycles_device  # noqa: E402
-import polish  # noqa: E402
+import common
+import cycles_device
+import polish
 
-# Cast relic: 4 cm chamfers on real corners, doubled curves, baked AO (POLISH.md). No edge
-# lightening and softer AO keep the ancient enamel under the section 11 cap.
 polish.enable(detail=1, bevel=0.04, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
-from common import Part  # noqa: E402
+from common import Part
 
 FPS = 30
-# Section 5: clip -> (length s, blend s).
 CLIPS = {
     "idle": (4.0, 1.0), "pulse_warn": (2.0, 0.5), "pulse": (0.3, 0.1), "active": (0.5, 0.5),
     "chunk_lost": (1.0, 0.8), "shrug": (0.4, 0.2), "gates_open": (0.6, 0.3), "pour": (1.0, 0.3),
@@ -78,68 +75,48 @@ CLIPS = {
     "chunk_lost_1": (1.0, 0.8), "chunk_lost_2": (1.0, 0.8), "chunk_lost_3": (1.0, 0.8),
 }
 REQUIRED = ("idle", "pulse_warn", "pulse", "active", "chunk_lost", "shrug", "gates_open", "pour", "final_quiet")
-# Polished caps (POLISH.md, 18 Oct): 60% of the warden_base class cap.
 BUDGET = {"tris": 12000, "verts": 9600, "draws": 32}
 RADIUS = 2.8
 HALF_HEIGHT = 1.6
 LOW = 2.0
 REACH = 1.0
-CORE_Z = 2.2 + 3.0 + HALF_HEIGHT  # warden_kit.gd DECK + 3.0, plus HALF_HEIGHT
+CORE_Z = 2.2 + 3.0 + HALF_HEIGHT
 STACK_RISE = 0.6
-JAW_LEAN = math.radians(14.0)  # warden_look.gd JAW_OPEN_DEGREES
+JAW_LEAN = math.radians(14.0)
 
 ENAMEL = "petrol"
 IRON = common.mix("charcoal", "petrol", 0.2)
 COPPER = "copper"
 SAND = common.mix("sandstone", "petrol", 0.22)
 SAND_DARK = common.mix("sandstone", "charcoal", 0.45)
-TOOTH = common.mix("sandstone", "bone", 0.35)  # the lightest value on the body: teeth over the dark jacket
+TOOTH = common.mix("sandstone", "bone", 0.35)
 ROD_STEEL = common.mix("ice", "bone", 0.45)
 COPPER_DARK = common.mix("copper", "charcoal", 0.6)
 DUST = common.mix("petrol", "sandstone", 0.3)
 
-# 2026-10-11 (w13 KF7c): the drum is slimmer (core 2.42, jacket ribs and bands to 2.62) so the
-# jaws stand off it with a dark gap and their teeth stand proud of everything above and below them
-# inside the 3.8 m reach; the stacks, cage and core keep their places.
 DRUM_R = 2.42
 DRUM_Z = (2.5, 5.75)
-JACKET_R = (2.5, 2.6)  # the jacket's skin and its ribs
+JACKET_R = (2.5, 2.6)
 BAND_R = (2.38, 2.62)
-# 2026-10-11 (w13 KF7c fix round): the drum stays at r 2.42, not KF7b's 3.22. Measured reason: the
-# jaw must stand 0.3 m off the jacket (SIL_JAW_STANDOFF) and its teeth 0.5 m past every other part's
-# outline (SIL_TOOTH_OUT_M), all inside the 3.8 m reach. A 3.22 drum puts the jaw's inner face at
-# 3.52 at least and its outer face at 3.6, which leaves a tooth 0.2 m of reach: the teeth check
-# cannot pass. Here: jacket ribs 2.6, jaw 2.98 to 3.2, teeth to 3.78 (0.58 proud of the lips).
-JAW_R = (2.98, 3.2)  # the jaw's inner and outer face: 0.36 m off the bands
-JAW_Z = (2.4, 6.9)  # the jaw's foot and crown
+JAW_R = (2.98, 3.2)
+JAW_Z = (2.4, 6.9)
 JAW_SPAN = math.radians(50)
-# KF7c fix round: the gate read KF7c's frame jaw (two thin mandibles and two upright cheeks) as
-# scaffold posts. Each jaw is now a mouth: a lower and an upper lip, 0.5 m thick at the middle,
-# whose inner edges curve to meet at the jaw's two corners, so face on the jaw is a lens-shaped
-# maw of dark drum ringed by light sandstone, with three big light fangs on each lip pointing at
-# the other row. No upright member stands anywhere in the jaw.
 LIP_H = 0.5
 JAW_SEGS = 10
-MOUTH_Z = sum(JAW_Z) / 2  # where the lips meet at the corners
-MOUTH_G = (JAW_Z[1] - JAW_Z[0]) / 2 - LIP_H  # the maw's half height at the middle
-# The fangs, per lip: (jaw-local degrees, lower height, upper height, base width). The middle
-# fangs are the biggest; tip to tip about 0.9 m of dark drum shows between the rows. Each root
-# runs out past the lip to r 3.78, so from the side every fang breaks the jaw's outline.
+MOUTH_Z = sum(JAW_Z) / 2
+MOUTH_G = (JAW_Z[1] - JAW_Z[0]) / 2 - LIP_H
 TEETH = ((0.0, 1.4, 1.25, 1.15), (-27.0, 1.0, 0.95, 0.9), (27.0, 1.0, 0.95, 0.9))
-TOOTH_R = (2.98, 3.78, 3.25)  # inner face, root's outer face, point's outer face
-TOOTH_W_OUT = 0.6  # the root's outer face width
-# The side fangs' roots stay in at r 3.3: proud, their corners stood at 3.57 across the front read
-# camera and hid the middle fangs' roots behind the same outline.
+TOOTH_R = (2.98, 3.78, 3.25)
+TOOTH_W_OUT = 0.6
 TOOTH_SIDE_R = 3.3
 STACK_R = 2.5
 STACK_BASE = 5.95
 STACK_ANGLES = (90.0, 210.0, 330.0)
-SEAM_ANGLES = (60.0, 120.0, 240.0, 300.0)  # one per jacket quarter, two face the ball
+SEAM_ANGLES = (60.0, 120.0, 240.0, 300.0)
 CAGE_BASE = 6.3
 CAGE_R = 1.45
 CAGE_TOP = 7.9
 HINGE = Vector((JAW_R[1], 0.0, JAW_Z[0]))
-# 2026-10-11 (KF7d): concept B, exposed columns on raised lower-clamp ears.
 PED_R = (1.0, 1.1)
 RAM_BASE = Vector((0.70, 2.94, 4.17))
 RAM_LUG = Vector((2.63, 2.21, 6.68))
@@ -152,23 +129,15 @@ RAM_GLAND_R = 0.52
 RAM_EYE_R = 0.25
 RAM_MOUTH = RAM_BASE_NECK + RAM_BARREL_LENGTH + RAM_GLAND_LENGTH
 
-# 2026-10-11 (w13 KF7c): the silhouette check (see "silhouette check" below).
-# The read cameras: (name, eye offset in radii, look_subjects.gd constant and row). Each looks along
-# -normalize(offset) in the body frame (coordinator ruling at the KF7c fix round: no probed staging
-# yaw; a read direction tuned until the body passes is not a read). KF7c round 3: the offsets are
-# world axes; the check turns them into the body frame by look_subjects.gd WARDEN_BODY_STAGE_YAW,
-# read from that file at build time, per camera, the yaw look_harness measures and asserts (see sil_cameras).
 SIL_CAMERAS = [
     ("over_shoulder", (0.0, 0.6, 2.0), "WARDEN_BODY_CAMERAS row 0"),
     ("three_q", (-1.97, 0.42, 1.31), "WARDEN_BODY_CAMERAS row 3"),
     ("under", (-1.2, -0.45, -1.06), "WARDEN_BODY_CAMERAS row 4"),
 ]
 SIL_APPROACH = ("over_shoulder", "three_q")
-# Thresholds (KF7c packet; fixed, never lowered inside a unit).
-SIL_RAM_OUT_M = 0.5  # KF7c round 3: raised from 0.4 to hold the level rams (three_q 0.570 and 0.603)
+SIL_RAM_OUT_M = 0.5
 SIL_RAM_OUT_FRAC = 0.3
 SIL_RAM_COUNT = 2
-# 2026-10-11: concept B replaced the level rams, owner ruling 2026-10-11.
 SIL_RAM_BASE_Z = 2.0
 SIL_RAM_DIAMETER_RATIO = 2.0
 SIL_RAM_EXTENSION_RATIO = 2.0
@@ -176,14 +145,9 @@ SIL_RAM_EYE_ERROR = 0.05
 RAM_RIG = []
 SIL_TOOTH_OUT_M = 0.5
 SIL_TOOTH_COUNT = 4
-# KF7c round 3 note: the 3D tooth height line (SIL_TOOTH_MIN_H) guards the teeth's size: the outline
-# count measures how far a tooth's root breaks the outline sideways, not how tall the tooth is.
 SIL_TOOTH_MIN_H = 0.6
 SIL_TOOTH_PER_ROW = 3
 SIL_JAW_STANDOFF = 0.3
-
-
-# --- geometry helpers ------------------------------------------------------------------
 
 
 def sweep(part, slot, profile, a0, a1, segs, color=None, caps=True):
@@ -254,17 +218,6 @@ def finish(part, origin, parent, rot_z=None):
 def polar(r, deg, z):
     a = math.radians(deg)
     return Vector((r * math.cos(a), r * math.sin(a), z))
-
-
-# --- silhouette check (w13 KF7c) -----------------------------------------------------------
-# 2026-10-11 (w13 KF7c): two blind reads failed in one class: the named parts did not break the
-# body's outline from the read cameras. This check measures that on the rest-pose mesh and fails
-# the build, so geometry is tuned against a number and a regression fails here, not in a read.
-# The read directions copy sketches/core-loop/tools/look_subjects.gd (WARDEN_BODY_CAMERAS /
-# WARDEN_BODY_MIND_CAMERAS: eye offset in radii from the warden_bounds centre), and the view
-# direction is -normalize(offset) in the body frame. An orthographic projection along the view
-# direction stands in for the harness's perspective at about two radii. Thresholds are fixed by the
-# KF7c packet; never lower them to pass a candidate (raising one to hold a gain is allowed).
 
 
 def _sub(a, b):
@@ -362,14 +315,6 @@ def sil_part_outside(part_pts, outline_pts, axes):
     return max(d), sum(1 for x in d if x > 1e-6) / len(d)
 
 
-# 2026-10-11 (w13 KF7c round 4): the game frame for this check and the render. The read cameras' eye
-# offsets are world axes. In the game the body turns to the ball and the player's camera sits behind
-# the ball, so look_harness stages the ball at its default spot and measures the yaw the body settles
-# to per camera (look_harness _check_stage_yaw); that measured yaw is look_subjects.gd
-# WARDEN_BODY_STAGE_YAW[subject][camera] (round 3 forced yaw 0 with a 40 m ball and lost the hand
-# read). The check reads it from that file at build time and turns each camera's offset into the
-# body frame by it (no copied or probed yaw). SIL_CAMERAS stays the readable copy of the rows: a row
-# that drifts from look_subjects.gd, or a camera without a yaw entry, fails the build.
 LOOK_SUBJECTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, "look_subjects.gd")
 
 
@@ -432,10 +377,6 @@ def sil_say(ok, body, camera, part, metric, value, want):
     return ok
 
 
-
-# The parts the check names: each tagged vertex carries its label's code in an integer layer
-# "sil" that travels with the vertex into the mesh (an index range does not: to_mesh reorders), and
-# silhouette() drops the attribute again before export.
 TAGS = []
 SIL_LAYER = "sil"
 RAM_MEASURE_LAYER = "ram_measure"
@@ -523,7 +464,7 @@ def material_slot_checks(root):
 
 def tagged(part, label, fn, *a, **kw):
     layer = part.bm.verts.layers.int.get(SIL_LAYER) or part.bm.verts.layers.int.new(SIL_LAYER)
-    faces = fn(*a, **kw)  # every Part builder returns the faces it made
+    faces = fn(*a, **kw)
     if label not in TAGS:
         TAGS.append(label)
     for f in faces:
@@ -547,7 +488,7 @@ def _labelled_points(root):
         codes = o.data.attributes.get(SIL_LAYER)
         for i, v in enumerate(o.data.vertices):
             w = mw @ v.co
-            pts.append((w.x, w.z, -w.y))  # Blender to the Godot frame
+            pts.append((w.x, w.z, -w.y))
             code = codes.data[i].value if codes is not None else 0
             labels.append(TAGS[code - 1] if code else o.name)
         for poly in o.data.polygons:
@@ -703,8 +644,6 @@ def silhouette(root):
         if cam in SIL_APPROACH:
             best_ram = max(best_ram, (good_rams, cam))
             best_tooth = max(best_tooth, (good_teeth, cam))
-    # 2026-10-11: concept B restores the failing ram count. The KF7c round-4 tooth
-    # count remains a review aid; its blind read came from the under camera.
     if not sil_say(best_ram[0] >= SIL_RAM_COUNT, "reactor", best_ram[1], "rams",
                    "count(outside_m>=%.1f,outside_frac>=%.1f)" % (SIL_RAM_OUT_M, SIL_RAM_OUT_FRAC),
                    best_ram[0], ">=%d on over_shoulder or three_q" % SIL_RAM_COUNT):
@@ -735,23 +674,16 @@ def silhouette(root):
     return fails
 
 
-# --- parts ---------------------------------------------------------------------------------
-
-
 def drum(root):
     p = Part("Drum")
-    # Pedestal: a narrow stem; everything under 2 m stays inside r = 2.8.
     p.cyl("ancient_enamel", PED_R[0], PED_R[1], 2.0, 16, loc=(0, 0, 1.0), color=ENAMEL)
     p.ring("rubber", PED_R[1] - 0.05, PED_R[1] + 0.14, 0.18, 16, loc=(0, 0, 1.5))
-    # Skirt flares above 2 m from the stem to the drum, an overhang the jaws' lower mandibles
-    # stand clear of.
     p.cyl("ancient_enamel", PED_R[1], DRUM_R, DRUM_Z[0] - LOW, 24, loc=(0, 0, (LOW + DRUM_Z[0]) / 2), color=ENAMEL,
           caps=False)
     p.cyl("ancient_enamel", DRUM_R, DRUM_R, DRUM_Z[1] - DRUM_Z[0], 24, loc=(0, 0, sum(DRUM_Z) / 2), color=IRON,
           caps=False)
     p.cyl("ancient_enamel", DRUM_R, 2.0, 0.55, 24, loc=(0, 0, DRUM_Z[1] + 0.275), color=DUST, caps=False)
     p.cyl("ancient_enamel", 2.0, 2.0, 0.1, 24, loc=(0, 0, DRUM_Z[1] + 0.6), color=IRON)
-    # Dark iron bands hold the jacket; a collar seats the core.
     for z in (DRUM_Z[0] + 0.02, DRUM_Z[1] - 0.02):
         p.ring("rubber", BAND_R[0], BAND_R[1], 0.14, 16, loc=(0, 0, z))
     p.ring("rubber", 0.85, 1.25, 0.24, 16, loc=(0, 0, DRUM_Z[1] + 0.68))
@@ -768,9 +700,8 @@ def jacket(root, k):
         prof += [(skin, zc - 0.16), (rib, zc - 0.1), (rib, zc + 0.1), (skin, zc + 0.16)]
     prof += [(skin, DRUM_Z[1] - 0.1), (DRUM_R - 0.02, DRUM_Z[1] - 0.1)]
     p = Part("Jacket%d" % k)
-    sweep(p, "ancient_enamel", prof, a0, a1, 4, ENAMEL)  # KF7b: 4 segments pay for the jaws' teeth
+    sweep(p, "ancient_enamel", prof, a0, a1, 4, ENAMEL)
     seam_deg = SEAM_ANGLES[k]
-    # beam(w, h): w runs radial after the roll, h tangential.
     p.beam("ancient_enamel", polar(rib + 0.005, seam_deg, 2.7), polar(rib + 0.005, seam_deg, 5.55), 0.06, 0.26,
            color=IRON, roll=math.radians(seam_deg))
     centre = polar(skin, mid, sum(DRUM_Z) / 2)
@@ -868,7 +799,6 @@ def jaw(root, side):
     p = Part("JawR" if side > 0 else "JawL")
     r0, r1 = JAW_R
     z0, z1 = JAW_Z
-    # 2026-10-11 (w13 KF7c fix round): the jaw is a mouth standing 0.36 m off the drum (see LIP_H).
     slab = "jawslab_" + p.name
     tagged(p, slab, sweep_var, p, "ancient_enamel",
            lambda a: [(r0 + 0.05, z0), (r1, z0 + 0.35), (r1, maw(a)[0]), (r0, maw(a)[0])], -JAW_SPAN, JAW_SPAN, JAW_SEGS, SAND)
@@ -904,7 +834,6 @@ def gate(root, side):
 def pour_lip(root):
     """The slag spout at the front foot of the drum, hinged at the drum (+X frame)."""
     p = Part("PourLip")
-    # 2026-10-11 (w13 KF7c): 0.8 m in, onto the slimmer drum's foot.
     p.box("ancient_enamel", (0.5, 1.1, 0.12), loc=(2.7, 0, 2.55), color=IRON)
     for y in (-0.55, 0.55):
         p.box("ancient_enamel", (0.5, 0.1, 0.3), loc=(2.7, y, 2.66), color=ENAMEL)
@@ -917,7 +846,7 @@ def steam(root):
                                 matrix=common.mtx((0, 0, 2.25)))
     smooth(p.paint(p._faces(res["verts"]), "glass"))
     obj = finish(p, (0, 0, 2.25), root)
-    obj.scale = (0.02, 0.02, 0.02)  # hidden in the drum until the pulse blows it out
+    obj.scale = (0.02, 0.02, 0.02)
     return obj
 
 
@@ -1061,9 +990,6 @@ def build():
     return root
 
 
-# --- clips ----------------------------------------------------------------------------------
-
-
 def smoothstep(t):
     t = min(max(t, 0.0), 1.0)
     return t * t * (3 - 2 * t)
@@ -1161,7 +1087,6 @@ def pose(clip, t, objs, rest):
         solve_rams()
 
 
-
 def rest(root):
     return {o.name: (o.location.copy(), o.rotation_euler.copy(), o.scale.copy()) for o in common.tree(root)}
 
@@ -1209,9 +1134,6 @@ def animate(root, snapshot):
             strip.extrapolation = "NOTHING"
             track.mute = True
         reset_pose(root, snapshot)
-
-
-# --- export and checks --------------------------------------------------------------------
 
 
 def freeze_rest_export(path, snapshot):
@@ -1353,9 +1275,6 @@ def check(root, info=None):
     if problems:
         raise SystemExit("warden_reactor check FAILED: " + "; ".join(problems))
     print("warden_reactor check: PASS")
-
-
-# --- look frames ------------------------------------------------------------------------------
 
 
 def look_frames(root, out_dir):

@@ -35,8 +35,6 @@ def _beats(n=8):
     return [b * BEAT for b in range(n)]
 
 
-# --- Foreman ---------------------------------------------------------------------------
-
 FOREMAN_CLIPS = {"idle": BAR2, "tell": 0.9, "break": 2.4}
 
 
@@ -55,11 +53,11 @@ def foreman(root, body_obj, signal_obj, hand_obj):
 
     def part(c, lo, hi):
         if c.y < -1.25:
-            return "Root"  # wheels and axles stay planted
+            return "Root"
         if c.y > 4.3 and hi.y > 4.6 and abs(c.x) > 0.05:
             return "HornBig" if c.x < 0 else "HornSmall"
         if hi.y > 3.6 or (c.z > 0.6 and c.y > 1.25 and abs(c.x) < 0.6):
-            return "Mast"  # mast, its braces, steam line, valve and head block
+            return "Mast"
         if c.y > 2.95 and abs(c.z) < 0.65:
             return "Hat"
         if 1.65 < c.y < 1.85 and c.z < -0.45 and abs(c.x) < 0.5:
@@ -72,8 +70,6 @@ def foreman(root, body_obj, signal_obj, hand_obj):
     rig.bind(signal_obj, part)
     rig.bind(hand_obj, lambda c, lo, hi: "Hand")
 
-    # idle: the punch clock. The hand ticks 45 degrees on every beat (eight ticks, one turn,
-    # so the loop closes), the cabinet punches with each tick, the hat hops on the steam.
     hand, cab = [], []
     for b, tb in enumerate(_beats()):
         a = 45 * b
@@ -96,9 +92,6 @@ def foreman(root, body_obj, signal_obj, hand_obj):
     rig.clip("idle", BAR2, {"Hand": hand, "Cabinet": cab, "Hat": hat, "Moustache": tache, "Mast": mast,
                             "HornBig": big, "HornSmall": small})
 
-    # tell: the horn is full on frame one, so the inhale is two frames and the blast is a
-    # snap: mast springs tall, bells flare, the cabinet rears back with its hat blown up,
-    # everything buzzing until the horn cuts; the steam at 0.55 pops the hat again.
     T = FOREMAN_CLIPS["tell"]
     rig.clip("tell", T, {
         "Chassis": [(0, {}), (2 * F, {"scale": (1.04, 0.95, 1.04)}), (5 * F, {"scale": (0.99, 1.02, 0.99)}),
@@ -121,9 +114,6 @@ def foreman(root, body_obj, signal_obj, hand_obj):
                            shake(7 * F, 0.7, 9, base={"scale": (1.35, 1.2, 1)}, decay=0.9), [(T, {})]),
     })
 
-    # break: SHIFT OVER. The ka-chunk punches the cabinet flat, the hand spins out to six
-    # o'clock, the hat flies and lands askew; then each trombone note sags the mast one step
-    # further and the last long note lets the whole crew boss slump, hat tipping over its face.
     B = FOREMAN_CLIPS["break"]
     wah = (0.45, 0.71, 0.97, 1.23)
     slump = [(0, {}), (0.04, {"loc": (0, -0.26, 0), "scale": (1.13, 0.8, 1.13)}),
@@ -170,10 +160,8 @@ FOREMAN_SHOTS = [(None, 0, "rest"), ("idle", 2 * F, "idle_tick"), ("tell", 2 * F
                  ("break", 0.3, "break_hat_flies"), ("break", 0.8, "break_wah"), ("break", 2.3, "break_slump")]
 
 
-# --- Dispatcher ------------------------------------------------------------------------
-
 DISPATCHER_CLIPS = {"idle": BAR2, "tell": 1.0, "break": 1.6}
-TUBE_CUTS = (-2.1, -2.8)  # Godot Z where the tube's three segments part, at the elbows
+TUBE_CUTS = (-2.1, -2.8)
 
 
 def dispatcher(root, body_obj, signal_obj, radar_obj):
@@ -183,7 +171,6 @@ def dispatcher(root, body_obj, signal_obj, radar_obj):
         ("EyeL", (-0.52, 0.55, -1.5), "Body"),
         ("EyeR", (0.52, 0.55, -1.5), "Body"),
         ("Tongue", (-0.1, -0.05, -1.55), "Body"),
-        # Tube bones sit mid-segment and are siblings, so a bulge in one does not scale the next.
         ("Tube1", (0.62, -0.5, -1.675), "Body"),
         ("Tube2", (0.62, -0.535, -2.5), "Body"),
         ("Tube3", (0.62, -0.76, -3.05), "Body"),
@@ -193,7 +180,7 @@ def dispatcher(root, body_obj, signal_obj, radar_obj):
 
     def part(c, lo, hi):
         if c.y < -1.25 or (c.y < -1.15 and math.hypot(c.x, c.z) > 0.9):
-            return "Root"  # magnet clamps and pads hold the perch
+            return "Root"
         if abs(c.x) < 0.25 and c.z > 0.5 and c.y > 1.15:
             return "Mast"
         for name, sx in (("EyeL", -1), ("EyeR", 1)):
@@ -209,8 +196,6 @@ def dispatcher(root, body_obj, signal_obj, radar_obj):
     rig.bind(signal_obj, part)
     rig.bind(radar_obj, lambda c, lo, hi: "Radar")
 
-    # idle: the radar snaps a quarter turn on each beacon ping, the paper tongue feeds on the
-    # teleprinter's off-beats, the eyes glance left then right, the mast wobbles on each ping.
     radar, tongue, mast = [], [(0, {})], []
     for b, tb in enumerate(_beats()):
         a = 90 * b
@@ -227,9 +212,6 @@ def dispatcher(root, body_obj, signal_obj, radar_obj):
                             "Body": [(0, {}), (2 * F, {"scale": (1.015, 0.985, 1.015)}), (6 * F, {}), (4 * BEAT, {}),
                                      (4 * BEAT + 2 * F, {"scale": (1.015, 0.985, 1.015)}), (4 * BEAT + 6 * F, {}), (BAR2, {})]})
 
-    # tell: a chaser rides the tube. The radar locks forward, the eyes go wide, the box
-    # crouches and a bulge runs base to mouth with the rising suck; on the first ding (0.45,
-    # the drop) the mouth kicks and flares and the box hops; on the second ding a ticket spits.
     T = DISPATCHER_CLIPS["tell"]
     bulge = {"scale": (1.38, 1.38, 1.0)}
     tube = {}
@@ -255,9 +237,6 @@ def dispatcher(root, body_obj, signal_obj, radar_obj):
         "Mast": [(0, {}), (0.45, {}), (0.45 + 3 * F, {"rot": (0, 0, 5)}), (0.6, {"rot": (0, 0, -3)}), (0.8, {}), (T, {})],
     }))
 
-    # break: line disconnected. The printer jams and spews paper, the mast sproings up and
-    # wobbles with the radar spinning off-beat, the eyes boing out on springs, then the box
-    # sags sideways as the beacon falls down its scale.
     B = DISPATCHER_CLIPS["break"]
     sproing = 0.2
     def eye_boing(sx):
@@ -294,10 +273,8 @@ DISPATCHER_SHOTS = [(None, 0, "rest"), ("idle", 3 * F, "idle_ping"), ("tell", 0.
                     ("break", 0.3, "break_sproing"), ("break", 1.5, "break_sag")]
 
 
-# --- Splitter and its piece ------------------------------------------------------------
-
 SPLITTER_CLIPS = {"crawl": BAR2, "tell": 0.4, "break_split": 0.2, "break_clean": 1.0}
-SPLIT_BURST = 0.45  # metres each pod has flown out along its pod_* socket's -Z at break_split's end
+SPLIT_BURST = 0.45
 
 
 def splitter(root, body_obj, glow_obj, R, FLOOR, AZ, NAMES):
@@ -306,8 +283,6 @@ def splitter(root, body_obj, glow_obj, R, FLOOR, AZ, NAMES):
 
     top = R * 0.93
     outs = {n: Vector((math.sin(az), 0.0, -math.cos(az))) for n, az in zip(NAMES, AZ)}
-    # Core (seams and junction caps) is its own bone so the split can shrink it under pods
-    # that fly free, without the pods inheriting its scale.
     bones = [("Root", (0, FLOOR, 0), None), ("Body", (0, -0.2, 0), "Root"), ("Core", (0, -0.2, 0), "Body"),
              ("Lamp", (0, top + 0.13, 0), "Root")]
     hips = {}
@@ -336,8 +311,6 @@ def splitter(root, body_obj, glow_obj, R, FLOOR, AZ, NAMES):
     rig.bind(glow_obj, part)
     pods = ["Pod" + n.upper() for n in NAMES]
 
-    # crawl: an alternating tripod, one footfall on every beat of the presence loop, the
-    # body dipping on each fall and the fuse lamp lagging a half beat behind like a spring.
     tracks = {name: [(0, {})] for name in hips}
     body, lamp = [], []
     for b, tb in enumerate(_beats()):
@@ -357,9 +330,6 @@ def splitter(root, body_obj, glow_obj, R, FLOOR, AZ, NAMES):
                                    for b, tb in enumerate(_beats())] + [(BAR2, {})]
     rig.clip("crawl", BAR2, tracks)
 
-    # tell: pressure. Ease-in all the way to the split frame: pods swell and part along
-    # their seams, the shell shivers harder and faster, the fuse stretches tall. It never
-    # relaxes: at 0.4 the voices cut dead and it is either split or killed clean.
     T = SPLITTER_CLIPS["tell"]
     tell = {}
     for n, pod in zip(NAMES, pods):
@@ -373,8 +343,6 @@ def splitter(root, body_obj, glow_obj, R, FLOOR, AZ, NAMES):
                     (T, {"loc": (0, 0.22, 0), "scale": (0.82, 1.6, 0.82)})]
     rig.clip("tell", T, tell)
 
-    # break_split: from the tell's held peak, the three pods burst out and the core and
-    # fuse go; the runtime swaps in the pieces on the last frame.
     S = SPLITTER_CLIPS["break_split"]
     split = {"Body": [(0, {"rot": (-3.6, 0, -6), "scale": 1.05}), (S, {"scale": 1.05})],
              "Core": [(0, {}), (0.08, {"scale": 0.5}), (S, {"scale": 0.05})],
@@ -387,8 +355,6 @@ def splitter(root, body_obj, glow_obj, R, FLOOR, AZ, NAMES):
                       (S, {"loc": tuple(o * SPLIT_BURST), "scale": 0.95})]
     rig.clip("break_split", S, split)
 
-    # break_clean: one fat pop. Squashed flat, it bounces once and deflates; the fuse lamp
-    # pops off its neck, flies, lands beside it and topples. The sound of doing it right.
     C = SPLITTER_CLIPS["break_clean"]
     clean = {"Body": [(0, {}), (0.06, {"loc": (0, -0.25, 0), "scale": (1.32, 0.5, 1.32)}),
                       (0.16, {"loc": (0, 0.12, 0), "scale": (0.92, 1.14, 0.92)}),
@@ -452,8 +418,6 @@ PIECE_SHOTS = [(None, 0, "rest"), ("scurry", BEAT * 0.25, "scurry"), ("pop_in", 
                ("pop_in", 0.1, "pop_stretch")]
 
 
-# --- Linker ----------------------------------------------------------------------------
-
 LINKER_CLIPS = {"idle": BAR2, "brace": 0.8, "braced": BEAT, "slack": 0.5, "cut": 2.4}
 
 
@@ -468,8 +432,6 @@ def linker(root, body_obj, dish_obj, cable_obj, start, end, sag, hinge, dish_c, 
         ("Crew", (-0.12, 1.2, 0.3), "Cab"),
         ("Ears", (-0.12, 1.4, 0.3), "Crew"),
         ("Boom", tuple(pivot), "Root"),
-        # DishAim belongs to the runtime (it turns the dish toward the ball); DishBrace under
-        # it belongs to the clips, so aiming and bracing never fight over one bone.
         ("DishAim", tuple(hinge), "Boom"),
         ("DishBrace", tuple(hinge), "DishAim"),
         ("Sag", tuple(mid), "Root"),
@@ -477,7 +439,7 @@ def linker(root, body_obj, dish_obj, cable_obj, start, end, sag, hinge, dish_c, 
 
     def part(c, lo, hi):
         if abs(c.x) < 0.05 and abs(c.y - pivot[1]) < 0.05:
-            return "Boom"  # the boom's pivot drum
+            return "Boom"
         if c.y < 0.5 and math.hypot(c.x, c.z) < 1.2 and c.x < 0.7:
             return "Root"
         if hi.y > 1.45 and c.z > 0.2 and abs(c.x + 0.12) < 0.3:
@@ -493,15 +455,11 @@ def linker(root, body_obj, dish_obj, cable_obj, start, end, sag, hinge, dish_c, 
     span = end - start
 
     def cable_weights(p):
-        # The rest cable is a parabola sagging `sag` at mid-span, so raising Sag by `sag`
-        # with these weights pulls it exactly straight: taut. Its far end rides DishAim, not
-        # the clip's DishBrace, so when the cut drops the dish the cable stays hanging.
         t = min(1.0, max(0.0, (p - start).dot(span) / span.length_squared))
         w = 4 * t * (1 - t)
         return {"Sag": w, "Root": (1 - w) * (1 - t), "DishAim": (1 - w) * t}
 
     rig.bind_smooth(cable_obj, cable_weights)
-    # cable_dish rides the aimed dish: a bone child imports as a BoneAttachment3D on DishAim.
     rig.socket_to_bone("cable_dish", "DishAim")
 
     def dish_at(centre, rot):
@@ -517,8 +475,6 @@ def linker(root, body_obj, dish_obj, cable_obj, start, end, sag, hinge, dish_c, 
     perk = {"scale": (1, 1.4, 1)}
     lean = {"loc": (0, 0, 0.06)}
 
-    # idle: the slack cable swings like a skipping rope, the dish breathes, and the crew in
-    # the cab flinches at each arc crackle (1.25 and 5.6 beats of the presence loop).
     q = BAR2 / 4
     ears = [(0, {})]
     crew = [(0, {})]
@@ -532,9 +488,6 @@ def linker(root, body_obj, dish_obj, cable_obj, start, end, sag, hinge, dish_c, 
         "Ears": hold(ears, BAR2), "Crew": hold(crew, BAR2),
     })
 
-    # brace: the pluck is frame one, so the cable snaps taut in three frames and twangs down
-    # to a hum; the dish rears back, then shoves forward over its partner; the boom dips
-    # under the load and the crew leans in, ears up.
     T = LINKER_CLIPS["brace"]
     rig.clip("brace", T, {
         "Sag": merge([(0, {}), (3 * F, {"loc": (0, sag * 1.12, 0)})],
@@ -546,7 +499,6 @@ def linker(root, body_obj, dish_obj, cable_obj, start, end, sag, hinge, dish_c, 
         "Ears": [(0, {}), (3 * F, {"scale": (1, 1.55, 1)}), (8 * F, perk), (T, perk)],
         "Crew": [(0, {}), (4 * F, {"loc": (0, 0.03, 0.09)}), (T, lean)],
     })
-    # braced: one beat of hum, the brace's end pose buzzing.
     rig.clip("braced", BEAT, {
         "Sag": merge([(0, taut)], shake(2 * F, BEAT - 3 * F, 0.015, period=2 * F, field="loc", axis=1, base=taut),
                      [(BEAT, taut)]),
@@ -562,13 +514,9 @@ def linker(root, body_obj, dish_obj, cable_obj, start, end, sag, hinge, dish_c, 
         "Ears": [(0, perk), (S, {})], "Crew": [(0, lean), (S, {})],
     })
 
-    # cut: snap at 0. The dish drops onto its partner (the clang, 0.12), slides off and lands
-    # on its back on the floor, then rattles round like a lost hubcap, each wobble on one of
-    # the sound's slowing rattles. The boom, freed of its load, springs up; the crew ducks,
-    # then peeks over the cab roof at what it lost.
     C = LINKER_CLIPS["cut"]
     land = Vector((hinge.x + 0.9, floor + 0.28, hinge.z + 1.1))
-    flat = (-118, 0, 0)  # face up: the dish lies on its back
+    flat = (-118, 0, 0)
     dish = [(0, {}), (0.12, dish_at(dish_c + Vector((0, -0.45, 0)), (14, 0, 0))),
             (0.18, dish_at(dish_c + Vector((0.05, -0.38, 0.05)), (20, 0, 4))),
             (0.33, dish_at(dish_c.lerp(land, 0.6) + Vector((0, 0.15, 0)), (-30, 0, 14)))]

@@ -31,11 +31,8 @@ SKETCH = HERE.parents[2]
 MODEL = SKETCH / "assets/models/bosses/arena_bowl_yard.glb"
 METAL, COPPER, SLAG, PAINT, GLOW = "foundry_steel", "foundry_copper", "cooled_slag", "paint", "slag_glow"
 DECK_Y = 15.0
-# Sector centre and half width in degrees, then the first tier the crew sit on and how many; tiers step out and up
-# from the deck. The east box seats its two benches (tiers 3 and 4), the west gallery its one deck (tier 4).
 NORTH_BLEACHERS, EAST_CRANE_WATCH, SOUTH_SCAFFOLD, WEST_GALLERY = 300.0, 4.0, 95.0, 163.0
 STANDS = [(NORTH_BLEACHERS, 18.0, 0, 5), (EAST_CRANE_WATCH, 5.0, 3, 2), (SOUTH_SCAFFOLD, 18.0, 0, 5), (WEST_GALLERY, 7.0, 4, 1)]
-# The gallery's piers, clear of the ledger board's posts (LEDGER_ANGLE) and the ingot stack at 150.
 WEST_PIERS = (154.0, 172.0)
 TIERS = 5
 TIER_R0, TIER_DR = 69.0, 2.4
@@ -136,7 +133,6 @@ def horn(part, mouth, aim, length, flare):
     m = Vector(mouth)
     root = m - d * length
     neck = m - d * length * .42
-    # The throat runs on into the bell, so their end caps never share a plane (and a fan diagonal).
     rod(part, tuple(root - d * .3), tuple(neck + d * .35), .3, "8a6a3a", slot=COPPER, segs=10, r2=.44)
     rod(part, tuple(neck), tuple(m), .42, "c29c55", slot=COPPER, segs=12, r2=flare)
     rod(part, tuple(m - d * .25), tuple(m + d * .05), flare + .16, "a38149", slot=COPPER, segs=12)
@@ -154,11 +150,9 @@ def foundry_bleachers(part, lo, hi):
                 width = chord(a0, a1, r)
                 box(part, (2.5, y - .3 - DECK_Y, width), polar(mid, r, (y - .3 + DECK_Y) / 2), "47443d" if (s + k) % 2 else "514d44", yaw=-mid)
                 box(part, (2.4, .3, width + .04), polar(mid, r, y - .15), "6d6656" if (s + k) % 2 else "5f5a4d", yaw=-mid)
-                # Riveted copper kick plate on each riser's face.
                 box(part, (.08, .42, width - .3), polar(mid, r - 1.27, y - .62), "8d6240", slot=COPPER, yaw=-mid)
             r, y = tier(TIERS - 1)
             box(part, (.16, .16, chord(a0, a1, r + 1.0)), polar(mid, r + 1.0, y + 1.1), "8a7556", slot=COPPER, yaw=-mid)
-            # The awning: a sheet a step, the front lip higher than the back so the canopy opens to the fight.
             corrugated(part, mid, (65.4, 37.6), (82.6, 34.2), chord(a0, a1, 65.4, -.08), chord(a0, a1, 82.6, -.08), 7, .34,
                        "ae6e48" if s % 2 else "a66444")
             box(part, (.5, .7, chord(a0, a1, 65.3, .02)), polar(mid, 65.3, 37.65), "6e4432", yaw=-mid)
@@ -167,20 +161,17 @@ def foundry_bleachers(part, lo, hi):
                 yk = 37.6 + (34.2 - 37.6) * k / 4
                 box(part, (.36, .36, chord(a0, a1, rk, .1)), polar(mid, rk, yk - .3), "3f3a33", yaw=-mid)
     with part.region(bevel=.12):
-        # Heavy portal frames every two steps: a front post, a back post and the raking rafter they carry.
         frames = [lo + (hi - lo) * f / 3 for f in range(4)]
         for f, a in enumerate(frames):
             beam(part, polar(a, 66.4, DECK_Y), polar(a, 66.4, 37.4), .7, "3e413b")
             beam(part, polar(a, 81.2, DECK_Y), polar(a, 81.2, 34.4), .7, "3e413b")
             beam(part, polar(a, 64.8, 37.7), polar(a, 83.2, 34.0), .62, "3a3d37")
             beam(part, polar(a, 66.4, 33.2), polar(a, 69.6, 37.2), .32, "3a3d37")
-        # Stepped cheek plates close each end of the stand.
         for end, side in ((lo, 1), (hi, -1)):
             for k in range(TIERS):
                 r, y = tier(k)
                 lbox(part, end, r - 1.3, r + 1.3, DECK_Y, y + .25, side * .05, side * .6, "39403b")
     with part.region(bevel=0):
-        # The megaphones: three on each end post, one pair at the middle frames, all aimed in and down at the bowl.
         for f, a in enumerate(frames):
             out = -1 if f == 0 else 1
             cluster = [(-1.1, 33.6, -.9 + 2.6 * out, 2.1), (1.0, 31.9, .7 + 2.2 * out, 1.75), (-.4, 30.2, .2 + 1.6 * out, 1.4)] \
@@ -208,7 +199,6 @@ def crane_watch_box(part, centre):
         for side in (-1, 1):
             lbox(part, a, 74.1, 80.9, 23.5, 29.4, side * 6.1, side * 6.5, green)
         lbox(part, a, 80.5, 80.9, 23.5, 29.4, -6.3, 6.3, green_dk)
-        # The scoreboard: a heavy dark frame on two stub posts, flap tiles in two rows on its bowl face.
         for t in (-4.2, 4.2):
             lbox(part, a, 77.0, 78.0, 30.2, 31.0, t - .5, t + .5, "3a3e39")
         lbox(part, a, 76.6, 77.8, 30.9, 37.3, -6.2, 6.2, "2e322f")
@@ -218,7 +208,6 @@ def crane_watch_box(part, centre):
         lbox(part, a, 77.4, 79.8, 23.5, 26.0, -6.0, 6.0, "5f5a4d", slot=PAINT)
         for t in (-3.1, 0.0, 3.1):
             lbox(part, a, 74.2, 74.5, 24.9, 28.2, t - .14, t + .14, green_dk)
-        # Riveted seams: copper straps along the sill and the lintel, and down each side wall.
         for y in (24.9, 28.2):
             lbox(part, a, 73.98, 74.14, y - .14, y + .14, -6.5, 6.5, seam, slot=COPPER)
         for side in (-1, 1):
@@ -231,7 +220,6 @@ def crane_watch_box(part, centre):
             lbox(part, a, 76.36, 76.62, y - 1.25, y + 1.25, t - .82, t + .82, "1f2321", slot=PAINT)
             lbox(part, a, 76.28, 76.38, y - .06, y + .06, t - .86, t + .86, "c2b597", slot=PAINT)
         beam(part, local(a, 77.2, 37.8, 5.4), local(a, 77.2, 41.6, 5.4), .12, "4a4e47")
-        # The gantry's bracing, the cantilever struts under the booth's bowl side, and a ladder up the back.
         for r in (77.2, 80.6):
             for t0, t1 in ((-4.6, 4.6), (4.6, -4.6)):
                 beam(part, local(a, r, DECK_Y + .4, t0), local(a, r, 22.0, t1), .24, "4a4e47")
@@ -243,7 +231,6 @@ def crane_watch_box(part, centre):
             beam(part, local(a, 81.1, DECK_Y, t), local(a, 81.1, 23.5, t), .1, "8a7556", slot=COPPER)
         for k in range(7):
             beam(part, local(a, 81.1, 16.0 + k * 1.1, -.45), local(a, 81.1, 16.0 + k * 1.1, .45), .08, "8a7556", slot=COPPER)
-        # A railed catwalk off the booth's south side.
         lbox(part, a, 74.8, 79.4, 23.1, 23.45, -9.0, -6.5, "4a4e47")
         for r in (74.9, 79.3):
             for t in (-8.9, -7.6):
@@ -280,7 +267,6 @@ def scrap_yard_scaffold(part, lo, hi):
             for k in range(TIERS):
                 r, y = tier(k)
                 box(part, (2.4, .28, chord(a0, a1, r)), polar(mid, r, y - .14), "7d5a3b" if (s + k) % 2 else "6c4d33", slot=PAINT, yaw=-mid)
-                # Under-board ledger, and a sway brace on every other bay.
                 beam(part, polar(a0, rails[k], y - .36), polar(a1, rails[k], y - .36), .16, "6f6a5e")
                 if (s + k) % 2 == 0:
                     beam(part, polar(a0, rails[k + 1], DECK_Y + .2), polar(a1, rails[k + 1], y - .4), .14, "7a4430")
@@ -292,13 +278,10 @@ def scrap_yard_scaffold(part, lo, hi):
             for k in range(TIERS):
                 r, y = tier(k)
                 beam(part, polar(a, rails[k], y - .4), polar(a, rails[k + 1], y - .4), .16, "6f6a5e")
-        # A ladder up the low end's front.
         for t in (-.4, .4):
             beam(part, local(lo, 66.8, DECK_Y, t + 1.4), local(lo, 67.6, 19.0, t + 1.4), .1, "7a4430")
         for k in range(5):
             beam(part, local(lo, 66.8 + .16 * (k + .5), DECK_Y + .7 + .75 * k, 1.0), local(lo, 66.8 + .16 * (k + .5), DECK_Y + .7 + .75 * k, 1.8), .08, "7a4430")
-    # The containers: three stacked askew on the deck past the high end, tall enough to clear the rim wall from the
-    # floor, two more perched high on girders over the scaffold's high corner, one on its side past the low end.
     end = hi + math.radians(5.0)
     container(part, end, 77.5, DECK_Y, 0.0, 7.0, 2.6, 2.7, "b09668", ribs=5)
     container(part, end, 77.1, DECK_Y + 2.7, -.5, 7.0, 2.6, 2.7, "9b5a44", yaw=.1, ribs=5)
@@ -312,7 +295,6 @@ def scrap_yard_scaffold(part, lo, hi):
         for da in (-4.0, 4.0):
             beam(part, polar(perch + math.radians(da), 81.6, DECK_Y), polar(perch + math.radians(da), 81.6, lintel + .2), .5, "6e4030")
     with part.region(bevel=0):
-        # Rust girders: the lintel the perched containers ride, and two leaning on the deck stack.
         for a0, a1 in steps(perch - math.radians(4.6), perch + math.radians(4.6), 4.6):
             mid = (a0 + a1) / 2
             for y, h, w in ((lintel + .07, .14, .8), (lintel + .63, .14, .8), (lintel + .35, .42, .16)):
@@ -322,12 +304,10 @@ def scrap_yard_scaffold(part, lo, hi):
             head = Vector(local(end, 75.6, DECK_Y + lean, t + .6))
             for off in (-.2, .2):
                 beam(part, tuple(foot + tangent(end) * off), tuple(head + tangent(end) * off), .3, "6e4030")
-        # Ladder up the deck stack.
         for t in (-.4, .4):
             beam(part, local(end, 75.9, DECK_Y, t - 2.0), local(end, 75.9, DECK_Y + 8.1, t - 2.0), .1, "4a4e47")
         for k in range(10):
             beam(part, local(end, 75.9, DECK_Y + .5 + .78 * k, -2.4), local(end, 75.9, DECK_Y + .5 + .78 * k, -1.6), .08, "4a4e47")
-        # Crew pennants: poles off the back rail and one tall mast on the stack, tattered sand and oxide cloth.
         top = tier(TIERS - 1)[1] + 1.2
         poles = [(lines[1], rails[-1], top - .9, top + 6.0), (lines[3], rails[-1], top - .9, top + 7.5), (lines[5], rails[-1], top - .9, top + 5.5),
                  (end, 78.0, DECK_Y + 7.6, DECK_Y + 21.0)]
@@ -342,7 +322,6 @@ def scrap_yard_scaffold(part, lo, hi):
                 tuple(tip + fly * size * .7 + Vector((0, -size * .3, 0))), sand if i != 1 else oxide)
             if i == 3:
                 tri(part, tuple(tip + Vector((0, -2.8, 0))), tuple(tip + Vector((0, -4.6, 0))), tuple(tip - fly * 3.6 + Vector((0, -3.4, 0))), oxide)
-        # Bunting strung along the back rail between the poles.
         n = round(math.degrees(hi - lo) / 2.0)
         for i in range(n):
             a0 = lo + (hi - lo) * i / n
@@ -368,7 +347,6 @@ def ladle_rail_gallery(part, lo, hi):
                 p0, p1 = Vector(polar(a0, r, y0)), Vector(polar(a1, r, y1))
                 d = (p1 - p0).normalized() * .25
                 beam(part, tuple(p0 - d), tuple(p1 + d), .8, "454a44")
-        # The under-arch on the gallery's back face: the portal the ladle track runs through.
         under = [(lo + (hi - lo) * i / 8, DECK_Y + 9.0 * math.sin(math.pi * i / 8)) for i in range(9)]
         for (a0, y0), (a1, y1) in zip(under, under[1:]):
             p0, p1 = Vector(polar(a0, 80.8, y0)), Vector(polar(a1, 80.8, y1))
@@ -389,7 +367,6 @@ def ladle_rail_gallery(part, lo, hi):
                 beam(part, polar(a, r, 26.0), polar(a, r, y - .3), .16, "4a4e47")
         for a, y in pts[2:-1:2]:
             beam(part, polar(a, r_front, y), polar(a, r_back, y), .22, "4a4e47")
-        # A buffer stop at the far end of the ladle track under the gallery.
         spout = math.radians(165.0)
         lbox(part, spout, 80.6, 81.0, DECK_Y, DECK_Y + 1.7, -2.6, 2.6, "7d6449", slot=COPPER)
         for t in (-1.6, 1.6):
@@ -432,7 +409,6 @@ def furnaces(root):
         part.cyl(METAL, 2.6, 2.4, 9, 16, loc=xyz((x, DECK_Y + 31.5, z)), color="44473f")
         for y in (DECK_Y + 4, DECK_Y + 12, DECK_Y + 20):
             part.cyl(COPPER, 4.85, 4.85, .5, 20, loc=xyz((x, y, z)), color="7a5f45")
-        # Charging platform and its ladder face the bowl.
         part.ring(METAL, 4.6, 6.6, .3, segs=20, loc=xyz((x, DECK_Y + 16, z)), color="5c574a")
         for k in range(8):
             leg = a + k * math.tau / 8
@@ -444,7 +420,6 @@ def furnaces(root):
         tap = polar(a, FURNACE_R - 4.5, DECK_Y + 3.0)
         box(part, (2.2, .5, 1.2), tap, "6b5a45", slot=COPPER, yaw=-a)
         box(glow, (.3, .9, 1.0), polar(a, FURNACE_R - 4.65, DECK_Y + 2.1), "ffffff", slot=GLOW, yaw=-a)
-        # The mouth of the stack: a glowing inner rim the smoke column rises out of.
         glow.ring(GLOW, 1.7, 2.35, .3, segs=16, loc=xyz((x, DECK_Y + 36.1, z)), color="ffffff")
     part.to_object(parent=root)
     glow.to_object(parent=root)
@@ -455,14 +430,12 @@ def ladles(root):
     melt = common.Part("LadleMelt")
     for degrees in SPOUTS:
         a = math.radians(degrees)
-        # A bogie on its own girder past the catch pan, the bucket tipped at the trough head.
         box(part, (6.0, .7, 4.6), polar(a, 76.5, DECK_Y + 2.6), "4e5249", yaw=-a)
         for side in (-1, 1):
             t = Vector((-math.sin(a), 0, math.cos(a))) * side * 2.0
             for r in (74.6, 78.4):
                 p = polar(a, r, DECK_Y + 2.0)
                 part.cyl(METAL, .55, .55, .4, 12, loc=xyz((p[0] + t.x, p[1], p[2] + t.z)), rot=(0, math.pi / 2, -a + math.pi / 2), color="383c37")
-            # The girder the bogie runs on: wheel bottoms (DECK_Y + 1.45) sit on its rail cap.
             run = polar(a, 76.5, DECK_Y + .675)
             box(part, (8.0, 1.35, .4), (run[0] + t.x, run[1], run[2] + t.z), "4a4e47", yaw=-a)
             box(part, (8.2, .1, .6), (run[0] + t.x, DECK_Y + 1.4, run[2] + t.z), "383c37", yaw=-a)
@@ -473,7 +446,6 @@ def ladles(root):
         rod(part, bottom, top, 1.8, "6f5a43", slot=COPPER, segs=16, r2=2.25)
         lip_lo = Vector(top) + (Vector(top) - Vector(bottom)).normalized() * -.05
         rod(part, tuple(lip_lo), tuple(Vector(top) + (Vector(top) - Vector(bottom)).normalized() * .25), 2.4, "7d6449", slot=COPPER, segs=16)
-        # Trunnion axle across the bucket.
         t = Vector((-math.sin(a), 0, math.cos(a))) * 2.7
         mid = (Vector(bottom) + Vector(top)) / 2
         rod(part, tuple(mid - t), tuple(mid + t), .32, "4b4f47", segs=10)
@@ -491,8 +463,6 @@ def ledger(root):
     box(part, (.12, 7.8, 14.8), polar(a, LEDGER_R - .3, y), "262b29", slot=PAINT, yaw=-a)
     for dy in (-4.35, 4.35):
         box(part, (.7, .3, 16.2), polar(a, LEDGER_R - .05, y + dy), "a48f55", slot=COPPER, yaw=-a)
-    # Ruled lines: the ledger's columns, chalked in.
-    # Clear of the dress's chalk: title above, the phase's figure between, the caption below.
     for dy in (2.15, -1.95, -3.45):
         box(part, (.04, .06, 13.6), polar(a, LEDGER_R - .37, y + dy), "6c6a5e", slot=PAINT, yaw=-a)
     for da in (-.085, .085):
@@ -516,14 +486,12 @@ def ingots(root):
                 at = Vector(polar(a, radius, y)) + (tangent if cross else radial) * off
                 size = (2.6, .4, .5) if cross else (.5, .4, 2.6)
                 box(part, size, tuple(at), "6a6b62" if (k + layer) % 3 else "7b6650", yaw=-a)
-        # Requisition tag on each stack: brass, the Fleet's colour on everything it counts.
         box(part, (.05, .5, .8), polar(a, radius - 1.52, DECK_Y + .9), "a48f55", slot=COPPER, yaw=-a)
     part.to_object(parent=root)
 
 
 def crew_yard(root):
     part = common.Part("CrewYard")
-    # Five crew gyrospheres parked nose-in between the west gallery and the north bleachers, chocked, bay lines painted.
     for i in range(5):
         a = math.radians(262 + i * 3.4)
         at = polar(a, 71.5, DECK_Y + .95)
@@ -532,7 +500,6 @@ def crew_yard(root):
         part.ring(COPPER, .9, 1.0, .16, segs=20, loc=xyz(at), rot=(math.pi / 2, 0, -a), color="7d6449")
         box(part, (.6, .35, .28), polar(a, 70.4, DECK_Y + .17), "3b3f3a", yaw=-a)
         box(part, (3.2, .02, .08), polar(a + .029, 71.5, DECK_Y + .01), "a39468", slot=PAINT, yaw=-a)
-    # Hard-hat rack and the tea urn cart, beside the south scaffolding.
     a = math.radians(121)
     rack = polar(a, 70.5, DECK_Y)
     box(part, (.3, 2.0, 2.6), (rack[0], DECK_Y + 1.0, rack[2]), "4c5148", yaw=-a)
@@ -550,7 +517,6 @@ def crew_yard(root):
     for side in (-1, 1):
         t = Vector((-math.sin(a), 0, math.cos(a))) * side * .8
         part.cyl(METAL, .28, .28, .12, 12, loc=xyz((cart[0] + t.x, DECK_Y + .28, cart[2] + t.z)), rot=(0, math.pi / 2, -a + math.pi / 2), color="2f3330")
-    # The hiring board: four crew gloves on pegs under a notice, the Mind's "All hands" planted in world 1.
     a = math.radians(64)
     board = polar(a, 70.0, DECK_Y + 4.6)
     box(part, (.16, 2.2, 3.2), board, "5c4b3a", yaw=-a)
@@ -565,7 +531,6 @@ def crew_yard(root):
             for f in range(4):
                 tip = palm + Vector((0, .3, 0)) + t.normalized() * (f - 1.5) * .07
                 rod(part, tuple(palm + Vector((0, .1, 0)) + t.normalized() * (f - 1.5) * .07), tuple(tip), .03, "c2b79c" if k != 2 else "8f8a7c", slot=PAINT, segs=4)
-    # The safety tally at the west end of the north bleachers.
     a = math.radians(279.5)
     box(part, (.14, 2.0, 3.4), polar(a, 70.2, DECK_Y + 3.6), "2c312e", slot=PAINT, yaw=-a)
     box(part, (.18, .2, 3.6), polar(a, 70.2, DECK_Y + 4.65), "a48f55", slot=COPPER, yaw=-a)
@@ -574,7 +539,6 @@ def crew_yard(root):
     part.to_object(parent=root)
 
 
-# Mojulo shell recipes beside this file (crew_shells.py mints them to shells/); hands in Blender metres, matching the recipes.
 CREW_SHELLS = {"CrewFan": "crew_fan", "CrewPennant": "crew_pennant"}
 CREW_HANDS = {"CrewFan": [(.20, .54, 1.56), (.20, -.54, 1.56)], "CrewPennant": [(.30, -.44, 1.18), (.44, .26, .34)]}
 CREW_TRIS = {"Body": 1100, "Hat": 220, "Teeth": 12}
@@ -640,8 +604,6 @@ def build():
 
 if __name__ == "__main__":
     import polish
-    # Machines keep crisp bevels; the crew and their gyrospheres go soft (soft-toy ruling, 18 Oct). The AO reach is
-    # set for props a few metres across, not the 170 m yard: a fraction of the whole tree's radius.
     polish.enable(detail=1, bevel=.03, ao_reach=.012, bake_slots=(METAL, COPPER, PAINT))
     options = common.args()
     root = build()

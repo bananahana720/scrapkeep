@@ -31,20 +31,13 @@ def animal_head(part, loc, radius, snout, ears, u=10, v=6, color=CHAR):
     return Vector(loc), radius
 
 
-# Job heads (W1-24). Under the Fleet's paint every ordinary enemy is an old-works machine
-# (ruling ch), so its head is a part of the job it did before the works were turned on the
-# ball (design-v3/SPILLWAY-ROSTER.md, "Old jobs"). Each takes the frame animal_head returns:
-# `loc`, the old head's centre, and `radius`, its size. The casting is fleet_paint, so it
-# flashes with the enemy; its working parts are vertex-colour paint. Each sits on the
-# barrel where the old head did, its base reaching the old head's bottom, and stays inside
-# about 1.6 radii of the old centre sideways.
 HALF_PI = 1.5707963267948966
 
 
 def gauge_head(part, loc, radius):
     """Rack magnet: the rated-load dial, a round cast gauge on edge facing forward with a
     bone face and a charcoal needle standing past its mark."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.42, r * 0.5, r * 0.85, segs=8, loc=c + Vector((0, 0, -r * 0.625)))
         dial = c + Vector((0, 0, r * 0.45))
@@ -65,7 +58,7 @@ def gauge_head(part, loc, radius):
 def bollard_head(part, loc, radius):
     """Mooring winch: a mooring bollard, a waisted post under a wide cap, a bone line made
     fast round its neck."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.62, r * 0.52, r * 1.55, segs=10, loc=c + Vector((0, 0, -r * 0.275)))
         part.cyl("paint", r * 1.18, r * 1.05, r * 0.38, segs=12, loc=c + Vector((0, 0, r * 0.66)), color=CHAR)
@@ -76,7 +69,7 @@ def bollard_head(part, loc, radius):
 def insulator_head(part, loc, radius):
     """Fish fence layer: the live line's insulator, three bone sheds stacked on a charcoal
     stem under a charcoal terminal cap."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("paint", r * 0.3, r * 0.3, r * 2.55, segs=8, loc=c + Vector((0, 0, r * 0.225)), color=CHAR)
         for k, z in ((1.15, -0.35), (0.98, 0.25), (0.8, 0.85)):
@@ -87,7 +80,7 @@ def insulator_head(part, loc, radius):
 def sheave_head(part, loc, radius):
     """Fish lift: the hoist block, a grooved charcoal sheave turning between two cast
     cheeks, with the bone line in its groove."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         hub = c + Vector((0, 0, r * 0.35))
         for side in (-1, 1):
@@ -100,7 +93,7 @@ def sheave_head(part, loc, radius):
 def lifting_beam_head(part, loc, radius):
     """Stoplog setter: the stoplog grab, a cast lifting beam across the shoulders with a
     charcoal hook dropping at each end, on a short neck."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.5, r * 0.55, r * 1.15, segs=8, loc=c + Vector((0, 0, -r * 0.475)))
         beam = c + Vector((0, 0, r * 0.35))
@@ -117,7 +110,7 @@ def lifting_beam_head(part, loc, radius):
 def handwheel_head(part, loc, radius):
     """Flap tender: the gate valve, a cast bonnet with a spoked charcoal handwheel standing on
     its front face, so the wheel still faces the player under a carried load."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.75, r * 0.45, r * 1.45, segs=8, loc=c + Vector((0, 0, -r * 0.325)))
         hub = c + Vector((0, -r * 0.95, -r * 0.3))
@@ -132,7 +125,7 @@ def handwheel_head(part, loc, radius):
 def lantern_head(part, loc, radius):
     """Heaving-line thrower: the lock keeper's signal lantern, a cast lamp housing with a bone
     lens behind three charcoal guard bars, under a charcoal cowl and its carry ring."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.8, r * 0.7, r * 1.65, segs=10, loc=c + Vector((0, 0, -r * 0.225)))
         part.cyl("paint", r * 0.62, r * 0.62, r * 0.7, segs=10, loc=c + Vector((0, -r * 0.18, 0)), color="bone")
@@ -147,7 +140,7 @@ def lantern_head(part, loc, radius):
 def screen_head(part, loc, radius):
     """Trash screen: the intake rack, a square cast frame of charcoal bars standing on edge
     and facing forward."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.45, r * 0.5, r * 0.9, segs=8, loc=c + Vector((0, 0, -r * 0.6)))
         frame = c + Vector((0, 0, r * 0.45))
@@ -162,7 +155,7 @@ def screen_head(part, loc, radius):
 def jet_deflector_head(part, loc, radius):
     """Outlet guard (deflector): the flip-bucket nozzle that turned the outlet jet off the
     bank, a cast elbow rising from the shoulders to a flared mouth with a charcoal lip."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.62, r * 0.5, r * 1.15, segs=10, loc=c + Vector((0, 0, -r * 0.475)))
         bend = c + Vector((0, 0, r * 0.4))
@@ -178,7 +171,7 @@ def jet_deflector_head(part, loc, radius):
 def current_meter_head(part, loc, radius):
     """Current meter (gyro jammer): the cup rotor that spun in the stream to read its flow,
     three charcoal arms with a bone cup each, on a cast bearing."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.55, r * 0.4, r * 1.35, segs=10, loc=c + Vector((0, 0, -r * 0.375)))
         hub = c + Vector((0, 0, r * 0.45))
@@ -196,7 +189,7 @@ def current_meter_head(part, loc, radius):
 def brush_head(part, loc, radius):
     """Screen sweeper (swatter): the sweep's brush, a cast stock across the head with a row
     of charcoal bristle tufts standing up from it."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.6, r * 0.5, r * 1.2, segs=10, loc=c + Vector((0, 0, -r * 0.45)))
         stock = c + Vector((0, 0, r * 0.3))
@@ -209,7 +202,7 @@ def brush_head(part, loc, radius):
 def buoy_head(part, loc, radius):
     """Buoy lifter (winch drone): a channel buoy, a cast float with a bone day band under a
     charcoal cone and its lamp cage."""
-    with part.region(subsurf=0, detail=1):  # cast: filleted, not subdivided
+    with part.region(subsurf=0, detail=1):
         c, r = Vector(loc), radius
         part.cyl("fleet_paint", r * 0.7, r * 0.8, r * 1.2, segs=12, loc=c + Vector((0, 0, -r * 0.45)))
         part.cyl("paint", r * 0.82, r * 0.82, r * 0.25, segs=12, loc=c + Vector((0, 0, -r * 0.25)), color="bone")

@@ -23,7 +23,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from jolt_layer_sfx import SR, bandpass_noise, buzz, env, sweep, t_of, write  # noqa: E402
+from jolt_layer_sfx import SR, bandpass_noise, buzz, env, sweep, t_of, write
 
 E1, E2, E3, B3, E4 = 41.20, 82.41, 164.81, 246.94, 329.63
 G2, G3, D4, G4, G5 = 98.0, 196.0, 293.66, 392.0, 783.99
@@ -110,7 +110,6 @@ def creak(seconds, pitch, loudness):
 
 
 def prop_crew_presence():
-    # Two creaks in 2.0 s that start and end silent, so the loop has no seam.
     n = round(2.0 * SR)
     out = place(n, 0.15, creak(0.6, E3, 0.6)) + place(n, 1.1, creak(0.5, B3, 0.4))
     out += bandpass_noise(n, 150, 500) * 0.03
@@ -154,7 +153,6 @@ def main(argv):
     for name, (make, loop) in SOUNDS.items():
         x = make()
         if not loop:
-            # A tell ends on its landing frame, so it keeps its tail; write() fades the last 10 ms.
             x = x * env(len(x), 0.002, 0.0)
         write(out / f"{name}.wav", x, loop)
         print(f"{name}.wav {len(x) / SR:.2f} s")

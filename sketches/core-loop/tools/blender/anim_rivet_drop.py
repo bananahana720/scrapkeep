@@ -23,9 +23,6 @@ OUT = rig.OUT
 TABLE = HERE / "rivet-drop-poses.json"
 FRAMES = [1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 22, 24, 26, 29, 34]
 
-# Authored after inspecting all 16 generated front/back/side pose sheets.
-# Values are torso pitch, head pitch, torso height, head height, neck offset,
-# right wrist XYZ, left wrist XYZ, curl, and a concrete visual observation.
 OBSERVATIONS = [
     (-2, -3, 1, 1, 0, (.32,.4,.05), (-.32,.4,.05), -35,
      "01: slight forward snout; hands level; side forearms reach forward."),
@@ -66,7 +63,6 @@ def solve_arm(arm, side, target, stretch=1.0):
     upper = arm.pose.bones["upper_arm." + side]
     lower = arm.pose.bones["lower_arm." + side]
     hand = arm.pose.bones["hand." + side]
-    # Stretch only the arm segments at the apex, matching the generated exaggeration.
     if stretch != 1:
         upper.scale = (stretch, stretch, stretch)
         lower.scale = (1/stretch, 1/stretch, 1/stretch)
@@ -177,7 +173,6 @@ def action(arm,rows):
                 b.keyframe_insert(data_path=path,frame=row["frame"],group=b.name)
     act=arm.animation_data.action
     act.name="drop_land"
-    # Linear keys preserve the two-frame impact and avoid Bezier limb overshoot.
     for layer in act.layers:
         for strip in layer.strips:
             for bag in strip.channelbags:
@@ -262,7 +257,6 @@ def main():
     subprocess.run(["python",str(HERE/"compose_rivet_evidence.py")],check=True)
     movie=OUT/"movie-frames-v4"
     movie.mkdir(exist_ok=True)
-    # Keep the shell stationary: this action belongs to the seated pilot, not ball physics.
     for obj in common.tree(root):
         obj.hide_render=False
     root.hide_render=False

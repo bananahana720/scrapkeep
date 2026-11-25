@@ -4,18 +4,11 @@ const Game := preload("res://src/game.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const StageLocks := preload("res://src/world/stage_locks.gd")
 
-# W1-76 probe: how fast a ball gets rolling down a line of the dam with no input after a start at
-# cruise. Prints the speed every half second and the peak, as multiples of the unmodded cruise.
-#   ... --script res://tools/sysaudit/roll_speed_probe.gd -- --from=x,z --to=x,z [--seconds=12] [--start=1.0] [--locks=0]
-# --locks=0 turns the stage locks and the yard sentry off (bot_run's switch); the default keeps them on.
-# Also prints each lock state change with the ball's z, and a 'snag' line when the flat speed falls to half
-# or less within 18 ticks (0.2 s), and the minimum speed through z 400 to 430 as a multiple of cruise.
 var _game
 var _ticks := 0
 var _from := Vector2.ZERO
 var _to := Vector2.ZERO
 var _seconds := 12.0
-# The start speed as a multiple of cruise (1.49 is a surge's 20.8 m/s).
 var _start := 1.0
 var _t := 0
 var _started := false

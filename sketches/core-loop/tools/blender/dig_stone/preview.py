@@ -59,7 +59,6 @@ def bed_material():
     ramp = nodes.new("ShaderNodeValToRGB")
     ramp.color_ramp.interpolation = "LINEAR"
     elements = ramp.color_ramp.elements
-    # The same stone palette, with pale thin beds and warm broad beds.
     tones = [common.srgb("sandstone"), common.srgb("bone"),
              common.mix("sandstone", "bone", 0.18), (0.721, 0.576, 0.411),
              common.mix("sandstone", "bone", 0.55), common.srgb("sandstone"),
@@ -86,7 +85,6 @@ def bed_material():
     links.new(ramp.outputs[0], mix.inputs[1])
     mix.inputs[2].default_value = common.rgba(common.mix("sandstone", "bone", 0.24))
     links.new(mix.outputs[0], bsdf.inputs["Base Color"])
-    # A narrow worn bed-foot darkening comes from the same world-height table.
     feet = nodes.new("ShaderNodeValToRGB")
     feet.color_ramp.interpolation = "LINEAR"
     feet.color_ramp.elements[0].color = (0.72, 0.72, 0.72, 1)
@@ -102,7 +100,6 @@ def bed_material():
     foot_mix = nodes.new("ShaderNodeMixRGB")
     foot_mix.blend_type = "MULTIPLY"
     links.new(up.outputs[0], foot_mix.inputs[0])
-    # Walls take bed-foot shading; floor stays pale and quiet.
     invert_up = math_node(nodes, links, "SUBTRACT", 1.0, up.outputs[0])
     links.new(invert_up, foot_mix.inputs[0])
     links.new(mix.outputs[0], foot_mix.inputs[1])
@@ -165,7 +162,6 @@ def stage(name, samples, outdir):
     bpy.ops.mesh.primitive_plane_add(size=200, location=(0, 0, ground))
     bpy.context.object.name = "PreviewGround_NOT_EXPORTED"
     bpy.context.object.data.materials.append(flat("preview_ground", "77746d"))
-    # Reference ball follows a neutral calibration role, not a pickup cue.
     ball_location = Vector((hi.x + 1.6, hi.y + 1.2, ground + 1))
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1, location=ball_location)
     ball = bpy.context.object
@@ -189,7 +185,6 @@ def stage(name, samples, outdir):
     outdir.mkdir(parents=True, exist_ok=True)
     files = []
     for label, direction in (("front", (0, 1, 0.18)), ("side", (1, 0, 0.22)), ("three-quarter", (0.75, 1, 0.65))):
-        # Place the ball beyond the asset's projected side, without occlusion.
         target = (lo + hi) / 2
         camera.location = target + Vector(direction).normalized() * 30
         common._look(camera, target)
@@ -208,7 +203,6 @@ def stage(name, samples, outdir):
         right = camera.matrix_world.to_quaternion() @ Vector((1, 0, 0))
         up = camera.matrix_world.to_quaternion() @ Vector((0, 1, 0))
         camera.location += right * ((xmin + xmax) / 2) + up * ((ymin + ymax) / 2)
-        # ortho_scale is horizontal with landscape sensor-fit AUTO.
         camera.data.ortho_scale = max(xmax - xmin, (ymax - ymin) * 960 / 720) * 1.13
         scene.render.filepath = str(outdir / (name + "-" + label + ".png"))
         bpy.ops.render.render(write_still=True)

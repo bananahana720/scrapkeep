@@ -60,21 +60,16 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import anchor_gap as gap  # noqa: E402
+import anchor_gap as gap
 
-import bpy  # noqa: E402
+import bpy
 
-LIMIT_M = 1.0          # ruling 6327976830: rows over 1.0 m of air at ball contact
+LIMIT_M = 1.0
 SPLIT_M = 2.0 * gap.BALL_RADIUS
 SAMPLE_M = 0.1
 LINE_STEP_M = 0.25
 LOW_SPLITS = (1, 2, 4)
 UPPER_BAND_M = 3.0
-# These families' sizes shipped in these parks are fitted also when the upper post alone holds over LIMIT_M of air inside
-# the 8 m box (upper_air): a timber post is a ~4.5 m shaft under a 7.4 m cap, so its low band fits the box (gap 0.2 m)
-# while the 8 m box stands 1.75-2 m off the shaft above it; on a rim or slope beside the post, or swinging into it, the
-# ball stopped in visible air (the flume's crane booms and hollow trestles, tools/qa/invisible_walls.gd, 30 Oct). Other
-# families and parks keep the low-band rule: fitting every hoodoo and basalt field adds shapes to parks with ~15.7k posts.
 FULL_HEIGHT_FAMILIES = ("timber",)
 FULL_HEIGHT_PARKS = ("park_dam.json", "park_flume.json")
 UPPER_NECK_SHARE = 0.5
@@ -104,7 +99,6 @@ def slab_polys(tris, lo, hi):
 
 
 def samples(tris, size, h0, h1):
-    # World (x, h, z) points covering the mesh between world heights h0 and h1, spaced at most SAMPLE_M.
     pts = []
     for poly in slab_polys(tris, gap.to_authored_y(h0, size), gap.to_authored_y(h1, size)):
         w = [(p[0], to_world_h(p[1], size), p[2]) for p in poly]
@@ -124,9 +118,6 @@ def bounds(pts):
 
 
 def line_gap(pts, boxes, face, c):
-    # Air between touching the boxes and touching the mesh, ball centre at h 1 on the line (other axis = c) toward `face`.
-    # A box touches the ball at sqrt(1 - dv^2 - dl^2) out from its face, dv the distance from h 1 to its height range
-    # and dl from the line to its span on the other axis; a box with dv^2 + dl^2 >= 1 cannot touch the ball.
     axis, other, sign = {"+x": (0, 2, 1.0), "-x": (0, 2, -1.0), "+z": (2, 0, 1.0), "-z": (2, 0, -1.0)}[face]
     r = gap.BALL_RADIUS
     hit, width = None, 0.0
@@ -156,8 +147,6 @@ def line_gap(pts, boxes, face, c):
 
 
 def face_gaps(pts, boxes):
-    # (centre-line gap, worst gap across the face) per face. The lines come from the mesh's own bounds in pts (the low
-    # region), so the 8 m box and the fitted boxes are measured on the same lines.
     bx, bz = bounds(pts)
     out = {}
     for face in OUT_KEYS:
@@ -208,8 +197,6 @@ def box_of(tris, size, h0, h1, lo_h):
 
 
 def fit(tris, size):
-    # The sunk skirt (h -1 .. 0) as its own box; the low region (h 0 .. min(size, SPLIT_M)) as one box, then 2, then 4
-    # stacked boxes until the gap is at or under LIMIT_M; then one upper box over the rest of the post.
     top = min(size, SPLIT_M)
     low = samples(tris, size, 0.0, top)
     if not low:
@@ -239,9 +226,6 @@ def footprint(b):
 
 
 def upper(tris, size, up):
-    # The upper box alone, or UPPER_BAND_M stacked bands when one of them has under UPPER_NECK_SHARE of the whole box's
-    # footprint: a waisted post (a hoodoo's neck under its cap) whose one hull held up to 1.7 m of air round the neck at
-    # h 5-7, where a jumping or launched ball meets it (tools/qa/collision_sweep.gd, 30 Oct).
     n = int(math.ceil((size - SPLIT_M) / UPPER_BAND_M - 1e-9))
     if n < 2:
         return [up]
@@ -253,7 +237,6 @@ def upper(tris, size, up):
 
 
 def upper_air(tris, size):
-    # Worst air between the 8 m box and the drawn post above SPLIT_M, on any face of any upper band (upper()).
     if size <= SPLIT_M:
         return 0.0
     up = box_of(tris, size, SPLIT_M, size, SPLIT_M)
@@ -279,9 +262,9 @@ def planted():
     cases = ((full, (2.0, 1.0, 0.0), "+x", 2.0), (full, (2.0, 1.6, 0.0), "+x", 2.2),
              (odd, (1.0, 1.0, 0.0), "+x", 1.0), (odd, (-0.5, 1.0, 0.0), "-x", 0.5),
              (odd, (0.0, 1.0, 1.0), "+z", 2.0), (odd, (0.0, 1.0, -2.5), "-z", 0.5),
-             (short, (2.0, 1.0, 0.0), "+x", 1.8),                       # box top at h 0.4: dv 0.6, touches at 4.8
-             (beside, (1.0, 1.0, 0.0), "+x", 2.0 + math.sqrt(0.75) - 2.0),  # box edge 0.5 m off the line
-             (full, (0.0, 1.0, 3.0), "+x", 8.0))                         # no mesh within reach: the box's full width
+             (short, (2.0, 1.0, 0.0), "+x", 1.8),
+             (beside, (1.0, 1.0, 0.0), "+x", 2.0 + math.sqrt(0.75) - 2.0),
+             (full, (0.0, 1.0, 3.0), "+x", 8.0))
     for boxes, p, face, want in cases:
         got = line_gap([p], boxes, face, 0.0)
         print("ANCHOR_FIT planted sample %s %s gap %.4f want %.4f %s" % (p, face, got, want, "ok" if abs(got - want) < 1e-6 else "WRONG"))

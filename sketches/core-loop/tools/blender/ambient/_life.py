@@ -47,10 +47,10 @@ HERE = Path(__file__).resolve().parent
 BLENDER = HERE.parent
 sys.path.insert(0, str(BLENDER))
 sys.path.insert(0, str(BLENDER / "world_one"))
-import common  # noqa: E402
-import cycles_device  # noqa: E402
-import polish  # noqa: E402
-import kill_first_rig as kfr  # noqa: E402
+import common
+import cycles_device
+import polish
+import kill_first_rig as kfr
 
 SKETCH = Path(common.SKETCH)
 RECORD = SKETCH / "src" / "core" / "ambient_kinds.gd"
@@ -62,13 +62,10 @@ HEIGHT_TOL = 0.15
 FPS = kfr.FPS
 CLIPS = ("idle", "move", "react")
 
-# The Godot -> Blender basis change (x, y, z) -> (x, -z, y); a proper rotation, so winding is kept.
 _B = Matrix(((1, 0, 0, 0), (0, 0, -1, 0), (0, 1, 0, 0), (0, 0, 0, 1)))
 
 common.SLOTS[SLOT] = {"vc": True, "rough": ROUGH}
 
-
-# --- the record -------------------------------------------------------------------------------------------------------
 
 def _record_text():
     return RECORD.read_text()
@@ -131,8 +128,6 @@ def args():
     return out
 
 
-# --- the critter ------------------------------------------------------------------------------------------------------
-
 def _m(loc=(0, 0, 0), rot=(0, 0, 0), scale=(1, 1, 1)):
     """A Godot-space transform; rot is degrees about Godot X, Y, Z."""
     return common.mtx(loc, [math.radians(a) for a in rot], scale)
@@ -144,7 +139,6 @@ class Critter:
         self.row = read_kind(kind_id)
         self.id = kind_id
         common.reset()
-        # Soft toy: no bevel, no AO or edge bake (the vertex colours are the record's paint, untouched).
         polish.enable(detail=detail, bevel=0.0, subsurf=2, ao=False, edge=0.0, crease_angle=179.0)
         self.root = common.empty(kind_id, (0, 0, 0))
         self.parts = {}
@@ -154,12 +148,10 @@ class Critter:
             if name not in self.k["accents"]:
                 assert in_band(hex_rgb(hexs), self.k), "%s palette %s %s is outside the life band" % (kind_id, name, hexs)
 
-    # palette ------------------------------------------------------------------------------------------------------------
     def col(self, name):
         """The record's colour for a palette name, as the hex string Part.paint takes."""
         return self.row["palette"][name]
 
-    # pieces -------------------------------------------------------------------------------------------------------------
     def part(self, bone):
         """The Part holding every piece weighted to `bone` (created on first use)."""
         if bone not in self.parts:
@@ -237,7 +229,6 @@ class Critter:
             verts = [v for ring in rings for v in ring] + ends
             self._paint(p, verts, color)
 
-    # rig ----------------------------------------------------------------------------------------------------------------
     def rig(self, bones):
         """bones: [(name, Godot head, parent or None)], parents first. Every `bone` named in ellipsoid/capsule/tube
         must be in this list. Pieces are built, weighted whole to their bone and joined into one mesh."""
@@ -262,7 +253,6 @@ class Critter:
         self.rig_ = kfr.Rig(self.root, self.id + "_rig", bones)
         self.rig_._attach(mesh)
 
-    # clips --------------------------------------------------------------------------------------------------------------
     def _closed(self, seconds, tracks):
         out = {}
         for bone, keys in tracks.items():
@@ -295,7 +285,6 @@ class Critter:
         assert 1.0 <= seconds <= 3.0, (name, seconds)
         assert abs(seconds * FPS - round(seconds * FPS)) < 1e-6, (name, "off the 30 fps grid")
 
-    # checks -------------------------------------------------------------------------------------------------------------
     def height(self):
         bpy.context.view_layer.update()
         zs = [(self.mesh.matrix_world @ v.co).z for v in self.mesh.data.vertices]
@@ -320,7 +309,6 @@ class Critter:
         assert share <= self.k["neutral_share"], "neutral share %.2f over %.2f" % (share, self.k["neutral_share"])
         return share
 
-    # export -------------------------------------------------------------------------------------------------------------
     def export(self, path):
         rig = self.rig_
         rig.stop()
@@ -368,7 +356,6 @@ class Critter:
         print("AMBIENT_EXPORT " + json.dumps({"file": os.path.basename(path), "kind": self.id, **stats}, sort_keys=True))
         return stats
 
-    # stills -------------------------------------------------------------------------------------------------------------
     def stills(self, outdir, pose=None):
         """Three Cycles CPU stills (640x480) on a neutral sandstone ground: front 3/4, side, and the react pose (the end of
         the react clip; pose=(clip, seconds) shows another frame, labelled by the clip)."""
@@ -403,7 +390,6 @@ class Critter:
         d = h * 3.2
         target = Vector((0, 0, h * 0.42))
         os.makedirs(outdir, exist_ok=True)
-        # Blender +Y is the creature's front (Godot -Z).
         shots = [
             ("front34", None, Vector((0.62, 0.78, 0.5)).normalized() * d + target),
             ("side", None, Vector((1.0, 0.0, 0.22)).normalized() * d + target),

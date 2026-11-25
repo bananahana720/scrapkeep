@@ -24,7 +24,6 @@ import common
 import polish
 from common import Part
 
-# A nine-metre ship: wider chamfers than the 3 cm default so they read at fight distance.
 polish.enable(detail=2, bevel=0.06, bevel_angle=46.0)
 
 ROOT = HERE.parents[4]
@@ -112,7 +111,6 @@ def stripe_rectangle(p, width, height, at):
 
 def striped_disc(p, radius, at, down=False, segs=12):
     centre = xyz(at)
-    # Broad alternating diagonals across the disc, clipped to its polygon.
     polygon = [(radius * math.cos(k * math.tau / segs), radius * math.sin(k * math.tau / segs)) for k in range(segs)]
     def clip(poly, edge, keep_greater):
         result = []
@@ -137,7 +135,6 @@ def striped_disc(p, radius, at, down=False, segs=12):
 
 def hull(root):
     p = Part("Hull")
-    # Chamfered footprint rather than a box. Raised side sponsons expose the drums.
     outline = [(-3.5, -7), (3.5, -7), (4.5, -5.8), (4.5, 5.8),
                (3.6, 7), (-3.6, 7), (-4.5, 5.8), (-4.5, -5.8)]
     recessed = [(max(-4.2, min(4.2, x)), max(z, -6.3)) for x, z in outline]
@@ -146,7 +143,6 @@ def hull(root):
     p.prism(STEEL, [(x, -z) for x, z in reversed(outline)], .85,
             matrix=common.mtx((0, 0, 4.575)), color="petrol")
     box(p, (5.6, 1.8, 11.2), (0, .9, 0), "charcoal", JOINT)
-    # Ribs behind the four shed panels; they remain visible during Scuttle.
     for side in (-1, 1):
         for z in (-5.6, -3.5, -1.4, 1.4, 3.5, 5.6):
             beam(p, (side * 4.42, 1.6, z), (side * 4.42, 4.85, z), .15, "copper")
@@ -161,7 +157,6 @@ def hull(root):
         for z in (-5.5, 0, 5.7):
             beam(p, (side * 4., 4.5, z), (side * 4., 4.98, z), .1, "bone")
     body = finish(p, (0, 2.5, 0), root)
-    # Masts count with the complete crane kit, including their deck pedestals.
     p = Part("CraneMasts")
     for x, y, z in PIVOTS:
         box(p, (.8, 3, .8), (x, y - 1.5, z), "petrol")
@@ -170,13 +165,11 @@ def hull(root):
     p = Part("DeckDressing")
     for x, y, z in CAPS:
         cyl(p, .8, .4, (x, 4.85, z), "charcoal", JOINT)
-    # Stern exhaust and service deck, all below the cockpit silhouette.
     for x in (-1.9, 1.9):
         cyl(p, .18, 1.4, (x, 5.4, 5.8), "copper", segs=8)
         cyl(p, .23, .15, (x, 6.04, 5.8), "charcoal", JOINT, 8)
     for z in (2, 2.3, 2.6, 2.9, 3.2):
         box(p, (2, .045, .11), (0, 5, z), "charcoal", JOINT)
-    # Weld beads are broad stepped metal strips, not miniature decorative pipes.
     for x in (-3, 3):
         for z in (-5.9, -5.65, -5.4, 5.4, 5.65, 5.9):
             box(p, (.24, .04, .12), (x, 5, z), "copper")
@@ -186,8 +179,6 @@ def hull(root):
 
 
 def drums(parent):
-    # Eight drums sit mostly under the hull: they keep today's segment counts under polish
-    # (bevels and smoothing only), which leaves the triangles for the parts you see.
     def keep(segs):
         return max(2, segs // common.DETAIL)
     for side, letter in ((-1, "L"), (1, "R")):
@@ -197,7 +188,6 @@ def drums(parent):
             cyl(p, .75, .8, at, "charcoal", JOINT, keep(16), True)
             cyl(p, .57, .04, (side * 4.43, .8, z), common.mix("charcoal", "bone", .25), JOINT, keep(12), True)
             cyl(p, .22, .045, (side * 4.4275, .8, z), "copper", JOINT, keep(8), True)
-            # Raised axial tread ribs remain inside the exact D1.5 envelope.
             for j in range(8):
                 a = j * math.tau / 8
                 rod(p, (side * 3.68, .8 + .69 * math.cos(a), z + .69 * math.sin(a)),
@@ -214,14 +204,9 @@ def armour(parent):
     rivet = common.mix("charcoal", "bone", .45)
     for k, (side, z) in enumerate(((-1, -3.5), (-1, 3.5), (1, -3.5), (1, 3.5))):
         p = Part("Armour%d" % k)
-        # The plate keeps its 0.4 x 3.2 x 6 envelope (BUILD-SPEC D4, dress_bri_assets_test):
-        # the slab is thinner so the fittings stand inside it, rivet heads at the outer face.
         face = side * 4.76
-        # Surface 0: the slab and a raised inner panel, so the flat tint still shows a frame
-        # line and a bevel highlight at ram distance.
         box(p, (.26, 3.2, 6), (side * 4.63, 2.8, z), "bone")
         box(p, (.07, 1.9, 4.9), (face + side * .03, 2.8, z), "bone")
-        # Surface 1: two charcoal bands with a rivet row each, wide enough to read at 20 m.
         for y in (1.48, 4.12):
             box(p, (.09, .36, 6), (face + side * .04, y, z), "charcoal", JOINT)
         with p.region(bevel=0, detail=1):
@@ -230,15 +215,11 @@ def armour(parent):
                     dz = -2.62 + j * 5.24 / 7
                     rod(p, (face + side * .07, y, z + dz), (face + side * .14, y, z + dz), .055,
                         rivet, JOINT, 4)
-            # The brass requisition tag, riveted proud of the inner panel near the top band:
-            # the Fleet's one mark (SIGHT-PERSONA habit 6).
             tag_z = z + (1.9 if z < 0 else -1.9)
             box(p, (.03, .5, .78), (face + side * .085, 3.4, tag_z), "brass", JOINT)
             for dz in (-.29, .29):
                 rod(p, (face + side * .095, 3.4, tag_z + dz), (face + side * .125, 3.4, tag_z + dz), .04,
                     "charcoal", JOINT, 4)
-            # Scrapes to bare steel where the ball strikes most, low on the panel: a mid grey
-            # that shows on slate and on amber, never the warning red.
             rng = random.Random("brindle:scuffs%d" % k)
             for y, dz, width, height in ((1.95, -1.7, 1.1, .16), (2.2, .6, 1.4, .12), (3.1, -.2, .7, .1)):
                 dz += rng.uniform(-.3, .3)
@@ -252,7 +233,6 @@ def armour(parent):
 
 def cockpit(root):
     p = Part("CockpitShield")
-    # Continuous faceted dome with an exact 3 x 2.2 x 3 envelope.
     rings = []
     for height, radius in ((5, 1.5), (6.1, 1.5), (6.85, 1.05), (7.2, .28)):
         rings.append([p.bm.verts.new(xyz((radius * math.cos(k * math.tau / 12), height,
@@ -272,7 +252,6 @@ def pilot(p, centre):
     """One continuous low-poly seated badger surface, with integrated snout/ears."""
     x, y, z = centre
     rows = []
-    # Noncircular rings shape seated shoulders, neck, cheek and the officer's cap.
     for h, w, d in ((-.48, .38, .35), (-.3, .52, .38), (-.05, .43, .30),
                      (.04, .29, .23), (.18, .35, .28), (.36, .30, .27), (.46, .40, .32), (.5, .28, .23)):
         row = []
@@ -281,9 +260,9 @@ def pilot(p, centre):
             xx, zz = w * math.cos(a), d * math.sin(a)
             hh = h
             if h == .36 and k in (1, 4):
-                hh += .11  # Ears belong to the continuous head surface.
+                hh += .11
             if h == .18 and k in (6, 7, 8):
-                zz -= .12  # Broad tapering muzzle toward the bow.
+                zz -= .12
             row.append(p.bm.verts.new(xyz((x + xx, y + hh, z + zz))))
         rows.append(row)
     for j in range(len(rows) - 1):
@@ -323,7 +302,6 @@ def cranes(root):
         socket = node("MagnetSocket" + tag, at, root)
         p = Part("Magnet" + tag)
         faces = cyl(p, 1.4, .9, at, "bone", STEEL, 12)
-        # The working face replaces the steel end cap, avoiding coplanar surfaces.
         bottom = [f for f in faces if len(f.verts) == 12 and f.calc_center_median().z < at[1]]
         bmesh.ops.delete(p.bm, geom=bottom, context="FACES_ONLY")
         cyl(p, .6, .12, (at[0], at[1] + .39, z), "petrol", STEEL, 8)
@@ -332,13 +310,10 @@ def cranes(root):
         finish(p, at, socket)
         node("Cable" + tag, tuple((pivot[j] + at[j]) / 2 for j in range(3)), root)
         beam(cables, pivot, (at[0], at[1] + .45, z), .25, "charcoal", JOINT)
-    # Static spans share one surface. Runtime replaces CableSpans with the two
-    # procedural spans driven by CablePort/Starboard and independent targets.
     finish(cables, (0, 0, 0), root)
     for k, at in enumerate(CAPS):
         socket = node("CapSocket%d" % k, at, root)
         p = Part("Cap%d" % k)
-        # Caps keep their exact 2.2 m magnet-target envelope, so no chamfer pulls the rim in.
         p.bevel = 0
         p.cyl(STEEL, 1.1, .95, .8, 12, loc=xyz(at), color="bone")
         striped_disc(p, 1.05, (at[0], at[1] - .401, at[2]), True)
@@ -354,8 +329,6 @@ def furnace(root, parent):
     finish(p, (0, 4.85, -2), root)
     for side, tag in ((-1, "L"), (1, "R")):
         p = Part("Hatch" + tag)
-        # A 2.2 x 1.8 x .2 plate is turned onto the ship's side: its width
-        # runs fore/aft. The lower longitudinal (+Z) edge is the hinge.
         box(p, (.16, 1.8, 2.2), (side * 4.4, 3.5, 0), "petrol")
         box(p, (.18, 1.4, 1.8), (side * 4.4, 3.5, 0), "charcoal", JOINT)
         box(p, (.2, 1.25, 1.65), (side * 4.4, 3.5, 0), "bone")
@@ -371,9 +344,6 @@ def build_ship():
     armour(h)
     p = Part("BowRam")
     box(p, (9, 3.2, .35), (0, 2.5, -6.625), "bone")
-    # Hazard paint only on the ram lip, clear of the bolts: the arenas sheet allows stripes
-    # on the magnet underside, the throats and the bow. A full-face stripe read as striped
-    # hull sides at rest.
     stripe_rectangle(p, 7.6, .8, (0, 1.6, -6.801))
     for x in (-4.35, 4.35):
         for y in (1.0, 4.0):
@@ -384,7 +354,6 @@ def build_ship():
     seat = node("AdmiralSeat", (0, 6, 4.8), root)
     launch = node("ScooterSeat", (0, 6, 4.8), seat)
     p = Part("Admiral")
-    # The badger is one soft surface: no chamfers, one rounding pass.
     p.bevel, p.subsurf = 0, 1
     pilot(p, (0, 6, 4.8))
     box(p, (1.2, .13, 1), (0, 5.565, 4.8), "petrol")
@@ -399,7 +368,6 @@ def build_scooter():
     root = node("ScooterRoot")
     seat = node("ScooterSeat", (0, 0, .25), root)
     p = Part("ScooterBody")
-    # Tiny cast inspection trolley, never a second ship. Everything fits the target.
     box(p, (1.6, .45, 2.3), (0, -.18, 0), "petrol")
     box(p, (2, .25, .45), (0, -.15, -1.175), "bone")
     box(p, (1.4, .18, .4), (0, -.18, 1.2), "bone")
@@ -408,11 +376,9 @@ def build_scooter():
     for side in (-1, 1):
         beam(p, (side * .45, -.22, -.38), (side * .45, .12, -.38), .055, "copper")
     box(p, (1.0, .12, .25), (0, .02, -.48), "bone")
-    # Neutral shallow windscreen, inside y +/- .6 and the visible one-metre hull.
     box(p, (1.2, .32, .04), (0, .12, -.52), color=None, slot=GLASS)
     worn(p)
     finish(p, (0, 0, .25), seat)
-    # One common axle rotates two small scooter wheels at their actual centres.
     p = Part("Drums")
     for side in (-1, 1):
         cyl(p, .22, .24, (side * .84, -.28, 0), "charcoal", JOINT, max(2, 12 // common.DETAIL), True)
@@ -483,8 +449,6 @@ def main():
     export(scooter, a.out_dir / "boss_brindle_scooter.glb")
     scooter_budget = measure(a.out_dir / "boss_brindle_scooter.glb")
     combined = [budget["kit"][i] + scooter_budget["kit"][i] for i in range(3)]
-    # Polished caps (POLISH.md, 18 Oct): about 70% of the warden_base and 85% of the
-    # warden_kit class caps, pending the 4080 frame check.
     assert all(n <= cap for n, cap in zip(budget["body"], (14500, 11500, 32))), budget
     assert all(n <= cap for n, cap in zip(combined, (5000, 5000, 18))), combined
     print("BRI budget: PASS body=%s combined_kit=%s" % (budget["body"], combined))

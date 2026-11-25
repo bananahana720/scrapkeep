@@ -19,32 +19,27 @@ import math
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+from _life import Critter
 
 life = Critter("tube_bat")
-CY = -0.1  # body centre height below the grip point
+CY = -0.1
 
-# --- body: a fuzzy ball with a few proud tufts
 life.ellipsoid("body", "body", (0, CY, 0), (0.064, 0.066, 0.062), subsurf=1, u=10, v=6)
 for cx, cy, cz in ((0.04, -0.07, 0.04), (-0.042, -0.085, 0.036), (0.0, -0.14, 0.05), (-0.036, -0.135, 0.038), (0.038, -0.13, 0.034)):
     life.ellipsoid("body", "wing", (cx, cy, cz), (0.02, 0.018, 0.018), subsurf=1, u=6, v=3)
 
-# --- tiny cream face on the lower front, nose and eyes
 life.ellipsoid("body", "cream", (0, -0.126, -0.05), (0.03, 0.027, 0.016), rot=(-20, 0, 0), subsurf=1, u=8, v=3)
 life.ellipsoid("body", "eye", (0, -0.134, -0.064), (0.0065, 0.005, 0.005), subsurf=1, u=6, v=3)
 for s in (-1, 1):
     life.ellipsoid("body", "eye", (0.019 * s, -0.117, -0.059), (0.007, 0.0075, 0.005), subsurf=1, u=6, v=4)
 
-# --- feet gripping the roof point at the top
 for s in (-1, 1):
     life.ellipsoid("body", "body", (0.014 * s, -0.027, 0.0), (0.0125, 0.026, 0.012), subsurf=1, u=6, v=3)
 
-# --- big round ears
 for s, bone in ((-1, "ear_l"), (1, "ear_r")):
     life.ellipsoid(bone, "body", (0.04 * s, -0.162, -0.018), (0.021, 0.027, 0.013), rot=(0, 0, 22 * s), subsurf=1, u=8, v=5)
     life.ellipsoid(bone, "cream", (0.04 * s, -0.163, -0.029), (0.012, 0.017, 0.005), rot=(0, 0, 22 * s), subsurf=1, u=6, v=3)
 
-# --- wings: a soft arm and three overlapping round lobes fanning from the shoulder, wrapped round the body at rest
 for s, bone in ((-1, "wing_l"), (1, "wing_r")):
     sx, sy = 0.058 * s, -0.075
     life.tube(bone, "body", [(sx, sy, 0.0), (sx + 0.002 * s, -0.172, -0.004)], [0.0095, 0.0075], sides=6, subsurf=1)
@@ -66,7 +61,7 @@ life.rig([
 ])
 
 REST = {}
-FLY = (90, 0, 180)  # head forward (-Z), belly down: the hanging ball tipped into flight
+FLY = (90, 0, 180)
 
 
 def wings(angle, yaw=0.0, tuck=1.0):
@@ -74,7 +69,6 @@ def wings(angle, yaw=0.0, tuck=1.0):
     return ({"rot": (0, -yaw, -angle), "scale": (1, tuck, 1)}, {"rot": (0, yaw, angle), "scale": (1, tuck, 1)})
 
 
-# --- idle, 2.8 s: hanging asleep in its wings. Breathes slowly, sways a little, one ear twitch.
 life.cycle("idle", 2.8, {
     "torso": [(0, REST), (0.7, {"rot": (0, 0, 2.5), "loc": (0, 0.002, 0)}), (1.4, REST),
               (2.1, {"rot": (0, 0, -2.5), "loc": (0, 0.002, 0)})],
@@ -88,7 +82,6 @@ life.cycle("idle", 2.8, {
     "ear_r": [(0, REST), (0.4, {"rot": (0, 0, 4)}), (0.9, REST)],
 })
 
-# --- move, 1.2 s: flying flap cycle, three wingbeats (down 55, up 125 degrees), body bobs against the wings.
 up_l, up_r = wings(125, 8)
 dn_l, dn_r = wings(55, -8)
 flap = {"wing_l": [], "wing_r": [], "torso": [], "ear_l": [], "ear_r": []}
@@ -103,7 +96,6 @@ for i in range(6):
 flap["body"] = [(0, {"rot": FLY}), (0.6, {"rot": (86, 0, 180)})]
 life.cycle("move", 1.2, flap)
 
-# --- react, 2.0 s: shiver, unfold, drop, tip into flight; hovering flap from 0.8 s that closes on itself.
 hu_l, hu_r = wings(115, 6)
 hd_l, hd_r = wings(65, -6)
 FLY_POSE = {"rot": FLY}
@@ -127,9 +119,7 @@ react = {
 }
 life.oneshot("react", 2.0, react, loop_from=0.8)
 
-# The kit's stills aim at a creature standing on the ground; this one hangs, so render them after the export with the
-# whole model lifted by its own height (the export has already written; nothing of this reaches the GLB).
-from _life import args  # noqa: E402
+from _life import args
 want_stills = args()["stills"]
 if want_stills:
     i = sys.argv.index("--stills")

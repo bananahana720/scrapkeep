@@ -24,10 +24,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..")))
 
-import common  # noqa: E402
-import palette_gd  # noqa: E402
-import polish  # noqa: E402
-from common import Part  # noqa: E402
+import common
+import palette_gd
+import polish
+from common import Part
 
 BONE = palette_gd.HEX["SAND"]
 RUST = palette_gd.HEX["RUST"]
@@ -76,7 +76,6 @@ def _ground_root(root):
 def build_magnet_sling_buoy(p, root):
     """Fleet Surplus cluster anchor buoy: heavy weighted anchor foot, twin copper electromagnet
     horseshoe horns, brass requisition tag, and glowing MINT #8bf0d3 central attractor core."""
-    # Wide flanged weighted charcoal anchor base with 4 radial stabilizer anchor flukes.
     p.cyl(METAL, 0.52, 0.42, 0.14, segs=10, loc=(0.0, 0.0, 0.07), color=CHARCOAL)
     p.cyl(METAL, 0.34, 0.30, 0.18, segs=8, loc=(0.0, 0.0, 0.22), color=RUST)
     for k in range(4):
@@ -85,16 +84,13 @@ def build_magnet_sling_buoy(p, root):
         p.box(METAL, (0.34, 0.12, 0.16), loc=(fx * 0.44, fy * 0.44, 0.08),
               rot=(0.0, 0.0, a), color=STEEL)
 
-    # Central copper coil pillar + 3 heavy copper winding rings.
     p.cyl(METAL, 0.20, 0.18, 0.68, segs=10, loc=(0.0, 0.0, 0.64), color=CHARCOAL)
     for rz in (0.42, 0.64, 0.86):
         p.ring(METAL, 0.19, 0.28, 0.075, segs=10, loc=(0.0, 0.0, rz), color=COPPER)
 
-    # Glowing MINT #8bf0d3 core halo ring & top attractor sphere.
     p.ring(ARC_GLOW, 0.26, 0.36, 0.070, segs=12, loc=(0.0, 0.0, 0.64))
     p.ico(ARC_GLOW, 0.19, subdiv=1, loc=(0.0, 0.0, 1.14))
 
-    # Twin bold horseshoe electromagnet yoke arms curving up around the glowing core!
     for sx in (-1.0, 1.0):
         pts = [
             Vector((sx * 0.24, 0.0, 0.36)),
@@ -106,12 +102,10 @@ def build_magnet_sling_buoy(p, root):
             p.rod(METAL, a_pt, b_pt, 0.078, segs=6, color=COPPER)
         for pt in pts[1:-1]:
             p.ico(METAL, 0.084, subdiv=1, loc=tuple(pt), color=CHARCOAL)
-        # Flared steel pole-shoe tips facing inward toward the core.
         p.box(METAL, (0.16, 0.20, 0.14), loc=(sx * 0.30, 0.0, 1.34),
               rot=(0.0, sx * math.radians(-22.0), 0.0), color=STEEL)
         p.box(ARC_GLOW, (0.04, 0.16, 0.10), loc=(sx * 0.21, 0.0, 1.32))
 
-    # Fleet brass requisition plate riveted on front skirt.
     p.box(METAL, (0.28, 0.05, 0.16), loc=(0.0, -0.34, 0.24), color=BRASS)
 
     common.empty("SocketCore", loc=(0.0, 0.0, 1.14), parent=root)
@@ -121,18 +115,14 @@ def build_magnet_sling_buoy(p, root):
 def build_magnet_sling_pod(p, root):
     """Heroic Magnet Sling held/dropped rack pod: twin brass-and-copper horseshoe rail launcher
     cradling a glowing MINT #8bf0d3 magnetic buoy slug."""
-    # Chunky mounting shoe base.
     p.box(METAL, (0.48, 0.54, 0.12), loc=(0.0, 0.0, 0.06), color=CHARCOAL)
     p.box(METAL, (0.36, 0.62, 0.26), loc=(0.0, -0.04, 0.25), color=RUST)
-    # Twin forward-projecting copper accelerator prongs (bold graphic-novel silhouette!).
     for sx in (-0.22, 0.22):
         p.box(METAL, (0.12, 0.72, 0.20), loc=(sx, 0.16, 0.30), color=COPPER)
         p.box(METAL, (0.15, 0.14, 0.24), loc=(sx, 0.48, 0.30), color=STEEL)
         p.box(METAL, (0.14, 0.10, 0.22), loc=(sx, 0.22, 0.30), color=CHARCOAL)
-    # Rear brass capacitor drum & requisition plate.
     p.cyl(METAL, 0.18, 0.18, 0.44, segs=12, loc=(0.0, -0.34, 0.30), rot=ALONG_X, color=BRASS)
     p.ring(METAL, 0.17, 0.21, 0.06, segs=12, loc=(0.0, -0.34, 0.30), rot=ALONG_X, color=CHARCOAL)
-    # Glowing MINT magnetic core nested between the twin prongs.
     p.cyl(ARC_GLOW, 0.12, 0.12, 0.32, segs=12, loc=(0.0, 0.26, 0.30), rot=ALONG_Y)
     p.ring(ARC_GLOW, 0.13, 0.19, 0.05, segs=12, loc=(0.0, 0.44, 0.30), rot=ALONG_Y)
 
@@ -142,7 +132,6 @@ def build_magnet_sling_pod(p, root):
 def build_slag_mortar_shell(p, root):
     """Redjaw Workshops heavy kiln slag mortar shell: fluted cast-iron bomb body, copper drive
     band, brass impact fuze nose, and glowing AMBER #e5a044 molten slag vent slits (zero HAZARD)."""
-    # Stabilizer tail ring + 4 chunky Redjaw tail fins.
     p.ring(METAL, 0.22, 0.28, 0.14, segs=12, loc=(0.0, 0.0, 0.10), color=CHARCOAL)
     for k in range(4):
         a = k * math.pi / 2.0
@@ -150,20 +139,16 @@ def build_slag_mortar_shell(p, root):
         p.box(METAL, (0.24, 0.045, 0.26), loc=(fx * 0.18, fy * 0.18, 0.15),
               rot=(0.0, 0.0, a), color=STEEL)
 
-    # Bulging cast charcoal/oxide kiln mortar body rising upright.
     p.cyl(METAL, 0.22, 0.32, 0.26, segs=12, loc=(0.0, 0.0, 0.34), color=CHARCOAL)
     p.cyl(METAL, 0.32, 0.30, 0.32, segs=12, loc=(0.0, 0.0, 0.62), color=RUST)
     p.cyl(METAL, 0.30, 0.14, 0.24, segs=12, loc=(0.0, 0.0, 0.89), color=CHARCOAL)
 
-    # Heavy riveted copper obturator drive band around equator.
     p.ring(METAL, 0.30, 0.365, 0.10, segs=12, loc=(0.0, 0.0, 0.54), color=COPPER)
-    # Four glowing AMBER #e5a044 molten kiln slag vent slits around upper shoulder.
     for k in range(4):
         a = k * math.pi / 2.0 + math.pi / 4.0
         fx, fy = math.cos(a), math.sin(a)
         p.box(AMBER_GLOW, (0.10, 0.06, 0.20), loc=(fx * 0.29, fy * 0.29, 0.72),
               rot=(0.0, 0.0, a))
-    # Brass impact fuze cap & glowing amber primer crown.
     p.cyl(METAL, 0.14, 0.08, 0.12, segs=10, loc=(0.0, 0.0, 1.06), color=BRASS)
     p.ico(AMBER_GLOW, 0.075, subdiv=1, loc=(0.0, 0.0, 1.15))
 
@@ -173,26 +158,21 @@ def build_slag_mortar_shell(p, root):
 def build_slag_mortar_pod(p, root):
     """Heroic Slag Mortar held/dropped rack pod: heavy canted Redjaw kiln mortar barrel on
     bolted recoil trunnions with glowing AMBER muzzle throat and brass pressure gauge."""
-    # Heavy bolted charcoal recoil cradle base.
     p.box(METAL, (0.56, 0.62, 0.12), loc=(0.0, 0.0, 0.06), color=CHARCOAL)
     for sx in (-0.25, 0.25):
         p.box(METAL, (0.10, 0.42, 0.32), loc=(sx, -0.04, 0.24), color=RUST)
         p.cyl(METAL, 0.065, 0.065, 0.14, segs=8, loc=(sx, -0.02, 0.34), rot=ALONG_X, color=STEEL)
 
-    # Thick flared kiln mortar barrel pitched upward 35 deg along +Y/+Z.
     b_start = Vector((0.0, -0.24, 0.24))
     b_mid = Vector((0.0, 0.06, 0.45))
     b_end = Vector((0.0, 0.38, 0.68))
     p.rod(METAL, b_start, b_mid, 0.22, segs=12, r2=0.20, color=CHARCOAL)
     p.rod(METAL, b_mid, b_end, 0.20, segs=12, r2=0.23, color=RUST)
-    # Copper heat-dissipation rings + flared muzzle rim.
     p.rod(METAL, b_start.lerp(b_end, 0.38), b_start.lerp(b_end, 0.48), 0.245, segs=12, color=COPPER)
     p.rod(METAL, b_start.lerp(b_end, 0.64), b_start.lerp(b_end, 0.74), 0.245, segs=12, color=COPPER)
     p.rod(METAL, b_start.lerp(b_end, 0.90), b_end, 0.265, segs=12, color=CHARCOAL)
-    # Glowing AMBER molten bore throat & side kiln grate.
     p.ico(AMBER_GLOW, 0.165, subdiv=1, loc=tuple(b_end - Vector((0.0, 0.03, 0.02))))
     p.box(AMBER_GLOW, (0.44, 0.16, 0.09), loc=(0.0, -0.02, 0.36))
-    # Rear brass breech knob & pressure gauge dial.
     p.ico(METAL, 0.11, subdiv=1, loc=tuple(b_start - Vector((0.0, 0.07, 0.05))), color=BRASS)
 
     common.empty("SocketMuzzle", loc=tuple(b_end), parent=root)

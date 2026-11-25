@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-// Runs Scrapkeep's Node test suite (reading the canonical list from package.json "test")
-// with deterministic shuffling and shard slicing done before launching `node --test`,
-// so Node's internal positional sort cannot undo shard shuffling.
-// Usage: node scripts/ci/node-tests.mjs [--shard <i/n>] [--shuffle] [--seed <n>] [--dry-run]
 
 import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
@@ -33,8 +29,6 @@ export function resolveTestFiles(testScript, baseDir = root) {
   return [...new Set(tokens.flatMap((token) => expandToken(token, baseDir)))];
 }
 
-// Deterministic Fisher-Yates shuffle (mulberry32) so all shards with the same seed partition
-// the exact same permuted list without overlap or dropped files.
 export function shuffleFiles(files, seed) {
   let state = seed >>> 0;
   const next = () => {

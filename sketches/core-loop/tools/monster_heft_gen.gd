@@ -1,13 +1,5 @@
 extends SceneTree
 
-# Generates data/challenge/monster_heft.json: for each stage entrance, the top-bucket maximum heft of
-# the library build, and from those the per-fight thresholds (fights). A pilot is a monster build at a Warden or boss only when
-# its heft is strictly above that number (coordinator ruling (B) on #222, 21 Oct). No hand tuning.
-# Source: lib-base index.json, branch scratch/challenge-lib commit 01a9f50d (155 docs); copied to
-# data/challenge/lib_base_index.json. Run: $GODOT_BIN --headless --path sketches/core-loop -s tools/monster_heft_gen.gd
-# The top bucket is the harness's pickBuilds rule: rank a stage's docs by mass, then parts, then
-# file; the top is every doc at percentile i/(n-1) >= TOP_PERCENTILE, and at least min(MIN_BUCKET, n).
-# Heft comes from RunState.heft() in armour mode, so the game's formula is never copied here.
 
 const Run := preload("res://src/core/run_state.gd")
 const INDEX_PATH := "res://data/challenge/lib_base_index.json"
@@ -32,7 +24,6 @@ static func heft_of(mass: float) -> float:
 	return run.heft()
 
 
-# Entrance thresholds, {stage: heft} for stages 1..STAGES; a stage with no docs is left out.
 static func compute(index: Array) -> Dictionary:
 	var out := {}
 	for stage in range(1, STAGES + 1):
@@ -55,15 +46,10 @@ static func compute(index: Array) -> Dictionary:
 		var top := 0.0
 		for i in range(first, n):
 			top = maxf(top, heft_of(float(docs[i]["mass"])))
-		# Rounded up, never to nearest: a top-bucket build must not sit strictly above its own threshold.
 		out[stage] = ceilf(top * 1000.0) / 1000.0
 	return out
 
 
-# The fights' thresholds from the entrance values (coordinator ruling on #222, 21 Oct): a park
-# Warden is judged at its ARRIVAL, the next stage's entrance (w1 takes s2 ... w5 takes s6). The
-# stage 6 park Warden (the crown's choir) has no s7 and no ruled threshold, so it gets none and
-# fails closed (MonsterHeft reads INF). The Waking takes its own entrance s4 and the Mind its own s6.
 static func fights(entrances: Dictionary) -> Dictionary:
 	var wardens := {}
 	for stage in range(1, STAGES):

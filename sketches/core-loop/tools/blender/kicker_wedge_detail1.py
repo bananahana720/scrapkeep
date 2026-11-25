@@ -21,11 +21,10 @@ from kicker_wedge import (kit, common, TONES, tone, face, slab, stud, stripes, r
 
 DETAIL = [1500, 3000, 1]
 INNER = HALF - CHEEK
-# Cheek rivets (z, y): a low row and an upper row, staggered, all under the riding edge (y < plane_y(z) - .12).
 ROW_LOW = [(1.9 + .75 * i, .52) for i in range(7)]
 ROW_HIGH = [(3.6 + .75 * i, .52 + .55) for i in range(5)]
 SKIRT_BOLTS = [1.8 + .9 * i for i in range(6)]
-PATCH = (.62, 4.3, .42, .9)            # centre y, centre z, height, length of the base's patch plate (kicker_wedge.py)
+PATCH = (.62, 4.3, .42, .9)
 SIZE = {"kicker_wedge_detail1": [6.22, 1.547, 6.701]}
 
 
@@ -42,7 +41,6 @@ def build(s):
                 dome(s, (side * HALF, y, z), (side, 0, 0), .075, .045, rivet)
         for z in SKIRT_BOLTS:
             dome(s, (side * (HALF + SKIRT[0]), SKIRT[1] * .5, z), (side, 0, 0), .07, .04, rivet)
-    # Seam framing the riding plate: two strips along the cheeks and one across the low end, flush to RIDE_PROUD / 2.
     top = RIDE_PROUD * .4
     v1 = CAP_V - CAP_GAP
     for u0, u1 in ((-INNER, -INNER + .06), (INNER - .06, INNER)):
@@ -51,10 +49,8 @@ def build(s):
     for u in (-INNER + .22, INNER - .22):
         for v in (.45, v1 - .12):
             stud(s, face(u, v, -FACE_SINK), NORMAL, .07, .05, FACE_SINK + top, rivet, sides=6, spin=0)
-    # Cap bar bolts: two on its flush top.
     for u in (-INNER + .5, INNER - .5):
         stud(s, face(u, CAP_V + .25, 0), NORMAL, .07, .05, top, rivet, sides=6, spin=0)
-    # Redjaw patch: four corner rivets and a weld bead round the plate on the +x cheek.
     y, z, h, l = PATCH
     x = HALF + .03
     for dy in (-h / 2 + .07, h / 2 - .07):
@@ -62,7 +58,6 @@ def build(s):
             dome(s, (x, y + dy, z + dz), (1, 0, 0), .045, .03, tone("body"))
     for dy, dz, sy, sz in ((-h / 2, 0, .035, l + .07), (h / 2, 0, .035, l + .07), (0, -l / 2, h, .035), (0, l / 2, h, .035)):
         s.box((.05, sy, sz), (HALF + .02, y + dy, z + dz), tone("patch"))
-    # Paint wear: slate chips at each band's low end, inside the band, so the stripes break up toward the bare plate.
     for k, poly in stripes(v1, INNER):
         if tone("stripe", k) != tone("stripe", 0):
             continue
@@ -97,7 +92,7 @@ def export(out_dir):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **kit.BAKE)
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))

@@ -21,17 +21,10 @@ from PIL import Image
 DEUTAN = np.array([[0.367322, 0.860646, -0.227968],
                    [0.280085, 0.672501, 0.047413],
                    [-0.011820, 0.042940, 0.968881]])
-# Cells of the 1600x900 still: column centres, then each row's y span (the ball row is cut
-# above the balls, so only the pieces and their feet count).
-COLUMNS = [800 + (i - 1.5) * 334 for i in range(4)]  # tier_still.gd COLUMN_PX
+COLUMNS = [800 + (i - 1.5) * 334 for i in range(4)]
 HALF_W = 150
 ROWS = {"gems": (130, 345), "pieces": (370, 520), "shop": (700, 800)}
 TIERS = ["common", "rare", "relic", "evolved"]
-# Set before the first run (12 Nov), not tuned to it: 300 px is about a 17 px square on the
-# 1600x900 still, a little more than one 16 px icon (VISUAL-LANGUAGE section 5's smallest
-# glyph), so the closest pair differs by at least one icon's worth of shape. The shop row
-# failed it first (165 px) and passed only after the frames changed (333 px); the threshold
-# stayed put.
 MIN_PX = 300
 
 

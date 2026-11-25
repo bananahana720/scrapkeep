@@ -78,7 +78,6 @@ def render(name, root, outdir, floor, ground, focus=(0, 0, 0), scale=5.6, ball_x
     cam.data.ortho_scale = scale
     scene.render.resolution_x = 900
     scene.render.resolution_y = 900
-    # The asset turns, the camera stays; face_yaw turns the body's face (Godot +Z) to camera.
     for label, turn in [("front", 0), ("three_quarter", -45), ("side", -90)]:
         root.rotation_euler = (0, 0, math.radians(face_yaw + turn))
         cam.location = focus + Vector((0, -12, 3.0))

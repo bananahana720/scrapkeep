@@ -1,14 +1,7 @@
 extends SceneTree
 
-# What one mesh readback costs on a real GPU (dense fights, wave 18). Mesh.surface_get_arrays(),
 # get_faces() and create_trimesh_shape() read the vertex buffer back from the renderer; on Vulkan
 # that waits for every frame in flight, and the headless dummy renderer does it for free, so only a
-# native run can price it. The scene keeps the GPU busy (a MultiMesh of boxes in front of the
-# camera), then runs ARMS in turn, each reading a mesh back that many times per frame:
-#   godot --path sketches/core-loop --resolution 1920x1080 --script res://tools/readback_bench.gd -- --out=/abs/readback.json [--boxes=40000] [--vsync]
-# Per arm (WARM_FRAMES unrecorded, then RECORD_FRAMES): read_ms is the reads' own time in a frame,
-# frame_ms the wall time between frames; median, p90 and max of each. reads counts the calls made
-# and vertices the last read's size, so a run shows the reads happened (lesson 34).
 
 const ARMS := [0, 1, 4, 16]
 const WARM_FRAMES := 60
@@ -66,7 +59,6 @@ func _build(boxes: int) -> void:
 	var view := MultiMeshInstance3D.new()
 	view.multimesh = multi
 	scene.add_child(view)
-	# The mesh read back: about the size of a park prop's LOD1 (a few thousand vertices).
 	var sphere := SphereMesh.new()
 	sphere.radial_segments = 48
 	sphere.rings = 32

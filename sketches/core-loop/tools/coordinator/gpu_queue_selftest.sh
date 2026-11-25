@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Proves the per-card queue: different cards overlap, the same card serializes, --shared overlaps.
 set -uo pipefail
 q="$(dirname "$(readlink -f "$0")")/gpu_queue.sh"
 fail=0

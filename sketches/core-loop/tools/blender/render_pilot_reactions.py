@@ -25,7 +25,6 @@ def render(pilot, clip, old=False):
             bpy.data.objects.remove(obj, do_unlink=True)
         else:
             obj.hide_render = False
-    # Clear the authored actions before import so the chosen action is the exported one.
     for action in list(bpy.data.actions):
         bpy.data.actions.remove(action)
     glb = (OUT / 'baseline' if old else HERE.parents[1] / 'assets/models') / f'pilot_{pilot}_anim.glb'
@@ -36,7 +35,6 @@ def render(pilot, clip, old=False):
     arm.animation_data.action = actions[0]
     if len(actions[0].slots) == 1:
         arm.animation_data.action_slot = actions[0].slots[0]
-    # Imported NLA tracks must not blend a second exported action into the evidence.
     for track in arm.animation_data.nla_tracks:
         track.mute = True
     scene = bpy.context.scene

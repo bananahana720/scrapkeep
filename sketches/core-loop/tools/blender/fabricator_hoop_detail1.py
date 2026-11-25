@@ -32,7 +32,6 @@ SIZE = [11.38, 9.25, 2.88]
 stud, band = lbd1.stud, lbd2.band
 RC = (fh.RING_IN + fh.RING_OUT) / 2
 FACE = fh.RING_DEPTH / 2
-# Face features on the ring: (angle in degrees from +X, half length along the ring, half width across it).
 SLOTS = [(68, .36, .12), (112, .36, .12), (32, .3, .11), (148, .3, .11)]
 DIMPLES = [0, 180]
 
@@ -47,7 +46,6 @@ def on_ring(a, dr, z):
 
 
 def face_badge(s, deg, half_l, half_w, side, color, n=8, proud=.025):
-    # A capsule-ish n-gon lying on the ring's flat face, its sides buried 2 cm into the face.
     a0 = math.radians(deg)
     ring0, ring1 = [], []
     for k in range(n):
@@ -93,7 +91,6 @@ def footings(s):
             zw = face * (hz - .01)
             s.box((.62, .1, .06), (cx - .12, .86, zw + face * .02), tone("footing"))
             s.box((.12, .12, .07), (cx + .38, .86, zw + face * .025), tone("brass"))
-        # Cradle: a brass saddle on the footing top and a sleeve where the ring enters it.
         a = math.asin((h - fh.RING_Y) / RC)
         a = a if side > 0 else math.pi - a
         p = Vector((math.cos(a) * RC, h, 0))
@@ -104,7 +101,6 @@ def footings(s):
 
 
 def toes(s):
-    # A brass toe cap at each foot's tip: a short slanted block that squares the wedge off like the picture's feet.
     x0, x1, hz, _, _ = fh.FOOTING
     hw, reach, hwall, htip = fh.FOOT
     for side in (-1, 1):
@@ -147,7 +143,7 @@ def export(name, slot, build_fn, size, budget, out_dir):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **fh.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **fh.kit.BAKE)
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(fh.MODELS))
