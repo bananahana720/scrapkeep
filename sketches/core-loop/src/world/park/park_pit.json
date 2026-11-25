@@ -4,7 +4,17 @@
  "size_m": 1600,
  "time_of_day": "noon",
  "spawn": {"at": [-560, -770], "heading_deg": 15.0},
+ "atlas": {"origin": [0, 0], "heading_deg": 0},
+ "exit": {"kind": "launch", "speed_cruise": 1.0, "opens": "warden_broken"},
+ "arrives": {"kind": "land", "speed_cruise": 0.9, "from": "slag bowl drop"},
  "play_rect": [-780, -790, 1560, 1580],
+ "approach": {"to": "waking_shaft", "smoke": [60, 2200], "far_card": {"at": [180, 1180], "to": "park_sinkhole", "size": [380, 140], "yaw_deg": 180}},
+ "district_rows": [
+  {"id": "moab_rim_archway", "name": "Moab Rim Archway", "rect": [-780, -790, 1560, 560], "grade": "pit_moab_rim"},
+  {"id": "copper_bench_amphitheater", "name": "Copper Bench Amphitheater", "rect": [-780, -230, 1560, 380], "grade": "pit_copper_benches"},
+  {"id": "headframe_collar", "name": "Headframe Collar", "rect": [-780, 150, 1560, 640], "grade": "pit_headframe_collar"}
+ ],
+ "cable_rows": [],
  "landmark": {"id": "headframe", "kind": "headframe", "at": [0, 255], "size": [40, 120, 30], "yaw_deg": 180, "recipe": "landmark_headframe", "budget": "hero_landmark", "sight_top": [0, 20, 255], "sight_share": 0.85, "beacon": [0, 255], "reach_m": 42, "warden": {"mounting": "headframe", "anchor": [0, -108, 255], "path": [[0, -108, 255], [0, -78, 255]], "hardpoints": 3, "family": "swarm", "harpoon_anchor": true}, "bay_dock": {"at": [60, 300], "facing_deg": 0}, "gate_slots": [{"at": [60, 280], "facing_deg": 0}], "light": "", "music": "landmark_hum", "fragment": "mining_headframe_cage"},
  "waymarks": ["drop_in", "canal_lip", "switchback_camp", "landmark"],
  "routes": [
@@ -183,7 +193,11 @@
   {"id": "bench2_haul_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [60, -38.5, -150], "to": [-90, -37.5, -150], "radius": 6.0, "floor": 22.0},
   {"id": "skip_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [175, -38.5, -125], "to": [120, -77.5, 25], "radius": 6.0, "floor": 22.0},
   {"id": "west_winze_cable", "kind": "cable", "site": "pit", "recipe": "", "from": [-150, -58.5, -25], "to": [-100, -97.5, 170], "radius": 6.0, "floor": 22.0},
-  {"id": "moab_arch_high_line", "kind": "cable", "site": "pit", "recipe": "", "from": [-155, 2.0, -285], "to": [108, -18.0, -245], "radius": 6.0, "floor": 22.0}
+  {"id": "moab_arch_high_line", "kind": "cable", "site": "pit", "recipe": "", "from": [-155, 2.0, -285], "to": [108, -17.0, -245], "radius": 6.0, "floor": 22.0},
+  {"id": "moab_canal_arch_zip", "kind": "cable", "site": "canal_lip", "recipe": "", "from": [-315.0, 2.4, -455.0], "to": [-235.0, -6.0, -335.0], "radius": 6.0, "floor": 24.0},
+  {"id": "copper_amphitheater_east_zip", "kind": "cable", "site": "pit", "recipe": "", "from": [250.0, -57.5, -60.0], "to": [175.0, -77.0, 125.0], "radius": 6.0, "floor": 24.0},
+  {"id": "conveyor_to_collar_zip", "kind": "cable", "site": "conveyor_gallery_2", "recipe": "", "from": [-245.0, -57.5, 105.0], "to": [-105.0, -97.0, 195.0], "radius": 6.0, "floor": 24.0},
+  {"id": "hoist_overlook_zip", "kind": "cable", "site": "hoist_house", "recipe": "", "from": [-175.0, -85.3, 255.0], "to": [-55.0, -97.0, 235.0], "radius": 6.0, "floor": 24.0}
  ],
  "weather_rows": [
   {"id": "noon_shimmer", "kind": "heat_shimmer", "trigger": {"on": "always"}, "lead_s": 0.0, "live_s": 0.0, "gap_s": 0.0, "fog": {"density": 0.0015, "color": "#e8d7b0"}, "sky": "clear", "sound": "heat_tick", "music_layer": "shimmer_pad", "event_odds": {}, "handling": "none"},
@@ -192,7 +206,9 @@
  "activity_rows": [
   {"id": "cache_lip", "activity": "cracked_cache", "site": "spoil_heap_14", "at": [296, -320], "pack": [], "pay": {"rarities": ["rare"]}},
   {"id": "switchback_camp_site", "activity": "enemy_camp", "site": "switchback_camp", "at": [180, -160], "pack": ["burrower", "burrower", "drill_crew"], "pay": {"named": "rivet_plating"}},
-  {"id": "bench3_altar", "activity": "ambush_altar", "site": "pit", "at": [-110, -84], "pack": ["drill_crew", "lamp_swarm", "drill_crew"], "pay": {"rarities": ["common", "rare"]}}
+  {"id": "bench3_altar", "activity": "ambush_altar", "site": "pit", "at": [-110, -84], "pack": ["drill_crew", "lamp_swarm", "drill_crew"], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "moab_rim_relay", "activity": "hold_the_relay", "site": "leach_pads", "at": [20, -520], "pack": [], "pay": {"rarities": ["common", "rare"]}},
+  {"id": "copper_bench_blazing_cache", "activity": "cracked_cache", "site": "pit", "at": [250, -60], "pack": [], "pay": {"rarities": ["rare"]}, "bar": "blazing"}
  ],
  "rescue_rows": [
   {"id": "kest_cage", "site": "floor_sump", "at": [-144, 110], "face": [1, 0], "quest": "dig", "pilot": "demolitions_caster", "prompt": "free the digger"}
@@ -202,6 +218,10 @@
   {"id": "west_bench_ruts", "points": [[-240, -330], [-360, -160], [-338, 60], [-262, 210], [-145, 220], [-40, 240]], "width_m": 6.0},
   {"id": "east_switchback_ruts", "points": [[180, -160], [220, -60], [260, 80], [160, 175], [60, 250]], "width_m": 5.5}
  ],
+ "survival_rows": [
+  {"id": "copper_bench_yard", "form": "yard", "at": [195, -55]},
+  {"id": "collar_sump_ring", "form": "muster", "at": [-65, 155]}
+ ],
  "destructible_rows": [
   {"id": "moab_rim_strut_w", "tier": 2, "at": [-120.0, -20.0, -255.0], "size": [3.4, 2.8, 1.4], "yaw_deg": 12},
   {"id": "moab_switchback_strut", "tier": 2, "at": [155.0, -40.0, -165.0], "size": [3.4, 2.8, 1.4], "yaw_deg": -28},
@@ -210,6 +230,12 @@
   {"id": "moab_sump_strut", "tier": 2, "at": [-120.0, -100.0, 125.0], "size": [3.4, 2.8, 1.4], "yaw_deg": 42},
   {"id": "moab_east_floor_strut", "tier": 2, "at": [125.0, -100.0, 115.0], "size": [3.4, 2.8, 1.4], "yaw_deg": -44},
   {"id": "moab_collar_crates", "tier": 1, "at": [75.0, -100.0, 220.0], "size": [2.0, 1.4, 2.0], "yaw_deg": -18},
-  {"id": "moab_collar_strut_w", "tier": 3, "at": [-50.0, -100.0, 265.0], "size": [3.8, 3.0, 1.5], "yaw_deg": 25}
+  {"id": "moab_collar_strut_w", "tier": 3, "at": [-50.0, -100.0, 265.0], "size": [3.8, 3.0, 1.5], "yaw_deg": 25},
+  {"id": "pit_canal_breach_wall", "tier": 2, "at": [-270.0, 1.3, -430.0], "size": [4.2, 2.6, 1.4], "yaw_deg": 45, "shortcut": true},
+  {"id": "pit_leach_pad_crib", "tier": 1, "at": [145.0, 3.8, -540.0], "size": [2.4, 1.6, 2.0], "yaw_deg": 20},
+  {"id": "pit_west_haul_barricade", "tier": 2, "at": [-245.0, -58.7, -70.0], "size": [3.8, 2.6, 1.4], "yaw_deg": 12, "shortcut": true},
+  {"id": "pit_adit_east_bulkhead", "tier": 3, "at": [235.0, -57.0, 95.0], "size": [4.0, 3.0, 1.5], "yaw_deg": -72, "shortcut": true},
+  {"id": "pit_barge_apron_wall", "tier": 3, "at": [-255.0, -66.36, 225.0], "size": [4.0, 3.0, 1.5], "yaw_deg": 75, "shortcut": true},
+  {"id": "pit_deep_adit_housing", "tier": 4, "at": [215.0, -78.4, 365.0], "size": [3.4, 3.2, 3.0], "yaw_deg": -25}
  ]
 }

@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "4fd1ba3104961d0a055f70df3851d227193cfb6bb31dc2c7f252e645b9735f65",
+  "bake_sha256": "e938f0f71b5db46b2a266bd937fd6b04c60b5c932f351a2d4d480eef62fd48f6",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 947088,
-  "edges": 314872,
+  "bytes": 947596,
+  "edges": 314876,
   "first_failed": "",
   "flags": {
     "deck": 37,
-    "door_ok": 39877,
-    "line": 404,
+    "door_ok": 39882,
+    "line": 399,
     "open": 40420,
-    "sight_ok": 9677,
+    "sight_ok": 9785,
     "under": 18
   },
-  "full_visit_m": 1906,
-  "full_visit_ratio": "1.356",
-  "graph_sha256": "c319951d54428625b6c11ee489bcb169e08c6fef0439b207381515ce3a90d425",
+  "full_visit_m": 2026,
+  "full_visit_ratio": "1.441",
+  "graph_sha256": "371738d7be8af2b5abdd15b57d4b48dc2c927d823ef2a271abc7be533135b7e2",
   "line_errors": [],
-  "line_path_nodes": 175,
-  "longest_est_m": 2038,
+  "line_path_nodes": 159,
+  "longest_est_m": 2036,
   "map": "park_sinkhole",
   "nodes": 40438,
-  "park_sha256": "82c84e780146a77c73a89eebd2218c9c9724ab899eb0586eb19c9d85a25a33df",
+  "park_sha256": "dd5dcc320505156e7c41e7fbde1fe1ea107e957c1cfb472003c0aa3dc323eae5",
   "pockets": [
     {
       "clear_ring": [],
@@ -107,6 +107,61 @@
     },
     {
       "clear_ring": [],
+      "d_landmark": 1098,
+      "d_spawn": 354,
+      "detour_m": 17,
+      "door_at": [
+        -416,
+        -568
+      ],
+      "door_m": 17,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "malpais_ridge_relay",
+      "kind": "hold_the_relay",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "event",
+      "sight_ok": true,
+      "site": "lava_channel_8"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 161,
+      "d_spawn": 1354,
+      "detour_m": 109,
+      "door_at": [
+        112,
+        256
+      ],
+      "door_m": 109,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "caisson_balcony_cache",
+      "kind": "cracked_cache",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "skill",
+      "sight_ok": true,
+      "site": "east_haulage_9"
+    },
+    {
+      "clear_ring": [],
       "d_landmark": 238,
       "d_spawn": 1170,
       "detour_m": 79,
@@ -132,7 +187,7 @@
     }
   ],
   "reward_ratio": "0.833",
-  "ride_edges": 51,
+  "ride_edges": 55,
   "routes": {
     "bore_shaft": [],
     "breach_caps": [],
@@ -165,12 +220,12 @@
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
     "d_landmark": 1405,
-    "farther_share": "0.008",
+    "farther_share": "0.007",
     "ok": true,
     "run": true
   },
   "spawn_beacon_m": 1405,
-  "spawn_beacon_share": "0.689",
+  "spawn_beacon_share": "0.690",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -180,7 +235,7 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.356
+      "value": 1.441
     }
   ],
   "tool_sha256": "b09fdadd9beb4d2b40cf13cd29ee9b8bda2406c6eae871d127357c472129d115",
@@ -203,7 +258,7 @@
         "viable": true
       },
       {
-        "cost": 1211.8,
+        "cost": 1208.8,
         "d_landmark": 459.6,
         "name": "east_mesa",
         "on_route": false,
@@ -243,7 +298,7 @@
         "viable": false
       },
       {
-        "cost": 581.6,
+        "cost": 578.5,
         "d_landmark": 1001.6,
         "name": "crater_breach",
         "on_route": false,
@@ -254,7 +309,7 @@
     "count": 187,
     "crossings": {
       "drop": 32,
-      "ride": 41,
+      "ride": 45,
       "walk": 463
     },
     "hidden": [

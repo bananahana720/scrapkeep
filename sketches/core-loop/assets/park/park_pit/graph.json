@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "39368f9ca188117da9bec4f4b8db09fab07b2341933d5974e2738021bf5b3ec8",
+  "bake_sha256": "3c884d3ed9441fe9ae0da6202375679ba292e868acae10ff0a68de36f440532d",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1108599,
-  "edges": 314154,
+  "bytes": 1108701,
+  "edges": 314158,
   "first_failed": "",
   "flags": {
     "deck": 16,
@@ -13,15 +13,15 @@
     "sight_ok": 10203,
     "under": 0
   },
-  "full_visit_m": 2041,
-  "full_visit_ratio": "1.588",
-  "graph_sha256": "93924c9164d64e2c3bfa14fbad849c51b4ef9d085a30f5b377d1673f2ebf8cb9",
+  "full_visit_m": 2265,
+  "full_visit_ratio": "1.767",
+  "graph_sha256": "68c46eb2b8b942119852d8b56c10e15d0a70a0e0861a6ced0bcb95e8e61008cf",
   "line_errors": [],
   "line_path_nodes": 112,
   "longest_est_m": 3256,
   "map": "park_pit",
   "nodes": 40417,
-  "park_sha256": "1e8c4e9c39930d93e52a669eb26ebf46055667ef3db827855e1bdc47e2770d65",
+  "park_sha256": "ebc3bd95039b6433070bda6b86b0aff304aa83d04bd6d0948469f2faacee2eaf",
   "pockets": [
     {
       "clear_ring": [],
@@ -80,7 +80,7 @@
     {
       "clear_ring": [],
       "d_landmark": 407,
-      "d_spawn": 902,
+      "d_spawn": 899,
       "detour_m": 216,
       "door_at": [
         -112,
@@ -102,6 +102,61 @@
         "rare"
       ],
       "role": "risk",
+      "sight_ok": true,
+      "site": "pit"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 855,
+      "d_spawn": 709,
+      "detour_m": 147,
+      "door_at": [
+        24,
+        -520
+      ],
+      "door_m": 147,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "moab_rim_relay",
+      "kind": "hold_the_relay",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "event",
+      "sight_ok": true,
+      "site": "leach_pads"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 439,
+      "d_spawn": 1160,
+      "detour_m": 124,
+      "door_at": [
+        248,
+        -56
+      ],
+      "door_m": 124,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "copper_bench_blazing_cache",
+      "kind": "cracked_cache",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "skill",
       "sight_ok": true,
       "site": "pit"
     },
@@ -131,8 +186,8 @@
       "site": "adit_back_door"
     }
   ],
-  "reward_ratio": "0.702",
-  "ride_edges": 22,
+  "reward_ratio": "0.701",
+  "ride_edges": 26,
   "routes": {
     "barge_ramp": [],
     "bench_dive": [],
@@ -159,13 +214,13 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1286,
-    "farther_share": "0.017",
+    "d_landmark": 1282,
+    "farther_share": "0.018",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1286,
-  "spawn_beacon_share": "0.395",
+  "spawn_beacon_m": 1282,
+  "spawn_beacon_share": "0.394",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -175,7 +230,7 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.588
+      "value": 1.767
     }
   ],
   "tool_sha256": "b09fdadd9beb4d2b40cf13cd29ee9b8bda2406c6eae871d127357c472129d115",
@@ -270,7 +325,7 @@
         "viable": false
       },
       {
-        "cost": 1292.7,
+        "cost": 1288.8,
         "d_landmark": 50.1,
         "name": "tipple_deck",
         "on_route": true,
@@ -294,7 +349,7 @@
         "viable": false
       },
       {
-        "cost": 1224.9,
+        "cost": 1221.0,
         "d_landmark": 83.4,
         "name": "ore_pile_sw",
         "on_route": false,
@@ -310,7 +365,7 @@
         "viable": false
       },
       {
-        "cost": 1136.6,
+        "cost": 1132.8,
         "d_landmark": 253.2,
         "name": "floor_dive_windrow_1",
         "on_route": false,
@@ -318,7 +373,7 @@
         "viable": false
       },
       {
-        "cost": 1123.0,
+        "cost": 1119.1,
         "d_landmark": 231.5,
         "name": "floor_dive",
         "on_route": true,
@@ -335,14 +390,14 @@
       },
       {
         "cost": 1096.2,
-        "d_landmark": 373.6,
+        "d_landmark": 366.5,
         "name": "barge_apron",
         "on_route": false,
         "rank": 6,
         "viable": true
       },
       {
-        "cost": 1093.5,
+        "cost": 1089.7,
         "d_landmark": 218.8,
         "name": "floor_dive_windrow_2",
         "on_route": false,
@@ -415,7 +470,7 @@
       },
       {
         "cost": 970.4,
-        "d_landmark": 335.9,
+        "d_landmark": 321.3,
         "name": "conveyor_gallery_2",
         "on_route": false,
         "rank": 0,
@@ -438,7 +493,7 @@
         "viable": true
       },
       {
-        "cost": 883.0,
+        "cost": 879.9,
         "d_landmark": 379.4,
         "name": "bench3_west_berm",
         "on_route": false,
@@ -455,14 +510,14 @@
       },
       {
         "cost": 864.9,
-        "d_landmark": 485.0,
+        "d_landmark": 473.4,
         "name": "winze_west",
         "on_route": false,
         "rank": 0,
         "viable": false
       },
       {
-        "cost": 852.5,
+        "cost": 848.6,
         "d_landmark": 440.1,
         "name": "west_dive_windrow_1",
         "on_route": false,
@@ -470,7 +525,7 @@
         "viable": false
       },
       {
-        "cost": 838.8,
+        "cost": 835.0,
         "d_landmark": 446.7,
         "name": "west_dive",
         "on_route": false,
@@ -510,7 +565,7 @@
         "viable": true
       },
       {
-        "cost": 742.5,
+        "cost": 738.6,
         "d_landmark": 538.8,
         "name": "north_dive",
         "on_route": false,
@@ -526,7 +581,7 @@
         "viable": true
       },
       {
-        "cost": 709.8,
+        "cost": 706.1,
         "d_landmark": 553.4,
         "name": "north_dive_windrow_2",
         "on_route": false,
@@ -535,7 +590,7 @@
       },
       {
         "cost": 670.4,
-        "d_landmark": 746.6,
+        "d_landmark": 732.3,
         "name": "slickrock_2",
         "on_route": false,
         "rank": 12,
@@ -575,7 +630,7 @@
       },
       {
         "cost": 446.4,
-        "d_landmark": 839.0,
+        "d_landmark": 811.8,
         "name": "slickrock_11",
         "on_route": false,
         "rank": 16,
@@ -623,7 +678,7 @@
       },
       {
         "cost": 175.6,
-        "d_landmark": 1189.5,
+        "d_landmark": 1180.2,
         "name": "slickrock_20",
         "on_route": false,
         "rank": 21,
@@ -639,7 +694,7 @@
       },
       {
         "cost": 44.2,
-        "d_landmark": 1241.2,
+        "d_landmark": 1238.7,
         "name": "dump_berm_west",
         "on_route": false,
         "rank": 0,
@@ -647,7 +702,7 @@
       },
       {
         "cost": 27.5,
-        "d_landmark": 1260.5,
+        "d_landmark": 1256.7,
         "name": "dump_berm_east",
         "on_route": false,
         "rank": 0,
@@ -657,7 +712,7 @@
     "count": 115,
     "crossings": {
       "drop": 41,
-      "ride": 19,
+      "ride": 23,
       "walk": 128
     },
     "hidden": [

@@ -52,7 +52,7 @@
     "min": -109.991836547852
   },
   "map": "park_pit",
-  "park_sha256": "1e8c4e9c39930d93e52a669eb26ebf46055667ef3db827855e1bdc47e2770d65",
+  "park_sha256": "ebc3bd95039b6433070bda6b86b0aff304aa83d04bd6d0948469f2faacee2eaf",
   "schema": "scrapkeep-park-bake/1",
   "tool_sha256": "1a1c35a1065036c71661883612d81aec458c72585db261bbc784efa91fb72faa"
 }
