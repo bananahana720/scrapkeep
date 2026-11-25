@@ -1,6 +1,7 @@
 extends RefCounted
 
 const ShiftVariants := preload("res://src/core/shift_variants.gd")
+const PilotStory := preload("res://src/core/pilot_story.gd")
 
 # Stage modifiers (SI3; W13-INTEGRATION-3.md SI3; comps/isaac/pacing-and-trades.md:84). At most one
 # per stage, picked from the run seed and the stage number alone, so the stage card that shows it
@@ -156,14 +157,16 @@ static func memo(run_seed: int, stage: int, row: Dictionary) -> String:
 const CURSE := {"id": "curse", "word": "Cursed Run", "line": "You shook on it. Nobody made you."}
 
 
-static func card_line(run, terrain, stage: int) -> String:
+static func card_line(run, terrain, stage: int, profile = null, pages: Array = []) -> String:
 	var lines := []
 	if run != null and run.cursed():
 		lines.append(caption(CURSE))
 	for row in ShiftVariants.card_rows(run, stage):
 		lines.append(caption(row))
 	if run != null and _park_map(terrain, stage) != null:
-		lines.append(memo(int(run.run_seed), stage, for_stage(run, terrain, stage)))
+		var row := for_stage(run, terrain, stage)
+		var adaptive := PilotStory.foreman_stage_memo(int(run.run_seed), stage, profile, pages, run) if row.is_empty() and profile != null else ""
+		lines.append(adaptive if adaptive != "" else memo(int(run.run_seed), stage, row))
 	return "  /  ".join(lines)
 
 

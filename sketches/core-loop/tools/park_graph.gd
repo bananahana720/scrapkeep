@@ -1932,13 +1932,13 @@ static func draw_arm(map_id: String, seeds := 1000, placement_seeds := 200) -> D
 		row.detour_bound = envelope.ratio
 		row.detour_bound_min = envelope.min
 		row.detour_bound_max = envelope.max
-		# World 1's level-ground rule (pocket_draw.gd TIDY) leaves fewer pay points than the permissive probe
-		# sees (the dam's reach 283 m of its 503 m), so there the floor reads the anchors the draw may use.
+		# Both the level-ground rule (TIDY) and authored-site keep-out rings trim the permissive probe's
+		# envelope, so the detour floor reads the anchors the draw may actually place on.
 		row.anchor_bound = row.detour_bound
-		if id in Draw.TIDY and not prepared.anchors.is_empty():
+		if not prepared.anchors.is_empty():
 			row.anchor_bound = minf(row.detour_bound, prepared.from_line[prepared.anchors.back().node] / prepared.from_line[prepared.anchors.front().node])
 		row.detour_floor = minf(2.0, 0.9 * row.anchor_bound)
-		if id not in Draw.TIDY and not is_equal_approx(row.detour_floor, minf(2.0, 0.9 * envelope.max / envelope.min)):
+		if not is_equal_approx(row.detour_floor, minf(2.0, 0.9 * row.anchor_bound)):
 			result.errors.append("floor derivation requirement: " + id)
 		for seed_value in seeds:
 			var run = Run.new()

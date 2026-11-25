@@ -1083,7 +1083,7 @@ func _on_world_entered(world: int) -> void:
 	if row.is_empty():
 		return
 	# The world card carries the first stage's modifier, so it is on screen from the drop's start.
-	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, game.run.stage))
+	launch_card.show_card("obj_beacon", String(row["name"]), EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, game.run.stage, game.ctx.profile))
 	_world_card_at = Time.get_ticks_msec()
 
 
@@ -1146,7 +1146,7 @@ func _step_curse() -> void:
 # the cursed line once the run is cursed.
 func _card_for_stage(stage: int) -> void:
 	var modifier := StageModifier.for_stage(game.run, game.ctx.terrain, stage)
-	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage))
+	launch_card.show_card("obj_beacon", game.ctx.stages.of(stage)["name"], EventKinds.color("stage_entered"), StageModifier.card_line(game.run, game.ctx.terrain, stage, game.ctx.profile))
 	if not modifier.is_empty() and game.player != null:
 		StageModifier.announce(game.player.shown_position())
 

@@ -6,6 +6,7 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const CalledShot := preload("res://src/build/called_shot.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const HullMark := preload("res://src/world/hull_mark.gd")
+const StakeDevices := preload("res://src/world/stake_devices.gd")
 const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
 const Accretion := preload("res://src/build/accretion.gd")
@@ -279,6 +280,7 @@ func setup(ctx_ref) -> void:
 	field.setup(ctx)
 	field.resolved.connect(_on_element_resolved)
 	field.fused.connect(_on_fused)
+	field.extended_fused.connect(_on_fused)
 	accretion = Accretion.new()
 	ctx.player.roll_node().add_child(accretion)
 	accretion.setup()
@@ -650,7 +652,7 @@ func recompute() -> void:
 	sheet.apply(ctx.tuning, ctx.run)
 	_apply_shell()
 	effects.apply_abilities(ctx.player)
-	scrap.magnet_scale = sheet.magnet
+	scrap.magnet_scale = sheet.magnet * Companion.vacuum_scale(ctx.run.companion)
 	field.shatter_scale = sheet.dial("shatter_damage")
 	for synergy_id in _live:
 		if not synergy_id in sheet.synergies:
@@ -989,7 +991,9 @@ func _on_element_resolved(result: Dictionary) -> void:
 
 # SG2: a fusion's first fire logs its codex card, which carries the row's elite rule.
 func _on_fused(result: Dictionary) -> void:
-	_note_found("fusion:" + String(result["key"]), Elements.card_text(Elements.FUSIONS[result["key"]]))
+	var row: Dictionary = Elements.all_fusions().get(String(result["key"]), {})
+	if not row.is_empty():
+		_note_found("fusion:" + String(result["key"]), Elements.card_text(row))
 
 
 func _class_id() -> String:
@@ -1149,6 +1153,7 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		scrap.drop(at, amount, scrap_rng)
 		scrap.drop_cogs(at, amount)
 	_drop_panel(kind, at)
+	Companion.on_salvage_kill(ctx.run)
 	# A vault pays out a rare part and a bonus core (DEMO-SPEC engagement tiers).
 	if kind == "vault":
 		# Each vault in a stage rolls its own stream, so two vaults never pay the same part.
@@ -1195,6 +1200,7 @@ func yard_cleared(at: Vector3) -> void:
 	if kill_log.size() < KILL_LOG_CAP:
 		kill_log.append([ctx.flow.stage(), "yard_clear", false, 1.0, false, true, false])
 	scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()))
+	Companion.on_yard_cleared(ctx.run, ctx.get("combat"), at)
 
 
 # The overtime pot (overtime.gd, loops.md Spec 2), on top of the yard's own panel (ruling af
@@ -1348,6 +1354,9 @@ func _on_flow_changed(state: String) -> void:
 	if clock.quick_break():
 		quick = Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
 		picks += quick
+	var stake_rolls := StakeDevices.warden_gate_bonus_rolls(ctx.run)
+	if stake_rolls > 0:
+		picks += Parts.roll(_offer_rng("challenge_stake"), rarities, _class_id(), ctx.run.parts, stake_rolls, picks, _offered)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()

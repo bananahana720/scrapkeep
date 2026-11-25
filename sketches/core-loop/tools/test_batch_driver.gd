@@ -64,6 +64,8 @@ const ScrapField := preload("res://src/build/scrap_field.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
+const AttackBudget := preload("res://src/combat/attack_budget.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -215,6 +217,8 @@ func _reset() -> void:
 	ScrapField.reset_for_tests()
 	Audio.reset_for_tests()
 	InkOutline.reset_for_tests()
+	AttackBudget.reset_ally(tree)
+	EventDirector.reset_prewarm()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

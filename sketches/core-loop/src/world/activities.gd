@@ -597,7 +597,7 @@ static func prepare_data(path: String, map, layout: bool) -> Dictionary:
 	# cloud at the flume, scrapkeep#494), so the worker fills them while the graph is still its own.
 	if graph.zone_count() > 0:
 		graph.zone_nodes(0)
-	return {"graph": graph, "pool": TradePockets.candidates(graph, map), "layout": PocketDraw.prepare(graph, map) if layout else {}}
+	return {"graph": graph, "pool": TradePockets.candidates(graph, map), "layout": PocketDraw.prepare_world(graph, map) if layout else {}}
 
 
 # This map's entry data, waiting on its worker when one is still running (a stage reached before
@@ -705,7 +705,7 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 	if _graph_map != "":
 		var tuning = ctx.get("tuning")
 		var sitting: bool = tuning != null and tuning.has_method("sitting") and tuning.sitting()
-		for room_spec in Secrets.room_sites(_graph_map, ctx.get("profile"), sitting):
+		for room_spec in Secrets.stage_room_sites(_graph_map, ctx.get("profile"), sitting):
 			out.append({"kind": "room", "id": "cracked_cache", "at": room_spec["at"], "spec": room_spec, "secret": String(room_spec["secret"])})
 		# The run's own seed picks the spots, so the next run moves them and a replay keeps them.
 		for find_spec in Secrets.find_sites(_graph_map, hash([ctx.rng.seed, ctx.run.run_seed, "field_finds"])):
@@ -726,10 +726,10 @@ func _plan(map, entry_data: Dictionary) -> Dictionary:
 			_draw_map = _graph_map
 		if _draw_layout.is_empty():
 			if entry_data.layout.is_empty():
-				entry_data.layout = PocketDraw.prepare(_graph, map)
+				entry_data.layout = PocketDraw.prepare_world(_graph, map)
 			_draw_layout = entry_data.layout
 		modifier = StageModifier.for_stage(ctx.run, ctx.terrain, ctx.run.stage)
-		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout, modifier):
+		for drawn_spec in PocketDraw.stage_sites(_graph, map, ctx.run, ctx.rng.seed, trade_spec, _draw_layout, modifier, true):
 			if not ctx.calm or RULES[drawn_spec.id].finishes == "wall_broken":
 				out.append({"kind": "drawn", "id": drawn_spec.id, "at": drawn_spec.at, "spec": drawn_spec})
 	return {"sites": out, "modifier": modifier}
@@ -1388,7 +1388,7 @@ func _find_sound(id: String, reach: float) -> AudioStreamPlayer3D:
 # A first-win room's crew-log line (secrets.gd ROOMS), on a crew board fixed inside its back wall, so it
 # reads only once the cracked face is down and the ball is in the room; and its two quiet tells outside.
 func _hang_room_log(s: Site, room_id: String) -> void:
-	var room: Dictionary = Secrets.ROOMS[room_id]
+	var room: Dictionary = Secrets.room_by_id(room_id)
 	_hang_board(s, "Secret_" + room_id, String(room["name"]), String(room["log"]))
 	s.set_meta("room", room_id)
 	_chalk_tally(s.wall)

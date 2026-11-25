@@ -198,8 +198,8 @@ func _calls() -> void:
 	_report("intro voices", voices["lore.park_dam.intro.warden"][0] == "pump_crew" and voices["lore.park_flume.intro.warden"][0] == "flume_crew"
 			and voices["lore.spillway.intro.brindle"] == ["brindle", "Your repair reserve is now Fleet inventory. Thank you."],
 		str(voices["lore.spillway.intro.brindle"]))
-	_report("an unlisted caller has no voice", LoreRows.voice_of({"kind": "exchange", "speaker": "Deck crew", "text": "x"}) == ""
-			and LoreRows.voice_of({"kind": "intro", "zone": "2-1", "subject": "warden", "text": "Pit Warden. x"}) == "", "Deck crew and the pit Warden's line stay silent")
+	_report("an unlisted caller has no voice", LoreRows.voice_of({"kind": "exchange", "speaker": "Barge crew", "text": "x"}) == ""
+			and LoreRows.voice_of({"kind": "intro", "zone": "9-9", "subject": "warden", "text": "Unknown Warden. x"}) == "", "unlisted crew and unknown zone stay silent")
 	_report("a single-line call reads as itself", LoreRows.call_text({"id": "call.x", "text": "One line."}, 9) == "One line.", "string text")
 	# Two rows on one seed do not all take the same place in their lists (the pick is salted by id).
 	var places := {}

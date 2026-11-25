@@ -36,6 +36,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
+const PilotStory := preload("res://src/core/pilot_story.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
@@ -165,6 +166,7 @@ var _spawn := Vector3.ZERO
 # The crew: class id -> the figure's holder; who has spoken this walk; the quip card and its plate.
 var _crew := {}
 var _quipped := {}
+var _pair_played_this_walk := false
 var _quip: Control
 var _quip_tile
 var _quip_label: Label
@@ -309,6 +311,7 @@ func enter_walk() -> void:
 		set_label("gate", game.gate_label())
 	walks += 1
 	_quipped.clear()
+	_pair_played_this_walk = false
 	_stand_crew()
 	_shelve_records()
 	_prompts.visible = true
@@ -924,18 +927,35 @@ func _quip_from(class_id: String) -> void:
 	var figure: Node3D = _crew.get(class_id)
 	if not walking or figure == null or not figure.visible or _quipped.has(class_id):
 		return
-	var row := LoreRows.camp_quip(class_id)
-	if row.is_empty():
+	var flying_def = game.gate_pilot() if game != null and game.has_method("gate_pilot") else null
+	var flying_id := String(flying_def.id) if flying_def != null else ""
+	var codex = game.get("codex") if game != null else null
+	var pair_blocked := _pair_played_this_walk or (game != null and bool(game.get("bot_driven")))
+	var beat := PilotStory.pick_camp_beat(flying_id, class_id, crew_standing(), camp_store, codex, [], walks, pair_blocked)
+	if beat.is_empty():
 		return
 	_quipped[class_id] = true
-	var words := LoreRows.camp_quip_text(row, walks)
-	var speaker := String(row["speaker"])
+	if bool(beat.get("consumes_pair_budget", false)):
+		_pair_played_this_walk = true
+		var cid := String(beat.get("codex_id", ""))
+		if cid != "" and codex != null and codex.has_method("mark_known"):
+			codex.mark_known(cid)
+		var skey := String(beat.get("settle_key", ""))
+		if skey != "" and camp_store != null and camp_store.has_method("settle"):
+			camp_store.settle(skey)
+	var lines: Array = beat.get("lines", [])
+	var speaker := String(beat.get("speaker", lines[0]["speaker"] if not lines.is_empty() else ""))
+	var words := String(beat.get("text", lines[0]["text"] if not lines.is_empty() else ""))
+	if lines.size() > 1:
+		var second: Dictionary = lines[1]
+		var reply_who := String(LoreRows.SPEAKERS.get(String(second["speaker"]), String(second["speaker"])))
+		words = "%s\n%s: %s" % [String(lines[0]["text"]), reply_who, String(second["text"])]
 	# The voice goes first, so the plate's talking bars run for as long as the call-in really speaks.
 	var audio = game.audio() if game != null and game.has_method("audio") else null
 	var voice_s: float = audio.call_in("camp_quip", speaker, words) if audio != null else 0.0
 	_show_quip(speaker, words, voice_s)
 	_face_ball(figure)
-	pilot_quipped.emit(speaker, String(row["id"]), words)
+	pilot_quipped.emit(speaker, String(beat["id"]), words)
 
 
 # The pilot turns the short way round until their face is to the ball, and cheers. A pilot model faces its local -Z

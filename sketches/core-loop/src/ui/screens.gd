@@ -515,7 +515,7 @@ func _on_flow_changed(state: String) -> void:
 			# has the run's last word (STORY-MAP, "Call-ins"). The memo stands on its own plate.
 			var memo := ""
 			if said != "" and game.flow.death_tip != "":
-				memo = DeathCause.memo(game.run.run_seed, game.run.stage)
+				memo = DeathCause.memo(game.run.run_seed, game.run.stage, said, game.ctx.profile, [], game.run)
 			var tip_line := DeathTips.shown(game.flow.death_tip) if game.flow.death_tip != "" else ""
 			if memo == "" and tip_line != "":
 				said += "\n" + tip_line
@@ -544,7 +544,7 @@ func _on_flow_changed(state: String) -> void:
 			if not game.flow.run_won and game.flow.death_cause != "":
 				body += "\n" + game.flow.death_cause
 				if game.flow.death_tip != "":
-					memo = DeathCause.memo(game.run.run_seed, game.run.stage)
+					memo = DeathCause.memo(game.run.run_seed, game.run.stage, game.flow.death_cause, game.ctx.profile, [], game.run)
 			var after := PackedStringArray()
 			# The trade pockets' odds are a tuning readout (recency, safe share, refusal weight), so
 			# only a --dev launch prints them; a played run's summary keeps to the run.

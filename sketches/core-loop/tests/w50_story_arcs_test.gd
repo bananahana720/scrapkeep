@@ -172,9 +172,12 @@ func _test_golden_hash_and_existing_safety() -> void:
 	var lore_issues := ContentRegistry.validate_table("lore_rows.ROWS", LoreRows.ROWS, snap, true)
 	_t.eq("P3 LoreRows.ROWS golden hash intact", lore_issues, [])
 
-	# Default voice_of keeps W1 compatibility for lore_rows_test.gd:201.
-	_t.eq("P3 default voice_of Deck crew silent", LoreRows.voice_of({"kind": "exchange", "speaker": "Deck crew", "text": "x"}), "")
-	_t.eq("P3 default voice_of 2-1 warden silent", LoreRows.voice_of({"kind": "intro", "zone": "2-1", "subject": "warden", "text": "Pit Warden. x"}), "")
+	# Explicit W1-only mode stays silent for W2/W3; default voice_of now resolves W1-W3 crews.
+	_t.eq("P3 W1-only voice_of Deck crew silent", LoreRows.voice_of({"kind": "exchange", "speaker": "Deck crew", "text": "x"}, false), "")
+	_t.eq("P3 W1-only voice_of 2-1 warden silent", LoreRows.voice_of({"kind": "intro", "zone": "2-1", "subject": "warden", "text": "Pit Warden. x"}, false), "")
+	_t.eq("P3 default voice_of Deck crew resolves roost_crew", LoreRows.voice_of({"kind": "exchange", "speaker": "Deck crew", "text": "x"}), "roost_crew")
+	_t.eq("P3 default voice_of 2-1 warden resolves dig_crew", LoreRows.voice_of({"kind": "intro", "zone": "2-1", "subject": "warden", "text": "Pit Warden. x"}), "dig_crew")
+	_t.eq("P3 default voice_of unlisted crew silent", LoreRows.voice_of({"kind": "exchange", "speaker": "Barge crew", "text": "x"}), "")
 
 	# world_voice_of resolves Dig crew -> dig_crew, Deck crew -> roost_crew, and EVERY non-field_note row in LoreRows.ROWS.
 	_t.eq("P3 world_voice_of Dig crew", LoreRows.world_voice_of({"kind": "exchange", "speaker": "Dig crew", "text": "x"}), "dig_crew")

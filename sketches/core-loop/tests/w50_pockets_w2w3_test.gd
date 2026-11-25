@@ -201,7 +201,9 @@ func _check_pocket_builds() -> void:
 
 
 func _check_pocket_draw_w2w3() -> void:
-	var min_anchors := {"park_pit": 1000, "park_sinkhole": 1000, "park_islands": 400, "park_crown": 300}
+	# After w50/map-w3-roboquest added 2 authored activities and 4 storm wires to park_crown,
+	# park_crown holds 180 raw / 99 tidy anchors for 3 drawn slots (CAP 8 - 5 authored).
+	var min_anchors := {"park_pit": 1000, "park_sinkhole": 1000, "park_islands": 400, "park_crown": 80}
 	for stage in [3, 4, 5, 6]:
 		var map_id := String(ParkDefs.of(stage).map)
 		var world := ParkDefs.world_of(stage)

@@ -17,7 +17,10 @@ const Profile := preload("res://src/core/profile.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 const Progress := preload("res://src/core/progress.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
+const PilotStory := preload("res://src/core/pilot_story.gd")
+const MetaOptions := preload("res://src/core/meta_options.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
@@ -272,6 +275,8 @@ func _ready() -> void:
 	codex = Codex.new()
 	add_child(codex)
 	codex.setup(events, run, flow, storage_dir)
+	codex.declare_story_entries(PilotStory.codex_declarations())
+	codex.set_story_hooks(PilotStory.entry_visible, PilotStory.synthesis_margin)
 	ctx.codex = codex
 	run_log = RunLog.new()
 	add_child(run_log)
@@ -287,6 +292,7 @@ func _ready() -> void:
 	progress = Progress.new()
 	progress.name = "Progress"
 	add_child(progress)
+	progress.set_story_chapter_hook(func(trigger_id: String, profile): return PilotStory.chapters_matching_trigger(trigger_id, profile, codex))
 	ctx.progress = progress
 	# Before any module hears run_started, so the run's first offer already sees the board's items.
 	events.run_started.connect(func(_class_id: String): open_board_items())
@@ -307,6 +313,7 @@ func _ready() -> void:
 	combat = _module(Combat)
 	_boot("combat")
 	build = _module(Build)
+	events.run_started.connect(_apply_player_run_options)
 	# Wave 4's boss module sets up after build and before presentation when it exists.
 	if ResourceLoader.exists(BOSS_PATH):
 		boss = _module(load(BOSS_PATH))
@@ -590,6 +597,27 @@ func open_board_items() -> void:
 		return
 	for id in ShiftBoard.opened_items(ctx.profile):
 		Parts.opened_items[id] = true
+
+
+func _apply_player_run_options(class_id: String) -> void:
+	if bot_driven or ctx == null or ctx.profile == null or run == null:
+		return
+	var sitting: bool = tuning != null and tuning.sitting()
+	var overrides: Array = MetaOptions.active_overrides(ctx.profile, bot_driven, sitting)
+	if not overrides.is_empty():
+		run.extra["overrides"] = overrides
+	var equipped: Dictionary = MetaOptions.equipped_alt_loadouts(ctx.profile, class_id, bot_driven, sitting)
+	if not equipped.is_empty():
+		for slot in equipped:
+			var alt_id := String(equipped[slot])
+			var relic_id := String(MetaOptions.alt_loadout(alt_id).get("relic", ""))
+			if relic_id == "" and alt_id in Relics.alt_loadouts(class_id):
+				relic_id = alt_id
+			var part_id := Relics.part_of(relic_id)
+			if part_id != "" and not part_id in run.parts:
+				run.parts.append(part_id)
+		if build != null and build.has_method("sync_relics"):
+			build.sync_relics()
 
 
 func pilot_unlocked(def) -> bool:

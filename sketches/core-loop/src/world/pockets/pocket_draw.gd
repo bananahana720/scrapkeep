@@ -335,7 +335,7 @@ static func draw_for_world(prepared: Dictionary, map, stage: int, rng: RandomNum
 	return draw(prepared, map, stage, rng, trade, anchors, modifier, Park.world_of(stage))
 
 
-static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}, modifier := {}) -> Array:
+static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared := {}, modifier := {}, world_aware := false) -> Array:
 	if graph == null or map == null or map.park.is_empty() or run.stage < 1 or run.stage > Park.COUNT or map.park.map != Park.of(run.stage).map:
 		return []
 	var key := str(run.stage)
@@ -345,8 +345,8 @@ static func stage_sites(graph, map, run, layout_seed: int, trade := {}, prepared
 	rng.seed = hash([layout_seed, run.run_seed, run.stage, "pocket_draw"])
 	var layout: Dictionary = prepared
 	if layout.is_empty():
-		layout = prepare(graph, map)
-	var result := draw(layout, map, run.stage, rng, trade, [], modifier)
+		layout = prepare_world(graph, map) if world_aware else prepare(graph, map)
+	var result := draw_for_world(layout, map, run.stage, rng, trade, [], modifier) if world_aware else draw(layout, map, run.stage, rng, trade, [], modifier)
 	run.pocket_draw_cache[key] = {"sites": result.sites.duplicate(true)}
 	return result.sites
 

@@ -19,6 +19,7 @@ extends RefCounted
 
 const UNLOCK := "first_win"
 const LOG_WORD_CAP := 40
+const PilotStory := preload("res://src/core/pilot_story.gd")
 
 const ROOMS := {
 	"spillway_break_room": {
@@ -383,3 +384,29 @@ static func door_sites(map_id: String, profile) -> Array:
 	return [{"id": "cracked_cache", "row": "timed_door", "site": DOOR["site"], "door": true,
 		"at": Vector2(float(DOOR["at"][0]), float(DOOR["at"][1])), "pay": FIND_PAY.duplicate(true),
 		"face": Vector2(float(DOOR["face"][0]), float(DOOR["face"][1])).normalized()}]
+
+
+# Patch's 6-node rogue -> wire secret trail (PilotStory.PATCH_TRAIL), exposed beside FINDS.
+static func patch_trail() -> Dictionary:
+	return PilotStory.PATCH_TRAIL
+
+
+static func patch_wire_sites(map_id: String, run_seed: int, codex = null) -> Array:
+	var out := []
+	var known_fn := Callable(codex, "known") if codex != null and codex.has_method("known") else Callable()
+	for node_id in PilotStory.PATCH_TRAIL:
+		var node: Dictionary = PilotStory.PATCH_TRAIL[node_id]
+		if String(node.get("kind", "")) != "wire" or String(node.get("map", "")) != map_id:
+			continue
+		if not PilotStory.entry_visible(String(node_id), known_fn):
+			continue
+		var spot := PilotStory.patch_spot(String(node_id), run_seed)
+		if spot.is_empty():
+			continue
+		var at_arr: Array = spot.get("at", [0, 0])
+		out.append({
+			"id": "cracked_cache", "row": String(node_id), "site": String(spot.get("site", "")),
+			"patch_wire": String(node_id), "at": Vector2(float(at_arr[0]), float(at_arr[1])),
+			"pay": FIND_PAY.duplicate(true),
+		})
+	return out

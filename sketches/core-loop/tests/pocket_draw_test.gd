@@ -74,8 +74,9 @@ func _run() -> void:
 			t.eq("trade placement and memory unchanged", run.trade_memory, trade_before)
 			t.eq("authored sites unchanged", map.activity_sites, authored)
 			var standing: int = authored.filter(func(s): return s.get("extra", "") != "card_2").size()
-			# The dam's four authored sites pass stage 1's count of three; it draws one pocket all the same (ruling bu).
-			var expected_slots := maxi(1 if stage == 1 else 0, mini(8, stage + 2) - standing)
+			# Every park stage draws at least MIN_DRAWN while CAP has room (ruling bu + W50 Roboquest authored sites).
+			var room := maxi(0, Modifier.CAP - standing)
+			var expected_slots := clampi(mini(Modifier.CAP, stage + 2) - standing, mini(Modifier.MIN_DRAWN, room), room)
 			t.eq("the draw's slots are the modifier's base slots", Modifier.base_slots(stage, standing), expected_slots)
 			t.check("D2 extra slot cap", specs.size() <= expected_slots)
 			t.check("every stage draws, the dam too", not specs.is_empty())
@@ -438,15 +439,16 @@ func _detours(arm: Dictionary) -> void:
 						high = maxf(high, value)
 		var bound := high / low
 		t.check("D10 independent permissive bound: " + row.map, is_equal_approx(row.detour_bound, bound), str(row.detour_bound) + " vs " + str(bound))
-		# A park under the level-ground rule reads its floor against the anchors that rule leaves.
-		if row.map in model_tidy():
-			var anchors: Array = load(MODEL).prepare(graph, Map.new("res://src/world/park/%s.json" % row.map)).anchors
+		# Every park reads its floor against the anchors prepare() actually leaves after keep-outs and TIDY.
+		var anchors: Array = load(MODEL).prepare(graph, Map.new("res://src/world/park/%s.json" % row.map)).anchors
+		if not anchors.is_empty():
 			var reach_low := INF
 			var reach_high := 0.0
 			for anchor in anchors:
 				reach_low = minf(reach_low, distance[anchor.node])
 				reach_high = maxf(reach_high, distance[anchor.node])
-			t.check("level ground leaves anchors: " + row.map, not anchors.is_empty())
+			if row.map in model_tidy():
+				t.check("level ground leaves anchors: " + row.map, not anchors.is_empty())
 			bound = minf(bound, reach_high / reach_low)
 			t.check("D10 anchor bound: " + row.map, is_equal_approx(row.anchor_bound, bound), str(row.anchor_bound) + " vs " + str(bound))
 		var floor_value := minf(2.0, 0.9 * bound)

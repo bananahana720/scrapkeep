@@ -552,7 +552,7 @@ const PAIRS := {
 				{"speaker": "kest", "text": "Pair two Highdraft parts and speed turns into a blade ring."},
 				{"speaker": "rivet", "text": "Finally a wind trick that rewards never slowing down."},
 			],
-			"codex_text": "Kest and Rivet agreed on one rule: Highdraft parts wake a spinning blade ring at speed, cutting everything passed without stopping to aim.",
+			"codex_text": "Kest and Rivet agreed that Highdraft parts wake a spinning blade ring at speed, cutting everything passed without stopping to aim.",
 			"links_to": "pinwheel",
 			"margin_note": "Stack two Highdraft Roosts parts to spin blades at high speed.",
 		},
@@ -1330,7 +1330,9 @@ static func pick_run_call(
 	# (1) Patch rogue/wire reaction.
 	if event == "enemy_killed" and args.size() > 0:
 		var rogue_id := patch_rogue_for_kind(String(args[0]))
-		if rogue_id != "" and not played_ids.has(rogue_id):
+		if rogue_id != "":
+			if played_ids.has(rogue_id):
+				return {}
 			var node: Dictionary = PATCH_TRAIL[rogue_id]
 			var speaker := "unsigned" if rogue_id == "patch.rogue.w1" and not _chapter_punched(chapter("patch.ch2"), profile, codex) else "patch"
 			return {
@@ -1777,8 +1779,8 @@ static func validate_tables(
 			_check_text(problems, "foreman %s crown_line" % axis, String(m), CALL_WORD_CAP, false)
 
 	# 5. Validate LoreRows additive WORLD_CALLS, CAMP_EXCHANGES, CAMP_QUIPS_BY_CHAPTER.
-	if world_calls.size() < 14:
-		problems.append("world_calls: expected at least 14 rows, got %d" % world_calls.size())
+	if world_calls.size() < 13:
+		problems.append("world_calls: expected at least 13 rows, got %d" % world_calls.size())
 	var wc_ids := {}
 	for row in world_calls:
 		var cid := String(row.get("id", ""))

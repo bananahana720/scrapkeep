@@ -105,8 +105,8 @@ static func call_matches(row: Dictionary, event: String, args: Array) -> bool:
 
 # Who says a row's line, as a SPEAKERS id: an exchange's speaker, the boss an intro quotes
 # ("Brindle: ..."), or the zone's site crew for a Warden's intro. "" when the line has no voice.
-# Default include_w23 := false keeps W1 compatibility; world_voice_of() enables W1-W3 resolution.
-static func voice_of(row: Dictionary, include_w23 := false) -> String:
+# Default include_w23 := true resolves W1-W3 crews and aliases; pass false for W1-only reads.
+static func voice_of(row: Dictionary, include_w23 := true) -> String:
 	var named := String(row.get("speaker", String(row.get("text", "")).get_slice(": ", 0)))
 	var id = SPEAKERS.find_key(named)
 	if id != null and (include_w23 or String(id) in W1_SPEAKER_IDS):
@@ -1051,12 +1051,6 @@ const WORLD_CALLS := [
 		"text": ["Gambling up in the clouds. Supper stays hot either way.", "Took the long odds at altitude. Kept the kettle going."]},
 	{"id": "call.highdraft.kindness", "on": "trade_taken", "arg": [0, "trade_safe"], "world": 3, "speaker": "mind",
 		"text": ["Upper deck efficiency confirmed. Return schedule updated automatically.", "Comfort selected at the Crown. We appreciate your consistency."]},
-	{"id": "call.patch.rogue_crane", "on": "enemy_killed", "arg": [0, "rogue_crane"], "world": 1, "speaker": "unsigned",
-		"text": ["Cut its line last Tuesday. Check the bricked wall by powerhouse.", "Crane 14 finally sat down. Warm kettle behind the west rim."]},
-	{"id": "call.patch.rogue_skip", "on": "enemy_killed", "arg": [0, "rogue_skip"], "world": 2, "speaker": "patch",
-		"text": ["Skip 31 off its loop. Old switchboard waits by barge apron.", "Good hit on 31. Loose wire room tucked near east gallery."]},
-	{"id": "call.patch.rogue_tender", "on": "enemy_killed", "arg": [0, "rogue_tender"], "world": 3, "speaker": "patch",
-		"text": ["Tender 7 stopped hauling. West fin hut has my notes.", "Cut that spool loose myself. Check signal butte before the storm."]},
 	{"id": "call.chapter.sable_drop", "on": "drop_landed", "at_least": [0, 3], "world": 2, "speaker": "sable", "pilot": "pylon_engineer", "requires_chapter": "pylon_engineer.ch3",
 		"text": ["Dropped clean into the pit. Next time vault the headframe first.", "Good drop down there. The arches make even better launch ramps."]},
 	{"id": "call.chapter.tally_drop", "on": "drop_landed", "at_least": [0, 3], "world": 3, "speaker": "tally", "pilot": "tally", "requires_chapter": "tally.ch3",

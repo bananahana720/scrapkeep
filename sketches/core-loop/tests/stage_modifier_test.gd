@@ -56,13 +56,17 @@ const BallState := preload("res://src/movement/ball_state.gd")
 # test's known-failing row for the stage 5 check, which names only that check.
 # Wave 46 re-cut stage 2 (6a062ee3... -> ab9f5cb2...): the flume map changes stacked in wave 46 (W46-02 and W46-07)
 # moved the flume's no-modifier draw, red on stage head 7975333d; the draw rule is unchanged.
+# Wave 50 re-cut stages 2 to 6 after w50/map-w1-roboquest, w50/map-w2-roboquest, and
+# w50/map-w3-roboquest updated and rebaked park_flume, park_pit, park_sinkhole, park_islands,
+# and park_crown (adding Roboquest authored activities/cables/ramps); stage 1 (park_dam) kept
+# its pin unchanged, and stage 5 park_islands Surplus Yard now draws more pockets cleanly.
 const GOLDEN := {
 	1: "ae7ed324419020fbd8c81a6fb71107220f87c991fc84611aa790cd30b93ca70e",
-	2: "ab9f5cb2fbca9396eea102a8d15a3702b4593e67b3ac040cdd37498930c6c3b7",
-	3: "55d86bc8cf198a63c7a692c8c29f5e4efe58b7aa99312e02c345f42de7c22f7b",
-	4: "09e28c2ca5f2f22a286ee5e4495eab8d1e3d3724483816f053be9cccc4bcb99b",
-	5: "70807e398a40a6dfd76baa8a6fa437b864ba47603fc390402cec108c8325a12d",
-	6: "ee063c318b2053d8272dec36f194458c6f703435d78acd905878ac3f7b06bd7f",
+	2: "f3e35111528d0c92849327ed451e7f6f25f7f49557ed6c1e98f5c4b39dedbaa8",
+	3: "3b912b0b890133243ee47c8370019e4d1935cff0ebd0f2ef5c95837fa15ee271",
+	4: "48101d40c88bbcb819d04a92a905cb8cd1408888b09a66f4b962731c68f56c1f",
+	5: "c28e441e63a70994b9c9472c56a636fff8cfbc4c8f399f81ac0871e10f59a821",
+	6: "a5cbf2ec164fb6ec87217595a79d7b15acc3949c5712a3bfd83c59d36974df5d",
 }
 const PICK_SEEDS := 2000
 const DRAW_SEEDS := 16
@@ -336,7 +340,7 @@ func _runtime() -> void:
 		game.run.run_seed = s
 		game.run.pocket_draw_cache = {}
 		for stage in range(1, Park.COUNT + 1):
-			var expected := Modifier.pick(s, stage, 3)
+			var expected := Modifier.pick(s, stage, Modifier.authored(game.ctx.terrain.map_for(stage)))
 			hud.launch_card.visible = false
 			hud._world_card_at = -1
 			game.flow.enter_stage(stage, Vector3.ZERO, false)
@@ -364,7 +368,7 @@ func _runtime() -> void:
 			if next <= game.ctx.stages.last_of(game.ctx.stages.world_of(stage)):
 				hud.launch_card.visible = false
 				hud._on_launched(Vector3.ZERO)
-				launch_ok = launch_ok and hud.launch_card.line == Modifier.memo(s, next, Modifier.pick(s, next, 3))
+				launch_ok = launch_ok and hud.launch_card.line == Modifier.memo(s, next, Modifier.pick(s, next, Modifier.authored(game.ctx.terrain.map_for(next))))
 	t.eq("every stage entry shows the applied modifier on its card", shown_ok, entries)
 	t.check("the runtime saw modifiers applied", applied > 0, "%d of %d entries" % [applied, entries])
 	t.check("the launch card for the next stage carries its modifier", launch_ok)

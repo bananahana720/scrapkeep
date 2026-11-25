@@ -69,9 +69,7 @@ func open_entry(id: String) -> void:
 		if entry["id"] != id:
 			continue
 		_read_row(id, entry)
-		var words: String = entry["text"] if entry["known"] else entry["hint"]
-		if not entry["known"] and entry["clue"] != "":
-			words += "\n" + String(entry["clue"])
+		var words: String = _codex.entry_detail(id, _profile)
 		detail.text = "%s\n%s" % [entry["name"], words]
 		return
 

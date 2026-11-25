@@ -6,6 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
+const PilotStory := preload("res://src/core/pilot_story.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
@@ -97,6 +98,7 @@ var _hello_due := 0
 # Call-ins (LoreRows.CALLS): the ids said this run, the one waiting for its turn with the
 # seconds it has left before it is stale, and the seconds since the last one came up.
 var _calls_played := {}
+var _pair_call_used := false
 var _call := {}
 var _call_fresh := 0.0
 var _call_quiet := LoreRows.CALL_GAP_S
@@ -164,6 +166,7 @@ func _on_run_started(_class_id: String) -> void:
 	_end_exchange(false)
 	_end_intro()
 	_calls_played.clear()
+	_pair_call_used = false
 	_call = {}
 	_call_quiet = LoreRows.CALL_GAP_S
 	if mood == "call":
@@ -281,7 +284,7 @@ func _flush_intro() -> void:
 	_intro_row = row
 	_intros_played[String(row["intro_key"])] = true
 	position = Vector2(0.0, get_viewport().get_visible_rect().size.y * 0.30)
-	var who := LoreRows.voice_of(row)
+	var who := LoreRows.world_voice_of(row)
 	var voice_s := _voice(who, LoreRows.spoken(row))
 	_say(String(row["text"]), "moss_beat", "intro", 0.0, false, "", who, voice_s)
 	_hold = maxf(INTRO_HOLD, voice_s)
@@ -303,7 +306,7 @@ func _end_intro() -> void:
 
 func _show_exchange_line() -> void:
 	var line: Dictionary = _exchange[_exchange_index]
-	var who := LoreRows.voice_of(line)
+	var who := LoreRows.world_voice_of(line)
 	_say("%s: %s" % [line["speaker"], line["text"]], "moss_beat", "exchange", 0.0, false, "", who, _voice(who, String(line["text"])))
 
 
@@ -394,10 +397,20 @@ func stand_down() -> void:
 # exchange or an intro. It is a reaction, so it is dropped when it cannot come up while fresh.
 
 func _connect_calls() -> void:
-	var relays := [_call_event_0, _call_event_1, _call_event_2, _call_event_3]
+	var relays := [_call_event_0, _call_event_1, _call_event_2, _call_event_3, _call_event_4]
+	var wanted := {}
+	for name in LoreRows.call_signals():
+		wanted[String(name)] = true
+	for row in LoreRows.WORLD_CALLS:
+		wanted[String(row["on"])] = true
+	for pid in PilotStory.PAIRS:
+		wanted[String(PilotStory.PAIRS[pid]["field"]["on"])] = true
+	wanted["enemy_killed"] = true
+	wanted["world_fact"] = true
 	for sig in _game.events.get_signal_list():
-		if LoreRows.call_signals().has(sig["name"]):
-			_game.events.connect(sig["name"], relays[sig["args"].size()].bind(sig["name"]))
+		var arity: int = (sig["args"] as Array).size()
+		if wanted.has(sig["name"]) and arity < relays.size():
+			_game.events.connect(sig["name"], relays[arity].bind(sig["name"]))
 
 
 func _call_event_0(event: String) -> void:
@@ -416,6 +429,10 @@ func _call_event_3(a, b, c, event: String) -> void:
 	call_caused(event, [a, b, c])
 
 
+func _call_event_4(a, b, c, d, event: String) -> void:
+	call_caused(event, [a, b, c, d])
+
+
 # A bus signal happened: the first call row it causes takes the waiting slot. Returns the row
 # (empty when nothing answers, or the last call was too recent).
 func call_caused(event: String, args: Array) -> Dictionary:
@@ -432,6 +449,16 @@ func call_caused(event: String, args: Array) -> Dictionary:
 
 func _call_for(event: String, args: Array) -> Dictionary:
 	var world: int = _game.ctx.stages.world_of(_game.run.stage)
+	var unlocked: Array = []
+	for def in _game.flow.classes:
+		if _game.pilot_unlocked(def):
+			unlocked.append(String(def.id))
+	var story_row := PilotStory.pick_run_call(
+		event, args, world, _game.run.class_id(), _game.run.run_seed,
+		unlocked, _game.ctx.profile, _game.codex, _calls_played, _pair_call_used
+	)
+	if not story_row.is_empty():
+		return story_row
 	var pilots: Array = []
 	for row in LoreRows.CALLS:
 		if _calls_played.has(row["id"]) or int(row["world"]) != world or not LoreRows.call_matches(row, event, args):
@@ -509,8 +536,14 @@ func _tick_call(delta: float) -> void:
 		if not _call_holds(row):
 			return
 		# One pilot's line on a cause is the run's: the others' rows for it are spent with it.
+		_calls_played[row["id"]] = true
+		if bool(row.get("consumes_pair_budget", false)):
+			_pair_call_used = true
+		var codex_id := String(row.get("codex_id", ""))
+		if codex_id != "" and _game.codex != null and _game.codex.has_method("mark_known"):
+			_game.codex.mark_known(codex_id)
 		for other in LoreRows.CALLS:
-			if other["id"] == row["id"] or (row.has("pilot") and other.has("pilot") and other["on"] == row["on"]):
+			if other["id"] == row["id"] or (row.has("pilot") and row.has("on") and other.has("pilot") and other["on"] == row["on"]):
 				_calls_played[other["id"]] = true
 		_call_quiet = 0.0
 		var words := LoreRows.call_text(row, _game.run.run_seed)

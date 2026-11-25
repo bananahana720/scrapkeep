@@ -2,6 +2,7 @@ extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
+const PilotStory := preload("res://src/core/pilot_story.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 
 # The RUN OVER line that names what scrapped you (wave 27 first-timer red team, note 2):
@@ -139,6 +140,7 @@ const LOSS_MEMOS := [
 
 
 # The memo as the screen shows it, its sender first (the name a call card gives the Foreman).
-static func memo(run_seed: int, stage: int) -> String:
-	var line := String(LOSS_MEMOS[absi(hash([run_seed, stage, "loss_memo"])) % LOSS_MEMOS.size()])
+static func memo(run_seed: int, stage: int, source := "", profile = null, pages: Array = [], run = null) -> String:
+	var adaptive := PilotStory.foreman_loss_memo(run_seed, source, profile, pages, run) if profile != null else ""
+	var line := adaptive if adaptive != "" else String(LOSS_MEMOS[absi(hash([run_seed, stage, "loss_memo"])) % LOSS_MEMOS.size()])
 	return "%s: %s" % [LoreRows.SPEAKERS["mind"], line]

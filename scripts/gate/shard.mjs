@@ -1015,7 +1015,7 @@ async function run(options) {
     ...(!options.bots
       ? {
           SMOKE_BATCH: env.SMOKE_BATCH ?? "1",
-          SMOKE_BATCH_SIZE: env.SMOKE_BATCH_SIZE ?? String(smokeBatchSize(env)),
+          ...(env.SMOKE_BATCH_SIZE ? { SMOKE_BATCH_SIZE: env.SMOKE_BATCH_SIZE } : {}),
         }
       : {}),
     SMOKE_LOG_DIR: path.join(options.out, "logs"),
