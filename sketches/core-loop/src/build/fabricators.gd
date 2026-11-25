@@ -226,7 +226,7 @@ static func press_part(run, target_part_id: String, rng: RandomNumberGenerator =
 	if run == null or target_part_id == "":
 		return {"ok": false, "reason": "empty", "part_id": target_part_id}
 	var d: Resource = Parts.def(target_part_id)
-	if d == null or Relics.is_relic(target_part_id):
+	if d == null or Relics.is_relic(target_part_id) or String(d.rarity) == "relic":
 		return {"ok": false, "reason": "invalid_target", "part_id": target_part_id}
 	if Parts.stacked_out(target_part_id, run.parts) or Parts.maxed(target_part_id, run.parts):
 		return {"ok": false, "reason": "capped", "part_id": target_part_id}

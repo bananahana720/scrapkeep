@@ -191,7 +191,7 @@ const ROWS_W50 := {
 		"price": 80,
 		"duration_s": DUPLICATOR_WINDOW_S,
 		"max_clones": 1,
-		"headline": "12 s clones next pickup, core or cartridge strictly once.",
+		"headline": "12 s clones next pickup, core or cartridge once.",
 	},
 	OVERLOAD_FUSE: {
 		"id": OVERLOAD_FUSE,
@@ -445,39 +445,43 @@ static func _audit_reroll_gates(ctx) -> int:
 
 
 # Clones the next pickup/core/consumable collected inside the 12 s Carbon Tape window,
-# strictly ONCE per pop (disarms atomically before granting to prevent any clone chain).
+# strictly ONCE per pop (validates payload first, then disarms atomically before granting).
 static func try_clone_pickup(ctx, combat, kind: String, payload, at := Vector3.ZERO) -> Dictionary:
 	if ctx == null or ctx.run == null:
 		return {"cloned": false}
 	var st := _w50_state(ctx.run)
 	if not bool(st.get("duplicator_armed", false)) or float(st.get("duplicator_left", 0.0)) <= 0.0:
 		return {"cloned": false}
+	var valid_payload := false
+	match kind:
+		"consumable":
+			valid_payload = is_valid(String(payload))
+		"core":
+			valid_payload = true
+		"part":
+			valid_payload = String(payload) != ""
+		"cogs", "scrap":
+			valid_payload = int(payload) > 0
+	if not valid_payload:
+		return {"cloned": false}
 	st["duplicator_armed"] = false
 	st["duplicator_left"] = 0.0
 	st["duplicator_clones"] = int(st.get("duplicator_clones", 0)) + 1
+	if combat != null and combat.has_method("_clear_buff"):
+		combat._clear_buff("consumable_duplicator_spool")
 	match kind:
 		"consumable":
 			var cid := String(payload)
-			if not is_valid(cid):
-				return {"cloned": false}
 			if not ctx.run.add_consumable(cid) and combat != null and combat.has_method("drop_consumable"):
 				combat.drop_consumable(cid, at + Vector3(3.2, 0.0, 0.0))
 		"core":
 			ctx.run.add_core("duplicator_spool", at)
 		"part":
-			var pid := String(payload)
-			if pid != "":
-				ctx.run.add_part(pid, "duplicator_spool")
+			ctx.run.add_part(String(payload), "duplicator_spool")
 		"cogs":
-			var amt := int(payload)
-			if amt > 0:
-				ctx.run.add_cogs(amt)
+			ctx.run.add_cogs(int(payload))
 		"scrap":
-			var samt := int(payload)
-			if samt > 0:
-				ctx.run.add_scrap(samt, at)
-		_:
-			return {"cloned": false}
+			ctx.run.add_scrap(int(payload), at)
 	return {"cloned": true, "kind": kind, "payload": payload, "clones_total": int(st["duplicator_clones"])}
 
 
