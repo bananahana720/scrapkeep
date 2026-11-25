@@ -139,3 +139,11 @@ func _mind_cards() -> void:
 	root.remove_child(dress)
 	dress.free()
 	_report("freeing the dress frees both cards", not is_instance_valid(hired) and root.find_child(MindDress.HIRED_NODE, true, false) == null, "")
+	# W49-MAPS B6: strictly one flat non-emissive Palette.KINDNESS (#D936B0) takeover panel on Mind casting.
+	var panel := MindDress.build_takeover_panel()
+	var plate := panel.get_node_or_null("Plate") as MeshInstance3D
+	var mat := plate.material_override as StandardMaterial3D if plate != null else null
+	_report("Mind casting mounts one flat non-emissive KINDNESS takeover panel",
+		plate != null and mat != null and mat.albedo_color == Palette.KINDNESS and not mat.emission_enabled
+		and mat.roughness >= 0.8 and mat.metallic == 0.0, "panel %s" % [panel])
+	panel.free()

@@ -46,6 +46,7 @@ const WARN_SPEED_MAX := 2.0
 # pause the tree and never take input from the ball; a press of jump, accept or cancel only dismisses.
 const CALL_IN_NODE := "ForemanCallIn"
 const HIRED_NODE := "HiredStamp"
+const TAKEOVER_NODE := "TakeoverPanel"
 const CARD_LAYER := 40
 # The last part of a card's life fades it out.
 const CARD_FADE_S := 0.45
@@ -154,6 +155,7 @@ func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
 	_pulse_anim = BossModel.split_player(_kit_anim, ["pulse_warn", "pulse"], ["PulseLip"])
 	BossModel.hide_warden_body(module.warden)
 	BossModel.play(_kit_anim, "attention")
+	_attach_takeover_panel()
 	show_call_in()
 
 
@@ -259,6 +261,54 @@ func _aim(attack: Dictionary) -> void:
 		if dir.length() > 0.1:
 			_recoil.global_basis = Basis.looking_at(dir.normalized(), Vector3.UP)
 		return
+
+
+# --- The single flat executive-purple takeover panel (W49-MAPS, rubric B6) ---
+
+# Strictly ONE flat matte non-emissive Palette.KINDNESS (#D936B0, hue 315 deg) takeover panel inset
+# in a cast charcoal bezel on The Mind's CrownFrame casting. Never a glow, beam, field or telegraph.
+func _attach_takeover_panel() -> void:
+	if base == null:
+		return
+	var crown := base.find_child("CrownFrame", true, false) as Node3D
+	if crown == null or crown.get_node_or_null(TAKEOVER_NODE) != null:
+		return
+	crown.add_child(build_takeover_panel())
+
+
+static func build_takeover_panel() -> Node3D:
+	var holder := Node3D.new()
+	holder.name = TAKEOVER_NODE
+	# Front face of CrownFrame's central cast beam (mind_body.py: crossbar at y=22, half-depth ~1.65 m).
+	holder.position = Vector3(0.0, 0.0, 1.78)
+	var bezel := MeshInstance3D.new()
+	bezel.name = "Bezel"
+	var bezel_box := BoxMesh.new()
+	bezel_box.size = Vector3(4.3, 1.85, 0.16)
+	bezel.mesh = bezel_box
+	var bezel_mat := StandardMaterial3D.new()
+	bezel_mat.albedo_color = Palette.CHARCOAL
+	bezel_mat.roughness = 0.86
+	bezel_mat.metallic = 0.15
+	bezel_mat.emission_enabled = false
+	bezel.material_override = bezel_mat
+	bezel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(bezel)
+	var plate := MeshInstance3D.new()
+	plate.name = "Plate"
+	var plate_box := BoxMesh.new()
+	plate_box.size = Vector3(3.85, 1.4, 0.12)
+	plate.mesh = plate_box
+	plate.position = Vector3(0.0, 0.0, 0.06)
+	var plate_mat := StandardMaterial3D.new()
+	plate_mat.albedo_color = Palette.KINDNESS
+	plate_mat.roughness = 0.88
+	plate_mat.metallic = 0.0
+	plate_mat.emission_enabled = false
+	plate.material_override = plate_mat
+	plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	holder.add_child(plate)
+	return holder
 
 
 # --- The story cards (W49-MAPS) ---

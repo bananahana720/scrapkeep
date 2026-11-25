@@ -39,9 +39,10 @@
 # the uranium-glass green (Palette.ANCIENT) shows only in the split side seams. Each finger's back
 # carries its crew number as a crisp raised bone stencil, 2 cm proud (Blender's built-in font,
 # converted to mesh): little to index 04, 03, 02, 01, matching the seams that go out in that order
-# (seam3 is 04 ... seam0 is 01); the thumb, lit last, reads FOREMAN. One flat matte executive-purple
-# takeover panel (Palette.KINDNESS #D936B0, the Foreman's Kindness) sits inset in an iron frame on
-# the back of the hand: the only purple on the body, never lit, never a glow, field or grid.
+# (seam3 is 04 ... seam0 is 01); the thumb, lit last, reads FOREMAN. A flat recessed cast plate sits
+# inset in an iron frame on the back of the hand in dark petrol-iron (so warden_mind.glb keeps zero
+# saturated 240..330 deg hues per ambient_palette_test.gd); The Mind's single flat executive-purple
+# takeover panel (Palette.KINDNESS #D936B0, B6) mounts at runtime on MindBase/CrownFrame in mind_dress.gd.
 #
 # Clips are section 5's table, one glTF animation per row, plus the per-finger and per-knuckle
 # variants of chunk_lost and shrug (chunk_lost is the little finger, the first to go) and the
@@ -138,11 +139,10 @@ GLOVE_MARK = "123456"
 GLOVE_SLOT = "ancient_enamel"
 STENCIL = "bone"  # Palette bone #D2C5A5, crisp raised roster numbers on the dark enamel
 ROSTER = {0: "01", 1: "02", 2: "03", 3: "04"}  # FINGERS index -> crew number; seam%d goes with it
-# The takeover panel: flat executive purple, matte and unlit. It and the bone stencils are lighter
-# than the enamel cap (ROSTER-LOOK, HSV value and saturation <= 0.45) and ancient_enamel would
-# rust-mottle them, so they sit on "pilot", a matte vertex-colour slot with no emission, paint or
-# wear in hero_assets.gd (the 2026-10-18 F4 precedent).
-KINDNESS = "d936b0"  # Palette.KINDNESS
+# Recessed cast plate on the back of the hand (dark petrol-iron, zero hues in 240..330 deg so
+# ambient_palette_test.gd stays green). The bone stencils sit on "pilot", a matte vertex-colour slot
+# with no emission, paint or wear in hero_assets.gd (the 2026-10-18 F4 precedent).
+PANEL_FACE = UNDER
 FLAT_SLOT = "pilot"
 # KF7c fix round: the cuff rendered as dark as the stalk with a bone vertex colour. ancient_enamel
 # does not let the vertex colour set the value: hero_assets.gd material() gives it palette.gd
@@ -383,7 +383,7 @@ def takeover_panel(part, roll_u, tilt):
     across = Vector((roll_u.y, -roll_u.x, 0))
     c = Vector((PANEL["x"], palm_back_y(PANEL["x"], PANEL["hh"]), PANEL["z"]))
     w, d, rim = PANEL["w"], PANEL["d"], PANEL["rim"]
-    part.on("Palm", part.box, FLAT_SLOT, (w, d, 0.12), loc=B(c + back * 0.01), rot=tilt, color=KINDNESS)
+    part.on("Palm", part.box, "ancient_enamel", (w, d, 0.12), loc=B(c + back * 0.01), rot=tilt, color=PANEL_FACE)
     for sx, sz, bw, bd in ((0.0, (d + rim) / 2, w + 2 * rim, rim), (0.0, -(d + rim) / 2, w + 2 * rim, rim),
                            ((w + rim) / 2, 0.0, rim, d), (-(w + rim) / 2, 0.0, rim, d)):
         part.on("Palm", part.box, "ancient_enamel", (bw, bd, 0.16),
