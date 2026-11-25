@@ -29,13 +29,15 @@ const WARN_GAP := 0.2
 
 const ONES6 := [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
 const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-# World 1's Wardens pulse harder (wave 37 unit D6, ruling cu): the core ring hits x1.3 on the dam and the flume,
-# and the flume's cycle runs x0.85 (6.0 s to 5.1 s), the HARD ladder's rung 2 values. The ring still charges
-# Warden.PULSE_TELEGRAPH seconds, so the tell is no shorter; only the gap between pulses is. The dam keeps the
-# 6 s gap (wave 39): at 5.1 s a ball rolling at cruise lost hull faster per second than one stopped (bot_fairness
-# F2 stop tax 1.05 pooled over six seeds, line 2.0; 3.71 at 6 s), so speed stopped being safety on the first
-# stage. A ladder rung multiplies on top of these.
-const PULSE_DAMAGE_W1 := [1.3, 1.3, 1.0, 1.0, 1.0, 1.0]
+# World 1's Wardens pulse harder (wave 37 unit D6, ruling cu; W46-S1 World 1 calibration): the core ring hits
+# x4.0 on the dam and x4.5 on the flume (up from x1.3), the flume's meltdown slag hits x4.5, and the flume's
+# cycle runs x0.85 (6.0 s to 5.1 s), the HARD ladder's rung 2 cadence. The ring still charges
+# Warden.PULSE_TELEGRAPH seconds, so the tell is no shorter; only the damage and flume gap move. The dam keeps
+# the 6 s gap (wave 39): at 5.1 s a ball rolling at cruise lost hull faster per second than one stopped
+# (bot_fairness F2 stop tax 1.05 pooled over six seeds, line 2.0; 3.71 at 6 s), so speed stopped being safety
+# on the first stage. A ladder rung multiplies on top of these.
+const PULSE_DAMAGE_W1 := [4.0, 4.5, 1.0, 1.0, 1.0, 1.0]
+const SLAG_DAMAGE_W1 := [1.0, 4.5, 1.0, 1.0, 1.0, 1.0]
 const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
 # The Wardens escalate (W1-67, gameplay critique finding 5): each chunk the Warden has lost multiplies its
 # pulse cycle by this, so the fight tightens as it goes (5.1 s, 4.59, 4.13, 3.72 on the flume). The tell is
@@ -45,12 +47,13 @@ const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
 const PULSE_RATCHET_W1 := [1.0, 0.9, 1.0, 1.0, 1.0, 1.0]
 # Silt boils ship on world 1 at strength 2 (pack pressure E, 24 Oct ruling; DECISIONS section 5).
 const SILT_W1 := [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]
-# Crews lead the ball's roll by half (wave 37 unit D1, ruling cu call 4: chasers lead your line).
-# A crew steers to cut the roll off and a chaser lays its lunge lane halfway to where the roll will be, so a
-# ball that slows or holds a line it can be met on gets lunged, and a ball at cruise across it still slips.
-# The lane is committed at the wind-up as before and the wind-up is no shorter. Stages 3 to 6 inherit the
-# stage 2 ruling-cu baseline so later worlds never drop back to an easier default.
-const LEAD_W1 := [0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+# Crews lead the ball's roll (wave 37 unit D1, ruling cu call 4: chasers lead your line; W46-S1 raises the
+# dam to 0.7 while stages 2 to 6 keep 0.5). A crew steers to cut the roll off and a chaser lays its lunge lane
+# toward where the roll will be, so a ball that slows or holds a line it can be met on gets lunged, and a
+# ball at cruise across it still slips. The lane is committed at the wind-up as before and the wind-up is no
+# shorter. Stages 3 to 6 inherit the stage 2 ruling-cu baseline so later worlds never drop back to an easier
+# default.
+const LEAD_W1 := [0.7, 0.5, 0.5, 0.5, 0.5, 0.5]
 # The share of that lead a crew keeps on a ball at cruise: none (wave 37, the stop-tax line F2). The
 # lead is whole below 85% of cruise and gone at cruise (PackPressure.lead_now), so pressure lands on the ball
 # that slows and a ball that keeps its speed is aimed at where it is, as before wave 37. 1 keeps it whole.
@@ -59,11 +62,12 @@ const LEAD_CRUISE_W1 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # 24 seeds on w1: Novice wins 33% (a measured miss of the <= 15% target: the dam Warden is world 1's
 # teaching Warden), Learner a5 67%, Expert 100% with the same fight time. Hit size, not crew aggression or
 # spawn rate: both of those slowed the Expert.
-# Wave 37 (ruling cu, unit D5's payment): x2. With the boils on the stall test the dam eased for the Novice
-# (8 wins of 12 against the base's 4); at x2 with all seven units it reads 3 of 12, 7 deaths, 1.72 hits a
-# second before armour against the base's 1.47 and the same hull lost a run (178). Hit size again, for the
-# reason above. A stalled ball's boil now hits 40 (10 x strength 2 x 2).
-const MOBS_DAMAGE_W1 := [2.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+# Wave 37 (ruling cu, unit D5's payment): x2 on the dam. With the boils on the stall test the dam eased for
+# the Novice (8 wins of 12 against the base's 4); at x2 with all seven units it reads 3 of 12, 7 deaths, 1.72
+# hits a second before armour against the base's 1.47 and the same hull lost a run (178). Hit size again, for
+# the reason above. W46-S1 (World 1 calibration) raised mob hits to x2.6 on the dam and x2.5 on the flume so
+# stalled/slow balls feel pressure across both stages while cruising balls slip through.
+const MOBS_DAMAGE_W1 := [2.6, 2.5, 1.0, 1.0, 1.0, 1.0]
 # Chasers run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
 # slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
 # running. The lunge, its lane and its wind-up are as they were. Stages 3 to 6 inherit the stage 2 baseline.
@@ -77,15 +81,12 @@ const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const DEFAULTS := {
 	# Per boss: hazard damage to the pilot, attack cadence, warn seconds, punish windows,
 	# and the number of extra follow-up attacks queued right after an attack.
-	# Brindle (world 1 boss): phases Requisition, Furnace, Scuttle, chase. Requisition (phase 1) deals no damage,
-	# so its damage entry stays 1.0. The band sweep tbr-k (12 seeds, 2a45b9c2) was read at the old 2.0 and 1.3 hit
-	# sizes and the 0.5 and 1.0 periods; nobody has swept the values below.
-	# Wave 37 (ruling cu; systems audit pass E, change 5): world 1 kept getting easier after the dam, so Brindle's
-	# Furnace slag hits x3 (36) on a 0.35 gap and his Scuttle charge x2 (36) on half the rest. One hit is 36, about
-	# 30% of a 120 hull, and the fight asks for more dodges, not one-shot luck. Eight random-policy runs a side
-	# (seeds 2860 to 2867, PR 787): the worst minute at Brindle took a median 40% of max hull before and 71% after,
-	# against 76% to 79% at the dam Warden. Every run that reached Brindle cleared it.
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [1.0, 3.0, 2.0, 1.0],
+	# Brindle (world 1 boss): phases Requisition, Furnace, Scuttle, chase.
+	# Wave 37 (ruling cu; systems audit pass E, change 5) moved Furnace slag to x3 on a 0.35 gap and Scuttle
+	# charge to x2 on a 0.5 rest. W46-S1 (World 1 calibration) added slow-only Requisition (phase 1) crane
+	# impact damage at x2.5 (37.5 on a 0.6 period) and calibrated Furnace slag to x3.2 (38.4) and Scuttle
+	# charge to x2.5 (45.0), pressing stalled/slow balls while cruising balls slip cranes and skim slag.
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [2.5, 3.2, 2.5, 1.0],
 	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.35, 0.5, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	# Fight phases (fight_phases.gd, Andrew 23 Oct 19:02Z): cued follow-ups after each lead attack, per
@@ -120,14 +121,14 @@ const DEFAULTS := {
 	"mobs.lobber_share_step_by_stage": [0.07, 0.07, 0.07, 0.07, 0.07, 0.07],
 	# Wardens (warden.gd): the pulse's damage and cycle, the meltdown slag's damage.
 	"warden.pulse_damage_mult": 1.0, "warden.pulse_cycle_mult": 1.0, "warden.slag_damage_mult": 1.0,
-	"warden.pulse_damage_by_stage": PULSE_DAMAGE_W1, "warden.pulse_cycle_by_stage": PULSE_CYCLE_W1, "warden.slag_damage_by_stage": ONES6,
+	"warden.pulse_damage_by_stage": PULSE_DAMAGE_W1, "warden.pulse_cycle_by_stage": PULSE_CYCLE_W1, "warden.slag_damage_by_stage": SLAG_DAMAGE_W1,
 	"warden.pulse_ratchet_by_stage": PULSE_RATCHET_W1,
 	# The Warden's counter-pulse (warden.gd): a second core ring committed inside a stagger. Damage is an
 	# absolute value per stage (0 = off, the default: nothing is built or rolled); the telegraph is floored at
 	# TELL_FLOOR; the delay is seconds into the stagger before it starts charging.
-	"warden.counter_damage_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+	"warden.counter_damage_by_stage": ZEROS6,
 	"warden.counter_telegraph_by_stage": [0.8, 0.8, 0.8, 0.8, 0.8, 0.8],
-	"warden.counter_delay_by_stage": [1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+	"warden.counter_delay_by_stage": ONES6,
 	# The difficulty clock's last tier per stage (director.gd clock_tiers, build/run_clock.gd tiers): the clock
 	# rises one tier each Director.TIER_SECONDS up to this count. World 1 climbs a third tier, at 135 s (wave 37
 	# unit D3, ruling cu): staying longer means a bigger crowd, shorter gaps and more lobbers. Every rise is

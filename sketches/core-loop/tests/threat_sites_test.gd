@@ -24,8 +24,10 @@ const AUDIT := {
 	"res://src/combat/chaser.gd": ["LANE"],
 	"res://src/combat/miniboss.gd": ["PROJECTILE", "LANE"],
 	# 2026-10-04 (wave 9): the scanner now finds a third (LANE) site. 2026-10-19 (Challenge): the
-	# counter-pulse ring is a fourth, INSTANT like the core ring it shares.
-	"res://src/combat/warden.gd": ["LANE", "INSTANT", "INSTANT", "INSTANT"],
+	# counter-pulse ring is a fourth, INSTANT like the core ring it shares. 2026-11-25 (W46-S1):
+	# mounted World 1 reactor splashes add overheat ring (INSTANT), flume jet lane (LANE), and dam
+	# vent ring (INSTANT) before the slag lane and pulse/counter rings.
+	"res://src/combat/warden.gd": ["INSTANT", "LANE", "INSTANT", "LANE", "INSTANT", "INSTANT", "INSTANT"],
 	"res://src/combat/projectile.gd": ["PROJECTILE", "PROJECTILE"],
 	# 2026-11-12 (FX-03): the phase beat's harmless previews come first in source order, a bone slag ring and a bone charge lane.
 	"res://src/boss/boss.gd": ["INSTANT", "LANE", "WAVE", "INSTANT", "INSTANT", "LANE", "INSTANT"],
