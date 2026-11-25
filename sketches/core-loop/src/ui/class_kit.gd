@@ -14,20 +14,26 @@ const Bindings := preload("res://src/core/bindings.gd")
 # (1 to 2 words).
 const WORDS := {
 	"arc_caster": "arc caster",
+	"arc_ring": "voltaic ring",
 	"grapple": "harpoon",
 	"detonation_gauge": "arc discharge",
+	"halo_discharge": "halo discharge",
 	"arc_slam": "arc slam",
 	"crater_slam": "crater slam",
 	"rapid_laser": "rapid laser",
+	"fan_burst": "fan burst",
 	"overdrive_sprint": "overdrive sprint",
 	"overdrive_blast": "overdrive blast",
 	"point_blank": "point blank",
 	"shockwave_skid": "shockwave skid",
+	"auger_slam": "auger slam",
 	"sticky_charge": "sticky charges",
 	"sticky_rain": "sticky rain",
 	"smoke_blink": "smoke blink",
 	"detonation_line": "detonation line",
+	"snare_detonate": "snare detonate",
 	"demo_slam": "demo slam",
+	"thermite_slam": "thermite slam",
 	"claw_sweep": "claw sweep",
 	"claw_rake": "claw rake",
 	"claw_pull": "claw pull",
@@ -35,6 +41,7 @@ const WORDS := {
 	"rend_slam": "rend slam",
 	"rend_drag": "rend drag",
 	"ledger_reader": "wire-tap spike",
+	"ledger_echo": "tape echo",
 	"flywheel_surge": "tape-reel surge",
 	"plate_return": "hostile audit",
 	"stamp_slam": "card-punch slam",
@@ -47,6 +54,7 @@ const WORDS := {
 	"cannon_lane_walk": "walking lane",
 	"cannon_recoil": "recoil split",
 	"cannon_plate": "cannon plate",
+	"cannon_mortar": "siege mortar",
 	"cannon_rush": "rush ring",
 	"cannon_rush_wake": "rush wake",
 	"line_reel": "line reel",
@@ -56,20 +64,20 @@ const WORDS := {
 	"harpoon": "harpoon line",
 	"boost": "boost",
 	# --- P-C Sable words ---
-	"bank_shot": "bank shot", "cable_run": "cable run", "ball_lightning": "ball lightning", "outpost": "outpost",
+	"bank_shot": "bank shot", "bank_arc": "bank arc", "cable_run": "cable run", "ball_lightning": "ball lightning", "outpost": "outpost",
 	"tradeoff_pylon_engineer": "Strong anchors, needs a surface.",
 	# --- end Sable ---
 	# --- P-C Rivet words ---
-	"line_drive": "line drive", "foundry_cutter": "foundry cutter", "prism_cutter": "prism cutter", "juggernaut_drive": "juggernaut drive",
+	"line_drive": "line drive", "rail_vault": "rail vault", "foundry_cutter": "foundry cutter", "prism_cutter": "prism cutter", "juggernaut_drive": "juggernaut drive",
 	"tradeoff_runner_gunner": "Ignores knockback, still takes damage.",
 	# --- end Rivet ---
 	# --- P-C Kest words ---
-	"cable_charge": "cable charge", "windhover": "hovering mortar",
+	"cable_charge": "cable charge", "cable_cluster": "cable cluster", "windhover": "hovering mortar",
 	"air_raid": "air raid", "minelayer": "minelayer",
 	"tradeoff_demolitions_caster": "Delayed blasts, needs fuse timing.",
 	# --- end Kest ---
 	# --- P-C Tarn words ---
-	"claw_drag": "claw drag", "redjaw_rend": "redjaw rend", "rake_run": "rake run", "vice_leap": "vice leap",
+	"claw_drag": "claw drag", "claw_whirl": "claw whirl", "redjaw_rend": "redjaw rend", "rake_run": "rake run", "vice_leap": "vice leap",
 	"tradeoff_tarn": "Heavy claws, must fight close.",
 	# --- end Tarn ---
 	# --- P-C Tally words ---

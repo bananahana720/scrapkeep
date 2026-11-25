@@ -19,6 +19,8 @@ const MAX_NAME_WORDS := 3
 const MAX_TEXT_WORDS := 8
 const MIN_PER_PILOT := 2
 const PILOTS := ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
+const VALID_MAKERS := ["waking", "spillway_works", "fleet_surplus", "highdraft_roosts", "mind_glass", "redjaw", "moss"]
+const VALID_WORLDS := [1, 2, 3]
 # Rivet's kit rows; Tarn, Tally and the remembered cannon have their own rows in each world.
 const RIVET := ["runner_gunner"]
 const SUFFIX := {AbilityState.WEAPON: "_weapon", AbilityState.MOVEMENT: "_move",
@@ -117,17 +119,95 @@ const ROWS := {
 		"pilots": ["remembered_cannon"], "slot": AbilityState.SPECIAL, "charges": 1, "world": 3},
 }
 
+# W50-ISAAC-RELICS: 6 World 1 kit-swap relics completing Sable/Rivet/Kest symmetry (9 -> 15 W1
+# swaps) plus 6 World 2 & World 3 transformational kit-swap relics (RoR2 alternate loadouts).
+# Kept additive beside ROWS so baseline per-world offer counts stay pinned while runtime lookups
+# (has, row, part_of, relic_of, part_row, eligible with include_alt, all_rows, validate) serve all.
+const ALT_ROWS := {
+	# World 1 symmetry swaps (Sable, Rivet, Kest).
+	"arc_sling": {"maker": "highdraft_roosts", "name": "Arc Sling", "text": "Bank exit leaves a live chord arc",
+		"pilots": ["pylon_engineer"], "slot": AbilityState.LINE, "swap": "bank_arc", "world": 1},
+	"voltaic_ring": {"maker": "mind_glass", "name": "Voltaic Ring", "text": "Blazing shots fire a brass conductive halo",
+		"pilots": ["pylon_engineer"], "slot": AbilityState.WEAPON, "swap": "arc_ring", "world": 1},
+	"fan_cylinder": {"maker": "redjaw", "name": "Fan Cylinder", "text": "Three staggered hot rounds, strong sixth ricochet",
+		"pilots": RIVET, "slot": AbilityState.WEAPON, "swap": "fan_burst", "world": 1},
+	"drill_auger": {"maker": "waking", "name": "Drill Auger", "text": "Skid slam shreds a crater and breaches",
+		"pilots": RIVET, "slot": AbilityState.SMASH, "swap": "auger_slam", "world": 1},
+	"thermite_dive": {"maker": "redjaw", "name": "Thermite Dive", "text": "Glide slams ignite seam, trigger 14m charges",
+		"pilots": ["demolitions_caster"], "slot": AbilityState.SMASH, "swap": "thermite_slam", "world": 1},
+	"zip_cluster": {"maker": "highdraft_roosts", "name": "Zip Cluster", "text": "Trolley drops three micro-charges along the wire",
+		"pilots": ["demolitions_caster"], "slot": AbilityState.LINE, "swap": "cable_cluster", "world": 1},
+	# World 2 & World 3 transformational kit-swap relics (RoR2 Survivor Alternate Loadouts).
+	"wrecking_chain": {"maker": "redjaw", "name": "Wrecking Chain", "text": "Claw drag whips grabbed machine 180 degrees",
+		"pilots": ["tarn"], "slot": AbilityState.LINE, "swap": "claw_whirl", "world": 2, "alt_loadout": true},
+	"tape_loop": {"maker": "spillway_works", "name": "Tape Loop", "text": "Splice pulse echoes once 0.3 s later",
+		"pilots": ["tally"], "slot": AbilityState.WEAPON, "swap": "ledger_echo", "world": 2, "alt_loadout": true},
+	"siege_mortar": {"maker": "waking", "name": "Siege Mortar", "text": "Special lobs a committed artillery barrage ring",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.SPECIAL, "swap": "cannon_mortar", "world": 3, "alt_loadout": true},
+	"halo_coil": {"maker": "mind_glass", "name": "Halo Coil", "text": "Discharge radiates an orbiting lightning perimeter",
+		"pilots": ["pylon_engineer"], "slot": AbilityState.SPECIAL, "swap": "halo_discharge", "world": 3, "alt_loadout": true},
+	"slotted_rail": {"maker": "fleet_surplus", "name": "Slotted Rail", "text": "Taut haul launches sparks and hot reloads",
+		"pilots": RIVET, "slot": AbilityState.LINE, "swap": "rail_vault", "world": 2, "alt_loadout": true},
+	"updraft_snare": {"maker": "spillway_works", "name": "Updraft Snare", "text": "Blasts launch light machines into apex traps",
+		"pilots": ["demolitions_caster"], "slot": AbilityState.SPECIAL, "swap": "snare_detonate", "world": 3, "alt_loadout": true},
+}
+
 
 static func ids() -> Array:
 	return ROWS.keys()
 
 
+static func alt_ids(world := 0) -> Array:
+	if world == 0:
+		return ALT_ROWS.keys()
+	return ALT_ROWS.keys().filter(func(id): return int(ALT_ROWS[id]["world"]) == world)
+
+
+static func all_rows() -> Dictionary:
+	var out := ROWS.duplicate(false)
+	for id in ALT_ROWS:
+		out[id] = ALT_ROWS[id]
+	return out
+
+
+static func all_ids() -> Array:
+	return all_rows().keys()
+
+
+static func swap_ids(world := 0) -> Array:
+	var out := []
+	var table := all_rows()
+	for id in table:
+		if String(table[id].get("swap", "")) == "":
+			continue
+		if world != 0 and int(table[id]["world"]) != world:
+			continue
+		out.append(id)
+	return out
+
+
+static func alt_loadouts(pilot := "", world := 0) -> Array:
+	var out := []
+	for id in ALT_ROWS:
+		var r: Dictionary = ALT_ROWS[id]
+		if not bool(r.get("alt_loadout", false)):
+			continue
+		if pilot != "" and not (pilot in r.get("pilots", [])):
+			continue
+		if world != 0 and int(r["world"]) != world:
+			continue
+		out.append(id)
+	return out
+
+
 static func has(relic_id: String) -> bool:
-	return ROWS.has(relic_id)
+	return ROWS.has(relic_id) or ALT_ROWS.has(relic_id)
 
 
 static func row(relic_id: String) -> Dictionary:
-	return ROWS.get(relic_id, {})
+	if ROWS.has(relic_id):
+		return ROWS[relic_id]
+	return ALT_ROWS.get(relic_id, {})
 
 
 static func slot_of(relic_id: String) -> String:
@@ -136,7 +216,7 @@ static func slot_of(relic_id: String) -> String:
 
 # The relic's id in a part list; "" for an unknown relic.
 static func part_of(relic_id: String) -> String:
-	return PREFIX + relic_id if ROWS.has(relic_id) else ""
+	return PREFIX + relic_id if has(relic_id) else ""
 
 
 # The relic a part id stands for, or "" for any other part.
@@ -144,7 +224,7 @@ static func relic_of(part_id: String) -> String:
 	if not part_id.begins_with(PREFIX):
 		return ""
 	var id := part_id.trim_prefix(PREFIX)
-	return id if ROWS.has(id) else ""
+	return id if has(id) else ""
 
 
 static func is_relic(part_id: String) -> bool:
@@ -167,7 +247,7 @@ static func part_row(part_id: String) -> Dictionary:
 	var id := relic_of(part_id)
 	if id == "":
 		return {}
-	var r: Dictionary = ROWS[id]
+	var r: Dictionary = row(id)
 	return {"name": r["name"], "verb": r["text"], "text": r["text"], "rarity": "relic", "tier": 3,
 		"family": "relic", "class_id": r["pilots"][0], "maker": r["maker"], "tags": [],
 		"icon": ICON_FOR_SLOT.get(r["slot"], "utility"), "cap": 1, "stack": "capped"}
@@ -184,15 +264,17 @@ static func fits(relic_id: String, pilot: String) -> bool:
 # Relic ids a pilot may still find: the pilot's rows whose slot holds nothing yet, in
 # table order. `held` is slot to relic id (held(parts)). A relic whose swap the upgrade tree already gave
 # (`tree`, optional) is not offered: it would change nothing. `world` keeps the rows of that
-# world only; 0 keeps every world's.
-static func eligible(pilot: String, held: Dictionary, tree = null, world := 0) -> Array:
+# world only; 0 keeps every world's. Set `include_alt` true to include W50 swap/loadout relics.
+static func eligible(pilot: String, held: Dictionary, tree = null, world := 0, include_alt := false) -> Array:
+	var table: Dictionary = all_rows() if include_alt else ROWS
 	var out := []
-	for id in ROWS:
-		if not fits(id, pilot) or held.has(ROWS[id]["slot"]):
+	for id in table:
+		var r: Dictionary = table[id]
+		if not fits(id, pilot) or held.has(r["slot"]):
 			continue
-		if world != 0 and int(ROWS[id]["world"]) != world:
+		if world != 0 and int(r["world"]) != world:
 			continue
-		if tree != null and swap_of(id) != "" and tree.gives_swap(ROWS[id]["slot"], swap_of(id)):
+		if tree != null and swap_of(id) != "" and tree.gives_swap(r["slot"], swap_of(id)):
 			continue
 		out.append(id)
 	return out
@@ -217,17 +299,25 @@ static func _kit_slot(pilot: String, slot: String) -> String:
 
 
 # Problems with the table, one string each; empty when it is sound.
-static func validate(rows: Dictionary = ROWS) -> Array:
+# Validates both ROWS and ALT_ROWS by default; pass a custom dictionary to test mutations.
+static func validate(rows = null) -> Array:
+	var table: Dictionary = all_rows() if rows == null else rows
 	var bad := []
 	var per_pilot := {}
-	for id in rows:
-		var r: Dictionary = rows[id]
+	for id in table:
+		var r: Dictionary = table[id]
 		var name_words := String(r.get("name", "")).split(" ", false).size()
 		if name_words < 1 or name_words > MAX_NAME_WORDS:
 			bad.append("%s: name has %d words" % [id, name_words])
 		var text_words := String(r.get("text", "")).split(" ", false).size()
 		if text_words < 1 or text_words > MAX_TEXT_WORDS:
 			bad.append("%s: text has %d words" % [id, text_words])
+		var maker := String(r.get("maker", ""))
+		if not maker in VALID_MAKERS:
+			bad.append("%s: maker %s is not valid" % [id, maker])
+		var world := int(r.get("world", 0))
+		if not world in VALID_WORLDS:
+			bad.append("%s: world %d out of range" % [id, world])
 		var slot := String(r.get("slot", ""))
 		if not slot in AbilityState.SLOTS:
 			bad.append("%s: slot %s is not a kit slot" % [id, slot])
@@ -252,4 +342,24 @@ static func validate(rows: Dictionary = ROWS) -> Array:
 	for pilot in PILOTS:
 		if int(per_pilot.get(pilot, 0)) < MIN_PER_PILOT:
 			bad.append("%s: fewer than %d relics" % [pilot, MIN_PER_PILOT])
+	return bad
+
+
+# Validates ALT_ROWS specifically as lateral swap-only relics (no cooldown scalars or extra charges).
+static func validate_alt(rows: Dictionary = ALT_ROWS) -> Array:
+	var bad := []
+	for id in rows:
+		if ROWS.has(id):
+			bad.append("%s: duplicates a baseline ROWS id" % id)
+		var r: Dictionary = rows[id]
+		if String(r.get("swap", "")) == "":
+			bad.append("%s: alt relic must declare a swap" % id)
+		if r.has("cooldown") or r.has("charges"):
+			bad.append("%s: alt swap relic must not carry cooldown or charges" % id)
+	var table := all_rows()
+	if rows != ALT_ROWS:
+		table = ROWS.duplicate(false)
+		for id in rows:
+			table[id] = rows[id]
+	bad.append_array(validate(table))
 	return bad
