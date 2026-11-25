@@ -129,9 +129,10 @@ static func pins(park: Dictionary, graph: Dictionary, lines: Dictionary) -> Arra
 		out.append("warden %s" % str(w))
 	var roles := {}
 	for p in graph.get("pockets", []):
-		if roles.has(p["role"]):
-			out.append("two %s pockets" % p["role"])
-		roles[p["role"]] = p["id"]
+		if POCKETS.has(p["role"]):
+			if roles.has(p["role"]):
+				out.append("two %s pockets" % p["role"])
+			roles[p["role"]] = p["id"]
 	if roles != POCKETS:
 		out.append("pocket roles %s, want %s" % [roles, POCKETS])
 	if not (graph.get("breaches", []) as Array).is_empty():

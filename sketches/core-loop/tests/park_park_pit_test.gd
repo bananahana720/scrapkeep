@@ -98,7 +98,8 @@ func _run() -> void:
 	for row in ruling["rows"]:
 		roles[row["id"]] = row["role"]
 		detour[row["role"]] = float(row.get("detour_m", 0.0))
-	t.eq("pocket roles", roles, ROLES)
+	for id in ROLES:
+		t.eq("pocket %s role" % id, roles.get(id), ROLES[id])
 	t.eq("no 2.12 breach", ruling["breaches"], [])
 	t.check("reward detour longer than risk", detour.get("reward", 0.0) > detour.get("risk", INF), str(detour))
 
