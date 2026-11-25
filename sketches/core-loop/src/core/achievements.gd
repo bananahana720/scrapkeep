@@ -30,6 +30,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const FIELDS := ["name", "text", "on", "where", "at_least", "sum", "count", "need", "min", "max", "hidden", "beat", "pilot", "reward"]
 const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries", "save_used"]
 const EVALUATOR_KEYS := ["class", "won", "world"]
+const MASTERY_EVALUATOR_KEYS := ["class", "won", "world", "run_tier"]
 const REWARD_KINDS := ["pilot", "cosmetic", "world", "option", "item"]
 const NAME_WORDS := 3
 const TEXT_WORDS := 12
@@ -224,13 +225,73 @@ const ROWS := {
 		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_cannon_velvet"}},
 }
 
+# W50 additive progression records for Worlds 2-3, rogue trail, and HARD ladder rungs.
+# Kept beside ROWS so ROWS stays byte-identical for content registry and fill checks.
+const MASTERY_ROWS := {
+	"dig_warden_broken": {"name": "Swarm Breaker", "text": "Break a Swarm Warden in the Dig.", "on": "beacon_unsealed",
+		"count": 1, "need": "world", "min": 2, "max": 2, "reward": {}},
+	"highdraft_warden_broken": {"name": "Crown Breaker", "text": "Break a Mind Warden in the Highdraft.", "on": "beacon_unsealed",
+		"count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+	"dig_mark_sable": {"name": "Sable's Dig Mark", "text": "Still the Waking flying Sable.", "on": "boss_defeated",
+		"pilot": "pylon_engineer", "count": 1, "need": "world", "min": 2, "max": 2, "reward": {}},
+	"dig_mark_rivet": {"name": "Rivet's Dig Mark", "text": "Still the Waking flying Rivet.", "on": "boss_defeated",
+		"pilot": "runner_gunner", "count": 1, "need": "world", "min": 2, "max": 2, "reward": {}},
+	"dig_mark_tarn": {"name": "Tarn's Dig Mark", "text": "Still the Waking flying Tarn.", "on": "boss_defeated",
+		"pilot": "tarn", "count": 1, "need": "world", "min": 2, "max": 2, "reward": {}},
+	"dig_mark_kest": {"name": "Kest's Dig Mark", "text": "Still the Waking flying Kest.", "on": "boss_defeated",
+		"pilot": "demolitions_caster", "count": 1, "need": "world", "min": 2, "max": 2, "reward": {}},
+	"dig_mark_tally": {"name": "Tally's Dig Mark", "text": "Still the Waking flying Tally.", "on": "boss_defeated",
+		"pilot": "tally", "count": 1, "need": "world", "min": 2, "max": 2, "reward": {}},
+	"dig_mark_cannon": {"name": "Cannon's Dig Mark", "text": "Still the Waking flying the Cannon.", "on": "boss_defeated",
+		"pilot": "remembered_cannon", "count": 1, "need": "world", "min": 2, "max": 2, "reward": {}},
+	"crown_mark_sable": {"name": "Sable's Crown Mark", "text": "Quiet the Mind flying Sable.", "on": "boss_defeated",
+		"pilot": "pylon_engineer", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+	"crown_mark_rivet": {"name": "Rivet's Crown Mark", "text": "Quiet the Mind flying Rivet.", "on": "boss_defeated",
+		"pilot": "runner_gunner", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+	"crown_mark_tarn": {"name": "Tarn's Crown Mark", "text": "Quiet the Mind flying Tarn.", "on": "boss_defeated",
+		"pilot": "tarn", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+	"crown_mark_kest": {"name": "Kest's Crown Mark", "text": "Quiet the Mind flying Kest.", "on": "boss_defeated",
+		"pilot": "demolitions_caster", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+	"crown_mark_tally": {"name": "Tally's Crown Mark", "text": "Quiet the Mind flying Tally.", "on": "boss_defeated",
+		"pilot": "tally", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+	"crown_mark_cannon": {"name": "Cannon's Crown Mark", "text": "Quiet the Mind flying the Cannon.", "on": "boss_defeated",
+		"pilot": "remembered_cannon", "count": 1, "need": "world", "min": 3, "max": 3, "reward": {}},
+	"ach_rogues_all": {"name": "Off the Books", "text": "Down three rogue machines across the works.", "on": "world_fact",
+		"where": {"kind": "rogue_downed"}, "count": 3, "reward": {}},
+	"ach_patch_trail": {"name": "Signed in Chalk", "text": "Find all three wire rooms along the trail.", "on": "world_fact",
+		"where": {"kind": "patch_wire_found"}, "count": 3, "hidden": true, "reward": {}},
+	"hard_rung_1": {"name": "Hard Rung One", "text": "Win a run on hard rung one.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "need": "run_tier", "min": 1, "reward": {}},
+	"hard_rung_2": {"name": "Hard Rung Two", "text": "Win a run on hard rung two.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "need": "run_tier", "min": 2, "reward": {}},
+	"hard_rung_3": {"name": "Hard Rung Three", "text": "Win a run on hard rung three.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "need": "run_tier", "min": 3, "reward": {}},
+	"hard_rung_4": {"name": "Hard Rung Four", "text": "Win a run on hard rung four.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "need": "run_tier", "min": 4, "reward": {}},
+	"hard_rung_5": {"name": "Hard Rung Five", "text": "Win a run on hard rung five.", "on": "run_ended",
+		"where": {"won": true}, "count": 1, "need": "run_tier", "min": 5, "reward": {}},
+}
+
 
 static func ids() -> Array:
 	return ROWS.keys()
 
 
+static func mastery_ids() -> Array:
+	return MASTERY_ROWS.keys()
+
+
+static func all_rows() -> Dictionary:
+	var out := ROWS.duplicate(false)
+	for id in MASTERY_ROWS:
+		out[id] = MASTERY_ROWS[id]
+	return out
+
+
 static func row(id: String) -> Dictionary:
-	return ROWS.get(id, {})
+	if ROWS.has(id):
+		return ROWS[id]
+	return MASTERY_ROWS.get(id, {})
 
 
 static func reward_of(id: String) -> Dictionary:
@@ -396,3 +457,72 @@ static func recorded_sources(id: String) -> Array:
 		if compatible:
 			out.append(source_id)
 	return out
+
+
+static func validate_mastery(signals: Dictionary, pilots: Array, cosmetics: Array = [], rows_to_check: Dictionary = MASTERY_ROWS) -> Array:
+	var problems: Array = []
+	for id in rows_to_check:
+		if ROWS.has(id):
+			problems.append("%s: collides with ROWS" % id)
+		var r = rows_to_check[id]
+		if not (r is Dictionary):
+			problems.append("%s: row must be a dictionary" % id)
+			continue
+		for key in r:
+			if not FIELDS.has(key):
+				problems.append("%s: unknown field %s" % [id, key])
+		var title := str(r.get("name", ""))
+		if title == "" or _words(title) > NAME_WORDS:
+			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
+		var text := str(r.get("text", ""))
+		if text == "" or _words(text) > TEXT_WORDS:
+			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
+		var on := str(r.get("on", ""))
+		var args: Array = signals.get(on, [])
+		if not signals.has(on):
+			problems.append("%s: on %s is not a declared signal" % [id, on])
+		var where = r.get("where", {})
+		if not (where is Dictionary):
+			problems.append("%s: where must be a dictionary" % id)
+		else:
+			for key in where:
+				if signals.has(on) and not args.has(key):
+					problems.append("%s: where key %s is not an argument of %s" % [id, key, on])
+		var at_least = r.get("at_least", {})
+		if not (at_least is Dictionary):
+			problems.append("%s: at_least must be a dictionary" % id)
+		else:
+			for key in at_least:
+				if signals.has(on) and not args.has(key):
+					problems.append("%s: at_least key %s is not an argument of %s" % [id, key, on])
+				if not (at_least[key] is int or at_least[key] is float):
+					problems.append("%s: at_least %s must be a number" % [id, key])
+		if not (r.get("count", 0) is int) or int(r.get("count", 0)) < 1 or int(r.get("count", 0)) > 10:
+			problems.append("%s: count must be an integer from 1 to 10" % id)
+		if r.has("need") and not (SUMMARY_KEYS.has(r["need"]) or MASTERY_EVALUATOR_KEYS.has(r["need"])):
+			problems.append("%s: need %s is not valid" % [id, r.get("need")])
+		for bound in ["min", "max"]:
+			if r.has(bound):
+				if not (r[bound] is int or r[bound] is float):
+					problems.append("%s: %s must be a number" % [id, bound])
+				elif not r.has("need"):
+					problems.append("%s: %s needs a need key to compare" % [id, bound])
+		if r.has("pilot") and not pilots.has(str(r["pilot"])):
+			problems.append("%s: pilot %s is not a ClassDef id" % [id, r["pilot"]])
+		if r.has("hidden") and not (r["hidden"] is bool):
+			problems.append("%s: hidden must be a bool" % id)
+		var reward = r.get("reward")
+		if not (reward is Dictionary):
+			problems.append("%s: reward must be a dictionary" % id)
+			continue
+		if reward.size() > 1:
+			problems.append("%s: reward must carry at most one kind" % id)
+		for kind in reward:
+			var target := str(reward[kind])
+			if not REWARD_KINDS.has(kind):
+				problems.append("%s: reward kind %s is unknown" % [id, kind])
+			elif kind == "cosmetic" and not cosmetics.is_empty() and not cosmetics.has(target):
+				problems.append("%s: reward cosmetic %s does not resolve" % [id, target])
+			elif kind == "pilot" and not pilots.has(target):
+				problems.append("%s: reward pilot %s does not resolve" % [id, target])
+	return problems

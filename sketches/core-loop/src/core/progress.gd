@@ -15,6 +15,10 @@ const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
+const WorkOrders := preload("res://src/core/work_orders.gd")
+
+signal work_order_changed(order_id: String, phase: String, summary: Dictionary)
+signal story_chapter_punched(cast_id: String, chapter: int, chapter_id: String)
 
 const STAT_PREFIX := "ach."
 const SAVE_POINTS := ["player_died", "run_ended"]
@@ -41,8 +45,16 @@ var _now := Callable()
 var _world := 0
 var _won := false
 var _rows_on := {}
+var _active_rows := {}
 var _codex
 var _board_before: Array = []
+var _wo_tracker := {}
+var _wo_shift_paid := {}
+var _story_chapter_hook := Callable()
+
+
+func set_story_chapter_hook(resolver: Callable) -> void:
+	_story_chapter_hook = resolver
 
 
 func setup(events, run, profile, now := Callable(), codex = null) -> void:
@@ -52,14 +64,19 @@ func setup(events, run, profile, now := Callable(), codex = null) -> void:
 	_codex = codex
 	_now = now if now.is_valid() else Callable(Time, "get_unix_time_from_system")
 	_board_before = ShiftBoard.stamped_ids(profile)
+	_wo_tracker = {}
+	_wo_shift_paid = {}
+	_active_rows = Achievements.all_rows() if rows == Achievements.ROWS else rows
 	_rows_on.clear()
-	for id in rows:
-		var on := String(rows[id].get("on", ""))
+	for id in _active_rows:
+		var on := String(_active_rows[id].get("on", ""))
 		if not _rows_on.has(on):
 			_rows_on[on] = []
 		_rows_on[on].append(id)
-	var wanted := {"world_entered": true, "run_started": true, "boss_defeated": true}
+	var wanted := {"world_entered": true, "run_started": true, "boss_defeated": true, "trade_taken": true}
 	for on in _rows_on:
+		wanted[on] = true
+	for on in WorkOrders.all_signals():
 		wanted[on] = true
 	for on in SAVE_POINTS:
 		wanted[on] = true
@@ -241,7 +258,8 @@ func reconcile_settled() -> void:
 		# never lost outranks at most once). The run's own list still refuses it this run; the first
 		# launch after the row is earned again pays it once (backfill_rewards needs the earned row,
 		# which the same failed save may have lost). Ledger ids still copy: their settle is their grant.
-		if String(id).begins_with("reward:"):
+		var sid := String(id)
+		if sid.begins_with("reward:") or sid.begins_with("order:") or sid.begins_with("license:"):
 			continue
 		if _profile.settle(id):
 			added = true
@@ -350,7 +368,25 @@ func _connect(signal_name: String, names: Array) -> void:
 func _world_now() -> int:
 	if _world >= 1:
 		return _world
-	return int(_run.world) if _run != null else 0
+	if _run != null and _run.get("world") != null:
+		return int(_run.get("world"))
+	return 0
+
+
+func _run_tier_now() -> int:
+	if _run == null:
+		return 0
+	if _run.has_method("selected_run_tier"):
+		return int(_run.selected_run_tier())
+	if _run.get("run_tier") != null:
+		return int(_run.get("run_tier"))
+	return 0
+
+
+func _is_bot_driven() -> bool:
+	if _run != null and _run.get("bot_driven") is bool:
+		return _run.get("bot_driven")
+	return false
 
 
 func _fact(signal_name: String, names: Array, values: Array) -> void:
@@ -363,13 +399,31 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 		_won = false
 		_board_before = ShiftBoard.stamped_ids(_profile)
 		board_line = ""
+		_wo_shift_paid.clear()
+		if _run != null:
+			for sid in WorkOrders.SHIFT_ORDERS:
+				_run.settled.erase(WorkOrders.SETTLE_ORDER_PREFIX + String(sid))
+		_wo_tracker = WorkOrders.begin_run(_run, _profile, _is_bot_driven())
 	elif signal_name == "run_ended":
 		_won = bool(fact.get("won", false))
 	elif signal_name == "boss_defeated" and _world_now() >= 1 and _world_now() <= LEDGER_WORLDS:
 		settle(LEDGER_FOUND % _world_now())
+	elif signal_name == "trade_taken" and _profile != null and not _is_bot_driven():
+		var tkind := String(fact.get("kind", ""))
+		if tkind == "trade_risk":
+			_profile.add_stat("habit.trade_risk", 1.0)
+		elif tkind == "trade_safe":
+			_profile.add_stat("habit.trade_safe", 1.0)
 	for id in _rows_on.get(signal_name, []):
 		_evaluate(id, fact)
+	if not _wo_tracker.is_empty() and _profile != null and not _is_bot_driven():
+		var ctx := {"world": _world_now(), "pilot": _run.class_id() if _run != null else "", "run_tier": _run_tier_now()}
+		var done_orders := WorkOrders.eval_fact(_wo_tracker, signal_name, fact, ctx)
+		for order_id in done_orders:
+			_complete_work_order(order_id)
 	if signal_name == "run_ended":
+		_record_run_habits()
+		WorkOrders.close_run(_run, _profile, _wo_tracker, _is_bot_driven())
 		_close_shift()
 	if SAVE_POINTS.has(signal_name) and _profile.can_save:
 		_profile.save()
@@ -377,10 +431,93 @@ func _fact(signal_name: String, names: Array, values: Array) -> void:
 		_won = false
 
 
+func _record_run_habits() -> void:
+	if _profile == null or _is_bot_driven():
+		return
+	if _run != null:
+		var pilot_id := String(_run.class_id())
+		if pilot_id != "":
+			_profile.add_stat("habit.pilot_runs." + pilot_id, 1.0)
+		var is_cursed := false
+		if _run.has_method("cursed"):
+			is_cursed = bool(_run.call("cursed"))
+		elif _run.get("cursed") is bool:
+			is_cursed = _run.get("cursed")
+		elif _run.get("extra") is Dictionary and _run.get("extra").get("cursed") is bool:
+			is_cursed = _run.get("extra").get("cursed")
+		if is_cursed:
+			_profile.add_stat("habit.runs_cursed", 1.0)
+
+
+func _complete_work_order(order_id: String) -> void:
+	if _profile == null:
+		return
+	var result: Variant = _profile.transact(_complete_work_order_now.bind(order_id))
+	if result is Dictionary and not (result as Dictionary).is_empty():
+		work_order_changed.emit(order_id, "completed", result)
+		_notify_story_chapters(WorkOrders.SETTLE_ORDER_PREFIX + order_id)
+
+
+func _complete_work_order_now(order_id: String) -> Dictionary:
+	var row := WorkOrders.order(order_id)
+	if row.is_empty():
+		return {}
+	var settle_key := WorkOrders.SETTLE_ORDER_PREFIX + order_id
+	var is_shift := String(row.get("track", "")) == "shift"
+	var maker := String(row.get("maker", ""))
+	var tier_before := WorkOrders.license_tier(maker, _profile)
+	if is_shift:
+		if _wo_shift_paid.has(order_id) or (_run != null and _run.settled.has(settle_key)):
+			return {}
+		_wo_shift_paid[order_id] = true
+		if _run != null and not _run.settled.has(settle_key):
+			_run.settled.append(settle_key)
+	else:
+		if _is_settled(settle_key):
+			return {}
+		settle(settle_key, false)
+	var pays: Dictionary = row.get("pays", {})
+	for kind in pays:
+		var target := String(pays[kind])
+		match String(kind):
+			"option":
+				_profile.open_option(target)
+			"tune":
+				_profile.hear_tune(target)
+	if is_shift and maker != "":
+		_profile.add_stat(WorkOrders.LICENSE_SHIFT_STAT_PREFIX + maker, 1.0)
+	var tier_after := WorkOrders.license_tier(maker, _profile)
+	var new_tiers: Array[int] = []
+	for t in range(maxi(1, tier_before + 1), tier_after + 1):
+		var lic_key := "%s%s:%d" % [WorkOrders.SETTLE_LICENSE_PREFIX, maker, t]
+		if settle(lic_key, false):
+			new_tiers.append(t)
+	if _profile.can_save and not _profile.save():
+		warnings += 1
+		push_warning("progress: work order %s completed but not saved: %s" % [order_id, _profile.last_error])
+	return {
+		"order_id": order_id,
+		"maker": maker,
+		"pays": pays.duplicate(true),
+		"license_tier": tier_after,
+		"new_license_tiers": new_tiers,
+	}
+
+
+func _notify_story_chapters(trigger_id: String) -> void:
+	if not _story_chapter_hook.is_valid() or _profile == null:
+		return
+	var punched: Variant = _story_chapter_hook.call(trigger_id, _profile)
+	if punched is Array:
+		for item in punched:
+			if item is Dictionary:
+				story_chapter_punched.emit(String(item.get("cast", "")), int(item.get("num", 0)), String(item.get("id", "")))
+
+
 func _evaluate(id: String, fact: Dictionary) -> void:
 	if _profile.earned(id):
 		return
-	var row: Dictionary = rows[id]
+	var row: Dictionary = _active_rows[id]
 	var where: Dictionary = row.get("where", {})
 	for key in where:
 		if not fact.has(key) or fact[key] != where[key]:
@@ -428,6 +565,8 @@ func _need_met(row: Dictionary) -> bool:
 			value = _won
 		"world":
 			value = _world_now()
+		"run_tier":
+			value = _run_tier_now()
 		_:
 			value = _run.summary().get(key)
 			if value is Array:
@@ -457,6 +596,7 @@ func _earn(id: String, row: Dictionary) -> void:
 		return
 	if not silent:
 		_events.achievement_earned.emit(id)
+	_notify_story_chapters(id)
 
 
 func _earn_now(id: String, row: Dictionary) -> bool:

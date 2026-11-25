@@ -23,9 +23,13 @@ extends RefCounted
 const Achievements := preload("res://src/core/achievements.gd")
 const Items := preload("res://src/build/items.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const ParkDefs := preload("res://src/core/park_defs.gd")
+const WorkOrders := preload("res://src/core/work_orders.gd")
 
 const FIELDS := ["name", "text", "when", "stamp", "pays", "pilot"]
+const WORLD_FIELDS := ["name", "text", "when", "stamp", "pays", "pilot", "act", "gate_rung", "hidden_until_stamped"]
 const PAY_KINDS := ["pilot", "cosmetic", "item", "tune", "option"]
+const WORLD_PAY_KINDS := ["pilot", "cosmetic", "item", "tune", "option", "mark"]
 const STAMPS := ["CLOCKED IN", "LOGGED", "HIRED", "FOUND"]
 const NAME_WORDS := 3
 const TEXT_WORDS := 12
@@ -88,6 +92,70 @@ const SEEDS := {
 		"text": "Short crew means no dam shop and a cache instead."},
 }
 
+# W50 World 2 (Act II: The Dig), World 3 (Act III: The Highdraft), and Patch hidden rungs.
+# Kept beside W1 RUNGS/CARDS/SEEDS so W1 tests and fresh profiles stay byte-identical.
+const WORLD_RUNGS := {
+	"dig_warden": {"name": "Swarm Breaker", "text": "Break a Swarm Warden in the Dig.", "act": 2, "gate_rung": "brindle_routed",
+		"when": {"earned": "dig_warden_broken"}, "stamp": "LOGGED", "pays": {"mark": "dig_warden"}},
+	"kest_freed": {"name": "Kest Freed", "text": "Dig out Kest in the upper bench.", "act": 2, "gate_rung": "brindle_routed",
+		"when": {"earned": "dig_rescued"}, "stamp": "HIRED", "pays": {"pilot": "demolitions_caster"}},
+	"waking_stilled": {"name": "Waking Stilled", "text": "Still the Waking in the Dig.", "act": 2, "gate_rung": "brindle_routed",
+		"when": {"earned": "waking_stilled"}, "stamp": "LOGGED", "pays": {"cosmetic": "paint_tarn_dig"}},
+	"dig_mark_sable": {"name": "Sable's Dig Mark", "text": "Still the Waking flying Sable.", "act": 2, "gate_rung": "brindle_routed", "pilot": "pylon_engineer",
+		"when": {"earned": "dig_mark_sable"}, "stamp": "LOGGED", "pays": {"mark": "dig_mark_sable"}},
+	"dig_mark_rivet": {"name": "Rivet's Dig Mark", "text": "Still the Waking flying Rivet.", "act": 2, "gate_rung": "brindle_routed", "pilot": "runner_gunner",
+		"when": {"earned": "dig_mark_rivet"}, "stamp": "LOGGED", "pays": {"mark": "dig_mark_rivet"}},
+	"dig_mark_tarn": {"name": "Tarn's Dig Mark", "text": "Still the Waking flying Tarn.", "act": 2, "gate_rung": "brindle_routed", "pilot": "tarn",
+		"when": {"earned": "dig_mark_tarn"}, "stamp": "LOGGED", "pays": {"mark": "dig_mark_tarn"}},
+	"dig_mark_kest": {"name": "Kest's Dig Mark", "text": "Still the Waking flying Kest.", "act": 2, "gate_rung": "brindle_routed", "pilot": "demolitions_caster",
+		"when": {"earned": "dig_mark_kest"}, "stamp": "LOGGED", "pays": {"mark": "dig_mark_kest"}},
+	"dig_mark_tally": {"name": "Tally's Dig Mark", "text": "Still the Waking flying Tally.", "act": 2, "gate_rung": "brindle_routed", "pilot": "tally",
+		"when": {"earned": "dig_mark_tally"}, "stamp": "LOGGED", "pays": {"mark": "dig_mark_tally"}},
+	"dig_mark_cannon": {"name": "Cannon's Dig Mark", "text": "Still the Waking flying the Cannon.", "act": 2, "gate_rung": "brindle_routed", "pilot": "remembered_cannon",
+		"when": {"earned": "dig_mark_cannon"}, "stamp": "LOGGED", "pays": {"mark": "dig_mark_cannon"}},
+	"highdraft_reached": {"name": "Highdraft Reached", "text": "Climb into the Highdraft cableways.", "act": 3, "gate_rung": "waking_stilled",
+		"when": {"earned": "highdraft_reached"}, "stamp": "LOGGED", "pays": {"cosmetic": "paint_any_sky"}},
+	"highdraft_warden": {"name": "Crown Breaker", "text": "Break a Mind Warden in the Highdraft.", "act": 3, "gate_rung": "waking_stilled",
+		"when": {"earned": "highdraft_warden_broken"}, "stamp": "LOGGED", "pays": {"mark": "highdraft_warden"}},
+	"tally_hired": {"name": "Ledger Balanced", "text": "Return three ledger leaves to Moss.", "act": 3, "gate_rung": "waking_stilled",
+		"when": {"earned": "ledger_balanced"}, "stamp": "HIRED", "pays": {"pilot": "tally"}},
+	"mind_quieted": {"name": "Mind Quieted", "text": "Quiet the Mind atop the Crown.", "act": 3, "gate_rung": "waking_stilled",
+		"when": {"earned": "mind_quieted"}, "stamp": "HIRED", "pays": {"pilot": "remembered_cannon"}},
+	"crown_mark_sable": {"name": "Sable's Crown Mark", "text": "Quiet the Mind flying Sable.", "act": 3, "gate_rung": "waking_stilled", "pilot": "pylon_engineer",
+		"when": {"earned": "crown_mark_sable"}, "stamp": "LOGGED", "pays": {"mark": "crown_mark_sable"}},
+	"crown_mark_rivet": {"name": "Rivet's Crown Mark", "text": "Quiet the Mind flying Rivet.", "act": 3, "gate_rung": "waking_stilled", "pilot": "runner_gunner",
+		"when": {"earned": "crown_mark_rivet"}, "stamp": "LOGGED", "pays": {"mark": "crown_mark_rivet"}},
+	"crown_mark_tarn": {"name": "Tarn's Crown Mark", "text": "Quiet the Mind flying Tarn.", "act": 3, "gate_rung": "waking_stilled", "pilot": "tarn",
+		"when": {"earned": "crown_mark_tarn"}, "stamp": "LOGGED", "pays": {"mark": "crown_mark_tarn"}},
+	"crown_mark_kest": {"name": "Kest's Crown Mark", "text": "Quiet the Mind flying Kest.", "act": 3, "gate_rung": "waking_stilled", "pilot": "demolitions_caster",
+		"when": {"earned": "crown_mark_kest"}, "stamp": "LOGGED", "pays": {"mark": "crown_mark_kest"}},
+	"crown_mark_tally": {"name": "Tally's Crown Mark", "text": "Quiet the Mind flying Tally.", "act": 3, "gate_rung": "waking_stilled", "pilot": "tally",
+		"when": {"earned": "crown_mark_tally"}, "stamp": "LOGGED", "pays": {"mark": "crown_mark_tally"}},
+	"crown_mark_cannon": {"name": "Cannon's Crown Mark", "text": "Quiet the Mind flying the Cannon.", "act": 3, "gate_rung": "waking_stilled", "pilot": "remembered_cannon",
+		"when": {"earned": "crown_mark_cannon"}, "stamp": "LOGGED", "pays": {"mark": "crown_mark_cannon"}},
+	"patch_backdoor": {"name": "Unsigned Trail", "text": "Find all three wire rooms along the trail.", "act": 3, "gate_rung": "brindle_routed",
+		"hidden_until_stamped": true, "when": {"earned": "ach_patch_trail"}, "stamp": "FOUND", "pays": {"mark": "patch_backdoor"}},
+}
+
+const WORLD_CARDS := [
+	{"name": "Fourth Card", "act": 2, "pays": {"item": "tumbler_bearing"}},
+	{"name": "Fifth Card", "act": 2, "pays": {"item": "slipstream"}},
+	{"name": "Sixth Card", "act": 3, "pays": {"item": "low_rider"}},
+]
+
+const WORLD_SEEDS := {
+	"pit_seismic_shift": {"kind": "stage_variant", "gate": "dig_warden",
+		"text": "The upper bench shakes loose extra scrap and falling rock."},
+	"skylight_blackout": {"kind": "stage_variant", "gate": "waking_stilled",
+		"text": "Deep works lights cut out while swarm lamps burn brighter."},
+	"cut_command_lines": {"kind": "run_modifier", "gate": "patch_backdoor",
+		"text": "A rogue machine joins each stage outside the Foreman's grid."},
+	"crown_squall_shift": {"kind": "stage_variant", "gate": "highdraft_warden",
+		"text": "Crosswinds sweep the islands and double thermal lift."},
+	"foreman_audit": {"kind": "run_modifier", "gate": "mind_quieted",
+		"text": "Wardens wake earlier and pay one extra cobalt gate."},
+}
+
 
 static func ids() -> Array:
 	return RUNGS.keys()
@@ -143,16 +211,94 @@ static func holes_on_card(profile) -> int:
 	return punches(profile) % int(TIME_CARD["holes"])
 
 
-# Every item the board has opened for this profile: stamped marks and paid cards, board order.
-static func opened_items(profile) -> Array:
+# Every item the board has opened for this profile: stamped marks, paid cards, world rungs,
+# world cards, and completed Work Orders / Maker Licenses (deduped, board order).
+static func opened_items(profile, bot_driven := false) -> Array:
 	var out: Array = []
 	for id in RUNGS:
 		var item := String(RUNGS[id]["pays"].get("item", ""))
-		if item != "" and stamped(id, profile):
+		if item != "" and stamped(id, profile) and not out.has(item):
 			out.append(item)
 	for i in cards_paid(profile):
-		out.append(String(CARDS[i]["pays"]["item"]))
+		var item := String(CARDS[i]["pays"]["item"])
+		if not out.has(item):
+			out.append(item)
+	if bot_driven or profile == null:
+		return out
+	for id in WORLD_RUNGS:
+		var item := String(WORLD_RUNGS[id]["pays"].get("item", ""))
+		if item != "" and world_rung_stamped(id, profile) and not out.has(item):
+			out.append(item)
+	for i in world_cards_paid(profile):
+		var item := String(WORLD_CARDS[i]["pays"]["item"])
+		if not out.has(item):
+			out.append(item)
+	for item in WorkOrders.opened_items(profile, bot_driven):
+		if not out.has(item):
+			out.append(item)
 	return out
+
+
+static func all_rungs() -> Dictionary:
+	var out := RUNGS.duplicate(false)
+	for id in WORLD_RUNGS:
+		out[id] = WORLD_RUNGS[id]
+	return out
+
+
+static func world_rung_stamped(id: String, profile) -> bool:
+	if profile == null:
+		return false
+	if RUNGS.has(id):
+		return stamped(id, profile)
+	if not WORLD_RUNGS.has(id):
+		return false
+	var when: Dictionary = WORLD_RUNGS[id]["when"]
+	if when.has("earned"):
+		return profile.earned(String(when["earned"]))
+	return profile.has_tune(String(when["tune"]))
+
+
+static func world_rung_shown(id: String, profile, sitting := false) -> bool:
+	if RUNGS.has(id):
+		return shown(id, profile, sitting)
+	if not WORLD_RUNGS.has(id):
+		return false
+	var r: Dictionary = WORLD_RUNGS[id]
+	if bool(r.get("hidden_until_stamped", false)) and not world_rung_stamped(id, profile):
+		return false
+	var gate := String(r.get("gate_rung", ""))
+	if gate != "" and not sitting and not world_rung_stamped(gate, profile):
+		return false
+	var pilot := String(r.get("pilot", ""))
+	if pilot == "" or sitting:
+		return true
+	var def = ClassDef.by_id(pilot)
+	return (def != null and def.starter) or (profile != null and profile.has_pilot(pilot))
+
+
+static func act_rungs(act: int, profile, sitting := false) -> Array:
+	if act == 1:
+		return RUNGS.keys().filter(func(id): return shown(id, profile, sitting))
+	var out: Array = []
+	for id in WORLD_RUNGS:
+		if int(WORLD_RUNGS[id].get("act", 0)) == act and world_rung_shown(id, profile, sitting):
+			out.append(id)
+	return out
+
+
+static func world_cards_paid(profile) -> int:
+	if profile == null or not stamped("brindle_routed", profile):
+		return 0
+	var holes := int(TIME_CARD["holes"])
+	var extra_punches := punches(profile) - CARDS.size() * holes
+	if extra_punches <= 0:
+		return 0
+	return mini(extra_punches / holes, WORLD_CARDS.size())
+
+
+static func open_world_seeds(profile) -> Array:
+	return WORLD_SEEDS.keys().filter(func(id): return world_rung_stamped(String(WORLD_SEEDS[id]["gate"]), profile))
 
 
 # Every item the board could ever open, board order.
@@ -217,6 +363,14 @@ static func reading(profile, sitting := false) -> Dictionary:
 		out["next_pays"] = pays_words(RUNGS[next]["pays"])
 	if cards_paid(profile) < CARDS.size():
 		out["card_next"] = item_name(String(CARDS[cards_paid(profile)]["pays"]["item"]))
+	var act_progress := {}
+	for act in [1, 2, 3]:
+		var act_shown := act_rungs(act, profile, sitting)
+		var act_done := act_shown.filter(func(id): return world_rung_stamped(id, profile))
+		act_progress[act] = {"stamped": act_done.size(), "shown": act_shown.size()}
+	out["active_orders"] = WorkOrders.active_ids(profile)
+	out["licenses"] = WorkOrders.camp_state(profile, sitting)["licenses"]
+	out["act_progress"] = act_progress
 	return out
 
 
@@ -234,6 +388,8 @@ static func pays_words(pays: Dictionary) -> String:
 				return "A record for the jukebox"
 			"option":
 				return "A head start"
+			"mark":
+				return "Logged on the shift board"
 	return ""
 
 
@@ -321,4 +477,88 @@ static func validate(rows: Dictionary, grants: Dictionary, tunes: Array) -> Arra
 			problems.append("seed %s: gate %s is not a rung" % [id, s.get("gate", "")])
 		if _words(String(s.get("text", ""))) > TEXT_WORDS:
 			problems.append("seed %s: text must be %d words or fewer" % [id, TEXT_WORDS])
+	return problems
+
+
+static func validate_world_rungs(all_grants: Dictionary, tunes: Array, rows_to_check: Dictionary = WORLD_RUNGS) -> Array:
+	var problems: Array = []
+	var items_seen := {}
+	for item in all_items():
+		items_seen[item] = "w1_board"
+	var merged := RUNGS.duplicate(false)
+	for id in rows_to_check:
+		if RUNGS.has(id):
+			problems.append("%s: collides with W1 RUNGS" % id)
+		merged[id] = rows_to_check[id]
+	for id in rows_to_check:
+		var r: Dictionary = rows_to_check[id]
+		for key in r:
+			if not WORLD_FIELDS.has(key):
+				problems.append("%s: unknown field %s" % [id, key])
+		if _words(String(r.get("name", ""))) < 1 or _words(String(r.get("name", ""))) > NAME_WORDS:
+			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
+		if _words(String(r.get("text", ""))) < 1 or _words(String(r.get("text", ""))) > TEXT_WORDS:
+			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
+		if not STAMPS.has(String(r.get("stamp", ""))):
+			problems.append("%s: stamp %s is not one of %s" % [id, r.get("stamp", ""), STAMPS])
+		var act := int(r.get("act", 0))
+		if act < 2 or act > 3:
+			problems.append("%s: act must be 2 or 3" % id)
+		var gate := String(r.get("gate_rung", ""))
+		if gate != "" and not merged.has(gate):
+			problems.append("%s: gate_rung %s is not a rung" % [id, gate])
+		var when = r.get("when", {})
+		if not (when is Dictionary) or when.size() != 1:
+			problems.append("%s: when must carry exactly one of earned or tune" % id)
+			continue
+		var pays = r.get("pays", {})
+		if not (pays is Dictionary) or pays.size() != 1 or not WORLD_PAY_KINDS.has(pays.keys()[0]):
+			problems.append("%s: pays must carry exactly one of %s" % [id, WORLD_PAY_KINDS])
+			continue
+		var kind := String(pays.keys()[0])
+		var target := String(pays[kind])
+		if when.has("earned"):
+			var grant := String(when["earned"])
+			if not all_grants.has(grant):
+				problems.append("%s: earned row %s is not an achievement" % [id, grant])
+			elif kind != "tune" and kind != "mark":
+				var reward: Dictionary = all_grants[grant].get("reward", {})
+				if String(reward.get(kind, "")) != target:
+					problems.append("%s: pays %s %s but %s rewards %s" % [id, kind, target, grant, reward])
+		elif when.has("tune"):
+			if not tunes.has(String(when["tune"])):
+				problems.append("%s: tune %s is not a jukebox row" % [id, when["tune"]])
+		else:
+			problems.append("%s: when key %s is unknown" % [id, when.keys()[0]])
+		if kind == "item":
+			if not Items.TABLE.has(target):
+				problems.append("%s: item %s is not an items.gd row" % [id, target])
+			elif items_seen.has(target):
+				problems.append("%s: item %s already opened by %s" % [id, target, items_seen[target]])
+			else:
+				items_seen[target] = id
+	for card in WORLD_CARDS:
+		var item := String(card.get("pays", {}).get("item", ""))
+		if not Items.TABLE.has(item):
+			problems.append("world card %s: item %s is not an items.gd row" % [card.get("name", ""), item])
+		elif items_seen.has(item):
+			problems.append("world card %s: item %s already opened by %s" % [card.get("name", ""), item, items_seen[item]])
+		else:
+			items_seen[item] = String(card.get("name", ""))
+	for item in items_seen:
+		if items_seen[item] == "w1_board":
+			continue
+		var row: Dictionary = Items.TABLE[item]
+		if row.has("class") or row.has("needs"):
+			problems.append("%s: an opened item must suit every pilot and need no seam" % item)
+		if ParkDefs.part_in_play(item):
+			problems.append("%s: an opened item must not already be in ParkDefs.part_in_play" % item)
+	for id in WORLD_SEEDS:
+		var s: Dictionary = WORLD_SEEDS[id]
+		if not SEED_KINDS.has(String(s.get("kind", ""))):
+			problems.append("world seed %s: kind must be one of %s" % [id, SEED_KINDS])
+		if not merged.has(String(s.get("gate", ""))):
+			problems.append("world seed %s: gate %s is not a rung" % [id, s.get("gate", "")])
+		if _words(String(s.get("text", ""))) > TEXT_WORDS:
+			problems.append("world seed %s: text must be %d words or fewer" % [id, TEXT_WORDS])
 	return problems

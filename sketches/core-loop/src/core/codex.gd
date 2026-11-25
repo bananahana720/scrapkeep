@@ -47,6 +47,8 @@ var _stage_found_before_arena: Array[String] = []
 var _warned := {}
 var _zone := ""
 var _guard_open := false
+var _visibility_fn := Callable()
+var _margin_fn := Callable()
 
 
 func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
@@ -83,6 +85,17 @@ func declare(entry: Dictionary) -> void:
 	}
 
 
+func declare_story_entries(entries_list: Array) -> void:
+	for entry in entries_list:
+		if entry is Dictionary:
+			declare(entry)
+
+
+func set_story_hooks(visibility_fn: Callable, margin_fn: Callable) -> void:
+	_visibility_fn = visibility_fn
+	_margin_fn = margin_fn
+
+
 func known(id: String) -> bool:
 	return _discovered.has(id)
 
@@ -117,15 +130,36 @@ func category_of(id: String) -> String:
 
 func entries(category := "", profile = null) -> Array:
 	var list: Array = []
+	var known_cb := Callable(self, "known")
 	for id in _order:
 		var entry: Dictionary = _entries[id]
 		if category != "" and entry["category"] != category:
+			continue
+		if _visibility_fn.is_valid() and not bool(_visibility_fn.call(id, known_cb)):
 			continue
 		var shown := entry.duplicate()
 		shown["known"] = known(id)
 		shown["status"] = status(id, profile)
 		list.append(shown)
 	return list
+
+
+func entry_detail(id: String, _profile = null) -> String:
+	if not _entries.has(id):
+		return ""
+	var entry: Dictionary = _entries[id]
+	if known(id):
+		var text := String(entry.get("text", ""))
+		if _margin_fn.is_valid():
+			var margin := String(_margin_fn.call(id, Callable(self, "known")))
+			if margin != "":
+				text = (text + margin) if (margin.begins_with("\n") or text == "") else ("%s\n%s" % [text, margin])
+		return text
+	var hint := String(entry.get("hint", ""))
+	var clue := String(entry.get("clue", ""))
+	if clue != "":
+		return ("%s %s" % [hint, clue]).strip_edges() if hint != "" else clue
+	return hint
 
 
 func status(id: String, profile = null) -> String:
