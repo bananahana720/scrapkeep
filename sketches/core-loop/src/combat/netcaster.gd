@@ -33,7 +33,7 @@ const DROP_WARN := 0.80
 const DROP_LIVE := 1.4
 const DROP_HEIGHT := 3.5
 const DROP_HOLD := 1.2
-const DROP_DAMAGE := 6.0
+const DROP_DAMAGE := 9.0
 const DROP_DAMP := 4.0
 const EMP_RADIUS := 10.0
 const EMP_DAMAGE := 12.0
@@ -168,7 +168,7 @@ static func _parts() -> Dictionary:
 func _physics_process(delta: float) -> void:
 	_boost_grace = maxf(0.0, _boost_grace - delta)
 	if _drop_primed and phase == Phase.ROAM and not recovering() and not stunned():
-		_rest = minf(_rest, 0.05)
+		_rest = minf(_rest, 0.6)
 	super._physics_process(delta)
 
 
@@ -240,7 +240,7 @@ func _live(delta: float) -> bool:
 	var ball := _real_ball()
 	var above: float = ball.y - Telegraph.ground_under(terrain, ball)
 	var airborne: bool = not player.state.on_floor() and above >= NET_FLOOR
-	if not _holding() and not airborne:
+	if not _holding() and not airborne and player.speed_tier() < SpeedTier.FAST:
 		var flat_dist := Vector2(ball.x - field.center.x, ball.z - field.center.z).length()
 		if flat_dist <= FIELD_RADIUS:
 			_camp_time += delta

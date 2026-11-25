@@ -260,7 +260,7 @@ func _test_jolt_layer_cable_whip() -> void:
 	var rim_pos: Vector3 = unit.field.centre + Vector3(0.0, 0.0, 5.2)
 	rim_pos.y = _game.ctx.terrain.height(rim_pos.x, rim_pos.z) + 1.05
 	var primed := false
-	for i in 120:
+	for i in 200:
 		player.reset_to(rim_pos)
 		await physics_frame
 		if unit._whip_primed:
@@ -271,7 +271,7 @@ func _test_jolt_layer_cable_whip() -> void:
 	# Let current mat finish, wait through recovery into Cable Whip WARN.
 	unit._t = unit.live_seconds
 	var whip_warn := false
-	for i in 220:
+	for i in 320:
 		player.reset_to(rim_pos)
 		await physics_frame
 		if unit.phase == unit.Phase.WARN and unit._whipping:

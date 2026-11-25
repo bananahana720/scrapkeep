@@ -34,14 +34,14 @@ const PRIMARY_WARN := 1.0
 const PRIMARY_LIVE := 3.7
 const RIM_INNER_RATIO := 0.72
 const RIM_OUTER_MARGIN := 3.0
-const RIM_SKIRT_S := 0.45
+const RIM_SKIRT_S := 0.90
 const WHIP_WARN := 0.70
 const WHIP_LIVE := 0.75
 const WHIP_LENGTH := 16.0
 const WHIP_WIDTH := 2.4
 const WHIP_REACH := 3.0
 const WHIP_WAVE_REACH := 2.4
-const WHIP_DAMAGE := 6.0
+const WHIP_DAMAGE := 10.0
 const WHIP_SHOVE := 6.0
 const WHIP_JAM_S := 0.6
 const SPECIAL_REFUND_SHARE := 0.30
@@ -133,7 +133,7 @@ static func _parts() -> Array:
 func _physics_process(delta: float) -> void:
 	_boost_grace = maxf(0.0, _boost_grace - delta)
 	if _whip_primed and phase == Phase.ROAM and not recovering() and not stunned():
-		_rest = minf(_rest, 0.05)
+		_rest = minf(_rest, 1.0)
 	super._physics_process(delta)
 
 
@@ -202,7 +202,7 @@ func _live(delta: float) -> bool:
 	if tele == null or field == null:
 		return false
 	var player = _player()
-	if player != null and hp >= _mat_start_hp - 0.1:
+	if player != null and hp >= _mat_start_hp - 0.1 and player.speed_tier() < SpeedTier.FAST:
 		var ball := _real_ball()
 		var dist := Vector2(ball.x - field.centre.x, ball.z - field.centre.z).length()
 		var r: float = field.radius()
@@ -210,6 +210,10 @@ func _live(delta: float) -> bool:
 			_rim_time += delta
 			if _rim_time >= RIM_SKIRT_S:
 				_whip_primed = true
+		else:
+			_rim_time = maxf(0.0, _rim_time - delta * 2.0)
+	else:
+		_rim_time = maxf(0.0, _rim_time - delta * 2.0)
 	var pulsed: bool = field.step(delta)
 	tele.set_progress(field.lead_fraction())
 	# The tell starts TELL_LEAD before each pulse that will go off inside the live window.
