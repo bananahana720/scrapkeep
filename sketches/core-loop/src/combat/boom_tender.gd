@@ -38,11 +38,33 @@ const LAMP_ON := 2.4
 const BOOM_DROP := 0.5
 const BUOY_OUT := 7.88
 const BUOY_SCALE := 0.5
+const PRIMARY_WARN := 1.1
+const PRIMARY_LIVE := SWEEP + PIN
+
+# Secondary attack (W47-E2): Buoy Flail Throw. Triggered when >= BUOY_MIN_POPS floats have
+# been bowled burst. 0.75 s reel-unlatch clank (Palette.HAZARD lane), then slings the heavy
+# end-buoy downrange; cruise-ramming the thrown buoy bats it back into the Tender's hull
+# for an instant double-scrap knockout.
+const BUOY_MIN_POPS := 2
+const BUOY_WARN := 0.75
+const BUOY_FLIGHT := 0.85
+const BUOY_RETURN_S := 0.35
+const BUOY_RANGE := 16.0
+const BUOY_WIDTH := 2.8
+const BUOY_LEAD_REACH := 8.0
+const BUOY_HIT_RADIUS := 2.2
+const BUOY_DAMAGE := 8.0
+const BUOY_SHOVE := 10.0
+const BUOY_THROW_SCALE := 1.35
+const BASE_SCRAP := 5
 
 var pinned := 0
 var pops := 0
 var strikes := 0
 var popped := [false, false, false, false, false]
+var buoy_throws := 0
+var buoy_returns := 0
+var buoy_knockouts := 0
 
 var _heading := Vector3.FORWARD
 var _origin := Vector3.ZERO
@@ -52,16 +74,23 @@ var _boom: Node3D
 var _floats: MultiMeshInstance3D
 var _reel: Node3D
 var _lamps: MultiMeshInstance3D
+var _buoy_rest_xform := Transform3D.IDENTITY
+var _buoy_throw := false
+var _buoy_returned := false
+var _buoy_hit_player := false
+var _buoy_pos := Vector3.ZERO
+var _buoy_return_from := Vector3.ZERO
+var _buoy_return_t := 0.0
 
 static var _shared: Array = []
 
 
 func _configure(threat: float) -> void:
 	_set_health(HP * threat)
-	scrap_value = 5
+	scrap_value = BASE_SCRAP
 	weight = 2.0
-	warn_seconds = 1.1
-	live_seconds = SWEEP + PIN
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	rest_seconds = 4.0
 	attack_range = LANE_LENGTH + 1.0
 	keep_near = 5.0
@@ -127,8 +156,8 @@ func _lay_boom(mesh: Mesh, at: Vector3, turn: Basis) -> void:
 	_floats = _multimesh("BoomFloats", mesh, FLOAT_OUT.size() + 1, false)
 	for i in FLOAT_OUT.size():
 		_floats.multimesh.set_instance_transform(i, Transform3D(turn, Vector3(at.x, at.y, -float(FLOAT_OUT[i]))))
-	_floats.multimesh.set_instance_transform(FLOAT_OUT.size(),
-			Transform3D(turn.scaled(Vector3.ONE * BUOY_SCALE), Vector3(at.x, at.y, -BUOY_OUT)))
+	_buoy_rest_xform = Transform3D(turn.scaled(Vector3.ONE * BUOY_SCALE), Vector3(at.x, at.y, -BUOY_OUT))
+	_floats.multimesh.set_instance_transform(FLOAT_OUT.size(), _buoy_rest_xform)
 	var lamp := BoxMesh.new()
 	lamp.size = Vector3(0.14, 0.12, 0.14)
 	var glow := StandardMaterial3D.new()
@@ -169,8 +198,35 @@ static func _parts() -> Array:
 	return _shared
 
 
+func _burst_count() -> int:
+	var count := 0
+	for is_burst in popped:
+		if is_burst:
+			count += 1
+	return count
+
+
+func _wants_attack(to_ball: Vector3) -> bool:
+	if _burst_count() >= BUOY_MIN_POPS:
+		return to_ball.length() <= BUOY_RANGE and is_on_floor()
+	return super._wants_attack(to_ball)
+
+
+func buoy_position() -> Vector3:
+	return _buoy_pos
+
+
 func _commit(to_ball: Vector3) -> Node3D:
-	var aim := _ahead(warn_seconds + SWEEP * 0.5, LEAD_REACH) - global_position
+	var is_buoy := _burst_count() >= BUOY_MIN_POPS
+	_buoy_throw = is_buoy
+	_buoy_returned = false
+	_buoy_hit_player = false
+	_buoy_return_t = 0.0
+	warn_seconds = BUOY_WARN if is_buoy else PRIMARY_WARN
+	live_seconds = BUOY_FLIGHT if is_buoy else PRIMARY_LIVE
+	var lead_t := (BUOY_WARN + BUOY_FLIGHT * 0.4) if is_buoy else (warn_seconds + SWEEP * 0.5)
+	var lead_cap := BUOY_LEAD_REACH if is_buoy else LEAD_REACH
+	var aim := _ahead(lead_t, lead_cap) - global_position
 	# A ball rolling straight at the hull is led past it: the lane would point behind the tender, so it
 	# is laid at the ball as it stands, which covers that approach.
 	if Vector2(aim.x, aim.z).dot(Vector2(to_ball.x, to_ball.z)) <= 0.0 or Vector2(aim.x, aim.z).length() < 0.5:
@@ -182,10 +238,26 @@ func _commit(to_ball: Vector3) -> Node3D:
 	_side = _strafe
 	_origin = global_position
 	_pops_live = 0
-	return _commit_lane(Threat.Type.LANE, global_position, _heading, LANE_LENGTH, LANE_WIDTH)
+	if is_buoy:
+		_buoy_pos = global_position + _heading * 2.0 + Vector3.UP * 0.65
+		if world_root != null and is_inside_tree():
+			FxLibrary.burst(world_root, "brass_spark", global_position + Vector3.UP * 1.4, 8)
+	var lane_len := BUOY_RANGE if is_buoy else LANE_LENGTH
+	var lane_w := BUOY_WIDTH if is_buoy else LANE_WIDTH
+	return _commit_lane(Threat.Type.LANE, global_position, _heading, lane_len, lane_w)
 
 
-func _live(_delta: float) -> bool:
+func _go_live() -> void:
+	if _buoy_throw:
+		buoy_throws += 1
+		_buoy_pos = _origin + _heading * 2.0 + Vector3.UP * 0.65
+		if world_root != null and is_inside_tree():
+			FxLibrary.burst(world_root, "steam_puff", _origin + Vector3.UP * 1.4, 6)
+
+
+func _live(delta: float) -> bool:
+	if _buoy_throw:
+		return _live_buoy(delta)
 	var lane := telegraph()
 	var player = _player()
 	if lane == null or player == null:
@@ -211,6 +283,64 @@ func _live(_delta: float) -> bool:
 		pinned += 1
 		hit_player.emit(STING_DAMAGE, shove)
 	return true
+
+
+func _live_buoy(delta: float) -> bool:
+	if _dead:
+		return false
+	var player = _player()
+	if _buoy_returned:
+		_buoy_return_t += delta
+		var ru := clampf(_buoy_return_t / BUOY_RETURN_S, 0.0, 1.0)
+		_buoy_pos = _buoy_return_from.lerp(global_position + Vector3.UP * 0.8, ru)
+		_place_buoy_visual(_buoy_pos, _buoy_return_t * 16.0)
+		if ru >= 1.0:
+			buoy_knockouts += 1
+			scrap_value = BASE_SCRAP * 2
+			if world_root != null and is_inside_tree():
+				FxLibrary.burst(world_root, "plate_chunks", global_position + Vector3.UP * 0.8, 14)
+				FxLibrary.burst(world_root, "brass_spark", global_position + Vector3.UP * 1.0, 16, Palette.BRASS)
+				FxLibrary.burst(world_root, "steam_puff", global_position + Vector3.UP * 0.8, 8)
+			take_damage(hp)
+			return false
+		return true
+	var lane := telegraph()
+	var u := clampf(_t / BUOY_FLIGHT, 0.0, 1.0)
+	var along := lerpf(2.0, BUOY_RANGE, u)
+	var flat_at := _origin + _heading * along
+	var gy: float = Telegraph.ground_under(terrain, flat_at) if terrain != null else _origin.y
+	_buoy_pos = Vector3(flat_at.x, gy + 0.65, flat_at.z)
+	_place_buoy_visual(_buoy_pos, _t * 12.0)
+	if lane != null:
+		lane.run_body(along, BUOY_HIT_RADIUS)
+	if player != null:
+		var ball := _real_ball()
+		var d_flat := Vector2(ball.x - _buoy_pos.x, ball.z - _buoy_pos.z).length()
+		var d_y := absf(ball.y - _buoy_pos.y)
+		if d_flat <= BUOY_HIT_RADIUS and d_y <= 2.4:
+			if player.speed_tier() >= SpeedTier.CRUISE:
+				_buoy_returned = true
+				_buoy_return_from = _buoy_pos
+				_buoy_return_t = 0.0
+				buoy_returns += 1
+				live_seconds = _t + BUOY_RETURN_S + 0.1
+				_clear_telegraph()
+				if world_root != null and is_inside_tree():
+					FxLibrary.burst(world_root, "brass_spark", _buoy_pos, 14, Palette.BRASS)
+					FxLibrary.burst(world_root, "steam_puff", _buoy_pos, 6)
+				return true
+			if not _buoy_hit_player:
+				_buoy_hit_player = true
+				hit_player.emit(BUOY_DAMAGE, _heading * BUOY_SHOVE + Vector3.UP * 2.5)
+	return _t < BUOY_FLIGHT
+
+
+func _place_buoy_visual(world_at: Vector3, spin: float) -> void:
+	if _floats == null or _boom == null or not _boom.is_inside_tree():
+		return
+	var local_at := _boom.to_local(world_at)
+	var rot := Basis(Vector3.RIGHT, spin * EnemyMotion.motion_scale) * Basis.from_scale(Vector3.ONE * (BUOY_SCALE * BUOY_THROW_SCALE))
+	_floats.multimesh.set_instance_transform(FLOAT_OUT.size(), Transform3D(rot, local_at))
 
 
 # A fast ball bursts every standing float within POP_REACH of it.
@@ -262,6 +392,14 @@ func _pay(at: Vector3) -> void:
 
 func _on_end() -> void:
 	_lamp(-1)
+	_buoy_throw = false
+	_buoy_returned = false
+	_buoy_hit_player = false
+	_buoy_return_t = 0.0
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
+	if _floats != null:
+		_floats.multimesh.set_instance_transform(FLOAT_OUT.size(), _buoy_rest_xform)
 
 
 # E40's pose, e40_reel_ratchet: the boom stows SWING to one side and the reel winds back
@@ -272,6 +410,21 @@ func _pose() -> void:
 		return
 	var swing := 0.0
 	var reel := 0.0
+	if _buoy_throw:
+		match phase:
+			Phase.WARN:
+				var t := clampf(_warn_progress(), 0.0, 1.0)
+				swing = -SWING * 0.4 * _side * t * t * (3.0 - 2.0 * t)
+				reel = TAU * 2.0 * t
+				_lamp(FLOAT_OUT.size() if int(floor(t * 6.0)) % 2 == 0 else 0)
+			Phase.LIVE:
+				swing = 0.0
+				reel = TAU * 3.0 * clampf(_t / BUOY_FLIGHT, 0.0, 1.0)
+				_lamp(FLOAT_OUT.size())
+		_boom.rotation.y = swing
+		if _reel != null:
+			_reel.rotation.x = reel
+		return
 	match phase:
 		Phase.WARN:
 			var t := clampf(_warn_progress(), 0.0, 1.0)
