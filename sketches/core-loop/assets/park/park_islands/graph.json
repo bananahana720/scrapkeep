@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "0a0481967df1cf1a0f1329ed62d7985a11bd44e8871084835da4c2dec29a7939",
+  "bake_sha256": "860a89ee587057010fbec0a4f56b2be00cf045ce1b533685a27a6d9f7a096473",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 890682,
-  "edges": 319426,
+  "bytes": 893474,
+  "edges": 319430,
   "first_failed": "",
   "flags": {
     "deck": 1331,
@@ -13,15 +13,15 @@
     "sight_ok": 10271,
     "under": 0
   },
-  "full_visit_m": 2010,
-  "full_visit_ratio": "1.539",
-  "graph_sha256": "e5162c807d2a9b0ccb312c013970ebf15c29b8603138fabc95308dea28248f28",
+  "full_visit_m": 2294,
+  "full_visit_ratio": "1.757",
+  "graph_sha256": "7226b262af3fc59abee96c7fff597fe9a5f4ab66562ea2f6b6c179c504d437e2",
   "line_errors": [],
   "line_path_nodes": 157,
-  "longest_est_m": 2356,
+  "longest_est_m": 2342,
   "map": "park_islands",
   "nodes": 41732,
-  "park_sha256": "19ba6e5d4339b6bc08310ef6aa2173f74a02759dbf130c93db41a611c58f26e7",
+  "park_sha256": "45820b1655601b837efb5ed227c77b07de8b52cc3b3c499c6e1d000ba3fb466c",
   "pockets": [
     {
       "clear_ring": [],
@@ -135,6 +135,61 @@
     },
     {
       "clear_ring": [],
+      "d_landmark": 312,
+      "d_spawn": 1050,
+      "detour_m": 64,
+      "door_at": [
+        -80,
+        264
+      ],
+      "door_m": 64,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "net_span_cache",
+      "kind": "cracked_cache",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "skill",
+      "sight_ok": true,
+      "site": "net_post_run"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 722,
+      "d_spawn": 661,
+      "detour_m": 112,
+      "door_at": [
+        112,
+        -120
+      ],
+      "door_m": 112,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "ore_chute_surge",
+      "kind": "surge_run",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "event",
+      "sight_ok": true,
+      "site": "ore_chute"
+    },
+    {
+      "clear_ring": [],
       "d_landmark": 1073,
       "d_spawn": 408,
       "detour_m": 240,
@@ -160,7 +215,7 @@
     }
   ],
   "reward_ratio": "0.580",
-  "ride_edges": 21,
+  "ride_edges": 25,
   "routes": {
     "carve_net": [],
     "east": [],
@@ -184,7 +239,7 @@
     "run": true
   },
   "spawn_beacon_m": 1306,
-  "spawn_beacon_share": "0.554",
+  "spawn_beacon_share": "0.558",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -194,7 +249,7 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.539
+      "value": 1.757
     }
   ],
   "tool_sha256": "b09fdadd9beb4d2b40cf13cd29ee9b8bda2406c6eae871d127357c472129d115",
@@ -233,17 +288,17 @@
         "viable": false
       },
       {
-        "cost": 1314.2,
-        "d_landmark": 371.1,
-        "name": "roost_foot_lip",
+        "cost": 1310.2,
+        "d_landmark": 503.1,
+        "name": "lens_foot_lip",
         "on_route": false,
         "rank": 0,
         "viable": false
       },
       {
-        "cost": 1310.2,
-        "d_landmark": 503.1,
-        "name": "lens_foot_lip",
+        "cost": 1303.0,
+        "d_landmark": 371.1,
+        "name": "roost_foot_lip",
         "on_route": false,
         "rank": 0,
         "viable": false
@@ -273,7 +328,7 @@
         "viable": true
       },
       {
-        "cost": 1150.9,
+        "cost": 1139.8,
         "d_landmark": 574.1,
         "name": "cage_catch_net",
         "on_route": false,
@@ -340,7 +395,7 @@
     "count": 231,
     "crossings": {
       "drop": 143,
-      "ride": 17,
+      "ride": 21,
       "walk": 394
     },
     "hidden": [

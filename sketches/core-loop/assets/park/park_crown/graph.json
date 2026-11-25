@@ -1,9 +1,9 @@
 {
-  "bake_sha256": "f6754ee71a365c9b36afe3f46ae15915e36f45d336442aa4e7138a7387991d00",
+  "bake_sha256": "f391a61f8ec81fb0eb79c6bb0266472f538f9ef340700b3dca8d51eca9263dc1",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 1005579,
-  "edges": 328314,
+  "bytes": 1006443,
+  "edges": 328318,
   "first_failed": "",
   "flags": {
     "deck": 1370,
@@ -13,15 +13,15 @@
     "sight_ok": 9107,
     "under": 0
   },
-  "full_visit_m": 1779,
-  "full_visit_ratio": "1.440",
-  "graph_sha256": "de3d524a2effa6e4454b2d044f0f164be3eee3c9051c4f499a1cfaa2eb9fadc2",
+  "full_visit_m": 2304,
+  "full_visit_ratio": "1.866",
+  "graph_sha256": "96dcae985c3e3187ff3e7e611516f31df549a6bce253651ac6c4a75b417f11b2",
   "line_errors": [],
   "line_path_nodes": 150,
   "longest_est_m": 2478,
   "map": "park_crown",
   "nodes": 41771,
-  "park_sha256": "cee909fc17b0c86ff789a26e970f8a2d9f35234babb353a11598401a08651703",
+  "park_sha256": "b62d4a4c4d657a57eb1273e949f0b9cae4fdcc855848e6cbc2d05ff298c6ed40",
   "pockets": [
     {
       "clear_ring": [],
@@ -52,7 +52,7 @@
     },
     {
       "clear_ring": [],
-      "d_landmark": 878,
+      "d_landmark": 872,
       "d_spawn": 555,
       "detour_m": 239,
       "door_at": [
@@ -80,7 +80,7 @@
     {
       "clear_ring": [],
       "d_landmark": 524,
-      "d_spawn": 863,
+      "d_spawn": 851,
       "detour_m": 191,
       "door_at": [
         200,
@@ -104,6 +104,61 @@
       "role": "risk",
       "sight_ok": true,
       "site": "gauntlet_toe"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 919,
+      "d_spawn": 447,
+      "detour_m": 147,
+      "door_at": [
+        160,
+        -376
+      ],
+      "door_m": 147,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "hoodoo_storm_relay",
+      "kind": "hold_the_relay",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "common",
+        "rare"
+      ],
+      "role": "event",
+      "sight_ok": true,
+      "site": "bajada"
+    },
+    {
+      "clear_ring": [],
+      "d_landmark": 242,
+      "d_spawn": 1298,
+      "detour_m": 235,
+      "door_at": [
+        232,
+        464
+      ],
+      "door_m": 235,
+      "flags": [
+        "open",
+        "door_ok",
+        "sight_ok"
+      ],
+      "id": "spire_thermal_cache",
+      "kind": "cracked_cache",
+      "nearest_door": -1,
+      "nearest_door_id": "",
+      "pay_named": "",
+      "pay_rarities": [
+        "rare"
+      ],
+      "role": "skill",
+      "sight_ok": true,
+      "site": "crown_bowl"
     },
     {
       "clear_ring": [],
@@ -132,7 +187,7 @@
     }
   ],
   "reward_ratio": "0.506",
-  "ride_edges": 17,
+  "ride_edges": 21,
   "routes": {
     "east": [],
     "gauntlet": [],
@@ -155,7 +210,7 @@
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
     "d_landmark": 1235,
-    "farther_share": "0.146",
+    "farther_share": "0.145",
     "ok": true,
     "run": true
   },
@@ -170,7 +225,7 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.44
+      "value": 1.866
     }
   ],
   "tool_sha256": "b09fdadd9beb4d2b40cf13cd29ee9b8bda2406c6eae871d127357c472129d115",
@@ -289,7 +344,7 @@
         "viable": false
       },
       {
-        "cost": 871.1,
+        "cost": 859.3,
         "d_landmark": 515.8,
         "name": "gauntlet_toe_lip",
         "on_route": false,
@@ -306,7 +361,7 @@
       },
       {
         "cost": 813.1,
-        "d_landmark": 863.4,
+        "d_landmark": 861.8,
         "name": "alcove_foot_lip",
         "on_route": false,
         "rank": 0,
@@ -330,7 +385,7 @@
       },
       {
         "cost": 759.1,
-        "d_landmark": 1024.7,
+        "d_landmark": 1023.1,
         "name": "west_field_lip",
         "on_route": false,
         "rank": 0,
@@ -345,7 +400,7 @@
         "viable": false
       },
       {
-        "cost": 735.8,
+        "cost": 723.7,
         "d_landmark": 607.9,
         "name": "east_ribs",
         "on_route": false,
@@ -354,7 +409,7 @@
       },
       {
         "cost": 696.3,
-        "d_landmark": 652.8,
+        "d_landmark": 651.2,
         "name": "hoodoo_gust_lip_2",
         "on_route": false,
         "rank": 0,
@@ -362,7 +417,7 @@
       },
       {
         "cost": 687.1,
-        "d_landmark": 724.2,
+        "d_landmark": 719.3,
         "name": "hoodoo_gust_lip_4",
         "on_route": false,
         "rank": 0,
@@ -402,7 +457,7 @@
       },
       {
         "cost": 588.5,
-        "d_landmark": 713.7,
+        "d_landmark": 702.6,
         "name": "hoodoo_gust_lip_1",
         "on_route": false,
         "rank": 0,
@@ -410,7 +465,7 @@
       },
       {
         "cost": 550.6,
-        "d_landmark": 878.0,
+        "d_landmark": 872.2,
         "name": "scree_gust_lip",
         "on_route": false,
         "rank": 0,
@@ -418,7 +473,7 @@
       },
       {
         "cost": 529.1,
-        "d_landmark": 1012.4,
+        "d_landmark": 1006.6,
         "name": "bajada_rim_lip_w",
         "on_route": false,
         "rank": 0,
@@ -434,7 +489,7 @@
       },
       {
         "cost": 441.4,
-        "d_landmark": 1096.8,
+        "d_landmark": 1091.0,
         "name": "watch_flank_lip_w",
         "on_route": false,
         "rank": 0,
@@ -476,7 +531,7 @@
     "count": 72,
     "crossings": {
       "drop": 30,
-      "ride": 10,
+      "ride": 13,
       "walk": 76
     },
     "hidden": [
