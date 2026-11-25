@@ -154,9 +154,12 @@ func _run() -> void:
 	var net := caster._net as MeshInstance3D
 	_check(net != null and net.mesh is BoxMesh and (net.mesh as BoxMesh).size.is_equal_approx(Vector3(2.4, 1.6, 0.04))
 		and net.position.is_equal_approx(Vector3(0.0, 1.6, -0.3)), "the net is the base 2.4 x 1.6 x 0.04 box at (0, 1.6, -0.3)")
-	var nmat := net.material_override as StandardMaterial3D
-	_check(nmat != null and nmat.albedo_color.is_equal_approx(Palette.HAZARD) and is_equal_approx(nmat.emission_energy_multiplier, 0.9),
-		"the net keeps its hazard material at emission 0.9")
+	var nmat := net.material_override as ShaderMaterial
+	_check(nmat != null and nmat.shader != null
+		and (nmat.get_shader_parameter("hazard_col") as Color).is_equal_approx(Palette.HAZARD)
+		and (nmat.get_shader_parameter("brass_col") as Color).is_equal_approx(Palette.BRASS)
+		and (nmat.get_shader_parameter("ink_col") as Color).is_equal_approx(Palette.CHARCOAL),
+		"the net wears its cel-inked animated hazard/brass cross-hatch shader")
 
 	var live := _measure(caster, net)
 	print("live assembly: %d T, %d D" % [live["tris"], live["draws"]])

@@ -2,6 +2,7 @@ extends "res://src/combat/counter.gd"
 
 const AreaField := preload("res://src/combat/area_field.gd")
 const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The jolt layer (design-v3/FIELDS-AND-CASTS.md section 2.3): a Spillway crew under a cable
 # spool that unrolls a live mat where the ball is going. The warning is an instant ring laid
@@ -102,10 +103,12 @@ func _live(delta: float) -> bool:
 	if field.pulses != _told and field.until_pulse() <= JoltAudio.TELL_LEAD:
 		_told = field.pulses
 		_cue("tell")
+		_crackle(8, 6)
 	if not pulsed:
 		return true
 	# The lead fill restarts on every pulse and never reaches its end, so each pulse lands here.
 	tele.land()
+	_crackle(12, 10)
 	var player = _player()
 	if player == null:
 		return true
@@ -152,9 +155,19 @@ func _cue(part: String) -> void:
 		JoltAudio.one_shot(part, get_parent(), global_position)
 
 
+func _crackle(arcs: int, sparks: int) -> void:
+	if world_root == null or not is_inside_tree():
+		return
+	var at := _coil.global_position if is_instance_valid(_coil) else global_position + Vector3(0.0, 2.2, -0.25)
+	FxLibrary.burst(world_root, "arc_fizz", at, arcs)
+	FxLibrary.burst(world_root, "brass_spark", at, sparks)
+
+
 func _pose() -> void:
 	if _coil != null:
 		var lead: float = field.lead_fraction() if field != null else 0.0
 		_coil.scale = Vector3.ONE * (1.0 + 0.35 * lead)
+		var spin := 0.28 + 0.32 * lead if phase == Phase.LIVE else (0.14 if phase == Phase.WARN else 0.03)
+		_coil.rotation.y = wrapf(_coil.rotation.y + spin * EnemyMotion.motion_scale, -PI, PI)
 	if _spool != null:
-		_spool.rotation.x += 0.25 if phase == Phase.LIVE else 0.02
+		_spool.rotation.x += (0.25 if phase == Phase.LIVE else 0.02) * EnemyMotion.motion_scale

@@ -6,6 +6,8 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # A cracked wall and the buried cache behind it, the secrets family (LOOP-REDESIGN
 # section 9): a verdigris concrete pocket with a charcoal groove, its open side walled
@@ -245,8 +247,21 @@ func crumble() -> void:
 
 func fire() -> bool:
 	state = PICKING
-	_lid.position += Vector3(0.0, 0.6, -0.4)
-	_lid.rotation.x = -0.9
+	var lid_target := _lid.position + Vector3(0.0, 0.6, -0.4)
+	var animate := EnemyMotion.motion_scale > 0.0 and is_inside_tree()
+	if animate:
+		_lid.rotation.x = -0.06
+		var tw := _lid.create_tween()
+		tw.set_parallel(true)
+		tw.tween_property(_lid, "position", lid_target, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		tw.tween_property(_lid, "rotation:x", -0.9, 0.28).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	else:
+		_lid.position = lid_target
+		_lid.rotation.x = -0.9
+	if is_inside_tree():
+		var lid_at := _lid.global_position + Vector3.UP * 0.5
+		FxLibrary.burst(self, "brass_spark", lid_at, 14, Palette.BRASS)
+		FxLibrary.burst(self, "steam_puff", lid_at, 6)
 	offers = Parts.roll(system.luck(id), PICK_RARITIES, ctx.run.class_id(), ctx.run.parts, PICKS)
 	var relic := _relic_offer()
 	if relic != "":
@@ -263,6 +278,13 @@ func fire() -> bool:
 		_inside.append(_on(p, ball))
 		if not shown:
 			continue
+		if animate:
+			var ped: Node3D = p["node"]
+			var top_y := ped.position.y
+			ped.position.y = top_y - 0.85
+			var ptw := ped.create_tween()
+			ptw.tween_interval(float(i) * 0.06)
+			ptw.tween_property(ped, "position:y", top_y, 0.26).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 		var d: Resource = Parts.def(offers[i])
 		var rarity: String = d.rarity if d != null else "common"
 		_set_gem(p["gem"], rarity)
