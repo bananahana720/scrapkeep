@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (two Wardens through 40 charges and 30 strikes in one stepped game, about 3 minutes)
+# smoke: solo timeout=360s fixed-fps=90 (two Wardens through 40 charges and 30 strikes in one stepped game, about 3 minutes)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")

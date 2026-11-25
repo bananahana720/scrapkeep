@@ -73,6 +73,8 @@ export function testScripts(directory) {
 // a mention further down (or in a string) does not opt a test in.
 const SOLO_MARKER = /^#\s*smoke:\s*solo\b/;
 const BOT_MARKER = /^#\s*smoke:\s*bots\b/;
+const FIXED_FPS_MARKER = /^#\s*smoke:.*\bfixed-fps=(\d+)\b/;
+const MAX_FIXED_FPS = 1000;
 const MARKER_LINES = 5;
 
 // A whole-run test that legitimately outgrows the cap declares a longer one in the same
@@ -85,6 +87,19 @@ const BOT_TIMEOUT_MS = 1_200_000;
 
 export function isBot(source) {
   return source.split("\n", MARKER_LINES).some((line) => BOT_MARKER.test(line.replace(/\r$/, "")));
+}
+
+// Opt-in fixed-FPS marker ("# smoke: fixed-fps=90") for deterministic frame-stepped physics tests.
+// Never set on wall-clock latency or real-time audio tests.
+export function testFixedFps(source) {
+  for (const line of source.split("\n", MARKER_LINES)) {
+    const match = FIXED_FPS_MARKER.exec(line.replace(/\r$/, ""));
+    if (match) {
+      const fps = Number(match[1]);
+      if (Number.isSafeInteger(fps) && fps >= 1 && fps <= MAX_FIXED_FPS) return fps;
+    }
+  }
+  return null;
 }
 
 // SMOKE_TIME_SCALE stretches every test's time limit on a slow machine. It applies after
@@ -136,13 +151,13 @@ export function isSoloScript(directory, script) {
   }
 }
 
-// Each headless Godot is one mostly single-threaded process, so tests run side by side.
-// The pool sizes itself to the idle cores (other agents share this machine), keeps at
-// least 2 and at most 16, and SMOKE_JOBS overrides it.
+// Each headless Godot uses ~1 core (1.06 measured), so the pool sizes itself to 75% of idle
+// cores (leaving 25% headroom for OS and sibling work), clamped to [2, 16]. SMOKE_JOBS overrides
+// it directly without clamping.
 export function jobCount(env = process.env, cpus = os.cpus().length, load = os.loadavg()[0]) {
   if (env.SMOKE_JOBS) return Math.max(1, Number(env.SMOKE_JOBS) || 1);
   const idle = cpus - load;
-  return Math.min(16, Math.max(2, Math.floor(idle / 2)));
+  return Math.min(16, Math.max(2, Math.floor(idle * 0.75)));
 }
 
 // Concurrency width for a smoke run: bots stay at 1; explicit SMOKE_JOBS is never clamped;
@@ -167,13 +182,27 @@ const BATCH_SOLO =
 export const BATCH_MAX_TESTS = 8;
 export const BATCH_MAX_MS = 60_000;
 export const BATCH_TEST_MAX_MS = 15_000;
+export const SMOKE_BATCH_SIZE_DEFAULT = 24;
+export const SMOKE_BATCH_TEST_MAX_MS = 25_000;
+export const SMOKE_BATCH_FALLBACK_MS = 10_000;
+
+export function smokeBatchSize(env = process.env) {
+  const raw = env.SMOKE_BATCH_SIZE;
+  if (raw === undefined || raw === "") return SMOKE_BATCH_SIZE_DEFAULT;
+  const size = Number(raw);
+  if (!Number.isSafeInteger(size) || size < 1) {
+    throw new Error("SMOKE_BATCH_SIZE must be a positive integer");
+  }
+  return size;
+}
 
 export function batchable(source) {
-  return (
-    /^extends SceneTree\r?$/m.test(source.split("\n", 1)[0]) &&
-    !isSolo(source) &&
-    !BATCH_SOLO.test(source)
-  );
+  const firstCode =
+    source
+      .split("\n")
+      .map((line) => line.replace(/\r$/, "").trim())
+      .find((line) => line !== "" && !line.startsWith("#")) ?? "";
+  return /^extends SceneTree$/.test(firstCode) && !isSolo(source) && !BATCH_SOLO.test(source);
 }
 
 // Takes consecutive batchable rows from the front of the queue, up to maxTests and maxMs.
@@ -253,10 +282,16 @@ export function batchHasOutsideError(outside, platform = process.platform) {
   return errorLine.test(clean);
 }
 
-// Solo tests run one at a time unless SMOKE_SOLO_JOBS widens the phase. A machine with cores to
-// spare can run several side by side; a test whose verdict reads wall time still wants 1.
-export function soloWidth(env = process.env) {
-  return Math.max(1, Math.floor(Number(env.SMOKE_SOLO_JOBS)) || 1);
+// Solo tests run one at a time by default so wall-clock assertions stay isolated;
+// SMOKE_SOLO_JOBS widens the solo phase, bounded safely to available cores.
+export function soloWidth(env = process.env, cpus = os.cpus().length) {
+  if (env.SMOKE_SOLO_JOBS !== undefined && env.SMOKE_SOLO_JOBS !== "") {
+    const requested = Math.floor(Number(env.SMOKE_SOLO_JOBS));
+    if (Number.isFinite(requested) && requested >= 1) {
+      return Math.min(requested, Math.max(1, cpus));
+    }
+  }
+  return 1;
 }
 
 // A test that prints SKIP, or "N skipped" with N above zero, passed without checking
@@ -1116,13 +1151,15 @@ function readSmokeTimings(file = TIMINGS_FILE) {
 // so warm batching can never add a false red or mask an exit leak.
 async function runBatchJobs(batchJobs) {
   const directory = batchJobs[0].directory;
+  const fixedFps = batchJobs[0].fixedFps ?? null;
+  const fixedFpsArgs = fixedFps ? ["--fixed-fps", String(fixedFps)] : [];
   const rels = batchJobs.map((job) => job.rel);
   const timeoutMs = batchJobs.reduce((sum, job) => sum + (job.timeoutMs || TIMEOUT_MS), 0);
   const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"));
   const result = await new Promise((resolve) => {
     const child = spawn(
       binary,
-      ["--headless", "--path", directory, "--script", "res://tools/test_batch.gd"],
+      ["--headless", ...fixedFpsArgs, "--path", directory, "--script", "res://tools/test_batch.gd"],
       {
         env: {
           ...process.env,
@@ -1170,18 +1207,36 @@ async function runBatchJobs(batchJobs) {
   return out;
 }
 
-async function pool(jobs, width) {
+async function pool(
+  jobs,
+  width,
+  { batchSize = SMOKE_BATCH_SIZE_DEFAULT, explicitBatchSize = false } = {},
+) {
   const results = [];
   const queue = [...jobs];
+  const batchableCount = jobs.filter((job) => job.canBatch).length;
+  const effectiveBatchSize =
+    batchSize <= 1
+      ? 1
+      : explicitBatchSize || width <= 1
+        ? batchSize
+        : Math.min(batchSize, Math.max(2, Math.ceil(batchableCount / width)));
+  const effectiveBatchMaxMs = Math.max(BATCH_MAX_MS, effectiveBatchSize * 8_000);
   async function worker() {
     while (queue.length > 0) {
       const first = queue[0];
-      const batch = first?.canBatch
-        ? takeBatchPacked(
-            queue,
-            (row) => Boolean(row.canBatch) && row.directory === first.directory,
-          )
-        : [];
+      const batch =
+        effectiveBatchSize > 1 && first?.canBatch
+          ? takeBatchPacked(
+              queue,
+              (row) =>
+                Boolean(row.canBatch) &&
+                row.directory === first.directory &&
+                (row.fixedFps ?? null) === (first.fixedFps ?? null),
+              effectiveBatchSize,
+              effectiveBatchMaxMs,
+            )
+          : [];
       if (batch.length > 1) {
         results.push(...(await runBatchJobs(batch)));
         continue;
@@ -1260,12 +1315,15 @@ async function main() {
     process.exit(2);
   }
   let scale;
+  let batchSize;
   try {
     scale = timeScale();
+    batchSize = smokeBatchSize();
   } catch (problem) {
     console.error(`sketch:smoke: ${problem.message}`);
     process.exit(2);
   }
+  const explicitBatchSize = Boolean(process.env.SMOKE_BATCH_SIZE);
   if (scale !== 1) console.log(`sketch:smoke: time limits scaled by ${scale} (SMOKE_TIME_SCALE)`);
   const waited = await acquireMachine();
   if (waited > 0) console.log(`sketch:smoke waited ${(waited / 1000).toFixed(0)}s for the machine`);
@@ -1328,23 +1386,26 @@ async function main() {
       const rel = script.replace(/^res:\/\//, "");
       const source = readFileSync(path.join(directory, rel), "utf8");
       const isSoloJob = isSolo(source);
+      const fixedFps = testFixedFps(source);
+      const fixedFpsArgs = fixedFps ? ["--fixed-fps", String(fixedFps)] : [];
       const timeoutMs = testTimeoutMs(source, scale);
       const timedMs = timings[rel];
       const canBatch =
         options.batch &&
+        batchSize > 1 &&
         userArgs.length === 0 &&
         hasBatchDriver &&
         !isSoloJob &&
-        Number.isFinite(timedMs) &&
-        timedMs <= BATCH_TEST_MAX_MS &&
+        (!Number.isFinite(timedMs) || timedMs <= SMOKE_BATCH_TEST_MAX_MS) &&
         batchable(source);
       const job = {
         label: `${name} ${script}`,
-        args: [...base, "--script", script, ...userArgs],
+        args: [...base, ...fixedFpsArgs, "--script", script, ...userArgs],
         test: script,
         rel,
         directory,
-        ms: Number.isFinite(timedMs) ? timedMs : BATCH_TEST_MAX_MS + 1,
+        fixedFps,
+        ms: Number.isFinite(timedMs) ? timedMs : SMOKE_BATCH_FALLBACK_MS,
         canBatch,
         solo: isSoloJob,
         timeoutMs,
@@ -1362,9 +1423,9 @@ async function main() {
     if (aBoot !== bBoot) return aBoot - bBoot;
     return (b.ms ?? 0) - (a.ms ?? 0);
   });
-  results.push(...(await pool(jobs, width)));
+  results.push(...(await pool(jobs, width, { batchSize, explicitBatchSize })));
   const soloStarted = Date.now();
-  results.push(...(await pool(solo, soloWidth())));
+  results.push(...(await pool(solo, soloWidth(), { batchSize: 1 })));
   const soloSeconds = (Date.now() - soloStarted) / 1000;
   const ok = runPasses(results) && expired.length === 0;
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);

@@ -1680,11 +1680,19 @@ test("a long import leaves the event loop free, so a held slot keeps its heartbe
   assert.equal(slow.signal, "SIGTERM", "the time limit still stops a child");
 });
 
-test("jobCount and smokeWidth scale cleanly on wide machines and never clamp explicit SMOKE_JOBS", () => {
-  assert.equal(smoke.jobCount({}, 32, 1), 15);
-  assert.equal(smoke.jobCount({}, 36, 0), 16);
-  assert.equal(smoke.jobCount({}, 4, 0), 2);
+test("jobCount, soloWidth, and smokeWidth scale cleanly on wide machines and never clamp explicit SMOKE_JOBS", () => {
+  assert.equal(smoke.jobCount({}, 32, 1), 16);
+  assert.equal(smoke.jobCount({}, 16, 0), 12);
+  assert.equal(smoke.jobCount({}, 8, 0), 6);
+  assert.equal(smoke.jobCount({}, 4, 0), 3);
+  assert.equal(smoke.jobCount({}, 4, 2), 2);
   assert.equal(smoke.jobCount({ SMOKE_JOBS: "12" }, 4, 3), 12);
+  assert.equal(smoke.soloWidth({}, 16), 1);
+  assert.equal(smoke.soloWidth({ SMOKE_SOLO_JOBS: "2" }, 16), 2);
+  assert.equal(smoke.soloWidth({ SMOKE_SOLO_JOBS: "10" }, 4), 4);
+  assert.equal(smoke.smokeBatchSize({}), 24);
+  assert.equal(smoke.smokeBatchSize({ SMOKE_BATCH_SIZE: "30" }), 30);
+  assert.throws(() => smoke.smokeBatchSize({ SMOKE_BATCH_SIZE: "0" }), /positive integer/);
   assert.equal(
     smoke.smokeWidth({ bots: true, named: true, testCount: 60, env: { SMOKE_JOBS: "12" } }),
     1,
@@ -1695,6 +1703,24 @@ test("jobCount and smokeWidth scale cleanly on wide machines and never clamp exp
     smoke.smokeWidth({ named: true, testCount: 1, env: { SMOKE_JOBS: "6" }, jobs: 6 }),
     6,
   );
+});
+
+test("testFixedFps parses opt-in fixed-fps markers from the first five lines and batchable accepts leading comments", () => {
+  assert.equal(smoke.testFixedFps("# smoke: fixed-fps=90\nextends SceneTree\n"), 90);
+  assert.equal(
+    smoke.testFixedFps("# smoke: solo timeout=360s fixed-fps=90\nextends SceneTree\n"),
+    90,
+  );
+  assert.equal(smoke.testFixedFps("extends SceneTree\n"), null);
+  assert.equal(
+    smoke.testFixedFps("# c\n".repeat(5) + "# smoke: fixed-fps=90\nextends SceneTree\n"),
+    null,
+  );
+  assert.equal(smoke.testFixedFps("# smoke: fixed-fps=0\nextends SceneTree\n"), null);
+  assert.equal(smoke.testFixedFps("# smoke: fixed-fps=9999\nextends SceneTree\n"), null);
+  assert.equal(smoke.batchable("# smoke: fixed-fps=90\nextends SceneTree\n"), true);
+  assert.equal(smoke.batchable("# header\n\nextends SceneTree\n"), true);
+  assert.equal(smoke.batchable("# smoke: solo fixed-fps=90\nextends SceneTree\n"), false);
 });
 
 test("splitBatch captures outside lines and batchHasOutsideError catches exit leaks", () => {
@@ -1848,6 +1874,123 @@ console.log(stem + ": PASS (1 checks)");
     for (const name of ["leak_a_test", "leak_b_test"]) {
       assert.match(readFileSync(path.join(r2.outLogs, `${name}.log`), "utf8"), /solo ok/);
     }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("sketch-smoke forwards --fixed-fps and honors SMOKE_BATCH_SIZE in warm batches", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-fps-batch-"));
+  try {
+    mkdirSync(path.join(dir, "scripts"));
+    for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
+      writeFileSync(
+        path.join(dir, "scripts", module),
+        readFileSync(new URL(`./${module}`, import.meta.url)),
+      );
+    writeFileSync(
+      path.join(dir, "scripts/sketch-fast.timings.json"),
+      JSON.stringify({
+        tests: {
+          "tests/fps_a_test.gd": 1000,
+          "tests/fps_b_test.gd": 1000,
+          "tests/fps_solo_test.gd": 1000,
+          "tests/plain_a_test.gd": 1000,
+          "tests/plain_b_test.gd": 1000,
+          "tests/plain_c_test.gd": 1000,
+        },
+      }),
+    );
+    const sketch = path.join(dir, "sketches/core-loop");
+    mkdirSync(path.join(sketch, "tests"), { recursive: true });
+    mkdirSync(path.join(sketch, "tools"), { recursive: true });
+    writeFileSync(path.join(sketch, "project.godot"), "config_version=5\n");
+    writeFileSync(path.join(sketch, "tools/test_batch.gd"), "extends SceneTree\n");
+    writeFileSync(
+      path.join(sketch, "tests/fps_a_test.gd"),
+      "# smoke: fixed-fps=90\nextends SceneTree\n",
+    );
+    writeFileSync(
+      path.join(sketch, "tests/fps_b_test.gd"),
+      "# smoke: fixed-fps=90\nextends SceneTree\n",
+    );
+    writeFileSync(
+      path.join(sketch, "tests/fps_solo_test.gd"),
+      "# smoke: solo fixed-fps=90\nextends SceneTree\n",
+    );
+    for (const name of ["plain_a_test", "plain_b_test", "plain_c_test"])
+      writeFileSync(path.join(sketch, "tests", `${name}.gd`), "extends SceneTree\n");
+
+    const fake = path.join(dir, "godot");
+    writeFileSync(
+      fake,
+      `#!${process.execPath}
+import { appendFileSync } from "node:fs";
+const args = process.argv.slice(2);
+if (args.includes("--version")) { console.log("fake"); process.exit(0); }
+if (args.includes("--import")) { process.exit(0); }
+const fpsIdx = args.indexOf("--fixed-fps");
+const fps = fpsIdx >= 0 ? args[fpsIdx + 1] : "none";
+const script = args[args.indexOf("--script") + 1];
+if (script === "res://tools/test_batch.gd") {
+  const list = process.env.SCRAPKEEP_TEST_BATCH.split(",");
+  appendFileSync(process.env.FIXTURE_LOG, "batch fps=" + fps + " " + list.join(",") + "\\n");
+  for (const rel of list) {
+    const stem = rel.split("/").pop().replace(/\\.gd$/, "");
+    console.log("BATCH START " + rel);
+    console.log(stem + ": PASS (1 checks)");
+    console.log("BATCH END " + rel + " exit=0 ms=10");
+  }
+  console.log("BATCH DONE " + list.length + " tests");
+  process.exit(0);
+}
+const stem = script.split("/").pop().replace(/\\.gd$/, "");
+appendFileSync(process.env.FIXTURE_LOG, "solo fps=" + fps + " " + stem + "\\n");
+console.log(stem + ": PASS (1 checks)");
+`,
+      { mode: 0o755 },
+    );
+
+    const logFile = path.join(dir, "events.log");
+    const ran = spawnSync(
+      process.execPath,
+      [
+        path.join(dir, "scripts/sketch-smoke.mjs"),
+        "--sketch",
+        "core-loop",
+        "--test",
+        "fps_*",
+        "--test",
+        "plain_*",
+      ],
+      {
+        encoding: "utf8",
+        timeout: 20_000,
+        env: {
+          ...process.env,
+          GODOT_BIN: fake,
+          SMOKE_JOBS: "1",
+          SMOKE_BATCH_SIZE: "2",
+          SMOKE_SLOTS: "6",
+          SCRAPKEEP_LOCK_DIR: dir,
+          SMOKE_FLAGS: "",
+          FIXTURE_LOG: logFile,
+        },
+      },
+    );
+    assert.equal(ran.status, 0, ran.stdout + ran.stderr);
+    const events = readFileSync(logFile, "utf8").trim().split("\n");
+    assert.ok(
+      events.includes("batch fps=90 tests/fps_a_test.gd,tests/fps_b_test.gd"),
+      events.join("\n"),
+    );
+    assert.ok(events.includes("solo fps=90 fps_solo_test"), events.join("\n"));
+    // With SMOKE_BATCH_SIZE=2, 3 plain tests split into a 2-test batch + 1 solo test.
+    assert.ok(
+      events.includes("batch fps=none tests/plain_a_test.gd,tests/plain_b_test.gd"),
+      events.join("\n"),
+    );
+    assert.ok(events.includes("solo fps=none plain_c_test"), events.join("\n"));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

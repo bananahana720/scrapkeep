@@ -1,4 +1,4 @@
-# smoke: timeout=360s (six pilots, nineteen input fixtures each)
+# smoke: timeout=360s fixed-fps=90 (six pilots, nineteen input fixtures each)
 extends SceneTree
 
 const GameEvents := preload("res://src/core/game_events.gd")

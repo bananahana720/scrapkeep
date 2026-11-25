@@ -53,12 +53,19 @@ import {
   isBot,
   jobCount,
   scriptErrorCount,
+  smokeBatchSize,
   testScripts,
   testTimeoutMs,
   timeScale,
   withoutTeardownNoise,
 } from "../sketch-smoke.mjs";
-import { checkImportStamp, godotIdentity, writeImportStamp } from "../import-stamp.mjs";
+import {
+  checkImportStamp,
+  godotIdentity,
+  hasValidUidCache,
+  isCleanImportPass,
+  writeImportStamp,
+} from "../import-stamp.mjs";
 import { scratchHomeEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -66,7 +73,7 @@ const SKETCH = "sketches/core-loop";
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
 const CLOUD_GODOT = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
 const IMPORT_TIMEOUT_MS = 900_000;
-const DEFAULT_CHUNK = 60;
+const DEFAULT_CHUNK = 90;
 const DEFAULT_SOLO_RUNS = 2;
 // Bot tests that never share the PC with another bot lane: the wall clock decides their result, or they
 // fill the machine alone. Every other bot test is driven by ticks at a fixed frame rate.
@@ -606,11 +613,12 @@ export function soloEnvironment(env, out, logDir) {
   };
 }
 
-const smokeArgs = (bots, tests) => [
+const smokeArgs = (bots, tests, { noBatch = false } = {}) => [
   path.join(root, "scripts", "sketch-smoke.mjs"),
   "--sketch",
   "core-loop",
   ...(bots ? ["--bots"] : []),
+  ...(noBatch ? ["--no-batch"] : []),
   ...tests.flatMap((test) => ["--test", test]),
 ];
 
@@ -844,7 +852,7 @@ async function runRetime(options) {
     const logDir = `logs-${test}-${run}`;
     await runToFile(
       process.execPath,
-      smokeArgs(options.bots, [test]),
+      smokeArgs(options.bots, [test], { noBatch: true }),
       path.join(options.out, name + ".log"),
       soloEnvironment(env, options.out, logDir),
     );
@@ -955,7 +963,7 @@ async function run(options) {
     });
   } else {
     let imported = "failed";
-    for (let pass = 1; pass <= IMPORT_TRIES && (pass <= 2 || imported !== "ok"); pass++) {
+    for (let pass = 1; pass <= IMPORT_TRIES; pass++) {
       const file = path.join(options.out, `import-${pass}.log`);
       await step(`import-${pass}`, async () => {
         const importEnv = {
@@ -969,10 +977,20 @@ async function run(options) {
           importEnv,
           IMPORT_TIMEOUT_MS,
         );
-        return { ...ran, outcome: importOutcome(ran.exit, readFileSync(file, "utf8")) };
+        const output = readFileSync(file, "utf8");
+        const outcome = importOutcome(ran.exit, output);
+        const cleanPass = isCleanImportPass({
+          status: typeof ran.exit === "number" ? ran.exit : null,
+          signal: typeof ran.exit === "string" ? ran.exit : null,
+          output,
+          uidCacheValid: hasValidUidCache(root, SKETCH),
+        });
+        return { ...ran, outcome, cleanPass };
       });
-      imported = state.steps[`import-${pass}`].outcome ?? "ok"; // a step from before outcomes were recorded
+      const stepInfo = state.steps[`import-${pass}`];
+      imported = stepInfo.outcome ?? "ok"; // a step from before outcomes were recorded
       if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);
+      if (imported === "ok" && (pass >= 2 || stepInfo.cleanPass)) break;
     }
     if (imported !== "ok")
       throw new Error(
@@ -994,6 +1012,12 @@ async function run(options) {
   const firstEnv = {
     ...env,
     ...(autoChunkJobs ? { SMOKE_JOBS: autoChunkJobs } : {}),
+    ...(!options.bots
+      ? {
+          SMOKE_BATCH: env.SMOKE_BATCH ?? "1",
+          SMOKE_BATCH_SIZE: env.SMOKE_BATCH_SIZE ?? String(smokeBatchSize(env)),
+        }
+      : {}),
     SMOKE_LOG_DIR: path.join(options.out, "logs"),
   };
   const runGroup = (index) =>
@@ -1034,7 +1058,7 @@ async function run(options) {
     await step(name, () =>
       runToFile(
         process.execPath,
-        smokeArgs(options.bots, [test]),
+        smokeArgs(options.bots, [test], { noBatch: true }),
         path.join(options.out, name + ".log"),
         soloEnvironment(env, options.out, logDir),
       ),

@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (50 solo spawns of each pack kind, about 1,100 attacks; 260 s wall measured 2026-10-11 on a loaded machine)
+# smoke: solo timeout=360s fixed-fps=90 (50 solo spawns of each pack kind, about 1,100 attacks; 260 s wall measured 2026-10-11 on a loaded machine)
 extends SceneTree
 
 # SQ1 pack-kind telegraph timing (W13-INTEGRATION-3.md SQ1; the lab measure of

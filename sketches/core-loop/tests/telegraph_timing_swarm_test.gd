@@ -1,4 +1,4 @@
-# smoke: timeout=360s (about 250 game seconds of stepped fights)
+# smoke: timeout=360s fixed-fps=90 (about 250 game seconds of stepped fights)
 # 2026-10-13 RED-COMBAT: WT-BANDS 907bfef changes posture gain, not BRAKE_DROP
 # (merge message; design-v3/wardens/swarm.md section 3). A stronger hit now
 # opens during hit-stop. Measure the row in physics delta seconds, as the
