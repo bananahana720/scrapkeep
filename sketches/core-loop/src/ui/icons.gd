@@ -1,16 +1,9 @@
 extends RefCounted
 
-# The icon registry (CONTRACTS, Icons). Icons.texture(id) returns
-# res://assets/icons/<id>.svg when the look track has drawn it, else a procedural
-# placeholder rasterized from a signed-distance glyph. A placeholder is white on clear,
-# 64 px, and callers tint it with the fact's own colour. An SVG carries its own colours
-# (bone glyph, charcoal plate, one accent), so tint() keeps only the caller's alpha.
 
 const ICON_DIR := "res://assets/icons/"
 const SIZE := 64
 
-# Every id the contract names: the 70 canonical ids of VISUAL-LANGUAGE.md section 5,
-# each mapped to the placeholder glyph drawn until its SVG lands.
 const IDS := {
 	"cls_sable": "ring_dot", "cls_rivet": "double_chevron", "cls_kest": "star",
 	"ab_sable_weapon": "bolt", "ab_sable_move": "hook", "ab_sable_special": "rings", "ab_sable_smash": "smash",
@@ -33,13 +26,8 @@ const IDS := {
 	"res_difficulty": "bar",
 	"fac_fleet": "tag", "fac_reactor": "weight", "fac_swarm": "triangle", "fac_mind": "ring_dot",
 }
-# An id outside the list still gets a glyph, picked by its prefix, so a later writer's
-# new ability or class shows something before the contract and the SVG catch up.
 const PREFIX_FALLBACK := {"ab_": "ring_dot", "cls_": "diamond", "key_": "square", "cat_": "diamond", "el_": "disc",
 	"trg_": "square", "thr_": "triangle", "obj_": "square", "res_": "disc", "fac_": "diamond"}
-# Pictures outside the 70 canonical ids: they draw a glyph but are not registry ids. res_mass
-# is scrap carried as mass (the heap), so the cog (res_scrap) means money alone. A later
-# pilot's portraits and ability pictures (Tarn's ab_tarn_* and Tally's ab_tally_* and the cannon's ab_cannon_*) live here too.
 const REEL := "ab_sable_reel"
 const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "chevron", "ab_tarn_move": "hook",
 	"cls_tarn": "cross", "cls_tally": "square", "cls_cannon": "lane",
@@ -47,33 +35,16 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	"ab_tally_weapon": "tag", "ab_tally_move": "cog", "ab_tally_special": "reel", "ab_tally_smash": "smash",
 	"ab_tally_gather": "target", "ab_tally_link": "bolt", "ab_tally_balance": "burst_ring",
 	"ab_cannon_weapon": "lane", "ab_cannon_move": "arrow", "ab_cannon_special": "shield", "ab_cannon_smash": "rings",
-	# Each pilot's line-skill and ultimate pictures, ab_<pilot>_line and ab_<pilot>_ult (SKILL-BAR
-	# sections 3 and 4), one marked block per pilot (section 12, item 4).
-	# --- P-C Sable icons ---
 	"ab_sable_line": "launch", "ab_sable_ult": "turret",
-	# --- end Sable ---
-	# --- P-C Rivet icons ---
 	"ab_rivet_line": "chevron_right", "ab_rivet_ult": "target",
-	# --- end Rivet ---
-	# --- P-C Kest icons ---
 	"ab_kest_line": "ab_kest_line", "ab_kest_ult": "ab_kest_ult",
-	# --- end Kest ---
-	# --- P-C Tarn icons ---
 	"ab_tarn_line": "hook", "ab_tarn_ult": "cross",
-	# --- end Tarn ---
-	# --- P-C Tally icons ---
 	"ab_tally_line": "hook", "ab_tally_ult": "square",
-	# --- end Tally ---
-	# --- P-C Cannon icons ---
 	"ab_cannon_line": "lane",
 	"ab_cannon_ult": "burst_ring",
-	# --- end Cannon ---
-	# --- companion pieces: kept out of IDS because four tests pin its 70 canonical ids ---
 	"cmp_primer_coil": "bolt", "cmp_primer_mesh": "rings", "cmp_ram_prow": "double_chevron",
 	"cmp_ram_spring": "disc_ring", "cmp_escape_vent": "launch", "cmp_escape_rail": "arrow",
 	"cmp_cog_scoop": "cog", "cmp_cartridge_caddy": "hoop",
-	# --- end companion pieces ---
-	# W50 additive fallbacks (SVGs in assets/icons/ override automatically when present).
 	"el_heat": "burst_ring",
 	"cons_scrap_dice": "diamond", "cons_duplicator_spool": "rings", "cons_overload_fuse": "bolt",
 	"cons_pocket_belt": "pips_2",
@@ -85,12 +56,9 @@ const EXTRA := {"ab_sable_reel": "reel", "res_mass": "heap", "ab_tarn_weapon": "
 	"lic_highdraft_roosts": "tag", "lic_waking": "tag", "lic_mind_glass": "tag", "lic_moss": "tag",
 	"cls_patch": "wave", "ab_patch_weapon": "wave", "ab_patch_move": "hook",
 	"ab_patch_special": "rings", "ab_patch_smash": "smash", "ab_patch_line": "lane", "ab_patch_ult": "burst_ring",
-	# The radio take's knob: the radio chip's dial, a ring with its needle (radio_dial.gd).
 	"radio_take": "knob",
 }
 
-# The event_kinds shapes as glyphs. These are drawn, never files: a toast wears its
-# row's silhouette (shape()).
 const SHAPES := {"ring": "ring", "diamond": "diamond", "square": "square", "chevron": "chevron", "arrow": "arrow",
 	"burst": "burst", "bar": "bar", "star": "star", "cross": "cross", "wave": "wave", "core": "core", "lane": "lane", "none": "disc"}
 
@@ -110,8 +78,6 @@ static func texture(id: String) -> Texture2D:
 	return tex
 
 
-# The modulate to draw an icon with: the fact's colour on a placeholder, and only its
-# alpha on an SVG that already wears the look track's colours.
 static func tint(id: String, color: Color) -> Color:
 	texture(id)
 	return Color(1.0, 1.0, 1.0, color.a) if _from_file.get(id, false) else color
@@ -122,6 +88,10 @@ static func shape(name: String) -> Texture2D:
 	if not _cache.has(key):
 		_cache[key] = _raster(SHAPES.get(name, "disc"))
 	return _cache[key]
+
+
+static func _static_init() -> void:
+	assert(IDS.size() == 70, "Icons.IDS must keep the 70 canonical ids")
 
 
 static func has(id: String) -> bool:
@@ -180,7 +150,6 @@ static func _raster(glyph: String) -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
-# Signed distance to a glyph in icon units: -1..1 across the icon, y up.
 static func distance(glyph: String, p: Vector2) -> float:
 	match glyph:
 		"ring":
@@ -319,12 +288,10 @@ static func _seg(p: Vector2, a: Vector2, b: Vector2, w: float) -> float:
 	return p.distance_to(a + ab * t) - w
 
 
-# An upward chevron: two arms meeting at the top.
 static func _chevron(p: Vector2) -> float:
 	return minf(_seg(p, Vector2(-0.6, -0.3), Vector2(0.0, 0.3), 0.14), _seg(p, Vector2(0.0, 0.3), Vector2(0.6, -0.3), 0.14))
 
 
-# A mouse body with the named button filled.
 static func _mouse(glyph: String, p: Vector2) -> float:
 	var body := absf(_box(p, Vector2.ZERO, Vector2(0.42, 0.7)) - 0.1) - 0.07
 	var split := _seg(p, Vector2(-0.52, 0.1), Vector2(0.52, 0.1), 0.05)

@@ -1,16 +1,6 @@
 extends Node
 
-# --frame-log=<file>: the game logs its own frame times for scripts/frametime-check.mjs where
-# MangoHud does not run (macOS). The CSV reads as MangoHud's does to that tool: an info pair of
-# rows, a "frametime" header, then one row a drawn frame in milliseconds.
-# --frame-log-warmup=<s> (default 10): logging starts this many seconds after the engine started.
-# --frame-log-seconds=<s> (default 300): and stops once the logged frames add up to this; the file is
-# written then, in one go. A game that closes before that writes nothing, as MangoHud's log.
-# The clock: Time.get_ticks_usec() read on RenderingServer.frame_post_draw, which the engine emits
-# once a frame after the viewports are drawn and the frame is handed to the display, and not at all
-# when no frame is drawn, so each delta is one presented frame to the next, like MangoHud's.
-# Cost: without the flag this node is never made. With it, one clock read and one append a frame.
-# It only reads the clock: nothing in the game or the simulation reads it back.
+# MangoHud does not run on macOS; RenderingServer.frame_post_draw emits once per presented frame to match its CSV.
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 
@@ -62,7 +52,6 @@ func _on_frame_drawn() -> void:
 	frame(Time.get_ticks_usec())
 
 
-# One drawn frame at now_usec on the engine's clock (microseconds since it started).
 func frame(now_usec: int) -> void:
 	if written:
 		return

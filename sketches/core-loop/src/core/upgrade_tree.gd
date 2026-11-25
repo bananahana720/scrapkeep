@@ -13,54 +13,26 @@ const Augments := preload("res://src/movement/augments.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 
-# One binary upgrade tree per pilot (DESIGN-V2 section 15, the primer gate). Four picks:
-# at class select, then at Moss's workshop after stages 1, 2 and 3, so each tree has
-# 2, 4, 8 and 16 nodes by depth and 16 end builds. A pick persists for the run and a
-# new run starts clean.
-#
-# A node never edits ability code. It carries ops the rest of the game reads:
-#   swap     {slot: ability id}     the slot (or "ultimate") plays a variant row from AbilityState.ABILITIES
-#   knob     {name: value}          a behaviour switch or number, defaults in KNOBS
-#   proc     [{on, do, scale, gap}] on a bus fact, run one of ACTIONS (combat runs them)
-#   pattern  {weapon: transformer}  applied to that weapon's Pattern after the parts
-#   charges  {slot: extra charges}  added to the slot's stockpile cap, on top of items
-#   cooldown {slot: scale}          floored at AbilityState.COOLDOWN_FLOOR
-#   tags     [..]                   what the build leans on, for the director (TAGS)
-# A later pick overrides an earlier knob of the same name.
 
 const DEPTHS := 4
 const SIZE := 30
-# The world-one profile (--world-one-builds=on): depth 1 and depth 2 only, six nodes a pilot
-# (indices 0 to 5 of the same heap-ordered list), and the run's picks are the start and the
-# workshop after stage 1. Deeper nodes stay in the data and are never offered.
 const WORLD_ONE_DEPTHS := 2
 const WORLD_ONE_SIZE := 6
 const TREES := {"pylon_engineer": Sable.NODES, "runner_gunner": Rivet.NODES, "demolitions_caster": Kest.NODES,
 	"tarn": Tarn.NODES, "tally": Tally.NODES,
 	"remembered_cannon": Cannon.NODES}
-# Each pilot declares NODES_WORLD_ONE in the same heap order as its full tree.
 const WORLD_ONE_TABLES := {"pylon_engineer": Sable, "runner_gunner": Rivet, "demolitions_caster": Kest, "tarn": Tarn,
 	"tally": Tally,
 	"remembered_cannon": Cannon}
-# The slot a node's card sits on: the bar, the chips and, from depth 3, the ultimate
-# (design-v3/SKILL-BAR.md section 12, item 3).
 const KEYS := ["weapon", "movement", "special", "smash", "line", "ultimate"]
 const OPS := ["swap", "knob", "proc", "pattern", "charges", "cooldown"]
-# The director's vocabulary: what a build leans on, so packs can test it fairly.
 const TAGS := ["air", "burst", "close", "ranged", "mobility", "mounted", "sustain", "cc_immune", "traps", "stealth"]
-# The offer kinds (W13-INTEGRATION-3 SG8). A pair is the two-card pick. A take_or_skip offer opens
-# depth 4 with one child of the run's own depth-3 pick: take it as the fourth pick, or skip it for
-# free and its sibling (the other child) opens as a forced pick, so the run's four picks stay one
-# connected path and it still makes its fourth pick (BIBLE.md growth paragraph). No reroll; the
-# skipped item never returns; only a checkpoint opens any offer, never elapsed time (TADR-010).
 const OFFER_PAIR := "pair"
 const OFFER_TAKE_OR_SKIP := "take_or_skip"
 const OFFER_FORCED := "forced"
 const NAME_WORDS := 3
 const EFFECT_WORDS := 8
 
-# Every knob a node may set, with its default (the untouched kit) and whether it is a
-# time between repeats, which no node may take under the cooldown floor.
 const KNOBS := {
 	"mount_reach": {"default": 1.0}, "grapple_fling": {"default": 0.0}, "air_charge": {"default": 1.0},
 	"mount_cc_immune": {"default": false}, "vault_air": {"default": false}, "vault_lock": {"default": Augments.VAULT_FACE_COOLDOWN, "time": true},
@@ -87,29 +59,10 @@ const KNOBS := {
 	"ult_encore": {"default": false},
 	"ult_radius": {"default": 0.0},
 	"ult_volley": {"default": 0},
-	# The shared ultimate knobs (ult_encore, ult_beats, ult_radius, ult_volley) are B3's. A pilot
-	# may own at most one ult_<word> knob, in its own block (SKILL-BAR section 12, item 4).
-	# --- P-C Sable knob ---
-	# --- end Sable ---
-	# --- P-C Rivet knob ---
-	# Rivet's own: the Breach Skid (and the Juggernaut Drive's rams) throw this many times as hard.
 	"ult_pins": {"default": 1.0},
-	# --- end Rivet ---
-	# --- P-C Kest knob ---
-	# --- end Kest ---
-	# --- P-C Tarn knob ---
-	# --- end Tarn ---
-	# --- P-C Tally knob ---
-	# Plate Return's settle share (pilots/tally.md section 3, depth 4); Weapons.SETTLE_SHARE.
 	"ult_settle": {"default": Weapons.SETTLE_SHARE},
-	# --- end Tally ---
-	# --- P-C Cannon knob ---
-	# --- end Cannon ---
 }
 
-# What a proc may do, and the bus facts each action itself causes. No proc listens for
-# a fact its own tree's actions cause, so chains end by construction (DESIGN-V2 section
-# 7); tree_data_test checks it.
 const DAMAGE_FACTS := ["enemy_struck", "enemy_killed", "strike_deflected", "enemy_pinned"]
 const ACTIONS := {
 	"discharge": DAMAGE_FACTS,
@@ -122,15 +75,9 @@ const ACTIONS := {
 
 var class_id := ""
 var picks: Array[String] = []
-# How many picks the run has opened so far: the start, then each workshop visit.
 var allowed := 0
-# The deepest pick currently open to the run: worlds one, two and three allow 2, 3 and 4.
-# world.gd sets it from the stage table's world index; flag off keeps the legacy four depths.
 var max_depth := DEPTHS
-# The world-one node tables in force; world.gd sets it beside max_depth only in world one.
 var world_one := false
-# The late forced-or-skip offer in force (SG8): off keeps every depth a plain pair. A run-level
-# switch sets it; the full tree only, since world one never reaches depth 4.
 var late_offer := false
 var events
 
@@ -138,10 +85,8 @@ var _knobs := {}
 var _procs: Array = []
 var _patterns := {}
 var _tags: Array[String] = []
-# The run declined its take_or_skip item; depth 4 is then a plain pair. Saved with the run's picks.
 var _late_skipped := false
 
-# A pick landed; the ball fits its slot ops (swap, charges, cooldown) onto the kit.
 signal picked(node: Dictionary)
 
 
@@ -149,7 +94,6 @@ func _init(events_ref = null) -> void:
 	events = events_ref
 
 
-# Pilot ids with no tree, already warned about this session.
 static var unknown_warned := {}
 
 
@@ -195,7 +139,6 @@ static func node(for_class: String, node_id: String, world_one := false) -> Dict
 	return nodes(for_class, world_one)[i] if i >= 0 else {}
 
 
-# The four node ids from the root pair down to a node, or [] for an unknown id.
 static func path_to(for_class: String, node_id: String, world_one := false) -> Array[String]:
 	var out: Array[String] = []
 	var i := index_of(for_class, node_id, world_one)
@@ -205,8 +148,6 @@ static func path_to(for_class: String, node_id: String, world_one := false) -> A
 	return out
 
 
-# A node's icon: its ability glyph with one variant notch per depth (VISUAL-LANGUAGE
-# section 5's variant notch, drawn by V2).
 static func icon_of(for_class: String, node_id: String, world_one := false) -> Dictionary:
 	var i := index_of(for_class, node_id, world_one)
 	if i < 0:
@@ -214,13 +155,6 @@ static func icon_of(for_class: String, node_id: String, world_one := false) -> D
 	return {"id": nodes(for_class, world_one)[i]["icon"], "notch": depth_of(i)}
 
 
-# Four safe growth picks preserve the untouched kit AND earlier picks on their route.
-# This is a conservative data check for swaps and knobs, separate from structural
-# problems(): existing tradeoff nodes remain playable and are reported, never edited.
-# Any different ability id replaces the old action, even if its variant adds power.
-# Any numeric reduction is flagged pending decision 3, including lower drain/timers;
-# false cannot disable an enabled knob. Ram Fins explicitly removes enemy rebound.
-# Other ops and runtime effectiveness are outside this check; [] is not a feel verdict.
 static func safe_pick_problems(for_class: String, n: Dictionary, earlier: Array = []) -> Array[String]:
 	var out: Array[String] = []
 	var id: String = n.get("id", "<fixture>")
@@ -270,15 +204,11 @@ static func safe_pick_problems(for_class: String, n: Dictionary, earlier: Array 
 	return out
 
 
-# A swap to a row whose variant_of is the held ability is growth: a depth-3 ultimate variant
-# changes the set piece without taking it away (SKILL-BAR section 12, item 3).
 static func _grows(held, replacement) -> bool:
 	var base := String(AbilityState.ABILITIES.get(String(replacement), {}).get("variant_of", ""))
 	return base != "" and base == String(held)
 
 
-# Visit every node with its actual ancestor picks. The world-one offer profile has
-# only six reachable nodes; the full profile checks all thirty, Tarn's included.
 static func safe_growth_problems(for_class: String, world_one := false) -> Array[String]:
 	var out: Array[String] = []
 	var list := nodes(for_class, world_one)
@@ -297,10 +227,6 @@ static func safe_growth_problems(for_class: String, world_one := false) -> Array
 	return out
 
 
-# Everything wrong with a class's tree, as sentences; empty when it is sound.
-# `world_one` validates the two-depth profile: the tree is still the fixed 30 nodes, but only
-# its first six are offered, so only those six are held to the node rules and to the proc-loop
-# check (their leaves are the depth-2 nodes).
 static func problems(for_class: String, world_one := false) -> Array[String]:
 	var out: Array[String] = []
 	var list := nodes(for_class, world_one)
@@ -364,8 +290,6 @@ static func problems(for_class: String, world_one := false) -> Array[String]:
 	return out
 
 
-# A bus fact from which one build's procs can lead back to itself, or "" when every
-# chain ends: each proc links its trigger to the facts its action causes.
 static func _proc_loop(for_class: String, build: Array[String], world_one := false) -> String:
 	var links := {}
 	for id in build:
@@ -387,7 +311,6 @@ static func _proc_loop(for_class: String, build: Array[String], world_one := fal
 	return ""
 
 
-# A new run: no picks, nothing open, the untouched kit.
 func reset(for_class: String) -> void:
 	class_id = for_class
 	picks.clear()
@@ -396,7 +319,6 @@ func reset(for_class: String) -> void:
 	_resolve()
 
 
-# A checkpoint (class select, or a workshop visit) opens the next pick and offers it.
 func open_checkpoint() -> void:
 	if allowed >= max_depth or class_id == "":
 		return
@@ -407,13 +329,9 @@ func open_checkpoint() -> void:
 
 
 func pending() -> bool:
-	# A pilot with no tree has nothing to offer, so no pick is ever owed.
 	return picks.size() < allowed and picks.size() < max_depth and not nodes(class_id, world_one).is_empty()
 
 
-# How the offer at this depth is made: take_or_skip only at depth 4, only with late_offer on and
-# never in the world-one profile; after the run skipped its late item, depth 4 is one forced pick
-# (the sibling), also when the saved skip loads under a run with late_offer off. Otherwise a pair.
 func offer_kind(depth: int) -> String:
 	if world_one or depth != DEPTHS:
 		return OFFER_PAIR
@@ -424,7 +342,6 @@ func offer_kind(depth: int) -> String:
 	return OFFER_PAIR
 
 
-# The take_or_skip item for this run's path, or {} before depth 3 is picked or when none is owed.
 func late_item() -> Dictionary:
 	if picks.size() < DEPTHS - 1 or offer_kind(DEPTHS) != OFFER_TAKE_OR_SKIP:
 		return {}
@@ -433,9 +350,6 @@ func late_item() -> Dictionary:
 	return list[i] if i >= 0 else {}
 
 
-# The player declines the open take_or_skip item. Free: no pick, no charge. Its sibling opens at
-# once as the forced fourth pick (its tree_offered goes out), and the item never comes back.
-# Refused on a pair or a forced pick.
 func skip() -> bool:
 	if not pending() or picks.size() + 1 != DEPTHS or late_item().is_empty():
 		return false
@@ -444,7 +358,6 @@ func skip() -> bool:
 	return true
 
 
-# A resumed run puts its saved skip back before its picks are replayed (RunState.tree_late_skipped).
 func restore_late_skip(skipped: bool) -> void:
 	_late_skipped = skipped
 
@@ -453,9 +366,6 @@ func late_skipped() -> bool:
 	return _late_skipped
 
 
-# The two choices at this depth for the path this run has taken: the children of the
-# pick one level up. A depth already picked answers with the pair it offered. At depth 4 a
-# take_or_skip offer is the late item alone and a forced offer its sibling alone.
 func offered(for_class: String, depth: int) -> Array:
 	if for_class != class_id or depth < 1 or depth > max_depth or depth > picks.size() + 1:
 		return []
@@ -473,24 +383,17 @@ func offered(for_class: String, depth: int) -> Array:
 	return pair.map(func(i): return list[i])
 
 
-# The ordinary pair's indices at this depth, or [] for a route that cannot give two.
 func _pair_indices(for_class: String, list: Array, depth: int) -> Array:
 	var pair := [0, 1]
 	if depth > 1:
 		pair = children_of(index_of(for_class, picks[depth - 2], world_one))
 	if depth > 1 and not world_one and not _pair_fits(pair, list, depth):
-		# A world-one pick can sit at another depth in the full table (Sable's Face Runner: slot 3
-		# there, slot 9 here). Take its children from the world-one slot, and swap any id the run
-		# already holds for the first unheld depth-d node under the first pick.
 		pair = _retained_pair(for_class, list, depth)
-	# Refuse a route that cannot give two nodes at this depth instead of offering the wrong ones.
 	if not _pair_fits(pair, list, depth):
 		return []
 	return pair
 
 
-# Which child of the run's own depth-3 pick is the take_or_skip item (L4); the other is the
-# forced sibling. Both come from the run's own depth-4 pair, so the four picks stay one path.
 const _LATE := 0
 
 
@@ -538,7 +441,6 @@ func pick(node_id: String) -> bool:
 	_resolve()
 	picked.emit(node(class_id, node_id, world_one))
 	events_emit("tree_picked", [class_id, node_id, depth])
-	# A skipped pick leaves one open: the next depth is offered as soon as this one lands.
 	if pending():
 		events_emit("tree_offered", [class_id, depth + 1, offered(class_id, depth + 1).map(func(n): return n["id"])])
 	return true
@@ -548,8 +450,6 @@ func path() -> Array[String]:
 	return picks.duplicate()
 
 
-# True when a held pick swaps this slot to this ability row. A relic that duplicates a pick's
-# swap reads this so it neither undoes the pick nor is offered on top of it.
 func gives_swap(slot: String, ability: String) -> bool:
 	for node_id in picks:
 		var n := node(class_id, node_id, world_one)
@@ -572,14 +472,10 @@ func pattern_ops(weapon_id: String) -> Array:
 	return _patterns.get(weapon_id, [])
 
 
-# The build's leanings, one per tag in pick order, for the director to weight packs by
-# (DESIGN-V2 section 15.5): a build is tested, never hard-countered. Read-only.
 func branch_tags() -> PackedStringArray:
 	return PackedStringArray(_tags)
 
 
-# Fits one pick's slot ops onto the live ability state: a swap keeps the slot's cap and
-# scale, extra charges add to whatever items gave, a cooldown scale multiplies in.
 static func apply_pick(abilities, n: Dictionary) -> void:
 	for slot in n.get("swap", {}):
 		if slot == AbilityState.ULTIMATE:

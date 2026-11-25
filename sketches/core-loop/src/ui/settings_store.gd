@@ -1,37 +1,17 @@
 extends RefCounted
 
-# The viewer's settings, saved beside the codex and the UI profile as settings.json:
-# the music and effects levels, comfort levels (screen shake, hit-stop) and look settings.
-# Only levels a player chose are stored, so an untouched game keeps the
-# defaults. Storage failures never throw; the settings keep working in memory, as the
-# UI profile does.
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 
 const FILE := "settings.json"
-# Comfort numbers the settings page keeps: fullscreen 0 off, 1 on (the default, so a fresh
-# install starts fullscreen and the monitor's variable refresh can follow the game); quality 0
-# High, 1 Low.
 const FULLSCREEN := "fullscreen"
 const QUALITY := "quality"
-# Reduced motion, 0 off and 1 on: damps camera shake, FOV kicks, hit-edge flashes and decorative
-# motion. Telegraphs are gameplay information and keep their timing and read.
 const REDUCED_MOTION := "reduced_motion"
-# A reduced-motion edge flash keeps this share of its alpha (the hit read stays visible).
 const REDUCED_FLASH := 0.25
-# Reduce flashes, 0 off and 1 on: cuts the brightness of flashes, white pops and strobes
-# (FlashGuard holds the shares). Separate from reduced motion: a player may want either alone.
 const REDUCE_FLASHES := "reduce_flashes"
-# Frame smoothing, 1 on (the default) and 0 off: the ball is drawn between physics ticks, so it
-# moves every frame on a display that is not 90 Hz, about one tick (11 ms) behind the sim.
 const FRAME_SMOOTHING := "frame_smoothing"
-# Wide picture, 1 on (the default) and 0 off: on a screen wider than 16:9 the world fills it (same
-# height of view, wider across) and the HUD sits in the true corners; off keeps the 16:9 picture
-# with a black bar each side (the PC check on the 3440x1440 monitor, 10 Nov 2026: +2.1% median
-# frame time, p99 at most 9.51 ms).
 const WIDE_PICTURE := "wide_picture"
-# The one line the settings page shows under a row while it has the focus (eight words at most).
 const HELPERS := {
 	FRAME_SMOOTHING: "Smoother motion, about 11 ms added input lag",
 	WIDE_PICTURE: "Fills ultrawide screens; off keeps black bars",
@@ -41,9 +21,6 @@ const INVERT_Y := "invert_y"
 const STICK_DEADZONE := "stick_deadzone"
 const MOUSE_SENSITIVITY := "mouse_sensitivity"
 const AIM_ASSIST := "aim_assist"
-# Stick sensitivity is the full-deflection yaw rate in rad/s; pitch keeps its 1.6/2.6 ratio.
-# Invert uses the comfort rows' numeric toggle convention, 0 off and 1 on. Aim assist is how hard
-# the stick turn slows over a hookable target, 0 off to 1 full (stick only, never the mouse).
 const LOOK_DEFAULTS := {
 	STICK_SENSITIVITY: 2.6,
 	INVERT_Y: 0.0,
@@ -56,7 +33,6 @@ var path := ""
 var volumes := {}
 var comfort := {}
 var look := {}
-# Action name to a comma-separated token list (Bindings.encode); only actions a player rebound.
 var bindings := {}
 var last_error := ""
 var _save_blocked := false
@@ -163,7 +139,6 @@ func wide_picture() -> bool:
 	return float(comfort.get(WIDE_PICTURE, 1.0)) >= 0.5
 
 
-# 0 for High, 1 for Low.
 func quality() -> int:
 	return 1 if float(comfort.get(QUALITY, 0.0)) >= 0.5 else 0
 
@@ -172,14 +147,12 @@ func binding(action: String) -> String:
 	return String(bindings.get(action, ""))
 
 
-# The decoded events of `action`; [] for an action this build does not hold.
 func binding_events(action: String) -> Array:
 	if not Bindings.actions().has(action):
 		return []
 	return Bindings.decode(binding(action))
 
 
-# Mouse look is not rebindable, and an empty binding means no override, so it clears.
 func set_binding(action: String, events: Array) -> void:
 	if Bindings.actions().get(action, {}).get("motion", false):
 		return
@@ -191,8 +164,6 @@ func set_binding(action: String, events: Array) -> void:
 	save()
 
 
-# Saves `events` over the saved events of the same kind only (keys and mouse buttons, pad
-# buttons, trigger axes), so a pad rebind keeps a saved key rebind and the reverse.
 func merge_binding(action: String, events: Array) -> void:
 	var kept := []
 	for old in binding_events(action):

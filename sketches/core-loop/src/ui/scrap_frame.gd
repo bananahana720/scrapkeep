@@ -3,33 +3,11 @@ extends StyleBox
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# The frame for every screen, card and plate, drawn in the hand of whoever made the thing it shows
-# (LEGIBILITY.md section 14.3, ruling ek). This is the one module that draws all four hands.
-#
-# Keeper, the default and the look every plate() and tag() has always had ("HUD look: scrapped
-# together, clean to read"): the ball culture built its screens from scrap, so a panel is a cut plate
-# with uneven corners, a heavier lip on one side, rivets and a strip of tape where parts join, and words
-# sit on small stamped tags. A hand_plate() Keeper also takes halftone corners and a slight lean.
-# The Fleet: a brass bezel on iron oxide, one notched corner, ledger rules and a rubber stamp.
-# The old works: cast in one piece, so no fastener, tape or lean, and a notched seam of uranium green
-# (purple only on the Kindness).
-# Rogues: a bare plate with stencil corner ticks, for a stencilled number.
-#
-# Roughness lives on the frame only; nothing here draws over an icon, number, key letter or glyph. Wear
-# is a value shift of the frame's own colour, never a new hue, so the class colour stays the one "yours"
-# accent. A serial fixes a frame's quirks, so it looks the same on every redraw.
-#
-# Use it anywhere a StyleBoxFlat was used: as a theme stylebox override, or through draw_style_box().
-# plate() and tag() build the Keeper's two kinds and hand_plate() and hand_tag() any hand's; stamp()
-# draws words on a tag for controls that draw their own text; wear() shifts a colour for mismatched parts
-# such as keycaps; draw_tape() tapes anything else; lawful() says whether a colour may sit on a hand's
-# frame. parts() lists what a frame draws, for a test or a capture.
 
 enum Kind { PLATE, TAG }
 
 const Hand := UiTokens.Hand
 const TAPE := Vector2(40.0, 13.0)
-# The Fleet's rubber stamp: its radius, and its gap to the bezel. It sits in the foot's right corner.
 const STAMP := 11.0
 const STAMP_GAP := 6.0
 
@@ -40,20 +18,13 @@ var bg_color := Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
 var border_width := 2.0
 var serial := 0
 var rivets := true
-# Where along the top edge a strip of tape joins the plate, 0 to 1; below 0, none.
 var tape := -1.0
-# A tag's punched hole, on its left end.
 var hole := true
-# Every colour the frame draws, rivets and tape included, times this alpha: a frame
-# fading in or out with the thing it holds (the reward card).
 var fade := 1.0
-# The Keeper's: how far the plate leans, in radians (none with less motion), and dots in two corners.
 var tilt := 0.0
 var halftone := false
-# The Fleet's: ledger rules across the plate, each 0 (top) to 1 (bottom), and a rubber stamp in a corner.
 var dividers := PackedFloat32Array()
 var stamped := false
-# The old works': the seam's colour.
 var seam := Palette.ANCIENT
 
 
@@ -83,8 +54,6 @@ static func tag(edge: Color, serial_value: int, punched := true) -> StyleBox:
 	return box
 
 
-# A plate in a hand's own colours (UiTokens.HANDS). `kindness` turns an old-works seam purple, for the
-# Kindness and nothing else; every other hand ignores it.
 static func hand_plate(which: int, serial_value: int, kindness := false) -> StyleBox:
 	var row: Dictionary = UiTokens.HANDS[which]
 	var box = new()
@@ -101,8 +70,6 @@ static func hand_plate(which: int, serial_value: int, kindness := false) -> Styl
 	return box
 
 
-# A tag in a hand's own colours: the Keeper's punched tag, a brass Fleet tag, a cast old-works tag or a
-# Rogue's bare one.
 static func hand_tag(which: int, serial_value: int) -> StyleBox:
 	var row: Dictionary = UiTokens.HANDS[which]
 	var box = tag(row.edge, serial_value, which == Hand.KEEPER)
@@ -111,8 +78,6 @@ static func hand_tag(which: int, serial_value: int) -> StyleBox:
 	return box
 
 
-# Whether a colour may sit on a hand's frame. Mint is press now and sits on none; brass is the Fleet's
-# alone; purple only on the Kindness's old-works frame.
 static func lawful(which: int, color: Color, kindness := false) -> bool:
 	if _near(color, Palette.ARC):
 		return false
@@ -127,14 +92,10 @@ static func _near(a: Color, b: Color) -> bool:
 	return Vector3(a.r - b.r, a.g - b.g, a.b - b.b).length() < 0.08
 
 
-# How far in from a Fleet plate's right edge its stamp reaches, so the plate's own marks stop short of it.
 static func stamp_reach(width := 2.0) -> float:
 	return width + 3.0 + STAMP_GAP + 2.0 * STAMP
 
 
-# Words stamped on a tag, for controls that draw their own text. `at` is the tag's
-# centre, or its right or left middle when aligned that way. A Keeper tag takes `edge`; any other hand's
-# tag is that hand's own. Returns the tag's rect.
 static func stamp(canvas: CanvasItem, text: String, font: Font, font_size: int, color: Color, edge: Color, serial_value: int,
 		at: Vector2, align := HORIZONTAL_ALIGNMENT_CENTER, which: int = Hand.KEEPER) -> Rect2:
 	var box := tag(edge, serial_value) if which == Hand.KEEPER else hand_tag(which, serial_value)
@@ -145,7 +106,6 @@ static func stamp(canvas: CanvasItem, text: String, font: Font, font_size: int, 
 	return rect
 
 
-# Where stamp() puts a tag: sized to the words plus the tag's margins.
 static func stamp_rect(box: StyleBox, text: String, font: Font, font_size: int, at: Vector2, align := HORIZONTAL_ALIGNMENT_CENTER) -> Rect2:
 	var inner := Vector2(font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x, font.get_height(font_size))
 	var size := inner + Vector2(box.content_margin_left + box.content_margin_right, box.content_margin_top + box.content_margin_bottom)
@@ -153,17 +113,14 @@ static func stamp_rect(box: StyleBox, text: String, font: Font, font_size: int, 
 	return Rect2(Vector2(at.x - size.x * anchor, at.y - size.y * 0.5), size)
 
 
-# A part from a different set: the same hue and saturation, a little lighter or darker.
 static func wear(color: Color, serial_value: int, amount := 0.1) -> Color:
 	return Color.from_hsv(color.h, color.s, clampf(color.v * (1.0 + amount * (2.0 * quirk(serial_value, 7) - 1.0)), 0.0, 1.0), color.a)
 
 
-# A stable 0 to 1 value per serial and slot.
 static func quirk(serial_value: int, slot: int) -> float:
 	return fposmod(sin(float(posmod(serial_value, 9973)) * 12.9898 + float(slot) * 78.233) * 43758.5453, 1.0)
 
 
-# A strip of tape centred on `at`, low contrast, with torn ends.
 static func draw_tape(item: RID, at: Vector2, angle: float, size := TAPE, alpha := 1.0) -> void:
 	_emit(item, _tape_parts(at, angle, size, alpha))
 
@@ -188,9 +145,6 @@ func _draw(item: RID, rect: Rect2) -> void:
 	_emit(item, parts(rect))
 
 
-# Everything the frame draws in `rect`, in order: each part is {role, shape, points, color, width, radius}.
-# The shape is "poly", "line", "segment" or "circle" (centre in points[0]). Roles: fill, lip, shine,
-# edge, hole, rivet, tape, halftone, notch, bezel, divider, stamp, seam, glass, tick.
 func parts(rect: Rect2) -> Array:
 	var out: Array
 	match hand:
@@ -202,7 +156,6 @@ func parts(rect: Rect2) -> Array:
 			out = _rogue(rect)
 		_:
 			out = _keeper(rect)
-	# The Keeper's parts fade as they are made; every other hand's fade here.
 	if fade < 1.0 and hand != Hand.KEEPER:
 		for part in out:
 			part.color = Color(part.color, part.color.a * fade)
@@ -267,7 +220,6 @@ func _keeper(rect: Rect2) -> Array:
 	return out
 
 
-# Printed dots fading out of the top-left and bottom-right corners, in the edge's own colour.
 func _halftone(rect: Rect2, cut: Array) -> Array:
 	var out := []
 	var step := 5.0
@@ -275,7 +227,6 @@ func _halftone(rect: Rect2, cut: Array) -> Array:
 	for corner in [0, 2]:
 		var origin := rect.position if corner == 0 else rect.end
 		var inward := Vector2.ONE if corner == 0 else -Vector2.ONE
-		# Past the corner's rivet, so a dot never sits under it.
 		var start: float = cut[corner] + border_width + 16.0
 		for row in 4:
 			for col in 4 - row:
@@ -289,7 +240,6 @@ func _fleet(rect: Rect2) -> Array:
 	var p := rect.position
 	var e := rect.end
 	var notch := clampf(minf(rect.size.x, rect.size.y) * 0.2, 3.0, 10.0)
-	# One notched corner, top right: a square bite out of the card.
 	var outline := PackedVector2Array([
 		p, Vector2(e.x - notch, p.y), Vector2(e.x - notch, p.y + notch), Vector2(e.x, p.y + notch), e, Vector2(p.x, e.y),
 	])
@@ -309,7 +259,6 @@ func _fleet(rect: Rect2) -> Array:
 	for at in dividers:
 		var y := lerpf(p.y + inset, e.y - inset, clampf(at, 0.0, 1.0))
 		out.append(_segment("divider", Vector2(p.x + inset + 4.0, y), Vector2(e.x - inset - 4.0, y), Color(border_color, 0.5), 1.0))
-	# The stamp goes down whole or not at all: a 44 px boss plate takes it, a tag does not.
 	var stamp_side := 2.0 * (inset + STAMP + STAMP_GAP)
 	if stamped and rect.size.x >= stamp_side and rect.size.y >= stamp_side:
 		var radius := STAMP
@@ -337,9 +286,7 @@ func _old_works(rect: Rect2) -> Array:
 	if kind == Kind.TAG:
 		return out
 	var inset := 4.0
-	# The glass: one straight, even highlight under the top edge.
 	out.append(_segment("glass", Vector2(p.x + inset, p.y + inset), Vector2(e.x - inset, p.y + inset), Color(UiTokens.HANDS[Hand.OLD_WORKS].ink, 0.12), 1.0))
-	# The seam where a join would be, along the foot, with one notch at its middle.
 	var y := e.y - inset - 1.0
 	var mid := rect.get_center().x
 	var half := clampf(rect.size.x * 0.04, 3.0, 8.0)
@@ -356,7 +303,6 @@ func _rogue(rect: Rect2) -> Array:
 	var e := rect.end
 	if bg_color.a > 0.0:
 		out.append(_poly("fill", PackedVector2Array([p, Vector2(e.x, p.y), e, Vector2(p.x, e.y)]), bg_color))
-	# Stencil registration: an L at each corner and a short tick at the middle of the top and foot, no edge.
 	var arm := clampf(minf(rect.size.x, rect.size.y) * 0.2, 4.0, 14.0)
 	var corners := [p, Vector2(e.x, p.y), e, Vector2(p.x, e.y)]
 	for at: Vector2 in corners:

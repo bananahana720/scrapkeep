@@ -1,29 +1,5 @@
 extends RefCounted
 
-# What the player did and the one thing it unlocks. A row listens to one bus signal
-# (game_events.gd), counts matching emissions, or adds up a named argument, until it
-# reaches count. need, min and max then compare one run fact. Nothing here evaluates a
-# row; the listener unit reads this table so unlocks, the locked pilot card's hint and
-# the saved record share one source.
-#
-# name     3 words or fewer
-# text     what to do, 12 words or fewer, shown on a locked card
-# on       the signal name
-# where    optional: signal argument name -> the value it must carry. A row whose where names one
-#          synergy_id never also filters first_time (the codex sets it only on the first find ever)
-# at_least optional: signal argument name -> a number the argument must reach for the fact to count
-# sum      optional: a signal argument to add up instead of counting 1 per emission
-# count    threshold, at least 1
-# need     optional: a run summary key (SUMMARY_KEYS) or one of class, won, world
-# min,max  optional numbers compared with the need key
-# hidden   optional: the card shows no text until it is earned
-# beat     a pilot reward row's story line, BEAT_WORDS or fewer, crew voice: the earned toast's
-#          second line and the line under a locked pilot card's condition
-# pilot    optional: a ClassDef id; the fact counts only while the run flies that pilot
-# reward   {} for none, else exactly one of {"pilot": id}, {"cosmetic": id}, {"world": id},
-#          {"option": id}, {"item": id}; a pilot id is a ClassDef id or a PENDING_PILOTS id; an option id is a
-#          meta_options.gd node row (MetaOptions.validate checks both directions); an item id is an
-#          items.gd row the shift board opens into the offer pool (shift_board.gd reads it from the earn)
 
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 
@@ -36,10 +12,7 @@ const NAME_WORDS := 3
 const TEXT_WORDS := 12
 const BEAT_WORDS := 14
 const MIN_ROWS := 8
-# Pilot ids a row may reward before their ClassDef row exists. The save records the unlock;
-# the card appears when the row lands, and that unit removes the id here.
 const PENDING_PILOTS := []
-# 2026-10-11 (PC-SABLE): preserve the twelve pre-wave lifetime grants; new grants fit one run.
 const GRANDFATHERED := ["kills_100", "kills_1000", "ach_d7_ink_stitch", "ach_d7_plum_curl",
 	"ach_d7_forge_chips", "ach_d7_snail_shell", "ach_d7_thimble", "ach_d7_paw", "ach_d7_seashell",
 	"ach_d7_forge_blue", "ach_d7_ember_plum", "ach_d7_dusk_pink"]
@@ -49,14 +22,10 @@ const ROWS := {
 		"count": 1, "reward": {"cosmetic": "paint_any_night"}},
 	"brindle_routed": {"name": "Brindle Routed", "text": "Rout Admiral Brindle.", "on": "enemy_killed",
 		"where": {"kind": "brindle"}, "count": 1, "beat": "Tarn signed on the day Brindle fell. Brought a claw nobody issued.", "reward": {"pilot": "tarn"}},
-	# rescue_site.gd emits rescue_completed("rivet"); Rivet is also a starter, so the row records the rescue.
 	"rivet_rescued": {"name": "Runner Rescued", "text": "Rescue the stranded runner in world one.", "on": "rescue_completed",
 		"where": {"quest_id": "rivet"}, "count": 1, "beat": "Rivet's back on the roster. Asked who locked the cage from inside.", "reward": {"pilot": "runner_gunner"}},
-	# rescue_site.gd emits rescue_completed("dig") for this quest.
 	"dig_rescued": {"name": "Digger Rescued", "text": "Rescue the buried digger.", "on": "rescue_completed",
 		"where": {"quest_id": "dig"}, "count": 1, "beat": "Kest dug out. Says the wall knocked back the whole time.", "reward": {"pilot": "demolitions_caster"}},
-	# rescue_site.gd emits rescue_completed("isles") at the Moorings cage (park_islands.json rescue_rows). It is
-	# Tally's "or" rule (class_def.gd), so the row carries no pilot reward; ledger_balanced keeps hers.
 	"isles_rescued": {"name": "Inventory Returned", "text": "Free the bookkeeper the Fleet filed as cargo.", "on": "rescue_completed",
 		"where": {"quest_id": "isles"}, "count": 1, "beat": "Tally signed her own release form. Stamped it PAID.", "reward": {}},
 	"kills_100": {"name": "Hundred Down", "text": "Break 100 machines across all your runs.", "on": "enemy_killed",
@@ -71,8 +40,6 @@ const ROWS := {
 		"count": 1, "reward": {"cosmetic": "paint_any_kelp"}},
 	"ten_events": {"name": "Event Regular", "text": "Win 10 world events across all your runs.", "on": "milestone_won",
 		"count": 10, "reward": {"cosmetic": "paint_any_cobalt"}},
-	# Shift board marks (shift_board.gd): routing Brindle with each pilot opens one item into the pools,
-	# from the next run. pilot keeps the count to runs flown with that pilot.
 	"brindle_mark_sable": {"name": "Sable's Mark", "text": "Rout Brindle flying Sable.", "on": "enemy_killed",
 		"where": {"kind": "brindle"}, "pilot": "pylon_engineer", "count": 1, "reward": {"item": "strike_pocket"}},
 	"brindle_mark_rivet": {"name": "Rivet's Mark", "text": "Rout Brindle flying Rivet.", "on": "enemy_killed",
@@ -85,20 +52,16 @@ const ROWS := {
 		"where": {"kind": "brindle"}, "pilot": "tally", "count": 1, "reward": {"item": "salvage_drone"}},
 	"brindle_mark_cannon": {"name": "Cannon's Mark", "text": "Rout Brindle flying the Cannon.", "on": "enemy_killed",
 		"where": {"kind": "brindle"}, "pilot": "remembered_cannon", "count": 1, "reward": {"item": "scrap_geyser"}},
-	# Beating the Mind remembers the cannon (ROADMAP:27); remembered_cannon is pending until its kit lands.
 	"mind_quieted": {"name": "Mind Quieted", "text": "Quiet the Mind. An old cannon in the Highdraft remembers.",
 		"on": "boss_defeated", "count": 1, "need": "world", "min": 3, "max": 3, "beat": "The Mind's guns went quiet. One turned up at the gate, cleaned.", "reward": {"pilot": "remembered_cannon"}},
-	# Tally: three ledger leaves handed to Moss (progress.gd return_leaves); pil-G7 adds her ClassDef row.
 	"ledger_balanced": {"name": "Ledger Balanced", "text": "Return one ledger leaf per world to Moss.", "on": "world_fact",
 		"where": {"kind": "ledger_returned"}, "count": 3, "beat": "Three ledger leaves balanced. Tally walked in holding the pen that wrote them.", "reward": {"pilot": "tally"}},
 	"full_rack": {"name": "Full Rack", "text": "Finish a run holding 10 parts.", "on": "run_ended",
 		"count": 1, "need": "parts", "min": 10, "reward": {"cosmetic": "paint_any_brine"}},
-	# boss_defeated fires for every boss; the world bound keeps this to the Waking (Worlds.ROWS id 2).
 	"waking_stilled": {"name": "Waking Stilled", "text": "Still the Waking in the Dig.", "on": "boss_defeated",
 		"count": 1, "need": "world", "min": 2, "max": 2, "reward": {"cosmetic": "paint_tarn_dig"}},
 	"highdraft_reached": {"name": "Highdraft Reached", "text": "Reach the Highdraft.", "on": "world_entered",
 		"where": {"world": 3}, "count": 1, "reward": {"cosmetic": "paint_any_sky"}},
-	# codex.gd sets first_time once per synergy for the player, so the count is distinct synergies.
 	"codex_keeper": {"name": "Codex Keeper", "text": "Discover 10 synergies across all your runs.", "on": "synergy_discovered",
 		"where": {"first_time": true}, "count": 10, "reward": {"cosmetic": "paint_any_moth"}},
 	"ach_d7_salt_skip": {"name": "Salt Skip", "text": "Finish one run.", "on": "run_ended", "count": 1, "reward": {"cosmetic": "trail_salt_skip"}},
@@ -121,20 +84,12 @@ const ROWS := {
 	"ach_d7_salt_white": {"name": "Salt White", "text": "Break three Wardens.", "on": "beacon_unsealed", "count": 3, "reward": {"cosmetic": "companion_paint_salt"}},
 	"ach_d7_dusk_pink": {"name": "Dusk Pink", "text": "Win 15 world events.", "on": "milestone_won", "count": 15, "reward": {"cosmetic": "companion_paint_dusk"}},
 	"ach_d7_moth_grey": {"name": "Moth Grey", "text": "Discover ten distinct synergies.", "on": "synergy_discovered", "count": 10, "where": {"first_time": true}, "reward": {"cosmetic": "companion_paint_moth"}},
-	# Shared: the skill bar's three grants (CUSTOMIZE.md section 8). B6 kit code fires the discoveries.
-	# A grant on one named discovery never filters first_time, so a trick found before the row existed still pays.
 	"ach_any_set_piece": {"name": "First Ultimate", "text": "Land your first ultimate.", "on": "synergy_discovered",
 		"where": {"synergy_id": "set_piece"}, "count": 1, "reward": {"cosmetic": "trail_any_downbeat"}},
 	"ach_any_curtain_call": {"name": "Curtain Call", "text": "Shatter an open Warden core with an ultimate landing.", "on": "synergy_discovered",
 		"where": {"synergy_id": "set_piece_core"}, "count": 1, "reward": {"cosmetic": "decal_curtain_call"}},
 	"ach_any_cash_in": {"name": "Cash In", "text": "Pay a chain of three with an ultimate landing.", "on": "synergy_discovered",
 		"where": {"synergy_id": "set_piece_cash_in"}, "count": 1, "reward": {"cosmetic": "companion_skin_till_bell"}},
-	# SG12 between-run options: one grant per meta_options.gd node, each a one-run accomplishment
-	# with a count of MetaOptions.MAX_GRANT_COUNT or below. The pocket key opens on a hidden
-	# pocket's discovery: cracked_cache.gd emits world_fact("cache_spent") when its chest opens.
-	# Each pays a paint (systems audit pass D, row 31, 11 Nov 2026): no screen shows a head start.
-	# The node rows and the meta page stay as code; MetaOptions.open_earned, which would open a
-	# node from its grant, has no caller today.
 	"ach_meta_spare_reroll": {"name": "Busy Hands", "text": "Finish three activities.", "on": "activity_done",
 		"count": 3, "reward": {"cosmetic": "paint_any_shift"}},
 	"ach_meta_shelf_preview": {"name": "Wall Crumbler", "text": "Crumble two cracked walls.", "on": "world_fact",
@@ -143,10 +98,6 @@ const ROWS := {
 		"where": {"kind": "cache_spent"}, "count": 1, "reward": {"cosmetic": "paint_any_cache"}},
 	"ach_meta_pocket_tint": {"name": "Fresh Eyes", "text": "Discover three new synergies.", "on": "synergy_discovered",
 		"where": {"first_time": true}, "count": 3, "reward": {"cosmetic": "paint_any_spark"}},
-	# w20 content-family records (WHATS-LEFT row 9). These eleven paid nothing until 12 Nov 2026; each now pays a
-	# tint-only paint, so a completionist run has a reason to chase them (feature-fit.md row 30).
-	# special_broken: a kill-first special (Foreman, Dispatcher, Splitter, Linker) fell.
-	# w19 Spillway roster records (design-v3/SPILLWAY-ROSTER.md): one per Flow kind's speed answer, plus the wet read.
 	"ach_w19_mat_slip": {"name": "Slip the Mat", "text": "Slip a jolt layer's pulse.", "on": "synergy_discovered",
 		"where": {"synergy_id": "mat_slip"}, "count": 1, "reward": {"cosmetic": "paint_any_jolt"}},
 	"ach_w19_flap_ride": {"name": "Ride the Flap", "text": "Ride a sluice flap instead of tumbling.", "on": "synergy_discovered",
@@ -159,7 +110,6 @@ const ROWS := {
 		"where": {"synergy_id": "boom_strike"}, "count": 1, "reward": {"cosmetic": "paint_any_float"}},
 	"ach_w20_kill_first": {"name": "Kill First", "text": "Break three kill-first specials across your runs.", "on": "special_broken",
 		"count": 3, "reward": {"cosmetic": "paint_any_foreman"}},
-	# radio_take_found carries the found rule's "on"; a Signal cache is source "cache".
 	"ach_w20_signal_cache": {"name": "Signal Found", "text": "Find a Signal cache in a park.", "on": "radio_take_found",
 		"where": {"source": "cache"}, "count": 1, "reward": {"cosmetic": "paint_any_signal"}},
 	"ach_w20_legend_take": {"name": "Legend Heard", "text": "Find a legend-tier radio take.", "on": "radio_take_found",
@@ -209,8 +159,6 @@ const ROWS := {
 	"ach_cannon_time_on_target": {"name": "Time on Target", "text": "Land a Fire Mission on eight machines at once.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_time_on_target"}, "count": 1, "reward": {"cosmetic": "paint_cannon_lens"}},
 	"ach_cannon_old_tune": {"name": "Old Tune", "text": "Quiet the Mind with its own gun.", "on": "synergy_discovered", "where": {"synergy_id": "cannon_old_tune"}, "count": 1, "hidden": true, "reward": {"cosmetic": "shell_cannon_choir"}},
 	# --- end remembered_cannon ---
-	# First-win secrets (secrets.gd): the first won run opens one alternate paint per pilot. Hidden, so a
-	# fresh player sees no hint; progress.gd backfill_secrets earns them for a player who won before they existed.
 	"secret_paint_sable": {"name": "Sable's Second Coat", "text": "Win a run.", "on": "run_ended",
 		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_sable_overtime"}},
 	"secret_paint_rivet": {"name": "Rivet's Second Coat", "text": "Win a run.", "on": "run_ended",
@@ -225,8 +173,6 @@ const ROWS := {
 		"where": {"won": true}, "count": 1, "hidden": true, "reward": {"cosmetic": "paint_cannon_velvet"}},
 }
 
-# W50 additive progression records for Worlds 2-3, rogue trail, and HARD ladder rungs.
-# Kept beside ROWS so ROWS stays byte-identical for content registry and fill checks.
 const MASTERY_ROWS := {
 	"dig_warden_broken": {"name": "Swarm Breaker", "text": "Break a Swarm Warden in the Dig.", "on": "beacon_unsealed",
 		"count": 1, "need": "world", "min": 2, "max": 2, "reward": {}},
@@ -302,9 +248,6 @@ static func beat_of(id: String) -> String:
 	return String(row(id).get("beat", ""))
 
 
-# The earned toast's words: the row's name, then its beat on a second line when it has one,
-# else "New look: <item>" for a cosmetic reward whose art has landed. A pending item's toast
-# shows the name only, so a toast never names a look the page cannot show.
 static func toast_text(id: String) -> String:
 	var title := String(row(id).get("name", id))
 	var beat := beat_of(id)
@@ -323,7 +266,6 @@ static func for_pilot(pilot_id: String) -> String:
 	return ""
 
 
-# The row whose reward is that cosmetic, or "" (starters have none).
 static func for_cosmetic(cosmetic_id: String) -> String:
 	for id in ROWS:
 		if ROWS[id].get("reward", {}).get("cosmetic", "") == cosmetic_id and cosmetic_id != "":
@@ -331,7 +273,6 @@ static func for_cosmetic(cosmetic_id: String) -> String:
 	return ""
 
 
-# The bus as signal name -> argument names, for validate.
 static func bus_signals() -> Dictionary:
 	var out := {}
 	var script: Script = load("res://src/core/game_events.gd")
@@ -347,7 +288,6 @@ static func _words(s: String) -> int:
 	return s.split(" ", false).size()
 
 
-# signals: signal name -> argument names. pilots and cosmetics: arrays of ids.
 static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosmetics: Array) -> Array:
 	var problems: Array = []
 	var pilot_rewards := {}
@@ -439,8 +379,6 @@ static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosme
 	return problems
 
 
-# Existing counters are lower bounds: an earned row stops counting. A stricter filter
-# proves the unfiltered fact too, but counts with a different sum never prove it.
 static func recorded_sources(id: String) -> Array:
 	var target := row(id)
 	var out: Array = []

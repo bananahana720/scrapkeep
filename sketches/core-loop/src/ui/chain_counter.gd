@@ -4,13 +4,6 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
-# The hook chain's combo beside the ability bar (design-v3/HOOK-CHAIN.md, "One source, every
-# layer"). The HUD steps it each frame from player.chain.combo and nothing here writes the chain.
-# Shown only while the combo is 2 or more. Each new link swells the digits and eases them back
-# in PULSE seconds; when the chain ends the last number drops and fades over FALL seconds, then
-# hides. The colour is the chain_link row's, so the live colour law holds. The count wears two
-# linked rings and a times sign ("chain x2"), so it reads as a count of links and not as a
-# stray number beside the bar (w37 film 022, PF-21).
 
 const FONT := UiTokens.HEADING
 const PULSE := 0.12
@@ -22,7 +15,6 @@ const LINK := 9.0
 const LINK_W := 2.5
 const TIMES := "×"
 
-# The combo on show: the live combo, or the last one while it falls.
 var shown := 0
 var _combo := 0
 var _pulse := -1.0
@@ -36,7 +28,6 @@ func _init() -> void:
 	visible = false
 
 
-# True while there is something to draw: a live combo or a falling one.
 func showing() -> bool:
 	return _combo >= 2 or _fall >= 0.0
 
@@ -89,7 +80,6 @@ func _draw() -> void:
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-# Two linked rings, the chain itself, with their middle at the counter's mid line.
 func _draw_links(color: Color) -> void:
 	var outline := Color(UiDraw.OUTLINE, UiDraw.OUTLINE.a * color.a)
 	for at in [Vector2(LINK, 0.0), Vector2(LINK * 2.2, 0.0)]:

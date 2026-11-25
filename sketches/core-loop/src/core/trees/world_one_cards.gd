@@ -1,22 +1,7 @@
 extends RefCounted
 
-# World-one card copy (--world-one-builds=on), keyed by node id. A pick card shows the row
-# here when the flag is on and one exists, and the node's own `effect` otherwise, so a node
-# without a row (and every card with the flag off) reads exactly as before. Source:
-# design-v3/research/build-systems/BUILD-SYSTEMS.md, the bold line of each node. Sable, Kest,
-# Rivet, Tarn, Tally and remembered cannon rows join this table in their own units; nothing else
-# needs to change. Depth-3 and depth-4 ultimate cards read SET_PIECE_LINES below instead.
 
-# A run's first pick is a depth-1 pair, read before the pilot has rolled a metre, so the three
-# starting pilots' depth-1 rows say the effect in the words the pilot card and the HUD already use
-# (vault kick, mount, charges, cloak, laser), and only what the card itself gives: Sable's two set
-# the weight launch, and Cannonball says what makes the ball heavy (scrap, the HUD's "Scrap = heft"
-# callout) before the launch it buys; Kest's blasts widen with weight whether or not a card is taken,
-# so her cards do not claim it (player's-eye pass, 10 Nov 2026: a first-time reader could not say
-# what either Sable card did; PF-01). No row uses the game's own terms for a mounted pilot or the
-# shell's steering: "on a wall" says mounted, and "steer sharper" says what the shell inversion does.
 const ROWS := {
-	# Sable, Depth-1 keystones and S1 to S6.
 	"s_static_flutter": "Three sparks on tap. Six pulses charged.",
 	"s_rail_lance": "Longer charge fires one piercing arc lance.",
 	"s_cannonball": "Kick off a wall to zap what's near. Scrap makes you heavier. Heavier launches farther.",
@@ -25,7 +10,6 @@ const ROWS := {
 	"s_face_runner": "Kick off a wall to jump again. Steer sharper after each kick.",
 	"s_arc_nest": "On a wall, bolts chain to another target.",
 	"s_bulwark": "On a wall, nothing shoves or snares you.",
-	# Kest, Depth-1 keystones and K1 to K6.
 	"k_cluster": "Throws scatter three small charges sharing snap.",
 	"k_keg": "One wide slow keg breaks tough props.",
 	"k_trapper": "Charges wait longer. Five can wait at once.",
@@ -34,7 +18,6 @@ const ROWS := {
 	"k_demo_expert": "Smash scatters five payloads.",
 	"k_smoke_trail": "Glide cloaked. Steer sharper while you glide.",
 	"k_ambush": "Throw payloads without breaking cloak.",
-	# Rivet, Depth-1 keystones and R1 to R6.
 	"r_fan_hammer": "Twelve light rounds. Hold to fan fire.",
 	"r_big_iron": "Two piercing shells. Heavy knock, breaks props.",
 	"r_gunline": "Your laser fires twin bolts.",
@@ -43,7 +26,6 @@ const ROWS := {
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
 	"r_ram_fins": "Sprint through bodies instead of bouncing.",
 	"r_second_wind": "Bank two sprints. Sprinting, you steer freely midair.",
-	# Tarn, Depth-1 keystones and T1 to T6.
 	"t_saw_flurry": "Fast light sweeps. Every fifth hit pierces.",
 	"t_guillotine": "Slow windup. Third beat cleaves, breaks props.",
 	"t_long_claw": "Reach two metres farther. Close the gap.",
@@ -52,7 +34,6 @@ const ROWS := {
 	"t_heavy_paw": "Sweeps hurl the crowd twice as far.",
 	"t_spare_claw": "Bank two claw pulls.",
 	"t_vice_grip": "Every clamp refills a claw pull.",
-	# Tally, Depth-1 keystones and TL1 to TL6.
 	"tl_petty_cash": "Half cost, half hit, faster beat spikes.",
 	"tl_compound_interest": "Slower beat. Chained spikes climb to 38.",
 	"tl_audit_stamp": "Every card-punch slam throws a shockwave.",
@@ -61,7 +42,6 @@ const ROWS := {
 	"tl_line_feed": "Harpoon smashes throw a second shockwave.",
 	"tl_spring_vent": "Each surge refills your air jump.",
 	"tl_corner_plate": "Beacons refill a surge and raise Ghost-Shift husks.",
-	# Remembered cannon, Depth-1 keystones and C1 to C6.
 	"c_snap_battery": "Quick lock and short wait, lighter lanes.",
 	"c_siege_rail": "Slow lock. 40m rail pierces and breaks props.",
 	"c_quick_lane": "Call lanes a quarter faster.",
@@ -72,14 +52,7 @@ const ROWS := {
 	"c_rush_shock": "Rush landings throw a shockwave.",
 }
 
-# The second line of a depth-3 or depth-4 ultimate card (SKILL-BAR section 12, item 5), keyed by
-# ultimate id or by the pilot's ult_ knob. Unlike ROWS it shows at every depth and with the
-# world-one flag on or off, and the node keeps its own `effect`. Wave P-B unit B6 seeds one
-# marked block per pilot; each P-C unit fills its own, one line a key in the voice of ROWS, and
-# edits nothing else in this table.
 const SET_PIECE_LINES := {
-	# Shared lines for the framework knobs (every pilot's depth-4 nodes set the same values);
-	# a pilot overrides one as "<class_id>:<knob>" in its own block.
 	"ult_beats": "Ultimate lasts two beats longer.",
 	"ult_volley": "Ultimate strikes one more each beat.",
 	"ult_radius": "Ultimate lands two metres wider.",
@@ -122,8 +95,6 @@ const SET_PIECE_LINES := {
 }
 
 
-# The three rows that name the Riveted Shell inversion read these instead while the shell is
-# not fitted (--hotwire-shell off), because build.gd applies the inversion only with it fitted.
 const UNFITTED_ROWS := {
 	"s_face_runner": "Kick off a wall to jump again.",
 	"k_smoke_trail": "Glide cloaked.",
@@ -135,8 +106,6 @@ static func has_row(node_id: String) -> bool:
 	return ROWS.has(node_id)
 
 
-# The effect line a card shows for this node: the world-one row when `world_one` and a
-# row exists, else the node's own effect. `shell` is whether Riveted Shell is fitted.
 static func effect_line(node: Dictionary, world_one: bool, shell: bool) -> String:
 	var id := String(node.get("id", ""))
 	if world_one and not shell and UNFITTED_ROWS.has(id):
@@ -146,9 +115,6 @@ static func effect_line(node: Dictionary, world_one: bool, shell: bool) -> Strin
 	return String(node.get("effect", ""))
 
 
-# The set piece line for a node: its swapped-in ultimate id first, then any ult_ knob it sets,
-# read as "<pilot>:<knob>" (the class id the card is offered to) before the shared knob line.
-# "" when none is seeded. Independent of the world-one flag.
 static func set_piece_line(node: Dictionary, table: Dictionary = SET_PIECE_LINES, pilot := "") -> String:
 	var swap = node.get("swap", {})
 	if swap is Dictionary and swap.has("ultimate"):

@@ -1,15 +1,5 @@
 extends RefCounted
 
-# Shift variants (W46-08, design-v3/WORLD1-DEMO-CATALYST.md): run modifiers and stage variants
-# opened by stamping rungs on the shift board (shift_board.gd SEEDS). This module is the one
-# owner of which built variants are open, which ones play on a run, and what each active variant
-# changes. Callers ask here and never reach into ShiftBoard.SEEDS or run.extra themselves.
-#
-# Only built variants are listed in BUILT. An unbuilt seed (flume_backwash) stays off the board
-# and never plays (Andrew, 12 Nov 2026, card on W1-72).
-#
-# No variant grants a lasting stat buff or scales enemy health (ruling al). Every effect ends
-# with the run and presses a slow or careless ball rather than stopping a rolling one (ruling cu).
 
 const ShiftBoard := preload("res://src/core/shift_board.gd")
 const Panels := preload("res://src/build/panels.gd")
@@ -21,32 +11,20 @@ const CREW_SHORT := "crew_short"
 const MALPAIS_MONSOON := "malpais_monsoon"
 const HIGHDRAFT_ECLIPSE := "highdraft_eclipse"
 
-# Built variants: World 1 in board rung order (first_warden, brindle_routed, mark_sable), followed by
-# World 2 & World 3 shift variants (W50).
 const BUILT := [OVERTIME, DAM_NIGHT_SHIFT, CREW_SHORT, MALPAIS_MONSOON, HIGHDRAFT_ECLIPSE]
 
-# Achievement gates for World 2 & 3 variants (not on the W1 ShiftBoard.SEEDS table, so W1 board
-# entries and W1-only open_for() counts stay unchanged).
 const WORLD_VARIANT_GATES := {
 	MALPAIS_MONSOON: "waking_stilled",
 	HIGHDRAFT_ECLIPSE: "highdraft_reached",
 }
 
-# Keys inside RunState.extra (omitted when unused so unstamped runs keep byte-identical docs).
 const RUN_KEY := "shift_variants"
 const OVERTIME_PAID_KEY := "overtime_panel_stage"
 
-# Profile stat prefix recording that an opened variant has played its guaranteed debut run.
 const DEBUT_STAT_PREFIX := "shift.variant_seen."
 
-# Per-variant seeded draw chance on runs after the variant's debut.
 const DRAW_CHANCE := 0.35
 
-# Dam Night Shift: look id for W46-13's lighting/props pass, fuller dam crew via pressure
-# scaling only (pack_scale up, interval_scale down; never threat or enemy health, ruling al),
-# and one extra salvage cage on the open west domes shelf (outside the yard-lock rings, off
-# every ride line and clear of all PocketDraw anchors). Freeing it pays a scrap burst the same
-# size as an ordinary standing salvage activity (no pilot unlock, no lasting stat, no panel).
 const NIGHT_LOOK_ID := "dam_night"
 const NIGHT_PACK_SCALE := 1.25
 const NIGHT_INTERVAL_SCALE := 0.85
@@ -62,12 +40,8 @@ const NIGHT_SHIFT_CAGE := {
 	"prompt": "crack the night cage",
 }
 
-# Overtime: Wardens wake one beat early (at OVERTIME_WAKE_SCALE x beacon radius, ahead of the
-# ring) and breaking a Warden bolts on one extra grey panel per run, banked once.
 const OVERTIME_WAKE_SCALE := 2.0
 
-# Short Crew: no dam shop on stage 1, and one extra cracked cache on the dam's east toe apron
-# clear of the kicker, training wall, gate slots, beacon and every surplus PocketDraw anchor.
 const CREW_SHORT_CACHE := {
 	"id": "cracked_cache",
 	"row": "crew_short_cache",
@@ -77,8 +51,6 @@ const CREW_SHORT_CACHE := {
 	"pay": {"rarities": ["rare"]},
 }
 
-# Malpais Monsoon (W50, World 2 stages 3-4): storm-driven Dig cadence (pack_scale up, interval_scale
-# down; zero threat or enemy HP scaling per ruling al) and one extra cracked cache per Dig park.
 const MONSOON_LOOK_ID := "malpais_monsoon"
 const MONSOON_PACK_SCALE := 1.2
 const MONSOON_INTERVAL_SCALE := 0.88
@@ -101,9 +73,6 @@ const MONSOON_CACHES := {
 	},
 }
 
-# Highdraft Eclipse (W50, World 3 stages 5-6): dimmed skies with sharper patrol tempo (pack_scale up,
-# interval_scale down, elite_rate up; zero threat or enemy HP scaling per ruling al) and one extra
-# cracked cache per Highdraft park.
 const ECLIPSE_LOOK_ID := "highdraft_eclipse"
 const ECLIPSE_PACK_SCALE := 1.22
 const ECLIPSE_INTERVAL_SCALE := 0.85
@@ -127,7 +96,6 @@ const ECLIPSE_CACHES := {
 	},
 }
 
-# Stage-card lines shown beside the Foreman's memo when a variant applies to the stage.
 const CARD_ROWS := {
 	DAM_NIGHT_SHIFT: {"id": DAM_NIGHT_SHIFT, "word": "Night Shift", "line": "Floodlights on, fuller crew, one more cage."},
 	OVERTIME: {"id": OVERTIME, "word": "Overtime", "line": "Wardens wake early and pay a panel."},
@@ -136,8 +104,6 @@ const CARD_ROWS := {
 	HIGHDRAFT_ECLIPSE: {"id": HIGHDRAFT_ECLIPSE, "word": "Highdraft Eclipse", "line": "Dim thermals, sharp patrols, rim cache."},
 }
 
-# Test and still-capture force seam: null means normal profile/run resolution; an Array forces
-# that exact built-variant set without touching tuning.gd.
 static var _forced: Variant = null
 
 
@@ -178,7 +144,6 @@ static func _sanitize(ids: Array) -> Array:
 	return out
 
 
-# Built variant ids opened on `profile` by stamping their ShiftBoard rung or earning their W2/W3 gate.
 static func open_for(profile) -> Array:
 	if profile == null:
 		return []
@@ -202,9 +167,6 @@ static func debut_needed(id: String, profile) -> bool:
 	return id in open_for(profile) and int(profile.stat(debut_stat(id))) < 1
 
 
-# Marks every newly-opened built variant as seen on `profile` and returns those ids so the run
-# that calls this plays them on its first shift. Mutates nothing for bots, null profiles, or
-# forced runs. Call before flow's existing profile save at run start so no extra save is added.
 static func consume_debuts(profile, bot_driven := false) -> Array:
 	if bot_driven or profile == null or forced() != null:
 		return []
@@ -216,9 +178,6 @@ static func consume_debuts(profile, bot_driven := false) -> Array:
 	return out
 
 
-# Pure read of which built variants play for `profile` and `run_seed`. Any id in `debuts` (or
-# still waiting for its debut on `profile`) is guaranteed; other open ids roll independently on
-# their own stream so shared RNG is never touched.
 static func resolve_run(profile, run_seed: int, debuts := [], bot_driven := false) -> Array:
 	var override = forced()
 	if override != null:
@@ -241,8 +200,6 @@ static func active_for(profile, run_seed: int, bot_driven := false) -> Array:
 	return resolve_run(profile, run_seed, [], bot_driven)
 
 
-# Resolves and records the run's active variants in `run.extra` only when non-empty, leaving
-# fresh profiles and unstamped runs with byte-identical entrance documents.
 static func attach_run(run, profile, debuts := [], bot_driven := false) -> Array:
 	var active_ids := resolve_run(profile, int(run.run_seed) if run != null else 0, debuts, bot_driven)
 	if run != null:
@@ -254,7 +211,6 @@ static func attach_run(run, profile, debuts := [], bot_driven := false) -> Array
 	return active_ids
 
 
-# The variants active on a live or resumed `run` (force override wins for tests and stills).
 static func active(run) -> Array:
 	var override = forced()
 	if override != null:
@@ -269,7 +225,6 @@ static func has(run, id: String) -> bool:
 	return id in active(run)
 
 
-# Stage look id for visual pass; "" when the stage uses its default look.
 static func look_id(run, stage: int) -> String:
 	if stage == 1 and has(run, DAM_NIGHT_SHIFT):
 		return NIGHT_LOOK_ID
@@ -281,9 +236,6 @@ static func look_id(run, stage: int) -> String:
 	return ""
 
 
-# Returns `def` unchanged unless a stage-pressure variant applies, in which case only the stage's
-# pressure cadence scales (more enemies per pack, shorter interval, elite rate; never threat,
-# warden_hp, warden_plating or enemy health per ruling al).
 static func stage_def(def: Dictionary, run, stage: int) -> Dictionary:
 	if def.is_empty():
 		return def
@@ -313,15 +265,10 @@ static func stage_def(def: Dictionary, run, stage: int) -> Dictionary:
 	return out
 
 
-# True when Overtime wakes the stage's sealed Warden ahead of the beacon ring.
-# Waits while a stage yard lock is armed or shut so approaching the yard never opens it early
-# or forfeits the yard's panel and bell.
 static func wakes_warden(run, beacon_radius: float, flat_distance: float, yard_ahead := false) -> bool:
 	return not yard_ahead and has(run, OVERTIME) and flat_distance <= beacon_radius * OVERTIME_WAKE_SCALE
 
 
-# Rewinds an Overtime panel claim made on or after the stage being retried, because run.restore()
-# rewinds run.panels back to stage entry. Claims banked on earlier stages stay intact.
 static func on_stage_retry(run) -> void:
 	if run == null or not ("extra" in run):
 		return
@@ -330,10 +277,6 @@ static func on_stage_retry(run) -> void:
 		run.extra.erase(OVERTIME_PAID_KEY)
 
 
-# Claims Overtime's extra grey panel on a Warden break: at most one panel per run, banked once
-# across stages and Continue (retry_stage calls on_stage_retry after run.restore() so a retried
-# stage can still pay on this stage or a later one without ever paying twice in one run). Drawn
-# on its own stream so shared and panel-drop RNG never drift.
 static func claim_overtime_panel(run) -> String:
 	if run == null or not has(run, OVERTIME):
 		return ""
@@ -346,7 +289,6 @@ static func claim_overtime_panel(run) -> String:
 	return Panels.draw(rng, String(run.class_id()))
 
 
-# False on stage 1 when Short Crew closes the dam shop; true everywhere else.
 static func dam_shop_open(run, stage := -1) -> bool:
 	if run == null:
 		return true
@@ -358,7 +300,6 @@ static func _is_dam_stage(map_id: String, run) -> bool:
 	return run != null and int(run.stage) == 1 and map_id == String(ParkDefs.of(1).get("map", ""))
 
 
-# Extra standing activity sites added by active variants on `map_id` for `run`.
 static func extra_sites(map_id: String, run) -> Array:
 	var out: Array = []
 	if _is_dam_stage(map_id, run) and has(run, CREW_SHORT):
@@ -370,19 +311,16 @@ static func extra_sites(map_id: String, run) -> Array:
 	return out
 
 
-# Extra rescue cages built by active variants on `map_id` for `run`.
 static func extra_cages(map_id: String, run) -> Array:
 	if not _is_dam_stage(map_id, run) or not has(run, DAM_NIGHT_SHIFT):
 		return []
 	return [NIGHT_SHIFT_CAGE.duplicate(true)]
 
 
-# Scrap burst paid when freeing a variant salvage cage; 0 for ordinary pilot cages.
 static func cage_salvage_scrap(quest: String) -> int:
 	return NIGHT_SHIFT_CAGE_SCRAP if quest == NIGHT_SHIFT_CAGE_QUEST else 0
 
 
-# Stage-card caption rows for active variants that apply to `stage`.
 static func card_rows(run, stage: int) -> Array:
 	var out: Array = []
 	var world := ParkDefs.world_of(stage)
@@ -396,7 +334,6 @@ static func card_rows(run, stage: int) -> Array:
 	return out
 
 
-# Built variant rows for the Shift Board UI, each paired with the rung that opens it.
 static func board_entries(profile, sitting := false) -> Array:
 	var out: Array = []
 	for id in BUILT:

@@ -9,16 +9,6 @@ const Icons := preload("res://src/ui/icons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const AchievementsPage := preload("res://src/ui/achievements_page.gd")
 
-# What to chase next shift (BACKLOG W1-72, gameplay critique finding 10): a plate the summary tapes up
-# left of the comic page, opposite the "next shift" tip. It names the shift board's next rung (an empty
-# slate ring, the rung's name, what to do and what it opens) and the run's world's secrets as pips, an
-# amber star for each found and a slate ring for each still out there, the achievements page's marks.
-# Display only: every word is a shift_board.gd or secrets.gd row.
-#
-# It is a strip of the shift board, so it wears the board's mixed hand (LEGIBILITY section 14.3): a cast
-# old-works frame with the uranium-green seam and no fastener or lean, laid on the Keeper's summary as a
-# mark; the rung's name on a split-flap cell in the works' mono face that settles in a straight line (at
-# once with less motion); what to do and what it opens in the Keepers' chalk.
 
 const WIDTH := 300.0
 const SERIAL := 34
@@ -32,8 +22,6 @@ var _settling: Tween
 var _said := ""
 
 
-# The plate's facts, for the plate and a test. next: the rung id ("" when the board is full). secrets:
-# secrets.gd world_count, {} when the world has no secret rows.
 static func reading(profile, world: int, known: Callable, sitting := false) -> Dictionary:
 	var board := ShiftBoard.reading(profile, sitting)
 	var out := {"next": String(board["next"]), "name": String(board["next_name"]), "text": String(board["next_text"]),
@@ -48,7 +36,6 @@ static func shows(read: Dictionary) -> bool:
 	return String(read["next"]) != "" or not (read["secrets"] as Dictionary).is_empty()
 
 
-# The plate as one line of words, for a test and the screen reader of tests: "" for an empty plate.
 static func said(read: Dictionary) -> String:
 	var parts := PackedStringArray()
 	if String(read["next"]) != "":

@@ -8,23 +8,9 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# What the reward ceremony draws (v3 W13): the reveal card, the crate that shakes, cracks
-# and bursts, the hull slot the part sockets into, and the payoff's flash over the ball.
-# It only draws the state presentation/reward_ceremony.gd hands it, on the real clock
-# the ceremony passes in `now`, so hit-stop and a paused tree never pin it.
-#
-# The look is salvage (Andrew's standing HUD direction): roughness lives on the frame, a
-# riveted plate with a jittered outline, a paint stripe and a stamped tag, and never on
-# the information, whose glyph and name stay crisp. The plate is W12's scrap_frame.gd
-# plate, the same salvage frame as the class cards and field notes. The class
-# colour means yours (the burst, the rays, the snapped wire, the socket); the rarity
-# colour is the find's own (the stripe, the stamp, the glyph). No red: nothing here is
-# hostile.
 
 const CARD := Vector2(360.0, 112.0)
 const MARGIN := 18.0
-# The HUD's centred toast column (hud.gd TOAST_WIDTH); the card rests beside it on the
-# left, as the discovery banner does on the right.
 const TOAST_COLUMN := 800.0
 const CEREMONY_SCALE := 1.25
 const CRATE := Vector2(220.0, 130.0)
@@ -32,19 +18,11 @@ const CRATE_SCALE := 1.4
 const RAYS := 14
 const BITS := 32
 
-# Reduced motion (Game.set_reduced_motion keeps it current): the crate holds still.
 static var reduced_motion := false
 
 var now := 0
-# The card showing, or {}: name, verb, stamp, icon, element_icon, tint, heart, partner_icon,
-# link ("" none, "lit" a completed synergy, "hint" the partner to look for), class_color,
-# start_ms, in_s, hold_s, out_s, snap_s, seed, and "ceremony" when it is the crate's card.
 var card := {}
-# The crate, or {}: start_ms, burst_ms (-1 until the lid goes), close_ms (-1 until it
-# closes), in_s, build_s, hold_s, out_s, tint, class_color, seed, hull (icon ids, the new
-# part last).
 var ceremony := {}
-# Payoff flashes: {icon, tint, class_color, at (screen), start_ms, life_s}.
 var flashes: Array = []
 
 var _cracks: Array = []
@@ -85,7 +63,6 @@ func set_ceremony(state: Dictionary) -> void:
 			"spin": rng.randf_range(-9.0, 9.0), "class": b % 2 == 0})
 
 
-# The words a player can read right now (word_budget.gd counts these).
 func drawn_words() -> PackedStringArray:
 	var words := PackedStringArray()
 	if _card_alpha() > 0.0:
@@ -109,8 +86,6 @@ func _screen() -> Vector2:
 	return get_viewport_rect().size if is_inside_tree() else Vector2(1600.0, 900.0)
 
 
-# Where an in-flow card rests: the toasts band's left side, or just under the band when
-# the side is too narrow (the discovery banner's rule, mirrored).
 func card_rest(screen: Vector2) -> Vector2:
 	var band := ScreenRegions.rect("toasts", screen)
 	var beside := MARGIN + CARD.x + MARGIN <= (screen.x - TOAST_COLUMN) * 0.5 and CARD.y <= band.size.y
@@ -161,8 +136,6 @@ static func _ease_in(x: float) -> float:
 	return x * x * x
 
 
-# --- The card ---------------------------------------------------------------------------
-
 func _draw_card(base: Transform2D, t: float, alpha: float) -> void:
 	draw_set_transform_matrix(base)
 	var tint: Color = card.get("tint", Palette.AMBER)
@@ -188,9 +161,6 @@ func _draw_card(base: Transform2D, t: float, alpha: float) -> void:
 	draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
-# The synergy wire: stapled along the bottom rail from the part to its partner. A lit
-# wire snaps across in the class colour and sparks the partner awake; a hint is a dim
-# dashed run to the partner you still need.
 func _draw_link(own: Vector2, t: float, alpha: float, yours: Color, tint: Color, lit: bool) -> void:
 	var partner := Vector2(CARD.x - 30.0, 74.0)
 	var path := PackedVector2Array([own + Vector2(0.0, 32.0), Vector2(own.x, CARD.y - 13.0), Vector2(partner.x, CARD.y - 13.0), partner + Vector2(0.0, 19.0)])
@@ -217,7 +187,6 @@ func _draw_link(own: Vector2, t: float, alpha: float, yours: Color, tint: Color,
 		draw_string(UiFonts.bold(), partner + Vector2(-5.5, 7.0), "?", HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.BODY, _faded(UiTokens.quiet(), alpha))
 
 
-# The first `fraction` of a polyline, by length.
 static func _partial(path: PackedVector2Array, fraction: float) -> PackedVector2Array:
 	var total := 0.0
 	for i in path.size() - 1:
@@ -235,10 +204,6 @@ static func _partial(path: PackedVector2Array, fraction: float) -> PackedVector2
 	return out
 
 
-# A salvaged plate: scrap_frame.gd's cut plate (uneven corners, lip, rivets, a strip of
-# tape where the seed puts it), edged verdigris warmed by the find's colour, with the
-# rarity paint stripe down the left. The seed is the frame's serial, so a card keeps its
-# quirks on every redraw, and the frame fades with the card.
 func _plate(rect: Rect2, edge: Color, plate_seed: int, alpha: float) -> void:
 	var box = ScrapFrame.plate(Palette.VERDIGRIS.lerp(edge, 0.35), plate_seed, Color(Palette.CHARCOAL, 0.94), 2.0,
 		0.2 + 0.6 * ScrapFrame.quirk(plate_seed, 8))
@@ -247,7 +212,6 @@ func _plate(rect: Rect2, edge: Color, plate_seed: int, alpha: float) -> void:
 	draw_rect(Rect2(rect.position + Vector2(5.0, 13.0), Vector2(5.0, rect.size.y - 26.0)), _faded(edge, alpha))
 
 
-# A socket: a dark disc ringed in `tint` holding a crisp glyph; rare-plus adds a mint heart.
 func _socket(centre: Vector2, radius: float, icon: String, tint: Color, alpha: float, heart := Color(0, 0, 0, 0)) -> void:
 	draw_circle(centre, radius, _faded(Color(Palette.CHARCOAL.darkened(0.35), 0.96), alpha))
 	draw_arc(centre, radius, 0.0, TAU, 32, _faded(tint, alpha), 2.5, true)
@@ -259,7 +223,6 @@ func _socket(centre: Vector2, radius: float, icon: String, tint: Color, alpha: f
 		draw_texture_rect(Icons.shape("diamond"), Rect2(centre - Vector2(h, h) * 0.5, Vector2(h, h)), false, heart)
 
 
-# The stamped tag, riveted over the plate's top-right corner at a tilt.
 func _stamp(base: Transform2D, at: Vector2, text: String, tint: Color, alpha: float) -> void:
 	if text == "":
 		return
@@ -274,9 +237,6 @@ func _stamp(base: Transform2D, at: Vector2, text: String, tint: Color, alpha: fl
 	draw_set_transform_matrix(base)
 
 
-# The card's verb line: {size, lines}. One line at BODY when it fits `width`, else broken at a word onto two
-# lines, at BODY when both fit and at CAPTION when not (a verb cut off mid-word, "Bounces hit machines like
-# a sh", read as broken: PF-34).
 static func verb_fit(verb: String, width: float) -> Dictionary:
 	if UiFonts.width(verb, UiTokens.BODY) <= width:
 		return {"size": UiTokens.BODY, "lines": [verb]}
@@ -287,7 +247,6 @@ static func verb_fit(verb: String, width: float) -> Dictionary:
 	return {"size": UiTokens.CAPTION, "lines": _two_lines(verb, width, UiTokens.CAPTION)}
 
 
-# The verb broken after the most words that fit `width` at `font_size`; the rest is the second line.
 static func _two_lines(verb: String, width: float, font_size: int) -> Array:
 	var words := verb.split(" ", false)
 	var first := ""
@@ -311,8 +270,6 @@ func _text(at: Vector2, value: String, font_size: int, color: Color, width: floa
 static func _faded(color: Color, alpha: float) -> Color:
 	return Color(color, color.a * alpha)
 
-
-# --- The crate ----------------------------------------------------------------------------
 
 func _burst_seconds() -> float:
 	var at := int(ceremony.get("burst_ms", -1))
@@ -419,8 +376,6 @@ func _draw_burst(centre: Vector2, bt: float, fade: float) -> void:
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
-# The build as slots on the hull: the parts already held, and the new one flying from
-# the card's glyph into the last slot, which rings in the class colour when it seats.
 func _draw_hull(centre: Vector2, bt: float, fade: float) -> void:
 	var hull: Array = ceremony.get("hull", [])
 	if hull.is_empty():
@@ -451,8 +406,6 @@ func _draw_hull(centre: Vector2, bt: float, fade: float) -> void:
 			var ring := clampf((bt - 0.85) / 0.4, 0.0, 1.0)
 			draw_arc(slot, 16.0 + 18.0 * ring, 0.0, TAU, 24, Color(yours, (1.0 - ring) * alpha), 3.0, true)
 
-
-# --- The payoff ---------------------------------------------------------------------------
 
 func _draw_flash(flash: Dictionary) -> void:
 	var x := clampf(_seconds(flash["start_ms"]) / float(flash["life_s"]), 0.0, 1.0)

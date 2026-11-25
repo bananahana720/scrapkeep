@@ -1,22 +1,5 @@
 extends RefCounted
 
-# The records on Moss's jukebox: every tune a run can play, found the first time it is heard
-# in play (tune_ear.gd) and kept in the profile's tunes list. One row per tune the game can
-# tell apart today. A row's source says what the band was doing when it played, so the same
-# row both recognises a tune (key_of) and plays it back at camp (audio.gd spin).
-#   menu    the title or a summary pack (won picks the summary's outcome)
-#   level   a zone's roaming music
-#   warden  a zone's Warden fight
-#   boss    a world boss's fight
-#   lounge  Moss's bay, a layer mask over the zone the bay docks at
-#   miniboss  the mini-boss fight, the level darkened (synth band only for now)
-#   pack    a recorded-only track (a boss phase, a final, the champion, a Eurodance drop, a
-#           place-and-moment tune): heard only while its ACE pack plays; on the deck the
-#           synth plays its boss, or its zone's roam, as a stand-in when the pack is not on disk
-# A new track (a secret area, a champion, a final phase) is one more row with its own source
-# kind and one more branch in key_of; nothing else changes. Ids and names follow the music
-# thread's registry, design-v3/sound/tunes.json, as each of its tracks is wired. where is the dry hint a blank
-# sleeve shows; sleeve is the note on the record once found.
 
 const SHELVES := ["Every Run", "Spillway Works", "The Dig", "The Highdraft"]
 
@@ -49,9 +32,6 @@ const ROWS := [
 		"where": "Wear a champion down to its last third.",
 		"sleeve": "Nobody told the crowd there was a crowd.",
 		"source": {"kind": "pack", "pack": "euro-champion", "boss": "brindle"}},
-	# The place-and-moment tunes (tune_moments.gd on the music branch): each a recorded pack
-	# named by its tunes.json id, heard while that pack plays. On the deck the zone (or boss)
-	# stands in on the synth when the pack is not on disk.
 	{"id": "event-scrap-stampede", "name": "Scrap Stampede", "shelf": 0, "rare": false,
 		"where": "Get caught in a scrap stampede.",
 		"sleeve": "Recorded mid-stampede. Some percussion was debris.",
@@ -237,9 +217,6 @@ const ROWS := [
 const BOSSES := ["brindle", "waking", "mind"]
 
 
-# First-win secrets (secrets.gd, PR #97): a secret tune stays off the crate and off the band
-# until Secrets.tune_open. Read by path, so the jukebox works with or without that file;
-# with no secrets.gd nothing is shut.
 const SECRETS := "res://src/core/secrets.gd"
 
 
@@ -265,11 +242,6 @@ static func on_shelf(shelf: int) -> Array:
 	return ROWS.filter(func(r: Dictionary): return int(r["shelf"]) == shelf)
 
 
-# The tune the band is playing, from what the music director reports: mode (idle, play or
-# dead), track and section as music_engine.gd names them, whether Moss's lounge mask is on,
-# the zone ("1-1") of the stage in play, and the recorded pack playing ("" when the synth
-# plays). A recorded-only pack wins over the synth track under it. "" when nothing on the
-# jukebox is playing: the death break's keys, a track no row names.
 static func key_of(state: Dictionary) -> String:
 	var pack := String(state.get("pack", ""))
 	if pack != "" and not row(pack).is_empty():

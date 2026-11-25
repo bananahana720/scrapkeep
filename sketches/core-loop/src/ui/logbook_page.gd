@@ -12,14 +12,6 @@ const WorkOrders := preload("res://src/core/work_orders.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
-# Logbook & Codex (W50 Stage D): preserves the flat Codex entries list (rows, detail,
-# open_entry) for logbook_test.gd while surfacing all four W50 narrative pillars behind
-# a keyboard/pad-navigable tab strip:
-#   entries  Codex discoveries with synthesis margins (codex.entry_detail)
-#   arcs     40-chapter PilotStory punch-cards (8 casts x 5 holes; Patch hidden until ch1)
-#   pairs    15-pair chemistry matrix (3 beats + live synthesis margin)
-#   trail    6-node Patch wire trail (strictly spoiler-gated via PilotStory.entry_visible)
-#   foreman  Foreman Habit Ledger (Old-Works cast plate; dormant < 3 runs, else 7 axes)
 
 const STATUS_TEXT := {"none": "", "unencountered": "Unencountered", "new": "New", "available": "Available"}
 const TABS := ["entries", "arcs", "pairs", "trail", "foreman"]

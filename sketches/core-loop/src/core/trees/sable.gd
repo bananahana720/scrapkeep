@@ -1,9 +1,5 @@
 extends RefCounted
 
-# Sable's upgrade tree: boom, bounce, take point, turret. Heap order: 2 depth-1 nodes,
-# then 4, 8 and 16; node i's children are nodes 2i + 2 and 2i + 3. The left half
-# bounces and booms (Cannonball); the right half takes point and turrets (Beachhead).
-# Op vocabulary and knob readers: upgrade_tree.gd.
 
 const NODES := [
 	{"id": "s_cannonball", "name": "Cannonball", "effect": "Vault kicks set off a small discharge", "key": "movement",
@@ -75,10 +71,6 @@ const NODES := [
 ]
 
 
-# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09). Both keep
-# mass_launch so no Sable run loses weight launch, and both shape arc_caster and pylon_turret.
-# Left root: Static Flutter (s_cannonball moves to slot 2 in place of s_coil_hook; Face Runner stays at slot 3).
-# Right root: Rail Lance (s_beachhead moves to slot 4 in place of s_arc_nest; s_bulwark stays at slot 5).
 const STATIC_FLUTTER := {"id": "s_static_flutter", "name": "Static Flutter", "effect": "Three sparks on tap. Six pulses charged.", "key": "weapon",
 	"icon": "ab_sable_weapon", "tags": ["air", "burst"], "knob": {"mass_launch": true},
 	"pattern": {
@@ -95,8 +87,6 @@ const RAIL_LANCE := {"id": "s_rail_lance", "name": "Rail Lance", "effect": "Long
 		"pylon_turret": {"set": {"charge_bolt_mult": 45.0 / 9.0, "charge_pierce": 2, "charge_no_chain": true},
 			"mul": {"charge_s": 1.00 / 0.64}},
 	}}
-# The world-one Face Runner stays at index 3 (S4, under Static Flutter): each valid vault restores
-# one air jump and keeps the default Augments.VAULT_FACE_COOLDOWN (1.5 s) lock.
 const FACE_RUNNER_WORLD_ONE := {"id": "s_face_runner", "name": "Face Runner", "effect": "Vault kicks refill your air jump", "key": "movement",
 	"icon": "ab_sable_vault", "tags": ["air", "mobility"], "knob": {"vault_air": true}}
 # A static var, not a const: GDScript cannot fold Array.slice into a constant.

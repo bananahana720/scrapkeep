@@ -1,9 +1,5 @@
 extends RefCounted
 
-# One object owns the run: class, stage, health, scrap, parts and the counters the
-# summary prints. Modules change it only through the mutators below, and each mutator
-# publishes its fact on the bus after the change is made, so the HUD and the numbers
-# here cannot disagree. Flow alone calls begin(), snapshot() and restore().
 
 const Companion := preload("res://src/core/companion.gd")
 const Relics := preload("res://src/build/relics.gd")
@@ -17,44 +13,24 @@ const MetaOptions := preload("res://src/core/meta_options.gd")
 const MAX_HP := 100.0
 const CONSUMABLE_SLOTS_DEFAULT := 1
 const CONSUMABLE_SLOTS_MAX := 2
-# A hit that would kill from full health leaves 1.0 instead (coordinator ruling, 19 Oct 02:29Z:
-# at base tier no single hit kills from full). Applies at every tier; the ladder's top step may
-# thin it through `one_shot_guard`. A hit of SCRIPTED_KILL or more is a scripted death (tests and
-# scripted ends use 9999 or 99999), never an attack, so the guard lets it through.
 const ONE_SHOT_GUARD := true
 const SCRIPTED_KILL := 9999.0
 const REGEN_DELAY := 5.0
 const REGEN_RATE := 6.0
-# Match HUD.LOW_HEALTH. Two seconds allows a clutch move before the 5 s regen delay;
-# player code will consume the window, without changing the hit's damage or retries.
 const ESCAPE_LOW_HULL := 0.25
 const ESCAPE_WINDOW_SECONDS := 2.0
-# Heft is the growth number (DEMO-SPEC): scrap rolled up becomes mass, parts add more.
-# It scales punch and never touches handling. Classes I to V start at these values.
 const HEFT_PER_MASS := 1.0 / 450.0
 const HEFT_PER_PART := 0.2
 const HEFT_CLASS_AT := [1.0, 1.5, 2.2, 3.2, 4.6]
-# Bonus cores past this many add nothing more to the gate tier.
 const CORE_TIER_CAP := 2
-# Scrap as armour (the durability prototype, tuning `scrap_mode`): mass is a temporary
-# health layer over the hull. SCRAP_PER_HP scrap absorbs one HP; of the scrap a hit
-# removes, SPILL_SHARE spills as at most SPILL_CLUSTERS recovery clusters and the rest
-# is destroyed. Wear (tuning `wear`) is WEAR_PER_MINUTE scrap a minute at cruise.
 const SCRAP_PER_HP := 10.0
 const SPILL_SHARE := 0.75
 const SPILL_CLUSTERS := 6
 const WEAR_PER_MINUTE := 30.0
-# A class falls only this share of the preceding class interval below its threshold.
 const CLASS_HYSTERESIS := 0.05
 
-# A hit that reached the scrap: how much it removed, how much of that spills, and the
-# source. player_hit still fires for every hit, armour-only included, with the whole hit.
 signal armor_hit(removed: float, spill: int, source: String)
-# Rolling wear took `removed` whole units of mass (wear_step only, --wear=on). Read-only; Rivet's
-# Run and Gun trail reads it (world_one_rtree_test).
 signal wear_taken(removed: float)
-# The earned save held a killing hit: the run lives on at `hp`. Flow rewrites the entrance with
-# the spent flag; the HUD can say it.
 signal death_saved(hp: float)
 
 var events
@@ -64,24 +40,17 @@ var max_hp := MAX_HP
 var hp := MAX_HP
 var one_shot_guard := ONE_SHOT_GUARD
 var scrap := 0
-# Mass is separate from the scrap wallet: spending compacts scrap into a part and keeps
-# the mass; only lose_scrap (a crane theft) takes mass away.
 var mass := 0.0
-# Bonus cores from events and vaults this stage; each one overcharges the beacon.
 var bonus_cores := 0
 var pocket_draw_cache := {}
 var _pocket_draw_entrance_doc := {}
 var trade_memory := preload("res://src/world/trade_pockets.gd").memory()
 var run_id := ""
 var parts: Array[String] = []
-# Grey panels (build/panels.gd), in pickup order: mass, never parts, so maker sets, the shop
-# and the parts digest never see them. The order seats them on the ball (panel_shell.gd).
 var panels: Array[String] = []
-# Pocket Consumable Belt (W47-C1): 1 slot by default, expandable to 2 via belt part/shop.
 var consumables: Array[String] = []
 var consumable_slots := CONSUMABLE_SLOTS_DEFAULT
 var consumable_grace_left := 0.0
-# RL2: the relic held in each kit slot, slot name to relic id. One per slot (Relics.can_hold).
 var relics := {}
 var kills := 0
 var events_won: Array[String] = []
@@ -93,118 +62,59 @@ var since_damage := 99.0
 var retries := 0
 var over := false
 var bot_driven := false
-# Seam faults the run log should carry, such as a Warden that vanished unbroken.
 var anomalies: Array[Dictionary] = []
 
-# The prototype's switches; build sets them from the tuning flags. Off is the base game.
 var armor_mode := false
-# Scrap one absorbed HP costs. Build resolves it on each recompute (Riveted Shell halves it);
-# nothing else writes it, and the damage order below is the only reader.
 var scrap_per_hp := SCRAP_PER_HP
 var wear_on := false
-# The share of a hit the passive damage reduction removes first (build sets it each
-# tick in armour mode, where the reduction runs before the scrap).
 var mitigation := 0.0
-# Optional Callable(source) -> share: the brace window's extra reduction for a hit's
-# source. It joins the passive reduction before the scrap layer (the damage order).
 var brace_hook := Callable()
-# Deflect plates: returns true when this hit glances off. A ward: given the hull left after
-# overflow, returns the hull to hold instead. Both run inside the one damage order.
 var deflect_hook := Callable()
 var ward_hook := Callable()
-# The earned save: Callable() -> the hull to live on at, or 0.0 when no save is held. It runs
-# once per hit that would kill, before player_died, in both damage paths. death_save_spent is
-# the run-doc flag: the save works once per run, survives a save and a Continue, and a stage
-# retry never hands it back.
 var death_save_hook := Callable()
 var death_save_spent := false
-# The set piece's defence (SKILL-BAR section 4): Callable(amount, hp) -> the amount to take,
-# x0.2 and never below 1 health; ride_hook answers whether a set piece rides, when no scrap
-# is knocked loose. The one choke point every hit passes, so a boss's direct hit obeys it too.
 var defend_hook := Callable()
 var ride_hook := Callable()
-# Heat on the shell (combat/redline.gd): Callable(source) -> the multiplier on a hit, 1.0 when
-# the shell is cool. It runs first, at the one choke point, so every hit (a boss's included)
-# lands harder on a hot shell before any defence reads it.
 var taken_hook := Callable()
-# Whole wear units owed but not yet taken from the mass.
 var _wear_accum := 0.0
-# The armour metrics the run log carries; a retry adds to them, they are never restored.
 var metrics := {}
 
-# The entrance document layer (RS1): fields a zone-entrance save carries that the live run did
-# not hold. flow.enter_stage sets `world` from the stage table at every entry, so a loaded doc's
-# world (0 in one saved before that was wired) is recomputed on resume. flow seeds `companion`
-# from the profile at a run's start.
 var run_seed := 0
-# Bot runner only; normal play keeps the clock-based identity.
 var run_seed_override = null
-# The --route-seed value for this run, 0 for none (Flow sets it before begin).
 var route_seed := 0
 var world := 0
-# The spend wallet (CG1): shop, fabricator, sell and refund move cogs and nothing else.
-# Damage, theft, wear and mass recovery never touch it; only add_cogs and spend_cogs do.
 var cogs := 0
 var companion := {}
-# SG9's run-start offer: {"options": three ids, "rerolls_left": int, "taken": id or ""}. Drawn
-# from run_seed in begin(); {} on a run loaded from a doc saved before SG9, which offers nothing.
 var start_pick := {}
-# Setting it sets the HARD ladder rung's attack dials (run_tier.gd LADDER) for the whole game.
 var run_tier := 0:
 	set(value):
 		run_tier = value
 		ChallengeDials.set_rung(RunTier.dials(value))
 var event_core_grants := 0
-# A core stowed in SPIL-9 (stow_core, `--carry-core=on`): 0 or 1. It leaves this stage's cores
-# and becomes a core of the next stage at enter_stage, so the next gate counts it. core_seat is
-# the piece it unseated ("" when a socket was free). arrived_core is the core that arrived in this
-# stage: it cannot ride again, and a Continue to this stage's entrance gets it back.
 var carried_core := 0
-# Pours of Moss's last-call kettle (shop.gd buy_brew, W1-73) and the stage they were bought on: the
-# boss fight that closes that stage pours them into the ultimate meter. Saved with a cleared stage,
-# so a Continue into the arena keeps what the cogs bought.
 var brew := 0
 var brew_stage := 0
 var core_seat := ""
 var arrived_core := 0
-# SA-F1 (systems audit pass F): the stage's exit is taken. Flow saves the cleared doc
-# (to_cleared_doc) at the launch, so a quit or crash in the flight or in the boss arena that
-# follows continues at the next entrance with what the stage earned (BIBLE section 6: completed
-# stages keep the build and resolved rewards, with resume at the next entrance). pick_opened
-# says the stage's workshop pick has opened (world.gd), so the Continue does not open it twice.
 var cleared := false
 var pick_opened := false
-# The cleared stage's flight has landed in its world's boss arena: stage_cleared has fired, so a
-# Continue re-enters the fight without clearing the stage (and its codex note) a second time.
 var landed := false
-# True once enter_stage has run in this run. A pick opens only after flow's enter_stage(1),
-# because enter_stage zeroes bonus_cores and would wipe a Bonus Core taken before it.
 var _stage_entered := false
-# The rung is chosen before stage 1's Warden fight: flow closes the choice when that Warden engages, so a
-# win never counts for a rung the dam was played below. A stage entry or a retry reopens it, since the stage replays its Warden.
 var _tier_closed := false
-# One-time grant ids already settled (RS4); the profile keeps the same set and Progress
-# unions the two. Optional in the entrance doc.
 var settled: Array[String] = []
 var escape_window_left := 0.0
 var escape_window_active: bool:
 	get:
 		return escape_window_left > 0.0 and alive()
-# World id to retries spent there, merged by max so a reload never hands retries back.
 var retries_spent := {}
-# Keys a newer build wrote that this one does not know; they ride through a round trip.
 var extra := {}
-# Upgrade-tree picks and the opened-pick count as last read from the tree or a loaded doc.
 var tree_picks: Array[String] = []
 var tree_allowed := 0
-# The run skipped its late take_or_skip item (SG8); a save without the field means no skip.
 var tree_late_skipped := false
 var _loaded_class_id := ""
 
 var _snapshot := {}
 var _heft_class := 1
-# The first stage-start snapshot of each stage in this run, kept for a replay of that
-# stage (the boss death screen's T replays stage 3).
 var _stage_starts := {}
 var _id_rng := RandomNumberGenerator.new()
 
@@ -214,9 +124,6 @@ static func roman(n: int) -> String:
 
 
 func _init(events_ref = null, session_seed = null) -> void:
-	# The id stream is seeded once from the session's global stream: players get fresh luck each
-	# session, seeded bots and tests repeat, and nothing drawn later can move it. Game takes the
-	# draw the moment it is created, before any node exists; a bare RunState draws here.
 	_id_rng.seed = session_seed if session_seed != null else randi() # lint: session seed
 	events = events_ref
 	for key in Profile.RUN_TALLY_KEYS:
@@ -235,9 +142,6 @@ func _on_warden_engaged(index: int) -> void:
 	_seen_wardens["%d/%d" % [world, index]] = true
 
 
-# The highest heft class this run has been rewarded for (the slice table opens one tree pick
-# per new class). Class I is the start pick's. A new run resets it. A retry keeps it, because
-# a retry keeps the tree picks it paid for.
 var class_rewarded := 1
 
 
@@ -273,13 +177,10 @@ func begin(chosen_class: Resource) -> void:
 	pocket_draw_cache = {}
 	_pocket_draw_entrance_doc = {}
 	trade_memory = preload("res://src/world/trade_pockets.gd").memory()
-	# The suffix also seeds device luck; presentation must never choose it.
 	if run_seed_override != null:
 		run_id = "bot-%d" % int(run_seed_override)
 	else:
 		run_id = "%d-%06d" % [int(_unix_time()), _id_rng.randi() % 1000000]
-	# Derived from the run id so it draws nothing from the global RNG; a fixed route (--route-seed,
-	# set by Flow before begin) names it instead, unless a run seed was set on purpose.
 	run_seed = hash(["route", route_seed]) if route_seed > 0 and run_seed_override == null else hash(run_id)
 	world = 0
 	cogs = 0
@@ -288,8 +189,6 @@ func begin(chosen_class: Resource) -> void:
 	event_core_grants = 0
 	load("res://src/build/parts.gd").bind_run(self)
 	_stage_entered = false
-	# 2026-10-11 (w13 coordinator, after SG9): a class without an id offers no pick. The run identity
-	# case begins runs with a bare Resource, which read chosen_class.id as a script error.
 	var pick_class := String(chosen_class.get("id")) if chosen_class != null and chosen_class.get("id") != null else ""
 	if pick_class != "":
 		start_pick = {"options": StartPicks.draw(pick_class, run_seed, 0), "rerolls_left": StartPicks.REROLLS, "taken": ""}
@@ -352,7 +251,6 @@ func override_on(effect_key: String) -> bool:
 	return false
 
 
-# Use the published class: pickup consumers run before the class-change publication.
 func base_max_hp() -> float:
 	var pilot := class_def
 	if pilot == null and _loaded_class_id != "":
@@ -365,8 +263,6 @@ func base_max_hp() -> float:
 	return base
 
 
-# One tick of the run's clocks and of hull regen. `rolling` is whether the ball is in the cruise speed tier or
-# above this tick (flow hands it the player's tier); a caller with no ball leaves it true.
 func advance(delta: float, rolling := true) -> void:
 	if not alive():
 		return
@@ -375,14 +271,10 @@ func advance(delta: float, rolling := true) -> void:
 	escape_window_left = maxf(0.0, escape_window_left - maxf(0.0, delta))
 	consumable_grace_left = maxf(0.0, consumable_grace_left - maxf(0.0, delta))
 	since_damage += delta
-	# pilot.regen_* move only on the HARD ladder's top rungs (run_tier.gd LADDER, Andrew 27 Oct option 3).
-	# Where the stage's dial is on, only a rolling ball heals (wave 37 unit D7): the wait after a hit runs at any
-	# speed, the healing does not.
 	if since_damage > REGEN_DELAY * ChallengeDials.f("pilot.regen_delay_mult") and hp < max_hp and (rolling or not regen_needs_roll()):
 		hp = minf(max_hp, hp + REGEN_RATE * ChallengeDials.f("pilot.regen_rate_mult") * delta)
 
 
-# Whether this stage heals only a ball rolling in the cruise tier or above (ChallengeDials pilot.regen_rolling_by_stage).
 func regen_needs_roll() -> bool:
 	return ChallengeDials.by_stage_or("pilot.regen_rolling_by_stage", stage, 0.0) > 0.0
 
@@ -397,8 +289,6 @@ func add_scrap(amount: int, at: Vector3) -> void:
 	_publish_heft_class()
 
 
-# A theft: mass drops by the amount (not below zero) and the wallet by what it holds.
-# Returns the mass actually taken, which a spill trail can pay back through add_scrap.
 func lose_scrap(amount: int, at: Vector3, cause: String) -> int:
 	if amount <= 0:
 		return 0
@@ -415,7 +305,6 @@ func reset_metrics() -> void:
 		"expired": 0.0, "hull_damage": 0.0, "class_changes": 0, "class_drops": 0, "min_heft": -1.0, "heft_at_hits": [], "reverse_seconds": 0.0, "arena_destroyed": 0.0}
 
 
-# Heft in armour mode comes from scrap alone; the base formula is untouched otherwise.
 func heft() -> float:
 	var panel_heft := panels.size() * Panels.PANEL_MASS * HEFT_PER_MASS
 	if armor_mode:
@@ -423,7 +312,6 @@ func heft() -> float:
 	return 1.0 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size() + panel_heft
 
 
-# The class heft reaches with no memory: the highest threshold it has crossed.
 func raw_heft_class(h: float) -> int:
 	var result := 1
 	for i in HEFT_CLASS_AT.size():
@@ -432,9 +320,6 @@ func raw_heft_class(h: float) -> int:
 	return result
 
 
-# Armour mode adds hysteresis: a class is held until heft is CLASS_HYSTERESIS of the
-# interval below it under its threshold, so wear draining across a threshold cannot
-# flicker the class. It only rises at the threshold itself.
 func heft_class() -> int:
 	var h := heft()
 	var raw := raw_heft_class(h)
@@ -452,7 +337,6 @@ func heft_class() -> int:
 	return maxi(held, raw)
 
 
-# 0 to 1 across the current class toward the next; 1 at the top class.
 func heft_progress() -> float:
 	var c := heft_class()
 	if c >= HEFT_CLASS_AT.size():
@@ -462,7 +346,6 @@ func heft_progress() -> float:
 	return clampf((heft() - low) / (high - low), 0.0, 1.0)
 
 
-# Takes one copy of a part back out of the build (the last one held). False when none is held.
 func remove_part(part_id: String) -> bool:
 	var i: int = parts.rfind(part_id)
 	if i < 0:
@@ -472,8 +355,6 @@ func remove_part(part_id: String) -> bool:
 	return true
 
 
-# A rise and a drop are different facts with different sounds, so each has its own
-# signal: heft_class_changed only ever means the class went up.
 func _publish_heft_class() -> void:
 	var c := heft_class()
 	if c == _heft_class:
@@ -491,7 +372,6 @@ func _publish_heft_class() -> void:
 		events.heft_class_dropped.emit(c, heft())
 
 
-# Events and vaults grant bonus cores; each one overcharges this stage's beacon.
 func add_core(source: String, at: Vector3) -> void:
 	bonus_cores += 1
 	events.core_gained.emit(source, at, bonus_cores)
@@ -501,8 +381,6 @@ func selected_run_tier() -> int:
 	return run_tier
 
 
-# check_unlock false is the bots' --run-tier (tools/bot_run.gd): the tier without earning first_win,
-# which would also open the secrets.
 func select_run_tier(value: int, profile, check_unlock := true) -> bool:
 	if value < RunTier.BASE or value > RunTier.TOP or not run_tier_open():
 		return false
@@ -520,13 +398,10 @@ func close_run_tier() -> void:
 	_tier_closed = true
 
 
-# The HARD ladder lab (bot_run --run-tier with --from-stage): the stage a resumed run opens on takes the tier,
-# over the entrance's, with no start card. Retries keep it. Not a player path.
 func lab_run_tier(value: int) -> void:
 	_keep_run_tier(clampi(value, RunTier.BASE, RunTier.TOP))
 
 
-# A start-card choice survives retry, while the pick still rewinds as SG9 specifies.
 func _keep_run_tier(value: int) -> void:
 	run_tier = value
 	if not _snapshot.is_empty():
@@ -547,11 +422,6 @@ func add_event_core(at: Vector3) -> void:
 		add_core("event", at)
 
 
-# Carry a core in SPIL-9 (docs/systems-audit/feature-fit.md, new mechanic 3; the Bible's
-# exception for one carried core, only into SPIL-9, Andrew 11 Nov 2026 19:24Z). One of this
-# stage's cores rides in a companion socket into the next stage. Refused with no SPIL-9, no core
-# of this stage's own (one that arrived rides once), or one already riding. The caller checks
-# the launch flag.
 func can_stow_core() -> bool:
 	return carried_core == 0 and bonus_cores > arrived_core and not companion.is_empty()
 
@@ -567,35 +437,26 @@ func stow_core() -> bool:
 	return true
 
 
-# The piece a stow would unseat now ("" when a socket is free or a core already rides): the
-# counter's stow plate shows it as the price.
 func stow_cost() -> String:
 	if carried_core > 0:
 		return ""
 	return String(Companion.unseat(companion)[1])
 
 
-# The sockets SPIL-9 can fill now: a riding core holds one (the companion panel asks).
 func companion_seats() -> int:
 	return Companion.SOCKETS - carried_core
 
 
-# The companion with no core riding: the piece the core unseated back in its socket. This is
-# what the profile keeps, so a stow never reaches the save.
 func companion_whole() -> Dictionary:
 	return Companion.reseat(companion, core_seat)
 
 
-# Ends a ride: the piece goes back in its socket and SPIL-9 has both sockets again. Flow calls it
-# when the run ends (won, or the ball's final death), so the title and pilot select never see a
-# ride from a run that is over.
 func end_ride() -> void:
 	companion = companion_whole()
 	core_seat = ""
 	carried_core = 0
 
 
-# A missed called shot (build/called_shot.gd) burns one of this stage's cores. Returns whether one burned.
 func lose_core() -> bool:
 	if bonus_cores <= 0:
 		return false
@@ -603,27 +464,22 @@ func lose_core() -> bool:
 	return true
 
 
-# A lost risk bet burns this stage's cores (world/bet_crate.gd); its bet_resolved fact
-# reports the loss. Returns how many burned.
 func burn_cores() -> int:
 	var burned := bonus_cores
 	bonus_cores = 0
 	return burned
 
 
-# The gate tier bonus the cores buy: 0, 1 or 2 (two or more cores).
 func gate_tier_bonus() -> int:
 	return mini(bonus_cores, CORE_TIER_CAP)
 
 
-# A cog pickup or a sale: the wallet only, never mass, heft or a pickup proc.
 func add_cogs(amount: int) -> void:
 	if amount <= 0 or not alive():
 		return
 	cogs += amount
 
 
-# Shop and fabricator buys spend cogs; short of the price, nothing is spent.
 func spend_cogs(amount: int) -> bool:
 	if amount < 0 or cogs < amount:
 		return false
@@ -631,8 +487,6 @@ func spend_cogs(amount: int) -> bool:
 	return true
 
 
-# The old scrap wallet: only world devices still charge it until they move to cogs.
-# A failed spend changes nothing.
 func spend_scrap(amount: int) -> bool:
 	if amount < 0 or scrap < amount:
 		return false
@@ -640,10 +494,6 @@ func spend_scrap(amount: int) -> bool:
 	return true
 
 
-# Moss's scale (shop.gd weigh, docs/systems-audit/feature-fit.md new mechanic 2): mass sold on
-# purpose. Mass and the wallet drop by the amount, not below zero, and the heft class follows
-# as on a theft, but it is a sale, not a loss: no scrap_lost, so nothing reads it as a theft.
-# Returns the mass taken.
 func weigh_out(amount: int) -> int:
 	if amount <= 0 or not alive():
 		return 0
@@ -662,8 +512,6 @@ func add_part(part_id: String, source: String) -> void:
 	_publish_heft_class()
 
 
-# A grey panel bolts on: it counts as PANEL_MASS of heft and publishes panel_gained with
-# its new stack count. jackpot marks a reel or dunk kill's drop for the chime.
 func add_panel(panel_id: String, at: Vector3, jackpot := false) -> void:
 	if not Panels.ROWS.has(panel_id):
 		return
@@ -677,7 +525,6 @@ func panel_counts() -> Dictionary:
 	return Panels.counts(panels)
 
 
-# Pocket Consumable Belt (W47-C1): 1 slot default, expandable to 2 via pocket_belt part or shop.
 func consumable_capacity() -> int:
 	var cap := clampi(consumable_slots, CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
 	if Consumables.BELT_PART_ID in parts:
@@ -736,8 +583,6 @@ func consumable_grace_active() -> bool:
 	return consumable_grace_left > 0.0 and alive()
 
 
-# RL2: holds a relic in its slot and announces it as a relic-rarity find. False, and
-# nothing changes, when the pilot cannot use it or the slot already holds one.
 func add_relic(relic_id: String, source: String) -> bool:
 	if not Relics.can_hold(relic_id, class_id(), relics):
 		return false
@@ -750,18 +595,14 @@ func part_count(part_id: String) -> int:
 	return parts.count(part_id)
 
 
-# SG9: the three options on offer; empty once nothing is offered (an old doc).
 func start_pick_options() -> Array:
 	return (start_pick.get("options", []) as Array).duplicate()
 
 
-# The offer is open in the first stage only, untaken, on a live run; an untaken pick does not
-# follow the run into stage 2 through the entrance doc.
 func _start_pick_open() -> bool:
 	return alive() and stage == 1 and not start_pick.is_empty() and String(start_pick.get("taken", "")) == ""
 
 
-# The one reroll: shows the pilot list's other three. Refused once taken or spent.
 func reroll_start_pick() -> bool:
 	if not _start_pick_open():
 		return false
@@ -776,8 +617,6 @@ func reroll_start_pick() -> bool:
 	return true
 
 
-# Takes option `index` of the three and grants it through the mutators above. Once per run,
-# in stage 1, and only after enter_stage(1) so a Bonus Core is not zeroed by the stage entry.
 func take_start_pick(index: int) -> bool:
 	if not _start_pick_open() or not _stage_entered:
 		return false
@@ -800,8 +639,6 @@ static func _start_pick_from(value) -> Dictionary:
 	return {"options": options, "rerolls_left": int(value.get("rerolls_left", 0)), "taken": String(value.get("taken", ""))}
 
 
-# Build owns what parts do; a max-health part routes through here so a restore can
-# put the old ceiling back.
 func set_max_hp(value: float) -> void:
 	var gained := maxf(0.0, value - max_hp)
 	max_hp = maxf(1.0, value)
@@ -813,9 +650,6 @@ func heal(amount: float) -> void:
 		hp = minf(max_hp, hp + amount)
 
 
-# Armour mode resolves every hit in one order: mitigation, then the scrap layer, then
-# the hull. The scrap layer takes what it can (SCRAP_PER_HP scrap per HP), SPILL_SHARE of
-# the scrap removed spills as recovery clusters and the rest is destroyed.
 func damage(amount: float, source: String) -> void:
 	if not alive() or amount <= 0.0:
 		return
@@ -837,9 +671,6 @@ func damage(amount: float, source: String) -> void:
 		events.player_died.emit()
 
 
-# The hull after a hit of `amount`. A pilot at full health is left at 1.0 by a hit that would
-# kill from there: no single hit kills from full. `hit` is the whole hit before armour, which
-# decides a scripted kill.
 func _after_hit(amount: float, hit: float = -1.0) -> float:
 	var whole := amount if hit < 0.0 else hit
 	if one_shot_guard and whole < SCRIPTED_KILL and hp >= max_hp - 0.001 and hp - amount <= 0.0:
@@ -852,8 +683,6 @@ func _damage_armored(amount: float, source: String) -> void:
 	if brace_hook.is_valid():
 		var brace: float = clampf(float(brace_hook.call(source)), 0.0, 1.0)
 		share = 1.0 - (1.0 - share) * (1.0 - brace)
-	# A glancing plate turns the hit aside before the scrap sees it, but the hit still
-	# happened: every listener hears it (items, near-miss, the hurt sound and flash).
 	var deflected: bool = deflect_hook.is_valid() and bool(deflect_hook.call(source))
 	var left := 0.0 if deflected else amount * (1.0 - share)
 	since_damage = 0.0
@@ -861,7 +690,6 @@ func _damage_armored(amount: float, source: String) -> void:
 		_try_escape_window()
 		events.player_hit.emit(amount, source)
 		return
-	# No scrap is knocked loose during a set piece: the defended hit goes to the hull.
 	var riding: bool = ride_hook.is_valid() and bool(ride_hook.call())
 	var absorbed := 0.0 if riding else minf(left, mass / scrap_per_hp)
 	var removed := absorbed * scrap_per_hp
@@ -872,14 +700,12 @@ func _damage_armored(amount: float, source: String) -> void:
 		metrics["hit_loss"] += removed
 		metrics["destroyed"] += removed - spill
 		_publish_heft_class()
-		# The spiral is observable: heft after each hit, and the lowest heft reached.
 		metrics["min_heft"] = heft() if metrics["min_heft"] < 0.0 else minf(metrics["min_heft"], heft())
 		if metrics["heft_at_hits"].size() < 200:
 			metrics["heft_at_hits"].append(snappedf(heft(), 0.01))
 		armor_hit.emit(removed, spill, source)
 	if overflow > 0.0:
 		var after := _after_hit(overflow, amount)
-		# A ward holds the hull at its floor, once, inside the same order.
 		if ward_hook.is_valid():
 			after = maxf(after, float(ward_hook.call(after)))
 		metrics["hull_damage"] += hp - after
@@ -891,7 +717,6 @@ func _damage_armored(amount: float, source: String) -> void:
 		events.player_died.emit()
 
 
-# A hit that took the hull to zero is held at the save's hull, once, when the run holds the save.
 func _try_death_save() -> void:
 	if hp > 0.0 or death_save_spent or not death_save_hook.is_valid():
 		return
@@ -912,7 +737,6 @@ func _try_escape_window() -> void:
 	var model := Companion.new()
 	if not model.from_dict(companion) or not model.spend_escape():
 		return
-	# Keep the entrance document's companion opaque; only its charge changes here.
 	companion["escape_ready"] = false
 	companion["escape_spent"] = true
 	escape_window_left = ESCAPE_WINDOW_SECONDS
@@ -931,8 +755,6 @@ func _on_stage_entered(_index: int, retry: bool) -> void:
 		companion["escape_spent"] = false
 
 
-# Spilled scrap picked back up: mass returns, but it is not a fresh pickup, so no
-# scrap_collected, no wallet, no procs and no discovery.
 func recover_mass(amount: int) -> void:
 	if amount <= 0 or not alive():
 		return
@@ -941,22 +763,16 @@ func recover_mass(amount: int) -> void:
 	_publish_heft_class()
 
 
-# A spill cluster that timed out unreached: its value is gone for good.
 func note_spill_expired(amount: int) -> void:
 	metrics["expired"] += amount
 
 
-# The wear rate in scrap a second: WEAR_PER_MINUTE at cruise, scaled down below it and
-# capped above it, so a faster ball pays no more than a cruising one.
 static func wear_rate(speed: float, cruise: float) -> float:
 	if cruise <= 0.0:
 		return 0.0
 	return WEAR_PER_MINUTE / 60.0 * clampf(speed / cruise, 0.0, 1.0)
 
 
-# Rolling friction takes whole units of mass, and accrues only while a whole unit is left to
-# take, so a fractional remainder never banks debt for the next pickup. `active` is false while paused, in the bay
-# and in authored transfers or flights; wear never touches the hull and makes no event.
 func wear_step(delta: float, speed: float, cruise: float, active: bool) -> void:
 	if not armor_mode or not wear_on or not active or not alive() or delta <= 0.0 or mass < 1.0:
 		return
@@ -971,7 +787,6 @@ func wear_step(delta: float, speed: float, cruise: float, active: bool) -> void:
 	wear_taken.emit(whole)
 
 
-# The fixed route's opening mass (tuning `start_mass`): mass only, no wallet, no procs.
 func grant_start_mass(amount: float) -> void:
 	var previous_base := base_max_hp()
 	mass = maxf(0.0, amount)
@@ -979,13 +794,8 @@ func grant_start_mass(amount: float) -> void:
 	set_max_hp(max_hp + base_max_hp() - previous_base)
 
 
-# True only while enemy_killed is emitting for a kill a wear spark or a world hazard landed (source "spark" or
-# "hazard"; hazard_hits.gd): the item and tree consumers skip it, the bookkeeping ones (the kill count, the drop)
-# do not.
 const TRIGGERLESS_SOURCES := ["spark", "hazard"]
 var last_kill_triggerless := false
-# What combat knew about the kill being recorded (elite, jackpot), read by enemy_killed
-# listeners during the emit and cleared after it.
 var kill_tags := {}
 
 
@@ -1007,9 +817,6 @@ func record_milestone(event_id: String) -> void:
 	events.milestone_won.emit(event_id)
 
 
-# Flow calls this as a stage begins (not on a retry): cores are stage-scoped.
-# A run is cursed once a curse pocket's deal was taken (a "risk" decision on a curse offer).
-# Read from trade_memory, so it follows saves, Continue and a retry's rewind with no field of its own.
 func cursed() -> bool:
 	for offer in trade_memory.seen:
 		if offer.get("curse", false) and bool(trade_memory.decisions.get(str(offer.stage), false)):
@@ -1022,8 +829,6 @@ func enter_stage(index: int) -> void:
 		for offer in trade_memory.seen:
 			if int(offer.stage) == stage and not trade_memory.decisions.has(str(stage)):
 				preload("res://src/world/trade_pockets.gd").decide(trade_memory, offer, false)
-	# A carried core arrives as one of this stage's cores and frees its socket. A Continue
-	# re-enters the same stage with the arrived core from the entrance doc, so it is kept.
 	if carried_core > 0:
 		arrived_core = carried_core
 		end_ride()
@@ -1039,8 +844,6 @@ func enter_stage(index: int) -> void:
 	_tier_closed = false
 
 
-# The stage-start checkpoint: everything a retry puts back, including where and how
-# fast the ball entered, so a retry drops you in with the launch's speed.
 func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: float) -> void:
 	stage_time = 0.0
 	_snapshot = {
@@ -1067,10 +870,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"relics": relics.duplicate(),
 		"kills": kills,
 		"events_won": events_won.duplicate(),
-		# The hot-wired offer (id, state, spent) rides the checkpoint with the cogs a Recycle
-		# pays, so a retry returns both to the pre-choice state together.
 		"hotwire": (extra.get("hotwire", {}) as Dictionary).duplicate(true),
-		# A retry rewinds a run-start pick with the part or cogs it paid, and offers the same three.
 		"start_pick": start_pick.duplicate(true),
 		"run_tier": run_tier,
 		"event_core_grants": event_core_grants,
@@ -1082,8 +882,6 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		_stage_starts[stage] = _snapshot.duplicate(true)
 
 
-# Flow takes the snapshot before stage_entered and fills in the entry pose once the
-# ball is placed; the kept stage start gets the same pose.
 func set_snapshot_entry(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: float) -> void:
 	for record in [_snapshot, _stage_starts.get(stage, {})]:
 		if record.is_empty() or record["stage"] != stage:
@@ -1093,8 +891,6 @@ func set_snapshot_entry(entry_position: Vector3, entry_velocity: Vector3, camera
 			record["entry_velocity"] = entry_velocity
 			record["camera_yaw"] = camera_yaw
 			record["pocket_draw_cache"] = pocket_draw_cache.duplicate(true)
-	# Flow creates the entrance doc before stage assembly, then fills its entry pose here.
-	# Refresh that doc's shared cache dictionary before Flow writes it to disk.
 	_pocket_draw_entrance_doc.clear()
 	_pocket_draw_entrance_doc.merge(preload("res://src/world/pockets/pocket_draw.gd").to_doc(pocket_draw_cache))
 
@@ -1103,7 +899,6 @@ func has_stage_start(index: int) -> bool:
 	return _stage_starts.has(index)
 
 
-# Makes a kept stage start the live checkpoint, so the next restore() replays it.
 func use_stage_start(index: int) -> bool:
 	if not _stage_starts.has(index):
 		return false
@@ -1134,7 +929,6 @@ func restore() -> void:
 	cogs = int(_snapshot.get("cogs", 0))
 	mass = _snapshot["mass"]
 	bonus_cores = _snapshot["bonus_cores"]
-	# A retry rewinds a stow made after the checkpoint: the core returns and the piece reseats.
 	if carried_core > int(_snapshot.get("carried_core", 0)):
 		end_ride()
 	carried_core = int(_snapshot.get("carried_core", 0))
@@ -1165,8 +959,6 @@ func restore() -> void:
 	since_damage = 99.0
 	retries += 1
 	over = false
-	# A restore is a rewind, not growth: the class follows silently, with no stinger.
-	# Armour mode puts back the class held at the checkpoint, hysteresis and all.
 	if armor_mode:
 		_heft_class = int(_snapshot.get("heft_class", raw_heft_class(heft())))
 		_wear_accum = float(_snapshot.get("wear_accum", 0.0))
@@ -1182,8 +974,6 @@ func tallies() -> Dictionary:
 
 
 func reconcile_tallies(saved: Dictionary) -> void:
-	# An entrance loaded after a death can predate the profile's logged snapshot.
-	# Retain those contributions before the resumed attempt adds any new ones.
 	for key in _tallies:
 		_tallies[key] = maxi(int(_tallies[key]), int(saved.get(key, 0)))
 	run_time = maxf(run_time, float(saved.get("time", 0.0)))
@@ -1208,12 +998,7 @@ func summary() -> Dictionary:
 	}
 
 
-# ---- Entrance document (RS1): a pure, versioned Dictionary of the zone-entrance state. ----
-# JSON loses Vector3 and typed arrays, so vectors are [x, y, z] and arrays are plain.
-
 const ENTRANCE_SCHEMA := 1
-# key: expected kind. "int" accepts a whole float, "num" any number, "vec3" three numbers,
-# "strs" an array of strings, "dict" a Dictionary, "str" a String, "bool" true or false.
 const ENTRANCE_KEYS := {
 	"schema": "int", "run_id": "str", "class_id": "str", "seed": "int", "stage": "int",
 	"world": "int", "max_hp": "num", "hp": "num", "mass": "num", "scrap": "int",
@@ -1225,8 +1010,6 @@ const ENTRANCE_KEYS := {
 const ENTRANCE_OPTIONAL := {"cogs": "int", "companion": "dict", "settled": "strs", "relics": "dict", "start_pick": "dict", "run_tier": "int", "event_core_grants": "int", "run_tallies": "dict", "seen_wardens": "strs", "trade_memory": "dict", "pocket_draw_cache": "dict", "tree_late_skipped": "bool", "death_save_spent": "bool", "panels": "strs", "consumables": "strs", "consumable_slots": "int", "scrap_ingots": "dict", "arrived_core": "int", "cleared": "bool", "pick_opened": "bool", "landed": "bool", "carried_core": "int", "core_seat": "str", "brew": "int", "brew_stage": "int"}
 
 
-# `tree` is optional: when given, its picks and allowed count are read the way world.gd
-# reads them; otherwise the last values held here (from a load) are written.
 func to_entrance_doc(tree = null) -> Dictionary:
 	if tree != null:
 		tree_picks.assign(tree.picks)
@@ -1286,7 +1069,6 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		"pocket_draw_cache": _pocket_draw_entrance_doc,
 		"trade_memory": preload("res://src/world/trade_pockets.gd").to_doc(_snapshot.get("trade_memory", trade_memory)),
 	}, true)
-	# Written only once a panel is held, so a run with none keeps its old document bytes.
 	if not panels.is_empty():
 		doc["panels"] = Array(panels)
 	if not consumables.is_empty():
@@ -1296,8 +1078,6 @@ func to_entrance_doc(tree = null) -> Dictionary:
 	var ingot_doc: Dictionary = preload("res://src/build/fabricators.gd").ingots_to_doc(self)
 	if int(ingot_doc.get("1", 0)) > 0 or int(ingot_doc.get("2", 0)) > 0 or int(ingot_doc.get("3", 0)) > 0:
 		doc["scrap_ingots"] = ingot_doc
-	# Flow writes this doc as a stage begins, after enter_stage ends any ride, so a ride never
-	# needs a key; the core that arrived does. Written only then, so other runs keep their bytes.
 	if arrived_core > 0:
 		doc["arrived_core"] = arrived_core
 	if run_tier == 0:
@@ -1306,10 +1086,6 @@ func to_entrance_doc(tree = null) -> Dictionary:
 	return doc
 
 
-# The doc Flow saves as a cleared stage's launch commits (SA-F1): the entrance doc's fields with
-# the run as it stands at the launch, not as the stage began, so the stage's cogs, parts, gate
-# pick, trades (seen, decisions, risk and the hull mark the break lifted) and a stowed core ride
-# the save. entry_velocity is the launch's, which the Continue carries into the next place.
 func to_cleared_doc(tree, launch_velocity: Vector3) -> Dictionary:
 	cleared = true
 	var doc := to_entrance_doc(tree)
@@ -1360,7 +1136,6 @@ static func _entrance_kind_ok(value, kind: String) -> bool:
 	return false
 
 
-# "" when the document can be applied, else the first problem.
 static func validate_entrance_doc(doc) -> String:
 	if typeof(doc) != TYPE_DICTIONARY:
 		return "entrance doc is not a Dictionary"
@@ -1441,9 +1216,6 @@ static func validate_entrance_doc(doc) -> String:
 	return ""
 
 
-# A resumed run is alive and its pools are not negative: hp 0 resumes a ball damage() never
-# reaches (alive() is false, so the run cannot die or finish), negative mass turns hits into
-# heals, negative cogs lock the shop. hp above max_hp is a hull the game never builds.
 static func _entrance_range_error(doc: Dictionary) -> String:
 	if float(doc["max_hp"]) <= 0.0:
 		return "max_hp %s is not above zero" % doc["max_hp"]
@@ -1471,7 +1243,6 @@ static func _entrance_range_error(doc: Dictionary) -> String:
 	return ""
 
 
-# Validates first; on any problem nothing is applied. Returns true when applied.
 func from_entrance_doc(doc) -> bool:
 	if validate_entrance_doc(doc) != "":
 		return false
@@ -1509,7 +1280,6 @@ func from_entrance_doc(doc) -> bool:
 		_seen_wardens[id] = true
 	var totals: Dictionary = doc.get("run_tallies", {})
 	for key in _tallies:
-		# Older entrances can recover checkpoint kills, but contain no encounter history.
 		_tallies[key] = int(totals.get(key, kills if key == "kills" else 0))
 	retries = int(doc["retries"])
 	tree_picks.assign(doc["tree_picks"])
@@ -1543,7 +1313,6 @@ func from_entrance_doc(doc) -> bool:
 	over = false
 	stage_time = 0.0
 	since_damage = 99.0
-	# The loaded entrance is the checkpoint a retry rewinds to.
 	_stage_starts = {}
 	pocket_draw_cache = preload("res://src/world/pockets/pocket_draw.gd").from_doc(doc.pocket_draw_cache) if doc.has("pocket_draw_cache") else {}
 	trade_memory = preload("res://src/world/trade_pockets.gd").from_doc(doc.trade_memory) if doc.has("trade_memory") else preload("res://src/world/trade_pockets.gd").memory()
@@ -1552,7 +1321,6 @@ func from_entrance_doc(doc) -> bool:
 	return true
 
 
-# Max per world; a world absent from `other` keeps its count, and nothing ever decreases.
 func merge_retries_spent(other: Dictionary) -> void:
 	for w in other:
 		var id := int(str(w))

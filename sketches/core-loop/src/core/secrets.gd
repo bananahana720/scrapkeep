@@ -1,21 +1,5 @@
 extends RefCounted
 
-# What the first won run opens (Andrew's design answer Q8, "A few secrets", 17 Oct 2026): one hidden
-# room per world, one hidden tune and one alternate paint per pilot. A fresh profile has none of
-# them and shows no hint of them; a profile that holds the first_win achievement has all of them.
-# The sitting profile opens them too, as it opens every pilot (Q15), without saving.
-#
-# rooms  one cracked cache per world, built by activities.gd beside the park's own sites. A room
-#        stands in a dead-end zone of its park's graph (park_graph.gd anchors(), off every line),
-#        so it is found by looking, not by riding the route. Each room tests its park's skill
-#        (Q4) and carries one crew-log line on its back wall, in the lore voice of lore_rows.gd.
-#        The rows live here, not in the park files, so the park threads keep sole edits there.
-# tune   a jukebox row id (tune_rows.gd on the jukebox branch). tune_open() is the one gate the
-#        jukebox asks before it files or spins the record.
-# paints cosmetic ids by pilot (cosmetics.gd); each is the reward of one hidden achievement row
-#        (achievements.gd secret_paint_*) on the won run, so a paint is owned the usual way. Those
-#        rows earn silently (progress.gd): the first win's own toast is the one announcement, and
-#        the paints wait on the customize page with the new-item glow.
 
 const UNLOCK := "first_win"
 const LOG_WORD_CAP := 40
@@ -39,9 +23,6 @@ const ROOMS := {
 	},
 }
 
-# Companion stage rooms (W50): fill the other three stages so every park stage across Worlds 1-3 has
-# one dead-end secret room (6 rooms total). Kept beside ROOMS so first_win_secrets_test's 1-per-world
-# ROOMS contract and activities.gd's ROOMS lookup stay green until w50-final-sync wires all_rooms().
 const STAGE_ROOMS := {
 	"spillway_dam_vault": {
 		"world": 1, "map": "park_dam", "site": "east_abutment", "at": [152, 608], "skill": "momentum",
@@ -60,7 +41,6 @@ const STAGE_ROOMS := {
 	},
 }
 
-# Moss's closing-time record: the B-side his bay jukebox only plays once a shift has been won.
 const TUNE := "secret-after-hours"
 
 const PAINTS := {
@@ -71,7 +51,6 @@ const PAINTS := {
 	"tally": "paint_tally_carbon",
 	"remembered_cannon": "paint_cannon_velvet",
 }
-# The hidden achievement row that grants each paint.
 const PAINT_ROWS := {
 	"pylon_engineer": "secret_paint_sable",
 	"runner_gunner": "secret_paint_rivet",
@@ -80,20 +59,8 @@ const PAINT_ROWS := {
 	"tally": "secret_paint_tally",
 	"remembered_cannon": "secret_paint_cannon",
 }
-# Hidden rooms pay as the far pocket of the pay ladder (park_placement.gd PAY_FAR): rare only.
 const ROOM_PAY := {"rarities": ["rare"]}
 
-# Field finds (world 1 unit 15, Isaac's secret rooms as the baseline): two per Spillway park on
-# every profile, fresh or won. Each is a cracked room in a dead-end zone of its park's graph, off
-# every line, so the skipper never passes one. The rule is what you learn, not the spot: each find
-# draws one of its `spots` per run from the run seed, so a run replays by seed and the next run
-# moves it. Two families, two tells:
-#   crack  a wet seep runs down a cracked face and drips (seen, and heard at DRIP_HEAR_M)
-#   radio  a crew radio plays through the wall (heard at RADIO_HEAR_M; the lost tape on the find)
-# A find pays the world's top ordinary rung (green, `rare`) every run; the first find also files
-# its codex row, so the camp counts it. Spots stand on graph door nodes that are not the zone's
-# far end, where grey panels' rib caches wait (IL-01). A spot's `face` is the way its cracked face
-# looks: out of the dead end, toward the drop-in, so the run-up to ram it is the way in.
 const FIND_KINDS := ["crack", "radio"]
 const DRIP_HEAR_M := 22.0
 const RADIO_HEAR_M := 40.0
@@ -141,12 +108,6 @@ const FINDS := {
 			"text": "The flume crew listened while they worked. Their wireless is still behind the wall, still taking requests."},
 	},
 }
-# The timed door (world 1 unit 15, Isaac's timed boss doors): rout Brindle with the run clock under
-# DOOR["under_s"] and the next run finds the Shift Clock Door by the dam's drop-in, a cracked room
-# that pays the green rung and files its codex row. It is earned, not hidden, so it keeps the beacon.
-# Every new run counts in DOOR_RUNS as it starts (a restart or an abandoned run too; a Continue does
-# not); the rout writes the count the next run will see into DOOR_FOR, so the door is open for exactly
-# that run, and a quit and Continue keeps it.
 const DOOR := {
 	"boss": "brindle", "under_s": 720.0, "world": 1, "map": "park_dam", "site": "top_shelf_deck",
 	"at": [-208, -720], "face": [2, 1],
@@ -160,19 +121,11 @@ const DOOR := {
 const DOOR_RUNS := "door.runs_started"
 const DOOR_FOR := "door.brindle_clock_run"
 
-# Mend wards (W45 P3): one per Spillway park, standing in a dead end off every line, so it is found by leaving the
-# route. activities.gd builds and runs them (its MendWard). A ward mends only a ball that stops in its ring while the
-# guard it wakes presses it (ruling cu: anything that eases play ships with a matching pressure). A ward names the
-# park row it stands by, and that row places it: no map is named here.
 const WARDS := {
 	"dam_ledge_ward": {"site": "lobber_ledge", "at": [-185, 455]},
 	"flume_pond_ward": {"site": "weir_pond", "at": [-650, -690]},
 }
 
-# Lore plates (W45 P3): a park row's `fragment` names the crew record left at that spot; the plates that have one
-# are flush bronze survey discs set in the ground at the row (the landmark's at its bay dock). Rolling over a disc
-# files the field note it carries (lore_rows.gd) once, quietly: no card, no word on screen. No ref_ fragment is
-# listed, so a guarded row (park_schema.gd GUARDED_SOCIETIES carries only those) never gets a plate.
 const PLATES := {
 	"dam_era_survey_deck": "lore.park_dam.note.plumb",
 	"dam_era_gate_flags": "lore.park_dam.note.gate_log",
@@ -190,24 +143,17 @@ const PLATES := {
 	"headhouse_relic_plate": "lore.park_flume.note.drum",
 }
 
-# A plate whose spot cannot seat it (a prop or a loose stone on it, or ground too curved for a flat disc) moves this
-# far, in metres (x, z), staying within its row's footprint (w45_plate_seat_test reads every seat).
 const PLATE_NUDGES := {
-	# The gate flag's plinth and its fallen stones fill the dome's middle out to about 3 m.
 	"dam_era_gate_flags": [-4, 3],
-	# Loose stones lie under the dock's middle and under the eye's: each plate moves onto clean floor.
 	"dam_dedication_plaque": [0, -2.25],
 	"ancient_eye_marks": [1.5, 0],
 }
 
-# The world codex rows each world's camp count reads: its field finds, then the parks' authored
-# secret caches (the contraption rows that carry a codex id).
 const WORLD_CODEX := {1: ["spillway_turbine_seep", "spillway_shift_radio", "spillway_flume_seep", "spillway_crew_radio",
 	"spillway_gallery_cache", "flume_weir_cache", "flume_grade_cache", "spillway_clock_door"]}
 const WORLD_NAMES := {1: "Spillway", 2: "The Dig", 3: "The Highdraft"}
 
 
-# All 6 secret rooms across Worlds 1-3 (1 per stage): ROOMS + STAGE_ROOMS.
 static func all_rooms() -> Dictionary:
 	var out: Dictionary = ROOMS.duplicate(true)
 	for id in STAGE_ROOMS:
@@ -221,8 +167,6 @@ static func room_by_id(id: String) -> Dictionary:
 	return STAGE_ROOMS.get(id, {})
 
 
-# A secret paint the profile does not own, or a secret row it has not earned: the customize page,
-# the achievements page and the camp's count leave these out, so a fresh profile sees no hint.
 static func shut_paint(id: String, profile) -> bool:
 	return PAINTS.values().has(id) and not (profile != null and profile.has_cosmetic(id))
 
@@ -239,8 +183,6 @@ static func tune_open(profile, sitting := false) -> bool:
 	return open(profile, sitting)
 
 
-# The rooms a park map holds for this profile, as activity site specs (park_map.gd's shape plus
-# `secret`, the room id). [] while the secrets are shut.
 static func room_sites(map_id: String, profile, sitting := false) -> Array:
 	var out := []
 	if not open(profile, sitting):
@@ -253,7 +195,6 @@ static func room_sites(map_id: String, profile, sitting := false) -> Array:
 	return out
 
 
-# All secret rooms for a park map across all 6 stages (ROOMS + STAGE_ROOMS) when open.
 static func stage_room_sites(map_id: String, profile, sitting := false) -> Array:
 	var out := []
 	if not open(profile, sitting):
@@ -267,7 +208,6 @@ static func stage_room_sites(map_id: String, profile, sitting := false) -> Array
 	return out
 
 
-# Every secret this profile holds, for the save test and the camp: room ids, tune ids, paint ids.
 static func held(profile, sitting := false) -> Dictionary:
 	var out := {"rooms": [], "tunes": [], "paints": []}
 	if open(profile, sitting):
@@ -279,7 +219,6 @@ static func held(profile, sitting := false) -> Dictionary:
 	return out
 
 
-# The sitting opens the paints in memory only (its profile never saves, game.gd sitting_save_guard).
 static func open_for_sitting(profile) -> void:
 	if profile == null:
 		return
@@ -287,8 +226,6 @@ static func open_for_sitting(profile) -> void:
 		profile.unlock_cosmetic(PAINTS[pilot])
 
 
-# The field finds a park map holds this run, as activity site specs (room_sites' shape, plus
-# `find`, the find id, and `kind`). Every profile gets them; `seed` picks each one's spot.
 static func find_sites(map_id: String, seed: int) -> Array:
 	var out := []
 	for id in FINDS:
@@ -302,8 +239,6 @@ static func find_sites(map_id: String, seed: int) -> Array:
 	return out
 
 
-# The mend wards a park holds (a ward whose site is one of its rows): [{id, site, at: Vector2}]. Every profile and
-# every run gets them.
 static func ward_sites(park: Dictionary) -> Array:
 	var rows := {}
 	for row: Dictionary in park.get("park_rows", []):
@@ -316,8 +251,6 @@ static func ward_sites(park: Dictionary) -> Array:
 	return out
 
 
-# The lore plates a park holds: [{fragment, note, row, at: Vector2}], in the park file's order (its landmark first).
-# A plate stands on its row's centre; the landmark's stands on its bay dock, off the Warden's floor.
 static func plate_sites(park: Dictionary) -> Array:
 	var out := []
 	var landmark: Dictionary = park.get("landmark", {})
@@ -339,7 +272,6 @@ static func _nudge(fragment: String) -> Vector2:
 	return Vector2(float(nudge[0]), float(nudge[1]))
 
 
-# The spot a find stands on for a run seed: the same seed, the same spot.
 static func find_spot(id: String, seed: int) -> Dictionary:
 	var spots: Array = FINDS[id]["spots"]
 	var rng := RandomNumberGenerator.new()
@@ -347,8 +279,6 @@ static func find_spot(id: String, seed: int) -> Dictionary:
 	return spots[rng.randi_range(0, spots.size() - 1)]
 
 
-# A world's secret count for the camp: how many of its WORLD_CODEX rows `known` (a codex id ->
-# bool callable, the codex's own known()) says the profile has found.
 static func world_count(world: int, known: Callable) -> Dictionary:
 	var ids: Array = WORLD_CODEX.get(world, [])
 	var got := 0
@@ -358,8 +288,6 @@ static func world_count(world: int, known: Callable) -> Dictionary:
 	return {"world": world, "name": WORLD_NAMES.get(world, "World %d" % world), "found": got, "total": ids.size()}
 
 
-# A boss rout: under the clock, the profile holds the door for the run after this one. True when
-# it marked it. Both stats only ever rise, as profile.gd's save merge keeps the larger value.
 static func note_rout(profile, boss: String, run_time: float) -> bool:
 	if profile == null or boss != DOOR["boss"] or run_time >= float(DOOR["under_s"]):
 		return false
@@ -367,7 +295,6 @@ static func note_rout(profile, boss: String, run_time: float) -> bool:
 	return true
 
 
-# A new run started: it is the one a rout in the run before opened the door for.
 static func roll_door(profile) -> void:
 	if profile != null:
 		profile.add_stat(DOOR_RUNS)
@@ -377,7 +304,6 @@ static func door_open(profile) -> bool:
 	return profile != null and profile.stat(DOOR_FOR) >= 1.0 and profile.stat(DOOR_FOR) == profile.stat(DOOR_RUNS)
 
 
-# The timed door a park map holds this run, as an activity site spec (find_sites' shape, with `door`).
 static func door_sites(map_id: String, profile) -> Array:
 	if DOOR["map"] != map_id or not door_open(profile):
 		return []
@@ -386,7 +312,6 @@ static func door_sites(map_id: String, profile) -> Array:
 		"face": Vector2(float(DOOR["face"][0]), float(DOOR["face"][1])).normalized()}]
 
 
-# Patch's 6-node rogue -> wire secret trail (PilotStory.PATCH_TRAIL), exposed beside FINDS.
 static func patch_trail() -> Dictionary:
 	return PilotStory.PATCH_TRAIL
 

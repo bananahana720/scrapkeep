@@ -1,12 +1,5 @@
 extends RefCounted
 
-# The SPIL-9 companion as pure data: one hover chassis, two unordered module sockets, and
-# one piece or any two different families. Pieces are found in runs and acquired without equipping;
-# assemble() runs at intermission. Run state consumes the escape corridor after a
-# survived low-hull hit; it never revives and never
-# spends or refills a retry; the ready/spent flag is what the body and chirp cues show.
-# Combat (combat.gd) runs the conductive primer, the ram brace and the escape piece's act,
-# each chosen by pick() from the DRIVERS rows; the body and its chirp read the CUES rows.
 
 const CHASSIS := "spil9"
 const SOCKETS := 2
@@ -16,9 +9,6 @@ const ESCAPE_CORRIDOR := "escape_corridor"
 const SALVAGE_MAGNET := "salvage_magnet"
 const FAMILIES := [CONDUCTIVE_PRIMER, RAM_BRACE, ESCAPE_CORRIDOR, SALVAGE_MAGNET]
 const MAX_NAME_WORDS := 3
-# Salvage Magnet (W50-ISAAC-ECONOMY): 4th SPIL-9 family.
-# cog_scoop widens scrap/cog vacuum and drips extra cogs on kill streaks (bounded per stage);
-# cartridge_caddy prints a random Pocket Consumable every 2 cleared yards/activities (bounded cap).
 const COG_SCOOP_VACUUM_MULT := 1.65
 const COG_SCOOP_STREAK_STEP := 5
 const COG_SCOOP_STREAK_COGS := 2
@@ -26,18 +16,11 @@ const COG_SCOOP_STAGE_CAP := 24
 const CADDY_EVERY_CLEARS := 2
 const CADDY_STAGE_CAP := 3
 const SALVAGE_META := "w50_companion_salvage"
-# Conductive primer (combat.gd): a weapon hit primes a foe for PRIMER_SECONDS; the next ball
-# contact or special on it consumes the prime. Coil scales that hit, Mesh shares it out.
 const PRIMER_SECONDS := 3.0
 const PRIMER_COIL_MULT := 1.5
 const PRIMER_MESH_SHARE := 0.4
 const PRIMER_MESH_TARGETS := 2
 const PRIMER_MESH_RANGE := 6.0
-# Escape corridor (combat.gd _escape_act): when run state opens the window, the seated piece's
-# `escape` row acts for its seconds. A shove adds velocity away from the hitter, sized from the
-# ball's speed (SHARE of it, at least FLOOR) and capped at CAP times that speed; it never slows
-# the ball. A lane is LANE_LENGTH m along the travel direction, LANE_HALF_WIDTH m either side,
-# where the ball keeps its speed (at least LANE_FLOOR) with only LANE_FRICTION of the loss.
 const ESCAPE_STYLES := ["shove", "lane"]
 const ESCAPE_SECONDS := 1.2
 const ESCAPE_SHOVE_SHARE := 0.5
@@ -68,11 +51,6 @@ const PIECES := [
 	{"id": "cartridge_caddy", "family": SALVAGE_MAGNET, "name": "Cartridge Caddy",
 		"effect": "Prints a random Pocket Consumable every two cleared yards or activities."},
 ]
-# Module drivers (SR7; comps/ror2/companions.md "Skill-driver list as the behavior model"):
-# each family is an ordered list of rows and pick() runs the first row the state meets, so
-# behaviour is edited as data. A row names its piece ("" for any seated piece of the family),
-# the triggers it answers ("on"), the state flags it needs, the act combat runs and the cue
-# (a CUES key) the body's animation, its chirp and the chirp's motif all read.
 const DRIVERS := {
 	CONDUCTIVE_PRIMER: [
 		{"id": "primer_consume", "piece": "", "on": ["contact", "special"], "needs": {"primed": true},
@@ -97,9 +75,6 @@ const DRIVERS := {
 			"act": "print_cartridge", "cue": "salvage_print"},
 	],
 }
-# One row per thing the companion shows: the clip the body plays and the UI row its chirp
-# sounds ("" stays silent). Chirps mark availability and recovery (BIBLE.md:570); the escape
-# piece's ready and spent chirps stay with the HUD's companion_ready / companion_spent rows.
 const CUES := {
 	"primer_set": {"clip": "primer_set", "chirp": "companion_ready"},
 	"primer_consume": {"clip": "primer_consume", "chirp": ""},
@@ -111,7 +86,6 @@ const CUES := {
 	"escape_rearm": {"clip": "escape_rearm", "chirp": ""},
 	"stalled": {"clip": "idle", "chirp": ""},
 	"rejoined": {"clip": "follow", "chirp": "companion_ready"},
-	# A called assist plays assist_rise; the body queues assist_drop and assist_return after it.
 	"assist_full": {"clip": "spring_arm", "chirp": "companion_ready"},
 	"assist_bonk": {"clip": "assist_rise", "chirp": "companion_ready"},
 	"assist_arc": {"clip": "assist_rise", "chirp": "companion_ready"},
@@ -128,10 +102,6 @@ const CUES := {
 	"assist_skim_scoop": {"clip": "assist_rise", "chirp": "companion_ready"},
 }
 
-# COMPANION-GROWS (Andrew's taps 16:36Z and 16:44Z, 17 Oct 2026; storyboard
-# https://claude.ai/artifact/D3kPhtU161uiv44JS5r8uT). SPIL-9 gains a mark per heft class:
-# a little bigger and one more add-on part, capped at 1.4x so it never hides the ball or a
-# warning. Add-ons are cumulative: a mark shows its own and every earlier one.
 const MARKS := [
 	{"mark": 1, "scale": 1.0, "adds": ""},
 	{"mark": 2, "scale": 1.1, "adds": "fins"},
@@ -139,19 +109,11 @@ const MARKS := [
 	{"mark": 4, "scale": 1.3, "adds": "exhaust"},
 	{"mark": 5, "scale": 1.4, "adds": "core_crest"},
 ]
-# The assist ("Call SPIL-9"): landed hits fill the halo gauge, a hull hit taken fills it
-# faster, and when it is full the next ram calls it in (no new combat key, BIBLE.md:570).
-# Start values for the lab.
 const ASSIST_FULL := 24.0
 const ASSIST_PER_HIT := 1.0
 const ASSIST_PER_CONTACT := 3.0
 const ASSIST_PER_HULL_HIT := 4.0
 const ASSIST_TRIGGER := "ram"
-# At heft class 1 the ring is ASSIST_RADIUS m and shoves at ASSIST_KNOCK; damage is the
-# calling ram's dealt (at least ASSIST_DAMAGE_FLOOR), which already grows with heft. Per
-# class above 1 the area grows by ASSIST_AREA_STEP and knockback by ASSIST_KNOCK_STEP, so class 5 is 2x the area
-# and 2x the knockback ("Presence, centre clear", 17:28Z: late growth reads through heat,
-# words and aura, and area stays within 1.5-2x). Sound layers: 2, 2, 3, 3, 4.
 const ASSIST_RADIUS := 2.6
 const ASSIST_KNOCK := 10.0
 const ASSIST_DAMAGE_FLOOR := 10.0
@@ -159,10 +121,6 @@ const ASSIST_AREA_STEP := 0.25
 const ASSIST_KNOCK_STEP := 0.25
 const ASSIST_LANE_HALF_WIDTH := 0.4
 const ASSIST_SLICK_SECONDS := 1.2
-# One assist per seated family set, keyed by family_key(). shape: "single" hits the nearest
-# foe only, "ring" every foe within the radius of the called hit, "lane" every foe along the
-# ball's travel for twice the radius. prime primes what it hits, shove knocks it out, slick
-# lays the escape lane under the ball. word is the ink sound effect; cue a CUES key.
 const ASSISTS := {
 	"": {"id": "bonk", "name": "Bonk", "word": "BONK!", "shape": "single", "prime": false, "shove": true, "slick": false},
 	CONDUCTIVE_PRIMER: {"id": "arc", "name": "Arc Call", "word": "ZZAK!", "shape": "ring", "prime": true, "shove": false, "slick": false},
@@ -176,15 +134,10 @@ const ASSISTS := {
 	RAM_BRACE + "+" + SALVAGE_MAGNET: {"id": "scrap_plow", "name": "Scrap Plow", "word": "CRUNCH!", "shape": "ring", "prime": false, "shove": true, "slick": false},
 	ESCAPE_CORRIDOR + "+" + SALVAGE_MAGNET: {"id": "skim_scoop", "name": "Skim Scoop", "word": "SWOOSH!", "shape": "ring", "prime": false, "shove": true, "slick": true},
 }
-# The leash (comps/ror2/companions.md:157, "use a Scrapkeep value tuned in the lab"): start
-# values. With no leader the companion stalls after STALL_AFTER s (must stay under 1 s) and
-# waits where its leader last stood alive; a companion over LEASH_RANGE m from a live leader
-# for LEASH_SECONDS s is recalled beside it. Respawn clears the stall and recalls it.
 const STALL_AFTER := 0.5
 const LEASH_RANGE := 14.0
 const LEASH_SECONDS := 2.0
 
-# The order run-found pieces arrive: the first two make a legal pair, and escape comes first.
 const DROP_ORDER := ["escape_vent", "ram_prow", "primer_coil", "escape_rail", "ram_spring", "primer_mesh", "cog_scoop", "cartridge_caddy"]
 
 var owned: Array[String] = []
@@ -203,13 +156,10 @@ static func family_of(id: String) -> String:
 	return String(_row(id).get("family", ""))
 
 
-# The piece's escape act {style, seconds}, empty for a piece that has none.
 static func escape_of(id: String) -> Dictionary:
 	return _row(id).get("escape", {})
 
 
-# The first driver row of the state's piece family that the state meets, or {}. state holds
-# "piece" (the seated piece, "" for none), "on" (the trigger) and the flags rows may need.
 static func pick(state: Dictionary, table: Dictionary = DRIVERS) -> Dictionary:
 	var piece := String(state.get("piece", ""))
 	var family := family_of(piece)
@@ -232,12 +182,10 @@ static func pick(state: Dictionary, table: Dictionary = DRIVERS) -> Dictionary:
 	return {}
 
 
-# The MARKS row for a heft class (clamped to the table).
 static func mark_of(heft_class: int) -> Dictionary:
 	return MARKS[clampi(heft_class, 1, MARKS.size()) - 1]
 
 
-# The add-ons a heft class shows: its own and every earlier mark's.
 static func adds_of(heft_class: int) -> Array:
 	var out := []
 	for row in MARKS:
@@ -246,7 +194,6 @@ static func adds_of(heft_class: int) -> Array:
 	return out
 
 
-# The seated families in FAMILIES order joined by "+": "" bare, one family, or a pair.
 static func family_key(socket_ids: Array) -> String:
 	var fams := []
 	for f in FAMILIES:
@@ -256,15 +203,12 @@ static func family_key(socket_ids: Array) -> String:
 	return "+".join(fams)
 
 
-# The assist a socket set calls, with its cue: ASSISTS[family_key] plus "cue".
 static func assist_of(socket_ids: Array) -> Dictionary:
 	var row: Dictionary = ASSISTS.get(family_key(socket_ids), ASSISTS[""]).duplicate()
 	row["cue"] = "assist_" + String(row["id"])
 	return row
 
 
-# How hard the assist hits at a heft class: {area, radius, knock, layers}. area and knock
-# are multipliers on class 1; radius is metres.
 static func assist_power(heft_class: int) -> Dictionary:
 	var steps := clampi(heft_class, 1, MARKS.size()) - 1
 	var area := 1.0 + ASSIST_AREA_STEP * steps
@@ -272,14 +216,11 @@ static func assist_power(heft_class: int) -> Dictionary:
 		"layers": 2 + floori(steps / 2.0)}
 
 
-# The gauge after one landed hit or hull hit. kind is the strike kind, or "hull" for a hit
-# taken; a full gauge stays full.
 static func assist_charge(charge: float, kind: String) -> float:
 	var add := ASSIST_PER_HULL_HIT if kind == "hull" else (ASSIST_PER_CONTACT if kind in ["ram", "slam", "stomp"] else ASSIST_PER_HIT)
 	return minf(charge + add, ASSIST_FULL)
 
 
-# Problems in a driver table, empty when it is sound.
 static func validate_drivers(table: Dictionary = DRIVERS) -> Array:
 	var problems := []
 	var seen := {}
@@ -323,9 +264,6 @@ static func validate_drivers(table: Dictionary = DRIVERS) -> Array:
 	return problems
 
 
-# One leash tick. prev is the last result ({} to start). Returns {state: "follow" or
-# "stalled", lost, far, safe, event: "" / "stalled" / "rejoined", recall}. Pure: the same
-# inputs give the same result, so a seed's replay stalls on the same frame.
 static func leash_step(prev: Dictionary, delta: float, leader_alive: bool, leader_at: Vector3, at: Vector3) -> Dictionary:
 	var out := {"state": String(prev.get("state", "follow")), "lost": float(prev.get("lost", 0.0)),
 		"far": float(prev.get("far", 0.0)), "safe": prev.get("safe", leader_at), "event": "", "recall": false}
@@ -351,7 +289,6 @@ static func leash_step(prev: Dictionary, delta: float, leader_alive: bool, leade
 	return out
 
 
-# The seated piece of `family` in a to_dict document, or "" (also for a malformed doc).
 static func seated(doc: Dictionary, family: String) -> String:
 	var sockets_v = doc.get("sockets")
 	if typeof(sockets_v) != TYPE_ARRAY:
@@ -369,7 +306,6 @@ func has_family(family: String) -> bool:
 	return false
 
 
-# Adds a found piece to the pile. Never equips. Refuses unknown ids and duplicates.
 func acquire(id: String) -> bool:
 	if _row(id).is_empty() or owned.has(id):
 		return false
@@ -377,8 +313,6 @@ func acquire(id: String) -> bool:
 	return true
 
 
-# Returns "" on success or the refusal reason. One owned piece, or two of two different
-# families in either order; the socket set is stored in table order so order never shows.
 func assemble(ids: Array) -> String:
 	if ids.is_empty() or ids.size() > SOCKETS:
 		return "needs 1 to %d pieces" % SOCKETS
@@ -396,6 +330,7 @@ func assemble(ids: Array) -> String:
 		if ids.has(p["id"]):
 			next.append(p["id"])
 	sockets = next
+	assert(sockets.size() <= SOCKETS, "Companion sockets exceeded max")
 	return ""
 
 
@@ -411,7 +346,6 @@ func escape_spent() -> bool:
 	return _escape_spent
 
 
-# Commit before run state publishes the window, so a listener cannot spend it twice.
 func spend_escape() -> bool:
 	if not escape_ready():
 		return false
@@ -429,7 +363,6 @@ func reset() -> void:
 	reset_escape()
 
 
-# Problems in the PIECES table, empty when it is sound.
 static func validate(table: Array = PIECES) -> Array:
 	var problems := []
 	var seen := {}
@@ -466,7 +399,6 @@ static func validate(table: Array = PIECES) -> Array:
 	return problems
 
 
-# The next piece a run finds, or "" when all are owned or the doc is malformed.
 static func next_drop(doc: Dictionary) -> String:
 	var model = new()
 	if not doc.is_empty() and not model.from_dict(doc):
@@ -477,7 +409,6 @@ static func next_drop(doc: Dictionary) -> String:
 	return ""
 
 
-# The doc with `id` acquired, never equipped; a malformed doc comes back unchanged.
 static func with_piece(doc: Dictionary, id: String) -> Dictionary:
 	var model = new()
 	if not doc.is_empty() and not model.from_dict(doc):
@@ -486,11 +417,6 @@ static func with_piece(doc: Dictionary, id: String) -> Dictionary:
 	return model.to_dict()
 
 
-# A carried core (run_state.stow_core, `--carry-core=on`; Andrew 11 Nov 2026 19:24Z: one core,
-# only into SPIL-9) takes a module socket while it rides. The run holds the ride, never this doc,
-# so every writer of run.companion (the panel, a found piece, the profile) sees a plain companion.
-# unseat() takes the last seated piece out of a full SPIL-9 (it stays owned) and returns
-# [doc, piece]; reseat() puts it back when the assembly rule allows, else leaves the doc as it is.
 static func unseat(doc: Dictionary) -> Array:
 	var out := doc.duplicate(true)
 	var seated: Array = out.get("sockets", [])
@@ -524,11 +450,6 @@ func to_dict() -> Dictionary:
 		"escape_ready": not _escape_spent, "escape_spent": _escape_spent}
 
 
-# A saved companion doc this build can load, or {} when nothing in it can be kept. Pieces this
-# build no longer has are dropped from owned and sockets, so a cut piece costs only itself, not
-# the whole companion (from_dict refuses the doc outright, which stops it growing and leaves its
-# escape un-armed for good). Lists of the wrong type read as no companion. The second value is
-# the warning, "" when the doc was already clean.
 static func sanitize(d: Dictionary) -> Array:
 	if d.is_empty():
 		return [{}, ""]
@@ -547,17 +468,13 @@ static func sanitize(d: Dictionary) -> Array:
 	out["sockets"] = (out["sockets"] as Array).filter(func(id): return (out["owned"] as Array).has(id))
 	var probe = load("res://src/core/companion.gd").new()
 	if not probe.from_dict(out):
-		# Kept, not wiped: its lists are clean now, so readers are safe, and nothing is lost.
 		return [out, "companion doc does not load (chassis, escape or socket rule)"]
 	return [out, "" if dropped.is_empty() else "dropped companion pieces %s" % [dropped]]
 
 
-# Loads a saved dict. False, with nothing changed, when any field is the wrong type or
-# names a piece that does not exist, or the sockets break the assembly rule.
 func from_dict(d: Dictionary) -> bool:
 	if d.get("chassis", "") != CHASSIS or typeof(d.get("escape_ready")) != TYPE_BOOL:
 		return false
-	# Wave 3 documents stored only escape_ready, independent of whether it was assembled.
 	var spent: bool = not d["escape_ready"]
 	if d.has("escape_spent"):
 		if typeof(d["escape_spent"]) != TYPE_BOOL or d["escape_spent"] != spent:
@@ -582,8 +499,6 @@ func from_dict(d: Dictionary) -> bool:
 	_escape_spent = spent
 	return true
 
-
-# ---- W50-ISAAC-ECONOMY: Salvage Magnet runtime helpers (cog_scoop & cartridge_caddy) ---
 
 static func vacuum_scale(doc: Dictionary) -> float:
 	return COG_SCOOP_VACUUM_MULT if seated(doc, SALVAGE_MAGNET) == "cog_scoop" else 1.0

@@ -8,13 +8,6 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# Why a synergy fired (LEGIBILITY section 5, Callout). One form for every row: the icons of
-# the row's two callout parts (Synergies.callout) snap together, an arrow draws to the effect
-# glyph in the row's own shape, and a pulse in that shape plays on the struck body
-# (presentation's vfx draws the pulse). The 2D part sits beside the body, clamped to the play
-# area and clear of the reticle. It runs RUN seconds; its name shows on a profile's first
-# NAME_USES firings of the row and the callout's three words on every later one.
-# Colours come from EventKinds.cause_color. A firing over a limit draws only the pulse.
 
 const RUN := 0.9
 const COOLDOWN := 4.0
@@ -38,8 +31,6 @@ var _since := {}
 var _calm_left := 0.0
 
 
-# The icons of a synergy's two callout parts, part a's first; empty when the row has no
-# callout or either part has no registered icon.
 static func callout_icons(id: String) -> Array:
 	var call := Synergies.callout(id)
 	if call.is_empty():
@@ -53,8 +44,6 @@ static func callout_icons(id: String) -> Array:
 	return out
 
 
-# Where a callout of `part` goes for a body at `anchor` on a screen of `screen`: beside the
-# body, inside the play area between the toasts and prompts bands, off the reticle.
 static func place(anchor: Vector2, part: Vector2, screen: Vector2) -> Vector2:
 	var area := Rect2(screen.x * ScreenRegions.SIDE_MARGIN, ScreenRegions.rect("toasts", screen).end.y,
 		screen.x * (1.0 - 2.0 * ScreenRegions.SIDE_MARGIN), 0.0)
@@ -101,9 +90,6 @@ func clear() -> void:
 	_since.clear()
 
 
-# The one definition of calm, read by this callout (as "fight") and through find_may_speak by
-# the find cards: CALM_SECONDS with no live telegraph (the threat group) and no damage taken,
-# and play not paused. `left` counts the seconds still owed since the last damage or telegraph.
 static func threat_live(tree: SceneTree) -> bool:
 	if tree == null:
 		return false
@@ -113,28 +99,22 @@ static func threat_live(tree: SceneTree) -> bool:
 	return false
 
 
-# `left` after delta seconds: a live telegraph holds it at CALM_SECONDS.
 static func calm_left_after(left: float, delta: float, tree: SceneTree) -> float:
 	if threat_live(tree):
 		return CALM_SECONDS
 	return maxf(0.0, left - delta)
 
 
-# A paused tree is never calm: a held card waits for play to resume.
 static func is_calm(left: float, tree: SceneTree) -> bool:
 	return left <= 0.0 and not threat_live(tree) and not (tree != null and tree.paused)
 
 
-# A Warden that is awake and still standing: the flow seals the stage on it and has
-# seen the ring or a strike. A find never speaks across that fight.
 static func warden_fight_live(flow) -> bool:
 	if flow == null or not flow.sealed or not is_instance_valid(flow.warden) or not flow.engaged():
 		return false
 	return not (flow.warden.has_method("is_dead") and flow.warden.is_dead())
 
 
-# The one gate for a find's card, read by the reward ceremony and the discovery banner:
-# calm as is_calm defines it, and no Warden engaged and alive in `flow`.
 static func find_may_speak(left: float, tree: SceneTree, flow) -> bool:
 	return is_calm(left, tree) and not warden_fight_live(flow)
 
@@ -176,8 +156,6 @@ func _process(delta: float) -> void:
 	step(delta)
 
 
-# Advances every clock by delta seconds; _process calls it each frame and a test steps it
-# by hand.
 func step(delta: float) -> void:
 	_calm_left = calm_left_after(_calm_left, delta, get_tree() if is_inside_tree() else null)
 	for id in _since:
@@ -247,7 +225,6 @@ class Piece extends Control:
 		draw_circle(centre, side * 0.62, Color(color.darkened(0.85), 0.7 * alpha))
 		draw_texture_rect(Icons.shape(silhouette), Rect2(centre - Vector2.ONE * side * 0.5, Vector2.ONE * side), false, Color(color, alpha))
 
-	# A part's own icon on the same disc; an SVG keeps its colours and takes only the fade.
 	func _icon(centre: Vector2, icon: String, alpha: float) -> void:
 		draw_circle(centre, GLYPH * 0.62, Color(color.darkened(0.85), 0.7 * alpha))
 		draw_texture_rect(Icons.texture(icon), Rect2(centre - Vector2.ONE * GLYPH * 0.5, Vector2.ONE * GLYPH), false, Icons.tint(icon, Color(color, alpha)))

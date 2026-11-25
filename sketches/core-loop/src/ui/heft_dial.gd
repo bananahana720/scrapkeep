@@ -6,10 +6,6 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# Heft as a pressure dial (VISUAL-LANGUAGE.md section 7): a half dial with one tick per
-# heft class, a needle at the class plus the share of the way to the next, and the
-# class numeral beside it. The needle swings to a new reading instead of jumping, and a
-# rise or a theft flashes the dial in its own event colour.
 
 const ICON := 24.0
 const RADIUS := 17.0

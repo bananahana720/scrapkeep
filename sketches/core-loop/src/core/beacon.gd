@@ -7,24 +7,13 @@ const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const Dispatcher := preload("res://src/combat/dispatcher.gd")
 const ROSTER_DIG_PATH := "res://src/combat/roster_dig.gd"
 
-# The stage exit. Sealed, a Warden clamps it: the charge shown is how much of the Warden
-# is broken, and sitting in the ring adds nothing. Unsealed, charging starts the moment
-# the ball rolls into the ring, with no key and no need to stop: circling inside charges
-# it, leaving pauses it. One state and one number, so a test can step it without a clock.
 
 enum { IDLE, CHARGING, READY }
 
 const MAST_HEIGHT := 18.0
-# The authored lantern beacon (tools/blender/lantern_beacon.py): the frame carries steel and enamel,
-# the lens carries glass at the frame's socket_lens. The ring and cap are the steel shader's state key,
-# so each frame wears the beacon's state through its state_tint. The frame's socket_clamp is the Warden's
-# seat, which the recipe keeps clear of every family's weak point. Without the GLBs or either socket the
-# beacon builds the copper mast and bulb.
 const FRAME_PATH := "res://assets/models/lantern_beacon_frame.glb"
 const LENS_PATH := "res://assets/models/lantern_beacon_lens.glb"
-# Inside the 1.08 m glass even at full charge (scale 1.6).
 const LANTERN_BULB_RADIUS := 0.6
-# World 1 frame-slice budget (<= 8 ms) for tile-draining Dig pit beacon bursts & Jolt shape builds.
 const DIG_DRAIN_BUDGET_USEC := 8000
 
 static var _packed_models: Dictionary = {}
@@ -46,11 +35,7 @@ var phase := IDLE
 var progress := 0.0
 var duration := 25.0
 var radius := 30.0
-# Sealed until the beacon opens: a Warden clamps it. The ring, the bulb and the edge marker
-# read this one fact through state_id(), so none of them wears the live colour.
 var sealed := true
-# False builds the copper mast and bulb even where the lantern GLBs load: the test seam for the mast branch of the
-# hero hook's _dress_mast. Set before setup().
 var authored := true
 
 var _ring_material: StandardMaterial3D
@@ -138,13 +123,11 @@ func _process(_delta: float) -> void:
 		_dig_drain_pending = false
 
 
-# Arms tile-drained warming of Dig pit enemy assets, Jolt shapes and Dispatcher shared state.
 func begin_dig_drain() -> void:
 	var dig = _dig_roster()
 	_dig_drain_pending = not (_dispatcher_warmed and (dig == null or dig.drain_complete()))
 
 
-# Drains at most budget_usec (default 8 ms) of Dig pit & Dispatcher shape/asset warm-up.
 func drain_dig_burst(budget_usec: int = DIG_DRAIN_BUDGET_USEC) -> bool:
 	var start := Time.get_ticks_usec()
 	var dig = _dig_roster()
@@ -160,8 +143,6 @@ func drain_dig_burst(budget_usec: int = DIG_DRAIN_BUDGET_USEC) -> bool:
 	return bool(step.get("done", dig.drain_complete()))
 
 
-# The frame and its lens from the authored GLBs, each surface in its material slot; false when
-# either GLB, the lens socket or the clamp seat is missing, and nothing is added.
 func _lantern() -> bool:
 	var frame := _model(FRAME_PATH)
 	var lens := _model(LENS_PATH)
@@ -195,7 +176,6 @@ func _lantern() -> bool:
 				_state_views.append(view)
 			if root == lens:
 				_lens_centre = lens.transform * _relative(view, lens) * view.mesh.get_aabb().get_center()
-	# The detail shells sit at the frame's origin and wear the steel state tint like the frame.
 	for shell in RecipeProps.shells("lantern_beacon", self, Transform3D.IDENTITY):
 		var view := shell as MeshInstance3D
 		if view.get_surface_override_material(0) == RecipeProps.slot_material("steel"):
@@ -203,7 +183,6 @@ func _lantern() -> bool:
 	return true
 
 
-# The Warden's seat on the lantern frame (socket_clamp); null on the copper mast.
 func clamp_seat() -> Node3D:
 	return _clamp_seat
 
@@ -225,7 +204,6 @@ static func _relative(node: Node3D, top: Node) -> Transform3D:
 	return xf
 
 
-# The frame's ring and cap are the steel state key; each one wears the beacon's state row.
 func _paint_state(tint: Color) -> void:
 	for view in _state_views:
 		view.set_instance_shader_parameter("state_tint", tint)
@@ -246,7 +224,6 @@ func place(at: Vector3, seconds: float, ring_radius: float) -> void:
 	_refresh()
 
 
-# The beacon's state row in EventKinds: sealed is "not yet", open is "the world is offering".
 func state_id() -> String:
 	return "beacon_sealed" if sealed else "beacon_open"
 
@@ -263,8 +240,6 @@ func fraction() -> float:
 	return clampf(progress / maxf(0.01, duration), 0.0, 1.0)
 
 
-# Returns true on the tick the charge completes. Sealed, ring entry still marks the
-# beacon engaged but only breaking the Warden moves the charge.
 func advance(delta: float, ball: Vector3, is_sealed := false) -> bool:
 	if phase == READY:
 		return false
@@ -285,7 +260,6 @@ func advance(delta: float, ball: Vector3, is_sealed := false) -> bool:
 	return false
 
 
-# Sealed charge follows the Warden's damage, set by flow every tick.
 func show_progress(value: float) -> void:
 	progress = clampf(value, 0.0, duration)
 	_refresh()

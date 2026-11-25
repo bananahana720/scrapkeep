@@ -2,7 +2,6 @@ extends Control
 
 const Keycap := preload("res://src/ui/keycap.gd")
 
-# A keycap as a control, for containers: sized to its key, drawn with Keycap.draw.
 
 var key := ""
 var color := Color.WHITE

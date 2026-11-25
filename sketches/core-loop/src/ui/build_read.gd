@@ -6,23 +6,13 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
-# The pause screen's build read (IL-01 card section 7; the ladder page, "One glance build
-# read"): the ball turns in a little window with every held panel bolted where it sits and
-# labelled by stack, and a stat line per panel reads in plain words ("Fire rate +25%: 5
-# louvres"). It draws the pilot's own shell (wear(): variant, paint and heft class as worn) and
-# the same PanelShell under the same run seed as the ball in play, so what you read is what you
-# roll. Built once, refreshed each time the pause menu opens; it turns while the tree is paused.
 
 const VIEW := Vector2i(300, 240)
 const TURN := 0.6
-# The pod faces -Z; open on the pilot almost head-on before the turn shows the panels.
 const OPEN_ANGLE := deg_to_rad(175.0)
 const LABEL_LIFT := 1.75
-# A panel tag's letter height in the view's world units.
 const TAG_HEIGHT := 0.16
-# Clearance from the screen's edge and from the pause column's left side (layout()).
 const MARGIN := float(UiTokens.GAP_XL)
-# The view shrinks no smaller than this share of VIEW when a long list needs the height.
 const VIEW_MIN := 0.6
 
 var shell
@@ -30,10 +20,8 @@ var lines: Array[String] = []
 var _pivot: Node3D
 var _labels: Node3D
 var _list: VBoxContainer
-# The stand-in sphere, built only while no shell is worn (_stand_in), so a run whose pilot wears one never holds it.
 var _ball: MeshInstance3D
 var _frame: SubViewportContainer
-# The worn shell's record from HeroAssets.fit_worn_into, {} while the stand-in sphere shows.
 var _worn := {}
 
 
@@ -76,14 +64,11 @@ func _init() -> void:
 	box.add_child(_list)
 
 
-# Reads the run: the plates and their labels (as held), then the stat lines (as folded, after
-# louvre overflow; `effective` empty means the held counts).
 func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 	var held: Array = Array(run.panels) if run != null else []
 	shell.show_panels(held, run.run_seed if run != null else 0)
 	for child in _labels.get_children():
 		child.queue_free()
-	# Freed now, not queued, so layout() measures the new list in the same frame.
 	for child in _list.get_children():
 		_list.remove_child(child)
 		child.free()
@@ -119,7 +104,6 @@ func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 		_list.add_child(_line(line))
 
 
-# Fits the worn shell and its pilot. A missing painter, pilot or shell model shows the stand-in sphere instead.
 func wear(painter, player) -> void:
 	if painter != null and player != null:
 		_worn = painter.fit_worn_into(_pivot, shell, player, _worn)
@@ -127,7 +111,6 @@ func wear(painter, player) -> void:
 	_stand_in(_worn.is_empty())
 
 
-# Builds the stand-in sphere when it is wanted and frees it when the worn shell takes its place.
 func _stand_in(wanted: bool) -> void:
 	if not wanted:
 		if _ball != null:
@@ -147,9 +130,6 @@ func _stand_in(wanted: bool) -> void:
 	_pivot.move_child(_ball, 0)
 
 
-# Seats the read in the screen's left gutter, centred on its height, clear of the pause
-# column (its left edge at column_left). A list too tall for the screen shrinks the turning
-# view (to VIEW_MIN of its height at the least) before anything leaves the screen.
 func layout(screen: Vector2, column_left: float) -> void:
 	_frame.custom_minimum_size = Vector2(VIEW)
 	var room := screen.y - MARGIN * 2.0

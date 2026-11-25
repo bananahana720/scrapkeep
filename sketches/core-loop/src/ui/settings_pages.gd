@@ -13,40 +13,17 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SettingRow := preload("res://src/ui/setting_row.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 
-# The settings page both hosts show: the pause menu in place of its first page, the title
-# through its Settings button. Three pages behind a tab strip, switched by LB and RB, Q and E
-# or a click, the last one kept for the session: Display (fullscreen, quality, less motion,
-# fewer flashes, frame smoothing, wide picture), Controls (a verb's name, then its key cap and its pad
-# cap; Reset keys; the two fixed verbs), Look (stick speed, invert Y, dead zone, mouse speed, aim assist,
-# each stepped by Enter, A or a click and by left and right) and Feel (Music, Effects, Screen shake,
-# Hit-stop and Find cards). Feel is the one owner of those rows, so the title reaches the volume the
-# pause menu once held alone; Back sits under every page. A key cap waits for the next key or mouse
-# button, a pad cap for the next pad button (and a trigger for fire and harpoon); Esc or B
-# cancels; a press another action already holds is refused with "Taken". Frame smoothing and Wide picture
-# show their one-line helper (SettingsStore.HELPERS) under the row while they have the focus. One column:
-# every row's label sits above its field (SettingRow.stack, VolumeRow.stack), a verb's key and pad caps
-# share one field under its name, and a page taller than PAGE_H scrolls down only, following the focus.
-# A cap that waits for a press shows amber dots and a line under it saying what to press (Back's cap
-# cancels); a refused press turns the cap's edge red and the line says who holds that press and what to do.
-# A new binding goes to the store and to the InputMap at once (game.apply_binding, the same
-# call boot makes), so a later launch reads what play just used. The host feeds its input
-# events to handle(); the page never reads the keyboard itself. The build stamp (build_stamp.gd)
-# sits under Back in small type, so a sitting's notes can name the build.
 
 signal back_requested
 
-# The rows a player can rebind, in the order they read: one per verb, and the pick's three keys
-# a row each (select_1 to select_3, design-v3/SKILL-BAR.md section 6). The F special retired.
 const VERBS := ["jump", "fire", "harpoon", "haul", "boost", "select_1", "select_2", "select_3", "ultimate", "active", "interact"]
 const SELECT_ROW := "select_"
 const FIXED := ["roll", "look"]
-# The in-run keys with no row here, by the name the player meets them under.
 const EXTRA_WORDS := {"cl_retry": "New run", "cl_pause": "Pause", "cl_consumable": "Cartridge",
 	"cl_radio_next": "Next track",
 	"cl_radio_prev": "Last track", "cl_radio_skip": "Skip track", "cl_radio_pin": "Keep track"}
 const PAGES := ["display", "controls", "look", "feel"]
 const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look", "feel": "Feel"}
-# The Feel rows: a mixer bus or a comfort level each, stepped in tenths, then the Find cards toggle.
 const FEEL := [
 	{"id": "music", "bus": "Music", "words": "Music", "glyph": "music"},
 	{"id": "effects", "bus": "SFX", "words": "Effects", "glyph": "effects"},
@@ -54,17 +31,11 @@ const FEEL := [
 	{"id": "hitstop", "comfort": "hitstop", "words": "Hit-stop", "glyph": "hitstop"},
 ]
 const CARDS_ROW := "ceremony"
-# The Display rows' words; a pip shows each one's state, and Quality shows low or high beside its words.
 const TOGGLE_WORDS := {"fullscreen": "Fullscreen", "quality": "Quality", "reduced_motion": "Less motion",
 	"reduce_flashes": "Fewer flashes", "frame_smoothing": "Frame smoothing", "wide_picture": "Wide picture"}
-# The verbs a trigger can fire, and how far a trigger is pulled before it counts as a press.
 const TRIGGER_VERBS := ["fire", "harpoon"]
 const TRIGGER_PULL := 0.6
-# Stick clicks are bindable on top of the glyphed buttons; the table has no pad glyph for
-# them, so the row draws a plain L3 or R3 cap. The d-pad has its own glyphs (Glyphs.PAD_BUTTONS).
 const PAD_EXTRA := {JOY_BUTTON_LEFT_STICK: "key_l3", JOY_BUTTON_RIGHT_STICK: "key_r3"}
-# The look rows: the setting each steps, its words, its values low to high, and what a shown
-# percent is measured against (0 shows on/off).
 const LOOK := [
 	{"id": SettingsStore.STICK_SENSITIVITY, "words": "Stick speed", "steps": [1.3, 1.95, 2.6, 3.25, 3.9], "per": 2.6},
 	{"id": SettingsStore.INVERT_Y, "words": "Invert Y", "steps": [0.0, 1.0], "per": 0.0},
@@ -73,15 +44,10 @@ const LOOK := [
 	{"id": SettingsStore.AIM_ASSIST, "words": "Aim assist", "steps": [0.0, 0.25, 0.5, 0.75, 1.0], "per": 1.0},
 ]
 const WIDTH := 500.0
-# The tallest a page stands before it scrolls: the 900 px canvas less the tabs, Back and the stamp.
 const PAGE_H := 640.0
-# A key cap or a pad cap on the Controls tab, beside the verb's name.
 const CAP_W := 150.0
-# Mouse buttons a press may bind: left, right, middle and the two side buttons. The wheel
-# is not a button press a player means.
 const MOUSE_OK := [MOUSE_BUTTON_LEFT, MOUSE_BUTTON_RIGHT, MOUSE_BUTTON_MIDDLE, MOUSE_BUTTON_XBUTTON1, MOUSE_BUTTON_XBUTTON2]
 
-# The page the last settings page showed, kept for the session across both hosts.
 static var last_page := 0
 
 var back: Button
@@ -89,7 +55,6 @@ var stamp: Label
 var rows := {}
 
 var _helper: Label
-# The line under a field that waits for a press or refused one.
 var _notice: Label
 var _scrolls := {}
 
@@ -136,7 +101,6 @@ func setup(game_ref, back_key := "key_esc") -> void:
 		scroll.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		scroll.custom_minimum_size.x = WIDTH + UiTokens.GAP_L
 		scroll.mouse_filter = Control.MOUSE_FILTER_PASS
-		# The inset keeps a focused field's ring, drawn outside its plate, inside the scroll's clip.
 		var inset := MarginContainer.new()
 		for side in ["left", "right", "top", "bottom"]:
 			inset.add_theme_constant_override("margin_" + side, UiTokens.GAP_S)
@@ -193,7 +157,6 @@ func _build_display() -> void:
 	_boxes["display"].add_child(_helper)
 
 
-# A focused row's helper line sits right under that row, and leaves with the focus.
 func _show_helper(words: String) -> void:
 	_helper.text = words
 	_helper.visible = words != ""
@@ -205,7 +168,6 @@ func helper_text() -> String:
 	return _helper.text
 
 
-# The line under a waiting or refused field, or "" while none shows.
 func notice_text() -> String:
 	return _notice.text if _notice.visible else ""
 
@@ -258,7 +220,6 @@ func _build_feel() -> void:
 	_add_plain(CARDS_ROW, "feel")
 
 
-# The viewer's saved levels go to the mixer and the juice at launch; a level never set keeps its default.
 static func apply_saved(game) -> void:
 	var store = game.settings_store()
 	store.load_saved()
@@ -285,7 +246,6 @@ static func _set_comfort(game, id: String, level: float) -> void:
 		juice.set_comfort(id, level)
 
 
-# A Feel row moved: the mixer or the juice takes the level and the store keeps it.
 func _on_feel(level: float, spec: Dictionary) -> void:
 	if spec.has("bus"):
 		_set_bus(_game, spec["bus"], level)
@@ -298,7 +258,6 @@ func _on_feel(level: float, spec: Dictionary) -> void:
 		audio.play("flow_changed", 0.0, Harmony.ratio(Harmony.pentatonic_step(int(level * 8.0))), "UI")
 
 
-# The levels as they stand in the mixer, the juice and the store; the Find cards row from the ceremony.
 func _show_feel() -> void:
 	var audio = _game.audio()
 	var juice = _juice(_game)
@@ -317,8 +276,6 @@ func _show_feel() -> void:
 	rows[CARDS_ROW].show_row("Find cards", "short" if ceremony != null and ceremony.short else "full")
 
 
-# C once flipped this in the pause menu: every find at the rare tier ("short") or in full, saved as the
-# ceremony's comfort level (1 full, 0 short).
 func _toggle_cards() -> void:
 	var ceremony = _game.presentation.get("ceremony") if _game.presentation != null else null
 	if ceremony != null:
@@ -357,12 +314,10 @@ func current_page() -> String:
 	return PAGES[_page_index]
 
 
-# The ids the d-pad walks on the shown page, Back last.
 func page_ids() -> Array:
 	return _order.duplicate()
 
 
-# Shows a page by index (wrapping) and keeps it for the session; a pending capture ends.
 func show_page(index: int) -> void:
 	_clear_notice()
 	_capture_end()
@@ -383,8 +338,6 @@ func show_page(index: int) -> void:
 	_hold_height()
 
 
-# Every page is as tall as the tallest, up to PAGE_H, so the tab strip and Back stay put when the
-# page changes; a longer page scrolls down only, following the focus.
 func _hold_height() -> void:
 	var tallest := 0.0
 	for id in PAGES:
@@ -404,7 +357,6 @@ func focused_id() -> String:
 	return ""
 
 
-# Focuses a row; a row on a page that is not shown sends focus to the shown page's first row.
 func focus(id: String) -> void:
 	if not is_visible_in_tree():
 		return
@@ -422,7 +374,6 @@ func _tab_pressed(index: int) -> void:
 	focus_first()
 
 
-# The action a row binds: a verb's one action, or the pick key a select row names.
 static func action_of(row: String) -> String:
 	var bare := row_of(row)
 	var n := _select_number(bare)
@@ -431,18 +382,15 @@ static func action_of(row: String) -> String:
 	return String(Bindings.VERBS[bare]["actions"].keys()[0])
 
 
-# The row a key row or a pad row ("pad_jump", "pad_select_2") stands for.
 static func row_of(id: String) -> String:
 	return id.trim_prefix("pad_")
 
 
-# The bindings verb a row binds: select for the three pick rows.
 static func verb_of(id: String) -> String:
 	var bare := row_of(id)
 	return "select" if _select_number(bare) > 0 else bare
 
 
-# 1 to 3 for a select row, else 0.
 static func _select_number(row: String) -> int:
 	if not row.begins_with(SELECT_ROW):
 		return 0
@@ -450,12 +398,10 @@ static func _select_number(row: String) -> int:
 	return n if n >= 1 and n <= Bindings.SELECT_ACTIONS.size() else 0
 
 
-# The cap a pad button draws on a row, or "" for a button no row binds.
 static func pad_cap(button: int) -> String:
 	return String(Glyphs.PAD_BUTTONS.get(button, PAD_EXTRA.get(button, "")))
 
 
-# The glyph id of the key or button the verb's action holds in the InputMap right now.
 func glyph_of(verb: String) -> String:
 	for event in InputMap.action_get_events(action_of(verb)):
 		if event is InputEventKey:
@@ -471,8 +417,6 @@ func glyph_of(verb: String) -> String:
 	return "key_%d" % n if n > 0 else Bindings.glyph(verb_of(verb))
 
 
-# The pad glyph id of the verb's pad row: the pad button or trigger the player saved last,
-# else the table's default.
 func pad_glyph_of(verb: String) -> String:
 	var saved := []
 	for event in _store().binding_events(action_of(verb)):
@@ -491,8 +435,6 @@ func pad_glyph_of(verb: String) -> String:
 	return "pad_a"
 
 
-# Rereads every row's words from the store and the InputMap; clears a pending capture and
-# shows the page the session last used.
 func refresh() -> void:
 	_capturing = ""
 	_taken = ""
@@ -525,7 +467,6 @@ func _add_plain(id: String, page: String) -> void:
 	_boxes[page].add_child(button)
 
 
-# A key row or a pad row; the pad row's glyph is a pad button or trigger.
 func _bind_button(id: String) -> Button:
 	var row := row_of(id)
 	var glyph := pad_glyph_of(row) if id.begins_with("pad_") else glyph_of(row)
@@ -535,7 +476,6 @@ func _bind_button(id: String) -> Button:
 	return button
 
 
-# A fixed verb shows its keys and takes no input.
 func _add_fixed(verb: String) -> void:
 	var button := SettingRow.new(verb, "", "")
 	button.show_row(verb.capitalize(), Bindings.label(verb))
@@ -549,7 +489,6 @@ func _add_fixed(verb: String) -> void:
 	_boxes["controls"].add_child(button)
 
 
-# A bind row's cap is fixed when it is built, so a new key makes a new row in its place.
 func _rebuild(id: String) -> void:
 	var old: Button = rows[id]
 	var had_focus := old.has_focus()
@@ -573,7 +512,6 @@ func _look_spec(id: String) -> Dictionary:
 	return {}
 
 
-# An on-off row: its words and a pip that is filled when the setting is on and a ring when off.
 func _show_toggle(id: String, on: bool) -> void:
 	rows[id].show_row(TOGGLE_WORDS[id], "", SettingRow.ON if on else SettingRow.OFF)
 
@@ -582,9 +520,6 @@ func _show_quality(low: bool) -> void:
 	rows["quality"].show_row(TOGGLE_WORDS["quality"], "low" if low else "high")
 
 
-# What a row shows, as data and never as a string to parse: its label, its right-hand value ("" for a
-# pip) and its pip state (-1 none, 0 off, 1 on). A Feel row's value is its filled steps of ten. Rows that
-# are not settings (a key cap, Back) answer an empty label.
 func read(id: String) -> Dictionary:
 	var node = rows.get(id)
 	if node is SettingRow:
@@ -602,8 +537,6 @@ func _show_look(spec: Dictionary) -> void:
 		rows[spec["id"]].show_row(spec["words"], "%d%%" % roundi(value / float(spec["per"]) * 100.0))
 
 
-# Moves a look row to the next listed value near its current one: wrapping for a press,
-# stopping at the ends for left and right.
 func _step_look(id: String, direction: int, wrap: bool) -> void:
 	var spec := _look_spec(id)
 	var steps: Array = spec["steps"]
@@ -671,7 +604,6 @@ func press(id: String) -> void:
 	focus(id)
 
 
-# A verb's name, written once beside its caps: the verb, or "Pick 2" for a pick row.
 func _caption(id: String) -> String:
 	var n := _select_number(row_of(id))
 	return "Pick %d" % n if n > 0 else verb_of(id).capitalize()
@@ -694,14 +626,12 @@ func _capture_end() -> void:
 		_notice.visible = false
 
 
-# What a waiting field asks for. Backing out is Back's own cap, under the page.
 func _ask_words(id: String) -> String:
 	if id.begins_with("pad_"):
 		return "Press a pad button for %s." % _caption(id)
 	return "Press a key or mouse button for %s." % _caption(id)
 
 
-# A line under a field: what it waits for (text colour) or why it refused and what to do (alert).
 func _say(id: String, words: String, refused: bool) -> void:
 	_notice.text = words
 	_notice.add_theme_color_override("font_color", UiTokens.ALERT if refused else UiTokens.TEXT)
@@ -709,7 +639,6 @@ func _say(id: String, words: String, refused: bool) -> void:
 	_place_under(_notice, id)
 
 
-# Moves a line to sit right under the field group that holds a row, on that row's page.
 func _place_under(line: Label, id: String) -> void:
 	var node: Node = rows.get(id)
 	if node == null:
@@ -729,7 +658,6 @@ func _place_under(line: Label, id: String) -> void:
 	_scroll_to.call_deferred(line, box)
 
 
-# A line placed below the fold scrolls into view, as the focus would.
 func _scroll_to(line: Control, box: Node) -> void:
 	if line.is_inside_tree() and line.visible:
 		for page in PAGES:
@@ -737,7 +665,6 @@ func _scroll_to(line: Control, box: Node) -> void:
 				_scrolls[page].ensure_control_visible(line)
 
 
-# The verb or the pause action that already holds a press, in the words the page uses for it.
 func _holder_words(row: String, event: InputEvent) -> String:
 	var own := action_of(row)
 	for action in Bindings.actions():
@@ -751,8 +678,6 @@ func _holder_words(row: String, event: InputEvent) -> String:
 	return ""
 
 
-# The name a player knows an action by: a row's name on this page (Roll for any of its four
-# directions), or the in-run key it answers (Pause, Retry, a radio key).
 func _action_words(action: String) -> String:
 	for verb in VERBS:
 		if action_of(verb) == action:
@@ -763,8 +688,6 @@ func _action_words(action: String) -> String:
 	return EXTRA_WORDS.get(action, String(action).trim_prefix("cl_").capitalize())
 
 
-# Takes one input event from the host. True when the page used it; every key and pad
-# button press counts, so nothing under the page hears it.
 func handle(event: InputEvent) -> bool:
 	if _capturing != "":
 		return _capture(event)
@@ -793,7 +716,6 @@ func handle(event: InputEvent) -> bool:
 			_accept()
 		return true
 	if event is InputEventJoypadMotion:
-		# The stick moves and steps as it did in the pause column (the ui_* actions the default map gives it).
 		for pair in [["ui_up", -1], ["ui_down", 1]]:
 			if event.is_action_pressed(pair[0], true):
 				_move(pair[1])
@@ -867,9 +789,6 @@ func _cancel() -> void:
 	_capture_end()
 
 
-# True when an action other than this verb's already holds this key or button in the
-# InputMap, the pause and retry actions included. A trigger is never Taken: fire and harpoon
-# swap triggers instead (_commit_trigger).
 func _held_elsewhere(row: String, event: InputEvent) -> bool:
 	return _holder_words(row, event) != ""
 
@@ -896,7 +815,6 @@ func _commit(id: String, event: InputEvent) -> void:
 	_rebuild(id)
 
 
-# The trigger axis an action holds in the InputMap, or -1.
 func _trigger_axis(action: String) -> int:
 	for held in InputMap.action_get_events(action):
 		if held is InputEventJoypadMotion and held.axis in Bindings.TRIGGER_AXES:
@@ -904,8 +822,6 @@ func _trigger_axis(action: String) -> int:
 	return -1
 
 
-# Fire and harpoon share two triggers: when `verb` takes the trigger the other holds, the
-# other gets the one `verb` leaves.
 func _hand_over_trigger(verb: String, axis: int) -> void:
 	var leaving := _trigger_axis(action_of(verb))
 	for other in TRIGGER_VERBS:
@@ -920,14 +836,12 @@ func _hand_over_trigger(verb: String, axis: int) -> void:
 		_rebuild("pad_" + other)
 
 
-# Moving on leaves a refusal standing under its field until that field takes a new press.
 func _move(direction: int) -> void:
 	var index := _order.find(focused_id())
 	index = 0 if index < 0 else posmod(index + direction, _order.size())
 	rows[_order[index]].grab_focus()
 
 
-# Left and right step the focused look row down and up, stopping at the ends.
 func _nudge(direction: int) -> void:
 	var id := focused_id()
 	if not _look_spec(id).is_empty():

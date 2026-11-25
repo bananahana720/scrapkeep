@@ -7,16 +7,10 @@ const DAMAGE_DIAL_CAP := 1.3
 const REST_DIAL_FLOOR := 0.75
 const BASE := 0
 const HARD := 1
-# The highest tier a run can pick (the HARD ladder's top rung). scripts/challenge/lib.mjs MAX_RUN_TIER mirrors it.
 const TOP := 5
 const BANNED_DIAL_SUFFIXES := ["hp_mult", "health_mult", "plating_mult", "posture_max_mult"]
 const BOSS_PREFIX_BY_WORLD := {1: "brindle.", 2: "waking.", 3: "mind."}
 const ALL_BOSS_PREFIXES := ["brindle.", "waking.", "mind."]
-# The HARD ladder (Andrew 27 Oct, option 3; DECISIONS section 5): tiers 1 to TOP are its rungs. Rung 1 is the
-# old HARD. Each rung's pace and pay live in Cards.RUN_TIERS; these are its attack dials, which multiply on top
-# of ChallengeDials (ChallengeDials.set_rung), cumulative up the ladder. Only allowed levers: hit damage,
-# attack cadence, punish windows, the elite repeat rate, the spawn interval and pilot regen, which only the top
-# rungs cut. Difficulty never raises enemy health (ruling al).
 const LADDER := {
 	1: {},
 	2: {"mobs.damage_mult": 1.15, "warden.pulse_damage_mult": 1.3, "warden.pulse_cycle_mult": 0.85,
@@ -31,9 +25,6 @@ const LADDER := {
 		"waking.damage_mult": 1.3, "waking.period_mult": 0.85, "waking.punish_mult": 0.9,
 		"mind.damage_mult": 1.3, "mind.period_mult": 0.85, "mind.punish_mult": 0.9,
 		"mobs.elite_rate_mult": 1.5, "mobs.interval_scale_mult": 0.95, "pilot.regen_delay_mult": 1.5},
-	# Tuned on w1 against Expert ordinary ~50% (ruling aq): the Warden's pulse, not mob hits, is what an Expert
-	# cannot dodge forever; mob hits x3, crowd pressure or no regen left it at 88-100% (8 seeds each). It reads
-	# 79% on the w20 stage (24 seeds), a recorded miss: below it the losses are fight caps, not deaths.
 	5: {"mobs.damage_mult": 1.5, "warden.pulse_damage_mult": 2.25, "warden.pulse_cycle_mult": 0.48,
 		"brindle.damage_mult": 1.4, "brindle.period_mult": 0.8,
 		"waking.damage_mult": 1.4, "waking.period_mult": 0.8, "waking.punish_mult": 0.85,
@@ -42,9 +33,7 @@ const LADDER := {
 		"pilot.regen_rate_mult": 0.6},
 }
 const UNLOCK := "first_win"
-# The highest rung a won run has cleared (profile stat). Beating rung N opens N+1 (Andrew 27 Oct, option 3).
 const BEST_STAT := "hard_ladder_best"
-# Small existing bonuses; the base id and all metadata remain the same.
 const ENHANCED := {
 	"loose_trigger": {"mods": {"weapon_rate": 1.15}, "text": "+15% fire rate"},
 	"long_barrel": {"mods": {"weapon_range": 1.18}, "text": "+18% weapon range"},
@@ -63,7 +52,6 @@ static func effective_part(id: String, base: Dictionary, tier: int) -> Dictionar
 	return out
 
 
-# Rung 1 opens on the first won run; rung N above it once a run on rung N-1 is won.
 static func unlocked(profile, tier := HARD) -> bool:
 	if profile == null or tier < HARD or tier > TOP or not profile.earned(UNLOCK):
 		return false
@@ -74,7 +62,6 @@ static func best_rung(profile) -> int:
 	return int(profile.stat(BEST_STAT)) if profile != null else 0
 
 
-# The highest rung the profile may pick, 0 while HARD is locked.
 static func top_unlocked(profile) -> int:
 	var top := 0
 	while top < TOP and unlocked(profile, top + 1):
@@ -82,7 +69,6 @@ static func top_unlocked(profile) -> int:
 	return top
 
 
-# A won run on a rung above the profile's best raises it. True when it changed.
 static func note_win(profile, tier: int) -> bool:
 	if profile == null or tier < HARD or tier <= best_rung(profile):
 		return false
@@ -129,21 +115,11 @@ static func threat_text(tier := HARD, world := 1) -> String:
 static func pay_text(tier := HARD) -> String:
 	return "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi((row(tier).event_core_multiplier - 1.0) * 100.0), PAY_GAIN_CAP]
 
-# A rung's contract in words, a line each, for the start card to show for the rung being looked at.
 static func contract_lines(tier: int, world := 1) -> PackedStringArray:
 	if tier <= BASE:
 		return PackedStringArray(["The standard shift."])
 	return PackedStringArray([threat_text(tier, world), pay_text(tier)])
 
-# What each gauge reads, as a multiple of the base tier. Every dial in LADDER and a row's cap,
-# interval and pay are read by one of them, so a rung that turns any of those moves a gauge:
-#   Crowd: how many may stand at once over how long the next pack takes to come.
-#   Hits: damage times how often it comes, averaged over the three that hit (the mobs with their
-#     elite repeat rate, the Warden's pulse, and that world's boss).
-#   Regen: the rate over the wait before it starts.
-#   Pay: event cores (rare weight steps with it in every row).
-# The plating rungs 1 up give their elite plated brutes (combat.gd) is the same on every rung, so it
-# is no gauge's; threat_text says it.
 static func _readings(tier: int, world := 1) -> Dictionary:
 	var d := dials(tier)
 	var r := row(tier)
@@ -158,11 +134,6 @@ static func _readings(tier: int, world := 1) -> Dictionary:
 		"Pay": float(r.event_core_multiplier),
 	}
 
-# A rung's contract as four gauges for the start card (start_pick_card.gd): what the works gains
-# (crowd, hits) and what the pilot keeps (regen) or is paid. `fill` and `base` are shares of the gauge's
-# length, the top rung's reading being the whole of it: `base` is the base tier's reading, so the length
-# past it is what the rung adds and a length short of it is what the rung takes. A gauge is a glance;
-# the numbers are contract_lines.
 static func meters(tier: int, world := 1) -> Array:
 	var now := _readings(tier, world)
 	var top := _readings(TOP, world)

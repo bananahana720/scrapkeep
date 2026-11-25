@@ -10,13 +10,6 @@ const BuildReadout := preload("res://src/ui/build_readout.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Icons := preload("res://src/ui/icons.gd")
 
-# The upgrade pick: two cards over a veil, and from the second pick on, the run's parts as one
-# button of their icons beside Later. It only shows and animates; workshop.gd decides when it
-# opens and what a choice does. No tree diagram and no "Build" word: a first-timer could read
-# neither (PF-01); the slot's depth notches on each card carry how deep the pick is. A click, a number
-# key, or left and right plus confirm all land on the same card. Transitions never wait:
-# the cards take input the frame they appear, and a closing screen gives up focus and
-# the mouse at once, so a transition cut short leaves nothing focused behind it.
 
 signal chosen(index: int)
 signal later
@@ -27,16 +20,10 @@ const DROP := 26.0
 const STAGGER := 0.06
 const POP := 1.12
 const CARD_GAP := 36.0
-# The parts button shows at most this many part icons, then a count of the rest.
 const PART_ICONS := 6
 const PART_ICON := 26.0
-# Says the screen is a choice, in the crew's voice; the briefing's start pick answers it
-# (workshop.gd BRIEF_WORDS).
 const HEADING := "Rig your kit. Pick one."
-# Under the heading while the card holds the game (the tree is paused), so a pick that opens
-# mid-fight does not read as a frozen picture.
 const HELD := "Paused"
-# The toast that names the kit once it is taken, through the HUD's existing toast row.
 const TAKEN_TOAST := "%s taken"
 
 var depth := 0
@@ -45,8 +32,6 @@ var _column: VBoxContainer
 var _heading: Label
 var _held_line: Label
 var _hidden: Array = []
-# Kit names taken but not yet toasted. A skipped depth reopens the screen without closing it, so
-# the queue survives a reopen and the toast fires once, after the veil is gone.
 var _taken_names: Array = []
 var _offered: Array = []
 var _row: HBoxContainer
@@ -56,11 +41,7 @@ var _part_icons: HBoxContainer
 var _foot: HBoxContainer
 var _tween: Tween
 var _open := false
-# False from each open until the pad's first A or a focus move, so an A mashed as the
-# pick appears picks nothing.
 var _pad_ready := false
-# Bumped by every open and close, so a tween callback from an older transition can
-# never hide a screen that has since reopened.
 var _generation := 0
 
 
@@ -105,8 +86,6 @@ func _init() -> void:
 	_foot.add_theme_constant_override("separation", int(CARD_GAP))
 	_foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_foot)
-	# The run's parts: the readout's own button, worn as the parts' icons instead of its word. A
-	# click opens the readout's page; its hover says how deep the picks go in each world.
 	_parts = BuildReadout.new()
 	_parts.text = ""
 	_parts.accessibility_name = "Parts"
@@ -140,7 +119,6 @@ func is_open() -> bool:
 	return _open
 
 
-# The line that says the game is held while a card is up, and whether it shows.
 func held_text() -> String:
 	return _held_line.text if _held_line.is_visible_in_tree() else ""
 
@@ -153,12 +131,10 @@ func later_button() -> Button:
 	return _later
 
 
-# The parts button: shown from the second pick on while the run holds a part.
 func parts_button() -> Button:
 	return _parts
 
 
-# Shows a pair. Reopening while open swaps the cards in place with the same drop.
 func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: Color) -> void:
 	_generation += 1
 	_open = true
@@ -184,8 +160,6 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 	_play_in()
 
 
-# The parts button's face: one icon a held part, in the order they were taken, up to PART_ICONS and
-# then the count of the rest. Hidden on a first pick and while the run holds nothing.
 func _show_parts(pick_depth: int) -> void:
 	for child in _part_icons.get_children():
 		_part_icons.remove_child(child)
@@ -224,8 +198,6 @@ func _held_parts() -> Array:
 	return host.game.run.parts
 
 
-# --world-one-builds, read through the workshop this screen sits under (its game's tuning);
-# a pick screen with no workshop above it reads as off.
 func _world_one() -> bool:
 	var host = get_parent()
 	if host == null or host.get("game") == null:
@@ -234,8 +206,6 @@ func _world_one() -> bool:
 	return game.tuning != null and game.tuning.world_one()
 
 
-# --hotwire-shell, read the same way: the cards that name the shell's inversion say so only
-# while it is fitted.
 func _shell() -> bool:
 	var host = get_parent()
 	if host == null or host.get("game") == null:
@@ -244,7 +214,6 @@ func _shell() -> bool:
 	return game.tuning != null and game.tuning.option("hotwire_shell") == "on"
 
 
-# Leaving the tree with the pick open (a run ended, a test freed it) gives the screen back.
 func _exit_tree() -> void:
 	if not _hidden.is_empty():
 		PickQuiet.restore(_hidden)
@@ -252,14 +221,12 @@ func _exit_tree() -> void:
 		_quiet_host(false)
 
 
-# Moss's line, which the workshop this screen sits under owns, goes quiet with the rest.
 func _quiet_host(on: bool) -> void:
 	var host = get_parent()
 	if host != null and host.has_method("quiet"):
 		host.quiet(on)
 
 
-# Closes. chosen_index lifts that card with the success pop while the rest leaves.
 func close(chosen_index := -1) -> void:
 	if not _open:
 		return
@@ -272,9 +239,6 @@ func close(chosen_index := -1) -> void:
 	_play_out(chosen_index)
 
 
-# A pick was taken: its card wears the taken mark before the screen leaves, and the kit's name
-# shows once on the HUD's toast row after the screen has gone (it would sit under the veil). The
-# card's edge weight, the amber and the pop carry the taken mark; no word does.
 func _on_picked(_class_id: String, node_id: String, _depth: int) -> void:
 	if not _open:
 		return
@@ -293,7 +257,6 @@ func _flush_taken_toasts() -> void:
 		return
 	if names.is_empty():
 		return
-	# The HUD has one toast slot, so kits taken in one sitting of the screen share one toast.
 	hud.toast(TAKEN_TOAST % ", ".join(names), Palette.SAND, "diamond", 3)
 
 
@@ -305,7 +268,6 @@ func focused_index() -> int:
 	return -1
 
 
-# Left and right (A and D, the pad's d-pad) move focus between the cards.
 func step_focus(direction: int) -> void:
 	var list := cards()
 	if list.is_empty() or not _open:
@@ -318,7 +280,6 @@ func step_focus(direction: int) -> void:
 	_pad_ready = true
 
 
-# Enter, Space or the pad's confirm on whatever has focus.
 func confirm() -> void:
 	if not _open:
 		return
@@ -329,8 +290,6 @@ func confirm() -> void:
 	chosen.emit(0 if at < 0 else at)
 
 
-# The pad's A: the first press after the pick opens only lands focus (card 0 if none) and
-# picks nothing; the next press picks. A d-pad move before it counts as that first press.
 func confirm_pad() -> void:
 	if not _open:
 		return
@@ -389,7 +348,6 @@ func _play_out(chosen_index: int) -> void:
 		var card: Control = list[i]
 		_nudge(card, 0.0)
 		if i == chosen_index:
-			# The Keeper's pop, held still with less motion: the taken edge alone says which was picked.
 			var pop := 1.0 if UiTokens.reduced_motion else POP
 			_tween.tween_property(card, "scale", Vector2.ONE * pop, FADE_OUT * 0.45).set_trans(UiTokens.hand(UiTokens.Hand.KEEPER).trans).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(card, "modulate:a", 0.0, FADE_OUT).set_delay(FADE_OUT * 0.45).set_ease(Tween.EASE_IN)

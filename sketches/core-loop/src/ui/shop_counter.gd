@@ -19,17 +19,6 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 
-# Moss's counter: the shop's verbs as stamped plates on one charcoal panel. It reads
-# the shop's records (CONTRACTS, Moss's shop) and calls its verbs; every answer goes out
-# as `acted` with the LOOT_ROWS fact it was, so the bubble says the record's own bark
-# and the sound is the row's. Nothing here invents a price, a state or a line.
-#
-# Two faces. Buy: the shelf's three parts, the reroll, a waiting upgrade pick, the
-# locked hook, a charge cell per ability that recharges and, with --carry-core=on, the core
-# SPIL-9 can carry to the next stage (a spent plate once one rides). Sell: every held part at
-# its quote, then Moss's scale when it is open (shop.weigh: one lump of mass for cogs, the
-# mass and the cogs shown on the plate before the press). The wallet row carries cogs and heft, because heft is what the hook asks
-# for. The line under the plates names the plate under the mouse or the keys.
 
 signal acted(fact: String, record: Dictionary)
 signal pick_wanted
@@ -63,7 +52,6 @@ var _open := false
 var _tween: Tween
 var _generation := 0
 var _rest_x := 0.0
-# The counter itself: one Keeper plate, taped where its top joins the hatch.
 var _frame = _counter_frame()
 
 
@@ -103,8 +91,6 @@ func _init() -> void:
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_wallet.add_child(spacer)
-	# The faces wear their verbs' row shapes: buying (diamond), cartridges & tri-terminal (core),
-	# scrapper & part press (square), selling (chevron).
 	for f in [["buy", "shop_bought", "Buy"], ["stock", "shop_charge", "Belt and terminal"],
 			["fab", "shop_rerolled", "Scrapper and press"], ["sell", "shop_sold", "Sell"]]:
 		var b := Button.new()
@@ -201,7 +187,6 @@ func set_face(which: String) -> void:
 		_faces[which].grab_focus()
 
 
-# Every plate, in reading order.
 func tiles() -> Array:
 	var out := []
 	for row in _rows.get_children():
@@ -228,7 +213,6 @@ func face_button(which: String) -> Button:
 	return _faces.get(which)
 
 
-# Rebuilds the plates from the shop's records, keeping the focused plate's place.
 func refresh() -> void:
 	if shop == null or game == null:
 		return
@@ -291,7 +275,6 @@ func _build_buy() -> void:
 		var seat := "" if unseats == "" else String(CompanionPanel.PIECE_ICONS.get(unseats, "disc"))
 		_tile(lower, {"kind": "stow", "name": "Stow a core in SPIL-9", "price": -1, "seat_icon": seat,
 			"color": EventKinds.color("core_gained"), "state": "spent" if riding else ("ok" if game.run.can_stow_core() else "poor")}, CELL_TILE)
-	# Moss's last-call kettle (shop.brew_offer): the pilot's ultimate glyph, a pip per pour.
 	var brew: Dictionary = shop.brew_offer()
 	if not brew.is_empty():
 		var ult := "ab_%s_ult" % AbilitySlots.pilot_of(game.run.class_def)
@@ -307,7 +290,6 @@ func _build_buy() -> void:
 
 
 func _build_stock() -> void:
-	# Row 1: Tri-Terminal (3-choice multi-shop; pick one closes the other two).
 	var tri_row := _row()
 	for offer in shop.tri_terminal_offers():
 		var state := "sold" if bool(offer["sold"]) or bool(offer["closed"]) else ("ok" if bool(offer["affordable"]) else "poor")
@@ -318,7 +300,6 @@ func _build_stock() -> void:
 			"price": offer["price"], "state": state, "revealed": revealed, "headline": offer.get("headline", ""),
 			"name": String(offer.get("name", "")) if revealed else "Sealed crate",
 		}, SHELF_TILE)
-	# Row 2: Pocket Consumables (2 cartridges) + Pocket Belt (2nd slot).
 	var belt_row := _row()
 	for offer in shop.consumable_offers():
 		var state := "sold" if bool(offer["sold"]) else ("capped" if not bool(offer["can_hold"]) else ("ok" if bool(offer["affordable"]) else "poor"))
@@ -340,7 +321,6 @@ func _build_stock() -> void:
 
 
 func _build_fab() -> void:
-	# Held Scrap Ingots strip (wordless tier pips + counts).
 	var ingots: Dictionary = shop.ingot_counts()
 	var ingot_row := _row()
 	for spec in [[1, "common", Palette.STEEL], [2, "rare", Palette.COBALT], [3, "relic", Palette.AMBER]]:
@@ -350,7 +330,6 @@ func _build_fab() -> void:
 			"kind": "ingot_readout", "tier": tier, "rarity": spec[1], "count": count,
 			"name": "%s ingots" % String(spec[1]).capitalize(), "color": spec[2], "price": -1, "state": "ok" if count > 0 else "poor",
 		}, Vector2(96.0, 56.0))
-	# Row 1: Scrapper (convert held ordinary parts into rarity-matched Scrap Ingots).
 	var scrap_row := _row()
 	var seen_scrap := {}
 	for part_id in game.run.parts:
@@ -361,7 +340,6 @@ func _build_fab() -> void:
 		var rec := _part_rec("scrap", part_id, -1, "ok" if can else "welded")
 		rec["tier"] = Fabricators.tier_of(part_id)
 		_tile(scrap_row, rec, SELL_TILE)
-	# Row 2: Part Press (duplicate a held ordinary part using matching ingot or spare same-tier part).
 	var press_row := _row()
 	var seen_press := {}
 	for part_id in game.run.parts:
@@ -430,7 +408,6 @@ func _tile(row: HBoxContainer, rec: Dictionary, tile_size: Vector2) -> void:
 	row.add_child(tile)
 
 
-# A plate pressed by click or key: its verb, then the shop's answer goes out.
 func press(tile) -> void:
 	if not _open or shop == null or not is_instance_valid(tile):
 		return
@@ -490,9 +467,6 @@ func press(tile) -> void:
 	acted.emit(fact, result)
 
 
-# Arrow keys, WASD and the d-pad move between plates by row: left and right along a
-# row, up and down to the nearest plate in the next row, the wallet row above the
-# plates and Leave below them.
 func step_focus(dx: int, dy: int) -> void:
 	var grid := _grid()
 	if grid.is_empty():
@@ -535,7 +509,6 @@ func _grid() -> Array:
 	return grid
 
 
-# The focused control's (row, column) in the grid, or (-1, -1).
 func _focus_place() -> Vector2i:
 	var grid := _grid()
 	for r in grid.size():
@@ -590,9 +563,6 @@ func _tile_detail(rec: Dictionary) -> String:
 	return ""
 
 
-# The line under the plates: the part's name, then its effect sentence with the numbers it holds.
-# A shelf part reads the level taking it now would give; the other plates read level one. A
-# record that is no catalogue part (a racked active) keeps its own line, its label colon a full stop.
 func _detail_line(rec: Dictionary) -> String:
 	var part_id := String(rec["part_id"])
 	if Parts.def(part_id) == null:
@@ -617,11 +587,8 @@ func _draw() -> void:
 	draw_style_box(_frame, Rect2(Vector2.ZERO, size))
 
 
-# A face's plate in the Keeper's hand: copper at rest, sand under the mouse, and focus a sand ring
-# over the plate, its edge alone.
 static func _face_plate(state: String, serial: int) -> StyleBox:
 	var box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
-	# The margins a face's ChoiceButton plate had, so the verb's icon keeps its size.
 	box.content_margin_left = 8.0
 	box.content_margin_right = ChoiceButton.PAD * 1.5
 	box.content_margin_top = UiTokens.GAP_S

@@ -4,12 +4,6 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
-# The objective, top centre: its glyph (ringed by how much of the Warden is broken), at
-# most five words from objectives.gd and, while the Warden is still to be found, the
-# distance to it in whole metres. A finished goal shows in the same place with a tick where the
-# glyph was (a lost one with a cross), drawn here so it needs no glyph of its own. Under the goal,
-# on the same plate, a quieter detour row (objectives.gd detour_shown): a smaller glyph, the
-# detour's words and metres, all at UiTokens.QUIET_ALPHA, so it reads as on offer, never as the goal.
 
 const ICON := 34.0
 const FONT := UiTokens.BODY
@@ -24,16 +18,12 @@ var words := ""
 var color := Color.WHITE
 var progress := -1.0
 var metres := -1
-# "" for a goal, "won" or "lost" for the done row.
 var done := ""
-# The live step of a loop row (objectives.gd STEPS): the steps before it are drawn dim.
 var step := 0
-# The detour row: "" words for none.
 var detour_icon := ""
 var detour_words := ""
 var detour_color := Color.WHITE
 var detour_metres := -1
-# "" for an offer or a live site, "won" or "lost" for the detour's own done row.
 var detour_done := ""
 
 
@@ -42,7 +32,6 @@ func _init() -> void:
 
 
 func set_objective(icon: String, text: String, tint: Color, broken := -1.0, distance := -1, finished := "", live := 0) -> void:
-	# Called every frame by the HUD: shape and redraw only when a shown value changed.
 	if icon == icon_id and text == words and tint == color and broken == progress and distance == metres and finished == done and live == step:
 		return
 	done = finished
@@ -141,12 +130,10 @@ func _draw() -> void:
 		UiDraw.text(self, x, mid, distance_text(), FONT, color, true)
 
 
-# The detour row's ink: its colour stepped back to QUIET_ALPHA, so it reads as on offer, not as the goal.
 func detour_ink() -> Color:
 	return Color(detour_color, detour_color.a * UiTokens.QUIET_ALPHA)
 
 
-# The detour row at `top`, centred under the goal and quieter than it.
 func _draw_detour(top: float) -> void:
 	var quiet := detour_ink()
 	var x := (size.x - _detour_width()) * 0.5
@@ -162,7 +149,6 @@ func _draw_detour(top: float) -> void:
 		UiDraw.text(self, x + GAP, mid, _metres_text(detour_metres), FONT, quiet, true)
 
 
-# The done row's mark: a tick for a goal finished, a cross for one lost, inked like the words.
 func _draw_done(rect: Rect2, kind: String, ink: Color) -> void:
 	var c := rect.get_center()
 	var r := rect.size.x * 0.3

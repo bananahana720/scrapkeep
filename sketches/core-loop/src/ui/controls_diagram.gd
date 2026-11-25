@@ -12,18 +12,7 @@ const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
-# The controls as a picture: the left half of a keyboard and a mouse, every key the
-# game uses drawn in place with its cap, and the rest left blank so the shape reads as
-# a keyboard at a glance. The key list and its words are FieldNotes.CONTROLS (the rows
-# with caps and a short word); with a class, that pilot's own keys (class_kit.gd) light
-# in its class colour and wear their ability icon and two words. Tab's first page and
-# the title's Help page both draw this. The board is scrap (scrap_frame.gd): each key a
-# cut plate, its cap from a mismatched set, the mouse taped together, its words on tags.
-# The ultimate's key wears the crosshair's meter arc in its picture corner, full, gap at six
-# o'clock, so the arc a player sees round the crosshair is named here once, by its key and its
-# word, with no new word (PF-21, w37 film 071).
 
-# The number row carries the pick keys 1, 2 and 3 (design-v3/SKILL-BAR.md section 5).
 const ROWS := [
 	[["key_quoteleft", 1.0], ["key_1", 1.0], ["key_2", 1.0], ["key_3", 1.0], ["key_4", 1.0], ["key_5", 1.0], ["key_6", 1.0],
 		["key_7", 1.0], ["key_8", 1.0], ["key_9", 1.0], ["key_0", 1.0]],
@@ -36,7 +25,6 @@ const ROWS := [
 ]
 const MOUSE_KEYS := ["key_lmb", "key_rmb"]
 const LOOK := "key_mouse"
-# The drive keys point where they drive instead of spelling it four times.
 const ARROWS := {"key_w": Vector2.UP, "key_a": Vector2.LEFT, "key_s": Vector2.DOWN, "key_d": Vector2.RIGHT}
 const U := 84.0
 const ROW_H := 88.0
@@ -67,9 +55,6 @@ func set_class(class_def: Resource) -> void:
 	queue_redraw()
 
 
-# key -> {label, icon, tone, lit, extra, extra_icon}: CONTROLS' keys, then the pilot's
-# own. A pilot's slot key takes over its generic word ("weapon" becomes "arc caster");
-# a pilot's extra on a shared key (Space) sits beside the shared word.
 static func entries(class_def) -> Dictionary:
 	var out := {}
 	for row in FieldNotes.CONTROLS:
@@ -79,7 +64,6 @@ static func entries(class_def) -> Dictionary:
 		var short: String = row["short"]
 		short = short.replace("use / ride", "use/ride").replace("hold restart", "hold-restart")
 		for i in caps.size():
-			# The direction arrow carries drive; the other keys keep their action tag.
 			var label := short if i == 0 and not (short == "drive" and ARROWS.has(caps[i])) else ""
 			out[caps[i]] = {"label": label, "icon": "", "tone": Color(Palette.SAND, 0.8),
 				"lit": false, "extra": "", "extra_icon": ""}
@@ -98,7 +82,6 @@ static func entries(class_def) -> Dictionary:
 	return out
 
 
-# The keys drawn in the class colour.
 func lit_keys() -> Dictionary:
 	var out := {}
 	for key in _keys:
@@ -171,7 +154,6 @@ func _key(key: String, rect: Rect2) -> void:
 		_words(entry["label"], _label_rect(rect, rect.size.x), tone)
 		return
 	if rect.size.x < 2.0 * U:
-		# A narrow key stacks the shared word over the pilot's own and wears the pilot's icon.
 		draw_texture_rect(Icons.texture(entry["extra_icon"]), icon_rect, false, Icons.tint(entry["extra_icon"], tone))
 		var below := _label_rect(rect, rect.size.x)
 		var line := Vector2(below.size.x, below.size.y * 0.5)
@@ -186,8 +168,6 @@ func _key(key: String, rect: Rect2) -> void:
 	_words(entry["extra"], _label_rect(side, half), tone)
 
 
-# The crosshair's meter as the reticle draws it, full: a 270-degree arc with its gap at six
-# o'clock round the small aim ring, or round the pilot's ultimate picture when there is one.
 func _meter_arc(spot: Rect2, tone: Color, icon: String) -> void:
 	var centre := spot.get_center() + Vector2(0.0, 2.0)
 	var span := AimReticle.meter_span(1.0)
@@ -199,12 +179,10 @@ func _meter_arc(spot: Rect2, tone: Color, icon: String) -> void:
 		draw_arc(centre, AimReticle.RING * ARC_R / AimReticle.meter_radius(), 0.0, TAU, 24, tone, 2.0)
 
 
-# The key that wears the meter arc: the ultimate's default key, as the diagram's other caps are.
 static func arc_key() -> String:
 	return Bindings.glyph("ultimate")
 
 
-# The words sit under the cap and icon, in the tile's lower half.
 func _label_rect(tile: Rect2, width: float) -> Rect2:
 	var top := CAP + 14.0
 	return Rect2(tile.position + Vector2(4.0, top), Vector2(width - 8.0, tile.size.y - top - 6.0))
@@ -263,7 +241,6 @@ func _arrow(at: Vector2, dir: Vector2, color: Color) -> void:
 	draw_colored_polygon(PackedVector2Array([at + dir * 9.0, at - dir * 6.0 + side * 8.0, at - dir * 6.0 - side * 8.0]), color)
 
 
-# A key's plate: cut and worn, without rivets, since its cap sits in the corner.
 static func _scrap(edge: Color, fill: Color, width: int, serial: int) -> StyleBox:
 	var box = ScrapFrame.plate(edge, serial, fill, width)
 	box.rivets = false

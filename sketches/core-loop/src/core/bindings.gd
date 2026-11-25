@@ -1,17 +1,5 @@
 extends RefCounted
 
-# The verbs the player has, by id, and the one table every key comes from. Per verb:
-#   intent   the Intent field a press fills ("" where no Intent field carries it: the camera
-#            reads the mouse itself)
-#   fail     the cue id of the answer to a press that cannot succeed
-#   actions  the InputMap actions the verb registers, each with its default "keys" (physical
-#            keycodes), its mouse "button", or "motion" for the mouse look, and its gamepad
-#            defaults: "pad" (a JOY_BUTTON_* index) and "axis" ([JOY_AXIS_*, sign]).
-#   glyph    the key glyph id a prompt, a card or a diagram draws for the verb
-#   label    what that glyph spells in words
-#   icon     the verb's icon id ("" where the verb has no prompt picture)
-#   retired  true on a verb no key fills any more (the old F special), kept for its readers
-# game.gd registers every action from here and holds no key table of its own.
 const VERBS := {
 	"roll": {"intent": "move", "fail": "verb_fail_roll", "glyph": "key_w", "label": "W A S D", "icon": "",
 		"actions": {
@@ -38,33 +26,21 @@ const VERBS := {
 		"actions": {"cl_haul": {"keys": [KEY_CTRL], "pad": JOY_BUTTON_X}}},
 	"boost": {"intent": "boost_pressed", "fail": "verb_fail_boost", "glyph": "key_shift", "label": "Shift", "icon": "cat_mobility",
 		"actions": {"cl_boost": {"keys": [KEY_SHIFT], "pad": JOY_BUTTON_B}}},
-	# Retired (SKILL-BAR section 6): F is unbound in play and the special is slot 2, cast by
-	# left click after a 2. The row stays, with no key, so the screens that still list the
-	# special verb keep reading it until wave P-B's HUD unit drops it; special_* are now the
-	# router's outputs, and no key fills them.
 	"special": {"intent": "special_pressed", "fail": "verb_fail_special", "glyph": "key_f", "label": "F", "icon": "ab_sable_special",
 		"retired": true, "actions": {"cl_special": {"keys": []}}},
 	"interact": {"intent": "interact_pressed", "fail": "verb_fail_interact", "glyph": "key_e", "label": "E", "icon": "ab_sable_mount",
 		"actions": {"cl_interact": {"keys": [KEY_E], "pad": JOY_BUTTON_Y}}},
-	# Keys 1, 2, 3 pick the bar slot left click casts (SKILL-BAR section 1). The actions keep
-	# their cl_bay names from Tally's old card bays.
 	"select": {"intent": "slot_pick", "fail": "verb_fail_select", "glyph": "key_1", "label": "1 2 3", "icon": "",
 		"actions": {
 			"cl_bay_1": {"keys": [KEY_1], "pad": JOY_BUTTON_DPAD_LEFT},
 			"cl_bay_2": {"keys": [KEY_2], "pad": JOY_BUTTON_DPAD_UP},
 			"cl_bay_3": {"keys": [KEY_3], "pad": JOY_BUTTON_DPAD_RIGHT},
 		}},
-	# Q is the ultimate (SKILL-BAR section 4); LB is free since the special retired.
 	"ultimate": {"intent": "ultimate_pressed", "fail": "verb_fail_ultimate", "glyph": "key_q", "label": "Q", "icon": "",
 		"actions": {"cl_ultimate": {"keys": [KEY_Q], "pad": JOY_BUTTON_LEFT_SHOULDER}}},
-	# F fires the racked active (src/combat/actives), the one item slot on a key. The key is
-	# bound always; with --actives off nothing is racked and a press does nothing.
 	"active": {"intent": "active_pressed", "fail": "verb_fail_active", "glyph": "key_f", "label": "F", "icon": "cat_damage",
 		"actions": {"cl_active": {"keys": [KEY_F], "pad": JOY_BUTTON_DPAD_DOWN}}},
 }
-# Actions that belong to no verb: the retry hold (R, RB), the pause (P and Escape, Start) and
-# the pilot radio (radio_deck.gd): period turns the dial on (D-pad down is the active's), comma
-# turns it back, slash skips to the next track, semicolon pins the track on air through a boss.
 const EXTRA_ACTIONS := {
 	"cl_retry": {"keys": [KEY_R], "pad": JOY_BUTTON_RIGHT_SHOULDER},
 	"cl_pause": {"keys": [KEY_P, KEY_ESCAPE], "pad": JOY_BUTTON_START},
@@ -74,31 +50,17 @@ const EXTRA_ACTIONS := {
 	"cl_radio_skip": {"keys": [KEY_SLASH]},
 	"cl_radio_pin": {"keys": [KEY_SEMICOLON]},
 }
-# Pocket Consumable Belt quick-tap (W47-C1): keyboard C via InputMap + gamepad L3 (Left Stick click)
-# across all connected controllers whenever no other InputMap action claims L3 — never collides
-# with cl_bay_2 (D-pad Up) and keeps L3 free for Settings pad rebinding.
 const CONSUMABLE_ACTION := "cl_consumable"
 const CONSUMABLE_PAD := JOY_BUTTON_LEFT_STICK
 const SITTING_CHORD_PAD := JOY_BUTTON_RIGHT_STICK
 static var _consumable_pad_down := false
 static var _consumable_pad_chord_used := false
-# The bar slot each select action picks, by its index in Intent.slot_pick.
 const SELECT_ACTIONS := ["cl_bay_1", "cl_bay_2", "cl_bay_3"]
-# The engine's ui_* actions have no pad button, so a pad moves menu focus but cannot press or go
-# back. Boot adds these two rows to ui_accept and ui_cancel and keeps the engine's key events.
 const UI_PAD := {"ui_accept": JOY_BUTTON_A, "ui_cancel": JOY_BUTTON_B}
 const VERB_FIELDS := ["intent", "fail", "glyph", "label", "icon", "actions"]
 
-# The ball states a key can be read in, highest first (LEGIBILITY section 3): a key means one
-# verb in the highest state that holds, and a world swing is also airborne.
-# set_piece is the ultimate's ride (SKILL-BAR section 6): every key but the roll, Space (bail)
-# and Q is swallowed.
 const STATES := ["set_piece", "line_body", "line_world", "charging", "mounted", "air", "ground"]
 
-# What each verb's key does in each state. "any" is the reading of every state not named.
-# "refused" is a press the ball answers with a failure cue; "brake or slam" is the ground and
-# air reading of Ctrl, which a charge does not change. "" is a key that does nothing there.
-# The retired special has no row, so it reads "" everywhere.
 const READS := {
 	"roll": {"any": "drive"},
 	"look": {"any": "look"},
@@ -110,14 +72,11 @@ const READS := {
 	"boost": {"any": "go", "mounted": "refused", "set_piece": ""},
 	"interact": {"any": "interact", "mounted": "dismount", "set_piece": ""},
 	"select": {"any": "pick", "charging": "swap", "set_piece": ""},
-	# Q reads "recall" in the set piece: it cancels the wind-up with a full refund (SKILL-BAR
-	# sections 2 and 4); in flight the press is refused busy.
 	"ultimate": {"any": "ultimate", "set_piece": "recall"},
 	"active": {"any": "fire active", "set_piece": ""},
 }
 
 
-# The InputMap actions of the whole table: action name to its binding record.
 static func actions() -> Dictionary:
 	var out := {}
 	for verb in VERBS:
@@ -136,8 +95,6 @@ static func _pad_claimed_elsewhere(button: int) -> bool:
 	return false
 
 
-# Fires on clean L3 release only when R3 was never pressed during the hold, so Andrew's
-# L3+R3 sitting-notes mark chord (sitting_notes.gd MARK_PAD) never burns a consumable.
 static func step_consumable_pad_state(l3_down: bool, r3_down: bool) -> bool:
 	if l3_down:
 		if not _consumable_pad_down:
@@ -171,7 +128,6 @@ static func consumable_just_pressed() -> bool:
 	return step_consumable_pad_state(l3_down, r3_down)
 
 
-# The verb that registers `action`, or "" for an action the table does not hold.
 static func verb_of_action(action: String) -> String:
 	for verb in VERBS:
 		if VERBS[verb]["actions"].has(action):
@@ -191,8 +147,6 @@ static func icon(verb: String) -> String:
 	return VERBS[verb]["icon"] if VERBS.has(verb) else ""
 
 
-# The ball's highest state. `line` is "" for no line, "body" or "world"; `set_piece` is true
-# while the ultimate rides.
 static func ball_state(line: String, charging: bool, mounted: bool, airborne: bool, set_piece := false) -> String:
 	if set_piece:
 		return "set_piece"
@@ -212,8 +166,6 @@ static func reading(verb: String, state: String) -> String:
 	return String(row.get(state, row.get("any", "")))
 
 
-# Every verb that reads the physical key `key` or the mouse button `button` in `state`. A key
-# belongs to one verb, so the answer holds one entry for a bound key and none for a free one.
 static func verbs_on(state: String, key: int, button: int) -> Array[String]:
 	var out: Array[String] = []
 	for verb in VERBS:
@@ -226,9 +178,6 @@ static func verbs_on(state: String, key: int, button: int) -> Array[String]:
 	return out
 
 
-# One token per event, comma separated: "key:<name>" (OS.get_keycode_string of the physical
-# keycode), "mouse:<button index>", "pad:<JOY_BUTTON index>" or "axis:<trigger JOY_AXIS index>".
-# Mouse motion and the sticks cannot be bound.
 static var _warned_tokens := {}
 const TRIGGER_AXES := [JOY_AXIS_TRIGGER_LEFT, JOY_AXIS_TRIGGER_RIGHT]
 
@@ -239,7 +188,6 @@ static func reset_for_tests() -> void:
 	_consumable_pad_chord_used = false
 
 
-# "desk" for a key or mouse button, "pad" for a pad button, "axis" for a trigger.
 static func kind_of(event: InputEvent) -> String:
 	if event is InputEventJoypadButton:
 		return "pad"
@@ -262,7 +210,6 @@ static func encode(events: Array) -> String:
 	return ",".join(tokens)
 
 
-# The events `text` names. A token that does not parse is skipped and warns once per token text.
 static func decode(text: String) -> Array:
 	var out := []
 	for raw in text.split(",", false):

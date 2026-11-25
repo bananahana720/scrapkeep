@@ -4,12 +4,9 @@ const EXCHANGE_LINE_WORD_CAP := 14
 const FIELD_NOTE_WORD_CAP := 40
 const INTRO_LINE_WORD_CAP := 12
 const CALL_LINE_WORD_CAP := 12
-# A call is a reaction: one that cannot come up within CALL_FRESH_S of its cause is dropped, not
-# played late, and one caused within CALL_GAP_S of the last call is dropped too.
 const CALL_FRESH_S := 4.0
 const CALL_GAP_S := 20.0
 const CALL_LOW_HULL := 0.3
-# Who may call, by id (the voice and the card read the id), and the name the card shows.
 const SPEAKERS := {
 	"moss": "Moss", "pump_crew": "Pump crew", "flume_crew": "Flume crew", "signal_crew": "Signal crew",
 	"brindle": "Brindle", "mind": "The Foreman",
@@ -25,7 +22,6 @@ const W1_SPEAKER_IDS := [
 	"sable", "rivet", "kest", "tarn", "tally", "cannon",
 ]
 
-# The site crew whose radio a zone's unsigned lines come over (a Warden's intro is theirs).
 const SITE_CREWS := {"1-1": "pump_crew", "1-2": "flume_crew"}
 const WORLD_SITE_CREWS := {
 	"1-1": "pump_crew", "1-2": "flume_crew",
@@ -39,19 +35,6 @@ const WORLD_SPEAKER_ALIASES := {
 	"Waking": "waking",
 }
 
-# Call-ins (design-v3/STORY-MAP.md, "Call-ins"): one line from a named caller, said because of
-# what the player just did. Each plays once a run; rows are read in order and the first that
-# passes is the call. Row keys:
-#   on        the GameEvents signal that causes it. A Warden's fall is beacon_unsealed (the gates
-#             open on it); stage_cleared comes later, in the launch, under the next stage's hello
-#   arg       [index, value]: only when the signal's argument at index equals value
-#   at_least  [index, value]: only when that argument is value or more
-#   when      "low_hull": only with the hull under CALL_LOW_HULL, when caused and when said
-#   world     the world it belongs to
-#   speaker   a SPEAKERS id. A pilot's row names their class under `pilot`: it is said only by a
-#             freed pilot who is not the one flying, and one pilot's line on a cause is the run's
-#   text      the line, or a list of ways to say it: the run seed picks one (call_text), so the
-#             same seed hears the same words and run five does not sound like run one
 const CALLS := [
 	{"id": "call.spillway.camp", "on": "activity_done", "arg": [0, "enemy_camp"], "world": 1, "speaker": "pump_crew",
 		"text": ["Camp's quiet. We logged it quiet last week too.", "Camp's down. We'll log it down. In pencil, in case.", "Camp's clear. Their brew's still hot. We'll mind it."]},
@@ -86,7 +69,6 @@ const CALLS := [
 ]
 
 
-# Whether a call row answers this signal with these arguments.
 static func call_matches(row: Dictionary, event: String, args: Array) -> bool:
 	if row["on"] != event:
 		return false
@@ -103,9 +85,6 @@ static func call_matches(row: Dictionary, event: String, args: Array) -> bool:
 	return true
 
 
-# Who says a row's line, as a SPEAKERS id: an exchange's speaker, the boss an intro quotes
-# ("Brindle: ..."), or the zone's site crew for a Warden's intro. "" when the line has no voice.
-# Default include_w23 := true resolves W1-W3 crews and aliases; pass false for W1-only reads.
 static func voice_of(row: Dictionary, include_w23 := true) -> String:
 	var named := String(row.get("speaker", String(row.get("text", "")).get_slice(": ", 0)))
 	var id = SPEAKERS.find_key(named)
@@ -124,15 +103,12 @@ static func world_voice_of(row: Dictionary) -> String:
 	return voice_of(row, true)
 
 
-# The words of a row's line as said aloud: the text without the name it opens on.
 static func spoken(row: Dictionary) -> String:
 	var text := String(row.get("text", ""))
 	var named := text.get_slice(": ", 0)
 	return text.trim_prefix(named + ": ") if SPEAKERS.find_key(named) != null else text
 
 
-# The words a call says this run: its one line, or the one its list gives this seed. The pick is
-# salted by the row's id, so two rows on one seed do not all take the same place in their lists.
 static func call_text(row: Dictionary, run_seed: int) -> String:
 	var text = row.get("text", "")
 	if not text is Array:
@@ -141,7 +117,6 @@ static func call_text(row: Dictionary, run_seed: int) -> String:
 	return "" if options.is_empty() else String(options[absi(hash([run_seed, String(row.get("id", ""))])) % options.size()])
 
 
-# The signals any call listens to, once each.
 static func call_signals() -> Array:
 	var out: Array = []
 	for row in CALLS:
@@ -150,11 +125,6 @@ static func call_signals() -> Array:
 	return out
 
 
-# Camp quips (W46-14, living camp): a freed pilot stands round Moss's fire pit and says one line
-# as the ball rolls past, on the caller plate and silent for now. speaker is the SPEAKERS id a
-# voice reads (the camp hands it out with the words), pilot the class that stands there. Each
-# pilot keeps their one fixed opinion; dry and workplace, never cruel. text is a list: the camp's
-# visit count picks one (camp_quip_text), so the next walk sounds different.
 const CAMP_QUIPS := [
 	{"id": "camp.quip.sable", "speaker": "sable", "pilot": "pylon_engineer",
 		"text": ["Nice roll. I'd have launched off the lamp post.", "Gate's slow. I go over it. Don't tell Moss.", "The fence is a perfectly good ramp, you know."]},
@@ -171,7 +141,6 @@ const CAMP_QUIPS := [
 ]
 
 
-# The quip row of the pilot who stands for this class, {} when the class has none.
 static func camp_quip(class_id: String) -> Dictionary:
 	for row in CAMP_QUIPS:
 		if row["pilot"] == class_id:
@@ -179,18 +148,12 @@ static func camp_quip(class_id: String) -> Dictionary:
 	return {}
 
 
-# The words a quip says on this visit: visits step through the list from a place the row's id
-# picks, so two pilots on one visit do not say their first line together.
 static func camp_quip_text(row: Dictionary, visit: int) -> String:
 	var lines: Array = row.get("text", [])
 	if lines.is_empty():
 		return ""
 	return String(lines[posmod(absi(hash(String(row.get("id", "")))) + visit, lines.size())])
 
-# One row per readable line. Exchange lines share an exchange id and follow array order.
-# Zone ids name the alpha route, independently of the sketch's current stage slots.
-# Park era (LORE-REPLACE, decisions.tsv): park notes lead each zone; approved sample
-# lines keep their slots; the old cableway set and 3-2 island notes are gone.
 const ROWS := [
 	{
 		"id": "lore.spillway.moss.spare", "kind": "exchange", "zone": "1-1",
@@ -809,11 +772,6 @@ const ROWS := [
 		"subject": "mind",
 		"text": "Lookout scrap: island lights blink in order. Count starts before the first.",
 	},
-	# Boss threat lines, one per boss and pilot (Andrew's design answer 12, "One line each",
-	# 2026-10-17). Each sits at the world's last zone, where the arena opens, and wins over the
-	# boss row without a pilot, which stays as the fallback. The Mind's lines answer its tune
-	# hidden backwards in the Spillway music (answer 9).
-	# TONE-READ: boss threat lines; every line awaits Andrew's read.
 	{
 		"id": "lore.reach.intro.brindle.pylon_engineer", "kind": "intro", "zone": "1-2",
 		"subject": "brindle", "pilot": "pylon_engineer",
@@ -906,8 +864,6 @@ const ROWS := [
 	},
 ]
 
-# World 2 narrative cards & rescue banter (Guard 4, W48-MAPS): kept outside ROWS/CALLS so
-# World 1's golden ROWS hash and 7-signal CALLS table stay untouched. Keyed by park landmark kind.
 const WORLD_TWO_COLD_OPEN := {
 	"headframe": {
 		"id": "lore.dig.cold_open",
@@ -967,8 +923,6 @@ static func kest_rescue_banter() -> Array:
 	return KEST_RESCUE_BANTER
 
 
-# World 3 cold opens and the Mind's two cards (W49-MAPS), kept outside ROWS/CALLS like World 2's
-# so the ROWS hash and the CALLS table stay untouched. Cold opens are keyed by park landmark kind.
 const WORLD_THREE_COLD_OPEN := {
 	"sky_island": {
 		"id": "lore.isle.cold_open",
@@ -990,8 +944,6 @@ const WORLD_THREE_COLD_OPEN := {
 	},
 }
 
-# The Foreman calls in on schedule when the Mind's body arrives: a corner card with three deadpan
-# stats and the LIKES line (TONE-BIBLE: the only entry is the player). cue is the soft chime's id.
 const FOREMAN_CALL_IN := {
 	"id": "lore.crown.foreman_call_in",
 	"zone": "3-2",
@@ -1004,14 +956,12 @@ const FOREMAN_CALL_IN := {
 	"duration_s": 3.2,
 }
 
-# Beaten, the Mind is stamped HIRED and takes a place on the crew (STORY-MAP, the Mind row).
 const HIRED_CEREMONY := {
 	"id": "lore.crown.hired",
 	"zone": "3-2",
 	"stamp": "HIRED",
 	"memo": "I am humbled to announce that I have accepted a position on the crew.",
 	"skippable": true,
-	# Inside flow.gd VICTORY_SECONDS (2.5 s), so the stamp finishes before the arena hands over to the ending.
 	"duration_s": 2.4,
 }
 
@@ -1027,7 +977,6 @@ static func waking_intro_line(pilot_id: String) -> String:
 	return String(WAKING_INTRO_CARD["fallback_line"])
 
 
-# W50-STORY-ARCS additive W2/W3 site-crew, Patch, and chapter-gated call-ins (outside W1 CALLS).
 const WORLD_CALLS := [
 	{"id": "call.dig.warden_pit", "on": "beacon_unsealed", "arg": [0, 3], "world": 2, "speaker": "dig_crew",
 		"text": ["Headframe gates unsealed. Pit stopped knocking for six seconds.", "Warden off the bench. Hoist bell rang once by itself."]},
@@ -1057,7 +1006,6 @@ const WORLD_CALLS := [
 		"text": ["Three grounded on one drop. Clean jumper tap, zero line drift.", "Nice spike on the trunk line. Relay board caught every spark."]},
 ]
 
-# W50-STORY-ARCS progressive multi-pilot camp exchanges (outside W1 CAMP_QUIPS).
 const CAMP_EXCHANGES := [
 	{
 		"id": "ex.sable_ch2_ramp",
@@ -1135,7 +1083,6 @@ const CAMP_EXCHANGES := [
 	},
 ]
 
-# W50-STORY-ARCS chapter-tiered solo camp quips (Ch. 2, Ch. 4, Ch. 5; outside W1 CAMP_QUIPS).
 const CAMP_QUIPS_BY_CHAPTER := {
 	"pylon_engineer": {
 		2: ["Brindle's mark is on my hull. Makes the ramp faster.", "Slag Bowl owes me a fresh paint coat. Next shift."],

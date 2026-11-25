@@ -1,9 +1,5 @@
 extends RefCounted
 
-# The remembered cannon's upgrade tree: the Mind's four families turned outward. Heap order as in
-# rivet.gd. The left half calls the lanes and kicks the split (Lanes); the right half plates and
-# rushes in close (Brace). Pattern rows add rate, the one number the lane reads, or shape the free
-# shots a volley proc above them fires.
 
 const NODES := [
 	{"id": "c_quick_lane", "name": "Quick Lane", "effect": "Call your lanes a quarter faster", "key": "weapon",
@@ -74,9 +70,6 @@ const NODES := [
 ]
 
 
-# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
-# Left root: Snap Battery (c_lane_fever stays at slot 2; c_quick_lane moves to slot 3 in place of c_spare_kick).
-# Right root: Siege Rail (c_brace_kick moves to slot 4 in place of c_spare_plate; c_rush_shock stays at slot 5).
 const SNAP_BATTERY := {"id": "c_snap_battery", "name": "Snap Battery", "effect": "Quick lock and short wait, lighter lanes.", "key": "weapon",
 	"icon": "ab_cannon_weapon", "tags": ["ranged", "sustain"],
 	"pattern": {"cannon_lane": {"set": {"window_s": [0.15, 0.31], "recover_s": 0.40,

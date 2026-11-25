@@ -1,33 +1,14 @@
 extends RefCounted
 
-# Between-run head starts (SG12; comps gunfire/run-pacing-and-economy "meta-options-tree"
-# and roboquest/stage-anatomy "secret-reward-unlocks-later"). A node is a small option, a
-# discovery or a pocket key that persists across runs; none adds combat power (BIBLE.md:475,
-# :586) and none is bought (BIBLE.md:513 bars invented prices), so a row carries no price,
-# cost or stat key. Each node opens when its one grant row in achievements.gd is earned; that
-# row pays {"option": <node id>} or, since no screen shows a node (systems audit pass D, row 31),
-# one cosmetic, and asks for a one-run accomplishment with a count of
-# MAX_GRANT_COUNT or below. The level is the number of nodes opened, so any short session that
-# meets one grant moves the bar.
-#
-# name    3 words or fewer
-# text    what the node gives, 12 words or fewer
-# kind    one of KINDS
-# effect  the id a run reads to apply the head start (the run side is a later unit's)
-# grant   the achievements.gd row that opens it
 
 const KINDS := ["option", "discovery", "pocket_key"]
 const FIELDS := ["name", "text", "kind", "effect", "grant"]
-# Words no key may hold at any depth of a row (P-UNITS B5; W13-INTEGRATION-3 section 6
-# items 4 and 5 keep currencies, starting cogs and discounts with Andrew).
 const BANNED_KEY_WORDS := ["price", "cost", "stat", "discount", "cogs", "currency", "hp_bonus", "damage_bonus"]
 const OVERRIDE_FIELDS := ["name", "text", "upside", "downside", "downside_text", "unlock"]
 const ALT_FIELDS := ["pilot", "slot", "relic", "swap", "name", "text", "unlock"]
 const CAMP_OVERRIDES_KEY := "meta_overrides"
 const CAMP_ALT_LOADOUTS_KEY := "alt_loadouts"
 const ORDER_SETTLE_PREFIX := "order:"
-# Start value: the largest count a grant may ask for (comps ror2/progression-and-music
-# "unlocks-as-lessons": no new lifetime count above 10).
 const MAX_GRANT_COUNT := 10
 const NAME_WORDS := 3
 const TEXT_WORDS := 12
@@ -37,15 +18,12 @@ const ROWS := {
 		"kind": "option", "effect": "extra_reroll", "grant": "ach_meta_spare_reroll"},
 	"shelf_preview": {"name": "Shelf Preview", "text": "See the next shelf's offers before you reach it.",
 		"kind": "option", "effect": "shelf_preview", "grant": "ach_meta_shelf_preview"},
-	# Roboquest's secret key, as Scrapkeep's: the hidden pocket pays a key for later runs.
 	"pocket_key": {"name": "Pocket Key", "text": "Sealed pockets open for you on later runs.",
 		"kind": "pocket_key", "effect": "pocket_key", "grant": "ach_meta_pocket_key"},
 	"pocket_tint": {"name": "Pocket Tint", "text": "A seen pocket door tints its zone on the map.",
 		"kind": "discovery", "effect": "pocket_tint", "grant": "ach_meta_pocket_tint"},
 }
 
-# W50 Foreman Override Codes (RoR2 Artifacts): toggleable give-and-take run mutators.
-# Default all OFF; bot runs always OFF. Every code declares both an upside and a downside.
 const OVERRIDE_CODES := {
 	"code_glass_rail": {
 		"name": "Glass Rail",
@@ -97,8 +75,6 @@ const OVERRIDE_CODES := {
 	},
 }
 
-# W50 Survivor Alternate Loadouts (RoR2 lateral skill swaps): backed strictly by existing
-# swap-only Relics.ROWS entries (zero cooldown or charges buffs).
 const ALT_LOADOUTS := {
 	"alt_sable_crater": {
 		"pilot": "pylon_engineer", "slot": "smash", "relic": "crater_heart", "swap": "crater_slam",
@@ -156,8 +132,6 @@ static func row(id: String) -> Dictionary:
 	return ROWS.get(id, {})
 
 
-# Opens every node whose grant row the profile has earned. Memory only; save() writes.
-# Returns the ids opened by this call, in table order.
 static func open_earned(profile) -> Array:
 	var out: Array = []
 	for id in ROWS:
@@ -166,7 +140,6 @@ static func open_earned(profile) -> Array:
 	return out
 
 
-# Nodes opened, counting only ids that are rows.
 static func level(profile) -> int:
 	return ROWS.keys().filter(func(id): return profile.has_option(id)).size()
 
@@ -186,7 +159,6 @@ static func _keys(value, out: Array) -> Array:
 	return out
 
 
-# rows: node rows. grants: achievement rows (Achievements.ROWS in the game).
 static func validate(rows: Dictionary, grants: Dictionary) -> Array:
 	var problems: Array = []
 	var granted := {}
@@ -217,8 +189,6 @@ static func validate(rows: Dictionary, grants: Dictionary) -> Array:
 		if not (g is Dictionary):
 			problems.append("%s: grant %s is not an achievement row" % [id, grant])
 			continue
-		# The grant may pay this node or, since no screen shows a node (systems audit pass D,
-		# row 31), one cosmetic a player sees; open_earned reads the grant, not the reward.
 		var reward = g.get("reward", {})
 		if reward != {"option": id} and not (reward is Dictionary and reward.size() == 1 and reward.has("cosmetic")):
 			problems.append("%s: grant %s must pay {\"option\": \"%s\"} or one cosmetic" % [id, grant, id])

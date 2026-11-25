@@ -5,18 +5,12 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
-# A menu choice: its key's cap on the left and its words on a charcoal plate. Hover
-# brightens the plate's edge to bone, keyboard focus thickens it, a press edges it
-# amber. The key still works on its own (game.gd _screen_key); the button is the same
-# choice for the mouse.
 
 const KEY_H := 26.0
 const PAD := float(UiTokens.GAP_L)
 
 var key := ""
 var action := ""
-# The two states a field shows besides focus, hover and disabled: waiting for an input the player
-# is about to give (amber edge, the cap gives way to three stepping dots), and refused (alert edge).
 var waiting := false
 var alert := false
 var _dots := 0.0
@@ -38,26 +32,22 @@ func _init(action_id := "", key_id := "", words := "") -> void:
 	_name_for_readers()
 
 
-# Godot turns processing on for a script with _process; the dots need it only while waiting.
+# Godot enables _process automatically when defined; keep it off unless waiting.
 func _ready() -> void:
 	set_process(waiting)
 
 
-# A screen reader hears the choice's words, or the cap's name on a cap-only button.
 func _name_for_readers() -> void:
 	if accessibility_name == "" or accessibility_name == Keycap.label(key):
 		accessibility_name = text if text != "" else Keycap.label(key)
 
 
-# A choice that asks before it acts (the pause menu's Restart run and Quit) words itself in the hazard
-# colour while it asks.
 func set_asking(asking: bool) -> void:
 	add_theme_color_override("font_color", Palette.HAZARD if asking else Palette.SAND)
 	add_theme_color_override("font_hover_color", Palette.HAZARD if asking else UiTokens.TEXT)
 	add_theme_color_override("font_focus_color", Palette.HAZARD if asking else UiTokens.TEXT)
 
 
-# The same choice under another key: the cap and the plate's inset follow it.
 func set_key(key_id: String) -> void:
 	if key_id == key:
 		return
@@ -67,8 +57,6 @@ func set_key(key_id: String) -> void:
 	queue_redraw()
 
 
-# Waiting: the field takes the next input (a key binder listening). Alert: the field refused one.
-# Each wears its own edge; the words that say what to do sit under the field, with its owner.
 func set_waiting(on: bool) -> void:
 	waiting = on
 	if on:
@@ -94,7 +82,6 @@ func set_alert(on: bool) -> void:
 	queue_redraw()
 
 
-# A refused input: the field reads Taken on the alert edge until set_alert(false) or a new text.
 func refuse() -> void:
 	text = "Taken"
 	set_alert(true)
@@ -122,7 +109,6 @@ func _plates() -> void:
 	add_theme_stylebox_override("disabled", plate(UiTokens.disabled(UiTokens.LINE), 2, left))
 
 
-# The tokens' plate, inset on the left for the key's cap.
 static func plate(edge: Color, width: int, left: float, fill := true) -> StyleBoxFlat:
 	var box := UiTokens.plate(edge, width, fill)
 	box.content_margin_left = left
@@ -140,7 +126,6 @@ func _draw() -> void:
 	Keycap.draw(self, Vector2(PAD + Keycap.size_of(key, KEY_H).x * 0.5, size.y * 0.5), key, tint, KEY_H)
 
 
-# Three dots light one after another while the field waits; with less motion they hold still, all lit.
 func _draw_dots() -> void:
 	var still := _less_motion()
 	var lit := 3 if still else int(_dots * 3.0) % 3 + 1

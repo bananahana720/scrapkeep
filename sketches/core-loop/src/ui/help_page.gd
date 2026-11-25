@@ -11,13 +11,6 @@ const MechanicsDiagram := preload("res://src/ui/mechanics_diagram.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 
-# The title's one-page how to play (DESIGN-V2 section 14.10): the run's goal loop as
-# four icons in their event colours (the last is the next world), then the controls
-# diagram Tab's first page draws, with no pilot chosen yet. Nothing here is written twice: the keys and words are
-# FieldNotes.CONTROLS, the colours are event_kinds rows. Back wears the Esc keycap; H still opens the page.
-# The page button walks the controls and then the picture pages (MechanicsDiagram.PAGES):
-# breach, lift and SPIL-9's modules; wall grip, actives and jam fields; relay stakes, the
-# radio and SPIL-9's halo.
 
 const GOAL := [
 	{"icon": "res_heft", "kind": "heft_class_changed", "words": "Get heavy"},
@@ -30,11 +23,8 @@ var back: Button
 var diagram
 var pictures := {}
 var page_button: Button
-# 0 is the controls diagram; 1 onward are MechanicsDiagram.PAGES rows, then the rules page.
 var page := 0
 var rules := {}
-# The run's tuning (screens.gd sets it): the F active's rule line shows only while the actives
-# option is on, as active_rack.gd racks one only then.
 var tuning
 var _mechanics: HBoxContainer
 var _rows: Array[HBoxContainer] = []
@@ -72,7 +62,6 @@ func _init() -> void:
 	visibility_changed.connect(_reset_page)
 
 
-# The Help button steps Controls, each picture page, Rules and back; its label names the next page.
 func toggle_pictures() -> void:
 	show_page((page + 1) % (_rows.size() + 2))
 
@@ -86,8 +75,6 @@ func show_page(index: int) -> void:
 	_mechanics = _rows[clampi(page - 1, 0, _rows.size() - 1)]
 	_rules.visible = rules_page
 	rules["active"].visible = actives_on()
-	# The rules page drops the goal row so its lines (six, five with actives off) fit the
-	# calm-screen budget.
 	_goal.visible = not rules_page
 	if page == 0:
 		page_button.text = "Pictures"
@@ -118,8 +105,6 @@ func _reset_page() -> void:
 		refresh_keys()
 
 
-# The rule lines' keycaps again from the live bindings, as the page opens: the lines are built once in
-# _init, and a rebind in Settings happens while this page is hidden.
 func refresh_keys() -> void:
 	for rule in FieldNotes.FIELD_RULES:
 		rules[rule["id"]].setup(FieldNotes.rule_parts(rule))
@@ -138,7 +123,6 @@ func _mechanics_row(ids: Array) -> HBoxContainer:
 		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var picture := MechanicsDiagram.new(id)
 		card.add_child(picture)
-		# A picture the drawing already names (SPIL-9's sockets) has no caption slot.
 		var caption: Label = null
 		if MechanicsDiagram.CAPTIONS.has(id):
 			caption = _label(MechanicsDiagram.CAPTIONS[id], UiTokens.BODY, Palette.SAND)
@@ -150,15 +134,11 @@ func _mechanics_row(ids: Array) -> HBoxContainer:
 	return row
 
 
-# A rule's line of words and keycaps (credits_hint.gd), counted by the word budget like a label: the
-# keys are read from the bindings, so a rebind moves the cap.
 class RuleLine extends CreditsHint:
 	func drawn_words() -> PackedStringArray:
 		return PackedStringArray([text()])
 
 
-# One line per FieldNotes.FIELD_RULES row: wall grip, the radio dial, the relay mast and the F active
-# (hidden while actives are off; see _show). Jam fields and cast times are the picture pages' captions.
 func _rules_column() -> VBoxContainer:
 	var column := VBoxContainer.new()
 	column.name = "FieldRules"

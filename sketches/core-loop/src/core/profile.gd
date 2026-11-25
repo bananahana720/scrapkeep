@@ -1,19 +1,5 @@
 extends RefCounted
 
-# The player's progress as one versioned document, saved as profile.json: unlocked
-# pilots, worlds and cosmetics, earned achievements, equipped cosmetics, stats and the
-# last pilot, the between-run nodes opened (SG12, an id list added inside schema 4: a
-# file without it reads as none opened) and the jukebox tunes heard (tune_rows.gd, an id
-# list added the same way; the pilot radio's takes join that list) and the radio's dial and
-# mixtapes (radio.gd's to_dict, a dict added the same way). Preferences live in settings_store.gd. The store knows no starters,
-# and the caller passes the time an achievement was earned; the only clock it reads is the save
-# lock's age. Mutators change memory and save() writes. A store cannot save until it has loaded,
-# and a save that finds a newer generation on disk merges it in instead of replacing it. Every
-# save, and every transact (one decision against the newest file), holds the save lock, a
-# directory beside the file, so two games on one profile never write between each other's read
-# and write. A file this build
-# cannot read is never overwritten: unreadable files are kept as .bad, and a file from a
-# newer build is left alone.
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 
@@ -21,23 +7,13 @@ const SCHEMA := 4
 const RUN_TALLY_KEYS := ["stages_cleared", "time", "kills", "deaths", "wardens_seen"]
 const RUN_TALLY_PREFIX := "run_tallies."
 const RUN_TALLY_BASE := "run_tally_base."
-# Runs whose tallies were folded into the base: a run brought back after that (run.json.prev
-# restored, then continued) would otherwise add its whole snapshot again, because compaction
-# erased the high-water marks that pay only deltas. The newest CLOSED_KEEP are kept, ordered.
 const RUN_TALLY_CLOSED := "run_tally_closed."
 const CLOSED_KEEP := 16
 
-# From-version to the method that returns the document one version up.
 const MIGRATIONS := {0: "_migrate_0", 1: "_migrate_1", 2: "_migrate_2", 3: "_migrate_3"}
 
-# Pilot ids every schema 2 build let anyone fly (Rivet was a starter, Kest came free with it).
-# Frozen history, not a rule: a returning v2 profile keeps them under the v3 locks.
 const V2_FREE_PILOTS := ["runner_gunner", "demolitions_caster"]
 
-# Cosmetic ids a cut item left in saves, to the id that replaces it. Every read swaps them, so
-# a save that earned the old item owns the new one; the new one stays unseen so it glows as new,
-# and a slot still wearing the old id is cleared. 2026-10-16: the Rigger Harness was cut for
-# alpha, and Homecoming pays Rigger Blue instead (COSMETICS-ART-BRIEFS.md).
 const RETIRED_COSMETICS := {"outfit_kest_rigger": "paint_kest_rigger"}
 
 const SHAPE := {
@@ -62,7 +38,6 @@ const LOCK_POLL_MS := 2
 var path := ""
 var last_error := ""
 var can_save := false
-# Seconds after which a save lock is taken as left by a game that died inside a save. A test sets its own.
 var lock_stale_s := 5.0
 
 var _doc := {}
@@ -75,8 +50,6 @@ var _loaded_tally_prefixes := {}
 var _pending_tally_settlements := {}
 var _last_closed_tally_run := ""
 var _lock_depth := 0
-# Inside a transact that could not get the lock: the error it got, and how deep. Every lock taken
-# under it fails at once with that error instead of waiting again.
 var _lock_refused := 0
 var _lock_error := OK
 
@@ -129,12 +102,6 @@ func save() -> bool:
 	return saved
 
 
-# Runs change, a Callable, as one step against the newest file, and returns what it returns. It holds
-# the save lock, so no other game's save comes between, and first takes in what another game saved
-# since this one last read or wrote the file (the same merge as save). A save inside change writes
-# under the same lock. A profile that cannot save, or a lock it cannot get, runs change on memory as
-# before: never lost outranks at most once (ruling ea).
-# Inside a held transact it runs change at once: the file was taken in under the same lock.
 func transact(change: Callable) -> Variant:
 	if not can_save or _lock_depth > 0 or _lock_refused > 0:
 		return change.call()
@@ -161,11 +128,6 @@ func transact(change: Callable) -> Variant:
 	return result
 
 
-# The save lock is a directory beside the file: making it is atomic, so one game holds it at a time.
-# Held for one save or one transact (milliseconds); taken again inside them it nests. A game waits
-# LOCK_WAIT_MS for another's save to finish (then ERR_BUSY), and breaks a lock whose time is more than
-# lock_stale_s from now either way: only a game that died inside a save, or a clock that was moved,
-# leaves one. Any other error is the directory's own.
 func _lock() -> Error:
 	if _lock_refused > 0:
 		return _lock_error
@@ -181,7 +143,6 @@ func _lock() -> Error:
 			return OK
 		if err != ERR_ALREADY_EXISTS:
 			return err
-		# 0 when the holder let go between the two calls: try again.
 		var made := FileAccess.get_modified_time(dir) if DirAccess.dir_exists_absolute(dir) else 0
 		if made > 0 and absf(Time.get_unix_time_from_system() - made) > lock_stale_s:
 			DirAccess.remove_absolute(dir)
@@ -203,7 +164,6 @@ func _unlock() -> void:
 		DirAccess.remove_absolute(path + ".lock")
 
 
-# True when the file holds what another game saved since this one last read or wrote it.
 func _newer_on_disk(read: Dictionary) -> bool:
 	return read["state"] == "ok" and (not _on_disk or int(read["doc"]["generation"]) != _loaded_generation)
 
@@ -249,12 +209,6 @@ func _save_locked() -> bool:
 	return true
 
 
-# What two writers of one file both did, as one document: lists are the union,
-# achievements keep the earliest time and stats the larger value, an equipped slot
-# both hold and last_pilot are the saver's, and a slot or key only the other side
-# holds is kept. Settled ids are a union and rewards_settled never goes back to false.
-# The companion keeps the union of owned pieces, the saver's assembly when it has one
-# (else theirs) and the saver's escape flag. The generation is the larger of the two.
 static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	var out := ours.duplicate(true)
 	for key in ["pilots", "worlds", "cosmetics", "settled", "seen", "options", "tunes"]:
@@ -265,6 +219,7 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 				out[key].append(id)
 	if bool(theirs.get("rewards_settled", false)):
 		out["rewards_settled"] = true
+	assert(not bool(ours.get("rewards_settled", false)) or bool(out.get("rewards_settled", false)), "rewards_settled must not regress")
 	var mine: Dictionary = out.get("companion", {})
 	var other: Dictionary = theirs.get("companion", {})
 	if mine.is_empty():
@@ -287,7 +242,6 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	for stat_name in stats:
 		if not out["stats"].has(stat_name) or stats[stat_name] > out["stats"][stat_name]:
 			out["stats"][stat_name] = stats[stat_name]
-	# Run snapshots merge by max, but distinct runs contribute additively.
 	for key in RUN_TALLY_KEYS:
 		if out["stats"].has(RUN_TALLY_BASE + key):
 			out["stats"][key] = float(out["stats"][RUN_TALLY_BASE + key]) + _run_contributions(out["stats"], key)
@@ -302,7 +256,6 @@ static func merge(ours: Dictionary, theirs: Dictionary) -> Dictionary:
 	return out
 
 
-# The camp's records: the skee best by max, the trial's best lap by min and its ghost with it.
 static func _merge_camp(mine: Dictionary, other: Dictionary) -> Dictionary:
 	var out := mine.duplicate(true)
 	if other.has("skee_best") and (not out.has("skee_best") or int(other["skee_best"]) > int(out["skee_best"])):
@@ -312,7 +265,6 @@ static func _merge_camp(mine: Dictionary, other: Dictionary) -> Dictionary:
 		var ours_trial: Variant = out.get("trial")
 		if not (ours_trial is Dictionary) or not ours_trial.has("best_ms") or int(theirs_trial["best_ms"]) < int(ours_trial["best_ms"]):
 			out["trial"] = (theirs_trial as Dictionary).duplicate(true)
-	# The camp ring's best count per pilot: the higher of the two.
 	var theirs_ring: Variant = other.get("ring")
 	if theirs_ring is Dictionary:
 		var ours_ring: Dictionary = (out["ring"] as Dictionary).duplicate() if out.get("ring") is Dictionary else {}
@@ -389,9 +341,6 @@ func set_stat(stat_name: String, value: float) -> void:
 	_doc["stats"][stat_name] = value
 
 
-# Cumulative run snapshots pay only the delta since this run's last logged snapshot.
-# The existing stats map carries the high-water marks, so a death, end or replayed
-# record cannot count the same kills or time twice. No grant rows consume these keys.
 func record_run_tallies(run_id: String, totals: Dictionary) -> bool:
 	if run_id.is_empty() or totals.size() != RUN_TALLY_KEYS.size():
 		return false
@@ -447,8 +396,6 @@ func _remember_run_tallies() -> void:
 
 
 func _discard_compacted_tallies(stats: Dictionary, saved: Dictionary) -> void:
-	# A newer save folded these loaded contributions into its base. A stale writer
-	# must not bring their per-run keys back, even if its snapshot advanced afterward.
 	for prefix in _loaded_tally_prefixes:
 		var still_open := false
 		for key in RUN_TALLY_KEYS:
@@ -511,7 +458,6 @@ func set_last_pilot(id: String) -> void:
 	_doc["last_pilot"] = id
 
 
-# The companion as the dictionary Companion.to_dict makes; {} until one is stored.
 func companion() -> Dictionary:
 	return _doc["companion"].duplicate(true)
 
@@ -524,7 +470,6 @@ func is_settled(id: String) -> bool:
 	return _doc["settled"].has(id)
 
 
-# True the first time an id is settled, false after. Memory only; save() writes.
 func settle(id: String) -> bool:
 	if is_settled(id):
 		return false
@@ -536,12 +481,10 @@ func settled_ids() -> Array:
 	return _doc["settled"].duplicate()
 
 
-# Cosmetic ids the player has looked at on the customize page; the new-item marks read it.
 func is_seen(id: String) -> bool:
 	return _doc["seen"].has(id)
 
 
-# True the first time an id is marked seen. Memory only; save() writes.
 func mark_seen(id: String) -> bool:
 	if is_seen(id):
 		return false
@@ -553,13 +496,10 @@ func seen_ids() -> Array:
 	return _doc["seen"].duplicate()
 
 
-# Between-run nodes opened (meta_options.gd). A list of ids and nothing else: no count, price
-# or stat travels with them. Memory only; save() writes.
 func has_option(id: String) -> bool:
 	return _doc["options"].has(id)
 
 
-# True the first time a node is opened, false after.
 func open_option(id: String) -> bool:
 	if has_option(id):
 		return false
@@ -571,12 +511,10 @@ func option_ids() -> Array:
 	return _doc["options"].duplicate()
 
 
-# Jukebox tunes heard in play (tune_rows.gd ids). Memory only; save() writes.
 func has_tune(id: String) -> bool:
 	return _doc["tunes"].has(id)
 
 
-# True the first time a tune is heard, false after.
 func hear_tune(id: String) -> bool:
 	if has_tune(id):
 		return false
@@ -588,7 +526,6 @@ func tune_ids() -> Array:
 	return _doc["tunes"].duplicate()
 
 
-# The pilot radio's station and mixtapes as Radio.to_dict makes them; {} until one is stored.
 func radio() -> Dictionary:
 	return _doc["radio"].duplicate(true)
 
@@ -597,7 +534,6 @@ func set_radio(doc: Dictionary) -> void:
 	_doc["radio"] = doc.duplicate(true)
 
 
-# The camp's records as camp_records.gd keeps them; {} until one is stored.
 func camp() -> Dictionary:
 	return _doc["camp"].duplicate(true)
 
@@ -637,8 +573,6 @@ func _reject(why: String) -> bool:
 	return false
 
 
-# Where the pending backup goes: the name itself, or the next free .1, .2 when that
-# name holds different bytes. A name already holding these bytes is the backup.
 func _keep_backup(base: String, bytes: PackedByteArray) -> Error:
 	var target := base
 	var n := 1
@@ -650,9 +584,6 @@ func _keep_backup(base: String, bytes: PackedByteArray) -> Error:
 	return SafeStore.write_atomic(target, bytes.get_string_from_utf8())
 
 
-# The file at path as a state: missing, unreadable, bad_schema, newer, wrong_type or
-# ok. An ok read carries the migrated document, the schema it was written at and the
-# bytes it came from; the other states carry why.
 func _read() -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {"state": "missing"}
@@ -687,9 +618,6 @@ func _read() -> Dictionary:
 	return {"state": "ok", "doc": doc, "from_version": from_version, "bytes": bytes}
 
 
-# The camp record is only shape-checked as a dictionary above; the camp trial and skee lane cast
-# its nested values. A bad nested value is dropped here, with a warning, and the rest is kept.
-# (The companion is cleaned where it enters a run: flow._seed_companion, Companion.sanitize.)
 static func _sanitize_records(doc: Dictionary) -> void:
 	var camp: Dictionary = doc["camp"]
 	if camp.has("skee_best") and not _whole(camp["skee_best"]):
@@ -768,8 +696,6 @@ func _migrate_0(doc: Dictionary) -> Dictionary:
 	return out
 
 
-# Schema 1 to 2 adds the companion, the settled ids and the rewards_settled marker;
-# every v1 field passes through untouched.
 func _migrate_1(doc: Dictionary) -> Dictionary:
 	var out := _defaults()
 	for key in doc:
@@ -778,9 +704,6 @@ func _migrate_1(doc: Dictionary) -> Dictionary:
 	return out
 
 
-# Schema 2 to 3 turns the pilot locks on (ruling P-R21). The pilots a v2 build gave everyone
-# are added so a returning player keeps them; pilots the saved achievements already earned
-# are opened by progress.gd's open_met_pilots at setup. Nothing is removed.
 func _migrate_2(doc: Dictionary) -> Dictionary:
 	var out := _defaults()
 	for key in doc:
@@ -795,10 +718,6 @@ func _migrate_2(doc: Dictionary) -> Dictionary:
 	return out
 
 
-# Schema 3 to 4 adds the seen marks. Everything a v3 profile owned counts as seen, so only
-# items earned after the upgrade glow as new. A seen list already in the file (from a tool)
-# is kept and unioned. Nothing is removed. A malformed cosmetics or seen value is left for
-# _shape_ok to reject after migration.
 func _migrate_3(doc: Dictionary) -> Dictionary:
 	var out := _defaults()
 	for key in doc:

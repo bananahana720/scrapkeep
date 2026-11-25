@@ -1,15 +1,6 @@
 extends RefCounted
 
-# The worlds of a run and the boss that ends each one. A stage table (stage_defs.gd,
-# slice_defs.gd) gives each stage row a `world`; this file names the worlds and holds
-# the bosses. The stage index stays global across the run (per-run memory is keyed by it).
-# The table helpers below take the table's DEFS so each table's statics stay one-liners.
 
-# World one's display name is the Bible's region name (BIBLE.md, "Spillway Works"); the
-# Spillway and the Cable Reach are its two stages today. The Dig and the Highdraft are
-# the plan's names (ALPHA-PLAN M2 and M3).
-# Full-alpha progression unlocked (W49-COMBAT): Worlds 1->2->3 play end-to-end and Brindle's
-# cobalt pick (ruling ap) returns when continuing into World 2.
 const FULL_ALPHA := true
 const BRINDLE_COBALT_PICK := true
 
@@ -19,13 +10,6 @@ const ROWS := [
 	{"id": 3, "name": "The Highdraft", "boss": "mind"},
 ]
 
-# One row per boss. kind is the prefix of the boss's piece kinds ("brindle_hull"); music
-# is the music engine's id. title is the victory screen's heading; victory its body. Brindle's rout
-# already has its ROUTED stamp (flourish_rows.gd), so his heading names what was won (ruling cx); stamp, when set, is inked
-# under the heading (the Mind's crew took you on: "All hands", Andrew 2026-10-18). built false means the script does not exist yet.
-# script is the module flow runs for that world's arena. The Waking (waking.gd) and the Mind
-# (mind.gd) have their own modules; each extends stub_boss.gd, one posture Warden on a flat
-# pad, until its fight lands.
 const BOSSES := {
 	"brindle": {"name": "Admiral Brindle", "title": "SPILLWAY RECLAIMED", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
 		"built": true, "victory": "Back on the crew's books, kettle and all.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
@@ -41,10 +25,6 @@ static func boss_finale_lift(boss_id: String) -> int:
 	return int(BOSSES.get(boss_id, {}).get("finale_lift_semitones", 0))
 
 
-# The page shown once when the summary opens after a win over the final world's boss, before
-# the stats (screens.gd). title is the heading. log holds two crew-log lines per world id, shown
-# over that world's fly-over. close is shown over the start of the credits, then sign.
-# TONE-READ: Crew-log ending, prog-G6; every line awaits Andrew's read.
 const ENDING := {
 	"title": "RETURN TRIP ENTERED",
 	"log": {
@@ -66,7 +46,6 @@ const ENDING := {
 		"Tally laid the three leaves beside the repair sheet. The torn edges fit.",
 	],
 	"sign": "Return trip entered. We filled in the time ourselves. Filed by the bay crew.",
-	# The free roll in the crater bowl after the fly-over; seconds matches victory_lap.gd SECONDS.
 	"free_roll": {"seconds": 60.0, "skippable": true, "blocking": false},
 }
 
@@ -83,8 +62,6 @@ static func boss_of(world: int) -> Dictionary:
 		return {}
 	return BOSSES.get(String(r["boss"]), {})
 
-
-# --- Helpers over a table's DEFS (rows sorted by stage, one row per stage) ---
 
 static func world_of(defs: Array, stage: int) -> int:
 	return int(defs[clampi(stage, 1, defs.size()) - 1].get("world", 1))

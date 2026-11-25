@@ -9,20 +9,6 @@ const Glyphs := preload("res://src/ui/glyphs.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 
-# The companion assembly screen, a calm menu between attempts. It lists the pieces the run
-# owns, shows the two sockets and writes the result back to run.companion (the model's
-# to_dict) after every change. workshop.gd decides when it may open (never in play) and
-# routes the keys; this layer only shows and edits.
-#
-#   Pick a piece to put it in a socket; pick a seated piece to take it out, or press the
-#   empty key (U, pad Y) to empty both. One piece works on its own and SPIL-9 wears it
-#   (COMPANION-GROWS). A third piece, or a second of one family, is refused with one line.
-#   Keys: W/S or the d-pad move, Enter or pad A picks, 1-6 pick directly, Esc or pad B
-#   leaves (the Back choice wears the Esc cap).
-#
-# No title and no socket text (ruling cx): the two sockets are drawn marks holding the
-# piece's icon, an empty socket an empty ring, and the cap beside them with the cross icon
-# empties both (U, pad Y: fixed keys, as before; the cap follows the device in hand).
 
 signal closed
 
@@ -30,7 +16,6 @@ const LAYER := 6
 const MAX_ROWS := 6
 const LINE_FULL := "Both sockets are full."
 const LINE_FAMILY := "One of each kind."
-# One icon per piece, from the icon registry, so a socket mark says which piece sits in it.
 const PIECE_ICONS := {"primer_coil": "cmp_primer_coil", "primer_mesh": "cmp_primer_mesh",
 	"ram_prow": "cmp_ram_prow", "ram_spring": "cmp_ram_spring", "escape_vent": "cmp_escape_vent",
 	"escape_rail": "cmp_escape_rail"}
@@ -38,7 +23,6 @@ const LINE_NONE := "No companion in this run."
 
 var game
 var model := Companion.new()
-# The pieces seated so far, at most two, always a set the model accepts.
 var staged: Array[String] = []
 var cursor := 0
 var message := ""
@@ -59,7 +43,6 @@ func setup(game_ref) -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	visible = false
 	_veil = ColorRect.new()
-	# Near solid: the screen behind (the title, a summary) must not read through the panel.
 	_veil.color = Color(Palette.CHARCOAL, 0.96)
 	_veil.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_veil.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -93,7 +76,6 @@ func is_open() -> bool:
 	return _open
 
 
-# Loads the run's companion. False, panel shut, when the run has none (run.companion {}).
 func open() -> bool:
 	if _open:
 		return true
@@ -120,9 +102,6 @@ func close() -> void:
 	closed.emit()
 
 
-# ---- Edits ----
-
-# Seats the piece at index i of the owned list, or takes it out when it is already seated.
 func pick(i: int) -> void:
 	if not _open or i < 0 or i >= model.owned.size():
 		return
@@ -153,7 +132,6 @@ func _seat_staged() -> void:
 		model.assemble(staged)
 
 
-# Both sockets empty; the owned pile stays as it is.
 func empty_sockets() -> void:
 	if not _open:
 		return
@@ -167,8 +145,6 @@ func _commit() -> void:
 	game.run.companion = model.to_dict()
 	_rebuild()
 
-
-# ---- Keys and the pad ----
 
 func handle(event: InputEvent) -> bool:
 	if not _open:
@@ -215,8 +191,6 @@ func step(direction: int) -> void:
 	_rebuild()
 
 
-# ---- Drawing ----
-
 func _rebuild() -> void:
 	_marks.queue_redraw()
 	for row in _rows.get_children():
@@ -247,8 +221,6 @@ func _name_of(id: String) -> String:
 	return String(Companion._row(id).get("name", id))
 
 
-# The icon id in each socket, "" for an empty one: what the two marks show. A core riding in
-# SPIL-9 (run_state.stow_core) holds the last socket and shows as the core.
 func socket_icons() -> Array[String]:
 	var out: Array[String] = []
 	var seats: int = game.run.companion_seats()
@@ -260,12 +232,10 @@ func socket_icons() -> Array[String]:
 	return out
 
 
-# The key glyph id the empty cap shows now, for the device in hand.
 func empty_cap() -> String:
 	return "pad_y" if Glyphs.is_pad() else "key_u"
 
 
-# The pixels each row has for its icon beside the keycap and the name, for the layout checks.
 func icon_room() -> Array[float]:
 	var out: Array[float] = []
 	for row in _rows.get_children():
@@ -274,7 +244,6 @@ func icon_room() -> Array[float]:
 	return out
 
 
-# The words on screen, one per line, for tests and the layout checks.
 func screen_text() -> String:
 	var lines := PackedStringArray()
 	for row in _rows.get_children():
@@ -285,9 +254,6 @@ func screen_text() -> String:
 	return "\n".join(lines)
 
 
-# The two sockets and the empty cap, drawn: a dark disc ringed in sand holding the piece's
-# icon (amber ring when filled), an empty ring when nothing sits there, then the cap with a
-# cross that empties both. Nothing here is a word.
 class Marks extends Control:
 	const RADIUS := 34.0
 	const GAP := 28.0

@@ -2,31 +2,13 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 
-# Looks only, never power. A row may carry nothing but the ALLOWED keys, so a stat
-# cannot ride in on a cosmetic. A tint is a new colour, never a hostile hue: those mean
-# danger on screen (Palette.HAZARD for threats, BRASS for the boss).
-#
-# slot    one of SLOTS (design-v3/CUSTOMIZE.md section 2); OWNERS slots belong to SPIL-9 or the bay
-# pilot   a pilot id, or "" for any pilot; required on a PILOT_ONLY slot, forbidden on an OWNERS slot
-# name    the label shown on the class card's paint picker and the customize page's card
-# starter owned from the first run; only a paint may be a starter
-# tint    a Color, required; also the card's swatch
-# asset   art id; required on every slot but paint. A shell row's asset is its GLB stem
-# mask    decal atlas tile, zero-based, below MASK_TILES; forbidden on other slots
 
 const SLOTS := ["paint", "trail", "decal", "companion_paint", "outfit", "shell", "companion_skin", "bay_decor"]
-# Slots worn by someone other than the pilot. Every other slot is worn per pilot.
 const OWNERS := {"companion_paint": "spil9", "companion_skin": "spil9", "bay_decor": "bay"}
-# Slots whose rows must name a pilot: they fit one body.
 const PILOT_ONLY := ["outfit", "shell"]
-# Slots that mount a scene (resolve to a PackedScene with no light and no collision).
 const SCENE_SLOTS := ["trail", "outfit", "shell", "companion_skin", "bay_decor"]
 const MASK_TILES := 16
-# Row ids whose art has not landed. The page hides them; a grant still records them.
-# The art unit removes its id here, as PENDING_PILOTS works (achievements.gd).
 const PENDING_ART := []
-# Test-only: ids treated as extra PENDING_ART so tests reach the pending paths while the list is
-# empty. Production never sets it; a test that sets it clears it before it finishes.
 static var _test_pending: Array[String] = []
 
 
@@ -53,14 +35,10 @@ const ROWS := {
 	"paint_cannon_verdigris": {"slot": "paint", "pilot": "remembered_cannon", "name": "Old Verdigris", "starter": true, "tint": Color("4f7f7a")},
 	"paint_any_kelp": {"slot": "paint", "pilot": "", "name": "Kelp", "starter": false, "tint": Color("3f6b4f")},
 	"paint_any_cobalt": {"slot": "paint", "pilot": "", "name": "Cobalt", "starter": false, "tint": Color("2a4fd6")},
-	# Four paints for the activity and discovery grants that paid head starts no screen shows
-	# (systems audit pass D, row 31, 11 Nov 2026). Tint only, so no art is owed.
 	"paint_any_shift": {"slot": "paint", "pilot": "", "name": "Shift Denim", "starter": false, "tint": Color("4a6a8c")},
 	"paint_any_mortar": {"slot": "paint", "pilot": "", "name": "Mortar Dust", "starter": false, "tint": Color("b8ab95")},
 	"paint_any_cache": {"slot": "paint", "pilot": "", "name": "Cache Green", "starter": false, "tint": Color("4e8a6c")},
 	"paint_any_spark": {"slot": "paint", "pilot": "", "name": "Spark Teal", "starter": false, "tint": Color("39a8c9")},
-	# Eleven paints for the content-family records that paid nothing (feature-fit.md row 30, 12 Nov 2026).
-	# Tint only, so no art is owed; none is mint, cobalt, pearl, gold or the Mind's purple.
 	"paint_any_jolt": {"slot": "paint", "pilot": "", "name": "Rubber Mat", "starter": false, "tint": Color("444a52")},
 	"paint_any_sluice": {"slot": "paint", "pilot": "", "name": "Sluice Foam", "starter": false, "tint": Color("cfe3dc")},
 	"paint_any_tether": {"slot": "paint", "pilot": "", "name": "Tether Oxblood", "starter": false, "tint": Color("6e2a2a")},
@@ -96,7 +74,6 @@ const ROWS := {
 	"companion_paint_salt": {"slot": "companion_paint", "pilot": "", "name": "Salt White", "starter": false, "tint": Color("e9ecea"), "asset": "companion_paint_salt"},
 	"companion_paint_dusk": {"slot": "companion_paint", "pilot": "", "name": "Dusk Pink", "starter": false, "tint": Color("d68ab0"), "asset": "companion_paint_dusk"},
 	"companion_paint_moth": {"slot": "companion_paint", "pilot": "", "name": "Moth Grey", "starter": false, "tint": Color("a39cb3"), "asset": "companion_paint_moth"},
-	# Shared: the skill bar's three earned items (CUSTOMIZE.md section 8). Art delivered.
 	"trail_any_downbeat": {"slot": "trail", "pilot": "", "name": "Downbeat", "starter": false, "tint": Color("8a5a3a"), "asset": "trail_any_downbeat"},
 	"decal_curtain_call": {"slot": "decal", "pilot": "", "name": "Curtain Call", "starter": false, "tint": Color("d2c5a5"), "asset": "decal_curtain_call_mask.png", "mask": 9},
 	"companion_skin_till_bell": {"slot": "companion_skin", "pilot": "", "name": "Till Bell", "starter": false, "tint": Color("8a5a3a"), "asset": "companion_skin_till_bell"},
@@ -112,8 +89,6 @@ const ROWS := {
 	# --- end runner_gunner ---
 	# --- demolitions_caster (Kest): P-C Kest adds its rows here ---
 	"trail_kest_fuse_smoke": {"slot": "trail", "pilot": "demolitions_caster", "name": "Fuse Smoke", "starter": false, "tint": Color("8c8577"), "asset": "trail_kest_fuse_smoke"},
-	# Rigger Harness (outfit_kest_rigger) cut for alpha, Andrew 2026-10-16: the pod and ring hide a body outfit
-	# and its straps clash with the wing fans (COSMETICS-ART-BRIEFS.md). Homecoming pays this paint instead.
 	"paint_kest_rigger": {"slot": "paint", "pilot": "demolitions_caster", "name": "Rigger Blue", "starter": false, "tint": Color("4f6f9a")},
 	"shell_kest_roost": {"slot": "shell", "pilot": "demolitions_caster", "name": "Roost Frame", "starter": false, "tint": Color("8c8577"), "asset": "shell_kest_roost"},
 	# --- end demolitions_caster ---
@@ -123,7 +98,6 @@ const ROWS := {
 	"outfit_tarn_steady_cap": {"slot": "outfit", "pilot": "tarn", "name": "Steady Cap", "starter": false, "tint": Color("d2c5a5"), "asset": "outfit_tarn_steady_cap"},
 	# --- end tarn ---
 	# --- tally (Tally): P-C Tally adds its rows here ---
-	# Ledger cream tape, a mulberry eyeshade with a copper rim, a copper abacus lattice; never brass.
 	"trail_tally_punch_tape": {"slot": "trail", "pilot": "tally", "name": "Punch Tape", "starter": false, "tint": Color("f7f1e3"), "asset": "trail_tally_punch_tape"},
 	"outfit_tally_eyeshade": {"slot": "outfit", "pilot": "tally", "name": "Eyeshade", "starter": false, "tint": Color("7a3b5c"), "asset": "outfit_tally_eyeshade"},
 	"shell_tally_abacus": {"slot": "shell", "pilot": "tally", "name": "Abacus Lattice", "starter": false, "tint": Color("7a3b5c"), "asset": "shell_tally_abacus"},
@@ -133,8 +107,6 @@ const ROWS := {
 	"paint_cannon_lens": {"slot": "paint", "pilot": "remembered_cannon", "name": "Lens Glass", "starter": false, "tint": Color("d4f2b0")},
 	"shell_cannon_choir": {"slot": "shell", "pilot": "remembered_cannon", "name": "Choir Barrel", "starter": false, "tint": Color("6fb3a6"), "asset": "shell_cannon_choir"},
 	# --- end remembered_cannon ---
-	# First-win secrets (secrets.gd PAINTS, Andrew's Q8 "A few secrets", 17 Oct): one alternate paint per
-	# pilot, each named for that pilot's own crew-log beat. Their grant rows are hidden until a run is won.
 	"paint_sable_overtime": {"slot": "paint", "pilot": "pylon_engineer", "name": "Overtime Arc", "starter": false, "tint": Color("b9a6ff")},
 	"paint_rivet_inside_job": {"slot": "paint", "pilot": "runner_gunner", "name": "Inside Job", "starter": false, "tint": Color("9be564")},
 	"paint_kest_knock_back": {"slot": "paint", "pilot": "demolitions_caster", "name": "Knocked Back", "starter": false, "tint": Color("4fd1d9")},
@@ -152,7 +124,6 @@ static func row(id: String) -> Dictionary:
 	return ROWS.get(id, {})
 
 
-# The ids that fit a slot for a pilot: rows for any pilot and rows for that pilot.
 static func for_slot(slot: String, pilot: String) -> Array:
 	var out: Array = []
 	for id in ROWS:
@@ -170,7 +141,6 @@ static func is_hostile(tint: Color) -> bool:
 	return false
 
 
-# pilots: an array of pilot ids.
 static func validate(rows: Dictionary, pilots: Array) -> Array:
 	var problems: Array = []
 	var starter_paints := 0
@@ -217,7 +187,6 @@ static func validate(rows: Dictionary, pilots: Array) -> Array:
 			starter_paints += 1
 	if starter_paints < 1:
 		problems.append("table: needs at least one starter paint")
-	# Table-level: content_registry validates one row at a time and skips "table:" problems.
 	for id in PENDING_ART + _test_pending:
 		if not rows.has(id):
 			problems.append("table: PENDING_ART id %s is not a row" % id)
@@ -243,8 +212,6 @@ static func fits(id: String, owner: String, slot: String) -> bool:
 	return owner != "" and not OWNERS.values().has(owner) and (r["pilot"] == "" or r["pilot"] == owner)
 
 
-# Consumers supply art ids mapped to imported resources or resource paths. Empty means
-# the slot's unmodified appearance; a missing optional asset is warned once per art id.
 var _warned := {}
 static var _warning_counts := {}
 var _resolved := {}
@@ -257,7 +224,6 @@ static func asset_paths() -> Dictionary:
 		for entry in registry.get("assets", []):
 			if entry is Dictionary and entry.has("id") and entry.has("path"):
 				paths[entry["id"]] = entry["path"]
-	# Materials and AtlasTextures are delivered in the cosmetics manifest, beside the GLBs.
 	var manifest := art_manifest()
 	for group in ["trails", "decals", "paints"]:
 		for entry in manifest.get(group, []):

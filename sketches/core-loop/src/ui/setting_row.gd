@@ -1,19 +1,10 @@
 extends "res://src/ui/choice_button.gd"
 
-# A settings row that shows what it sets and its present value without a "Label: value" string: the label
-# is the button's text, and the value is drawn on its right as its own mark. An on-off row wears a pip,
-# filled when on and a ring when off, so the state reads by shape and not by tint alone. A row with named
-# steps or a number draws that value as right-hand text. `data()` is what a test reads; nothing parses
-# the drawn text. With a key it sits in a column of keyed rows (the pause menu's Radio and Breath). The
-# settings page stacks its rows (stack): the label above, the field below it holding a switch, a stepped
-# value with chevrons, or a padlock on a row that cannot change.
 
 const NONE := -1
 const OFF := 0
 const ON := 1
 const PIP_R := 9.0
-# The settings page's form layout (stack): the label sits above the field, and the field is a
-# target-height plate that holds the value. LABEL_H is the label's line plus the gap under it.
 const LABEL_H := 28.0
 const SWITCH := Vector2(44.0, 24.0)
 const CHEVRON := 7.0
@@ -29,7 +20,6 @@ func _init(action_id := "", key_id := "", row_words := "") -> void:
 	words = row_words
 
 
-# Puts the label above the field: one column, the label read first, the field below it.
 func stack() -> void:
 	stacked = true
 	alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -38,7 +28,6 @@ func stack() -> void:
 	_plates()
 
 
-# The plate under the label: the field itself.
 func field_rect() -> Rect2:
 	if not stacked:
 		return Rect2(Vector2.ZERO, size)
@@ -74,7 +63,6 @@ func _plates() -> void:
 	add_theme_stylebox_override("disabled", plate(UiTokens.disabled(UiTokens.LINE), 2, left))
 
 
-# Shows the label and one value: a pip state (ON or OFF) or right-hand text, never both.
 func show_row(row_words: String, shown_value := "", pip_state := NONE) -> void:
 	words = row_words
 	text = row_words
@@ -85,7 +73,6 @@ func show_row(row_words: String, shown_value := "", pip_state := NONE) -> void:
 	queue_redraw()
 
 
-# The row as data: its label, its right-hand text ("" for a pip row) and its pip state (NONE, OFF or ON).
 func data() -> Dictionary:
 	return {"label": words, "value": value, "pip": pip}
 
@@ -119,8 +106,6 @@ func _draw() -> void:
 	draw_string(font, Vector2(edge - UiFonts.width(value, UiTokens.LABEL), baseline), value, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.LABEL, ink)
 
 
-# The field's value: a switch for an on-off row (the knob's side and the filled track carry the
-# state), right-hand text with step chevrons for a stepped row, a padlock on a row that cannot change.
 func _draw_field() -> void:
 	var field := field_rect()
 	var mid := field.position.y + field.size.y * 0.5

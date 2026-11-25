@@ -7,17 +7,12 @@ const KeycapView := preload("res://src/ui/keycap_view.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 
-# First-run callouts: each teaches one thing at the moment it first matters, once per
-# profile (ui_profile.gd), in the toast band so it never sits over the reticle. The
-# wording, colour and sound are the callout's v2 W1 UI row in event_kinds.
 
 const SHOW_SECONDS := 2.5
 const FADE_IN := 0.2
 const FADE_OUT := 0.4
 const NOTES_AFTER := 60.0
 const ICON := 28.0
-# callout id: the icons before and after its words. A {key_...} in the row's wording
-# draws as that keycap where it stands.
 const PARTS := {
 	"callout_scrap": {"before": ["res_mass"], "after": ["res_heft"]},
 	"callout_warden": {"before": ["obj_warden"], "after": []},
@@ -30,7 +25,6 @@ var game
 var profile
 var queue: Array[String] = []
 var showing := ""
-# Set by the HUD while the hold-R meter needs the row.
 var suppressed := false
 var _shown_text := ""
 var _tween: Tween
@@ -48,7 +42,6 @@ func setup(game_ref, profile_ref) -> void:
 	game.events.beacon_unsealed.connect(func(_stage: int): offer("callout_gates"))
 
 
-# Queues a callout this profile has not seen; it shows once, then never again.
 func offer(id: String) -> void:
 	if profile.seen(id) or id in queue or id == showing or not game.flow.in_play():
 		return
@@ -99,7 +92,6 @@ func _show(id: String) -> void:
 	_chime(id)
 
 
-# The callout's row sound (callout_chime) on the UI bus as it appears.
 func _chime(id: String) -> void:
 	var presentation = game.get("presentation")
 	var audio = presentation.get("audio") if presentation != null else null
@@ -111,7 +103,6 @@ func text() -> String:
 	return _shown_text if showing != "" else ""
 
 
-# The wording as read, with each {key_...} as its key's label: "Hold Tab: notes".
 static func plain(wording: String) -> String:
 	var keys := RegEx.create_from_string(KEY_PATTERN)
 	var out := wording

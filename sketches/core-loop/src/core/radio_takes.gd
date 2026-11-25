@@ -1,25 +1,11 @@
 extends RefCounted
 
-# The pilot radio's catalogue (assets/radio/catalogue.json; design in design-v3/sound/RADIO.md):
-# the stations on the dial and the takes a run can find, each a wild reinterpretation of one of
-# the band's current tracks. A take is found by its found rule and kept in the profile's tunes
-# list beside the jukebox records (tune_rows.gd), so a save, a merge and the HUD's record plate
-# treat both the same. Until a take's own recording is packaged, the radio plays its parent
-# record in its place.
-#
-# found rules:
-#   {"on": <bus signal>, "where": {arg: value}, "at_least": {arg: number}, "count": n, "stage": [n]}
-#       a bus signal (game_events.gd) emitted count times in one run (default 1), each emission
-#       carrying where's values and reaching at_least's numbers, on one of stage's stages if given
-#   {"on": "heard", "tune": <tune_rows id>}   the moment that record is found for the jukebox
-#   {"on": "cache", "park": <map>, "spot": <words>}   a Signal cache in a park (radio_cache.gd)
 
 const TuneRows := preload("res://src/core/tune_rows.gd")
 
 const PATH := "res://assets/radio/catalogue.json"
 const TIERS := ["b-side", "take", "legend"]
 const SPECIAL_RULES := ["heard", "cache"]
-# The stations that hold no takes of their own: the score, the scan and the player's mixtapes.
 const LIVE := "live"
 const AUTO := "auto"
 const MIXTAPE := "mixtape"
@@ -79,18 +65,15 @@ static func is_take(id: String) -> bool:
 	return not take(id).is_empty()
 
 
-# The station a jukebox record airs on, "" for none (it still plays on Auto and in mixtapes).
 static func record_station(id: String) -> String:
 	return String(doc().get("records", {}).get(id, ""))
 
 
-# A track's station: a take's own, else its record's.
 static func station_of(id: String) -> String:
 	var t := take(id)
 	return String(t["station"]) if not t.is_empty() else record_station(id)
 
 
-# What the radio shows and plays for an id: a take, or a jukebox record. {} for neither.
 static func track(id: String) -> Dictionary:
 	var t := take(id)
 	if not t.is_empty():
@@ -102,13 +85,11 @@ static func track(id: String) -> Dictionary:
 		"world": int(r["shelf"]), "where": r["where"], "sleeve": r["sleeve"]}
 
 
-# The jukebox record the band plays for a track: the track itself, or a take's parent.
 static func record_of(id: String) -> String:
 	var t := take(id)
 	return String(t["parent"]) if not t.is_empty() else id
 
 
-# The tracks that air on a station, takes first, in catalogue order.
 static func on_station(id: String) -> Array:
 	var out: Array = []
 	for t in takes():
@@ -120,7 +101,6 @@ static func on_station(id: String) -> Array:
 	return out
 
 
-# Every id the radio can play, records then takes.
 static func all_ids() -> Array:
 	return TuneRows.ids() + take_ids()
 
@@ -137,7 +117,6 @@ static func by_signal() -> Dictionary:
 	return out
 
 
-# Does one emission of the rule's signal count? args maps argument names to values.
 static func counts(rule: Dictionary, args: Dictionary, stage: int) -> bool:
 	var stages: Array = rule.get("stage", [])
 	if not stages.is_empty() and not stage in stages:
@@ -156,8 +135,6 @@ static func needed(rule: Dictionary) -> int:
 	return maxi(1, int(rule.get("count", 1)))
 
 
-# Problems with a catalogue, [] when it is sound. signals maps bus signal names to their
-# argument names (Achievements.bus_signals()).
 static func validate(catalogue: Dictionary, signals: Dictionary) -> Array:
 	var errors: Array = []
 	var seen := {}

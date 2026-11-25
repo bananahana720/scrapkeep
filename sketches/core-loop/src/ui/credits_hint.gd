@@ -5,10 +5,6 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
-# One line of keycaps and words ("1 to 6 choose · Enter start"), drawn with the title's
-# keycap so a key looks the same on every screen. A part with a "cap" draws that key and
-# says its "say"; a part with only "say" is plain words. The credits' skip hint and the
-# class select's footer both read their words from the same part list they draw.
 
 const CAP_H := 24.0
 const FONT := UiTokens.BODY

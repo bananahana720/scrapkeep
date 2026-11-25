@@ -1,9 +1,5 @@
 extends RefCounted
 
-# What the HUD has already taught this profile, saved beside the codex as
-# ui-profile.json: how many times each contextual key glyph's action succeeded, and
-# which first-run callouts have shown. Storage failures never throw; the profile keeps
-# working in memory, as the codex does.
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 
@@ -12,8 +8,6 @@ const FILE := "ui-profile.json"
 var path := ""
 var glyph_uses := {}
 var callouts_seen: Array = []
-# Ids of the synergies, parts and finds whose first-discovery picture card has shown
-# (--discovery=cards); a repeat draws no card.
 var discoveries_seen: Array = []
 var last_error := ""
 var _save_blocked := false
@@ -88,8 +82,6 @@ func mark_discovered(discovery_id: String) -> void:
 	save()
 
 
-# Two owners (the HUD and the banner) may hold the same file; a save keeps what the
-# other one wrote instead of dropping it.
 func _merge_disk() -> void:
 	if not FileAccess.file_exists(path):
 		return

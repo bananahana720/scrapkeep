@@ -13,11 +13,6 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 
-# Camp Dispatch Board (W50 Stage D): Work Orders & Repeatable Shift Orders, 7 Maker
-# Licenses, and Head Starts + Foreman Override Codes. Four-Hand mixed surface (ruling ek):
-# reclaimed Old-Works cast header and Foreman Override plates with the uranium-green seam;
-# Keeper riveted cards for pinned clips, Crew/Shift Orders, and Maker License plaques.
-# Strictly adheres to Four-Hand ink boundaries and zero slop copy.
 
 signal back_requested
 

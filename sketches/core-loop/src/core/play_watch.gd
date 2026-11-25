@@ -1,25 +1,5 @@
 extends RefCounted
 
-# Watches a run as a player would meet it and reports each place it went wrong, one row a place.
-# It only reads the game, so a seeded bot run replays tick for tick with it on or off. Two users:
-# a bot's run (tools/qa_watch.gd, rows to a file with the bot's goal) and a person's sitting
-# (src/core/sitting_notes.gd).
-#   stuck   within STUCK_M of one point for STUCK_S of play, boss fights included (not frozen, not on a line,
-#           not mounted on a pylon: a mount is a chosen rest in the air)
-#   hung    at rest off the ground for HUNG_S (an ungrounded rest, ruling aa)
-#   wedged  at rest on the ground pressed into a wall-steep contact for HUNG_S
-#   fell    the fall rescue: the ball moved over TELEPORT_M in one tick from under the floor or off
-#           the map (a blink or a boss's carry is not a fall)
-#   objective  the HUD's objective plate changed (its id and words, with the gate's lock state)
-#   blank   the objective plate showed no words for BLANK_S of play, the victory lap aside (once a stretch).
-#           It reads the row the HUD chose (hud.objective_reading), not the pixels drawn.
-#   bar     the hull bar stood more than BAR_OFF of a full bar away from the hull for BAR_S of play
-#           (once a stretch). The HUD sets the bar every frame, so a bar off for seconds is a bar a
-#           player cannot trust. It reads the share the HUD gave the bar (hud.hull_shown), not pixels.
-#           A stretch is timed from the first reading that found the bar off, so one reading alone
-#           is never a row however long ago the reading before it was (the frame a pause lifts,
-#           before the HUD has drawn again; a run's first read).
-# stuck, hung, wedged and fell log again only REARM_M or more from where they last fired.
 
 const STUCK_M := 3.0
 const STUCK_S := 8.0
@@ -31,8 +11,6 @@ const BLANK_S := 3.0
 const BAR_S := 3.0
 const BAR_OFF := 0.05
 
-# Rows by kind, the plate changes seen, and the longest stretches the plate stood empty and the
-# hull bar stood off the hull in play.
 var counts := {}
 var plates := 0
 var blank_max := 0.0
@@ -58,7 +36,6 @@ var _blinked := -10
 var _was_in_play := false
 
 
-# sink takes each row (a Dictionary) as it is found.
 func watch(game, sink: Callable) -> void:
 	_game = game
 	_sink = sink
@@ -69,18 +46,15 @@ func _on_blink(_from: Vector3, _to: Vector3) -> void:
 	_blinked = _ticks
 
 
-# What a stuck or hung row needs for reading: the ball's motion and contact.
 func _detail(_ball: Vector3) -> Dictionary:
 	var player = _game.player
 	return {"v": _v(player.state.velocity), "grounded": player.state.grounded, "n": _v(player.state.contact_normal)}
 
 
-# Fields every row carries after its place: a bot's run adds its goal.
 func _who() -> Dictionary:
 	return {}
 
 
-# Once a physics tick of play.
 func step(delta: float) -> void:
 	if _game == null or _game.player == null or _game.flow == null or _game.run == null:
 		return
@@ -97,13 +71,9 @@ func step(delta: float) -> void:
 		_objective = ""
 		return
 	var state: String = _game.flow.state_name()
-	# Only a jump between two ticks of play: the game placing the ball as a run starts (from the
-	# title's spot, off the stage's ground) is not something a player falls through.
 	var in_play: bool = _game.flow.in_play()
 	if in_play and _was_in_play and ball.distance_to(_last) > TELEPORT_M:
 		var terrain = _game.ctx.terrain
-		# A blink and a boss's scripted carry move the ball on purpose; only the fall rescue's
-		# move (from under the floor or off the map) counts.
 		if _ticks - _blinked > 2 and (not terrain.contains(_last) or _last.y < terrain.floor_height(_last.x, _last.z) - 2.0):
 			_emit("fell", _last, state, {"to": _v(ball)})
 	_last = ball
@@ -131,10 +101,6 @@ func step(delta: float) -> void:
 		_emit("wedged", ball, state, {"n": _v(player.state.contact_normal)})
 
 
-# The HUD's objective plate, read about once a second by the runner (since = unpaused seconds
-# since the last read; a read outside play counts nothing and starts every stretch again): a row each time its id changes, with the gate's lock state beside it, so a wrong
-# plate during a lock reads off the log; a row when it has stood empty for BLANK_S; and a row
-# when the hull bar has stood off the hull for BAR_S.
 func read_text(since := 1.0) -> void:
 	if _game == null or _game.hud == null or _game.flow == null or not _game.flow.in_play():
 		_blank = 0.0
@@ -159,7 +125,6 @@ func read_text(since := 1.0) -> void:
 		_bar_off = 0.0
 		_bar_seen = false
 		_bar_told = false
-	# The victory lap has no objective by design (objectives.gd), so its empty plate is not a fault.
 	if String(reading.get("words", "")).strip_edges() == "" and state != "lap":
 		_blank += since
 		blank_max = maxf(blank_max, _blank)

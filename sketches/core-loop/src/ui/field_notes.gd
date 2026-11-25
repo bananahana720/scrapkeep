@@ -15,14 +15,6 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 
-# Tab's field notes are pictures (playtest entry 8: the old page was "a whole essay of
-# text"): the controls as a keyboard and mouse with your pilot's keys lit, what hurts
-# you, and how you grow, then the codex pages. Each picture page stays inside the
-# calm-screen budget of 40 words. CONTROLS below is the one key list; the diagram draws
-# its rows with caps and a short word. The tester notes (TESTING, QUESTIONS, TRY_FIRST,
-# SCREEN_KEYS) and the legend are no longer drawn on Tab; README.md mirrors them.
-# What the run asks of you and why, in one line: the title screen shows it too. The why is the game's
-# one line (ruling cj, design-v3/STORY-MAP.md): a machine runs the world and calls it perfect (the quote marks are the crew's), and the crew takes it back.
 const OBJECTIVE := "A machine runs your world \"perfectly\". Take it back. Get heavy, break the Wardens, smash their cores."
 
 const TESTING := [
@@ -50,10 +42,6 @@ const TRY_FIRST := [
 	"Against Brindle, read the line at the top of the screen. Shoot the crane magnets in phase 1 and slam the vent caps in phase 2. In phase 3, bait his charge into the rim wall and hit the open cockpit. Then ram or stomp the scooter when he runs.",
 ]
 
-# The key list. The ten verbs come first, their keys read from the bindings table; the rest
-# are menu and screen keys, which are not verbs. A row with "caps" and "short" is drawn on the
-# controls diagram (Tab's Keys page and the title's Help page), as its keycaps and those one
-# or two words. The F special retired into slot 2 (design-v3/SKILL-BAR.md section 5).
 const VERB_ROWS := [
 	["roll", "drive, relative to where the camera looks. At top speed walls and overhang lips count as ground", "drive"],
 	["look", "look", "look"],
@@ -82,13 +70,6 @@ const MENU_ROWS := [
 ]
 static var CONTROLS := controls()
 
-# The field rules page of the title's Help (help_page.gd), one line per rule, each short enough
-# for its calm-screen budget of 40 words with the title and buttons. A line is {id, words}; the
-# words open with the rule's own name. They go with the key list above: the keys read F (the
-# active; the help page shows its line only while the actives option is on) and . , / (the
-# radio). Wall grip, jam fields, cast times and relay stakes have no key; each is also said once,
-# in play, when first met (field_tips.gd). A cast is a slot with a cast time: the Q variants and
-# Gather Plate (ability_state.gd VARIANT_CAST).
 const FIELD_RULES := [
 	{"id": "grip", "say": "Stay fast against a wall and you climb it."},
 	{"id": "radio", "say": "Radio", "keys": [["cl_radio_next", "next"], ["cl_radio_prev", "back"], ["cl_radio_skip", "skip"]]},
@@ -103,8 +84,6 @@ const SCREEN_KEYS := [
 	{"keys": "N", "does": "new run as the same pilot, on the summary (pad A on the summary)"},
 ]
 
-# A rule as credits_hint.gd parts: its words, with each key drawn as the keycap the bindings give now
-# (a rebind moves the cap), never a typed letter. The jam and cast rules are the picture pages' captions.
 static func rule_parts(rule: Dictionary) -> Array:
 	var parts := []
 	if rule.has("say"):
@@ -121,7 +100,6 @@ static func rule_parts(rule: Dictionary) -> Array:
 	return parts
 
 
-# The key list in display order: a row per verb with its table keys and caps, then the menu keys.
 static func controls() -> Array:
 	var out := []
 	for spec in VERB_ROWS:
@@ -131,8 +109,6 @@ static func controls() -> Array:
 	return out
 
 
-# The caps a verb draws on the diagram: its glyph, one cap per drive key for the roll, and one
-# per number key for the pick.
 static func verb_caps(verb: String) -> Array:
 	if verb == "select":
 		return Bindings.SELECT_ACTIONS.map(func(action):
@@ -145,14 +121,12 @@ static func verb_caps(verb: String) -> Array:
 	return caps
 
 
-# A glyph per event_kinds shape, so a codex card wears its category's silhouette.
 const SHAPE_GLYPHS := {
 	"diamond": "◆", "wave": "≈", "burst": "*", "square": "■", "chevron": "›", "star": "★",
 	"ring": "○", "arrow": "»", "bar": "=", "cross": "×", "core": "◆", "none": "",
 }
 const CARD_COLUMNS := 3
 const MOUSE_STEPS := {MOUSE_BUTTON_LEFT: 1, MOUSE_BUTTON_WHEEL_DOWN: 1, MOUSE_BUTTON_RIGHT: -1, MOUSE_BUTTON_WHEEL_UP: -1}
-# The picture pages, before the codex: id -> {label, icon}. An icon names an Icons id.
 const PICTURE_PAGES := {
 	"keys": {"label": "Keys", "icon": "key_lmb"},
 	"hurts": {"label": "What hurts", "icon": "thr_instant"},
@@ -169,7 +143,6 @@ var _codex_page: VBoxContainer
 var _page := 0
 
 
-# Every notable fact in its own colour and wording, straight from event_kinds.gd.
 static func legend_bbcode() -> String:
 	var lines := PackedStringArray(["What the colours mean"])
 	for kind in EventKinds.ROWS:
@@ -181,8 +154,6 @@ static func legend_bbcode() -> String:
 	return "\n".join(lines)
 
 
-# Tab has to keep listening while the tree is paused, so this layer always processes
-# and the game it steers does not. P and Esc belong to the pause menu (pause_menu.gd).
 func setup(game_ref) -> void:
 	game = game_ref
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -191,7 +162,6 @@ func setup(game_ref) -> void:
 	_notes = PanelContainer.new()
 	_notes.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_notes.offset_left = 40.0
-	# Below the objective and run status strip, which presentation draws on top.
 	_notes.offset_top = 72.0
 	_notes.offset_right = -40.0
 	_notes.offset_bottom = -24.0
@@ -227,8 +197,6 @@ func setup(game_ref) -> void:
 	show_page(0)
 
 
-# The picture pages first, then one page per codex category (reserved ones only once
-# they hold entries), then the Found list and lore Notes.
 func pages() -> Array[String]:
 	var list: Array[String] = []
 	list.append_array(PICTURE_PAGES.keys())
@@ -300,9 +268,6 @@ func _tab_color(page: String) -> Color:
 	return EventKinds.category(page)["color"]
 
 
-# The page row: Q, one icon per page (the open one wears its name and an underline in
-# its colour), E. Hovering an icon opens its page when the mouse is free (notes pinned
-# from the pause menu).
 class TabStrip:
 	extends Control
 
@@ -355,7 +320,6 @@ class TabStrip:
 		Keycap.draw(self, Vector2(x + 4.0 + CAP * 0.5, mid), "key_e", Palette.SAND, CAP)
 
 
-# Builds one codex page and returns how many cards or lines it shows.
 func render_page(page: String) -> int:
 	for child in _codex_page.get_children():
 		_codex_page.remove_child(child)
@@ -390,7 +354,6 @@ func render_page(page: String) -> int:
 	return listed.size()
 
 
-# Saved codex ids are the only found-state; locked rows never expose their words.
 func note_entries() -> Array:
 	var listed := []
 	var codex = _codex()
@@ -450,14 +413,11 @@ func _card(entry: Dictionary, style: Dictionary) -> Control:
 	return card
 
 
-# An undiscovered card: the hint sentence, then the clue on its own line. A hint that
-# already names its clue (build's "Chain Arc + something that splits") shows it once.
 static func hint_card_text(glyph: String, hint: String, clue: String) -> String:
 	var lines := PackedStringArray(["%s ???" % glyph])
 	if hint != "":
 		lines.append(hint)
 	if clue != "" and not hint.contains(clue):
-		# A clue that opens with "+" carries on from its hint ("Knocked machines" / "+ three down").
 		lines.append(clue if clue.begins_with("+") else "Try " + clue)
 	return "\n".join(lines)
 
@@ -478,8 +438,6 @@ func _render_found(codex) -> int:
 	return codex.found().size()
 
 
-# While Tab is held the mouse is captured, so its buttons turn pages: left or wheel down
-# for the next, right or wheel up for the one before.
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and game != null and game.notes_held() and MOUSE_STEPS.has(event.button_index):
 		show_page(_page + MOUSE_STEPS[event.button_index])

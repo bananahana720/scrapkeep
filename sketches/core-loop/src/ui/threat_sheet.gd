@@ -7,11 +7,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ThreatGrammar := preload("res://src/combat/threat_grammar.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
-# Tab's "what hurts you" page: the four attack types of threat_grammar.gd, each as a
-# looping top-down miniature of its telegraph (the same striped fill, front, reticle and
-# rails the game draws), its thr_ icon, its THREAT_ROWS shape and two words, then one
-# tile for the player's own amber, which never hurts. Colours are the grammar's: hazard
-# with charcoal keylines for hostile, amber and no stripes for yours.
 
 const TILE := Vector2(260.0, 300.0)
 const GAP := 24.0
@@ -38,7 +33,6 @@ func _init() -> void:
 	custom_minimum_size = Vector2(tiles().size() * (TILE.x + GAP) - GAP, TILE.y)
 
 
-# The grammar's kinds in its Type order, then the player's own tone.
 static func tiles() -> Array[String]:
 	var out: Array[String] = []
 	for kind in ThreatGrammar.KINDS:
@@ -94,7 +88,6 @@ func _draw() -> void:
 		ScrapFrame.stamp(self, words, font, 20, Palette.SAND, Color(tone, 0.6), i + 11, Vector2(mid, row_y + 56.0))
 
 
-# A sharp edge; stripes close in from it over the warning; a solid flash on landing.
 func _instant(at: Vector2, p: float) -> void:
 	var r := 62.0
 	_keyline_circle(at, r, Palette.HAZARD)
@@ -104,8 +97,6 @@ func _instant(at: Vector2, p: float) -> void:
 		draw_circle(at, r, Color(Palette.HAZARD, 0.9))
 
 
-# The whole reach dashed and faint; a bright front travels out with chevrons; the swept
-# ground holds faint stripes.
 func _wave(at: Vector2, p: float) -> void:
 	var reach := 72.0
 	for i in 24:
@@ -121,8 +112,6 @@ func _wave(at: Vector2, p: float) -> void:
 			_chevron(at + dir * (front + 9.0), dir, Palette.HAZARD)
 
 
-# A dotted flight from the launcher, eaten as the shell flies; brackets close on the
-# blast edge.
 func _projectile(stage: Rect2, p: float) -> void:
 	var from := stage.position + Vector2(18.0, stage.size.y - 18.0)
 	var land := stage.get_center() + Vector2(30.0, -6.0)
@@ -146,7 +135,6 @@ func _projectile(stage: Rect2, p: float) -> void:
 		draw_circle(land, r, Color(Palette.HAZARD, 0.9))
 
 
-# Rails along the strip; the striped fill runs from the source end.
 func _lane(stage: Rect2, p: float) -> void:
 	var strip := Rect2(stage.position + Vector2(14.0, stage.size.y * 0.5 - 24.0), Vector2(stage.size.x - 28.0, 48.0))
 	for y in [strip.position.y, strip.end.y]:
@@ -160,7 +148,6 @@ func _lane(stage: Rect2, p: float) -> void:
 		draw_rect(strip, Color(Palette.HAZARD, 0.9))
 
 
-# The player's own: amber, clean fill, no stripes, no keyline menace.
 func _own(at: Vector2, p: float) -> void:
 	var r := 30.0 + 34.0 * clampf(p, 0.0, 1.0)
 	draw_circle(at, r, Color(Palette.AMBER, 0.25))
@@ -172,7 +159,6 @@ func _keyline_circle(at: Vector2, r: float, color: Color) -> void:
 	draw_arc(at, r, 0.0, TAU, 56, color, 3.5)
 
 
-# 45-degree hazard stripes over the ring between r_in and r_out.
 func _stripes(at: Vector2, r_out: float, r_in: float, color: Color) -> void:
 	var along := Vector2(1.0, 1.0).normalized()
 	var normal := Vector2(1.0, -1.0).normalized()

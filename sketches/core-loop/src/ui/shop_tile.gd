@@ -7,32 +7,11 @@ const Keycap := preload("res://src/ui/keycap.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
-# One stamped plate on Moss's counter. A tile is icons first: the part's family (cat_)
-# inside its rarity frame, its element (el_) and trigger (trg_) glyphs on the frame's
-# lower corners, and the price as the cog icon and a number. The name and what it does
-# show in the counter's detail line for the tile under the mouse or the keys.
-#
-# kind   shelf | top | cell | reroll | sell | pick | weigh | stow | brew
-# A brew plate is Moss's last-call kettle (shop.brew_offer): the pilot's ultimate glyph with a
-# pip per pour, each pour a third of the meter at the boss fight's start.
-# A shelf plate with set_pieces is the last call's set piece: a pip per piece of its maker's set
-# under the frame, the held ones filled and the one this plate adds outlined in amber.
-# A stow plate is a core carried in SPIL-9 (shop.stow_core): the core glyph in a socket ring,
-# and under it the piece it unseats (seat_icon), struck through; nothing when a socket is free.
-# A weigh plate is Moss's scale (shop.gd weigh): the mass glyph with the mass one press
-# takes under it, and the cogs it pays as the price.
-# state  ok | poor (too few cogs) | sold | locked (heft) | capped | welded | spent
-# A poor tile keeps its price but dims and strikes it; a locked hook wears the heft
-# dial with a notch at the class it needs; a sold slot is an empty dashed plate.
 
 const ICON := 56.0
 const GLYPH := 20.0
 const PRICE_FONT := UiTokens.BODY
 const COG := 16.0
-# The rarity frames (VISUAL-LANGUAGE section 5): each rung differs by shape, not colour alone.
-# Common one line, rare two, relic two with round bolt heads round the bezel, evolved two with
-# its outer line cut into the ancients' dashed seam and diamond points at the corners. Common is
-# steel, not the field mint it wears in the world: mint on a screen is press now (LEGIBILITY 14.3).
 const RARITY := {
 	"common": {"color": Palette.STEEL, "width": 2.0, "double": false, "notches": "", "dashed": false},
 	"rare": {"color": Palette.COBALT, "width": 3.0, "double": true, "notches": "", "dashed": false},
@@ -45,7 +24,6 @@ const DASH := 9.0
 var rec := {}
 var index := -1
 var _lift := 0.0
-# The tile's Keeper plate and the ring focus draws round it, cut by the record's serial (set_record).
 var _plate: StyleBox
 var _ring: StyleBox
 
@@ -129,7 +107,6 @@ func _draw() -> void:
 		"stow":
 			draw_arc(centre, ICON * 0.42, 0.0, TAU, 32, Color(Palette.SAND, dim), 3.0)
 			draw_texture_rect(Icons.texture("res_core"), icon_rect.grow(-14.0), false, Icons.tint("res_core", Color(rec.get("color", Palette.SAND), dim)))
-			# The cost: the piece the core unseats, struck through, under the socket ring.
 			var seat := String(rec.get("seat_icon", ""))
 			if seat != "":
 				var side := 24.0
@@ -177,7 +154,6 @@ func _draw() -> void:
 		draw_texture_rect(Icons.shape("cross"), Rect2(Vector2(size.x * 0.5 - 9.0, size.y - 25.0), Vector2(18.0, 18.0)), false, Color(Palette.SAND, 0.6))
 
 
-# The part's family glyph inside its rarity frame, element and trigger on the corners.
 func _framed(icon_rect: Rect2, dim: float) -> void:
 	var frame: Dictionary = RARITY.get(String(rec.get("rarity", "common")), RARITY["common"])
 	var tint := Color(frame["color"], dim)
@@ -192,13 +168,10 @@ func _framed(icon_rect: Rect2, dim: float) -> void:
 		draw_rect(outer.grow(-6.0), tint, false, frame["width"])
 	match frame["notches"]:
 		"bolt":
-			# Corners and edge midpoints, so the bolts still read where the element and
-			# trigger badges cover the lower corners.
 			for k in 4:
 				draw_circle(rim[k], NOTCH, tint)
 				draw_circle((rim[k] + rim[(k + 1) % 4]) * 0.5, NOTCH, tint)
 		"diamond":
-			# Corners only, so the dashed seam reads along every edge.
 			var r := NOTCH * 1.6
 			for corner in rim:
 				draw_colored_polygon(PackedVector2Array([corner + Vector2(0.0, -r), corner + Vector2(r, 0.0), corner + Vector2(0.0, r), corner + Vector2(-r, 0.0)]), tint)
@@ -214,7 +187,6 @@ func _framed(icon_rect: Rect2, dim: float) -> void:
 		draw_texture_rect(Icons.texture(c[0]), r, false, Icons.tint(c[0], Color(Palette.SAND, dim)))
 
 
-# The cog icon and the price in mono digits; too poor dims it and strikes it through.
 func _price(at: Vector2, amount: int, poor: bool) -> void:
 	var digits := str(amount)
 	var w := COG + 5.0 + UiDraw.width(digits, PRICE_FONT, true)
@@ -226,8 +198,6 @@ func _price(at: Vector2, amount: int, poor: bool) -> void:
 		draw_line(Vector2(x - 3.0, at.y + 1.0), Vector2(x + w + 3.0, at.y - 1.0), Palette.SAND, 2.0)
 
 
-# The hook's lock: the heft dial with a notch at the class Moss wants and the needle at
-# the ball's class now (DESIGN-V2 section 12).
 func _lock_dial(hub: Vector2) -> void:
 	var radius := 15.0
 	var classes := maxi(2, int(rec.get("classes", 5)))
@@ -245,7 +215,6 @@ func _lock_dial(hub: Vector2) -> void:
 	draw_circle(hub, 2.5, Palette.SAND)
 
 
-# The maker set this piece belongs to: held pieces filled, this piece's place ringed in amber.
 func _set_pips(at: Vector2, held: int, pieces: int, dim: float) -> void:
 	_pips(at, held, pieces, dim)
 	if held < pieces:
@@ -264,7 +233,6 @@ func _pips(at: Vector2, filled: int, cap: int, dim: float) -> void:
 			draw_polyline(diamond, Color(Palette.SAND, 0.5 * dim), 1.5)
 
 
-# Reroll: two arrows chasing each other round a circle.
 func _cycle(centre: Vector2, r: float, tint: Color) -> void:
 	for half in 2:
 		var start := PI * half + 0.35

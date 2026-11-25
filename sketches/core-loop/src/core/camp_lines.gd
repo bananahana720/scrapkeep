@@ -1,14 +1,5 @@
 extends RefCounted
 
-# The one dry crew-log line the camp shows when the walk opens. Pure logic: it reads the
-# scrapbook's pages (newest first, as ScrapbookStore.load_all makes them) and returns a
-# line. Nothing here touches the tree, the clock or a random stream: the choice is a hash
-# of the newest page's run id, so the same history says the same thing. A page is read for
-# run_id, outcome ("won" or "lost"; an older page without it reads its won flag), world,
-# pilot and stage_reached; missing keys read as empty. An abandoned run makes no page, so there
-# is no quit line. With no pages it falls back to the profile's lifetime stats (stages_cleared,
-# deaths, kills): a ledger line when there are any, the first-visit line when there are
-# none. Melodrama stays in the scrapbook's captions; these are the log.
 
 const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
 
@@ -76,7 +67,6 @@ const STREAK_WIN := [
 
 const OUTCOME_LOSS := [LOSS_1, LOSS_2, LOSS_3]
 
-# W50-STORY-ARCS additive story-state pools (selected only when a 3rd story_state arg reports progress).
 const ORDER_DONE := [
 	"Work order stamped and clipped to the brass rail. Moss signed the bottom corner.",
 	"Shift slip filed on the board. One fewer job waiting on the hook.",
@@ -114,9 +104,6 @@ static func all_lines() -> Array:
 	return out
 
 
-# The line for a scrapbook, newest page first. `stats` is the profile's stats map, read
-# only when there are no pages. Optional `story_state` selects W50 progression pools while
-# keeping 1- and 2-arg callers byte-identical.
 static func line_for(pages: Array, stats := {}, story_state := {}) -> String:
 	if not story_state.is_empty():
 		var story_line := _story_line(pages, story_state)
@@ -163,12 +150,10 @@ static func _story_line(pages: Array, story_state: Dictionary) -> String:
 	return ""
 
 
-# A page's outcome: the run-end thread's "outcome" field, else the older won flag.
 static func is_won(page: Dictionary) -> bool:
 	return ScrapbookStore.is_won(page)
 
 
-# How many pages from the newest share its outcome (won or not).
 static func _streak(pages: Array) -> int:
 	var won := is_won(pages[0])
 	var n := 0
@@ -179,7 +164,6 @@ static func _streak(pages: Array) -> int:
 	return n
 
 
-# The newest page is the only one that pilot has on the shelf.
 static func _is_new_pilot(pages: Array) -> bool:
 	var id := String((pages[0] as Dictionary).get("pilot", ""))
 	if id.is_empty():
@@ -190,6 +174,5 @@ static func _is_new_pilot(pages: Array) -> bool:
 	return pages.size() > 1
 
 
-# String.hash is stable for the same text across runs of one build.
 static func _pick(group: Array, seed_text: String) -> String:
 	return String(group[posmod(seed_text.hash(), group.size())])

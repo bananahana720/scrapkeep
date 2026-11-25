@@ -6,15 +6,6 @@ const Icons := preload("res://src/ui/icons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 
-# The run at a glance, top left: one pip per stage of the current world (cleared, current, still ahead) and
-# the Fleet's tag for that world's boss arena, then the difficulty under them as rising steps
-# and their word, the lowest step always lit and one more for each threat tier the director
-# can raise. The run clock is not shown in play.
-#
-# The difficulty was a filled, notched bar in the threat colour. A filled red bar in a status
-# corner is a health bar in every other game: of the six blind readers shown it with no other
-# cue (one still, 10 Nov 2026) six named it as their health and none the real bar. Drawn as
-# steps (a level, like a signal meter) none of twelve did, and all twelve found the health bar.
 
 const PIP := 18.0
 const PIP_STEP := 24.0
@@ -23,18 +14,11 @@ const BAR_X := 28.0
 const THREAT_TIERS := 2
 const STEP := Vector2(22.0, 13.0)
 const STEP_GAP := 5.0
-# How tall a step's low (left) edge is against its high one's place on the ramp, so the
-# first step is a wedge with a foot and not a point.
 const STEP_FOOT := 0.35
-# The steps' own word, in the threat colour. With no word one of nine blind readers guessed
-# threat (most said signal, heat or speed); with it three of three read "how dangerous things are".
 const THREAT_WORD := "THREAT"
 const WORD_FONT := UiTokens.CAPTION
 const WORD_GAP := 2.0
-# Room after the word for its outline, which touched the plate's border and rivet on the PC.
 const WORD_PAD := 6.0
-# A step that has just lit blinks for this long, at this rate, so the eye finds
-# the meter the moment the threat rises: no toast says so (the rise is below the toast line).
 const RISE_BLINK := 1.5
 const RISE_HZ := 3.0
 const PLATE_WIDTH := 150.0
@@ -69,7 +53,6 @@ func set_status(stage_now: int, stage_count: int, boss_exists: bool, arena: bool
 	queue_redraw()
 
 
-# Whether a step has just lit and is still blinking.
 func rising() -> bool:
 	return _rise_left > 0.0
 
@@ -103,7 +86,6 @@ func _draw() -> void:
 
 	var threat_color := EventKinds.color("threat_rose")
 	var foot := size.y - 1.0
-	# The newest step, bone on the blink's beat while a rise is fresh.
 	var bright := Palette.SAND if rising() and fmod(_rise_left * RISE_HZ, 1.0) >= 0.5 else threat_color
 	draw_texture_rect(Icons.texture("res_difficulty"), Rect2(Vector2(4.0, foot - 12.0), Vector2(14.0, 14.0)), false, Icons.tint("res_difficulty", threat_color))
 	for i in steps():
@@ -113,7 +95,6 @@ func _draw() -> void:
 		var lit := threat_color if i < steps_lit() else UiDraw.TRACK
 		draw_colored_polygon(step, bright if i == steps_lit() - 1 else lit)
 		draw_polyline(ring, UiDraw.OUTLINE, 1.5, true)
-	# The word stays in the text colour: rust words hold only 3.5:1 on their outline (pass 4); the steps carry the rust.
 	UiDraw.text(self, word_left(), foot - STEP.y * 0.5, THREAT_WORD, WORD_FONT, Palette.SAND)
 
 
@@ -129,7 +110,6 @@ static func steps() -> int:
 	return THREAT_TIERS + 1
 
 
-# The lowest step is the run's own difficulty; each threat tier lights one more.
 func steps_lit() -> int:
 	return steps_lit_at(threat)
 
@@ -138,8 +118,6 @@ static func steps_lit_at(tier: int) -> int:
 	return clampi(tier, 0, THREAT_TIERS) + 1
 
 
-# Step `i` of the ramp, its foot's left end at `origin` plus the steps before it: foot left,
-# top left, top right, foot right. Each step starts a little under where the last one ended.
 static func step_points(i: int, origin: Vector2) -> PackedVector2Array:
 	var left := origin.x + i * (STEP.x + STEP_GAP)
 	var low := STEP.y * (i + STEP_FOOT) / steps()

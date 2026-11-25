@@ -10,26 +10,17 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 
-# The camp page on K. The camp is now a walk through the 3D hub (camp_hub.gd), so in walk mode this page is only a
-# key-hint strip; the pilot lines, the pieces count and the button row stay built (reading() and labels() still
-# serve the tests) but hidden, since every station is a zone in the world that opens its page by its own key.
 
 const NO_PIECES := "No SPIL-9 pieces yet. They turn up in runs."
-# The walk's keys, as the keycap row every other screen draws (credits_hint.gd).
 const WALK_HINTS := [{"cap": "key_w", "say": "W"}, {"cap": "key_a", "say": "A"}, {"cap": "key_s", "say": "S"}, {"cap": "key_d", "say": "D"},
 	{"say": "roll"}, {"say": "·"}, {"cap": "key_space", "say": "Space"}, {"say": "jump"}, {"say": "·"}, {"say": "mouse to look"}, {"say": "·"},
 	{"cap": "key_k", "say": "K"}, {"say": "leave camp"}]
-# The row's plate lifts it off the screen's bottom edge and keeps it readable over the camp's pale ground.
 const STRIP_LIFT := 14
-# From the second walk on the strip keeps only the way out: the keys to roll, jump and look were met once (S5).
 const LEAVE_HINT := [{"cap": "key_k", "say": "K"}, {"say": "leave camp"}]
 const PAINT := "Choose paint on each pilot's card after Launch."
 
 var back: Button
-# The camp walk (camp_hub.gd) shows only a key-hint strip over the 3D camp: the pilot lines and the button row stay
-# hidden, since every station is a zone in the world and opens its page by its own key.
 var walk := false
-# Set by the first walk; later walks show LEAVE_HINT alone.
 var walked := false
 var customize
 var customize_entry: Button
@@ -94,12 +85,10 @@ func _init() -> void:
 	preload("res://src/ui/customize_page.gd").attach(self)
 
 
-# The walk's key row as a player reads it.
 func walk_words() -> String:
 	return _strip.find_child("WalkKeys", true, false).text()
 
 
-# Walk mode on or off: the strip replaces the lines and the button row.
 func set_walk(on: bool) -> void:
 	if on and not walk:
 		_walk_keys.setup(LEAVE_HINT if walked else WALK_HINTS)
@@ -112,7 +101,6 @@ func set_walk(on: bool) -> void:
 		customize_entry.visible = not on
 
 
-# The customize page covers the camp page and gives it back.
 func page_opened() -> void:
 	_lines.hide()
 	_buttons.hide()
@@ -136,12 +124,10 @@ func button_for(action: String) -> Button:
 	return null
 
 
-# The companion button, in or out of the row, so screens.gd wires it once.
 func companion_button() -> Button:
 	return _companion
 
 
-# What the camp shows, for a test and for the page: pilots, pieces, seated, achievements.
 static func reading(game) -> Dictionary:
 	var profile = game.ctx.profile
 	var pilots: Array = []
@@ -153,7 +139,6 @@ static func reading(game) -> Dictionary:
 		pilots.append({"id": def.id, "name": def.display_name, "ready": is_ready,
 			"hint": ClassCard.unlock_hint(def, game.progress)})
 	var model = Companion.new()
-	# Cleaned the way the run reads it, so a piece this build cut does not hide the rest.
 	var doc: Dictionary = game.flow.profile_companion() if profile != null and game.flow != null else {}
 	if not doc.is_empty() and not model.from_dict(doc):
 		model = Companion.new()
@@ -182,7 +167,6 @@ static func reading(game) -> Dictionary:
 		lines.append(NO_PIECES)
 	lines.append(PAINT)
 	lines.append("%d / %d achievements earned" % [earned, ids.size()])
-	# Each world's secret count (secrets.gd WORLD_CODEX), read from the saved codex.
 	var codex = game.ctx.get("codex")
 	var secrets: Array = []
 	for world in Secrets.WORLD_CODEX:
@@ -220,7 +204,6 @@ func refresh(game) -> void:
 		_buttons.remove_child(_companion)
 
 
-# The Companion button lives outside the tree while hidden; free it with the page.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_PREDELETE and is_instance_valid(_companion) and _companion.get_parent() == null:
 		_companion.free()

@@ -1,42 +1,5 @@
 extends RefCounted
 
-# Ambient life: the one record per critter or local (AMBIENT-LIFE.md). The model, its three
-# baked loops, its paint, its two sounds, where it lives and how it behaves all read the same
-# row, so a kind looks, moves and sounds the same everywhere it shows up. The Blender recipes
-# (tools/blender/ambient/) paint from `palette`, tools/ace/ambient_sfx.py renders `sound` from
-# its `voice`, ambient_life.gd places and drives the kind, and the tests check the GLB, the wavs
-# and the behaviour against this row.
-#
-# Ambient life never touches play: no physics body, no event, no damage, no pickup. It is
-# candy (FEEL-READABILITY.md P7): first to go under load, no keyline, no emission.
-#
-# Colour law: every kind lives in the life band, hue LIFE_HUE (degrees) at saturation
-# LIFE_SAT. No enemy, telegraph, reward or verb colour sits in it (measured on every enemy GLB,
-# tests/ambient_palette_test.gd), so lilac means "harmless and alive". `cream` accents (eyes,
-# bellies, fur) stay under NEUTRAL_SAT and cover at most NEUTRAL_SHARE of a model's vertices.
-#
-# Row fields:
-#   world      1 Spillway, 2 Dig, 3 Highdraft
-#   parks      park map ids (park_schema.gd MAP_STAGE) the kind lives in
-#   role       "critter" | "local"
-#   model      the GLB; `loops` names its three baked clips
-#   height_m   standing height of the model in metres (round, small: never enemy scale)
-#   tris       [min, max] triangles for the recipe's assert (the "ambient" budget class)
-#   palette    name -> Color the recipe paints; every entry but `cream` and `eye` is in the band
-#   sound      {"call", "react"} -> wav; `voice` is the renderer's recipe for each
-#   call_every [min, max] seconds between calls while calm
-#   volume_db  call level; react plays 3 dB under it
-#   motion     "walk" | "hop" | "fly"
-#   speed      wander speed m/s; flee_speed when fleeing
-#   flee_m     the ball inside this distance (metres) sends it away, never toward the ball
-#   react      what combat nearby does: "hide" (run to cover, then sink out of sight),
-#              "scatter" (lift away up and out, re-perch later), "duck" (stay, hide in place)
-#   wander_m   leash radius around its home
-#   sleep      share of calm time spent asleep (idle loop slowed, eyes shut pose)
-#   homes      where the planner may put it: landforms / elements / societies (any match),
-#              perch ("ground" | "rim" | "ceiling" | "water"), count [min, max] homes per
-#              park, group [min, max] members per home; optional `spots`, crew prop templates
-#              (src/world/park/props/<map>.json) the kind lives beside first, so keepers stand at the camps
 
 const LIFE_HUE := Vector2(250.0, 300.0)
 const LIFE_SAT := Vector2(0.15, 0.55)
@@ -48,26 +11,19 @@ const MOTIONS := ["walk", "hop", "fly"]
 const REACTS := ["hide", "scatter", "duck"]
 const PERCHES := ["ground", "rim", "ceiling", "water"]
 const LOOPS := {"idle": "idle", "move": "move", "react": "react"}
-# The react clip is a one-shot into its ducked or hidden pose; from REACT_HOLD_S to its end it
-# closes on itself, so the runtime plays it once and then loops only that hold (the recipe asserts it).
 const REACT_HOLD_S := 0.8
-# The recipes build every kind facing -Z (Godot forward); the pool's facing points +Z along travel.
 const FRONT_YAW := PI
 const MODEL_DIR := "res://assets/models/ambient/"
 const SOUND_DIR := "res://assets/audio/ambient/"
 const TRIS := [800, 6000]
-# The pool: at most this many members drawn per park; reduced motion halves it.
 const CAP := 24
-# Combat within this many metres of a member makes it react; calm returns after RETURN_S.
 const COMBAT_M := 30.0
 const RETURN_S := Vector2(6.0, 10.0)
-# Every ambient sound is muted while a telegraph is live within this many metres.
 const HUSH_M := 40.0
 const MAX_VOICES := 2
 const FALLOFF_M := 30.0
 
 const KINDS := {
-	# --- World 1, Spillway Works: dawn water and the dam-era keepers ---
 	"dusk_quail": {
 		"world": 1, "parks": ["park_dam", "park_flume"], "role": "critter",
 		"model": MODEL_DIR + "dusk_quail.glb", "height_m": 0.32, "tris": [1200, 3000],
@@ -114,7 +70,6 @@ const KINDS := {
 			"spots": ["crew_camp", "wheelhouse_yard", "survey_station", "tool_wall", "pour_site", "flood_gauge",
 				"washday", "camp_corner", "sluice_station", "head_gate_crew", "crane_yard", "skiff_shore"]},
 	},
-	# --- World 2, the Dig: the miners left, their burros stayed ---
 	"pit_burro": {
 		"world": 2, "parks": ["park_pit", "park_sinkhole"], "role": "critter",
 		"model": MODEL_DIR + "pit_burro.glb", "height_m": 1.3, "tris": [2500, 6000],
@@ -159,7 +114,6 @@ const KINDS := {
 		"homes": {"landforms": ["tailings_bench", "cenote_pool", "canal", "flume", "open_pit", "adit"], "elements": ["ground", "bank", "terrace", "ledge"],
 			"societies": ["mining"], "perch": "ground", "count": [2, 2], "group": [1, 1]},
 	},
-	# --- World 3, the Highdraft: dusk wind and the net-weavers ---
 	"bighorn_lamb": {
 		"world": 3, "parks": ["park_islands", "park_crown"], "role": "critter",
 		"model": MODEL_DIR + "bighorn_lamb.glb", "height_m": 0.7, "tris": [1500, 5000],
@@ -200,7 +154,6 @@ static func row(id: String) -> Dictionary:
 	return KINDS.get(id, {})
 
 
-# The kinds that live in a park, in a stable order.
 static func for_park(map_id: String) -> Array:
 	var ids := []
 	for id in KINDS:
@@ -219,7 +172,6 @@ static func worlds() -> Array:
 	return result
 
 
-# Whether a colour belongs to the life band (hue and saturation both inside).
 static func in_band(c: Color) -> bool:
 	var hue := c.h * 360.0
 	return hue >= LIFE_HUE.x and hue <= LIFE_HUE.y and c.s >= LIFE_SAT.x and c.s <= LIFE_SAT.y
@@ -229,6 +181,5 @@ static func is_neutral(c: Color) -> bool:
 	return c.s < NEUTRAL_SAT
 
 
-# Every field a row must carry, for the record test.
 const FIELDS := ["world", "parks", "role", "model", "height_m", "tris", "palette", "sound", "voice", "call_every",
 	"volume_db", "motion", "speed", "flee_speed", "flee_m", "react", "wander_m", "sleep", "homes"]
