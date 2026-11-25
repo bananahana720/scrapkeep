@@ -7039,19 +7039,13 @@ func _step_hot_wire(ball: Vector3, anchor: Vector3, enemies: Array) -> void:
 		var kind := _spawn_kind_of(enemy)
 		if kind == "boom_tender":
 			var popped_arr = enemy.get("popped")
-			if popped_arr is Array and enemy.has_method("float_position"):
+			if popped_arr is Array and enemy.has_method("float_position") and enemy.has_method("pop_float_at"):
 				for fi in popped_arr.size():
 					if bool(popped_arr[fi]):
 						continue
 					var fpos: Vector3 = enemy.float_position(fi)
 					var c_pt := Geometry3D.get_closest_point_to_segment(fpos, ball, anchor)
-					if c_pt.distance_to(fpos) <= float_reach:
-						popped_arr[fi] = true
-						enemy.pops += 1
-						if enemy.has_method("_pop_float"):
-							enemy._pop_float(fi)
-						if enemy.has_method("_pay"):
-							enemy._pay(fpos)
+					if c_pt.distance_to(fpos) <= float_reach and enemy.pop_float_at(fi, true):
 						effects.spark(fpos + Vector3.UP * 0.5, Palette.AMBER)
 						popped_floats += 1
 		if _fights_posture(enemy) or _target_class(enemy) in ["Warden", "boss"]:
@@ -7092,20 +7086,8 @@ func _step_dragnet_siphon(delta: float, ball: Vector3, anchor: Vector3) -> void:
 	var pulled_scrap := 0
 	var pulled_consumables := 0
 	var scrap = ctx.build.get("scrap") if ctx.build != null else null
-	if scrap != null:
-		var items_val = scrap.get("_items")
-		var caught_val = scrap.get("_caught")
-		if items_val is Array:
-			for item in items_val:
-				if not is_instance_valid(item) or not (item is Node3D):
-					continue
-				var n := item as Node3D
-				var closest := Geometry3D.get_closest_point_to_segment(n.global_position, ball, anchor)
-				if closest.distance_to(n.global_position) <= radius:
-					n.global_position = n.global_position.move_toward(ball, pull_speed * delta)
-					if caught_val is Dictionary and not (caught_val as Dictionary).has(item):
-						(caught_val as Dictionary)[item] = 1.0
-					pulled_scrap += 1
+	if scrap != null and scrap.has_method("pull_along_segment"):
+		pulled_scrap = scrap.pull_along_segment(ball, anchor, radius, pull_speed * delta)
 	if ctx.run != null and ctx.run.has_method("can_hold_consumable") and ctx.run.can_hold_consumable():
 		for cradle in _consumable_drops:
 			if not is_instance_valid(cradle) or cradle.collected:
@@ -7449,14 +7431,7 @@ func _fire_cap_charge(at: Vector3) -> Dictionary:
 		if enemy.global_position.distance_to(at) > radius + _hull(enemy):
 			continue
 		var kind := String(enemy.get("kind")) if enemy.get("kind") != null else ""
-		if kind == "plated_brute" and int(enemy.get("plates")) > 0:
-			enemy.plates = 0
-			enemy.plates_popped += 1
-			if enemy.has_method("_fling_plate"):
-				enemy._fling_plate()
-			var plate_node = enemy.get("_plate")
-			if plate_node != null and is_instance_valid(plate_node):
-				plate_node.visible = false
+		if kind == "plated_brute" and enemy.has_method("strip_plate") and enemy.strip_plate():
 			stripped += 1
 		elif kind == "warden":
 			if enemy.has_method("_apply_posture"):
@@ -7510,15 +7485,8 @@ func _step_nitro_siphon(enemies: Array) -> int:
 		var kind := String(enemy.get("kind")) if enemy.get("kind") != null else ""
 		if kind == "boom_tender":
 			if enemy.global_position.distance_to(ball) <= rip_r + 12.0:
-				var popped_arr = enemy.get("popped")
-				if popped_arr is Array:
-					for i in popped_arr.size():
-						if not bool(popped_arr[i]):
-							popped_arr[i] = true
-							if enemy.has_method("_pop_float"):
-								enemy._pop_float(i)
-							enemy.pops += 1
-							ripped += 1
+				if enemy.has_method("pop_all_floats"):
+					ripped += enemy.pop_all_floats(false)
 				if enemy.has_method("cancel_attack"):
 					enemy.cancel_attack()
 		elif kind == "jolt_layer":

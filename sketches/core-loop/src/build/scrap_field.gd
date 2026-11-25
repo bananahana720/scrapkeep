@@ -387,6 +387,22 @@ func panel_count() -> int:
 	return _panels.size()
 
 
+# Vacuums pickups within `radius` of the line segment [from, to] toward `from` by `step_dist`,
+# marking them caught so the normal magnet pull completes collection without exposing _items/_caught.
+func pull_along_segment(from: Vector3, to: Vector3, radius: float, step_dist: float) -> int:
+	var pulled := 0
+	for item in _items:
+		if not is_instance_valid(item):
+			continue
+		var closest := Geometry3D.get_closest_point_to_segment(item.global_position, from, to)
+		if closest.distance_to(item.global_position) <= radius:
+			item.global_position = item.global_position.move_toward(from, step_dist)
+			if not _caught.has(item):
+				_caught[item] = _catch_side(item)
+			pulled += 1
+	return pulled
+
+
 # One grey panel dropped at `at`, waiting for the ball like a gear: the panel's own kit plate, lying flat.
 func drop_panel(at: Vector3, panel_id: String, jackpot := false, cache := false) -> void:
 	var plate := ground_plate(panel_id)

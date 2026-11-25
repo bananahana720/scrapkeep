@@ -316,20 +316,16 @@ func _trigger_emp(origin: Vector3) -> void:
 			if other_kind == "linker" and node.has_method("cut_cable") and not bool(node.get("cut")):
 				node.cut_cable("emp")
 				emp_stripped += 1
-			elif other_kind == "deflector" and node.has_method("_stagger") and int(node.get("phase")) != Phase.ROAM:
-				node._stagger()
+			elif other_kind == "deflector" and node.has_method("stagger") and int(node.get("phase")) != Phase.ROAM:
+				node.stagger()
 				emp_stripped += 1
-			elif other_kind == "plated_brute" and int(node.get("plates")) > 0:
-				node.set("plates", 0)
-				var p_mesh = node.get("_plate")
-				if p_mesh != null and is_instance_valid(p_mesh):
-					p_mesh.visible = false
-				if node.has_method("_stagger"):
-					node._stagger()
+			elif other_kind == "plated_brute" and node.has_method("strip_plate") and node.strip_plate():
+				if node.has_method("stagger"):
+					node.stagger()
 				emp_stripped += 1
-			elif (other_kind == "jolt_layer" or other_kind == "gyro_jammer") and node.has_method("_stagger"):
+			elif (other_kind == "jolt_layer" or other_kind == "gyro_jammer") and node.has_method("stagger"):
 				if int(node.get("phase")) != Phase.ROAM or node.get("field") != null:
-					node._stagger()
+					node.stagger()
 					emp_stripped += 1
 			if is_ordinary_kind(other_kind) and node.has_method("take_damage") and not node.is_dead():
 				node.take_damage(EMP_DAMAGE)

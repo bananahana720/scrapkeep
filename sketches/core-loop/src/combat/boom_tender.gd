@@ -383,6 +383,25 @@ func float_position(i: int) -> Vector3:
 	return _origin + _heading * float(FLOAT_OUT[i])
 
 
+func pop_float_at(index: int, pay := true) -> bool:
+	if index < 0 or index >= popped.size() or bool(popped[index]):
+		return false
+	popped[index] = true
+	pops += 1
+	_pop_float(index)
+	if pay:
+		_pay(float_position(index))
+	return true
+
+
+func pop_all_floats(pay := false) -> int:
+	var count := 0
+	for i in popped.size():
+		if pop_float_at(i, pay):
+			count += 1
+	return count
+
+
 func _pay(at: Vector3) -> void:
 	var ctx = fleet.ctx if fleet != null else null
 	var build = ctx.build if ctx != null and "build" in ctx else null

@@ -453,6 +453,8 @@ func telegraphs(ball: Vector3) -> Array:
 	if not _sluice_active():
 		return out
 	for s in sluice_valves:
+		if _delegated_to_grapple_sluice(String(s["spec"]["id"])):
+			continue
 		var h: Hazard = s["hazard"]
 		if h != null and is_instance_valid(h) and not h.is_done():
 			out.append({"id": h.get_instance_id(), "cause": SURGE_SOURCE, "covers": h.contains(ball)})
@@ -461,6 +463,21 @@ func telegraphs(ball: Vector3) -> Array:
 
 func _sluice_active() -> bool:
 	return live and is_inside_tree() and is_visible_in_tree()
+
+
+# True when flood.sluice_valves (W47-GRAPPLE-CODE) owns this valve id on the live stage, so the
+# legacy contraptions.gd ram/slam/pay trigger cannot double-fire alongside grapple-yank sluices.
+func _delegated_to_grapple_sluice(id: String) -> bool:
+	var world_ref = _ctx_field("world")
+	if world_ref == null or not is_instance_valid(world_ref):
+		return false
+	var flood_ref = world_ref.get("flood")
+	if flood_ref == null or not is_instance_valid(flood_ref):
+		return false
+	var sv = flood_ref.get("sluice_valves")
+	if sv == null or not is_instance_valid(sv) or not sv.has_method("valve_of"):
+		return false
+	return not (sv.valve_of(id) as Dictionary).is_empty()
 
 
 # One physics tick. riding is true while world already holds the ball to a rail.
@@ -1451,7 +1468,7 @@ func _drop_sluice_hazard(s: Dictionary) -> void:
 
 
 func _try_pay_sluice(s: Dictionary, run_ref: Variant, facts: Array) -> bool:
-	if not _sluice_active() or s["state"] != "ready":
+	if not _sluice_active() or s["state"] != "ready" or _delegated_to_grapple_sluice(String(s["spec"]["id"])):
 		return false
 	var price: int = int(s["price"])
 	if price <= 0:
@@ -1462,7 +1479,7 @@ func _try_pay_sluice(s: Dictionary, run_ref: Variant, facts: Array) -> bool:
 
 
 func _arm_sluice(s: Dictionary, facts: Array, paid: bool) -> bool:
-	if s["state"] != "ready":
+	if s["state"] != "ready" or _delegated_to_grapple_sluice(String(s["spec"]["id"])):
 		return false
 	_drop_sluice_hazard(s)
 	var h := Hazard.new()
@@ -1497,6 +1514,16 @@ func _arm_sluice(s: Dictionary, facts: Array, paid: bool) -> bool:
 
 
 func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: Array) -> void:
+	if _delegated_to_grapple_sluice(String(s["spec"]["id"])):
+		_drop_sluice_hazard(s)
+		var delegated_dev: Node3D = s.get("device")
+		if delegated_dev != null and is_instance_valid(delegated_dev) and delegated_dev.system != null \
+				and is_instance_valid(delegated_dev.system) and delegated_dev.system.has_method("unregister"):
+			delegated_dev.system.unregister(delegated_dev)
+			delegated_dev.system = null
+		if s.get("pay_ring") != null:
+			(s["pay_ring"] as MeshInstance3D).visible = false
+		return
 	if s.get("device") != null and (s["device"] as Node3D).system == null:
 		_register_sluice_device(s)
 	var ball: Vector3 = motion["pos"]
@@ -1654,6 +1681,8 @@ func _sluice_by_id(id: String) -> Dictionary:
 
 
 func sluice_pay_read(id: String) -> Dictionary:
+	if _delegated_to_grapple_sluice(id):
+		return {"active": false, "can_pay": false, "gauge": -1.0}
 	var active := _sluice_active()
 	var s := _sluice_by_id(id)
 	if s.is_empty():
@@ -1698,6 +1727,13 @@ func _register_sluice_devices() -> void:
 func _register_sluice_device(s: Dictionary) -> void:
 	var dev: Node3D = s.get("device")
 	if dev == null or not is_instance_valid(dev):
+		return
+	if _delegated_to_grapple_sluice(String(s["spec"]["id"])):
+		if dev.system != null and is_instance_valid(dev.system) and dev.system.has_method("unregister"):
+			dev.system.unregister(dev)
+			dev.system = null
+		if s.get("pay_ring") != null:
+			(s["pay_ring"] as MeshInstance3D).visible = false
 		return
 	var interact = _resolve_interact()
 	if interact == null or not is_instance_valid(interact) or not interact.has_method("register"):

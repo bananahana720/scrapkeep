@@ -389,12 +389,15 @@ func _complete_overtime() -> void:
 	if ally != null and is_instance_valid(ally) and not ally.is_dead():
 		if ally.has_meta(AttackBudget.CLOCKED_OUT_META):
 			ally.remove_meta(AttackBudget.CLOCKED_OUT_META)
-		if "_rest" in ally:
-			ally._rest = 0.0
-		if "recover_left" in ally:
-			ally.recover_left = 0.0
-		if "stun_left" in ally:
-			ally.stun_left = 0.0
+		if ally.has_method("prime_attack"):
+			ally.prime_attack()
+		else:
+			if "_rest" in ally:
+				ally._rest = 0.0
+			if "recover_left" in ally:
+				ally.recover_left = 0.0
+			if "stun_left" in ally:
+				ally.stun_left = 0.0
 		ally.set_meta("overtime_boosted", true)
 		if world_root != null and is_inside_tree():
 			FxLibrary.burst(world_root, "brass_spark", ally.global_position + Vector3.UP * 0.8, 12)
@@ -418,17 +421,8 @@ func _interrupt_overtime() -> void:
 	var shattered: Array = []
 	for member in standing_crew():
 		var had_plate := false
-		if member.get("plates") != null and int(member.get("plates")) > 0:
+		if member.has_method("strip_plate") and member.strip_plate():
 			had_plate = true
-			var count := int(member.get("plates"))
-			member.set("plates", 0)
-			if member.get("plates_popped") != null:
-				member.set("plates_popped", int(member.get("plates_popped")) + count)
-			if member.has_method("_fling_plate"):
-				member._fling_plate()
-			var plate_mesh = member.get("_plate")
-			if plate_mesh is Node3D:
-				(plate_mesh as Node3D).visible = false
 		if float(member.get("plating")) > 0.0:
 			had_plate = true
 			member.set("plating", 0.0)

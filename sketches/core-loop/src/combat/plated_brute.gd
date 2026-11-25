@@ -501,6 +501,10 @@ func _try_crash_wall() -> bool:
 	return false
 
 
+func strip_plate() -> bool:
+	return strip_outer_plate()
+
+
 func strip_outer_plate() -> bool:
 	if plates <= 0:
 		return false

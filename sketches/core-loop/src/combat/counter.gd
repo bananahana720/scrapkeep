@@ -363,6 +363,16 @@ func _on_broken(_method: String) -> void:
 	pass
 
 
+func stagger() -> void:
+	_stagger()
+
+
+func prime_attack() -> void:
+	_rest = 0.0
+	recover_left = 0.0
+	stun_left = 0.0
+
+
 # The warning broke under a hard hit: the attack ends and the unit stands open for the
 # shared window. Nothing here touches the ball; its knock carries it as before.
 func _stagger() -> void:
