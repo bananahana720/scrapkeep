@@ -224,7 +224,7 @@ func _reset() -> void:
 	InkOutline.reset_for_tests()
 	AttackBudget.reset_ally(tree)
 	EventDirector.reset_prewarm()
-	Consumables._reset()
+	Consumables.reset_for_tests()
 	RosterDig.reset_drain()
 	Bindings.reset_for_tests()
 	PocketLibrary.reset_for_tests()

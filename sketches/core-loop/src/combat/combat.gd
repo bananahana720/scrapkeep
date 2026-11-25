@@ -7344,7 +7344,6 @@ var _memo_left := 0.0
 var _memo_frozen := {}
 var _balloons: Array = []
 var _consumable_drops: Array = []
-var _pad_consumable_down := false
 var _consumable_rng := RandomNumberGenerator.new()
 var consumable_uses := 0
 var overclock_skilled_shots := 0
@@ -7770,7 +7769,6 @@ func _clear_consumables_runtime() -> void:
 	_nitro_left = 0.0
 	_overclock_left = 0.0
 	_memo_left = 0.0
-	_pad_consumable_down = false
 	_release_memo_formation()
 	for b in _balloons:
 		if is_instance_valid(b):

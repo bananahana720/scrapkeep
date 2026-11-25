@@ -218,6 +218,10 @@ static func _reset() -> void:
 	_packed_cache.clear()
 
 
+static func reset_for_tests() -> void:
+	_reset()
+
+
 static func all_order() -> Array[String]:
 	var out: Array[String] = []
 	out.append_array(ORDER)
@@ -399,9 +403,13 @@ static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
 	var st := _w50_state(ctx.run if ctx != null else null)
 	match cid:
 		SCRAP_DICE:
-			# Foreman efficiency fee (STORY-MAP §5): 1 bonus core if held, else 5% hull (floored at 10% max_hp).
+			var shop_res := {"rerolled": 0, "before_tiers": [], "after_tiers": []}
+			if ctx != null and ctx.build != null and ctx.build.get("shop") != null and ctx.build.shop.has_method("audit_reroll"):
+				shop_res = ctx.build.shop.audit_reroll()
+			var gate_rerolls := _audit_reroll_gates(ctx)
+			# Foreman efficiency fee (STORY-MAP §5): only charge if >=1 offer actually rerolled.
 			var paid_cost := "none"
-			if ctx != null and ctx.run != null:
+			if int(shop_res.get("rerolled", 0)) + gate_rerolls > 0 and ctx != null and ctx.run != null:
 				if int(ctx.run.bonus_cores) >= int(row.get("core_cost", 1)):
 					ctx.run.bonus_cores -= int(row.get("core_cost", 1))
 					paid_cost = "core"
@@ -412,10 +420,6 @@ static func fire_w50(cid: String, ctx, combat, at: Vector3) -> Dictionary:
 						ctx.run.hp = maxf(floor_hp, float(ctx.run.hp) - loss)
 						ctx.run.since_damage = 0.0
 					paid_cost = "hull"
-			var shop_res := {"rerolled": 0, "before_tiers": [], "after_tiers": []}
-			if ctx != null and ctx.build != null and ctx.build.get("shop") != null and ctx.build.shop.has_method("audit_reroll"):
-				shop_res = ctx.build.shop.audit_reroll()
-			var gate_rerolls := _audit_reroll_gates(ctx)
 			if combat != null and combat.get("effects") != null:
 				combat.effects.ring(at, 4.5, row.get("color", Palette.BRASS))
 			return {
@@ -452,8 +456,13 @@ static func _audit_reroll_gates(ctx) -> int:
 	rng.seed = hash([ctx.run.run_seed, ctx.run.stage, "scrap_dice_gates", offers.size()])
 	if gates.has_method("reroll_offers"):
 		var changed: int = gates.reroll_offers(rng, ctx.run.class_id(), ctx.run.parts)
-		if changed > 0 and ctx.events != null and ctx.events.has_signal("reward_offered"):
-			ctx.events.reward_offered.emit(gates.offers)
+		if changed > 0:
+			if ctx.build.has_method("note_offered"):
+				for o in gates.offers:
+					if o is Dictionary and o.has("part_id"):
+						ctx.build.note_offered(String(o["part_id"]))
+			if ctx.events != null and ctx.events.has_signal("reward_offered"):
+				ctx.events.reward_offered.emit(gates.offers)
 		return changed
 	var PartsScript = load("res://src/build/parts.gd")
 	var changed := 0

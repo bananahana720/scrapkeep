@@ -466,6 +466,10 @@ func start_pick_waits() -> bool:
 	return start_pick_at_yard() and gate.yard_ahead()
 
 
+func start_pick_open() -> bool:
+	return start_card != null and start_card.visible
+
+
 # Stage 1's start pick comes at the yard's clear rather than at the drop: the briefing's
 # run-opening line is left off then (workshop.gd). A profile with a harder rung open keeps the card
 # at the drop: the run tier rides on it, and a rung chosen after the yard would credit a dam whose

@@ -1326,7 +1326,7 @@ func _dress_find(s: Site, find_id: String) -> void:
 # Patch's secret wire room (PilotStory.PATCH_TRAIL): hidden behind a cracked face with a seep tell.
 func _dress_patch_wire(s: Site, wire_id: String) -> void:
 	var row: Dictionary = PilotStory.PATCH_TRAIL.get(wire_id, {})
-	_hang_board(s, "PatchWire_" + wire_id, String(row.get("name", wire_id)), String(row.get("text", "")))
+	_hang_board(s, "PatchWire_" + wire_id, String(row.get("name", wire_id)), String(row.get("log", "")))
 	s.set_meta("patch_wire", wire_id)
 	s.set_meta("find", wire_id)
 	s.view.finish()

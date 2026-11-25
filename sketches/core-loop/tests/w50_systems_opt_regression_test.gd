@@ -51,6 +51,23 @@ func _test_bindings_and_story_and_lore() -> void:
 		"cl_consumable pad and cl_bay_2 do not collide")
 	_check(not actions["cl_consumable"].has("pad"),
 		"cl_consumable keeps L3 unbound in InputMap so Settings pad rebind stays free")
+
+	Bindings.reset_for_tests()
+	_check(not Bindings.step_consumable_pad_state(true, false) and Bindings.step_consumable_pad_state(false, false),
+		"Clean L3 tap fires consumable on release")
+	_check(not Bindings.step_consumable_pad_state(true, false) and not Bindings.step_consumable_pad_state(true, true)
+		and not Bindings.step_consumable_pad_state(false, true) and not Bindings.step_consumable_pad_state(false, false),
+		"L3 then R3 sitting-notes chord suppresses consumable fire")
+	_check(not Bindings.step_consumable_pad_state(false, true) and not Bindings.step_consumable_pad_state(true, true)
+		and not Bindings.step_consumable_pad_state(false, true) and not Bindings.step_consumable_pad_state(false, false),
+		"R3 then L3 sitting-notes chord suppresses consumable fire")
+	Bindings.reset_for_tests()
+
+	for wire_id in PilotStory.PATCH_TRAIL:
+		var wrow: Dictionary = PilotStory.PATCH_TRAIL[wire_id]
+		if String(wrow.get("kind", "")) == "wire":
+			_check(String(wrow.get("log", "")).strip_edges() != "",
+				"Patch wire trail %s has non-empty log body for in-world board" % String(wire_id))
 	for cid in Consumables.ORDER_W50:
 		_check(ResourceLoader.exists(Consumables.model_path_of(cid)),
 			"W50 consumable %s resolves existing GLB" % cid)
@@ -128,14 +145,18 @@ func _test_run_state_ingots_and_overrides() -> void:
 			drew_risk_only = false
 	_check(drew_risk_only, "kindness_sealed prevents safe/kindness trade counters")
 
-	var p := Profile.new("user://test-override-check.json")
+	var pid_dir := "user://test-%d" % OS.get_process_id()
+	var p := Profile.new(pid_dir.path_join("override-check.json"))
+	p.can_save = false
 	_check(MetaOptions.active_overrides(p, true, false).is_empty(),
 		"Bot runs never activate overrides")
 	ev.free()
 
 
 func _test_work_orders_and_progress_habits() -> void:
-	var p := Profile.new("user://test-wo-check.json")
+	var pid_dir := "user://test-%d" % OS.get_process_id()
+	var p := Profile.new(pid_dir.path_join("wo-check.json"))
+	p.can_save = false
 	p.unlock_pilot("runner_gunner")
 	var pinned_rivet: Array = WorkOrders.ensure_default_pin(p, false, "runner_gunner")
 	var pin_rivet := String(pinned_rivet[0]) if not pinned_rivet.is_empty() else ""
@@ -191,6 +212,36 @@ func _test_live_game_wiring() -> void:
 		"Audit Die spends 1 bonus core as Foreman fee when held")
 	_check(int(game.run.cogs) == cogs_before, "Audit Die spends 0 cogs")
 	game.build.gates.close()
+
+	game.run.bonus_cores = 1
+	var empty_dice: Dictionary = game.combat.use_consumable(Consumables.SCRAP_DICE)
+	_check(int(empty_dice.get("rerolled_gates", 0)) == 0 and int(empty_dice.get("rerolled_shop", 0)) == 0
+		and String(empty_dice.get("cost", "")) == "none" and int(game.run.bonus_cores) == 1,
+		"Audit Die charges 0 fee when 0 offers reroll")
+
+	game.run.extra["overrides"] = ["code_cut_governor"]
+	game.player.state.grounded = true
+	var hp_before_stall: float = float(game.run.hp)
+	game.flow.start_card.visible = true
+	_check(game.flow.start_pick_open(), "Flow.start_pick_open() reports open start card")
+	game.world._step_cut_governor(0.5, Vector3.ZERO, Vector3.ZERO, false)
+	_check(is_equal_approx(float(game.run.hp), hp_before_stall),
+		"Cut Governor does not drain hull while start pick card is open")
+	game.flow.start_card.visible = false
+	game.world._step_cut_governor(0.5, Vector3.ZERO, Vector3.ZERO, false)
+	_check(float(game.run.hp) < hp_before_stall,
+		"Cut Governor drains hull when grounded and stalled")
+	game.player.state.grounded = false
+	game.player.state.air_actions = 0
+	var cruise_v := Vector3(0.0, 0.0, -game.tuning.f("cruise") - 1.0)
+	game.world._step_cut_governor(0.05, Vector3.ZERO, cruise_v, false)
+	_check(game.player.state.air_actions == 1,
+		"Cut Governor refills 1 air action at cruise speed")
+	game.player.state.air_actions = 0
+	game.world._step_cut_governor(0.05, Vector3.ZERO, cruise_v, false)
+	_check(game.player.state.air_actions == 0,
+		"Cut Governor caps air refill to 1 per airborne excursion")
+	game.run.extra.erase("overrides")
 
 	var look := RewardGates.taken_look(Consumables.BELT_OFFER_ID)
 	_check(String(look.get("name", "")) == "Pocket Belt", "RewardGates.taken_look handles consumable offers")

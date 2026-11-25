@@ -379,6 +379,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 		fwd.y = 0.0
 		fwd = fwd.normalized() if fwd.length_squared() > 0.01 else Vector3.FORWARD
 		ctx.player.set_velocity_now(fwd * ctx.tuning.f("cruise"))
+	_cut_gov_air_refilled = false
 
 
 # The arena is not a stage (DESIGN-NOTES spine call 34). The live events close, the
@@ -541,6 +542,9 @@ func _physics_process(delta: float) -> void:
 	_step_cut_governor(delta, ball, velocity, calm_bay)
 
 
+var _cut_gov_air_refilled := false
+
+
 func _step_cut_governor(delta: float, _ball: Vector3, velocity: Vector3, calm_bay: bool) -> void:
 	if ctx == null or ctx.run == null or not ctx.run.has_method("override_on"):
 		return
@@ -548,9 +552,12 @@ func _step_cut_governor(delta: float, _ball: Vector3, velocity: Vector3, calm_ba
 		return
 	var cruise: float = ctx.tuning.f("cruise")
 	var flat_speed := Vector2(velocity.x, velocity.z).length()
-	if ctx.run.override_on("cruise_launch_air_reset") and not ctx.player.state.grounded and flat_speed >= cruise:
+	if ctx.player.state.grounded:
+		_cut_gov_air_refilled = false
+	elif ctx.run.override_on("cruise_launch_air_reset") and not _cut_gov_air_refilled and flat_speed >= cruise:
 		if ctx.player.state.air_actions < 1:
 			ctx.player.state.air_actions = 1
+			_cut_gov_air_refilled = true
 	if ctx.run.override_on("stall_drains_hull") and ctx.player.state.grounded and flat_speed < cruise * 0.25:
 		if ctx.flow == null or not ctx.flow.start_pick_open():
 			ctx.run.damage(6.0 * delta, "cut_governor")

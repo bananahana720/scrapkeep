@@ -78,7 +78,6 @@ const PARK_LAND_FACTS := {
 # the 69 ms Stage 5 EventFamilies.build entry hitch.
 const FAMILIES_SCRIPT_PATH := "res://src/world/events/families.gd"
 const NATURAL_SCRIPT_PATH := "res://src/world/events/natural.gd"
-const EVENT_GROUND_SCRIPT_PATH := "res://src/world/events/event_ground.gd"
 static var _prewarmed_stages := {}
 static var _prewarmed_scripts := {}
 

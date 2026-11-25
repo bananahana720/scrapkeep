@@ -234,7 +234,7 @@ func reroll_offers(rng: RandomNumberGenerator, class_id: String, held: Array) ->
 			next_ids.append(pid)
 			continue
 		var min_tier := int(d.tier)
-		var rarities: Array = ["rare", "relic"] if min_tier >= 2 else ["common", "rare"]
+		var rarities: Array = ["rare"] if min_tier >= 2 else ["common", "rare"]
 		var pool: Array = Parts.offer_pool(class_id, rarities).filter(func(id):
 			var pd: Resource = Parts.def(id)
 			return pd != null and int(pd.tier) >= min_tier and not (id in used) and not Parts.maxed(id, held))

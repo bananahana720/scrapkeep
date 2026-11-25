@@ -1040,10 +1040,15 @@ func _on_stage_cleared_contracts(_stage: int) -> void:
 	TradePockets.settle_overtime_contract(ctx.run, float(clock.stage_seconds), at)
 
 
+func note_offered(part_id: String) -> void:
+	if part_id != "":
+		_offered[part_id] = int(_offered.get(part_id, 0)) + 1
+
+
 func _on_world_fact_overrides(kind: String, _at: Vector3) -> void:
 	if kind != "wall_crumbled" or scrapless() or ctx == null or ctx.run == null:
 		return
-	if not ctx.run.override_on("drops_from_wrecks"):
+	if not ctx.run.override_on("drops_from_wrecks") or loot_rng.randf() >= 0.20:
 		return
 	var picks: Array = Parts.roll(loot_rng, ["common", "rare"], _class_id(), ctx.run.parts, 1)
 	if not picks.is_empty():
@@ -1175,8 +1180,7 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 		return
 	# The stage row's kill_scrap (the slice's 4.0; a row without one pays 1.0) scales a kill on top of the sheet's.
 	var stage_pay := float(ctx.flow.stage_def().get("kill_scrap", 1.0))
-	var double_mult := 2.0 if ctx.run.override_on("double_packs_scrap") else 1.0
-	var amount := int(round(scrap_value * sheet.kill_scrap * stage_pay * double_mult)) if not scrapless() else 0
+	var amount := int(round(scrap_value * sheet.kill_scrap * stage_pay)) if not scrapless() else 0
 	# A kill pays mass as scrap and the wallet as an equal count of 1-cog gears (CG1).
 	if kind == "warden":
 		scrap.drop_line(at, _heading(), WARDEN_LINE, amount, scrap_rng)
