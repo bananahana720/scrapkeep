@@ -12,7 +12,6 @@ extends Node3D
 #   - Patch 7th pilot assets lookup (pilot_patch_anim.glb, shell_patch.glb, patch_husk_sticker.glb)
 
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
-const Palette := preload("res://src/core/palette.gd")
 
 const CONSUMABLE_MODELS := {
 	"scrap_dice": "res://assets/models/consumables/cons_scrap_dice.glb",
@@ -65,9 +64,13 @@ var _pools := {}
 var _clock := 0.0
 
 
-static func _reset() -> void:
+static func reset_for_tests() -> void:
 	_packed_cache.clear()
 	_orbital_mesh_cache = null
+
+
+static func _reset() -> void:
+	reset_for_tests()
 
 
 static func consumable_model_path(id: String) -> String:
@@ -220,11 +223,11 @@ func _on_node_added(node: Node) -> void:
 	var nname := String(node.name)
 	var interested := (
 		nname.begins_with("ConsumableDrop_")
-		or nname == "WorldScrapper"
-		or nname == "WorldPartPress"
-		or nname == "WorldTriTerminal"
+		or nname.begins_with("WorldScrapper")
+		or nname.begins_with("WorldPartPress")
+		or nname.begins_with("WorldTriTerminal")
 		or nname == "OrbitalSatelliteMesh"
-		or nname == "DroppedActive"
+		or nname.begins_with("DroppedActive")
 		or (nname.begins_with("Stake") and node.get_parent() != null and String(node.get_parent().name) == "SableStakes")
 	)
 	if interested:
@@ -243,43 +246,53 @@ func _maybe_dress(node: Node) -> void:
 	var nname := String(node.name)
 	if nname.begins_with("ConsumableDrop_"):
 		dress_consumable_drop(node as Node3D)
-	elif nname == "WorldScrapper":
+	elif nname.begins_with("WorldScrapper"):
 		dress_station(node as Node3D, "scrapper")
-	elif nname == "WorldPartPress":
+	elif nname.begins_with("WorldPartPress"):
 		dress_station(node as Node3D, "part_press")
-	elif nname == "WorldTriTerminal":
+	elif nname.begins_with("WorldTriTerminal"):
 		dress_station(node as Node3D, "tri_terminal")
 	elif nname == "OrbitalSatelliteMesh" and node is MultiMeshInstance3D:
 		dress_orbital_multimesh(node as MultiMeshInstance3D)
-	elif nname == "DroppedActive":
+	elif nname.begins_with("DroppedActive"):
 		dress_dropped_active(node as Node3D)
 	elif node.get_parent() != null and String(node.get_parent().name) == "SableStakes" and nname.begins_with("Stake"):
 		dress_sable_stake(node as Node3D)
 
 
-# Swaps placeholder W47 cartridge inside ConsumableDrop_<w50_id> with the dedicated W50 GLB.
+# Swaps placeholder W47 cartridge inside ConsumableDrop_<w50_id> with the dedicated W50 GLB,
+# freeing the placeholder "Cartridge" node and rebinding _cartridge_node so spin/bob animates cleanly.
 static func dress_consumable_drop(drop: Node3D) -> bool:
 	if drop == null or drop.has_meta("w50_dressed"):
 		return false
-	var id := String(drop.name).trim_prefix("ConsumableDrop_")
-	var path := consumable_model_path(id)
+	var cid := String(drop.get("consumable_id")) if drop.get("consumable_id") != null else ""
+	if cid == "":
+		cid = String(drop.name).trim_prefix("ConsumableDrop_")
+	var path := consumable_model_path(cid)
 	if path == "":
 		return false
 	var socket := drop.find_child("SocketCartridge", true, false) as Node3D
 	var host: Node3D = socket if socket != null else drop
 	for child in host.get_children():
-		if String(child.name) == "CartridgeModel":
+		var cname := String(child.name)
+		if cname == "Cartridge" or cname == "CartridgeModel":
+			host.remove_child(child)
 			child.queue_free()
-	var model := instantiate_prop(path, "CartridgeModel", true)
+	var model := instantiate_prop(path, "Cartridge", true)
 	if model == null:
 		return false
 	model.scale = Vector3.ONE * 1.15
+	if socket == null:
+		model.position = Vector3.UP * 0.45
 	host.add_child(model)
+	if drop.get("_cartridge_node") != null or drop.has_method("step"):
+		drop.set("_cartridge_node", model)
 	drop.set_meta("w50_dressed", true)
 	return true
 
 
-# Mounts a 3D world station GLB onto WorldScrapper / WorldPartPress / WorldTriTerminal.
+# Mounts a 3D world station GLB onto WorldScrapper / WorldPartPress / WorldTriTerminal,
+# hiding any fallback primitive MeshInstance3D children to prevent double-rendering.
 static func dress_station(host: Node3D, kind: String) -> bool:
 	if host == null or host.has_node("StationModel"):
 		return false
@@ -287,6 +300,12 @@ static func dress_station(host: Node3D, kind: String) -> bool:
 	var model := instantiate_prop(path, "StationModel", true)
 	if model == null:
 		return false
+	for child in host.get_children():
+		if child is MeshInstance3D:
+			var mi := child as MeshInstance3D
+			if mi.mesh is PrimitiveMesh:
+				mi.layers = 0
+				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	host.add_child(model)
 	return true
 
@@ -303,23 +322,22 @@ static func dress_orbital_multimesh(mmi: MultiMeshInstance3D) -> bool:
 	return true
 
 
-# Replaces the raw PrismMesh on DroppedActive when the dropped active is magnet_sling or slag_mortar.
+# Replaces the raw PrismMesh on DroppedActive* when the dropped active is magnet_sling or slag_mortar.
+# WorldPrompt extends Label (not Label3D), so both Label and Label3D prompts are checked.
 static func dress_dropped_active(drop: Node3D) -> bool:
 	if drop == null or drop.has_node("ActivePodModel"):
 		return false
 	var id := String(drop.get_meta("active_id", ""))
 	if id == "":
-		var lbl := drop.find_child("*", true, false)
 		for child in drop.get_children():
-			if child is Label3D:
-				var t := String((child as Label3D).text).to_lower()
+			if child is Label or child is Label3D:
+				var t := String(child.get("text")).to_lower()
 				if t.contains("magnet sling"):
 					id = "magnet_sling"
+					break
 				elif t.contains("slag mortar"):
 					id = "slag_mortar"
-				break
-		if lbl == null:
-			pass
+					break
 	var path := active_model_path(id, false)
 	if path == "":
 		return false
@@ -383,24 +401,30 @@ func _sync_actives(combat) -> void:
 		var node := _acquire("magnet_buoy", used_buoys, ACTIVE_WORLD_MODELS["magnet_sling"])
 		if node != null:
 			node.visible = true
-			node.global_position = b.get("at", Vector3.ZERO)
+			node.position = b.get("at", Vector3.ZERO)
 			node.rotation.y = _clock * 2.2
 			used_buoys += 1
 	_release_from("magnet_buoy", used_buoys)
 
-	# 2. Slag Mortar descending shells & impact markers.
+	# 2. Slag Mortar descending shells: slag_mortar.gd stores `pending` as a Dictionary
+	#    {"ring", "at", "radius", "warn", "age"} (also tolerate an Array for forwards compatibility).
 	var mortar = kinds.get("slag_mortar")
-	var pending: Array = mortar.get("pending") if mortar != null and mortar.get("pending") is Array else []
+	var pending_raw = mortar.get("pending") if mortar != null else null
+	var pending_list: Array = []
+	if pending_raw is Dictionary and not pending_raw.is_empty():
+		pending_list.append(pending_raw)
+	elif pending_raw is Array:
+		pending_list = pending_raw
 	var used_shells := 0
-	for sh in pending:
-		if not (sh is Dictionary):
+	for sh in pending_list:
+		if not (sh is Dictionary) or sh.is_empty():
 			continue
 		var node := _acquire("slag_shell", used_shells, ACTIVE_WORLD_MODELS["slag_mortar"])
 		if node != null:
 			var target: Vector3 = sh.get("at", Vector3.ZERO)
-			var left := maxf(0.0, float(sh.get("left", 0.0)))
+			var left: float = float(sh["left"]) if sh.has("left") else maxf(0.0, float(sh.get("warn", 0.35)) - float(sh.get("age", 0.0)))
 			node.visible = true
-			node.global_position = target + Vector3(0.0, left * 14.0, 0.0)
+			node.position = target + Vector3(0.0, maxf(0.0, left) * 14.0, 0.0)
 			node.rotation = Vector3(PI, _clock * 3.0, 0.0)
 			used_shells += 1
 	_release_from("slag_shell", used_shells)
@@ -412,7 +436,7 @@ func _sync_relic_swaps(combat) -> void:
 		for k in ["drill_auger", "halo_orb", "voltaic_halo", "snare_beacon", "relic_mortar"]:
 			_release_from(k, 0)
 		return
-	# Drill Auger craters.
+	# Drill Auger craters (relic_swaps.gd:479 uses "at").
 	var augers: Array = swaps.get("_augers") if swaps.get("_augers") is Array else []
 	var n_aug := 0
 	for a in augers:
@@ -421,12 +445,12 @@ func _sync_relic_swaps(combat) -> void:
 		var node := _acquire("drill_auger", n_aug, RELIC_VFX_MODELS["drill_auger"])
 		if node != null:
 			node.visible = true
-			node.global_position = a.get("at", Vector3.ZERO)
+			node.position = a.get("at", Vector3.ZERO)
 			node.rotation.y = _clock * 9.0
 			n_aug += 1
 	_release_from("drill_auger", n_aug)
 
-	# Halo Coil 3 orbiting lightning orbs.
+	# Halo Coil 3 orbiting lightning orbs (relic_swaps.gd:814 uses "left", "angle", "radius").
 	var orbit = swaps.get("_orbit_halo")
 	var n_orb := 0
 	if orbit is Dictionary and float(orbit.get("left", 0.0)) > 0.0 and ctx.player != null:
@@ -438,12 +462,12 @@ func _sync_relic_swaps(combat) -> void:
 			var node := _acquire("halo_orb", n_orb, RELIC_VFX_MODELS["halo_orb"])
 			if node != null:
 				node.visible = true
-				node.global_position = center + Vector3(cos(a) * r, 0.0, sin(a) * r)
+				node.position = center + Vector3(cos(a) * r, 0.0, sin(a) * r)
 				node.rotation.y = -a + _clock * 4.0
 				n_orb += 1
 	_release_from("halo_orb", n_orb)
 
-	# Voltaic Ring expanding conductive halos.
+	# Voltaic Ring expanding conductive halos (relic_swaps.gd:367 uses "pos").
 	var halos: Array = swaps.get("_halos") if swaps.get("_halos") is Array else []
 	var n_hal := 0
 	for h in halos:
@@ -451,15 +475,16 @@ func _sync_relic_swaps(combat) -> void:
 			continue
 		var node := _acquire("voltaic_halo", n_hal, RELIC_VFX_MODELS["voltaic_halo"])
 		if node != null:
+			var pos: Vector3 = h.get("pos", h.get("at", Vector3.ZERO))
 			node.visible = true
-			node.global_position = h.get("at", Vector3.ZERO) + Vector3(0.0, 0.45, 0.0)
+			node.position = pos + Vector3(0.0, 0.45, 0.0)
 			var r := maxf(0.6, float(h.get("radius", 1.5)))
 			node.scale = Vector3(r * 0.65, 1.0, r * 0.65)
 			node.rotation.y = _clock * 3.5
 			n_hal += 1
 	_release_from("voltaic_halo", n_hal)
 
-	# Updraft Snare apex beacons.
+	# Updraft Snare apex beacons (relic_swaps.gd:952 uses "apex", already lifted by SNARE_APEX_LIFT).
 	var snares: Array = swaps.get("_snares") if swaps.get("_snares") is Array else []
 	var n_snr := 0
 	for s in snares:
@@ -467,13 +492,14 @@ func _sync_relic_swaps(combat) -> void:
 			continue
 		var node := _acquire("snare_beacon", n_snr, RELIC_VFX_MODELS["snare_beacon"])
 		if node != null:
+			var apex: Vector3 = s.get("apex", s.get("at", Vector3.ZERO))
 			node.visible = true
-			node.global_position = s.get("at", Vector3.ZERO) + Vector3(0.0, 2.2 + 0.25 * sin(_clock * 5.0), 0.0)
+			node.position = apex + Vector3(0.0, 0.22 * sin(_clock * 5.0), 0.0)
 			node.rotation.y = _clock * 2.4
 			n_snr += 1
 	_release_from("snare_beacon", n_snr)
 
-	# Siege Mortar shells.
+	# Siege Mortar shells (relic_swaps.gd:778 uses "at" and "left").
 	var rmortars: Array = swaps.get("_mortars") if swaps.get("_mortars") is Array else []
 	var n_rm := 0
 	for m in rmortars:
@@ -484,7 +510,7 @@ func _sync_relic_swaps(combat) -> void:
 			var target: Vector3 = m.get("at", Vector3.ZERO)
 			var left := maxf(0.0, float(m.get("left", 0.0)))
 			node.visible = true
-			node.global_position = target + Vector3(0.0, left * 16.0, 0.0)
+			node.position = target + Vector3(0.0, left * 16.0, 0.0)
 			node.rotation = Vector3(PI, _clock * 3.5, 0.0)
 			n_rm += 1
 	_release_from("relic_mortar", n_rm)

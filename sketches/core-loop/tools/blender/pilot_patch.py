@@ -48,8 +48,9 @@ LEDGER_CREAM = palette_gd.HEX["LEDGER_CREAM"]
 POSSUM_FUR = "7e8488"
 POSSUM_FACE = "e8e4da"
 POSSUM_EAR = "2b2d30"
-PATCH_PINK = "f29ec4"
+PATCH_PINK = "ea7fa0"
 COLD_WHITE = "e8f0f2"
+AMBER = palette_gd.HEX["AMBER"]
 
 ALONG_X = (0.0, math.pi / 2.0, 0.0)
 ALONG_Y = (math.pi / 2.0, 0.0, 0.0)
@@ -114,6 +115,10 @@ def build_pilot_patch(out_path):
           rot=(math.radians(-18.0), 0.0, 0.0), color=STEEL)
     p.box("class_accent", (0.28, 0.022, 0.15), loc=(0.0, 0.39, 0.08),
           rot=(math.radians(-18.0), 0.0, 0.0))
+    # Colorful 2010 band/yard stickers slapped across the outer lid!
+    for sx, sz, sc in ((-0.09, 0.12, PATCH_PINK), (0.02, 0.06, AMBER), (0.10, 0.11, COLD_WHITE)):
+        p.box("hydraulic", (0.075, 0.012, 0.055), loc=(sx, 0.422, sz),
+              rot=(math.radians(-18.0), sx * 1.4, 0.0), color=sc)
 
     # Long prehensile pink possum tail curling up behind Patch's back to hook the upper cockpit rail!
     tail_pts = [
