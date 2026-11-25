@@ -501,10 +501,13 @@ func _fire(family: String) -> void:
 	var posture: float = _warden.posture()
 	var worst := 0.0
 	_bolts = 0
+	var fire_every := maxi(1, _seconds(0.22))
 	_line_hold({"fire_held": true})
 	for tick in _seconds(FIRE_SECONDS):
 		_keep_quiet()
 		_aim_at(_warden.global_position)
+		if tick % fire_every == 0:
+			_source.press = {"fire_pressed": true}
 		await physics_frame
 		held = held and _held()
 		if held:

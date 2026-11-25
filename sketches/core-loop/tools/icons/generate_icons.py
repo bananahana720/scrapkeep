@@ -1776,6 +1776,10 @@ def plate_cmp_hex():
     return [poly(32, 32, 28, 6, fill=CHARCOAL, stroke=OLD_VERDIGRIS, width=3, start_deg=0)]
 
 
+def plate_cmp_oct():
+    return [poly(32, 32, 28, 8, fill=CHARCOAL, stroke=OLD_VERDIGRIS, width=3, start_deg=22.5)]
+
+
 def g_cmp_primer_coil():
     return [
         path("M10 40 C10 22 22 22 22 40 C22 22 34 22 34 40 C34 22 46 22 46 40", stroke=MINT, width=PRIMARY),
@@ -1862,6 +1866,37 @@ def g_cmp_escape_rail():
 register(
     "cmp_escape_rail", "Corridor Rail",
     "Two rails with ties and one chevron at the far end", plate_cmp_hex, g_cmp_escape_rail,
+)
+
+
+def g_cmp_cog_scoop():
+    return [
+        star(32, 30, 8, 12, 8, fill=AMBER),
+        dot(32, 30, 4, fill=CHARCOAL),
+        path("M14 28 V42 Q14 50 24 50 H40 Q50 50 50 42 V28", stroke=BONE, width=DETAIL),
+        line(24, 15, 28, 19, stroke=MINT, width=3),
+        line(40, 15, 36, 19, stroke=MINT, width=3),
+    ]
+
+
+register(
+    "cmp_cog_scoop", "Cog Scoop",
+    "A U-scoop cradle pulling a toothed amber cog inward", plate_cmp_oct, g_cmp_cog_scoop,
+)
+
+
+def g_cmp_cartridge_caddy():
+    return [
+        rect(14, 24, 36, 22, fill="none", stroke=BONE, width=DETAIL, rx=3),
+        rect(20, 18, 8, 16, fill=AMBER, rx=1),
+        rect(36, 18, 8, 16, fill=COPPER, rx=1),
+        line(24, 38, 40, 38, stroke=MINT, width=3),
+    ]
+
+
+register(
+    "cmp_cartridge_caddy", "Cartridge Caddy",
+    "A twin-slot rack holding two upright pocket cartridges", plate_cmp_oct, g_cmp_cartridge_caddy,
 )
 
 

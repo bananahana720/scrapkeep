@@ -61,7 +61,7 @@ func _audit(map: Dictionary) -> Array[String]:
 
 func _initialize() -> void:
 	var real: Dictionary = PanelScript.PIECE_ICONS
-	_report("six pieces", Companion.PIECES.size() == 6 and real.size() == 6, "%d pieces, %d icons" % [Companion.PIECES.size(), real.size()])
+	_report("eight pieces", Companion.PIECES.size() == 8 and real.size() == 8, "%d pieces, %d icons" % [Companion.PIECES.size(), real.size()])
 	var problems := _audit(real)
 	_report("the panel's map is sound", problems.is_empty(), str(problems))
 	var from_file := true

@@ -294,6 +294,7 @@ var _pulse_left := 0.0
 var _cloak_held := 0.0
 var _actions := {}
 var door := DamageDoor.new()
+var _deferred_procs: Array = []
 var _pressure_chasers := 0
 var churn
 var boils
@@ -1496,6 +1497,7 @@ func _physics_process(delta: float) -> void:
 		ally_husks.step(delta, enemies)
 	if orbitals != null:
 		orbitals.step(delta, enemies)
+	_step_deferred_procs()
 	wear_trail.step(delta, enemies)
 	PackPressure.observe(ctx.player.planar_velocity(), ctx.player.tuning.f("cruise"))
 	churn.step(delta)
@@ -2365,7 +2367,24 @@ static func heat_hit(state: Dictionary, id: int, now: float) -> Dictionary:
 
 
 func deal_proc_hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "item_proc", impact := "", chip := CHIP) -> void:
+	if door.in_pass():
+		_deferred_procs.append({"enemy": enemy, "kind": kind, "damage": damage, "direction": direction,
+			"knock": knock, "part": part, "source": source, "impact": impact, "chip": chip})
+		return
 	_hit(enemy, kind, damage, direction, knock, part, source, impact, chip)
+
+
+func _step_deferred_procs() -> void:
+	if _deferred_procs.is_empty():
+		return
+	var batch := _deferred_procs
+	_deferred_procs = []
+	for entry in batch:
+		var enemy: Node3D = entry["enemy"]
+		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
+			continue
+		_hit(enemy, entry["kind"], float(entry["damage"]), entry["direction"], float(entry["knock"]),
+			entry["part"], entry["source"], entry["impact"], float(entry["chip"]))
 
 
 func nearest_enemies(at: Vector3, reach: float, limit: int) -> Array:
@@ -5246,6 +5265,7 @@ func _on_stage_content_cleared(_reason: String) -> void:
 
 func _start_attempt() -> void:
 	_clear_fight()
+	_deferred_procs.clear()
 	_crushes.clear()
 	_shred.clear()
 	_guards.clear()
