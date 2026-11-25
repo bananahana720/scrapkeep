@@ -14,7 +14,6 @@ const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
 const CAPTURE_DEPTH := 0.05
 const CAPTURE_AT := 0.2
-# Drawn bowl is at most twice the physical sink, so the ball rests in the net it draws.
 const VISUAL_CATCH_GAIN := 2.0
 const RIPPLE_SECONDS := 0.5
 const CAPTURE_RIPPLE_SECONDS := 0.3
@@ -23,13 +22,10 @@ const PULSE_SECONDS := 0.2
 const CATCH_RADIUS := 6.0
 const CHUNK := 32.0
 const CLOUD_WRAP := 650.0
-# Seconds between cloud drift steps at full rate; the low preset's share of the rate is a DRESSING row.
 const CLOUD_STEP := 0.1
-# Idle and occupied counts per column come from the thermal_ride JUICE row.
 static var MOTE_COUNTS: Array = EventKinds.juice("thermal_ride")["motes"]
 static var STREAK_COUNTS: Array = EventKinds.juice("thermal_ride")["streaks"]
 
-# Injectable only for the missing-resource proof. No preload that can break boot.
 static var shader_dir := SHADER_DIR
 var thermals: Array[Dictionary] = []
 var chunks := {}
@@ -40,8 +36,6 @@ var cloud_placements: Array[Transform3D] = []
 var cloud_velocities: Array[Vector3] = []
 var clock := 0.0
 var frozen := false
-# The saved setting, read when the fx installs; Game.set_reduced_motion also updates a live one. It is
-# the world effects' one store (WorldFxKit.reduced_motion).
 static var preferred: bool:
 	get:
 		return Kit.reduced_motion
@@ -55,21 +49,16 @@ var _cloud_wait := 0.0
 var _warned_net := false
 var _net_dust: Array[GPUParticles3D] = []
 var _net_dust_next := 0
-# W49-MAPS valley motion: kite rings turn in the updraft, tram buckets ride their haul ropes, the gypsum sea swells,
-# and storm bolts find the grounding rods: when the storm's own lightning lands (world_fact) and on every
-# STRIKE_BEATS-th beat of the band (beat_offset, audio.gd beat_offset_s), so the field strikes in time with the music.
 const RING_SPIN := 0.3
 const BUCKET_SPEED := 3.2
 const GYPSUM_PERIOD := 26.0
 const STRIKE_BEATS := 8
-# With no band playing (headless, muted) the field keeps a slow storm clock instead.
 const STRIKE_FALLBACK_S := 4.0
 const STRIKE_REACH := 160.0
 const BOLT_SECONDS := 0.32
 const BOLT_HEIGHT := 140.0
 const BOLT_SEGMENTS := 9
 const BOLT_WIDTH := 1.1
-# Blue-white storm light: apart from the live mint, HAZARD and the Kindness purple.
 const BOLT_COLOUR := Color("e4ecff")
 const CARD_LAYER := 34
 var rings: Array[Dictionary] = []
@@ -167,7 +156,6 @@ func _thermal(row: Dictionary, shader: Shader) -> void:
 
 static func _lift_chevron() -> ArrayMesh:
 	var vertices := PackedVector3Array()
-	# Crossed ribbons keep the upward arrow legible from every chase heading.
 	var outline := [Vector2(-0.5, -0.35), Vector2(0, 0.35),
 		Vector2(0.5, -0.35), Vector2(0.5, -0.15), Vector2(0, 0.55), Vector2(-0.5, -0.15)]
 	for angle in [0.0, PI * 0.5]:
@@ -184,7 +172,6 @@ static func _lift_chevron() -> ArrayMesh:
 
 func _net_chunk(view: MultiMeshInstance3D, shader: Shader) -> void:
 	var source := view.multimesh.mesh.surface_get_material(0) as StandardMaterial3D
-	# Malformed material: keep this chunk's original finish and weave.
 	if source == null:
 		if not _warned_net:
 			_warned_net = true
@@ -217,7 +204,6 @@ func _clouds() -> void:
 		cloud_origins.append(placements[i])
 		cloud_placements.append(placements[i])
 		cloud_velocities.append(Vector3(rng.randf_range(0.08, 0.14), 0.0, rng.randf_range(0.025, 0.055)))
-	# Drift can reach the whole wrap square, while the banks remain below the catch plane.
 	clouds.custom_aabb = AABB(Vector3(-900.0, -34.0, -900.0), Vector3(1800.0, 16.0, 1800.0))
 
 
@@ -237,7 +223,6 @@ func _density(row: Dictionary) -> void:
 		view.visible = Kit.dressing_shown(id)
 
 
-# Called by Presence after it reads the actual column occupancy. No physics writes or RNG.
 func step(delta: float, ball: Vector3) -> void:
 	if frozen:
 		return
@@ -297,8 +282,6 @@ func catch_at(ball: Vector3) -> void:
 		FxLibrary.fire(puff, "net_dust", "net_caught", int(FxLibrary.effects("net_caught")["net_dust"]), Vector3(ball.x, deck + 0.1, ball.z))
 
 
-# The existing landing signal arrives during force integration. Read the committed body
-# transform there so a quick bounce between rendered frames cannot miss its catch.
 func on_landed(_impact: float, player: Node3D) -> void:
 	if frozen or not is_visible_in_tree() or not is_instance_valid(player):
 		return
@@ -312,11 +295,9 @@ func _sink(age: float) -> float:
 	if age < CAPTURE_AT:
 		return lerpf(CATCH_DEPTH, CAPTURE_DEPTH, smoothstep(0.0, 1.0, age / CAPTURE_AT))
 	var phase := clampf((age - CAPTURE_AT) / (CATCH_SECONDS - CAPTURE_AT), 0.0, 1.0)
-	# Spring toward rest with a smaller second settle. Never above the deck.
 	return CAPTURE_DEPTH * pow(1.0 - phase, 2.0) * (0.75 + 0.25 * cos(phase * TAU * 1.5))
 
 
-# Ring fronts are metres from the contact point; the shader brightens cords at that distance.
 func _glow(row: Dictionary) -> void:
 	var at: Vector2 = row.at
 	var material: ShaderMaterial = row.material
@@ -358,9 +339,6 @@ func _step_catches(delta: float) -> void:
 	active_catches = live
 
 
-
-# ---- World 3 valley motion and story cards (W49-MAPS) ----
-
 func _valley(presence: Node) -> void:
 	if presence.get("rings") == null:
 		return
@@ -380,7 +358,6 @@ func _valley(presence: Node) -> void:
 	_bolt_material.emission_energy_multiplier = 2.4
 
 
-# The point a share t (0..1) of the way along a polyline, by length.
 static func along(path: Array[Vector3], t: float) -> Vector3:
 	var total := 0.0
 	for i in path.size() - 1:
@@ -420,7 +397,6 @@ func _step_valley(delta: float) -> void:
 	_step_cards(delta)
 
 
-# Strike a rod on the band's beat, every STRIKE_BEATS beats; with no band, on the slow storm clock.
 func _step_strikes(delta: float) -> void:
 	if rods.is_empty() or reduced_motion:
 		return
@@ -444,7 +420,6 @@ func _strike_ambient() -> void:
 	_strike_next = (_strike_next * 7 + 3) % maxi(1, rods.size() * 5)
 
 
-# The storm's own lightning landing (natural.gd publishes its landing as a world fact) jumps to the nearest rod.
 func on_world_fact(kind: String, at: Vector3) -> void:
 	if kind != "lightning_landed" and kind != "lightning_mark_landed" or rods.is_empty() or not is_inside_tree():
 		return
@@ -460,8 +435,6 @@ func on_world_fact(kind: String, at: Vector3) -> void:
 		strike_rod(best)
 
 
-# One bolt from the storm into rod i's tip, a jagged blue-white ribbon that fades in BOLT_SECONDS. Public so a capture
-# can frame a strike.
 func strike_rod(i: int) -> void:
 	if i < 0 or i >= rods.size() or _bolt_material == null:
 		return
@@ -514,9 +487,6 @@ func _step_bolts(delta: float) -> void:
 	bolts = live
 
 
-# Stage entry: the world's cold-open card (LoreRows.world_three_cold_open) and, arriving at the Crown on the launch
-# from the Isle, the golden-hour tint fading out into the storm dusk (StageBeats.LAUNCH_CROSSFADE). Both non-blocking:
-# nothing pauses, the ball keeps every input, and a press skips them. A retry shows neither.
 func on_stage_entered(kind: String, retry: bool) -> void:
 	_dismiss_cards()
 	if retry or kind.is_empty():

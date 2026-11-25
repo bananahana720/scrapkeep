@@ -16,53 +16,29 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const KillMark := preload("res://src/presentation/kill_mark.gd")
 const HeroFx := preload("res://src/presentation/hero_fx.gd")
 
-# World-space effects. Each glyph takes its colour and silhouette from the fact's
-# event_kinds row, so a slam ring, a kill burst and a scrap square read the same way
-# here, in the HUD and in the field notes. Speed shows as a trail and speed lines in
-# the speed tier's own colour. Effects stay small, brief and behind or around the
-# ball, never across the line ahead, so they never hide the next threat.
 
 const POOL := 48
-# Glyph silhouettes that are pure light pops: reduce flashes keeps FlashGuard's decorative
-# share of their alpha. Every other glyph (rings, bars, cause shapes) shows a reach or a cause
-# and keeps the information share.
 const POP_SHAPES := ["flash", "star", "burst"]
 const SPARKLE_POOL := 6
-# Trail seconds and width per speed tier: nothing at a walk, a comet when blazing.
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
 const TRAIL_WIDTH := [0.0, 0.28, 0.48, 0.72]
-# A trail point nearer the eye than the ball fades out: gone at TRAIL_NEAR.x of the ball's distance
-# from the eye, whole at .y. After a drop at full speed the trail lay back up over the camera and its
-# last metres filled the middle of the view as a pale cone (PF-07, w37 film 019 and 070: read as a
-# light from above). Shares of the ball's distance, so the trail at the ball stays whole on the 8 m
-# arm and the 4.2 m mount alike.
 const TRAIL_NEAR := Vector2(0.4, 0.8)
 const LINES_PER_TIER := [0, 0, 10, 20]
-# v3 W11 bursts: pooled one-shot CPU particles, one shared mesh and material per kind;
-# each burst sets only its emitter's colour, place and count. pool emitters x max count
-# is the ceiling a dense fight can hold alive at once (DESIGN-NOTES v3 W11).
-#   debris    a kill or a blast: chunks thrown up under gravity
-#   dust      a ram, a rebound or a blast: soft puffs rolling out along the ground
-#   fountain  a part or a core: a column that rises and falls around the drop
 const BURSTS := {
 	"debris": {"pool": 6, "max": 12, "life": 0.7, "speed": [4.0, 9.0], "spread": 55.0, "gravity": -26.0, "size": Vector3.ONE * 0.24},
 	"dust": {"pool": 4, "max": 14, "life": 0.5, "speed": [2.0, 5.0], "spread": 85.0, "gravity": 1.5, "size": Vector3.ONE * 0.4, "soft": true},
 	"fountain": {"pool": 3, "max": 24, "life": 0.9, "speed": [6.0, 10.0], "spread": 22.0, "gravity": -18.0, "size": Vector3.ONE * 0.18},
 }
 const BURST_LOOKS := {"debris": "chunk", "dust": "puff", "fountain": "bead"}
-# The kill chain: a pip per kill in the run over the ball, from 2 up.
 const PIPS := 8
 const PIP_RADIUS := 0.9
 const PIP_HEIGHT := 2.5
-# The kill mark's width across its longest points, before the merged pop's scale: a crit's
-# star reaches 1.6 m, so a single kill's mark stands clear of it.
 const KILL_MARK_M := 3.0
 
 var ctx
 var player
 var camera
 var root: Node3D
-# kind -> count of glyphs spawned, for the tests and the notes.
 var spawned := {}
 
 var _glyphs: Array = []
@@ -81,7 +57,6 @@ var _heft_class := 1
 var _found_wired := false
 var _bursts := {}
 var _burst_next := {}
-# W12 P-FX: GPU effect pools by FxLibrary spec id, and the ball's rolling dust.
 var _fx := {}
 var _fx_next := {}
 var _roll: GPUParticles3D
@@ -91,41 +66,25 @@ var _chain := 0
 var _chain_rung := 0
 var _pip_pop := 0.0
 var edge: Control
-# How grown the build is, 0 to 1 (player_fx.gd might): hit and kill glyphs grow with it, so
-# a late run's hit reads bigger than the first fight's (Andrew, "Clearly mightier").
-# The slam ring stays at the slam's real reach.
 var might := 0.0
 const MIGHT_GLYPH := 0.15
-# How far a grown build's hit and kill glyphs run toward heat orange (player_fx.gd heat_k):
-# growth shows as colour, not size (Andrew, "Presence, centre clear").
 var heat := 0.0
 const HEAT_GLYPH := Color(1.0, 0.5, 0.12)
-# False skips the ball trail and speed lines; tools/perf_bench.gd --no-trails sets it.
 var trails := true
-# Every kill's mark, shards and debris pass through this gate (kill_pop).
 var pops := PopGate.new()
-# A kill's own mark (FX-01, Andrew's pick 12 Nov 2026: the ink burst, and a time card on elites).
 var kill_mark: KillMark
-# W47-H1 hero-baseline world-space marks (Sable pylon ring, Rivet hot-round tracer, Kest sightline fuse trace).
 var hero_fx: HeroFx
 var _fill_scale := 1.0
-# What the governor steers toward, recounted every 1 / Density.SAMPLE_HZ seconds.
 var _density_target := 0.0
 var _density_wait := 0.0
 
 
-# At most Density.KILL_POPS_PER_WINDOW kill pops in any KILL_POP_WINDOW seconds
-# (FEEL-READABILITY.md §1.2, E1-DENSITY.md §3). A kill that finds no room, or arrives in a
-# band that coalesces, joins the nearest pending cluster within reach, else opens one;
-# a fourth cluster folds into the nearest. A cluster pops once, scaled by its kill count,
-# when the window has room and it has waited the band's coalesce time. O(1) per kill.
 class PopGate:
 	extends RefCounted
 
 	var ring := PackedFloat64Array([-1.0e9, -1.0e9, -1.0e9])
 	var oldest := 0
 	var pending: Array = []
-	# The last EMITTED_KEEP pops: [clock, kills, scale], for the tests.
 	const EMITTED_KEEP := 64
 	var emitted: Array = []
 
@@ -143,7 +102,6 @@ class PopGate:
 			return
 		pending.append({"sum": at, "n": 1, "since": clock})
 
-	# The clusters that pop now, oldest first.
 	func ready(clock: float, wait: float) -> Array:
 		var out: Array = []
 		while not pending.is_empty() and clock - ring[oldest] >= Density.KILL_POP_WINDOW \
@@ -242,8 +200,6 @@ func wire_optional() -> void:
 		events.connect("interaction_found", _on_found.unbind(argc) if argc > 0 else _on_found)
 
 
-# An interactable's consent and act, in its family's shape and colour; a result as a
-# star for a win and a cross for a loss.
 func _on_interact_armed(family: String, _id: String, at: Vector3) -> void:
 	var row := Interactables.row(family)
 	glyph("interact_armed", at + Vector3.UP * 2.0, 0.4, 1.2, 0.3, Vector3.ZERO, String(row["shape"]), row["color"])
@@ -262,9 +218,6 @@ func _on_bet_resolved(_id: String, won: bool, _stake: int, at: Vector3) -> void:
 	glyph("bet_resolved", at + Vector3.UP * 5.0, 0.6, 2.6 if won else 1.0, 0.5, Vector3.ZERO, "star" if won else "cross", Palette.ARC if won else Palette.RUST)
 
 
-# --- Demo-spec facts ----------------------------------------------------------------------
-
-# The Warden breaks: a star flash over the beacon and a ring out to its edge.
 func _on_unsealed(stage: int) -> void:
 	var at := player.shown_position() as Vector3
 	var radius := 12.0
@@ -276,10 +229,8 @@ func _on_unsealed(stage: int) -> void:
 	glyph("beacon_unsealed", at + Vector3.UP * 0.3, 2.0, radius, 0.7, Vector3.UP, "ring")
 
 
-# A new heft class ripples out from the ball along the ground.
 func _on_heft_class(heft_class: int, _heft: float) -> void:
 	if heft_class < _heft_class:
-		# A class lost: the ring falls inward in the torn-scrap colour.
 		_heft_class = heft_class
 		var down: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
 		glyph("scrap_lost", player.shown_position() - down * 0.9, 5.0, 1.0, 0.4, down, "ring")
@@ -304,14 +255,11 @@ func _on_deflected(enemy: Node3D, _kind: String, _punch: float, _plating: float)
 			String(row["shape"]), EventKinds.state_color("glancing"))
 
 
-# The core locks in where it was won: a diamond flash and a tight ring.
 func _on_core(_source: String, at: Vector3, _count: int) -> void:
 	glyph("core_gained", at + Vector3.UP * 1.2, 0.5, 1.6, 0.5)
 	glyph("core_gained", at + Vector3.UP * 0.2, 0.6, 3.0, 0.45, Vector3.UP, "ring")
 
 
-# The discovery leaves a ring on the ball for the rest of the run, one per synergy, so your
-# build shows on the ball. The moment itself is the pulse on the struck body.
 func _on_synergy(id: String, category: String, _first_time: bool) -> void:
 	add_ring(id, CodexStyle.category_color(category))
 
@@ -319,7 +267,6 @@ func _on_synergy(id: String, category: String, _first_time: bool) -> void:
 const ARMED_SECONDS := 0.6
 
 
-# A synergy goes live: its two cause glyphs link above the ball, no name and no banner.
 func _on_cause_armed(id: String) -> void:
 	var shapes: Array = EventKinds.cause_glyphs(Synergies.ROWS[id]["tags"]) if Synergies.ROWS.has(id) else []
 	if shapes.is_empty() or EventKinds.cause_row(id).is_empty():
@@ -334,8 +281,6 @@ func _on_cause_armed(id: String) -> void:
 	glyph("cause_armed", top, 0.2, 1.2, ARMED_SECONDS, side, "bar", tint, "P4")
 
 
-# The effect resolves: a pulse in the row's own shape on the struck body, or where it
-# landed when nobody was in reach.
 func _on_cause_fired(id: String, target: Node3D, at: Vector3) -> void:
 	var shape := String(EventKinds.cause_row(id).get("shape", ""))
 	if shape == "":
@@ -357,9 +302,6 @@ func _on_element(_element: String, _material: String, behaviour: String, at: Vec
 
 
 const MAX_RINGS := 4
-# A ring shows whole for RING_READ seconds after its discovery, then settles over RING_SETTLE to
-# RING_REST of its alpha for the rest of the run: four bright rings round the ball stood over the
-# view all run (PF-27, film 048). Once read, it is the build's mark, not news.
 const RING_ALPHA := 0.8
 const RING_REST := 0.3
 const RING_READ := 2.5
@@ -374,12 +316,10 @@ func add_ring(id: String, tint: Color) -> void:
 	_rings[id] = {"node": ring, "tilt": 0.5 + 0.35 * _rings.size(), "speed": 1.4 + 0.5 * _rings.size(), "born": _clock}
 
 
-# A ring's alpha `age` seconds after its discovery: whole while it is news, then settled.
 static func ring_alpha(age: float) -> float:
 	return lerpf(RING_ALPHA, RING_ALPHA * RING_REST, smoothstep(RING_READ, RING_READ + RING_SETTLE, age))
 
 
-# The index-th synergy ring as add_ring draws it (BakeWarm builds one at stage entry).
 static func ring_view(index: int, tint: Color) -> MeshInstance3D:
 	var ring := MeshInstance3D.new()
 	var torus := TorusMesh.new()
@@ -433,9 +373,6 @@ func clear() -> void:
 		_heft_class = int(ctx.run.heft_class())
 
 
-# --- Glyphs ---------------------------------------------------------------------------
-
-# The glyph pool and the kill mark, under root.
 func _build_glyphs() -> void:
 	_build_meshes()
 	for i in POOL:
@@ -497,8 +434,6 @@ func _build_meshes() -> void:
 	_meshes["arc"] = _arc_mesh()
 
 
-# Sable's tap arc (wave 46 3D blueprint section 3.2): three jagged segments from the origin to 1 m
-# along -Z, the way a facing glyph points, as two crossed ribbons so it reads from any side.
 static func _arc_mesh() -> ArrayMesh:
 	const WIDTH := 0.06
 	var points := [Vector3.ZERO, Vector3(0.12, 0.05, -0.33), Vector3(-0.1, -0.04, -0.66), Vector3(0.0, 0.0, -1.0)]
@@ -513,7 +448,6 @@ static func _arc_mesh() -> ArrayMesh:
 	return st.commit()
 
 
-# Thin spokes radiating from the centre in the XY plane.
 static func _star_mesh(spokes: int, thickness: float, length: float) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -530,10 +464,6 @@ static func _star_mesh(spokes: int, thickness: float, length: float) -> ArrayMes
 	return st.commit()
 
 
-# Spawns the fact's glyph: its event_kinds shape and colour, growing from size_from to
-# size_to over life seconds while it fades. facing orients rings and bars.
-# priority_class is the fact's FEEL-READABILITY §1.1 class; unset, the kind's own
-# (Density.class_of_kind). The governor thins P5 glyphs and never P0 to P3.
 func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: float, facing := Vector3.ZERO, shape := "",
 		color_override := Color(0, 0, 0, 0), priority_class := "") -> Dictionary:
 	if root == null or not root.is_inside_tree():
@@ -568,7 +498,6 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	return slot
 
 
-# Ends a glyph glyph() returned early, unless its pooled slot has since moved on to another glyph.
 func end_glyph(slot: Dictionary, at: Vector3) -> void:
 	if slot.is_empty() or slot["t"] >= 1.0 or not slot["node"].global_position.is_equal_approx(at):
 		return
@@ -578,7 +507,6 @@ func end_glyph(slot: Dictionary, at: Vector3) -> void:
 
 func _facing_basis(silhouette: String, facing: Vector3) -> Basis:
 	if facing.length_squared() < 0.0001:
-		# Flat glyphs lie on the ground; the rest face the camera.
 		if silhouette in ["ring", "wave"]:
 			return Basis.IDENTITY
 		if camera != null and camera.cam != null:
@@ -586,7 +514,6 @@ func _facing_basis(silhouette: String, facing: Vector3) -> Basis:
 		return Basis.IDENTITY
 	var dir := facing.normalized()
 	if silhouette in ["ring", "wave"]:
-		# A torus lies in its XZ plane, so point its Y along the facing.
 		var right := Vector3.RIGHT if absf(dir.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
 		right = (right - dir * right.dot(dir)).normalized()
 		return Basis(right, dir, right.cross(dir))
@@ -608,8 +535,6 @@ func _draw_glyph(slot: Dictionary) -> void:
 	mat.albedo_color = Color(color.r, color.g, color.b, (1.0 - t) * slot.get("alpha", 0.9))
 
 
-# --- Facts -------------------------------------------------------------------------------
-
 func _on_landed(impact: float) -> void:
 	if impact < 10.0:
 		return
@@ -617,7 +542,6 @@ func _on_landed(impact: float) -> void:
 	glyph("landed", at, 0.6, 1.2 + impact * 0.06, 0.25, player.state.contact_normal)
 
 
-# The slam ring grows to the slam's real reach, so the effect shows exactly who it hit.
 func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05:
 		return
@@ -625,7 +549,6 @@ func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	play_fx("slammed", at + Vector3.UP * 0.15)
 
 
-# The plant ring shows the mount's repel reach.
 func _on_mounted(at: Vector3, _banked: float) -> void:
 	var normal: Vector3 = player.kit.mount_normal
 	var face: Vector3 = player.kit.mount_face if player.kit.mount_face != Vector3.ZERO else at
@@ -639,17 +562,13 @@ func _on_dismounted(velocity: Vector3) -> void:
 
 func _on_shot(_weapon: String, from: Vector3, to: Vector3) -> void:
 	var dir := to - from
-	# Muzzle: a short bar along the shot, right at the barrel.
 	glyph("shot_fired", from + dir.normalized() * 0.4, 0.5, 0.9, 0.06, dir, "", player.class_color())
-	# Impact: a small flash where it landed.
 	glyph("shot_fired", to, 0.5, 1.1, 0.09, Vector3.ZERO, "flash", player.class_color())
 
 
-# A glyph's colour run toward heat and brightened; transparent (the row's own colour) when cold.
 func _hot(kind: String) -> Color:
 	if heat <= 0.0:
 		return Color(0, 0, 0, 0)
-	# Hotter and brighter: a grown hit's core carries more light at the same size.
 	var c: Color = Rows.color(kind).lerp(HEAT_GLYPH, heat)
 	var k := 1.0 + 0.6 * heat
 	return Color(c.r * k, c.g * k, c.b * k, c.a)
@@ -662,8 +581,6 @@ func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:
 	glyph("enemy_struck", enemy.global_position + Vector3.UP * 0.6, 0.4 * grow, clampf(0.8 + force * 0.03, 0.8, 1.6) * grow, 0.14 + 0.08 * might,
 		Vector3.ZERO, "", _hot("enemy_struck"))
 
-
-# --- Scrap sparkles ------------------------------------------------------------------------
 
 func _make_sparkle() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
@@ -705,20 +622,14 @@ func _on_scrap(amount: int, at: Vector3, _total: int) -> void:
 	spawned["scrap_collected"] = spawned.get("scrap_collected", 0) + 1
 
 
-# --- Trail and speed lines -----------------------------------------------------------------
-
 func _build_trail() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
-	# The colours written into the mesh are the palette's sRGB values: the switch makes the PC's renderer read them so,
-	# not as linear light, which washed the trail and speed lines out (tools/vertex_colour_probe.gd --marks=1, W46-13).
 	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	# The juice node belongs to presentation; the trail hangs off it but draws in world
-	# space, so it is top level.
 	var juice: Node3D = player.juice_node()
 	_trail = MeshInstance3D.new()
 	_trail.name = "Trail"
@@ -768,7 +679,6 @@ func _process(delta: float) -> void:
 	_roll_dust()
 
 
-# How much of a trail point at `point_m` from the eye is drawn when the ball is `ball_m` away.
 static func trail_near(point_m: float, ball_m: float) -> float:
 	return smoothstep(ball_m * TRAIL_NEAR.x, ball_m * TRAIL_NEAR.y, point_m)
 
@@ -802,8 +712,6 @@ func _draw_trail(tier: int) -> void:
 	mesh.surface_end()
 
 
-# Streaks in a sleeve around the ball, drawn from beside the ball backwards only, so
-# they frame the ball and never cross the line ahead.
 func _draw_lines(tier: int, delta: float) -> void:
 	var mesh: ImmediateMesh = _lines.mesh
 	mesh.clear_surfaces()
@@ -828,7 +736,6 @@ func _draw_lines(tier: int, delta: float) -> void:
 	var color: Color = SpeedTier.COLORS[tier]
 	mesh.surface_begin(Mesh.PRIMITIVE_LINES)
 	for streak in _streaks:
-		# Each streak slides back past the ball and wraps to the front of the sleeve.
 		streak["offset"] -= delta * (1.5 + speed * 0.08)
 		if streak["offset"] < -3.0:
 			streak["offset"] = _rng.randf_range(0.0, 0.4)
@@ -843,13 +750,9 @@ func _draw_lines(tier: int, delta: float) -> void:
 	mesh.surface_end()
 
 
-# --- v3 W11 bursts, the chain and the edge flash ----------------------------------------
-
 func _build_bursts() -> void:
 	for kind in BURSTS:
 		var spec: Dictionary = BURSTS[kind]
-		# The same looks as the GPU effects (FxLibrary._LOOKS): kill pops and dust are cel puffs,
-		# debris is chipped lit shards, and a drop's fountain is keylined beads.
 		var look: String = BURST_LOOKS[kind]
 		var mesh := FxLibrary.look_mesh(look, spec["size"])
 		if mesh is PrimitiveMesh:
@@ -897,7 +800,6 @@ func _build_bursts() -> void:
 		_burst_next[kind] = 0
 
 
-# One pooled burst: the oldest emitter of its kind restarts here in this colour.
 func burst(kind: String, at: Vector3, color: Color, count: int) -> void:
 	if not _bursts.has(kind) or count <= 0 or root == null or not root.is_inside_tree():
 		return
@@ -931,10 +833,6 @@ func _build_fx() -> void:
 	_roll.set_instance_shader_parameter("tint", FxLibrary.colour("roll_dust", "rolling"))
 
 
-# The GPU effects an event's JUICE row names, at one place: the oldest emitter of each
-# restarts there, its particle count from the row, its tint from the spec's colour
-# source unless the caller passes one (a crit's colour). `variant` picks the row's
-# "crit" set; `toward` aims a forward spec (the latch's pulse runs at the ball).
 func play_fx(kind: String, at: Vector3, tint := Color.TRANSPARENT, variant := "", toward := Vector3.ZERO) -> void:
 	if root == null or not root.is_inside_tree():
 		return
@@ -945,7 +843,6 @@ func play_fx(kind: String, at: Vector3, tint := Color.TRANSPARENT, variant := ""
 		_fire_fx(id, kind, int(effects[id]), at, tint, toward)
 
 
-# The oldest emitter of one "vfx" spec restarts at `at`.
 func _fire_fx(id: String, kind: String, count: int, at: Vector3, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> void:
 	var pool: Array = _fx[id]
 	var p: GPUParticles3D = pool[_fx_next[id]]
@@ -959,15 +856,12 @@ func _on_world_fact_fx(kind: String, at: Vector3) -> void:
 		play_fx(kind, at)
 
 
-# A spent cache keeps a low ember going where it stands, until the stage is left.
 func stop_embers() -> void:
 	for id in ["cache_ember", "cache_wisp"]:
 		for p: GPUParticles3D in _fx[id]:
 			p.emitting = false
 
 
-# Rolling dust: the ball's contact point emits while it rolls on the ground at speed,
-# thicker as it goes faster; the row's count is particles per second at twice min_speed.
 func _roll_dust() -> void:
 	if _roll == null:
 		return
@@ -985,7 +879,6 @@ func _roll_dust() -> void:
 			spawned["fx_roll_dust"] = spawned.get("fx_roll_dust", 0) + 1
 
 
-# A kill's mark, shards and debris, through the kill-pop gate: one call per kill.
 func kill_pop(at: Vector3) -> void:
 	var governor := Density.live()
 	pops.add(_clock, at, governor.coalesce_metres())
@@ -999,9 +892,6 @@ func _emit_pops() -> void:
 		kill_look(cluster["at"], cluster["scale"])
 
 
-# One merged kill pop at `at`, `scale` from its kill count (FX-01): the kill mark, the body's
-# shards in the pilot's colour and ink debris. `pilot` overrides the pilot's colour (a capture
-# with no ball).
 func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
 	var row := EventKinds.juice("enemy_killed")
 	scale *= 1.0 + MIGHT_GLYPH * might
@@ -1018,15 +908,10 @@ func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
 	spawned["enemy_killed"] = spawned.get("enemy_killed", 0) + 1
 
 
-# The pilot's colour: "you did this" (VISUAL-LANGUAGE section 2); the row's copper without a pilot.
 func kill_tint() -> Color:
 	return player.class_color() if player != null and player.has_method("class_color") else EventKinds.color("enemy_killed")
 
 
-# One density per frame from what is in view (FEEL-READABILITY.md §1.2); the P6 fill
-# scale reaches every governed fill as one global shader value. The group walks run
-# Density.SAMPLE_HZ times a second; between samples the governor eases toward the last
-# count, so a frame costs one update and at most one server call.
 func _govern(delta: float) -> void:
 	_density_wait -= delta
 	if _density_wait <= 0.0:
@@ -1052,7 +937,6 @@ func _publish_fill_scale(value: float) -> void:
 		Density.publish_fill_scale(value)
 
 
-# The most particles the bursts can hold alive at once, for the notes.
 static func burst_ceiling() -> int:
 	var total := 0
 	for kind in BURSTS:
@@ -1078,8 +962,6 @@ func _build_pips() -> void:
 		_pips.append(pip)
 
 
-# The kill chain over the ball: a pip per kill in the run from the second one, climbing
-# from the kill colour to the reward amber and to white at the top rung. 0 hides it.
 func set_chain(length: int, rung: int) -> void:
 	var shown := mini(length, PIPS) if length >= 2 else 0
 	if shown > chain_pips():
@@ -1109,7 +991,6 @@ func _draw_pips(delta: float) -> void:
 			centre + Vector3(cos(angle), 0.0, sin(angle)) * PIP_RADIUS)
 
 
-# The screen edge toward direction (x right, y down; zero for every edge) flashes.
 func edge_flash(direction: Vector2, color: Color, strength: float, seconds: float) -> void:
 	if edge != null:
 		edge.flash(direction, color, strength, seconds)

@@ -5,12 +5,6 @@ const Density := preload("res://src/presentation/density.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
-# W47-H1 hero-baseline world-space VFX helper owned by Vfx (zero static mutable state):
-#   - Sable: mint (Palette.ARC) Kinetic Orbit Pylon tether ring
-#   - Rivet: superheated copper/amber (Palette.COPPER / Palette.AMBER) 6th hot-round tracer & ricochet glint
-#   - Kest:  visible amber (Palette.AMBER #E5A044) sightline fuse-spark trace along unobstructed canyon walls,
-#            revealing direct line-of-sight weak points and cracked destructible seams (ZERO through-rock radar).
-# Strictly obeys B6 colour law: NEVER draws Palette.HAZARD (#FF5A3C).
 
 const PRIORITY := 1
 const WORLD_MASK := 1
@@ -57,7 +51,6 @@ func clear() -> void:
 	set_process(false)
 
 
-# Rivet's active-reloaded 6th hot round copper/amber tracer (optional ricochet elbow segment).
 func add_rivet_hot_tracer(from: Vector3, to: Vector3, ricochet_to := Vector3.INF) -> void:
 	if _tracers.size() >= TRACER_CAP:
 		_tracers.pop_front()
@@ -73,7 +66,6 @@ func add_rivet_hot_tracer(from: Vector3, to: Vector3, ricochet_to := Vector3.INF
 	set_process(true)
 
 
-# Sable's Kinetic Orbit Pylon mint tether ring (Palette.ARC #8BF0D3).
 func set_sable_pylon_ring(at: Vector3, radius: float, overcharged: bool, active := true) -> void:
 	if not active or radius <= 0.05:
 		_pylon_ring = {}
@@ -88,7 +80,6 @@ func set_sable_pylon_ring(at: Vector3, radius: float, overcharged: bool, active 
 	set_process(true)
 
 
-# Kest's unobstructed sightline amber fuse-spark trace (Palette.AMBER #E5A044).
 func set_kest_fuse_trace(scan: Dictionary) -> void:
 	if scan.is_empty():
 		_kest_trace = {}
@@ -125,9 +116,6 @@ func snapshot() -> Dictionary:
 	}
 
 
-# Direct line-of-sight scan for Kest's visible amber fuse-spark trace.
-# Strictly raycasts WORLD_MASK from `eye` to every canyon surface, enemy weak point, and intact
-# Heft Destructible seam. Anything occluded by canyon rock/walls is strictly skipped (ZERO wall-hack).
 static func scan_kest_sightline(space: PhysicsDirectSpaceState3D, eye: Vector3, forward: Vector3,
 		enemies: Array, destructibles = null, max_range := Weapons.KEST_FUSE_TRACE_RANGE) -> Dictionary:
 	var result := {
@@ -144,7 +132,6 @@ static func scan_kest_sightline(space: PhysicsDirectSpaceState3D, eye: Vector3, 
 	var right := fwd.cross(up_hint).normalized()
 	var up := right.cross(fwd).normalized()
 
-	# 1. Surface-running amber fuse-spark trace along canyon/wall faces Kest directly sees.
 	var wall_hits: Array = []
 	var ray_count := maxi(3, Weapons.KEST_FUSE_TRACE_RAYS)
 	var half_rad := deg_to_rad(TRACE_FOV_HALF_DEG)
@@ -163,13 +150,10 @@ static func scan_kest_sightline(space: PhysicsDirectSpaceState3D, eye: Vector3, 
 		var b: Vector3 = wall_hits[i + 1]["at"]
 		var span := a.distance_to(b)
 		if span >= 0.25 and span <= 16.0:
-			# Verify midpoint stays near visible sightline (not bridging across a chasm behind cover).
 			var mid := a.lerp(b, 0.5)
 			if _has_line_of_sight(space, eye, mid, null):
 				(result["wall_traces"] as Array).append({"from": a, "to": b, "color": Palette.AMBER})
 
-	# 2. Direct line-of-sight enemy weak points (or unobstructed crown/hull spot on ordinary
-	# machines with no separate weak_points()) — STRICTLY zero through-rock reveal.
 	for enemy in enemies:
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
@@ -198,7 +182,6 @@ static func scan_kest_sightline(space: PhysicsDirectSpaceState3D, eye: Vector3, 
 			if wall_anchor != Vector3.INF:
 				(result["wall_traces"] as Array).append({"from": wall_anchor, "to": at, "color": Palette.AMBER})
 
-	# 3. Direct line-of-sight intact cracked destructible seams ONLY (zero through-rock reveal).
 	if destructibles != null and is_instance_valid(destructibles) and destructibles.has_method("ids"):
 		for id in destructibles.ids():
 			if destructibles.state_of(id) != "intact":

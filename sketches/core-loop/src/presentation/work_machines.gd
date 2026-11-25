@@ -1,17 +1,5 @@
 extends Node3D
 
-# Looping workers (BACKLOG W1-93; DECISIONS machine lore, 22 Oct 2026): the works machines that kept
-# doing their old jobs after the people left, set beside the lines a pilot rides so a park reads as a
-# place that is still running. They are neither friend nor foe: no event, no damage, no target, no
-# telegraph colour. Each kind is one GLB whose named nodes this module turns on a fixed work cycle;
-# pose() is the cycle itself, pure, so a test samples it without a game.
-#
-# Solid (agreed with the collisions thread, PR 950): only a machine's fixed footings and housings
-# carry a StaticBody3D on the world layer, so the ball bumps them like any wall. Moving parts never
-# collide, and every row stands clear of the pilot lines (tests/work_machines_test.gd), so no line
-# gains a wall and a fight never lands under a boom. Built on every preset: the bodies exist for bots
-# and players alike.
-
 const WORLD_LAYER := 1
 const VIEW_END_M := 900.0
 const SWAY_STEP_S := 1.0 / 60.0
@@ -19,7 +7,6 @@ const GRAVITY := 9.8
 const SWAY_DAMP := 0.6
 const SWAY_MAX := 0.25
 
-# The conveyor's buckets ride a MultiMesh each way, built from the GLB's CupFull and CupEmpty.
 const CONVEYOR := {
 	"model": "res://assets/models/world_one/works_conveyor.glb",
 	"scale": 1.6,
@@ -36,14 +23,6 @@ const CONVEYOR := {
 	],
 }
 
-# One row per kind: its model (drawn at "scale", 1 when absent), its work cycle and the boxes that stand solid, in the machine's frame
-# (origin on the ground under its pivot, the working side towards -Z). A cycle is a list of steps,
-# [seconds, {channel: target}]: each step eases its channels from where the last step left them to
-# its targets (a channel it does not name holds), and the cycle starts where its last step ends, so
-# it loops without a seam. Channels: slew_deg (a derrick's boom about its mast), drop_m (its hoist
-# rope below the boom's tip), lift_m (a sluice's leaf above its sill; the handwheel turns with it),
-# run_m (how far a conveyor's belt has run; its buckets repeat every spacing_m, so a cycle whose run
-# is a whole number of spacings loops cleanly). A kind's "start" overrides where a channel starts.
 const KINDS := {
 	"derrick": {
 		"model": "res://assets/models/world_one/works_derrick.glb",
@@ -87,19 +66,14 @@ const KINDS := {
 	"conveyor": CONVEYOR,
 }
 
-# The named nodes a kind's channels drive.
 const NODES := ["Slew", "Hook", "Fall", "Load", "Gate", "Wheel", "BeltFull", "BeltEmpty"]
 
-# Where each park's machines stand (work_machine_rows.json, keyed by map): kind, ground point, yaw of
-# the working side and a phase offset in seconds so two machines never move in step.
 const ROWS_PATH := "res://src/presentation/work_machine_rows.json"
 static var _rows := {}
 
 
 var ctx
 var map_id := ""
-# Built machines: {row, kind, root, nodes, t, sway, sway_v, last_slew, last_rate}. last_rate is NAN until two
-# frames have posed the boom, so a machine that starts mid-slew does not read its whole rate as a kick.
 var machines: Array = []
 var _built_for := -1
 static var _scenes := {}
@@ -118,7 +92,6 @@ static func rows_for(map: String) -> Array:
 	return _rows.get(map, [])
 
 
-# A row's pivot and the ground corners of every solid box, in park metres (x, z).
 static func footprint(row: Dictionary) -> PackedVector2Array:
 	var kind: Dictionary = KINDS[row.kind]
 	var basis := Basis(Vector3.UP, deg_to_rad(float(row.yaw_deg))).scaled(Vector3.ONE * float(kind.get("scale", 1.0)))
@@ -131,7 +104,6 @@ static func footprint(row: Dictionary) -> PackedVector2Array:
 	return out
 
 
-# Where a derrick's boom tip passes over its whole slew, 21 points; empty for a kind with no boom.
 static func reach(row: Dictionary) -> PackedVector2Array:
 	var kind: Dictionary = KINDS[row.kind]
 	var out := PackedVector2Array()
@@ -157,7 +129,6 @@ static func cycle_s(kind: String) -> float:
 	return total
 
 
-# The channels at the end of a kind's cycle, which is also where it starts.
 static func rest(kind: String) -> Dictionary:
 	var at := {}
 	for step in KINDS[kind].steps:
@@ -165,7 +136,6 @@ static func rest(kind: String) -> Dictionary:
 	return at
 
 
-# The work cycle at time t (seconds) for a kind: every channel's value. Pure and periodic.
 static func pose(kind: String, t: float) -> Dictionary:
 	var at := rest(kind)
 	at.merge(KINDS[kind].get("start", {}), true)
@@ -184,7 +154,6 @@ static func pose(kind: String, t: float) -> Dictionary:
 	return at
 
 
-# Smootherstep: machinery takes up and lets off slack, it never snaps.
 static func _ease(x: float) -> float:
 	x = clampf(x, 0.0, 1.0)
 	return x * x * x * (x * (x * 6.0 - 15.0) + 10.0)
@@ -242,7 +211,6 @@ func _build(row: Dictionary, ground: Callable) -> Dictionary:
 	add_child(root)
 	var yaw := deg_to_rad(float(row.yaw_deg))
 	var basis := Basis(Vector3.UP, yaw).scaled(Vector3.ONE * float(kind.get("scale", 1.0)))
-	# Seat on the lowest of the pivot and the footings, so nothing stands on air.
 	var floor_y := INF
 	for p in footprint(row):
 		floor_y = minf(floor_y, ground.call(p.x, p.y, 0.0).y)
@@ -274,8 +242,6 @@ func _build(row: Dictionary, ground: Callable) -> Dictionary:
 	}
 
 
-# A conveyor's two runs of buckets: one MultiMesh per run from the GLB's CupFull and CupEmpty, which
-# stay in the kit only as templates.
 static func _belt(root: Node3D, belt: Dictionary) -> void:
 	var count := int(Vector3(belt.to - belt.from).length() / float(belt.spacing_m))
 	for pair in [["CupFull", "BeltFull"], ["CupEmpty", "BeltEmpty"]]:
@@ -302,8 +268,6 @@ static func _scene(path: String) -> PackedScene:
 	return _scenes[path]
 
 
-# The kit is vertex coloured: each mesh, once per process, swaps its imported surfaces for one material
-# that takes the paint from the vertices, and every view of it shares that mesh.
 static var _painted := {}
 
 
@@ -333,7 +297,6 @@ func _tick(delta: float) -> void:
 		_apply(m, delta)
 
 
-# Poses the nodes from the cycle.
 func _apply(m: Dictionary, delta: float) -> void:
 	var p := pose(m.kind, m.t)
 	var nodes: Dictionary = m.nodes
@@ -349,7 +312,6 @@ func _apply(m: Dictionary, delta: float) -> void:
 		_conveyor(m, float(p.run_m))
 
 
-# Each bucket sits spacing_m behind the next: up the carrying run loaded, back down under it empty.
 func _conveyor(m: Dictionary, run: float) -> void:
 	var placed := buckets(m.kind, run)
 	for pair in [["BeltFull", "full"], ["BeltEmpty", "empty"]]:
@@ -361,8 +323,6 @@ func _conveyor(m: Dictionary, run: float) -> void:
 			multi.set_instance_transform(i, list[i])
 
 
-# Where a conveyor's buckets are after its belt has run `run` metres, in the machine's frame: {full, empty},
-# one Transform3D per bucket, each facing along the carrying run. Pure.
 static func buckets(kind: String, run: float) -> Dictionary:
 	var belt: Dictionary = KINDS[kind].belt
 	var spacing: float = belt.spacing_m
@@ -381,8 +341,6 @@ static func buckets(kind: String, run: float) -> Dictionary:
 	return {"full": full, "empty": empty}
 
 
-# A derrick slews its boom and hoists its bucket, and the hook swings on its rope as the boom's tip
-# speeds up and slows down.
 func _derrick(m: Dictionary, p: Dictionary, delta: float) -> void:
 	var nodes: Dictionary = m.nodes
 	var slew := deg_to_rad(float(p.slew_deg))
@@ -406,6 +364,5 @@ func _derrick(m: Dictionary, p: Dictionary, delta: float) -> void:
 			m.sway = clampf(m.sway + m.sway_v * dt, -SWAY_MAX, SWAY_MAX)
 			left -= dt
 	m.last_slew = slew
-	# The tip moves sideways (along the slew's tangent), so the rope leans about the boom's own axis.
 	if nodes.has("Hook"):
 		nodes.Hook.rotation.z = m.sway

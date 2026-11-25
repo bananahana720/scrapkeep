@@ -3,13 +3,6 @@ extends Node
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
-# A hit that breaks an enemy's wind-up answers with the STATE_ROWS row "interrupted" over the
-# body: a star in the live colour, so the break reads as yours. It listens to the enemy's own
-# attack facts and draws through the vfx glyph pool. The star means a hit counted: when a
-# wind-up arrives it records that enemy's knocks, and a cancelled phase draws only if the
-# count rose since. A wind-up that ends because its owner died or left, that ran out, or that
-# lost its target (a lobber's ball walking out of range) draws nothing. One star per enemy per
-# second. Both records drop the enemy when it leaves the tree.
 
 const SHOWN_SECONDS := 0.5
 const COOLDOWN_SECONDS := 1.0
@@ -39,8 +32,6 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 
 
-# Whether `enemy` wears its interrupted star now; player_fx keeps its words off the marks over a
-# foe only while one is shown.
 func marked(enemy: Node3D) -> bool:
 	var id := enemy.get_instance_id()
 	return _last.has(id) and _clock - float(_last[id]) < SHOWN_SECONDS

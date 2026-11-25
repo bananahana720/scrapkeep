@@ -22,13 +22,8 @@ const PILOTS := [
 const LOOK := Vector3(0.0, 2.6, 0.0)
 const CAMERA_AT := Vector3(0.6, 5.1, 12.8)
 const COMPANION_AT := Vector3(5.1, 1.7, 1.0)
-# Every ANTIC_PERIOD seconds one deck pilot, in turn, climbs out and does their bit
-# (pilot_antics.gd), starting ANTIC_DELAY into the slot so the first frames stay still. The poster's hero at the bow
-# holds the pose: their turn is a still beat, so the picture the menu sits on only moves behind it.
 const ANTIC_PERIOD := 11.0
 const ANTIC_DELAY := 4.0
-# Look closer: drag with the right mouse button (or the right stick) to orbit a deck pilot,
-# wheel to zoom; let go and the camera drifts back after LOOK_HOLD seconds.
 const LOOK_DIST := 3.4
 const LOOK_NEAR := 1.6
 const LOOK_FAR := 6.5
@@ -43,7 +38,6 @@ var stage: Node3D
 var camera: Camera3D
 var companion: Node3D
 var active := false
-# The camp walk (camp_hub.gd) shows the real world through the chase camera, so the title picture stands down.
 var camp_walk := false
 var _layer: CanvasLayer
 var _picture: TextureRect
@@ -53,13 +47,9 @@ var _environment: Environment
 var _clock := 0.0
 var _warned := {}
 var _flow_state := "title"
-# The rotating opening (title_intros.gd). It autoplays once per launch on the first title
-# screen, never for bots or tests (bot_driven, test_mode, a headless display) and never with
-# --no-intro.
 var intro: Node
 var intro_autoplay := true
 var _intro_tried := false
-# True while a 2D title card sits above this stage: the opening waits for release_intro().
 var intro_hold := false
 var _ctx
 var deck_antics: Array = []
@@ -69,12 +59,9 @@ var _look := {"yaw": 0.0, "pitch": 0.25, "dist": LOOK_DIST}
 var _look_dragging := false
 var _look_idle := LOOK_HOLD
 var _stick := Vector2.ZERO
-# The launch take (launch_take.gd) rushes the deck camera in at the pilots, widening as it goes, as pilot select hands
-# over to the dam: 0 at rest, 1 at full rush. show_flow puts it back on every state but pilot select.
 var push := 0.0
 var _push_tween: Tween
 var poster := POSTER
-# The pilot the poster casts at the bow (cast_hero), by class id.
 var hero_id := ""
 var _hero: Node3D
 var _disc: Sprite3D
@@ -83,13 +70,6 @@ const PUSH_RISE := Vector3(-0.6, -1.5, -7.6)
 const PUSH_LOOK := Vector3(0.0, -1.4, 0.0)
 const PUSH_FOV := 24.0
 
-# The gig poster (W46-C1, ruling ei): the pilot the camp gate would launch (game.gate_pilot) rides their ball at the
-# barge's bow over the Spillway's skyline, the rest of the crew behind them, under a halftone sun that stands behind
-# the wordmark and thumps on the music's bar (thump()). Three framings were judged on one sheet (ruling cq); POSTER is
-# the one picked, and --title-poster=<id> shows another. A row: the camera (at, look, fov), the hero's spot, yaw and
-# scale, the crew's spots, deck rows moved from DECK's place (name: [at, yaw, scale]), the sun's middle and diameter
-# as shares of the screen, and the sky's ink. The picture itself stays unfiltered: a screen-space halftone over it
-# turned the camera's slow drift into a crawl of dots, and the menu would never hold still for a press to read.
 const POSTERS := {
 	"bow": {"at": Vector3(2.4, 1.7, 10.6), "look": Vector3(0.1, 3.0, -2.0), "fov": 42.0,
 		"hero": Vector3(0.4, 1.35, 3.6), "hero_yaw": -0.5, "hero_scale": 1.3,
@@ -107,15 +87,10 @@ const POSTERS := {
 		"sun": Vector2(0.36, 0.14), "sun_size": 0.58, "sky": Color("d89048")},
 }
 const POSTER := "bow"
-# The Spillway's skyline, far below and behind the barge: the dam the opening's postcard shows (title_intro_player.gd
-# WORLDS), its crest just over the barge's rim; the facade has one face, toward the deck. Rows as DECK's.
 const SKYLINE := [
 	["SpillwayDam", "res://assets/models/world_one/dam.glb", Vector3(0.0, -262.0, -420.0), 0.0, Vector3(2.4, 2.4, 2.4)],
 ]
-# The skyline prints as one flat ink, a silhouette a shade under the sky, as a screen print lays its back plate.
 const SKYLINE_INK := Color("8e3a2c")
-# The sun is a sprite in the stage's own world, so the skyline stands in front of it and the deck lights never touch
-# it: SUN_DEPTH metres off the camera, on a halftone screen in the sun ink.
 const SUN_DEPTH := 420.0
 const SUN_INK := Color("ffe2a8")
 const SUN_SHADER := """shader_type spatial;
@@ -135,14 +110,12 @@ void fragment() {
 	ALPHA = d * step(r, 1.0);
 }
 """
-# The thump on each bar of the music's grid: up at once, back over THUMP_DECAY seconds (thump()).
 const THUMP_DECAY := 0.11
 
 
 func setup(ctx) -> void:
 	name = "TitleStage"
 	_ctx = ctx
-	# boot.gd marks the game before it enters the tree while its 2D title card is up.
 	intro_hold = ctx.root != null and ctx.root.has_meta(&"intro_hold")
 	intro_autoplay = ctx.root != null and not bool(ctx.root.get("bot_driven")) and not bool(ctx.root.get("test_mode")) \
 		and not AppShell.headless() and not "--no-intro" in OS.get_cmdline_user_args()
@@ -198,8 +171,6 @@ func setup(ctx) -> void:
 
 func show_flow(state: String) -> void:
 	_flow_state = state
-	# Only pilot select's launch take holds the rush; every other state (a run, the summary) puts the camera back, so
-	# pilot select reached again from the summary or a death opens at rest, not mid-rush.
 	if state != "class_select":
 		_set_push(0.0)
 	if state == "title":
@@ -215,8 +186,6 @@ func show_flow(state: String) -> void:
 		_autoplay_intro.call_deferred()
 
 
-# The deferred autoplay re-checks the hold: one set after this call was queued (boot.gd marking the
-# game late) still stops it, and the opening stays untried for release_intro().
 func _autoplay_intro() -> void:
 	if intro_hold:
 		_intro_tried = false
@@ -224,8 +193,6 @@ func _autoplay_intro() -> void:
 	play_intro()
 
 
-# The 2D title card hands off here: lifts the hold and starts the once-per-launch opening if the
-# title is up and it has not been tried. Off the title it does nothing.
 func release_intro() -> void:
 	intro_hold = false
 	if _flow_state == "title" and intro_autoplay and not _intro_tried and not intro_playing():
@@ -237,7 +204,6 @@ func intro_playing() -> bool:
 	return intro != null and intro.playing
 
 
-# Plays the opening the profile's state picks (or the given row) and records it as shown.
 func play_intro(id := "") -> bool:
 	if not active or intro_playing() or (_ctx != null and _ctx.flow.state_name() != "title"):
 		return false
@@ -259,7 +225,6 @@ func play_intro(id := "") -> bool:
 		if profile.can_save:
 			profile.save()
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	# The music side starts title take A or B on bar 1; a no-op until audio carries title_theme.
 	var audio = get_parent().get("audio") if get_parent() != null else null
 	if audio != null and audio.has_method("title_theme"):
 		audio.title_theme(intro.theme)
@@ -274,7 +239,6 @@ func _intro_finished(_id: String, _skipped: bool) -> void:
 func _boss_met() -> void:
 	var run = _ctx.run if _ctx != null else null
 	var boss: Dictionary = Worlds.boss_of(int(run.world)) if run != null else {}
-	# Memory only: the run's own save carries it, so a boss entry never adds a disk write.
 	if _ctx.profile != null:
 		TitleIntros.mark_met(_ctx.profile, String(boss.get("kind", "")))
 
@@ -305,7 +269,6 @@ func _sync_dressing() -> void:
 		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		return
 	if not active or low:
-		# Not stepped again until shown: no pilot left frozen half out of its ball.
 		_seat_deck()
 	set_process(active and not low)
 	if not active:
@@ -348,8 +311,6 @@ func _frame() -> void:
 		camera.transform = camera.transform.interpolate_with(_orbit(), smoothstep(0.0, 1.0, look_weight))
 
 
-# The sun keeps its place on the poster (the row's share of the screen) however the camera drifts or rushes: SUN_DEPTH
-# metres out along the ray through that point, as wide as the row's share of the screen's height at that depth.
 func _hang_sun(row: Dictionary) -> void:
 	if _disc == null or not camera.is_inside_tree():
 		return
@@ -361,11 +322,6 @@ func _hang_sun(row: Dictionary) -> void:
 	_disc.pixel_size = tall * float(row.sun_size) / float(_disc.texture.get_height())
 
 
-# How far into its thump the poster is, 1 on the bar line the player hears falling to 0 over THUMP_DECAY. The bar comes
-# from audio's bar_since_s(): seconds since the last bar line of the grid that sounds (the recorded title pack's when it
-# plays, else the band's), INF while no music sounds. audio.gd does not offer that call yet (the Sound thread owns it
-# this wave), and without it the poster holds still. 0 under reduced motion, during the intro and off the title (pilot
-# select's cards hold the stage still behind them).
 func thump() -> float:
 	if HighdraftFx.preferred or not active or _flow_state != "title" or intro_playing():
 		return 0.0
@@ -376,7 +332,6 @@ func thump() -> float:
 	return exp(-since / THUMP_DECAY) if since >= 0.0 and since < THUMP_DECAY * 4.0 else 0.0
 
 
-# The deck camera's rush for the launch take, over seconds. Reduced motion leaves the camera where it is.
 func launch_push(seconds: float) -> void:
 	if not active or HighdraftFx.preferred:
 		return
@@ -414,14 +369,10 @@ func _seat_deck() -> void:
 			antic.seat()
 
 
-# --- look closer -----------------------------------------------------------------------------
-
 func looking() -> bool:
 	return _look_dragging or _look_idle < LOOK_HOLD
 
 
-# Where look closer can orbit: the deck's three pilots in PILOTS' order (look_target indexes this), then the bow's
-# HeroShell when the gate pilot is not one of them.
 func _look_spots() -> Array:
 	var spots := []
 	for row in PILOTS:
@@ -450,7 +401,6 @@ func _step_look(delta: float) -> void:
 	look_weight = move_toward(look_weight, goal, LOOK_RATE * delta * (1.0 if goal > look_weight else 0.35))
 
 
-# Begins looking at the deck pilot nearest the screen point (or keeps the current one).
 func look_begin(at_screen := Vector2(-1.0, -1.0)) -> void:
 	if at_screen.x >= 0.0 and camera.is_inside_tree():
 		var best := INF
@@ -554,10 +504,6 @@ func _build_lights() -> void:
 	stage.add_child(lamp)
 
 
-# The deck (W1-47, the gig poster look Andrew picked on 13 Nov 2026): the crew on Moss's
-# barge at dusk while Brindle's ship hangs over them, all from the game's finished models. Each
-# row: name, model, position, yaw, scale. A model that fails to load is left out, never stood in. Only
-# models without collision shapes load here (visual_scene), so a camp prop with a -col node cannot be used.
 const DECK := [
 	["Barge", "res://assets/models/barge.glb", Vector3(0.0, -1.95, 0.3), 0.0, Vector3(1.0, 1.0, 0.62)],
 	["Brindle", "res://assets/models/bosses/boss_brindle.glb", Vector3(9.0, 6.5, -38.0), 2.5, Vector3(1.6, 1.6, 1.6)],
@@ -587,7 +533,6 @@ func _build_heroes() -> void:
 		deck_antics[PILOTS.find(row)] = _build_shell(row)
 
 
-# One pilot in their ball on the deck, under a holder named row.name; its antics, or null with no seated pilot.
 func _build_shell(row: Dictionary) -> PilotAntics:
 	var holder := Node3D.new()
 	holder.name = row.name
@@ -624,17 +569,12 @@ func _build_shell(row: Dictionary) -> PilotAntics:
 	return PilotAntics.new({"holder": holder, "core": core, "pod": pod, "pilot": fitted.pilot, "animator": fitted.animator}, row.id)
 
 
-# Casts the poster: the pilot the camp gate would launch takes the bow at the row's scale, and the deck's other pilots
-# stand back on the crew's spots. A pilot not among the deck's three is built once, as HeroShell.
 func cast_hero(id := "") -> void:
 	if id == "":
 		var root = _ctx.root if _ctx != null else null
 		var def = root.gate_pilot() if root != null and root.has_method("gate_pilot") else null
 		id = String(def.id) if def != null else HeroAssets.DEFAULT_CLASS
 	var row: Dictionary = POSTERS[poster]
-	# The deck and the skyline are placed on every cast, in the tree: placed only as they were built, before they
-	# entered it, the frozen models were drawn at a stale transform (the barge at full depth, its rim at the lens,
-	# and the facade not at all).
 	for line in DECK + SKYLINE:
 		_place(stage.get_node_or_null(String(line[0])), line[2], line[3], line[4])
 	for name in row.deck:
@@ -684,7 +624,6 @@ func _place(model: Node3D, at: Vector3, yaw: float, size: Vector3) -> void:
 	model.scale = size
 
 
-# Shows another of the three poster framings (the comparison sheet, ruling cq).
 func use_poster(id: String) -> void:
 	if not POSTERS.has(id):
 		return
@@ -753,8 +692,6 @@ func _build_companion() -> void:
 	_freeze_visual(model)
 
 
-# Reject malformed imported scenes before they enter any physics space. With strip_collision, a scene that
-# carries collision (a park recipe imports its -col mesh and body) has it removed instead of being refused.
 func visual_scene(path: String, strip_collision := false) -> Node3D:
 	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 	if packed == null:

@@ -17,9 +17,6 @@ const PARTS := {
 }
 const FLOOR_LIFT := 0.02
 const SKY_RING := 460.0
-# The Crown Sky-Deck (W49-MAPS, storyboard section 2.3): muted copper and iron inlays let into the wet stone, under the
-# telegraph drawing (hazard.gd DRAW_LIFT 0.08) and darker than any live HAZARD mark, so static trim never reads as a
-# telegraph; iron stanchions stand round the open edge just outside the fight's collider.
 const INLAY_LIFT := 0.035
 const INLAY_WIDTH := 0.7
 const INLAY_RINGS := [9.0, 18.0, 27.0, 33.5]
@@ -30,24 +27,17 @@ const POST_COUNT := 32
 const POST_OUT := 0.85
 const DECK_ROUGHNESS := 0.6
 
-# A missing-folder fixture uses the same loader as the real fight.
 static var dir := DIR
 static var _sky_material: ShaderMaterial
-# The panorama painted ahead on a worker by prepare(): its task (-1 for none) and {image}.
 static var _panorama_task := -1
 static var _panorama_out := {}
-# Kit meshes rebuilt ahead by warm_kit (a part a frame, on the main thread), by file path, until _load_kit takes them.
 static var _kit_ahead := {}
 
 var _saved := {}
 var _greybox: Array[Dictionary] = []
 
 
-# Reads the kit ahead on loader threads and paints the sky panorama on a worker, while the
-# approach to the arena runs (flow, through mind.gd's prepare_arena): loading the kit and painting
-# the panorama took 80 to 150 ms of the boss-entry frame on the cloud (scrapkeep#241). Headless,
-# the kit loads on the main thread in warm_kit instead: the dummy rasterizer's mesh RIDs are not
-# thread-safe (park_recipes.gd's placer and ending_sequence.gd's crater keep the same gate).
+# Godot headless Dummy rasterizer mesh RIDs are not thread-safe; load on main thread when headless.
 static func prepare() -> void:
 	for key in PARTS:
 		var path: String = dir.path_join(PARTS[key][0])
@@ -60,9 +50,6 @@ static func prepare() -> void:
 		_panorama_task = WorkerThreadPool.add_task(func(): out["image"] = _paint_panorama(), false, "mind panorama")
 
 
-# Teardown: waits for the panorama worker and collects the kit files prepare() asked for, so no
-# loader thread or worker task is still running when the game quits before the boss entry (the
-# stage 6 quit abort, exit 134, scrapkeep#322).
 static func settle() -> void:
 	if _panorama_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_panorama_task)
@@ -81,9 +68,6 @@ static func reset_for_tests() -> void:
 	_sky_material = null
 
 
-# Rebuilds the next kit part on the main thread, once its file has loaded: one part a call, so the
-# approach's frames share the rebuild that _load_kit did in the boss-entry frame (16 to 20 ms of it
-# on the cloud, scrapkeep#322 row 30). True once every part is ready.
 static func warm_kit() -> bool:
 	for key in PARTS:
 		var path: String = dir.path_join(PARTS[key][0])
@@ -96,8 +80,6 @@ static func warm_kit() -> bool:
 	return true
 
 
-# A kit file: the loader thread's copy when prepare() asked for it (waiting if it is still
-# loading), else a plain load.
 static func _take(path: String) -> Resource:
 	if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 		return ResourceLoader.load_threaded_get(path)
@@ -124,9 +106,6 @@ static func attach(module):
 	return dress
 
 
-# Validate the complete kit before changing the floor or the environment. Imported
-# materials only supply slots and textures; vertex colour owns each surface's finish. A part
-# warm_kit rebuilt ahead is taken from it.
 func _load_kit() -> Dictionary:
 	var meshes := {}
 	var ahead := _kit_ahead
@@ -140,7 +119,6 @@ func _load_kit() -> Dictionary:
 	return meshes
 
 
-# One kit part's rebuilt mesh, or null when its file is missing or malformed.
 static func _kit_part(key: String) -> Mesh:
 	var path: String = dir.path_join(PARTS[key][0])
 	if not ResourceLoader.exists(path):
@@ -243,7 +221,6 @@ func _build(meshes: Dictionary, radius: float) -> void:
 	_sky_pieces(meshes)
 
 
-# The storm has just passed: the stone top keeps a wet sheen (w3-boss-the-mind.png) while its colour stays the kit's.
 func _wet_deck(island: MeshInstance3D) -> void:
 	var mesh := island.mesh as ArrayMesh
 	for i in mesh.get_surface_count():
@@ -253,7 +230,6 @@ func _wet_deck(island: MeshInstance3D) -> void:
 		mesh.surface_set_material(i, wet)
 
 
-# Concentric rings and radial spokes of muted copper and iron, one vertex-coloured surface, flush with the stone.
 func _inlays(radius: float) -> void:
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
@@ -298,9 +274,6 @@ func _inlays(radius: float) -> void:
 	add_child(view)
 
 
-# Tuck the nosing inside the real floor edge; flare only the lower skirt past the
-# stone wall so its fascia is visible rather than buried in the island slab. Made with the kit part
-# (_kit_part): its arrays read back from the renderer, which stalls a real GPU.
 static func _rim_skirt(source: Mesh) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	for surface in source.get_surface_count():
@@ -408,8 +381,6 @@ func _exit_tree() -> void:
 	release()
 
 
-# The Highdraft sheet's painted panorama, graded to the run's dusk by the Mind's look row, with a
-# local cache and per-fight saved values. The worker's painting when prepare() started one.
 static func _make_panorama() -> ImageTexture:
 	if _panorama_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_panorama_task)
@@ -421,7 +392,6 @@ static func _make_panorama() -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
-# The panorama's pixels. Touches no node or server, so a worker can paint it.
 static func _paint_panorama() -> Image:
 	var image := Image.create_empty(512, 256, false, Image.FORMAT_RGB8)
 	var noise := FastNoiseLite.new()

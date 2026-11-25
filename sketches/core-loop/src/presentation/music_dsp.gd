@@ -1,13 +1,5 @@
 extends RefCounted
 
-# Dynamic Music bus DSP chain and StingerMusic room cohesion bus (Sound V4).
-# Owns:
-#   - Music bus: AudioEffectEQ6 (dynamic 2-4 kHz warning carving),
-#     AudioEffectLowPassFilter (low-hull / slow-motion),
-#     AudioEffectHighPassFilter (build tension and drop release).
-#   - StingerMusic bus -> SFX: studio room reverb so stingers and June's answers sit inside
-#     the same acoustic space as the recorded band while obeying SFX volume and mute.
-
 const MUSIC_BUS := "Music"
 const STINGER_BUS := "StingerMusic"
 const SFX_BUS := "SFX"

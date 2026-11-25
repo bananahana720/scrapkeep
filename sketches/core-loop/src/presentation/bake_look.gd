@@ -1,41 +1,14 @@
 extends RefCounted
 
-# Shows the polish pass's baked shading (tools/blender/POLISH.md) on runtime materials.
-# The bake writes ambient occlusion and edge wear into the vertex colours of the vertex-colour
-# slots, and into UV2 for every face (x: unoccluded fraction, y: wear, 0.5 neutral). Enemy and
-# boss scripts swap their own materials onto GLB surfaces (body paint for the hit flash, tints,
-# state swaps), and those ignore UV2, so every face outside the vertex-colour slots lost the bake.
-# dress() multiplies those surfaces by the bake's shade through StandardMaterial3D's detail layer on
-# UV2, so a script can keep mutating its material (albedo, emission) as before. A multiply cannot
-# brighten, so convex edges stop at neutral (the vertex slots lift them up to 18%, and Fleet paint's
-# edge layer, finish() below, lifts them toward bone): the darkening, which carries the form, matches exactly. The detail layer always writes NORMAL_MAP,
-# so the shaded surfaces need usable tangents: the polished GLBs carry a constant UV1, which
-# leaves theirs constant and, where one runs along its normal, drew that quad black.
-# tangent_safe() rebuilds such a mesh once with tangents square to the normals.
-
-# Slots whose vertex colours already carry the bake (polish.py bake_slots): left alone, or the
-# shade would apply twice.
 const VERTEX_BAKED := ["paint", "pilot", "ancient_enamel", "hydraulic"]
-# polish.py defaults: shade = (1 - AO_STRENGTH * occluded) * (1 + wear), wear in +-EDGE.
 const AO_STRENGTH := 0.55
 const EDGE := 0.18
-# 256 steps: the plate material samples with nearest filtering, and 64 banded on it.
 const RAMP := 256
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# The 2010 finish (SIGHT-PERSONA.md sections 5 and 6, items 6 and 7). Fleet paint is what a hand repainted, so its
-# convex edges wear toward bone and its rim keeps a pale edge in shade; a casting (an Old Works shell, a Warden's
-# enamel) bakes with edge 0 (POLISH.md), so its wear reads neutral and it stays spotless whatever slot it is in.
-# The multiply above cannot brighten, so the bone comes from one shared layer drawn after the paint (next_pass):
-# where the bake's wear says convex it mixes the lit paint toward lit bone, up to LIFT at the most worn edge, and
-# at the silhouette (RIM, rising as the face turns from the eye) it does the same. Both glow faintly in SKY_TINT
-# (SKY_GLOW), light no sun gives, so in shade the rust keeps a pale cool edge against warm sandstone instead of going
-# near black (visual-assets-audit.md finding 8). It draws nothing on a neutral face that looks at the eye.
-# The candidates and their numbers are on the W46-03 pull request's sheet (ruling cq).
 const LIFT_SLOTS := ["fleet_paint"]
 const LIFT := 0.55
-# Wear below LIFT_FROM of the most worn reads as unworn: the bake's soft falloff stays paint, the edge goes bone.
 const LIFT_FROM := 0.2
 const RIM := 0.45
 const RIM_POWER := 3.0
@@ -72,8 +45,6 @@ static var _twins := {}
 static var _lift: ShaderMaterial
 
 
-# The one shared edge layer every Fleet-paint surface draws after its paint: bone on worn convex edges and a pale,
-# faintly sky-lit rim where a face turns from the eye (the constants above).
 static func edge_lift() -> ShaderMaterial:
 	if _lift == null:
 		var shader := Shader.new()
@@ -91,16 +62,12 @@ static func edge_lift() -> ShaderMaterial:
 	return _lift
 
 
-# The bone the edge layer mixes in at bake wear `wear_v` (UV2.y) on a face whose normal meets the eye at `facing`
-# (dot(normal, view), 1 head on), as its shader draws it: none on a neutral face (a casting baked with edge 0 reads 0.5
-# everywhere) or a crease that looks at the eye, LIFT at the most worn convex edge, RIM at the silhouette.
 static func lift_alpha(wear_v: float, facing := 1.0) -> float:
 	var edge := LIFT * smoothstep(LIFT_FROM, 1.0, clampf((0.5 - wear_v) * 2.0, 0.0, 1.0))
 	var a := maxf(edge, RIM * pow(1.0 - clampf(facing, 0.0, 1.0), RIM_POWER))
 	return a if a >= 0.004 else 0.0
 
 
-# What a surface's slot finish is: "lift" for Fleet paint, "brass" for a brass slot, "" for the rest.
 static func finish_of(mesh: Mesh, surface: int) -> String:
 	if not (mesh is ArrayMesh):
 		return ""
@@ -112,7 +79,6 @@ static func finish_of(mesh: Mesh, surface: int) -> String:
 	return ""
 
 
-# Gives `mat` its slot finish in place: Fleet paint the bone edge and rim layer, brass the one satin brass.
 static func finish(mat: StandardMaterial3D, kind: String) -> void:
 	if kind == "lift":
 		mat.next_pass = edge_lift()
@@ -120,8 +86,7 @@ static func finish(mat: StandardMaterial3D, kind: String) -> void:
 		Palette.brass_finish(mat)
 
 
-# The shade as a multiplier, capped at 1. x is the unoccluded fraction; y is the wear with glTF's
-# flipped V, so 0 is the most worn convex edge and 1 the deepest crease.
+# glTF flips V, so y=0 is convex wear and y=1 is deepest crease.
 static func ramp() -> ImageTexture:
 	if _ramp == null:
 		var img := Image.create_empty(RAMP, RAMP, false, Image.FORMAT_RGB8)
@@ -143,8 +108,6 @@ static func vertex_baked(mesh: Mesh, surface: int) -> bool:
 	return mesh is ArrayMesh and (mesh as ArrayMesh).surface_get_name(surface) in VERTEX_BAKED
 
 
-# Gives `mat` the UV2 shade in place. A Palette.solid loses its world grain and grime: the polished
-# model brings its own surface, and the soft-toy bodies read smooth.
 static func apply(mat: StandardMaterial3D) -> void:
 	if mat.get_meta("bake_look", false):
 		return
@@ -156,16 +119,11 @@ static func apply(mat: StandardMaterial3D) -> void:
 	mat.detail_mask = null
 	mat.uv2_triplanar = false
 	mat.uv2_world_triplanar = false
-	# Into texel centres: an open face (x = 1) on a repeating, filtered ramp would otherwise blend
-	# in the fully occluded column from the far edge.
 	mat.uv2_scale = Vector3(RAMP - 1.0, RAMP - 1.0, RAMP) / RAMP
 	mat.uv2_offset = Vector3(0.5, 0.5, 0.0) / RAMP
 	mat.set_meta("bake_look", true)
 
 
-# A shared material's baked copy, made once per source, for surfaces of a shared mesh. With
-# `shade` false the copy only loses the grain, for a vertex-colour slot that carries the bake.
-# `kind` is the slot finish (finish_of) the copy also takes.
 static func twin(mat: StandardMaterial3D, shade := true, kind := "") -> StandardMaterial3D:
 	if mat.get_meta("bake_look", false) or mat.get_meta("bake_smooth", false):
 		return mat
@@ -182,8 +140,6 @@ static func twin(mat: StandardMaterial3D, shade := true, kind := "") -> Standard
 	return _twins[key]
 
 
-# `mat` without the shade, for a mesh with no UV2 that borrows a dressed material (death debris
-# boxes): UV2 reads (0, 0) there, the fully covered corner.
 static func unbaked(mat: Material) -> Material:
 	if not (mat is StandardMaterial3D and mat.get_meta("bake_look", false)):
 		return mat
@@ -198,29 +154,16 @@ static func unbaked(mat: Material) -> Material:
 	return _twins[key]
 
 
-# Telegraph stripes read flat: Palette's, and the per-script ones painted with the threat texture.
 static func _warning(mat: StandardMaterial3D) -> bool:
 	return mat == Palette.hazard_stripe() or mat.get_meta("no_bake", false) \
 		or (mat.albedo_texture != null and mat.albedo_texture == Threat.Painter.stripe_texture())
 
 
-# Every baked surface under `root` that a StandardMaterial3D draws takes the bake's look: outside
-# the vertex-colour slots the UV2 shade, inside them (which carry the shade already) just the
-# loss of the world grain. A material in `owned` (one the script holds and mutates, such as the
-# body paint the hit flash brightens) changes in place, so the script's changes still show; any
-# other material is swapped for its twin, on the node or on the shared mesh (an imported mesh's
-# cached resource included, so every later instance shares the twin). An owned material that also
-# draws a surface wanting another look stays as it is, since a twin would stop drawing the
-# script's changes. Each surface also takes its slot's finish (finish_of): an owned material asked for two keeps
-# neither. Telegraph stripes stay flat. Shader materials and unbaked meshes are left
-# alone. Safe to call again. Returns the surfaces dressed.
 static func dress(root: Node, owned: Array = []) -> int:
 	var views: Array = root.find_children("*", "MeshInstance3D", true, false)
 	if root is MeshInstance3D:
 		views.append(root)
-	# Which looks each material is asked for: 0 unbaked, 1 shaded, 2 smoothed only.
 	var wants := {}
-	# Which slot finishes each material is asked for: an owned one asked for two keeps its own.
 	var finishes := {}
 	for view: MeshInstance3D in views:
 		if view.mesh == null:
@@ -258,7 +201,6 @@ static func dress(root: Node, owned: Array = []) -> int:
 			elif view.material_override == mat:
 				if wants[mat].size() > 1:
 					continue
-				# One override covers every surface, so like an owned material it takes a finish only when they all share it.
 				view.material_override = twin(mat, look == 1, kind if finishes[mat].size() == 1 else "")
 			elif view.get_surface_override_material(i) == mat:
 				view.set_surface_override_material(i, twin(mat, look == 1, kind))
@@ -268,8 +210,6 @@ static func dress(root: Node, owned: Array = []) -> int:
 	return dressed
 
 
-# Makes what dress() would make for one view (its tangent-safe mesh and its materials' twins) without
-# changing the view, so a later dress() of its scene finds them made: a warm spreads a model's dress a view a frame.
 static func warm_view(view: MeshInstance3D) -> void:
 	if view.mesh == null:
 		return
@@ -281,12 +221,6 @@ static func warm_view(view: MeshInstance3D) -> void:
 			twin(mat, look == 1, finish_of(mesh, i))
 
 
-# `mesh`, or once per mesh a copy whose shaded surfaces have tangents square to their normals:
-# every tangent where the surface's UV1 is a single point (the tangents mean nothing there), else
-# only the ones that are zero or run along their normal. The normal map those surfaces draw is
-# flat, so any square tangent is right. Names, materials, LODs and the shadow mesh carry over;
-# a mesh with blend shapes or custom channels is left as it is. The copy hangs off the source
-# mesh's metadata, so it lives exactly as long as the source.
 static func tangent_safe(mesh: Mesh) -> Mesh:
 	if not (mesh is ArrayMesh) or mesh.get_meta("bake_tangents_ok", false):
 		return mesh
@@ -336,8 +270,6 @@ static func tangent_safe(mesh: Mesh) -> Mesh:
 const _CUSTOM := Mesh.ARRAY_FORMAT_CUSTOM0 | Mesh.ARRAY_FORMAT_CUSTOM1 | Mesh.ARRAY_FORMAT_CUSTOM2 | Mesh.ARRAY_FORMAT_CUSTOM3
 
 
-# 0 leaves the tangents, 1 fixes the bad ones, 2 replaces them all (no tangents, or a UV1 that
-# is a single point). Compressed surfaces read back decompressed and rebuild uncompressed.
 static func _tangent_fix(mesh: ArrayMesh, surface: int) -> int:
 	var format := mesh.surface_get_format(surface)
 	if (format & Mesh.ARRAY_FORMAT_NORMAL) == 0:
@@ -367,8 +299,6 @@ static func _bad(tangent: Vector3, normal: Vector3) -> bool:
 	return tangent.length() < 0.5 or absf(tangent.normalized().dot(normal)) > 0.9
 
 
-# The surface's imported LODs as add_surface_from_arrays takes them, read back from the server's
-# index buffers (16-bit up to 65536 vertices). Any that does not read back cleanly is dropped.
 static func _lods(mesh: ArrayMesh, surface: int) -> Dictionary:
 	var lods := {}
 	var count := mesh.surface_get_array_len(surface)

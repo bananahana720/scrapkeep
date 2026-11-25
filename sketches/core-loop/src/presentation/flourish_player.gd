@@ -1,25 +1,6 @@
 extends Node
 
-# Plays one row of flourish_rows.gd over play: name cards, inked stamps, captions, comic panels,
-# a live close-up panel and drawn sound words on a canvas layer, in the title openings' comic look
-# (title_intro_player.gd). It never stops time, never moves the camera and never eats input:
-# a fresh press after SKIP_GRACE (wall seconds) that is not steering or a core verb (PLAY_ACTIONS) and not the
-# mouse wheel ends the row, and still reaches the ball. While the tree is paused (a reward ceremony, the pause menu) the row hides and waits.
-#
-# Layout keeps to ScreenRegions: cards, captions, panels and stamps in the left column of the
-# play view (a stamp inks onto the right edge of the top piece), sound words at their anchor
-# clamped inside the play view. Nothing sits over the top band (the boss plate), the toast band
-# (the world and stage cards), the prompts or the bottom bar, and nothing over a visible Control
-# in AVOID_GROUP (the stage 1 start pick card): the column narrows to its left and sound words
-# drop below it.
-#
-# A row plays in full until a profile has seen SEEN_SHARE of it, and in its short form after, so
-# a full beat cut early plays in full again next run. A queued row that waited QUEUE_WAIT seconds
-# of play, or whose anchor is gone, is dropped and logged with cut "expired". Every finished row emits finished and joins
-# the run's "flourishes" meta, which run_log.gd writes into the run record.
-
 signal finished(id: String, skipped: bool)
-# A row reached the screen (its first piece is about to draw); spillway_story hangs its sting here.
 signal started(id: String)
 
 const Rows := preload("res://src/presentation/flourish_rows.gd")
@@ -37,12 +18,8 @@ const QUEUE_WAIT := 6.0
 const PLAY_ACTIONS := ["cl_forward", "cl_back", "cl_left", "cl_right", "cl_jump", "cl_boost", "cl_haul", "cl_fire", "cl_harpoon"]
 const AVOID_GROUP := "flourish_avoid"
 const AVOID_GAP := 12.0
-# The pieces that are read: a stamp and a sound word are looked at.
-# The pieces that carry a fact a sound word must not cover; one that starts hides a live word it meets.
 const FACT_KINDS := ["card", "caption", "panels", "stamp", "inset"]
 const WRITTEN := ["card", "caption", "panels"]
-# What holds the other voices (reading()): the written pieces and the stamp, which is a voice too
-# and sits where Moss's message box goes when a second run's short cold open is only a stamp.
 const HOLDS_VOICES := ["card", "caption", "panels", "stamp"]
 const INK := Color("17141a")
 const PAPER := Color("f3ecdc")
@@ -51,15 +28,11 @@ const SFX_FILL := Color("ffd23f")
 const COLUMN_X := 0.03
 const COLUMN_WIDTH := 0.30
 const SLOT_Y := {"left_top": 0.30, "left_low": 0.50}
-# A stamp inks onto the right edge of the column's top piece (the punch card, the comic page);
-# "centre" puts it over the upper play view, for a caller that knows no threat is committed.
 const STAMP_OVERLAP := 0.08
 const STAMP_RIGHT := 0.5
 const STAMP_MIN_SHARE := 0.4
 const STAMP_CENTRE_Y := 0.40
-# Sound words stay inside the play view, between the toast band and the prompts.
 const PLAY_VIEW := Rect2(0.34, 0.30, 0.60, 0.28)
-# A close-up panel sits on the right of the play view, between the toast band and the prompts.
 const INSET_VIEW := Rect2(0.715, 0.295, 0.25, 0.32)
 const INSET_TILT := 2.0
 const BASE_HEIGHT := 1080.0
@@ -71,15 +44,8 @@ var playing := false
 var id := ""
 var short := false
 var clock := 0.0
-# Wall seconds the row has played: its clock runs on game time, which slow motion stretches,
-# and the skip grace is the player's own second and a half.
 var _wall := 0.0
 var run_seed := 0
-# Every row finished since setup: {id, s, full, skipped, held, cut}. cut is "" when it showed
-# out, else "skipped" (a press), "preempted" (a higher row), "stopped" (stop_all) or "expired"
-# (dropped from the queue unshown); skipped is
-# cut != "". finished is emitted before the record joins the run meta, and it is the same
-# dictionary, so a listener may set its held.
 var played: Array = []
 
 var _pieces: Array = []
@@ -117,10 +83,6 @@ func setup(ctx_ref) -> void:
 	set_process(false)
 
 
-# Starts a row, or queues it behind a row of equal or higher priority. A higher row ends the
-# one showing (cut "preempted"). seed_value < 0 reads the run's seed. anchors: name -> Node3D for
-# sound words. form "full" or "short" overrides the seen rule (stills, tests) and marks nothing.
-# False for an unknown row or a full queue.
 func play(row_id: String, seed_value := -1, anchors := {}, form := "") -> bool:
 	if not Rows.has(row_id):
 		return false
@@ -132,7 +94,6 @@ func play(row_id: String, seed_value := -1, anchors := {}, form := "") -> bool:
 			_queue.append([row_id, seed_value, anchors, form, 0.0])
 			return true
 		_finish("preempted", false)
-		# A finished listener may have started a row of its own; this one waits behind it.
 		if playing:
 			_queue.push_front([row_id, seed_value, anchors, form, 0.0])
 			return true
@@ -149,7 +110,6 @@ func skip() -> void:
 		_finish("skipped")
 
 
-# Ends the showing row and drops the queue: a screen change away from play.
 func stop_all() -> void:
 	_queue.clear()
 	if playing:
@@ -160,9 +120,6 @@ func queued() -> Array:
 	return _queue.map(func(entry): return entry[0])
 
 
-# Whether the row (or, with no name, whatever plays) still has reading matter to show: it waits
-# in the queue, or it plays with a card, a caption, a panel or a stamp not yet off the screen. The run's
-# opening holds Moss for it and the HUD holds its plates and its boss title for it.
 func reading(row_id := "") -> bool:
 	if row_id != "" and row_id in queued():
 		return true
@@ -171,18 +128,14 @@ func reading(row_id := "") -> bool:
 	return _pieces.any(func(piece): return String(piece.kind) in HOLDS_VOICES and clock < float(piece.at) + float(piece["for"]))
 
 
-# Whether the row plays or waits its turn in the queue.
 func has(row_id: String) -> bool:
 	return (playing and id == row_id) or row_id in queued()
 
 
-# Whether the row is playing with its clock in [from, to): the cues time a world beat off it.
 func in_window(row_id: String, from: float, to: float) -> bool:
 	return playing and id == row_id and clock >= from and clock < to
 
 
-# Whether the playing row has a close-up panel up or still to come: the speech bubble that
-# shares its moment waits for the picture. A panel with no subject to show is never coming.
 func close_up() -> bool:
 	if not playing:
 		return false
@@ -192,7 +145,6 @@ func close_up() -> bool:
 	return false
 
 
-# Pieces on screen now, by kind, for tests and stills.
 func live_kinds() -> Array:
 	return _live.map(func(entry): return String(entry.piece.kind))
 
@@ -245,13 +197,10 @@ func _input(event: InputEvent) -> void:
 		skip()
 
 
-# Whether a press may end the row yet.
 func skippable() -> bool:
 	return playing and _wall >= SKIP_GRACE
 
 
-# Steering and the verbs a player presses all through play never skip a row: only a press with
-# nothing to do in play (or E, Q, the bay keys, Esc) does, so a first-time beat is read in full.
 func _play_verb(event: InputEvent) -> bool:
 	for action in PLAY_ACTIONS:
 		if InputMap.has_action(action) and InputMap.event_is_action(event, action):
@@ -269,7 +218,6 @@ static func skips(event: InputEvent) -> bool:
 		or (event is InputEventScreenTouch and event.pressed)
 
 
-# Moves the row on by delta seconds; tests call it directly.
 func advance(delta: float) -> void:
 	if not playing:
 		return
@@ -280,7 +228,6 @@ func advance(delta: float) -> void:
 	if clock >= length():
 		_finish("")
 		return
-	# Sound words start last, so a stamp or card that starts the same frame is already live for the word to keep off.
 	for words_pass in [false, true]:
 		for i in _pieces.size():
 			var piece: Dictionary = _pieces[i]
@@ -333,8 +280,6 @@ func _finish(cut: String, next := true) -> void:
 		_start(entry[0], entry[1], entry[2], entry[3])
 
 
-# Drops queued rows that waited QUEUE_WAIT seconds of play or lost an anchor, each logged with
-# cut "expired" (s 0) and announced by finished, so a caller's once-per-run flag can tell.
 func _expire_queue() -> void:
 	for entry in _queue.duplicate():
 		if float(entry[4]) > QUEUE_WAIT or not _anchors_alive(entry[2]):
@@ -378,8 +323,6 @@ func _drop(entry: Dictionary) -> void:
 		node.queue_free()
 
 
-# A card, caption, panel, stamp or inset carries the fact, so a sound word that is already up and meets
-# it is hidden at once; player_fx reads the new list.
 func _yield_words(node: Control) -> void:
 	_room_changed()
 	var rect := node.get_global_rect()
@@ -535,7 +478,6 @@ func _panels(texts: Array) -> Control:
 	return strip
 
 
-# The node a row's anchor names, while it is alive and in the world; null otherwise.
 func _anchor(name: String) -> Node3D:
 	var node = _anchors.get(name)
 	return node if is_instance_valid(node) and node is Node3D and node.is_inside_tree() else null
@@ -545,7 +487,6 @@ func _subject_of(piece: Dictionary) -> Node3D:
 	return _anchor(String(piece.get("anchor", "")))
 
 
-# A live close-up of the piece's anchor in an inked panel (flourish_inset.gd). No anchor, no panel.
 func _inset(piece: Dictionary) -> Control:
 	var subject := _subject_of(piece)
 	if subject == null:
@@ -567,7 +508,6 @@ func _inset(piece: Dictionary) -> Control:
 	return inset
 
 
-# A column piece at its slot, lifted if it would reach the prompts band, never above the toasts.
 func _seat(node: Control, at: Vector2) -> void:
 	node.reset_size()
 	var screen := _screen()
@@ -591,7 +531,6 @@ func _stamp(text: String, colour: Color, slot: String) -> Control:
 	return label
 
 
-# Panel i shows PANEL_STEP * i seconds after the strip, on the row's own clock.
 func _reveal_panels(entry: Dictionary) -> void:
 	var strip: Control = entry.node
 	for i in strip.get_child_count():
@@ -599,7 +538,6 @@ func _reveal_panels(entry: Dictionary) -> void:
 			strip.get_child(i).modulate.a = 1.0
 
 
-# Visible Controls the row keeps clear of, as screen rectangles.
 func _avoid_rects() -> Array:
 	var out: Array = []
 	if not is_inside_tree():
@@ -610,12 +548,10 @@ func _avoid_rects() -> Array:
 	return out
 
 
-# The column's right edge in pixels: COLUMN_WIDTH, or short of an avoided rectangle.
 func _column_right() -> float:
 	return minf(_screen().x * (COLUMN_X + COLUMN_WIDTH), _avoid_right())
 
 
-# Short of the nearest avoided rectangle that crosses the column's height, in pixels; INF if none.
 func _avoid_right() -> float:
 	var screen := _screen()
 	var right := INF
@@ -627,9 +563,6 @@ func _avoid_right() -> float:
 	return right
 
 
-# On the right edge of the column's top piece, overlapping it by STAMP_OVERLAP of the stamp's
-# width so the piece's words stay readable, and never past STAMP_RIGHT of the screen; with no
-# piece up, at the column's top slot.
 func _stamp_at(label: Control) -> Vector2:
 	var screen := _screen()
 	var top: Control = null
@@ -641,8 +574,6 @@ func _stamp_at(label: Control) -> Vector2:
 		return _column_at("left_top")
 	var start := top.position.x + top.size.x
 	var limit := minf(screen.x * STAMP_RIGHT, _avoid_right())
-	# Too little room beside the piece: the stamp's type shrinks (to STAMP_MIN_SHARE) rather than
-	# cover more of the piece's words.
 	var room := limit - start
 	if label.size.x * (1.0 - STAMP_OVERLAP) > room:
 		var share := clampf(room / (label.size.x * (1.0 - STAMP_OVERLAP)), STAMP_MIN_SHARE, 1.0)
@@ -652,8 +583,6 @@ func _stamp_at(label: Control) -> Vector2:
 	return Vector2(x, top.position.y + top.size.y * 0.5 - label.size.y * 0.5)
 
 
-# The screen the row's own pieces cover now, for the sound words of player_fx and machine_fx to keep off
-# (PlayerFx.KEEP_GROUP). Its own words are left out: the row places them against everything else.
 func keep_clear_rects() -> Array[Rect2]:
 	var out: Array[Rect2] = []
 	for entry in _live:
@@ -665,10 +594,6 @@ func keep_clear_rects() -> Array[Rect2]:
 	return out
 
 
-# A sound word sits at its anchor's screen point, or at its at_share, clamped in the play view. It
-# takes the first of its spots (the asked one, then above, below and beside it, each clamped to the
-# play view) that covers none of the row's pieces, the HUD or a screen; with none free it is not
-# drawn. It never slides onto something else (PF-26).
 func _place_word(label: Control, piece: Dictionary) -> bool:
 	var screen := _screen()
 	var share: Vector2 = piece.get("at_share", Vector2(0.62, 0.36))
@@ -681,7 +606,6 @@ func _place_word(label: Control, piece: Dictionary) -> bool:
 	var view := Rect2(PLAY_VIEW.position * screen, PLAY_VIEW.size * screen)
 	var asked := share * screen - label.size * 0.5
 	var gap := AVOID_GAP * _scale()
-	# Near its anchor: where it was asked, above it, below it, then beside it.
 	var spots: Array[Vector2] = [asked, asked + Vector2(0.0, -label.size.y - gap), asked + Vector2(0.0, label.size.y + gap),
 		asked + Vector2(label.size.x + gap, 0.0), asked - Vector2(label.size.x + gap, 0.0)]
 	var room = get_tree().get_first_node_in_group(PlayerFx.ROOM_GROUP) if is_inside_tree() else null
@@ -699,7 +623,6 @@ func _place_word(label: Control, piece: Dictionary) -> bool:
 	return false
 
 
-# Three frames of overshoot; reduced motion just shows the piece.
 func _pop(node: Control, from: float) -> void:
 	if reduced_motion or not is_inside_tree():
 		return
@@ -710,7 +633,6 @@ func _pop(node: Control, from: float) -> void:
 	_tweens.append(tween)
 
 
-# Speed lines from the screen's rim only, so the play view's middle stays clear.
 class Lines extends Control:
 	var player
 	var mode := ""

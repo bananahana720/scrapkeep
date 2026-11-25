@@ -2,15 +2,10 @@ extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# A run of one fact inside its window (EventKinds.JUICE chain_ms): each one inside the
-# window climbs a rung up to chain_cap, a gap starts over at rung 0. Audio climbs the
-# pentatonic by the rung and juice draws the run's length, both from this one record,
-# so what you hear and what you see never count differently.
 
 var window_ms := 700
 var cap := 9
 var rung := 0
-# Facts in the current run, uncapped; 0 before the first.
 var length := 0
 var last_ms := -100000
 

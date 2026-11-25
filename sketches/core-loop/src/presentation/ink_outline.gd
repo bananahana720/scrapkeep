@@ -5,47 +5,21 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
 
-# The comic ink line round the actors: pilots' shells, enemies and Wardens (W46-INK). Each drawn surface takes one more
-# pass, an inverted hull: its back faces pushed out along a normal and drawn flat in warm charcoal, so only the rim past
-# the silhouette shows. A mesh's hard edges split its normals (a box corner has three), and a hull pushed along split
-# normals opens a gap at every corner; so each mesh is copied once with its normals averaged per position into CUSTOM0
-# (hull()), and every hull pushes along that one welded normal. The push is measured in pixels, so the line keeps its
-# weight at any distance, and capped in metres, so a far thin strut never drowns in it; past FADE_FROM it thins to none
-# at FADE_TO, where the silhouette carries itself. It casts no shadow.
-#
-# Glass, glows, telegraph stripes, see-through, hole-cutting and unshaded surfaces take no line (drawable()). The one
-# hole-cutting look that does is the shipped cutaway ball (BallLooks.CUTAWAY_SHADER): its line is a variant that cuts the
-# same window with the same parameters, so the ball and its kit keep their rim and the window stays open. A material the
-# actor's script holds and mutates (`owned`: the body paint the hit flash, a Warden's enamel) and a shader material (a live
-# look whose uniforms move) take the pass in place; any other standard material may be shared with scenery (hero_assets'
-# slot cache paints the world's scrap chunks too), so the surface draws an inked twin of it instead, set on the surface
-# itself and never on the shared welded mesh. A material already carrying the Fleet edge layer (BakeLook.edge_lift) keeps
-# it: the line chains after a copy of the layer, never the shared layer itself.
 
 const INK := Color(0.08, 0.09, 0.11)
 const ROLES := ["pilot", "enemy", "warden"]
-# Line weight in pixels, and the most it may be in metres.
 const WIDTH_PX := {"pilot": 1.6, "enemy": 1.8, "warden": 2.5}
 const WIDTH_CAP := {"pilot": 0.03, "enemy": 0.06, "warden": 0.12}
 const FADE_FROM := 65.0
 const FADE_TO := 95.0
-# Slot or material names that never take a line: see-through, lit or glowing parts, and the identity-swapped accents
-# hero_assets lights by identity (the ready glow, Kest's fuse).
 const SKIP_NAMES := ["glass", "lens", "glow", "canopy", "window", "visor", "lamp", "screen", "flame", "class_accent", "kest_fuse",
 	"ancient_light"]
-# A node under one of these takes no line: the cockpit's controls sit inside the ball.
 const SKIP_NODES := ["Cockpit", "Control"]
-# A lit material whose glow is this bright is a light, not a body.
 const GLOW_LIMIT := 0.3
-# Positions within this many metres are one corner.
 const WELD := 0.0001
 const _CUSTOM := Mesh.ARRAY_FORMAT_CUSTOM0 | Mesh.ARRAY_FORMAT_CUSTOM1 | Mesh.ARRAY_FORMAT_CUSTOM2 | Mesh.ARRAY_FORMAT_CUSTOM3
 
-# CUSTOM0.xyz is the welded normal. w 0: in the mesh's space. w 1: a skinned surface's, in the frame of its own normal
-# and tangent, so the bones turn it with them (Godot skins NORMAL and TANGENT, never CUSTOM0). A vertex with no
-# welded normal (a mesh that never went through hull()) reads zero and its hull folds away off screen.
-# The cutaway variant (CUT_*) cuts the window BallLooks.CUTAWAY_SHADER cuts, read with its parameters: where the ball's
-# plating or kit opens for the pilot, its line opens too.
+# Godot skins NORMAL and TANGENT, never CUSTOM0; skinned welded normals use the N/T frame (CUSTOM0.w > 0.5).
 const SHADER := """shader_type spatial;
 render_mode unshaded, cull_front, depth_draw_opaque, shadows_disabled, skip_vertex_transform;
 uniform vec4 ink : source_color = vec4(0.08, 0.09, 0.11, 1.0);
@@ -124,11 +98,9 @@ const CUT_FRAGMENT := """float facing = dot(normalize(from_centre), normalize(to
 	if (!cockpit && facing > window) {
 		discard;
 	}"""
-# The cutaway parameters the variant reads off the material it lines.
 const CUT_PARAMETERS := ["window", "held", "centre_at", "centre_local", "keep_within", "tube", "back_is_kit", "seat_back_top",
 	"back_above", "back_behind"]
 
-# Off, apply() draws no line on what it is given next (a lean preset's switch).
 static var enabled := true
 static var _shaders := {}
 static var _inks := {}
@@ -136,9 +108,6 @@ static var _lifts := {}
 static var _stripped := {}
 
 
-# Gives every drawable surface under `root` the ink line for `role` ("pilot", "enemy" or "warden"; anything else draws
-# as "enemy"). `owned` lists materials the caller's script mutates, which take the line in place. Safe to call again.
-# Returns the surfaces that draw the line.
 static func apply(root: Node, role := "enemy", owned: Array = []) -> int:
 	if not enabled or root == null:
 		return 0
@@ -168,7 +137,6 @@ static func apply(root: Node, role := "enemy", owned: Array = []) -> int:
 	return lined
 
 
-# `mat` without the ink line, for what borrows a lined material but must not draw it (death debris on a plain box).
 static func strip(mat: Material) -> Material:
 	if mat == null:
 		return null
@@ -193,7 +161,6 @@ static func reset_for_tests() -> void:
 	_stripped.clear()
 
 
-# The shared ink pass for `role`.
 static func ink(role: String) -> ShaderMaterial:
 	if not role in ROLES:
 		role = "enemy"
@@ -211,14 +178,12 @@ static func ink(role: String) -> ShaderMaterial:
 	return _inks[role]
 
 
-# The line's width in metres at `depth` metres from the eye, `per_px` metres to a pixel there, as the shader draws it.
 static func width_at(role: String, depth: float, per_px: float) -> float:
 	if not role in ROLES:
 		role = "enemy"
 	return minf(WIDTH_PX[role] * per_px, WIDTH_CAP[role]) * (1.0 - smoothstep(FADE_FROM, FADE_TO, depth))
 
 
-# Whether surface `surface` of `mesh`, drawn with `mat`, takes a line: an opaque, lit, unglowing body.
 static func drawable(mesh: Mesh, surface: int, mat: Material) -> bool:
 	if mat == null or mat.has_meta("ink_role"):
 		return false
@@ -241,7 +206,6 @@ static func drawable(mesh: Mesh, surface: int, mat: Material) -> bool:
 		var code := shader.code
 		if code == BallLooks.CUTAWAY_SHADER:
 			return true
-		# Any other shader that cuts holes (discard) takes none: its hull would fill the hole.
 		for mark in ["unshaded", "blend_add", "blend_sub", "blend_mul", "depth_draw_never", "ALPHA", "discard"]:
 			if code.contains(mark):
 				return false
@@ -249,12 +213,6 @@ static func drawable(mesh: Mesh, surface: int, mat: Material) -> bool:
 	return false
 
 
-# `mesh`, or once per mesh a copy carrying the welded normal in CUSTOM0, everything else as it was (skin, UVs,
-# colours, tangents, names, materials, LODs; the shadow mesh too unless the source was compressed: the copy is not,
-# and a compressed shadow mesh beside it drew the shell as a black block). Hard corners average every face normal that meets there, so
-# the hull closes round them. Null for a mesh it cannot copy: a primitive (scripts resize those), a blend-shaped or
-# non-triangle mesh, or one already using a custom channel. The copy hangs off the source's metadata, so it lives
-# exactly as long as the source.
 static func hull(mesh: Mesh) -> Mesh:
 	if mesh == null or mesh.has_meta("ink_hull_of"):
 		return mesh
@@ -278,7 +236,6 @@ static func _weld(mesh: Mesh) -> ArrayMesh:
 				or (format & Mesh.ARRAY_FORMAT_NORMAL) == 0:
 			return null
 		surfaces.append(source.surface_get_arrays(i))
-	# Every distinct normal that meets at a position, summed once each (a split seam's twins count once).
 	var sums := {}
 	var seen := {}
 	for arrays: Array in surfaces:
@@ -338,9 +295,6 @@ static func _weld(mesh: Mesh) -> ArrayMesh:
 	return out
 
 
-# Lines surface `surface` of `view`: in place for an owned or shader material, else through a twin set on the view (its
-# override, or the surface's), never on the welded mesh other actors share. False when the material's pass chain is one
-# it does not know.
 static func _line(view: MeshInstance3D, surface: int, role: String, owned: Array) -> bool:
 	var mat := view.get_active_material(surface)
 	if mat.has_meta("ink_source") or (mat.next_pass != null and mat.next_pass.has_meta("ink_role")):
@@ -357,13 +311,9 @@ static func _line(view: MeshInstance3D, surface: int, role: String, owned: Array
 	return true
 
 
-# `mat`'s inked twin for `role`, made once and held on `mat` itself, so it lives exactly as long as its source (a refit
-# preview leaves nothing behind). The twin names its source by id, not by reference, so the two never hold each other.
 static func _twin(mat: Material, role: String) -> Material:
 	var key := "ink_twin_" + role
 	var twin := mat.get_meta(key) as Material if mat.has_meta(key) else null
-	# One made before reset_for_tests() chains a pass no longer current, and a copy of `mat` made
-	# elsewhere (BallLooks.light_pilot's backlit duplicate) carries the original's twin in its metas.
 	if twin == null or twin.get_meta("ink_source", 0) != mat.get_instance_id() \
 			or not (twin.next_pass == ink(role) or twin.next_pass == _lift(role)):
 		twin = mat.duplicate() as Material
@@ -377,7 +327,6 @@ static func _twin(mat: Material, role: String) -> Material:
 	return twin
 
 
-# Puts `line` after `mat`'s own passes: straight after it, or after a copy of the Fleet edge layer.
 static func _chain(mat: Material, role: String, line: ShaderMaterial) -> bool:
 	var after := mat.next_pass
 	if after == null:
@@ -396,8 +345,6 @@ static func _cutaway(mat: Material) -> bool:
 		and (mat as ShaderMaterial).shader.code == BallLooks.CUTAWAY_SHADER
 
 
-# The cutaway variant of `role`'s line for one cutaway material, its window read off that material. A shell's cutaway
-# materials keep their window once fitted, so the copy is made once and held on the material.
 static func _cut_ink(mat: ShaderMaterial, role: String) -> ShaderMaterial:
 	var line := ink(role).duplicate() as ShaderMaterial
 	line.shader = _shader_for(true)
@@ -447,8 +394,6 @@ static func _sheltered(view: Node, root: Node) -> bool:
 	return false
 
 
-# The surface's imported LODs, read back from the server's index buffers (16-bit up to 65536 vertices). The copy keeps
-# every vertex in place, so the source's indices stay good. Any that does not read back cleanly is dropped.
 static func _lods(mesh: ArrayMesh, surface: int) -> Dictionary:
 	var lods := {}
 	var count := mesh.surface_get_array_len(surface)

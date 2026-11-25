@@ -5,20 +5,9 @@ const Synth := preload("res://src/presentation/synth.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
 const SetDirector := preload("res://src/presentation/set_director.gd")
 
-# One baked sound per event_kinds `sound` id. Each recipe is built from the shared
-# rack in synth.gd and pitched from harmony.gd, so the families mean something:
-#   rewards and pickups ring bright bells that climb the D minor pentatonic;
-#   danger is low, minor and buzzy (squares and saws under D);
-#   movement is air and wood: whooshes, chirps and thuds with no fixed pitch;
-#   flow stingers are little band hits written on the band's own grid.
-# Everything is baked once per process at startup and cached.
 
 const RATE := Harmony.RATE
 
-# The 51 event-set WAVs (49, and feedback_set.py's shot and deflect) (design-v3/sound/INTEGRATION.md section 7, item 2; renders in
-# RENDERS.md), registered under their cue keys. A file cue replaces the recipe of the
-# same key. The file is decoded to the bank's rate at bake time, so stingers, streams and
-# the keyed bakes read it like any other cue. Peak -1 dBFS, like the recipes' 0.9.
 const EVENT_DIR := "res://assets/audio/event_set/"
 const FILE_RATE := 48000
 const EVENT_CUES := [
@@ -30,20 +19,14 @@ const EVENT_CUES := [
 	"scrap_tick_2", "scrap_tick_3", "scrap_tick_4", "scrap_tick_5", "shop_bell", "slam_boom", "smash_crack",
 	"stinger_boss_defeated", "stinger_clear", "stinger_milestone", "stinger_run_end", "stinger_run",
 	"stinger_stage", "stinger_world", "synergy_fanfare", "threat_whistle", "ui_tick", "verb_fail",
-	# Combat feedback as percussion (design-v3/sound/feedback_set.py): the shot and the deflect.
 	"weapon_zap", "clank",
 ]
-# Tiered cues: the base key keeps its recipe and its pitch-ladder callers; resolve() picks
-# the tier's file from the rung the caller already sends (the scrap and kill ladders, and
-# the rarity rung: common 0, rare up to 4, epic from the relic's 5).
 const TIER_CUES := {
 	"scrap_tick": ["scrap_tick_1", "scrap_tick_2", "scrap_tick_3", "scrap_tick_4", "scrap_tick_5"],
 	"kill_chain_tier": ["kill_chain_tier_1", "kill_chain_tier_2", "kill_chain_tier_3", "kill_chain_tier_4", "kill_chain_tier_5"],
 	"rarity_bell": ["rarity_bell_common", "rarity_bell_rare", "rarity_bell_epic"],
 }
 
-# Stingers written on the grid. The audio director starts them on a beat through the
-# music engine; beats is how long they hold the stinger lane.
 const STINGER_BEATS := {
 	"stinger_run": 4,
 	"stinger_stage": 1,
@@ -64,40 +47,25 @@ const STINGER_BEATS := {
 	"hype_drop": 7,
 	"stinger_boss_defeated": 8,
 	"build_riser": 8,
-	# The world stinger, one id per WORLD_STEPS value (world_stinger names them).
 	"stinger_world": 2,
 	"stinger_world_down5": 2,
 	"stinger_world_up5": 2,
 }
 
-# Crossing into a world plays the world stinger moved by that world's step in semitones,
-# worlds 1 to 3: the Dig steps down a fourth, the Highdraft up a fourth.
 const WORLD_STINGER := "stinger_world"
 const WORLD_STEPS := [0, -5, 5]
 
-# Simultaneous voices per cue and the shortest gap between two starts (mix_rows.gd).
 const VOICE_LIMIT := MixRows.VOICE_LIMIT
 const MIN_GAP_MS := MixRows.MIN_GAP_MS
-# Danger sounds pull the bass down so the low end never masks a warning.
 const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue", "klaxon", "threat_up", "death",
 	"threat_tick", "threat_whoosh", "threat_whistle", "threat_hum", "threat_tear", "hold_pit", "hold_bola", "hold_tether", "hold_net", "heat_kettle",
-	# The wind-up tells of the roster's attacks (windup_rows.gd), the pack pressure calls and the vent's charge:
-	# each warns of a hit, so each pulls the bass down like the threat rows do.
 	"warn_burrow", "warn_bore", "warn_lure", "warn_cut", "warn_winch", "warn_dive", "warn_tether", "warn_flap", "warn_reel",
 	"jolt_layer_tell", "flank_call", "boil_rumble", "reactor_tick",
-	# A rubble fall's warnings (rubble_fall.gd warn_sound) and the arena's crew-arrival whistle (arena_wave,
-	# sluice_warning): each comes before a hit or a crew, as enemy_arrive does.
 	"prop_crew_strain", "cave_in_rumble", "arena_wave_whistle",
-	# Brindle's five wind-ups (audio.gd BRINDLE_TELEGRAPHS), each its own tell of the attack it warns of.
 	"tele_crane_sweep", "tele_slag_ring", "tele_charge", "tele_charge_wall", "tele_eject",
-	# The park hazards' own warnings, each family's falling tone and the ground's grind: they took over the
-	# threat whistle and tick, so they pull the bass down as those do.
 	"flood_falling_pure", "fleet_falling_pure", "boiler_falling_pure", "lightning_falling_pure", "ancient_falling_pure",
 	"rock_grind_dust_hiss",
-	# Wave 46 C2/C3: Works sluice valve warning took over the shared whistle and stays in the danger lane.
 	"sluice_valve_warning"]
-# Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
-# feedback percussion (feedback_set.py) has no key, so it is not here.
 const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
 	"rivet_line_punch", "rivet_line_arrive",
 	"grapple_clink", "grapple_release", "pylon_plant", "beacon_hum", 
@@ -107,42 +75,28 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	"swarm_scatter", "mind_sable", "mind_rivet", "mind_kest", "mind_tarn", "mind_tally", "mind_cannon", "hold_pit", "hold_bola", "hold_tether", "hold_net",
 	"hold_riser", "callout_chime", "shop_bell", "rarity_tick", "rarity_bell", "rung_coil", "reveal_clank", "ceremony_build",
 	"ceremony_resolve", "line_bite", "smash_crack", "achievement_chime", "rescue_fanfare",
-	# v3 AU2 bank: every pitched cue named in design-v3/AUDIO-V3.md sections 4, 5, 8.
 	"bet_clunk", "bet_crack", "bet_refusal", "sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest",
 	"ally_wake", "fight_arm_stamp", "near_miss_whip_sable", "near_miss_whip_rivet", "near_miss_whip_kest",
 	"drop_landing", "return_launch_arpeggio", "crater_hold", "shell_spring",
 	"core_slam", "ultimate_land", "kest_demo_knock", "rivet_skid_plate",
 	"active_cutting_torch",
-	# The flume head gate's two-tone siren, and the pitched ride cues that took over a keyed stand-in.
 	"sluice_siren_two_tone", "ride_cable_clink", "steam_whistle_rise",
-	# The camp, the menus' rise and fall, and the ready and found sounds.
 	"lounge_flip", "bay_bell_ring", "marble_tick_ladder", "bay_lounge_in", "menu_move", "menu_confirm", "menu_back",
 	"ultimate_ready", "found_twinkle", "beacon_open_chime", "callout_warden_chime",
-	# World 1's own pitched sounds: the five falling warnings on the sinister degrees, the pitched landings, and the
-	# player cues built from a class motif or the spring and thwack ladders.
 	"flood_falling_pure", "fleet_falling_pure", "boiler_falling_pure", "lightning_falling_pure", "ancient_falling_pure",
 	"fleet_anvil_brass_drop", "steam_whistle_percussion_drop", "ancient_family_drop", "companion_chirp_escape",
 	"kest_falling_triad", "kest_muffled_thump", "line_load", "motif_accumulate", "motif_line", "motif_stinger",
 	"pin_double_thwack", "rebound_spring_snap", "sable_root_fifth", "rivet_snare_flam",
-	# The gauge, line-skill and ultimate cues in each class's own motif (motif_cue_id).
 	"motif_accumulate_sable", "motif_accumulate_rivet", "motif_accumulate_kest", "motif_accumulate_tarn", "motif_accumulate_tally", "motif_accumulate_cannon",
 	"motif_line_sable", "motif_line_rivet", "motif_line_kest", "motif_line_tarn", "motif_line_tally", "motif_line_cannon",
 	"motif_stinger_sable", "motif_stinger_rivet", "motif_stinger_kest", "motif_stinger_tarn", "motif_stinger_tally", "motif_stinger_cannon",
-	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
-	# --- end Tally ---
-	# Wave 46 C2/C3/C4 pitched cues: Foreman's Kindness chime, Works sluice valve warning, Shift Boss quick-sync horn.
 	"kindness_chime", "sluice_valve_warning", "quick_sync_horn",
-	# Wave 46 E3-04 pitched cadence and wayfinding flip cues (D Dorian, never threat tritone).
 	"cadence_tarn_window", "cadence_cannon_lock", "site_flip",
 ]
-# --- P-C Kest sounds ---
 const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
 	"tick_kest_62", "tick_kest_57", "tick_kest_53", "raid_kest_stinger", "raid_kest_boom", "raid_kest_roll"]
-# --- end Kest ---
 
-# Per-cue trim in dB against the 0.9 peak every cue is normalized to. Rapid, small
-# facts sit low so a firefight never turns to mush; rare facts sit at the top.
 const TRIM_DB := {
 	"ui_tick": -8.0, "hop": -10.0, "boost_whoosh": -6.0, "dash_whoosh": -5.0, "carve_release": -8.0,
 	"land_thud": -6.0, "slam_boom": -1.0, "grapple_clink": -7.0, "grapple_release": -11.0,
@@ -167,37 +121,22 @@ const TRIM_DB := {
 	"warn_burrow": -7.0, "warn_bore": -7.0, "warn_lure": -7.0,
 	"warn_cut": -7.0, "warn_winch": -7.0, "warn_dive": -7.0,
 	"warn_tether": -7.0, "warn_flap": -7.0, "warn_reel": -7.0,
-	# Pack pressure cues (combat/pack_pressure.gd): the flanker's whistle and the silt boil's rumble.
 	"flank_call": -6.0, "boil_rumble": -5.0,
 	"breach_crack": -4.0,
-	# v2 W5: the leitmotifs, the crowd-control holds, the ancients and Moss's bench.
 	"sable_arpeggio": -3.0, "rivet_hihat_roll": -3.0, "kest_low_thump": -2.0, "tarn_latch_tear": -3.0, "tally_balance_due": -3.0, "cannon_recall": -3.0,
-	# The ultimate's ready pulse carries news: 4 dB up from -9 (-8 for Kest) after mixsim read
-	# rivet_ready buried in a Warden fight (median -2.2 on the PC, -2.0 in the cloud; +2.0 here).
 	"sable_ready": -5.0, "rivet_ready": -5.0, "kest_ready": -4.0, "tarn_ready": -5.0, "tally_ready": -5.0, "cannon_ready": -5.0,
 	"sable_break": -3.0, "rivet_break": -3.0, "kest_break": -3.0, "tarn_break": -3.0, "tally_break": -3.0, "cannon_break": -3.0,
 	"fleet_motif": -4.0, "reactor_tick": -6.0, "reactor_erupt": -2.0, "swarm_buzz": -9.0, "swarm_lock": -6.0, "swarm_scatter": -8.0,
 	"mind_sable": -5.0, "mind_rivet": -5.0, "mind_kest": -5.0, "mind_tarn": -5.0, "mind_tally": -5.0, "mind_cannon": -5.0,
-	# The Highdraft's own event drops (music_rows.gd): the anvil, the boiler and the Mind's wrong note.
 	"fleet_anvil": -3.0, "boiler_burst": -3.0,
 	"mind_wrong_sable": -5.0, "mind_wrong_rivet": -5.0, "mind_wrong_kest": -5.0, "mind_wrong_tarn": -5.0, "mind_wrong_tally": -5.0, "mind_wrong_cannon": -5.0,
-	# --- Glass Lance sounds (src/combat/actives/glass_lance.gd) ---
 	"active_glass_lance": -7.0,
-	# --- end Glass Lance ---
 	"hold_pit": -13.0, "hold_bola": -14.5, "hold_tether": -13.0, "hold_net": -9.0, "hold_riser": -9.0, "tenacity_choke": -4.0,
 	"callout_chime": -8.0, "shop_bell": -6.0, "bench_clank": -7.0, "babble": -8.0,
-	# v3 W11 juice: the dodge whoosh and the crit's bright ping over the thwack.
 	"near_whoosh": -6.0, "crit_ping": -5.0, "kest_kick_thump": 0.0,
-	# v3 W13 reward ceremony: the rarity tick and bell, the card's plate, the crate's build
-	# and the burst's resolve.
 	"rarity_tick": -9.0, "rarity_bell": -5.0, "reveal_clank": -4.0, "ceremony_build": -3.0, "ceremony_resolve": -1.0,
-	# The cobalt rung's own voice under the bell (item ladder: blue is a coil whine and click).
 	"rung_coil": -9.0,
-	# IL-01 grey panels: the ratchet tick a panel bolts on with, the phrase note a pickup streak
-	# climbs (keyed, pitched by the caller), and the pinball jackpot over a reel or dunk drop.
 	"panel_ratchet": -9.0, "panel_note": -8.0, "panel_jackpot": -5.0, "panel_cache": -16.0,
-	# v3 AU2 bank: bets, secrets, allies, opt-in fights, the escalation's ladder and the
-	# ride's return (design-v3/AUDIO-V3.md sections 4, 5, 8, 11).
 	"bet_roll": -7.0, "bet_clunk": -4.0, "bet_crack": -2.0, "bet_refusal": -6.0,
 	"sunken_bell": -6.0, "ally_hum_sable": -14.0, "ally_hum_rivet": -14.0, "ally_hum_kest": -14.0,
 	"ally_wake": -6.0, "fight_arm_stamp": -4.0,
@@ -208,34 +147,19 @@ const TRIM_DB := {
 	"pilot_unlocked_tarn": -9.0, "pilot_unlocked_tally": -9.0, "pilot_unlocked_cannon": -9.0,
 	"kill_chain_tier": 0.0, "chain_crash": -12.0, "drop_landing": -3.0, "door_tick": -9.0,
 	"return_launch_arpeggio": -4.0, "lift_hiss": -9.0, "crater_hold": -12.0,
-	# The Spillway's arena locks and Warden gates (src/world/stage_locks.gd): the yard slams shut,
-	# springs open, the Warden's clamp counts a crew, refuses a hit, and lets go.
 	"arena_lock_slam": -2.0, "arena_wave_whistle": -6.0, "arena_unlock_bells": -4.0, "warden_gate_pip": -7.0,
 	"warden_gate_clunk": -10.0, "warden_gate_release": -3.0,
-	# Called Shot (loops.md Spec 3) and Heat (Spec 1), each its own sound (sound-gaps 12 Nov): the call
-	# inks with a stamp that climbs, a miss drops dry, and a shell about to cook off whistles like a kettle.
 	"call_ink": -6.0, "call_drop": -8.0, "heat_kettle": -9.0,
-	# Overtime is a bet (loops.md Spec 2): the offer asks, the ring raises the stakes, the pay resolves.
-	# Heat's own three: the shell turning hot, cooling back, and a hit landing on it hot.
 	"overtime_offer": -8.0, "overtime_ring": -5.0, "overtime_pay": -6.0,
 	"heat_rise": -8.0, "heat_cool": -10.0, "heat_hot_hit": -6.0,
-	# Brindle's five wind-ups: each opens on the boss_telegraph's D and Eb pulses, then goes its own way.
 	"tele_crane_sweep": -4.0, "tele_slag_ring": -4.0, "tele_charge": -4.0, "tele_charge_wall": -4.0, "tele_eject": -4.0,
-	# The flume's head-gate siren, and the ride and movement facts that heard a stand-in: the chute, the bowl,
-	# the drop, the ledge, the hop, the grapple line, the water sheet, the launcher's charge, the cannon and the sluice.
 	"sluice_siren_two_tone": -6.0, "ride_rolling_metal": -9.0, "ride_bowl_carve": -9.0, "ride_drop_swoop": -8.0,
 	"ride_ledge_scuff": -10.0, "ride_hop_lift": -10.0, "ride_cable_clink": -9.0, "ride_sheet_swell": -9.0,
 	"steam_whistle_rise": -8.0, "cannon_bang_rail_whoosh": -3.0, "sluice_gush_roar": -5.0,
-	# The camp (a record dropped on the jukebox, the bell, the marble toy, the pins, the way in and out), the menus' move,
-	# confirm and back, the ultimate's ready tune, a found discovery, and the two soft nos a failed verb and a cancelled gauge play.
 	"lounge_flip": -7.0, "bay_bell_ring": -6.0, "marble_tick_ladder": -10.0, "pins_crash": -5.0, "bay_lounge_in": -8.0,
 	"bay_slingshot_out": -7.0, "menu_move": -13.0, "menu_confirm": -10.0, "menu_back": -10.0, "ultimate_ready": -5.0,
 	"found_twinkle": -8.0, "verb_fail": -9.0, "gauge_dry_click": -10.0,
-	# The fight facts that had no sound: a drop that threw enemies, a drop that threw none, the guard about to break, the beacon opening.
 	"drop_thud": -7.0, "drop_whiff": -11.0, "guard_creak": -6.0, "beacon_open_chime": -9.0, "callout_warden_chime": -8.0,
-	# World 1's own sounds for the 28 cues that played a shared one (sound-own-recipes). Each sits at or under the
-	# level of the sound it replaces: a hazard family's falling warning at the whistle's -8 (the grind at the tick's -7),
-	# its landing at the Highdraft drops' -3 (under the shared slam's -1), and each player cue at its stand-in's level.
 	"flood_falling_pure": -8.0, "fleet_falling_pure": -8.0, "boiler_falling_pure": -8.0, "lightning_falling_pure": -8.0,
 	"ancient_falling_pure": -8.0, "rock_grind_dust_hiss": -7.0,
 	"flood_drop": -3.0, "fleet_anvil_brass_drop": -3.0, "lightning_strike": -4.0, "rockfall_boom": -3.0,
@@ -244,58 +168,29 @@ const TRIM_DB := {
 	"kest_falling_triad": -4.0, "kest_muffled_thump": -12.0, "line_load": -22.0, "motif_accumulate": -12.0,
 	"motif_line": -7.0, "motif_stinger": -4.0, "pin_double_thwack": -3.0, "rebound_spring_snap": -9.0,
 	"rivet_cymbal_choke": -4.0, "rivet_snare_flam": -4.0, "sable_root_fifth": -8.0,
-	# Durability prototype: the plate shed in three sizes and the reclaim chime.
 	"armor_shed_small": -6.0, "armor_shed": -5.0, "armor_shed_big": -4.0, "armor_reclaim": -7.0,
 	"armor_deflect": -10.0,
-	# Rivet's wear trail: one soft sputter per patch (world one, --wear=on).
 	"wear_sputter": -14.0,
-	# The shell's air factor moved: a released spring, an up-and-settle boing (audio.gd plays it
-	# up a fifth for the rise and down a fourth for the return).
 	"shell_spring": -9.0,
-	# The escape charge re-arms (a rising mallet pair) or is spent (a falling one).
 	"companion_chirp_ready": -8.0, "companion_chirp_spent": -9.0,
-	# The harpoon line's states (design-v3/LEGIBILITY.md section 3), its hum, and one refusal per
-	# verb. The bite (line_bite, -7) is the reference: the dry tick sits 14 dB under it by RMS, the
-	# lock tick and the refusals under that, the world clunk under the bite.
 	"lock_tick": -22.0, "dry_tick": -25.0, "line_bite": -7.0, "anchor_clunk": -12.0, "smash_whistle": -9.0, "smash_crack": -3.0,
-	# The Waking crew's seal timer (waking.gd SEAL_SOUND): a dry two-click ratchet kept apart from the harpoon's FM lock tick.
 	"seal_ratchet": -16.0,
 	"dock_click": -15.0, "line_zip": -10.0, "line_twang": -9.0, "line_hum": -17.0, "find_drip": -14.0, "find_radio": -12.0,
 	"verb_fail_jump": -18.0, "verb_fail_fire": -18.0, "verb_fail_haul": -18.0, "verb_fail_boost": -18.0,
 	"verb_fail_special": -18.0, "verb_fail_interact": -18.0,
-	# The skill bar's refusals (SKILL-BAR section 2): a refused pick and a refused Q, each a dull
-	# tick of its own.
 	"verb_fail_select": -18.0, "verb_fail_ultimate": -18.0, "verb_fail_active": -18.0,
-	# A roll into a cracked face under the ram's bar (activities.gd RULES cracked_cache refused): the
-	# face shrugs the ball off with a dull thunk and two flecks of grit.
 	"verb_fail_roll": -18.0,
-	# The actives' launches (src/combat/actives), one per active: "active_" + its id.
 	"active_scrap_rocket": -8.0,
 	"active_cutting_torch": -10.0, "active_cutting_torch_heat": -14.0,
 	"active_silo_battery": -6.0,
 	"active_quake_knock": -7.0,
 	"active_lift_pulse": -7.0,
-	# Each pilot's line-skill and set-piece cues, one marked block per pilot (SKILL-BAR section 12,
-	# item 4); a row here needs its recipe in _bake.
-	# --- P-C Sable sounds ---
-	# --- end Sable ---
-	# --- P-C Rivet sounds ---
-	# --- end Rivet ---
-	# --- P-C Kest sounds ---
 	"cable_kest_fizz": -12.0, "cable_kest_set": -9.0, "cable_kest_blast": -3.0,
 	"raid_kest_tick": -12.0, "tick_kest_62": -12.0, "tick_kest_57": -12.0, "tick_kest_53": -12.0,
 	"raid_kest_stinger": -3.0, "raid_kest_boom": -2.0, "raid_kest_roll": -9.0,
-	# --- end Kest ---
-	# --- P-C Tarn sounds ---
-	# --- end Tarn ---
-	# --- P-C Tally sounds ---
 	"plate_tally": CAUSE_NOTE_DB, "clip_tally": CAUSE_NOTE_DB,
 	"stroke_tally": CAUSE_NOTE_DB, "settle_tally": CAUSE_NOTE_DB,
-	# --- end Tally ---
-	# --- P-C Cannon sounds ---
-	# --- end Cannon ---
 	"chunk_low": -2.0,
-	# The kill-first specials and the hype drop are rendered files (FILE_SOUNDS), not recipes.
 	"foreman_presence": -14.0, "foreman_tell": -4.0, "foreman_break": -3.0, "foreman_spawn": -6.0,
 	"dispatcher_presence": -14.0, "dispatcher_tell": -4.0, "dispatcher_break": -3.0, "dispatcher_spawn": -6.0,
 	"splitter_presence": -14.0, "splitter_tell": -4.0, "splitter_break_split": -3.0, "splitter_break_clean": -3.0,
@@ -304,26 +199,17 @@ const TRIM_DB := {
 	"hype_drop": -3.0,
 	"jolt_layer_presence": -14.0, "jolt_layer_tell": -4.0, "jolt_layer_jam": -3.0, "jolt_layer_fizzle": -6.0,
 	"jolt_layer_break": -3.0,
-	# The crown's place layers (tools/ace/cut_layers.py): two bars of the crown's own band, under it.
 	"music_layer_crown_hoodoos": -8.0, "music_layer_crown_alcove": -8.0, "music_layer_crown_toppled": -8.0,
 	"music_layer_crown_ramp": -8.0,
-	# The Mind's first quote, its theme inverted over the Spillway's groove (tools/ace/mind_quote.py).
 	"music_layer_mind_quote_spillway": -8.0,
-	# The arrival forms and the prop crew (tools/ace/arrival_sfx.py); a tell ends on its landing frame.
 	"lift_cage_arrive": -3.0, "zipline_whine": -5.0, "zipline_snap": -3.0, "cave_in_rumble": -4.0,
 	"cave_in_debris": -3.0, "prop_crew_presence": -14.0, "prop_crew_strain": -4.0, "prop_crew_collapse": -2.0,
-	# Heft destructibles (destructible_kit.gd): one shatter per family, made from the bank's own voices.
 	"destructible_wood": -7.0, "destructible_scrap": -6.0, "destructible_masonry": -4.0, "destructible_steel": -5.0,
-	# The Highdraft roster (tools/ace/roster_sfx.py); a tell ends on its landing frame.
 	"ballast_brace_tell": -4.0, "ballast_brace_slam": -2.0, "gap_net_charge_tell": -6.0, "gap_net_charge_live": -4.0,
 	"ring_out_fall": -8.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
-	# Wave 46 C2/C3/C4 own sounds: Foreman's Kindness sterile chime, Works sluice valve warning/open,
-	# Shift Boss quick-sync horn snap, and downed-machine shift-over spinning-tag sigh.
 	"kindness_chime": -6.0, "sluice_valve_warning": -8.0, "sluice_valve_open": -3.0,
 	"quick_sync_horn": -5.0, "shift_over_sigh": -5.0,
-	# Wave 46 E3-04: pilot weapon cadence cues (player voice class), Nixie tube rail relay clacks,
-	# and visited-site flip chime.
 	"cadence_rivet_notch_open": -11.0, "cadence_rivet_notch_hit": -6.0, "cadence_rivet_spent": -11.0,
 	"cadence_sable_full": -8.0, "cadence_sable_bolt": -5.0,
 	"cadence_kest_window": -9.0, "cadence_kest_snap": -4.0,
@@ -333,78 +219,34 @@ const TRIM_DB := {
 	"rail_rise": -10.0, "rail_sink": -11.0,
 	"site_flip": -7.0,
 }
-# The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
-# one per quarter, then the same notes together when it staggers. Variant 0 is wired in;
-# 1 and 2 are sketches for the owner's ear (tools/sound_sketches.gd). notes are note names
-# read through Harmony.note_midi; gaps are the seconds between one note and the next in
-# the sketch, and chord_gap the pause before the chord.
 const BREAK_PHRASES := [
 	{"notes": ["D4", "F4", "A4", "D5"], "gaps": [0.16, 0.16, 0.16], "chord_gap": 0.3},
 	{"notes": ["D4", "G4", "C5", "F5"], "gaps": [0.2, 0.2, 0.2], "chord_gap": 0.3},
 	{"notes": ["D4", "F4", "G4", "A4"], "gaps": [0.26, 0.17, 0.11], "chord_gap": 0.42},
 ]
-# A synergy's motif is three of these, one baked note per midi number (cause_note_<midi>).
 const CAUSE_NOTE := "cause_note_"
-# One note of a cue the audio director places on the band's grid (grid_note_<voice>_<midi>): a kill
-# streak's landing, the near miss's two notes, the dunk's pair, a death's fall. One baked note per
-# voice and midi number, like the cause notes, so the stinger lane keys each to the band.
 const GRID_NOTE := "grid_note_"
 const GRID_NOTE_DB := -8.0
 const GRID_NOTE_SECONDS := 0.5
-# Offsets on that trim: the voice under a landing and a long chain's restated last note, and a
-# death's fall, which sits under the recorded death cue.
 const GRID_UNDER_DB := -3.0
-# The band answers a long kill chain by name (SOUND-BIBLE, "Pilot quotes"): pilot_quote_<class>, the
-# pilot's motif on the sax with a brass and kick hit under its last note. It is made for the
-# sounding band's step and key when a chain earns it, never at boot.
 const PILOT_QUOTE := "pilot_quote_"
 const PILOT_QUOTE_DB := -6.0
-# A motif whose top note is under A4 (Kest's toms, Tarn's bass) goes up an octave so the sax sings it.
 const PILOT_QUOTE_FLOOR := 69
-# June's answer at the end of a phrase (set_director.gd, SOUND-BIBLE "The set"): set_answer_<phrase id>,
-# one bar from the director's phrase book on the sax, made for the sounding band's step and key
-# like the quote, and 2 dB under it so the quote stays the bigger moment.
 const SET_ANSWER := "set_answer_"
 const SET_ANSWER_DB := -8.0
 const DEATH_FALL_DB := -6.0
-# The note each climbing cue rings on, where its ladder starts (Harmony.ladder_ratio): the kill
-# pop's bell is D6 and the line's bite A5, in the recipes here and in the event-set files.
 const KILL_POP_MIDI := 86
 const BITE_MIDI := 81
-# The motif cell a class's whip lands on, when it is not the second (Tarn's first two are one note).
 const WHIP_SECOND := {"tarn": 2}
 const CAUSE_NOTE_DB := -8.0
 
-# SPIL-9's called assists, one sting per move, landed on the next beat by audio.gd. Each
-# grows with heft: two layers at heft class 1 or 2, an 808 sub under them at 3 or 4, and
-# at 5 a sax stab on top quoting the pilot's motif. Ids: companion_assist_<move>_t<tier>,
-# the top tier also _<motif id>. Every pitch reads _hz/_n, so the band's live key holds.
 const ASSIST_STING := "companion_assist_"
 const ASSIST_MOVES := ["bonk", "arc", "pile", "slip", "anvil", "static", "bulldozer"]
 const ASSIST_STING_DB := -7.0
-# Moss's babble roots (SOUND-STORY.md section 8), beats 1 to 6 of the conversation
-# loop: ask, refuse, insist, double down, plead, send off. Barks and the relent sit on D3.
 const BABBLE_ROOTS := [50, 52, 53, 55, 57, 48]
 const BABBLE_LEVEL := 0
 const BABBLE_RELENT := -1
 const VOWELS := ["a", "e", "i", "o", "u"]
-# A line on the call card (SOUND-STORY.md section 8, "Who talks on what"), baked by id like
-# any keyed sound: say|<caller>|<the line>. Its voice follows whose hands the caller is.
-# motif is the Harmony row its letters are drawn from and whose voice it talks on, unless
-# voice names another; a caller with no motif talks on its root's Dorian triad. lift moves
-# the notes in semitones, pace scales a letter's length, bend scoops up into a letter by
-# that many semitones (a fall when negative), loose is how far a letter's length strays
-# (CALL_LOOSE unless the row says), run closes the gaps between words, stop stretches the
-# rest after a sentence, lean ends a sentence held on the flat second, and second has a
-# second talker take every other word that many scale steps away. mouth gives the caller a
-# mouth of that size (1 is a grown voice, more is a smaller creature): the chirp stays on the
-# instrument, and the letters are said, drop semitones away from where the instrument would
-# play them. grid is the Foreman alone: one note, every letter half a sixteenth, no bend,
-# no mouth and nothing left to chance. bench is Moss alone: his call is his bench line after
-# his bell, and a caller with no row gets his. db levels a voice against Moss's bench blips.
-# Moss and Brindle, the two low voices, are said high (Andrew, 10 November 2026): Moss an
-# octave over his old bench pitch, Brindle at his brass's. Moss's row is his voice everywhere,
-# at his bench (babble) as on a call: {"bench": true} alone gives him his old blips back.
 const SAY := "say|"
 const MOSS := "moss"
 const PURE := "pure"
@@ -422,57 +264,37 @@ const CALLERS := {
 	"brindle": {"motif": "fleet", "lift": 12, "pace": 1.7, "lean": true, "mouth": 0.95, "db": 3.5},
 	"mind": {"root": 74, "voice": PURE, "grid": true, "db": -2.5},
 }
-# The incoming chirp: two notes a little under the voice, then the line starts this long after
-# the first.
 const CHIRP_NOTE_S := 0.12
 const CHIRP_GAIN := 0.6
 const CALL_TALK_S := 0.36
-# A second talker comes in this long before the first has finished the word.
 const CALL_OVERLAP_S := 0.06
 const CALL_LOOSE := 0.15
-# A mouth's two resonances for each vowel, in Hz for a grown voice, and the half-shut shape
-# every consonant is said through. A letter rings on a little past its slot so speech joins up.
 const MOUTH_VOWELS := {"a": [800.0, 1200.0], "e": [500.0, 1900.0], "i": [320.0, 2500.0], "o": [500.0, 900.0], "u": [350.0, 750.0]}
 const MOUTH_SHUT := [420.0, 1400.0]
 const MOUTH_HUM := [250.0, 1100.0]
 const MOUTH_HUMMED := ["m", "n"]
 const MOUTH_BREATHED := ["s", "f", "h", "z", "c", "x", "t", "k", "p"]
 const MOUTH_RING := 1.25
-# A said vowel's peak, so a mouth sits level with the instrument that chirps before it.
 const MOUTH_PEAK := 0.8
-# Moss's sigh (the relent) is said through a mouth this much larger than his own, and this
-# much under his other lines, where the old sigh's softer blip sat.
 const BENCH_SIGH := 0.9
 const BENCH_SIGH_LEVEL := 0.75
-# A caller id with no row, warned about once (say_id) and given Moss's voice.
 static var unknown_callers := {}
-# Opt-in TTS voice sidecar (--voice=tts). Default is strictly false ("synth").
-# Cannon always stays procedural synth chime per SOUND-BIBLE.md:129.
 const SYNTH_ONLY_SPEAKERS := ["cannon"]
 static var _voice_tts := false
 static var _voice_clips := {}
 
 static var _samples := {}
-# The live key and level a keyed or themed bake is for (see samples_at).
 static var _shift := 0
 static var _theme := 0
 static var _lock := Mutex.new()
-# Cues whose notes depend on the level (the synergy fanfare quotes its motif).
 const THEMED := ["synergy_fanfare"]
 static var _streams := {}
-# Sounds the music session renders to files rather than recipes: each plays once its file is
-# in RENDERED_DIR, and the cue that wants it plays without it until then.
 const RENDERED_DIR := "res://assets/audio/sfx/"
 static var _rendered := {}
-# Guards _samples, _streams, _file_present and _rendered: the startup bake fills them on a worker while the main thread
-# reads and fills them too. It is held only to look up or store, never across a bake, so neither thread waits on the
-# other's bake (when both bake one id, the first one stored is kept).
 static var _cache_lock := Mutex.new()
-# Set on the main thread to abandon a startup bake; the worker checks it between ids.
 static var bake_cancel := false
 
 
-# The midi numbers of a break phrase's four notes, lowest first.
 static func break_midis(variant := 0) -> Array:
 	var midis: Array = []
 	for note in BREAK_PHRASES[variant]["notes"]:
@@ -486,8 +308,6 @@ static func has_recipe(id: String) -> bool:
 		or _assist_parts(id).size() > 0 or id in EVENT_CUES or _motif_cue_parts(id).size() > 0)
 
 
-# True when the bank plays a sound made for this id: a recorded sound whose file is there, or a recipe
-# (has_recipe). False when it would bake the fallback blip. A read-only query; nothing is baked.
 static func plays_own(id: String) -> bool:
 	if FILE_SOUNDS.has(id) or id.begins_with(STINGER_PREFIX):
 		return file_exists(id)
@@ -515,8 +335,6 @@ static func trim_db(id: String) -> float:
 	return TRIM_DB.get(id, TRIM_DB.get(base_key(id), -8.0))
 
 
-# The key a tier's file belongs to (scrap_tick_3 -> scrap_tick), else the id itself. A
-# tier file keeps its base key's trim.
 static func base_key(id: String) -> String:
 	for base in TIER_CUES:
 		if id in TIER_CUES[base]:
@@ -524,14 +342,10 @@ static func base_key(id: String) -> String:
 	return id
 
 
-# The res:// path of an event-set cue.
 static func event_path(id: String) -> String:
 	return EVENT_DIR + id + ".wav"
 
 
-# The file a sound id plays and the pitch it plays at. A tiered key reads the rung the
-# caller already sends as its pitch (Harmony.ratio of a pentatonic step): the tier's file
-# is already stepped, so it plays at 1.0. Every other id passes through.
 static func resolve(sound: String, pitch: float) -> Dictionary:
 	if not TIER_CUES.has(sound) or pitch <= 0.0:
 		return {"id": sound, "pitch": pitch}
@@ -540,7 +354,6 @@ static func resolve(sound: String, pitch: float) -> Dictionary:
 	var index := clampi(rung, 0, files.size() - 1)
 	if sound == "rarity_bell":
 		index = 0 if rung <= 0 else (1 if rung < 5 else 2)
-	# A tier whose file is missing plays the base recipe on the caller's rung, pitch kept.
 	if not _has_file(files[index]):
 		return {"id": sound, "pitch": pitch}
 	return {"id": files[index], "pitch": 1.0}
@@ -569,7 +382,6 @@ static func _cache_get(cache: Dictionary, key: String) -> Variant:
 	return value
 
 
-# Stores value unless the key is already there, and returns what the cache holds.
 static func _cache_put(cache: Dictionary, key: String, value: Variant) -> Variant:
 	_cache_lock.lock()
 	if not cache.has(key):
@@ -579,7 +391,6 @@ static func _cache_put(cache: Dictionary, key: String, value: Variant) -> Varian
 	return held
 
 
-# The pentatonic rung whose ratio is nearest this pitch ratio.
 static func ladder_rung(pitch: float) -> int:
 	var steps := 12.0 * log(maxf(pitch, 0.001)) / log(2.0)
 	var best := 0
@@ -589,8 +400,6 @@ static func ladder_rung(pitch: float) -> int:
 	return best
 
 
-# An event-set WAV as float samples at the bank rate (linear resample from the file rate), moved shift semitones.
-# Empty when the file is absent or is not 16-bit mono.
 static func _event_samples(id: String, shift := 0) -> PackedFloat32Array:
 	var out := PackedFloat32Array()
 	var path := event_path(id)
@@ -599,10 +408,8 @@ static func _event_samples(id: String, shift := 0) -> PackedFloat32Array:
 	var wav := ResourceLoader.load(path, "AudioStreamWAV", ResourceLoader.CACHE_MODE_IGNORE) as AudioStreamWAV
 	if wav == null or wav.format != AudioStreamWAV.FORMAT_16_BITS or wav.stereo:
 		return out
-	# wav.data returns a copy on every read, so read it once, not twice a sample.
 	var data := wav.data
 	var count := data.size() / 2
-	# A keyed bake (shift in semitones) is a varispeed of the file, like pitch_scale in play.
 	var step := float(wav.mix_rate) / float(RATE) * pow(2.0, float(shift) / 12.0)
 	var length := int(floor(float(count - 1) / step)) + 1
 	out.resize(length)
@@ -616,7 +423,6 @@ static func _event_samples(id: String, shift := 0) -> PackedFloat32Array:
 	return out
 
 
-# The world stinger's id for a world: the plain row sound at step 0, else the step named.
 static func world_stinger(world: int) -> String:
 	var step: int = WORLD_STEPS[clampi(world, 1, WORLD_STEPS.size()) - 1]
 	if step == 0:
@@ -624,8 +430,6 @@ static func world_stinger(world: int) -> String:
 	return "%s_%s%d" % [WORLD_STINGER, "up" if step > 0 else "down", absi(step)]
 
 
-# The sting for a called assist at a heft class, or "" for a move without one. motif is
-# the pilot's motif id (audio.gd's _motif); only the top tier quotes it.
 static func assist_sting_id(move: String, heft_class: int, motif := "") -> String:
 	if not move in ASSIST_MOVES:
 		return ""
@@ -634,7 +438,6 @@ static func assist_sting_id(move: String, heft_class: int, motif := "") -> Strin
 	return id + "_" + (motif if Harmony.MOTIFS.has(motif) else Harmony.CLASS_MOTIFS[0]) if tier == 3 else id
 
 
-# [move, tier, motif] from a sting id, or [] when the id is not one.
 static func _assist_parts(id: String) -> Array:
 	if not id.begins_with(ASSIST_STING):
 		return []
@@ -660,9 +463,6 @@ static func pilot_quote_id(class_id: String) -> String:
 	return PILOT_QUOTE + class_id
 
 
-# The quote's score, rows of [step, midi, steps, voice, gain] in sixteenths: the class motif's
-# cells at half speed, so the sax sings in eighths what the cue sounds flick in sixteenths, then
-# the brass an octave under the last note and a kick with it.
 static func pilot_quote_score(class_id: String) -> Array:
 	var cells: Array = Harmony.motif_or_first(class_id)["cells"]
 	var top := 0
@@ -680,16 +480,12 @@ static func pilot_quote_score(class_id: String) -> Array:
 	return score
 
 
-# The class whip's voice and its two notes, the class motif's first interval an octave up:
-# [voice, first midi, second midi].
 static func whip_notes(class_id: String) -> Array:
 	var row := Harmony.motif_or_first(class_id)
 	var cells: Array = row["cells"]
 	return [String(row["voice"]), int(cells[0][1]) + 12, int(cells[WHIP_SECOND.get(class_id, 1)][1]) + 12]
 
 
-# Rendered sounds (design-v3/sound/specials.py and extras.py), 44.1 kHz mono 16-bit WAVs under
-# assets/sfx/. The four presence cues are seamless two-bar loops at 129 BPM.
 const SFX_DIR := "res://assets/audio/"
 const SPECIALS := ["foreman", "dispatcher", "splitter", "linker"]
 const FILE_SOUNDS := {
@@ -717,12 +513,9 @@ const FILE_SOUNDS := {
 	"gap_net_charge_tell": "foley/gap_net_charge_tell.wav", "gap_net_charge_live": "foley/gap_net_charge_live.wav",
 	"ring_out_fall": "foley/ring_out_fall.wav",
 }
-# hype_drop's drop lands this many seconds into the file: one 150 BPM bar of riser and a beat of silence.
 const HYPE_DROP_LEAD_SECONDS := 2.0
 
 
-# Per-stage park event stingers (tools/ace/cut_stingers.py) are ids of the form
-# "stinger:<zone with _>/<cue>", for example "stinger:3_1/drop_boiler".
 const STINGER_PREFIX := "stinger:"
 
 
@@ -741,16 +534,13 @@ static func file_exists(id: String) -> bool:
 	return ResourceLoader.exists(path) or FileAccess.file_exists(path)
 
 
-# The mono samples of a rendered file: the imported resource when the editor or export has
-# one, else the raw RIFF (headless runs without an import cache). An id outside FILE_SOUNDS
-# and the stingers is an event-set cue (EVENT_CUES), read at the bank rate and moved shift semitones.
+# Headless Godot runs without an import cache, falling back to raw 16-bit RIFF.
 static func file_samples(id: String, shift := 0) -> PackedFloat32Array:
 	if not FILE_SOUNDS.has(id) and not id.begins_with(STINGER_PREFIX):
 		return _event_samples(id, shift)
 	var path := file_path(id)
 	var out := PackedFloat32Array()
-	# Uncached: this runs on the bake worker, and a cached load there leaves its load token
-	# and stream alive at exit ("resources still in use"). samples() keeps the decoded copy.
+	# Uncached on worker: Godot cached loads on a worker leave resources alive at exit.
 	var res = ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE) if ResourceLoader.exists(path) else null
 	if res is AudioStreamWAV and (res as AudioStreamWAV).format == AudioStreamWAV.FORMAT_16_BITS:
 		return _pcm16(res.data, res.stereo)
@@ -776,14 +566,9 @@ static func _pcm16(data: PackedByteArray, stereo: bool) -> PackedFloat32Array:
 	return out
 
 
-# Every id the game plays as a loop, through loop_stream or hum_stream. A looped sound is held
-# to a seam that tiles, not to ends at rest (tests/sound_edges_test.gd).
 const LOOPED := ["line_hum", "panel_cache", "find_drip", "find_radio",
 	"foreman_presence", "dispatcher_presence", "splitter_presence", "linker_presence"]
 
-# A presence loop: the file as a forward-looping stream, whole file as the loop. It copies the
-# stream the bake already encoded (bake_all), so a special's first spawn does not encode its
-# two-bar loop again on the main thread (12-14 ms at the Dispatcher's first spawn on the cloud).
 static func loop_stream(id: String) -> AudioStreamWAV:
 	assert(id in LOOPED, "a looped sound must be listed in SfxBank.LOOPED: " + id)
 	var key := id + "@loop"
@@ -796,7 +581,6 @@ static func loop_stream(id: String) -> AudioStreamWAV:
 	return _cache_put(_streams, key, wav)
 
 
-# The hum is the one looping cue: a whole number of cycles in its buffer, so it tiles.
 static func hum_stream() -> AudioStreamWAV:
 	if _cache_has(_streams, "line_hum"):
 		return _cache_get(_streams, "line_hum")
@@ -810,25 +594,19 @@ static func hum_stream() -> AudioStreamWAV:
 static func samples(id: String) -> PackedFloat32Array:
 	if _cache_has(_samples, id):
 		return _cache_get(_samples, id)
-	# A keyed bake on a worker sets the shared key and theme; the plain bake waits it out.
 	_lock.lock()
 	var buf: PackedFloat32Array = _cache_get(_samples, id) if _cache_has(_samples, id) else _cache_put(_samples, id, Synth.normalize(_bake(id), 0.9))
 	_lock.unlock()
 	return buf
 
 
-# A grid stinger baked on another tempo's grid, for the boss tempo. Cues that are not
-# written on the grid are the same at any tempo.
 static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedFloat32Array:
 	if _plain(id, step, shift, theme):
 		return samples(id)
 	var key := _key_at(id, step, shift, theme)
 	if _cache_has(_samples, key):
 		return _cache_get(_samples, key)
-	# A worker warms keyed variants while the band may ask for one: one bake at a time.
 	_lock.lock()
-	# A recorded event cue is the same file at any grid step or theme (_bake ignores both), so
-	# its variants share one resample per key shift.
 	if not _cache_has(_samples, key) and id in EVENT_CUES and not FILE_SOUNDS.has(id) and not id.begins_with(STINGER_PREFIX):
 		var shared := "%s@file@%d" % [id, shift]
 		if not _cache_has(_samples, shared):
@@ -852,13 +630,10 @@ static func samples_at(id: String, step: int, shift := 0, theme := 0) -> PackedF
 	return _cache_get(_samples, key)
 
 
-# True when samples_at would return without a bake: the startup bank's own variant, or one already made.
 static func baked_at(id: String, step: int, shift := 0, theme := 0) -> bool:
 	return _plain(id, step, shift, theme) or _cache_has(_samples, _key_at(id, step, shift, theme))
 
 
-# True when this variant is in memory, the plain one included (baked_at takes the plain one on
-# trust: the boot bake makes every plain sound a row can name, but not a note named by its pitch).
 static func cached_at(id: String, step: int, shift := 0, theme := 0) -> bool:
 	return _cache_has(_samples, id if _plain(id, step, shift, theme) else _key_at(id, step, shift, theme))
 
@@ -871,13 +646,10 @@ static func _key_at(id: String, step: int, shift: int, theme: int) -> String:
 	return "%s@%d@%d@%d" % [id, step if _gridded(id) else Harmony.STEP, shift, theme if id in THEMED else 0]
 
 
-# A sound written on the grid is made again for each step it sounds at: the listed stingers, and
-# a pilot's quote, and a line from a caller who talks on the grid.
 static func _gridded(id: String) -> bool:
 	return STINGER_BEATS.has(id) or id.begins_with(PILOT_QUOTE) or id.begins_with(SET_ANSWER) or (id.begins_with(SAY) and caller_on_grid(_said(id)[0]))
 
 
-# Every tonal recipe reads pitches through these, so a keyed bake transposes it whole.
 static func _hz(midi: float) -> float:
 	return Harmony.hz(midi + _shift)
 
@@ -894,7 +666,6 @@ static func stream(id: String) -> AudioStreamWAV:
 	return _cache_put(_streams, id, Synth.to_wav(samples(id)))
 
 
-# A rendered sound's stream, or null while its file is not there yet.
 static func rendered(id: String) -> AudioStream:
 	if _cache_has(_rendered, id):
 		return _cache_get(_rendered, id)
@@ -902,7 +673,6 @@ static func rendered(id: String) -> AudioStream:
 	return _cache_put(_rendered, id, load(path) if ResourceLoader.exists(path) else null)
 
 
-# True when a bake of this id resamples a recorded file.
 static func file_backed(id: String) -> bool:
 	return id in EVENT_CUES or FILE_SOUNDS.has(id) or id.begins_with(STINGER_PREFIX)
 
@@ -928,8 +698,6 @@ static func _bake(id: String) -> PackedFloat32Array:
 		var recorded := file_samples(id, _shift)
 		if not recorded.is_empty():
 			return recorded
-		# A missing or unreadable file never leaves the cue silent: a tier falls back to
-		# its base recipe, a plain key to its own.
 		if base_key(id) != id:
 			return _bake(base_key(id))
 	if id in ["plate_tally", "clip_tally", "stroke_tally", "settle_tally"]:
@@ -945,8 +713,6 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _mix([[_tone(0.11, 380.0, 640.0, "sine", 28.0), 0, 1.0], [_noise(0.02, 3000.0, 3000.0, 200.0), 0, 0.3]])
 		"boost_whoosh":
 			return _mix([[_noise(0.42, 500.0, 3200.0, 7.0, 0.06), 0, 1.0], [_tone(0.12, 90.0, 55.0, "sine", 25.0), 0, 0.7]])
-		# The carve letting go: the grind's bright rasp falls away under a short rising saw, so the
-		# ride off a bank sounds like the shell springing free of the wall.
 		"carve_release":
 			return _mix([[_noise(0.18, 5200.0, 1600.0, 16.0, 0.004), 0, 0.9], [_tone(0.14, 220.0, 520.0, "saw", 18.0), Synth.seconds(0.03), 0.22],
 				[_tone(0.08, 140.0, 90.0, "sine", 30.0), 0, 0.5]])
@@ -959,17 +725,13 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"core_slam":
 			return _core_slam()
 		"grown_sub":
-			# The low end under a grown hit: a 62-to-34 Hz drop that outlasts the thwack.
 			return _mix([[_tone(0.5, 62.0, 34.0, "sine", 5.0), 0, 1.0], [_tone(0.03, 140.0, 70.0, "sine", 60.0), 0, 0.3]])
 		"grown_crack":
-			# A heavier transient: a sharp noise snap over a dark saw knock.
 			return _mix([[_noise(0.03, 4200.0, 1800.0, 110.0, 0.0005), 0, 1.0],
 				[_tone(0.07, 190.0, 85.0, "saw_dark", 38.0), 0, 0.8]], true)
 		"grown_tail":
-			# A long tail: low rumble and filtered air that ring on after the hit.
 			return _mix([[_tone(1.2, 48.0, 38.0, "sine", 2.4), 0, 0.8], [_noise(1.3, 420.0, 120.0, 2.6, 0.02), 0, 0.6]])
 		"grown_rattle":
-			# Scrap settling off the shell: four ticks, each quieter.
 			return _mix([[_noise(0.03, 3200.0, 2000.0, 80.0), 0, 0.7], [_noise(0.03, 2600.0, 1700.0, 80.0), Synth.seconds(0.06), 0.5],
 				[_noise(0.03, 3600.0, 2200.0, 80.0), Synth.seconds(0.13), 0.38], [_noise(0.03, 2400.0, 1500.0, 80.0), Synth.seconds(0.22), 0.26]])
 		"ultimate_land":
@@ -1026,35 +788,25 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[_noise(0.012, 3200.0, 2400.0, 280.0), Synth.seconds(0.05), 0.35], [_noise(0.012, 2800.0, 2000.0, 280.0), Synth.seconds(0.11), 0.25]])
 		"verb_fail_active":
 			return _mix([[_fm(0.12, _hz(67), 1.5, 2.0, 24.0, -2.0), 0, 1.0], [_noise(0.05, 900.0, 600.0, 40.0), 0, 0.3]])
-		# A valve hiss, then a bottle rocket's rising whistle over a low thump: FWOOSH.
 		"active_scrap_rocket":
 			return _mix([[_noise(0.16, 2400.0, 5200.0, 14.0, 0.004), 0, 0.7], [_tone(0.09, 120.0, 60.0, "sine", 30.0), 0, 0.8],
 				[_tone(0.34, 900.0, 2600.0, "sine", 6.0), Synth.seconds(0.06), 0.35], [_noise(0.3, 1200.0, 3600.0, 8.0, 0.02), Synth.seconds(0.06), 0.4]])
-		# A gas torch catching: a pop and a hiss, then a buzz on the key's root and fifth that
-		# burns as long as the beam. Keyed (audio.gd), so it sits in the world's key.
 		"active_cutting_torch":
 			return _mix([[_noise(0.05, 3200.0, 1400.0, 60.0, 0.001), 0, 0.9], [_tone(0.07, 200.0, 90.0, "sine", 40.0), 0, 0.7],
 				[_tone(1.6, _hz(38), _hz(38), "saw_dark", 1.4), Synth.seconds(0.04), 0.6], [_tone(1.6, _hz(45), _hz(45), "square_dark", 1.6), Synth.seconds(0.04), 0.25],
 				[_noise(1.6, 2800.0, 2200.0, 1.2, 0.03), Synth.seconds(0.04), 0.3]])
-		# Hot metal spitting under the flame: a short sizzle; audio climbs it with the heat.
 		"active_cutting_torch_heat":
 			return _mix([[_noise(0.14, 3400.0, 5200.0, 18.0, 0.004), 0, 1.0], [_noise(0.08, 1800.0, 2600.0, 30.0), Synth.seconds(0.02), 0.4]])
-		# A two-note klaxon chirp, the hatch's clank, two shells whistling down, and the landing
-		# FALL (silo_battery.gd) after the hatch opens: KA-THOOM.
 		"active_silo_battery":
 			return _mix([[_tone(0.07, 740.0, 720.0, "square_dark", 12.0), 0, 0.45], [_tone(0.07, 990.0, 960.0, "square_dark", 12.0), Synth.seconds(0.07), 0.45],
 				[_fm(0.2, _hz(43), 2.76, 3.0, 16.0), Synth.seconds(0.12), 0.8], [_noise(0.05, 3200.0, 1800.0, 60.0), Synth.seconds(0.12), 0.5],
 				[_tone(0.3, 2600.0, 900.0, "sine", 2.0), Synth.seconds(0.15), 0.28], [_tone(0.26, 2200.0, 760.0, "sine", 2.0), Synth.seconds(0.19), 0.24],
 				[_tone(0.45, 95.0, 36.0, "sine", 6.0), Synth.seconds(0.45), 1.0], [_noise(0.4, 900.0, 180.0, 8.0, 0.003), Synth.seconds(0.45), 0.8],
 				[_noise(0.06, 4200.0, 2200.0, 50.0), Synth.seconds(0.45), 0.4]], true)
-		# The Waking's own floor voice (warn_burrow's low Eb rumble, breach's dry crack), struck by
-		# hand: a muffled knock under the plate, the rumble rolling out, then stone cracking. KRRAK
 		"active_quake_knock":
 			return _mix([[_noise(0.1, 420.0, 200.0, 30.0), 0, 0.9], [_tone(0.5, _hz(39), _hz(34), "saw_dark", 3.5), 0, 0.85],
 				[_noise(0.035, 5200.0, 2200.0, 85.0), Synth.seconds(0.05), 0.9], [_fm(0.1, _hz(63), 2.3, 4.0, 26.0), Synth.seconds(0.05), 0.5],
 				[_noise(0.03, 4400.0, 2000.0, 90.0), Synth.seconds(0.12), 0.6], [_noise(0.4, 1300.0, 200.0, 5.0, 0.02), Synth.seconds(0.1), 0.7]], true)
-		# The deep thump of the pulse leaving the fan on the press (the shove lands with it), over the
-		# turbine spooling up behind it (a rising whine and rushing air): WHUMP.
 		"active_lift_pulse":
 			return _mix([[_tone(0.3, 95.0, 42.0, "sine", 12.0), 0, 1.0], [_noise(0.22, 1600.0, 300.0, 14.0, 0.004), 0, 0.6],
 				[_fm_sweep(0.26, 180.0, 720.0, 1.2, 4.0), Synth.seconds(0.02), 0.4], [_noise(0.28, 500.0, 2600.0, 6.0, 0.06), Synth.seconds(0.02), 0.3]])
@@ -1101,12 +853,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"scrap_tick":
 			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.2]])
 		"cog_tick":
-			# scrap_tick's shape in brass: the bell's attack over a short brass body, a touch lower in the noise.
 			return _mix([[_cut(_n("bell", 74), 0.16), 0, 1.0], [_cut(_n("brass", 62), 0.09), 0, 0.45], [_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.15]])
 		"part_get":
 			return _arpeggio([74, 77, 81, 86], 0.05, "bell", 0.8)
 		"panel_ratchet":
-			# Three pawl clicks over a short steel ring: a socket wrench seating a plate.
 			return _mix([[_noise(0.012, 5200.0, 5200.0, 260.0), 0, 0.7], [_noise(0.012, 4600.0, 4600.0, 260.0), Synth.seconds(0.035), 0.6],
 				[_noise(0.012, 4000.0, 4000.0, 260.0), Synth.seconds(0.07), 0.5], [_cut(_n("mallet", 86), 0.08), Synth.seconds(0.07), 0.35]])
 		"panel_note":
@@ -1117,7 +867,6 @@ static func _bake(id: String) -> PackedFloat32Array:
 				[_cut(_n("keys", 69), 0.65, 1800), Synth.seconds(0.12), 0.26],
 				[_cut(_n("keys", 76), 0.65, 1800), Synth.seconds(0.12), 0.22]])
 		"panel_cache":
-			# A rib cache's call: two high bell notes, then rest, one 1.86 s bar at 129 BPM, looped.
 			var chime := _mix([[_cut(_n("bell", 86), 0.3), 0, 0.8], [_cut(_n("bell", 93), 0.4), Synth.seconds(0.233), 0.6]])
 			chime.resize(Synth.seconds(1.86))
 			return chime
@@ -1212,14 +961,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _stage_fade()
 		"vault_rise":
 			return _mix([[_noise(0.32, 600.0, 4200.0, 3.0, 0.2), 0, 0.6], [_tone(0.32, _hz(62), _hz(74), "saw_dark", 4.0), 0, 0.6]])
-		# The world slows for a close-up and comes back (audio.gd slowed): the air goes out of the
-		# room down a fourth past the octave, D5 to A3, and comes back up it faster. Both stay
-		# above 200 Hz: the entrance's own sound has the low end.
 		"slow_dip":
 			return _mix([[_tone(0.7, _hz(74), _hz(57), "sine", 3.5), 0, 0.7], [_tone(0.7, _hz(74), _hz(57), "saw_dark", 5.0), 0, 0.25],
 				[_noise(0.6, 3200.0, 500.0, 5.0, 0.02), 0, 0.35]])
 		"slow_rise":
-			# A decay under zero is a swell: the tone grows into the return and lets go in 40 ms.
 			return _cut(_mix([[_tone(0.3, _hz(57), _hz(74), "sine", -8.0), 0, 0.7], [_noise(0.3, 500.0, 3600.0, 2.0, 0.2), 0, 0.45]]), 0.3, 1800)
 		"vault_drop":
 			return Synth.render_score([[0, 0, 2, "kick", 1.0], [0, 0, 8, "crash", 0.6], [0, 38, 8, "sub", 0.8],
@@ -1244,12 +989,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"threat_tick":
 			return _threat_tick()
 		"near_whoosh":
-			# Air rushing past, then a bell on A, the fifth over the home D: danger went by.
 			return _mix([[_noise(0.22, 700.0, 4800.0, 9.0, 0.04), 0, 0.9], [_noise(0.16, 4200.0, 1500.0, 14.0), Synth.seconds(0.1), 0.5],
 				[_cut(_n("bell", 81), 0.35), Synth.seconds(0.09), 0.7]])
 		"kest_kick_thump":
-			# The bomb: a kick and Kest's tom landing on D, the motif's last note, a bright
-			# crack on top and a sub that falls away under it.
 			return _mix([[Synth.kick(), 0, 1.0], [_n("tom", 50), 0, 0.85], [_noise(0.06, 5600.0, 2000.0, 60.0), 0, 0.75],
 				[_noise(0.35, 900.0, 200.0, 9.0), Synth.seconds(0.02), 0.35], [_tone(0.55, 72.0, 33.0, "sine", 5.5), 0, 0.9]], true)
 		"crit_ping":
@@ -1339,21 +1081,14 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"babble":
 			return babble("Hm. Hm, hm.", BABBLE_LEVEL)
 		"rarity_tick":
-			# A common find: one mallet tick on D with a glassy top. Pitched up the reward
-			# ladder by rarity, like every rarity cue.
 			return _mix([[_cut(_n("mallet", 74), 0.14), 0, 0.9], [_noise(0.015, 7000.0, 5000.0, 250.0), 0, 0.3]])
 		"rarity_bell":
-			# A rare flare: bells climbing D, A, D with a shimmer on the last, rung higher the
-			# rarer the part. The payoff rings the same bell, so the change sounds like the find.
 			return _mix([[_cut(_n("bell", 74), 0.3), 0, 0.7], [_cut(_n("bell", 81), 0.3), Synth.seconds(0.06), 0.8],
 				[_cut(_n("bell", 86), 0.5), Synth.seconds(0.12), 1.0], [_fm(0.5, _hz(98), 3.5, 1.0, 7.0), Synth.seconds(0.12), 0.25]])
 		"rung_coil":
-			# A cobalt find: a fleet coil charges from low D up to the A an octave and a fifth above, then its latch clicks
-			# home on a high D. It sits under the rare bell, so the rung reads by ear as well.
 			return _mix([[_fm_sweep(0.22, _hz(62), _hz(81), 1.4, 5.0), 0, 0.5], [_tone(0.22, _hz(74), _hz(93), "saw_dark", 6.0), 0, 0.35],
 				[_noise(0.012, 5200.0, 5200.0, 280.0), Synth.seconds(0.22), 0.8], [_cut(_n("mallet", 86), 0.1), Synth.seconds(0.22), 0.6]])
 		"reveal_clank":
-			# The reveal card: a salvaged plate dropped on the bench, then its stamp rings a fifth.
 			return _mix([[_fm(0.25, 196.0, 1.41, 3.0, 14.0), 0, 0.6], [_tone(0.1, 140.0, 70.0, "sine", 30.0), 0, 0.8],
 				[_noise(0.04, 3000.0, 1200.0, 70.0), 0, 0.4], [_cut(_n("mallet", 81), 0.2), Synth.seconds(0.07), 0.8],
 				[_cut(_n("bell", 86), 0.45), Synth.seconds(0.15), 0.9]])
@@ -1394,7 +1129,6 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"kill_chain_tier":
 			return _kill_chain_tier()
 		"chain_crash":
-			# The long kill chain's downbeat (AUDIO-V3 section 5 rule 5): the band's own crash.
 			return _mix([[Synth.drum("crash"), 0, 1.0]])
 		"drop_landing":
 			return _drop_landing()
@@ -1523,49 +1257,40 @@ static func _bake(id: String) -> PackedFloat32Array:
 		return _say(_said(id)[0], _said(id)[1])
 	if _assist_parts(id).size() > 0:
 		return _assist_sting(_assist_parts(id))
-	# A kind added after this bank still gets a sound: a small blip pitched from its
-	# name, flagged by presentation_sfx_test so it gets a real recipe.
 	return _tone(0.12, _hz(62 + Harmony.pentatonic_step(absi(id.hash()) % 8)), 0.0, "sine", 20.0)
 
 
-# --- Assist stings ------------------------------------------------------------------
-
-# The two layers that say which move it was, short and a little silly.
 static func _assist_base(move: String) -> Array:
 	match move:
-		"bonk":  # a cartoon bonk: a wooden knock bending down over a kick thump
+		"bonk":
 			return [[_fm(0.22, _hz(74), 1.0, 2.5, 18.0, -7.0), 0, 0.8], [_tone(0.16, 140.0, 55.0, "sine", 24.0), 0, 0.9]]
-		"arc":  # a zap that climbs into a bell
+		"arc":
 			return [[_fm_sweep(0.18, 300.0, 2400.0, 3.0, 14.0), 0, 0.6], [_cut(_n("bell", 81), 0.4), Synth.seconds(0.08), 0.7]]
-		"pile":  # three clanks stacking up, low to high
+		"pile":
 			return [[_fm(0.12, _hz(57), 1.41, 3.0, 26.0), 0, 0.7], [_fm(0.12, _hz(62), 1.41, 3.0, 26.0), Synth.seconds(0.06), 0.7],
 				[_fm(0.2, _hz(69), 1.41, 3.0, 18.0), Synth.seconds(0.12), 0.75]]
-		"slip":  # a whoosh that slides past, and a little chirp after it
+		"slip":
 			return [[_noise(0.4, 600.0, 4800.0, 8.0, 0.05), 0, 0.9], [_tone(0.08, _hz(86), _hz(91), "sine", 30.0), Synth.seconds(0.3), 0.4]]
-		"anvil":  # a ringing metal clang over a roll of thunder
+		"anvil":
 			return [[_fm(0.6, _hz(69), 1.41, 6.0, 6.0), 0, 0.8], [_noise(0.85, 400.0, 90.0, 3.5, 0.03), Synth.seconds(0.03), 0.9]]
-		"static":  # a crackle and a beep, like a radio catching
+		"static":
 			return [[_noise(0.25, 3500.0, 6000.0, 16.0, 0.002), 0, 0.6], [_tone(0.1, _hz(81), _hz(81), "saw", 22.0), Synth.seconds(0.05), 0.35]]
-		"bulldozer":  # a low growl that shoves forward, then the hit
+		"bulldozer":
 			return [[_tone(0.35, 55.0, 95.0, "saw_dark", 6.0), 0, 0.8], [_noise(0.12, 900.0, 300.0, 30.0), Synth.seconds(0.28), 0.8]]
 	return []
 
 
 static func _assist_sting(parts: Array) -> PackedFloat32Array:
 	var layers := _assist_base(String(parts[0]))
-	if int(parts[1]) >= 2:  # heft class 3 and up: an 808 sub drop on home
+	if int(parts[1]) >= 2:
 		layers.append([_tone(0.7, _hz(38), _hz(31), "sine", 4.5), 0, 0.85])
-	if int(parts[1]) >= 3:  # heft class 5: a sax stab quoting the pilot's motif, three notes
+	if int(parts[1]) >= 3:
 		var notes := Harmony.motif_notes(String(parts[2]))
 		for i in mini(3, notes.size()):
 			layers.append([_cut(_n("sax_lounge", int(notes[i])), 0.18), Synth.seconds(0.1 + 0.07 * i), 0.55])
 	return _cut(_mix(layers, int(parts[1]) >= 2), 0.95)
 
 
-# --- The harpoon line ------------------------------------------------------------------
-
-# The bite to a body, two layers: a knock that lands and a ring over it. Variant 0 is the
-# one wired in; 1 and 2 are sketches for the owner's ear (tools/sound_sketches.gd).
 static func bite(variant: int) -> PackedFloat32Array:
 	match variant:
 		1:
@@ -1578,7 +1303,6 @@ static func bite(variant: int) -> PackedFloat32Array:
 		[_fm(0.24, _hz(81), 3.5, 5.0, 16.0), 0, 1.0]])
 
 
-# The smash's crack, tuned a fifth under the bite's ring (A5 to D5) so the pair resolves.
 static func crack(variant: int) -> PackedFloat32Array:
 	match variant:
 		1:
@@ -1600,7 +1324,6 @@ static func zip() -> PackedFloat32Array:
 	return _mix([[_noise(0.16, 5500.0, 800.0, 16.0, 0.004), 0, 1.0], [_tone(0.14, 1700.0, 500.0, "sine", 22.0), 0, 0.35]])
 
 
-# A cut cable: a plucked string settling from a sharp start, lower and longer than the zip.
 static func twang() -> PackedFloat32Array:
 	var n := Synth.seconds(0.6)
 	var buf := Synth.buffer(n)
@@ -1613,7 +1336,6 @@ static func twang() -> PackedFloat32Array:
 	return _mix([[Synth.declick(buf, 8, 300), 0, 1.0], [_noise(0.025, 3000.0, 1500.0, 120.0), 0, 0.5]])
 
 
-# Whole cycles of every partial and of the tremolo fit the buffer, so it tiles as a loop.
 static func _line_hum() -> PackedFloat32Array:
 	var length := 0.6
 	var n := Synth.seconds(length)
@@ -1625,7 +1347,6 @@ static func _line_hum() -> PackedFloat32Array:
 	return buf
 
 
-# A field find's crack tell (secrets.gd): two drips off a wet face and the quiet between, one loop.
 static func _find_drip() -> PackedFloat32Array:
 	var length := 1.8
 	return _mix([[Synth.buffer(Synth.seconds(length)), 0, 0.0],
@@ -1633,9 +1354,6 @@ static func _find_drip() -> PackedFloat32Array:
 		[_tone(0.1, _hz(94), _hz(88), "sine", 46.0), Synth.seconds(1.05), 0.6]])
 
 
-# A field find's radio tell: two bars of the dance hour in D minor (the lost tape's key), keys under
-# a lead, heard through a wall: a slow wobble and crackle over it. Trimmed to the bars and faded at
-# both ends, so the loop's seam is a breath, not a click.
 static func _find_radio() -> PackedFloat32Array:
 	var score := [[0, 62, 16, "keys", 0.3], [0, 65, 16, "keys", 0.3], [0, 69, 16, "keys", 0.3], [0, 72, 16, "keys", 0.3],
 		[16, 55, 16, "keys", 0.3], [16, 58, 16, "keys", 0.3], [16, 62, 16, "keys", 0.3], [16, 65, 16, "keys", 0.3],
@@ -1656,8 +1374,6 @@ static func _find_radio() -> PackedFloat32Array:
 	return buf
 
 
-# --- Scores ----------------------------------------------------------------------------
-
 static func _score_run(at: int) -> Array:
 	return [[at, 0, 2, "kick", 1.0], [at, 0, 16, "crash", 0.55], [at, 62, 2, "lead", 0.7], [at + 2, 69, 2, "lead", 0.7],
 		[at + 4, 72, 1, "lead", 0.7], [at + 5, 74, 3, "lead", 0.75], [at + 8, 77, 2, "lead", 0.75], [at + 10, 76, 2, "lead", 0.7],
@@ -1666,8 +1382,6 @@ static func _score_run(at: int) -> Array:
 		[at + 10, 64, 4, "keys", 0.35], [at + 4, 0, 1, "snare", 0.7], [at + 12, 0, 1, "snare", 0.8], [at + 10, 0, 1, "kick", 0.8]]
 
 
-# The end-of-cycle melody. It climbs the A7 chord, turns, and lands on D, then the
-# two little "done" beeps land on the home note an octave up.
 static func _score_clear(at: int) -> Array:
 	var tune := [[0, 69], [2, 73], [4, 76], [6, 81], [8, 79], [10, 76], [12, 73], [14, 76]]
 	var score := []
@@ -1691,9 +1405,6 @@ static func _score_milestone() -> Array:
 	return score
 
 
-# Three notes that climb: A, D, A an octave up. It says "bigger" in the band's key.
-# A door swinging open, two beats: a clav tumble down and back up on the eighths, then a
-# chime with a bell an octave under on beat two. No kick, so it never reads as the stage hit.
 static func _score_world(step: int) -> Array:
 	var score := [[0, 0, 1, "hat", 0.3], [4, 0, 1, "brush", 0.4], [4, 50 + step, 4, "keys", 0.3]]
 	for note in [[0, 74, 1, "clav", 0.55], [1, 72, 1, "clav", 0.5], [2, 69, 1, "clav", 0.5], [3, 74, 1, "clav", 0.55],
@@ -1708,16 +1419,11 @@ static func _score_class_up() -> Array:
 		[4, 0, 2, "open_hat", 0.4], [4, 38, 2, "fbass", 0.7]]
 
 
-# A heft class lost to a crane: the climb played back down, A F D, lighter and softer.
-# It lands on home, not below it, because the spill trail pays the mass back.
 static func _score_class_down() -> Array:
 	return [[0, 81, 2, "mallet", 0.7], [2, 77, 2, "mallet", 0.65], [4, 74, 3, "mallet", 0.7], [4, 74, 3, "bell", 0.25]]
 
 
-# The discovery: a bebop run up the Dorian scale with a chromatic lean on C#, landing
-# on high D over the home chord with a crash. The most exciting short cue in the game.
 static func _score_synergy() -> Array:
-	# The run climbs into the current level's motif, its first four notes an octave up.
 	var head: Array = Harmony.MOTIF_HEADS[clampi(_theme, 0, 2)]
 	var run := [[0, 69], [1, 72], [2, 74], [3, 76], [4, head[0] + 12 if head[0] < 74 else head[0]], [5, head[1] + (12 if head[0] < 74 else 0)],
 		[6, head[2] + (12 if head[0] < 74 else 0)], [7, 85]]
@@ -1732,9 +1438,6 @@ static func _score_synergy() -> Array:
 	return score
 
 
-# The crate shakes for sixteen steps (about 1.4 s, the ceremony row's build_s): toms
-# closing in, hats then a snare roll into the burst, and bells climbing the D minor
-# pentatonic a rung every two steps, over a breath of air that swells to the lid.
 static func _ceremony_build() -> PackedFloat32Array:
 	var score := []
 	for t in [[0, 45], [4, 47], [8, 50], [10, 52], [12, 53], [13, 55], [14, 57], [15, 60]]:
@@ -1754,16 +1457,12 @@ static func _ceremony_build() -> PackedFloat32Array:
 	return _mix([[Synth.render_score(score, 0.05), 0, 1.0], [air, 0, 0.3]])
 
 
-# The lid bursts on a D chord with a kick and a crash, then a little tune walks A, B, C up
-# to the home D: a rice cooker's end-of-cycle song, resolved.
 static func _score_ceremony_resolve() -> Array:
 	return [[0, 0, 2, "kick", 1.0], [0, 0, 12, "crash", 0.6], [0, 38, 10, "sub", 0.72],
 		[0, 62, 10, "keys", 0.42], [0, 69, 10, "keys", 0.4], [0, 74, 10, "keys", 0.4], [0, 77, 10, "keys", 0.4], [0, 76, 10, "keys", 0.3],
 		[0, 86, 2, "bell", 0.5], [2, 81, 1, "mallet", 0.68], [3, 83, 1, "mallet", 0.72], [4, 84, 1, "mallet", 0.78],
 		[5, 86, 6, "bell", 0.84], [5, 74, 6, "lead", 0.52], [5, 62, 6, "brass", 0.28], [5, 98, 6, "bell", 0.26]]
 
-
-# --- Recipe helpers --------------------------------------------------------------------
 
 static func _mix(parts: Array, saturate := false, target := 0.9) -> PackedFloat32Array:
 	var length := 0
@@ -1778,14 +1477,11 @@ static func _mix(parts: Array, saturate := false, target := 0.9) -> PackedFloat3
 	return Synth.declick(Synth.normalize(buf, target), 16, 400)
 
 
-# The first length_seconds of a buffer, faded out over `fade` samples. The default suits a
-# tick or a stab; a held note or a phrase cut while it still rings wants a longer one.
 static func _cut(buf: PackedFloat32Array, length_seconds: float, fade := 600) -> PackedFloat32Array:
 	var cut := buf.slice(0, mini(buf.size(), Synth.seconds(length_seconds)))
 	return Synth.declick(cut, 8, fade)
 
 
-# An oscillator with an exponential pitch sweep and exponential decay.
 static func _tone(length: float, f0: float, f1: float, shape: String, decay: float) -> PackedFloat32Array:
 	var n := Synth.seconds(length)
 	var buf := Synth.buffer(n)
@@ -1812,7 +1508,6 @@ static func _tone(length: float, f0: float, f1: float, shape: String, decay: flo
 	return Synth.declick(buf, 8, 300)
 
 
-# Noise through a resonant band-pass that sweeps f0 to f1, with an attack and decay.
 static func _noise(length: float, f0: float, f1: float, decay: float, attack := 0.002) -> PackedFloat32Array:
 	var n := Synth.seconds(length)
 	var buf := Synth.buffer(n)
@@ -1881,14 +1576,12 @@ static func _slam() -> PackedFloat32Array:
 
 
 static func _core_slam() -> PackedFloat32Array:
-	# Neutral planted mass: a 105-to-55 Hz sweep with a rounded attack, not Kest's bomb.
 	return _mix([[_tone(0.9, 105.0, 55.0, "sine", 2.2), 0, 1.0],
 		[_fm(0.12, 165.0, 1.41, 1.2, 22.0), Synth.seconds(0.004), 0.18],
 		[_noise(0.09, 950.0, 280.0, 30.0, 0.006), 0, 0.22]], true)
 
 
 static func _ultimate_land() -> PackedFloat32Array:
-	# Shared downbeat: a D sub drop under a short Dm7 stab, no pilot motif.
 	return _mix([[_tone(1.25, _hz(38), _hz(26), "sine", 3.2), 0, 1.0],
 		[_fm(0.12, _hz(62), 2.0, 1.6, 28.0), 0, 0.2],
 		[_fm(0.1, _hz(65), 2.0, 1.4, 30.0), 0, 0.16],
@@ -1901,7 +1594,6 @@ static func _kest_demo_knock() -> PackedFloat32Array:
 	var parts := [[_fm(0.1, _hz(57), 1.41, 2.0, 45.0), 0, 0.85],
 		[_tone(0.08, _hz(53), _hz(41), "sine", 38.0), 0, 0.45],
 		[_noise(0.012, 1800.0, 900.0, 150.0), 0, 0.3]]
-	# Three discrete pips count the mini charges after the dry knock.
 	for i in 3:
 		var at := Synth.seconds(0.11 + 0.1 * i)
 		var note: int = [86, 89, 93][i]
@@ -1944,7 +1636,6 @@ static func _death() -> PackedFloat32Array:
 	var line := [57, 53, 50]
 	for i in line.size():
 		parts.append([_tone(0.2, _hz(line[i]), _hz(line[i]), "square_dark", 5.0), Synth.seconds(0.17 * i), 0.8])
-	# The power-down: a low D that sags a fourth as it dies.
 	parts.append([_tone(0.9, _hz(38), _hz(31), "saw_dark", 3.0), Synth.seconds(0.51), 1.0])
 	return _mix(parts, true)
 
@@ -1960,7 +1651,6 @@ static func _hum() -> PackedFloat32Array:
 	return buf
 
 
-# Two falling minor-third "WAH"s, one beat each: low, minor, impossible to miss.
 static func _klaxon() -> PackedFloat32Array:
 	var parts := []
 	var beat := Synth.score_step * Harmony.STEPS_PER_BEAT
@@ -1970,7 +1660,6 @@ static func _klaxon() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-# The Warden breaks: a clamp tearing loose, then the band hits and bells climb out.
 static func _unseal() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "kick", 1.0], [0, 0, 16, "crash", 0.7], [0, 74, 1, "bell", 0.5], [1, 81, 1, "bell", 0.5],
 		[2, 86, 1, "bell", 0.5], [3, 89, 1, "bell", 0.5], [4, 93, 4, "bell", 0.55], [4, 86, 10, "lead", 0.7],
@@ -1982,17 +1671,11 @@ static func _unseal() -> PackedFloat32Array:
 	return _mix([[band, 0, 1.0], [release, 0, 0.6]])
 
 
-# A plated hit that bounced: a bright ringing plate an octave above the punch, with
-# no low body, so it reads as "not through" next to hit_thwack's meaty thud.
 static func _clank() -> PackedFloat32Array:
 	return _mix([[_fm(0.3, _hz(76), 1.41, 1.6, 11.0), 0, 1.0], [_fm(0.22, _hz(83), 2.76, 1.2, 16.0), 0, 0.55],
 		[_tone(0.03, 1800.0, 1200.0, "sine", 90.0), 0, 0.3]])
 
 
-# Plates knocked loose: `plates` inharmonic FM pings, each a little lower and later than
-# the last, over a grit of noise. More plates also add a low thunk, so the size of the hit
-# reads by how much falls, not only by loudness. Clatter, never a tune: it must not be
-# mistaken for a pickup.
 static func _shed(plates: int) -> PackedFloat32Array:
 	var notes := [86, 81, 84, 77, 79]
 	var parts: Array = [[_noise(0.03 + 0.012 * plates, 4800.0, 2400.0, 90.0 / plates), 0, 0.35]]
@@ -2003,26 +1686,19 @@ static func _shed(plates: int) -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# The scrap is back: a quick, bright, rising fourth (A to D on the bell), the tail of a
-# rice cooker's melody. Audio climbs it up the pentatonic while recoveries keep coming.
 static func _reclaim() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 81), 0.2), 0, 0.75], [_cut(_n("bell", 86), 0.32), Synth.seconds(0.075), 0.95],
 		[_noise(0.01, 6000.0, 6000.0, 300.0), 0, 0.12]])
 
 
-# A hit turned aside entirely: one short, soft, high metal tick (a single bell partial and
-# a breath of grit, about 110 ms). No plates, no thunk and no second note, so it is not the
-# shed's clatter, the reclaim's chime or the hurt's low square.
 static func _deflect() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 91), 0.11), 0, 0.8], [_noise(0.012, 7000.0, 5000.0, 250.0), 0, 0.15]])
 
 
-# A dry, soft crackle: a short filtered noise puff over a low ember tick.
 static func _sputter() -> PackedFloat32Array:
 	return _mix([[_noise(0.06, 2600.0, 900.0, 60.0, 0.004), 0, 0.5], [_tone(0.05, 300.0, 180.0, "sine", 40.0), 0, 0.5]])
 
 
-# Torn metal: a zipper of teeth sweeping down while a saw sags.
 static func _rip() -> PackedFloat32Array:
 	var n := Synth.seconds(0.45)
 	var teeth := _noise(0.45, 4200.0, 500.0, 3.0, 0.005)
@@ -2033,15 +1709,12 @@ static func _rip() -> PackedFloat32Array:
 	return _mix([[teeth, 0, 1.0], [_tone(0.4, 820.0, 180.0, "saw_dark", 5.0), 0, 0.5]], true)
 
 
-# The lock-in: a click, a thud, and a clean fifth on D that rings out.
 static func _core_socket() -> PackedFloat32Array:
 	return _mix([[_noise(0.02, 5000.0, 5000.0, 250.0), 0, 0.5], [_tone(0.12, 140.0, 80.0, "sine", 28.0), 0, 0.8],
 		[_n("bell", 74), Synth.seconds(0.05), 0.7], [_n("bell", 81), Synth.seconds(0.05), 0.6],
 		[_cut(_n("bell", 86), 0.6), Synth.seconds(0.16), 0.45]])
 
 
-# The Warden wakes: a low anvil strike and a Neapolitan brass swell (Eb over D), the
-# sound of the band turning toward the boss groove.
 static func _warden_in() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "kick", 1.0], [0, 38, 16, "sub", 0.7], [0, 51, 12, "brass", 0.45], [0, 55, 12, "brass", 0.45],
 		[0, 58, 12, "brass", 0.45], [4, 0, 2, "kick", 0.8], [8, 0, 2, "kick", 0.9], [12, 0, 2, "kick", 1.0],
@@ -2050,7 +1723,6 @@ static func _warden_in() -> PackedFloat32Array:
 	return _mix([[band, 0, 1.0], [_fm(0.9, _hz(38), 2.71, 5.0, 3.5), 0, 0.5]], true)
 
 
-# The slam womp: a sub that drops out of the floor with a thump on top, instant.
 static func _womp() -> PackedFloat32Array:
 	var n := Synth.seconds(0.62)
 	var buf := Synth.buffer(n)
@@ -2062,7 +1734,6 @@ static func _womp() -> PackedFloat32Array:
 	return _mix([[buf, 0, 1.0], [_noise(0.08, 900.0, 200.0, 40.0), 0, 0.3]], true)
 
 
-# Two bars of rising noise and pitch, the build's riser (on the grid it is baked for).
 static func _build_riser() -> PackedFloat32Array:
 	var n := Synth.score_step * Harmony.STEPS_PER_BAR * 2
 	var noise := _noise(float(n) / RATE, 300.0, 6000.0, 0.0, 0.001)
@@ -2098,8 +1769,6 @@ static func _zap_hum() -> PackedFloat32Array:
 	return Synth.declick(buf, 16, 600)
 
 
-# A heft destructible breaking, one voice a family. Wood knocks and splinters, scrap clanks and rattles, masonry
-# thuds and crumbles, steel rings under a low hit. Each is a short mix of the bank's own tone, FM and noise.
 static func _destructible(family: String) -> PackedFloat32Array:
 	match family:
 		"wood":
@@ -2122,8 +1791,6 @@ static func _shatter() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Admiral Brindle's arrival: two anvil strikes and a brass fanfare that climbs D, F,
-# A and lands on the flat second, Eb, the Phrygian colour of his whole arena.
 static func _brindle_in() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "boom", 1.0], [0, 0, 2, "anvil", 1.0], [0, 38, 16, "sub", 0.6], [2, 0, 2, "anvil", 0.8],
 		[4, 62, 2, "brass", 0.6], [6, 65, 2, "brass", 0.6], [8, 69, 2, "brass", 0.65], [8, 0, 2, "kick", 0.9],
@@ -2133,8 +1800,6 @@ static func _brindle_in() -> PackedFloat32Array:
 	return Synth.render_score(score, 0.9)
 
 
-# The stage's ambience drawn out before the arena: a soft breath of air that falls
-# and fades, with a low D under it. Quiet on purpose; the arena music is the event.
 static func _stage_fade() -> PackedFloat32Array:
 	var air := _noise(0.7, 2600.0, 400.0, 0.0, 0.08)
 	var n := air.size()
@@ -2144,16 +1809,12 @@ static func _stage_fade() -> PackedFloat32Array:
 	return _mix([[air, 0, 1.0], [_tone(0.6, _hz(50), _hz(50), "sine", 4.0), 0, 0.35]], false, 0.6)
 
 
-# A wind-up: two low minor-second pulses (D, Eb) with a rising noise, over in 0.4 s so
-# it never masks the hit it warns about.
 static func _boss_telegraph() -> PackedFloat32Array:
 	return _mix([[_tone(0.12, _hz(50), _hz(50), "square_dark", 10.0), 0, 0.9],
 		[_tone(0.18, _hz(51), _hz(52), "square_dark", 8.0), Synth.seconds(0.13), 1.0],
 		[_noise(0.35, 600.0, 3000.0, 3.0, 0.2), 0, 0.35]], true)
 
 
-# A cued follow-up is coming (fight_phases.gd): three ratchet clicks climbing D, F, A and a
-# high bell on D, all inside CUE_LEAD, so the ear has the warning before the eye's short tell.
 static func _ratchet_cue() -> PackedFloat32Array:
 	return _mix([[_tone(0.05, _hz(62), _hz(62), "square_dark", 30.0), 0, 0.8],
 		[_tone(0.05, _hz(65), _hz(65), "square_dark", 30.0), Synth.seconds(0.11), 0.85],
@@ -2161,8 +1822,6 @@ static func _ratchet_cue() -> PackedFloat32Array:
 		[_cut(_n("bell", 86), 0.3), Synth.seconds(0.33), 0.7]], true)
 
 
-# Brindle routed: the brass fanfare in D major, a bell run to the top, and the
-# rice-cooker resolution on high D over a held D major chord.
 static func _boss_defeated() -> PackedFloat32Array:
 	var score := [[0, 0, 2, "boom", 1.0], [0, 0, 16, "crash", 0.7], [0, 62, 2, "brass", 0.6], [2, 66, 2, "brass", 0.6],
 		[4, 69, 2, "brass", 0.65], [6, 74, 2, "brass", 0.7], [8, 0, 2, "kick", 1.0], [8, 78, 4, "brass", 0.7],
@@ -2175,7 +1834,6 @@ static func _boss_defeated() -> PackedFloat32Array:
 	return Synth.render_score(score, 1.6)
 
 
-# A one-beat reverse swell that ends exactly on the next downbeat.
 static func _riser() -> PackedFloat32Array:
 	var n := Synth.score_step * Harmony.STEPS_PER_BEAT
 	var noise := _noise(float(n) / RATE, 400.0, 5000.0, 0.0, 0.001)
@@ -2185,11 +1843,6 @@ static func _riser() -> PackedFloat32Array:
 	return Synth.normalize(noise, 0.9)
 
 
-# The four threat warnings (combat/threat_grammar.gd), one per attack type, in the
-# threat register of SOUND-STORY.md section 3: low, on the sinister degrees of D (Eb,
-# Ab, Bb), never on the reward ladder. Each is a one-shot played on the frame the threat
-# is declared, so it cannot stretch to the attack's own wind-up.
-# Instant: ratchet clicks that speed up, the clock running out, then a clang on Eb.
 static func _threat_tick() -> PackedFloat32Array:
 	var parts := []
 	var at := 0.0
@@ -2204,21 +1857,15 @@ static func _threat_tick() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Wave: a whoosh that rises through the sinister set, Eb up to Bb, as the front comes on.
 static func _threat_whoosh() -> PackedFloat32Array:
 	return _mix([[_noise(0.6, 300.0, 2800.0, 1.5, 0.35), 0, 1.0], [_tone(0.6, _hz(51), _hz(58), "saw_dark", 2.0), 0, 0.55]])
 
 
-# Projectile: a launch thunk, then a whistle falling from Bb to Eb as the shell comes down.
 static func _threat_whistle() -> PackedFloat32Array:
 	return _mix([[_tone(0.1, 110.0, 50.0, "sine", 28.0), 0, 1.0], [_noise(0.06, 900.0, 300.0, 40.0), 0, 0.5],
 		[_tone(0.65, _hz(82), _hz(75), "sine", 1.2), Synth.seconds(0.08), 0.8], [_noise(0.65, 2200.0, 1300.0, 2.5, 0.05), Synth.seconds(0.08), 0.15]])
 
 
-# Lane: a charge hum on Ab from the frame the lane is declared. It holds for
-# THREAT_HUM_HOLD, longer than any lane's warning, and audio.gd cuts it on the frame the
-# lane goes live, where the tear plays: the tear is its own one-shot because it means fire
-# (SOUND-STORY section 7) and a warning's length varies (1.4 s charge, 0.6 s hook turn).
 const THREAT_HUM_HOLD := 3.0
 
 static func _threat_hum() -> PackedFloat32Array:
@@ -2226,19 +1873,16 @@ static func _threat_hum() -> PackedFloat32Array:
 		[_tone(THREAT_HUM_HOLD, _hz(56), _hz(56), "square_dark", 0.2), 0, 0.5]], true)
 
 
-# Lane release: the tearing buzz, sliding Ab down to F.
 static func _threat_tear() -> PackedFloat32Array:
 	return _mix([[_noise(0.18, 1800.0, 5200.0, 10.0), 0, 0.9], [_tone(0.18, _hz(56), _hz(51), "saw", 12.0), 0, 0.6]], true)
 
 
-# Burrow: a low Eb rumble with two muffled knocks under the floor.
 static func _warn_burrow() -> PackedFloat32Array:
 	return _mix([[_tone(0.38, _hz(39), _hz(51), "saw_dark", 3.0), 0, 0.8],
 		[_noise(0.09, 350.0, 180.0, 35.0), 0, 0.7],
 		[_noise(0.1, 500.0, 250.0, 28.0), Synth.seconds(0.14), 1.0]])
 
 
-# Bore: three accelerating teeth, then a short Ab rig clang.
 static func _warn_bore() -> PackedFloat32Array:
 	var parts := []
 	for at in [0.0, 0.12, 0.2]:
@@ -2248,7 +1892,6 @@ static func _warn_bore() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Breach: a dry crack across the plate, then the rubble falling away into a low Eb rumble.
 static func _breach_crack() -> PackedFloat32Array:
 	return _mix([[_noise(0.03, 5200.0, 2400.0, 90.0), 0, 0.9],
 		[_fm(0.08, _hz(63), 2.3, 4.0, 30.0), 0, 0.55],
@@ -2256,20 +1899,17 @@ static func _breach_crack() -> PackedFloat32Array:
 		[_tone(0.34, _hz(46), _hz(39), "saw_dark", 5.0), Synth.seconds(0.1), 0.8]])
 
 
-# Lure: a slow bloom of air over the beating Ab/Eb pair, with no reward bell.
 static func _warn_lure() -> PackedFloat32Array:
 	return _mix([[_noise(0.52, 250.0, 1400.0, 3.0, 0.18), 0, 0.9],
 		[_tone(0.52, _hz(44), _hz(44), "sine", 2.0), 0, 0.65],
 		[_tone(0.4, _hz(51), _hz(51), "sine", 3.0), Synth.seconds(0.08), 0.45]])
 
 
-# Cutter: a dry snip followed by a fast, falling metallic spin on Bb.
 static func _warn_cut() -> PackedFloat32Array:
 	return _mix([[_noise(0.025, 4200.0, 1800.0, 120.0), 0, 0.8],
 		[_fm(0.29, _hz(58), 2.71, 5.0, 12.0, -12.0), 0, 1.0]])
 
 
-# Winch: three evenly spaced cable pawls over a low Bb tension buzz.
 static func _warn_winch() -> PackedFloat32Array:
 	var parts := [[_tone(0.43, _hz(46), _hz(46), "square_dark", 2.0), 0, 0.6]]
 	for at in [0.0, 0.13, 0.26]:
@@ -2278,13 +1918,11 @@ static func _warn_winch() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Dive: a breath at the crest, then a sustained Bb-to-Eb falling whistle.
 static func _warn_dive() -> PackedFloat32Array:
 	return _mix([[_noise(0.56, 1800.0, 350.0, 4.0, 0.06), 0, 0.45],
 		[_tone(0.56, _hz(58), _hz(51), "sine", 1.8), 0, 1.0]])
 
 
-# Tether: the harpoon's spring cocking in two rising Bb ratchet clicks, then a taut wet twang.
 static func _warn_tether() -> PackedFloat32Array:
 	return _mix([[_noise(0.03, 2600.0, 1200.0, 90.0), 0, 0.6],
 		[_noise(0.03, 3200.0, 1500.0, 90.0), Synth.seconds(0.12), 0.7],
@@ -2292,15 +1930,12 @@ static func _warn_tether() -> PackedFloat32Array:
 		[_noise(0.2, 700.0, 300.0, 9.0, 0.03), Synth.seconds(0.2), 0.35]])
 
 
-# Flap: a sluice hinge creaking up from Eb to Ab, with a gush of water under it.
 static func _warn_flap() -> PackedFloat32Array:
 	return _mix([[_tone(0.42, _hz(51), _hz(56), "saw_dark", 2.5), 0, 0.7],
 		[_fm(0.42, _hz(63), 2.1, 1.5, 3.0, 5.0), 0, 0.35],
 		[_noise(0.4, 600.0, 1600.0, 3.0, 0.12), Synth.seconds(0.05), 0.6]])
 
 
-# Reel: the boom tender's reel ratcheting five clicks up, one per float lamp, over a low
-# tug-engine chug, and a small brass lamp ping on the last.
 static func _warn_reel() -> PackedFloat32Array:
 	var parts := [[_tone(0.7, _hz(39), _hz(41), "saw_dark", 3.0), 0, 0.5]]
 	for i in 5:
@@ -2309,15 +1944,12 @@ static func _warn_reel() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Flank call: a crew hand's two-finger whistle, up a fifth and down a step (A to E, then D): someone is
-# cutting across your line.
 static func _flank_call() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, _hz(81), _hz(88), "sine", 4.0), 0, 0.8],
 		[_tone(0.2, _hz(88), _hz(86), "sine", 7.0), Synth.seconds(0.15), 0.85],
 		[_noise(0.3, 5200.0, 4400.0, 9.0, 0.01), 0, 0.12]])
 
 
-# Boil rumble: the silt belching up from below, a low wobble rising under a wet gurgle.
 static func _boil_rumble() -> PackedFloat32Array:
 	return _mix([[_fm(0.9, _hz(31), 1.5, 2.5, 2.0, 3.0), 0, 0.9],
 		[_noise(0.8, 300.0, 900.0, 2.5, 0.08), Synth.seconds(0.1), 0.5],
@@ -2325,11 +1957,6 @@ static func _boil_rumble() -> PackedFloat32Array:
 		[_noise(0.06, 1700.0, 800.0, 40.0), Synth.seconds(0.72), 0.3]])
 
 
-# --- The leitmotifs (SOUND-STORY.md section 2) ------------------------------------------
-# Every class and faction cue reads its notes from Harmony.MOTIFS, so the class row,
-# the band's counter-line and these cues can never disagree about the tune.
-
-# A motif's cells as score events on an instrument, from a step, an octave up or down.
 static func _motif_score(id: String, at: int, instrument: String, gain: float, octave := 0) -> Array:
 	var score: Array = []
 	for cell in Harmony.motif(id).get("cells", []):
@@ -2337,7 +1964,6 @@ static func _motif_score(id: String, at: int, instrument: String, gain: float, o
 	return score
 
 
-# A dry paper punch under ledger keys; the total adds a small till bell.
 static func tally_recipe(id: String, midi := -1, total := false) -> PackedFloat32Array:
 	var direct := midi >= 0
 	var saved := []
@@ -2380,8 +2006,6 @@ static func kest_score(id: String) -> Array:
 	return [[0, note, 1, "tom", 0.6]]
 
 
-# Sable's release: the arpeggio reeled up in sixteenths, then the ninth resolving onto
-# a bright chord of bells.
 static func _sable_release() -> PackedFloat32Array:
 	var score := _motif_score("sable", 0, "mallet", 0.8)
 	score.append_array(_motif_score("sable", 0, "bell", 0.3, 12))
@@ -2392,8 +2016,6 @@ static func _sable_release() -> PackedFloat32Array:
 	return Synth.render_score(score, 0.9)
 
 
-# Rivet's release: the hammered note over a closed-hat roll that doubles its rate, the
-# fourth landing on the beat with an open-hat crash.
 static func _rivet_release() -> PackedFloat32Array:
 	var step := Synth.score_step
 	var score := _motif_score("rivet", 0, "clav", 0.8)
@@ -2406,8 +2028,6 @@ static func _rivet_release() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Kest's release: tick, tick, tick, boom. The triad falls on the tuned tom in eighths
-# and the last thump is doubled on the 808.
 static func _kest_release() -> PackedFloat32Array:
 	var score := _motif_score("kest", 0, "tom", 0.85)
 	var cells: Array = Harmony.motif("kest")["cells"]
@@ -2417,8 +2037,6 @@ static func _kest_release() -> PackedFloat32Array:
 	return Synth.render_score(score, 1.0)
 
 
-# Tarn's release: tap, tap, creak, tear. Two Redjaw anvil taps test the latch on the
-# reese, the Eb creaks, and the long low A tears it loose over the 808, a kick and a crash.
 static func _tarn_release() -> PackedFloat32Array:
 	var step := Synth.score_step
 	var score := _motif_score("tarn", 0, "reese", 0.8)
@@ -2429,8 +2047,6 @@ static func _tarn_release() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Tally's release: four card punches count up the keys, then the total is struck.
-# A snare stamp, kick, till bell and low D land together after the pen lifts.
 static func _tally_release() -> PackedFloat32Array:
 	var step := Synth.score_step
 	var score := _motif_score("tally", 0, "keys", 0.8)
@@ -2442,7 +2058,6 @@ static func _tally_release() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# The rebuilt gun answers the Mind in reverse, climbing to the held D.
 static func _cannon_release() -> PackedFloat32Array:
 	var step := Synth.score_step
 	var score := _motif_score("cannon", 0, "chime", 0.7)
@@ -2454,8 +2069,6 @@ static func _cannon_release() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# The ready pulse: the motif's first note on the class instrument, 120 ms, an octave up
-# so it reads over the band ("F is back").
 static func _ready_pulse(id: String) -> PackedFloat32Array:
 	var first: int = int(Harmony.motif_or_first(id)["cells"][0][1])
 	match id:
@@ -2472,8 +2085,6 @@ static func _ready_pulse(id: String) -> PackedFloat32Array:
 	return _mix([[_cut(_n("mallet", first + 12), 0.12), 0, 1.0], [_cut(_n("bell", first + 24), 0.12), 0, 0.3]])
 
 
-# Breaking free: a bright burst in the class colour, then the class's first interval
-# an octave up (Rivet's is the fourth its sprint arrives on).
 static func _break_free(id: String) -> PackedFloat32Array:
 	var row := Harmony.motif_or_first(id)
 	var cells: Array = row["cells"]
@@ -2485,8 +2096,6 @@ static func _break_free(id: String) -> PackedFloat32Array:
 		[_cut(_n(voice, b), 0.35), gap, 0.9], [_cut(_n("bell", b + 12), 0.4), gap, 0.3]])
 
 
-# The Fleet: stamp, stamp, decree. Two anvil hits on the beat, the brass lean D Eb D on
-# the offbeat. Every Fleet unit is a small Brindle.
 static func _fleet_motif() -> PackedFloat32Array:
 	var score := _motif_score("fleet", 0, "brass", 0.6)
 	score.append_array(_motif_score("fleet", 0, "brass", 0.35, 12))
@@ -2496,15 +2105,12 @@ static func _fleet_motif() -> PackedFloat32Array:
 	return Synth.render_score(score, 0.9)
 
 
-# A reactor vent blowing: a boom, a steam roar falling away, and the Ab pedal dropping
-# out of the floor.
 static func _reactor_erupt() -> PackedFloat32Array:
 	var pedal: int = int(Harmony.motif("reactor")["cells"][0][1])
 	return _mix([[Synth.drum("boom"), 0, 1.0], [_noise(1.1, 3800.0, 350.0, 2.6, 0.004), 0, 0.8],
 		[_n("sub808", pedal), 0, 0.8], [Synth.drum("crash"), 0, 0.35]], true)
 
 
-# The swarm locks: the unison buzz snaps into stacked fourths and holds.
 static func _swarm_lock() -> PackedFloat32Array:
 	var row := Harmony.motif("swarm")
 	var unison: int = int(row["cells"][0][1])
@@ -2515,7 +2121,6 @@ static func _swarm_lock() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Scattered: the chord falls apart into single detuned notes, then silence.
 static func _swarm_scatter() -> PackedFloat32Array:
 	var chord: Array = Harmony.motif("swarm")["chord"]
 	var parts: Array = []
@@ -2524,8 +2129,6 @@ static func _swarm_scatter() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# The Mind's hand quotes your class motif back, inverted and one note wrong, on a pure
-# sine that rings long.
 static func _mind_quote(class_id: String) -> PackedFloat32Array:
 	var score: Array = []
 	for cell in Harmony.mind_quote(class_id):
@@ -2533,8 +2136,6 @@ static func _mind_quote(class_id: String) -> PackedFloat32Array:
 	return Synth.render_score(score, 2.4)
 
 
-# The Mind's wrong note: the quote's flattened last note rung alone, with the floor a tritone
-# under it sliding down a semitone more, so the Highdraft's G never arrives.
 static func _mind_wrong(class_id: String) -> PackedFloat32Array:
 	var quote: Array = Harmony.mind_quote(class_id)
 	var wrong: int = (int(quote[-1][1]) if not quote.is_empty() else 61) + 12
@@ -2542,8 +2143,6 @@ static func _mind_wrong(class_id: String) -> PackedFloat32Array:
 		[_tone(1.2, _hz(wrong - 18), _hz(wrong - 19), "sine", 2.0), Synth.seconds(0.1), 0.6], [Synth.drum("crash"), 0, 0.25]])
 
 
-# The Fleet's mooring anvil (KLANG-KLANG), then its brass a fourth up with the Lydian sharp
-# eleven on top and a pulley whirring away into the wind.
 static func _fleet_anvil() -> PackedFloat32Array:
 	var gap := Synth.seconds(0.17)
 	return _mix([[Synth.drum("anvil"), 0, 1.0], [Synth.drum("anvil"), gap, 0.8], [Synth.drum("boom"), 0, 0.6],
@@ -2551,16 +2150,11 @@ static func _fleet_anvil() -> PackedFloat32Array:
 		[_fm_sweep(0.6, _hz(79), _hz(91), 1.5, 5.0), gap * 2, 0.2]], true)
 
 
-# A boiler or burner giving way: a pressure hiss that swells, the valve pop with a thud under
-# it, the steam roaring off and a two-pipe whistle on D and its tritone.
 static func _boiler_burst() -> PackedFloat32Array:
 	var pop := Synth.seconds(0.22)
 	return _mix([[_noise(0.3, 900.0, 4200.0, 1.0, 0.25), 0, 0.5], [Synth.drum("boom"), pop, 1.0],
 		[_noise(0.9, 5000.0, 600.0, 3.0, 0.003), pop, 0.7], [_tone(0.25, 70.0, 40.0, "sine", 12.0), pop, 0.8],
 		[_tone(0.7, _hz(74), _hz(76), "sine", 3.5), pop, 0.35], [_tone(0.7, _hz(80), _hz(82), "sine", 3.5), pop, 0.25]], true)
-# The Glass Lance: a glass flick, then the Mind's quote in miniature. The first three notes of its
-# quote of Sable (D B G) ring fast on the chime two octaves up, and a clean sine holds the
-# quote's wrong last note: TINNG. No vocals.
 static func _glass_lance() -> PackedFloat32Array:
 	var quote: Array = Harmony.mind_quote("sable")
 	var parts: Array = [[_fm(0.06, _hz(int(quote[0][1]) + 36), 3.5, 3.0, 45.0), 0, 0.5]]
@@ -2571,12 +2165,6 @@ static func _glass_lance() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# A hold loop, n samples long. The four counter holds of SOUND-STORY.md section 3 sit
-# on the sinister degrees around home, so a chain of them assembles D, Bb, Eb and Ab.
-# "crater" (v3 AU2) is the reactor's own hold, the burning ring left by a missed pulse,
-# on the family's Ab in its Geiger crackle. strain (0..1) raises the tether's pitch as
-# the ball pulls against it. The riser is the one sound that means "this is about to be
-# over".
 static func hold(kind: String, n: int, strain := 0.0) -> PackedFloat32Array:
 	var buf := Synth.buffer(n)
 	var rng := RandomNumberGenerator.new()
@@ -2666,24 +2254,17 @@ static func hold(kind: String, n: int, strain := 0.0) -> PackedFloat32Array:
 	return Synth.declick(Synth.normalize(buf, 0.9), 64, 600)
 
 
-# The shop bell: a counter bell, then the rice cooker's two "done" beeps on high D.
 static func _shop_bell() -> PackedFloat32Array:
 	return _mix([[_fm(0.6, _hz(93), 3.5, 2.0, 5.0), 0, 0.6], [_cut(_n("beep", 86), 0.12), Synth.seconds(0.16), 0.9],
 		[_cut(_n("mallet", 86), 0.12), Synth.seconds(0.16), 0.5], [_cut(_n("beep", 86), 0.2), Synth.seconds(0.34), 0.9],
 		[_cut(_n("mallet", 86), 0.2), Synth.seconds(0.34), 0.5]])
 
 
-# --- v3 AU2 bank: bets, secrets, allies, fights and the ride ---------------------------
-# design-v3/AUDIO-V3.md sections 4 (interactables), 5 (W11's juice), 8 (this wave) and
-# 11 (Andrew's ruling on the bet's pitch, option a).
-
-# The bet's question: an anvil accent under the fbass leaping the tritone, D to Ab.
 static func _bet_clunk() -> PackedFloat32Array:
 	return _mix([[Synth.drum("anvil"), 0, db_to_linear(-6.0)], [_cut(_n("fbass", 38), 0.16), 0, 0.9],
 		[_cut(_n("fbass", 44), 0.22), Synth.seconds(0.1), 0.9]])
 
 
-# The 0.35 s hold: a snare roll accelerating from the eighth at 172 to the thirty-second.
 static func _bet_roll() -> PackedFloat32Array:
 	var parts := []
 	var at := 0.0
@@ -2697,21 +2278,16 @@ static func _bet_roll() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# The win: the question resolves up a semitone, Ab to A, home's own dominant, with a
-# snare crack and the rice-cooker's two "done" beeps a fifth up (A5 D6, not D6 D6).
 static func _bet_crack() -> PackedFloat32Array:
 	return _mix([[Synth.drum("snare"), 0, 1.0], [_cut(_n("fbass", 45), 0.24), 0, 0.9],
 		[_cut(_n("beep", 81), 0.12), Synth.seconds(0.1), 0.8], [_cut(_n("mallet", 81), 0.12), Synth.seconds(0.1), 0.45],
 		[_cut(_n("beep", 86), 0.2), Synth.seconds(0.26), 0.9], [_cut(_n("mallet", 86), 0.2), Synth.seconds(0.26), 0.5]])
 
 
-# The loss: the question resolves down a semitone, Ab to G, and stops on a dry click.
 static func _bet_refusal() -> PackedFloat32Array:
 	return _mix([[_noise(0.04, 3000.0, 3000.0, 150.0), 0, 0.5], [_cut(_n("fbass", 43), 0.3), 0, 0.85]])
 
 
-# The reward bell an octave down through a dark low-pass: the ladder's first interval
-# reversed, a falling fourth A to D, something old rather than earned.
 static func _sunken_bell() -> PackedFloat32Array:
 	var bell := _mix([[_n("bell", 69), 0, 0.85], [_n("bell", 62), Synth.seconds(0.22), 1.0]])
 	var low := 0.0
@@ -2722,35 +2298,26 @@ static func _sunken_bell() -> PackedFloat32Array:
 	return _cut(bell, 2.0)
 
 
-# The ally quotes you right: the class motif straight on the Mind's own sine, an octave
-# up, where the Mind's hand quotes it wrong (_mind_quote always inverts).
 static func _ally_hum(class_id: String) -> PackedFloat32Array:
 	return Synth.render_score(_motif_score(class_id, 0, "chime", 0.7, 12), 1.4)
 
 
-# The wake: a Cherenkov flicker on bell, D6 A5 D6, 40 ms apart.
 static func _ally_wake() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 86), 0.1), 0, 0.8], [_cut(_n("bell", 81), 0.12), Synth.seconds(0.04), 0.7],
 		[_cut(_n("bell", 86), 0.16), Synth.seconds(0.08), 0.9]])
 
 
-# The opt-in fight's arm: one anvil stamp on the beat, the Fleet's brass lean (D to Eb)
-# under it, so a small fight still sounds like a small Brindle (SOUND-STORY section 2).
 static func _fight_arm_stamp() -> PackedFloat32Array:
 	return _mix([[Synth.drum("anvil"), 0, 1.0], [_n("brass", 50), 0, 0.5],
 		[_n("brass", 51), Synth.seconds(0.12), 0.4]], true)
 
 
-# The class-colour whip: a rising sweep plus the class motif's first interval, an
-# octave up, on the class's own voice (SOUND-STORY section 5, "a reward, not a threat").
 static func _near_miss_whip(class_id: String) -> PackedFloat32Array:
 	var notes := whip_notes(class_id)
 	return _mix([[_noise(0.22, 700.0, 4800.0, 9.0, 0.04), 0, 0.85],
 		[_cut(_n(notes[0], notes[1]), 0.16), 0, 0.8], [_cut(_n(notes[0], notes[2]), 0.22), Synth.seconds(0.09), 0.85]])
 
 
-# Four bright notes up the home key's pentatonic, D F G A, a fountain of scrap: a rising
-# mallet line with a bell an octave over it and a spray of noise on the last note.
 static func _pickup_fountain() -> PackedFloat32Array:
 	var step := Synth.seconds(0.075)
 	var parts: Array = []
@@ -2762,30 +2329,24 @@ static func _pickup_fountain() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Two causes become one: A below and D above close in on F, the minor third of the home
-# key, which rings as a chord of bells over the keys.
 static func _synergy_fired() -> PackedFloat32Array:
 	var score := [[0, 69, 2, "mallet", 0.72], [1, 86, 2, "bell", 0.62], [3, 77, 5, "mallet", 0.85], [3, 77, 5, "bell", 0.44],
 		[3, 77, 5, "lead", 0.34], [3, 65, 5, "keys", 0.38], [3, 62, 5, "keys", 0.34], [3, 69, 5, "keys", 0.3]]
 	return Synth.render_score(score, 0.05)
 
 
-# Something became more: the fourth A to D, then the octave over it, ringing.
 static func _evolution_fired() -> PackedFloat32Array:
 	var score := [[0, 69, 2, "mallet", 0.72], [2, 74, 2, "mallet", 0.82], [4, 86, 4, "mallet", 0.9], [4, 86, 4, "bell", 0.54],
 		[4, 74, 4, "lead", 0.36], [4, 62, 4, "brass", 0.28], [4, 74, 4, "keys", 0.36], [4, 62, 4, "sub808", 0.45]]
 	return Synth.render_score(score, 0.05)
 
 
-# A page turned and a note was written: a soft falling pair, A then F, a breath of
-# paper under the first, one quiet low note after.
 static func _lore_found() -> PackedFloat32Array:
 	return _mix([[_noise(0.14, 3000.0, 1200.0, 18.0, 0.03), 0, 0.3],
 		[_cut(_n("keys", 81), 0.3), 0, 0.8], [_cut(_n("keys", 77), 0.4), Synth.seconds(0.2), 0.7],
 		[_cut(_n("bell", 74), 0.45), Synth.seconds(0.42), 0.35]])
 
 
-# The pilot's own motif opening: its first phrase on its own voice, cut to under a second.
 static func _pilot_unlocked(class_id: String) -> PackedFloat32Array:
 	var row := Harmony.motif_or_first(class_id)
 	var score := _motif_score(class_id, 0, row["voice"], 0.8)
@@ -2793,43 +2354,29 @@ static func _pilot_unlocked(class_id: String) -> PackedFloat32Array:
 	return _cut(Synth.render_score(score, 0.4), 0.85, Synth.seconds(0.12))
 
 
-# A two-note ladder stab, the kill chain's own accent so a tier never sounds like a lone
-# kill_pop; resolved by rung through the same pitch ratio kill_pop already uses.
 static func _kill_chain_tier() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 74), 0.14), 0, 0.85], [_cut(_n("bell", 77), 0.14), 0, 0.7],
 		[_noise(0.03, 5500.0, 4000.0, 130.0), 0, 0.4]])
 
 
-# The drop the player caused: the reward note on the ladder, then the rebound's own
-# spring snap, resolved by segments cut the same way.
 static func _drop_landing() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 74), 0.3), 0, 0.85], [_tone(0.12, 260.0, 620.0, "sine", 26.0), Synth.seconds(0.02), 0.7],
 		[_noise(0.03, 5000.0, 3000.0, 120.0), 0, 0.4]])
 
 
-# The shell's released spring: a sine that snaps up and settles back, with a small metal tick.
 static func _shell_spring() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, 240.0, 620.0, "sine", 14.0), 0, 0.9], [_tone(0.22, 620.0, 410.0, "sine", 16.0), Synth.seconds(0.05), 0.6],
 		[_noise(0.02, 4500.0, 3000.0, 200.0), 0, 0.3]])
 
 
-# The held-door ready pulse, class-independent: a bright blip on the next sixteenth, so
-# a hit reads as progress without borrowing whichever class happens to be playing.
 static func _door_tick() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 86), 0.08), 0, 0.8], [_noise(0.015, 6500.0, 6500.0, 250.0), 0, 0.35]])
 
 
-# The return's launch grammar: the rice-cooker climb up A7, on the ride family's mallet,
-# pitched by throw speed at playback (KEYED_SOUNDS carries it, same as every ride cue).
 static func _return_launch_arpeggio() -> PackedFloat32Array:
 	return _arpeggio(Harmony.LAUNCH_TUNE, 0.07, "mallet", 0.5)
 
 
-# The bone gauge's pressure hiss, rising through the cycle: noise only, so it never
-# competes with a pitched cue for the ear.
-# --- Arena locks and Warden gates (src/world/stage_locks.gd) ---------------------------
-# The yard shuts: an iron gate drops on a sub boom, and a square falls a minor third, D to B,
-# so the room reads "closed" before the crew lands.
 static func _arena_lock_slam() -> PackedFloat32Array:
 	return _mix([[_noise(0.5, 180.0, 60.0, 7.0), 0, 1.0],
 		[_tone(0.7, _hz(38), _hz(31), "sine", 4.0), 0, 0.9],
@@ -2838,15 +2385,11 @@ static func _arena_lock_slam() -> PackedFloat32Array:
 		[_noise(0.06, 3200.0, 1800.0, 60.0), Synth.seconds(0.02), 0.35]], true)
 
 
-# The next wave is coming: a pure whistle falls an octave over a low tick, the same fall the
-# hazard warnings use, so the 1.5 s before it lands reads as "incoming".
 static func _arena_wave_whistle() -> PackedFloat32Array:
 	return _mix([[_tone(0.9, _hz(86), _hz(74), "sine", 2.0), 0, 0.8],
 		[_noise(0.04, 1400.0, 900.0, 60.0), 0, 0.4], [_noise(0.04, 1400.0, 900.0, 60.0), Synth.seconds(0.45), 0.4]])
 
 
-# The yard opens: a latch clicks, then three bells climb the pentatonic to the home D, the
-# same walk up as the ceremony's, short.
 static func _arena_unlock_bells() -> PackedFloat32Array:
 	var score := [[0, 69, 1, "mallet", 0.62], [1, 72, 1, "mallet", 0.68], [2, 74, 4, "bell", 0.82],
 		[2, 86, 4, "bell", 0.32], [2, 62, 4, "keys", 0.28], [2, 69, 4, "keys", 0.24]]
@@ -2854,18 +2397,14 @@ static func _arena_unlock_bells() -> PackedFloat32Array:
 		[Synth.render_score(score, 0.05), Synth.seconds(0.04), 1.0]])
 
 
-# One crew counted on the Warden's clamp: a single bright brass ping that climbs with the
-# count (the caller pitches it), small enough to stack in a fight.
 static func _warden_gate_pip() -> PackedFloat32Array:
 	return _mix([[_fm(0.32, _hz(74), 2.0, 1.4, 9.0), 0, 1.0], [_noise(0.03, 3600.0, 2400.0, 90.0), 0, 0.3]])
 
 
-# A hit on a gated Warden: a dull clank on the clamp, no ring, so it never sounds like progress.
 static func _warden_gate_clunk() -> PackedFloat32Array:
 	return _mix([[_noise(0.12, 420.0, 260.0, 30.0), 0, 1.0], [_tone(0.14, _hz(45), _hz(43), "square_dark", 22.0), 0, 0.6]])
 
 
-# The clamp lets go: a chain rattles off and a D major chord blooms, the fight is on.
 static func _warden_gate_release() -> PackedFloat32Array:
 	var parts := []
 	for i in 6:
@@ -2876,22 +2415,16 @@ static func _warden_gate_release() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# A Called Shot is inked: a stamp thumps, then two brass notes climb D to A, a promise made. It
-# shares nothing with the gate's dull clank, so placing a bet never sounds like being refused.
 static func _call_ink() -> PackedFloat32Array:
 	var score := [[0, 62, 1, "brass", 0.6], [1, 69, 3, "brass", 0.75]]
 	return _mix([[_noise(0.06, 900.0, 500.0, 45.0), 0, 0.7], [_tone(0.08, _hz(38), _hz(36), "sine", 30.0), 0, 0.6],
 		[Synth.render_score(score, 0.05), Synth.seconds(0.03), 1.0]])
 
 
-# The call missed: one muted note sags from A down to E and stops dead, no ring and no chord, so a
-# lost bet is heard as a let-down and never as a warning.
 static func _call_drop() -> PackedFloat32Array:
 	return _mix([[_tone(0.34, _hz(57), _hz(52), "square_dark", 9.0), 0, 0.8], [_noise(0.05, 600.0, 300.0, 50.0), 0, 0.3]])
 
 
-# The shell at redline is about to cook off: a kettle whistle that climbs from D to the tritone
-# above over two seconds and swells as it goes, so the last two seconds of the fuse are heard.
 static func _heat_kettle() -> PackedFloat32Array:
 	var n := Synth.seconds(2.0)
 	var whistle := _tone(2.0, _hz(86), _hz(92), "sine", 0.0)
@@ -2903,21 +2436,16 @@ static func _heat_kettle() -> PackedFloat32Array:
 	return _mix([[whistle, 0, 0.8], [breath, 0, 0.18]])
 
 
-# The keeper's bell offers overtime: two soft mallet notes climb and stop on a ninth, a question
-# left open. Nothing is paid yet, so it never resolves to the chord a found item rings.
 static func _overtime_offer() -> PackedFloat32Array:
 	var score := [[0, 69, 1, "mallet", 0.6], [1, 72, 1, "mallet", 0.65], [2, 76, 3, "bell", 0.55]]
 	return _mix([[Synth.render_score(score, 0.1), 0, 1.0]])
 
 
-# The bell is rung and the crew is called: a low toll, a riser that tightens, and a tritone
-# clang on top. It is the risk, so it leans on the dissonance the pay then answers.
 static func _overtime_ring() -> PackedFloat32Array:
 	var toll := [[0, 50, 6, "bell", 0.8], [0, 38, 6, "sub", 0.6], [3, 62, 3, "bell", 0.6], [3, 68, 3, "bell", 0.5]]
 	return _mix([[Synth.render_score(toll, 0.15), 0, 1.0], [_noise(0.5, 500.0, 3600.0, 0.0, 0.3), 0, 0.35]])
 
 
-# The pot pays on the till: a quick spill of coin ticks lands on a D major chord, the bet answered.
 static func _overtime_pay() -> PackedFloat32Array:
 	var parts := []
 	for i in 5:
@@ -2928,7 +2456,6 @@ static func _overtime_pay() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# The shell crosses its hot line: a sweep climbs through a hiss and ends on a brass note.
 static func _heat_rise() -> PackedFloat32Array:
 	var sweep := _fm_sweep(0.5, 180.0, 900.0, 2.5, 3.0)
 	var hiss := _noise(0.5, 1200.0, 5200.0, 0.0, 0.3)
@@ -2939,21 +2466,16 @@ static func _heat_rise() -> PackedFloat32Array:
 	return _mix([[sweep, 0, 0.7], [hiss, 0, 0.25], [Synth.render_score(tail, 0.1), Synth.seconds(0.35), 0.8]])
 
 
-# The shell falls back under the hot line: the same sweep run down and a quick breath of steam.
 static func _heat_cool() -> PackedFloat32Array:
 	var sweep := _fm_sweep(0.55, 700.0, 150.0, 1.5, 4.0)
 	return _mix([[sweep, 0, 0.6], [_noise(0.5, 4200.0, 900.0, 5.0, 0.01), 0, 0.3]])
 
 
-# A hit lands on a hot shell and bites harder: a hard clang over a sizzle.
 static func _heat_hot_hit() -> PackedFloat32Array:
 	return _mix([[_fm(0.3, _hz(60), 1.41, 5.0, 12.0), 0, 0.9], [_noise(0.3, 6200.0, 2600.0, 10.0, 0.002), 0, 0.5],
 		[_tone(0.14, _hz(40), _hz(36), "sine", 20.0), 0, 0.7]])
 
 
-# --- Brindle's wind-ups, the flume's siren and the ride sounds ---------------------------------
-
-# A buffer's loudness rising to `peak` (0 to 1 of its length) and falling after it.
 static func _arch(buf: PackedFloat32Array, peak := 0.5) -> PackedFloat32Array:
 	var n := buf.size()
 	for i in n:
@@ -2962,20 +2484,17 @@ static func _arch(buf: PackedFloat32Array, peak := 0.5) -> PackedFloat32Array:
 	return buf
 
 
-# The opening every Brindle wind-up shares with boss_telegraph: two low minor-second pulses (D, Eb).
 static func _tele_open() -> PackedFloat32Array:
 	return _mix([[_tone(0.1, _hz(50), _hz(50), "square_dark", 12.0), 0, 0.8],
 		[_tone(0.14, _hz(51), _hz(52), "square_dark", 10.0), Synth.seconds(0.11), 0.85]], true)
 
 
-# The crane's sweep: the pulses, then a rushing band of air that swells across and fades out.
 static func _tele_crane_sweep() -> PackedFloat32Array:
 	var air := _arch(_noise(0.55, 500.0, 3200.0, 0.0, 0.05), 0.45)
 	var sweep := _arch(_tone(0.5, _hz(62), _hz(74), "saw_dark", 0.0), 0.5)
 	return _mix([[_tele_open(), 0, 0.8], [air, Synth.seconds(0.12), 0.6], [sweep, Synth.seconds(0.12), 0.25]])
 
 
-# A slag ring: the pulses, then a low molten bubble and two bells that spread one after the other, like a ring widening.
 static func _tele_slag_ring() -> PackedFloat32Array:
 	var bubble := _arch(_noise(0.5, 160.0, 420.0, 0.0, 0.1), 0.4)
 	for i in bubble.size():
@@ -2985,7 +2504,6 @@ static func _tele_slag_ring() -> PackedFloat32Array:
 		[_cut(_n("bell", 74), 0.3), Synth.seconds(0.28), 0.5], [_cut(_n("bell", 81), 0.3), Synth.seconds(0.4), 0.45]])
 
 
-# The charge: the pulses, then dull clicks that come faster and climb, an engine winding up to run.
 static func _tele_charge() -> PackedFloat32Array:
 	var parts := [[_tele_open(), 0, 0.8]]
 	var at := 0.3
@@ -2998,7 +2516,6 @@ static func _tele_charge() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-# The charge at a wall: slower, falling clicks and a clang waiting at the end, a hull about to meet masonry.
 static func _tele_charge_wall() -> PackedFloat32Array:
 	var parts := [[_tele_open(), 0, 0.8]]
 	var at := 0.3
@@ -3010,13 +2527,11 @@ static func _tele_charge_wall() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-# The eject: the pulses, then a thin whistle that climbs and ends on a pop, the scooter leaving the deck.
 static func _tele_eject() -> PackedFloat32Array:
 	return _mix([[_tele_open(), 0, 0.8], [_fm_sweep(0.4, 450.0, 1900.0, 0.6, 2.5), Synth.seconds(0.28), 0.55],
 		[_tone(0.07, _hz(86), _hz(74), "sine", 40.0), Synth.seconds(0.66), 0.7]], true)
 
 
-# The head gate's siren: a high and a low tone, twice over, a wail over a swelling run of water.
 static func _sluice_siren_two_tone() -> PackedFloat32Array:
 	var parts := [[_arch(_noise(0.9, 300.0, 1100.0, 0.0, 0.2), 0.6), 0, 0.22]]
 	for i in 4:
@@ -3024,7 +2539,6 @@ static func _sluice_siren_two_tone() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# A chute's rolling metal: a rumble pulsing about 22 times a second under a low saw.
 static func _ride_rolling_metal() -> PackedFloat32Array:
 	var rumble := _noise(0.5, 250.0, 900.0, 0.0, 0.05)
 	for i in rumble.size():
@@ -3032,33 +2546,27 @@ static func _ride_rolling_metal() -> PackedFloat32Array:
 	return _mix([[_arch(rumble, 0.3), 0, 0.8], [_arch(_tone(0.5, _hz(43), _hz(43), "saw_dark", 0.0), 0.3), 0, 0.35]])
 
 
-# A bowl's carve: a smooth curve, the air and a tone rising to the lip and settling.
 static func _ride_bowl_carve() -> PackedFloat32Array:
 	return _mix([[_arch(_noise(0.55, 700.0, 1800.0, 0.0, 0.1), 0.5), 0, 0.5],
 		[_arch(_tone(0.55, _hz(55), _hz(64), "sine", 0.0), 0.5), 0, 0.8]])
 
 
-# A drop: the floor falls away, a sweep falling fast through its air.
 static func _ride_drop_swoop() -> PackedFloat32Array:
 	return _mix([[_fm_sweep(0.45, 1500.0, 220.0, 0.8, 4.0), 0, 0.8], [_noise(0.4, 3200.0, 500.0, 5.0, 0.02), 0, 0.4]])
 
 
-# A ledge: a short scuff of grit and a small low knock.
 static func _ride_ledge_scuff() -> PackedFloat32Array:
 	return _mix([[_noise(0.2, 1800.0, 800.0, 14.0, 0.004), 0, 0.8], [_tone(0.1, _hz(45), _hz(41), "sine", 25.0), 0, 0.5]])
 
 
-# A hop: a quick lift of pitch and a tiny pop.
 static func _ride_hop_lift() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, 330.0, 760.0, "sine", 9.0), 0, 0.8], [_noise(0.05, 3000.0, 5000.0, 40.0, 0.001), 0, 0.3]])
 
 
-# The grapple line takes up the slack: two bright metal clinks, the second higher.
 static func _ride_cable_clink() -> PackedFloat32Array:
 	return _mix([[_fm(0.16, _hz(86), 2.76, 2.0, 22.0), 0, 0.8], [_fm(0.2, _hz(91), 2.76, 2.0, 20.0), Synth.seconds(0.08), 0.7]])
 
 
-# A water sheet carries the ball up: low water swelling in, and a tone that climbs with it.
 static func _ride_sheet_swell() -> PackedFloat32Array:
 	var water := _noise(0.7, 350.0, 1900.0, 0.0, 0.3)
 	var n := water.size()
@@ -3067,25 +2575,19 @@ static func _ride_sheet_swell() -> PackedFloat32Array:
 	return _mix([[water, 0, 0.7], [_tone(0.7, _hz(50), _hz(57), "sine", -2.0), 0, 0.5]])
 
 
-# The launcher charges: a steam whistle climbing a fifth on a breath of hiss.
 static func _steam_whistle_rise() -> PackedFloat32Array:
 	return _mix([[_fm(0.7, 520.0, 1.0, 0.5, 0.0, 7.0), 0, 0.8], [_noise(0.7, 4200.0, 5500.0, 0.0, 0.2), 0, 0.2]])
 
 
-# The cannon fires: a flat bang and a falling thump, then the shot's rushing whoosh down its rail.
 static func _cannon_bang_rail_whoosh() -> PackedFloat32Array:
 	return _mix([[_noise(0.1, 2400.0, 900.0, 25.0, 0.001), 0, 0.9], [_tone(0.2, _hz(45), _hz(33), "sine", 12.0), 0, 0.9],
 		[_arch(_noise(0.5, 900.0, 3800.0, 0.0, 0.05), 0.25), Synth.seconds(0.08), 0.5]], true)
 
 
-# The sluice lands: a wall of water, a roar that opens fast and drains away over a falling sub.
 static func _sluice_gush_roar() -> PackedFloat32Array:
 	return _mix([[_noise(0.95, 220.0, 1700.0, 2.2, 0.04), 0, 0.9], [_tone(0.8, _hz(40), _hz(34), "sine", 2.5), 0, 0.8]])
 
 
-# --- The camp, the ready and found tunes, and the soft no ------------------------------------
-
-# A record goes on: the needle drops with a thump and a crackle, then the first bar of a warm tune.
 static func _lounge_flip() -> PackedFloat32Array:
 	var parts := [[_noise(0.9, 3000.0, 5000.0, 3.0, 0.01), 0, 0.12], [_tone(0.09, _hz(43), _hz(38), "sine", 30.0), 0, 0.8],
 		[_noise(0.03, 2000.0, 900.0, 80.0, 0.001), 0, 0.5]]
@@ -3097,18 +2599,15 @@ static func _lounge_flip() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# The camp bell: one struck bell and its octave ring, a little out of tune with it like cast metal.
 static func _bay_bell_ring() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 79), 1.0, 2400), 0, 0.8], [_fm(0.9, _hz(86), 2.76, 1.2, 4.5), 0, 0.35],
 		[_noise(0.01, 3000.0, 3000.0, 200.0, 0.001), 0, 0.3]])
 
 
-# The marble toy's note: a glass tick. The world fact carries no step, so every step is this one tick.
 static func _marble_tick_ladder() -> PackedFloat32Array:
 	return _mix([[_fm(0.12, _hz(91), 3.5, 1.0, 26.0), 0, 0.8], [_noise(0.012, 5000.0, 4000.0, 200.0, 0.001), 0, 0.3]])
 
 
-# The pins go down: a crack of wood, then four knocks falling over each other and a low thud.
 static func _pins_crash() -> PackedFloat32Array:
 	var parts := [[_noise(0.12, 2600.0, 1100.0, 22.0, 0.001), 0, 0.9], [_tone(0.22, _hz(46), _hz(38), "sine", 12.0), 0, 0.6]]
 	var at := 0.06
@@ -3118,7 +2617,6 @@ static func _pins_crash() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-# Back in the workshop: a soft rising fifth on the keys over a warm D5 pillow and room breath.
 static func _bay_lounge_in() -> PackedFloat32Array:
 	return _mix([[_arch(_noise(0.5, 400.0, 1500.0, 0.0, 0.05), 0.5), 0, 0.15], [_cut(_n("keys", 67), 0.35), 0, 0.6],
 		[_cut(_n("keys", 74), 0.52, 1800), Synth.seconds(0.1), 0.68],
@@ -3126,14 +2624,11 @@ static func _bay_lounge_in() -> PackedFloat32Array:
 		[_cut(_n("keys", 69), 0.52, 1800), Synth.seconds(0.1), 0.24]])
 
 
-# Out of the workshop: the slingshot's band stretches, then lets go.
 static func _bay_slingshot_out() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, _hz(62), _hz(55), "saw_dark", 6.0), 0, 0.4], [_fm_sweep(0.3, 300.0, 2500.0, 0.6, 7.0), Synth.seconds(0.16), 0.7],
 		[_noise(0.25, 800.0, 4000.0, 9.0, 0.01), Synth.seconds(0.16), 0.35]])
 
 
-# The big move is charged: D, F, A, D climbing fast on the mallet, then a warm Rhodes
-# fifth-and-ninth cushion (D-A-E) and bell shimmer on top.
 static func _ultimate_ready() -> PackedFloat32Array:
 	var parts := []
 	var notes := [74, 77, 81, 86]
@@ -3147,7 +2642,6 @@ static func _ultimate_ready() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# A discovery: a bright three-note twinkle up the pentatonic over a warm Rhodes pillow and glint.
 static func _found_twinkle() -> PackedFloat32Array:
 	return _mix([[_cut(_n("mallet", 86), 0.2), 0, 0.7], [_cut(_n("mallet", 89), 0.2), Synth.seconds(0.07), 0.72],
 		[_cut(_n("bell", 93), 0.5, 1800), Synth.seconds(0.14), 0.82],
@@ -3156,37 +2650,29 @@ static func _found_twinkle() -> PackedFloat32Array:
 		[_noise(0.15, 6000.0, 6000.0, 22.0, 0.002), Synth.seconds(0.14), 0.15]])
 
 
-# --- The fight facts that had no sound ---------------------------------------------------------
-
-# A drop that threw enemies: a soft low thud with a short woody knock over it, a reward that asks nothing.
 static func _drop_thud() -> PackedFloat32Array:
 	return _mix([[_tone(0.16, _hz(55), _hz(41), "sine", 22.0), 0, 0.9], [_noise(0.05, 1400.0, 600.0, 60.0, 0.001), 0, 0.35],
 		[_cut(_n("mallet", 62), 0.12), Synth.seconds(0.02), 0.3]])
 
 
-# A drop that threw nobody: a breath of air and a soft sigh downward, no knock. A no that costs nothing.
 static func _drop_whiff() -> PackedFloat32Array:
 	return _mix([[_noise(0.22, 3200.0, 900.0, 14.0, 0.02), 0, 0.5], [_tone(0.2, _hz(67), _hz(60), "sine", 14.0), Synth.seconds(0.03), 0.5]])
 
 
-# The Warden's guard about to break, the player's opening one hit away (not a danger cue, so it keeps the bass): a dark saw straining upward under a groaning metal sweep, then one dry crack.
 static func _guard_creak() -> PackedFloat32Array:
 	return _mix([[_tone(0.45, _hz(38), _hz(45), "saw_dark", 4.0), 0, 0.8], [_fm_sweep(0.4, 380.0, 1700.0, 0.7, 6.0), Synth.seconds(0.04), 0.5],
 		[_noise(0.04, 3500.0, 2500.0, 90.0, 0.001), Synth.seconds(0.3), 0.5]])
 
 
-# The Warden callout: the callout's bell, dropped to a falling minor third so "break it" sounds like a task, not a prize.
 static func _callout_warden_chime() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 77), 0.4, 1800), 0, 0.8], [_cut(_n("bell", 74), 0.55, 1800), Synth.seconds(0.1), 0.75]])
 
 
-# The beacon's ring turning open: two bells a fifth apart rising, with a glint on top.
 static func _beacon_open_chime() -> PackedFloat32Array:
 	return _mix([[_cut(_n("bell", 81), 0.5, 1800), 0, 0.8], [_cut(_n("bell", 88), 0.7, 2200), Synth.seconds(0.12), 0.85],
 		[_cut(_n("bell", 93), 0.5, 2200), Synth.seconds(0.2), 0.3]])
 
 
-# A gauge let go: two dry clicks and a short low drop, a no that asks nothing of the player.
 static func _gauge_dry_click() -> PackedFloat32Array:
 	return _mix([[_noise(0.012, 3200.0, 2200.0, 160.0, 0.001), 0, 0.7], [_noise(0.012, 2800.0, 1800.0, 160.0, 0.001), Synth.seconds(0.07), 0.55],
 		[_tone(0.1, _hz(55), _hz(50), "sine", 30.0), Synth.seconds(0.07), 0.5]])
@@ -3200,14 +2686,6 @@ static func _lift_hiss() -> PackedFloat32Array:
 		hiss[i] *= x * x
 	return Synth.declick(Synth.normalize(hiss, 0.85), 64, 300)
 
-
-# --- Moss's babble (SOUND-STORY.md section 8) --------------------------------------------
-# One letter at a time, drawn from the beat root's Dorian triad and seeded by the line, so a
-# line always babbles the same way. beat is 1 to 6 for the conversation loop, BABBLE_LEVEL
-# for barks, BABBLE_RELENT for the sigh. Moss says his letters through the mouth his caller
-# row gives him (Andrew, 10 November 2026: mouths for everyone alive), the sigh through a
-# larger one; with no mouth on his row each letter is his old blip, a square through a
-# 1.2 kHz low-pass.
 
 static func babble(text: String, beat: int, shift := 0) -> PackedFloat32Array:
 	var relent := beat == BABBLE_RELENT
@@ -3226,8 +2704,6 @@ static func babble(text: String, beat: int, shift := 0) -> PackedFloat32Array:
 	return Synth.declick(Synth.normalize(buf, 0.9 * (BENCH_SIGH_LEVEL if relent and row.has("mouth") else 1.0)), 16, 600)
 
 
-# A line laid out as Moss's blips [seconds, midi, seconds long, gain, glide, grumble, letter],
-# and where the last one ends.
 static func _babble_blips(text: String, beat: int) -> Array:
 	var relent := beat == BABBLE_RELENT
 	var root: int = BABBLE_ROOTS[beat - 1] if beat >= 1 and beat <= 6 else 50
@@ -3282,8 +2758,6 @@ static func _ends_sentence(word: String) -> bool:
 	return word.ends_with(".") or word.ends_with("?") or word.ends_with("!")
 
 
-# One babble blip. glide bends it down that many semitones across its length (the
-# relent's closing fifth). warm swaps the square for a softer triangle.
 static func _blip(midi: int, length: float, warm: bool, glide: float) -> PackedFloat32Array:
 	var n := Synth.seconds(length)
 	var buf := Synth.buffer(n)
@@ -3302,15 +2776,10 @@ static func _blip(midi: int, length: float, warm: bool, glide: float) -> PackedF
 	return Synth.declick(buf, 8, 96)
 
 
-# The refusal grumble: a dark saw burst on the beat root, under the first word.
 static func _grumble(midi: int) -> PackedFloat32Array:
 	return _tone(0.2, Harmony.hz(midi), Harmony.hz(midi - 1), "saw_dark", 6.0)
 
 
-# --- Callers (SOUND-STORY.md section 8, "Who talks on what") -----------------------------
-
-# The bank id of a caller's line. A caller with no row is warned about here, once, on the
-# thread that asks for the line; the bake on a worker only reads the rows.
 static func say_id(speaker: String, text: String) -> String:
 	if not CALLERS.has(speaker) and not unknown_callers.has(speaker):
 		unknown_callers[speaker] = true
@@ -3318,14 +2787,11 @@ static func say_id(speaker: String, text: String) -> String:
 	return "%s%s|%s" % [SAY, speaker, text]
 
 
-# The caller and the line of a say id.
 static func _said(id: String) -> Array:
 	var parts := id.trim_prefix(SAY).split("|", true, 1)
 	return [parts[0], parts[1] if parts.size() > 1 else ""]
 
 
-# Drops every caller's line but this one's: a line is said and done, and a run of calls would
-# otherwise keep each one for good.
 static func keep_said(id: String) -> void:
 	_cache_lock.lock()
 	for key in _samples.keys():
@@ -3334,7 +2800,6 @@ static func keep_said(id: String) -> void:
 	_cache_lock.unlock()
 
 
-# The caller's row: its own, else Moss's.
 static func _caller(speaker: String) -> Dictionary:
 	return CALLERS.get(speaker, CALLERS[MOSS])
 
@@ -3343,8 +2808,6 @@ static func caller_on_grid(speaker: String) -> bool:
 	return _caller(speaker).get("grid", false)
 
 
-# The notes a caller's letters are drawn from, lowest first heard first: its motif's, lifted,
-# or its root's Dorian triad.
 static func _caller_notes(speaker: String) -> Array:
 	var row := _caller(speaker)
 	var notes: Array = []
@@ -3362,7 +2825,6 @@ static func _caller_voice(speaker: String) -> String:
 	return row.get("voice", Harmony.motif(row.get("motif", "")).get("voice", ""))
 
 
-# How long a caller's line lasts, chirp included, at the band's sixteenth.
 static func say_seconds(speaker: String, text: String, step := Harmony.STEP) -> float:
 	var clip := voice_clip_path(speaker, text)
 	if clip != "":
@@ -3460,9 +2922,6 @@ static func load_voice_wav(path: String) -> PackedFloat32Array:
 	return Synth.declick(_pcm16(bytes.slice(offset, offset + size), false), 16, 600)
 
 
-# A caller's line laid out as [seconds, midi, seconds long, gain, bend, voice, letter] and where
-# the last one ends: the chirp (no letter), then one blip a letter. A line is laid out the same way every
-# time it is said. voice "" is Moss's own blip.
 static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Array:
 	var row := _caller(speaker)
 	if row.get("bench", false):
@@ -3522,7 +2981,6 @@ static func _say_plan(speaker: String, text: String, step := Harmony.STEP) -> Ar
 	return [blips, at]
 
 
-# Moss calling in: the bell on his counter twice, then the line in his bench voice.
 static func _moss_call(text: String) -> Array:
 	var blips: Array = []
 	for i in 2:
@@ -3555,13 +3013,6 @@ static func _say(speaker: String, text: String) -> PackedFloat32Array:
 	return Synth.declick(buf, 16, 600)
 
 
-# One letter said by a mouth: a reed at the note (in the key the caller passes; nothing here
-# reads the bake's, so Moss's bench line can be said off a bake) through the letter's two
-# resonances, scaled
-# by the mouth's size, with the same scoop a played letter gets. A vowel is its own shape; a
-# consonant is half shut and shorter of breath, m and n hum, and the hissed and stopped ones
-# start as air. The air is seeded by the letter and the note, so a line is said the same
-# way twice.
 static func _mouth(midi: int, length: float, bend: float, letter: String, size: float) -> PackedFloat32Array:
 	var n := Synth.seconds(length * MOUTH_RING)
 	var buf := Synth.buffer(n)
@@ -3592,9 +3043,6 @@ static func _mouth(midi: int, length: float, bend: float, letter: String, size: 
 	return Synth.declick(Synth.normalize(buf, MOUTH_PEAK if vowel else MOUTH_PEAK * 0.6), 8, 200)
 
 
-# One letter in a caller's voice: the front of that instrument's note, scooped up into its
-# pitch by bend semitones (or falling away from it when bend is negative). The pure voice is
-# a sine with square shoulders and no bend: it starts, holds and stops.
 static func _letter(voice: String, midi: int, length: float, bend: float) -> PackedFloat32Array:
 	var n := Synth.seconds(length)
 	var buf := Synth.buffer(n)
@@ -3615,11 +3063,6 @@ static func _letter(voice: String, midi: int, length: float, bend: float) -> Pac
 	return Synth.declick(buf, 8, 96)
 
 
-# --- World 1's own sounds (the world 1 done read's row sound-own-recipes) ---------------------
-# Each of these cues played a shared stand-in until now (its row's `sound`). The grammar is SOUND-STORY section 3:
-# a thrown or falling hazard warns with a falling pure tone on the sinister degrees, one register and texture per
-# family so the five are told apart by ear; a landing is that family's material; a player cue is its class's motif
-# material. Empty for any other id.
 static func _world1_own(id: String) -> PackedFloat32Array:
 	var motif_cue := _motif_cue_parts(id)
 	if not motif_cue.is_empty():
@@ -3627,7 +3070,6 @@ static func _world1_own(id: String) -> PackedFloat32Array:
 	if id in MOTIF_CUES:
 		return _motif_cue(id, "")
 	var buf := _world1_recipe(id)
-	# A landing is no longer than the slam it took over (its bake is 0.8 s).
 	return _cut(buf, LANDING_S, 2400) if id in LANDINGS else buf
 
 
@@ -3635,16 +3077,13 @@ const MOTIF_CUES := ["motif_accumulate", "motif_line", "motif_stinger"]
 const LANDINGS := ["flood_drop", "fleet_anvil_brass_drop", "lightning_strike", "rockfall_boom", "crater_crump_sub_boom",
 	"steam_whistle_percussion_drop", "ancient_family_drop", "sluice_valve_open"]
 const LANDING_S := 0.8
-# The generic motif cues, heard only with no class in context: a plain D, A, D on the mallet.
 const NEUTRAL_MOTIF := {"cells": [[0, 62, 1], [1, 69, 1], [2, 74, 2]], "voice": "mallet"}
 
 
-# The class's own version of a motif cue: "motif_line" for "rivet" is motif_line_rivet.
 static func motif_cue_id(cue: String, motif: String) -> String:
 	return "%s_%s" % [cue, motif]
 
 
-# Every class's version of every motif cue, for the startup bake.
 static func motif_cue_ids() -> Array:
 	var ids: Array = []
 	for cue in MOTIF_CUES:
@@ -3653,7 +3092,6 @@ static func motif_cue_ids() -> Array:
 	return ids
 
 
-# [cue, motif] for a class's motif cue id, else [].
 static func _motif_cue_parts(id: String) -> Array:
 	for cue in MOTIF_CUES:
 		var motif := id.trim_prefix(String(cue) + "_")
@@ -3662,7 +3100,6 @@ static func _motif_cue_parts(id: String) -> Array:
 	return []
 
 
-# The motif notes (midi, in order) and the instrument a motif cue plays them on: the class row's in Harmony.MOTIFS.
 static func motif_cue_notes(motif: String) -> Array:
 	var row: Dictionary = Harmony.MOTIFS.get(motif, NEUTRAL_MOTIF)
 	return (row["cells"] as Array).map(func(cell): return int(cell[1]))
@@ -3679,20 +3116,16 @@ static func _motif_cue(cue: String, motif: String) -> PackedFloat32Array:
 	var root: int = unique.min()
 	match cue:
 		"motif_accumulate":
-			# The gauge fills: the class's motif note by note, each louder, over its lowest note an octave down.
 			var gap := 0.6 / float(maxi(1, notes.size() - 1))
 			var parts: Array = [[_tone(0.9, _hz(root - 12), _hz(root - 12), "sine", 1.0), 0, 0.25]]
 			for i in notes.size():
 				parts.append([_cut(_n(voice, notes[i]), 0.3), Synth.seconds(gap * i), 0.45 + 0.5 * float(i) / float(notes.size())])
 			return _mix(parts)
 		"motif_line":
-			# The line skill fires: a bite click, then the motif's first interval on its instrument.
 			var second: int = unique[1] if unique.size() > 1 else unique[0] + 12
 			return _mix([[_fm(0.05, _hz(81), 2.0, 3.0, 60.0), 0, 0.6], [_noise(0.015, 3000.0, 2000.0, 200.0), 0, 0.4],
 				[_cut(_n(voice, notes[0]), 0.15), Synth.seconds(0.02), 0.7], [_cut(_n(voice, second), 0.25), Synth.seconds(0.09), 0.8]])
 		_:
-			# The ultimate's peak, on the beat: the motif's notes struck at once on its instrument, doubled an octave up on
-			# the bell, a crash and the root an octave down, all from the first sample.
 			var parts: Array = [[_noise(0.03, 5000.0, 2500.0, 90.0, 0.0005), 0, 0.5], [_cut(Synth.crash(), 0.8, 2400), 0, 0.3],
 				[_tone(0.6, _hz(root - 12), _hz(root - 12), "sine", 4.0), 0, 0.5]]
 			for note in unique:
@@ -3704,17 +3137,13 @@ static func _motif_cue(cue: String, motif: String) -> PackedFloat32Array:
 static func _world1_recipe(id: String) -> PackedFloat32Array:
 	match id:
 		"flood_falling_pure":
-			# Low and wobbling, Bb4 to Eb4, over a rush of water.
 			return _mix([[_pure_fall(1.0, 70, 63, 1.4, 5.0, 0.25), 0, 1.0], [_noise(1.0, 250.0, 700.0, 2.0, 0.15), 0, 0.3]])
 		"fleet_falling_pure":
-			# The Fleet's stamp, stamp, then the tone falls an octave on the tritone, Ab5 to Ab4.
 			return _mix([[_cut(Synth.drum("anvil"), 0.1), 0, 0.45], [_cut(Synth.drum("anvil"), 0.1), Synth.seconds(0.09), 0.4],
 				[_pure_fall(0.8, 80, 68, 1.8), Synth.seconds(0.15), 1.0]])
 		"boiler_falling_pure":
-			# A high pure tone that sags a fifth with a fast shiver, Bb6 to Eb6. Pure: the steam is the landing's.
 			return _mix([[_pure_fall(0.75, 94, 87, 2.0, 7.0, 0.12), 0, 1.0]])
 		"lightning_falling_pure":
-			# Fast and wide, Bb6 to Eb5 in 0.6 s, with static crackling on it.
 			var parts: Array = [[_pure_fall(0.6, 94, 75, 3.0), 0, 1.0]]
 			var rng := RandomNumberGenerator.new()
 			rng.seed = 7311
@@ -3722,35 +3151,28 @@ static func _world1_recipe(id: String) -> PackedFloat32Array:
 				parts.append([_noise(0.008, 6000.0, 4000.0, 300.0, 0.0005), Synth.seconds(rng.randf_range(0.0, 0.5)), 0.35])
 			return _mix(parts)
 		"ancient_falling_pure":
-			# One pure tone sinking slowly, Eb5 to Ab4, over a still Ab sub: in tune, no noise, the longest of the five.
 			return _mix([[_pure_fall(1.2, 75, 68, 1.2), 0, 1.0], [_tone(1.2, _hz(44), _hz(44), "sine", 1.5), 0, 0.2]])
 		"rock_grind_dust_hiss":
 			return _rock_grind_dust_hiss()
 		"flood_drop":
-			# The water lands: a low thud under a wash that falls away, and spray thrown up.
 			return _mix([[_tone(0.3, 80.0, 38.0, "sine", 9.0), 0, 1.0], [_noise(0.9, 2200.0, 300.0, 3.5, 0.01), 0, 0.8],
 				[_noise(0.4, 600.0, 1800.0, 6.0, 0.03), Synth.seconds(0.05), 0.4]], true)
 		"fleet_anvil_brass_drop":
-			# One anvil stamp on a boom, then the brass decree, Eb3 leaning down to D3.
 			var gap := 0.12
 			return _mix([[Synth.drum("anvil"), 0, 1.0], [Synth.drum("boom"), 0, 0.7], [_cut(_n("brass", 51), 0.25), Synth.seconds(gap), 0.6],
 				[_cut(_n("brass", 50), 0.5), Synth.seconds(gap + 0.22), 0.6]], true)
 		"lightning_strike":
-			# A white crack, a buzzing arc and thunder rolling under it.
 			return _mix([[_noise(0.05, 6000.0, 3000.0, 60.0, 0.0005), 0, 1.0], [_tone(0.25, _hz(45), _hz(43), "saw", 10.0), 0, 0.4],
 				[_noise(0.8, 300.0, 90.0, 4.0, 0.01), Synth.seconds(0.03), 0.7], [_tone(0.4, 70.0, 35.0, "sine", 8.0), 0, 0.7]], true)
 		"rockfall_boom":
 			return _rockfall_boom()
 		"crater_crump_sub_boom":
-			# A dull crump, then a sub that drops from 52 Hz to 27 Hz and holds.
 			return _mix([[_noise(0.18, 700.0, 140.0, 14.0, 0.001), 0, 1.0], [_tone(0.12, 160.0, 70.0, "square_dark", 25.0), 0, 0.5],
 				[_tone(0.95, 52.0, 27.0, "sine", 3.2), Synth.seconds(0.02), 1.0]], true)
 		"steam_whistle_percussion_drop":
-			# A boom and a snare on the burst, the steam blowing out, and a short whistle sagging Ab5 to Eb5.
 			return _mix([[Synth.drum("boom"), 0, 0.9], [_cut(Synth.drum("snare"), 0.25), 0, 0.6], [_noise(0.6, 4800.0, 2000.0, 4.0, 0.005), 0, 0.4],
 				[_pure_fall(0.55, 80, 75, 3.0), Synth.seconds(0.03), 0.45]], true)
 		"ancient_family_drop":
-			# A soft sub thump, then a chord in perfect tune, Ab4 Eb5 Ab5, over an Ab drone. Pure tones only.
 			var parts: Array = [[_tone(0.25, 90.0, 45.0, "sine", 10.0), 0, 0.8], [_tone(1.2, _hz(44), _hz(44), "sine", 2.2), 0, 0.6]]
 			for midi in [68, 75, 80]:
 				parts.append([_tone(1.2, _hz(midi), _hz(midi), "sine", 2.0), Synth.seconds(0.02), 0.35])
@@ -3758,74 +3180,58 @@ static func _world1_recipe(id: String) -> PackedFloat32Array:
 		"cracked_wall_crumble":
 			return _cracked_wall_crumble()
 		"kest_snare_crack":
-			# The cloak breaks and pays: a snare crack under a bright starburst.
 			return _mix([[_cut(Synth.drum("snare"), 0.18), 0, 1.0], [_fm(0.14, _hz(93), 3.0, 2.5, 22.0), 0, 0.6],
 				[_noise(0.02, 7000.0, 5000.0, 200.0), 0, 0.4]])
 		"companion_chirp_escape":
-			# The companion gets away: G5, D6, G6 up fast, and a puff of air.
 			return _mix([[_cut(_n("mallet", 79), 0.1), 0, 0.6], [_cut(_n("mallet", 86), 0.1), Synth.seconds(0.05), 0.65],
 				[_cut(_n("mallet", 91), 0.18), Synth.seconds(0.1), 0.7], [_noise(0.2, 1500.0, 5000.0, 12.0, 0.02), 0, 0.25]])
 		"kest_blast_lift":
-			# A charge goes off under her: a kick and a crack, then air rushing up and a sub that rises.
 			return _mix([[Synth.kick(), 0, 0.8], [_noise(0.05, 4000.0, 1500.0, 70.0, 0.001), 0, 0.6],
 				[_noise(0.45, 500.0, 3500.0, 6.0, 0.04), Synth.seconds(0.03), 0.8], [_tone(0.35, 55.0, 110.0, "sine", 6.0), Synth.seconds(0.03), 0.5]])
 		"kest_falling_triad":
-			# Kest's motif head on the floor tom: D4, A3, F3 falling, and the low D under the last.
 			return _mix([[_cut(_n("tom", 62), 0.3), 0, 0.8], [_cut(_n("tom", 57), 0.3), Synth.seconds(0.09), 0.85],
 				[_cut(_n("tom", 53), 0.35), Synth.seconds(0.18), 0.95], [_tone(0.35, _hz(38), _hz(36), "sine", 6.0), Synth.seconds(0.18), 0.6]])
 		"kest_muffled_thump":
-			# Hidden: one soft thump on D3 with the top taken off it.
 			return _mix([[_tone(0.17, _hz(50), _hz(45), "sine", 18.0), 0, 1.0], [_noise(0.05, 350.0, 200.0, 40.0), 0, 0.3]])
 		"line_load":
-			# The harpoon cocks: two small clicks and a soft A5 ping.
 			return _mix([[_noise(0.01, 2600.0, 1800.0, 250.0, 0.0005), 0, 0.6], [_noise(0.01, 2200.0, 1500.0, 250.0, 0.0005), Synth.seconds(0.04), 0.5],
 				[_fm(0.1, _hz(81), 1.0, 0.8, 40.0), Synth.seconds(0.04), 0.7]])
 		"pin_double_thwack":
-			# One enemy into another: two thwacks, the second a fourth up.
 			return _mix([[_noise(0.1, 1300.0, 700.0, 35.0), 0, 0.7], [_tone(0.1, 230.0, 85.0, "sine", 30.0), 0, 1.0],
 				[_noise(0.1, 1750.0, 900.0, 35.0), Synth.seconds(0.09), 0.7], [_tone(0.12, 307.0, 113.0, "sine", 28.0), Synth.seconds(0.09), 1.0]], true)
 		"rebound_spring_snap":
-			# A squash, then the spring snaps up an octave, D5 to D6, and rings.
 			return _mix([[_tone(0.05, 180.0, 120.0, "sine", 40.0), 0, 0.6], [_noise(0.04, 800.0, 400.0, 60.0), 0, 0.3],
 				[_tone(0.06, _hz(74), _hz(86), "sine", 25.0), Synth.seconds(0.04), 0.9], [_fm(0.14, _hz(86), 1.0, 0.6, 22.0), Synth.seconds(0.08), 0.5],
 				[_noise(0.015, 5000.0, 3500.0, 250.0), Synth.seconds(0.04), 0.3]])
 		"rivet_cymbal_choke":
-			# Something tried to hold her: a cymbal grabbed short, and the hat carries on.
 			return _mix([[_cut(Synth.crash(), 0.09, 900), 0, 0.9], [_cut(Synth.drum("hat"), 0.05), Synth.seconds(0.06), 0.4]])
 		"rivet_snare_flam":
-			# The skid: a snare flam, the grace note 30 ms ahead, over the scrape.
 			return _mix([[_cut(Synth.drum("snare"), 0.2), 0, 0.45], [_cut(Synth.drum("snare"), 0.25), Synth.seconds(0.03), 1.0],
 				[_noise(0.2, 3000.0, 900.0, 14.0, 0.005), 0, 0.3]])
 		"sable_root_fifth":
-			# The arc slam rings: D3 and A3 on the mallet, the octave over them.
 			return _mix([[_cut(_n("mallet", 50), 0.45, 1200), 0, 0.9], [_cut(_n("mallet", 57), 0.45, 1200), Synth.seconds(0.03), 0.8],
 				[_cut(_n("mallet", 62), 0.35), Synth.seconds(0.06), 0.35]])
 		"kindness_chime":
-			# Foreman's Kindness: clinical pure-sine chime on the grid with flat shoulders, no bend, D5-A5-D6.
 			var step_s := float(Harmony.STEP) / float(Harmony.RATE)
 			return _mix([[_letter(PURE, 74, step_s * 0.7, 0.0), 0, 0.85],
 				[_letter(PURE, 81, step_s * 0.7, 0.0), Synth.seconds(step_s), 0.9],
 				[_letter(PURE, 86, step_s * 1.4, 0.0), Synth.seconds(step_s * 2.0), 0.75]])
 		"sluice_valve_warning":
-			# Works sluice valve warning: brass valve clicks, pressurized hiss, and a taut falling tone Ab5-Eb5.
 			return _mix([[_noise(0.025, 3200.0, 1800.0, 110.0, 0.002), 0, 0.55],
 				[_noise(0.025, 3600.0, 2000.0, 110.0, 0.002), Synth.seconds(0.08), 0.55],
 				[_noise(0.7, 1600.0, 3200.0, 2.2, 0.08), Synth.seconds(0.04), 0.35],
 				[_pure_fall(0.72, 80, 75, 1.9, 6.0, 0.18), Synth.seconds(0.06), 1.0]])
 		"sluice_valve_open":
-			# Works sluice valve open: iron unlatch clank, low hydraulic thud, and surging water release.
 			return _mix([[_fm(0.09, 340.0, 2.7, 3.0, 28.0), 0, 0.75],
 				[_tone(0.28, 95.0, 40.0, "sine", 9.5), 0, 0.95],
 				[_noise(0.75, 2600.0, 450.0, 3.8, 0.015), Synth.seconds(0.02), 0.85],
 				[_noise(0.45, 500.0, 1600.0, 5.0, 0.04), Synth.seconds(0.08), 0.45]], true)
 		"quick_sync_horn":
-			# Shift Boss "Quick sync." horn snap: crisp twin-horn brass punch D4-A4-D5 with relay click.
 			return _mix([[_noise(0.02, 2800.0, 1400.0, 120.0, 0.002), 0, 0.45],
 				[_cut(_n("brass", 62), 0.14, 1200), 0, 0.85],
 				[_cut(_n("brass", 69), 0.14, 1200), Synth.seconds(0.06), 0.9],
 				[_cut(_n("brass", 74), 0.24, 1600), Synth.seconds(0.12), 0.95]])
 		"shift_over_sigh":
-			# Downed Foreman "shift_over" sigh: slowing brass tag ticks over a releasing steam exhale.
 			return _mix([[_noise(0.68, 3600.0, 650.0, 3.2, 0.04), 0, 0.75],
 				[_pure_fall(0.58, 72, 60, 2.8), Synth.seconds(0.02), 0.55],
 				[_fm(0.04, 1480.0, 2.3, 1.5, 45.0), Synth.seconds(0.03), 0.55],
@@ -3835,8 +3241,6 @@ static func _world1_recipe(id: String) -> PackedFloat32Array:
 	return PackedFloat32Array()
 
 
-# A pure sine falling from one midi note to another (in the live key), with an optional wobble of
-# `wobble` semitones at wobble_hz. Every hazard family's falling warning is built on it.
 static func _pure_fall(length: float, from_midi: float, to_midi: float, decay: float, wobble_hz := 0.0, wobble := 0.0) -> PackedFloat32Array:
 	var n := Synth.seconds(length)
 	var buf := Synth.buffer(n)
@@ -3851,7 +3255,6 @@ static func _pure_fall(length: float, from_midi: float, to_midi: float, decay: f
 	return Synth.declick(buf, 8, 600)
 
 
-# Ground about to give: rock grinding in uneven surges, dust hissing in from above, and a dark Ab under it.
 static func _rock_grind_dust_hiss() -> PackedFloat32Array:
 	var grind := _noise(1.3, 150.0, 380.0, 0.8, 0.15)
 	for i in grind.size():
@@ -3860,7 +3263,6 @@ static func _rock_grind_dust_hiss() -> PackedFloat32Array:
 	return _mix([[grind, 0, 1.0], [_noise(1.3, 3500.0, 6000.0, 0.5, 0.6), 0, 0.35], [_tone(1.2, _hz(44), _hz(43), "saw_dark", 2.0), 0, 0.25]])
 
 
-# A roof or a trestle comes down: a low boom, a crack, rocks knocking down over each other and dust settling.
 static func _rockfall_boom() -> PackedFloat32Array:
 	var parts: Array = [[_tone(0.6, 65.0, 30.0, "sine", 5.5), 0, 1.0], [_noise(0.12, 1400.0, 500.0, 25.0, 0.001), 0, 0.7],
 		[_noise(0.9, 3000.0, 1500.0, 3.0, 0.1), Synth.seconds(0.1), 0.15]]
@@ -3872,7 +3274,6 @@ static func _rockfall_boom() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-# A cracked wall gives: one stone crack, a thud, chunks of masonry tumbling and a little dust. Stone, not glass.
 static func _cracked_wall_crumble() -> PackedFloat32Array:
 	var parts: Array = [[_noise(0.04, 3200.0, 1500.0, 70.0, 0.0005), 0, 0.9], [_tone(0.2, 110.0, 55.0, "sine", 14.0), Synth.seconds(0.06), 0.6],
 		[_noise(0.7, 2500.0, 1200.0, 3.5, 0.08), Synth.seconds(0.1), 0.2]]
@@ -3884,18 +3285,14 @@ static func _cracked_wall_crumble() -> PackedFloat32Array:
 	return _mix(parts)
 
 
-# Wave 46 E3-04: dedicated procedural recipes for pilot weapon cadence cues (player voice class),
-# Nixie tube rail mechanical relay clacks (ui voice class), and visited-site flip chime.
 static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 	match id:
 		"cadence_rivet_notch_open":
-			# Crisp steel cylinder detent click entering the reload notch.
 			return _mix([
 				[_noise(0.022, 4200.0, 2600.0, 150.0, 0.001), 0, 0.85],
 				[_fm(0.068, 2240.0, 2.76, 1.4, 52.0), 0, 0.72],
 			])
 		"cadence_rivet_notch_hit":
-			# Crisp brass/steel revolver cylinder snap locking six hot rounds home.
 			return _mix([
 				[_noise(0.028, 4800.0, 2200.0, 115.0, 0.001), 0, 0.9],
 				[_fm(0.085, 1680.0, 2.41, 2.6, 36.0, 2.0), 0, 0.85],
@@ -3903,21 +3300,18 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_tone(0.075, 290.0, 145.0, "sine", 42.0), 0, 0.55],
 			])
 		"cadence_rivet_spent":
-			# Dull hollow cylinder click when the reload notch is missed or spent early.
 			return _mix([
 				[_noise(0.03, 1250.0, 520.0, 85.0, 0.002), 0, 0.85],
 				[_tone(0.088, 210.0, 118.0, "sine", 34.0), 0, 0.7],
 				[_fm(0.055, 640.0, 1.83, 0.8, 48.0, -3.0), Synth.seconds(0.012), 0.45],
 			])
 		"cadence_sable_full":
-			# Clean electric-coil full-charge ready tick ("let go now").
 			return _mix([
 				[_noise(0.018, 5600.0, 3800.0, 180.0, 0.001), 0, 0.6],
 				[_fm(0.105, 2680.0, 2.0, 1.8, 34.0, 3.0), 0, 0.92],
 				[_tone(0.082, 1340.0, 1780.0, "sine", 36.0), Synth.seconds(0.015), 0.55],
 			])
 		"cadence_sable_bolt":
-			# Snappy charged arc bolt release: capacitor crack + resonant electric sweep.
 			return _mix([
 				[_noise(0.04, 5800.0, 2000.0, 75.0, 0.001), 0, 0.9],
 				[_fm_sweep(0.19, 1950.0, 420.0, 3.4, 15.0), 0, 0.9],
@@ -3925,14 +3319,12 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_noise(0.14, 3400.0, 5200.0, 20.0, 0.01), Synth.seconds(0.085), 0.35],
 			], true)
 		"cadence_kest_window":
-			# Taut fuse-cap metallic tick announcing the cook-and-snap window.
 			return _mix([
 				[_noise(0.02, 5200.0, 3200.0, 165.0, 0.001), 0, 0.78],
 				[_fm(0.092, 1980.0, 3.12, 1.7, 42.0), 0, 0.85],
 				[_tone(0.045, 520.0, 760.0, "sine", 55.0), 0, 0.42],
 			])
 		"cadence_kest_snap":
-			# Punchy bone-dry concussive snap burst with crisp transient pop.
 			return _mix([
 				[_noise(0.048, 4600.0, 1400.0, 62.0, 0.001), 0, 0.95],
 				[_tone(0.18, 175.0, 52.0, "sine", 14.0), 0, 1.0],
@@ -3940,14 +3332,12 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_noise(0.18, 2200.0, 680.0, 14.0, 0.006), Synth.seconds(0.065), 0.45],
 			], true)
 		"cadence_tarn_window":
-			# Mechanical piston-draw chime in D Dorian (D5-A5) signalling beat-3 readiness.
 			return _mix([
 				[_noise(0.055, 2400.0, 4400.0, 36.0, 0.004), 0, 0.45],
 				[_fm(0.09, _hz(74), 2.0, 1.2, 34.0), 0, 0.8],
 				[_fm(0.115, _hz(81), 2.0, 1.0, 28.0), Synth.seconds(0.03), 0.88],
 			])
 		"cadence_tarn_rend":
-			# Heavy industrial beat-3 rend cleave: iron sweep + gritty sub crunch.
 			return _mix([
 				[_noise(0.075, 2800.0, 780.0, 28.0, 0.002), 0, 0.9],
 				[_tone(0.24, 155.0, 46.0, "saw_dark", 10.5), 0, 0.95],
@@ -3955,13 +3345,11 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_tone(0.285, 110.0, 48.0, "sine", 9.0), 0, 0.75],
 			], true)
 		"cadence_tally_beat":
-			# Crisp flywheel escapement / mechanical ledger beat tick.
 			return _mix([
 				[_noise(0.016, 4900.0, 2900.0, 190.0, 0.001), 0, 0.72],
 				[_fm(0.078, 2460.0, 1.62, 1.2, 46.0), 0, 0.84],
 			])
 		"cadence_tally_paid":
-			# Firm PAID ink-press mechanical stamp thud + brief crisp till chime.
 			return _mix([
 				[_tone(0.11, 185.0, 68.0, "sine", 24.0), 0, 0.95],
 				[_noise(0.036, 1900.0, 760.0, 68.0, 0.001), 0, 0.82],
@@ -3969,7 +3357,6 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_fm(0.13, 3180.0, 1.5, 0.6, 26.0), Synth.seconds(0.065), 0.48],
 			])
 		"cadence_cannon_lock":
-			# Resonant industrial bracket-flush lock chime in D Dorian (A4-D5-A5).
 			return _mix([
 				[_noise(0.02, 3400.0, 1800.0, 130.0, 0.001), 0, 0.48],
 				[_fm(0.11, _hz(69), 2.0, 1.3, 30.0), 0, 0.76],
@@ -3977,7 +3364,6 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_fm(0.125, _hz(81), 1.5, 0.8, 26.0), Synth.seconds(0.03), 0.65],
 			])
 		"cadence_cannon_rail":
-			# Sharp hyper-velocity railgun crack + tight metallic rail ring.
 			return _mix([
 				[_noise(0.045, 5600.0, 1900.0, 65.0, 0.001), 0, 0.98],
 				[_fm_sweep(0.24, 2400.0, 320.0, 3.8, 12.0), 0, 0.92],
@@ -3985,7 +3371,6 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_fm(0.22, 1840.0, 2.75, 1.6, 14.0), Synth.seconds(0.045), 0.55],
 			], true)
 		"cadence_cannon_barrage":
-			# Wide heavy double-thump barrage burst.
 			return _mix([
 				[_tone(0.14, 135.0, 48.0, "sine", 15.0), 0, 0.92],
 				[_noise(0.065, 2200.0, 620.0, 34.0, 0.002), 0, 0.8],
@@ -3994,7 +3379,6 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_tone(0.18, 220.0, 90.0, "saw_dark", 14.0), Synth.seconds(0.115), 0.52],
 			], true)
 		"rail_rise":
-			# Nixie tube rail rises: crisp two-contact mechanical relay clack stepping up.
 			return _mix([
 				[_noise(0.016, 2600.0, 1400.0, 170.0, 0.001), 0, 0.72],
 				[_fm(0.045, 920.0, 2.3, 1.4, 58.0), 0, 0.65],
@@ -4002,7 +3386,6 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_fm(0.056, 1380.0, 2.1, 1.1, 48.0), Synth.seconds(0.026), 0.78],
 			])
 		"rail_sink":
-			# Nixie tube rail sinks/expires: damped two-contact mechanical relay release stepping down.
 			return _mix([
 				[_noise(0.018, 3000.0, 1500.0, 155.0, 0.001), 0, 0.74],
 				[_fm(0.05, 1140.0, 2.2, 1.1, 52.0), 0, 0.68],
@@ -4010,7 +3393,6 @@ static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
 				[_tone(0.062, 310.0, 165.0, "sine", 42.0), Synth.seconds(0.032), 0.65],
 			])
 		"site_flip":
-			# Visited-site flip chime: light wind flutter into a crisp rising D Dorian metallic pennant chime (D5-F5-A5).
 			return _mix([
 				[_noise(0.11, 2200.0, 4200.0, 22.0, 0.012), 0, 0.32],
 				[_fm(0.14, _hz(74), 2.0, 0.9, 20.0), 0, 0.72],

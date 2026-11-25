@@ -1,9 +1,5 @@
 extends RefCounted
 
-# Single melodic lane lease (Sound V4, verified by SoundArbiter.tla).
-# Owns June's active set-director answer booking and decides when warnings, callers,
-# pilot quotes, pack changes, or directed sections preempt it.
-
 const YIELD_SECTIONS := ["open", "drop", "break"]
 
 var answer_id := ""

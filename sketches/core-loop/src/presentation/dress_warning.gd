@@ -1,11 +1,11 @@
 extends RefCounted
 
 const DRESS_WORDS: Array[String] = [
-	"fleet_paint", # the paint slot every kind must carry
-	"greybox", # a loader fell back to the placeholder body
-	"fallback", # any malformed-model fallback path
-	"no material", # a surface without a material
-	"malformed", # a model that failed its shape check
+	"fleet_paint",
+	"greybox",
+	"fallback",
+	"no material",
+	"malformed",
 ]
 
 

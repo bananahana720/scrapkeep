@@ -4,37 +4,8 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# W12 VX-FX: GPU particle effects, one spec per effect. An event's EventKinds.JUICE row
-# names the effects it plays and how many particles each throws ("fx": {spec: count});
-# the spec says how the particles move and where their colour comes from.
-#   pool     emitters of this effect, reused oldest first
-#   max      particles one emitter holds; pool x max is the effect's ceiling
-#   life     seconds a particle lives
-#   speed    initial speed range, metres per second
-#   radial   outward speed from the emitter's centre (negative collapses a ring inward)
-#   spread   cone half-angle in degrees around the emitter's direction (up, or forward)
-#   gravity  vertical acceleration
-#   size     the particle mesh: a float is a ball's diameter, a Vector3 a box
-#   colour   "row" takes the event row's colour, any other value names a Palette const
-#   attach   "world" fires once where it is told, "ball" follows the ball and emits
-#            continuously, "persist" emits continuously where it was placed until stopped
-#   blend    "add" glows over the scene, "mix" is solid matter
-#   glow     brightness multiplier on the tint; the glow and additive streak looks spend it on a
-#            wider halo instead of clipping to white, so an additive spark still reads on sand
-#   warm     a persistent emitter starts with a full cloud (preprocess = life), not a trickle
-#   shape    "point" or "ring" (emission on a flat ring of ring_m radius)
-#   forward  the emitter's direction is its own -Z, aimed at a target (the latch's pulse)
-#   owner    "vfx" pools are built by Vfx under its root; others belong to the node named
-#            ("machine" is MachineFx: what enemies and bosses throw off)
-#   grow     a puff that swells as it fades (steam), instead of shrinking
-#   alpha    the spec colour's opacity (steam is thin, not a solid ball)
-#   local    particles ride the emitter, so turning the emitter turns them (a daze halo)
-#   look     names the draw look outright instead of deriving it from blend, size and colour (see look())
-# Emitters use a fixed seed, so a capture at a fixed tick repeats. No lights.
 const SEED := 731
-# Pool x max over the "vfx" specs; fx_library_test pins it.
 const CEILING := 800
-# Pool x max over the "machine" specs; machine_fx_test pins it.
 const MACHINE_CEILING := 876
 const SPECS := {
 	"roll_dust": {"pool": 1, "max": 64, "life": 0.7, "speed": [0.4, 1.4], "spread": 75.0, "gravity": 0.6,
@@ -57,7 +28,6 @@ const SPECS := {
 		"size": 0.9, "colour": "row", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 1.2, "glow": 2.0},
 	"latch_pulse": {"pool": 2, "max": 16, "life": 0.12, "speed": [9.0, 10.5], "spread": 1.0, "gravity": 0.0, "explosive": 0.6,
 		"size": 0.34, "colour": "row", "attach": "world", "blend": "mix", "shape": "point", "forward": true, "glow": 1.8},
-	# A kill's body shards (FX-01), tinted the pilot's colour: the kill's own matter, not the hit's light.
 	"kill_shards": {"pool": 3, "max": 16, "life": 0.8, "speed": [5.0, 11.0], "spread": 70.0, "gravity": -24.0, "spin": 600.0,
 		"size": Vector3(0.3, 0.07, 0.24), "colour": "row", "attach": "world", "blend": "mix", "shape": "point"},
 	"crack_debris": {"pool": 2, "max": 32, "life": 1.0, "speed": [4.0, 9.0], "spread": 50.0, "gravity": -24.0,
@@ -74,9 +44,6 @@ const SPECS := {
 		"size": Vector3.ONE * 0.24, "colour": "SANDSTONE", "attach": "persist", "blend": "mix", "shape": "point", "down": true, "owner": "dig"},
 	"net_dust": {"pool": 2, "max": 14, "life": 0.6, "speed": [1.5, 3.5], "spread": 80.0, "gravity": 0.8,
 		"size": 0.5, "colour": "SANDSTONE", "attach": "world", "blend": "mix", "shape": "ring", "ring_m": 1.0, "owner": "highdraft"},
-	# Machine effects (machine_fx.gd). Fleet crews leak steam and throw brass sparks; ancients
-	# fizz in their seam light and shed cast shell. Steam is ledger cream, never white, so
-	# it never reads as frost or a flash, and dense enough to show against sandstone.
 	"steam_puff": {"pool": 6, "max": 10, "life": 1.1, "speed": [1.0, 2.6], "spread": 30.0, "gravity": 1.2, "grow": true,
 		"size": 0.7, "colour": "LEDGER", "alpha": 0.75, "attach": "world", "blend": "mix", "shape": "point", "owner": "machine"},
 	"steam_jet": {"pool": 16, "max": 10, "life": 0.6, "speed": [3.0, 6.0], "spread": 12.0, "gravity": 0.8, "grow": true,
@@ -89,8 +56,6 @@ const SPECS := {
 		"size": 0.18, "colour": "ANCIENT", "attach": "persist", "blend": "add", "shape": "ring", "ring_m": 1.1, "glow": 1.8, "owner": "machine"},
 	"seam_motes": {"pool": 6, "max": 12, "life": 0.9, "speed": [1.0, 3.0], "spread": 25.0, "gravity": 2.5,
 		"size": 0.16, "colour": "ANCIENT", "attach": "world", "blend": "add", "shape": "ring", "ring_m": 0.8, "glow": 1.8, "owner": "machine"},
-	# A stun is a ring of inked comic stars circling the head (FX-02): solid, so it reads on sand and
-	# concrete alike, where the old additive amber glow drew a few dozen pixels.
 	"daze_halo": {"pool": 6, "max": 6, "life": 1.2, "speed": [0.0, 0.0], "spread": 0.0, "gravity": 0.0, "local": true, "scale": [0.9, 1.1],
 		"size": 0.6, "colour": "AMBER", "attach": "persist", "blend": "mix", "shape": "ring", "ring_m": 0.8, "look": "star", "owner": "machine"},
 	"fuse_sputter": {"pool": 4, "max": 6, "life": 0.3, "speed": [1.5, 3.5], "spread": 50.0, "gravity": -6.0,
@@ -103,16 +68,6 @@ const SPECS := {
 		"size": Vector3(0.34, 0.08, 0.28), "colour": "RUST", "attach": "world", "blend": "mix", "shape": "point", "owner": "machine"},
 }
 
-# How a particle draws, from its spec (look): solid matter and light each get their own shape
-# instead of one flat ball or box.
-#   puff    a comic cel puff: a lumpy billboard disc, lit top and shaded underside, inked rim (dust, steam)
-#   glow    a soft additive bloom, a hot centre falling off to the tint (embers, rings of light)
-#   streak  a camera-facing streak along the particle's velocity, fat hot head, thin cooling tail
-#   chunk   a chipped lit shard with flat facets, each particle a shade off the next (debris)
-#   bead    a solid disc in the row colour with a charcoal keyline, so it reads on sand (latch, phase)
-#   star    a solid five-point comic star with a charcoal keyline (the daze halo)
-#   A solid streak (blend mix) wears a charcoal rim around its bright body, so a hit spark reads on pale
-#   sand and dark concrete alike; an additive streak stays pure light.
 const _HEAD := """
 shader_type spatial;
 render_mode %s;
@@ -127,10 +82,6 @@ float seed_of(int id) {
 	return fract(sin(float(id) * 12.9898 + 78.233) * 43758.5453);
 }
 """
-# A puff nearer the eye than this fades out: gone at LENS_FADE.x metres, whole at .y. The chase camera
-# trails the ball by 7.5 to 10.5 m, so at speed the ball's own dust lies back through the lens and one
-# 0.5 m puff 1 to 3 m away covers hundreds of pixels (PF-53). Metres, not a share of the arm: the cut
-# is about what the lens can swallow. The kill mark fades by the same two numbers (kill_mark.gd).
 const LENS_FADE := Vector2(1.5, 4.0)
 const _BILLBOARD := """
 void vertex() {
@@ -244,8 +195,6 @@ void vertex() {
 	MODELVIEW_NORMAL_MATRIX = mat3(MODELVIEW_MATRIX);
 }
 """
-# 3D particles carry their spin angle only in INSTANCE_CUSTOM.x, so the shard turns itself about
-# an axis of its own: debris tumbles instead of sliding flat.
 const _CHUNK_VERTEX := """
 void vertex() {
 	v_life = INSTANCE_CUSTOM.y;
@@ -259,14 +208,11 @@ void vertex() {
 	NORMAL = turn * NORMAL;
 }
 """
-# How hot each look starts (before FlashGuard.whiten): sparks and beads flash toward white and
-# cool to their tint; puffs and chunks are matter and never glow.
 const HEAT := {"glow": 0.55, "streak": 0.7, "bead": 0.35, "puff": 0.0, "chunk": 0.0, "star": 0.0}
 
 static var _shaders := {}
 static var _meshes := {}
 
-# The shader's fade by eye distance, for tests and for the kill mark's own check.
 static func lens_alpha(eye_m: float) -> float:
 	return smoothstep(LENS_FADE.x, LENS_FADE.y, eye_m)
 
@@ -275,8 +221,6 @@ static func spec(id: String) -> Dictionary:
 	return SPECS.get(id, {})
 
 
-# The effects an event plays, from its JUICE row: {spec id: particle count}.
-# A crit's own set comes from the row's "crit" sub-dict, a low preset's from "low".
 static func effects(kind: String, variant := "") -> Dictionary:
 	var row := EventKinds.juice(kind)
 	if variant != "" and row.has(variant) and row[variant].has("fx"):
@@ -304,7 +248,6 @@ static func ceiling(owner := "vfx") -> int:
 	return total
 
 
-# A spec's look (see _LOOKS), from its blend, size and colour source.
 static func look(id: String) -> String:
 	var s := spec(id)
 	if s.is_empty():
@@ -322,8 +265,6 @@ static func look(id: String) -> String:
 	return "puff"
 
 
-# One material per look (and blend, for streaks), shared by every emitter that draws that way;
-# colour and heat are instance uniforms.
 static func _material(id: String) -> ShaderMaterial:
 	return look_material(look(id), spec(id)["blend"])
 
@@ -350,10 +291,6 @@ static func look_material(kind: String, blend := "mix") -> ShaderMaterial:
 	return _shaders[key]
 
 
-# An emitter's starting heat, read from FlashGuard each time it fires so a flipped toggle takes
-# effect on the next burst. `kind` defaults to the look the emitter was built with (meta fx_look).
-# Every emitter that took heat joins HEAT_GROUP, so Game.set_reduce_flashes re-reads the toggle on
-# emitters that keep running (embers, overdrive flecks, follow halos).
 const HEAT_GROUP := &"fx_heat"
 
 static func set_heat(p: GeometryInstance3D, kind := "") -> void:
@@ -366,12 +303,10 @@ static func set_heat(p: GeometryInstance3D, kind := "") -> void:
 			p.add_to_group(HEAT_GROUP)
 
 
-# The material an emitter draws with, whatever its mesh type.
 static func material_of(p: GPUParticles3D) -> Material:
 	return p.draw_pass_1.surface_get_material(0)
 
 
-# The particle mesh for a look: a quad for the billboards and streaks, a chipped shard for chunks.
 static func look_mesh(kind: String, size, blend := "mix") -> Mesh:
 	var key := kind + ":" + blend + ":" + str(size)
 	if _meshes.has(key):
@@ -385,7 +320,6 @@ static func look_mesh(kind: String, size, blend := "mix") -> Mesh:
 			quad.size = Vector2(size.x * 2.0, maxf(size.y, size.z)) if size is Vector3 else Vector2.ONE * float(size)
 			mesh = quad
 		_:
-			# The puff's lumpy edge sits inside the quad, so the quad is a quarter wider than the old ball.
 			var quad := QuadMesh.new()
 			var d: float = (size.x if size is Vector3 else float(size)) * (1.25 if kind == "puff" else 1.0)
 			quad.size = Vector2(d, d)
@@ -394,8 +328,6 @@ static func look_mesh(kind: String, size, blend := "mix") -> Mesh:
 	return mesh
 
 
-# A box with its corners pushed in and out and one corner chipped off, flat-shaded, so debris reads
-# as broken plate and stone, not cubes. Fixed seed: every build makes the same shard.
 static func _shard(size: Vector3) -> ArrayMesh:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = SEED
@@ -425,7 +357,6 @@ static func _shard(size: Vector3) -> ArrayMesh:
 	return st.commit()
 
 
-# One emitter, configured from its spec; the caller owns placement, tint and restart.
 static func build(id: String) -> GPUParticles3D:
 	var s := spec(id)
 	var pm := ParticleProcessMaterial.new()
@@ -467,8 +398,6 @@ static func build(id: String) -> GPUParticles3D:
 		pm.scale_curve = swell_tex
 	if s["blend"] == "add" or s["attach"] == "ball" or s.get("grow", false):
 		pm.alpha_curve = fade_tex
-	# Secondary motion: puffs drag to a stop and roll as they swell, sparks lose speed to the
-	# air so their arcs bend, and every billboard starts at its own turn so no two lumps match.
 	var kind := look(id)
 	if kind == "puff":
 		pm.damping_min = 0.6
@@ -516,8 +445,6 @@ static func build(id: String) -> GPUParticles3D:
 	return p
 
 
-# One effect fired: the emitter restarts at `at` with `count` of its particles in `tint`
-# (the spec's own colour when tint is transparent). `toward` aims a forward spec.
 static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Vector3, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> void:
 	p.amount_ratio = clampf(float(count) / float(p.amount), 0.0, 1.0)
 	if toward.length() > 0.01 and spec(id).get("forward", false):
@@ -530,10 +457,6 @@ static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Ve
 	p.emitting = true
 
 
-# Standalone one-shot burst attached to `parent` (world or capture stage) that frees itself once
-# finished while leaving frozen capture bursts (speed_scale == 0) intact. `isolate` sets
-# `top_level = true` so a scaling or moving parent never distorts or drags the burst while still
-# owning its lifetime.
 static func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> GPUParticles3D:
 	if parent == null or not parent.is_inside_tree():
 		return null

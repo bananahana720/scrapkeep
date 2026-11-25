@@ -7,27 +7,10 @@ const Word := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
 
-# World and event effects (WORLD-FX.md): the runtime. The game installs one (hook) that swaps its
-# air to each stage's world on stage entry and rests it on the title, summary and death screens.
-#   var fx := WorldFx.install(parent, world_index)        # ambient air for that world
-#   fx.bind(camera, ball)                                 # the air follows them
-#   WorldFx.fire("relay_full", at)                        # any system fires a hook, no reference needed
-#   fx.set_overlay("storm_build")                         # a weather sky or modifier kind adds air
-# Ambient emitters follow the camera (or the ball) with an identity basis, so the wind keeps its
-# direction while the view turns. Anchors (WorldFxAnchor) register themselves; every RANK_SECONDS
-# the nearest ANCHOR_SLOTS inside their lod_m emit and the rest rest or show an impostor. The same
-# ranking hands each sounding set (Specs.SOUNDS, world_fx_sound.gd) to its nearest emitting anchor
-# alone, so four foam pieces on one flood are one voice; a hook with a sound plays it once, and the
-# wake's churn follows the ball. Resting silences all of it.
 const RANK_SECONDS := 0.25
 const BURST_POOL := 2
-# Flow states with no stage on screen: the air rests there.
 const RESTING := ["title", "class_select", "summary", "dead", "victory"]
-# The ball's wake (Specs set "spill_wake"): how often it reads the water under the ball, how high over
-# the surface the ball's centre still rides in it, and the speeds that start the wake, fill it, and
-# splash on entry (a fast roll in or a drop).
 const WAKE_SET := "spill_wake"
-# The worlds whose water throws the wake (the Spillway's); the others keep their air budget whole.
 const WAKE_WORLDS := [1]
 const WAKE_EVERY := 1.0 / 15.0
 const WAKE_RIDE_M := 1.6
@@ -36,14 +19,10 @@ const WAKE_FULL := 16.0
 const SPLASH_SPEED := 7.0
 const SPLASH_DROP := 4.0
 const SPLASH_COOL := 0.5
-# A set's voice moves to a nearer anchor only when the holder is farther than this share of the
-# nearest's distance plus this many metres.
 const VOICE_KEEP := 1.25
 const VOICE_KEEP_M := 5.0
 
 static var current: Node3D
-# The saved reduced-motion setting, read on install; Game.set_reduced_motion keeps it current. It is
-# the kit's one store (WorldFxKit.reduced_motion), so every world's effects read the same value.
 static var preferred: bool:
 	get:
 		return Kit.reduced_motion
@@ -71,7 +50,6 @@ var _wake_wait := 0.0
 var _last_ball := Vector3.INF
 var _splash_cool := 0.0
 var wake_sound: AudioStreamPlayer3D
-# Which anchor holds each sounding set's voice (set id -> anchor).
 var _voice_of := {}
 var _wake_heard := 0.0
 
@@ -86,7 +64,6 @@ static func install(parent: Node, world_index: int, is_low := false, is_reduced 
 	return fx
 
 
-# The game's wiring: one WorldFx under the game root, following the chase camera and the ball.
 static func hook(ctx) -> Node3D:
 	var fx := install(ctx.root, -1, false, preferred)
 	ctx.events.stage_entered.connect(fx._on_stage_entered.bind(ctx))
@@ -98,13 +75,11 @@ static func hook(ctx) -> Node3D:
 	return fx
 
 
-# A weather sky id or a modifier kind through the installed WorldFx; "" clears it.
 static func lay_overlay(kind: String) -> void:
 	if is_instance_valid(current):
 		current.set_overlay(kind)
 
 
-# Fire a hook through the installed WorldFx; a no-op when none is installed (menus, tests).
 static func fire(hook: String, at: Vector3, tint := Color.TRANSPARENT) -> void:
 	if is_instance_valid(current):
 		current.play(hook, at, tint)
@@ -140,7 +115,6 @@ func _build_ambient() -> void:
 	_follow()
 
 
-# Swap the air to another world's; the same world keeps its emitters (and their particles) as is.
 func enter_world(world_index: int) -> void:
 	if world_index == world:
 		return
@@ -164,13 +138,10 @@ func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 
 func _on_flow_changed(state: String) -> void:
 	set_resting(RESTING.has(state))
-	# Off a run (title, class select) the effects wear their authored look; a summary keeps its run's.
 	if state in ["title", "class_select"]:
 		set_run_seed(0)
 
 
-# A run's grain (world_fx_grain.gd): every emitter this WorldFx owns and every live anchor re-rolls its
-# dials from the new seed; the same seed again changes nothing.
 func set_run_seed(seed: int) -> void:
 	if seed == Grain.run_seed:
 		return
@@ -194,7 +165,6 @@ func _owned() -> Array[GPUParticles3D]:
 	return out
 
 
-# Resting stops new air and hides what is in it, so a menu never shows a stage's dust.
 func set_resting(on: bool) -> void:
 	resting = on
 	visible = not on
@@ -209,12 +179,10 @@ func set_resting(on: bool) -> void:
 	_rank()
 
 
-# GraphicsPreset calls this on bind and on every preset change.
 func _sync_dressing() -> void:
 	set_quality(load("res://src/presentation/graphics_preset.gd").current == "low", reduced_motion)
 
 
-# camera: the chase camera (a rig node) or a Camera3D; the air follows the viewport's live lens.
 func bind(camera: Node3D, ball: Node3D) -> void:
 	_camera = camera
 	_ball = ball
@@ -227,7 +195,6 @@ func set_quality(is_low: bool, is_reduced: bool) -> void:
 	_sync()
 
 
-# A weather sky id or a stage modifier kind (Specs.OVERLAYS); "" clears it.
 func set_overlay(kind: String) -> void:
 	for p in overlay:
 		p.queue_free()
@@ -239,9 +206,6 @@ func set_overlay(kind: String) -> void:
 	_follow()
 
 
-# Hold the Relay (event id "hold_the_relay"): an anchor at the mast foot, sized to the ring, whose
-# level follows the charge and pauses while the ball is out; each quarter traces the ring and a
-# win fires the full burst.
 const RELAY_ID := "hold_the_relay"
 const RELAY_RING_M := 24.0
 
@@ -316,7 +280,6 @@ func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> 
 		WorldSound.one_shot(hook, self, at, linear_to_db(size))
 
 
-# Live particles this WorldFx can hold at once: ambient plus overlay plus the slotted anchors.
 func live_ceiling() -> int:
 	var total := 0
 	for p in ambient + overlay + (wake if WAKE_WORLDS.has(world) else []):
@@ -369,9 +332,6 @@ func _lens() -> Node3D:
 	return _camera if is_instance_valid(_camera) else null
 
 
-# Where the ball is drawn this frame. The game binds its PlayerBall, a node that never leaves the
-# origin (its body and its visuals move under it), so its place is shown_position(); a plain
-# Node3D (the workshop, a test) is its own place.
 func _ball_place() -> Vector3:
 	return _ball.shown_position() if _ball.has_method("shown_position") else _ball.global_position
 
@@ -404,12 +364,10 @@ func _rank() -> void:
 	var rows: Array = []
 	for ref in Anchor.live:
 		var a: Node3D = ref.get_ref()
-		# A hidden anchor (foam over drained water, a parked stage) draws nothing, so it takes no slot.
 		if a.is_visible_in_tree():
 			rows.append([a.global_position.distance_to(eye), a])
 	rows.sort_custom(func(x, y): return x[0] < y[0])
 	var slots := Specs.ANCHOR_SLOTS
-	# Each sounding set's nearest emitting anchor, and how far the anchor holding its voice now is.
 	var nearest := {}
 	var holder_at := {}
 	for row in rows:
@@ -423,8 +381,6 @@ func _rank() -> void:
 				nearest[a.set_id] = [row[0], a]
 			if _voice_of.get(a.set_id) == a:
 				holder_at[a.set_id] = row[0]
-	# The voice stays where it is until another anchor is clearly nearer, so a view between two foam
-	# pieces does not hop the loop back and forth.
 	for id in nearest:
 		if not holder_at.has(id) or float(holder_at[id]) > float(nearest[id][0]) * VOICE_KEEP + VOICE_KEEP_M:
 			_voice_of[id] = nearest[id][1]
@@ -437,9 +393,6 @@ func _rank() -> void:
 			a.set_voiced(_voice_of.get(a.set_id) == a)
 
 
-# The ball's wake, read WAKE_EVERY from the terrain's material under the ball (water where a flood
-# stands over the ground). A roll through water throws spray back off the ball and leaves foam rings;
-# a fast entry or a drop into it splashes once (the ball_splash hook: crown, ring, SPLOSH).
 func _step_wake(delta: float) -> void:
 	_splash_cool -= delta
 	_wake_wait -= delta
@@ -455,14 +408,12 @@ func _step_wake(delta: float) -> void:
 	var under: Dictionary = _ctx.terrain.material_at(ball)
 	var water := float(under["surface_y"]) if under.get("material", "") == "water" else NAN
 	var velocity := Vector3.ZERO
-	# A respawn or a stage swap is a jump, not a speed.
 	if _last_ball != Vector3.INF and dt > 0.0 and ball.distance_to(_last_ball) < 30.0:
 		velocity = (ball - _last_ball) / dt
 	_last_ball = ball
 	steer_wake(ball, water, velocity)
 
 
-# One wake step: water is the surface height under the ball, NAN where it is dry.
 func steer_wake(ball: Vector3, water: float, velocity: Vector3) -> void:
 	var was := wet
 	wet = WAKE_WORLDS.has(world) and not is_nan(water) and ball.y - water <= WAKE_RIDE_M
@@ -482,7 +433,6 @@ func steer_wake(ball: Vector3, water: float, velocity: Vector3) -> void:
 	_steer_wake_sound(on, Vector3(ball.x, water, ball.z), speed)
 
 
-# The churn of the ball through water: louder with speed, logged once round its loop for the mix tools.
 func _steer_wake_sound(on: bool, at: Vector3, speed: float) -> void:
 	if wake_sound == null:
 		return
@@ -492,7 +442,6 @@ func _steer_wake_sound(on: bool, at: Vector3, speed: float) -> void:
 	var spot := wake_sound.get_parent() as Node3D
 	spot.global_position = at
 	WorldSound.tend(wake_sound, float(WorldSound.row(WAKE_SET)["db"]) + linear_to_db(clampf(speed / WAKE_FULL, 0.3, 1.0)))
-	# steer_wake runs every WAKE_EVERY: count the loop's length down in those steps.
 	_wake_heard -= WAKE_EVERY
 	if not wake_sound.playing:
 		wake_sound.play()

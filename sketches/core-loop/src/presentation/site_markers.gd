@@ -1,32 +1,5 @@
 extends Node3D
 
-# Site markers (map audit unit 4, map standard point 1: "smaller signs mark caches and objectives, never a HUD arrow"):
-# a thin smoke plume over each place worth a detour that has nothing tall of its own, so a player on the line can see
-# it from a distance and choose to go. Three site kinds and the furnace's horizon column, told apart by shape and motion first and by shade second, so none
-# borrows a pickup's glow, an enemy's paint or a colour-law row (LEGIBILITY section 1). One exemption: the furnace's
-# glow is the bowl melt's own colour, near amber, because it is the bowl's light seen from afar; its place under a dark
-# column on the horizon, not its hue, tells it from an offer:
-#
-# - cache: a rib cache still waiting (scrap_field.gd caches()). A keeper's brew fire: one pale wisp that leans and curls.
-# - cage: a caged pilot not yet freed (rescue_site.gd). A smoke signal: pale puffs rising in an even beat.
-# - rogue: the stage's rogue site while its machine still sleeps (world.gd rogue_plan). Works exhaust: a dark column
-#   that chugs in puffs that drift off the beat, the rogue's old work cycle (STORY-MAP section 3).
-# - crew: a Fleet crew home still standing (director.gd live_homes()), so a fork shows which branch holds the fight.
-#   A work crew's steam: a squat column of quick, even puffs, lower than a cache's wisp and a cage's signal
-#   (13 Nov 2026, "Give maps routes and life": a route with a fight on it reads from the fork).
-# - furnace: Brindle's Slag Bowl, ahead of the world's last stage's exit gate where its launch lands (Arena.place_ahead).
-#   A tall works column lit from below by the furnace (hand-overs audit T6, ruling cv: the next place is in view before
-#   you leave). It is a horizon sign: it shows from the drop-in, so it has no far fade, and past PULL_M it is drawn
-#   pulled in along the eye's ray and shrunk by the same share (landmark_impostor.gd's method), so it covers the pixels
-#   it would at its true distance while staying inside the far plane. It stands from the stage's start until the launch.
-#
-# A plume fades out over LEAVE_S once its thing is done: the cache taken, the cage spent, the rogue woken (the rogue wakes
-# 63 m out, where its plume is at full strength). Leaving the stage takes every plume down at once. Secrets (field finds) keep
-# no sign by rule (activities.gd _dress_find), standing activities have their amber column, Signal caches their mast.
-# Smoke is drawn, not simulated: one camera-facing quad a site with a shader, no particles and no light. It is a sign
-# for the middle distance: gone inside GONE_M so it never stands over the thing it marks, full from FULL_M to
-# FAR_FULL_M, and gone again by FAR_GONE_M, inside the chase camera's 700 m far plane.
-
 const Shade := preload("res://src/presentation/site_markers.gdshader")
 const Arena := preload("res://src/boss/arena.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -36,14 +9,11 @@ const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const CREW_SMOKE := Color("ece6d8")
-# A spent cracked pocket's flag: this far out from its pedestal, this far aside, found on a ring of FLAG_RING probes.
 const FLAG_OUT_M := 9.0
 const FLAG_ASIDE_M := 4.0
 const FLAG_RING := 16
 const FLAG_LEVEL_M := 0.6
 const WORKS_SMOKE := Color("262826")
-# The furnace's light on the foot of its column: the bowl's own melt at its working heat (arena_bowl_yard.gd MELT), on
-# the gold side of MELT_MIN_HUE as the melt is, so it never reads as the live slag's or HAZARD's red-orange.
 const FURNACE_GLOW: Color = Yard.MELT[2]["color"]
 const KINDS := {
 	"cache": {"tint": CREW_SMOKE, "height": 34.0, "width": 14.0, "alpha": 1.0, "foot": 0.12, "crown": 0.85, "rim_dark": 0.45,
@@ -58,9 +28,6 @@ const KINDS := {
 		"sway": 0.06, "sway_hz": 0.05, "rise": 0.035, "grain": Vector2(2.0, 3.5), "puffs": 0.0, "stutter": 0.0,
 		"glow": Color(FURNACE_GLOW, 0.85), "far": true, "near": Vector2(60.0, 140.0)},
 }
-# What each site kind shows once finished (design-v3/WAYFINDING.md section 4, ruling ek).
-# Every finished mark is quiet (no glow, no motion, no text label) and never mint (Palette.ARC /
-# Palette.live() is strictly "press now" / "act here"). Furnace never flips.
 const VISITED_SPECS := {
 	"cache": {"flips": true, "mark": "flag", "color": Palette.SAND, "tie": Palette.COPPER, "glow": 0.0, "still": true},
 	"crew": {"flips": true, "mark": "chalk_x", "color": Palette.SAND, "tie": Palette.SAND, "glow": 0.0, "still": true},
@@ -70,39 +37,26 @@ const VISITED_SPECS := {
 	"cable": {"flips": true, "mark": "severed", "color": Palette.CHARCOAL, "tie": Palette.CHARCOAL, "glow": 0.0, "still": true},
 	"furnace": {"flips": false, "mark": "", "color": WORKS_SMOKE, "tie": WORKS_SMOKE, "glow": 0.0, "still": true},
 }
-# The boss whose bowl stands a furnace column, by Worlds' boss kind.
 const FURNACE_BOSS := "brindle"
-# A far kind past this distance is drawn pulled in to it: chase_camera.gd's 700 m far plane, less the column's reach.
 const PULL_M := 520.0
 const GONE_M := 12.0
 const FULL_M := 40.0
 const FAR_FULL_M := 450.0
 const FAR_GONE_M := 600.0
-# Past GROW_FROM_M a plume grows with distance, up to GROW_MAX times its size, so it keeps the screen size it has at
-# GROW_FROM_M for as long as it can: a sign, not scenery to scale (PC film of 79dcc01b: nothing read at 300 m).
 const GROW_FROM_M := 130.0
 const GROW_MAX := 2.5
-# The site list is read four times a second; the fade follows the camera every frame it moves.
 const READ_EVERY := 0.25
 const LEAVE_S := 1.0
-# An eye that moved less than this since the last fade changes no plume enough to redraw it.
 const EYE_STILL_M := 0.25
 
 var ctx
-# key -> the plume's MeshInstance3D; each carries meta "kind".
 var views := {}
-# Plumes whose site is done, fading out; each carries meta "leave", its remaining share from 1 to 0.
 var leaving: Array[MeshInstance3D] = []
 var _clock := 0.0
 var _last_eye := Vector3.INF
-# The furnace column's foot for the stage it was read on: [stage, foot], foot null for none. Read once a stage.
 var _furnace: Array = [0, null]
-# key -> {key, kind, at, mark, color, tie, glow, still}: finished sites that flipped this attempt.
-# Instance state only (zero static var leaks); cleared on stage entry, retry, stage clear and reset_visited().
 var _visited := {}
-# The sleeping rogue plume's key for this stage attempt, kept across wake so enemy_killed flips it at death.
 var _rogue_key := ""
-# The keeper flags standing over this stage attempt's spent cracked caches (CrackedCache.raise_flag); freed on leaving.
 var flags: Array[Node3D] = []
 static var _materials := {}
 static var _meshes := {}
@@ -113,7 +67,6 @@ func setup(ctx_ref) -> void:
 	name = "SiteMarkers"
 	var events = ctx.get("events")
 	if events != null:
-		# A new stage reads its sites on the next frame; leaving one takes every plume down at once.
 		events.stage_entered.connect(_on_stage_entered)
 		events.stage_content_cleared.connect(_on_cleared)
 		if events.has_signal("rescue_completed"):
@@ -139,19 +92,12 @@ func _on_cleared(_reason: String) -> void:
 	_clock = READ_EVERY
 
 
-# Crew and cache sites flip only by their plume keys, through sync's fade: a crew home when director.live_homes() drops
-# it, a rib cache when scrap_field.caches() does. An activity's activity_done is no plume site (an enemy_camp is no crew
-# home, a field find keeps no sign), with one exception: a cracked cache's pocket, whose done puts up its keeper flag.
 func _on_rescue_completed(quest_id: String) -> void:
 	var key := "cage:" + quest_id
-	# A cage whose plume already came down flipped then; one that never stood a plume has no site to mark.
 	if views.has(key):
 		mark_visited(key, "cage", views[key].get_meta("at"))
 
 
-# A cracked cache's pocket is spent: the same keeper flag the cache device raises when its part is taken (W46 E1-15)
-# goes up on the open ground before the pocket's mouth, beside it, so it stands clear of the cliff the pocket is cut
-# into and out of the line to the pedestal (`at`, the pocket floor).
 func _on_activity_done(id: String, at: Vector3) -> void:
 	if id != "cracked_cache":
 		return
@@ -164,10 +110,6 @@ func _on_activity_done(id: String, at: Vector3) -> void:
 		flags.append(raised)
 
 
-# Where a spent pocket's flag stands: on the ground FLAG_OUT_M from the pedestal (`at`, the pocket floor), the way out of
-# a ring of FLAG_RING whose ground is nearest the floor's own height (the mouth opens on the floor; the cliff the pocket
-# is cut into does not), the way's ground across it breaking ties; then FLAG_ASIDE_M to that way's left when the ground
-# there is level with the floor too, so it stands beside the mouth's line, not on it.
 static func pocket_flag_foot(at: Vector3, terrain) -> Vector3:
 	if terrain == null or not terrain.has_method("height"):
 		return at
@@ -200,18 +142,14 @@ func _drop_flags() -> void:
 func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
 	if not Rogue.ROWS.has(kind):
 		return
-	# A rogue killed before any sync stood its plume has no site key to flip, so it is keyed by its kind.
 	var key := _rogue_key if _rogue_key != "" else "rogue:" + kind
 	mark_visited(key, "rogue", at)
 
 
-# Read-only spec for one site kind's finished state, or {} for an unknown kind.
 static func visited_spec(kind: String) -> Dictionary:
 	return VISITED_SPECS.get(kind, {}).duplicate()
 
 
-# Flips site `key` of `kind` from unvisited to visited once; returns true only on the first flip.
-# Idempotent on repeat calls, and false for unknown kinds, empty keys, or kinds that never flip (furnace).
 func mark_visited(key: String, kind: String, at: Vector3 = Vector3.ZERO) -> bool:
 	if key == "" or _visited.has(key) or not VISITED_SPECS.has(kind):
 		return false
@@ -246,26 +184,17 @@ func reset_visited() -> void:
 	_rogue_key = ""
 
 
-# The share of a plume's alpha it shows for an eye distance_m away (horizontal): the one rule for distance. A far kind
-# has no far fade, and its own near fade (its row's "near", [gone, full]): the furnace has thinned out by the time the
-# ball rolls up to the gate in front of it, so the stage's clear at the launch takes nothing still showing.
 static func near_alpha(distance_m: float, far := false, near := Vector2(GONE_M, FULL_M)) -> float:
 	var share := smoothstep(near.x, near.y, distance_m)
 	return share if far else share * (1.0 - smoothstep(FAR_FULL_M, FAR_GONE_M, distance_m))
 
 
-# The furnace column's site while it stands, else {}: on the last stage of a world whose boss is FURNACE_BOSS, from the
-# stage's start until its launch, at the foot of the bowl the launch lands in. boss_kind is the boss that will run after
-# the stage ("" when the table runs none or its row is not built), showing tells whether the run is still on the stage
-# (not in the boss, the summary or a menu), foot is the ground under the bowl's centre (furnace_foot).
 static func furnace_site(world_last: bool, boss_kind: String, showing: bool, foot) -> Dictionary:
 	if not world_last or boss_kind != FURNACE_BOSS or not showing or not foot is Vector3:
 		return {}
 	return {"key": "furnace", "kind": "furnace", "at": foot}
 
 
-# The ground under the bowl Arena.place_ahead puts past stage's exit gate, or null when there is no terrain to read or
-# the stage's map states no exit row: the bowl then falls back over the beacon, not ahead of a launch (arena.gd).
 static func furnace_foot(terrain, stage: int):
 	if terrain == null or not terrain.has_method("height") or not terrain.has_method("map_for"):
 		return null
@@ -276,17 +205,12 @@ static func furnace_foot(terrain, stage: int):
 	return _ground(terrain, Vector3(bowl.x, 0.0, bowl.z))
 
 
-# Every site that wants a plume now, as [{key, kind, at}] with at the plume's foot. world is the World node (its
-# rescue's waiting() and its rogue_plan), scrap the build's scrap field (its caches(), each with the foot under its
-# panel, which can be a deck over the baked ground), terrain answers height(x, z) for the rogue site; any may be null.
-# rogue_plan is World's public plan var, read as is: world.gd is another unit's this wave.
 static func sites(world, scrap, terrain) -> Array:
 	var out := []
 	if scrap != null and scrap.has_method("caches"):
 		for c in scrap.caches():
 			var item: Node3D = c["item"]
 			if is_instance_valid(item):
-				# Keyed by where it stands: two caches never share a spot, and the key carries no object id.
 				var foot: Vector3 = c["foot"]
 				out.append({"key": "cache:%d:%d" % [roundi(foot.x * 10.0), roundi(foot.z * 10.0)], "kind": "cache", "at": foot})
 	var rescue = world.get("rescue") if world != null else null
@@ -311,8 +235,6 @@ static func _ground(terrain, at: Vector3) -> Vector3:
 	return Vector3(at.x, terrain.height(at.x, at.z), at.z)
 
 
-# Puts up a plume for each site in list that has none and takes down every plume whose site is gone: faded out over
-# LEAVE_S when fade is true and the plume shows, else at once (with every plume still fading out).
 func sync(list: Array, fade := false) -> void:
 	var wanted := {}
 	for s in list:
@@ -327,8 +249,6 @@ func sync(list: Array, fade := false) -> void:
 			var view: MeshInstance3D = views[key]
 			views.erase(key)
 			var kind := String(view.get_meta("kind"))
-			# A sleeping rogue's plume leaves when the machine wakes at 63 m (world.gd _watch_rogue),
-			# not when it dies; _on_enemy_killed flips the rogue once it actually falls.
 			if fade and kind != "rogue":
 				mark_visited(key, kind, view.get_meta("at"))
 			if fade and view.visible:
@@ -347,14 +267,12 @@ func _plume(kind: String, at: Vector3, key: String) -> MeshInstance3D:
 	var view := MeshInstance3D.new()
 	view.name = "Plume_" + key.replace(":", "_")
 	view.mesh = _mesh(kind)
-	# Each plume owns a copy of its kind's material: per-instance shader uniforms overflow the project's global
-	# buffer on the compatibility renderer, and a stage stands only a handful of plumes.
+	# Per-material copy avoids overflowing Godot Compatibility renderer per-instance uniform buffer.
 	var material: ShaderMaterial = _material(kind).duplicate()
 	material.set_shader_parameter("near_alpha", 0.0)
 	material.set_shader_parameter("seed", float(absi(hash(key)) % 1000) / 1000.0)
 	view.material_override = material
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# The quad turns about its axis in the shader, so its bounds must cover the turn at its largest.
 	view.extra_cull_margin = float(row["width"]) * 0.5 * GROW_MAX
 	view.set_meta("kind", kind)
 	view.set_meta("at", at)
@@ -388,19 +306,14 @@ static func _material(kind: String) -> ShaderMaterial:
 	return _materials[kind]
 
 
-# The scale a plume takes for an eye distance_m away (horizontal): 1 near, growing past GROW_FROM_M to GROW_MAX.
 static func grow(distance_m: float) -> float:
 	return clampf(distance_m / GROW_FROM_M, 1.0, GROW_MAX)
 
 
-# The share a far kind is drawn at for an eye distance_m away (horizontal): 1 inside PULL_M, then PULL_M / distance, so
-# it is drawn at PULL_M along the eye's ray at the size that covers the same pixels.
 static func pull(distance_m: float) -> float:
 	return minf(1.0, PULL_M / maxf(distance_m, 0.001))
 
 
-# Each plume's shown share and size for an eye; a plume with nothing to show is hidden, so it costs no draw. An eye
-# that has not moved since the last call changes nothing, unless a plume is fading out.
 func fade_for(eye: Vector3) -> void:
 	if leaving.is_empty() and eye.distance_squared_to(_last_eye) < EYE_STILL_M * EYE_STILL_M:
 		return
@@ -426,7 +339,6 @@ static func _show(view: MeshInstance3D, eye: Vector3, keep: float) -> void:
 	(view.material_override as ShaderMaterial).set_shader_parameter("near_alpha", share)
 
 
-# Runs each leaving plume's share down by delta / LEAVE_S and frees the ones that reach 0.
 func leave(delta: float) -> void:
 	for i in range(leaving.size() - 1, -1, -1):
 		var view := leaving[i]
@@ -459,7 +371,6 @@ func _process(delta: float) -> void:
 		fade_for(camera.global_position)
 
 
-# The furnace column's site for the run's stage now (furnace_site), reading the bowl's foot once a stage.
 func _furnace_now() -> Dictionary:
 	var flow = ctx.get("flow")
 	var run = ctx.get("run")

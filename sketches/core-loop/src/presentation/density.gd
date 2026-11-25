@@ -1,16 +1,5 @@
 extends RefCounted
 
-# The density governor (design-v3/FEEL-READABILITY.md §1.1 and §1.2, E1-DENSITY.md §2 to
-# §4). One scalar per frame, 0 to 1, from the threats, effects and enemies in view. It
-# thins P5 player effects and P6 hostile fills and never touches P0 to P3: the ball, every
-# hostile edge, front and rail, the reads and the player's own targeting.
-#
-# One Governor is live at a time (live()). Vfx steps it once per frame and publishes the
-# P6 fill scale as the global shader value threat_fill_scale; every other reader, bolts
-# included, reads that same instance. What is in view is counted SAMPLE_HZ times a second,
-# not every frame: counting walks the threat and enemy groups, and the governor's own
-# RISE_SECONDS smoothing is longer than the sample gap (E1 fix round, finding 5a).
-
 const THREAT_WEIGHT := 0.35
 const THREAT_SCALE := 6.0
 const FX_WEIGHT := 0.35
@@ -21,13 +10,10 @@ const RISE_SECONDS := 0.25
 const FALL_SECONDS := 0.6
 const SAMPLE_HZ := 10.0
 
-# Past this density only the edges read: governed fills fade from 1.0 to FILL_FLOOR at 1.0.
 const FILL_FROM := 0.4
 const FILL_FLOOR := 0.35
 const FILL_GLOBAL := "threat_fill_scale"
 
-# §1.2 caps per band. A band's lower edge must be cleared by HYSTERESIS in the direction of
-# travel before the band moves, so a density sitting on an edge never flickers the caps.
 const BANDS := [
 	{"max": 0.4, "alpha": 0.9, "size": 1.0, "lifetime": 1.0, "coalesce_ms": 0, "coalesce_m": 0.0},
 	{"max": 0.7, "alpha": 0.6, "size": 0.85, "lifetime": 0.7, "coalesce_ms": 120, "coalesce_m": 4.0},
@@ -40,22 +26,16 @@ const KILL_POP_WINDOW := 0.25
 const POP_SCALE_PER_EXTRA := 1.2
 const POP_SCALE_CAP := 2.5
 
-# Systems' shed order (§8), each step only once an emitter honours it. Bolt tails are the
-# one step built; the rest join as their emitters exist.
 const SHED_ORDER := ["bolt_tails"]
 const SHED_ENTER := 0.42
 const SHED_LEAVE := 0.36
 const SHED_STREAK_SCALE := 0.5
 
-# The priority class of every threat mark role (§1.1). P6 fills are governed; P1 never. A
-# shell's landing is an "edge" and spikes ("band", P1) over a "fill" (P6, the only part that
-# fades in a crowd); its flight is a dashed "trace".
 const CLASS_OF_ROLE := {
 	"area": "P6", "fill": "P6", "swept": "P6", "run": "P6",
 	"edge": "P1", "front": "P1", "chevrons": "P1", "outline": "P1",
 	"trace": "P1", "band": "P1", "band_top": "P1", "owner": "P1", "solid": "P1",
 }
-# Glyph kinds that are not P5 candy. Anything unlisted is a P5 player effect.
 const CLASS_OF_KIND := {
 	"near_miss": "P2", "redline_blast": "P2", "interact_armed": "P2", "interact_fired": "P2",
 	"part_gained": "P4", "milestone_won": "P4", "core_gained": "P4", "reward_rare": "P4",
@@ -81,7 +61,6 @@ static func is_shed_exempt(priority_class: String) -> bool:
 	return not priority_class in GOVERNED_CLASSES
 
 
-# A keyline underlay ("edge_under") has its line's class.
 static func class_of_role(role: String) -> String:
 	return CLASS_OF_ROLE.get(role.trim_suffix("_under"), "P1")
 
@@ -90,9 +69,8 @@ static func class_of_kind(kind: String) -> String:
 	return CLASS_OF_KIND.get(kind, "P5")
 
 
-# The one place the fill scale reaches the shader. The last value is kept because the dummy
-# renderer a headless run uses stores no globals, so a test cannot read them back there.
-static var last_published := 1.0  # the project setting's default
+# Godot headless Dummy renderer stores no shader globals for readback.
+static var last_published := 1.0
 
 
 static func publish_fill_scale(value: float) -> void:
@@ -133,7 +111,6 @@ class Governor:
 	extends RefCounted
 
 	var value := 0.0
-	# Tests pin the value; update() then leaves it alone.
 	var hold := false
 	var _band := 0
 	var _shedding := false
@@ -175,8 +152,6 @@ class Governor:
 		var at := SHED_ORDER.find(step)
 		return at >= 0 and at < shed_step()
 
-	# A glyph's alpha, size and lifetime under this band: unchanged for an exempt class,
-	# and unchanged for P4 until reward thinning exists (F4).
 	func apply(priority_class: String, alpha: float, size: float, life: float) -> Vector3:
 		if priority_class == "P4" or not priority_class in GOVERNED_CLASSES:
 			return Vector3(alpha, size, life)

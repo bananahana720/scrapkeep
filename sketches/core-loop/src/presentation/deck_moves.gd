@@ -2,21 +2,12 @@ extends RefCounted
 
 const DeckFx := preload("res://src/presentation/deck_fx.gd")
 
-# Deck moves for the recorded band (design-v3/SOUND-BIBLE.md, "The moves"):
-# kick-locked sidechain pump on the bass and chords, snare-roll + noise-riser builds
-# through the Warden's telegraph, a breath downlifter on open, and a swell + impact
-# landing on the drop. Behind --deck=festival or --deck=viking (off by default);
-# no AudioServer use and no randomness.
 
-# Linear dip depth (0 to 1) by section name. Unlisted sections never pump.
 const PUMP := {"build": 0.45, "telegraph": 0.6, "drop": 0.55}
 const PUMP_VIKING := {"build": 0.58, "telegraph": 0.72, "drop": 0.68}
 const PRESETS := ["festival", "viking"]
 const PUMP_STEMS := ["bass", "other"]
 const PUMP_ATTACK_FRAMES := 220
-# Piecewise-linear breakpoints across one beat: [fraction of beat, share of depth applied].
-# The dip falls from 0 to 1 over the first PUMP_ATTACK_FRAMES, holds 1 to 0.07, then eases
-# back to 0 by 0.62 and stays 0 to the next beat. Gain is 1.0 - depth * share.
 const PUMP_SHAPE := [
 	[0.07, 1.0],
 	[0.2, 0.86],
@@ -25,9 +16,6 @@ const PUMP_SHAPE := [
 	[0.62, 0.0],
 ]
 
-# Build density tiers by Warden posture when a bar is booked (subdivision patterns live in DeckFx):
-# from 75 quarter notes, from 85 eighth notes, from 95 sixteenths turning to thirty-seconds
-# on the bar's last beat.
 const BUILD_TIERS := [
 	{"posture": 75.0},
 	{"posture": 85.0},
@@ -113,8 +101,6 @@ func reset() -> void:
 	_style = "off"
 
 
-# Called once per frame while the game runs.
-# room: {style: "off"|"festival"|"viking" (or on: bool), allow: bool, posture: float, staggered: bool}.
 func tend(seq, room: Dictionary) -> void:
 	if seq == null:
 		reset()
@@ -172,7 +158,6 @@ func tend(seq, room: Dictionary) -> void:
 		_drop_active = false
 
 
-# Called when follow_guard books a drop at transport sample `at`.
 func on_drop(seq, at: int, style := "") -> void:
 	var use_style := style if style != "" else _style
 	if not _allowed or not use_style in PRESETS or seq == null or at < 0 or bool(seq.flat) or String(seq.mode) == "off":

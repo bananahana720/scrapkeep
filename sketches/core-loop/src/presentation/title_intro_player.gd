@@ -1,15 +1,5 @@
 extends Node
 
-# Plays one row of title_intros.gd on the title stage: builds a small set far off the service
-# deck in the title's own world, moves the title camera through the row's shots on the 129 BPM
-# bar grid, and draws the comic layer (name card, captions, drawn sound words, speed lines,
-# rain, the logo) over the stage picture. The last shot cuts back to the deck, so the held
-# frame is the main menu's own backdrop. Any key, click or pad button skips to it.
-#
-# Readability guard (TONE-BIBLE.md): this only ever plays on the title, before any input is
-# live, and it never runs on retry. Reduced motion keeps every card and caption but drops the
-# camera push, the zoom punch, the speed lines' spin and the rain's fall.
-
 signal finished(id: String, skipped: bool)
 
 const TitleIntros := preload("res://src/presentation/title_intros.gd")
@@ -22,21 +12,17 @@ const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
 const Wordmark := preload("res://src/ui/wordmark.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 
-# The set stands far enough off the deck that no deck shot sees it, and the reverse.
 const SET_AT := Vector3(600.0, 0.0, 0.0)
 const LAYER := 6
 const INK := Color("17141a")
 const PAPER := Color("f3ecdc")
 const CAPTION_FILL := Color("fff6c9")
-# The arrow under a pointer line, in overlay pixels: how far it drops, how far its stem bows,
-# and its head's half width and height.
 const POINTER_DROP := 58.0
 const POINTER_BOW := 7.0
 const POINTER_HEAD := Vector2(10.0, 15.0)
 const SFX_FILL := Color("ffd23f")
 const BOSS_FILL := Color("ffe1dc")
 
-# Per world: ground colour, sky colour, and the landmark that fills the postcard.
 const WORLDS := {
 	1: {"ground": Color("2f6b62"), "sky": Color("f2b37a"), "landmark": "res://assets/models/world_one/dam.glb", "fit": 110.0, "behind": 80.0},
 	2: {"ground": Color("3a2c22"), "sky": Color("2b2430"), "landmark": "res://assets/models/dig_mechanical/intake_throat.glb", "fit": 30.0, "behind": 34.0},
@@ -50,15 +36,11 @@ const BOSS_MODELS := {
 const SCOOTER := "res://assets/models/bosses/boss_brindle_scooter.glb"
 const CHASER := "res://assets/models/world_one/enemy_chaser.glb"
 const BARGE := "res://assets/models/moss_hover_barge.glb"
-# The set's GLBs keep their colour in vertex colours and import with white materials, so each
-# surface gets the finish the game gives it in play: the Dig's machine parts their slot library,
-# the dam its slot tints (spillway_scenery.gd), everything else its vertex colours.
 const DIG_PARTS := "res://assets/models/dig_mechanical/"
 const DIG_SLOTS := ["stone", "steel", "enamel", "elastomer", "glass"]
 const DAM_TINT := {"paint": Color.WHITE, "bare_metal": Color("7a7a70"), "rubber": Color("454943")}
 const DAM_ROUGHNESS := {"paint": 0.8, "bare_metal": 0.45, "rubber": 0.95}
 const ROLLCALL_AT := Vector3(-300.0, 0.0, 0.0)
-# The stage is tonemapped bright for the deck; sky colours read true at this energy.
 const SKY_ENERGY := 0.5
 const ROLLCALL := [["runner_gunner", "RIVET", "Never misses."], ["demolitions_caster", "KEST", "Still deciding."], ["tarn", "TARN", "Very gentle. Machine isn't."]]
 const POSTCARD_SKY_CURVE := 0.45
@@ -88,8 +70,7 @@ var _overlay: Control
 var _lines: Control
 var _saved := {}
 var _tweens: Array[Tween] = []
-# One shared finish per source material for the life of the game, as boss_model.gd keeps them;
-# a fresh copy per opening tripped the headless renderer when its set was freed.
+# Shared session-wide: freeing per-opening material copies tripped Godot headless renderer.
 static var _finishes := {}
 var _catcher: Node
 var _antics
@@ -121,8 +102,6 @@ func play(intro_id: String, picture: Texture2D) -> bool:
 		"energy": environment.background_energy_multiplier}
 	_build_set()
 	_build_layer(picture)
-	# Input reaches the tree root's last child first, so the catcher sits there and every press
-	# skips before any menu, workshop or panel handler sees it.
 	_catcher = Catcher.new()
 	_catcher.name = "TitleIntroCatcher"
 	_catcher.player = self
@@ -152,7 +131,6 @@ func _process(delta: float) -> void:
 	advance(delta)
 
 
-# Moves the opening on by delta seconds; tests call it directly.
 func advance(delta: float) -> void:
 	if not playing:
 		return
@@ -216,8 +194,6 @@ func _finish(skipped: bool) -> void:
 	finished.emit(id, skipped)
 
 
-# --- the set -------------------------------------------------------------------------------
-
 func _build_set() -> void:
 	_antics = null
 	_set = Node3D.new()
@@ -249,7 +225,6 @@ func _build_set() -> void:
 			if _subject != null:
 				_subject.rotation.y = PI
 		"world":
-			# A world opening shows Sable visiting it; the card names the world.
 			_subject = _shell("pylon_engineer", "Subject")
 	if _subject == null:
 		_subject = _fallback("Subject", ClassDef.by_id(String(_row.get("pilot", ""))).color if _row.kind == "pilot" and ClassDef.by_id(String(_row.get("pilot", ""))) != null else Palette.COPPER)
@@ -286,8 +261,6 @@ func _build_set() -> void:
 		_build_postcard(_row.postcard)
 
 
-# A row's own postcard set (title_intros.gd): its model at its authored scale, any dressing, a water plane and
-# a sky. A set whose model will not load leaves the postcard on the ordinary world framing.
 func _build_postcard(spec: Dictionary) -> void:
 	var set_model := _postcard_model(String(spec.set))
 	if set_model == null:
@@ -392,7 +365,6 @@ func _shell(class_id: String, label: String) -> Node3D:
 	return holder
 
 
-# Loads a visual-only model, scaled so its tallest side is fit metres, its base on the ground.
 func _model(path: String, label: String, fit: float) -> Node3D:
 	var model: Node3D = host.visual_scene(path)
 	if model == null:
@@ -414,8 +386,6 @@ func _model(path: String, label: String, fit: float) -> Node3D:
 	return holder
 
 
-# Gives an imported model its drawn finish (vertex colour; the dam's tints; the Dig's library
-# parts). The title stage dresses its deck with it too.
 static func dress(model: Node, path: String) -> void:
 	for view: MeshInstance3D in model.find_children("*", "MeshInstance3D", true, false):
 		if view.mesh == null:
@@ -497,8 +467,6 @@ func _flat(color: Color) -> StandardMaterial3D:
 	mat.roughness = 0.9
 	return mat
 
-
-# --- shots ---------------------------------------------------------------------------------
 
 func _enter_shot(shot: Dictionary) -> void:
 	var kind := String(shot.kind)
@@ -614,13 +582,10 @@ func _frame_shot(kind: String, t: float) -> void:
 			look = Vector3(0.0, 0.85, 0.0) * s
 			roll = 5.0
 			if _row.kind == "boss":
-				# Bosses get no hop-out; their card moves in close on the face instead.
 				at = Vector3(0.7, 1.3, 1.9) * s
 				look = Vector3(0.0, 1.15, 0.0) * s
 				roll = -4.0
 		"antics":
-			# The pilot climbs out and does their bit (pilot_antics.gd); the camera holds wide
-			# enough for Kest's hover and Rivet's and Tally's step to the side.
 			at = Vector3(0.9, 1.5, 6.4) * s
 			look = Vector3(0.0, 0.9, 0.0) * s
 			at = at.lerp(look, 0.06 * push)
@@ -668,7 +633,6 @@ func _frame_shot(kind: String, t: float) -> void:
 	_track_pointer()
 
 
-# Keeps the postcard's arrow on the subject, however small it is in the frame.
 func _track_pointer() -> void:
 	var pointer: Control = _overlay.get_node_or_null("Pointer") if _overlay != null else null
 	if pointer == null or _subject == null or not camera.is_inside_tree():
@@ -686,8 +650,6 @@ func _show_prop(label: String, on: bool) -> void:
 	if prop != null:
 		prop.visible = on
 
-
-# --- the comic layer -----------------------------------------------------------------------
 
 func _build_layer(picture: Texture2D) -> void:
 	_layer = CanvasLayer.new()
@@ -782,8 +744,6 @@ func _caption(text: String, at: Vector2, fill := CAPTION_FILL) -> PanelContainer
 	return panel
 
 
-# A bare outlined line with an arrow curving down to the subject. No box: a caption box under a
-# line reads as a speech bubble, and the subject as the speaker.
 func _pointer(text: String, at: Vector2) -> void:
 	var column := VBoxContainer.new()
 	column.name = "Pointer"
@@ -793,7 +753,6 @@ func _pointer(text: String, at: Vector2) -> void:
 	words.name = "Words"
 	words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(words)
-	# No wider than a line, so the column centres it and its left edge is the words' middle.
 	var arrow := Control.new()
 	arrow.name = "Arrow"
 	arrow.custom_minimum_size = Vector2(0.0, POINTER_DROP)
@@ -858,7 +817,6 @@ func _sfx(text: String, at: Vector2, tilt: float, scale_by: float, fill := SFX_F
 	_pop(label, 1.5)
 
 
-# The drawn name (W1-47) lands as the opening's last beat; the plain word only if it fails to load.
 func _logo() -> void:
 	var label: Control = Wordmark.view(_screen().y * 0.24) if Wordmark.texture() != null else _label("SCRAPKEEP", 150, Palette.ARC, 18)
 	label.name = "Logo"
@@ -882,7 +840,6 @@ func _rain() -> void:
 		_lines.mode = "rain"
 
 
-# Stamps a piece on with three frames of overshoot; reduced motion just shows it.
 func _pop(node: Control, from: float) -> void:
 	if reduced_motion or not is_inside_tree():
 		return
@@ -893,7 +850,6 @@ func _pop(node: Control, from: float) -> void:
 	_tweens.append(tween)
 
 
-# Takes every press while the opening plays; frees itself if the player is gone.
 class Catcher extends Node:
 	var player
 
@@ -909,7 +865,6 @@ class Catcher extends Node:
 			player.skip()
 
 
-# Speed lines burst from the centre; rain falls on one spot only.
 class Lines extends Control:
 	var player
 	var mode := ""

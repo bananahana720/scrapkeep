@@ -5,44 +5,13 @@ const Requisition := preload("res://src/boss/requisition.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# When an in-run flourish plays (flourish_rows.gd holds what each one shows; the player
-# draws it). A row names its moment with "on" and is matched here against the bus:
-#
-#   arrival  boss_arena_entered for the row's boss, once per run (an arena retry plays
-#            nothing: TONE-BIBLE, never replays on retry). It plays inside the boss's
-#            BossRules.INTRO_SECONDS, when no attack can land, so it holds nothing.
-#   phase    boss_phase_changed to one of the row's phases. It fits inside the 2.0 s
-#            transition beat a later phase opens with (fight_phases.gd on #391).
-#   rout     boss_defeated for the row's boss. Flow asks plan_victory() before it opens
-#            the victory window, so the world stays in view for the rout's length and
-#            the window grows by what the rout and a sign-on need past its own 2.5 s,
-#            never more than HOLD_CAP.
-#   sign_on  after the rout, when the row's achievement was earned during this fight
-#            (Tarn signs on the day Brindle falls). It plays over the victory card.
-#
-# A row's trigger fields: on (one of the four above), boss (Worlds.BOSSES kind), phases
-# (phase rows) and earned (sign-on rows). A row plays in full the first time a profile sees
-# it and in its short form after that (the player keeps the seen key). Any skip cuts the
-# hold it was paying for. A row's "world" {full, short} lists its world beats ("rise",
-# "eject", "glance", "slow"), which are this module's: the player only draws the overlay. The hold a beat paid
-# for is written into its entry in the run's "flourishes" meta, which the run log keeps.
-#
-# Two world beats are for a hand on the controls only, so a bot's run is the one the bands were
-# measured on: "glance" (ruling bv) and "slow" (ruling cf), which drops the world to the beat's
-# scale between its at and at + for on the row's own clock (game.slow_motion). The row's clock
-# slows with the world, so the pieces drawn inside the window stay up for the whole of it.
-# Music keeps its own sample clock and does not slow. A pause lifts the slow motion and gives
-# it back; the row's end, a skip (the player's skip grace counts wall seconds, so a press can
-# land inside the window) or a screen away from play ends it.
 
 const HOLD_CAP := 2.0
-# The Requisition's arc over the bowl rim: it starts this far out and up from where it stands.
 const RISE_OUT := 16.0
 const RISE_UP := 12.0
 const EJECT_UP := 11.0
 const EJECT_OUT := 30.0
 const EJECT_TURNS := 1.5
-# How hard the slow-motion curve bends the eject's middle: 0 is linear, 1 stops at the apex.
 const EJECT_SLOW := 0.75
 
 var ctx
@@ -50,13 +19,10 @@ var player
 var _played_this_run := {}
 var _earned_in_fight := {}
 var _chain: Array[String] = []
-# The victory's rows (the rout and its chain), and the row whose own finish starts the next.
 var _victory_ids := {}
 var _chain_from := ""
-# Per playing id: the seconds of the victory hold it is paying for and whether it is full.
 var _playing := {}
 var _world := []
-# The slow-motion window a playing row asked for: {id, from, to, scale}; empty when none.
 var _slow := {}
 
 
@@ -64,7 +30,6 @@ func setup(ctx_ref, player_ref) -> void:
 	ctx = ctx_ref
 	player = player_ref
 	name = "FlourishCues"
-	# It lifts a slow motion the moment the tree pauses, so it runs under a pause too.
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	set_process(false)
 	var events = ctx.events
@@ -95,8 +60,6 @@ func _on_arena_entered() -> void:
 		_play(id)
 
 
-# Whether the fight's arrival row is saying the boss's name on a card of its own, now or when
-# its turn comes: the HUD's boss title stays down for it.
 func names_boss() -> bool:
 	return matching("arrival", _boss_id()).any(func(id): return player != null and player.reading(id))
 
@@ -107,9 +70,6 @@ func _on_phase(phase: int, _name: String) -> void:
 			_play(id)
 
 
-# Flow's hook at a boss's defeat, before it opens the victory window: {hold, veil}. hold
-# is the seconds added to the window, veil how long the victory card waits so the rout
-# plays over the world. Starts the rout.
 func plan_victory() -> Dictionary:
 	var boss := _boss_id()
 	var routs := matching("rout", boss)
@@ -129,15 +89,12 @@ func plan_victory() -> Dictionary:
 	for id in _chain:
 		total += length_of(id)
 	var hold := clampf(total - base, 0.0, HOLD_CAP)
-	# Each beat pays for the part of the hold that falls inside it.
 	var start := 0.0
 	var paid := {}
 	for id in [rout] + _chain:
 		var end := start + length_of(id)
 		paid[id] = clampf(minf(end, base + hold) - maxf(start, base), 0.0, hold)
 		start = end
-	# The rout starts now, over whatever was showing (a phase panel at most), so the veil
-	# counts the same seconds the rout plays.
 	if player != null:
 		player.stop_all()
 	_play(rout, paid[rout])
@@ -146,7 +103,6 @@ func plan_victory() -> Dictionary:
 	return {"hold": hold, "veil": veil}
 
 
-# The rows for a moment and a boss, in table order.
 static func matching(on: String, boss: String) -> Array[String]:
 	var out: Array[String] = []
 	for id in FlourishRows.ROWS:
@@ -190,7 +146,6 @@ func _anchors() -> Dictionary:
 			var node = boss.get(key)
 			if node is Node3D and is_instance_valid(node):
 				out[key] = node
-		# The ship's body: the model that arcs over the rim, or the ship where primitives stand in.
 		if out.has("ship"):
 			out["ship_body"] = out.ship.model if out.ship.get("model") is Node3D else out.ship
 	if ctx.player != null and ctx.player.has_method("body"):
@@ -207,7 +162,6 @@ func _on_finished(id: String, skipped: bool) -> void:
 		_end_slow()
 	var held := float(info.get("held", 0.0))
 	if skipped and _victory_ids.has(id):
-		# A skipped beat gives back its hold and every hold the chain still owed.
 		var owed := held
 		for later in _chain:
 			owed += float(_playing.get(later, {}).get("held", 0.0))
@@ -217,7 +171,6 @@ func _on_finished(id: String, skipped: bool) -> void:
 		if ctx.flow != null and ctx.flow.has_method("cut_victory"):
 			ctx.flow.cut_victory(owed)
 		held = 0.0
-	# The player's record for this row is the last it finished; it joins the run meta next.
 	if not player.played.is_empty() and String(player.played.back().get("id", "")) == id:
 		player.played.back()["held"] = snappedf(held, 0.01)
 	elif skipped:
@@ -245,8 +198,6 @@ func _reduced_motion() -> bool:
 	return ctx.camera != null and bool(ctx.camera.get("reduced_motion"))
 
 
-# --- World beats -----------------------------------------------------------------------
-
 func _world_beat(id: String, beat: Dictionary) -> void:
 	if _reduced_motion():
 		return
@@ -261,12 +212,6 @@ func _world_beat(id: String, beat: Dictionary) -> void:
 			_glance(String(beat.get("anchor", "ship")), float(beat.get("seconds", 0.9)), float(beat.get("at", 0.0)), id)
 
 
-# The camera turns to the beat's subject, so the entrance is on screen (chase_camera.glance_at;
-# the player's look ends it). A hand on the controls only: a bot's run keeps its own heading,
-# so its stream is the one the bands were measured on.
-# A beat's `at` waits that long first, on the paused-aware tree clock, so a glance can catch a
-# subject that is in view as the beat starts and leaves it (the scooter's arc over the hull). The
-# wait is dropped if its row has ended by then (skipped, a death, the title) or motion was reduced.
 func _glance(anchor: String, seconds: float, at := 0.0, id := "") -> void:
 	if ctx.camera == null or not ctx.camera.has_method("glance_at"):
 		return
@@ -287,8 +232,6 @@ func _hands_on() -> bool:
 	return ctx.root != null and not bool(ctx.root.get("bot_driven"))
 
 
-# The world slows while the row's close-up is up (ruling cf). Read off the row's clock each
-# frame, so a queued row slows nothing until it plays and a paused one gives the speed back.
 func _slow_for(id: String, at: float, seconds: float, scale: float) -> void:
 	if not _hands_on() or seconds <= 0.0 or ctx.root == null or not ctx.root.has_method("slow_motion"):
 		return
@@ -297,7 +240,6 @@ func _slow_for(id: String, at: float, seconds: float, scale: float) -> void:
 
 
 func _process(_delta: float) -> void:
-	# The row is neither playing nor waiting its turn: its window is over, however it ended.
 	if not player.has(String(_slow.id)):
 		_end_slow()
 		return
@@ -313,9 +255,6 @@ func _end_slow() -> void:
 	ctx.root.slow_motion(1.0)
 
 
-# The Requisition crests the bowl rim: its model, never its hull, arcs in from outside and
-# lands where the fight already has it. The ball enters on the far side and nothing can
-# land before the intro ends, so the gap between body and hull is never touched.
 func _rise(at: float, seconds: float) -> void:
 	var boss = ctx.get("boss")
 	var ship = boss.get("ship") if boss != null else null
@@ -323,7 +262,6 @@ func _rise(at: float, seconds: float) -> void:
 	if not (ship is Node3D) or not is_instance_valid(ship) or ship.get("model") == null or not (arena is Node3D):
 		return
 	var model: Node3D = ship.model
-	# Bound to the model, so an arena freed mid-arc (a death, a retry) takes its tween along.
 	var tween := model.create_tween()
 	tween.tween_interval(at)
 	tween.tween_method(func(f: float):
@@ -338,8 +276,6 @@ func _rise(at: float, seconds: float) -> void:
 			model.position = Vector3.ZERO)
 
 
-# Brindle's scooter pops out of the catch and sails over the rim in slow motion: a copy, so
-# the fight's own scooter (hidden at the catch) is left alone.
 func _eject(at: float, seconds: float) -> void:
 	var boss = ctx.get("boss")
 	var arena = boss.get("arena") if boss != null else null
@@ -361,7 +297,6 @@ func _eject(at: float, seconds: float) -> void:
 		prop.add_child(box)
 	prop.global_position = from
 	prop.visible = false
-	# Away from the camera, so the sail is seen whole rather than over the player's shoulder.
 	var view = get_viewport().get_camera_3d() if is_inside_tree() else null
 	var out: Vector3 = -view.global_basis.z if view != null else from - arena.global_position
 	out.y = 0.0
@@ -382,7 +317,5 @@ func _eject(at: float, seconds: float) -> void:
 			prop.queue_free())
 
 
-# Time through the eject with its middle slowed: the apex hangs, the launch and the fall
-# move at speed. Monotonic for EJECT_SLOW under 1.
 static func slow_mo(t: float) -> float:
 	return t + EJECT_SLOW * sin(TAU * t) / TAU

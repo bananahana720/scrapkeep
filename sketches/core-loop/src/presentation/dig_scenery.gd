@@ -7,17 +7,9 @@ const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# The Dig's scenery (alpha dress push, unit WDG): both zones' landmarks, cut faces, rubble,
-# struts, carts, shells and lamp lines along the rim, the drum look on every breach cover, the
-# stone beds as the ground material, and the Dig's light. Presentation only. Nothing here
-# collides, no gameplay rectangle moves, and breach.gd and terrain.apply_swap stay the owners of
-# the break. Every instance stands outside the play rect plus its 8 m apron, on the rim's foot.
-# A missing GLB is skipped with a warning; a breach whose skin cannot be built keeps its box.
 
-# The directories are static vars so a test can point them at nothing and see the fallback.
 const STONE_DIR := "res://assets/models/dig_stone/"
 const MECH_DIR := "res://assets/models/dig_mechanical/"
-# The authored ore cart (tools/blender/ore_cart.py) lives with the other recipe GLBs.
 const CART_DIR := "res://assets/models/"
 static var stone_dir := STONE_DIR
 static var mech_dir := MECH_DIR
@@ -28,7 +20,6 @@ static func reset_for_tests() -> void:
 	stone_dir = STONE_DIR
 	mech_dir = MECH_DIR
 	cart_dir = CART_DIR
-# The resource paths come from the one material slot table (material_slots.gd).
 const SLOTS := {
 	"stone": MaterialSlots.SLOTS["stone"]["path"],
 	"steel": MaterialSlots.SLOTS["steel"]["path"],
@@ -37,15 +28,11 @@ const SLOTS := {
 	"glass": MaterialSlots.SLOTS["glass"]["path"],
 }
 const MINT := Color("8bf0d3")
-# Warm white, not amber: amber belongs to an offered landing or reward (SHEET.md).
 const LAMP_LIGHT := Color.WHITE
 const BURY := 0.25
 const ASSEMBLY_LIFT := 0.03
-# The rim begins to climb at 162 m (Features.rim); everything stands at or beyond 160.
 const FACE_C := 166.0
 const TOE_C := 161.0
-# The north, south, east and west edges: outward normal and the yaw that turns a model's -Z
-# (its front, and the lamp's open side) toward the arena. The tangent is the yawed +X.
 const EDGES := [
 	{"n": Vector2(0, 1), "yaw": 0.0},
 	{"n": Vector2(0, -1), "yaw": PI},
@@ -59,13 +46,8 @@ var _fx: Node3D
 var _cart_bodies: Array[Transform3D] = []
 
 
-# Built on first entry, not at boot: building the Dig's terrain at game start changes
-# physics body creation order and so every seeded run (Rivet seed 1: 38208 -> 34066 ticks).
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
-	# The context owns the terrain, a RefCounted, so a handler on its signal bound to the context would
-	# hold the context from the terrain: a cycle that outlives the game and keeps this script's statics
-	# with it (scrapkeep#494). The handler takes the context through a weak reference.
 	ctx.terrain.stage_built.connect(_on_stage_built_weak.bind(weakref(ctx)))
 
 
@@ -75,10 +57,6 @@ static func _on_stage_built_weak(stage: int, ctx_ref: WeakRef) -> void:
 		_on_stage_built(stage, ctx)
 
 
-# A Dig park stage built ahead on worker threads takes its park pass a step a frame from when
-# its ground is done (ParkBuild), parked out of sight, while the current stage is calm (flow.calm(),
-# as world.gd's contraptions); entry finishes whatever is left. A bot run
-# that builds stages whole, or a stage on show, keeps the entry build.
 static func _on_stage_built(stage: int, ctx) -> void:
 	if not ctx.terrain.built_threaded(stage):
 		return
@@ -99,10 +77,8 @@ static func _on_stage_built(stage: int, ctx) -> void:
 		return
 
 
-# Steps a park pass begun ahead, one step a frame, and leaves when it is done.
 class ParkBuild extends Node:
 	var builder
-	# Steps wait while this flow is not calm; without one (a test) they run every frame.
 	var flow
 
 	func _process(_delta: float) -> void:
@@ -118,8 +94,6 @@ class ParkBuild extends Node:
 		set_process(false)
 
 
-# A Dig park stage (park_pit, park_sinkhole) takes the park pass (build_park). A park stage's root
-# is freed when it leaves memory, so its scenery is built again on the entry that rebuilds it.
 static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 	for row in ctx.stages.DEFS:
 		if row["stage"] != stage:
@@ -167,11 +141,6 @@ func _build(scenery: Node3D, stage_root: Node3D, map: RefCounted, map_id: String
 	_fx.finish_build()
 
 
-# The park pass: the same kit seated on the park's own rows (park_sites.gd). Cut faces, rubble,
-# struts and shells stand at the foot of the pit's benches and along the tubes and adits; ore carts
-# park beside the haul roads; lamp lines hang on the walls of the adits (straight rails) and the
-# lava tubes (curved rails), where the world look's lamp pool lights them. A park's ground is its
-# own bake, so the stone beds stay on the old maps, and a park has no breach plates to skin.
 static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3D:
 	var builder := new()
 	var scenery := builder._begin_park(stage_root, map, ground, stage)
@@ -180,9 +149,6 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 	return scenery
 
 
-# The park pass as steps, so it can run whole (build_park) or a step a frame (ParkBuild): the
-# rim a row a step, the carts, the first flush, the lamps a tube a step, the last flush. Steps
-# run in the same order either way, so the seeded draws and the result are the same.
 var _scenery: Node3D
 var _sites: ParkSites
 var _landmark_kind := ""
@@ -215,7 +181,6 @@ func _begin_park(stage_root: Node3D, map, ground: Callable, stage: int) -> Node3
 	return _scenery
 
 
-# One step of the park pass; false once the pass is done.
 func _park_step() -> bool:
 	match _phase:
 		0:
@@ -243,7 +208,6 @@ func _park_step() -> bool:
 	return _phase < 5
 
 
-# Rows whose flanks wear the cut kit, and how many seats each row draws.
 const PARK_RIM_ROWS := {"bank": ["open_pit", "tailings_bench"], "terrace": ["open_pit", "tailings_bench"],
 	"tunnel": ["lava_tube", "adit"], "half_pipe": ["lava_tube"], "drop": ["shaft", "lava_tube"]}
 const PARK_RIM_SEATS := 3
@@ -300,7 +264,6 @@ func _park_rim_row(batches: Dictionary, sites: ParkSites, rng: RandomNumberGener
 		_toes += 1
 
 
-# The haul roads: an ore cart parked beside a pit ramp or a tailings bench, now and then.
 const PARK_CARTS_MAX := 10
 
 
@@ -328,9 +291,6 @@ func _park_carts(batches: Dictionary, sites: ParkSites, rng: RandomNumberGenerat
 			carts += 1
 
 
-# A lamp line on each tube, adit or haul-ramp wall: from the row's centre line, walk out until the
-# ground stands LAMP_WALL_M over the floor, and hang the rail there facing the floor. Every other tube
-# section takes one, so the lamps pace the run instead of lining it.
 const LAMP_WALL_M := 3.0
 const PARK_LAMPS_MAX := 32
 
@@ -339,7 +299,6 @@ static func _park_lamp_rows(sites: ParkSites) -> Array:
 	return sites.rows(["tunnel", "half_pipe"], ["lava_tube", "adit", "flooded_shaft"]) + sites.rows(["flow_line"], ["open_pit"])
 
 
-# Tube k's lamp line, if it takes one; _line counts the lines hung so far.
 func _park_lamp_row(batches: Dictionary, sites: ParkSites, k: int) -> void:
 	var row: Dictionary = _tubes[k]
 	var curved := String(row["landform"]) == "lava_tube"
@@ -365,7 +324,6 @@ func _park_lamp_row(batches: Dictionary, sites: ParkSites, k: int) -> void:
 	_line += 1
 
 
-# The lowest ground across a piece's width at a seat, and the spread: (low, high - low).
 static func _park_seat(sites: ParkSites, at: Vector2, inward: Vector2, half: float) -> Vector2:
 	var along := Vector2(-inward.y, inward.x)
 	var low := INF
@@ -377,16 +335,11 @@ static func _park_seat(sites: ParkSites, at: Vector2, inward: Vector2, half: flo
 	return Vector2(low, high - low)
 
 
-# The ground's beds: the Dig's own stone material over the terrain mesh. The preset system
-# rewrites a ground view's material on every preset change, so a dressing host puts it back.
-# The target preset keeps its own ground shader on every map, so the beds stand in high and low.
 class GroundBeds extends Node:
 	var view: MeshInstance3D
 	var material: Material
 
 	func _sync_dressing() -> void:
-		# The beds stand in every preset: the shipped high and its target alias keep a prebuilt slot
-		# resource (GraphicsPreset._apply_material), and low gets the beds put back here.
 		if view != null and material != null:
 			view.material_override = material
 
@@ -440,7 +393,6 @@ func _slot_material(slot: String) -> Material:
 	return material
 
 
-# A GLB's socket nodes whose names start with the prefix, each as its transform in the GLB's space.
 func _sockets(path: String, prefix: String) -> Array:
 	var key := path + "#" + prefix
 	if _dir_cache.has(key):
@@ -457,8 +409,6 @@ func _sockets(path: String, prefix: String) -> Array:
 	return out
 
 
-# One entry per mesh in a GLB: {name, mesh, local, slot, material}; empty when the GLB is
-# absent or has no mesh, which every caller reads as "skip this piece".
 func _parts(path: String) -> Array:
 	if _dir_cache.has(path):
 		return _dir_cache[path]
@@ -503,7 +453,6 @@ func _mech(file: String) -> String:
 	return mech_dir + file
 
 
-# Queue one placed instance of every mesh in the GLB.
 func _put(batches: Dictionary, path: String, xf: Transform3D, lamp_phase: float = -1.0, flicker: bool = false) -> bool:
 	var parts := _parts(path)
 	for part in parts:
@@ -540,7 +489,7 @@ func _flush(scenery: Node3D, batches: Dictionary) -> void:
 		var view := MultiMeshInstance3D.new()
 		view.name = batch["name"]
 		view.multimesh = multi
-		# A headless renderer keeps no instance buffer, so tests read the placements from here.
+		# Godot headless Dummy renderer keeps no MultiMesh instance buffer for readback.
 		view.set_meta("origins", origins)
 		view.material_override = batch["material"]
 		view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -550,14 +499,12 @@ func _flush(scenery: Node3D, batches: Dictionary) -> void:
 			_fx.lamp_views.append(view)
 		batch["xf"] = []
 	batches.clear()
-	# One shell node per cart per layer, so Godot measures each fade from its own cart.
 	for body in _cart_bodies:
 		for shell in RecipeProps.shells("ore_cart", scenery, body):
 			GraphicsPreset.register_scenery(shell)
 	_cart_bodies.clear()
 
 
-# A point on an edge band: c metres out along the normal, a along the tangent.
 static func _at(edge: Dictionary, c: float, a: float) -> Vector2:
 	var n: Vector2 = edge["n"]
 	var yaw: float = edge["yaw"]
@@ -570,7 +517,6 @@ static func _tangent(edge: Dictionary) -> Vector2:
 	return Vector2(cos(yaw), -sin(yaw))
 
 
-# The lowest ground under a piece's run, so the foot is buried and never floats.
 static func _seat(ground: Callable, edge: Dictionary, c: float, a: float, half: float) -> Vector2:
 	var low := INF
 	var high := -INF
@@ -594,7 +540,6 @@ func _edges(batches: Dictionary, ground: Callable, map_id: String, mix: Dictiona
 			for i in int(mix[kind]):
 				faces.append(kind)
 		_shuffle(faces, rng)
-		# Cut faces: a loose chain along the rim's foot, scale varied, gaps left between runs.
 		var a := -138.0 + rng.randf_range(0.0, 6.0)
 		for kind in faces:
 			var s := rng.randf_range(1.7, 2.5)
@@ -630,7 +575,6 @@ static func _shuffle(list: Array, rng: RandomNumberGenerator) -> void:
 		list[j] = swap
 
 
-# One prop at the rim's toe. A strut keeps its back (+Z, the wall side) to the rim.
 func _toe(batches: Dictionary, ground: Callable, edge: Dictionary, rng: RandomNumberGenerator,
 		path: String, s: float, bury: float, any_yaw: bool) -> void:
 	var a := rng.randf_range(-138.0, 138.0)
@@ -644,7 +588,6 @@ func _toe(batches: Dictionary, ground: Callable, edge: Dictionary, rng: RandomNu
 	_put(batches, path, xf)
 
 
-# A parked haul cart with its four tyres at the body's wheel sockets.
 func _cart(batches: Dictionary, ground: Callable, edge: Dictionary, rng: RandomNumberGenerator) -> void:
 	var a := rng.randf_range(-130.0, 130.0)
 	var c := TOE_C + rng.randf_range(0.0, 2.0)
@@ -663,9 +606,6 @@ func _cart(batches: Dictionary, ground: Callable, edge: Dictionary, rng: RandomN
 	_cart_bodies.append(body)
 
 
-# Zone A: the broken Daylight Cut pump impeller, upright in the south wall, face toward -Z, 30
-# percent of its lower arc buried. Zone B: the Hollow Cistern intake bell on its spine, at the
-# south edge. Both are background scenery with no collider (P-R6).
 func _landmark(batches: Dictionary, ground: Callable, map_id: String) -> void:
 	if map_id == "dig":
 		var at := Vector2(-45.0, 178.0)
@@ -683,7 +623,6 @@ func _impeller(batches: Dictionary, root: Transform3D) -> void:
 		_put(batches, _mech("impeller_rim_sector.glb"), axle * Transform3D(Basis(Vector3.BACK, k * PI / 4.0), Vector3.ZERO))
 	var hub := axle * Transform3D(Basis.IDENTITY, Vector3(0.8, 0, 0))
 	_put(batches, _mech("impeller_hub.glb"), hub)
-	# Five unequal blunt vanes on the hub's sockets, four whole and one chipped.
 	for i in 5:
 		var angle := -i * TAU / 5.0
 		var socket := Vector3(2.5 * sin(-angle), 2.5 * cos(-angle), 0.0)
@@ -699,8 +638,6 @@ func _intake(batches: Dictionary, root: Transform3D) -> void:
 		_put(batches, _mech("intake_petal.glb"), root * Transform3D(Basis(Vector3.UP, k * TAU / 3.0), Vector3(0, 10, 0)))
 
 
-# Straight and curved rails on the rim wall, hung well above any shelf. Lens and rail are two
-# meshes of one GLB; the GLB's own sockets chain the modules. Their lenses stay white and unpooled.
 func _lamp_lines(batches: Dictionary, ground: Callable, map_id: String) -> void:
 	var curved := map_id == "dig_deep"
 	var line := 0
@@ -729,10 +666,6 @@ static func _height_at(ground: Callable, edge: Dictionary, c: float, a: float) -
 	return ground.call(p.x, p.y)
 
 
-# The drum look on each breach cover: rim, three membrane wedges and four mint tabs from
-# the manifest's assembly for the cover's rectangle, a visual child of the existing cover body.
-# The cover's box mesh hides once the skin stands; its collider, its meta and its position are
-# untouched, so breach.gd's break and terrain.apply_swap park the skin with it.
 func _breach_skins(stage_root: Node3D, map: RefCounted) -> void:
 	var manifest = null
 	if FileAccess.file_exists(_mech("manifest.json")):
@@ -784,7 +717,6 @@ func _skin(cover: StaticBody3D, rect: Rect2, manifest) -> void:
 			if String(item["name"]).begins_with("wedge_"):
 				view.set_meta("wedge", true)
 			if String(item["file"]) == "breach_tab.glb":
-				# P-R6: every plate is slam-anywhere, so every tab reads mint; no slate state.
 				view.set_instance_shader_parameter("state_tint", MINT)
 			skin.add_child(view)
 	cover.add_child(skin)
@@ -799,9 +731,6 @@ func _warn_once(key: String, message: String) -> void:
 		push_warning("dig_scenery: " + message)
 
 
-# World 2 curated canyon & lava-tube landmark dressing (W48-MAPS, dispatched by park landmark kind;
-# legacy dig / dig_deep build() never calls this). Zero colliders; Guard 1 petrol #365754 +
-# uranium-green #9DFF3C wayfinding cables only (zero brass, zero hazard stripes).
 func _park_valley_canon(batches: Dictionary, sites: ParkSites, landmark_kind: String) -> void:
 	if landmark_kind == "headframe":
 		_place_moab_arches(batches, sites)
@@ -824,7 +753,6 @@ func _park_valley_canon(batches: Dictionary, sites: ParkSites, landmark_kind: St
 		])
 
 
-# Utah Moab natural red-rock sandstone arches framing sightlines toward the 120 m Headframe.
 func _place_moab_arches(batches: Dictionary, sites: ParkSites) -> void:
 	var arch_path := _stone("moab_arch.glb")
 	var specs := [
@@ -839,7 +767,6 @@ func _place_moab_arches(batches: Dictionary, sites: ParkSites) -> void:
 		var at: Vector2 = spec["at"]
 		var yaw: float = spec["yaw"]
 		var s: float = spec["scale"]
-		# Sample both arch abutment feet (+/- 12 m local X) and bury below the lower foot so no leg floats.
 		var right := Vector2(cos(yaw), -sin(yaw))
 		var foot_l: float = sites.height(at - right * 12.0 * s)
 		var foot_r: float = sites.height(at + right * 12.0 * s)
@@ -848,7 +775,6 @@ func _place_moab_arches(batches: Dictionary, sites: ParkSites) -> void:
 		_put(batches, arch_path, xf)
 
 
-# 5-bench oxidized turquoise-patina copper vein faces ringing the open-pit steps (w2-dig-pit-sinkhole.png).
 func _place_copper_benches(batches: Dictionary, sites: ParkSites) -> void:
 	var face_path := _stone("copper_vein_face.glb")
 	var benches := [
@@ -873,8 +799,6 @@ func _place_copper_benches(batches: Dictionary, sites: ParkSites) -> void:
 			_put(batches, face_path, xf)
 
 
-# Scenic Utah Moab timber/rock support struts along outer canyon flanks (g14 row 1 canon).
-# Kept >= 90 m clear of all park_pit.json destructible_rows so breakables never overlap static props.
 func _place_moab_struts(batches: Dictionary, sites: ParkSites) -> void:
 	var strut_path := _mech("timber_rock_strut.glb")
 	var specs := [
@@ -895,30 +819,24 @@ func _place_moab_struts(batches: Dictionary, sites: ParkSites) -> void:
 		_put(batches, strut_path, xf)
 
 
-# NM El Malpais hexagonal black volcanic basalt column clusters framing lava tubes & karst sinkhole.
 func _place_malpais_basalt(batches: Dictionary, sites: ParkSites) -> void:
 	var rib_path := _stone("basalt_column_rib.glb")
 	var specs := [
-		# Cinder cone rim & lava channel jaws
 		{"at": Vector2(-605.0, -645.0), "yaw": 0.6, "scale": 2.4},
 		{"at": Vector2(-470.0, -525.0), "yaw": 1.2, "scale": 2.2},
 		{"at": Vector2(-245.0, -545.0), "yaw": -0.4, "scale": 2.3},
 		{"at": Vector2(-135.0, -390.0), "yaw": 0.9, "scale": 2.2},
-		# Tube mouth basalt portal buttresses
 		{"at": Vector2(-38.0, -358.0), "yaw": 0.35, "scale": 2.5},
 		{"at": Vector2(42.0, -366.0), "yaw": -0.45, "scale": 2.5},
-		# Skylight & drift flank columns (strictly outside tube interiors and PF-41 junction)
 		{"at": Vector2(118.0, -328.0), "yaw": 0.8, "scale": 2.0},
 		{"at": Vector2(198.0, -210.0), "yaw": 1.5, "scale": 2.1},
 		{"at": Vector2(146.0, -104.0), "yaw": -0.9, "scale": 2.0},
 		{"at": Vector2(-156.0, -245.0), "yaw": 1.1, "scale": 2.1},
-		# Great Room perimeter buttresses
 		{"at": Vector2(54.0, -48.0), "yaw": -0.7, "scale": 2.4},
 		{"at": Vector2(-58.0, -46.0), "yaw": 0.7, "scale": 2.4},
 		{"at": Vector2(62.0, 26.0), "yaw": -2.2, "scale": 2.3},
 		{"at": Vector2(192.0, 48.0), "yaw": 1.4, "scale": 2.2},
 		{"at": Vector2(-242.0, -14.0), "yaw": -1.5, "scale": 2.2},
-		# Karst Sinkhole rim colonnade (r = 72..82 around (0, 350), completely clear of gallery_ring & PF-43 ramps)
 		{"at": Vector2(-74.0, 326.0), "yaw": 1.2, "scale": 2.8},
 		{"at": Vector2(74.0, 326.0), "yaw": -1.2, "scale": 2.8},
 		{"at": Vector2(-78.0, 368.0), "yaw": 1.9, "scale": 2.9},
@@ -935,7 +853,6 @@ func _place_malpais_basalt(batches: Dictionary, sites: ParkSites) -> void:
 		_put(batches, rib_path, xf)
 
 
-# NM El Malpais sunlit skylight flash shafts & karst sinkhole oculus sunbeam (Guard 4 wayfinding).
 func _build_skylight_shafts(scenery: Node3D, sites: ParkSites) -> void:
 	var holder := Node3D.new()
 	holder.name = "SkylightShafts"
@@ -959,7 +876,6 @@ void fragment() {
 		{"at": Vector2(127.5, -126.0), "top_r": 4.5, "bot_r": 11.0, "h": 42.0, "alpha": 0.22, "phase": 2.2},
 		{"at": Vector2(0.0, -355.0), "top_r": 6.0, "bot_r": 14.0, "h": 46.0, "alpha": 0.20, "phase": 0.7},
 		{"at": Vector2(0.0, -15.0), "top_r": 8.0, "bot_r": 19.0, "h": 54.0, "alpha": 0.18, "phase": 1.7},
-		# Hero sunlit karst sinkhole oculus descending onto the Sinkhole Brood Warden
 		{"at": Vector2(0.0, 368.0), "top_r": 24.0, "bot_r": 48.0, "h": 145.0, "alpha": 0.22, "phase": 2.8},
 	]
 	for i in specs.size():
@@ -989,8 +905,6 @@ void fragment() {
 		_fx.skylight_shafts.append({"node": shaft, "phase": float(spec["phase"]), "base_alpha": float(spec["alpha"])})
 
 
-# Guard 1 + Guard 4 no-minimap wayfinding: petrol (#365754) Old Works command conduits + pulsing
-# uranium-green (#9DFF3C) direction beads running toward the Warden landmark. Zero colliders, zero brass.
 func _build_command_cables(scenery: Node3D, sites: ParkSites, paths: Array) -> void:
 	var holder := Node3D.new()
 	holder.name = "OldWorksCommandCables"

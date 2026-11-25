@@ -3,9 +3,6 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const DISTANT := ["sky_mesa.glb", "sky_loom.glb", "sky_blades.glb", "sky_cradle.glb"]
 const WorldLook := preload("res://src/presentation/world_look.gd")
-# The Highdraft's light and surface rows from the D2 sheet (SHEET.md, materials and sky). The light
-# keys are a view over the world look row (world_look.gd ROWS[3]); the surface colours live here.
-# Scenery, net and props all read these, so the light and the surfaces cannot drift.
 const LOOK := {
 	"key": WorldLook.ROWS[3]["sun_color"],
 	"key_rotation": WorldLook.ROWS[3]["sun_rotation"],
@@ -21,7 +18,6 @@ const LOOK := {
 	"charcoal": Color("242a28"),
 	"catch_edge": Color("e5a044"),
 }
-# Props drawn in the M2 petrol paint; the rest keep the bone finish.
 const PETROL_PROPS := ["prop_crate.glb", "prop_spool.glb", "prop_bench.glb", "prop_pot.glb", "prop_bearing.glb"]
 static var _pieces := {}
 static var _warned_aerial := false

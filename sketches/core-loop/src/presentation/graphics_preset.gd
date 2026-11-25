@@ -2,11 +2,6 @@ extends RefCounted
 
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
-# Quality knobs only; each world's light and air numbers live in world_look.gd. The shipped high
-# takes the parked target look (wave 12): 4096 shadow atlas, the SSAO tuning, the sun's shadow
-# properties and the surface swap to VX-SURF's slots (palette.target_surface_material). R1's -28 degree sun put play ground in the western rim's shadow, so
-# the sun direction stays the world row's -36 degree pin. No global shaft veil: world air is the
-# per-world volumetric row, entered with the world.
 const HIGH := {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mode": 1,
 	"scenery_distance": 780.0, "lod_threshold": 1.0, "msaa": 2, "ssao_quality": 2, "air": true,
 	"sdfgi": false, "ssil": false, "volumetric_fog": false,
@@ -20,9 +15,6 @@ const HIGH := {"ssao": true, "glow": true, "shadow_distance": 180.0, "shadow_mod
 		"directional_shadow_split_1": 0.18},
 	"sky_properties": {},
 }
-# Settings are applied on bind or an explicit preset change, never polled each frame.
-# target is the lab name the shipped high grew from; it stays an alias so --preset=target and the
-# files that still gate on the name keep working.
 const PRESETS := {
 	"high": HIGH,
 	"low": {"ssao": false, "glow": false, "shadow_distance": 95.0, "shadow_mode": 1,
@@ -80,8 +72,6 @@ static func _unregister_dressing_host(id: int) -> void:
 		return host != null and host.get_instance_id() != id)
 
 
-# Restore one shared baseline, then compose live overrides in entry order. An older
-# arena can leave after a new stage has entered without restoring over that stage.
 static func set_lighting(owner: Node, environment: Environment, values: Dictionary,
 		lights: Array = [], slot: String = "", look: Dictionary = {}) -> Dictionary:
 	var world := _lighting_for(environment)
@@ -128,10 +118,6 @@ static func clear_lighting(environment: Environment, slot: String) -> void:
 		_update_lighting(world)
 
 
-# A stage or arena enters its world look row: light, fog and, on presets with air, the world's
-# volumetric air. The row lives on the owner's own WorldLook node (set_lighting replaces every row
-# of one owner, P-LIGHT's fix round), so it leaves with the owner. Stage rows use slot "world",
-# arena rows slot "arena": both write the same keys, so an arena covers its stage and uncovers it.
 static func enter_world(owner: Node, environment: Environment, look: Dictionary, slot := "world") -> void:
 	clear_lighting(environment, slot)
 	if look.is_empty() or environment == null:
@@ -177,8 +163,6 @@ static func _write_lighting(properties: Array) -> void:
 				object.set(key, row.values[key])
 
 
-# Explicit edits to the live light belong to the active override, or to the baseline
-# when that property has no override. Re-entering a named world keeps those edits.
 static func _capture_lighting_changes(world: Dictionary) -> void:
 	for row in world.defaults:
 		var object = row.object.get_ref()
@@ -250,7 +234,6 @@ static func _apply_world(world: Dictionary) -> void:
 	env.ambient_light_color = look.ambient
 	env.ambient_light_sky_contribution = 0.25
 	env.ambient_light_energy = look.energy
-	# AgX with a fixed exposure; auto exposure and SDFGI/SSIL/SSR stay off.
 	env.tonemap_mode = Environment.TONE_MAPPER_AGX
 	env.tonemap_exposure = look.exposure
 	env.tonemap_agx_white = 16.29
@@ -283,8 +266,6 @@ static func _apply_world(world: Dictionary) -> void:
 	sun.rotation_degrees = look.sun_rotation
 	sun.light_color = look.sun_color
 	sun.directional_shadow_split_1 = 0.18
-	# PCSS (angular distance above 0) samples the hoop's shadow on the pilot's head with visible
-	# noise; the smooth high-quality filter blurs it without any.
 	sun.light_angular_distance = 0.0
 	RenderingServer.directional_soft_shadow_filter_set_quality(RenderingServer.SHADOW_QUALITY_SOFT_HIGH)
 	sun.shadow_blur = 1.0
@@ -308,8 +289,6 @@ static func _apply_world(world: Dictionary) -> void:
 		_apply_lighting(lighting)
 
 
-# One shadowless cool directional fill opposite the sun (LIGHTING-TARGETS: elevation 50,
-# azimuth 298). It is a sibling of the world sun, so the sun stays the only shadow caster.
 static func _apply_fill(sun: DirectionalLight3D, look: Dictionary) -> void:
 	var parent := sun.get_parent()
 	if parent == null:
@@ -323,13 +302,10 @@ static func _apply_fill(sun: DirectionalLight3D, look: Dictionary) -> void:
 		fill.light_color = look.fill_color
 		fill.light_specular = 0.0
 		parent.add_child(fill)
-	# Opposite the sun's yaw, so the wall faces the key misses get cool light.
 	fill.rotation_degrees = Vector3(look.fill_pitch, look.sun_rotation.y + 180.0, 0.0)
 	fill.light_energy = look.fill
 
 
-# Snapshot only the renderer properties target overrides. Returning to either established
-# preset restores untouched defaults too, including the terrain's existing sky resource.
 static func _target_properties(world: Dictionary, object: Object, values: Dictionary) -> void:
 	if object == null:
 		return
@@ -373,8 +349,6 @@ static func _restore_target_server() -> void:
 	_target_server_active = false
 
 
-# Bind after the scenery builder's opaque merge. Changing the input materials before
-# that merge would split its batch and change the scene's geometry/draw structure.
 static func _bind_scenery_material(ref: WeakRef) -> void:
 	var view := ref.get_ref() as MeshInstance3D
 	if view == null:
@@ -390,7 +364,6 @@ static func register_ground(view: MeshInstance3D) -> void:
 	_bind_material(view, "ground")
 
 
-# Keep a world-specific ground finish through preset changes, including target.
 static func set_ground_material(view: MeshInstance3D, material: Material) -> void:
 	for binding in _materials:
 		if binding.view.get_ref() == view:
@@ -431,8 +404,6 @@ static func _apply_material(binding: Dictionary) -> void:
 		view.material_override = binding.target_override
 		return
 	var palette := preload("res://src/core/palette.gd")
-	# A prebuilt slot resource a dressing host put on the view (the Dig's stone beds) is already the
-	# shipped surface; swapping it for the binding's original role would erase the Dig's strata.
 	for material in [view.material_override, binding.override]:
 		if material != null and palette.is_slot_resource(material):
 			view.material_override = material

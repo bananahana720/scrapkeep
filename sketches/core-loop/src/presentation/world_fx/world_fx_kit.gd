@@ -2,15 +2,6 @@ extends RefCounted
 
 const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 
-# World and event effects (WORLD-FX.md): the builder. One emitter per spec, drawn as camera-facing
-# quads whose shape the fragment paints (no textures to import or lose). Materials are shared per
-# shape, blend and readability class, so a whole world's ambient air is a handful of materials whose
-# clear zone moves with one call per frame (set_clear).
-#   in-world effects are soft (no ink); ceremony and comic effects (title, summaries, words) carry an
-#   ink rim, so the comic book sits on top of the world and never inside it (TONE-BIBLE pillar 2).
-# Readability: every ambient material fades out inside CLEAR_RADIUS of the ball and near the camera,
-# so air never sits between the player and a telegraph at fighting range. Emitters use a fixed seed
-# and cast no shadow; no effect owns a light.
 const SEED := 917
 const CLEAR_RADIUS := 7.0
 const SHAPES := ["dot", "streak", "paper", "ring", "glint", "arc"]
@@ -127,7 +118,6 @@ static func material(shape: String, blend: String, ambient := false, ink := 0.0,
 	return mat
 
 
-# The ball's position for every ambient material's clear zone. One write per material per frame.
 static func set_clear(center: Vector3) -> void:
 	for key in _materials:
 		var mat: ShaderMaterial = _materials[key]
@@ -162,7 +152,6 @@ static func _gradient(colours: Array) -> GradientTexture1D:
 	return tex
 
 
-# The spec's growth over life: fade shrinks, grow swells, puff swells then holds, const holds.
 static func _scale_curve(kind: String) -> CurveTexture:
 	match kind:
 		"grow":
@@ -174,7 +163,6 @@ static func _scale_curve(kind: String) -> CurveTexture:
 	return _curve([Vector2(0.0, 1.0), Vector2(1.0, 0.2)])
 
 
-# Alpha over life: every particle fades in and out, so no emitter pops at its box edge.
 static func _alpha_curve(burst: bool) -> CurveTexture:
 	if burst:
 		return _curve([Vector2(0.0, 1.0), Vector2(0.6, 0.8), Vector2(1.0, 0.0)])
@@ -197,13 +185,10 @@ static func _emission(pm: ParticleProcessMaterial, s: Dictionary) -> void:
 		pm.emission_ring_height = emit.get("height", 0.0)
 	else:
 		pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_POINT
-	# A following emitter keeps an identity basis (so wind blows the same way whatever the camera's
-	# yaw) and WorldFx places its offset by hand; an anchor's offset rides the anchor's own frame.
 	if s["attach"] != "camera" and s["attach"] != "ball":
 		pm.emission_shape_offset = s.get("offset", Vector3.ZERO)
 
 
-# One emitter from its spec. The caller owns placement, tint and start; build never starts it.
 static func build(id: String) -> GPUParticles3D:
 	var s: Dictionary = Specs.SPECS[id]
 	var burst: bool = s["attach"] == "burst"
@@ -286,7 +271,6 @@ static func build(id: String) -> GPUParticles3D:
 	return p
 
 
-# A still quad drawn with the kit's shader: the rainbow in the dam's spray and the range impostors.
 static func quad(shape: String, size: Vector2, colour: Color, blend := "mix", alpha := 1.0, near_m := 2.5) -> MeshInstance3D:
 	var mesh := QuadMesh.new()
 	mesh.size = size
@@ -295,12 +279,9 @@ static func quad(shape: String, size: Vector2, colour: Color, blend := "mix", al
 	view.mesh = mesh
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	view.set_instance_shader_parameter("tint", Color(colour.r, colour.g, colour.b, alpha))
-	# A still quad has no particle colour, so COLOR is white; the tint carries everything.
 	return view
 
 
-# The share of a spec's particles that emit: the low preset keeps its `low` share, reduced motion
-# drops a `motion: false` spec (strobes and fast sparks) and halves the rest.
 static func share(s: Dictionary, low: bool, reduced: bool) -> float:
 	var r := float(s.get("low", 0.5)) if low else 1.0
 	if reduced:
@@ -308,13 +289,6 @@ static func share(s: Dictionary, low: bool, reduced: bool) -> float:
 	return r
 
 
-# The one place a world's effects read quality. The graphics preset is GraphicsPreset.current; the
-# reduced-motion setting lives here (WorldFx.preferred and HighdraftFx.preferred read and write it,
-# and Game.set_reduced_motion sets it). A world's own dressing (Specs.DRESSING rows) asks for its
-# share, visibility and colour below and registers once with follow_quality, so a new world's
-# dressing writes rows and behaviour, not its own low-quality cut, reduced-motion branch or colours.
-# Not yet folded: game.gd still pushes reduced motion into live HighdraftFx nodes, and the Dig's
-# burst counts take fx_library.gd's own low row.
 static var reduced_motion := false
 
 
@@ -322,8 +296,6 @@ static func low_preset() -> bool:
 	return String(load("res://src/presentation/graphics_preset.gd").current) == "low"
 
 
-# The share of a dressing effect that plays: its `low` share on the low preset, times its `reduced`
-# share under reduced motion. A count takes floored_share; a rate or a switch reads it directly.
 static func dressing_share(id: String, low := false, reduced := false) -> float:
 	var row: Dictionary = Specs.DRESSING[id]
 	return (float(row.get("low", 1.0)) if low else 1.0) * (float(row.get("reduced", 1.0)) if reduced else 1.0)
@@ -333,7 +305,6 @@ static func dressing_count(id: String, full: int, low := false, reduced := false
 	return int(floor(full * dressing_share(id, low, reduced) + 0.000001))
 
 
-# False when the current preset row turns the effect's `preset` flag off.
 static func dressing_shown(id: String) -> bool:
 	var flag := String(Specs.DRESSING[id].get("preset", ""))
 	if flag == "":
@@ -350,12 +321,9 @@ static func dressing_alpha(id: String) -> float:
 	return float(Specs.DRESSING[id].get("alpha", 1.0))
 
 
-# A world's dressing node follows the preset: GraphicsPreset calls host._sync_dressing() now and on
-# every change.
 static func follow_quality(host: Node) -> void:
 	load("res://src/presentation/graphics_preset.gd").register_dressing_host(host)
 
 
-# Live particles a spec costs at a preset.
 static func cost(id: String, low := false, reduced := false) -> int:
 	return int(round(float(Specs.SPECS[id]["max"]) * share(Specs.SPECS[id], low, reduced)))

@@ -9,19 +9,11 @@ const ASSET_DIR := "res://assets/models/bosses"
 const SPILLWAY_DIR := "res://assets/models/world_one"
 const FOUNDRY_PARTS := ["RimRepairs", "CraneRails", "PourSpouts", "CooledSlagPools", "CastFloorSeams", "MastCollars", "BankCopperCourses"]
 const SPILLWAY_PARTS := ["rock_a", "rock_c", "slab_a", "slab_b"]
-# Foundry parts authored on the bowl's own faces (the repairs on the rim wall, the copper courses on the bank, the pools
-# and seams on the floor) stand SURFACE_STANDOFF_M in from and up off the bowl, so their faces do not z-fight the bowl's
-# (clip audit, 30 Oct: BankCopperCourses 161 m2 in the bank's plane, RimRepairs 46 m2 in the rim wall's).
 const ON_BOWL_PARTS := ["RimRepairs", "CooledSlagPools", "CastFloorSeams", "BankCopperCourses"]
 const SURFACE_STANDOFF_M := 0.02
-# The Fleet yard behind the rim (tools/blender/bosses/arena_bowl_yard.py): static parts, the two melt parts that glow
-# with the phase, and the two plush crew the stands seat by MultiMesh.
 const YARD_PARTS := ["YardDeck", "FleetStands", "CupolaFurnaces", "LadleCars", "LedgerBoard", "IngotStock", "CrewYard"]
 const GLOW_PARTS := ["LadleMelt", "FurnaceGlow"]
 const CREW_PARTS := ["CrewFan", "CrewPennant"]
-# Mirrors the recipe's STANDS and tiers: sector centre and half width in degrees, the first tier the crew sit on and
-# how many, then tier radius and plank top. One stand a quarter: the north foundry bleachers, the east crane-watch box
-# (its two benches), the south scrap-yard scaffolding and the west ladle-rail gallery (its one deck).
 const STANDS := [[300.0, 18.0, 0, 5], [4.0, 5.0, 3, 2], [95.0, 18.0, 0, 5], [163.0, 7.0, 4, 1]]
 const TIERS := 5
 const TIER_R0 := 69.0
@@ -29,18 +21,14 @@ const TIER_DR := 2.4
 const TIER_Y0 := 18.0
 const TIER_DY := 2.0
 const SEAT_PITCH := 2.0
-# The crew sit at mascot scale, so a fan reads from the far side of the bowl, 140 m away.
 const CREW_SCALE := 1.35
-# Half the seats are taken, one fan in five waves a pennant; a fixed private stream, so every bowl seats the same crowd.
 const SEAT_FILL := 0.5
 const PENNANT_SHARE := 0.2
 const CROWD_SEED := 0x5b0b
-# Fur tints over the recipe's neutral fur: badger, fox, mole, otter, pack rat. Kept muted under the dressing rule.
 const CREW_TINTS := [Color(0.92, 0.92, 0.92), Color(1.0, 0.82, 0.66), Color(0.78, 0.7, 0.64), Color(0.86, 0.78, 0.66), Color(0.95, 0.9, 0.82)]
 const DECK_Y := 15.0
 const LEDGER_ANGLE := 180.0
 const LEDGER_R := 76.0
-# Dry crew-log signs, not reads: none of them is in the riding lane or on a telegraph.
 const SIGNS := [
 	{"name": "LedgerTitle", "angle": 180.0, "r": 75.5, "y": 28.1, "size": 116, "text": "REQUISITION LEDGER", "lit": true},
 	{"name": "SafetyTally", "angle": 279.5, "r": 70.06, "y": 18.6, "size": 46, "text": "SLAG BOWL\nDAYS WITHOUT A\nREQUISITION: 0"},
@@ -54,7 +42,6 @@ const SLOTS := {
 	"slag_glow": Vector2(0.6, 0.0),
 }
 
-# Tests can redirect either folder. Nothing is loaded or built until the bowl is warmed or built.
 static var asset_dir := ASSET_DIR
 static var spillway_dir := SPILLWAY_DIR
 
@@ -65,17 +52,12 @@ static func reset_for_tests() -> void:
 	spillway_dir = SPILLWAY_DIR
 
 
-# Each kit's parts read ahead by warm(), by file path until build takes them.
 static var _ahead := {}
-# The kit warm() is part way through: its path, the loaded scene, the views still to copy and the parts so far.
 static var _reading := {}
 static var _requested := {}
 
 
-# A step a call while the world's last stage runs (boss.gd's warm_arena): a kit's file, then one part's
-# mesh copy a call; true once every kit is read. A played game reads the file on a loader thread; headless
-# reads it here, since the dummy rasterizer's mesh RIDs are not thread-safe (as requisition.gd). Reading a
-# kit whole took 23-31 ms frames on the 4080 at the flume Warden's engage.
+# Godot headless Dummy rasterizer mesh RIDs are not thread-safe; load on main thread when headless.
 static func warm() -> bool:
 	for kit in _kits():
 		if _ahead.has(kit[0]):
@@ -100,7 +82,6 @@ static func warm() -> bool:
 
 static func drop_ahead() -> void:
 	_ahead.clear()
-	# A loader thread still reading a kit is waited out, so no load is left in flight at a quit.
 	for path in _requested:
 		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 			ResourceLoader.load_threaded_get(path)
@@ -114,7 +95,6 @@ static func _drop_reading() -> void:
 	_reading = {}
 
 
-# The kit's scene, false while a loader thread still reads it, or null when it cannot load.
 static func _read(path: String):
 	if not ResourceLoader.exists(path):
 		return null
@@ -149,7 +129,6 @@ static func build(arena: Node3D) -> Node3D:
 		return null
 	var dressing := Node3D.new()
 	dressing.name = "ArenaBowlDress"
-	# In by the standoff at the rim wall's radius (less further in, where the bank and floor need the lift instead), and up.
 	var inward := 1.0 - SURFACE_STANDOFF_M / Arena.BANK_R
 	var standoff := Transform3D(Basis.from_scale(Vector3(inward, 1.0, inward)), Vector3(0.0, SURFACE_STANDOFF_M, 0.0))
 	for part in FOUNDRY_PARTS:
@@ -166,7 +145,6 @@ static func build(arena: Node3D) -> Node3D:
 		var part: String = SPILLWAY_PARTS[i % SPILLWAY_PARTS.size()]
 		var placement := Transform3D(Basis(Vector3.UP, angle).scaled(Vector3(size, size * 0.7, size)), at)
 		builder._view(rubble, "RimStone_%d" % i, stone[part].mesh, placement * stone[part].local)
-	# The yard is its own kit: without it the foundry dressing still stands, the rim just has no crowd.
 	if yard.is_empty():
 		push_warning("arena_bowl_dress: missing or malformed arena_bowl_yard.glb; Slag Bowl dresses without its Fleet yard")
 	else:
@@ -176,8 +154,6 @@ static func build(arena: Node3D) -> Node3D:
 	return dressing
 
 
-# The Fleet yard on the game bus, once the bowl is in the tree: a bowl built ahead has no parent
-# to read the bus from when its dressing is built.
 static func bind_yard(arena: Node3D) -> void:
 	var yard = arena.get_node_or_null("ArenaBowlDress/FleetYard")
 	if yard == null:
@@ -192,8 +168,6 @@ func _yard(dressing: Node3D, parts: Dictionary) -> void:
 	dressing.add_child(yard)
 	for part in YARD_PARTS:
 		_view(yard, part, parts[part].mesh, parts[part].local)
-		# Behind the wall a yard part's shadow falls only on the yard deck, out of the fight's sight, so only the
-		# furnaces (tall enough to throw theirs into the bowl) pay for a shadow pass.
 		if part != "CupolaFurnaces":
 			(yard.get_node(part) as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	yard.melt_material = _slot_material("slag_glow")
@@ -222,7 +196,6 @@ func _yard(dressing: Node3D, parts: Dictionary) -> void:
 					continue
 				var angle := lo + span * (j + 0.5) / count
 				var at := Vector3(cos(angle) * (r - 0.3), TIER_Y0 + TIER_DY * k, sin(angle) * (r - 0.3))
-				# The crew are built facing +X; PI - angle turns them to the bowl's centre.
 				rests[kind].append(Transform3D(Basis(Vector3.UP, PI - angle + turn).scaled(Vector3.ONE * size), at))
 				tints[kind].append(tint)
 	for kind in CREW_PARTS:
@@ -241,7 +214,6 @@ func _yard(dressing: Node3D, parts: Dictionary) -> void:
 		yard.add_child(crowd)
 		yard.seat(crowd, rests[kind])
 	var font := load(SIGN_FONT) as Font
-	# The ledger's figure reads from the fight's camera across the bowl (about 100 m); the caption reads up close.
 	yard.ledger_line = _sign(yard, font, {"name": "LedgerLine", "angle": LEDGER_ANGLE, "r": LEDGER_R - 0.5, "y": DECK_Y + 10.5,
 		"size": 230, "text": "", "lit": true})
 	yard.ledger_caption = _sign(yard, font, {"name": "LedgerCaption", "angle": LEDGER_ANGLE, "r": LEDGER_R - 0.5,
@@ -259,13 +231,11 @@ func _sign(parent: Node3D, font: Font, row: Dictionary) -> Label3D:
 	label.font_size = row.size
 	label.pixel_size = 0.01
 	label.outline_size = 0
-	# The ledger's chalk is unshaded so the board's own shadow and the haze never sink it; the small notices take the light.
 	var lit: bool = row.get("lit", false)
 	label.modulate = Palette.LEDGER if lit else Palette.LEDGER.darkened(0.12)
 	label.double_sided = false
 	label.shaded = not lit
 	label.position = Vector3(cos(angle) * row.r, row.y, sin(angle) * row.r)
-	# A Label3D reads from +Z: turn +Z to face the bowl's centre.
 	label.basis = Basis(Vector3.UP, atan2(-cos(angle), -sin(angle)))
 	parent.add_child(label)
 	return label
@@ -280,7 +250,6 @@ func _parts(path: String, required: Array) -> Dictionary:
 	return _close(reading, required)
 
 
-# The kit's instance and its required views; empty when the file is missing or carries a collider.
 static func _open(path: String, packed: PackedScene, required: Array) -> Dictionary:
 	if packed == null:
 		return {}
@@ -295,7 +264,6 @@ static func _open(path: String, packed: PackedScene, required: Array) -> Diction
 	return {"path": path, "scene": scene, "views": views, "result": {}, "ok": true}
 
 
-# Copies one part's mesh with the slot materials into result; false when the part is malformed.
 func _take(view: MeshInstance3D, scene: Node, result: Dictionary) -> bool:
 	var mesh := view.mesh.duplicate() as ArrayMesh
 	if mesh == null:
@@ -339,7 +307,6 @@ func _slot_material(slot: String) -> StandardMaterial3D:
 		material.uv1_triplanar = true
 		material.uv1_scale = Vector3.ONE / 4.0
 	elif slot == "slag_glow":
-		# The only lit dressing: the yard sets its colour and energy by phase (arena_bowl_yard.gd MELT).
 		material.emission_enabled = true
 	return material
 
@@ -371,9 +338,7 @@ func _surfaces(arena: Node3D) -> void:
 	ramp_mat.albedo_color = Palette.COPPER
 	var mast_mat := _slot_material("foundry_steel")
 	mast_mat.resource_name = "bowl_crane_masts"
-	# A weathered steel upright against the copper of the inward ramp and the rim repairs.
 	mast_mat.albedo_color = Palette.MAST_STEEL
-	# Only arena-owned views carry this metadata. Combat/hazards and vent pads stay live.
 	for view: MeshInstance3D in arena.get_children().filter(func(n): return n is MeshInstance3D):
 		match view.get_meta("bowl_surface", ""):
 			"Floor": view.material_override = floor_mat
@@ -386,9 +351,6 @@ func _surfaces(arena: Node3D) -> void:
 			"Mast", "Crossbar": view.material_override = mast_mat
 
 
-# The authored kicker replaces the greybox view where the collider stands: one holder per kicker at the wedge's own
-# frame (arena.gd _wedge), its base views and detail shells at the holder's origin, so the recipe's riding face lies on
-# the collider plane. The greybox view stays in the tree, hidden, and the collider is untouched.
 func _kicker(arena: Node3D, view: MeshInstance3D) -> void:
 	var holder := Node3D.new()
 	holder.name = "KickerWedge"

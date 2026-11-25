@@ -1,10 +1,5 @@
 extends RefCounted
 
-# Pure music deck ownership arbiter (Sound V4, verified by SoundArbiter.tla).
-# Every music-deck decision reads one deterministic priority stack:
-#   dead > menu > boss_finale > launch > boss (unless radio pinned) > warden (unless radio pinned)
-#   > ult_flight > radio > champion > moment > stage > menu.
-
 const OWNER_DEAD := "dead"
 const OWNER_MENU := "menu"
 const OWNER_BOSS_FINALE := "boss_finale"

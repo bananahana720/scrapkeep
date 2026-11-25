@@ -12,36 +12,6 @@ const RewardView := preload("res://src/ui/reward_view.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
-# The reward ceremony (v3 W13, playtest entry 8 follow-up: "treasure find ceremony").
-# Every part_gained is presented at a tier, so a big find feels big and a small one stays
-# out of the way. The tier's look, sound, timing and pause rule are its
-# EventKinds.LOOT_ROWS reward_* row; which tier is tier_of(), the one place a part's
-# rarity is read.
-#
-#   common    in the flow: juice's fountain and vfx's glyph pop, plus a rarity tick
-#   rare      the same with a rising bell rung up the reward ladder, a ring flare in the
-#             rarity colour and a hit-stop from juice's shared budget
-#   reveal    rare-plus, a first find or a completed synergy: a salvaged
-#             plate card with the glyph, the name, six words of what changes and, when
-#             it completes or feeds a synergy, a wire snapped to the partner's glyph
-#   ceremony  a Warden-break gate, Brindle's crest, a vault or cache, the cage, an
-#             evolution: a crate shakes and cracks over a drum and bell build, bursts on
-#             a resolving chord and seats the part in a hull slot
-#
-# A card or a ceremony opens only when the screen's one gate says so (may_show_card, through
-# screen_busy.gd): quiet for the finds' hold, and the crate also takes the one slot like a card
-# (_take_crate_slot), so it never opens over a card and no card shows over it. A first find that cannot yet is held, at most
-# MAX_HELD of them, and opens in the order found; a part is seen when its card is shown, so a
-# dropped one is still unseen. A repeat find shows no card; the name at the ball is all it
-# says. A reveal card that is up when a Warden fight turns live closes at once; the part
-# stays seen. A ceremony also waits for calm(): in play (or the victory roll), no committed
-# threat or enemy near, on the ground and not launching, and it waits as long as that takes.
-# A boss's own reward (source "boss") asks only calm() and the calm hold: the boss's death
-# ends the fight, and the victory roll is shorter than the damage clock. The ball's
-# velocity is exactly what it was when the pause began. Any key or click jumps to the
-# reveal, a second closes it. The pause menu's "Ceremonies: short" presents every find at
-# the rare tier. After a revealed or ceremonial part lands, the first time its effect
-# fires the payoff flashes its glyph over the ball and rings its bell, once.
 
 signal started(part_id: String)
 signal revealed(part_id: String)
@@ -49,14 +19,11 @@ signal closed(part_id: String)
 
 const SETTING := "ceremony"
 const SEEN_FILE := "reward-finds.json"
-# The first bus fact that shows a passive part at work, by the knob it turns. A triggered
-# part waits for its own proc in build.item_procs() instead.
 const PAYOFF_FACTS := ["enemy_struck", "shot_fired", "dashed", "slammed", "element_resolved", "grapple_fired",
 	"boosted", "scrap_collected", "special_used", "player_hit"]
 const PAYOFF_BY_MOD := {"weapon_rate": "shot_fired", "weapon_range": "shot_fired", "dash_impulse": "dashed",
 	"rope_range": "grapple_fired", "cruise": "boosted"}
 const MAX_HELD := 3
-# The key the banner's card for a found part waits under (presentation.gd, _on_part): a crate's find card.
 const FIND_CARD := "part:"
 const CLOSE_SCREENS := ["title", "class_select", "summary", "dead"]
 
@@ -65,15 +32,9 @@ var audio
 var juice
 var vfx
 var view
-# Short: every find at the rare tier. The pause menu's Ceremonies row flips it and saves
-# it in settings.json (SETTING, a comfort level: 1 full, 0 short); it is read at launch.
 var short := false
-# Off in test mode, as the workshop's screens are, so the bots and older tests never
-# pause; a ceremony then plays in the flow as a reveal card. Tests switch it on.
 var pause_armed := true
-# The real clock in milliseconds; tests may swap it.
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
-# Every find presented: [part_id, tier, source, msec]; every payoff: [part_id, fact, msec].
 var presented: Array = []
 var payoffs: Array = []
 
@@ -83,7 +44,6 @@ var last_error := ""
 var _save_blocked := false
 var _queue: Array = []
 var _cards: Array = []
-# The screen_busy key of the reveal card now up (src/ui/screen_busy.gd), "" when none.
 var _slot := ""
 var _active := {}
 var _calm_since := -1
@@ -142,17 +102,11 @@ static func _argc(events: Object, signal_name: String) -> int:
 	return 0
 
 
-# --- Tiers --------------------------------------------------------------------------------
-
-# The one read of a part's rarity. The rarity ladder can remap parts in their rows
-# without touching anything here.
 static func rarity_of(part_id: String) -> String:
 	var d: Resource = Parts.def(part_id)
 	return String(d.rarity) if d != null else "common"
 
 
-# The tier a find is presented at. context: source (part_gained's), first (never found
-# before), synergy (the named synergy it completes), short (the pause menu's setting).
 static func tier_of(part_id: String, context := {}) -> String:
 	return tier_for(rarity_of(part_id), context)
 
@@ -170,8 +124,6 @@ static func tier_for(rarity: String, context := {}) -> String:
 	return tier
 
 
-# Rare and up flare (the ring, the bell and the stop); a common first find or synergy
-# gets its card without stopping the play.
 static func flares(rarity: String) -> bool:
 	return EventKinds.REWARD_TIER_BY_RARITY.get(rarity, "common") != "common"
 
@@ -180,7 +132,6 @@ static func rung_pitch(rarity: String) -> float:
 	return Harmony.ratio(Harmony.pentatonic_step(int(EventKinds.REWARD_RUNGS.get(rarity, 0))))
 
 
-# The six words of what changes: the part's verb, cut to the reveal row's word limit.
 static func card_words(part_id: String) -> String:
 	var d: Resource = Parts.def(part_id)
 	var line: String = d.verb if d != null and d.verb != "" else (d.text if d != null else String(Parts.token(part_id).get("verb", "")))
@@ -189,7 +140,6 @@ static func card_words(part_id: String) -> String:
 	return " ".join(words.slice(0, mini(words.size(), limit)))
 
 
-# The relic a part stands for, or "" for an ordinary part: a relic card names the relic.
 static func relic_of(part_id: String) -> String:
 	return Relics.relic_of(part_id)
 
@@ -199,7 +149,6 @@ static func icon_of(part_id: String) -> String:
 	return "cat_" + String(d.icon_category) if d != null and d.icon_category != "" else "cat_utility"
 
 
-# The first bus fact that shows the part at work, or "proc" for a triggered part.
 static func payoff_fact(part_id: String) -> String:
 	var d: Resource = Parts.def(part_id)
 	if d == null:
@@ -229,14 +178,10 @@ static func payoff_fact(part_id: String) -> String:
 	return "enemy_struck"
 
 
-# --- A find ---------------------------------------------------------------------------------
-
 func _on_part_gained(part_id: String, source: String) -> void:
 	present(find_of(part_id, source))
 
 
-# A find as the ceremony sees it: its tier, whether it is a first, and the maker trick it
-# wakes or feeds with the partner part of the same maker.
 func find_of(part_id: String, source: String) -> Dictionary:
 	var held: Array = ctx.run.parts.duplicate() if ctx.run != null else []
 	var before := held.duplicate()
@@ -262,7 +207,6 @@ func find_of(part_id: String, source: String) -> Dictionary:
 		"partner": partner, "link": link, "at": int(now_ms.call()), "held": held}
 
 
-# The held part of the same maker that this one woke a maker trick with.
 static func _partner(synergy: String, part_id: String, before: Array) -> String:
 	var maker: String = Synergies.ROWS[synergy]["maker"]
 	for other in before:
@@ -271,8 +215,6 @@ static func _partner(synergy: String, part_id: String, before: Array) -> String:
 	return ""
 
 
-# [trick, ""] for the maker trick this part is the first piece toward: one more part of its
-# maker wakes it (the card shows a socket with a question mark for the piece still out there).
 static func _fed(part_id: String, before: Array) -> Array:
 	var maker := Parts.maker_of(part_id)
 	if maker == "" or part_id in before or int(Parts.maker_counts(before).get(maker, 0)) != 0:
@@ -305,8 +247,6 @@ func present(find: Dictionary) -> void:
 				_demote(find)
 
 
-# Whether a find may wait for a card: a first find of a part nothing is already holding a
-# card for, with fewer than MAX_HELD waiting. Anything else shows its name at the ball only.
 func _may_hold(find: Dictionary) -> bool:
 	return find["first"] and not _is_held(find["part"]) and _queue.size() + _cards.size() < MAX_HELD
 
@@ -318,13 +258,10 @@ func _is_held(part_id: String) -> bool:
 	return not _active.is_empty() and _active["find"]["part"] == part_id
 
 
-# The shared gate: the screen is quiet (screen_busy.gd) for the finds' longer hold.
 func may_show_card() -> bool:
 	return _busy() == null or _busy().settled(ScreenBusy.FIND_HOLD)
 
 
-# A rung's own voice (EventKinds.REWARD_RUNG_CUES: cobalt's coil whine and click), played
-# with the find's bell or tick, or with the crate's burst when the find waits for one.
 func _rung_voice(find: Dictionary) -> void:
 	var voice := String(EventKinds.REWARD_RUNG_CUES.get(find["rarity"], ""))
 	if voice != "":
@@ -345,7 +282,6 @@ func _flare(find: Dictionary) -> void:
 		vfx.glyph("reward_rare", ball + Vector3.UP * 2.4, 0.4, 1.8, float(row["flare_s"]), Vector3.ZERO, "star", tint)
 
 
-# A ceremony with no pause armed (test mode): the rare flare and the reveal card, in the flow.
 func _demote(find: Dictionary) -> void:
 	var shown := find.duplicate()
 	shown["tier"] = "reveal"
@@ -362,7 +298,6 @@ func _hold_card(find: Dictionary) -> void:
 		_next_card()
 
 
-# The head of the held cards opens when the gate allows, and the part is seen only now.
 func _next_card() -> void:
 	_release_slot()
 	view.card = {}
@@ -381,7 +316,6 @@ func _busy():
 	return ctx.get("screen_busy") if ctx != null else null
 
 
-# A reveal card waits its turn with the other cards that can wait (screen_busy.gd): quiet screen, oldest first.
 func _take_slot(find: Dictionary) -> bool:
 	if _busy() == null:
 		return true
@@ -406,7 +340,6 @@ func card_state(find: Dictionary, start: int, in_ceremony: bool) -> Dictionary:
 	var stamp: String = stamps.get(rarity, "")
 	if find["first"] and rarity in ["common", "rare"]:
 		stamp = "%s %s" % [stamps["first"], stamp]
-	# A run token (Parts.TOKENS) is no rung of the item ladder: it wears its own stamp.
 	stamp = String(Parts.token(find["part"]).get("stamp", stamp))
 	var element := String(d.element) if d != null else ""
 	var relic := relic_of(find["part"])
@@ -426,10 +359,6 @@ func _class_color() -> Color:
 	return EventKinds.reward_row("ceremony")["color"]
 
 
-# --- Calm and the pause ---------------------------------------------------------------------
-
-# True when a ceremony may stop the world: in play or the victory roll, not launching,
-# nothing else holding the tree, on the ground, and no committed threat or enemy near.
 func calm() -> bool:
 	var row := EventKinds.reward_row("ceremony")
 	var game = ctx.root
@@ -441,7 +370,6 @@ func calm() -> bool:
 	var st = ctx.player.state
 	if not st.grounded and absf(st.velocity.y) > float(row["fall_speed"]):
 		return false
-	# The tick's place: this is a rule that stops the world, read against threats at the tick.
 	var at: Vector3 = ctx.player.ball_position()
 	for node in get_tree().get_nodes_in_group("threat"):
 		if not node.has_method("threat_at") and not node is Node3D:
@@ -493,7 +421,6 @@ func _step_queue(now: int) -> void:
 	var row := EventKinds.reward_row("ceremony")
 	if _busy() != null:
 		_busy().request(crate_key(_queue[0]["part"]), true)
-	# A boss's own reward does not wait on the damage clock: its death ends the fight.
 	var gate: bool = String(_queue[0]["source"]) == "boss" or may_show_card()
 	if not gate or not calm():
 		_calm_since = -1
@@ -505,16 +432,10 @@ func _step_queue(now: int) -> void:
 		_begin(_queue.pop_front())
 
 
-# The crate's place in the screen's one line (screen_busy.gd); it asks first, ahead of cards waiting.
 static func crate_key(part_id: String) -> String:
 	return "crate:" + part_id
 
 
-# The crate takes the screen like a card: never over another card, and given back when it closes.
-# Its find card (the banner's card for the same part, FIND_CARD) is the same beat: when that card holds
-# the screen the crate opens beside it, and while it waits in line the crate lets it go up first. A
-# boss's crate does not wait for quiet, so it takes the slot at the front (ScreenBusy.take) and its
-# find card follows it. The wait is bounded by the holder's own life, a run end or a reset.
 func _take_crate_slot(find: Dictionary) -> bool:
 	var gate = _busy()
 	if gate == null:
@@ -554,7 +475,6 @@ func _begin(find: Dictionary) -> void:
 		"class_color": _class_color(), "seed": absi(String(find["part"]).hash()), "hull": hull})
 	if not view.card.is_empty() and not view.card.get("ceremony", false):
 		_cards.push_front(view.card["find"])
-		# The card the crate pushed off keeps its place in line, first.
 		if _busy() != null and _slot != "":
 			_busy().give_back(_slot)
 		_slot = ""
@@ -601,7 +521,6 @@ func _burst(now: int) -> void:
 	revealed.emit(find["part"])
 
 
-# The world moves again as the overlay fades, so the run never waits on the fade.
 func _close(now: int) -> void:
 	_active["phase"] = "out"
 	_active["close"] = now
@@ -610,7 +529,6 @@ func _close(now: int) -> void:
 	_arm(_active["find"])
 
 
-# Any key or click: during the build, straight to the reveal; during the reveal, close.
 func skip() -> void:
 	if _active.is_empty():
 		return
@@ -635,8 +553,6 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 
 
-# Holds the tree paused with the player's keys off, or lets it go. Velocity is captured
-# at the pause and handed back exactly, as the tree pick's pause does.
 func _hold(on: bool) -> void:
 	var game = ctx.root
 	var body: RigidBody3D = ctx.player.body()
@@ -667,8 +583,6 @@ func _hold(on: bool) -> void:
 func held_velocity() -> Vector3:
 	return _held_velocity
 
-
-# --- The payoff -----------------------------------------------------------------------------
 
 func _arm(find: Dictionary) -> void:
 	var part: String = find["part"]
@@ -714,7 +628,6 @@ func _step_payoffs() -> void:
 			_pay(armed, "proc")
 
 
-# The "there it is": the part's glyph flashes over the ball and its bell rings, once.
 func _pay(armed: Dictionary, fact: String) -> void:
 	_armed.erase(armed)
 	var part: String = armed["part"]
@@ -734,8 +647,6 @@ func _pay(armed: Dictionary, fact: String) -> void:
 	view.flashes.append({"icon": icon_of(part), "tint": tint, "class_color": _class_color(), "at": at, "start_ms": now,
 		"life_s": row["flash_s"]})
 
-
-# --- Settings, finds and resets ---------------------------------------------------------------
 
 func _load_seen() -> void:
 	_seen = {}
@@ -772,8 +683,6 @@ func seen(part_id: String) -> bool:
 	return _seen.has(part_id)
 
 
-# A run start clears everything; a death, a retry or a screen drops what is waiting and
-# lets go of the tree, and keeps the payoffs of parts the run still holds.
 func _reset(new_run: bool) -> void:
 	for find in _queue:
 		_release_crate(find)

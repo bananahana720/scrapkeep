@@ -1,15 +1,5 @@
 extends RefCounted
 
-# Explicit event policy (design-v3/PILOT-CLIPS.md section 1.1). Each row id is a GameEvents
-# signal, unless the row names its signal under "signal" (two rows on one signal).
-# Cooldowns are shared by resolved clip, including per-class overrides.
-#
-# Row keys: clip, priority, cooldown; optional
-#   blend     seconds the clip eases in over (status clips 0.08; impact clips cut in at 0.0)
-#   arg       [index, value]: the row fires only when the signal's argument at index equals value
-#   queue     seconds: a row that loses on priority waits in the one queue slot when the
-#             playing clip has at most this long left, and plays when it ends
-#   class_clips  {class_id: clip}, a per-class clip (no row uses it)
 const ROWS := {
 	"boss_defeated": {"clip": "big_cheer", "priority": 80, "cooldown": 4.0, "blend": 0.08},
 	"stage_cleared": {"clip": "big_cheer", "priority": 80, "cooldown": 4.0, "blend": 0.08},
@@ -22,11 +12,8 @@ const ROWS := {
 	"hold_broken": {"clip": "phew", "priority": 20, "cooldown": 4.0, "blend": 0.08},
 	"missed_drop": {"clip": "wince", "priority": 40, "cooldown": 3.0},
 	"evolution_fired": {"clip": "big_cheer", "priority": 80, "cooldown": 4.0, "blend": 0.08},
-	# A hit slam: drop_land waits for the smash gesture to finish (section 1.3).
 	"drop_landed": {"clip": "drop_land", "priority": 30, "cooldown": 1.5, "queue": 1.0},
 	"slammed": {"clip": "smash", "priority": 36, "cooldown": 1.0},
-	# The skill bar and the set piece (design-v3/SKILL-BAR.md section 7, as PILOT-CLIPS section
-	# 1.1 changes it: ultimate_landed 69, ultimate_cancelled 72, ult_ready 28 and queued).
 	"ultimate_ready": {"clip": "ult_ready", "priority": 28, "cooldown": 10.0, "blend": 0.08, "queue": 1.0},
 	"ultimate_started": {"clip": "ult_windup", "priority": 70, "cooldown": 0.0},
 	"ultimate_peak": {"clip": "ult_strike", "priority": 68, "cooldown": 0.0, "blend": 0.05},
@@ -37,8 +24,6 @@ const ROWS := {
 	"heft_class_changed": {"clip": "class_up", "priority": 50, "cooldown": 4.0, "blend": 0.08},
 }
 
-# The base loops (section 3): what plays when no clip does. "flight" holds while the set piece
-# is in its wind-up or flight; "idle" the rest of the time.
 const BASES := {
 	"idle": {"clip": "idle_loop", "priority": -1},
 	"flight": {"clip": "ult_ride_loop", "priority": 64},
@@ -46,9 +31,6 @@ const BASES := {
 const BASE_BLEND := 0.1
 
 
-# Seats a pilot in its idle loop from the first frame (PILOT-CLIPS section 3 rule 9), for a pilot
-# shown where no reaction drives it (the class card, the Build preview). A GLB with no idle_loop
-# gets the animator stopped and its bones at rest pose. Returns the clip now playing, or "".
 static func seat_idle(animator: AnimationPlayer, pilot: Node) -> String:
 	if animator == null or pilot == null:
 		return ""
@@ -62,14 +44,9 @@ static func seat_idle(animator: AnimationPlayer, pilot: Node) -> String:
 	for skeleton in pilot.find_children("*", "Skeleton3D", true, false):
 		skeleton.reset_bone_poses()
 	return ""
-# Set piece phases (ultimate.gd phase()) that hold the ride base. The wind-up counts: its clip
-# ends on the ride pose 17 ms before the flight begins, and no signal marks that start.
 const RIDE_PHASES := ["windup", "flight"]
-# Clips that end on the ride anchor; one that ends outside the ride phases hands off to
-# RECOVER, never to idle (section 3, rule 2).
 const ENDS_ON_RIDE := ["ult_windup", "ult_strike", "ult_ride_loop"]
 const RECOVER := {"clip": "ult_recover", "priority": 69}
-# No row: the surface that shows the unlocked pilot plays it (section 1.4).
 const UNLOCK := "unlock"
 
 
@@ -81,7 +58,6 @@ static func signal_of(row_id: String) -> String:
 	return String(ROWS.get(row_id, {}).get("signal", row_id))
 
 
-# The row ids listening to one bus signal, in table order.
 static func rows_for(event: String) -> Array:
 	var ids: Array = []
 	for row_id in ROWS:
@@ -90,7 +66,6 @@ static func rows_for(event: String) -> Array:
 	return ids
 
 
-# Whether a row's argument filter passes for these signal arguments.
 static func arg_matches(row: Dictionary, args: Array) -> bool:
 	if not row.has("arg"):
 		return true

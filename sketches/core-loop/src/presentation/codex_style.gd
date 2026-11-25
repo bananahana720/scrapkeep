@@ -3,10 +3,6 @@ extends RefCounted
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# How the codex looks: one colour, one silhouette and one icon per category, shared
-# by the discovery burst on the ball, the ring it leaves, the banner, the hold-Tab
-# codex page and the HUD. If the spine's event_kinds grows a CODEX_CATEGORIES table,
-# its colour and shape win, so the codex page and the effects never disagree.
 
 const CATEGORIES := {
 	"build": {"label": "Build", "color": Palette.AMBER, "shape": "diamond", "blurb": "Parts that change each other"},
@@ -40,7 +36,6 @@ static func category_color(id: String) -> Color:
 	return category(id)["color"]
 
 
-# Everything a page or banner needs, in one dictionary.
 static func style() -> Dictionary:
 	var categories := {}
 	for id in CATEGORIES:
@@ -54,8 +49,6 @@ static func style() -> Dictionary:
 	}
 
 
-# A 64 px icon drawn from the category's silhouette, in the category's colour on clear, or in
-# tint when one is given (a banner that wears the colour of the thing it names).
 static func icon(id: String, tint = null) -> ImageTexture:
 	var key := id if not tint is Color else "%s:%s" % [id, (tint as Color).to_html()]
 	if _icons.has(key):
@@ -77,7 +70,6 @@ static func icon(id: String, tint = null) -> ImageTexture:
 	return texture
 
 
-# Signed distance to the silhouette, in icon units (-1..1 across the icon).
 static func _distance(shape: String, p: Vector2) -> float:
 	match shape:
 		"diamond":

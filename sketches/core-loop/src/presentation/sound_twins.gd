@@ -1,57 +1,10 @@
 extends RefCounted
 
-# UI principle P9 (design-v3/ui-audit/principles.json): no fact arrives by sound alone. This file
-# classifies every place the game decides to make a sound that carries information, and
-# tests/sound_twins_test.gd holds it. A row is a FACT (the source that decides to make the sound),
-# never a bare cue id, because one cue serves several facts and a cue's status belongs to the fact
-# (ratchet_cue is a warning at Brindle's hook turn and at the rogue's chained attack, and the
-# beacon_hum fallback is a warning at the Warden's charge and the weak point's opening). The test builds the list of facts
-# from the game's own tables and call sites (its header says how); this file only judges them.
-#
-# The rule for "act on". A fact is act-on when its sound tells the player to do something, or tells
-# them something changed that they must respond to: an attack about to land, a boss turning phase,
-# a hit taken, an ability ready to press, a gate or yard now open or shut, a timer running down. It
-# is NOT act-on when it only echoes what the player just did (a hop, a hit, a pickup), pays a
-# reward, scores a moment (stingers, music, a near miss, which is a reward), or lands after a
-# warning that already sounded and showed (the slam after its tell). A cue in sfx_bank.gd's
-# DANGER_SOUNDS is act-on by definition; a not-act row for one is printed with its reason.
-#
-# Row kinds:
-#   ACT     act-on with a twin. "script", "fn" and "token": the token must sit inside function fn of
-#           that script, on a line that is code (not a declaration or a comment), so a renamed
-#           function or a deleted drawing call fails the test. "toast" names an event kind the HUD
-#           must toast. "traced" says the code path was read, not only the row.
-#   OPEN    act-on and NO twin found. "plays" names the file and line that plays it; "severity"
-#           "fairness" means the sound shortens the warning a muted player gets. The test prints
-#           these and pins their count, so none can be added silently.
-#   RELAY   a shared row or emitter whose facts are judged at their callers.
-#   NOT_ACT not act-on, one reason per group.
-# World 1. The test derives the facts that can fire in world 1 (the dam and flume park files' forms and
-# music cues, the roster units those files name or mark world 1, the scanned sites in WORLD1_FILES, and
-# every table fact with a firing site) and FAILS any of them marked not traced. A not-act row counts as
-# traced when its firing site was found; its reason was judged from the row and the site, not by reading
-# each consequence. A row outside the world 1 check (world 2 and 3 forms, bank sounds with no fact) may be
-# untraced, and the count is pinned.
-#
-# The toast rule. A toast is a twin only for the fact that IS that toast's event (event_announced's klaxon
-# and event_ended's "lost" toast). The toast and the edge marker that the park director's announced fact
-# shows name an event, not a place on the ground, so for a world warning the player must move for (a park
-# telegraph, a siren) the twin must be a mark in the world; a toast alone leaves the row OPEN, severity
-# info, with a note that the toast shows.
-#
-# Moving a row to ACT means building the twin first; the test cannot see game changes that add a
-# new warning, only that the new fact is listed.
-
 const OPEN_PINNED := 5
-# Rows read only by name, not traced through code. This number may only go down.
 const UNTRACED_PINNED := 305
-# Not-act rows for a cue in DANGER_SOUNDS (printed by the test with their reasons).
 const DANGER_NOT_ACT_PINNED := 1
 
-# Files whose scanned call sites are world 1's own (Brindle, the yard locks and overtime, the called shot,
-# the Wardens, the Spillway rogue and miniboss) or core audio and effects that play in every world.
 const WORLD1_FILES := ["boss.gd", "stage_locks.gd", "overtime.gd", "called_shot.gd", "warden.gd", "stub_boss.gd", "miniboss.gd", "rogue.gd", "audio.gd", "juice.gd", "panel_fx.gd", "projectile.gd"]
-# Facts that can fire in world 1 and no rule finds: fact id -> why.
 const WORLD1_EXTRA := {
 	"WORLD_ROWS:kindness_offered": "stake_devices.gd:_offer_made emits KINDNESS_FACT constant",
 	"UI_ROWS:cadence_rivet_notch_open": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() reload notch open",
@@ -72,9 +25,7 @@ const WORLD1_EXTRA := {
 	"UI_ROWS:rail_sink": "audio.gd:_on_buff_expired tracks ctx.buffs visible expiry",
 	"WORLD_ROWS:site_flip": "audio.gd:_play_site_flip tracks site completion and site_markers.visited_sites()",
 }
-# Table facts with no firing site found by the emit scan (their signal is emitted some other way). They
-# sit outside the world 1 check; this number may only go down.
-const UNSITED_PINNED := 130  # +2 (wave 43 sound part 4): guard_critical and the beacon_open state fire from audio.gd with no bus signal of their own
+const UNSITED_PINNED := 130
 
 const ACT := [
 	{"facts": ["ROWS:event_announced"], "traced": true, "what": "the toast \"<event> incoming\"",
@@ -224,7 +175,6 @@ const ACT := [
 		"also": [{"what": "the bracket on the held ball", "script": "res://src/combat/holds.gd", "fn": "_process", "token": "_draw_bracket(ball)"}]},
 	{"facts": ["WORLD_ROWS:quick_sync"], "traced": true, "what": "the Foreman's brass sync ring pulses on the ground while its chasers snap into formation",
 		"script": "res://src/combat/foreman.gd", "fn": "_show_signal", "token": "_sync_ring.visible = level > 0.0 and not _dead"},
-	# Wave 46 E3-04: pilot weapon cadence sound twins (PILOT-CADENCE.md §5.3), Nixie tube rail clacks, and visited-site flip.
 	{"facts": ["UI_ROWS:cadence_rivet_notch_open"], "traced": true, "what": "Rivet's reload notch arc turns live mint on the aim reticle",
 		"script": "res://src/ui/aim_reticle.gd", "fn": "_rivet_marks", "token": "\"role\": \"notch_open\", \"layer\": \"line\""},
 	{"facts": ["UI_ROWS:cadence_rivet_notch_hit"], "traced": true, "what": "Rivet's six chambers fill copper as hot rounds on the aim reticle",

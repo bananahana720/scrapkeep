@@ -1,15 +1,5 @@
 extends RefCounted
 
-# One effect budget (BACKLOG.md FX-21): every effect ceiling in the game, one row each, read from
-# the module that owns it, and one call that sums a world's worst case. The table records the
-# ceilings; it sets none. A row's number stays where it is tuned and pinned (world_fx_test,
-# fx_library_test, machine_fx_test); fx_budget_test checks the table still reads them all.
-#
-# Units are kept apart because they cost differently: "particles" are live particles at the
-# high preset (GPU and CPU particles alike), "nodes" are pooled glyph and word nodes, "draws" are transparent meshes (each a
-# draw call and its overdraw). What each unit costs in frame time is a PC measurement (4080,
-# idle card), not a cloud one: cloud reads overstate shader cost 2 to 3 times.
-
 const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
@@ -17,13 +7,6 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
-# id: what the effect is, its unit, where its number lives, and which worlds carry it.
-#   const    a constant on `owner` that holds the ceiling
-#   read     a named reader below, when the ceiling is a sum the owner computes
-#   worlds   "all"; "water" for the worlds with standing water (WorldFx.WAKE_WORLDS, the worlds whose
-#            water throws a wake); or a world_fx set id (Specs.WORLD_SETS values) for one world's own pools
-#   per      the ceiling is per placed thing (a thermal column), so worst_case lists it, not sums it
-#   more     {unit: const} for an effect that also costs in another unit, each a constant on `owner`
 const ROWS := {
 	"world_air": {"unit": "particles", "owner": "res://src/presentation/world_fx/world_fx_specs.gd",
 		"const": "AMBIENT_CEILING", "worlds": "all", "what": "a world's ambient air plus its worst overlay"},
@@ -67,14 +50,11 @@ const ROWS := {
 		"read": "thermal_views", "worlds": "highdraft", "per": "thermal column", "what": "a thermal's motes and streaks multimeshes"},
 }
 
-# Counts the owners build in code, not as constants; fx_budget_test checks each against its owner:
-# the beam's layers by building a beam, the sparkle cap and the thermal views by reading the source.
 const BEAM_LAYERS := 2
 const SPARKLE_MAX := 20
 const THERMAL_VIEWS := 2
 
 
-# A row's ceiling, read from its owner now.
 static func ceiling(id: String) -> int:
 	var row: Dictionary = ROWS[id]
 	if row.has("const"):
@@ -111,7 +91,6 @@ static func ceiling(id: String) -> int:
 	return 0
 
 
-# Every unit a row costs in: its own ceiling and each of its "more" constants, read from its owner.
 static func ceilings(id: String) -> Dictionary:
 	var row: Dictionary = ROWS[id]
 	var out := {String(row.unit): ceiling(id)}
@@ -131,8 +110,6 @@ static func in_world(id: String, world: int) -> bool:
 	return String(Specs.WORLD_SETS.get(world, "")) == scope
 
 
-# A world's worst case: every ceiling it carries at once, summed per unit. A per-thing row (a thermal
-# column) is not summed; per_thing(world) lists those, since how many stand is the park's data.
 static func worst_case(world: int) -> Dictionary:
 	var out := {"particles": 0, "nodes": 0, "draws": 0}
 	for id in ROWS:

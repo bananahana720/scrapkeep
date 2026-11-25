@@ -1,18 +1,8 @@
 extends RefCounted
 
-# Where ambient life lives: a planner from a parsed park file (park_schema.gd load_park), the park's
-# props file (a kind with `spots` stands first beside those crew props, src/world/park/props/<map>.json) and
-# the ambient record (src/core/ambient_kinds.gd, the one row per kind). It picks `count` homes per
-# kind from the park rows the kind's `homes` names (any landform, element or society match), draws
-# each point inside the row's footprint, and keeps every home and every member clear of play:
-# ride lines, grapple fields, routes, enemy homes, the Warden ring, spawn, activities, rescues,
-# contraptions and the reward gate slots. keepouts() and blocked() are public so a test can ask the
-# same question of any position. Deterministic for a seed; no nodes, no ground (the view lifts to it).
-
 const AmbientKinds := preload("res://src/core/ambient_kinds.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 
-# Elements a ball rides: homes keep their footprint plus RIDE_M clear. A kicker that is a mesa edge is ground.
 const RIDE_ELEMENTS := ["half_pipe", "flow_line", "grind_line", "rail", "bowl", "tunnel", "drop", "elevated_line",
 	"kicker", "crater_bowl", "flooded_cavern"]
 const RIDE_M := 6.0
@@ -21,23 +11,15 @@ const ROUTE_M := 10.0
 const ENEMY_HOME_M := 25.0
 const RING_EXTRA_M := 10.0
 const SPOT_M := 12.0
-# A home at least this far from another home of its kind, so a kind spreads over the park.
 const SPREAD_M := 40.0
-# Members of a group spread over a disc this wide round the home.
 const GROUP_RADIUS_M := 2.5
-# Homes within this distance of a route are preferred (the player passes them); any valid point is the fallback.
 const NEAR_ROUTE_M := 80.0
 const ATTEMPTS := 400
 const VALID_PER_HOME := 6
 const EDGE_M := 20.0
-# A home at a crew prop stands this far beside it, so the keeper is at the camp and not inside the prop.
 const SPOT_SIDE_M := 3.0
 
 
-# homes: [{kind, at: Vector2, perch, group: int, members: Array[Vector2] (offsets, the first is ZERO)}].
-# `group` is the home's index in this plan, unique per call. `veto` (optional) is the runtime's say on a spot the
-# park file cannot judge, (at: Vector2, perch: String) -> bool: true rejects it (ambient_life.gd: too steep, or
-# under a structure).
 static func plan(park: Dictionary, kind_ids: Array, seed_number: int, veto := Callable()) -> Array:
 	var planner := Planner.new(park, kind_ids, seed_number, veto)
 	while planner.step():
@@ -45,8 +27,6 @@ static func plan(park: Dictionary, kind_ids: Array, seed_number: int, veto := Ca
 	return planner.homes
 
 
-# plan() as steps, so a caller can spread it over frames: the keepout grid first, then a kind a step.
-# Each kind draws from its own seeded stream, so the homes are plan()'s whichever way it runs.
 class Planner extends RefCounted:
 	const Homes := preload("res://src/presentation/ambient_homes.gd")
 	var homes := []
@@ -66,7 +46,6 @@ class Planner extends RefCounted:
 		_seed_number = seed_number
 		_veto = veto
 
-	# One step; false once every kind is planned.
 	func step() -> bool:
 		if _next < 0:
 			_keep = Homes._keep_grid(Homes.keepouts(_park))
@@ -85,11 +64,9 @@ class Planner extends RefCounted:
 		var spec: Dictionary = kind["homes"]
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash([_seed_number, String(kind_id), String(_park["map"])])
-		# A ride or grapple row is wholly inside its own keepout, so it can never hold a home: skip it up front.
 		var rect := _rect
 		var want := rng.randi_range(int(spec["count"][0]), int(spec["count"][1]))
 		var placed: Array[Vector2] = []
-		# A kind with `spots` lives first at the park's crew props of those templates (the camps and yards).
 		for found in Homes._spot_homes(rng, String(_park["map"]), spec, _keep, _rect, want, _veto):
 			placed.append(found["at"])
 			found["kind"] = String(kind_id)
@@ -110,8 +87,6 @@ class Planner extends RefCounted:
 			homes.append(found)
 
 
-# Homes at the park's crew props whose template is in spec["spots"] (src/world/park/props/<map>.json): each stands
-# SPOT_SIDE_M beside its prop, clear of every keepout, at most `want`, spread SPREAD_M apart, in a seeded order.
 static func _spot_homes(rng: RandomNumberGenerator, map_id: String, spec: Dictionary, keep: Dictionary, rect: Rect2,
 		want: int, veto := Callable()) -> Array:
 	var out := []
@@ -183,7 +158,6 @@ static func _find_home(rng: RandomNumberGenerator, matching: Array, keep: Dictio
 	return {"at": pick["at"], "members": pick["members"]}
 
 
-# The first member stands on the home; the rest are drawn round it and kept only where they are clear too.
 static func _members(rng: RandomNumberGenerator, at: Vector2, keep: Dictionary, count: int, veto := Callable(), perch := "") -> Array[Vector2]:
 	var offsets: Array[Vector2] = [Vector2.ZERO]
 	for i in range(1, count):
@@ -202,7 +176,6 @@ static func _crowded(at: Vector2, placed: Array[Vector2]) -> bool:
 	return false
 
 
-# A uniform point in the row's rotated footprint (park_map.gd footprint_contains inverted).
 static func _sample(rng: RandomNumberGenerator, row: Dictionary) -> Vector2:
 	var half := ParkMap.footprint_half_extents(row)
 	var local := Vector2(rng.randf_range(-half.x, half.x), rng.randf_range(-half.y, half.y))
@@ -218,7 +191,6 @@ static func _v2(a: Array) -> Vector2:
 	return Vector2(float(a[0]), float(a[1]))
 
 
-# Route polylines from the rows' `at`; ids that name no row (waymarks past the rows) are skipped.
 static func _route_lines(park: Dictionary) -> Array:
 	var at := {}
 	for row in park["park_rows"]:
@@ -254,8 +226,6 @@ static func _line_distance(points: PackedVector2Array, p: Vector2) -> float:
 	return best
 
 
-# Every place ambient life keeps out of. Each keepout is {what, shape: "rect"|"circle"|"line", ...}:
-# a rect carries the park row and a margin, a circle a centre and radius, a line points and a radius.
 static func keepouts(park: Dictionary) -> Array:
 	var out := []
 	var rect := _rect(park)
@@ -276,7 +246,6 @@ static func keepouts(park: Dictionary) -> Array:
 				site = row
 				break
 		if not site.is_empty():
-			# The enemy's ground is the row's own; a big row keeps out 25 m plus up to 30 m of its half-size round its centre.
 			var reach := ENEMY_HOME_M + minf(maxf(ParkMap.footprint_half_extents(site).x, ParkMap.footprint_half_extents(site).y), 30.0)
 			out.append(_circle("enemy home " + String(home["id"]), _v2(site["at"]), reach))
 	var mark: Dictionary = park["landmark"]
@@ -313,7 +282,6 @@ static func _circle(what: String, centre: Vector2, radius: float) -> Dictionary:
 	return {"what": what, "shape": "circle", "centre": centre, "radius": radius}
 
 
-# The `what` of the first keepout that holds `at`, or "".
 static func blocked(keep: Array, at: Vector2) -> String:
 	for k in keep:
 		var what := _holds(k, at)
@@ -322,9 +290,6 @@ static func blocked(keep: Array, at: Vector2) -> String:
 	return ""
 
 
-# blocked() over only the keepouts whose reach touches at's cell, in keepout order, so it answers the same. The
-# plan asks it thousands of times a stage, and walking every keepout each time was a 660 ms stage entry frame
-# on the cloud (Brindle's stage 4). keep: {"keep": keepouts(), "cells": {Vector2i: [index]}}.
 const KEEP_CELL_M := 48.0
 
 
@@ -346,7 +311,6 @@ static func _keep_grid(keep: Array) -> Dictionary:
 	return {"keep": keep, "cells": cells}
 
 
-# Adds index i to every cell the box round a and b, grown by r, touches (once a cell).
 static func _cover(cells: Dictionary, i: int, a: Vector2, b: Vector2, r: float) -> void:
 	var lo := Vector2i(floori((minf(a.x, b.x) - r) / KEEP_CELL_M), floori((minf(a.y, b.y) - r) / KEEP_CELL_M))
 	var hi := Vector2i(floori((maxf(a.x, b.x) + r) / KEEP_CELL_M), floori((maxf(a.y, b.y) + r) / KEEP_CELL_M))

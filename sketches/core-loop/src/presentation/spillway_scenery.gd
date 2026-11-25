@@ -7,9 +7,6 @@ const StageMap := preload("res://src/world/stage_map.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 
-# The existing cast slabs keep their exact geometry. Their finishes share the workshop's
-# concrete/paint/shutter kit; the signal insert adds directional safety paint, open grates
-# and recessed ancient lenses. A missing insert leaves every original material intact.
 const PROP_SHADER_PATH := "res://assets/materials/wog_signal.gdshader"
 static var prop_shader_path := PROP_SHADER_PATH
 static var _prop_shaders := {}
@@ -32,7 +29,6 @@ static func dress_props(parent: Node, keep: Node = null) -> void:
 			continue
 		if not view.mesh is PrimitiveMesh or original == null or original.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED:
 			continue
-		# Transparent steam and the threat painter's committed geometry keep their own grammar.
 		if original.shading_mode != BaseMaterial3D.SHADING_MODE_PER_PIXEL:
 			continue
 		var size := view.mesh.get_aabb().size
@@ -103,10 +99,6 @@ static func _prop_material(shader: Shader, original: StandardMaterial3D, role: S
 	_prop_materials[key] = mat
 	return mat
 
-# Rim crown families, CLIFF-R2 section 1. Each crown is one closed solid: 12 perimeter stations
-# (six along the arena face, six along the back, both lists ordered by world Z) and five height
-# rings: buried base, h0 (the highest terrain under the footprint), then .35, .70 and 1.0 of the
-# local crest rise. C = broad crown, S = saddle, H = blunt headland (variant 0, 1, 2).
 const RIM_WIDTH := [48.0, 36.0, 24.0]
 const RIM_DEPTH := [16.0, 12.0, 14.0]
 const RIM_ADD := [18.0, 6.0, 12.0]
@@ -114,25 +106,15 @@ const RIM_GULLY := 6.0
 const RIM_FAMILY_PITCH := 126.0
 const RIM_START_Z := -186.0
 const RIM_WEST_X := -167.0
-# East centres per variant, so every root lies on the terrain side of X=200.
 const RIM_EAST_X := [192.0, 194.0, 193.0]
-# Family order along increasing world Z. F2 is C/S/H on both sides.
 const RIM_WEST_ORDER := [[0, 1, 2], [0, 2, 1], [0, 1, 2]]
 const RIM_EAST_ORDER := [[2, 1, 0], [2, 0, 1], [0, 1, 2]]
-# Fraction of the crest rise per ring.
 const RIM_RING_Y := [0.0, 0.0, 0.35, 0.70, 1.0]
-# Crest profile, u along the unit's world-Z interval : metres above h0, linear between.
 const RIM_CREST := [
 	[Vector2(0, 8), Vector2(0.20, 16), Vector2(0.38, 18), Vector2(0.64, 17), Vector2(0.85, 12), Vector2(1, 8)],
 	[Vector2(0, 3), Vector2(0.20, 5), Vector2(0.40, 6), Vector2(0.60, 5.5), Vector2(0.85, 4), Vector2(1, 3)],
 	[Vector2(0, 5), Vector2(0.20, 10), Vector2(0.38, 12), Vector2(0.64, 12), Vector2(0.85, 10), Vector2(1, 6)],
 ]
-# CLIFF-R3 section 2: oblique plans. The proposal tables come from tools/cliff_gate_report.py (its
-# gate passed on exactly these values). Crowns: 12 stations (x toward the arena, z along world Z,
-# face list ascending then back list descending) and per-face batter (metres of inward lean per metre
-# of rise); hulls: 10 (d outward from the arena, e along Z) stations at the bottom level and per-face
-# batter. Corner lines are solved so every face stays planar. Crowns index by variant; hulls by
-# (index in side + 2 on the east side) mod 4.
 const RIM_PLAN := [
 	{"plan": [Vector2(-3.8857, -21.8841), Vector2(6.0186, -20.1818), Vector2(4.6834, -3.8842), Vector2(7.4083, 7.5523), Vector2(2.5292, 20.1855), Vector2(8, 21.5691), Vector2(1.6873, 24), Vector2(-6.8807, 21.516), Vector2(-4.599, 11.216), Vector2(-8, -3.2799), Vector2(-6.4321, -10.1929), Vector2(-6.2417, -12.0995)],
 	 "batter": [0.0778, 0.2858, 0.1053, 0.02, 0.1028, 0.2007, 0.2948, 0.0926, 0.0537, 0.272, 0.2475, 0.1651]},
@@ -152,7 +134,6 @@ const HULL_PLAN := [
 	 "batter": [0.0826, 0.0818, 0.1351, 0.112, 0.085, 0.01, 0.01, 0.0459, 0.0145, 0.1785]},
 ]
 
-# All instances stay outside the stage-1 play rectangle plus an 8 m apron. No collisions.
 static func build(stage_root: Node3D) -> Node3D:
 	var scenery := Node3D.new()
 	scenery.name = "SpillwayScenery"
@@ -171,7 +152,6 @@ static func build(stage_root: Node3D) -> Node3D:
 	var lamps: Array[Transform3D] = []
 	var glyphs: Array[Transform3D] = []
 
-	# A downstream retaining wall with three valve towers above the existing rim.
 	_place(stone, Vector3(0, 70, 247), Vector3(270, 100, 22))
 	_place(trim, Vector3(0, 122, 247), Vector3(282, 5, 28))
 	for x in [-112.0, -84.0, -56.0, -28.0, 0.0, 28.0, 56.0, 84.0, 112.0]:
@@ -187,41 +167,29 @@ static func build(stage_root: Node3D) -> Node3D:
 			_place(recess, Vector3(x + dx, 143, 230.5), Vector3(3, 12, 1))
 		_place(metal, Vector3(x, 94, 224), Vector3(3, 40, 3))
 
-	# Lintels give the retaining wall scale.
 	for x in [-90.0, 0.0, 90.0]:
 		_place(banners, Vector3(x + 12, 106, 228), Vector3(7, 26, 0.25))
 		_place(metal, Vector3(x + 12, 120, 228), Vector3(11, 0.7, 1.0))
 		for floor_index in 3:
 			_place(trim, Vector3(x, 132 + floor_index * 10, 229), Vector3(28, 1.0, 2.0))
 
-	# All water is behind the existing southern rim, never on a traversable shelf.
 	for x in [-103.0, -47.0, 37.0, 93.0]:
-		# Spill mist: a small cluster of irregular, feathered patches per fall. Sizes, offsets and
-		# in-plane rolls vary from a fixed seed, so no row or grid reads; alpha stays at the cap.
 		var rng := RandomNumberGenerator.new()
 		rng.seed = int(absf(x) * 31.0) + 7
 		for j in 11:
 			_place_mist(mist, Vector3(x + rng.randf_range(-15.0, 15.0), rng.randf_range(30.0, 42.0), 211.0 + rng.randf_range(0.0, 11.0)),
 				Vector2(rng.randf_range(10.0, 22.0), rng.randf_range(6.0, 13.0)), rng.randf_range(-0.7, 0.7))
-		# Ledge spray where the sheet strikes the visible dam face, above the rim line.
 		for j in 8:
 			_place_mist(mist, Vector3(x + rng.randf_range(-8.0, 8.0), rng.randf_range(38.0, 58.0), 222.0 + rng.randf_range(0.0, 3.0)),
 				Vector2(rng.randf_range(8.0, 16.0), rng.randf_range(5.0, 11.0)), rng.randf_range(-1.0, 1.0))
-	# G05: the four sheets and the tailrace are hand-broken meshes in world metres (water_edges.glb),
-	# each inside the box it replaces, so they take one identity placement.
 	_place(water, Vector3.ZERO, Vector3.ONE)
 	_place(pools, Vector3.ZERO, Vector3.ONE)
-	# Shoulders: 16 continuous hulls (below) replace the 64 shelves; 48 small scattered rocks keep their
-	# transforms. The cottonwoods stand on the hull roots under the stage root (_cottonwoods).
 	for side in [-1.0, 1.0]:
 		for i in 8:
 			var z := -176.0 + i * 56.0
 			for j in 3:
 				_place(rocks, Vector3(side * (206 + j * 2), 31, z + j * 2), Vector3(0.5, 0.3, 0.7), j)
-	# The rim skyline is the crown, saddle and headland families of GEOMETRY.md section 3, baked
-	# into the shoulder batch below. West crowns end at x=-158, east ones start at x=184.
 	var rim := rim_plan(Spillway.new())
-	# Service balconies, lanterns and ball-culture marks share existing batches.
 	for x in [-90.0, 0.0, 90.0]:
 		_place(metal, Vector3(x, 91, 221), Vector3(29, 1, 8))
 		for dx in [-12.0, 12.0]:
@@ -229,7 +197,6 @@ static func build(stage_root: Node3D) -> Node3D:
 			_place(lamps, Vector3(x + dx, 104, 217), Vector3(1.1, 1.8, 1.1))
 		_place(metal, Vector3(x, 107, 218), Vector3(26, 0.6, 0.6))
 		_place(glyphs, Vector3(x + 12, 106, 227.6), Vector3(2.6, 2.6, 0.5))
-		# Gyro rings are narrow segments around the sphere, no letters or warning bands.
 		for k in 16:
 			var a := k * TAU / 16.0
 			var tr := Transform3D(Basis(Vector3.FORWARD, -a).scaled(Vector3(0.27, 1.3, 0.2)), Vector3(x + 12 + cos(a) * 2.5, 106 + sin(a) * 4.1, 227.3))
@@ -247,8 +214,6 @@ static func build(stage_root: Node3D) -> Node3D:
 	var box := BoxMesh.new()
 	box.size = Vector3.ONE
 	var rock := _eroded_rock()
-	# One opaque cliff draw: the shoulder shelves and the rim crowns share the batch, so the
-	# rim swap adds no draw. The cliff shader reads world position, not vertex colour.
 	var cliff := SurfaceTool.new()
 	cliff.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for placement in rocks:
@@ -259,8 +224,6 @@ static func build(stage_root: Node3D) -> Node3D:
 		cliff.append_from(shoulder_mesh(hull), 0, Transform3D.IDENTITY)
 	cliff.index()
 	var canopy := SphereMesh.new()
-	# Spray cards: a two-triangle quad facing the play area with a soft radial alpha edge,
-	# so the shared triangle budget is not spent on spheres.
 	var puff := QuadMesh.new()
 	puff.size = Vector2(2, 2)
 	puff.flip_faces = true
@@ -290,14 +253,8 @@ static func build(stage_root: Node3D) -> Node3D:
 	return scenery
 
 
-# The park pass (park_dam, park_flume; the old map's build() is fixed to the stage-1 rim): game.gd
-# builds the old map at boot, and this hook builds a Spillway park stage on the entry that builds its
-# ground, again after a freed stage comes back. Visual only, nothing collides.
 static func hook(ctx) -> void:
 	ctx.events.stage_entered.connect(_on_stage_entered.bind(ctx))
-	# The context owns the terrain, a RefCounted, so a handler on its signal bound to the context would
-	# hold the context from the terrain: a cycle that outlives the game and keeps this script's statics
-	# with it (scrapkeep#494). The handler takes the context through a weak reference.
 	ctx.terrain.stage_built.connect(_on_stage_built_weak.bind(weakref(ctx)))
 
 
@@ -307,11 +264,6 @@ static func _on_stage_built_weak(stage: int, ctx_ref: WeakRef) -> void:
 		_on_stage_built(stage, ctx)
 
 
-# A Spillway park stage built ahead on worker threads (the flume, behind the dam) takes its park pass
-# a step a frame from when its ground is done (ParkBuild), parked out of sight, while the current
-# stage is calm, as dig_scenery.gd's does: the whole pass was 45 ms of the flume's entry tick on the
-# cloud (scrapkeep#494). Entry finishes whatever is left. A bot run that builds stages whole, or a
-# stage on show, keeps the entry build.
 static func _on_stage_built(stage: int, ctx) -> void:
 	if not ctx.terrain.built_threaded(stage):
 		return
@@ -331,10 +283,8 @@ static func _on_stage_built(stage: int, ctx) -> void:
 		return
 
 
-# Steps a park pass begun ahead, one step a frame, and leaves when it is done.
 class ParkBuild extends Node:
 	var pass_
-	# Steps wait while this flow is not calm; without one (a test) they run every frame.
 	var flow
 
 	func _process(_delta: float) -> void:
@@ -365,10 +315,6 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 		return
 
 
-# The water's edge of a park: cottonwood groves on the flanks of its washes, canals, canyons and
-# the flume, and spill mist where its water drops: below each drop on a wet landform and at the
-# foot of a dam face. The dam itself, the flume spans and the cable cars are park rows and
-# landmark recipes, so the old rim's retaining wall, valve towers and gondolas stay on the old map.
 const PARK_WET := ["river_canyon", "canal", "slot_canyon", "dry_wash", "arroyo", "flume", "dam_face"]
 const PARK_TREES_MAX := 24
 const PARK_MIST_ROWS_MAX := 10
@@ -382,11 +328,6 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 	return pass_.scenery
 
 
-# The park pass as steps, so it can run whole (build_park) or a step a frame (ParkBuild): the plan and
-# the mist, the cottonwoods' base batches, their detail shells PARK_TREES_PER_STEP trees a step, the
-# spillway effects, then the next stage's smoke on the horizon where the park names one (smoke_column.gd).
-# Steps run in the same order either way, and only the plan draws from the seeded stream, so the result
-# is the same.
 const PARK_TREES_PER_STEP := 4
 
 
@@ -409,7 +350,6 @@ class ParkPass extends RefCounted:
 		stage_root.add_child(scenery)
 		_sites = ParkSites.new(map, ground, stage)
 
-	# One step; false once the pass is done.
 	func step() -> bool:
 		match _phase:
 			0:
@@ -433,7 +373,6 @@ class ParkPass extends RefCounted:
 		return _phase < 5
 
 
-# The park's cottonwood seats and its mist batch (under scenery), from the map's own seeded stream.
 static func _plan(scenery: Node3D, sites, map) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = ("spillway_scenery_" + String(map.park["map"])).hash()
@@ -453,7 +392,6 @@ static func _plan(scenery: Node3D, sites, map) -> Array:
 			if high - low <= 1.5:
 				trees.append({"foot": Vector3(at.x, low, at.y), "size": rng.randf_range(0.6, 1.0)})
 	var mist: Array[Transform3D] = []
-	# Water falls off a drop, and down the dam's face (its tall bank row), not off the toe's ledges and ramps.
 	var drops: Array = rows.filter(func(row): return row["element"] == "drop" \
 		or (row["landform"] == "dam_face" and row["element"] == "bank" and float(row["size"][1]) >= PARK_FACE_MIN_M))
 	for row in drops.slice(0, PARK_MIST_ROWS_MAX):
@@ -472,9 +410,6 @@ static func _plan(scenery: Node3D, sites, map) -> Array:
 		puff.size = Vector2(2, 2)
 		puff.flip_faces = true
 		_batch(scenery, "WaterMist", puff, mist, Color("bcd4da"))
-	# A row that carries clear_view keeps the strip behind its rear edge free of trees, so the ball
-	# arrives with the row and what lies past it in one view. Filter after seating so the other
-	# trees and mist retain their seed.
 	for row in map.park["park_rows"]:
 		if row.has("clear_view"):
 			var frame := ParkSites.frame(row)
@@ -485,10 +420,6 @@ static func _plan(scenery: Node3D, sites, map) -> Array:
 	return trees
 
 
-# SWAP-WAVE 12-F: the shoulder cottonwoods are the cottonwood recipe, one tree per hull root under the stage root (not the
-# scenery batches, which bake and merge their children). The base trunk and crown are one MultiMesh per base view, an
-# instance per tree, each surface in the loader's slot material; the detail shells hang per tree under a holder at the
-# tree's frame, so each fades by its own distance. A park passes its own trees.
 static func _cottonwoods(stage_root: Node3D, trees: Array = []) -> Node3D:
 	if trees.is_empty():
 		trees = cottonwood_trees()
@@ -497,7 +428,6 @@ static func _cottonwoods(stage_root: Node3D, trees: Array = []) -> Node3D:
 	return group
 
 
-# The Cottonwoods group under the stage root with its base batches, one MultiMesh per base view.
 static func _cottonwood_group(stage_root: Node3D, trees: Array) -> Node3D:
 	var group := Node3D.new()
 	group.name = "Cottonwoods"
@@ -520,7 +450,7 @@ static func _cottonwood_group(stage_root: Node3D, trees: Array) -> Node3D:
 		var batch := MultiMeshInstance3D.new()
 		batch.name = source.name
 		batch.multimesh = multi
-		# A headless renderer keeps no instance buffer, so tests read the placements from here.
+		# Godot headless Dummy renderer keeps no MultiMesh instance buffer for readback.
 		batch.set_meta("origins", origins)
 		batch.cast_shadow = source.cast_shadow
 		group.add_child(batch)
@@ -529,7 +459,6 @@ static func _cottonwood_group(stage_root: Node3D, trees: Array) -> Node3D:
 	return group
 
 
-# Trees from..to-1's detail shells, each under a holder at the tree's frame.
 static func _cottonwood_shells(group: Node3D, trees: Array, from: int, to: int) -> void:
 	for i in range(from, to):
 		var holder := Node3D.new()
@@ -540,18 +469,11 @@ static func _cottonwood_shells(group: Node3D, trees: Array, from: int, to: int) 
 			GraphicsPreset.register_scenery(shell)
 
 
-# The water runs (spill_water.gdshader): down the slope of each face, faster the steeper it is,
-# and where a face is flat it drifts by the surface's drift uniform. flow_at is the shader's
-# vertex flow in GDScript, so tests/water_flow_test.gd can check it on the built meshes.
 const WATER_FALL_SPEED := 2.4
-# Below WATER_LEVEL (sine of the slope) a face is level water and only drifts; the fall fades in
-# up to WATER_SLOPED. Same values as LEVEL and SLOPED in the shader.
 const WATER_LEVEL := 0.05
 const WATER_SLOPED := 0.15
 const WATER_VERTICAL := 0.98
-# The tailrace's drift away from the falls, m/s: still water barely moves.
 const TAILRACE_DRIFT := 0.35
-# The water_flow_scale shader global under reduced motion: the water runs slower, never stops.
 const CALM_FLOW := 0.35
 static var flow_scale := 1.0
 
@@ -565,12 +487,10 @@ static func flow_at(normal: Vector3, drift: Vector2) -> Vector3:
 	return fall_dir * WATER_FALL_SPEED * sloped + Vector3(drift.x, 0.0, drift.y) * (1.0 - sloped)
 
 
-# How far the shader's pattern has been carried at time_s.
 static func flow_offset(normal: Vector3, drift: Vector2, time_s: float) -> Vector3:
 	return flow_at(normal, drift) * time_s * flow_scale
 
 
-# Away from the falls, level: from the spill sheets' middle to the tailrace's.
 static func tailrace_drift(sheets: Mesh, tailrace: Mesh) -> Vector2:
 	var from := sheets.get_aabb().get_center()
 	var to := tailrace.get_aabb().get_center()
@@ -578,8 +498,7 @@ static func tailrace_drift(sheets: Mesh, tailrace: Mesh) -> Vector2:
 	return away.normalized() * TAILRACE_DRIFT if away.length() > 0.01 else Vector2.ZERO
 
 
-# The one place reduced motion reaches the water. The dummy renderer a headless run uses
-# stores no globals, so flow_scale keeps the value for tests and flow_offset.
+# Godot headless Dummy renderer stores no shader globals for readback.
 static func set_water_calm(on: bool) -> void:
 	flow_scale = CALM_FLOW if on else 1.0
 	RenderingServer.global_shader_parameter_set("water_flow_scale", flow_scale)
@@ -597,9 +516,6 @@ static func _water_edge_mesh(node_name: String, fallback: Mesh) -> Mesh:
 	return found if found != null else fallback
 
 
-# I01: broad cast courses and repaired service frames from dam.glb, on the wall's front face
-# (z 236, at most 1.2 m proud). One node with a surface per slot, so each slot keeps the sheet's
-# roughness; no material_override, so _merge_opaque leaves it as its own three draws.
 const DAM_PATH := "res://assets/models/world_one/dam.glb"
 const DAM_FACE := Vector3(0, 0, 236)
 const DAM_TINT := {"paint": Color.WHITE, "bare_metal": Color("7a7a70"), "rubber": Color("454943")}
@@ -739,13 +655,10 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 		flowing.set_shader_parameter("falling", label == "SpillSheets")
 		view.material_override = flowing
 	elif label == "WaterMist":
-		# Spill mist at the four falls only (LIGHTING-TARGETS: #BCD4DA); the scenery test caps
-		# its alpha at 0.12, so bigger cards and a cooler tint carry it, not more opacity.
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		material.albedo_color = Color("bcd4da", 0.12)
 		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		var soft := Gradient.new()
-		# Card UVs, not triplanar, so each card carries one falloff.
 		material.uv1_triplanar = false
 		material.uv1_scale = Vector3.ONE
 		soft.offsets = PackedFloat32Array([0.0, 0.3, 0.6, 0.85, 1.0])
@@ -765,8 +678,6 @@ static func _batch(parent: Node3D, label: String, mesh: Mesh, placements: Array[
 	GraphicsPreset.register_scenery(view)
 
 
-# Bakes one shelf with the base _batch rule: positions by the placement, normals by its
-# inverse transpose, so non-uniform scale keeps the lit normals the base had.
 static func _placed_rock(rock: ArrayMesh, placement: Transform3D) -> ArrayMesh:
 	var source := rock.surface_get_arrays(0)
 	var vertices: PackedVector3Array = source[Mesh.ARRAY_VERTEX]
@@ -813,7 +724,6 @@ static func _eroded_rock() -> ArrayMesh:
 	return st.commit()
 
 
-# The one cottonwood table: a tree per shoulder hull root, {foot, size}; size is the round 1 crown factor, 0.2 to 1.0.
 static func cottonwood_trees() -> Array:
 	var trees := []
 	for hull in shoulder_plan():
@@ -822,12 +732,10 @@ static func cottonwood_trees() -> Array:
 	return trees
 
 
-# A tree's frame: the recipe GLB origin on the root, scaled by the tree's size.
 static func cottonwood_frame(tree: Dictionary) -> Transform3D:
 	return Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * float(tree["size"])), tree["foot"])
 
 
-# The cottonwood placements on the shoulder stacks, unchanged from round 1.
 static func cottonwood_transforms() -> Dictionary:
 	var trunks: Array[Transform3D] = []
 	var leaves: Array[Transform3D] = []
@@ -840,7 +748,6 @@ static func cottonwood_transforms() -> Dictionary:
 	return {"trunks": trunks, "leaves": leaves}
 
 
-# The 16 shoulder stations: side, index, centre, height h, and the four root points.
 static func shoulder_plan() -> Array:
 	var plan := []
 	for side in [-1.0, 1.0]:
@@ -855,7 +762,6 @@ static func shoulder_plan() -> Array:
 	return plan
 
 
-# The four old shelf placements of one station, for the envelope the hull must stay inside.
 static func shelf_placements(hull: Dictionary) -> Array[Transform3D]:
 	var shelves: Array[Transform3D] = []
 	for shelf in 4:
@@ -864,7 +770,6 @@ static func shelf_placements(hull: Dictionary) -> Array[Transform3D]:
 	return shelves
 
 
-# The old shelves' union AABB in world metres.
 static func shoulder_envelope(hull: Dictionary) -> AABB:
 	var rock := _eroded_rock()
 	var box := AABB()
@@ -880,8 +785,6 @@ static func shoulder_envelope(hull: Dictionary) -> AABB:
 	return box
 
 
-# Heights of the four levels at station k: bottom of the old stack, two irregular mid levels,
-# and an upper surface at least 0.15 m over the root height, never above the old top.
 static func hull_levels_y(hull: Dictionary, k: int) -> Array:
 	var h: float = hull["h"]
 	var bottom := 12.0 - h * 0.2 + 0.2
@@ -895,8 +798,6 @@ static func hull_variant(hull: Dictionary) -> int:
 	return (int(hull["i"]) + (0 if hull["side"] < 0 else 2)) % 4
 
 
-# Per-vertex plan lean (metres of plan movement per metre of height): the corner line where face j-1
-# and face j meet, so both faces stay planar. Face i runs from station i to i+1.
 static func corner_slopes(plan: Array, batter: Array) -> Array:
 	var n := plan.size()
 	var area := 0.0
@@ -937,7 +838,6 @@ static func hull_rings(hull: Dictionary) -> Array[PackedVector3Array]:
 	return rings
 
 
-# One closed hull in world metres: 10 stations, three planar-faced bands, fan caps. No folds.
 static func shoulder_mesh(hull: Dictionary) -> ArrayMesh:
 	var rings := hull_rings(hull)
 	var tris := PackedVector3Array()
@@ -948,7 +848,6 @@ static func shoulder_mesh(hull: Dictionary) -> ArrayMesh:
 	return _solid(tris)
 
 
-# Bands between two same-length rings, outward by the ring's winding in plan.
 static func _wall(tris: PackedVector3Array, ring_a: PackedVector3Array, ring_b: PackedVector3Array) -> void:
 	var n := ring_a.size()
 	var area := 0.0
@@ -983,7 +882,6 @@ static func _fan_cap(tris: PackedVector3Array, ring: PackedVector3Array, up: Vec
 		_oriented_tri(tris, centre, ring[i], ring[(i + 1) % ring.size()], up)
 
 
-# Flat-shaded mesh from a triangle soup, indexed.
 static func _solid(tris: PackedVector3Array) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -995,9 +893,6 @@ static func _solid(tris: PackedVector3Array) -> ArrayMesh:
 	return st.commit()
 
 
-# The crown records: where each crown stands and how tall it is over the sampled solid crest.
-# `crest` is h0, the highest terrain under the final footprint (boundary included), `root` how far
-# the base reaches below h0: down to 5 m under the lowest terrain of that footprint.
 static func rim_plan(map: RefCounted) -> Array:
 	var plan := []
 	for side in [-1, 1]:
@@ -1023,7 +918,6 @@ static func rim_plan(map: RefCounted) -> Array:
 	return plan
 
 
-# Offsets from the centre at 2 m spacing over [-length/2, length/2], boundary points included.
 static func footprint_steps(length: float) -> Array:
 	var steps := []
 	var at := -length * 0.5
@@ -1049,10 +943,6 @@ static func crest_rise(variant: int, u: float) -> float:
 	return keys[keys.size() - 1].y
 
 
-# Crown-local rings: origin at h0, +x toward the arena, z along the crest (mirrored under the east
-# yaw so the plan's z always runs along increasing world Z). Five rings of 12 stations. Ring 0 is
-# the buried base; the upper rings lean inward per face by the batter and take the crest rise at
-# the station's own final z, so a sloped face keeps its height ceiling.
 static func crown_rings(crown: Dictionary) -> Array[PackedVector3Array]:
 	var v: int = crown["variant"]
 	var table: Dictionary = RIM_PLAN[v]
@@ -1076,7 +966,6 @@ static func crown_rings(crown: Dictionary) -> Array[PackedVector3Array]:
 	return rings
 
 
-# A closed solid: four bands of 12 quads and zipped caps. No folds.
 static func crown_mesh(crown: Dictionary) -> ArrayMesh:
 	var rings := crown_rings(crown)
 	var tris := PackedVector3Array()
@@ -1088,8 +977,6 @@ static func crown_mesh(crown: Dictionary) -> ArrayMesh:
 	return _solid(tris)
 
 
-# Triangulates a ring as a strip between its six face stations and six back stations, merged by
-# world Z (`zsign` undoes the east mirror), so no radial fan shows.
 static func _zip_cap(tris: PackedVector3Array, ring: PackedVector3Array, zsign: float, up: Vector3) -> void:
 	var faces := ring.size() / 2
 	var fi := 0

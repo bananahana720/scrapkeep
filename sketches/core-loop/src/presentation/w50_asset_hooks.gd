@@ -1,16 +1,5 @@
 extends Node3D
 
-# Presentation-layer 3D asset wiring for W50 features and remaining W1 stand-ins.
-# Reads live scene-tree nodes and read-only combat tables without modifying gameplay
-# scripts (TADR-008):
-#   - W50 consumables (scrap_dice, duplicator_spool, overload_fuse) -> dedicated GLBs
-#   - W50 fabricator stations (WorldScrapper, WorldPartPress, WorldTriTerminal) -> 3D station GLBs
-#   - W50 actives (magnet_sling, slag_mortar) -> dropped pod GLBs + live deployed buoy/shell 3D props
-#   - Orbital satellites (OrbitalSatellites/OrbitalSatelliteMesh) -> replaces BoxMesh with flywheel GLB
-#   - W50 kit-swap relics (relic_swaps.gd) -> live 3D VFX meshes (drill auger, halo orb, voltaic halo, snare beacon)
-#   - Sable stakes (SableStakes/Stake*) -> replaces CylinderMesh + TorusMesh W1-23 stand-in with sable_stake.glb
-#   - Patch 7th pilot assets lookup (pilot_patch_anim.glb, shell_patch.glb, patch_husk_sticker.glb)
-
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 
 const CONSUMABLE_MODELS := {
@@ -100,8 +89,7 @@ static func _load_packed(path: String) -> PackedScene:
 	return packed
 
 
-# Clean per-instance GLB instantiation: duplicates meshes & materials so PackedScene resources are
-# never mutated, and enables vertex_color_use_as_albedo on vertex-colored slots (Godot 4.7 glTF quirk).
+# Enables vertex_color_use_as_albedo on vertex-colored slots (Godot 4.7 glTF quirk).
 static func instantiate_prop(path: String, node_name := "PropModel", with_outline := true) -> Node3D:
 	var packed := _load_packed(path)
 	if packed == null:
@@ -144,7 +132,6 @@ static func _apply_vertex_color_materials(root: Node) -> void:
 		mi.mesh = mesh_copy
 
 
-# Single-surface Mesh extracted from orbital_flywheel_sat.glb for OrbitalSatellites' MultiMeshInstance3D.
 static func orbital_mesh() -> Mesh:
 	if _orbital_mesh_cache != null:
 		return _orbital_mesh_cache
@@ -260,8 +247,6 @@ func _maybe_dress(node: Node) -> void:
 		dress_sable_stake(node as Node3D)
 
 
-# Swaps placeholder W47 cartridge inside ConsumableDrop_<w50_id> with the dedicated W50 GLB,
-# freeing the placeholder "Cartridge" node and rebinding _cartridge_node so spin/bob animates cleanly.
 static func dress_consumable_drop(drop: Node3D) -> bool:
 	if drop == null or drop.has_meta("w50_dressed"):
 		return false
@@ -291,8 +276,6 @@ static func dress_consumable_drop(drop: Node3D) -> bool:
 	return true
 
 
-# Mounts a 3D world station GLB onto WorldScrapper / WorldPartPress / WorldTriTerminal,
-# hiding any fallback primitive MeshInstance3D children to prevent double-rendering.
 static func dress_station(host: Node3D, kind: String) -> bool:
 	if host == null or host.has_node("StationModel"):
 		return false
@@ -310,7 +293,6 @@ static func dress_station(host: Node3D, kind: String) -> bool:
 	return true
 
 
-# Replaces OrbitalSatellites' placeholder BoxMesh with orbital_flywheel_sat.glb.
 static func dress_orbital_multimesh(mmi: MultiMeshInstance3D) -> bool:
 	if mmi == null or mmi.multimesh == null or mmi.has_meta("w50_dressed"):
 		return false
@@ -322,8 +304,6 @@ static func dress_orbital_multimesh(mmi: MultiMeshInstance3D) -> bool:
 	return true
 
 
-# Replaces the raw PrismMesh on DroppedActive* when the dropped active is magnet_sling or slag_mortar.
-# WorldPrompt extends Label (not Label3D), so both Label and Label3D prompts are checked.
 static func dress_dropped_active(drop: Node3D) -> bool:
 	if drop == null or drop.has_node("ActivePodModel"):
 		return false
@@ -355,7 +335,6 @@ static func dress_dropped_active(drop: Node3D) -> bool:
 	return true
 
 
-# Replaces CylinderMesh + TorusMesh W1-23 stand-in on Sable's planted stakes with sable_stake.glb.
 static func dress_sable_stake(stake: Node3D) -> bool:
 	if stake == null or stake.has_node("SableStakeModel"):
 		return false
@@ -391,7 +370,6 @@ func _sync_actives(combat) -> void:
 		_release_from("magnet_buoy", 0)
 		_release_from("slag_shell", 0)
 		return
-	# 1. Magnet Sling deployed anchor buoys.
 	var magnet = kinds.get("magnet_sling")
 	var buoys: Array = magnet.get("buoys") if magnet != null and magnet.get("buoys") is Array else []
 	var used_buoys := 0
@@ -406,19 +384,11 @@ func _sync_actives(combat) -> void:
 			used_buoys += 1
 	_release_from("magnet_buoy", used_buoys)
 
-	# 2. Slag Mortar descending shells: slag_mortar.gd stores `pending` as a Dictionary
-	#    {"ring", "at", "radius", "warn", "age"} (also tolerate an Array for forwards compatibility).
 	var mortar = kinds.get("slag_mortar")
 	var pending_raw = mortar.get("pending") if mortar != null else null
-	var pending_list: Array = []
-	if pending_raw is Dictionary and not pending_raw.is_empty():
-		pending_list.append(pending_raw)
-	elif pending_raw is Array:
-		pending_list = pending_raw
 	var used_shells := 0
-	for sh in pending_list:
-		if not (sh is Dictionary) or sh.is_empty():
-			continue
+	if pending_raw is Dictionary and not pending_raw.is_empty():
+		var sh: Dictionary = pending_raw
 		var node := _acquire("slag_shell", used_shells, ACTIVE_WORLD_MODELS["slag_mortar"])
 		if node != null:
 			var target: Vector3 = sh.get("at", Vector3.ZERO)
@@ -436,7 +406,6 @@ func _sync_relic_swaps(combat) -> void:
 		for k in ["drill_auger", "halo_orb", "voltaic_halo", "snare_beacon", "relic_mortar"]:
 			_release_from(k, 0)
 		return
-	# Drill Auger craters (relic_swaps.gd:479 uses "at").
 	var augers: Array = swaps.get("_augers") if swaps.get("_augers") is Array else []
 	var n_aug := 0
 	for a in augers:
@@ -450,7 +419,6 @@ func _sync_relic_swaps(combat) -> void:
 			n_aug += 1
 	_release_from("drill_auger", n_aug)
 
-	# Halo Coil 3 orbiting lightning orbs (relic_swaps.gd:814 uses "left", "angle", "radius").
 	var orbit = swaps.get("_orbit_halo")
 	var n_orb := 0
 	if orbit is Dictionary and float(orbit.get("left", 0.0)) > 0.0 and ctx.player != null:
@@ -467,7 +435,6 @@ func _sync_relic_swaps(combat) -> void:
 				n_orb += 1
 	_release_from("halo_orb", n_orb)
 
-	# Voltaic Ring expanding conductive halos (relic_swaps.gd:367 uses "pos").
 	var halos: Array = swaps.get("_halos") if swaps.get("_halos") is Array else []
 	var n_hal := 0
 	for h in halos:
@@ -484,7 +451,6 @@ func _sync_relic_swaps(combat) -> void:
 			n_hal += 1
 	_release_from("voltaic_halo", n_hal)
 
-	# Updraft Snare apex beacons (relic_swaps.gd:952 uses "apex", already lifted by SNARE_APEX_LIFT).
 	var snares: Array = swaps.get("_snares") if swaps.get("_snares") is Array else []
 	var n_snr := 0
 	for s in snares:
@@ -499,7 +465,6 @@ func _sync_relic_swaps(combat) -> void:
 			n_snr += 1
 	_release_from("snare_beacon", n_snr)
 
-	# Siege Mortar shells (relic_swaps.gd:778 uses "at" and "left").
 	var rmortars: Array = swaps.get("_mortars") if swaps.get("_mortars") is Array else []
 	var n_rm := 0
 	for m in rmortars:

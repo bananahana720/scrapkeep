@@ -2,53 +2,26 @@ extends RefCounted
 
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
-# A walking crew's body language between attacks, on its model's pivot only: it turns to
-# watch where it means to strike, leans with its own weight when it starts and stops, and
-# steps instead of sliding. Before this the body snapped to face the ball on the commit
-# frame, stood frozen at that old heading while it circled, and glided at full speed from
-# a standstill with no step, which read as a prop on a rail rather than a crew.
-#
-# Presentation only. The body's yaw, velocity, colliders, hit spheres and telegraphs are the
-# kind's own and never read this. While an attack is open the model carries no turn of its
-# own: a kind that faces at its commit closes the gap in CATCH seconds (the wind-up lead is
-# longer), and a kind that does not face holds the heading it had. Off in headless runs like
-# the idle, so tests and bots see the exact body; reduced motion keeps the turn and drops the
-# lean and steps.
-#
-# The owner calls aim(yaw) on each tick it is free to look (the yaw its _facing would set),
-# committed() when its _facing sets the body's yaw, and step() once a physics tick; then it
-# composes `tilt` outside its other poses and `turn` inside them. glance(yaw) turns the head
-# to something that happened (a crewmate going down) for a beat, and hop() is a small cheer.
 
-# Turn speed, radians a second: a crew tracks a rolling ball at its circling range.
 const TURN_RATE := 6.0
-# Time constant of the catch-up after a commit snap, seconds.
 const CATCH := 0.04
-# Lean into travel at walking speed, and the lag against a change of speed.
 const WALK_REF := 3.8
 const LEAN_TRAVEL := 0.07
 const LEAN_LAG := 0.09
 const LEAN_MAX := 0.16
-# How fast the felt speed follows the real one, and the tilt follows its goal (1/s).
 const SPEED_FOLLOW := 6.0
 const TILT_FOLLOW := 14.0
-# Below this lean (radians) with nothing pushing, the body stands exactly upright.
 const SETTLED := 0.002
-# Steps: two a stride, a small lift and a side roll, faded in by speed.
 const STEP_LENGTH := 0.7
 const STEP_LIFT := 0.06
 const STEP_ROLL := 0.08
-# How fast the model settles onto a new slope (1/s), and the steepest it follows (radians).
 const GROUND_FOLLOW := 12.0
 const GROUND_MAX := 0.6
-# A glance holds the look on something for this long, then the aim takes it back.
 const GLANCE := 0.6
-# The cheer: a hop this high, this long.
 const HOP_LIFT := 0.14
 const HOP := 0.3
 
 var steps := true
-# Composed by the owner: tilt (body-local, about the feet) outside its poses, turn inside.
 var tilt := Transform3D.IDENTITY
 var turn := Transform3D.IDENTITY
 
@@ -80,8 +53,6 @@ func hop() -> void:
 	_hop_age = 0.0
 
 
-# A wind-up: drop the roaming look and any glance, and hold the heading it has (a kind that
-# faces its attack also calls committed(), which catches the model up to the body).
 func hold() -> void:
 	_aim = NAN
 	_glance_left = 0.0
@@ -92,10 +63,6 @@ func committed() -> void:
 	_aim = NAN
 
 
-# `walking`: the body is on its feet under its own drive (not knocked or falling), so it steps.
-# `ground`: the floor's normal under it; the model sits flat on a slope instead of standing
-# upright into it (Andrew, 13 Nov: "the enemies are clipping into the terrain"). `girth` is the
-# body's radius: a round foot on a slope stands a little proud of the ground below its centre.
 func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking := true, ground := Vector3.UP, girth := 0.0) -> void:
 	tilt = Transform3D.IDENTITY
 	turn = Transform3D.IDENTITY
@@ -104,7 +71,6 @@ func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking :=
 		return
 	var root_yaw := body.global_basis.get_euler().y
 	if not is_nan(_root_yaw):
-		# The model's world heading is continuous when the body's yaw jumps (the commit snap).
 		_yaw = wrapf(_yaw - angle_difference(_root_yaw, root_yaw), -PI, PI)
 	_root_yaw = root_yaw
 	_glance_left = maxf(0.0, _glance_left - delta)
@@ -145,26 +111,21 @@ func step(delta: float, body: Node3D, velocity: Vector3, foot: float, walking :=
 	var lay := Basis.IDENTITY
 	var sink := 0.0
 	if ground.length_squared() > 0.0:
-		# Normalised lerp, not slerp: slerp turns about the cross of two nearly equal normals, whose
-		# normalised axis can be off unit length, an engine error a tick on settled ground.
 		var followed := _ground.lerp(ground.normalized(), 1.0 - exp(-GROUND_FOLLOW * delta))
 		_ground = followed.normalized() if followed.length_squared() > 0.000001 else ground.normalized()
 	var slope := minf(_ground.angle_to(Vector3.UP), GROUND_MAX)
 	if slope > 0.001:
-		# Lay the model on the slope about its feet, and drop it by the round foot's standoff.
 		var up := body.global_basis.inverse() * _ground
 		lay = Basis(Vector3.UP.cross(up).normalized(), slope)
 		sink = girth * (1.0 / cos(slope) - 1.0)
 	var angle := _tilt.length() * scale
 	var lean := Basis.IDENTITY
 	if angle > 0.0001:
-		# Tilt toward the lean vector, about the feet, in the body's own frame.
 		var local := body.global_basis.inverse() * _tilt
 		lean = Basis(Vector3.UP.cross(local).normalized(), angle)
 	if slope > 0.001 or angle > 0.0001:
 		tilt = Transform3D(Basis.IDENTITY, pivot + Vector3.DOWN * sink) * Transform3D(lay * lean, Vector3.ZERO) * Transform3D(Basis.IDENTITY, -pivot)
 
 
-# The turn the model carries now, radians (tests).
 func yaw() -> float:
 	return _yaw

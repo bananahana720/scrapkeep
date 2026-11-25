@@ -1,17 +1,8 @@
 extends Node3D
 
-# The Slag Bowl's Fleet yard, live: Brindle's crew in the stands, the ladles and furnace mouths, the ledger board.
-# It reads the fight off the bus and never feeds it back. Each phase turn (fight_phase_changed, PR #391) plays across
-# the transition beat: the stands cheer in a wave that runs round the bowl, the melt steps hotter, and the ledger
-# rounds its sum up again. A weak-point hit gets a short hop, the rout a long one, and the melt cools to embers.
-# Everything here stands behind the rim wall, so nothing it moves can cross a telegraph. Idle, it does no work.
-
 const FightPhases := preload("res://src/combat/fight_phases.gd")
 
 const FIGHT_ID := "brindle"
-# Melt by phase, index 0 the rout: emission energy and colour. The glow is the melt's own emission, never a runtime
-# light: a light freed with the arena crashes Forward+ (sketch-lint L6). Banked ember to white-gold, every step on the
-# gold side of MELT_MIN_HUE: the live slag (hazard.gd MOLTEN, about 22 degrees) and HAZARD (about 8) keep the red-orange.
 const MELT := [
 	{"emission": 0.35, "color": Color("504028")},
 	{"emission": 0.9, "color": Color("8a6024")},
@@ -19,20 +10,15 @@ const MELT := [
 	{"emission": 3.0, "color": Color("ffd98a")},
 ]
 const MELT_MIN_HUE := 32.0
-# Seconds the melt takes to reach its phase's heat; the turn's beat is 2 s, so it lands inside it.
 const MELT_SECONDS := 1.6
-# Cheers: strength (hop metres) and seconds; a phase turn lasts the fight's transition beat.
 const CHEERS := {
 	"arrival": {"hop": 0.35, "seconds": 1.4},
 	"phase": {"hop": 0.6, "seconds": -1.0},
 	"weak_point": {"hop": 0.22, "seconds": 0.6},
 	"rout": {"hop": 0.8, "seconds": 3.5},
 }
-# The wave runs once round the bowl in this long, so the far stand answers the near one.
 const WAVE_SECONDS := 0.7
 const HOP_HZ := 3.0
-# The ledger rounds up, by phase; index 0 is the rout. The sums never balance on screen (CHARACTER-BIBLE, Brindle).
-# The figure is big enough to read from the fight's camera across the bowl; the caption carries the joke up close.
 const LEDGER := ["SHIFT OVER", "1,200 T", "1,300 T", "ALL OF IT"]
 const LEDGER_CAPTIONS := ["SUMS DO NOT BALANCE", "OWED (ROUNDED UP)", "OWED (ROUNDED UP AGAIN)", "OWED (ROUNDED)"]
 
@@ -45,13 +31,11 @@ var seats := []
 var _cheer := {}
 var _melt_from := 0.0
 var _melt_to := 0.0
-# The heat on show, so a turn that lands mid-blend starts from what the eye sees.
 var _melt_now := 1.0
 var _melt_t := 1.0
 var _clock := 0.0
 
 
-# Wires the yard to the game bus; a bowl built without one (a fixture) keeps its first heat and stays still.
 func bind(events) -> void:
 	set_process(false)
 	_set_melt(MELT[1])
@@ -67,7 +51,6 @@ func bind(events) -> void:
 		events.boss_defeated.connect(_on_rout)
 
 
-# Every seat's rest transform and its place in the wave, per crowd, from the dress's seat rows.
 func seat(crowd: MultiMeshInstance3D, rests: Array) -> void:
 	crowds.append(crowd)
 	var row := []
@@ -103,7 +86,6 @@ func _ledger(index: int) -> void:
 func cheer(kind: String) -> void:
 	var row: Dictionary = CHEERS[kind]
 	var seconds: float = row.seconds if row.seconds > 0.0 else FightPhases.boss(FIGHT_ID).transition()
-	# A bigger cheer takes over a smaller one; a small one never cuts a big one short.
 	if not _cheer.is_empty() and _clock < _cheer.until and float(_cheer.hop) > float(row.hop):
 		return
 	_cheer = {"kind": kind, "hop": row.hop, "start": _clock, "until": _clock + seconds + WAVE_SECONDS}

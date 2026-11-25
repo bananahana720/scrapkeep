@@ -1,75 +1,26 @@
 extends RefCounted
 
-# The set director: the DJ behind the band (design-v3/SOUND-BIBLE.md, "The set"; Andrew, 12
-# November 2026: "it should feel like there is a backend dj that mixes things and orchestrates
-# things perfectly with the player's experience"). Arlo at the decks reads the room once a bar
-# and plans the next bar: the room's mood, one move, and June's sax answer at the end of each
-# phrase. audio.gd applies the plan on the bar line; this file only decides.
-#
-# The rules it keeps:
-#   - one read a bar, one plan a bar, and nothing changes off the bar line;
-#   - a mood climbs on the next bar but falls only after it has been low for MOOD_HOLD_BARS,
-#     so a room that hovers at a line never flutters, and a fall from the peak passes
-#     through release;
-#   - trims only pull a stem down, never push it over the recording, and every pulled stem
-#     is back by the next plan unless the move holds it;
-#   - one melody at a time: June answers only on the phrase's last bar, only when no warning,
-#     no other melodic cue and no fight section owns the lead, and the recorded lead steps
-#     back for her bar;
-#   - her answers walk a phrase book in order (statement, variation, development, home), so
-#     the melody progresses, and the same answer never plays twice in a row;
-#   - melody first: at least MIN_GAP_BARS between any two moves, so the song carries and each
-#     move is an event (about two a minute at most, fights included); a phrase June does not
-#     answer may end on a breakdown, which keeps the melody; the band's own directed sections
-#     and boss and set-piece songs play as written;
-#   - no randomness: the same rooms give the same set, in bots and in play.
-
 const PHRASE_BARS := 8
 const MOOD_HOLD_BARS := 2
 const RELEASE_BARS := 2
-# The energy lines between moods, climbing and falling.
 const BUILD_UP := 0.3
 const BUILD_DOWN := 0.18
 const PEAK_UP := 0.62
 const PEAK_DOWN := 0.48
-# How close below the peak line, and rising, a room counts as about to peak.
 const PEAK_NEAR := 0.1
-# The recorded lead under June's answer.
 const LEAD_SPACE := 0.35
-# How deep a filter roll sweeps the band (the low-pass's wet share at the end of its bar).
 const SWEEP_DEPTH := 0.85
-# Melody first (Andrew, 13 November 2026, on the whole-stretch page: "it sounds really chaotic
-# and I can't really follow the song"): at least MIN_GAP_BARS between any two moves, across
-# records, so the song carries and a move is an event. About two moves a minute at most.
 const MIN_GAP_BARS := 16
-# The turnaround move when June is not answering: the drums step out for a breakdown, which
-# keeps the melody and only takes sound away, so it never masks a warning. The filter roll is
-# kept for a real change (a climb into the peak, a set piece landing) and the lead never drops.
 const TURNS := ["breakdown"]
-# Fight words whose own form is the move, where the director holds: the Warden's breath and
-# drop, a directed piece, "directed" (a section the band directs itself: its pivot, break,
-# return and home) and "anthem" (a boss or set-piece song, which plays as written).
 const OWN_FORM := ["open", "drop", "piece", "directed", "anthem"]
-# Heat's band (redline.gd: 0 cool, 1 a quarter, 2 hot, 3 redline) from which answers run hot.
 const HOT_BAND := 2
-# Armour fraction under which the room is hanging on (the band strips its lead there too).
 const HANGING := 0.3
-# Plans kept for a recording across every band of a run (about 25 minutes of bars).
 const PLANS_KEPT := 1024
 
-# The room's floor in each fight word (INTEGRATION section 7): the guard holding is a build,
-# the guard cracking and the drop are the peak, the breath and the break are release.
-# A flat pack's anthem (a miniboss, Brindle or a set-piece tune) is a fight at the build's top.
 const FIGHT_FLOOR := {"closed": 0.45, "telegraph": 0.75, "drop": 0.9, "anthem": 0.55}
 const FIGHT_RELEASE := ["open", "piece"]
-# Fight sections that own the lead: June never answers over them.
 const LEAD_OWNED := ["open", "drop", "piece", "anthem"]
 
-# June's phrase book. Each answer is one bar of [sixteenth, midi, sixteenths], with an optional
-# fourth field naming the voice ("lead", the synth sax, when absent). Every pitch is in D Dorian
-# or a C# leading home, never on the threat notes Eb, Ab, Bb (SOUND-STORY registers), so an
-# answer is never heard as a warning. Each book is ordered statement, variation, development,
-# home: walked in order, the answers tell a short story and end where they began.
 const BOOK := {
 	"lull": [
 		{"id": "lull_a", "cells": [[2, 69, 2], [4, 72, 2], [7, 74, 5]]},
@@ -93,17 +44,14 @@ const BOOK := {
 		{"id": "release_a", "cells": [[0, 76, 2], [2, 79, 2], [4, 77, 1], [5, 76, 1], [6, 74, 6]]},
 		{"id": "release_b", "cells": [[0, 81, 1], [1, 79, 1], [2, 77, 1], [3, 76, 1], [4, 74, 4], [8, 86, 2, "bell"]]},
 	],
-	# Heat: the shell running hot climbs the ladder and ends high.
 	"hot": [
 		{"id": "hot_a", "cells": [[0, 74, 1], [1, 76, 1], [2, 77, 1], [3, 79, 1], [4, 81, 1], [5, 83, 1], [6, 84, 1], [7, 86, 5]]},
 		{"id": "hot_b", "cells": [[0, 81, 1], [1, 83, 1], [2, 84, 1], [3, 85, 1], [4, 86, 2], [6, 88, 1], [7, 89, 1], [8, 91, 4]]},
 	],
-	# Overtime: the keeper's bell rang, so the brass calls the shift and the sax signs it.
 	"overtime": [
 		{"id": "overtime_a", "cells": [[0, 62, 2, "brass"], [2, 62, 1, "brass"], [4, 69, 2, "brass"], [6, 74, 4]]},
 		{"id": "overtime_b", "cells": [[0, 74, 2, "brass"], [2, 72, 1, "brass"], [3, 74, 1, "brass"], [4, 77, 2], [6, 74, 6]]},
 	],
-	# Hanging on: a fall that winks (the tone bible's sad-but-corny): down home, then a bell.
 	"hanging": [
 		{"id": "hanging_a", "cells": [[0, 81, 2], [2, 79, 2], [4, 77, 2], [6, 76, 1], [7, 74, 5], [12, 86, 2, "bell"]]},
 		{"id": "hanging_b", "cells": [[0, 77, 1], [1, 76, 1], [2, 74, 2], [4, 73, 2], [6, 74, 6]]},
@@ -118,14 +66,11 @@ var _low_bars := 0
 var _release_left := 0
 var _rising := false
 var _turn_move := 0
-# Bars since the last move, kept across records so a change of record never doubles a move.
 var _since_move := MIN_GAP_BARS
 var _turns := {}
 var _last_answer := ""
 var _swap_armed := true
 var _landing_swapped := false
-# Every plan of the run, kept across band changes up to PLANS_KEPT, for the recorder and the tests:
-# [bar, mood, move, answer, transport sample of the bar or -1, why a turnaround held or "", fight word].
 var plans: Array = []
 
 
@@ -142,10 +87,6 @@ func reset() -> void:
 	_landing_swapped = false
 
 
-# The room's energy, 0 to 1, from the read audio.gd gathers (every key optional):
-#   pressure, threat, chain, approach, speed: 0 to 1 (the band's own faders);
-#   heat: redline band 0 to 3; overtime: bool; armour: fraction of the run's peak;
-#   fight: "" outside a fight, else the band's fight word (closed, telegraph, open, drop, piece).
 static func room_energy(room: Dictionary) -> float:
 	var e := maxf(maxf(float(room.get("pressure", 0.0)), 0.85 * float(room.get("threat", 0.0))),
 		maxf(0.9 * float(room.get("chain", 0.0)), 0.6 * float(room.get("approach", 0.0))))
@@ -156,8 +97,6 @@ static func room_energy(room: Dictionary) -> float:
 	return clampf(e, 0.0, 1.0)
 
 
-# The room's colour: what June's answer speaks to before the mood. Hanging on outranks the
-# shift, which outranks heat.
 static func colour(room: Dictionary) -> String:
 	if room.has("armour") and float(room.armour) < HANGING:
 		return "hanging"
@@ -168,12 +107,6 @@ static func colour(room: Dictionary) -> String:
 	return ""
 
 
-# Reads the room for the coming bar and returns its plan:
-#   {bar, mood, move, trims: {stem: gain}, answer: phrase id or "", sweep: low-pass depth the
-#   band rolls to across the bar}.
-# room may also carry warning (a danger or telegraph cue is sounding or due inside the bar),
-# busy (another melodic cue owns the bar) and incoming_bars (bars until a set piece the
-# conductor has announced, 0 when none).
 func read(room: Dictionary) -> Dictionary:
 	bar += 1
 	var was := mood
@@ -188,9 +121,6 @@ func read(room: Dictionary) -> Dictionary:
 	_since_move += 1
 	var free := _since_move >= MIN_GAP_BARS
 	var incoming := int(room.get("incoming_bars", 0))
-	# The rise into a peak or a set piece: one per climb, re-armed when the room falls under the
-	# peak's fall line (so a guard holding near it never rolls twice) or leaves build, and one per announcement. Outside a fight the bass steps
-	# out for the bar and slams back on the downbeat; in a fight the band rolls under the filter.
 	if mood != "build" or e < PEAK_DOWN - PEAK_NEAR:
 		_swap_armed = true
 	var climb := _swap_armed and mood == "build" and _rising and e >= PEAK_UP - PEAK_NEAR
@@ -220,7 +150,6 @@ func read(room: Dictionary) -> Dictionary:
 		_last_answer = plan.answer
 	if plan.move != "hold":
 		_since_move = 0
-	# Why a turnaround passed without an answer, for the listening reads.
 	var held := ""
 	if turnaround and plan.answer == "":
 		held = "gap" if not free else "warning" if bool(room.get("warning", false)) else "busy" if bool(room.get("busy", false)) else fight if fight in LEAD_OWNED else plan.move
@@ -229,7 +158,6 @@ func read(room: Dictionary) -> Dictionary:
 	return plan
 
 
-# The next turnaround move in order.
 func _turn(plan: Dictionary) -> void:
 	plan.move = TURNS[_turn_move % TURNS.size()]
 	_turn_move += 1
@@ -284,7 +212,6 @@ func _book_for(room: Dictionary) -> String:
 	return c if c != "" else mood
 
 
-# The next answer in the book, in order; one that would repeat the last answer is passed over.
 func _pick(book: String) -> String:
 	var rows: Array = BOOK[book]
 	var turn := int(_turns.get(book, 0))
@@ -308,10 +235,6 @@ static func _row(id: String) -> Dictionary:
 	return {}
 
 
-# The answer's score for Synth.render_score: rows of [step, midi, steps, voice, gain] in
-# sixteenths, the sax a little under the pilot's quote so the quote stays the bigger moment.
-# Expressive phrasing shapes passing sixteenths lighter and sustained landings warmer, with
-# an understated in-key harmonic cushion on the phrase's arrival (never on a threat note).
 static func answer_score(id: String) -> Array:
 	var book_name := _book_of(id)
 	var cells: Array = _row(id).get("cells", [])
@@ -338,8 +261,6 @@ static func answer_score(id: String) -> Array:
 			elif dur == 1 and step % 2 == 1:
 				phrase = 0.86
 		score.append([step, midi, dur, voice, base_gain * phrase])
-	# Add a gentle harmonic cushion on the phrase's landing note, strictly within the 1-bar
-	# grid (step < 16) and strictly off THREAT_PITCH_CLASSES (Eb, Ab, Bb).
 	var land: Array = cells[count - 1]
 	var land_step := int(land[0])
 	var land_midi := int(land[1])

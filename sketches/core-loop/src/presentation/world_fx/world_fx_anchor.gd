@@ -5,14 +5,6 @@ const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
 
-# A drop-in effect (WORLD-FX.md): one SETS row placed by dressing, a landmark, the camp or the relay.
-#   var fx := WorldFxAnchor.make("landmark_dam")   # then add_child(fx) and place it
-# It emits while it is one of the WorldFx.ANCHOR_SLOTS nearest anchors inside its lod_m, and shows
-# its impostor (one soft quad) past lod_m, so a landmark keeps its plume at range for one draw call.
-# With no WorldFx installed (a title stage, a capture, a test scene) it simply emits.
-# A set with a sound row (Specs.SOUNDS) carries one voice, heard only while WorldFx gives it the set's
-# voice (set_voiced: the nearest emitting anchor of its set): a loop sounds while it emits, a pulsed
-# set sounds once as each puff starts. With no WorldFx it stays silent.
 
 static var live: Array[WeakRef] = []
 
@@ -76,8 +68,6 @@ func _exit_tree() -> void:
 	live = live.filter(func(r): return r.get_ref() != null and r.get_ref() != self)
 
 
-# The terrain's Reaper frees a stage a few nodes a frame, deepest first, so this anchor's emitters can
-# go before it does while WorldFx still reaches it through live.
 func _on_child_exiting(node: Node) -> void:
 	if node is GPUParticles3D:
 		emitters.erase(node)
@@ -94,30 +84,24 @@ func lod_m() -> float:
 	return m
 
 
-# Charge level 0..1 for a level-driven set (the relay): more motes and a faster column as it fills.
-# paused stops new particles (the ring is empty) without resetting what is in the air.
 func set_level(t: float, is_paused := false) -> void:
 	level = clampf(t, 0.0, 1.0)
 	paused = is_paused
 	_apply()
 
 
-# The low preset keeps each spec's `low` share; reduced motion drops `motion: false` specs and halves the rest.
 func set_quality(is_low: bool, is_reduced: bool) -> void:
 	low = is_low
 	reduced_motion = is_reduced
 	_apply()
 
 
-# A new run's grain (Grain.run_seed) on an anchor that outlived the last run (park dressing stays built).
 func set_grain(seed: int) -> void:
 	for p in emitters:
 		Grain.apply(p, seed)
 	_apply()
 
 
-# Stretches every "fit" spec's emission box over a footprint of half extents (x, z) in the anchor's frame:
-# a flood's foam covers the water it stands on, whatever the site's size. Particle counts never change.
 func fit(half: Vector2) -> void:
 	for p in emitters:
 		if Specs.SPECS[p.get_meta("world_fx")].get("fit", false):
@@ -125,7 +109,6 @@ func fit(half: Vector2) -> void:
 			p.visibility_aabb = AABB(Vector3(-half.x - 4.0, -6.0, -half.y - 4.0), Vector3(half.x * 2.0 + 8.0, 12.0, half.y * 2.0 + 8.0))
 
 
-# Range: within lod_m and slotted it emits; past lod_m only the impostor draws.
 func set_range(distance: float, has_slot: bool) -> void:
 	slotted = has_slot and distance <= lod_m()
 	for q in impostors:
@@ -137,7 +120,6 @@ func has_voice() -> bool:
 	return sound != null
 
 
-# WorldFx hands the set's one voice to the nearest emitting anchor of the set (and takes it back).
 func set_voiced(on: bool) -> void:
 	voiced = on
 	_tend_sound(0.0)
@@ -161,8 +143,6 @@ func _process(delta: float) -> void:
 	_tend_sound(delta)
 
 
-# A loop plays while the set's voice is here and it emits, at its level's trim (calm water quieter);
-# each time round it logs another start, so the mix tools hear a loop as long as it plays.
 func _tend_sound(delta: float) -> void:
 	if sound == null or WorldSound.row(set_id)["play"] != "loop":
 		return

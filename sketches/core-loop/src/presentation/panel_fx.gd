@@ -4,32 +4,15 @@ const Panels := preload("res://src/build/panels.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# How a grey panel pickup lands (IL-01 card section 6): the panel's name and step pop for
-# POP_LIFE, a short ratchet tick plays, and each panel in a STREAK_MS streak plays the next note
-# of a pentatonic phrase in the live combat key. The phrase is drawn from the run seed, so every
-# run has its own tune and a replay keeps it; a reel or dunk drop adds the pinball jackpot over
-# the note. This decides what each pop says, its tint, its row and when it shows, and sends it
-# out as `popped`; the HUD draws it as a line rising at its edge (src/ui/pickup_lines.gd), off
-# the fight and off the gates' feet (PF-14).
 
 signal popped(words: String, tint: Color, row: int, life: float)
 
 const POP_LIFE := 1.2
-# A pop that lands while the last one is still up takes the next free one of POP_ROWS rows, so
-# pickups in a row never print on top of each other. While both rows are held a pop waits for one
-# to clear (a cleared camp drops several panels at once, and a third pop on the bottom row printed
-# over the first, play finding from the goal plate film).
 const POP_ROWS := 2
-# A pop never shows later than POP_LIFE after its pickup sound (sight and sound of one event are
-# paired, PF-19). A row is held a frame's slack short of POP_LIFE so a waiting pop is up inside
-# that window, and at most POP_ROWS pops wait: a longer pile folds into the lines waiting, as
-# "+3 FIN" when they are one kind, "+3 PANELS" when they are not.
 const ROW_HOLD := POP_LIFE - 0.05
 const MIXED_NOUN := "PANELS"
 const STREAK_MS := 2000
 const PHRASE_LENGTH := 8
-# The phrase walks the reward pentatonic (Harmony.PENTATONIC rungs) from the tonic, a step
-# or two at a time, so it sings rather than jumps.
 const PHRASE_STEPS := [-1, 1, 1, 2, -2, 1]
 
 var ctx
@@ -38,10 +21,7 @@ var phrase: Array = []
 var streak := 0
 var _last_ms := -100000
 var _phrase_seed := -1
-# [id, rung, jackpot] per pickup, for tests and captures.
 var played: Array = []
-# Seconds each pop row is still held, and the pops waiting for a line: [panel_id, jackpot, count].
-# A folded line of mixed kinds has the id "".
 var _row_left: Array = []
 var _waiting: Array = []
 
@@ -60,7 +40,6 @@ func _on_run_started(_class_id: String) -> void:
 	_row_left.clear()
 
 
-# The run's phrase: PHRASE_LENGTH rungs of the reward pentatonic, seeded from the run seed.
 static func phrase_for(run_seed: int) -> Array:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([run_seed, "panel_phrase"])
@@ -71,7 +50,6 @@ static func phrase_for(run_seed: int) -> Array:
 	return rungs
 
 
-# The rung a pickup at `now_ms` plays, advancing the streak.
 func next_rung(now_ms: int) -> int:
 	var seed_now: int = ctx.run.run_seed if ctx != null and ctx.run != null else 0
 	if seed_now != _phrase_seed or phrase.is_empty():
@@ -96,7 +74,6 @@ func _on_panel_gained(panel_id: String, _count: int, _at: Vector3, jackpot: bool
 	_release()
 
 
-# A pop joins the line of pops waiting for a row; past POP_ROWS it folds into one already waiting.
 func _wait(panel_id: String, jackpot: bool) -> void:
 	if _waiting.size() < POP_ROWS:
 		_waiting.append([panel_id, jackpot, 1])
@@ -116,7 +93,6 @@ static func _count(pop: Array) -> int:
 	return int(pop[2]) if pop.size() > 2 else 1
 
 
-# The words of a waiting pop: its panel's own pop, or "+N NOUN" for a folded line.
 static func pop_words(pop: Array) -> String:
 	var n := _count(pop)
 	if n == 1:
@@ -125,7 +101,6 @@ static func pop_words(pop: Array) -> String:
 	return "+%d %s" % [n, noun if noun != "" else MIXED_NOUN]
 
 
-# Shows waiting pops while a row is free, oldest first.
 func _release() -> void:
 	while not _waiting.is_empty():
 		var row := next_pop_row()
@@ -135,8 +110,6 @@ func _release() -> void:
 		popped.emit(pop_words(pop), Palette.AMBER if pop[1] else Palette.SAND, row, POP_LIFE)
 
 
-# The row the next pop takes, holding it for POP_LIFE: the lowest free row, or -1 while every
-# row is held.
 func next_pop_row() -> int:
 	if _row_left.size() != POP_ROWS:
 		_row_left.resize(POP_ROWS)

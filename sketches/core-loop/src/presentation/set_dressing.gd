@@ -8,8 +8,6 @@ const Features := preload("res://src/world/features.gd")
 const Reach := preload("res://src/world/map_reach.gd")
 const KIT_PATH := "res://assets/models/world_one/clutter_kit.glb"
 const ROUTES := "res://src/world/reach_routes.json"
-# The kit is small beside a 1 m radius ball, so every piece is scaled up. Anchors are the
-# big pieces a cluster is built round; small ones gather at their feet.
 const KIT_ORDER := ["rock_a", "rock_b", "rock_c", "slab_a", "slab_b", "plate_a", "plate_b", "stub_a", "tuft_a", "tuft_b"]
 const KIT_FOOTPRINT := {"rock_a": 0.48, "rock_b": 0.30, "rock_c": 0.58, "slab_a": 1.05, "slab_b": 0.79,
 	"plate_a": 0.64, "plate_b": 0.50, "stub_a": 0.21, "tuft_a": 0.11, "tuft_b": 0.11}
@@ -29,7 +27,6 @@ var map_id := ""
 var seed_value := 0
 var batches: Array[MultiMeshInstance3D] = []
 var _materials: Array[ShaderMaterial] = []
-# The protection mask last uploaded to _protected_for (_update_protection).
 var _protected_count := -1
 var _protected_rects: Array[Vector4] = []
 var _protected_for: Array[ShaderMaterial] = []
@@ -37,39 +34,25 @@ var _dust: MultiMeshInstance3D
 var _clock := 0.0
 var _active := true
 var _ground: Callable
-# What the current children were built for: stage, map, preset and ground root (_build_stage).
 var _built_for := []
-# The main-thread time of the last stage_entered handler, for stage_entry_budget_test.
 var last_entry_usec := 0
-# The next stage's plan (plan()) while a worker draws it: {"key", "task", "out"}, else empty.
 var _prep := {}
-# Plans already built from, by key, oldest first (_keep).
 var _kept := {}
 const KEPT_PLANS := 3
-# A first stage still building behind the menu (world.gd MENU-READY): a worker draws its plan once
-# its ground is built and the menu builds it, so neither setup nor the first entry waits on it.
 var _dress_when_planned := false
-# Whether the current children were built from a worker's plan, for stage_entry_budget_test.
 var built_from_worker := false
-# Whether the last stage entry found its plan still drawing and left the build to _process, for
-# stage_entry_budget_test.
 var entry_deferred := false
-# The main-thread time of the whole _process in the frame it last ran (Engine.get_process_frames), every frame, for stage_entry_budget_test.
 var last_process_usec := 0
 var last_process_frame := -1
-# The clutter kit's meshes and their target materials, read once (_kit_meshes).
 var _kit := {}
 var _kit_materials: Array[ShaderMaterial] = []
 static var _broken_rock: ArrayMesh
 
-# A dressing plan's draw state: the map's seeded stream, the stage's ground and the cluster spacing.
 class Plan:
 	extends RefCounted
 	var rng := RandomNumberGenerator.new()
 	var ground: Callable
 	var spacing := 0.0
-	# One flag the owner raises when nobody will take the plan (the game is quitting); the loops
-	# read it and return early. Empty for a plan drawn on the caller's own thread.
 	var stop: Array = []
 
 	func stopped() -> bool:
@@ -96,33 +79,21 @@ func _clear_stage(_reason: String) -> void:
 	_active = false
 	visible = false
 
-# On a stage entry (defer) a stage with no plan drawn or kept is planned on a worker and built the
-# frame it is done, so the entry never draws one on the main thread: that draw took 0.5 s on a New
-# run after a death and 3.5 s entering the Dig after Brindle (cloud), a frozen frame and a gap in
-# the music. Setup and a preset change build at once.
 func _build_stage(defer := false) -> void:
 	_dress_when_planned = false
 	var stage: int = ctx.terrain.stage
 	var root: Node3D = ctx.terrain.geometry_root(stage)
 	_active = root.visible
-	# The dressing is a pure function of the stage's map, ground and preset, so a stage that is
-	# entered again on the ground it was built for (setup then the first entry, every retry)
-	# keeps what it has: the build costs 250 to 600 ms (SWAP-HITCH).
 	var key := _key(stage, root)
 	if key == _built_for and get_child_count() > 0:
 		_update_protection()
 		return
-	# A plan still drawing is never waited on here (DRESS-ENTRY: the wait was 140 to 380 ms of a
-	# stage entry on a quick exit, the plan taking ~360 ms on a worker, the build ~2 ms). The old
-	# stage's dressing goes, and _process builds this one the frame the worker is done.
 	if not _prep.is_empty() and _prep.key == key and not WorkerThreadPool.is_task_completed(_prep.task):
 		_clear_children()
 		_built_for = []
 		_dress_when_planned = true
 		entry_deferred = true
 		return
-	# A worker's plan is taken even when it came back empty (a stopped or failed draw), so a
-	# deferred entry never starts a new worker every frame.
 	var from_worker: bool = not _prep.is_empty() and _prep.key == key
 	var planned := _take_plan(key)
 	built_from_worker = from_worker
@@ -153,8 +124,6 @@ func _build_stage(defer := false) -> void:
 		streaks.material_override.set_shader_parameter("opacity", 0.018)
 	_update_protection()
 
-# The plans of the last stages built stay, so a New run back on stage 1 builds at once on the
-# ground it left. A rebuilt ground is a new key; the oldest plan goes past KEPT_PLANS.
 func _keep(key: Array, planned: Dictionary) -> void:
 	_kept.erase(key)
 	_kept[key] = planned
@@ -175,12 +144,9 @@ func _flags() -> Dictionary:
 	var preset: Dictionary = Preset.PRESETS[Preset.current]
 	return {"props": preset.get("set_dressing", false), "dust": preset.get("air_motes", false), "streaks": preset.get("air_streaks", false)}
 
-# What plan() reads of a map, copied, so a worker shares no live object.
 static func map_rows(map) -> Dictionary:
 	return {"play_rect": map.play_rect, "scatter": map.scatter.duplicate(true), "structures": structure_points(map)}
 
-# The plan a worker drew for this key, waiting once on a worker still drawing. A plan for another
-# key is never waited on here: _prepare_next drops it once its worker is done. Empty when none.
 func _take_plan(key: Array) -> Dictionary:
 	if _prep.is_empty() or _prep.key != key:
 		return {}
@@ -189,17 +155,12 @@ func _take_plan(key: Array) -> Dictionary:
 	_prep = {}
 	return planned
 
-# Once the next stage's ground is built (world.gd starts it when the Warden wakes), a worker draws
-# its plan from the stage's ground callable (static terrain functions over its grids) and a copy of
-# its rows, so entering it builds only the MultiMeshes.
 func _prepare_next() -> void:
 	var terrain = ctx.terrain
 	if not "maps" in terrain or not terrain.has_method("is_ready") or not "stage" in terrain:
 		return
 	var next: int = terrain.stage + (0 if _dress_when_planned else 1)
 	var key := _key(next, terrain.geometry_root(next)) if next <= terrain.maps.size() and terrain.is_ready(next) else []
-	# A plan no stage can take any more (a new run, a preset change) is dropped once its worker is
-	# done, so no frame waits on it.
 	if not _prep.is_empty():
 		if _prep.key != key and WorkerThreadPool.is_task_completed(_prep.task):
 			WorkerThreadPool.wait_for_task_completion(_prep.task)
@@ -220,20 +181,13 @@ func _prepare_next() -> void:
 
 func _exit_tree() -> void:
 	if not _prep.is_empty():
-		# Nobody takes this plan: tell its worker to stop, so quitting waits for one loop step and
-		# not for the whole draw (2.9 s of a 14 s headless test on a 4-core box, 2026-11-09).
 		_prep.stop[0] = true
 		WorkerThreadPool.wait_for_task_completion(_prep.task)
 		_prep = {}
 
-# Teardown (activities.gd): the shared rock mesh goes with the Game.
 static func release_shared() -> void:
 	_broken_rock = null
 
-# Every batch's instance buffer, drawn from the map's seeded stream in the order the batches are
-# built (SWAP-HITCH-2: 250 to 430 ms of a new stage's entry). Pure: map is map_rows(), rows the
-# stage's keepouts and ground the stage's ground callable, so a worker can draw it.
-# stop is the owner's one-element flag (Plan.stop); a stopped plan returns what it has, to be dropped.
 static func plan(map: Dictionary, rows: Array, ground: Callable, seed_number: int, flags: Dictionary, stop: Array = []) -> Dictionary:
 	var p := Plan.new()
 	p.rng.seed = seed_number
@@ -283,7 +237,6 @@ static func plan(map: Dictionary, rows: Array, ground: Callable, seed_number: in
 				return out
 			var x := p.rng.randf_range(rect.position.x, rect.end.x)
 			var z := p.rng.randf_range(rect.position.y, rect.end.y)
-			# Both ends of the 3 m drift remain on open, almost level ground.
 			if _normal(p, x, z).y < 0.98 or _normal(p, x + WIND.x * 4.0, z + WIND.y * 4.0).y < 0.98 or blocked(rows, Vector2(x, z), 0.0) != "":
 				continue
 			var basis := Basis(Vector3.UP, wind_angle) * Basis(Vector3.RIGHT, -PI / 2.0)
@@ -291,8 +244,6 @@ static func plan(map: Dictionary, rows: Array, ground: Callable, seed_number: in
 		out.streaks = _instance_buffer(p, transforms, "air")
 	return out
 
-# A MultiMesh buffer: 12 floats a transform, then for a dressing batch 4 more drawn per instance,
-# a grey shade ("shade") or an air batch's phase ("air").
 static func _instance_buffer(p: Plan, transforms: Array, extra: String) -> PackedFloat32Array:
 	var buffer := PackedFloat32Array()
 	for tr: Transform3D in transforms:
@@ -325,7 +276,6 @@ static func _quad(size: Vector2) -> QuadMesh:
 	mesh.size = size
 	return mesh
 
-# The kit's meshes by node name, each with the target copy of its slot materials, read once.
 func _kit_meshes() -> Dictionary:
 	if _kit.is_empty():
 		var scene := (load(KIT_PATH) as PackedScene).instantiate()
@@ -343,8 +293,6 @@ func _kit_meshes() -> Dictionary:
 			_materials.append(material)
 	return _kit
 
-# Where clutter gathers: the foot of a cliff, the base of a post, wall or tower, and the
-# edge of each ride line just outside its clear strip. Everything else stays bare.
 static func _cluster_centres(p: Plan, map: Dictionary, rect: Rect2, rows: Array) -> Array[Vector2]:
 	var centres: Array[Vector2] = []
 	p.spacing = float(map.scatter["spacing"])
@@ -381,7 +329,6 @@ static func _try_centre(p: Plan, centres: Array[Vector2], at: Vector2, rect: Rec
 			return
 	centres.append(at)
 
-# Flat footing with a steep face a few metres off: the foot of a cliff or rock family.
 static func _at_cliff_foot(p: Plan, at: Vector2) -> bool:
 	if _normal(p, at.x, at.y).y < 0.93:
 		return false
@@ -392,7 +339,6 @@ static func _at_cliff_foot(p: Plan, at: Vector2) -> bool:
 				return true
 	return false
 
-# One big piece with small ones about its feet.
 static func _place_cluster(p: Plan, centre: Vector2, rect: Rect2, rows: Array, lists: Dictionary) -> void:
 	var placed: Array = []
 	var anchor: String = ANCHORS[p.rng.randi() % ANCHORS.size()]
@@ -407,7 +353,6 @@ static func _place_cluster(p: Plan, centre: Vector2, rect: Rect2, rows: Array, l
 			if _place_piece(p, kit_name, at, SMALL_SCALE[kit_name], rect, rows, lists, placed):
 				break
 
-# placed holds Vector3(x, z, footprint radius) per piece, so a cluster does not overlap itself.
 static func _place_piece(p: Plan, kit_name: String, at: Vector2, span: Vector2, rect: Rect2, rows: Array, lists: Dictionary, placed: Array) -> bool:
 	var size := p.rng.randf_range(span.x, span.y)
 	var stretch := Vector3(p.rng.randf_range(0.9, 1.15), p.rng.randf_range(0.9, 1.15), p.rng.randf_range(0.9, 1.15)) * size
@@ -420,7 +365,6 @@ static func _place_piece(p: Plan, kit_name: String, at: Vector2, span: Vector2, 
 	var basis := Basis(Vector3.UP, p.rng.randf_range(0.0, TAU))
 	basis = basis * Basis(Vector3.RIGHT, p.rng.randf_range(-0.08, 0.08)) * Basis(Vector3.FORWARD, p.rng.randf_range(-0.08, 0.08))
 	basis = basis.scaled_local(stretch)
-	# Stand on the lowest ground under the footprint: the high side is buried, nothing floats.
 	var low := INF
 	for k in 8:
 		var spot: Vector2 = at + Vector2.from_angle(k * TAU / 8.0) * footprint * 0.8
@@ -430,9 +374,6 @@ static func _place_piece(p: Plan, kit_name: String, at: Vector2, span: Vector2, 
 	placed.append(Vector3(at.x, at.y, footprint))
 	return true
 
-# Every authored place the ground must stay clean of clutter, from the map's own data.
-# Each row is {what, points, radius, ride}: a point or a polyline, the clear distance in
-# metres from it, and whether it is a ride line (clutter gathers along its clear edge).
 static func keepouts(map, stage: int) -> Array:
 	var rows := []
 	rows.append(_row("spawn", [map.spawn], 6.0))
@@ -463,8 +404,6 @@ static func keepouts(map, stage: int) -> Array:
 			rows.append(_row("thermal", [thermal], 8.0))
 	return rows
 
-# The authored ride lines of the three pilots, from src/world's route file. A file that is
-# missing or not a Dictionary places no pilot keep-outs and warns once; the game runs on.
 static func load_routes() -> Variant:
 	if not FileAccess.file_exists(ROUTES):
 		return null
@@ -485,9 +424,6 @@ static func pilot_rows(routes: Variant) -> Array:
 			rows.append(_row("ride line " + String(pilot), line, 4.0, true))
 	return rows
 
-# A banked arc's riding surface is the radial band from `radius` out by `band` (the face and
-# its bank) across the span the map hands Features.banked_arc: its centreline, half the band
-# plus the clear distance.
 static func _arc_row(what: String, centre: Vector2, radius: float, band: float, from_deg: float, to_deg: float) -> Dictionary:
 	var line := PackedVector2Array()
 	var span := wrapf(to_deg - from_deg, 0.0, 360.0)
@@ -499,7 +435,6 @@ static func _arc_row(what: String, centre: Vector2, radius: float, band: float, 
 static func _row(what: String, points: Array, radius: float, ride := false) -> Dictionary:
 	return {"what": what, "points": PackedVector2Array(points), "radius": radius, "ride": ride}
 
-# Posts, walls and towers a cluster can lean against, on the map that has them.
 static func structure_points(map) -> Array[Vector2]:
 	var result: Array[Vector2] = []
 	if map.get_script() != Reach:
@@ -513,7 +448,6 @@ static func structure_points(map) -> Array[Vector2]:
 		result.append(sat.at + Vector2(float(sat.radius) + 4.0, 0.0))
 	return result
 
-# The name of the first keepout within margin of `at` (its clear distance plus margin), or "".
 static func blocked(rows: Array, at: Vector2, margin: float) -> String:
 	for row in rows:
 		if distance_to_row(row, at) < float(row.radius) + margin:
@@ -529,7 +463,6 @@ static func distance_to_row(row: Dictionary, at: Vector2) -> float:
 		best = minf(best, at.distance_to(Geometry2D.get_closest_point_to_segment(at, points[i], points[i + 1])))
 	return best
 
-# Broken rock belongs at the foot of a cliff, never up on its face.
 static func _near_flat(p: Plan, at: Vector2) -> bool:
 	for k in 12:
 		for reach: float in [3.0, 6.0]:
@@ -578,13 +511,11 @@ func _batch(label: String, mesh: Mesh, buffer: PackedFloat32Array, color: Color,
 	var view := MultiMeshInstance3D.new()
 	view.name = label
 	view.multimesh = multi
-	# Retain the exact submitted buffer: the headless dummy server has no readback.
+	# Godot headless Dummy renderer has no MultiMesh buffer readback.
 	view.set_meta("instance_buffer", buffer)
 	view.material_override = material
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	# A visibility range is measured to the batch's bounds centre, not to each instance,
-	# so one range hid every prop batch whose bounds span the whole map. Frustum culling
-	# alone limits these batches; only the camera-anchored motes keep a range.
+	# Godot measures visibility_range from the MultiMesh bounds center, not per instance.
 	view.visibility_range_end = 50.0 if air and label == "DustMotes" else 0.0
 	add_child(view)
 	batches.append(view)
@@ -602,8 +533,6 @@ func _clutter_batch(label: String, mesh: Mesh, buffer: PackedFloat32Array) -> Mu
 	view.multimesh = multi
 	view.set_meta("instance_buffer", buffer)
 	view.set_meta("clutter", true)
-	# Like every other dressing piece, clutter casts no shadow; the clutter shader's contact
-	# shade seats it on the ground and its protection hides it behind actors and telegraphs.
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(view)
 	batches.append(view)
@@ -632,15 +561,12 @@ func _active_camera() -> Camera3D:
 	var camera := get_viewport().get_camera_3d()
 	return camera if camera != null else ctx.camera.cam
 
-# Capture cameras can refresh the view while the staged simulation stays frozen.
 func sync_camera(camera: Camera3D) -> void:
 	visible = _active and ctx.flow.in_play()
 	if _dust != null:
 		_dust.global_transform = camera.global_transform
 	_update_protection(camera)
 
-# Clear a padded screen rectangle around every pickup, actor and committed threat.
-# Overflow hides the dressing rather than dropping a gameplay read from the mask.
 func _update_protection(camera: Camera3D = null) -> void:
 	if camera == null:
 		camera = _active_camera()
@@ -653,13 +579,9 @@ func _update_protection(camera: Camera3D = null) -> void:
 		scrap = ctx.build.scrap.get_children()
 	for object in objects:
 		_add_rect(rects, camera, object)
-	# Actors and threats are never dropped: if they alone overflow, hide the dressing.
 	if rects.size() > 64:
 		visible = false
 		return
-	# Scrap fills the remaining slots nearest the camera first, so a long scrap line
-	# cannot hide the whole ground dressing. The mask is a set of rectangles, so only which
-	# pieces get a slot matters: when they all fit, no ranking is needed.
 	var eye := camera.global_position
 	var pieces: Array[Node3D] = []
 	var distances := PackedFloat64Array()
@@ -667,8 +589,6 @@ func _update_protection(camera: Camera3D = null) -> void:
 		if piece is Node3D and piece.is_visible_in_tree():
 			pieces.append(piece)
 			distances.append(piece.global_position.distance_squared_to(eye))
-	# Nearest first, a band of as many pieces as there are free slots at a time; a piece off
-	# the screen takes no slot, so the next band fills the slots it left.
 	var ranked := distances.duplicate()
 	if pieces.size() > 64 - rects.size():
 		ranked.sort()
@@ -688,7 +608,6 @@ func _update_protection(camera: Camera3D = null) -> void:
 	var count := rects.size()
 	while rects.size() < 64:
 		rects.append(Vector4(-1.0, -1.0, -1.0, -1.0))
-	# The same mask for the same materials needs no upload.
 	if count == _protected_count and rects == _protected_rects and _materials == _protected_for:
 		return
 	_protected_count = count
@@ -708,9 +627,6 @@ func _add_rect(rects: Array[Vector4], camera: Camera3D, object: Node) -> void:
 	if area.z >= 0.0:
 		rects.append(area)
 
-# A telegraph's node origin is not where it is drawn: use its centre. A hostile threat
-# keeps its whole footprint clear. A harmless field (the Warden's lift) clears only its
-# edge, so the ground inside it keeps its clutter.
 func _add_telegraph(rects: Array[Vector4], camera: Camera3D, object: Node) -> void:
 	var middle: Vector3 = object.center
 	var reach := 3.0
@@ -739,7 +655,6 @@ static func protection_rect(camera: Camera3D, at: Vector3, reach: float) -> Vect
 			for z in [-reach, reach]:
 				var corner := at + Vector3(x, y, z)
 				if camera.is_position_behind(corner):
-					# A corner behind the camera has no screen point; the box runs off the frame on that side.
 					var side := camera.global_transform.affine_inverse() * corner
 					straddles = true
 					low.x = 0.0 if side.x < 0.0 else low.x

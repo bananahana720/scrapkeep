@@ -4,7 +4,6 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
-# How far above an enemy's origin its damage number starts (world units).
 const NUMBER_LIFT := 1.6
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Parts := preload("res://src/build/parts.gd")
@@ -17,89 +16,34 @@ const Contact := preload("res://src/movement/contact.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 
-# Feel: squash and stretch, camera punches and kicks, hit-stop, the pylon's plant and
-# eject, and (v3 W11) how a hit, a kill, a pickup, a dodge and a hit taken land. Every
-# effect answers something that happened, reads the committed fact off the bus and never
-# decides an outcome (TADR-008). How hard each fact lands is its EventKinds.JUICE row.
-# Punches are short and the camera never leaves the ball, so juice never hides the next
-# threat; kicks and squashes are camera and shell only, never the ball's velocity.
 
-# Hit-stop (v3 W11): every landed hit stops for its damage band (the enemy_struck row:
-# base + per damage point, clamped), crits and weak points multiply, a ram, stomp or
-# slam adds. The hits of one frame coalesce into one stop, stops start STOP_GAP_MS
-# apart and spend at most STOP_BUDGET_MS a second, so rapid fire and a Katamari
-# roll-up tick instead of stutter. A deflected hit clanks and never stops. The spine
-# caps a stop at 60 ms and refuses to stack; Engine.time_scale never touches velocity.
 const SettingsStore := preload("res://src/ui/settings_store.gd")
-# A reduced-motion hit-edge flash keeps this share of its alpha; the store owns the number.
 const REDUCED_FLASH: float = SettingsStore.REDUCED_FLASH
 const SPINE_CAP_MS := 60.0
-# The most shake presentation asks of the camera on any frame, before the viewer's Screen
-# shake row scales it. Every juice shake goes through request_shake, so stacked hits, blasts
-# and any future row share this one ceiling. A start value (ror2/characters-and-feel: shake
-# is capped per frame so a crowded fight stays readable); the crit row's 0.22 and the
-# blast's 0.35 pass untouched.
 const SHAKE_CAP := 0.5
-# Hit-stop belongs to the attacker's own strike, so only these facts may freeze time. The
-# list is closed: a fact naming the ball's motion, a roll, a dodge past an attack, a reward
-# card or a beacon asks for a stop that is logged at zero and never sent, and so does any
-# new fact nobody has listed (ror2/characters-and-feel: no hitstop on ball rolling;
-# BIBLE: momentum is sacred). "test" and "comfort" are the names the presentation tests
-# send straight to the budget. The weighed facts (EventKinds.WEIGHTED, allegiance player) are the
-# strike's own consequence: a Warden staggered or broken, a boss felled, a heavy piece shattered.
 const STRIKE_STOP_FACTS := ["enemy_struck", "boss_weak_point_hit", "multi_kill", "harpoon_bit", "posture_changed",
 	"posture_break", "boss_defeated", "piece_shattered", "test", "comfort"]
 const STOP_FLOOR_MS := 4.0
 const STOP_TRIM_FLOOR_MS := 8.0
-# The harpoon biting a body stops time this long (LEGIBILITY section 3). A world latch sends none.
 const BITE_STOP_MS := 40.0
 const CONTACT_KINDS := ["ram", "stomp", "slam"]
-# KNOCKBACK-FEEL: a ball contact's stop and shake follow its throw (Contact.ram_knock), not
-# its damage, so a heft V slam lands bigger than a heft II one instead of both sitting at
-# the damage cap. A throw of THROW_LO m/s (a cruise bump) or less asks for the low end, the
-# knock ceiling for the high end; the spine's 60 ms cap and SHAKE_CAP still bound both. The
-# throw only ever adds: a hit never stops or shakes less than its damage asked for, so a
-# cruise bump lands as it did and only harder throws land harder.
 const THROW_LO := 11.0
 const THROW_STOP_MS := [22.0, 58.0]
 const THROW_SHAKE := [0.2, 0.5]
-# A heft destructible's break (destructibles.gd) by tier, as an EventKinds.WEIGHT class and the damage its
-# stop is read at: light clutter (tiers 1 and 2) never stops time, so a run through it keeps its flow; a tier
-# 3 piece lands a hit's punch, tier 4 a heavy crunch and tier 5 a heavier one. One stop budget for all.
 const SHATTER_WEIGHT := {3: ["hit", 0.0], 4: ["heavy", 0.0], 5: ["heavy", 30.0]}
-# Bursts per frame, so a blast through a crowd costs a handful of emitters, not one each.
 const MAX_BURSTS := 6
-# The outline stays the collision ball's size at every heft class (DECISIONS "Fixed outline"):
-# heft reads as panels, caps, modules and accretion chunks, never as whole-ball scale. The
-# shell still springs (pickup pulses) but its resting target is 1.0 at every class.
 const SHELL_PER_CLASS := 0.0
 const SHELL_RATE := 9.0
-# A pickup kicks the shell's spring outward this fast per unit of pulse: a heft gain.
 const PULSE_SPEED := 9.0
-# Pickups that land together add their kicks, and with no ceiling a brute's pile swelled the ball
-# to twice its size (the PC's reel, 10 Nov 2026). Two limits hold any pile to a swell of a fifth
-# and leave one pickup as it was: the spring never moves faster than PULSE_MAX of pulse, and a
-# kick fades as the shell nears SHELL_SWING from rest on the kick's side.
 const PULSE_MAX := 0.22
 const SHELL_SWING := 0.15
 
-# The squash spring: underdamped, so a landing squashes, overshoots into a stretch and
-# settles in about a quarter second. Snappy on the hit, fluid on the way out.
 const SPRING := 420.0
 const DAMPING := 17.0
 const MAX_SQUASH := 0.45
-# The springs integrate in steps no longer than this, so one long frame (a stage load,
-# a stall under a scaled time_scale) cannot blow them up: the squash spring's explicit
-# step goes unstable near 0.1 s. At most MAX_SPRING_STEPS per frame.
 const SPRING_STEP := 1.0 / 120.0
 const MAX_SPRING_STEPS := 64
 
-# Pad rumble (systems audit pass C; loops.md found no vibration call anywhere in src/). The
-# hands' half of a fact, one row per fact: the weak (fast, light) and strong (slow, heavy)
-# motor shares, 0 to 1, and how long. A row's strength scales by the caller's share (a ram by
-# its throw, a hit taken by its damage). Start values for a PC pad check, not a feel verdict.
-# Rumble follows the Screen shake comfort row until the settings form carries its own, so a
-# player who stills the screen stills the pad too.
 const RUMBLE := {
 	"near_miss": {"weak": 0.6, "strong": 0.0, "ms": 60},
 	"harpoon_bit": {"weak": 0.35, "strong": 0.1, "ms": 50},
@@ -117,52 +61,30 @@ const RUMBLE := {
 	"piece_shattered": {"weak": 0.3, "strong": 0.55, "ms": 90},
 	"heft_class_changed": {"weak": 0.15, "strong": 0.5, "ms": 220},
 	"beacon_unsealed": {"weak": 0.3, "strong": 0.85, "ms": 320},
-	# The loops prototypes (docs/design/loops.md). Heat: a skim's tick, the redline buzz held
-	# through the cook-off wait (redline.gd COOK_OFF_S), the blast's thump. Called Shot: a firm tap
-	# at the call, a long thump on a met break.
 	"heat_skim": {"weak": 0.6, "strong": 0.0, "ms": 60},
 	"heat_redline": {"weak": 0.25, "strong": 0.0, "ms": Redline.COOK_OFF_S * 1000.0},
 	"heat_blast": {"weak": 0.4, "strong": 1.0, "ms": 180},
 	"shot_called": {"weak": 0.0, "strong": 0.5, "ms": 80},
 	"call_met": {"weak": 0.0, "strong": 1.0, "ms": 250},
 }
-# A request weaker than the one still running is dropped, so a crowd of small facts never
-# blurs the big one under them.
 const RUMBLE_FLOOR := 0.05
-# A carve's release plays at pitch 1 at the 14 m/s cruise, higher off a faster ride.
 const CARVE_PITCH_SPEED := 14.0
 
 var ctx
 var player
 var camera
-# Siblings presentation hands over: audio for the crit ping, the multi-kill beat and the
-# throw; vfx for the bursts, the chain pips and the edge flash. Either may be null.
 var audio
 var vfx
-# [hook, fact] for every camera or time effect fired, for the tests and the notes.
 var hook_log: Array = []
-# [requested_seconds, sent_seconds or 0 when gated, fact, msec] for every hit-stop asked for.
 var hit_stop_log: Array = []
-# Swap for a recorder in tests; defaults to the spine's ctx.hit_stop.
 var hit_stop_sink: Callable
-# Resolves a strike the way combat does (ctx.spawner.resolve: dealt, punch, the plating
-# the hit met, its part, whether it broke through). Without it a hit lands for its force.
 var resolve_of: Callable
-# The body plating of an enemy (ctx.spawner.plating_of), so a part softer than the body
-# reads as a weak point.
 var plating_of: Callable
-# The HUD's damage-number layer (DamageNumbers.add), set by the HUD: key, value, world point,
-# type, team, crit. A number is raised from the same hit the burst is drawn from, so the two
-# share the crit decision and the colour table (SR6).
 var number_sink: Callable
 var shell := 1.0
-# The viewer's comfort, from the pause menu: 1 is full, 0 is none.
 var stop_scale := 1.0
 var shake_scale := 1.0
-# Multi-kill groups this run: [size, msec] each time a group reached 2, 4 or 8.
 var multi_log: Array = []
-# The last RUMBLE_LOG_CAP pad rumbles asked for: [fact, weak, strong, seconds, sent]. Tests and
-# the census read it.
 var rumble_log: Array = []
 const RUMBLE_LOG_CAP := 512
 const LOG_CAP := 2048
@@ -180,9 +102,7 @@ var _stops: Array = []
 var _hits: Array = []
 var _kills: Array = []
 var _blasts: Array = []
-# EventKinds.weigh records (plus "at") waiting for the frame's one stop and shake.
 var _weighed: Array = []
-# Instance id -> [staggered, chunks left] at the last posture reading, so only an edge lands.
 var _posture_seen := {}
 var _flush_queued := false
 var _multi_size := 0
@@ -215,20 +135,17 @@ func setup(ctx_ref) -> void:
 	events.player_hit.connect(_on_player_hit)
 	events.shot_fired.connect(_on_shot)
 	events.stage_entered.connect(func(_stage: int, _retry: bool): _reset())
-	# Arena entry and the arena retry restore state without a stage_entered.
 	for signal_name in ["stage_content_cleared", "boss_arena_entered"]:
 		if events.has_signal(signal_name):
 			var argc := SignalWire.arg_count(events, signal_name)
 			events.connect(signal_name, _reset.unbind(argc) if argc > 0 else _reset)
 	events.run_started.connect(func(_class_id: String): _heft_class = 1)
 	_wire_loop_rumble(events)
-	# A shut yard lifts the camera over its rim (chase_camera.gd "locked" row) until it opens.
 	events.world_fact.connect(func(kind: String, at: Vector3):
 		if camera != null and kind == "arena_locked":
 			camera.set_lock(at)
 		elif camera != null and kind == "arena_unlocked":
 			camera.set_lock(null))
-	# A yard also ends on these flow states with no arena_unlocked (stage_locks.gd _on_flow_changed).
 	events.flow_changed.connect(func(state: String):
 		if camera != null and state in ["gates", "launch", "summary", "title", "victory"]:
 			camera.set_lock(null))
@@ -269,8 +186,6 @@ func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
 	rumble("harpoon_bit")
 
 
-# A carve let go: the grind's release in the ears and a tap in the hands, louder for a longer
-# ride. The sparks while it rides are player_fx's; this is the moment it ends.
 func _on_carved(_at: Vector3, seconds: float, speed: float) -> void:
 	var share := clampf(seconds / 1.2, 0.4, 1.0)
 	if audio != null:
@@ -278,7 +193,6 @@ func _on_carved(_at: Vector3, seconds: float, speed: float) -> void:
 	rumble("carved", share)
 
 
-# How far `speed` sits between a collision row's min_speed (0) and full_speed (1).
 static func collision_share(row: Dictionary, speed: float) -> float:
 	return clampf((speed - float(row["min_speed"])) / (float(row["full_speed"]) - float(row["min_speed"])), 0.0, 1.0)
 
@@ -287,9 +201,6 @@ static func _span(pair: Array, share: float) -> float:
 	return lerpf(float(pair[0]), float(pair[1]), share)
 
 
-# The ball hit a wall, cliff or structure side: a thud lower and louder with speed, the shell
-# flattened against the face, the camera kicked into it, dust and chips off the face, and from
-# shake_from up a shake and the pad. Camera, shell and sound only; the ball's bounce is physics'.
 func _on_bumped(at: Vector3, normal: Vector3, speed: float) -> void:
 	var row := EventKinds.juice("bumped")
 	var share := collision_share(row, speed)
@@ -304,8 +215,6 @@ func _on_bumped(at: Vector3, normal: Vector3, speed: float) -> void:
 	rumble("bumped", maxf(share, 0.35))
 
 
-# A thrown enemy stopped by a wall: its thud and dust where it struck, and a small shake when it
-# struck near the ball. The stagger is the enemy's own (enemy.gd _wall_slam).
 func _on_walled(_enemy: Node3D, at: Vector3, normal: Vector3, speed: float) -> void:
 	var row := EventKinds.juice("enemy_walled")
 	var share := collision_share(row, speed)
@@ -317,8 +226,6 @@ func _on_walled(_enemy: Node3D, at: Vector3, normal: Vector3, speed: float) -> v
 		request_shake(float(row["shake"]) * share, 0.15, "enemy_walled")
 
 
-# The ball ran into a park prop (park_props.gd prop_kicked): its knock or clank, higher for a light one
-# thrown, and a puff of dust where it stood. Sound and dust only; the prop's own move is prop_kicks.gd's.
 func on_prop_kicked(at: Vector3, mode: String, speed: float, tags: Array) -> void:
 	var row: Dictionary = EventKinds.juice("prop_kicked")[mode]
 	var share := clampf((speed - 4.0) / 26.0, 0.0, 1.0)
@@ -331,7 +238,6 @@ func on_prop_kicked(at: Vector3, mode: String, speed: float, tags: Array) -> voi
 
 
 func _reset() -> void:
-	# A retry restores mass, so the shell follows the restored class.
 	if ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
 	if camera != null:
@@ -351,8 +257,6 @@ func _reset() -> void:
 	_ghosts.clear()
 
 
-# The pause menu's comfort rows: "shake" scales every camera punch, kick and shake (the
-# camera applies it), "hitstop" every stop and the dodge tick.
 func set_comfort(id: String, level: float) -> void:
 	level = clampf(level, 0.0, 1.0)
 	match id:
@@ -364,9 +268,6 @@ func set_comfort(id: String, level: float) -> void:
 			stop_scale = level
 
 
-# Reduced motion: the camera holds still and the hit-edge flash drops to a quarter; its notch
-# toward the source stays at full strength (edge_flash.gd), so the direction still reads.
-# Telegraph motion is not read here, so it keeps its timing.
 func set_reduced_motion(on: bool) -> void:
 	if camera != null:
 		camera.reduced_motion = on
@@ -378,8 +279,6 @@ func comfort(id: String) -> float:
 	return shake_scale if id == "shake" else stop_scale
 
 
-# --- Squash and stretch -------------------------------------------------------------
-
 func squash(amount: float, axis: Vector3) -> void:
 	_squash = clampf(amount, -MAX_SQUASH, MAX_SQUASH)
 	_squash_velocity = 0.0
@@ -387,7 +286,6 @@ func squash(amount: float, axis: Vector3) -> void:
 		_axis = axis.normalized()
 
 
-# A pop of the shell's spring: positive swells (heft gained), negative shrinks (lost).
 func pulse(amount: float) -> void:
 	var room := clampf(1.0 - signf(amount) * (shell - shell_target()) / SHELL_SWING, 0.0, 1.0)
 	_shell_velocity = clampf(_shell_velocity + amount * room * PULSE_SPEED, -PULSE_MAX * PULSE_SPEED, PULSE_MAX * PULSE_SPEED)
@@ -410,27 +308,21 @@ func _on_slammed(_at: Vector3, strength: float, _flatness: float) -> void:
 	squash(0.3 + 0.2 * minf(strength, 1.0), player.state.contact_normal)
 	rumble("slammed", minf(strength, 1.0))
 	_camera("kick", "slammed", Vector3.DOWN, 0.35 + 0.35 * minf(strength, 1.5))
-	# A zoom-in thump: the world leans toward the impact for a beat.
 	_camera("punch_fov", "slammed", Vector3.ZERO, -4.0 * minf(strength, 1.5), 0.25)
 
 
 func _process(delta: float) -> void:
 	if player == null:
 		return
-	# The springs run on scaled time, so a hit-stop freezes the squash mid-frame too.
 	step_springs(delta)
 	var juice: Node3D = player.juice_node()
 	var basis := _axis_scale(_axis, _squash)
-	# A gentle stretch along the travel line, scaled by speed.
 	var flat: Vector3 = player.planar_velocity()
 	if flat.length() > 1.0:
 		basis = _axis_scale(flat.normalized(), -0.1 * player.speed_fraction()) * basis
 	juice.basis = basis.scaled(Vector3.ONE * shell)
-	# Keep the contact point planted while squashed, and a grown shell resting on the
-	# ground rather than sunk into it.
 	var ground: Vector3 = player.state.contact_normal if player.state.grounded else Vector3.UP
 	juice.position = -_axis * Tuning.RADIUS * clampf(_squash, -0.3, MAX_SQUASH) * 0.9 * shell + ground * Tuning.RADIUS * (shell - 1.0)
-	# The cockpit rides the same offset but never the squash or shell basis.
 	var mount: Node3D = player.pod_mount() if player.has_method("pod_mount") else null
 	if mount != null:
 		mount.position = juice.position
@@ -439,7 +331,6 @@ func _process(delta: float) -> void:
 		vfx.set_chain(audio.kill_streak.length if audio.kill_streak.live(Time.get_ticks_msec()) else 0, audio.kill_streak.rung)
 
 
-# One frame of the squash and shell springs.
 func step_springs(delta: float) -> void:
 	var steps := clampi(ceili(delta / SPRING_STEP), 1, MAX_SPRING_STEPS)
 	var h := delta / float(steps)
@@ -448,13 +339,11 @@ func step_springs(delta: float) -> void:
 		var accel := -SPRING * _squash - DAMPING * _squash_velocity
 		_squash_velocity += accel * h
 		_squash += _squash_velocity * h
-		# The shell: an underdamped spring toward the heft class's size.
 		var shell_accel := SHELL_RATE * SHELL_RATE * (target - shell) - 2.0 * 0.45 * SHELL_RATE * _shell_velocity
 		_shell_velocity += shell_accel * h
 		shell += _shell_velocity * h
 
 
-# Squashes by amount along axis and bulges the other two to keep the volume.
 static func _axis_scale(axis: Vector3, amount: float) -> Basis:
 	var up := axis.normalized()
 	var right := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
@@ -467,8 +356,6 @@ static func _axis_scale(axis: Vector3, amount: float) -> Basis:
 func squash_amount() -> float:
 	return _squash
 
-
-# --- Camera -------------------------------------------------------------------------
 
 func _on_dashed(direction: Vector3) -> void:
 	_camera("punch_fov", "dashed", direction, 7.0, 0.3)
@@ -494,14 +381,9 @@ func _on_dismounted(velocity: Vector3) -> void:
 	squash(-0.25, velocity)
 
 
-# --- Hits ---------------------------------------------------------------------------
-# A strike is collected for the end of the frame, where every hit of the frame lands as
-# one stop, one shake and a handful of bursts.
-
 func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 	var result := {"dealt": force, "punch": force, "full": true, "part": "", "plating": 0.0}
 	if resolve_of.is_valid() and is_instance_valid(enemy):
-		# enemy_struck goes out before the damage, so this is the hit as combat met it.
 		result = resolve_of.call(enemy, kind, force)
 	if not bool(result.get("full", true)):
 		return
@@ -510,11 +392,8 @@ func _on_enemy_struck(enemy: Node3D, kind: String, force: float) -> void:
 		at = enemy.global_position
 	var dealt := float(result.get("dealt", force))
 	var key := str(enemy.get_instance_id()) if is_instance_valid(enemy) else ""
-	# A hit a plate takes whole removes nothing: the plate's pop is its read, and no number rises.
 	var absorbed := bool(result.get("absorbed", false))
 	if kind == "synergy":
-		# A synergy's shockwave is the build's doing, not a landing: no stop, no burst, no
-		# weak-point read. Its figure still shows.
 		if not absorbed:
 			_raise_number(key, dealt, at, kind, false)
 		return
@@ -531,16 +410,12 @@ func _raise_number(key: String, dealt: float, at: Vector3, kind: String, crit: b
 		number_sink.call(key, dealt, at + Vector3.UP * NUMBER_LIFT, DamageNumbers.type_of_kind(kind), "player", crit)
 
 
-# Where the hit met the body: on its skin along the line to the ball, not at its middle.
 func _contact_point(enemy: Node3D, centre: Vector3) -> Vector3:
 	var to_ball: Vector3 = player.shown_position() - centre
 	var reach := minf(float(enemy.get("radius")) if is_instance_valid(enemy) and enemy.get("radius") != null else 0.0, to_ball.length() * 0.5)
 	return centre + to_ball.normalized() * reach
 
 
-# A blast publishes enemy_struck under a gun kind, so the row comes from the record combat
-# holds for the strike being published (last_impact) when it names this enemy, else from
-# the kind.
 func _impact_key(enemy: Node3D, kind: String) -> String:
 	var last = ctx.spawner.get("last_impact") if ctx != null and ctx.spawner != null else null
 	if last is Dictionary and not last.is_empty() and is_instance_valid(enemy) and int(last.get("enemy", 0)) == enemy.get_instance_id():
@@ -548,7 +423,6 @@ func _impact_key(enemy: Node3D, kind: String) -> String:
 	return kind
 
 
-# How hard a ball contact throws, in m/s, the way the ball shoves it; -1 for any other hit.
 func _throw_of(kind: String, force: float) -> float:
 	if not kind in CONTACT_KINDS:
 		return -1.0
@@ -560,7 +434,6 @@ func _throw_of(kind: String, force: float) -> float:
 	return Contact.ram_knock(Augments.RAM_KNOCK, force, heft)
 
 
-# A contact's stop and shake at its throw: 0 at THROW_LO, 1 at the knock ceiling.
 static func throw_share(throw: float) -> float:
 	return clampf((throw - THROW_LO) / (Contact.KNOCK_CEILING - THROW_LO), 0.0, 1.0)
 
@@ -572,7 +445,6 @@ static func throw_stop_ms(throw: float, crit := false) -> float:
 	return minf(ms, SPINE_CAP_MS)
 
 
-# The stop a hit asks for, in ms, before the frame coalesces and the gate spaces it.
 static func stop_ms_for(damage: float, crit := false, heavy := false) -> float:
 	var row := EventKinds.juice("enemy_struck")
 	var ms := clampf(float(row["stop_ms"]) + float(row["stop_per_damage"]) * maxf(damage, 0.0), float(row["stop_min_ms"]), float(row["stop_cap_ms"]))
@@ -589,15 +461,10 @@ func _queue_flush() -> void:
 		flush.call_deferred()
 
 
-# Lands everything the frame collected. Deferred, so the streaks audio bumped this frame
-# are current and every hit of one blast is in; tests call it directly.
 func flush() -> void:
 	_flush_queued = false
-	# A blast's punch grows with the enemies it caught this frame.
 	var caught := _hits.filter(func(h: Dictionary): return h["kind"] == "sticky").size()
 	var b_row := EventKinds.juice("sticky_detonated")
-	# A cloaked charge is a crit (sticky_detonated says so), though its damage was
-	# multiplied before combat resolved it.
 	if _blasts.any(func(b: Array): return b[1]):
 		for hit in _hits:
 			if hit["kind"] == "sticky":
@@ -611,15 +478,12 @@ func flush() -> void:
 	var shake := maxf(float(landed["shake"]), float(struck["shake"]))
 	if camera != null and shake > 0.0:
 		request_shake(shake, 0.3 if float(landed["shake"]) > float(struck["shake"]) else 0.2, String(landed["fact"]) if float(landed["shake"]) > float(struck["shake"]) else "enemy_struck")
-	# One stop for the frame: the hits' or the weighed fact's, whichever asks more.
 	var stop := maxf(float(landed["stop"]), float(struck["stop"]))
 	if stop > 0.0:
 		request_hit_stop(stop / 1000.0, String(landed["fact"]) if float(landed["stop"]) > float(struck["stop"]) else "enemy_struck")
 	_flush_kills()
 
 
-# The frame's weighed facts: their camera kick and zoom now, their stop and shake for flush() to merge
-# with the hits'. Returns the largest {stop (ms), shake, fact}.
 func _flush_weighed() -> Dictionary:
 	var out := {"stop": 0.0, "shake": 0.0, "fact": ""}
 	var kick := 0.0
@@ -658,8 +522,6 @@ func _flush_weighed() -> Dictionary:
 	return out
 
 
-# The frame's hits: bursts, numbers, the crit ping and the heavy thump now; returns the stop (ms) and
-# shake they ask for, which flush() lands with the weighed facts'.
 func _flush_hits() -> Dictionary:
 	if _hits.is_empty():
 		return {"stop": 0.0, "shake": 0.0}
@@ -699,8 +561,6 @@ func _flush_hits() -> Dictionary:
 	return {"stop": stop, "shake": shake}
 
 
-# The ram's weight: the camera kicked along the ball's travel, dust at the contact and
-# the shell squashed into the hit. Camera and shell only; the ball keeps its speed.
 func _thump(at: Vector3, kick: float, dust: int, fact: String) -> void:
 	var travel: Vector3 = player.planar_velocity()
 	var along: Vector3 = travel.normalized() if travel.length() > 0.5 else (at - player.shown_position()).normalized()
@@ -710,7 +570,6 @@ func _thump(at: Vector3, kick: float, dust: int, fact: String) -> void:
 		vfx.burst("dust", at - Vector3.UP * 0.5, EventKinds.color("landed"), dust)
 
 
-# The bowling-ball rebound: the heavy thump, whatever the strike did.
 func _on_rebounded(enemy: Node3D, _speed: float) -> void:
 	var row := EventKinds.juice("enemy_rebounded")
 	var at: Vector3 = enemy.global_position if is_instance_valid(enemy) and enemy.is_inside_tree() else player.shown_position()
@@ -719,17 +578,12 @@ func _on_rebounded(enemy: Node3D, _speed: float) -> void:
 		request_shake(float(row["shake"]), 0.2, "enemy_rebounded")
 
 
-# A weak point cracked: a crit's stop and a small kick.
 func _on_weak_point(_point_id: String) -> void:
 	_camera("kick", "boss_weak_point_hit", Vector3.DOWN, 0.25)
 	rumble("boss_weak_point_hit")
 	request_hit_stop(stop_ms_for(30.0, true) / 1000.0, "boss_weak_point_hit")
 
 
-# The Warden's posture (posture_changed carries every reading): only an edge lands, through
-# EventKinds.weigh. The reading that opens a stagger is massive, the one that breaks the last chunk
-# is the posture_break sub-fact (massive), and a chunk shattered short of either is heavy by the
-# share of the bar it took. A reading with no edge lands nothing.
 func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
 	if not is_instance_valid(enemy):
 		return
@@ -747,13 +601,10 @@ func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
 		weigh("posture_changed", {"chunks_lost": lost}, at)
 
 
-# A boss felled: the climax row, the biggest stop and shake the spine allows.
 func _on_boss_defeated() -> void:
 	weigh("boss_defeated", {}, player.shown_position() if player != null else Vector3.ZERO)
 
 
-# A heft destructible broke at `at` (destructibles.gd): its tier's SHATTER_WEIGHT class. Tiers 1 and 2
-# ask for nothing, so light clutter never hitches a run.
 func on_piece_shattered(tier: int, at: Vector3) -> void:
 	var record := shatter_weight(tier)
 	if record.is_empty():
@@ -763,7 +614,6 @@ func on_piece_shattered(tier: int, at: Vector3) -> void:
 	_queue_flush()
 
 
-# The weight record for a tier's break, in EventKinds.weigh's shape, or {} for a tier that lands none.
 static func shatter_weight(tier: int) -> Dictionary:
 	if not SHATTER_WEIGHT.has(tier):
 		return {}
@@ -774,8 +624,6 @@ static func shatter_weight(tier: int) -> Dictionary:
 		"kick": float(profile["kick"]), "punch_fov": float(profile["punch_fov"])}
 
 
-# Lands a WEIGHTED fact with the frame's other hits: its record from EventKinds.weigh, its stop and
-# shake merged into the frame's one stop in flush().
 func weigh(fact: String, args: Dictionary, at: Vector3) -> Dictionary:
 	var record := EventKinds.weigh(fact, args)
 	record["at"] = at
@@ -788,11 +636,8 @@ func _on_unsealed(_stage: int) -> void:
 	var row := EventKinds.juice("beacon_unsealed")
 	_camera("punch_fov", "beacon_unsealed", Vector3.ZERO, float(row["punch_fov"]), 0.6)
 	rumble("beacon_unsealed")
-	# A beacon is not a strike: the ask is logged at zero and never sent (STRIKE_STOP_FACTS).
 	request_hit_stop(0.0, "beacon_unsealed")
 
-
-# --- Kills --------------------------------------------------------------------------
 
 func _on_killed(_kind: String, at: Vector3, _value: int) -> void:
 	_kills.append(at)
@@ -811,7 +656,6 @@ func _flush_kills() -> void:
 	_multi_size = before + _kills.size()
 	_multi_last = now
 	_kills.clear()
-	# One ram or blast that takes several: an extra beat at 2, 4 and 8.
 	for mark in [2, 4, 8]:
 		if before < mark and _multi_size >= mark:
 			_log_push(multi_log, [mark, now])
@@ -819,15 +663,11 @@ func _flush_kills() -> void:
 			rumble("multi_kill", minf(0.5 + mark / 8.0, 1.0))
 			_camera("punch_fov", "multi_kill", Vector3.ZERO, -2.0 - mark * 0.5, 0.3)
 			if audio != null:
-				# A second, louder pop: percussion has no ladder (SOUND-BIBLE rule 7).
 				audio.play("enemy_killed", 2.0, 1.0, "SFX", "kill_pop")
 			if vfx != null:
 				vfx.glyph("enemy_killed", player.shown_position(), 1.0, 3.0 + mark, 0.35, Vector3.UP, "ring")
 
 
-# --- Pickups ------------------------------------------------------------------------
-
-# Each piece swells the shell a little, more as the streak climbs.
 func _on_scrap(_amount: int, _at: Vector3, _total: int) -> void:
 	var row := EventKinds.juice("scrap_collected")
 	var rung: int = audio.scrap_streak.rung if audio != null else 0
@@ -839,8 +679,6 @@ func _on_scrap_lost(_amount: int, _at: Vector3, _total: int, _cause: String) -> 
 	squash(0.3, Vector3.UP)
 
 
-# A part: a fountain in its element's colour (else its rarity's) off the ball, so what it
-# will do flares before you read its name.
 func _on_part(part_id: String, _source: String) -> void:
 	if vfx == null:
 		return
@@ -849,8 +687,6 @@ func _on_part(part_id: String, _source: String) -> void:
 	pulse(0.12)
 
 
-# The pickup fountain's colour: the element's when the part has one, else the rung's, and a
-# common part flashes sandstone, not its mint rung colour, because mint flashes mean live.
 static func part_tint(part_id: String) -> Color:
 	var def: Resource = Parts.def(part_id)
 	if def == null:
@@ -865,7 +701,6 @@ func _on_core(_source: String, at: Vector3, _count: int) -> void:
 		vfx.burst("fountain", at + Vector3.UP * 0.6, EventKinds.color("core_gained"), int(EventKinds.juice("core_gained")["fountain"]))
 
 
-# A quick Warden break's extra arch: an amber fountain from its crossbar and a pulse of the shell.
 func _on_quick_break(_stage: int, _seconds: float, at: Vector3) -> void:
 	pulse(0.12)
 	if vfx != null:
@@ -873,12 +708,8 @@ func _on_quick_break(_stage: int, _seconds: float, at: Vector3) -> void:
 		vfx.burst("fountain", at + Vector3.UP * float(row["rise"]), EventKinds.color("quick_break"), int(row["fountain"]))
 
 
-# --- Dodges and hits taken ------------------------------------------------------------
-
-# The dodge: a short slow-mo tick, a zoom-in and the chevron over the ball.
 func _on_near_miss(_kind: String, at: Vector3) -> void:
 	var row := EventKinds.juice("near_miss")
-	# A dodge keeps the ball's momentum: the ask is logged at zero and never sent (STRIKE_STOP_FACTS).
 	request_hit_stop(0.0, "near_miss")
 	_camera("punch_fov", "near_miss", Vector3.ZERO, float(row["punch_fov"]), 0.25)
 	rumble("near_miss")
@@ -888,13 +719,11 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 		vfx.glyph("near_miss", at, 1.0, 4.0, 0.3, Vector3.UP, "ring", Color(0, 0, 0, 0), "P2")
 
 
-# A hit taken: the screen edge toward the source flashes and the shell winces. Never a camera shake: it would hide whether the hit was dodged.
 func _on_player_hit(amount: float, source: String) -> void:
 	var row := EventKinds.juice("player_hit")
 	_log_push(hook_log, ["edge_flash", "player_hit"])
 	squash(float(row["squash"]), Vector3.ZERO)
 	rumble("player_hit", clampf(0.5 + amount / 30.0, 0.5, 1.0))
-	# The number and the flash keep the player_hit juice row's HAZARD for either source.
 	var team := DamageNumbers.team_of_source(source)
 	if number_sink.is_valid():
 		number_sink.call("player", amount, player.shown_position() + Vector3.UP * 1.4, "kinetic", team, false)
@@ -907,8 +736,6 @@ func _on_player_hit(amount: float, source: String) -> void:
 	vfx.edge_flash(_screen_direction(from), DamageNumbers.effect_colour("kinetic", team), float(row["edge_alpha"]) * clampf(0.6 + amount / 25.0, 0.6, 1.0), float(row["edge_s"]))
 
 
-# Where a world point sits from the screen's centre, as a unit 2D direction (x right, y
-# down); zero when unknown, which flashes every edge.
 func _screen_direction(from) -> Vector2:
 	if from == null or camera == null or camera.cam == null:
 		return Vector2.ZERO
@@ -916,8 +743,6 @@ func _screen_direction(from) -> Vector2:
 	var flat := Vector2(local.x, -local.y if local.z < 0.0 else local.z)
 	return flat.normalized() if flat.length() > 0.01 else Vector2.ZERO
 
-
-# --- Your own shots, throws and blasts ------------------------------------------------
 
 func _on_shot(weapon_id: String, from: Vector3, to: Vector3) -> void:
 	var row := EventKinds.juice("shot_fired")
@@ -928,7 +753,6 @@ func _on_shot(weapon_id: String, from: Vector3, to: Vector3) -> void:
 	aim = aim.normalized()
 	if float(feel.get("kick", 0.0)) > 0.0:
 		_camera("kick", "shot_fired", -aim, float(feel["kick"]))
-	# Recoil never cuts a bigger squash short, so rapid fire cannot flatten a landing.
 	if float(feel.get("recoil", 0.0)) > absf(_squash):
 		squash(float(feel["recoil"]), aim)
 	if weapon_id == "sticky_charge" and audio != null:
@@ -956,8 +780,6 @@ func _on_detonated(at: Vector3, crit: bool) -> void:
 		vfx.glyph("sticky_detonated", at + Vector3.UP * 0.2, 1.0, 9.0, 0.4, Vector3.UP, "ring")
 		vfx.burst("debris", at + Vector3.UP * 0.4, color, int(row["debris"]))
 		vfx.burst("dust", at, EventKinds.color("landed"), int(row["dust"]))
-	# A blast beside you rocks the camera and the shell away from it; the ball's velocity
-	# is the rocket jump's business alone.
 	var away: Vector3 = player.shown_position() - at
 	if away.length() < float(row["near_m"]):
 		var dir := away.normalized() if away.length() > 0.1 else Vector3.UP
@@ -972,7 +794,6 @@ func _on_rocket_jumped(_at: Vector3, _speed: float) -> void:
 	squash(-float(row["squash"]), Vector3.UP)
 
 
-# A new heft class: the ball pops and the panels slam in (the outline does not grow).
 func _on_heft_class(heft_class: int, _heft: float) -> void:
 	if heft_class > _heft_class:
 		squash(0.32, Vector3.UP)
@@ -1002,10 +823,6 @@ func _camera(hook: String, fact: String, direction: Vector3, amount: float, time
 			camera.kick(direction, amount)
 
 
-# The one way presentation asks the pad to rumble: the fact's RUMBLE row at `share` of its
-# strength, scaled by the Screen shake comfort row, sent to every connected pad. A request no
-# stronger than the one still running is logged unsent. Outside play (a menu, a pause) it is
-# logged unsent too. With no pad connected it only logs.
 func rumble(fact: String, share := 1.0) -> void:
 	var row: Dictionary = RUMBLE.get(fact, {})
 	if row.is_empty():
@@ -1014,7 +831,6 @@ func rumble(fact: String, share := 1.0) -> void:
 	var weak := float(row["weak"]) * scale
 	var strong := float(row["strong"]) * scale
 	var seconds := float(row["ms"]) / 1000.0
-	# The motors run on real time, so a hit-stop must not stretch the running window.
 	var now := Time.get_ticks_msec()
 	var running := now < _rumble_until
 	if rumble_log.size() >= RUMBLE_LOG_CAP:
@@ -1032,12 +848,10 @@ func rumble(fact: String, share := 1.0) -> void:
 		Input.start_joy_vibration(device, weak, strong, seconds)
 
 
-# The fact whose rumble is still running, or "".
 func rumbling() -> String:
 	return _rumble_fact if Time.get_ticks_msec() < _rumble_until else ""
 
 
-# Stops the pad when `fact` is the rumble still running.
 func _stop_rumble(fact: String) -> void:
 	if _rumble_fact != fact or Time.get_ticks_msec() >= _rumble_until:
 		return
@@ -1049,7 +863,6 @@ func _stop_rumble(fact: String) -> void:
 		Input.stop_joy_vibration(device)
 
 
-# The loops' pad facts (Heat on the shell, Called Shot), through the same rows as every other.
 func _wire_loop_rumble(events) -> void:
 	var redline = player.get("redline")
 	if redline != null:
@@ -1057,7 +870,6 @@ func _wire_loop_rumble(events) -> void:
 		redline.redlined.connect(func(): rumble("heat_redline"))
 		redline.detonated.connect(func(_at: Vector3, _force: float): rumble("heat_blast"))
 		redline.cooked_off.connect(func(_at: Vector3, _force: float): rumble("heat_blast"))
-		# The redline buzz ends with redline: a stage change or a death cools the shell without a blast.
 		redline.changed.connect(func(_value: float, band: int):
 			if band < 3:
 				_stop_rumble("heat_redline"))
@@ -1066,17 +878,12 @@ func _wire_loop_rumble(events) -> void:
 			rumble(kind))
 
 
-# The one way presentation asks the camera to shake, so every shake shares SHAKE_CAP. The
-# camera scales the capped amount by the viewer's Screen shake row.
 func request_shake(amount: float, time: float, _fact: String) -> void:
 	if camera == null:
 		return
 	camera.shake(minf(amount, SHAKE_CAP), time)
 
 
-# The one way presentation asks for a freeze, so every stop shares one budget. Gated by
-# the spacing and the short and long budgets, and
-# scaled by the viewer's Hit-stop setting; a stop over the budget is trimmed to fit.
 func request_hit_stop(seconds: float, fact: String) -> void:
 	var now := SimClock.msec()
 	if not STRIKE_STOP_FACTS.has(fact):
@@ -1103,14 +910,9 @@ func request_hit_stop(seconds: float, fact: String) -> void:
 		hit_stop_sink.call(sent / 1000.0)
 
 
-# Forgets the stops already spent, for a test that measures from a clean slate.
 func reset_stops() -> void:
 	_stops.clear()
 
-
-# --- The pylon ------------------------------------------------------------------------
-# The spine draws the pylon and places it every frame; presentation animates its two
-# parts: the post drives into the face with an overshoot and the plate flashes out.
 
 func _on_mounted(_at: Vector3, banked_speed: float) -> void:
 	_plant_t = 0.0
@@ -1151,7 +953,6 @@ func _animate_pylon(delta: float) -> void:
 		return
 	_plant_t += delta
 	var t := clampf(_plant_t / 0.16, 0.0, 1.0)
-	# Out of the face with a 12% overshoot, then home.
 	var drive := 1.0 + 0.12 * sin(t * PI) if t > 0.45 else lerpf(0.15, 1.12, t / 0.45)
 	if parts.has("post"):
 		var post: Dictionary = parts["post"]
@@ -1172,8 +973,6 @@ func _restore_pylon() -> void:
 		(part["node"] as Node3D).transform = part["rest"]
 
 
-# The eject: the spine hides the pylon the moment you leave it, so a ghost of the post
-# snaps back into the face behind you.
 func _eject_ghost() -> void:
 	var parts := _pylon()
 	_plant_t = -1.0

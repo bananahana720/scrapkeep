@@ -1,68 +1,41 @@
 extends Node3D
 
-# SPIL-9's body in the world: the assembled chassis-plus-two-modules model, hovering beside
-# the ball and following it. Visual only: no collision, no damage, no timers of its own.
-# It reads the seated pieces from run.companion and plays each module's beat from state
-# combat already commits (primed, prow_staggered, spring_armed); it never decides any of it.
-# The escape piece wears a lamp read from combat.escape_phase(): lit while ready, a flare (vent)
-# or a rail flick (rail) for the act's seconds with the escape_acted chirp, dimmed once spent.
-# A missing model leaves a plain hull box so the companion is still seen, and warns once.
-# SR7: every beat goes through cue(), which plays the clip and asks audio.chirp() for the
-# sound from one Companion.CUES row, and state() reports the cue shown. With no leader (the
-# run not alive) Companion.leash_step stalls it at the leader's last live spot; a respawn
-# or a long stretch past the leash recalls it beside the ball.
-# COMPANION-GROWS: the bare chassis shows once the run has a companion, one seated piece
-# bolts onto its socket, and two show the assembled pair. Each heft class adds a mark (scale
-# and greybox add-on parts from Companion.MARKS), the halo shows the assist gauge, and a
-# called assist shows its ink word beside the hit. The add-ons and the word are greybox
-# stand-ins for the effects and rig threads' art.
-
 const Companion := preload("res://src/core/companion.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
-# One GLB per ordered socket pair, named <socket 0>__<socket 1> in table order.
 const MODEL_DIR := "res://assets/models/companion/assembled/"
 const PART_DIR := "res://assets/models/companion/"
 const BARE := "bare"
 const CHASSIS_PATH := "res://assets/models/companion/spil9.glb"
-# The rig thread's grown-mark parts (PR #44, registry row spil9_marks): one Hull root whose
-# children are one mesh per mark. Without it the body builds greybox stand-ins.
 const MARKS_PATH := "res://assets/models/companion/spil9_marks.glb"
 const MARK_PARTS := ["Mk1Halo", "Mk2Fins", "Mk3Halo", "Mk4Exhaust", "Mk5CoreCrest"]
-# Socket.01 in the chassis rig, used when the skeleton has no socket bone to follow.
 const SOCKET_AT := Vector3(-0.29, 0.225, 0.0)
 const HALO_LIFT := 0.62
 const HALO_RADIUS := 0.36
 const HALO_ENERGY := {"empty": 0.15, "full": 3.0}
 const WORD_LIFE := 0.7
 const WORD_SIZE := 0.012
-# Root height: the belly floats 0.30 m over the floor and the hull is 0.21 m deep below it.
 const HULL_LIFT := 0.51
 const SIDE := 2.0
 const BEHIND := 0.8
 const FOLLOW_RATE := 8.0
 const TURN_RATE := 6.0
 const MOVING_SPEED := 1.0
-# Presentation only: stop below this so idle and follow do not flicker around MOVING_SPEED.
 const STOPPED_SPEED := 0.6
-# Seconds of crossfade into idle/follow and into a one-shot beat; the clip name switches at once.
 const LOOP_BLEND := 0.2
 const BEAT_BLEND := 0.12
-# The escape lamp: radius, height over the hull root, emission per cue, and each act's shape.
 const LAMP_RADIUS := 0.09
 const LAMP_LIFT := 0.48
 const LAMP_ENERGY := {"ready": 1.0, "flare": 4.0, "flick": 3.0, "spent": 0.12}
 const LAMP_SCALE := {"ready": Vector3.ONE, "flare": Vector3.ONE * 1.8, "flick": Vector3(0.6, 0.6, 3.5), "spent": Vector3.ONE}
 const ESCAPE_CUES := {"shove": "flare", "lane": "flick"}
-# Renderer updates can outlive a retired mesh during a socket swap.
 static var _painted_materials := {}
 static var _warned_empty_mesh := false
 
 var ctx
 var model_dir := MODEL_DIR
-# Combat's read-only state; tests may stand a fake in.
 var combat
 
 var _key := ""
@@ -85,12 +58,10 @@ var _state := "idle"
 var _mark := 0
 var _grown := 1.0
 var _kit: Node3D
-# The mounted spil9_marks parts by name, empty when the GLB or the Hull bone is missing.
 var _mark_parts := {}
 var _halo: MeshInstance3D
 var _words: Array = []
 var _wired := false
-# Assists this body has shown, for tests and the power read.
 var assists_shown := 0
 
 
@@ -102,15 +73,12 @@ func setup(ctx_ref) -> void:
 	combat = ctx.get("spawner")
 
 
-# The model path for a socket pair, "" when the pair is not two ids.
 static func model_path(sockets: Array, dir := MODEL_DIR) -> String:
 	if sockets.size() != Companion.SOCKETS:
 		return ""
 	return dir + "%s__%s.glb" % [sockets[0], sockets[1]]
 
 
-# Imported enamel is white without COLOR. Keep private overrides so a tableau never
-# repaints the cached GLB or a live companion's equipped cosmetic.
 static func dress_model(model: Node) -> void:
 	for mesh in model.find_children("*", "MeshInstance3D", true, false):
 		if mesh.mesh == null:
@@ -129,7 +97,6 @@ static func dress_model(model: Node) -> void:
 			mesh.set_surface_override_material(surface, _painted_materials[original])
 
 
-# The key the body is built for: "" (no companion), "bare", one piece id, or the pair.
 static func key_of(sockets: Array, has_companion := true) -> String:
 	if not has_companion:
 		return ""
@@ -138,8 +105,6 @@ static func key_of(sockets: Array, has_companion := true) -> String:
 	return "__".join(sockets)
 
 
-# Capture hook (tools/asset_capture.gd --call): seats two owned pieces into the run's
-# companion so a staged run shows the body. Returns "" or the refusal reason.
 func seat_for_capture(a: String, b: String) -> String:
 	var model := Companion.new()
 	model.acquire(a)
@@ -199,13 +164,11 @@ func _process(delta: float) -> void:
 	_beats()
 
 
-# The leader is the ball while the run is alive; a dead or finished run leaves none.
 func _leader_alive() -> bool:
 	var run = ctx.get("run")
 	return run == null or not run.has_method("alive") or run.alive()
 
 
-# Stalled: hover beside the leader's last live spot and wait there, idle.
 func _hold(delta: float, safe: Vector3) -> void:
 	var target := safe + _heading.cross(Vector3.UP).normalized() * SIDE * _grown
 	target.y = safe.y - Tuning.RADIUS + HULL_LIFT
@@ -220,14 +183,10 @@ func _hold(delta: float, safe: Vector3) -> void:
 		_play("idle")
 
 
-# The cue the body shows now: a CUES key while its beat is the latest, else idle, follow
-# or stalled.
 func state() -> String:
 	return _state
 
 
-# The one place a companion cue is shown: the clip and the chirp both read
-# Companion.CUES[event], so the gesture, the sound and the motif cannot disagree.
 func cue(event: String) -> void:
 	var row: Dictionary = Companion.CUES.get(event, {})
 	if row.is_empty():
@@ -301,8 +260,6 @@ func _fallback() -> Node3D:
 	return hull
 
 
-# One seated piece bolts onto Socket.01: a bone attachment when the chassis skeleton has the
-# bone, else the socket's rest position.
 func _seat_part(chassis: Node3D, id: String) -> void:
 	var path := PART_DIR + id + ".glb"
 	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
@@ -328,8 +285,6 @@ func _seat_part(chassis: Node3D, id: String) -> void:
 		chassis.add_child(part)
 
 
-# The halo is the assist gauge: dim while it fills, bright and blinking when full. With the
-# real marks mounted, Mk1Halo is the gauge.
 func _add_halo(host: Node3D) -> void:
 	_mark_parts = _mount_marks(host)
 	_kit = Node3D.new()
@@ -360,8 +315,6 @@ func _halo_material() -> StandardMaterial3D:
 	return mat
 
 
-# Seats spil9_marks on the chassis Hull bone; returns its parts by name, all hidden until
-# _grow shows them. Empty when the GLB or the bone is missing.
 func _mount_marks(host: Node3D) -> Dictionary:
 	if not ResourceLoader.exists(MARKS_PATH):
 		return {}
@@ -394,7 +347,6 @@ func _mount_marks(host: Node3D) -> Dictionary:
 	return parts
 
 
-# The mark follows the run's heft class: scale, then the add-on parts, rebuilt on a change.
 func _grow() -> void:
 	var run = ctx.get("run")
 	var heft: int = run.heft_class() if run != null and run.has_method("heft_class") else 1
@@ -407,8 +359,6 @@ func _grow() -> void:
 	if _halo != null:
 		var fill: float = combat.assist_fill() if combat != null and combat.has_method("assist_fill") else 0.0
 		var mat := _halo.material_override as StandardMaterial3D
-		# The full halo's 2 Hz blink is under FlashGuard's cap; reduce flashes stops it anyway and
-		# holds the full glow, since the fill level already says "full".
 		var blink := not FlashGuard.on and fill >= 1.0 and fmod(Time.get_ticks_msec() / 1000.0, 0.5) < 0.25
 		mat.emission_energy_multiplier = lerpf(HALO_ENERGY["empty"], HALO_ENERGY["full"], fill) * (1.6 if blink else 1.0)
 
@@ -473,7 +423,6 @@ func _build_kit(adds: Array) -> void:
 				_kit_part("Crest", PrismMesh.new(), grey, Vector3(0.0, 0.62, -0.05), Vector3(0.06, 0.4, 0.3), Vector3.ZERO)
 
 
-# Real marks: Mk1Halo always, then each mark's part up to the current one.
 func _show_marks() -> void:
 	for i in MARK_PARTS.size():
 		var part = _mark_parts.get(MARK_PARTS[i])
@@ -501,8 +450,6 @@ func _wire() -> void:
 	combat.companion_assist_full.connect(func(): cue("assist_full"))
 
 
-# A called assist: its cue (clip and chirp) and its ink word beside the hit, drawn with depth
-# so it never covers a telegraph (tone bible guardrails; BIBLE.md:795).
 func _on_assisted(assist: Dictionary) -> void:
 	cue(String(assist.get("cue", "")))
 	if _anim != null and _anim.current_animation == "assist_rise":
@@ -561,7 +508,6 @@ func words_shown() -> Array:
 	return out
 
 
-# The lamp rides the model (or the plain hull) so the body keeps one child.
 func _add_lamp(host: Node3D, key: String) -> void:
 	if not key.contains("escape_"):
 		return
@@ -579,7 +525,6 @@ func _add_lamp(host: Node3D, key: String) -> void:
 	_light("ready")
 
 
-# The cue the escape lamp shows: none, ready, flare, flick or spent.
 func escape_cue() -> String:
 	return _escape_cue
 
@@ -649,7 +594,6 @@ func _play(clip: String) -> void:
 	_anim.play(clip, LOOP_BLEND)
 
 
-# A one-shot beat; the next frame's idle or follow resumes when it ends.
 func _beat(clip: String) -> void:
 	if _anim == null or not _anim.has_animation(clip):
 		return

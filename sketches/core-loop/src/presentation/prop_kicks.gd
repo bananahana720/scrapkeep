@@ -1,26 +1,10 @@
 extends RefCounted
 
-# The ball meets the park's dressing (thread "Make collisions feel physical", 13 Nov 2026). A park
-# prop has no body (park_props.gd: nothing there collides or moves a run), so without this the ball
-# rolled through barrels, drums and scrub as if they were not there. Now a ball that runs into a
-# prop at KICK_SPEED or more moves it, presentation only, by the prop's build:
-#   fly    a light prop (FLY_HEIGHT_M or lower) is thrown ahead of the ball, tumbles, bounces and
-#          comes to rest on its side where it lands
-#   shove  a heavier one slides a little along the push and rocks on its base
-#   bend   a plant or a soft thing (tags "plant", "soft") bends away and springs back
-# Heroes and tall props stand: they are landmarks. Each prop's drawn copies (its LOD batches, its
-# litter batch) take the same transform, so the near and middle views agree; the far merge keeps
-# the old spot, beyond PROP_RANGES[1]. The run never reads any of this: the ball keeps its speed.
-#
-# index() reads the stage's batches once; step() runs the moves and returns the kicks this frame,
-# [{at, mode, speed, tags}] for sound and dust.
-
 const KICK_SPEED := 4.0
 const FLY_HEIGHT_M := 1.8
 const GRAVITY := 26.0
 const CELL_M := 6.0
 const LIVE_CAP := 24
-# A fly throw: the share of the ball's speed it takes, the lift, the bounce and the rest it ends in.
 const FLY_CARRY := 0.75
 const FLY_LIFT := 3.0
 const FLY_LIFT_PER_SPEED := 0.22
@@ -28,7 +12,6 @@ const FLY_BOUNCE := 0.3
 const FLY_SKID := 0.55
 const FLY_REST_SPEED := 1.2
 const FLY_MAX_S := 3.0
-# A shove: how far it slides per m/s of the ball, and the rock it settles from.
 const SHOVE_PER_SPEED := 0.07
 const SHOVE_MAX_M := 1.4
 const SHOVE_S := 1.1
@@ -60,7 +43,6 @@ static func mode_of(inst: Dictionary) -> String:
 	return "fly" if float(inst["height"]) <= FLY_HEIGHT_M else "shove"
 
 
-# A prop's drawn transform, as park_props.gd _transform places it.
 static func place_of(inst: Dictionary) -> Transform3D:
 	return Transform3D((inst["basis"] as Basis).scaled_local(Vector3.ONE * float(inst["scale"])), inst["pos"])
 
@@ -73,8 +55,6 @@ static func _cell(x: float, z: float) -> Vector2i:
 	return Vector2i(floori(x / CELL_M), floori(z / CELL_M))
 
 
-# instances: the stage's instance list; eligible: Callable(inst) -> bool; views: the stage's batches, each carrying
-# meta "dress_members" (park_props.gd _batch: instance i of the batch is members[i]).
 func index(instances: Array, eligible: Callable, views: Array) -> void:
 	clear()
 	var by_key := {}
@@ -105,8 +85,6 @@ func index(instances: Array, eligible: Callable, views: Array) -> void:
 	indexed = true
 
 
-# One frame: starts the kicks the ball makes at `ball_at` moving `velocity` (radius `radius`), runs
-# every live move on `height` (x, z) -> ground y, and returns this frame's kicks.
 func step(delta: float, ball_at: Vector3, velocity: Vector3, radius: float, height: Callable) -> Array:
 	var out := []
 	var flat := Vector3(velocity.x, 0.0, velocity.z)
@@ -152,7 +130,6 @@ func _start(id: int, flat: Vector3, speed: float) -> void:
 	_live[id] = move
 
 
-# Advances one move; true once it has come to rest (its last transform is the prop's new base).
 func _run(id: int, delta: float, height: Callable) -> bool:
 	var prop: Dictionary = _props[id]
 	var move: Dictionary = _live[id]
@@ -178,7 +155,6 @@ func _run(id: int, delta: float, height: Callable) -> bool:
 					done = true
 			move["angle"] = float(move["angle"]) + float(move["spin"]) * delta
 			if done or t >= FLY_MAX_S:
-				# At rest it lies on its side, turned the way its tumble left it.
 				var side := PI * 0.5 * (1.0 if fposmod(float(move["angle"]), TAU) < PI else -1.0)
 				xf = Transform3D(Basis(axis, side) * from.basis, Vector3(p.x, ground + lie, p.z))
 				done = true
@@ -212,7 +188,6 @@ func _place(id: int, xf: Transform3D) -> void:
 		(slot[0] as MultiMesh).set_instance_transform(int(slot[1]), xf)
 
 
-# A prop at rest stays where it came to rest and can be kicked again from there.
 func _settle(id: int, xf: Transform3D) -> void:
 	var prop: Dictionary = _props[id]
 	var old: Vector3 = prop["base"].origin
@@ -226,7 +201,6 @@ func _settle(id: int, xf: Transform3D) -> void:
 		_grid[now].append(id)
 
 
-# The current transform of every indexed prop, for tests.
 func base_of(id: int) -> Transform3D:
 	return _props[id]["base"]
 

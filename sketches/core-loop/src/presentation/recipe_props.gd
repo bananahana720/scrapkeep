@@ -2,13 +2,6 @@ extends RefCounted
 
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
-# One row per picture-driven recipe object; this table is the single source for its GLBs and fade ranges.
-# Row shape: key -> {"base": [glb_path, ...], "shells": [[glb_path, visibility_range_end, visibility_range_end_margin], ...]}.
-# base: the object's base GLBs, placed by base() with shadows and no fade. shells: its detail shells, placed by shells()
-# and faded out by range end and margin, metres, proven on the render rig under the no-pop rule
-# (tools/w12_recipe_cart_side.gd LAYER_RANGE). An object authored in two frames (the valve's wheel and foot) is two rows,
-# one per frame. The game camera differs from the rig camera, so this is the one place to retune a range.
-# Set on every shell; GraphicsPreset leaves a view with this meta at its row's range.
 const META_FADE := "recipe_fade"
 const ROWS := {
 	"ore_cart": {"base": ["res://assets/models/ore_cart_body.glb", "res://assets/models/ore_cart_wheel.glb"], "shells": [["res://assets/models/ore_cart_detail1.glb", 40.0, 4.0], ["res://assets/models/ore_cart_detail2.glb", 15.0, 3.0]]},
@@ -24,7 +17,6 @@ const ROWS := {
 }
 
 
-# The one slot lookup: a shared slot resource by role name, null and an error for a name that is no resource slot.
 static func slot_material(slot_name: String) -> Material:
 	if not is_slot_role(slot_name):
 		push_error("recipe_props: '%s' is not a material slot role" % slot_name)
@@ -44,9 +36,6 @@ static func base_paths(key: String) -> Array:
 	return ROWS.get(key, {}).get("base", [])
 
 
-# One MeshInstance3D per mesh node of each base GLB under parent at xform, named "<key>_<node>", each surface in the
-# slot named by its GLB material. Base views cast the shape's shadow and never fade. Steel views take the state tint
-# (steel_views). A base GLB that cannot load is skipped with a warning.
 static func base(key: String, parent: Node3D, xform: Transform3D) -> Array[GeometryInstance3D]:
 	var out: Array[GeometryInstance3D] = []
 	for path: String in base_paths(key):
@@ -56,8 +45,6 @@ static func base(key: String, parent: Node3D, xform: Transform3D) -> Array[Geome
 	return out
 
 
-# One MeshInstance3D per shell under parent at xform, each surface in the slot named by its GLB material, faded out
-# by the row's range end and margin. Shells cast no shadow: the base mesh already casts the shape. A shell that cannot load is skipped with a warning.
 static func shells(key: String, parent: Node3D, xform: Transform3D) -> Array[GeometryInstance3D]:
 	var out: Array[GeometryInstance3D] = []
 	for shell: Array in shell_rows(key):
@@ -71,7 +58,6 @@ static func shells(key: String, parent: Node3D, xform: Transform3D) -> Array[Geo
 	return out
 
 
-# The views among these that wear the steel slot on any surface; a caller sets state_tint on them.
 static func steel_views(views: Array[GeometryInstance3D]) -> Array[GeometryInstance3D]:
 	var steel := slot_material("steel")
 	var out: Array[GeometryInstance3D] = []
@@ -84,8 +70,6 @@ static func steel_views(views: Array[GeometryInstance3D]) -> Array[GeometryInsta
 	return out
 
 
-# The per-surface slot loop shared by base() and shells(): one view per mesh node of the GLB at path, every surface
-# mapped through slot_material by its GLB material resource_name, placed at xform times the node's transform in the GLB.
 static func _place(path: String, parent: Node3D, xform: Transform3D, prefix: String) -> Array[MeshInstance3D]:
 	var out: Array[MeshInstance3D] = []
 	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
@@ -111,11 +95,6 @@ static func _place(path: String, parent: Node3D, xform: Transform3D, prefix: Str
 	return out
 
 
-# --- Code-built pieces ---
-# A small shape drawn in code (a cast kiosk, a record sleeve, a crate) is one ArrayMesh built once and shared by every
-# instance: piece(key, build) builds it the first time with build (a Callable taking a SurfaceTool already begun) and
-# hands the same mesh back after. One shared mesh and one shared material per piece keep a repeated piece to one draw
-# each, or one draw in all through a MultiMesh. Never a PrimitiveMesh, so the primitive census has nothing to pin.
 static var _pieces := {}
 
 
@@ -131,8 +110,6 @@ static func piece(key: String, build: Callable) -> ArrayMesh:
 	return mesh
 
 
-# A convex solid cut by planes (each Plane's normal points out) added to st with one flat normal per face, so a bevel
-# catches the light as a crisp edge, never a soft blend. A vertex colour per solid lets one material carry two tones.
 static func add_hull(st: SurfaceTool, planes: Array[Plane], color := Color.WHITE, xf := Transform3D.IDENTITY) -> void:
 	var points := Geometry3D.compute_convex_mesh_points(planes)
 	for plane in planes:
@@ -157,8 +134,6 @@ static func add_hull(st: SurfaceTool, planes: Array[Plane], color := Color.WHITE
 				st.add_vertex(xf * p)
 
 
-# The planes of a box from `low` to `high` with every edge chamfered by bevel metres (bevel 0: a plain box). taper
-# pulls the top face in by that many metres on x and z, a cast casing's draft.
 static func bevel_box(low: Vector3, high: Vector3, bevel: float, taper := 0.0) -> Array[Plane]:
 	var c := (low + high) * 0.5
 	var h := (high - low) * 0.5
@@ -173,7 +148,6 @@ static func bevel_box(low: Vector3, high: Vector3, bevel: float, taper := 0.0) -
 		return planes
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
-			# The upright edge leans with the draft, so its chamfer leans the same way and keeps one width.
 			var n := Vector3(sx, 2.0 * taper / rise, sz).normalized()
 			planes.append(Plane(n, Vector3(c.x, low.y, c.z) + Vector3(sx * (h.x - bevel), 0.0, sz * h.z)))
 	for side: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.BACK, Vector3.FORWARD]:
@@ -187,8 +161,6 @@ static func bevel_box(low: Vector3, high: Vector3, bevel: float, taper := 0.0) -
 	return planes
 
 
-# The planes of an upright prism of `sides` faces from y0 to y1, radius r0 at the foot and r1 at the top, with the top
-# rim chamfered by bevel metres; centred on (x, z) of at.
 static func prism(at: Vector3, sides: int, r0: float, r1: float, y0: float, y1: float, bevel := 0.0) -> Array[Plane]:
 	var planes: Array[Plane] = [Plane(Vector3.UP, y1), Plane(Vector3.DOWN, -y0)]
 	var rise := y1 - y0

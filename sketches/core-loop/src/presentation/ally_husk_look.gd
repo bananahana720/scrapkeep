@@ -2,15 +2,6 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 
-# W47-TALLY-B-CODE Ghost Shift Ally-Husk Look & Mandatory B6 Readability Contract:
-#   (a) Allied attack zones drawn strictly in warm Palette.AMBER #E5A044 (NEVER Palette.HAZARD).
-#   (b) Zero enemy telegraphs: no hostile klaxons, no red brow flashes, no 45-deg hazard stripes.
-#   (c) Attaches W47-TALLY-B-3D overlays onto every raised husk:
-#         - 2x amber-sparking copper alligator jumper clips (ally_husk_clip.glb)
-#         - 1x forged oxblood/amber Hollerith punched card tag (ally_husk_tag.glb)
-#         - 1x raised amber-sparking Jacob's-ladder clip mast & frayed trailing copper lead (ally_husk_mast.glb)
-#         - 2x arched copper jumper leads bridging clips -> mast (ally_husk_lead.glb)
-#   Clean per-instance mesh/material duplication: never mutates shared PackedScene resources.
 
 const CLIP_PATH := "res://assets/models/ally_husk/ally_husk_clip.glb"
 const TAG_PATH := "res://assets/models/ally_husk/ally_husk_tag.glb"
@@ -25,7 +16,6 @@ const ENEMY_CHASSIS := {
 	"boom_tender": "res://assets/models/world_one/enemy_boom_tender.glb",
 }
 
-# Exact Godot-space anchor offsets from tools/blender/ally_husk_overlay.py (W47-TALLY-B-3D).
 const ANCHORS := {
 	"chaser": {
 		"body_y": 1.50, "forward_z": -1.0,
@@ -77,12 +67,10 @@ static func attach_husk_look(host: Node3D, kind: String, body_radius := 1.0, hal
 		chassis_root.scale = Vector3.ONE * 1.12
 	visual.add_child(chassis_root)
 
-	# 1. Retained Fleet oxide chassis with hostile brow/visor darkened (B6: zero hostile flashes).
 	var body_node := _build_chassis(kind, body_radius, half_height)
 	body_node.name = "HuskChassis"
 	chassis_root.add_child(body_node)
 
-	# 2. W47-TALLY-B-3D overlays (clean per-instance duplicates, never mutating PackedScene).
 	var amber_mats: Array = []
 	var clip_l := _instantiate_overlay(CLIP_PATH, "ClipL", amber_mats)
 	var clip_r := _instantiate_overlay(CLIP_PATH, "ClipR", amber_mats)
@@ -103,16 +91,13 @@ static func attach_husk_look(host: Node3D, kind: String, body_radius := 1.0, hal
 	chassis_root.add_child(tag)
 	chassis_root.add_child(mast)
 
-	# 3. Arched copper jumper leads bridging each alligator clip -> Jacob's-ladder mast.
 	var lead_l := _bridge_lead(chassis_root, clip_l, mast, "socket_clip_feed_l", "JumperLeadL", amber_mats)
 	var lead_r := _bridge_lead(chassis_root, clip_r, mast, "socket_clip_feed_r", "JumperLeadR", amber_mats)
 
-	# 4. Crisp warm AMBER #E5A044 allied base ring (zero stripes, zero HAZARD) for Blazing read.
 	var foot_ring := _build_footprint_ring(maxf(1.35, body_radius * 1.45), amber_mats)
 	foot_ring.name = "AllyFootprintRing"
 	visual.add_child(foot_ring)
 
-	# 5. Shift-countdown tick pips on the tag sockets (3 pips ticking down 12 s shift).
 	var tick_pips := _build_tick_pips(tag)
 
 	return {
@@ -150,7 +135,6 @@ static func update_husk_look(look: Dictionary, shift_fraction: float, overclocke
 			sm.emission_energy_multiplier = energy
 	var chassis = look.get("chassis")
 	if chassis != null and is_instance_valid(chassis):
-		# Distinct overclocked lowered hunch silhouette tell when surged by flywheel_surge.
 		var target_pitch := deg_to_rad(-9.0) if overclocked else 0.0
 		var target_y := float(look.get("base_y", 1.0)) - (0.14 if overclocked else 0.0)
 		chassis.rotation.x = lerpf(chassis.rotation.x, target_pitch, minf(1.0, delta * 12.0))
@@ -163,7 +147,6 @@ static func update_husk_look(look: Dictionary, shift_fraction: float, overclocke
 			pip.visible = shift_fraction > threshold
 
 
-# Ground marker for a 6 s raiseable ordinary Fleet wreck (copper/amber ring + slumped relay body GLB).
 static func build_wreck_marker(parent: Node3D, at: Vector3, radius := 1.0, elite := false) -> Node3D:
 	var root := Node3D.new()
 	root.name = "GhostShiftWreck"
@@ -227,7 +210,6 @@ static func _build_chassis(kind: String, body_radius: float, half_height: float)
 	return fallback
 
 
-# Duplicates meshes and applies neutral Fleet oxide + DARK charcoal visor/brow (zero red glow).
 static func _dress_husk_chassis(root: Node) -> void:
 	var oxide := Palette.solid(Palette.RUST)
 	var charcoal := Palette.solid(Palette.CHARCOAL)
@@ -244,7 +226,6 @@ static func _dress_husk_chassis(root: Node) -> void:
 			if slot == "fleet_paint":
 				mesh_copy.surface_set_material(i, oxide)
 			elif slot == "requisition_tag" or lower.contains("bulb") or lower.contains("visor") or lower.contains("eye"):
-				# B6: raised husk visor/brow is powered down — NEVER red or orange hostile flash.
 				mesh_copy.surface_set_material(i, charcoal)
 			elif lower.contains("plate") or lower.contains("slab"):
 				mesh_copy.surface_set_material(i, steel)
@@ -254,7 +235,6 @@ static func _dress_husk_chassis(root: Node) -> void:
 		mi.material_override = null
 
 
-# Clean per-instance GLB instantiation; duplicates Mesh & Materials so PackedScene stays untouched.
 static func _instantiate_overlay(path: String, node_name: String, amber_mats: Array) -> Node3D:
 	var holder := Node3D.new()
 	holder.name = node_name
@@ -400,13 +380,10 @@ static func _build_ring_mesh_with_mat(radius: float, thickness: float, mat: Mate
 	return mi
 
 
-# --- Mandatory B6 Allied Attack Zone (Warm Palette.AMBER #E5A044 ONLY, Zero Stripes) -------
-
 class AllyZone extends Node3D:
 	const PaletteRef := preload("res://src/core/palette.gd")
+	const color: Color = PaletteRef.AMBER
 
-	# B6 immutable contract: always warm AMBER #E5A044, never HAZARD, never hostile, zero stripes.
-	var color: Color = PaletteRef.AMBER
 	var shape := "ring"
 	var center := Vector3.ZERO
 	var radius := 4.0
@@ -430,6 +407,7 @@ class AllyZone extends Node3D:
 
 
 	func descriptor() -> Dictionary:
+		assert(color == PaletteRef.AMBER and color != PaletteRef.HAZARD, "B6: AllyZone color must stay Palette.AMBER")
 		return {
 			"shape": shape,
 			"color": color,
@@ -445,7 +423,6 @@ class AllyZone extends Node3D:
 		}
 
 
-	# TADR-008: damage and drawn zone consume the exact same committed geometry.
 	func contains(point: Vector3) -> bool:
 		var above := point.y - center.y
 		if above > reach_up or above < -2.5:
@@ -461,14 +438,12 @@ class AllyZone extends Node3D:
 
 	func build_ring(at: Vector3, r: float, terrain_ref = null, reach := 4.0) -> void:
 		shape = "ring"
-		color = PaletteRef.AMBER
 		radius = r
 		reach_up = reach
 		terrain = terrain_ref
 		center = at
 		position = center + Vector3(0.0, ZONE_LIFT, 0.0)
 		add_to_group("ally_zone")
-		# Charcoal keyline + crisp AMBER rim + clean translucent AMBER fill (no stripes!).
 		var key := _ring_mesh(radius, 0.28, PaletteRef.CHARCOAL, 0.90, ZONE_PRIORITY - 1)
 		key.position.y = -0.02
 		add_child(key)
@@ -482,7 +457,6 @@ class AllyZone extends Node3D:
 
 	func build_lane(from: Vector3, heading: Vector3, lane_length: float, lane_width: float, terrain_ref = null, reach := 4.0) -> void:
 		shape = "lane"
-		color = PaletteRef.AMBER
 		var flat := Vector3(heading.x, 0.0, heading.z)
 		dir = flat.normalized() if flat.length_squared() > 0.0001 else Vector3.FORWARD
 		length = lane_length
@@ -493,7 +467,6 @@ class AllyZone extends Node3D:
 		position = center + Vector3(0.0, ZONE_LIFT, 0.0)
 		basis = Basis.looking_at(dir, Vector3.UP)
 		add_to_group("ally_zone")
-		# Charcoal keyline rails + AMBER rails + clean AMBER growing fill (zero 45-deg stripes).
 		var hw := width * 0.5
 		var key_mat := _mat(PaletteRef.CHARCOAL, 0.90, ZONE_PRIORITY - 1)
 		var rim_mat := _mat(PaletteRef.AMBER, 0.96, ZONE_PRIORITY + 1)

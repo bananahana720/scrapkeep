@@ -4,29 +4,6 @@ const MusicRows := preload("res://src/presentation/music_rows.gd")
 const TuneMoments := preload("res://src/presentation/tune_moments.gd")
 const DeckMoves := preload("res://src/presentation/deck_moves.gd")
 
-# The ACE band for Spillway (design-v3 ACE-MUSIC-SYSTEM; the runtime rules proven by the
-# POC sequencer, core-loop-v3-seq 43453ab). ACE-Step performed the music; this plays its
-# Demucs stems (drums, bass, other) from the clips tools/ace/package_music.py cut, and
-# follows the game by switching sections on its own bar and beat grid.
-#
-# The music follows the player in systemic play: calm or travel on the shelf, the pivot
-# on the drop-line commit, the Warden build looping bars 9 to 16, the telegraph, the open
-# as a held breath, and the drop on the next beat after contact. A Warden break is the
-# one directed passage: break, return and home play start to finish whatever the game
-# does, then systemic play resumes.
-#
-# The rules copied from the POC, each measured there:
-#   - every stem is pulled with mix_audio(mix_rate / RATE, n), the same n for every stem,
-#     split at every scheduled action and one-shot exit;
-#   - a decoder opens with start((sample + 0.5) / RATE) and drops its LEAD_IN frames;
-#   - loops are native, loop and loop_offset from the manifest;
-#   - the ring is pumped to QUEUE_TARGET queued frames, not full;
-#   - every key change is logged by transport sample, and keyed SFX read the key at the
-#     audible sample, clock - queued - GEN_LEAD - output latency;
-#   - a contact starts the gap at the render head and drops on the next beat after it.
-# Section edges crossfade over the manifest's join (10 ms) or the breath style's ramp,
-# ending on the edge, so a downbeat always lands at its full level.
-# Parameter joins use the same duration starting at their committed boundary.
 
 const RATE := 44100
 const LEAD_IN := 2
@@ -34,34 +11,21 @@ const GEN_LEAD := 130
 const QUEUE_TARGET := 3072
 const MANIFEST: String = MusicRows.ROWS["1-1"]["ace_manifest"]
 const BREATHS := ["raw", "hard", "gentle"]
-# The render head goes quiet over this many frames when a contact starts the gap.
 const GAP_RAMP := 96
 const STOP_RAMP := 441
 const DUCK_DOWN := 400.0
 const PAUSE_RAMP := 2048.0
 const BAY_RAMP := 8820
-# Pressure that moves the shelf from calm to travel, and back.
 const TRAVEL_UP := 0.4
 const TRAVEL_DOWN := 0.2
 const TRAVEL_THREAT := 2
-# The Warden's guard (0 to 100): see guard_state.
 const GUARD_TIGHT := 75.0
 const GUARD_LOOSE := 50.0
-# The ultimate meter's pressure step: a full meter at rest pressure still reaches travel.
 const ULTIMATE_STEP := 0.4
-# The momentum faders (INTEGRATION section 2): speed is a fraction of top speed.
 const DRUMS_IN_SPEED := 0.25
 const DRUMS_FULL_SPEED := 0.5
-# The lead's level on a level's shelf with nothing lifting it: about half (-6 dB), so the calm
-# stretches of a run carry the tune (ruling bt). Threat, the approach and the chain lift it from
-# here to full.
 const LEAD_FLOOR := 0.5
-# The directed sections that end a Warden break: the kill cadence and the walk home carry the
-# lead whole, and the break's release stops stripping it from the cadence on.
 const LEAD_RETURN := ["return", "home"]
-# The Warden fight's held breath and its drop carry the lead whole, whatever the threat feed,
-# the fight floor or low armour say: the breath is the lead alone, so a lead at nothing is
-# silence, and the drop is the payoff.
 const LEAD_WHOLE := ["open", "drop"]
 const PROTECTED := ["pivot", "drop", "break", "return", "home"]
 const SHELF_CLIPS := ["calm", "travel"]
@@ -87,7 +51,6 @@ class Voice:
 	var pump_depth := 0.0
 	var pump_target := 0.0
 	var pump_step := 0.0
-	# A shelf voice whose harmony has cleared for the pivot: nothing raises it again.
 	var cleared := false
 
 
@@ -102,35 +65,23 @@ class Shot:
 
 
 var manifest := {}
-# A single-loop pack (phase_music.gd): one looping clip, section "main", no Warden sections.
 var flat := false
-# The resolved manifest selected for this band, even when its Oggs are absent.
 var manifest_source := ""
 var clips := {}
 var sections := {}
 var streams := {}
 var stems: Array = []
-# The streams of the last packages read, by resolved manifest path, so a band going back to a
-# package it just left reads none of its Oggs again: when the Warden engages, the dam's landmark
-# tune ends and the stage pack comes back, and its 24 load_from_file calls were 13 ms of the 4080's
-# engage tick (#512 comment 6507862519). A stream is shared, not played: each voice instantiates
-# its own playback. audio.gd also builds a band on a worker, hence the lock. Five, so the two
-# packages audio.gd reads ahead at a world's last Warden (read_ace_ahead) leave the three a retry
-# goes back to kept, as before.
 const KEPT_PACKAGES := 5
 static var _kept := {}
 static var _kept_order: Array[String] = []
 static var _kept_lock := Mutex.new()
-# The first file the package lacks, or "" when every file loaded.
 var missing := ""
 var rate_scale := 1.0
 var level := 1.0
 
 var clock := 0
 var out := PackedVector2Array()
-# [transport sample, key offset from D] at every key change.
 var key_log: Array = []
-# [kind, transport sample, detail]: enter, gap, then, release, miss, stop.
 var events_log: Array = []
 var short_reads := 0
 var misses := 0
@@ -139,19 +90,12 @@ var trims := {}
 var trim_epoch := 0
 var _pump_depths := {}
 var shots: Array = []
-# The set director's low-pass sweep: the wet share of SWEEP_HZ on every voice whose profile has
-# no low-pass of its own, in the sections trims reach.
 var sweep := 0.0
 const SWEEP_HZ := 420.0
 var rendered := 0
-# Stem voices opened and the time opening them took: each one seeks its recording on the
-# frame that asks for the section, so a call that opens more than one section's stems shows here.
-# Both are running totals for this sequencer, and a change of pack makes a new sequencer that
-# counts from zero: a frame's cost is the change across that frame, never the figure itself.
 var opened := 0
 var open_usec := 0
 
-# The section sounding at the render head, its grid and voices.
 var section := ""
 var origin := 0
 var grid_bar := 61536
@@ -170,14 +114,9 @@ var ultimate_lift := false
 var parameter_enabled := false
 var parameters := {}
 var parameter_released := false
-# The kill cadence has answered a Warden break (ruling bt): set as the break piece's return
-# section enters. The release stops stripping the lead from there, and audio.gd takes the mark on
-# its next pump (_answer_release): from then on the release no longer reaches this band.
 var lead_returned := false
 var parameter_layer_log: Array = []
 var _parameter_danger_floor := 0.0
-# The band engine's fight floor (music_engine PRESSURE_FLOOR: warden, miniboss, brindle:1..3),
-# set by audio.gd while a fight plays: the melody stem stays up through it, not only under threat.
 var fight_floor := 0.0
 var threat := 0
 var in_bay := false
@@ -193,9 +132,6 @@ var pause_level := 1.0
 var _serial := 0
 
 
-# Where the manifest is on disk: the editor or source tree path first, then the sidecar
-# music_ace/ folder beside the executable (an exported game keeps res:// inside its pack,
-# so the stems ship beside it, scripts/sketch-export.mjs). "" when neither exists.
 static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
 	return MusicRows.resolve_manifest(manifest_path, sidecar_dir)
 
@@ -254,7 +190,6 @@ func _init(manifest_path := MANIFEST, sidecar_dir := "") -> void:
 	_report()
 
 
-# True when the package's streams are kept: building its band reads no Ogg.
 static func kept(manifest_path: String, sidecar_dir := "") -> bool:
 	var path := resolve_manifest(manifest_path, sidecar_dir)
 	_kept_lock.lock()
@@ -273,7 +208,6 @@ static func _keep(path: String, read: Dictionary) -> void:
 	_kept_lock.unlock()
 
 
-# --ace-check: one line saying whether the band found its stems (the export proof reads it).
 func _report() -> void:
 	if "--ace-check" in OS.get_cmdline_args() or "--ace-check" in OS.get_cmdline_user_args():
 		print("ACE_CHECK ready=%s clips=%d streams=%d missing=%s" % [ready(), clips.size(), streams.size(), missing])
@@ -283,14 +217,10 @@ func ready() -> bool:
 	return missing == "" and not clips.is_empty()
 
 
-# Something is sounding or about to: the director renders the band while this is true.
 func active() -> bool:
 	return mode != "off" or not voices.is_empty() or not fading.is_empty() or not shots.is_empty()
 
 
-# The transport sample the band first sounds from: now when voices play, the pending
-# section's fade-in when one is waiting, -1 when nothing is on the way. The synth band
-# hands over here.
 func sound_from() -> int:
 	if mode == "off":
 		return -1
@@ -301,15 +231,7 @@ func sound_from() -> int:
 	return -1
 
 
-# --- Facts the audio director hands over ------------------------------------------------
-
-# A stage starts on the shelf: calm (or travel) from bar 1 at transport sample at. A
-# restart while the band sounds fades the old section out and gives the new one its
-# full join, so no one-shot is left without a follower. With `fight`, the band is coming back
-# into a Warden fight already under way (after a radio hold or an ultimate): it enters on the
-# pivot and goes on to the build, and the shelf's recordings are never opened.
 func start_level(at: int, fight := false) -> void:
-	# A begun join's voices fade over the full ramp too, and calm waits out its join.
 	var faded := _cancel_pending(STOP_RAMP)
 	actions.clear()
 	var earliest := clock
@@ -342,10 +264,7 @@ func start_level(at: int, fight := false) -> void:
 	_schedule(_desired(), maxi(at, earliest))
 
 
-# The band stops: every voice fades over ramp frames (a beat when a launch takes the
-# music, STOP_RAMP otherwise).
 func stop(ramp := STOP_RAMP) -> void:
-	# Voices of a begun join fade over the same ramp as the rest.
 	_cancel_pending(ramp)
 	actions.clear()
 	mode = "off"
@@ -361,7 +280,6 @@ func stop(ramp := STOP_RAMP) -> void:
 	events_log.append(["stop", clock, ""])
 
 
-# Menus keep their chosen outcome; systemic pressure never changes a lost summary.
 func start_menu(at: int, won := true) -> void:
 	start_level(at)
 	_cancel_pending()
@@ -384,26 +302,16 @@ func start_boss(at: int) -> void:
 	_schedule(first, maxi(at, clock + _join_frames(first)))
 
 
-# The band stops at transport sample at: the sounding section plays to it and fades over
-# ramp frames from there (a set piece heard through a launch's flight, then handed to the
-# synth on the landing's beat). Anything that restarts or stops the band cancels it.
 func stop_at(at: int, ramp := STOP_RAMP) -> void:
 	if mode == "off":
 		return
 	_add({"at": maxi(at, clock), "type": "stop", "ramp": ramp})
 
 
-# The set director's trims (set_director.gd): one gain per stem, at or under 1, on top of the
-# section's profile and the faders, from transport sample at over frames. An empty dict puts every
-# stem back. The directed sections (PROTECTED) and the Warden's breath and drop ignore them, so the
-# director can never thin a payoff. Starting or stopping the band clears them.
 func trim_at(at: int, next: Dictionary, frames: int, epoch := -1) -> void:
 	_add({"at": maxi(at, clock), "type": "trim", "trims": next.duplicate(), "frames": maxi(frames, 1), "epoch": epoch})
 
 
-# One bar of trims: the cut is full on bar line at, the stems are back on the next, each ramp
-# ending on its edge so the downbeat sounds at its own level.
-# depth rolls the band under the low-pass across the bar; it is gone by the next bar line.
 func trim_bar(at: int, next: Dictionary, bar: int, ramp: int, depth := 0.0, epoch := -1) -> void:
 	if not next.is_empty():
 		trim_at(at - ramp, next, ramp, epoch)
@@ -425,8 +333,6 @@ func invalidate_trims(ramp := STOP_RAMP) -> void:
 		_add({"at": clock, "type": "trim", "trims": {}, "frames": maxi(ramp, 1), "sweep": 0.0, "epoch": -1})
 
 
-# Festival deck sidechain pump: linear dip depth (0 to 1) by section name. `{}` turns it off.
-# Each voice reads its own opening section name, and depth changes ramp over one beat.
 func set_pump(depth_by_section: Dictionary) -> void:
 	if depth_by_section == _pump_depths:
 		return
@@ -464,7 +370,6 @@ func _has_active_pump() -> bool:
 	return false
 
 
-# Mixes a sample-exact one-shot into the sequencer's Music-bus output starting at transport sample `at`.
 func shot_at(at: int, pcm: PackedVector2Array, tag: String, gain := 1.0) -> void:
 	if pcm.is_empty() or gain <= 0.0 or at + pcm.size() <= clock:
 		return
@@ -476,7 +381,6 @@ func shot_at(at: int, pcm: PackedVector2Array, tag: String, gain := 1.0) -> void
 	shots.append(s)
 
 
-# Drops unstarted shots matching `tag` (or all when `tag == ""`) and fades live ones over `ramp` frames.
 func cancel_shots(tag := "", ramp := GAP_RAMP) -> void:
 	if shots.is_empty():
 		return
@@ -494,7 +398,6 @@ func cancel_shots(tag := "", ramp := GAP_RAMP) -> void:
 	shots = kept
 
 
-# The live voices move toward a sweep depth over frames.
 func _sweep_to(depth: float, frames: int) -> void:
 	sweep = depth
 	var begun := bool(pending.get("begun", false))
@@ -515,8 +418,6 @@ func _sweep_to(depth: float, frames: int) -> void:
 		v.wet_step = maxf(absf(want - v.wet), 0.000001) / maxf(frames, 1)
 
 
-# Only the stems a trim changes move, and only when their level changes; a fall, breath or join
-# ramp in flight keeps its pace. Voices waiting on a join ramp at the join's own pace.
 func _trim_voices(list: Array, name: String, stems: Array, frames: int) -> void:
 	var gains := _profile(name)
 	for v: Voice in list:
@@ -543,7 +444,6 @@ func commit_parameters(at: int, values: Dictionary, released: bool, lift: bool, 
 	_add({"at": maxi(at, clock), "type": "parameters", "values": values.duplicate(), "released": released, "lift": lift, "reason": reason, "timing": timing.duplicate()})
 
 
-# A change of fight floor reopens or settles the live melody stem over STOP_RAMP.
 func set_fight_floor(value: float) -> void:
 	if value == fight_floor:
 		return
@@ -552,8 +452,6 @@ func set_fight_floor(value: float) -> void:
 		_retarget(STOP_RAMP)
 
 
-# The arena clears a Warden break's release at once (audio.gd stage_content_cleared): the
-# queued commits stop carrying it, and the live stems reopen over STOP_RAMP.
 func clear_release() -> void:
 	for action in actions:
 		if action["type"] == "parameters":
@@ -562,15 +460,6 @@ func clear_release() -> void:
 		_run({"type": "parameters", "values": parameters, "released": false, "lift": ultimate_lift, "reason": "arena", "timing": {}})
 
 
-# Demucs's other stem carries the melodic roles; drums and bass retain their profiles.
-# At full threat/approach the recorded mix is unchanged. Low armour removes other, and so does a
-# Warden break's release until the kill cadence brings it back (LEAD_RETURN).
-# Two momentum faders ride on top when the feed carries them (INTEGRATION section 2):
-# drums follow rolling speed, in from a quarter of top speed and full at half, and the
-# lead (other) also opens with the kill chain: a third of the way at chain 2 (the sax hook),
-# full at 4. On a level's shelf the lead starts from LEAD_FLOOR, not from silence.
-# Boss sections keep the full kit: the duel does not breathe with the ball's speed.
-# at names the section the gain is for, for voices that join ahead of it; "" is the live one.
 func parameter_gain(stem: String, at := "") -> float:
 	if not parameter_enabled or not parameters.has("threat"):
 		return 1.0
@@ -590,25 +479,18 @@ func parameter_gain(stem: String, at := "") -> float:
 		return 1.0
 	var approach := float(parameters.get("approach", 0.0))
 	if mode == "level":
-		# The landmark's own moment begins at LANDMARK_IN: the lead is whole from there on, not
-		# only at the landmark's foot.
 		approach = clampf(approach / TuneMoments.LANDMARK_IN, 0.0, 1.0)
 	var open := maxf(maxf(pressure + (ULTIMATE_STEP if ultimate_lift else 0.0), maxf(_parameter_danger_floor, fight_floor)), approach)
 	var lift := clampf(maxf(open, float(parameters.get("chain", 0.0))), 0.0, 1.0)
 	return lerpf(LEAD_FLOOR, 1.0, lift) if mode == "level" else lift
 
 
-# Low armour strips the lead anywhere. A Warden break's release strips it through the break's
-# held breath only: the kill cadence returns it, and it stays back.
 func _lead_stripped(cadence := false) -> bool:
 	if parameters.has("armour") and float(parameters.armour) < 0.3:
 		return true
 	return parameter_released and not lead_returned and not cadence
 
 
-# A full ultimate meter is one pressure step for the ACE band, as set_ultimate_lift is one
-# intensity step for the synth (SKILL-BAR section 4, music). The landing or a spent cancel
-# releases it. It sits on top of the systemic pressure; set_pressure keeps its own value.
 func set_ultimate_lift(on: bool) -> void:
 	ultimate_lift = on
 	_follow()
@@ -629,7 +511,6 @@ func set_bay(on: bool) -> void:
 		_retarget(BAY_RAMP)
 
 
-# The ball committed to a drop line, or the Warden engaged: the pivot at the next bar.
 func commit_warden() -> void:
 	if flat or mode != "level":
 		return
@@ -643,10 +524,6 @@ func set_warden_state(state: String) -> void:
 	_follow()
 
 
-# The Warden's guard as its posture fight reports it (0 to 100, rising toward the break).
-# The tight build ("telegraph") enters at GUARD_TIGHT and holds until the guard drains under
-# GUARD_LOOSE, so a guard that hovers at the line never flutters; a stagger is the held
-# breath ("open"); anything else is the build ("closed").
 static func guard_state(was: String, posture: float, staggered: bool) -> String:
 	if staggered:
 		return "open"
@@ -655,17 +532,11 @@ static func guard_state(was: String, posture: float, staggered: bool) -> String:
 	return "closed"
 
 
-# The fight follows the guard: its state from guard_state, and `landed` (the hit that
-# shattered a chunk) the drop. Returns the drop's transport sample, or -1 when none is
-# booked. Outside a Warden fight it does nothing.
 func follow_guard(posture: float, staggered: bool, landed: bool) -> int:
 	if mode != "warden":
 		return -1
 	var state := guard_state(warden_state, posture, staggered)
 	if landed:
-		# The drop is the answer, and the build comes back as the drop's own follower. Asking
-		# for the build first would open its three stems on this frame only to throw them away
-		# (10 ms on the hit's frame, measured on the PC).
 		warden_state = state
 		return drop_now()
 	if state != warden_state:
@@ -673,9 +544,6 @@ func follow_guard(posture: float, staggered: bool, landed: bool) -> int:
 	return -1
 
 
-# Contact on the core: the render head goes quiet now and the drop enters on the next
-# beat. Returns the drop's transport sample, or -1 when nothing plays or the break has
-# begun.
 func drop_now() -> int:
 	if flat or mode in ["off", "menu"] or (mode == "piece" and not piece_after_drop and section in ["break", "return", "home"]):
 		return -1
@@ -684,8 +552,6 @@ func drop_now() -> int:
 	if mode == "level":
 		mode = "warden"
 	_cancel_pending()
-	# The next beat with room for the drop's full fade-in: a contact on (or just before)
-	# a beat drops on the one after, never with a one-frame join.
 	var at := next_beat(clock + maxi(GAP_RAMP, _ramp_frames(float(manifest.get("join_ms", 10.0)))))
 	for v: Voice in voices:
 		_ramp_to(v, 0.0, GAP_RAMP)
@@ -696,8 +562,6 @@ func drop_now() -> int:
 	return at
 
 
-# The Warden broke: the directed set piece, once. After a drop still sounding, it waits
-# for the drop's end; otherwise it enters on the next bar.
 func warden_broken() -> void:
 	if flat or mode in ["off", "piece", "menu"]:
 		return
@@ -708,16 +572,10 @@ func warden_broken() -> void:
 		return
 	var at := _landing("break", false)
 	if section == "drop":
-		# The drop's follower is already scheduled: the break takes its place, on the
-		# first bar of the drop's grid at or after it (a follower may sit on a beat).
 		at = next_bar(maxi(int(pending["at"]), clock + _join_frames("break")))
-		# The drop's stems run out at their exit: a break placed after that plays the
-		# gap as silence, so it enters there with the join it has left.
 		for v: Voice in voices:
 			if not v.loop:
 				at = mini(at, clock + v.exit - v.pos)
-	# A follower whose join has begun keeps sounding until the break's own join replaces
-	# it, so the wait for the bar is never silent.
 	_cancel_pending(GAP_RAMP, true)
 	_schedule("break", at)
 
@@ -735,13 +593,10 @@ func duck(amount: float, hold_seconds: float) -> void:
 	duck_until = maxi(duck_until, clock + int(hold_seconds * RATE))
 
 
-# The cue the band dipped under has stopped early: the band comes back from this frame.
 func free_duck() -> void:
 	duck_until = clock
 	duck_target = 1.0
 
-
-# --- The grid -------------------------------------------------------------------------
 
 func next_beat(from := -1) -> int:
 	return _next(grid_beat, from)
@@ -758,15 +613,12 @@ func _next(unit: int, from: int) -> int:
 	if section == "":
 		if pending.is_empty():
 			return base
-		# Before the first commit the section about to enter owns the grid.
 		var clip: Dictionary = clips[sections[String(pending["section"])]["clip"]]
 		grid_origin = int(pending["at"]) - posmod(int(pending["entry"]) - int(clip["entry"]), int(clip["bar"]))
 		step = int(clip["beat"]) if unit == grid_beat else int(clip["bar"])
 	return grid_origin + int(ceil(float(base - grid_origin) / step)) * step
 
 
-# The first bar (or beat) far enough ahead for name's whole crossfade: a change asked on
-# the grid itself, or inside the join before it, lands on the next grid point.
 func _landing(name: String, on_beat: bool) -> int:
 	var from := clock + _join_frames(name)
 	return next_beat(from) if on_beat else next_bar(from)
@@ -781,21 +633,14 @@ func key_at(s: int) -> int:
 	return key
 
 
-# The next transport sample to reach the speaker, given the ring's queued frames. Exact
-# at a 44.1 kHz mixer; at other rates it trails by under GEN_CHUNK frames (POC 43453ab).
 func audible_sample(queued: int) -> int:
 	return clock - queued - GEN_LEAD - int(round(AudioServer.get_output_latency() * RATE))
 
 
-# The frames that top the ring up to target queued frames. capacity is the ring's frames
-# available when empty.
 func frames_to_pump(gp: AudioStreamGeneratorPlayback, capacity: int, target := QUEUE_TARGET) -> int:
 	return clampi(target - (capacity - gp.get_frames_available()), 0, gp.get_frames_available())
 
 
-# --- Rendering ------------------------------------------------------------------------
-
-# Advances the transport without decoding: the band is not playing.
 func advance(n: int) -> void:
 	clock += n
 
@@ -832,11 +677,9 @@ func render(n: int) -> PackedVector2Array:
 					if v.pump_depth != v.pump_target:
 						span = mini(span, maxi(1, int(ceil(absf(v.pump_target - v.pump_depth) / v.pump_step - 0.001))))
 		if faded != null:
-			# A one-shot fading out under its follower reached its exit: nothing is lost.
 			fading.erase(faded)
 			continue
 		if ended != null:
-			# A one-shot reached its exit with nothing scheduled: keep time in silence.
 			misses += 1
 			events_log.append(["miss", clock, ended.stem])
 			voices.erase(ended)
@@ -983,7 +826,6 @@ func _mix_shots(at: int, span: int, l0: float, l1: float) -> void:
 				out[at + i] += pcm[offset + i] * (g0 + dg * i)
 
 
-# Second-order Butterworth low-pass, direct form I, mixed wet over dry as the breath asks.
 func _lowpass(buf: PackedVector2Array, v: Voice, w0: float) -> void:
 	var c := v.lp
 	var b0 := c[0]
@@ -1027,9 +869,6 @@ static func lowpass_coeffs(hz: float) -> PackedFloat64Array:
 	return PackedFloat64Array([(1.0 - cw) * 0.5 / a0, (1.0 - cw) / a0, (1.0 - cw) * 0.5 / a0, -2.0 * cw / a0, (1.0 - alpha) / a0])
 
 
-# --- Sections -------------------------------------------------------------------------
-
-# What systemic play asks for now.
 func _desired() -> String:
 	if flat:
 		return "main" if mode in ["level", "warden", "menu"] else ""
@@ -1047,8 +886,6 @@ func _desired() -> String:
 	return ""
 
 
-# Moves toward what the game asks for, at the first moment a change is allowed: never
-# inside a hold, never over a protected entry, never during the directed piece.
 func _follow() -> void:
 	var want := _follow_target()
 	if want != "":
@@ -1074,7 +911,6 @@ func _follow_target() -> String:
 		return ""
 	if pending.is_empty() and (want == section or _continues(want)):
 		return ""
-	# A drop or pivot is heard to its end before the build comes back.
 	if want == "build" and section in ["drop", "pivot"]:
 		return ""
 	_cancel_pending()
@@ -1083,7 +919,6 @@ func _follow_target() -> String:
 	return want
 
 
-# home and calm share a clip: the release from home into calm plays on without a join.
 func _continues(want: String) -> bool:
 	if section == "" or not sections.has(want):
 		return false
@@ -1114,7 +949,6 @@ func _ramp_frames(ms: float) -> int:
 	return maxi(1, int(round(ms * RATE / 1000.0)))
 
 
-# The crossfade into name: the join, or longer where the breath style ramps longer.
 func _join_frames(name: String) -> int:
 	var ms := float(manifest.get("join_ms", 10.0))
 	var b: Dictionary = manifest["breath"][breath]
@@ -1125,7 +959,6 @@ func _join_frames(name: String) -> int:
 	return mini(_ramp_frames(ms), int(manifest.get("pre_roll", 4096)))
 
 
-# Parameter joins start on the committed boundary. Other joins end on their section edge.
 func _schedule(name: String, at: int, join_from_edge := false) -> void:
 	var row: Dictionary = sections[name]
 	var clip: Dictionary = clips[row["clip"]]
@@ -1150,10 +983,6 @@ func _schedule(name: String, at: int, join_from_edge := false) -> void:
 	_add({"at": at, "type": "commit", "serial": _serial})
 
 
-# The roaming shelf and the Warden's combat clips need not share a key (the rebuilt zone packs
-# cut the shelf from the world's roaming take, key_check.py reads it a fifth or a relative
-# away). So the shelf's bass and lead fade out over the beat before the pivot's downbeat and
-# only the drums cross it: two keys never sound together.
 func _clear_harmony(at: int) -> void:
 	var frames := mini(grid_beat, maxi(at - clock, 1))
 	for v: Voice in voices:
@@ -1209,7 +1038,6 @@ func _ramp_to(v: Voice, g: float, frames: int) -> void:
 	v.step = maxf(absf(g - v.gain), 0.000001) / maxf(frames, 1)
 
 
-# The live voices move to the current profile: the bay, or a breath style flipped mid-open.
 func _retarget(frames: int) -> void:
 	var gains := _profile(section)
 	for v: Voice in voices:
@@ -1225,16 +1053,11 @@ func _retarget(frames: int) -> void:
 			want = 1.0
 		elif not v.lp.is_empty() and mode != "piece" and not section in PROTECTED and not section in LEAD_WHOLE:
 			want = sweep
-		# A target that holds keeps its pace: a filter roll in flight still runs across its bar.
 		if want != v.wet_target:
 			v.wet_target = want
 			v.wet_step = 1.0 / maxf(frames, 1)
 
 
-# The momentum faders rise over one beat and fall over two bars, so one bump of speed or
-# a single broken link never makes the band stutter (INTEGRATION section 2). Only voices
-# already sounding move, and only when their own momentum factor changed: a join's new
-# voices, the threat and armour retargets and the Warden release keep their own ramps.
 func _smooth_momentum(drums_before: float, chain_before: float, stripped_before: bool) -> void:
 	var drums_moved := parameters.has("speed") and parameter_gain("drums") != drums_before
 	var stripped := _lead_stripped()
@@ -1254,11 +1077,6 @@ func _add(action: Dictionary) -> void:
 	actions.insert(i, action)
 
 
-# Drops the pending section. Once its join has begun the old section is already fading
-# out and the pending voices are the ones sounding, so they must not vanish: with keep
-# they stay in voices and the replacement's own begin fades them (the replacement
-# schedules itself right after); otherwise they fade over ramp, as for a gap or a stop.
-# Returns true when a begun join's voices were faded or kept.
 func _cancel_pending(ramp := GAP_RAMP, keep := false) -> bool:
 	if pending.is_empty():
 		return false
@@ -1325,7 +1143,6 @@ func _run(action: Dictionary) -> void:
 				return
 			_commit()
 		"clear":
-			# Only for the pivot it was scheduled for: a cancelled pivot leaves the shelf whole.
 			var v: Voice = action["voice"]
 			if not pending.is_empty() and int(pending["serial"]) == int(action["serial"]) and (v in voices or v in fading):
 				_ramp_to(v, 0.0, int(action["frames"]))
@@ -1356,8 +1173,6 @@ func _run(action: Dictionary) -> void:
 			for stem in trims:
 				if not stem in stems:
 					stems.append(stem)
-			# Inside a begun join the live voices already belong to the incoming section, and
-			# voices opened for a join not yet begun are levelled by their own section's rules.
 			var begun := bool(pending.get("begun", false))
 			var live := String(pending["section"]) if begun else section
 			if live != "":
@@ -1408,8 +1223,6 @@ func _commit() -> void:
 	_follow()
 
 
-# A one-shot ends: the drop hands to the break when the Warden broke under it, otherwise
-# to whatever the game asks for now.
 func _then(action: Dictionary) -> void:
 	var end: int = action["end"]
 	if mode == "piece":

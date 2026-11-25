@@ -5,9 +5,6 @@ const Palette := preload("res://src/core/palette.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Roster := preload("res://src/combat/roster.gd")
 
-# The event_kinds row for a fact, as presentation reads it. The spine's table wins.
-# Until the spine lands the demo-spec rows, these fallbacks carry the same fields
-# the reconciled change requests name, so audio and VFX read one source either way.
 
 const FALLBACK := {
 	"beacon_unsealed": {"group": "flow", "color": Palette.ARC, "shape": "star", "sound": "stinger_unseal", "priority": 3},
@@ -21,7 +18,6 @@ const FALLBACK := {
 	"element_resolved": {"group": "event", "color": Palette.ARC, "shape": "burst", "sound": "element_resolved", "priority": 1},
 }
 
-# element_resolved picks its voice by what the element did to the material.
 const ELEMENT_SOUNDS := {"freeze": "ice_form", "ice": "ice_form", "frost": "ice_form", "chill": "ice_form",
 	"electr": "zap_hum", "zap": "zap_hum", "arc": "zap_hum", "shock": "zap_hum", "charge": "zap_hum",
 	"shatter": "shatter", "break": "shatter", "crack": "shatter"}
@@ -36,14 +32,10 @@ static func row(kind: String) -> Dictionary:
 	return {}
 
 
-# The sound a kind is heard as. context carries who is involved: "motif" (the player's
-# class motif id), "hold" (hold_started's kind, a roster mechanic) and "faction".
 static func sound(kind: String, context := {}) -> String:
 	return heard(row(kind), context)
 
 
-# A row's baked sound_next when the bank has it, else its stand-in `sound`. Either may
-# be symbolic and resolve through the class or roster row (resolve).
 static func heard(entry: Dictionary, context := {}) -> String:
 	var next := resolve(String(entry.get("sound_next", "")), context)
 	if next != "" and SfxBank.has_recipe(next):
@@ -51,14 +43,6 @@ static func heard(entry: Dictionary, context := {}) -> String:
 	return resolve(String(entry.get("sound", "")), context)
 
 
-# A symbolic sound id as the bank id it means in this context, or the id itself when it
-# is concrete; "" when the context lacks what the id needs.
-#   class_motif      the class's ready pulse (<motif>_ready): the HUD's class tune
-#   class_break      the class's break-free (<motif>_break)
-#   motif_release    the class's whole motif resolved (release_of)
-#   hold_by_kind     the holding unit's loop (hold_of)
-#   faction_arrival  the faction's roster arrival, voiced for the class
-#   mind_quote       the Mind playing the class motif back (Roster.voiced)
 static func resolve(id: String, context := {}) -> String:
 	var motif := String(context.get("motif", ""))
 	match id:
@@ -77,7 +61,6 @@ static func resolve(id: String, context := {}) -> String:
 		"mind_quote":
 			return Roster.voiced(id, motif) if motif != "" else ""
 		"motif_accumulate", "motif_line", "motif_stinger":
-			# The class's own version (sfx_bank motif_cue_id); the generic cue with no class in context.
 			return SfxBank.motif_cue_id(id, motif) if motif != "" else id
 	return id
 
@@ -86,10 +69,6 @@ static func _baked(id: String) -> String:
 	return id if SfxBank.has_recipe(id) else ""
 
 
-# A class's release is the one bank recipe named for its motif that is neither a
-# variant (<motif>_ready, <motif>_break) nor a cue an event row names for itself
-# (vault_kicked's sable_octave_leap, once baked, stays vault_kicked's). A second
-# candidate plays the stand-in, and audio_cue_resolution_test fails on it.
 static func release_of(motif: String) -> String:
 	var found := releases(motif)
 	return found[0] if found.size() == 1 else ""
@@ -106,8 +85,6 @@ static func releases(motif: String) -> Array:
 	return found
 
 
-# Every sound any event_kinds table plans, in `sound` or `sound_next`: a row's own planned sound
-# is never a class's release, whichever table the row sits in.
 static func _named_by_rows() -> Array:
 	var named: Array = []
 	for table in (EventKinds as GDScript).get_script_constant_map().values():
@@ -120,9 +97,6 @@ static func _named_by_rows() -> Array:
 	return named
 
 
-# The hold loop of the roster unit whose mechanic is kind: the first of its `hold` and
-# `tag` that is a baked hold loop (the netcaster's `hold` still names the zap stand-in;
-# its tag is the net), else its `hold` stand-in. "" for a kind no unit holds with.
 static func hold_of(kind: String) -> String:
 	for id in Roster.ROWS:
 		var unit: Dictionary = Roster.ROWS[id]
@@ -155,8 +129,6 @@ static func element_sound(behaviour: String) -> String:
 	return "element_resolved"
 
 
-# Every sound id the bank must bake: the spine's rows plus the fallbacks and the
-# element variants, so a new row never plays silence.
 static func sound_ids() -> Array:
 	var ids := []
 	for kind in EventKinds.ROWS:

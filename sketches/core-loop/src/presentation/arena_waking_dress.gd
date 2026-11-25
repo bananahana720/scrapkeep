@@ -21,8 +21,6 @@ const STONE_FILES := ["cut_face_long.glb", "cut_face_scoop.glb"]
 const MECH_FILES := ["lamp_curve_module.glb", "strut_tall.glb", "strut_bent.glb", "shell_crescent.glb", "shell_saddle.glb"]
 const RIM_COPING_FILE := "waking_rim_coping.glb"
 const HATCH_FRAME_FILE := "waking_hatch_frame.glb"
-# Guard 3: Static collapsing-shaft rim banks render cast ribbed steel plates with an orthogonal
-# AMBER (#E5A044) / BONE (#D2C5A5) / CHARCOAL (#242A28) upper coping band — ZERO 45-degree HAZARD stripes!
 const RIM_BANK_SHADER_CODE := """
 shader_type spatial;
 render_mode diffuse_burley, cull_disabled;
@@ -69,12 +67,8 @@ void fragment() {
 """
 const ENV_PROPERTIES := ["background_mode", "background_color", "ambient_light_source", "ambient_light_color", "ambient_light_energy", "reflected_light_source", "fog_enabled", "fog_density", "fog_light_color", "fog_light_energy", "fog_sun_scatter"]
 const WARNING := "arena_waking_dress: assets missing or malformed; keeping greybox"
-# The boss camera has a 12 m arm beyond the 36 m floor; rock and machines leave it room.
 const WALL_RADIUS := 60.0
 const WALL_SECTORS := 16
-# One row per pit light (VX3): every builder and the readability test read these numbers.
-# Light comes from lamps, the reactor and the key; the floor itself never glows.
-# core_key_low is the low preset's trim: the key keeps its shadow on a tighter cone.
 const LIGHTS := {
 	"rim_pool": {"energy": 1.0, "range": 34.0, "radius": 28.0, "height": 6.0},
 	"lamp_pool": {"energy": 1.2, "range": 24.0},
@@ -82,11 +76,8 @@ const LIGHTS := {
 	"core_key": {"energy": 2.8, "range": 55.0, "angle": 55.0},
 	"core_key_low": {"angle": 30.0},
 }
-# The pit floor's plates: half the old 8 m pitch, so the top floor reads as tiled plate.
 const FLOOR_PLATE_PITCH := 4.0
 const FLOOR_SEAM_WIDTH := 0.12
-# Pale zinc: a cool plate that is no state colour (not slate's "not yet") and lighter than the old sandstone,
-# so the copper ball reads dark against it under the 0.16 ambient and the amber pools stay an accent.
 const FLOOR_PLATE_COLOR := Color("c8cdcf")
 
 var module
@@ -117,13 +108,11 @@ static func attach(owner_module):
 	return dress
 
 
-# The key casts on every preset; low narrows its cone so its one shadow map stays small.
 func _sync_dressing() -> void:
 	_core_key.shadow_enabled = true
 	_core_key.spot_angle = LIGHTS.core_key_low.angle if GraphicsPreset.current == "low" else LIGHTS.core_key.angle
 
 
-# Preflight is atomic: no floor, environment or scene change before every slot is valid.
 func _prepare() -> bool:
 	var stone := load(DigScenery.SLOTS["stone"]) as ShaderMaterial
 	if stone == null or stone.shader == null or stone.get_shader_parameter("tex_tone") == null or stone.get_shader_parameter("tex_grain") == null:
@@ -182,14 +171,12 @@ func _prepare() -> bool:
 	for file in MECH_FILES:
 		if not _load_parts(mech_dir + file):
 			return false
-	# Optional W48 sculpted rim coping and hatch frames (keep greybox fallback clean when absent).
 	if _load_parts(boss_dir + RIM_COPING_FILE):
 		_coping_ring_mesh = _build_coping_ring_mesh()
 	_load_parts(boss_dir + HATCH_FRAME_FILE)
 	return true
 
 
-# Bakes 24 15-degree coping blocks into one static ArrayMesh ring (no MultiMesh under FloorDressing).
 func _build_coping_ring_mesh() -> ArrayMesh:
 	var parts: Array = _parts.get(RIM_COPING_FILE, [])
 	if parts.is_empty():
@@ -299,7 +286,6 @@ func _build() -> void:
 		WorldLook.environment(look, GraphicsPreset.PRESETS[GraphicsPreset.current].air), lights, "arena", look)
 
 
-# The preset baseline is dark; the active arena alone supplies energy and visibility.
 func _lighting_entry(light: Light3D) -> Dictionary:
 	var values := {"light_energy": light.light_energy, "visible": true}
 	_light_values[light.get_instance_id()] = values
@@ -316,7 +302,6 @@ func _darken(light: Light3D) -> void:
 	light.visible = false
 
 
-# Return borrowed lights before the arena or a floor can destroy its children.
 func release_lights() -> void:
 	GraphicsPreset.release_lighting(get_instance_id())
 	for pools in _floor_pools:
@@ -340,11 +325,8 @@ func _retire_floor(pools: Node3D) -> void:
 func _floor(body: StaticBody3D, node_name: String) -> void:
 	var skin := Node3D.new()
 	skin.name = node_name
-	# Body centre is one metre below its gameplay surface; no collider is touched.
 	skin.position.y = module.PAD_THICK * 0.5 + 0.015
 	body.add_child(skin)
-	# Floor arcs had no gameplay state; the pit remains readable through its walls and lights.
-	# RimBankMesh takes the Guard 3 ribbed cast-steel + AMBER/bone/charcoal coping shader (ZERO 45-deg HAZARD).
 	for child in body.get_children():
 		if child is MeshInstance3D:
 			child.material_override = _materials["rim_bank"] if child.name == "RimBankMesh" else _materials["floor"]
@@ -397,7 +379,6 @@ func _works() -> void:
 			var basis := Basis(Vector3.UP, angle)
 			for link in 3:
 				_put(batches, "lamp_curve_module.glb", Transform3D(basis, wall) * Transform3D(Basis.IDENTITY, Vector3((link - 1) * 3.0, 0, 0)))
-			# One pool per line; deeper machinery recedes through the same fog as the cut faces.
 			var light_name := "LampPool%d_%d" % [tier, line]
 			var light := _light_pool.get_node_or_null(light_name) as OmniLight3D
 			if light == null:
@@ -448,7 +429,6 @@ func _physics_process(_delta: float) -> void:
 	_dress_weak_parts()
 
 
-# Warm industrial amber shaft-abyss underglow below the lowest pad (w2-boss-the-waking.png).
 func _add_pit_abyss_glow(skin: Node3D) -> void:
 	var quad := QuadMesh.new()
 	quad.size = Vector2(96.0, 96.0)
@@ -478,8 +458,6 @@ void fragment() {
 	skin.add_child(glow)
 
 
-# Dresses Waking WeakPart hatches with sculpted petrol-enamel frames (replacing greybox Frame* boxes)
-# while keeping colliders, WeakPart.lit_colors() and BROKEN torn-rim cues exact.
 func _dress_weak_parts() -> void:
 	var hatch_parts: Array = _parts.get(HATCH_FRAME_FILE, [])
 	if hatch_parts.is_empty() or module == null or not is_instance_valid(module):

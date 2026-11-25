@@ -3,60 +3,28 @@ extends Node
 const AppShell := preload("res://src/core/app_shell.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
-# The field crew's baked clips (tools/blender/world_one/field_motion.py): idle, move, windup,
-# attack, hit and death, one clips-only GLB per kind. The GLB holds a motion skeleton and no
-# mesh; this driver samples it and moves the body's existing parts through joint nodes it
-# slots in above each part, so the parts keep their names, materials and the code poses
-# their scripts give them (the chaser's rear-up, the lobber's tube raise), and the clip moves
-# on top. A brute's pad bones take the clip on the channels its script leaves free.
-#
-# Clocks. `windup` is sampled by the open attack's own progress (the telegraph's, or the
-# lobber's charge), so its last frame is the release frame whatever the timing; `attack`
-# by the seconds since the strike fact; idle by a per-body clock seeded from the spawn
-# point; move by the distance rolled. Nothing here owns or changes a game clock, a
-# collider or a telegraph. Presentation only, and off in headless runs like the idle.
-#
-# A new kind (the Spillway roster's): add a builder to field_motion.py KINDS, with bones named
-# for the parts, a row here naming the part paths under the pivot (and any rig bones with the
-# channels its script leaves free), and the kind to the test and verifier lists. Nothing in the
-# kind's own script changes: enemy.gd seats the driver and hands it hits and the death.
-#
-# Blends. Windup, attack, hit and death cut in on their first frame (the read must start
-# on time); idle and move cross-fade over BLEND. Reduced motion keeps the attack clips and
-# the death and drops idle and move.
 
 const DIR := "res://assets/models/world_one/clips/"
 const CLIPS := ["idle", "move", "windup", "attack", "hit", "death"]
 const HARD := ["windup", "attack", "hit", "death"]
 const BLEND := 0.15
-# Planar speed (m/s) above which a body starts its move loop; it keeps it down to 60% of this.
 const MOVE_MIN := 0.8
 const JOINT_PREFIX := "Clip_"
 
-# Per kind: the parts each bone moves, as paths under the reaction pivot; and for a rig the
-# body already has, the bones and the channels the clip owns ("p" position, "r" rotation,
-# "s" scale). stride: metres rolled per move loop.
 const ROWS := {
 	"chaser": {"stride": 2.2, "parts": {"body": ["ChaserBody/ChaserBody"], "fin": ["ChaserBody/ChaserFin"],
 		"claws": ["ChaserBody/ChaserClaws"]}},
 	"lobber": {"stride": 1.6, "parts": {"body": ["LobberBody"], "barrel": ["LobberBody/LobberBarrel"], "bulb": ["LobberBulb"]}},
 	"mag_trapper": {"stride": 1.8, "parts": {"cart": ["MagTrapperBody/Cart"], "stack": ["MagTrapperBody/MagStack"]}},
-	# The skinned body follows its own MeshInstance3D transform, so the body joint wraps the
-	# mesh and the plates; the pads' heights and the rear's tilt stay plated_brute.gd's.
 	"plated_brute": {"stride": 1.5, "parts": {"body": ["BruteBody", "BrutePlates"]},
 		"bones": {"feet": ["Skeleton3D", "BruteFeet", "prs"], "pad_l": ["Skeleton3D", "SlamPadLeft", "rs"],
 			"pad_r": ["Skeleton3D", "SlamPadRight", "rs"]}},
 	"winch_drone": {"stride": 2.4, "parts": {"body": ["WinchBody"], "drum": ["WinchBody/WinchDrum"], "rotor": ["WinchBody/WinchRotor"]}},
 	"jolt_layer": {"stride": 1.8, "parts": {"body": ["JoltBody"], "coil": ["JoltCoil"]}},
-	# The Spillway roster (design-v3/SPILLWAY-ROSTER.md). The flap's plate is ramp_flipper.gd's own
-	# (it leaves the cart while it tilts), so only the crew and cart take the clip.
 	"hooker": {"stride": 1.8, "parts": {"body": ["HookerBody/Body"], "harpoon": ["HookerBody/HookerHarpoon"]}},
 	"ramp_flipper": {"stride": 1.8, "parts": {"body": ["RampBody"]}},
 	"boom_tender": {"stride": 2.4, "parts": {"hull": ["BoomTenderBody/TenderHull"], "reel": ["BoomTenderBody/TenderReel"],
 		"boom": ["BoomTenderBody/Boom"]}},
-	# The rest of the Spillway crew (W1-87). The code's own poses ride inside the joints: the
-	# bola's whirl, the swatter's sweep, the deflector's wall and squash, the meter's spin; the net
-	# rides the netcaster's body joint.
 	"netcaster": {"stride": 1.8, "parts": {"body": ["NetcasterBody/Body", "NetcasterNet"]}},
 	"bola_thrower": {"stride": 1.8, "parts": {"body": ["BolaThrowerBody"], "bola": ["BolaLoop"]}},
 	"swatter": {"stride": 1.8, "parts": {"body": ["SwatterBody"], "paddle": ["SwatterPaddle"]}},
@@ -65,8 +33,6 @@ const ROWS := {
 	"gyro_jammer": {"stride": 1.8, "parts": {"body": ["GyroBody"], "aerial": ["GyroAerial"]}},
 }
 
-# Tests opt in; a headless run otherwise plays nothing. This is its own switch, not
-# EnemyMotion.headless_idle, so the idle tests keep their immediate scatter and rest poses.
 static var headless := false
 static var _libraries := {}
 
@@ -103,7 +69,6 @@ static func has_clips(kind_name: String) -> bool:
 	return ROWS.has(kind_name) and ResourceLoader.exists(path_for(kind_name))
 
 
-# The kind's clips, read once: bone names, parents and rests, and each clip's tracks per bone.
 static func library(kind_name: String) -> Dictionary:
 	if _libraries.has(kind_name):
 		return _libraries[kind_name]
@@ -139,8 +104,6 @@ static func library(kind_name: String) -> Dictionary:
 	return found
 
 
-# Seats a driver on `body` when its kind has clips, slotting a joint above each part the row
-# names. Null when nothing plays (headless, no file, no pivot, or a part is missing).
 static func seat(body: Node3D) -> Node:
 	var kind_name := String(body.get("kind"))
 	var pivot := body.get("reaction_pivot") as Node3D
@@ -218,7 +181,6 @@ func _on_attack_phase(facts: Dictionary) -> void:
 		_strike_age = 0.0
 
 
-# A struck body flinches unless it is committed to an attack; enemy.react() calls this.
 func hit() -> void:
 	if clip in ["windup", "attack"] or _dying:
 		return
@@ -226,9 +188,6 @@ func hit() -> void:
 		_hit_age = 0.0
 
 
-# Takes the dying body's look with it: the pivot moves to a holder in the world that plays
-# the death clip, then breaks up as before (EnemyMotion.scatter) and frees. False when the
-# kind has no death clip, so the caller scatters at once.
 var _land := Callable()
 
 
@@ -254,8 +213,6 @@ func die(direction: Vector3, land := Callable()) -> bool:
 	return true
 
 
-# A part the kind has let go of (a deployed ramp plate, a bola in flight, a thrown cup) does not
-# ride the dying hull back onto the body; hide it so the hull still plays its baked death clip.
 func _detach_away_tools() -> void:
 	for row in _joints:
 		for part in (row.joint as Node3D).get_children():
@@ -295,7 +252,6 @@ func _physics_process(delta: float) -> void:
 		_hit_age += delta
 
 
-# [clip, seconds into it] for this tick, highest claim first.
 func _choose() -> Array:
 	var atk: Dictionary = enemy.get("_atk")
 	var anims: Dictionary = lib.anims
@@ -304,14 +260,11 @@ func _choose() -> Array:
 		_hit_age = -1.0
 		var tele = atk.get("tele")
 		var progress := float(tele.progress) if tele != null and is_instance_valid(tele) else float(atk.progress)
-		# A crew's wind-up runs on its own clock even where its telegraph is held open (the bola).
 		var run: float = enemy.windup_run() if enemy.has_method("windup_run") else -1.0
 		if run >= 0.0:
 			progress = run
 		return ["windup", clampf(progress, 0.0, 1.0) * float(anims.windup.length)]
 	if _strike_age >= 0.0 and anims.has("attack"):
-		# A live phase longer than the clip (a pit, a winch) holds its last pose until it closes,
-		# so the idle never plays inside an open attack.
 		if _strike_age <= float(anims.attack.length) or not atk.is_empty():
 			return ["attack", minf(_strike_age, float(anims.attack.length))]
 		_strike_age = -1.0
@@ -334,8 +287,6 @@ func _set_clip(next: String) -> void:
 	clip = next
 
 
-# Poses the motion bones at `seconds` of `clip_name`, eased from the last clip while a blend
-# runs, and hands every joint and owned bone channel its share.
 func _sample(clip_name: String, seconds: float, weight: float) -> void:
 	var entry: Dictionary = lib.anims.get(clip_name, {})
 	var bones: Array = lib.bones
@@ -398,6 +349,5 @@ func _apply() -> void:
 			skeleton.set_bone_pose_scale(row.target, pose.basis.get_scale())
 
 
-# What plays now, for tests and the still page.
 func state() -> Dictionary:
 	return {"clip": clip, "time": clip_time, "dying": _dying}

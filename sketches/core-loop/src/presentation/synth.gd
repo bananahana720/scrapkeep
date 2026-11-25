@@ -2,26 +2,14 @@ extends RefCounted
 
 const Harmony := preload("res://src/presentation/harmony.gd")
 
-# The instrument rack: every sound in the game is computed here from oscillators,
-# envelopes, noise and small filters. No samples, no files, no network. Buffers are
-# mono float at Harmony.RATE; to_wav() turns one into a 16-bit AudioStreamWAV.
-#
-# The instruments are shared by the band (music_engine.gd) and the one-shot cues
-# (sfx_bank.gd), so a reward chime and the lead line come from the same rack.
 
 const RATE := Harmony.RATE
 const INV_RATE := 1.0 / Harmony.RATE
 
-# Note renderers cache by instrument and pitch: a note is rendered once at its
-# longest useful length and cut short at play time with a release ramp.
 static var _notes := {}
-# The cache is shared with the background bake, so every read and write takes the lock.
 static var _lock := Mutex.new()
-# The grid a score renders on. The bank sets it to bake a stinger at the boss tempo.
 static var score_step := Harmony.STEP
-# Semitones added to every pitched note of a score (live-key stingers).
 static var score_transpose := 0
-# Held sounds are long enough to fill a bar at the slower boss tempo.
 const HOLD := 90000
 
 
@@ -79,7 +67,6 @@ static func normalize(buf: PackedFloat32Array, target := 0.9) -> PackedFloat32Ar
 	return buf
 
 
-# Short linear fades at both ends so no cue starts or stops with a click.
 static func declick(buf: PackedFloat32Array, fade_in := 32, fade_out := 256) -> PackedFloat32Array:
 	var n := buf.size()
 	for i in mini(fade_in, n):
@@ -102,7 +89,6 @@ static func to_wav(buf: PackedFloat32Array) -> AudioStreamWAV:
 	return wav
 
 
-# The loudest sample of a baked stream, read back from its 16-bit data.
 static func wav_peak(wav: AudioStreamWAV) -> float:
 	var data := wav.data
 	var top := 0
@@ -116,8 +102,6 @@ static func _rng(seed_value: int) -> RandomNumberGenerator:
 	rng.seed = seed_value
 	return rng
 
-
-# --- Drums -------------------------------------------------------------------------
 
 static func kick() -> PackedFloat32Array:
 	var n := seconds(0.34)
@@ -175,7 +159,6 @@ static func hat(open := false) -> PackedFloat32Array:
 	for i in n:
 		var t := i * INV_RATE
 		var x := rng.randf_range(-1.0, 1.0)
-		# Two-stage high-pass pushes hat air cleanly above the 2-4 kHz warning lane.
 		var hp1 := 0.44 * (prev_y + x - prev_x)
 		prev_x = x
 		prev_y2 = 0.44 * (prev_y2 + hp1 - prev_y)
@@ -244,10 +227,6 @@ static func crash() -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 8, 2000)
 
 
-# --- Pitched instruments -------------------------------------------------------------
-# Each takes a midi note and a length in samples and returns a note with its own
-# attack and natural decay; the player adds the release when the note is cut.
-
 static func note(instrument: String, midi: int) -> PackedFloat32Array:
 	var key := "%s:%d" % [instrument, midi]
 	var hit = _cached(key)
@@ -299,8 +278,6 @@ static func note(instrument: String, midi: int) -> PackedFloat32Array:
 	return buf
 
 
-# A whole keys voicing mixed into one buffer, so a chord stab is one voice to mix
-# instead of four. Soft-limited below full scale so 4- and 5-note jazz voicings never clip.
 static func chord(voicing: Array) -> PackedFloat32Array:
 	var key := "chord:%s" % str(voicing)
 	var hit = _cached(key)
@@ -315,8 +292,6 @@ static func chord(voicing: Array) -> PackedFloat32Array:
 	return buf
 
 
-# A warm analog Juno-style pad: detuned warm voices an octave under the keys voicing
-# through a gentle low-pass swell so it sits under the band like heat without sounding static.
 static func pad_chord(voicing: Array) -> PackedFloat32Array:
 	var key := "pad:%s" % str(voicing)
 	var hit = _cached(key)
@@ -366,8 +341,6 @@ static func sub(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.8), 64, 600)
 
 
-# Two detuned saws, a quiet octave and a rock-solid sub fundamental through a swept
-# resonant low-pass: drum-and-bass and electro-house growl that stays grounded and warm.
 static func reese(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -393,8 +366,6 @@ static func reese(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.75), 64, 800)
 
 
-# A vintage Rhodes electric piano: warm chorused fundamental, gentle FM tine bloom,
-# soft bell-tine attack ping and slow vintage tremolo.
 static func keys(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -414,10 +385,6 @@ static func keys(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 16, 1500)
 
 
-# The lead is a warm jazz-house alto saxophone, for Andrew: a scoop into the pitch,
-# warm even-harmonic reed body shaped through a resonant pitch-tracking horn low-pass,
-# delayed vibrato and a soft tongue-breath puff at the onset. Moss's lounge plays
-# the same horn with a wider scoop and a slower, later vibrato (sax_lounge).
 static func lead(midi: int, n: int, scoop_depth := 0.03, vib_rate := 5.6, vib_depth := 0.0055, vib_delay := 0.16) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -469,7 +436,6 @@ static func lead(midi: int, n: int, scoop_depth := 0.03, vib_rate := 5.6, vib_de
 	return declick(normalize(buf, 0.6), 32, 600)
 
 
-# A clean celesta-glass chime bell for rewards and harmonic sparkles.
 static func bell(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -489,7 +455,6 @@ static func bell(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 8, 1500)
 
 
-# A warm marimba-vibraphone bar, the tone of the end-of-cycle melody and pickups.
 static func mallet(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -507,7 +472,6 @@ static func mallet(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 8, 1200)
 
 
-# A rounded appliance beep: a low-passed square, the rice cooker's own voice.
 static func beep(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -522,9 +486,6 @@ static func beep(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.5), 16, 800)
 
 
-# --- The level and boss palettes -----------------------------------------------------
-
-# Clavinet: a Hohner D6 narrow pulse with warm double-string bite through a snapping low-pass.
 static func clav(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -545,8 +506,6 @@ static func clav(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 8, 600)
 
 
-# Brass: a three-voice unison horn section with a warm sub-octave anchor whose filter
-# swells open with the breath and settles rich rather than buzzy.
 static func brass(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -573,8 +532,6 @@ static func brass(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 32, 800)
 
 
-# Talkbox: a warm saw plus fundamental anchor through two vocal formants that glide
-# "oo" to "ah" to "eh", with late vibrato and soft analog saturation so the lead sings.
 static func talk(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -604,7 +561,6 @@ static func talk(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 32, 800)
 
 
-# Funk bass: saw and square plucked through a closing filter over a solid sub sine anchor.
 static func fbass(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -625,7 +581,6 @@ static func fbass(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.75), 16, 600)
 
 
-# A Hammond B3 drawbar organ chord with woody key click, dual-rate Leslie shimmer and tube warmth.
 static func organ_chord(voicing: Array) -> PackedFloat32Array:
 	var key := "organ:%s" % str(voicing)
 	var hit = _cached(key)
@@ -656,8 +611,6 @@ static func organ_chord(voicing: Array) -> PackedFloat32Array:
 	return buf
 
 
-# A filtered French-house / blog-house chord stab: detuned unison saws over a warm
-# fundamental, dark for the build and bright for the drop.
 static func stab_chord(voicing: Array, bright: bool) -> PackedFloat32Array:
 	var key := "stab%s:%s" % ["B" if bright else "D", str(voicing)]
 	var hit = _cached(key)
@@ -691,7 +644,6 @@ static func stab_chord(voicing: Array, bright: bool) -> PackedFloat32Array:
 	return buf
 
 
-# An anvil: a bright inharmonic clang that rings, the forge's hammer.
 static func anvil() -> PackedFloat32Array:
 	var n := seconds(1.1)
 	var buf := buffer(n)
@@ -729,7 +681,6 @@ static func clap() -> PackedFloat32Array:
 	return declick(normalize(buf, 0.8), 4, 400)
 
 
-# A deep industrial boom: a tom that falls a fifth, with grit.
 static func boom() -> PackedFloat32Array:
 	var n := seconds(0.6)
 	var buf := buffer(n)
@@ -742,10 +693,6 @@ static func boom() -> PackedFloat32Array:
 	return declick(normalize(buf, 0.95), 8, 800)
 
 
-# --- The leitmotif voices (SOUND-STORY.md section 2) ------------------------------------
-
-# Kest's tuned floor tom: a skin that settles onto its pitch, a second mode a little
-# over a fifth up, and a warm felt beater strike, so a thump sits in key.
 static func tom(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -765,7 +712,6 @@ static func tom(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.8), 8, 1200)
 
 
-# Kest's 808: a punchy sine that drops an octave onto its note and holds with warm analog drive.
 static func sub808(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -778,8 +724,6 @@ static func sub808(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.85), 16, 1500)
 
 
-# The swarm: a thin high sawtooth with its low end cut, gated in sixteenths on the band
-# grid. loose > 0 detunes and smears the gate, the formation breaking apart.
 static func buzz(midi: int, n: int, loose: float) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var rng := _rng(midi * 7 + int(loose * 100.0))
@@ -805,8 +749,6 @@ static func buzz(midi: int, n: int, loose: float) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.5), 32, 800)
 
 
-# The Mind: blown crystal sine with a delicate glass overtone and a long tail that bends
-# 3 cents flat as it rings.
 static func chime(midi: int, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -819,12 +761,6 @@ static func chime(midi: int, n: int) -> PackedFloat32Array:
 	return declick(normalize(buf, 0.6), 16, 3000)
 
 
-# --- The 2011 bass rack -----------------------------------------------------------------
-
-# One LFO cycle of a wobble: detuned saws and a square sub-octave through a resonant
-# low-pass that opens and closes once, so a voice retriggered on the grid is an LFO
-# locked to the beat. The period is rounded to 128 samples for the cache, and the
-# player cuts each cycle at the next trigger. "yoi" adds a formant that talks.
 static func wob(midi: int, period: int, vowel := "wub") -> PackedFloat32Array:
 	var n := maxi(256, int(ceil(period / 128.0)) * 128)
 	var key := "wob:%d:%d:%s" % [midi, n, vowel]
@@ -866,8 +802,6 @@ static func wob(midi: int, period: int, vowel := "wub") -> PackedFloat32Array:
 	return buf
 
 
-# A wordless studio choir: three detuned saws through two natural vocal formants
-# ("ah" 760/1150 Hz or "ooh" 360/620 Hz) with soft breath air, late vibrato and warm fundamental.
 static func choir(midi: int, vowel: String, n: int) -> PackedFloat32Array:
 	var buf := buffer(n)
 	var f := Harmony.hz(midi)
@@ -900,10 +834,6 @@ static func choir(midi: int, vowel: String, n: int) -> PackedFloat32Array:
 		buf[i] = tanh((b1 * 0.82 + b2 * 0.56 + l1 * 0.28 + air * 0.05) * 1.1) * env
 	return declick(normalize(buf, 0.6), 32, 1200)
 
-
-# --- Scores ---------------------------------------------------------------------------
-# A score is a list of [step, midi, steps, instrument, gain]; drums use midi 0. It is
-# rendered on the band's own grid, so a stinger started on a beat stays in time.
 
 static func drum(instrument: String) -> PackedFloat32Array:
 	var key := "drum:" + instrument
@@ -943,7 +873,6 @@ static func drum(instrument: String) -> PackedFloat32Array:
 const DRUMS := ["kick", "snare", "hat", "open_hat", "ride", "crash", "anvil", "clap", "boom", "brush", "geiger", "choke"]
 
 
-# A brush swept across the ride: soft noise that swells in, the lounge's hat.
 static func brush() -> PackedFloat32Array:
 	var n := seconds(0.22)
 	var buf := buffer(n)
@@ -959,7 +888,6 @@ static func brush() -> PackedFloat32Array:
 	return declick(normalize(buf, 0.7), 32, 600)
 
 
-# One Geiger click: a dry snap with a faint sub knock, a reactor relic counting.
 static func geiger() -> PackedFloat32Array:
 	var n := seconds(0.03)
 	var buf := buffer(n)
@@ -970,8 +898,6 @@ static func geiger() -> PackedFloat32Array:
 	return declick(normalize(buf, 0.7), 2, 200)
 
 
-# A cymbal grabbed by the hand: the crash's strike cut dead in 80 ms. Crowd control
-# that could not hold you (Rivet's ignored hit, tenacity).
 static func choke() -> PackedFloat32Array:
 	var buf := crash().slice(0, seconds(0.11))
 	var n := buf.size()
@@ -997,8 +923,6 @@ static func render_score(score: Array, tail_seconds := 1.0) -> PackedFloat32Arra
 			continue
 		var source := note(instrument, int(event[1]) + score_transpose)
 		var length := mini(source.size(), int(event[2]) * step + seconds(0.25))
-		# A note the buffer ends before releases into that end, so a short tail never cuts one
-		# mid-wave.
 		var count := mini(length, buf.size() - start)
 		var release := mini(1200, count)
 		for i in count:

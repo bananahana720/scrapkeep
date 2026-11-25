@@ -7,53 +7,19 @@ const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
-# The discovery banner: the category icon, a kicker ("New synergy" or "Found"), the
-# name and one line of what it does. Per the UI regions rule (CONTRACTS) it sits in
-# the toasts band, beside the HUD's centred toast column on the right, never in the
-# top band (objective, status) or the prompts band; on a screen too narrow for that
-# it drops just under the toasts band into the middle view. It slides in from the
-# right edge,
-# holds, and slides away, about 3 s in all on the real clock, so neither hit-stop nor
-# a paused screen can pin it. Discoveries in quick succession queue and play one at a
-# time. dismiss() clears it at once (presentation calls it on flow changes, arena
-# entry, death and run end).
-#
-# A first-discovery card raised in a fight waits at the head of the queue and shows at the
-# next time the screen's one gate says so (screen_busy.gd): quiet for the finds' hold. One
-# raised when the gate is already open shows at once. Whatever is showing closes when a
-# Warden fight goes live. In cards mode at most MAX_HELD wait and a repeat shows nothing; in
-# banner mode presentation drops a repeat synergy before it reaches the queue. The banner
-# finds the bus and the flow through its presentation ancestor, or a test hands it a bus
-# with watch().
-#
-# `--discovery=cards` (cards = true, profile set by the owner): the first time an id is
-# discovered a picture card lands in the same slot: a larger panel with a looping
-# animated glyph drawn from the discovery's EventKinds shape and colour, the name and
-# its one line. Every later time shows nothing: the part's name at the ball is enough. The
-# card never pauses the game or touches Engine.time_scale; any input dismisses it at
-# once and is left unhandled, so play never notices. It uses the banner's slot in the
-# toasts band, so the calm-screen word budget is unchanged. Off, none of this runs.
 
 const HOLD := 2.5
 const IN_TIME := 0.22
 const OUT_TIME := 0.3
 const WIDTH := 360.0
 const MARGIN := 18.0
-# The HUD's toast column width (hud.gd TOAST_WIDTH), which the banner stays beside.
 const TOAST_COLUMN := 800.0
-# The first-discovery card (cards mode) and the most that wait for the gate. A card holds
-# CARD_HOLD for a line of up to CARD_WORDS words and CARD_WORD_HOLD more for each word past
-# that, up to CARD_HOLD_MAX, so a long line stays up long enough to read to its end.
 const CARD_HOLD := 4.0
 const CARD_WORDS := 18
 const CARD_WORD_HOLD := 0.2
 const CARD_HOLD_MAX := 8.0
 const MAX_HELD := 3
 const GLYPH_CARD := 132.0
-# A card is this tall (250 at 900p: from just under the toasts band, y 279, to 529, above
-# the prompts band at 558) so it reads as the bigger ceremony, and its line takes at
-# most CARD_LINES lines, so it stays clear of the play area whatever the text. Seven lines
-# is what the card holds beside its title without growing; a longer line is trimmed.
 const CARD_HEIGHT := 250.0
 const CARD_LINES := 7
 const GLYPH_PERIOD := 1.2
@@ -62,26 +28,18 @@ const TINT_KICKER_LIFT := 0.35
 
 var shown := 0
 var last_title := ""
-# Cards mode: set by the owner from the discovery option, with a UiProfile that
-# persists discoveries_seen. Without a profile the ids seen this session stand in.
 var cards := false
 var profile = null
-# Where the profile lives when the banner opens it itself (--discovery=cards on the
-# command line); empty means the owner supplies one.
 var storage_dir := ""
-# "banner" or "card": how the current item is shown, and how many cards.
 var last_style := ""
 var cards_shown := 0
-# The clock in milliseconds; tests swap it for a fake.
 var now_ms: Callable = Callable(Time, "get_ticks_msec")
 
-# An item is on screen now (key is its show_discovery id): the calm moment it waited for.
 signal came_up(key: String)
 
 var _queue: Array = []
 var _events = null
 var _flow = null
-# The screen_busy gate (src/ui/screen_busy.gd) and the key of the card up: it queues behind a fight.
 var _busy = null
 var _slot := ""
 var _session_seen := {}
@@ -167,37 +125,24 @@ func _ready() -> void:
 		node = node.get_parent()
 
 
-# Hands the banner the bus: a retry drops what it holds.
 func watch(events) -> void:
 	if _events == events or not events.has_signal("player_hit"):
 		return
 	_events = events
-	# A retry rewinds the stage and clears the codex record: a held card goes unseen.
 	if events.has_signal("stage_entered"):
 		events.stage_entered.connect(func(_stage: int, retry: bool):
 			if retry:
 				dismiss(true))
 
 
-# Whether a find may show its card now: the screen is quiet (screen_busy.gd) for the finds' hold.
 func calm() -> bool:
 	return _busy == null or _busy.settled(ScreenBusy.FIND_HOLD)
 
 
-# A card is waiting for a calm moment.
 func held() -> bool:
 	return not showing() and not _queue.is_empty()
 
 
-# kicker: "New synergy", "Synergy", "Found" or similar. While one is showing the next
-# waits its turn.
-# id names the discovery for the first-time test in cards mode (default: category and
-# title); kind is the EventKinds row whose shape and colour the glyph wears.
-# tint, when set, replaces the category colour on the edge, the kicker and the glyph, so a
-# banner can wear the colour of the thing it names (a part set's studs on the ball).
-# every_time is for a moment of the run, not a codex first (a completed set): in cards mode its
-# first showing ever is still the card, and each later one is the small banner instead of
-# nothing. It is never dropped for a full queue, and it does not wait behind first-find cards.
 func show_discovery(title: String, category: String, detail := "", kicker := "New synergy", id := "", kind := DEFAULT_KIND,
 		tint = null, every_time := false) -> void:
 	var style := "banner"
@@ -210,14 +155,9 @@ func show_discovery(title: String, category: String, detail := "", kicker := "Ne
 			return
 		if every_time:
 			style = "banner" if _was_seen(key) else "auto"
-		# Seen means shown: the record is written when the card comes up (_next), so a
-		# discovery that is queued and then dropped stays unseen. A repeat, one already
-		# held, or one past MAX_HELD shows nothing.
 		elif _was_seen(key) or _queue.size() >= MAX_HELD:
 			return
 	var item := [title, category, detail, kicker, style, kind, key, tint, every_time]
-	# A moment of the run goes ahead of the first-find cards still waiting (and behind an earlier
-	# moment), so it lands in the next calm moment after the pickup that earned it.
 	var at := _queue.size()
 	if every_time:
 		at = 0
@@ -238,7 +178,6 @@ func queued() -> int:
 	return _queue.size()
 
 
-# Gone at once. clear_queue also drops the discoveries still waiting.
 func dismiss(clear_queue := true) -> void:
 	_started_ms = -1
 	visible = false
@@ -263,8 +202,6 @@ func _mark_seen(key: String) -> void:
 		_session_seen[key] = true
 
 
-# Any key, mouse button or pad button press (or a hard stick push) dismisses a card at
-# once. The event is not consumed: the press still reaches the game.
 func _input(event: InputEvent) -> void:
 	if not showing() or _style_name == "banner":
 		return
@@ -278,7 +215,6 @@ func _input(event: InputEvent) -> void:
 		_next()
 
 
-# How long a card with this line stays up between its slide in and its slide out.
 static func card_hold(line: String) -> float:
 	var extra := maxi(line.split(" ", false).size() - CARD_WORDS, 0)
 	return minf(CARD_HOLD + CARD_WORD_HOLD * extra, CARD_HOLD_MAX)
@@ -296,7 +232,6 @@ func _apply_style(style: String, entry: Dictionary, kind: String) -> void:
 	_panel.custom_minimum_size = Vector2(WIDTH, 0.0)
 	_body.custom_minimum_size = Vector2(WIDTH - 90.0, 0.0)
 	_body.max_lines_visible = -1
-	# A card trims its line; a banner after a card must not keep the trim (it hid the whole line).
 	_body.text_overrun_behavior = TextServer.OVERRUN_NO_TRIMMING
 	_title.add_theme_font_size_override("font_size", 24)
 	_body.add_theme_font_size_override("font_size", 15)
@@ -326,7 +261,6 @@ func _next() -> void:
 		_queue.pop_front()
 		_next()
 		return
-	# Every head asks the shared gate, whatever its style.
 	if _busy != null and not _busy.may_show(head[6], ScreenBusy.FIND_HOLD):
 		return
 	_slot = head[6]
@@ -341,14 +275,9 @@ func _next() -> void:
 	if item[7] is Color:
 		_glyph_color = color
 	_icon.texture = CodexStyle.icon(item[1], item[7])
-	# The glyph, the colour and the name say what it is; the kicker is only the category, not a sentence.
-	# A moment of the run (a finished set) wears the synergy card's glyph, so its word stays until a
-	# mark of its own carries it (reported, wave 36 round 4).
 	_kicker.text = String(entry["label"]).to_upper()
 	if item[8]:
 		_kicker.text = "%s  ·  %s" % [String(item[3]).to_upper(), _kicker.text]
-	# The edge, icon and glyph wear a tint as given; the small kicker text is lifted so a dark
-	# tint (rust, slate) still reads on the panel.
 	_kicker.add_theme_color_override("font_color", color.lightened(TINT_KICKER_LIFT) if item[7] is Color else color)
 	_title.text = item[0]
 	_body.text = item[2]
@@ -372,7 +301,6 @@ func _process(delta: float) -> void:
 	if _started_ms < 0:
 		_next()
 		return
-	# A fight going live closes what is up; the discovery stays seen and the queue waits.
 	if WhyCallout.warden_fight_live(_flow):
 		dismiss(false)
 		return
@@ -398,8 +326,6 @@ func _place(slide: float) -> void:
 	_panel.modulate.a = clampf(slide * 1.4, 0.0, 1.0)
 
 
-# Where the banner rests on this screen: the toasts band's right side, or just under
-# the band when the side is too narrow or the banner too tall for it.
 func rest_position() -> Vector2:
 	var screen := _screen()
 	var band := ScreenRegions.rect("toasts", screen)
@@ -415,9 +341,6 @@ func _screen() -> Vector2:
 	return get_viewport_rect().size if is_inside_tree() else Vector2(1600.0, 900.0)
 
 
-# The looping glyph: the EventKinds shape in its colour, pulsing with an echo ring on a
-# GLYPH_PERIOD loop. Shapes that mean motion (chevron, arrow) travel, the rest turn or
-# swell, so the picture is never only a static icon.
 func _draw_glyph() -> void:
 	if _started_ms < 0:
 		return
