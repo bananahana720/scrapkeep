@@ -17,7 +17,6 @@ from mathutils import Euler, Vector
 
 HERE = Path(__file__).resolve().parent
 BASE = HERE / "ore_cart.py"
-# ore_cart.py ends in a bare main() call; load its tables and helpers without running its export.
 oc = {"__file__": str(BASE), "__name__": "ore_cart_tables"}
 exec(compile(BASE.read_text().rsplit("\nmain()", 1)[0], str(BASE), "exec"), oc)
 kit, common = oc["kit"], oc["common"]
@@ -29,7 +28,6 @@ PHI = (math.sqrt(5) - 1) / 2
 
 
 def tone(name, k=0):
-    # The TONES row as an sRGB triple, so kit's bone/petrol wear jitter leaves the palette value exact.
     t = oc["tone"](name, k)
     return common.srgb(t) if isinstance(t, str) else t
 
@@ -39,7 +37,6 @@ def frac(x):
 
 
 def rock(s, x, z, size, yaw, flat, color):
-    # A chunk: an irregular frustum seated in the heap; bottom face buried, so five faces.
     y = oc["heap_y"](x, z) - size * .25
     rot = Euler((0, math.radians(yaw), 0), "YXZ").to_matrix()
     h = size / 2
@@ -53,7 +50,6 @@ def rock(s, x, z, size, yaw, flat, color):
 
 
 def heap(s):
-    # 40 chunks spread by a golden-ratio sequence over the tub mouth, out to the rim lip; every fourth a pale slab.
     n = 40
     ex, ez = oc["HEAP_EDGE"][0] - .14, oc["HEAP_EDGE"][1] - .14
     for i in range(n):
@@ -70,7 +66,6 @@ def tube(s, a, b, w, h, color):
 
 
 def ribs(s):
-    # Ribs stand proud of the tapered wall from the tub floor ring to under the rim, two per long side, one per end.
     bw, bl, _, by = oc["TUB_BOTTOM"]
     tw, tl, _, ty = oc["TUB_TOP"]
     out = .04
@@ -82,7 +77,6 @@ def ribs(s):
 
 
 def disc(s, center, axis, r, depth, n, color, cap=True):
-    # An n-sided cylinder along local axis (x or z) from center outward by depth; open at the base.
     c = Vector(center)
     d = Vector(axis) * depth
     u = Vector((0, 1, 0))
@@ -96,7 +90,6 @@ def disc(s, center, axis, r, depth, n, color, cap=True):
 
 
 def hubs(s):
-    # Outer face of each wheel: a raised ring around the hub disc and a boss at the centre (wheel GLB faces at +-0.17).
     for name, (x, y, z) in oc["SOCKETS"].items():
         if not name.startswith("socket_wheel_"):
             continue
@@ -114,16 +107,13 @@ def bolt(s, center, axis):
 
 def chassis(s):
     rx, ry, tip = oc["RAIL_X"], oc["RAIL_Y"], oc["TOW_TIP"]
-    # Front cross-member where the tow bar leaves the rails.
     s.box((2 * rx + .14, .13, .13), (0, ry, -1.08), tone("chassis"))
-    # Hitch block across the two tow-bar arms, with a pin on top.
     hz = -1.78
     arm = rx * (tip - hz) / (tip + 1.12)
     s.box((2 * abs(arm) + .16, .15, .18), (0, ry, hz), tone("chassis"))
     pin = Vector((0, ry + .075, hz))
     s.add([tuple(pin + Vector((.035 * math.cos(a), dy, .035 * math.sin(a)))) for dy in (0, .12) for a in kit.angles(6, closed=True)],
           [(i, (i + 1) % 6, 6 + (i + 1) % 6, 6 + i) for i in range(6)] + [tuple(range(6, 12))], tone("brass"))
-    # Strut feet: plates on the rail's outer face under each side strut, a bolt on each.
     for sx in (-1, 1):
         for z in (-.25, .25):
             face = sx * (rx + .07)

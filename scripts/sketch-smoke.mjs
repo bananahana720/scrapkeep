@@ -34,15 +34,10 @@ function defaultGodotBinary() {
 export const binary = defaultGodotBinary();
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
 // On macOS the headless engine reports the dummy renderer's unreleased handles and the resources
-// still loaded as it shuts down, after the verdict line, on tests that end clean on Linux (13 tests
-// on the wave 43 stage, 16 Nov 2026). Only macOS skips them: on Linux an exit-leak line has named
-// real faults (docs/decisions.tsv, the HDRI sky cycle) and still fails the run.
 const TEARDOWN_NOISE =
   /^ERROR: \d+ (?:RID allocations of type '\w*RendererDummy\w*' were leaked|resources still in use) at exit\b.*\r?\n?/gm;
 export const withoutTeardownNoise = (output, platform = process.platform) =>
   platform === "darwin" ? output.replace(TEARDOWN_NOISE, "") : output;
-// 180 s since 2026-10-04: the solo bot bands (alpha_posture_bands_test, bot_chain_hand_test)
-// legitimately run 110 to 120 s on a loaded machine; a hang still fails, three minutes later.
 const TIMEOUT_MS = 180_000;
 const SLOWEST = 10;
 const RECEIPT_SCHEMA = "scrapkeep-smoke-receipt/1";
@@ -66,22 +61,14 @@ export function testScripts(directory) {
     .map((name) => "res://tests/" + name);
 }
 
-// A test whose pass or fail reads a wall-clock measurement (a CPU or frame-time cap, a
-// real-time freeze) declares it in a comment among its first lines: "# smoke: solo". The
-// runner runs those files one at a time after the parallel batch, so load from sibling
-// tests cannot push the measurement over its cap. Only the head of the file is read, so
-// a mention further down (or in a string) does not opt a test in.
 const SOLO_MARKER = /^#\s*smoke:\s*solo\b/;
 const BOT_MARKER = /^#\s*smoke:\s*bots\b/;
 const FIXED_FPS_MARKER = /^#\s*smoke:.*\bfixed-fps=(\d+)\b/;
 const MAX_FIXED_FPS = 1000;
 const MARKER_LINES = 5;
 
-// A whole-run test that legitimately outgrows the cap declares a longer one in the same
-// head comment ("# smoke: solo timeout=300s"). It can only raise the cap, never past 360 s.
 const TIMEOUT_MARKER = /^#\s*smoke:.*\btimeout=(\d+)s\b/;
 const MAX_TIMEOUT_MS = 360_000;
-// Whole-run bot proofs have a separate tier and always use the solo phase.
 const MAX_BOT_TIMEOUT_MS = 1_800_000;
 const BOT_TIMEOUT_MS = 1_200_000;
 
@@ -89,8 +76,6 @@ export function isBot(source) {
   return source.split("\n", MARKER_LINES).some((line) => BOT_MARKER.test(line.replace(/\r$/, "")));
 }
 
-// Opt-in fixed-FPS marker ("# smoke: fixed-fps=90") for deterministic frame-stepped physics tests.
-// Never set on wall-clock latency or real-time audio tests.
 export function testFixedFps(source) {
   for (const line of source.split("\n", MARKER_LINES)) {
     const match = FIXED_FPS_MARKER.exec(line.replace(/\r$/, ""));
@@ -102,10 +87,6 @@ export function testFixedFps(source) {
   return null;
 }
 
-// SMOKE_TIME_SCALE stretches every test's time limit on a slow machine. It applies after
-// the marker and the ceiling, so it is the one way past 360 s (1800 s for bots), and it
-// never touches a limit a test sets for its own child processes. A run that used it says
-// so in its output and its receipt, so two runs are compared with the same scale in mind.
 const MAX_TIME_SCALE = 4;
 
 export function timeScale(env = process.env) {
@@ -151,17 +132,12 @@ export function isSoloScript(directory, script) {
   }
 }
 
-// Each headless Godot uses ~1 core (1.06 measured), so the pool sizes itself to 75% of idle
-// cores (leaving 25% headroom for OS and sibling work), clamped to [2, 16]. SMOKE_JOBS overrides
-// it directly without clamping.
 export function jobCount(env = process.env, cpus = os.cpus().length, load = os.loadavg()[0]) {
   if (env.SMOKE_JOBS) return Math.max(1, Number(env.SMOKE_JOBS) || 1);
   const idle = cpus - load;
   return Math.min(16, Math.max(2, Math.floor(idle * 0.75)));
 }
 
-// Concurrency width for a smoke run: bots stay at 1; explicit SMOKE_JOBS is never clamped;
-// only small ad-hoc named runs (<= NAMED_WIDTH tests) stay narrow when SMOKE_JOBS is unset.
 export function smokeWidth({
   bots = false,
   named = false,
@@ -175,8 +151,6 @@ export function smokeWidth({
   return jobs;
 }
 
-// Warm batching (tools/test_batch.gd): runs plain SceneTree tests in one Godot process so
-// game scripts compile once per batch instead of once per test. Shared with sketch-fast.mjs.
 const BATCH_SOLO =
   /get_ticks_|OS\.set_environment|ProjectSettings\.set|OS\.(execute|create_process|kill)|\b(warm|hitch|cold)\b|change_scene/;
 export const BATCH_MAX_TESTS = 8;
@@ -205,7 +179,6 @@ export function batchable(source) {
   return /^extends SceneTree$/.test(firstCode) && !isSolo(source) && !BATCH_SOLO.test(source);
 }
 
-// Takes consecutive batchable rows from the front of the queue, up to maxTests and maxMs.
 export function takeBatch(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = BATCH_MAX_MS) {
   const batch = [];
   let ms = 0;
@@ -221,8 +194,6 @@ export function takeBatch(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = B
   return batch;
 }
 
-// Packs non-adjacent batchable rows while preserving their relative order in `queue`.
-// If the front row is not batchable, returns [] so the caller runs it alone without starving it.
 export function takeBatchPacked(queue, canBatch, maxTests = BATCH_MAX_TESTS, maxMs = BATCH_MAX_MS) {
   if (queue.length === 0 || !canBatch(queue[0])) return [];
   const batch = [queue.shift()];
@@ -242,8 +213,6 @@ export function takeBatchPacked(queue, canBatch, maxTests = BATCH_MAX_TESTS, max
   return batch;
 }
 
-// Splits a batch's output into each test's own output by its BATCH START and BATCH END lines,
-// plus `outside`: lines printed outside any test slice (such as process-level exit leaks).
 export function splitBatch(output, tests) {
   const done = [];
   const outsideLines = [];
@@ -273,17 +242,11 @@ export function splitBatch(output, tests) {
   };
 }
 
-// True when a warm batch printed an engine error or exit-leak ERROR outside individual test slices
-// (after stripping macOS dummy-renderer shutdown noise), matching judge()'s errorLine contract.
-// Benign Godot exit WARNINGs (e.g. ObjectDB instances leaked) do not fail judge() and do not force
-// solo reruns; any ERROR:/SCRIPT ERROR:/FAIL outside a test slice forces solo reruns of the batch.
 export function batchHasOutsideError(outside, platform = process.platform) {
   const clean = withoutTeardownNoise(outside ?? "", platform);
   return errorLine.test(clean);
 }
 
-// Solo tests run one at a time by default so wall-clock assertions stay isolated;
-// SMOKE_SOLO_JOBS widens the solo phase, bounded safely to available cores.
 export function soloWidth(env = process.env, cpus = os.cpus().length) {
   if (env.SMOKE_SOLO_JOBS !== undefined && env.SMOKE_SOLO_JOBS !== "") {
     const requested = Math.floor(Number(env.SMOKE_SOLO_JOBS));
@@ -294,8 +257,6 @@ export function soloWidth(env = process.env, cpus = os.cpus().length) {
   return 1;
 }
 
-// A test that prints SKIP, or "N skipped" with N above zero, passed without checking
-// something. The run still passes, but the summary lists it so a missing asset stays visible.
 const skipWord = /\bSKIP\b/;
 const skippedCount = /\b([1-9]\d*) skipped\b/;
 
@@ -306,8 +267,6 @@ export function skipLines(output) {
     .filter((line) => skipWord.test(line) || skippedCount.test(line));
 }
 
-// CONTRACTS.md: a test prints one line per check ending in "-> PASS" or "-> FAIL" and a
-// final "NAME: PASS" line. Some tests print no check lines, so the counts are tolerant.
 const verdictLine = /^([\w.-]+): (PASS|FAIL)\b/gm;
 
 export function hasVerdictLine(output, script) {
@@ -325,8 +284,6 @@ export function countChecks(output) {
   };
 }
 
-// --test GLOB matches a test file's base name; * is the only wildcard and a trailing .gd
-// on either side is ignored.
 export function globToRegExp(glob) {
   const body = glob
     .replace(/\.gd$/, "")
@@ -377,7 +334,6 @@ export function parseArgs(argv, env = {}) {
   return options;
 }
 
-// Returns an error message, or null when the arguments are usable.
 export function validateRun(options, available) {
   if (options.named && options.sketches.length !== 1)
     return "sketch:smoke --test requires exactly one --sketch";
@@ -390,8 +346,6 @@ export function noMatchMessage(sketch, globs) {
   return `sketch:smoke found no test in ${sketch} matching ${globs.join(", ")}`;
 }
 
-// Gates and named runs use the same pool. Keep its root independent of TMPDIR so
-// worktrees share the limit; all participants must use the same SMOKE_SLOTS value.
 function slotRoot() {
   return path.join(process.env.SCRAPKEEP_LOCK_DIR || "/tmp", "scrapkeep-sketch-smoke.slots");
 }
@@ -403,7 +357,6 @@ export function machineSlotCount(env = process.env) {
   return slots;
 }
 
-// Kept for compatibility; liveness is the heartbeat rule below.
 export const FOREIGN_CLAIM_MAX_MS = 3 * 60 * 60 * 1000;
 export const HEARTBEAT_MS = 15_000;
 export const STALE_CLAIM_MS = 90_000;
@@ -420,7 +373,6 @@ function slotOwner(slot) {
       if (error.code === "ESRCH") return { owner, alive: false };
       if (error.code !== "EPERM") throw error;
     }
-    // Heartbeat rule: a holder refreshes its claim's mtime, so a stale mtime is dead whatever the pid says (sandbox pids are unverifiable).
     const age = Date.now() - statSync(path.join(slot, owner)).mtimeMs;
     return { owner, alive: age < STALE_CLAIM_MS };
   } catch (error) {
@@ -429,8 +381,6 @@ function slotOwner(slot) {
   }
 }
 
-// Remove only this claim's file, then an empty directory. A racing reclaimer or
-// delayed release cannot recursively delete a replacement owner's populated slot.
 function releaseSlot(slot, owner) {
   try {
     unlinkSync(path.join(slot, owner));
@@ -453,7 +403,6 @@ function touch(target) {
   }
 }
 
-// Waiter directories of killed runners: unlink-then-rmdir, never recursive.
 function sweepStaleWaiters(directory, own) {
   for (const name of readdirSync(directory)) {
     if (!name.startsWith("claim-") || name === own) continue;
@@ -467,16 +416,8 @@ function sweepStaleWaiters(directory, own) {
   }
 }
 
-// The quiet hold: a frame-time reading must have the machine to itself. While a reading holds this file, no runner on
-// this machine takes a slot in any pool (acquireSlot waits, whatever SCRAPKEEP_LOCK_DIR says, so gate steps wait too),
-// and the reading starts only once the shared pool's slots are empty. It does not see work that never takes a slot from
-// the shared pool: a running gate, the nightly run, the red team, a band read or an export. Do not start a reading
-// while one of those runs. A written "check pgrep first" rule was broken four times in one day (17 Nov 2026).
-// The holder blocks in spawnSync and cannot heartbeat, so a hold is alive while its pid is and it is under
-// QUIET_MAX_MS old.
 export const QUIET_HOLD = "scrapkeep-quiet-hold";
 export const QUIET_MAX_MS = 2 * 60 * 60 * 1000;
-// The lock is held for a few file calls; a minute old means its holder died.
 const QUIET_LOCK_STALE_MS = 60 * 1000;
 
 function quietRoot() {
@@ -502,9 +443,6 @@ export function quietHolder(directory = quietRoot()) {
   }
 }
 
-// Take the hold, then wait until no runner holds a slot in the shared pool. Synchronous, for
-// scripts/frametime-check.mjs. Replacing a dead hold happens under a short lock, so two readings that start together
-// cannot both take it.
 export function holdQuietSync({
   directory = slotRoot(),
   quietDirectory = quietRoot(),
@@ -527,7 +465,6 @@ export function holdQuietSync({
       if (error.code !== "ENOENT") throw error;
     }
   };
-  // Returns the pid that holds after this try: ours when the hold was free or dead.
   const claim = () => {
     for (;;) {
       try {
@@ -575,7 +512,6 @@ export function holdQuietSync({
       const busy = readdirSync(directory).filter(
         (name) => name.startsWith("slot-") && slotOwner(path.join(directory, name))?.alive,
       );
-      // Read the hold after the scan: a runner publishes its slot and then checks the hold, so one side sees the other.
       if (quietHolder(quietDirectory) !== pid) {
         lost = true;
         break;
@@ -594,7 +530,6 @@ export function holdQuietSync({
     }
     if (!lost) break;
   }
-  // The age cap counts from the start of the reading, not from the start of the wait.
   touch(file);
   return { waitMs: Date.now() - started, release };
 }
@@ -639,14 +574,9 @@ export async function acquireSlot({
         const holder = slotOwner(slot);
         if (holder && !holder.alive) releaseSlot(slot, holder.owner);
         try {
-          // Publish an already populated directory atomically: no pid-write gap.
-          beforePublish(); // a test seam: what happens between this runner's hold check and its publish
-          // A long wait leaves the owner file older than the stale window. Refresh it while the claim is still private,
-          // so the slot is never visible looking stale (a rename keeps the files' mtimes).
+          beforePublish();
           touch(path.join(claim, owner));
           renameSync(claim, slot);
-          // Publish, then check the hold again: the reading writes its hold and then scans the slots, so a runner that
-          // slipped in between gives the slot back here before it starts anything.
           if (quietHolder(quietDirectory) !== null) {
             releaseSlot(slot, owner);
             mkdirSync(claim, { recursive: true });
@@ -693,7 +623,6 @@ export function namedRunMustWait({ directory = slotRoot(), slots = machineSlotCo
   ).every((holder) => holder?.alive);
 }
 
-// Retained API: named runs now acquire a slot too, rather than bypassing the limit.
 export async function waitForMachine(options = {}) {
   const lease = await acquireSlot(options);
   process.once("exit", lease.release);
@@ -733,8 +662,6 @@ export function receiptFileName(label, tree, startedAt) {
   return `${label}-${tree ? tree.slice(0, 12) : "nogit"}-${stamp}.json`;
 }
 
-// tests/QUARANTINE.tsv lets a known-red top-level test stay visible without failing the
-// run. The test still runs; the coordinator owns the file.
 export function parseQuarantine(text) {
   return (text || "")
     .split("\n")
@@ -755,7 +682,6 @@ export function readQuarantine(directory) {
   return new Set(readQuarantineEntries(directory).map((entry) => entry.test));
 }
 
-// The rows themselves, for a lane that names the owner and reason of a quarantined failure.
 export function readQuarantineEntries(directory) {
   const file = path.join(directory, "tests", "QUARANTINE.tsv");
   if (!existsSync(file)) return [];
@@ -766,9 +692,6 @@ export function quarantineNote(entry) {
   return `quarantined: ${entry.test} (${entry.owner}: ${entry.reason})`;
 }
 
-// A row whose deadline is an ISO date before today is expired; the run fails until the row is
-// removed or its deadline is extended by the coordinator. A free-text deadline ("wave 3") is
-// not enforced because it has no date to compare.
 export function expiredQuarantine(entries, today = new Date().toISOString().slice(0, 10)) {
   return entries.filter(
     (entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry.deadline ?? "") && entry.deadline < today,
@@ -779,7 +702,6 @@ export function expiredLine(entry) {
   return `quarantine expired: ${entry.test} (${entry.owner}) deadline ${entry.deadline}; fix the test or have the coordinator extend the row in tests/QUARANTINE.tsv`;
 }
 
-// One receipt entry per quarantined test that ran: the row plus that run's result.
 export function quarantineRecord(entry, { ok, exit, signal = null, failing }) {
   return {
     test: entry.test,
@@ -806,7 +728,6 @@ export function quarantineRecords(results) {
     );
 }
 
-// Human lines for the full gate: red rows with the failing-check count and exit or signal, then stale green rows.
 export function quarantineLines(records) {
   const how = (record) => (record.signal ? `signal ${record.signal}` : `exit ${record.exit}`);
   const red = records.filter((record) => record.result === "red");
@@ -827,7 +748,6 @@ export function quarantineLines(records) {
   return lines;
 }
 
-// A quarantined test never fails the run. Green, it is stale and listed for removal.
 export function quarantineVerdict(results) {
   const label = (result) => result.label.replace(/^.* res:\/\/tests\//, "").replace(/\.gd$/, "");
   const quarantined = results.filter((result) => result.quarantined);
@@ -842,7 +762,6 @@ export function runPasses(results) {
   return quarantineVerdict(results).failed.length === 0;
 }
 
-// A gate runs the shipping defaults, so it takes no launch flags from anywhere.
 export function gateFlagsError(options) {
   if (["gate", "gate-bots"].includes(options.receipt) && options.flags.length > 0) {
     return `sketch:smoke: a gate run (--receipt ${options.receipt}) refuses launch flags from --flags or SMOKE_FLAGS because a gate runs the shipping defaults`;
@@ -850,8 +769,6 @@ export function gateFlagsError(options) {
   return null;
 }
 
-// A run whose receipt could not be written is not evidence. Returns the exit code that
-// overrides the test result (3), or null when the receipt is on disk.
 export function emitReceipt(receipt, write = writeReceipt, log = console.log) {
   const target = path.join(root, "artifacts", "local", "receipts");
   try {
@@ -939,12 +856,8 @@ export const MISSING_VERDICT = "no verdict line: the test ended early";
 
 const failVerdictLine = /^[\w.-]+: FAIL\b/m;
 
-// A test ends with one verdict line. A skip line exempts it only when no check ran. A FAIL
-// verdict fails the test whatever the exit code. The reason names the cause that applies.
 export function judge({ test, status, output: raw, platform = process.platform }) {
   const output = withoutTeardownNoise(raw, platform);
-  // A script path binds the verdict to its file stem. Boolean callers retain the
-  // legacy API until their owners supply the path (play.mjs and sketch-nightly.mjs).
   const verdict = test ? hasVerdictLine(output, typeof test === "string" ? test : undefined) : null;
 
   const skips = skipLines(output);
@@ -961,11 +874,7 @@ export function judge({ test, status, output: raw, platform = process.platform }
   return { ok, verdict, skips, missing, reason };
 }
 
-// The lines of a test's output that say why it failed: failed checks, engine errors and
-// time-outs. A long test prints them far above its last 40 lines, so a failure lists them
-// first and nobody has to patch the runner to find them.
 const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR|FAIL)\b|\btimed[ _]out\b/;
-// A passing check can carry the words ("exit 0, timed out false -> PASS").
 const PASSING_LINE = /-> PASS\b/;
 const MAX_FAILING_LINES = 60;
 
@@ -984,9 +893,6 @@ export function failingLines(output, limit = MAX_FAILING_LINES, platform = proce
   ];
 }
 
-// SMOKE_LOG_DIR keeps every test's whole output, pass or fail, one file per test, so a
-// gate shard can compare check lines with the last promoted head. SMOKE_FULL=1 prints the
-// same output to the terminal instead.
 export function logFileName(label) {
   return (
     label
@@ -1010,7 +916,6 @@ function report(job, status, output, ms, signal = null) {
   const { passes, fails } = countChecks(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${job.label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
   if (!ok) {
-    // The runner's own reason leads: a test killed at its limit prints nothing that says so.
     const failing = [...(reason ? [reason] : []), ...failingLines(output)];
     if (failing.length > 0)
       console.log(
@@ -1040,8 +945,6 @@ function report(job, status, output, ms, signal = null) {
 
 export const scriptErrorCount = (output) => (output.match(/^SCRIPT ERROR\b/gm) ?? []).length;
 
-// One child run with its output collected and a time limit, without blocking the event loop: a held
-// machine slot keeps its heartbeat only while the loop is free, and an import can take minutes.
 export function spawnCollect(command, args, { env = process.env, timeoutMs = TIMEOUT_MS } = {}) {
   return new Promise((resolve) => {
     const child = spawn(command, args, { env, stdio: ["ignore", "pipe", "pipe"] });
@@ -1068,7 +971,6 @@ export function spawnCollect(command, args, { env = process.env, timeoutMs = TIM
   });
 }
 
-// Import writes the sketch's .godot cache, so it runs alone before anything reads it.
 async function runImport(job) {
   const started = Date.now();
   const result = await spawnCollect(binary, job.args, {
@@ -1085,22 +987,15 @@ async function runImport(job) {
 
 export const IMPORT_TRIES = 3;
 const CRASH_SIGNALS = new Set(["SIGSEGV", "SIGABRT"]);
-const CRASH_CODES = new Set([139, 134]); // 128 + the signal, when a shell reports it
+const CRASH_CODES = new Set([139, 134]);
 
 // What one import try came to. Godot 4.7.2's threaded font reimport can crash the first import of
-// a fresh .godot (signal 11 or 6, "malloc(): smallbin double linked list corrupted", last line a
-// .ttf): an engine race, never the project's red, and it leaves .ctex files missing, so every test
-// then fails its "no script errors" checks. An import can also exit 0 while scripts that preload
 // those missing files still print SCRIPT ERROR; the next import finds the files there.
 export function importTry({ exit, signal = null, scriptErrors = 0 }) {
   if (exit === 0) return scriptErrors > 0 ? "script errors" : "ok";
   return CRASH_SIGNALS.has(signal) || CRASH_CODES.has(exit) ? "engine crash" : "failed";
 }
 
-// Up to IMPORT_TRIES imports, stopping at the first that exits 0 with no SCRIPT ERROR line. The
-// import fails only when the last try does, so the run stops there and no test prints a misleading
-// red. On a pass, `results` holds the passing try alone (earlier tries are in `tries` and the log):
-// a crash that a retry cleared is not a failed row of the run.
 export async function importWithRetry(name, base, run = runImport, log = console.log) {
   const tries = [];
   for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
@@ -1118,8 +1013,6 @@ export async function importWithRetry(name, base, run = runImport, log = console
   return { ok: false, results: tries, tries };
 }
 
-// Every test gets its own data home (and on macOS its own HOME), so user:// is never shared
-// between parallel runs.
 function runAsync(job) {
   return new Promise((resolve) => {
     const started = Date.now();
@@ -1145,10 +1038,6 @@ function readSmokeTimings(file = TIMINGS_FILE) {
   }
 }
 
-// Run a warm batch of eligible non-solo tests in one Godot process via tools/test_batch.gd.
-// Any test that fails inside the batch, is cut off, or shares a batch with an outside engine
-// error / exit leak / unexpected non-zero batch exit is rerun alone in a fresh Godot process
-// so warm batching can never add a false red or mask an exit leak.
 async function runBatchJobs(batchJobs) {
   const directory = batchJobs[0].directory;
   const fixedFps = batchJobs[0].fixedFps ?? null;
@@ -1415,8 +1304,6 @@ async function main() {
       (isSoloJob ? solo : jobs).push(job);
     }
   }
-  // Run longest-estimated parallel tests first (LPT) so slow/unbatched tests start at t=0
-  // instead of tailing at the end of a chunk; boot stays first and solo keeps its order.
   jobs.sort((a, b) => {
     const aBoot = a.test ? 1 : 0;
     const bBoot = b.test ? 1 : 0;
@@ -1479,6 +1366,4 @@ async function main() {
   process.exit(receiptFailure ?? (ok ? 0 : 1));
 }
 
-// Node resolves the module's own path through symlinks, so the launch path must be resolved too
-// (macOS keeps its temp folder behind one).
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) main();

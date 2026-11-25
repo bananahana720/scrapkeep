@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# Rule: the CPU tile gate rejects mismatched edges, oversized textures and registry drift.
 """Synthetic, lossless WebP fixtures; no game, GPU, wall clock or user:// writes.
 
 python3 tools/tile_check_selftest.py
@@ -156,7 +155,6 @@ if __name__ == "__main__":
         print(f"tile_check_selftest: SKIP ({exc})")
         sys.exit(2)
     (Path(__file__).resolve().parents[3] / "artifacts/local/sol").mkdir(parents=True, exist_ok=True)
-    # Invoke assertion cases directly: unittest's runner reads the wall clock.
     names = unittest.defaultTestLoader.getTestCaseNames(TileCheckTests)
     failures = 0
     for name in names:

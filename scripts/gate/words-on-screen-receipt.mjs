@@ -1,14 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "words-on-screen" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// On a clean checkout (cleanHead refuses dirty checkouts):
-//   1. runs scripts/sketch-lint.mjs --sketch core-loop (must exit 0 with 0 findings);
-//   2. runs both word-budget tests (ui_word_budget_test, ui_word_budget_first_find_test) through
-//      scripts/sketch-smoke.mjs with SMOKE_LOG_DIR in a temp dir cleaned up in finally;
-//   3. runs the real word-lint checker (sketch-lint-words.mjs lintFile + sketch-lint.mjs applyBaseline)
-//      on a planted label that restates its value and requires it to fail with W6 (plant_caught).
-//
-//   node scripts/gate/words-on-screen-receipt.mjs [--out <file>]
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -93,8 +83,6 @@ export function gradeBudgetLog(
   return { ok, test, words, reason };
 }
 
-// Runs the real word-lint checker (sketch-lint-words.mjs lintFile + sketch-lint.mjs applyBaseline)
-// on a planted UI label that restates its value ("Speed: 24 m/s") and confirms W6 catches it.
 export function runPlantedWordLint(cwd = root) {
   const sketchDir = path.join(cwd, "sketches", "core-loop");
   const names = readFileSync(path.join(sketchDir, "design-v3", "NAMES.md"), "utf8");

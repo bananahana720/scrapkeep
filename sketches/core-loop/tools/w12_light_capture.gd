@@ -1,9 +1,4 @@
 extends SceneTree
-# Wave 12 light capture: port of the wave 7 driver's environment, arena and title cameras with
-# eyes and targets unchanged, so frames compare with w11/captures. Native window only.
-#   godot --path sketches/core-loop --script res://tools/w12_light_capture.gd -- --out=<dir> --scene=worlds|pit|arenas|title|warden
-# Writes <out>/<subject>__<shot>.png and frames_<scene>.json. The game names each world's light
-# and air itself on stage and arena entry; this tool never calls the look.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
@@ -54,8 +49,6 @@ func _boot(warden: bool) -> void:
 	cam.near = 0.05
 	game.add_child(cam)
 
-# Lab overrides for a measured pair, applied just before a frame: the world sun's shadow_bias and
-# shadow_normal_bias, or a panorama file in place of the environment's sky material.
 func _overrides() -> void:
 	if bias.size() == 2:
 		for sun: DirectionalLight3D in game.find_children("*", "DirectionalLight3D", true, false):
@@ -95,7 +88,6 @@ func _snap(subject: String, shot: Array, ui := false) -> void:
 	paused = was_paused
 	print("snap ", id, " ", rec.dead)
 
-# A dead frame: over 80 percent near-black or over 60 percent one flat colour.
 func _dead(image: Image) -> String:
 	var small := image.duplicate() as Image
 	small.resize(192, 108, Image.INTERPOLATE_BILINEAR)
@@ -144,16 +136,13 @@ func _worlds() -> void:
 	await _frames(60)
 	game.player.body().freeze = true
 	var b: Vector3 = game.player.ball_position()
-	# w7 _workshop
 	await _snap("wog_spillway", ["spawn_wide", b + Vector3(-40, 28, -50), b + Vector3(10, 0, 30), 65.0])
 	await _snap("wog_spillway", ["benches", Vector3(10, 44, 56), Vector3(24, 28, 22), 65.0])
-	# w7 _scrap, Dig half (the camp bay camera is dead on alpha stage 1; VX-CAP repairs it)
 	await _enter(3)
 	var items: Array = game.find_child("Scrap", true, false).get_children().filter(func(n): return n is MeshInstance3D and n.visible)
 	var q2: Vector3 = items[0].global_position
 	await _snap("scr_dig", ["cluster", q2 + Vector3(0, 6, -10), q2 + Vector3(0, -0.5, 4), 55.0])
 	await _snap("scr_dig", ["wide", q2 + Vector3(-18, 14, -26), q2 + Vector3(0, 0, 6), 62.0])
-	# The Dig's stage-owned lamp pool: the lit lamp nearest the ball, seen from the ball's side.
 	game.player.body().freeze = false
 	await _frames(30)
 	game.player.body().freeze = true
@@ -167,11 +156,9 @@ func _worlds() -> void:
 	else:
 		print("no lit lamp pool")
 		failures += 1
-	# w7 _hd_redo sky camera
 	await _enter(5)
 	await _snap("hdr_sky", ["sky_loom", Vector3(0, 45, 60), Vector3(0, 10, -400), 70.0])
 
-# w7 _arw2: the Waking pit entered from the last Dig stage with the Warden forced.
 func _pit() -> void:
 	await _boot(true)
 	await _frames(20)
@@ -189,7 +176,6 @@ func _pit() -> void:
 	await _snap("arw_pit", ["rim_view", c + Vector3(0, 12, 66), c + Vector3(0, 6, 0), 60.0])
 	await _snap("arw_pit", ["lamps_wall", c + Vector3(-30, 8, 20), c + Vector3(20, 6, -10), 65.0])
 
-# w7 _arenas: the bowl from stage 1, then the Mind's crown from the last Highdraft stage.
 func _arenas() -> void:
 	await _boot(false)
 	await _frames(20)
@@ -208,7 +194,6 @@ func _arenas() -> void:
 	game.player.body().freeze = true
 	await _snap("arm_crown", ["crown", p + Vector3(0, 18, 78), p + Vector3(0, 16, 0), 60.0])
 
-# w7 _title2: the title stage picture with the menu layers hidden.
 func _title() -> void:
 	seed(280928)
 	game = Game.new()
@@ -224,7 +209,6 @@ func _title() -> void:
 		if n != d._layer: n.visible = false
 	await _snap("ttl_stage_only", ["t0", Vector3.ZERO, Vector3.ZERO, 55.0], true)
 
-# Stage 1's Warden (forced) seen from the ball's side with the ball in frame: the cool fill read.
 func _warden() -> void:
 	await _boot(true)
 	await _frames(90)
@@ -233,7 +217,6 @@ func _warden() -> void:
 	var b: Vector3 = game.player.ball_position()
 	var away := Vector3(b.x - w.x, 0, b.z - w.z).normalized()
 	var side := away.cross(Vector3.UP)
-	# The ball parked 7 m in front of the Warden as the scale mannequin.
 	var at := w + away * 7.0 + side * 2.0
 	game.player.body().global_position = Vector3(at.x, _gh(at.x, at.z) + 1.2, at.z)
 	await _frames(4)

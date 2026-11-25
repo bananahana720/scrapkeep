@@ -1,9 +1,4 @@
 #!/usr/bin/env node
-// Point-of-interest spacing along the pilot ride lines of a park map.
-// Reads sketches/core-loop/src/world/park/park_<map>.json and assets/park/park_<map>/lines.json.
-// A site is an activity row, a rescue row or the Warden; it counts for a line that comes within
-// REACH_M of it. Gaps are seconds at SPEED_MPS. Prints medians over the pilots, or JSON with --json.
-// --check fails when a map is under the pass line (BACKLOG, "World 1 now: points of interest").
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -20,7 +15,6 @@ const median = (xs) => {
   return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
 };
 
-// The game ends a pilot line at the landmark's beacon, where the Warden's ring stands.
 const beacon = (park) => park.landmark.beacon ?? park.landmark.at;
 
 export function sites(park) {
@@ -33,7 +27,6 @@ export function sites(park) {
 }
 
 function points(park, waypoints) {
-  // Park rows win over activity ids, as in the game (tools/traversal_line.gd).
   const named = { drop_in: park.spawn.at, landmark: beacon(park) };
   const known = new Set(Object.keys(named));
   for (const row of [...(park.park_rows ?? []), ...(park.activity_rows ?? [])]) {
@@ -42,7 +35,12 @@ function points(park, waypoints) {
   }
   return waypoints.map((w) => {
     if (typeof w !== "string") return w;
-    if (!named[w]) throw new Error(known.has(w) ? `pilot line names "${w}", which has no position in ${park.map}` : `pilot line names "${w}", which is no row of ${park.map}`);
+    if (!named[w])
+      throw new Error(
+        known.has(w)
+          ? `pilot line names "${w}", which has no position in ${park.map}`
+          : `pilot line names "${w}", which is no row of ${park.map}`,
+      );
     return named[w];
   });
 }
@@ -56,7 +54,10 @@ export function ride(park, waypoints, list = sites(park)) {
     const n = Math.max(1, Math.floor(seg / STEP_M));
     for (let k = 0; k < n; k += 1) {
       const t = k / n;
-      samples.push([length + seg * t, [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t]]);
+      samples.push([
+        length + seg * t,
+        [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t],
+      ]);
     }
     length += seg;
   }
@@ -79,7 +80,10 @@ export function ride(park, waypoints, list = sites(park)) {
 }
 
 export function census(park, lines) {
-  const rides = Object.entries(lines.pilots).map(([pilot, spec]) => ({ pilot, ...ride(park, spec.waypoints) }));
+  const rides = Object.entries(lines.pilots).map(([pilot, spec]) => ({
+    pilot,
+    ...ride(park, spec.waypoints),
+  }));
   return {
     map: park.map,
     sites_on_map: sites(park).length,
@@ -93,7 +97,12 @@ export function census(park, lines) {
 export const passes = (row) => row.sites >= PASS.sites && row.gap_s <= PASS.gap_s;
 
 export function main(argv) {
-  const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "sketches", "core-loop");
+  const root = path.join(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+    "sketches",
+    "core-loop",
+  );
   const maps = argv.filter((a) => !a.startsWith("--"));
   const rows = (maps.length ? maps : ["park_dam", "park_flume"]).map((map) =>
     census(
@@ -104,10 +113,13 @@ export function main(argv) {
   if (argv.includes("--json")) console.log(JSON.stringify(rows, null, 1));
   else {
     for (const r of rows) {
-      console.log(`${r.map}: ${r.sites_on_map} sites on the map; a ride of ${r.length_m} m passes ${r.sites} (pass ${PASS.sites}+), longest stretch with none ${r.gap_s} s (pass ${PASS.gap_s} s or less): ${passes(r) ? "PASS" : "UNDER"}`);
+      console.log(
+        `${r.map}: ${r.sites_on_map} sites on the map; a ride of ${r.length_m} m passes ${r.sites} (pass ${PASS.sites}+), longest stretch with none ${r.gap_s} s (pass ${PASS.gap_s} s or less): ${passes(r) ? "PASS" : "UNDER"}`,
+      );
     }
   }
   if (argv.includes("--check") && !rows.every(passes)) process.exitCode = 1;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main(process.argv.slice(2));
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  main(process.argv.slice(2));

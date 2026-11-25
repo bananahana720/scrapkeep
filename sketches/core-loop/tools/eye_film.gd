@@ -1,43 +1,5 @@
 extends RefCounted
 
-# A run filmed as the player's eyes meet it (tools/self_play.gd --self-play-film=<dir>): the picture
-# on the screen at the moments a player has to read it, saved as frames with one row of ground
-# truth each, so a reader who has never seen the game can say what the screen told them and a
-# judge can set that beside what the game knew. It only reads the game.
-#
-# It needs a rendered display (a real one, or xvfb with --rendering-driver opengl3): under
-# --headless there is no picture and setup() refuses. Run it with --fixed-fps so its seconds are
-# game seconds whatever the renderer's speed.
-#
-# Unless `live` is set it draws only the frames it keeps (the engine's render loop is off between
-# them), which is what makes a software renderer fast enough: a whole stage films in minutes, not
-# hours. That is the one thing it changes, and it is why a film is never a frame-time reading and
-# under-shows GPU particles (they advance only on a drawn frame). A PC film runs live.
-#
-# Frames (why, in the row and the file name):
-#   screen-<state>   each flow state as it opens, SETTLE_S after and again LATE_S after
-#   held             the game paused (a kit pick, the briefing, a ceremony, the pause menu):
-#                    SETTLE_S after, then every HELD_STEP_S while it stays held, HELD_MAX times
-#   roam             every `every` seconds of play, so quiet stretches are seen too
-#   plate            the objective plate changed
-#   prompt-<verb>    a key prompt or first-meet tip drew (once a verb)
-#   page             a page the player turned (the prologue's lines), when the driver says so
-#   offer / reward / warden / arena   a kit pick offered, the reward gates, a Warden engaged,
-#                    the boss arena entered
-#   cleared / phase-<n> / boss-down   a stage's Warden broken, a boss phase begun, the boss beaten:
-#                    the ends of fights, which a player sees and a ten second gap can miss
-#   hit-<n>          a hit of BIG_HIT of the hull or more, or the run's first: the LEAD_S before
-#                    it from a rolling buffer (was the attack on the screen before it landed?),
-#                    then the frame after
-#   death            the same lead-in for the killing hit, then the death screen
-# Rows go to film.ndjson in the folder, one a frame: t (game seconds filmed), file, why, flow,
-# paused, stage, stage_s, plate (the HUD's objective words), hp, hp_max, mass, pos, lens (the camera's
-# position), ball_on_screen, arm {wanted, hit, body: what stopped the arm, or null} and slots (each
-# ability slot to ready, cooling, empty, unavailable, jammed, active or dimmed-for-set-piece),
-# and for a hit its source and amount. The reader is not shown the rows.
-# Evidence limit: the picture is this machine's renderer. In the cloud that is a software
-# renderer: words, layout, marks and what is on screen read true; colour, light, bloom and
-# frame pacing do not, and belong to a PC film.
 
 const SETTLE_S := 0.5
 const LATE_S := 2.5
@@ -70,7 +32,6 @@ var _hits := 0
 var _hit_at := -100.0
 var _first_hit := true
 var _live := false
-# Pictures asked for this frame, taken once it has drawn: [why, extra, into the buffer?].
 var _asked := []
 var _held := false
 var _held_shots := 0
@@ -78,7 +39,6 @@ var _held_next := 0.0
 var _shot_at := -1.0
 
 
-# False when there is no picture to film or the folder cannot be made.
 func setup(game, dir: String, every: float, live := false, world_scale := 1.0) -> bool:
 	if DisplayServer.get_name() == "headless":
 		push_error("eye-film: no picture under --headless; run with a display (xvfb and --rendering-driver opengl3)")
@@ -102,8 +62,6 @@ func setup(game, dir: String, every: float, live := false, world_scale := 1.0) -
 	events.boss_phase_changed.connect(_on_phase)
 	events.boss_defeated.connect(_on_boss_down)
 	_live = live
-	# The world drawn at a fraction of the window, the HUD and every word at full size: for a
-	# software renderer, where the world's pixels are the cost and the words are the reading.
 	if world_scale < 1.0:
 		game.get_viewport().scaling_3d_scale = clampf(world_scale, 0.25, 1.0)
 	RenderingServer.frame_post_draw.connect(_drawn)
@@ -112,7 +70,6 @@ func setup(game, dir: String, every: float, live := false, world_scale := 1.0) -
 	return _rows != null
 
 
-# Once a physics tick, paused or not: a paused screen is still a screen the player reads.
 func step(delta: float) -> void:
 	if _game == null or _game.flow == null:
 		return
@@ -213,7 +170,6 @@ func _on_prompt(verb: String) -> void:
 	_later(0.6, "prompt-%s" % verb.validate_filename())
 
 
-# The buffer's frames before now, oldest first, then the frame of the moment itself.
 func _lead_in(why: String, extra: Dictionary) -> void:
 	for kept in _ring:
 		_save(kept[1], "%s-lead" % why, kept[2], extra, float(kept[0]))
@@ -221,8 +177,6 @@ func _lead_in(why: String, extra: Dictionary) -> void:
 	_shoot(why, extra)
 
 
-# One picture a moment: a frame asked for within NEAR_S of the last kept one shows the same
-# screen, so only a hit or a death is kept that close.
 func _shoot(why: String, extra := {}) -> void:
 	if _t - _shot_at < NEAR_S and not (why.begins_with("hit-") or why.begins_with("death")):
 		return
@@ -230,12 +184,10 @@ func _shoot(why: String, extra := {}) -> void:
 	_ask(why, extra, false)
 
 
-# A page the player turned (the prologue's lines): the new page, once it has settled.
 func page() -> void:
 	_later(SETTLE_S, "page")
 
 
-# Ask for this frame's picture; it is taken in _drawn, once the frame has been drawn.
 func _ask(why: String, extra: Dictionary, into_ring: bool) -> void:
 	_asked.append([why, extra, into_ring, _t, _truth()])
 	RenderingServer.render_loop_enabled = true
@@ -272,7 +224,6 @@ func _save(picture: Image, why: String, truth: Dictionary, extra: Dictionary, at
 	_rows.flush()
 
 
-# What the game knew at this frame: never shown to the reader.
 func _truth() -> Dictionary:
 	var run = _game.run
 	var ball: Vector3 = _game.player.ball_position() if _game.player != null else Vector3.ZERO
@@ -281,8 +232,6 @@ func _truth() -> Dictionary:
 		"pos": [snappedf(ball.x, 0.1), snappedf(ball.y, 0.1), snappedf(ball.z, 0.1)]}.merged(view_truth())
 
 
-# Where the lens is, whether the ball is in the picture, what the arm reached and each ability
-# slot's word: what a reader needs to say why a picture is jammed or a slot is grey.
 func view_truth() -> Dictionary:
 	var out := {"lens": null, "ball_on_screen": false, "arm": null, "slots": {}}
 	var rig = _game.get("camera")

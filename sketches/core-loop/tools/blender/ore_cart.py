@@ -26,8 +26,7 @@ import polish
 
 MODELS = kit.SKETCH / "assets/models"
 
-# Polish (tools/blender/POLISH.md): tub gets a bevel, the tyre only smooth shading and the bake (subdivision or a bevel pulls its 12-gon tread in past the size assert); the dig_mechanical cart_body/cart_wheel recipes are untouched.
-PROP = [750, 610, 1]  # polish: was kit.P [270, 610, 1]
+PROP = [750, 610, 1]
 FINISH = {"Tub": {"bevel": .04}, "Tyre": {"bevel": 0}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
 
 
@@ -36,9 +35,6 @@ def polish_on():
     kit.FINISH.update(FINISH)
 
 
-# One row per painted part. Hues come from the game palette, not the picture: the sheet's bright orange
-# rim and mint ore sit on reserved meanings (LEGIBILITY.md: hazard hurts, amber pays, mint is "your verb
-# works now"), so the rim is copper and the pale ore is mint pulled halfway to sandstone.
 TONES = {
     "tub": "bone",
     "rim": "copper",
@@ -49,8 +45,7 @@ TONES = {
     "tyre": ["charcoal", "333936"],
 }
 
-# Godot space, metres before the placement scale (dig_scenery uses 2.2), front is -Z (the tow bar).
-TUB_BOTTOM = (.60, 1.05, .12, .58)    # half width, half length, corner chamfer, y
+TUB_BOTTOM = (.60, 1.05, .12, .58)
 TUB_TOP = (.92, 1.42, .18, 1.40)
 RIM = [(1.00, 1.50, .22, 1.38), (1.00, 1.50, .22, 1.54), (.86, 1.36, .16, 1.54)]
 HEAP_EDGE = (.90, 1.40, .18, 1.50)
@@ -60,7 +55,6 @@ WHEEL_R, WHEEL_W = .42, .28
 WHEEL_X, WHEEL_Z = .86, .80
 RAIL_X, RAIL_Y = .62, .50
 TOW_TIP, BALL_R = -2.12, .12
-# Ore lumps on the heap: kind, x, z, size, yaw, tilt, tone. Fixed table, no random draw.
 LUMPS = [
     ("cube", 0.00, -0.15, .30, 20, 12, "ore"), ("cube", -0.40, 0.55, .26, 50, -10, "ore_pale"),
     ("cube", 0.42, 0.30, .28, 75, 15, "ore"), ("cube", -0.30, -0.70, .26, 35, 8, "ore_pale"),
@@ -73,7 +67,6 @@ LUMPS = [
 SOCKETS = {**{f"socket_wheel_{p}": [x * WHEEL_X, WHEEL_R, z * WHEEL_Z] for p, x, z in
               [("fl", -1, -1), ("fr", 1, -1), ("rl", -1, 1), ("rr", 1, 1)]},
            "socket_tow": [0, RAIL_Y, TOW_TIP - BALL_R]}
-# Expected bounds (size in metres) checked after export; a drift here is a geometry change, not noise.
 SIZE = {"ore_cart_body": [2.0, 1.72, 3.84], "ore_cart_wheel": [.34, .84, .80]}
 
 
@@ -97,7 +90,6 @@ def bands(s, rings, colors):
 
 
 def strut(s, a, b, w, h, color):
-    # Open-ended square tube: both ends are buried in another part, so no caps.
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
     up = Vector((0, 1, 0)) if abs(d.y) < .9 else Vector((1, 0, 0))
@@ -109,7 +101,6 @@ def strut(s, a, b, w, h, color):
 
 
 def heap_y(x, z):
-    # The mound's mean surface: a straight slope from the edge ring up to the peak.
     return HEAP_PEAK - (HEAP_PEAK - HEAP_EDGE[3]) * max(abs(x) / HEAP_EDGE[0], abs(z) / HEAP_EDGE[1])
 
 
@@ -122,7 +113,6 @@ def lump(s, kind, x, z, size, yaw, tilt, color):
         faces = [(4, 5, 6, 7), (0, 1, 5, 4), (3, 7, 6, 2), (0, 4, 7, 3), (1, 2, 6, 5)]
         lift = h * .55
     else:
-        # A squat chip, not a spike: wide base, apex barely above it.
         local = [(size * .75 * math.sin(a), -h * .3, size * .75 * math.cos(a)) for a in (0, math.tau / 3, 2 * math.tau / 3)]
         local.append((size * .1, h * .55, 0))
         faces = [(0, 1, 3), (1, 2, 3), (2, 0, 3)]
@@ -135,8 +125,6 @@ def body(s):
     n = bands(s, tub, [tone("tub")] * 2)
     s.faces.append(tuple(reversed(range(len(s.verts) - 2 * n, len(s.verts) - n))))
     bands(s, [ring(*TUB_TOP)] + [ring(*r) for r in RIM], [tone("rim")] * 4)
-    # The heap: a rubbly mound under the rim lip. A shoulder ring at uneven heights and a peak give it
-    # facets; tones alternate per vertex so the facets read as separate stones.
     start = len(s.verts)
     shoulder = [(x, heap_y(x, z) + dy, z) for (x, _, z), dy in zip(ring(.56, .92, .14, 0), HEAP_SHOULDER)]
     bands(s, [ring(*HEAP_EDGE), shoulder], [tone("ore", 0), tone("ore", 1)])
@@ -157,7 +145,6 @@ def body(s):
             strut(s, (x * RAIL_X, RAIL_Y + .06, z), (x * .95, 1.46, z), .12, .10, tone("chassis"))
         strut(s, (x * RAIL_X, RAIL_Y, -1.12), (0, RAIL_Y, TOW_TIP), .10, .12, tone("chassis"))
     kit.PARTS["Chassis"] = {"vertex_range": [start, len(s.verts)], "reference_position": [0, RAIL_Y, 0], "merged_mesh": "Tub"}
-    # Brass tow ball: a six-sided bicone, round enough at the 0.26 m it measures in game.
     c = Vector((0, RAIL_Y, TOW_TIP - BALL_R))
     mid = [tuple(c + Vector((BALL_R * math.cos(a), 0, BALL_R * math.sin(a)))) for a in kit.angles(6, closed=True)]
     s.add(mid + [tuple(c + Vector((0, BALL_R, 0))), tuple(c - Vector((0, BALL_R, 0)))],
@@ -165,7 +152,6 @@ def body(s):
 
 
 def wheel(s):
-    # Chunky tyre with a domed brass hub on both faces; lugs alternate radius and tone around the tread.
     half = WHEEL_W / 2
     profile = [(.09, -half - .03, "brass"), (.21, -half + .01, "brass"), (.235, -half, "tyre"),
                (WHEEL_R - .05, -half, "tyre"), (WHEEL_R, -half + .05, "tread"), (WHEEL_R, half - .05, "tread"),

@@ -1,12 +1,5 @@
 extends "res://tools/bot_run.gd"
 
-# Systems audit pass C census (docs/systems-audit/mechanics/): wraps bot_run and counts every
-# GameEvents signal a world 1 run publishes, per stage, plus the seconds the ball spends carving
-# (BallState.carving), the carves it starts, and the pad rumbles juice asked for. It reads only; the run is bot_run's. Writes
-# census-<seed>.json in --out when the run ends. Run one seed per process (bot_run forks a
-# multi-seed run into children that run bot_run.gd itself, without this wrapper):
-#   $GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/sysaudit/clip_census.gd -- \
-#     --out=<dir> --policy=skipper --seeds=2860 --table=park --until=2
 
 var _census_game: Object = null
 var _counts := {}
@@ -17,9 +10,7 @@ var _done := false
 var _run_time := 0.0
 var _outcome := ""
 var _rumble_log: Array = []
-# The player's finished chains (chain.gd `finished`), read each tick while the game lives (W1-74).
 var _chains: Array = []
-# The feel facts in order, for the timeline clip: [run seconds, kind, detail].
 const TIMELINE_KINDS := ["carved", "near_miss", "player_hit", "slammed", "harpoon_bit"]
 var _timeline: Array = []
 
@@ -42,7 +33,6 @@ func _physics_process(delta: float) -> bool:
 		for sig in _game.events.get_signal_list():
 			var name := String(sig["name"])
 			var argc: int = sig["args"].size()
-			# A lambda takes a fixed arity; bind away the signal's own arguments with unbind.
 			var count := (func(n: String): _bump(n)).bind(name)
 			_game.events.connect(name, count.unbind(argc) if argc > 0 else count)
 		_game.events.carved.connect(func(_at: Vector3, seconds: float, speed: float):
@@ -67,9 +57,7 @@ func _physics_process(delta: float) -> bool:
 	return over
 
 
-# bot_run quits the tree itself when the run ends, so the census writes on the way out.
 func _finalize() -> void:
-	# The game is freed by now, and a freed object compares equal to null, so the counts decide.
 	if _done or _counts.is_empty():
 		return
 	_done = true
@@ -86,7 +74,6 @@ func _finalize() -> void:
 		f.close()
 
 
-# Chains by how they ended: paid ones by combo (the burst steps, W1-74), the best, and the unpaid count.
 func _chain_summary() -> Dictionary:
 	var paid_by_combo := {}
 	var best := 0

@@ -31,9 +31,9 @@ import soundfile as sf
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from package_music import (RATE, PRE_ROLL, POST_ROLL, LOOP_JOIN, STEMS, SILENT_DB, SECTIONS, SET_PIECE,  # noqa: E402
+from package_music import (RATE, PRE_ROLL, POST_ROLL, LOOP_JOIN, STEMS, SILENT_DB, SECTIONS, SET_PIECE,
                            PROFILES, cut_clip, encode, sha)
-import package_render_music  # noqa: E402
+import package_render_music
 
 SKETCH = HERE.parents[1]
 BIBLE = Path.home() / 'Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders'
@@ -41,7 +41,6 @@ KEYS = package_render_music.KEYS
 G172 = BIBLE / 'lab-round5-1/grid172'
 G129 = BIBLE / 'lab-round4-1/grid129'
 
-# theme: (source, tempo the source measures at, tempo of the grid it joins, key, what it belongs to)
 PICKS = {
     'title_a': (BIBLE / 'sketch-1/title-a-sax-noir/f91247ea-1d1c-c226-cecc-5635e9a422e4.wav', 127.0, 129, 'D', 'title A, sax noir (s2101)'),
     'title_b': (BIBLE / 'sketch-1/title-b-machine-lead/c955043f-d642-ce30-90b2-116687ac3989.wav', 128.0, 129, 'D', 'title B, machine lead (s2101)'),

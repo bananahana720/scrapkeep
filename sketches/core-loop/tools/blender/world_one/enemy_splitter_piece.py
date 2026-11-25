@@ -36,7 +36,6 @@ from splitter_pod import g
 common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("SplitterPiece")
 
@@ -49,15 +48,12 @@ glow = Part("SplitterPieceGlow")
 glow.bevel = 0
 glow.subsurf = 0
 tip, out = splitter_pod.build(body, glow, 0.0, R, centre=(0.0, 0.0, BACK), back_glow=True)
-# Loose, the snout runs out to a full lance with a bone tip: the chaser's read, small.
 lance = Vector(g(tip.x, tip.y, tip.z + BACK))
 lead = Vector(g(0.0, -0.04, -1.0))
 body.rod("fleet_paint", lance - lead * 0.05, lance + lead * 0.18, 0.05, segs=4, color="charcoal")
 body.rod("fleet_paint", lance + lead * 0.18, lance + lead * 0.3, 0.05, segs=4, color="bone", r2=0.0)
-# Tail skid under the spine, so the half-dome sits braced instead of tipping back.
 body.rod("fleet_paint", Vector(g(0, -0.5 * R, BACK + 0.05)), Vector(g(0, FLOOR + 0.06, BACK + 0.28)),
          0.06, segs=4, color="charcoal", r2=0.1)
-# A torn weld stub on the spine, where the lamp neck used to hold it.
 body.cyl("fleet_paint", 0.07, 0.05, 0.12, segs=5, loc=g(0, R * 0.93 + 0.03, BACK), color="charcoal")
 bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])
 bmesh.ops.recalc_face_normals(glow.bm, faces=glow.bm.faces[:])

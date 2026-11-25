@@ -24,12 +24,9 @@ from ore_cart import kit, common, strut
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [1200, 1000, 1]  # polish: was kit.P [270, 610, 1]; class cap 2,000 T / 4,600 V
+PROP = [1200, 1000, 1]
 SLOT = "enamel"
 
-# Palette names only. The palette (common.HEX, src/core/palette.gd) has no bark brown and no leaf green, so each row is a
-# mix of palette names, as ore_cart.py mixes its ore: bark is charcoal toward sandstone, limbs rust toward charcoal, leaves
-# brass toward the arc mint and then toward verdigris (petrol). No leaf row is the mint state key itself.
 LEAF_LIT = common.mix("brass", "mint", .3)
 
 
@@ -48,32 +45,23 @@ TONES = {
     "slab_shadow": common.mix("sandstone", "oxide", .45),
 }
 
-# Godot space, metres, +Y up, origin at the root point; front is +Z (the picture's view).
-# Trunk rings: (centre x, y, centre z, radius, twist degrees), an S-curve with a quarter turn of twist.
 TRUNK = [(0, -.25, 0, .95, 0), (.08, .7, 0, .66, 15), (.24, 1.8, .05, .58, 35), (.12, 3.0, 0, .55, 60),
          (-.15, 4.3, -.05, .56, 80), (-.05, 5.5, 0, .66, 95)]
-TRUNK_SIDES = 12  # polish: was 6
-# Limbs: three tubes from the fork, (start, elbow, tip) with radii.
+TRUNK_SIDES = 12
 LIMBS = [((-.25, 5.3, 0), (-1.7, 7.6, -.3), (-3.5, 9.8, -.6)),
          ((.05, 5.4, .1), (.4, 8.0, .6), (.2, 10.6, 1.0)),
          ((.25, 5.3, -.05), (1.9, 7.2, -.4), (3.5, 9.0, -.8))]
 LIMB_R = (.34, .22, .12)
-# Bare twigs reaching under the crown edge (the picture's thin dark branches): from, to, width.
 TWIGS = [((-1.7, 7.6, -.3), (-4.2, 4.6, 1.5), .16), ((1.9, 7.2, -.4), (4.0, 4.6, 1.9), .16),
          ((.4, 8.0, .6), (-1.3, 9.2, 3.2), .12), ((2.7, 8.1, -.6), (3.0, 9.4, -3.3), .12)]
-# Roots: angle in degrees from +X toward +Z, reach, start height; each a three-sided wedge to a point on the slab.
 ROOTS = [(15, 2.0, .9), (80, 1.7, .8), (150, 2.2, 1.0), (215, 1.6, .7), (290, 1.9, .9)]
-# Slab: irregular nine-sided outline (angle, radius), top y, chamfer drop, buried depth.
 SLAB = [(0, 2.5), (38, 2.2), (82, 2.6), (122, 2.3), (165, 2.55), (205, 2.15), (245, 2.45), (290, 2.3), (330, 2.6)]
 SLAB_TOP, SLAB_BOTTOM = .5, -.6
-# Leaf clusters: centre x, y, z, radius, yaw; squashed to .85 in y; flat-bottomed by the darker underside tone.
-# The two low clusters hang on the drooping twigs (TWIGS rows 1 and 2), as the picture's side clusters do.
 CLUSTERS = [(-.5, 10.8, .5, 2.9, 0), (-3.6, 9.8, -.3, 2.7, 30), (2.6, 9.9, .9, 2.7, 60), (-4.9, 7.1, .5, 2.1, 15),
             (4.2, 7.0, .8, 2.1, 45), (-1.8, 8.4, 2.3, 2.3, 75), (1.4, 8.3, -1.9, 2.3, 20), (.6, 8.6, 2.7, 2.1, 50),
             (-2.2, 9.0, -2.1, 2.2, 10), (4.0, 4.5, 1.8, 2.1, 35), (-4.2, 4.5, 1.5, 2.1, 65), (2.0, 11.0, -1.2, 2.1, 5),
             (-2.7, 11.2, 1.3, 1.9, 40)]
 SQUASH = .85
-# Expected bounds (size in metres) checked after export; a drift here is a geometry change, not noise.
 SIZE = {"cottonwood_trunk": [8.386, 11.218, 6.583], "cottonwood_crown": [13.062, 9.96, 8.721]}
 
 
@@ -103,7 +91,6 @@ def trunk(s):
     for x, y, z, r, twist in TRUNK:
         rings.append([Vector((x + r * math.cos(math.radians(twist) + a), y, z + r * math.sin(math.radians(twist) + a)))
                       for a in kit.angles(TRUNK_SIDES, closed=True)])
-    # Alternating bark and dark corners along each ring read as the twisted ridges of the picture's trunk.
     colors = [tone("bark") if i % 2 else tone("bark_dark") for _ in rings for i in range(TRUNK_SIDES)]
     tube(s, rings, None, colors=colors, cap=True)
 
@@ -125,7 +112,6 @@ def root(s, angle, reach, y0):
     start = Vector((0, y0, 0)) + out * .35
     mid = out * (.35 + reach * .55) + Vector((0, SLAB_TOP + .28, 0))
     tip = out * (.35 + reach) + Vector((0, SLAB_TOP - .02, 0))
-    # A three-sided wedge: two flanks and a ridge, the flat underside buried in the slab.
     sections = [(start, .34, .26), (mid, .2, .22)]
     rings = [[c - side * w + Vector((0, -.1, 0)), c + Vector((0, h, 0)), c + side * w + Vector((0, -.1, 0))] for c, w, h in sections]
     verts = [tuple(v) for r in rings for v in r] + [tuple(tip)]
@@ -137,7 +123,6 @@ def slab(s):
     def ring(y, grow):
         return [(math.cos(math.radians(a)) * (r + grow), y, math.sin(math.radians(a)) * (r + grow)) for a, r in SLAB]
     n = len(SLAB)
-    # Top inset and buried foot flared: one slanted side band reads as the picture's chamfered edge.
     rings = [ring(SLAB_TOP, -.2), ring(SLAB_BOTTOM, .25)]
     verts = [v for r in rings for v in r]
     faces = [tuple(reversed(range(n)))]
@@ -170,7 +155,6 @@ ICO_F = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11), (1, 5, 9), (
 
 
 def ico_once():
-    # One midpoint subdivision of the icosahedron (42 vertices, 80 faces) so a cluster reads as a round blob, not a gem.
     verts = [Vector(v).normalized() for v in ICO_V]
     cache, faces = {}, []
 
@@ -190,9 +174,8 @@ def ico_once():
 def cluster(s, x, y, z, r, yaw):
     rot = Euler((0, math.radians(yaw), 0), "XYZ").to_matrix()
     local, faces = ico_once()
-    r *= .895  # the old icosahedron's corners reached about .85 of r along each axis; a round blob keeps the crown's bounds
+    r *= .895
     verts = [tuple(rot @ Vector((v.x * r, v.y * r * SQUASH * .972, v.z * r)) + Vector((x, y, z))) for v in local]
-    # Underside dark, belly mid, top lit: the chunky clusters of the picture under a sun from above.
     colors = [tone("leaf", 0 if v.y < -.3 else (1 if v.y < .45 else 2)) for v in local]
     s.add(verts, faces, colors=colors)
 
@@ -226,8 +209,6 @@ def export(name, part, smooth, build, out_dir):
 
 
 def main():
-    # Polish: organic crown blobs take subdivided icospheres (smooth shading, no bevel); the trunk keeps a 3 cm bevel on its
-    # slab and ridges; the AO and wear bake rides the enamel vertex colours.
     polish.enable(bevel=.03, bevel_min=.2, **kit.BAKE)
     kit.FINISH.update({"Crown": {"bevel": 0, "subsurf": 0}})
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []

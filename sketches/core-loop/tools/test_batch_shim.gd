@@ -1,9 +1,5 @@
 extends SceneTree
 
-# The base a batched test runs on (tools/test_batch.gd swaps `extends SceneTree` for this).
-# The runner renames a test's own quit( calls to _batch_quit( and its _process and
-# _physics_process to _batch_process and _batch_physics_process, so a test's end (quit, or a
-# frame callback returning true) ends that test and the runner starts the next one.
 
 static var batch
 var _batch_done := false

@@ -59,31 +59,26 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
-from mathutils import Matrix, Quaternion, Vector  # noqa: E402
+import bmesh
+import bpy
+from mathutils import Matrix, Quaternion, Vector
 
-import common  # noqa: E402
-import polish  # noqa: E402
+import common
+import polish
 
-# Cast comb: 3 cm chamfers on real corners, smooth shading, baked AO (POLISH.md). Cells keep
-# their hexagons; no edge lightening and softer AO keep ancient enamel under its cap.
 polish.enable(detail=1, bevel=0.03, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
-from common import Part  # noqa: E402
+from common import Part
 
 FPS = 30
 CLIPS = {"idle": 4.0, "pulse": 2.4, "active": 4.0, "hoist_ride": 2.0, "snip": 2.0,
          "stagger_open": 4.0, "chunk_shed": 1.0, "brood_dark": 1.0, "break": 3.0}
-# Clips whose every pose keeps the collider rule (the rest are debris in flight).
 HELD = ("idle", "active", "hoist_ride", "snip", "stagger_open", "brood_dark")
-# The drones' snip walks the rope away from the body, so the kit holds the rule in the rest.
 KIT_HELD = ("idle", "active", "hoist_ride", "stagger_open", "brood_dark")
-# Polished caps (POLISH.md, 18 Oct), well under the warden_base and warden_kit class caps.
 BUDGET = {"warden_swarm": ("warden_base", 13000, 17000, 32), "warden_swarm_kit_drones": ("warden_kit", 1500, 2800, 18)}
-RADIUS = 2.8          # warden.gd RADIUS
-LOW_BAND = 2.0        # below this height nothing passes RADIUS
-REACH = RADIUS + 1.0  # above it nothing passes RADIUS + 1 m
-QUEEN = Vector((0.0, 0.0, 6.7))  # warden_kit.gd swarm point_offset 5.1 + warden.gd HALF_HEIGHT 1.6
+RADIUS = 2.8
+LOW_BAND = 2.0
+REACH = RADIUS + 1.0
+QUEEN = Vector((0.0, 0.0, 6.7))
 
 ENAMEL = common.srgb("petrol")
 LIP = common.mix("petrol", "bone", 0.18)
@@ -91,12 +86,9 @@ IRON = common.mix("charcoal", "petrol", 0.28)
 PLATE = common.mix("charcoal", "petrol", 0.45)
 DUSTY = common.mix("petrol", "sandstone", 0.3)
 
-# The hull's revolved profile (r, z): a hanging egg, narrow at the base so the lower comb stays
-# inside the 2.8 m collider below 2 m.
 PROFILE = [(0.55, 0.0), (1.25, 0.25), (1.8, 0.75), (2.15, 1.4), (2.35, 2.0), (2.75, 2.7), (3.0, 3.4),
            (3.05, 4.2), (2.85, 4.9), (2.4, 5.6), (1.75, 6.2), (1.0, 6.7), (0.5, 6.95)]
 SEGS = 12
-# Rings: (name, count, z on the profile, azimuth offset deg, cell circumradius, protrusion, shuttered)
 RINGS = [
     ("Ring1", 6, 6.25, 0.0, 0.78, 0.33, True),
     ("Ring2", 12, 5.15, 15.0, 0.78, 0.30, True),
@@ -104,11 +96,10 @@ RINGS = [
     ("Ring4", 12, 2.78, 15.0, 0.62, 0.26, False),
     ("Ring5", 9, 1.4, 20.0, 0.55, 0.2, False),
 ]
-BALL_AZ = -90.0          # Blender -Y is the ball's side
-GRIP_CELLS = (1, 3, 5)   # Ring1 cells at -90, 30 and 150 degrees
-# The ring each chunk sheds, chunk 1 to 4 (section 3.2: lowest first); chunk_shed keys all four.
+BALL_AZ = -90.0
+GRIP_CELLS = (1, 3, 5)
 SHED_RINGS = ("Ring5", "Ring4", "Ring3", "Ring2")
-RING_REST = {}           # ring bone -> rest axes (3x3), filled once the armature exists
+RING_REST = {}
 YOKE_AZ = (-60.0, 60.0, 180.0)
 SEAM_DIM = -0.05
 SEAM_OFF = -0.13
@@ -149,7 +140,7 @@ class Mesh:
     def __init__(self, name):
         self.part = Part(name)
         self.bm = self.part.bm
-        self.owner = []  # bone name per vertex, in creation order
+        self.owner = []
 
     def claim(self, bone, start):
         self.owner += [bone] * (len(self.bm.verts) - start)
@@ -191,7 +182,6 @@ def build_cell(m, bone, seam, cell):
         m.face([bot[k], bot[j], top[j], top[k]], "ancient_enamel", cell["color"], mid - (s + n * (h / 2)))
         m.face([top[k], top[j], inner[j], inner[k]], "ancient_enamel", LIP, n)
     if cell["shutters"]:
-        # Open: a charcoal groove and floor with a small green core, seen only past the shutter.
         deep = [m.v(c) for c in hex_corners(face - n * depth, u, v, rc * 0.8, rot)]
         for k in range(6):
             j = (k + 1) % 6
@@ -200,7 +190,6 @@ def build_cell(m, bone, seam, cell):
         core = [m.v(c) for c in hex_corners(face - n * (depth - 0.02), u, v, rc * 0.32, rot)]
         m.face(core, "ancient_light", None, n)
     else:
-        # The comb is sealed: a low dark-iron cap, so the green stays in the seams.
         apex = m.v(face + n * 0.1)
         for k in range(6):
             j = (k + 1) % 6
@@ -250,7 +239,6 @@ def build_plate(m, bone, cell, j, thick, raise_):
         q = (k + 1) % 4
         m.face([lo[k], lo[q], up[q], up[k]], "ancient_enamel", IRON, (up[k].co + up[q].co) / 2 - mid)
     m.claim(bone, mk)
-    # The hinge: through the plate's outer corner, along the chord of its two side corners.
     return cs[(2 * j + 1) % 6], (cs[(2 * j + 2) % 6] - cs[2 * j]).normalized(), (face - cs[(2 * j + 1) % 6]).normalized()
 
 
@@ -322,9 +310,6 @@ def build_yoke(m):
     m.claim("Yoke", mk)
 
 
-# ---------------------------------------------------------------------------- armature
-
-
 def new_armature(name):
     data = bpy.data.armatures.new(name)
     obj = bpy.data.objects.new(name, data)
@@ -349,7 +334,6 @@ def bone(arm, name, head, tail, parent=None, roll_to=None):
 
 def skin(m, arm, name):
     m.bm.verts.index_update()
-    # Owners ride in the bmesh's deform layer, so polish bevels carry them onto new vertices.
     names = list(dict.fromkeys(m.owner))
     index = {owner: k for k, owner in enumerate(names)}
     deform = m.bm.verts.layers.deform.verify()
@@ -360,7 +344,6 @@ def skin(m, arm, name):
     obj.name = name
     for owner in names:
         obj.vertex_groups.new(name=owner)
-    # Rigid skinning: every vertex keeps only its strongest bone, at full weight.
     for v in obj.data.vertices:
         groups = sorted(((g.weight, -g.group) for g in v.groups), reverse=True)
         if len(groups) > 1 or (groups and groups[0][0] != 1.0):
@@ -387,9 +370,6 @@ def marker(name, arm, bone_name, at):
     return obj
 
 
-# ---------------------------------------------------------------------------- the hive
-
-
 def build_body():
     rng = random.Random("scrapkeep-warden-swarm")
     cells = hive_cells(rng)
@@ -405,7 +385,6 @@ def build_body():
                 thick, raise_ = (0.12, 0.16) if c.get("queen") else (0.06, 0.07)
                 hinge, along, inward = build_plate(m, name, c, j, thick, raise_)
                 plates.append({"name": name, "cell": c, "hinge": hinge, "along": along, "inward": inward})
-    # The queen's lit core, at the point.
     mk = m.mark()
     m.part.ico("ancient_light", 0.5, 1, loc=QUEEN)
     m.claim("QueenCore", mk)
@@ -427,7 +406,6 @@ def build_body():
         n = p["cell"]["axis"]
         bone(arm, p["name"], p["hinge"], p["hinge"] + n * 0.25, p["cell"]["name"], roll_to=p["along"])
     bpy.ops.object.mode_set(mode="OBJECT")
-    # Which way a plate turns about its local Z to open: its inward direction toward +Y (the axis).
     for p in plates:
         b = arm.data.bones[p["name"]]
         x = b.matrix_local.to_3x3().col[0]
@@ -481,8 +459,6 @@ def body_pose(clip, t, cells, plates):
             else:
                 scale = 1.0 + 0.03 * o
         elif clip == "chunk_shed":
-            # The fall rides the ring bones (below); every cell only shudders and its pinpricks
-            # flicker, so one clip serves whichever ring KF8 lets fall.
             scale = 1.0 + 0.04 * math.exp(-5 * t) * math.sin(math.tau * t / 0.25)
             seam = SEAM_DIM + (SEAM_OFF - SEAM_DIM) * math.exp(-4 * t) * abs(math.sin(math.tau * t / 0.2))
         elif clip == "brood_dark":
@@ -511,8 +487,6 @@ def body_pose(clip, t, cells, plates):
             if int(c["name"][4:]) % 2 == 0:
                 ang = math.radians(28 + 6 * math.sin(math.tau * (t / 2.0 + h)))
         elif clip == "stagger_open":
-            # Ring2 sits on the widest shoulder: its plates stop at 50 degrees so an open
-            # shutter stays inside 3.8 m.
             full = 125 if c.get("queen") else (50 if c["ring"] == "Ring2" else 105)
             ang = math.radians(full) * smooth(t / 0.22) + math.radians(4) * math.sin(math.tau * t / 0.5) * smooth(t / 0.3)
         elif clip == "break":
@@ -534,7 +508,6 @@ def body_pose(clip, t, cells, plates):
     pose["Yoke"] = (Vector(), Quaternion(), Vector((1, 1, 1)))
     core_loc, core_scale = 0.0, 1.0
     if clip == "stagger_open":
-        # The finisher window: the lit core rises out of the open queen and swells.
         core_loc = 0.6 * smooth(t / 0.3)
         core_scale = 1.0 + 0.25 * smooth(t / 0.3) + 0.05 * math.sin(math.tau * t / 0.5) * smooth(t / 0.3)
     elif clip == "pulse" and t <= 2.0:
@@ -556,7 +529,7 @@ def ring_fall(t, rest3):
     k = max(0.0, t - 0.08)
     world = Vector((0, 1.2 * k, -0.5 * 9.8 * k * k))
     loc = local_vector(rest3, world)
-    spin = Quaternion((0, 1, 0), 1.6 * k)             # the bone's Y is the hive's axis
+    spin = Quaternion((0, 1, 0), 1.6 * k)
     tumble = Quaternion((1, 0, 0), 0.6 * k)
     spread = 1.0 + 0.12 * smooth(k / 0.5)
     return (loc, tumble @ spin, Vector((spread, spread, spread)))
@@ -572,19 +545,10 @@ def local_vector(rest3, world):
     return rest3.inverted() @ world
 
 
-# ---------------------------------------------------------------------------- the drones
-
-
-DRONES = [  # (height z, azimuth deg, wander phase)
+DRONES = [
     (3.75, 0.0, 0.0), (3.7, 270.0, 0.3), (3.5, 90.0, 0.55), (3.3, 180.0, 0.15),
     (3.6, 225.0, 0.7), (3.65, 135.0, 0.4), (3.15, 45.0, 0.85), (3.4, 315.0, 0.25),
 ]
-# A drone clings flat to the comb, DRONE_CLEAR off the hull along its normal: the lips and caps
-# stand up to 0.45 m proud and the pinpricks sink below the lip, so the underside (0.05 m below the
-# frame) clears them. They crawl the lower dome, below the shuttered rings, where the plates open
-# and the yoke arms stand clear of the comb. In chunk_shed they start up by SHED_LIFT as the rings
-# break away (the falling cells spread 12 percent, drift and tumble past them) and hold it to the
-# clip's end: the next clip blends them back down once the ring is gone.
 DRONE_CLEAR = 0.53
 SHED_LIFT = 1.2
 SNIP_FILE = (0, 1, 7)
@@ -628,7 +592,6 @@ def build_drone(m, i, frame):
 
     tri_prism([(0, 0.48), (-0.42, -0.24), (0.42, -0.24)], -0.05, 0.05, "ancient_enamel", ENAMEL, IRON)
     tri_prism([(0, 0.3), (-0.2, -0.16), (0.2, -0.16)], 0.05, 0.12, "ancient_enamel", PLATE, IRON)
-    # Flanking uranium-glass green (#9DFF3C) seam ribs along the cast drone chassis (g08 canon).
     for sign in (-1.0, 1.0):
         tri_prism([(sign * 0.08, 0.24), (sign * 0.28, -0.12), (sign * 0.20, -0.16)], 0.052, 0.072, "ancient_light", None, None)
     tip = at(0, 0.3, 0.13)
@@ -671,8 +634,6 @@ def drone_target(clip, i, t):
         return surface_frame(z, az, hd)
     if clip == "snip":
         if i in SNIP_FILE:
-            # The file of three walks the lined rope from Grip0 toward the ball: out along the
-            # ball's side and 30 degrees down, 0.9 m apart, 9 m in the 2 s charge.
             g = surface_frame(6.25, BALL_AZ, 0.0, 0.33 + 0.1)
             rope = Vector((0, -math.cos(math.radians(30)), -math.sin(math.radians(30))))
             slot = SNIP_FILE.index(i)
@@ -722,9 +683,6 @@ def kit_pose(clip, t, arm, rest):
         loc, rot, scale = basis_m.decompose()
         pose["Drone%d" % i] = (loc, rot, scale)
     return pose
-
-
-# ---------------------------------------------------------------------------- clips and export
 
 
 def author_clips(arm, pose_fn):
@@ -856,7 +814,6 @@ def check(path, name):
         elif abs(lengths[clip] - length) > 0.05:
             problems.append("clip %s is %.3f s, want %.2f" % (clip, lengths[clip], length))
     if name == "warden_swarm":
-        # Each shed ring bone carries the fall in chunk_shed (KF8 enables chunk n's track).
         node_ids = {nd.get("name"): i for i, nd in enumerate(g["nodes"])}
         shed = next((a for a in g.get("animations", []) if a["name"] == "chunk_shed"), None)
         for ring in SHED_RINGS:

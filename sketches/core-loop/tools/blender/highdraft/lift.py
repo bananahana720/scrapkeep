@@ -33,11 +33,6 @@ import polish
 
 COLORS = dict(bone="d2c5a5", petrol="53686d", charcoal="242a28",
               oxide="9b513a", mint="8bf0d3", amber="e5a044", slate="596a7c")
-# Polish (tools/blender/POLISH.md). dress_mhl_assets_test pins every file's bounds to a
-# millimetre, so these take bevels only (planar faces keep the extents) and no subdivision.
-# The eye and collar swap slate and mint by exact vertex colour at import (color_pose), so
-# they take no AO or wear bake. thermal_air takes no polish (a glass column, nothing to bake);
-# it rounds itself with 24 sides and rings every 3.5 m or less, so the rise wave reads.
 POLISH = {
     "thermal_vent": dict(bevel=.05, bevel_min=.15, bevel_angle=35),
     "net_tile": dict(bevel=0),
@@ -48,7 +43,6 @@ POLISH = {
     "anchor_collar": dict(bevel=.03, ao=False, edge=0),
     "travel_vane": dict(bevel=.03, bevel_min=.1),
 }
-# polish: was 270 / 610 (dress_mhl_assets_test pins that); class cap prop 2,000 / 4,600
 PROP_CAP = (1500, 3400, 1)
 FILES = ("thermal_vent", "thermal_air", "net_tile", "net_edge", "net_shoe",
          "anchor_mast", "anchor_eye", "anchor_collar", "travel_vane")
@@ -74,7 +68,6 @@ def part_marker(root, name, size, loc=(0, 0, 0)):
 def tint(part, faces, color, wear=False):
     part.paint(faces, "paint", COLORS.get(color, color))
     if wear:
-        # Broad cast-face wear, deterministic and carried by the same vertex slot.
         for i, face in enumerate(faces):
             if i % 7 == 2:
                 part.paint([face], "paint", common.mix(COLORS[color], COLORS["bone"], .25))
@@ -102,7 +95,6 @@ def finish(part, root, recalc=True):
     if recalc:
         bmesh.ops.recalc_face_normals(part.bm, faces=list(part.bm.faces))
     obj = part.to_object(parent=root)
-    # Godot generates tangents for skinned/morph meshes even without a normal map.
     uv = obj.data.uv_layers.new(name="UVMap")
     for loop in obj.data.loops:
         pos = obj.data.vertices[loop.vertex_index].co
@@ -114,8 +106,6 @@ def finish(part, root, recalc=True):
 def thermal_vent(root):
     p = common.Part("Hardware")
     inner = 2.5 / math.cos(math.pi / 12)
-    # Six-point rim profile softens both entry edges. The buried duct is open
-    # at its ends, leaving the budget for this visible padded mouth and grate.
     profiles = [([(inner, 1.2), (3, 1.2), (3, 1.72), (2.92, 1.8),
                   (inner + .08, 1.8), (inner, 1.72)], range(6), "amber"),
                 ([(inner, 0), (3, 0), (3, 1.2), (inner, 1.2)], (1, 3), "petrol")]
@@ -135,7 +125,6 @@ def thermal_vent(root):
             size = (2 * half, .15, .14) if axis == 0 else (.14, .15, 2 * half)
             loc = (0, 1.1, offset) if axis == 0 else (offset, 1.1, 0)
             box(p, size, loc, "charcoal")
-    # Preserve authored inward duct normals on the open inner shell.
     obj = finish(p, root, recalc=False)
     part_marker(root, "MouthRim", (6, .6, 6), (0, 1.5, 0))
     part_marker(root, "DuctFoot", (6, 1.2, 6), (0, .6, 0))
@@ -184,8 +173,6 @@ def thermal_air(root):
 
 def net_tile(root):
     p = common.Part("Weave")
-    # Five lines per axis at exact 1 m pitch. Boundary lines are half ribbons,
-    # completing one full 0.10 m ribbon when two 4 m tiles meet.
     for axis in range(2):
         for offset in (-2, -1, 0, 1, 2):
             lo, hi = max(-2, offset - .05), min(2, offset + .05)
@@ -214,7 +201,6 @@ def net_tile(root):
 
 def net_edge(root):
     p = common.Part("Hardware")
-    # Eight-sided cross-section gives the offered edge a blunt padded nose.
     outline = [(-.2, 0), (.2, 0), (.25, .05), (.25, .30),
                (.2, .35), (-.2, .35), (-.25, .30), (-.25, .05)]
     m = Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, -.35), (0, 0, 0, 1)))
@@ -264,8 +250,6 @@ def anchor_mast(root):
 def anchor_eye(root):
     p = common.Part("Hardware")
     outer = ring(p, 1, 1.5, .45, (0, 0, 0), "bone", vertical=True, wear=True)
-    # The sleeve fills this interface; omit its buried bone faces so BOTH colour
-    # variants fit the per-file cap. All slate and mint triangles still count.
     for face in outer[3::4]:
         p.bm.faces.remove(face)
     ring(p, .9 / math.cos(math.pi / 12), 1, .45, (0, 0, 0), "slate", vertical=True)
@@ -289,8 +273,6 @@ def anchor_collar(root):
     box(p, (.45, .45, .35), (0, 0, 0), "slate")
     box(p, (.45, .45, .35), (0, 0, 0), "mint")
     obj = finish(p, root)
-    # One top-right corner module; rotate instances about eye Z for other corners.
-    # Geometry stays centred at its own pivot. Translation is relative to the socket.
     mark(root, "slide_axis", inward_godot=[-1 / math.sqrt(2), -1 / math.sqrt(2), 0])
     root["open_offset_godot"] = [.25 / math.sqrt(2), .25 / math.sqrt(2), 0]
     root["close_tint"] = COLORS["mint"]
@@ -302,7 +284,7 @@ def travel_vane(root):
     p = common.Part("Hardware")
     box(p, (.2, 1.2, .2), (0, .6, 0), "charcoal")
     blade = common.Part("Hardware.blade")
-    blade.bevel = 0  # its 2.0 m extent is pinned to a millimetre
+    blade.bevel = 0
     outline = [(-.7, 0), (.95, .10), (1.3, .34), (1.12, .65),
                (.55, .70), (-.7, .42)]
     m = common.mtx((0, 0, 1.2), (math.pi / 2, 0, 0))
@@ -448,7 +430,6 @@ def motions(path, name):
     doc, binary = read_glb(path)
     nodes = {n.get("name"): i for i, n in enumerate(doc["nodes"])}
     root = nodes[name]
-    # Named poses use a separate control marker. Static meshes and sockets never move.
     phase = len(doc["nodes"])
     doc["nodes"].append(dict(name="PresentationState", extras=dict(presentation_only=True)))
     doc["nodes"][root].setdefault("children", []).append(phase)
@@ -479,9 +460,6 @@ def motions(path, name):
                          for x, y, z in pos]
                 prim["targets"] = [dict(POSITION=floats(doc, binary, delta, "VEC3"))]
             else:
-                # Four nonnegative morph weights make a travelling wave, rather
-                # than a whole column breathing up and back down. The phase moves
-                # upward 7 m/s and wraps continuously every 2 seconds.
                 prim["targets"] = []
                 for fn, sign in ((math.sin, 1), (math.sin, -1), (math.cos, 1), (math.cos, -1)):
                     delta = []
@@ -551,7 +529,6 @@ def export(root, path, name):
             triangles += doc["accessors"][prim["indices"]]["count"] // 3
             vertices += doc["accessors"][prim["attributes"]["POSITION"]]["count"]
             draws += 1
-    # thermal_air polish: was (120, 110, 2); now under the scenery class cap 1500/3000/2 (asset_budgets.json)
     cap = (800, 500, 2) if name == "thermal_air" else PROP_CAP
     assert 0 < triangles <= cap[0] and 0 < vertices <= cap[1] and draws <= cap[2], (name, triangles, vertices, draws)
     assert len(doc["materials"]) == 1
@@ -584,7 +561,6 @@ def preview_glb(path, outdir, pose=None):
     ball = bpy.context.object
     ball.name = "ReferenceBall_2m"
     ball.data.materials.append(common._flat("ReferenceBone", "d2c5a5"))
-    # A dark equator makes the 2 m reference ball easy to identify.
     p = common.Part("ReferenceBand")
     p.ring("paint", .995, 1.008, .12, 24, ball_loc, color="242a28")
     p.to_object()
@@ -616,7 +592,6 @@ def preview_glb(path, outdir, pose=None):
     scene.camera = cam
     cam.data.type = "ORTHO"
     distance = max(20, (high - low).length * 2)
-    # In side view move the reference ball beside the depth silhouette, not behind it.
     for label, direction in (("front", (0, -1, .20)), ("side", (1, 0, .20)),
                              ("three_quarter", (.75, -1, .65))):
         if label == "side":
@@ -662,7 +637,6 @@ def main():
             if name in POLISH:
                 polish.enable(**POLISH[name])
             else:
-                # Scenery: untouched.
                 polish._opts = common.POLISH = None
                 common.DETAIL = 1
             root = common.empty(name)

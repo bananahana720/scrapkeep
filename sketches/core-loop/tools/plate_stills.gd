@@ -6,16 +6,6 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 
-# Stills of World 1's lore plates (W45 P8) in the running game, so two builds compare plate for plate: a free camera
-# at each plate's row spot, posed from the ground and the decks round the spot alone (never from the plate), so one
-# seed gives one pose in every build; then the chase camera behind a frozen ball a few metres short of an unread
-# plate, and the same view once the plate is read. HUD shown in the chase shots, hidden in the plate shots. Needs a
-# rendered display. On the Mac, start it only with Godot's embedded display (no window on screen):
-#
-#   $GODOT_BIN --embedded --rendering-driver metal --resolution 1920x1080 --audio-driver Dummy --path sketches/core-loop \
-#     --script res://tools/plate_stills.gd -- --out=<absolute dir> [--shots=dam_era_haul_sign,chase_unread]
-#
-# Writes <out>/<shot>.png and shots.json (each shot's eye, target and the plate's position when one stands there).
 
 const SIZE := Vector2i(1920, 1080)
 const SEED := 280928
@@ -23,7 +13,6 @@ const PLATES := {
 	"park_dam": ["dam_era_incline_tally", "dam_era_haul_sign", "dam_dedication_plaque", "dam_era_gate_flags", "ancient_eye_marks"],
 	"park_flume": ["dam_era_trestle_tag", "dam_era_flume_survey", "dam_era_rim_milepost", "dam_era_annex_dial"],
 }
-# The chase shots' plate: on open sandstone, off every deck.
 const CHASE := {"map": "park_dam", "fragment": "dam_era_survey_deck", "back_m": 8.0, "turn": -0.3}
 const EYE_OUT_M := 6.5
 const EYE_UP_M := 2.5
@@ -78,7 +67,6 @@ func _main() -> void:
 		if not await _enter(map_id):
 			quit(1)
 			return
-		# The chase shots keep the HUD, and hide_ui() is one way, so they come first.
 		if map_id == CHASE["map"] and (_only.is_empty() or _only.has("chase_unread") or _only.has("chase_read")):
 			await _chase_shots()
 		for fragment in PLATES[map_id]:
@@ -108,7 +96,6 @@ func _enter(map_id: String) -> bool:
 	return false
 
 
-# The row spot a plate's fragment names, unmoved by any nudge, so the pose is the same in every build.
 func _spot(fragment: String) -> Vector2:
 	var park: Dictionary = _game.ctx.terrain.map().park
 	var landmark: Dictionary = park.get("landmark", {})
@@ -121,8 +108,6 @@ func _spot(fragment: String) -> Vector2:
 	return Vector2.INF
 
 
-# The highest static world face under (x, z), any static body at all: it only places the camera over the ground,
-# so one pose serves every build. It is not the seat test's ground, nor terrain.gd top_surface.
 func _top(x: float, z: float) -> float:
 	var ground: float = _game.ctx.terrain.height(x, z)
 	var query := PhysicsRayQueryParameters3D.create(Vector3(x, ground + REACH_M, z), Vector3(x, ground - 1.0, z), 1)
@@ -150,8 +135,6 @@ func _freeze_ball_away() -> void:
 	_game.player.body().global_position = Vector3(-400, 400, -400)
 
 
-# The eye stands EYE_OUT_M off the spot on the side whose surface is lowest (down a slope, off a deck's middle
-# toward its edge), EYE_UP_M over the spot's surface, and looks at the spot.
 func _plate_shot(map_id: String, fragment: String) -> void:
 	var spot := _spot(fragment)
 	if spot == Vector2.INF:
@@ -177,7 +160,6 @@ func _plate_shot(map_id: String, fragment: String) -> void:
 	await _save(fragment, _cam, at)
 
 
-# The chase camera behind a frozen ball back_m short of the plate, facing it; then the plate is read and shot again.
 func _chase_shots() -> void:
 	var p := _plate(CHASE["fragment"])
 	if p == null:
@@ -189,7 +171,6 @@ func _chase_shots() -> void:
 	_game.player.set_frozen(false)
 	_game.player.reset_to(ball)
 	_game.player.set_frozen(true)
-	# Turned a little off the plate, so the ball does not stand between the camera and it.
 	var to := plate - ball
 	_game.camera.yaw = atan2(-to.x, -to.z) + float(CHASE["turn"])
 	_game.camera.cam.make_current()

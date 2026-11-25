@@ -1,22 +1,4 @@
 extends SceneTree
-# Ring edge lightness on the noon Slag Bowl floor (watch "noon bowl lightness", #487 owed read).
-# Boots the park table, enters Brindle's bowl as a run does, commits a hostile INSTANT ring at
-# spots across the bowl floor, and shoots each straight down from the live chase camera's distance
-# with the HUD hidden. Along 16 radial rays it reads pixels (L*) through the ring's cross-section,
-# at the marks' own height (Telegraph.LIFT): the HAZARD stroke just inside the radius, the charcoal
-# keyline just outside it (threat_grammar `_lined`, UNDERLAY each side; its median) and the bare
-# floor just beyond (at ground height). HAZARD (L* about 61) sits near the pale floors, so the
-# edge's lightness step is the keyline's: a ray's edge step is the larger of floor minus keyline
-# and |stroke minus floor| (on the dark track bands the stroke carries it). A ray counts only
-# where the stroke is in view (a HAZARD-hued pixel; a name card drawn over the ring drops it).
-# Planted control: a dark and a light grey plate inside each ring must read their authored
-# lightness step within CONTROL_TOLERANCE, which proves the sampler reads the pixels it names.
-# Not measured here: a pitched chase view (straight down shows the keyline at its widest), a haze
-# fill of another telegraph lying over the keyline (fills draw above keylines), and the other types.
-#   xvfb-run -s "-screen 0 1280x720x24" godot --path sketches/core-loop --resolution 1280x720 --script res://tools/keyline_floor_capture.gd -- --out=<dir> [--gate]
-# Writes <out>/keyline_floor.json and <out>/keyline-<n>.png. --gate exits 1 when a spot's weakest
-# counted ray steps under EDGE_STEP_MIN, a spot counts fewer than MIN_RAYS rays, or a control fails.
-# Evidence limit: llvmpipe GL Compatibility; the number that counts is the 3060 Forward+ read.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -27,11 +9,6 @@ const SIZE := Vector2i(1280, 720)
 const RING := 7.0
 const EDGE_STEP_MIN := 20.0
 const MIN_RAYS := 6
-# Planted control: two opaque unshaded grey plates inside each ring (clear of the fill band) whose
-# authored L* differ by about 50. The grade and the ring's faint area base bend that step (it read
-# 40.9 on llvmpipe and 37.1 on the 3060's Forward+, #498 comment 6428905151), so the read must land
-# within CONTROL_TOLERANCE of it, in at least MIN_CONTROLS spots (a raised prop can cover the plates
-# at a spot).
 const CONTROL_DARK := Color(0.25, 0.25, 0.25)
 const CONTROL_LIGHT := Color(0.75, 0.75, 0.75)
 const CONTROL_TOLERANCE := 0.3
@@ -53,7 +30,6 @@ func _initialize() -> void:
 			out = a.trim_prefix("--out=")
 		elif a == "--gate":
 			gate = true
-	# Captures go outside the project, never into the Godot tree it imports.
 	var project := ProjectSettings.globalize_path("res://")
 	if out.is_empty() or out.is_relative_path() or out.simplify_path().path_join("").begins_with(project):
 		push_error("keyline_floor_capture: pass --out=<absolute dir outside %s>" % project)
@@ -137,7 +113,6 @@ func _run() -> void:
 		var light_at := _plant(at + Vector3(-2.0, 0, 0.7), CONTROL_LIGHT)
 		cam.global_position = at + Vector3(0.0, reach, 0.01)
 		cam.look_at(at, Vector3.FORWARD)
-		# Wide enough that the floor beyond the ring stays in frame on every ray.
 		cam.fov = 85.0
 		cam.current = true
 		for i in 10:
@@ -204,8 +179,6 @@ func _run() -> void:
 	quit(1 if gate and not red.is_empty() else 0)
 
 
-# The L* of every in-view pixel along a ray between two radii, `lift` above the ground. hazard=true
-# keeps HAZARD-hued pixels only (the stroke), so a card drawn over the ring drops the ray.
 func _band(img: Image, at: Vector3, u: Vector3, r0: float, r1: float, lift: float, hazard: bool) -> Array:
 	var result := []
 	var r := r0

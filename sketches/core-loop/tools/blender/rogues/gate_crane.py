@@ -18,7 +18,6 @@ import polish
 from common import Part
 
 kit.setup()
-# Small parts get crisp 3 cm bevels; the mojulo shells keep their own one-cell rounding.
 polish.enable(detail=1, subsurf=0, bevel=0.03, bevel_angle=40.0, sharp_angle=55.0)
 HALF = 3.6
 DOWN = (0, 0, -HALF)
@@ -47,15 +46,15 @@ bone_rows = [
 def body_paint(c, n):
     z = c.z + HALF
     if z < 0.3:
-        return "charcoal"  # bogie feet
+        return "charcoal"
     if n.z > 0.6 and z < 1.3:
-        return WEAR  # dust on the upward faces of the base
+        return WEAR
     return "petrol"
 
 
 def jib_paint(c, n):
     if c.y > 6.75:
-        return "charcoal"  # tip sheave block
+        return "charcoal"
     return WEAR if n.z > 0.8 else "petrol"
 
 
@@ -81,7 +80,6 @@ kit.drop(imported)
 hull = Part("GateCraneHull")
 bind = kit.weights(hull)
 kit.add_shell(hull, meshes["Body"], SLOT, body_paint)
-# Rails, wheels and the crew marks stay with the body.
 for x in (-1.5, 1.5):
     hull.box(SLOT, (0.14, 4.3, 0.08), loc=at(x, 0, 0.04), color="brass")
     for y in (-1.5, 1.5):
@@ -92,8 +90,6 @@ for side in (-1, 1):
 kit.stencil(hull, SLOT, "HIRED", at(-0.92, 1.37, 1.47), (0, 1, 0), 0.15, "bone", resolution=1)
 kit.cut_line(hull, SLOT, [at(-1.41, 0.95, 1.85), at(-1.52, 1.05, 1.45), at(-1.58, 1.2, 0.95), at(-1.55, 1.38, 0.62)],
              radius=0.075)
-# Hard colour borders are their own parts: brass bands and drum flanges, the cab's frost
-# window and the dark floor of the hatch recess.
 for z in (2.0, 4.55):
     w = mast_width(z) + 0.05
     hull.box(SLOT, (w, w, 0.13), loc=at(0, 0, z), color="brass")
@@ -119,7 +115,6 @@ armour.bevel = 0.02
 bind_plate = kit.weights(armour)
 import math
 for side, index in [(-1, 4), (1, 5)]:
-    # A half disc hinged at its outer edge, so it swings outward off the drum's rear face.
     outline = [(side * 0.015, 0.7)]
     for k in range(9):
         a = math.pi / 2 - math.pi * k / 8

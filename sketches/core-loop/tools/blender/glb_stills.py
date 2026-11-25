@@ -23,7 +23,7 @@ import bpy
 from mathutils import Vector
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import cycles_device  # noqa: E402
+import cycles_device
 
 VIEWS = {"front": 0.0, "side": 90.0, "three-quarter": 35.0, "rear": 180.0}
 
@@ -63,8 +63,6 @@ def bounds(objects):
 
 
 def colour_material():
-    # glTF import keeps COLOR_0 as a colour attribute; route it into the base colour so
-    # vertex-coloured slots read as they do in game.
     for mat in bpy.data.materials:
         if not mat.use_nodes:
             continue
@@ -91,7 +89,6 @@ def mount(path):
         group.parent = socket
         group.matrix_parent_inverse.identity()
         group.matrix_basis.identity()
-    # The mantle's own root (and its glTF axis turn) is dropped, as hero_assets frees it.
     keep = set(groups).union(*(g.children_recursive for g in groups))
     for o in added:
         if o not in keep:
@@ -146,7 +143,6 @@ def main():
     dist = radius * 3.2
     for view in a["views"].split(","):
         yaw = math.radians(VIEWS[view])
-        # glTF +Z forward becomes Blender -Y; front looks at the model's front from -Y.
         eye = centre + Vector((math.sin(yaw) * dist, -math.cos(yaw) * dist, radius * 0.9))
         cam.location = eye
         cam.rotation_euler = (centre - eye).to_track_quat("-Z", "Y").to_euler()

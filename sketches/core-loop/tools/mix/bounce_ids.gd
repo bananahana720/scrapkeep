@@ -1,11 +1,6 @@
 extends SceneTree
-# Bounces the stream of every sound id a recorded run played (the cue_rows of a run json),
-# as the game plays it: after the bank's normalise, before any trim. Raw float32 mono with
-# a manifest of rate and length, for mixsim.py.
-#   godot --headless --audio-driver Dummy --script res://tools/mix/bounce_ids.gd -- <run.json> <out folder>
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
-# The world's water and steam (world_fx_sound.gd) log their file names; their trims are in the logged level.
 const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
 
 

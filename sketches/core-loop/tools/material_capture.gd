@@ -3,11 +3,6 @@ extends SceneTree
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 
-# Painted-solid stills: Palette.solid in each palette colour on a box, a cylinder, a sphere and a
-# bevel, under a world row's light, so a change to how solids answer light can be compared with
-# the build before it. Display server needed (xvfb-run works):
-#   xvfb-run -s "-screen 0 1280x800x24" <godot> --path sketches/core-loop --rendering-driver opengl3 \
-#     --script res://tools/material_capture.gd -- --out=/abs/dir [--world=N]
 
 const SIZE := Vector2i(1280, 720)
 const COLOURS := ["VERDIGRIS", "RUST", "COPPER", "AMBER", "CHARCOAL", "SAND", "BRASS", "HAZARD"]
@@ -37,7 +32,6 @@ func _initialize() -> void:
 func _run() -> void:
 	stage = Node3D.new()
 	root.add_child(stage)
-	# The world row's light as GraphicsPreset._apply_world sets it (no fog, no SSAO).
 	var look: Dictionary = WorldLook.ROWS[world_row]
 	var env := Environment.new()
 	if look.sky == "hdri":
@@ -72,14 +66,12 @@ func _run() -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(60, 60)
 	ground.mesh = plane
-	# The packed sand floor as a plain lit material: the ground shader wants terrain vertex data.
 	var sand := StandardMaterial3D.new()
 	sand.albedo_texture = load("res://assets/textures/packed-sand-floor.webp")
 	sand.uv1_scale = Vector3(12.0, 12.0, 1.0)
 	sand.roughness = 0.95
 	ground.material_override = sand
 	stage.add_child(ground)
-	# A charcoal crate for scale and for dark-background read.
 	var crate := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(1.0, 1.0, 1.0)

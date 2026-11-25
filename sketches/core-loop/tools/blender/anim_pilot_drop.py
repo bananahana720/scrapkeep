@@ -18,7 +18,6 @@ import anim_rivet_drop as shared
 import common
 FRAMES=shared.FRAMES
 
-# Image observations are recorded alongside explicit pose data, after inspection.
 SABLE_NOTES=[
     '01: back tail leans left; hands at controls; neutral head.',
     '02: nearly neutral brace; back tail slightly right despite requested left swish.',
@@ -112,7 +111,6 @@ def check(arm,meshes,rows,out,pilot=None):
     scene=bpy.context.scene
     anchor=arm.data.bones['pelvis'].head_local
     radius=0; drift=0; worst=None
-    # Half-frame samples catch interpolation problems between authored poses.
     end = scene.frame_end
     for half in range(2,end*2+1):
         frame=half/2
@@ -200,7 +198,6 @@ def main():
         rows=json.loads((HERE/f'{pilot}-drop-poses.json').read_text())['rows']
         timing.action(arm,rows,pilot,reference,shared.apply_row)
         timed=[dict(row,frame=frame) for row,frame in zip(rows,timing.FRAMES[pilot])]
-        # Compare every authored bone value at its new key before export.
         max_error=0
         for row in timed:
             bpy.context.scene.frame_set(row['frame'])

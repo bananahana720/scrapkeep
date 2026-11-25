@@ -3,33 +3,6 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 
-# Lists every node that physics interpolation would draw wrong, by playing the game with a bot
-# and watching what moves when. Run it at a display rate that is not the tick rate:
-#
-#   godot --headless --fixed-fps 144 --path sketches/core-loop --script res://tools/interp_audit.gd \
-#     -- --out=<dir> [--seed=1] [--policy=skipper] [--until=3] [--ticks=0] [--every=4] [--interp=1]
-#
-# With interpolation on, the renderer draws each node between its last two physics ticks. That
-# is right for a node moved in _physics_process and wrong for two kinds of node, which this
-# tool finds:
-#
-#   MOVER   a node whose own transform changed between the end of the frame's physics ticks and
-#           the end of every node's _process, so _process (or an idle tween) moved it. If it
-#           is interpolated the renderer blends that per-frame move with a stale tick and it
-#           lags and shivers; the fix is PHYSICS_INTERPOLATION_MODE_OFF on it, or moving it in
-#           _physics_process. A MOVER that is already off is listed as "off": it is safe from
-#           the renderer, but it must follow shown (interpolated) positions, not raw ones.
-#   STREAK  an interpolated node drawn more than STREAK metres from where it is, so it jumped
-#           in one tick and nothing called reset_physics_interpolation(): it is drawn sliding
-#           across the gap for a frame or two.
-#   STEP    a node whose own transform changed during the frame's physics ticks and that is not
-#           interpolated: it is drawn at the tick rate, not the display rate. That is how
-#           everything was drawn before interpolation, so it is not a fault, only the list of
-#           what is not smooth yet. The same node interpolated is listed as "smooth".
-#
-# Rows are grouped by the nearest script and the node's path under it, digits removed, so a
-# thousand pooled sparks are one row. Every --every-th frame is checked; the bot's play is not
-# changed by the check. The report is printed and written to <out>/interp-audit.json.
 
 const STREAK := 2.0
 
@@ -117,8 +90,6 @@ func _physics_process(delta: float) -> bool:
 	return false
 
 
-# The main loop's _process runs after the frame's physics ticks and their deferred calls, and
-# before any node's _process: the last moment only physics has moved anything.
 func _process(_delta: float) -> bool:
 	if _done or _driver == null:
 		return false
@@ -139,7 +110,6 @@ func _process(_delta: float) -> bool:
 func _after_process() -> void:
 	if _done:
 		return
-	# The frame before a checked one: what every node looks like before its physics ticks.
 	if (_frames + 1) % _every == 0:
 		_rested.clear()
 		for node: Node3D in root.find_children("*", "Node3D", true, false):
@@ -177,7 +147,6 @@ func _note(kind: String, node: Node3D, stage: int, gap: float) -> void:
 	row.max_gap = maxf(row.max_gap, gap)
 
 
-# The nearest script at or above the node, then the node's path under it with digits removed.
 func _key(node: Node3D) -> String:
 	var names: Array[String] = []
 	var at: Node = node

@@ -1,10 +1,4 @@
 #!/usr/bin/env node
-// Fast (<9s) local pre-push hook: formats/lints changed JS/MJS files with oxfmt + oxlint,
-// runs sketch-lint on Godot changes, and runs check:project / check:docs on doc/package changes.
-// Enforces a hard 9s budget so local feedback stays snappy.
-// Usage:
-//   git push (invoked via scripts/hooks/pre-push with push refs on stdin)
-//   node scripts/hooks/pre-push.mjs --base <ref>
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
@@ -36,9 +30,6 @@ export function changedFilesForRange(
   { localSha, remoteSha },
   { cwd = root, spawn = spawnSync } = {},
 ) {
-  // Include deletions (no --diff-filter=ACM drop) so deleting a .md or sketch file still triggers
-  // check:docs / sketch:lint; filterFormatTargets filters out deleted JS files via exists().
-  // For new branches (remoteSha === null), walk all commits not yet on any remote (and handle merges).
   const args = remoteSha
     ? ["diff", "--no-renames", "--name-only", `${remoteSha}..${localSha}`]
     : [

@@ -48,7 +48,6 @@ PARK_LARGE = {"tris": 16000, "draws": 2}
 DETAIL = {"tris": 1500, "draws": 1}
 LIFT = 0.2
 BURY = 6.0
-# FloorRule.FLOOR_NORMAL_Y: a face whose normal has y below this is off the floor.
 FLOOR_NORMAL_Y = 0.9
 STATION_M = 2.0
 
@@ -63,7 +62,6 @@ COL.update({
     "lime_polish": common.mix("bone", "petrol", .30),
 })
 
-# id: length, depth, width, kind
 RECIPES = {
     "lava_wash": {"length": 54.0, "depth": 4.0, "width": 26.0, "kind": "lava"},
     "lava_wash_short": {"length": 24.0, "depth": 4.0, "width": 26.0, "kind": "lava"},
@@ -94,7 +92,7 @@ def wall_slope(x, width, depth):
 
 def band_start(width, depth):
     """The lateral distance where the wash wall gets steeper than the floor rule (normal y below FLOOR_NORMAL_Y)."""
-    k = math.sqrt(1.0 / (FLOOR_NORMAL_Y * FLOOR_NORMAL_Y) - 1.0)  # slope at the threshold, tan 25.8 degrees
+    k = math.sqrt(1.0 / (FLOOR_NORMAL_Y * FLOOR_NORMAL_Y) - 1.0)
     w = k * 0.3 * width / (2.0 * depth)
     return min(1.0, 0.4 + 0.6 * w) * width / 2.0
 
@@ -103,7 +101,6 @@ def surface(x, z, spec, lift=LIFT):
     """The drawn point above the wash at lateral x, along z: y is relative to the floor centre (y 0 is the floor)."""
     d = spec["depth"]
     y = d - wash_depth(x, spec["width"], d)
-    # lift along the surface normal so the band sits evenly off the wall
     s = wall_slope(x, spec["width"], d) * (1 if x > 0 else -1)
     n = Vector((-s, 1.0, 0.0)).normalized()
     return Vector((x, y, z)) + n * lift
@@ -127,7 +124,6 @@ def band(soup, spec, side, palette):
     for li in range(lanes):
         rings = [[surface(side * xs[li], z, spec), surface(side * xs[li + 1], z, spec)] for z in zs]
         soup.strip(rings, lambda r, i, li=li: palette(li, r), "out", lambda r: Vector((0, -50.0, zs[r])), closed=False, smooth=True)
-    # the pale lip line along the band's lower edge, where the floor rule lets go of the ball
     xa, xb = x0 - 0.18, x0 + 0.18
     rings = [[surface(side * xa, z, spec, LIFT + .02), surface(side * xb, z, spec, LIFT + .02)] for z in zs]
     soup.strip(rings, lambda r, i: COL["polish_lip"] if palette is not drift_band else COL["timber_pale"], "out",
@@ -145,7 +141,6 @@ def gallery_band(lane, r):
 
 
 def drift_band(lane, r):
-    # timber lagging: boards along the run, alternating tone every board
     return tint(COL["timber"] if lane % 2 == 0 else COL["timber_pale"], .07, lane * 7 + r // 2)
 
 

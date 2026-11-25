@@ -1,8 +1,5 @@
 extends SceneTree
 
-# Systems audit pass C clip: renders the carve's release cue (SfxBank "carve_release") to a WAV
-# for a listening review, and prints its length and peak. It writes only to --out.
-#   $GODOT_BIN --headless --path sketches/core-loop --script res://tools/sysaudit/clip_carve_sound.gd -- --out=<dir>
 
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")

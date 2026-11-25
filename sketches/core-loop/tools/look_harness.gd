@@ -1,65 +1,5 @@
 extends SceneTree
 
-# The look harness: every wave 12 look unit and judge renders named subjects through it.
-# Subjects and cameras live in look_subjects.gd (one row per subject); this file stages them.
-#
-# Render (native display; on card 1 through tools/coordinator/gpu_queue.sh --gpu 1 --need 3000 --display --shared):
-#   godot --rendering-driver vulkan --display-driver x11 --gpu-index $SCRAPKEEP_GPU_INDEX --path sketches/core-loop
-#     --resolution 1920x1080 --script res://tools/look_harness.gd -- --subject=<name>[,<name>...]|--all --out=<abs dir>
-#     [--tick=N] [--preset=high|low|target] [--variant=<label>] [--class=N]
-#     [--hide-ui=0] [--baseline=<sha7>] [--pair --base=<sha7>] [--baseline-root=<abs dir>]
-#   Writes <out>/<subject>/<camera>.png and <out>/<subject>/frames.json, and <out>/run.json over the run.
-#   Subjects of one group render in one boot; several groups run one child process per group.
-#   The tree pauses on the subject's physics tick (its row's tick, or --tick) before the first frame,
-#   so a re-run draws the same tick. Each frame records its metrics (near-black share, flat-sky share:
-#   the single most common colour, mean luminance) and the ball's screen box; a frame over its row's
-#   dead_frame limits is dead, and any dead frame makes the run exit 1 naming subject/camera.
-#   The ball (the scale mannequin) is placed beside each camera's target, on the floor under it,
-#   for every subject that is not a ui row. Its point is a function of the camera row alone: a
-#   point the row pins ("ball": {camera: offset from the target}), else ball_candidates(eye,
-#   target) tried in order against static colliders only (enemy, Warden and rigid bodies are
-#   skipped), never where the staging left the ball or where the previous camera put it. With
-#   --base, the base run's recorded point wins, so both sides of a pair show the ball on one spot.
-#   Whether the ball shows is the render's answer, not a ray's: the frame is drawn again with the
-#   ball hidden and ball.visible is the share of its screen disk that changed (ball_seen); an
-#   actor or prop frame under SEEN_SHARE fails the run as NO_BALL.
-#   --baseline=<sha7>  renders into <baseline root>/<sha7>/ (default root artifacts/local/alpha/baselines).
-#   --pair --base=<sha7>  after rendering, writes <out>/pairs/<subject>__<camera>/{a,b}.png and
-#     <out>/pairs/key.json; which side is the baseline is the subject/camera coin (look_subjects.coin),
-#     never printed. A subject whose base and head frames.json name different adapters is not paired.
-#     A missing or empty baseline fails the run before it renders (exit 2), and a run that makes
-#     0 pairs fails after it (exit 1); either prints the reason (pair_problem).
-#   Every frames.json in a run must name the run's adapter; a drift fails the run.
-#   Non-ui subjects hide the Moss bubble and the world prompts (presentation.hide_ui) unless --hide-ui=0.
-# Frame strips (MOTION-SPEC row 217): --frames=N renders N consecutive frames of every camera of a non-ui
-#   subject at a fixed --fps (default 60), for the strobe, bank, rope and slam reads a still cannot show.
-#     --frames=N          the strip length (1..600); without it every flag below is refused (exit 2).
-#     --fps=F             the fixed rate: frame i is i/F seconds after frame 0, whatever the wall clock.
-#     --speed=M [--dir=x,y,z]   roll at M m/s along dir (default forward, -Z; made tangent to a
-#                         --contact-normal). The ball stays on its camera's point (a treadmill):
-#                         the speed drives the roll, the stretch and the pod's heading, not travel.
-#     --pod-yaw=DEG       the pod's world yaw, held around the game's own steering each frame (0 faces -Z);
-#                         a subject with no pod warns and records "pod_yaw_applied": false.
-#     --contact-normal=x,y,z   the surface under the ball (a park wall: its normal); the squash axis
-#                         and the rolling axis follow it, and the ball counts as grounded.
-#     --anchor=x,y,z | --anchor-rel=x,y,z   hook the harpoon line there (world point, or an offset
-#                         from the ball) and set the rope taut.
-#     --squash-tick=N [--squash=A]   frame 0 is N physics ticks (1/90 s) after a slam or landing
-#                         squash of amount A (default 0.45, the peak) along the contact normal (else up).
-#   Not stepped: player_fx (trails, speed rings, sound words) and the camera, so those freeze across a strip.
-#   The tree stays paused: each frame steps the ball's roll, the pod, the juice springs and the line
-#   by exactly 1/F s, so spin and squash advance between frames. Writes <out>/<subject>/<camera>/f0000.png
-#   and a frames.json row per frame (id <camera>_f0000, "frame": {index, time, fps, overrides}). Ball
-#   visibility is measured on frame 0 and shared by the strip ("seen_of": 0). Stills are untouched by
-#   these flags: a run without --frames writes the same files as before.
-# Serve: --serve --out=<abs dir> renders each <out>/requests/<id>.json ({"subjects": [...]} or
-#   {"quit": true}) and answers <out>/answers/<id>.json, for units with many render cycles.
-# Boss smoke: --boss=bowl|waking|mind boots on the native display, enters that world's last stage
-#   and its arena as the bot does (flow.enter_stage, then flow.enter_boss), runs 300 physics ticks
-#   and prints one BOSS_SMOKE line with the device (sketch-export runs it per boss on Vulkan).
-# Silhouette helper for asset tests: subject_bounds(node) is the world AABB of the visible meshes
-#   under it; facing(node, eye) is the angle in degrees between the node's forward (-Z) and the
-#   direction to the camera eye; a subject faces a named view when facing() is under 90.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Subjects := preload("res://tools/look_subjects.gd")
@@ -72,11 +12,8 @@ const BLACK_LEVEL := 24
 const DRAW_FRAMES := 12
 const SEED := 280928
 const BOSS_TICKS := 300
-# A collider this close to the eye (the camera inside or against it) does not pull the ball in.
 const NEAR_PULL := 4.0
 const BOSSES := {"bowl": 1, "waking": 2, "mind": 3}
-# ball_seen: a pixel changed when a channel moves more than SEEN_DELTA with the ball hidden; the
-# ball shows when SEEN_SHARE of its on-screen disk changed; at most SEEN_SAMPLES pixels are read.
 const SEEN_DELTA := 12.0 / 255.0
 const SEEN_SHARE := 0.2
 const SEEN_SAMPLES := 4096
@@ -199,7 +136,6 @@ func _main() -> void:
 	quit(_render_children(requested, out))
 
 
-# ---------------------------------------------------------------- runs, children, summary
 static func _groups_of(subjects: Array) -> Array:
 	var groups: Array = []
 	for g in Subjects.GROUPS:
@@ -211,9 +147,6 @@ static func _groups_of(subjects: Array) -> Array:
 func _render_children(subjects: Array, dir: String) -> int:
 	var logs := dir.path_join("_logs")
 	DirAccess.make_dir_recursive_absolute(logs)
-	# OS.get_cmdline_args() drops the engine's own flags (a child given only those rendered on
-	# card 0 while the parent ran on card 1), so each child gets the parent's renderer, display
-	# and the queue's card index explicitly.
 	var engine_args: Array = ["--path", ProjectSettings.globalize_path("res://"), "--rendering-driver", RenderingServer.get_current_rendering_driver_name(),
 		"--display-driver", DisplayServer.get_name().to_lower(), "--resolution", "%dx%d" % [SIZE.x, SIZE.y], "--script", "res://tools/look_harness.gd"]
 	if OS.has_environment("SCRAPKEEP_GPU_INDEX"):
@@ -302,7 +235,6 @@ func _serve() -> int:
 	return 0
 
 
-# ---------------------------------------------------------------- frames
 static func frame_metrics(img: Image) -> Dictionary:
 	var small: Image = img.duplicate()
 	if small.get_format() != Image.FORMAT_RGB8:
@@ -335,9 +267,6 @@ static func is_dead(metrics: Dictionary, limits: Dictionary) -> bool:
 	return metrics["black"] > limits["black"] or metrics["sky"] > limits["sky"]
 
 
-# The rule's two ball points for a camera, in the order tried: beside the target on the
-# camera's right, then its left (side grows with distance), both moved toward the eye for a far
-# view and behind the target for a close one. Eye and target alone decide them.
 static func ball_candidates(eye: Vector3, target: Vector3) -> Array:
 	var to_eye := eye - target
 	var dist := to_eye.length()
@@ -347,7 +276,6 @@ static func ball_candidates(eye: Vector3, target: Vector3) -> Array:
 	return [target + right * side + toward, target - right * side + toward]
 
 
-# Camera name to the ball point a frames.json recorded, for --base.
 static func ball_pins(frames_doc: Dictionary) -> Dictionary:
 	var pins := {}
 	for fr in frames_doc.get("frames", []):
@@ -357,10 +285,6 @@ static func ball_pins(frames_doc: Dictionary) -> Dictionary:
 	return pins
 
 
-# Share of the ball's on-screen disk (bbox from ball_box) whose pixels differ between the frame
-# with the ball and the same frame with the ball hidden: 0 when a wall or the frame edge hides
-# it, near 1 when it is in plain view. Physics rays cannot answer this, because visual-only
-# meshes (the pit's rock bands, the cache shell) have no collider.
 static func ball_seen(on: Image, off: Image, bbox: Array) -> float:
 	if bbox.size() != 4 or on.get_size() != off.get_size():
 		return 0.0
@@ -386,7 +310,6 @@ static func ball_seen(on: Image, off: Image, bbox: Array) -> float:
 	return 0.0 if total == 0 else float(changed) / total
 
 
-# Screen box of a sphere of radius r at p, in viewport pixels; in_frame when it overlaps the frame.
 static func ball_box(camera: Camera3D, p: Vector3, r: float, size: Vector2i) -> Dictionary:
 	if camera.is_position_behind(p):
 		return {"in_frame": false, "bbox": []}
@@ -428,7 +351,6 @@ static func write_pairs(subjects: Array, base_dir: String, head_dir: String, pai
 	return made
 
 
-# Pairs the run against --base and returns why the pairing proved nothing, "" when it made pairs.
 func _pair(subjects: Array, dir: String) -> String:
 	var base_dir := baseline_root.path_join(base)
 	var why := pair_problem(base_dir)
@@ -439,8 +361,6 @@ func _pair(subjects: Array, dir: String) -> String:
 	return why
 
 
-# Why a blind pair against base_dir proves nothing: the baseline is missing, empty, or (made
-# given) yielded no pair. "" when it is sound.
 static func pair_problem(base_dir: String, made := -1) -> String:
 	if not DirAccess.dir_exists_absolute(base_dir):
 		return "baseline %s does not exist" % base_dir
@@ -451,7 +371,6 @@ static func pair_problem(base_dir: String, made := -1) -> String:
 	return ""
 
 
-# A pair is only fair on one card and driver: the adapter a subject folder's frames.json names.
 static func _adapter_of(dir: String) -> String:
 	var fj := dir.path_join("frames.json")
 	if not FileAccess.file_exists(fj):
@@ -460,7 +379,6 @@ static func _adapter_of(dir: String) -> String:
 	return String(doc.get("adapter", "")) if doc is Dictionary else ""
 
 
-# ---------------------------------------------------------------- silhouette helper
 static func subject_bounds(n: Node) -> AABB:
 	var box := AABB()
 	var first := true
@@ -487,7 +405,6 @@ static func facing(n: Node3D, eye: Vector3) -> float:
 	return rad_to_deg(fwd.normalized().angle_to(to_eye.normalized()))
 
 
-# ---------------------------------------------------------------- staging
 func _frames(n: int) -> void:
 	for i in n:
 		await physics_frame
@@ -548,13 +465,6 @@ func _wait_tick(subject: String) -> Dictionary:
 	return {"tick": ticks, "wanted": want, "late": late}
 
 
-# The ball, frozen, moved under the paused tree to the camera row's point: the body for physics
-# and the visual root (the parent of the juice node), which _process places and a paused tree no
-# longer updates. The point, in order: the --base run's recorded point for this camera; the
-# row's pin ("ball": {camera: offset from the target}) on the floor under it; else the first of
-# ball_candidates the eye sees past static colliders, else the first pulled in front of the
-# static collider that hides it. Rays skip enemies, the Warden and rigid bodies, so where they
-# stand at the tick cannot move the ball, and nothing reads where the staging left it.
 func _place_ball(subject: String, shot_name: String, eye: Vector3, target: Vector3) -> Dictionary:
 	var how := "rule"
 	var p := Vector3.INF
@@ -589,8 +499,6 @@ func _ball_root() -> Node3D:
 	return game.player.juice_node().get_parent() as Node3D
 
 
-# A ray against the stage's static colliders: the player, enemies (the Warden is one) and rigid
-# bodies are skipped, so the answer is the same whatever moved before the tick.
 func _ray(from: Vector3, to: Vector3) -> Dictionary:
 	var skip: Array[RID] = [game.player.body().get_rid()]
 	for i in 16:
@@ -606,9 +514,6 @@ func _ray(from: Vector3, to: Vector3) -> Dictionary:
 	return {}
 
 
-# The floor under p: the nearest surface below a point just above it, so a stacked arena
-# puts the ball on the floor the target stands on, not the slab over it; a longer cast when
-# nothing is under that, and p itself when the floor would leave the frame.
 func _on_floor(p: Vector3) -> Vector3:
 	for up in [2.0, 30.0]:
 		var hit := _ray(p + Vector3.UP * up, p + Vector3.DOWN * 80.0)
@@ -667,7 +572,6 @@ func _shoot(subject: String, extra := {}) -> void:
 		var png := dir.path_join(String(shot[0]) + ".png")
 		img.save_png(png)
 		if not ui:
-			# The same frame without the ball: what changed inside its disk is what showed.
 			_ball_root().visible = false
 			for i in DRAW_FRAMES:
 				await RenderingServer.frame_post_draw
@@ -694,9 +598,6 @@ func _shoot(subject: String, extra := {}) -> void:
 	print("snap ", subject, " ", recs.size(), " tick ", tick["tick"])
 
 
-
-# ---------------------------------------------------------------- frame strips
-# The nodes a strip steps, by role; hero and line_view may be absent (a stub in the test).
 func _strip_rig() -> Dictionary:
 	var player = game.player
 	var hero = game.presentation.hero_assets
@@ -705,7 +606,6 @@ func _strip_rig() -> Dictionary:
 		"core": hero.shell_of(player).get("core") if hero != null else null}
 
 
-# Frame 0: the overrides that are states rather than rates. Returns the anchor it hooked, if any.
 static func strip_begin(rig: Dictionary, o: Dictionary, ball_at: Vector3) -> Dictionary:
 	var player = rig["player"]
 	var resolved := {}
@@ -731,21 +631,16 @@ static func strip_begin(rig: Dictionary, o: Dictionary, ball_at: Vector3) -> Dic
 		resolved["pod_yaw_applied"] = pod != null and is_instance_valid(pod)
 		if not resolved["pod_yaw_applied"]:
 			printerr("look_harness: --pod-yaw ignored: this subject has no pod (recorded as pod_yaw_applied false)")
-	# Frame 0 shows exactly the state its row records: the same presentation pass as a step, for no time.
 	_strip_present(rig, o, 0.0)
 	return resolved
 
 
-# The game's own per-frame code for dt, with the pod yaw override set before it (so the gyro and the
-# lattice solve against the overridden yaw) and again after it (the pod's own steering turns it).
 static func _strip_present(rig: Dictionary, o: Dictionary, dt: float) -> void:
 	_strip_pod(rig, o)
 	if rig.get("hero") != null:
 		rig["hero"]._process(dt)
 	rig["juice"]._process(dt)
 	_strip_pod(rig, o)
-	# The pod's steering lerped the yaw toward the heading before the override put it back, so the
-	# gyro and lattice it solved are off by that turn: solve them again at the held yaw.
 	var pod = rig.get("pod")
 	if o.has("pod_yaw") and rig.get("hero") != null and pod != null and is_instance_valid(pod):
 		var gyro := (pod as Node3D).get_node_or_null("Gyro") as Node3D
@@ -756,7 +651,6 @@ static func _strip_present(rig: Dictionary, o: Dictionary, dt: float) -> void:
 		rig["line_view"].step(dt)
 
 
-# Frame i of a strip: the begin pose for 0, else one step. Returns what the begin resolved.
 static func strip_frame(rig: Dictionary, o: Dictionary, i: int, ball_at: Vector3) -> Dictionary:
 	if i == 0:
 		return strip_begin(rig, o, ball_at)
@@ -770,8 +664,6 @@ static func _strip_pod(rig: Dictionary, o: Dictionary) -> void:
 		(pod as Node3D).rotation.y = deg_to_rad(float(o["pod_yaw"]))
 
 
-# One frame on: the roll turns by speed * dt / r, then the game's own per-frame code runs for dt
-# (the pod's steering and the gyro, the juice springs, the line), then the held pod yaw is set.
 static func strip_step(rig: Dictionary, o: Dictionary, dt: float) -> void:
 	var mesh: Node3D = rig["mesh"]
 	mesh.basis = (Subjects.spin_step(o, dt) * mesh.basis).orthonormalized()
@@ -1048,9 +940,6 @@ func _arw2() -> void:
 	await _shoot("arw_pit_b", {"warden": [m.warden.global_position.x, m.warden.global_position.y, m.warden.global_position.z]})
 
 
-# KF8a: one park Warden per kind (spec "harpoon_anchor": true), dressed in its recipe body by
-# hero_assets.gd, 60 m apart and out of the ball's reach so no pulse runs; each shoots alone.
-# The mind hangs from the island: lifted 14 m so the hand and its lens clear the ground.
 func _warden_bodies() -> void:
 	await _boot_play(1)
 	var b: Vector3 = game.player.ball_position()
@@ -1076,8 +965,6 @@ func _warden_bodies() -> void:
 		for j in made.size():
 			made[j].visible = j == i
 		var w: Node3D = made[i]
-		# 2026-10-11 (w13 KF7c round 4): the body keeps the yaw it settled to turning to the ball at its
-		# default spot (the game frame); _shoot measures it per camera against WARDEN_BODY_STAGE_YAW.
 		_yaw_probe = {rows[i][0]: [w, rows[i][1]]} if Subjects.WARDEN_BODY_STAGE_YAW.has(rows[i][0]) else {}
 		if _yaw_probe.size() > 0:
 			await _settle_yaw(w, rows[i][1], b)
@@ -1093,11 +980,6 @@ func _warden_bodies() -> void:
 		_yaw_probe = {}
 
 
-# 2026-10-11 (w13 KF7c round 4): put the ball back at its default spot b (the previous subject's last
-# camera leaves it elsewhere, and the bodies turn to it while the tree runs between subjects, which
-# made the yaw depend on the run's subject order) and wait until the body's yaw holds still for 10
-# physics frames: the reactor's jaws turn at a rate (warden_look _turn_jaws) and converge slowly,
-# the mind turns at once. The settled yaw is the one WARDEN_BODY_STAGE_YAW records.
 func _settle_yaw(w: Node3D, kind: String, b: Vector3) -> void:
 	var pbody: RigidBody3D = game.player.body()
 	pbody.freeze = true
@@ -1114,12 +996,6 @@ func _settle_yaw(w: Node3D, kind: String, b: Vector3) -> void:
 			break
 
 
-# 2026-10-11 (w13 KF7c round 4): the game frame. The reactor and the mind turn to the ball at runtime
-# (hero_assets _update_warden_body: the reactor's +X; _hold_mind: the Pose's -Z) and the read cameras
-# stage the ball as the player's camera does (default spot, WARDEN_BODY_BALL rows), so the body's yaw
-# is whatever that staging settles it to. WARDEN_BODY_STAGE_YAW holds the measured value per camera;
-# the recipes' silhouette checks turn each read direction by it. A camera whose settled yaw is more
-# than 0.5 degree off its constant (or missing) fails the run: the check would score another frame.
 func _check_stage_yaw(subject: String, shot: String) -> Dictionary:
 	if not _yaw_probe.has(subject):
 		return {}
@@ -1135,7 +1011,6 @@ func _check_stage_yaw(subject: String, shot: String) -> Dictionary:
 	return {"stage_yaw": snappedf(got, 0.001), "stage_yaw_want": want}
 
 
-# The yaw (degrees) of the node that carries the body recipe's frame: its -Z's heading in world.
 func _body_yaw(w: Node3D, kind: String) -> float:
 	var rec: Dictionary = game.presentation.hero_assets.warden_of(w)
 	var node = rec.get("body", null)
@@ -1422,12 +1297,6 @@ func _customize() -> void:
 	await _shoot("cus_page_decal", {"decal": profile.equipped(page.pilot, "decal")})
 
 
-# ---------------------------------------------------------------- Hoberman mecha per pilot (PD-0)
-# Each pilot boots once (its row's "pilot" is the class index), the ball stands frozen on the
-# floor under where it spawned, and each row shows its heft class's layers. Heft rows also carry
-# that class's chunk load; rule rows ("chunks": false) carry none, as ROSTER-LOOK section 3 rules
-# 1 to 3 measure. Every row is posed chase from behind: the Pod faces -Z, away from the cge eyes,
-# its WeaponRing aims straight ahead and the gimbal follows the Core against the posed Pod.
 const CGE_MASS := {1: 0.0, 3: 60.0, 5: 400.0}
 
 
@@ -1445,8 +1314,6 @@ func _cge() -> void:
 		await _boot_play(1)
 		var body: RigidBody3D = game.player.body()
 		body.freeze = true
-		# The spawn leaves the ball in the air; the anchor is the floor under it, so the camera
-		# target and the pinned ball agree and the far eye keeps the whole ball in frame.
 		var at: Vector3 = game.player.ball_position()
 		var floor_hit := _ray(at + Vector3.UP * 2.0, at + Vector3.DOWN * 80.0)
 		if not floor_hit.is_empty():
@@ -1484,7 +1351,6 @@ func _pose_chase(hero) -> void:
 		hero.counter_tilt(pod, gyro, core)
 
 
-# ---------------------------------------------------------------- boss smoke
 func _boss_smoke(id: String) -> int:
 	if not BOSSES.has(id):
 		printerr("look_harness: unknown boss ", id)

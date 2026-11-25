@@ -68,14 +68,13 @@ BUDGET = grind.BUDGET
 PARK_DIR = SKETCH / "src/world/park"
 MODELS = SKETCH / "assets/models/park"
 
-# Palette. Sandstone, ochre and bleached wood; rust is a muted brown (kit "rust"), never orange.
 MUD = ("b39a76", "a98f6d", "bba784", "a49378")
 MUD_DARK = "7f6a50"
 SEAM = "54432f"
 MUD_TOP = ("e2cfa8", "d9c49c", "e8d5ae", "d2bc94")
 CAP_COL = "a39b86"
-SEAM_W = 0.10                  # crack seams: mud-brown ribbons this wide
-SEAM_TOP = 0.05                # a seam lies this far over the ground, 0.015 m over the floor lattice
+SEAM_W = 0.10
+SEAM_TOP = 0.05
 FLOOR_OFF = 0.035
 CREAM_L = "dccaa2"
 OCHRE = "c2a06c"
@@ -91,11 +90,11 @@ PEBBLE = ("c4b490", "a69a82", "d4c4a0", "8f8470")
 FLAKE = ("a8725a", "c2a06c", "dccaa2", "8c5c46")
 BANNED = {"ff5a3c", "9dff3c", "8bf0d3", "e5a044", "b77843", "d9b44a"}
 
-FLUSH = 0.2                    # |x| <= 0.2 W is the middle 40 % of the width: lattice only
-PLATES_X = (0.26, 0.40)        # curled plates live in the outer band of |x| / W, never in the flush band
-LATTICE_MIN = 1500             # the lattice always keeps at least this many triangles
-PROP_MAX = 1.0                 # no prop stands taller than this over the ground
-PROP_TOP = 1.2                  # props stand at most this far over the ground (all are outside the flush corridor)
+FLUSH = 0.2
+PLATES_X = (0.26, 0.40)
+LATTICE_MIN = 1500
+PROP_MAX = 1.0
+PROP_TOP = 1.2
 LIMITS = {"base_max": PROP_TOP + 0.05, "flush_max": BASE_OFF + 0.03, "gap_min": -0.35}
 PROFILE_PROPS = {
     "wash": dict(clusters=2, bars=3, plates=60, pebbles=60, seam_cap=1100, d2_seams=300, d2_flakes=70),
@@ -164,12 +163,12 @@ class Row:
         yaw = math.radians(float(jrow.get("yaw_deg", 0.0)))
         self.c, self.s = math.cos(yaw), math.sin(yaw)
         self.hw, self.hl = self.W / 2.0, self.L / 2.0
-        self.profile_margin = 0.0 if self.profile == "ramp" else MARGIN   # a ramp ends at its stamp's rim: past it the ground is a cliff
+        self.profile_margin = 0.0 if self.profile == "ramp" else MARGIN
         self.ex, self.ez = self.hw + self.profile_margin, self.hl + self.profile_margin
         self.seed = seed_of(self.rid)
         self.cache = {}
         self.g0 = self.ground(self.ax, self.az)[0]
-        self.fl = (FLUSH if self.profile == "wash" else 0.04) * self.W   # a ramp is all ride line: its flush corridor is 0.04 W
+        self.fl = (FLUSH if self.profile == "wash" else 0.04) * self.W
 
     def ground(self, x, z):
         g = self.g
@@ -201,8 +200,6 @@ def hjit(i, j, k=0, salt=0):
     """Deterministic hash in [0, 1)."""
     return ((i * 73856093) ^ (j * 19349663) ^ (k * 83492791) ^ (salt * 2654435761)) % 1009 / 1009.0
 
-
-# ------------------------------------------------------------------ mud tiles: a jittered triangular lattice of centres
 
 TILE = 2.0
 
@@ -260,8 +257,6 @@ def circum(a, b, c):
     return (ax + ux, az + uz)
 
 
-# ------------------------------------------------------------------ geometry
-
 def newell(pts):
     nx = ny = nz = 0.0
     for k, p in enumerate(pts):
@@ -304,7 +299,7 @@ def frame(a, b):
     ax, ay, az = b[0] - a[0], b[1] - a[1], b[2] - a[2]
     n = math.sqrt(ax * ax + ay * ay + az * az) or 1.0
     ax, ay, az = ax / n, ay / n, az / n
-    sx, sy, sz = -az, 0.0, ax                       # axis x world up -> horizontal side
+    sx, sy, sz = -az, 0.0, ax
     sn = math.hypot(sx, sz) or 1.0
     sx, sz = sx / sn, sz / sn
     ux, uy, uz = ay * sz - az * sy, az * sx - ax * sz, ax * sy - ay * sx
@@ -351,8 +346,6 @@ def lump(s, cx, cz, base_y, top_y, r, sides, color, row, k, flat=0.0):
     solid(s, verts, faces, color)
 
 
-# ------------------------------------------------------------------ profile colour and offset rules
-
 LAYERS = [0.9, 0.55, 0.8, 0.5, 1.0, 0.6, 0.7, 0.45]
 LAYER_COLOURS = [CREAM_L, OCHRE, REDBROWN, OCHRE, CREAM_L, TAN, REDBROWN, OCHRE]
 
@@ -397,7 +390,6 @@ def vertex_rules(row, cross, lx, lz, gh, bank_face):
     wx, wz = row.world(lx, lz)
     a = abs(lx)
     if row.profile == "ramp":
-        # Strata streaks running down the slope: stripes about 12 m across that wander a little along the fall line.
         s = int(math.floor((lx + 3.0 * math.sin(lz / 23.0 + row.seed % 7)) / 12.0))
         pick = int(hjit(s, 5, 3, row.seed) * 8)
         col = (CREAM_L, OCHRE, REDBROWN, OCHRE, CREAM_L, REDBROWN, TAN, SAND_TOP)[pick]
@@ -417,19 +409,17 @@ def vertex_rules(row, cross, lx, lz, gh, bank_face):
     if k <= 0.0:
         return base_off, mud
     if h_rel > 0.84 * depth:
-        return BASE_OFF, CAP_COL           # the cap: one smooth grey-tan band
+        return BASE_OFF, CAP_COL
     idx, u = layer_of(h_rel, 1.0, row.seed % 5)
     col = LAYER_COLOURS[idx % len(LAYER_COLOURS)]
     col = tone(col, SOIL, idx + int(wz / 5), 0.15)
     off = BASE_OFF + wt * 0.06 * lip(u)
     if u < 0.18:
-        col = mix(col, SOIL, 0.3)          # the shadowed foot of each layer
+        col = mix(col, SOIL, 0.3)
     if bank_face:
         return off, col
     return BASE_OFF + (off - BASE_OFF) * k, mix(mud, col, k)
 
-
-# ------------------------------------------------------------------ lattice
 
 def across_stations(row, sf, sb):
     hw, W, fl = row.hw, row.W, row.fl
@@ -481,7 +471,7 @@ def draw_lattice(s, row, cross, xs, zs):
                 bank_face = amean > row.fl and min(q[2] for q in quad) - floor > 0.5
             else:
                 floor, rim = 0.0, 1.0
-                bank_face = True               # slickrock streaks are hard-edged patches
+                bank_face = True
             mlx, mlz = sum(q[0] for q in quad) / 4.0, sum(q[1] for q in quad) / 4.0
             mx = sum(q[2] for q in quad) / 4.0
             face_col = vertex_rules(row, cross, mlx, mlz, mx, True)[1] if bank_face else None
@@ -497,8 +487,6 @@ def draw_lattice(s, row, cross, xs, zs):
                 cols.append(col)
             sheet_up(s, pts, None, cols)
 
-
-# ------------------------------------------------------------------ prop sites
 
 class Sites:
     """Seeded prop placement: candidate points outside the flush band, on calm ground, kept apart from one another."""
@@ -590,8 +578,6 @@ def surface_y(row, lx, lz):
     return row.gy(lx, lz) + BASE_OFF
 
 
-# ------------------------------------------------------------------ props
-
 def mound(s, row, cx, cz, rx, rz, top, colour, sides=12, k=0):
     """An elongated rounded mound (rx across, rz along the flow), sunk below the ground at its rim; no bottom cap."""
     verts, faces = [], []
@@ -646,7 +632,6 @@ def shelves(s, row, cross):
         for lz0 in [-row.hl + 3.0 + 5.0 * q for q in range(int((row.L - 6.0) / 5.0))]:
             floor, rim = cross.at(lz0)
             depth = rim - floor
-            # boundaries of the hard layers (index % 3 == 1) below the cap
             hs, acc, i = [], -(row.seed % 5), 0
             while acc < 0.84 * depth:
                 acc += LAYERS[i % len(LAYERS)]
@@ -698,7 +683,6 @@ def build_props(s, row, sites, counts):
         shelves(s, row, Cross(row))
         print("WASHES_PROPS %s bends %d bars %d clusters %d" % (row.rid, len(bends), counts["bars"], len(bends) - counts["bars"]))
         return
-    # ramp: a few clusters, scattered rounded boulders and sand drifts, all outside the flush corridor
     for k in range(counts["clusters"]):
         side = 1 if k % 2 else -1
         lz = -row.hl + row.L * (k + 0.5) / counts["clusters"]
@@ -732,7 +716,6 @@ def log(s, row, lx, lz, rng, k, ang=None, length=None, r=None, lift=0.0):
     b = (lx + d[0] * length / 2, row.gy(lx + d[0] * length / 2, lz + d[1] * length / 2) + BASE_OFF + r * 0.2 + lift, lz + d[1] * length / 2)
     wood = BONE_WOOD[k % 3]
     tube(s, a, b, [r * 0.6, r, r * 0.55], [0.0, 0.5, 1.0], 7, tone(wood, SOIL, k, 0.2), wobble=0.25, k=k)
-    # one broken branch stub
     t = 0.35 + 0.3 * rng.random()
     base = tuple(a[m] + (b[m] - a[m]) * t for m in range(3))
     tip = (base[0] - d[1] * 0.3, base[1] + 0.2 + r * 0.4, base[2] + d[0] * 0.3)
@@ -811,14 +794,11 @@ def pipe(s, row, lx, lz, rng, k, sc=1.0):
          colors_fn=lambda ri, i: IRON if ri in (0, 2) and i % 2 else rust)
 
 
-# ------------------------------------------------------------------ plates (curled mud, margin only)
-
 def plates(s, row, tiles, count):
     if count <= 0:
         return 0
     cand = []
     lo, hi = PLATES_X[0] * row.W, PLATES_X[1] * row.W
-    # world-space centres inside the margin band, scanned through the row's footprint
     xs = int(row.W / TILE) + 3
     zs = int(row.L / (TILE * 0.866)) + 3
     j0 = int(round(row.az / (TILE * 0.866)))
@@ -867,8 +847,6 @@ def plates(s, row, tiles, count):
     return done
 
 
-# ------------------------------------------------------------------ build
-
 SEAMS_USED = {}
 
 
@@ -898,7 +876,7 @@ def seam_list(row, tiles):
                 if mid > sw or max(abs(pts[0][1]), abs(pts[1][1])) > row.hl - 1.0:
                     continue
                 if mid < 0.5 * sw and hjit(i, j, k, 7 + row.seed) < 0.5:
-                    continue                    # the middle lane keeps half its seams
+                    continue
                 items.append((hjit(i, j, k, row.seed) + 0.9 * mid / sw, pts))
     items.sort(key=lambda it: it[0])
     return [p for _, p in items]
@@ -921,8 +899,6 @@ def base_builder(row, plan_holder):
         scratch = kit_surface()
         build_props(scratch, row, sites, counts)
         n_plates = plates(scratch, row, tiles, counts["plates"])
-        # props on a slope: nothing sinks more than 0.3 m below the ground or stands more than PROP_TOP over it, and
-        # nothing crosses into the flush band
         lim = row.fl + 0.25
         scratch.verts = [(nx, min(max(y, row.gy(nx, z) - 0.3), row.gy(nx, z) + PROP_TOP), z)
                          for x, y, z in scratch.verts for nx in (math.copysign(max(abs(x), lim), x),)]
@@ -1003,8 +979,6 @@ def cracks_builder(row):
             flakes += 1
     return build
 
-
-# ------------------------------------------------------------------ export, check, registry
 
 def liner_build(row, out_dir):
     holder = {}

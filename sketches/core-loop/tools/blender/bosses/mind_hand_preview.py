@@ -39,7 +39,6 @@ def main():
     bpy.ops.import_scene.gltf(filepath=str(args.glb))
     arm = next(o for o in bpy.context.scene.objects if o.type == "ARMATURE")
     imported = {a.name: a for a in bpy.data.actions}
-    # glTF importer may suffix actions with the rig name.
     clips = {name: next(a for key, a in imported.items() if key == name or key.startswith(name + "_"))
              for name in hand.CLIPS}
     scene = bpy.context.scene
@@ -90,20 +89,16 @@ def main():
 
     def render(name, yaw, clip="still_track", seconds=0):
         angle = math.radians(yaw)
-        # 13 metres is a gameplay-sized local encounter, rather than macro optics.
         eye = Vector((13 * math.sin(angle), 13 * math.cos(angle), 3.0))
         target = Vector((0, 0, 1.3))
         camera.location = eye
         camera.rotation_euler = (target - eye).to_track_quat("-Z", "Y").to_euler()
-        # Horizontal camera-right is perpendicular to the optical depth axis.
         right = Vector((math.cos(angle), -math.sin(angle), 0))
         ball.location = right * 3.2 + Vector((0, 0, -0.8))
-        # Compensate the camera's downward pitch so the two centres have equal depth.
         depth_axis = (target - eye).normalized()
         horizontal = Vector((depth_axis.x, depth_axis.y, 0)).normalized()
         ball.location -= horizontal * (ball.location - target).dot(depth_axis) / horizontal.dot(depth_axis)
         arm.animation_data.action = clips[clip]
-        # Imported glTF times start at frame zero, unlike authoring frame one.
         start = clips[clip].frame_range[0]
         scene.frame_set(int(start + seconds * 30))
         bpy.context.view_layer.update()

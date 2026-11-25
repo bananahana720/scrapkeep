@@ -39,8 +39,6 @@ import pilot_arm
 
 FPS = 30
 SPLIT = (('spine_01', .55), ('spine_02', .45))
-# PILOT-CLIPS 4.2: anim_pilot_reactions.py:311-314; anim_tarn.py:197-202;
-# pilot_tally.py:545-550; pilot_cannon.py:403-407 (export body now at 414-418).
 EXPORT_COMMON = dict(export_format='GLB', use_selection=True, export_animations=True,
                      export_animation_mode='ACTIONS', export_anim_slide_to_zero=True,
                      export_frame_range=False, export_force_sampling=True, export_def_bones=False,
@@ -141,7 +139,6 @@ def spline_pose(poses, i, frame, loop):
             return times[j], flats[j]
         if not loop:
             return None
-        # The last key repeats the first, so a wrap skips it.
         return (times[j + n - 1] - span, flats[j + n - 1]) if j < 0 else (times[j - n + 1] + span, flats[j - n + 1])
 
     def tangent(j, path):
@@ -365,8 +362,6 @@ def export(arm, out_glb, pilot):
     bpy.context.scene.frame_set(1)
     extra, canonical = EXPORT_ROUTES[pilot]
     bpy.ops.export_scene.gltf(filepath=str(out_glb), **dict(EXPORT_COMMON, **extra))
-    # A polished body (POLISH.md) carries the "Bake" UV map; its vertices are sorted so
-    # rebuilds stay byte-identical.
     polished = any("Bake" in o.data.uv_layers for o in meshes)
     if canonical or polished:
         from common import canonical_indices
@@ -400,8 +395,6 @@ def selftest():
     folder = Path(tempfile.mkdtemp(prefix='pilot-clips-build-'))
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=str(base_glb))
-    # A reimported scene resamples the kept clips on export, so the self-test's baseline is the
-    # same scene exported once before the build, through the same exporter arguments.
     arm = next(o for o in bpy.context.scene.objects if o.type == 'ARMATURE')
     for track in arm.animation_data.nla_tracks:
         track.mute = False

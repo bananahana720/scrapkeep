@@ -33,30 +33,29 @@ import sys
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
-from mathutils import Euler, Matrix, Vector  # noqa: E402
+import bmesh
+import bpy
+from mathutils import Euler, Matrix, Vector
 
-import common  # noqa: E402
+import common
 
 SKETCH = HERE.parents[1]
 MODELS = SKETCH / "assets/models"
 
-# Palette constants matching src/core/palette.gd (strictly zero brass, zero hazard).
-PETROL = "365754"       # Palette.VERDIGRIS
-ANCIENT = "9dff3c"      # Palette.ANCIENT
-BONE = "d2c5a5"         # Palette.SAND
-SANDSTONE = "c6a274"    # Palette.SANDSTONE
-RUST = "9b513a"         # Palette.RUST (Moab red-rock strata)
-COPPER = "b77843"       # Palette.COPPER (weathered timber / earth)
-CHARCOAL = "242a28"     # Palette.CHARCOAL
-AMBER = "e5a044"        # Palette.AMBER (static rim coping trim — never HAZARD!)
-TURQ_PATINA = "42b8a8"  # Oxidized copper turquoise patina (w2-dig-pit-sinkhole.png)
-TURQ_DEEP = "2d7f76"    # Deep oxidized copper streak
-BASALT_DARK = "1e2326"  # El Malpais volcanic basalt core
-BASALT_EDGE = "3c454a"  # Basalt fractured edge highlight
-TIMBER_DARK = "5b3c26"  # Aged mine cribbing timber
-TIMBER_LIGHT = "7d5436" # Sun-bleached timber edge
+PETROL = "365754"
+ANCIENT = "9dff3c"
+BONE = "d2c5a5"
+SANDSTONE = "c6a274"
+RUST = "9b513a"
+COPPER = "b77843"
+CHARCOAL = "242a28"
+AMBER = "e5a044"
+TURQ_PATINA = "42b8a8"
+TURQ_DEEP = "2d7f76"
+BASALT_DARK = "1e2326"
+BASALT_EDGE = "3c454a"
+TIMBER_DARK = "5b3c26"
+TIMBER_LIGHT = "7d5436"
 
 
 def srgb(h):
@@ -161,7 +160,6 @@ class Builder:
         mesh = bpy.data.meshes.new(self.name)
         self.bm.to_mesh(mesh)
         self.bm.free()
-        # Keep ONLY our painted "Color" attribute so glTF exports it as COLOR_0 (never COLOR_1!).
         for ca in list(mesh.color_attributes):
             if ca.name != "Color":
                 mesh.color_attributes.remove(ca)
@@ -220,7 +218,6 @@ def export_glb(root, path: Path, caps):
     return info
 
 
-# 1. Utah Moab natural sandstone arch (22 m span, 14 m peak, stratified red-rock)
 def build_moab_arch(out_root: Path):
     common.reset()
     root = common.empty("moab_arch")
@@ -233,17 +230,14 @@ def build_moab_arch(out_root: Path):
     strata = [RUST, mix_hex(RUST, SANDSTONE, 0.55), SANDSTONE, mix_hex(SANDSTONE, BONE, 0.45), SANDSTONE, RUST]
     for s in range(steps + 1):
         u = s / steps
-        ang = math.pi * u  # 0 (right foot) -> pi (left foot)
+        ang = math.pi * u
         cx = math.cos(ang) * span_half
         cz = max(-1.2, math.sin(ang) * peak_h - 0.8)
-        # Thicker abutments at feet, sculpted thinner bridge span at crown.
         foot_w = 1.0 + 1.35 * (abs(math.cos(ang)) ** 1.6)
         half_t = 1.9 * foot_w
         half_d = 2.6 * (0.85 + 0.55 * abs(math.cos(ang)))
-        # Outward radial direction in XZ plane for arch rib section.
         rx = math.cos(ang)
         rz = math.sin(ang)
-        # 8-sided chamfered sandstone rib cross-section with strata shelf steps.
         profile = [
             (-1.0, -0.55), (-0.6, -1.0), (0.6, -1.0), (1.0, -0.55),
             (1.0, 0.55), (0.55, 1.0), (-0.55, 1.0), (-1.0, 0.55),
@@ -258,7 +252,6 @@ def build_moab_arch(out_root: Path):
         if s < steps:
             colors.append(strata[s % len(strata)])
     b.add_tube(rings, colors, closed_ends=True)
-    # Sculpted stratified abutment ledges at both feet so arch anchors visually into canyon rim.
     for side in (-1.0, 1.0):
         b.add_box((5.6, 6.2, 3.2), loc=(side * 12.2, 0.0, 0.6), color=RUST)
         b.add_box((4.4, 5.0, 2.2), loc=(side * 11.4, 0.3, 3.0), color=mix_hex(RUST, SANDSTONE, 0.45))
@@ -267,16 +260,13 @@ def build_moab_arch(out_root: Path):
     return export_glb(root, out_root / "dig_stone/moab_arch.glb", (8000, 16000, 2))
 
 
-# 2. Oxidized turquoise-patina copper bench face (w2-dig-pit-sinkhole.png signature)
 def build_copper_vein_face(out_root: Path):
     common.reset()
     root = common.empty("copper_vein_face")
     b = Builder("CopperVeinFace", "copper_stone", rough=0.86)
-    # Pale stepped Moab sandstone bench face backing (14 m wide x 10 m tall).
     b.add_box((14.0, 1.6, 3.2), loc=(0.0, 0.4, 1.6), color=mix_hex(SANDSTONE, BONE, 0.35))
     b.add_box((13.4, 1.8, 3.4), loc=(0.0, 0.6, 4.8), color=SANDSTONE)
     b.add_box((14.2, 1.4, 3.0), loc=(0.0, 0.3, 8.0), color=mix_hex(SANDSTONE, BONE, 0.50))
-    # Horizontal oxidized copper ore seam bands + dripping turquoise patina streaks.
     b.add_box((13.6, 0.45, 0.9), loc=(0.0, -0.45, 7.2), color=TURQ_PATINA)
     b.add_box((11.2, 0.40, 0.65), loc=(-0.8, -0.42, 4.1), color=TURQ_DEEP)
     streak_specs = [
@@ -288,14 +278,12 @@ def build_copper_vein_face(out_root: Path):
     ]
     for sx, sw, sh, sz, col in streak_specs:
         b.add_box((sw, 0.42, sh), loc=(sx, -0.52, sz), color=col)
-    # Foot scree boulders (cinder-red sandstone + patina chips).
     b.add_box((2.4, 1.6, 1.2), loc=(-4.5, -0.8, 0.5), rot=(0.1, 0.0, 0.25), color=RUST)
     b.add_box((2.0, 1.4, 1.0), loc=(3.8, -0.9, 0.4), rot=(-0.05, 0.1, -0.3), color=mix_hex(RUST, SANDSTONE, 0.4))
     b.to_object(root)
     return export_glb(root, out_root / "dig_stone/copper_vein_face.glb", (8000, 16000, 2))
 
 
-# 3. NM El Malpais hexagonal black volcanic basalt column cluster & arch rib
 def build_basalt_column_rib(out_root: Path):
     common.reset()
     root = common.empty("basalt_column_rib")
@@ -318,24 +306,19 @@ def build_basalt_column_rib(out_root: Path):
     return export_glb(root, out_root / "dig_stone/basalt_column_rib.glb", (8000, 16000, 2))
 
 
-# 4. Utah Moab grapple-pullable unstable timber/rock support strut (g14 row 1)
 def build_timber_rock_strut(out_root: Path):
     common.reset()
     root = common.empty("timber_rock_strut")
     b = Builder("TimberRockStrut", "steel", rough=0.84, metal=0.14)
-    # Twin splayed heavy mine timber posts (3.6 m clear opening for ball / enemy lane).
     b.add_box((0.55, 0.55, 5.2), loc=(-2.2, 0.0, 2.5), rot=(0.0, 0.08, 0.0), color=TIMBER_DARK)
     b.add_box((0.55, 0.55, 5.2), loc=(2.2, 0.0, 2.5), rot=(0.0, -0.08, 0.0), color=TIMBER_DARK)
-    # Diagonal knee braces & heavy timber cap lintel.
     b.add_box((5.6, 0.65, 0.65), loc=(0.0, 0.0, 5.05), color=TIMBER_LIGHT)
     b.add_box((0.35, 0.35, 2.1), loc=(-1.35, 0.0, 4.1), rot=(0.0, 0.78, 0.0), color=TIMBER_LIGHT)
     b.add_box((0.35, 0.35, 2.1), loc=(1.35, 0.0, 4.1), rot=(0.0, -0.78, 0.0), color=TIMBER_LIGHT)
-    # Bolted charcoal iron gusset brackets + grapple pull ring lug in AMBER/bone (never brass/hazard!).
     for sx in (-1.95, 1.95):
         b.add_box((0.85, 0.78, 0.78), loc=(sx, 0.0, 5.05), color=CHARCOAL)
         b.add_box((0.78, 0.72, 0.45), loc=(sx * 1.12, 0.0, 0.25), color=CHARCOAL)
     b.add_box((0.45, 0.90, 0.45), loc=(0.0, -0.45, 5.05), color=AMBER)
-    # Unstable wedged Moab red-rock keystone boulders perched atop the timber cap!
     b.add_box((2.4, 1.9, 1.5), loc=(-1.1, 0.1, 6.05), rot=(0.08, 0.12, 0.2), color=RUST)
     b.add_box((2.6, 2.1, 1.7), loc=(1.0, -0.1, 6.15), rot=(-0.06, -0.14, -0.18), color=mix_hex(RUST, SANDSTONE, 0.45))
     b.add_box((1.8, 1.5, 1.2), loc=(0.0, 0.0, 7.15), rot=(0.12, 0.05, 0.35), color=SANDSTONE)
@@ -343,15 +326,12 @@ def build_timber_rock_strut(out_root: Path):
     return export_glb(root, out_root / "dig_mechanical/timber_rock_strut.glb", (1200, 2400, 2))
 
 
-# 5. The Waking cast petrol-enamel excavator drill crown + uranium-green seams (w2-boss-the-waking.png & g08)
 def build_waking_drill_crown(out_root: Path):
     common.reset()
     root = common.empty("waking_drill_crown")
     enamel = Builder("WakingCrownBody", "ancient_enamel", rough=0.62, metal=0.12)
     seams = Builder("WakingCrownSeams", "ancient_light", rough=0.25, metal=0.0, emit_hex=ANCIENT, emit_strength=3.2)
 
-    # Domed cast petrol-enamel excavator crown collar (sits around CombatSeat / CoreSocket, clear of WeakPoint core).
-    # Lower cast shoulder collar (z 1.4..2.8) + 8 heavy chamfered excavator cutter ribs curving up to z 6.6.
     segs = 16
     r_in, r_out = 2.05, 2.75
     bot_in = [(r_in * math.cos(k * math.tau / segs), r_in * math.sin(k * math.tau / segs), 1.35) for k in range(segs)]
@@ -361,19 +341,15 @@ def build_waking_drill_crown(out_root: Path):
     for i in range(8):
         a = i * math.tau / 8.0
         ca, sa = math.cos(a), math.sin(a)
-        # Stepped cast petrol-enamel drill rib blades (matching w2-boss-the-waking.png drill crown).
         enamel.add_box((0.55, 0.62, 2.2), loc=(ca * 2.55, sa * 2.55, 2.65), rot=(0.0, 0.0, a), color=PETROL)
         enamel.add_box((0.46, 0.50, 1.8), loc=(ca * 2.25, sa * 2.25, 4.45), rot=(0.0, -0.22, a), color=mix_hex(PETROL, BONE, 0.14))
-        # Cast charcoal cutter teeth along rib spine (zero brass!).
         for zt in (2.1, 3.1, 4.2):
             rt = 2.88 if zt < 3.5 else 2.58
             enamel.add_box((0.28, 0.34, 0.32), loc=(ca * rt, sa * rt, zt), rot=(0.0, 0.0, a), color=CHARCOAL)
-        # Uranium-glass green (#9DFF3C) recessed vertical seam strip between ribs!
         sa_mid = a + math.tau / 16.0
         cm, sm = math.cos(sa_mid), math.sin(sa_mid)
         seams.add_box((0.12, 0.14, 3.1), loc=(cm * 2.42, sm * 2.42, 3.25), rot=(0.0, -0.08, sa_mid), color=ANCIENT)
 
-    # Upper crown uranium-green harmonic ring (z 5.45, clear of 2.6 m CoreSocket aperture).
     for i in range(12):
         a = i * math.tau / 12.0
         seams.add_box((0.14, 0.56, 0.14), loc=(math.cos(a) * 1.92, math.sin(a) * 1.92, 5.45), rot=(0.0, 0.0, a), color=ANCIENT)
@@ -383,20 +359,16 @@ def build_waking_drill_crown(out_root: Path):
     return export_glb(root, out_root / "bosses/waking_drill_crown.glb", (4000, 8000, 2))
 
 
-# 6. The Waking sculpted service hatch surround (replaces greybox WeakPart BoxMeshes; Guard 1 & 3 compliant)
 def build_waking_hatch_frame(out_root: Path):
     common.reset()
     root = common.empty("waking_hatch_frame")
     body = Builder("WakingHatchBody", "ancient_enamel", rough=0.68, metal=0.18)
     seams = Builder("WakingHatchSeams", "ancient_light", rough=0.25, metal=0.0, emit_hex=ANCIENT, emit_strength=2.6)
 
-    # Heavy cast petrol-enamel bevelled bulkhead surround matching WeakPart.SIZE (3.2 x 2.4 x 0.8 m).
-    # Godot -Z is Blender +Y, so the front face sits toward Blender +Y.
     body.add_box((4.1, 0.85, 0.42), loc=(0.0, 0.05, 1.42), color=PETROL)
     body.add_box((4.1, 0.85, 0.42), loc=(0.0, 0.05, -1.42), color=PETROL)
     body.add_box((0.46, 0.85, 2.42), loc=(-1.82, 0.05, 0.0), color=PETROL)
     body.add_box((0.46, 0.85, 2.42), loc=(1.82, 0.05, 0.0), color=PETROL)
-    # Recessed charcoal inner clamp flange + corner cast lugs (zero brass, zero hazard stripes!).
     body.add_box((3.4, 0.55, 0.18), loc=(0.0, 0.25, 1.18), color=CHARCOAL)
     body.add_box((3.4, 0.55, 0.18), loc=(0.0, 0.25, -1.18), color=CHARCOAL)
     for sx in (-1.82, 1.82):
@@ -409,26 +381,21 @@ def build_waking_hatch_frame(out_root: Path):
     return export_glb(root, out_root / "bosses/waking_hatch_frame.glb", (1200, 2400, 2))
 
 
-# 7. The Waking collapsing shaft rim coping (Guard 3: strictly AMBER/bone/charcoal — ZERO 45-deg HAZARD stripes!)
 def build_waking_rim_coping(out_root: Path):
     common.reset()
     root = common.empty("waking_rim_coping")
     b = Builder("WakingRimCoping", "steel", rough=0.78, metal=0.18)
-    # 15-degree curved coping block seated along r = 35.6..36.4 at top of quarter-pipe rim bank.
-    # Strictly horizontal cast steel plates in CHARCOAL + BONE lip + clean AMBER indicator key blocks (NO 45-deg HAZARD!).
     steps = 6
     a0 = math.radians(0.25)
     a1 = math.radians(14.75)
     rings = []
     colors = []
-    # Cross section (radius, z_offset)
     profile = [(35.55, 0.0), (36.35, 0.0), (36.45, 0.55), (35.95, 0.85), (35.45, 0.55)]
     for s in range(steps + 1):
         a = a0 + (a1 - a0) * (s / steps)
         ca, sa = math.cos(a), math.sin(a)
         rings.append([(r * ca, r * sa, z) for r, z in profile])
         if s < steps:
-            # Clean orthogonal coping bays: charcoal plate, bone lip, central warm AMBER (#e5a044) key block.
             if s in (2, 3):
                 colors.append(AMBER)
             elif s in (1, 4):

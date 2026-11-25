@@ -128,7 +128,6 @@ def run(export, prop_path, outdir, baseline):
             for t in (6, 8, 12, 24):
                 row[f"R{t}_cand"], _ = V.run_r(mc, ec, t)
                 row[f"R{t}_base"], _ = V.run_r(mb, eb, t)
-            # occluders of the unit's own baseline footprint: which groups now hide it
             hidden = mb & ~mc
             occ = np.unique(cid[hidden])
             row["hidden_by"] = [meta["groups"][o]["path"].split("/")[-1] if 0 <= o < len(meta["groups"]) else f"unit{o - 1000}" for o in occ[:12] if o >= -1]

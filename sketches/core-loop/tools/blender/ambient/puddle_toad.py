@@ -15,34 +15,28 @@ import math
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+from _life import Critter
 
 life = Critter("puddle_toad")
 
-BY, RX, RY, RZ = 0.08, 0.10, 0.075, 0.105   # dome centre height and radii
+BY, RX, RY, RZ = 0.08, 0.10, 0.075, 0.105
 
-# --- body: a wide squat dome, mouth line across the front
 life.ellipsoid("body", "body", (0, BY, 0), (RX, RY, RZ), subsurf=1, u=14, v=9)
 life.tube("body", "eye", [(-0.056, 0.097, -0.081), (-0.03, 0.087, -0.1), (0, 0.084, -0.106), (0.03, 0.087, -0.1),
                           (0.056, 0.097, -0.081)], [0.005, 0.006, 0.006, 0.006, 0.005], sides=4, subsurf=1)
-# cream belly, low and wide
 life.ellipsoid("body", "cream", (0, 0.03, -0.02), (0.075, 0.03, 0.08), subsurf=1, u=6, v=4)
-# soft round spots on the back and shoulders, sunk to sit on the dome
 for x, z, r in ((0.05, 0.035, 0.032), (-0.05, 0.05, 0.028), (0.0, 0.07, 0.021)):
     k = max(0.2, 1 - (x / RX) ** 2 - (z / RZ) ** 2)
     y = BY + RY * math.sqrt(k) - 0.006
     life.ellipsoid("body", "spots", (x, y, z), (r, 0.012, r), subsurf=1, u=6, v=3)
 
-# --- throat: cream pouch under the chin
 life.ellipsoid("throat", "cream", (0, 0.058, -0.078), (0.05, 0.032, 0.034), subsurf=1, u=6, v=4)
 
-# --- eye bumps (the hook) with dark pupils on their fronts
 for s, bone in ((-1, "eye_l"), (1, "eye_r")):
     life.ellipsoid(bone, "body", (0.052 * s, 0.182, -0.032), (0.044, 0.052, 0.044), subsurf=1, u=8, v=6)
     life.ellipsoid(bone, "body", (0.052 * s, 0.14, -0.03), (0.052, 0.04, 0.05), subsurf=1, u=6, v=4)
     life.ellipsoid(bone, "eye", (0.057 * s, 0.19, -0.072), (0.022, 0.025, 0.014), subsurf=1, u=6, v=4)
 
-# --- folded legs: round thigh tucked at the side, big soft foot out front
 for s, bone in ((-1, "leg_l"), (1, "leg_r")):
     life.ellipsoid(bone, "body", (0.092 * s, 0.045, 0.035), (0.03, 0.037, 0.05), subsurf=1, u=6, v=4)
     life.ellipsoid(bone, "spots", (0.074 * s, 0.017, -0.075), (0.04, 0.02, 0.052), subsurf=1, u=7, v=4)
@@ -59,7 +53,6 @@ life.rig([
 
 REST = {}
 
-# --- idle, 2.4 s: throat pulse (twice), slow blink, a tiny weight shift; slowed it reads as dozing
 life.cycle("idle", 2.4, {
     "body": [(0, REST), (0.6, {"scale": (1.0, 1.015, 1.0), "rot": (0, 0, 1.5)}), (1.2, {"loc": (0.002, 0, 0), "rot": (0, 0, 2.5)}),
              (1.8, {"scale": (1.0, 1.015, 1.0), "rot": (0, 0, 0.5)})],
@@ -71,7 +64,6 @@ life.cycle("idle", 2.4, {
     "leg_r": [(0, REST), (1.2, {"scale": (1.0, 0.97, 1.0)}), (1.8, REST)],
 })
 
-# --- move, 1.2 s: one soft hop. Crouch, spring (legs extend), land and tuck.
 HOP = 0.07
 life.cycle("move", 1.2, {
     "body": [(0, REST), (0.2, {"loc": (0, -0.012, 0), "scale": (1.08, 0.85, 1.06)}),
@@ -91,7 +83,6 @@ life.cycle("move", 1.2, {
               (0.8, {"loc": (0, 0.0, 0.0), "scale": (1.0, 0.75, 1.0)}), (0.95, {"scale": (1.05, 0.85, 1.0)})],
 })
 
-# --- react, 2.0 s: startled crouch (0.25), then a big squash that sinks and flattens; hold from 0.8 s
 START = {
     "body": {"loc": (0, 0.012, 0), "scale": (0.96, 1.08, 0.96)},
     "throat": {"loc": (0, 0.012, 0), "scale": (1.15, 1.2, 1.15)},
@@ -116,7 +107,7 @@ SINK = {
     "leg_l": {"loc": (0.01, -0.01, 0), "scale": (1.15, 0.3, 1.1)},
     "leg_r": {"loc": (-0.01, -0.01, 0), "scale": (1.15, 0.3, 1.1)},
 }
-SETTLE = {  # a breath inside the hold; same shape, a hair flatter
+SETTLE = {
     "body": {"loc": (0, -0.047, 0), "scale": (1.21, 0.43, 1.16)},
     "throat": {"loc": (0, -0.041, 0), "scale": (1.22, 0.27, 1.12)},
     "eye_l": {"loc": (0, -0.104, 0.004), "scale": (1.08, 0.64, 1.08)},

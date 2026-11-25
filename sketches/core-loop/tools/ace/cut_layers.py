@@ -17,10 +17,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from cut_stingers import DEFAULT_PACKS, PROJECT, RATE, finish, level, lufs, mix, read_clip, true_peak_db, write_wav  # noqa: E402
+from cut_stingers import DEFAULT_PACKS, PROJECT, RATE, finish, level, lufs, mix, read_clip, true_peak_db, write_wav
 
 PACK = "highdraft_crown"
-# place -> (clip, first bar or "last", stem weights drums/bass/other, lowpass, highpass)
 LAYERS = {
     "crown_hoodoos": ("travel", 1, (1.0, 1.0, 1.0), None, None),
     "crown_alcove": ("calm", 1, (0.35, 0.6, 1.0), 2400, None),

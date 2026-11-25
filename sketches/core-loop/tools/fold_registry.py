@@ -52,8 +52,6 @@ def fold(root):
         rows[identity] = row
         paths.add(resource)
 
-    # fragment_ids records ownership, so refolding replaces prior output while
-    # still rejecting a fragment that collides with a hand-maintained registry row.
     existing_ids = set()
     existing_paths = set()
     for row in document["assets"]:

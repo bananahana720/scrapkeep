@@ -17,7 +17,7 @@ import valve_wheel as vw
 import valve_wheel_detail1 as d1
 from valve_wheel import frustum, section_ring, around, TONES
 
-PLATE_SPAN = .24                        # radians of rim the crack plate covers
+PLATE_SPAN = .24
 PLATE_PROUD = .05
 
 
@@ -34,7 +34,6 @@ def wheel(s):
     groove = inn + .27
     for sign in (1, -1):
         section_ring(s, [(groove - .025, sign * (half + .004)), (groove + .025, sign * (half + .004))], n, TONES["crack"])
-    # The crack plate: a block over the rim around the crack, then the slit through it with fresh-fracture edges.
     ca, p = vw.CRACK_ANGLE, PLATE_PROUD
     a0, a1 = ca - PLATE_SPAN / 2, ca + PLATE_SPAN / 2
     prof = [(inn - .02, half + p), (out + p, half + p), (out + p, -half - p), (inn - .02, -half - p), (inn - .02, half + p)]

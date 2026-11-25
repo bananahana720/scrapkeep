@@ -1,16 +1,5 @@
 extends SceneTree
 
-# W12 P-FX capture: one event fired at a known physics tick in a small staged scene,
-# then eight frames, one every 3 ticks. Run it with --fixed-fps 90 (the physics rate),
-# so every rendered frame is exactly one tick and each saved frame is the one drawn on
-# its tick. (Pausing the tree on a tick barely advanced GPU particles between shots on
-# 4.7.2, so the driver does not pause.) GPU display only.
-#   godot --fixed-fps 90 ... --script res://tools/w12_fx_capture.gd -- --out=<abs dir> --event=<name>
-# Open-ground events: dust sparks crit slam latch crack ember. Scene events on the alpha
-# table, ball in frame as the scale reference: rupture (Dig stage), grit, thermal_occ,
-# thermal_idle, net_sag (Highdraft stage), miniboss (a ram hit on the miniboss).
-# Writes <out>/f0..f7.png and prints the device line. Fires bus facts only, so it runs
-# on any tree that has the bus (the before captures run it on BASE).
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
@@ -107,15 +96,11 @@ func _stage() -> void:
 	cam.global_position = site + Vector3(7.5, 5.0, 9.0)
 	cam.look_at(site + Vector3(0, 0.8, 0))
 	if event == "ember":
-		# the gpd_cache three_q camera (tools/w12_capture.gd:190): 7 right, 3 up, 6 back of the cache, fov 50
 		var cache := site + Vector3(1.5, 0.0, -1.0)
 		cam.global_position = cache + Vector3(7.0, 3.0, -6.0)
 		cam.look_at(cache, Vector3.UP)
 
 
-# The ball and the enemy hold their marks for the shots: the ball frozen beside the site
-# as the scale reference, the enemy (spawned 150 ticks early, so its arrival has played out)
-# moved back to its mark with its own processing off.
 func _hold_still() -> void:
 	game.player.reset_to(game.ctx.terrain.drop_point(site.x - 3.0, site.z + 1.5, 1.2))
 	if is_instance_valid(enemy):
@@ -123,7 +108,6 @@ func _hold_still() -> void:
 		enemy.global_position = game.ctx.terrain.drop_point(site.x + 1.5, site.z - 1.0, 0.0)
 
 
-# Scene events: ticks 60 to 200 place the subject and the camera, T0 - 5 holds the ball.
 func _scene_tick() -> void:
 	var terrain = game.ctx.terrain
 	if ticks == 100:
@@ -172,8 +156,6 @@ func _scene_tick() -> void:
 		_fire()
 
 
-# The nearest point to `near` where the Highdraft net deck is bare net (the catch ignores a
-# ball that is not on the deck: highdraft_fx.gd catch_at).
 func _deck_point(terrain, near: Vector3) -> Vector3:
 	var deck: float = terrain.map().net_deck_height()
 	for ring in range(14, 54, 2):
@@ -230,8 +212,6 @@ func _fire() -> void:
 	print("FXCAP fired ", event, " at tick ", ticks, " ball ", game.player.ball_position(), " speed ", game.player.planar_velocity().length())
 
 
-# The bite point is on the body's skin facing the ball, as the harpoon reports it, not
-# the body's origin (inside the mesh, where a flash cannot be seen).
 func _surface_toward_ball(body: Node3D) -> Vector3:
 	var centre: Vector3 = body.global_position + Vector3.UP * 1.2
 	var toward: Vector3 = game.player.ball_position() - centre

@@ -61,7 +61,6 @@ const base = () => [
   texture(512),
 ];
 
-// A glb with one mesh, a skin of `joints` bones and clips of the given lengths.
 function skinned(joints, clipLengths) {
   const nodes = [{ mesh: 0, skin: joints > 0 ? 0 : undefined }];
   for (let i = 0; i < joints; i++) nodes.push({});

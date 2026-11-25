@@ -1,8 +1,5 @@
 extends SceneTree
 
-# Stills of every flourish row over a live park run (world 1 stage 1), one PNG per row and form,
-# taken when the most pieces are on screen. Needs a renderer: run under xvfb-run or on the PC.
-#   godot --path sketches/core-loop -s tools/flourish_stills.gd -- --out=<dir> [--size=1920x1080]
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -27,7 +24,6 @@ func _frames(count: int) -> void:
 		await process_frame
 
 
-# The time inside the row when the most pieces are live.
 func _busiest(id: String, short: bool) -> float:
 	var best := 0.0
 	var most := -1
@@ -61,7 +57,6 @@ func _run() -> void:
 			player.stop_all()
 			player.play(id, SEED, {}, form)
 			player.advance(_busiest(id, form == "short"))
-			# Software rendering under xvfb runs slow; hold the row at that moment.
 			player.set_process(false)
 			await _frames(12)
 			var path := "%s/%s-%s.png" % [out, id, form]

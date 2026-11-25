@@ -17,12 +17,11 @@ import geyser_launcher as g
 import polish
 from geyser_launcher import kit, frustum, polar, tone
 
-DETAIL = [2000, 3300, 1]  # polish: was [1500, 3000, 1]
+DETAIL = [2000, 3300, 1]
 SIZE = [6.749, 1.161, 6.749]
 
 
 def frame(n):
-    # Two unit vectors perpendicular to the unit normal n.
     nx, ny, nz = n
     a = (0.0, 1.0, 0.0) if abs(ny) < .9 else (1.0, 0.0, 0.0)
     u = (a[1] * nz - a[2] * ny, a[2] * nx - a[0] * nz, a[0] * ny - a[1] * nx)
@@ -33,7 +32,6 @@ def frame(n):
 
 
 def bolt(s, c, n, r, h, color, k=6):
-    # A k-sided head standing on point c along unit normal n, open underneath.
     u, v = frame(n)
     ring = []
     for d in (0.0, h):
@@ -45,7 +43,6 @@ def bolt(s, c, n, r, h, color, k=6):
 
 
 def plate(s, c, n, up, half_w, half_h, t, color):
-    # A thin plate on a face: centre c, outward normal n, `up` along its height; front and four edges.
     side = (up[1] * n[2] - up[2] * n[1], up[2] * n[0] - up[0] * n[2], up[0] * n[1] - up[1] * n[0])
     v = []
     for d in (0.0, t):
@@ -73,7 +70,6 @@ def build(s):
         d = sro * math.cos(math.pi / sn)
         plate(s, polar(d, a, (sy0 + sy1) / 2), radial(a), (0, 1, 0), .035, (sy1 - sy0) / 2, .02, dark)
     gy0, gy1 = g.GRATE_Y
-    # The rim lip: a low charcoal ring on the grate's outer edge, inside the state-keyed band's outer half.
     frustum(s, g.R_TORUS_IN + .02, g.R_TORUS_IN - .04, gy1 - .02, gy1 + .07, 16, dark, caps=(False, False))
     frustum(s, g.R_TORUS_IN - .04, g.R_TORUS_IN - .1, gy1 + .07, gy1 + .07, 16, dark, caps=(False, False))
     for i in range(8):
@@ -98,7 +94,7 @@ def build(s):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **g.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **g.kit.BAKE)
     g.export(g.NAME + "_detail1", "Detail1", "steel", build, SIZE, {}, g.out_dir(), budget=DETAIL, tag="GEYSER_D1")
 
 

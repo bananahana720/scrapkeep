@@ -43,8 +43,8 @@ from skyislands import Surf, col, lerp, dim, rnd
 BUDGET = si.BUDGET["landform"]
 SHELL_BUDGET = si.SHELL_BUDGET
 SHELL_PROUD = si.SHELL_PROUD
-PAINT_PROUD = 0.006          # painted chevrons and stripes lie this far over the ride face
-RIVET_H = 0.015              # rivet heads stand this far over the deck (under SHELL_PROUD)
+PAINT_PROUD = 0.006
+RIVET_H = 0.015
 UP = (0.0, 1.0, 0.0)
 
 si.HEX.update({
@@ -58,13 +58,13 @@ def fmt(v):
     return ("%g" % v).replace(".", "p")
 
 
-PLATE_SIZES = [  # [L, H, W] of each row size: the pit's dives, then the flume's kickers
+PLATE_SIZES = [
     (12, 2.5, 14), (12, 2.5, 30), (12, 2.5, 40),
     (10, 3, 8), (30, 8, 18), (28, 14, 34), (24, 3, 20), (24, 4, 18), (18, 4, 10), (16, 6, 24), (8, 3, 20),
 ]
-MESA_SIZES = [  # the crown's kickers: 22 x 6 x 36 (eleven rows) and 30 x 6 seat on 24 x 6; the ribs and two cliff ramps
+MESA_SIZES = [
     (24, 6, 36), (24, 6, 60), (24, 6, 90), (26, 5, 30), (60, 32, 36), (60, 26, 60),
-    (12, 4, 56), (12, 4, 300),  # the fin's nose kicker and the lookout lip
+    (12, 4, 56), (12, 4, 300),
 ]
 SHELF = {"L": 12.0, "W": 1600.0, "TOP": 0.06, "NOSE": 2.5, "BLOCK": 8.0}
 
@@ -78,11 +78,10 @@ def zs_of(k, step):
     return [k["L"] * j / n for j in range(n + 1)]
 
 
-# ---------------------------------------------------------------- plate kicker
-PLATE_ROW = 2.4      # deck plate rows along z
-PLATE_W = 3.0        # deck plate width across
-SEAM = 0.05          # half-width of a dark seam
-LIP_BAND = 0.6       # the hazard stripe band at the lip
+PLATE_ROW = 2.4
+PLATE_W = 3.0
+SEAM = 0.05
+LIP_BAND = 0.6
 
 
 def plate_colour(i, j):
@@ -125,7 +124,6 @@ def plate_face(s, k):
         if j > 0:
             s.poly([(-k["W"] / 2, ktop(z0, k), z0), (-k["W"] / 2, ktop(z0 + SEAM, k), z0 + SEAM),
                     (k["W"] / 2, ktop(z0 + SEAM, k), z0 + SEAM), (k["W"] / 2, ktop(z0, k), z0)], col("seam"), up=UP)
-    # the lip band: diagonal hazard stripes, 1 m wide, cream on iron
     z0, z1 = L - LIP_BAND, L
     hw = k["W"] / 2
     n = max(1, round(k["W"]))
@@ -173,7 +171,7 @@ def build_plate_base(k):
     zs = zs_of(k, 0.5)
     solid_sides(s, k, zs, lambda sign, z: dim(col("iron"), 0.9 + 0.2 * rnd(int(z * 10), sign, 3)), col("iron_dk"))
     hw = k["W"] / 2
-    cap = min(0.35, 0.12 * k["H"])  # the copper angle-iron cap down the back edge, flush with the back face
+    cap = min(0.35, 0.12 * k["H"])
     s.poly([(-hw, k["H"] - cap, k["L"] + 0.004), (hw, k["H"] - cap, k["L"] + 0.004), (hw, k["H"], k["L"] + 0.004), (-hw, k["H"], k["L"] + 0.004)],
            col("copper"), inside=(0.0, k["H"] / 2, k["L"] / 2))
     s.poly([(-hw, 0.0, 0.0), (hw, 0.0, 0.0), (hw, 0.0, k["L"]), (-hw, 0.0, k["L"])], col("iron_dk"), up=(0.0, -1.0, 0.0))
@@ -234,7 +232,6 @@ def build_plate_d1(k):
 def build_plate_d2(k):
     s = Surf(k["id"] + "_detail2")
     hw = k["W"] / 2
-    # rivet heads along every plate row seam and down the cheeks, spaced to the shell budget
     rows = [z for z in (PLATE_ROW * j for j in range(1, 40)) if z < k["L"] - LIP_BAND]
     spacing = max(0.6, (len(rows) * k["W"] * 2) / 240.0)
     for j, z in enumerate(rows):
@@ -242,17 +239,15 @@ def build_plate_d2(k):
             n = int(k["W"] / spacing)
             for i in range(n):
                 x = -hw + spacing * (i + 0.5)
-                # the base ring sits at the deck's lowest point under the head, so no base corner stands off the slope
                 drop = ktop(zz, k) - ktop(zz - 0.05, k)
                 s.cone((x, ktop(zz, k) - drop, zz), 0.05, RIVET_H + drop, 3, col("iron_hi"), spin=rnd(i, j))
-    for sign in (-1, 1):  # rust runs down the cheeks from the seams
+    for sign in (-1, 1):
         for q, z in enumerate(rows):
             h = ktop(z, k)
             if h < 0.4:
                 continue
             x = sign * (hw + 0.008)
             s.poly([(x, h - 0.05, z - 0.08), (x, h - 0.05, z + 0.08), (x, 0.15, z + 0.04), (x, 0.15, z - 0.02)], col("rust"), inside=(0.0, h / 2, z))
-    # the crew's lunch pail and thermos, left by the left cheek near the entry: a machine-world shift that ran long
     px, pz = -hw - 1.6, 1.4
     s.box((px, 0.0, pz), (0.36, 0.26, 0.24), col("pail"))
     s.box((px, 0.26, pz), (0.36, 0.05, 0.24), dim(col("pail"), 0.8))
@@ -263,7 +258,6 @@ def build_plate_d2(k):
     return s
 
 
-# ---------------------------------------------------------------- wide mesa kicker
 def slick_w(x, z, k):
     """mesa_lip_kicker's cross-bedded slickrock, with the varnish edge and the cream lip set by this kicker's width and length."""
     w = 0.5 + 0.5 * math.sin(0.85 * x + 0.32 * z + 1.3 * math.sin(0.35 * z + 0.4 * x))
@@ -314,7 +308,6 @@ def build_mesa_base(k):
     nb = max(14, min(45, round(k["W"] / 2.0)))
     strata_wall(s, [(-hw + k["W"] * i / nb, k["H"]) for i in range(nb + 1)], lambda u, y: (u, y, k["L"]), inside, 1, step)
     s.poly([(-hw, 0.0, 0.0), (hw, 0.0, 0.0), (hw, 0.0, k["L"]), (-hw, 0.0, k["L"])], col("sandstone"), up=(0.0, -1.0, 0.0))
-    # bleached chevrons, one set per 14 m of width (at most twelve, spread wider on the lookout lip), scaled to the length
     sets = max(1, min(12, round(k["W"] / 14.0)))
     sc = k["L"] / 12.0
     band = 0.5 * min(sc, 1.6)
@@ -337,12 +330,12 @@ def build_mesa_d1(k):
     hw = k["W"] / 2
     n = max(10, min(18, round(k["L"] * 1.2)))
     for sign in (-1, 1):
-        for q in range(n):  # rubble shed from the cheeks, outside the ride footprint
+        for q in range(n):
             z = k["L"] * (q + 0.6) / (n + 0.4) + rnd(q, sign) * 0.4
             sz = (0.3 + 0.6 * rnd(q, 4, sign)) * (1.0 + k["H"] / 20.0)
-            x = sign * (hw + 0.35 + 0.85 * sz + 1.9 * rnd(q, 3, sign))  # its inner corner clear of the cheek at any yaw
+            x = sign * (hw + 0.35 + 0.85 * sz + 1.9 * rnd(q, 3, sign))
             s.chunk((x, 0.0, z), (sz, sz * 0.7, sz * 1.1), rnd(q, 5, sign) * math.tau, q + 40 * sign, lerp(col("sandstone"), col("slick_red"), rnd(q, 6, sign)), top=0.7)
-    for c, (cx, cz) in enumerate([(hw + 1.1, k["L"] - 0.6), (-hw - 1.4, k["L"] - 1.4)]):  # a bleached cairn at the lip, each side
+    for c, (cx, cz) in enumerate([(hw + 1.1, k["L"] - 0.6), (-hw - 1.4, k["L"] - 1.4)]):
         for tier in range(4):
             r = 0.55 - 0.1 * tier
             s.chunk((cx, tier * 0.34, cz), (r, 0.3, r), tier + 3 * c, 90 + tier, col("bone"), top=0.75)
@@ -357,24 +350,23 @@ def build_mesa_d2(k):
     s = Surf(k["id"] + "_detail2")
     hw = k["W"] / 2
     for sign in (-1, 1):
-        for q in range(22):  # pebbles and chips along the foot of the cheeks
+        for q in range(22):
             z = k["L"] * (q + 0.4) / 22.4
             x = sign * (hw + 0.15 + 1.2 * rnd(q, 2, sign))
             sz = 0.1 + 0.2 * rnd(q, 3, sign)
             s.chunk((x, 0.0, z), (sz, sz * 0.6, sz), rnd(q, 4, sign) * math.tau, q + 200 * sign, lerp(col("sandstone"), col("varnish"), rnd(q, 5, sign) * 0.6), top=0.6)
-        for q in range(6):  # desert varnish streaks run down the cheeks
+        for q in range(6):
             z = k["L"] * (0.17 + 0.14 * q)
             h = ktop(z, k) * 0.9
             s.poly([(sign * (hw + 0.012), h, z), (sign * (hw + 0.012), h, z + 0.22), (sign * (hw + 0.012), 0.1, z + 0.12), (sign * (hw + 0.012), 0.1, z + 0.02)],
                    col("varnish"), inside=(0.0, 1.0, z))
     stones = max(7, min(30, round(k["W"] / 2.0)))
-    for q in range(stones):  # bleached stones set on the lip's back edge
+    for q in range(stones):
         s.chunk((-hw + 0.8 + (k["W"] - 1.6) * q / max(1, stones - 1), 0.0, k["L"] + 0.28), (0.4, 0.32, 0.32), 0.0, 300 + q, col("bone" if q % 2 else "cream"), top=0.7)
     assert len(s.t) <= SHELL_BUDGET[0], (s.name, len(s.t))
     return s
 
 
-# ---------------------------------------------------------------- shelf edge
 def nose_pts():
     """The bullnose profile past the lip: (z, y) from the top edge at z L round to the face NOSE below."""
     L, top, nose = SHELF["L"], SHELF["TOP"], SHELF["NOSE"]
@@ -397,7 +389,6 @@ def build_shelf_base(k):
         x0, x1 = -hw + SHELF["BLOCK"] * i, -hw + SHELF["BLOCK"] * (i + 1)
         tone = lerp(col("cream"), col("sandstone"), 0.25 + 0.5 * rnd(i, 1))
         jx = 0.06
-        # back bevel from the buried edge up to the top, the coping top, and the joint between blocks
         s.poly([(x0, -0.3, -0.4), (x0, top, 0.0), (x1 - jx, top, 0.0), (x1 - jx, -0.3, -0.4)], dim(tone, 0.85), up=UP)
         s.poly([(x0, top, 0.0), (x0, top, L), (x1 - jx, top, L), (x1 - jx, top, 0.0)],
                [tone, lerp(tone, col("varnish"), 0.15), lerp(tone, col("varnish"), 0.15), tone], up=UP)
@@ -423,7 +414,7 @@ def build_shelf_col(k):
 def build_shelf_d1(k):
     s = Surf(k["id"] + "_detail1")
     hw = k["W"] / 2
-    for q in range(70):  # spalled caprock blocks fallen at the foot of the nose and sat on the back edge
+    for q in range(70):
         x = -hw + k["W"] * (q + rnd(q, 1)) / 70
         if q % 2:
             s.chunk((x, -SHELF["NOSE"], SHELF["L"] + 1.2 + 1.4 * rnd(q, 2)), (0.9, 0.6, 0.8), rnd(q, 3) * math.tau, q, lerp(col("cream"), col("sandstone"), rnd(q, 4)), top=0.7)
@@ -436,7 +427,7 @@ def build_shelf_d1(k):
 def build_shelf_d2(k):
     s = Surf(k["id"] + "_detail2")
     hw = k["W"] / 2
-    for q in range(60):  # tufts in the joints behind the coping and varnish streaks down the nose
+    for q in range(60):
         x = -hw + k["W"] * (q + 0.5) / 60
         if q % 3:
             s.tuft((x, 0.0, -0.8), 0.7, 5, col("dry_sage" if q % 2 else "sage"), 500 + q)
@@ -447,7 +438,6 @@ def build_shelf_d2(k):
     return s
 
 
-# ---------------------------------------------------------------- the recipe table
 def spec_of(family, L, H, W):
     rid = f"{family}_{fmt(L)}x{fmt(H)}x{fmt(W)}"
     return rid, {"id": rid, "family": family, "L": float(L), "H": float(H), "W": float(W)}
@@ -465,7 +455,6 @@ for _L, _H, _W in MESA_SIZES:
               extent=((-_W / 2, 0.0, 0.0), (_W / 2, _H, _L)))
     RECIPES[_id] = _k
 for _id, _W in (("mesa_shelf_edge", SHELF["W"]), ("mesa_shelf_edge_12x0p01x840", 840.0), ("mesa_shelf_edge_12x0p01x720", 720.0)):
-    # the full 1600 m step lip, and the two halves of run_step_lip_3 split around run_turn_wash (the seat fit keeps width)
     RECIPES[_id] = {"id": _id, "family": "mesa_shelf_edge", "L": SHELF["L"], "H": SHELF["TOP"], "W": _W,
                     "base": build_shelf_base, "col": build_shelf_col, "d": (build_shelf_d1, build_shelf_d2), "material": "elastomer",
                     "extent": ((-_W / 2, -SHELF["NOSE"], -0.4), (_W / 2, SHELF["TOP"], SHELF["L"] + 0.7))}
@@ -480,11 +469,10 @@ def check_surfaces(k, base, col_s, shells):
     rivet height; no shell stands more than SHELL_PROUD over it inside the footprint."""
     hw = k["W"] / 2
     if k["family"] == "mesa_shelf_edge":
-        nb = int(k["W"] / SHELF["BLOCK"])  # probe block faces, off the 0.06 m joints between blocks
+        nb = int(k["W"] / SHELF["BLOCK"])
         probes = [(-hw + SHELF["BLOCK"] * ((nb - 1) * i // 42) + 0.5 + 0.17 * (i % 40), 0.3 + 0.9 * j) for i in range(43) for j in range(13)]
     else:
         probes = [(-hw + k["W"] * (i + 0.37) / 31, k["L"] * (j + 0.21) / 33) for i in range(31) for j in range(33)]
-    # a chord of the parabola over the longest facet step (0.6 m on the deck, a chevron's 1.1 m) sags H / L^2 * dz^2 / 4
     tol = 0.002 + k["H"] / k["L"] ** 2 * 1.1 ** 2 / 4
     worst = 0.0
     for x, z in probes:
@@ -498,7 +486,7 @@ def check_surfaces(k, base, col_s, shells):
         for x, z in probes[::2]:
             h_sh = si.height_at(shell, x, z)
             assert h_sh is None or h_sh - ride_top(k, z) <= SHELL_PROUD + 1e-6, (k["id"], "shell proud", shell.name, x, z, h_sh)
-        for x, y, z in shell.v:  # every shell vertex over the footprint, so a small rock or rivet cannot slip between probes
+        for x, y, z in shell.v:
             if abs(x) < hw and 0.0 < z < k["L"]:
                 assert y - ride_top(k, z) <= SHELL_PROUD + 1e-6, (k["id"], "shell vertex proud", shell.name, x, y, z)
     return worst

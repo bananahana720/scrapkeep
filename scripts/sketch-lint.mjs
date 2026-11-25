@@ -35,7 +35,6 @@ function codeLines(text) {
 const wallClock =
   /Time\.get_ticks_(?:msec|usec)|Time\.get_unix_time_from_system|Time\.get_datetime_\w+|OS\.delay_(?:msec|usec)|\bcreate_timer\b/;
 
-// L1: a test that reads real time. Tests step frames or use the sim clock.
 export function lintL1(file, text) {
   return codeLines(text)
     .filter((line) => wallClock.test(line.raw))
@@ -53,7 +52,6 @@ const writeOpen = /FileAccess\.open\([^)]*\b(?:WRITE|READ_WRITE|WRITE_READ)\b/;
 const storeCall =
   /\.store_(?:string|line|buffer|var|8|16|32|64|float|double|half|real|csv_line|pascal_string)\(/;
 
-// L2: a save written outside SafeStore. The caller exempts src/core/safe_store.gd.
 export function lintL2(file, text) {
   return codeLines(text)
     .filter((line) => writeOpen.test(line.raw) || storeCall.test(line.raw))
@@ -64,11 +62,6 @@ export function lintL2(file, text) {
 
 const toolsLoad = /res:\/\/tools\//;
 
-// L7: a game file under src/ that names a res://tools/ path. The release pack leaves tools/ out,
-// so the shipped game would fail to compile (wave-13 close: pocket_draw.gd preloaded park_graph.gd).
-// One exception: src/game.gd names tools/self_play.gd in the const SELF_PLAY line (the --self-play
-// launch flag), loaded at run time behind ResourceLoader.exists, never preloaded. Any other
-// tools/ path in src/, or the same line in another file or without the exists guard, still fails.
 const selfPlayLine = /^const SELF_PLAY := "res:\/\/tools\/self_play\.gd"$/;
 export function lintL7(file, text) {
   const guarded =
@@ -104,11 +97,6 @@ const parsedFlag =
   /(?:begins_with|trim_prefix|startsWith|startswith|replace)\(\s*["']--([a-z][a-z0-9-]*)=/g;
 const tuningCall = /\.(?:option|set_option|f|set_value)\(\s*"([^"]+)"/g;
 
-// L3: files is a list of { path, text } from tests/, tools/ and the scripts that hand
-// launch flags to the game. A "--name=" literal is dangling when it is not a FLAGS name
-// and no scanned file owns it: some file parses it (begins_with, startsWith, startswith), or some file
-// reads the bare name as a setting (_settings.get("policy")). Godot's
-// own flags carry no "=" and never match.
 export function lintL3(files, tuning) {
   const parsed = new Set();
   for (const file of files) {
@@ -150,7 +138,6 @@ export function lintL3(files, tuning) {
   return findings;
 }
 
-// L4: entries is the tests/ tree as { rel, dir } with rel relative to tests/.
 export function lintL4(entries, testsPath = "sketches/core-loop/tests") {
   const findings = [];
   for (const entry of entries) {
@@ -183,7 +170,6 @@ export function lintL4(entries, testsPath = "sketches/core-loop/tests") {
   return findings;
 }
 
-// L5: text is QUARANTINE.tsv, tests the base names of the existing top-level tests.
 export function lintL5(text, tests, file = "sketches/core-loop/tests/QUARANTINE.tsv") {
   const lines = text
     .split("\n")
@@ -218,11 +204,6 @@ export function lintL5(text, tests, file = "sketches/core-loop/tests/QUARANTINE.
   return findings;
 }
 
-// L6 owners: every src/ file that creates a Light3D at runtime, its site count and the node that owns
-// the lights. A light freed with a node a stage change frees segfaults Forward+ on the next boss entry,
-// GPU only (light_lifetime_lint_test). Paths are relative to the sketch; a site count that drifts is a
-// finding, so a new light in a listed file is classified too. open: a known stage-freed owner left
-// for its own card; it stays quiet but main prints it on every run.
 export const LIGHT_OWNERS = {
   "src/presentation/hero_assets.gd": {
     sites: 2,
@@ -279,7 +260,6 @@ export const LIGHT_OWNERS = {
 
 const lightNew = /\b(?:Omni|Spot|Directional)Light3D\.new\(/;
 
-// L6: rel is the path inside the sketch, file the repo path for the finding.
 export function lintL6(file, rel, text, owners = LIGHT_OWNERS) {
   const sites = codeLines(text).filter((line) => lightNew.test(line.raw));
   if (sites.length === 0) return [];
@@ -307,7 +287,6 @@ export function lintL6(file, rel, text, owners = LIGHT_OWNERS) {
   return [];
 }
 
-// L6 stale entries: counts maps rel to the sites found, so a listed owner that no longer lights is removed.
 export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
   return Object.keys(owners)
     .filter((rel) => !counts.has(rel))
@@ -321,16 +300,6 @@ export function lintL6Owners(counts, relative, owners = LIGHT_OWNERS) {
     );
 }
 
-// L8: drawing code that asks where the ball is at the physics tick. Under src/presentation and src/ui
-// the ball's place is PlayerBall.shown_position(), where the ball is drawn this frame. ball_position()
-// moves once per tick, so anything placed from it in a drawn frame steps against the ball. At a tick
-// the two are the same place, so shown_position() is also right in a handler the sim calls.
-// SIM_READS lists the reads that are not a picture of the ball: the file, how many, and why. Three
-// are rules that decide or mirror what the sim does, so they read the tick's place; one asks a
-// Sight, not the ball. A count that drifts is a finding, and so is an entry with no read left.
-// Every mention of the name counts as a read (a call, a spaced or split call, a call by name);
-// only a has_method("ball_position") guard does not. Asking the ball's body for its place
-// (body().global_position) is the same read by another door and counts too.
 export const SIM_READS = {
   "src/presentation/audio.gd": {
     sites: 1,
@@ -353,7 +322,6 @@ export const SIM_READS = {
 const tickGuard = /has_method\(\s*["']ball_position["']\s*\)/g;
 const tickRead = /\bball_position\b|\b(?:active_)?body\(\)\s*\.\s*global_(?:position|transform)\b/g;
 
-// L8: rel is the path inside the sketch, file the repo path for the finding.
 export function lintL8(file, rel, text, allowed = SIM_READS) {
   if (!/^src\/(?:presentation|ui)\//.test(rel)) return [];
   const reads = codeLines(text).flatMap((line) =>
@@ -377,11 +345,6 @@ export function lintL8(file, rel, text, allowed = SIM_READS) {
   return reads.map((line) => finding("L8", file, line.number, message));
 }
 
-// L9: game code that asks the player node for its own place. PlayerBall never leaves the origin (its
-// body and its visuals move under it), so player.global_position is the map's origin for the whole
-// run and nothing fails loudly: a rule measured from it never fires and a picture placed from it
-// sits at the origin. A rule asks ball_position(), a picture asks shown_position(). A line that
-// guards with has_method (a caller that may also be handed a plain Node3D) passes.
 const ownPlace =
   /(?<![\w.])(?:\w+\s*\.\s*)*_?player\s*\.\s*(?:global_position|global_transform|position)\b/;
 const placeGuard = /has_method\(\s*["'](?:ball_position|shown_position)["']\s*\)/;
@@ -399,14 +362,6 @@ export function lintL9(file, text) {
     );
 }
 
-// L10: game code that moves the ball's body by hand. PlayerBall.reset_to(point, velocity) places the
-// ball in one call: its body reads at the new spot with its new speed at once, the next tick starts
-// there and no frame is drawn sliding in. A write to the body's place beside it is a reach into the
-// ball that moves it without its speed, its state or the drawn reset. The rule sees a write or a
-// setter call spelled through body(), active_body(), _ball_body() or the ball's own _rigid; a body
-// held in a local variable is not seen. rigid_ball.gd writes its own place and is not matched.
-// HAND_MOVED lists the writes that are not a placement: the file, how many, and why. A count that
-// drifts is a finding, and so is an entry with no write left.
 export const HAND_MOVED = {
   "src/combat/kest_kit.gd": {
     sites: 1,
@@ -417,7 +372,6 @@ export const HAND_MOVED = {
 const handMove =
   /\b(?:(?:active_|_ball_)?body\(\)|_rigid)\s*\.\s*(?:(?:global_)?(?:position|transform)\b(?:\s*\.\s*\w+)*\s*[-+*\/]?=(?!=)|(?:set_(?:global_)?(?:position|transform)|global_translate|translate)\s*\()/g;
 
-// L10: rel is the path inside the sketch, file the repo path for the finding.
 export function lintL10(file, rel, text, allowed = HAND_MOVED) {
   const writes = codeLines(text).flatMap((line) =>
     (line.raw.match(handMove) ?? []).map(() => line),
@@ -440,11 +394,6 @@ export function lintL10(file, rel, text, allowed = HAND_MOVED) {
   return writes.map((line) => finding("L10", file, line.number, message));
 }
 
-// The baseline only shrinks: offenders it lists stay quiet, a listed path that no longer
-// offends or no longer exists is itself a finding. exists(path) answers for the disk.
-// The word rules (ruling cx, sketch-lint-words.mjs) list a count per file instead of a path: a file
-// over its count fails with every offence it holds, a file under it must lower the count, and a
-// file at zero must leave the baseline.
 export function applyBaseline(findings, baseline, exists) {
   const kept = [];
   const offending = new Map();
@@ -580,7 +529,6 @@ export function lintSketch(sketch) {
     if (file.path !== `${relative}/src/core/safe_store.gd`)
       findings.push(...lintL2(file.path, file.text));
     findings.push(...lintL7(file.path, file.text));
-    // LIGHT_OWNERS describes core-loop; another sketch has no owner table yet.
     if (sketch !== "core-loop") continue;
     const rel = file.path.slice(relative.length + 1);
     if (codeLines(file.text).some((line) => lightNew.test(line.raw))) lit.add(rel);
@@ -590,7 +538,6 @@ export function lintSketch(sketch) {
     findings.push(...lintL10(file.path, rel, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
-  // Ruling cx word rules: core-loop owns the names table and the source list.
   if (sketch === "core-loop") {
     const words = lintWords({
       sketchDir: directory,

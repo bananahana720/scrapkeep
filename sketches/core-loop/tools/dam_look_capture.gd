@@ -4,15 +4,6 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 
-# Stills of the spillway dam (landmark_dam, W1-25) from five fixed eyes in the running game, so two
-# builds of the dam compare frame for frame: the Warden yard (as the 10 Nov PC still 02), the yard from
-# the side, the approach, the mid view about 650 m out and the drop-in at the stage spawn (the far mesh,
-# 1.33 km). The ball is frozen out of shot and the HUD hidden. Needs a rendered display:
-#
-#   xvfb-run -a -s "-screen 0 1920x1080x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --script res://tools/dam_look_capture.gd -- --out=<absolute dir> [--shots=yard,dropin]
-#
-# On the PC run it on the real renderer (drop --rendering-driver). Writes <out>/<shot>.png and shots.json.
 
 const SIZE := Vector2i(1920, 1080)
 const SHOTS := {
@@ -78,8 +69,6 @@ func _main() -> void:
 	cam.far = 2000.0
 	_game.add_child(cam)
 	cam.make_current()
-	# Terrain3D keeps the detail rings round the camera it took at start (the chase camera, now far off with the
-	# frozen ball), so a free still camera must take them over or the far rings' coarse ground pokes through drapes.
 	for terrain in root.find_children("*", "Terrain3D", true, false):
 		terrain.set_camera(cam)
 	var record := {}

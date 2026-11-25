@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Keep up to MAX writers busy from a queue file, so the coordinator reviews in batches.
-# Usage: sol_queue.sh <queue.tsv> [max]
-# Each queue line: role<TAB>wave<TAB>unit<TAB>cwd<TAB>brief
-# A writer counts as active while its receipt folder has `started` and no `finished`,
-# so units launched outside this queue count too. Prints one line per finished unit.
 
 set -u
 queue="$1"
@@ -36,7 +31,6 @@ while IFS=$'\t' read -r role wave unit cwd brief; do
     --add-dir "$HOME/.local/share/godot" > /dev/null 2>&1 &
   pids+=("$!")
   echo "launched $role $unit $(date -u +%H:%M:%S)"
-  # Give the receipt folder time to appear before the next count.
   sleep 5
 done < "$queue"
 

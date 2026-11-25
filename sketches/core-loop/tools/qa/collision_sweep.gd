@@ -1,26 +1,5 @@
 extends SceneTree
 
-# Invisible-wall sweep (world 1 QA, 30 Oct). Boots the game headless like the bot runs, builds one area (the camp walk or a
-# park stage), and checks every static collider the ball can hit against the meshes that draw there:
-#   - each blocking shape (StaticBody3D / AnimatableBody3D on the ball's mask, terrain tiles left out: Terrain3D draws the
-#     same heights) is sampled over its surface, about one point per --step m;
-#   - every drawn mesh near a blocker (MeshInstance3D and each MultiMesh instance, visible in the tree, no near
-#     visibility_range_begin) is copied as a trimesh onto a private layer, and each sample asks whether drawn geometry is
-#     within --tol m of it (or the ground is, or a drawn volume encloses it);
-#   - samples under the ground, inside another blocker or out of the ball's reach band are skipped.
-# A sample with no drawn surface within --tol is "bare"; with none within NEAR_M either it is "invisible" (nothing at all
-# draws there). The report ranks shapes by invisible area in the ball's band (0.15-12 m above the ground).
-#
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --script res://tools/qa/collision_sweep.gd -- \
-#     --area=camp|arena|park_dam|park_flume|... --out=<abs dir> [--seed=1] [--step=0.75] [--tol=0.4] [--centre=x,z --radius=r]
-#
-# --area=arena finishes stage 2 into Brindle's Slag Bowl and sweeps the bowl, its ground being the bowl's own surface.
-#
-# The report includes every bare sample in "places", even on shapes below the flagged-area cutoff.
-# A place gives the owner and the centre and size of the sample bounds in world metres.
-# Filtered reports have a -partial suffix with their filter hash; incomplete reads have an -unavailable suffix.
-# --area=wall_fixture checks matching, near and missing wall meshes. --plant-wall hides the matching mesh.
 
 const OffscreenWindow := preload("res://tools/offscreen_window.gd")
 const UndrawnPlaces := preload("res://tools/qa/undrawn_places.gd")
@@ -34,7 +13,6 @@ const VISUAL_LAYER := 1 << 23
 const NEAR_M := 1.5
 const BAND_LOW := 0.15
 const BAND_HIGH := 12.0
-# The rolling band: a grounded ball (radius 1 m) meets a wall at about its centre height, a ramp lower.
 const ROLL_HIGH := 2.5
 var max_samples := 4000
 const NEAR_BEGIN_M := 10.0
@@ -56,7 +34,6 @@ var visual_count := 0
 var identity_multimeshes := 0
 var report_owners := {}
 var owner_filter := ""
-# --bot=<policy>: a bot plays the stage and every ball contact is checked against what draws there.
 var bot_policy := ""
 var bot_seconds := 600.0
 var driver
@@ -233,7 +210,6 @@ func _run() -> void:
 	await _sweep_map(places_unavailable)
 
 
-# Keep the rider view before the sweep parks the ball below the map.
 func _save_frame_if_requested() -> bool:
 	if not OS.get_cmdline_user_args().has("--frame"):
 		return true
@@ -348,7 +324,6 @@ func _in_area(p: Vector3) -> bool:
 	return centre == Vector2.INF or Vector2(p.x, p.z).distance_to(centre) <= radius
 
 
-# Every enabled CollisionShape3D on a static body the ball collides with, terrain tiles left out.
 func _blockers() -> Array:
 	var out: Array = []
 	var skipped := {}
@@ -405,7 +380,6 @@ func _rider_can_see(view: GeometryInstance3D) -> bool:
 	return camera != null and view.get_world_3d() == camera.get_world_3d() and view.is_visible_in_tree() and (view.layers & camera.cull_mask) != 0
 
 
-# Drawn meshes near any blocker, copied as baked trimeshes onto VISUAL_LAYER.
 func _visual_bodies(blockers: Array) -> Array:
 	var cell := 32.0
 	var grid := {}
@@ -467,7 +441,6 @@ func _visual_bodies(blockers: Array) -> Array:
 	return made
 
 
-# A MultiMesh's instance transforms: from its buffer (or the builder's "instance_buffer" meta, as park_props_audit
 # reads them), else per instance. The headless dummy renderer keeps no instance data: run under xvfb-run with
 # --rendering-driver opengl3, or every instance reads as the identity and drawn posts look missing.
 func _instances(view: MultiMeshInstance3D) -> Array:
@@ -568,7 +541,6 @@ func _sweep_shape(b: Dictionary, bare_positions: PackedVector3Array) -> Dictiona
 			bare_positions.append(p)
 			probe.radius = NEAR_M
 			var none_near := space.intersect_shape(q, 1).is_empty()
-			# The gap to the drawn surface: the first of GAPS that reaches it, NEAR_M when only NEAR_M does, "none" past it.
 			var gap: Variant = "none" if none_near else NEAR_M
 			if not none_near:
 				for g_m in GAPS:
@@ -617,8 +589,6 @@ func _sweep_shape(b: Dictionary, bare_positions: PackedVector3Array) -> Dictiona
 	}
 
 
-# Inside a drawn volume: an odd number of drawn surfaces crossed along at least two of three axis rays (Jolt turns a
-# back face's normal toward the ray, so the side of the first hit cannot be read from it).
 func _enclosed(p: Vector3, _n: Vector3) -> bool:
 	var rq := PhysicsRayQueryParameters3D.new()
 	rq.collision_mask = VISUAL_LAYER
@@ -680,7 +650,6 @@ func _meta_up(node: Node, key: String) -> String:
 	return ""
 
 
-# The nearest named owner: a park row or landmark, a camp piece, else the body's parent path.
 func _owner_label(body: Node) -> String:
 	var n := body
 	while n != null and n != game:
@@ -693,7 +662,6 @@ func _owner_label(body: Node) -> String:
 	return str(game.get_path_to(body.get_parent()))
 
 
-# Every collision object by class, layer and owner (--census): what the ball can meet beyond the static sweep.
 func _census(ball: Node) -> void:
 	var rows := {}
 	for node in game.find_children("*", "CollisionObject3D", true, false):
@@ -712,9 +680,6 @@ func _census(ball: Node) -> void:
 		print("  census %4d  %s" % [rows[k], k])
 
 
-# --bot: the run plays stage 1 (the dam) under the bot; once the rows stand, the drawn meshes go on VISUAL_LAYER and
-# every tick each ball contact off the terrain tiles is checked: drawn geometry within tol (VISUAL_LAYER, the ground,
-# or a drawn mesh under the touched body's parent). A contact with none is an invisible-wall hit, kept by owner and 2 m cell.
 func _run_bot() -> void:
 	game.run.run_seed_override = run_seed
 	driver = BotDriver.new(game, bot_policy, run_seed)
@@ -800,7 +765,6 @@ func _watch_contacts() -> void:
 		contacts[key]["speed"] = snappedf(maxf(float(contacts[key]["speed"]), ball_body.linear_velocity.length()), 0.1)
 
 
-# A drawn mesh under the touched body's parent whose box, grown by tol, holds p (enemies, moving pieces).
 func _drawn_near(body: Node, p: Vector3) -> bool:
 	var top: Node = body.get_parent() if body.get_parent() != null else body
 	for node in [body] + top.find_children("*", "GeometryInstance3D", true, false):
@@ -811,8 +775,6 @@ func _drawn_near(body: Node, p: Vector3) -> bool:
 	return false
 
 
-# --terrain: the park's collider heights (ParkTerrain.heights, what the tiles are cut from) against the drawn
-# Terrain3D's heights at every grid vertex. A collider over the drawn ground is an invisible step; under it, a sink.
 func _terrain_check(stage_index: int) -> void:
 	var ground = game.ctx.terrain._grounds[stage_index - 1]
 	var t3d = ground.terrain3d

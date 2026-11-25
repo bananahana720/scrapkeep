@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import common
 
 sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")))
-import palette_gd  # noqa: E402
+import palette_gd
 import cycles_device
 import polish
 from common import Part
@@ -42,9 +42,9 @@ HARD = "panel_hardware"
 BONE = common.HEX["bone"]
 STEEL = palette_gd.HEX["STEEL"]
 CHARCOAL = common.HEX["charcoal"]
-ROPE = "b8a77f"  # bone in shade: rope reads apart from the plate it sits on
-TOP = 0.03       # the plate's face height above its back
-TRIS_CAP = 1200  # 128 drawn plates stay near 150k triangles at the worst mix
+ROPE = "b8a77f"
+TOP = 0.03
+TRIS_CAP = 1200
 HEIGHT_CAP = 0.25
 
 ALONG_X = (0, math.pi / 2, 0)
@@ -92,7 +92,6 @@ def louvre(p):
         p.box(FACE, (0.018, 0.188, 0.032), loc=(x, 0, TOP + 0.016), color=BONE)
     for y in (-0.103, 0.103):
         p.box(FACE, (0.334, 0.018, 0.032), loc=(0, y, TOP + 0.016), color=BONE)
-    # Five slats on their hinge pins, opened 35 degrees (the working state reads as a grille).
     for k in range(5):
         y = -0.076 + k * 0.038
         p.box(FACE, (0.29, 0.042, 0.008), loc=(0, y, TOP + 0.022), rot=(-0.61, 0, 0), color=BONE)
@@ -115,7 +114,6 @@ def skirt(p):
     p.rod(HARD, (-0.222, -0.03, 0.022), (0.222, -0.03, 0.022), 0.013, segs=8, color=STEEL)
     for x in (-0.15, -0.075, 0.0, 0.075, 0.15):
         p.cyl(HARD, 0.016, 0.016, 0.03, segs=8, loc=(x, -0.03, 0.022), rot=ALONG_X, color=STEEL)
-    # Three scalloped lip segments fanned 35 degrees off the hinge, out and down.
     lip = [(-0.07, 0), (0.07, 0), (0.07, -0.075), (0.04, -0.105), (-0.04, -0.105), (-0.07, -0.075)]
     for x in (-0.148, 0.0, 0.148):
         m = common.mtx((x, -0.03, 0.022)) @ Matrix.Rotation(-0.61, 4, "X") @ common.mtx((0, -0.012, 0))
@@ -128,7 +126,6 @@ def sight(p):
     for x in (-0.085, 0.085):
         p.box(HARD, (0.035, 0.08, 0.04), loc=(x, 0, TOP + 0.02), color=STEEL)
         p.ring(HARD, 0.04, 0.052, 0.035, segs=12, loc=(x, 0, z), rot=ALONG_X, color=STEEL)
-    # The sighting tube along the plate, a ring of distance marks, the lens and its cap flipped up.
     p.cyl(FACE, 0.04, 0.04, 0.3, segs=16, loc=(0, 0, z), rot=ALONG_X, color=BONE)
     p.cyl(HARD, 0.05, 0.044, 0.04, segs=16, loc=(0.165, 0, z), rot=ALONG_X, color=STEEL)
     p.cyl(FACE, 0.036, 0.036, 0.004, segs=16, loc=(0.186, 0, z), rot=ALONG_X, color=CHARCOAL)
@@ -147,8 +144,6 @@ def fin(p):
     for y in (-0.11, 0.0, 0.1):
         p.cyl(HARD, 0.009, 0.009, 0.008, segs=6, loc=(0.017, y, TOP + 0.022), color=CHARCOAL)
         p.cyl(HARD, 0.009, 0.009, 0.008, segs=6, loc=(-0.017, y, TOP + 0.022), color=CHARCOAL)
-    # The swept fin, rising toward the trailing edge (-Y) like the side view, with three pressed
-    # speed lines and the trim tab on its hinge.
     side = Matrix(((0, 0, 1, 0), (1, 0, 0, 0), (0, 1, 0, TOP + 0.01), (0, 0, 0, 1)))
     p.prism(FACE, [(0.15, 0), (-0.1, 0), (-0.1, 0.195), (-0.075, 0.2)], 0.022, matrix=side, color=BONE,
             side_slot=HARD, side_color=STEEL)
@@ -168,7 +163,6 @@ def drum(p):
     p.cyl(HARD, 0.045, 0.045, 0.22, segs=12, loc=(0, 0, z), rot=ALONG_X, color=CHARCOAL)
     for k in range(5):
         p.ring(FACE, 0.044, 0.066, 0.034, segs=8, loc=(-0.084 + k * 0.042, 0, z), rot=ALONG_X, color=ROPE)
-    # The ratchet wheel and pawl on the right cheek.
     p.cyl(HARD, 0.04, 0.04, 0.012, segs=12, loc=(0.137, 0, z), rot=ALONG_X, color=STEEL)
     for k in range(8):
         a = k * math.tau / 8
@@ -181,7 +175,6 @@ def collar(p):
     plate(p, chamfer(0.45, 0.45, 0.1), 0.45, 0.45, corners(0.165, 0.165))
     p.cyl(FACE, 0.09, 0.09, 0.006, segs=20, loc=(0, 0, TOP + 0.003), color=CHARCOAL)
     p.ring(FACE, 0.09, 0.13, 0.025, segs=20, loc=(0, 0, TOP + 0.0125), color=BONE)
-    # Sixteen ramp-and-stop teeth: each rises along its ramp and drops at a radial stop face.
     teeth = 16
     for k in range(teeth):
         a0 = k * math.tau / teeth
@@ -191,7 +184,6 @@ def collar(p):
         p.prism(FACE, tooth, 0.022, matrix=common.mtx((0, 0, TOP + 0.011)), color=BONE, side_slot=HARD, side_color=STEEL)
     p.cyl(HARD, 0.06, 0.06, 0.05, segs=20, loc=(0, 0, TOP + 0.025), color=STEEL)
     p.cyl(HARD, 0.03, 0.03, 0.006, segs=12, loc=(0, 0, TOP + 0.053), color=CHARCOAL)
-    # The sprung pawl, engaged at the ring's right side.
     p.box(HARD, (0.07, 0.03, 0.02), loc=(0.175, 0.03, TOP + 0.03), rot=(0, 0, 0.35), color=STEEL)
     p.cyl(HARD, 0.016, 0.016, 0.035, segs=8, loc=(0.2, 0.045, TOP + 0.0175), color=STEEL)
     p.rod(HARD, (0.19, -0.03, TOP + 0.02), (0.15, -0.0, TOP + 0.02), 0.008, segs=6, color=CHARCOAL)
@@ -208,7 +200,6 @@ def spool(p):
     p.cyl(HARD, 0.035, 0.035, 0.26, segs=12, loc=(0, 0, z), rot=ALONG_Y, color=CHARCOAL)
     for k in range(6):
         p.ring(FACE, 0.034, 0.058, 0.035, segs=8, loc=(0, -0.105 + k * 0.042, z), rot=ALONG_Y, color=ROPE)
-    # The loose rope end tucked under its clip.
     p.rod(FACE, (0.03, -0.14, z - 0.04), (0.085, -0.17, TOP + 0.01), 0.011, segs=6, color=ROPE)
     p.box(HARD, (0.035, 0.03, 0.012), loc=(0.09, -0.172, TOP + 0.012), color=STEEL)
 
@@ -216,7 +207,6 @@ def spool(p):
 def tank(p):
     plate(p, hexo(0.45, 0.27, 0.08), 0.45, 0.27, corners(0.145, 0.1))
     z = TOP + 0.085
-    # The pressure tank in two strap bands, its gauge on the left end and a pipe stub on the right.
     p.cyl(FACE, 0.072, 0.072, 0.22, segs=16, loc=(0, 0, z), rot=ALONG_X, color=BONE)
     for side in (-1, 1):
         p.cyl(FACE, 0.072, 0.04, 0.035, segs=16, loc=(side * 0.1275, 0, z), rot=(0, side * math.pi / 2, 0), color=BONE)
@@ -233,7 +223,6 @@ def tank(p):
 
 def bumper(p):
     plate(p, chamfer(0.45, 0.32, 0.06), 0.45, 0.32, corners(0.17, 0.11))
-    # Two shock struts (bone housing, charcoal sleeve, steel rod) under the rubber-faced bar.
     for x in (-0.11, 0.11):
         p.box(HARD, (0.07, 0.07, 0.008), loc=(x, 0, TOP + 0.004), color=STEEL)
         p.cyl(FACE, 0.03, 0.03, 0.04, segs=12, loc=(x, 0, TOP + 0.024), color=BONE)
@@ -244,8 +233,6 @@ def bumper(p):
 
 
 def tile(p):
-    # A regular hex armour tile: steel back, bone face, a heavy steel rim standing proud of the
-    # face (one hex annulus) and the pressed cross-brace.
     p.prism(HARD, hexo(0.45, 0.39, 0.1125), 0.03, matrix=common.mtx((0, 0, 0.015)), color=STEEL)
     p.prism(FACE, hexo(0.39, 0.338, 0.0975), 0.016, matrix=common.mtx((0, 0, 0.038)), color=BONE)
     p.ring(HARD, 0.19, 0.225, 0.034, segs=6, loc=(0, 0, 0.047), color=STEEL, taper=0.01)
@@ -260,7 +247,6 @@ def tile(p):
 def bracket(p):
     plate(p, chamfer(0.45, 0.34, 0.05), 0.45, 0.34, corners(0.19, 0.13))
     z = TOP + 0.055
-    # Three cells lying along the plate, ribbed steel caps up, in a wire bracket with its flag.
     for x in (-0.115, 0.0, 0.115):
         p.cyl(FACE, 0.05, 0.05, 0.17, segs=12, loc=(x, -0.02, z), rot=ALONG_Y, color=BONE)
         p.cyl(HARD, 0.053, 0.053, 0.045, segs=16, loc=(x, 0.085, z), rot=ALONG_Y, color=STEEL)
@@ -273,7 +259,6 @@ def bracket(p):
     p.box(FACE, (0.03, 0.07, 0.008), loc=(0.2, -0.06, TOP + 0.03), color=BONE)
 
 
-# silhouette (panels.gd ROWS) -> builder. Recipe order is the GLB names' order.
 PLATES = {
     "louvre": louvre, "rivet": rivet, "skirt": skirt, "sight": sight, "fin": fin, "drum": drum,
     "collar": collar, "spool": spool, "tank": tank, "bumper": bumper, "tile": tile, "bracket": bracket,

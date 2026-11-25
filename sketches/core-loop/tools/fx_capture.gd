@@ -7,27 +7,10 @@ const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 
-# Particle look stills: every FxLibrary spec and every Vfx burst, one still each, fired on a
-# sand plane under a fixed sun and sky, frozen at FREEZE of its life, so a build that changes how
-# particles draw can be compared side by side with the build before it. A display server is
-# needed (xvfb-run works; the cloud's software GL judges layout and read, not final look):
-#   xvfb-run -s "-screen 0 1280x800x24" <godot> --path sketches/core-loop --rendering-driver opengl3 \
-#     --script res://tools/fx_capture.gd -- --out=/abs/dir [--reduce-flashes] [--only=id,id] [--freeze=0.35]
-# Writes <id>.png and frames.json. One still cannot show how an effect starts, moves or ends, so
-# run it once per --freeze (0.1, 0.35, 0.6 and 0.85 of the life, one --out each) for a strip over time.
-# Each frame row carries drawn_px and contrast: how many pixels the effect changed against the
-# empty stage, and by how much on average (of 255; a pixel counts when it moved more than DRAWN, so 0 or 21
-# and over). An effect nobody could see reads 0 or a handful; a pale effect on pale sand reads a low contrast. Compare them on the machine that
-# renders the real look (the PC), not across machines.
-# After the particles it shoots the moments as the game composes them (FX-01): "moment_hit" (the hit
-# star and sparks), "moment_crit", the kill "moment_kill" and an elite's kill with its clock-out card
-# "moment_kill_elite". --tint=<hex> sets the pilot colour the kill wears (default the copper row colour).
 
 const SIZE := Vector2i(640, 400)
 const FREEZE := 0.35
 const ROW_KIND := "enemy_struck"
-# A pixel counts as drawn when a channel moved this far from the empty stage, of 255: over the
-# flicker of one still against the next, under the faintest dust.
 const DRAWN := 20
 
 var out := ""
@@ -41,7 +24,6 @@ var _empty := PackedByteArray()
 var tint := Color.TRANSPARENT
 
 
-# Vfx reads camera.cam to face its glyphs.
 class Eye:
 	var cam: Camera3D
 
@@ -76,7 +58,6 @@ func _initialize() -> void:
 func _run() -> void:
 	stage = Node3D.new()
 	root.add_child(stage)
-	# The world row's light as GraphicsPreset._apply_world sets it (no fog, no SSAO).
 	var look: Dictionary = WorldLook.ROWS[world_row]
 	var env := Environment.new()
 	if look.sky == "hdri":
@@ -111,14 +92,12 @@ func _run() -> void:
 	var plane := PlaneMesh.new()
 	plane.size = Vector2(60, 60)
 	ground.mesh = plane
-	# The packed sand floor as a plain lit material: the ground shader wants terrain vertex data.
 	var sand := StandardMaterial3D.new()
 	sand.albedo_texture = load("res://assets/textures/packed-sand-floor.webp")
 	sand.uv1_scale = Vector3(12.0, 12.0, 1.0)
 	sand.roughness = 0.95
 	ground.material_override = sand
 	stage.add_child(ground)
-	# A charcoal crate for scale and for dark-background read.
 	var crate := MeshInstance3D.new()
 	var box := BoxMesh.new()
 	box.size = Vector3(1.0, 1.0, 1.0)
@@ -185,11 +164,9 @@ func _burst_shot(vfx, kind: String) -> void:
 	for p in vfx._bursts[kind]:
 		p.emitting = false
 		p.speed_scale = 1.0
-	# What this burst threw dies before the next still, so the next count is its own.
 	await create_timer(float(spec["life"]) + 0.1).timeout
 
 
-# One moment as the game composes it, every part frozen at the same share of its own life.
 func _moment_shot(vfx, id: String) -> void:
 	var at := Vector3(0.0, 0.6, 0.0)
 	var used: Array = []
@@ -261,7 +238,6 @@ static func _bytes(image: Image) -> PackedByteArray:
 	return image.get_data()
 
 
-# (pixels the effect changed against the empty stage, their mean change of 255).
 func _drawn(bytes: PackedByteArray) -> Vector2i:
 	if bytes.size() != _empty.size():
 		return Vector2i(-1, -1)

@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Rebuilds every camp kit GLB and prints one CAMP_EXPORT row per file (sha256 included), then writes the registry fragment.
-#   sketches/core-loop/tools/blender/camp/build_all.sh [OUT_DIR]      (default: assets/models/camp)
-# Run it twice into two directories and compare the sha256 rows to prove the kit rebuilds byte-identically.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 SKETCH="$(cd "$HERE/../../.." && pwd)"

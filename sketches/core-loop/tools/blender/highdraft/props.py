@@ -31,10 +31,6 @@ DARK = "242a28"
 OXIDE = "9b513a"
 
 
-# (bevel, subsurf) per look. Hard machinery takes a small bevel; round bodies subdivide;
-# thin sheets stay as drawn. Nothing that sets a floor or extreme extent is subdivided: the
-# tests pin bottoms at Y=0 and fan top at 0 to a millimetre.
-# polish: was 270 / 610; class cap prop 2,000 / 4,600. dress_mhp_assets_test pins the same 1100 / 900.
 TRI_CAP, VERT_CAP = 1100, 900
 STYLES = {"hard": (0.03, 0), "round": (0, 1), "flat": (0, 0)}
 
@@ -48,9 +44,6 @@ class Prop:
         self.markers = set()
 
     def get(self, style="hard", moving=False):
-        # Polish settings are per Part, so each look gets its own Part; finish() joins them
-        # back into the one "Surface" mesh. Moving parts stay separate so the rig can weight
-        # them (bevel and subdivision renumber vertices, so indices cannot be tracked).
         key = (style, moving)
         if key not in self.parts:
             part = common.Part("Surface." + style + ("m" if moving else ""))
@@ -84,8 +77,6 @@ class Prop:
         return self.add(name, "beam", a, b, width, color=color, **kwargs)
 
     def wear(self, part, stone=False):
-        # Broad wear belongs on exposed edges; grease belongs on inward faces.
-        # Vertex tint reuses the existing paint surface without another atlas or draw.
         part.bm.normal_update()
         for i, face in enumerate(part.bm.faces):
             if i % 13 == 2 and face.normal.z > 0.35:
@@ -133,7 +124,6 @@ def spool():
               rot=(0, math.pi / 2, 0))
         p.cyl("Flange", 0.22, 0.10, (s * 1.12, 0, 1.4), PETROL, 6,
               rot=(0, math.pi / 2, 0))
-    # The winding profile is continuous, with two broad ridges and a recessed bite.
     rows = []
     for x, radius in ((-0.9, 0.76), (-0.45, 0.8), (0, 0.73), (0.45, 0.8), (0.9, 0.76)):
         rows.append([p.get("round").bm.verts.new((x, radius * math.cos(k * math.tau / 10),
@@ -154,7 +144,6 @@ def spool():
 def bearing():
     p = Prop("prop_bearing")
     p.box("Foot", (1.8, 1.4, 0.35), (0, 0, 0.175))
-    # Two half shells leave a real split at the crown; the bore stays empty.
     for a in (0.035, math.pi + 0.035):
         p.ring("SplitHousing", 0.40, 0.65, 0.8, (0, 0, 0.9), segs=6,
                arc=(a, a + math.pi - 0.07))
@@ -171,7 +160,6 @@ def fan():
     p.box("Bracket", (0.5, 1.8, 0.18), (0, 0, -0.09))
     for s in (-1, 1):
         p.beam("Bracket", (0, s * 0.81, -0.18), (0, s * 0.5, -1.2), 0.18)
-    # Four broad guards rather than the sheet's dense mesh grille.
     for x in (-0.55, 0.55):
         p.beam("Guards", (x, 0.66, -3.05), (x, 0.66, -0.55), 0.12, DARK, style="flat")
     for z in (-2.35, -1.25):
@@ -190,7 +178,6 @@ def fan():
 
 def crate():
     p = Prop("prop_crate")
-    # A chamfered case and inset bands between actual open front slots.
     outline = [(-1, -0.61), (-0.86, -0.75), (0.86, -0.75), (1, -0.61),
                (1, 0.61), (0.86, 0.75), (-0.86, 0.75), (-1, 0.61)]
     p.add("Box", "prism", outline, 0.18, matrix=common.mtx((0, 0, 1.11)), color=BONE)
@@ -212,7 +199,6 @@ def crate():
 
 def pot():
     p = Prop("prop_pot")
-    # Unequal shoulder rings form one continuous dented pressure tank.
     rings = []
     for radius, z, shift in ((0.49, 0.2, 0), (0.7, 0.43, 0), (0.7, 1.40, -0.04),
                               (0.48, 1.72, 0.03), (0.21, 2.0, 0)):
@@ -240,10 +226,9 @@ def clamp():
     p = Prop("prop_clamp")
     p.box("Stem", (0.45, 0.45, 0.8), (0, 0, 0.4), PETROL)
     for s in (-1, 1):
-        # Open socket mouths, with bone lips on petrol sleeves.
         rot = (0, s * math.radians(35), 0)
         phase = (math.pi / 8, math.pi / 8 + math.tau)
-        p.ring("Sockets", 0.20, 0.325, 0.8, (s * 0.32057, 0, 0.97234), PETROL, 4,  # 8 sides at detail 2: the 0.6 m envelope is pinned
+        p.ring("Sockets", 0.20, 0.325, 0.8, (s * 0.32057, 0, 0.97234), PETROL, 4,
                rot=rot, arc=phase)
         p.ring("Sockets", 0.20, 0.325, 0.13, (s * 0.51272, 0, 1.24675), BONE, 4,
                rot=rot, arc=phase)
@@ -254,7 +239,6 @@ def clamp():
 
 def ballast():
     p = Prop("prop_ballast")
-    # Bedding is cut into a continuous asymmetric wedge, not stacked boxes.
     rows = []
     for z, inset in ((0, 0), (0.37, 0.045), (0.42, 0), (0.76, 0.035), (0.81, 0), (1.2, 0)):
         xmax = 1 - z * 1.05
@@ -307,7 +291,6 @@ def lamp_glass():
 def sail():
     p = Prop("prop_sail")
     p.box("Mast", (0.15, 0.15, 2), (0, 0, 1))
-    # The whole cloth read is an existing matte bone paint sample.
     m = common.mtx((0, 0, 1.5), (math.pi / 2, 0, 0))
     p.add("Triangle", "prism", [(0, -0.65), (1.8, 0), (0, 0.65)], 0.05,
           matrix=m, color=BONE, moving=True, style="flat")
@@ -325,7 +308,6 @@ def bench():
     for s in (-1, 1):
         p.box("Feet", (0.4, 0.5, 1.2), (s * 1.1, 0, 0.6), PETROL if s == -1 else BONE)
         p.box("Feet", (0.58, 0.65, 0.12), (s * 1.1, 0, 0.06), DARK)
-    # 1.6 m brace, diagonal in the front elevation.
     p.beam("Brace", (-0.7, 0, 0.32), (0.7, 0, 1.095), 0.15, OXIDE)
     p.marker("tool_rest", (0, 0, 1.325))
     return p.finish()
@@ -347,7 +329,6 @@ def make_rig(root, obj, motion):
     base.head, base.tail = (0, 0, 0), (0, 0, 0.2)
     bone = data.edit_bones.new("Motion")
     bone.head = pivot
-    # Fan's local bone Y is Blender Y, the required Godot Z rotor axis.
     bone.tail = Vector(pivot) + Vector((0, 0.2, 0))
     bone.parent = base
     bpy.ops.object.mode_set(mode="OBJECT")
@@ -427,7 +408,6 @@ def preview(paths, folder, asset=None):
     assert len(assemblies) == 10 and sum(len(files) for _, files in assemblies) == 11
     for name, files in assemblies:
         if asset is None:
-            # Isolate each assembly's imported animation and material state.
             subprocess.run([bpy.app.binary_path, "-b", "--factory-startup", "--threads", "2",
                             "--python-exit-code", "1", "-P", str(Path(__file__).resolve()), "--",
                             "--out-dir", str(paths[0].parent.resolve()), "--preview-only",
@@ -447,7 +427,6 @@ def preview(paths, folder, asset=None):
         objects = [obj for root in roots for obj in common.tree(root)]
         for obj in objects:
             # glTF's Blender importer also creates a bone-widget Icosphere outside
-            # the exported hierarchy. It is not a model or a scale reference.
             if obj.type == "MESH" and not obj.hide_render:
                 evaluated = obj.evaluated_get(deps)
                 mesh = evaluated.to_mesh()
@@ -455,7 +434,6 @@ def preview(paths, folder, asset=None):
                 evaluated.to_mesh_clear()
         low = Vector(tuple(min(p[k] for p in points) for k in range(3)))
         high = Vector(tuple(max(p[k] for p in points) for k in range(3)))
-        # The reference ball is beside the prop along view-right in every view.
         scene.render.engine = "CYCLES"
         cycles_device.use(scene)
         scene.cycles.samples = 12

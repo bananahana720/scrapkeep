@@ -1,14 +1,5 @@
 extends SceneTree
 
-# Prints the consumed band lit (L-W19-consumed): for every light look and normal, the lit hex, hue, saturation and L* of the
-# consumed sample and of each in-band life colour, plus the consumed sample's CIE76 gap to HAZARD, AMBER and MOLTEN lit under
-# the same look. Same model as tests/consumed_light_test.gd, which this reads; run it for the reviewer and for the 3060 bench:
-#   godot --headless --path sketches/core-loop --script res://tools/consumed_light_sweep.gd
-# Columns: look | normal | colour | lit hex | hue | sat | L* | gap HAZARD | gap AMBER | gap MOLTEN
-# cell peak is the cell's shared scale, the largest lit linear channel among the sample and the three warning colours before
-# scaling; clamp lists the life colours whose lit channel exceeds it and so clamp at 1 in the gaps (N1/N2).
-# Hue, sat and the in-band column are "lit drift (info; per #241 ruling 6367828092)": reported, not gated; the gates are in the test.
-# Lit hex is the colour divided by its largest channel (hue and saturation are scale-free); a gap is on a shared scale.
 
 const Model := preload("res://tests/consumed_light_test.gd")
 

@@ -18,7 +18,7 @@ import bpy
 from mathutils import Vector
 
 import common
-from crew import stencil  # noqa: F401  (the rogues call kit.stencil)
+from crew import stencil
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SHELLS = os.path.join(HERE, "shells")
@@ -63,7 +63,6 @@ def shell_mesh(objs, tris, offset):
         piece.free()
         bm.from_mesh(tmp)
         bpy.data.meshes.remove(tmp)
-    # Term groups split the surface net along their borders; weld it back to one skin.
     bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=0.002)
     bmesh.ops.translate(bm, vec=Vector(offset), verts=bm.verts[:])
     mesh = bpy.data.meshes.new("shell")

@@ -1,17 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "snag-sweep" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// Grades the merged JSON reports produced by sketches/core-loop/tools/qa/snag_sweep.gd for
-// park_dam and park_flume, plus the control log from sketches/core-loop/tests/snag_sweep_test.gd.
-// Passes only when both maps are complete with matching map names, skipped share <= 0.20, 0 static
-// ride-lane snags (lane === "ride" and class !== "moving"; moving bodies are judged by their own
-// phase tests), 0 open-ground tile seams, the control log caught its planted 0.3 m ride lip and
-// open-ground control seam, AND a planted copy of the dam JSON with 1 ride snag injected fails the
-// exact same map grader (plant_caught). Graze wall/cluster hits are reported for visibility without
-// conflating 15-degree AABB wall grazes into cactus groves or boulder clusters with riding lines.
-//
-//   node scripts/gate/snag-sweep-receipt.mjs --dam <park_dam.json> --flume <park_flume.json> \
-//     --control-log <snag_sweep_test.log> --head <sha> [--out <file>] [--mapcheck]
 import { existsSync, mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -215,7 +202,6 @@ export function gradeControlLog(logText, { platform = process.platform } = {}) {
   return { ok: problems.length === 0, problems };
 }
 
-// Clones a dam report and injects one static ride-lane piece snag so the exact same map grader must reject it.
 export function injectPlantedSnag(damData) {
   const base =
     damData && typeof damData === "object" && !Array.isArray(damData)

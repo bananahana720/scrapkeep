@@ -1,10 +1,5 @@
 extends SceneTree
 
-# Stills for PF-54 (the plate's detour row dropped a side site with no result): the park dam from the
-# drop with the HUD, at three moments of one site. 1 the row names the nearest site ahead, 2 the site's
-# run is live (the goal row says it, the detour row draws nothing), 3 the site's done tick sits in the
-# detour row. Run it on the base and on the fix and compare each moment.
-#   gpu-run.sh <worktree> detour --path sketches/core-loop --script res://tools/detour_still.gd -- --out=/abs/dir
 
 const Game := preload("res://src/game.gd")
 
@@ -57,7 +52,6 @@ func _run() -> void:
 	acts.set_physics_process(false)
 	for site in acts.sites:
 		site.started = false
-		# A trade spot never comes to hand, so it would not show the run this still is about.
 		if site.rule.finishes == "trade":
 			site.visible = false
 	var cage = game.world.rescue.cage("rivet")
@@ -76,7 +70,6 @@ func _run() -> void:
 		var ahead := Vector2(site.global_position.x - ball.x, site.global_position.z - ball.z).dot(Vector2(warden.global_position.x - ball.x, warden.global_position.z - ball.z)) > 0.0
 		if ahead and (best == null or ball.distance_to(site.global_position) < ball.distance_to(best.global_position)):
 			best = site
-	# The fix keeps the site the row named; a base build keeps none, so it takes the nearest ahead.
 	game.hud._process(0.0)
 	var named = game.hud.get("_detour_site")
 	if is_instance_valid(named):

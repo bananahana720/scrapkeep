@@ -3,23 +3,10 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# Draw calls on a park's landmark view, for splitting a frame-budget jump between stacked PRs: run it
-# on each head (and the base) with the same args and compare. A fixed camera stands `--dist` metres off
-# the landmark, looking at `--at` (landmark-local; default the dam's gates), and 60 frames are sampled
-# after 120 settle. Where the Spillway effects stand (spillway_fx.gd), it measures again with them
-# hidden, in the same frame state, so that PR's own share reads directly. One JSON line per sample:
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --path sketches/core-loop --rendering-driver opengl3 \
-#     --resolution 1280x720 --script res://tools/draw_probe.gd -- [--stage=1] [--seed=31] [--dist=120] [--at=0,41,-3]
-# On the 4080 drop --rendering-driver to read Forward+. Draws and objects only: time frames with the
-# capture lane, not here.
 
 const SETTLE := 120
-# Hiding nodes changes the next frame's draws; no emitters need to warm up.
 const HIDDEN_SETTLE := 10
 const SAMPLES := 60
-# The whole probe's cap, under a caller's usual 300 s timeout, and how long the exit may take before
-# the process is killed. Software GL in the cloud renders about one frame a second, so the full probe
-# takes ~250 s there.
 const CAP_S := 285.0
 const EXIT_GRACE_MS := 15000
 
@@ -100,7 +87,6 @@ func _run() -> void:
 	_finish(0)
 
 
-# Quits once; a backstop thread kills the process if the exit itself hangs.
 func _finish(code: int) -> void:
 	if _done:
 		return
@@ -118,7 +104,6 @@ func _report(label: String, sample: Dictionary) -> void:
 	print("draw_probe: ", JSON.stringify(sample))
 
 
-# The camera is re-made current each frame: the chase rig is stopped, but others may claim the view.
 func _sample(cam: Camera3D, settle := SETTLE) -> Dictionary:
 	var draws: Array = []
 	var objects: Array = []

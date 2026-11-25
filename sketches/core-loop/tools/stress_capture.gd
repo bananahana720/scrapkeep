@@ -14,21 +14,6 @@ const Director := preload("res://src/world/director.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
-# Dense-scene diagnostic. Synthetic attacks do not establish gameplay or human readability.
-# Does a hostile telegraph stay readable when the screen fills, and what do the effect
-# counts and frame times look like? Three scenes on stage 1 (or --stage=N) as Rivet with a stacked build:
-#   S1  1 pack, no extra telegraphs (baseline)
-#   S2  3 packs, 4 committed telegraphs of each hostile type around the ball
-#   S3  6 packs, 8 of each type, and the stage's Warden moved in front and charging
-# A pack is a director PACKS row (controller + punisher) plus two chasers.
-# After four seconds of warmup, time 240 live frames while preserving the fixture load.
-# Then pause and save six paired images to isolate P1 edges from fills and scenery.
-# Needs imported assets and a real display; see FEEL-READABILITY.md section 6.3.
-# Options, all after `--`: --out=<dir> (required), --stage, --calm, --dry, --size, --timeout and
-# --impact=hold (forces impact-frame fires in the sample phase so impact_ms_per_fire is read
-# from real fires; opt-in, notes at --calm below).
-# --dry=1 skips readback and writes schema/control-flow evidence only, never pixels or
-# valid performance evidence. Synthetic attacks recycle and do not resolve damage.
 
 const PLAY_SECONDS := 4.0
 const COMMIT_BEFORE := 1.4
@@ -41,15 +26,11 @@ const SCENES := [
 ]
 const PACK_ORDER := ["grounded", "strung", "netted", "rebound", "reeled", "wobble", "flung", "cupped"]
 const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart", "double_feed", "arc_coil"]
-# HAZARD family: hue within HUE_TOL of HAZARD, saturation over SAT_MIN, value over VAL_MIN.
 const HUE_TOL := 12.0
 const SAT_MIN := 0.5
 const VAL_MIN := 0.25
-# A run is strong when S3's differential mask holds at least this many candidate pixels, so the
-# P1 bar reads straight from the file (ruling #241 comment 6332468877).
 const STRONG_MIN := 50000
 const RIVET_SEED := 1
-# --impact=hold: the shortest gap between forced fires, the game's own rate limit.
 const IMPACT_HOLD_PERIOD_S := PlayerFx.FRAME_GAP_S
 
 var _out := ""
@@ -70,7 +51,6 @@ var _last_usec := 0
 var _committed := false
 var _warden_note := ""
 var _spawned_at_start := {}
-# PlayerFx impact-frame counters when the sample window opened (see _impact_counters).
 var _impact_at_sample := [0, 0, 0, 0, 0]
 var _images := {}
 var _render_rid: RID
@@ -78,21 +58,6 @@ var _dry := false
 var _load_slots: Array = []
 var _count_samples: Array = []
 var _errors: Array = []
-# --stage=N (1..6) runs the scenes on that stage of the launched park table and tags every
-# output file "stN-"; absent, the run is stage 1 of the default table with untagged names.
-# --timeout=<seconds> and --size=WxH (default 1920x1080) are for slow software renderers.
-# --calm=1 holds no fire and no roll, so no hit bursts or speed lines reach the frame; the
-# telegraphs, packs and light are the same. It tags outputs "calm-" (the dusk P1 split, #241).
-# Contact hits can still fire impact frames under calm (measured: 3 and 6 fires in two scenes).
-# --impact=hold forces impact frames during the sample phase, so impact_ms_per_fire reads from
-# real fires over the scene's live warnings (the 4080 read for lighting L7, #297): each scene
-# asks PlayerFx.impact_frame (at the ball, strength 1.0) every IMPACT_HOLD_PERIOD_S of
-# sample time, the shortest gap the game itself allows (PlayerFx.FRAME_GAP_S; a gated ask
-# retries on the next frame). The scene's synthetic telegraphs are the warnings: S2 holds 16
-# and S3 32, plus the packs' own. Each result then also carries "impact_hold": forced fires,
-# the period and the fewest and most hostile marks (Threat.GROUP) standing at a fire. Opt-in:
-# absent, no fire is forced, no field is added and the output names are as before; present,
-# outputs are tagged "impact-". Meaningful only on a rendered display, like the rest of the tool.
 var _stage := 1
 var _staged := false
 var _entered := false
@@ -103,7 +68,6 @@ var _size := Vector2i(1920, 1080)
 var _calm := false
 var _impact_hold := false
 var _impact_clock := 0.0
-# Hostile marks standing at each forced fire, this scene.
 var _impact_marks: Array = []
 
 
@@ -112,8 +76,6 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--") and "=" in arg:
 			settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
-	# --dry=1 runs the logic headless with blank stills, to check the script before the
-	# one display run; its numbers are meaningless.
 	_dry = settings.get("dry", "0") == "1"
 	if (DisplayServer.get_name() == "headless" and not _dry) or not settings.has("out"):
 		printerr("stress_capture: needs a rendered display and -- --out=<absolute dir>")
@@ -190,7 +152,6 @@ func _process(delta: float) -> bool:
 			_phase_usec = now
 		"drop":
 			if _staged and _stage != 1 and not _entered and _game.flow.in_stage() and _seconds_since(_phase_usec) > 1.5:
-				# The start lands on stage 1; once it has settled, move the run to stage N and settle again.
 				_entered = true
 				_game.flow.enter_stage(_stage, Vector3.ZERO, false)
 				_phase_usec = now
@@ -228,7 +189,6 @@ func _process(delta: float) -> bool:
 func _physics_process(_delta: float) -> bool:
 	if _game == null or _game.run == null or _driver == null or paused:
 		return false
-	# The run must survive the stress: HP is topped up every tick (a harness write).
 	_game.run.hp = _game.run.max_hp
 	if _phase == "play" or _phase == "sample" or _phase == "warm":
 		_hold_fire()
@@ -237,8 +197,6 @@ func _physics_process(_delta: float) -> bool:
 	return false
 
 
-# Fire held, a slow roll forward, the camera turned toward the nearest non-Warden enemy
-# the way bot_driver._look turns it (mouse pixels through camera.look).
 func _hold_fire() -> void:
 	var hold := {"fire_held": not _calm, "move": Vector2.ZERO if _calm else Vector2(0.25, 0.25)}
 	_driver.source.hold = hold
@@ -266,8 +224,6 @@ func _hold_fire() -> void:
 	cam.look(Vector2(-dyaw / 0.0022, -dpitch / 0.0022))
 
 
-# Every catalogue part Rivet may be offered, then a second copy of the pattern and
-# fire-rate parts, so weapon effects are as dense as the catalogue allows.
 func _grant() -> void:
 	var class_id: String = _game.run.class_id()
 	var pool := Parts.offer_pool(class_id, ["common", "uncommon", "rare", "rare_plus"])
@@ -330,10 +286,6 @@ func _next_scene() -> void:
 	_phase_usec = Time.get_ticks_usec()
 
 
-# [fires, rect calls, rect usec, shape calls, shape usec] so far. A fire is rate-limited
-# (PlayerFx.FRAME_GAP_S), so fires can be fewer than the hits that asked. A rect call is one
-# refresh of a live impact frame (the source and the uniform upload), made every live frame;
-# a shape call is one build and draw of its pieces, made once per fire (ImpactFrame).
 func _impact_counters() -> Array:
 	var fx = _game.presentation.player_fx
 	if fx == null or fx._frame == null:
@@ -342,8 +294,6 @@ func _impact_counters() -> Array:
 	return [int(fx.spawned.get("impact_frame", 0)), f.rect_calls, f.rect_usec, f.shape_calls, f.shape_usec]
 
 
-# --impact=hold: asks for a fire every IMPACT_HOLD_PERIOD_S of sample time. The game's rate
-# limit and its own checks decide whether it fires; a refused ask is retried next frame.
 func _hold_impact(delta: float) -> void:
 	var fx = _game.presentation.player_fx
 	if not _impact_hold or fx == null:
@@ -357,7 +307,6 @@ func _hold_impact(delta: float) -> void:
 		_impact_marks.append(marks)
 
 
-# Opens a window: the worst single call is reset so the window's max is its own.
 func _impact_open() -> void:
 	_impact_clock = 0.0
 	_impact_marks = []
@@ -368,9 +317,6 @@ func _impact_open() -> void:
 		fx._frame.shape_usec_max = 0
 
 
-# What the impact frame did since the sample window opened: fires, the refresh and shapes
-# cost in ms per call, and ms per fire (all refreshes plus all shapes over the fires), the
-# figure the 0.2 ms bar reads.
 func _impact_window() -> Dictionary:
 	var now := _impact_counters()
 	var fires: int = now[0] - _impact_at_sample[0]
@@ -397,7 +343,6 @@ func _vfx():
 	return null
 
 
-# Committed telegraphs of each hostile type in the camera's forward fan around the ball.
 func _commit_threats(scene: Dictionary) -> void:
 	var n := int(scene["per_type"])
 	var ball: Vector3 = _game.player.ball_position()
@@ -427,8 +372,6 @@ func _commit_threats(scene: Dictionary) -> void:
 		_wake_warden(ball, fwd)
 
 
-# The stage's Warden, moved 16 m in front of the ball and set to begin its pulse charge
-# on its next tick (its _pulse_clock is set from outside; warden.gd is not edited).
 func _wake_warden(ball: Vector3, fwd: Vector3) -> void:
 	var warden = _game.flow.warden
 	if warden == null or not is_instance_valid(warden):
@@ -470,8 +413,6 @@ func _sample(dt_ms: float) -> Dictionary:
 		"prims": Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
 	}
 
-
-# --- Stills -------------------------------------------------------------------------------
 
 func _player_fx() -> Array:
 	var out: Array = []
@@ -663,8 +604,6 @@ static func _pct(sorted: Array, q: float) -> float:
 	return sorted[mini(int(floor(q * (sorted.size() - 1) + 0.5)), sorted.size() - 1)]
 
 
-# --- Coverage -----------------------------------------------------------------------------
-
 func _analyse() -> void:
 	_phase = "analyse"
 	var hazard_h := Palette.HAZARD.h * 360.0
@@ -782,8 +721,6 @@ func _finish(reason: String) -> void:
 	quit(0 if reason == "done" and _errors.is_empty() else 1)
 
 
-# Keep each scene populated through warmup and sampling. Replacement work is timed.
-# Positions reset only when a surviving fixture leaves the camera neighbourhood.
 func _maintain_load() -> void:
 	var ball: Vector3 = _game.player.ball_position()
 	if is_instance_valid(_game.flow.warden):
@@ -798,10 +735,6 @@ func _maintain_load() -> void:
 			enemy.global_position = _ground(ball + slot["offset"])
 
 
-# Paired renders isolate P1 edges/keylines/height rails from fills, scenery and HUD.
-# A candidate must change the clean image by >= 12/255 in at least one RGB channel.
-# Count as lost if the full image retains < 50% of that differential contrast.
-# This is a contrast-loss proxy, not a semantic readability verdict.
 func _edge_coverage(imgs: Dictionary, id: String) -> Dictionary:
 	var a: PackedByteArray = imgs["threats"].get_data()
 	var b: PackedByteArray = imgs["clean_no_edges"].get_data()
@@ -832,8 +765,6 @@ func _edge_coverage(imgs: Dictionary, id: String) -> Dictionary:
 		"valid": not _dry and candidates >= 100, "minimum_reference_delta": 12, "contrast_retention": 0.5}
 
 
-# s3_mask_px is S3's P1 candidate pixel count, -1 when S3 has no analysed edges. Strong also
-# needs S3's mask valid (a display run with no unsupported painters), as the bar does.
 static func _strength(results: Array) -> Dictionary:
 	var mask := -1
 	var valid := false
@@ -868,8 +799,6 @@ func _metric_self_test() -> void:
 		"full": full, "full_no_edges": empty}, "self-test-quarter")
 	var missing := _edge_coverage({"threats": empty, "clean_no_edges": empty,
 		"full": empty, "full_no_edges": empty}, "self-test-empty")
-	# Planted controls: a telegraph off-screen leaves S3 an empty mask and must not read strong;
-	# a valid mask of exactly STRONG_MIN pixels must, and an invalid one must not.
 	var wide := Image.create(250, 200, false, Image.FORMAT_RGB8)
 	wide.fill(Color(0.5, 0.5, 0.5))
 	var wide_empty := Image.create(250, 200, false, Image.FORMAT_RGB8)

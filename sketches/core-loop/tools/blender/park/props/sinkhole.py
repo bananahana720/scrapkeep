@@ -20,20 +20,19 @@ from kit import C, mix, shade, tint
 
 K = kit.Kit("sinkhole")
 
-# Local colours, all safe hues: unlit white lens, pale limestone, lichen, steel, basalt.
-LENS = "e4e2d6"       # plain white, non-emissive
-LIME = "cfc8b2"       # pale limestone
+LENS = "e4e2d6"
+LIME = "cfc8b2"
 LIME_D = "a9a28c"
-LICHEN = "9aa284"     # dusty grey-sage lichen (never luminous, clear of mint and ancient green)
+LICHEN = "9aa284"
 FERN = "7b8a58"
 FERN_D = "58664a"
-STEEL = "365754"      # petrol enamel (dig-props board machine bodies); no brass
-STEEL_D = shade("365754", 0.75)  # darker petrol
+STEEL = "365754"
+STEEL_D = shade("365754", 0.75)
 BASALT = "3d4140"
 PALE_PAINT = "e0d9c3"
-OXIDE = "9b513a"      # board oxide: painted bands, cart straps
-COPPER = "b77843"     # board copper, small functional fittings only (WARN hex, never a large face)
-WET = "4a4234"        # damp timber stain
+OXIDE = "9b513a"
+COPPER = "b77843"
+WET = "4a4234"
 TAU = math.tau
 FLAT = math.pi / 2
 
@@ -77,7 +76,6 @@ def lamp(p, loc, yaw, col=STEEL_D, s=1.0, lens=LENS, sg=10):
     p.torus(0.16 * s, 0.03 * s, (x - fx * 0.05 * s, y - fy * 0.05 * s, z + 0.52 * s), col, rot=(FLAT, 0, yaw), major=8, minor=4)
 
 
-# --- heroes --------------------------------------------------------------------------------
 @K.kind("pump_engine", hero=True, tags=["machine"],
         polish_opts={"detail": 1},
         story="The caisson crew's steam-less pump engine, parked off mid-shift under a half-pulled tarp.")
@@ -86,19 +84,16 @@ def pump_engine(p, v, rng):
     p.box((7.0, 3.4, 0.5), (0, 0, 0.25), C["concrete_light"], style="hard_smooth")
     for x in (-3.0, -1.0, 1.0, 3.0):
         p.box((0.5, 3.0, 0.2), (x, 0, 0.6), C["timber_pale"])
-    # Engine block, then three upright cylinders with piston guides.
     p.box((3.0, 2.0, 1.1), (-0.8, 0, 1.25), STEEL, style="hard_smooth")
-    p.box((3.1, 0.25, 0.3), (-0.8, -1.05, 1.5), OXIDE, style="hard_smooth")  # painted band
+    p.box((3.1, 0.25, 0.3), (-0.8, -1.05, 1.5), OXIDE, style="hard_smooth")
     for i, x in enumerate((-1.8, -0.8, 0.2)):
         p.cyl(0.55, 1.5, (x, 0.2, 2.5), STEEL_D if i % 2 else STEEL, segs=14, style="hard_smooth")
         p.cyl(0.62, 0.18, (x, 0.2, 3.3), C["bone"], segs=14, style="hard_smooth")
         p.cyl(0.14, 1.0 if not (run and i == 1) else 0.4, (x, 0.2, 3.9 if not (run and i == 1) else 3.6),
               STEEL, segs=8, style="round")
         p.box((0.9, 0.3, 0.2), (x, 0.2, 4.35 if not run else 3.95), C["bone"], style="hard_smooth")
-    # Piston arms out to the flywheel (laid down, parked).
     for i, x in enumerate((-1.8, -0.8, 0.2)):
         p.rod((x, -0.6, 2.0), (x + 1.7, -1.35, 1.5), 0.1, STEEL_D, segs=8)
-    # Flywheel with fat spokes, plain rim.
     fx = 1.6 if not run else 2.0
     fz = 2.1 if not run else 1.1
     fr = 1.4
@@ -112,23 +107,19 @@ def pump_engine(p, v, rng):
         a = TAU * k / 6 + ang
         p.rod((fx + 0.7, 0.2 + 0.2 * math.cos(a), fz + 0.2 * math.sin(a)),
               (fx + 0.7, 0.2 + fr * math.cos(a), fz + fr * math.sin(a)), 0.1, STEEL_D, segs=6)
-    # Pump barrel (left), flanged, with a stub pipe to the ground.
     p.cyl(0.85, 2.3, (-3.0, 0.1, 1.6), STEEL, segs=16, rot=(0, FLAT, 0), style="hard_smooth")
     for x in (-4.1, -1.9):
         p.cyl(1.0, 0.2, (x, 0.1, 1.6), C["bone"], segs=16, rot=(0, FLAT, 0), style="hard_smooth")
     p.cyl(0.35, 1.4, (-3.4, 1.0, 0.95), STEEL_D, segs=10, rot=(FLAT, 0, 0), style="hard_smooth")
     p.cyl(0.45, 0.25, (-3.4, 1.8, 0.95), C["bone"], segs=10, rot=(FLAT, 0, 0), style="hard_smooth")
-    p.cyl(0.4, 0.5, (-2.2, -1.6, 0.55), COPPER, segs=8, style="hard_smooth")  # drain cock
-    # Little brass-free oil can, and a mug on the plinth: someone was here.
+    p.cyl(0.4, 0.5, (-2.2, -1.6, 0.55), COPPER, segs=8, style="hard_smooth")
     mug(p, (2.9, -1.3, 0.5))
     p.cyl(0.13, 0.25, (2.4, -1.45, 0.62), STEEL, segs=8, r2=0.07, style="hard_smooth")
-    # Tarp: half-pulled over the cylinders (a), slumped and torn on the floor (b).
     if not run:
         p.ico(1.5, (-0.6, 0.4, 3.0), C["canvas"], scale=(1.3, 0.9, 0.65), rot=(0.1, 0, 0.1), subdiv=0, style="soft")
         p.ico(0.5, (1.2, -1.6, 0.6), C["canvas_dark"], scale=(1.4, 1.0, 0.5), subdiv=0, style="soft")
     else:
         p.ico(1.2, (2.6, -1.9, 0.6), C["canvas_dark"], scale=(1.8, 1.2, 0.35), rot=(0, 0, 0.5), subdiv=0, style="soft")
-        # Dropped piston rod and a loose spoke on the plinth, dry rust-brown drip stain.
         p.rod((-0.2, -2.0, 0.65), (1.4, -1.9, 0.62), 0.11, C["rust"], segs=8)
         p.box((1.3, 0.5, 0.05), (-1.2, -1.2, 0.53), mix(C["concrete_light"], C["soil"], 0.5), style="flat")
         fern_tuft(p, rng, (-3.9, -1.3, 0.0), 7, 1.6, FERN, 0.4)
@@ -139,14 +130,12 @@ def pump_engine(p, v, rng):
         story="Crew lamp rack, every unlit lamp facing the same wrong way, toward the dark wall.")
 def lamp_rack(p, v, rng):
     run = v == "b"
-    p.box((6.4, 2.2, 0.35), (0, 0, 0.17), C["timber_pale"])  # deck
+    p.box((6.4, 2.2, 0.35), (0, 0, 0.17), C["timber_pale"])
     for x in (-2.8, 0, 2.8):
         p.box((0.4, 2.0, 0.18), (x, 0, 0.44), C["timber_dark"])
-    # Back board: wide planks, pale so it shows against basalt.
     planks(p, rng, 17, -3.0, 0.375, 0.8, 2.15, (0.36, 0.14, 3.3), C["timber_pale"])
     for z in (0.7, 1.9, 3.1):
         p.beam((-3.25, 0.68, z), (3.25, 0.68, z), 0.16, C["timber_dark"], h=0.1)
-    # Three stepped shelves with lamps; buttress boxes at the ends.
     for i, z in enumerate((1.0, 2.1, 3.2)):
         p.box((6.0, 0.9, 0.14), (0, 0.3, z), C["timber_grey"])
         for x in (-2.9, 2.9):
@@ -154,19 +143,19 @@ def lamp_rack(p, v, rng):
         for j in range(6):
             x = -2.5 + j * 1.0
             if run and (i + j) % 4 == 1:
-                continue  # that lamp walked off
+                continue
             if run and (i + j) % 5 == 2:
-                lamp(p, (x + 0.2, -0.6 - i * 0.2, 0.0), 0.8 + j)  # on the deck, knocked over
+                lamp(p, (x + 0.2, -0.6 - i * 0.2, 0.0), 0.8 + j)
                 continue
             lamp(p, (x, 0.3, z + 0.07), math.pi / 2 + rng.uniform(-0.04, 0.04) + (0.5 if run and j == 3 else 0),
                  s=1.2)
-    p.box((1.5, 0.12, 0.7), (0, -0.3, 3.95), PALE_PAINT, style="hard_smooth")  # roster board top
+    p.box((1.5, 0.12, 0.7), (0, -0.3, 3.95), PALE_PAINT, style="hard_smooth")
     for k in range(5):
         p.box((0.06, 0.04, 0.4), (-0.5 + k * 0.25, -0.38, 3.95), C["charcoal"], style="fine")
-    p.ico(0.5, (-2.8, -1.4, 0.5), C["canvas"], scale=(1.0, 0.8, 0.6), subdiv=0, style="soft")  # folded rag
+    p.ico(0.5, (-2.8, -1.4, 0.5), C["canvas"], scale=(1.0, 0.8, 0.6), subdiv=0, style="soft")
     mug(p, (2.4, -0.8, 0.35))
     if run:
-        p.box((1.6, 0.9, 0.12), (-2.2, -1.3, 0.1), C["timber_grey"], rot=(0.1, 0, 0.6))  # shelf plank dropped
+        p.box((1.6, 0.9, 0.12), (-2.2, -1.3, 0.1), C["timber_grey"], rot=(0.1, 0, 0.6))
         fern_tuft(p, rng, (3.4, -1.0, 0.0), 6, 1.4, FERN_D, 0.4)
 
 
@@ -175,27 +164,23 @@ def lamp_rack(p, v, rng):
         story="A timber set that came down, lagging heaped over limestone slabs, a painted water mark still on a post.")
 def gallery_collapse(p, v, rng):
     full = v == "b"
-    # Limestone slab rubble.
     for i in range(26 if not full else 34):
         a = rng.uniform(0, TAU)
         r = rng.uniform(0.6, 3.1)
         s = rng.uniform(0.6, 1.4)
         p.box((s, s * rng.uniform(0.6, 1.1), 0.4 * s + 0.1), (r * math.cos(a), r * math.sin(a), 0.2 + 0.1 * s),
               tint(LIME, rng, 0.1), rot=(rng.uniform(-0.2, 0.2), rng.uniform(-0.2, 0.2), a), style="hard_smooth")
-    # The standing post, snapped, with its painted water mark and tide ticks.
     px = -2.4
     h = 3.4 if not full else 1.5
     p.beam((px, 0.2, 0), (px, 0.2, h), 0.45, C["timber_pale"])
     p.box((0.5, 0.5, 0.5), (px, 0.2, 0.25), WET)
-    p.box((0.52, 0.52, 0.16), (px, 0.2, 0.62), PALE_PAINT, style="hard_smooth")  # water mark band
+    p.box((0.52, 0.52, 0.16), (px, 0.2, 0.62), PALE_PAINT, style="hard_smooth")
     for k in range(4):
         p.box((0.3, 0.04, 0.05), (px, -0.07, 0.95 + k * 0.28), C["charcoal"], style="fine")
     if not full:
-        p.beam((px, 0.2, h), (px + 0.7, 0.4, h + 0.25), 0.4, C["timber_grey"], roll=0.3)  # splintered top
-    # The cap beam and a second post, down and lying cross-wise.
+        p.beam((px, 0.2, h), (px + 0.7, 0.4, h + 0.25), 0.4, C["timber_grey"], roll=0.3)
     p.beam((-1.2, -1.5, 0.45), (3.2, 0.6, 0.7), 0.5, C["timber_dark"], h=0.42, roll=0.2)
     p.beam((1.5, 2.3, 0.35), (-0.5, -0.3, 1.0), 0.42, C["timber"], roll=0.5)
-    # Lagging pile: planks in every heading.
     for i in range(76 if full else 56):
         a = rng.uniform(0, math.pi)
         r = rng.uniform(0.2, 2.8)
@@ -203,11 +188,10 @@ def gallery_collapse(p, v, rng):
         p.box((rng.uniform(1.4, 2.4), 0.22, 0.08), (1.2 + r * math.cos(a * 2), 0.4 + r * math.sin(a * 2) * 0.8, z),
               tint(C["timber_pale"] if i % 3 else C["timber_grey"], rng, 0.1),
               rot=(rng.uniform(-0.3, 0.3), rng.uniform(-0.3, 0.3), a * 3), jit=0.01)
-    # Wedges for the set (square chunks, not wedges): short blocks.
     for k in range(3):
         p.box((0.35, 0.35, 0.35), (-1.0 + k * 0.5, -2.0, 0.18), C["timber_dark"], rot=(0, 0, k))
-    p.ico(0.5, (2.8, -1.2, 0.4), C["canvas_dark"], scale=(1.2, 1.0, 0.5), subdiv=0, style="soft")  # dropped tool bag
-    p.cyl(0.25, 0.5, (3.4, -1.8, 0.28), C["iron_light"], segs=10, r2=0.2, style="hard_smooth")  # a pail
+    p.ico(0.5, (2.8, -1.2, 0.4), C["canvas_dark"], scale=(1.2, 1.0, 0.5), subdiv=0, style="soft")
+    p.cyl(0.25, 0.5, (3.4, -1.8, 0.28), C["iron_light"], segs=10, r2=0.2, style="hard_smooth")
     if full:
         fern_tuft(p, rng, (-0.5, 1.7, 0.4), 8, 1.5, FERN, 0.4)
         p.ico(0.8, (1.8, 0.2, 0.9), LICHEN, scale=(1.6, 1.2, 0.3), subdiv=0, style="soft")
@@ -215,16 +199,13 @@ def gallery_collapse(p, v, rng):
         p.ico(0.6, (0.2, 1.4, 0.7), LICHEN, scale=(1.4, 1.0, 0.25), subdiv=0, style="soft")
 
 
-# --- props ---------------------------------------------------------------------------------
 @K.kind("echo_horn", hero=False, tags=["machine"], polish_opts={"detail": 1},
         story="A big petrol-enamel signal horn with a bone rim on a squat timber cradle, aimed at the dark to count the crew in.")
 def echo_horn(p, v, rng):
     p.box((2.4, 1.6, 0.4), (0, 0, 0.2), C["timber_pale"])
-    # Cradle: two saddle beams on the pallet, not a solid block.
     for x in (-0.75, 0.45):
         p.box((0.28, 1.1, 0.5), (x, 0, 0.65), C["timber_dark"])
     if v == "a":
-        # Horn: a short throat and a flared bell, pointed gently upward along +X.
         pts = [((-0.4, 0, 1.3), 0.2), ((0.3, 0, 1.45), 0.35), ((1.0, 0, 1.65), 0.6), ((1.5, 0, 1.85), 0.95)]
         for (a, ra), (b, rb) in zip(pts, pts[1:]):
             d = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
@@ -233,11 +214,10 @@ def echo_horn(p, v, rng):
             mid = tuple((a[i] + b[i]) / 2 for i in range(3))
             p.cyl(ra, ln, mid, STEEL, segs=14, r2=rb, rot=(0, FLAT - tilt, 0), style="hard_smooth")
         p.torus(0.97, 0.08, (1.55, 0, 1.87), C["bone"], rot=(0, FLAT - 0.2, 0), major=16, minor=5)
-        p.cyl(0.25, 0.4, (-0.55, 0, 1.28), STEEL_D, segs=10, rot=(0, FLAT, 0), style="hard_smooth")  # mouthpiece
+        p.cyl(0.25, 0.4, (-0.55, 0, 1.28), STEEL_D, segs=10, rot=(0, FLAT, 0), style="hard_smooth")
         for x in (-0.1, 0.9):
             p.box((0.2, 0.8, 0.2), (x, 0, 0.98 + x * 0.1), C["iron"])
     else:
-        # Knocked off its cradle, lying on its side, bell dented.
         p.cyl(0.55, 1.4, (0.9, 1.5, 0.6), STEEL, segs=14, r2=0.25, rot=(FLAT, 0.0, 0.4), style="hard_smooth", jit=0.03)
         p.torus(0.57, 0.08, (1.1, 2.1, 0.62), C["bone"], rot=(FLAT, 0, 0.4), major=14, minor=5)
         p.cyl(0.22, 0.4, (0.4, 0.8, 0.5), STEEL_D, segs=10, rot=(FLAT, 0, 0.4), style="hard_smooth")
@@ -252,7 +232,6 @@ def tin_cart(p, v, rng):
     over = v == "c"
     if tip:
         rot = (0, 0, 0)
-    # Body: tapered bin of pale planks inside iron straps, on a timber chassis.
     if not tip:
         p.box((2.2, 1.3, 0.2), (0, 0, 0.5), C["timber_dark"])
         for s in (-1, 1):
@@ -265,11 +244,9 @@ def tin_cart(p, v, rng):
             for sy in (-0.78, 0.78):
                 p.cyl(0.36, 0.14, (sx, sy, 0.38), C["timber_dark"], segs=6, rot=(FLAT, 0, 0), style="hard")
                 p.cyl(0.1, 0.2, (sx, sy, 0.38), C["iron_light"], segs=8, rot=(FLAT, 0, 0), style="hard")
-        # Tailings and two pails sitting in the bin.
         p.ico(0.8, (0, 0, 1.18), LIME_D if over else BASALT, scale=(1.2, 0.8, 0.28), subdiv=0, style="soft")
         for x in (-0.5, 0.5):
             p.cyl(0.26, 0.4, (x, 0.0, 1.18), C["iron_light"], segs=6, r2=0.3, style="hard")
-        # Bone tag on a short peg at the front.
         p.cyl(0.04, 0.3, (1.2, -0.45, 1.1), C["timber_dark"], segs=6)
         p.box((0.28, 0.06, 0.34), (1.2, -0.45, 1.3), C["bone"], style="hard_smooth")
         for k in range(3):
@@ -278,11 +255,9 @@ def tin_cart(p, v, rng):
             fern_tuft(p, rng, (0, 0, 1.2), 6, 0.7, FERN, 0.4)
             p.ico(0.55, (-1.2, 0.6, 0.35), LICHEN, scale=(1.4, 1.0, 0.4), subdiv=0, style="soft")
         else:
-            p.cyl(0.2, 0.34, (1.8, 0.8, 0.17), C["iron_light"], segs=6, r2=0.23, style="hard")  # pail on ground
+            p.cyl(0.2, 0.34, (1.8, 0.8, 0.17), C["iron_light"], segs=6, r2=0.23, style="hard")
     else:
-        # Tipped onto its side: a hand-laid box set, not a transform of the upright parts. Mouth toward -Y,
-        # no open top; a chassis plate on top, five slats on the open side, two end boards and a floor plank.
-        p.box((2.2, 1.3, 0.2), (0, -0.7, 0.83), C["timber_dark"])  # chassis plate, now the top
+        p.box((2.2, 1.3, 0.2), (0, -0.7, 0.83), C["timber_dark"])
         for k in range(5):
             p.box((0.42, 0.1, 0.7), (-0.9 + k * 0.45, -0.15 - k * 0.01, 0.43), tint(C["timber_pale"], rng), rot=(0, -0.1 * k, 0))
         p.box((0.1, 1.1, 0.7), (-1.05, -0.55, 0.43), C["timber_pale"])
@@ -290,7 +265,7 @@ def tin_cart(p, v, rng):
         p.box((2.2, 1.1, 0.1), (0, -0.55, 0.05), C["timber_pale"])
         for sx in (-0.75, 0.75):
             p.cyl(0.36, 0.14, (sx, -0.7, 0.98), C["timber_dark"], segs=6, style="hard")
-        p.cyl(0.36, 0.14, (1.9, 1.0, 0.07), C["timber_dark"], segs=6, rot=(0.1, 0, 0), style="hard")  # wheel off
+        p.cyl(0.36, 0.14, (1.9, 1.0, 0.07), C["timber_dark"], segs=6, rot=(0.1, 0, 0), style="hard")
         p.ico(0.9, (0.3, -1.4, 0.2), BASALT, scale=(1.5, 1.0, 0.3), subdiv=0, style="soft")
         for k, (x, y) in enumerate(((-1.3, -1.5), (1.4, -1.9))):
             p.cyl(0.26, 0.4, (x, y, 0.22), C["iron_light"], segs=6, r2=0.3, rot=(0, FLAT, 0.6 * k), style="hard")
@@ -307,31 +282,29 @@ def granary_jars(p, v, rng):
     for i, (x, y, r) in enumerate(spec):
         col = tint(mix(LIME, C["sandstone_pale"], 0.4), rng, 0.06)
         if v == "b" and i == 1:
-            # Smashed: base ring and shards.
             p.ring(r * 0.5, r * 0.85, 0.2, (x, y, 0.1), col, segs=6, style="hard_smooth")
             for k in range(5):
                 a = k * 1.3
                 p.box((0.24, 0.16, 0.12), (x + 0.5 * math.cos(a), y + 0.5 * math.sin(a), 0.06), col, rot=(0.0, 0.0, a), style="hard")
             continue
         if v == "c" and i == 0:
-            # Toppled on its side, mouth open, lid rolled away.
             p.uv(r, (x, y, r), col, scale=(1.0, 0.9, 0.9), rot=(0, FLAT, 0.4), u=8, v=4)
-            p.box((0.5, 0.3, 0.1), (x, y, 0.05), shade(col, 0.85), rot=(0, 0, 0.4), style="hard_smooth")  # chock stone
+            p.box((0.5, 0.3, 0.1), (x, y, 0.05), shade(col, 0.85), rot=(0, 0, 0.4), style="hard_smooth")
             p.cyl(r * 0.5, 0.2, (x + 0.55, y + 0.2, r), shade(col, 0.8), segs=6, rot=(0, FLAT, 0.4), style="hard")
             p.cyl(r * 0.5, 0.1, (x + 1.1, y - 0.8, 0.05), shade(col, 1.05), segs=6)
             continue
-        p.cyl(r * 0.62, 0.14, (x, y, 0.07), shade(col, 0.85), segs=6, style="hard")  # foot ring
+        p.cyl(r * 0.62, 0.14, (x, y, 0.07), shade(col, 0.85), segs=6, style="hard")
         p.uv(r, (x, y, r * 1.15), col, scale=(1, 1, 1.15), u=8, v=4)
-        p.cyl(r * 0.5, 0.12, (x, y, r * 2.2), shade(col, 0.82), segs=6, r2=r * 0.42, style="hard")  # neck
-        p.cyl(r * 0.6, 0.12, (x, y, r * 2.3), shade(col, 1.06), segs=6, r2=r * 0.5, style="hard")   # lid stone
+        p.cyl(r * 0.5, 0.12, (x, y, r * 2.2), shade(col, 0.82), segs=6, r2=r * 0.42, style="hard")
+        p.cyl(r * 0.6, 0.12, (x, y, r * 2.3), shade(col, 1.06), segs=6, r2=r * 0.5, style="hard")
         p.ico(r * 0.2, (x, y, r * 2.42), shade(col, 0.9), subdiv=0, style="flat")
         for s in (-1, 1):
-            p.ico(r * 0.2, (x + s * r * 0.95, y, r * 1.5), shade(col, 0.9), subdiv=0, style="flat")  # lug handles
+            p.ico(r * 0.2, (x + s * r * 0.95, y, r * 1.5), shade(col, 0.9), subdiv=0, style="flat")
     if v == "a":
         p.ico(0.3, (-0.2, -0.6, 0.12), LICHEN, scale=(1.3, 1.0, 0.3), subdiv=0, style="soft")
     if v == "c":
         fern_tuft(p, rng, (-1.4, -0.3, 0.0), 6, 0.8, FERN_D, 0.4)
-    p.box((0.3, 0.22, 0.16), (1.0, -0.7, 0.08), col, rot=(0, 0, 0.7), style="hard_smooth")  # a stray sherd
+    p.box((0.3, 0.22, 0.16), (1.0, -0.7, 0.08), col, rot=(0, 0, 0.7), style="hard_smooth")
 
 
 @K.kind("column_stubs", hero=False, tags=[], variants="abc", polish_opts={"detail": 1},
@@ -342,7 +315,6 @@ def column_stubs(p, v, rng):
         if v == "b":
             h = h * 2.0
         if v == "c" and i % 2:
-            # Toppled: lies on the floor.
             p.cyl(0.42, h, (x * 1.4, y * 1.4, 0.4), BASALT, segs=6, rot=(FLAT, 0, i), style="hard")
             continue
         top = rng.uniform(-0.04, 0.04)
@@ -359,19 +331,17 @@ def rain_gauge(p, v, rng):
         p.box((w, w * 0.8, 0.22), (sx, sy, 0.11), tint(C["concrete_light"], rng, 0.08), rot=(0, 0, rz), style="hard_smooth", jit=0.02)
     p.beam((0, 0, 0.25), (0.2 * lean[0] * 4, 0, 1.0), 0.2, C["timber_pale"], style="hard")
     ox = lean[0] * 0.8
-    p.cyl(0.4, 0.36, (ox, 0, 1.2), C["iron_light"], segs=6, r2=0.55, style="hard_smooth")  # funnel
-    # Graduated measuring tube on the post, front to -Y: tall, narrow, straight, no round face.
-    # Pale glass above a petrol (STEEL, a board colour) water column; a fuller on a, lower on b.
+    p.cyl(0.4, 0.36, (ox, 0, 1.2), C["iron_light"], segs=6, r2=0.55, style="hard_smooth")
     tx, ty, z0, zt, fill = ox, -0.2, 0.35, 1.05, (0.35 if v == "a" else 0.2)
-    p.cyl(0.1, 0.04, (tx, ty, z0 - 0.02), C["iron_light"], segs=8, style="hard")  # foot cap
-    p.cyl(0.09, fill, (tx, ty, z0 + fill / 2), STEEL, segs=8, style="hard")  # water column
-    p.cyl(0.09, zt - z0 - fill, (tx, ty, z0 + fill + (zt - z0 - fill) / 2), PALE_PAINT, segs=8, style="hard")  # glass
-    for k in range(5):  # ladder scale up the left side
+    p.cyl(0.1, 0.04, (tx, ty, z0 - 0.02), C["iron_light"], segs=8, style="hard")
+    p.cyl(0.09, fill, (tx, ty, z0 + fill / 2), STEEL, segs=8, style="hard")
+    p.cyl(0.09, zt - z0 - fill, (tx, ty, z0 + fill + (zt - z0 - fill) / 2), PALE_PAINT, segs=8, style="hard")
+    for k in range(5):
         p.box((0.09 if k % 2 == 0 else 0.06, 0.03, 0.025), (tx - 0.05, ty - 0.075, 0.47 + 0.12 * k), C["charcoal"],
               style="fine", jit=0.004)
     p.ico(0.25, (0.6, -0.6, 0.15), LICHEN, scale=(1.3, 1, 0.4), subdiv=0, style="soft", jit=0.02)
     if v == "b":
-        p.cyl(0.18, 0.3, (-0.9, -0.5, 0.18), C["iron_light"], segs=6, rot=(0, FLAT, 0.4), style="hard_smooth")  # spare tin cup, tipped
+        p.cyl(0.18, 0.3, (-0.9, -0.5, 0.18), C["iron_light"], segs=6, rot=(0, FLAT, 0.4), style="hard_smooth")
 
 
 @K.kind("coat_hooks", hero=False, tags=["soft"], polish_opts={"detail": 1},
@@ -383,15 +353,13 @@ def coat_hooks(p, v, rng):
         p.box((1.3, 0.16, 0.14), (0, 0, 1.3), C["timber_pale"])
         for x in (-0.5, 0, 0.5):
             p.rod((x, -0.1, 1.3), (x, -0.32, 1.24), 0.04, C["iron_light"], segs=6)
-        # The coat: soft slumped form with sleeves, hanging from the left hook.
         p.ico(0.34, (-0.5, -0.42, 0.82), C["canvas_dark"], scale=(0.9, 0.5, 1.5), subdiv=0, style="round")
         p.ico(0.15, (-0.78, -0.42, 0.75), C["canvas_dark"], scale=(0.5, 0.5, 1.5), subdiv=0, style="round")
         p.ico(0.15, (-0.22, -0.42, 0.75), C["canvas_dark"], scale=(0.5, 0.5, 1.5), subdiv=0, style="round")
-        lamp(p, (0.5, -0.45, 0.88), -FLAT, s=0.8, sg=6)  # hand lamp hung on the right hook
+        lamp(p, (0.5, -0.45, 0.88), -FLAT, s=0.8, sg=6)
         mug(p, (0.0, -0.4, 1.12))
         p.ico(0.22, (0.4, 0.5, 0.2), C["canvas"], scale=(1.2, 0.9, 0.55), subdiv=0, style="round")
     else:
-        # The post is down; the coat and lamp lie where they dropped.
         p.beam((0.2, 0.2, 0.3), (1.4, 0.7, 0.28), 0.2, C["timber_grey"])
         p.box((0.14, 1.3, 0.14), (1.2, 0.5, 0.35), C["timber_grey"], rot=(0, 0, 0.8))
         p.ico(0.45, (-0.5, -0.6, 0.18), C["canvas_dark"], scale=(1.7, 1.0, 0.35), rot=(0, 0, 0.5), subdiv=0, style="round")
@@ -414,11 +382,10 @@ def hose_reel(p, v, rng):
         p.cyl(0.25, 0.9, (0, 0, zc), C["timber_dark"], segs=6, rot=(FLAT, 0, 0), style="hard_smooth")
         for k in range(5):
             p.torus(0.42 + 0.06 * (k % 2), 0.1, (0, -0.28 + k * 0.14, zc), C["cable"], rot=(FLAT, 0, 0), major=10, minor=4, style="flat")
-        p.cyl(0.07, 0.4, (0.9, 0, zc), COPPER, segs=6, rot=(0, FLAT, 0))  # crank peg
-        p.torus(0.28, 0.06, (1.3, 0.9, 0.06), C["cable"], major=10, minor=4, style="flat")  # the loose end, coiled flat
+        p.cyl(0.07, 0.4, (0.9, 0, zc), COPPER, segs=6, rot=(0, FLAT, 0))
+        p.torus(0.28, 0.06, (1.3, 0.9, 0.06), C["cable"], major=10, minor=4, style="flat")
         p.torus(0.2, 0.06, (1.3, 0.9, 0.13), C["cable"], major=10, minor=4, style="flat")
     else:
-        # Reel on its side, hose paid out in flat loops.
         p.cyl(0.75, 0.1, (0, 0, 0.55), C["timber_pale"], segs=6, rot=(0.0, 0.0, 0), style="hard_smooth")
         p.cyl(0.75, 0.1, (0, 0, 1.05), C["timber_pale"], segs=6, rot=(0.0, 0.0, 0), style="hard_smooth")
         p.cyl(0.25, 0.5, (0, 0, 0.8), C["timber_dark"], segs=6, style="hard_smooth")
@@ -428,7 +395,7 @@ def hose_reel(p, v, rng):
             p.torus(r, 0.1, (x, y, 0.1), C["cable"], major=10, minor=4, style="flat")
             p.torus(r * 0.55, 0.1, (x, y, 0.1), C["cable"], major=8, minor=4, style="flat")
         p.ico(0.35, (-1.2, -0.9, 0.3), LICHEN, scale=(1.3, 1, 0.4), subdiv=0, style="soft")
-    p.cyl(0.14, 0.3, (1.15, -0.9, 0.2), COPPER, segs=8, r2=0.1, style="hard_smooth")  # copper nozzle, a small fitting
+    p.cyl(0.14, 0.3, (1.15, -0.9, 0.2), COPPER, segs=8, r2=0.1, style="hard_smooth")
 
 
 @K.kind("tally_post", hero=False, tags=["sign"], polish_opts={"detail": 1},
@@ -449,7 +416,7 @@ def tally_post(p, v, rng):
             p.box((0.15, 0.03, 0.025), (lean * 0.8 + gx + 0.035, -0.28, 0.95 - r * 0.3), PALE_PAINT, rot=(0, 0.5, 0), style="fine")
     p.ico(0.3, (0.7, -0.6, 0.15), LICHEN, scale=(1.3, 1, 0.35), subdiv=0, style="soft")
     if v == "b":
-        p.box((0.7, 0.09, 0.4), (-0.9, -0.5, 0.06), C["charcoal"], rot=(0.05, 0, 0.5), style="hard_smooth")  # fallen spare board
+        p.box((0.7, 0.09, 0.4), (-0.9, -0.5, 0.06), C["charcoal"], rot=(0.05, 0, 0.5), style="hard_smooth")
 
 
 @K.kind("cave_fern", hero=False, tags=["plant"], variants="abc", polish_opts={"detail": 1},
@@ -465,7 +432,6 @@ def cave_fern(p, v, rng):
         fern_tuft(p, rng, (0.8, -0.5, 0), 7, 1.1, FERN, 0.4)
         p.ico(0.6, (0, 0, 0.1), tint(LICHEN, rng), scale=(1.7, 1.7, 0.3), subdiv=0, style="soft")
     else:
-        # Moss mat: low lumpy cushions with pale lichen caps.
         for i in range(5):
             a = TAU * i / 5 + rng.uniform(-0.3, 0.3)
             r = rng.uniform(0.2, 1.1) if i else 0
@@ -482,7 +448,6 @@ def cave_fern(p, v, rng):
         story="A bundle of drill steels leaned against a low timber crossbar, a canvas wrap loose at the middle.")
 def drill_steels(p, v, rng):
     if v == "a":
-        # Low A-frame (an X-trestle on the floor) with steels fanned against its bar.
         for s in (-1, 1):
             p.beam((s * 0.55, -0.55, 0.0), (s * 0.15, 0.05, 0.8), 0.13, C["timber_pale"])
             p.beam((s * 0.55, 0.65, 0.0), (s * 0.15, 0.05, 0.8), 0.13, C["timber_dark"])
@@ -492,10 +457,9 @@ def drill_steels(p, v, rng):
             ox, oy = 0.15 * math.cos(ang), 0.1 * math.sin(ang)
             top = (ox * 0.5, 0.15 + oy * 0.6, 1.15 + 0.05 * (k % 3))
             p.rod((ox * 1.8, -0.7 + oy, 0.02), top, 0.045, STEEL if k % 2 else C["iron_light"], segs=6)
-            p.cyl(0.075, 0.1, (ox * 1.8, -0.7 + oy, 0.05), PALE_PAINT, segs=6, style="hard_smooth")  # chalk-marked bit
-        p.cyl(0.2, 0.3, (0.0, 0.05, 0.9), C["canvas"], segs=10, rot=(FLAT, 0, 0), style="soft")  # wrap
+            p.cyl(0.075, 0.1, (ox * 1.8, -0.7 + oy, 0.05), PALE_PAINT, segs=6, style="hard_smooth")
+        p.cyl(0.2, 0.3, (0.0, 0.05, 0.9), C["canvas"], segs=10, rot=(FLAT, 0, 0), style="soft")
     else:
-        # Fallen: steels fanned on the ground, trestle collapsed beside them.
         for k in range(8):
             a = 0.2 * k - 0.7
             p.rod((-0.7, -0.5 + 0.13 * k, 0.06 + 0.02 * (k % 2)), (0.7 + 0.06 * k, -0.5 + 0.16 * k + a * 0.3, 0.06),
@@ -509,7 +473,6 @@ def drill_steels(p, v, rng):
 @K.kind("mist_rings", hero=False, tags=["soft"], polish_opts={"detail": 1},
         story="Terraced limestone rimstone rings where the pool edge seeps, smooth and pale, never glowing.")
 def mist_rings(p, v, rng):
-    # Swap: not stacked rings (stacked tins read as a cache). Wide, low, stepped lips instead.
     n = 3 if v == "a" else 2
     for i in range(n):
         r = 1.9 - i * 0.55
@@ -522,7 +485,7 @@ def mist_rings(p, v, rng):
             p.ico(0.22, (2.2 * math.cos(a), 2.2 * math.sin(a), 0.14), tint(LIME, rng, 0.1), scale=(1.2, 1, 0.7), subdiv=0, style="round")
     else:
         fern_tuft(p, rng, (-1.3, 0.9, 0.0), 7, 0.9, FERN, 0.4)
-        p.box((0.9, 0.5, 0.22), (1.3, -1.7, 0.12), LIME_D, rot=(0, 0.1, 0.8), style="hard_smooth")  # fallen lip chunk
+        p.box((0.9, 0.5, 0.22), (1.3, -1.7, 0.12), LIME_D, rot=(0, 0.1, 0.8), style="hard_smooth")
 
 
 if __name__ == "__main__":

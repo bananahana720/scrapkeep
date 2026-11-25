@@ -20,10 +20,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..")))
 
-import common  # noqa: E402
-import palette_gd  # noqa: E402
-import polish  # noqa: E402
-from common import Part  # noqa: E402
+import common
+import palette_gd
+import polish
+from common import Part
 
 BONE = palette_gd.HEX["SAND"]
 COPPER = palette_gd.HEX["COPPER"]
@@ -51,24 +51,19 @@ def build_stake():
     root = common.empty("SableStake")
     p = Part("SableStakeMesh")
 
-    # Flared anchor foot flange at Z = -0.45.. -0.35 (matches stakes.gd collider base at y = -0.45).
     p.cyl(METAL, 0.34, 0.26, 0.10, segs=12, loc=(0.0, 0.0, -0.40), color=CHARCOAL)
     p.ring(FIELD, 0.28, 0.36, 0.055, segs=16, loc=(0.0, 0.0, -0.38))
 
-    # Three radial riveted steel anchor drive fins biting the earth.
     for k in range(3):
         a = k * math.tau / 3.0
         fx, fy = math.cos(a), math.sin(a)
         p.box(METAL, (0.22, 0.055, 0.24), loc=(fx * 0.22, fy * 0.22, -0.32),
               rot=(0.0, 0.0, a), color=STEEL)
 
-    # Tapered hexagonal copper pylon spike body rising from -0.36 to +0.36.
     p.cyl(METAL, 0.21, 0.11, 0.72, segs=8, loc=(0.0, 0.0, 0.00), color=COPPER)
-    # Ribbed bone ceramic insulator collar + glowing MINT grapple ring near upper neck.
     p.ring(METAL, 0.14, 0.22, 0.065, segs=10, loc=(0.0, 0.0, 0.04), color=BONE)
     p.ring(FIELD, 0.15, 0.23, 0.065, segs=12, loc=(0.0, 0.0, 0.24))
 
-    # Twin flared copper arc-conductor ears & glowing MINT crown beacon tip.
     for sx in (-1.0, 1.0):
         p.rod(METAL, (sx * 0.09, 0.0, 0.28), (sx * 0.21, 0.0, 0.44), 0.032, segs=6, color=CHARCOAL)
         p.ico(FIELD, 0.048, subdiv=1, loc=(sx * 0.22, 0.0, 0.46))

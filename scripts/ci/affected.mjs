@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-// Classifies a git diff into affected CI surfaces so PR feedback runs only what the diff can reach,
-// while full-suite triggers (merge_group, push to main/stage/*, workflow_dispatch) run everything.
-// Usage: node scripts/ci/affected.mjs [--base <ref> | --stdin | --full] [--github-output <path>]
 
 import { spawnSync } from "node:child_process";
 import { appendFileSync, readFileSync, realpathSync } from "node:fs";

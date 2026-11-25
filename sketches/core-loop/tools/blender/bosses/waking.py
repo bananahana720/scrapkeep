@@ -39,8 +39,6 @@ sys.path.insert(0, str(HERE.parent))
 import common
 import polish
 
-# A 25 m cast column: 5 cm chamfers, smooth cast curves, rounder lathes (POLISH.md).
-# AO reaches about a metre; the default fraction of 25 m darkened the whole spine.
 polish.enable(detail=2, bevel=0.05, bevel_angle=46.0, ao_reach=0.06)
 
 ROOT = HERE.parents[4]
@@ -49,8 +47,6 @@ PREVIEW = ROOT / "artifacts/local/dress-preview/WAK"
 M1, M2, M3, M4 = "ancient_enamel", "dark_joint", "glass", "signal_surface"
 BONE, PETROL, DARK = "d2c5a5", "365754", "242a28"
 BLUE, HAZARD, SLATE, MINT = "3d8bff", "ff5a3c", "617481", "8bf0d3"
-# Keys are authored in seconds; the export samples every 1/60 s so eased curves hold
-# their shape in game. Key times, and so every telegraph window, are unchanged.
 FPS = 60
 CLIPS = {
     "sleeping": (3.0, 0.0), "wake": (1.6, 1.0),
@@ -80,7 +76,6 @@ def cast_paint(part):
         if face.material_index != slot:
             continue
         c = face.calc_center_median()
-        # Broad dust and rubbed boundaries, no random per-pixel surface noise.
         phase = math.sin(c.x * 2.1 + c.y * 1.7 + c.z * 0.65)
         petrol = max(face.loops[0][part.col][:3]) < .15
         base = common.srgb(PETROL if petrol else BONE)
@@ -131,7 +126,6 @@ def vane(parent, index):
                   (2.2 * math.cos(index * math.tau / 3), 2.2 * math.sin(index * math.tau / 3), 24))
     pivot.rotation_euler.z = index * math.tau / 3
     p = common.Part("VaneCasting%d" % index)
-    # Each section is an octagonal casting; 7 m long, 1.4 radial, 2.2 tangent.
     sections = [(0, 0.0, .3, .22), (-.4, .14, .8, .46),
                 (-1.8, .38, 1.1, .7), (-3.5, .46, 1.0, .62),
                 (-5.6, .35, .65, .36), (-7, .05, .025, .05)]
@@ -146,7 +140,6 @@ def vane(parent, index):
             color = PETROL if j in (2, 3, 4) and k in (1, 2, 3) else BONE
             p.paint([face], M2 if j == 7 else M1, DARK if j == 7 else color)
     p.paint([p.bm.faces.new(rows[0]), p.bm.faces.new(list(reversed(rows[-1])))], M1, BONE)
-    # Thin blue ceramic inlay inside a broader charcoal groove, not glowing enamel.
     for slot,x,width in [(M2,1.082,.095),(M4,1.084,.045)]:
         face=p.bm.faces.new([p.bm.verts.new(v) for v in
             [(x,-.4-width/2,-3.4),(x,-.4+width/2,-3.4),
@@ -168,7 +161,6 @@ def build_base():
     lathe(bell, [(1.0,-2),(1.2,-1.8),(2.5,-.7),(3.5,1.8),(3.5,2),
                  (3.05,2),(2.85,1.6),(2.1,-.5),(.8,-1.7),(.8,-2)],
           32, slots=[M1,M1,M1,M1,M1,M2,M2,M2,M2,M1])
-    # Three restrained small tracking sensors on the static bell, not weak points.
     for i in range(3):
         a = math.tau*i/3 + math.pi/2
         bell.uv(M3, .22, 8, 4, loc=(1.6*math.cos(a),1.6*math.sin(a),-.9))
@@ -186,19 +178,15 @@ def build_base():
     seat = empty("CombatSeat", root, (0,0,1.6))
     seat["runtime_owner"] = "Warden actor transform; scale one; no authored tracks"
     body = common.Part("SeatCasting")
-    # The casting stands on the pit floor at exactly 0: a chamfer would lift its foot.
     body.bevel = 0
     lathe(body, [(1.7,-1.6),(2.55,-1.4),(2.8,-.85),(2.8,.65),(2.7,1.25),
                  (1.8,1.6),(1.4,1.6),(1.4,1.25),(2.15,.55),(2.15,-1.05),(1.7,-1.3)],
           24, slots=[M1,M1,M1,M1,M1,M1,M2,M2,M2,M2,M1])
-    # Three open cast rails connect the low body to the elevated core. The central
-    # target sphere is kept clear; these rails are above the inherited collider.
     for i in range(3):
         a = i*math.tau/3 + math.pi/6
         r = Vector((math.cos(a),math.sin(a),0))
         body.beam(M1, r*1.85+Vector((0,0,1.25)), r*1.65+Vector((0,0,6.6)), .32, .48, color=BONE)
         body.beam(M1, (0,0,6.85), r*1.65+Vector((0,0,6.6)), .30, .25, color=BONE)
-    # Cradle rim at actor-local 5.2, with a clear 2.6 m core aperture.
     lathe(body, [(1.55,4.95),(1.72,5.05),(1.72,5.35),(1.55,5.45),(1.37,5.45),(1.37,4.95)],
           24, slots=[M1,M1,M1,M1,M2,M1])
     mesh(body, seat)
@@ -214,14 +202,12 @@ def pressure(parent, i):
     lip = empty("PressureLip%d" % i, parent, (2.25*math.cos(angle),2.25*math.sin(angle),1.0))
     lip.rotation_euler.z = angle
     p = common.Part("PressureCasting%d" % i)
-    # Exact 1.8 tangent x .4 radial x .35 high. Bone housing and striped working face.
     p.box(M1, (.4,1.8,.35), color=BONE)
     count = 8
     for j in range(count):
         y0, y1 = -.9+j*1.8/count, -.9+(j+1)*1.8/count
         vs = [p.bm.verts.new(v) for v in [(.205,y0,-.175),(.205,y1,-.175),(.205,y1,.175),(.205,y0,.175)]]
         p.paint([p.bm.faces.new(vs)], M4, HAZARD if j%2 == 0 else DARK)
-    # Diagonal top stripes: clip against the exact rectangular working-face bounds.
     for j in range(-2,10):
         polygon = [(-.2,-.9+j*.24),(.2,-.9+j*.24+.18),(.2,-.9+(j+1)*.24+.18),(-.2,-.9+(j+1)*.24)]
         for limit, keep_above in [(-.9,True),(.9,False)]:
@@ -257,8 +243,6 @@ def build_kit():
         signal = common.Part(name)
         signal.ico(M4,1.18,2,color=color)
         if name=="CoreUnready":
-            # A neutral optical aperture makes the small tracking rotation visible.
-            # It shares the signal primitive and adds no target or draw call.
             center=signal.bm.verts.new((0,1.20,0))
             iris=[signal.bm.verts.new((.32*math.cos(i*math.tau/16),1.20,.32*math.sin(i*math.tau/16))) for i in range(16)]
             for i in range(16):
@@ -346,8 +330,6 @@ def poses(root, clip):
             track("CoreLive","scale",[(0,(1,)*3),(.25,(1,)*3),(duration,(.001,)*3)])
             for i in range(3):
                 track("IntakeVane%d"%i,"rotation_euler",[(0,(.05,0,i*math.tau/3)),(duration,(0,0,i*math.tau/3))])
-    # The paired file carries the same clip library. An intentionally static track
-    # preserves a named clip whose moving controls belong only to the other file.
     if not tracks:
         name="SpineInner" if "SpineInner" in found else "CoreShutter0"
         rest=tuple(found[name].scale)
@@ -371,8 +353,6 @@ def animate(root):
                 for time,value in keys:
                     setattr(obj,path,value)
                     obj.keyframe_insert(data_path=path,frame=1+time*FPS)
-            # Eased keys that blend into each other: clamped auto handles never overshoot,
-            # so every key pose and warning endpoint lands exactly on its time.
             for layer in action.layers:
                 for strip in layer.strips:
                     for bag in strip.channelbags:
@@ -410,7 +390,6 @@ def export(root,path):
     json_size=struct.unpack_from("<I",blob,12)[0]
     gltf=json.loads(blob[20:20+json_size])
     # Blender's global object namespace suffixes the second CoreSocket. GLB files
-    # have independent namespaces; keep the exact consumer names in each export.
     for row in gltf["nodes"]:
         name=row.get("name","")
         stem,_,suffix=name.rpartition(".")
@@ -431,7 +410,6 @@ def export(root,path):
             draws+=1
             verts+=gltf["accessors"][primitive["attributes"]["POSITION"]]["count"]
             tris+=gltf["accessors"][primitive["indices"]]["count"]//3
-    # Polished caps (POLISH.md, 18 Oct), half and two thirds of the class caps.
     caps=(10000,9600,32) if path.stem.endswith("base") else (4000,4000,18)
     assert 0<tris<=caps[0] and verts<=caps[1] and draws<=caps[2], (path,tris,verts,draws,caps)
     result={"file":path.name,"bytes":len(blob),"sha256":hashlib.sha256(blob).hexdigest(),

@@ -1,20 +1,3 @@
-// Copy the packed music Oggs into a worktree. The Oggs are gitignored, so a fresh worktree holds the
-// manifests and no audio: the export and the audio gate then report stems missing, and the title intro
-// falls back to the plain title row.
-//
-//   node scripts/stems-sync.mjs [--to <music_ace dir>] [--from <dir> ...]
-//
-// The target defaults to this checkout's sketches/core-loop/assets/music_ace; the sources default to the
-// main checkout's copy, ~/scratch/w46/music_ace-v2 (Ogg-only short-paged 20 ms set with the 6 short
-// older-pack clips trimmed -0.8 dB under -1 dBTP and Take 6107 restored for spillway/cable_reach),
-// ~/scratch/w33/music_ace-full (every stem re-paged into 20 ms Ogg pages), ~/scratch/w19/music_ace-full
-// (wave 19 repacks, such as the s4404 Brindle phase 2 cover), ~/scratch/w18/music_ace-full (the wave 18
-// set, with the boss anthems), ~/scratch/w17/music_ace-full and ~/scratch/repage/music_ace (the repaged
-// archive fallback). Every file listed in the target's STEMS.sha256 is
-// either present with the listed hash (left alone), absent and copied from the first source whose copy has
-// the listed hash, or reported. A file whose hash differs, in the target or in every source, is never
-// overwritten: it is named as mismatched, and so is a listed file no source holds. The exit is 1 when any
-// file is mismatched or missing, so a build can refuse to go on.
 import { copyFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";

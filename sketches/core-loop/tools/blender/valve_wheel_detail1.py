@@ -23,9 +23,6 @@ import valve_wheel as vw
 from valve_wheel import kit, common, strut, frustum, tube, section_ring, around, TONES
 
 DETAIL = [1500, 3000, 1]
-# Each shell must stay inside its base frame's bounds (additive, no silhouette change), within this margin.
-# The wheel frame allows the hub nut and back boss along the axle (A4, A5): the back boss stops short of the shaft's
-# gearbox, the nut 0.12 m proud of the cap.
 BASE_BOUNDS = {"wheel": ([-1.9, -.42, -1.9], [1.9, .53, 1.9]), "mount": ([-.65, 0, -2.35], [1.05, 1.82, -.10])}
 MARGIN = .12
 

@@ -42,13 +42,9 @@ ROOM = [1.2, 'near_miss', 'near_whoosh', 'room', 0.3, -8.0, ['threat_tear']]
 
 
 def run():
-    # The game ducks the tear already sounding (started 1.0) at 1.2 and not the one starting at 1.25.
     duck = sim(STARTS + [ROOM, [1.2, 'near_miss', 'threat_tear', 'duck', 1.0, -8.0]])
-    # Whoosh, then a hit: the game restores the ducked tear at 1.25.
     early = sim(STARTS + [ROOM, [1.2, 'near_miss', 'threat_tear', 'duck', 1.0, -8.0], [1.25, 'hurt', 'threat_tear', 'restore', 1.0, 0.0]])
-    # A planted disagreement: the rows duck the bell, which the old rule would never do, and not the tear, which it would.
     planted = sim(STARTS + [ROOM, [1.2, 'near_miss', 'bell', 'duck', 1.0, -6.0]])
-    # A second hit inside the first hit's hold: the game restores and ducks again in one call, so the rows share a time.
     again = sim(STARTS + [[1.2, 'hurt', 'bell', 'duck', 1.0, -10.0], [1.3, 'hurt', 'bell', 'restore', 1.0, 0.0], [1.3, 'hurt', 'bell', 'duck', 1.0, -10.0]])
     old_log = None
     try:

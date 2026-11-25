@@ -1,19 +1,10 @@
 extends SceneTree
 
-# Stills of the Slag Bowl's Fleet yard (world 1 unit 9): the stands, furnaces, ladles and ledger from the floor and
-# from a crane mast, in each of Brindle's three phases (the turns mid-cheer). Needs a rendered display:
-#
-#   xvfb-run -s "-screen 0 1920x1080x24" <godot> --path sketches/core-loop --script res://tools/arb_yard_stills.gd \
-#     -- --out=<absolute dir> [--hold]
-#
-# --hold stops Brindle's attack clock on entry, so no telegraph covers the dressing. The play_* views stand where the
-# fight's chase camera does (arm 12 m behind the ball, looking at Brindle) at eight bearings round the floor.
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# name, eye (arena angle degrees, radius, height), look-at (angle, radius, height)
 const VIEWS := [
 	["floor_to_stand_a", [120.0, 20.0, 5.0], [300.0, 72.0, 20.0]],
 	["floor_to_ledger", [0.0, 24.0, 6.0], [180.0, 76.0, 23.0]],
@@ -73,7 +64,6 @@ func _run() -> void:
 		if phase >= 2:
 			game.boss.jump_to_phase(phase)
 		var yard = game.boss.arena.get_node("ArenaBowlDress/FleetYard")
-		# Mid-cheer for the turns, settled for the rest.
 		for i in (40 if phase >= 2 else 150):
 			await process_frame
 		for view in VIEWS:
@@ -100,7 +90,6 @@ func _run() -> void:
 	quit(0)
 
 
-# A point in the bowl's frame: arena angle in degrees, radius, height above the bowl floor.
 func _at(spot: Array) -> Vector3:
 	var arena = game.boss.arena
 	return arena.global_position + arena.dir(deg_to_rad(spot[0])) * spot[1] + Vector3.UP * spot[2]

@@ -38,18 +38,14 @@ STEMS = ('drums', 'bass', 'other')
 SILENT_DB = -80.0
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
-from repage import PAGE_USEC  # noqa: E402
+from repage import PAGE_USEC
 SKETCH = HERE.parents[1]
 OUT = SKETCH / 'assets' / 'music_ace' / 'spillway'
 SLICE = Path('/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0')
 WARDEN_TAKES = {'s42': 'warden-F-085-s42', 's7': 'warden-F-085-s7'}
 CALM_TAKE = 'calm-F-085-s1001'
-# The ACE stems at unity sit about 4 dB under the synth band. RMS over 24 s, headless: the synth
-# band -13.0 dB at pressure 0.3 and -14.6 dB on the Warden; the stems through the sequencer
-# -17.4 dB in calm and -18.5 dB in the build.
 LEVEL_DB = 4.0
 
-# clip id -> (parent, timeline state its bars come from, loop target bar or None)
 CLIPS = {
     'calm': ('calm', 'calm', 1),
     'travel': ('calm', 'travel', 1),
@@ -61,12 +57,6 @@ CLIPS = {
     'cadence': ('warden', 'return', None),
 }
 
-# How the game moves through the clips. enter: "bar" waits for the current section's next
-# bar line, "beat" for its next beat. phase "keep" enters at the current beat of the bar,
-# "start" at the clip's first beat. hold_bars protects a section from systemic requests
-# for that many bars (a pivot or a drop is heard whole). then names what follows a
-# one-shot or a counted section: a section id, "follow" (whatever the game asks for
-# now) or "release" (the directed set piece ends and systemic play resumes).
 SECTIONS = {
     'calm': dict(clip='calm', game='shelf, closed Warden, pressure low', enter='bar', phase='start', profile='full'),
     'travel': dict(clip='travel', game='shelf, pressure up', enter='bar', phase='start', profile='full'),
@@ -88,7 +78,6 @@ SECTIONS = {
 SET_PIECE = ['break', 'return', 'home']
 PROFILES = {
     'full': {s: dict(volume_db=0.0, lowpass_hz=None) for s in STEMS},
-    # Moss's bay: the lounge sits the kit back so his babble reads over it.
     'lounge': dict(drums=dict(volume_db=-12.0, lowpass_hz=None), bass=dict(volume_db=-4.0, lowpass_hz=None),
                    other=dict(volume_db=0.0, lowpass_hz=None)),
 }
@@ -237,7 +226,6 @@ def main():
               + (f', loops to bar {loop_bar}' if loop_bar else ', one-shot'), flush=True)
     build_loop = json.loads((slice_dir / 'round2/automation/build.json').read_text())['loop']
     if args.warden == 's42':
-        # The automation file's reason was written for s7; this is the packaged take's own seam.
         build_loop['reason'] = "Bars 9 to 16 loop on warden-F-085-s42 (the packaged take). Measured on its packaged build clip (fix round 2, scratchpad/acemusic-fix2/seam_s42.py): the native 16 -> 9 wrap's join step is 26.3 dB under the loop's own 99.9th-percentile step, and its kick lands 10.2 ms off the grid across the join (an ordinary bar boundary reads 13.1 ms in the same measure). warden-F-085-s7's 16 -> 1 wrap read 17.4 ms in pack 3's screen, which is why the loop never targets bar 1."
     manifest = dict(
         format=1, theme='spillway', rate=RATE, key='D', key_offset=0, stems=list(STEMS), level_db=LEVEL_DB,

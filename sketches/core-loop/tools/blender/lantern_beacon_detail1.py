@@ -28,7 +28,6 @@ SIZE = [5.5, 20.436, 6.219]
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     t = lb.TONES[name]
     assert name != "state", "a detail shell never paints the state key"
     return common.srgb(t) if isinstance(t, str) else t
@@ -39,7 +38,6 @@ def ring(s, r0, r1, y0, y1, n=12, color=None, caps=(True, True), at=(0, 0)):
 
 
 def stud(s, center, axis, r, depth, n, color):
-    # An n-sided boss from center outward along axis, top capped, base open (buried in the part it sits on).
     c, d = Vector(center), Vector(axis).normalized()
     u = Vector((0, 1, 0)) if abs(d.y) < .9 else Vector((1, 0, 0))
     v = d.cross(u).normalized()
@@ -62,7 +60,6 @@ def collar(s):
 
 
 def feet(s):
-    # Domed rubber caps over the base hex feet: an 8-sided skirt and a two-ring dome.
     for angle in lb.LEG_ANGLES:
         a = math.radians(angle)
         r, y = lb.LEG_PATH[-1]
@@ -89,8 +86,6 @@ def lantern(s):
 
 
 def brackets(s):
-    # The picture's bracket loops reach up to the threaded fitting under the cap: extend each side upright from the
-    # base bracket's top arm to just under the cap rim, close it inward to the fitting, and round the elbows.
     out, top, bottom = lb.BRACKET
     head = lb.CAP[1] - .12
     fit = lb.TOP_FIT[0]

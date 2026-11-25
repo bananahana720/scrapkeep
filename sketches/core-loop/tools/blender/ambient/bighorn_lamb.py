@@ -18,24 +18,21 @@ import math
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+from _life import Critter
 
 life = Critter("bighorn_lamb")
 
-HY = 0.49  # head centre height
-HZ = -0.2  # head centre z
+HY = 0.49
+HZ = -0.2
 
-# --- wool: one fluffy mass from overlapping lobes of one colour
 life.ellipsoid("body", "wool", (0, 0.29, 0.02), (0.17, 0.15, 0.2), subsurf=0, u=16, v=10)
 for s in (-1, 1):
     life.ellipsoid("body", "wool", (0.1 * s, 0.325, -0.09), (0.11, 0.105, 0.11), subsurf=0, u=12, v=8)
     life.ellipsoid("body", "wool", (0.1 * s, 0.30, 0.15), (0.11, 0.11, 0.115), subsurf=0, u=12, v=8)
 life.ellipsoid("body", "wool", (0, 0.40, 0.01), (0.115, 0.075, 0.14), subsurf=0, u=12, v=8)
-life.ellipsoid("body", "wool", (0, 0.375, -0.15), (0.1, 0.1, 0.085), subsurf=0, u=12, v=8)   # chest and neck cloud
-# cream bib low on the chest
+life.ellipsoid("body", "wool", (0, 0.375, -0.15), (0.1, 0.1, 0.085), subsurf=0, u=12, v=8)
 life.ellipsoid("body", "cream", (0, 0.25, -0.163), (0.06, 0.055, 0.04), subsurf=0, u=12, v=8)
 
-# --- head: plum, a soft muzzle, a nose, big friendly eyes
 life.ellipsoid("head", "face", (0, HY, HZ), (0.095, 0.088, 0.1), subsurf=0, u=12, v=8)
 life.ellipsoid("head", "face", (0, HY - 0.032, HZ - 0.076), (0.055, 0.047, 0.06), subsurf=0, u=12, v=8)
 life.ellipsoid("head", "eye", (0, HY - 0.016, HZ - 0.14), (0.02, 0.015, 0.015), subsurf=0, u=10, v=7)
@@ -43,7 +40,6 @@ life.ellipsoid("jaw", "face", (0, HY - 0.064, HZ - 0.07), (0.04, 0.025, 0.05), s
 for s in (-1, 1):
     life.ellipsoid("head", "eye", (0.07 * s, HY + 0.018, HZ - 0.066), (0.026, 0.031, 0.02), rot=(0, 0, 0), subsurf=0, u=12, v=8)
     life.ellipsoid("head", "cream", (0.077 * s, HY + 0.028, HZ - 0.082), (0.009, 0.01, 0.006), subsurf=0, u=8, v=5)
-    # horn: a thick curl in the front-facing plane with a slight forward drift, ending in a rounded nub
     cx, cy = 0.125 * s, HY + 0.09
     pts, rad = [], []
     angles = [200, 165, 130, 95, 60, 25, -10, -45, -80, -115, -145]
@@ -53,15 +49,12 @@ for s in (-1, 1):
         rad.append(0.037 - 0.0012 * i)
     life.tube("head", "horn", pts, rad, sides=8, subsurf=0, cap=0.9)
 
-# floppy ears and a wool forelock between the horns
 for s, bone in ((-1, "ear_l"), (1, "ear_r")):
     life.ellipsoid(bone, "face", (0.115 * s, HY - 0.015, HZ + 0.035), (0.022, 0.06, 0.036), rot=(0, 0, -14 * s), subsurf=0, u=12, v=8)
 life.ellipsoid("head", "wool", (0, HY + 0.085, HZ - 0.015), (0.06, 0.042, 0.065), subsurf=0, u=12, v=8)
 
-# --- tail tuft
 life.ellipsoid("tail", "cream", (0, 0.31, 0.225), (0.038, 0.042, 0.034), subsurf=0, u=12, v=8)
 
-# --- legs: short sturdy plum posts, round hooves
 LEGS = {"leg_fl": (-0.085, -0.1), "leg_fr": (0.085, -0.1), "leg_bl": (-0.095, 0.13), "leg_br": (0.095, 0.13)}
 for bone, (x, z) in LEGS.items():
     life.capsule(bone, "face", (x, 0.24, z), (x, 0.05, z), 0.048, 0.04, subsurf=0, u=10, v=7)
@@ -85,7 +78,6 @@ REST = {}
 LEGS_ = list(LEGS)
 EARS = ("ear_l", "ear_r")
 
-# --- idle, 2.8 s: chew (period 0.7 s), an ear flick, a little weight shift; the breath is slow
 chew = []
 for i in range(8):
     chew.append((i * 0.35, {"rot": (-13 if i % 2 else 0, 0, 0)}))
@@ -104,7 +96,6 @@ life.cycle("idle", 2.8, {
     "leg_br": [(0, REST), (0.7, {"scale": (1, 0.985, 1)}), (1.4, REST)],
 })
 
-# --- move, 1.2 s: two bouncy hops (0.6 s each). Land squashed, spring, fly with the feet tucked, reach, land.
 UP = 0.075
 def hop(t0):
     k = {"body": [], "head": [], "tail": [], "ear_l": [], "ear_r": []}
@@ -131,7 +122,6 @@ a, b = hop(0.0), hop(0.6)
 move = {bone: a[bone] + b[bone] for bone in a}
 life.cycle("move", 1.2, move)
 
-# --- react, 2.0 s: startle (head up, legs stiff), a stiff-legged pronk, then crouched low ready to bound; hold from 0.8 s
 START = {
     "body": {"loc": (0, 0.014, 0), "rot": (-3, 0, 0), "scale": (0.98, 1.05, 0.98)},
     "head": {"rot": (24, 0, 0), "loc": (0, 0.012, 0.004)},

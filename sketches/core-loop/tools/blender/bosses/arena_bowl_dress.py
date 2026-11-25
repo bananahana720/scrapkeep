@@ -72,7 +72,6 @@ def build():
     repairs = common.Part("RimRepairs")
     for k in range(24):
         a = k * math.tau / 24
-        # Shallow bolted repairs on the retaining face, above the riding lane.
         box(repairs, (.10, 5.65, .62), polar(a, 59.97, 13.05), "674f3e", yaw=-a)
         for y in [10.6, 13.1, 15.5]:
             repairs.rod(METAL, xyz(polar(a, 59.86, y)), xyz(polar(a, 59.73, y)),
@@ -92,7 +91,6 @@ def build():
         beam(rails, polar(a, 62.1, 10), polar(a, 64, 19.75), .34, "484e45")
         beam(rails, polar(a, 62.5, 19.56), polar(a, 65.5, 19.56), .28, "686354", .34)
         box(rails, (1.0, .18, 1.0), polar(a, 61.3, 16.1), "866851", yaw=-a)
-    # Two idle trolley frames stay outside the inner wall and below the skyline.
     for a in [math.radians(35), math.radians(200)]:
         box(rails, (3.6, .65, 4.0), polar(a, 64, 20.4), "405751", yaw=-a)
         for da in [-.022, .022]:
@@ -102,7 +100,6 @@ def build():
     spouts = common.Part("PourSpouts")
     for degrees in [15, 165, 255]:
         a = math.radians(degrees)
-        # Idle, open U troughs stop above the wall. No scenery hangs over the lane.
         beam(spouts, polar(a, 68, 19.1), polar(a, 60.25, 16.8), 2.5, "775c43", .24, COPPER)
         for side in [-1, 1]:
             da = side * .018
@@ -111,7 +108,6 @@ def build():
         box(spouts, (2.9, .16, 4.3), polar(a, 69, 19.9), "766a56", yaw=-a)
         for da in [-.020, .020]:
             beam(spouts, polar(a+da, 69, 16), polar(a+da, 69, 19.2), .28, "4b5149")
-        # Catch pans support the cooled overflow beyond the wall.
         box(spouts, (8.0, .25, 8.0), polar(a, 70.5, 15.43), "4c5148", yaw=-a)
     spouts.to_object(parent=root)
 
@@ -119,7 +115,6 @@ def build():
     for at, sx, sz, seed in [((-7, .009, -5), 5.2, 3.5, 19), ((9, .009, 7), 3.6, 4.4, 27),
                               ((-24, .009, 5), 2.3, 3.2, 36), ((5, .009, -25), 3.2, 2.1, 41)]:
         pool(slag, at, sx, sz, seed)
-    # Cooled overflow outside the rim, recognizably separate from the live slag channels.
     for k, degrees in enumerate([15, 165, 255]):
         pool(slag, polar(math.radians(degrees), 70.5, 15.6), 3.5, 3.0, 100+k)
     slag.to_object(parent=root)

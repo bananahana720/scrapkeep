@@ -4,20 +4,10 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Board := preload("res://tools/audio_board.gd")
 
-# The AU2 bank's listening board (design-v3/AUDIO-V3.md section 7's listening receipt).
-# Every new sfx_bank.gd recipe from this wave, solo, mastered to -14 LUFS under a -1
-# dBFS ceiling through the same pipeline as tools/audio_board.gd, plus one concatenated
-# reel with a 0.4 s gap between cues. How it sounds is Andrew's; this only proves the
-# files exist, non-silent, at the mastered level.
-#
-#   godot --headless --path sketches/core-loop --script res://tools/au2_board.gd
-#   ... -- --out=/abs/dir
-# The default output is <repo>/artifacts/local/au2 (gitignored).
 
 const DEFAULT_OUT := "../../artifacts/local/au2"
 const GAP_SECONDS := 0.4
 
-# design-v3/AUDIO-V3.md section 8's AU2 bank row, in the design's own order.
 const CUES := [
 	"bet_roll", "bet_clunk", "bet_crack", "bet_refusal",
 	"sunken_bell", "ally_hum_sable", "ally_hum_rivet", "ally_hum_kest", "ally_wake",
@@ -27,7 +17,6 @@ const CUES := [
 ]
 
 
-# One cue, solo, mastered through the board's own Take/master/to_wav pipeline.
 static func _take(id: String) -> Board.Take:
 	var take := Board.Take.new()
 	var buf := SfxBank.samples(id)

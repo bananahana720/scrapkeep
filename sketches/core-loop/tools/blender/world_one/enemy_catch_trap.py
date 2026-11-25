@@ -1,20 +1,3 @@
-# C22 Catch trap: a small Fleet oxide crew under an open, sixteen-sided spring cup.
-# The cup has a dark empty well, oxide tapered walls, a worn grey lip and one red
-# hostile latch tab. A side spring stack, pivot pin and long release paddle stand
-# outside the well. They travel with the cup; the runtime has no jaw or lever pose.
-# The crew has charcoal boots, belt and pack, with one brass chest tag.
-#
-# Two meshes / three opaque surfaces: CatchBody (fleet_paint + vertex paint) and
-# CatchCup (vertex paint). CatchCup's origin is its centre; catch_trap.gd supplies
-# both carried and deployed positions. Blender +Z is Godot up; Blender -Y is +Z.
-# The literal 0.8 m collider footprint, including the carried cup's -0.3 m offset,
-# limits the mouth to 0.48 m radius and the base to 0.30 m (source maxima 1.2/0.7).
-# The tool has no geometry in its well above the floor at local y -0.28 m.
-# Provenance: procedural bmesh, no external meshes or textures.
-#
-# systemd-run --user --scope -p MemoryMax=20G -p MemorySwapMax=2G \
-#   blender -b --factory-startup -P enemy_catch_trap.py -- [--out file.glb]
-
 import math
 import os
 import sys
@@ -30,7 +13,6 @@ import polish
 from common import Part
 
 common.reset()
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("CatchTrap")
 CHAR = "charcoal"
@@ -53,14 +35,11 @@ for side in (-1, 1):
 b.cyl("paint", 0.37, 0.37, 0.09, segs=10, loc=g(0, -0.05, 0.08), color=CHAR)
 b.box("paint", (0.40, 0.20, 0.45), loc=g(0, 0.10, -0.31), color=CHAR)
 b.box("paint", (0.22, 0.04, 0.14), loc=g(0, 0.20, 0.405), color="brass")
-# The old works' two marks, cast in under the Fleet's paint: the crew number and HIRED, one on
-# each cheek of the hoist block, the part of it that stands clear of the cup.
 crew.cast_number(b, "paint", "05", (0.185, -0.18, 0.80), (1, 0, 0), 0.15)
 crew.hired(b, "paint", (-0.185, -0.18, 0.80), (-1, 0, 0), 0.05)
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 
-# Cup wall: four rings, sealed underside and a recessed floor, no top cap.
 c = Part("CatchCup")
 c.bevel = 0
 c.subsurf = 0
@@ -80,8 +59,6 @@ for k in range(N):
     c.paint([bm.faces.new((rows[3][k], rows[3][n], floor))], "paint", CHAR)
     c.paint([bm.faces.new((rows[0][n], rows[0][k], bottom))], "paint", CHAR)
 
-# Release assembly on +X: charcoal spring core, four iron collars, worn paddle,
-# dark pivot pin and a red latch at its upper end. All are outside the well.
 c.box("paint", (0.045, 0.10, 0.40), loc=g(0.415, -0.02, 0.02), color=CHAR)
 for y in (-0.16, -0.06, 0.04, 0.14):
     c.box("paint", (0.055, 0.14, 0.04), loc=g(0.425, y, 0.02), color=IRON)

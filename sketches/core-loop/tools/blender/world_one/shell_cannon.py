@@ -61,25 +61,21 @@ from mathutils import Matrix, Vector
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
-import common  # noqa: E402
-from common import Part  # noqa: E402
-import shell_base as sb  # noqa: E402
+import common
+from common import Part
+import shell_base as sb
 
 MODEL = HERE.parents[2] / "assets/models/world_one/shell_cannon.glb"
 VARIANT_MODELS = {"choir": HERE.parents[2] / "assets/models/world_one/shell_cannon_choir.glb"}
 SHELL_BAND = (3000, 11000)
-# hero_six_pilot_budget_test OVER_CAP holds the default at 7,738 and the Choir at 7,742.
 TRI_HOLD = {"": 7738, "choir": 7742}
 DRAW_CAP = 12
 REACH_CAP = 1.75
 GROUND_Z = -0.55
 
-# Lattice enamel, seat and controls (ROSTER-LOOK 0.2, 6; PILOT-CLIPS section 5).
 ENAMEL = "petrol"
 SEAT = "charcoal"
 BANK = (("PlateCrank", "crank"), ("CableClamp", "lever"))
-# Cast colours, all at or under HSV value and saturation 0.45 (the section 11 enamel cap,
-# hero_assets_test ENAMEL_CAP): slate casting, raised unlit petrol bands, dark copper keeper straps.
 STONE = "736b5a"
 SLATE = common.mix("petrol", "charcoal", 0.55)
 DARK = common.mix("charcoal", "petrol", 0.15)
@@ -88,17 +84,11 @@ BAND = "5e4836"
 BORE = "242a28"
 CHOIR = common.mix("petrol", STONE, 0.35)
 
-# The barrel (pilots/cannon.md section 5, re-cast by E2-06): its axis runs parallel to Y at
-# (SIDE * X_C, y, Z_C), on the pilot's left (SIDE -1), Z_C above the band so the casting clears
-# the band and the bearing collar, and the lattice by 0.01 m at the collar. PIVOT is the
-# trunnion on the bone yoke, near the breech, so a pitch swings the long front, not the breech.
 SIDE = -1
 X_C = 1.22
 Z_C = 0.28
 PIVOT = Vector((SIDE * X_C, -0.18, Z_C))
 PITCH = (-10.0, 35.0)
-# (y from, y to, radius from, radius to, colour): rear cap, breech, step, mid, step; each piece
-# overlaps the next by 0.005 m so no cap ring meets another (welded caps were 34 non-manifold edges).
 PROFILE = (
     (-0.43, -0.39, 0.185, 0.185, DARK),
     (-0.40, 0.11, 0.215, 0.215, SLATE),
@@ -107,25 +97,20 @@ PROFILE = (
     (0.615, 0.66, 0.158, 0.138, SLATE),
 )
 MUZZLE_Y = 1.035
-MUZZLE_R = (0.075, 0.155)         # bore, swell (shell_cannon_plates.py --ring-scrap reads it)
+MUZZLE_R = (0.075, 0.155)
 MUZZLE = ((0.655, 0.97, 0.138, 0.132, SLATE), (0.965, MUZZLE_Y, 0.155, 0.155, DARK))
 BREECH_R = 0.215
-# Four raised petrol family bands, lane, split, rush, plate from breech to muzzle, each with one
-# 6 mm ancient-green seam (class_accent) broken by one notch; no fastener on any band.
 BANDS_Y = (-0.22, 0.30, 0.48, 0.80)
 BAND_W = 0.045
 BAND_PROUD = 0.02
 SEAM_W = 0.006
 SEAM_PROUD = 0.004
 NOTCH_ARC = 0.035
-# The keeper strap round the breech casting (dark copper, cast on: no fastener).
 STRAP = (-0.33, -0.30, 0.226)
-SHUTTER = (-0.15, 0.21, 0.255)    # y, r_in, r_out: the sector shield on top of the breech
-# The heavy breech collar on the step: rest span, radius, and its kick back along the bore.
+SHUTTER = (-0.15, 0.21, 0.255)
 COLLAR_Y = (-0.02, 0.10)
 COLLAR_R = 0.235
 COLLAR_KICK = 0.09
-# The bone side yoke on WeaponRing: saddle from the band to the barrel, outer cheek, trunnion pin.
 RING_SEGS = 32
 COLLAR_SEGS = 20
 
@@ -143,27 +128,17 @@ def ax(y):
     return Vector((SIDE * X_C, y, Z_C))
 
 
-# Split ports (bracket carriers): twin-bore copper blocks low at the rear sides, every vertex
-# outside the ball above GROUND_Z (ROSTER-LOOK section 3 rule 6, E2-06's ruling). From the mid
-# chase eye their centres sit about 60 degrees below horizontal, 5 and 7 o'clock (ROSTER-LOOK
-# section 4; 4 and 8 is Tarn's), outside the 35 degree sight cone; main() prints the CLOCK line.
 PORT_DIR = Vector((0.37, -0.83, -0.415))
 PORT_R = 1.045
-# The nominal block the class V hoods fit (shell_cannon_plates.py reads it): radial, forward, up.
 PORT_SIZE = (0.11, 0.26, 0.12)
 BORE_R = 0.034
-# The built block: chunkier across, shortened forward so its low front corner clears GROUND_Z;
-# its rear face stays at -PORT_SIZE[1] / 2 along the bore, where SplitExit sits.
-BLOCK = (0.15, (-0.13, 0.045), 0.15)    # radial, (forward from, to), up
-# The rear jaws: two copper brackets per port behind the block's rear face, open JAW_TRAVEL
-# apart from the flush lock; each a bar and a lip that clamps over the block's rear edge.
-JAW = (0.20, 0.05, 0.075)               # radial, forward, up
-JAW_F = -0.20                           # jaw centre along the bore
-JAW_N = 0.035                           # jaw centre outward
+BLOCK = (0.15, (-0.13, 0.045), 0.15)
+JAW = (0.20, 0.05, 0.075)
+JAW_F = -0.20
+JAW_N = 0.035
 JAW_TRAVEL = 0.07
 JAW_BONES = ("JawUpper.R", "JawLower.R", "JawUpper.L", "JawLower.L")
-# Rush ring under the pod, inside the lattice and outside the gimbal sweep (0.862).
-RUSH = (0.14, 0.21, 0.04, -0.88)  # r_in, r_out, depth, z
+RUSH = (0.14, 0.21, 0.04, -0.88)
 
 
 def flag(name, default=None):
@@ -210,7 +185,6 @@ def fold_slot(obj, slot, color):
             moved += 1
     bm.to_mesh(obj.data)
     bm.free()
-    # pop() shifts the face indices above the removed slot down by one.
     obj.data.materials.pop(index=src)
     return moved
 
@@ -298,7 +272,6 @@ def split_port(p, side, weigh):
         j = jaw_centre(side, upper)
         sign = 1 if upper else -1
         weigh(oriented_box(p, "copper", j, (n, f, u), JAW), bone)
-        # The lip sinks 2 mm into its bar and stays 4 mm narrower, so no corner of the two welds.
         lip = j + f * (JAW[1] / 2 + 0.028) + u * (sign * (JAW[2] / 2 - 0.012))
         weigh(oriented_box(p, "copper", lip, (n, f, u), (JAW[0] - 0.004, 0.06, 0.02)), bone)
 
@@ -376,7 +349,7 @@ def cannon_ring():
     for k in range(10):
         a = (k + 0.5) * math.tau / 10
         if SIDE * math.cos(a) > 0.8:
-            continue  # the yoke's saddle takes the clamp on the barrel's side
+            continue
         r.box("paint", (0.06, b_out - b_in + 0.012, b_h + 0.012), loc=((b_in + b_out) / 2 * math.cos(a),
               (b_in + b_out) / 2 * math.sin(a), b_z), rot=(0, 0, a + math.pi / 2), color="charcoal")
     c_in, c_out, c_h, c_z = sb.RING_COLLAR
@@ -401,8 +374,6 @@ def _band(b, y, k):
     band_r = body_r(y) + BAND_PROUD
     b.rod("ancient_enamel", ax(y - BAND_W / 2), ax(y + BAND_W / 2), band_r, 12, color=PETROL)
     seam = b.rod("class_accent", ax(y - SEAM_W / 2), ax(y + SEAM_W / 2), band_r + SEAM_PROUD, 12)
-    # Only the seam's 6 mm side glows: its end caps sit inside the band and show only where the
-    # cutaway opens the barrel, so they take the band's petrol, never a solid green disc.
     b.paint([f for f in seam if len(f.verts) > 4], "ancient_enamel", PETROL)
     a = math.pi / 2 + SIDE * (0.6 + 0.5 * k)
     d = Vector((math.cos(a), 0, math.sin(a)))
@@ -452,7 +423,6 @@ def breech_collar():
     y0, y1 = COLLAR_Y
     c.rod("ancient_enamel", ax(y0), ax(y1), COLLAR_R, 16, color=DARK)
     y_axis = Vector((0, 1, 0))
-    # The ribs straddle the direction to the ball's centre, so none points into the lattice.
     inward = math.atan2(-Z_C, -SIDE * X_C)
     for k in range(6):
         a = inward + math.pi / 6 + k * math.tau / 6
@@ -483,7 +453,6 @@ def build_shell(variant=""):
         shell = sb.hoberman("Cannon", enamel=ENAMEL, seat=SEAT, pairs=2, bank=BANK)
     finally:
         sb.cockpit, sb.weapon_ring = _BASE_COCKPIT, _BASE_RING
-    # The animated pilot is fitted at run time; a Pilot node here would be a second pilot.
     bpy.data.objects.remove(shell["pilot"], do_unlink=True)
     pod, ring, core = shell["pod"], shell["ring"], shell["core"]
     print("CORE rubber folded into paint: %d faces; studs shaded smooth: %d"
@@ -656,7 +625,6 @@ def main():
     if (hits or band_hits or closest <= sb.CORE_LIMIT or not ports_ok or n_draws > DRAW_CAP or reach > 1.25
             or tip > REACH_CAP or low_bad or tris > hold):
         raise SystemExit("cannon shell out of contract")
-    # finish() reads a pilot node; the shell carries none, so it gets a detached empty.
     no_pilot = common.empty("NoPilot")
     out = common.args()["out"] or str(VARIANT_MODELS.get(variant, MODEL))
     sb.finish("Cannon", root, shell["core"], no_pilot, shell_band=SHELL_BAND, pod_obj=pod, out=out)

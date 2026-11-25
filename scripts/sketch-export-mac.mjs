@@ -15,22 +15,6 @@ import {
   trackedManifests,
 } from "./sketch-export.mjs";
 
-// npm run sketch:export-mac: a macOS release of sketches/core-loop on the Mac Studio, as
-// artifacts/local/core-loop-export-mac/<run>/Scrapkeep.app with BUILD.txt in Contents/Resources, ad-hoc
-// signed (no Apple identity, no notarization), then booted headless for 300 frames, which must report
-// this commit. Every Godot launch runs with HOME
-// in a scratch folder under the run (Godot on macOS ignores XDG_DATA_HOME; scripts/godot-home.mjs),
-// and the export finds the installed templates through a link in that scratch HOME, so the player's
-// ~/Library/Application Support/Godot is read for templates only and never written.
-// --self-play keeps tools/ in the pack (the frame-time self-play needs res://tools/self_play.gd) by
-// swapping the "macOS" exclude_filter for the export alone, as sketch-export.mjs does on Linux.
-// The ACE stems are gitignored. When every stem the tracked manifests name is in --stems-from (default:
-// the main checkout's assets/music_ace) and matches STEMS.sha256, they copy into
-// Scrapkeep.app/Contents/MacOS/music_ace (the game looks beside its executable) and the boot checks
-// ACE_CHECK; otherwise the app ships with its synth music and BUILD.txt says why.
-// Not run here, unlike the Linux export: the release placeholder gate, the Vulkan boss smoke, the
-// park-table boot and the win proof. BUILD.txt lists them.
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const project = path.join(root, "sketches/core-loop");
 const stemRoot = path.join(project, "assets/music_ace");
@@ -53,8 +37,6 @@ export function parseArgs(argv) {
   return { stemsFrom, selfPlay };
 }
 
-// The Mac preset must pack what the shipped Linux preset packs, and stay universal (the installed 4.7.2 templates hold no arm64-only binary), ad-hoc signed and
-// unnotarized. Returns one line per difference; empty means in step.
 export function macPresetDrift(presets) {
   const mac = presets[MAC_PRESET];
   const shipped = presets[SHIPPED_PRESET];
@@ -74,8 +56,6 @@ export function macPresetDrift(presets) {
 }
 
 // Godot refuses a universal or arm64 macOS export unless the project imports ETC2/ASTC textures. Turning that
-// on in project.godot would make every Linux import build ASTC copies too, so the Mac export sets it
-// for its own import and export only and restores the file (as --self-play does with the preset).
 export const ASTC_SETTING = "textures/vram_compression/import_etc2_astc=true";
 export function astcProjectText(text) {
   if (text.split("\n").includes(ASTC_SETTING)) return text;
@@ -86,9 +66,6 @@ export function astcProjectText(text) {
   return lines.join("\n");
 }
 
-// The files the export swaps must match git before it starts: a run killed with SIGKILL can leave
-// the ETC2/ASTC line in, and the restore would then write that back. porcelain is
-// `git status --porcelain -- <files>`; returns the problem, or null when both are clean.
 export const SWAPPED_FILES = [
   "sketches/core-loop/project.godot",
   "sketches/core-loop/export_presets.cfg",
@@ -102,12 +79,10 @@ export function swapFilesProblem(porcelain) {
   return `${changed.join(", ")} differ from git; an earlier export may have been killed mid-swap. Check with git diff and restore the file (git restore <path>) before exporting.`;
 }
 
-// Where Godot on macOS looks for export templates under a given HOME.
 export function templatesDir(home) {
   return path.join(home, "Library/Application Support/Godot/export_templates");
 }
 
-// The one file in Contents/MacOS that is not the stem folder is the game's executable.
 export function appExecutable(app, list = readdirSync) {
   const dir = path.join(app, "Contents/MacOS");
   const files = list(dir).filter((name) => name !== "music_ace");
@@ -117,8 +92,6 @@ export function appExecutable(app, list = readdirSync) {
 }
 
 // BUILD.txt. In a .app src/core/build_stamp.gd reads Contents/Resources/BUILD.txt (codesign refuses
-// a data file in Contents/MacOS), so one copy goes there (boot null: written before the boot) and
-// the full one beside the app.
 export function macBuildStamp({ sha, dirty, stamp, godot, stems, selfPlay, boot = null }) {
   return (
     [
@@ -141,7 +114,6 @@ export function macBuildStamp({ sha, dirty, stamp, godot, stems, selfPlay, boot 
   );
 }
 
-// The boot must print the stamp it was given: build_stamp.gd's "SCRAPKEEP_BUILD commit=<sha> ...".
 export function stampFailures(output, sha) {
   const line = /^SCRAPKEEP_BUILD commit=(\S+) .*source=(\S+)/m.exec(output);
   if (!line) return ["no SCRAPKEEP_BUILD line in the boot output"];
@@ -152,9 +124,6 @@ export function stampFailures(output, sha) {
   return [];
 }
 
-// Writes each {path, text} for the length of body and puts every file back afterwards: in finally,
-// on process.exit (fail() included) and on SIGINT or SIGTERM (exit 130 or 143). SIGKILL cannot be
-// caught; git status then shows the change.
 export async function withSwappedFiles(changes, body) {
   const saved = changes.map(({ path: file }) => ({ file, text: readFileSync(file, "utf8") }));
   const restore = () => {
@@ -188,7 +157,6 @@ function fail(message) {
   process.exit(1);
 }
 
-// Copies the stems into the app when every one is present and hashes as cut; otherwise returns why not.
 async function stems(stemsFrom, app) {
   const tracks = trackedManifests(stemRoot);
   const manifests = {};
@@ -267,8 +235,6 @@ async function main() {
   await symlink(realTemplates, path.join(templatesDir(home), TEMPLATE_VERSION));
   const env = { ...process.env, HOME: home, XDG_DATA_HOME: home };
 
-  // project.godot (and, with --self-play, the preset) change for the import and export alone;
-  // withSwappedFiles puts them back on success, failure and interruption.
   const projectPath = path.join(project, "project.godot");
   const projectText = await readFile(projectPath, "utf8");
   const app = path.join(outDir, APP_NAME);
@@ -302,9 +268,6 @@ async function main() {
   const stemsFrom = path.resolve(args.stemsFrom ?? defaultStemsFrom(common.stdout.trim()));
   const stemResult = await stems(stemsFrom, app);
 
-  // The stamp goes in Contents/Resources, where the game reads it in a .app. Adding files after
-  // Godot signed the bundle breaks its seal, so the app is signed again, ad-hoc (no identity),
-  // keeping Godot's entitlements and hardened-runtime flags, and the seal is verified. Stems in
   // Contents/MacOS/music_ace have not been tried; codesign may refuse them as it did BUILD.txt there.
   const sha = run("git", ["-C", root, "rev-parse", "HEAD"]).stdout.trim();
   const dirty =

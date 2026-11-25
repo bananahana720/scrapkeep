@@ -1,8 +1,3 @@
-# Procedural class shells. VD-01 puts the clear rolling sphere under Core and
-# the seated pilot, equipment and independent gyro under upright Pod.
-# Blender +Z is up, +Y forward; glTF becomes Godot +Y up, -Z forward.
-# Original shape helpers remain for recipe equipment. spherical() owns the new assembly.
-
 import math
 import random
 
@@ -192,7 +187,6 @@ def spherical(name, kit, animal, extras=()):
     core = hull.to_object((0, 0, 0), root)
     for polygon in core.data.polygons:
         polygon.use_smooth = True
-    # Refit the existing class equipment below shoulder height, inside the ball.
     def kit_point(point):
         v = Vector(point)
         return Vector((v.x * 0.67, v.y * 0.67, (v.z - 0.78) * 0.67 - 0.28))
@@ -203,7 +197,6 @@ def spherical(name, kit, animal, extras=()):
         a = k * math.tau / 16
         normal = Vector((math.cos(a), math.sin(a), 0))
         kit.bolt(normal * 0.925 + Vector((0, 0, -0.29)), normal, r=0.018, h=0.015)
-        # Broken enamel at the rim exposes small warm metal edges.
         kit.ring("paint", 0.916, 0.925, 0.04, 2, loc=(0, 0, -0.26), color="bone",
                  arc=(a + 0.06, a + 0.13))
     kit.cyl("rubber", 0.36, 0.28, 0.16, 20, loc=(0, 0, -0.6))
@@ -218,7 +211,6 @@ def spherical(name, kit, animal, extras=()):
         kit.rod("rubber", (side * 0.32, 0.4, 0.0), (side * 0.32, 0.4, 0.1), 0.045, 8)
     pod = kit.to_object((0, 0, 0), root)
     dome = common.empty("Dome", (0, 0, 0), pod)
-    # Head groups are reduced together; the connected seated body stays full size.
     for v in animal.bm.verts:
         v.co = (v.co - Vector((0, 0.2 if name == "Kest" else 0.0, 1.1))) * 1.2325 + Vector((0, 0.015, 0.17))
     jacket = "bone" if name == "Rivet" else "oxide"
@@ -256,68 +248,26 @@ def spherical(name, kit, animal, extras=()):
     return root, core, pilot_obj
 
 
-# --- Hoberman mecha (ROSTER-LOOK section 0; unit PD-0 HOBERMAN-BASE) ----------------------
-#
-# hoberman() builds the base every pilot shell stands on. Node tree, origin at the ball centre:
-#   Core                the fully expanded Hoberman lattice; tumbles with the ball. 32 copper hubs
-#                       with rubber tread caps, Hub.00 to Hub.11 five-way and Hub.12 to Hub.31
-#                       three-way, joined by 60 scissor chains of X-pairs, and Gap.00 to Gap.29
-#                       empties at the 30 open diamonds.
-#   Pod                 upright, turns to the heading: seat, DecalPlate, the CONTROLS layout, the
-#                       outer gimbal bosses and axles.
-#   Pod > Gyro          the two nested gimbal rings, one mesh (see GIMBAL_INNER).
-#   Pod > WeaponRing    the level band over its bearing collar; hero_assets yaws it to the aim.
-#                       WeaponMount marks the weapon's seat on the front arc.
-#   Pod > Dome > Pilot  where the animated pilot sits; an empty unless the recipe passes a body.
-# Every Hub, Gap and Control empty faces outward or up: its local +Z (Godot +Y) points away
-# from the centre for Hub and Gap. Blender +Y forward, +Z up; Godot -Z forward, +Y up.
-# Draws (one per slot per mesh): Core paint, copper, rubber; Pod paint, rubber, copper; Gyro
-# rubber; WeaponRing paint, rubber, copper. That is 10, the shell class cap
-# (assets/asset_budgets.json). A slot a recipe adds to any of these meshes costs a draw.
-
-# Copper keeps its colour under any equipped paint (ROSTER-LOOK section 6); hero_assets.SLOTS
-# carries the runtime row.
 common.SLOTS.setdefault("copper", {"color": "copper", "metal": 0.6, "rough": 0.4})
 
-# Lattice radii (ROSTER-LOOK sections 0.1 and 2). The strut pair is 0.035 m thick, outer face
-# 0.975, inner face 0.94; the hub caps' tread faces reach CORE_LIMIT.
 LATTICE_OUTER = 0.975
 STRUT_PAIR = 0.035
 LATTICE_INNER = LATTICE_OUTER - STRUT_PAIR
 HUB_RADIUS = LATTICE_OUTER - STRUT_PAIR / 2
-# Strut bar face width and hub tread cap diameter. hoberman() and lattice() take strut_width and
-# cap_width; these are the defaults. 2026-10-10 (PD-0b): 0.10 / 0.14 (ROSTER-LOOK section 3 rule 7)
-# down to 0.06 / 0.10 by the strut-table rule: no width from 0.10 to 0.05 met rule 1 (pilot 75%,
-# head 90%) on the neutral shell, so the rule's fallback applies (0.06 m is about 6 px at the
-# chase mid eye); the coordinator re-pins rules 1 and 7 from that table.
 BAR_WIDTH = 0.06
 CAP_WIDTH = 0.10
 CHAIN_WIDTH = 0.12
-HUB_BODY = (0.10, 0.937, LATTICE_OUTER)      # radius, inner and outer reach of the copper drum
-# The rubber tread cap: radius, the reach of its buried point and of its tread face, whose rim
-# reaches CORE_LIMIT. Its sides close to the point inside the copper drum (_tread_cap).
+HUB_BODY = (0.10, 0.937, LATTICE_OUTER)
 HUB_CAP = (CAP_WIDTH / 2, 0.940, 0.9824)
-HUB_CLEAR = 0.075                            # chain ends tuck under the hub drum
-PIN_DEPTH = 0.012                            # a pin's buried point, inside the outer bar
-# One equator gap faces the front (+Y) and one the rear, so the face and the head show
-# through open diamonds in the rest pose.
+HUB_CLEAR = 0.075
+PIN_DEPTH = 0.012
 LATTICE_TWIST = math.radians(72)
-# Gimbal rings: inside clears the kept-clip envelope of Tarn, Tally and the Cannon (0.799 m,
-# PD-0 envelope-kept.json) by 0.03 m; the outer ring stays inside the lattice inner face, and
-# inside it at the 0.92 landing fold. Rivet's, Sable's and Kest's kept clips reach 0.92 to
-# 1.03 m, past the lattice itself (cage_contract_test KNOWN_OVER); no ring here can clear them,
-# so their clip units (PE-RIVET, PE-SABLE, PE-KEST) re-key those clips.
 GIMBAL_INNER = (0.830, 0.846)
 GIMBAL_OUTER = (0.848, 0.862)
 GIMBAL_DEPTH = 0.04
-# Weapon ring: band 1.03 to 1.08 m, 0.08 m tall, at the equator; the collar sits under it.
 RING_BAND = (1.03, 1.08, 0.08, 0.0)
 RING_COLLAR = (1.035, 1.075, 0.03, -0.055)
 RING_SEGMENTS = 40
-# The cockpit control layout, the same in all six (ROSTER-LOOK 0.7, PILOT-CLIPS section 5).
-# Each name becomes a Control.<name> empty under Pod at its point (Blender metres, Pod space).
-# BANK holds the slot 2 and slot 3 points beside the right yoke; a recipe names them through
-# hoberman(bank=...), e.g. (("GaugeLever", "lever"), ("SpoolBrake", "lever")) for Sable.
 CONTROLS = {
     "Grip.L": (-0.32, 0.40, 0.05),
     "Grip.R": (0.32, 0.40, 0.05),
@@ -332,8 +282,6 @@ BANK_KINDS = ("lever", "button", "plunger", "crank", "key", "tab")
 SEAT_TOP = -0.30
 SEAT_BACK_TOP = -0.10
 DECAL_PLATE = ((0.0, -0.2325, -0.25), (0.36, 0.015, 0.30))
-# Sight cone (ROSTER-LOOK section 3 rule 3): from the pilot's head to the chase eyes at the
-# close, mid and far cameras (section 9 step 6, here in Blender axes), half-angle 35 degrees.
 HEAD = Vector((0.0, 0.02, 0.20))
 CHASE_EYES = (Vector((0.0, -3.44, 1.06)), Vector((0.0, -7.17, 2.22)), Vector((0.0, -11.46, 3.55)))
 SIGHT_HALF_ANGLE = 35.0
@@ -373,10 +321,6 @@ def _frame(n):
     return e1, n.cross(e1)
 
 
-# Watertight rule (POLISH.md, "Watertight"): every piece the base builds is a closed island, so
-# the light bake and cull_back shadows cannot see through it; check_manifold.py proves a GLB.
-# Each closed piece costs no more triangles than the open piece it replaced.
-
 def _bar(part, a, b, width, thick, slot, color=None, facing=1):
     """A closed bar from a to b lying on the sphere: a three-sided prism with a flat face width
     across and a ridge thick from it. facing 1 turns the flat face away from the centre, -1
@@ -395,8 +339,6 @@ def _bar(part, a, b, width, thick, slot, color=None, facing=1):
     return part.paint(faces, slot, color)
 
 
-# A stud's corners sit this far out for the old disc's radius, so its triangle keeps most of the
-# hexagon's area (72%) and still sits on its bar.
 STUD_SPAN = 1.2
 
 
@@ -491,8 +433,6 @@ def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None, 
             t0 = span + (1 - 2 * span) * k / pairs
             t1 = span + (1 - 2 * span) * (k + 1) / pairs
             c0, c1, cm = _slerp(a, b, t0), _slerp(a, b, t1), _slerp(a, b, (t0 + t1) / 2)
-            # The pair's flat faces are its outer and inner faces (LATTICE_OUTER and LATTICE_INNER);
-            # the two ridges point at each other between them.
             _bar(part, c0 * r_outer_bar - s * CHAIN_WIDTH / 2, c1 * r_outer_bar + s * CHAIN_WIDTH / 2,
                  strut_width, STRUT_PAIR / 2, "paint", enamel, facing=1)
             _bar(part, c0 * r_inner_bar + s * CHAIN_WIDTH / 2, c1 * r_inner_bar - s * CHAIN_WIDTH / 2,
@@ -504,10 +444,7 @@ def lattice(part, enamel="petrol", pairs=2, hub_sides=8, cap_sides=8, rng=None, 
                     _stud(part, p, p, 0.022, PIN_DEPTH, "copper", toward=b - a)
     for h, d in enumerate(hubs):
         _drum(part, d, HUB_BODY[0], HUB_BODY[1], HUB_BODY[2], hub_sides, "copper", roll=0.0)
-        # Rule 8: each cap's tread turns differently, so the pattern cannot strobe.
         _tread_cap(part, d, cap_r, HUB_CAP[1], HUB_CAP[2], cap_sides, "rubber", roll=rng.uniform(0, math.tau))
-    # The chalk balance mark on one tread cap, so the eye can count a turn (rule 8); it scales
-    # with the cap (0.035 m out, 0.018 m radius on the 0.14 m cap).
     e1, _ = _frame(hubs[0])
     _stud(part, hubs[0] * (HUB_CAP[2] + 0.0003) + e1 * (cap_r * 0.5), hubs[0], cap_r * 0.018 / 0.07, 0.004, "paint", "bone")
     _sharpen(part)
@@ -533,13 +470,10 @@ def weapon_ring(enamel_band="bone"):
               (b_in + b_out) / 2 * math.sin(a), b_z), rot=(0, 0, a + math.pi / 2))
     c_in, c_out, c_h, c_z = RING_COLLAR
     r.ring("rubber", c_in, c_out, c_h, RING_SEGMENTS, loc=(0, 0, c_z))
-    # The collar studs and the mount rod ride the rubber slot, so WeaponRing is two draws and
-    # the gimbal's inner ring can be its own mesh inside the 10-draw shell cap.
     for k in range(12):
         a = k * math.tau / 12 + 0.13
         n = Vector((math.cos(a), math.sin(a), 0))
         _stud(r, n * (c_out + 0.002) + Vector((0, 0, c_z)), n, 0.012, 0.006, "rubber")
-    # Neutral weapon seat at 12 o'clock; a pilot recipe replaces it with its weapon.
     r.box("rubber", (0.14, 0.07, 0.11), loc=(0, b_out + 0.03, b_z))
     r.rod("rubber", (0, b_out + 0.06, b_z), (0, b_out + 0.13, b_z), 0.025, 8)
     _sharpen(r)
@@ -591,7 +525,6 @@ def cockpit(seat="bone", bank=(("Slot2", "lever"), ("Slot3", "lever"))):
     p.box("rubber", (0.30, 0.30, 0.10), loc=(0, 0.0, SEAT_TOP - 0.12))
     (dx, dy, dz), size = DECAL_PLATE
     p.box("paint", size, loc=(dx, dy, dz), color=seat)
-    # Floor rail to the pedals.
     p.beam("rubber", (0, 0.10, SEAT_TOP - 0.16), (0, 0.42, -0.66), 0.06)
     for side in (-1, 1):
         gx, gy, gz = CONTROLS["Grip.R"]
@@ -599,19 +532,16 @@ def cockpit(seat="bone", bank=(("Slot2", "lever"), ("Slot3", "lever"))):
         p.rod("rubber", (side * gx, gy, gz - 0.07), (side * gx, gy, gz + 0.07), 0.03, 8)
         px, py, pz = CONTROLS["Pedal.R"]
         p.box("rubber", (0.09, 0.15, 0.02), loc=(side * px, py, pz + 0.03), rot=(-0.5, 0, 0))
-        # Outer gimbal axle and its copper boss on the ring axis.
         p.rod("rubber", (side * 0.24, -0.02, SEAT_TOP + 0.02), (side * 0.80, 0, 0), 0.02, 6)
         p.rod("copper", (side * 0.80, 0, 0), (side * 0.89, 0, 0), 0.04, 8)
     tx, ty, tz = CONTROLS["Trigger"]
     p.box("copper", (0.02, 0.03, 0.04), loc=(tx, ty, tz))
-    # The lap bar: the largest control, copper, both hands on it for the ultimate.
     lx = LAP_HANDS["LapBar.R"][0] + 0.12
     _, ly, lz = LAP_HANDS["LapBar.R"]
     p.rod("copper", (-lx, ly, lz), (lx, ly, lz), 0.028, 8)
     hx, hy, hz = CONTROLS["LapBar"]
     for side in (-1, 1):
         p.rod("copper", (side * lx, ly, lz), (side * (lx - 0.02), hy, hz), 0.02, 6)
-    # The bank beside the right yoke.
     p.box("rubber", (0.10, 0.26, 0.05), loc=(BANK[0][0], (BANK[0][1] + BANK[1][1]) / 2, BANK[0][2] - 0.02))
     for (name, kind), point in zip(bank, BANK):
         if kind not in BANK_KINDS:

@@ -7,29 +7,6 @@ const ClassKit := preload("res://src/ui/class_kit.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 
-# The FIRST-TIMER probe (alpha-status ambition map, unit 8). One headless bot run on a fresh
-# profile records the first tick each teaching surface is on screen and the first tick each
-# mechanic is needed or used. It judges nothing: scripts/first-timer.mjs holds the mechanic
-# table and fails a mechanic that is needed before it is taught.
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/first_timer.gd \
-#     -- --out=<file.json> [--seed=1] [--pilot=<class id>] [--stages=2] [--scrap-at=<seconds>] [--table=park]
-#
-# --stages=2 ends the run as it leaves world 1 (both Spillway stages and Brindle). --scrap-at
-# scraps the ball (a chaser's hit, twice past the full-hull guard) that many stage seconds into
-# stage 1, so a run that would not die still reaches RUN OVER and the retry row. Test mode
-# gives every process its own data folder, so the key prompts start from an empty profile.
-#
-# Teach ids, with the tick they first show (tick -1 is before play):
-#   prompt:<verb>     a key prompt drew (events.prompt_shown: ui/key_glyphs.gd, ui/first_steps.gd)
-#   objective:<id>    the objective plate's row (hud.objective_reading, core/objectives.gd)
-#   prompt:tip_<id>   a first-meet field tip told (ui/field_tips.gd: grip, jam, cast, radio, stake,
-#                     companion, active, dunk), emitted as prompt_shown once its toast has been on
-#                     screen MIN_SHOWN
-#   screen:run_over   RUN OVER after a death, naming what scrapped you, with its Run again key
-#                     (no free retry: a death with no earned save ends the run)
-#   card:<slot>       a key on the chosen pilot's class card (ui/class_kit.gd card_keys)
-# Need ids: the first tick of the bus fact or flow state that names them (NEEDS below).
 
 const NEEDS := {
 	"stage_entered": "first stage dropped in",
@@ -52,9 +29,6 @@ const NEEDS := {
 	"companion_full": "SPIL-9's halo gauge first full",
 	"active_racked": "first active racked on F",
 }
-# How near a relay's stake post counts as met: E's lock reach, the first place E can take the stake.
-# The post's tip (field_tips.gd) goes up from 30 m and counts once on screen MIN_SHOWN, so a slow
-# approach is taught first and a fast one may reach the post first (the audit says late).
 const RELAY_MET := Interactables.LOCK_REACH
 
 var _settings := {}
@@ -147,14 +121,12 @@ func _on_run_started(class_id: String) -> void:
 		_taught["card:" + String(record["slot"])] = {"tick": -1, "stage": 0}
 
 
-# A Warden's or Brindle's posture bar reaching a stagger.
 func _on_posture(_enemy, _posture: float, staggered: bool) -> void:
 	if not staggered:
 		return
 	_need("boss_staggered" if _game.flow.state_name() == "boss" else "warden_staggered")
 
 
-# --scrap-at: the run's one death, in stage 1, from a chaser so RUN OVER has a cause to name.
 func _scrap_if_due() -> void:
 	if _scrapped or not _settings.has("scrap-at") or _game.run.stage != 1 or not _game.flow.in_play():
 		return
@@ -167,7 +139,6 @@ func _scrap_if_due() -> void:
 
 
 func _watch() -> void:
-	# The lesson after a death is RUN OVER itself: the line naming what scrapped you and Run again.
 	var screens = _game.get("screens")
 	if _game.flow.state_name() == "summary" and not _game.flow.run_won and screens != null \
 			and _game.flow.death_cause != "" and screens.button_for("again") != null:
@@ -179,7 +150,6 @@ func _watch() -> void:
 		_watch_fields()
 
 
-# The field-rule needs, read off the live state a tick at a time (not off field_tips.gd's own rules).
 func _watch_fields() -> void:
 	var player = _game.player
 	if player.state.carving:

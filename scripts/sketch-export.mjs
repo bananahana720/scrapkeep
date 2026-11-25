@@ -7,32 +7,6 @@ import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
 
-// npm run sketch:export: a Linux x86_64 release of sketches/core-loop under
-// artifacts/local/core-loop-export/<run>/, the ACE stems beside it in music_ace/, booted
-// headless for 300 frames. The stems are not in the pack, so the sequencer finds them beside
-// the executable. They are gitignored and cannot be regenerated, so they are copied from
-// --stems-from=<music_ace folder> (default: the main checkout's sketches/core-loop/assets/music_ace).
-// --self-play exports the same pack with tools/ kept in (package name ends -selfplay), so the
-// launch flag --self-play can load res://tools/self_play.gd; the default pack leaves tools/ out.
-// --win-proof then exports the "Linux x64 proof" pack (the shipped recipe plus tools/) into the
-// sibling <run>-win-proof/ and plays three skipper bot runs on it, each from a fresh user://, with
-// the editor binary: seed 1 as rolled (Rivet), seed 11 pinned to the remembered cannon, then seed 1
-// pinned to Tally (wave 11, GP7).
-// Either run not won fails the export. Release templates refuse --main-pack and
-// --script, so this proves the exported pack, not the release template's runtime.
-// The proof runs before packaging, so a failed proof leaves no tarball. BUILD.txt records the
-// proof lines, or "win proof: not run" without the flag. A dirty tree adds -dirty to the package name.
-// After the headless release gate, the boss smoke boots the project on Vulkan once per boss on a
-// hidden display through tools/coordinator/gpu_queue.sh (card 1, shared), enters that world's last
-// stage and arena as the bot does and runs 300 ticks (tools/look_harness.gd --boss=): a crash, a
-// missing PASS line, a non-Vulkan device or an error line before the PASS fails the export, because
-// the headless gate cannot see the Forward+ light crash class (wave 11, the Waking boss entry).
-// Each boss waits at most BOSS_SMOKE_QUEUE_WAIT_S for the card, runs at most BOSS_SMOKE_TIMEOUT_S
-// under timeout(1) and prints one PASS or FAIL line with its exit (124 names the timeout, 128+N the
-// signal) and wall time. --boss-smoke-only runs just this step. SCRAPKEEP_BOSS_SMOKE_CRASH=<boss> is
-// the positive control: that boss boots tools/boss_smoke_crash.gd, which enters the arena, prints its
-// PASS line and then aborts, so the step must fail on the exit alone. Unset, nothing crashes.
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 const binary = process.env.GODOT_BIN || recordedBinary;
@@ -46,7 +20,6 @@ const WIN_STAGE = 6;
 const WIN_SEED = 1;
 const CANNON_SEED = 11;
 const CANNON_PILOT = "remembered_cannon";
-// Tally on seed 1 is the first of seeds 1 to 4 she wins in bot_six_tally_test (wave 11, GP7).
 const TALLY_SEED = 1;
 const TALLY_PILOT = "tally";
 const PARK_SEED = 2;
@@ -60,15 +33,6 @@ export const WIN_PROOFS = [
     dir: "cannon",
   },
   { label: "win proof (tally)", seed: TALLY_SEED, pilot: TALLY_PILOT, dir: "tally" },
-  // The park table (--table=park) reads its ground from assets/park/*/*.bin, which the shipped
-  // recipe once dropped (wave-14 release), so its proof is mandatory. PARK-WIN (2026-10-16):
-  // pylon_engineer seed 1, skipper policy, from stage 1, won stage 6 twice out of two. The wave-15
-  // export (2026-10-17) then won 1 of 3 on one pack, so it passes on its first win in 3 tries.
-  // 2026-10-19 (Systems B w18): seed 2, not 1. The proof checks packaging, not balance, and the new
-  // Highdraft plating pack draft_plate puts Sable's nemesis on seed 1 (it stalls at stage 5).
-  // 2026-10-23 (C17 dry run): the w18 park run is about 92,000 ticks, twice a world run, and won
-  // in 1060 s wall on a cloud box, past the 900 s every proof had; headless at --fixed-fps 90 runs
-  // near real time, so a faster GPU does not shorten it.
   {
     label: "win proof (park)",
     seed: PARK_SEED,
@@ -101,7 +65,6 @@ export function missingStems(manifest, directory, exists = existsSync) {
   return missing;
 }
 
-// Every ACE track with a committed manifest ships: zones, bosses, title and summary.
 export function trackedManifests(directory, list = readdirSync, exists = existsSync) {
   return list(directory)
     .filter((track) => exists(path.join(directory, track, "manifest.json")))
@@ -205,8 +168,6 @@ export function proofPresetDrift(presets) {
 
 // The win proof runs the exported pack on the editor binary, a debug-features build, which loads
 // each GDExtension's linux debug library relative to its working directory. The pack carries no
-// libraries, so these copy beside it (wave-13 close: Terrain3D's library was missing and every
-// proof printed three ERROR lines). files is the project's paths relative to the sketch.
 export function proofLibraries(files) {
   return files.filter((rel) => /^addons\/[^/]+\/.*\.linux\.debug\.x86_64\.so$/.test(rel));
 }
@@ -259,10 +220,6 @@ export function buildStamp({
   );
 }
 
-// One boss boot: the GPU queue on card 1 with its own hidden display (waiting at most
-// BOSS_SMOKE_QUEUE_WAIT_S for the card), then timeout(1) around Godot on Vulkan with the card index
-// the queue exports, and no sound (an export on the PC must not play through its speakers).
-// crash swaps in the positive-control entry script.
 export function bossSmokeCommand({ queue, binary, project, boss, crash = false }) {
   return {
     command: queue,
@@ -304,8 +261,6 @@ export function bossSmokeCommand({ queue, binary, project, boss, crash = false }
   };
 }
 
-// The positive control is off unless SCRAPKEEP_BOSS_SMOKE_CRASH names one boss; a typo stops the
-// export rather than silently testing nothing.
 export function bossSmokeCrash(env) {
   const value = env.SCRAPKEEP_BOSS_SMOKE_CRASH;
   if (!value) return null;
@@ -314,7 +269,6 @@ export function bossSmokeCrash(env) {
   return value;
 }
 
-// 124 is timeout(1) giving up; above 128 a shell reports the signal that ended the child.
 export function exitText(status, signal) {
   if (signal) return `signal ${signal}`;
   if (status === 124) return `exit 124 (timed out after ${BOSS_SMOKE_TIMEOUT_S} s)`;
@@ -345,7 +299,6 @@ export function bossSmokeFailures(boss, output, status, signal = null) {
   return failures;
 }
 
-// Error lines after the PASS line come from teardown; they are kept in the line, not failed.
 const runText = ({ status, signal, wall }) =>
   `${exitText(status, signal)}, ${(wall / 1000).toFixed(1)} s wall`;
 
@@ -369,7 +322,6 @@ export function bossSmokeFailLine(boss, failures, run) {
   return `boss smoke ${boss}: FAIL, ${runText(run)}: ${reasons.join("; ")}`;
 }
 
-// Every boss runs and prints its line, so one crash does not hide the others' state.
 export function runBossSmoke({
   runner,
   queue,
@@ -417,7 +369,6 @@ export function howToRun({ sha7 }) {
   );
 }
 
-// Printed last, so the export is not the end of the road: the AppImage wraps this tarball.
 export function nextStepLine() {
   return "next: npm run sketch:appimage packs and installs the launcher; then open Scrapkeep from the app menu (or run ~/.local/share/scrapkeep/Scrapkeep.AppImage) and check its window groups under the one icon.";
 }
@@ -426,10 +377,6 @@ export function packageName(sha7, dirty = false, selfPlay = false) {
   return "scrapkeep-core-loop-" + sha7 + (dirty ? "-dirty" : "") + (selfPlay ? "-selfplay" : "");
 }
 
-// --self-play: the shipped preset with tools/ kept in, so the launch flag --self-play finds
-// res://tools/self_play.gd (and the bot driver it preloads). Only the exclude_filter line of the
-// shipped preset changes; the default pack keeps tools/* out. name picks another preset (the Mac
-// export passes "macOS").
 export function selfPlayPresetText(presetText, name = preset) {
   const lines = presetText.split("\n");
   const start = lines.findIndex((line) => line === `name="${name}"`);
@@ -448,8 +395,6 @@ export function selfPlayPresetText(presetText, name = preset) {
   throw new Error(`preset "${name}" has no exclude_filter`);
 }
 
-// The bot_run.gd arguments after "--" for one proof; the local and cloud exports both build from this,
-// so a proof field such as table cannot reach one export and not the other.
 export function winProofBotArgs(proof, out) {
   return [
     "--out=" + out,
@@ -489,8 +434,6 @@ function run(command, args, options = {}) {
   });
 }
 
-// Prints every boss line, then fails the export if any boss failed. The outer timeout only backs up
-// the queue wait and timeout(1), so it should never be the one that fires.
 function bossSmoke(crash) {
   const smoke = runBossSmoke({
     runner: (command, args) =>
@@ -569,8 +512,6 @@ async function main() {
     }
   }
 
-  // The Oggs are gitignored, so a folder can hold a stale mix under the right file name. Every stem the
-  // tracked manifests name must match STEMS.sha256, and each rejected file is named.
   const named = tracks.flatMap((track) =>
     Object.values(manifests[track].clips ?? {}).flatMap((clip) =>
       Object.values(clip.files ?? {}).map((f) => `${track}/${f}`),
@@ -587,7 +528,6 @@ async function main() {
         rejected.map((r) => `  ${r.file}: ${r.why}`).join("\n"),
     );
 
-  // Raw data files the game opens must reach the pack (RELEASE-PARK); see export-include-check.mjs.
   const presetText = await readFile(path.join(project, "export_presets.cfg"), "utf8");
   for (const name of [preset, proofPreset]) {
     const included = checkPreset({ sketch: project, presetText, presetName: name });
@@ -607,7 +547,6 @@ async function main() {
   const gateFailures = releaseGateFailures(gate.stdout + gate.stderr, gate.status);
   if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 
-  // Report only until wave 20 (Andrew, 2026-10-16): print the placeholder count, never block on it.
   const placeholders = run(process.execPath, [
     path.join(root, "scripts/placeholder-gate.mjs"),
     "--project",
@@ -626,9 +565,6 @@ async function main() {
   const outDir = path.join(root, "artifacts/local/core-loop-export", stamp);
   await mkdir(outDir, { recursive: true });
   const exe = path.join(outDir, "core-loop.x86_64");
-  // --self-play swaps the shipped preset's exclude_filter for the export alone and restores the
-  // file at once, so the checkout is clean for the dirty check below. The restore also runs on any
-  // exit (fail() included) and on SIGINT/SIGTERM, so an interrupted export leaves the file as it was.
   const presetPath = path.join(project, "export_presets.cfg");
   const restorePreset = () => writeFileSync(presetPath, presetText);
   let exported;
@@ -671,8 +607,6 @@ async function main() {
   if (boot.status !== 0) failures.push("boot exit " + boot.status);
   if (failures.length > 0) fail(failures.join("; ") + "\n" + bootText.slice(-2000));
 
-  // The park table reads assets/park/*.bin from the pack; a dropped file prints a park_terrain
-  // ERROR and the run still exits 0, so the boot output is scanned (RELEASE-PARK).
   const parkBoot = run(exe, ["--headless", "--table=park", "--quit-after", "600"], { cwd: outDir });
   const parkText = parkBoot.stdout + parkBoot.stderr;
   const parkErrors = parkText.split("\n").filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line));
@@ -822,9 +756,6 @@ async function playWinProof(base, pack, proof) {
   return { ok: true, line: winProofLine(JSON.parse(rowsText.trim()), pack, proof) };
 }
 
-// A proof with `tries` passes on its first won try (park, 2026-10-17: seed 1 Pylon wins the stage-6
-// Mind about half the time, and the proof exists to show the export ships a winnable park table).
-// Every try's outcome goes in the summary line.
 export async function playProofTries(proof, playOnce) {
   const tries = proof.tries ?? 1;
   const outcomes = [];

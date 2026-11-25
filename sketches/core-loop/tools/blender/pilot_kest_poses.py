@@ -40,7 +40,6 @@ def pose(arm,k):
     anim.rotate(arm,'crest',(crest,0,0))
     jaw=[0,0,0,0,0,-10,-28,-40,-35,-4,0,0,-8,0,0,0][k-1]
     anim.rotate(arm,'jaw',(jaw,0,0))
-    # Upper beak lifts slightly while the existing lower beak hinges down.
     anim.rotate(arm,'snout',(-jaw*.25,0,0))
     right=(.32,.4,.05);left=(-.32,.4,.05)
     hand_r=(0,0,0);hand_l=(0,0,0)

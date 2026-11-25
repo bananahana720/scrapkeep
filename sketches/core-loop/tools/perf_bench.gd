@@ -9,105 +9,6 @@ const Warden := preload("res://src/combat/warden.gd")
 const Director := preload("res://src/world/director.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
 
-# Frame-cost benchmark for the dense-fight scenes of tools/stress_capture.gd (perf-lab E0).
-# One scene per process:
-#   godot --headless --path sketches/core-loop --script res://tools/perf_bench.gd -- --scene=s3 [--table=slice] --out=/abs/run.json [ablations]
-# Native runs drop --headless and add --resolution 1920x1080; vsync is turned off.
-# The scene matches stress_capture: stage 1 as Rivet with every offered part, N packs
-# (controller, punisher, two chasers) in front of the ball, 4 committed telegraph types
-# per fan slot recycled every frame, and in s3 the stage's Warden 16 m ahead charging.
-# Unlike stress_capture, the telegraphs are committed when the packs spawn, so the whole
-# window carries the full load, and no stills or word counts are taken inside it.
-# After the scene is built: WARM_FRAMES unrecorded frames, then RECORD_FRAMES recorded.
-#
-# Per frame (a frame is the span between two ends of the idle process pass):
-#   frame_ms     wall time between frames; everything on the main thread plus waits
-#   process_ms   process_frame signal to the Probe, which runs last: every node's _process
-#                (the bench's own SceneTree step runs before the signal, so not it)
-#   physics_ms   physics_frame signal to the Probe, summed over this frame's ticks
-#                (node _physics_process work; the Jolt step itself is outside it)
-#   ticks        physics ticks in this frame (90 Hz, so a 60 FPS frame averages 1.5)
-#   harness_ms   the bench's own _process step: load upkeep and recycling the synthetic
-#                telegraphs, whose set_progress() repaints them (the telegraph draw cost)
-#   perf_process_ms, perf_physics_ms   Performance TIME_PROCESS / TIME_PHYSICS_PROCESS
-#   nodes        Performance OBJECT_NODE_COUNT
-#   draws        Performance RENDER_TOTAL_DRAW_CALLS_IN_FRAME (native only)
-#   gpu_ms, render_cpu_ms   the root viewport's measured render times (native only)
-#
-# Ablations, one subsystem each; the checks block in the JSON proves each one stopped:
-#   --no-music           audio.engine becomes SilentBand: the sequencer, beats, ducks and
-#                        cue scheduling still run, _mix and _finish are skipped and both
-#                        output buffers stay silent.
-#   --no-audio           the Audio node: process mode disabled (no pump, no band render),
-#                        players stopped, sound_ready false so direct play() calls exit
-#                        at _admit, and its GameEvents and node_added listeners cut.
-#   --no-vfx             presentation Vfx (glyphs, sparkles, bursts, pips, trail, speed
-#                        lines, edge flash) and combat's CombatEffects: process disabled,
-#                        hidden, event listeners cut, juice.vfx set null (juice's guard).
-#                        Combat still appends marks to CombatEffects; the bench clears
-#                        them each frame so they do not pile up.
-#   --no-telegraph-draw  every telegraph keeps its committed geometry and progress (hits,
-#                        audio warnings and contains() are unchanged), but its painter is
-#                        hidden and detached, so _repaint rebuilds no meshes.
-#   --no-hud             the Hud CanvasLayer subtree: process disabled, hidden, event
-#                        listeners cut.
-#   --no-enemy-ai        every node in the "enemy" group, the Warden included, has
-#                        _process and _physics_process off (no thinking, moving or
-#                        attacking); respawns are switched off as they enter the tree.
-#   --no-trails          vfx.trails = false: the ball trail and speed lines are not built.
-#   --no-machine-fx      presentation MachineFx (enemy and boss steam, sparks, arcs, words):
-#                        process disabled, its root hidden, event listeners cut.
-#   --no-stills          run_moments takes no scrapbook stills (each reads the frame back from the GPU,
-#                        frame_post_draw); stills_taken in the result counts the reads either way.
-# Synthetic attacks recycle and never resolve damage. HP is topped up every tick.
-#
-# level-sites   (LEVEL-SITES-BENCH, scrapkeep#149 ruling 3, wave 17) what a level Breach landing costs on its landing tick
-# against how often it fits, over a seeded sample of level park ground, on #205's live merge_level path:
-#   godot --headless --path sketches/core-loop --script res://tools/perf_bench.gd -- --scene=level-sites --out=/abs/sites.json [--seed=7301] [--sites=80] [--landing-scale=N]
-# The park stand as p1, then --sites random level landing sites in a ±50 m square around the drop-in, headings drawn from the same seeded RNG and
-# handed to landing() through a stub ride (tries are drawn from --seed, so every run and scale sees the same sites). Each site times RivetKit.landing() itself (carve, first
-# share, the hit when it fits, the bookkeeping), then a second pass of its parts for the split: carve_ms, share_ms, breach_ms.
-# This measures landing() ms, not the landing frame: the scar mesh build in VolumeIndicator._process and the report_landing
-# listeners are outside the timed span. The split pass runs hot (the same site a second time), so its parts need not sum to
-# landing_ms. A queued carve is dropped after each site. --landing-scale=N sets the level budget to N/2 x LEVEL_LANDING_WORK parts, so 2 is
-# the shipped 400 and 4 is 800 (late_work moves in proportion). Per site: fit (the carve hit inside landing()), work, shares, builds and the ms; the summary gives fit,
-# median/p90/max landing ms over level sites ("all") and over the fitting ones, and the stand's landing ms (median of 5). The run is
-# invalid if any row's builds delta, which covers both the timed landing and the split pass, shows a terrain build. The warm-up cache variant (merge_level moved to a worker) was measured and
-# closed: 27444187 on claude/perf-merge-level-warm; cloud 80 sites, live 400 56/80 median 21.9 ms, cached 400/800/1000 40/56/59 of 80 at 20.5/33.1/34.9 ms.
-# Park scenes (PARK.md section 9, unit KB6) run on the park table with ctx.calm set, so no enemy arrives:
-#   p1   stage 1 standing: the ball frozen at the drop-in, the camera on the landmark.
-#   p2   p1's stand, then the swap: the recorded window opens with terrain.prepare(2) (what the Warden's
-#        wake does), so two park stages are resident while stage 2 builds; once its ground, scatter and
-#        rows are in, the real launch fires (flow LAUNCH, world's launch rail) and the window runs on
-#        through the 0.6 s flight, terrain.use(2) and the landing. Each sample carries its segment
-#        (build, flight, landing, after); the window lasts RECORD_FRAMES or until 30 frames past the landing.
-#   p3   p1's stand, then Rivet carves where the ball stands every CARVE_EVERY frames of the window, turn
-#        about between the Breach Skid landing's sector and Full Cut's (RIVET-CURVE, wave 17): the park
-#        drop-in's carve against the 16.7 ms frame, with no ultimate to wait for. A Breach is the kit's own
-#        landing(): a LANDING_WORK share on the call, the rest one per physics tick from the kit's _step_late,
-#        the hit when the kit decides. Each carve's landing-call ms, the ms of each tick it was queued in (ms is
-#        the largest), its measured ticks to the hit and its ground angle go to "carves"; its terrain face count before and after
-#        the coplanar merge is read after the window, so it costs no recorded frame.
-# The carve check cannot pass by not firing (lesson 34, "a check that can't fire proves nothing"). RivetKit counts
-# its carves (carve_stats) and the terrain cache its builds; the window's deltas go to "carve_window" and
-# "terrain_window" and print on the result line. p3 fails (valid false, exit 1) when its window committed no
-# Full Cut, no Breach carve that cut terrain, no Breach hit or no carve share, or when the pilot is not Rivet.
-# p1 is the no-carve control: it fails if any carve fired in it. Both fail if the terrain cache started more
-# than 0 builds in the window (the 100-175 ms ticks that reverted
-# 8e40be12: a standing Rivet's warm-up must find its park cached).
-#   --pilot=<class id>   the class the bot plays (default the Rivet seed). Planted negative: p3 with
-#                        --pilot=pylon_engineer must fail.
-#   --plant=no-carve     p3 skips its carves. Planted negative: it must fail.
-#   --plant=no-flat      p3 skips its flat-ground (slab) Breaches. Planted negative: it must fail.
-#   --plant=stand-late   p3's stand Breaches get a one-part landing budget, the old late path on level park ground
-#                        (RivetKit.LEVEL_GROUND_DEG). Planted negative: the stand's same-tick gate must fail.
-#   --plant=no-slope     p3 skips its real-slope Breaches. Planted negative: it must fail.
-#   --plant=late-flat    p3's slab Breaches get a one-part landing budget, so they go through the late path and
-#                        hit ticks after landing. Planted negative: the measured flat-hit check must fail.
-# The one-placement control (the old keying) is tests/rivet_warm_hitch_test.gd's: Andrew's park has no
-# shared shape placed twice near the stand, so a planted run here would not trip (tried: 0 builds).
-# Every scene records memory at the window's open and close; p2 also at two_stages (stage 2 built, stage 1
-# active) and after_swap (stage 1 freed).
 
 const Flow := preload("res://src/core/flow.gd")
 
@@ -126,27 +27,12 @@ const SCENES := {
 	"level-sites": {"packs": 0, "per_type": 0, "warden": false, "view": "sites", "table": "park"},
 }
 const CARVE_EVERY := 60
-# p3 keeps its original schedule (a carve on frame 59 of every 60, Full Cut and Breach alternating at the park
-# stand, so its 4080 history stays comparable) and adds a Breach on frame 29 of every 60 on a slab floating
-# FLAT_LIFT above the stand, and one on frame 44 on the park's real slope (SLOPE_WANT_DEG, found from the reset
-# target within SLOPE_REACH). The slab is a synthetic plane; the stand is the park's own level ground (3.43 degrees,
-# under RivetKit.LEVEL_GROUND_DEG). Andrew's ruling (18 Oct, option B) is that both Breach on their landing tick:
-# one share, 0 ticks, hit_in_call 1. The slope site keeps the late path (shares over 1, a hit within the 0.18 s
-# limit). Each row carries its parts of work, so a cloud run proves the carve got cheaper in counts, not ms. Rows and
-# maxima are keyed by location (slab, stand, slope) as well as by the kit's class (flat: done on the landing share;
-# slope: later).
 const FLAT_LIFT := 40.0
 const FLAT_AHEAD := 30.0
-# Thick, so its underside is out of the carve's reach and the floor is one plane.
 const FLAT_THICK := 30.0
-# The ruling (DECISIONS.md, "Instant, 0.11 s later"): a flat Breach hits on its carve tick; a slope Breach
-# lands by about 0.18 s. Both are measured: the kit's own _step_late runs each physics tick and the bench reads
-# the tick its breach_hits count rose (the Probe runs after every node). Nothing is derived.
 const SLOPE_HIT_SECONDS := 0.18
 const CARVE_BUDGET_MS := 16.7
 const LEVEL_DEG := 0.5
-# The slope site: park ground this steep (RivetKit.LEVEL_GROUND_DEG is 5), the closest to SLOPE_WANT_DEG
-# within SLOPE_REACH of the reset target (inside the 60 m warm reach, so no terrain build lands in the window).
 const SLOPE_WANT_DEG := 15.0
 const SLOPE_MIN_DEG := 6.0
 const SLOPE_MAX_DEG := 25.0
@@ -177,7 +63,6 @@ class SilentBand extends MusicEngine:
 		out_stinger.fill(Vector2.ZERO)
 
 
-# Runs after every other node in both passes, so it marks the end of each pass.
 class Probe extends Node:
 	var bench
 
@@ -220,28 +105,19 @@ var _last_perf := -1.0
 var _probe_open := {}
 var _probe_close := {}
 var _ablation_notes := {}
-# --series=<absolute .tsv>: every recorded frame's process, frame and physics time, for hunting a hitch.
 var _series := ""
-# --table=<id>: the stage table the game is built on (empty is the game's default; "slice" is the checkpoint's).
 var _table := ""
-# --warm-frames=N and --warm-seconds=S: the warm phase lasts N frames and at least S wall seconds. The
-# music engine bakes each instrument the first time a bar plays it, on the main thread (35 to 85 ms, see
-# the E1 ledger), so a warm phase measured in frames alone ends before those first bars once the
-# frames are fast.
 var _warm_frames := WARM_FRAMES
 var _warm_seconds := 0.0
 var _warm_usec := 0
-# The sound bank and band bake on a worker; the scene waits for them so every run has audio.
 var _sound_ready_s := -1.0
 var _view := "fight"
 var _memory := {}
-# p2's segment ("" until the window opens), the frame each began, and the swap's own timings.
 var _segment := ""
 var _segment_at := {}
 var _landed := 0
 var _swap := {}
 var _carves: Array = []
-# p3's Breach carve in progress (RivetKit._carve_late's record) and its row in _carves.
 var _pending: Array = []
 var _hits_seen := 0
 var _stand_heading := Vector3.FORWARD
@@ -307,7 +183,6 @@ func _initialize() -> void:
 		DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = 0
 	# A window that cannot draw (headless) sleeps this long per frame by default (6900 us),
-	# which floors frame_ms at about 6.9 ms and hides the CPU cost.
 	OS.low_processor_usage_mode_sleep_usec = 0
 	_render_rid = root.get_viewport_rid()
 	RenderingServer.viewport_set_measure_render_time(_render_rid, true)
@@ -459,13 +334,6 @@ func _process_end() -> void:
 		_finish()
 
 
-# --- Scene ---------------------------------------------------------------------------------
-
-# A played run bakes the other themes and instruments on a worker behind stage 1 (Audio._on_ready); a
-# headless run has no device and renders them on the main thread the first time a bar asks. That first
-# use costs 35 to 85 ms in one frame, and with fast frames it lands in the recorded window. The bench
-# finishes the bake before it warms, so the window measures the frame and not the cold band. --cold-band
-# leaves it out, to reproduce that hitch.
 func _prebake_band() -> void:
 	if _off.has("cold-band"):
 		return
@@ -516,7 +384,6 @@ func _build_stand() -> void:
 		shape.shape = box
 		slab.add_child(shape)
 		_game.add_child(slab)
-		# The reset target, not ball_position(): the body has not moved yet on this frame.
 		var ball: Vector3 = _ground(drop_in)
 		_flat_at = ball + heading * FLAT_AHEAD + Vector3.UP * FLAT_LIFT
 		slab.global_position = _flat_at - Vector3.UP * (1.0 + FLAT_THICK * 0.5)
@@ -526,9 +393,6 @@ func _build_stand() -> void:
 	_swap["drop_in"] = [drop_in.x, drop_in.y, drop_in.z]
 
 
-# Park ground within SLOPE_REACH of from, 12 m or more away, whose slope over a 4 m span is between
-# SLOPE_MIN_DEG and SLOPE_MAX_DEG, the 12 closest to SLOPE_WANT_DEG first (the heightfield the colliders
-# are cut from; _step_slope confirms each with the collider's own face before landing on it).
 func _slope_candidates(from: Vector3) -> Array:
 	var terrain = _game.ctx.terrain
 	var found: Array = []
@@ -590,9 +454,6 @@ func _row(at: Vector3, kind: String, where: String) -> Dictionary:
 	return row
 
 
-# The kit's own landing (RivetKit.landing): its first share on this call, the rest one per physics tick from
-# the kit's _step_late, the hit when the kit decides. A light carve hits inside the call; a heavy one is
-# queued and its hit tick is read by _watch_hits.
 func _landing(kit, at: Vector3, where: String) -> void:
 	var ult = _game.combat.ultimate
 	if ult != null:
@@ -618,7 +479,6 @@ func _landing(kit, at: Vector3, where: String) -> void:
 		row["shares"] = 1
 		row["work"] = int(kit.last_landing.get("work", 0))
 		row["hit_in_call"] = int(kit.carve_stats["breach_hits"]) - hits_before
-		# A light carve hits inside the landing call: the hit is the kit's breach_hits rise, read here.
 		if int(row["hit_in_call"]) == 1:
 			row["hit_tick"] = Engine.get_physics_frames()
 			row["ticks"] = int(row["hit_tick"]) - int(row["landing_tick"])
@@ -629,7 +489,6 @@ func _landing(kit, at: Vector3, where: String) -> void:
 	_carves.append(row)
 
 
-# After every physics node: time the tick a queued carve is in, and stamp the tick its hit landed.
 func _watch_hits() -> void:
 	var kit = _kit()
 	if kit == null or _pending.is_empty():
@@ -650,13 +509,11 @@ func _watch_hits() -> void:
 	_hits_seen = hits
 
 
-# A Breach landing on the park's real slope.
 func _step_slope() -> void:
 	var kit = _kit()
 	if kit == null or _plant == "no-slope":
 		return
 	if _slope_at == Vector3.INF:
-		# The first candidate whose collider face is steeper than level ground: the bench lands there from now on.
 		var space: PhysicsDirectSpaceState3D = _game.ctx.root.get_world_3d().direct_space_state
 		for site: Vector3 in _slope_sites:
 			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(site + Vector3.UP * 0.5, site + Vector3.DOWN * 6.0, Hitscan.WORLD))
@@ -670,7 +527,6 @@ func _step_slope() -> void:
 	_landing(kit, _slope_at, "slope")
 
 
-# A Breach landing on the synthetic flat slab.
 func _step_flat() -> void:
 	var kit = _kit()
 	if kit == null or _flat_at == Vector3.INF or _plant == "no-flat":
@@ -678,7 +534,6 @@ func _step_flat() -> void:
 	_landing(kit, _flat_at, "slab")
 
 
-# Each carve's face counts, read once the record is over so they cost no recorded frame.
 func _carve_stats() -> void:
 	var kit = _game.combat.get_node_or_null("RivetKit")
 	if kit == null:
@@ -699,8 +554,6 @@ func _carve_stats() -> void:
 		row.erase("late")
 
 
-# The largest carve time (landing call, or any tick it was queued in) by kit class (flat: done on the landing
-# share; slope: later), by location (slab, stand) and Full Cut.
 func _max_by_ground() -> Dictionary:
 	var out := {"flat": 0.0, "slope": 0.0, "full_cut": 0.0, "slab": 0.0, "stand": 0.0, "slope_site": 0.0}
 	for row in _carves:
@@ -714,7 +567,6 @@ func _max_by_ground() -> Dictionary:
 	return out
 
 
-# Rows to report per location: landing-share ms, shares, measured ticks to the hit, ground angle.
 func _where_summary() -> Dictionary:
 	var out := {}
 	for where in ["slab", "stand", "slope"]:
@@ -742,16 +594,12 @@ func _open_counts() -> void:
 	var kit = _kit()
 	if kit == null:
 		return
-	# The warm phase is 120 frames, under one 45-tick warm-up cycle at headless frame times, so the slab
-	# (added with the stand) would be first read by a carve. One cycle now, before the counters open, leaves
-	# the window with only a standing Rivet's own warm-up: its builds must be 0.
 	if _scene_id == "p3" and kit._rivet():
 		kit.warm_cycle()
 	_carve_open = kit.carve_stats.duplicate()
 	_terrain_open = {"builds": kit.terrain.builds, "hits": kit.terrain.hits, "warm_cycles": kit.warm_cycles}
 
 
-# The carves and terrain builds the recorded window saw; empty when there is no kit.
 func _window_counts() -> Dictionary:
 	var kit = _kit()
 	if kit == null or _carve_open.is_empty():
@@ -764,7 +612,6 @@ func _window_counts() -> Dictionary:
 	return {"carve_window": carves, "terrain_window": terrain, "rivet": kit._rivet()}
 
 
-# Appends an error for each way the carve check could pass without proving anything.
 func _gate_carves(counts: Dictionary) -> void:
 	if not _scene_id in ["p1", "p3"]:
 		return
@@ -805,7 +652,6 @@ func _gate_carves(counts: Dictionary) -> void:
 				if angle <= level_deg:
 					_errors.append("p3: the slope site is level ground (%.2f degrees, level is under %.1f)" % [angle, level_deg])
 				continue
-			# Slab and stand are level ground: the ruling (Andrew, 18 Oct) is that the Breach hits on its landing tick.
 			if int(row["ticks"]) != 0 or int(row.get("hit_in_call", 0)) != 1:
 				_errors.append("p3: a level-ground (%s) Breach hit %d ticks after landing, measured (the ruling: the same tick)" % [where, int(row["ticks"])])
 			if where == "slab" and angle > LEVEL_DEG:
@@ -845,7 +691,6 @@ func _resident() -> int:
 
 
 func _snapshot() -> Dictionary:
-	# procfs reports a size of 0, so the status file is read line by line, not whole.
 	var rss_kb := -1
 	var status := FileAccess.open("/proc/self/status", FileAccess.READ)
 	while status != null and rss_kb < 0:
@@ -1045,8 +890,6 @@ func _check_load() -> void:
 		_load_ok = false
 
 
-# --- Ablations -----------------------------------------------------------------------------
-
 func _apply_ablations() -> void:
 	var presentation = _game.presentation
 	var audio = presentation.audio
@@ -1106,7 +949,6 @@ func _ablate_new(node) -> void:
 			_painters.append(painter)
 
 
-# Disconnects every GameEvents listener owned by the node, lambdas and bound calls included.
 func _cut_listeners(owner: Object) -> int:
 	var cut := 0
 	var events: Object = _game.events
@@ -1129,8 +971,6 @@ func _listeners_of(owner: Object) -> int:
 	return count
 
 
-# Readings taken at the start and end of the recorded window. A stopped subsystem shows
-# no change between them; the baseline shows what change looks like.
 func _checks() -> Dictionary:
 	var audio = _game.presentation.audio
 	var vfx = _game.presentation.vfx
@@ -1215,8 +1055,6 @@ func _check_delta() -> Dictionary:
 		"detached_painters": a["detached_painter_meshes"].size(), "detached_painters_repainted": repainted,
 	}
 
-
-# --- Output --------------------------------------------------------------------------------
 
 func _stats(key: String) -> Dictionary:
 	var values: Array = _samples.map(func(s): return float(s[key]))
@@ -1330,7 +1168,6 @@ func _finish() -> void:
 	quit(0 if _errors.is_empty() else 1)
 
 
-# The level-sites scene (see the header): landing-tick cost against fit on a seeded sample of level park ground.
 func _level_sites() -> void:
 	var kit = _kit()
 	if kit == null:
@@ -1382,7 +1219,6 @@ func _level_sites() -> void:
 	print("perf_bench: level-sites %s" % [summary])
 
 
-# A stand-in for the ride landing() reads its heading from and hands its exit speed to.
 class SiteRide extends RefCounted:
 	var heading := Vector3.FORWARD
 	var mode := 0
@@ -1390,9 +1226,6 @@ class SiteRide extends RefCounted:
 	var release_speed := 0.0
 
 
-# One Breach landing: RivetKit.landing() timed whole, then its parts timed on a second pass of the same site. The ride
-# is a stub carrying `heading` (landing() reads only that), removed again after the call; the plan has no legs, and the carve a
-# landing queues is dropped, so repeated sites do not stack.
 func _site_landing(kit, at: Vector3, heading: Vector3, budget: int) -> Dictionary:
 	var ult = _game.combat.ultimate
 	var stub := SiteRide.new()

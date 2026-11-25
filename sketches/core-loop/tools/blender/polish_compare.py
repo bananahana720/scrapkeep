@@ -1,17 +1,3 @@
-# Before-and-after stills for a polished recipe (POLISH.md): builds the recipe's GLB with
-# polish off and on, renders each from two three-quarter views in Cycles (CPU), and writes
-# one JPEG with today's model on top and the polished one below.
-#
-#   blender -b --factory-startup -P polish_compare.py -- <recipe.py> <out.jpg> [option=value ...]
-#
-# A recipe that writes several GLBs shows its last one; glb=<name> picks another by file name.
-#
-# Options go to polish.enable() for recipes that do not call it themselves; the before
-# build turns a recipe's own enable() off. A recipe whose
-# old triangle assert stops the polished build is exported anyway, for the still only.
-# Faces outside the vertex-coloured slots show the UV2 bake at the default AO strength,
-# which is what a runtime material that opts in would show.
-
 import math
 import os
 import runpy
@@ -21,10 +7,8 @@ import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-import cycles_device  # noqa: E402
+import cycles_device
 
-# Slots whose runtime material shows vertex colour: common.SLOTS vc slots and the kit slots
-# (dig_mechanical enamel, elastomer and steel).
 VC = ("paint", "pilot", "ancient_enamel", "hydraulic", "enamel", "elastomer", "steel")
 
 BUILD = """

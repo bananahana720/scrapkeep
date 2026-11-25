@@ -71,12 +71,10 @@ def crown_checks(meta, prop):
         r["nested"] = bool(nested)
         if not nested:
             r["fail"].append("nesting")
-        # height ceiling: top ring may not exceed the R2 profile at its own z
         over = max(rings[4][j][1] - F.crest_rise(v, rings[4][j][2] / c["width"] + 0.5) for j in range(12))
         r["top_over_ceiling_m"] = round(float(over), 4)
         if over > 1e-6:
             r["fail"].append("ceiling")
-        # envelope
         half_d = c["depth"] / 2
         ex = max(abs(p[0]) for ring in rings for p in ring)
         r["max_abs_local_x"] = round(ex, 2)
@@ -140,7 +138,6 @@ def hull_checks(meta, prop):
         r["retreat_spread_m"] = round(max(rets) - min(rets), 2) if len(rets) >= 2 else 0.0
         if r["retreat_spread_m"] < 2.0:
             r["fail"].append("retreat")
-        # roots: a 2 m disk around each trunk inside the solid at root Y + 0.15
         sl = F.slice_polygon(t, h["roots"][0][1] + 0.15)
         worst = 1e9
         for rt in h["roots"]:
@@ -168,7 +165,6 @@ def hull_checks(meta, prop):
         if t[:, :, 0].min() < APRON_X[1] and t[:, :, 0].max() > APRON_X[0] and t[:, :, 2].min() < APRON_Z[1] and t[:, :, 2].max() > APRON_Z[0]:
             r["fail"].append("apron")
         rows.append(r)
-    # neighbour difference: hulls i and i+1 on the same side
     nb = []
     for hi in range(len(meta["hulls"]) - 1):
         a, b = meta["hulls"][hi], meta["hulls"][hi + 1]
@@ -176,7 +172,7 @@ def hull_checks(meta, prop):
             continue
         da = F.angle_between(doms[hi][0], doms[hi + 1][0])
         ds = abs(doms[hi][1] - doms[hi + 1][1])
-        ok = da >= 12.0 and ds >= 0.05  # share gap 5 points: RULINGS.md (rulings-1) item 1
+        ok = da >= 12.0 and ds >= 0.05
         nb.append({"pair": [hi, hi + 1], "d_az": round(da, 1), "d_share_pts": round(ds * 100, 1), "pass": bool(ok)})
     return rows, nb, tri_total
 

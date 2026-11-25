@@ -1,10 +1,5 @@
 extends SceneTree
 
-# Headless: godot --headless --path <sketch> --script res://tools/still_compare.gd -- <a.png> <b.png>
-# Prints the mean colour of each named rectangle in both stills and their CIE76 distance.
-# With --peak first (-- --peak <rest.png> <flash.png>) it prints the brightness the flash
-# adds instead: over the pixels that got brighter, the mean and the 99th-percentile rise in
-# relative luminance (Rec. 709, linear), and the share of the frame that rose by over 0.1.
 const RECTS := {
 	"sunlit_sand": Rect2i(180, 900, 220, 100),
 	"shadowed_sand": Rect2i(1620, 700, 200, 160),

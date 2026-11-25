@@ -54,11 +54,11 @@ STEEL = "53686d"
 OXIDE = "9b513a"
 TILE = 2.0
 CURTAIN_H = 16.0
-HEM = 0.4  # the hem rope; the lead drops hang below it to Y = 0
-COLS = 4  # even, so pleats and diamonds join tile to tile
+HEM = 0.4
+COLS = 4
 ROWS = 7
-PLEAT = 0.22  # fold depth either side of the curtain's plane
-BELLY = 0.5  # the draught's push at mid-height
+PLEAT = 0.22
+BELLY = 0.5
 REEL = Vector((0.6, FLOOR + 0.48, -0.3))
 
 
@@ -71,10 +71,8 @@ def G(*p):
 
 
 post = Part("GapNetPost")
-# Upright mast: the post no longer leans out, so it reads from any side the crew turns to.
 MAST = [(0.0, FLOOR + 0.1, 0), (0.0, 0.9, 0), (0.0, 2.15, 0), (0.0, 3.05, 0), (0.0, 3.35, 0)]
 POST_SOCKETS = gap_net_post.build(post, MAST)
-# The hoist: a yard across the masthead, a block at its +X end and the fall down to the reel.
 post.beam("fleet_paint", G(-0.55, 3.2, 0), G(0.8, 3.2, 0), 0.16, 0.16, color=OXIDE)
 post.box("fleet_paint", (0.2, 0.3, 0.3), loc=g(0.72, 3.05, 0), color=STEEL)
 with post.region(bevel=0.01):
@@ -82,7 +80,6 @@ with post.region(bevel=0.01):
 bmesh.ops.recalc_face_normals(post.bm, faces=post.bm.faces[:])
 post_obj = post.to_object(parent=root)
 
-# Reel: the drum the curtain was paid out from, between two hazard flanges, on the clamp's +X side.
 reel = Part("GapNetBatten")
 reel.cyl("working_tool", 0.3, 0.3, 0.5, segs=6, loc=g(*REEL), rot=(math.pi / 2, 0, 0), color="brass")
 for dz in (-0.27, 0.27):
@@ -115,12 +112,10 @@ def strand(part, a, b, r, color):
 
 
 span = Part("GapNetSpan")
-# Cords stay open three-sided tubes: no bevel or subdivision, so tiles still join edge to edge.
 span.bevel = 0
 span.subsurf = 0
 TOP = CURTAIN_H - 0.12
 for i in range(COLS):
-    # Headrope (heavy) and hem rope follow the pleats.
     strand(span, at(i, TOP), at(i + 1, TOP), 0.12, "brass")
     strand(span, at(i, HEM), at(i + 1, HEM), 0.09, "brass")
 for j in range(ROWS):
@@ -129,11 +124,9 @@ for j in range(ROWS):
     for i in range(COLS):
         a, b = (y0, y1) if (i + j) % 2 == 0 else (y1, y0)
         strand(span, at(i, a), at(i + 1, b), 0.06, "brass")
-# Lead drops on the hem at the inner folds: the weight that keeps a curtain hanging straight.
 for i in (1, 3):
     p = at(i, HEM)
     span.cyl("requisition_tag", 0.17, 0.1, HEM, segs=4, loc=(p.x, p.y, HEM / 2), color="hazard")
-# Square the cord ends off at the tile edges, so the tile is exactly TILE wide and repeats seamlessly.
 for vert in span.bm.verts:
     vert.co.x = min(max(vert.co.x, 0.0), TILE)
 bmesh.ops.recalc_face_normals(span.bm, faces=span.bm.faces[:])
@@ -162,7 +155,7 @@ import world_preview
 world_preview.budget(path, 3, tris=6000, verts=9000)
 
 if opts["render"]:
-    RIM = 1.0  # the runtime sets the crew 1 m back from the near rim
+    RIM = 1.0
     GAP = 12.0
     WIDTH = 14.0
 
@@ -170,8 +163,6 @@ if opts["render"]:
         span_obj.hide_render = True
 
     def gap():
-        # Preview only: the curtain hung as the runtime hangs it, mid-gap, 9 m below the rim to 7 m
-        # above, 14 m wide; the camera chases a ball heading across.
         span_obj.hide_render = False
         mid = RIM + GAP / 2
         for k in range(int(WIDTH / TILE)):

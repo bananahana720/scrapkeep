@@ -6,28 +6,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { Worker, isMainThread, parentPort, workerData } from "node:worker_threads";
 
-// The alpha's audio check for sketches/core-loop, the "Sound and music" half of the placeholder gate.
-//   cue        a special-enemy or boss cue named in design-v3/sound/INTEGRATION.md that the game cannot
-//              play yet: no sfx_bank.gd recipe or audio file for a sound, no music_ace theme, clip or
-//              file for a track. A missing cue counts as a placeholder (Andrew, 17 Oct 00:45Z), so
-//              placeholder-gate.mjs reports these too.
-//   loudness   integrated loudness (ffmpeg ebur128) more than 0.5 LU from -16 LUFS (MIX-CHECK target)
-//   peak       true peak above -1 dBTP
-//   seam       a looping track whose wrap from its last sample to its loop point steps further than
-//              the loop's own 99.9th-percentile sample step, the measure package_music.py used for
-//              the warden loop: an audible click
-//   stale      a packed Ogg that does not match what its manifest or STEMS.sha256 records: another
-//              mix under the same file name (a pack whose manifest was rewritten but whose Oggs were
-//              not), decoded length different from sample_count, loudness more than 0.3 LU from the
-//              clip's recorded measured.lufs, or a sha256 that differs from STEMS.sha256. The Oggs are
-//              gitignored, so the manifest and the hash list are what a checkout can compare them to.
-//   unchecked  a track whose audio is not on disk, or no ffmpeg; never counted as a pass
-// Game clips are measured as the engine plays them: stems summed, plus the manifest's level_db.
-// Loudness skips clips and files under 10 s (stingers, fanfares, short beds): the target is EBU R 128
-// integrated programme loudness (ITU-R BS.1770 gating), a whole-programme measure that means little
-// over a few seconds. True peak (BS.1770 4x oversampled) and seams are checked on every clip.
-// Run: node scripts/audio-gate.mjs [--project <dir>] [--music <dir>]... [--loops <regex>] [--jobs <n>] [--json] [--cues-only]
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 export const TARGET_LUFS = -16;
@@ -41,8 +19,6 @@ export const MUSIC_DIR = "assets/music_ace";
 export const STEM_HASHES = "STEMS.sha256";
 export const MANIFEST_LUFS_TOL = 0.3;
 
-// INTEGRATION.md section 7 item 5: each special's presence loop, tell, break and spawn. The
-// Splitter's break has a ground-ram and a clean variant.
 export const SPECIALS = ["foreman", "dispatcher", "splitter", "linker"];
 export function specialCues() {
   return SPECIALS.flatMap((name) =>
@@ -53,9 +29,6 @@ export function specialCues() {
   );
 }
 
-// INTEGRATION.md sections 4 to 6 and section 7 items 6 and 7: the boss duel stingers, each boss's
-// theme, Brindle's three phase tracks, the final phases and their Eurodance hype versions, and the
-// champion, which follows the same hype rule. Track ids drop the take's seed suffix (-s2801).
 export const BOSS_SOUNDS = ["boss_arena_in", "boss_phase", "stinger_boss_defeated", "hype_drop"];
 export const BOSS_TRACKS = [
   "brindle",
@@ -80,7 +53,6 @@ export function cueList() {
   ];
 }
 
-// "euro-brindle-p3-s2801.wav" -> "euro_brindle_p3", so files, theme folders and clip ids compare.
 export function cueKey(name) {
   return name
     .replace(/\.[a-z0-9]+$/i, "")
@@ -90,13 +62,10 @@ export function cueKey(name) {
     .replace(/-/g, "_");
 }
 
-// The cue ids sfx_bank.gd can bake: every quoted id in the file (TRIM_DB keys, match labels).
 export function bankIds(source) {
   return new Set([...source.matchAll(/"([a-z][a-z0-9_]*)"/g)].map((m) => m[1]));
 }
 
-// What the game can play: sound ids from the bank and audio files, track ids from music_ace theme
-// folders, their clips and sources, and audio files.
 export function wiredSet({ bank = "", manifests = [], files = [] }) {
   const sounds = bankIds(bank);
   const tracks = new Set();
@@ -112,8 +81,6 @@ export function wiredSet({ bank = "", manifests = [], files = [] }) {
   return { sounds, tracks };
 }
 
-// One finding per cue the game cannot play. delivered lists audio files outside the game tree
-// (--music folders), so the report says whether a cue is unrendered or rendered but not imported.
 export function missingCues(cues, wired, delivered = []) {
   const byKey = new Map(delivered.map((f) => [cueKey(path.basename(f)), f]));
   return cues
@@ -157,7 +124,6 @@ export function cueFindings(project, delivered = []) {
   return missingCues(cueList(), wired, delivered);
 }
 
-// ffmpeg ebur128 summary: integrated loudness and true peak.
 export function parseEbur128(stderr) {
   const i = [...stderr.matchAll(/^\s*I:\s+(-?[\d.]+|-inf)\s+LUFS/gm)].pop();
   const p = [...stderr.matchAll(/^\s*Peak:\s+(-?[\d.]+|-inf)\s+dBFS/gm)].pop();
@@ -169,7 +135,6 @@ export function hasFfmpeg() {
   return spawnSync("ffmpeg", ["-version"], { stdio: "ignore" }).status === 0;
 }
 
-// Interleaved stereo float samples at the file's own rate (or rate when given).
 export function decode(file, rate = null) {
   const args = [
     "-v",
@@ -230,7 +195,6 @@ export function meter(samples, rate) {
   return parseEbur128(String(out.stderr));
 }
 
-// The wrap from frame exit - 1 to frame loopAt against the loop's own sample steps.
 export function seamStep(samples, exit, loopAt) {
   const frames = samples.length / 2;
   const end = Math.min(exit, frames);
@@ -254,7 +218,6 @@ export function gain(samples, db) {
   return samples.map((s) => s * g);
 }
 
-// A track's verdicts: true peak always, loudness when it is long enough, the seam when it loops.
 export function judge(name, samples, rate, { loop = false, exit = null, loopAt = 0 } = {}) {
   const found = [];
   const seconds = samples.length / 2 / rate;
@@ -291,7 +254,6 @@ export function judge(name, samples, rate, { loop = false, exit = null, loopAt =
 
 const round4 = (x) => Math.round(x * 10000) / 10000;
 
-// Game clips from the music_ace manifests: stems summed as the engine mixes them.
 export function gameTracks(manifests) {
   const tracks = [];
   for (const m of manifests)
@@ -312,7 +274,6 @@ export function gameTracks(manifests) {
   return tracks;
 }
 
-// A clip whose decoded length or loudness differs from what its manifest recorded when it was cut.
 export function staleAgainstManifest(t, frames, lufs) {
   const found = [];
   if (t.frames !== null && frames !== t.frames)
@@ -339,7 +300,6 @@ export function sha256(file) {
   return createHash("sha256").update(readFileSync(file)).digest("hex");
 }
 
-// The stem files the manifests name, as "pack/file.ogg".
 export function namedStems(manifests) {
   return manifests.flatMap((m) =>
     Object.values(m.clips ?? {}).flatMap((clip) =>
@@ -358,9 +318,6 @@ export function readStemHashes(file) {
   return hashes;
 }
 
-// Every packed Ogg on disk under stemsDir must match STEMS.sha256, and every one the manifests name
-// must be listed there. Missing files are not reported here (missingStems and "unchecked" own that).
-// Returns one { file, why } per rejected file, so the caller can name each.
 export function stemHashMismatches(hashFile, stemsDir, named) {
   const hashes = readStemHashes(hashFile);
   if (hashes === null) return null;
@@ -551,8 +508,6 @@ export async function measureGameAsync(manifests, { jobs } = {}) {
   return { rows, found };
 }
 
-// Loose files: music under the --music folders, one track each. Files whose name matches loops
-// are checked as loops that wrap from their last sample to their first.
 export function measureFiles(files, loops) {
   const rows = [];
   const found = [];
@@ -642,7 +597,6 @@ export function parseArgs(argv) {
   return args;
 }
 
-// What the run cannot see, so a wrong path never reads as a pass.
 export function missingInputs(args, manifests) {
   const found = [];
   if (!existsSync(path.join(args.project, SFX_BANK)))
@@ -662,7 +616,6 @@ export function missingInputs(args, manifests) {
   return found;
 }
 
-// STEMS.sha256 beside the manifests: a mismatch names the file; no list at all is "unchecked", never a pass.
 export function hashFindings(project, manifests) {
   const dir = path.join(project, MUSIC_DIR);
   const named = namedStems(manifests);
@@ -679,10 +632,7 @@ export function hashFindings(project, manifests) {
   return rejected.map((r) => ({ kind: "stale", where: r.file, what: r.why }));
 }
 
-// An Ogg is stored in pages, and a start anywhere but a page's first sample decodes from the page
 // before. ffmpeg writes pages one second long unless told otherwise, which made a section change deep
-// in a clip decode up to a second of audio on its frame (tools/ace/repage.py has the measurement and
-// the fix). Returns the seconds of audio in the file's longest page, or null when it is not Ogg Vorbis.
 export const MAX_OGG_PAGE_S = 0.1;
 export function oggLongestPage(data) {
   let rate = 0;
@@ -711,7 +661,6 @@ export function oggLongestPage(data) {
   return rate > 0 && pages > 0 ? longest / rate : null;
 }
 
-// Every packed Ogg the manifests name and the disk holds must be short-paged.
 export function pageFindings(project, manifests) {
   const dir = path.join(project, MUSIC_DIR);
   const found = [];

@@ -85,8 +85,6 @@ export function windowCounts(samples, pid) {
   let maxGapMs = 0;
   for (const [i, s] of samples.entries()) {
     if (i > 0) {
-      // launch() gives the capture its own group. A child can start another group,
-      // so also check the foreground process’s ancestry at the time of the sample.
       const inCapture = s.front === pid || s.frontGroup === pid || s.frontAncestors?.includes(pid);
       if (s.front !== samples[i - 1].front && inCapture) frontmostChanges++;
       maxGapMs = Math.max(maxGapMs, s.at - samples[i - 1].at);
@@ -108,8 +106,6 @@ export function windowCounts(samples, pid) {
   };
 }
 
-// The first reading precedes spawn, and a new reading brackets exit. Failure to sample
-// never becomes a receipt with zero windows. The positive control must match the child's PID.
 function startSampler() {
   return spawn("/usr/bin/osascript", ["-l", "JavaScript", "-e", SAMPLER], {
     stdio: ["ignore", "pipe", "pipe"],

@@ -1,17 +1,3 @@
-# A looping worker (BACKLOG W1-93, DECISIONS machine lore 22 Oct): the batch plant's bucket conveyor,
-# still carrying aggregate up its truss and tipping it onto a pile nobody will pour. It runs, stops
-# while the hopper "fills", and runs again.
-# src/presentation/work_machines.gd places it and drives the buckets; nothing here is animated.
-# Procedural bmesh; no external assets or physics. Metres; Godot (X,Y,Z) -> Blender (X,-Z,Y).
-#
-# Nodes (the runtime finds them by name):
-#   WorksConveyorModel   root, origin on the ground under the truss's middle, the head (discharge) towards -Z
-#     Base               static: hopper, truss gallery, trestle legs, head tower, chute, tail housing, the pile
-#     CupFull            one loaded bucket at the origin, open side up, its run along -Z; the runtime
-#                         copies it along the carrying run (a MultiMesh) and hides this one
-#     CupEmpty           one empty bucket hanging upside down, for the return run under the belt
-# The carrying run goes from TAIL_TOP to HEAD_TOP; the return run 1.1 m under it the other way.
-# Paint as works_derrick.py; aggregate in sandstone tones.
 import math
 import os
 import sys
@@ -63,7 +49,6 @@ def finish(p, origin=(0, 0, 0), parent=None):
 root = common.empty("WorksConveyorModel")
 
 p = Part("Base")
-# The truss gallery: two side trusses under the run, chords, verticals and diagonals.
 n = 8
 for side in (-1, 1):
     x = side * HALF_W
@@ -75,11 +60,9 @@ for side in (-1, 1):
         beam(p, top[k] if k % 2 else bot[k], bot[k + 1] if k % 2 else top[k + 1], 0.14, PETROL_DARK)
     for k in range(n + 1):
         beam(p, top[k], bot[k], 0.14, PETROL_DARK)
-# Cross ties under the gallery and the walkway plate beside it.
 for k in range(n + 1):
     a = lerp3((-HALF_W, TAIL_TOP[1] - 0.2 - DEPTH, TAIL_TOP[2]), (-HALF_W, HEAD_TOP[1] - 0.2 - DEPTH, HEAD_TOP[2]), k / n)
     beam(p, a, (HALF_W, a[1], a[2]), 0.14, IRON)
-# Trestle legs: A-frames at a third and two thirds, set on concrete pads.
 for t in (0.3, 0.65):
     c = lerp3(TAIL_TOP, HEAD_TOP, t)
     yb = c[1] - 0.2 - DEPTH
@@ -87,14 +70,12 @@ for t in (0.3, 0.65):
         beam(p, (side * HALF_W, yb, c[2]), (side * (HALF_W + 2.2), 0.4, c[2]), 0.3, IRON)
         box(p, (1.2, 0.5, 1.2), (side * (HALF_W + 2.2), 0.25, c[2]), CONCRETE)
     beam(p, (-(HALF_W + 1.4), yb * 0.45, c[2]), (HALF_W + 1.4, yb * 0.45, c[2]), 0.16, IRON)
-# Tail: the receiving hopper and the tail pulley housing.
 tz = TAIL_TOP[2]
 box(p, (3.6, 1.4, 3.0), (0, 0.7, tz + 0.6), CONCRETE)
 hop = [(-2.0, 0.0), (2.0, 0.0), (1.0, -1.6), (-1.0, -1.6)]
 p.prism(SLOT, [(-2.2, 1.8), (2.2, 1.8), (1.1, 0.0), (-1.1, 0.0)], 2.6, matrix=common.mtx(g(0, 1.4, tz + 0.6), (math.pi / 2, 0, 0)), color=RUST)
 box(p, (2.8, 0.25, 2.2), (0, 3.25, tz + 0.6), GRAVEL)
 p.cyl(SLOT, 0.55, 0.55, 2.6, segs=10, loc=g(0, TAIL_TOP[1] - 0.6, tz), rot=(0, math.pi / 2, 0), color=IRON)
-# Head tower: four legs, a deck, the head pulley house with its motor, the discharge chute.
 hz = HEAD_TOP[2]
 for sx in (-1, 1):
     for sz in (-1, 1):
@@ -110,13 +91,11 @@ box(p, (1.0, 1.0, 1.6), (2.1, HEAD_TOP[1] - 0.3, hz), IRON)
 p.cyl(SLOT, 0.3, 0.3, 0.6, segs=8, loc=g(2.1, HEAD_TOP[1] + 0.4, hz - 0.5), color=IRON)
 chute = [(-0.9, 0.0), (0.9, 0.0), (0.6, -4.5), (-0.6, -4.5)]
 p.prism(SLOT, chute, 1.2, matrix=common.mtx(g(0, HEAD_TOP[1] - 1.2, hz - 1.9), (math.pi / 2 - 0.35, 0, 0)), color=RUST)
-# The pile under the chute: three heaped mounds.
 for (x, z, r, h) in ((0.0, hz - 4.6, 4.2, 3.4), (-2.4, hz - 3.0, 2.6, 1.8), (2.2, hz - 6.2, 2.4, 1.4)):
     p.cyl(SLOT, r, r * 0.25, h, segs=12, loc=g(x, h / 2 - 0.2, z), color=GRAVEL)
     p.cyl(SLOT, r * 0.25, 0.1, h * 0.25, segs=12, loc=g(x, h - 0.2 + h * 0.125, z), color=GRAVEL_LIGHT)
 finish(p, parent=root)
 
-# One bucket each way: open up and loaded, and hung empty under the belt.
 for name, full in (("CupFull", True), ("CupEmpty", False)):
     p = Part(name)
     flip = 1.0 if full else -1.0

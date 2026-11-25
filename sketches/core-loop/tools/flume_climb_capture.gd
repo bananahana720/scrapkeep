@@ -4,15 +4,6 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 
-# Stills of the flume's butte gap table (park_flume gap_table and gap_table_kicker, W1-102), from three fixed eyes in
-# the running game, so the place before and after a change compares frame for frame: far from the weir bench (how it
-# reads from a distance, map standard point 1), the approach down the mesa rim road (the kicker head-on, from south of its foot, on the line a ball climbs), and the
-# gap floor under the flume's last reach looking back at the far lip. The ball is frozen out of shot and the HUD
-# hidden. Each eye stands 2 m over the ground under it. Needs a rendered display:
-#
-#   $GODOT_BIN --path sketches/core-loop --script res://tools/flume_climb_capture.gd -- --out=<absolute dir> [--shots=far]
-#
-# Run it with a scratch HOME (macOS keeps user:// under HOME). Writes <out>/<shot>.png and shots.json.
 
 const SIZE := Vector2i(1920, 1080)
 const SHOTS := {
@@ -71,7 +62,6 @@ func _main() -> void:
 	cam.far = 2000.0
 	_game.add_child(cam)
 	cam.make_current()
-	# A free still camera takes the terrain's detail rings over from the chase camera (dam_look_capture.gd).
 	for terrain in root.find_children("*", "Terrain3D", true, false):
 		terrain.set_camera(cam)
 	var record := {}

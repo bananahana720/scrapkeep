@@ -1,36 +1,4 @@
 extends SceneTree
-# How much an attack warning hides the play (Andrew, 13 Nov 2026: "the attack indicators are way too
-# obstructive ... they do the reverse effect of trying to provide the player a way to read an enemy's
-# attack"). In stage 2 the ball is frozen under the game's own chase camera, HUD hidden, and a swatter
-# stands POSE_AHEAD metres ahead. Two poses, each in every telegraph look (Threat.LOOKS but classic):
-#   lane  a 3 m lane from the crew back through the ball and past the lens, reach 2.2 (a sweep), so the
-#         camera stands inside its fence, as on the wave 40 fight film; pending at 0.6, then live
-#   ring  a 3 m INSTANT ring round the crew, reach 3.5, pending at 0.6
-# Per pose it renders the frame with the marks, without them, and without them and the crew (then
-# the ball), and counts pixels whose largest 8-bit channel moved by at least CHANGED:
-#   body   share of the crew's pixels the marks change (the crew mask: marks-off frames with and
-#          without the crew; its shadow is turned off for the capture)
-#   ball   the same for the ball
-#   screen share of the whole frame the marks change
-#   noise  the same three counts between two marks-off frames, the floor each number sits on
-# The crew's and the ball's shadows are turned off, so a mask holds the body alone.
-#
-# UA-03: P1 in design-v3/ui-audit/principles.json, "The threat reads first: Nothing hides a danger,
-# including its own warning, and the warning comes early enough to act on". The score is `cover`,
-# the share of the attacker's own pixels its warning changes, minus a matched control: a fresh
-# marks-off grab taken right after each marked grab, whose own body share is subtracted. It passes
-# at COVER_LINE or less, so at least three quarters of the attacker's silhouette stays as drawn
-# (an assumption Andrew can overturn). A pose passes when its cover is at or under the line; the
-# run passes when every pose in every look does. --plant=cover puts an opaque slab across the
-# attacker, as a warning drawn over the thing it warns of, and must fail. Exit 0 pass, 1 fail,
-# 2 no display or no --out. The ball's share and the screen's share are recorded, not scored.
-# Needs a display:
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --path sketches/core-loop --resolution 1280x720 \
-#     --script res://tools/mark_cover_capture.gd -- --out=<abs dir>
-# The density governor's fill scale is held at 1, so fills draw at full strength (the worst case).
-# On the PC run it through gpu-run.sh. Writes <out>/cover-<pose>-<look>.png (marks on) and frames.json.
-#   gpu-run.sh <worktree> cover --path sketches/core-loop --script res://tools/mark_cover_capture.gd -- [--plant=cover] --out=<abs dir>
-# Evidence limit: llvmpipe in the cloud renders GL Compatibility; the PC's Forward+ judges.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
@@ -38,7 +6,6 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Density := preload("res://src/presentation/density.gd")
 
 const SIZE := Vector2i(1280, 720)
-# Stage 2's pale morning floor, the haze pose capture's first place.
 const STAGE := 2
 const OPEN_SAND := 45.0
 const POSE_AHEAD := 7.0
@@ -109,7 +76,6 @@ func _run() -> void:
 	DirAccess.make_dir_recursive_absolute(out)
 	game.flow.enter_stage(STAGE, Vector3.ZERO, false)
 	await _frames(60)
-	# Off the launch pad onto open sand ahead, where the ball sits on the floor the crew stands on.
 	var cam0: Camera3D = game.camera.cam
 	var ahead0: Vector3 = -cam0.global_transform.basis.z
 	ahead0.y = 0.0
@@ -117,7 +83,6 @@ func _run() -> void:
 	game.player.reset_to(game.ctx.terrain.drop_point(start.x, start.z, 1.2))
 	await _frames(90)
 	game.player.body().freeze = true
-	# The chase camera eases in behind the frozen ball before the pose is read from it.
 	await _frames(120)
 	var cam: Camera3D = game.camera.cam
 	var ball: Vector3 = game.player.ball_position()
@@ -137,8 +102,6 @@ func _run() -> void:
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	for n in root.find_children("*", "CanvasLayer", true, false):
 		n.visible = false
-	# The ball and the crew animate while paused (shader time), so every comparison is against
-	# BASES frames: a pixel counts only when it differs from all of them.
 	var plain: Array = []
 	for k in BASES:
 		plain.append(await _shot())
@@ -163,7 +126,6 @@ func _run() -> void:
 			else:
 				mark = Telegraph.ring(game, floor_at, Threat.Type.INSTANT, crew_at, RING_RADIUS)
 				mark.set_progress(PENDING)
-			# Fills at full strength: the density governor's scale is whatever the paused frame left.
 			Density.publish_fill_scale(1.0)
 			var slab: MeshInstance3D = null
 			if plant == "cover":
@@ -173,7 +135,6 @@ func _run() -> void:
 			if slab != null:
 				slab.free()
 			mark.free()
-			# The matched control: the same view with no mark, taken right beside this grab.
 			var beside := await _shot()
 			var control: float = _changed(beside, plain, crew_mask)
 			var body: float = _changed(image, plain, crew_mask)
@@ -200,8 +161,6 @@ func _run() -> void:
 	quit(0 if all_pass else 1)
 
 
-# An opaque unshaded slab between the lens and the attacker, wider than it: a warning drawn over
-# the thing it warns of.
 func _slab(cam: Camera3D, at: Vector3) -> MeshInstance3D:
 	var quad := QuadMesh.new()
 	quad.size = Vector2(4.0, 4.0)
@@ -219,7 +178,6 @@ func _slab(cam: Camera3D, at: Vector3) -> MeshInstance3D:
 	return view
 
 
-# 1 where `a` differs from every frame in `bases` by at least CHANGED in some channel.
 static func _mask(a: Image, bases: Array) -> PackedByteArray:
 	var da := a.get_data()
 	var dbs: Array = bases.map(func(b: Image): return b.get_data())
@@ -244,7 +202,6 @@ static func _count(mask: PackedByteArray) -> int:
 	return n
 
 
-# Share of the pixels in `within` (all pixels when empty) where `a` differs from every base.
 static func _changed(a: Image, bases: Array, within: PackedByteArray) -> float:
 	var diff := _mask(a, bases)
 	var hit := 0
@@ -256,8 +213,6 @@ static func _changed(a: Image, bases: Array, within: PackedByteArray) -> float:
 	return float(hit) / total if total > 0 else -1.0
 
 
-# The attacker's cover: its marked share minus the matched control's share. An empty mask
-# (a negative share) is a measure that saw nothing, so it scores 1.0 and fails.
 static func score(body: float, control: float) -> float:
 	if body < 0.0:
 		return 1.0

@@ -47,7 +47,7 @@ ob.parent = None
 bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
 ob.name = "fitted"
 me = ob.data; me.name = "fitted"
-weld = bmesh.new(); weld.from_mesh(me)  # the fit leaves seam splits, which would break the ball into loose faces
+weld = bmesh.new(); weld.from_mesh(me)
 bmesh.ops.remove_doubles(weld, verts=weld.verts, dist=0.0005)
 weld.to_mesh(me); weld.free()
 names = [m.name for m in me.materials]
@@ -62,7 +62,6 @@ co[:, :2] *= squeeze
 base, top = co[:, 2].min(), co[:, 2].max()
 bulb_z = pivot["LobberBulb"].z
 
-# the ball: the largest joined patch of tag faces
 bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
 tagged = [f for f in bm.faces if f.material_index == TAG]
 if not tagged:
@@ -90,12 +89,12 @@ if not base + 0.3 * (top - base) < zc < base + 0.85 * (top - base):
 if np.hypot(centre[0], centre[1]) > 0.15 or size.min() < 0.5 * size.max() or size.max() < 0.4:
     raise SystemExit("lobber_parts: the largest brass patch is not a ball on the axis (centre %s, size %s)" % (centre.round(2), size.round(2)))
 
-def warp(z):  # two straight pieces: base..zc onto base..bulb_z, zc..top onto bulb_z..--top
+def warp(z):
     return np.where(z < zc, base + (z - base) * (bulb_z - base) / (zc - base), bulb_z + (z - zc) * (float(opt["top"]) - bulb_z) / (top - zc))
 
 ball_top_w = float(warp(np.array([ball_top]))[0])
 co[:, 2] = warp(co[:, 2])
-own = np.array([centre[0], centre[1], bulb_z])  # the ball's own centre after the stretch; it moves onto the pivot
+own = np.array([centre[0], centre[1], bulb_z])
 reach = np.linalg.norm(co[ball_verts] - own, axis=1).max()
 shrink = float(opt["bulb-r"]) / reach
 co[ball_verts] = np.array([0.0, 0.0, bulb_z]) + (co[ball_verts] - own) * shrink

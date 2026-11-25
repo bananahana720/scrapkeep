@@ -15,21 +15,18 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+from _life import Critter
 
 life = Critter("canyon_wren")
 
-# --- body: a round ball, cream bib on the front
 life.ellipsoid("body", "body", (0, 0.074, 0.006), (0.052, 0.05, 0.058), subsurf=1, u=12, v=6)
 life.ellipsoid("body", "cream", (0, 0.066, -0.03), (0.04, 0.04, 0.034), rot=(-10, 0, 0), subsurf=1, u=8, v=6)
 
-# --- tail: a plum root merged into the rump, then three rounded lobes fanned up and back
 life.tube("tail", "tail", [(0, 0.085, 0.045), (0, 0.116, 0.068)], [0.02, 0.017], sides=5, subsurf=1)
 for s in (-1, 0, 1):
     life.ellipsoid("tail", "tail", (0.016 * s, 0.14 + 0.004 * (s == 0), 0.072 + 0.006 * abs(s)),
                    (0.015, 0.042, 0.01), rot=(16, 0, -24 * s), subsurf=1, u=8, v=4)
 
-# --- head: merged into the front-top of the body, cream throat, slender curved beak, big eyes
 life.ellipsoid("head", "body", (0, 0.122, -0.035), (0.036, 0.034, 0.036), subsurf=1, u=8, v=5)
 life.ellipsoid("head", "cream", (0, 0.108, -0.056), (0.026, 0.02, 0.016), subsurf=1, u=8, v=5)
 life.tube("head", "tail", [(0, 0.125, -0.06), (0, 0.124, -0.082), (0, 0.117, -0.103), (0, 0.105, -0.118)],
@@ -37,12 +34,10 @@ life.tube("head", "tail", [(0, 0.125, -0.06), (0, 0.124, -0.082), (0, 0.117, -0.
 for s in (-1, 1):
     life.ellipsoid("head", "eye", (0.024 * s, 0.13, -0.054), (0.0105, 0.0115, 0.009), subsurf=1, u=8, v=4)
 
-# --- thin legs, round feet
 for s in (-1, 1):
     life.capsule("body", "wing", (0.017 * s, 0.034, 0.0), (0.017 * s, 0.008, -0.008), 0.0055, subsurf=1, u=5, v=3)
     life.ellipsoid("body", "wing", (0.017 * s, 0.006, -0.012), (0.011, 0.006, 0.02), subsurf=1, u=6, v=4)
 
-# --- folded wing lobes on the flanks, rounded, a little swept back
 for s, bone in ((-1, "wing_l"), (1, "wing_r")):
     life.ellipsoid(bone, "wing", (0.045 * s, 0.083, 0.014), (0.018, 0.034, 0.05), rot=(-10, 12 * s, 0), subsurf=1, u=8, v=5)
 
@@ -62,7 +57,6 @@ def wings(yaw, roll, tip=0):
     return {"wing_l": {"rot": (tip, -yaw, -roll)}, "wing_r": {"rot": (tip, yaw, roll)}}
 
 
-# --- idle, 2.0 s: quick knee-bob dips, tail flicks, head tilts
 DIP = {"loc": (0, -0.008, 0), "rot": (6, 0, 0), "scale": (1.03, 0.95, 1.03)}
 life.cycle("idle", 2.0, {
     "body": [(0, REST), (0.2, DIP), (0.4, REST), (0.6, DIP), (0.8, REST), (1.5, REST), (1.7, DIP), (1.9, REST)],
@@ -72,7 +66,6 @@ life.cycle("idle", 2.0, {
              (1.3, {"rot": (0, -8, 0)}), (1.6, {"rot": (-8, 0, 0)}), (1.7, {"rot": (7, 0, 0)}), (1.9, REST)],
 })
 
-# --- move, 1.2 s: wings out in a quick flutter (6 flaps), body bobbing, tail up
 w_up, w_down = wings(70, 40), wings(70, -28)
 flap = {"wing_l": [], "wing_r": [], "body": [], "head": [], "tail": []}
 for i in range(6):
@@ -85,7 +78,6 @@ for i in range(6):
     flap["tail"].append((t, {"rot": (6 if i % 2 else -4, 0, 0)}))
 life.cycle("move", 1.2, flap)
 
-# --- react, 2.0 s: alarm crouch, tail snapped up, wings flick open; hold-flutter from 0.8 s closes on itself
 CROUCH = {
     "body": {"loc": (0, -0.014, 0.004), "rot": (-12, 0, 0), "scale": (1.06, 0.88, 1.05)},
     "head": {"loc": (0, -0.004, 0), "rot": (8, 0, 0)},
@@ -106,13 +98,12 @@ react = {}
 for bone in ("body", "head", "tail", "wing_l", "wing_r"):
     react[bone] = [(0, REST), (0.1, SQUASH[bone]), (0.25, SNAP[bone]), (0.5, CROUCH[bone]), (0.8, CROUCH[bone]),
                    (1.0, FLUTTER[bone]), (1.2, CROUCH[bone]), (1.4, FLUTTER[bone]), (1.7, FLUTTER[bone]), (2.0, CROUCH[bone])]
-# the flutter keys must repeat so 0.8 s == 2.0 s: 0.8 and 2.0 are both CROUCH
 life.oneshot("react", 2.0, react, loop_from=0.8)
 
-import os  # noqa: E402
-import _life  # noqa: E402
+import os
+import _life
 
-if os.environ.get("CANYON_WREN_POSE") and _life.args()["stills"]:  # review aid: a mid-clip still, e.g. CANYON_WREN_POSE=move:0.2
+if os.environ.get("CANYON_WREN_POSE") and _life.args()["stills"]:
     clip, at = os.environ["CANYON_WREN_POSE"].split(":")
     dest = _life.args()["stills"]
     sys.argv = [a for a in sys.argv if a not in ("--stills", dest)]
@@ -120,4 +111,3 @@ if os.environ.get("CANYON_WREN_POSE") and _life.args()["stills"]:  # review aid:
     life.stills(dest, pose=(clip, float(at)))
 else:
     life.finish()
-

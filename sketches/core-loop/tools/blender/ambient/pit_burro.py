@@ -15,18 +15,16 @@ import math
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+from _life import Critter
 
 life = Critter("pit_burro")
 
-D = -0.15   # the barrel sits low: legs are short and chunky
+D = -0.15
 
-# --- body: a fat barrel, plus a big soft neck that grows into the head, and a pale belly
 life.ellipsoid("body", "body", (0, 0.66 + D, 0.02), (0.28, 0.27, 0.38), subsurf=1, u=10, v=6)
 life.ellipsoid("body", "body", (0, 0.8 + D, -0.24), (0.24, 0.27, 0.3), rot=(-20, 0, 0), subsurf=1, u=10, v=6)
 life.ellipsoid("body", "cream", (0, 0.5 + D, -0.06), (0.2, 0.1, 0.26), subsurf=1, u=6, v=4)
 
-# --- head: big and round, sunk into the neck; cream muzzle, big sleepy eyes with lids, brush mane
 life.ellipsoid("head", "body", (0, 0.93 + D, -0.43), (0.22, 0.2, 0.25), subsurf=1, u=10, v=6)
 life.ellipsoid("head", "cream", (0, 0.86 + D, -0.66), (0.13, 0.1, 0.1), subsurf=1, u=10, v=6)
 life.ellipsoid("head", "hoof", (0, 0.88 + D, -0.755), (0.05, 0.035, 0.03), subsurf=0, u=6, v=4)
@@ -38,18 +36,15 @@ life.tube("head", "mane", [(0, 1.09 + D, -0.44), (0, 1.07 + D, -0.34), (0, 1.0 +
 life.tube("body", "mane", [(0, 1.02 + D, -0.27), (0, 0.98 + D, -0.18), (0, 0.93 + D, -0.08)],
           [0.058, 0.055, 0.045], sides=6, subsurf=1)
 
-# --- ears: oversized, long, rounded, tilted a little out; cream inside
 for s, bone in ((-1, "ear_l"), (1, "ear_r")):
     life.capsule(bone, "body", (0.1 * s, 1.0 + D, -0.4), (0.28 * s, 1.27 - 0.05, -0.38), 0.1, 0.085, subsurf=1, u=7, v=5, squash=(0.55, 1.0))
     life.ellipsoid(bone, "cream", (0.135 * s, 1.1 + D, -0.43), (0.022, 0.12, 0.05), rot=(0, 0, -12 * s), subsurf=0, u=6, v=4)
 
-# --- legs: short, chunky, soft round hooves
 legs = {"leg_fl": (-1, -0.2), "leg_fr": (1, -0.2), "leg_bl": (-1, 0.24), "leg_br": (1, 0.24)}
 for bone, (s, z) in legs.items():
     life.capsule(bone, "body", (0.15 * s, 0.5 + D, z), (0.15 * s, 0.13, z), 0.12, 0.105, subsurf=1, u=7, v=4)
     life.ellipsoid(bone, "hoof", (0.15 * s, 0.05, z - 0.01), (0.12, 0.055, 0.13), subsurf=1, u=7, v=4)
 
-# --- tail: a short rope ending in a tuft
 life.tube("tail", "body", [(0, 0.78 + D, 0.38), (0, 0.66 + D, 0.45), (0, 0.52 + D, 0.47)], [0.04, 0.032, 0.026], sides=6, subsurf=1)
 life.ellipsoid("tail", "mane", (0, 0.45 + D, 0.47), (0.055, 0.1, 0.055), subsurf=1, u=8, v=5)
 
@@ -68,7 +63,6 @@ life.rig([
 
 REST = {}
 
-# --- idle, 2.8 s: breathe, graze (head dips low), come back up, flick the ears, swish the tail
 life.cycle("idle", 2.8, {
     "body": [(0, REST), (0.7, {"scale": (1, 1.02, 1)}), (1.4, REST), (2.1, {"scale": (1, 1.02, 1)})],
     "head": [(0, REST), (0.4, {"rot": (-30, 0, 0), "loc": (0, -0.04, -0.03)}), (0.9, {"rot": (-34, 0, 3), "loc": (0, -0.05, -0.03)}),
@@ -78,7 +72,6 @@ life.cycle("idle", 2.8, {
     "tail": [(0, REST), (0.5, {"rot": (0, 0, 16)}), (1.0, {"rot": (0, 0, -14)}), (1.5, {"rot": (0, 0, 14)}), (2.0, {"rot": (0, 0, -10)}), (2.4, {"rot": (0, 0, 6)})],
 })
 
-# --- move, 1.2 s: a diagonal amble. Front-left with back-right swing together, opposite pair half a cycle later.
 steps = 8
 T = 1.2
 tracks = {k: [] for k in ("body", "head", "ear_l", "ear_r", "tail", *legs)}
@@ -97,7 +90,6 @@ for i in range(steps):
     tracks["tail"].append((t, {"rot": (0, 0, 12 * math.sin(ph + 1.0))}))
 life.cycle("move", T, tracks)
 
-# --- react, 2.0 s: head up, ears back, a little hop, turn the rump and hunch; breathing hold from 0.8 s
 FINAL = {
     "root": {"rot": (0, 165, 0)},
     "body": {"loc": (0, -0.03, 0), "rot": (6, 0, 0), "scale": (1.06, 0.94, 1.04)},

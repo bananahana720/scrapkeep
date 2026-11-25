@@ -32,7 +32,6 @@ SKETCH = HERE.parents[1]
 ROOT = HERE.parents[3]
 PREVIEW = ROOT / "artifacts/local/dress-preview/PTL"
 PILOT_OUT = SKETCH / "assets/models/pilot_tally_anim.glb"
-# Pinned source hashes document the design without requiring the external picture archive.
 REFERENCE_HASHES = {
     "pilot-tally.png": "5ec88f4f6ecd42917355f85d8a23e09f369de57097a34f13702f6b22a72f61d7",
     "shell-tally.png": "209703bc741987b1b9cd7039cbc2b556a7a05a24c1d58f90ee390ddd181d2838",
@@ -50,9 +49,6 @@ KEYS = {"drop_land": [1, 7, 13, 17, 21, 29, 39, 49, 58, 66],
         "heave": [1, 3, 7, 10, 15, 25]}
 KEY_POSES = {"drop_land": 17, "big_cheer": 25, "wince": 3,
              "slump": 23, "phew": 10, "brace": 6, "heave": 7}
-# Polish (POLISH.md): face, ears, muzzle, jaw, paws and grip fans subdivide once into soft
-# vinyl-toy forms; torso, limbs, tail, cloth, ledger and metal keep their authored topology,
-# smooth shaded with hard creases (no bevel, as for Tarn).
 POLISH = {"detail": 1, "bevel": 0}
 SOFT_BONES = ("head", "ear.R", "ear.L", "snout", "jaw", "hand.R", "hand.L", "curl.R", "curl.L")
 COLOURS = {"fur": "706a5d", "ear": "906681", "cream": "f7f1e3",
@@ -60,7 +56,6 @@ COLOURS = {"fur": "706a5d", "ear": "906681", "cream": "f7f1e3",
 
 
 def bone_schema():
-    # Read-only reuse of the common schema; only anatomy anchors are fitted here.
     spec = rig_pilot.bone_spec("rivet", [])
     anchors = {"head": (0, .015, .20), "snout": (0, .24, .12),
                "jaw": (0, .19, .09), "ear.R": (.17, 0, .335),
@@ -124,7 +119,6 @@ class AnimalSurface:
             a = -math.pi/2 + math.pi*i/rings
             rows.append((tuple(c+Vector((0, 0, scale[2]*math.sin(a)))),
                          scale[0]*math.cos(a), scale[1]*math.cos(a)))
-        # Poles are true top and bottom, rather than flat cylinder caps.
         points = []
         for p, rx, ry in rows:
             for j in range(n):
@@ -172,7 +166,6 @@ class AnimalSurface:
 
     def finish(self):
         bmesh.ops.recalc_face_normals(self.part.bm, faces=list(self.part.bm.faces))
-        # One connected island can carry several tags, so every vertex must be soft.
         soft = {self.bones.index(name) + 1 for name in SOFT_BONES}
         polish.subdivide_where(self.part.bm, 1, lambda island: all(
             v[self.weights] in soft for f in island for v in f.verts))
@@ -237,7 +230,6 @@ def model():
         ((0,.015,.20),.215,.17), ((0,0,.265),.178,.147),
         ((0,-.005,.32),.166,.112), ((0,-.005,.360),.099,.068),
         ((0,-.005,.377),.042,.028), ((0,-.005,.38),.005,.005)], 20, "head", head_colour)
-    # Snout and tiny jaw keep the short rat nose; pupils and brows stay head-bound.
     a.loft("Snout", [((0,.18,.12),.072,.042), ((0,.22,.12),.09,.05),
         ((0,.266,.125),.05,.031), ((0,.291,.134),.016,.014)], 12, "snout", "cream", axis="Y")
     a.oval("Nose", (0,.298,.142), (.025,.015,.017), "snout", "charcoal", 10, 5)
@@ -245,7 +237,6 @@ def model():
     for side, s in (("R",1),("L",-1)):
         a.oval("Eye."+side, (s*.095,.162,.236), (.022,.017,.028), "head", "charcoal", 10, 6)
         a.oval("EyeGlint."+side, (s*.092,.178,.244), (.006,.003,.007), "head", "cream", 6, 4)
-        # Concave ear cup: one continuous front/rim/back surface, hinge at lower inner rim.
         centre = Vector((s*.255,0,.405))
         points, faces = [], []
         profiles = [(.012,.006),(.055,.011),(.099,.021),(.114,.025),(.12,.010),
@@ -273,13 +264,11 @@ def model():
         return "pelvis" if p[2]<-.31 else "spine_01" if p[2]<-.1 else "spine_02"
     def body_colour(ps):
         c = sum((Vector(p) for p in ps),Vector())/len(ps)
-        # Bib sides frame an uninterrupted cream pouch, rather than a painted sphere.
         return "cream" if c.y > .095 and abs(c.x)<.165 else "petrol"
     a.loft("PouchBodyBib", [((0,-.015,-.42),.10,.07),((0,-.012,-.38),.205,.135),
         ((0,-.01,-.30),.262,.197),((0,-.007,-.20),.28,.21),
         ((0,-.004,-.10),.254,.181),((0,.002,0),.19,.115),
         ((0,.008,.058),.105,.075),((0,.008,.074),.07,.053)],20,body_weight,body_colour)
-    # Tail has two smooth, tapering spans on the existing two bones, not a brush.
     a.tube("TailBase",[(0,-.16,-.27),(0,-.22,-.29),(0,-.29,-.26),(0,-.36,-.22)],
            [.0175,.017,.015,.013],"tail.01","ear",8)
     a.tube("TailTip",[(0,-.36,-.22),(.03,-.405,-.18),(.06,-.44,-.15),(.08,-.48,-.19),(.085,-.51,-.23)],
@@ -302,7 +291,6 @@ def model():
         a.tube("Cuff."+side,[(s*.327,.326,-.021),(s*.325,.337,-.005),(s*.32,.35,.010)],
                [.077,.079,.074],"lower_arm."+side,"mulberry",10)
         a.oval("Paw."+side,(s*.32,.40,.05),(.065,.052,.055),"hand."+side,"cream",10,5)
-        # One connected three-lobe fan, all on curl; no fingers or extra joints.
         points, faces = [], []
         n=18
         for y,r in ((.421,.050),(.454,.047),(.469,.036)):
@@ -320,14 +308,12 @@ def model():
         a.mechanical("BibStrap."+side,"spine_02",lambda p,s=s:
             p.beam("pilot",(s*.175,.129,-.14),(s*.12,.105,.048),.027,.012,color="sandstone"))
 
-    # Folded scarf is a cloth surface with front point and a broad rear collar.
     a.loft("ScarfCollar", [((0,0,.012),.137,.091),((0,0,.047),.145,.096),
                            ((0,0,.068),.128,.083)],16,"spine_02","mulberry")
     a.surface("ScarfBib",[(-.126,.115,.043),(.126,.115,.043),(.086,.171,-.064),
         (0,.197,-.146),(-.086,.171,-.064),(0,.143,-.022)],
         [(0,1,5),(1,2,5),(2,3,5),(3,4,5),(4,0,5)],"spine_02",
         lambda ps:"cloth_shadow" if sum(p[2] for p in ps)/len(ps)<-.065 else "mulberry",smooth=False)
-    # Closed book, three punched holes and empty broad face. It never follows the arm.
     def ledger(p):
         punched_panel(p,(-.255,.045,-.20),.17,.23,.045,strip=.034,colour=COLOURS["cream"])
         for x in (-.335,-.178):
@@ -391,8 +377,6 @@ def solve_tally_arm_once(arm,side,target,pole=None):
 
 
 def solve_tally_arm(arm,side,target,pole=None):
-    # Full inherited torso scale changes segment lengths as the elbow turns.
-    # Re-evaluate those lengths instead of stretching the shared arm controls.
     for _ in range(8):
         solve_tally_arm_once(arm,side,target,pole)
         if (arm.pose.bones["hand."+side].head-Vector(target)).length<.00001:
@@ -507,8 +491,6 @@ def animate(arm):
         action=arm.animation_data.action
         action.name=clip
         action.use_fake_user=True
-        # Linear segments bound every component between inspected keys. Repeated key
-        # poses carry readable holds without spline overshoot inside the glass.
         for layer in action.layers:
             for strip in layer.strips:
                 for bag in strip.channelbags:
@@ -517,8 +499,6 @@ def animate(arm):
                             point.interpolation="LINEAR"
         planted=["R","L"] if clip in ("brace","drop_land") else ["R"] if clip=="phew" else ["L"] if clip=="heave" else []
         if planted:
-            # Bake planted hands every frame while retaining the authored elbow
-            # plane. Sparse Euler interpolation otherwise lets a grip drift 15 mm.
             baked=[]
             for frame in range(1,CLIPS[clip]+1):
                 bpy.context.scene.frame_set(frame)
@@ -602,7 +582,6 @@ def verify_motion(arm,obj,actions):
                 grip_error=max(grip_error,(arm.pose.bones["hand."+side].head-target).length)
         assert radius < .98,(action.name,"glass clearance",radius)
         assert root_error < 1e-6,(action.name,"pelvis drift",root_error)
-        # Interpolated rigid-arm Euler channels are sampled too, not just the keys.
         assert grip_error < .003,(action.name,"planted grip",grip_error)
         assert overlap_count==0,(action.name,"ledger/arm intersection",overlap_count,ledger_clearance)
         checks.append({"clip":action.name,"seconds":(CLIPS[action.name]-1)/30,
@@ -657,7 +636,6 @@ def previews(arm,obj,actions,tag):
             scene.render.filepath=str(PREVIEW/(tag+"clip-"+action.name+".png"))
             bpy.ops.render.render(write_still=True)
             paths.append(Path(scene.render.filepath))
-    # Unoccluded model study complements the requested in-shell turnaround.
     for o in common.tree(bpy.data.objects["ShellTally"]):
         o.hide_render=True
     if arm:

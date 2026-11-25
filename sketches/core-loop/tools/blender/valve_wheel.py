@@ -29,8 +29,7 @@ from ore_cart import kit, common, strut
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [600, 610, 1]  # polish: was kit.P [270, 610, 1]
-# Polish (tools/blender/POLISH.md): hard machinery; the amber band stays an unbevelled stripe.
+PROP = [600, 610, 1]
 FINISH = {"Wheel": {"bevel": .03}, "Band": {"bevel": 0}, "Mount": {"bevel": .03}, "WheelDetail1": {"bevel": 0}, "MountDetail1": {"bevel": 0}, "WheelDetail2": {"bevel": 0}}
 
 
@@ -39,10 +38,6 @@ def polish_on():
     kit.FINISH.update(FINISH)
 
 
-
-# One row per painted part, palette names only. The band is amber, a painted safety stripe (VISUAL-LANGUAGE.md:482), not hazard (LEGIBILITY.md:21); the hub, gasket
-# and outlet are copper: brass is the Fleet requisition colour, friendly fittings are copper (RECIPE-WAVE.md LORE).
-# The wheel grey is charcoal lifted toward bone (the palette has no neutral grey; slate is a state colour).
 TONES = {
     "iron": common.mix("charcoal", "bone", .32),
     "crack": "charcoal",
@@ -54,25 +49,23 @@ TONES = {
     "shaft": "charcoal",
 }
 
-# Metres at game scale. Wheel frame: axle +Y. Today's TorusMesh: inner 1.3, outer 1.9, so tube depth 0.6.
-RIM = (1.90, 1.45, .28, 16)             # outer radius, inner radius, half depth, segments
+RIM = (1.90, 1.45, .28, 16)
 SPOKES, SPOKE_W, SPOKE_D = 8, .26, .22
-HUB = (.50, .22)                        # radius, half depth
-CAP = (.38, .30, .22, .40)              # bottom radius, top radius, y0, y1 (front boss)
-CRACK_ANGLE = math.radians(-12)        # from +X toward the mesh -Z, i.e. just above 3 o'clock in the game
-BAND = (1.80, 1.915, .285, .20)         # inner radius, outer radius, front y, wrap y
+HUB = (.50, .22)
+CAP = (.38, .30, .22, .40)
+CRACK_ANGLE = math.radians(-12)
+BAND = (1.80, 1.915, .285, .20)
 BAND_GAP = math.radians(8)
-# Mount frame: foot origin, +Z faces the same way as the wheel's front.
-MZ = -1.75                              # body axis behind the wheel plane on a line shaft, clear of the rim silhouette
-HUB_Y = 1.6                             # contraptions.gd: wheel at foot + UP * 1.6
+MZ = -1.75
+HUB_Y = 1.6
 SLAB = (1.30, .22, 1.20)
 BODY = (.48, .22, 1.00)
 GASKET = (.58, .62, .76)
 FLANGE = (.56, 1.00, 1.12)
 BONNET = (.36, .18, 1.12, 1.42)
 GEARBOX = (.50, .44, .50)
-OUTLET = (.20, .40, .80, .45)           # pipe radius, x0, x1, y
-SOCKET = (.30, .80, 1.05, .14)          # radius, x0, x1, bore radius
+OUTLET = (.20, .40, .80, .45)
+SOCKET = (.30, .80, 1.05, .14)
 SIZE = {"valve_wheel_wheel": [3.8, .68, 3.8], "valve_wheel_band": [3.8, .57, 3.8],
         "valve_wheel_mount": [1.7, 1.82, 2.25]}
 
@@ -93,7 +86,6 @@ def frustum(s, r0, r1, y0, y1, n, color, caps=(True, True), at=(0, 0)):
 
 
 def tube(s, a, b, profile, n, colors, caps=(True, True)):
-    # Rings of (radius, t along a->b) around an arbitrary axis; colors one per ring.
     a, b = Vector(a), Vector(b)
     d = (b - a).normalized()
     u = d.cross(Vector((0, 1, 0)) if abs(d.y) < .9 else Vector((1, 0, 0))).normalized()
@@ -115,7 +107,6 @@ def tube(s, a, b, profile, n, colors, caps=(True, True)):
 
 
 def section_ring(s, profile, n, color, start=0.0, span=math.tau, closed=True):
-    # A loop of (radius, y) points swept around +Y: the rim's box section, the band's L.
     count = n if closed else n + 1
     aa = [start + span * i / n for i in range(count)]
     verts = [(r * math.cos(a), y, -r * math.sin(a)) for r, y in profile for a in aa]
@@ -133,7 +124,6 @@ def wheel(s):
         strut(s, (HUB[0] * .8 * c, 0, HUB[0] * .8 * k), ((inn + .05) * c, 0, (inn + .05) * k), SPOKE_W, SPOKE_D, TONES["iron"])
     frustum(s, HUB[0], HUB[0], -HUB[1], HUB[1], 8, TONES["brass"])
     frustum(s, CAP[0], CAP[1], CAP[2], CAP[3], 8, TONES["brass"], caps=(False, True))
-    # The crack: a dark zig-zag across the rim's front face and over the tread, proud of the iron by 6 mm.
     ca = CRACK_ANGLE
     path = [(inn - .01, 0), (inn + .14, .05), (inn + .27, -.03), (out + .01, .03)]
     pts = []

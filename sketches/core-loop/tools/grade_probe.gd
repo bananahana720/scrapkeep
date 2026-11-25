@@ -1,33 +1,5 @@
 extends SceneTree
-# What the post grade does to the colours that must read (G2, Grading lane, wave 18). The probe
-# boots the game on the launch table (game.gd LAUNCH_TABLE) and enters every stage, and after each
-# world's last stage that world's boss arena (flow.enter_boss, so the arena dress lights it). In
-# each place it lays a grid of plates beside the ball, in the game's own world and lights, and looks
-# straight down from the live chase camera's distance to the ball, so fog, lamps and arena keys
-# reach the plates as they reach the floor. The camp row is entered last through enter_world on
-# the "camp" slot, as camp_hub.gd does, over the last place's lights.
-#   row 0  the Bible ground colours, lit
-#   row 1  the same grounds under a hostile fill as threat_grammar paints it (fill()): under the
-#          default haze look HAZARD at FILL_ALPHA * HAZE_FILL; under classic the HAZARD stripe
-#          of the striped fill, HAZARD at FILL_ALPHA (unshaded, alpha)
-#          plus a small live plate on each fill, the live INSTANT slag layer (live_fill()) over it:
-#          the "live~pending:" value is the L* step, pending L* minus live L*, of that live colour
-#          against the pending fill beside it (live is a dark scorched core), reported and not gated (ATTACK-READS.md:27, live and pending must stay distinct under haze). The
-#          plate stacks slag over the fill; the game also draws the footprint's AREA_ALPHA base
-#          under both, which the plate leaves out.
-#   row 2  the meaning colours at EDGE_ALPHA over threat_grammar's charcoal under-band at
-#          UNDERLAY_ALPHA, both unshaded, on lit sandstone
-# It reads the pixels back and reports the graded colours and their CIE76 gaps. Needs a display:
-#   godot --path sketches/core-loop --resolution 1000x600 --script res://tools/grade_probe.gd -- --out=<dir> [--gate]
-# Writes <out>/grade_probe.json and <out>/<place>.png. --gate exits 1 when a gated pair falls
-# under GAP on any place. GAP is beacon_colour_test.gd's floor between a colour and the live
-# (ARC) or hazard colour; the probe holds its pairs (edges against edges) to it. The fill-over-
-# ground gaps are reported, not gated: no ruling sets their floor.
-#   --stills=<dir> also reports, for every PNG there (day_arc_capture.gd output), mean L* and the
-#   share of pixels with a channel at 0 or at 255 in sRGB.
-# Evidence limit: llvmpipe GL Compatibility shows colour, not Forward+ glow or volumetric air
 # (PLAYER-FX.md, the capture note; Godot prints that volumetric fog needs Forward+). The numbers
-# that count come from the PC render bench. Frame cost is not measured here.
 const Game := preload("res://src/game.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
@@ -36,15 +8,12 @@ const Palette := preload("res://src/core/palette.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
 const SIZE := Vector2i(1000, 600)
 const CELL := 200
-# Visual layer 20, which no game node uses.
 const GRID_LAYER := 1 << 19
 const GAP := 20.0
 const GROUND := {"sand": Palette.SAND, "sandstone": Palette.SANDSTONE, "charcoal": Palette.CHARCOAL,
 	"ledger": Palette.LEDGER, "verdigris": Palette.VERDIGRIS}
 const MEANING := {"hazard": Palette.HAZARD, "arc": Palette.ARC, "brass": Palette.BRASS,
 	"amber": Palette.AMBER, "slate": Palette.SLATE}
-# beacon_colour_test.gd's pairs (the state colours against live and hazard), and HAZARD against
-# the warm meaning colours it must never be read as.
 const PAIRS := [["hazard", "amber"], ["hazard", "brass"], ["slate", "hazard"], ["slate", "arc"], ["amber", "arc"]]
 var out := ""
 var gate := false
@@ -75,8 +44,6 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
-# The probed places, in run order: each stage at its time of day, the boss arena after its world's
-# last stage when the table names a boss, then the camp.
 static func places(stages) -> Array:
 	var result := []
 	for stage in range(1, stages.COUNT + 1):
@@ -88,8 +55,6 @@ static func places(stages) -> Array:
 	return result
 
 
-# The gaps one place's graded colours leave, as {pair: CIE76}. "edge:" pairs are meaning colours
-# against each other; "fill:" pairs are a HAZARD fill against the ground it lies on.
 static func gaps(seen: Dictionary) -> Dictionary:
 	var result := {}
 	for pair in PAIRS:
@@ -100,8 +65,6 @@ static func gaps(seen: Dictionary) -> Dictionary:
 	return result
 
 
-# The L* step the live slag leaves under the pending fill: pending L* minus live L*, signed (a
-# positive step means live reads darker). Report-only; the bar is 10 on the 3060 (#241 6343230462).
 static func lstar_step(pending: Color, live: Color) -> float:
 	return DefenceBars._lab(pending).x - DefenceBars._lab(live).x
 
@@ -110,24 +73,19 @@ static func gated(pair: String) -> bool:
 	return pair.begins_with("edge:")
 
 
-# A hostile area's fill as the painter tints it on the live telegraph look. Classic tints white
-# over the HAZARD and charcoal stripe texture; its HAZARD stripe is HAZARD at the same alpha.
 static func fill() -> Color:
 	var tone: Color = ThreatGrammar._area_tone({"tone": Palette.HAZARD}, ThreatGrammar.FILL_ALPHA)
 	return tone if ThreatGrammar.haze() else Color(Palette.HAZARD, tone.a)
 
 
-# A live hostile INSTANT's slag layer as fill_tint paints it, drawn over the pending fill.
 static func live_fill() -> Color:
 	return ThreatGrammar.fill_tint({"type": ThreatGrammar.Type.INSTANT, "live": true, "tone": Palette.HAZARD})
 
 
-# The keyline band under every line.
 static func band() -> Color:
 	return Color(Palette.CHARCOAL, ThreatGrammar.UNDERLAY_ALPHA)
 
 
-# The same gaps with no grade or light: the palette as authored, alpha-mixed as the painter mixes.
 static func raw() -> Dictionary:
 	var seen := {}
 	var over := func(under: Color, top: Color) -> Color: return under.lerp(Color(top, 1.0), top.a)
@@ -190,10 +148,6 @@ func _run() -> void:
 	quit(1 if gate and not red.is_empty() else 0)
 
 
-# The grid sits on its own visual layer and the probe camera sees only that layer, so a bump in
-# the floor, a ring or a prop never cuts a cell. A camera's cull mask also culls lights by their
-# layers, so _probe lends the grid layer to every light for the shot. Plates take no shadow, so a
-# cell reads the place's light rather than whatever casts on that spot.
 func _build_grid() -> void:
 	grid = Node3D.new()
 	grid.top_level = true
@@ -209,7 +163,6 @@ func _build_grid() -> void:
 		cells[id] = _plate(GROUND[id], 1.0, false, Vector2(column, 0), 0)
 		_plate(GROUND[id], 1.0, false, Vector2(column, 1), 0)
 		cells["fill_" + id] = _plate(fill(), fill().a, true, Vector2(column, 1), 1)
-		# Off the fill's centre sample, inside the fill plate (0.6 wide), 30 px for the 21 px sample.
 		cells["live_" + id] = _plate(live_fill(), live_fill().a, true, Vector2(column + 0.2, 1.2), 2, 0.15)
 		column += 1
 	column = 0
@@ -247,9 +200,7 @@ func _probe(id: String) -> void:
 	game.player.body().freeze = true
 	var ball: Vector3 = game.player.ball_position()
 	var game_cam: Camera3D = root.get_camera_3d()
-	# The live chase camera's distance to the ball; without one, the arm's rest length (chase_camera.gd).
 	var reach: float = game_cam.global_position.distance_to(ball) if game_cam != null and game_cam != cam else 8.0
-	# Beside the ball at its centre height, above the floor, clear of its body and shadow.
 	grid.global_position = ball + Vector3(2.0, 0.0, 2.0)
 	cam.global_position = grid.global_position + Vector3(float(SIZE.x) / CELL * 0.5, reach, float(SIZE.y) / CELL * 0.5)
 	cam.rotation_degrees = Vector3(-90.0, 0.0, 0.0)
@@ -291,7 +242,6 @@ func _probe(id: String) -> void:
 	print("place %s hazard~amber %.1f fill~sandstone %.1f live~pending:sandstone %.1f reach %.1f" % [id, pairs["edge:hazard~amber"], pairs["fill:hazard~sandstone"], pairs["live~pending:sandstone"], reach])
 
 
-# The mean of a 21 px square at a cell's centre.
 static func _sample(image: Image, at: Vector2i) -> Color:
 	var sum := Color(0, 0, 0, 0)
 	var n := 0

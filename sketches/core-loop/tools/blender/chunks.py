@@ -1,16 +1,3 @@
-# Accretion chunks (VISUAL-LANGUAGE.md section 9): three size classes, three variants
-# each, so no two neighbours share a silhouette or a face colour. Small is a bolt plate,
-# a bracket or a hinge strap; medium a dented tank end, a pipe elbow or a flanged stub;
-# large a panel section joined by a weld seam. Each is irregular, matte and unlit (it
-# is scrap, not a pickup) and has one flat face on the ball.
-# Provenance: authored procedurally here from Blender primitives and bmesh operators;
-# no external assets. Measured tris: small 72, 72, 84; medium 230, 280, 164; large
-# 640, 640, 640 (targets 60 to 120, 150 to 300 and 400 to 800).
-#
-# Frame: +Z points out of the ball (Godot +Y after export, matching accretion.gd
-# _facing), the flat base sits at z = BASE so a chunk placed at radius 1.02 seats on
-# the ~0.96 m core. Each object is one chunk named chunk_<size>_<variant>.
-
 import math
 import os
 import random
@@ -18,13 +5,10 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import common  # noqa: E402
-import polish  # noqa: E402
-from common import Part, Vector  # noqa: E402
+import common
+import polish
+from common import Part, Vector
 
-# Polish (POLISH.md): the per-variant bands are pinned by hero_assets_test, so smooth shading and one chamfer only
-# on edges over 0.2 m (the plates and the large panels). Paint stays exact petrol, oxide or bone (hero_assets_test
-# "chunks paint"), so the AO/wear bake goes to UV2 only (bake_slots empty).
 polish.enable(detail=1, bevel=0.012, bevel_min=0.2, bake_slots=())
 
 BASE = -0.07
@@ -131,7 +115,7 @@ def main():
             rng = random.Random("scrapkeep-" + name)
             p = Part(name)
             if size == "small":
-                p.bevel = 0  # 60 to 120 band: small plates take smooth shading and the bake only
+                p.bevel = 0
             build(p, rng, v)
             loc = (x0 + (v - 1) * (0.5 if size == "small" else 0.75 if size == "medium" else 0.95), 0, 0)
             for vert in p.bm.verts:

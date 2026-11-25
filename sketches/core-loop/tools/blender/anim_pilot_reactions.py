@@ -157,7 +157,6 @@ def pose(arm, pilot, clip, k):
         height = 1 - .16 * strength
         pitch = -32 * strength
         shoulder = .025 * strength
-        # World-space hand targets stay at the controls while the torso pitches.
         if pilot == 'sable':
             rotate(arm, 'ear.R', (38 * strength, 12 * strength, 0))
             rotate(arm, 'ear.L', (38 * strength, -12 * strength, 0))
@@ -216,7 +215,6 @@ def author(pilot, reference):
     out = OUT / pilot
     arm, meshes, shell = rig.build(pilot, out=out)
     source_rows = json.loads((HERE / f'{pilot}-drop-poses.json').read_text())['rows']
-    # Preserve every retimed key and interpolation except Sable's hidden point.
     action = timing.action(arm, source_rows, pilot, reference / (pilot if pilot != 'rivet' else ''), shared.apply_row)
     if pilot == 'sable':
         point_rows = []
@@ -291,7 +289,6 @@ def author(pilot, reference):
         neutral_error = max(abs(v - identity) for b in arm.pose.bones for values, neutral in
                             [(b.location, (0,0,0)), (b.rotation_euler, (0,0,0)), (b.scale, (1,1,1))]
                             for v, identity in zip(values, neutral))
-        # Existing Sable drop ends with a full 360-degree tool turn: same orientation.
         if act.name != 'drop_land':
             assert neutral_error < 1e-5, (act.name, neutral_error)
         checks.append({'clip': act.name, 'seconds': (end-1)/30, 'pelvis_max_drift': max_drift,

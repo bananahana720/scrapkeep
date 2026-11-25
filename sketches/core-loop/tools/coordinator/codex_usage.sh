@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# Print the Codex account's weekly usage from the newest rollout's rate_limits block.
-# Usage: codex_usage.sh            -> "used_percent 12.5 resets 2026-10-14T13:00:59Z window_minutes 10080"
-#        codex_usage.sh --percent  -> "12.5" only (for scripts; prints "unknown" when no block is found)
-# The CLI writes the block on every turn, so the newest rollout is at most one unit stale.
 set -u
 newest="$(find "$HOME/.codex/sessions" -name 'rollout-*.jsonl' -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2-)"
 if [ -z "$newest" ]; then

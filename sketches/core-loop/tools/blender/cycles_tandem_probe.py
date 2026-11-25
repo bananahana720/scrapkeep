@@ -21,7 +21,7 @@ import tempfile
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import cycles_device  # noqa: E402
+import cycles_device
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STILLS = os.path.join(HERE, "glb_stills.py")
@@ -45,7 +45,7 @@ def main():
           flush=True)
     for job, adaptive, run in ((j, ad, r) for j in a.jobs for ad in adaptives for r in range(1, a.runs + 1)):
         size, samples = (int(v) for v in job.lower().split("x"))
-        height = int(size * 0.75)  # glb_stills renders size x 0.75 size
+        height = int(size * 0.75)
         for mode in MODES if run % 2 else MODES[::-1]:
             if cycles_device.capture_on():
                 raise SystemExit("cycles_tandem_probe: a 4080 capture is running (%s or %s); stopped"

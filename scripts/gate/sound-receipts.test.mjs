@@ -21,8 +21,6 @@ import { receiptRow } from "../world1-bands.mjs";
 const HEAD = "3adc2fd0e8563b13c87f921b2ae85763467fec03";
 const ffmpeg = hasFfmpeg();
 
-// --- sound-own-recipes ----------------------------------------------------------------------
-
 const recipesRow = {
   id: "sound-own-recipes",
   plant: "a cue with its recipe removed must be counted",
@@ -145,8 +143,6 @@ test("recipes: the producer takes the head from git and refuses a checkout with 
   );
   assert.equal(ran, 1, "a dirty checkout never runs the test");
   git("checkout", "-q", "--", "a.txt");
-  // An untracked file elsewhere is fine; one under the game's src or assets is refused (an uncommitted rendered sound
-  // would count as a cue's own sound for a head that lacks it).
   writeFileSync(path.join(repo, "notes.txt"), "x");
   assert.equal(cleanHead(repo), head);
   mkdirSync(path.join(repo, "sketches/core-loop/assets/audio/sfx"), { recursive: true });
@@ -165,8 +161,6 @@ test("recipes: the producer takes the head from git and refuses a checkout with 
   );
   assert.equal(ran, 1);
 });
-
-// --- sound-levels ---------------------------------------------------------------------------
 
 const levelsRow = { id: "sound-levels", plant: "a stem 6 LU too loud must fail", producer: "x" };
 const caught = { caught: true, what: "plants caught" };
@@ -261,7 +255,6 @@ test(
   },
 );
 
-// A WAV of a float stereo buffer, 16-bit, so ffmpeg reads it as a stem.
 function wav(file, samples, rate) {
   const data = Buffer.alloc(samples.length * 2);
   for (let i = 0; i < samples.length; i++)
@@ -289,7 +282,6 @@ test(
     const project = mkdtempSync(path.join(os.tmpdir(), "sound-levels-"));
     const pack = path.join(project, "assets/music_ace/fixture");
     mkdirSync(pack, { recursive: true });
-    // amp 0.25 cosine at 240 Hz meters near -12.9 LUFS; level_db brings the mix to the target.
     const stem = tone(12, PLANT_RATE, 240, 0.25);
     wav(path.join(pack, "a.wav"), stem, PLANT_RATE);
     const manifest = (level) => ({

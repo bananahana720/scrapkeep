@@ -4,14 +4,6 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
-# Rendered stills of the victory lap and the credits after it (src/world/victory_lap.gd): the drop over the rim, the
-# vent from the floor, a vent shot in the air, a crew-log caption, the countdown and the credits over the bowl. The
-# bot driver's lap policy rolls the ball. It needs a rendered display:
-#
-#   xvfb-run -a <godot> --rendering-driver opengl3 --path sketches/core-loop --script res://tools/lap_capture.gd \
-#     -- --out=<absolute dir>
-#
-# Stills are what a software renderer draws; frame time and final look belong to Andrew's 4080.
 
 const SHOTS := [
 	{"name": "01-drop-in", "at": 0.6},
@@ -66,7 +58,6 @@ func _physics_process(delta: float) -> bool:
 				_driver.tick(delta)
 		"victory":
 			if _game.flow.state_name() == "lap":
-				# A bot-driven game skips the credits after a second (screens.gd); the still wants them rolling.
 				_game.bot_driven = false
 				_phase = "lap"
 		"lap":
@@ -87,7 +78,6 @@ func _physics_process(delta: float) -> bool:
 					_taken.append(shot["name"])
 					_save(shot["name"])
 		"credits":
-			# The credits run on frame time, which a software renderer lags behind physics time, so read their own clock.
 			var seq = _game.screens.ending_sequence
 			var rolled: float = seq.elapsed - seq.WORLD_SECONDS * 3.0 if is_instance_valid(seq) else INF
 			if rolled >= CREDITS_AT:

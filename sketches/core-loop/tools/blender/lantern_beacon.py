@@ -30,8 +30,7 @@ from ore_cart import kit, common, strut
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [1900, 2000, 2]  # polish: was [900, 2000, 2]
-# Polish (tools/blender/POLISH.md): hard machinery: small bevels, no subdivision on the thin struts; the kit bake takes every vertex-coloured slot.
+LANDMARK = [1900, 2000, 2]
 FINISH = {"Frame": {"bevel": .03}, "Housing": {"bevel": .04}, "Lens": {"bevel": .05}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
 
 
@@ -40,11 +39,6 @@ def polish_on():
     kit.FINISH.update(FINISH)
 
 
-
-# One row per painted part, palette names only. "state" is the exact mint that steel.gdshader swaps for the
-# instance's state_tint, so the ring and cap carry the beacon's open/sealed colour from one table; the
-# picture's orange (hazard) and mint lantern (live colour) are reserved meanings (LEGIBILITY.md:21,23,263).
-# The picture's brass trim is copper: brass is the Furnace Fleet's requisition colour (briefs/RECIPE-WAVE.md, LORE).
 TONES = {
     "leg": "petrol",
     "foot": "charcoal",
@@ -54,23 +48,20 @@ TONES = {
     "lens": common.mix("bone", "ffffff", .55),
 }
 
-# Metres at game scale, Godot +Y up. Legs: (radius from the axis, y) at the collar, shoulder, knee and foot.
-# The legs stand between the choir lens seats (Vector3.RIGHT turned by 0, 120 and 240 degrees: 90, 210 and 330 here).
 LEG_ANGLES = [150, 30, -90]
 LEG_PATH = [(.6, 10.85), (1.8, 9.8), (2.55, 1.4), (3.1, .35)]
 LEG_R, LEG_SIDES = .22, 6
-# Everything above the collar rides LIFT over the RECIPE-CART beacon, so the mind's sphere (y 9.0) clears the collar.
 LIFT = 1.8
-COLLAR = (.75, 1.0, 8.8 + LIFT, 9.25 + LIFT)  # bottom radius, top radius, y0, y1
+COLLAR = (.75, 1.0, 8.8 + LIFT, 9.25 + LIFT)
 PLATFORM = (2.1, 9.25 + LIFT, 9.55 + LIFT)
 BASE_BAND = (1.3, 9.55 + LIFT, 10.15 + LIFT)
 GLASS = (1.08, 10.15 + LIFT, 15.35 + LIFT)
 TOP_BAND = (1.3, 15.35 + LIFT, 15.85 + LIFT)
 TOP_FIT = (.95, 15.85 + LIFT, 16.35 + LIFT)
 CAP = (1.35, 16.35 + LIFT, 19.4 + LIFT)
-RING = (15.0 + LIFT, 3.27, .22, 28, 4)  # centre y, major radius, tube radius, segments, tube sides
+RING = (15.0 + LIFT, 3.27, .22, 28, 4)
 BARS, BAR_R = 8, 1.12
-BRACKET = (1.62, 15.7 + LIFT, 12.2 + LIFT)  # out radius, top y, bottom y
+BRACKET = (1.62, 15.7 + LIFT, 12.2 + LIFT)
 SIZE = {"lantern_beacon_frame": [6.89, 21.2, 5.99], "lantern_beacon_lens": [2.09, 5.2, 2.09]}
 SRC = kit.SKETCH / "src/combat"
 
@@ -89,8 +80,6 @@ def warden_rows():
     deck = const(wkit, "DECK")
     body = wkit.split("func point_offset()")[1].split("\nfunc ")[0]
     offsets = dict(re.findall(r"Roster\.(\w+):\s*return Vector3\.UP \* \(DECK \+ ([0-9.]+)\)", body))
-    # The mind's branch since KF8a is `if mind_body(): return MIND_BODY_POINTS[...]` and then the plain offset; the
-    # beacon's Warden has no harpoon anchor, so the plain offset is the one that applies here.
     mind = re.search(r"Roster\.MIND:.*?\n\t\t\treturn Vector3\.UP \* \(DECK \+ ([0-9.]+)\)", body, re.S)
     assert mind, "mind point offset"
     offsets["MIND"] = mind.group(1)
@@ -104,7 +93,6 @@ def warden_rows():
 
 
 def _closest(p, a, b, c):
-    # Closest point on triangle abc to p (Ericson, Real-Time Collision Detection 5.1.5).
     sub = lambda u, v: (u[0] - v[0], u[1] - v[1], u[2] - v[2])
     dot = lambda u, v: u[0] * v[0] + u[1] * v[1] + u[2] * v[2]
     at = lambda o, u, s: (o[0] + u[0] * s, o[1] + u[1] * s, o[2] + u[2] * s)

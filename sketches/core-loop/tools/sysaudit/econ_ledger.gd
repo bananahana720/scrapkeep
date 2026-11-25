@@ -1,18 +1,5 @@
 extends "res://tools/bot_run.gd"
 
-# Systems audit pass B (docs/systems-audit/economy/README.md): bot_run with a resource ledger, and
-# the min-maxer's choices. Run one seed per process (a multi-seed bot_run forks children that run
-# bot_run.gd itself, without this wrapper). Extra flag: --econ=none|minmax (default none).
-#   none    the ledger only; the policy's run is bot_run's, untouched.
-#   minmax  also takes the start pick (a part or core, never the cogs), boards Moss's bay each
-#           stage it docks and buys out what it can afford (the hook, the shelf by price, one
-#           reroll and a second pass, then charge cells), and takes every upgrade-tree offer.
-# The bay visit is modelled: the probe makes the boarding call the cradle makes (world.gd
-# _bay_fact "entered"), shops through shop.gd's own verbs, then the pad's "left" call. The ball
-# never rides the barge, so the few seconds of the ride are not counted; the stage clock pauses
-# aboard in the game anyway.
-# Writes econ-<seed>.ndjson in --out: every gain, every drop in cogs, every heal, every buy, every
-# tree pick, the start pick, and a snapshot at each stage entry and at the end.
 
 var _hooked: Object = null
 var _ledger: FileAccess = null
@@ -22,7 +9,6 @@ var _emitted := 0
 var _visited := {}
 var _pick_rng := RandomNumberGenerator.new()
 var _keep_class := 0
-# The last tick's state, so the end row can be written after bot_run frees the game.
 var _snap := {}
 var _healed := 0.0
 var _max_grown := 0.0
@@ -55,8 +41,6 @@ func _physics_process(delta: float) -> bool:
 		if _econ == "minmax":
 			_choose()
 	if _game == null and _ledger != null:
-		# bot_run frees the game at the end of a run and returns false, so the end row is the
-		# last tick's state, written here.
 		_snap["kind"] = "end"
 		_ledger.store_line(JSON.stringify(_snap))
 		_ledger.close()
@@ -83,7 +67,6 @@ func _hook() -> void:
 	ev.tree_offered.connect(_on_tree_offered)
 
 
-# Tick-to-tick changes no signal names: a cog gain nobody emitted, any cog drop, any heal.
 func _watch() -> void:
 	var run = _game.run
 	var now := {"cogs": run.cogs, "hp": run.hp, "max_hp": run.max_hp}
@@ -93,8 +76,6 @@ func _watch() -> void:
 			_row("cogs+", {"amount": gained - _emitted, "source": "unsignalled"})
 		elif gained < 0 and _emitted == 0:
 			_row("cogs-", {"amount": -gained})
-		# Every hull gain counts (regen is 6 a second, under 0.07 a tick); the part that rides a
-		# max-hull rise (a heft class up, a hull part) is kept apart from regen and heals.
 		var grown: float = maxf(0.0, now["max_hp"] - _last["max_hp"])
 		var hp_gain: float = now["hp"] - _last["hp"]
 		_max_grown += grown
@@ -165,7 +146,6 @@ func _shop_visit(world) -> void:
 				if r.get("ok", false):
 					_row("buy", {"what": "cell", "item": o["part_id"], "price": r.get("price", 0)})
 					bought = true
-	# Moss's last-call kettle (W1-73): the cogs left at the world's last till go into the boss fight.
 	var brew: Dictionary = shop.brew_offer() if shop.has_method("brew_offer") else {}
 	while not brew.is_empty() and int(brew["price"]) >= 0 and _afford(shop, int(brew["price"])):
 		var r: Dictionary = shop.buy_brew()
@@ -179,9 +159,6 @@ func _shop_visit(world) -> void:
 	world._bay_fact({"kind": "left", "velocity": _game.player.state.velocity})
 
 
-# Moss's scale (PR 768, `--moss-scale=on`): when the next buy is out of reach, sell mass for
-# cogs until it is not, and never make a press that would drop the ball below its class on boarding (the min-maxer keeps
-# its class: max hull, the hook lock and the tree's milestones ride it). True when affordable.
 func _afford(shop, price: int) -> bool:
 	if _game.run.cogs >= price:
 		return true
@@ -197,8 +174,6 @@ func _afford(shop, price: int) -> bool:
 	return _game.run.cogs >= price
 
 
-# Whether the next press leaves the ball at or above its boarding class (heft as run_state.gd
-# computes it, less the mass the press would weigh).
 func _keeps_class(shop) -> bool:
 	var run = _game.run
 	var after: float = run.heft() - float(shop.weigh_quote()["mass"]) * run.HEFT_PER_MASS

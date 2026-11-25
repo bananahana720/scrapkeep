@@ -52,7 +52,7 @@ WORN = "a8aaa3"
 CHAR = "charcoal"
 OXIDE = "9b513a"
 UNDER = 2.2
-CX, CZ = 0.0, -1.3  # canopy centre (behind the crew)
+CX, CZ = 0.0, -1.3
 HALF_X, HALF_Z = 2.6, 2.0
 PROP = (0.75, FLOOR, CZ + HALF_Z - 0.35)
 LEGS = [(-HALF_X + 0.35, CZ - HALF_Z + 0.35), (HALF_X - 0.35, CZ - HALF_Z + 0.35)]
@@ -67,14 +67,11 @@ def G(*p):
 
 
 body = Part("PropCrewBody")
-# Rear timber legs: plain wood, square, on sole plates, braced to each other with a ledger.
 for x, z in LEGS:
     body.beam("fleet_paint", G(x, FLOOR + 0.05, z), G(x, UNDER, z), 0.3, 0.3, color=TIMBER)
     body.box("fleet_paint", (0.62, 0.62, 0.1), loc=g(x, FLOOR + 0.05, z), color=CHAR)
 body.beam("fleet_paint", G(LEGS[0][0], 1.4, LEGS[0][1]), G(LEGS[1][0], 1.4, LEGS[1][1]), 0.2, 0.2, color=TIMBER_DK)
-# The crew: a Fleet miner at the prop's side, shoulder into it, one paw on the jack handle.
 CREW = Vector((0.0, 0.55, CZ + HALF_Z - 0.1))
-# Under polish the crew body is the shared soft critter (two subdivisions), arms once.
 with body.region(bevel=0, subsurf=2, detail=1):
     body.cyl("fleet_paint", 0.42, 0.34, 1.2, segs=8, loc=g(CREW.x, FLOOR + 0.62, CREW.z), color=OXIDE)
 body.box("fleet_paint", (0.8, 0.5, 0.16), loc=g(CREW.x, FLOOR + 0.95, CREW.z), color="petrol")
@@ -87,7 +84,6 @@ with body.region(bevel=0, subsurf=1, detail=1):
              color=OXIDE)
     body.rod("fleet_paint", G(CREW.x - 0.38, 0.0, CREW.z), G(CREW.x - 0.62, -0.45, CREW.z + 0.3), 0.08, segs=5,
              color=OXIDE)
-# A tally board hung on the left leg, for the shift's tons propped (bone, three marks).
 with body.region(bevel=0.01):
     body.box("fleet_paint", (0.5, 0.06, 0.6), loc=g(LEGS[0][0] + 0.26, 0.5, LEGS[0][1] + 0.2), color="bone")
     for i in range(3):
@@ -96,7 +92,6 @@ with body.region(bevel=0.01):
 bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])
 body_obj = body.to_object(parent=root)
 
-# The prop: a steel screw jack, foot plate, threaded collar, hazard band, cap plate under the roof.
 shore = Part("PropShore")
 px, _, pz = PROP
 shore.box("working_tool", (0.56, 0.56, 0.1), loc=g(px, FLOOR + 0.05, pz), color=CHAR)
@@ -112,7 +107,6 @@ shore.box("working_tool", (0.6, 0.6, 0.12), loc=g(px, UNDER - 0.06, pz), color=C
 bmesh.ops.recalc_face_normals(shore.bm, faces=shore.bm.faces[:])
 shore_obj = shore.to_object(origin=g(px, FLOOR, pz), parent=root)
 
-# Canopy: two bearers on the legs and prop, planks across, a heap of rock under a cargo net.
 canopy = Part("PropCanopy")
 for z in (CZ - HALF_Z + 0.35, CZ + HALF_Z - 0.35):
     canopy.beam("part_state", G(-HALF_X, UNDER + 0.15, z), G(HALF_X, UNDER + 0.15, z), 0.32, 0.3, color=TIMBER_DK)
@@ -127,18 +121,15 @@ ROCKS = [(-1.4, -0.6, 0.8), (0.2, -0.3, 1.0), (1.5, -0.9, 0.75), (-0.6, 0.7, 0.8
 for rx, rz, s in ROCKS:
     y = UNDER + 0.42 + s * 0.55
     color = rng.choice(["7b6a58", "8f7a62", "6b5c4c"])
-    # Rocks keep their chunky facets' count; smooth shading softens them.
     with canopy.region(detail=1):
         canopy.ico("part_state", s, loc=g(rx, y, CZ + rz), scale=(1.15, 1.0, 0.8),
                    rot=(rng.uniform(0, 1), rng.uniform(0, 1), rng.uniform(0, 3)), color=color)
-# Cargo net over the heap: a few brass straps lashed to the bearers.
 with canopy.region(bevel=0.01):
     for x in (-1.6, 0.0, 1.6):
         canopy.beam("part_state", G(x, UNDER + 0.42, CZ - HALF_Z + 0.2), G(x * 0.8, UNDER + 1.55, CZ), 0.06, 0.05,
                     color="brass")
         canopy.beam("part_state", G(x * 0.8, UNDER + 1.55, CZ), G(x, UNDER + 0.42, CZ + HALF_Z - 0.2), 0.06, 0.05,
                     color="brass")
-# Hazard stripes on the front fascia: the edge of the drop zone.
 with canopy.region(bevel=0.01):
     for i in range(6):
         x = -HALF_X + (i + 0.5) * (2 * HALF_X / 6)
@@ -170,7 +161,6 @@ if opts["render"]:
     rest_canopy = (canopy_obj.location.copy(), canopy_obj.rotation_euler.copy())
 
     def collapse():
-        # Rammed: the prop kicks out forward and the roof slams down at a tilt.
         shore_obj.rotation_euler.x = math.radians(-70)
         canopy_obj.rotation_euler.x = math.radians(-14)
         canopy_obj.location.z -= 2.2
@@ -180,7 +170,6 @@ if opts["render"]:
         canopy_obj.location, canopy_obj.rotation_euler = rest_canopy[0].copy(), rest_canopy[1].copy()
 
     def pack():
-        # A plated drill crew stand-in under the roof: two 2 m balls of company. Preview only.
         for x in (-1.3, 1.2):
             world_preview.ball(FLOOR, x, -CZ - 0.2, name="PackStandIn")
 

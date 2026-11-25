@@ -1,16 +1,3 @@
-// Which gate rows carry from one stage head to the next.
-//
-//   node scripts/gate/carry.mjs <head the rows were read on> [<new head, default HEAD>]
-//
-// When a small fix lands on a stage after its shards ran, the Gate carries the
-// rows it does not need to read again. Wave 31 carried one row too many: a
-// changed test file had a child test that extends it, and the child was never
-// run. This prints the tests that must run again: every changed test, and every
-// test that reaches a changed file under tests/ through `res://` references,
-// however many steps away. If any game file changed, nothing carries.
-//
-// Run it in a checkout of the new head. It reads; it changes nothing.
-
 import { spawnSync } from "node:child_process";
 import { realpathSync } from "node:fs";
 import path from "node:path";
@@ -22,8 +9,6 @@ import { gateLists } from "./shard.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
 
-// Splits changed repo paths into game files (nothing carries), files under the
-// sketch's tests/ folder, and everything else.
 export function sortChanges(paths, sketch = SKETCH) {
   const game = [];
   const tests = [];
@@ -40,7 +25,6 @@ export function sortChanges(paths, sketch = SKETCH) {
   return { game, tests, other };
 }
 
-// Every top-level test that is a changed file, or reaches one through files under tests/.
 export function testsToRerun(index, changedTestFiles) {
   const why = new Map();
   const queue = changedTestFiles.map((rel) => ({ rel, from: null }));
@@ -49,7 +33,8 @@ export function testsToRerun(index, changedTestFiles) {
     const { rel, from } = queue.shift();
     if (visited.has(rel)) continue;
     visited.add(rel);
-    if (isTopLevelTest(rel) && index.files.has(rel) && !why.has(rel)) why.set(rel, from === null ? "changed" : `reaches ${from}`);
+    if (isTopLevelTest(rel) && index.files.has(rel) && !why.has(rel))
+      why.set(rel, from === null ? "changed" : `reaches ${from}`);
     for (const next of referrers(index, rel)) {
       if (next.startsWith("tests/")) queue.push({ rel: next, from: from ?? rel });
     }
@@ -57,13 +42,13 @@ export function testsToRerun(index, changedTestFiles) {
   return why;
 }
 
-// Where a test sits in the gate lists, so a row can be matched to its shard.
 export function place(name, lists) {
   const bot = lists.bots.indexOf(name);
   if (bot >= 0) return `bot list ${bot + 1}`;
   const test = lists.tests.indexOf(name);
   if (test >= 0) return `non-bot list ${test + 1}`;
-  if (lists.weekly?.tests.includes(name) || lists.weekly?.bots.includes(name)) return "weekly list, not in this promotion";
+  if (lists.weekly?.tests.includes(name) || lists.weekly?.bots.includes(name))
+    return "weekly list, not in this promotion";
   return "not in a gate list";
 }
 
@@ -75,13 +60,19 @@ function git(...args) {
 
 function main() {
   const [from, to = "HEAD"] = process.argv.slice(2);
-  if (!from) throw new Error("usage: node scripts/gate/carry.mjs <head the rows were read on> [<new head>]");
-  if (git("rev-parse", to) !== git("rev-parse", "HEAD")) throw new Error(`check out ${to} first; the test files are read from the working tree`);
+  if (!from)
+    throw new Error("usage: node scripts/gate/carry.mjs <head the rows were read on> [<new head>]");
+  if (git("rev-parse", to) !== git("rev-parse", "HEAD"))
+    throw new Error(`check out ${to} first; the test files are read from the working tree`);
   const changed = git("diff", "--name-only", from, to).split("\n").filter(Boolean);
   const { game, tests, other } = sortChanges(changed);
-  console.log(`${git("rev-parse", "--short=8", from)} to ${git("rev-parse", "--short=8", to)}: ${changed.length} files changed.`);
+  console.log(
+    `${git("rev-parse", "--short=8", from)} to ${git("rev-parse", "--short=8", to)}: ${changed.length} files changed.`,
+  );
   if (game.length > 0) {
-    console.log(`NOTHING CARRIES: ${game.length} game files changed (${game.slice(0, 5).join(", ")}${game.length > 5 ? ", ..." : ""}). Run every shard again, or name the shards a reviewer agrees cannot be reached.`);
+    console.log(
+      `NOTHING CARRIES: ${game.length} game files changed (${game.slice(0, 5).join(", ")}${game.length > 5 ? ", ..." : ""}). Run every shard again, or name the shards a reviewer agrees cannot be reached.`,
+    );
     return 1;
   }
   const sketchDir = path.join(root, SKETCH);
@@ -95,7 +86,10 @@ function main() {
       console.log(`  ${name} (${place(name, lists)}): ${reason}`);
     }
   }
-  if (other.length > 0) console.log(`Also changed outside the game and its tests (judge by hand; a runner change under scripts/ can move any row): ${other.join(", ")}`);
+  if (other.length > 0)
+    console.log(
+      `Also changed outside the game and its tests (judge by hand; a runner change under scripts/ can move any row): ${other.join(", ")}`,
+    );
   return 0;
 }
 

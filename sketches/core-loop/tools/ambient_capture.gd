@@ -6,20 +6,6 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const AmbientKinds := preload("res://src/core/ambient_kinds.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 
-# Receipts for ambient life (AMBIENT-LIFE.md): a calm still, a react still and a short clip of one
-# home's members, for every kind whose GLB exists in the park (or just --kind). Needs a rendered
-# display; on a GPU-less box run it under xvfb:
-#
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --fixed-fps 15 \
-#     --path sketches/core-loop --script res://tools/ambient_capture.gd \
-#     -- --out=<absolute dir> [--park=park_dam] [--kind=<id>] [--seconds=8]
-#
-# --fixed-fps 15 makes each rendered frame exactly one clip frame; without it the tool still saves a
-# frame per 1/15 s of game time, so a slow renderer repeats frames instead of changing speed.
-# The ball is frozen and carried by hand: 25 m from the home for the calm still and the first 2 s,
-# then in to 5 m (the members flee), then a bare "telegraph" node over the group (the combat
-# react), then removed; the clip ends 1 s after every member has hidden, or at --seconds. The camera is fixed 7 m from the group and follows its centre.
-# Writes <out>/<park>_<kind>/{calm,react}.png, frame_####.png, ambient_<park>_<kind>.mp4 and .gif.
 
 const FPS := 15.0
 const SIZE := Vector2i(1280, 720)
@@ -131,7 +117,6 @@ func _ball(at: Vector3) -> void:
 	_game.player.body().linear_velocity = Vector3.ZERO
 
 
-# The ball spot 25 m from home with the ground nearest the home's height (not a drop or a wall).
 func _far_spot(home: Vector2) -> Dictionary:
 	var best := {}
 	var best_d := INF
@@ -159,8 +144,6 @@ func _centre(list: Array, live_only := true) -> Vector3:
 	return sum / n if n > 0 else Vector3.ZERO
 
 
-# The side of a roost whose floor is level with the floor under it, so the camera stands in the open below the roof
-# and not up on the hill the roof is cut into.
 func _roost_side(home: Vector2) -> Vector2:
 	var best := Vector2.RIGHT
 	var best_dy := INF
@@ -197,7 +180,6 @@ func _shoot(life, kind: String, home_index: int) -> void:
 	_ball(ball_at.call(FAR_M))
 	var follow := Vector3(home.x, _gh(home.x, home.y), home.y)
 	var cam_offset := Vector3(side.x * CAM_M, 2.2, side.y * CAM_M)
-	# A roost hangs under a roof, so its camera stands out on the open side at eye height and looks up into it.
 	var roost := String(AmbientKinds.row(kind).get("homes", {}).get("perch", "")) == "ceiling"
 	var roost_dir := _roost_side(home) if roost else dir
 	var states_log: Array = []
@@ -217,7 +199,6 @@ func _shoot(life, kind: String, home_index: int) -> void:
 		var dt: float = _game.get_process_delta_time()
 		clock += dt
 		var t := clock - SETTLE_S
-		# Ball: far until t_far, then in to NEAR_M over t_in, held there.
 		if t < t_far:
 			_ball(ball_at.call(FAR_M))
 		else:
@@ -281,8 +262,6 @@ func _states(list: Array) -> String:
 	return ",".join(parts)
 
 
-# A bare node in group "telegraph" with `center`, which ambient_life.gd reads, and the fields set_dressing.gd
-# reads to clear clutter from a hostile telegraph.
 func _telegraph(at: Vector3) -> Node3D:
 	var script := GDScript.new()
 	script.source_code = "extends Node3D\nvar center := Vector3.ZERO\nvar shape := 0\nvar radius := 6.0\nvar length := 0.0\nvar width := 0.0\nfunc is_hostile() -> bool:\n\treturn true\n"

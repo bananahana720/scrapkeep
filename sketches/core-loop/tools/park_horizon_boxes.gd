@@ -1,55 +1,14 @@
 extends SceneTree
 
-# Haze box fitted to each pose's own skyline (World lane, wave 19 islands ground-over-horizon). The render bench measures "ground over
-# horizon" as the L* of the near floor against the L* of a fixed haze box (full width, y 365 to 405 of a 1280x720 frame). That box sits on
-# fogged far ground under the skyline in the pit noon frame, but the islands audit chase poses put the skyline anywhere from about y 290
-# to 330, so the fixed box lands on mid-distance floor. This sidecar finds where the ground ends in each pose and fits the box to it.
-# It does not render: it boots the park stage as tools/park_props_audit.gd does (table "park"), places the camera for each pose with the
-# audit's own rule (_place: the chase branch, and the eye branch when a pose carries "cam" and "look"), and casts rays itself.
-#
-#   $GODOT_BIN --headless --path sketches/core-loop --script res://tools/park_horizon_boxes.gd -- --map=park_islands \
-#     --poses=<abs poses.json> --out=<abs dir> [--cam=rest|mid|fast]
-#
-# Writes <out>/<map>/horizon_boxes.json. tools/park_horizon_lstar.py reads it with a directory of frames.
-#
-# Rays: Camera3D.fov is the vertical field of view (keep_aspect KEEP_HEIGHT, the default), so a pixel (px, py) of a W x H frame has the
-# camera-space direction ((2 px / W - 1) tan(fov / 2) W / H, (1 - 2 py / H) tan(fov / 2), -1). The headless viewport is not 1280x720, so
-# project_ray_* is not used. A ray hits when the nearer of two things lies within CAM_FAR in view depth: a physics intersect_ray against
-# the world (the ball body excluded), and a march along the ray over the game's terrain height function (the one _place reads,
-# game.ctx.terrain.height; 0.5 to 4 m steps, 2 percent of the distance, bisected to a hit). Godot clips at far along view depth, not ray
-# length, so each ray is cast out to CAM_FAR / cos(theta), theta the angle from the camera's forward (the ray distance is then up to
-# about twice CAM_FAR at the frame corners). Pixels are cast through their centres: a skyline column's pixel is floor(x), the ray at x + 0.5.
-# Skyline: for 33 columns at x = (i + 0.5) W / 33, the first row from the top whose ray hits (every 8th row, then the 7 rows above the
-# first hit, to 1 px); the pose skyline is the median of the columns that hit (the upper middle when the count is even).
-# Median haze box (comparison only): [0, skyline + 5, W, skyline + 45] clipped to the frame. Hit samples: a grid of every 32 px by 8 rows over that box, giving
-# haze_hit_share (share whose ray hits) and haze_median_hit_m (median ray distance of the hits, null for none). geometric_horizon_y:
-# the row of a horizontal ray straight ahead (H / 2 - f tan(pitch down) for a level-roll camera, f = H / 2 / tan(fov / 2)). A skyline
-# below the geometric horizon means ground ends at CAM_FAR short of the true horizon.
-# Haze rule (the measure): a SKY BAND just above each column's skyline. On islands the far ground fades fully into haze within a few pixels
-# of the skyline, and a fog-distance mask over far ground also caught cliffs, terrain slopes and visual-only landforms (idx 142, 222, 81 in
-# the r349 audit). "No hit within CAM_FAR" is the one geometric class that cannot be a cliff or a structure with a collider. Known
-# limit: a rendered mesh with no collider counts as sky, because the rays only see colliders and the terrain function. It shows in the
-# r349 islands poses 74 (the walker's legs), 26 and 95 (pale far blocks and a pole) and 142 (a far tower), on a small share of the
-# samples, and is not corrected. Per 8 px
-# column (x = 4, 12, ...) take that column's own combined skyline row S (physics plus terrain search), sample rows S - 12 to S - 2 every 2
-# rows, and keep a sample only when its ray hits nothing (no physics hit, no terrain hit) within CAM_FAR. A column with no skyline (sky to
-# the bottom, the void past an island edge) is skipped, and so is one whose S leaves no row above it. A pose is valid when the camera is not
-# below ground and at least MIN_SAMPLES samples were kept; poses short of that are reported invalid with their count.
-# Why this reads the pit bar: the pit noon frame (4-stage3-noon.jpg on scratch/render-r349-e9484509 a309ddc5, both heads) has its sky rows just
-# above the skyline, y 346 to 358, at mean L* 75.7 against 73.7 to 73.9 for the fixed far-ground box, y 365 to 405 (measured with
-# park_horizon_lstar.py's box_lab): the sky band stays within about 2 L* of the pit bar's haze. A fog-distance mask (ln(2) / density, the
-# 50 percent point of 1 - exp(-density * d)) was tried first and dropped: it is not in this tool.
-# Also recorded: terrain_skyline_y/cols (the same search over the terrain alone) and camera_below_ground (the chase camera sits under
-# the heightfield, as in a slope-hugging pose: terrain rays then find nothing from inside, and the skyline is not trustworthy).
 
 const Audit := preload("res://tools/park_props_audit.gd")
 
-const SIZE := Audit.SIZE # 1280x720, audit line 91
-const CAMERAS := Audit.CAMERAS # audit line 95
-const CAM_UP := Audit.CAM_UP # audit line 96
-const CAM_PITCH := Audit.CAM_PITCH # audit line 97
-const CAM_FAR := Audit.CAM_FAR # audit line 98
-const V_FOV := Audit.V_FOV # audit line 113, the eye frame lens
+const SIZE := Audit.SIZE
+const CAMERAS := Audit.CAMERAS
+const CAM_UP := Audit.CAM_UP
+const CAM_PITCH := Audit.CAM_PITCH
+const CAM_FAR := Audit.CAM_FAR
+const V_FOV := Audit.V_FOV
 const COLUMNS := 33
 const COARSE_PX := 8
 const HAZE_FROM := 5.0
@@ -59,7 +18,7 @@ const GRID_ROWS := 8
 const NEAR_BOX := [300, 650, 980, 720]
 const SETTLE_PHYSICS := 3
 const SAMPLE_COL_PX := 8
-const SKY_ABOVE_FAR := 12 # rows S - 12 .. S - 2
+const SKY_ABOVE_FAR := 12
 const SKY_ABOVE_NEAR := 2
 const BAND_ROW_STEP := 2
 const MIN_SAMPLES := 40
@@ -73,20 +32,16 @@ var space: PhysicsDirectSpaceState3D
 var ball_rid: RID
 
 
-# ---- static helpers (tests/park_horizon_boxes_test.gd drives these with a synthetic ground) ----
-
 static func focal_px(fov_deg: float, height_px: float) -> float:
 	return height_px * 0.5 / tan(deg_to_rad(fov_deg) * 0.5)
 
 
-# World direction (unit) of the ray through frame pixel (px, py), py down from the top.
 static func ray_dir(xf: Transform3D, fov_deg: float, size: Vector2, px: float, py: float) -> Vector3:
 	var th := tan(deg_to_rad(fov_deg) * 0.5)
 	var d := Vector3((2.0 * px / size.x - 1.0) * th * size.x / size.y, (1.0 - 2.0 * py / size.y) * th, -1.0)
 	return (xf.basis * d).normalized()
 
 
-# Camera transform and lens for a pose, the audit's _place (lines 1025 to 1036). ground is height(x, z).
 static func pose_camera(s: Dictionary, ground: Callable, cam_key: String) -> Dictionary:
 	if s.has("cam") and s.has("look"):
 		var at := Vector3(float(s["cam"][0]), float(s["cam"][1]), float(s["cam"][2]))
@@ -99,11 +54,10 @@ static func pose_camera(s: Dictionary, ground: Callable, cam_key: String) -> Dic
 	return {"xf": Transform3D(basis, anchor + basis * Vector3(0.0, 0.0, float(CAMERAS[cam_key]["arm"]))), "fov": float(CAMERAS[cam_key]["fov"])}
 
 
-# Distance along the unit ray to the first terrain crossing within far, or INF.
 static func march(origin: Vector3, dir: Vector3, ground: Callable, far: float) -> float:
 	var t := 0.0
 	if is_below(origin, ground):
-		return INF # a camera inside the heightfield sees no ground crossing from there; measure() flags it
+		return INF
 	while t < far:
 		var t2 := minf(t + clampf(t * 0.02, 0.5, 4.0), far)
 		var p := origin + dir * t2
@@ -126,8 +80,6 @@ static func is_below(p: Vector3, ground: Callable) -> bool:
 	return p.y - float(ground.call(p.x, p.z)) <= 0.0
 
 
-# Nearer of the world hit (Callable(origin, dir, range) -> distance or INF, may be invalid) and the terrain march, INF when beyond the
-# far clip. Godot clips at far along view depth, so the ray is cast out to far / cos(theta), theta the angle from the camera's forward.
 static func hit_dist(xf: Transform3D, dir: Vector3, ground: Callable, world: Callable, far: float) -> float:
 	var reach := far / maxf(dir.dot(-xf.basis.z), 0.05)
 	var d := march(xf.origin, dir, ground, reach)
@@ -140,12 +92,10 @@ static func column_x(i: int, w: float) -> float:
 	return (float(i) + 0.5) * w / float(COLUMNS)
 
 
-# The ray goes through the centre of the pixel column that lstar reads.
 static func column_px(i: int, w: float) -> float:
 	return floorf(column_x(i, w)) + 0.5
 
 
-# First row (0 at the top) whose ray hits in the column at pixel x, or -1.
 static func column_skyline(px: float, xf: Transform3D, fov: float, size: Vector2, ground: Callable, world: Callable, far: float) -> int:
 	var rows := int(size.y)
 	var y := 0
@@ -175,7 +125,6 @@ static func median_float(values: Array) -> float:
 	return float(v[v.size() / 2])
 
 
-# Row of the horizontal ray straight ahead (the camera's forward flattened), at the frame's centre column.
 static func horizon_row(xf: Transform3D, fov: float, size: Vector2) -> float:
 	var fwd := -xf.basis.z
 	var flat := Vector3(fwd.x, 0.0, fwd.z).normalized()
@@ -183,7 +132,6 @@ static func horizon_row(xf: Transform3D, fov: float, size: Vector2) -> float:
 	return size.y * 0.5 - focal_px(fov, size.y) * c.y / -c.z
 
 
-# Skyline, haze box and its hit samples for one camera.
 static func measure(xf: Transform3D, fov: float, size: Vector2, ground: Callable, world: Callable, far: float) -> Dictionary:
 	var cols: Array = []
 	var hits: Array = []
@@ -193,8 +141,6 @@ static func measure(xf: Transform3D, fov: float, size: Vector2, ground: Callable
 		if r >= 0:
 			hits.append(r)
 	var out := {"skyline_cols": cols, "geometric_horizon_y": snappedf(horizon_row(xf, fov, size), 0.1), "near_box": NEAR_BOX, "camera_below_ground": is_below(xf.origin, ground)}
-	# The same skyline over the terrain alone (no physics world: props, landforms and cliffs left out), for poses where tall things
-	# cover half the columns and the median rides their tops instead of the ground's edge.
 	var tcols: Array = []
 	var thits: Array = []
 	for i in COLUMNS:
@@ -228,10 +174,9 @@ static func measure(xf: Transform3D, fov: float, size: Vector2, ground: Callable
 	return out
 
 
-# Sky band: per 8 px column, rows S - 12 .. S - 2 every 2 rows, kept when the ray hits nothing within far.
 static func _haze_samples(out: Dictionary, xf: Transform3D, fov: float, size: Vector2, ground: Callable, world: Callable, far: float) -> void:
 	var kept: Array = []
-	var px := SAMPLE_COL_PX * 0.5 # the pixel column x = 4, 12, ...; rays go through its centre, px + 0.5
+	var px := SAMPLE_COL_PX * 0.5
 	while px < size.x:
 		var r := column_skyline(px + 0.5, xf, fov, size, ground, world, far)
 		if r >= 0:
@@ -245,8 +190,6 @@ static func _haze_samples(out: Dictionary, xf: Transform3D, fov: float, size: Ve
 	out["haze_sample_count"] = kept.size()
 	out["valid"] = not bool(out["camera_below_ground"]) and kept.size() >= MIN_SAMPLES
 
-
-# ---- run ----
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
@@ -279,7 +222,6 @@ func _run() -> void:
 		printerr("park_horizon_boxes: cannot read %s" % poses_file)
 		quit(2)
 		return
-	# The audit's boot (lines 242 to 265).
 	game = Audit.Game.new()
 	game.test_mode = true
 	game.table = "park"
@@ -316,7 +258,6 @@ func _run() -> void:
 		if p.get("cam") is Array and p.get("look") is Array:
 			s["cam"] = p["cam"]
 			s["look"] = p["look"]
-		# The ball goes where _place puts it (lines 1020 to 1031), so anything streamed around it is in place.
 		var g := float(ground.call(s["x"], s["z"]))
 		body.global_position = Vector3(s["x"], g + 1.0, s["z"])
 		body.linear_velocity = Vector3.ZERO
@@ -345,7 +286,6 @@ func _run() -> void:
 	quit(0)
 
 
-# The nearest physics hit along the ray within reach (CAM_FAR / cos theta), the ball excluded, or INF.
 func _world_hit(origin: Vector3, dir: Vector3, reach: float) -> float:
 	var query := PhysicsRayQueryParameters3D.create(origin, origin + dir * reach)
 	query.exclude = [ball_rid]

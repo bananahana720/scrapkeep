@@ -15,9 +15,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 import common
 import polish
 from common import Part
-# Polish (POLISH.md): smooth shading with hard fracture creases and the AO/wear bake. No subdivision or bevel:
-# the cheeks are deliberate unequal fracture planes with chipped, not rolled, edges (moss_shelter_test "planes
-# unequal"). Only this recipe builds the module, so it opts in at module level.
 polish.enable(bevel=0)
 common.reset()
 root = common.empty('MossShelter')
@@ -44,12 +41,7 @@ def shell(rows):
     bm.faces.new(rings[-1])
 
 
-NECK_TOP = 7.62  # buried in the cap: its underside reaches Y 7.61 above the cheek strip
-# Cheeks: one closed skin per side, 0.45 to 0.65 m thick. Each side breaks at its own heights and its
-# outer front edge runs in three broad, unequal oblique fractures (X swings 1.6 to 1.9 m, so the edge
-# is well off vertical; round 2's 0.6 m swing read as a near-straight slab). The end face is oblique
-# in plan too: the inner edge sits 0.5 to 0.6 m forward or back of the outer one, never past X -14.52.
-# Stations: (Y, outer front X, |Z| outer, thickness, inner shear).
+NECK_TOP = 7.62
 cheeks = {
     1: [(0.0, -14.6, 3.99, 0.50, -0.50), (1.5, -16.0, 3.94, 0.62, 0.60), (4.3, -14.85, 3.99, 0.47, -0.55),
         (6.0, -16.5, 3.93, 0.58, 0.60), (NECK_TOP, -15.8, 3.96, 0.55, -0.50)],
@@ -62,23 +54,17 @@ for side, stations in cheeks.items():
         xi = min(-14.52, xf + sh)
         rows.append((y, [(X_BACK, side * zo), (xf, side * zo), (xi, side * (zo - thick)), (X_BACK, side * (zo - thick))]))
     shell(rows)
-# Rear skin: one continuous wall, three broad planes across the back.
 shell([(0.0, [(X_BACK, -3.98), (X_BACK + 0.50, -3.98), (X_BACK + 0.50, 3.98), (X_BACK, 3.98)]),
        (3.1, [(X_BACK, -3.94), (X_BACK + 0.62, -3.94), (X_BACK + 0.62, 3.99), (X_BACK, 3.99)]),
        (6.0, [(X_BACK, -3.99), (X_BACK + 0.47, -3.99), (X_BACK + 0.47, 3.93), (X_BACK, 3.93)]),
        (NECK_TOP, [(X_BACK, -3.96), (X_BACK + 0.55, -3.96), (X_BACK + 0.55, 3.96), (X_BACK, 3.96)])])
 
-# Cap perimeter, 12 points. Ridge 1 is the chord 2->10, ridge 2 the chord 3->9 (offset, not parallel).
 perimeter = [(-19.5, -5.0), (-18.5, -6.3), (-15.5, -5.9), (-13.0, -6.2), (-11.9, -6.0), (-11.5, -4.2),
              (-11.9, -0.6), (-11.55, 3.6), (-12.6, 6.15), (-13.5, 6.3), (-15.7, 6.3), (-19.3, 5.5)]
 n = len(perimeter)
 centre = (sum(x for x, _ in perimeter) / n, sum(z for _, z in perimeter) / n)
 FRONT = (5, 6, 7)
 CORNER = (1, 4, 8, 9, 10)
-# Ring k: height fraction and inward inset (m) per point class. The front keeps its belly (inset
-# near zero until the last ring). Corners and sides hold their wall, then break in one broad
-# planar chamfer over the last third (rings 3 to 5 are collinear in inset), scaled per point so no
-# two chips match: a chipped edge rather than a rolled bevel.
 t_rings = [0.0, 0.14, 0.42, 0.68, 0.86, 1.0]
 inset = {'front': [0.10, 0.0, 0.0, 0.0, 0.03, 0.08],
          'corner': [0.20, 0.0, 0.0, 0.0, 0.45, 0.80],
@@ -107,8 +93,6 @@ def plane(a, b, c):
     return lambda x, z: h1 + gx * (x - x1) + gz * (z - z1)
 
 
-# Crown: three planar regions. Rear plane crests at the ceiling, middle plane near 9.0, the lower
-# forward shoulder near 8.8; adjacent planes share their ridge chord's two top vertices.
 P_R = lambda x, z: 9.18 - 0.040 * (x - X_BACK) - 0.004 * z
 h = {}
 for i in (10, 11, 0, 1, 2):
@@ -135,7 +119,6 @@ for a, b in zip(rings, rings[1:]):
     for i in range(n):
         j = (i + 1) % n
         bm.faces.new((a[i], a[j], b[j], b[i]))
-# Underside scooped up 0.40 m toward the centre (deepest point Y 7.75), Y 7.35 at the lip.
 inner = [vert((centre[0] + (x - centre[0]) * 0.55, CAP_LOW + 0.26, centre[1] + (z - centre[1]) * 0.55)) for x, z in xz[0]]
 hub = vert((centre[0], CAP_LOW + 0.40, centre[1]))
 for i in range(n):
@@ -146,7 +129,7 @@ for idx in REGIONS.values():
     bm.faces.new([rings[-1][i] for i in idx])
 
 bmesh.ops.recalc_face_normals(bm, faces=bm.faces[:])
-p.paint([], 'paint')  # registers the one slot
+p.paint([], 'paint')
 for f in bm.faces:
     f.material_index = 0
     f.smooth = False

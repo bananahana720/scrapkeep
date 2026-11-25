@@ -5,18 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// node scripts/sketch-appimage.mjs: wraps the newest npm run sketch:export tarball
-// (artifacts/local/core-loop-export/scrapkeep-core-loop-<sha>.tar.gz, pack embedded) into
-// Scrapkeep-<sha>-x86_64.AppImage beside it, then installs it for the current user: the AppImage
-// at ~/.local/share/scrapkeep/Scrapkeep.AppImage, the icon under ~/.local/share/icons and the
-// app-menu entry at ~/.local/share/applications/scrapkeep.desktop. --tarball=<path> picks another
-// export, --no-install only builds, --appimagetool=<path> (or APPIMAGETOOL) names the packer and
-// --uninstall takes the installed copy, icon and entry out again. Installing runs
-// scripts/appimage/install.sh, the same file the AppImage carries for "Scrapkeep.AppImage --install".
-// The game and its music_ace folder sit side by side in usr/lib/scrapkeep/ as real files, because
 // the sequencer looks for music_ace beside OS.get_executable_path(), which resolves symlinks.
-// appimagetool is not on a stock Arch install and this script never downloads it: without it the
-// AppDir is left built and the script prints how to get the tool.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const exportRoot = path.join(root, "artifacts/local/core-loop-export");
@@ -24,9 +13,7 @@ const iconSource = path.join(root, "scripts/appimage/scrapkeep.svg");
 const installScript = path.join(root, "scripts/appimage/install.sh");
 export const APP_ID = "scrapkeep";
 // Godot 4.7.2 sets the X11 WM_CLASS class from application/config/name in
-// sketches/core-loop/project.godot (measured under Xvfb); the Wayland app id is expected, not
 // measured, to follow it. StartupWMClass must equal it so a launcher groups the window with its
-// entry. Change both together.
 export const WM_CLASS = "Scrapkeep";
 export const EXECUTABLE = "core-loop.x86_64";
 const tarballName = /^scrapkeep-core-loop-([0-9a-f]{7,40}(?:-dirty)?)\.tar\.gz$/;
@@ -40,7 +27,8 @@ export function parseArgs(argv) {
     else if (arg === "--uninstall") args.uninstall = true;
     else if (arg.startsWith("--tarball=")) args.tarball = arg.slice("--tarball=".length);
     else if (arg === "--tarball" && i + 1 < argv.length) args.tarball = argv[++i];
-    else if (arg.startsWith("--appimagetool=")) args.appimagetool = arg.slice("--appimagetool=".length);
+    else if (arg.startsWith("--appimagetool="))
+      args.appimagetool = arg.slice("--appimagetool=".length);
     else if (arg === "--appimagetool" && i + 1 < argv.length) args.appimagetool = argv[++i];
     else throw new Error("unknown argument: " + arg);
   }
@@ -55,8 +43,11 @@ export function appImageName(version) {
   return `Scrapkeep-${version}-x86_64.AppImage`;
 }
 
-// Newest by modification time, so a rebuilt sha wins over an older one.
-export function newestTarball(directory, list = readdirSync, mtime = (file) => statSync(file).mtimeMs) {
+export function newestTarball(
+  directory,
+  list = readdirSync,
+  mtime = (file) => statSync(file).mtimeMs,
+) {
   if (!existsSync(directory)) return null;
   const found = list(directory)
     .filter((name) => tarballName.test(name))
@@ -65,12 +56,6 @@ export function newestTarball(directory, list = readdirSync, mtime = (file) => s
   return found[0] ?? null;
 }
 
-// Exec names the command on PATH inside the AppDir; install.sh points it at the installed copy.
-// The sitting action (decisions.tsv P-R21 and B7) launches with --profile=sitting, which opens all
-// six pilots and never writes the real save; the plain entry plays the unlock ladder.
-// The earned sitting action launches with --profile=sitting-earned (W1-78): the sitting's loops and
-// the run that ends won at Brindle (rulings da, dd, df, dk), on a profile of its own that keeps what
-// it earns. It is the launch the world 1 sitting plays; without an entry it could only be typed.
 export function desktopEntry({ exec, icon = APP_ID }) {
   return (
     [
@@ -99,9 +84,6 @@ export function desktopEntry({ exec, icon = APP_ID }) {
   );
 }
 
-// The AppImage runtime mounts the image and runs AppRun with APPDIR and APPIMAGE set; arguments
-// pass through, so "Scrapkeep.AppImage -- --profile=sitting" still reaches the game. A first
-// argument of --install or --uninstall runs the bundled install script instead.
 export function appRun() {
   return [
     "#!/bin/sh",
@@ -114,10 +96,19 @@ export function appRun() {
   ].join("\n");
 }
 
-export function findAppimagetool({ flag = null, env = process.env, home = os.homedir(), exists = existsSync }) {
+export function findAppimagetool({
+  flag = null,
+  env = process.env,
+  home = os.homedir(),
+  exists = existsSync,
+}) {
   const named = flag ?? env.APPIMAGETOOL;
   if (named) return exists(named) ? path.resolve(named) : null;
-  const dirs = [...(env.PATH ?? "").split(":").filter(Boolean), path.join(home, "Applications"), path.join(home, ".local/bin")];
+  const dirs = [
+    ...(env.PATH ?? "").split(":").filter(Boolean),
+    path.join(home, "Applications"),
+    path.join(home, ".local/bin"),
+  ];
   for (const dir of dirs)
     for (const name of toolNames) if (exists(path.join(dir, name))) return path.join(dir, name);
   return null;
@@ -125,7 +116,9 @@ export function findAppimagetool({ flag = null, env = process.env, home = os.hom
 
 export function missingToolMessage(appDir, named = null) {
   return [
-    named ? `appimagetool not found at ${named}.` : "appimagetool not found on PATH, in ~/Applications or in ~/.local/bin.",
+    named
+      ? `appimagetool not found at ${named}.`
+      : "appimagetool not found on PATH, in ~/Applications or in ~/.local/bin.",
     `The AppDir is built at ${appDir}. Get the packer one of these ways, then run this again:`,
     "  yay -S appimagetool-bin        (AUR package; Omarchy ships yay)",
     "  or download appimagetool-x86_64.AppImage from https://github.com/AppImage/appimagetool/releases,",
@@ -147,16 +140,29 @@ export function appImageToolArgs(appDir, output) {
 }
 
 function run(command, args, options = {}) {
-  return spawnSync(command, args, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024, timeout: 600_000, ...options });
+  return spawnSync(command, args, {
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    timeout: 600_000,
+    ...options,
+  });
 }
 
 export class AppImageError extends Error {}
 
-// Builds <tarball dir>/<name>.AppDir, packs it beside the tarball and, unless install is false,
-// installs it under dataHome. Returns what it made; throws AppImageError on any failure.
-export async function buildAppImage({ tarball, install = true, appimagetool = null, env = process.env, home = os.homedir(), log = console.log }) {
+export async function buildAppImage({
+  tarball,
+  install = true,
+  appimagetool = null,
+  env = process.env,
+  home = os.homedir(),
+  log = console.log,
+}) {
   const version = versionOf(tarball);
-  if (!version) throw new AppImageError(`not a sketch:export tarball: ${tarball} (want scrapkeep-core-loop-<sha>.tar.gz)`);
+  if (!version)
+    throw new AppImageError(
+      `not a sketch:export tarball: ${tarball} (want scrapkeep-core-loop-<sha>.tar.gz)`,
+    );
   if (!existsSync(tarball)) throw new AppImageError("tarball missing: " + tarball);
   const outDir = path.dirname(tarball);
   const output = path.join(outDir, appImageName(version));
@@ -170,7 +176,8 @@ export async function buildAppImage({ tarball, install = true, appimagetool = nu
   const untar = run("tar", ["-xzf", tarball, "-C", unpack]);
   if (untar.status !== 0) throw new AppImageError("tar failed\n" + untar.stderr);
   const top = await readdir(unpack);
-  if (top.length !== 1) throw new AppImageError(`expected one folder in the tarball, found ${top.length}`);
+  if (top.length !== 1)
+    throw new AppImageError(`expected one folder in the tarball, found ${top.length}`);
   await rename(path.join(unpack, top[0]), lib);
   await rm(unpack, { recursive: true });
   const exe = path.join(lib, EXECUTABLE);
@@ -189,11 +196,14 @@ export async function buildAppImage({ tarball, install = true, appimagetool = nu
   log("appdir: " + appDir);
 
   const tool = findAppimagetool({ flag: appimagetool, env, home });
-  if (!tool) throw new AppImageError(missingToolMessage(appDir, appimagetool ?? env.APPIMAGETOOL ?? null));
+  if (!tool)
+    throw new AppImageError(missingToolMessage(appDir, appimagetool ?? env.APPIMAGETOOL ?? null));
   await rm(output, { force: true });
   const packed = run(tool, appImageToolArgs(appDir, output), { env: { ...env, ARCH: "x86_64" } });
   if (packed.status !== 0 || !existsSync(output))
-    throw new AppImageError(`appimagetool exited ${packed.status}\n` + (packed.stdout + packed.stderr).slice(-2000));
+    throw new AppImageError(
+      `appimagetool exited ${packed.status}\n` + (packed.stdout + packed.stderr).slice(-2000),
+    );
   await chmod(output, 0o755);
   log(`appimage: ${output} (${((await stat(output)).size / 1048576).toFixed(1)} MiB)`);
   if (!install) return { version, appDir, output, installed: null };
@@ -206,11 +216,18 @@ export function dataHomeOf(env, home) {
   return env.XDG_DATA_HOME || path.join(home, ".local/share");
 }
 
-// Runs scripts/appimage/install.sh with HOME and XDG_DATA_HOME pinned to what the caller passed.
-export async function runInstallScript(args, { env = process.env, home = os.homedir(), log = console.log } = {}) {
+export async function runInstallScript(
+  args,
+  { env = process.env, home = os.homedir(), log = console.log } = {},
+) {
   const dataHome = dataHomeOf(env, home);
-  const result = run("sh", [installScript, ...args], { env: { ...env, HOME: home, XDG_DATA_HOME: dataHome } });
-  if (result.status !== 0) throw new AppImageError(`install.sh ${args[0]} exited ${result.status}\n` + result.stdout + result.stderr);
+  const result = run("sh", [installScript, ...args], {
+    env: { ...env, HOME: home, XDG_DATA_HOME: dataHome },
+  });
+  if (result.status !== 0)
+    throw new AppImageError(
+      `install.sh ${args[0]} exited ${result.status}\n` + result.stdout + result.stderr,
+    );
   for (const line of result.stdout.trim().split("\n")) if (line) log(line);
   return installPaths({ dataHome });
 }
@@ -232,7 +249,8 @@ async function main() {
     return;
   }
   const tarball = args.tarball ? path.resolve(args.tarball) : newestTarball(exportRoot);
-  if (!tarball) fail(`no scrapkeep-core-loop-*.tar.gz in ${exportRoot}; run npm run sketch:export first`);
+  if (!tarball)
+    fail(`no scrapkeep-core-loop-*.tar.gz in ${exportRoot}; run npm run sketch:export first`);
   try {
     await buildAppImage({ tarball, install: args.install, appimagetool: args.appimagetool });
   } catch (error) {
@@ -246,4 +264,5 @@ function fail(message) {
   process.exit(1);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  await main();

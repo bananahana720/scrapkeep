@@ -4,16 +4,6 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// node scripts/pacing-check.mjs: measures world 1 run length against the pacing budget
-// (sketches/core-loop/design-v3/pacing/world1-pacing.json) with the skipper and completionist bots.
-// --run plays the budget's measure: bot_run.gd on the park table, --stages=2, every policy x pilot x
-// seed, --jobs at once (default 4, one per vCPU); --seeds=1,2 and --pilots=tarn,tally narrow it, and
-// --pilots=seed lets each seed pick its pilot. --from=<dir> (repeatable) reads bots.ndjson files already
-// on disk instead (the dir or its children). --level=floor (default) fails only on a stall or a median
-// under its floor, the per-PR guard; --level=target also checks each band's min and max and the
-// content slots, the world 1 sitting's acceptance. Output: artifacts/local/pacing/<stamp>/ with
-// summary.json and report.md (--out= to choose). Exit 0 pass, 1 fail, 2 nothing measured.
-
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
 export const DEFAULT_BUDGET = path.join(sketch, "design-v3/pacing/world1-pacing.json");
@@ -23,23 +13,37 @@ const RUN_TIMEOUT_MS = 1_800_000;
 export class PacingError extends Error {}
 
 export function parseArgs(argv) {
-  const args = { budget: DEFAULT_BUDGET, from: [], run: false, level: "floor", jobs: 4, seeds: null, pilots: null, out: null };
+  const args = {
+    budget: DEFAULT_BUDGET,
+    from: [],
+    run: false,
+    level: "floor",
+    jobs: 4,
+    seeds: null,
+    pilots: null,
+    out: null,
+  };
   for (const arg of argv) {
-    const [key, value] = arg.includes("=") ? [arg.slice(0, arg.indexOf("=")), arg.slice(arg.indexOf("=") + 1)] : [arg, null];
+    const [key, value] = arg.includes("=")
+      ? [arg.slice(0, arg.indexOf("=")), arg.slice(arg.indexOf("=") + 1)]
+      : [arg, null];
     if (key !== "--run" && !value) throw new PacingError(`${key} needs a value: ${arg}`);
     if (key === "--run") args.run = true;
     else if (key === "--budget") args.budget = path.resolve(value);
     else if (key === "--from") args.from.push(path.resolve(value));
     else if (key === "--out") args.out = path.resolve(value);
     else if (key === "--level") {
-      if (!["floor", "target"].includes(value)) throw new PacingError(`--level is floor or target: ${arg}`);
+      if (!["floor", "target"].includes(value))
+        throw new PacingError(`--level is floor or target: ${arg}`);
       args.level = value;
     } else if (key === "--jobs") {
       args.jobs = Number(value);
-      if (!Number.isInteger(args.jobs) || args.jobs < 1) throw new PacingError(`--jobs needs a whole number: ${arg}`);
+      if (!Number.isInteger(args.jobs) || args.jobs < 1)
+        throw new PacingError(`--jobs needs a whole number: ${arg}`);
     } else if (key === "--seeds") {
       args.seeds = value.split(",").map(Number);
-      if (args.seeds.some((s) => !Number.isInteger(s) || s < 1)) throw new PacingError(`--seeds needs whole numbers: ${arg}`);
+      if (args.seeds.some((s) => !Number.isInteger(s) || s < 1))
+        throw new PacingError(`--seeds needs whole numbers: ${arg}`);
     } else if (key === "--pilots") args.pilots = value.split(",").filter(Boolean);
     else throw new PacingError(`unknown argument ${arg}`);
   }
@@ -65,7 +69,6 @@ export function median(values) {
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-// Every bots.ndjson in dir or one level below it (a --run output keeps one folder per job).
 export function readRows(dirs) {
   const rows = [];
   const seen = new Set();
@@ -89,8 +92,6 @@ export function readRows(dirs) {
 const done = (row) => row.outcome === "stages_done";
 const parkNote = (row, stage) => (row.stages ?? []).find((s) => s.stage === stage);
 
-// Seconds a run spent on a budget stage: a park's exit_s, or for the boss row whatever the run spent
-// after the last park's exit (transition, fight, beats). null when the run never finished that stage.
 export function stageSeconds(row, stage, parks) {
   if (stage.stage === "boss") {
     if (!done(row)) return null;
@@ -106,7 +107,6 @@ export function stageSeconds(row, stage, parks) {
   return exit > 0 ? exit : null;
 }
 
-// A content field as a count: a list counts its entries, a number is itself, true is 1, absent is null.
 export function fieldCount(note, field) {
   if (!note || !(field in note)) return null;
   const value = note[field];
@@ -125,7 +125,6 @@ function band(id, policy, value, limits, level, factor, extra = {}) {
   return { id, policy, value, ...limits, human_min: human, status, ...extra };
 }
 
-// expected (policy -> runs launched) makes a run that crashed or wrote no row count against reach.
 export function evaluate(budget, rows, level = "floor", expected = {}) {
   const factor = budget.human_per_bot.value;
   const parks = budget.stages.filter((s) => s.stage !== "boss");
@@ -137,27 +136,60 @@ export function evaluate(budget, rows, level = "floor", expected = {}) {
     const finished = mine.filter(done);
     const launched = Math.max(mine.length, expected[policy] ?? 0);
     const reach = launched ? finished.length / launched : 0;
-    runs[policy] = { runs: launched, rows: mine.length, done: finished.length, stalled: mine.filter((r) => !done(r)).map((r) => ({ seed: r.seed, class: r.class, outcome: r.outcome })) };
-    checks.push({ id: "reach", policy, value: reach, floor: budget.reach.floor, status: launched && reach >= budget.reach.floor ? "pass" : "fail" });
+    runs[policy] = {
+      runs: launched,
+      rows: mine.length,
+      done: finished.length,
+      stalled: mine
+        .filter((r) => !done(r))
+        .map((r) => ({ seed: r.seed, class: r.class, outcome: r.outcome })),
+    };
+    checks.push({
+      id: "reach",
+      policy,
+      value: reach,
+      floor: budget.reach.floor,
+      status: launched && reach >= budget.reach.floor ? "pass" : "fail",
+    });
     const total = median(finished.map((r) => r.game_seconds));
-    checks.push(band("run", policy, total, budget.run[policy], level, factor, {
-      range: finished.length ? [Math.min(...finished.map((r) => r.game_seconds)), Math.max(...finished.map((r) => r.game_seconds))] : null,
-    }));
+    checks.push(
+      band("run", policy, total, budget.run[policy], level, factor, {
+        range: finished.length
+          ? [
+              Math.min(...finished.map((r) => r.game_seconds)),
+              Math.max(...finished.map((r) => r.game_seconds)),
+            ]
+          : null,
+      }),
+    );
     for (const stage of budget.stages) {
       const values = mine.map((r) => stageSeconds(r, stage, parks)).filter((v) => v !== null);
       const extra = { n: values.length, low: values.length ? Math.min(...values) : null };
-      if (stage.stage === "boss") extra.fight_s = median(finished.map((r) => r.boss?.seconds).filter((v) => typeof v === "number"));
+      if (stage.stage === "boss")
+        extra.fight_s = median(
+          finished.map((r) => r.boss?.seconds).filter((v) => typeof v === "number"),
+        );
       checks.push(band(stage.id, policy, median(values), stage[policy], level, factor, extra));
     }
   }
   for (const slot of budget.content?.slots ?? []) {
     for (const parkId of slot.parks) {
       const park = parks.find((p) => p.id === parkId);
-      const entry = { slot: slot.id, park: parkId, field: slot.field, planned: slot.planned?.[parkId] ?? null, owner: slot.owner };
+      const entry = {
+        slot: slot.id,
+        park: parkId,
+        field: slot.field,
+        planned: slot.planned?.[parkId] ?? null,
+        owner: slot.owner,
+      };
       for (const policy of budget.measure.policies) {
-        const counts = rows.filter((r) => r.policy === policy).map((r) => fieldCount(parkNote(r, park.stage), slot.field));
+        const counts = rows
+          .filter((r) => r.policy === policy)
+          .map((r) => fieldCount(parkNote(r, park.stage), slot.field));
         const seen = counts.filter((c) => c !== null);
-        entry[policy] = seen.length ? { median: median(seen), max: Math.max(...seen), n: seen.length } : null;
+        entry[policy] = seen.length
+          ? { median: median(seen), max: Math.max(...seen), n: seen.length }
+          : null;
       }
       const need = slot.completionist_min?.[parkId];
       const cap = slot.skipper_max?.[parkId];
@@ -171,8 +203,6 @@ export function evaluate(budget, rows, level = "floor", expected = {}) {
       content.push(entry);
     }
   }
-  // The planned optional minutes per park: what the completionist must take (completionist_min) and
-  // everything there is (planned), at each slot's bot_s.
   const planned = parks.map((park) => {
     let required = 0;
     let all = 0;
@@ -181,13 +211,25 @@ export function evaluate(budget, rows, level = "floor", expected = {}) {
       required += (slot.completionist_min?.[park.id] ?? 0) * slot.bot_s;
       all += (slot.planned?.[park.id] ?? 0) * slot.bot_s;
     }
-    const room = (park.completionist.min + park.completionist.max) / 2 - (park.skipper.min + park.skipper.max) / 2;
+    const room =
+      (park.completionist.min + park.completionist.max) / 2 -
+      (park.skipper.min + park.skipper.max) / 2;
     return { park: park.id, required_s: required, everything_s: all, room_s: room };
   });
-  const failing = checks.filter((c) => c.status === "fail").length
-    + (level === "target" ? content.filter((c) => c.status !== "pass").length : 0);
+  const failing =
+    checks.filter((c) => c.status === "fail").length +
+    (level === "target" ? content.filter((c) => c.status !== "pass").length : 0);
   const measured = rows.length > 0;
-  return { level, human_per_bot: budget.human_per_bot, runs, checks, content, planned, measured, pass: measured && failing === 0 };
+  return {
+    level,
+    human_per_bot: budget.human_per_bot,
+    runs,
+    checks,
+    content,
+    planned,
+    measured,
+    pass: measured && failing === 0,
+  };
 }
 
 const fmt = (s) => (s === null || s === undefined ? "none" : `${Math.round(s)} s`);
@@ -197,28 +239,64 @@ export function renderMarkdown(result, header = {}) {
   const lines = [`# World 1 pacing (${result.level})`, ""];
   for (const [key, value] of Object.entries(header)) lines.push(`- ${key}: ${value}`);
   const f = result.human_per_bot;
-  lines.push(`- Person estimate: bot seconds x ${f.value} (${f.measured ? "measured" : `inferred ${f.low}-${f.high}, not measured`})`, "");
-  lines.push(`Verdict: ${result.pass ? "PASS" : result.measured ? "FAIL" : "NOTHING MEASURED"}`, "");
-  lines.push("| Check | Policy | Median | Floor | Band | Person min | n | Status |", "| --- | --- | ---: | ---: | --- | ---: | ---: | --- |");
+  lines.push(
+    `- Person estimate: bot seconds x ${f.value} (${f.measured ? "measured" : `inferred ${f.low}-${f.high}, not measured`})`,
+    "",
+  );
+  lines.push(
+    `Verdict: ${result.pass ? "PASS" : result.measured ? "FAIL" : "NOTHING MEASURED"}`,
+    "",
+  );
+  lines.push(
+    "| Check | Policy | Median | Floor | Band | Person min | n | Status |",
+    "| --- | --- | ---: | ---: | --- | ---: | ---: | --- |",
+  );
   for (const c of result.checks) {
     if (c.id === "reach") {
       const r = result.runs[c.policy];
-      lines.push(`| reach Brindle's rout | ${c.policy} | ${r.done}/${r.runs} | ${c.floor * 100}% | | | ${r.runs} | ${c.status} |`);
+      lines.push(
+        `| reach Brindle's rout | ${c.policy} | ${r.done}/${r.runs} | ${c.floor * 100}% | | | ${r.runs} | ${c.status} |`,
+      );
       continue;
     }
     const extra = c.fight_s ? ` (fight ${fmt(c.fight_s)})` : "";
-    lines.push(`| ${c.id} | ${c.policy} | ${fmt(c.value)}${extra} | ${fmt(c.floor)} | ${c.min}-${c.max} s | ${mins(c.human_min)} | ${c.n ?? result.runs[c.policy].done} | ${c.status} |`);
+    lines.push(
+      `| ${c.id} | ${c.policy} | ${fmt(c.value)}${extra} | ${fmt(c.floor)} | ${c.min}-${c.max} s | ${mins(c.human_min)} | ${c.n ?? result.runs[c.policy].done} | ${c.status} |`,
+    );
   }
-  lines.push("", "## Optional content (per run, median)", "", "| Slot | Park | Field | Planned | Completionist | Needs | Skipper (max) | Cap | Status |", "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |");
+  lines.push(
+    "",
+    "## Optional content (per run, median)",
+    "",
+    "| Slot | Park | Field | Planned | Completionist | Needs | Skipper (max) | Cap | Status |",
+    "| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |",
+  );
   for (const c of result.content) {
     const comp = c.completionist ? c.completionist.median : "not written";
     const skip = c.skipper ? c.skipper.max : "not written";
-    lines.push(`| ${c.slot} | ${c.park} | ${c.field} | ${c.planned ?? ""} | ${comp} | ${c.completionist_min ?? ""} | ${skip} | ${c.skipper_max ?? ""} | ${c.status} |`);
+    lines.push(
+      `| ${c.slot} | ${c.park} | ${c.field} | ${c.planned ?? ""} | ${comp} | ${c.completionist_min ?? ""} | ${skip} | ${c.skipper_max ?? ""} | ${c.status} |`,
+    );
   }
-  lines.push("", "## Planned optional seconds per park", "", "| Park | Required by the budget | Everything planned | Room between the bands |", "| --- | ---: | ---: | ---: |");
-  for (const p of result.planned) lines.push(`| ${p.park} | ${fmt(p.required_s)} | ${fmt(p.everything_s)} | ${fmt(p.room_s)} |`);
-  const stalled = Object.entries(result.runs).flatMap(([policy, r]) => r.stalled.map((s) => `${policy} seed ${s.seed} (${s.class}): ${s.outcome}`));
-  if (stalled.length) lines.push("", "## Runs that did not reach Brindle's rout", "", ...stalled.map((s) => `- ${s}`));
+  lines.push(
+    "",
+    "## Planned optional seconds per park",
+    "",
+    "| Park | Required by the budget | Everything planned | Room between the bands |",
+    "| --- | ---: | ---: | ---: |",
+  );
+  for (const p of result.planned)
+    lines.push(`| ${p.park} | ${fmt(p.required_s)} | ${fmt(p.everything_s)} | ${fmt(p.room_s)} |`);
+  const stalled = Object.entries(result.runs).flatMap(([policy, r]) =>
+    r.stalled.map((s) => `${policy} seed ${s.seed} (${s.class}): ${s.outcome}`),
+  );
+  if (stalled.length)
+    lines.push(
+      "",
+      "## Runs that did not reach Brindle's rout",
+      "",
+      ...stalled.map((s) => `- ${s}`),
+    );
   return `${lines.join("\n")}\n`;
 }
 
@@ -230,13 +308,31 @@ export function buildJobs(budget, args, outDir) {
     for (const pilot of pilots)
       for (const seed of seeds) {
         const out = path.join(outDir, "bots", `${policy}-${pilot}-${seed}`);
-        const botArgs = [`--out=${out}`, `--policy=${policy}`, `--seeds=${seed}`, `--table=${budget.measure.table}`, `--stages=${budget.measure.stages}`, ...budget.measure.bot_args, ...(budget.measure.policy_args?.[policy] ?? [])];
+        const botArgs = [
+          `--out=${out}`,
+          `--policy=${policy}`,
+          `--seeds=${seed}`,
+          `--table=${budget.measure.table}`,
+          `--stages=${budget.measure.stages}`,
+          ...budget.measure.bot_args,
+          ...(budget.measure.policy_args?.[policy] ?? []),
+        ];
         if (pilot !== "seed") botArgs.push(`--pilot=${pilot}`);
         jobs.push({
           policy,
           label: `${policy} ${pilot} ${seed}`,
           out,
-          args: ["--headless", "--fixed-fps", "90", "--path", sketch, "--script", "res://tools/bot_run.gd", "--", ...botArgs],
+          args: [
+            "--headless",
+            "--fixed-fps",
+            "90",
+            "--path",
+            sketch,
+            "--script",
+            "res://tools/bot_run.gd",
+            "--",
+            ...botArgs,
+          ],
         });
       }
   return jobs;
@@ -245,16 +341,24 @@ export function buildJobs(budget, args, outDir) {
 function runJob(binary, job) {
   mkdirSync(job.out, { recursive: true });
   const env = { ...process.env };
-  for (const kind of ["DATA", "CONFIG", "CACHE"]) env[`XDG_${kind}_HOME`] = path.join(job.out, "state", kind.toLowerCase());
+  for (const kind of ["DATA", "CONFIG", "CACHE"])
+    env[`XDG_${kind}_HOME`] = path.join(job.out, "state", kind.toLowerCase());
   return new Promise((resolve) => {
     const started = Date.now();
     const child = spawn(binary, job.args, { env, stdio: ["ignore", "ignore", "pipe"] });
     let tail = "";
-    child.stderr.on("data", (chunk) => { tail = (tail + chunk).slice(-4000); });
+    child.stderr.on("data", (chunk) => {
+      tail = (tail + chunk).slice(-4000);
+    });
     const timer = setTimeout(() => child.kill("SIGKILL"), RUN_TIMEOUT_MS);
     child.on("close", (code) => {
       clearTimeout(timer);
-      resolve({ label: job.label, code, wall_s: Math.round((Date.now() - started) / 1000), tail: code ? tail : "" });
+      resolve({
+        label: job.label,
+        code,
+        wall_s: Math.round((Date.now() - started) / 1000),
+        tail: code ? tail : "",
+      });
     });
   });
 }
@@ -304,7 +408,9 @@ async function main() {
     }
     const jobs = buildJobs(budget, args, outDir);
     for (const job of jobs) expected[job.policy] = (expected[job.policy] ?? 0) + 1;
-    console.log(`pacing: ${jobs.length} bot runs, ${args.jobs} at a time (${os.cpus().length} CPUs)`);
+    console.log(
+      `pacing: ${jobs.length} bot runs, ${args.jobs} at a time (${os.cpus().length} CPUs)`,
+    );
     jobResults = await runPool(binary, jobs, args.jobs);
     args.from.push(path.join(outDir, "bots"));
     header.runs = `${jobs.length} (${jobResults.filter((j) => j.code !== 0).length} exited non-zero)`;
@@ -312,7 +418,10 @@ async function main() {
   header.from = args.from.map((d) => path.relative(root, d) || d).join(", ");
   const rows = readRows(args.from);
   const result = evaluate(budget, rows, args.level, expected);
-  writeFileSync(path.join(outDir, "summary.json"), `${JSON.stringify({ ...result, header, jobs: jobResults }, null, 2)}\n`);
+  writeFileSync(
+    path.join(outDir, "summary.json"),
+    `${JSON.stringify({ ...result, header, jobs: jobResults }, null, 2)}\n`,
+  );
   const report = renderMarkdown(result, header);
   writeFileSync(path.join(outDir, "report.md"), report);
   console.log(report);
@@ -320,4 +429,5 @@ async function main() {
   process.exit(result.measured ? (result.pass ? 0 : 1) : 2);
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) await main();
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
+  await main();

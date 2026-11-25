@@ -68,7 +68,6 @@ def delivery_frames(arm, actions):
         render(camera, "clip-" + clip, (2.6, 5, 1.20))
     arm.animation_data.action = actions["drop_land"]
     bpy.context.scene.frame_set(1)
-    # Exact chase geometry, uncropped at the requested projection; no GPU capture.
     camera.data.type = "PERSP"
     camera.data.sensor_fit = "VERTICAL"
     camera.data.angle_y = math.radians(65)

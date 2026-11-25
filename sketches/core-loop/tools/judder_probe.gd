@@ -2,25 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 
-# Measures how evenly the ball is drawn when the display's frame rate is not the physics
-# tick rate. Run it at the display rate to check:
-#
-#   godot --headless --fixed-fps 144 --path sketches/core-loop --script res://tools/judder_probe.gd \
-#     -- [--interp=0|1|default] [--speed=40] [--seconds=4]
-#
-# The real game boots calm, the ball is held at a steady ground speed, and every drawn frame
-# records where the ball is drawn (PlayerBall.shown_position) and where the lens is. A steady
-# ball should move the same distance every frame. JUDDER lines give, for the ball in the world
-# and for the ball as seen from the lens: the median step, the 95th percentile step, and the
-# spread (standard deviation over the mean of the world step; 0 is perfectly even). A step over
-# JUMP metres is a respawn or a cut and is counted, not measured. The lens line is what the
-# player sees: a steady ball under a settled camera should barely move in the picture.
-# --interp=default leaves the tree as a test's game sets it, which is off: only a game on a
-# window takes the Frame smoothing setting (Game.set_frame_smoothing). --interp=1 is what a
-# player gets with the setting on, --interp=0 with it off.
 
-# Seconds of run-up before recording. The run-up and the recording are counted in physics
-# ticks, so every display rate measures the same stretch of ground.
 const WARM := 1.25
 const JUMP := 5.0
 

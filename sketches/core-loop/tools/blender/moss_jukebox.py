@@ -33,8 +33,7 @@ from lantern_beacon import kit, common
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [500, 610, 1]  # polish: was [270, 610, 1]
-# Polish (tools/blender/POLISH.md): cabinet and trim take a bevel, round feet one subdivision.
+PROP = [500, 610, 1]
 FINISH = {"Cabinet": {"bevel": .04}, "Trim": {"bevel": .02}, "Feet": {"bevel": 0, "subsurf": 1}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
 
 
@@ -45,10 +44,6 @@ def polish_on():
 
 NAME = "moss_jukebox"
 
-# One row per painted part, palette names or palette hex only (common.HEX mirrors src/core/palette.gd; LEDGER e6d9b8 and
-# VERDIGRIS 365754 = "petrol" are written as hex/names). The picture's lighter teal is a palette gap: VERDIGRIS.
-# The picture's grey speaker mesh becomes CHARCOAL panels with SAND (d2c5a5) mesh lines in detail1 (no neutral grey in the
-# palette; SLATE means "not yet"). "groove" is CABLE (palette.gd), the feet's groove band.
 TONES = {
     "arch": "e6d9b8",
     "band": "amber",
@@ -67,42 +62,39 @@ TONES = {
     "groove": "2a3231",
 }
 
-# Metres, Godot +Y up, origin at the cabinet's floor centre, face on -z.
 W, H, D = 1.8, 2.6, 1.2
-ARCH_R = .88                 # outer arch radius = half the cabinet width
-ARCH_C = H - ARCH_R          # arch centre height
-BAND_R, FRONT_R = .72, .6    # amber band and tan front: stacked tombstones, so the band runs down the pillars as a line
+ARCH_R = .88
+ARCH_C = H - ARCH_R
+BAND_R, FRONT_R = .72, .6
 BODY_Y0 = .2
 SEGS = 8
-Z_BODY = (-.45, .6)          # front, back
+Z_BODY = (-.45, .6)
 Z_BAND, Z_FRONT, Z_STRIP = -.48, -.5, -.51
-STRIP = (.6, .68, .46, 1.78)     # teal pillar strip: x0, x1, y0, y1 (mirrored)
-DOME = (ARCH_C - .03, .42, .08)  # centre y, radius, bulge (half dome on the tan front)
-BULB = (DOME[0] + .33, .065, .055)  # y, radius, half depth
-PLATE = (.48, 1.27, 1.66)        # copper display plate: half width, y0, y1
+STRIP = (.6, .68, .46, 1.78)
+DOME = (ARCH_C - .03, .42, .08)
+BULB = (DOME[0] + .33, .065, .055)
+PLATE = (.48, 1.27, 1.66)
 WINDOW = (.17, 1.44, 1.62)
 DRAWER = (.17, 1.3, 1.41)
-SPEAKER = (.22, .44, 1.33, 1.6)  # x0, x1, y0, y1 (mirrored)
-OVAL = (.85, .42, .46, .05)      # centre y, half width, half height, bezel width
-BANDS = [1.71, 1.59, 1.46]       # copper pillar band centres
+SPEAKER = (.22, .44, 1.33, 1.6)
+OVAL = (.85, .42, .46, .05)
+BANDS = [1.71, 1.59, 1.46]
 KEYSTONE = [(-.15, 2.47), (.15, 2.47), (.09, 2.22), (-.09, 2.22)]
 KNOBS = [(-.34, 1.3), (0.0, 1.27), (.34, 1.3), (0.0, 1.06)]
 LATTICE = [((-.24, 1.25), (0, 1.06)), ((.24, 1.25), (0, 1.06)), ((0, 1.06), (-.2, .72)), ((-.2, .72), (0, .42)),
            ((0, .42), (.2, .72)), ((.2, .72), (0, 1.06))]
 PATCH = (-.86, -.74, .58, .8)
-FOOT = (.715, .185, .6, .46)     # centre x (mirrored), half width, half depth, top y
+FOOT = (.715, .185, .6, .46)
 KICK = (.53, .08, .22)
 SOCKETS = {"socket_grille": [0, DOME[0], -.58]}
 SIZE = {"cabinet": [1.76, 2.4, 1.185], "trim": [1.8, 2.17, 1.18], "feet": [1.8, .46, 1.2]}
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     return common.srgb(TONES[name])
 
 
 def prism(s, outline, z0, z1, color, back=True):
-    # Extrude a convex XY outline from the front plane z0 back to z1; open back when it sits on another part.
     n = len(outline)
     verts = [(x, y, z) for z in (z0, z1) for x, y in outline]
     faces = [(i, (i + 1) % n, n + (i + 1) % n, n + i) for i in range(n)] + [tuple(range(n))]
@@ -125,7 +117,6 @@ def oval(cy, hw, hh, n=10):
 
 
 def half_dome(s, cy, r, bulge, z0, segs, color):
-    # A mesh dome on the front plane, cut flat along its base; open where it meets the front.
     ring0 = [(r * math.cos(math.pi * i / segs), cy + r * math.sin(math.pi * i / segs), z0) for i in range(segs + 1)]
     ring1 = [(.6 * r * math.cos(math.pi * i / segs), cy + .6 * r * math.sin(math.pi * i / segs), z0 - .8 * bulge)
              for i in range(segs + 1)]
@@ -137,7 +128,6 @@ def half_dome(s, cy, r, bulge, z0, segs, color):
 
 
 def bead(s, c, r, h, color, k=6):
-    # A closed six-sided bead facing -z: a ring with a point in front and behind.
     x, y, z = c
     ring = [(x + r * math.cos(math.tau * i / k), y + r * math.sin(math.tau * i / k), z) for i in range(k)]
     faces = [(i, (i + 1) % k, k) for i in range(k)] + [((i + 1) % k, i, k + 1) for i in range(k)]
@@ -170,7 +160,6 @@ def cabinet(s):
 
 
 def bar(s, a, b, w, z0, z1, color, ends=True):
-    # A flat bar on the face from a to b (XY), front at z0, open back.
     dx, dy = b[0] - a[0], b[1] - a[1]
     ln = math.hypot(dx, dy)
     nx, ny = -dy / ln * w / 2, dx / ln * w / 2
@@ -187,7 +176,6 @@ def arc_strip(s, cy, r0, r1, segs, z0, z1, color):
         a0, a1 = math.pi * i / segs, math.pi * (i + 1) / segs
         p = [(r * math.cos(a), cy + r * math.sin(a)) for r in (r0, r1) for a in (a0, a1)]
         v = [(x, y, z) for z in (z0, z1) for x, y in p]
-        # p: inner a0, inner a1, outer a0, outer a1
         s.add(v, [(0, 1, 3, 2), (2, 3, 7, 6), (1, 0, 4, 5)], color)
 
 

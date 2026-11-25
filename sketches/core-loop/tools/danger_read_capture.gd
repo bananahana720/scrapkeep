@@ -1,28 +1,5 @@
 extends SceneTree
 
-# Stills for a blind read of the ground danger marks (design-v3/SIGHT-PERSONA.md section 7, step 3;
-# PLAY-FINDINGS PF-16): the game on its park maps, the chase camera and the HUD, with the ball
-# standing inside each mark and outside it. Inside, the still is taken twice with the game held:
-# as the game draws it, and with the HUD's danger mark hidden, so readers can say whether that
-# mark carries the warning.
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --path sketches/core-loop --rendering-driver opengl3 \
-#     --resolution 1280x720 --script res://tools/danger_read_capture.gd -- --out=/abs/dir [--only=id,id] [--at=0.6]
-# Marks: boil (silt boil ring), lobber (a lobber's landing ring), yard (the yard lock's wall), slag
-# (Brindle's slag ring), charge (Brindle's charge lane). --at is how far through its warning each
-# mark stands when the still is taken. Writes <id>-inside.png, <id>-inside-plain.png,
-# <id>-outside.png and frames.json. The yard lock is no threat, so it has no danger mark and no
-# plain still, and no outside still: once the wall is up it pushes the ball back in.
-#
-# How true each still is. The lobber, the slag ring and the charge lane are the game's own
-# attacks: a real lobber fires at the ball, and Brindle lays his own ring in his second phase and
-# his own lane in his third, at his own timing, with his own hull and cues. The boil ring and the
-# yard wall are staged, drawn through the game's builders and sizes with no fight running; the
-# wall stands where the run starts, not where the lock fires. No crew is on screen, Brindle's
-# drones are held off and the crew's hello is put down as a press of fire does, so in play more
-# would be going on. Each still records the game's own word on whether the ball stands in a
-# warning, and the tool stops if that contradicts the still's name; it also lists every warning
-# on screen, how far through its warning the mark stood, and whether a crew line was up. The
-# cloud's renderer judges size, place and read, not final look.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -37,15 +14,11 @@ const LockRows := preload("res://src/world/lock_rows.gd")
 
 const MARKS := ["boil", "lobber", "yard", "slag", "charge"]
 const SETTLE := 45
-# How far past a mark's edge the ball stands for the outside still.
 const CLEAR := 5.0
-# How far ahead of the ball the lobber stands.
 const LOBBER_AT := 30.0
-# How far past the arena's centre the ball stands for the second charge, metres.
 const CHARGE_FAR := 8.0
 const WAIT_TICKS := 2400
 const QUIET_TICKS := 900
-# The ball's centre this close over the ground is the ball on the ground.
 const LANDED := 1.6
 
 var game
@@ -94,7 +67,6 @@ func _run() -> void:
 	game.flow.choose_class(0)
 	game.run.set_max_hp(999999.0)
 	game.player.source = Intent.Scripted.new()
-	# The run opens with the ball on its drop; a mark laid under a falling ball misses it.
 	var ground = game.ctx.spawner.ground
 	var down := 0
 	for i in WAIT_TICKS:
@@ -105,14 +77,11 @@ func _run() -> void:
 			break
 	if down < 30:
 		return _fail("the ball never landed")
-	# The first-steps key hints are retired by the time a fight starts; a fresh profile draws them.
 	if game.hud.get("first_steps") != null:
 		game.hud.first_steps.modulate.a = 0.0
 
-	# The dam, where the run starts: the ball where the game stood it, looking toward the beacon.
 	var spot: Vector3 = game.player.ball_position()
 	var ahead := _flat(game.flow.beacon.global_position - spot) if is_instance_valid(game.flow.beacon) else Vector3.BACK
-	# The run's opening toasts, its first hint and the crew's send-off clear before the first still.
 	await _place(spot, ahead)
 	await _quiet()
 	if _wanted("boil"):
@@ -121,7 +90,6 @@ func _run() -> void:
 			var ring = Telegraph.ring(game.ctx.root, ground, Threat.Type.INSTANT, mid, SiltBoil.RADIUS)
 			ring.set_progress(at)
 			_made.append(ring)
-			# The rumble's chevron over the ring (presentation.gd answers this signal).
 			game.ctx.spawner.boils.rumbled.emit(mid, SiltBoil.WARN)
 		await _place(spot, ahead)
 		boil.call(spot)
@@ -133,9 +101,6 @@ func _run() -> void:
 	if _wanted("lobber") and failed == "":
 		await _lobber(ground, spot, ahead)
 	if _wanted("yard") and failed == "":
-		# The lock builds its wall when a fight seals the yard; this draws the same wall with no
-		# fight, through the lock's own builder and the map's own lock row. Inside, the wall stands
-		# where a lock puts it: ahead of the ball, toward the beacon.
 		var map = game.ctx.terrain.map()
 		var row: Dictionary = LockRows.row(String(map.title)) if map != null and "title" in map else {}
 		var lock: Dictionary = row.get("lock", {})
@@ -170,16 +135,10 @@ func _run() -> void:
 		var out_dir := _flat(start - centre)
 		if out_dir == Vector3.ZERO:
 			out_dir = Vector3.RIGHT
-		# The ball holds where the fight put it while the opening toast clears; Brindle's own
-		# first-phase attacks come and go round it.
-		# A stage starts the ball on its own health, and Brindle's attacks land on it here.
 		game.run.set_max_hp(999999.0)
 		await _place(_stand(floor_query, start), _flat(boss.ship.global_position - start))
 		await _quiet()
 		if _wanted("slag"):
-			# Slag is the second phase: the ship parks on the arena's centre, the cranes are gone
-			# and the caps are open. The rings are Brindle's own, the one he lays next each time.
-			# His drones are held off so the ring is the only mark; in play their shells land too.
 			boss.jump_to_phase(2)
 			boss._next_lobber = INF
 			var parked := 0
@@ -195,18 +154,11 @@ func _run() -> void:
 			ring = await _attack("slag_ring", ring)
 			if ring == null:
 				return _fail("Brindle laid no second slag ring")
-			# Outside is the floor between the two rings, or inside the inner ring's hole.
 			var off: float = ring.r_out + CLEAR if ring.r_out < Arena.RING_B.x else ring.r_in - CLEAR
 			var outside := _stand(floor_query, centre + out_dir * off)
 			await _place(outside, _flat(boss.ship.global_position - outside), 4)
 			await _still("slag", "outside", outside, -1.0, ring)
 		if _wanted("charge") and failed == "":
-			# The charge is Brindle's third phase, and these are his own: he aims at the ball, so
-			# inside is the ball where he laid the lane, and outside is the ball after a step to
-			# the side once the next lane is down.
-			# The ball stands before the phase starts, so the first charge is the one caught: on a
-			# slow renderer a wait after the jump let it pass, and the next began with the hull
-			# on top of the ball.
 			var aimed := _stand(floor_query, start)
 			await _place(aimed, _flat(boss.ship.global_position - aimed))
 			boss.jump_to_phase(3)
@@ -215,8 +167,6 @@ func _run() -> void:
 				return _fail("Brindle never charged")
 			game.camera.snap(_flat(boss.ship.global_position - aimed))
 			await _stills("charge", aimed, -1.0, lane)
-			# That charge ends at the rim by the ball. The ball crosses to the far side of the
-			# floor while it does, so the next lane comes the length of the arena again.
 			for i in WAIT_TICKS:
 				if not is_instance_valid(lane) or lane.is_done():
 					break
@@ -245,8 +195,6 @@ func _run() -> void:
 	quit(0)
 
 
-# A real lobber ahead of the ball. It aims at the ball, so its first shell is the inside still.
-# For the outside still the ball steps back to its spot once the next shell has left.
 func _lobber(ground, spot: Vector3, ahead: Vector3) -> void:
 	await _place(spot, ahead)
 	var stand := spot + ahead * LOBBER_AT
@@ -256,8 +204,6 @@ func _lobber(ground, spot: Vector3, ahead: Vector3) -> void:
 		return _fail("the lobber never fired")
 	await _stills("lobber", spot, -1.0, shell)
 	_drop(shell)
-	# The lobber aims the next shell at the ball where it now stands, further on; the ball is
-	# back at its spot before the shell is halfway, so the ring lies ahead of it as the boil's does.
 	var on := spot + ahead * (Projectile.BLAST_RADIUS + CLEAR)
 	on = _on(ground, on) + Vector3.UP * (spot.y - Telegraph.ground_under(ground, spot))
 	await _place(on, ahead, 4)
@@ -272,7 +218,6 @@ func _lobber(ground, spot: Vector3, ahead: Vector3) -> void:
 	await _ticks(4)
 
 
-# The next shell in flight, or null if none leaves.
 func _shell():
 	for i in WAIT_TICKS:
 		for node in get_nodes_in_group("enemy_shot"):
@@ -290,8 +235,6 @@ static func _drop(shell) -> void:
 	shell.free()
 
 
-# The inside stills: as drawn, then with the HUD's danger mark hidden. The game is held between
-# the two, so the second is the same frame without the mark.
 func _stills(id: String, ball: Vector3, hold: float, shell = null) -> void:
 	await _hold(hold, shell)
 	paused = true
@@ -308,9 +251,6 @@ func _still(id: String, where: String, ball: Vector3, hold: float, shell = null)
 	paused = false
 
 
-# Lets the game run until the mark is `at` through its warning: `seconds` of game time for a
-# staged mark (its chevron plays on from the moment it was drawn), or the mark's own clock for
-# a lobber's shell or one of Brindle's warnings.
 func _hold(seconds: float, mark) -> void:
 	if mark == null:
 		await _ticks(maxi(4, roundi(seconds * Engine.physics_ticks_per_second)))
@@ -321,7 +261,6 @@ func _hold(seconds: float, mark) -> void:
 		await physics_frame
 
 
-# How far a shell's ring or one of Brindle's warnings has run, or 2 when it is gone.
 static func _run_of(mark) -> float:
 	if not is_instance_valid(mark):
 		return 2.0
@@ -330,8 +269,6 @@ static func _run_of(mark) -> float:
 	return float(mark.age) / maxf(float(mark.warn_seconds), 0.01) if int(mark.state) == Hazard.WARN else 2.0
 
 
-# Brindle's next lead warning whose id starts with `prefix`, caught early in its warning, or
-# null. His cued follow-ups (the short tell his ratchet cue pays for) are passed over.
 func _attack(prefix: String, after):
 	for i in WAIT_TICKS * 2:
 		for node in get_nodes_in_group(Threat.GROUP):
@@ -342,9 +279,6 @@ func _attack(prefix: String, after):
 	return null
 
 
-# QUIET_TICKS, then until the crew's speech bubble has been down for two seconds. A zone's hello
-# stays up until a key answers it, so it is put down the way a press of fire puts it down. Each
-# still says whether a line was up all the same.
 func _quiet() -> void:
 	await _ticks(QUIET_TICKS)
 	var down := 0
@@ -367,7 +301,6 @@ func _speaking() -> bool:
 	return is_instance_valid(_bubble) and _bubble.showing()
 
 
-# Every warning on screen: Brindle's by their ids, the rest as "ring".
 func _threats() -> Array:
 	var found := []
 	for node in get_nodes_in_group(Threat.GROUP):
@@ -389,11 +322,8 @@ func _shot(id: String, where: String, plain: bool, ball: Vector3, mark_node = nu
 		return _fail("could not save %s" % path)
 	var watch = game.combat.get("near_miss")
 	var standing = watch.standing_in() if watch != null and watch.has_method("standing_in") else null
-	# The game's own word on the still: the ball is in the warning for an inside still and out
-	# of it for an outside one. The yard wall is no warning, so the game counts it as neither.
 	if standing != null and id != "yard" and (float(standing) >= 0.0) != where.begins_with("inside"):
 		return _fail("%s-%s: the game reads the ball %s the mark" % [id, where, "inside" if float(standing) >= 0.0 else "outside"])
-	# A staged mark and the lobber's ring stand alone; the yard wall is no warning at all.
 	var threats := _threats()
 	if id in ["boil", "lobber", "yard"] and threats.size() != (0 if id == "yard" else 1):
 		return _fail("%s-%s: %d warnings on screen: %s" % [id, where, threats.size(), str(threats)])
@@ -405,7 +335,6 @@ func _shot(id: String, where: String, plain: bool, ball: Vector3, mark_node = nu
 		mark.modulate.a = 1.0
 
 
-# Stands the ball at `point` and turns the chase camera to look along `heading`.
 func _place(point: Vector3, heading: Vector3, settle := SETTLE) -> void:
 	var body = game.player.body()
 	body.freeze = false
@@ -458,11 +387,9 @@ static func _flat_length(v: Vector3) -> float:
 	return Vector2(v.x, v.z).length()
 
 
-# `point` on the ground the telegraph follows.
 static func _on(ground, point: Vector3) -> Vector3:
 	return Vector3(point.x, Telegraph.ground_under(ground, point), point.z)
 
 
-# `point` with the ball resting on the arena floor.
 func _stand(floor_query, point: Vector3) -> Vector3:
 	return Vector3(point.x, floor_query.height(point.x, point.z) + 1.2, point.z)

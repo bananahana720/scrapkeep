@@ -5,34 +5,6 @@ const Intent := preload("res://src/movement/intent.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 
-# Rendered stills for the Reduce flashes toggle (design question 7): each flash site at its
-# peak with the toggle off and on, each beside a rest still taken the frame before, so
-# still_compare's --peak mode can measure the brightness the flash adds. Sites: the hit edge
-# flash, a pop glyph (the shot and detonation flash), a reach ring glyph, an enemy hit flash,
-# a comic sound word and the reward crate burst. It needs a rendered display; in the cloud:
-#
-#   xvfb-run -a -s "-screen 0 1920x1080x24" <godot> --rendering-driver opengl3 \
-#     --path sketches/core-loop --script res://tools/flash_capture.gd -- --out=<absolute dir>
-#
-# then, per site and mode:
-#   <godot> --headless --path sketches/core-loop --script res://tools/still_compare.gd -- \
-#     --peak <out>/<site>-<mode>-rest.png <out>/<site>-<mode>-peak.png
-#
-# The run is calm (no director spawns) and the tree is paused across each rest and peak pair,
-# so the two stills differ only by the flash.
-#
-# UA-06, clip mode (--clip=1): P8 in design-v3/ui-audit/principles.json, "Motion is optional and
-# nothing flashes fast: Less motion and fewer flashes are settings; no more than three flashes a
-# second" (WCAG 2.3.1). The tree runs, and every site above fires at once, twice, half a second
-# apart (the busiest second this tool can reach; the crate burst needs a paused ceremony and is
-# left out). Every rendered frame is cut to a 4 x 3 grid of regions and each region's mean WCAG
-# relative luminance is kept with the game clock. A flash is a rise of at least FLASH_DELTA in a
-# region's luminance followed by a fall of at least FLASH_DELTA; the score is the most flashes in
-# any one second, in the worst region. It passes at FLASH_LINE or fewer. --plant=blink adds a
-# white rectangle over one region that blinks five times a second, and must fail.
-# frames.json holds the numbers; the tool exits 1 on a fail and 2 with no display or --out.
-#   gpu-run.sh <worktree> flash --path sketches/core-loop --script res://tools/flash_capture.gd -- \
-#     --clip=1 [--plant=blink] [--guard=on] --out=<abs dir>
 
 const SITES := ["edge", "pop_glyph", "ring_glyph", "enemy_hit", "word"]
 const SETTLE_FRAMES := 10
@@ -154,7 +126,6 @@ func _ahead(metres: float) -> Vector3:
 	return _game.ctx.terrain.drop_point(ball.x + ahead.x, ball.z + ahead.z, 1.0)
 
 
-# The enemy stands where the camera looks now, since the ball may have rolled.
 func _place(site: String) -> void:
 	if site == "enemy_hit":
 		_enemy.global_position = _ahead(6.0)
@@ -182,8 +153,6 @@ func _calm(site: String) -> void:
 		_enemy._update_flash(1.0)
 
 
-# The crate burst only plays in a paused ceremony; the rest still is the frame it reveals,
-# before the burst draws, and the peak is 0.08 s into the burst.
 func _burst(mode: String, part: String) -> void:
 	_game.set_reduce_flashes(mode == "on")
 	_burst_mode = mode
@@ -231,10 +200,6 @@ func _finish() -> void:
 	quit(0)
 
 
-# --- UA-06: flash rate from a running clip ---
-
-# The ball is dropped on the stage's start and held still once it has rested, so the clip's
-# luminance moves only by what the sites and the world's own motion (dust, sky) do.
 func _clip_wait() -> void:
 	var p: Vector3 = _game.player.ball_position()
 	var ground = _game.ctx.spawner.ground
@@ -316,7 +281,6 @@ func _clip_finish() -> void:
 	quit(0 if pass_clip else 1)
 
 
-# Per region, the flash score of the frames with from <= t < to.
 func _score(from: float, to: float) -> Array:
 	var rows := []
 	for r in GRID.x * GRID.y:
@@ -354,8 +318,6 @@ static func _linear_table() -> PackedFloat32Array:
 	return table
 
 
-# Mean WCAG relative luminance of each cell of a cols x rows grid, sampling every `step`th pixel.
-# Needs an RGB8 or RGBA8 image; `lin` is _linear_table().
 static func region_means(image: Image, grid: Vector2i, step: int, lin: PackedFloat32Array) -> PackedFloat32Array:
 	var width := image.get_width()
 	var height := image.get_height()
@@ -377,8 +339,6 @@ static func region_means(image: Image, grid: Vector2i, step: int, lin: PackedFlo
 	return sums
 
 
-# The most flashes in any one second of a luminance series. A flash is a rise of at least `delta`
-# followed by a fall of at least `delta`; it is placed at the time of its rise. `times` is in seconds.
 static func flashes_per_second(times: PackedFloat32Array, luma: PackedFloat32Array, delta: float) -> float:
 	var rises: Array = []
 	if luma.size() == 0 or luma.size() != times.size():

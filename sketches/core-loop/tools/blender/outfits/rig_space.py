@@ -10,7 +10,6 @@ import struct
 
 from mathutils import Matrix, Quaternion, Vector
 
-# Blender (x, y, z) -> glTF (x, z, -y).
 TO_GLTF = Matrix(((1, 0, 0, 0), (0, 0, 1, 0), (0, -1, 0, 0), (0, 0, 0, 1)))
 
 

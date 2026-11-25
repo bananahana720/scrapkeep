@@ -1,16 +1,3 @@
-# The mend ward's post (W46-18, activities.gd _build_ward): the keepers' mending station that stands in a dead end off
-# every line, over the ward's charcoal ring and its verdigris charge fill (both drawn by the game). A keeper repair on
-# old works stone (STORY-MAP section 3): a stepped slate plinth bound by an iron strap and copper rivets, a weathered
-# iron column with a bolted foot flange, a verdigris mend collar, a mismatched copper patch plate, a hand wheel at
-# hand height on the front, a spanner hung on the side, and a flared verdigris lamp head under a wide roof, so the
-# outline reads from the chase camera as a lamp post you roll up to and stop at. Copper, not brass: brass tags are the
-# Fleet's (STORY-MAP section 2). Never mint (LEGIBILITY section 1): mint means "press now", and a ward asks the ball to
-# hold still. Procedural bmesh, vertex coloured, one mesh and one slot (one draw) for ModelKit.whole; every piece is a
-# closed solid that shares no vertex with another, so the file is watertight. Metres; Godot (X,Y,Z) -> Blender
-# (X,-Z,Y); the front faces +Z; origin on the ground at the middle of the plinth. Fits the 0.9 x 2.4 x 0.9 m post it
-# replaces.
-#
-#   blender -b --factory-startup --python-exit-code 1 -P sketches/core-loop/tools/blender/world_one/mend_ward_post.py -- [--out DIR] [--render DIR]
 import math
 import os
 import sys
@@ -32,7 +19,6 @@ FOOT, HEIGHT = 0.9, 2.4
 COL_R, COL_Y0, COL_Y1 = 0.18, 0.56, 2.02
 WHEEL_Y = 1.62
 LIMIT_TRIS, LIMIT_DRAWS = 2000, 1
-# The game's ward ring (activities.gd MendWard.RING_M) and the ball (radius 0.92), for the stills only.
 RING_M, BALL_R = 5.0, 0.92
 
 
@@ -56,11 +42,9 @@ def bolt(p, at, normal, r=0.03, h=0.035, color="copper_dk"):
 
 
 def plinth(p):
-    # Two stepped slate blocks, the upper one sunk a hair into the lower so no faces share corners, and a worn cap stone.
     box(p, (FOOT, 0.22, FOOT), (0, 0.11, 0), "slate_dk")
     box(p, (0.76, 0.31, 0.76), (0, 0.365, 0), "slate")
     box(p, (0.6, 0.07, 0.6), (0, 0.545, 0), "slate_hi")
-    # The iron strap that binds the upper block, three copper rivets a face.
     box(p, (0.79, 0.08, 0.79), (0, 0.42, 0), "iron")
     for k in range(4):
         a = TAU * k / 4
@@ -69,7 +53,6 @@ def plinth(p):
         for s in (-0.26, 0.0, 0.26):
             at = n * 0.395 + side * s + Vector((0, 0.42, 0))
             bolt(p, tuple(at), tuple(n), r=0.028, h=0.03)
-    # Corner chocks on the base, keeper-cut wedges that stop the block walking.
     for k in range(4):
         a = TAU * k / 4 + math.pi / 4
         at = (0.4 * math.sin(a), 0.265, 0.4 * math.cos(a))
@@ -77,23 +60,18 @@ def plinth(p):
 
 
 def column(p):
-    # The iron column, eight flats with one facing the front, tapering a little to its head.
     p.cyl(SLOT, COL_R, COL_R * 0.9, COL_Y1 - COL_Y0, segs=8, loc=g(0, (COL_Y0 + COL_Y1) / 2, 0),
           rot=(0, 0, math.pi / 8), color=c("iron_hi"))
-    # Its foot flange: a flat octagonal shelf (flat apothem 0.268 m) and a fillet up to the column, eight copper
-    # heads sunk into the shelf's top face between the two, one on each flat.
     p.cyl(SLOT, 0.29, 0.29, 0.08, segs=8, loc=g(0, 0.62, 0), rot=(0, 0, math.pi / 8), color=c("iron"))
     p.cyl(SLOT, 0.2, 0.185, 0.07, segs=8, loc=g(0, 0.69, 0), rot=(0, 0, math.pi / 8), color=c("iron"))
     for k in range(8):
         a = TAU * k / 8
         at = (0.235 * math.sin(a), 0.66, 0.235 * math.cos(a))
         bolt(p, at, (0, 1, 0), r=0.024, h=0.025)
-    # A rust bleed band where water sat on the flange.
     p.cyl(SLOT, COL_R + 0.008, COL_R * 0.99, 0.12, segs=8, loc=g(0, 0.76, 0), rot=(0, 0, math.pi / 8), color=c("iron_rust"))
 
 
 def mend_collar(p):
-    # The verdigris collar where the column was mended: a fat band with darker lips and six copper bolts round it.
     y = 1.24
     p.cyl(SLOT, 0.255, 0.255, 0.24, segs=12, loc=g(0, y, 0), color=c("verdigris"))
     for dy in (-0.135, 0.135):
@@ -102,16 +80,12 @@ def mend_collar(p):
         a = TAU * k / 6 + TAU / 12
         n = (math.sin(a), 0.0, math.cos(a))
         bolt(p, (0.255 * n[0], y, 0.255 * n[2]), n, r=0.026, h=0.03, color="copper")
-    # The head collar under the lamp.
     p.cyl(SLOT, 0.235, 0.235, 0.08, segs=12, loc=g(0, COL_Y1 - 0.03, 0), color=c("copper_dk"))
 
 
 def patch(p):
-    # A mismatched copper plate bolted over a crack on the front, skewed, four iron bolts.
-    # Its tilted top stays 5 cm under the collar's lower lip (1.085 m).
     at = Vector((0.03, 0.9, 0.185))
     tilt = 0.12
-    # A turn about Godot +Z is a turn about Blender -Y: local (x, y) lands at (x cos - y sin, x sin + y cos).
     box(p, (0.2, 0.24, 0.03), tuple(at), "copper", rot=(0, -tilt, 0))
     for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
         x = sx * 0.07 * math.cos(tilt) - sy * 0.09 * math.sin(tilt)
@@ -120,7 +94,6 @@ def patch(p):
 
 
 def wheel(p):
-    # The hand wheel on the front, where a keeper's hands go: stem, hub, four spokes and a rim, rubbed copper.
     z = COL_R * 0.95 + 0.14
     p.rod(SLOT, g(0, WHEEL_Y, COL_R * 0.8), g(0, WHEEL_Y, z), 0.035, segs=8, color=c("iron"))
     p.cyl(SLOT, 0.055, 0.055, 0.07, segs=8, loc=g(0, WHEEL_Y, z), rot=(math.pi / 2, 0, 0), color=c("copper_dk"))
@@ -132,20 +105,15 @@ def wheel(p):
 
 
 def spanner(p):
-    # A spanner hung on a hook on the right side: the mend's tool, left where the next keeper will want it. It hangs at
-    # x = 0.36, clear of the collar lips (0.285 m) below the hook, and its shank runs up over the hook's rod.
     x = 0.36
     p.rod(SLOT, g(0.14, 1.52, 0), g(0.4, 1.52, 0), 0.016, segs=5, color=c("iron"))
     p.cyl(SLOT, 0.026, 0.026, 0.03, segs=6, loc=g(0.41, 1.52, 0), rot=(0, math.pi / 2, 0), color=c("iron"))
-    # Thin across x (2 cm), broad along the side (5.5 cm), so it hangs flat against the column's side.
     p.beam(SLOT, g(x, 1.54, 0), g(x, 1.06, 0), 0.02, 0.055, color=c("iron_hi"))
-    # The open jaw at its foot, in the side's plane, its gap facing the ground (angle 0 points down after the turn).
     p.ring(SLOT, 0.035, 0.075, 0.025, segs=10, loc=g(x, 1.02, 0), rot=(0, math.pi / 2, 0),
            arc=(math.radians(40), math.radians(320)), color=c("iron_hi"))
 
 
 def head(p):
-    # The lamp head: a flared verdigris bowl, a pale lamp band, a wide verdigris roof and a copper finial at 2.4 m.
     p.cyl(SLOT, 0.2, 0.33, 0.13, segs=12, loc=g(0, 2.085, 0), color=c("verdigris"))
     p.cyl(SLOT, 0.25, 0.25, 0.11, segs=12, loc=g(0, 2.2, 0), color=c("lamp"))
     for k in range(4):

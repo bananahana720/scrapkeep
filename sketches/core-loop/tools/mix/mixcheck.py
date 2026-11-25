@@ -24,7 +24,6 @@ raw = np.frombuffer(w.readframes(n), dtype=np.int16).astype(np.float64) / 32768.
 x = raw.reshape(-1, ch)
 mono = x.mean(axis=1)
 meta = json.load(open(path.rsplit(".", 1)[0] + ".json"))
-# A "room", "duck" or "restore" row (MixRows.MAKE_ROOM, audio.gd _log_gain) is a level change, not a start.
 cues = [c for c in meta.get("cue_rows", []) if c[0] >= 0 and c[3] not in ("room", "duck", "restore")]
 out = []
 
@@ -58,7 +57,6 @@ def band(seg, lo, hi):
     return float(np.sum(spec[(f >= lo) & (f <= hi)])) + 1e-15
 
 
-# --- 1. The whole mix -------------------------------------------------------------------
 secs = len(mono) / rate
 win = int(0.4 * rate)
 st = [loud(mono[i:i + win]) for i in range(0, len(mono) - win, win // 2)]
@@ -69,7 +67,6 @@ say("MIX  %.1f s, %d cues with a start time, %d kinds of sound" % (secs, len(cue
 say("  loudness (400 ms windows): median %.1f, loudest %.1f, quietest sounding %.1f" % (np.median(gated), max(gated), min(gated)))
 say("  peak %.2f dBFS; samples within 0.13 dB of full scale: %d (%.3f%% of the run)" % (db(peak), int(hot.sum()), 100.0 * hot.sum() / len(hot)))
 
-# Hot stretches: runs of near-full-scale samples, merged when under 50 ms apart.
 idx = np.flatnonzero(hot)
 runs = []
 for i in idx:
@@ -88,7 +85,6 @@ for a, b, count in runs[:12]:
     near = [c[2] for c in cues if t - 0.15 <= c[0] <= t + 0.02]
     say("  %7.2f s  %4d samples over %3.0f ms   %s" % (t, count, (b - a) * 1000 / rate, ", ".join(near) or "(no cue: the band alone)"))
 
-# --- 2. Pile-ups ------------------------------------------------------------------------
 bins = defaultdict(list)
 for c in cues:
     bins[int(c[0] / 0.04)].append(c[2])
@@ -104,9 +100,6 @@ for b, names in piles[:10]:
 sizes = [len(v) for v in bins.values()]
 say("  starts alone: %d; in twos: %d; three or more together: %d" % (sizes.count(1), sizes.count(2), sum(1 for s in sizes if s >= 3)))
 
-# --- 3. Level by what the game is doing ---------------------------------------------------
-# A set needs contrast: the breath quieter than the build, the drop louder than both. This is
-# the level of the whole mix in each stretch of the game's own mix state.
 s50 = int(0.05 * rate)
 r = np.array([math.sqrt(float(np.mean(mono[i:i + s50] ** 2))) for i in range(0, len(mono) - s50, s50)])
 r = 20 * np.log10(np.maximum(r, 1e-9))

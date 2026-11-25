@@ -4,12 +4,7 @@ import "@fontsource/dm-sans/latin-400.css";
 import "@fontsource/dm-sans/latin-500.css";
 import "@fontsource/dm-sans/latin-700.css";
 import "./styles.css";
-import {
-  OrchardGame,
-  ARENA,
-  LIGHTNING_CONFIG,
-  ITEM_CONFIG,
-} from "./simulation.js";
+import { OrchardGame, ARENA, LIGHTNING_CONFIG, ITEM_CONFIG } from "./simulation.js";
 import { OrchardScene } from "./scene.js";
 
 const $ = (id) => document.getElementById(id);
@@ -24,12 +19,9 @@ try {
     ["uiScale", 0.85, 1.25],
     ["impactShake", 0, 1],
   ]) {
-    if (Number.isFinite(saved[name]))
-      settings[name] = clamp(saved[name], lo, hi);
+    if (Number.isFinite(saved[name])) settings[name] = clamp(saved[name], lo, hi);
   }
-} catch {
-  /* Preferences are optional when storage is unavailable. */
-}
+} catch {}
 const controlCopy = `<dl class="controls-list"><div><dt>Mouse + WASD</dt><dd>Look freely; roll with the camera.</dd></div><div><dt>Hold LMB / RMB</dt><dd>Repeat lightning / focused aim.</dd></div><div><dt>Hold, release Q / E</dt><dd>Preview, then cast strike / conductor.</dd></div><div><dt>Space / Shift / Ctrl</dt><dd>Double jump / ram burst / brake.</dd></div><div><dt>R / I / Escape</dt><dd>Ultimate / dashboard / cancel or pause.</dd></div></dl>`;
 $("orchard-app").innerHTML = `
 <header class="orchard-top"><a href="/" class="wordmark"><span>ϟ</span> SCRAPKEEP</a><span class="chapter">THE IRON ORCHARD</span><button id="dashboard-button" hidden><kbd>I</kbd> Dashboard</button></header>
@@ -92,9 +84,7 @@ const frameTimes = [],
   eventLog = [];
 const audio = { ctx: null };
 window.addEventListener("error", (event) => errorLog.push(event.message));
-window.addEventListener("unhandledrejection", (event) =>
-  errorLog.push(String(event.reason)),
-);
+window.addEventListener("unhandledrejection", (event) => errorLog.push(String(event.reason)));
 function applySettings() {
   document.documentElement.style.setProperty("--ui-scale", settings.uiScale);
   world.setView({
@@ -104,9 +94,7 @@ function applySettings() {
   });
   try {
     localStorage.setItem("orchard-settings", JSON.stringify(settings));
-  } catch {
-    /* Optional storage. */
-  }
+  } catch {}
 }
 applySettings();
 function enableAudio() {
@@ -114,9 +102,7 @@ function enableAudio() {
   try {
     audio.ctx ||= new (window.AudioContext || window.webkitAudioContext)();
     audio.ctx.resume().catch(() => {});
-  } catch {
-    /* Silent play remains available. */
-  }
+  } catch {}
 }
 function sound(type) {
   if (!audio.ctx || !settings.audio) return;
@@ -186,8 +172,7 @@ function captureFailure(reason) {
     supported: typeof canvas.requestPointerLock === "function",
   };
   canvas.dataset.captureError = JSON.stringify(detail);
-  if ($("capture-detail"))
-    $("capture-detail").textContent = `${detail.name}: ${detail.message}`;
+  if ($("capture-detail")) $("capture-detail").textContent = `${detail.name}: ${detail.message}`;
   capturePending = false;
   if (qaInput || game.mode !== "playing") return;
   game.pause();
@@ -208,8 +193,7 @@ function acquirePointer() {
     const request = canvas.requestPointerLock();
     request?.catch(captureFailure);
     setTimeout(() => {
-      if (capturePending && document.pointerLockElement !== canvas)
-        captureFailure();
+      if (capturePending && document.pointerLockElement !== canvas) captureFailure();
     }, 1000);
   } catch (error) {
     captureFailure(error);
@@ -250,17 +234,9 @@ function openDashboard(tab = selectedTab) {
   showModal(
     "dashboard",
     "Your lightning caster",
-    game.mode === "intermission"
-      ? "BETWEEN WAVES · RECONFIGURE"
-      : "PAUSED · INSPECT YOUR BUILD",
+    game.mode === "intermission" ? "BETWEEN WAVES · RECONFIGURE" : "PAUSED · INSPECT YOUR BUILD",
   );
-  $("dashboard-tabs").innerHTML = [
-    "Character",
-    "Equipment",
-    "Companion",
-    "Map",
-    "Settings",
-  ]
+  $("dashboard-tabs").innerHTML = ["Character", "Equipment", "Companion", "Map", "Settings"]
     .map(
       (name) =>
         `<button data-tab="${name}" aria-current="${name === tab ? "page" : "false"}">${name}</button>`,
@@ -286,40 +262,27 @@ function renderDashboard() {
     config = LIGHTNING_CONFIG;
   const movement = config.movement;
   const ramDamage =
-    movement.ramDamage +
-    Math.min(p.shear, movement.maxShearBonus) * movement.shearRamBonus;
+    movement.ramDamage + Math.min(p.shear, movement.maxShearBonus) * movement.shearRamBonus;
   const ramCooldown = Math.max(
     movement.minRamCooldown,
     movement.ramCooldown - p.brace * movement.braceCooldownBonus,
   );
-  const protection = Math.min(
-    movement.maxBraceProtection,
-    p.brace * movement.braceProtection,
-  );
+  const protection = Math.min(movement.maxBraceProtection, p.brace * movement.braceProtection);
   const stats = (rows) =>
     `<dl class="stat-grid">${rows.map(([name, value]) => `<div><dt>${name}</dt><dd>${value}</dd></div>`).join("")}</dl>`;
   if (selectedTab === "Character")
     $("dialog-body").innerHTML = `${stats([
       ["Hull", `${Math.ceil(p.hp)} / ${p.maxHp}`],
       ["Ball radius", `${p.radius.toFixed(2)} m`],
-      [
-        "Lightning bolt",
-        `${config.bolt.damage} damage / ${config.bolt.interval}s`,
-      ],
+      ["Lightning bolt", `${config.bolt.damage} damage / ${config.bolt.interval}s`],
       ["Bolt reach", `${config.bolt.range} m`],
       ["Ram burst", `${ramDamage} damage / ${ramCooldown.toFixed(2)}s`],
-      [
-        "Brace protection",
-        `${Math.round(protection * 100)}% less incoming damage`,
-      ],
+      ["Brace protection", `${Math.round(protection * 100)}% less incoming damage`],
       [
         "Chain reach",
         `${(config.bolt.chainRange * (p.ultimateTime > 0 ? config.ultimate.chainMultiplier : 1)).toFixed(1)} m${p.ultimateTime > 0 ? " · overcharged" : ""}`,
       ],
-      [
-        "Ground strike",
-        `${config.strike.damage} damage · ${config.strike.radius} m radius`,
-      ],
+      ["Ground strike", `${config.strike.damage} damage · ${config.strike.radius} m radius`],
       [
         "Conductor",
         `${config.conductor.damage} damage / ${(config.conductor.interval / (p.ultimateTime > 0 ? config.ultimate.conductorMultiplier : 1)).toFixed(2)}s · ${config.conductor.max} active`,
@@ -368,10 +331,7 @@ function renderDashboard() {
     $("dialog-body").innerHTML =
       `<div class="map-layout"><svg class="arena-map" viewBox="0 0 400 420" role="img" aria-label="Arena map showing your position, live enemies, conductors and available pickups"><rect x="10" y="10" width="380" height="400" rx="12" fill="#102b2a" stroke="#52776e"/><path d="M140 12 V408 M260 12 V408" stroke="#2c4a3d" stroke-width="32"/><text x="200" y="35" text-anchor="middle" fill="#b9d4c5" font-size="16">SEEDHOUSE</text>${game.pickups
         .filter((v) => !v.collected)
-        .map(
-          (v) =>
-            `<circle cx="${sx(v.x)}" cy="${sy(v.z)}" r="3" fill="#e6c96e"/>`,
-        )
+        .map((v) => `<circle cx="${sx(v.x)}" cy="${sy(v.z)}" r="3" fill="#e6c96e"/>`)
         .join("")}${game.enemies
         .filter((v) => v.hp > 0)
         .map(
@@ -407,11 +367,7 @@ function renderDashboard() {
 }
 function showRewards() {
   if (game.mode !== "intermission") return;
-  showModal(
-    "rewards",
-    "Make the next wave yours",
-    `WAVE ${game.wave.index} CLEARED`,
-  );
+  showModal("rewards", "Make the next wave yours", `WAVE ${game.wave.index} CLEARED`);
   $("dialog-body").innerHTML =
     `<p>A safe moment to collect your reward and adjust your equipment.</p><div class="reward-grid">${game.rewards.map((reward) => `<button class="reward-card" data-reward="${reward.id}" ${game.wave.rewardChosen ? "disabled" : ""}><span class="eyebrow">CHOOSE ONE</span><strong>${reward.name}</strong><span>${reward.description}</span></button>`).join("")}</div><p id="reward-confirmation" role="status">${game.wave.rewardChosen ? "Reward acquired. Your equipment is ready to reconfigure." : "Choose one reward to continue."}</p>`;
   $("dialog-footer").innerHTML =
@@ -474,8 +430,7 @@ window.addEventListener("keydown", (event) => {
     return;
   }
   if (dialog.open || game.mode !== "playing") return;
-  if (["Space", "ControlLeft", "ControlRight"].includes(event.code))
-    event.preventDefault();
+  if (["Space", "ControlLeft", "ControlRight"].includes(event.code)) event.preventDefault();
   if (!event.repeat && !blockedKeys.has(event.code)) {
     keys.add(event.code);
     pulses.add(event.code);
@@ -512,8 +467,7 @@ document.addEventListener("pointerlockchange", () => {
     capturePending = false;
     clearInput();
     canvas.focus();
-  } else if (game.mode === "playing" && !qaInput && !dialog.open)
-    openDashboard();
+  } else if (game.mode === "playing" && !qaInput && !dialog.open) openDashboard();
 });
 document.addEventListener("pointerlockerror", captureFailure);
 window.addEventListener("blur", () => {
@@ -531,8 +485,7 @@ if (matchMedia("(pointer:coarse)").matches)
   $("device-note").textContent =
     "This playtest needs a keyboard and mouse, or a controller. Touch controls are not available.";
 function controls(dt) {
-  const down = (...codes) =>
-    codes.some((code) => keys.has(code) || pulses.has(code));
+  const down = (...codes) => codes.some((code) => keys.has(code) || pulses.has(code));
   let sx = Number(down("KeyD")) - Number(down("KeyA")),
     sz = Number(down("KeyS")) - Number(down("KeyW"));
   const state = {
@@ -566,8 +519,7 @@ function controls(dt) {
       state.strike ||= pressed(4);
       state.conductor ||= pressed(5);
       state.ultimate ||= pressed(3);
-      if ((pressed(9) && !padPrevious[9]) || (pressed(8) && !padPrevious[8]))
-        openDashboard();
+      if ((pressed(9) && !padPrevious[9]) || (pressed(8) && !padPrevious[8])) openDashboard();
     }
     padPrevious = pad.buttons.map((b) => b.pressed);
   }
@@ -609,8 +561,7 @@ function processEvents() {
           ? "Shear Linkage · stronger rams + companion"
           : "Adjustable Brace · faster ram recovery",
       );
-    if (event.type === "spawn")
-      toast(event.text || "Workers entering the orchard", 2);
+    if (event.type === "spawn") toast(event.text || "Workers entering the orchard", 2);
     if (event.type === "hurt") {
       $("hurt-flash").classList.remove("hit");
       void $("hurt-flash").offsetWidth;
@@ -635,10 +586,8 @@ function updateHUD() {
     : `${p.airJumps} air jump${p.airJumps === 1 ? "" : "s"}`;
   $("scrap-value").textContent = `${p.scrap} scrap`;
   $("wave-title").textContent = `WAVE ${w.index} / ${w.total}`;
-  $("wave-objective").textContent =
-    w.index === 3 ? "Clear the workers & Pruner" : "Clear the wave";
-  $("wave-count").textContent =
-    `${w.remaining} remaining · ${w.queued} incoming`;
+  $("wave-objective").textContent = w.index === 3 ? "Clear the workers & Pruner" : "Clear the wave";
+  $("wave-count").textContent = `${w.remaining} remaining · ${w.queued} incoming`;
   const cooldowns = {
     bolt: p.shotCooldown,
     strike: p.strikeCooldown,
@@ -660,8 +609,7 @@ function updateHUD() {
     $("ability-" + id).classList.toggle("cooling", cooldown > 0);
     $("ability-" + id).classList.toggle(
       "prepared",
-      game.preparedAbility === id ||
-        (id === "ultimate" && p.ultimateCharge >= 100),
+      game.preparedAbility === id || (id === "ultimate" && p.ultimateCharge >= 100),
     );
   }
   $("reticle").classList.toggle("focused", world.view.aiming);
@@ -681,9 +629,7 @@ function updateHUD() {
         : relative < 0
           ? 110
           : innerWidth - 110;
-      const y = point.visible
-        ? clamp(point.y, 200, innerHeight - 230)
-        : innerHeight * 0.42;
+      const y = point.visible ? clamp(point.y, 200, innerHeight - 230) : innerHeight * 0.42;
       return `<div class="entry-label" style="left:${x}px;top:${y}px"><b>${point.visible ? "◇" : Math.abs(relative) > 2 ? "↓" : relative < 0 ? "←" : "→"} ${entry.kinds.length} incoming</b><span>${Math.max(0, entry.time - game.time).toFixed(1)}s · ${entry.z < -16 ? "seedhouse" : entry.x < 0 ? "west rows" : "east rows"}</span></div>`;
     })
     .join("");
@@ -729,10 +675,8 @@ function updateHUD() {
     .sort((a, b) => a.distance - b.distance)[0];
   $("threat").hidden = !threat || game.mode !== "playing";
   if (threat) {
-    const direction =
-      Math.abs(threat.a) > 2 ? "↓ Behind" : threat.a < 0 ? "← Left" : "Right →";
-    const attack =
-      threat.hazard.kind === "offcut" ? "offcut incoming" : "tool attack";
+    const direction = Math.abs(threat.a) > 2 ? "↓ Behind" : threat.a < 0 ? "← Left" : "Right →";
+    const attack = threat.hazard.kind === "offcut" ? "offcut incoming" : "tool attack";
     $("threat").textContent =
       `${direction} · ${attack} · ${threat.hazard.jumpable ? "low · jump clear" : "tall · move clear"}`;
   }
@@ -758,10 +702,7 @@ function frame(now) {
       }
     }
   } else accumulator = 0;
-  world.update(
-    game,
-    game.mode === "paused" || game.mode === "intermission" ? 0 : dt,
-  );
+  world.update(game, game.mode === "paused" || game.mode === "intermission" ? 0 : dt);
   if (toastLife > 0) {
     toastLife -= dt;
     if (toastLife <= 0) $("toast").classList.remove("show");

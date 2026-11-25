@@ -3,44 +3,11 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# The render check for a generated (Tripo) enemy model: how bright the lit model is on screen, beside the
-# authored one. The PC look of 14 November 2026 twice found a generated hooker barrel near-black in the game
-# after the light test in tests/tripo_variants_test.gd had passed it, so a generated model is now judged from
-# rendered pixels. See tools/tripo/README.md, "The render check".
-#
-# Shoot (needs a GPU display; on the PC that is headless gamescope, as in tools/ui_screens_capture.md). Run it
-# once with no model flag and once with --models=tripo-all, into two folders:
-#   <gamescope ...> -- $GODOT_BIN --path sketches/core-loop --script res://tools/model_render_check.gd -- \
-#     --out=/abs/authored [--kinds=hooker,lobber]
-#   <the same> -- --out=/abs/tripo --models=tripo-all
-# Each run spawns every kind in the real game, paused, on the launch lip, and takes two views of it from
-# opposite sides. For each view it takes three stills from one camera: the ground with the enemy
-# hidden, the enemy casting no shadow, and the enemy as the game draws it. The first two give the enemy's own
-# pixels; the third is measured over those pixels and saved. stats.json records, per kind and view, the mean
-# brightness, the share of near-black pixels and the pixel count.
-#
-# Compare (no display needed, runs with --headless):
-#   $GODOT_BIN --headless --path sketches/core-loop --script res://tools/model_render_check.gd -- \
-#     --compare=/abs/authored,/abs/tripo --out=/abs/sheets
-# It prints one PASS or FAIL line per kind, writes a side-by-side sheet per kind, and exits 1 on any FAIL.
-# A kind fails when, in either view, the generated model is under FLOOR of the authored brightness or has
-# DARK_MORE more near-black pixels. Exit 2: a bad argument, no display for a shoot, or a kind that drew
-# fewer than MIN_PIXELS pixels (the check saw nothing, which is not a pass).
-# The compare step ends with one machine-readable line for scripts/gate/model-render-receipt.mjs:
-#   SUMMARY {"judged": n, "pinned": <KINDS.size()>, "failed": [kind...], "missing": [kind...], "plant": "<switch or empty>"}
-# The mask: only the parts drawn from the model file are measured (model_parts: a mesh that is not a Godot primitive).
-# The code-built parts an enemy hangs on its model (the netcaster's net, masts, rings, lamps) are hidden for the two
-# measured stills, so they cannot dilute a dark body. stats.json records, per kind, the file ModelVariants loaded,
-# whether it loaded, and the measured part names; the compare refuses a kind whose generated shoot did not load its own
-# generated file (a miss named in "missing"), so a lost model is never judged as present.
-# Plant (the receipt's control): RENDER_PLANT=dark_models in a --models=tripo-all shoot paints the model parts of
-# every kind near-black as each is shot, the fault of the rejected dark hooker body; the compare must fail every kind.
-# stats.json records the switch, so a compare over a planted shoot names it, and an authored shoot refuses it.
 
 const SIZE := Vector2i(800, 600)
 const KINDS := ["chaser", "lobber", "swatter", "hooker", "netcaster", "boom_tender"]
 const VIEWS := [Vector3(0.55, 0.3, 0.75), Vector3(-0.6, 0.3, -0.7)]
-const DIFFERS := 0.06  # a pixel belongs to the enemy when any channel moves this far from the empty ground
+const DIFFERS := 0.06
 const NEAR_BLACK := 0.08
 const FLOOR := 0.8
 const DARK_MORE := 0.15
@@ -62,13 +29,13 @@ func _initialize() -> void:
 		elif arg.begins_with("--kinds="):
 			kinds = Array(arg.trim_prefix("--kinds=").split(","))
 			for kind in kinds:
-				if not kind in KINDS:  # the spawner draws a chaser for a name it does not know
+				if not kind in KINDS:
 					printerr("model_render_check: unknown kind %s (known: %s)" % [kind, ", ".join(KINDS)])
 					quit(2)
 					return
 		elif arg.begins_with("--compare="):
 			compare = arg.trim_prefix("--compare=")
-		elif arg != "--models=tripo-all":  # --models=tripo would shoot accepted siblings under the label "authored"
+		elif arg != "--models=tripo-all":
 			printerr("model_render_check: unknown option %s" % arg)
 			quit(2)
 			return
@@ -114,7 +81,7 @@ func _shoot() -> void:
 	camera.current = true
 	camera.fov = 40.0
 	for t in root.find_children("*", "Terrain3D", true, false):
-		t.set_camera(camera)  # else the far rings draw at the wrong detail behind the enemy
+		t.set_camera(camera)
 	var terrain = game.ctx.terrain
 	var base: Vector3 = terrain.drop_point(-65.0, -130.0, 0.0)
 	game.player.reset_to(base + Vector3(0, 0, -60))
@@ -157,10 +124,10 @@ func _shoot() -> void:
 			enemy.visible = false
 			var ground := await _still()
 			enemy.visible = true
-			for drawn: GeometryInstance3D in code_built:  # the mask: only what the model file drew is measured
+			for drawn: GeometryInstance3D in code_built:
 				drawn.visible = false
 			var shadows := {}
-			for drawn: GeometryInstance3D in enemy.find_children("*", "GeometryInstance3D", true, false):  # batched parts too (the boom tender's floats)
+			for drawn: GeometryInstance3D in enemy.find_children("*", "GeometryInstance3D", true, false):
 				shadows[drawn] = drawn.cast_shadow
 				drawn.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 			var bare := await _still()
@@ -193,7 +160,6 @@ func _still() -> Image:
 	return root.get_texture().get_image()
 
 
-# Brightness of `lit` over the pixels where `bare` (the enemy with no shadow) differs from the empty `ground`.
 func _measure(ground: Image, bare: Image, lit: Image) -> Dictionary:
 	var pixels := 0
 	var sum := 0.0
@@ -223,8 +189,6 @@ func _read(dir: String) -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 
-# The parts of an enemy drawn from its model file: every drawn geometry whose mesh is not a Godot primitive (the
-# code-built net, masts, rings and lamps are BoxMesh, CylinderMesh, TorusMesh and the like).
 static func model_parts(enemy: Node) -> Array:
 	var out := []
 	for drawn: GeometryInstance3D in enemy.find_children("*", "GeometryInstance3D", true, false):
@@ -238,9 +202,6 @@ static func model_parts(enemy: Node) -> Array:
 	return out
 
 
-# Judges a --models=tripo-all shoot's stats against an authored shoot's. Returns {error, judged, failed, missing,
-# lines}. A kind is missing when the generated shoot did not load a generated file of its own (the path is the
-# authored one, or it did not load): it is a miss, never judged. error is set when nothing can be judged.
 static func judge(authored: Dictionary, tripo: Dictionary) -> Dictionary:
 	var out := {"error": "", "judged": 0, "failed": [], "missing": [], "lines": []}
 	if authored.get("models", "") != "authored" or tripo.get("models", "") != "tripo-all":
@@ -302,4 +263,3 @@ func _compare() -> int:
 	print("SUMMARY " + JSON.stringify({"judged": verdict.judged, "pinned": KINDS.size(), "failed": verdict.failed, "missing": verdict.missing, "plant": planted}))
 	print("model_render_check: %s (%d kinds judged, %d missing, at least %.2f of the authored brightness, at most %.2f more near-black)" % ["PASS" if bad == 0 else "FAIL (%d)" % bad, verdict.judged, verdict.missing.size(), FLOOR, DARK_MORE])
 	return 1 if bad > 0 else 0
-

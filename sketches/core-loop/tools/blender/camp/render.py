@@ -20,9 +20,9 @@ from mathutils import Vector
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent))
-import common  # noqa: E402
-import cycles_device  # noqa: E402
-import layout as L  # noqa: E402
+import common
+import cycles_device
+import layout as L
 
 SKETCH = HERE.parents[2]
 MODELS = SKETCH / "assets/models"
@@ -104,7 +104,6 @@ def world_setup(samples, size, sky=True):
     world.use_nodes = True
     nt = world.node_tree
     bg = nt.nodes["Background"]
-    # A pale desert sky for the layout, a warm neutral for turntables.
     bg.inputs["Color"].default_value = common.rgba("a9c3d6" if sky else common.mix("sandstone", "bone", 0.5))
     bg.inputs["Strength"].default_value = 0.9
     sun = bpy.data.lights.new("sun", "SUN")
@@ -175,7 +174,6 @@ def turntable(o):
         for yaw in (0, 90, 180, 270):
             root.rotation_euler.z = math.radians(yaw)
             bpy.context.view_layer.update()
-            # Camera on the +Z (Godot) side, which is Blender -Y, looking slightly down: the plaza-side view at yaw 0.
             cam = camera("cam_%d" % yaw, centre + Vector((0, -dist * math.cos(0.42), dist * math.sin(0.42))), centre, 40)
             p = out / ("%s_%03d.png" % (name, yaw))
             shot(cam, p)
@@ -187,7 +185,6 @@ def turntable(o):
 
 
 EXISTING = [
-    # (glb under assets/models, Godot position, yaw radians, scale): reused models that dress Moss's station.
 ]
 
 
@@ -209,7 +206,6 @@ def build_layout(models):
     for sid, glb in station_glbs.items():
         pos, yaw = L.station(sid)
         put(glb, pos, yaw)
-    # Moss's stall, with the shipped jukebox at its socket and Moss's hover barge parked out past the ring as a backdrop.
     pos, yaw = L.station("moss")
     put("camp_moss_stall.glb", pos, yaw)
     jx, jz = 7.6, -1.2
@@ -242,7 +238,6 @@ def layout_shots(o):
     shot(camera("hero", g2b(0, 110, 95), g2b(0, 0, -8), 62), out / "camp_layout_hero.png")
     shot(camera("spawn", g2b(0, 3.2, 9), g2b(0, 2.5, -40), 75), out / "camp_layout_spawn.png")
     shot(camera("top", g2b(0, 300, 0.01), g2b(0, 0, 0), 62), out / "camp_layout_top.png")
-    # One close shot per station, from the plaza side at chase-camera height (arm about 12 m, a little above).
     for sid, (dist, h, fov) in {"gate": (30, 6, 60), "lockers": (22, 5, 60), "moss": (17, 4, 60),
                                 "achieve": (18, 4, 60), "settings": (10, 3, 55), "skee": (24, 7, 62),
                                 "pet": (15, 4, 60)}.items():

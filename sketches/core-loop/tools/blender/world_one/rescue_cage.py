@@ -13,8 +13,6 @@ from common import Part
 common.reset()
 common.SLOTS["cage_steel"] = {"vc": True, "rough": 0.72, "metal": 0.25}
 common.SLOTS["cage_signal"] = {"vc": True, "rough": 0.72, "metal": 0.25}
-# Polish (POLISH.md): the 1100 T / 2100 V cap and the 4-part, 4-draw check leave room for smooth shading and the
-# AO/wear bake only; the mint latch (cage_signal) is not baked so the ally state colour stays bright.
 import polish
 polish.enable(detail=1, bevel=0, bake_slots=("cage_steel",))
 root = common.empty("RescueCage")
@@ -49,7 +47,6 @@ for x in (-1.4,1.4):
     panel(p,0.33,0.32,0.08,(x,2.8,1.53),"bone")
 finish(p)
 p = Part("CageGate")
-# All imprisoning bars retract with the state-owned gate, leaving an open frame.
 for x in (-1.4,1.4):
     for z in (-0.7,0,0.7):
         rod(p,(x,0.2,z),(x,3.15,z))
@@ -64,12 +61,10 @@ for x in (-0.6,0,0.6):
     rod(p,(x,0.3,1.43),(x,2.95,1.43))
 finish(p)
 p = Part("CageLatch")
-# Mint belongs to the ally latch alone, not a cage-wide recolour.
 panel(p,0.72,0.56,0.22,(0,1.45,1.6),"mint","cage_signal")
 panel(p,0.25,0.28,0.025,(0,1.45,1.73),"charcoal","cage_signal")
 finish(p,(0,1.45,1.6))
 p = Part("CageSeat")
-# A low folded perch supports the existing seated pilot.
 panel(p,1.18,0.16,0.85,(0,0.67,-0.25),"petrol")
 for x in (-0.44,0.44):
     rod(p,(x,0.08,-0.53),(x,0.62,-0.53),0.075,"oxide")
@@ -85,7 +80,6 @@ opts=common.args()
 common.export(root,opts["out"] or os.path.join(common.MODELS,"world_one","rescue_cage.glb"))
 
 if opts["render"]:
-    # CPU-only scale sheet. The coordinator captures live states under the GPU lock.
     from mathutils import Vector
     scene=bpy.context.scene
     scene.render.engine="CYCLES"

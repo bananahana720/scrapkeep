@@ -50,7 +50,6 @@ def pitched(x, p):
     return np.interp(np.arange(n) * p, np.arange(len(x)), x)
 
 
-# --- Place every cue ---------------------------------------------------------------------
 cues = []
 missing = Counter()
 unlevelled = Counter()
@@ -64,15 +63,11 @@ for row in run["cue_rows"]:
         stops.append((t, sound))
         continue
     if how == "room":
-        # The room row says a room was made; what it did to each voice is in the duck rows.
         has_room = True
         continue
     if how in ("duck", "restore") and t >= 0:
-        # [t, kind, sound, how, voice start, dB]: audio.gd _log_gain. The game says which voice
-        # takes which gain and when; nothing here decides it.
         gains[(sound, float(row[4]))].append((t, float(row[5]) if how == "duck" else 0.0))
         continue
-    # June's answers (the set director) are booked on the grid and log the level they play at.
     placed = how == "now" or (kind == "set_answer" and len(row) > 5 and row[5] is not None)
     if not placed or t < 0:
         if t >= 0:
@@ -82,7 +77,6 @@ for row in run["cue_rows"]:
         missing[sound] += 1
         continue
     if len(row) < 6 or row[5] is None:
-        # A loop or a voice started outside the one play path logs no level: it cannot be placed.
         unlevelled[sound] += 1
         continue
     pitch = float(row[4]) if row[4] else 1.0
@@ -101,7 +95,6 @@ for i, c in enumerate(cues):
     a = int(c["t"] * RATE)
     x = x[:total_len - a].copy()
     c["a"], c["x"], c["cut"] = a, x, len(x)
-    # The game's voice limit: the oldest voice of this sound stops when a new one starts.
     voices = [j for j in live[c["sound"]] if cues[j]["a"] + cues[j]["cut"] > a]
     limit = VOICE_LIMIT.get(c["sound"], VOICE_DEFAULT)
     while len(voices) >= limit:
@@ -110,8 +103,6 @@ for i, c in enumerate(cues):
         old["stolen"] = True
     voices.append(i)
     live[c["sound"]] = voices
-# A stop row ends every voice of that sound still sounding (a warning hum is three seconds
-# long and is stopped after half of one).
 for t, sound in stops:
     at = int(t * RATE)
     for c in cues:
@@ -119,11 +110,8 @@ for t, sound in stops:
             c["cut"] = at - c["a"]
             c["stolen"] = True
             c["stopped"] = True
-# The game's own duck and restore rows (audio.gd _log_gain): a voice takes each row's dB offset from
-# that row's time until the next one, matched by sound and start time.
 for c in cues:
     g = np.ones(len(c["x"]))
-    # Sorted by time only: rows from one call share a time and keep the order the game logged them in.
     for t, db in sorted(gains.get((c["sound"], c["t"]), []), key=lambda r: r[0]):
         g[max(int(t * RATE) - c["a"], 0):] = 10 ** (db / 20)
     c["x"] *= g
@@ -136,8 +124,7 @@ for c in cues:
     layer = own_layer.setdefault(c["sound"], np.zeros(total_len))
     layer[c["a"]:c["a"] + len(x)] += x
 
-# --- Third-octave bands ------------------------------------------------------------------
-edges = [50 * 2 ** (k / 3) for k in range(0, 26)]  # 50 Hz to about 16 kHz
+edges = [50 * 2 ** (k / 3) for k in range(0, 26)]
 freqs = np.fft.rfftfreq(WIN, 1 / RATE)
 band_of = np.digitize(freqs, edges) - 1
 valid = (band_of >= 0) & (band_of < len(edges) - 1)
@@ -145,8 +132,6 @@ TAPER = 64
 
 
 def bands(seg, n=WIN):
-    # n is how much of the window counts: a 30 ms tick is read over its own 30 ms, with a
-    # flat top, so the click at its start is not windowed away.
     n = max(256, min(n, WIN))
     w = np.zeros(WIN)
     k = min(n, len(seg))
@@ -165,29 +150,23 @@ for i, c in enumerate(cues):
         by_sound[c["sound"]].append((-60.0, -1, 0.0))
         continue
     k = min(WIN, len(c["x"]))
-    # Read the sound where it is loudest, not where it starts: a swell's first 150 ms is air.
     off = 0
     if len(c["x"]) > WIN:
         e = np.concatenate([[0.0], np.cumsum(c["x"] ** 2)])
         off = int(np.argmax(e[WIN:] - e[:-WIN]))
     own = c["x"][off:off + k]
-    # Everything else: the whole layer less every voice of this same sound, so a stream of
-    # zaps is not called buried by its own neighbours.
     a0 = c["a"] + off
     rest = (mix[a0:a0 + k] - own_layer[c["sound"]][a0:a0 + k])
     c["k"], c["a0"] = k, a0
     bo, br = bands(own, k), bands(rest, k)
-    # Only bands that hold a real share of this sound count: a whisper of it up high is not it.
     keep = bo >= 0.05 * bo.sum()
     margin = 10 * np.log10((bo + 1e-15) / (br + 1e-12))
     margin[~keep] = -200
     b = int(np.argmax(margin))
-    # Whole-sound margin too: its energy against everything else in the window.
     whole = 10 * math.log10((bo.sum() + 1e-15) / (br.sum() + 1e-12))
     c["best"], c["band"], c["whole"] = float(min(margin[b], 60.0)), b, whole
     by_sound[c["sound"]].append((c["best"], b, whole))
 
-# What was loudest under each buried start, by sound.
 masker = defaultdict(Counter)
 order = np.argsort([c["a"] for c in cues])
 starts = np.array([cues[j]["a"] for j in order])

@@ -59,47 +59,31 @@ from mathutils import Matrix, Vector
 HERE = Path(__file__).resolve().parent
 SKETCH = HERE.parents[1]
 sys.path.insert(0, str(HERE))
-import common  # noqa: E402
-from common import Part  # noqa: E402
-import shell_base as sb  # noqa: E402
+import common
+from common import Part
+import shell_base as sb
 
 SHELL_BAND = (3000, 11000)
 TARGET_TRIS = 6600
 VERT_CAP = 11600
-REACH_CAP = 1.75        # the weapon reach cap, lifted from 1.35 for heroic weapons (Andrew, 23 Nov 2026)
+REACH_CAP = 1.75
 
-# The slot 2 and slot 3 controls in the bank beside the right yoke (PILOT-CLIPS section 5).
 BANK = (("ClampLever", "lever"), ("DrumLever", "lever"))
-# Control name to Pod-space point (Blender metres), the table the clip units read
-# (PILOT-CLIPS section 4.3 "controls": tools/blender/shell_tarn.py:CONTROLS).
 CONTROLS = dict(sb.CONTROLS)
 CONTROLS.update({name: point for (name, _), point in zip(BANK, sb.BANK)})
 
-# Claw arms (pilots/tarn.md section 5): tips past the lattice's outer face by class I to V, from
-# 1.65 m to the class V hook at 1.74 m, inside the 1.75 m reach cap. Heroic and exaggerated
-# (Andrew, 23 Nov 2026): the jaws frame the cutaway ball from the chase camera, 7.5 m back and
-# 17 degrees down, and each beat reads at a glance.
 CLAW_REACH = (0.675, 0.675, 0.70, 0.73, 0.765)
-# Clock angle above 3 and 9 o'clock seen from the chase camera (negative is above): clear of the
-# weapon ring and its blades, which turn to the aim round the equator, and of the ground, so a
-# flared lower jaw stays far above Z -0.55; no lean, so each arm points straight out to the side
-# and its jaws swing in the plane facing the camera.
 CLAW_CLOCK = math.radians(-25)
 CLAW_LEAN = math.radians(0)
-HINGE_RADIUS = 1.16       # outboard of the cutaway plating (0.983) and the ring (1.08)
-# The jaw plate's height over the 2026-10 outline: deep, chunky jaws.
+HINGE_RADIUS = 1.16
 JAW_HEIGHT = 3.0
 JAW_THICK = 0.10
-BRACKET_R = 0.05          # a stout dark-steel arm, 0.10 m across
-BRACKET_SIDE = 0.12       # the arm's end off the jaw plane along the pin: half a jaw and the arm
-ARM_ROOT = 0.80           # where the arm starts inside the ball, outside the cutaway window's cone
-SHOULDER = (0.30, 0.34, 0.12)   # the armoured shoulder where the arm leaves the ball: radial, up, along the pin
-BOSS = (0.085, 0.18)      # the hinge boss: radius and half length along the pin
-TOOTH_BITE = 1.6          # how far the teeth stand proud of the jaw, over the 2026-10 outline
-# The ram on each upper jaw, in the jaw's swing plane: angles about the hinge axis from the arm
-# direction toward the jaw's up, the rod's end tied to the jaw at RAM_ATTACH, the sleeve's mouth
-# RAM_GAP short of it, offset RAM_OFFSET along the hinge pin to the camera side so it clears the
-# coplanar jaws. Rod length RAM_ROD >= (RAM_GAP + RAM_OPEN) / (1 - RAM_MIN_OVERLAP).
+BRACKET_R = 0.05
+BRACKET_SIDE = 0.12
+ARM_ROOT = 0.80
+SHOULDER = (0.30, 0.34, 0.12)
+BOSS = (0.085, 0.18)
+TOOTH_BITE = 1.6
 RAM_RADIUS = 0.30
 RAM_OFFSET = 0.12
 RAM_ROD_SECTION = 0.07
@@ -111,13 +95,10 @@ RAM_SLEEVE = 110.0
 RAM_OPEN = 85.0
 RAM_MIN_OVERLAP = 0.15
 RAM_SEGS = 5
-# The tooth strip sinks this far into the jaw body and is this much of its thickness.
 TOOTH_SINK = 0.008
 TOOTH_DEPTH = 0.75
-# Blades on the ring's front arc at 11 and 1 o'clock, edges forward.
 BLADE_X = 0.53
 BLADE_THICK = 0.026
-# Pull drum low at the rear, inside the gimbal sweep (0.829).
 DRUM_CENTRE = Vector((0.0, -0.44, -0.54))
 DRUM_RADIUS = 0.10
 DRUM_HALF = 0.17
@@ -134,7 +115,7 @@ def claw_frame(sign):
     return d, axis, up
 
 
-TOOTH_TOP = 0.014         # the seam between the bone jaw body and its tooth strip
+TOOTH_TOP = 0.014
 
 
 def jaw_outlines(length, sign_v):
@@ -144,7 +125,6 @@ def jaw_outlines(length, sign_v):
     edge sits TOOTH_SINK inside the body, so the two are separate closed pieces that overlap
     rather than share the seam (a shared seam welds into non-manifold edges). sign_v +1 is the
     upper jaw, teeth on its lower edge. (u, v) pairs, counter-clockwise either way."""
-    # Each traced clockwise for the upper jaw, then reversed.
     body = [(0.0, 0.0), (0.0, 0.045), (0.55 * length, 0.060), (0.86 * length, 0.048),
             (length, 0.006), (0.95 * length, -0.034), (0.88 * length, -0.004),
             (0.86 * length, TOOTH_TOP), (0.12 * length, TOOTH_TOP)]
@@ -267,13 +247,8 @@ def claws(pod):
     points = {}
     for side, sign in (("R", 1), ("L", -1)):
         d, axis, up, hinge, tip = claw_points(sign, CLAW_REACH[0])
-        # The arm leaves the ball through a shoulder block and meets the boss beside the jaw
-        # plane on the far side from the camera, so the jaws' heels swing past it at any open
-        # angle (they rotate about the boss).
         side_off = -sign * BRACKET_SIDE
         shoulder = d * 1.0 + axis * side_off
-        # The arm starts just inside the plating, out of the cutaway window's sight, so a banked
-        # mount never swings through the cockpit.
         root = d * ARM_ROOT + axis * side_off
         extra.rod("copper", root, hinge - d * 0.03 + axis * side_off, BRACKET_R, 6)
         _block(extra, "copper", _swing_matrix(hinge, d, up, axis, 0.0, side_off),
@@ -289,8 +264,6 @@ def claws(pod):
             _plane_prism(jaw, "class_accent", teeth, JAW_THICK * TOOTH_DEPTH, hinge, d, up)
             if sign_v > 0:
                 ram(jaw, extra, hinge, d, up, axis, sign)
-            # The mesh is built in Pod space, then turned so the object's own yaw carries the
-            # hinge: local X is the pin, local Z stays up, the origin is the pin's centre.
             bmesh.ops.rotate(jaw.bm, cent=hinge, matrix=Matrix.Rotation(-yaw, 3, "Z"), verts=jaw.bm.verts[:])
             sb._sharpen(jaw)
             obj = jaw.to_object(tuple(hinge), pod)
@@ -313,7 +286,6 @@ def drum_parts(pod):
         extra.cyl("copper", 0.125, 0.125, 0.02, 10, loc=(sx * (DRUM_HALF + 0.012), c.y, c.z), rot=(0, math.pi / 2, 0))
         extra.rod("rubber", (sx * 0.15, -0.10, -0.40), (sx * (DRUM_HALF + 0.012), c.y, c.z), 0.018, 6)
     extra.cyl("rubber", DRUM_RADIUS, DRUM_RADIUS, 2 * DRUM_HALF, 12, loc=tuple(c), rot=(0, math.pi / 2, 0))
-    # Three raised rope wraps read as the winding at the chase camera.
     for k in (-1, 0, 1):
         extra.ring("rubber", DRUM_RADIUS - 0.002, DRUM_RADIUS + 0.012, 0.03, 12, loc=(c.x + k * 0.095, c.y, c.z),
                    rot=(0, math.pi / 2, 0))
@@ -396,7 +368,6 @@ def fold_slot(obj, slot, color):
             moved += 1
     bm.to_mesh(obj.data)
     bm.free()
-    # pop() shifts the face indices above the removed slot down by one.
     obj.data.materials.pop(index=src)
     return moved
 
@@ -408,8 +379,6 @@ def drop_neutral_seat(ring):
     bm.from_mesh(ring.data)
     gone = [v for v in bm.verts if v.co.y > sb.RING_BAND[1] + 0.01 and abs(v.co.x) < 0.08]
     bmesh.ops.delete(bm, geom=gone, context="VERTS")
-    # The seat box's inner face (two triangles) survives the cut on its own; every piece the
-    # cut leaves open goes with it, so the ring stays watertight.
     seen = set()
     remnants = []
     for f in bm.faces:
@@ -511,9 +480,6 @@ def build_shell(variant=""):
     drum_extra, exit_point = drum_parts(pod)
     join_into(pod, drum_extra.to_object((0, 0, 0), pod))
     join_into(ring, blades(ring).to_object((0, 0, 0), ring))
-    # Rubber folds into paint in charcoal on the static meshes, so the moving and banked parts keep
-    # their own meshes inside 17 draws (docs/decisions.tsv 2026-10-11 w13-PD, Tarn 17). Copper
-    # never folds: paint must not tint the lap bar (ROSTER-LOOK section 6).
     folds = {
         "Core rubber": fold_slot(core, "rubber", "charcoal"),
         "Pod rubber": fold_slot(pod, "rubber", "charcoal"),
@@ -582,9 +548,6 @@ def check(shell, points):
                     print("OXIDE off the lattice on", o.name)
                     ok = False
                     break
-    # Copper keeps its own untinted slot (ROSTER-LOOK section 6): Pod (lap bar, bank knobs,
-    # bosses, drum cheeks) and Core (hubs) each spend faces on a copper material at metallic
-    # 0.6, and no paint face on any shell mesh carries copper vertex colour.
     copper = Vector(common.rgba("copper")[:3])
     for o in (shell["pod"], shell["core"]):
         mats = [m.name for m in o.data.materials]

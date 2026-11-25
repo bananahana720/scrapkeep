@@ -22,7 +22,6 @@ SIZE = [12.0, 13.065, 4.82]
 
 
 def rivet(s, at, normal=(0.0, 0.0, 1.0), r=.11, h=.07, color=None):
-    # A four-sided domed-off stud standing on a face; its root sinks 3 cm into the part.
     f = Frame(s, at, normal, (1.0, 0.0, 0.0) if abs(normal[0]) < .9 else (0.0, 0.0, 1.0))
     frustum(f, r, r * .55, -.03, h, 4, color or tone("copper"), caps=(False, True))
 
@@ -43,11 +42,9 @@ def girder_rivets(s):
 
 def build(s):
     girder_rivets(s)
-    # A3 foot plates under every leg foot.
     for x in (tl.OUTER[0][0], tl.POST[0]):
         for sx in (-1.0, 1.0):
             box(s, (sx * x - .6, GROUND, FZ - .62), (sx * x + .6, GROUND + .14, FZ + .62), tone("beam"))
-    # A4 gear teeth and A5 flywheel teeth: an alternating ring outside each wheel's rim.
     g0, g1, gy0, gy1, teeth = tl.GEAR
     ring(s, [(g0 - .03, gy0 + .03), (g1, gy0 + .03), (g1, gy1 - .03), (g0 - .03, gy1 - .03)], 24, tone("iron"), at=(0.0, FZ),
          radius=lambda r, i: r if r < g0 else (g1 if i % 2 == 0 else g0 - .03))
@@ -55,18 +52,15 @@ def build(s):
     fr, fh = tl.FLY[1], tl.FLY[2] * .7
     ring(f, [(fr - .04, -fh), (fr + .17, -fh), (fr + .17, fh), (fr - .04, fh)], 32, tone("copper"),
          radius=lambda r, i: r if r < fr else (fr + .17 if i % 2 == 0 else fr - .04))
-    # A7 the cradle the sphere sits in, A14 the piston collar.
     pr = tl.PLATE[0]
     ring(s, [(pr - .1, tl.PLATE[2] - .02), (pr, tl.PLATE[2] - .02), (1.45, .5), (1.3, .5), (pr - .25, tl.PLATE[2] - .02)], 12,
          tone("iron"), at=(0.0, FZ))
     ring(s, [(tl.PISTON[0] - .02, tl.GEAR[3] - .02), (.5, tl.GEAR[3] - .02), (.5, tl.GEAR[3] + .3), (tl.PISTON[0] - .02, tl.GEAR[3] + .3)],
          8, tone("copper"), at=(0.0, FZ))
-    # A8 plinth feet.
     hx, hz, (p0, _) = tl.PLINTH
     for sx in (-1.0, 1.0):
         for sz in (-1.0, 1.0):
             box(s, (sx * (hx - .25) - .18, GROUND, FZ + sz * (hz - .25) - .18), (sx * (hx - .25) + .18, p0 + .02, FZ + sz * (hz - .25) + .18), tone("iron"))
-    # A12 turnbuckles 1.6 m up each guy cable and the anchor plates at the skids (Highdraft: tensioned cables).
     for a, b in tl.CABLES:
         d = tuple(a[k] - b[k] for k in range(3))
         n = math.sqrt(sum(c * c for c in d))
@@ -74,7 +68,6 @@ def build(s):
         t = Frame(s, at, d, (1.0, 0.0, 0.0))
         ring(t, [(.02, -.32), (.13, -.32), (.16, 0.0), (.13, .32), (.02, .32)], 6, tone("copper"))
         box(s, (b[0] - .3, b[1] - .02, b[2] - .3), (b[0] + .3, b[1] + .08, b[2] + .3), tone("iron"))
-    # A13 bolts on the base beam's top.
     bl, _, y1, bd = tl.BASE
     for x in (-4.6, -3.9, -2.7, 2.7, 3.9, 4.6):
         rivet(s, (x, y1, FZ + bd * .55), (0.0, 1.0, 0.0), r=.12, h=.1, color=tone("iron"))

@@ -46,8 +46,6 @@ import _camp as cp
 T = cp.T
 pk = cp.pk
 
-# ---------------------------------------------------------------------------------------------------------------- helpers
-
 
 def _sub(a, b):
     return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
@@ -79,21 +77,19 @@ def smooth(x):
     return x * x * (3.0 - 2.0 * x)
 
 
-# ---------------------------------------------------------------------------------------------------------------- track
-
-R = 16.0              # turn centre line radius
-STR = 28.0            # straight length
-TZ = 14.0             # turn centres at z = +-TZ
-XS = 16.0             # straights at x = +-XS
+R = 16.0
+STR = 28.0
+TZ = 14.0
+XS = 16.0
 TURN = math.pi * R
 LOOP = 2 * STR + 2 * TURN
-HALF = 4.5            # half deck width
+HALF = 4.5
 SLAB = 0.08
 BANK_H = 4.0
 BANK_U0 = -2.5
-START_S = 6.0         # start line, along the start straight
-RAMP_IN = 10.0        # bank blends in over this many metres, starting 2 m before the turn
-KICK_AT = STR + TURN  # kicker straight begins
+START_S = 6.0
+RAMP_IN = 10.0
+KICK_AT = STR + TURN
 CARVE = 1.8
 U_TOP = [-4.5, -4.15, -3.9, -2.5, -2.4, -1.5, -0.5, 0.5, 1.5, 2.5, 3.3, 3.9, 4.15, 4.5]
 U_COL = [-4.5, -2.5, -0.5, 1.5, 3.3, 4.5]
@@ -164,7 +160,7 @@ def profile(s, us):
 
 def frame(s):
     x, z, tx, tz = pos(s)
-    return x, z, tz, -tx          # outward normal
+    return x, z, tz, -tx
 
 
 def ring(s, us):
@@ -188,7 +184,6 @@ JOINTS = [4.0 + 8.0 * k for k in range(int(LOOP // 8.0) + 1) if abs(4.0 + 8.0 * 
 def track_s(drawn):
     vals = sample_s(1.0, [(KICK_AT + 2.0, KICK_AT + 26.0, 0.5), (8.0, 28.0, 0.5)] if drawn else [])
     if drawn:
-        # Colour rings: the start line, the form-board joints and a soft shoulder either side of each (vertex colour blends).
         vals |= {round(START_S + d, 4) for d in (-0.7, -0.5, 0.5, 0.7)}
         for j in JOINTS:
             vals |= {round(j + d, 4) for d in (-0.25, -0.06, 0.06, 0.25)}
@@ -293,7 +288,6 @@ def track_apron(s):
         for i in (0, 2):
             add([top[i, j], bot[i, j], bot[i, j + 1], top[i, j + 1]])
     s.add(verts, faces, colors=cols)
-    # mint threshold bar at the apron's foot and two amber chevrons pointing at the deck
     cp.obox(s, (0.7, 0.03, 8.4), (-27.6, SLAB + 0.015, z0), T["mint"])
     for x in (-25.0, -23.2):
         for sz in (-1, 1):
@@ -301,7 +295,6 @@ def track_apron(s):
 
 
 def track_details(s):
-    # Copper studs on the wall caps and concrete buttresses behind the high walls.
     for a in (STR, 2 * STR + TURN):
         d = 8.0
         while d <= TURN - 7.0:
@@ -361,7 +354,6 @@ def check_track(s):
     x1, z1, _, _ = pos(LOOP - 1e-6)
     assert math.hypot(x0 - x1, z0 - z1) < 1e-3, "the loop does not close"
     assert abs(deck_y(0.0, 3.0) - deck_y(LOOP, 3.0)) < 1e-6, "deck height does not close"
-    # the deck is continuous: no jump between neighbouring samples of the centre line or the lip
     prev = None
     for k in range(int(LOOP * 4) + 1):
         sv = k / 4.0
@@ -384,8 +376,6 @@ def check_track(s):
     assert 4.5 <= hi[1] <= 5.4, ("wall height", hi[1])
 
 
-# ---------------------------------------------------------------------------------------------------------------- arch
-
 POST_X = 5.9
 CLEAR_Y = 7.2
 
@@ -401,9 +391,7 @@ def arch(s):
         pk.frustum(s, 0.64, 0.64, 0.6, 1.0, 8, T["copper"], at=(x, 0))
         pk.frustum(s, 0.52, 0.52, 6.8, 7.2, 8, T["copper"], at=(x, 0))
         s.box((1.4, 0.35, 1.4), (x, 7.775, 0), T["iron_hi"])
-        # knee braces from the post to the header, kept above the clear height
         pk.strut(s, (x - sx * 0.45, 7.1, 0), (x - sx * 1.5, 7.8, 0), 0.25, 0.5, T["iron"])
-    # header beam, copper trims and rivets
     s.box((13.2, 1.4, 1.0), (0, 8.5, 0), T["iron"])
     for y in (7.82, 9.18):
         s.box((13.4, 0.12, 1.14), (0, y, 0), T["copper_dk"])
@@ -413,11 +401,9 @@ def arch(s):
             continue
         for sz in (-1, 1):
             pk.hexstud(s, (x, 8.5, sz * 0.5), (0, 0, sz), 0.09, 0.05, T["copper_dk"])
-    # blank amber timer panel on +Z
     s.box((4.8, 1.1, 0.14), (0, 8.5, 0.55), T["copper"])
     s.box((4.4, 0.78, 0.08), (0, 8.5, 0.62), T["amber"])
     s.box((4.5, 0.06, 0.05), (0, 8.92, 0.6), T["copper_dk"])
-    # mint scalloped banner skirt, both faces
     teeth = 14
     w = 12.6 / teeth
     for sz in (-1, 1):
@@ -429,7 +415,6 @@ def arch(s):
             pts = [(x0, 7.52, z - 0.025), (x0 + w, 7.52, z - 0.025), (x0 + w / 2, 7.2, z - 0.025),
                    (x0, 7.52, z + 0.025), (x0 + w, 7.52, z + 0.025), (x0 + w / 2, 7.2, z + 0.025)]
             s.add(pts, [(0, 1, 2), (5, 4, 3), (0, 3, 4, 1), (1, 4, 5, 2), (2, 5, 3, 0)], col)
-    # medal lamps in cages
     for x, bulb in ((-2.6, "copper"), (0.0, "bone"), (2.6, "amber")):
         pk.frustum(s, 0.55, 0.5, 9.24, 9.42, 8, T["copper_dk"], at=(x, 0))
         cp.lamp(s, x, 9.9, 0, 0.3, bulb)
@@ -456,8 +441,6 @@ def check_arch(s):
     assert not below, ("the arch dips under the clear height", min(below))
     assert hi[1] >= 10.0 and lo[1] >= 0.0
 
-
-# ---------------------------------------------------------------------------------------------------------------- sandbox
 
 FENCE_R = 21.5
 FENCE_N = 20
@@ -505,8 +488,6 @@ def flat_prism(s, outline, y, h, color, at=(0.0, 0.0)):
 
 
 def yard(s):
-    # Raked sand slab: a closed chamfered base under concentric bands of alternating sand tones, each a thin closed ring a hair
-    # higher than the last (the bands overlap by 5 cm instead of meeting face to face).
     n = 20
     pk.frustum(s, FLOOR_R + 0.5, FLOOR_R, 0.0, SAND, n, T["sandstone"])
     radii = [0.0, 6.0, 11.0, 16.0, FLOOR_R * math.cos(math.pi / n) - 0.03]
@@ -517,7 +498,6 @@ def yard(s):
             pk.frustum(s, radii[1], radii[1], SAND - 0.02, y1, n, col)
         else:
             pk.ring_y(s, radii[i] - 0.05, radii[i + 1], SAND - 0.02, y1, n, col)
-    # Fence: copper posts, two iron flat rails, a bollard pair at the gap.
     angles = fence_pts()
     for a in angles:
         pk.frustum(s, 0.21, 0.16, 0.0, 1.55, 8, T["copper"], at=(FENCE_R * math.sin(a), FENCE_R * math.cos(a)))
@@ -528,7 +508,6 @@ def yard(s):
         z = FENCE_R * math.cos(a)
         s.box((0.7, 1.9, 0.7), (x + sx * 0.6, 0.95, z), T["concrete"])
         s.box((0.74, 0.15, 0.74), (x + sx * 0.6, 1.95, z), T["copper_dk"])
-    # Hard cover: a concrete block with form joints and a three-tyre stack.
     bx, bz = BLOCK_AT
     cp.obox(s, (3.0, 1.5, 1.6), (bx, 0.75 + SAND, bz), cp.jitter_tone("concrete", 3, 0.05), yaw=BLOCK_YAW)
     cp.obox(s, (3.04, 0.06, 1.64), (bx, 0.5 + SAND, bz), T["concrete_dk"], yaw=BLOCK_YAW)
@@ -540,7 +519,6 @@ def yard(s):
         pk.frustum(s, 0.95, 1.0, y0, y0 + 0.5, 8, cp.jitter_tone("charcoal", k, 0.1), at=(tx + 0.04 * k, tz))
         pk.frustum(s, 1.0, 0.98, y0 + 0.45, y0 + 0.55, 8, T["iron_hi"], at=(tx + 0.04 * k, tz))
     pk.frustum(s, 0.5, 0.5, SAND + 1.6, SAND + 1.67, 8, T["charcoal"], at=(tx + 0.08, tz))
-    # Spawn grate: copper rim, dark pit, iron bars, a hub with the brass Fleet chevron.
     gx, gz = GRATE_AT
     pk.frustum(s, 3.3, 3.1, SAND, SAND + 0.2, 16, T["concrete"], at=GRATE_AT)
     pk.frustum(s, 3.0, 3.0, SAND + 0.18, SAND + 0.205, 16, T["charcoal"], at=GRATE_AT)
@@ -553,7 +531,6 @@ def yard(s):
     chev = [(-1.0, 0.45), (0.0, -0.5), (1.0, 0.45), (1.0, 1.0), (0.0, 0.05), (-1.0, 1.0)]
     for dz in (-0.55, 0.45):
         flat_prism(s, chev, SAND + 0.355, 0.03, T["brass"], at=(gx, gz + dz))
-    # A call-box pad where the picker stands.
     cx, _, cz = CALL_BOX_AT
     s.box((2.4, 0.06, 2.0), (cx, SAND + 0.03, cz), T["concrete_lt"])
 
@@ -591,24 +568,19 @@ def check_yard(s):
     assert hi[1] < 3.0
 
 
-# ---------------------------------------------------------------------------------------------------------------- call box
-
 def call_box(s):
     s.box((1.3, 0.25, 1.3), (0, 0.125, 0), T["concrete"])
     s.box((1.34, 0.05, 1.34), (0, 0.22, 0), T["concrete_dk"])
     pk.frustum(s, 0.27, 0.23, 0.25, 1.15, 8, T["iron"])
     pk.frustum(s, 0.34, 0.34, 0.45, 0.6, 8, T["copper"])
-    # the dispatch box: dark iron body in a copper frame
     s.box((1.5, 1.1, 0.8), (0, 1.65, 0), T["iron"])
     for y in (1.12, 2.18):
         s.box((1.58, 0.1, 0.88), (0, y, 0), T["copper_dk"])
     for sx in (-1, 1):
         s.box((0.1, 1.1, 0.88), (sx * 0.74, 1.65, 0), T["copper_dk"])
-    # Fleet requisition tag: brass plate with a charcoal chevron
     s.box((1.0, 0.26, 0.04), (0, 2.0, 0.41), T["brass"])
     chev = [(-0.32, 0.07), (0.0, -0.09), (0.32, 0.07), (0.32, 0.12), (0.0, -0.04), (-0.32, 0.12)]
     qface(s, [(x, 2.0 + 0.0 - z, 0.435) for x, z in chev], T["charcoal"], (0, 0, 1))
-    # selector dial
     dc = (-0.32, 1.52)
     pk.disc_z(s, 0, 0.4, 0.4, 0.48, 16, T["copper"], at=dc)
     pk.disc_z(s, 0, 0.32, 0.48, 0.52, 16, T["sand"], at=dc)
@@ -617,24 +589,20 @@ def call_box(s):
         pk.bar_xy(s, (dc[0] + 0.25 * math.sin(a), dc[1] + 0.25 * math.cos(a)), -a, 0.07, 0.035, 0.52, 0.545, T["charcoal"])
     pk.bar_xy(s, (dc[0] + 0.1 * math.sin(0.6), dc[1] + 0.1 * math.cos(0.6)), -0.6, 0.3, 0.07, 0.52, 0.58, T["mint"])
     pk.disc_z(s, 0, 0.07, 0.58, 0.62, 8, T["copper"], at=dc)
-    # paper-ticket slot with a ledger-paper tongue
     s.box((0.52, 0.09, 0.05), (0.38, 1.5, 0.41), T["charcoal"])
     s.box((0.34, 0.34, 0.025), (0.38, 1.38, 0.44), T["ledger"])
     s.box((0.34, 0.03, 0.03), (0.38, 1.2, 0.445), T["bone"])
-    # big pull lever on the right cheek: slotted sector plate, copper arm, mint grip
     s.box((0.1, 1.1, 0.5), (0.84, 1.75, 0), T["iron_hi"])
     s.box((0.04, 0.8, 0.14), (0.9, 1.78, 0), T["charcoal"])
     pk.strut(s, (0.95, 1.4, 0), (1.25, 2.5, 0), 0.16, 0.16, T["copper"])
     pk.tube(s, (0.95, 1.4, -0.09), (0.95, 1.4, 0.09), 0.14, 0.14, 8, T["copper_dk"])
     cp.lamp(s, 1.27, 2.62, 0, 0.2, "mint")
-    # beacon lamp on top
     pk.frustum(s, 0.3, 0.26, 2.2, 2.34, 8, T["copper"])
     cp.lamp(s, 0, 2.68, 0, 0.24, "glass_lt")
     for a in cp.around(4, math.pi / 4):
         bx, bz = 0.3 * math.cos(a), 0.3 * math.sin(a)
         pk.strut(s, (bx, 2.34, bz), (bx * 0.5, 2.98, bz * 0.5), 0.05, 0.05, T["iron_hi"])
     pk.frustum(s, 0.17, 0.08, 2.98, 3.08, 8, T["copper_dk"])
-    # pneumatic tube out of the back, down the post and into the ground toward the grate (-Z)
     way = [(0.3, 1.9, -0.4), (0.3, 1.9, -0.95), (0.3, 1.65, -1.2), (0.3, 0.55, -1.2), (0.3, 0.3, -1.45), (0.3, 0.3, -2.3)]
     for a, b in zip(way, way[1:]):
         pk.tube(s, a, b, 0.11, 0.11, 8, T["copper"])
@@ -644,7 +612,7 @@ def call_box(s):
         pk.tube(s, (0.3, 0.3 if z < -1.5 else 1.9, z - 0.08), (0.3, 0.3 if z < -1.5 else 1.9, z + 0.08), 0.15, 0.15, 8, T["copper_dk"])
     pk.frustum(s, 0.55, 0.42, 0.0, 0.32, 8, T["concrete"], at=(0.3, -2.5))
     pk.frustum(s, 0.2, 0.2, 0.31, 0.34, 8, T["charcoal"], at=(0.3, -2.5))
-    pk.strut(s, (0.0, 1.0, -0.2), (0.3, 1.9, -0.4), 0.1, 0.1, T["iron_hi"])    # tube bracket to the post
+    pk.strut(s, (0.0, 1.0, -0.2), (0.3, 1.9, -0.4), 0.1, 0.1, T["iron_hi"])
 
 
 def call_box_col(s):

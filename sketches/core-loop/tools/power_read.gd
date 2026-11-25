@@ -7,37 +7,6 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# POWER-READ (alpha-status/ambition-map.md, unit 5): how much mightier one pilot's
-# signature hit reads on a grown build than on the first fight. Every pilot slams the
-# same way and the landing then takes the pilot's flavour (player_ball.gd _on_slammed),
-# so the signature hit here is one scripted slam at 30 m/s (full flatness, in open air) with one
-# standard chaser 3 m in front of the ball. The hit is identical at both depths; only
-# the build differs:
-#   depth 0  the pilot as chosen: no tree picks, no parts, no mass (heft class I)
-#   depth 4  four tree picks (the left card each time), the first four catalogue parts the
-#            pilot may be offered, and start mass to heft 3.2 (heft class IV)
-# Readings, one JSON line per run ("power_read row: {...}"):
-#   pixels   against the frame before the hit, each a peak over WINDOW frames, as a share of
-#            the screen: area (pixels changed), energy (how far they changed), heat (colour
-#            in what changed: max minus min channel), ink (changed pixels now dark: outlines
-#            and words), centre (changed share of the middle ninth). The runner reads
-#            presence from energy, heat and ink (Andrew's card "Presence, centre clear",
-#            17 Oct 17:28Z). The same window without a hit is reported as noise. Needs a
-#            display (xvfb-run is fine); --render=0 skips it. Peaks come from the first
-#            HIT_FRAMES, and telegraphs and committed hazards are hidden while pixels are
-#            read: combat geometry (Cannon's rush ring) is not the hit's look.
-#   knock    metres the chaser actually travels while knockback outranks its own steering
-#            (enemy.gd _move), plus the code's own v^2 / 2a reading of the push it got.
-#   sound    cues the hit fired "now" in audio.cue_log, as entries and distinct sounds.
-#   fx       vfx glyphs and fx_ effects spawned by the hit.
-# The chaser's health is raised so neither depth kills it; a kill would add its death
-# effects at one depth only. One warm-up slam lands on a throwaway chaser before the quiet
-# wait, so a part's first-fire accent (reward_payoff's bell and ring) never counts as part of
-# the grown hit. Camera shake is set to zero so a shake never counts as
-# effect area; the shake itself is not read. It measures and changes nothing.
-#   xvfb-run -a -s "-screen 0 960x540x24" godot --path sketches/core-loop --rendering-driver opengl3 \
-#     --resolution 960x540 --fixed-fps 60 --script res://tools/power_read.gd -- --pilot=tally --depth=4 [--out=dir]
-# scripts/power-read.mjs runs every pilot at both depths and writes the phone page.
 
 const BALL := Vector3(0.0, 500.0, 0.0)
 const TARGET := Vector3(0.0, 0.0, -3.0)
@@ -46,18 +15,12 @@ const GROWN_DEPTH := 4
 const GROWN_PARTS := 4
 const GROWN_HEFT := 3.2
 const SETTLE_FRAMES := 30
-# Long enough for the stage banner and any part-gained card and bell to clear.
 const QUIET_FRAMES := 360
 const WINDOW := 45
-# Pixel peaks come from the hit's own first frames: its bursts, words and ink live about three
-# frames, and the peak lands by frame 8 for every pilot on main. Later frames hold what the hit
-# leaves behind, such as Cannon's rush zone growing to fill the screen.
 const HIT_FRAMES := 15
 const KNOCK_FRAMES := 240
 const SOUND_WAIT_FRAMES := 600
-# A channel moved by more than this (0 to 1) counts the pixel as changed.
 const PIXEL_DELTA := 0.1
-# A changed pixel whose mean channel ends under this (0 to 1) counts as ink.
 const INK_LEVEL := 0.25
 const METRICS := ["area", "energy", "heat", "ink", "centre"]
 const STURDY_HP := 100000.0
@@ -126,7 +89,6 @@ func _measure(row: Dictionary) -> String:
 		await process_frame
 	row["sound_ready"] = audio.sound_ready
 	await _frames(QUIET_FRAMES)
-	# After the part cards close: a payoff waits while any reward ceremony is still showing.
 	var warm := _spawn_target()
 	await _frames(2)
 	_game.player._on_slammed(_game.player.body().global_position, SLAM_SPEED, 1.0)
@@ -137,7 +99,6 @@ func _measure(row: Dictionary) -> String:
 	await _frames(QUIET_FRAMES)
 	row["payoffs_before_hit"] = _game.presentation.ceremony.payoffs.size()
 
-	# The same window with no hit: what the scene changes on its own.
 	var still := _spawn_target()
 	await _frames(2)
 	var before: Image = await _grab(render)
@@ -217,7 +178,6 @@ func _measure(row: Dictionary) -> String:
 	return ""
 
 
-# The depth-4 build: the left card at each of four picks, four catalogue parts, heft IV.
 func _grow(row: Dictionary, depth: int) -> String:
 	var run = _game.ctx.run
 	var tree = _game.player.tree
@@ -245,15 +205,12 @@ func _grow(row: Dictionary, depth: int) -> String:
 	return ""
 
 
-# The ball held still in open air, so the backdrop and camera never move between frames.
 func _park() -> void:
 	_game.player.reset_to(BALL)
 	_game.player.body().global_position = BALL
 	_game.player.active_body().freeze = true
 
 
-# A standard chaser in front of the ball, too sturdy to die, its own body hidden so only
-# what the hit draws counts as changed pixels.
 func _spawn_target() -> Node3D:
 	var enemy: Node3D = _game.ctx.spawner.spawn_enemy("chaser", BALL + TARGET)
 	enemy._set_health(STURDY_HP)
@@ -276,8 +233,6 @@ func _window(render: bool, before) -> Dictionary:
 	return peak
 
 
-# Telegraphs, hostile threats and every committed hazard, the player's own included (Cannon's
-# rush ring is a hazard the slam commits): combat geometry, not the hit's look.
 func _hide_telegraphs() -> int:
 	var hidden := 0
 	var nodes: Array = get_nodes_in_group("telegraph") + get_nodes_in_group(Threat.GROUP)
@@ -319,10 +274,6 @@ func _spawned_total() -> int:
 	return total
 
 
-# Each reading as a share of the screen. A pixel counts as changed when any channel moved by
-# more than PIXEL_DELTA; energy adds how far it moved, heat its colour (max minus min channel,
-# saturation times value), ink whether it ended dark. Centre is the changed share of the
-# middle third by width and height.
 static func _changed(a: Image, b: Image) -> Dictionary:
 	var out := {"area": 0.0, "energy": 0.0, "heat": 0.0, "ink": 0.0, "centre": 0.0}
 	if a == null or b == null or a.get_size() != b.get_size():

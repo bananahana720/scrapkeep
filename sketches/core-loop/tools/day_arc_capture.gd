@@ -1,14 +1,4 @@
 extends SceneTree
-# One day per run: a still of every stage in run order, the boss arena that ends each world before
-# the last (the Brindle bowl is the Spillway at noon, WorldLook.DAYLIT_ARENAS; the Waking has its own pit look), then
-# the Mind's crown, each at the time of day its stage enters at (world_look.gd STAGE_TIME). The
-# camera sits behind and above the ball (an arena's centre for an arena) and looks 40 degrees off
-# the day's sun, so the graded sky, its glow and the lit ground share a frame. Needs a display (Xvfb works; llvmpipe GL draws without volumetric air):
-#   godot --path sketches/core-loop --resolution 1280x720 --script res://tools/day_arc_capture.gd -- --out=<dir> [--table=<id>]
-# --table defaults to "park", the shipped table (game.gd LAUNCH_TABLE); --table=alpha reproduces the
-# legacy-map frames. Writes <out>/<n>-stage<stage>-<time>.png (<n>-arena-<boss>.png for an
-# arena) and frames.json, which records the table. Evidence limit: colour and composition
-# only; frame times come from the 4080.
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
@@ -68,15 +58,12 @@ func _run() -> void:
 		await _snap("%d-stage%d-%s" % [n, stage, WorldLook.time_id(stage)], stage, game.player.ball_position())
 		var world: int = game.ctx.stages.world_of(stage)
 		if game.ctx.stages.is_world_last(stage) and world != last_world:
-			# The arena that ends this world, entered as the flow enters it after the stage's launch.
 			var boss_id := String(game.flow.boss_row(world).get("kind", "boss"))
 			game.flow.enter_boss(Vector3.ZERO)
 			await _frames(90)
 			game.player.body().freeze = true
 			var rot = WorldLook.arena_look(boss_id).get("sun_rotation")
 			n += 1
-			# Framed on the arena's centre from inside its mast ring (arena.gd MAST_R 27 m, MAST_HEIGHT 20 m):
-			# the stage frame's 34 m pull-back puts a bowl mast in front of the lens.
 			var mod = game.flow._boss_module()
 			var centre = mod.get("pad") if mod.get("pad") != null else mod.get("arena")
 			var at: Vector3 = centre.global_position + Vector3.UP if centre != null else game.player.ball_position()
@@ -90,8 +77,6 @@ func _run() -> void:
 	game.player.body().freeze = true
 	var pad: Vector3 = game.flow._boss_module().pad.global_position + Vector3.UP
 	await _snap("%d-mind-crown-dusk" % (n + 1), 0, pad, WorldLook.ARENAS.mind.sun_rotation)
-	# The readability read: the live fight through the game's own camera with the HUD up, after the
-	# Mind has had time to start its attacks (telegraphs on the floor).
 	cam.current = false
 	game.player.body().freeze = false
 	for k in 3:

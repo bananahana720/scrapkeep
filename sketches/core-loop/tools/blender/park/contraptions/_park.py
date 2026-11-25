@@ -27,17 +27,17 @@ CLASSES = json.loads((SKETCH / "assets/asset_budgets.json").read_text())["classe
 SLOT = "enamel"
 
 TONES = {
-    "iron": "2b2724",          # dark iron
+    "iron": "2b2724",
     "iron_hi": "3d3732",
-    "copper": "b77843",        # the palette copper
+    "copper": "b77843",
     "copper_dk": "8d5a32",
-    "concrete": "7f7d76",      # dam-era concrete
-    "concrete_dk": "5c5a54",   # form-board joint
+    "concrete": "7f7d76",
+    "concrete_dk": "5c5a54",
     "concrete_lt": "96938a",
-    "deck": "56534e",          # the barge floor, darker than the sand it floats over
+    "deck": "56534e",
     "oxide": "9b513a",
     "rust": "7a4430",
-    "varnish": "3e3029",       # desert varnish
+    "varnish": "3e3029",
     "sand": "c6a274",
     "bone": "d2c5a5",
     "charcoal": "242a28",

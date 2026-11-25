@@ -68,7 +68,6 @@ def package_render(args):
         bpm = int(job['params']['bpm'])
         beat = round(RATE * 60 / bpm)
         bar = beat * 4
-        # Menu summary cadence has three bars; title cadence has two.
         bars = 3 if track == 'summary' and cid == 'cadence' else BODY_BARS[cid]
         start = int(cut['source_start']) if 'source_start' in cut else 4 * bar
         if not args.nominal and 'source_start' not in cut:

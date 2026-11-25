@@ -1,25 +1,5 @@
 extends SceneTree
 
-# Wave 12-D RECIPE-WAVE cottonwood copy of tools/w12_recipe_cart_side.gd (the shared rig stays unedited): --subject=cottonwood
-# puts today's tree (spillway_scenery.gd's own trunk cylinder and two crown spheres at one foot, size 1.0, through its
-# _batch) on the left and cottonwood_trunk.glb plus cottonwood_crown.glb (tools/blender/cottonwood.py) at one origin on the
-# right; --crown=<abs cottonwood_crown.glb>. Everything below is the shared rig's text.
-# Wave 12 RECIPE-CART side-by-side, after tools/w12_gen2_side.gd on wt/w12-gen (same ground, light, ball and
-# arena/near cameras): today's cart on the left, the ore cart built by tools/blender/ore_cart.py on the right,
-# the ball between them, and the FLUX concept picture beside each frame on a sheet. Both carts take their
-# materials through dig_scenery.gd's SLOTS table (GLB material name = slot key) and their tyres at the body's
-# wheel sockets, the runtime route. The ore cart's sockets are read from its own GLB nodes.
-# --subject=beacon does the same for the lantern beacon (tools/blender/lantern_beacon.py) beside today's code-built
-# beacon (src/core/beacon.gd, opened), its lens at the frame's socket_lens, and its steel state key lit through
-# the instance's state_tint from EventKinds' beacon_open and beacon_sealed rows.
-#   godot --path sketches/core-loop --script res://tools/w12_recipe_cart_side.gd -- --out=<abs dir>
-#     --body=<abs ore_cart_body.glb> --wheel=<abs ore_cart_wheel.glb> --ref=<abs png> [--tag=<name>]
-#     [--subject=beacon --body=<abs lantern_beacon_frame.glb> --lens=<abs lantern_beacon_lens.glb>]
-#     [--detail1=<abs detail1 glb> [--detail2=<abs detail2 glb>]] [--mode=side|ranges]
-# Wave 12 DETAIL-CART and DETAIL-BEACON: each detail GLB is an additive shell at the subject's origin and scale, its own
-# draw, dropped by distance through LAYER_RANGE (VISIBILITY_RANGE_FADE_SELF). mode=side shoots each camera with every
-# layer, without the last layer and base only; mode=ranges shoots the stack from the hero direction at the subject's
-# RANGE_DISTANCES, its FADE_DISTANCES (inside the first layer's fade band) and the per-layer toggles.
 
 const Tuning := preload("res://src/movement/tuning.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
@@ -28,16 +8,11 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Scenery := preload("res://src/presentation/spillway_scenery.gd")
 const CART_SCALE := 2.2
 const TODAY_SOCKETS := [Vector3(-0.74, 0.3, -0.95), Vector3(0.74, 0.3, -0.95), Vector3(-0.74, 0.3, 0.95), Vector3(0.74, 0.3, 0.95)]
-# Per subject: each side's distance from the ball, and camera rows [eye, target]; "hero" is relative to one side.
 const VIEWS := {
 	"cart": {"gap": 9.0, "arena": [Vector3(0, 9, 30), Vector3(0, 1.5, 0)], "hero": [Vector3(7.5, 5.5, -5.0), Vector3(0, 1.9, -1.2)]},
 	"beacon": {"gap": 16.0, "arena": [Vector3(0, 16, 62), Vector3(0, 9, 0)], "hero": [Vector3(14, 12, 24), Vector3(0, 10, 0)]},
 	"cottonwood": {"gap": 10.0, "arena": [Vector3(0, 14, 80), Vector3(0, 7, 0)], "hero": [Vector3(2.5, 6.0, 16), Vector3(0, 6.6, 0)]},
 }
-# Detail layer drop-out per subject, one row per layer: [visibility_range_end, visibility_range_end_margin] in metres,
-# and the range shots (metres from the hero target along the hero direction), the last one the arena distance;
-# TOGGLE_DISTANCE sits between the two layers' ends (detail2 gone, detail1 present); FADE_DISTANCES sit inside
-# detail1's fade band. The beacon's detail2 ends past its 28 m hero view, so pass 2 shows where the picture is framed.
 const LAYER_RANGE := {"cart": [[40.0, 4.0], [15.0, 3.0]], "beacon": [[60.0, 8.0], [35.0, 5.0]], "cottonwood": [[50.0, 10.0], [30.0, 4.0]]}
 const RANGE_DISTANCES := {"cart": [8.0, 20.0, 45.0], "beacon": [10.0, 30.0, 70.0], "cottonwood": [12.0, 30.0, 80.0]}
 const TOGGLE_DISTANCE := {"cart": 20.0, "beacon": 45.0, "cottonwood": 40.0}
@@ -127,7 +102,6 @@ func _bbox(cam: Camera3D, subject: Node3D, layers: Array[Node3D], tag: String) -
 		var p := cam.unproject_position(box.get_endpoint(k))
 		lo = lo.min(p)
 		hi = hi.max(p)
-	# unproject_position answers in the root's visible rect (content-scaled); the saved PNG is the window size.
 	var px := Vector2(get_root().size) / get_root().get_visible_rect().size
 	lo *= px
 	hi *= px
@@ -140,7 +114,6 @@ func _bbox(cam: Camera3D, subject: Node3D, layers: Array[Node3D], tag: String) -
 		" eye_to_origin=", snappedf(cam.global_position.distance_to(subject.global_position), 0.01), to_layers)
 
 
-# Detail shells at the subject's origin and scale, each faded out by its LAYER_RANGE row.
 func _layers(fresh: Node3D, args: Dictionary, subject: String) -> Array[Node3D]:
 	var layers: Array[Node3D] = []
 	var rows: Array = LAYER_RANGE[subject]
@@ -158,8 +131,6 @@ func _layers(fresh: Node3D, args: Dictionary, subject: String) -> Array[Node3D]:
 			view.visibility_range_end = rows[i][0]
 			view.visibility_range_end_margin = rows[i][1]
 			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-			# The game builds cottonwoods through spillway_scenery.gd _batch with shadows off (:469); a shell's shadow is
-			# not dithered by FADE_SELF and pops at the range end, so the cottonwood shells cast none either.
 			if subject == "cottonwood":
 				view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		print("W12_DC_LAYER ", subject, " ", key, " end=", rows[i][0], " margin=", rows[i][1])
@@ -318,7 +289,6 @@ func _init() -> void:
 	quit(0)
 
 
-# Today's cart at its hard-coded sockets on the left; the ore cart and its tyres at its own GLB sockets on the right.
 func _cart(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	var body: Node3D = (load("res://assets/models/dig_mechanical/cart_body.glb") as PackedScene).instantiate()
 	body.scale = Vector3.ONE * CART_SCALE
@@ -345,7 +315,6 @@ func _cart(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	return sockets
 
 
-# Today's beacon, opened, on the left; the lantern beacon frame and its lens at socket_lens on the right.
 func _beacon(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	var old := Beacon.new()
 	old.sealed = false
@@ -366,7 +335,6 @@ func _beacon(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	return sockets
 
 
-# A socket's position in its GLB root's space (the generated scene nests the GLB root under one more node).
 func _local(socket: Node3D, top: Node3D) -> Vector3:
 	var at := Vector3.ZERO
 	var node: Node = socket
@@ -376,7 +344,6 @@ func _local(socket: Node3D, top: Node3D) -> Vector3:
 	return at
 
 
-# The steel shader swaps its mint state key for the instance's state_tint; the beacon state row names the colour.
 func _state(node: Node, id: String) -> void:
 	for view: MeshInstance3D in node.find_children("*", "MeshInstance3D", true, false):
 		if view.material_override is ShaderMaterial and String(view.material_override.resource_name) == "steel":
@@ -384,8 +351,6 @@ func _state(node: Node, id: String) -> void:
 			print("W12_RC_STATE node=", view.name, " state=", id, " tint=", EventKinds.state_color(id).to_html(false))
 
 
-# Today's tree at one foot, size 1.0 (the largest the transforms make), built by spillway_scenery.gd's own meshes and _batch;
-# the new trunk and crown GLBs at one shared origin on the right.
 func _cottonwood(today: Node3D, fresh: Node3D, args: Dictionary) -> int:
 	var trunks: Array[Transform3D] = [Transform3D(Basis.IDENTITY.scaled(Vector3(0.55, 3, 0.55)), Vector3(0, 3, 0))]
 	var leaves: Array[Transform3D] = [Transform3D(Basis.IDENTITY.scaled(Vector3(5, 4, 4)), Vector3(-2, 6, 0)),

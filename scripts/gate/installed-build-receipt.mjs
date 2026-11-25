@@ -1,12 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "installed-build" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// Extracts usr/lib/scrapkeep/BUILD.txt from the installed AppImage (or reads --build-txt directly)
-// and verifies that its `commit: <sha>` stamp matches --head (7..40 hex prefix or full match,
-// clean, never -dirty). Also runs the exact same grader against a synthetic mismatched commit
-// and requires it to read as a miss (plant_caught).
-//
-//   node scripts/gate/installed-build-receipt.mjs --head <sha> [--appimage <path>] [--build-txt <path>] [--out <file>]
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -39,7 +31,6 @@ export function commitsMatch(a, b) {
   );
 }
 
-// Synthetic 40-char hex commit guaranteed to differ from head on the first nibble.
 export function mismatchedCommit(head) {
   const first = typeof head === "string" && head[0] === "0" ? "1" : "0";
   return first + "0".repeat(39);
@@ -55,7 +46,6 @@ export function parseBuildTxt(text) {
   };
 }
 
-// Grades the text of a BUILD.txt file against the judged head.
 export function gradeBuildTxt(text, head) {
   if (typeof head !== "string" || !COMMIT.test(head)) {
     return { ok: false, commit: null, dirty: false, reason: `invalid judged head "${head}"` };
@@ -92,7 +82,6 @@ export function gradeBuildTxt(text, head) {
   return { ok: true, commit: commitRaw, dirty: false, reason: null };
 }
 
-// Extracts usr/lib/scrapkeep/BUILD.txt from an AppImage into a temp directory cleaned up in finally.
 export function extractBuildTxt(appImagePath, { run = spawnSync } = {}) {
   if (!existsSync(appImagePath)) {
     return { ok: false, text: null, error: `AppImage not found: ${appImagePath}` };

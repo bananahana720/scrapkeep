@@ -35,33 +35,22 @@ from mathutils import Vector
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-import common  # noqa: E402
-from common import Part  # noqa: E402
-import shell_base as sb  # noqa: E402
-import shell_tally as st  # noqa: E402
+import common
+from common import Part
+import shell_base as sb
+import shell_tally as st
 
 LAYER_TRIS = 1500
 PANEL_HALF = 0.15
 PANEL_OUT = 0.905
 PANEL_THICK = 0.035
-# The front sight line: from the head to a camera ahead of the face (the chase eyes mirrored).
 FRONT_EYES = tuple(Vector((0.0, -e.y, e.z)) for e in sb.CHASE_EYES)
-# The drum brackets leave through the side gaps at 3 and 9 o'clock.
 BRACKET_DIRS = (Vector((1, 0, 0.12)).normalized(), Vector((-1, 0, 0.12)).normalized())
-# A plate's corner reaches 13.3 degrees off its gap centre; the nearest side gaps sit 19 degrees
-# from the bracket line, so 15 keeps every plate clear of the arm (0.018 m radius) by 0.09 m.
 BRACKET_CLEAR = math.radians(15)
-# Class V heavy drums (they replace the light drums): copper flanges and a second tape reel, on
-# the light drum's axis and inner face. E2-05 grew the light drums to the 1.70 m weapon reach
-# and the carrier bank's slope law, so the heavy drum gains only what still fits (0.01 m of
-# radius) and reads heavier by its reel and copper flanges; its rim stays inside the light
-# drum's index shoe.
 HEAVY_R = st.DRUM_R + 0.01
 HEAVY_DEPTH = st.DRUM_DEPTH - 0.01
 HEAVY_Z = st.DRUM_Z
 HEAVY_X = st.DRUM_INNER + HEAVY_DEPTH / 2
-# Class IV hoods: over the top half of the light drum, outboard of its index shoe's tooth and
-# ending inside the heavy drum's outer face so a class V ball hides them.
 HOOD = (st.DRUM_R + 0.016, st.DRUM_R + 0.03, st.DRUM_DEPTH * 0.6)
 HOOD_FROM = st.DRUM_INNER + st.SHOE_OVER + 0.004
 
@@ -119,8 +108,6 @@ def quad(p, centre, u, v, hu, hv, colour):
     return p.paint([p.bm.faces.new(vs)], "paint", colour)
 
 
-# Each class's Roman numeral as charcoal strokes on the plate face: (offset along e1, slant) per
-# stroke, slant in radians from upright; a V is two strokes leaning in to meet at the foot.
 NUMERALS = {
     2: ((-0.015, 0.0), (0.015, 0.0)),
     3: ((-0.03, 0.0), (0.0, 0.0), (0.03, 0.0)),
@@ -135,7 +122,6 @@ def plate(p, d, strokes):
     e1, e2 = sb._frame(d)
     n = d.normalized()
     centre = n * (PANEL_OUT - PANEL_THICK / 2)
-    # The slab: a box built in its own frame (e1, e2, n).
     vs = []
     for sz in (-1, 1):
         for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
@@ -189,8 +175,6 @@ def build(n, gaps, classes, rng):
         plate(p, gaps[i], strokes)
     sb._sharpen(p)
     pod = p.to_object((0, 0, 0), root)
-    # The hoods and the heavy drums stand past the ball, so each is its own mesh under Pod
-    # (DrumHoods, HeavyDrums): hero_assets banks them with the carrier, one more draw at IV and V.
     if n == 4:
         hp = Part("DrumHoods")
         hoods(hp)
@@ -212,7 +196,6 @@ def build(n, gaps, classes, rng):
             common.empty("Replace.Flywheel." + side, (0, 0, 0), pod)
     bpy.context.view_layer.update()
     tris = common.tri_total(root)
-    # low_reach and sight_cone_hits walk the Pod subtree; the other checks take the split meshes too.
     parts = [pod] + [c for c in pod.children if c.type == "MESH"]
     low = sb.low_reach(pod)
     cone = sb.sight_cone_hits(pod)

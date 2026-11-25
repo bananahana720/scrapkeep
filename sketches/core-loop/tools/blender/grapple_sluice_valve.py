@@ -1,26 +1,3 @@
-# W47-GRAPPLE-3D: the World 1 grapple-yank sluice valve (master bible section 3.3; grounded sheet
-# artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g12-w1-setpieces-contraptions-destructibles.png,
-# row "grapple-yank sluice valve"). Hook the bite ring mid-swing and the yank spins the handwheel, which
-# opens the gate and flood-washes a locked Spillway yard (Dam and Flume). This file only builds the
-# hardware; W47-GRAPPLE-CODE binds the yank and the flood (ParkFlood.tla stays the owner of the water).
-#
-#   blender -b --factory-startup --python-exit-code 1 -P tools/blender/grapple_sluice_valve.py -- [--out-dir DIR]
-#
-# Files (prop class, assets/asset_budgets.json: 2,000 tris, 4,600 verts, 2 draws; each is one draw):
-#   assets/models/grapple/sluice_valve_body.glb    SluiceValveBody (empty, the foot) > Body, socket_hub
-#       The concrete plinth, the petrol valve body with copper flanges on its pipe, the bonnet, the
-#       gearbox and the stem shaft out to the wheel. Origin on the ground under the valve; the wheel side
-#       faces Blender -Y (Godot +Z). socket_hub is the wheel's hub (avoids Godot's _wheel VehicleWheel3D
-#       import suffix, matching valve_wheel.py); its frame is the body's.
-#   assets/models/grapple/sluice_valve_wheel.glb   SluiceValveWheel (empty, the hub) > Wheel, socket_bite
-#       The handwheel: steel rim, five spokes, copper hub, a bone spinner grip, and the bite ring, an amber
-#       painted eye on a lug off the rim at 12 o'clock, the one thing on the valve a hook reads as "bite
-#       here". The axle is Blender Y (Godot Z): turn the wheel about its local Godot Z as the yank pulls.
-#       socket_bite is the ring's centre, where the binder hangs the bitten head.
-# Paint: palette.gd hexes only, vertex colour on one surface per file, named for its material slot role
-# (material_slots.gd: enamel for the body, steel for the wheel, as valve_wheel.py). Amber is the
-# painted safety eye (VISUAL-LANGUAGE.md: amber stripes are safety paint), never HAZARD.
-
 import argparse
 import hashlib
 import json
@@ -33,23 +10,23 @@ import bmesh
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-import common  # noqa: E402
-from mathutils import Vector  # noqa: E402
-import grapple_rigs as gr  # noqa: E402
-from grapple_rigs import X, Y, Z, Rig, frame  # noqa: E402
+import common
+from mathutils import Vector
+import grapple_rigs as gr
+from grapple_rigs import X, Y, Z, Rig, frame
 
 common.SLOTS.setdefault("enamel", {"vc": True, "rough": 0.6, "metal": 0.1})
 common.SLOTS.setdefault("steel", {"vc": True, "rough": 0.45, "metal": 0.5})
 
-CAP = {"tris": 2000, "verts": 4600, "draws": 1}     # prop class tris and verts; one draw per file by design
+CAP = {"tris": 2000, "verts": 4600, "draws": 1}
 CONCRETE = common.mix("sandstone", "bone", 0.45)
 CONCRETE_DARK = common.mix("sandstone", "charcoal", 0.30)
 PETROL = common.mix("petrol", "bone", 0.10)
 IRON = common.mix("charcoal", gr.STEEL, 0.35)
 
-HUB = Vector((0.0, -0.32, 1.95))      # socket_wheel, in the body frame
+HUB = Vector((0.0, -0.32, 1.95))
 RIM_R, RIM_T = 0.85, 0.055
-BITE = Vector((0.0, 0.0, 1.07))       # socket_bite, in the wheel frame
+BITE = Vector((0.0, 0.0, 1.07))
 
 
 def body(rig):
@@ -86,7 +63,6 @@ def wheel(rig):
               ["copper", "copper", "copper"])
     g = Vector((math.cos(math.radians(210)), 0, math.sin(math.radians(210)))) * RIM_R
     rig.lathe(frame(g, -Y), [(0.0, 0.035), (0.04, 0.042), (0.17, 0.042), (0.19, 0.03)], 8, "bone")
-    # The bite ring: an amber lug off the rim at 12 o'clock and a heavy amber eye facing the player.
     rig.cyl((0, 0, RIM_R - 0.02), (0, 0, BITE.z - 0.13), 0.045, 8, "amber")
     rig.lathe(frame((0, 0.05, RIM_R), -Y), [(0.0, 0.07), (0.1, 0.07)], 10, IRON)
     rig.torus(BITE, Y, 0.125, 0.036, 20, 8, "amber")

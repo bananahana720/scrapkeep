@@ -97,7 +97,6 @@ def panel(still, boxes, proposed):
     overlay = Image.new("RGBA", SIZE)
     draw = ImageDraw.Draw(overlay)
     if proposed:
-        # Opaque neutral masks remove only the baked-in v2 UI for the box study.
         mask = ImageDraw.Draw(canvas)
         for rect in [(10, 4, 180, 82), (760, 4, 1160, 82), (0, 950, 1320, 1080)]:
             mask.rectangle(rect, fill=INK)

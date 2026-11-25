@@ -20,8 +20,8 @@ import _park as pk
 
 T = pk.TONES
 FACE = (0.0, 3.4)
-SWEEP = 2.1                       # contraptions.gd _needle: the needle sweeps -2.1 to +2.1 rad
-REDLINE_FROM = 0.72               # the code's redline sits at about g 0.72 and above
+SWEEP = 2.1
+REDLINE_FROM = 0.72
 MAJORS = 13
 
 
@@ -38,18 +38,18 @@ def tick(s, g, r0, r1, w, z1, color):
 def base(s):
     s.box((1.5, 0.5, 1.1), (0, 0.25, 0), T["concrete"])
     for y in (0.17, 0.34):
-        s.box((1.53, 0.035, 1.13), (0, y, 0), T["concrete_dk"])      # form-board joints
-    pk.frustum(s, 0.2, 0.2, 0.5, 2.4, 8, T["iron"])      # ends under the face: the code post pokes through it
+        s.box((1.53, 0.035, 1.13), (0, y, 0), T["concrete_dk"])
+    pk.frustum(s, 0.2, 0.2, 0.5, 2.4, 8, T["iron"])
     pk.frustum(s, 0.3, 0.3, 0.55, 0.75, 8, T["copper"])
-    s.box((0.5, 1.0, 0.45), (0, 2.7, -0.35), T["iron_hi"])             # saddle, buried in the drum
+    s.box((0.5, 1.0, 0.45), (0, 2.7, -0.35), T["iron_hi"])
     pk.disc_z(s, 0, 1.2, -0.6, -0.12, 20, T["iron"], at=FACE)
-    pk.disc_z(s, 1.06, 1.32, -0.12, 0.12, 24, T["copper"], at=FACE)    # bezel, outside the needle's reach
+    pk.disc_z(s, 1.06, 1.32, -0.12, 0.12, 24, T["copper"], at=FACE)
     pk.disc_z(s, 0, 1.06, -0.12, 0.07, 24, T["sand"], at=FACE)
     for k in range(MAJORS):
         g = k / (MAJORS - 1)
         hot = g >= REDLINE_FROM
         tick(s, g, 0.72, 0.96, 0.07 if hot else 0.055, 0.085, T["oxide"] if hot else T["charcoal"])
-    pk.disc_z(s, 0, 0.12, 0.07, 0.085, 10, T["copper"], at=FACE)       # hub cap under the needle
+    pk.disc_z(s, 0, 0.12, 0.07, 0.085, 10, T["copper"], at=FACE)
 
 
 def detail1(s):
@@ -64,7 +64,7 @@ def detail1(s):
             s.box((0.15, 0.02, 0.15), (sx * 0.6, 0.51, sz * 0.4), T["iron_hi"])
             pk.hexstud(s, (sx * 0.6, 0.52, sz * 0.4), (0, 1, 0), 0.045, 0.07, T["iron"])
     for sx in (-1, 1):
-        s.box((0.1, 0.1, 0.012), (sx * 0.45, 0.25, 0.556), T["charcoal"])     # form-tie holes
+        s.box((0.1, 0.1, 0.012), (sx * 0.45, 0.25, 0.556), T["charcoal"])
     for y in (1.2, 2.2):
         pk.frustum(s, 0.24, 0.24, y, y + 0.05, 8, T["iron_hi"])
 
@@ -76,13 +76,13 @@ def detail2(s):
     for k in range(24):
         a = math.tau * k / 24
         pk.hexstud(s, (FACE[0] + 1.1 * math.cos(a), FACE[1] + 1.1 * math.sin(a), 0.12), (0, 0, 1), 0.028, 0.03, T["copper_dk"])
-    s.box((0.3, 0.4, 0.03), (0, 1.6, 0.215), T["copper"])                      # nameplate
+    s.box((0.3, 0.4, 0.03), (0, 1.6, 0.215), T["copper"])
     for sx in (-1, 1):
         for sy in (-1, 1):
             pk.hexstud(s, (sx * 0.1, 1.6 + sy * 0.15, 0.23), (0, 0, 1), 0.022, 0.02, T["copper_dk"])
-    pk.tube(s, (0, 2.25, -0.25), (0, 0.6, -0.3), 0.045, 0.045, 6, T["iron_hi"])   # conduit down the post's back
+    pk.tube(s, (0, 2.25, -0.25), (0, 0.6, -0.3), 0.045, 0.045, 6, T["iron_hi"])
     pk.tube(s, (0, 0.6, -0.3), (0, 0.45, -0.3), 0.07, 0.07, 6, T["copper"])
-    pk.tube(s, (0, 2.2, -0.05), (0, 1.95, -0.05), 0.04, 0.04, 6, T["copper"])      # drain cock
+    pk.tube(s, (0, 2.2, -0.05), (0, 1.95, -0.05), 0.04, 0.04, 6, T["copper"])
 
 
 def check_base(s):

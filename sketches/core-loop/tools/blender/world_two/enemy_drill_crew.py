@@ -1,7 +1,3 @@
-# E20: measured Dig drilling carriage, collider-centred, facing Blender -Y.
-# Three opaque vertex-painted surfaces: crew/carriage, screw, removable rear plate.
-# Provenance: procedural bmesh; no external models, textures or animation.
-# blender -b --factory-startup --python <this file> -- [--out file.glb] [--render dir]
 import json
 import math
 import os
@@ -44,8 +40,6 @@ def measured(part, faces, lo, hi):
 
 
 b = Part("DrillCrewBody")
-# Under polish the crew is the shared soft critter: body, head and muzzle subdivide twice,
-# ears and arms once; eyes stay small smooth beads and the casting keeps crisp bevels.
 with b.region(bevel=0, subsurf=2, detail=1):
     core = b.uv("fleet_paint", 0.8, u=8, v=6, scale=(1, 1, 1.375), color="petrol")
 core_vertices = b.verts_of(core)
@@ -69,7 +63,6 @@ with b.region(bevel=0, subsurf=2, detail=1):
     b.uv("fleet_paint", 0.16, u=8, v=4, loc=g(0, 1.21, 0.34), scale=(1, 1, 0.65), color="bone")
 with b.region(bevel=0.015, detail=1):
     box(b, "fleet_paint", (0.10, 0.07, 0.06), (0, 1.26, 0.48), "charcoal")
-# A chamfered casting reaches the measured carriage envelope without square corners.
 outline = [(-0.65, -0.8), (-0.8, -0.65), (-0.8, 0.65), (-0.65, 0.8),
            (0.65, 0.8), (0.8, 0.65), (0.8, -0.65), (0.65, -0.8),
            (0.58, -0.8), (0.58, 0.45), (-0.58, 0.45), (-0.58, -0.8)]
@@ -83,10 +76,8 @@ for side in (-1, 1):
     for z in (-0.37, 0.37):
         foot = box(b, "fleet_paint", (0.25, 0.15, 0.35), (side * 0.40, -1.025, z), "charcoal")
         assert all(math.hypot(v.co.x, v.co.y) <= 0.8 for v in b.verts_of(foot))
-# Rear bearing surrounds the screw shaft; the open casting exposes both slide rails.
 b.ring("fleet_paint", 0.27, 0.45, 0.10, segs=8, loc=g(0, 0.5, 1.1),
        rot=(math.pi / 2, 0, 0), color="charcoal")
-# Repaired edges, two handles and one blank brass equipment tag.
 box(b, "fleet_paint", (0.33, 0.04, 0.14), (0, 0.955, 1.40), "brass")
 box(b, "fleet_paint", (0.47, 0.06, 0.04), (-0.29, 0.94, 1.81), "a8aaa3")
 box(b, "fleet_paint", (0.24, 0.08, 0.025), (0.60, 0.80, 2.113), "242a28")
@@ -96,9 +87,7 @@ for side in (-1, 1):
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=root)
 
-# The screw is a continuous tapered helical flight, not stacked discs.
 d = Part("DrillBit")
-# The flight is only 7 cm thick, so its bevel stays narrow.
 d.bevel = 0.012
 d.rod("working_tool", g(0, 0.5, 1.2), g(0, 0.5, 3.6), 0.22, r2=0.0, segs=12, color="a8aaa3")
 rows = []
@@ -124,7 +113,6 @@ bit = d.to_object(origin=g(0, 0.5, 2.4), parent=root)
 p = Part("DrillPlate")
 plate_faces = box(p, "part_state", (2.2, 1.8, 0.25), (0, 0.6, -1.0), "bone")
 measured(p, plate_faces, (-1.1, -0.3, -1.125), (1.1, 1.5, -0.875))
-# Flat stripes and bolt heads on the plate keep a hairline bevel.
 with p.region(bevel=0.006):
     for side in (-1, 1):
         box(p, "part_state", (0.14, 1.58, 0.025), (side * 0.83, 0.6, -1.108), "petrol")
@@ -135,7 +123,6 @@ with p.region(bevel=0.006):
 bmesh.ops.recalc_face_normals(p.bm, faces=p.bm.faces[:])
 plate = p.to_object(origin=g(0, 0.6, -1.0), parent=root)
 
-# Static named assemblies are merged into the body surface; these nodes keep their datums.
 for name, at in (("DrillHead", (0, 1.3, 0)), ("DrillCarriage", (0, 0.5, 1.3)),
                  ("DrillRails", (0, 0.3, 1.3)), ("DrillFeet", (0, -1.025, 0)),
                  ("bit_axis", (0, 0.5, 2.4)), ("bit_tip", (0, 0.5, 3.6)),

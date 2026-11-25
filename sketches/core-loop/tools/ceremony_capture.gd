@@ -3,16 +3,6 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# Rendered stills of the reward ceremony (v3 W13): a rare flare, a reveal card, a reveal
-# card whose synergy wire snaps, the crate mid-build and at the burst, the part seating
-# in its hull slot, and the payoff flash on the first hit after. It needs a rendered
-# display; launch it off Andrew's screen:
-#
-#   claude-open <godot> --path sketches/core-loop --script res://tools/ceremony_capture.gd \
-#     -- --out=<absolute dir> [--class=0]
-#
-# The run is calm (no director spawns) so each moment is framed alone. Stills render at
-# 1920x1080 whatever the window's size.
 
 var _out := ""
 var _game

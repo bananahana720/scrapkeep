@@ -37,7 +37,7 @@ COLS = 11
 PITCH_X, PITCH_Y = 1.02, 0.56
 PLAQUE = (0.88, 0.44, 0.07)
 ROW_Y = [4.88, 4.32, 3.76, 2.67, 2.11, 1.55]
-FACE_Z = 0.22          # plaque face
+FACE_Z = 0.22
 LEG_X = 6.35
 
 
@@ -66,13 +66,11 @@ def lathe(s, prof, n, color, at=(0.0, 0.0)):
     s.add(verts, faces, color)
 
 
-# ------------------------------------------------------------------------------------------------------- trophy wall
-
 def cup(s, x, y, z, k, color="copper", k2=1.0):
     lh(s, x - 0.14, x + 0.14, y, y + 0.05, z - 0.1, z + 0.1, "iron_hi")
     pk.tube(s, (x, y + 0.05, z), (x, y + 0.2 * k2, z), 0.035, 0.035, 4, T["copper_dk"])
     pk.frustum(s, 0.06, 0.15, y + 0.2 * k2, y + 0.46 * k2, 8, T[color], caps=(True, True), at=(x, z))
-    lh(s, x - 0.17, x + 0.17, y + 0.34 * k2, y + 0.39 * k2, z - 0.025, z + 0.025, T["copper_dk"])   # handle bar
+    lh(s, x - 0.17, x + 0.17, y + 0.34 * k2, y + 0.39 * k2, z - 0.025, z + 0.025, T["copper_dk"])
 
 
 def ball(s, x, y, z):
@@ -115,7 +113,6 @@ def gooseneck(s, x):
 
 
 def trophy_wall(s):
-    # Legs on concrete footings, with diagonal braces to the board underside.
     for sx in (-1, 1):
         x0, x1 = sorted((sx * (LEG_X - 0.3), sx * (LEG_X + 0.3)))
         lh(s, sx * LEG_X - 0.7, sx * LEG_X + 0.7, 0.0, 0.45, -0.9, 0.9, "concrete")
@@ -124,9 +121,7 @@ def trophy_wall(s):
         lh(s, x0 - 0.04, x1 + 0.04, 6.5, 6.62, -0.44, 0.44, "copper")
         lh(s, x0 - 0.04, x1 + 0.04, 0.8, 0.9, -0.44, 0.44, "copper_dk")
         pk.strut(s, (sx * LEG_X, 0.6, 0.45), (sx * 4.9, 1.0, 0.1), 0.2, 0.2, T["iron_hi"])
-        # Rear prop brace.
         pk.strut(s, (sx * LEG_X, 4.5, -0.4), (sx * LEG_X, 0.45, -2.0), 0.28, 0.28, T["iron_hi"])
-    # Board: petrol slab, copper frame, header band.
     lh(s, -6.0, 6.0, 1.0, 6.0, -0.25, 0.15, "petrol_dk")
     for y0, y1 in ((1.0, 1.18), (5.2, 5.28), (5.9, 6.0)):
         lh(s, -6.05, 6.05, y0, y1, -0.25, 0.27, "copper")
@@ -135,13 +130,11 @@ def trophy_wall(s):
     lh(s, -5.9, 5.9, 5.28, 5.9, 0.15, 0.2, "petrol")
     for i in range(6):
         lh(s, -5.0 + i * 2.0 - 0.07, -5.0 + i * 2.0 + 0.07, 5.5, 5.64, 0.2, 0.26, "copper_dk")
-    # Plaques, dim bone, tone-jittered.
     for k in range(ROWS):
         r, c = divmod(k, COLS)
         x = (c - 5) * PITCH_X
         y = ROW_Y[r]
         s.box(PLAQUE, (x, y, 0.15 + PLAQUE[2] / 2), cp.jitter_tone("b3a98f", k, 0.1))
-    # Mid ledge across the board and the end ledge under the empty slots.
     lh(s, -5.9, 5.9, 2.85, 2.95, 0.15, 0.55, "timber")
     lh(s, -5.9, 5.9, 2.85, 2.92, 0.55, 0.6, "copper_dk")
     lh(s, 0.4, 5.9, 1.2, 1.3, 0.15, 0.55, "timber")
@@ -158,7 +151,6 @@ def trophy_wall(s):
     ball(s, 2.3, 1.3, 0.35)
     harpoon(s, 3.5, 1.3, 0.35)
     cup(s, 4.7, 1.3, 0.35, 1, "copper_dk", 0.9)
-    # Awning with a scalloped valance, two iron arms.
     pitch = math.atan2(0.43, 1.1)
     for i in range(8):
         cx = -6.2 + 1.55 * (i + 0.5)
@@ -187,8 +179,6 @@ def wall_sockets():
 
 
 def wall_col(s):
-    # Three boxes (the class budget covers collision too): each leg from the ground, and the board slab. The low footings
-    # (0.45 m) are drawn only; the ball rolls over their lip into the leg box.
     for sx in (-1, 1):
         lh(s, sx * LEG_X - 0.3, sx * LEG_X + 0.3, 0.0, 6.6, -0.4, 0.4, "iron")
     lh(s, -6.0, 6.0, 1.0, 6.0, -0.25, 0.3, "iron")
@@ -199,8 +189,6 @@ def check_wall(s):
     assert abs(lo[1]) < 1e-6 and 7.0 < hi[1] < 8.0, ("wall height", lo, hi)
     assert hi[0] - lo[0] > 12.0, ("wall width", lo, hi)
 
-
-# ---------------------------------------------------------------------------------------------------- settings console
 
 DECK_FRONT_Y, DECK_BACK_Y = 1.9, 2.6
 CAB_X, CAB_Z = 2.0, 0.7
@@ -233,7 +221,6 @@ def dial(s, x, z, k):
 
 
 def console(s):
-    # Cabinet, feet, sloped deck.
     for sx in (-1, 1):
         for sz in (-1, 1):
             lh(s, sx * 1.75 - 0.2, sx * 1.75 + 0.2, 0.0, 0.25, sz * 0.5 - 0.2, sz * 0.5 + 0.2, "iron_hi")
@@ -241,13 +228,11 @@ def console(s):
     pts = [(-CAB_X, DECK_FRONT_Y, -CAB_Z), (CAB_X, DECK_FRONT_Y, -CAB_Z), (CAB_X, DECK_FRONT_Y, CAB_Z), (-CAB_X, DECK_FRONT_Y, CAB_Z),
            (-CAB_X, DECK_BACK_Y, -CAB_Z), (CAB_X, DECK_BACK_Y, -CAB_Z), (CAB_X, DECK_FRONT_Y, CAB_Z), (-CAB_X, DECK_FRONT_Y, CAB_Z)]
     s.add(pts, [(0, 1, 2, 3), (4, 7, 6, 5), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0)], T["petrol"])
-    lh(s, -CAB_X - 0.04, CAB_X + 0.04, 0.25, 0.4, -CAB_Z - 0.04, CAB_Z + 0.04, "copper_dk")      # copper skirt
-    lh(s, -CAB_X - 0.04, CAB_X + 0.04, DECK_FRONT_Y - 0.1, DECK_FRONT_Y, CAB_Z - 0.02, CAB_Z + 0.06, "copper")   # deck lip
-    # Front: speaker grille on the left.
+    lh(s, -CAB_X - 0.04, CAB_X + 0.04, 0.25, 0.4, -CAB_Z - 0.04, CAB_Z + 0.04, "copper_dk")
+    lh(s, -CAB_X - 0.04, CAB_X + 0.04, DECK_FRONT_Y - 0.1, DECK_FRONT_Y, CAB_Z - 0.02, CAB_Z + 0.06, "copper")
     lh(s, -1.9, -0.95, 0.55, 1.75, CAB_Z, CAB_Z + 0.05, "iron_hi")
     for i in range(6):
         lh(s, -1.82, -1.03, 0.65 + i * 0.18, 0.74 + i * 0.18, CAB_Z + 0.05, CAB_Z + 0.09, "charcoal")
-    # Patch bay.
     lh(s, -0.8, 0.45, 1.05, 1.75, CAB_Z, CAB_Z + 0.04, "copper_dk")
     jacks = []
     for r in range(2):
@@ -255,7 +240,6 @@ def console(s):
             x, y = -0.6 + c * 0.25, 1.62 - r * 0.28
             jacks.append((x, y))
             pk.tube(s, (x, y, CAB_Z + 0.04), (x, y, CAB_Z + 0.11), 0.075, 0.075, 6, T["iron"], caps=(False, True))
-    # Cables: plug, then a drooping run to a lower jack.
     for (x0, y0), (x1, y1), col in ((jacks[0], jacks[8], "oxide"), (jacks[2], jacks[5], "canvas_dk"), (jacks[4], jacks[7], "petrol")):
         pk.tube(s, (x0, y0, CAB_Z + 0.11), (x0, y0, CAB_Z + 0.22), 0.05, 0.05, 6, T["bone"], caps=(False, True))
         pk.tube(s, (x1, y1, CAB_Z + 0.11), (x1, y1, CAB_Z + 0.22), 0.05, 0.05, 6, T["bone"], caps=(False, True))
@@ -263,19 +247,16 @@ def console(s):
         pts = [(x0, y0, CAB_Z + 0.22), mid, (x1, y1, CAB_Z + 0.22)]
         for a, b in zip(pts, pts[1:]):
             pk.strut(s, a, b, 0.045, 0.045, T[col])
-    # Toggle row.
     lh(s, -0.8, 0.45, 0.5, 0.9, CAB_Z, CAB_Z + 0.04, "iron_hi")
     for c in range(5):
         x = -0.65 + c * 0.28
         up = 1 if c in (0, 2, 3) else -1
         pk.tube(s, (x, 0.7, CAB_Z + 0.04), (x, 0.7 + up * 0.12, CAB_Z + 0.18), 0.035, 0.05, 4, T["bone"] if up > 0 else T["concrete_lt"], caps=(False, True))
-    # Slider slots.
     lh(s, 0.75, 1.9, 0.55, 1.75, CAB_Z, CAB_Z + 0.03, "iron_hi")
     for i, h in enumerate((0.3, 0.75, 0.5, 0.9)):
         x = 0.95 + i * 0.28
         lh(s, x - 0.04, x + 0.04, 0.7, 1.6, CAB_Z + 0.03, CAB_Z + 0.05, "charcoal")
         lh(s, x - 0.11, x + 0.11, 0.7 + h * 0.8 - 0.06, 0.7 + h * 0.8 + 0.06, CAB_Z + 0.05, CAB_Z + 0.12, "copper" if i != 1 else "bone")
-    # Deck: dial bank, VU meters, big mint knob and its tick ring.
     for i, x in enumerate((-1.55, -0.85)):
         dial(s, x, 0.15, i)
     for i, x in enumerate((-1.55, -0.85)):
@@ -296,7 +277,6 @@ def console(s):
     knob(s, bx, bz, 0.36, 0.28, "mint", 10, off=0.06)
     c = on_deck(bx + 0.1, bz - 0.12, 0.34)
     cp.obox(s, (0.07, 0.04, 0.28), c, T["iron"], yaw=0.5)
-    # Telegraph key on a side shelf (right).
     lh(s, 2.05, 3.1, 1.05, 1.15, -0.45, 0.55, "timber")
     for z in (-0.35, 0.45):
         lh(s, 2.1, 2.2, 0.25, 1.05, z - 0.04, z + 0.04, "iron_hi")
@@ -304,7 +284,6 @@ def console(s):
     pk.strut(s, (2.5, 1.3, 0.35), (2.5, 1.38, -0.05), 0.07, 0.04, T["copper"])
     pk.tube(s, (2.5, 1.38, 0.35), (2.5, 1.5, 0.35), 0.1, 0.09, 6, T["bone"], caps=(False, True))
     lh(s, 2.45, 2.55, 1.22, 1.3, -0.06, 0.02, "iron_hi")
-    # Mast, back left, with a dish and three guys.
     mx, mz = -2.6, -0.8
     pk.tube(s, (mx, 0.0, mz), (mx, 8.0, mz), 0.13, 0.08, 6, T["iron_hi"], caps=(False, True))
     lh(s, mx - 0.4, mx + 0.4, 0.0, 0.2, mz - 0.4, mz + 0.4, "concrete")
@@ -323,7 +302,6 @@ def console(s):
     pk.tube(s, rim, horn, 0.03, 0.07, 6, T["iron"], caps=(False, True))
     cp.lamp(s, mx, 8.2, mz, 0.15)
     pk.tube(s, (mx, 8.0, mz), (mx, 8.12, mz), 0.08, 0.1, 6, T["copper"], caps=(False, True))
-    # Crate stool in front.
     sx, sz = 0.1, 2.0
     lh(s, sx - 0.45, sx + 0.45, 0.0, 0.8, sz - 0.4, sz + 0.4, "timber")
     for ox in (-0.45, 0.45):

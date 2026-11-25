@@ -8,15 +8,6 @@ const Audio := preload("res://src/presentation/audio.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# The audio board for the v2 primer (design-v2/board/AUDIO-BOARD.md). Each demo drives
-# the sketch's own band (music_engine.render) and cue bank (sfx_bank) along one
-# timeline, calling the engine between renders the way audio.gd does, mixed at the
-# game's bus levels. Each take is matched to -14 LUFS (BS.1770 integrated, gated) under
-# a -1 dBFS sample-peak ceiling and written as a 16-bit stereo WAV. No external audio.
-#
-#   godot --headless --path sketches/core-loop --script res://tools/audio_board.gd
-#   ... -- --out=/abs/dir --only=01,08
-# The default output is <repo>/artifacts/local/v2-primer/audio (gitignored).
 
 const TARGET_LUFS := -14.0
 const CEILING := 0.8913
@@ -30,8 +21,6 @@ const DEMOS := [
 	["13", "ui-utility-reel"], ["14", "fleet-difficulty-ticks"],
 ]
 const RELEASE := {"sable": "sable_arpeggio", "rivet": "rivet_hihat_roll", "kest": "kest_low_thump", "tarn": "tarn_latch_tear", "tally": "tally_balance_due", "cannon": "cannon_recall"}
-# Moss's lines are the vision keeper's (SOUND-STORY.md section 8); the board babbles the
-# first variation of each beat and the first relent.
 const MOSS_LINES := [
 	"The hook. Everyone looks at the hook. Shelf's the thing for sale.",
 	"No. It'd shear your axle the first bump you took.",
@@ -43,7 +32,6 @@ const MOSS_LINES := [
 const MOSS_RELENT := "Fine. You're heavy enough. Don't come back lighter."
 
 
-# One demo's timeline: the band and every cue summed at the game's bus levels.
 class Take:
 	var left := PackedFloat32Array()
 	var right := PackedFloat32Array()
@@ -64,7 +52,6 @@ class Take:
 				left[i] = 0.0
 				right[i] = 0.0
 
-	# The band starts at a take sample, restarted in a theme at a pressure, as a stage.
 	func band(theme: int, pressure: float, at := 0) -> MusicEngine:
 		engine = MusicEngine.new()
 		engine.schedule_restart(0, MusicEngine.PLAY, theme)
@@ -73,7 +60,6 @@ class Take:
 		cursor = at
 		return engine
 
-	# Renders the band up to a take sample, in the small blocks the audio thread asks for.
 	func to(sample: int) -> void:
 		if engine == null:
 			return
@@ -103,8 +89,6 @@ class Take:
 			left[at + i] += buf[i] * gl
 			right[at + i] += buf[i] * gr
 
-	# A cue now, as audio.play does it: trim plus the row priority's dB, on its bus, and
-	# a priority 2+ cue ducks the band while a danger cue ducks the bass.
 	func play(id: String, at: int, priority := 1, db := 0.0, shift := 0, pan := 0.0, bus := "SFX", ducks := true) -> void:
 		to(at)
 		var buf := SfxBank.samples_at(id, Harmony.STEP, shift)
@@ -117,7 +101,6 @@ class Take:
 				engine.duck_bass(0.3, 0.45)
 		cues.append([at, id])
 
-	# An announcement on the next beat, through the band's stinger lane (audio.on_beat).
 	func on_beat(id: String, at: int, db := 0.0) -> int:
 		to(at)
 		var start := engine.schedule_stinger(id, db)
@@ -128,7 +111,6 @@ class Take:
 		cues.append([band_at + start, id])
 		return band_at + start
 
-	# A held sound (a crowd-control hold) from one sample to another.
 	func hold(kind: String, from: int, until: int, strain := 0.0) -> void:
 		to(from)
 		var id := "hold_" + kind
@@ -181,10 +163,6 @@ static func render_demo(number: String) -> Take:
 	return null
 
 
-# --- The demos ------------------------------------------------------------------------
-
-# A class motif bare on its voice twice, the full release, then the stage 1 groove with
-# the player's own cues on it: the ready pulse and the release, played on the frame.
 static func _class_demo(id: String) -> Take:
 	var t := Take.new()
 	var row := Harmony.motif(id)
@@ -210,7 +188,6 @@ static func _class_demo(id: String) -> Take:
 	return t
 
 
-# The Fleet motif alone, then announced on the beat over the groove as a pack arrives.
 static func _fleet_demo() -> Take:
 	var t := Take.new()
 	t.play("fleet_motif", t.sec(0.3), 2)
@@ -223,8 +200,6 @@ static func _fleet_demo() -> Take:
 	return t
 
 
-# A reactor relic's vent charging for four bars: the sub takes the Ab pedal under the
-# bass figure, the Geiger ticks speed up with the charge, and the vent blows on the beat.
 static func _reactor_demo() -> Take:
 	var t := Take.new()
 	var engine := t.band(0, 0.5)
@@ -243,9 +218,6 @@ static func _reactor_demo() -> Take:
 	return t
 
 
-# A swarm forming: the unison buzz, the snap into stacked fourths while the formation
-# holds, and the chord breaking into single detuned notes when it scatters. The band
-# keeps playing underneath; the swarm adds nothing to it.
 static func _swarm_demo() -> Take:
 	var t := Take.new()
 	t.band(0, 0.35)
@@ -259,8 +231,6 @@ static func _swarm_demo() -> Take:
 	return t
 
 
-# The player's habit (each class's release), then the Mind's hand quoting it back once,
-# inverted with the last note a semitone flat. It never enters the band.
 static func _mind_demo() -> Take:
 	var t := Take.new()
 	t.band(0, 0.35)
@@ -272,10 +242,6 @@ static func _mind_demo() -> Take:
 	return t
 
 
-# Twenty-four bars (34 s) of Spillway with Sable woven in. The objective's pressure rises and the
-# counter-line enters carrying Sable's arpeggio on its rotation; the event passing half
-# way (escalate) lifts the key a half step through a pickup bar on the dominant, and the
-# motif comes back on its rotation in Eb.
 static func _stage_theme() -> Take:
 	var t := Take.new()
 	var engine := t.band(0, 0.55)
@@ -289,9 +255,6 @@ static func _stage_theme() -> Take:
 	return t
 
 
-# The ball banks in Moss's bay: the plant clack, the lounge from the next bar (sax at
-# half speed, brushes, the calm bass on the sub), a shop bell, then the exit pad's
-# slingshot, the launch build over A7b9 and the landing drop back into the full band.
 static func _lounge_demo() -> Take:
 	var t := Take.new()
 	var engine := t.band(0, 0.6)
@@ -309,7 +272,6 @@ static func _lounge_demo() -> Take:
 	return t
 
 
-# The four threat types, each after a second of groove, read from W2's threat rows.
 static func _threat_reel() -> Take:
 	var t := Take.new()
 	t.band(0, 0.5)
@@ -321,11 +283,6 @@ static func _threat_reel() -> Take:
 	return t
 
 
-# Two crowd-control chains. The first assembles the sinister set around home (the pit
-# on D, the bola on Bb, the tether on Eb, the net on Ab), gains the riser, and is broken
-# by the player's own action: the holds cut on the frame, the class burst, the boost
-# refund and the bass back from that frame. The second is held to tenacity: the choke,
-# the class interval, and the bass back over a beat.
 static func _cc_chain() -> Take:
 	var t := Take.new()
 	var engine := t.band(0, 0.6)
@@ -361,9 +318,6 @@ static func _cc_chain() -> Take:
 	return t
 
 
-# Moss's conversation loop over the lounge: each press is the pilot's nod (Sable's
-# first note), then one beat of babble, each beat's root a step higher and its blips
-# shorter, the grumble under beats 2, 4 and 6, then the relent, a sigh.
 static func _babble_demo() -> Take:
 	var t := Take.new()
 	var engine := t.band(0, 0.0)
@@ -386,9 +340,6 @@ static func _babble_demo() -> Take:
 	return t
 
 
-# The utility cues in the order a player meets them, over the calm stage 1 groove so
-# each can be judged for cutting through: ready per class, the callout chime, the shop
-# bell, Moss's bench clank and the milestone stinger on the beat.
 static func _ui_reel() -> Take:
 	var t := Take.new()
 	t.band(0, 0.2)
@@ -407,8 +358,6 @@ static func _ui_reel() -> Take:
 	return t
 
 
-# The difficulty clock ticking three times past the Warden break: each tick's stinger
-# on the beat, and from the next bar the Fleet adds one layer and never swaps one.
 static func _fleet_ticks() -> Take:
 	var t := Take.new()
 	var engine := t.band(0, 0.6)
@@ -421,10 +370,6 @@ static func _fleet_ticks() -> Take:
 	return t
 
 
-# --- Loudness and the ceiling -------------------------------------------------------------
-
-# BS.1770 integrated loudness of a stereo take: K-weighting, 400 ms blocks every 100 ms,
-# the -70 LUFS absolute gate and the -10 LU relative gate.
 static func loudness(left: PackedFloat32Array, right: PackedFloat32Array) -> float:
 	var zl := _k_squares(left)
 	var zr := _k_squares(right)
@@ -468,8 +413,6 @@ static func _mean(values: PackedFloat64Array) -> float:
 	return total / maxi(values.size(), 1)
 
 
-# The K-weighting filter (a high shelf, then a high-pass), from the BS.1770 analogue
-# prototypes at 44.1 kHz; returns the squared output.
 static func _k_squares(x: PackedFloat32Array) -> PackedFloat64Array:
 	var fs := float(Harmony.RATE)
 	var k := tan(PI * 1681.974450955533 / fs)
@@ -520,9 +463,6 @@ static func peak(left: PackedFloat32Array, right: PackedFloat32Array) -> float:
 	return top
 
 
-# Gain to -14 LUFS, then a look-ahead limiter (1.5 ms window, 80 ms release) holds the
-# sample peak under -1 dBFS. The gain applied never needs more than MAX_LIMIT_DB of
-# limiting; a take that would is matched quieter instead, and the report says so.
 static func master(take: Take) -> Dictionary:
 	var before := loudness(take.left, take.right)
 	var gain_db := TARGET_LUFS - before if is_finite(before) else 0.0
@@ -566,7 +506,6 @@ static func _limit(left: PackedFloat32Array, right: PackedFloat32Array) -> float
 	return -linear_to_db(deepest)
 
 
-# The minimum over [j, j + w) for every j, in two passes (van Herk / Gil-Werman).
 static func _window_min(a: PackedFloat32Array, w: int) -> PackedFloat32Array:
 	var n := a.size()
 	var pre := a.duplicate()
@@ -602,8 +541,6 @@ static func default_out() -> String:
 	return ProjectSettings.globalize_path("res://").path_join(DEFAULT_OUT).simplify_path()
 
 
-# Renders, masters and writes the named demos (all when empty). Returns one report row
-# per file: [file name, stats, error].
 static func write_all(out_dir: String, only: Array = []) -> Array:
 	DirAccess.make_dir_recursive_absolute(out_dir)
 	var report: Array = []

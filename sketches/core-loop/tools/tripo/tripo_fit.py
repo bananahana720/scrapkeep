@@ -70,7 +70,6 @@ def bounds(objs):
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
 
-# 1. authored reference
 bpy.ops.import_scene.gltf(filepath=opt["ref"])
 ref = list(bpy.context.scene.objects)
 ref_meshes = [o for o in ref if o.type == "MESH"]
@@ -84,11 +83,9 @@ for o in ref_meshes:
     for s in o.material_slots:
         if s.material and s.material not in mats:
             mats.append(s.material)
-palette = []  # (linear rgb, material index)
+palette = []
 if len(mats) > 1:
     style = "slots"
-    # Read baseColorFactor from the GLB itself: the importer links Base Color to a vertex-colour
-    # node, so the socket's default value is not the slot colour.
     import struct
     raw = open(opt["ref"], "rb").read()
     gj = json.loads(raw[20:20 + struct.unpack("<I", raw[12:16])[0]])
@@ -123,7 +120,6 @@ for m in mats:
 for k, m in enumerate(keep_mats):
     m.name = m.name.split(".")[0]
 
-# 2. Tripo mesh
 bpy.ops.import_scene.gltf(filepath=opt["in"])
 objs = [o for o in bpy.context.scene.objects if o.type == "MESH"]
 for o in bpy.context.scene.objects:
@@ -148,13 +144,10 @@ ob.data.transform(Matrix.Translation(Vector((rc.x, rc.y, rmn.z))) @ Matrix.Diago
 k = narrow(ob.data)
 sv = [sv[0] * k, sv[1] * k, sv[2]]
 
-# Weld the vertices Tripo split along its UV seams; a vertex-coloured asset needs no UVs, so they
-# go first and the vertex count drops to what the colour borders need.
 def _weld(mesh, keep_uv):
     bmw = bmesh.new(); bmw.from_mesh(mesh)
     bmesh.ops.remove_doubles(bmw, verts=bmw.verts, dist=1e-5)
     bmw.to_mesh(mesh); bmw.free()
-# 3. texture -> flat palette per face
 me = ob.data
 img = None
 for sl in ob.material_slots:
@@ -169,8 +162,6 @@ LUMA = np.array([0.2126, 0.7152, 0.0722])
 
 
 def tone_dist(col):
-    # --match tone: compare the tint first and the lightness at a quarter weight, so a lighter or darker shade of
-    # an authored colour still lands on that colour (a sky-blue wall on the authored teal, not on the pale grey).
     dl = pal_s @ LUMA - float(np.asarray(col) @ LUMA)
     dc = (pal_s - (pal_s @ LUMA)[:, None]) - (np.asarray(col) - float(np.asarray(col) @ LUMA))
     return 0.25 * dl ** 2 + np.sum(dc ** 2, axis=1)
@@ -179,7 +170,7 @@ if img is not None and me.uv_layers:
     W, H = img.size
     px = np.array(img.pixels[:], dtype=np.float32).reshape(H, W, -1)[:, :, :3]
     if img.colorspace_settings.name == "sRGB":
-        px_s = px  # pixels are stored as sRGB-encoded floats for 8-bit images
+        px_s = px
     else:
         px_s = srgb(px)
     uv = me.uv_layers.active.data
@@ -192,8 +183,6 @@ if img is not None and me.uv_layers:
             cols.append(px_s[y, x])
         col = np.median(np.array(cols), axis=0)
         face_slot[p.index] = int(np.argmin(tone_dist(col) if opt["match"] == "tone" else np.sum((pal_s - col) ** 2, axis=1)))
-# Two passes of neighbour-majority smoothing: palette snapping turns painted rust spots and bolt
-# dots into one-face speckles, which read as noise at game distance.
 bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
 for _ in range(int(opt.get("smooth", "2"))):
     new = face_slot.copy()
@@ -250,14 +239,13 @@ if style == "vertex":
     while me.uv_layers:
         me.uv_layers.remove(me.uv_layers[0])
 _weld(me, style != "vertex")
-# 4. budget, names, sockets, export
 tris = sum(len(p.vertices) - 2 for p in me.polygons)
 cap = int(opt["max-tris"])
 if cap and tris > cap:
     md = ob.modifiers.new("dec", "DECIMATE"); md.ratio = cap / tris
     bpy.ops.object.modifier_apply(modifier=md.name)
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
-    narrow(me)  # the reduction can move a point out again; the radius is a promise about the exported mesh
+    narrow(me)
 reach_out = round(max(math.hypot(v.co.x, v.co.y) for v in me.vertices), 4)
 ob.name = mesh_name; me.name = mesh_name
 root = bpy.data.objects.new(root_name, None); bpy.context.scene.collection.objects.link(root)
@@ -267,7 +255,7 @@ zmin_all = min(v.co.z for v in me.vertices); zh = max(v.co.z for v in me.vertice
 for spec in [x for x in opt["split"].split(",") if x]:
     name, rule = spec.split("=")
     bits = rule.split(":"); kind, frac = bits[0], float(bits[1])
-    only = bits[2] if len(bits) > 2 else ""  # restrict the part to one material slot by name
+    only = bits[2] if len(bits) > 2 else ""
     only_idx = next((k for k, m in enumerate(me.materials) if m.name == only), -1) if only else -1
     bm = bmesh.new(); bm.from_mesh(me); bm.faces.ensure_lookup_table()
     sel = [f for f in bm.faces if ((f.calc_center_median().z - zmin_all) / zh < frac) == (kind == "zmax")
@@ -288,8 +276,6 @@ for name, loc in sockets:
     e.parent = root; e.location = loc
 bpy.ops.export_scene.gltf(filepath=opt["out"], export_format="GLB", export_image_format="NONE",
                           export_vertex_color="ACTIVE", export_all_vertex_colors=False)
-# Carry the authored material definitions over by name (the importer's node graph does not
-# round-trip baseColorFactor), so slot colours, metal and roughness match the authored asset.
 import struct
 def read_glb(path):
     raw = open(path, "rb").read(); n = struct.unpack("<I", raw[12:16])[0]

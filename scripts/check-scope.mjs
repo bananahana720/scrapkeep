@@ -9,8 +9,6 @@ const noBuildToolingPaths = [
   /^tests\/.*\.test\.js$/,
   /^tests\/fixtures\/check-scope\/.*\.json$/,
 ];
-// Order matters: the first matching class wins, so sketch, configuration,
-// native and native-player paths are claimed before the broad Markdown rule.
 const classes = [
   {
     name: "sketch",
@@ -72,8 +70,6 @@ const classes = [
   {
     name: "tooling-no-build",
     build: false,
-    // No single path claims this class; toolingNoBuild promotes a whole change
-    // set out of tooling below, so classify() must never select it per file.
     patterns: [],
     commands: ["npm test", "npm run check:docs", "npm run check:project"],
     evidence:
@@ -135,8 +131,6 @@ function readJsonAtRevision(root, revision, file) {
   }
 }
 
-// package.json holds scripts beside dependencies, so its path cannot say which
-// one moved; an unreadable or unparsable revision counts as a dependency change.
 function packageJsonScriptsOnly(root, base, candidate) {
   const before = readJsonAtRevision(root, base, "package.json");
   const after = readJsonAtRevision(root, candidate, "package.json");

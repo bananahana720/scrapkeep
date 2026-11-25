@@ -44,9 +44,8 @@ MODELS = SKETCH / "assets/models/park"
 
 PARK_LARGE = {"tris": 16000, "draws": 2}
 DETAIL = {"tris": 1500, "draws": 1}
-BEVEL = 3.0  # roof lips bevel back 3 m (PARK.md section 4)
+BEVEL = 3.0
 
-# sRGB tuples. The tube palettes pull from the game palette (common.HEX) and stay mid-value so no frame reads black.
 C = {
     "basalt": common.mix("charcoal", "oxide", .58),
     "basalt_dark": common.mix("charcoal", "oxide", .40),
@@ -144,7 +143,6 @@ class Soup:
         pts = [Vector(center) + rot @ Vector((sx * hx, sy * hy, sz * hz))
                for sx in (-1, 1) for sy in (-1, 1) for sz in (-1, 1)]
         ix = [self.add_vert(p) for p in pts]
-        # corners indexed (sx, sy, sz) -> 4*a + 2*b + c with a,b,c in {0 (neg), 1 (pos)}
         quads = [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]
         for q in quads:
             self.outward(tuple(ix[k] for k in q), center, color)
@@ -206,9 +204,6 @@ def make_object(name, soup, root, painted):
     bpy.context.scene.collection.objects.link(obj)
     obj.parent = root
     return obj, len(tris)
-
-
-# ------------------------------------------------------------------------------------------------ tubes
 
 
 class Tube:
@@ -303,7 +298,6 @@ def ellipse(cx, cy, a, b, t0, t1, n):
     return [(cx + a * math.cos(t0 + (t1 - t0) * k / (n - 1)), cy + b * math.sin(t0 + (t1 - t0) * k / (n - 1))) for k in range(n)]
 
 
-# lava_tube_run: basalt tube, a trough floor 14 m across, walls out to 8 m, an elliptical roof to 11 m
 def lava_profile():
     pts = [(x, .7 * (x / 7.0) ** 2, "floor") for x in range(-7, 8)]
     pts.append((7.6, 1.8, "wall"))
@@ -324,7 +318,6 @@ def lava_palette(side, s, i, tube):
     return strata(tube, s, i, [C["varnish"], C["scoria"], C["varnish"], C["rock_red"]])
 
 
-# adit_mouth: a timbered drift 8 m wide, walls to 3.6 m, a flat arch to 5.6 m
 def adit_profile():
     pts = [(x, .3 * (x / 4.0) ** 2, "floor") for x in (-3.5, -2.5, -1.5, -.5, .5, 1.5, 2.5, 3.5)]
     pts.append((4.0, 1.6, "wall"))
@@ -345,7 +338,6 @@ def adit_palette(side, s, i, tube):
     return strata(tube, s, i, [C["sand"], C["rock_red"], C["cream"], C["sandstone_wall"]])
 
 
-# spillway_tunnel: dam-era horseshoe, floor 11 m wide, walls to 4.5 m, arch to 9 m; board bands of 1.2 m
 def spillway_profile():
     pts = [(x, .15 * (x / 5.5) ** 2, "floor") for x in range(-5, 6)]
     pts.append((5.5, 1.2, "wall"))
@@ -387,12 +379,9 @@ def tube_for(rid):
     raise KeyError(rid)
 
 
-# ------------------------------------------------------------------------------------------------ shells
-
-
 def lava_shell1(tube):
     soup = Soup()
-    for k in range(12):  # lava benches along both walls
+    for k in range(12):
         for side in (-1, 1):
             if hash01(k, side, 11) < .25:
                 continue
@@ -400,13 +389,13 @@ def lava_shell1(tube):
             ln = 3.2 + hash01(k, side, 13) * 2.4
             pos = tube.world(s, side * 7.55, 2.1 + hash01(k, side, 14) * .5)
             soup.box(pos, (.9, .45, ln), tint(C["scoria"], .12, k * 2 + side), yaw=math.degrees(tube.frame(s)[1]))
-    for k in range(16):  # drips hanging from the roof
+    for k in range(16):
         s = 6 + hash01(k, 1, 21) * 36
         x = (hash01(k, 2, 22) - .5) * 9
         top = 3.6 + 7.4 * math.sqrt(max(0.0, 1 - (x / 8.0) ** 2)) - .15
         pos = tube.world(s, x, top)
         soup.cone(pos, .22 + hash01(k, 3, 23) * .22, 1.1 + hash01(k, 4, 24) * 1.5, 6, tint(C["basalt_dark"], .25, k), down=True)
-    for k in range(26):  # rubble where the walls meet the floor
+    for k in range(26):
         s = 5 + hash01(k, 1, 31) * 38
         side = -1 if k % 2 else 1
         x = side * (5.0 + hash01(k, 2, 32) * 1.7)
@@ -418,19 +407,19 @@ def lava_shell1(tube):
 
 def lava_shell2(tube):
     soup = Soup()
-    for k in range(64):  # pebbles and scoria chips on the floor edges
+    for k in range(64):
         s = 3 + hash01(k, 1, 41) * 42
         side = -1 if k % 2 else 1
         x = side * (3.4 + hash01(k, 2, 42) * 3.3)
         sz = .16 + hash01(k, 3, 43) * .28
         pos = tube.world(s, x, .7 * (x / 7) ** 2 + sz * .3)
         soup.box(pos, (sz, sz * .6, sz), tint(C["scoria"] if k % 3 else C["basalt"], .3, k), yaw=hash01(k, 4, 44) * 180)
-    for k in range(18):  # fine drips
+    for k in range(18):
         s = 4 + hash01(k, 1, 51) * 40
         x = (hash01(k, 2, 52) - .5) * 11
         top = 3.6 + 7.4 * math.sqrt(max(0.0, 1 - (x / 8.0) ** 2)) - .1
         soup.cone(tube.world(s, x, top), .09 + hash01(k, 3, 53) * .08, .45 + hash01(k, 4, 54) * .6, 5, tint(C["scoria"], .3, k), down=True)
-    for k in range(20):  # ropy flow ridges beside the trough
+    for k in range(20):
         s = 4 + k * 2.1
         side = -1 if k % 2 else 1
         x = side * (5.3 + hash01(k, 1, 61) * .8)
@@ -457,14 +446,14 @@ def adit_timbers(tube):
 
 def adit_shell1(tube):
     soup = Soup()
-    for k in range(27):  # sleepers
+    for k in range(27):
         s = 2 + k * 2.0
         soup.box(tube.world(s, 0, .12), (3.0, .16, .28), C["timber"], yaw=math.degrees(tube.frame(s)[1]))
-    for side in (-1, 1):  # copper rails
+    for side in (-1, 1):
         for c in range(7):
             s0 = 1 + c * 8
             soup.box(tube.world(s0 + 4, side * 1.0, .30), (.12, .14, 8.0), C["copper"], yaw=math.degrees(tube.frame(s0 + 4)[1]))
-    for k, s in enumerate(range(6, 54, 6)):  # lagging planks between the sets
+    for k, s in enumerate(range(6, 54, 6)):
         for side in (-1, 1):
             soup.box(tube.world(s + 3, side * 4.08, 2.2), (.14, 3.4, 4.6), tint(C["timber_pale"], .2, k * 2 + side), yaw=math.degrees(tube.frame(s)[1]))
     return soup
@@ -473,12 +462,12 @@ def adit_shell1(tube):
 def adit_shell2(tube):
     soup = Soup()
     for k, s in enumerate(adit_sets(tube)):
-        for side in (-1, 1):  # copper bolt plates and a lantern hook
+        for side in (-1, 1):
             yaw = math.degrees(tube.frame(s)[1])
             soup.box(tube.world(s, side * 3.55, 2.4), (.12, .34, .34), C["copper"], yaw=yaw)
             soup.box(tube.world(s, side * 3.55, 1.0), (.12, .20, .20), C["copper"], yaw=yaw)
         soup.box(tube.world(s, 0, 4.9), (.12, .22, .12), C["copper"], yaw=math.degrees(tube.frame(s)[1]))
-    for k in range(40):  # pick-mark chips on the walls, ore bits on the floor
+    for k in range(40):
         s = 2 + hash01(k, 1, 71) * 52
         side = -1 if k % 2 else 1
         x = side * (2.6 + hash01(k, 2, 72) * .9)
@@ -489,11 +478,11 @@ def adit_shell2(tube):
 
 def spillway_shell1(tube):
     soup = Soup()
-    for j in tube.joints:  # anchor bolt rows along every joint
+    for j in tube.joints:
         for side in (-1, 1):
             for h in (1.0, 2.2, 3.4):
                 soup.box(tube.world(j, side * 5.46, h), (.1, .22, .22), C["concrete_dark"])
-    for k in range(18):  # weep stains running down the walls
+    for k in range(18):
         s = 4 + k * 4.8
         side = -1 if k % 2 else 1
         soup.box(tube.world(s, side * 5.49, 2.0 + hash01(k, 1, 81) * 1.2), (.04, 1.8 + hash01(k, 2, 82) * 1.4, .5), tint(C["stain"], .2, k))
@@ -502,30 +491,24 @@ def spillway_shell1(tube):
 
 def spillway_shell2(tube):
     soup = Soup()
-    for k in range(34):  # efflorescence and rust flecks, proud of the board faces
+    for k in range(34):
         s = 2 + hash01(k, 1, 91) * 86
         side = -1 if k % 2 else 1
         h = .6 + hash01(k, 2, 92) * 3.6
         soup.box(tube.world(s, side * 5.5, h), (.04, .16 + hash01(k, 3, 93) * .3, .2 + hash01(k, 4, 94) * .5),
                  tint(C["stain"] if k % 3 else C["concrete_light"], .15, k))
-    for k in range(30):  # grit along the invert edges
+    for k in range(30):
         s = 3 + hash01(k, 1, 95) * 84
         side = -1 if k % 2 else 1
         x = side * (4.2 + hash01(k, 2, 96) * 1.1)
         sz = .12 + hash01(k, 3, 97) * .18
         soup.box(tube.world(s, x, .15 * (x / 5.5) ** 2 + sz * .3), (sz, sz * .5, sz), tint(C["concrete_dark"], .2, k), yaw=hash01(k, 4, 98) * 180)
-    for h in range(8):  # steel drain pipes, copper-banded
+    for h in range(8):
         s = 8 + h * 10
         soup.box(tube.world(s, -5.35, 4.1), (.28, .28, 1.4), C["copper"])
     return soup
 
 
-# ------------------------------------------------------------------------------------------------ shaft_drop
-
-# The pit is long enough that a ball leaving the entry lip at cruise (14 m/s, gravity 26) lands on the floor, at about
-# z 18, before it reaches the far wall at z PIT_L; the far wall is vertical, so nothing faces the ball in flight
-# (TRAVERSAL.md: a face meeting a ball in flight is a wall; KC-INT R5 replaced the 60 degree batter that did).
-# The row stays [26, 18, 12]: the drift shortens to the rest of the length.
 PIT_W, PIT_L, PIT_DEPTH = 6.0, 20.0, 18.0
 PIT_TAN = math.tan(math.radians(12))
 DRIFT_L, DRIFT_TAN = 6.0, math.tan(math.radians(4))
@@ -563,15 +546,14 @@ def build_shaft(render):
     d.verts = [tuple(Vector(v) + Vector((0, y0, PIT_L))) for v in d.verts]
     rows = [0, 4, 8, 12, 16, 20]
     cols = [-PIT_W, -PIT_W / 3, PIT_W / 3, PIT_W]
-    ts = (0, .25, .5, .75, 1.0)  # 0 is the ground, 1 the floor
+    ts = (0, .25, .5, .75, 1.0)
     floor = [[Vector((x, pit_floor_y(z), z)) for x in cols] for z in rows]
     soup.strip(floor, lambda r, i: tint(C["dust"], .04, r * 4 + i), "in", lambda r: Vector((0, pit_floor_y(rows[r]) + 5, rows[r])), closed=False)
-    for side in (-1, 1):  # side walls: timber cribbing from the collar down, a rock footing below
+    for side in (-1, 1):
         wall = [[Vector((side * PIT_W, pit_floor_y(z) * t, z)) for t in ts] for z in rows]
         soup.strip(wall, lambda r, i, side=side: shaft_wall_color(i, r, side), "in", lambda r: Vector((0, -6, rows[r])), closed=False)
     north = [[Vector((x, pit_floor_y(0) * t, 0)) for t in ts] for x in cols]
     soup.strip(north, lambda r, i: shaft_wall_color(i, r, 0), "in", lambda r: Vector((cols[r], -6, 4)), closed=False)
-    # the south wall: vertical from the floor to the ground, past the landing run, with the drift's arch cut out
     inner = [(-3.0, drift_floor(-3.0)), (-3.5, 1.4)] + ellipse(0, 2.8, 3.5, 2.6, math.pi, 0.0, 9) + [(3.5, 1.4), (3.0, drift_floor(3.0))]
     top = -y0
     outer = rect_loop(len(inner), PIT_W, top)
@@ -629,11 +611,11 @@ def merge(dst, src):
 
 def shaft_shell1():
     soup = Soup()
-    for k in range(29):  # ladder up the west wall
+    for k in range(29):
         soup.box(Vector((-PIT_W + .22, -18.3 + k * .62, 2.0)), (.1, .06, .7), C["timber_pale"])
     for z in (1.65, 2.35):
         soup.box(Vector((-PIT_W + .22, -9.5, z)), (.1, 17.8, .08), C["timber"])
-    for k, h in enumerate([-16, -12.5, -9, -5.5, -2]):  # cross cribbing, drawn as heavy beams
+    for k, h in enumerate([-16, -12.5, -9, -5.5, -2]):
         soup.box(Vector((0, h - PIT_TAN * 6, .25)), (2 * PIT_W - .1, .4, .5), tint(C["timber"], .2, k))
         for side in (-1, 1):
             soup.box(Vector((side * (PIT_W - .25), h - PIT_TAN * PIT_L / 2, PIT_L / 2)), (.5, .4, PIT_L - .2), tint(C["timber"], .2, k + 7 * side))
@@ -642,20 +624,17 @@ def shaft_shell1():
 
 def shaft_shell2():
     soup = Soup()
-    soup.box(Vector((PIT_W - .3, -9.0, 5.0)), (.1, 18.0, .1), C["copper"])  # the bucket rail
+    soup.box(Vector((PIT_W - .3, -9.0, 5.0)), (.1, 18.0, .1), C["copper"])
     for k in range(18):
         soup.box(Vector((PIT_W - .22, -17 + k, 5.0)), (.14, .22, .22), C["copper"])
-    for k in range(20):  # rubble heaped under the collar, away from the ball's line
+    for k in range(20):
         side = -1 if k % 2 else 1
         x = side * (3.6 + hash01(k, 1, 101) * 1.8)
         z = 1 + hash01(k, 2, 102) * 9
         sz = .3 + hash01(k, 3, 103) * .6
         soup.box(Vector((x, pit_floor_y(z) + sz * .3, z)), (sz, sz * .7, sz), tint(C["rock_red"], .3, k), yaw=hash01(k, 4, 104) * 180)
-    soup.cone(Vector((PIT_W - .6, -2.4, 8.0)), .5, 1.0, 8, C["timber"], down=True)  # a hanging bucket
+    soup.cone(Vector((PIT_W - .6, -2.4, 8.0)), .5, 1.0, 8, C["timber"], down=True)
     return soup
-
-
-# ------------------------------------------------------------------------------------------------ build
 
 
 RECIPES = {

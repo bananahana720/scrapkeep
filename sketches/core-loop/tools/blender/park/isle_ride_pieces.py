@@ -43,7 +43,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
-import common  # noqa: E402
+import common
 
 SKETCH = common.SKETCH
 MODELS = os.path.join(SKETCH, "assets", "models", "park")
@@ -52,8 +52,8 @@ PARK = json.load(open(os.path.join(SKETCH, "src", "world", "park", "park_islands
 GROUND_BIN = os.path.join(SKETCH, "assets", "park", "park_islands", "ground.bin")
 SLOT = "enamel"
 N, STEP, HALF = 801, 2.0, 800.0
-FLUSH = 0.12                # the most any part may stand over the ground (landmarks.py; ghost solid, #183)
-MIN_LIFT = 0.03             # and the least it may stand over it (no sink, no z-fight)
+FLUSH = 0.12
+MIN_LIFT = 0.03
 OFF_LO, OFF_HI = 0.04, 0.08
 
 SAND = "d8b484"
@@ -69,7 +69,6 @@ SILT = "cdb893"
 BONE = "d9cdae"
 SAGE = "9aa273"
 
-# id: row, world windows (x0, x1, z0, z1) on the 2 m ground nodes, palette (flat tones, cliff tones, stroke), seed
 PIECES = {
     "isle_ride_wash_west": {"row": "cloud_wash_west", "raise": "full", "windows": [(-226, -194, 110, 410)],
                             "flat": (SILT, SAND, STONE), "cliff": (STONE_DK, VARNISH), "stroke": BONE, "seed": 4141},
@@ -79,7 +78,6 @@ PIECES = {
 BUDGET_CLASS = "landform"
 
 
-# ------------------------------------------------------------------------------------------------------ the ground
 _G = []
 
 
@@ -132,7 +130,7 @@ def node_y(spec):
     y = ground_db(float(row["at"][0]), float(row["at"][1]))
     if spec["raise"] == "half":
         y -= float(row["size"][1]) / 2.0
-    elif spec["raise"] == "full":      # a plateau stamp raises its whole (here 0.01 m) height
+    elif spec["raise"] == "full":
         y -= float(row["size"][1])
     return y
 
@@ -146,7 +144,6 @@ def tone(hex_color, other, t):
     return tuple(a[k] + (b[k] - a[k]) * t for k in range(3))
 
 
-# ------------------------------------------------------------------------------------------------------ events
 def footprint(site):
     """The box the game treats as a site: ParkMap.footprint_half_extents (x: size[2] / 2, z: size[0] / 2) at `at`."""
     x, z = float(site["at"][0]), float(site["at"][1])
@@ -206,14 +203,13 @@ def inside(x, z, box):
     return box[0] < x < box[1] and box[2] < z < box[3]
 
 
-# ------------------------------------------------------------------------------------------------------ build
 def cell_colour(spec, wx, wz, steep, i, j):
     if steep:
         return tone(spec["cliff"][int(hh(i, j, 1) * len(spec["cliff"]))], spec["cliff"][0], 0.35 * hh(i, j, 2))
     h = hh(i, j, 3)
     if h < 0.06:
         return tone(spec["stroke"], spec["flat"][0], 0.35 + 0.3 * hh(i, j, 4))
-    band = (int((wz + 4000.0) / 6.0) + (i // 5)) % 3        # strata: three tones in 6 m runs along z
+    band = (int((wz + 4000.0) / 6.0) + (i // 5)) % 3
     return tone(spec["flat"][band], spec["flat"][(band + 1) % 3], 0.5 * hh(i, j, 5))
 
 
@@ -240,12 +236,11 @@ def build_mesh(rid, spec):
             for ix in range(int((x0 + HALF) / STEP), int((x1 + HALF) / STEP)):
                 wx0, wz0 = ix * STEP - HALF, iz * STEP - HALF
                 if any(inside(wx0 + dx, wz0 + dz, b) for b in ev for dx in (0.0, STEP) for dz in (0.0, STEP)):
-                    continue        # a hole round the cannon's mouth, or any ground an event lowers or swaps
+                    continue
                 hs = [g[iz, ix], g[iz, ix + 1], g[iz + 1, ix], g[iz + 1, ix + 1]]
                 steep = max(hs) - min(hs) > 1.2
                 colour = cell_colour(spec, wx0, wz0, steep, ix, iz)
                 a, b, c, d = vert(ix, iz), vert(ix + 1, iz), vert(ix, iz + 1), vert(ix + 1, iz + 1)
-                # the b-c diagonal, each triangle counter-clockwise seen from above in Godot axes (x right, z toward us)
                 tris.append((a, c, b))
                 tris.append((d, b, c))
                 cols.append(colour)
@@ -293,7 +288,6 @@ def build(rid, out_dir, count_only):
                                                "sha256": hashlib.sha256(open(path, "rb").read()).hexdigest()}))
 
 
-# ------------------------------------------------------------------------------------------------------ check
 def read_glb(path):
     data = open(path, "rb").read()
     length = struct.unpack_from("<I", data, 12)[0]
@@ -344,7 +338,6 @@ def check(rid, out_dir):
     for k in range(0, len(ids), 3):
         p = [pos[ids[k + m]] for m in range(3)]
         up = (p[1][2] - p[0][2]) * (p[2][0] - p[0][0]) - (p[1][0] - p[0][0]) * (p[2][2] - p[0][2])
-        # winding seen from above in Godot axes; the exporter keeps it, a downward face would be culled
         worst_down = min(worst_down, up)
         for w in ((1 / 3, 1 / 3, 1 / 3), (0.5, 0.5, 0.0), (0.0, 0.5, 0.5), (0.5, 0.0, 0.5), (0.8, 0.1, 0.1), (0.1, 0.8, 0.1), (0.1, 0.1, 0.8)):
             measure(*[sum(w[m] * p[m][c] for m in range(3)) for c in range(3)])

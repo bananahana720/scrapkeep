@@ -69,11 +69,11 @@ MODELS = os.path.join(SKETCH, "assets", "models", "park")
 PARK_DIR = os.path.join(SKETCH, "src", "world", "park")
 FAMILIES = ["hoodoo", "basalt", "timber", "saguaro", "cairn"]
 VARIANTS = ["a", "b", "c"]
-HALF = 4.0                 # ANCHOR_POST_M / 2
-POST_M = 8.0               # ANCHOR_POST_M
-AUTHORED_M = 10.0          # ANCHOR_AUTHORED_M
-SINK_M = 1.0               # ANCHOR_SINK_M
-BALL_RADIUS = 1.0          # Tuning.RADIUS, src/movement/tuning.gd:95
+HALF = 4.0
+POST_M = 8.0
+AUTHORED_M = 10.0
+SINK_M = 1.0
+BALL_RADIUS = 1.0
 MAX_WORLD_BANDS = 20
 TOL = 1e-4
 FACES = ("+x", "-x", "+z", "-z")
@@ -87,12 +87,10 @@ def fail(msg):
 
 
 def to_authored_y(h, size):
-    # World height above ground to authored y under the loader's Y stretch (park_recipes.gd anchor_draws).
     return (h + SINK_M) * AUTHORED_M / (size + SINK_M) - SINK_M
 
 
 def authored(p):
-    # Blender (x, y, z) back to authored (x, y up, z): the importer turned authored (x, y, z) into (x, -z, y).
     return (p[0], p[2], -p[1])
 
 
@@ -105,7 +103,6 @@ def world_tris(obj):
 
 
 def clip_plane(poly, axis, limit, keep_above):
-    # Sutherland-Hodgman against coord[axis] >= limit (keep_above) or <= limit; points on the plane are kept.
     sign = 1.0 if keep_above else -1.0
     out = []
     for i, a in enumerate(poly):
@@ -121,7 +118,6 @@ def clip_plane(poly, axis, limit, keep_above):
 
 
 def slab_points(tris, lo, hi, strip_axis=None, strip=BALL_RADIUS):
-    # Points of the triangles clipped to authored y in [lo, hi] and, if strip_axis (0 x, 2 z), to |coord| <= strip.
     pts = []
     for tri in tris:
         ys = [p[1] for p in tri]
@@ -143,7 +139,6 @@ def face_gaps(pts):
 
 
 def centre_gaps(tris, lo, hi):
-    # +-x faces from the |z| <= radius strip, +-z faces from the |x| <= radius strip.
     gx = face_gaps(slab_points(tris, lo, hi, 2))[:2]
     gz = face_gaps(slab_points(tris, lo, hi, 0))[2:]
     return gx + gz
@@ -226,8 +221,6 @@ def sha256(path):
 
 
 def shipped_sizes(only=None):
-    # {family: {size[1]: row count}} from every object with a kit recipe, at any depth, in park_*.json except park_test.json
-    # (or only the park files named in `only`).
     found = {f: {} for f in FAMILIES}
 
     def walk(o):

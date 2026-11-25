@@ -26,7 +26,6 @@ test("packDurationShards partitions real Scrapkeep non-bot Godot tests completel
   const shards = packDurationShards(items, 4);
   const stats = shardStats(shards);
   assert.equal(stats.totalTests, items.length);
-  // Full set equality: no dropped tests and no duplicates across shards.
   const combined = shards.flatMap((s) => s.tests);
   assert.equal(new Set(combined).size, items.length);
   assert.deepEqual([...combined].sort(), items.map((x) => x.name).sort());

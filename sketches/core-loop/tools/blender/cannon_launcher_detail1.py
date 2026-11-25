@@ -15,10 +15,10 @@ import cannon_launcher as cl
 import polish
 from cannon_launcher import Frame, frustum, around, ring, slab, tone, cross, unit
 
-DETAIL = [2300, 3000, 1]  # polish: was [1500, 3000, 1]
+DETAIL = [2300, 3000, 1]
 NAME = "cannon_launcher_detail1"
 SIZE = [7.271, 7.898, 9.725]
-STUD = 6                                        # sides of every stud
+STUD = 6
 
 
 def perp(n):
@@ -26,13 +26,11 @@ def perp(n):
 
 
 def stud(s, at, normal, r, h, color, n=STUD):
-    # A short domed-off post standing on a surface along its normal; its root sinks 5 cm into the part.
     f = Frame(s, at, normal, perp(normal))
     frustum(f, r, r * .7, -.05, h, n, color, caps=(False, True))
 
 
 def on_barrel(b, radius, t, a):
-    # Surface point and outward normal at angle a round the barrel axis.
     p = b.at((radius * math.sin(a), t, radius * math.cos(a)))
     nrm = tuple(math.sin(a) * b.u[k] + math.cos(a) * b.w[k] for k in range(3))
     return p, nrm
@@ -41,14 +39,11 @@ def on_barrel(b, radius, t, a):
 def build(s):
     b = cl.barrel_frame(s)
     zc, pr, (y0, y1), dr, (d0, d1) = cl.PLATE
-    # A1 plate rim studs, A2 deck bolts (the deck's far half: the boiler covers the rest).
     for a in around(12, .1):
         stud(s, (pr * math.sin(a), (y0 + y1) / 2, zc + pr * math.cos(a)), (math.sin(a), 0.0, math.cos(a)), .1, .09, tone("iron"))
     for a in around(12, .26):
         stud(s, (2.62 * math.sin(a), d1, zc + 2.62 * math.cos(a)), (0.0, 1.0, 0.0), .1, .08, tone("copper"))
-    # A13 the turntable ring round the body's foot.
     ring(s, [(2.55, d1 - .02), (2.55, d1 + .12), (2.3, d1 + .12), (2.3, d1 - .02)], 14, tone("copper"), at=(0.0, zc))
-    # A3 collar lugs with their bolts (Redjaw: load-bearing clamp blocks), A12 flange face bolts.
     cr, c0, c1 = cl.COLLAR
     for a in around(4, math.pi / 4):
         p, nrm = on_barrel(b, cr, (c0 + c1) / 2, a)
@@ -59,7 +54,6 @@ def build(s):
     for a in around(10, .2):
         p = b.at(((fr - .22) * math.sin(a), f1, (fr - .22) * math.cos(a)))
         stud(s, p, b.d, .09, .08, tone("copper"))
-    # A5 the lip seam band, A4 lip rivets and the barrel-top stud.
     lr, l0, l1 = cl.LIP
     br = cl.BARREL[-1][0]
     ring(b, [(br - .02, l0 - .22), (br + .1, l0 - .22), (br + .1, l0), (br - .02, l0)], cl.N, tone("body"))
@@ -68,17 +62,14 @@ def build(s):
         stud(s, p, nrm, .08, .07, tone("copper"))
     p, nrm = on_barrel(b, 2.0, 1.2, math.pi)
     stud(s, p, nrm, .16, .14, tone("copper"))
-    # A14 boiler rivet row.
     for a in around(8, .4):
         p, nrm = on_barrel(b, 2.9, -2.4, a)
         stud(s, p, nrm, .08, .07, tone("iron"))
-    # A6 side valve on the +x flank under the collar: body, wheel cap and knob.
     p, nrm = on_barrel(b, 2.9, -2.0, math.pi / 2 + .45)
     valve = Frame(s, p, nrm, perp(nrm))
     frustum(valve, .16, .16, -.05, .35, 6, tone("copper"), caps=(False, True))
     frustum(valve, .3, .3, .35, .43, 8, tone("copper"))
     frustum(valve, .07, .05, .43, .6, 6, tone("iron"), caps=(False, True))
-    # A7 ticks, A8 needle, A9 elbow on the gauge.
     g = cl.gauge_frame(s)
     face = cl.GAUGE[3]
     for a in around(10, math.pi):
@@ -89,7 +80,6 @@ def build(s):
     frustum(s, .16, .16, cl.GAUGE_ARM[0][1] - .2, cl.GAUGE_ARM[0][1] + .2, 6, tone("copper"),
             at=(cl.PIPES[1][0], cl.PIPES[1][1]))
     stud(s, cl.GAUGE_ARM[1], cl.GAUGE[1], .14, .12, tone("copper"))
-    # A10 hub boss, A11 inner rim lip on the flywheel's outer face.
     f = cl.flywheel_frame(s)
     _, ro, ri, hw = cl.FLY
     ring(f, [(.42, hw - .05), (.78, hw - .05), (.78, hw + .12), (.42, hw + .12)], 10, tone("copper"))
@@ -97,7 +87,7 @@ def build(s):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **cl.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **cl.kit.BAKE)
     cl.export(NAME, [("Detail1", "steel", False, build)], {}, cl.out_dir(), budget=DETAIL, tag="CANNON_D1", size=SIZE)
 
 

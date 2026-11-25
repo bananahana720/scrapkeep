@@ -13,10 +13,7 @@ const check = (condition, message) => {
 const integer = (n, min = 0) => Number.isSafeInteger(n) && n >= min;
 const hash = (bytes) => createHash("sha256").update(bytes).digest("hex");
 const list = (value, label) => {
-  check(
-    value === undefined || Array.isArray(value),
-    `${label} must be an array`,
-  );
+  check(value === undefined || Array.isArray(value), `${label} must be an array`);
   return value ?? [];
 };
 const ref = (values, id, label) => {
@@ -29,10 +26,7 @@ const multiply = (a, b) =>
     const r = i % 4,
       c = Math.floor(i / 4);
     return (
-      a[r] * b[c * 4] +
-      a[r + 4] * b[c * 4 + 1] +
-      a[r + 8] * b[c * 4 + 2] +
-      a[r + 12] * b[c * 4 + 3]
+      a[r] * b[c * 4] + a[r + 4] * b[c * 4 + 1] + a[r + 8] * b[c * 4 + 2] + a[r + 12] * b[c * 4 + 3]
     );
   });
 function transform(node) {
@@ -45,23 +39,15 @@ function transform(node) {
   };
   if (node.matrix !== undefined) {
     check(
-      node.translation === undefined &&
-        node.rotation === undefined &&
-        node.scale === undefined,
+      node.translation === undefined && node.rotation === undefined && node.scale === undefined,
       "Node matrix and TRS cannot coexist",
     );
     const m = vector(node.matrix, 16, "matrix");
-    check(
-      m[3] === 0 && m[7] === 0 && m[11] === 0 && m[15] === 1,
-      "Node matrix must be affine",
-    );
+    check(m[3] === 0 && m[7] === 0 && m[11] === 0 && m[15] === 1, "Node matrix must be affine");
     return m;
   }
   const [x, y, z, w] = vector(node.rotation ?? [0, 0, 0, 1], 4, "rotation");
-  check(
-    Math.abs(x * x + y * y + z * z + w * w - 1) < 1e-4,
-    "Node quaternion must be normalized",
-  );
+  check(Math.abs(x * x + y * y + z * z + w * w - 1) < 1e-4, "Node quaternion must be normalized");
   const s = vector(node.scale ?? [1, 1, 1], 3, "scale"),
     t = vector(node.translation ?? [0, 0, 0], 3, "translation");
   return [
@@ -93,9 +79,7 @@ function extend(box, p) {
   }
 }
 const point = (m, p) =>
-  [0, 1, 2].map(
-    (i) => m[i] * p[0] + m[i + 4] * p[1] + m[i + 8] * p[2] + m[i + 12],
-  );
+  [0, 1, 2].map((i) => m[i] * p[0] + m[i + 4] * p[1] + m[i + 8] * p[2] + m[i + 12]);
 const irrelevant = new Set([
   "KHR_materials_unlit",
   "KHR_materials_clearcoat",
@@ -110,7 +94,6 @@ const irrelevant = new Set([
   "KHR_texture_transform",
   "KHR_lights_punctual",
 ]);
-// Texture-only extensions that never change geometry; accepted when a caller opts in.
 const textureOnly = new Set(["EXT_texture_webp"]);
 function extensions(value, location = "document", lenient = false) {
   if (!value || typeof value !== "object") return;
@@ -121,11 +104,9 @@ function extensions(value, location = "document", lenient = false) {
         `Unsupported extension ${name} at ${location}; export uncompressed core glTF geometry`,
       );
   for (const [key, item] of Object.entries(value))
-    if (key !== "extras" && key !== "extensions")
-      extensions(item, `${location}.${key}`, lenient);
+    if (key !== "extras" && key !== "extensions") extensions(item, `${location}.${key}`, lenient);
 }
 
-// Longest animation in seconds: the largest keyframe time over every sampler input.
 function longestClip(animations, parsed) {
   let longest = 0;
   for (const clip of animations)
@@ -135,12 +116,10 @@ function longestClip(animations, parsed) {
         input.type === "SCALAR" && input.componentType === 5126,
         "Animation sampler input must be float SCALAR",
       );
-      for (let i = 0; i < input.count; i++)
-        longest = Math.max(longest, input.read(i, 0));
+      for (let i = 0; i < input.count; i++) longest = Math.max(longest, input.read(i, 0));
     }
   return longest;
 }
-// Larger side in pixels over the embedded PNG and JPEG images (0 when there are none).
 function imageSides(images, views, bin) {
   let side = 0;
   for (const image of images) {
@@ -163,14 +142,12 @@ export function webpSide(b) {
   )
     return 0;
   const kind = b.toString("latin1", 12, 16);
-  if (kind === "VP8X")
-    return Math.max(b.readUIntLE(24, 3) + 1, b.readUIntLE(27, 3) + 1);
+  if (kind === "VP8X") return Math.max(b.readUIntLE(24, 3) + 1, b.readUIntLE(27, 3) + 1);
   if (kind === "VP8L") {
     const bits = b.readUInt32LE(21);
     return Math.max((bits & 0x3fff) + 1, ((bits >> 14) & 0x3fff) + 1);
   }
-  if (kind === "VP8 ")
-    return Math.max(b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff);
+  if (kind === "VP8 ") return Math.max(b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff);
   return 0;
 }
 export function pixelSide(b) {
@@ -179,7 +156,7 @@ export function pixelSide(b) {
   if (b.length >= 24 && b.readUInt32BE(0) === 0x89504e47)
     return Math.max(b.readUInt32BE(16), b.readUInt32BE(20));
   if (b.length > 4 && b[0] === 0xff && b[1] === 0xd8)
-    for (let i = 2; i + 9 < b.length; ) {
+    for (let i = 2; i + 9 < b.length;) {
       if (b[i] !== 0xff) return 0;
       const marker = b[i + 1];
       if (marker >= 0xc0 && marker <= 0xcf && ![0xc4, 0xc8, 0xcc].includes(marker))
@@ -194,10 +171,7 @@ export function inspectGlb(bytes, selection = {}) {
     bytes.readUInt32LE(0) === 0x46546c67 && bytes.readUInt32LE(4) === 2,
     "Expected GLB version 2",
   );
-  check(
-    bytes.readUInt32LE(8) === bytes.length,
-    "GLB declared length differs from actual bytes",
-  );
+  check(bytes.readUInt32LE(8) === bytes.length, "GLB declared length differs from actual bytes");
   const chunks = [];
   for (let offset = 12; offset < bytes.length;) {
     check(offset + 8 <= bytes.length, "Truncated chunk header");
@@ -220,19 +194,14 @@ export function inspectGlb(bytes, selection = {}) {
   );
   let doc;
   try {
-    doc = JSON.parse(
-      new TextDecoder("utf-8", { fatal: true }).decode(chunks[0].data),
-    );
+    doc = JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(chunks[0].data));
   } catch {
     fail("Invalid GLB JSON");
   }
   check(
-    doc?.asset?.version === "2.0" &&
-      (!doc.asset.minVersion || doc.asset.minVersion === "2.0"),
+    doc?.asset?.version === "2.0" && (!doc.asset.minVersion || doc.asset.minVersion === "2.0"),
     "Expected glTF asset version 2.0",
   );
-  // selection.textureLenient: measure geometry of a file whose images are external, data
-  // URIs or WebP. Geometry checks stay strict; only image sourcing is relaxed.
   const lenient = selection.textureLenient === true;
   for (const name of list(doc.extensionsRequired, "extensionsRequired"))
     check(
@@ -270,9 +239,7 @@ export function inspectGlb(bytes, selection = {}) {
     );
     if (v.byteStride !== undefined)
       check(
-        integer(v.byteStride, 4) &&
-          v.byteStride <= 252 &&
-          v.byteStride % 4 === 0,
+        integer(v.byteStride, 4) && v.byteStride <= 252 && v.byteStride % 4 === 0,
         "Invalid bufferView stride",
       );
   }
@@ -294,20 +261,11 @@ export function inspectGlb(bytes, selection = {}) {
     MAT4: 16,
   };
   const parsed = accessors.map((a, id) => {
-    check(
-      !a.sparse,
-      `Sparse accessor ${id} is unsupported; export dense accessors`,
-    );
+    check(!a.sparse, `Sparse accessor ${id} is unsupported; export dense accessors`);
     const c = component[a.componentType],
       width = widths[a.type];
-    check(
-      c && width && integer(a.count, 1),
-      `Invalid accessor ${id} type/count`,
-    );
-    check(
-      !a.type.startsWith("MAT") || c[0] === 4,
-      `Packed matrix accessor ${id} is unsupported`,
-    );
+    check(c && width && integer(a.count, 1), `Invalid accessor ${id} type/count`);
+    check(!a.type.startsWith("MAT") || c[0] === 4, `Packed matrix accessor ${id} is unsupported`);
     const v = ref(views, a.bufferView, "bufferView"),
       offset = a.byteOffset ?? 0,
       stride = v.byteStride ?? c[0] * width;
@@ -328,8 +286,7 @@ export function inspectGlb(bytes, selection = {}) {
       width,
       stride,
       offset: (v.byteOffset ?? 0) + offset,
-      read: (i, j = 0) =>
-        bin[c[1]]((v.byteOffset ?? 0) + offset + i * stride + j * c[0]),
+      read: (i, j = 0) => bin[c[1]]((v.byteOffset ?? 0) + offset + i * stride + j * c[0]),
     };
   });
   const materials = list(doc.materials, "materials"),
@@ -353,14 +310,9 @@ export function inspectGlb(bytes, selection = {}) {
       vertices = 0,
       welded = 0;
     const geometry = primitives.map((p) => {
+      check((p.mode ?? 4) === 4, "Unsupported primitive mode; export TRIANGLES");
       check(
-        (p.mode ?? 4) === 4,
-        "Unsupported primitive mode; export TRIANGLES",
-      );
-      check(
-        p.attributes &&
-          typeof p.attributes === "object" &&
-          !Array.isArray(p.attributes),
+        p.attributes && typeof p.attributes === "object" && !Array.isArray(p.attributes),
         "Missing primitive attributes",
       );
       const pos = ref(parsed, p.attributes.POSITION, "POSITION accessor");
@@ -368,10 +320,7 @@ export function inspectGlb(bytes, selection = {}) {
         pos.type === "VEC3" && pos.componentType === 5126 && !pos.normalized,
         "POSITION must be float VEC3",
       );
-      check(
-        pos.offset % 4 === 0 && pos.stride % 4 === 0,
-        "POSITION must be four-byte aligned",
-      );
+      check(pos.offset % 4 === 0 && pos.stride % 4 === 0, "POSITION must be four-byte aligned");
       for (const a of Object.values(p.attributes))
         check(
           ref(parsed, a, "attribute accessor").count === pos.count,
@@ -398,35 +347,24 @@ export function inspectGlb(bytes, selection = {}) {
           "Index bufferView cannot have a stride",
         );
         count = index.count;
-        const restartIndex = { 5121: 255, 5123: 65535, 5125: 4294967295 }[
-          index.componentType
-        ];
+        const restartIndex = { 5121: 255, 5123: 65535, 5125: 4294967295 }[index.componentType];
         for (let i = 0; i < count; i++) {
           const value = index.read(i);
-          check(
-            value !== restartIndex,
-            "Reserved primitive-restart index value",
-          );
+          check(value !== restartIndex, "Reserved primitive-restart index value");
           check(value < pos.count, "Index value outside POSITION range");
         }
       }
-      check(
-        count % 3 === 0,
-        "TRIANGLES element count must be divisible by three",
-      );
+      check(count % 3 === 0, "TRIANGLES element count must be divisible by three");
       for (let i = 0; i < pos.count; i++)
         extend(box, [pos.read(i, 0), pos.read(i, 1), pos.read(i, 2)]);
       triangles += count / 3;
       vertices += pos.count;
-      // Vertices left after merging identical ones: same value in every attribute.
       const accessorsOf = Object.values(p.attributes).map((a) => parsed[a]);
       const seen = new Set();
       for (let i = 0; i < pos.count; i++)
         seen.add(
           accessorsOf
-            .map((a) =>
-              Array.from({ length: a.width }, (_, j) => a.read(i, j)).join(","),
-            )
+            .map((a) => Array.from({ length: a.width }, (_, j) => a.read(i, j)).join(","))
             .join("|"),
         );
       welded += seen.size;
@@ -483,24 +421,16 @@ export function inspectGlb(bytes, selection = {}) {
   let roots,
     sceneId = null;
   if (selection.nodes !== undefined) {
-    check(
-      Array.isArray(selection.nodes) && selection.nodes.length > 0,
-      "Node selection is empty",
-    );
+    check(Array.isArray(selection.nodes) && selection.nodes.length > 0, "Node selection is empty");
     roots = selection.nodes;
   } else {
     sceneId = selection.scene ?? doc.scene ?? (scenes.length === 1 ? 0 : null);
-    check(
-      sceneId !== null,
-      "Scene selection is ambiguous or missing; use --scene or --nodes",
-    );
+    check(sceneId !== null, "Scene selection is ambiguous or missing; use --scene or --nodes");
     roots = ref(scenes, sceneId, "selected scene").nodes ?? [];
   }
   check(roots.length > 0, "Selected assembly is empty");
   const selected = new Set(),
     worldBounds = bounds();
-  // A node named "<name>-col" is the engine's collision mesh (Godot imports it as a trimesh and never draws it), so it
-  // counts under collision_nodes, not draws; primitives still counts every primitive selected (KC-INT, 2026-10-11).
   let triangles = 0,
     primitiveCount = 0,
     draws = 0,
@@ -512,18 +442,13 @@ export function inspectGlb(bytes, selection = {}) {
     if (!worldCache.has(id))
       worldCache.set(
         id,
-        parents[id] === null
-          ? matrices[id]
-          : multiply(world(parents[id]), matrices[id]),
+        parents[id] === null ? matrices[id] : multiply(world(parents[id]), matrices[id]),
       );
     return worldCache.get(id);
   }
   function collect(id) {
     const n = ref(nodes, id, "selected node");
-    check(
-      !selected.has(id),
-      "Overlapping selected subtrees or duplicate roots",
-    );
+    check(!selected.has(id), "Overlapping selected subtrees or duplicate roots");
     selected.add(id);
     if (n.mesh !== undefined) {
       const mesh = meshes[n.mesh];
@@ -532,14 +457,10 @@ export function inspectGlb(bytes, selection = {}) {
       if (typeof n.name === "string" && n.name.endsWith("-col")) collisionNodes++;
       else draws += mesh.primitives;
       instances++;
-      unknownBounds ||=
-        n.skin !== undefined || mesh.geometry.some((p) => p.morph);
+      unknownBounds ||= n.skin !== undefined || mesh.geometry.some((p) => p.morph);
       for (const { pos } of mesh.geometry)
         for (let i = 0; i < pos.count; i++)
-          extend(
-            worldBounds,
-            point(world(id), [pos.read(i, 0), pos.read(i, 1), pos.read(i, 2)]),
-          );
+          extend(worldBounds, point(world(id), [pos.read(i, 0), pos.read(i, 1), pos.read(i, 2)]));
     }
     for (const child of n.children ?? []) collect(child);
   }
@@ -593,20 +514,10 @@ function options(args) {
     const a = args[i];
     if (["--json", "--help"].includes(a)) o[a.slice(2)] = true;
     else if (
-      [
-        "--profile",
-        "--max-tris",
-        "--nodes",
-        "--scene",
-        "--manifest",
-        "--output",
-      ].includes(a)
+      ["--profile", "--max-tris", "--nodes", "--scene", "--manifest", "--output"].includes(a)
     ) {
       check(o[a.slice(2)] === undefined, `Duplicate option ${a}`);
-      check(
-        args[i + 1] !== undefined && !args[i + 1].startsWith("--"),
-        `Missing value for ${a}`,
-      );
+      check(args[i + 1] !== undefined && !args[i + 1].startsWith("--"), `Missing value for ${a}`);
       o[a.slice(2)] = args[++i];
     } else {
       check(!a.startsWith("-"), `Unknown option ${a}`);
@@ -626,8 +537,7 @@ function options(args) {
     o.max = profiles[o.profile].max_triangles;
   }
   if (o.scene !== undefined) o.scene = numeric(o.scene, "scene");
-  if (o.nodes !== undefined)
-    o.nodes = o.nodes.split(",").map((n) => numeric(n, "node"));
+  if (o.nodes !== undefined) o.nodes = o.nodes.split(",").map((n) => numeric(n, "node"));
   check(!(o.nodes && o.scene !== undefined), "Choose nodes or scene, not both");
   return o;
 }
@@ -655,14 +565,8 @@ function safeOutput(output, inputs) {
     stat = fs.statSync(absolute);
   } catch (e) {
     if (e.code !== "ENOENT") throw e;
-    check(
-      !fs.lstatSync(absolute, { throwIfNoEntry: false }),
-      "Output is a dangling symlink",
-    );
-    real = path.join(
-      fs.realpathSync(path.dirname(absolute)),
-      path.basename(absolute),
-    );
+    check(!fs.lstatSync(absolute, { throwIfNoEntry: false }), "Output is a dangling symlink");
+    real = path.join(fs.realpathSync(path.dirname(absolute)), path.basename(absolute));
   }
   check(
     !inputs.some(
@@ -702,9 +606,7 @@ function manifestEntries(doc) {
       "Manifest file must be a local relative path",
     );
     check(
-      Array.isArray(p.nodes) &&
-        p.nodes.length &&
-        p.nodes.every((n) => integer(n)),
+      Array.isArray(p.nodes) && p.nodes.length && p.nodes.every((n) => integer(n)),
       "Manifest part needs numeric node roots",
     );
     check(
@@ -724,8 +626,7 @@ export function run(args) {
     performance: "not_measured",
     texture_memory_bytes: null,
     gpu_memory_bytes: null,
-    scope:
-      "Static triangle geometry inspection; not full glTF conformance or engine qualification",
+    scope: "Static triangle geometry inspection; not full glTF conformance or engine qualification",
     files: [],
     errors: [],
   };
@@ -766,14 +667,9 @@ export function run(args) {
           nodes: part.nodes,
           lod: part.lod ?? null,
         });
-    } else
-      for (const file of o.files)
-        entries.push({ file, nodes: o.nodes, scene: o.scene });
+    } else for (const file of o.files) entries.push({ file, nodes: o.nodes, scene: o.scene });
     for (const entry of entries) {
-      check(
-        path.extname(entry.file).toLowerCase() === ".glb",
-        "Only .glb inputs are supported",
-      );
+      check(path.extname(entry.file).toLowerCase() === ".glb", "Only .glb inputs are supported");
       entry.source = capture(entry.file);
       inputs.push(entry.source);
     }
@@ -793,21 +689,13 @@ export function run(args) {
       }
     }
     report.budget =
-      o.max === undefined
-        ? null
-        : { profile: o.profile ?? null, max_triangles: o.max };
+      o.max === undefined ? null : { profile: o.profile ?? null, max_triangles: o.max };
     if (!report.errors.length) {
-      const triangles = report.files.reduce(
-        (n, f) => n + f.selection.triangles,
-        0,
-      );
+      const triangles = report.files.reduce((n, f) => n + f.selection.triangles, 0);
       report.assembly = {
         name: report.manifest?.name ?? null,
         triangles,
-        mesh_instances: report.files.reduce(
-          (n, f) => n + f.selection.mesh_instances,
-          0,
-        ),
+        mesh_instances: report.files.reduce((n, f) => n + f.selection.mesh_instances, 0),
         static_world_bounds:
           o.manifest || report.files.length > 1
             ? null
@@ -818,11 +706,7 @@ export function run(args) {
             : report.files[0].selection.bounds_status,
       };
       report.status =
-        o.max === undefined
-          ? "inventory"
-          : triangles <= o.max
-            ? "pass"
-            : "over_budget";
+        o.max === undefined ? "inventory" : triangles <= o.max ? "pass" : "over_budget";
     }
   } catch (e) {
     report.errors.push(e.message);
@@ -836,8 +720,7 @@ export function run(args) {
       report.errors.push(`Cannot write report: ${e.message}`);
     }
   }
-  if (o?.json || args.includes("--json"))
-    console.log(JSON.stringify(report, null, 2));
+  if (o?.json || args.includes("--json")) console.log(JSON.stringify(report, null, 2));
   else {
     console.log(`Asset inspection: ${report.status}`);
     for (const f of report.files)
@@ -853,14 +736,7 @@ export function run(args) {
       "Engine import: not_run; GPU/texture memory, visual acceptance and performance: not measured.",
     );
   }
-  return report.status === "invalid"
-    ? 1
-    : report.status === "over_budget"
-      ? 2
-      : 0;
+  return report.status === "invalid" ? 1 : report.status === "over_budget" ? 2 : 0;
 }
-if (
-  process.argv[1] &&
-  path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
-)
+if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
   process.exitCode = run(process.argv.slice(2));

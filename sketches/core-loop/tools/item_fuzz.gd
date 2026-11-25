@@ -11,39 +11,6 @@ const Bolts := preload("res://src/combat/bolts.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 
-# The item fuzzer (I2 section 4, DESIGN-V2 section 7: a tool, not a test). Each seed
-# drafts a random legal build of 6 to 14 parts through the same Parts.roll and
-# roll_gate calls the game uses, then the feedback loop's bot plays it in the real game
-# (not calm) while a scripted enemy line keeps arriving ahead of the ball. Every tick
-# is checked; anything that breaks an invariant, or clearly outruns what its cap
-# intends, is an anomaly for Andrew to mark KEEP or KILL in HAPPY-ACCIDENTS.md.
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/item_fuzz.gd \
-#     -- --seeds=1-200 --seconds=90 --out=<dir>
-#
-# --fixed-fps 90 makes one frame one physics tick, so a seed runs faster than real
-# time. --seeds takes a range (1-200) or a list (1,2,3). The tool writes, under --out:
-#   fuzz.ndjson    one line per seed: class, policy, build, trigger coverage (natural
-#                  and injected), item procs, peak speed, kills, tick p99 and anomalies.
-#   anomalies.md   one line per anomaly, in HAPPY-ACCIDENTS.md's shape.
-# and prints "item_fuzz: <seeds> seeds, <n> anomalies" last.
-#
-# Every seed, a solo run included, runs in a fresh child Godot under
-# <out>/children/<position>-seed-<seed>, so a seed reads the same alone or in a batch.
-# --child-timeout=S bounds each child in wall seconds (default 600); a killed or failed
-# child is INCONCLUSIVE, left out of the results, and makes the tool exit 3.
-#
-# Per tick: no non-finite ball position, velocity or health; no non-finite enemy
-# position; live bolts within Bolts.MAX_LIVE; every slot within the charge ceiling and
-# every cooldown at or over the 0.4 s floor; damage reduction within its hyperbolic
-# cap; the trigger guard never leaking and never letting a kind fire twice in a pass;
-# no stall while the bot drives. Per run: every trigger kind fires; a kind the scripted
-# line did not reach by three quarters of the run is injected once, so every item's
-# path runs, and the line records which kinds were natural. Across runs: a peak speed
-# or kill count past three times its build-size median.
-#
-# Evidence limit: automated play with a scripted line; it finds numbers that escape,
-# not whether an accident is fun. That is Andrew's KEEP or KILL.
 
 const TICKS_PER_SECOND := 90.0
 const LINE_EVERY := 5.0
@@ -70,7 +37,6 @@ var _build
 var _results: Array[Dictionary] = []
 var _anomalies: Array[Dictionary] = []
 
-# The seed in flight.
 var _ticks := 0
 var _drafted := false
 var _parts: Array = []
@@ -92,8 +58,6 @@ func _initialize() -> void:
 	_out = _settings.get("out", "user://item-fuzz")
 	_seconds = float(_settings.get("seconds", "90"))
 	_seeds = _seed_list(String(_settings.get("seeds", "1-200")))
-	# --path moves the working directory to the project, so a relative --out is read from
-	# the shell's directory, as traversal_line reads it; parent, children and outliers share it.
 	_out = ProjectSettings.globalize_path(_out)
 	if not _out.is_absolute_path():
 		_out = OS.get_environment("PWD").path_join(_out)
@@ -112,10 +76,6 @@ func _initialize() -> void:
 		_run_children()
 
 
-# One fresh child Godot per seed, with its own user data, as traversal_line runs them: a seed
-# run after another in one process inherits its physics space and statics, and seed 2751
-# after 2750 drifted from tick 568 on (19 Oct speedrunner persona). GNU timeout owns the
-# child's process group, so a deadline kills descendants too.
 func _run_children() -> void:
 	var out := _out
 	var inconclusive := 0
@@ -154,7 +114,6 @@ func _run_children() -> void:
 			printerr("item_fuzz: seed %d INCONCLUSIVE (child exit %d, %d records); see %s" % [_seeds[i], code, records.size(), child_out])
 			continue
 		var record: Dictionary = records[0]
-		# JSON parses every number as float; keep the integer fields integers.
 		for key in ["seed", "size", "generated", "ticks", "kills"]:
 			record[key] = int(record[key])
 		for a in record["anomalies"]:
@@ -246,8 +205,6 @@ func _physics_process(delta: float) -> bool:
 	return false
 
 
-# A random legal build: gate pairs across the three tiers and stages, a fabricator's
-# uncommon, a vault's rare, a won event's milestone, each through the game's own rolls.
 func _draft() -> void:
 	_drafted = true
 	var rng := RandomNumberGenerator.new()
@@ -273,8 +230,6 @@ func _draft() -> void:
 			run.add_part(part_id, "fuzz")
 
 
-# Three chasers in a line ahead of the ball every LINE_EVERY seconds, and a heavy one
-# every HEAVY_EVERY to rebound off, so hits, kills, pins and rebounds all come up.
 func _scripted_line(delta: float) -> void:
 	if not _game.flow.in_stage() or _game.ctx.spawner == null:
 		return
@@ -338,8 +293,6 @@ func _check_tick(delta: float) -> void:
 		_stall = 0.0
 
 
-# Every kind the line did not reach, posted once through the build's own door, so
-# each held item's path runs at least once.
 func _inject_missing() -> void:
 	var ball: Vector3 = _game.player.ball_position()
 	var near: Array = _build.enemies_near(ball, 40.0, 1)
@@ -385,8 +338,6 @@ func _close(ended: bool) -> void:
 	_next()
 
 
-# Outliers across seeds: a peak speed or kill count past OUTLIER times the median of
-# runs with a similar build size.
 func _outliers() -> void:
 	var buckets := {}
 	for r in _results:

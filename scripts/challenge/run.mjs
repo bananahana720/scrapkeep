@@ -1,16 +1,4 @@
 #!/usr/bin/env node
-// node scripts/challenge/run.mjs --library [--lib-seeds=4] [--lib-pilots=a,b] [--label=<name>]
-// node scripts/challenge/run.mjs --library=<dir> [--cells=boss,warden,park,world] [--only=brindle,w1,park1]
-//     [--seeds=<n>: 24 fights, 16 parks and clears] (--only=w1clear: the whole of World 1 in one attempt, never in the default cells)
-//     [--seeds=<n>: 24 fights, 16 parks] [--bands=novice,learner1,learner5,expert] [--no-top] [--persona=brawler] [--warden-persona=skipper] [--park-persona=skipper]
-//     [--tune=<text passed whole to bot_run; the game's dials split key=value,key=value>] [--tune-unruled] [--tier=<n>] [--jobs=4] [--label=<name>] [--shard=i/n] [--dry-run] [--strict] [--early-stop]
-// node scripts/challenge/run.mjs --library [--lib-shard=i/n]; --library-merge=<dir,dir> --label=<name>
-// node scripts/challenge/run.mjs --merge=<dir,dir>
-//
-// The band table (scripts/challenge/README.md): plays each boss, Warden and park with the Novice,
-// Learner and Expert bot bands from saved builds, and grades the win rates against the base-tier
-// targets. Output: artifacts/local/challenge/<label>/{runs.ndjson,table.md,table.json,jobs/}.
-// Exit 0 when the harness ran, whatever the table says; --strict exits 1 on any ✗.
 import { spawn, spawnSync } from "node:child_process";
 import {
   appendFileSync,
@@ -112,18 +100,17 @@ for (const arg of process.argv.slice(2)) {
   else if (k === "label") opts.label = v;
   else if (k === "shard") opts.shard = v;
   else if (k === "merge") opts.merge = v.split(",");
-  else if (k === "tune") opts.tune = arg.startsWith("--tune=") ? arg.slice(7) : ""; // passed to bot_run whole; the value keeps its own =
-  else if (k === "tune-unruled") opts.tuneUnruled = true; // lets bot_run apply pilot.* dials, for information only: no ruling allows them yet
+  else if (k === "tune") opts.tune = arg.startsWith("--tune=") ? arg.slice(7) : "";
+  else if (k === "tune-unruled") opts.tuneUnruled = true;
   else if (k === "tier") {
     opts.tierText = v ?? "";
     opts.tier = Number(v);
-  } // the HARD ladder rung every run plays (bot_run --run-tier)
-  else if (k === "resume") opts.resume = true;
+  } else if (k === "resume") opts.resume = true;
   else if (k === "allow-mixed") opts.allowMixed = true;
   else if (k === "dry-run") opts.dryRun = true;
   else if (k === "strict") opts.strict = true;
-  else if (k === "stale-import-ok") opts.staleImportOk = true; // run on a .godot imported at another tree (the result is not this tree's)
-  else if (k === "early-stop") opts.earlyStop = true; // ruling dg: skip a column's seeds once they cannot change its mark
+  else if (k === "stale-import-ok") opts.staleImportOk = true;
+  else if (k === "early-stop") opts.earlyStop = true;
   else die("unknown option " + arg);
 }
 
@@ -161,8 +148,6 @@ function runFolder(d) {
   return existsSync(p) && statSync(p).isDirectory() ? p : path.dirname(p);
 }
 
-// --merge=<run folder,...>: refuses folders of different plans or commits (unless --allow-mixed) and sharded
-// sets with a shard missing; each folder's meta.json says which it is.
 function mergeRuns() {
   const dirs = opts.merge.map(runFolder);
   const metas = dirs.map((d) =>
@@ -248,8 +233,6 @@ function stateEnv(dir) {
   };
 }
 
-// --- the build library ----------------------------------------------------------------------
-
 async function buildLibrary() {
   const label = opts.label ?? "lib-" + stamp;
   const dir = path.join(outRoot, "library", label);
@@ -334,7 +317,6 @@ async function buildLibrary() {
   console.log(`library ${dir}: ${index.length} docs (${per})`);
 }
 
-// --library-merge=<shard dir,...> --label=<name>: join shard libraries into library/<label> with one index.json.
 function mergeLibraries() {
   if (!opts.label) die("--library-merge needs --label=<name>");
   const dir = path.join(outRoot, "library", opts.label);
@@ -375,8 +357,6 @@ function loadLibrary(dir) {
   return builds;
 }
 
-// --- the table ------------------------------------------------------------------------------
-
 async function runTable() {
   const builds = opts.library ? loadLibrary(opts.library) : {};
   if (
@@ -402,8 +382,6 @@ async function runTable() {
     wardenPersona: opts.wardenPersona,
     parkPersona: opts.parkPersona,
   });
-  // The tier is picked on stage 1's start card; a cell resumed from a saved entrance takes it as its stage opens
-  // (bot_run --run-tier with --from-stage), so later cells and the Expert top build play the ladder too.
   jobs = shardJobs(jobs, opts.shard);
   const missing = jobs.filter((j) => j.missing);
   if (missing.length) {
@@ -460,7 +438,6 @@ async function runTable() {
     buckets: bucketInfo(builds),
     jobs: jobs.length,
   };
-  // A label is one experiment: an existing folder is refused, not appended to, unless --resume continues the same plan.
   if (existsSync(runsFile) || existsSync(path.join(outDir, "meta.json"))) {
     if (!opts.resume)
       die(
@@ -474,8 +451,6 @@ async function runTable() {
   } else if (opts.resume) die(`--resume: ${label} has nothing to resume`);
   mkdirSync(path.join(outDir, "jobs"), { recursive: true });
   writeFileSync(path.join(outDir, "meta.json"), JSON.stringify(meta, null, 1) + "\n");
-  // With --resume, a job is done when its row exists for this plan and this commit and graded as a result;
-  // an error or a harness kill reruns and replaces the older row.
   const done = new Set(
     parseNdjson(read(runsFile))
       .filter((r) => !["error", "killed"].includes(r.grade?.result))
@@ -496,7 +471,6 @@ async function runTable() {
       logFile: path.join(dir, "log.txt"),
     });
     const row = parseNdjson(read(path.join(out, "bots.ndjson"))).at(-1) ?? null;
-    // The play watch's file is there whenever the run got as far as its first tick.
     const qaFile = path.join(out, `qa-${job.seed}.ndjson`);
     return {
       p,
@@ -513,7 +487,6 @@ async function runTable() {
           result: p.timedOut ? "killed" : "error",
           why: p.timedOut ? "killed at the wall timeout" : "exit " + p.exit + ", no record",
         };
-    // The entrance is kept relative to the library, so run folders from other machines merge as they are.
     const line = {
       ...job,
       key: keyOf(job),
@@ -536,9 +509,6 @@ async function runTable() {
     );
   };
 
-  // --early-stop (ruling dg): before a job starts, its column is checked against the rows already
-  // final for this plan and commit. Once the seeds left cannot change the column's mark, the rest
-  // of that column is skipped, and the table says how many of its seeds ran.
   const colKey = (job) => job.cell + "|" + job.column;
   const planned = new Map();
   for (const job of jobs) planned.set(colKey(job), (planned.get(colKey(job)) ?? 0) + 1);
@@ -588,7 +558,6 @@ async function runTable() {
     }),
     opts.jobs,
   );
-  // A killed or timed-out job is rerun once alone (band sweeps can run out of memory) before it counts.
   for (const { job, first } of failed) {
     log(
       `rerun ${job.id} alone (first try: ${first.p.timedOut ? "timeout" : "exit " + first.p.exit})`,
@@ -614,7 +583,6 @@ async function runTable() {
   });
 }
 
-// Ruling dg: a read that stopped early says, per column, how many of its planned seeds ran.
 function renderEarlyStop(stops) {
   if (!stops) return "";
   if (!stops.length)

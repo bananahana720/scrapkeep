@@ -1,6 +1,3 @@
-// Deep-modules sweep: flags new shallow wrappers, private reach-ins, wide signatures,
-// leaked string keys and growing giant files in the GDScript a promotion brought in.
-// It reports candidates for a reader; it fails nothing. Checklist: project-guide/handoff/DEEP-SWEEP.md.
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import path from "node:path";
@@ -8,15 +5,12 @@ import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const SRC = "sketches/core-loop/src/";
-// Tools are read for private reach-ins only: a capture or trial script that drives the game through its
-// underscore members breaks on the next refactor and proves less than it claims.
 const TOOLS = "sketches/core-loop/tools/";
 const WIDE_PARAMS = 6;
 const WIDE_BOOLS = 3;
 const GIANT_LINES = 1500;
 const GIANT_GROWTH = 100;
 const LEAK_FILES = 3;
-// Schema modules that own their keys: a key they spell is named, not leaked (event kinds are the bus contract).
 const KEY_OWNERS = [`${SRC}core/event_kinds.gd`];
 
 const git = (...args) =>
@@ -24,7 +18,6 @@ const git = (...args) =>
 
 const strip = (line) => line.replace(/#.*$/, "").trimEnd();
 
-// Functions in a GDScript file: name, params, first line, body lines (comments and blanks dropped).
 export function parseFuncs(text) {
   const lines = text.split("\n");
   const funcs = [];
@@ -87,7 +80,6 @@ function splitTop(text) {
   return out;
 }
 
-// D1: a function whose whole body forwards its own parameters, in order, to one other call.
 export function passThroughs(funcs) {
   return funcs
     .filter((f) => {
@@ -105,7 +97,6 @@ export function passThroughs(funcs) {
     }));
 }
 
-// D3: wide signatures.
 export function wideSignatures(funcs) {
   return funcs
     .filter(
@@ -117,13 +108,9 @@ export function wideSignatures(funcs) {
     }));
 }
 
-// The owner may be a chain (game.flow.warden._age), and self.other._member is still a reach into other.
-// super._member is a class calling its own parent, and self._member a file reading its own field, neither a reach.
-// A chain may start at the file's own private field, with or without self (_game.flow._set_state): the reach is into flow.
 const reachIn =
   /(?<![\w.])(?!super\._)(?:self\.)?(?!self\b)((?:_?[a-z]\w*\.)*_?[a-z]\w*)\.(_[a-z]\w*)\b|\.(?:get|set|call)\(\s*"(_[a-z]\w*)"/;
 
-// D2: code that touches another object's underscore members. Lines are [number, text] pairs.
 export function reachIns(lines) {
   const out = [];
   for (const [number, raw] of lines) {
@@ -138,7 +125,6 @@ export function reachIns(lines) {
   return out;
 }
 
-// Snake-case string keys (likely dictionary keys or state names) on the given lines.
 export function stringKeys(lines) {
   const keys = new Set();
   for (const [, raw] of lines) {
@@ -147,7 +133,6 @@ export function stringKeys(lines) {
   return keys;
 }
 
-// Added lines per file from a unified diff with zero context.
 export function addedLines(diff) {
   const files = new Map();
   let file = null;

@@ -1,15 +1,10 @@
 extends SceneTree
 
-# Stills of the plating lesson (ui/first_steps.gd "plate", W1-68): a plated brute at plating 90 in
-# front of the ball, before a glance, at the rim's first beat, with the speed lines fully out, and after.
-#   xvfb-run -a <godot> --rendering-driver opengl3 --path sketches/core-loop \
-#     -s res://tools/plate_lesson_still.gd -- --out=DIR
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 const AHEAD := 9.0
-# Frames after the glance: the rim's first beat peaks a quarter of the way through GLANCE_SECONDS.
 const SHOTS := {"before": -1, "glance": 13, "streak": 30, "after": 220}
 
 var _game

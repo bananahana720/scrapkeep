@@ -1,26 +1,5 @@
 extends "res://tools/bot_run.gd"
 
-# The challenge lane's runner (scripts/challenge/README.md): tools/bot_run.gd plus the four
-# switches the band-table harness needs to start a run from a saved build and stop it at a
-# fight. One seed per process; the harness rotates seeds across processes.
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/band_run.gd \
-#     -- --out=<dir> --policy=<p> --seeds=<n> --table=park --gate=1 --from-stage=N [--until=N]
-#     [--entrance=<abs path>] [--keep-entrances=1] [--to-boss=1] [--stop-at=engaged:<stage>]
-#     [--cell=<id>]
-#
-# --entrance=<file> copies a saved entrance doc to <out>/entrance.json before the Game exists,
-# so --from-stage=N resumes it. The doc's stage must equal --from-stage (exit 2 otherwise).
-# --keep-entrances=1 copies each entrance the run writes to <out>/entrance-s<stage>.json, one
-# physics tick after the stage is entered (the doc lands after stage_entered fires).
-# --to-boss=1 calls flow.enter_boss once the run is in play, so the bot fights the world's boss at
-# once. The run ends on the boss's result, or "until" if --until=N is set and the boss falls.
-# --stop-at=engaged:<stage> ends the run as "reached" the tick that stage's Warden is engaged.
-# --fight-limit=<s> sets the driver's fight_limit (a Warden fight past that many seconds from engagement ends
-# "fight_capped"); --stage-limit=<s> sets its stage_limit, so the stall cap cannot cut an engaged fight first.
-# The row keeps bot_run's format and gains "entrance" (the doc's basename), "cell" and "resumed" (true when the run
-# matches the doc's stage, parts count and mass after the resume; null without --entrance).
-# The band flags (--band, --attempt) are tools/bot_run.gd's, from tools/skill_band.gd.
 
 var _band_hooked := false
 var _band_copy_stage := -1
@@ -85,7 +64,6 @@ func _physics_process(delta: float) -> bool:
 	if not _band_checked and _driver != null and _game != null and _game.run != null:
 		_band_checked = true
 		_band_resumed = _check_resumed()
-	# The doc is saved at the end of enter_stage, so by here it is on disk, even on the tick that ends an --until run.
 	if _band_copy_stage >= 0 and _settings.get("keep-entrances", "0") == "1":
 		_keep_entrance()
 	_band_copy_stage = -1
@@ -95,7 +73,6 @@ func _physics_process(delta: float) -> bool:
 	return over
 
 
-# A RunStore file wraps the entrance doc: {generation, schema, run: {stage, ...}}.
 static func _doc_stage(doc: Dictionary) -> int:
 	var run = doc.get("run", doc)
 	return int(run.get("stage", -1)) if run is Dictionary else -1
@@ -114,8 +91,6 @@ func _keep_entrance() -> void:
 		file.store_string(text)
 
 
-# With --entrance, did the run really continue the doc? Stage, parts count and mass must match what was saved.
-# null when no doc was named.
 func _check_resumed():
 	if not _settings.has("entrance"):
 		return null
@@ -132,7 +107,6 @@ func _check_resumed():
 	return ok
 
 
-# bot_run appends the row inside its tick; rewrite the last line with the harness fields.
 func _annotate_row() -> void:
 	var path := _out.path_join("bots.ndjson")
 	var lines := FileAccess.get_file_as_string(path).split("\n", false)

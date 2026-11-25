@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-// Water flow stills on the real renderer (sketches/core-loop/tools/water_flow_stills.gd), through the one approved
-// way to open a Godot window, scripts/gate/display-run.mjs: a machine slot, a scratch HOME under artifacts/local that is
-// deleted after the run, and no --headless. One run at a time.
-//   node scripts/water-flow-stills.mjs --out=<dir> [--shader=<file>] [--calm]
-// --out and --shader are made absolute against this checkout; --out must lie outside the scratch home (it is deleted).
-// SCRAPKEEP_WATER_FLOW_PLANT=freeze in the environment reaches the tool and must make it exit 1.
-// Prints the tool's output and exits with its exit code (2 when the run did not start or was killed).
 import path from "node:path";
 import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";

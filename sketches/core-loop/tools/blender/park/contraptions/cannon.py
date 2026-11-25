@@ -31,7 +31,7 @@ S_BREECH, S_MUZZLE = -2.0, 4.0
 
 
 def r_at(s_):
-    return 2.4 + 0.1 * s_              # 2.0 at -4, 2.8 at +4: the code cylinder's taper
+    return 2.4 + 0.1 * s_
 
 
 def at(s_):
@@ -39,18 +39,18 @@ def at(s_):
 
 
 def base(s):
-    s.box((9.0, 0.8, 8.0), (0, GROUND + 0.4, -8.1), T["concrete_lt"])                  # poured pad
-    s.box((4.4, 3.4, 4.5), (0, 0.7, -7.3), T["concrete"])                                # breech buttress
+    s.box((9.0, 0.8, 8.0), (0, GROUND + 0.4, -8.1), T["concrete_lt"])
+    s.box((4.4, 3.4, 4.5), (0, 0.7, -7.3), T["concrete"])
     for y in (-0.3, 0.6, 1.5):
-        s.box((4.44, 0.05, 4.54), (0, y, -7.3), T["concrete_dk"])                        # form-board joints
+        s.box((4.44, 0.05, 4.54), (0, y, -7.3), T["concrete_dk"])
     for z in (-8.9, -5.9):
-        s.box((4.5, 3.46, 0.3), (0, 0.7, z), T["copper_dk"])                             # strap bands
+        s.box((4.5, 3.46, 0.3), (0, 0.7, z), T["copper_dk"])
     pk.tube(s, at(S_BREECH), at(S_MUZZLE), r_at(S_BREECH), r_at(S_MUZZLE), 16, T["iron"])
-    for s_ in (-1.0, 1.0, 3.0):                                                          # copper hoops
+    for s_ in (-1.0, 1.0, 3.0):
         pk.tube(s, at(s_ - 0.25), at(s_ + 0.25), r_at(s_ - 0.25) + 0.12, r_at(s_ + 0.25) + 0.12, 16, T["copper"])
-    pk.tube(s, at(S_MUZZLE - 0.5), at(S_MUZZLE), r_at(S_MUZZLE) + 0.1, r_at(S_MUZZLE) + 0.14, 16, T["iron_hi"])   # muzzle lip
-    pk.tube(s, at(S_MUZZLE), at(S_MUZZLE + 0.06), 1.75, 1.75, 14, T["charcoal"])         # the bore, seen end on
-    for sx in (-1, 1):                                                                   # A-frame cheeks, sole plates, bearings
+    pk.tube(s, at(S_MUZZLE - 0.5), at(S_MUZZLE), r_at(S_MUZZLE) + 0.1, r_at(S_MUZZLE) + 0.14, 16, T["iron_hi"])
+    pk.tube(s, at(S_MUZZLE), at(S_MUZZLE + 0.06), 1.75, 1.75, 14, T["charcoal"])
+    for sx in (-1, 1):
         x = sx * 3.1
         pk.strut(s, (x, 0.1, -6.6), (x, 2.0, -5.0), 0.7, 0.8, T["iron"])
         pk.strut(s, (x, 0.1, -3.7), (x, 2.0, -5.0), 0.7, 0.8, T["iron"])
@@ -68,7 +68,7 @@ def detail1(s):
             pk.hexstud(s, (sx * 3.1, 0.15, -6.5 + k * 0.7), (0, 1, 0), 0.08, 0.06, T["iron"])
     u = Vector((1.0, 0.0, 0.0))
     v = D.cross(u)
-    for s_ in (-1.0, 1.0, 3.0):                                                          # hoop studs
+    for s_ in (-1.0, 1.0, 3.0):
         for k in range(8):
             a = math.tau * k / 8
             n = u * math.cos(a) + v * math.sin(a)
@@ -79,15 +79,15 @@ def detail1(s):
 
 
 def detail2(s):
-    for k in range(10):                                                                  # form-tie holes in the buttress back
+    for k in range(10):
         s.box((0.14, 0.14, 0.02), (-1.65 + (k % 5) * 0.825, 0.1 + (k // 5) * 1.6, -9.56), T["charcoal"])
     for sx in (-1, 1):
-        pk.ring_y(s, 0.12, 0.3, 2.43, 2.55, 8, T["iron"], at=(sx * 1.3, -7.3))           # lifting eyes on the buttress
-        s.box((1.2, 0.2, 0.8), (sx * 3.4, -0.1, -4.6), T["concrete_dk"])                      # chocks on the pad, behind the ring
-    pk.tube(s, at(S_MUZZLE - 0.7), at(S_MUZZLE - 0.5), r_at(S_MUZZLE) + 0.02, r_at(S_MUZZLE) + 0.02, 16, T["varnish"])   # scorch
-    pk.tube(s, (0, 2.35, -6.2), (0, 2.65, -6.2), 0.18, 0.18, 8, T["copper"])             # vent plug
+        pk.ring_y(s, 0.12, 0.3, 2.43, 2.55, 8, T["iron"], at=(sx * 1.3, -7.3))
+        s.box((1.2, 0.2, 0.8), (sx * 3.4, -0.1, -4.6), T["concrete_dk"])
+    pk.tube(s, at(S_MUZZLE - 0.7), at(S_MUZZLE - 0.5), r_at(S_MUZZLE) + 0.02, r_at(S_MUZZLE) + 0.02, 16, T["varnish"])
+    pk.tube(s, (0, 2.35, -6.2), (0, 2.65, -6.2), 0.18, 0.18, 8, T["copper"])
     for k in range(5):
-        s.box((0.1, 0.9 - 0.1 * k, 0.04), (-1.8 + k * 0.9, 1.0, -9.57), T["rust"])       # rust streaks
+        s.box((0.1, 0.9 - 0.1 * k, 0.04), (-1.8 + k * 0.9, 1.0, -9.57), T["rust"])
 
 
 def check_base(s):

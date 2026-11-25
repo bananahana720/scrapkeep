@@ -20,13 +20,12 @@ import moss_hover_barge as base
 from moss_hover_barge import kit, common, tone
 
 DETAIL = [1500, 3000, 1]
-SIDE_U, SIDE_V = 32.3, 22.3          # straight hull faces
-COPING = (31.55, 21.55, 4.0)         # bolt line on the coping top, outside the deck edge
+SIDE_U, SIDE_V = 32.3, 22.3
+COPING = (31.55, 21.55, 4.0)
 SIZE = {"moss_hover_barge_detail1": [64.84, 14.91, 49.13]}
 
 
 def bolt(s, centre, normal, size=.36, height=.14, color="cable"):
-    # A squat four-sided bolt head standing on a face with the given axis normal (+-x, +y, +-z).
     cx, cy, cz = centre
     h = size / 2
     t = h * .6
@@ -54,12 +53,10 @@ def rim(s):
     for v in range(-15, 16, 6):
         for su in (-1, 1):
             bolt(s, (su * hu, y, v), (0, 1, 0))
-    # A narrow edge strip on the coping's inner edge, flush with the deck rim, outside the deck rectangle.
     for sv in (-1, 1):
         s.box((61.0, .06, .16), (0, 4.0, sv * 21.1), tone("hull"))
     for su in (-1, 1):
         s.box((.16, .06, 41.0), (su * 31.1, 4.0, 0), tone("hull"))
-    # Corner plates where the side faces meet the rounded corners.
     for su in (-1, 1):
         for sv in (-1, 1):
             s.box((1.4, 1.1, .1), (su * 29.6, 3.0, sv * (SIDE_V + .05)), tone("copper"))
@@ -74,13 +71,11 @@ def sides(s):
     for v in range(-15, 16, 6):
         for su in (-1, 1):
             bolt(s, (su * SIDE_U, 1.6, v + 3), (su, 0, 0), .3, .12)
-    # Plate seams: thin raised straps from the coping shoulder to the stripe.
     for u in (-18.0, -6.0, 6.0, 18.0):
         for sv in (-1, 1):
             s.box((.14, 2.4, .06), (u, 2.0, sv * (SIDE_V + .03)), tone("under"))
     for su in (-1, 1):
         s.box((.06, 2.4, .14), (su * (SIDE_U + .03), 2.0, 0), tone("under"))
-    # Service hatches: a plate with a bolt at each corner, two on each long side between the wheels.
     for u in (-10.0, 10.0):
         for sv in (-1, 1):
             if sv == 1 and u == base.PATCH[0]:
@@ -99,7 +94,6 @@ def wheels(s):
         for k in range(6):
             a = math.tau * k / 6 + math.pi / 6
             ca, sa = math.cos(a), math.sin(a)
-            # A clamp block over the tread: tangential .5, radial .35, along the axle .8.
             cx, cy = u + (r + .1) * ca, y + (r + .1) * sa
             tx, ty = -sa * .25, ca * .25
             rx, ry = ca * .18, sa * .18

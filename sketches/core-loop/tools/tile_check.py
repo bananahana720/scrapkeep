@@ -77,7 +77,6 @@ def measure_image(path, np, image_module, max_side, max_mean_diff, max_peak_diff
                 result["errors"].append("requires at least 2 pixels on each side")
             if max(width, height) > max_side:
                 result["errors"].append(f"max side {max(width, height)} exceeds {max_side}")
-            # Check the budget before decoding a potentially enormous image.
             if result["errors"]:
                 return result
             if image.format != "WEBP":
@@ -88,7 +87,6 @@ def measure_image(path, np, image_module, max_side, max_mean_diff, max_peak_diff
                 return result
             pixels = np.asarray(image.convert("RGBA"), dtype=np.float64)
             pixels[:, :, :3] *= pixels[:, :, 3:4] / 255.0
-            # Opaque files use RGB only; a constant alpha must not dilute mean.
             if bool(np.all(pixels[:, :, 3] == 255)):
                 pixels = pixels[:, :, :3]
             pairs = {

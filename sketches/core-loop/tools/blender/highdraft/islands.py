@@ -30,16 +30,11 @@ import polish
 SKETCH = Path(common.SKETCH)
 FILES = ("island_small", "island_medium", "island_large", "island_rim",
          "island_rib", "bridge_skin", "return_ramp_skin", "barge_skin")
-# Polish (tools/blender/POLISH.md). Bevels keep the planar faces, so the pinned bounds hold, and
-# the flat deck skins take smoothing and the bake without a bevel. finish() renames the material
-# "steel" or "stone", so that is the slot that takes the bake. The islands keep their slab
-# unbevelled, since dress_mhi_assets_test pins its flat top to the full diameter, and round
-# their keels with one subdivision fitted back to each keel's bounds.
 LANDFORM = dict(bevel=0, bake_slots=("stone",))
 POLISH = {"island_rim": dict(bevel=.03, bevel_min=.1), "island_rib": dict(bevel=.04, bevel_min=.1),
           "bridge_skin": dict(bevel=0), "return_ramp_skin": dict(bevel=0),
           "barge_skin": dict(bevel=.04, bevel_min=.15)}
-HARDWARE_CAP = (400, 450, 1)  # polish: was (270, 610, 1); dress_mhi_assets_test PROP_CAP matches
+HARDWARE_CAP = (400, 450, 1)
 CHALK = "c8bda5"
 PETROL = "53686d"
 BONE = "d2c5a5"
@@ -62,22 +57,18 @@ def face(part, points, color):
 
 
 def material(family):
-    # Use the existing vertex-colour material graph and the existing source maps.
     mat = common.material("paint")
     mat.name = family
     bsdf = mat.node_tree.nodes.get("Principled BSDF")
     bsdf.inputs["Roughness"].default_value = 0.95 if family == "stone" else 0.8
     source = "sandstone-strata.webp" if family == "stone" else "rusted-salvaged-plate.webp"
     image = bpy.data.images.load(str(SKETCH / "assets" / "textures" / source))
-    # Match Palette.look_texture's neutral reuse: retain wear values, lift mean,
-    # and let the shared vertex tint own the colour. No new source atlas file.
     import numpy as np
     pixels = np.array(image.pixels[:], dtype=np.float32).reshape((-1, 4))
     luminance = pixels[:, :3] @ np.array((0.2126, 0.7152, 0.0722))
     gain = 0.85 / max(float(luminance.mean()), 0.05)
     pixels[:, :3] = np.clip((luminance[:, None] * 0.65 + pixels[:, :3] * 0.35) * gain, 0, 1)
     if family == "stone":
-        # Geological form carries the bedding; the pale rolling disk stays quiet.
         pixels[:, :3] = 0.85 + (pixels[:, :3] - 0.85) * 0.30
     image.pixels.foreach_set(pixels.ravel())
     image.update()
@@ -101,7 +92,6 @@ def finish(part, root, family):
     obj.data.materials.clear()
     obj.data.materials.append(material(family))
     uv = obj.data.uv_layers.new(name="UVMap")
-    # Metre-scaled dominant-plane UVs reuse the shared maps on every face.
     for poly in obj.data.polygons:
         normal = poly.normal
         axis = max(range(3), key=lambda k: abs(normal[k]))
@@ -125,8 +115,6 @@ def island(size, name, keels):
     rng = random.Random(name)
     radius = size / 2
     n = 128
-    # Flat disk, continuous shallow slab and broad uninterrupted geological beds.
-    # No raised decoration reduces the walkable diameter.
     rings = []
     for r, height in [(radius * 0.12, 0), (radius * 0.38, 0),
                       (radius * 0.66, 0), (radius, 0),
@@ -172,8 +160,6 @@ def island(size, name, keels):
 
 
 def keel(p, centre, width, rng):
-    # One continuous ring surface per keel, not stacked separate rocks.
-    # A broad unequal cross-section carries curved bedding and chipped planes.
     n = 20
     rows = []
     for row, (y, scale, twist) in enumerate([(-2, 0.86, 0), (-2.8, 1, 0.03),
@@ -183,7 +169,6 @@ def keel(p, centre, width, rng):
         points = []
         for i in range(n):
             a = i * math.tau / n
-            # Cardinal extrema at the widest ring retain exact assigned bounds.
             bend = 0 if row in (0, 1, 6) else math.sin(a * 2 + twist) * 0.16
             x = centre[0] + width * 0.5 * scale * math.cos(a)
             z = centre[2] + 3.5 * scale * math.sin(a)
@@ -204,12 +189,10 @@ def hardware(name):
     root = common.empty(name)
     p = common.Part("HardwareSkin")
     if name == "island_rim":
-        # Inner edge Z0; rounded octagonal nosing projects outward to Z0.7.
         outline = [(-1.9, 0), (1.9, 0), (2, -0.1), (2, -0.6),
                    (1.9, -0.7), (-1.9, -0.7), (-2, -0.6), (-2, -0.1)]
         p.prism("paint", outline, 0.35, matrix=common.mtx((0, 0, -0.175)), color=BONE)
         box(p, (4, 1.8, 0.25), (0, -0.9, 0.55), PETROL)
-        # Broad contact lip and local rubbed patches, no signal colours.
         box(p, (4, 0.10, 0.04), (0, -0.44, 0.68), DARK)
         for x in (-1.65, 0.8):
             box(p, (0.35, 0.10, 0.015), (x, -1.0, 0.69), OXIDE)
@@ -228,11 +211,9 @@ def hardware(name):
         marker(root, "join_a")
         marker(root, "join_b", (4, 0, 0))
     elif name in ("bridge_skin", "return_ramp_skin"):
-        # Edge strips share top Y0 and stay within the 8 m rolling width.
         box(p, (7.3, 0.15, 4), (0, -0.075, 0), PETROL)
         for x in (-3.825, 3.825):
             box(p, (0.35, 0.15, 4), (x, -0.075, 0), BONE)
-        # Narrow worn contacts on the top are coplanar inset faces, not steps.
         marker(root, "TopBay" if name == "bridge_skin" else "RampBay")
         marker(root, "EdgeStrip_l", (-3.825, 0, 0))
         marker(root, "EdgeStrip_r", (3.825, 0, 0))
@@ -245,7 +226,6 @@ def hardware(name):
             marker(root, "net_join", (0, 0, 2))
     elif name == "barge_skin":
         box(p, (14, 0.15, 14), (0, 0.925, 0), PETROL)
-        # Hollow belt: four connected loops, no closed underside or filled core.
         rows = []
         for y, extent in [(0.85, 7), (-0.95, 7), (0.85, 6.45), (-0.95, 6.45)]:
             rows.append([p.bm.verts.new(xyz((x, y, z))) for x, z in
@@ -254,8 +234,6 @@ def hardware(name):
             j = (i + 1) % 4
             for a, b, tone in [(0, 1, DARK), (2, 3, PETROL), (0, 2, BONE), (1, 3, DARK)]:
                 face(p, (rows[a][i], rows[a][j], rows[b][j], rows[b][i]), tone)
-        # Flush bone perimeter on the deck, without crossing a route mouth.
-        # Vertex colours mark the upper deck edges; no overlapping top faces.
         for x in (-6.45, 6.45):
             box(p, (0.3, 1.7, 0.4), (x, -0.05, -6.8), BONE)
             box(p, (0.3, 1.7, 0.4), (x, -0.05, 6.8), BONE)
@@ -297,7 +275,6 @@ def preview(path, outdir, samples):
     points = [o.matrix_world @ Vector(v) for o in objects for v in o.bound_box]
     low = Vector(tuple(min(v[i] for v in points) for i in range(3)))
     high = Vector(tuple(max(v[i] for v in points) for i in range(3)))
-    # Neutral 2 m reference ball, placed beside the actual GLB bounds.
     bpy.ops.mesh.primitive_uv_sphere_add(segments=24, ring_count=12, radius=1,
                                        location=(high.x + 2.0, low.y - 2.0, low.z + 1))
     ball = bpy.context.object

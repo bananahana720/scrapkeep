@@ -1,10 +1,5 @@
 extends SceneTree
 
-# Paint stills (PAINT-TRACE-2026-10-16.md): one pilot's class-I shell side by side, unpainted
-# and in each paint, under a fixed sun and camera, so two checkouts compare frame for frame.
-# Default: Sable in Default, Lagoon and Salt White. Needs a renderer; with no GPU use Mesa:
-#   xvfb-run -a godot --path sketches/core-loop --rendering-driver opengl3 --resolution 1500x620 \
-#     -s res://tools/paint_still.gd -- --out=/abs/file.png [--pilot=tally] [--paints=none,paint_tally_cream]
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
@@ -59,7 +54,6 @@ func _initialize() -> void:
 		var rec: Dictionary = hook.fit_shell_into(ball, _pilot, "", 1, tints)
 		if rec.is_empty():
 			push_error("no shell for " + _pilot)
-
 
 
 func _process(_delta: float) -> bool:

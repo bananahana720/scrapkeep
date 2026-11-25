@@ -50,19 +50,14 @@ SKETCH = Path(common.SKETCH)
 RES_ROOT = "res://assets/models/park/props/"
 LOADER = "src/presentation/park_props.gd (vignette file src/world/park/props/park_%s.json)"
 
-# --- budgets (DRESSING-KITS.md) -----------------------------------------------------------
-PERCH_MIN_HEIGHT = 6.0  # metres: a variant this tall or taller exports a `perch` anchor (design-v3/park/PERCH-ANCHOR.md)
+PERCH_MIN_HEIGHT = 6.0
 BUDGET = {"dress_hero": (6000, 20000), "dress_prop": (300, 3000)}
 LOD1_BAND, LOD2_BAND, LOD2_MIN_TRIS = (0.40, 0.60), (0.10, 0.20), 40
 LOD1_TARGET, LOD2_TARGET = 0.50, 0.15
-# A LOD that fills less than model_audit.COVER_MIN of LOD0's outline gets COVER_STEP times the triangles again, up to
-# model_audit.COVER_CAP of LOD0's triangles (and no more than the LOD before it), and one still under model_audit.COVER_FLOOR there fails the build; the collapse otherwise ate whole parts (the dam's cable drums drew as floating rings at 100 m,
-# 14 Nov, W1-29). Only those LODs pass their band's top.
 COVER_STEP = 1.25
-FLOOR_TOL = 0.02  # metres a LOD bottom may sit off y 0
-RESEAT_MAX = 0.15  # metres decimate() may shift a LOD down or up to put its bottom back on the floor
+FLOOR_TOL = 0.02
+RESEAT_MAX = 0.15
 
-# --- palette: only safe colours -----------------------------------------------------------
 C = {
     "sandstone": "c6a274", "sandstone_dark": "a98b60", "sandstone_pale": "d8c19a",
     "concrete": "9a9a94", "concrete_dark": "6f706b", "concrete_light": "b8b7ae",
@@ -73,10 +68,9 @@ C = {
     "verdigris": "5f8a7c", "rust": "8a5a44", "bone": "d2c5a5", "soil": "6a5a42",
     "leaf": "6f7f4a", "leaf_dark": "4f5e38", "dry_grass": "a39a64",
 }
-BANNED = {"ff5a3c", "9dff3c", "8bf0d3"}  # HAZARD, ANCIENT, MINT
-# A colour this close (Euclidean, 0..1 sRGB) to a banned hex reads as that hex, so it fails too.
+BANNED = {"ff5a3c", "9dff3c", "8bf0d3"}
 BANNED_NEAR = 0.08
-WARN = {"e5a044", "b77843", "d9b44a"}  # AMBER, COPPER (never dominant), BRASS (Fleet only)
+WARN = {"e5a044", "b77843", "d9b44a"}
 
 
 def hexcolor(c):
@@ -127,28 +121,16 @@ def _selftest_colours():
 _selftest_colours()
 
 
-# --- board palette (opt-in per park; DRESSING-KITS.md "Board palette check") -----------------
-# A park declares the swatches of its reference boards (docs/art/reference/); every painted colour must then
-# sit on them. Known limit: the shared base palette `C` is not itself board-checked; it is accepted as the
-# shared material set (sandstone, timber, canvas, iron ...) and is not park-specific. The snapshot is taken here,
-# before any park script runs C.update(...), so a park's own additions get no free pass.
 BASE_C = dict(C)
 REPO = HERE.parents[5]
 BOARD_ROOT = REPO / "docs" / "art" / "reference"
-# Within this Euclidean distance (0..1 sRGB) of a swatch or approved hex counts as that colour: about 13/255 on
-# each channel, the 0.05 that tint()'s default 0.08 value jitter moves a mid colour (0.08 x ~0.6), which covers
-# hand-sampled swatch rounding and 8-bit quantisation.
 BOARD_NEAR = 0.05
-# An approved shade of a swatch keeps its hue and saturation and only changes value, as shade() and tint() do.
-# 0.03 hue (about 11 degrees of 360) absorbs 8-bit quantisation of dark colours; a 0.08 hue shift fails.
 SHADE_HUE = 0.03
-SHADE_SAT = 0.08   # absolute saturation difference, same reason
-# shade(c, 0.75) passes; tint() at its default amount spans 0.92..1.08; 1.25 allows a lightened wear tone.
+SHADE_SAT = 0.08
 SHADE_VAL_MIN, SHADE_VAL_MAX = 0.70, 1.25
-BRASS_HEX = "d9b44a"  # the WARN brass: Fleet only, one tag per site
-BRASS_TAG_PARTS = 4   # a plate plus its rivets
-BRASS_TAG_BOX = 0.6   # metres: every brass face centre of a variant lies inside a box this size
-# Known limit: the kit sees one variant at a time, so "one tag per site" (per vignette) is not checkable here.
+BRASS_HEX = "d9b44a"
+BRASS_TAG_PARTS = 4
+BRASS_TAG_BOX = 0.6
 
 
 def _hsv(h):
@@ -161,7 +143,7 @@ def is_shade_of(h, base):
     bh, bs, bv = _hsv(base)
     if abs(hs - bs) > SHADE_SAT:
         return False
-    if max(hs, bs) >= 0.10:  # greys have no meaningful hue
+    if max(hs, bs) >= 0.10:
         d = abs(hh - bh)
         if min(d, 1.0 - d) > SHADE_HUE:
             return False
@@ -248,14 +230,14 @@ def _selftest_board():
     for _ in range(200):
         for sw in board["swatches"]:
             check_board(tint(sw, rng), board, "selftest")
-    for bad in ("3a5fa8", "e060a0"):  # planted off-board colours: mid saturated blue, pink
+    for bad in ("3a5fa8", "e060a0"):
         try:
             check_board(bad, board, "selftest_a")
         except ValueError as e:
             assert str(e).startswith("off-board colour #%s in selftest_a: nearest swatch #" % bad), e
             continue
         raise AssertionError("colour #%s should fail check_board" % bad)
-    C["selftest_planted"] = "3a5fa8"  # a park's own C.update(...) must not put a colour on board
+    C["selftest_planted"] = "3a5fa8"
     try:
         check_board("3a5fa8", board, "selftest")
     except ValueError:
@@ -264,7 +246,7 @@ def _selftest_board():
         raise AssertionError("a colour added to C after import should fail check_board")
     finally:
         del C["selftest_planted"]
-    hh, hs, hv = _hsv("365754")  # a 0.08 hue shift of petrol must fail
+    hh, hs, hv = _hsv("365754")
     shifted = hexcolor(colorsys.hsv_to_rgb((hh + 0.08) % 1.0, hs, hv))
     try:
         check_board(shifted, {"swatches": {"365754": "petrol"}, "approved": {}}, "selftest")
@@ -283,7 +265,7 @@ def _selftest_board():
             continue
         raise AssertionError("brass %r should fail check_brass" % (bad,))
     tmp = tempfile.TemporaryDirectory()
-    root = Path(tmp.name)  # the self-test must not depend on the checkout's docs
+    root = Path(tmp.name)
     (root / "board.png").write_bytes(b"")
     for bad in ({"boards": ["no-such-board.png"], "swatches": {"365754": "p"}},
                 {"boards": ["board.png"], "swatches": {"36575": "p"}},
@@ -301,14 +283,13 @@ def _selftest_board():
 _selftest_board()
 
 
-# (bevel metres, subsurf levels) per look.
 STYLES = {
-    "hard": (0.04, 0),         # machinery, slabs, planks: crisp edges with a rounded bevel
-    "hard_smooth": (0.04, 1),  # bevelled and softened: toy-like blocks
-    "fine": (0.015, 0),        # thin boards, straps, small hard bits
-    "round": (0.0, 1),         # drums, hubs, rims, rods
-    "soft": (0.0, 2),          # cloth, sacks, plants, mud: chunky blobs, smooth
-    "flat": (0.0, 0),          # thin sheets and decals as drawn
+    "hard": (0.04, 0),
+    "hard_smooth": (0.04, 1),
+    "fine": (0.015, 0),
+    "round": (0.0, 1),
+    "soft": (0.0, 2),
+    "flat": (0.0, 0),
 }
 
 
@@ -323,7 +304,7 @@ class Prop:
         self.name = name
         self.rng = rng
         self.board = board
-        self.brass = []  # face centres per primitive painted in brass
+        self.brass = []
         self.root = common.empty(name)
         self.parts = {}
         self.perch_at = None
@@ -425,7 +406,6 @@ class Prop:
         for k in range(n + 1):
             t = k / n
             pos = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))
-            # The link's long axis (local X) follows the chord; odd links roll a quarter turn.
             quat = Quaternion(d, math.pi / 2 * (k % 2)) @ Vector((1, 0, 0)).rotation_difference(d)
             self.torus(link * 0.5, radius, pos, color, rot=quat.to_euler(), scale=(1.0, 0.7, 1.0),
                        major=6, minor=4, style=style)
@@ -444,7 +424,6 @@ class Prop:
             bpy.context.view_layer.objects.active = obj
             bpy.ops.object.join()
         obj.name = obj.data.name = "Surface"
-        # Origin at the foot centre: bbox xy centre, lowest point on the floor.
         me = obj.data
         lo = Vector((min(v.co[i] for v in me.vertices) for i in range(3)))
         hi = Vector((max(v.co[i] for v in me.vertices) for i in range(3)))
@@ -456,17 +435,13 @@ class Prop:
         return obj
 
 
-# --- shared sight gags (W46-07): jokes told by objects, no words (ruling cx) -------------------------
-# The old works' hand (design-v3/STORY-MAP.md section 2): cast, seamless, no fastener, pristine. The keepers' hand: chalk
-# white and a ball-shaped dent. Each park recipe registers them with K.kind(...)(kit.foreman_billboard), so the dam and
-# the flume carry the same two kinds. Authored in real metres, Blender Z up, front (the joke's face) toward -Y.
-GAG_CAST = "b8b7ae"     # concrete_light: the works' cast body, never rusted, never bolted
-GAG_FACE = "d9d2bc"     # canvas: the notice's pristine face
-GAG_WATER = "5f8a7c"    # verdigris: water on the notice
-GAG_INK = "242a28"      # charcoal: the notice's print
-GAG_CHALK = "e6e3d6"    # chalk white: the keepers' marks
-GAG_GLOVE = "b9b095"    # canvas_dark: a cast work glove
-_FACE_ROT = (math.pi / 2, 0, 0)  # local Z to -Y: a prism outline (x, y) draws as (x, up) on the face
+GAG_CAST = "b8b7ae"
+GAG_FACE = "d9d2bc"
+GAG_WATER = "5f8a7c"
+GAG_INK = "242a28"
+GAG_CHALK = "e6e3d6"
+GAG_GLOVE = "b9b095"
+_FACE_ROT = (math.pi / 2, 0, 0)
 
 
 def _stroke(p, a, b, z_y, width=0.09, color=GAG_CHALK):
@@ -515,26 +490,24 @@ def foreman_billboard(p, v, rng):
     p.box((W + 0.5, 0.5, H + 0.5), (0, 0.1, zc), GAG_CAST, style="hard_smooth")
     face_y = -0.18
     p.box((W, 0.08, H), (0, face_y, zc), GAG_FACE, style="flat")
-    for k in range(4):  # the back's cast ribs, one pour with the frame
+    for k in range(4):
         p.box((0.25, 0.3, H + 0.2), (-3.6 + 2.4 * k, 0.45, zc), GAG_CAST, style="hard")
-    for s in (-1, 1):  # fluted legs on round cast footings
+    for s in (-1, 1):
         p.cyl(0.55, 0.3, (s * 3.4, 0.0, 0.5), GAG_CAST, segs=20, style="round")
         for k in range(4):
             a = math.tau * k / 4 + math.pi / 4
             p.box((0.12, 0.12, Z0 - 0.2), (s * 3.4 + 0.3 * math.cos(a), 0.05 + 0.3 * math.sin(a), (Z0 - 0.2) / 2 + 0.35),
                   GAG_CAST, style="hard_smooth")
-    # The service ledge under the face, one pour with the frame, its grating cast in.
     p.box((W + 0.2, 1.1, 0.18), (0, -0.55, Z0 - 0.15), GAG_CAST, style="hard_smooth")
     for k in range(12):
         p.box((0.08, 1.0, 0.06), (-4.95 + 0.9 * k, -0.6, Z0 - 0.02), GAG_INK, style="fine")
-    # Three lamps on swan-neck arms light the notice from above, so it reads at dusk too.
     for k in (-1, 0, 1):
         x = k * 3.4
         p.rod((x, 0.2, Z0 + H + 0.2), (x, -0.4, Z0 + H + 0.9), 0.09, GAG_CAST, segs=10, style="round")
         p.rod((x, -0.4, Z0 + H + 0.9), (x, -1.1, Z0 + H + 0.8), 0.09, GAG_CAST, segs=10, style="round")
         p.cyl(0.42, 0.3, (x, -1.2, Z0 + H + 0.62), GAG_CAST, segs=20, r2=0.18, style="round")
         p.cyl(0.36, 0.04, (x, -1.2, Z0 + H + 0.46), GAG_FACE, segs=20, style="flat")
-    fy = face_y - 0.06  # print sits just proud of the face
+    fy = face_y - 0.06
     if v == "a":
         drop = [(0.0, 1.55)] + [(1.05 * math.cos(math.radians(a)), -0.35 + 1.05 * math.sin(math.radians(a)))
                                 for a in range(20, -201, -20)]
@@ -609,8 +582,7 @@ def shift_table(p, v, rng):
                       GAG_CHALK, rot=(0, 0, math.atan2(dy, dx)), style="flat")
             continue
         _glove(p, x, -0.12, top + 0.06)
-        p.cyl(0.09, 0.16, (x, 0.42, top + 0.14), GAG_CAST, segs=10, style="hard")  # a cast cup at each place
-    # The punch clock at the table's head: a cast post, a dial with both hands straight up.
+        p.cyl(0.09, 0.16, (x, 0.42, top + 0.14), GAG_CAST, segs=10, style="hard")
     hx = L / 2 + 0.6
     p.box((0.5, 0.5, 0.2), (hx, 0, 0.1), GAG_CAST, style="hard")
     p.cyl(0.11, 1.5, (hx, 0, 0.95), GAG_CAST, segs=10, style="hard")
@@ -656,8 +628,6 @@ class Kit:
         if not board:
             print("KIT note: %s declares no board palette; the board check is off" % park, flush=True)
         self.kinds = {}
-        # Kinds whose LODs must stay closed (check_manifold.py --strict): a collapse that shrinks a small closed part to
-        # a lone open triangle drops that part instead. Opt-in, so a kit's other kinds export as they always have.
         self.closed_lods = set()
         self._exporting = None
         self.polish_opts = dict(detail=2, bevel=0.04, bevel_min=0.08)
@@ -676,7 +646,6 @@ class Kit:
             return fn
         return deco
 
-    # --- build ------------------------------------------------------------------------
     def build(self, kind, variant):
         spec = self.kinds[kind]
         rng = random.Random("%s/%s/%s" % (self.park, kind, variant))
@@ -725,7 +694,6 @@ class Kit:
         if opts.preview_dir:
             self.preview(out_dir, opts.preview_dir, names)
 
-    # --- budgets ----------------------------------------------------------------------
     def check_lod0(self, kind, variant, tris):
         lo, hi = BUDGET[self.kinds[kind]["class"]]
         assert lo <= tris <= hi, "%s_%s: LOD0 %d tris outside %s %d-%d" % (
@@ -738,7 +706,6 @@ class Kit:
         self.check_lod0(kind, variant, tris)
         return tris
 
-    # --- export -----------------------------------------------------------------------
     def export(self, kind, variant, out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
         root, obj = self.build(kind, variant)
@@ -767,7 +734,6 @@ class Kit:
                 lod = self.decimate(root, obj, want)
                 stat = self.write(root, lod, path)
                 fills = model_audit.cover(full, path)
-                # Never more than the LOD before it.
                 most = min(math.floor(t0 * cap), stats[-1]["tris"])
                 if fills >= model_audit.COVER_MIN or want >= most:
                     break
@@ -823,16 +789,12 @@ class Kit:
         bpy.context.scene.collection.objects.link(obj)
         obj.parent = root
         common.place(obj, src["world_origin"], root)
-        # Collapse can lift or sink the lowest vertex a few centimetres; re-seat the LOD on LOD0's floor so no recipe
-        # needs a ground plinth to hold FLOOR_TOL. A shift past RESEAT_MAX means the silhouette broke, so it fails.
         if self._exporting in self.closed_lods:
             drop_open_islands(mesh)
         shift = min(v.co.z for v in src.data.vertices) - min(v.co.z for v in mesh.vertices)
         assert abs(shift) <= RESEAT_MAX, "LOD re-seat of %.3f m exceeds %.2f m" % (shift, RESEAT_MAX)
         for v in mesh.vertices:
             v.co.z += shift
-        # Smooth, with LOD0's hard creases taken again from the collapsed shape: smoothing every edge let a fold (a drum
-        # flange, a rope coil) average its vertex normals against its faces, so far meshes drew lit inside out (W1-29).
         for poly in mesh.polygons:
             poly.use_smooth = True
         mesh.set_sharp_from_angle(angle=math.radians(polish.options()["sharp_angle"]))
@@ -861,7 +823,6 @@ class Kit:
         obj.name = keep
         return inspect_glb(path)
 
-    # --- manifest, registry -----------------------------------------------------------
     def write_manifest(self, out_dir, names, results):
         path = out_dir / "manifest.json"
         old = json.loads(path.read_text())["kinds"] if path.exists() else {}
@@ -929,7 +890,6 @@ class Kit:
                                '[params]\n\nmeshes/generate_lods=false\n')
                 print("KIT_IMPORT_STUB", imp, flush=True)
 
-    # --- preview ----------------------------------------------------------------------
     def preview(self, out_dir, folder, names):
         folder.mkdir(parents=True, exist_ok=True)
         tile = 360

@@ -1,21 +1,3 @@
-# The relay's two devices (W13 SR10, PR #36): the copper stake post that stands outside a park relay's
-# ring, and the relay mast an event relay stands as. Procedural bmesh, vertex coloured, in the park
-# landmarks' look (copper on dark iron, concrete feet, riveted bands, an arc-glass coil); no external
-# assets or physics. Metres; Godot (X,Y,Z) -> Blender (X,-Z,Y). Both origins are on the ground at the
-# foot, and both keep the primitive look's heights: the coil's centre 17 m up.
-#
-# Stake post (relay_stake_post.glb), driven by src/world/relay_stake.gd:
-#   StakePost     the column, plinth, bands, ring cages and coil windings (no collider; nothing stops the ball)
-#   Stake1..4     four glass rings round the column, low to high; the post lights one per stack, so 0 to 4
-#                 reads from any side and from the ring 50 m away
-#   StakeDial     the hand-height dial face with its five marks, 0 to 4, facing +Z
-#   StakeNeedle   origin on the dial's pivot, pointer +Y at 0; the post turns it by STAKE_SWEEP per stack
-#   CoilGlow      the glass orb on top; glows with the stake and the charge
-# Relay mast (relay_mast.glb), driven by src/world/event_view.gd:
-#   RelayMast     a three-leg lattice tower on concrete feet with an insulator stack and coil windings
-#   CoilGlow      the glass orb on top
-#
-#   blender -b --python-exit-code 1 -P sketches/core-loop/tools/blender/world_one/relay_stake.py -- [--out DIR]
 import math
 import os
 import sys
@@ -27,8 +9,6 @@ from common import Part
 
 for slot, rough, metal in [("relay_concrete", 0.95, 0.0), ("relay_metal", 0.6, 0.35), ("relay_glass", 0.2, 0.0)]:
     common.SLOTS[slot] = {"vc": True, "rough": rough, "metal": metal}
-# Polish (POLISH.md): LIMITS are pinned by relay_models_test and both devices sit near them, so smooth shading and
-# the AO/wear bake only; the glass rings and orb carry the live state glow and are not baked.
 import polish
 polish.enable(detail=1, bevel=0, bake_slots=("relay_concrete", "relay_metal"))
 
@@ -36,7 +16,7 @@ TAU = math.tau
 COIL_Y = 17.0
 ORB_R = 1.4
 STAKE_Y = (6.0, 8.0, 10.0, 12.0)
-STAKE_SWEEP = 0.5    # radians per stack on the dial, 0 at the top, 4 at 2.0 rad clockwise
+STAKE_SWEEP = 0.5
 DIAL_Y = 2.2
 LIMITS = {"relay_stake_post": (3000, 4800, 9), "relay_mast": (3000, 4800, 3)}
 HEX = {"copper": "b77843", "copper_dk": "8d5a32", "iron": "2b2724", "iron_hi": "3d3732", "steel": "4f4c48",
@@ -80,13 +60,11 @@ def build_post():
     for k in range(8):
         a = TAU * (k + 0.5) / 8
         p.cyl("relay_metal", 0.09, 0.09, 0.3, segs=6, loc=g(1.35 * math.sin(a), 0.65, 1.35 * math.cos(a)), color=c("copper"))
-    # the column: an eight-sided copper shaft tapering up, iron bands between the rings
     p.cyl("relay_metal", 0.75, 0.45, 13.5, segs=8, loc=g(0, 0.5 + 6.75, 0), rot=(0, 0, math.pi / 8), color=c("copper"))
     p.cyl("relay_metal", 1.0, 0.8, 0.6, segs=8, loc=g(0, 0.8, 0), rot=(0, 0, math.pi / 8), color=c("iron"))
     for y in (3.0, 5.0, 14.0):
         r = 0.75 - 0.3 * (y - 0.5) / 13.5 + 0.06
         p.cyl("relay_metal", r, r, 0.22, segs=8, loc=g(0, y, 0), rot=(0, 0, math.pi / 8), color=c("iron"))
-    # the ring cages: an iron collar under and over each glass ring, four copper struts between
     for y in STAKE_Y:
         r = 0.75 - 0.3 * (y - 0.5) / 13.5
         for dy in (-0.42, 0.42):
@@ -95,12 +73,9 @@ def build_post():
             a = TAU * (k + 0.5) / 4
             p.rod("relay_metal", g(1.5 * math.sin(a), y - 0.4, 1.5 * math.cos(a)), g(1.5 * math.sin(a), y + 0.4, 1.5 * math.cos(a)),
                   0.07, segs=4, color=c("copper_dk"))
-    # the dial's housing at hand height: an iron drum on the +Z face with a copper bezel
     p.box("relay_metal", (1.3, 0.35, 1.3), loc=g(0, DIAL_Y, 0.82), color=c("iron"))
     p.ring("relay_metal", 0.52, 0.62, 0.1, segs=16, loc=g(0, DIAL_Y, 1.02), rot=(math.pi / 2, 0, 0), color=c("copper"))
-    # the coil: windings from 14 m, the orb seated in its cup above them
     coil(p, 14.0, 15.4, 1.3)
-    # a ground cable from the plinth toward the ring side, so the post reads as wired to the relay
     p.rod("relay_metal", g(0.0, 0.25, -1.75), g(0.0, 0.08, -4.5), 0.08, segs=5, color=c("cable"))
     finish(p, root)
     for i, y in enumerate(STAKE_Y):
@@ -136,7 +111,6 @@ def build_mast():
         top = (0.45 * math.sin(a), 13.6, 0.45 * math.cos(a))
         legs.append((foot, top))
         p.rod("relay_metal", g(foot[0], 0.6, foot[2]), g(*top), 0.16, segs=6, r2=0.11, color=c("copper"))
-    # lattice: a ring of rungs and crossed braces every 2.4 m up the three faces
     lv = [0.6 + 2.6 * j for j in range(5)] + [13.6]
     at = lambda leg, y: tuple(legs[leg][0][i] + (legs[leg][1][i] - legs[leg][0][i]) * (y - 0.6) / 13.0 if i != 1 else y for i in range(3))
     for j, y in enumerate(lv):
@@ -147,14 +121,12 @@ def build_mast():
                 y2 = lv[j + 1]
                 p.rod("relay_metal", g(*a), g(*at((k + 1) % 3, y2)), 0.05, segs=4, color=c("iron_hi"))
                 p.rod("relay_metal", g(*b), g(*at(k, y2)), 0.05, segs=4, color=c("iron_hi"))
-    # the head: an iron cap plate, a bone insulator stack and the coil
     p.cyl("relay_metal", 0.9, 0.9, 0.25, segs=6, loc=g(0, 13.7, 0), color=c("iron"))
     for k in range(5):
         y = 13.95 + 0.2 * k
         p.cyl("relay_metal", 0.42, 0.42, 0.12, segs=10, loc=g(0, y, 0), color=c("bone"))
         p.cyl("relay_metal", 0.2, 0.2, 0.1, segs=8, loc=g(0, y + 0.11, 0), color=c("iron"))
     coil(p, 14.9, 15.4, 1.4)
-    # three grounding rods round the feet, copper caps, cabled to the legs
     for k in range(3):
         a = TAU * (k + 0.5) / 3
         q = (3.6 * math.sin(a), 0.0, 3.6 * math.cos(a))

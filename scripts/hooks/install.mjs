@@ -1,6 +1,4 @@
 #!/usr/bin/env node
-// Activates tracked git hooks (scripts/hooks) on local clones via core.hooksPath.
-// No-ops cleanly in CI or outside a git checkout.
 
 import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync } from "node:fs";
@@ -21,9 +19,7 @@ const hookFile = path.join(root, "scripts", "hooks", "pre-push");
 if (existsSync(hookFile)) {
   try {
     chmodSync(hookFile, 0o755);
-  } catch {
-    // Best-effort executable bit on platforms that support chmod.
-  }
+  } catch {}
 }
 
 const set = spawnSync("git", ["config", "core.hooksPath", "scripts/hooks"], {

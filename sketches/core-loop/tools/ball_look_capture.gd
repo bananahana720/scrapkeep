@@ -12,24 +12,6 @@ const Game := preload("res://src/game.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# Stills and counts of one ball look on a bare sand stage, so looks compare frame for frame:
-# the chase view at rest (7.5 m, 65 degree lens) and at speed (10.5 m, 80 degrees), both at the
-# play camera's pitch, a three-quarter hero view, and the rest chase view again with the rolling
-# part turned through three spins. Needs a rendered display:
-#
-#   xvfb-run -a -s "-screen 0 1920x1080x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --script res://tools/ball_look_capture.gd -- --out=<absolute dir> [--ball-look=<id>] [--pilot=<class id>] [--heft=<1 to 5>] [--paint=<hex>] [--load=<panel plates>] [--outfit=<cosmetic id>] [--glance=1] [--shade=1] [--game=1 [--ui=1] [--pitch=<camera pitch, radians>]]
-#
-# --ball-look is the game's own launch switch (tuning.gd), so the stage and the game share it.
-# --heft fits that heft class, --paint an equipped paint, and --load a late run's ball: scrap
-# chunks and that many panel plates riding it; --outfit mounts an outfit on the pilot and
-# --glance=1 holds the pilot's glance back at the camera. Each adds its own suffix to the file names.
-# --game=1 boots the park table instead of the stage and takes the play camera's own picture
-# with the ball at rest and after two seconds of rolling: <look>-game_rest.png and -game_roll.png.
-#
-# Writes <out>/<look>-<pilot>-<shot>.png and <out>/<look>-<pilot>.json: triangles and surfaces of
-# the ball alone (meshes under it that draw), how many of those surfaces are see-through, and the
-# renderer's own draw calls and primitives for the ball's frame less the empty stage's.
 
 const SIZE := Vector2i(1920, 1080)
 const GAME_SIZE := Vector2i(1280, 720)
@@ -106,8 +88,6 @@ func _run() -> void:
 	env.background_color = Palette.SAND.darkened(0.25)
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Palette.SAND
-	# The sun shines toward the chase camera, so that camera sees the ball's shaded side; --shade=1
-	# takes most of the sky's fill away, as under a bridge or at dusk.
 	env.ambient_light_energy = 0.15 if _shade else 0.7
 	cam.environment = env
 	root.add_child(cam)
@@ -125,14 +105,12 @@ func _run() -> void:
 	floor_mat.roughness = 1.0
 	floor_view.material_override = floor_mat
 	root.add_child(floor_view)
-	# The empty stage's own cost, taken off the ball's frame below.
 	cam.position = Vector3(0.0, 3.0, 7.5)
 	cam.look_at(Vector3(0.0, 1.0, 0.0))
 	var empty := await _renderer_counts()
 
 	var painter := HeroAssets.new()
 	root.add_child(painter)
-	# The stage's painter reads the look from a tuning of its own, as the game's painter does.
 	var tuning := Tuning.new()
 	tuning.apply_args(PackedStringArray(["--ball-look=%s" % (_look if _look != "" else BallLooks.TODAY)]))
 	painter.ctx = {"tuning": tuning}
@@ -163,12 +141,10 @@ func _run() -> void:
 	if _outfit != "":
 		painter.fit_outfit(fitted.pilot, _outfit, tints)
 	if _glance:
-		# The top of the glance back at the chase camera, held for the stills.
 		var glance = PilotGlance.seat(fitted.pilot)
 		if glance != null:
 			glance.turn = 1.0
 	if _load > 0:
-		# A late run's ball: scrap chunks and panel plates ride the roll node, as build.gd adds them.
 		var roll := Node3D.new()
 		rolling.add_child(roll)
 		var scrap := Accretion.new()
@@ -199,7 +175,6 @@ func _run() -> void:
 		elif shot.has("side"):
 			cam.position = centre + Vector3(1.0, 0.25, 0.25).normalized() * 5.2
 		else:
-			# The ball faces -Z; the chase camera sits behind on +Z, lifted by the play pitch.
 			cam.position = centre + Vector3(0.0, sin(PITCH), cos(PITCH)) * float(shot.arm)
 		cam.look_at(centre)
 		var counts := await _renderer_counts()
@@ -226,7 +201,6 @@ func _renderer_counts() -> Dictionary:
 	}
 
 
-# Triangles and surfaces of every mesh under the ball that draws, and how many surfaces blend.
 func _mesh_counts(ball: Node) -> Dictionary:
 	var triangles := 0
 	var surfaces := 0
@@ -248,10 +222,6 @@ func _mesh_counts(ball: Node) -> Dictionary:
 	return {"triangles": triangles, "surfaces": surfaces, "see_through_surfaces": see_through}
 
 
-# How much of the pilot the chase camera sees. The pilot is drawn flat magenta; each of SPINS
-# turns of the rolling part is drawn with the shell and without it, at rest and at speed, and
-# the share is magenta pixels with over magenta pixels without. Glass in front counts as seen
-# (it tints the magenta a little); the report says how tall the pilot stands in pixels.
 const SPINS := 24
 
 func _pilot_seen(cam: Camera3D, ball: Node3D, rolling: Node3D, shell: Dictionary, pilot: Node3D) -> Dictionary:
@@ -291,7 +261,6 @@ func _pilot_seen(cam: Camera3D, ball: Node3D, rolling: Node3D, shell: Dictionary
 			"seen_rest_pose": 0.0}
 		rolling.rotation = Vector3.ZERO
 		out[eye[0]]["seen_rest_pose"] = snappedf(float((await _magenta()).count) / maxf(1.0, float(alone.count)), 0.001)
-		# The measured frame itself, so a reader can see what stands before the pilot.
 		root.get_texture().get_image().save_png("%s/%s-seen_%s.png" % [_out, _label, eye[0]])
 	return out
 
@@ -314,7 +283,6 @@ func _magenta() -> Dictionary:
 	return {"count": count, "height": maxi(0, bottom - top + 1)}
 
 
-# The look in the running game: the park table, the game's own fit and play camera.
 func _play() -> void:
 	root.size = GAME_SIZE
 	root.content_scale_size = GAME_SIZE

@@ -70,8 +70,6 @@ def shape(name, cells, size_m, spec, cases, note):
     SHAPES[name] = {"cells": cells, "size_m": size_m, "spec": {"units": "cm", **spec}, "cases": cases, "note": note}
 
 
-# 1. Half pipe, 64 x 32 m (8 x 4 cells): half_pipe_concrete's section, so lab and park agree. A 12 m floor, 6 m radius
-# transitions, walls battered 0.08 to 10 m over the floor (crest to crest 24.64 m), the floor falling 3% along +x.
 HP_F, HP_R, HP_H, HP_B, HP_GRADE, HP_LEN = 6.0, 6.0, 10.0, 0.08, 0.03, 64.0
 half = [(0.0, 0.0), (HP_F, 0.0)]
 half += [(HP_F + HP_R * math.cos(math.radians(a)), HP_R + HP_R * math.sin(math.radians(a))) for a in range(-81, 1, 9)]
@@ -80,7 +78,7 @@ half += [(xw + 2.0 * HP_B, HP_R + 2.0), (xw + 3.0 * HP_B, HP_R + 3.0), (xw + (HP
 HP_CREST = xw + (HP_H - HP_R) * HP_B
 cut = [[round(y, 4), round(z, 4)] for y, z in half[::-1]] + [[round(-y, 4), round(z, 4)] for y, z in half[1:]]
 cut = [[y, z] for y, z in cut if not (y == 0.0 and z == 0.0)]
-HP_TILT = math.degrees(math.atan(HP_GRADE))  # mojulo rotates +y tilt so +x falls (checked: lowest z moves to the exit end)
+HP_TILT = math.degrees(math.atan(HP_GRADE))
 shape("half_pipe", "8x4", [64, 32], {"fields": [
     field("pipe", [{"op": "transform", "rotate": [0, HP_TILT, 0], "translate": [0, 0, 0], "terms": [
         term("add", box([HP_LEN / 2, 0, (HP_H - 2) / 2], [HP_LEN, 32, HP_H + 2]), "deck"),
@@ -99,7 +97,6 @@ shape("half_pipe", "8x4", [64, 32], {"fields": [
     "The park's concrete channel section. Entry and off-centre drops at 8 m/s ride it out without stalling (the park test's"
     " roll); cruise and fast carve at 20 degrees; a 70 degree entry at 37 m/s clears the 10 m wall (control).")
 
-# 2. Rolling wall, 32 x 24 m (4 x 3 cells). One diagonal cosine roller (crest 3 m, 20 m wide), 2 m side berms.
 HUMP = [[-10.5, -1], [10.5, -1]] + [[round(u, 3), round(1.5 * (1 + math.cos(math.pi * u / 10)), 3)] for u in [10 - i for i in range(21)]]
 shape("rolling_wall", "4x3", [32, 24], {"fields": [
     field("roller", [term("add", box([16, 0, -0.5], [32, 24, 1]), "floor"),
@@ -117,9 +114,6 @@ shape("rolling_wall", "4x3", [32, 24], {"fields": [
                       "pass": {"exit_box": [[31, -12, -1], [60, 12, 12]]}}},
     "Cruise rolls over the 3 m crest; 37 m/s jumps it; 6 m/s rolls back (control).")
 
-# 3. Crevice, 32 x 24 m (4 x 3 cells). A choke: slick guide walls funnel a 16 m mouth into a 5 m slot under 5 m walls,
-# with a 2 m sky gap in the roof. The funnel's guide walls (`slick_guide`, `slick_mouth`) and the slot's walls (`slick_slot`)
-# are tagged slick, so the lab gives them friction 0; the floor is its own field and keeps its grip.
 FUNNEL = [[-1, -8], [8, -2.5], [8, 2.5], [-1, 8]]
 shape("crevice", "4x3", [32, 24], {"fields": [
     field("rock", [term("add", box([20, 0, 4], [24, 24, 8]), "block"),
@@ -141,7 +135,6 @@ shape("crevice", "4x3", [32, 24], {"fields": [
     "A choke: the slick guide walls turn an off-line entry into the 5 m slot without scrubbing speed (cruise graze at"
     " 30 degrees); 4 m/s at 60 degrees stalls in the mouth (control).")
 
-# 4. Hazard field, 32 x 32 m (4 x 4 cells). Four coral pits staggered off a 4 m safe lane.
 PITS = [(8, -6), (14, 6), (20, -6), (26, 6)]
 AVOID = [[[x - 3.5, y - 3.5, -3], [x + 3.5, y + 3.5, 0.85]] for x, y in PITS]
 shape("hazard_field", "4x4", [32, 32], {"fields": [
@@ -160,8 +153,6 @@ shape("hazard_field", "4x4", [32, 32], {"fields": [
                           "pass": {"exit_box": [[31, -16, -2], [60, 16, 6]], "avoid_boxes": AVOID}}},
     "The straight lane misses every pit; a 12 degree line drops into one (control).")
 
-# 5. Rail grove, 32 x 24 m (4 x 3 cells). Pillars off a 6 m floor lane; two rails on posts whose tube underside stays
-# RIDE_CLEAR over the floor everywhere (the shared line system's clearance), so a ball on the ground passes under.
 RAIL_R = 0.25
 RZ = RIDE_CLEAR + RAIL_R + 0.08
 PILLARS = [(6, -7.8), (6, 7.8), (12, -10.3), (12, 10.3), (18, -7.8), (18, 7.8), (24, -10.3), (24, 10.3), (29, -7.8), (29, 7.8)]

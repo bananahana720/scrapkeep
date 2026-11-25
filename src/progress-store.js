@@ -1,9 +1,4 @@
-import {
-  createProfile,
-  parseProfile,
-  settleRun,
-  masteryFor,
-} from "./campaign.js";
+import { createProfile, parseProfile, settleRun, masteryFor } from "./campaign.js";
 
 export function createProgressStore(storage, key) {
   if (typeof key !== "string" || !key || key.length > 200) {
@@ -17,17 +12,15 @@ export function createProgressStore(storage, key) {
   function receipt(raw, expectedId) {
     try {
       const value = typeof raw === "string" ? JSON.parse(raw) : raw;
-      if (!value || (expectedId !== undefined && value.id !== expectedId))
-        return null;
+      if (!value || (expectedId !== undefined && value.id !== expectedId)) return null;
       const run = Object.fromEntries(
-        ["id", "classId", "seed", "score", "survived", "outcome"].map(
-          (field) => [field, value[field]],
-        ),
+        ["id", "classId", "seed", "score", "survived", "outcome"].map((field) => [
+          field,
+          value[field],
+        ]),
       );
       const result = settleRun(createProfile(), run);
-      return result.mastery && result.profile.settled.includes(run.id)
-        ? run
-        : null;
+      return result.mastery && result.profile.settled.includes(run.id) ? run : null;
     } catch {
       return null;
     }
@@ -41,21 +34,14 @@ export function createProgressStore(storage, key) {
       if (raw !== null) {
         try {
           const parsed = JSON.parse(raw);
-          if (
-            parsed?.version === 1 &&
-            parsed.classes &&
-            typeof parsed.classes === "object"
-          )
+          if (parsed?.version === 1 && parsed.classes && typeof parsed.classes === "object")
             base = parseProfile(parsed);
-        } catch {
-          /* Keep the last usable profile when the aggregate is corrupt. */
-        }
+        } catch {}
       }
       const keys = [];
       for (let i = 0; i < storage.length; i++) {
         const name = storage.key(i);
-        if (typeof name === "string" && name.startsWith(prefix))
-          keys.push(name);
+        if (typeof name === "string" && name.startsWith(prefix)) keys.push(name);
       }
       for (const name of keys) {
         const id = name.slice(prefix.length);

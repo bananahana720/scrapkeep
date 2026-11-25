@@ -1,15 +1,12 @@
-# VD-01 Rivet pilot and class equipment. shell_base.spherical() seats the
-# pilot inside the clear rolling hull. Authored here from Blender primitives.
-
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
-from common import Part  # noqa: E402
+import common
+import shell_base as sb
+from common import Part
 
 DOME_C = (0.0, -0.02, 0.84)
 DOME_R = 0.6
@@ -41,8 +38,6 @@ def pod():
         p.rod("paint", (mid[0], mid[1] + 0.02, mid[2] - 0.05), (mid[0], mid[1] - 0.02, mid[2] + 0.05), 0.08, 8,
               color="petrol")
     p.box("paint", (0.36, 0.14, 0.12), loc=(0, -0.52, 0.78), color="petrol")
-    # The optical rail: a flat bed, not a barrel, with a slotted carriage and the lens.
-    # It runs forward and down from the pod, so the lens sits below the pilot's face.
     tilt = -0.38
     rail = common.mtx((0, 0.5, 0.78), (tilt, 0, 0))
     p.box("bare_metal", (0.16, 0.9, 0.035), loc=rail @ common.Vector((0, 0.45, 0)), rot=(tilt, 0, 0))

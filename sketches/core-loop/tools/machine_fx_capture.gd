@@ -5,13 +5,6 @@ const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Density := preload("res://src/presentation/density.gd")
 
-# Stills of the machine effects (presentation/machine_fx.gd) on stage 1, one moment per
-# shot, for the phone review page. Needs a display (xvfb-run works with the Compatibility
-# renderer); headless quits 2.
-#   xvfb-run -s "-screen 0 1600x900x24" godot --rendering-method gl_compatibility \
-#     --path sketches/core-loop --script res://tools/machine_fx_capture.gd -- --out=/abs/dir
-# Each shot fires its moment, lets it run for `settle` seconds of real frames and grabs
-# the frame. Stills show one instant; motion, timing and feel need a play.
 
 var game
 var fx
@@ -68,7 +61,6 @@ func _run() -> void:
 	game.player._visual_root.visible = false
 	Density.live().force(0.0)
 
-	# 1. A Fleet pack winds up together: six steam jets building on six bodies.
 	var crew: Array = []
 	for i in 6:
 		var at: Vector3 = _ground(ball + Vector3(cos(i * 0.55 - 1.4) * 14.0, 0, 10 + sin(i * 0.55 - 1.4) * 6.0))
@@ -79,19 +71,16 @@ func _run() -> void:
 		if is_instance_valid(enemy):
 			_freeze(enemy)
 			enemy.attack_phase.emit({"phase": "windup", "progress": 0.8, "row": "", "at": enemy.global_position})
-	# Frozen bodies report no live attack, so hold each jet at its late wind-up strength.
 	for id in fx._windups.keys():
 		fx._windups[id]["emitter"].amount_ratio = 0.9
 	fx._windups.clear()
 	var mid: Vector3 = crew[2].global_position
 	await _shot("1-pack-windup", mid + Vector3(-4, 4, -9), mid + Vector3(0, 2, 0), 62.0, 0.9)
 
-	# 2. A heavy ram: brass sparks, a steam leak and KLANG.
 	var target: Node3D = crew[0]
 	game.ctx.events.enemy_struck.emit(target, "ram", 60.0)
 	await _shot("2-heavy-hit", target.global_position + Vector3(-5, 3, -6), target.global_position + Vector3(0, 2.5, 0), 55.0, 0.12)
 
-	# 3. An elite clocks out.
 	var elite: Node3D = crew[1]
 	elite.set_meta("elite_affix", "stamp")
 	var elite_at := elite.global_position
@@ -104,7 +93,6 @@ func _run() -> void:
 	fx.clear()
 	await _wait(0.4)
 
-	# 4. The Foreman's horn: the tell, its ring and its word.
 	var foreman := _body("foreman", ball + Vector3(4, 0, 14))
 	game.ctx.events.enemy_spawned.emit(foreman, "lobber")
 	await _wait(0.8)
@@ -116,21 +104,18 @@ func _run() -> void:
 	foreman.queue_free()
 	fx.clear()
 
-	# 6. The Linker's cable goes taut.
 	var linker := _body("linker", ball + Vector3(-4, 0, 14))
 	fx.special_moment("linker", "tell", linker)
 	await _shot("6-linker-tell", linker.global_position + Vector3(-6, 5, -9), linker.global_position + Vector3(3, 3, 1), 60.0, 0.08)
 	linker.queue_free()
 	fx.clear()
 
-	# 7. A Waking chunk breaks: the boss phase.
 	var far := _ground(ball + Vector3(0, 0, 22))
 	fx.boss_phase("waking", far)
 	await _shot("7-waking-phase", far + Vector3(-10, 6, -14), far + Vector3(0, 4, 0), 62.0, 0.18)
 	fx.clear()
 	await _wait(0.4)
 
-	# 8. A stagger: the daze halo and the vent.
 	var dazed := _body("chaser", ball + Vector3(0, 0, 12))
 	dazed.faction = "reactor"
 	fx.follow("arc_crawl", dazed, 10, 1.2, 4.0)
@@ -140,7 +125,6 @@ func _run() -> void:
 	dazed.queue_free()
 	fx.clear()
 
-	# 9. Brindle falls: mid-blasts, then the wink one beat later.
 	var hull := _ground(ball + Vector3(0, 0, 26))
 	fx.boss_fall("brindle", hull)
 	await _shot("9-brindle-fall", hull + Vector3(-12, 10, -16), hull + Vector3(0, 4, 0), 62.0, 0.75)
@@ -148,8 +132,6 @@ func _run() -> void:
 	quit(0)
 
 
-# The flattest 30 m square within 80 m of the drop-in, so subjects and the eye share
-# open ground instead of a bank or the pit.
 func _flat_spot(start: Vector3) -> Vector3:
 	var best := start
 	var best_spread := INF
@@ -193,7 +175,6 @@ func _wait(seconds: float) -> void:
 
 
 func _shot(id: String, eye: Vector3, look: Vector3, fov: float, settle: float) -> void:
-	# Keep the eye above the ground under it, so a shot never starts inside a bank.
 	eye.y = maxf(eye.y, _ground(eye).y + 3.0)
 	camera.global_position = eye
 	camera.look_at(look, Vector3.UP)

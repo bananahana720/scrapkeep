@@ -1,11 +1,3 @@
-# Builds a recipe twice in fresh Blender processes with polish enabled and fails unless
-# the two GLBs are byte-identical (POLISH.md).
-#
-#   blender -b --factory-startup -P check_polish.py -- <recipe.py relative to here> [option=value ...]
-#
-# Recipe budget asserts are left to the recipe: an unpolished recipe can stop on its own
-# old cap, so run this on recipes that already opted in, or pass options a recipe allows.
-
 import os
 import subprocess
 import sys
@@ -34,7 +26,6 @@ def main():
         raise SystemExit("usage: check_polish.py -- <recipe.py> [option=value ...]")
     recipe = os.path.join(HERE, argv[0])
     blender = os.environ.get("BLENDER", "blender")
-    # Recipes that write several GLBs take --out-dir; every GLB they write is compared.
     multi = "--out-dir" in open(recipe).read()
     outs = []
     with tempfile.TemporaryDirectory() as tmp:

@@ -1,34 +1,4 @@
 extends SceneTree
-# UA-04: P3 in design-v3/ui-audit/principles.json, "Words and marks hold contrast: 4.5 to 1 for
-# words, 3 to 1 for edges and marks" (WCAG 2.2 1.4.3 and 1.4.11). In each world 1 stage (1 and 2)
-# the ball rests under the game's chase camera twice: looking along the ground, and tipped up so
-# the park sky sits behind the top of the screen. The world event warning line is raised each
-# time (it is Palette.SLATE since PR 1089). Per view two frames are grabbed with the world held
-# still: H with the HUD on, and G with every canvas layer off. Every visible HUD Label (a word) and
-# TextureRect (a mark) is scored from its screen rectangle:
-#   shown   the pixels of H that differ from G by DIFFER or more, inside the rectangle plus a pad;
-#   glyph   for a word, the shown pixels that match the label's own colour laid over G at its alpha
-#           (so an outline or a panel behind the glyph does not count as the glyph); for a mark,
-#           every shown pixel;
-#   around  the pixels of H within AROUND pixels outside the glyph (the ring). When drawn HUD pixels
-#           (an outline or a backing panel) fill at least OUTLINE_SHARE of the ring, only they count;
-#           otherwise the whole ring counts, because a thin outline lets the ground through.
-# The score is the WCAG 2.2 contrast ratio between the median relative luminance of the glyph and
-# of the around pixels: the contrast the player sees between a glyph and what touches it. It must
-# reach WORD_LINE for a word and MARK_LINE for a mark. `ring_contrast` records the whole ring's ratio
-# and `surround` which one judged. `ground` records the same ratio against G
-# alone, the contrast the glyph would have with no outline or panel, for reading only.
-# An element with fewer than MIN_GLYPH glyph pixels is `unseen` and not scored; the run fails when
-# nothing at all was scored. --plant=close adds a word with no outline in a colour a few levels
-# from the ground behind it, beside a matched control word in white or black, whichever stands further from the ground; the plant run's verdict is the
-# plant's alone: fail (exit 1) when the planted word falls under the line, pass (exit 0) when the
-# measure missed it, 3 when the control word also fails or was not seen. Real run: exit 0 pass, 1 fail. Both: 2 for
-# no display or no --out.
-# Covered: only Label and TextureRect nodes under game.hud. Not covered: words and marks a control
-# draws itself with draw_string or _draw (run_status THREAT, ui_draw's ARMOUR and HEALTH values,
-# the ability icons, the gauges), which is most of the HUD's words; `scored` counts what was read.
-#   gpu-run.sh <worktree> hud --path sketches/core-loop --script res://tools/hud_contrast_capture.gd -- \
-#     [--plant=close] --out=<abs dir>
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -149,7 +119,6 @@ func _run() -> void:
 	quit(code)
 
 
-# The ball is held still once it has rested, then the chase camera eases in behind it.
 func _rest() -> bool:
 	var landed := 0
 	for i in 2400:
@@ -221,9 +190,6 @@ func _layers(on: bool) -> void:
 				n.visible = true
 
 
-# A word drawn with no outline. `close`: a colour a few levels from the ground behind it, which must
-# fail. Otherwise the plant's matched control: black or white, whichever the ground contrasts with
-# more, which must pass, so the run shows the measure tells the two apart on the same ground.
 func _plant_word(ground: Image, text: String, close: bool, down: float) -> Label:
 	var layer := CanvasLayer.new()
 	layer.layer = 90
@@ -298,9 +264,6 @@ func _measure_node(node: Control, shot: Image, ground: Image, stage: int, view: 
 	return rec
 
 
-# The glyph's and its surround's contrast inside `rect`. `font` is a word's colour with its alpha
-# (alpha below 0 means a mark: every shown pixel is the glyph). Returns {scored, contrast,
-# ground_contrast, glyph_px, around_px}; scored is false below MIN_GLYPH glyph pixels.
 static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Dictionary:
 	var is_mark := font.a < 0.0
 	var w := rect.size.x
@@ -318,7 +281,6 @@ static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Di
 				continue
 			shown[j * w + i] = 1
 			if is_mark:
-				# A mark has no outline of its own here: every drawn pixel is the mark, so it is judged by the ring.
 				glyph[j * w + i] = 1
 				count += 1
 			else:
@@ -347,8 +309,6 @@ static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Di
 					drawn_lum.append(luminance(s))
 	if ring_lum.is_empty():
 		return rec
-	# The surround is the drawn outline or panel when it fills at least half the ring; a thinner
-	# outline lets the ground show through, so the whole ring is what the glyph touches.
 	var share := float(drawn_lum.size()) / float(ring_lum.size())
 	var around_lum: Array = drawn_lum if share >= OUTLINE_SHARE else ring_lum
 	rec["around_px"] = around_lum.size()
@@ -356,8 +316,6 @@ static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Di
 	rec["outline_share"] = snappedf(share, 0.01)
 	rec["scored"] = true
 	var core := _median(core_lum)
-	# An outline's inner edge blends into the glyph, so its median reads lighter than the outline
-	# the eye sees; the outline is judged by its solid part, the quartile farthest from the glyph.
 	var around := _median(around_lum)
 	if around_lum == drawn_lum:
 		around = _quantile(drawn_lum, 0.25 if core > around else 0.75)
@@ -367,12 +325,10 @@ static func measure(shot: Image, ground: Image, rect: Rect2i, font: Color) -> Di
 	return rec
 
 
-# The largest 8-bit channel difference between two colours.
 static func _apart(a: Color, b: Color) -> float:
 	return maxf(absf(a.r - b.r), maxf(absf(a.g - b.g), absf(a.b - b.b))) * 255.0
 
 
-# 1 where a pixel is within `r` (Chebyshev) of a set pixel in `mask`.
 static func _dilate(mask: PackedByteArray, w: int, h: int, r: int) -> PackedByteArray:
 	var out_mask := PackedByteArray()
 	out_mask.resize(w * h)
@@ -397,7 +353,6 @@ static func _median(values: Array) -> float:
 	return sorted[sorted.size() / 2]
 
 
-# WCAG 2.x relative luminance of an sRGB colour.
 static func luminance(c: Color) -> float:
 	return 0.2126 * _lin(c.r) + 0.7152 * _lin(c.g) + 0.0722 * _lin(c.b)
 
@@ -406,6 +361,5 @@ static func _lin(v: float) -> float:
 	return v / 12.92 if v <= 0.04045 else pow((v + 0.055) / 1.055, 2.4)
 
 
-# WCAG contrast ratio between two relative luminances.
 static func ratio(a: float, b: float) -> float:
 	return (maxf(a, b) + 0.05) / (minf(a, b) + 0.05)

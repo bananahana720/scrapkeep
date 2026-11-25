@@ -1,5 +1,3 @@
-# Shared-world device prop. Procedural bmesh; no external assets or physics.
-# Metres; Godot (X,Y,Z) -> Blender (X,-Z,Y). State parts keep script-owned pivots.
 import math
 import os
 import sys
@@ -13,8 +11,6 @@ from common import Part
 common.reset()
 for slot, rough, metal in [("device_concrete", 0.95, 0.0), ("device_metal", 0.68, 0.28), ("device_marks", 0.85, 0.0)]:
     common.SLOTS[slot] = {"vc": True, "rough": rough, "metal": metal}
-# Polish (POLISH.md): the registry caps device props at 1100 T / 2100 V, so smooth shading and the AO/wear bake only
-# (bevel 0); Not imported by another recipe, so module level.
 import polish
 polish.enable(detail=1, bevel=0)
 
@@ -121,8 +117,6 @@ def preview(outdir,stem,span,target,ball_at):
 
 root=common.empty("CrackedCache")
 p=Part("CacheShell")
-# Walls preserve the collision envelope. Chamfered slab edges and repair seams
-# break up the pocket without stealing any route clearance.
 for s in (-1,1):
     box(p,(1,7.5,12),(s*6.5,2.25,0),common.mix("petrol","bone",0.22),"device_concrete")
     for y in (0.5,3.3,5.6):
@@ -131,21 +125,17 @@ for s in (-1,1):
         panel(p,chamfer(0.65,0.85,0.16),0.05,(s*6.5,4.4,z),common.mix("petrol","bone",0.16),"device_concrete")
 box(p,(14,7.5,1),(0,2.25,-5.5),common.mix("petrol","bone",0.22),"device_concrete")
 box(p,(14.2,0.35,0.3),(0,3.3,6.05),"charcoal","device_concrete")
-# Exposed aggregate and two retained repair bands stay subdued.
 for x in (-5.8,-2,2,5.8):
     box(p,(0.3,0.18,1.06),(x,5.75,-5.5),"sandstone","device_concrete")
 for s in (-1,1):
     box(p,(0.8,0.12,1.025),(s*5.9,5.85,-5.5),"charcoal","device_concrete")
 finish(p)
-# The roof is its own part: the park's open-topped pocket (activities.gd) wears the shell without it.
 p=Part("CacheRoof")
 panel(p,chamfer(14,1,0.18),12,(0,6.5,0),common.mix("petrol","bone",0.12),"device_concrete")
-# Exposed chips follow slab edges; broad irregular patches are aggregate, not trim.
 for x,y,w in [(-5.3,6.35,0.8),(-1.8,6.17,0.65),(4.8,6.32,0.95)]:
     panel(p,[(-w/2,-0.12),(w/2,-0.16),(w/2-0.18,0.14),(-w/2+0.12,0.21)],0.03,(x,y,6.015),common.mix("sandstone","petrol",0.28),"device_concrete")
 finish(p)
 p=Part("CacheWall")
-# Convex interlocking slabs leave a charcoal fracture line across the front.
 polys=[ [(-6,-3.75),(-1,-3.75),(-1.5,-0.5),(-4,0.7),(-6,0.2)],
 [(-0.87,-3.75),(6,-3.75),(6,-0.1),(2,0.5),(-1.35,-0.57)],
 [(-6,0.35),(-4,0.85),(-1.55,-0.36),(-0.7,3.75),(-6,3.75)],

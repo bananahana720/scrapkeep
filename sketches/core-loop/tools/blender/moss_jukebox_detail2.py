@@ -26,7 +26,7 @@ def build(s):
         for t in (.25, .75):
             bead(s, (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, -.565), .018, .012, copper)
     for i in range(4):
-        x = -.18 - .035 * i  # the face looks down -z, so screen right is -x
+        x = -.18 - .035 * i
         bar(s, (x, 1.86 - .02 * i), (x - .07, 1.93 - .02 * i), .014, -.545, -.525, dark, ends=False)
     x0, x1, y0, y1 = j.PATCH
     for x in (x0 + .02, x1 - .02):

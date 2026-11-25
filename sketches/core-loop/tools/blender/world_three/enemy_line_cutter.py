@@ -34,8 +34,6 @@ root = common.empty("LineCutter")
 body = Part("CutterCrewBody")
 core_points = []
 
-# Broad repaired breastplate with rounded radial sections, not a square box.
-# Under polish the breastplate subdivides once; the crew is the shared soft critter.
 with body.region(bevel=0, subsurf=1):
     rows = []
     for y, radius in [(-0.55, 0.48), (-0.2, 0.72), (0.55, 0.8), (0.9, 0.62), (1.1, 0.42)]:
@@ -61,14 +59,12 @@ for side in (-1, 1):
     body.cyl("fleet_paint", 0.16, 0.12, 0.18, segs=6,
              loc=g(side * 0.35, -0.6, 0), color="bone")
     body.box("fleet_paint", (0.32, 0.42, 0.18), loc=g(side * 0.4, -1.01, 0.12), color="53686d")
-    # Scuffed plate edges and sparse rivets, all on the shared body surface.
     with body.region(bevel=0.006):
         body.rod("fleet_paint", g(side * 0.52, 0.1, 0.43), g(side * 0.4, 0.72, 0.43),
                  0.024, segs=4, color="a8aaa3")
         body.cyl("fleet_paint", 0.032, 0.032, 0.03, segs=5,
                  loc=g(side * 0.37, 0.57, 0.65), rot=(math.pi / 2, 0, 0), color="charcoal")
 
-# Anonymous russet crew: small head, two ears, closed opposing paw.
 with body.region(bevel=0, subsurf=2, detail=1):
     body.uv("fleet_paint", 0.38, u=10, v=6, loc=g(0, 1.3, 0), color="oxide")
     body.uv("fleet_paint", 0.14, u=8, v=4, loc=g(0, 1.23, 0.29),
@@ -88,7 +84,6 @@ bmesh.ops.recalc_face_normals(body.bm, faces=body.bm.faces[:])
 crew = body.to_object(parent=root)
 
 arm = Part("ThrowArm")
-# Arm rods are 7 cm and the rack 4.5 cm, so the bevel stays narrow.
 arm.bevel = 0.015
 arm.rod("fleet_paint", g(-0.48, 0.7, 0), g(-0.50, 1.25, 0), 0.07, segs=8, color="charcoal")
 arm.rod("fleet_paint", g(-0.50, 1.25, 0), g(-0.50, 1.8, 0), 0.07, segs=8, color="charcoal")
@@ -96,16 +91,13 @@ for y in (0.7, 1.25):
     arm.cyl("fleet_paint", 0.13, 0.13, 0.17, segs=8,
             loc=g(-0.50, y, 0), rot=(0, math.pi / 2, 0), color="bone")
 arm.cyl("fleet_paint", 0.1, 0.1, 0.28, segs=6, loc=g(-0.50, 1.56, 0), color="53686d")
-# Narrow overhead rack and bridge: the disc is not part of the arm's action.
 arm.rod("fleet_paint", g(-0.50, 1.8, 0), g(0, 1.8, 0), 0.045, segs=6, color="charcoal")
 arm.cyl("fleet_paint", 0.08, 0.08, 0.35, segs=8, loc=g(0, 1.9, 0), color="a8aaa3")
 bmesh.ops.recalc_face_normals(arm.bm, faces=arm.bm.faces[:])
 throw_arm = arm.to_object(origin=g(-0.48, 0.7, 0), parent=root)
 
 disc = Part("CutterDisc")
-# The disc is 8 cm thick: a narrow bevel keeps its rim bands sharp and readable.
 disc.bevel = 0.01
-# A closed thin disc with a metal centre and alternating working rim bands.
 rings = []
 for y, radius in [(2.06, 0.61), (2.06, 0.7), (2.14, 0.7), (2.14, 0.61)]:
     rings.append([disc.bm.verts.new(Vector(g(radius * math.cos(math.tau * i / 24), y,
@@ -134,7 +126,6 @@ assert common.tri_total(root) <= 6000
 opts = common.args()
 path = opts["out"] or os.path.join(common.MODELS, "world_three", "enemy_line_cutter.glb")
 common.export(root, path)
-# Count actual split vertices/surfaces in the export, including colour/normal seams.
 data = open(path, "rb").read()
 size = struct.unpack_from("<I", data, 12)[0]
 glb = json.loads(data[20:20 + size])
@@ -187,7 +178,6 @@ def preview(outdir):
     os.makedirs(outdir, exist_ok=True)
     for label, at in [("front", (-1, -10, 1)), ("side", (-10, -0.01, 1)),
                       ("three_quarter", (-7, -10, 6)), ("windup", (-7, -10, 6))]:
-        # Side comparison moves the sphere sideways in screen space, retaining its height.
         ball.location = g(0, -0.1, -2.1) if label == "side" else g(-2.1, -0.1, 0)
         if label == "windup":
             crew.rotation_euler.x = 0.08

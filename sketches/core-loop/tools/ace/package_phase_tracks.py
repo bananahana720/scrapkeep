@@ -32,26 +32,21 @@ import numpy as np
 import soundfile as sf
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from package_music import RATE, PRE_ROLL, POST_ROLL, LOOP_JOIN, STEMS, SILENT_DB, PROFILES, cut_clip, encode, sha  # noqa: E402
+from package_music import RATE, PRE_ROLL, POST_ROLL, LOOP_JOIN, STEMS, SILENT_DB, PROFILES, cut_clip, encode, sha
 
 SKETCH = Path(__file__).resolve().parents[2]
 OUT = SKETCH / 'assets/music_ace'
 SOUND = SKETCH / 'design-v3/sound'
 BARS = 16
 START_BAR = 4
-# Takes whose loop clicks when cut from START_BAR (scripts/audio-gate.mjs seam), cut earlier.
 START_BARS = {'landmark-penstock': 2, 'event-surge-run': 2}
 TARGET_LUFS = -16.0
 MAX_TP = -1.2
 
-# id -> (render folder under renders/, job name, seed or None, bpm to land on, key, key_offset)
-# Picks are RENDERS.md's. waking-final takes the Rubber Band grid file the page names.
 TRACKS = {
     'brindle-p1-requisition': ('lab-round7-1', 'brindle-p1-requisition', 2701, 138, 'D', 0),
     'brindle-p2-furnace': ('lab-round7-1', 'brindle-p2-furnace', 2702, 150, 'D', 0),
     'brindle-p3-scuttle': ('lab-round7-1', 'brindle-p3-scuttle', 2702, 172, 'D', 0),
-    # The Rubber Band 142 file reads 129.25 to 139.25 depending on the window, so the take itself
-    # (kick at 129.0) is packed at 129, the engine's house grid.
     'waking-final': ('lab-round7-1', 'waking-final', 2702, 129, 'D', 0),
     'mind-final': ('lab-round7-1', 'mind-final', 2701, 142, 'E', 2),
     'champion-hype': ('lab-round7-1', 'champion-hype', 2702, 129, 'D', 0),
@@ -62,8 +57,6 @@ TRACKS = {
 }
 
 
-# The place-and-moment tunes (design-v3/sound/tunes.json): the picked take of each row, from the
-# mastered gapfill folder. Key letter and offset from the row's key, relative to the house D.
 TUNES_JSON = SOUND / 'tunes.json'
 KEY_OFFSETS = {'D': 0, 'E': 2, 'G': 5}
 
@@ -78,9 +71,6 @@ def tune_tracks(tunes_path=TUNES_JSON):
     return out
 
 
-# The radio's takes (design-v3/sound/radio_renders.json, written by radio_takes.py): whole songs,
-# packed with `pack --whole` so the take plays start to finish instead of a 16-bar loop. The
-# take played is the row's pick, else its first render.
 def radio_tracks(renders_path):
     out = {}
     for row in json.loads(Path(renders_path).read_text()):
@@ -133,16 +123,12 @@ def stretch(args):
     (work / 'stretched').mkdir(parents=True, exist_ok=True)
     report = {}
     tracks = radio_tracks(args.radio) if args.radio else tune_tracks(args.tunes) if args.tunes else TRACKS
-    # Gapfill tunes and radio takes were rendered at their row's tempo, so a read that disagrees
-    # is the detector's, not the take's.
     at_tempo = bool(args.tunes or args.radio)
     for track_id, (_, _, _, bpm, key, key_offset) in tracks.items():
         src = source_of(args.render_root, track_id, tracks)
         measured = mono_tempo(src, bpm)
         out = work / 'stretched' / f'{theme_of(track_id)}.wav'
         if abs(measured / bpm - 1) > 0.045 and at_tempo:
-            # The gapfill takes were rendered at their row's tempo; a read at the wide window's
-            # edge is the detector, so read again in a narrow window around the row's tempo.
             narrow = mono_tempo(src, bpm, 0.97, 1.03)
             print(f'{track_id}: wide read {measured:.2f}, narrow read {narrow:.2f}', flush=True)
             measured = narrow
@@ -152,8 +138,6 @@ def stretch(args):
         after = mono_tempo(out, bpm)
         note = 'stretched'
         if at_tempo and abs(after / bpm - 1) > 0.01:
-            # The stretch moved the read away from the row's tempo, so the reads disagree with
-            # themselves; the take was rendered at the row's tempo, so it is packed as rendered.
             import shutil
             shutil.copyfile(src, out)
             note = f'unstretched: detector unreliable (read {after:.2f} after stretching)'
@@ -218,12 +202,8 @@ def pack(args):
         beat = round(RATE * 60 / bpm)
         bar = beat * 4
         head = round(cut_loops.phase(flux, rate, bpm) * RATE)
-        # Skip the intro by START_BAR bars, or as many as a short take leaves room for; a take
-        # shorter than 16 bars (some gapfill renders are 30 s) loops 8.
         fit = None
         if args.whole:
-            # The whole take from its first downbeat: every full bar that fits before the
-            # post-roll, so the song plays through and its last bar joins back to its first.
             whole_bars = (len(mix) - head - POST_ROLL) // bar
             if whole_bars < BARS // 2:
                 raise SystemExit(f'{track_id}: take too short for a whole-song pack at {bpm}')

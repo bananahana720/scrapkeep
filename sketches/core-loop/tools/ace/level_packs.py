@@ -19,8 +19,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import package_phase_tracks as P  # noqa: E402
-from package_music import encode  # noqa: E402
+import package_phase_tracks as P
+from package_music import encode
 
 STEMS = ('drums', 'bass', 'other')
 NOTE = 'summed stems before Ogg re-encode, after level_packs.py'

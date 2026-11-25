@@ -33,8 +33,6 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 MUSIC = HERE.parent.parent / 'assets' / 'music_ace'
 PAGE_USEC = 20000
-# The longest page a packed Ogg may hold, in seconds. 20 ms pages hold one or two Vorbis
-# packets (a long block is 46 ms at 44.1 kHz), so a re-paged file's longest is under this.
 MAX_PAGE_S = 0.1
 
 
@@ -129,8 +127,6 @@ def apply(root, backup):
                     shutil.copy2(f, keep)
             before += f.stat().st_size
             after += out.stat().st_size
-            # The new file lands beside the original and takes its name in one step, so a
-            # pass that is killed part way leaves every file whole: the old one or the new one.
             beside = f.with_name(f.name + '.repaged')
             shutil.copyfile(out, beside)
             os.replace(beside, f)

@@ -49,14 +49,14 @@ from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
-import common  # noqa: E402
-import polish  # noqa: E402
+import common
+import polish
 
 MODELS = os.path.join(common.SKETCH, "assets", "models", "park")
 CLASSES = json.load(open(os.path.join(common.SKETCH, "assets", "asset_budgets.json")))["classes"]
 SLOT = "enamel"
-FLUSH = 0.12            # the most a part with no collider may stand over a surface a ball rolls on (landmarks.py)
-CLEAR_ABOVE = 5.5       # nothing over a lane lower than this (ledges.py)
+FLUSH = 0.12
+CLEAR_ABOVE = 5.5
 
 TIMBER = "8c6d4c"
 TIMBER_DK = "6b4a30"
@@ -129,7 +129,6 @@ def stencil(part, cx, y0, y1, z, digits, facing):
             block(part, (bx0, by0, za), (bx1, by1, zb), STENCIL)
 
 
-# ---------------------------------------------------------------------------------------------------------- keel rib
 RIB_HX, RIB_TOP, RIB_HZ = 1.5, 12.0, 25.0
 RIB_FLANGE = 0.8
 RIB_INSET = 0.1
@@ -143,17 +142,14 @@ def rib_ground(z):
 
 def keel_rib(root, rng):
     rib = common.Part("isle_keel_rib")
-    # bottom flange, bay by bay so its skirt follows the ground down under the flat-bottomed box
     n = int(2 * RIB_HZ / RIB_BAY)
     for k in range(n):
         z0, z1 = -RIB_HZ + k * RIB_BAY, -RIB_HZ + (k + 1) * RIB_BAY
         foot = min(rib_ground(z0), rib_ground(z1), 0.0) - 0.15
         block(rib, (-RIB_HX, foot, z0), (RIB_HX, RIB_FLANGE, z1), shade(RUST_DK, rng))
-        # web panel: flaking hull paint over rust, set in by RIB_INSET between the stiffeners
         za, zb = z0 + RIB_STIFF / 2, z1 - RIB_STIFF / 2
         paint = PAINT if rng.random() < 0.55 else RUST
         block(rib, (-RIB_HX + RIB_INSET, RIB_FLANGE, za), (RIB_HX - RIB_INSET, RIB_TOP - RIB_FLANGE, zb), shade(paint, rng))
-        # a rust bloom low on each panel, where water ran
         h = rng.uniform(1.6, 3.4)
         block(rib, (-RIB_HX + RIB_INSET - 0.01, RIB_FLANGE, za + 0.3), (RIB_HX - RIB_INSET + 0.01, RIB_FLANGE + h, zb - 0.3),
               shade(RUST_LT if paint == PAINT else RUST_DK, rng))
@@ -162,8 +158,6 @@ def keel_rib(root, rng):
         z = -RIB_HZ + k * RIB_BAY
         z0, z1 = max(-RIB_HZ, z - RIB_STIFF / 2), min(RIB_HZ, z + RIB_STIFF / 2)
         block(rib, (-RIB_HX, RIB_FLANGE, z0), (RIB_HX, RIB_TOP - RIB_FLANGE, z1), shade(RUST_DK if k % 2 else RUST, rng))
-    # rivets along both faces of the top flange and up every stiffener, proud of the box by 0.04 m (the count keeps the
-    # rib under 4,000 triangles, the detail cap, well inside its landform class's 8,000)
     with rib.region(bevel=0):
         for side in (-1, 1):
             x0, x1 = sorted((side * RIB_HX, side * (RIB_HX + 0.04)))
@@ -181,10 +175,9 @@ def keel_rib(root, rng):
     rib.to_object(parent=root)
 
 
-# ---------------------------------------------------------------------------------------------------------- tram head
-TRAM_Z = (-12.8, 6.6)       # the deck's run along z on the flat top
+TRAM_Z = (-12.8, 6.6)
 TRAM_HX = 12.0
-TRAM_GAUGE = 1.0            # rail offset from the axis
+TRAM_GAUGE = 1.0
 
 
 def tram_top(z):
@@ -193,7 +186,6 @@ def tram_top(z):
 
 def tram_head(root, rng):
     deck = common.Part("isle_tram_head")
-    # planks across x, 0.9 m wide, 0.04 m proud of the stamped top and 0.08 m into it
     z = TRAM_Z[0]
     k = 0
     while z < TRAM_Z[1] - 0.1:
@@ -203,13 +195,9 @@ def tram_head(root, rng):
         sloped(deck, -TRAM_HX + trim0, TRAM_HX - trim1, z + 0.02, z1 - 0.02, tram_top, -0.08, 0.04, shade(tone, rng, 0.08))
         z = z1
         k += 1
-    # the track: sleepers under two iron rails, the rails' heads FLUSH over the top
     with deck.region(bevel=0.01):
         for x in (-TRAM_GAUGE, TRAM_GAUGE):
             sloped(deck, x - 0.08, x + 0.08, TRAM_Z[0] + 0.3, TRAM_Z[1] - 0.2, tram_top, 0.0, FLUSH, IRON)
-    # wheel stops at the back: a timber sill across both rail ends with iron caps, and a hazard band painted on the
-    # deck before it, all within FLUSH of the top: the stamped top is this row's only collider, so nothing taller stands
-    # on it (a buffer block the ball rolled through would read as a wall that is not there)
     zb = TRAM_Z[0] + 0.15
     sloped(deck, -TRAM_GAUGE - 0.7, TRAM_GAUGE + 0.7, zb, zb + 0.5, tram_top, 0.0, FLUSH, shade(TIMBER_DK, rng))
     for x in (-TRAM_GAUGE, TRAM_GAUGE):
@@ -217,22 +205,19 @@ def tram_head(root, rng):
     for k in range(9):
         x = -TRAM_GAUGE - 1.6 + k * 0.4
         sloped(deck, x, x + 0.2, zb + 0.7, zb + 1.3, tram_top, 0.0, 0.045, HAZARD if k % 2 == 0 else BONE)
-    # the winch's bed plate off the track's left, where the hauling crew stood, with its cable coiled flat on it
     wx, wz = -5.5, TRAM_Z[0] + 1.4
     sloped(deck, wx - 0.9, wx + 0.9, wz - 0.7, wz + 0.7, tram_top, 0.0, 0.07, IRON)
     deck.ring(SLOT, 0.3, 0.55, 0.05, segs=12, loc=g(wx, tram_top(wz) + 0.06, wz), color=RUST)
     deck.to_object(parent=root)
 
 
-# ---------------------------------------------------------------------------------------------------------- adit portal
 ADIT_SETS = (-13.5, -9.5, -5.5)
 ADIT_POST_X = 9.5
 ADIT_POST = 0.55
-ADIT_CAP = (7.0, 7.7)       # cap underside and top over the ramp at each set
+ADIT_CAP = (7.0, 7.7)
 ADIT_HZ = 15.0
 ADIT_TRACK = 1.0
-LANE_HX = 7.0               # the row's half width: the 14 m lane
-# Godot strips one -col on import, so the node arrives as isle_adit_portal-col and park_recipes.gd cooks its trimesh
+LANE_HX = 7.0
 ADIT_COL = "isle_adit_portal-col-col"
 
 
@@ -248,17 +233,13 @@ def adit_portal(root, rng):
             x0, x1 = sorted((s * (ADIT_POST_X - ADIT_POST / 2), s * (ADIT_POST_X + ADIT_POST / 2)))
             block(adit, (x0, base - 0.4, z - ADIT_POST / 2), (x1, base + ADIT_CAP[0], z + ADIT_POST / 2),
                   shade(TIMBER_DK if k % 2 else TIMBER, rng))
-            # a rubble footing round each post, kept outside the lane and sunk to within FLUSH of the ramp
             for j in range(3):
                 r = rng.uniform(0.45, 0.8)
                 rx, rz = rng.uniform(0.2, 0.9), z + rng.uniform(-0.9, 0.9)
-                # topped FLUSH over the ramp at the stone's downhill edge, where the ramp is lowest under it
                 adit.ico(SLOT, r, subdiv=1, loc=g(s * (ADIT_POST_X + rx), adit_floor(rz + r) + FLUSH - 0.02 - 0.6 * r, rz),
                          scale=(1.0, 1.0, 0.6), color=shade(STONE, rng, 0.1))
         block(adit, (-ADIT_POST_X - 0.6, base + ADIT_CAP[0], z - 0.32), (ADIT_POST_X + 0.6, base + ADIT_CAP[1], z + 0.32),
               shade(TIMBER, rng))
-    # knee braces in the upper corners and side lagging under the caps, all above 4.5 m, so the sets read as one
-    # timbered mouth while nothing the ball can reach stands inside the lane
     for z in ADIT_SETS:
         base = adit_floor(z)
         for s in (-1, 1):
@@ -276,7 +257,6 @@ def adit_portal(root, rng):
                    shade(TIMBER if j % 2 else TIMBER_DK, rng, 0.08))
             lo = hi
             j += 1
-    # roof lagging: boards along the slope over the caps, from the first set to the last
     za, zb = ADIT_SETS[0] - 0.5, ADIT_SETS[-1] + 0.4
     x = -ADIT_POST_X
     k = 0
@@ -287,12 +267,10 @@ def adit_portal(root, rng):
                ADIT_CAP[1] + lift, ADIT_CAP[1] + 0.14 + lift, shade(TIMBER_LT if k % 2 else TIMBER_DK, rng, 0.08))
         x += w
         k += 1
-    # the number board on the downhill cap's +z face, and its stencilled "07"
     zf = ADIT_SETS[-1] + 0.32
     yb = adit_floor(ADIT_SETS[-1]) + ADIT_CAP[0]
     block(adit, (-0.75, yb + 0.06, zf), (0.75, yb + 0.64, zf + 0.06), BONE)
     stencil(adit, 0.0, yb + 0.06, yb + 0.64, zf + 0.06, "07", 1)
-    # the lamp: a chain off the cap's centre, a copper cage lamp under it, clear of the 5.5 m lane height
     ly = yb - 0.05
     with adit.region(bevel=0):
         for j in range(2):
@@ -300,7 +278,6 @@ def adit_portal(root, rng):
     adit.cyl(SLOT, 0.22, 0.28, 0.5, segs=10, loc=g(0.0, ly - 0.75, zf - 0.32), color=COPPER)
     adit.cyl(SLOT, 0.16, 0.16, 0.3, segs=10, loc=g(0.0, ly - 1.1, zf - 0.32), color="e5a044")
     adit_collider(root)
-    # ties and the track down the ramp
     z = -ADIT_HZ + 0.4
     while z < ADIT_HZ - 0.3:
         sloped(adit, -ADIT_TRACK - 0.9, ADIT_TRACK + 0.9, z - 0.11, z + 0.11, adit_floor, -0.09, 0.05,
@@ -346,8 +323,6 @@ def adit_collider(root):
     obj.parent = root
 
 
-# ---------------------------------------------------------------------------------------------------------- recipes
-# id: (builder, seed, budget class the row places it under)
 RECIPES = {
     "isle_keel_rib": (keel_rib, 3101, "landform"),
     "isle_tram_head": (tram_head, 3111, "landform"),
@@ -365,7 +340,6 @@ def bounds(root, skip=()):
             p = o.matrix_world @ v.co
             lo = Vector(map(min, lo, p))
             hi = Vector(map(max, hi, p))
-    # back to Godot axes
     return (lo.x, lo.z, -hi.y), (hi.x, hi.z, -lo.y)
 
 
@@ -377,14 +351,12 @@ def build(rid, out_dir, count_only):
     root = common.empty(rid + "_root")
     fn(root, random.Random(seed))
     cols = [o for o in common.tree(root) if "-col" in o.name]
-    tris = common.tri_total(root)        # the -col mesh counts against the cap, as landmarks.py counts its own
+    tris = common.tri_total(root)
     lo, hi = bounds(root, skip=cols)
     cap = CLASSES[cls]
     print("ISLE_COUNT", rid, json.dumps({"tris": tris, "class": cls, "cap": cap["tris"],
                                          "bounds": [[round(v, 3) for v in lo], [round(v, 3) for v in hi]]}))
     assert tris <= cap["tris"], (rid, tris, cap["tris"])
-    # nothing drawn the ball can reach stands more than FLUSH over the surface it rolls on (no ghost solids): on the
-    # tram head nothing over the stamped top, in the adit's lane and a metre past it nothing between FLUSH and CLEAR_ABOVE
     for o in common.tree(root):
         if o.type != "MESH" or o in cols:
             continue

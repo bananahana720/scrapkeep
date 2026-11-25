@@ -24,7 +24,6 @@ def call(tool, args):
     out = subprocess.run(MOJULO + [tool, "--json", "@" + os.path.abspath(path)], env=env,
                          capture_output=True, text=True, check=True).stdout
     os.remove(path)
-    # The CLI cuts stdout at 64 KB; the head always holds ok, ref and the export path.
     head = out[:4000]
     if '"ok": true' not in head:
         raise SystemExit(tool + " failed: " + head[:800])

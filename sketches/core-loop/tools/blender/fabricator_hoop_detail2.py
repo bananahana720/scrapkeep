@@ -23,12 +23,11 @@ SLOT = "steel"
 BUDGET = [1500, 3000, 1]
 SIZE = [10.46, 8.753, 2.012]
 tone, stud, band, on_ring = d1.tone, d1.stud, d1.band, d1.on_ring
-LINE_DR, LINE_W, LINE_H = .21, .045, .015   # panel line offset from the centreline, width, height proud of the face
-NUT_GAP = math.radians(11)                  # the panel lines stop this far either side of the crown
+LINE_DR, LINE_W, LINE_H = .21, .045, .015
+NUT_GAP = math.radians(11)
 
 
 def panel_line(s, side, dr, a0, a1, n):
-    # A low trough-shaped strip on the ring face: two buried walls and a top, following the ring between a0 and a1.
     z0, z1 = side * (d1.FACE - .02), side * (d1.FACE + LINE_H)
     verts = []
     for i in range(n + 1):
@@ -54,7 +53,6 @@ def nut(s):
     apothem = r * math.cos(math.pi / 6)
     for side in (-1, 1):
         stud(s, (0, ym, side * (apothem + .1)), (0, 0, side), .22, .04, 10, tone("footing"))
-    # Weld seams: a dark collar on the ring where it leaves the nut on each side.
     for sign in (-1, 1):
         a = math.pi / 2 + sign * math.asin((apothem + .02) / d1.RC)
         p0, p1 = on_ring(a, 0, 0), on_ring(a + sign * .02, 0, 0)
@@ -87,7 +85,7 @@ def build(s):
 
 
 def main():
-    polish.enable(bevel=.02, bevel_min=.25, **fh.kit.BAKE)  # light shell polish: smooth shading, bake
+    polish.enable(bevel=.02, bevel_min=.25, **fh.kit.BAKE)
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(fh.MODELS))

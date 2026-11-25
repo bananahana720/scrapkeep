@@ -41,8 +41,7 @@ from ore_cart import strut
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [2500, 2000, 2]  # polish: was [900, 2000, 2]
-# Polish (tools/blender/POLISH.md): small bevels only; the deck Plate top is a ride surface, so it gets a bevel and no subdivision and stays flat.
+LANDMARK = [2500, 2000, 2]
 FINISH = {"Plate": {"bevel": .03}, "Column": {"bevel": .03}, "Pump": {"bevel": .03}, "Frame": {"bevel": .03}, "Faces": {"bevel": .04}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
 
 
@@ -53,8 +52,6 @@ def polish_on():
 
 NAME = "lift_platform"
 
-# One row per painted part, palette names or palette hex only (common.HEX mirrors src/core/palette.gd; LEDGER e6d9b8 and
-# ANCIENT 9dff3c are written out: common.HEX has no LEDGER and still carries the old ancient blue). No mint: no state.
 TONES = {
     "body": "petrol",
     "iron": "charcoal",
@@ -63,46 +60,41 @@ TONES = {
     "lamp": "9dff3c",
 }
 
-# Metres, Godot +Y up. Deck: origin at the lift body (plate centre). Pump and glass: origin at the foot (ground).
-RADIUS = 4.5                                    # spec radius (map_gorge.gd:350-351)
-TOP = .5                                        # lift_top = body y + 0.5 (contraptions.gd:416-417)
-PISTON = (1.2, 14.0)                            # radius, rise + 1 hanging from 0 (contraptions.gd:395-403)
+RADIUS = 4.5
+TOP = .5
+PISTON = (1.2, 14.0)
 DECK_CLEAR = (RADIUS + .001, TOP + .001)
 ND = 24
 NC = 12
-# The plate as one closed lathe (radius, y, tone): charcoal top (under the steel deck plate), copper rim, petrol underside.
 PLATE = [(.02, .49, "iron"), (4.26, .49, "iron"), (4.26, .49, "copper"), (4.5, .4, "copper"), (4.5, -.12, "copper"),
          (4.42, -.2, "copper"), (4.42, -.2, "body"), (3.9, -.5, "body"), (.02, -.5, "body")]
-DECK = (4.27, TOP, .47)                         # the steel deck plate: radius, top, bottom
+DECK = (4.27, TOP, .47)
 COLUMN = [(.02, -.45), (1.6, -.45), (1.6, -1.2), (1.2, -1.2), (1.2, -2.5), (1.48, -2.5), (1.48, -3.25), (1.2, -3.25),
           (1.2, -PISTON[1]), (.02, -PISTON[1])]
-# The pump, in metres from PUMP_AT; -x faces away from the plate, so the tank ends with their bosses face out.
 PUMP_AT = (-9.0, 0.0, 0.0)
-PUMP_CLEAR = RADIUS + 2.0                       # a ball's width (radius 1.0, tuning.gd:82) outside the rim
+PUMP_CLEAR = RADIUS + 2.0
 BASE = ((0.0, .175, 0.0), (2.0, .175, 2.9))
 NT = 10
 TANK_Z = (-1.4, 1.4)
 TANK_Y = 1.95
 TANK = [(.02, -1.9), (.75, -1.82), (1.12, -1.6), (1.3, -1.25), (1.3, 1.25), (1.12, 1.6), (.75, 1.82), (.02, 1.9)]
-BOSS = (.34, .22)                               # bolted inspection boss on each tank's outer end: radius, height
+BOSS = (.34, .22)
 CRADLE_X = (-.9, .9)
 RISER = [(.02, 2.7), (.6, 2.7), (.6, 3.3), (.95, 3.3), (.95, 3.45), (.6, 3.45), (.6, 3.95), (.02, 3.95)]
 RISER_AT = (.2, 0.0)
-CHIMNEY = ((-.2, -.25), (.17, 3.95, 4.95), (.26, 4.95, 5.12))   # at, pipe, cap
-LAMP = ((.45, .3), (.11, 3.95, 5.0), (.18, 4.95, 5.08), (.17, .31, 5.08, 5.4))   # at, post, collar, cup (r0, r1, y0, y1)
+CHIMNEY = ((-.2, -.25), (.17, 3.95, 4.95), (.26, 4.95, 5.12))
+LAMP = ((.45, .3), (.11, 3.95, 5.0), (.18, 4.95, 5.08), (.17, .31, 5.08, 5.4))
 PIPE_R = .17
 U_PIPE = [(.6, 3.0, 1.75), (.6, 3.75, 1.75), (.6, 3.75, 3.25), (.6, 1.3, 3.25), (.6, 1.3, 2.85)]
 ELBOW = [(-.5, 1.6, -2.65), (-.5, 1.6, -3.25), (-.5, 2.5, -3.25)]
 ELBOW_VALVE = ((-.5, -3.25), (.24, 2.5, 2.7), (.13, 2.7, 3.05))
 FEED = [(1.6, .9, -.5), (2.15, .9, -.5), (2.15, -.4, -.5)]
 VALVE_BLOCK = ((.55, 1.4, 2.95), (.55, .38, .32))
-# Gauges face +z: centre, bezel radius, face radius, housing depth.
 GAUGES = [((-.55, 2.75, 2.75), .46, .38, .5), ((.55, 1.4, 3.3), .3, .24, .06)]
 SIZE = {"lift_platform_deck": [8.923, 14.5, 8.923], "lift_platform_pump": [4.541, 5.8, 6.828], "lift_platform_glass": [1.7, 1.921, .6]}
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     return common.srgb(TONES[name])
 
 
@@ -134,8 +126,6 @@ class Frame:
 
 
 def ring(s, rows, n, color, start=None, tones=None, at=(0.0, 0.0)):
-    # A lathe through (radius, t) rows as one connected piece: kit.Surface.finish recalculates each separate piece's
-    # normals (dig_mechanical/kit.py:120), so steps and caps belong in the profile. A radius of 0.02 closes an end.
     aa = around(n, math.pi / n if start is None else start)
     verts = [(at[0] + r * math.sin(a), t, at[1] + r * math.cos(a)) for r, t in rows for a in aa]
     faces = [(k * n + i, k * n + (i + 1) % n, (k + 1) * n + (i + 1) % n, (k + 1) * n + i)
@@ -157,7 +147,6 @@ def pump(v):
 
 
 def pipe(s, points, r, color, n=6):
-    # A bent pipe through points as one tube with mitred corners, open ends buried in the parts it joins.
     pts = [pump(p) for p in points]
     rings = []
     for i, p in enumerate(pts):
@@ -176,7 +165,6 @@ def pipe(s, points, r, color, n=6):
 
 
 def tank_frame(s, z):
-    # Axis along +x (toward the plate); local z is up.
     return Frame(s, pump((0.0, TANK_Y, z)), (1.0, 0.0, 0.0), (0.0, 0.0, 1.0))
 
 
@@ -200,7 +188,6 @@ def pump_enamel(s):
     pipe(s, U_PIPE, PIPE_R, tone("copper"))
     pipe(s, ELBOW, PIPE_R, tone("copper"))
     pipe(s, FEED, PIPE_R * 1.3, tone("copper"))
-    # Small round parts are capped frustums: closed solids, and fewer triangles than a lathe closed at the axis.
     (x, z), (r0, y0, y1), (r1, y2, y3) = ELBOW_VALVE
     frustum(s, r0, r0, y0, y1, 6, tone("copper"), at=(PUMP_AT[0] + x, z))
     frustum(s, r1, r1, y2, y3, 6, tone("copper"), at=(PUMP_AT[0] + x, z))
@@ -238,7 +225,6 @@ def glass(s):
 
 
 def deck_clear(name, verts):
-    # The ball rolls across the whole plate and rides it: nothing above the plate top, nothing past the collider's rim.
     r, top = DECK_CLEAR
     high = [v for v in verts if v[1] > top]
     wide = [v for v in verts if math.hypot(v[0], v[2]) > r]
@@ -248,7 +234,6 @@ def deck_clear(name, verts):
 
 
 def pump_clear(name, verts):
-    # The pump stands outside the plate by a ball's width, so the plate's rise and the ball's approach stay clear.
     near = min(math.hypot(v[0], v[2]) for v in verts)
     assert near >= PUMP_CLEAR, (name, "pump clear", round(near, 3), PUMP_CLEAR)
     print("LIFT_PUMP_CLEAR", name, "nearest_to_axis", round(near, 3))

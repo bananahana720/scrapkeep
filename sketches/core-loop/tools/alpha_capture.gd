@@ -3,18 +3,6 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 
-# Rendered stills of a bot run for the alpha hand-off: the title, the help page, then one
-# skipper run with the workshop armed, saving the frame at the moments a player would
-# look at (each upgrade pick, stage entries, pack arrivals, the bay, the pause menu) and
-# every few seconds of play. It needs a rendered display; launch it off Andrew's screen:
-#
-#   claude-open <godot> --path sketches/core-loop --script res://tools/alpha_capture.gd \
-#     -- --out=<absolute dir> [--seed=0] [--seconds=150] [--ui=1] [--policy=skipper]
-#
-# The seed picks the class the way bot_run does (seed % class count). The pick screen
-# pauses the tree, so after its still the script presses 1 through Input, as a player
-# would. Stills render at 1920x1080 whatever the window's size. --ui=1 adds the class
-# select at rest and with the seed's card open, and Tab's three picture pages in play.
 
 const EVERY := 9.0
 

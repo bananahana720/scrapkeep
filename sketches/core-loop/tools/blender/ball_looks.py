@@ -1,31 +1,15 @@
-# The ball looks behind --ball-look=<id> (src/presentation/ball_looks.gd); today's shells are
-# untouched. Andrew picked the cutaway on 13 Nov 2026 (ruling dm); the gyro and the bell stay as
-# the candidates he saw.
-#
-#   gyro      three crossed hoops tumble around an open seat; nothing stands before the pilot
-#   bell      a salvaged diving bell: painted prow, glass back and porthole, three tread hoops
-#   cutaway   a solid plated ball; the game's shader opens a window on the side facing the camera
-#
-# The gyro and the bell are one shared shell each: Core (rolls with the ball), Pod (level, turns
-# to the heading) and the Hoberman cockpit's seat and controls. The game takes only the Core of
-# the cutaway and puts it on each pilot's own shell, so the pilot's kit, weapon ring and cockpit
-# stay; cutaway_c2 to cutaway_c5 are what each heft class bolts onto that plating.
-#
-#   blender -b -P tools/blender/ball_looks.py -- [--out <dir>]     writes ball_look_<id>.glb
-# Blender +Z is up, +Y forward; glTF becomes Godot +Y up, -Z forward.
-
 import math
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import bmesh  # noqa: E402
-from mathutils import Matrix, Vector  # noqa: E402
+import bmesh
+from mathutils import Matrix, Vector
 
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
-from common import Part  # noqa: E402
+import common
+import shell_base as sb
+from common import Part
 
 AXES = {"x": (0, math.pi / 2, 0), "y": (math.pi / 2, 0, 0), "z": (0, 0, 0)}
 
@@ -60,7 +44,6 @@ def hub(part, direction, r_in, r_out, radius=0.11):
 
 def assemble(name, core_part, pod_part, extras=(), weapon_ring=True):
     root = common.empty("BallLook" + name)
-    # A hoop's corners and side blocks reach past its radius; the whole Core scales to the collider.
     far = max(v.co.length for v in core_part.bm.verts)
     if far > sb.CORE_LIMIT:
         for v in core_part.bm.verts:
@@ -93,7 +76,6 @@ def gyro():
     hoop(core, "z", 0.86, 0.965, 0.07, "copper")
     for d in ((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)):
         hub(core, d, 0.84, 0.985)
-    # Turned an eighth about the upright axis, so the rest pose leaves the back and front open.
     twist = Matrix.Rotation(math.radians(45), 4, "Z")
     for v in core.bm.verts:
         v.co = twist @ v.co
@@ -126,14 +108,12 @@ def bell():
         elif c.z < -0.62:
             hull.paint([f], "paint", "oxide")
     hull.paint(glass, "glass")
-    # A bone liner inside the prow, so the pilot's back stands against a light wall.
     liner = hull.uv("paint", radius - 0.015, 32, 16, color="bone")
     drop = [f for f in liner if f.calc_center_median().y < -0.02
             or f.calc_center_median().normalized().dot(port) > math.cos(math.radians(27))]
     keep = [f for f in liner if f not in set(drop)]
     bmesh.ops.reverse_faces(hull.bm, faces=keep)
     bmesh.ops.delete(hull.bm, geom=drop, context="FACES")
-    # The bolted frame where plate meets glass, the porthole's ring, and a hatch wheel on top.
     hull.ring("copper", radius - 0.01, radius + 0.035, 0.07, 40, loc=(0, -0.02, 0), rot=AXES["y"])
     for k in range(16):
         a = k * math.tau / 16
@@ -174,8 +154,6 @@ def cutaway():
             a = (k + 0.5) * math.tau / 8
             n = Vector((side * 0.52, math.cos(a) * 0.854, math.sin(a) * 0.854)).normalized()
             sb._drum(core, n, 0.075, 0.955, 0.985, 6, "rubber")
-    # Bone blocks on the belt show the turn. The class colour comes with each pilot's kit on the
-    # level Pod: the ready glow swaps class_accent materials, which the window's shader would hide.
     for k in range(8):
         a = k * math.tau / 8
         n = Vector((0, math.cos(a), math.sin(a)))
@@ -231,16 +209,13 @@ def cutaway_cockpit():
     keep = dict(alpha=0.0)
     dark = common.mix("petrol", "charcoal", 0.6)
     steel = common.mix("bone", "charcoal", 0.35)
-    # Floor pan and its tread strips, under the pedals.
     c.paint(c.cyl("paint", 0.60, 0.56, 0.03, 12, loc=(0, 0, -0.685)), "paint", "charcoal", alpha=0.0)
     for y in (-0.30, -0.10, 0.10, 0.30):
         c.box("paint", (0.62, 0.05, 0.012), loc=(0, y, -0.667), color=steel, **keep)
-    # The cradle ring the shell rolls around, on four struts.
     c.paint(c.ring("paint", 0.80, 0.85, 0.035, 24, loc=(0, 0, -0.42)), "paint", steel, alpha=0.0)
     for k in range(4):
         a = (k + 0.5) * math.tau / 4
         c.rod("paint", (math.cos(a) * 0.82, math.sin(a) * 0.82, -0.43), (math.cos(a) * 0.55, math.sin(a) * 0.55, -0.67), 0.022, 6, color="charcoal", **keep)
-    # The dash: a cowl ahead of the yokes with three gauges facing the pilot.
     c.box("paint", (0.58, 0.09, 0.19), loc=(0, 0.66, -0.10), rot=(-0.30, 0, 0), color=dark, **keep)
     c.box("paint", (0.62, 0.13, 0.03), loc=(0, 0.655, 0.005), rot=(-0.30, 0, 0), color="oxide", **keep)
     for i, x in enumerate((-0.18, 0.0, 0.18)):
@@ -250,12 +225,10 @@ def cutaway_cockpit():
         c.box("class_accent", (0.010, 0.012, 0.050), loc=(x + math.sin(lean) * 0.018, 0.592, -0.066), rot=(-0.30, lean, 0))
     for k in range(5):
         c.box("paint", (0.03, 0.02, 0.035), loc=(-0.16 + k * 0.08, 0.625, -0.165), rot=(-0.30, 0, 0), color="copper" if k % 2 else "bone", **keep)
-    # A console by the left knee (the slot bank owns the right side).
     c.box("paint", (0.10, 0.30, 0.07), loc=(-0.52, 0.24, -0.29), color=dark, **keep)
     c.paint(c.cyl("paint", 0.035, 0.035, 0.03, 8, loc=(-0.52, 0.32, -0.245)), "paint", "copper", alpha=0.0)
     c.paint(c.cyl("paint", 0.028, 0.028, 0.03, 8, loc=(-0.52, 0.22, -0.245)), "paint", "bone", alpha=0.0)
     c.box("class_accent", (0.05, 0.03, 0.012), loc=(-0.52, 0.13, -0.252))
-    # Cable looms: dash to floor, console to floor, seat base to the cradle, in rubber and copper.
     for side in (-1, 1):
         c.rod("paint", (side * 0.22, 0.66, -0.20), (side * 0.30, 0.56, -0.50), 0.02, 6, color="charcoal", **keep)
         c.rod("paint", (side * 0.30, 0.56, -0.50), (side * 0.36, 0.40, -0.67), 0.02, 6, color="charcoal", **keep)

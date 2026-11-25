@@ -58,7 +58,6 @@ for (const name of ["Linux x64", "Linux x64 proof", "macOS"]) {
   });
 }
 
-// Seeded control: drop one pattern and the check must fail on exactly that class of file.
 test("dropping the ground.bin pattern fails the check", () => {
   const broken = presetText.replaceAll("assets/park/*/ground.bin, ", "");
   assert.notEqual(broken, presetText);
@@ -67,8 +66,6 @@ test("dropping the ground.bin pattern fails the check", () => {
   assert.ok(problems.every((line) => line.includes("/ground.bin ")));
 });
 
-// surface.bin joined the game's reads with park ground step 2 (6485944c) and missed the preset until
-// the 23 Oct release dry run; the same seeded control keeps it covered.
 test("dropping the surface.bin pattern fails the check for every park's surface", () => {
   const broken = presetText.replaceAll("assets/park/*/surface.bin, ", "");
   assert.notEqual(broken, presetText);

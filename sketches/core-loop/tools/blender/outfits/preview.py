@@ -44,11 +44,9 @@ def wear(rig_glb, outfit_glb, pose=None):
     rig = import_glb(rig_glb)
     frames = rig_space.joint_frames(rig_glb)
     worn = import_glb(outfit_glb) if outfit_glb else []
-    # The GLB's scene roots are the bone nodes; put each at its bone's rest frame.
     for o in worn:
         if o.parent is None and o.name.split(".")[0] in frames:
             o.matrix_world = frames[o.name.split(".")[0]]
-    # Replace_<name> hides the rig's <name>, as hero_assets.apply_replacements does.
     hidden = {o.name.split(".")[0][len("Replace_"):] for o in worn if o.name.startswith("Replace_")}
     for o in rig:
         if o.name.split(".")[0] in hidden:
@@ -83,7 +81,6 @@ def light_and_render(target, shots, out, samples):
         cam.data.angle = math.radians(30)
         t = Vector(target)
         y, p = math.radians(yaw), math.radians(pitch)
-        # yaw 0 looks at the face (+Y forward), 180 from behind like the chase camera.
         cam.location = t + dist * Vector((math.sin(y) * math.cos(p), math.cos(y) * math.cos(p), math.sin(p)))
         cam.rotation_euler = (t - cam.location).to_track_quat("-Z", "Y").to_euler()
         path = os.path.join(out, "%s.png" % label)

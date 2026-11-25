@@ -1,19 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "core-feel-tests" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// The row's basis is the six core feel flakes KNOWN-FAILING.tsv carries, rows that fail only under load. They are
-// the flake rows on hit-stop, the juice budget and how the ball takes a shove or a slam (TESTS below). None of them
-// checks launch speed; world_launch_test does, and this row does not claim it. On this checkout (head from
-// git; cleanHead refuses a dirty checkout) it runs each test alone through the project's runner (SMOKE_SLOTS=1), three
-// times, each run on a quiet machine: it refuses to start when the 1-minute load is above a quarter of the threads
-// (shard.mjs QUIET_FACTOR, the gate's retime rule), and between runs waits for quiet as retime does.
-// The receipt passes only with 18 passes in 18 runs, no flake or red row for any of the six in KNOWN-FAILING.tsv, and
-// the plant caught: hit_stop_ticks_test with FEEL_PLANT=zero_stop (a test-only switch asking for a hit-stop of zero
-// ticks) must fail its [slowed ticks] check, so a runner that reports everything green is caught. Fewer runs than 18
-// is a miss, never a pass. The quiet runs do not take a row off the ledger: a row comes off only after the test
-// passes two full gates in a row, or with a fix for its load fault (project-guide/handoff/GATE.md, KNOWN-FAILING).
-//
-//   node scripts/gate/core-feel-receipt.mjs --out <file>
 import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -24,7 +9,6 @@ import { cleanHead, root } from "./clean-head.mjs";
 import { QUIET_FACTOR, QUIET_POLLS, QUIET_POLL_MS } from "./shard.mjs";
 import { runAlone } from "./solo-run.mjs";
 
-// The six, with what each holds of the row's label.
 export const TESTS = [
   ["hit_stop_ticks_test", "hit-stop: a stop slows exactly its ticks and hands the time scale back"],
   ["presentation_hitstop_test", "hit-stop: damage bands, the 60 ms cap, spacing and budget"],
@@ -53,7 +37,6 @@ export const PLANT = {
   check: "[slowed ticks]",
 };
 
-// runs: [{ test, run, ok, exit, seconds, load }]; carried: ledger rows for the six; plant: { ok, log }.
 export function buildReceipt({ runs, carried, plant, head, threads, maxLoad }) {
   const want = NAMES.length * RUNS;
   const passed = runs.filter((r) => r.ok && NAMES.includes(r.test));
@@ -86,7 +69,6 @@ export function carriedRows(ledgerText) {
   );
 }
 
-// The receipt for the checkout at cwd. run, load and sleep are injectable so the refusals can be tested without Godot.
 export async function produce({
   cwd = root,
   run = runAlone,

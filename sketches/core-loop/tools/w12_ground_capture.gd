@@ -1,9 +1,4 @@
 extends SceneTree
-# Wave 12 ground capture driver, ported from the wave 11 w7_capture.gd (evidence only). Boots the
-# real Game on table alpha, renders the w7 cameras for the ground probe with unchanged eyes and
-# targets, and puts the ball (frozen) beside each target as the scale reference.
-# Writes <out>/<subject>/<cam>.png + frames.json. Native window only.
-#   godot --path sketches/core-loop --script res://tools/w12_ground_capture.gd -- --out=<dir>
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 var out := ""
@@ -60,11 +55,9 @@ func _gh(x: float, z: float) -> float:
 	return game.ctx.terrain.height(x, z)
 
 
-# The ball sits on the ground at (x, z), frozen, as the scale reference.
 func _ball_at(x: float, z: float, y := NAN) -> void:
 	game.player.body().freeze = false
 	game.player.reset_to(Vector3(x, _gh(x, z) + 1.0 if is_nan(y) else y, z))
-	# The teleport lands on the next physics tick, so the ball freezes after it.
 	await _frames(3)
 	game.player.body().freeze = true
 
@@ -118,7 +111,6 @@ func _run() -> void:
 	quit(failures)
 
 
-# w7 _workshop: wog_spillway spawn_wide and benches (the ball stays on its spawn pad).
 func _spillway() -> void:
 	var b: Vector3 = game.player.ball_position()
 	await _snap("wog_spillway", [
@@ -129,7 +121,6 @@ func _spillway() -> void:
 		["benches", Vector3(10, 44, 56), Vector3(24, 28, 22), 65.0]])
 
 
-# w7 _props, camp bay three_q: the bay docked at the stage's gate slots.
 func _camp_bay() -> void:
 	var offers: Array = []
 	for slot in game.ctx.terrain.map().gate_slots:
@@ -141,8 +132,6 @@ func _camp_bay() -> void:
 	var bc := box.get_center()
 	var r := maxf(box.size.x, box.size.z) * 0.8 + 6.0
 	print("bay docked ", docked, " aabb ", box)
-	# Deviation from w7: with no visible bay mesh the w7 framing points at the origin under the
-	# map, so the camera falls back to the first gate slot with the w7 radius rule on an 8 m box.
 	if box.size == Vector3.ZERO and not offers.is_empty():
 		bc = offers[0]["at"] + Vector3(0, 2, 0)
 		r = 8.0 * 0.8 + 6.0
@@ -151,7 +140,6 @@ func _camp_bay() -> void:
 	await _snap("cv2_camp_bay", [["three_q", bc + Vector3(r * 0.7, r * 0.45, -r * 0.7), bc, 60.0]], {"docked": docked})
 
 
-# w7 _scrap, scr_dig close and cluster on stage 3 (Dig: the upper bench).
 func _dig() -> void:
 	await _stage(3)
 	var sc = game.find_child("Scrap", true, false)
@@ -170,7 +158,6 @@ func _dig() -> void:
 	await _snap("scr_dig", [["close", q2 + Vector3(2.4, 1.6, -3), q2, 45.0], ["cluster", q2 + Vector3(0, 6, -10), q2 + Vector3(0, -0.5, 4), 55.0]], {"scrap_count": items.size(), "scrap_rest_above_collider": rest})
 
 
-# Extra (not a w7 camera): the Dig deep floor on stage 4, near its spawn pad.
 func _dig_deep() -> void:
 	await _stage(4)
 	var s: Vector3 = game.ctx.terrain.spawn_point(4)
@@ -179,7 +166,6 @@ func _dig_deep() -> void:
 	await _snap("dig_deep_floor", [["floor", s + Vector3(-6, 9, -12), s + Vector3(4, 0, 10), 60.0]])
 
 
-# w7 _hd_redo, hdr_island_bridge island_bridge on stage 5.
 func _highdraft() -> void:
 	await _stage(5)
 	await _ball_at(0.0, 104.0, 27.0)
@@ -198,7 +184,6 @@ func _highdraft() -> void:
 	await _snap("hdr_net", [["net_deck", Vector3(0, 45, -20), Vector3(0, 10, -10), 60.0], ["return_ramps", Vector3(-14, 30, -35), Vector3(-8, 15, -70), 60.0], ["net_low", Vector3(0, 14, 30), Vector3(0, 8, -30), 65.0]])
 
 
-# w7 _scrap, scr_variants on stage 1: one close camera per scrap variant.
 func _scrap_variants() -> void:
 	await _stage(1)
 	var sc = game.find_child("Scrap", true, false)
@@ -218,7 +203,6 @@ func _scrap_variants() -> void:
 	await _snap("scr_variants", vshots, {"variants": vs.keys()})
 
 
-# w7 _props, gpd_cache three_q on stage 1: a cracked cache built beside the spawn, fired.
 func _cache() -> void:
 	await _stage(1)
 	var b: Vector3 = game.player.ball_position()

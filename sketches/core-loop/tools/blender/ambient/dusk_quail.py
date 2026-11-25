@@ -15,31 +15,25 @@ from pathlib import Path
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _life import Critter  # noqa: E402
+from _life import Critter
 
 life = Critter("dusk_quail")
 
-# --- body: a teardrop, heavy at the front, tapering to a short tail that points back (+Z)
 life.ellipsoid("body", "body", (0, 0.118, -0.005), (0.078, 0.072, 0.092), subsurf=1, u=12, v=6)
 life.tube("body", "body", [(0, 0.125, 0.05), (0, 0.14, 0.11), (0, 0.158, 0.165)], [0.055, 0.032, 0.012], sides=7, subsurf=1)
-# cream belly bib, proud of the body so it reads
 life.ellipsoid("body", "cream", (0, 0.095, -0.045), (0.05, 0.04, 0.045), rot=(-15, 0, 0), subsurf=1, u=7, v=4)
-# folded wings
 for s in (-1, 1):
     life.ellipsoid("body", "wing", (0.066 * s, 0.13, 0.018), (0.018, 0.044, 0.07), rot=(8, 0, 6 * s), subsurf=1, u=6, v=4)
 
-# --- head: small and round; mask, beak, eyes
 life.ellipsoid("head", "body", (0, 0.222, -0.07), (0.043, 0.042, 0.043), subsurf=1, u=10, v=6)
 life.ellipsoid("head", "cream", (0, 0.216, -0.099), (0.032, 0.03, 0.016), subsurf=0, u=8, v=4)
 life.tube("head", "plume", [(0, 0.218, -0.108), (0, 0.213, -0.128)], [0.015, 0.007], sides=5, subsurf=1)
 for s in (-1, 1):
     life.ellipsoid("head", "eye", (0.027 * s, 0.232, -0.093), (0.012, 0.013, 0.01), subsurf=1, u=5, v=3)
 
-# --- topknot: a comma curling forward off the crown, ending in a teardrop bulb
 life.tube("plume", "plume", [(0, 0.248, -0.062), (0, 0.282, -0.054), (0, 0.304, -0.062), (0, 0.315, -0.085), (0, 0.307, -0.108)],
           [0.016, 0.014, 0.0125, 0.0155, 0.012], sides=7, subsurf=1)
 
-# --- stubby legs and feet
 for s, bone in ((-1, "leg_l"), (1, "leg_r")):
     life.capsule(bone, "plume", (0.032 * s, 0.07, 0.008), (0.032 * s, 0.016, -0.004), 0.017, 0.013, subsurf=1, u=6, v=4)
     life.ellipsoid(bone, "plume", (0.032 * s, 0.009, -0.02), (0.016, 0.009, 0.026), subsurf=0, u=8, v=4)
@@ -53,10 +47,8 @@ life.rig([
     ("leg_r", (0.032, 0.07, 0.006), "root"),
 ])
 
-# pitch (about Godot X) is negative for nose down and the plume's forward tilt, positive for tail down and plume back.
 REST = {}
 
-# --- idle, 2.0 s: breathe, bob the head, peck twice
 life.cycle("idle", 2.0, {
     "body": [(0, REST), (0.5, {"scale": (1, 1.025, 1)}), (1.0, {"rot": (-7, 0, 0), "scale": (1, 1.0, 1)}),
              (1.3, {"rot": (-3, 0, 0)}), (1.5, {"rot": (-7, 0, 0)}), (1.75, {"scale": (1, 1.02, 1)})],
@@ -68,7 +60,6 @@ life.cycle("idle", 2.0, {
               (1.5, {"rot": (6, 0, 3)})],
 })
 
-# --- move, 1.2 s: scurry. Legs swing at 7.5 Hz (two frames per half stroke), the body bobs on every stroke.
 half = 2 / 30.0
 legs = {"leg_l": [], "leg_r": []}
 body, head, plume = [], [], []
@@ -82,7 +73,6 @@ for i in range(18):
     plume.append((t, {"rot": (18 + (5 if i % 2 == 0 else -3), 0, 0)}))
 life.cycle("move", 1.2, {"body": body, "head": head, "plume": plume, **legs})
 
-# --- react, 2.0 s: flick up, then crouch and flatten, plume laid back; breath hold from 0.8 s closes on itself
 DUCK = {
     "body": {"loc": (0, -0.05, 0.004), "rot": (0, 0, 0), "scale": (1.16, 0.55, 1.1)},
     "head": {"loc": (0, -0.03, 0.02), "rot": (-18, 0, 0)},

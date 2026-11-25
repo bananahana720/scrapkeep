@@ -58,13 +58,10 @@ def bind(part, weights, bone):
 
 body = Part("KiteCrewPod")
 bw = weighted(body)
-# The keel makes the hull lopsided, so it keeps its subdivided size instead of a box fit.
 with body.region(bevel=0, subsurf=1, fit=False):
-    # Broad tapered cast panels, with rounded radial sections and a closed keel.
     rows = []
     for y, radius, front in [(-1.1, 0.30, 0.30), (-0.93, 0.58, 0.40), (-0.55, 0.8, 0.32),
                              (0.18, 0.70, 0.58), (0.48, 0.8, 0.8), (0.88, 0.62, 0.62), (1.1, 0.34, 0.34)]:
-        # A recessed forward keel exposes the blunt chin within the original radial core.
         rows.append([body.bm.verts.new(Vector(g(radius * math.cos(a * math.tau / 12), y,
                                                min(front, radius * math.sin(a * math.tau / 12)))))
                      for a in range(12)])
@@ -83,7 +80,6 @@ core = [v.co.copy() for v in body.bm.verts]
 assert max(math.hypot(v.x, v.y) for v in core) <= 0.800001
 assert abs(min(v.z for v in core) + 1.1) < 1e-6 and abs(max(v.z for v in core) - 1.1) < 1e-6
 body.cyl("fleet_paint", 0.795, 0.795, 0.07, segs=12, loc=g(0, -0.47, 0), color=CHAR)
-# Mechanical side bearings sit within the core, rather than inflating its collider.
 for side in (-1, 1):
     body.cyl("fleet_paint", 0.26, 0.26, 0.12, segs=8, loc=g(side * 0.68, 0.18, 0),
              rot=(0, math.pi / 2, 0), color=WORN)
@@ -93,7 +89,6 @@ for side in (-1, 1):
              0.055, segs=5, color=CHAR)
 body.box("fleet_paint", (0.38, 0.12, 0.12), loc=g(0, 0.82, 0.45), color=CHAR)
 bind(body, bw, 0)
-# Shared anonymous two-eared crew. Pale muzzle and dark inset eyes remain neutral.
 with body.region(bevel=0, subsurf=2, detail=1):
     body.uv("fleet_paint", 0.38, u=8, v=6, loc=g(0, 1.3, 0), color="oxide")
     body.uv("fleet_paint", 0.20, u=8, v=4, loc=g(0, 1.20, 0.25), scale=(1, 0.60, 0.65), color="bone")
@@ -105,7 +100,6 @@ with body.region(bevel=0, detail=1):
     for side in (-1, 1):
         body.ico("fleet_paint", 0.046, loc=g(side * 0.16, 1.40, 0.31), color=CHAR)
 bind(body, bw, 1)
-# Open-front hub shroud: the specified cylinder envelope leaves the operator visible.
 body.ring("fleet_paint", 0.41, 0.50, 0.9, segs=10, loc=g(0, 1.2, 0),
           arc=(math.radians(-15), math.radians(195)), color=PETROL)
 body.ring("fleet_paint", 0.40, 0.50, 0.07, segs=10, loc=g(0, 0.80, 0),
@@ -124,7 +118,6 @@ sail = Part("KiteSail")
 sail.bevel = 0
 sw = weighted(sail)
 for side, bone in [(-1, 5), (1, 6)]:
-    # Two rigid half-diamonds. The hub bridges the central seam; no upright wing.
     outline = [(side * x, -z) for x, z in [(0, 0.35), (1.6, 0), (0, -0.35)]]
     if side < 0:
         outline.reverse()
@@ -136,7 +129,6 @@ for side, bone in [(-1, 5), (1, 6)]:
                      0.025, segs=5, color=PETROL)
         sail.rod("fleet_paint", g(0, 1.53, 0), g(side * 1.56, 1.53, 0),
                  0.03, segs=6, color=CHAR)
-    # Sparse repaired canvas facets and one pale edge chip, in the same draw.
     sail.prism("fleet_paint", [(side * 0.52, -0.17), (side * 0.95, -0.09), (side * 0.68, 0.06)],
                0.0002, matrix=common.mtx(g(0, 1.5601, 0)), color=WORN)
     bind(sail, sw, bone)
@@ -144,10 +136,8 @@ bmesh.ops.recalc_face_normals(sail.bm, faces=sail.bm.faces[:])
 wing = sail.to_object(parent=root)
 
 chin = Part("DiveChin")
-# Blunt skid, exactly 0.35 W x 0.5 D x 0.2 H. Stripes belong only to this working face.
 chin_faces = chin.prism("working_tool", [(-0.175, 0.15), (0.175, 0.15), (0.14, -0.35), (-0.14, -0.35)],
                        0.2, matrix=common.mtx(g(0, -0.3, 0.35)), color=CHAR)
-# A diagonal hostile band crosses the forward skid face, visible below the pod.
 front_face = chin_faces[4]
 corners = [loop.vert for loop in front_face.loops]
 chin.bm.faces.remove(front_face)
@@ -190,7 +180,6 @@ assert sum(len(o.data.materials) for o in (pod, wing, skid)) == 3
 opts = common.args()
 out = opts["out"] or os.path.join(common.MODELS, "world_three", "enemy_kite_drone.glb")
 common.export(root, out)
-# Check actual split export vertices and triangles, including skin/color seams.
 data = open(out, "rb").read()
 size = struct.unpack_from("<I", data, 12)[0]
 glb = json.loads(data[20:20 + size])
@@ -239,7 +228,6 @@ def preview(directory):
     os.makedirs(directory, exist_ok=True)
     for label, position in [("front", (1.2, -15, 0.5)), ("side", (15, -1.2, 0.5)),
                             ("three-quarter", (9, -14, 7)), ("windup", (9, -14, 7))]:
-        # Keep ball beside the side silhouette along the camera's horizontal axis.
         ball.location = (0, -3.1, -0.1) if label == "side" else (3.1, 0, -0.1)
         target = (0, -1.2, 0.5) if label == "side" else (1.2, 0, 0.5)
         cam.location = position

@@ -230,9 +230,7 @@ test("a ledger flake that is red twice gets more head runs: one green is flaky, 
     newChecks: [],
     ledgerRuns: LEDGER_FLAKE_RUNS,
   });
-  // A run the lane stopped is not a verdict, whatever came before it.
   assert.equal(settleLedgerFlake(prRed, [red, { ok: false, killed: true }]).kind, "stopped");
-  // New failing checks stay named when every extra run is red.
   const grew = classifyFailure({
     rerunOk: false,
     baseOk: false,
@@ -474,7 +472,6 @@ test("import: an engine crash or a script error is tried again, up to three trie
     };
   };
   const said = [];
-  // Node reports a crash as a signal; a shell reports 128 + the signal.
   const crashed = runner([{ exit: null, signal: "SIGSEGV" }, { exit: 134 }, { exit: 0 }]);
   const third = await importWithRetry("core-loop", ["--headless"], crashed.run, (line) =>
     said.push(line),
@@ -499,7 +496,6 @@ test("import: an engine crash or a script error is tried again, up to three trie
     "core-loop import try 1 of 3: engine crash (exit=SIGSEGV); trying again",
     "core-loop import try 2 of 3: engine crash (exit=134); trying again",
   ]);
-  // Three crashes stop the run, and every try is a row.
   const dead = await importWithRetry(
     "core-loop",
     ["--headless"],
@@ -508,7 +504,6 @@ test("import: an engine crash or a script error is tried again, up to three trie
   );
   assert.equal(dead.ok, false);
   assert.equal(dead.results.length, 3);
-  // A clean exit that still prints SCRIPT ERROR is not a pass: tried again, and it fails when the last try still prints one.
   const healed = runner([
     { exit: 0, scriptErrors: 12 },
     { exit: 0, scriptErrors: 0 },
@@ -526,7 +521,6 @@ test("import: an engine crash or a script error is tried again, up to three trie
     broken.tries.map((row) => row.outcome),
     ["script errors", "script errors", "script errors"],
   );
-  // Any other failure (a time limit, an exit code) is tried again too, and a first clean try is the only one.
   assert.equal(importTry({ exit: null, signal: "SIGTERM" }), "failed");
   assert.equal(importTry({ exit: 1 }), "failed");
   const clean = await importWithRetry(
@@ -560,7 +554,6 @@ test("the lane pool never runs more tasks than its width, and queued tasks still
       live--;
       return ms;
     });
-  // A confirm's rerun and base run queue behind the other worker's test, as in the lane.
   const results = await Promise.all([task(20), task(5), task(5), task(1), task(1)]);
   assert.deepEqual(results, [20, 5, 5, 1, 1]);
   assert.equal(peak, 2);
@@ -621,7 +614,6 @@ test("a base that dies by the same non-SIGKILL signal as the head keeps its verd
     "base-red",
   );
   assert.equal(cacheableBaseRun(base), false);
-  // A head-only crash: the base passed, so the head is the PR's red.
   const pass = { ok: true, exit: 0, signal: null, killed: false, timedOut: false, checks: [] };
   const kept = usableBaseRun(head, pass);
   assert.equal(kept, pass);
@@ -630,16 +622,12 @@ test("a base that dies by the same non-SIGKILL signal as the head keeps its verd
       .kind,
     "pr-red",
   );
-  // SIGKILL is the OOM killer or the lane's own timeout: no verdict.
   assert.equal(usableBaseRun(crash("SIGKILL"), crash("SIGKILL")), null);
   assert.equal(usableBaseRun(head, crash("SIGKILL")), null);
-  // A different signal says nothing about the base.
   assert.equal(usableBaseRun(head, crash("SIGSEGV")), null);
-  // Same signal, different failing checks: the head's new checks are the PR's.
   const headChecks = crash("SIGABRT", ["a", "b"]);
   const baseChecks = crash("SIGABRT", ["a"]);
   assert.equal(usableBaseRun(headChecks, baseChecks), null);
-  // Same signal and checks, but the head aborted earlier (fewer passing checks): no base verdict, so pr-red.
   const early = crash("SIGABRT", [], 60);
   const dropped = usableBaseRun(early, base);
   assert.equal(dropped, null);

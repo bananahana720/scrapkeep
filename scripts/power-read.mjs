@@ -1,26 +1,14 @@
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-
-// node scripts/power-read.mjs: POWER-READ (alpha-status/ambition-map.md, unit 5). Plays the same
-// scripted signature hit (one 30 m/s slam on one chaser, sketches/core-loop/tools/power_read.gd)
-// for every pilot on the first-fight build (depth 0) and on a grown depth-4 build, then compares
-// presence, screen area, knockback metres and sound layers against Andrew's targets. Cards
-// "Clearly mightier" (17 Oct 16:36Z: about 3x the size, 2x the knockback) and "Presence, centre
-// clear" (17:28Z: the 3x is presence, meaning colour heat, word size, edge ink and aura layers,
-// with 1.5 to 2x pixel area). Presence is the geometric mean of the energy, heat and ink ratios;
-// area's goal is the 1.5x floor; 2x sound layers comes from the unit brief. Centre clear is a
-// guard: the grown hit may not change more than CENTRE_LIMIT times the middle ninth of the
-// screen that the first fight's hit does. Writes report.json, the stills and page.html (a phone page, stills embedded) to --out
-// (default artifacts/local/power-read/<stamp>).
-// Rendering: under xvfb-run with the GL compatibility renderer when xvfb-run is on PATH, so a cloud
-// box without a GPU can read pixels; --native uses the machine's own display and renderer;
-// --no-render reads knockback, sound and effect counts only. --pilots=a,b limits the pilots,
-// --jobs=<n> (default 2) runs that many Godot processes at once, --rows=<dir> rebuilds the
-// report from a previous run's JSON. It measures and changes nothing.
-// Exit 0 when every run reported, 2 when a run failed; --gate also exits 1 when a pilot misses a
-// target.
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
@@ -43,7 +31,14 @@ export const SIZE = "960x540";
 export class PowerReadError extends Error {}
 
 export function parseArgs(argv) {
-  const args = { pilots: PILOTS.map((p) => p.id), out: null, jobs: 2, rows: null, render: "xvfb", gate: false };
+  const args = {
+    pilots: PILOTS.map((p) => p.id),
+    out: null,
+    jobs: 2,
+    rows: null,
+    render: "xvfb",
+    gate: false,
+  };
   for (const arg of argv) {
     if (arg.startsWith("--pilots=")) {
       args.pilots = arg.slice(9).split(",").filter(Boolean);
@@ -53,7 +48,8 @@ export function parseArgs(argv) {
     else if (arg.startsWith("--rows=")) args.rows = path.resolve(arg.slice(7));
     else if (arg.startsWith("--jobs=")) {
       args.jobs = Number(arg.slice(7));
-      if (!Number.isInteger(args.jobs) || args.jobs < 1) throw new PowerReadError(`--jobs needs a whole number: ${arg}`);
+      if (!Number.isInteger(args.jobs) || args.jobs < 1)
+        throw new PowerReadError(`--jobs needs a whole number: ${arg}`);
     } else if (arg === "--native") args.render = "native";
     else if (arg === "--no-render") args.render = "none";
     else if (arg === "--gate") args.gate = true;
@@ -62,28 +58,36 @@ export function parseArgs(argv) {
   return args;
 }
 
-// The Godot command for one pilot at one depth.
 export function command({ binary, pilot, depth, out, render }) {
   const user = ["--", `--pilot=${pilot}`, `--depth=${depth}`, `--out=${out}`];
   const tool = ["--path", sketch, "--fixed-fps", "60", "--script", "res://tools/power_read.gd"];
-  if (render === "none") return { cmd: binary, argv: ["--headless", ...tool, ...user, "--render=0"] };
+  if (render === "none")
+    return { cmd: binary, argv: ["--headless", ...tool, ...user, "--render=0"] };
   const view = ["--audio-driver", "Dummy", "--resolution", SIZE, ...tool, ...user];
   if (render === "native") return { cmd: binary, argv: view };
-  return { cmd: "xvfb-run", argv: ["-a", "-s", `-screen 0 ${SIZE}x24`, binary, "--rendering-driver", "opengl3", ...view] };
+  return {
+    cmd: "xvfb-run",
+    argv: ["-a", "-s", `-screen 0 ${SIZE}x24`, binary, "--rendering-driver", "opengl3", ...view],
+  };
 }
 
 export function parseRow(stdout) {
-  const line = stdout.split("\n").reverse().find((l) => l.startsWith("power_read row: "));
+  const line = stdout
+    .split("\n")
+    .reverse()
+    .find((l) => l.startsWith("power_read row: "));
   return line ? JSON.parse(line.slice("power_read row: ".length)) : null;
 }
 
 const ratio = (grown, first) => (first > 0 ? grown / first : grown > 0 ? Infinity : null);
 
-// A pixel reading net of what the scene changes on its own in the same window with no hit.
-export const net = (row, k) => (row.rendered ? Math.max(0, row[k] - (row[`noise_${k}`] ?? 0)) : null);
+export const net = (row, k) =>
+  row.rendered ? Math.max(0, row[k] - (row[`noise_${k}`] ?? 0)) : null;
 
 function presence(first, grown) {
-  const parts = PRESENCE_PARTS.map((k) => (first.rendered ? ratio(net(grown, k), net(first, k)) : null));
+  const parts = PRESENCE_PARTS.map((k) =>
+    first.rendered ? ratio(net(grown, k), net(first, k)) : null,
+  );
   if (parts.some((v) => v === null)) return null;
   if (parts.some((v) => v === Infinity)) return Infinity;
   return Math.cbrt(parts[0] * parts[1] * parts[2]);
@@ -95,7 +99,13 @@ export function summarize(rows, targets = TARGETS) {
     const first = rows.find((r) => r.pilot === pilot.id && r.depth === 0);
     const grown = rows.find((r) => r.pilot === pilot.id && r.depth === 4);
     if (!first && !grown) continue;
-    const entry = { id: pilot.id, name: pilot.name, first, grown, errors: [first, grown].filter((r) => r?.error).map((r) => r.error) };
+    const entry = {
+      id: pilot.id,
+      name: pilot.name,
+      first,
+      grown,
+      errors: [first, grown].filter((r) => r?.error).map((r) => r.error),
+    };
     if (first && grown && !entry.errors.length) {
       entry.ratios = {
         presence: presence(first, grown),
@@ -104,10 +114,20 @@ export function summarize(rows, targets = TARGETS) {
         layers: ratio(grown.sound_layers, first.sound_layers),
       };
       entry.damage = ratio(grown.damage, first.damage);
-      entry.parts = Object.fromEntries(PRESENCE_PARTS.map((k) => [k, first.rendered ? ratio(net(grown, k), net(first, k)) : null]));
+      entry.parts = Object.fromEntries(
+        PRESENCE_PARTS.map((k) => [k, first.rendered ? ratio(net(grown, k), net(first, k)) : null]),
+      );
       const centre = first.rendered ? ratio(net(grown, "centre"), net(first, "centre")) : null;
-      entry.centre = { ratio: centre, clear: centre === null ? null : centre <= CENTRE_LIMIT + 1e-9 };
-      entry.meets = Object.fromEntries(Object.entries(entry.ratios).map(([k, v]) => [k, v === null ? null : v >= targets[k] - 1e-9]));
+      entry.centre = {
+        ratio: centre,
+        clear: centre === null ? null : centre <= CENTRE_LIMIT + 1e-9,
+      };
+      entry.meets = Object.fromEntries(
+        Object.entries(entry.ratios).map(([k, v]) => [
+          k,
+          v === null ? null : v >= targets[k] - 1e-9,
+        ]),
+      );
     }
     pilots.push(entry);
   }
@@ -118,12 +138,19 @@ export function summarize(rows, targets = TARGETS) {
     targets,
     damage: damages.length ? damages.reduce((a, b) => a + b, 0) / damages.length : null,
     pilots,
-    totals: Object.fromEntries(Object.keys(targets).map((k) => [k, { met: met(k), measured: measured(k) }])),
+    totals: Object.fromEntries(
+      Object.keys(targets).map((k) => [k, { met: met(k), measured: measured(k) }]),
+    ),
   };
 }
 
-const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-const fx = (v, digits = 1) => (v === null || v === undefined ? "n/a" : v === Infinity ? "new" : `${v.toFixed(digits)}x`);
+const esc = (s) =>
+  String(s).replace(
+    /[&<>"]/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+  );
+const fx = (v, digits = 1) =>
+  v === null || v === undefined ? "n/a" : v === Infinity ? "new" : `${v.toFixed(digits)}x`;
 
 function meter(label, value, target, detail) {
   const scale = Math.max(target * 1.25, value === Infinity || value === null ? 0 : value);
@@ -147,17 +174,21 @@ export function renderPage(summary, { images = {}, version = "", stamp = "", ren
     ["Knockback", "knock", t.knock],
     ["Sound", "layers", t.layers],
   ];
-  const tiles = head.map(([label, k, target]) => {
-    const { met, measured } = summary.totals[k];
-    return `<div class="tile ${measured && met === measured ? "ok" : "short"}"><span class="tile-n">${met}<small>/${measured}</small></span><span class="tile-l">${label} at ${target}x</span></div>`;
-  }).join("");
-  const cards = summary.pilots.map((p) => {
-    if (!p.ratios) return `<section class="pilot"><h2>${esc(p.name)}</h2><p class="err">Not measured: ${esc(p.errors.join("; ") || "a depth is missing")}</p></section>`;
-    const still = (row, depth, caption) => {
-      const src = images[`${p.id}-d${depth}`];
-      return `<figure>${src ? `<img src="${src}" alt="${esc(p.name)} ${caption} at the hit's biggest frame" loading="lazy">` : `<div class="noimg">no still</div>`}<figcaption><b>${caption}</b> heft ${row.heft.toFixed(1)}, ${row.parts.length} parts, ${row.picks.length} picks</figcaption></figure>`;
-    };
-    return `<section class="pilot">
+  const tiles = head
+    .map(([label, k, target]) => {
+      const { met, measured } = summary.totals[k];
+      return `<div class="tile ${measured && met === measured ? "ok" : "short"}"><span class="tile-n">${met}<small>/${measured}</small></span><span class="tile-l">${label} at ${target}x</span></div>`;
+    })
+    .join("");
+  const cards = summary.pilots
+    .map((p) => {
+      if (!p.ratios)
+        return `<section class="pilot"><h2>${esc(p.name)}</h2><p class="err">Not measured: ${esc(p.errors.join("; ") || "a depth is missing")}</p></section>`;
+      const still = (row, depth, caption) => {
+        const src = images[`${p.id}-d${depth}`];
+        return `<figure>${src ? `<img src="${src}" alt="${esc(p.name)} ${caption} at the hit's biggest frame" loading="lazy">` : `<div class="noimg">no still</div>`}<figcaption><b>${caption}</b> heft ${row.heft.toFixed(1)}, ${row.parts.length} parts, ${row.picks.length} picks</figcaption></figure>`;
+      };
+      return `<section class="pilot">
 <h2>${esc(p.name)}</h2>
 <div class="pair">${still(p.first, 0, "First fight")}${still(p.grown, 4, "Grown")}</div>
 <div class="meters">
@@ -170,7 +201,8 @@ ${meter("Sound", p.ratios.layers, t.layers, `${p.first.sound_layers} to ${p.grow
 ${net(p.first, "area") > 0.5 ? `<p class="small">The first-fight hit already changes most of the screen, so its area cannot grow much; presence has to come from heat and ink.</p>` : ""}
 <p class="small">Damage ${p.first.damage.toFixed(0)} to ${p.grown.damage.toFixed(0)}. Effects spawned ${p.first.fx_spawned} to ${p.grown.fx_spawned}.</p>
 </section>`;
-  }).join("\n");
+    })
+    .join("\n");
   return `<title>Power Read</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -257,7 +289,15 @@ function runOne(spec) {
     const timer = setTimeout(() => child.kill("SIGKILL"), 15 * 60 * 1000);
     child.on("close", (code) => {
       clearTimeout(timer);
-      resolve(parseRow(out) ?? { error: `no row (exit ${code}): ${out.split("\n").filter((l) => /ERROR/.test(l)).slice(0, 3).join(" | ")}` });
+      resolve(
+        parseRow(out) ?? {
+          error: `no row (exit ${code}): ${out
+            .split("\n")
+            .filter((l) => /ERROR/.test(l))
+            .slice(0, 3)
+            .join(" | ")}`,
+        },
+      );
     });
   });
 }
@@ -265,17 +305,21 @@ function runOne(spec) {
 async function pool(tasks, jobs) {
   const results = [];
   let next = 0;
-  await Promise.all(Array.from({ length: jobs }, async () => {
-    while (next < tasks.length) {
-      const i = next++;
-      results[i] = await tasks[i]();
-    }
-  }));
+  await Promise.all(
+    Array.from({ length: jobs }, async () => {
+      while (next < tasks.length) {
+        const i = next++;
+        results[i] = await tasks[i]();
+      }
+    }),
+  );
   return results;
 }
 
 function readRows(dir) {
-  return readdirSync(dir).filter((f) => /-d\d+\.json$/.test(f)).map((f) => JSON.parse(readFileSync(path.join(dir, f), "utf8")));
+  return readdirSync(dir)
+    .filter((f) => /-d\d+\.json$/.test(f))
+    .map((f) => JSON.parse(readFileSync(path.join(dir, f), "utf8")));
 }
 
 export async function main(argv = process.argv.slice(2)) {
@@ -287,41 +331,64 @@ export async function main(argv = process.argv.slice(2)) {
   if (args.rows) rows = readRows(args.rows);
   else {
     const binary = process.env.GODOT_BIN || recordedBinary;
-    if (!existsSync(binary)) throw new PowerReadError(`Godot binary not found at ${binary}; set GODOT_BIN`);
+    if (!existsSync(binary))
+      throw new PowerReadError(`Godot binary not found at ${binary}; set GODOT_BIN`);
     let render = args.render;
     if (render === "xvfb" && spawnSync("sh", ["-c", "command -v xvfb-run"]).status !== 0) {
-      console.error("power-read: xvfb-run not found, reading without pixels (use --native for this display)");
+      console.error(
+        "power-read: xvfb-run not found, reading without pixels (use --native for this display)",
+      );
       render = "none";
     }
-    const tasks = args.pilots.flatMap((pilot) => DEPTHS.map((depth) => async () => {
-      const row = await runOne(command({ binary, pilot, depth, out, render }));
-      console.log(`power-read: ${pilot} depth ${depth} ${row.error ? `FAILED ${row.error}` : "ok"}`);
-      return { pilot, depth, ...row };
-    }));
+    const tasks = args.pilots.flatMap((pilot) =>
+      DEPTHS.map((depth) => async () => {
+        const row = await runOne(command({ binary, pilot, depth, out, render }));
+        console.log(
+          `power-read: ${pilot} depth ${depth} ${row.error ? `FAILED ${row.error}` : "ok"}`,
+        );
+        return { pilot, depth, ...row };
+      }),
+    );
     rows = await pool(tasks, args.jobs);
   }
   const summary = summarize(rows);
   const images = {};
   for (const row of rows) {
     const file = path.join(out, `${row.pilot}-d${row.depth}-peak.png`);
-    if (existsSync(file)) images[`${row.pilot}-d${row.depth}`] = `data:image/png;base64,${readFileSync(file).toString("base64")}`;
+    if (existsSync(file))
+      images[`${row.pilot}-d${row.depth}`] =
+        `data:image/png;base64,${readFileSync(file).toString("base64")}`;
   }
   const renderer = rows.find((r) => r.renderer)?.renderer ?? "";
-  writeFileSync(path.join(out, "report.json"), JSON.stringify({ stamp, version: gitVersion(), renderer, ...summary }, null, 2));
-  writeFileSync(path.join(out, "page.html"), renderPage(summary, { images, version: gitVersion(), stamp, renderer }));
+  writeFileSync(
+    path.join(out, "report.json"),
+    JSON.stringify({ stamp, version: gitVersion(), renderer, ...summary }, null, 2),
+  );
+  writeFileSync(
+    path.join(out, "page.html"),
+    renderPage(summary, { images, version: gitVersion(), stamp, renderer }),
+  );
   for (const p of summary.pilots) {
     if (!p.ratios) console.log(`${p.name.padEnd(7)} not measured`);
-    else console.log(`${p.name.padEnd(7)} presence ${fx(p.ratios.presence)}  area ${fx(p.ratios.area)}  centre ${fx(p.centre.ratio)}  knock ${fx(p.ratios.knock)}  sound ${fx(p.ratios.layers)}`);
+    else
+      console.log(
+        `${p.name.padEnd(7)} presence ${fx(p.ratios.presence)}  area ${fx(p.ratios.area)}  centre ${fx(p.centre.ratio)}  knock ${fx(p.ratios.knock)}  sound ${fx(p.ratios.layers)}`,
+      );
   }
   console.log(`power-read: ${out}/page.html`);
   const failed = rows.some((r) => r.error);
-  const missed = summary.pilots.some((p) => p.meets && Object.values(p.meets).some((v) => v === false));
+  const missed = summary.pilots.some(
+    (p) => p.meets && Object.values(p.meets).some((v) => v === false),
+  );
   return failed ? 2 : args.gate && missed ? 1 : 0;
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().then((code) => process.exit(code), (error) => {
-    console.error(error instanceof PowerReadError ? `power-read: ${error.message}` : error);
-    process.exit(2);
-  });
+  main().then(
+    (code) => process.exit(code),
+    (error) => {
+      console.error(error instanceof PowerReadError ? `power-read: ${error.message}` : error);
+      process.exit(2);
+    },
+  );
 }

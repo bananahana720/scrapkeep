@@ -41,7 +41,6 @@ def env(n, attack, release, curve=2.0):
 
 
 def lowpass(x, cutoff):
-    # Smooth spectral roll-off: nothing sharp survives above the cutoff.
     spec = np.fft.rfft(x)
     f = np.fft.rfftfreq(len(x), 1 / SR)
     spec *= 1 / (1 + (f / cutoff) ** 4)
@@ -61,7 +60,6 @@ def glide(freqs):
 
 
 def note(f0, f1, seconds, harmonics=(1.0, 0.25, 0.08), vib=0.0, attack=0.012, release=0.05):
-    # One soft whistled or sung note gliding f0 to f1, with an optional gentle vibrato.
     t = t_of(seconds)
     f = np.linspace(f0, f1, len(t)) * (1 + vib * np.sin(2 * np.pi * 5.5 * t))
     ph = glide(f)
@@ -70,7 +68,6 @@ def note(f0, f1, seconds, harmonics=(1.0, 0.25, 0.08), vib=0.0, attack=0.012, re
 
 
 def formant(x, centers, width=0.25):
-    # Vowel-ish colour: keep energy near the formant centres.
     spec = np.fft.rfft(x)
     f = np.fft.rfftfreq(len(x), 1 / SR)
     gain = sum(np.exp(-0.5 * ((f - c) / (c * width)) ** 2) for c in centers)
@@ -92,23 +89,18 @@ def thump(f, seconds, decay):
 
 
 def tap(r, p, seconds=0.09, f=420.0, decay=0.025):
-    # A dull woody tap: low pitched, soft knock, no ring.
     t = t_of(seconds)
     body = np.sin(2 * np.pi * f * p * t) + 0.4 * np.sin(2 * np.pi * f * p * 1.7 * t)
     return (body * np.exp(-t / decay) + 0.15 * lowpass(noise(r, len(t), 100, 1500), 1200) * np.exp(-t / 0.02)) * env(len(t), 0.006, 0.03)
 
 
-# --- calls ---------------------------------------------------------------------------------
-
 def three_note_chirp(r, p):
-    # Gambel's quail "chi-CA-go": a short mid note, a longer high one, a falling last one.
     return mix([(0.0, note(1250 * p, 1350 * p, 0.12), 0.7),
                 (0.17, note(1650 * p, 1750 * p, 0.26, vib=0.01), 1.0),
                 (0.50, note(1350 * p, 950 * p, 0.34), 0.8)], 0.88)
 
 
 def thin_twitter(r, p):
-    # A swift's quick chain of tiny notes, each a soft little glide, the gaps uneven.
     parts, at = [], 0.0
     for i in range(7):
         parts.append((at, note(2100 * p * (1 + 0.06 * r.standard_normal()), 1800 * p, 0.05, (1, 0.2), attack=0.01, release=0.025), 0.8))
@@ -129,7 +121,6 @@ def two_note_whistle(r, p):
 
 
 def bray(r, p):
-    # A cartoon hee-haw: two alternating formant tones, "hee" high and "haw" low, twice.
     parts, at = [], 0.0
     for f, vowel, d in ((300, [450, 2200], 0.26), (190, [700, 1100], 0.32), (310, [450, 2200], 0.2), (185, [700, 1100], 0.36)):
         t = t_of(d)
@@ -146,7 +137,6 @@ def tiny_squeak(r, p):
 
 
 def pebble_scratch(r, p):
-    # Tiny dry scritches: band-limited noise grains, uneven.
     parts, at = [], 0.0
     for i in range(6):
         d = 0.04 + 0.03 * r.random()
@@ -157,7 +147,6 @@ def pebble_scratch(r, p):
 
 
 def hummed_tune(r, p):
-    # A short hummed four-note snatch, "mm" colour, no words.
     notes = [(262, 0.17), (330, 0.17), (294, 0.14), (392, 0.34)]
     parts, at = [], 0.0
     for f, d in notes:
@@ -168,7 +157,6 @@ def hummed_tune(r, p):
 
 
 def bleat(r, p):
-    # A lamb's "mbaa": a wobbling buzz through an open vowel.
     t = t_of(0.6)
     f = np.linspace(430, 360, len(t)) * p * (1 + 0.05 * np.sin(2 * np.pi * 28 * t))
     x = sum(np.sin(k * glide(f)) / k for k in range(1, 12))
@@ -176,7 +164,6 @@ def bleat(r, p):
 
 
 def falling_whistle(r, p):
-    # The canyon wren: clear notes cascading down, each lower and a touch quicker.
     parts, at, f = [], 0.0, 2800.0
     for i in range(7):
         d = 0.15 - 0.012 * i
@@ -189,13 +176,10 @@ def falling_whistle(r, p):
 def humming_creak(r, p):
     t = t_of(0.95)
     hum = formant(note(196 * p, 205 * p, 0.95, (1, 0.5, 0.25), vib=0.01, attack=0.12, release=0.2), [300 * p, 800 * p], 0.3)
-    # Rope creak: a slow sawtooth rasp, pitched low and rounded so it stays soft.
     saw = ((glide(np.linspace(95, 70, len(t)) * p) / (2 * np.pi)) % 1.0) * 2 - 1
     creak = lowpass(saw, 700) * (0.5 + 0.5 * np.sin(2 * np.pi * 3.1 * t + 1.0)) * env(len(t), 0.2, 0.25)
     return hum * 0.8 + creak * 0.4
 
-
-# --- reacts --------------------------------------------------------------------------------
 
 def wing_whirr(r, p):
     t = t_of(0.55)
@@ -218,7 +202,6 @@ def water_plop(r, p):
 
 
 def bucket_clonk(r, p):
-    # Dull and woody: two soft low knocks, no metal ring.
     return mix([(0.0, tap(r, p, 0.14, 310, 0.04), 1.0), (0.19, tap(r, p, 0.12, 260, 0.035), 0.6)], 0.36)
 
 
@@ -241,7 +224,6 @@ def hiss_puff(r, p):
 
 
 def pan_clatter(r, p):
-    # A tinny-soft rattle: a few quick dull taps with a faint thin ring, short.
     parts = []
     for i, at in enumerate((0.0, 0.07, 0.15, 0.21, 0.31)):
         parts.append((at, tap(r, p * (1.7 + 0.1 * r.standard_normal()), 0.08, 520, 0.02), 0.9 - 0.12 * i))
@@ -269,7 +251,6 @@ RECIPES = {f.__name__: f for f in (
 
 
 def parse_record(path=RECORD):
-    # {kind: {"call": voice, "react": voice}} from the `"id": {` rows and their `"voice": {...}` line.
     kinds, current = {}, None
     for line in path.read_text().splitlines():
         m = re.match(r'\t"(\w+)": \{$', line)

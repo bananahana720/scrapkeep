@@ -53,7 +53,6 @@ target = bpy.data.objects.get(opt["node"])
 if target is None or target.type != "MESH":
     raise SystemExit("no mesh node named %s in %s" % (opt["node"], opt["ref"]))
 tme = target.data
-# the node's bounds in its own local space
 lmn = Vector([min(v.co[k] for v in tme.vertices) for k in range(3)])
 lmx = Vector([max(v.co[k] for v in tme.vertices) for k in range(3)])
 old_tris = sum(len(p.vertices) - 2 for p in tme.polygons)
@@ -82,7 +81,7 @@ palette = []
 ca = tme.color_attributes.active_color or (tme.color_attributes[0] if tme.color_attributes else None)
 
 
-def vertex_palette(slot_index, limit):  # the node's own vertex colours on one slot (None: all), largest area first
+def vertex_palette(slot_index, limit):
     area = {}
     for p in tme.polygons:
         if ca is None or (slot_index is not None and p.material_index != slot_index):
@@ -97,15 +96,13 @@ def vertex_palette(slot_index, limit):  # the node's own vertex colours on one s
 
 flat = {m.name.split(".")[0]: np.array(factor.get(m.name.split(".")[0], [0.8] * 3)) for m in mats}
 if len(mats) > 1 and ca is not None and any(np.allclose(flat[m.name.split(".")[0]], 1.0, atol=0.02) for m in mats):
-    # Crew enemies: the game paints every surface from vertex colour (enemy_casting.gd), and the slots only say
-    # which surface flashes. Each slot offers its own vertex colours; a face takes the nearest and that slot.
     style = "slots+vertex"
     for k, m in enumerate(mats):
         own = flat[m.name.split(".")[0]]
         if np.allclose(own, 1.0, atol=0.02):
             for c in vertex_palette(k, 10):
                 palette.append((c, k, c))
-        else:  # a slot with a colour of its own (the flashing body paint): match on it, keep white vertex colour
+        else:
             palette.append((own, k, np.ones(3)))
 elif len(mats) > 1:
     style = "slots"
@@ -149,14 +146,10 @@ mn = Vector([min(v.co[k] for v in me.vertices) for k in range(3)])
 mx = Vector([max(v.co[k] for v in me.vertices) for k in range(3)])
 ext, rext = mx - mn, lmx - lmn
 s = (rext.z / max(ext.z, 1e-6)) if opt["fit"] == "height" else min(rext[k] / max(ext[k], 1e-6) for k in range(3))
-# --fit fill stretches each axis to the node's bounds: the part keeps the authored reach where the game's collider
-# and its other parts expect it, at the price of the generated proportions. Look at the render.
 sx, sy, sz = [rext[k] / max(ext[k], 1e-6) for k in range(3)] if opt["fit"] == "fill" else (s, s, s)
 c, rc = (mn + mx) / 2, (lmn + lmx) / 2
 me.transform(Matrix.Translation(Vector((rc.x, rc.y, lmn.z))) @ Matrix.Diagonal((sx, sy, sz, 1.0)) @ Matrix.Translation(Vector((-c.x, -c.y, -mn.z))))
 
-# Weld the vertices Tripo split along its UV seams; a vertex-coloured asset needs no UVs, so they
-# go first and the vertex count drops to what the colour borders need.
 def _weld(mesh, keep_uv):
     bmw = bmesh.new(); bmw.from_mesh(mesh)
     bmesh.ops.remove_doubles(bmw, verts=bmw.verts, dist=1e-5)
@@ -170,11 +163,11 @@ for sl in ob.material_slots:
 pal_s = srgb(np.array([p[0] for p in palette]))
 
 
-def lum(c):  # brightness of sRGB colours, one per row
+def lum(c):
     return np.asarray(c) @ np.array([0.2126, 0.7152, 0.0722])
 
 
-def node_lum(mesh, layer):  # area-weighted mean brightness of what the game shows: slot colour times vertex colour
+def node_lum(mesh, layer):
     tot = a = 0.0
     for p in mesh.polygons:
         if region is not None and mesh is tme and not in_region(p.center):
@@ -189,8 +182,6 @@ def node_lum(mesh, layer):  # area-weighted mean brightness of what the game sho
 
 
 ref_lum = node_lum(tme, ca)
-# With --region the node is judged whole: the faces kept outside the box count at their own brightness, so a new
-# part with less bright surface than the one it replaces is lifted further.
 whole_lum, kept_lum, kept_area = ref_lum, 0.0, 0.0
 if region is not None:
     full, region = region, None
@@ -214,9 +205,6 @@ if img is not None and me.uv_layers:
         return np.argmin(((cols[:, None, :] - pal_s[None, :, :]) ** 2).sum(axis=2), axis=1)
     slot = snap(samp)
     if opt["bright"] == "match" and ref_lum > 0.0:
-        # A generated texture is usually darker than the authored paint, so many faces snap to the dark colours
-        # and the enemy stands out less (the board's PC look, 14 November 2026). Lift the samples until the
-        # snapped faces' mean brightness reaches the authored node's.
         gain = 1.0
         for _ in range(12):
             got = float((np.sum(lum(pal_s[slot]) * area) + kept_lum * kept_area) / max(area.sum() + kept_area, 1e-9))
@@ -268,14 +256,10 @@ if cap and tris > cap:
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
 
 new_lum = node_lum(me, me.color_attributes[ca_name])
-if region is not None:  # the authored faces outside the box join the new mesh, colours and slots as they were
+if region is not None:
     both = bmesh.new(); both.from_mesh(me)
     fresh = len(both.faces)
     both.from_mesh(tme); both.faces.ensure_lookup_table()
-    # The authored faces bring their second UV set, which holds the polish bake (x: the share of the face out of
-    # shadow, y: edge wear, 0.5 neutral). The game multiplies the slot colour by it (bake_look.gd). The new faces
-    # would read (0, 0) there, fully in shadow: the hooker barrel and the netcaster torso rendered near-black for
-    # that reason until 14 November 2026. They take the unshaded value instead.
     for layer in list(both.loops.layers.uv.values())[1:]:
         for f in both.faces[:fresh]:
             for loop in f.loops:
@@ -284,7 +268,6 @@ if region is not None:  # the authored faces outside the box join the new mesh, 
     both.to_mesh(me); both.free()
     tris = sum(len(p.vertices) - 2 for p in me.polygons)
 
-# hand the new mesh to the authored node, then drop the import
 old = target.data
 target.data = me
 me.name = old.name
@@ -297,7 +280,6 @@ for m in list(bpy.data.materials):
         bpy.data.materials.remove(m)
 bpy.ops.export_scene.gltf(filepath=opt["out"], export_format="GLB", export_image_format="NONE",
                           export_vertex_color="ACTIVE", export_all_vertex_colors=False)
-# carry the authored material definitions over by name
 oj, rest = read_glb(opt["out"])
 byname = {m.get("name"): m for m in gj.get("materials", [])}
 oj["materials"] = [byname.get(m.get("name"), m) for m in oj.get("materials", [])]

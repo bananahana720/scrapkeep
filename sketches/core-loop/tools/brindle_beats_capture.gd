@@ -3,19 +3,8 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
-# Rendered stills of Brindle's beats (flourish_cues.gd): the arrival, the phase two panel, the
-# rout over the world and Tarn's sign-on over the victory card, on a fresh profile so every
-# row plays its full form. It needs a rendered display and a fixed frame rate, so the
-# seconds below are game seconds whatever the renderer's speed:
-#
-#   xvfb-run -s "-screen 0 1920x1080x24" <godot> --path sketches/core-loop --fixed-fps 30 \
-#     --script res://tools/brindle_beats_capture.gd -- --out=<absolute dir> [--human=1]
-#
-# --human=1 plays the beats as a hand on the controls sees them: the camera glances at the ship
-# (ruling bv), which a bot's run never does.
 
 const FPS := 30.0
-# [seconds after the arena opens, still name, action to run first or ""].
 const PLAN := [
 	[0.35, "arrival_0_35s", ""],
 	[1.0, "arrival_1_0s", ""],

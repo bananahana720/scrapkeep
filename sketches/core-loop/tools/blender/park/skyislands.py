@@ -44,10 +44,9 @@ MODELS = SKETCH / "assets/models/park"
 
 BUDGET = {"landform": [8000, 24000], "park_large": [16000, 48000]}
 SHELL_BUDGET = [1500, 3000]
-SHELL_PROUD = 0.02          # the most a detail shell may stand over a ridden surface
-ROPE_H = 0.1                # rope ridge above the net sheet
+SHELL_PROUD = 0.02
+ROPE_H = 0.1
 
-# ---------------------------------------------------------------- palette (sRGB tuples)
 HEX = {
     "slick_red": "a9553a", "deep_red": "7d3a2a", "cream": "e3d3ad", "sandstone": "c6a274", "oxide": "9b513a",
     "varnish": "3a2e29", "bone": "d2c5a5", "sage": "6b7a4e", "dry_sage": "8a8a56", "juniper": "4b5c3e", "pine": "3f5238",
@@ -78,7 +77,6 @@ def rnd(*key):
     return (h & 0xFFFFFF) / float(1 << 24)
 
 
-# ---------------------------------------------------------------- geometry kit (Godot space, metres)
 def sub(a, b):
     return (a[0] - b[0], a[1] - b[1], a[2] - b[2])
 
@@ -219,7 +217,6 @@ class Surf:
             base = (c[0] + 0.12 * math.cos(a), c[1], c[2] + 0.12 * math.sin(a))
             tip = (c[0] + lean * ht * 0.5 * math.cos(a), c[1] + ht, c[2] + lean * ht * 0.5 * math.sin(a))
             self.cone(base, 0.05, ht, 3, color)
-            # the cone above stands upright; shift its apex to the lean
             for i in range(len(self.v) - 9, len(self.v)):
                 if abs(self.v[i][1] - (c[1] + ht)) < 1e-9:
                     self.v[i] = tip
@@ -229,7 +226,6 @@ def tris_of(surf):
     return len(surf.t)
 
 
-# ---------------------------------------------------------------- strata
 STRATA = [("oxide", 0.34), ("cream", 0.5), ("slick_red", 0.3), ("sandstone", 0.6), ("varnish", 0.16), ("cream", 0.4), ("deep_red", 0.36)]
 
 
@@ -259,7 +255,6 @@ def wall(surf, pts_top, x_of, inside, outward):
                       c, inside=inside)
 
 
-# ---------------------------------------------------------------- mesa_lip_kicker
 K_L, K_H, K_W = 12.0, 2.5, 14.0
 K_NX, K_NZ = 28, 24
 
@@ -280,8 +275,8 @@ def slick(x, z):
     return c
 
 
-CHEVRONS = (2.6, 5.4, 8.2)   # z of each chevron's tip along the centre line, pointing +Z
-CHEV_PROUD = 0.006           # painted bleached chevrons lie this far over the ride face
+CHEVRONS = (2.6, 5.4, 8.2)
+CHEV_PROUD = 0.006
 
 
 def chevrons(s):
@@ -336,17 +331,17 @@ def build_kicker_d1():
     s = Surf("mesa_lip_kicker_detail1")
     hw = K_W / 2
     for sign in (-1, 1):
-        for k in range(16):  # rubble shed from the cheeks, outside the ride footprint
+        for k in range(16):
             z = 0.8 + k * 0.78 + rnd(k, sign) * 0.4
             x = sign * (hw + 0.35 + 1.9 * rnd(k, 3, sign))
             sz = 0.3 + 0.6 * rnd(k, 4, sign)
             s.chunk((x, 0.0, z), (sz, sz * 0.7, sz * 1.1), rnd(k, 5, sign) * math.tau, k + 40 * sign, lerp(col("sandstone"), col("slick_red"), rnd(k, 6, sign)), top=0.7)
-        for k in range(10):  # cream ledges proud of the wall in the pale bands
+        for k in range(10):
             z0 = 0.6 + k * 1.1
             h = k_top(z0) * 0.55
             if h > 0.3:
                 s.chunk((sign * (hw + 0.035), h, z0 + 0.5), (0.1, 0.07, 0.9), 0.0, k, col("cream"), jitter=0.0)
-    for k, (cx, cz) in enumerate([(hw + 1.1, 11.4), (-hw - 1.4, 10.6)]):  # a cairn of bleached stones at the lip, each side
+    for k, (cx, cz) in enumerate([(hw + 1.1, 11.4), (-hw - 1.4, 10.6)]):
         for tier in range(4):
             r = 0.55 - 0.1 * tier
             s.chunk((cx, tier * 0.34, cz), (r, 0.3, r), tier + 3 * k, 90 + tier, col("bone"), top=0.75)
@@ -360,17 +355,17 @@ def build_kicker_d2():
     s = Surf("mesa_lip_kicker_detail2")
     hw = K_W / 2
     for sign in (-1, 1):
-        for k in range(22):  # pebbles and chips along the foot of the cheeks
+        for k in range(22):
             z = 0.4 + k * 0.58 + rnd(k, 1, sign) * 0.3
             x = sign * (hw + 0.15 + 1.2 * rnd(k, 2, sign))
             sz = 0.1 + 0.2 * rnd(k, 3, sign)
             s.chunk((x, 0.0, z), (sz, sz * 0.6, sz), rnd(k, 4, sign) * math.tau, k + 200 * sign, lerp(col("sandstone"), col("varnish"), rnd(k, 5, sign) * 0.6), top=0.6)
-        for k in range(5):  # desert varnish streaks run down the cheeks
+        for k in range(5):
             z = 2.0 + k * 1.9
             h = k_top(z) * 0.9
             s.poly([(sign * (hw + 0.012), h, z), (sign * (hw + 0.012), h, z + 0.22), (sign * (hw + 0.012), 0.1, z + 0.12), (sign * (hw + 0.012), 0.1, z + 0.02)],
                    col("varnish"), inside=(0.0, 1.0, z))
-    for k in range(7):  # bleached stones set on the lip's back edge
+    for k in range(7):
         s.chunk((-hw + 0.8 + k * 2.0, 0.0, K_L + 0.28), (0.4, 0.32, 0.32), 0.0, 300 + k, col("bone" if k % 2 else "cream"), top=0.7)
     for k in range(6):
         for twig in range(3):
@@ -381,7 +376,6 @@ def build_kicker_d2():
     return s
 
 
-# ---------------------------------------------------------------- net_deck
 N_X, N_Z, N_SAG, N_POST, N_STEP = 40.0, 80.0, 3.5, 16.0, 5.0
 N_NX, N_NZ = 16, 16
 N_CELL_X, N_CELL_Z = 2 * N_X / N_NX, N_Z / N_NZ
@@ -402,7 +396,7 @@ def net_post_at(s, x, z, solid_col=False):
     s.ring_solid(r0, r1, col("grey_timber"), caps=(False, True))
     if solid_col:
         return
-    for k in range(1, 5):  # rope wraps
+    for k in range(1, 5):
         y = 3.0 * k
         rr = 0.6 - (0.26 * (y + 0.4) / (N_POST + 0.4)) + 0.05
         a = [(x + rr * math.cos(math.tau * i / sides), y, z + rr * math.sin(math.tau * i / sides)) for i in range(sides)]
@@ -412,10 +406,8 @@ def net_post_at(s, x, z, solid_col=False):
     cap1 = [(x + 0.3 * math.cos(math.tau * i / sides), N_POST + 0.5, z + 0.3 * math.sin(math.tau * i / sides)) for i in range(sides)]
     s.ring_solid(cap0, cap1, col("copper"))
     sx = -1.0 if x > 0 else 1.0
-    # yoke: a crossarm at 13 m reaching over the net, a copper pulley at its end
     s.box((x + sx * 1.6, 13.0, z), (3.4, 0.28, 0.28), col("timber"))
     s.cone((x + sx * 3.2, 12.55, z), 0.45, 0.2, 8, col("copper"), r_top=0.45, base=True)
-    # balloon: tethered 6 m off the yoke, striped in the animals' red and cream
     bc = (x + sx * 3.2, 19.0, z)
     s.rope((x + sx * 3.2, 13.0, z), (bc[0], bc[1] - 2.3, bc[2]), 0.06, 0.05, col("rope_dark"))
     s.sphere(bc, 2.3, 5, 10, [col("balloon_red"), col("balloon_cream")])
@@ -434,7 +426,6 @@ def build_net_base():
             pts = [(x0, net_y(x0, z0), z0), (x0, net_y(x0, z1), z1), (x1, net_y(x1, z1), z1), (x1, net_y(x1, z0), z0)]
             shade = 0.88 + 0.24 * rnd(i, j)
             s.poly(pts, dim(col("net_cloth"), shade), up=(0.0, 1.0, 0.0))
-    # ropes on every node line, ridge ROPE_H above the sheet
     for i in range(N_NX + 1):
         x = -N_X + i * N_CELL_X
         for j in range(N_NZ):
@@ -464,11 +455,11 @@ def build_net_col():
 
 def build_net_d1():
     s = Surf("net_deck_detail1")
-    for i in range(1, N_NX):  # a knot at every interior crossing
+    for i in range(1, N_NX):
         for j in range(1, N_NZ):
             x, z = -N_X + i * N_CELL_X, j * N_CELL_Z
             s.pyramid((x, net_y(x, z) + ROPE_H * 0.4, z), 0.2, 0.2, lerp(col("rope"), col("bone"), 0.4 * rnd(i, j, 11)), seed=i * 40 + j)
-    for sx in (-1, 1):  # lashings on the border cables beside each post
+    for sx in (-1, 1):
         for k in range(1, 5):
             z = k * 2.2
             s.chunk((sx * N_X, -0.02, z), (0.5, 0.2, 0.3), 0.0, 5 + k, col("rope_dark"), jitter=0.0)
@@ -477,14 +468,14 @@ def build_net_d1():
 
 def build_net_d2():
     s = Surf("net_deck_detail2")
-    for k in range(26):  # mended patches: pale cloth laid on the net
+    for k in range(26):
         x = -N_X + 6 + 68 * rnd(k, 1)
         z = 6 + 68 * rnd(k, 2)
         w, d = 1.6 + 1.6 * rnd(k, 3), 1.4 + 1.2 * rnd(k, 4)
         pts = [(x, net_y(x, z) + ROPE_H + 0.02, z), (x, net_y(x, z + d) + ROPE_H + 0.02, z + d),
                (x + w, net_y(x + w, z + d) + ROPE_H + 0.02, z + d), (x + w, net_y(x + w, z) + ROPE_H + 0.02, z)]
         s.poly(pts, lerp(col("cream"), col("sandstone"), rnd(k, 5)), up=(0.0, 1.0, 0.0))
-    for (x, z) in net_posts():  # knot-tally tags hung from the yoke, and the pulley's rim
+    for (x, z) in net_posts():
         sx = -1.0 if x > 0 else 1.0
         for k in range(8):
             s.chunk((x + sx * (0.9 + 0.3 * k), 12.0, z + (k % 2) * 0.18), (0.16, 0.5 + 0.1 * (k % 3), 0.04), 0.0, k, col("oxide" if k % 3 else "bone"), jitter=0.05)
@@ -492,7 +483,6 @@ def build_net_d2():
     return s
 
 
-# ---------------------------------------------------------------- floating_island
 I_R, I_DROP, I_CROWN = 90.0, 318.0, 0.4
 I_SIDES = 40
 I_RINGS = 26
@@ -577,7 +567,6 @@ def i_pine_sites():
 
 def build_island_base():
     s = Surf("floating_island")
-    # deck: concentric rings from the centre out to the rim
     rings = 10
     for j in range(rings):
         r0, r1 = I_R * j / rings, I_R * (j + 1) / rings
@@ -589,7 +578,6 @@ def build_island_base():
                 c = lerp(c, col("sage"), 0.7)
             pts = [p(r0, a0), p(r1, a0), p(r1, a1), p(r0, a1)] if j > 0 else [p(r0, a0), p(r1, a0), p(r1, a1)]
             s.poly(pts, c, up=(0.0, 1.0, 0.0))
-    # hull: ring k to ring k+1, flat bands with varnish streaks
     for k in range(I_RINGS):
         r0, r1 = i_hull_ring(k), i_hull_ring(k + 1) if k + 1 < I_RINGS else None
         for n in range(I_SIDES):
@@ -600,7 +588,6 @@ def build_island_base():
                 s.poly([r0[n], r0[m], tip], i_band_colour(k, n), inside=(0.0, -i_depth(k) + 5, I_R))
             else:
                 s.poly([r0[n], r0[m], r1[m], r1[n]], i_band_colour(k, n), inside=(ctr[0], (r0[n][1] + r1[n][1]) / 2, ctr[2]))
-    # the waterfall: a pale sheet off the west rim that widens and thins into mist, long before the net
     top = (-I_R * 1.0 - 0.6, -2.0, I_R)
     steps = 8
     widths = [4.0, 5.0, 6.0, 7.0, 7.5, 6.0, 3.5, 1.0, 0.0]
@@ -613,7 +600,6 @@ def build_island_base():
         quad = [(x0, y0, I_R - w0 / 2), (x1, y1, I_R - w1 / 2), (x1, y1, I_R + w1 / 2), (x0, y0, I_R + w0 / 2)]
         s.poly(quad, [c0, c1, c1, c0], up=(-1.0, 0.0, 0.0))
         s.poly(quad, [c0, c1, c1, c0], up=(1.0, 0.0, 0.0))
-    # relict pines, none in the 28 m lane along +Z
     for (x, z, h, seed) in i_pine_sites():
         y = i_crown(math.hypot(x, z - I_R))
         s.cone((x, y, z), 0.45, h * 0.3, 4, col("timber"), r_top=0.3)
@@ -647,18 +633,18 @@ def build_island_col():
 
 def build_island_d1():
     s = Surf("floating_island_detail1")
-    for n in range(26):  # boulders along the rim's outer edge
+    for n in range(26):
         a = math.tau * (n + 0.3 * rnd(n, 1)) / 26
         r = I_R * (0.9 + 0.08 * rnd(n, 2))
         sz = 2.5 + 3.5 * rnd(n, 3)
         s.chunk((r * math.cos(a), i_crown(r), I_R + r * math.sin(a)), (sz, sz * 0.7, sz * 1.2), rnd(n, 4) * math.tau, n, lerp(col("sandstone"), col("slick_red"), rnd(n, 5)), top=0.65)
-    for n in range(14):  # stalactite spires hanging under the rim
+    for n in range(14):
         a = math.tau * (n + 0.5 * rnd(n, 6)) / 14
         r = I_R * (0.55 + 0.25 * rnd(n, 7))
         ln = 24 * (0.5 + rnd(n, 9))
         y0 = -i_depth(6) * (0.7 + 0.3 * rnd(n, 8))
         s.cone((r * math.cos(a), y0, I_R + r * math.sin(a)), 2.4 + rnd(n, 10) * 2, -ln, 5, col("deep_red"))
-    for n in range(24):  # grass and sage in the pine stands
+    for n in range(24):
         x, z = (rnd(n, 11) - 0.5) * 140, I_R + (rnd(n, 12) - 0.5) * 140
         if abs(x) < 16 or math.hypot(x, z - I_R) > 80:
             continue
@@ -668,14 +654,14 @@ def build_island_d1():
 
 def build_island_d2():
     s = Surf("floating_island_detail2")
-    for n in range(30):  # rocks and cairns on the rim shelf and in the stands, none in the lane
+    for n in range(30):
         x, z = (rnd(n, 21) - 0.5) * 150, I_R + (rnd(n, 22) - 0.5) * 150
         r = math.hypot(x, z - I_R)
         if abs(x) < 16 or r > 86:
             continue
         sz = 0.5 + 1.0 * rnd(n, 23)
         s.chunk((x, i_crown(r) - 0.05, z), (sz, sz * 0.6, sz), rnd(n, 24) * math.tau, 500 + n, lerp(col("sandstone"), col("varnish"), rnd(n, 25) * 0.5), top=0.65)
-    for n in range(10):  # exposed roots and bones of the rim, set into the cliff
+    for n in range(10):
         a = math.tau * n / 10 + 0.2
         c0 = (I_R * 1.02 * math.cos(a), -3.0, I_R + I_R * 1.02 * math.sin(a))
         c1 = (c0[0] * 1.015, c0[1] - 14, c0[2] - (c0[2] - I_R) * 0.015)
@@ -689,7 +675,6 @@ def build_island_d2():
     return s
 
 
-# ---------------------------------------------------------------- Blender build, export, checks
 RECIPES = {
     "mesa_lip_kicker": {"budget": "landform", "base": build_kicker_base, "col": build_kicker_col, "d": (build_kicker_d1, build_kicker_d2),
                         "material": "elastomer",
@@ -813,7 +798,6 @@ def check_surfaces(recipe, base, col_s, shells):
         h_col = height_at(col_s, x, z)
         h_view = height_at(base, x, z)
         if recipe == "net_deck":
-            # posts are solid in the collider; the sheet is what the render's rope ridges sit on
             sheet = net_y(x, z)
             assert abs(h_col - sheet) < 0.05 or h_col >= N_POST - 1, (recipe, x, z, h_col, sheet)
             if h_view is not None and abs(h_col - sheet) < 0.05:
@@ -827,13 +811,12 @@ def check_surfaces(recipe, base, col_s, shells):
         else:
             assert h_col is not None and h_view is not None and abs(h_col - h_view) < 0.02, ("deck", x, z, h_col, h_view)
             worst = max(worst, abs(h_col - h_view))
-    # a shell may not stand over the ridden surface by more than SHELL_PROUD (outside the footprint it is free)
     for shell in shells:
         for (x, z) in probes[::3]:
             if recipe == "mesa_lip_kicker" and (abs(x) > K_W / 2 or not 0 <= z <= K_L):
                 continue
             if recipe == "net_deck":
-                continue  # knots, patches and tags ride on the rope ridge by design; checked by SHELL height below
+                continue
             if recipe == "floating_island" and abs(x) < 14.0:
                 h_col = height_at(col_s, x, z)
                 h_sh = height_at(shell, x, z)
@@ -850,7 +833,6 @@ def build(recipe, out_dir, count_only=False):
     shells = [fn() for fn in spec["d"]]
     cap_t, cap_v = BUDGET[spec["budget"]]
     ext_lo, ext_hi = spec["extent"]
-    # fail loud on the budgets before touching Blender's exporter
     assert len(base.t) + len(col_s.t) <= cap_t, (recipe, "base+col triangles", len(base.t), len(col_s.t), cap_t)
     assert len(base.v) + len(col_s.v) <= cap_v, (recipe, "vertices", len(base.v) + len(col_s.v), cap_v)
     for sh in shells:
@@ -867,7 +849,6 @@ def build(recipe, out_dir, count_only=False):
     rows["glb"][recipe] = export(recipe, [(base, spec["material"]), (col_s, None)], out_dir)
     for k, sh in enumerate(shells, start=1):
         rows["glb"][f"{recipe}_detail{k}"] = export(f"{recipe}_detail{k}", [(sh, spec["material"])], out_dir)
-    # the exported base: nodes, draws, extents and budgets, read back from the file
     g = rows["glb"][recipe]
     assert recipe in g["meshes"] and recipe + "-col" in g["meshes"], (recipe, list(g["meshes"]))
     assert g["materials"] == [spec["material"]], (recipe, g["materials"])

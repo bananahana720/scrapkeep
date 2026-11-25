@@ -28,7 +28,6 @@ const row = {
   producer: "x",
 };
 
-// A full set of logs: every point checked on both maps, padded with extra point 10 lines up to the pin.
 function logs({
   status = {},
   value = {},
@@ -83,7 +82,6 @@ test("map standard: an OWED line not ruled to wait is a miss, one on a waiting f
   );
   assert.equal(owed.pass, false);
   assert.match(owed.measured, /misses: park_flume height_bands_populated 1.00 pass>=0.50 OWED/);
-  // Live WAITING is empty since W46-02 built the flume yard bowl, so an OWED flume yard now fails by default.
   const yard = "park_flume yard_rim_median_m";
   assert.equal(WAITING.length, 0);
   const unparkedYard = buildReceipt(
@@ -113,7 +111,6 @@ test("map standard: an OWED line not ruled to wait is a miss, one on a waiting f
     parked.measured,
     /waiting: park_flume yard_rim_median_m -0.41 pass>=0.50 \(project-guide\/handoff\/ROADMAP.md:27/,
   );
-  // The wait is pinned to its value and status: a worse bowl, or a FAIL in place of OWED, is a miss.
   assert.match(
     buildReceipt(logs({ status: { [yard]: "OWED" }, value: { [yard]: "-0.90" } }), HEAD, {
       waiting: waitingFixture,

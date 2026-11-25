@@ -6,7 +6,14 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { checkAll, checkSpec, exitCode, loadSpecs, phraseError, stretchedSeconds } from "./brief-check.mjs";
+import {
+  checkAll,
+  checkSpec,
+  exitCode,
+  loadSpecs,
+  phraseError,
+  stretchedSeconds,
+} from "./brief-check.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixtures = path.join(root, "tests/fixtures/brief-check");
@@ -48,21 +55,30 @@ test("positive control: the planted bad brief is flagged by each of its three fi
 });
 
 test("positive control through the CLI: bad dir exits 1 and lists the three findings", () => {
-  const r = spawnSync("node", ["scripts/brief-check.mjs", "--dir", "tests/fixtures/brief-check/bad"], { cwd: root, encoding: "utf8" });
+  const r = spawnSync(
+    "node",
+    ["scripts/brief-check.mjs", "--dir", "tests/fixtures/brief-check/bad"],
+    { cwd: root, encoding: "utf8" },
+  );
   assert.equal(r.status, 1);
-  for (const code of ["FILE_MISSING", "LENGTH_RAW", "OFF_PHRASE"]) assert.match(r.stdout, new RegExp(code));
+  for (const code of ["FILE_MISSING", "LENGTH_RAW", "OFF_PHRASE"])
+    assert.match(r.stdout, new RegExp(code));
 });
 
 test("clean fixture has zero findings and the CLI exits 0", () => {
   const r = checkAll(loadSpecs(path.join(fixtures, "clean")));
   assert.deepEqual(r.findings, []);
   assert.deepEqual(r.unchecked, []);
-  const cli = spawnSync("node", ["scripts/brief-check.mjs", "--dir", "tests/fixtures/brief-check/clean", "--strict"], { cwd: root, encoding: "utf8" });
+  const cli = spawnSync(
+    "node",
+    ["scripts/brief-check.mjs", "--dir", "tests/fixtures/brief-check/clean", "--strict"],
+    { cwd: root, encoding: "utf8" },
+  );
   assert.equal(cli.status, 0, cli.stdout);
 });
 
 test("phrase tolerance edges: on the boundary, within tolerance, just outside", () => {
-  const spec = cleanSpec(); // phrase 4 s, tolerance 0.12
+  const spec = cleanSpec();
   assert.equal(phraseError(4, spec), 0);
   const edit = (t) => codes(checkSpec({ ...clone(spec), edits: [t] })).includes("OFF_PHRASE");
   assert.equal(edit(4), false, "exactly on");
@@ -91,14 +107,22 @@ test("length is compared after tempo stretch, loop lets a span run past, gap doe
 });
 
 test("an unavailable root reports unchecked, never a pass", () => {
-  const spec = { ...clone(cleanSpec()), pick: { ...clone(cleanSpec().pick), root: "music_direction", file: "spice/x.wav" } };
-  const r = checkSpec(spec, { roots: { music_direction: path.join(os.tmpdir(), "brief-check-no-such-root") } });
+  const spec = {
+    ...clone(cleanSpec()),
+    pick: { ...clone(cleanSpec().pick), root: "music_direction", file: "spice/x.wav" },
+  };
+  const r = checkSpec(spec, {
+    roots: { music_direction: path.join(os.tmpdir(), "brief-check-no-such-root") },
+  });
   assert.deepEqual(codes(r), []);
   assert.equal(r.unchecked.length, 1);
   assert.equal(r.unchecked[0].field, "pick.file");
   assert.equal(exitCode(r, false), 0);
   assert.equal(exitCode(r, true), 2);
-  const pack = checkSpec({ ...spec, pick: { ...spec.pick, root: "pack" } }, { roots: { pack: path.join(os.tmpdir(), "brief-check-no-pack") } });
+  const pack = checkSpec(
+    { ...spec, pick: { ...spec.pick, root: "pack" } },
+    { roots: { pack: path.join(os.tmpdir(), "brief-check-no-pack") } },
+  );
   assert.equal(pack.unchecked.length, 1, "pack root without STEMS.sha256 on disk is unavailable");
 });
 
@@ -115,23 +139,24 @@ test("hash: wrong spec hash, wrong STEMS.sha256 entry, and native length drift",
     const base = clone(cleanSpec());
     base.edits = [];
 
-    // spec sha256 wrong, file present
-    let spec = { ...base, pick: { ...base.pick, root: "repo", file: "repo.wav", sha256: "f".repeat(64) } };
+    let spec = {
+      ...base,
+      pick: { ...base.pick, root: "repo", file: "repo.wav", sha256: "f".repeat(64) },
+    };
     let r = checkSpec(spec, { roots });
     assert.deepEqual(codes(r), ["HASH_MISMATCH"]);
-    // right hash passes
     spec = { ...base, pick: { ...base.pick, root: "repo", file: "repo.wav", sha256: good } };
     assert.deepEqual(codes(checkSpec(spec, { roots })), []);
-    // STEMS.sha256 entry disagrees with the file even though the spec hash is right
     spec = { ...base, pick: { ...base.pick, root: "pack", file: "theme/a.wav", sha256: good } };
     r = checkSpec(spec, { roots });
     assert.deepEqual(codes(r), ["HASH_MISMATCH"]);
     assert.match(r.findings[0].message, /STEMS\.sha256/);
-    // STEMS entry matching passes
     writeFileSync(path.join(dir, "pack/STEMS.sha256"), `${good}  theme/a.wav\n`);
     assert.deepEqual(codes(checkSpec(spec, { roots })), []);
-    // native_seconds off by more than 0.25 s from ffprobe
-    spec = { ...base, pick: { ...base.pick, root: "repo", file: "repo.wav", sha256: good, native_seconds: 4.5 } };
+    spec = {
+      ...base,
+      pick: { ...base.pick, root: "repo", file: "repo.wav", sha256: good, native_seconds: 4.5 },
+    };
     r = checkSpec(spec, { roots });
     assert.deepEqual(codes(r), ["LENGTH_RAW"]);
     assert.equal(r.findings[0].field, "pick.native_seconds");
@@ -146,12 +171,35 @@ test("sections must chain, end at seconds, and match the journey", () => {
     edit(s);
     return codes(checkSpec(s)).filter((c) => c === "SECTIONS_SUM").length;
   };
-  assert.equal(f(() => {}), 0);
-  assert.equal(f((s) => (s.sections[1].start_s = 4.5)), 1, "gap");
-  assert.equal(f((s) => (s.sections[1].start_s = 3.5)), 1, "overlap");
-  assert.equal(f((s) => (s.sections[1].end_s = 7)), 1, "short of seconds");
-  assert.equal(f((s) => s.journey.pop()), 1, "journey misses a section");
-  assert.equal(f((s) => s.journey.reverse()), 1, "journey out of order");
+  assert.equal(
+    f(() => {}),
+    0,
+  );
+  assert.equal(
+    f((s) => (s.sections[1].start_s = 4.5)),
+    1,
+    "gap",
+  );
+  assert.equal(
+    f((s) => (s.sections[1].start_s = 3.5)),
+    1,
+    "overlap",
+  );
+  assert.equal(
+    f((s) => (s.sections[1].end_s = 7)),
+    1,
+    "short of seconds",
+  );
+  assert.equal(
+    f((s) => s.journey.pop()),
+    1,
+    "journey misses a section",
+  );
+  assert.equal(
+    f((s) => s.journey.reverse()),
+    1,
+    "journey out of order",
+  );
 });
 
 test("span holes: over a bar flags, a mute covers, guide only exempts", () => {
@@ -161,12 +209,17 @@ test("span holes: over a bar flags, a mute covers, guide only exempts", () => {
     return checkSpec(s).findings.filter((x) => x.code === "SPAN_HOLE");
   };
   assert.equal(holes(() => {}).length, 0);
-  const cut = holes((s) => (s.sources[3].to_s = 4)); // other ends at 4 of 8, bar is 2 s
+  const cut = holes((s) => (s.sources[3].to_s = 4));
   assert.equal(cut.length, 1);
   assert.equal(cut[0].field, "part:other");
   assert.equal(holes((s) => (s.sources[3].to_s = 6)).length, 0, "exactly one bar is allowed");
   assert.equal(holes((s) => (s.sources[1].action = "mute")).length, 0, "mute still covers");
-  assert.equal(holes((s) => { s.sources = [{ part: "guide", from_s: 0, to_s: 8, action: "use", note: "guide only" }]; }).length, 0);
+  assert.equal(
+    holes((s) => {
+      s.sources = [{ part: "guide", from_s: 0, to_s: 8, action: "use", note: "guide only" }];
+    }).length,
+    0,
+  );
 });
 
 test("a spec missing a required field reports BAD_SPEC", () => {
@@ -175,7 +228,6 @@ test("a spec missing a required field reports BAD_SPEC", () => {
   assert.deepEqual(codes(checkSpec(s)), ["BAD_SPEC"]);
 });
 
-// Offset stems: stretched pick 3.75 s (120 bpm pick at 128), 8 s take, one bar is 1.875 s.
 const offsetSpec = (src) => {
   const s = clone(cleanSpec());
   s.take_bpm = 128;
@@ -185,43 +237,65 @@ const offsetSpec = (src) => {
   s.sources = [src];
   return s;
 };
-const lengthFindings = (s) => checkSpec(s).findings.filter((f) => f.code === "LENGTH_RAW" || f.code === "PICK_FROM_MISSING");
+const lengthFindings = (s) =>
+  checkSpec(s).findings.filter((f) => f.code === "LENGTH_RAW" || f.code === "PICK_FROM_MISSING");
 
 test("an offset stem is flagged when gap: true is the only thing hiding its length", () => {
-  const src = { part: "drums", from_s: 3.75, to_s: 7.5, action: "use", pick_from_s: 3, gap: true }; // reads 3 + 3.75 = 6.75 of 3.75
-  assert.deepEqual(lengthFindings(offsetSpec(src)).map((f) => f.code), ["LENGTH_RAW"]);
+  const src = { part: "drums", from_s: 3.75, to_s: 7.5, action: "use", pick_from_s: 3, gap: true };
+  assert.deepEqual(
+    lengthFindings(offsetSpec(src)).map((f) => f.code),
+    ["LENGTH_RAW"],
+  );
   const { pick_from_s, ...noPick } = src;
-  assert.deepEqual(lengthFindings(offsetSpec(noPick)).map((f) => f.code), ["PICK_FROM_MISSING", "LENGTH_RAW"], "with gap and no pick_from_s it is still live");
+  assert.deepEqual(
+    lengthFindings(offsetSpec(noPick)).map((f) => f.code),
+    ["PICK_FROM_MISSING", "LENGTH_RAW"],
+    "with gap and no pick_from_s it is still live",
+  );
 });
 
 test("an offset stem with a correct pick_from_s passes, one over the stretched pick by pick_from_s flags", () => {
   const ok = { part: "drums", from_s: 3.75, to_s: 7.5, action: "use", pick_from_s: 0 };
   assert.deepEqual(lengthFindings(offsetSpec(ok)), []);
-  const late = { ...ok, pick_from_s: 0.5 }; // 0.5 + 3.75 = 4.25 > 3.75 + 0.12
+  const late = { ...ok, pick_from_s: 0.5 };
   const f = lengthFindings(offsetSpec(late));
   assert.equal(f.length, 1);
   assert.equal(f[0].code, "LENGTH_RAW");
-  assert.equal(lengthFindings(offsetSpec({ ...ok, pick_from_s: 0.1 })).length, 0, "within tolerance");
-  assert.equal(lengthFindings(offsetSpec({ ...ok, loop: true, pick_from_s: 0.5 })).length, 0, "loop runs past");
+  assert.equal(
+    lengthFindings(offsetSpec({ ...ok, pick_from_s: 0.1 })).length,
+    0,
+    "within tolerance",
+  );
+  assert.equal(
+    lengthFindings(offsetSpec({ ...ok, loop: true, pick_from_s: 0.5 })).length,
+    0,
+    "loop runs past",
+  );
 });
 
 test("a guide span is exempt from the length check", () => {
   const src = { part: "guide", from_s: 0, to_s: 8, action: "use", note: "guide only" };
   assert.deepEqual(lengthFindings(offsetSpec(src)), []);
-  assert.deepEqual(lengthFindings(offsetSpec({ ...src, from_s: 2 })), [], "no PICK_FROM_MISSING for a guide");
+  assert.deepEqual(
+    lengthFindings(offsetSpec({ ...src, from_s: 2 })),
+    [],
+    "no PICK_FROM_MISSING for a guide",
+  );
 });
 
 test("PICK_FROM_MISSING: a use span from_s != 0 without pick_from_s; mute and from_s 0 are exempt", () => {
-  const miss = { part: "drums", from_s: 1, to_s: 2, action: "use" }; // default pick_from_s = from_s reaches 2, inside the pick
+  const miss = { part: "drums", from_s: 1, to_s: 2, action: "use" };
   const f = lengthFindings(offsetSpec(miss));
-  assert.deepEqual(f.map((x) => x.code), ["PICK_FROM_MISSING"]);
+  assert.deepEqual(
+    f.map((x) => x.code),
+    ["PICK_FROM_MISSING"],
+  );
   assert.equal(f[0].field, "sources[0].pick_from_s");
   assert.deepEqual(lengthFindings(offsetSpec({ ...miss, action: "mute" })), []);
   assert.deepEqual(lengthFindings(offsetSpec({ ...miss, from_s: 0, to_s: 2 })), []);
   assert.deepEqual(codes(checkSpec(offsetSpec({ ...miss, pick_from_s: "x" }))), ["BAD_SPEC"]);
 });
 
-// OTHER_STEM_LEAD: the clean take is 8 s, 2 s bars, other = sources[3] (drums/bass/other kept covered).
 const leadFindings = (s) => checkSpec(s).findings.filter((f) => f.code === "OTHER_STEM_LEAD");
 const withOther = (edit) => {
   const s = clone(cleanSpec());
@@ -238,14 +312,23 @@ test("OTHER_STEM_LEAD positive control: 'other' kept with no guide_matches_pick 
 
 test("OTHER_STEM_LEAD: 'other' inside a guide_matches_pick span passes, partly outside flags", () => {
   assert.deepEqual(leadFindings(cleanSpec()), [], "fixture span covers bars 0 to 4");
-  const inside = (g, from, to) => leadFindings(withOther((o) => Object.assign(o, { guide_matches_pick: g, from_s: from, to_s: to, loop: true })));
+  const inside = (g, from, to) =>
+    leadFindings(
+      withOther((o) =>
+        Object.assign(o, { guide_matches_pick: g, from_s: from, to_s: to, loop: true }),
+      ),
+    );
   assert.deepEqual(inside({ from_s: 0, to_s: 8 }, 0, 8), [], "seconds form, exactly equal");
   assert.deepEqual(inside({ from_bar: 1, to_bar: 3 }, 2, 6), [], "bars form, equal");
   assert.equal(inside({ from_bar: 1, to_bar: 3 }, 0, 6).length, 1, "starts before the span");
   assert.equal(inside({ from_bar: 1, to_bar: 3 }, 2, 8).length, 1, "ends after the span");
   assert.equal(inside({ from_s: 2, to_s: 6 }, 2, 6.1).length, 0, "within tolerance_s");
   assert.equal(inside({ from_s: 2, to_s: 6 }, 2, 6.2).length, 1, "past tolerance_s");
-  assert.deepEqual(codes(checkSpec(withOther((o) => (o.guide_matches_pick = { from_bar: "x" })))), ["BAD_SPEC"], "malformed span");
+  assert.deepEqual(
+    codes(checkSpec(withOther((o) => (o.guide_matches_pick = { from_bar: "x" })))),
+    ["BAD_SPEC"],
+    "malformed span",
+  );
 });
 
 test("OTHER_STEM_LEAD leaves mute, guide, drums and bass alone", () => {
@@ -253,13 +336,17 @@ test("OTHER_STEM_LEAD leaves mute, guide, drums and bass alone", () => {
   s.sources[3].action = "mute";
   s.sources[3].gap = true;
   s.sources.push({ part: "guide", from_s: 0, to_s: 8, action: "use" });
-  assert.deepEqual(leadFindings(s), [], "a muted other, a guide, drums and bass (none carry guide_matches_pick)");
+  assert.deepEqual(
+    leadFindings(s),
+    [],
+    "a muted other, a guide, drums and bass (none carry guide_matches_pick)",
+  );
   assert.deepEqual(leadFindings(badSpec()), [], "the planted bad brief mutes other");
 });
 
 test("gap: true marks a deliberate hole for SPAN_HOLE only", () => {
   const s = clone(cleanSpec());
-  s.sources[3].to_s = 4; // other uncovered 4 to 8, over a bar
+  s.sources[3].to_s = 4;
   assert.equal(checkSpec(s).findings.filter((x) => x.code === "SPAN_HOLE").length, 1);
   s.sources[3].gap = true;
   assert.equal(checkSpec(s).findings.filter((x) => x.code === "SPAN_HOLE").length, 0);

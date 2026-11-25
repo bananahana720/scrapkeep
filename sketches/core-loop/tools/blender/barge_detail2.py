@@ -20,7 +20,7 @@ import polish
 
 NAME = "barge_detail2"
 SLOT = "steel"
-BUDGET = [2100, 3000, 1]  # polish: was [1500, 3000, 1]
+BUDGET = [2100, 3000, 1]
 SIZE = [15.64, 2.63, 15.4]
 tone, stud = d1.tone, d1.stud
 
@@ -77,7 +77,6 @@ def more_rivets(s):
 
 
 def patch(s):
-    # The repairer's hand: a bolted copper patch on the +Z hull between the pad and the hasp.
     s.box((1.0, .42, .08), (-1.0, .72, 7.47), tone("copper"))
     for dx in (-.4, .4):
         for dy in (-.14, .14):
@@ -100,7 +99,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(bg.MODELS))
     args = parser.parse_args(argv)
-    polish.enable(bevel=.02, bevel_min=.25, **bg.kit.BAKE)  # light shell polish: smooth shading, bake, tiny bevel on big edges
+    polish.enable(bevel=.02, bevel_min=.25, **bg.kit.BAKE)
     lbd1.export(NAME, SLOT, build, SIZE, BUDGET, args.out_dir)
 
 

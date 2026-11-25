@@ -39,7 +39,6 @@ from splitter_pod import g
 common.reset()
 common.SLOTS["fleet_paint"] = {"vc": True, "rough": 0.8}
 common.SLOTS["requisition_tag"] = {"vc": True, "rough": 0.4, "metal": 0.5}
-# Soft-toy polish (POLISH.md): filleted edges, one Catmull-Clark level, baked AO.
 polish.enable(detail=1, subsurf=1, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty("Splitter")
 
@@ -58,7 +57,6 @@ for i, az in enumerate(AZ):
     tip, out = splitter_pod.build(body, glow, az, R, tally=i + 1)
     snouts.append((tip, out))
 
-# Seam strips fill the 7 degree gaps, pole to pole, slightly proud of the shell.
 for az in AZ:
     seam_az = az + math.pi / 3
     pts = []
@@ -70,11 +68,9 @@ for az in AZ:
     for a, b in zip(pts, pts[1:]):
         glow.beam("requisition_tag", a, b, 0.17, 0.07, color=BRASS)
 
-# Junction caps where the three seams meet, top and bottom: a welded three-way star.
 for y, sign in ((R * 0.93 * 0.99, 1), (-R * 0.99, -1)):
     glow.cyl("requisition_tag", 0.26, 0.2, 0.08, segs=6, loc=g(0, y, 0), color=BRASS)
 
-# Stubby fuse lamp on a short charcoal neck with a three-bar cage: the ball's crown.
 top = R * 0.93
 body.cyl("fleet_paint", 0.11, 0.09, 0.26, segs=6, loc=g(0, top + 0.13, 0), color="charcoal")
 body.cyl("fleet_paint", 0.2, 0.2, 0.06, segs=6, loc=g(0, top + 0.27, 0), color="a8aaa3")

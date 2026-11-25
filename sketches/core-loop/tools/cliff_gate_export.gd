@@ -1,11 +1,5 @@
 extends SceneTree
 
-# Read-only export for the cliff preconstruction gate (CLIFF-R3 section 3) and its post-build
-# measurement. Builds the stage-1 game exactly as asset_capture does, then writes world-space
-# triangles of every visible mesh except the SandstoneShoulders batch (grouped by node), the
-# scattered rocks, and the crown and hull meshes the source currently builds, plus the plans,
-# envelopes and terrain samples the analysis needs. Nothing in the project is modified.
-#   godot --headless --path sketches/core-loop --script res://tools/cliff_gate_export.gd -- --out=<dir>
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Scenery := preload("res://src/presentation/spillway_scenery.gd")
@@ -81,7 +75,6 @@ func _run() -> void:
 			for i in n.multimesh.instance_count:
 				count += _emit(scene, n.multimesh.mesh, n.global_transform * n.multimesh.get_instance_transform(i))
 		groups.append({"path": str(n.get_path()), "tris": count})
-	# The scattered rocks share the cliff batch; rebuild them as the source does.
 	var rocks: Array[Transform3D] = []
 	for side in [-1.0, 1.0]:
 		for i in 8:
@@ -94,7 +87,6 @@ func _run() -> void:
 		rock_count += _emit(scene, Scenery._placed_rock(rock, placement), Transform3D.IDENTITY)
 	groups.append({"path": "rocks", "tris": rock_count})
 	_write(out.path_join("scene.f32"), scene)
-	# Baseline units.
 	var units := PackedFloat32Array()
 	var unit_rows := []
 	var map := Spillway.new()
@@ -115,7 +107,6 @@ func _run() -> void:
 		var samples := []
 		for xi in Scenery.footprint_steps(c["depth"]):
 			for zi in Scenery.footprint_steps(c["width"]):
-				# Local (x toward the arena, z along the crest) mapped through the yaw.
 				var wx: float = c["x"] + (xi if c["yaw"] == 0.0 else -xi)
 				var wz: float = c["z"] + (zi if c["yaw"] == 0.0 else -zi)
 				samples.append([xi, zi, map.sample(wx, wz)[0]])

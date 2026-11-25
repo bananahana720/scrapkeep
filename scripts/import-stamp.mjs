@@ -1,11 +1,4 @@
 #!/usr/bin/env node
-// Which tree a sketch's .godot folder was imported at. A .godot imported at one tree and then run
-// at another gives a run that is not the checked-out code (14 Nov 2026: seed 40322 played a
-// different stage 1 on a worktree whose .godot came from an older tree). Every import that passes
-// writes the stamp; a runner that does not import refuses a .godot whose stamp is not this tree.
-//
-//   node scripts/import-stamp.mjs check  [--sketch sketches/core-loop]
-//   node scripts/import-stamp.mjs import [--sketch sketches/core-loop] [--double]
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -48,9 +41,6 @@ export function isUntrackedGodotAsset(porcelainLine) {
   return GODOT_ASSET_FILE.test(file);
 }
 
-// The git tree of the sketch folder at HEAD, so commits that leave the sketch alone keep the stamp.
-// Uncommitted edits to tracked sketch files and untracked Godot project/asset files are named apart
-// (untracked non-asset temp/output files such as run logs are ignored): they are not in the tree a stamp records.
 export function sketchState(root, sketch = DEFAULT_SKETCH) {
   const status = git(root, ["status", "--porcelain", "--untracked-files=all", "--", sketch], {
     trim: false,
@@ -98,8 +88,6 @@ export function writeImportStamp(root, sketch = DEFAULT_SKETCH, nowOrOptions = n
   return state;
 }
 
-// { ok, reason }. Uncommitted sketch edits, at the import or now, are not in any tree a stamp can
-// name, so either one refuses.
 export function checkImportStamp(root, sketch = DEFAULT_SKETCH, options = {}) {
   const godot = "godot" in options ? options.godot : godotIdentity();
   const file = stampPath(root, sketch);

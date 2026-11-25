@@ -34,7 +34,7 @@ import _camp as cp
 
 T = cp.T
 pk = cp.pk
-OPEN_HALF, OPEN_TOP = 5.5, 9.0          # the gate's required clear opening: |x| < 5.5, 0.2 < y < 9, |z| < 2
+OPEN_HALF, OPEN_TOP = 5.5, 9.0
 PAD_TOP = 0.08
 
 
@@ -68,16 +68,15 @@ class Xf:
         self.base.add([self.pt(v) for v in verts], faces, color, colors)
 
 
-# ------------------------------------------------------------------------------------------------------------- the gate
-PX_IN, PW, PD = 6.0, 2.6, 2.4            # pylon inner face, width, depth
-PCX = PX_IN + PW / 2                     # 7.3
+PX_IN, PW, PD = 6.0, 2.6, 2.4
+PCX = PX_IN + PW / 2
 Y_HDR0, HDR_H = 9.4, 3.0
-Y_HDR1 = Y_HDR0 + HDR_H                  # 12.4
+Y_HDR1 = Y_HDR0 + HDR_H
 HDR_HW, HDR_HZ = 8.9, 1.3
 PAD = 12.0
 RAIL_Z0, RAIL_LEN = -6.5, 10.0
-EMB = (0.0, 11.0)                        # emblem centre on the header front (x, y)
-Z_FRONT = HDR_HZ                         # header front face
+EMB = (0.0, 11.0)
+Z_FRONT = HDR_HZ
 TREE_Y = (13.6, 14.8, 16.0)
 MARQUEE_Y = 10.05
 MARQUEE_X = [sx * (1.6 + 0.9 * j) for sx in (-1, 1) for j in range(7)]
@@ -101,7 +100,6 @@ def pad_slab(s, color):
 def gate(s):
     pad_slab(s, T["iron"])
     h = PAD / 2
-    # Pad finish: copper edge frame, plate seams, the mint track and four mint chevrons pointing -Z.
     for sz in (-1, 1):
         bx(s, (PAD - 0.4, 0.018, 0.3), (0, PAD_TOP + 0.009, sz * (h - 0.25)), T["copper"], True)
     for sx in (-1, 1):
@@ -117,7 +115,6 @@ def gate(s):
     for sx in (-1, 1):
         for sz in (-1, 1):
             stud(s, (sx * (h - 0.6), PAD_TOP, sz * (h - 0.6)), (0, 1, 0), 0.14, 0.018, T["copper_dk"], 6)
-    # Pylons: iron plinth, petrol shaft with iron corner posts, three copper bands, an iron capital, bulbs up the front.
     for sx in (-1, 1):
         cx = sx * PCX
         bx(s, (3.2, 0.9, 3.2), (sx * 7.4, 0.45, 0), T["iron_hi"], True)
@@ -132,7 +129,6 @@ def gate(s):
         bx(s, (1.5, 3.4, 0.05), (cx, 4.65, PD / 2 + 0.02), T["petrol_dk"])
     for x, y, z in marquee_points()[14:]:
         pk.disc_z(s, 0, 0.2, z - 0.1, z + 0.12, 6, T["amber"], at=(x, y))
-    # Header: petrol beam, iron lower rail, copper cap, raised front panels with amber pips, the marquee strip.
     bx(s, (2 * HDR_HW, HDR_H, 2 * HDR_HZ), (0, Y_HDR0 + HDR_H / 2, 0), T["petrol"])
     bx(s, (2 * HDR_HW + 0.1, 0.35, 2 * HDR_HZ + 0.2), (0, Y_HDR0 + 0.175, 0), T["iron"])
     bx(s, (2 * HDR_HW + 0.4, 0.3, 2 * HDR_HZ + 0.4), (0, Y_HDR1 + 0.15, 0), T["copper"])
@@ -145,7 +141,6 @@ def gate(s):
         bx(s, (6.0, 0.1, 0.14), (sx * 5.2, 10.35, Z_FRONT + 0.1), T["copper"])
     for x, y, z in marquee_points()[:14]:
         pk.disc_z(s, 0, 0.2, z - 0.1, z + 0.12, 6, T["amber"], at=(x, y))
-    # Emblem: a copper cog, a petrol hub and a mint chevron (the gate's "go").
     ex, ey = EMB
     pk.disc_z(s, 0, 1.1, Z_FRONT, Z_FRONT + 0.16, 12, T["copper"], at=EMB)
     for k in range(10):
@@ -156,7 +151,6 @@ def gate(s):
     for sx in (-1, 1):
         pk.bar_xy(s, (ex + sx * math.sin(th) * 0.5, ey + 0.3 - math.cos(th) * 0.5), -sx * th, 1.0, 0.3,
                   Z_FRONT + 0.22, Z_FRONT + 0.34, T["mint"])
-    # Start tree above the header: post, three lamps (amber, amber, mint) under visors, a copper finial.
     bx(s, (2.8, 0.3, 1.8), (0, Y_HDR1 + 0.45, 0), T["iron_hi"], True)
     bx(s, (1.2, 4.2, 1.0), (0, 14.8, 0), T["petrol_dk"], True)
     for sx in (-1, 1):
@@ -169,7 +163,6 @@ def gate(s):
     for sx in (-1, 1):
         pk.frustum(s, 0.55, 0.55, Y_HDR1 + 0.3, Y_HDR1 + 0.8, 8, T["copper"], caps=(False, True), at=(sx * 8.0, 0))
         pk.frustum(s, 0.42, 0.18, Y_HDR1 + 0.8, Y_HDR1 + 1.35, 8, T["amber"], at=(sx * 8.0, 0))
-    # Catapult rail behind the gate: copper rails on timber sleepers, a slot, a sled and a buffer stop.
     z0, z1 = RAIL_Z0, RAIL_Z0 - RAIL_LEN
     zc = (z0 + z1) / 2
     for sx in (-1, 1):
@@ -223,7 +216,6 @@ def check_gate_col(s):
 
 
 def gate_detail1(s):
-    # Bolt rows along both rails of the header's front panels, and on the pylon bands.
     for sx in (-1, 1):
         for y in (10.5, 11.8):
             for k in range(11):
@@ -231,30 +223,24 @@ def gate_detail1(s):
         for y in (2.2, 5.2, 8.2):
             for k in range(5):
                 stud(s, (sx * PCX + (k - 2) * 0.5, y, PD / 2 + 0.15), (0, 0, 1), 0.07, 0.06, T["iron_hi"])
-        # Signal boxes low on the pylon fronts: an iron case, a mint-free amber lens, a copper hood.
         bx(s, (1.0, 0.85, 0.35), (sx * PCX, 1.45, PD / 2 + 0.17), T["iron_hi"])
         pk.disc_z(s, 0, 0.14, PD / 2 + 0.34, PD / 2 + 0.4, 6, T["amber"], at=(sx * PCX, 1.45))
         bx(s, (1.1, 0.08, 0.45), (sx * PCX, 1.92, PD / 2 + 0.2), T["copper_dk"])
-    # Cable runs: up the pylon backs, across the header top and back, to the tree base.
     for sx in (-1, 1):
         pk.strut(s, (sx * PCX, 1.0, -PD / 2 - 0.1), (sx * PCX, Y_HDR1 + 0.5, -PD / 2 - 0.1), 0.14, 0.14, T["iron"])
         pk.strut(s, (sx * PCX, Y_HDR1 + 0.55, -PD / 2 - 0.1), (sx * 2.0, Y_HDR1 + 0.55, -0.2), 0.14, 0.14, T["iron"])
         pk.strut(s, (sx * 2.0, Y_HDR1 + 0.55, -0.2), (sx * 0.4, Y_HDR1 + 0.55, -0.2), 0.14, 0.14, T["iron"])
         for k in range(4):
             bx(s, (0.24, 0.24, 0.3), (sx * PCX, 1.8 + 2.0 * k, -PD / 2 - 0.1), T["iron_hi"])
-    # Bolt row along the tree post base.
     for k in range(5):
         stud(s, (-0.8 + 0.4 * k, 12.9, 0.95), (0, 0, 1), 0.07, 0.05, T["copper_dk"])
-    # Rivets around the rail's end stop.
     for k in range(4):
         stud(s, (-1.4 + 0.93 * k, 0.65, RAIL_Z0 - RAIL_LEN - 0.5), (0, 0, 1), 0.08, 0.06, T["copper_dk"])
-    # Pad corner brackets and cable down to the sled.
     for sx in (-1, 1):
         pk.strut(s, (sx * 0.6, 0.12, RAIL_Z0 - 0.2), (sx * 0.6, 0.12, RAIL_Z0 - 1.6), 0.1, 0.06, T["iron"])
 
 
 def gate_detail2(s):
-    # Small pipes: up the pylon outer faces and across the header back.
     for sx in (-1, 1):
         for dz in (-0.5, 0.5):
             pk.tube(s, (sx * (PX_IN + PW + 0.15), 1.0, dz), (sx * (PX_IN + PW + 0.15), 8.9, dz), 0.1, 0.1, 6, T["copper_dk"])
@@ -262,29 +248,24 @@ def gate_detail2(s):
             bx(s, (0.18, 0.2, 1.4), (sx * (PX_IN + PW + 0.15), y, 0), T["copper"])
     pk.tube(s, (-8.4, 9.9, -HDR_HZ - 0.15), (8.4, 9.9, -HDR_HZ - 0.15), 0.1, 0.1, 6, T["copper_dk"])
     pk.tube(s, (-8.4, 11.9, -HDR_HZ - 0.15), (8.4, 11.9, -HDR_HZ - 0.15), 0.07, 0.07, 6, T["iron_hi"])
-    # Panel seams on the header panels and pylon fronts.
     for sx in (-1, 1):
         for k in range(5):
             bx(s, (0.04, 1.5, 0.03), (sx * (2.6 + 1.2 * k), 11.15, Z_FRONT + 0.115), T["iron"])
         for y in (3.7, 6.7):
             bx(s, (PW, 0.05, 0.04), (sx * PCX, y, PD / 2 + 0.05), T["iron"])
         bx(s, (0.05, 8.0, 0.04), (sx * PCX, 5.0, PD / 2 + 0.05), T["iron"])
-    # Bulb cages: a bar across the top and bottom of each header bulb, and a clamp ring plate behind.
     for x, y, z in marquee_points()[:14]:
         bx(s, (0.5, 0.05, 0.08), (x, y + 0.24, z + 0.12), T["copper"])
         bx(s, (0.5, 0.05, 0.08), (x, y - 0.24, z + 0.12), T["copper"])
-    # Lamp hoods' side fins on the start tree.
     for y in TREE_Y:
         for sx in (-1, 1):
             bx(s, (0.06, 0.5, 0.5), (sx * 0.57, y, 1.0), T["iron"])
-    # Seam rows on the pad foot.
     for sx in (-1, 1):
         bx(s, (0.04, 0.012, 11.0), (sx * 4.6, PAD_TOP + 0.006, 0), T["iron_hi"], True)
 
 
-# ----------------------------------------------------------------------------------------------------------- lockers
 ARC_R, SPACING = 30.0, 3.4
-BAY_BACK, BAY_FRONT = -1.3, 1.1           # inside the bay frame: back wall face, side wall front edge
+BAY_BACK, BAY_FRONT = -1.3, 1.1
 DOOR_W, DOOR_ANG = 1.2, math.radians(125)
 HINGE = (-1.5, 1.15)
 BENCH_Z = 2.45
@@ -330,7 +311,6 @@ def emblem(d, shape, color, u=0.6, v=2.3):
 
 def bay_shell(b, k, pid, cname, shape):
     petrol = cp.jitter_tone("petrol", k, 0.04)
-    # Cabinet: two side walls, the back plate, a lighter inner panel, the top slab and front lintel.
     for sx in (-1, 1):
         bx(b, (0.2, 4.0, BAY_FRONT - BAY_BACK), (sx * 1.5, 2.0, (BAY_FRONT + BAY_BACK) / 2), petrol, True)
         bx(b, (0.26, 3.4, 0.1), (sx * 1.5, 1.7, BAY_FRONT + 0.02), T["copper"], True)
@@ -339,16 +319,13 @@ def bay_shell(b, k, pid, cname, shape):
     bx(b, (3.7, 0.2, 2.8), (0, 4.1, -0.1), T["iron_hi"], True)
     bx(b, (3.2, 0.55, 0.3), (0, 3.7, 0.95), T["petrol_dk"])
     bx(b, (3.0, 0.3, 0.06), (0, 3.7, 1.13), T[cname])
-    # Turntable: iron drum, copper top ring; the pilot stands at its centre.
     pk.frustum(b, 0.9, 0.85, 0.0, 0.25, 8, T["iron_hi"], caps=(False, True), at=(0, -0.1))
     pk.frustum(b, 0.72, 0.72, 0.25, 0.32, 8, T["copper"], caps=(False, True), at=(0, -0.1))
-    # Shelf with two brackets, and the coat hook.
     bx(b, (2.6, 0.1, 0.55), (0, 2.7, BAY_BACK + 0.5), T["timber"])
     for sx in (-1, 1):
         pk.strut(b, (sx * 1.0, 2.0, BAY_BACK + 0.2), (sx * 1.0, 2.64, BAY_BACK + 0.72), 0.1, 0.1, T["copper_dk"])
     pk.tube(b, (1.0, 3.1, BAY_BACK + 0.28), (1.0, 3.1, BAY_BACK + 0.55), 0.04, 0.04, 5, T["copper"])
     pk.tube(b, (1.0, 3.1, BAY_BACK + 0.55), (1.0, 3.3, BAY_BACK + 0.55), 0.04, 0.04, 5, T["copper"])
-    # The open door: petrol leaf, copper rails, handle, raised class emblem.
     d = door_frame(b)
     bx(d, (DOOR_W, 3.25, 0.1), (DOOR_W / 2, 1.775, 0), petrol)
     for u in (0.04, DOOR_W - 0.04):
@@ -356,11 +333,9 @@ def bay_shell(b, k, pid, cname, shape):
     bx(d, (DOOR_W - 0.16, 0.08, 0.04), (DOOR_W / 2, 3.2, -0.07), T["copper"])
     bx(d, (0.08, 0.35, 0.1), (DOOR_W - 0.2, 1.4, -0.1), T["copper"])
     emblem(d, shape, T[cname])
-    # Bench in front.
     bx(b, (2.0, 0.12, 0.5), (0, 0.55, BENCH_Z), T["timber"])
     for sx in (-1, 1):
         bx(b, (0.12, 0.5, 0.42), (sx * 0.85, 0.25, BENCH_Z), T["iron"], True)
-    # Awning: pitched canvas roof, valance, pennants, two brackets, two back blocks.
     roof_y = lambda z: 4.75 - (z - 0.55) * math.sin(ROOF_PITCH)
     cp.obox(b, (3.7, 0.1, 3.9), (0, 4.75, 0.55), cp.jitter_tone("canvas", k, 0.08), pitch=ROOF_PITCH)
     zf = 0.55 + 1.95 * math.cos(ROOF_PITCH)
@@ -408,14 +383,14 @@ def check_lockers(s):
 def lockers_detail1(s):
     for k, (pid, cname, shape) in enumerate(cp.PILOTS):
         b = bay_frame(s, k)
-        for j in range(3):                                   # vent slats above the shelf
+        for j in range(3):
             bx(b, (1.4, 0.07, 0.05), (0, 3.15 + 0.17 * j, BAY_BACK + 0.28), T["iron"])
         d = door_frame(b)
-        for y in (0.6, 1.8, 3.0):                            # hinge knuckles along the hinge edge
+        for y in (0.6, 1.8, 3.0):
             bx(d, (0.12, 0.3, 0.14), (0.02, y, -0.02), T["copper"])
-        bx(d, (0.2, 0.16, 0.1), (DOOR_W - 0.2, 1.1, -0.12), T["iron_hi"])       # padlock body
-        bx(d, (0.05, 0.1, 0.06), (DOOR_W - 0.2, 1.25, -0.12), T["copper_dk"])   # shackle
-        for j in range(6):                                   # rivets across the lintel
+        bx(d, (0.2, 0.16, 0.1), (DOOR_W - 0.2, 1.1, -0.12), T["iron_hi"])
+        bx(d, (0.05, 0.1, 0.06), (DOOR_W - 0.2, 1.25, -0.12), T["copper_dk"])
+        for j in range(6):
             stud(b, (-1.25 + 0.5 * j, 3.7, 1.1), (0, 0, 1), 0.06, 0.06, T["copper_dk"])
 
 
@@ -423,29 +398,27 @@ def lockers_detail2(s):
     for k, (pid, cname, shape) in enumerate(cp.PILOTS):
         b = bay_frame(s, k)
         z = BAY_BACK + 0.62
-        if k == 0:                                           # helmet on the hook
+        if k == 0:
             pk.frustum(b, 0.22, 0.14, 2.65, 2.98, 8, T[cname], at=(1.0, z + 0.1))
             bx(b, (0.04, 0.4, 0.04), (1.0, 3.1, z - 0.02), T["iron"])
-        elif k == 1:                                         # spanner
+        elif k == 1:
             bx(b, (0.1, 0.8, 0.05), (1.0, 2.7, z - 0.1), T["iron_hi"])
             bx(b, (0.3, 0.14, 0.05), (1.0, 3.12, z - 0.1), T["iron_hi"])
-        elif k == 2:                                         # scarf
+        elif k == 2:
             bx(b, (0.16, 0.8, 0.05), (1.0, 2.8, z - 0.1), T["amber"])
             bx(b, (0.22, 0.1, 0.05), (1.0, 2.38, z - 0.1), T["canvas_dk"])
-        elif k == 3:                                         # goggles
+        elif k == 3:
             for dx in (-0.14, 0.14):
                 pk.disc_z(b, 0, 0.12, z - 0.14, z - 0.06, 6, T["glass_lt"], at=(1.0 + dx, 2.92))
             bx(b, (0.5, 0.04, 0.05), (1.0, 2.92, z - 0.18), T["timber_lt"])
-        elif k == 4:                                         # clipboard
+        elif k == 4:
             bx(b, (0.5, 0.65, 0.04), (1.0, 2.8, z - 0.1), T["ledger"])
             bx(b, (0.2, 0.08, 0.06), (1.0, 3.1, z - 0.1), T["copper"])
-        else:                                                # mallet
+        else:
             bx(b, (0.08, 0.7, 0.05), (1.0, 2.75, z - 0.1), T["timber"])
             bx(b, (0.4, 0.22, 0.08), (1.0, 3.12, z - 0.1), T["iron_hi"])
-        # A second peg and a tin on the shelf.
         pk.tube(b, (-1.0, 3.1, BAY_BACK + 0.28), (-1.0, 3.1, BAY_BACK + 0.5), 0.04, 0.04, 5, T["copper"])
         pk.frustum(b, 0.12, 0.1, 2.75, 3.0, 6, T["oxide"], at=(-0.9, BAY_BACK + 0.8))
-        # Stickers: raised diamonds and discs on the side walls' fronts and the lintel.
         cp.obox(b, (0.3, 0.3, 0.03), (-1.0, 3.7, 1.17), T["bone"], roll=math.pi / 4)
         cp.obox(b, (0.3, 0.3, 0.03), (1.0, 3.7, 1.17), T["bone"], roll=math.pi / 4 * (1 + (k % 2)))
         pk.disc_z(b, 0, 0.14, 1.12, 1.17, 6, T["copper_dk"], at=(0.0, 3.7))

@@ -37,7 +37,7 @@ import common
 
 FPS = 30
 BEAT = 60 / 129
-BAR2 = 8 * BEAT  # the presence loops: two bars at 129 BPM, 3.72 s
+BAR2 = 8 * BEAT
 
 
 def g(x, y, z):
@@ -157,7 +157,6 @@ class Rig:
 
     def pose(self, bone_name, loc=(0, 0, 0), rot=(0, 0, 0), scale=1.0):
         pb = self.arm.pose.bones[bone_name]
-        # Bone local axes are Godot axes (see the module note), so the values go straight in.
         pb.location = Vector(loc)
         pb.rotation_euler = Euler([math.radians(a) for a in rot], "XYZ")
         pb.scale = Vector(scale) if isinstance(scale, (tuple, list)) else Vector((scale,) * 3)
@@ -242,15 +241,12 @@ class Rig:
             "joints": len(doc["skins"][0]["joints"]) if doc.get("skins") else 0,
             "clips": sorted(a["name"] for a in doc.get("animations", [])),
         }
-        # The enemy class caps in assets/asset_budgets.json; each body recipe asserts its own.
         assert stats["draws"] == draws and stats["verts"] <= 19100 and stats["tris"] <= 10000, stats
         assert stats["clips"] == sorted(self.clips), (stats["clips"], sorted(self.clips))
         assert all("JOINTS_0" in p["attributes"] for p in prims), "every mesh is skinned"
         print("RIG EXPORTED", os.path.basename(path), json.dumps(stats, sort_keys=True))
         return stats
 
-
-# --- Key helpers: anime timing is holds, snaps and overshoot, so these build key lists. ----
 
 def keys(*rows):
     """keys((0, {}), (0.2, {...}), ...) -> list; a readable alias."""
@@ -291,8 +287,6 @@ def merge(*lists):
     return out
 
 
-# --- Contact sheet: key poses of every clip, for the phone page. --------------------------
-
 def contact_sheet(name, rig, floor, outdir, focus, scale, shots, yaw=-35.0, size=420, pitch_up=3.0,
                   lit_clips=()):
     """Renders `shots` = [(clip, seconds, label)] from one three-quarter orthographic camera
@@ -306,7 +300,6 @@ def contact_sheet(name, rig, floor, outdir, focus, scale, shots, yaw=-35.0, size
     cam.data.ortho_scale = scale
     focus = Vector(focus)
     a = math.radians(yaw)
-    # Godot -Z (where every special faces) is Blender +Y, so the camera stands on +Y.
     cam.location = focus + Vector((math.sin(a) * 12, math.cos(a) * 12, pitch_up))
     common._look(cam, focus)
     os.makedirs(outdir, exist_ok=True)

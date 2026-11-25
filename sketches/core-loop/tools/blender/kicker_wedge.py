@@ -30,11 +30,8 @@ from ore_cart import kit, common
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-PROP = [520, 520, 1]  # polish: was [270, 610, 1]; class cap 2,000 T / 4,600 V
+PROP = [520, 520, 1]
 
-# One row per painted part, palette names only (src/core/palette.gd; slate is SLATE 6f7f8f, absent from common.HEX).
-# The picture's orange is HAZARD, reserved for hostile reads (palette.gd:18), so the stripes are AMBER; its yellow cap
-# is AMBER too. Rivets and bolts are slate so they read on charcoal; the repair patch is oxide.
 TONES = {
     "body": "charcoal",
     "face": "6f7f8f",
@@ -44,27 +41,24 @@ TONES = {
     "cap": "amber",
 }
 
-LENGTH, TOP, HALF = 7.0, 1.6, 3.0       # arena.gd KICKER_LENGTH, KICKER_TOP, KICKER_HALF_WIDTH
-SLOPE = math.hypot(LENGTH, TOP)          # riding face length along the slope
+LENGTH, TOP, HALF = 7.0, 1.6, 3.0
+SLOPE = math.hypot(LENGTH, TOP)
 UP_SLOPE = Vector((0, TOP, LENGTH)) / SLOPE
 NORMAL = Vector((0, LENGTH, -TOP)) / SLOPE
-CHEEK = .15                              # cheek plate thickness, inside the collider width
-SKIRT = (.07, .32)                       # skirt plate: proud of the cheek, height
-FACE_SINK = .010                         # face plate top under the plane; stripes sit exactly on it
-RIDE_PROUD = .016                        # the most anything may stand above the riding plane
-CAP_V = SLOPE - .55                      # where the cap bar starts along the slope
-BACK = .12                               # back wall thickness
-# Stripes: 45 degree bands (u + v constant; the other lean read as cross-slope bars at the hero view) in face space (u = x, v = up the slope), period 2 * STRIPE_W along u; the fade edge is a
-# slanted line v = FADE_V + FADE_K * u, lower on the left as in the picture, and each band ends at its own step.
+CHEEK = .15
+SKIRT = (.07, .32)
+FACE_SINK = .010
+RIDE_PROUD = .016
+CAP_V = SLOPE - .55
+BACK = .12
 STRIPE_W = .75
 STRIPE_C0 = -9.0
 FADE_V, FADE_K = 3.5, .30
 FADE_STEP = [0, .45, .15, .6, .25, .5, .1, .4, .3, .55, .2, .35, .05, .5]
-MIN_BAND = .2                            # square metres; a smaller clipped sliver is dropped
-CAP_SEGMENTS = 7                         # amber, charcoal, ... amber across the cap bar
-CAP_GAP = .25                            # bare face plate between the face stripes and the cap bar, as in the picture
-CAP_SHEAR = .9                           # the cap's band edges lean like the picture's cap stripes
-# Cheek rivets: (z, y) on each cheek's outer face, two staggered rows under the riding edge as in the picture.
+MIN_BAND = .2
+CAP_SEGMENTS = 7
+CAP_GAP = .25
+CAP_SHEAR = .9
 RIVETS = [(2.6, .38), (3.9, .38), (5.2, .38), (6.5, .38), (4.6, .82), (6.1, 1.12)]
 SIZE = {"kicker_wedge": [6.14, 1.6, 7.0], "kicker_wedge_stripes": [5.7, 1.011, 4.538]}
 
@@ -157,23 +151,16 @@ def body(s):
     inner = HALF - CHEEK
     for side in (-1, 1):
         x_in, x_out = side * inner, side * HALF
-        # Cheek plate: the collider's side triangle; its top edge is the riding edge.
         extrude_x(s, [(0, 0), (LENGTH, 0), (LENGTH, TOP)], x_in, x_out, tone("body"))
-        # Skirt plate along the foot of the cheek, its top edge following the plane near the foot.
         rise = SKIRT[1] * LENGTH / TOP
         extrude_x(s, [(0, 0), (LENGTH, 0), (LENGTH, SKIRT[1]), (rise, SKIRT[1])], x_out, side * (HALF + SKIRT[0]), tone("body"))
         for z, y in RIVETS:
             stud(s, (side * (HALF + (SKIRT[0] if y < SKIRT[1] else 0)), y, z), (side, 0, 0), .09, .06, .05, tone("rivet"), sides=8)
-    # Face plate between the cheeks, 1 cm under the plane, down to the cap bar.
-    # Its lower edge stays at or above the floor, so the leading edge is flush and nothing hangs under y 0.
     top0, top1, bot1 = face(0, .06, -FACE_SINK), face(0, CAP_V, -FACE_SINK), face(0, CAP_V, -.08)
     extrude_x(s, [(top0[2], top0[1]), (top1[2], top1[1]), (bot1[2], bot1[1]), (top0[2] + .35, 0)], -inner, inner, tone("face"))
-    # Back wall under the cap bar.
     s.box((2 * HALF, 1.2, BACK), (0, .6, LENGTH - BACK / 2), tone("body"))
-    # Face corner bolts at the low corners, flush with the plane (the ball rolls over them).
     for u in (-inner + .22, inner - .22):
         stud(s, face(u, .9, -FACE_SINK), NORMAL, .08, .06, FACE_SINK + RIDE_PROUD * .5, tone("rivet"))
-    # Redjaw repair: a load-bearing patch plate riveted over the +x cheek (the hero side) where the kicker takes its hits.
     s.box((.03, .42, .9), (HALF + .015, .62, 4.3), tone("patch"))
     kit.PARTS["RideFace"] = {"reference_position": list(face(0, SLOPE / 2))}
 
@@ -182,8 +169,6 @@ def enamel(s):
     inner = HALF - CHEEK
     for k, poly in stripes(CAP_V - CAP_GAP, inner):
         slab(s, poly, -FACE_SINK - .01, 0.0, tone("stripe", k))
-    # Cap bar: flush with the plane on top, rounded over the top edge (the picture's curved lip, kept off the
-    # riding plane) and down the back; amber with charcoal bands across it.
     z0 = CAP_V * UP_SLOPE.z
     profile = [(z0, plane_y(z0)), (LENGTH, TOP), (LENGTH + .18, TOP - .1), (LENGTH + .2, 1.2), (z0 + .1, 1.2)]
     xs = [-inner + i * (2 * inner) / CAP_SEGMENTS for i in range(CAP_SEGMENTS + 1)]
@@ -226,9 +211,6 @@ def export(name, part, slot, build, sockets, out_dir):
 
 
 def main():
-    # Polish: smooth shading with creases, bake, a 2 cm bevel on the long edges only (bevel_min keeps bolts cheap); the
-    # stripes and cap are decals on the plane, so they stay unbevelled. ride_check runs on the unpolished verts and
-    # a bevel only pulls surfaces inward, so the ride face stays flat and under RIDE_PROUD.
     polish.enable(bevel=.02, bevel_min=.3, **kit.BAKE)
     kit.FINISH.update({"Stripes": {"bevel": 0}})
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []

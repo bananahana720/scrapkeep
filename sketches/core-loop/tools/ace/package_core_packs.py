@@ -29,7 +29,7 @@ import numpy as np
 import soundfile as sf
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from package_music import RATE, PRE_ROLL, POST_ROLL, STEMS, cut_clip, encode, sha  # noqa: E402
+from package_music import RATE, PRE_ROLL, POST_ROLL, STEMS, cut_clip, encode, sha
 
 SKETCH = Path(__file__).resolve().parents[2]
 OUT = SKETCH / 'assets/music_ace'
@@ -40,24 +40,15 @@ CEILING = -3.0
 MUSIC_FLOOR_DB = -45.0
 KEYS = {'C': -2, 'Db': -1, 'D': 0, 'Eb': 1, 'E': 2, 'F': 3, 'Gb': 4, 'G': 5, 'Ab': 6, 'A': 7, 'Bb': 8, 'B': 9}
 
-# cue -> (nominal bpm the tempo search centres on, or None for a 16-bar loop whose length gives the tempo, high mix name)
 CUES = {
     'roam-spillway': (172, 'spiced'), 'roam-dig': (172, 'spiced'), 'roam-highdraft': (172, 'spiced'),
     'spillway-loop': (None, 'spiced'), 'dig-loop': (None, 'spiced'), 'highdraft-loop': (None, 'spiced'),
     'boss-brindle': (129, 'spiced'), 'boss-waking': (129, 'spiced'), 'boss-mind': (129, 'spiced'),
     'title-a': (129, 'spiced'), 'title-b': (129, 'spiced'), 'title-c': (172, 'spiced'),
     'camp': (129, 'light'),
-    # Theme C a whole step up (Rubber Band -p 2 on bass, other and vocals; drums unshifted), for the won summary's lift.
     'title-c-up2': (172, 'spiced'), 'summary-loss': (129, 'light'),
 }
 ZONE_BPM = 129
-# pack -> (kind, key, cue, roam cue, stage). Stage-to-pack mapping: src/core/park_defs.gd music.ace (stage 1 spillway,
-# 2 cable_reach, 3 dig_upper, 4 dig_deep, 5 highdraft, 6 highdraft_crown). Worlds' tonics: Spillway D, Dig E, Highdraft G;
-# Brindle D; the Waking E (Phrygian) and the Mind G (Lydian minor), as design-v3/score/themes.py writes them and key_check.py reads them.
-# roam: calm and travel from the roam track's current mix, cadence from its spiced mix, at 172 (the title layout).
-# zone: the world's 16-bar loop stretched to 129 supplies pivot, build, telegraph, open, drop and cadence; calm and
-#   travel come from the roam track at 172. Stage B, the world's second stage, takes windows 8 bars further on.
-# boss: the long-track plan at 129. menu: calm, travel and cadence from the picked mix whole.
 PACKS = {
     'roam_spillway': ('roam', 'D', 'roam-spillway', None, 'A'),
     'roam_dig': ('roam', 'E', 'roam-dig', None, 'A'),
@@ -75,16 +66,10 @@ PACKS = {
     'title_b': ('menu', 'D', 'title-b', None, 'A'),
     'title_c': ('menu', 'D', 'title-c', None, 'A'),
     'camp': ('menu', 'D', 'camp', None, 'A'),
-    # Andrew, card 23:24:59Z 17 Oct ("Won run and ending"): a won run plays theme C with a whole-step lift, a lost run keeps
-    # the jazz-club summary. The summary pack plays return (cadence, then home = calm) when won and travel when lost
-    # (ace_sequencer.gd start_menu), so cadence is two bars of theme C in D, calm is theme C lifted to E, and travel is
-    # summary-loss's light mix.
     'summary': ('summary', 'D', 'title-c', 'title-c-up2', 'A'),
 }
 EXTRA = {'summary': ('summary-loss',)}
-# A clip cut from a shifted copy reports the key it sounds in.
 CLIP_KEY = {'title-c-up2': 'E'}
-# A new pack's section map comes from the existing pack it sits beside.
 TEMPLATES = {'boss_brindle': 'brindle', 'boss_waking': 'waking', 'boss_mind': 'mind', 'summary': 'summary'}
 
 
@@ -167,11 +152,7 @@ class Track:
             self.music_bars = 16
             self.head = 0.0
         else:
-            # Grid-stretched files sit on their nominal tempo (a wider window found 174.18 for a 172 file);
-            # the titles were not grid-stretched, so their own tempo is searched wider.
             self.read = narrow_tempo(self.flux, self.rate, nominal, 0.03 if cue.startswith('title') else 0.01)
-            # The grid files hold their nominal tempo, which a weak kick envelope can misread (roam-highdraft read
-            # 174.18 and 170.95 from two windows around 172); each clip's start is then snapped to the local kicks.
             self.tempo = self.read if cue.startswith('title') else float(nominal)
             self.head = cut_loops.phase(self.flux, self.rate, self.tempo) * RATE
         self.bar_f = 240 / self.tempo * RATE
@@ -185,7 +166,6 @@ class Track:
                       for i in range(bars)]
             self.music_bars = max(i for i, v in enumerate(levels) if v > MUSIC_FLOOR_DB + 0) + 1
         else:
-            # Three copies so a clip can wrap past either end; the middle copy is the take.
             for d in (self.cur, self.hi):
                 for s in STEMS:
                     d[s] = np.concatenate([d[s]] * 3)
@@ -246,9 +226,6 @@ def full_plan(pack, tracks):
         r = tracks[roam]
         o = 0 if stage == 'A' else 8
         shelf = 4 + o
-        # Stage B also swaps the telegraph and open windows (the second stage's open wrap clicked at +16 in the first cut).
-        # Stage A's open starts two bars past the loop's halfway point for the same reason (spillway's wrap stepped
-        # 0.2936 against a 0.2905 limit at bar 8, 0.3014 against 0.2992 at bar 9).
         tele, opn = (4 + o, 10 + o) if stage == 'A' else (8 + o, 4 + o)
         return dict(calm=(r, 'cur', shelf, 16, 1), travel=(r, 'cur', shelf + 16, 16, 1), pivot=(t, 'high', o - 1, 1, None),
                     build=(t, 'high', o, 16, 9), telegraph=(t, 'high', tele, 4, 1), open=(t, 'high', opn, 4, 1),
@@ -314,7 +291,6 @@ def cut_pack(work, pack, tracks, only=None):
                          pcm=pcm, offset=clips['drums'][1])
         if (len(pcm['drums']) / RATE) >= 10:
             rows[cid]['gain'] = fit_gain(pcm)
-    # clips under 10 s are not metered by the gate; they take the mean gain of their mix's long clips
     for cid, r in rows.items():
         if 'gain' not in r:
             peers = [x['gain'] for x in rows.values() if 'gain' in x and x['which'] == r['which'] and x['tr'] is r['tr']]
@@ -329,7 +305,6 @@ def write_pack(work, pack, kind, key, rows, only=None, renders=None):
     template = json.loads((own if own.exists() and (kind == 'zone' or only) else beside).read_text())
     folder = OUT / pack
     folder.mkdir(parents=True, exist_ok=True)
-    # With --clips, the clips not recut keep their manifest rows and their Oggs untouched.
     clips, sources = (dict(template['clips']), dict(template['sources'])) if only else ({}, {})
     for cid, r in rows.items():
         tr = r['tr']
@@ -340,7 +315,6 @@ def write_pack(work, pack, kind, key, rows, only=None, renders=None):
             files[s] = f'{cid}.{s}.ogg'
             encode(v, folder / files[s])
         mixname = tr.hi_name if r['which'] == 'high' else tr.cur_name
-        # A shifted copy's source is the mix it was shifted from; a stand-in take (--render) names its own file.
         mix_path = (renders or {}).get(tr.cue) or SPICE / f'{mixname.replace("-up2", "")}.wav'
         stem_dir = work / ('stretched' if tr.loop else 'stems/htdemucs') / mixname
         total = len(r['pcm']['drums'])

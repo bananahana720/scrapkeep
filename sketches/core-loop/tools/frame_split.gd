@@ -1,26 +1,5 @@
 extends RefCounted
 
-# Splits a frame's wall time into the parts that built it (bot_run --frame-split=1|2), on top of the
-# idle_ms, draw_ms, tick_ms and ticks the frame log already has. Head and tail nodes at the extreme
-# priorities time the spans in which node physics callbacks and node _process callbacks run, and the
-# render server's frame_pre_draw marks where the frame's node work ends. take() returns what built up
-# since the last call:
-#   phys_ms, tick_max_ms          node _physics_process summed over the frame's ticks, and the longest tick
-#   proc_ms                       node _process
-#   pre_proc_ms                   process_frame to the first node _process: the deferred-call queue, transform notifications
-#   post_proc_ms                  the last node _process to pre_draw: timers, tweens and deletions
-#   bot_ms                        the bot driver's tick (add_bot): bot_run extends SceneTree, so its _physics_process
-#                                 runs before physics_frame, in time no node bracket sees
-#   net_ms                        the frame's ms less bot_ms
-# A frame's wall ms minus these is the engine's own work. --frame-split=2 also keeps an events list
-# of every bracket with the main thread's on-CPU microseconds (/proc/thread-self/schedstat) on frames
-# over 40 ms: a gap with wall time and CPU time alike was busy, one with little CPU was waiting.
-# After each phys_tail it marks the tick's own engine work in tick order: phys_deferred when the
-# deferred calls queued by then have run; phys_deleted when the nodes queued for deletion by then have
-# been freed (a sentinel queued last; nodes queued later in the flush go after it), so that span also
-# holds the tick's physics timers, tweens and transform notifications. The gap from phys_deleted on is
-# the physics server's step plus navigation, idle callbacks, the next tick's body callbacks and the bot
-# driver, or on a frame's last tick bot_run's own frame row.
 
 var _phys_start := 0
 var _phys_us := 0

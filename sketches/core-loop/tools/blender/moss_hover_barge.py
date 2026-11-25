@@ -34,8 +34,7 @@ from ore_cart import strut
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [2700, 2000, 2]  # polish: was [900, 2000, 2]
-# Polish (tools/blender/POLISH.md): hard hull with small bevels; tyres are round elastomer.
+LANDMARK = [2700, 2000, 2]
 FINISH = {"Hull": {"bevel": .04}, "Fittings": {"bevel": .03}, "Wheels": {"bevel": 0, "subsurf": 1}, "Jets": {"bevel": .03}, "Detail1": {"bevel": 0}, "Detail2": {"bevel": 0}}
 
 
@@ -44,25 +43,20 @@ def polish_on():
     kit.FINISH.update(FINISH)
 
 
-
-# One row per painted part, palette constants only (src/core/palette.gd). The picture's lighter teal is VERDIGRIS
-# (gap: no lighter teal tone); its orange wheels are COPPER (lore: coils and plumbing) and its orange sign is AMBER
-# (the world offers: Moss's workshop), never HAZARD; nothing is mint, so no state key is baked.
 TONES = {
-    "hull": "365754",       # VERDIGRIS
-    "under": "242a28",      # CHARCOAL
-    "stripe": "242a28",     # CHARCOAL
-    "sign": "e5a044",       # AMBER
-    "sign_face": "e6d9b8",  # LEDGER
-    "copper": "b77843",     # COPPER
-    "patch": "9b513a",      # RUST (iron oxide)
-    "cable": "2a3231",      # CABLE
+    "hull": "365754",
+    "under": "242a28",
+    "stripe": "242a28",
+    "sign": "e5a044",
+    "sign_face": "e6d9b8",
+    "copper": "b77843",
+    "patch": "9b513a",
+    "cable": "2a3231",
 }
 
 DECK_U, DECK_V, RIM_Y = 31.0, 21.0, 4.0
 SEG = 4
 SEAM = .002
-# Hull plan rings, top (tucked under the deck edge) to keel: (half u, half v, corner radius, y, tone).
 HULL = [
     (30.6, 20.6, .6, -.8, "hull"),
     (31.0, 21.0, .25, RIM_Y - .04, "hull"),
@@ -76,19 +70,18 @@ HULL = [
     (31.2, 21.2, 2.9, -2.7, "under"),
     (30.0, 20.0, 3.4, -3.5, "under"),
 ]
-STRIPE = (32.3, 22.3, 2.1, -.85, .45, .1)   # half u, half v, radius, y0, y1, proud
+STRIPE = (32.3, 22.3, 2.1, -.85, .45, .1)
 JETS = [(25.0, 16.0), (-25.0, 16.0), (25.0, -16.0), (-25.0, -16.0)]
 JET = [(2.0, -3.0, "copper"), (3.2, -5.7, "copper"), (3.2, -6.0, "copper"), (2.5, -6.0, "cable"), (2.1, -5.5, "cable")]
-WHEELS = [(24.0, 1), (-24.0, 1), (24.0, -1), (-24.0, -1)]   # (u, side): on the long sides
-WHEEL = (2.4, -.4, 12)                                       # radius, centre y, sides
-SIGN = (-10.0, 4.2, .4, 16, math.radians(18))                # u, radius, thickness, sides, lean back from vertical
-SIGN_HINGE = (-22.75, 5.0)                                    # z, y of the hinge on the -v side, outside the deck
-PATCH = (10.0, -.0, 3.2, 1.8)                                # u, y, width, height on the +v side
+WHEELS = [(24.0, 1), (-24.0, 1), (24.0, -1), (-24.0, -1)]
+WHEEL = (2.4, -.4, 12)
+SIGN = (-10.0, 4.2, .4, 16, math.radians(18))
+SIGN_HINGE = (-22.75, 5.0)
+PATCH = (10.0, -.0, 3.2, 1.8)
 SIZE = {"moss_hover_barge": [64.8, 17.03, 48.09], "moss_hover_barge_thrusters": [56.4, 8.0, 46.6]}
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     return common.srgb(TONES[name])
 
 
@@ -115,17 +108,14 @@ def loft(s, rings, colors, cap_first=False, cap_last=False):
 
 
 def hull(s):
-    # One closed solid from the hidden top cap under the deck edge, over the coping, down the side to the keel, so
-    # kit's normal pass faces every band outward.
     loft(s, [plan(*row[:4]) for row in HULL], [tone(row[4]) for row in HULL], cap_first=True, cap_last=True)
 
 
 def sign_frame():
-    # Disc centre one radius above the hinge, leaning back (toward -v); the face looks toward +v, across the deck.
     u, r, t, n, lean = SIGN
     hz, hy = SIGN_HINGE
-    up = (math.cos(lean), -math.sin(lean))       # (y, z)
-    normal = (math.sin(lean), math.cos(lean))    # (y, z)
+    up = (math.cos(lean), -math.sin(lean))
+    normal = (math.sin(lean), math.cos(lean))
     return (u, hy + up[0] * (r + .5), hz + up[1] * (r + .5)), up, normal
 
 
@@ -150,7 +140,6 @@ def steel(s):
     hu, hv, r, y0, y1, out = STRIPE
     loft(s, [plan(hu, hv, r, y0), plan(hu, hv, r, y0, out), plan(hu, hv, r, y1, out), plan(hu, hv, r, y1)],
          [tone("stripe")] * 4)
-    # Sign mast and hinge: a bolt-on foot on the -v side face, a post up to the hinge, two arms to the disc's back.
     u = SIGN[0]
     hz, hy = SIGN_HINGE
     s.box((1.6, 2.2, .5), (u, 2.9, -22.55), tone("cable"))
@@ -159,7 +148,6 @@ def steel(s):
     (cu, cy, cz), up, normal = sign_frame()
     for du in (-.5, .5):
         strut(s, (u + du, hy, hz), (cu + du, cy - normal[0] * .2, cz - normal[1] * .2), .18, .18, tone("cable"))
-    # The dent's patch: an oxide plate bolted over the +v side.
     u, y, w, h = PATCH
     s.box((w, h, .08), (u, y, 22.3 + .04), tone("patch"))
 
@@ -168,7 +156,7 @@ def wheels(s):
     r, y, n = WHEEL
     aa = [math.tau * i / n for i in range(n)]
     for u, side in WHEELS:
-        z0 = side * 21.9                         # buried in the hull side
+        z0 = side * 21.9
         prof = [(r, 0.0, "copper"), (r, 1.0, "copper"), (r * .88, 1.25, "copper"), (r * .45, 1.3, "cable"),
                 (r * .38, 1.5, "copper")]
         rings = [[(u + rr * math.cos(a), y + rr * math.sin(a), z0 + side * d) for a in aa] for rr, d, _ in prof]

@@ -14,7 +14,6 @@ test("selectShardFiles partitions files cleanly across shards with and without s
   assert.equal(s1.length + s2.length, input.length);
   assert.deepEqual([...s1, ...s2].sort(), input);
 
-  // Different seed produces a different shard assignment (actually shuffles membership).
   const s1Alt = selectShardFiles(input, { shard: "1/2", shuffle: true, seed: 99 });
   assert.notDeepEqual(s1, s1Alt);
 

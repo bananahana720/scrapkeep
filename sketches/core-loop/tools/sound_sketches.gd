@@ -5,19 +5,10 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 
-# The harpoon line's sounds as WAV files, for the owner's ear. Each is written at its bank
-# level (peak 0.9 scaled by its trim), so the files sit against each other as they do in the
-# game. Variant A of the bite and the crack is the one wired in; B and C are alternatives.
-#
-#   godot --headless --path sketches/core-loop --script res://tools/sound_sketches.gd
-#   ... -- --out=/abs/dir
-# The default output is <repo>/artifacts/local/harpoon/sounds (gitignored).
 
 const DEFAULT_OUT := "../../artifacts/local/harpoon/sounds"
 const NOTE_GAP := 0.2
 const HUM_SECONDS := 3.0
-# The break phrase's pauses: after the chord before the shatter, and the level at which the
-# phrase's hits sit under the priority of an enemy_struck cue in the game.
 const SHATTER_GAP := 0.38
 const HIT_PRIORITY_DB := -3.0
 const BREAK_PEAK := 0.95
@@ -39,7 +30,6 @@ func _initialize() -> void:
 	quit(1 if failed > 0 else 0)
 
 
-# [file name, samples] for every sketch.
 func _sketches() -> Array:
 	var list: Array = []
 	for variant in 3:
@@ -66,7 +56,6 @@ static func _at_level(buf: PackedFloat32Array, id: String) -> PackedFloat32Array
 	return scaled
 
 
-# Three seconds of the looped hum at one pitch, then the pitch's octave climb across them.
 static func _hum() -> PackedFloat32Array:
 	var cycle := SfxBank.samples("line_hum")
 	var total := Synth.seconds(HUM_SECONDS)
@@ -79,7 +68,6 @@ static func _hum() -> PackedFloat32Array:
 	return _at_level(buf, "line_hum")
 
 
-# A bank cue resampled to a pitch ratio, the way playing it at that pitch does.
 static func _pitched(buf: PackedFloat32Array, ratio: float) -> PackedFloat32Array:
 	var n := int(buf.size() / ratio)
 	var out := Synth.buffer(n)
@@ -91,9 +79,6 @@ static func _pitched(buf: PackedFloat32Array, ratio: float) -> PackedFloat32Arra
 	return out
 
 
-# The Warden's break phrase as the game plays it: a hit per quarter of the guard, each
-# one note higher, then the notes together with the open sound, then the chunk's shatter
-# over its low hit.
 static func _break(variant: int) -> PackedFloat32Array:
 	var phrase: Dictionary = SfxBank.BREAK_PHRASES[variant]
 	var midis := SfxBank.break_midis(variant)

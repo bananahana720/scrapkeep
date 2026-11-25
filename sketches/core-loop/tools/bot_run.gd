@@ -18,124 +18,6 @@ const BotPlants := preload("res://tools/bot_plants.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const QaWatch := preload("res://tools/qa_watch.gd")
 
-# Headless bot runs for the design feedback loop (DEMO-SPEC). Each seed plays one full
-# demo run through a fresh Game.new() with one policy (tools/bot_driver.gd), in play
-# (not calm), and leaves behind the real logs the spine writes: runs.ndjson from the
-# run log and codex-log.ndjson from the codex. It lives outside tests/ because
-# sketch-smoke.mjs runs every tests/*.gd.
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd \
-#     -- --out=<dir> --policy=skipper|completionist|random [--seeds=1,2,3,4] [--trace=1]
-#     [--pilot=<class id>] [--band=novice|learner|expert] [--attempt=N]
-#
-# --pilot plays that ClassDef id (pylon_engineer, runner_gunner, demolitions_caster, tarn,
-# tally, remembered_cannon) whatever the seed; without it the seed picks seed % roster size.
-#
-# --band plays the driver at a skill band (tools/skill_band.gd: slower reactions, missed tells and
-# a smaller kit below Expert); --attempt=N (default 1) is the attempt number a Learner has reached.
-# Without --band the driver is unchanged. Multi-seed children are forwarded every flag.
-#
-# --trace prints the bot's goal and the ball every two game seconds. --trace-ticks=1
-# writes full-precision pre-driver snapshots to trace-<seed>.ndjson, each with the hits landed
-# since the row before, in order (`struck`). --ticks=N caps a
-# diagnostic run. --fixed-fps 90 makes one frame one physics tick, faster than real time.
-# --comic-page=1 ends a run cut short as a loss so it folds a comic page (run_moments.gd); with a
-# rendering display (not --headless) the panels carry real stills.
-# --bot-profile=1 writes runner/tick timings and sampled Performance monitors.
-# --bot-audit=1 writes full-precision committed bus events with stable object tokens.
-# --bot-no-mix=1 skips sample arithmetic while retaining music transport.
-# --bot-no-pilot-tracks=1 skips pilot bone sampling, retaining playback and signals.
-# --bot-no-visuals=1 skips selected unread idle callbacks and a park stage's render regions
-# (park_terrain.gd draw_regions), only on the headless display. Camera, HUD, hit-stop and
-# collision work remain active.
-# --plant=name=value[,name=value] (test only, the anti-kiting gates' controls): pack_damage=K, damage=K, packs_passive=1,
-# hide_pack_telegraphs=1, rut=K, fast_tax=K, ringless=K (tools/bot_plants.gd). Absent, the run is unchanged. --policy=orbit|terrain are the gates' arms (bot_kite.gd).
-# --gate=1 enables all three switches, unless individually overridden with =0.
-# --chain-hand=0 turns off the explorer's two-hook hand (bot_driver's control switch).
-# --late-offer=take|skip (SG8) turns the tree's late_offer on, has the bot take a random branch at
-# each plain offer so depth 4 can open, and answers the take_or_skip offer with that policy;
-# bots.ndjson then carries a late_offer row. Without it the bot is unchanged.
-# --relay-stake=<0..4> (SR10) has the skipper stake the park relay (src/world/hold_relay.gd
-# set_stakes) once, before it rolls into the ring, work the relay to its pay, then go on to the
-# Warden; the stage row in bots.ndjson carries relay_stakes [{stage, k, ...}]. 0 or absent leaves
-# the bot byte-identical. Only the park table builds a relay (stages 1 and 5).
-# --explore-by=<s> (pacing lab, scripts/pacing-check.mjs) lets the completionist roll optional content
-# until stage second s instead of ENGAGE_BY (140), and stretches the stall cap by the same amount, so
-# a park can be measured longer than the default explorer stays. Absent, the bot is unchanged.
-# --run-tier=N (the HARD ladder lab, scripts/challenge/run.mjs --tier) picks run tier N on the start card as stage 1
-# opens, without the first_win unlock (which would also open the secrets). With --from-stage the run takes tier N
-# as that stage opens instead, over whatever tier the entrance kept (a lab override; the start card is past).
-# Absent or 0, the run is unchanged; the row gains "run_tier".
-# --panel-log=1 adds panel_kills (the build's kill_log: stage, kind, elite, rib, jackpot, dropped,
-# yard; a yard lock crew's kill has yard true, a cleared yard is a yard_clear row)
-# and panels (the run's pickups in order) to the bots.ndjson row.
-# --stages=N ends the run ("stages_done") once stage N is cleared. --until=N ends each
-# run as it enters stage N+1 (outcome "until"). The game reads its lab flags from the
-# same args (tuning.gd's FLAGS).
-# --from-stage=N continues a matching RunStore entrance in --out/entrance.json;
-# otherwise it starts normally, then enters stage N for a bounded world run.
-# Frame-time probes (stage-entry and mid-stage freezes; a bot run plays the legacy maps unless it
-# passes --table=park, which a launched game plays):
-# --wall-clock=1 leaves SimClock on the wall clock, as in a played game: park stages build on
-# worker threads and hit-stop reads real time, so the seed no longer replays exactly.
-# --threaded-stages=1 builds park stages on worker threads as --wall-clock=1 does, frees a left stage
-# over the next frames, and reads later-world enemy scripts on the loader thread at stage entry, as a
-# played game does, but keeps the hit-stop clock on physics ticks: for frame captures, where the next
-# stage's one-frame build on the engage frame is a bot artifact. The seed no longer replays exactly.
-# --warm-band=1 renders the band's other themes, keys and boss tracks (MusicEngine.prepare_rest) before
-# the run, as a played run does on a worker behind stage 1. Without it each chord, note and riser
-# renders on the main thread the first time a bar asks, 60 to 300 ms a frame that play never has.
-# It also renders each queued stinger on a worker before its beat, as a played run does. Use it
-# for frame captures and hitch hunts; the seed still replays exactly.
-# --frame-log=1 writes frames-<seed>.ndjson: each frame's wall ms, stage and flow state; that ms split
-# into idle_ms (the scene's _process), draw_ms (the RenderingServer's draw) and tick_ms (the physics
-# ticks after it, ticks of them), timed per frame; Performance's process and physics times, which are
-# each the slowest of the last second and update once a second, so they name no frame; the node,
-# resource and object counts; the renderer's draw calls and
-# objects in frame; video, texture and buffer memory (MB, totals, so an upload is a step between
-# rows); and the five pipeline compilation counters ("pipelines": canvas, mesh, surface, draw,
-# specialization), running totals whose difference from the previous row is that frame's compiles,
-# so a frame that compiles pipelines or uploads a stage's buffers shows which (scrapkeep#241 row 28).
-# The pipeline counters exist on the RenderingDevice renderers only and read 0 under Compatibility.
-# --entry-profile=1 writes entry-<seed>.ndjson: every GameEvents handler's main-thread ms by
-# frame (tools/signal_timer.gd), signals under 5 ms a frame dropped. It slows the run about 2.5x.
-# --physics-probe=1 writes physics-<seed>.ndjson: for each physics tick over 100 ms, the Game
-# children (and --probe-under=<child,...>'s children) that spent it (tools/physics_probe.gd).
-# --frame-split=1 adds the parts of each --frame-log row's ms (tools/frame_split.gd): node physics
-# and node _process time, the bot driver's own tick (bot_ms) and net_ms, the frame without that tick.
-# The rest of the ms is the engine's own work. =2 also keeps a bracket-by-bracket events list with
-# on-CPU time on frames over 40 ms. The bot's climb planner is bot_ms: 60 to 85 ms every 6 s
-# while a stalled bot sits below its gate, which is the 6 s GATES hitch; read GATES frames by net_ms.
-# --physics-hz=N sets the physics tick rate (the project's 90 stays when absent): a hitch whose period
-# follows the tick count moves with it, one on a wall clock does not.
-# --inject-ms=N sleeps N ms every 6 s of wall time outside the driver's tick: a planted frame cost
-# for the net_ms read of a --frame-split frame log (the control that a game-side hitch still shows).
-# --locks=0 turns off the Spillway's Warden gate and arena lock (src/world/stage_locks.gd), so one
-# binary measures the pacing they add.
-# --qa-log=1 writes qa-<seed>.ndjson (tools/qa_watch.gd): where the ball sat stuck, rested off the ground,
-# wedged on a wall or fell through, and each objective text once per stage; the row gains "qa" counts.
-# --unshaded=1 draws the root viewport unshaded, so a render cost can be told apart from the lights
-# and shadows (for frame captures: it changes the picture).
-# The game runs in test mode (no keyboard, no mouse capture) and its codex and run log
-# are pointed at --out, the way test mode points them at a per-process folder; --out may
-# be an absolute path or a user:// path. Next to the spine's two logs the runner writes:
-#   bots.ndjson          one line per run: run_id, policy, seed, class, outcome, stage
-#                        reached, ticks, game and wall seconds, per-stage bot notes (pockets_drawn
-#                        names the pockets that stage drew by library id: [] for none, as on the
-#                        legacy maps, and null when the run ended before the stage was played), and the
-#                        beats column (src/core/stage_beats.gd): per stage entered, the physics
-#                        ticks of arrive, loot, find, hold, fight and leave and whether it exited.
-#   scrapbook/           the run-end comic page (src/core/run_moments.gd) of a run that ended:
-#                        <run_id>.json and its stills <run_id>_<i>.png.
-#   codex-entries.json   every declared codex entry (id, category, name, clue), so the
-#                        report can name entries no run discovered.
-# A run ends on run_ended (won or lost), death, stall, or --until/--stages; a stalled
-# or missing-boss run has no spine record (the run log writes only at death and run end), so
-# its bots.ndjson line is the only trace. Each seed gets a fresh process and data folder,
-# seeded RNG streams, spawn-order signs instead of object-ID-dependent choices, a
-# completed audio bake (stage 1's band too, as a player gets behind the title), and
-# physics-tick hit-stop gates (src/core/sim_clock.gd).
-# Replay evidence is specific to the checked machine, build, policy and table.
 
 var _audit
 var _settings := {}
@@ -148,7 +30,6 @@ var _started_msec := 0
 var _out := ""
 var _results: Array[Dictionary] = []
 var _tick_trace: FileAccess
-# The hits since the last trace row, in the order they landed: enemy kind, its position, hit kind, force.
 var _struck: Array = []
 var _scrap_serial := 0
 var _counter_serial := 0
@@ -157,9 +38,6 @@ var _allocation_noise: Array[RefCounted] = []
 var _beats
 var _frame_log: FileAccess
 var _frame_usec := 0
-# The frame log's own split of a frame (Performance's process and physics times are each the slowest of the last
-# second, updated once a second, so they name no frame): the physics ticks since the last draw, and when the
-# RenderingServer began and ended that draw.
 var _ticks := 0
 var _draw_began := 0
 var _draw_ended := 0
@@ -169,7 +47,6 @@ var _physics_probe
 var _frame_split
 var _inject_ms := 0
 var _inject_at := 0
-# The test-only plants of --plant= (tools/bot_plants.gd); null, and untouched, without the flag.
 var _plants
 var _qa
 
@@ -183,7 +60,6 @@ func _initialize() -> void:
 	BotProfile.enabled = _settings.get("bot-profile", "0") == "1"
 	if BotProfile.enabled:
 		root.add_child(BotProfile.EndMarker.new(BotProfile))
-	# The repeat test perturbs object IDs without touching policy, seed or physics.
 	for i in int(_settings.get("allocation-noise", "0")):
 		_allocation_noise.append(RefCounted.new())
 	node_added.connect(_on_node_added)
@@ -230,9 +106,7 @@ func _initialize() -> void:
 	_next()
 
 
-# A fresh physics server and presentation caches for every seed, including list runs.
 func _run_children() -> void:
-	# Each child has its own data folder, so --out goes to it as an absolute path the parent resolved.
 	var forwarded := PackedStringArray(["--out=" + _out])
 	for arg in OS.get_cmdline_user_args():
 		if not arg.begins_with("--seeds=") and not arg.begins_with("--out="):
@@ -269,7 +143,6 @@ func _run_children() -> void:
 	quit(0)
 
 
-# res:// and user:// resolve in this process; a relative path resolves against the working folder.
 static func _absolute(path: String) -> String:
 	var global := ProjectSettings.globalize_path(path)
 	if global.is_absolute_path():
@@ -291,10 +164,7 @@ func _next() -> void:
 	if _index >= _seeds.size():
 		_finish()
 		return
-	# A hit-stop cut short by the previous game's free would leave time slowed.
 	Engine.time_scale = 1.0
-	# Freeing Game leaves the viewport's Jolt space and its body allocation history alive.
-	# Keep the old world alive until the viewport has detached its rendering scenario.
 	var _previous_world := root.world_3d
 	root.world_3d = World3D.new()
 	_scrap_serial = 0
@@ -336,7 +206,6 @@ func _physics_process(delta: float) -> bool:
 	if _game == null or _game.flow == null:
 		return false
 	if _driver == null:
-		# --director=interval|credit follows every fresh stage director, including retries.
 		var director_mode := String(_settings.get("director", "interval"))
 		if director_mode not in ["interval", "credit"]:
 			printerr("bot_run: --director must be interval or credit")
@@ -345,7 +214,6 @@ func _physics_process(delta: float) -> bool:
 		var select_director := func(_stage: int, _retry: bool): _game.world.director.mode = director_mode
 		_game.events.stage_entered.connect(select_director)
 		_game.world.director.mode = director_mode
-		# Point the codex and the run log at --out; nothing has been written yet.
 		_game.codex.storage_dir = _out
 		_game.run_log.storage_dir = _out
 		_game.run_moments.storage_dir = _out
@@ -384,7 +252,6 @@ func _physics_process(delta: float) -> bool:
 		_game.run.run_seed_override = _seeds[_index]
 		var run_tier := int(_settings.get("run-tier", "0"))
 		if run_tier != 0:
-			# Deferred: the flow is in its stage state only once stage_entered has returned.
 			var choose := func():
 				if not _game.flow.choose_run_tier(run_tier, false):
 					printerr("bot_run: run tier %d refused on stage 1" % run_tier)
@@ -461,7 +328,6 @@ func _physics_process(delta: float) -> bool:
 	if not over and _settings.has("stages") and _game.run.stage > int(_settings["stages"]):
 		_driver._end("stages_done")
 		over = true
-	# --until=N ends a run as it enters stage N+1.
 	if not over and _settings.has("until") and _game.run.stage > int(_settings["until"]):
 		_driver._end("until")
 		over = true
@@ -470,17 +336,11 @@ func _physics_process(delta: float) -> bool:
 	var wall := float(Time.get_ticks_msec() - _started_msec) / 1000.0
 	var record: Dictionary = _driver.record(wall)
 	_beats.finish()
-	# --stages=N and --until=N end the run a tick or two into the next stage; that sliver is not an attempt.
 	record["beats"] = StageBeats.within(_beats.rows, int(_settings.get("stages", _settings.get("until", "0"))))
-	# --comic-page=1 folds a comic page from a run cut short (--ticks, --until, a stall) as a
-	# loss, so a short rendered run can show its stills.
 	if _settings.has("comic-page") and not _game.run.over:
 		_game.flow._end_run(false)
-	# The run-end comic page (run_moments.gd): its panel count and where it was saved.
 	record["comic_panels"] = (_game.run_moments.last_page.get("panels", []) as Array).size()
 	record["comic_page"] = _game.run_moments.saved_path()
-	# --panel-log=1: the grey panels' recorded kill stream and what the run picked up, for
-	# tests/panels_drop_sim_test.gd's fixtures.
 	if _settings.has("panel-log"):
 		record["panel_kills"] = _game.build.kill_log.duplicate()
 		record["panels"] = Array(_game.run.panels)
@@ -519,7 +379,6 @@ func _physics_process(delta: float) -> bool:
 	_plants = null
 	_tick_trace = null
 	_frame_log = null
-	# Match a fresh process: start the driver before the new camera's first render update.
 	Engine.time_scale = 1.0
 	_next_pending = true
 	return false
@@ -532,8 +391,6 @@ static func _vector(v: Vector3) -> Array:
 func _on_node_added(node: Node) -> void:
 	if _game == null or _game.build == null:
 		return
-	# A body the warm stands out of sight (BakeWarm.spawn_holder) is no spawn: counting it gave every
-	# later unit the other side whenever the warm's list changed length (10 November 2026).
 	var stood: bool = node.get_parent() != null and node.get_parent().has_meta("spawn_warm")
 	if "_strafe" in node and not stood:
 		node.set_meta("bot_strafe", 1.0 if (_counter_serial + _seeds[_index]) % 2 == 0 else -1.0)
@@ -558,7 +415,6 @@ func _snapshot(delta: float) -> Dictionary:
 		items.append([_vector(item.global_position), field._caught.get(item),
 			field._value.get(item), field._age.get(item), field._cogs.get(item)])
 	var events := []
-	# world.gd holds no event director between stages (its events is null from a stage's end to the next entry).
 	var director = _game.world.events
 	for state in (director._park_states if director != null else []):
 		events.append({"id": state.row.id, "phase": state.phase, "due": state.due_s,
@@ -604,8 +460,6 @@ func _process(_delta: float) -> bool:
 	if _frame_log != null and _game != null and _game.run != null:
 		var now := Time.get_ticks_usec()
 		if _frame_usec > 0:
-			# The row's ms runs from the last _process to this one: that idle step, the draw after it, then this frame's
-			# physics ticks. A headless run draws nothing, so there the idle and draw split is null.
 			var drew := _draw_began > _frame_usec and _draw_ended >= _draw_began
 			var row := {"f": _frame_index, "ms": (now - _frame_usec) / 1000.0, "stage": _game.run.stage, "state": _game.flow.state,
 				"idle_ms": (_draw_began - _frame_usec) / 1000.0 if drew else null, "draw_ms": (_draw_ended - _draw_began) / 1000.0 if drew else null,

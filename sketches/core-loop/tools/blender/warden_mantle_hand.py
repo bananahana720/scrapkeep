@@ -26,14 +26,10 @@ import polish
 from common import Part
 
 PETROL = common.srgb("petrol")
-# The source hex has S=.379/V=.341 and already meets the 45% cap.
 DUST = common.mix("petrol", "bone", 0.09)
 CANVAS = common.mix("sandstone", "petrol", 0.42)
 LEATHER = common.mix("sandstone", "bone", 0.5)
 STITCH = common.mix("charcoal", "sandstone", 0.3)
-# Review F4 (2026-10-18): glove colours are lighter than the enamel cap, so the whole glove
-# finger, its stitching and cuff use the matte vertex-colour "pilot" slot (no paint or wear in
-# hero_assets.gd), as warden_mind.py does. The fingers carry no enamel, so draws stay at 5.
 GLOVE_SLOT = "pilot"
 
 
@@ -99,7 +95,6 @@ def clipped_stripes(part, polygon, plane):
 
 def setup():
     common.reset()
-    # edge 0 and a lighter AO keep bevelled enamel corners under the enamel cap.
     polish.enable(detail=1, bevel=0.02, edge=0.0, ao_strength=0.35)
     common.SLOTS["mantle_tool"] = {"vc": True, "rough": 0.85}
     common.material("ancient_enamel").node_tree.nodes["Principled BSDF"].inputs[
@@ -112,7 +107,6 @@ def build():
     root = common.empty("MantleHand")
     mount = common.empty("MountBody", parent=root)
     wrist = Part("HandWrist")
-    # An open-front cast channel, with a recessed sill carrying all three fingers.
     box(wrist, "ancient_enamel", (0.18, 1.0, 2.5), (-3.435, 4.2, 0), PETROL)
     box(wrist, "ancient_enamel", (0.97, 0.18, 2.5), (-2.86, 4.61, 0), DUST)
     box(wrist, "ancient_enamel", (0.815, 0.16, 2.5), (-3.1175, 3.78, 0), PETROL)
@@ -125,7 +119,6 @@ def build():
     wrist.to_object(parent=mount)
     fingers = Part("HandThreeFingers")
     for z in (-1.0, 0.0, 1.0):
-        # Eight-point cast section, blunt bottom, tapered shoulder.
         rows = []
         for y, depth, width in (
             (1.6, 0.53, 0.46),
@@ -169,14 +162,11 @@ def build():
             [fingers.bm.faces.new(list(reversed(rows[0])))], GLOVE_SLOT, LEATHER
         )
         fingers.paint([fingers.bm.faces.new(rows[-1])], GLOVE_SLOT, CANVAS)
-        # The stitched seam ridge down the glove finger's back, ticks across it.
         fingers.beam(GLOVE_SLOT, Vector(xyz((-3.285, 2.2, z))), Vector(xyz((-3.285, 3.45, z))),
                      0.05, 0.04, color=STITCH)
         for y in (2.35, 2.75, 3.15):
             fingers.beam(GLOVE_SLOT, Vector(xyz((-3.285, y, z - 0.1))), Vector(xyz((-3.285, y, z + 0.1))),
                          0.03, 0.04, color=STITCH)
-        # The working pad sits .052m behind the front; neutral cast rim closes
-        # the real cutout, so no orange overlay floats over a solid finger face.
         outer = [
             (-2.625, 1.73, z - 0.195),
             (-2.625, 2.12, z - 0.195),
@@ -201,8 +191,6 @@ def build():
             [(-0.125, -0.16), (0.125, -0.16), (0.125, 0.16), (-0.125, 0.16)],
             lambda a, b, z=z: (-2.677, 1.925 + a, z + b),
         )
-    # Each glove finger's rolled cuff at its root, frayed tabs hanging down its back; all of it
-    # stays inside the finger's 0.5 m lane.
     for z in (-1.0, 0.0, 1.0):
         box(fingers, GLOVE_SLOT, (0.72, 0.18, 0.5), (-2.95, 3.52, z), LEATHER)
         for k, dz in enumerate((-0.17, -0.05, 0.07, 0.18)):
@@ -217,8 +205,6 @@ def finish(root, path, cap):
     data = open(path, "rb").read()
     size = struct.unpack_from("<I", data, 12)[0]
     gltf = json.loads(data[20 : 20 + size])
-    # A delivered mantle rests dark. Stripe vertex colours remain intact for
-    # the future charge-driven presentation material, owned by integration.
     for mat in gltf["materials"]:
         if mat["name"] == "mantle_tool":
             mat["pbrMetallicRoughness"]["baseColorFactor"] = [0, 0, 0, 1]
@@ -256,7 +242,6 @@ def finish(root, path, cap):
 
 
 def preview(path, outdir, name):
-    # Read the delivered bytes, not the authoring meshes. Mounts stay in kit-local space.
     common.reset()
     bpy.ops.import_scene.gltf(filepath=os.path.abspath(path))
     if name == "choir":
@@ -331,7 +316,6 @@ def preview(path, outdir, name):
     scene.camera = cam
     cam.data.type = "ORTHO"
     cam.data.ortho_scale = 9.4
-    # Mount translations must update before measuring imported world vertices.
     bpy.context.view_layer.update()
     points = [
         o.matrix_world @ v.co
@@ -357,7 +341,6 @@ def preview(path, outdir, name):
             ("three-quarter", (11, -11, 5)),
         ):
             direction = Vector(offset)
-            # With Z-up cameras, screen-right is perpendicular to the horizontal look.
             right = Vector((-direction.y, direction.x, 0)).normalized()
             lo = min(p.dot(right) for p in points)
             hi = max(p.dot(right) for p in points)
@@ -384,7 +367,6 @@ if __name__ == "__main__":
     options = common.args()
     output = options["out"] or common.default_out("warden_mantle_hand")
     root = build()
-    # warden_kit class, raised for polish (POLISH.md).
     assert common.tri_total(root) <= 6000
     finish(root, output, (6000, 11200, 5))
     if options["render"]:

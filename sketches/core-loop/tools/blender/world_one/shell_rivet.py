@@ -1,41 +1,3 @@
-# PD-RIVET: Rivet's Hoberman mecha (ROSTER-LOOK section 0; pilots/rivet.md section 5), on the
-# shared base shell_base.hoberman(). Charcoal steel lattice, bone seat; a stepped drill nose hung
-# under the weapon ring's front arc whose lens is DrillTip; the twin side-sponson rotary rivet
-# cannons clamped on the ring band at 3 and 9 o'clock, muzzles forward (rivet_revolvers.glb, mounted
-# by hero_assets.gd under WeaponRing; this file keeps only their LaserMuzzle.L/R markers, and bakes
-# nothing outboard into Pod); twin exhaust stacks on gap brackets at 11:30 and
-# 12:30, standing 0.18 m past the lattice; copper fins folded flat on the lattice in the front
-# lower gaps, raked into a forward V. Lens and exhaust mouths are the only class_accent.
-# Concept: artifacts/local/alpha/push/w13/concepts/codex/rivet/hero.png, chase.png and sheet.png,
-# with concepts/codex/base/base-hero.png and mechanism.png (approved after cleanup round 3,
-# docs/decisions.tsv w13-look rows of 2026-10-10). Heft layers: shell_rivet_plates.py.
-#
-#   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
-#     --python world_one/shell_rivet.py -- [--variant calibrated] [--out <file.glb>]
-#
-# --variant calibrated builds the earned Calibrated shell (CUSTOMIZE section 8, pilots/rivet.md
-# section 7): the same machinery at the same points, with bone scale ticks on the outer struts,
-# bone calibration bands on the stacks and drill steps numbered by raised notches (1, 2, 3).
-#
-# The recipe extends three shell_base builders (lattice, cockpit, weapon_ring) by wrapping them
-# for the one hoberman() call, so the shared base stays PD-0's and Rivet's parts land on the
-# base meshes' existing slots. Draws: Core paint, copper, rubber; Pod paint, rubber, copper,
-# class_accent (exhaust mouths); Gyro; GyroInner; WeaponRing paint, rubber, copper (collar studs,
-# drill hanger); Drill copper, class_accent (lens); the placeholder Pilot, which fit_pilot_into
-# hides in play. 15 in the file, 14 drawn; the revolvers' two make 16 in play, the 16-draw
-# Hoberman pilot mecha cap (docs/decisions.tsv w13-PD, 2026-10-10), which the registry row carries.
-#
-# 2026-10-10 (PD-RIVET fix round 2): rebuilt on PD-0b's shell_base (struts 0.06 m, caps 0.10 m,
-# ROSTER-LOOK section 3 rule 7 as amended); the lattice wrapper forwards strut_width and
-# cap_width, and the Calibrated ticks shrink to sit on the narrower bar.
-# 2026-11-23 (E1-09, wave 46, ruling ek): rebuilt on E1-03's closed-bar base; the laser pods leave
-# the ring for rivet_revolvers.glb and LaserMuzzle.L/R move to its barrel tips (MUZZLES). Rivet's
-# own flush marks (the lens, the stack mouths, the Calibrated ticks) close to a buried point
-# (plug), so every piece of the shell outside the hidden placeholder pilot is a closed island.
-# 2026-11-23 (E1-09b, wave 46, ruling en): the revolvers become side-sponson rotary cannons at
-# 3 and 9 o'clock (rivet_revolvers.SIDE_X 1.26 m); LaserMuzzle.L/R follow MUZZLES to the cluster
-# hubs' crowns on the ring's level, so the flash and the drawn bolt leave the outboard barrels.
-
 import math
 import os
 import sys
@@ -43,49 +5,38 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import bmesh  # noqa: E402
-from mathutils import Vector  # noqa: E402
+import bmesh
+from mathutils import Vector
 
-import common  # noqa: E402
-import rivet_revolvers as revolvers  # noqa: E402
-import shell_base as sb  # noqa: E402
-from common import Part  # noqa: E402
+import common
+import rivet_revolvers as revolvers
+import shell_base as sb
+from common import Part
 
-# Shell class (assets/asset_budgets.json): 11,000 tris with the placeholder pilot. The base without
-# the pilot stays under hero_assets_test's 6,500 band, so the hubs and caps are 6-sided (the
-# ROSTER-LOOK section 5 cut order: cheaper hubs before raising the target).
 SHELL_BAND = (3000, 11000)
 ENAMEL = "charcoal"
 SEAT = "bone"
 BANK = (("Lever", "lever"), ("WinchLever", "lever"))
 
-# Drill nose (Blender axes): axis along +Y at x 0, hung under the ring's front arc so the collar
-# (radius 1.035 to 1.075, Z -0.07 to -0.04) clears the second step. Steps: (y0, y1, r0, r1).
 DRILL_Z = -0.22
 DRILL_Y0 = 0.88
 DRILL_STEPS = ((0.88, 1.00, 0.17, 0.155), (1.00, 1.10, 0.13, 0.11), (1.10, 1.18, 0.09, 0.07))
-LENS_R = 0.06                       # 0.12 m across at class I; class V's is in the c5 layer
+LENS_R = 0.06
 DRILL_SIDES = 10
-# A flush mark's buried point: the lens, the stack mouths and the Calibrated ticks close to it.
 LENS_DEPTH = 0.006
 MOUTH_DEPTH = 0.01
 TICK_DEPTH = 0.008
-# Exhaust stacks: straight up at 11:30 and 12:30 from behind, 0.18 m past the lattice outline.
 STACK_X = 0.25
 STACK_Y = -0.20
 STACK_BASE = 0.80
 STACK_R = 0.055
 STACK_RISE = 0.18
 STACK_TOP = round(math.sqrt(sb.LATTICE_OUTER ** 2 - STACK_X ** 2 - STACK_Y ** 2) + STACK_RISE, 3)
-# Gap bracket: one slim rod per stack from the seat back's top corner, outside the sight cone.
 BRACKET_FOOT = (0.22, -0.20, -0.12)
 BRACKET_R = 0.02
-# Fins: folded flat on the lattice (Core), radius 0.978 to 0.983, front lower, raked into a V
-# whose point leads toward the drill. (azimuth from +Y toward +X, elevation), degrees.
 FIN_AT = ((38.0, -32.0), (-38.0, -32.0))
 FIN_IN, FIN_OUT = 0.978, 0.983
 FIN_TIP, FIN_TAIL, FIN_HALF = 0.11, 0.07, 0.07
-# Calibrated scale tick: a diamond whose half-diagonal stays inside the bar's half width.
 TICK_R = round(sb.BAR_WIDTH * 0.42, 4)
 
 
@@ -112,9 +63,6 @@ def plug(part, centre, normal, radius, sides, depth, slot, color=None, roll=0.0)
     tip = part.bm.verts.new(c - n * depth)
     faces = [part.bm.faces.new(rim)] + [part.bm.faces.new((rim[(k + 1) % sides], rim[k], tip)) for k in range(sides)]
     return part.paint(faces, slot, color)
-
-
-# --- lattice extras (Core) ------------------------------------------------------------------
 
 
 def fin(part, centre_dir):
@@ -158,7 +106,6 @@ def scale_ticks(part, pairs):
         for k in range(min(pairs, 1)):
             t0 = span + (1 - 2 * span) * k / pairs
             t1 = span + (1 - 2 * span) * (k + 1) / pairs
-            # The outer bar of the pair, as lattice() lays it: a chord, so sit on its face.
             p0 = sb._slerp(a, b, t0) * r_bar - s * sb.CHAIN_WIDTH / 2
             p1 = sb._slerp(a, b, t1) * r_bar + s * sb.CHAIN_WIDTH / 2
             n = ((p0 + p1) / 2).normalized()
@@ -176,22 +123,14 @@ def make_lattice(variant):
         for az, el in FIN_AT:
             fin(part, direction(az, el))
         ticks = scale_ticks(part, pairs) if variant else []
-        # 6-sided hub drums turn 60 degrees a side, past the base's 0.9 rad split, so they would
-        # export faceted; 1.1 rad keeps them round and saves their split vertices. _sharpen only
-        # marks edges sharp, so the base's marks are cleared first.
         for e in part.bm.edges:
             e.smooth = True
         sb._sharpen(part, angle=1.1)
-        # A tick is 2.5 cm across and its sides are buried in the bar, so it shades smooth: its five
-        # corners export once each instead of once per face (660 vertices on the Calibrated shell).
         for f in ticks:
             for e in f.edges:
                 e.smooth = True
         return out
     return lattice
-
-
-# --- cockpit extras (Pod) -------------------------------------------------------------------
 
 
 def stacks(p, variant):
@@ -215,15 +154,11 @@ def make_cockpit(variant):
     def cockpit(seat="bone", bank=BANK):
         p = base(seat, bank)
         stacks(p, variant)
-        # The Foundry Cutter sight at the lap bar's centre (the largest control, copper).
         _, ly, lz = sb.LAP_HANDS["LapBar.R"]
         p.cyl("copper", 0.03, 0.03, 0.02, 6, loc=(0, ly + 0.01, lz + 0.05), rot=(math.pi / 2, 0, 0))
         p.rod("copper", (0, ly, lz), (0, ly + 0.01, lz + 0.035), 0.01, 4)
         return p
     return cockpit
-
-
-# --- weapon ring extras -----------------------------------------------------------------------
 
 
 def drop_neutral_seat(r):
@@ -264,7 +199,6 @@ def make_ring():
         studs = studs_to_copper(r)
         if studs != 12:
             raise SystemExit("expected 12 collar studs, found %d" % studs)
-        # The drill hanger: a copper strap from the collar down to the drill's second step.
         r.box("copper", (0.07, 0.04, 0.035), loc=(0, (sb.RING_COLLAR[0] + sb.RING_COLLAR[1]) / 2, -0.0875))
         sb._sharpen(r)
         return r
@@ -277,7 +211,6 @@ def drill(variant):
     for n, (y0, y1, r0, r1) in enumerate(DRILL_STEPS):
         d.cyl("copper", r0, r1, y1 - y0, DRILL_SIDES, loc=(0, (y0 + y1) / 2, DRILL_Z), rot=(-math.pi / 2, 0, 0))
         if variant:
-            # Numbered steps: step n carries n + 1 raised notches on its shoulder.
             for k in range(n + 1):
                 a = math.pi / 2 + (k - n / 2) * 0.32
                 p = Vector((math.cos(a) * (r0 - 0.004), y0 + 0.012, DRILL_Z + math.sin(a) * (r0 - 0.004)))
@@ -286,9 +219,6 @@ def drill(variant):
     plug(d, (0, tip + 0.0015, DRILL_Z), (0, 1, 0), LENS_R, 10, LENS_DEPTH, "class_accent")
     sb._sharpen(d)
     return d
-
-
-# --- pilot placeholder ------------------------------------------------------------------------
 
 
 def pilot():
@@ -306,7 +236,6 @@ def pilot():
     for side in (-1, 1):
         f.uv("pilot", 0.06, 6, 3, loc=(side * 0.225, 0.0, 1.135), scale=(0.7, 0.75, 1), color=fur)
         f.ring("pilot", 0.052, 0.076, 0.04, 6, loc=(side * 0.092, 0.195, 1.165), rot=(math.pi / 2, 0, 0), color="copper")
-        # The goggle lens, as shell_base.eye() draws it, at 8 by 5.
         ex, ey, ez = side * 0.092, 0.218, 1.165
         f.uv("pilot", 0.047, 6, 3, loc=(ex, ey, ez), scale=(1, 0.6, 1.1), color="charcoal")
         f.box("pilot", (0.0235, 0.0141, 0.0235), loc=(ex + 0.0141, ey + 0.04, ez + 0.0165), color="bone")
@@ -329,9 +258,6 @@ def pilot():
     return f
 
 
-# --- assembly -----------------------------------------------------------------------------------
-
-
 def build(variant=False):
     """Builds Rivet's mecha under a new root and returns the hoberman() dict plus drill."""
     saved = (sb.lattice, sb.cockpit, sb.weapon_ring)
@@ -345,7 +271,6 @@ def build(variant=False):
     ring, pod = shell["ring"], shell["pod"]
     shell["drill"] = drill(variant).to_object((0, DRILL_Y0, DRILL_Z), ring)
     common.empty("DrillTip", (0, DRILL_STEPS[-1][1] + 0.0015, DRILL_Z), ring)
-    # The weapon is still rapid_laser: the flash and the bolt leave from the rotary cannons' hub crowns.
     for tag, point in revolvers.MUZZLES.items():
         common.empty("LaserMuzzle." + tag, point, ring)
     for side, tag in ((-1, "L"), (1, "R")):

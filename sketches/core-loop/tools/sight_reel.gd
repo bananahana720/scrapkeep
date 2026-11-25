@@ -1,42 +1,5 @@
 extends SceneTree
 
-# A reel of the Spillway's crew at play speed (design-v3/SIGHT-PERSONA.md section 7, steps 4 and
-# 5): the game on its dam, the chase camera and the HUD. First the panel pickup's pop at the ball
-# (its shortest, middle and longest line, then one of the player's own hit words for scale). Then
-# one kind at a time arrives ahead of the ball, works on it, takes a hit, stands stunned if it can
-# be (the kinds built on counter.gd), and dies, with its name on screen. It arrives and works under
-# the play camera; for the hit, the stun and the death a second camera stands CLOSE_M from it on
-# the ball's side (a little round from the ball), because from the ball a death 14 m off is a few
-# pixels and the ball's own warning rings stand in the way. The ball's hull is filled before every kind and the reel stops
-# if the ball is ever scrapped: on the PC's first run it was, and the last kind played under the
-# game-over screen.
-# Record it with Godot's movie writer, which draws every frame at the stated rate whatever the
-# machine's speed, so the film runs at play speed:
-#   <godot> --path sketches/core-loop --fixed-fps 60 --write-movie /abs/dir/reel.avi \
-#     --script res://tools/sight_reel.gd -- --out=/abs/dir [--only=pop,chaser,lobber] [--captions=0]
-# The film is the game's own view (1600 by 900, kept at 16:9 on any screen). The PC lane found
-# that --resolution did not change the film and that a wider one only stretched the same view;
-# reel.json's `size` is the view, not the film's pixels, so it cannot tell.
-# A display is needed for the film (xvfb-run works; the cloud's renderer judges motion and place,
-# not the look). Headless, with --fixed-fps 60 and no --write-movie, it plays the same reel and
-# writes only reel.json. The movie writer films from the engine's first frame, so the reel's
-# seconds count from there too: reel.json's first_scene_s is where the lead-in (the load, the
-# ball's opening drop, the opening toasts) ends.
-#
-# reel.json is the motion count, taken from the game and not from the film. Every frame, each part
-# of the body is measured against the body itself (so travel is not counted), and a snap is the
-# clip scan's own (tools/model_audit.py): a step faster than SNAP_DEG degrees a second or SNAP_M
-# metres a second, and over SNAP_RATIO times the steps either side of it: one frame that jumps.
-# Two fast steps in a row between slow ones count too: a part that jumps and jumps back.
-# A snap on the frame a clip starts is a cut, which the wind-up, the attack, the hit and the death
-# make by design (enemy_clips.gd), and so is the flinch a hit gives; it is listed and not counted. The pass line is no snap inside a
-# clip, counted through the hit and the death clip too. A number cannot tell style from fault:
-# watch the second it names before calling it a pop. The game steps its clips 90 times a second
-# and the film draws 60, so a frame carries one step or two and speeds swing by up to a half:
-# counts compare only between runs at the same --fixed-fps (reel.json says whether the step held).
-# Skinned bones are not measured (the brute's pads), only the parts. For the pop, reel.json holds
-# each line's width as a share of the view's width and its letters' height as a share of the
-# view's height, counted as the player's words count theirs (player_fx.gd WORD_SCREEN).
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -49,12 +12,10 @@ const Panels := preload("res://src/build/panels.gd")
 const Palette := preload("res://src/core/palette.gd")
 const MossBubble := preload("res://src/ui/moss_bubble.gd")
 
-# The Spillway roster (design-v3/SPILLWAY-ROSTER.md), ordinary kinds first, then the specials.
 const KINDS := ["chaser", "lobber", "mag_trapper", "jolt_layer", "catch_trap", "hooker", "ramp_flipper", "boom_tender", "plated_brute",
 	"splitter", "linker", "foreman", "dispatcher", "miniboss"]
 const BASE_KINDS := ["chaser", "lobber", "miniboss"]
 const POP := "pop"
-# A word's letters stand this share of its font size tall (player_fx.gd: 0.7 m of cap at 96 px).
 const CAP := 0.7 / 0.96
 const AHEAD := 14.0
 const WORK := 8.0
@@ -65,15 +26,11 @@ const GAP := 0.5
 const SNAP_DEG := 360.0
 const SNAP_M := 3.0
 const SNAP_RATIO := 4.0
-# The flinch rises in a twentieth of a second and holds (event_kinds.gd REACTIONS): the frames
-# after a hit are a cut, as a clip's first frame is.
 const FLINCH_FRAMES := 8
 const WAIT_TICKS := 2400
 const QUIET_TICKS := 900
-# The ball's centre this close over the ground is the ball on the ground.
 const LANDED := 1.6
 const HULL := 999999.0
-# The close camera: how far from the kind, how high, and where on the kind it looks.
 const CLOSE_M := 7.0
 const CLOSE_UP := 2.4
 const CLOSE_AIM := 1.0
@@ -91,7 +48,6 @@ var clock := 0.0
 
 var _caption: Label
 var _enemy: Node3D
-# What the count measures: the enemy, or the holder its look moves to when it dies.
 var _body: Node3D
 var _row := {}
 var _parts := {}
@@ -120,7 +76,6 @@ func _initialize() -> void:
 	if DirAccess.make_dir_recursive_absolute(out) != OK:
 		quit(3)
 		return
-	# Headless runs play no clips unless asked (enemy_clips.gd); the count needs them.
 	EnemyClips.headless = true
 	_run.call_deferred()
 
@@ -141,7 +96,6 @@ func _run() -> void:
 	game.flow.choose_class(0)
 	game.run.set_max_hp(999999.0)
 	game.player.source = Intent.Scripted.new()
-	# The run opens with the ball on its drop.
 	var ground = game.ctx.spawner.ground
 	var down := 0
 	for i in WAIT_TICKS:
@@ -164,7 +118,6 @@ func _run() -> void:
 	await _ticks(2)
 	game.player.body().freeze = true
 	game.camera.snap(ahead)
-	# The run's opening toasts and its first hint clear before the reel starts.
 	await _ticks(QUIET_TICKS)
 	_build_caption()
 	var first_scene := snappedf(clock, 0.01)
@@ -182,8 +135,6 @@ func _run() -> void:
 		if not (kind in BASE_KINDS or game.combat.fleet.makes(kind)):
 			rows.append({"kind": kind, "skipped": "the game makes no such kind"})
 			continue
-		# The pop's panels and a stage entry put the hull's ceiling back; fill it for every kind.
-		# A scrapped ball cannot be healed, so a kind never starts under the game-over screen.
 		if not game.run.alive():
 			return _fail("the ball was scrapped before the %s" % kind)
 		game.run.set_max_hp(HULL)
@@ -200,7 +151,6 @@ func _run() -> void:
 			_closeup(true)
 			_beat("hit")
 			_say("%s  takes a hit" % kind)
-			# The flinch a player's hit gives it (its hit clip rides on the reaction), and the damage.
 			if _enemy.has_method("react"):
 				_enemy.react("stagger", _enemy.global_position - spot)
 			_enemy.take_damage(1.0)
@@ -214,8 +164,6 @@ func _run() -> void:
 		if is_instance_valid(_enemy):
 			_beat("death")
 			_say("%s  dies" % kind)
-			# A kind with a death clip hands its look to a holder in the world and is gone the
-			# same frame (enemy_clips.gd die); the count follows the look.
 			var pivot = _enemy.get("reaction_pivot")
 			_enemy.take_damage(1.0e9)
 			if pivot is Node3D and is_instance_valid(pivot) and pivot.get_parent() is Node3D and pivot.get_parent() != _enemy:
@@ -227,12 +175,10 @@ func _run() -> void:
 		_row["hull_left"] = snappedf(game.run.hp / game.run.max_hp, 0.001)
 		_row["end_s"] = snappedf(clock, 0.01)
 		_row["in_clip"] = (_row["snaps"] as Array).size()
-		# A kind that never stood, or that the light hit killed, was not counted through its death.
 		_row["measured"] = int(_row["frames"]) > 0 and (_row["beats"] as Dictionary).has("death")
 		rows.append(_row)
 		_enemy = null
 		_body = null
-		# What a kind leaves behind (a splitter's halves, shells in the air) goes before the next.
 		for group in ["enemy", "enemy_shot"]:
 			for node in get_nodes_in_group(group):
 				if is_instance_valid(node):
@@ -254,9 +200,6 @@ func _run() -> void:
 	quit(0)
 
 
-# The panel pickup's pop as the HUD draws it at its edge (ui/pickup_lines.gd, PF-14), for the
-# shortest, the middle and the longest line a panel has, each for its whole life, then one of the
-# player's own words beside the ball.
 func _pop() -> void:
 	var font := UiFonts.bold()
 	var lines := []
@@ -280,7 +223,6 @@ func _pop() -> void:
 			"width_of_view": snappedf(float(line[0]) * scale / view.x, 0.001),
 			"letters_of_height": snappedf(PickupLines.FONT * CAP * scale / view.y, 0.0001)})
 		await _seconds(PanelFx.POP_LIFE * 0.6 + GAP)
-	# The player's word may be refused (its own gap and density rules); the count says so.
 	hit_word = game.presentation.player_fx.word("wham", game.player.shown_position() + Vector3.UP * 1.8)
 	_say("the player's own hit word, for scale" if hit_word else "")
 	await _seconds(1.5)
@@ -288,8 +230,6 @@ func _pop() -> void:
 	await _seconds(GAP)
 
 
-# One step of the count, every drawn frame: each part against the body, and a snap named once
-# the step after it is known.
 func _process(delta: float) -> bool:
 	clock += delta
 	_aim_close()
@@ -306,12 +246,10 @@ func _process(delta: float) -> bool:
 	_row["frames"] = int(_row["frames"]) + 1
 	var inverse := _body.global_transform.affine_inverse()
 	for node in _body.find_children("*", "Node3D", true, false):
-		# The clip's joints carry the parts; the parts are what is drawn.
 		if node is GPUParticles3D or node is CPUParticles3D or node is Label3D or node is CollisionShape3D \
 				or String(node.name).begins_with(EnemyClips.JOINT_PREFIX):
 			continue
 		var id: int = node.get_instance_id()
-		# A hidden part starts again when it shows: its last pose is stale by then.
 		if not node.is_visible_in_tree():
 			_parts.erase(id)
 			continue
@@ -325,7 +263,6 @@ func _process(delta: float) -> bool:
 		(part["deg"] as Array).append(rad_to_deg((part["turn"] as Quaternion).angle_to(turn)) / delta)
 		(part["m"] as Array).append((part["at"] as Vector3).distance_to(now.origin) / delta)
 		(part["clip"] as Array).append(clip)
-		# The step onto a clip's first frame, or off its last, is the cut.
 		(part["cut"] as Array).append(_cut_age <= 1)
 		part["at"] = now.origin
 		part["turn"] = turn
@@ -333,10 +270,7 @@ func _process(delta: float) -> bool:
 			var steps: Array = part[unit]
 			if steps.size() < 4:
 				continue
-			# steps[1] is judged once the two after it are known: alone, or with steps[2] as a pair
-			# (a part that jumps and jumps back is two fast steps, which the lone test cannot see).
 			var floor_speed := SNAP_DEG if unit == "deg" else SNAP_M
-			# The second step of a pair already named is not named again on its own.
 			var named: bool = (part["paired"] as Dictionary).get(unit, false)
 			part["paired"][unit] = false
 			if named:
@@ -357,7 +291,6 @@ func _process(delta: float) -> bool:
 	return false
 
 
-# The close camera on or off. Off hands the picture back to the play camera.
 func _closeup(on: bool) -> void:
 	if on and _close_camera == null:
 		_play_camera = root.get_camera_3d()
@@ -375,8 +308,6 @@ func _closeup(on: bool) -> void:
 		_play_camera.make_current()
 
 
-# The close camera stands CLOSE_M from the kind, on the ball's side and CLOSE_TURN round from the
-# ball, and looks at the kind: a kind that works at arm's length would have the ball in the way.
 func _aim_close() -> void:
 	if not _close or not is_instance_valid(_body) or not is_instance_valid(_close_camera):
 		return
@@ -388,7 +319,6 @@ func _aim_close() -> void:
 	_close_camera.look_at_from_position(eye, at + Vector3.UP * CLOSE_AIM, Vector3.UP)
 
 
-# The crew's hello stays up until a key answers it; it is put down as a press of fire does.
 func _hush() -> void:
 	if _bubble == null:
 		for node in game.find_children("*", "Control", true, false):
@@ -400,7 +330,6 @@ func _hush() -> void:
 		_bubble.hush()
 
 
-# The kind's clip driver (enemy_clips.gd seats it on the body's pivot), or null for a kind with no clips.
 static func _driver(enemy: Node) -> Node:
 	var found := enemy.find_child("EnemyClips", true, false)
 	return found if found != null and found.get_script() == EnemyClips else null
@@ -437,7 +366,6 @@ func _fail(why: String) -> void:
 	quit(4)
 
 
-# Game seconds, by the reel's own clock (the movie writer fixes the step).
 func _seconds(n: float) -> void:
 	var until := clock + n
 	while clock < until:

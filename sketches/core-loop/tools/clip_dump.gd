@@ -1,25 +1,6 @@
 extends SceneTree
 
-# Geometry dump for the clipping audit (tools/clip_audit.py). It boots one world 1 area like the game does and writes every
-# drawn surface and every solid the ball can hit, in world space, so the audit can look for props that cut into each other,
-# props that float over or sink into the ground, coplanar faces and colliders with nothing drawn on them (invisible walls).
-#
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --resolution 1280x720 --script res://tools/clip_dump.gd -- --area=dam|flume|brindle|camp --out=<absolute dir> \
-#     [--seed=<run seed>] [--shots=<json>]
-#
 # It needs a real renderer: dressing multimeshes are filled with RenderingServer.multimesh_set_buffer, and the headless
-# dummy server hands back no buffer, which would put every such instance at the origin.
-#
-# Areas: dam and flume are park stages 1 and 2 (table "park"), brindle is the arena after the flume's finish (as
-# brindle_beats_capture.gd enters it), camp is the title's K walk (camp_hub.gd). The run seed is the session seed the run
-# draws from; the park dressing is seeded by its map, so seeds move run-drawn content (caches, sites, events) only.
-#
-# Writes <out>/<area>-s<seed>/: items.json (one row per drawn mesh, multimesh instance or collider shape: path, kind,
-# owner hints, world AABB, triangle range), tris.f32 (float32 xyz triangle soup, world space, rows in order) and, for park
-# stages, ground.f32 with ground.json (the stage's floor_height on a 1 m grid over the items' bounds).
-# Skipped: nodes not visible in the tree, far LOD stand-ins (visibility_range_begin > 0), the ball, enemies and other
-# moving bodies, canvas UI, and meshes with more than MAX_TRIS triangles per instance (recorded with tris 0).
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -137,7 +118,6 @@ func _aabb(b: AABB) -> Array:
 
 
 func _hints(n: Node) -> Dictionary:
-	# Owner hints for the audit: the nearest ancestors that look like a placed thing.
 	var h := {}
 	var at: Node = n
 	var depth := 0
@@ -198,9 +178,7 @@ func _walk(n: Node, skip: Dictionary) -> void:
 		return
 	if n is CharacterBody3D or n is RigidBody3D:
 		return
-	# Hidden branches are still walked: a collider under a hidden node is an invisible wall.
 	var drawn := not n is Node3D or (n as Node3D).is_visible_in_tree()
-	# A render-layer mask of 0 is a hidden stand-in (boss_model.gd hide_primitive), drawn by no camera.
 	if n is VisualInstance3D and (n as VisualInstance3D).layers == 0:
 		drawn = false
 	if n is MeshInstance3D and drawn:
@@ -235,9 +213,6 @@ func _multimesh_items(mmi: MultiMeshInstance3D) -> void:
 	var hints := _hints(mmi)
 	var mat := _material_hint(mmi, mm.mesh)
 	var local_aabb := mm.mesh.get_aabb()
-	# Many multimeshes are filled on the RenderingServer side (multimesh_set_buffer from a worker), so the resource's
-	# get_instance_transform answers identity: read the server's buffer instead (12 floats a 3D transform, row-major
-	# 3x4, then 4 for colour and 4 for custom data when used).
 	var buf := RenderingServer.multimesh_get_buffer(mm.get_rid())
 	var stride := 12 + (4 if mm.use_colors else 0) + (4 if mm.use_custom_data else 0)
 	var from_server := buf.size() >= count * stride
@@ -257,8 +232,6 @@ func _multimesh_items(mmi: MultiMeshInstance3D) -> void:
 		items.append(row)
 
 
-# Every shape owner of a body the ball can hit: CollisionShape3D children and owners made in code (create_shape_owner,
-# as anchor fields and fitted posts do) alike.
 func _body_items(body: CollisionObject3D) -> void:
 	if body is Area3D or _moving(body) or body.collision_layer & ball_mask == 0:
 		return
@@ -301,9 +274,6 @@ func _shape_item(body: CollisionObject3D, shape: Shape3D, xf: Transform3D, owner
 	items.append(row)
 
 
-# --shots=<json>: [{"id": "...", "at": [x, y, z], "r": metres}, ...]. Each shot looks at its point from two bearings
-# (south-west and north-east, 35 degrees down) at max(4, 2.2 r) m, with the ball parked out of frame, and writes
-# <out>/shots-<area>-s<seed>/<id>-a.png and -b.png.
 func _shots() -> void:
 	var list = JSON.parse_string(FileAccess.get_file_as_string(shots_file))
 	var dir := out_root.path_join("shots-%s-s%d" % [area, run_seed])
@@ -314,8 +284,6 @@ func _shots() -> void:
 	cam.far = 900.0
 	game.add_child(cam)
 	cam.make_current()
-	# The terrain's detail rings follow the camera it was given, the game's, which stays with the ball: without this a shot far
-	# from the ball draws coarse ground that pokes through the liners (the false "ground shows through" patches of the w33 audit).
 	for terrain in game.find_children("*", "Terrain3D", true, false):
 		terrain.set_camera(cam)
 	game.player.body().global_position = Vector3(0, -500, 0)

@@ -36,8 +36,7 @@ FELT_M = 0.3
 COARSE = 4.0
 ROLL_M = 1.6
 COPLANAR_MIN_CELLS = 6
-SEAM_MARGIN = 0.05           # a coplanar sample this far inside the other owner's face is an overlap, not a shared edge;
-                             # an edge-to-edge overlap narrower than this is not flagged
+SEAM_MARGIN = 0.05
 HANG_M = 0.35
 HANG_SHARE = 0.25
 CLIP_MIN_SHARE = 0.04
@@ -236,8 +235,6 @@ def run(dump, cell=CELL):
             continue
         t = np.concatenate([tris[rows[i]["t0"]:rows[i]["t0"] + rows[i]["n"]] for i in hard])
         p, n = sample_tris(t, cell)
-        # One point per cell per owner: dense small-triangle meshes add nothing past the cell size.
-        # Kept per facing as well (six axis bins), so a thin slab keeps both its top and its bottom in a cell.
         facing = np.argmax(np.abs(n), axis=1) * 2 + (np.take_along_axis(n, np.argmax(np.abs(n), axis=1)[:, None], 1)[:, 0] > 0)
         _, first_in_cell = np.unique(cell_keys(p, cell) * 8 + facing, return_index=True)
         p, n = p[first_in_cell], n[first_in_cell]
@@ -262,17 +259,14 @@ def run(dump, cell=CELL):
     findings = {"clip": [], "coplanar": [], "ground": [], "naked": [], "stacked": []}
 
     _tick("pairs")
-    # Outward sign per owner: +1 when its face normals point away from its centroid on average.
     no = len(info)
     cnt = np.maximum(np.bincount(O, minlength=no), 1)
     cen = np.stack([np.bincount(O, weights=P[:, k], minlength=no) / cnt for k in range(3)], 1)
     outward = np.bincount(O, weights=np.einsum("ij,ij->i", P - cen[O], N), minlength=no)
-    # get_faces winds every front face the same way, so one sign turns face normals outward for every closed owner.
     global GLOBAL_SIGN
     GLOBAL_SIGN = -1.0 if np.median(outward / cnt) < 0 else 1.0
     sign = {o: GLOBAL_SIGN for o in range(no)}
 
-    # Shared cells between owners: candidate pairs, plus coplanar faces. One representative point per (cell, owner).
     order = np.lexsort((O, C))
     Cs, Os = C[order], O[order]
     first = np.r_[True, (Cs[1:] != Cs[:-1]) | (Os[1:] != Os[:-1])]
@@ -306,10 +300,6 @@ def run(dump, cell=CELL):
     for (a, b), c in pair_coplanar.items():
         if c < COPLANAR_MIN_CELLS:
             continue
-        # A shared cell holds a coplanar overlap where either owner's sample lies SEAM_MARGIN deep in the other's faces
-        # (either: a strip lying on a larger face has the strip's samples deep in the face, never the face's in the
-        # strip). Two faces that only meet at an edge (a tiled flume's walls continuing across a joint) share the cells
-        # along the edge with neither sample deep in the other: those are edge_cells.
         deep = [(pa, pb) for pa, pb in pair_points[(a, b)]
                 if on_faces(P[pa], N[pa], otris[b]) or on_faces(P[pb], N[pb], otris[a])]
         if len(deep) >= COPLANAR_MIN_CELLS:
@@ -319,8 +309,6 @@ def run(dump, cell=CELL):
                                          "at": [round(float(v), 1) for v in at]})
 
     _tick("clip")
-    # Clip: for each candidate pair, points of one owner that sit behind the other's nearest surface sample (against its
-    # face normal, oriented outward per owner) and within CLIP_REACH of it. Depth is that distance.
     by_owner = {}
     order_o = np.argsort(O, kind="stable")
     bounds = np.searchsorted(O[order_o], np.arange(len(info) + 1))
@@ -358,7 +346,6 @@ def run(dump, cell=CELL):
             findings["clip"].append({"a": info[a], "b": info[b], "shared_cells": c, "a_in_b": res[0], "b_in_a": res[1]})
 
     _tick("stacked")
-    # Stacked: same mesh, origins within STACK_M.
     by_mesh = defaultdict(list)
     for k, idxs in owner_rows.items():
         r0 = rows[idxs[0]]
@@ -377,7 +364,6 @@ def run(dump, cell=CELL):
                 seen[cc] = i
 
     _tick("ground")
-    # Ground checks, per owner over its sorted run of points.
     if ground is not None:
         gap_all = P[:, 1] - ground_at(ground, P[:, 0], P[:, 2])
         for o in range(len(info)):
@@ -407,7 +393,6 @@ def run(dump, cell=CELL):
                 findings["ground"].append({"kind": "ground_coplanar", "o": info[o], "area_m2": round(float(flat.sum()) * cell * cell, 2)})
 
     _tick("naked")
-    # Naked colliders.
     occupied = np.unique(C)
     floor_y = float(meta["ball"][1]) - 1.5
 
@@ -415,7 +400,6 @@ def run(dump, cell=CELL):
         at = np.clip(np.searchsorted(occupied, keys), 0, len(occupied) - 1)
         return occupied[at] == keys
 
-    # Drawn points by a coarse grid, for the felt test's local search.
     ck = np.floor(P / COARSE).astype(np.int64) + (1 << 20)
     ckey = (ck[:, 0] << 42) | (ck[:, 1] << 21) | ck[:, 2]
     corder = np.argsort(ckey, kind="stable")
@@ -444,7 +428,6 @@ def run(dump, cell=CELL):
             continue
         t = tris[r["t0"]:r["t0"] + r["n"]]
         p, n = sample_tris(t, cell)
-        # Faces the ball can meet: not facing down, above the ground (parks) or above the ball's floor (camp, arena).
         keep = n[:, 1] > -0.5
         if ground is not None:
             keep &= p[:, 1] > ground_at(ground, p[:, 0], p[:, 2]) + 0.1
@@ -467,8 +450,6 @@ def run(dump, cell=CELL):
         naked = ~covered
         if naked.sum() * cell * cell < 0.5:
             continue
-        # Felt: a ball resting on a naked point (its centre BALL_R out along the face normal) stops more than FELT_M short
-        # of anything drawn. Shallow hull gaps the ball cannot reach into are not felt.
         pn, nn = p[naked], n[naked]
         if len(pn) > 400:
             pick = np.linspace(0, len(pn) - 1, 400).astype(int)
@@ -487,7 +468,6 @@ def run(dump, cell=CELL):
         gap -= BALL_R
         felt = gap > FELT_M
         felt_m2 = float(felt.mean()) * float(naked.sum()) * cell * cell
-        # Rolling: the ball's centre within ROLL_M of the ground under it (a roll or a hop, not a flight).
         if ground is not None:
             rolling = centre[:, 1] - ground_at(ground, centre[:, 0], centre[:, 2]) < ROLL_M
         else:

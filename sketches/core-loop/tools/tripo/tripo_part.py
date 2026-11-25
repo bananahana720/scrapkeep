@@ -33,10 +33,6 @@ me = ob.data
 bm = bmesh.new(); bm.from_mesh(me)
 bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=1e-5)
 bmesh.ops.triangulate(bm, faces=bm.faces)
-# Drop floating fragments (a thin stray wire sets the bounds and shrinks the part). A model is often
-# built from separate shells that touch, so a shell stays when its bounding box overlaps, within --touch
-# (2 %) of the model's size, a shell already kept (low-poly shells cross without sharing near
-# vertices, so a vertex-distance test drops bases; a fragment inside another shell's box survives); the walk starts from the shell with the most faces.
 seen = set(); islands = []
 for f in bm.faces:
     if f in seen:
@@ -70,8 +66,6 @@ while grew:
 stray = [f for n, isl in enumerate(islands) if n not in kept for f in isl]
 if stray:
     bmesh.ops.delete(bm, geom=stray, context="FACES")
-# --cut-above F removes faces whose centre is above fraction F of the height, for a floating
-# fragment a thin strand still joins to the body.
 if float(opt["cut-above"]) < 1.0:
     zs = [v.co.z for v in bm.verts]
     limit = min(zs) + (max(zs) - min(zs)) * float(opt["cut-above"])
@@ -95,7 +89,6 @@ while me.uv_layers:
 while me.color_attributes:
     me.color_attributes.remove(me.color_attributes[0])
 me.materials.clear()
-# Smooth across shallow edges, hard across edges sharper than 40 degrees.
 for p in me.polygons:
     p.use_smooth = True
 bpy.ops.object.shade_auto_smooth(angle=0.698)

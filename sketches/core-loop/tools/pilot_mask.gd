@@ -1,27 +1,5 @@
 extends SceneTree
 
-# ROSTER-LOOK section 3 rules 1 and 2 by the rule's own method: a pilot-only mask against the
-# full shell from the chase mid eye (look_subjects CGE_CAMERAS "mid", 1920x1080). Promoted from
-# PD-SABLE's fix-round pilot_mask.gd (artifacts/local/alpha/push/w13/units/PD-SABLE/fix-round/),
-# which rasterised on the GPU; this one casts one Jolt ray per pixel against trimesh copies of
-# the meshes, so it gives the same answer on card 1 and in the headless smoke run.
-#
-# The shell and pilot are fitted as the game fits them (hero_assets fit_shell_into, then
-# fit_pilot_into, seated in the rest pose), the Pod facing -Z away from the eye and the
-# WeaponRing aimed straight ahead. The pilot-only mask is every pixel whose ray hits the pilot.
-# A pixel is seen at one roll angle when no occluder lies on its ray before the pilot. Occluders
-# are rule 1's list: the lattice (Core), the gimbal rings (Pod > Gyro), the weapon ring (Pod >
-# WeaponRing) and the heft panels (HeftC holders); the Pod's own mesh, its modules and the dome
-# are not. Each angle turns Core about the travel axis (X) and the gimbal follows by
-# counter_tilt; the angles are evenly spaced over one full turn.
-# Head region: mask pixels above the projected neck bone. head_px: the neck bone's row minus the
-# mask's top row.
-#
-#   godot --headless --path sketches/core-loop --script res://tools/pilot_mask.gd -- --out=<abs json>
-#     [--shell=<res path>] [--pilot=<class id>] [--class=N] [--samples=16] [--seed-sphere=<radius>]
-# --shell overrides the pilot's shell (hero_assets shell_assets); --seed-sphere closes an opaque
-# sphere over the Pod as an extra occluder (the test's seeded case). Exit 0 when mask.json is
-# written, 1 when the pilot mask is empty or the neck bone is missing.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -31,7 +9,6 @@ const SIZE := Vector2i(1920, 1080)
 const SAMPLES := 16
 const PILOT_LAYER := 1
 const OCCLUDER_LAYER := 2
-# The pilot hit stops a hair short so the pilot's own face never counts as an occluder.
 const EPS := 0.002
 
 
@@ -63,8 +40,6 @@ func _cli() -> void:
 	quit(0)
 
 
-# The measurement. opts: shell (res path), pilot (class id, default pylon_engineer), class (heft
-# class, default 1), samples (roll angles, default 16), seed-sphere (radius, default none).
 static func measure(tree: SceneTree, opts: Dictionary) -> Dictionary:
 	var pilot_id := String(opts.get("pilot", "pylon_engineer"))
 	var heft := int(opts.get("class", 1))
@@ -94,13 +69,11 @@ static func measure(tree: SceneTree, opts: Dictionary) -> Dictionary:
 	if fitted.is_empty():
 		out["error"] = "no pilot rig for %s" % pilot_id
 		return _done(hero, ball, out)
-	# Seated as hero_assets._seat_pilot leaves it: animator stopped, bones at rest.
 	if fitted.animator != null:
 		(fitted.animator as AnimationPlayer).stop()
 	var skels: Array = (fitted.pilot as Node).find_children("*", "Skeleton3D", true, false)
 	for s: Skeleton3D in skels:
 		s.reset_bone_poses()
-	# A skinned mesh registers its skin with the skeleton a frame after it enters the tree.
 	await tree.process_frame
 	await tree.process_frame
 	if opts.has("seed-sphere"):
@@ -115,8 +88,6 @@ static func measure(tree: SceneTree, opts: Dictionary) -> Dictionary:
 	var ring := pod.get_node_or_null("WeaponRing") as Node3D
 	if ring != null:
 		ring.rotation = Vector3.ZERO
-	# Bodies: the pilot on PILOT_LAYER, each occluder group on OCCLUDER_LAYER, each body a child of
-	# its mesh so it turns with it.
 	var groups := {}
 	for mi in pod.find_children("*", "MeshInstance3D", true, false) + core.find_children("*", "MeshInstance3D", true, false) + [core, pod]:
 		var g := occluder_group(mi, core, pod)
@@ -148,7 +119,6 @@ static func measure(tree: SceneTree, opts: Dictionary) -> Dictionary:
 	var q := PhysicsRayQueryParameters3D.new()
 	q.hit_back_faces = true
 	q.hit_from_inside = false
-	# The pilot-only mask: the pilot stays upright on the Pod, so one pass serves every angle.
 	var box := _pilot_box(pilot_meshes, cam, eye, tan_half)
 	var mask: Array = []
 	var top := SIZE.y
@@ -231,7 +201,6 @@ static func _done(hero: Node, ball: Node, out: Dictionary) -> Dictionary:
 	return out
 
 
-# Rule 1's occluder group for a mesh, "" when it does not occlude.
 static func occluder_group(mi: Node, core: Node, pod: Node) -> String:
 	if mi == core or core.is_ancestor_of(mi):
 		var n := mi.get_parent()
@@ -257,9 +226,6 @@ static func occluder_group(mi: Node, core: Node, pod: Node) -> String:
 	return ""
 
 
-# The skinned mesh's triangles in its own space at the skeleton's current pose, skinned on the
-# CPU (bone global pose times bind pose, weighted), as the GPU would draw them; headless has no
-# rendering skeleton for bake_mesh_from_current_skeleton_pose.
 static func skinned_faces(mi: MeshInstance3D, skel: Skeleton3D) -> PackedVector3Array:
 	var skin := mi.skin
 	var mats: Array[Transform3D] = []
@@ -293,7 +259,6 @@ static func skinned_faces(mi: MeshInstance3D, skel: Skeleton3D) -> PackedVector3
 	return faces
 
 
-# A static trimesh body under mi carrying mesh's faces; false when the mesh has none.
 static func _body(mi: Node3D, mesh: Mesh, layer: int, group: String) -> bool:
 	return mesh != null and _body_faces(mi, mesh.get_faces(), layer, group)
 
@@ -315,7 +280,6 @@ static func _body_faces(mi: Node3D, faces: PackedVector3Array, layer: int, group
 	return true
 
 
-# The ray direction through pixel (x, y) of a SIZE frame, vertical field of view.
 static func pixel_dir(cam: Basis, tan_half: float, x: int, y: int) -> Vector3:
 	var aspect := float(SIZE.x) / SIZE.y
 	var nx := (2.0 * (x + 0.5) / SIZE.x - 1.0) * tan_half * aspect
@@ -323,7 +287,6 @@ static func pixel_dir(cam: Basis, tan_half: float, x: int, y: int) -> Vector3:
 	return (cam * Vector3(nx, ny, -1.0)).normalized()
 
 
-# The pixel a world point lands on.
 static func project(cam: Basis, eye: Vector3, tan_half: float, p: Vector3) -> Vector2:
 	var c := cam.inverse() * (p - eye)
 	var aspect := float(SIZE.x) / SIZE.y
@@ -332,7 +295,6 @@ static func project(cam: Basis, eye: Vector3, tan_half: float, p: Vector3) -> Ve
 	return Vector2((nx + 1.0) * SIZE.x / 2.0 - 0.5, (1.0 - ny) * SIZE.y / 2.0 - 0.5)
 
 
-# The pilot's screen box from its mesh vertices, padded 2 px and clamped to the frame.
 static func _pilot_box(meshes: Array, cam: Basis, eye: Vector3, tan_half: float) -> Rect2i:
 	var lo := Vector2(INF, INF)
 	var hi := Vector2(-INF, -INF)

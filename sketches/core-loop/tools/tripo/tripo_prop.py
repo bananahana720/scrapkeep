@@ -46,7 +46,6 @@ def srgb(c):
     return np.where(c <= 0.0031308, c * 12.92, 1.055 * np.power(c, 1 / 2.4) - 0.055)
 
 def hexcol(text, option):
-    # "#rrggbb" or "rrggbb" as three sRGB floats; anything else stops the script (a short colour would paint wrong)
     if not re.fullmatch(r"#?[0-9a-fA-F]{6}", text.strip()):
         raise SystemExit("tripo_prop: %s needs a colour as #rrggbb, got %s" % (option, text))
     h = text.strip().lstrip("#")
@@ -80,7 +79,7 @@ sh = wide / max(ext[0], ext[1]) if wide > 0 else tall / ext[2]
 sv = tall / ext[2] if tall > 0 else sh
 c = (mn + mx) / 2
 me.transform(Matrix.Diagonal((sh, sh, sv, 1.0)) @ Matrix.Translation(Vector((-c[0], -c[1], -mn[2]))))
-if opt["span"]:  # widen or narrow the middle: points at |x| = a move to |x| = b, the outer edge stays where it is
+if opt["span"]:
     a, b = [float(x) for x in opt["span"].split(":")]
     half = max(abs(v.co.x) for v in me.vertices)
     if not (0 < a < half and 0 < b < half):
@@ -89,11 +88,10 @@ if opt["span"]:  # widen or narrow the middle: points at |x| = a move to |x| = b
         x = abs(v.co.x)
         v.co.x = math.copysign(x * b / a if x <= a else b + (x - a) * (half - b) / (half - a), v.co.x)
 
-# texture -> one colour a face
 img = None
 for sl in ob.material_slots:
     if sl.material and sl.material.use_nodes:
-        for ln in sl.material.node_tree.links:  # the image that feeds Base Color, not a normal or roughness map
+        for ln in sl.material.node_tree.links:
             if ln.to_socket.name == "Base Color" and ln.from_node.type == "TEX_IMAGE" and ln.from_node.image:
                 img = ln.from_node.image; break
     if img: break
@@ -113,8 +111,6 @@ for p in me.polygons:
         cols.append(px_s[y, x])
     face[p.index] = np.median(np.array(cols), axis=0); area[p.index] = p.area
 
-# the prop's own palette: area-weighted k-means, seeded from the faces spread furthest apart so a small bright part
-# (a lamp, a count board) keeps its own colour
 k = int(opt["colours"])
 cent = [face[int(np.argmax(area))]]
 while len(cent) < k:
@@ -140,14 +136,14 @@ for _ in range(int(opt["smooth"])):
 bm.free()
 shares = [float(area[slot == j].sum() / area.sum()) for j in range(k)]
 found = ["#%02x%02x%02x" % tuple(int(round(float(x) * 255)) for x in np.clip(cent[j], 0, 1)) for j in range(k)]
-for item in [x for x in opt["paint"].split(",") if x]:  # repaint a found colour by its number in the printed list
+for item in [x for x in opt["paint"].split(",") if x]:
     if item.count("=") != 1 or not item.split("=")[0].strip().isdigit():
         raise SystemExit("tripo_prop: --paint needs number=#rrggbb, got " + item)
     j, hx = item.split("=")
     if not 0 <= int(j) < k:
         raise SystemExit("tripo_prop: --paint names colour %s, the mesh has 0 to %d" % (j, k - 1))
     cent[int(j)] = hexcol(hx, "--paint")
-fcol = cent[slot].copy()  # one sRGB colour a face
+fcol = cent[slot].copy()
 if opt["region"]:
     lum = fcol @ np.array([0.2126, 0.7152, 0.0722])
     centre = np.array([p.center[:] for p in me.polygons])
@@ -170,7 +166,7 @@ if opt["region"]:
 fcol_lin = linear(fcol)
 me.materials.clear()
 paint = bpy.data.materials.new("paint"); paint.use_backface_culling = False; paint.diffuse_color = (1, 1, 1, 1); me.materials.append(paint)
-for old in list(me.color_attributes):  # a colour layer the generator shipped would stay active and export instead
+for old in list(me.color_attributes):
     me.color_attributes.remove(old)
 ca = me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER")
 me.color_attributes.active_color = ca
@@ -205,7 +201,7 @@ def export(path):
                               export_vertex_color="ACTIVE", export_all_vertex_colors=False)
 
 export(opt["out"])
-co = np.array([v.co[:] for v in me.vertices])  # the size of the full mesh, before the LOD passes thin it
+co = np.array([v.co[:] for v in me.vertices])
 lods = []
 for n, share in enumerate([float(x) for x in opt["lods"].split(",") if x], 1):
     lods.append(decimate(ob, max(1, int(tris * share))))

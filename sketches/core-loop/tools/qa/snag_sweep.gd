@@ -1,26 +1,6 @@
 extends SceneTree
 
-# Snag sweep (wave 36, map standard point 8c): finds where a fast ball loses half its speed against
-# a contact facing its line of travel, along or over every large static piece of one map. The probe
-# itself (what a piece is, the lanes, what a snag is, classes and places) is tools/qa/snag_probe.gd;
-# this boots the map, deals the pieces out to shards and writes one JSON file. Calm (no enemies); it
-# only reads the game. How to run it, shard it and merge shards: tools/qa/snag_sweep.md.
-#
-#   $GODOT_BIN --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/qa/snag_sweep.gd -- \
-#     --map=park_flume|park_dam|...|arena --out=<file.json> [--shard=0/1] [--seed=1] [--only=<path substring>]
-#   ... -- --merge=<a.json>,<b.json>,... --out=<merged.json>
-#
-# Each raw snag row: position (at), contact normal (n), the piece rolled at (piece) and the collider hit
-# (hit), class (piece, ground or other), the lane kind (ride or graze), speed before and after, and
-# visible (a drawn mesh covers the contact). "places" joins snags within 2 m on one collider into one
-# row. "controls" are lanes over open ground with no piece near: a snag there is the ground itself
-# (tile seams), not a piece. Pieces outside the stage's ground (the bay's barge) are not counted.
-# The JSON is rewritten after every piece ("complete": false until the end). It holds no clock, so
-# two runs of one shard compare byte for byte; wall time and load print instead. Exit 1 when more
 # than 20% of the lanes were skipped. Under --headless MultiMesh instances are not drawn into the
-# index, so visible false is then a lower bound; "multimesh_trusted" says which.
-# --map=arena finishes stage 2 into the Slag Bowl, as tools/qa/invisible_walls.gd does, and counts
-# only the bowl's own ramps, kickers and masts (its floor, bank and wall are ground).
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -116,7 +96,6 @@ func _run() -> void:
 		await physics_frame
 	var probe = Probe.new(self, game, source)
 	probe.index_drawn([game])
-	# The map's own pieces: under the bowl for the arena, else those standing over the stage's ground.
 	var gb := AABB()
 	var everything: Array = probe.pieces(bowl if arena else game, arena)
 	var all := []
@@ -186,7 +165,6 @@ func _skip(meta: Dictionary, row: Dictionary, path: String) -> void:
 	why[key] = int(why.get(key, 0)) + 1
 
 
-# One report from raw rows: classes before and after joining places, the places, the controls.
 static func _report(meta: Dictionary, snags: Array, controls: Array) -> Dictionary:
 	var out := meta.duplicate(true)
 	snags.sort_custom(func(a, b): return JSON.stringify(a) < JSON.stringify(b))
@@ -223,7 +201,6 @@ func _write(path: String, meta: Dictionary, snags: Array, controls: Array) -> bo
 	return true
 
 
-# Prints the summary; exit 1 when more than MAX_SKIP of the lanes were skipped, naming why.
 func _verdict(meta: Dictionary, snags: Array, controls: Array) -> int:
 	var rep := _report(meta, snags.duplicate(), controls.duplicate())
 	var total := int(meta["lanes_run"]) + int(meta["lanes_skipped"])
@@ -237,7 +214,6 @@ func _verdict(meta: Dictionary, snags: Array, controls: Array) -> int:
 	return 0
 
 
-# Joins shard files of one map into one report.
 func _merge(files: PackedStringArray, out_path: String) -> int:
 	var meta := {}
 	var snags := []

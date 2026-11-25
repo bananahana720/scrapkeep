@@ -13,7 +13,6 @@ import sys
 
 
 def functions(frame):
-    # [number, frame_s, process_s, physics_s, physics_step_s, script_s, servers, (name, n, n values)..., m, (id, calls, self_s, total_s, internal_s)...]
     i = 7
     for _ in range(int(frame[6])):
         i += 2 + int(frame[i + 1])

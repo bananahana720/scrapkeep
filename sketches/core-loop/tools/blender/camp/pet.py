@@ -88,8 +88,6 @@ def belt(s, c, r, z, half, grow, color, n=10):
     s.add(verts, faces, color)
 
 
-# --------------------------------------------------------------------------------------------------------------- the pet
-
 BODY_C, BODY_R = (0.0, 0.62, -0.05), (0.43, 0.32, 0.5)
 HEAD_C, HEAD_R = (0.03, 0.92, 0.34), (0.38, 0.36, 0.36)
 LEGS = {"fl": (0.24, 0.3), "fr": (-0.24, 0.3), "bl": (0.24, -0.34), "br": (-0.24, -0.34)}
@@ -101,40 +99,32 @@ MOUTH = (0.03, 0.66, 0.66)
 def pet(s):
     ell(s, BODY_C, BODY_R, "iron", 10, 6)
     ell(s, HEAD_C, HEAD_R, "iron_hi", 10, 6)
-    # Legs and paws: stubby iron legs on dark pads.
     for k, (x, z) in sorted(LEGS.items()):
         pk.frustum(s, 0.1, 0.12, 0.07, 0.44, 6, T["iron"], at=(x, z))
         pk.frustum(s, 0.15, 0.13, 0.0, 0.09, 6, T["charcoal"], at=(x, z))
-    # The eye: copper bezel, a warm ledger ring, the glass_lt lens.
     ex, ey, ez = EYE
     pk.disc_z(s, 0, 0.27, ez - 0.25, ez - 0.07, 10, T["copper"], at=(ex, ey))
     pk.disc_z(s, 0, 0.21, ez - 0.25, ez - 0.04, 10, T["ledger"], at=(ex, ey))
     pk.disc_z(s, 0, 0.14, ez - 0.25, ez - 0.01, 10, T["glass_lt"], at=(ex, ey))
-    # Smile slot under the eye and two cheek rivets.
     mx, my, mz = MOUTH
     for dx, dy, roll in ((-0.09, -0.015, 0.35), (0.0, -0.035, 0.0), (0.09, -0.015, -0.35)):
         cp.obox(s, (0.1, 0.03, 0.04), (mx + dx, my + dy + 0.03, mz - 0.03), T["charcoal"], roll=roll)
     for sx in (-1, 1):
         pk.hexstud(s, (HEAD_C[0] + sx * 0.33, 0.9, 0.3), (sx, 0, 0), 0.04, 0.04, T["copper_dk"])
-    # Ears: Fleet cones, soft. The right one is bent over.
     pk.tube(s, (0.3, 1.1, 0.26), (0.44, 1.28, 0.2), 0.11, 0.05, 6, T["oxide"])
     pk.tube(s, (-0.24, 1.14, 0.26), (-0.46, 1.2, 0.18), 0.11, 0.05, 6, T["oxide"])
-    # Collar with the brass requisition tag.
     pk.disc_z(s, 0.3, 0.38, 0.2, 0.3, 10, T["copper_dk"], at=(0.0, 0.78))
     pk.tube(s, (0.0, 0.47, 0.3), (0.0, 0.44, 0.38), 0.025, 0.025, 4, T["copper"])
     s.box((0.17, 0.21, 0.03), (0.0, 0.34, 0.4), T["brass"])
     s.box((0.05, 0.05, 0.03), (0.0, 0.31, 0.42), T["iron"])
-    # Antenna tail with a bolt on its tip.
     for a, b in zip(TAIL, TAIL[1:]):
         pk.tube(s, a, b, 0.035, 0.03, 6, T["iron_hi"])
     pk.hexstud(s, TAIL[-1], (0, 0.5, 0.2), 0.09, 0.1, T["copper"])
-    # Fleet chips and plates on the body and head, bare-metal scuffs.
     patch(s, BODY_C, BODY_R, (0.5, 1.0, -0.4), 0.17, "oxide")
     patch(s, BODY_C, BODY_R, (-1.0, 0.2, 0.3), 0.14, "oxide")
     patch(s, HEAD_C, HEAD_R, (-1.0, 0.6, -0.1), 0.12, "oxide")
     patch(s, BODY_C, BODY_R, (0.9, 0.2, 0.5), 0.07, "concrete_lt")
     patch(s, BODY_C, BODY_R, (-0.2, 1.0, 0.7), 0.06, "concrete_lt")
-    # Moss's repairs: a riveted copper patch band round the belly, a bone bandage on the front-right leg.
     belt(s, BODY_C, BODY_R, -0.2, 0.1, 0.07, T["copper"])
     for i in range(4):
         a = math.tau * (i + 0.5) / 4 + 0.3
@@ -157,10 +147,8 @@ def check_pet(s):
     assert hi[2] > 0.7 and lo[2] > -0.95 and hi[0] < 0.75 and lo[0] > -0.75, ("pet footprint", lo, hi)
 
 
-# ------------------------------------------------------------------------------------------------------------- the pen
-
 PEN_R = 9.0
-POST_ANGLES = [a for a in range(-180, 180, 15) if abs(a) > 20]       # none within 20 degrees of +Z: a gap of 9 m
+POST_ANGLES = [a for a in range(-180, 180, 15) if abs(a) > 20]
 KENNEL = (-3.5, -5.5)
 BOWL = (3.4, -4.4)
 BIN = (-6.0, -1.5)
@@ -199,7 +187,6 @@ def kennel_box(s):
 def pen(s):
     fence(s)
     kx, kz = KENNEL
-    # The cut oil drum lying on its side, entrance toward +Z, hoops, dark door, copper roof.
     pk.tube(s, (kx, 0.85, kz - 0.9), (kx, 0.85, kz + 0.9), 0.85, 0.85, 12, T["oxide"])
     for dz in (-0.6, 0.0, 0.6):
         pk.tube(s, (kx, 0.85, kz + dz - 0.04), (kx, 0.85, kz + dz + 0.04), 0.88, 0.88, 12, T["iron_hi"])
@@ -209,14 +196,12 @@ def pen(s):
     for sx in (-1, 1):
         cp.obox(s, (0.95, 0.07, 2.3), (kx + sx * 0.62, 1.93, kz + 0.05), T["copper"], roll=-sx * math.radians(30))
     s.box((0.12, 0.14, 2.35), (kx, 2.22, kz + 0.05), T["copper_dk"])
-    # Food bowl, copper dish heaped with bolts.
     bx, bz = BOWL
     pk.frustum(s, 0.34, 0.5, 0.0, 0.26, 12, T["copper"], at=(bx, bz))
     pk.frustum(s, 0.5, 0.52, 0.26, 0.31, 12, T["copper_dk"], at=(bx, bz))
     for k, (dx, dz, dy) in enumerate(((0, 0, 0.42), (0.2, 0.1, 0.36), (-0.18, 0.12, 0.35), (0.1, -0.2, 0.35),
                                        (-0.15, -0.14, 0.36), (0.28, -0.1, 0.33), (-0.3, 0.0, 0.33))):
         cp.pk.hexstud(s, (bx + dx, 0.26, bz + dz), (0.3 * (k % 3 - 1), 1, 0.2 * (k % 2 - 0.5)), 0.07, dy - 0.2, T["iron_hi"] if k % 2 else T["concrete_lt"])
-    # Toy bin: an open timber crate with a ball and a wrench handle sticking out.
     tx, tz = BIN
     s.box((1.3, 0.1, 0.9), (tx, 0.05, tz), T["timber"])
     for sx in (-1, 1):
@@ -226,7 +211,6 @@ def pen(s):
     s.box((1.36, 0.06, 0.06), (tx, 0.72, tz + 0.4), T["copper_dk"])
     ell(s, (tx - 0.2, 0.62, tz - 0.05), (0.26, 0.26, 0.26), "petrol", 8, 4)
     cp.obox(s, (0.7, 0.1, 0.14), (tx + 0.25, 0.78, tz - 0.05), T["copper"], yaw=0.5, roll=0.4)
-    # The worn dirt patch with two tones and a few paw scuffs.
     hx, hz = HOME
     cp.disc_y(s, 0, 3.0, 0.0, 0.02, 14, T["plaza_dk"], at=(hx, hz))
     cp.disc_y(s, 0, 2.0, 0.02, 0.035, 12, T["varnish"], at=(hx, hz))
@@ -241,8 +225,6 @@ def pen_sockets():
 
 
 def pen_col(s):
-    # Eight straight boxes round the ring (the arc from the +30 to the -30 degree gap edge), thick enough to cover the fence
-    # line where a chord drifts inside it; the class budget covers collision too, so no per-post boxes.
     n, lo, hi = 8, 30.0, 330.0
     step = math.radians((hi - lo) / n)
     half = step / 2
@@ -262,8 +244,6 @@ def check_pen(s):
     assert 2 * PEN_R * math.sin(math.radians(15)) > 4.0, "the gap must clear the ball"
 
 
-# ------------------------------------------------------------------------------------------------------------------ toys
-
 BALL_R = 0.3
 BALL_COLS = ["petrol", "canvas", "petrol", "canvas", "petrol", "canvas", "petrol"]
 
@@ -280,7 +260,6 @@ def ball(s):
 
 
 def ball_col(s):
-    # One box: the ball is bumped as a rolling toy and the runtime may use a SphereShape3D (radius 0.3) instead.
     s.box((2 * BALL_R, 2 * BALL_R, 2 * BALL_R), (0.0, 0.0, 0.0), T["iron"])
 
 

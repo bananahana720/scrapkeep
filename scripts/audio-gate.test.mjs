@@ -46,7 +46,6 @@ function project(files) {
   return dir;
 }
 
-// 16-bit stereo PCM WAV of a sine, frames long.
 function sineWav(frames, amplitude, hz = 1000, rate = 48000) {
   const data = Buffer.alloc(frames * 4);
   for (let f = 0; f < frames; f++) {
@@ -172,7 +171,6 @@ test("seamStep passes a whole-cycle loop and catches a wrap that clicks", () => 
   assert.equal(seamStep(clean.s, 4800, 0).ok, true);
   const click = loop(4800 + 12);
   assert.equal(seamStep(click.s, 4812, 0).ok, false);
-  // A loop that wraps to a later loop point is judged from that point.
   assert.equal(seamStep(clean.s, 4800, 480).ok, true);
 });
 
@@ -214,7 +212,6 @@ test(
   { skip: !hasFfmpeg() && "no ffmpeg" },
   () => {
     const dir = project({
-      // A full-scale stereo sine reads 0 LUFS, so amplitude 0.158 reads about -16.
       "on-target-loop.wav": sineWav(48000 * 12, 0.158),
       "loud-click-loop.wav": sineWav(48000 * 12 + 12, 0.5),
     });
@@ -234,9 +231,6 @@ test(
   },
 );
 
-// A stale Ogg under the right file name is the failure these tests plant (the zone packs' Oggs were
-// 17 days older than their manifests and every export played them). Each check runs on a good pack
-// first, so a zero is only trusted after the same check has failed on the planted one.
 test("a clip whose length or loudness differs from its manifest is stale", () => {
   const t = { name: "spillway/calm", frames: 988672, measuredLufs: -16 };
   assert.deepEqual(staleAgainstManifest(t, 988672, -15.9), []);
@@ -291,7 +285,6 @@ test("STEMS.sha256 rejects a stale, an unlisted and a re-encoded stem and names 
   }
 });
 
-// The fixture packs are Ogg Vorbis, which an ffmpeg built without libvorbis (Homebrew's) cannot write.
 const hasLibvorbis = () =>
   hasFfmpeg() &&
   /libvorbis/.test(String(spawnSync("ffmpeg", ["-hide_banner", "-encoders"]).stdout));
@@ -365,7 +358,6 @@ test(
   },
 );
 
-// A minimal Ogg Vorbis byte stream: an identification page, then one page per granule position.
 function oggOf(granules, rate = 44100) {
   const page = (granule, body) => {
     const head = Buffer.alloc(27 + 1);
@@ -426,7 +418,6 @@ test(
   async () => {
     const dir = project({
       "src/presentation/sfx_bank.gd": "",
-      // Varied durations and faults so workers complete out of order while output stays exact.
       "assets/music_ace/alpha/long_clean.a.wav": sineWav(48000 * 13, 0.08, 1000, 48000),
       "assets/music_ace/alpha/long_clean.b.wav": sineWav(48000 * 13, 0.078, 1000, 48000),
       "assets/music_ace/alpha/short_hot.wav": sineWav(48000 * 2, 0.99, 440, 48000),
@@ -520,7 +511,6 @@ test(
       const asyncRun = await runAsync(args);
       assert.deepEqual(asyncRun, syncRun);
 
-      // CLI path uses runAsync with worker threads and must not recursively spawn main().
       const cli = spawnSync(
         process.execPath,
         [

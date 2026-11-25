@@ -21,7 +21,7 @@ import polish
 
 NAME = "barge_detail1"
 SLOT = "steel"
-BUDGET = [2100, 3000, 1]  # polish: was [1500, 3000, 1]
+BUDGET = [2100, 3000, 1]
 SIZE = [15.56, 3.47, 15.54]
 stud = lbd1.stud
 RIM_H, RIM_R = bg.RIM[1][0], bg.RIM[1][1]
@@ -32,7 +32,6 @@ def tone(name):
 
 
 def perimeter(h, r, y, count, start=0.0):
-    # Points evenly spaced by arc length on the rounded-square plan, with the outward normal in XZ.
     c = h - r
     straight, arc = 2 * c, math.pi * r / 2
     total = 4 * (straight + arc)
@@ -40,7 +39,6 @@ def perimeter(h, r, y, count, start=0.0):
     for k in range(count):
         d = (start + k * total / count) % total
         side, d = int(d // (straight + arc)), d % (straight + arc)
-        # side 0 runs along +X face (from z=-c to z=c), then the (+,+) corner, and so on counter-clockwise in XZ.
         ang = side * math.pi / 2
         n = (math.cos(ang), math.sin(ang))
         t = (-n[1], n[0])
@@ -62,7 +60,6 @@ def rivets(s):
 
 
 def joints(s):
-    # Bolt-on joint plates where the rim's straight runs meet the corners, the sections a crew would swap.
     c = bg.RIM[1][0] - bg.RIM[1][1]
     for sx in (-1, 1):
         for sz in (-1, 1):
@@ -91,7 +88,6 @@ def hook_plates(s):
 def knobs(s):
     r, x0, x1, n = bg.KNOB
     for z, y in bg.KNOBS:
-        # A collar where the knob meets the hull, along -X; frustum builds along +Y, so its rings are rotated here.
         aa = [math.tau * i / 12 for i in range(12)]
         rings = [[(-x, y + rr * math.cos(a), z + rr * math.sin(a)) for a in aa] for x, rr in
                  ((x0 - .25, r + .2), (x0 + .05, r + .2), (x0 + .15, r + .05))]
@@ -110,8 +106,6 @@ def pad_bolts(s):
 
 
 def floor_lines(s):
-    # Faint seams: floor-tone strips whose only contrast is the steel slot's sheen (p1i1: charcoal lines read as a
-    # game board, the picture's seams are faint).
     y = bg.DECK_Y + .008
     for v in (-3.5, 0.0, 3.5):
         s.box((.07, .016, 12.6), (v, y, 0), tone("floor"))
@@ -143,7 +137,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(bg.MODELS))
     args = parser.parse_args(argv)
-    polish.enable(bevel=.02, bevel_min=.25, **kit.BAKE)  # light shell polish: smooth shading, bake, tiny bevel on big edges
+    polish.enable(bevel=.02, bevel_min=.25, **kit.BAKE)
     lbd1.export(NAME, SLOT, build, SIZE, BUDGET, args.out_dir)
 
 

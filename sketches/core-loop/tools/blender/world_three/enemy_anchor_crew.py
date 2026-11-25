@@ -1,7 +1,3 @@
-# E23: measured Fleet deck winch. Godot metres (X,Y,Z) map to Blender (X,-Z,Y).
-# Three opaque vertex-colour surfaces; rigid joints move the clutch, hook and crew.
-# No exported lane, held-player cable, collision or root motion. Procedural provenance.
-# blender -b --factory-startup --python <this file> -- [--out file.glb] [--render dir]
 import math
 import os
 import sys
@@ -54,8 +50,6 @@ def binder(part):
 
 b = Part("AnchorCrewBody")
 bind = binder(b)
-# Rounded core at the collider centre, exact 1.6 diameter / 2.2 height envelope.
-# Under polish the core subdivides once; the crew is the shared soft critter.
 with b.region(bevel=0, subsurf=1):
     rows = []
     for y, radius in [(-1.1, 0.38), (-0.9, 0.62), (-0.45, 0.8),
@@ -90,7 +84,6 @@ with b.region(bevel=0, subsurf=1, detail=1):
 bind("CrewBrace")
 b.box("fleet_paint", (0.7, 0.16, 0.12), loc=g(0, 0.9, 0.58), color=WORN)
 bind("CrewBrace")
-# Thin rear post, worn collars and bracing; static while the crew loads the controls.
 b.box("fleet_paint", (0.26, 0.26, 2.4), loc=g(0, 1.2, -1.3), color=PAINT)
 for y in (0.12, 1.9, 2.3):
     b.box("fleet_paint", (0.30, 0.30, 0.20), loc=g(0, y, -1.3), color="bone")
@@ -98,10 +91,6 @@ bind("WinchPost")
 for side in (-1, 1):
     b.beam("fleet_paint", g(side * 0.45, -0.2, -0.5), g(0, 0.45, -1.3), 0.10, color="charcoal")
 bind("WinchFrame")
-# The hook housing rides the head: anchor_crew.gd:118-122 leans CrewBrace 8 deg for the whole hold and
-# AnchorHead is its child, so a housing left on WinchFrame was swallowed by the head sphere (209 mm).
-# Bound to AnchorHead it leans with the head and (unlike CrewBrace) stays out of the measured core.
-# Rest position is unchanged; the hook and its HostileHook hardpoint stay where they were.
 b.box("fleet_paint", (0.32, 0.28, 0.25), loc=g(0, 1.2, 0.48), color=PAINT)
 bind("AnchorHead")
 bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
@@ -119,14 +108,12 @@ for x in (-0.39, 0.39):
 r.cyl("fleet_paint", 0.37, 0.37, 0.66, segs=12, loc=g(0, 0.9, -1.3), rot=axis, color="charcoal")
 for x in (0,):
     r.ring("fleet_paint", 0.36, 0.385, 0.045, segs=8, loc=g(x, 0.9, -1.3), rot=axis, color="charcoal")
-# Asymmetric rubbed spoke makes reel-in rotation visible.
 with r.region(bevel=0):
     r.box("fleet_paint", (0.002, 0.075, 0.40), loc=g(-0.449, 1.13, -1.3), color=WORN)
 bmesh.ops.recalc_face_normals(r.bm, faces=r.bm.faces[:])
 reel = r.to_object(origin=g(0, 0.9, -1.3), parent=root)
 
 w = Part("AnchorWorkingTools")
-# Clutch tabs and the hook are a few centimetres across, so the bevel stays narrow.
 w.bevel = 0.012
 bind_tool = binder(w)
 w.cyl("working_tool", 0.15, 0.15, 0.10, segs=9, loc=g(0.45, 0.9, -1.3), rot=axis, color=WORN)
@@ -135,7 +122,6 @@ for i in range(3):
     _, p = BONES[5 + i]
     w.box("working_tool", (0.11, 0.05, 0.065), loc=g(*p), rot=(math.tau * i / 3, 0, 0), color="hazard")
     bind_tool("ClutchTab" + str(i))
-# Short J hook: 0.20 W x 0.30 H x 0.12 D, no cable leading to a player.
 outline = [(-0.10, 0.15), (-0.025, 0.15), (-0.025, -0.065), (0.02, -0.10),
            (0.07, -0.06), (0.07, 0.01), (0.10, 0.01), (0.10, -0.10),
            (0.035, -0.15), (-0.045, -0.15), (-0.10, -0.085)]
@@ -189,7 +175,6 @@ def previews(outdir):
     world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.5
     bpy.ops.mesh.primitive_plane_add(size=200, location=(0, 0, -1.1))
     bpy.context.object.data.materials.append(common._flat("Ground", "666a68"))
-    # Measured reference is always a 2 m sphere. It is never exported in the GLB.
     bpy.ops.mesh.primitive_uv_sphere_add(segments=32, ring_count=16, radius=1, location=(2.5, -0.1, -0.1))
     bpy.context.object.name = "ReferenceBall_2m"
     bpy.context.object.data.materials.append(common._flat("ReferenceBall", "bone"))
@@ -223,7 +208,6 @@ def previews(outdir):
             torso.rotation_mode = "XYZ"
             torso.rotation_euler.x = math.radians(8)
             torso.location.y = -0.08
-            # Bone local Y is Blender Z; these offsets mirror the Godot actor pose.
             for i in range(3):
                 p = Vector(BONES[5 + i][1]) - Vector((0.46, 0.9, -1.3))
                 offset = p.normalized() * 0.09

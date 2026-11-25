@@ -1,27 +1,3 @@
-# Warden clamp (VISUAL-LANGUAGE.md sections 9 and 11): an awakened ancient, not Fleet
-# gear. A shared base (a four-piston support round the beacon's foot, a
-# cast pivot tower on its rim, and two massive C-jaws that hinge at the tower and close
-# round the beacon) plus one family kit per stage that sits on the tower and forms the
-# weak point: the reactor relic (stage 1), the swarm-remnant hive (stage 2) and the
-# Mind's hands (stage 3). Cast, seamless and geometric: no bolts, welds or brass. Light
-# lives only in thin ancient_light seams set in charcoal grooves twice their width, and
-# the enamel is dull petrol with sandstone dust on top faces, under the section 11 cap.
-# Provenance: authored procedurally here from Blender primitives and bmesh operators;
-# no external assets. Polished (#107): base 13164; kits reactor 3500, hive 4420, mind
-# 3976 (BASE_TRIS and KIT_TRIS below).
-# WM: the unchanged crown exterior is cut into ArmourSegment0..3; InnerL/InnerR
-# stay below it and CoreAssembly cages a 1 m HeartSurface. Base 4956 triangles.
-#
-# Frame and nodes (for W7 to wire; this sketch does not wire the Warden):
-#   warden_clamp_base.glb  WardenClampBase > Housing, Tower > KitMount, JawL, JawR
-#     The beacon stands at the origin. JawL/JawR origins sit on the hinge axis
-#     (x = HINGE_X, vertical), so rotating them about Godot Y opens and closes the
-#     clamp; closed is the modelled pose. Below 2 m nothing passes r = 2.8 m, the
-#     collider radius warden_look.gd promises.
-#   warden_kit_<family>.glb  WardenKit<Family> with its origin at KitMount; each has a
-#     WeakPoint node, plus Vent0..2 (reactor), Drone0..5 (hive), ArmL/ArmR and
-#     Shutter0..5 (mind) for motion.
-
 import math
 import os
 import random
@@ -29,18 +5,13 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
+import bmesh
+import bpy
 
-import common  # noqa: E402
-import polish  # noqa: E402
-from common import Part, Vector  # noqa: E402
+import common
+import polish
+from common import Part, Vector
 
-# Cast ancient castings: 4 cm chamfers on real corners, doubled curves, baked AO (POLISH.md).
-# Hex cells stay six-sided. The Mind's kit (the clamp path's stage 5 and 6 Wardens) is polished
-# too; its claws, knuckles, rings and lens keep their own segment counts (see mind_extras).
-# No edge lightening and softer AO: dark quantised corners pushed enamel saturation past
-# the section 11 cap of 0.45 (hero_assets_test).
 polish.enable(detail=2, bevel=0.04, bevel_angle=46.0, edge=0.0, ao_strength=0.35)
 
 ENAMEL = "petrol"
@@ -49,7 +20,6 @@ HINGE_X = 2.2
 TOWER_TOP = 7.8
 JAW_R = 3.1
 JAW_Z = (2.4, 5.4)
-# Polished bands (POLISH.md, 18 Oct), under the warden_base and warden_kit class caps.
 BASE_TRIS = (4000, 14000)
 KIT_TRIS = (800, 4600)
 
@@ -110,7 +80,6 @@ def seam_line(part, a, b, out, width=0.06):
 
 def housing():
     p = Part("Housing")
-    # Four squat piston legs remain inside the original 2.8 m lower envelope.
     for k in range(4):
         a = k * math.tau / 4 + math.pi / 4
         foot = Vector((math.cos(a)*1.85, math.sin(a)*1.85, 0.35))
@@ -152,7 +121,6 @@ def jaw(side):
     lo, hi = (0.5, 2.85) if side > 0 else (-2.85, -0.5)
     a0, a1 = (lo, hi) if side > 0 else (hi, lo)
     body = [(-0.45, z0 + 0.4), (0.0, z0), (0.5, z0 + 0.45), (0.5, z1 - 0.45), (0.0, z1), (-0.45, z1 - 0.4)]
-    # Sweeping toward negative angles flips the winding, so the -Y jaw reverses its profiles.
     flip = (lambda prof: prof) if side > 0 else (lambda prof: list(reversed(prof)))
     sweep(p, "ancient_enamel", flip(body), JAW_R, a0, a1, 26, ENAMEL, taper=0.45, zc=zc)
     s0, s1 = (0.8, 1.9) if side > 0 else (-0.8, -1.9)
@@ -274,7 +242,6 @@ def reactor_extras():
         a = math.pi + (k - 1) * 0.95
         at = Vector((0.95 * math.cos(a), 0.95 * math.sin(a), 1.45))
         v = Part("Vent%d" % k)
-        # Vents keep ten sides under polish; smoothing rounds them and the kit stays light.
         n = 10 // common.DETAIL
         v.cyl("ancient_enamel", 0.3, 0.24, 1.2, n, loc=at + Vector((0, 0, 0.6)), color=ENAMEL)
         v.ring("ancient_enamel", 0.2, 0.36, 0.14, n, loc=at + Vector((0, 0, 1.2)), color=DUST)
@@ -358,14 +325,11 @@ def mind_extras():
                Vector((-2.3, side * 1.4, 3.4))]
         for a, b in zip(pts, pts[1:]):
             arm.rod("ancient_enamel", a, b, 0.11, 6, color=ENAMEL, r2=0.08)
-        # Knuckles, their light rings, the claws and the lens keep their unpolished segment counts:
-        # smooth shading rounds them, and the polished kit stays inside the kit band.
         for q in pts[1:]:
             with arm.region(detail=1):
                 arm.ico("ancient_enamel", 0.17, 1, loc=q, color=ENAMEL)
                 arm.ring("ancient_light", 0.12, 0.18, 0.03, 8, loc=q, rot=(math.pi / 2, 0, 0))
         tip = pts[-1]
-        # The claws taper to 1.5 cm, under the chamfer: unbevelled, or the bevel folds them shut.
         with arm.region(bevel=0, detail=1):
             for k in range(3):
                 a = (k - 1) * 0.6
@@ -426,7 +390,6 @@ def main():
         j = jaw(side)
         dust(j)
         jaw_obj = j.to_object((HINGE_X, 0, 0), base)
-        # Alternating sides, then outer/inner halves: four distinct crown silhouettes.
         for half in (1, -1):
             index = (0 if side > 0 else 1) + (0 if half > 0 else 2)
             segment = segment_shoulder(side, half, "ArmourSegment%d" % index).to_object((HINGE_X, 0, 0), jaw_obj)
@@ -454,7 +417,6 @@ def main():
     ok = common.report("warden", rows)
     if a["render"]:
         sheets = []
-        # Preview only, never exported: the beacon mast the jaws close round.
         bpy.ops.mesh.primitive_cylinder_add(radius=0.45, depth=12.0, location=(0, 0, 6.0))
         bpy.context.active_object.data.materials.append(common.material("rubber"))
         for fam, root in kits:

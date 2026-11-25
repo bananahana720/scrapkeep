@@ -15,77 +15,6 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const CINDER_SOURCE := CinderHeat.SOURCE
 const CINDER_BURN := CinderHeat.BURN_FACT
 
-# The traversal measure (design-v3/TRAVERSAL.md): one pilot's traversal bot crosses the slice
-# table's stage once per seed, from the spawn to the Warden's engagement, and one JSON file
-# holds the four numbers per seed, the median, the worst seed, the pilot, the table and the
-# commit. One command per pilot, one frame one physics tick:
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/traversal_line.gd \
-#     -- --pilot=sable|rivet|kest [--seeds=1,2,3,4,5,6,7,8] [--out=<dir>] [--commit=<sha>] [--trace]
-#
-# Every seed, including a solo run, runs in a fresh child Godot process at the
-# parent's niceness. --ticks=N caps driver ticks for diagnostics (outcome ticks_done).
-# --child-timeout=S bounds each child in wall seconds (default 120); a killed or
-# failed child is INCONCLUSIVE, excluded from runs, and makes the parent exit 3.
-# Each child writes under <out>/children/<position>-seed-<seed>; trace files are
-# also copied beside the unchanged per-pilot summary for existing consumers.
-# As in bot_run, the audio bake completes before play and actor side choices use
-# seed/spawn order instead of allocator-dependent object IDs. Trace allocation
-# can then only change the diagnostic buffer, not the world it observes.
-#
-# --hands=harpoon,glide gives the traversal bot its optional hands (bot_driver.gd HAND_NAMES): the
-# harpoon hand swings from an anchor ahead on the way to the next waypoint, the glide hand holds
-# glide over a thermal column and down a long drop. Both are off by default, so every pin, band
-# and bot baseline is the bare pilot's; the flag reaches every child. A hands run writes
-# <pilot>.hands.json with a "hands" field and prints hands= on its summary line, never <pilot>.json;
-# --floor refuses --hands.
-#
-# --anchor-contacts (park table, off by default; with it off nothing below runs and every output is unchanged) measures
-# the fitted anchor colliders (park_recipes.gd place_anchor_field, anchor_fit.json): every dead stop and every bounce off an
-# anchor-field body, with its distance to the nearest fitted box's vertical-edge corner. The parent writes
-# anchor_contacts.json (anchor_contacts.hands.json for a hands run) beside the summary and prints one line per park.
-# See AnchorContacts for the definitions. --anchor-contacts=0 leaves it off; on a non-park table it is ignored with one warning.
-# It also records, per seed and per park, the closest approach of the ball's centre to a fitted box surface and to a fitted
-# corner (with the row), and lists every placed row that carries an over_limit pair with its near-event count, 0 included.
-#
-# The default out is artifacts/local/traversal at the repository root. The pilot's route and
-# bar come from tools/traversal_lines.json. The number judges a bot, not the feel of the map.
-#
-# Route measures, per seed: path_length_m (the distance travelled from spawn to engage), rides
-# (which of ride_grapple_line, ride_chute, ride_skylight, ride_glide_drop, wall_crumbled,
-# kicker_launch and thermal_ride fired, by name) and
-# uphill_m (the most z the ball gave back from its furthest point toward the Warden). The summary
-# holds each one's median.
-#
-# The park (PARK.md section 8, unit KB7) runs a park stage for any of the six pilots, or the
-# floor line (the stick and the brake only: no harpoon, no skill, no smash, no jump):
-#
-#   ... traversal_line.gd -- --table=park --stage=<n> --pilot=sable|rivet|kest|tarn|tally|cannon
-#     [--floor] [--seeds=...] [--out=<dir>] [--lines=<file>] [--ref=<pilot>] [--commit=<sha>] [--trace]
-#
-# Stage 1 to 6 is the park table's row. Stage 0 is the park_test fixture: the park table has no
-# fixture row (park_defs.gd), so the tool reloads park_defs.gd in this process with stage 1's map
-# named park_test, and the fixture rides as stage 1. The line comes from
-# assets/park/<map_id>/lines.json (--lines= names another file), its named waymarks resolve
-# through the park file, and the default out is artifacts/local/traversal/park/<map_id>, one
-# <pilot>.json or floor.json. With --floor, --pilot picks the class that rolls (Rivet when
-# absent) and --ref the pilot whose summary in the same out directory sets the floor band
-# (Rivet when absent).
-#
-# Park measures, per seed, beside today's: airborne_share (ticks with no ground contact over all
-# counted ticks), peak_speed_mps, tier3_s (seconds at speed tier 3, blazing, or above),
-# segments_s (stage seconds between waymark passes, a waymark counting as passed within 12 m;
-# the landmark also passes at the Warden's engagement) and segment_s (the longest of them),
-# quiet_max_s (the longest stretch with no ride fact, kicker launch, bite or drop of 4 m or
-# more; on the park the ride facts are PARK_RIDE_FACTS alone), distinct_verbs (how many different
-# ride facts and verbs fired, named in verbs), distinct_ride_facts (how many of those were
-# PARK_RIDE_FACTS, the count the distinct-verbs band judges), blazing_mps (the blazing tier's speed, 1.9 times the tuned
-# cruise, the peak band's threshold), length_ratio (path over the straight distance from the drop to the engage centre),
-# dead_stop_at (stage second and place of each dead stop) and progress_m (the drop in the stage
-# graph's d_landmark per second; null without assets/park/<map_id>/graph.bin, said once), floor_share
-# (ticks on the Dig floor rule's floor, FloorRule.on_floor, over all counted ticks) and carve_share (grounded ticks
-# off that floor, on a bank, a wall or a lip, over all grounded ticks; the sinkhole's carving test reads it). The
-# summary holds each measure's median and names every band with whether its median is inside.
 
 const TABLE := "slice"
 const ROUTES := "res://tools/traversal_lines.json"
@@ -99,7 +28,6 @@ const PROBE_PITCHES := [0.0, 0.4, 0.8]
 const RIDE_FACTS := ["ride_grapple_line", "ride_chute", "ride_skylight", "ride_glide_drop", "wall_crumbled", "thermal_ride"]
 const KICKER_LAUNCH := "kicker_launch"
 
-# The park (PARK.md section 8). Pilot keys and their class_def ids (src/core/class_def.gd:87-122).
 const PARK := "park"
 const PARK_PILOTS := {"sable": "pylon_engineer", "rivet": "runner_gunner", "kest": "demolitions_caster",
 	"tarn": "tarn", "tally": "tally", "cannon": "remembered_cannon"}
@@ -115,21 +43,13 @@ const FIXTURE_SWAP := ["\"map\": \"park_dam\"", "\"map\": \"park_test\""]
 const GRAPH_FILE := "res://assets/park/%s/graph.bin"
 const WAYMARK_PASSED := 12.0
 const DROP_EVENT := 4.0
-# The park's ride facts, PARK.md section 4's "Verb and ride fact" column (kicker_launch
-# included). On --table=park only these count toward distinct_ride_facts and end a quiet
-# stretch; the lift is a contraption there, not a ride fact.
 const PARK_RIDE_FACTS := ["ride_chute", "ride_grapple_line", "ride_bowl", "ride_drop", "ride_ledge",
 	"kicker_launch", "ride_glide_drop", "thermal_ride", "ride_hop"]
-# World facts recorded among the verbs (and, on the slice, counted as rides) that the park
-# does not count as ride facts.
 const RIDE_EXTRAS := ["crater_ride", "lift_fired"]
-# Verbs by the bus signal that reports them.
 const VERB_SIGNALS := {"jumped": "jump", "boosted": "boost", "dashed": "dash", "slammed": "slam", "special_used": "special",
 	"vault_kicked": "vault", "sprint_started": "sprint", "rocket_jumped": "rocket_jump", "blink_used": "blink",
 	"mounted": "mount", "shield_vaulted": "shield_vault"}
 
-# The bands, PARK.md section 8's table (start). Numbers are the design doc's; never tune here.
-# The reached band reads "<n> of <n> seeds" with the run's own seed count (8 in PARK.md).
 const BAND_REACHED := "%d of %d seeds"
 const BAND_TIME := [60.0, 120.0]
 const BAND_TIME_WORST := 150.0
@@ -139,25 +59,19 @@ const BAND_FLOW_WORST := 0.60
 const BAND_AIRBORNE := [0.12, 0.45]
 const BAND_AIRBORNE_HIGH := [0.25, 0.60]
 const BAND_AIRBORNE_HIGH_STAGES := [5, 6]
-# The peak band is the blazing tier (SpeedTier.MULTIPLES[BLAZING] times the tuned cruise),
-# read per run into blazing_mps, so it moves with cruise the way tier3_s does.
 const BAND_TIER3 := 3.0
 const BAND_QUIET := 20.0
 const BAND_ANCHOR := 40.0
 const BAND_VERBS := 3
 const BAND_LENGTH := [1.3, 2.0]
 const BAND_FLOOR := 2.0
-# Not a band: a run under this much path never armed the dead-stop clock (RunLog.Traversal).
 const STALLED_PATH_M := 1.0
 
-# How many times this process said a stage has no graph (once is enough).
 static var graph_notes := 0
 static var _park_defs_source := ""
-# Graphs read this process, by file: every seed of a sweep shares one read.
 static var _graphs := {}
 
 
-# One seed's measurement, fed once per physics tick from the spawn until the Warden engages.
 class Sampler:
 	extends RefCounted
 
@@ -168,8 +82,6 @@ class Sampler:
 	var max_anchor_gap := 0.0
 	var _path := 0.0
 	var _last_anchor := 0.0
-	# Where the worst gap lies: the ball and stage second at the last anchored tick before it, and
-	# at the tick it closed (or the run ended).
 	var _last_anchor_ball := Vector3.INF
 	var _last_anchor_time := 0.0
 	var _gap_from := Vector3.INF
@@ -183,10 +95,7 @@ class Sampler:
 	var _uphill := 0.0
 	var tracing := false
 	var trace: Array = []
-	# Records "glide" among the verbs when the glide hand is on: a thermal column or drop the hand
-	# opens the glide over leaves no fact of its own, and a bare run's verbs stay as they were.
 	var record_glide := false
-	# The park's measures (PARK.md section 8).
 	var park := false
 	var waymarks: Array = []
 	var graph = null
@@ -204,10 +113,8 @@ class Sampler:
 	var cruise := 0.0
 	var _floor_ticks := 0
 	var _grounded_ticks := 0
-	# The sinkhole's lava floor (src/world/cinder_heat.gd): burns started and hull lost to it.
 	var _cinder_burns := 0
 	var _cinder_hp := 0.0
-	# --anchor-contacts: an AnchorContacts, null when the flag is off.
 	var contacts = null
 
 	func _init(game_ref) -> void:
@@ -225,8 +132,6 @@ class Sampler:
 				var verb: String = VERB_SIGNALS[signal_name]
 				game.events.connect(signal_name, func(_a = null, _b = null, _c = null): _on_verb(verb))
 
-	# Turns on the park's waymark clock and graph: waymarks are {id, at: Vector2} in line order,
-	# the first the drop-in; graph is open_graph's result (null without one).
 	func setup_park(marks: Array, graph_ref) -> void:
 		park = true
 		waymarks = marks
@@ -272,13 +177,11 @@ class Sampler:
 		if not name in _verbs:
 			_verbs.append(name)
 
-	# The ride facts among the verbs: PARK.md section 8 judges distinct verbs on these alone.
 	func _ride_facts() -> Array:
 		if park:
 			return _verbs.filter(func(v): return v in PARK_RIDE_FACTS)
 		return _verbs.filter(func(v): return v in RIDE_FACTS or v in RIDE_EXTRAS or v.begins_with("ride_") or v == KICKER_LAUNCH)
 
-	# A ride fact, kicker launch, bite or drop ends the quiet stretch.
 	func _event() -> void:
 		var now: float = game.run.stage_time
 		_quiet_max = maxf(_quiet_max, now - _last_event)
@@ -360,7 +263,6 @@ class Sampler:
 			_event()
 			_drop_top = ball.y
 
-	# Waymarks pass in line order; the next one counts within WAYMARK_PASSED metres.
 	func _watch_marks(ball: Vector3) -> void:
 		if not park:
 			return
@@ -396,8 +298,6 @@ class Sampler:
 			"aim_forward": [aim_forward.x, aim_forward.y, aim_forward.z],
 		})
 
-	# Godot's generated node names include a process-wide serial. Sibling indices preserve
-	# contact identity without putting that serial into an otherwise repeatable trace.
 	func _contact_path(body: Node) -> String:
 		var names: Array[String] = []
 		var node := body
@@ -427,7 +327,6 @@ class Sampler:
 	func _close_gap() -> void:
 		_note_gap(_last_ball)
 
-	# Keeps max_anchor_gap as maxf of every gap, and where the first longest one lay.
 	func _note_gap(ball: Vector3) -> void:
 		var gap := _path - _last_anchor
 		if gap > max_anchor_gap and _last_anchor_ball != Vector3.INF and ball != Vector3.INF:
@@ -504,24 +403,6 @@ class Sampler:
 		}
 
 
-# --anchor-contacts: where the ball stops or bounces against an anchor field, and how far that is from a fitted box's corner.
-# Definitions (coordinator rulings 6329361490 and 6330065475 on issue #241):
-#   stop    a dead stop exactly as RunLog.Traversal counts it (the same tick Sampler.sample sees dead_stops rise).
-#   bounce  a tick where the ball's rigid body touches (this tick or the last) a StaticBody3D place_anchor_field built and
-#           its velocity's component along that body's nearest-box surface normal goes from below -BOUNCE_MIN_MPS to
-#           above 0. Godot gives no contact signal with a normal outside RigidBall's _integrate_forces, so the normal is the
-#           ball-centre-to-nearest-box direction, from the boxes' own transforms.
-#   corner  a fitted box's vertical-edge corner, in XZ, of the box as placed (turned and yawed); only a fitted row's boxes, and
-#           only boxes whose height span, widened by Y_SLACK_M, holds the ball. A stop or bounce "near a corner" is
-#           corner_dist_m <= NEAR_M, the ball's centre to the corner.
-#   row     the nearest anchor-field box of any row (fitted or the 8 m box), by distance to its surface; "near" it is
-#           surface_dist_m <= NEAR_M, which the over_limit count uses.
-#   closest approach  per tick, the ball centre's distance to the nearest fitted box surface, and to the nearest fitted
-#           corner (the vertical edge, 3D), with the row; only boxes within the 3 by 3 cells of CELL_M around the ball are scanned,
-#           so a distance of CELL_M or more reads null (none that close).
-#   ride line  the park's lane mask (ParkMap.lane_mask_for, as scatter.gd reads it): the cell of the lattice node nearest
-#           the ball's XZ is marked. That cell is 8 m wide and the mask's own guarantee is only about 2.3 to 13.7 m,
-#           so "on a ride line" is generous.
 class AnchorContacts:
 	extends RefCounted
 
@@ -535,18 +416,15 @@ class AnchorContacts:
 	var seed_number := 0
 	var lane := {}
 	var park_rows: Array = []
-	# One record per BoxShape3D of every anchor field, in scene order (see box_record).
 	var boxes: Array = []
 	var events: Array = []
 	var fields := 0
 	var _body_boxes := {}
-	# Fitted boxes by CELL_M cell of their XZ extent (Vector2i -> box indices), for the closest approach.
 	var _grid := {}
 	var closest_surface := {"dist": INF, "row": ""}
 	var closest_corner := {"dist": INF, "row": ""}
 	var _ticks := 0
 	var _tries := 0
-	# Ticks the ball touched an anchor-field body: a run with none measured nothing, whatever its event count.
 	var touch_ticks := 0
 	var _prev_v := Vector3.INF
 	var _prev_touch := {}
@@ -557,7 +435,6 @@ class AnchorContacts:
 		lane = lane_mask
 		park_rows = rows
 
-	# A box: xf its global transform (yaw only), size its extents. info: row, key, size_y, fitted, over_limit.
 	static func box_record(xf: Transform3D, size: Vector3, info: Dictionary) -> Dictionary:
 		var half := size * 0.5
 		var corners: Array = []
@@ -573,8 +450,6 @@ class AnchorContacts:
 		out["y1"] = xf.origin.y + half.y
 		return out
 
-	# The XZ convex polygon (counter-clockwise in x right, z up terms) of points, by monotone chain, with their local y span:
-	# {"poly": Array[Vector2], "y0", "y1"}. Built once per shared shape (see collect).
 	static func hull_outline(points: PackedVector3Array) -> Dictionary:
 		var flat: Array = []
 		var lo := INF
@@ -605,9 +480,6 @@ class AnchorContacts:
 		out.reverse()
 		return out
 
-	# A convex hull band as a vertical prism: outline (hull_outline of the shape's points, cached by the caller) carried through
-	# the shape's global transform xf into world XZ, plus its world h span. "corners" is the polygon's vertices, so the corner
-	# rule, the grid and the closest approach read it like a box's four. The "poly" key marks the prism.
 	static func hull_record(xf: Transform3D, outline: Dictionary, info: Dictionary) -> Dictionary:
 		var poly: Array = []
 		for v: Vector2 in outline["poly"]:
@@ -623,8 +495,6 @@ class AnchorContacts:
 		out["y1"] = (xf * Vector3(0.0, float(outline["y1"]), 0.0)).y
 		return out
 
-	# Distance and outward normal from at to record b's surface: a box by its own frame, a prism by its XZ polygon edge or its
-	# top and bottom faces. {"dist", "normal"}; 0 and UP inside.
 	static func surface_of(at: Vector3, b: Dictionary) -> Dictionary:
 		if b.has("poly"):
 			return _prism_surface(at, b)
@@ -663,8 +533,6 @@ class AnchorContacts:
 		var away := flat - nearest if dxz > 0.0 else Vector2.ZERO
 		return {"dist": d, "normal": Vector3(away.x, dy, away.y).normalized()}
 
-	# The anchor_fit.json entry ({"key", "over_limit", "fitted"}) of a row: fitted when its recipe is a kit with an entry at
-	# its height, else the 8 m box. kit: whether the placed node drew the kit (meta anchor_kit).
 	static func fit_info(row: Dictionary, kit: bool) -> Dictionary:
 		var info := {"row": String(row.get("id", "")), "key": String(row.get("recipe", "")), "size_y": float(row["size"][1]), "fitted": false, "over_limit": false}
 		if not kit or ParkRecipes.anchor_fit_boxes(row).is_empty():
@@ -677,7 +545,6 @@ class AnchorContacts:
 				info["over_limit"] = bool(entry.get("over_limit", false))
 		return info
 
-	# Every anchor-field box under root (nodes named Park_<row id> carrying the anchor_posts meta), for rows by id.
 	static func collect(root: Node, rows: Array) -> Array:
 		var by_id := {}
 		for row: Dictionary in rows:
@@ -702,7 +569,6 @@ class AnchorContacts:
 					out.append(hull_record(shape.global_transform, outlines[hull], info))
 		return out
 
-	# The nearest fitted box corner to at: {"dist" (INF if none), "box"}.
 	static func corner_distance(at: Vector3, list: Array) -> Dictionary:
 		var best := INF
 		var which := -1
@@ -718,7 +584,6 @@ class AnchorContacts:
 					which = i
 		return {"dist": best, "box": which}
 
-	# The nearest box surface to at among list's indices (all when null): {"dist", "box", "normal"}; 0 inside a box.
 	static func nearest_surface(at: Vector3, list: Array, indices = null) -> Dictionary:
 		var best := INF
 		var which := -1
@@ -732,7 +597,6 @@ class AnchorContacts:
 				normal = hit["normal"]
 		return {"dist": best, "box": which, "normal": normal}
 
-	# Whether (x, z) falls in a marked cell of ParkMap's lane mask (scatter.gd's rule: the cell of the nearest lattice node).
 	static func on_lane(mask: Dictionary, x: float, z: float) -> bool:
 		if mask.is_empty():
 			return false
@@ -743,11 +607,9 @@ class AnchorContacts:
 		var j := clampi(roundi((z + half) / step), 0, side - 1)
 		return (mask["cells"] as PackedByteArray)[j * side + i] != 0
 
-	# The grid cell of an XZ point.
 	static func cell_of(x: float, z: float) -> Vector2i:
 		return Vector2i(floori(x / CELL_M), floori(z / CELL_M))
 
-	# Fitted boxes by cell: every cell the box's XZ extent touches lists its index.
 	static func build_grid(list: Array) -> Dictionary:
 		var grid := {}
 		for i in list.size():
@@ -769,8 +631,6 @@ class AnchorContacts:
 					grid[key].append(i)
 		return grid
 
-	# The closest approach of at to a fitted box surface and to a fitted corner (its vertical edge, 3D) among the grid's 3 by 3
-	# cells around at: {"surface": {"dist", "row"}, "corner": {"dist", "row"}}, dist INF when none lies within CELL_M.
 	static func approach(at: Vector3, list: Array, grid: Dictionary) -> Dictionary:
 		var out := {"surface": {"dist": INF, "row": ""}, "corner": {"dist": INF, "row": ""}}
 		var home := cell_of(at.x, at.z)
@@ -795,7 +655,6 @@ class AnchorContacts:
 				out[k] = {"dist": INF, "row": ""}
 		return out
 
-	# Every placed row with an over_limit pair, from the collected boxes: [{"row", "key", "size_y"}], in row order.
 	func over_limit_rows() -> Array:
 		var seen := {}
 		var out: Array = []
@@ -817,7 +676,6 @@ class AnchorContacts:
 				fields += 1
 			_body_boxes[id].append(i)
 
-	# Called once per counted tick after the dead-stop clock steps; stopped is whether a dead stop was just counted.
 	func observe(game, ball: Vector3, stopped: bool) -> void:
 		_ticks += 1
 		if boxes.is_empty():
@@ -858,7 +716,6 @@ class AnchorContacts:
 	func _record(kind: String, game, ball: Vector3, hit: Dictionary) -> void:
 		events.append(describe(kind, park_id, seed_number, snappedf(game.run.stage_time, 0.01), ball, boxes, hit, lane))
 
-	# One event row. hit: nearest_surface over boxes; the row fields are the nearest box's, the corner fields the nearest fitted corner's.
 	static func describe(kind: String, park_name: String, seed_value: int, time: float, ball: Vector3, list: Array, hit: Dictionary, mask: Dictionary) -> Dictionary:
 		var corner := corner_distance(ball, list)
 		var near: Dictionary = list[hit["box"]] if int(hit["box"]) >= 0 else {}
@@ -883,10 +740,6 @@ class AnchorContacts:
 			"closest_corner_m": snappedf(float(closest_corner["dist"]), 0.01) if is_finite(float(closest_corner["dist"])) else null, "closest_corner_row": closest_corner["row"],
 			"over_limit_rows": over_limit_rows()}
 
-	# One park's summary over event rows: events and those within NEAR_M of a fitted corner (and how many of them on a ride
-	# line), all events on a ride line, and the events near an over_limit variant's post (surface within NEAR_M), by row and size.
-	# over_rows (AnchorContacts.over_limit_rows, unioned over seeds) lists every placed row carrying an over_limit pair, so
-	# "over_limit_rows" holds each with its near event count, 0 included.
 	static func summarise(rows: Array, over_rows: Array = []) -> Dictionary:
 		var near_corner := 0
 		var corner_on_line := 0
@@ -918,12 +771,10 @@ class AnchorContacts:
 			"near_corner_by_row": by_row, "events_on_ride_line": on_line, "over_limit_events": limit, "over_limit_rows": listed}
 
 
-# The park's ride facts among verbs, in the order they fired (PARK_RIDE_FACTS only).
 static func park_ride_facts(verbs: Array) -> Array:
 	return verbs.filter(func(v): return v in PARK_RIDE_FACTS)
 
 
-# The file's content: the per-seed numbers, the median flow share, the worst seed and the totals.
 static func document(pilot: String, table: String, commit: String, runs: Array, bar: Dictionary) -> Dictionary:
 	var shares: Array = []
 	var worst := {}
@@ -953,11 +804,7 @@ static func document(pilot: String, table: String, commit: String, runs: Array, 
 	}
 
 
-# The park's file: today's document plus the map, the stage, each measure's median and one
-# row per PARK.md section 8 band ({measure, band, median, worst, inside}). inside is null when
-# no seed gave the measure. floor_ref is {} or {"pilot", "median_time_to_warden_s"} for --floor.
 static func park_document(pilot: String, map_id: String, stage: int, commit: String, runs: Array, bar: Dictionary, floor_ref: Dictionary) -> Dictionary:
-	# distinct_ride_facts follows each row's verbs through PARK_RIDE_FACTS, whatever wrote it.
 	for run in runs:
 		if run.get("verbs") is Array:
 			run["distinct_ride_facts"] = park_ride_facts(run["verbs"]).size()
@@ -1010,7 +857,6 @@ static func park_document(pilot: String, map_id: String, stage: int, commit: Str
 	bands.append(_band("airborne_share", "%s to %s" % [air[0], air[1]], medians["airborne_share"], null, _within(medians["airborne_share"], air)))
 	var dead := _values(runs, "dead_stops")
 	var dead_worst = _worst(dead, true)
-	# A seed that never rolled (under 1 m of path) cannot arm the slow clock, so its 0 is no data.
 	var stalled := runs.filter(func(r): return float(r.get("path_length_m", 0.0)) < STALLED_PATH_M).size()
 	var dead_inside = null
 	if not dead.is_empty() and stalled == 0:
@@ -1021,7 +867,6 @@ static func park_document(pilot: String, map_id: String, stage: int, commit: Str
 		medians["dead_stops"], dead_worst, dead_inside))
 	var peaks := _values(runs, "peak_speed_mps")
 	var peak_worst = _worst(peaks, false)
-	# The strictest blazing speed any run was tuned to; null when no run recorded it.
 	var blazings := _values(runs, "blazing_mps")
 	var blazing = _worst(blazings, true) if not blazings.is_empty() else null
 	var peak_label := "at least the blazing tier on every seed (no tuned cruise recorded)" if blazing == null \
@@ -1123,8 +968,6 @@ static func route_of(routes: Dictionary, pilot: String) -> Array[Vector2]:
 	return points
 
 
-# --- The park's lines, fixture and graph ---
-
 static func load_lines(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {}
@@ -1132,8 +975,6 @@ static func load_lines(path: String) -> Dictionary:
 	return parsed if parsed is Dictionary else {}
 
 
-# Where a waymark id stands on the park file: drop_in is the spawn, landmark the engage centre
-# (the landmark's beacon), any other id a park row's or an activity's at. INF when none.
 static func place_of(park: Dictionary, id: String) -> Vector2:
 	if id == ParkSchema.DROP_IN:
 		return _pair(park.get("spawn", {}).get("at"))
@@ -1152,8 +993,6 @@ static func _pair(value) -> Vector2:
 	return Vector2.INF
 
 
-# One line's bot route (every point after the drop-in, waymarks resolved) and its waymarks
-# ({id, at} in line order). key is a pilot key or FLOOR.
 static func line_of(lines: Dictionary, key: String, park: Dictionary) -> Dictionary:
 	var line: Dictionary = lines.get("floor", {}) if key == FLOOR else lines.get("pilots", {}).get(key, {})
 	var route: Array[Vector2] = []
@@ -1173,7 +1012,6 @@ static func line_of(lines: Dictionary, key: String, park: Dictionary) -> Diction
 	return {"route": route, "waymarks": marks, "bar": line.get("bar", {})}
 
 
-# The floor line's hands: only the stick and the brake reach the ball.
 static func floor_hands(hold: Dictionary, press: Dictionary) -> Dictionary:
 	var kept := {}
 	for key in hold:
@@ -1182,8 +1020,6 @@ static func floor_hands(hold: Dictionary, press: Dictionary) -> Dictionary:
 	return {"hold": kept, "press": {}}
 
 
-# The park table has no fixture row: this reloads park_defs.gd in this process with stage 1's
-# map named park_test, so --table=park rides the fixture as stage 1. True when the swap holds.
 static func use_fixture() -> bool:
 	var script: GDScript = load(PARK_DEFS)
 	if _park_defs_source == "":
@@ -1214,8 +1050,6 @@ static func map_of(stage: int) -> String:
 	return String(defs[clampi(stage, 1, defs.size()) - 1].get("map", "")) if not defs.is_empty() else ""
 
 
-# The stage graph (src/world/park/park_graph.gd's static read over assets/park/<map_id>/graph.bin),
-# or null. A missing or unreadable graph is said once per process.
 static func open_graph(map_id: String):
 	return open_graph_file(GRAPH_FILE % map_id, map_id)
 
@@ -1246,7 +1080,6 @@ var _runs: Array = []
 var _inconclusive: Array = []
 var _counter_serial := 0
 var _scrap_serial := 0
-# The park run: the stage number (0 the fixture), its map, the line file, the line and the class key.
 var _park := false
 var _stage := 1
 var _map_id := ""
@@ -1304,8 +1137,6 @@ func _initialize() -> void:
 		_run_children()
 
 
-# GNU timeout owns the child's process group, so a deadline kills descendants too.
-# OS.execute and timeout inherit scheduling priority; no child resets niceness.
 func _run_children() -> void:
 	var out := ProjectSettings.globalize_path(_out_dir())
 	if not out.is_absolute_path():
@@ -1321,7 +1152,6 @@ func _run_children() -> void:
 		var name := "%s-seed-%d-trace.json" % [trace_stem(_pilot, hands_of(_settings)), _seeds[i]]
 		var child_trace := child_out.path_join(name)
 		var trace_path := out.path_join(name)
-		# Invalidate both trace consumers before replacing this seed's evidence.
 		for stale in [path, child_trace, trace_path]:
 			if FileAccess.file_exists(stale):
 				DirAccess.remove_absolute(stale)
@@ -1363,7 +1193,6 @@ func _run_children() -> void:
 			_inconclusive.append({"seed": _seeds[i], "status": "INCONCLUSIVE", "exit_code": code, "out": child_out})
 			printerr("traversal_line: seed %d INCONCLUSIVE (child exit %d, %d rows); see %s" % [_seeds[i], code, rows.size(), child_out])
 			continue
-		# JSON parses every number as float; retain the result schema's integer fields.
 		for key in ["seed", "ticks", "dead_stops", "distinct_verbs", "distinct_ride_facts"]:
 			rows[0][key] = int(rows[0][key])
 		_runs.append(rows[0])
@@ -1397,12 +1226,10 @@ func _setup_park() -> bool:
 	return true
 
 
-# The game's stage number for the park run: the fixture rides as stage 1.
 func _game_stage() -> int:
 	return 1 if _stage == FIXTURE_STAGE else _stage
 
 
-# Whether --anchor-contacts is on: given, and not 0 or false.
 static func contacts_on(settings: Dictionary) -> bool:
 	return settings.has("anchor-contacts") and not String(settings["anchor-contacts"]) in ["0", "false", ""]
 
@@ -1417,18 +1244,14 @@ static func _parse(args: PackedStringArray) -> Dictionary:
 	return out
 
 
-# A hands run's summary is <pilot>.hands.json, so it is never the bare baseline that bands, the
-# floor's --ref and other readers take from <pilot>.json.
 static func summary_name(pilot: String, hands: Array) -> String:
 	return "%s.json" % pilot if hands.is_empty() else "%s.hands.json" % pilot
 
 
-# The trace files' stem: a hands run's traces never collide with a bare run's.
 static func trace_stem(pilot: String, hands: Array) -> String:
 	return pilot if hands.is_empty() else "%s.hands" % pilot
 
 
-# The hands --hands= names, in the order given.
 static func hands_of(settings: Dictionary) -> Array[String]:
 	var out: Array[String] = []
 	for part in String(settings.get("hands", "")).split(",", false):
@@ -1496,8 +1319,6 @@ func _physics_process(delta: float) -> bool:
 	return false
 
 
-# This is bot_run's existing replay contract, applied before Counter.setup reads it.
-# Counter's object-ID parity and scrap's side otherwise change with trace allocation.
 static func replay_side(node: Node, key: String, ordinal: int, seed_number: int) -> void:
 	node.set_meta(key, 1.0 if (ordinal + seed_number) % 2 == 0 else -1.0)
 
@@ -1580,7 +1401,6 @@ func _finish() -> void:
 	quit((0 if _inconclusive.is_empty() else 3) if written else 1)
 
 
-# The anchor-contacts document, taking each run's "anchor_contacts" out of the runs so the summary keeps its shape.
 func _take_contacts() -> Dictionary:
 	var per_seed: Array = []
 	var events: Array = []
@@ -1615,7 +1435,6 @@ func _take_contacts() -> Dictionary:
 		"per_seed": per_seed, "summary": summary, "events": events}
 
 
-# The park's minimum closest approach over the per-seed rows: {"surface_m", "surface_row", "seed", "corner_m", "corner_row", "corner_seed"}.
 static func closest_of(per_seed: Array) -> Dictionary:
 	var out := {"surface_m": null, "surface_row": "", "seed": null, "corner_m": null, "corner_row": "", "corner_seed": null}
 	for row: Dictionary in per_seed:
@@ -1634,7 +1453,6 @@ static func approach_text(metres, row: String, seed_number) -> String:
 	return "none within %.0f m" % AnchorContacts.CELL_M if metres == null else "%.2f m (%s, seed %d)" % [float(metres), row, int(seed_number)]
 
 
-# The floor band's reference: the --ref pilot's (Rivet's by default) summary in the same out.
 func _floor_ref(out: String) -> Dictionary:
 	if not _floor:
 		return {}

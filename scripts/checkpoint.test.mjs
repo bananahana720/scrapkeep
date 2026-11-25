@@ -44,14 +44,8 @@ const passing = () => ({
   completionist: Array.from({ length: 16 }, (_, i) =>
     run("completionist", i + 1, i % 3 === 2 ? "died" : "won", 2.1, 8, 25),
   ),
-  skipper: [
-    run("skipper", 1, "won", 1.0, 2, 90),
-    run("skipper", 2, "died", 1.0, 3, null),
-  ],
-  camper: [
-    run("camper", 1, "died", 1.0, 1, null),
-    run("camper", 2, "stalled", 1.0, 1, null),
-  ],
+  skipper: [run("skipper", 1, "won", 1.0, 2, 90), run("skipper", 2, "died", 1.0, 3, null)],
+  camper: [run("camper", 1, "died", 1.0, 1, null), run("camper", 2, "stalled", 1.0, 1, null)],
 });
 const byBand = (rows, band) => rows.find((r) => r.band === band);
 
@@ -76,10 +70,7 @@ test("a passing set of bots passes every bot band", () => {
 test("a camper win, no skipper win and a slow explorer each miss their own band", () => {
   const camperWins = passing();
   camperWins.camper[0].outcome = "won";
-  assert.equal(
-    byBand(evaluateBots(camperWins), "camper cannot win").pass,
-    false,
-  );
+  assert.equal(byBand(evaluateBots(camperWins), "camper cannot win").pass, false);
 
   const noSkipWin = passing();
   noSkipWin.skipper[0].outcome = "died";
@@ -103,25 +94,16 @@ test("skipper must be slower, and the explorer bigger, than each other", () => {
   const fastSkip = passing();
   fastSkip.skipper[0].fightSeconds = 20;
   assert.equal(
-    byBand(
-      evaluateBots(fastSkip),
-      "skipper slower than explorer (Warden fight)",
-    ).pass,
+    byBand(evaluateBots(fastSkip), "skipper slower than explorer (Warden fight)").pass,
     false,
   );
   const sameHeft = passing();
   sameHeft.skipper[0].heft = 2.2;
   sameHeft.skipper[1].heft = 2.2;
-  assert.equal(
-    byBand(evaluateBots(sameHeft), "explorer heft above skipper").pass,
-    false,
-  );
+  assert.equal(byBand(evaluateBots(sameHeft), "explorer heft above skipper").pass, false);
   const fewParts = passing();
   fewParts.skipper.forEach((r) => (r.parts = 20));
-  assert.equal(
-    byBand(evaluateBots(fewParts), "explorer parts above skipper").pass,
-    false,
-  );
+  assert.equal(byBand(evaluateBots(fewParts), "explorer parts above skipper").pass, false);
 });
 
 test("summarizeRun reads the last stage row that carries a value, and the fight from its posture block", () => {
@@ -156,14 +138,8 @@ test("summarizeRun reads the last stage row that carries a value, and the fight 
     { stages: [{ ticks_to_warden_break: 900 }] },
   );
   assert.equal(noPosture.fightSeconds, null);
-  assert.equal(
-    summarizeRun({ policy: "camper", seed: 1, outcome: "stalled" }, null).heft,
-    null,
-  );
-  const missing = summarizeRun(
-    { policy: "camper", seed: 1, outcome: "stalled" },
-    null,
-  );
+  assert.equal(summarizeRun({ policy: "camper", seed: 1, outcome: "stalled" }, null).heft, null);
+  const missing = summarizeRun({ policy: "camper", seed: 1, outcome: "stalled" }, null);
   assert.deepEqual(
     [
       missing.smashDamage,
@@ -176,28 +152,20 @@ test("summarizeRun reads the last stage row that carries a value, and the fight 
   );
 });
 
-// Rule: skipper mean smash damage across fight slots rises by at most 10%, inclusive.
 test("skipper smash calibration passes at pre-chain plus 10 percent", () => {
   const bots = passing();
   bots.skipper[0].smashDamageByFight = [0, 220];
-  bots.skipper[1].smashDamageByFight = [110]; // includes this losing fight; pooled mean 110
-  const row = byBand(
-    evaluateBots(bots, baseline),
-    "skipper smash damage per fight",
-  );
+  bots.skipper[1].smashDamageByFight = [110];
+  const row = byBand(evaluateBots(bots, baseline), "skipper smash damage per fight");
   assert.equal(row.pass, true);
   assert.match(row.measured, /110.00 HP mean, pre-chain 100.00/);
   assert.equal(checkpointPassed(evaluateBots(bots, baseline)), true);
 });
 
-// Rule: over-budget damage or missing/invalid fight data or baseline fails closed.
 test("skipper smash deliberately failing calibration misses above plus 10 percent", () => {
   const bots = passing();
   bots.skipper.forEach((r) => (r.smashDamageByFight = [110.01]));
-  const row = byBand(
-    evaluateBots(bots, baseline),
-    "skipper smash damage per fight",
-  );
+  const row = byBand(evaluateBots(bots, baseline), "skipper smash damage per fight");
   assert.equal(row.pass, false);
   assert.equal(checkpointPassed([row]), false);
   for (const value of [
@@ -213,34 +181,22 @@ test("skipper smash deliberately failing calibration misses above plus 10 percen
     assert.equal(byBand(evaluateBots(bots, baseline), row.band).pass, false);
   }
   bots.skipper.forEach((r) => (r.smashDamageByFight = [0]));
-  assert.equal(
-    byBand(evaluateBots(bots, { skipperSmashDamagePerFight: 0 }), row.band)
-      .pass,
-    true,
-  );
+  assert.equal(byBand(evaluateBots(bots, { skipperSmashDamagePerFight: 0 }), row.band).pass, true);
 });
 
-// Rule: explorer best_combo median is at least 2 over 16 distinct, valid seeds.
 test("explorer combo calibration passes at median 2 over 16 seeds", () => {
   const bots = passing();
   bots.completionist.forEach((r, i) => (r.bestCombo = i < 7 ? 1 : 2));
-  const row = byBand(
-    evaluateBots(bots, baseline),
-    "explorer best_combo median",
-  );
+  const row = byBand(evaluateBots(bots, baseline), "explorer best_combo median");
   assert.deepEqual([row.pass, row.status], [true, "watch"]);
   assert.match(row.measured, /^2.0 over 16 runs, 16 distinct seeds/);
   assert.match(formatTable([row]), /watch \(pass\)/);
 });
 
-// Rule: the measured 7/16 known red stays numerically false and prints watch (MISS).
 test("explorer combo deliberately failing calibration remains a known-red watch", () => {
   const bots = passing();
   bots.completionist.forEach((r, i) => (r.bestCombo = i < 7 ? 2 : 1));
-  const row = byBand(
-    evaluateBots(bots, baseline),
-    "explorer best_combo median",
-  );
+  const row = byBand(evaluateBots(bots, baseline), "explorer best_combo median");
   assert.deepEqual([row.pass, row.status], [false, "watch"]);
   assert.match(row.measured, /^1.0 over 16 runs, 16 distinct seeds/);
   assert.match(formatTable([row]), /watch \(MISS\)/);
@@ -252,18 +208,14 @@ test("explorer combo deliberately failing calibration remains a known-red watch"
     bots.completionist.map((r, i) => ({ ...r, bestCombo: i === 0 ? null : 3 })),
   ]) {
     assert.equal(
-      byBand(evaluateBots({ ...bots, completionist: bad }, baseline), row.band)
-        .pass,
+      byBand(evaluateBots({ ...bots, completionist: bad }, baseline), row.band).pass,
       false,
     );
   }
 });
 
-// Rule: recorded bot/run joins use the last cumulative line and print both chain bands.
 test("checkpoint replays recorded bots.ndjson and a stored calibration baseline", () => {
-  const dir = mkdtempSync(
-    path.join(os.tmpdir(), "scrapkeep-chain-checkpoint-"),
-  );
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-chain-checkpoint-"));
   try {
     const bots = passing();
     bots.completionist.forEach((r, i) => (r.bestCombo = i < 7 ? 2 : 1));
@@ -285,15 +237,11 @@ test("checkpoint replays recorded bots.ndjson and a stored calibration baseline"
     }));
     writeFileSync(
       path.join(dir, "bots.ndjson"),
-      all
-        .map((r) => JSON.stringify({ ...r, run_id: `${r.policy}-${r.seed}` }))
-        .join("\n"),
+      all.map((r) => JSON.stringify({ ...r, run_id: `${r.policy}-${r.seed}` })).join("\n"),
     );
     writeFileSync(
       path.join(dir, "runs.ndjson"),
-      [{ ...records[0], best_combo: 99 }, ...records]
-        .map((r) => JSON.stringify(r))
-        .join("\n"),
+      [{ ...records[0], best_combo: 99 }, ...records].map((r) => JSON.stringify(r)).join("\n"),
     );
     writeFileSync(path.join(dir, "baseline.json"), JSON.stringify(baseline));
     const result = spawnSync(
@@ -308,26 +256,15 @@ test("checkpoint replays recorded bots.ndjson and a stored calibration baseline"
       { cwd: root, encoding: "utf8" },
     );
     assert.equal(result.status, 0, result.stderr + result.stdout);
-    assert.match(
-      result.stdout,
-      /skipper smash damage per fight\s+100.00 HP mean/,
-    );
+    assert.match(result.stdout, /skipper smash damage per fight\s+100.00 HP mean/);
     assert.match(result.stdout, /explorer best_combo median.*watch \(MISS\)/);
     const summaryPath = result.stdout.match(
       /(artifacts\/local\/checkpoint\/[^\n]+\/summary.json)/,
     )[1];
-    const summary = JSON.parse(
-      readFileSync(path.join(root, summaryPath), "utf8"),
-    );
-    assert.deepEqual(
-      [summary.mode, summary.ok, summary.baseline],
-      ["recorded", true, baseline],
-    );
+    const summary = JSON.parse(readFileSync(path.join(root, summaryPath), "utf8"));
+    assert.deepEqual([summary.mode, summary.ok, summary.baseline], ["recorded", true, baseline]);
     assert.equal(summary.bots.completionist[0].bestCombo, 2);
-    assert.equal(
-      byBand(summary.rows, "explorer best_combo median").pass,
-      false,
-    );
+    assert.equal(byBand(summary.rows, "explorer best_combo median").pass, false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -350,10 +287,7 @@ test("perf bands: CPU 10 ms and GPU 7 ms at the edge, and an invalid run misses"
     evaluatePerf(bench(10.1, 7.1)).map((r) => r.pass),
     [true, false, false],
   );
-  assert.equal(
-    evaluatePerf({ ...bench(1, 1), display: "headless" })[0].pass,
-    false,
-  );
+  assert.equal(evaluatePerf({ ...bench(1, 1), display: "headless" })[0].pass, false);
   assert.equal(evaluatePerf(null)[1].pass, false);
 });
 
@@ -370,21 +304,14 @@ test("perf validity rejects the retired slice table", () => {
 });
 
 test("sweep line is the slice cell's pass column; the receipt must match HEAD", () => {
-  const defs =
-    '"warden_plating": 110.0, "posture": {"curve": 2.0, "ram_shatters": false}';
+  const defs = '"warden_plating": 110.0, "posture": {"curve": 2.0, "ram_shatters": false}';
   const cell = sliceCell(defs);
   assert.deepEqual(cell, { plating: 110, curve: 2, ram_shatters: "false" });
   const tsv =
     "plating\tcurve\tram_shatters\tgrown_median_s\tmid_median_s\tsmall_median_s\tsmall_to_grown\tpass\n110.0\t2.0\tfalse\t25.5\t54.5\t85.8\t3.36\tpass\n";
   assert.equal(evaluateSweep(tsv, cell).pass, true);
-  assert.equal(
-    evaluateSweep(tsv.replace("\tpass\n", "\tmiss\n"), cell).pass,
-    false,
-  );
-  assert.equal(
-    evaluateSweep(tsv, { plating: 90, curve: 2, ram_shatters: "false" }).pass,
-    false,
-  );
+  assert.equal(evaluateSweep(tsv.replace("\tpass\n", "\tmiss\n"), cell).pass, false);
+  assert.equal(evaluateSweep(tsv, { plating: 90, curve: 2, ram_shatters: "false" }).pass, false);
   const receipts = [
     {
       label: "gate",
@@ -404,14 +331,8 @@ test("sweep line is the slice cell's pass column; the receipt must match HEAD", 
   ];
   assert.equal(evaluateReceipt(receipts, "abc").pass, true);
   assert.equal(evaluateReceipt(receipts, "new").pass, false);
-  assert.equal(
-    evaluateReceipt([{ ...receipts[0], ok: false }], "abc").pass,
-    false,
-  );
-  assert.equal(
-    evaluateReceipt([{ ...receipts[0], clean: false }], "abc").pass,
-    false,
-  );
+  assert.equal(evaluateReceipt([{ ...receipts[0], ok: false }], "abc").pass, false);
+  assert.equal(evaluateReceipt([{ ...receipts[0], clean: false }], "abc").pass, false);
 });
 
 test("the table prints a pass, a miss, a skip and a by-hand row", () => {
@@ -426,8 +347,6 @@ test("the table prints a pass, a miss, a skip and a by-hand row", () => {
   assert.match(text, /b\s+3\s+4\s+MISS/);
   assert.match(text, /c\s+-\s+-\s+skipped/);
 });
-
-// --- --after on a fixture log ----------------------------------------------------------
 
 const line = (id, extra) =>
   JSON.stringify({
@@ -483,12 +402,10 @@ test("readRunLog keeps the last line of each default run and drops other tables"
 });
 
 test("the sitting reader answers each question and reports one with no field as not measurable", () => {
-  const verdicts = Object.fromEntries(
-    evaluateSitting(readRunLog(fixture)).map((v) => [v.id, v]),
-  );
+  const verdicts = Object.fromEntries(evaluateSitting(readRunLog(fixture)).map((v) => [v.id, v]));
   assert.equal(verdicts.activities.verdict, "pass");
   assert.deepEqual(verdicts.activities.values, [2, 0]);
-  assert.equal(verdicts.zone.verdict, "pass"); // 6300 ticks is 70 s
+  assert.equal(verdicts.zone.verdict, "pass");
   assert.equal(verdicts.second_run.verdict, "pass");
   assert.equal(verdicts.smashes.verdict, "not measurable");
   assert.equal(verdicts.smashes.measurable, false);
@@ -501,10 +418,7 @@ test("the sitting reader answers each question and reports one with no field as 
     ),
   );
   const byId = Object.fromEntries(oneRun.map((v) => [v.id, v.verdict]));
-  assert.deepEqual(
-    [byId.activities, byId.zone, byId.second_run],
-    ["miss", "miss", "miss"],
-  );
+  assert.deepEqual([byId.activities, byId.zone, byId.second_run], ["miss", "miss", "miss"]);
 });
 
 test("a custom question with a reason reports not measurable", () => {
@@ -526,6 +440,5 @@ test("a custom question with a reason reports not measurable", () => {
 
 test("by-hand rows never count as a pass or a miss", () => {
   assert.ok(BY_HAND.length >= 3);
-  for (const row of BY_HAND)
-    assert.deepEqual([row.pass, row.byHand], [null, true]);
+  for (const row of BY_HAND) assert.deepEqual([row.pass, row.byHand], [null, true]);
 });

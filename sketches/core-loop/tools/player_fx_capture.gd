@@ -1,9 +1,5 @@
 extends SceneTree
 
-# Stills of the player effects (PLAYER-FX.md) from the real game, for the phone page.
-# Needs a real renderer: xvfb-run godot --rendering-driver opengl3 --path . -s
-# tools/player_fx_capture.gd -- --out=DIR. The cloud runs llvmpipe (Compatibility), so
-# these show shape, colour and placement, not final Forward+ glow or frame cost.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -48,14 +44,12 @@ func _run() -> void:
 	fx = game.presentation.player_fx
 	for layer in root.find_children("*", "CanvasLayer", true, false):
 		layer.visible = layer.name == "ImpactFrameLayer"
-	# Slow the clock so a software-rendered frame does not skip a 0.6 s word.
 	Engine.time_scale = 0.15
 	var ball: Vector3 = game.player.ball_position()
 	var chase: Camera3D = game.camera.cam
 	var back: Vector3 = chase.global_basis.z
 	back.y = 0.0
 	back = back.normalized()
-	# A close staged camera: behind and above the ball, a little off to one side.
 	var cam := Camera3D.new()
 	game.add_child(cam)
 	cam.fov = 60.0
@@ -67,14 +61,12 @@ func _run() -> void:
 	var enemy = game.ctx.spawner.spawn_enemy("chaser", ball + side * 4.5 - cam.global_basis.z * 3.0)
 	await _frames(10)
 
-	# 1. First fight: no parts, a plain hit and a smash.
 	_reset()
 	game.events.enemy_struck.emit(enemy, "claw", 20.0)
 	game.events.harpoon_smashed.emit(enemy, enemy.global_position, 25.0)
 	await _frames(4)
 	await _shot("hit-small")
 
-	# 2. Late run: twelve parts, fused, mighty. Same hit.
 	for id in ["frost_vane", "arc_coil", "chain_arc", "frost_vane", "hot_rivets", "arc_coil",
 			"long_spool", "frost_vane", "tread_plating", "chain_arc", "boost_coil", "arc_coil"]:
 		game.run.parts.append(id)
@@ -91,7 +83,6 @@ func _run() -> void:
 	await _frames(3)
 	await _shot("hit-mighty-after")
 
-	# 3. Overdrive past the soft cap, streaming across the screen.
 	_reset()
 	fx.pose = {"velocity": side * 65.0}
 	_stream([fx._flecks, fx._embers], side * 65.0)
@@ -99,7 +90,6 @@ func _run() -> void:
 	await _frames(25)
 	await _shot("overdrive")
 
-	# 4. Carving a bank.
 	_reset()
 	_stream([fx._flecks, fx._embers], Vector3.ZERO)
 	fx.pose = {"velocity": side * 30.0, "normal": Vector3(0.0, 0.7, 0.71).normalized(), "grounded": true}
@@ -107,17 +97,12 @@ func _run() -> void:
 	await _frames(25)
 	await _shot("carve")
 
-	# 5. Heft class up: the column and the word.
 	_reset()
 	fx.column(Palette.BRASS)
 	fx.word("heft_up", fx._beside_ball())
 	await _frames(2)
 	await _shot("heft-up")
 
-	# 6. A held dunk charge: the coil on the collar's rear arc, rolling away from the camera,
-	# then late in the window with one pip left.
-	# Live world telegraphs (a dam event wall) can fill the frame over the ball, so they are hidden
-	# for these shots. Then the same two states from the play chase camera, where it must read.
 	_reset()
 	for node in get_nodes_in_group("telegraph") + get_nodes_in_group(Threat.GROUP):
 		if node is Node3D:
@@ -146,8 +131,6 @@ func _run() -> void:
 	quit()
 
 
-# The ball is frozen for the still, so the stream the chase camera would see (particles
-# left behind at the ball's speed) is given to the particles instead.
 func _stream(emitters: Array, velocity: Vector3) -> void:
 	for p: GPUParticles3D in emitters:
 		var pm := p.process_material as ParticleProcessMaterial

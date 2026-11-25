@@ -29,8 +29,6 @@ FRAMES = {"drop_land": [1, 5, 9, 12, 16, 23, 32, 43, 54, 66],
           "phew": [1, 5, 10, 14, 19, 25], "brace": [1, 3, 6, 10, 14, 19],
           "heave": [1, 3, 7, 10, 15, 25]}
 
-# Each row: torso height, torso pitch, head pitch/yaw, shoulder lift, R/L wrist,
-# ear pitch, tail yaw, jaw pitch. Endpoints are always the exact bind pose.
 REST = (1, 0, 0, 0, 0, GRIPS["R"], GRIPS["L"], 0, 0, 0)
 POSES = {
     "drop_land": [REST,
@@ -94,7 +92,6 @@ def lerp_pose(clip, frame):
     for i in range(len(keys) - 1):
         if keys[i] <= frame <= keys[i + 1]:
             f = (frame - keys[i]) / (keys[i + 1] - keys[i])
-            # Smooth timing applied before IK keeps a grip planted between authored keys.
             if clip not in ("wince", "brace"):
                 f = f * f * (3 - 2 * f)
             return tuple(tuple(a[j] + (b[j] - a[j]) * f for j in range(3)) if isinstance(a, tuple)
@@ -115,7 +112,6 @@ def pose(arm, values):
     rotate(arm, "spine_02", pitch * .45)
     arm.pose.bones["spine_01"].scale = (1 + (1 - height) * .12, 1, math.sqrt(height))
     arm.pose.bones["spine_02"].scale.z = math.sqrt(height)
-    # Preserve head size; the body's compression carries the reaction.
     arm.pose.bones["head"].scale = (1 / (1 + (1 - height) * .12), 1, 1 / height)
     rotate(arm, "head", nod, 0, yaw)
     rotate(arm, "jaw", jaw)
@@ -127,8 +123,6 @@ def pose(arm, values):
     bpy.context.view_layer.update()
     for side, target in (("R", right), ("L", left)):
         solve_arm(arm, side, target)
-        # Shared analytic IK assumes an unscaled parent. Repeated rotations correct
-        # the small error introduced by inherited nonuniform torso compression.
         for _ in range(16):
             for name in ("lower_arm." + side, "upper_arm." + side):
                 rig.point_segment(arm, name, "hand." + side, target)

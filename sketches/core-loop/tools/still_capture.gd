@@ -4,21 +4,6 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# Telegraph look stills (E1-DENSITY.md section 5.2). Flat ground, a fixed camera, one
-# telegraph per still at a set progress, so a build that changes how telegraphs are drawn
-# can be compared pixel for pixel with the build before it (tools/still_diff.gd).
-# Native only, into a fixed 1920x1080 SubViewport with MSAA 2x (project.godot's setting),
-# so the compositor's window size never changes a still. Run on hidden workspace 10:
-#   claude-open <godot> --path sketches/core-loop --resolution 1920x1080 --script res://tools/still_capture.gd -- --out=/abs/dir [--control]
-# --control adds known-bad stills of the INSTANT ring at 0.5, named
-# control-<still>--<defect> so tools/still_diff.gd compares each with the reference
-# <still>: the whole stripe_motion fill hidden, a 0.4 m band of that fill cut (about a
-# tenth of it), and the static charcoal keyline hidden. The diff budget must fail all
-# three; they run on a driven (E1) build only. --telegraph=haze draws the stills in the
-# haze look (threat_grammar.gd), for a classic-vs-haze contact sheet; the references are
-# classic, so a haze run is compared by eye, not by still_diff. "empty" is the ground alone, which the diff
-# uses to box each telegraph. The same script runs on the build before E1; it reads
-# threat_fill_scale only where that build has it.
 
 const SETTLE_FRAMES := 4
 const PROGRESS := [0.25, 0.5, 0.95]
@@ -109,18 +94,10 @@ func _plan() -> void:
 	_shots.append({"name": "wave-ring-arming", "make": func(): return _wave(-0.5)})
 	_shots.append({"name": "overlap-5ring-50", "make": func(): return _overlap(0.0)})
 	_shots.append({"name": "overlap-5ring-50-density1", "make": func(): return _overlap(1.0)})
-	# Every fill class at once (area, fill and swept) plus a lane across a ring, so the
-	# batch order between classes is stilled, not only one class against itself; the
-	# live variant has the lane running at its brighter live alpha.
 	_shots.append({"name": "overlap-mixed-50", "make": func(): return _mixed(0.5)})
 	_shots.append({"name": "overlap-mixed-live", "make": func(): return _mixed(1.0)})
-	# A live lane over a pending lane, seen from the two sides so the lanes' depth order flips.
-	# Both lanes are one stencil class family; the live one must own the overlap from either
-	# side (fix round 2, item 3). check_live_over_pending compares the overlap's mean colour.
 	_shots.append({"name": "overlap-live-pending-front", "cam": Vector3(0.0, 17.0, 17.0), "make": func(): return _live_over_pending()})
 	_shots.append({"name": "overlap-live-pending-back", "cam": Vector3(0.0, 17.0, -14.0), "make": func(): return _live_over_pending()})
-	# A WAVE front crossing a live lane band: the front is a P1 line and reads at its own
-	# strength inside the band as outside it (fix round 3, item 1). check_front_over_live.
 	_shots.append({"name": "overlap-front-live", "make": func(): return _front_over_live()})
 	if _control:
 		_shots.append({"name": "control-instant-ring-50--no-stripe-motion", "make": func(): return _control_ring(func(layers: Dictionary):
@@ -157,8 +134,6 @@ const LANE_ONLY := Vector3(-8.0, 0.0, 1.5)
 const FRONT_PATCH := 6
 
 
-# A live lane band across z 1.5 +- 4, and a half-run WAVE (front at 5 m) centred at z -4 so
-# its front crosses the band at (0, 0, 1) and runs on bare ground at (0, 0, -9).
 func _front_over_live() -> Array:
 	var live: Node3D = _progress(Telegraph.lane(_world, _ground, Threat.Type.LANE, Vector3(-14.0, 0.0, 1.5), Vector3.RIGHT, 28.0, 8.0), 1.0)[0]
 	var wave: Node3D = _wave(0.5, FRONT_CENTRE)[0]
@@ -178,7 +153,6 @@ func _small_mean(image: Image, point: Vector3) -> Color:
 	return Color(sum.x, sum.y, sum.z)
 
 
-# The mean colour of a PATCH x PATCH square around a world point in the current still.
 func _patch_mean(image: Image, point: Vector3) -> Color:
 	var at := Vector2i(_cam.unproject_position(point))
 	var sum := Vector3.ZERO
@@ -205,9 +179,6 @@ func _dist(a: Color, b: Color) -> float:
 	return (absf(a.r - b.r) + absf(a.g - b.g) + absf(a.b - b.b)) / 3.0 * 255.0
 
 
-# The overlap reads the same from both sides and reads as the live band: it sits nearer the
-# live-only colour than the pending-only colour, and live and pending are apart enough for
-# that to mean something.
 func check_live_over_pending() -> bool:
 	if not _probes.has("overlap-live-pending-front") or not _probes.has("overlap-live-pending-back"):
 		return true
@@ -227,10 +198,6 @@ func check_live_over_pending() -> bool:
 	return ok
 
 
-# The front's line pixels inside the live band read as they do on bare ground: the two
-# differ by less than a fifth of what separates the front from the bare live band, and the
-# front inside the band is nearer the front outside than the live band alone. A line the
-# band covered at 20% would read as the band and fail both.
 func check_front_over_live() -> bool:
 	if _front_probe.is_empty():
 		return true
@@ -283,7 +250,6 @@ func _projectile(p: float) -> Array:
 	return [node]
 
 
-# share of r_out the front has run; a negative share is the arming still at that progress.
 func _wave(share: float, at := Vector3.ZERO) -> Array:
 	var node := Telegraph.wave(_world, _ground, at, 10.0, 6.0, 0.5)
 	if share < 0.0:

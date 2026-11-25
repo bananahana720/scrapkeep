@@ -1,5 +1,3 @@
-# Shared-world device prop. Procedural bmesh; no external assets or physics.
-# Metres; Godot (X,Y,Z) -> Blender (X,-Z,Y). State parts keep script-owned pivots.
 import math
 import os
 import sys
@@ -13,9 +11,6 @@ from common import Part
 common.reset()
 for slot, rough, metal in [("device_concrete", 0.95, 0.0), ("device_metal", 0.68, 0.28), ("device_marks", 0.85, 0.0)]:
     common.SLOTS[slot] = {"vc": True, "rough": rough, "metal": metal}
-# Polish (POLISH.md): the registry caps device props at 1100 T / 2100 V, so smooth shading and the AO/wear bake only
-# (bevel 0); Not imported by another recipe, so module level. The odds face keeps its exact mint and oxide halves
-# (device_props_asset_test reads them back as the bet's colour language).
 import polish
 polish.enable(detail=1, bevel=0, bake_keep=(common.rgba("mint"), common.rgba("oxide")))
 
@@ -87,13 +82,11 @@ def preview(outdir,stem,span,target,ball_at):
 root=common.empty("BetCrate")
 p=Part("BetHousing")
 panel(p,chamfer(2.4,1.8,0.22),2.4,(0,0.9,0),"copper")
-# The chest has a recessed lid, broad rib straps and dented armour corners.
 box(p,(2.05,0.12,2.05),(0,1.79,0),"charcoal")
 box(p,(1.8,0.12,1.8),(0,1.86,0),common.mix("copper","bone",0.18))
 for s in (-1,1):
     box(p,(0.18,1.55,2.44),(s*0.86,0.89,0),common.mix("copper","charcoal",0.35))
     box(p,(2.44,1.55,0.18),(0,0.89,s*0.86),common.mix("copper","charcoal",0.35))
-# Four 45-degree hazard bands. Slashes are actual coloured faces, not a checker.
 for side in range(4):
     rot=side*math.pi/2
     outline=[(-1.22,-0.19),(1.22,-0.19),(1.22,0.19),(-1.22,0.19)]
@@ -102,7 +95,6 @@ for side in range(4):
     for x in (-0.95,-0.45,0.05,0.55):
         poly=[(x,-0.18),(x+0.22,-0.18),(x+0.58,0.18),(x+0.36,0.18)]
         p.prism("device_metal",poly,0.042,matrix=mat,color="hazard")
-# A mismatched repair patch, worn fasteners and grease at the lid's contact edge.
 panel(p,[(-0.45,-0.23),(0.38,-0.25),(0.49,0.11),(0.24,0.24),(-0.4,0.19)],0.035,(0.07,0.6,1.215),common.mix("copper","charcoal",0.24))
 for x,y in [(-0.22,0.46),(0.34,0.68),(-0.84,1.65),(0.84,1.65)]:
     p.cyl("device_metal",0.065,0.065,0.045,segs=5,loc=g(x,y,1.25),rot=(math.pi/2,0,0),color="bone")
@@ -113,7 +105,6 @@ for s in (-1,1):
     p.rod("device_metal",g(s*0.82,1.86,0),g(0,3.4,0),0.07,segs=5,color="copper")
 finish(p)
 p=Part("OddsDial")
-# Front is Godot +Z. The dark edge and back hold a real split circular face.
 p.cyl("device_marks",1.2,1.2,0.16,segs=20,loc=g(0,4.6,0),rot=(math.pi/2,0,0),color="charcoal")
 for color,angles in [("mint",(math.pi/2,3*math.pi/2)),("oxide",(-math.pi/2,math.pi/2))]:
     p.ring("device_marks",0.001,1.07,0.025,segs=10,loc=g(0,4.6,0.1),rot=(math.pi/2,0,0),color=color,arc=angles)
@@ -121,7 +112,6 @@ for k in range(12):
     a=math.tau*k/12
     x,y=0.91*math.cos(a),4.6+0.91*math.sin(a)
     panel(p,[(-0.028,-0.07),(0.028,-0.07),(0.028,0.07),(-0.028,0.07)],0.028,(x,y,0.13),"charcoal","device_marks")
-# Heads diamond and tails cross remain readable without colour.
 panel(p,[(0,-0.16),(0.16,0),(0,0.16),(-0.16,0)],0.03,(-0.57,4.6,0.14),"charcoal","device_marks")
 for angle in (-math.pi/4,math.pi/4):
     p.box("device_marks",(0.075,0.035,0.4),loc=g(0.57,4.6,0.14),rot=(0,angle,0),color="bone")

@@ -7,37 +7,6 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const TelegraphScript := preload("res://src/combat/telegraph.gd")
 
-# PRIORITY-PROOF (alpha-status/ambition-map.md unit 7; design-v3/ENEMY-PRIORITY.md section 4).
-# Does killing a kill-first special first matter? One staged encounter per run: a crew in an
-# arc 22 m ahead of the ball (six, the attacker budget's start, PR #15) and the special 12 m
-# behind it. Two arms share each seed, so the
-# pilot, the spawns and the ball's start are paired:
-#   target  the bot fights the special first, then the crew;
-#   ignore  the bot never picks the special while any of the crew stands (bolts and rams may
-#           still hit it on the way), then finishes it, so both arms end on the same clear.
-# The target is ignore's mean hull lost at least 1.25 x target's (TARGET_RATIO), per special,
-# with at least MIN_HULL lost on the ignore arm: a ratio between two near-zero means is noise.
-# Damage taken is graded the same way beside it (damage_verdict, MIN_DAMAGE): the hull only
-# takes what the ball's scrap armour does not, so at low numbers the hull reads noise while
-# the hits that landed still show the cost (coordinator, 2026-10-17, on the Splitter: accept
-# on median hull plus damage taken). Each arm also reports its median hull.
-#
-# The stock bot dodges every telegraph it sees, so no fair attack ever lands on it; --dodge
-# (DODGE by default) is the share it answers, each telegraph decided once from the seed.
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/priority_proof.gd \
-#     -- --out=<abs json> [--procs=4] [--seeds=1,...,8] [--cap=120] [--start-mass=0] [--dodge=0.65]
-#     [--hp-mult=1] [--spawn-every=<s>] [--specials=a,b]
-#
-# Each run is its own process (a bot run repeats exactly only in a fresh one, tools/bot_run.gd).
-# A special whose enemy is not in the game is reported "not built" and plays no runs.
-#
-# Row kinds. "built": the special's roster row, spawned through combat.spawn_enemy. "model":
-# a lab-only stand-in that plays the design's start values (ENEMY-PRIORITY section 4) on a
-# non-attacking body (a vault with plating 0 and MODEL_HP), so the numbers can be read before
-# the enemy exists; it is never proof that the built enemy works. "control": a current pack
-# controller as the special, the instrument's positive control. The machine owns the real
-# enemies; when one lands, its row's `id` is the only line to check.
 const SPECIALS := [
 	{"name": "foreman", "id": "foreman", "crew": ["hooker", "plated_brute", "plated_brute", "chaser", "chaser", "lobber"],
 		"model": {"wipe_every": 5.0}},
@@ -51,16 +20,12 @@ const SPECIALS := [
 const ARMS := ["target", "ignore"]
 const TARGET_RATIO := 1.25
 const MIN_HULL := 5.0
-# About one fair hit landed per run on the ignore arm.
 const MIN_DAMAGE := 10.0
-# The default share of telegraphs dodged: a stand-in for a player who misses about a third.
 const DODGE := 0.65
 const CREW_RANGE := 22.0
 const CREW_SPREAD := 5.0
 const SPECIAL_BEHIND := 12.0
 const MODEL_HP := 120.0
-# Grounded seconds before the encounter spawns: the stage's drop-in landing slam would
-# otherwise knock the crew flat before the fight starts.
 const SETTLE_S := 1.0
 const WALL_LIMIT_S := 900.0
 
@@ -73,7 +38,6 @@ class PriorityDriver extends BotDriver:
 	var _dodge_rng := RandomNumberGenerator.new()
 	var _answers := {}
 
-	# Each telegraph is answered or missed once, when first seen, from the run's own stream.
 	func _threats() -> Array:
 		var out: Array = []
 		for h in super._threats():
@@ -91,7 +55,6 @@ class PriorityDriver extends BotDriver:
 			return
 		_fight(target, delta)
 
-	# The arm's choice: the special first on target, last on ignore.
 	func pick() -> Node3D:
 		if arm == "target" and alive(special):
 			return special
@@ -119,7 +82,6 @@ var _cap := 120.0
 var _parent := false
 var _done := false
 
-# Parent state.
 var _queue: Array = []
 var _running: Array = []
 var _results: Array = []
@@ -128,7 +90,6 @@ var _procs := 4
 var _total := 0
 var _sweep_dir := ""
 
-# Child state.
 var _row := {}
 var _mode := ""
 var _run_seed := 0
@@ -144,7 +105,6 @@ var _wipes := 0
 var _warnings := 0
 var _dispatched := 0
 var _joined := 0
-# True once the crew and the special stand, so only what comes after joins.
 var _encounter_up := false
 var _special_split := false
 var _model_clock := 0.0
@@ -202,15 +162,11 @@ static func row_named(name: String) -> Dictionary:
 	return {}
 
 
-# "built" when the roster has the id and its script exists; "model" when the row carries
-# design start values instead; otherwise "not_built". A control is always built.
 static func mode_of(row: Dictionary) -> String:
 	if row.get("control", false) or (Roster.ROWS.has(row["id"]) and Roster.built(row["id"])):
 		return "built"
 	return "model" if row.has("model") else "not_built"
 
-
-# ---- Parent: the pool -------------------------------------------------------------------
 
 func _process(_delta: float) -> bool:
 	if not _parent or _done:
@@ -300,9 +256,6 @@ func _merge() -> void:
 	quit(0)
 
 
-# Per special: each arm's mean hull lost and clear seconds over the runs that produced a
-# result, the paired seeds where ignore lost more, the ratio and the verdict. A run that
-# never cleared counts its clear time as the cap; a death counts the hull it lost (all of it).
 static func summarize(rows: Array, results: Array, cap: float) -> Dictionary:
 	var out := {"target_ratio": TARGET_RATIO, "cap_s": cap, "specials": []}
 	for entry in rows:
@@ -349,8 +302,6 @@ static func summarize(rows: Array, results: Array, cap: float) -> Dictionary:
 		item["paired_seeds"] = paired
 		item["ignore_worse_seeds"] = worse
 		item["ignore_damage_worse_seeds"] = damage_worse
-		# The paired seeds' own ratios, middle value: above 1 means most seeds went the right way,
-		# so the mean is not carried by one seed.
 		item["median_ratio"] = snappedf(median(seed_ratios), 0.01) if not seed_ratios.is_empty() else 1.0
 		var t: float = item["target"]["hull_mean"]
 		var i: float = item["ignore"]["hull_mean"]
@@ -411,8 +362,6 @@ static func mean(values: Array) -> float:
 	return total / values.size()
 
 
-# ---- Child: one run ---------------------------------------------------------------------
-
 func _begin_child() -> void:
 	_row = row_named(String(_settings["special"]))
 	_mode = String(_settings.get("mode", ""))
@@ -428,7 +377,6 @@ func _begin_child() -> void:
 	root.add_child(_game)
 
 
-# Object-ID-dependent choices take their sign from spawn order, as tools/bot_run.gd does.
 func _on_node_added(node: Node) -> void:
 	if _game == null or _game.build == null:
 		return
@@ -446,7 +394,6 @@ func _physics_process(delta: float) -> bool:
 	if _parent or _done or _game == null or _game.flow == null:
 		return false
 	if _driver == null:
-		# Calm: no Warden, no director packs; the encounter is the only fight on the map.
 		_game.ctx.calm = true
 		var home := String(_settings["home"])
 		_game.codex.storage_dir = home
@@ -499,9 +446,6 @@ var _start_s := 0.0
 var _grounded_s := 0.0
 
 
-# Whatever the encounter makes after it starts (a Dispatcher's drop, a Splitter's pieces)
-# joins the crew, toughened like the rest: the bot fights it and the clear waits for it. A
-# Splitter piece scales its health from the toughened chaser, so --hp-mult carries through.
 func _on_enemy_spawned(enemy: Node3D, _kind: String) -> void:
 	if _encounter_up and enemy not in _driver.crew:
 		_driver.crew.append(_toughen(enemy))
@@ -512,7 +456,6 @@ func _encounter_s() -> float:
 	return _game.run.stage_time - _start_s
 
 
-# Clear means everything down and nothing still to come (a Splitter's flare yet to pop).
 func _cleared() -> bool:
 	if not _game.get_tree().get_nodes_in_group("enemy_pending").is_empty():
 		return false
@@ -540,20 +483,16 @@ func _spawn_encounter() -> void:
 	var at := _drop(ball + forward * (CREW_RANGE + SPECIAL_BEHIND))
 	if _mode == "built":
 		_driver.special = _toughen(spawner.spawn_enemy(String(_row["id"]), at))
-		# A built spawner's adds join the crew: the bot fights them and the clear waits on them.
 		if _driver.special != null and _driver.special.has_signal("dispatched"):
 			_driver.special.dispatched.connect(func(add: Node3D):
 				_driver.crew.append(_toughen(add))
 				_dispatched += 1)
-		# A built buffer reports its own wipes (foreman.gd), as the model counts its stand-in's.
 		if _driver.special != null and _driver.special.has_signal("wiped"):
 			_driver.special.wiped.connect(func(_members: Array): _wipes += 1)
-		# A built Splitter records whether it split, as the model counts its stand-in's.
 		var special: Node3D = _driver.special
 		if special != null and special.has_signal("died"):
 			special.died.connect(func(_where: Vector3, _scrap: int): _special_split = bool(special.get_meta("split", false)))
 	else:
-		# The model's stand-in: a non-attacking body with no plating and MODEL_HP.
 		var body: Node3D = spawner.spawn_enemy("vault", at)
 		body.plating = 0.0
 		body._set_health(MODEL_HP * float(_settings.get("hp-mult", "1")))
@@ -561,8 +500,6 @@ func _spawn_encounter() -> void:
 	_encounter_up = true
 
 
-
-# --hp-mult scales every spawned body's health, the lab's stand-in for a later, denser run.
 func _toughen(enemy: Node3D) -> Node3D:
 	var mult := float(_settings.get("hp-mult", "1"))
 	if mult != 1.0 and enemy != null:
@@ -574,9 +511,6 @@ func _drop(flat: Vector3) -> Vector3:
 	return _game.ctx.terrain.drop_point(flat.x, flat.z, 1.8)
 
 
-# The design's start values on the stand-in, while it lives (ENEMY-PRIORITY section 4):
-# the Foreman wipes its crew's plating shred every wipe_every seconds; the Dispatcher drops
-# one more of `spawn` every spawn_every seconds while fewer than alive_cap of the crew stand.
 func _step_model(delta: float) -> void:
 	if _mode != "model" or not _spawned or not PriorityDriver.alive(_driver.special):
 		return
@@ -602,8 +536,6 @@ func _step_model(delta: float) -> void:
 
 
 func _record() -> void:
-	# Hull lost is the run's own hull_damage counter: armour mode heals the hull between
-	# hits, so the hp at the end understates it. A death counts what the hull lost to it.
 	var lost: float = float(_game.run.metrics["hull_damage"]) - _hull_start if _spawned else 0.0
 	var killed := 0
 	for enemy in _driver.crew:
@@ -615,7 +547,6 @@ func _record() -> void:
 			"special_dead_s": snappedf(_special_dead_s, 0.01), "crew_spawned": _driver.crew.size(),
 			"crew_killed": killed, "wipes": _wipes, "warnings": _warnings, "dispatched": _dispatched, "joined": _joined, "special_split": _special_split,
 			"encounter_s": snappedf(_encounter_s() if _spawned else 0.0, 0.01)}
-	# A built special's own counts, when it keeps them (the Dispatcher's drops and drop hits).
 	for key in ["drops", "landed_hits"]:
 		if is_instance_valid(_driver.special) and key in _driver.special:
 			row[key] = int(_driver.special.get(key))

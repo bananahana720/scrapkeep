@@ -13,7 +13,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import cycles_device  # noqa: E402
+import cycles_device
 
 GIB = cycles_device.GIB
 R3060, R4080 = "NVIDIA GeForce RTX 3060", "NVIDIA GeForce RTX 4080"
@@ -51,9 +51,9 @@ def mesh(triangles):
                                                                          polygons=[0] * triangles))
 
 
-TANDEM_AT = 2e10  # the tandem tests move the size check to this
-LONG = 16384  # samples: 1920 x 1080 x 16384 = 3.4e10 sample-pixels, over TANDEM_AT
-SHORT = 256  # 1920 x 1080 x 256 = 5.3e8, under it
+TANDEM_AT = 2e10
+LONG = 16384
+SHORT = 256
 
 
 def fake_bpy(prefs, triangles=0, images=(), samples=SHORT, adaptive=False):

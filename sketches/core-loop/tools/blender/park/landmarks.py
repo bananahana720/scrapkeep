@@ -58,8 +58,8 @@ HERO, DETAIL = CLASSES["hero_landmark"], CLASSES["detail"]
 SLOTS = ("enamel", "steel", "stone", "elastomer", "glass", "ancient_lens")
 TAU = math.tau
 UP = (0.0, 1.0, 0.0)
-FLUSH = 0.12        # the most a part with no collider may stand over a surface a ball rolls on
-CLEAR = 8.0         # no landmark geometry this close to warden_anchor except the card's cradle (card section 1)
+FLUSH = 0.12
+CLEAR = 8.0
 
 HEX = {
     "concrete": "8f8b82", "concrete_lt": "a8a398", "concrete_dk": "706c65", "joint": "5c5a54", "patch": "9a9488",
@@ -91,7 +91,6 @@ def shade(name, k, seed, amount=0.08):
 rnd = sky.rnd
 
 
-# ---------------------------------------------------------------- vector kit (Godot space, metres)
 def vadd(a, b, k=1.0):
     return (a[0] + b[0] * k, a[1] + b[1] * k, a[2] + b[2] * k)
 
@@ -147,7 +146,6 @@ FRAMES = {
 }
 
 
-# ---------------------------------------------------------------- solids on a sky.Surf
 def circle(c, r, y, n, spin=0.0):
     """n points on a horizontal circle about (c[0], c[1]); bearing 0 is +Z, turning toward +X."""
     return [(c[0] + r * math.sin(spin + TAU * i / n), y, c[1] + r * math.cos(spin + TAU * i / n)) for i in range(n)]
@@ -277,7 +275,6 @@ def hexcell(s, c, normal, r, depth, color, rim=None, open_end=False):
             surf.poly([lip[i], lip[j], inner[j], inner[i]], rim_color, up=normal)
 
 
-# ---------------------------------------------------------------- one view of a landmark
 class View:
     """The drawn parts of one GLB view, one sky.Surf per material slot, merged into one mesh at export."""
 
@@ -315,30 +312,20 @@ def verts_of(views):
             yield from view.v
 
 
-# ================================================================ card 1: the spillway dam (park_dam)
-# Bake fit (assets/park/park_dam): the dam_face_quarter stamp is a straight ramp, y = 1.2 * (5 - z) from local z 5
-# (y 0) to z -20 (y 30), then a near-vertical cliff from z -20 (y 30) to z -22 (y 100) under the plateau at 100, across
-# x -200..200 (the canyon walls). A wall curved in plan below the plateau would float over the ridden ramp or sink into
-# the cliff, so the lower face is straight and clads the cliff (DAM_FACE_Z, in front of every cliff point), and the
-# arch is the upper wall standing on the plateau, bowed 25 m upstream at the centre. Its front stays behind the
-# crest_rail row (local z -36, the ridge stamp at 100.75), so the rail's drop down the face stays open. The data's
-# warden anchor [0, 22, 590] is local (0, 22, 30), out over the toe apron: the cradle is a concrete halo hung from a steel
-# jib crane cantilevered off the face, ringing the relic in its own plane, with hp_1 and hp_2 on the halo. White water
-# spills from under the radial gates down the face and the ramp (enamel dressing, no collider).
 DAM_FACE_Z = -19.94
 DAM_RAMP_TOP = 30.0
 DAM_PLATEAU = 100.0
-DAM_CHORD = 160.0           # half chord of the arch
-DAM_CANYON = 200.0          # half width of the canyon the face spans
+DAM_CHORD = 160.0
+DAM_CANYON = 200.0
 DAM_CREST = 121.0
-DAM_TOWER = (12.0, 24.0)    # inner and outer |x| of the gate towers: inner faces 24 m apart, the reactor's SHEET_WIDTH
+DAM_TOWER = (12.0, 24.0)
 DAM_TOWER_Z = (-27.0, -15.0)
 DAM_TOP = 141.0
 DAM_ANCHOR = (0.0, 22.0, 30.0)
-DAM_HINGE = (44.0, -8.0)    # the radial gates' trunnion axis (y, z)
+DAM_HINGE = (44.0, -8.0)
 DAM_GATE_R = 11.5
-DAM_HALO = (8.6, 11.2, 2.2)  # inner radius, outer radius, depth
-DAM_JIB_TIP = (0.0, 44.0, 30.0)  # the crane's tip, 22 m over the relic
+DAM_HALO = (8.6, 11.2, 2.2)
+DAM_JIB_TIP = (0.0, 44.0, 30.0)
 
 
 def dam_ramp_y(z):
@@ -390,18 +377,12 @@ def dam_gate(name, x0, x1):
     return v
 
 
-# The dam's look (W1-25, Andrew's taste pick of 13 Nov under ruling cq): a weathered cast face (graded lifts, monolith
-# tones, calcite leach and varnish streaks, a wet band by the spill) with its structure drawn, ribs at 40 m with the bays
-# between them set back BAY_DEPTH (never forward: the face's collider stays where it is, so a ball can only stand off a
-# bay, never sink into one) under a lintel band carrying the Fleet's claim, and the crew's chalk answer low on the face
-# by the yard (STORY-MAP.md, The Spillway).
-DAM_RIBS = (-168.0, -128.0, -88.0, -48.0, 48.0, 88.0, 128.0, 168.0)   # rib centres; +-168 are the collided pilasters
+DAM_RIBS = (-168.0, -128.0, -88.0, -48.0, 48.0, 88.0, 128.0, 168.0)
 DAM_RIB_W = 6.0
 BAY_DEPTH = 1.0
 BAY_TOP = 88.0
-BAY_FOOT = 36.0       # each bay keeps a flush plinth up to here, then a batter slopes back to the set-back face at BAY_SILL:
-BAY_SILL = 64.0       # the bake's cliff (z -20 at y 30 to z -22 at y 100) stands in front of a 1 m set-back until y 62.9, so
-                      # a bay set back from the ramp top showed bare rock along its foot (review of W1-25)
+BAY_FOOT = 36.0
+BAY_SILL = 64.0
 DAM_CLAIM = "ALL WATER IS NOW INVENTORY"
 DAM_CHALK = "Tell the river."
 
@@ -433,7 +414,7 @@ def dam_spans():
         x0, x1 = edges[k], edges[k + 1]
         rib = k % 2 == 1
         if not rib and (x1 <= -DAM_CHORD - 10 or x0 >= DAM_CHORD + 10 or (x0 >= -50 and x1 <= 50)):
-            rib = True        # abutment ends and the gate bay stay on the face line (the jib and trunnions bolt to it)
+            rib = True
         spans.append((x0, x1, "rib" if rib else "bay"))
     return spans
 
@@ -449,7 +430,7 @@ def bay_z(fz, y):
 
 def dam_face(e, fz):
     """The cast face from the ramp top (29.9) to the plateau lip, in lifts; returns the face depth function z(x, y)."""
-    assert BAY_DEPTH >= 0.0 and 29.9 < BAY_FOOT < BAY_SILL < BAY_TOP   # bays only ever go back of the collided face
+    assert BAY_DEPTH >= 0.0 and 29.9 < BAY_FOOT < BAY_SILL < BAY_TOP
     rows = 20
     spans = dam_spans()
     for si, (x0, x1, kind) in enumerate(spans):
@@ -472,7 +453,6 @@ def dam_face(e, fz):
                 if not set_back:
                     e.poly([(xa, y0, z), (xb, y0, z), (xb, y1, z), (xa, y1, z)], [lo, lo, hi, hi], up=(0.0, 0.0, 1.0))
                     continue
-                # a bay's lift splits where its profile bends (plinth, batter, set-back, lintel)
                 ys = [y0] + [b for b in (BAY_FOOT, BAY_SILL, BAY_TOP) if y0 < b < y1] + [y1]
                 for ya, yb in zip(ys, ys[1:]):
                     ca, cb = lerp(lo, hi, (ya - y0) / (y1 - y0)), lerp(lo, hi, (yb - y0) / (y1 - y0))
@@ -481,7 +461,6 @@ def dam_face(e, fz):
                     za, zb = bay_z(fz, ya + 1e-6), bay_z(fz, yb - 1e-6)
                     e.poly([(xa, ya, za), (xb, ya, za), (xb, yb, zb), (xa, yb, zb)], [ca, ca, cb, cb], up=(0.0, 0.0, 1.0))
         if set_back:
-            # the bay's reveals: its two sides (down to the batter) and its head under the lintel
             shadow = vscale(dam_tone(si), 0.34)
             for x, nx in ((x0, 1.0), (x1, -1.0)):
                 e.poly([(x, BAY_FOOT, fz), (x, BAY_TOP, fz), (x, BAY_TOP, z), (x, BAY_SILL, z)], shadow, up=(nx, 0.0, 0.0))
@@ -657,9 +636,6 @@ def dam_claim(e, d1, fz):
         x = sx * (width / 2 + 3.0)
         e.poly([(x - 1.6, y0 + 2.0, fz + 0.07), (x + 1.6, y0 + 2.0, fz + 0.07), (x + 1.6, y1 - 2.0, fz + 0.07),
                 (x - 1.6, y1 - 2.0, fz + 0.07)], col("iron"), up=(0.0, 0.0, 1.0))
-    # the crew's answer, chalked by hand inside a scrawled box on the gate bay's flush face (x -45 to -24, clear of the
-    # set-back bays and the jib's foot), so it never floats over a bay
-    # in two lines, written by hand: slanted, climbing a little to the right, the second line set in under the first
     words = DAM_CHALK.rsplit(" ", 1)
     _, w0, _, k = dam_letters(words[0], 3.6, size_x=15.0)
     chalk = lerp(col("calcite"), col("concrete_lt"), 0.1)
@@ -673,7 +649,7 @@ def dam_claim(e, d1, fz):
                     up=(0.0, 0.0, 1.0))
         right = max(right, x0 + dx + w + 0.18 * h)
         top = max(top, y0 + dy + h + 0.035 * (w + dx))
-    assert right + 2.4 < -24.0, right   # the box stays on the gate bay's flush face, clear of the jib's foot
+    assert right + 2.4 < -24.0, right
     pad, lw = 1.4, 0.32
     box_pts = [(x0 - pad, y0 - pad), (right + pad + 0.8, y0 - pad - 0.3), (right + pad + 1.0, top + pad),
                (x0 - pad + 0.3, top + pad + 0.4)]
@@ -691,7 +667,6 @@ def build_dam():
     colm = sky.Surf("landmark_dam-col-col")
     e, st, ln = base["enamel"], base["steel"], base["ancient_lens"]
     fz = DAM_FACE_Z
-    # face cladding: concrete panels laid on the ridden ramp, FLUSH-safe at 0.06 m, no collider (the stamp is the ride)
     for i in range(20):
         x0, x1 = -DAM_CANYON + 20.0 * i, -DAM_CANYON + 20.0 * (i + 1)
         for j in range(5):
@@ -701,32 +676,24 @@ def build_dam():
             e.poly(q, shade("concrete_dk", 1.0, (i, j, 1), 0.05), up=(0.0, 0.83, 0.55))
     rows = 20
     d1, d2 = sky.Surf("landmark_dam_detail1"), sky.Surf("landmark_dam_detail2")
-    # the face, cast in lifts with its ribs and set-back bays, weathered, its works and its two voices
     depth = dam_face(e, fz)
     dam_weather(e, depth)
     dam_works(e, fz)
     dam_claim(e, d1, fz)
     box(e, (-DAM_CANYON, DAM_PLATEAU, fz - 2.0), (DAM_CANYON, DAM_PLATEAU + 0.3, fz + 0.3), col("concrete_lt"))
-    # pilasters just past the chord, standing on the ramp (outside x +-160, so nothing below y 30 collides there)
     for sx in (-1, 1):
         lo_x, hi_x = sorted((sx * 164.0, sx * 172.0))
         box(e, (lo_x, dam_ramp_y(fz + 3.0) - 0.6, fz - 1.0), (hi_x, 104.0, fz + 3.0), col("concrete"))
         box(colm, (lo_x, dam_ramp_y(fz + 3.0) - 0.6, fz - 1.0), (hi_x, 104.0, fz + 3.0), col("concrete"))
-    # crest terrace on the plateau, flush (the terrain is the surface)
     for i in range(10):
         x0, x1 = -DAM_CANYON + 40.0 * i, -DAM_CANYON + 40.0 * (i + 1)
         e.poly([(x0, DAM_PLATEAU + 0.08, fz - 2.0), (x0, DAM_PLATEAU + 0.08, -44.0), (x1, DAM_PLATEAU + 0.08, -44.0),
                 (x1, DAM_PLATEAU + 0.08, fz - 2.0)], shade("concrete_dk", 1.05, (i, 9), 0.04), up=UP)
     box(colm, (-DAM_CANYON, 30.5, -30.0), (DAM_CANYON, DAM_PLATEAU, fz), col("concrete"))
-    # the face's returns into the rock: the block above ends on the canyon walls' line, and its end showed bare in the
-    # wedge where the wall's foot slope meets the cliff under the face, a strip up to 1.7 m deep beside the face at
-    # x +-200 with nothing drawn on it (red team w30, collision sweep: y 50 to 93). The ground reaches the plateau within
-    # 2 m of it, so no ball fits there; the return gives the collider a drawn face and the rock hides the rest
     for sx in (-1, 1):
         x = sx * DAM_CANYON
         e.poly([(x, 29.9, fz), (x, DAM_PLATEAU, fz), (x, DAM_PLATEAU, fz - 2.5), (x, 29.9, fz - 2.5)],
                lerp(col("concrete"), col("concrete_dk"), 0.45), inside=(0.0, 65.0, fz - 1.25))
-    # the upper arch: bowed upstream, cast courses, an 8 m crest deck at 121 with parapets both sides
     n = 24
     xs = [-DAM_CHORD + 2 * DAM_CHORD * k / n for k in range(n + 1)]
     thick = 9.0
@@ -745,9 +712,6 @@ def build_dam():
                shade("concrete_lt", 1.0, (k, 33)), up=UP)
         for dz in (0.0, -thick + 0.6):
             beam(e, (xa, DAM_CREST + 0.6, za + dz - 0.3), (xb, DAM_CREST + 0.6, zb + dz - 0.3), 0.6, 1.2, col("concrete_lt"))
-        # the collider follows the drawn arch segment by segment: its faces, the crest deck and the parapets. A box per
-        # two segments met the ball inside the arch's drawn walls at every joint (clip audit, 30 Oct: 2,539 m2 felt,
-        # up to 3.5 m from a drawn face) and floated it 1.2 m over the deck
         for ra, rb in zip(arch_pieces(xa, za, thick), arch_pieces(xb, zb, thick)):
             colm.ring_solid(ra, rb, col("concrete"), caps=(k == 0, k == n - 1))
     for sx in (-1, 1):
@@ -755,7 +719,6 @@ def build_dam():
         z = dam_arch_z(x)
         e.poly([(x, 99.0, z), (x, DAM_CREST, z), (x, DAM_CREST, z - thick), (x, 99.0, z - thick)], col("concrete_dk"),
                inside=(x - sx, 110.0, z - thick / 2))
-    # gate towers: from the terrace to 139, a copper-roofed hoist house on each, corbelled over the face
     for sx in (-1, 1):
         x0, x1 = sorted((sx * DAM_TOWER[0], sx * DAM_TOWER[1]))
         for j in range(8):
@@ -767,7 +730,6 @@ def build_dam():
         box(colm, (x0, DAM_PLATEAU, DAM_TOWER_Z[0]), (x1, DAM_TOP, DAM_TOWER_Z[1]), col("concrete"))
         for xc in (x0 + 2.0, x1 - 2.0):
             beam(st, (xc, 92.0, fz + 0.2), (xc, DAM_PLATEAU, DAM_TOWER_Z[1]), 0.8, 0.8, col("iron"))
-        # a truss bridge from each tower back to the arch crest, high over the crest_rail
         xm = sx * 18.0
         z_arch = dam_arch_z(xm)
         for dx in (-2.0, 2.0):
@@ -779,7 +741,6 @@ def build_dam():
                 ya, yb = (119.0, DAM_CREST + 1.2) if k % 2 == 0 else (DAM_CREST + 1.2, 119.0)
                 beam(st, (xm + dx, ya, za), (xm + dx, yb, zb), 0.25, 0.25, col("iron_hi"), caps=False)
         box(e, (xm - 2.4, 118.6, z_arch + 0.5), (xm + 2.4, 119.0, DAM_TOWER_Z[0]), col("concrete_dk"))
-    # gantry: a box truss between the towers' inner faces; sight_top sits on its top centre
     gz = -20.0
     for dy in (138.0, DAM_TOP - 0.25):
         for dz in (-1.5, 1.5):
@@ -791,11 +752,9 @@ def build_dam():
             beam(st, (xa, ya, gz + dz), (xb, yb, gz + dz), 0.22, 0.22, col("iron_hi"), caps=False)
     box(st, (-3.0, 138.3, gz - 1.2), (3.0, 140.2, gz + 1.2), col("copper"))
     box(colm, (-DAM_TOWER[0], 137.75, gz - 1.75), (DAM_TOWER[0], DAM_TOP, gz + 1.75), col("iron"))
-    # trunnion brackets for the two radial gates (the leaves are their own nodes)
     hy, hz = DAM_HINGE
     for x in (-12.4, 0.0, 12.4):
         beam(e, (x, hy, fz), (x, hy, hz - 0.8), 1.2, 2.0, col("concrete_dk"))
-    # the halo: the relic's cradle, hung from the jib, rims green at hp_1 and hp_2
     ax, ay, az = DAM_ANCHOR
     r0, r1, dep = DAM_HALO
     segs = 24
@@ -819,7 +778,6 @@ def build_dam():
             exempt["ancient_lens"].poly([p(0.8, a0), p(1.25, a0), p(1.25, a1), p(0.8, a1)], col("lens"), up=(0.0, 0.0, 1.0))
         top = (ax + sx * r1 * math.sin(0.5), ay + r1 * math.cos(0.5), az)
         tube(exempt["steel"], top, (sx * 1.2, DAM_JIB_TIP[1] - 1.4, az), 0.3, 6, col("cable"))
-    # the jib: a steel A-frame crane cantilevered off the face, its tip over the halo, so the cradle reads as rigged
     tip = DAM_JIB_TIP
     for sx in (-1, 1):
         roots = [(sx * 22.0, 76.0, fz + 0.3), (sx * 22.0, 52.0, fz + 0.3)]
@@ -837,8 +795,7 @@ def build_dam():
         beam(st, (-22.0, y, fz + 0.3), (22.0, y, fz + 0.3), 0.7, 0.7, col("iron"))
     box(st, (tip[0] - 1.6, tip[1] - 1.6, tip[2] - 1.6), (tip[0] + 1.6, tip[1] + 1.6, tip[2] + 1.6), col("copper"))
     wheel(st, (0.0, tip[1] - 1.4, tip[2]), (1.0, 0.0, 0.0), 1.3, 0.25, 4, 12, col("iron"), col("copper_dk"))
-    # spill: white water from under the radial gates, down the face, the ramp and out across the apron
-    gl = e          # on the enamel slot: a sixth draw would push the base over the class cap with the -col mesh counted
+    gl = e
     lip = DAM_HINGE[0] - DAM_GATE_R * math.sin(0.62)
     for x0, x1 in ((-11.4, -0.6), (0.6, 11.4)):
         steps = [(lip, fz + 0.18), (DAM_RAMP_TOP + 0.1, fz + 0.18)]
@@ -860,7 +817,6 @@ def build_dam():
             gl.poly(q, [ca, ca, cb, cb], up=face)
     gates = [dam_gate("gate_l", -11.6, -0.4), dam_gate("gate_r", 0.4, 11.6)]
 
-    # ---- mid: a 24-segment arch, the face, towers, gantry, closed gates, the halo
     me, ms = mid["enamel"], mid["steel"]
     dam_face_flat(me, fz, 5)
     for k in range(n):
@@ -897,7 +853,6 @@ def build_dam():
         mid["enamel"].poly([(x0, DAM_RAMP_TOP + 0.1, fz + 0.2), (x1, DAM_RAMP_TOP + 0.1, fz + 0.2), (x1 + 1.4, 0.1, 22.0), (x0 - 1.4, 0.1, 22.0)],
                           col("mist"), up=(0.0, 0.83, 0.55))
 
-    # ---- far: the drop-in hero silhouette: crest line, tower notches, the face as a pale bar
     fe = far["enamel"]
     box(fe, (-DAM_CANYON, 29.9, fz - 1.0), (DAM_CANYON, DAM_PLATEAU + 0.3, fz), col("concrete"))
     dam_face_flat(fe, fz + 0.15, 1)
@@ -923,7 +878,6 @@ def build_dam():
         ring = lambda r, a: (ax + r * math.sin(a), ay + r * math.cos(a), az + dep / 2)
         fe.poly([ring(r0, a0), ring(r1, a0), ring(r1, a1), ring(r0, a1)], col("concrete_lt"), up=(0.0, 0.0, 1.0))
 
-    # ---- shells: course lines and tower ladders (1); monolith joints (2)
     lines = [(x0, x1) for x0, x1, _ in dam_spans()]
     for j in range(1, rows):
         y = 29.9 + (DAM_PLATEAU + 0.3 - 29.9) * j / rows
@@ -946,7 +900,6 @@ def build_dam():
         x = -DAM_CANYON + 16.0 * i
         if any(abs(x - r) < DAM_RIB_W / 2 + 0.2 for r in DAM_RIBS):
             continue
-        # a joint follows the face's profile: plinth, batter, set-back, lintel
         for ya, yb in ((29.95, BAY_FOOT), (BAY_FOOT, BAY_SILL), (BAY_SILL, BAY_TOP), (BAY_TOP, DAM_PLATEAU)):
             za, zb = depth(x, ya + 1e-6) + 0.04, depth(x, yb - 1e-6) + 0.04
             card(d2, [(x - 0.08, ya, za), (x + 0.08, ya, za), (x + 0.08, yb, zb), (x - 0.08, yb, zb)], col("joint"), (0.0, 0.0, 1.0))
@@ -960,19 +913,11 @@ def build_dam():
             "shells": (d1, d2), "shell_slot": "enamel", "clear": CLEAR}
 
 
-# ================================================================ card 2: the penstock tower (park_flume)
-# Bake fit (assets/park/park_flume): the head_house_drum terrace stamp is square, not round: its floor is at y -14 inside
-# 40 m of the centre (230, 480) and its walls slope to grade (y 0) at 42 m on all four sides, so the head house is a
-# square concrete pit. The liner lies on those four planes 0.07 m proud; the parapet stands outside the rim and keeps
-# off every crossing of the six pilot lines and the floor line in assets/park/park_flume/lines.json (the south-west
-# corner and the south wall near x 253), the annex corner and the whole east wall (the two routes to the gate lip).
-# The roof is a ring girder on rim columns carrying six north-south trusses, never lower than y 14.6.
 FLUME_DRUM = (230.0, 480.0)
 FLUME_FLOOR = -14.0
 FLUME_WALL = (40.0, 42.0)
 FLUME_TOWER = (300.0, 560.0)
 FLUME_ANCHOR = (230.0, -2.0, 470.0)
-# parapet runs on the rim, world coordinates: (side, from, to) with side W/N/S along the drum's edges
 FLUME_PARAPET = (("W", 462.0, 504.0), ("N", 212.0, 268.0), ("S", 204.0, 238.0))
 FLUME_LINE_CROSSINGS = ((188.0, 445.0), (189.0, 441.0), (253.0, 438.0))
 
@@ -993,7 +938,6 @@ def build_penstock_tower():
     e, st, ln = base["enamel"], base["steel"], base["ancient_lens"]
     tx, _, tz = L(FLUME_TOWER[0], 0.0, FLUME_TOWER[1])
     tc = (tx, tz)
-    # surge tower: formwork bands every 3 m, the bell, a gallery at 84, a green ring round the beam root
     ys = [-1.0] + [3.0 * k for k in range(1, 27)] + [80.0, 82.0, 84.0, 86.0, 87.0, 89.0, 90.0]
     for k in range(len(ys) - 1):
         y0, y1 = ys[k], ys[k + 1]
@@ -1011,7 +955,6 @@ def build_penstock_tower():
     frustum(colm, tc, 9.0, 7.0, -1.0, 80.0, 12, col("concrete"))
     frustum(colm, tc, 7.0, 11.0, 80.0, 87.0, 12, col("concrete"))
     frustum(colm, tc, 11.0, 10.2, 87.0, 90.0, 12, col("concrete"))
-    # the head house: the four liner planes, panelled in 8 m form panels, 0.07 m proud of the stamp's slopes
     cx, cz = FLUME_DRUM
     d0, d1w = FLUME_WALL
     inset = 0.07
@@ -1028,8 +971,6 @@ def build_penstock_tower():
         if name != "E":
             surface.poly([L(*point) for point in points], color, up=inward)
             return
-        # The grade cuts through the terrain beneath this draw-only liner. Keep the same opening
-        # in the formwork, its stains and the mid view, so the eye and the ball have the same way out.
         outline = [(z, y) for _, y, z in points]
         for normal, limit in (((1, 0), opening[0]), ((-1, 0), -opening[1])):
             section = clip(outline, normal, limit)
@@ -1048,7 +989,6 @@ def build_penstock_tower():
                     wz = cz + along[1] * a + out[1] * d
                     pts.append((wx, y, wz))
                 liner_face(e, name, out, pts, shade("concrete", 1.0, (i, j, ord(name)), 0.06), inset)
-    # parapet: concrete runs on the rim with pilasters; each run collides
     for side, a0, a1 in FLUME_PARAPET:
         if side == "W":
             lo, hi = (cx - 43.8, -0.3, a0), (cx - 42.3, 4.0, a1)
@@ -1071,7 +1011,6 @@ def build_penstock_tower():
                 plo, phi = (a - 0.6, 0.0, cz - 44.1), (a + 0.6, 4.6, cz - 42.0)
             pc = [L(plo[0], 0, plo[2]), L(phi[0], 0, plo[2]), L(phi[0], 0, phi[2]), L(plo[0], 0, phi[2])]
             slab(e, [(p[0], p[2]) for p in pc], plo[1], phi[1], col("concrete_lt"))
-    # roof: rim columns (on the parapet runs and the two east corners), a square ring girder, six trusses north-south
     cols_w = [(cx - 43.0, cz + dz) for dz in (-12.0, 2.0, 16.0)] + [(cx + dx, cz + 43.0) for dx in (-14.0, 2.0, 18.0, 36.0)] + \
              [(cx + dx, cz - 43.0) for dx in (-22.0, -8.0)] + [(cx + 43.0, cz - 43.0), (cx + 43.0, cz + 43.0), (cx - 43.0, cz + 43.0), (cx - 43.0, cz - 43.0)]
     for wx, wz in cols_w:
@@ -1096,7 +1035,6 @@ def build_penstock_tower():
             beam(st, L(x, ya, za), L(x, yb, zb), 0.25, 0.25, col("iron_hi"), caps=False)
     for dz in (-30.0, -10.0, 10.0, 30.0):
         beam(st, L(cx - 30.0, 18.9, cz + dz), L(cx + 30.0, 18.9, cz + dz), 0.3, 0.3, col("iron_hi"), caps=False)
-    # penstock heads: three copper valve collars on the south wall, toward the bluff piers
     for dx in (-16.0, 0.0, 16.0):
         x = cx + dx
         wall = cz - (d0 + (d1w - d0) * 8.0 / 14.0)
@@ -1106,7 +1044,6 @@ def build_penstock_tower():
         hub = vadd(b, sky.norm(vsub(b, a)), 1.2)
         tube(st, vadd(b, sky.norm(vsub(b, a)), 0.2), hub, 0.25, 6, col("iron"))
         wheel(st, hub, sky.norm(vsub(b, a)), 1.6, 0.18, 6, 12, col("copper"), col("iron"))
-    # the pour channel's two cheeks: green rims at hp_1 and hp_2 (the reactor's latch points)
     ax, ay, az = FLUME_ANCHOR
     hp = {"hp_0": (ax, ay + 1.6, az), "hp_1": (ax - 3.1, ay + 4.0, az + 3.9), "hp_2": (ax + 3.1, ay + 4.0, az - 3.9)}
     for key in ("hp_1", "hp_2"):
@@ -1118,7 +1055,6 @@ def build_penstock_tower():
             p = lambda r, a: vadd(vadd(c, u, r * math.cos(a)), v, r * math.sin(a))
             exempt["ancient_lens"].poly([p(0.5, a0), p(0.85, a0), p(0.85, a1), p(0.5, a1)], col("lens"), up=out)
 
-    # ---- mid: tower, parapet runs, liner planes, girder and trusses as bars
     me, ms = mid["enamel"], mid["steel"]
     for k, (y0, y1) in enumerate(((-1.0, 30.0), (30.0, 60.0), (60.0, 80.0), (80.0, 87.0), (87.0, 90.0))):
         frustum(me, tc, flume_tower_r(max(y0, 0.0)), flume_tower_r(y1), y0, y1, 16, col("concrete_lt" if k % 2 else "concrete"), caps=(k == 0, k == 4))
@@ -1148,7 +1084,6 @@ def build_penstock_tower():
         p = L(wx, 0.0, wz)
         box(ms, (p[0] - 0.6, 0.0, p[2] - 0.6), (p[0] + 0.6, 18.6, p[2] + 0.6), col("iron"))
 
-    # ---- far: the tower (a 12-sided frustum and bell) and the drum's rim line
     fe = far["enamel"]
     frustum(fe, tc, 9.0, 7.0, -1.0, 80.0, 12, col("concrete"), caps=(False, False))
     frustum(fe, tc, 7.0, 11.0, 80.0, 87.0, 12, col("concrete_lt"), caps=(False, False))
@@ -1160,7 +1095,6 @@ def build_penstock_tower():
             beam(fe, L(start[0], 2.0, start[1]), L(end[0], 2.0, end[1]), 1.5, 4.0, col("concrete_lt"))
         beam(far["steel"], L(a[0], 17.8, a[1]), L(b[0], 17.8, b[1]), 0.9, 1.6, col("iron"))
 
-    # ---- shells: window slots, gallery brackets, truss gussets (1); tie holes and liner streaks (2)
     s1, s2 = sky.Surf("landmark_penstock_tower_detail1"), sky.Surf("landmark_penstock_tower_detail2")
     for k in range(6):
         a = TAU * (k + 0.5) / 6
@@ -1210,35 +1144,16 @@ def build_penstock_tower():
             "shells": (s1, s2), "shell_slot": "enamel", "clear": CLEAR}
 
 
-# ================================================================ card 3: the headframe (park_pit)
-# Bake fit (assets/park/park_pit): the pit floor is y -100 (local 0); the collar_dish dips to local -10 at the axis and
-# meets the floor at 35 m. Front legs stand at the collar corners and run below the dish (solid to the ground, Andrew
-# 2026-10-16); the back legs rake toward the hoist_house row (local (75, 0, 40)) and land on open floor clear of it and
-# of the tipple deck. The hive well (|x|, |z| < 6, y 0..38) stays empty; the sheave deck sits at 104.5 under the two
-# 14 m wheels, whose tops are sight_top at 120.
 PIT_FEET = ((12.0, 10.0), (-12.0, 10.0), (-12.0, -10.0), (12.0, -10.0))
 PIT_TOPS = ((6.0, 5.0), (-6.0, 5.0), (-6.0, -5.0), (6.0, -5.0))
 PIT_FOOT_Y, PIT_DECK_Y = -12.0, 104.5
-PIT_ROPE = (0.882, 0.0, 0.470)          # toward the hoist house, unit
+PIT_ROPE = (0.882, 0.0, 0.470)
 PIT_PERP = (-0.470, 0.0, 0.882)
 PIT_WHEEL_Y, PIT_WHEEL_R = 113.0, 7.0
-PIT_WELL = (6.0, 0.0, 38.0)             # half width, bottom, top
-# The tipple_deck row (park_pit: at [0, 240], y -60, size [24, 2, 16], yaw 180) in this frame: Frame.local(0, -60, 240)
-# = (0, 40, 15); the row's yaw less the landmark's is 0, so its length (24) runs along local z and its width (16) along
-# x; place_greybox stands the box on the row's y: local x -8..8, y 40..42, z 3..27. The deck plate's top is the row's
-# top, 42; its edge stringers sit on the girders (top 39.7) through bearing shims out to x +-8.7.
+PIT_WELL = (6.0, 0.0, 38.0)
 PIT_DECK_BOX = ((-8.0, 40.0, 3.0), (8.0, 42.0, 27.0))
-# The hoist_house row (at [-75, 215], ground y -100, size [44, 16, 26], yaw -63): Frame.local(-75, -100, 215) = (75, 0,
-# 40); local yaw = -63 - 180 = -243 = 117 degrees, so its length axis is local (sin 117, 0, cos 117) = (0.891, 0, -0.454)
-# (Frame.dir_local of the row's world +Z) and its width axis (cos 117, 0, -sin 117) = (-0.454, 0, -0.891). Half 22 by 13,
-# roof 16. The rope ends (hoist, below) lie 12 m from the centre toward the headframe on the plane square to PIT_ROPE;
-# the house meets them with a rope slot cut in the roof: the drum wall on that plane (d 12, d along -PIT_ROPE from the
-# centre), the slot 2 m deep to d 14, |q| < 5.5 along PIT_PERP, floor at 12. A rope rises 1.49 m per metre of plan back
-# toward the wheels, so it clears the slot's far lip (y 17 at d 14) and the roof beyond.
 PIT_HOUSE_ROW = ((-75.0, 215.0), -63.0, (44.0, 16.0, 26.0))
 PIT_ROPE_END_D = 12.0
-# d from, d to, half q, floor y; d is -PIT_ROPE . (p - centre), and PIT_ROPE is unit to 3 places, so the rope ends sit
-# at d = 12 |PIT_ROPE|^2 (11.986), where the drum wall stands
 PIT_SLOT = (PIT_ROPE_END_D * (PIT_ROPE[0] ** 2 + PIT_ROPE[2] ** 2), 14.0, 5.5, 12.0)
 
 
@@ -1319,7 +1234,6 @@ def build_headframe():
     colm = sky.Surf("landmark_headframe-col-col")
     st = base["steel"]
     iron = col("iron")
-    # four lattice legs of the front tower, X-braced on its four faces between the legs
     for i in range(4):
         a, b = pit_leg(i, PIT_FOOT_Y), pit_leg(i, PIT_DECK_Y)
         lattice(st, a, b, 1.4, 0.9, 24, iron)
@@ -1333,7 +1247,6 @@ def build_headframe():
             beam(st, pit_leg(i, y0), pit_leg(j, y1), 0.45, 0.45, col("iron_hi"), caps=False)
             beam(st, pit_leg(j, y0), pit_leg(i, y1), 0.45, 0.45, col("iron_hi"), caps=False)
             beam(st, pit_leg(i, y1), pit_leg(j, y1), 0.6, 0.6, iron)
-    # back legs and their ties to the tower
     for (f, t) in pit_back():
         lattice(st, f, t, 1.5, 1.0, 22, iron)
         beam(colm, f, t, 3.0, 3.0, iron)
@@ -1347,7 +1260,6 @@ def build_headframe():
         pa = vlerp(fa, ta, (y - fa[1]) / (ta[1] - fa[1]))
         pb = vlerp(fb, tb, (y - fb[1]) / (tb[1] - fb[1]))
         beam(st, pa, pb, 0.5, 0.5, col("iron_hi"), caps=False)
-    # sheave deck with a rope hole, stools and the two wheels; sight_top on the wheel tops
     dy0, dy1 = PIT_DECK_Y, PIT_DECK_Y + 1.5
     for lo, hi in (((-8.0, -7.0), (-2.0, 7.0)), ((2.0, -7.0), (8.0, 7.0)), ((-2.0, -7.0), (2.0, -2.0)), ((-2.0, 2.0), (2.0, 7.0))):
         box(st, (lo[0], dy0, lo[1]), (hi[0], dy1, hi[1]), col("iron_hi"))
@@ -1366,10 +1278,8 @@ def build_headframe():
         a = vadd(vadd(c, PIT_ROPE, PIT_WHEEL_R - 0.3), UP, 0.0)
         hoist = vadd(vadd((75.0, 14.0, 40.0), PIT_ROPE, -12.0), PIT_PERP, s * 3.5)
         tube(st, a, hoist, 0.22, 4, col("cable"))
-    # shaft collar: a steel frame round the hive well, flush on the dish
     for lo, hi in (((-8.5, -8.5), (8.5, -6.5)), ((-8.5, 6.5), (8.5, 8.5)), ((-8.5, -6.5), (-6.5, 6.5)), ((6.5, -6.5), (8.5, 6.5))):
         box(st, (lo[0], -9.78, lo[1]), (hi[0], -9.7, hi[1]), col("iron_hi"))
-    # tipple girders: under the tipple deck row's long edges (local x +-8, z 3..27, base y 40), cantilevered off the legs
     for sx in (-1, 1):
         root = pit_leg(0 if sx > 0 else 1, 39.2)
         beam(st, (sx * 8.4, 39.2, root[2]), (sx * 8.4, 39.2, 27.5), 0.6, 1.0, iron)
@@ -1377,7 +1287,6 @@ def build_headframe():
         beam(st, pit_leg(0 if sx > 0 else 1, 18.0), (sx * 8.4, 38.7, 22.0), 0.5, 0.5, col("iron_hi"))
     for z in (12.0, 20.0, 27.0):
         beam(st, (-8.4, 38.9, z), (8.4, 38.9, z), 0.4, 0.5, col("iron_hi"), caps=False)
-    # tipple deck (PIT_DECK_BOX): plate, edge stringers on bearing shims over the girders, floor beams, end channels
     (dx0, dyb, dz0), (dx1, dyt, dz1) = PIT_DECK_BOX
     box(st, (dx0, dyt - 0.4, dz0), (dx1, dyt, dz1), col("steel"))
     for sx in (-1, 1):
@@ -1387,8 +1296,6 @@ def build_headframe():
     for z in (dz0 + 0.2, 7.0, 11.0, 15.0, 19.0, 23.0, dz1 - 0.2):
         box(st, (-7.7, dyb + 0.2, z - 0.2), (7.7, dyt - 0.4, z + 0.2), col("iron_hi"))
     box(colm, (dx0, dyb, dz0), (dx1, dyt, dz1), iron)
-    # hoist house (pit_house): corrugated walls, rust roof round the rope slot, the drum window on the slot's back wall
-    # facing the headframe, a boiler stack with two bands and a cap
     hc, hax, haw, hhl, hhw, hroof = pit_house()
     pit_house_solid(st, col("rust"), col("steel"))
     pit_house_solid(colm, iron, iron, slot=False)
@@ -1407,7 +1314,6 @@ def build_headframe():
     frustum(st, (sc[0], sc[2]), 1.15, 1.15, 33.4, 34.4, 10, col("iron_hi"))
     frustum(colm, (sc[0], sc[2]), 1.0, 0.85, hroof - 0.2, 34.0, 8, iron)
 
-    # ---- mid: box legs with cross braces, the deck, 16-segment wheel discs, ropes
     ms = mid["steel"]
     for i in range(4):
         beam(ms, pit_leg(i, PIT_FOOT_Y), pit_leg(i, PIT_DECK_Y), 2.4, 2.4, iron)
@@ -1430,7 +1336,6 @@ def build_headframe():
     pit_house_solid(ms, col("rust"), col("steel"))
     frustum(ms, (sc[0], sc[2]), 1.0, 0.85, hroof - 0.2, 34.0, 8, col("iron"))
 
-    # ---- far: four box legs, the back legs, the deck and both wheel discs (the A-and-wheels read)
     fs = far["steel"]
     for i in range(4):
         beam(fs, pit_leg(i, PIT_FOOT_Y), pit_leg(i, PIT_DECK_Y), 2.6, 2.6, iron)
@@ -1447,7 +1352,6 @@ def build_headframe():
         fs.ring_solid([vadd(p, PIT_PERP, -0.3) for p in ring], [vadd(p, PIT_PERP, 0.3) for p in ring], iron)
     pit_house_solid(fs, None, col("steel"), slot=False)
 
-    # ---- shells: ladder and gusset plates (1); rivet rows (2)
     s1, s2 = sky.Surf("landmark_headframe_detail1"), sky.Surf("landmark_headframe_detail2")
     for k in range(len(levels)):
         for i in range(4):
@@ -1466,7 +1370,6 @@ def build_headframe():
         for k in range(9):
             x = x0 + 2.0 * k
             beam(s1, (x, dy1, z), (x, dy1 + 1.1, z), 0.06, 0.06, col("iron_hi"), caps=False)
-    # corrugation ribs every 2 m on the two house walls facing the headframe (+width and -length), under the slot floor
     for axis, half, along, span in ((haw, hhw, hax, hhl), (hax, -hhl, haw, hhw)):
         n = int(span)
         for k in range(-n + 1, n, 2):
@@ -1478,7 +1381,6 @@ def build_headframe():
             for m in range(3):
                 q = vadd(p, (-1.0 + m, 0.95, 2.0 if p[2] > 0 else -2.0))
                 box(s2, vsub(q, (0.09, 0.09, 0.09)), vadd(q, (0.09, 0.09, 0.09)), col("copper_dk"))
-    # rivet rows on the tipple deck's edge stringers
     for sx in (-1, 1):
         for k in range(12):
             q = (sx * 8.05, 40.8, 4.0 + 2.0 * k)
@@ -1489,19 +1391,6 @@ def build_headframe():
             "shells": (s1, s2), "shell_slot": "steel", "clear": CLEAR}
 
 
-# ================================================================ card 4: the sinkhole (park_sinkhole)
-# Bake fit (assets/park/park_sinkhole): the collapse is a U, not a round hole. The floor is flat at y -100 for 50 m
-# round the axis and out to the walls; the walls are planes, x = +-(124 + 0.02 (y + 100)) east and west from local z
-# -100 to 48, and z = 48 + 0.02 (y + 100) to the south; the U opens north toward the tubes. Stains and strata are cards on
-# those planes 0.08 m inside; coping lies on the rims where the plateau reads y 0 (the east and west rims from local z
-# -50, the south rim within x +-104). The gallery ring is full (Andrew 2026-10-16): timber decking round the pool from r
-# 42 to 49, its top 0.1 m over the floor, so it needs no collider and moves no line. The pool cylinder (r 40, y -120 to
-# -100) stays empty. Refit to the sinkhole bake of 2026-10-17 (claude/sinkhole-bake-rkry23, rows gallery_ring to
-# gallery_ring_24, gallery_cut_1 to _15, gallery_post_1 to _11): the ring lane runs r 46 to 61, so the deck spans it and
-# the lamps stand inside it at r LAMP_R; the south wall is cut back into an alcove (SINK_ALCOVE, the floor line where the
-# bake's wall meets y -100, sampled every 3 m, the same 0.02 lean as the planes). The nest's comb hangs on a timber gantry
-# over the lane at the anchor (legs on the caisson lip and behind the ring, nothing in the lane below SINK_LANE_TOP), and
-# its cells carry on into the alcove wall. The headgear stands east of the pump gallery (now at x 73), over its far end.
 SINK_FLOOR = -100.0
 SINK_RING = (46.0, 61.0)
 SINK_LANE_TOP = -92.0
@@ -1509,8 +1398,6 @@ SINK_POOL = (40.0, -120.0, -100.0)
 SINK_ANCHOR = (0.0, -99.0, 38.0)
 LAMP_R = 44.2
 SINK_HEAD_X = 100.0
-# The tube mouths' wash stamps (main_tube_lower_11, east_haulage_11) cut a trough through the north ring, down to y
-# -107.8; the deck, its seams and its lamps stop at the trough's bearings (degrees, sampled at bake 49b06209).
 SINK_WASH = (math.radians(142.0), math.radians(183.0))
 
 
@@ -1581,7 +1468,6 @@ def sink_walls(s, cols, rows, inset, color_fn, y_top=-3.0, y_bot=-97.0):
                 ya, yb = y_bot + (y_top - y_bot) * j / rows, y_bot + (y_top - y_bot) * (j + 1) / rows
                 c = color_fn(name, i, j, (ya + yb) / 2)
                 card(s, [at(aa, ya), at(ab, ya), at(ab, yb), at(aa, yb)], c, normal)
-    # the south wall follows the alcove: one card per column break, each facing into the hole
     xs = sink_south_xs(2.0 * sink_wall_x(y_bot) / cols)
     at = lambda a, y: (a, y, sink_wall_z(y, a) - inset)
     for i, (aa, ab) in enumerate(zip(xs, xs[1:])):
@@ -1602,12 +1488,6 @@ def sink_alcove_rim(s, step, color_fn):
         slab(s, [(xa, za), (xb, zb), (xb - n[0] * w, zb - n[2] * w), (xa - n[0] * w, za - n[2] * w)], -0.6, 0.08, color_fn(k))
 
 
-# The trestle: a timber span over the wash trough, closing the ring (Andrew 16 Oct: "sinkhole a full ring"). It follows the
-# deck's arc from bearing 142 to 183, planked flush with the deck (top SINK_FLOOR + 0.1) and slung on four fish-belly
-# stringers whose soffit sags 0.9 m at mid-span, so the span's lowest timber is y -101.44, 6.3 m over the trough floor at
-# -107.8. Two bents (three legs, a cap beam, knee braces) stand on the trough's flanks, 0.6 degrees (0.5 to 0.6 m) inside the
-# sampled bearings 142 and 183, and their legs run down to the floor at -107.8; the span between them carries no support, so
-# the ball's line down the trough stays open. Visual only: nothing here enters the -col mesh.
 TRESTLE_N = 30
 TRESTLE_PLANK = 0.14
 TRESTLE_STRINGERS = (47.2, 51.4, 55.6, 59.8)
@@ -1654,7 +1534,6 @@ def sink_trestle(e, ex, mid):
             beam(e, sink_pt(r, tb, TRESTLE_LEG_FOOT), sink_pt(r, tb, cap), 0.6, 0.6, col("timber"))
             tk = tb + inward * math.radians(3.0)
             beam(e, sink_pt(r, tb, cap - 2.6), sink_pt(r, tk, seat - TRESTLE_DEPTH - 0.2), 0.3, 0.3, col("timber_lt"))
-    # mid view: the planks and the four stringers as single runs
     annulus(mid, (0.0, 0.0), r0, r1, seat, top, 10, lambda i: col("timber"), arc=SINK_WASH, sides=False)
     bot = lambda u: seat - TRESTLE_DEPTH - TRESTLE_SAG * math.sin(math.pi * u)
     for r in TRESTLE_STRINGERS:
@@ -1669,10 +1548,8 @@ def build_sinkhole():
     base, exempt, mid, far = View("landmark_sinkhole"), View("flush"), View("landmark_sinkhole_mid"), View("landmark_sinkhole_far")
     colm = sky.Surf("landmark_sinkhole-col-col")
     sto, e, st, ln = base["stone"], base["enamel"], base["steel"], base["ancient_lens"]
-    # strata cards: basalt cap over pale limestone, painted near-white for the stone slot's beds to multiply
     wall_colour = lambda name, i, j, y: shade(sink_band(y), 1.0, (i, j, ord(name)), 0.05)
     sink_walls(sto, 20, 16, 0.08, wall_colour, y_top=-0.6)
-    # mineral stains over the strata: iron, ochre, calcite, manganese, a few verdigris
     stains = ("oxide", "ochre", "calcite", "mangan", "verdigris", "rust")
     for k in range(70):
         wall = ("E", "W", "S")[k % 3]
@@ -1692,7 +1569,6 @@ def build_sinkhole():
             pts = [(sx * (sink_wall_x(bot) - 0.14), bot, a - w), (sx * (sink_wall_x(bot) - 0.14), bot, a + w),
                    (sx * (sink_wall_x(top) - 0.14), top, a + w * 0.4), (sx * (sink_wall_x(top) - 0.14), top, a - w * 0.4)]
             card(sto, pts, c, (-sx, 0.0, 0.0))
-    # rim coping: broken basalt slabs on the plateau along the edge, top 0.08 m over grade, no collider
     def coping(s, a0, a1, step, place, seed):
         k = 0
         a = a0
@@ -1709,13 +1585,11 @@ def build_sinkhole():
     for sx in (-1, 1):
         coping(sto, SINK_ALCOVE[-1][0] + 0.6, 104.0, 5.0, lambda a, w, sx=sx: (sx * a, 50.1 + w), 20 + sx)
     sink_alcove_rim(sto, 3.0, lambda k: shade("basalt", 1.0, (k, 23), 0.1))
-    # the full gallery ring round the pool: radial planks on sleepers, flush (FLUSH-safe), with lamp posts
     fe = exempt["enamel"]
     deck_arc = (SINK_WASH[1], SINK_WASH[0] + TAU)
     annulus(fe, (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 106, arc=deck_arc, color_fn=
             lambda i: shade("timber" if i % 3 else "timber_dk", 1.0, (i, 41), 0.08))
     sink_trestle(e, fe, mid["enamel"])
-    # the caisson lip: a riveted steel band set flush just outside the pool
     annulus(exempt["steel"], (0.0, 0.0), SINK_POOL[0] + 0.15, SINK_POOL[0] + 1.1, SINK_FLOOR, SINK_FLOOR + 0.08, 64,
             lambda i: shade("steel", 1.0, (i, 51), 0.06))
     for k in range(16):
@@ -1725,12 +1599,9 @@ def build_sinkhole():
         p = (LAMP_R * math.sin(a), SINK_FLOOR + 0.1, LAMP_R * math.cos(a))
         box(e, (p[0] - 0.12, p[1], p[2] - 0.12), (p[0] + 0.12, p[1] + 2.6, p[2] + 0.12), col("timber_dk"))
         box(e, (p[0] - 0.35, p[1] + 2.6, p[2] - 0.35), (p[0] + 0.35, p[1] + 3.1, p[2] + 0.35), col("amber"))
-    # copper anchor eyes where the anchor rows ring_post_w and ring_post_e stand (the swarm's hardpoints; the loader
-    # builds no post inside the landmark's footprint): rings set flush in the deck, so the lane stays open
     for sx in (-1, 1):
         annulus(exempt["steel"], (sx * 20.0, 43.0), 0.45, 0.9, SINK_FLOOR, SINK_FLOOR + 0.11, 12,
                 lambda i: col("copper") if i % 2 else col("copper_dk"))
-    # headgear: two timber A-frames, a cap beam and a sheave over the pump gallery's far end
     hx = SINK_HEAD_X
     for z in (-11.0, 11.0):
         for x in (hx - 8.0, hx + 8.0):
@@ -1740,7 +1611,6 @@ def build_sinkhole():
     beam(e, (hx, -71.4, -12.0), (hx, -71.4, 12.0), 1.0, 1.2, col("timber_dk"))
     wheel(st, (hx, -68.6, 0.0), (0.0, 0.0, 1.0), 2.4, 0.3, 6, 16, col("iron"), col("copper"))
     tube(st, (hx - 2.4, -68.6, 0.0), (78.0, -94.0, 0.0), 0.12, 4, col("cable"))
-    # the nest socket on the south wall: broken hex cells, green rims on the central ones, timbers through them
     cells = []
     for i in range(-9, 10):
         for j in range(0, 9):
@@ -1762,8 +1632,6 @@ def build_sinkhole():
         x = -14.0 + 28.0 * rnd(k, 66)
         y = SINK_FLOOR + 3.0 + 9.0 * rnd(k, 67)
         beam(e, (x, y, sink_wall_z(y, x) - 0.1), (x + 2.5 * (rnd(k, 68) - 0.5), y - 1.5, sink_wall_z(y, x) - 2.2), 0.4, 0.4, col("timber_dk"))
-    # the comb over the lane: a timber gantry with legs on the caisson lip (r 44) and behind the ring (r 64), cap beams
-    # at y -83, and a hex comb hung from the front beam facing the anchor; nothing in the lane below SINK_LANE_TOP
     gx, gz0, gz1, gy = 10.5, 42.6, 63.5, -83.0
     for sx in (-1, 1):
         for z in (gz0, gz1):
@@ -1788,7 +1656,6 @@ def build_sinkhole():
             hexcell(sto, (x, y, 44.6), (0.0, 0.0, -1.0), 0.92, depth, shade("basalt_dk", 1.0, (i, j, 72), 0.12),
                     rim=(ln, col("lens")) if abs(x) < 4.0 and rnd(i, j, 73) > 0.3 else None, open_end=rnd(i, j, 74) > 0.5)
 
-    # ---- mid: coping, coarse strata, the ring deck, the caisson band, the headgear's outline
     sink_walls(mid["stone"], 6, 5, 0.08, wall_colour, y_top=-0.6)
     annulus(mid["enamel"], (0.0, 0.0), SINK_RING[0], SINK_RING[1], SINK_FLOOR, SINK_FLOOR + 0.1, 42, lambda i: col("timber"),
             arc=deck_arc, sides=False)
@@ -1803,7 +1670,6 @@ def build_sinkhole():
             beam(mid["enamel"], (x, SINK_FLOOR - 1.0, z), (SINK_HEAD_X, -72.0, z), 1.0, 1.0, col("timber"), caps=False)
     beam(mid["enamel"], (SINK_HEAD_X, -71.4, -12.0), (SINK_HEAD_X, -71.4, 12.0), 1.0, 1.2, col("timber_dk"))
 
-    # ---- far: the rim coping as a dark lip and the cap band under it, so the U reads from the plateau
     for sx in (-1, 1):
         box(far["stone"], (min(sx * 126.1, sx * 129.0), -0.6, -50.0), (max(sx * 126.1, sx * 129.0), 0.08, 48.0), col("basalt"))
     for sx in (-1, 1):
@@ -1811,7 +1677,6 @@ def build_sinkhole():
     sink_alcove_rim(far["stone"], 15.0, lambda k: col("basalt"))
     sink_walls(far["stone"], 4, 2, 0.08, lambda name, i, j, y: col("basalt_dk") if j else col("lime"), y_top=-0.6, y_bot=-20.0)
 
-    # ---- shells: plank seams, lamp brackets, rubble at the wall foot (1); caisson rivets and drips (2)
     s1, s2 = sky.Surf("landmark_sinkhole_detail1"), sky.Surf("landmark_sinkhole_detail2")
     for k in range(60):
         a = TAU * k / 60
@@ -1864,19 +1729,12 @@ def build_sinkhole():
             "shells": (s1, s2), "shell_slot": "stone", "clear": CLEAR}
 
 
-# ================================================================ card 5: the Hanging Isle (park_islands)
-# The isle is sky.floating_island (the same builders), re-origined onto the tilt pivot (warden_mind.gd PIVOT_HEIGHT 118 m
-# above the tip, the tip at world 82), with more rings and sides on the underside players see from the bowl. The hand
-# hangs 16 m under the tip since PW1 (wave 15: the stage 5 anchor at y 66, in rope reach), so a copper collar on the tip
-# carries a chain tether down to it; the tether is its own node (origin on the tip) for the runtime to stretch. The tip's
-# lowest 49 m collide only through landmark_sky_island_tip.glb (ISLE-TIP, Andrew 2026-10-16: a moving harpoon anchor on
-# an AnimatableBody3D), so the base collider stops above it and nothing here bites until the tilt drives that body.
 ISLE_SHIFT = (0.0, 200.0, -sky.I_R)
 ISLE_PIVOT = 118.0
-ISLE_HAND_Y = 66.0 - 200.0              # park_islands.json warden anchor y 66 (PW1, wave 15)
+ISLE_HAND_Y = 66.0 - 200.0
 ISLE_HAND_CLEAR = 16.0
 ISLE_TIP = (0.0, -ISLE_PIVOT, 0.0)
-ISLE_COL_RING = 23                      # the base collider follows the hull to this ring (of the default 26)
+ISLE_COL_RING = 23
 
 
 def isle_shift(surf, name):
@@ -1927,7 +1785,6 @@ def build_sky_island():
     base.parts["elastomer"] = el
     el.name = "landmark_sky_island:elastomer"
     st, ln = base["steel"], base["ancient_lens"]
-    # keel ribs: rusted iron ribs on the lower taper, where the hand's fingers would curl
     for k in range(6):
         a = TAU * (k + 0.5) / 6
         pts = []
@@ -1940,7 +1797,6 @@ def build_sky_island():
         for p in pts[1:-1:2]:
             t = (math.cos(a), 0.0, -math.sin(a))
             beam(st, vadd(p, t, -1.6), vadd(p, t, 1.6), 0.6, 0.6, col("copper_dk"))
-    # the tip collar and the green ring round the beam root on the deck
     collar_d = 312.0
     r = isle_hull_r(collar_d) + 0.6
     for k in range(12):
@@ -1948,7 +1804,6 @@ def build_sky_island():
         beam(st, (r * math.sin(a0), 200.0 - collar_d, r * math.cos(a0)), (r * math.sin(a1), 200.0 - collar_d, r * math.cos(a1)),
              0.8, 1.4, col("copper"))
     annulus(ln, (0.0, 0.0), 3.0, 4.2, 200.0 + sky.I_CROWN - 0.02, 200.0 + sky.I_CROWN + 0.02, 16, lambda i: col("lens"), sides=False)
-    # mist under the waterfall's end: crossed pale cards
     fall_x = -sky.I_R - 1.6
     for k in range(5):
         y = 200.0 - 112.0 - 8.0 * k
@@ -1961,7 +1816,6 @@ def build_sky_island():
             normal = sky.norm(sky.cross(t, UP))
             el.poly(pts, lerp(col("mist"), col("water"), 0.2 * k / 5), up=normal)
             el.poly(list(reversed(pts)), lerp(col("mist"), col("water"), 0.2 * k / 5), up=vscale(normal, -1.0))
-    # the tether: a chain from the tip to the hand's grip (its own node, origin on the tip)
     tet = exempt["steel"]
     top = ISLE_TIP
     grip = (0.0, ISLE_HAND_Y + 3.0, 0.0)
@@ -1980,7 +1834,6 @@ def build_sky_island():
             beam(tet, pts[i], pts[(i + 1) % 4], 0.22, 0.22, col("iron"), caps=False)
     tube(tet, top, (0.0, top[1] - 1.0, 0.0), 1.1, 8, col("copper"))
     tube(tet, (0.0, grip[1] + 0.8, 0.0), (0.0, grip[1] - 0.4, 0.0), 0.9, 8, col("copper_dk"))
-    # base collider: floating_island's deck and hull down to ring ISLE_COL_RING, closed there
     colm = sky.Surf("landmark_sky_island-col-col")
     rings = 5
     for j in range(rings):
@@ -2000,7 +1853,6 @@ def build_sky_island():
     last = [vadd(p, ISLE_SHIFT) for p in sky.i_hull_ring(ISLE_COL_RING)]
     colm.poly(list(last), col("sandstone"), inside=(0.0, last[0][1] + 5.0, 0.0))
 
-    # ---- mid: the taper at half the rings, the deck with clumps of pines, one waterfall ribbon, ribs, the tether
     with IsleDetail(32, 13):
         m_el = mid["elastomer"]
         for k in range(sky.I_RINGS):
@@ -2035,7 +1887,6 @@ def build_sky_island():
         beam(mid["steel"], p, q, 1.6, 1.1, col("rust"), caps=False)
     tube(mid["steel"], ISLE_TIP, grip, 0.5, 4, col("iron"))
 
-    # ---- far: a 24-sided inverted cone under the deck disc, the waterfall as one strip
     fl = far["elastomer"]
     rings_f = [(0.0, sky.I_R), (40.0, isle_hull_r(40.0)), (110.0, isle_hull_r(110.0)), (200.0, isle_hull_r(200.0)), (270.0, isle_hull_r(270.0))]
     for (d0, r0), (d1, r1) in zip(rings_f, rings_f[1:]):
@@ -2054,7 +1905,6 @@ def build_sky_island():
     fl.poly(quad, col("water"), up=(-1.0, 0.0, 0.0))
     fl.poly(list(reversed(quad)), col("water"), up=(1.0, 0.0, 0.0))
 
-    # ---- shells: floating_island's two shells, re-origined, plus rib rivet plates (2)
     s1 = isle_shift(sky.build_island_d1(), "landmark_sky_island_detail1")
     s2 = isle_shift(sky.build_island_d2(), "landmark_sky_island_detail2")
     for k in range(6):
@@ -2075,11 +1925,6 @@ def build_sky_island():
             "extra": {"landmark_sky_island_tip": tip_glb}}
 
 
-# ================================================================ card 6: the Crown Spire (park_crown)
-# The bowl floor is y -12 at the axis (local 0) and climbs 0.03 m by r 15 (bake). The shaft is 30 m across from the floor
-# to y 60 (Andrew 2026-10-16), so warden_mind.gd's perch-to-perch flight (chords 22.5 m off the axis, at most 9 m over
-# the perches at local 30) keeps 7.5 m from it; it widens to 50 m by 120, tapers to 20 m at 330 under a dark caprock to
-# 342. Flutes only cut inward, so no vertex below y 60 stands outside r 15.
 SPIRE_PROFILE = ((-2.0, 15.0), (0.0, 15.0), (60.0, 15.0), (120.0, 25.0), (200.0, 22.0), (280.0, 16.0), (330.0, 10.0))
 SPIRE_TOP = 342.0
 SPIRE_PERCHES = ((0.0, 30.0, 45.0), (39.0, 30.0, -22.5), (-39.0, 30.0, -22.5))
@@ -2152,7 +1997,6 @@ def build_spire():
     top = spire_shaft(el, 36, ys)
     spire_cap(el, 36, top, col("caprock"))
     annulus(ln, (0.0, 0.0), 2.4, 3.6, SPIRE_TOP, SPIRE_TOP + 0.04, 16, lambda i: col("lens"), sides=False)
-    # talus skirt: fallen blocks round the foot, never past r 15 and never over 3 m
     for k in range(34):
         a = TAU * (k + 0.4 * rnd(k, 1)) / 34
         sz = 1.2 + 1.0 * rnd(k, 2)
@@ -2160,7 +2004,6 @@ def build_spire():
         c = (r * math.sin(a), -1.0, r * math.cos(a))
         hgt = min(3.0, 1.2 + 2.6 * rnd(k, 3))
         el.chunk(c, (sz, hgt, sz * 0.9), a, 300 + k, shade(("cream", "sandstone", "slick_red")[k % 3], 1.0, (k, 4), 0.08), jitter=0.15, top=0.6)
-    # desert varnish streaks and three fulgurite scars down the upper shaft (the lightning prefers it)
     for k in range(18):
         a = TAU * rnd(k, 11)
         y1 = 300.0 - 120.0 * rnd(k, 12)
@@ -2185,22 +2028,18 @@ def build_spire():
                 pts.append((r * math.sin(ab), yy, r * math.cos(ab)))
             gl.poly(pts, col("fulgurite"), inside=(0.0, (y + ny) / 2, 0.0))
             y, a = ny, na
-    # collider: 12-sided frustums inside the profile (flutes cut inward, so the polygon's corners touch r)
     cys = [-2.0, 60.0, 90.0, 120.0, 160.0, 200.0, 240.0, 280.0, 330.0]
     rings = [circle((0.0, 0.0), spire_r(y), y, 12) for y in cys]
     for k in range(len(cys) - 1):
         colm.ring_solid(rings[k], rings[k + 1], col("sandstone"), caps=(k == 0, False))
     colm.ring_solid(rings[-1], circle((0.0, 0.0), 7.0, SPIRE_TOP, 12), col("caprock"), caps=(False, True))
 
-    # ---- mid: a 16-sided banded shaft and the cap
     top_m = spire_shaft(mid["elastomer"], 16, [-2.0] + [16.0 * k for k in range(0, 21)] + [330.0], flutes=False)
     spire_cap(mid["elastomer"], 16, top_m, col("caprock"))
-    # ---- far: a 10-sided lofted shaft and the cap
     top_f = spire_shaft(far["elastomer"], 10, [-2.0, 30.0, 60.0, 90.0, 120.0, 160.0, 200.0, 240.0, 280.0, 310.0, 330.0], flutes=False,
                         colour=lambda k, n: col(("slick_red", "cream", "oxide", "sandstone")[k % 4]))
     spire_cap(far["elastomer"], 10, top_f, col("caprock"))
 
-    # ---- shells: small talus and ledges (1); varnish drips on the lower shaft (2)
     s1, s2 = sky.Surf("landmark_spire_detail1"), sky.Surf("landmark_spire_detail2")
     for k in range(40):
         a = TAU * rnd(k, 21)
@@ -2245,7 +2084,6 @@ BUILDERS = {
 }
 
 
-# ---------------------------------------------------------------- checks (fail loud before and after export)
 def all_views(spec):
     out = [spec["base"], spec["exempt"], spec["col"], spec["mid"], spec["far"], *spec["shells"]]
     out += [v for v, _ in spec["nodes"]]
@@ -2293,8 +2131,6 @@ def check_card(rid, spec):
         inside = [v for v in every if abs(v[0]) < hw and abs(v[2]) < hw and y0 < v[1] < y1]
         assert not inside, (rid, "geometry in the hive well", inside[:3])
         assert min(v[1] for v in spec["col"].v) <= -2.0, (rid, "legs do not reach the ground")
-        # each rope end lies on the drum wall inside the slot; back along the rope toward its wheel, every point over the
-        # house's footprint outside the slot is above the roof
         c, ax, aw, hl, hw, roof = pit_house()
         d0, d1, hq, floor = PIT_SLOT
         for s, end in zip((-1, 1), pit_rope_ends()):
@@ -2361,7 +2197,6 @@ def budgets(rid, spec):
     return rows
 
 
-# ---------------------------------------------------------------- Blender export
 def material(slot):
     mat = bpy.data.materials.get(slot)
     if mat:
@@ -2383,21 +2218,13 @@ def material(slot):
     return mat
 
 
-# ---------------------------------------------------------------- soft toy pass (tools/blender/POLISH.md)
-# Soft toy (Andrew, 18 Oct): the drawn meshes run through the polish toolkit at export. This file writes its own meshes
-# (sky.Surf, one flat shaded fan per polygon) and never builds a common.Part, so the pass is an adapter: it recovers each
-# polygon from its fan, welds each convex piece (a run of polygons that share edges: a box, a beam, a ring of planks) into
-# a closed bmesh, bevels the hard edges of each piece to a quarter of its own thickness (thin timbers get no bevel, so
-# nothing folds shut), smooths the rest and triangulates as Part does. The AO and edge-wear bake runs over the drawn
-# meshes alone, before any -col mesh joins the scene, so a collider neither occludes it nor changes. polish.enable is not
-# called: common.export is not used, so the colliders keep their old export path byte for byte.
 SOFT = {
-    "bevel": 0.06,           # the widest bevel, metres; each piece takes at most a quarter of its thinnest side
-    "bevel_angle": 40.0,     # only edges sharper than this bevel (silhouette corners, not the facets of a round)
-    "bevel_min": 0.45,       # shorter edges keep hard: rivets, cell rims and plank ends stay cheap
+    "bevel": 0.06,
+    "bevel_angle": 40.0,
+    "bevel_min": 0.45,
     "sharp_angle": 50.0,
     "ao_rays": 16,
-    "ao_reach_m": 3.0,       # occlusion reach in metres (the toolkit's ao_reach is a fraction of the bounds)
+    "ao_reach_m": 3.0,
     "ao_strength": 0.45,
     "edge": 0.12,
     "bake_slots": ("enamel", "steel", "stone", "elastomer", "glass"),
@@ -2428,7 +2255,6 @@ def surf_pieces(surf):
         keys = [key(surf.v[k]) for k in vs]
         edges = [frozenset((keys[k], keys[(k + 1) % len(keys)])) for k in range(len(keys))]
         same = frozenset(keys)
-        # a polygon on the same points as one already in the piece is a two-sided card's back: its own piece keeps both windings
         if cur is not None and same not in cur[2] and any(cur[1].get(e, 0) == 1 for e in edges) and all(cur[1].get(e, 0) < 2 for e in edges):
             cur[0].append(vs)
         else:
@@ -2622,7 +2448,7 @@ def export_glb(path, nodes, empties, soft=False):
             make_mesh(name, parts, root, origin, soft=o)
     if o is not None:
         bpy.context.view_layer.update()
-        polish.bake(root, o)        # before any collider joins the scene: it must not occlude the bake or take its UVs
+        polish.bake(root, o)
     for name, parts, origin in nodes:
         if not (soft and parts and all(slot is not None for _, slot in parts)):
             make_mesh(name, parts, root, origin)
@@ -2661,9 +2487,8 @@ def build(rid, out_dir, count_only=False):
         glb[name] = export_glb(out / (name + ".glb"), [(name, spec[view_name].surfs(), (0.0, 0.0, 0.0))], {})
     for name, extra in spec.get("extra", {}).items():
         glb[name] = export_glb(out / (name + ".glb"), extra["nodes"], extra["empties"])
-    # read back: the base's draws, the class caps, the empties and the -col node
     b = glb[rid]
-    draws = sum(m["draws"] for m in b["meshes"].values())      # every primitive, the -col mesh included, as budget_audit counts
+    draws = sum(m["draws"] for m in b["meshes"].values())
     tris = sum(m["tris"] for m in b["meshes"].values())
     verts = sum(m["verts"] for m in b["meshes"].values())
     assert draws <= HERO["draws"] and tris <= HERO["tris"] and verts <= HERO["verts"], (rid, draws, tris, verts)

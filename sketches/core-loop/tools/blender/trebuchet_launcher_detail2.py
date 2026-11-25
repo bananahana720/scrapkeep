@@ -23,8 +23,6 @@ SIZE = [8.954, 12.787, 4.687]
 
 
 def gauge(s, cx, cy, br, zf):
-    # C1 ticks round the upper arc and a needle; C2 the outer rim.
-    # The rim is a lathe along +z: torus() lies in the XZ plane (p2i1 showed it cutting across the face).
     rim = along_z(s, (cx, cy, zf - .13))
     ring(rim, [(br - .03, .0), (br + .08, .0), (br + .08, .17), (br - .03, .17), (br - .03, .0)], 10, tone("copper"))
     for k in range(7):
@@ -39,7 +37,6 @@ def build(s):
     (x0, x1), (y0, y1), (z0, z1) = tl.BOX
     for (gx, gy), br in tl.GAUGES:
         gauge(s, gx, gy, br, z1 + .13)
-    # C3 the panel border, C4 the knob plate, C13 the patch plate and its bolts.
     for a, b in (((x0 + .05, y1 - .17), (x1 - .05, y1 - .05)), ((x0 + .05, y0 + .15), (x1 - .05, y0 + .27)),
                  ((x0 + .05, y0 + .15), (x0 + .17, y1 - .05)), ((x1 - .17, y0 + .15), (x1 - .05, y1 - .05))):
         box(s, (a[0], a[1], z1 - .02), (b[0], b[1], z1 + .05), tone("iron"))
@@ -50,30 +47,24 @@ def build(s):
     for px in (x0 + .32, x0 + .63):
         for py in (.32, .88):
             rivet(s, (px, py, z1 + .04), r=.06, h=.04)
-    # C6 the pulley's hub boss.
     (qx, qy, qz), qr, qh = tl.PULLEY
     h = along_x(s, (qx, qy, qz))
     ring(h, [(.02, -qh - .12), (.3, -qh - .12), (.3, qh + .12), (.02, qh + .12)], 6, tone("iron"))
-    # C7 cable clamps 0.6 m above each anchor plate.
     for a, b in tl.CABLES:
         d = tuple(a[i] - b[i] for i in range(3))
         n = math.sqrt(sum(c * c for c in d))
         at = tuple(b[i] + d[i] / n * .6 for i in range(3))
         box(s, (at[0] - .12, at[1] - .12, at[2] - .12), (at[0] + .12, at[1] + .12, at[2] + .12), tone("iron"))
-    # C8 a second rivet row on the beam's front face, offset half a pitch.
     hl, b0, b1, hd = tl.BEAM
     for i in range(10):
         rivet(s, (-hl + .45 + (i + .5) * (2 * hl - .9) / 10, b0 + .1, tl.FZ + hd), r=.08, h=.05)
-    # C9 the gland where the rod leaves the piston.
     ring(s, [(tl.ROD[0], tl.PISTON[2] - .05), (.28, tl.PISTON[2] - .05), (.24, tl.PISTON[2] + .25), (tl.ROD[0], tl.PISTON[2] + .25)],
          8, tone("copper"), at=(0.0, FZ))
-    # C11 the valve hand wheel on its front, C12 the lamp cup.
     (vx, vy, vz), vr = tl.VALVE
     torus(s, (vx, vy + .25 + .08, vz), .26, .045, 10, 3, tone("copper"))
     strut(s, (vx - .26, vy + .33, vz), (vx + .26, vy + .33, vz), .05, .05, tone("copper"))
     (lx, ly, lz), lr, _ = tl.LAMP
     ring(s, [(.02, ly - .16), (lr + .04, ly - .16), (lr + .1, ly + .08), (lr + .02, ly + .08), (.02, ly - .1)], 6, tone("copper"), at=(lx, lz))
-    # C14 hose clamps on the riser pipe.
     (fx, fy, fz), ty, _ = tl.PIPE
     for y in (fy + .9, ty - 1.1):
         ring(s, [(.13, y - .07), (.21, y - .07), (.21, y + .07), (.13, y + .07), (.13, y - .07)], 6, tone("copper"), at=(fx, fz))

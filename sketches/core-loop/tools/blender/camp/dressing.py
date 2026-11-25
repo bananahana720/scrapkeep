@@ -75,36 +75,30 @@ def height_check(lo_h, hi_h):
     return check
 
 
-# ------------------------------------------------------------------------------------------------------------ lamp post
-
 BULB = (0.0, 3.8, 1.0)
 
 
 def lamp_post(s):
     lh(s, -0.3, 0.3, 0.0, 0.3, -0.3, 0.3, "concrete")
     plank(s, 0, -0.14, 0.14, 0.3, 4.5, -0.14, 0.14)
-    lh(s, -0.19, 0.19, 0.9, 1.05, -0.19, 0.19, "copper_dk")             # band
-    lh(s, -0.19, 0.19, 3.9, 4.05, -0.19, 0.19, "copper")                # bracket collar
-    lh(s, -0.05, 0.05, 4.0, 4.1, 0.1, 1.05, "copper")                   # arm
-    pk.strut(s, (0, 3.5, 0.14), (0, 4.02, 0.7), 0.07, 0.07, T["copper"])     # brace
+    lh(s, -0.19, 0.19, 0.9, 1.05, -0.19, 0.19, "copper_dk")
+    lh(s, -0.19, 0.19, 3.9, 4.05, -0.19, 0.19, "copper")
+    lh(s, -0.05, 0.05, 4.0, 4.1, 0.1, 1.05, "copper")
+    pk.strut(s, (0, 3.5, 0.14), (0, 4.02, 0.7), 0.07, 0.07, T["copper"])
     lh(s, -0.04, 0.04, 3.95, 4.0, 0.98, 1.02, "iron")
     pk.tube(s, (0, 3.95, 1.0), (0, 4.1, 1.0), 0.02, 0.02, 4, T["iron"])
-    # Caged bulb: top and bottom plates, four corner bars, a glowing bulb inside.
     lh(s, -0.2, 0.2, 3.98, 4.04, 0.8, 1.2, "copper")
     lh(s, -0.17, 0.17, 3.45, 3.5, 0.83, 1.17, "copper")
     for sx in (-1, 1):
         for sz in (-1, 1):
             lh(s, sx * 0.17 - 0.015, sx * 0.17 + 0.015, 3.5, 3.98, 1.0 + sz * 0.17 - 0.015, 1.0 + sz * 0.17 + 0.015, "iron")
     lathe(s, [(0.0, 3.55), (0.04, 3.55), (0.13, 3.8), (0.05, 3.95), (0.0, 3.95)], 6, T["glass_lt"], at=(0.0, 1.0))
-    # Roof finial on the lamp.
     lathe(s, [(0.0, 4.04), (0.22, 4.04), (0.02, 4.28), (0.0, 4.28)], 4, T["copper_dk"], at=(0.0, 1.0))
 
 
 def lamp_col(s):
     col_box(s, -0.3, 0.3, 0.0, 4.5, -0.3, 0.3)
 
-
-# ------------------------------------------------------------------------------------------------------------ signpost
 
 def arrow_board(s, base, yaw, flip, length, h, thick, color):
     """A pentagon arrow board standing on the post: u points along the arrow (flip points it the other way), w is the face."""
@@ -131,7 +125,6 @@ def signpost(s):
     boards = [(3.15, 0.3, False, "timber_lt", "dial"), (2.55, -0.25, True, "petrol", "star"), (1.95, -0.85, False, "oxide", "ball")]
     for y, yaw, flip, col, icon in boards:
         w = arrow_board(s, (0.0, y, 0.0), yaw, flip, 1.5, 0.5, 0.1, col)
-        # Icon on the face, near the shaft end of the board.
         t = 0.07
         if icon == "dial":
             ca, sa = math.cos(yaw), math.sin(yaw)
@@ -154,8 +147,6 @@ def post_col(s):
     col_box(s, -0.2, 0.2, 0.0, 3.6, -0.2, 0.2)
 
 
-# ------------------------------------------------------------------------------------------------------------ fire pit
-
 def fire_pit(s):
     R = 1.35
     for i in range(10):
@@ -166,7 +157,6 @@ def fire_pit(s):
     for i in range(10):
         a = math.tau * (i + 0.5) / 10
         cp.obox(s, (0.3, 0.16, 0.24), (1.22 * math.sin(a), 0.5, 1.22 * math.cos(a)), cp.jitter_tone("concrete_lt", i, 0.15), yaw=a + 0.3 * (i % 2))
-    # Crossed logs.
     for k, (yaw, y) in enumerate(((0.3, 0.28), (2.4, 0.32), (4.5, 0.36))):
         d = (math.sin(yaw), math.cos(yaw))
         pk.tube(s, (-d[0] * 0.95, y, -d[1] * 0.95), (d[0] * 0.95, y + 0.12, d[1] * 0.95), 0.12, 0.11, 6, T["timber"] if k != 1 else T["timber_lt"], caps=(True, True))
@@ -176,7 +166,6 @@ def fire_pit(s):
         top = (base[0] * 0.5, 1.0 + 0.2 * (k % 2), base[2] * 0.5)
         pk.tube(s, base, top, 0.2, 0.0001, 5, T["amber"] if k % 2 == 0 else "f4c36a", caps=(True, False))
     pk.tube(s, (0, 0.4, 0), (0, 0.85, 0), 0.14, 0.0001, 5, "ffe9a8", caps=(False, False))
-    # Tripod and kettle.
     top = (0.0, 2.7, -0.15)
     for k in range(3):
         a = math.tau * k / 3 + 0.9
@@ -192,7 +181,6 @@ def fire_pit(s):
         lh(s, sx * 0.4 - 0.02, sx * 0.4 + 0.02, ky + 0.5, ky + 0.95, kc[2] - 0.02, kc[2] + 0.02, "iron_hi") if False else None
     pk.strut(s, (-0.38, ky + 0.5, kc[2]), (0.0, ky + 0.98, kc[2]), 0.04, 0.04, T["iron_hi"])
     pk.strut(s, (0.38, ky + 0.5, kc[2]), (0.0, ky + 0.98, kc[2]), 0.04, 0.04, T["iron_hi"])
-    # Two log seats' worth of scattered kindling near the ring.
     cp.obox(s, (0.12, 0.12, 0.7), (1.9, 0.07, 0.9), T["timber_lt"], yaw=0.5)
     cp.obox(s, (0.12, 0.12, 0.6), (-1.8, 0.07, 1.0), T["timber"], yaw=-0.4)
 
@@ -200,8 +188,6 @@ def fire_pit(s):
 def fire_col(s):
     pk.frustum(s, 1.7, 1.7, 0.0, 0.5, 10, "iron")
 
-
-# ------------------------------------------------------------------------------------------------------------ bench
 
 def crate_leg(s, cx, cz, k, w=0.55, h=0.62):
     lh(s, cx - w / 2, cx + w / 2, 0.0, h, cz - 0.3, cz + 0.3, cp.jitter_tone("timber_lt", k, 0.12))
@@ -222,8 +208,6 @@ def bench_col(s):
     col_box(s, -1.4, 1.4, 0.0, 0.76, -0.35, 0.35)
 
 
-# ------------------------------------------------------------------------------------------------------------ crate stack
-
 def crate(s, cx, cy, cz, size, yaw, k):
     h = size / 2
     cp.obox(s, (size, size, size), (cx, cy + h, cz), cp.jitter_tone("timber_lt", k, 0.12), yaw=yaw)
@@ -240,7 +224,6 @@ def crate_stack(s):
     crate(s, -0.55, 0.0, 0.0, 1.2, 0.05, 1)
     crate(s, -0.5, 1.2, -0.05, 1.0, -0.25, 4)
     ca, sa = crate(s, 0.85, 0.0, 0.25, 0.95, 0.35, 7)
-    # Brass Fleet requisition tag and its string on the front crate, with an iron stripe (an icon, not a word).
     fx, fz = 0.85 + 0.475 * math.sin(0.35), 0.25 + 0.475 * math.cos(0.35)
     n = (math.sin(0.35), math.cos(0.35))
     cp.obox(s, (0.34, 0.22, 0.03), (fx + n[0] * 0.07, 0.62, fz + n[1] * 0.07), T["brass"], yaw=0.35)
@@ -248,22 +231,18 @@ def crate_stack(s):
 
 
 def crate_col(s):
-    # Two boxes (the class budget covers collision too): the two-high stack as one column, the single crate beside it.
     cp.obox(s, (1.15, 2.2, 1.15), (-0.55, 1.1, -0.02), "iron", yaw=-0.1)
     cp.obox(s, (0.95, 0.95, 0.95), (0.85, 0.475, 0.25), "iron", yaw=0.35)
 
 
-# ------------------------------------------------------------------------------------------------------------ barrel
-
 def barrel(s):
     R, H = 0.46, 1.1
     pk.frustum(s, R, R, 0.0, H, 12, T["petrol"], caps=(True, True))
-    pk.frustum(s, R + 0.02, R + 0.02, 0.38, 0.55, 12, T["copper"], caps=(False, False))        # copper band
+    pk.frustum(s, R + 0.02, R + 0.02, 0.38, 0.55, 12, T["copper"], caps=(False, False))
     for y in (0.04, 0.96):
         pk.frustum(s, R + 0.025, R + 0.025, y, y + 0.1, 12, T["iron_hi"], caps=(False, False))
-    pk.frustum(s, 0.1, 0.1, H, H + 0.04, 6, T["iron"], caps=(False, True), at=(0.17, 0.12))   # bung
+    pk.frustum(s, 0.1, 0.1, H, H + 0.04, 6, T["iron"], caps=(False, True), at=(0.17, 0.12))
     pk.frustum(s, 0.06, 0.06, H, H + 0.03, 5, T["copper_dk"], caps=(False, True), at=(-0.2, -0.1))
-    # Dent: a darker pushed-in patch with a lighter rim, on the plaza side.
     cp.obox(s, (0.3, 0.2, 0.04), (-0.1, 0.78, R - 0.02), "2a4442", yaw=0.0, roll=0.25)
     cp.obox(s, (0.18, 0.1, 0.03), (-0.1, 0.78, R - 0.005), "1f3331", yaw=0.0, roll=0.25)
     cp.obox(s, (0.4, 0.05, 0.03), (0.0, 0.2, R), T["oxide"], yaw=0.0, roll=0.15)
@@ -273,15 +252,13 @@ def barrel_col(s):
     pk.frustum(s, 0.47, 0.47, 0.0, 1.1, 8, "iron")
 
 
-# ------------------------------------------------------------------------------------------------------------ fence
-
 def fence(s):
     for k, x in enumerate((-1.9, 1.9)):
         plank(s, k + 5, x - 0.09, x + 0.09, 0.0, 1.3, -0.09, 0.09)
         lh(s, x - 0.12, x + 0.12, 1.3, 1.36, -0.12, 0.12, "copper_dk")
     for k, (y0, y1) in enumerate(((0.42, 0.58), (0.88, 1.04))):
         plank(s, k, -1.9, 1.9, y0, y1, 0.09, 0.15, "timber_lt")
-    cp.obox(s, (0.1, 1.0, 0.04), (0.0, 0.73, 0.18), T["timber"], roll=0.0)           # middle slat
+    cp.obox(s, (0.1, 1.0, 0.04), (0.0, 0.73, 0.18), T["timber"], roll=0.0)
     cp.obox(s, (0.12, 1.1, 0.04), (0.9, 0.7, 0.19), T["timber"], roll=-0.7)
     lh(s, -1.9 - 0.1, -1.9 + 0.1, 0.9, 1.0, 0.15, 0.17, "iron")
     lh(s, 1.9 - 0.1, 1.9 + 0.1, 0.9, 1.0, 0.15, 0.17, "iron")
@@ -294,8 +271,6 @@ def fence_col(s):
     col_box(s, 1.8, 2.0, 0.0, 1.36, -0.12, 0.12)
     col_box(s, -1.8, 1.8, 0.4, 1.06, 0.0, 0.16)
 
-
-# ------------------------------------------------------------------------------------------------------------ tool rack
 
 def wrench(s, x, y, length, z, color, k):
     """A hanging open-end wrench, shaft down, head up: a shaft and a U of three boxes."""
@@ -315,23 +290,18 @@ def tool_rack(s):
         lh(s, x - 0.12, x + 0.12, 1.98, 2.08, -0.12, 0.12, "copper")
     for y, k in ((1.7, 0), (0.9, 1)):
         pk.tube(s, (-1.2, y, 0.0), (1.2, y, 0.0), 0.05, 0.05, 6, T["iron_hi"], caps=(True, True))
-    lh(s, -1.2, 1.2, 1.55, 1.85, -0.06, -0.02, "timber")                       # backing board
+    lh(s, -1.2, 1.2, 1.55, 1.85, -0.06, -0.02, "timber")
     for k, (x, ln) in enumerate(((-0.95, 0.75), (-0.62, 0.62), (-0.3, 0.85))):
         wrench(s, x, 1.68, ln, 0.03, "copper" if k != 1 else "iron_hi", k)
-    # Hammer: handle and iron head.
     lh(s, 0.0, 0.06, 1.0, 1.66, 0.04, 0.09, "timber_lt")
     lh(s, -0.12, 0.18, 1.52, 1.66, 0.02, 0.12, "iron")
-    # Spare harpoon tip: shaft, barbed head, copper collar, hung by two loops on the lower rail.
     pk.tube(s, (0.75, 0.9, 0.08), (0.75, 0.2, 0.08), 0.03, 0.035, 6, T["timber_lt"], caps=(False, True))
     pk.tube(s, (0.75, 0.9, 0.08), (0.75, 1.3, 0.08), 0.1, 0.0001, 6, T["iron_hi"], caps=(True, False))
     for sx in (-1, 1):
         cp.obox(s, (0.05, 0.22, 0.04), (0.75 + sx * 0.1, 0.87, 0.08), T["iron_hi"], roll=-sx * 0.55)
     pk.tube(s, (0.75, 0.82, 0.08), (0.75, 0.9, 0.08), 0.07, 0.07, 6, T["copper"], caps=(False, False))
-    # Coil of canvas strap on a hook.
     pk.frustum(s, 0.2, 0.2, 1.4, 1.62, 8, T["canvas_dk"], caps=(True, True), at=(0.35, 0.1))
 
-
-# ------------------------------------------------------------------------------------------------------------ tarp
 
 NX, NZ = 8, 6
 TW, TD = 5.0, 4.0
@@ -340,7 +310,7 @@ SAG = 0.32
 
 
 def tarp_y(x, z):
-    t = (TD / 2 - z) / TD            # 0 at the front (+Z), 1 at the back
+    t = (TD / 2 - z) / TD
     base = FRONT_Y + (BACK_Y - FRONT_Y) * t
     return base - SAG * (1 - (2 * x / TW) ** 2) * math.sin(math.pi * min(max(t, 0.0), 1.0) ** 0.9) * 0.8 - 0.1 * (1 - (2 * x / TW) ** 2)
 
@@ -353,8 +323,6 @@ def tarp(s):
             z = TD / 2 - TD * j / NZ
             top[(i, j)] = (x, tarp_y(x, z), z)
     thick = 0.05
-    # One closed welded shell: top grid, underside grid and a rim. Colour is per vertex, so the canvas panels (every second
-    # column) change tone over one column instead of at a hard seam.
     verts, cols, hi, lo = [], [], {}, {}
     for i in range(NX + 1):
         for j in range(NZ + 1):
@@ -378,28 +346,22 @@ def tarp(s):
         faces.append((hi[0, j], lo[0, j], lo[0, j + 1], hi[0, j + 1]))
         faces.append((hi[NX, j], hi[NX, j + 1], lo[NX, j + 1], lo[NX, j]))
     s.add(verts, faces, colors=cols)
-    # Two tall poles at the back corners, copper caps; ropes from the front corners to pegs.
     for sx in (-1, 1):
         px = sx * (TW / 2 + 0.1)
         pk.tube(s, (px, 0.0, -TD / 2 - 0.05), (px, BACK_Y + 0.35, -TD / 2 - 0.05), 0.1, 0.07, 6, T["timber"], caps=(True, True))
         lh(s, px - 0.1, px + 0.1, BACK_Y + 0.35, BACK_Y + 0.43, -TD / 2 - 0.15, -TD / 2 + 0.05, "copper")
         lh(s, px - 0.25, px + 0.25, 0.0, 0.1, -TD / 2 - 0.25, -TD / 2 + 0.15, "concrete")
-        # Front corner rope and a timber peg.
         fx = sx * (TW / 2)
         fy = tarp_y(sx * TW / 2, TD / 2)
         pk.strut(s, (fx, fy - 0.03, TD / 2), (sx * (TW / 2 + 0.5), 0.12, TD / 2 + 0.9), 0.04, 0.04, T["canvas_dk"])
         cp.obox(s, (0.1, 0.4, 0.1), (sx * (TW / 2 + 0.5), 0.15, TD / 2 + 0.9), T["timber_lt"], pitch=-0.35)
-        # Back-corner guy to a peg behind.
         pk.strut(s, (sx * (TW / 2 + 0.1), BACK_Y + 0.3, -TD / 2 - 0.05), (sx * (TW / 2 + 0.9), 0.1, -TD / 2 - 1.5), 0.035, 0.035, T["canvas_dk"])
         cp.obox(s, (0.1, 0.4, 0.1), (sx * (TW / 2 + 0.9), 0.15, -TD / 2 - 1.5), T["timber_lt"], pitch=0.35)
-    # A hanging lantern under the high edge for a cosy read.
     pk.strut(s, (0, tarp_y(0, -1.5) - 0.05, -1.5), (0, 2.55, -1.5), 0.03, 0.03, T["iron"])
     lh(s, -0.12, 0.12, 2.0, 2.05, -1.62, -1.38, "copper")
     pk.tube(s, (0, 2.05, -1.5), (0, 2.5, -1.5), 0.1, 0.07, 6, T["glass_lt"], caps=(True, True))
     lh(s, -0.13, 0.13, 2.5, 2.56, -1.63, -1.37, "copper")
 
-
-# ------------------------------------------------------------------------------------------------------------------ main
 
 def main():
     args = cp.options()

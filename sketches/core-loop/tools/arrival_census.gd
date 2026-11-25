@@ -1,8 +1,5 @@
 extends RefCounted
 
-# Headless witness of the crew's collider through the rider's lens. The drawn
-# footprint at a mouth is a separate look-harness measurement. World geometry
-# is layer 1; the ball and other moving crews use different layers.
 const Chaser := preload("res://src/combat/chaser.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 
@@ -11,7 +8,6 @@ var _rows := {}
 
 
 func spawned(body: Node3D, kind: String, stage := 1) -> void:
-	# These two anchored set pieces also pass through spawn_enemy.
 	if kind in ["warden", "vault"]:
 		return
 	var row := {"kind": kind, "stage": stage, "ref": weakref(body), "died": false, "seen": false, "pop_in": false, "warned": false,
@@ -19,7 +15,6 @@ func spawned(body: Node3D, kind: String, stage := 1) -> void:
 	var id := body.get_instance_id()
 	_rows[id] = row
 	_active[id] = {"ref": row.ref, "row": row, "was_visible": false, "points": _points(body)}
-	# A death can free the body between two samples.
 	if body.has_signal("died"):
 		body.connect("died", func(_at: Vector3, _scrap: int): row.died = true, CONNECT_ONE_SHOT)
 	if body.has_signal("attack_phase"):
@@ -35,8 +30,6 @@ func _phase(fact: Dictionary, row: Dictionary) -> void:
 		row.warned = true
 
 
-# Cache body-local samples from the actual shapes at spawn. The centre and
-# six face centres capture a shoulder or crown emerging before the origin.
 func _points(body: Node3D) -> PackedVector3Array:
 	var points := PackedVector3Array()
 	if body is CollisionObject3D:
@@ -71,8 +64,6 @@ func _visible(cam: Camera3D, body: Node3D, points: PackedVector3Array) -> bool:
 	return false
 
 
-# Call once per physics tick. An interval is credited only after the body
-# was actually visible. A warning before its first visible tick keeps zero.
 func sample(cam: Camera3D, delta: float) -> void:
 	for id in _active.keys():
 		var track: Dictionary = _active[id]
@@ -114,7 +105,6 @@ func reading(ids = null) -> Dictionary:
 				out.early_warnings += 1
 			if out.seen_before_warning_s == null or lead < out.seen_before_warning_s:
 				out.seen_before_warning_s = lead
-	# The same coverage rule applies to a whole ride and an individual yard wave.
 	out["crew_coverage_complete"] = out.crews > 0 and out.seen == out.crews and out.short_unwarned == 0
 	return out
 
@@ -131,8 +121,6 @@ func _observation(row: Dictionary) -> String:
 	return "lead_observed" if _enough_lead(row.seen_before_warning_s) else "short_unwarned"
 
 
-# Keep one entry per spawn in spawn order, including crews already freed. The
-# way a crew left the ride never excuses a missing first sighting or warning lead.
 func ordinary_reading(ending: String) -> Dictionary:
 	var out := reading()
 	var members := []

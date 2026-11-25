@@ -1,9 +1,3 @@
-# blender -b --factory-startup -P pilot_pose_check.py -- pilot.glb [more.glb ...]
-# Plays every clip of a pilot and measures how far the skin stretches: for each edge, its posed length over its rest length,
-# sampled at eight frames a clip. Prints one line a pilot with the worst clip and the share of edges that more than double.
-# The authored pilots measure 0.0 to 0.1 percent. The first Tripo skins (weights copied from the authored mesh) measured 5.1 to
-# 7.5 percent on five pilots and 2.1 percent on Tarn (stretch_before in the refit's receipt); keep a sibling under 4 percent.
-# tools/tripo/README.md has each pilot's number.
 import bpy, sys, json
 a = sys.argv[sys.argv.index("--") + 1:]
 for path in a:

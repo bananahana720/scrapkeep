@@ -1,5 +1,3 @@
-# Shared-world device prop. Procedural bmesh; no external assets or physics.
-# Metres; Godot (X,Y,Z) -> Blender (X,-Z,Y). State parts keep script-owned pivots.
 import math
 import os
 import sys
@@ -13,8 +11,6 @@ from common import Part
 common.reset()
 for slot, rough, metal in [("device_concrete", 0.95, 0.0), ("device_metal", 0.68, 0.28), ("device_marks", 0.85, 0.0)]:
     common.SLOTS[slot] = {"vc": True, "rough": rough, "metal": metal}
-# Polish (POLISH.md): the registry caps device props at 1100 T / 2100 V, so smooth shading and the AO/wear bake only
-# (bevel 0); Not imported by another recipe, so module level.
 import polish
 polish.enable(detail=1, bevel=0)
 
@@ -121,12 +117,10 @@ for side in range(4):
         if len(poly)>=3:
             p.prism("device_marks",poly,0.035,matrix=mat,color="hazard")
 finish(p,(0,3.5,0))
-# The bone band under the cap, proud of its octagon; the runtime gives it the altar's bone finish.
 p=Part("AltarBand")
 p.cyl("device_metal",0.79,0.79,0.12,segs=8,loc=g(0,3.22,0),rot=(0,0,math.pi/8),color="bone")
 finish(p)
 p=Part("AltarRing")
-# Existing radius and 20-dash extent; keylines belong to this hazard footprint.
 for k in range(20):
     a=math.tau*k/20
     p.ring("device_marks",9.76,10.24,0.055,segs=1,loc=g(0,0.055,0),color="charcoal",arc=(a-0.042,a+0.042))

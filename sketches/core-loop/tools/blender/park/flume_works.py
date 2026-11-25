@@ -88,14 +88,12 @@ FOOTING = "9c907a"
 STEEL = "4a4844"
 BOARD = "ece3cc"
 GLASS = "6fa58a"
-HOP = 0.15                 # nothing stands this far proud of a box face
-RECESS = 0.3               # nothing sits deeper than this
-RAIL_PROUD = 0.02          # flush decals on a rideable top
+HOP = 0.15
+RECESS = 0.3
+RAIL_PROUD = 0.02
 
-Surf = kit.Surface         # no pitch here: every piece is authored level in Godot space
+Surf = kit.Surface
 
-
-# ------------------------------------------------------------------ geometry helpers
 
 def hull(s, ring_a, ring_b, color):
     """A closed convex prism between two same-length 3D rings (windings are fixed by the kit's normal recalculation)."""
@@ -246,8 +244,6 @@ def streaks(s, W, L, k0, faces, y_lo, y_hi, count, color=VARNISH):
         fslab(s, W, L, face, u, u + 0.12 + 0.06 * (j % 3), v0, v0 + 1.5 + (j % 4) * 0.7, 0.0, 0.012, color)
 
 
-# ------------------------------------------------------------------ A. timber bent towers
-
 def bent_straps(H):
     out, y = [], 4.0
     while y < H - 1.5:
@@ -271,7 +267,6 @@ def bent_body(s, H):
     block(s, -hx - 0.1, hx + 0.1, H - 0.4, H, -hz - 0.1, hz + 0.1, TIMBER_DK)
     for k, y in enumerate(bent_straps(H)):
         ring_band(s, W, L, y - 0.25, y + 0.25, tone(STEEL, DARK, k), 0.10)
-    # Diagonal braces, one per 10 m bay, alternating hands, flush on the long faces (0.16 square, at most 0.12 proud).
     ys = [1.5] + [y for y in range(10, int(H - 3), 10)] + [H - 3.0]
     for face in ("px", "nx"):
         for k in range(len(ys) - 1):
@@ -281,11 +276,9 @@ def bent_body(s, H):
             strut(s, fpt(W, L, face, a[0], a[1]), fpt(W, L, face, b[0], b[1]), 0.16, tone(TIMBER_DK, TIMBER, k, 0.5))
     mid = H / 2
     for face in ("px", "nx"):
-        # Speed-tick band: a cream ground and twelve iron-oxide stripes, 0.5 m on 1.0 m, readable as riders pass.
         fslab(s, W, L, face, -5.9, 5.9, mid - 1.5, mid + 1.5, 0.0, 0.03, CREAM)
         for i in range(12):
             fslab(s, W, L, face, -5.9 + i * 1.0, -5.4 + i * 1.0, mid - 1.5, mid + 1.5, 0.0, 0.045, OXIDE)
-        # Bent number board: blank white board with black tick stripes, no text.
         fslab(s, W, L, face, -2.4, 2.4, H - 6.0, H - 3.2, 0.0, 0.06, BOARD)
         for i in range(7):
             fslab(s, W, L, face, -2.1 + i * 0.7 - 0.07, -2.1 + i * 0.7 + 0.07, H - 5.6, H - 3.6, 0.06, 0.085, DARK)
@@ -314,8 +307,6 @@ def bent_d2(s, H):
     base_weeds(s, W, L, int(H), 9)
 
 
-# ------------------------------------------------------------------ A. survey mast
-
 def mast_body(s):
     W, L, H = 4.0, 12.0, 40.0
     hx, hz = W / 2, L / 2
@@ -330,7 +321,6 @@ def mast_body(s):
         for i in range(1, n):
             u = -span / 2 + span * i / n
             fslab(s, W, L, face, u - 0.02, u + 0.02, 4.1, H - 0.5, 0.0, 0.02, TIMBER_DK)
-    # Copper survey plate on the +X face, with a string-line pulley block flush at the top of the +Z end.
     fslab(s, W, L, "px", -0.9, 0.9, 5.0, 6.4, 0.0, 0.07, COPPER)
     fslab(s, W, L, "px", -0.7, 0.7, 5.2, 6.2, 0.07, 0.085, tone(COPPER, VARNISH, 3, 0.25))
     fslab(s, W, L, "pz", -0.5, 0.5, H - 2.0, H - 0.9, 0.0, 0.12, STEEL)
@@ -360,8 +350,6 @@ def mast_d2(s):
     streaks(s, W, L, 7, ("px", "nx", "pz", "nz"), 0.3, 18.0, 18)
     base_weeds(s, W, L, 4, 10)
 
-
-# ------------------------------------------------------------------ A. surge pylons
 
 def pylon_body(s, H):
     W, L = 4.0, 12.0
@@ -403,8 +391,6 @@ def pylon_d2(s, H):
     base_weeds(s, W, L, int(H), 10)
 
 
-# ------------------------------------------------------------------ A. timber crib piers and wall
-
 def crib_layout(L, W):
     nA = max(2, round(W / 3.0) + 1)
     nB = max(2, round(L / 3.0) + 1)
@@ -428,7 +414,6 @@ def crib_body(s, L, H, W):
         else:
             for i, zc in enumerate(zs):
                 block(s, -hx, hx, y0, y1, zc - 0.5, zc + 0.5, tone(TIMBER, TIMBER_DK, k + i * 2 + 1, 0.5))
-    # Timber cap: whole-footprint planks along Z, flush top.
     n = max(2, round(W / 1.0))
     for i in range(n):
         block(s, -hx + W * i / n + 0.01, -hx + W * (i + 1) / n - 0.01, H - 1.0, H, -hz, hz, tone(TIMBER_LT, TIMBER_DK, i, 0.4))
@@ -454,8 +439,6 @@ def crib_d2(s, L, H, W):
     streaks(s, W, L, int(L + H), ("px", "nx", "pz", "nz"), 1.0, H * 0.8, 24)
     base_weeds(s, W, L, int(L), 8)
 
-
-# ------------------------------------------------------------------ A. anchor block
 
 def octa_pts(a, y):
     r = a / math.cos(math.pi / 8)
@@ -521,8 +504,6 @@ def anchor_d2(s):
     base_weeds(s, W, L, 3, 9)
 
 
-# ------------------------------------------------------------------ A. gatehouse and annex hall
-
 def roof_tiles(s, W, L, H, t, nx, nz, base, other):
     hx, hz = W / 2, L / 2
     for i in range(nx):
@@ -537,18 +518,15 @@ def gatehouse_body(s):
     roof_tiles(s, W, L, H, 0.4, 3, 3, FORM, CONCRETE)
     ring_band(s, W, L, H - 1.3, H - 0.9, FORM, 0.1)
     ring_band(s, W, L, 0.0, 0.6, FOOTING, 0.08)
-    # Door on the +Z face: timber leaf, iron straps, a lintel and jambs.
     fslab(s, W, L, "pz", -1.1, 1.1, 0.0, 3.4, 0.0, 0.06, TIMBER)
     for v in (0.8, 1.7, 2.6):
         fslab(s, W, L, "pz", -1.1, 1.1, v - 0.1, v + 0.1, 0.06, 0.09, STEEL)
     fslab(s, W, L, "pz", -1.5, 1.5, 3.4, 3.9, 0.0, 0.12, FORM)
     for sg in (-1, 1):
         fslab(s, W, L, "pz", min(sg * 1.1, sg * 1.5), max(sg * 1.1, sg * 1.5), 0.0, 3.4, 0.0, 0.12, FORM)
-    # Gate wheel: spoked hand wheel on a short stem, mounted on the +Z face right of the door.
     verts, faces = _wheel(0.0, 0.0, 0.0, 0.8)
     s.add([(3.6 + a, 6.2 + b, L / 2 + 0.08 + c) for a, b, c in verts], faces, COPPER)
     fslab(s, W, L, "pz", 3.55, 3.65, 6.15, 6.25, 0.0, 0.13, STEEL)
-    # Flush window panes.
     for face in ("px", "nx"):
         for u in (-3.0, 3.0):
             fslab(s, W, L, face, u - 0.8, u + 0.8, 5.0, 6.6, 0.0, 0.02, DARK)
@@ -583,7 +561,6 @@ def annex_body(s):
     for fx in range(-16, 17, 8):
         for face in ("nx",):
             fslab(s, W, L, face, fx - 0.5, fx + 0.5, 0.0, H - 0.4, 0.0, 0.1, tone(FORM, CONCRETE, fx))
-    # Pipe runs along the +X long face: three 8-sided pipes (r 0.13), flanges every 6 m, two vertical risers.
     for k, v in enumerate((2.6, 3.7, 4.8)):
         solid(s, disc(W / 2, v, 0.13, 8, math.pi / 8), -17.0, 17.0, tone(STEEL, OXIDE, k, 0.3))
         for z in range(-15, 16, 6):
@@ -593,7 +570,6 @@ def annex_body(s):
         pa = [(W / 2 + 0.13 * math.cos(math.pi / 8 + math.tau * i / n), 2.6, z + 0.13 * math.sin(math.pi / 8 + math.tau * i / n)) for i in range(n)]
         pb = [(x, 8.6, zz) for x, _, zz in pa]
         hull(s, pa, pb, tone(STEEL, OXIDE, k, 0.3))
-    # The pressure dial on the +X face: iron rim, cream face, red band, ticks, needle, copper hub.
     u, v = 6.0, 9.4
     fdisc(s, W, L, "px", u, v, 2.4, 0.0, 0.1, STEEL, 24)
     fdisc(s, W, L, "px", u, v, 2.15, 0.1, 0.12, CREAM, 24)
@@ -626,8 +602,6 @@ def annex_d2(s):
     base_weeds(s, W, L, 8, 12)
 
 
-# ------------------------------------------------------------------ A. crew bunk ledge
-
 def ledge_body(s):
     W, L, H = 10.0, 120.0, 1.0
     hx, hz = W / 2, L / 2
@@ -649,7 +623,6 @@ def ledge_body(s):
             strut(s, (sx * 4.5, -3.2, zc), (sx * 2.7, -0.6, zc), 0.16, tone(TIMBER_DK, TIMBER, z + 1, 0.4))
             strut(s, (sx * 4.5, -3.2, zc), (sx * 4.5, -3.2, zc + 3.0), 0.16, tone(TIMBER_DK, TIMBER, z + 2, 0.4)) if zc + 3.0 <= hz else None
         block(s, -4.5, 4.5, -3.4, -3.0, zc - 0.12, zc + 0.12, tone(TIMBER_DK, TIMBER, z + 3, 0.4))
-    # Numbered bunk door boards on the +X edge: blank boards, one to four tick stripes by bunk.
     for j in range(nc):
         zc = -hz + L * (j + 0.5) / nc
         fslab(s, W, L, "px", zc - 0.45, zc + 0.45, 0.1, 0.9, 0.0, 0.06, BOARD)
@@ -687,8 +660,6 @@ def ledge_d2(s):
                 stud(s, (sx * 4.5 + 0.25 * (i - 1), -4.95, z + 0.1 * (i % 2)), (0, 0.8, 0.2), 0.05, 0.12, tone(SAGE, JUNIPER, z + i, 0.4), 3)
 
 
-# ------------------------------------------------------------------ B. wedges
-
 def wy(L, H, z):
     return H * (L / 2 - z) / L
 
@@ -724,12 +695,6 @@ def edges_columns(edges, W):
     return list(zip(edges[:-1], edges[1:]))
 
 
-# The weir apron is the drop wedge with its rim bevelled (wave 36 ride-snag). As a plain wedge its 0.5 m high end and its
-# sides (0.5 m falling to 0) stood vertical, and a radius 1 ball met their top edge as a step: the snag sweep's ride
-# lanes lost 13.6 m/s down to 2.0 (high end) and 4.8 to 6.6 (sides), on the flat ground the deck sits on. Both sides and
-# the high end now fall 1 in APRON_BEVEL to the ground; the flush front stays a knife edge. The solid is the wedge cut by
-# those three planes, still six corners (the two high corners pulled in and forward to where the bevels meet the sloped
-# top), and the drawn cells and the -col mesh are cut from the same planes (apron_planes), so what is drawn collides.
 APRON = (44.0, 0.5, 30.0)
 APRON_BEVEL = 6.0
 
@@ -813,7 +778,6 @@ def apron_d1(s):
     L, H, W = APRON
     k = APRON_BEVEL
     e = 0.012
-    # Form joints across each side bevel, from its toe to where it meets the sloped top, 0.012 proud of the bevel.
     for j in range(1, 8):
         z = -L / 2 + L * j / 8
         for sg in (-1, 1):
@@ -824,7 +788,6 @@ def apron_d1(s):
                 p0, p1 = (sg * W / 2, 0.0), (sg * (W / 2 - top * k), top)
                 rings.append([(p0[0], p0[1], zz), (p1[0], p1[1], zz), (p1[0] + nx_ * e, p1[1] + ny_ * e, zz), (p0[0] + nx_ * e, p0[1] + ny_ * e, zz)])
             hull(s, rings[0], rings[1], VARNISH)
-    # Joint lines along the sloped top, starting past the high-end bevel so they lie on the top plane their whole length.
     for i in range(1, 6):
         x = -W / 2 + W * i / 6
         z0, z1 = -L / 2 + 3.0, L / 2 - 2.0
@@ -839,13 +802,11 @@ def apron_d2(s):
         x = -W / 2 + 1.0 + (n * 13 % 28)
         z = -L / 2 + 1.5 + (n * 7 % 39)
         wide = 0.5 + 0.15 * (n % 3)
-        # Sand patches keep to the sloped top: in past the side bevels (widest at the patch's high end) and the high end's.
         z = max(z, -L / 2 + H * k * L / (L + H * k) + 0.1)
         reach = W / 2 - wy(L, H, z) * k - 0.1
         x = min(max(x, -reach), reach - wide)
         pts = [(z, wy(L, H, z)), (z + 1.2, wy(L, H, z + 1.2)), (z + 1.2, wy(L, H, z + 1.2) + 0.01), (z, wy(L, H, z) + 0.01)]
         hull(s, [(x, y, zz) for zz, y in pts], [(x + wide, y, zz) for zz, y in pts], tone(SAND, VARNISH, n, 0.5))
-    # Weed tufts at the toe of the -x bevel, rooted on it.
     for n in range(10):
         stud(s, (-W / 2 + 0.5, 0.5 / k, -L / 2 + 4.0 + n * 4.0), (-1, 0.5, 0), 0.05, 0.1, tone(SAGE, JUNIPER, n, 0.4), 3)
 
@@ -871,7 +832,6 @@ def gap_body(s):
             else:
                 color = tone(TIMBER_LT, TIMBER, j * 2 + i, 0.45)
             wedge_cell(s, W, L, H, xa, xb, z0, z1, color)
-    # Sheathed trestle framing on the two triangular side faces: posts, rails and X braces, 0.1 m proud.
     zs = [-hz + 0.25 + (L - 0.5) * k / 20 for k in range(21)]
     for sg in (-1, 1):
         for k, z in enumerate(zs):
@@ -888,7 +848,6 @@ def gap_body(s):
                 strut(s, (sg * W / 2, ya, zb), (sg * W / 2, yb, za), 0.16, tone(TIMBER_DK, TIMBER, k + 1, 0.4)) if wy(L, H, za) > yb + 0.3 else None
             else:
                 strut(s, (sg * W / 2, ya, za), (sg * W / 2, yb, zb), 0.16, tone(TIMBER_DK, TIMBER, k + 1, 0.4))
-    # End face (z = -L/2, vertical): sheathing planks, rails, posts.
     for i in range(30):
         fslab(s, W, L, "nz", -W / 2 + W * i / 30 + 0.01, -W / 2 + W * (i + 1) / 30 - 0.01, 0.0, H, 0.0, 0.05, tone(TIMBER_LT, TIMBER, i, 0.4))
     for k, y in enumerate((8.0, 16.0, 24.0)):
@@ -1002,8 +961,6 @@ def road_d2(s):
                 stud(s, (sg * (W / 2 + 0.02), 0.08, z), (sg, 0.6, 0), 0.05, 0.1, tone(SAGE, JUNIPER, k, 0.4), 3)
 
 
-# ------------------------------------------------------------------ C. flume ride pieces
-
 def smooth(t):
     t = min(1.0, max(0.0, t))
     return 3 * t * t - 2 * t ** 3
@@ -1113,7 +1070,6 @@ def flume_body2(spec):
                         (side * (f["crest_out"] + 0.06), f["top"] - 0.5 + dy), (side * f["crest_out"], f["top"] - 0.5 + dy)]
                 hull(s, [(x, y, z - 0.2) for x, y in ring], [(x, y, z + 0.2) for x, y in ring], tone(IRON, DARK, int(z)))
         if spec["length"] == SPOUT_L:
-            # Pour lip: an iron beam across the floor end and a copper splash plate flush on the floor's lip.
             fe = fring(SPOUT_L, spec["floor_dy"](SPOUT_L))
             block(s, -f["wall_in"], f["wall_in"], f["under"] - 1.4, f["under"] - 1.0, SPOUT_L - 0.5, SPOUT_L, tone(IRON, DARK, 3))
     return build
@@ -1171,16 +1127,14 @@ def flume_d2_2(spec):
     return build
 
 
-# ------------------------------------------------------------------ C. flume intake
-
 INTAKE_L = 16.0
-INTAKE_MOUTH_DROP = 0.6        # the floor at the mouth sits this far below the flume floor
-INTAKE_FLARE = 5.4             # the half-width at the mouth is wall_in + this (7.0)
-INTAKE_WALL_H = 3.0            # the wall stands this far above the floor at the flume end (top - floor_y)
+INTAKE_MOUTH_DROP = 0.6
+INTAKE_FLARE = 5.4
+INTAKE_WALL_H = 3.0
 INTAKE_STEP = 1.0
-GATE_X = 3.0                   # gate posts stand this far outside the mouth half-width
-GATE_UP = 7.0                  # post tops above the mouth floor
-GATE_BOARD_UP = 6.0            # the open sluice board hangs this far above the mouth floor
+GATE_X = 3.0
+GATE_UP = 7.0
+GATE_BOARD_UP = 6.0
 
 
 def intake_s(z):
@@ -1306,8 +1260,6 @@ def intake_d2(s):
             stud(s, (side * (x + 0.04), y, z + 0.2), (0, 0, 1), 0.06, 0.04, tone(STEEL, DARK, k), 4)
 
 
-# ------------------------------------------------------------------ registry of recipes
-
 def box(rid, size, body, d1, d2):
     return {"kind": "box", "size": size, "body": body, "d1": d1, "d2": d2}
 
@@ -1358,33 +1310,27 @@ for _rid, _spec in RECIPES.items():
 RECIPES["weir_apron"]["col"] = apron_col
 
 
-# ------------------------------------------------------------------ D. liners (decoration only, conformed to the bake)
-
 GROUND_BINS = {"park_flume": kit.SKETCH / "assets/park/park_flume/ground.bin", "park_pit": kit.SKETCH / "assets/park/park_pit/ground.bin",
                "park_islands": kit.SKETCH / "assets/park/park_islands/ground.bin"}
-GROUND_N = 801                 # 801 x 801 float32, row-major z then x, 2 m apart over -800..800
+GROUND_N = 801
 GROUND_STEP = 2.0
 GROUND_HALF = 800.0
 SILT = "b9a98a"
 EARTH = "9c7650"
 STONE = "a8957a"
 COPING = "d9ccaa"
-BASE_OFF = 0.05                # the liner surface rides this far above the baked ground
-EDGE_OFF = 0.031               # and eases to this at its outer edge, where it meets untouched ground (just over FLUSH_MIN)
-HI_LIFT = 0.02                 # never lower than this above either triangulation of a ground cell
-FLUSH_LANE = 0.12             # flush_lane liners: the most any drawn vertex inside the lane stands above the ground
-FLUSH_RIM_GAP = 0.5           # and rim rock bodies start this far outside the lane edge
-FEATURE_MAX = 0.25             # stones, cobbles, lips and joints stay under this above the ground
-MARGIN = 3.0                   # the liner runs this far past the row's rims
-SLEEPER_PITCH = 2.0            # rails style: a tie every 2 m, 0.5 m wide
+BASE_OFF = 0.05
+EDGE_OFF = 0.031
+HI_LIFT = 0.02
+FLUSH_LANE = 0.12
+FLUSH_RIM_GAP = 0.5
+FEATURE_MAX = 0.25
+MARGIN = 3.0
+SLEEPER_PITCH = 2.0
 SLEEPER_HALF = 0.25
-PANEL = 8.0                    # concrete panel length
-JOINT_HALF = 0.15              # half the width of a form joint
-BASE_TRIS = 7900               # under the landform budget of 8000
-# Registry class of a liner: landform (8,000 triangles) unless listed. With the surface cut to the ground mesh (at least FLUSH_MIN above
-# it everywhere, at most FLUSH_LANE inside a footprint) these rows need more; the counts the cut measures are trestle_hollow 13.9k,
-# gap_wash 9.5k, main_canal 9.5k and lateral_canal 14.3k (park_large, 16,000) and wasteway_chute 22.3k (hero_landmark, 24,000, the only
-# class above it). A class only sets the cap assert; the park row's `budget` stays landform and sets the in-game draw ranges.
+PANEL = 8.0
+JOINT_HALF = 0.15
+BASE_TRIS = 7900
 LINER_CLASS = {"liner_trestle_hollow": "park_large", "liner_gap_wash": "park_large", "liner_main_canal": "park_large",
                "liner_lateral_canal": "park_large", "liner_wasteway_chute": "hero_landmark"}
 
@@ -1399,8 +1345,8 @@ def liner_cap(rid):
 
 def tri_limit(rid):
     return liner_cap(rid)
-ROCKS_MAX = 48                 # 20 tris each
-TUFTS_MAX = 60                 # 18 tris each
+ROCKS_MAX = 48
+TUFTS_MAX = 60
 CHECK_MIN, CHECK_MAX = -0.05, 0.30
 
 LINERS = {
@@ -1417,9 +1363,6 @@ LINERS = {
     "liner_lateral_canal": {"style": "canal", "at": (-270.0, 15.0), "size": (286.5, 3.0, 40.0), "yaw": 29.2, "flush_lane": True},
 }
 LINER_IDS = list(LINERS)
-# The pit's rows (park_pit bake). Each size and yaw is the row's own in src/world/park/park_pit.json; a liner is placed rigidly at the
-# row's `at` (no fit), so these must follow the row if it moves. "gap": the canal is left out where the arroyo cuts it or the mound
-# at its west end rises (ground more than 0.35 m off the canal's own level), so no lining bridges a cut or climbs a hill.
 PIT_LINERS = {
     "liner_dump_wash_1": {"park": "park_pit", "style": "sandstone", "at": (-465.7, -531.2), "size": (67.8, 10.0, 36.0), "yaw": 74.8, "flush_lane": True},
     "liner_dump_wash_2": {"park": "park_pit", "style": "sandstone", "at": (-402.3, -519.4), "size": (61.7, 10.0, 36.0), "yaw": 84.6, "flush_lane": True},
@@ -1430,13 +1373,6 @@ PIT_LINERS = {
 }
 PIT_LINER_IDS = list(PIT_LINERS)
 LINERS.update(PIT_LINERS)
-# The islands' decoration-only pass (park_islands bake). fin_chute (the twin_fins collapse drops its ground 8 m) and cloud_wash_west
-# (the west_wing impact swaps in a crater) are not here: a baked-ground liner would float over the swapped ground.
-# "flush_lane": the drawn surface inside any ride row's footprint of the park stands at most FLUSH_LANE (0.12 m) above the game's ground
-# mesh, because a ride lane may carry no visible bump that is not solid; everywhere it stands at least FLUSH_MIN (0.03 m) above it.
-# Outside every footprint (the margin strips past a row's ends, walls, lips and verges) the style's relief stands as it was, up to
-# FEATURE_MAX, and a plain cell may raise its corners to 0.22 m to clear the ground. The test is exact (tri_extremes_at), liner_check
-# fails the build otherwise, and a flush liner ships no rim props and so no detail shells.
 ISLES_LINERS = {
     "liner_run_turn_wash": {"park": "park_islands", "style": "sandstone", "at": (-60.0, -516.0), "size": (60.0, 4.0, 40.0), "yaw": 0.0, "flush_lane": True},
     "liner_lookout_stair": {"park": "park_islands", "style": "haul", "at": (-100.0, -520.0), "size": (160.0, 0.01, 40.0), "yaw": 0.0, "flush_lane": True},
@@ -1523,7 +1459,7 @@ def hh(i, j, k=0):
     return ((i * 73856093) ^ (j * 19349663) ^ (k * 83492791)) % 1009 / 1009.0
 
 
-FLUSH_PROP_REACH = {"rock": 0.7, "tuft": 0.5}    # how far a rock or tuft reaches from its centre
+FLUSH_PROP_REACH = {"rock": 0.7, "tuft": 0.5}
 _RIDES = {}
 
 
@@ -1578,11 +1514,10 @@ def box_touches_footprint(row, x0, x1, z0, z1):
     return False
 
 
-FLUSH_MIN = 0.03              # every liner vertex stands at least this far above the game's ground mesh: Terrain3D's own 1 m diagonals and LOD
-                              # can fold the drawn ground slightly above the 2 m collider planes, so a surface level with them z-fights
-MINV = FLUSH_MIN + 5e-5       # the offset a vertex is held above: over the minimum by more than float32 export can move it
-SLIVER = 1e-6                 # a piece or triangle smaller than this (m2) is dropped; the lane coverage assert still holds
-CAPV = FLUSH_LANE - 5e-5      # the offset a vertex inside a footprint is held to: under the band by more than float32 export can move it
+FLUSH_MIN = 0.03
+MINV = FLUSH_MIN + 5e-5
+SLIVER = 1e-6
+CAPV = FLUSH_LANE - 5e-5
 
 
 _FPQ = {}
@@ -1958,7 +1893,7 @@ def emit_flush(row, V, cells):
                         queue.append(o)
         else:
             choice[ci] = got
-        if not queue:       # corners moved by an adjustment can spoil a cell accepted earlier: recheck every plain cell
+        if not queue:
             for cj in range(len(cells)):
                 if mode[cj] == "plain":
                     again = plain_choice(cj, adjust=False)
@@ -2097,7 +2032,7 @@ def flush_clip(row, spec):
     """(exl, exr) of a flush_lane row's sheet: where another flush_lane liner's lane starts on that side within the z range
     of both sheets, the sheet stops at that lane's edge, so adjacent sheets do not overlap or z-fight."""
     exl = exr = row.ex
-    if spec["yaw"] != 0.0:      # a turned row is separated from its flush neighbours by flush_cull, cell by cell
+    if spec["yaw"] != 0.0:
         return exl, exr
     for oid, o in LINERS.items():
         if not o.get("flush_lane") or o is spec or o.get("park") != spec.get("park") or o["yaw"] != 0.0:
@@ -2159,7 +2094,7 @@ def sheet_zone(rid, x, z, gap_aware=True):
     lx, lz = dx * c - dz * s, dx * s + dz * c
     hw, hl = spec["size"][2] / 2.0, spec["size"][0] / 2.0
     if spec["style"] == "pond":
-        return 0        # the pond's sheet is elliptical; assert_pond_clear keeps every other flush row of the park off it
+        return 0
     if abs(lx) <= hw and abs(lz) <= hl:
         zone = 2
     elif abs(lx) <= hw + MARGIN and abs(lz) <= hl + MARGIN:
@@ -2182,7 +2117,7 @@ def flush_covered(row, lx, lz):
 
 
 SEAM_CUT_PARKS = ("park_flume",)
-SEAM_MAX = 0.01                # m2 of a sheet that may lie where another sheet draws (slivers under SLIVER are dropped, not cut)
+SEAM_MAX = 0.01
 
 
 def rect_lines(spec, grow=0.0):
@@ -2234,7 +2169,7 @@ def flush_cut(row, t, cuts):
     def taken(f):
         return flush_covered(row, *row.local(sum(q[0] for q in f) / len(f), sum(q[1] for q in f) / len(f)))
     gone = [taken(f) for f in frags]
-    if not any(gone):       # crossed by a line but taken nowhere: the triangle stays whole, so a row with no seam rebuilds unchanged
+    if not any(gone):
         return [t]
     if all(gone):
         return []
@@ -2310,7 +2245,7 @@ class Row:
         spec = LINERS[rid]
         self.rid, self.style = rid, spec["style"]
         self.park = spec.get("park", "park_flume")
-        self.gap = spec.get("gap")          # a lining left out wherever the ground departs this far from the row's own level
+        self.gap = spec.get("gap")
         self.gauge = spec.get("gauge", False)
         self.flush = spec.get("flush_lane", False)
         self.ax, self.az = spec["at"]
@@ -2320,7 +2255,7 @@ class Row:
         self.g0 = ground_at(self.ax, self.az, self.park)[0]
         self.hw, self.hl = self.W / 2.0, self.L / 2.0
         self.ex, self.ez = self.hw + MARGIN, self.hl + MARGIN
-        self.exl = self.exr = self.ex           # the sheet's extent on the -x and +x side (flush_lane rows clip at a neighbouring lane)
+        self.exl = self.exr = self.ex
         self.peers = flush_peers(rid) if self.flush else []
         if self.flush:
             assert_pond_clear(rid)
@@ -2447,7 +2382,7 @@ def rect_off(row, lx, lz, gh):
     elif st == "haul":
         if row.flush:
             off += 0.10 * verge_bump(d)
-        elif -1.0 < d < 1.4:      # cobbles along the verge, low and soft: nothing in the lane stands up
+        elif -1.0 < d < 1.4:
             bump = ss((d + 1.0) / 0.8) if d < 0.2 else 1.0 - ss((d - 0.2) / 1.2)
             off += 0.10 * bump
     else:
@@ -2515,7 +2450,6 @@ def rect_colour(row, lx, lz, gh, i, j):
         if 3.0 <= a <= 4.0:
             return tone(IRON, VARNISH, i + j, 0.45)
         return tone(SAND, SILT, i * 5 + j, 0.5) if hh(i, j, 6) < 0.8 else tone(CREAM, SAND, i + j, 0.4)
-    # canal
     if d > 2.4 or out_of_run:
         return tone(SAGE, SAND, i + j, 0.35) if hh(i, j, 3) < 0.07 else tone(SAND, CREAM, i * 3 + j, 0.5)
     if -1.5 <= d <= 0.6:
@@ -2669,8 +2603,6 @@ def liner_base(row):
     return build
 
 
-# Detail shells: where things sit on the rims. Rocks stay low (cobbles, 0.25 m above the ground at most), tufts are sage.
-
 def settled(row, lx, lz, rad=0.7, limit=0.3):
     """Whether the ground is calm enough under a prop of this radius for it not to hang or sink."""
     c = row.sample(lx, lz)[0]
@@ -2698,7 +2630,7 @@ def rim_points(row, count, kind, salt):
         "rails": {"rock": (hw - 0.8, hw + 0.4), "tuft": (hw + 1.2, hw + 2.8)},
     }[row.style][kind]
     if row.flush and kind == "rock":
-        lo = max(lo, hw + 0.6 + FLUSH_RIM_GAP)      # a rock's radius reaches 0.6 m from its centre
+        lo = max(lo, hw + 0.6 + FLUSH_RIM_GAP)
         hi = max(hi, lo + 1.0)
     per = max(1, count // 2)
     span = row.ez * 2.0 - 1.4
@@ -2772,7 +2704,7 @@ def liner_build(rid, out_dir):
         mesh = flush_mesh(row)
         print("FLUME_WORKS_MESH", rid, "triangles %d  class %s (cap %d)  cut cells %d" % (len(mesh["tris"]), liner_class(rid), liner_cap(rid), mesh["overlay"]))
     plans = [(rid, [(rid + "_body", liner_base(row))], "base", LinerSurf)]
-    if not row.flush:       # a flush_lane liner has no rim props, so no detail shells (the loader skips a missing shell)
+    if not row.flush:
         plans += [
             (rid + "_detail1", [(rid + "_detail1_mesh", liner_rocks(row))], "detail", Surf),
             (rid + "_detail2", [(rid + "_detail2_mesh", liner_tufts(row))], "detail", Surf),
@@ -2974,8 +2906,6 @@ def liner_check(rid, out_dir):
     return fails
 
 
-# ------------------------------------------------------------------ export, build, check
-
 def export(name, builders, rail, out_dir):
     common.reset()
     kit.PARTS.clear()
@@ -3008,7 +2938,7 @@ def build(rid, out_dir):
         tris = info["metrics"]["triangles"]
         assert tris <= BUDGET[kind]["tris"], (name, tris, BUDGET[kind])
         assert info["metrics"]["materials"] == ["enamel"], (name, info["metrics"]["materials"])
-        draws = info["metrics"]["draws"] - (1 if kind == "base" else 0)    # the -col mesh is never drawn
+        draws = info["metrics"]["draws"] - (1 if kind == "base" else 0)
         assert draws <= (1 if kind == "base" else BUDGET[kind]["draws"]), (name, draws)
         if kind == "base":
             assert (rid + COL_NODE) in [m[0] for m in info["meshes"]], (name, info["meshes"])
@@ -3096,7 +3026,6 @@ def check(rid, out_dir):
         if max(max(abs(lo[k] - wlo[k]), abs(hi[k] - whi[k])) for k in range(3)) > 0.001:
             fails.append("%s: -col bbox %s %s" % (rid, lo, hi))
         if rid == "weir_apron":
-            # Drawn and collided agree: no base vertex above the bevelled top, no detail more than HOP proud of it.
             for name, slack in ((rid, 1e-4), (rid + "_detail1", HOP), (rid + "_detail2", HOP)):
                 d, b = read_glb(Path(out_dir) / (name + ".glb"))
                 node = next(n for n in mesh_nodes(d) if not n.endswith("-col"))
@@ -3106,7 +3035,6 @@ def check(rid, out_dir):
             base_top = max(p[1] for p in mesh_positions(doc, binary, next(n for n in mesh_nodes(doc) if not n.endswith("-col"))))
             if abs(base_top - whi[1]) > 0.001:
                 fails.append("%s: drawn top %.4f != collider top %.4f" % (rid, base_top, whi[1]))
-        # Hugging: the drawn base and both shells stay within HOP outward (decals on a slope within 0.02) of the box.
         tops = {"box": 0.001, "wedge": 0.02}[spec["kind"]]
         for name in (rid, rid + "_detail1", rid + "_detail2"):
             d, b = read_glb(Path(out_dir) / (name + ".glb"))
@@ -3122,7 +3050,6 @@ def check(rid, out_dir):
             if hi2[1] > H + (tops if "detail" in name or spec["kind"] == "wedge" else 0.001) + 1e-4:
                 fails.append("%s above the top: %.4f > %.4f" % (name, hi2[1], H))
             if name == rid:
-                # No recess deeper than RECESS: the base spans the box to within RECESS on the +/- faces it must touch.
                 if lo2[0] > -W / 2 + RECESS or hi2[0] < W / 2 - RECESS or lo2[2] > -L / 2 + RECESS or hi2[2] < L / 2 - RECESS:
                     fails.append("%s: base does not reach the box faces %s %s" % (rid, lo2, hi2))
                 if spec["kind"] == "box" and abs(hi2[1] - H) > 0.001:
@@ -3166,7 +3093,6 @@ def intake_check(rid, out_dir):
     f = FLUME
     doc, binary = read_glb(Path(out_dir) / (rid + ".glb"))
     pts = mesh_positions(doc, binary, rid + COL_NODE)
-    # The z = 16 section is the FLUME ring (and wring(side, 16, 0) is its source).
     want = {(round(abs(p[0]), 3), round(p[1], 3)) for side in (-1, 1) for p in wring(side, INTAKE_L, 0.0)}
     end = [p for p in pts if abs(p[2] - INTAKE_L) < 1e-3]
     for x, y in want:

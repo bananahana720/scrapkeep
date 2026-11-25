@@ -30,7 +30,6 @@ class Sc:
 
     def _kw(self, kw, ico=False):
         if self.lite and not ico:
-            # Small props: keep the bevel, drop the subdivision on hard and round primitives.
             st = kw.get("style")
             if st is None:
                 st = "round" if kw.pop("_default_round", False) else "hard"
@@ -90,18 +89,15 @@ class Sc:
 @K.kind("gate_wheelhouse", hero=True, tags=["machine"], variants="ab",
         story="Sluice crew's wheelhouse: a big hand wheel chained shut, petrol-enamel walls on a concrete plinth.")
 def gate_wheelhouse(p, v, rng):
-    p = Sc(p, 1.8)  # 3.2 m hut built at 1.8x: about 5.8 m tall
+    p = Sc(p, 1.8)
     sag = 0.38 if v == "b" else 0.0
-    # Concrete plinth with chipped corners and a stain band.
     p.box((4.0, 3.2, 0.4), (0, 0, 0.2), C["concrete"], style="hard_smooth")
     p.box((4.1, 0.5, 0.18), (0, -1.55, 0.09), C["concrete_light"], style="hard_smooth")
     for x, y in ((-1.9, -1.5), (1.9, 1.5), (1.95, -1.4)):
         p.box((0.28, 0.28, 0.14), (x, y, 0.45), mix(C["concrete"], C["concrete_stain"], 0.5), rot=(0, 0, rng.uniform(0, 1.5)))
-    # Corner posts.
     for x in (-1.75, 1.75):
         for y in (-1.3, 1.3):
             p.beam((x, y, 0.4), (x, y, 2.35), 0.2, tint(mix(PETROL, "charcoal", 0.3), rng, 0.05))
-    # Wall planks: back, sides, front (a door of wide planks, set a hair proud).
     for i in range(16):
         x = -1.58 + i * 0.21
         p.box((0.2, 0.12, 1.9), (x, 1.3, 1.35), tint(PETROL, rng), jit=0.004)
@@ -109,7 +105,7 @@ def gate_wheelhouse(p, v, rng):
         for i in range(11):
             y = -1.05 + i * 0.21
             if v == "b" and s == 1 and i in (3, 4):
-                continue  # a gap where two planks came away
+                continue
             p.box((0.12, 0.2, 1.9), (s * 1.75, y, 1.35), tint(mix(PETROL, "concrete_stain", 0.3) if s == 1 else PETROL, rng), jit=0.004)
     for i in range(16):
         x = -1.58 + i * 0.21
@@ -118,7 +114,6 @@ def gate_wheelhouse(p, v, rng):
               tint(mix(PETROL, "bone", 0.2) if door else PETROL, rng), jit=0.004)
     for z in (0.7, 1.9):
         p.beam((-1.78, -1.38, z), (1.78, -1.38, z), 0.1, mix(PETROL, "charcoal", 0.3), h=0.08)
-    # Roof: planks in rows up each slope; the ridge dips in the sagging variant.
     rise, half, rows, segs = 0.75, 1.85, 8, 6
     theta = math.atan2(rise, half)
     seg_len = 3.9 / segs
@@ -127,7 +122,7 @@ def gate_wheelhouse(p, v, rng):
             t = (r + 0.5) / rows
             for j in range(segs):
                 if v == "b" and s == -1 and j in (2, 3) and r >= 5:
-                    continue  # open hole in the sagging roof
+                    continue
                 x = -1.95 + (j + 0.5) * seg_len
                 dip = sag * (1 - (x / 1.95) ** 2) * (0.35 + 0.65 * t)
                 slope = math.atan2(sag * 2 * x / 1.95 ** 2, 1.0) if sag else 0.0
@@ -142,18 +137,16 @@ def gate_wheelhouse(p, v, rng):
             p.beam((x, s * half, 2.3), (x, 0, 2.3 + rise - dip - 0.05), 0.11, C["timber_dark"], h=0.09)
     p.beam((-1.95, 0, 2.3 + rise - 0.02), (1.95, 0, 2.3 + rise - 0.02 - (sag * 0.4)), 0.14, C["timber_dark"])
     if v == "b":
-        # Canvas patch slumped over the hole, planks that fell to the plinth.
         p.ico(0.8, (-0.15, -0.5, 2.55), C["canvas_dark"], scale=(1.5, 1.0, 0.22), rot=(0.4, 0, 0.1), style="soft")
         p.box((1.6, 0.26, 0.07), (-0.6, -1.95, 0.1), C["timber_grey"], rot=(0, 0, 0.35))
         p.box((1.2, 0.24, 0.07), (0.3, -2.1, 0.22), C["timber_dark"], rot=(0.05, 0, -0.5))
         p.box((1.0, 0.22, 0.07), (-1.8, -1.85, 0.07), C["timber_pale"], rot=(0, 0, 1.2))
     else:
-        p.ico(0.45, (-1.3, -1.7, 0.3), C["canvas"], scale=(1.0, 0.8, 0.7), style="soft")  # folded tarp
-    # The big hand wheel on the front wall: rim, hub, spokes, grips, chained shut.
+        p.ico(0.45, (-1.3, -1.7, 0.3), C["canvas"], scale=(1.0, 0.8, 0.7), style="soft")
     wx, wy, wz, wr = 0.95, -1.72, 1.35, 0.78
     face = (math.pi / 2, 0, 0)
-    p.box((0.34, 0.3, 1.5), (wx, -1.5, 1.1), C["timber_dark"])  # wheel bracket
-    p.cyl(0.09, 0.5, (wx, -1.65, wz), C["iron"], segs=8, rot=face)  # axle
+    p.box((0.34, 0.3, 1.5), (wx, -1.5, 1.1), C["timber_dark"])
+    p.cyl(0.09, 0.5, (wx, -1.65, wz), C["iron"], segs=8, rot=face)
     p.torus(wr, 0.075, (wx, wy, wz), OXIDE, rot=face, major=16, minor=6)
     p.cyl(0.2, 0.2, (wx, wy, wz), C["iron"], segs=10, rot=face, style="round")
     for k in range(8):
@@ -164,7 +157,6 @@ def gate_wheelhouse(p, v, rng):
         a = math.tau * k / 4 + 0.2
         p.cyl(0.06, 0.28, (wx + (wr + 0.02) * math.cos(a), wy - 0.05, wz + (wr + 0.02) * math.sin(a)),
               C["timber_dark"], segs=6, rot=face)
-    # Chain from the rim to a ring on the plinth, and a padlock block where it crosses a spoke.
     ring_x = wx - 0.05
     p.ring(0.05, 0.12, 0.08, (ring_x, -1.85, 0.5), C["iron"], segs=8, rot=(math.pi / 2, 0, 0))
     if v == "a":
@@ -174,7 +166,6 @@ def gate_wheelhouse(p, v, rng):
         p.chain((wx, wy - 0.12, wz + wr), (ring_x + 0.4, -2.3, 0.1), C["cable"], link=0.12, radius=0.022, sag=0.3)
         p.chain((wx + wr, wy - 0.12, wz), (ring_x, -1.85, 0.55), C["cable"], link=0.12, radius=0.022, sag=0.3)
     p.box((0.22, 0.14, 0.26), (wx + 0.02, wy - 0.18, wz + 0.3), C["iron"], style="hard_smooth")
-    # Work boots-width step stone and a bucket-less tool leaning flat: a short-handled mallet.
     p.cyl(0.07, 0.9, (-1.0, -2.35, 0.07), C["timber_dark"], segs=6, rot=(0, math.pi / 2, 0.3))
     p.cyl(0.13, 0.32, (-0.5, -2.2, 0.13), C["iron"], segs=8, rot=(0, math.pi / 2, 0.3), style="hard_smooth")
 
@@ -185,11 +176,9 @@ def survey_tripod(p, v, rng):
     p = Sc(p, 1.6, lite=True)
     leg_r = 0.045
     if v == "a":
-        # Toppled on its side: one leg propped up, two on the ground.
         head = (0.0, 0.0, 0.24)
         feet = [(1.35, 0.15, 0.06), (0.4, 1.0, 0.07), (0.35, -0.55, 0.85)]
     else:
-        # Folded and dropped: three legs near parallel, head at one end.
         head = (-0.7, 0.0, 0.2)
         feet = [(0.8, 0.14, 0.06), (0.75, -0.14, 0.06), (0.7, 0.0, 0.2)]
     for k, f in enumerate(feet):
@@ -200,12 +189,10 @@ def survey_tripod(p, v, rng):
         p.box((0.1, 0.1, 0.1), mid, C["iron_light"], rot=(0.2 * k, 0.4, 0.3 * k))
     p.cyl(0.15, 0.1, head, C["iron"], segs=10, style="hard_smooth", rot=(0.3, 0.1, 0.4))
     p.cyl(0.04, 0.2, (head[0], head[1], head[2] + 0.12), C["iron_light"], segs=6, rot=(0.3, 0.1, 0.4))
-    # The instrument: a short telescope barrel on the ground beside the head.
     tx, ty = (-0.45, -0.35) if v == "a" else (0.0, -0.45)
     p.cyl(0.075, 0.55, (tx, ty, 0.1), C["canvas_dark"], segs=10, rot=(0, math.pi / 2, 0.3), style="hard_smooth")
     p.cyl(0.1, 0.1, (tx - 0.3, ty - 0.09, 0.1), C["iron"], segs=10, rot=(0, math.pi / 2, 0.3), style="hard_smooth")
     p.cyl(0.07, 0.08, (tx + 0.3, ty + 0.09, 0.1), C["verdigris"], segs=8, rot=(0, math.pi / 2, 0.3), style="hard_smooth")
-    # The chunky plumb bob, rolled aside, and its slack cord.
     bx, by = (0.55, 0.45) if v == "a" else (-0.2, 0.55)
     p.cyl(0.11, 0.24, (bx, by, 0.11), C["charcoal"], segs=10, r2=0.02, rot=(0, math.pi / 2, 0.8), style="hard_smooth")
     p.uv(0.11, (bx - 0.07, by - 0.07, 0.11), C["iron"], scale=(1, 1, 0.95), u=10, v=6, style="round")
@@ -214,19 +201,17 @@ def survey_tripod(p, v, rng):
     for a, b in zip(pts, pts[1:]):
         p.rod(a, b, 0.016, C["cable"], segs=6)
     if v == "a":
-        p.ico(0.22, (-0.9, 0.55, 0.12), C["canvas"], scale=(1.0, 0.8, 0.6), style="soft")  # kit bag, slumped
+        p.ico(0.22, (-0.9, 0.55, 0.12), C["canvas"], scale=(1.0, 0.8, 0.6), style="soft")
     else:
         p.ico(0.2, (0.2, -0.85, 0.11), C["canvas_dark"], scale=(1.1, 0.8, 0.55), style="soft")
 
 
-
-# --- shared bits ---------------------------------------------------------------------------
 V = kit.Vector if hasattr(kit, "Vector") else None
 from mathutils import Euler, Matrix, Vector
 
-PETROL, OXIDE = "365754", "9b513a"   # board petrol (old-enamel machine bodies) and oxide (Sluice Wheelhouse hand wheel), spillway props board
-DUSK_BLUE = mix(PETROL, "bone", 0.35)   # crew shirts: petrol worn toward bone, the crews board's two cloth colours
-FLOWER = "c9b45e"      # brittlebush yellow, muted (not brass)
+PETROL, OXIDE = "365754", "9b513a"
+DUSK_BLUE = mix(PETROL, "bone", 0.35)
+FLOWER = "c9b45e"
 SILVER_LEAF = "8f9a78"
 
 
@@ -268,14 +253,11 @@ def rock(p, x, y, r, rng, col="sandstone", sc=(1.2, 1.0, 0.55)):
     p.ico(r, (x, y, r * sc[2] * 0.8), tint(col, rng, 0.06), scale=sc, rot=(0, 0, rng.uniform(0, 3)), style="round")
 
 
-# --- mixer_wreck -------------------------------------------------------------------------
 @K.kind("mixer_wreck", hero=True, tags=["machine"], variants="abc",
         story="A concrete mixer truck from the last pour: drum tipped, left where the crew walked off.")
 def mixer_wreck(p, v, rng):
-    # Scaled so it stays under 6 m: the tipped drum has no flat 3.6 m deck, so it carries no perch.
     p = Sc(p, 1.1)
-    dz = -0.75 if v == "c" else 0.0   # sunk to the axles in silt
-    # Chassis frame and tandem axles (cab toward -Y).
+    dz = -0.75 if v == "c" else 0.0
     p.box((1.5, 7.6, 0.34), (0, 0.3, 0.88 + dz), "iron", style="hard_smooth")
     p.box((2.1, 7.0, 0.1), (0, 0.4, 1.12 + dz), "charcoal", style="hard_smooth")
     for y in (-2.7, 1.5, 2.85):
@@ -283,28 +265,24 @@ def mixer_wreck(p, v, rng):
     for y in (-2.7, 1.5, 2.85):
         for sx in (-1, 1):
             if v == "b" and sx == -1 and y == -2.7:
-                # Wheel off: the hub stub shows, the tyre lies flat in the dust.
                 p.cyl(0.3, 0.3, (sx * 1.12, y, 0.6), "iron_light", segs=10, rot=(0, math.pi / 2, 0), style="round")
                 continue
             wheel(p, sx * 1.12, y, 0.6 + dz, 0.62, 0.42, rng)
     if v == "b":
         p.torus(0.45, 0.2, (-3.5, -2.2, 0.2), "charcoal", rot=(0.05, 0.08, 0), major=16, minor=6)
         p.cyl(0.3, 0.12, (-3.5, -2.2, 0.18), "iron_light", segs=12, style="round")
-        # Cribbing under the dropped corner.
         p.box((1.3, 0.28, 0.24), (-1.1, -2.55, 0.12), "timber_grey")
         p.box((0.28, 1.3, 0.24), (-1.0, -2.6, 0.36), "timber_dark")
-    # Cab: cab-over block, one wide window band, flat bumper (no headlight pair).
     cab = PETROL if v != "c" else mix(PETROL, "concrete_stain", 0.3)
     cz = 2.15 + dz
     p.box((2.4, 2.1, 1.75), (0, -2.95, cz), cab, style="hard_smooth")
     p.box((2.5, 2.2, 0.14), (0, -2.95, cz + 0.95), "iron_light", style="hard_smooth")
     p.box((2.5, 0.28, 0.4), (0, -4.1, 1.15 + dz), "iron", style="hard_smooth")
-    p.box((2.0, 0.1, 0.34), (0, -4.0, 1.55 + dz), "charcoal", style="hard_smooth")  # grille band
+    p.box((2.0, 0.1, 0.34), (0, -4.0, 1.55 + dz), "charcoal", style="hard_smooth")
     for sx in (-1, 1):
-        p.box((0.1, 1.2, 0.7), (sx * 1.22, -3.1, cz + 0.3), "cable", style="hard_smooth")  # side window
-        p.box((0.5, 1.0, 0.1), (sx * 1.2, -2.7, 1.55 + dz), "iron", style="hard_smooth")  # step
+        p.box((0.1, 1.2, 0.7), (sx * 1.22, -3.1, cz + 0.3), "cable", style="hard_smooth")
+        p.box((0.5, 1.0, 0.1), (sx * 1.2, -2.7, 1.55 + dz), "iron", style="hard_smooth")
     if v == "b":
-        # Windscreen gone, brittlebush growing out of the cab.
         p.box((2.0, 0.08, 0.1), (0, -4.0, cz + 0.62), "iron_light")
         p.box((2.0, 0.08, 0.1), (0, -4.0, cz + 0.02), "iron_light")
         bush(p, 0, -3.5, 0.9, rng, n=12, h=1.2)
@@ -312,12 +290,10 @@ def mixer_wreck(p, v, rng):
     else:
         p.box((2.0, 0.08, 0.72), (0, -4.0, cz + 0.32), "cable", style="hard_smooth")
         p.box((2.0, 0.1, 0.08), (0, -4.0, cz + 0.7), "iron_light")
-    # Fuel tank and mud flaps.
     p.cyl(0.38, 1.4, (1.1, 0.0, 1.3 + dz), "iron_light", segs=10, rot=(math.pi / 2, 0, 0), style="round")
     for y in (2.2,):
         for sx in (-1, 1):
             p.box((0.06, 0.6, 0.5), (sx * 1.35, y + 1.1, 0.5 + dz), "charcoal", style="fine")
-    # Drum: nose cone, belly, mouth cone; helix ridge; roller rings. Tipped, mouth high.
     tilt = math.radians(26)
     d = Vector((0, math.cos(tilt), math.sin(tilt)))
     base = Vector((0, -1.1, 2.6 + dz))
@@ -347,17 +323,14 @@ def mixer_wreck(p, v, rng):
         pts = [ax(0.7 + t * 0.28, ph + t * 0.7, rad(0.7 + t * 0.28) + 0.04) for t in range(12)]
         for a, b in zip(pts, pts[1:]):
             p.rod(a, b, 0.07, "concrete_dark", segs=5, style="flat")
-    # Drum cradle and the pedestal at the rear.
     p.box((1.4, 0.4, 1.0), (0, -0.4, 1.7 + dz), "iron", style="hard_smooth")
     p.beam((-0.9, 3.0, 1.2 + dz), (-0.6, 3.1, 2.6 + dz), 0.22, "iron")
     p.beam((0.9, 3.0, 1.2 + dz), (0.6, 3.1, 2.6 + dz), 0.22, "iron")
-    # Dried concrete: drips down the mouth, a slumped lump, spatter on the cab roof.
     for i, a in enumerate((0.3, 1.6, 2.7, 4.2)):
         o = ax(4.6, a, 0.55)
         p.ico(0.22 + 0.06 * (i % 2), (o[0], o[1], o[2]), "concrete", scale=(1, 1, 1.6), style="round")
     p.ico(0.55, (0.8, 5.2, 0.28 + dz * 0), "concrete", scale=(1.4, 1.1, 0.5), style="round")
     if v == "c":
-        # Silt mound: a low flat-topped drift with lumps, up over the axles.
         p.cyl(4.6, 0.75, (0, 0.5, -0.38 + dz * 0), mix("sandstone", "soil", 0.3), segs=18, r2=3.6, style="hard_smooth")
         for i in range(10):
             a = rng.uniform(0, math.tau)
@@ -373,13 +346,11 @@ def mixer_wreck(p, v, rng):
             bush(p, -2.6, 4.4, 0.6, rng, n=7)
 
 
-# --- survey_tent -------------------------------------------------------------------------
 @K.kind("survey_tent", hero=True, tags=["soft"], variants="ab",
         story="The survey crew's wall tent on its timber platform: a cot, a table, a mug left on the ledger.")
 def survey_tent(p, v, rng):
     p = Sc(p, 1.5)
     L, W, WH = 4.2, 3.4, 1.55
-    # Deck on sleepers.
     for x in (-1.4, 0, 1.4):
         p.box((0.22, 4.9, 0.3), (x, 0.0, 0.15), "timber_dark")
     for i in range(18):
@@ -390,7 +361,6 @@ def survey_tent(p, v, rng):
     if v == "a":
         sag = 0.22
         wall = "canvas"
-        # Corner posts and ridge pole.
         for sx in (-1, 1):
             for sy in (-1, 1):
                 p.beam((sx * 1.7, sy * 2.05, 0.4), (sx * 1.7, sy * 2.05, 0.4 + WH), 0.1, "timber_dark")
@@ -398,18 +368,15 @@ def survey_tent(p, v, rng):
             p.beam((0, sy * 2.2, 0.4), (0, sy * 2.2, 2.7), 0.12, "timber_dark")
         p.beam((0, -2.2, 2.7), (0, 0, 2.7 - sag), 0.1, "timber_dark")
         p.beam((0, 0, 2.7 - sag), (0, 2.2, 2.7), 0.1, "timber_dark")
-        # Side walls (two panels each, an open front), back wall.
         for sx in (-1, 1):
             for j in range(4):
                 y = -1.9 + j * 1.2
                 p.box((0.1, 1.15, WH), (sx * 1.75, y + 0.3, 0.4 + WH / 2), tint(wall, rng, 0.04), style="soft")
         for i in range(3):
             p.box((1.2, 0.1, WH), (-1.15 + i * 1.15, 2.1, 0.4 + WH / 2), tint(wall, rng, 0.04), style="soft")
-        # Front: two flaps tied back, a short doorway valance.
         for sx in (-1, 1):
             p.box((0.5, 0.1, WH), (sx * 1.45, -2.1, 0.4 + WH / 2), tint(wall, rng, 0.04), rot=(0, 0, sx * -0.3), style="soft")
             p.ico(0.2, (sx * 1.2, -2.2, 1.0), "canvas_dark", scale=(0.6, 0.6, 1.6), style="round")
-        # Roof: slope panels along the ridge, with the ridge belly sagging.
         n = 9
         for s_ in (-1, 1):
             for j in range(n):
@@ -418,28 +385,25 @@ def survey_tent(p, v, rng):
                 slope = math.atan2(zr - 0.4 - WH, 1.85)
                 p.box((2.0, 4.5 / n + 0.03, 0.09), (s_ * 0.92, y, 0.4 + WH + (zr - 0.4 - WH) * 0.5),
                       tint(wall if (j % 2) else "canvas_dark", rng, 0.04), rot=(0, s_ * -slope, 0), style="soft")
-        # Interior: cot, table, mug, ledger, lantern.
         for sx in (-1, 1):
             p.box((0.06, 1.9, 0.06), (-1.15 + sx * 0.35, 0.8, 0.65), "timber_dark", style="fine")
             for y in (-0.1, 1.7):
                 p.beam((-1.15 + sx * 0.35, y, 0.4), (-1.15 + sx * 0.35, y, 0.7), 0.06, "timber_dark")
         p.box((0.75, 1.85, 0.07), (-1.15, 0.8, 0.72), "canvas_dark", style="soft")
-        p.ico(0.42, (-1.15, 0.65, 0.88), "dry_grass", scale=(0.8, 1.7, 0.35), style="round")  # blanket roll
-        p.ico(0.17, (-1.15, 1.55, 0.88), "canvas", scale=(1.3, 0.9, 0.6), style="round")      # pillow
+        p.ico(0.42, (-1.15, 0.65, 0.88), "dry_grass", scale=(0.8, 1.7, 0.35), style="round")
+        p.ico(0.17, (-1.15, 1.55, 0.88), "canvas", scale=(1.3, 0.9, 0.6), style="round")
         p.box((1.0, 0.8, 0.07), (0.8, 1.3, 0.95), "timber_pale")
         for sx in (-1, 1):
             for sy in (-1, 1):
                 p.beam((0.8 + sx * 0.42, 1.3 + sy * 0.32, 0.4), (0.8 + sx * 0.42, 1.3 + sy * 0.32, 0.95), 0.05, "timber_dark")
-        p.box((0.45, 0.32, 0.04), (0.6, 1.25, 1.0), "canvas", style="fine")  # ledger
-        p.cyl(0.07, 0.12, (1.05, 1.5, 1.04), "canvas", segs=8, style="round")   # mug
-        p.cyl(0.1, 0.18, (0.35, 1.55, 1.07), "iron_light", segs=8, style="round")  # lantern, unlit
-        p.box((0.5, 0.06, 0.45), (1.2, 2.0, 1.3), "timber_dark")  # shelf board
-        # Slack guy ropes lying on the deck edge and two pegs.
+        p.box((0.45, 0.32, 0.04), (0.6, 1.25, 1.0), "canvas", style="fine")
+        p.cyl(0.07, 0.12, (1.05, 1.5, 1.04), "canvas", segs=8, style="round")
+        p.cyl(0.1, 0.18, (0.35, 1.55, 1.07), "iron_light", segs=8, style="round")
+        p.box((0.5, 0.06, 0.45), (1.2, 2.0, 1.3), "timber_dark")
         for sx in (-1, 1):
             p.rod((sx * 1.9, -2.05, 0.45), (sx * 2.6, -2.7, 0.15), 0.03, "timber_grey", segs=5)
             p.cyl(0.06, 0.3, (sx * 2.6, -2.7, 0.15), "timber_dark", segs=6, rot=(0.3, 0.2, 0))
     else:
-        # Collapsed: poles snapped, canvas heaped and draped over the cot and table.
         p.beam((-0.9, -1.0, 0.4), (0.4, 0.4, 1.7), 0.1, "timber_dark")
         p.beam((0.9, 1.4, 0.4), (-0.4, 0.2, 1.1), 0.1, "timber_dark")
         p.beam((-1.7, 2.0, 0.4), (-1.6, 2.1, 1.3), 0.1, "timber_dark")
@@ -454,7 +418,6 @@ def survey_tent(p, v, rng):
         p.cyl(0.1, 0.2, (1.4, -0.9, 0.51), "iron_light", segs=8, rot=(0, math.pi / 2, 0.4), style="round")
         for sx in (-1, 1):
             p.rod((sx * 1.9, -2.2, 0.4), (sx * 2.7, -2.0, 0.12), 0.03, "timber_grey", segs=5)
-        # Broken deck planks and fallen gear around the heap.
         for i, (x, y, r_) in enumerate(((-1.6, -2.7, 0.4), (1.9, -2.9, 1.0), (2.4, 0.2, -0.5), (-2.3, 1.0, 0.9))):
             p.box((1.3, 0.24, 0.07), (x, y, 0.1), tint("timber_grey", rng, 0.08), rot=(0, 0, r_), jit=0.004)
         for i in range(8):
@@ -462,24 +425,20 @@ def survey_tent(p, v, rng):
             p.box((0.9, 0.14, 0.14), (1.9 * math.cos(a), 1.5 * math.sin(a) + 0.2, 0.55 + 0.3 * (i % 3)),
                   tint("canvas" if i % 2 else "canvas_dark", rng, 0.05), rot=(0.2, 0.3, a + 1.2), style="soft")
         for sx in (-1, 1):
-            p.ico(0.16, (0.8 + sx * 0.14, -1.9, 0.5), "timber_dark", scale=(0.7, 1.4, 0.7), style="round")  # boots
+            p.ico(0.16, (0.8 + sx * 0.14, -1.9, 0.5), "timber_dark", scale=(0.7, 1.4, 0.7), style="round")
         p.torus(0.28, 0.05, (-0.6, 2.4, 0.14), "canvas_stain", major=12, minor=5)
         p.torus(0.2, 0.05, (-0.6, 2.4, 0.22), "canvas_stain", major=12, minor=5)
-        p.cyl(0.14, 0.2, (1.7, 1.9, 0.44), "iron_light", segs=10, style="round")  # unlit lantern
+        p.cyl(0.14, 0.2, (1.7, 1.9, 0.44), "iron_light", segs=10, style="round")
         for i in range(3):
             p.beam((-2.3 + i * 0.2, 2.3, 0.4), (-1.9 + i * 0.25, 2.1, 0.12), 0.09, "timber_dark")
         bush(p, 2.4, 1.5, 0.7, rng, n=8)
         tuft(p, -2.4, -2.4, 0.8, rng, n=7, h=0.6)
 
 
-# --- survey_tripod (rescaled; the proof kind) is above --------------------------------------
-
-# --- flood_staff -------------------------------------------------------------------------
 @K.kind("flood_staff", hero=False, tags=["sign"], variants="abc",
         story="A water-level staff on a concrete pier, its high-water line repainted higher three times.")
 def flood_staff(p, v, rng):
-    # KITS.md dam brief: staff 2.6 m. a and b are scaled to it (3.05 m authored x 0.853 = 2.6 m); c lies fallen.
-    p = Sc(p, {"a": 0.853, "b": 0.836, "c": 1.5}[v], lite=True)  # b leans, so it reads taller
+    p = Sc(p, {"a": 0.853, "b": 0.836, "c": 1.5}[v], lite=True)
     lean = {"a": 0.0, "b": 0.16, "c": 1.5}[v]
     pivot = (0, 0, 0.35)
     ca, sa = math.cos(lean), math.sin(lean)
@@ -487,15 +446,12 @@ def flood_staff(p, v, rng):
     def T(x, y, z):
         """Rotate about the base pivot (around Y) so the pier can lean or lie."""
         return (pivot[0] + x * ca + (z - pivot[2]) * sa, y, pivot[2] - x * sa + (z - pivot[2]) * ca) if True else None
-    # Wide footing slab, always flat.
     p.box((1.9, 1.5, 0.35), (0, 0, 0.175), "concrete_light" if v == "a" else "concrete", style="hard_smooth")
-    # Stout pier with the gauge face: lean about the footing edge.
     H = 2.5
     ppos = T(0, 0, 0.35 + H / 2)
     p.box((0.62, 0.5, H), ppos, "concrete", rot=(0, lean, 0), style="hard_smooth")
     face = T(0, -0.27, 0.35 + H / 2)
     p.box((0.46, 0.06, H - 0.2), face, "canvas", rot=(0, lean, 0), style="hard")
-    # Painted bands every 0.5 m, chunky numerals as slab blocks, and three high-water marks.
     for i in range(1, 5):
         zc = 0.35 + 0.1 + i * 0.5
         p.box((0.46, 0.07, 0.12), T(0, -0.3, zc), "charcoal", rot=(0, lean, 0), style="hard")
@@ -505,7 +461,7 @@ def flood_staff(p, v, rng):
     for k, zc in enumerate((1.0, 1.65, 2.35)):
         p.box((0.5, 0.08, 0.1), T(0, -0.31, 0.35 + zc), mix("timber_pale", "concrete_stain", 0.2 * k), rot=(0, lean, 0), style="hard")
         p.box((0.28, 0.06, 0.1), T(-0.36, -0.29, 0.35 + zc + 0.12), "bone", rot=(0, lean, 0), style="hard")
-    p.box((0.74, 0.62, 0.2), T(0, 0, 0.35 + H + 0.1), "concrete_light", rot=(0, lean, 0), style="hard_smooth")  # cap
+    p.box((0.74, 0.62, 0.2), T(0, 0, 0.35 + H + 0.1), "concrete_light", rot=(0, lean, 0), style="hard_smooth")
     if v == "c":
         for k in range(3):
             p.ico(0.6 + 0.1 * k, (-1.0 - k * 0.9, rng.uniform(-0.5, 0.5), 0.1), "sandstone_dark", scale=(1.4, 1.0, 0.35), style="round")
@@ -517,14 +473,11 @@ def flood_staff(p, v, rng):
         rock(p, 1.2, 0.4, 0.3, rng, "sandstone_dark")
 
 
-# --- stencil_post ------------------------------------------------------------------------
 @K.kind("stencil_post", hero=False, tags=["sign"], variants="abc",
         story="Stencil post and chalk tally board; variant c is the Fleet docket marker, a pile of 'surplus concrete' slabs.")
 def stencil_post(p, v, rng):
     p = Sc(p, 1.5, lite=True)
     if v == "c":
-        # Fleet docket marker: a heap of surplus slabs, a charcoal tally board with one brass tag. A heap and a board,
-        # never a camp: no tent, no fire, nothing that stands up.
         for i, (x, y, z, sx, sy, sz, r) in enumerate(((0, 0, 0.12, 1.5, 1.0, 0.24, 0.1), (0.1, -0.05, 0.34, 1.3, 0.9, 0.2, -0.25),
                                                       (-0.15, 0.1, 0.52, 1.0, 0.8, 0.16, 0.5), (0.9, 0.55, 0.1, 0.9, 0.7, 0.2, 0.9),
                                                       (-0.95, -0.4, 0.09, 0.8, 0.6, 0.18, -0.6))):
@@ -539,13 +492,12 @@ def stencil_post(p, v, rng):
             for k in range(4):
                 p.box((0.03, 0.03, 0.22), (bx - 0.35 + g * 0.4 + k * 0.06, by - 0.12, 0.68), "canvas", rot=(0.12, 0, 0.08), style="flat")
             p.box((0.26, 0.03, 0.03), (bx - 0.28 + g * 0.4, by - 0.12, 0.68), "canvas", rot=(0.12, 0, 0.28), style="flat")
-        p.box((0.22, 0.04, 0.16), (bx + 0.3, by - 0.14, 0.4), "d9b44a", rot=(0.12, 0, 0.08), style="flat")  # the one brass tag
+        p.box((0.22, 0.04, 0.16), (bx + 0.3, by - 0.14, 0.4), "d9b44a", rot=(0.12, 0, 0.08), style="flat")
         tuft(p, -1.3, 0.7, 0.4, rng, n=5, h=0.4)
         return
     p.box((0.8, 0.8, 0.12), (0, 0, 0.06), "concrete_light", style="hard_smooth")
     p.box((0.52, 0.52, 0.9), (0, 0, 0.57), "concrete", style="hard_smooth")
     p.box((0.6, 0.6, 0.12), (0, 0, 1.08), "concrete_light", style="hard_smooth")
-    # Plate with stencilled word bars (plain, no stripes). Hangs on the post front.
     tilt = {"a": 0.0, "b": 0.35}[v]
     pc = (0, -0.34, 0.75)
     rot = (0, 0, 0) if v == "a" else (0, tilt, 0.2)
@@ -557,7 +509,6 @@ def stencil_post(p, v, rng):
             p.box((wd * 0.9, 0.14, 0.09), (pc[0] + x + wd * 0.45, pc[1] - 0.01, pc[2] + 0.18 - row * 0.17),
                   "charcoal", rot=rot, style="fine")
             x += wd + 0.1
-    # Chalk tally board on two stub legs (low, wide, not an arch).
     bx = 1.7
     for dx in (-0.55, 0.55):
         p.box((0.16, 0.5, 0.5), (bx + dx, 0, 0.25), "timber_dark")
@@ -567,10 +518,9 @@ def stencil_post(p, v, rng):
         for k in range(4):
             p.box((0.03, 0.03, 0.26), (bx - 0.5 + g * 0.42 + k * 0.07, -0.16, 0.74), "canvas", rot=(0.14, 0, 0), style="flat")
         p.box((0.32, 0.03, 0.03), (bx - 0.4 + g * 0.42, -0.16, 0.74), "canvas", rot=(0.14, 0, 0.2), style="flat")
-    p.cyl(0.04, 0.2, (bx + 0.7, -0.4, 0.04), "canvas", segs=6, rot=(0, math.pi / 2, 0.5), style="round")  # chalk stub
+    p.cyl(0.04, 0.2, (bx + 0.7, -0.4, 0.04), "canvas", segs=6, rot=(0, math.pi / 2, 0.5), style="round")
 
 
-# --- lunch_pail --------------------------------------------------------------------------
 @K.kind("lunch_pail", hero=False, tags=[], variants="abc",
         story="A crew member's pail, thermos and tin cup left on a flat rock, one lunch break never finished.")
 def lunch_pail(p, v, rng):
@@ -581,14 +531,13 @@ def lunch_pail(p, v, rng):
     px, py = (-0.15, -0.05)
     if not tip:
         p.cyl(0.26, 0.36, (px, py, 0.46), "iron_light", segs=12, r2=0.3, style="hard_smooth")
-        p.cyl(0.31, 0.06, (px, py, 0.66), "iron", segs=12, style="hard_smooth")  # lid
-        p.torus(0.28, 0.018, (px, py, 0.7), "iron", rot=(0, 0.2, 0), major=14, minor=4)  # bail laid over
+        p.cyl(0.31, 0.06, (px, py, 0.66), "iron", segs=12, style="hard_smooth")
+        p.torus(0.28, 0.018, (px, py, 0.7), "iron", rot=(0, 0.2, 0), major=14, minor=4)
     else:
         p.cyl(0.26, 0.36, (px, py, 0.31), "iron_light", segs=12, r2=0.3, style="hard_smooth", rot=(0, math.pi / 2, 0.5))
         p.cyl(0.31, 0.06, (px + 0.45, py - 0.25, 0.08), "iron", segs=12, style="hard_smooth")
         p.torus(0.2, 0.018, (px - 0.1, py + 0.15, 0.1), "iron", major=12, minor=4)
-        p.ico(0.2, (px - 0.35, py + 0.15, 0.32), "canvas_dark", scale=(1.3, 1.0, 0.5), style="round")  # lunch cloth
-    # Thermos on its side and a tin cup.
+        p.ico(0.2, (px - 0.35, py + 0.15, 0.32), "canvas_dark", scale=(1.3, 1.0, 0.5), style="round")
     tx, ty = 0.4, -0.3
     if v == "c":
         p.cyl(0.14, 0.52, (tx, ty, 0.43), "verdigris", segs=10, r2=0.13, style="hard_smooth")
@@ -607,7 +556,6 @@ def lunch_pail(p, v, rng):
         tuft(p, 0.9, 0.4, 0.3, rng, n=5, h=0.3)
 
 
-# --- hardhat_rack ------------------------------------------------------------------------
 def hat(p, loc, col, rot=(0, 0, 0), rng=None):
     p.ico(0.2, loc, col, scale=(1, 1, 0.75), rot=rot, subdiv=1, style="round")
     p.cyl(0.28, 0.04, (loc[0], loc[1], loc[2] - 0.01), col, segs=12, rot=rot, r2=0.26, style="hard_smooth")
@@ -619,10 +567,8 @@ def hat(p, loc, col, rot=(0, 0, 0), rng=None):
 def hardhat_rack(p, v, rng):
     p = Sc(p, 1.35, lite=True)
     cols = ["canvas", "bone", "canvas_dark", DUSK_BLUE, "canvas", "bone"]
-    # Short concrete wall stub the board hangs on (a wall, never an arch).
     p.box((3.0, 0.5, 1.7), (0, 0.3, 0.85), mix("concrete", "concrete_stain", 0.55), style="hard_smooth", jit=0.02)
     p.box((3.1, 0.6, 0.14), (0, 0.3, 1.74), mix("concrete_light", "concrete_stain", 0.4), style="hard_smooth", jit=0.02)
-    # Run down: a stain band at the foot, chipped corners, and a diagonal crack.
     p.box((3.02, 0.52, 0.35), (0, 0.3, 0.18), "concrete_dark", style="flat", jit=0.02)
     for sx, z in ((-1, 1.78), (1, 1.7), (-1, 0.2)):
         p.box((0.32, 0.62, 0.22), (sx * 1.5, 0.3, z), "soil", rot=(0, 0, 0.3 * sx), style="flat")
@@ -633,7 +579,6 @@ def hardhat_rack(p, v, rng):
         p.box((1.1, 0.5, 0.9), (1.6, 0.3, 0.45), "concrete", rot=(0, 0, 0.3), style="hard_smooth")
         p.ico(0.5, (0.9, -0.1, 0.25), "concrete_stain", scale=(1.4, 1.0, 0.4), style="round")
     ang = {"a": 0.0, "b": 0.0, "c": 0.0}[v]
-    # Board of planks with pegs.
     for i in range(5):
         p.box((0.4, 0.07, 1.0 if v != "c" else (0.7 if i % 2 else 1.0)), (-1.0 + i * 0.5, -0.03, 1.1),
               tint("timber_pale" if v == "a" else "timber_grey", rng, 0.08), jit=0.004)
@@ -645,7 +590,6 @@ def hardhat_rack(p, v, rng):
         p.cyl(0.04, 0.2, (x, -0.2, 1.05), "timber_dark", segs=6, rot=(math.pi / 2, 0, 0), style="round")
         if i < n:
             hat(p, (x, -0.38, 1.02), cols[i], rot=(0.3, 0, 0))
-    # The fallen hat, face-down on the dirt, and a work glove.
     hat(p, (0.9, -1.0, 0.1), "canvas_dark", rot=(math.pi * 0.85, 0.2, 0.4))
     p.ico(0.12, (1.4, -0.7, 0.05), "dry_grass", scale=(1.2, 0.8, 0.3), style="round")
     if v == "c":
@@ -655,14 +599,12 @@ def hardhat_rack(p, v, rng):
         tuft(p, -1.7, -0.5, 0.4, rng, n=5, h=0.4)
 
 
-# --- cable_drum --------------------------------------------------------------------------
 @K.kind("cable_drum", hero=False, tags=[], variants="abc",
         story="A wooden cable spool left flat on the ground, with a coil of rope the crew never stowed.")
 def cable_drum(p, v, rng):
     p = Sc(p, 1.5, lite=True)
     R, core = 1.05, 0.5
     fl = 0.1
-    # Spool lying with its axis up: lower flange on the ground, upper flange on top.
     for z in (0.2 + fl / 2, 0.2 + 0.7 + fl * 1.5):
         for k in range(10):
             a = k / 10 * math.tau
@@ -672,9 +614,8 @@ def cable_drum(p, v, rng):
     top_z = 0.2 + fl + 0.7 + fl / 2
     if v != "c":
         p.cyl(R, fl, (0, 0, top_z), "timber_pale" if v == "a" else "timber_grey", segs=20, style="hard_smooth")
-        p.cyl(core * 0.3, fl * 1.3, (0, 0, top_z), "charcoal", segs=10, style="round")  # arbor hole
-    # Wound cable between the flanges (cable full in a, half in b).
-    for a_ in (0.5, 2.6, 4.7):  # three skid blocks keep it off the dirt
+        p.cyl(core * 0.3, fl * 1.3, (0, 0, top_z), "charcoal", segs=10, style="round")
+    for a_ in (0.5, 2.6, 4.7):
         p.box((0.5, 0.34, 0.2), (0.75 * math.cos(a_), 0.75 * math.sin(a_), 0.1), "timber_dark", rot=(0, 0, a_))
     wr = {"a": 0.85, "b": 0.62, "c": 0.6}[v]
     p.cyl(wr, 0.66, (0, 0, 0.2 + fl + 0.35), "cable", segs=20, style="round")
@@ -682,41 +623,35 @@ def cable_drum(p, v, rng):
         zc = 0.2 + fl + 0.1 + k * 0.17
         p.torus(wr, 0.045, (0, 0, zc), "iron", major=24, minor=4)
     if v == "b":
-        # A loop of cable unspooled across the dirt.
         pts = [(wr * 0.9, 0.2, 0.3), (1.2, -0.4, 0.1), (1.7, -0.8, 0.1), (2.0, -0.3, 0.1),
                (1.9, 0.4, 0.1), (1.5, 0.6, 0.1), (1.2, 0.3, 0.1)]
         for a, b in zip(pts, pts[1:]):
             p.rod(a, b, 0.06, "cable", segs=6)
     if v == "c":
-        # Upper flange broken and slipped to the ground in two halves; cable spilled.
         p.cyl(R, fl, (-1.7, -1.2, 0.2), "timber_grey", segs=20, rot=(0.04, 0.05, 0), r2=R, style="hard_smooth")
         p.box((0.9, 0.35, fl), (1.6, 1.2, 0.1), "timber_grey", rot=(0, 0, 0.5))
         p.box((0.7, 0.3, fl), (2.0, 1.7, 0.13), "timber_dark", rot=(0.1, 0, -0.3))
         bush(p, 1.5, -1.5, 0.6, rng, n=8)
-    # The rope coil, flat: layered rings of rope.
     cx, cy = (-1.25, 0.75) if v != "c" else (-1.25, 1.0)
     for k in range(3):
         p.torus(0.5 - k * 0.1, 0.07, (cx, cy, 0.1 + k * 0.1), "canvas_stain" if v != "c" else "timber_grey", major=14, minor=5)
     p.cyl(0.18, 0.1, (cx, cy, 0.08), "canvas_dark", segs=10, style="round")
-    p.rod((cx + 0.3, cy, 0.12), (cx + 0.9, cy + 0.35, 0.1), 0.07, "canvas_stain", segs=6)  # tail
+    p.rod((cx + 0.3, cy, 0.12), (cx + 0.9, cy + 0.35, 0.1), 0.07, "canvas_stain", segs=6)
     if v != "c":
         tuft(p, 1.4, -1.6, 0.6, rng, n=6, h=0.35)
 
 
-# --- compressor_cart ---------------------------------------------------------------------
 @K.kind("compressor_cart", hero=False, tags=["machine"], variants="abc",
         story="A squat two-wheel air compressor on its tow bar, one stubby whistle on top; nobody blew the shift whistle.")
 def compressor_cart(p, v, rng):
     p = Sc(p, 1.5, lite=True)
     tilt = 0.2 if v == "b" else 0.0
     body = PETROL if v == "a" else ("rust" if v == "b" else mix(PETROL, "concrete_stain", 0.4))
-    # Skid frame, horizontal tank beneath, boxy body with a vent panel.
     p.box((1.5, 0.95, 0.14), (0, 0, 0.52), "charcoal", rot=(0, tilt, 0), style="hard_smooth")
     p.cyl(0.24, 1.3, (0, 0, 0.38), "iron_light", segs=10, rot=(0, math.pi / 2 + tilt, 0), style="hard_smooth")
     p.box((1.0, 0.75, 0.7), (0, 0, 0.97), body, rot=(0, tilt, 0), style="hard_smooth")
     p.box((0.7, 0.06, 0.4), (0, -0.4, 1.0), "charcoal", rot=(0, tilt, 0), style="hard_smooth")
     p.box((0.74, 0.8, 0.08), (0, 0, 1.36), "iron_light", rot=(0, tilt, 0), style="hard_smooth")
-    # Axle and two wheels (b: one wheel off, lying flat; c: both on, sunk in weeds).
     p.cyl(0.07, 1.9, (0, 0.1, 0.4), "iron", segs=8, rot=(0, math.pi / 2, 0), style="round")
     for sx in (-1, 1):
         if v == "b" and sx == 1:
@@ -724,16 +659,14 @@ def compressor_cart(p, v, rng):
             p.torus(0.28, 0.12, (1.9, 0.9, 0.2), "charcoal", rot=(0.05, 0.05, 0), major=14, minor=6)
             continue
         wheel(p, sx * 0.85, 0.1, 0.4, 0.4, 0.22, rng)
-    # Short tow bar with an eye, dropped to the ground (never a rail: 1.1 m).
     p.rod((0, -0.45, 0.16), (0.1, -1.5, 0.12), 0.05, "iron_light", segs=6)
     p.torus(0.1, 0.03, (0.1, -1.6, 0.14), "iron", major=10, minor=4)
-    # Coiled hose on top, and one stubby whistle.
     for k in range(3):
         p.torus(0.26 - k * 0.02, 0.05, (-0.1, 0.1, 1.46 + k * 0.08), "cable", major=12, minor=5)
     if v != "c":
         p.cyl(0.09, 0.32, (0.28, -0.1, 1.56), "iron_light", segs=10, style="hard_smooth")
         p.cyl(0.12, 0.07, (0.28, -0.1, 1.76), "iron", segs=10, style="hard_smooth")
-    p.ico(0.24, (0.9, -1.0, 0.14), "canvas", scale=(1.2, 0.8, 0.5), style="round")  # rag
+    p.ico(0.24, (0.9, -1.0, 0.14), "canvas", scale=(1.2, 0.8, 0.5), style="round")
     if v == "c":
         bush(p, 1.3, -0.3, 0.55, rng, n=7)
         tuft(p, -1.2, 0.6, 0.4, rng, n=5, h=0.5)
@@ -741,7 +674,6 @@ def compressor_cart(p, v, rng):
         tuft(p, -1.2, -0.6, 0.4, rng, n=5, h=0.4)
 
 
-# --- cold_campfire -----------------------------------------------------------------------
 @K.kind("cold_campfire", hero=False, tags=[], variants="abc",
         story="A stone ring of a cold campfire: charred logs, a seat, and the crew's kettle waiting on a stone.")
 def cold_campfire(p, v, rng):
@@ -757,15 +689,13 @@ def cold_campfire(p, v, rng):
         r = rng.uniform(0.22, 0.32)
         p.ico(r, (rr * math.cos(a), rr * math.sin(a), r * 0.6), tint("sandstone" if i % 2 else "concrete_light", rng, 0.08),
               scale=(1.1, 1.0, 0.7), rot=(0, 0, a), style="round")
-    p.cyl(0.88, 0.04, (0, 0, 0.03), "charcoal", segs=16, r2=0.8, style="flat")  # ash bed
+    p.cyl(0.88, 0.04, (0, 0, 0.03), "charcoal", segs=16, r2=0.8, style="flat")
     p.cyl(0.55, 0.05, (0.1, 0.1, 0.06), "concrete_dark", segs=14, style="flat")
-    # Charred logs.
     for a, ln in ((0.3, 1.1), (1.6, 1.0), (2.6, 0.9)):
         c = (0.1 * math.cos(a), 0.1 * math.sin(a), 0.17)
         d = Vector((math.cos(a), math.sin(a), 0.25 if v != "b" else 0.0)).normalized() * (ln / 2)
         p.rod((c[0] - d.x, c[1] - d.y, c[2] - d.z * 0.5), (c[0] + d.x, c[1] + d.y, c[2] + d.z + 0.15), 0.1, "charcoal", segs=8)
         p.ico(0.1, (c[0] + d.x, c[1] + d.y, c[2] + d.z + 0.15), "iron", scale=(1, 1, 0.6), style="round")
-    # Seat log and the kettle on its stone.
     p.rod((-1.9, -1.0, 0.25), (-0.9, -1.9, 0.25), 0.25, "timber_dark" if v != "c" else "timber_grey", segs=10)
     kx, ky = (1.8, -0.6)
     p.ico(0.4, (kx, ky, 0.2), "sandstone_dark", scale=(1.2, 1.0, 0.55), style="round")
@@ -779,12 +709,11 @@ def cold_campfire(p, v, rng):
         p.uv(0.28, (kx, ky, 0.65), "iron", scale=(1, 1, 0.8), u=10, v=7, style="round")
         p.cyl(0.12, 0.08, (kx, ky, 0.9), "iron_light", segs=10, style="hard_smooth")
         p.cyl(0.05, 0.1, (kx, ky, 0.98), "charcoal", segs=6, style="round")
-        p.cyl(0.06, 0.34, (kx + 0.35, ky, 0.72), "iron", segs=8, r2=0.03, rot=(0, math.pi / 3, 0), style="round")  # spout
-        p.torus(0.2, 0.025, (kx, ky, 0.88), "iron", rot=(math.pi / 2, 0, 0.3), major=12, minor=4)  # bail
-        p.cyl(0.08, 0.14, (-0.4, -1.5, 0.12), "iron_light", segs=8, r2=0.1, style="hard_smooth")  # tin mug
+        p.cyl(0.06, 0.34, (kx + 0.35, ky, 0.72), "iron", segs=8, r2=0.03, rot=(0, math.pi / 3, 0), style="round")
+        p.torus(0.2, 0.025, (kx, ky, 0.88), "iron", rot=(math.pi / 2, 0, 0.3), major=12, minor=4)
+        p.cyl(0.08, 0.14, (-0.4, -1.5, 0.12), "iron_light", segs=8, r2=0.1, style="hard_smooth")
 
 
-# --- laundry_line ------------------------------------------------------------------------
 def shirt(p, top, col, rot_z=0.0, size=1.0, rng=None):
     x, y, z = top
     p.ico(0.3 * size, (x, y, z - 0.4 * size), col, scale=(1.0, 0.18, 1.35), rot=(0, 0, rot_z), style="round")
@@ -796,7 +725,6 @@ def shirt(p, top, col, rot_z=0.0, size=1.0, rng=None):
 @K.kind("laundry_line", hero=False, line_clear_m=30, tags=["soft"], variants="abc",
         story="A crew washing line between two leaning posts: shirts, a towel, a sock, left out in the dawn wind.")
 def laundry_line(p, v, rng):
-    # KITS.md dam brief: two posts under 2 m. Scale 1.15 (c: 1.0, its bush is taller) from 1.5 puts every variant at about 1.9 m.
     p = Sc(p, 1.0 if v == "c" else 1.15, lite=True)
     ha, hb = 1.6, 1.4
     pa = (-1.6, 0.0, 0.0)
@@ -828,13 +756,12 @@ def laundry_line(p, v, rng):
             shirt(p, tuple(a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))), col, rz, sz)
         t = 0.8
         q = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))
-        p.box((0.6, 0.06, 0.95), (q.x, q.y, q.z - 0.5), "canvas", style="soft")        # towel
+        p.box((0.6, 0.06, 0.95), (q.x, q.y, q.z - 0.5), "canvas", style="soft")
         p.box((0.6, 0.07, 0.12), (q.x, q.y, q.z - 0.12), "timber_pale", style="soft")
         for t in (0.3, 0.7):
             q = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))
             p.box((0.04, 0.05, 0.12), (q.x + 0.16, q.y, q.z), "timber_dark", style="fine")
     elif v == "b":
-        # Line sagging low: one shirt hangs, a towel trails on the ground.
         t = 0.3
         q = a.lerp(b, t) - Vector((0, 0, sag * 4 * t * (1 - t)))
         shirt(p, tuple(q), DUSK_BLUE, 0.1, 1.0)
@@ -848,10 +775,9 @@ def laundry_line(p, v, rng):
             p.ico(0.45, (x, y, 0.08 + 0.02 * i), col, scale=(1.2, 0.9, 0.25), rot=(0, 0, i * 1.1), style="round")
         bush(p, 0.2, 1.0, 0.5, rng, n=7)
         tuft(p, -1.2, -0.7, 0.4, rng, n=6, h=0.5)
-    p.ico(0.1, (0.0, -0.9, 0.05), "canvas_stain", scale=(1.6, 0.6, 0.4), style="round")  # dropped sock
+    p.ico(0.1, (0.0, -0.9, 0.05), "canvas_stain", scale=(1.6, 0.6, 0.4), style="round")
 
 
-# --- sandbags ----------------------------------------------------------------------------
 @K.kind("sandbags", hero=False, tags=["soft"], variants="abc",
         story="A low curved wall of sandbags thrown up against the spring melt, slumping now.")
 def sandbags(p, v, rng):
@@ -875,7 +801,6 @@ def sandbags(p, v, rng):
             p.ico(0.5, (x + jx, y, 0.2 + c * 0.28 + sink), col, scale=(1.05, 0.62, 0.42), rot=(0, 0.05 * rng.uniform(-1, 1), ang + math.pi / 2), style="round")
             p.box((0.1, 0.04, 0.04), (x, y - 0.0, 0.3 + c * 0.28 + sink), "canvas_dark", rot=(0, 0, ang), style="flat") if False else None
     if v in ("b", "c"):
-        # Split bag and its spilled sand.
         p.ico(0.5, (R * 0.35, -R * 0.4 - 0.1, 0.07), "sandstone_pale", scale=(1.3, 1.0, 0.25), style="round")
         p.ico(0.4, (R * 0.5, -R * 0.4 - 0.3, 0.15), "canvas_dark", scale=(1.1, 0.6, 0.35), rot=(0, 0.1, 0.5), style="round")
     if v == "c":
@@ -888,12 +813,10 @@ def sandbags(p, v, rng):
         tuft(p, -2.2, -2.0, 0.5, rng, n=6, h=0.4)
 
 
-# --- rebar_bloom -------------------------------------------------------------------------
 @K.kind("rebar_bloom", hero=False, tags=["plant"], variants="abc",
         story="A bundle of rebar left in a slab chunk, with a brittlebush that has taken the scrap for a trellis.")
 def rebar_bloom(p, v, rng):
     p = Sc(p, 1.5, lite=True)
-    # Broken concrete slab pieces (irregular, no holes).
     p.box((1.9, 1.2, 0.34), (0, 0, 0.17), "concrete", rot=(0, 0.04, 0.2), style="hard_smooth", jit=0.03)
     p.box((1.1, 0.9, 0.3), (-0.7, -0.7, 0.4), "concrete_stain", rot=(0.06, -0.08, 0.7), style="hard_smooth", jit=0.03)
     p.box((0.7, 0.6, 0.24), (0.95, 0.4, 0.46), "concrete_light", rot=(0, 0.2, 0.3), style="hard_smooth", jit=0.03)
@@ -910,7 +833,6 @@ def rebar_bloom(p, v, rng):
         p.rod(base, mid, 0.035, col, segs=6)
         p.rod(mid, top, 0.035, col, segs=6)
         p.cyl(0.05, 0.06, top, col, segs=6, style="round")
-    # A few tie wires coil and the brittlebush threaded through.
     p.torus(0.2, 0.02, (0.2, 0.0, 0.8), "cable", major=12, minor=4)
     bush(p, 0.1, 0.0, 0.9 if v != "c" else 0.6, rng, n=14 if v != "c" else 8, h=1.0 if v == "a" else 0.8)
     if v == "c":
@@ -919,18 +841,15 @@ def rebar_bloom(p, v, rng):
         tuft(p, -1.0, 0.9, 0.7, rng, n=8, h=0.6)
 
 
-# --- desert_scrub ------------------------------------------------------------------------
 @K.kind("desert_scrub", hero=False, tags=["plant"], variants="abc",
         story="Brittlebush and creosote clumps: what grows once the works are quiet.")
 def desert_scrub(p, v, rng):
     p = Sc(p, 1.5, lite=True)
     if v == "a":
-        # Brittlebush: a big silver mound with yellow flower stems.
         bush(p, 0, 0, 1.2, rng, n=14)
         bush(p, 1.1, 0.8, 0.7, rng, n=7)
         rock(p, -1.0, 0.8, 0.3, rng, "sandstone_dark")
     elif v == "b":
-        # Creosote: wiry olive stems fanning up with small leaf blobs.
         for k in range(11):
             a = rng.uniform(0, math.tau)
             lean = rng.uniform(0.15, 0.55)
@@ -944,7 +863,6 @@ def desert_scrub(p, v, rng):
                 p.ico(0.17 + 0.03 * j, q, tint("leaf", rng, 0.12), scale=(1.1, 1.0, 0.8), style="round")
         tuft(p, 0.9, -0.7, 0.4, rng, n=6, h=0.4)
     else:
-        # Dry brittlebush gone to sticks, a few leaves left, beside a cracked stone.
         bush(p, 0.0, 0.0, 0.8, rng, leaf="dry_grass", flowers=False, n=8, h=0.8)
         for k in range(9):
             a = rng.uniform(0, math.tau)
@@ -954,55 +872,40 @@ def desert_scrub(p, v, rng):
         tuft(p, -1.0, 0.7, 0.5, rng, n=7, h=0.5)
 
 
-# --------------------------------------------------------------------------------------
-# Sight gags (W46-07): the shared builders in kit.py, so the dam and the flume carry the same two kinds.
 K.kind("foreman_billboard", hero=True, tags=["sign", "tall"], variants="ab",
        story="A cast Foreman notice, square and spotless, and the keepers' answer on it: a ball-shaped hole and chalk.")(kit.foreman_billboard)
 K.kind("shift_table", tags=["machine"], variants="ab",
        story="A cast shift table still set for a crew that left: giant gloves laid out square, the clock stopped on the bell.")(kit.shift_table)
 
 
-# --------------------------------------------------------------------------------------
-# Wayfinding pieces (W46 E1-15, design-v3/WAYFINDING.md sections 2 and 4, ruling en: bold and chunky). The gantry is the
-# old works' hand: squared cast panels, one pour, no bolt, no bracing, no lit rail. The deck, the pump kit, the chalk and
-# the bunting are the dam crew's and the keepers' hands: concrete, oxide paint, chalk, cloth and copper rope. Nothing
-# here is mint or uranium green (kit BANNED); every piece is dressing with no collider.
-CAST = mix(PETROL, "verdigris", 0.35)      # the gantry's cast body: petrol enamel gone to verdigris, light enough to
-                                            # read against the canyon from the crest
-CAST_FIELD = mix(PETROL, "verdigris", 0.55) # a cast panel's raised field, a shade lighter so the panels read
-CAST_EDGE = mix(PETROL, "verdigris", 0.8)   # weathered edges and drips
-CHALK = "e6e3d6"                            # the keepers' chalk (kit GAG_CHALK)
-ROPE = "b77843"                             # copper rope ties: never dominant, only ties
-PIPE = mix(OXIDE, "rust", 0.45)             # pump pipe body: oxide gone to rust
+CAST = mix(PETROL, "verdigris", 0.35)
+CAST_FIELD = mix(PETROL, "verdigris", 0.55)
+CAST_EDGE = mix(PETROL, "verdigris", 0.8)
+CHALK = "e6e3d6"
+ROPE = "b77843"
+PIPE = mix(OXIDE, "rust", 0.45)
 PIPE_DARK = mix(PIPE, "charcoal", 0.35)
-# Every wayfinding piece exports closed at every LOD (E1-15 brief: check_manifold.py --strict on each GLB).
 K.closed_lods |= {"intake_gantry", "takeoff_deck", "pump_elbow", "chalk_turn", "keeper_bunting"}
 
 
 @K.kind("intake_gantry", hero=True, tags=["tall"], variants="ab",
         story="An old-works intake gantry: a squared cast portal with one oversized cable socket on its lintel end.")
 def intake_gantry(p, v, rng):
-    # One portal, legs along X, its faces toward -Y and +Y. Variant a carries its socket on the +X end of the lintel and
-    # b on the -X end, so a pair stands either side of the intake slot with both sockets facing the sky gap between.
     s = 1 if v == "a" else -1
-    LX, LW, TOP = 3.7, 2.4, 14.6     # leg centres at +-LX, leg width, top of the legs
+    LX, LW, TOP = 3.7, 2.4, 14.6
     for x in (-LX, LX):
-        # Stepped cast plinth, then the squared leg.
         p.box((4.0, 4.0, 0.9), (x, 0, 0.45), CAST, style="hard_smooth")
         p.box((3.3, 3.3, 0.7), (x, 0, 1.24), mix(CAST, "concrete_dark", 0.3), style="hard_smooth")
         p.box((LW, LW, TOP - 1.55), (x, 0, 1.55 + (TOP - 1.55) / 2), CAST, style="hard_smooth")
-        # Three cast panels up each face: a raised frame and a lighter field, so the leg reads as panels, not a post.
         for k, zc in enumerate((3.9, 7.9, 11.9)):
             for fy in (-1, 1):
                 p.box((1.86, 0.2, 3.3), (x, fy * (LW / 2 + 0.06), zc), mix(CAST, "charcoal", 0.12), style="hard")
                 p.box((1.38, 0.16, 2.78), (x, fy * (LW / 2 + 0.17), zc), CAST_FIELD, style="hard_smooth")
             p.box((0.2, 1.86, 3.3), (x + (x > 0 and 1 or -1) * (LW / 2 + 0.06), 0, zc), mix(CAST, "charcoal", 0.12), style="hard")
             p.box((0.16, 1.38, 2.78), (x + (x > 0 and 1 or -1) * (LW / 2 + 0.17), 0, zc), CAST_FIELD, style="hard_smooth")
-        # A cast haunch inside the top of each leg: the opening's squared shoulder.
         inner = -1 if x > 0 else 1
         p.prism([(0.0, 0.0), (1.9, 0.0), (0.0, -1.9)], LW * 0.92, (x + inner * LW / 2, 0, TOP - 0.02), CAST,
                 rot=(math.pi / 2, 0, 0 if inner > 0 else math.pi), style="hard_smooth")
-    # The lintel: one heavy cast beam with three squared panels a face, a stepped cornice and a cap.
     p.box((2 * LX + LW + 1.6, 2.9, 2.8), (0, 0, TOP + 1.4), CAST, style="hard_smooth")
     for k in (-1, 0, 1):
         for fy in (-1, 1):
@@ -1010,16 +913,12 @@ def intake_gantry(p, v, rng):
             p.box((2.0, 0.16, 1.32), (k * 3.0, fy * 1.67, TOP + 1.4), CAST_FIELD, style="hard_smooth")
     p.box((2 * LX + LW + 2.6, 3.7, 0.55), (0, 0, TOP + 3.08), mix(CAST, "charcoal", 0.1), style="hard_smooth")
     p.box((2 * LX + LW + 0.9, 2.6, 0.6), (0, 0, TOP + 3.62), CAST, style="hard_smooth")
-    # The oversized cable socket on one lintel end: a squared cast boss, a heavy flange and the dark bore the line
-    # seats in. The bore is a disc laid proud of the flange (no boolean), so the piece stays closed.
     end = s * (LX + LW / 2 + 0.8)
     p.box((1.3, 2.4, 2.4), (end + s * 0.62, 0, TOP + 1.4), mix(CAST, "charcoal", 0.15), style="hard_smooth")
     p.cyl(1.25, 0.5, (end + s * 1.5, 0, TOP + 1.4), CAST_EDGE, segs=20, rot=(0, math.pi / 2, 0), style="round")
     p.cyl(0.95, 0.42, (end + s * 1.9, 0, TOP + 1.4), mix(CAST, "charcoal", 0.25), segs=20, rot=(0, math.pi / 2, 0), style="round")
     p.cyl(0.62, 0.08, (end + s * 2.14, 0, TOP + 1.4), "charcoal", segs=20, rot=(0, math.pi / 2, 0), style="flat")
-    # A cast shackle hanging from the socket: the line's eye.
     p.torus(0.62, 0.16, (end + s * 1.9, 0, TOP - 0.2), mix(CAST, "charcoal", 0.25), rot=(math.pi / 2, 0, 0), major=16, minor=6)
-    # Weather: verdigris drips down the panels under the socket, more on b, and one chipped cornice corner on b.
     for k in range(3 if v == "a" else 5):
         x = s * (LX + rng.uniform(-0.6, 0.6))
         ln = rng.uniform(1.6, 3.4)
@@ -1031,9 +930,6 @@ def intake_gantry(p, v, rng):
 @K.kind("takeoff_deck", hero=False, tags=["sign"], variants="ab",
         story="The intake takeoff deck: two painted concrete cheeks either side of the slot, bone chevrons pointing at the lip.")
 def takeoff_deck(p, v, rng):
-    # Front (the lip) toward -Y. Two low cheeks 9 m apart so a ball-wide slot runs between them, bone chevrons on their
-    # tops and inner faces, and a squat bollard at each lip end. Low (under 1.2 m), so a ball crossing reads it as a kerb.
-    # a: the full 12 m run-in; b: a short 8 m pour, its far end broken off and tipped.
     length, marks = (12.0, 5) if v == "a" else (8.0, 3)
     for sx in (-1, 1):
         x = sx * 4.6
@@ -1049,10 +945,8 @@ def takeoff_deck(p, v, rng):
         p.box((1.36, 1.36, 0.22), (x, lip, 0.7), "bone", style="hard")
         p.box((1.2, 1.2, 0.08), (x, lip, 0.99), "concrete_light", style="hard")
         if v == "b":
-            # The broken-off end of the pour, tipped against the cheek's back.
             p.box((1.0, 1.8, 0.55), (x + sx * 0.3, length / 2 + 1.3, 0.4), "concrete_light", rot=(0.35, 0, sx * 0.25),
                   style="hard_smooth")
-    # Chipped corners and a stain on one cheek, so the pour reads hand-made.
     for k in range(4):
         p.box((0.3, 0.3, 0.16), (rng.choice((-1, 1)) * (4.6 + rng.uniform(-0.4, 0.4)),
                                  rng.uniform(-length / 2 + 0.5, length / 2 - 0.5), 0.6),
@@ -1065,13 +959,11 @@ def _bend(p, centre, radius, a0, a1, pipe_r, plane, color, segs=6):
     pts = [plane(centre, radius * math.cos(a0 + (a1 - a0) * k / segs), radius * math.sin(a0 + (a1 - a0) * k / segs))
            for k in range(segs + 1)]
     for k, (a, b) in enumerate(zip(pts, pts[1:])):
-        # Each segment runs 2 cm past its inner joints, so two segments' caps never share an edge there.
         d = (Vector(b) - Vector(a)).normalized() * 0.02
         a2 = Vector(a) - d if k > 0 else Vector(a)
         b2 = Vector(b) + d if k < segs - 1 else Vector(b)
         p.rod(tuple(a2), tuple(b2), pipe_r, color, segs=12, style="hard")
     for k in range(1, segs):
-        # A weld collar over each joint, laid along the arc's tangent there.
         a, b = Vector(pts[k - 1]), Vector(pts[k + 1])
         d = (b - a).normalized()
         q = Vector(pts[k])
@@ -1081,7 +973,6 @@ def _bend(p, centre, radius, a0, a1, pipe_r, plane, color, segs=6):
 
 def _flange(p, at, axis_rot, r, color, studs=6):
     p.cyl(r, 0.22, at, color, segs=14, rot=axis_rot, style="hard")
-    # Stud heads round the rim (the dam crew's riveted kit), set on the flange's face.
     m = Matrix.LocRotScale(Vector(at), Euler(axis_rot).to_quaternion(), Vector((1, 1, 1)))
     for k in range(studs):
         a = math.tau * k / studs
@@ -1092,22 +983,19 @@ def _flange(p, at, axis_rot, r, color, studs=6):
 @K.kind("pump_elbow", hero=False, tags=["machine"], variants="abc",
         story="Hydro pump elbows dragged out of the sunken yard: oversized, riveted flanges, oxide gone to rust.")
 def pump_elbow(p, v, rng):
-    xz = lambda c, u, w: (c[0] + u, c[1], c[2] + w)     # a bend in the XZ plane
-    xy = lambda c, u, w: (c[0] + u, c[1] + w, c[2])     # a bend lying flat
+    xz = lambda c, u, w: (c[0] + u, c[1], c[2] + w)
+    xy = lambda c, u, w: (c[0] + u, c[1] + w, c[2])
     R = 0.62
     if v == "a":
-        # A standing elbow: up out of a flanged foot, round a 90 degree bend, out to a blind flange.
         p.box((2.2, 2.2, 0.35), (0, 0, 0.175), "concrete", style="hard_smooth")
         _flange(p, (0, 0, 0.47), (0, 0, 0), 0.95, PIPE_DARK)
-        # The straight runs reach 6 cm into the bend, so no rod's cap lands on the bend's own cap (one shared edge ring).
         p.rod((0, 0, 0.5), (0, 0, 1.36), R, PIPE, segs=12, style="hard")
         _bend(p, (1.2, 0, 1.3), 1.2, math.pi, math.pi / 2, R, xz, PIPE)
         p.rod((1.14, 0, 2.5), (2.2, 0, 2.5), R, PIPE, segs=12, style="hard")
         _flange(p, (2.28, 0, 2.5), (0, math.pi / 2, 0), 0.92, PIPE_DARK)
         p.cyl(0.55, 0.06, (2.42, 0, 2.5), "charcoal", segs=12, rot=(0, math.pi / 2, 0), style="flat")
-        p.box((0.6, 0.3, 1.9), (1.7, 0.0, 0.95), "iron", style="hard")   # a cast prop under the overhang
+        p.box((0.6, 0.3, 1.9), (1.7, 0.0, 0.95), "iron", style="hard")
     elif v == "b":
-        # An S-bend pair lying on the ground with a valve hand wheel standing off it.
         _bend(p, (0, 1.2, R), 1.2, -math.pi / 2, 0, R, xy, PIPE)
         _bend(p, (2.4, 1.2, R), 1.2, math.pi, math.pi * 1.5, R, xy, PIPE)
         _flange(p, (0, -0.08, R), (math.pi / 2, 0, 0), 0.9, PIPE_DARK)
@@ -1120,7 +1008,6 @@ def pump_elbow(p, v, rng):
         for x in (0.3, 2.1):
             p.box((0.9, 0.6, 0.3), (x, 1.2, 0.15), "timber_dark", style="hard")
     else:
-        # A big elbow lying half-sunk on its side, its far flange cracked off, sand drifted against it.
         _bend(p, (0, 0, 0.55), 1.5, 0, math.pi / 2, 0.78, xy, PIPE, segs=7)
         _flange(p, (1.5, -0.1, 0.55), (math.pi / 2, 0, 0), 1.12, PIPE_DARK)
         p.rod((0, 1.5, 0.55), (-1.2, 1.5, 0.55), 0.78, PIPE, segs=12, style="hard")
@@ -1153,20 +1040,17 @@ def _arrow(p, tail, tip, width, rng, head=1.1):
 @K.kind("chalk_turn", hero=False, tags=["sign"], variants="abc",
         story="A keeper's chalk turn mark at the mouth of a side route: a fat crooked arrow and a stone to hold the place.")
 def chalk_turn(p, v, rng):
-    # Arrows point -Y (the way to go). Bold strokes, 0.36 m wide, so they read from the chase camera along the ground.
     W = 0.36
     if v == "a":
         _arrow(p, (0.0, 2.2), (0.0, -2.2), W, rng, head=1.3)
-        for k in range(3):   # the keepers' tally: they came through three times
+        for k in range(3):
             _ground_stroke(p, (1.0 + 0.3 * k, 1.9), (1.05 + 0.3 * k, 1.1), 0.12, rng)
     elif v == "b":
-        # A fork: one stroke in, two arrows out, the chosen one doubled.
         _ground_stroke(p, (0.0, 2.4), (0.0, 0.4), W, rng)
         _arrow(p, (0.0, 0.4), (-1.6, -1.9), W, rng, head=1.1)
         _arrow(p, (0.0, 0.4), (1.6, -1.9), W * 0.7, rng, head=0.9)
         _ground_stroke(p, (-1.25, -1.2), (-1.85, -2.3), W * 0.6, rng)
     else:
-        # A concrete slab leant on a stone, the arrow chalked on its face, so it stands up out of a low ground.
         p.box((1.6, 0.28, 1.1), (0, 0, 0.55), "concrete", rot=(-0.28, 0, 0.05), style="hard_smooth")
         face = -0.32
         q = lambda x, z: (x, face + (z - 0.55) * 0.28, z)
@@ -1178,7 +1062,6 @@ def chalk_turn(p, v, rng):
             p.box((ln + 0.08, 0.04, 0.13), mid, CHALK, rot=(-0.28, -math.atan2(bz - az, bx - ax), 0.05), style="flat")
         p.ico(0.42, (0.0, 0.55, 0.2), "sandstone_dark", scale=(1.3, 1.0, 0.6), style="soft")
         _arrow(p, (0.0, -0.6), (0.0, -2.6), W * 0.8, rng, head=0.9)
-    # A worn stub of chalk dropped by the stone, and a scuffed hatch where the keeper tested the stick.
     p.cyl(0.07, 0.3, (0.5 if v != "b" else -0.6, 2.6, 0.07), CHALK, segs=8, rot=(0, math.pi / 2, 0.6), style="hard")
     for k in range(4):
         _ground_stroke(p, (-0.7 + 0.22 * k, -2.9), (-0.45 + 0.22 * k, -2.55), 0.08, rng)
@@ -1203,7 +1086,6 @@ def keeper_bunting(p, v, rng):
             p.torus(0.12, 0.035, (top[0] * 0.96, top[1] * 0.96, h - 0.25 - 0.12 * k), ROPE, major=10, minor=4)
         return top
     if v == "a":
-        # One tall pole with a long tied cloth strip and a square pennant: the mark you can see from the fork.
         top = pole(0, 0, 3.0, (0.12, -0.05))
         for k, (dz, col) in enumerate(((0.0, "bone"), (-0.7, "canvas"), (-1.35, "canvas_dark"))):
             p.box((0.06, 0.62, 0.72), (top[0] + 0.05, top[1] - 0.36 - 0.05 * k, top[2] - 0.45 + dz), col,
@@ -1211,7 +1093,6 @@ def keeper_bunting(p, v, rng):
         p.box((0.05, 0.9, 0.6), (top[0] - 0.02, top[1] + 0.52, top[2] - 0.4), "bone", rot=(0, 0, -0.1), style="flat")
         p.box((0.04, 0.12, 0.12), (top[0] - 0.02, top[1] + 0.95, top[2] - 0.36), OXIDE, style="flat")
     else:
-        # Two crooked poles with a sagging copper-tied line of pennants in sand, bone and oxide.
         a = pole(-1.9, 0, 2.7, (0.1, 0.05))
         b = pole(1.9, 0.1, 2.5, (-0.12, -0.04))
         n = 7

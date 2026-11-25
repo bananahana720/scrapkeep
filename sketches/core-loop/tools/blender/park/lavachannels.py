@@ -52,18 +52,16 @@ UP = (0.0, 1.0, 0.0)
 SHELL_LIFT = 0.2
 COL_DROP = 0.15
 CREST_CLEAR = 0.5
-CARVE_DEG = 25.8              # FloorRule.on_floor: normal.y >= 0.9, so steeper than acos(0.9) is a wall
-END_SLAB = (6.0, 0.2)         # a chained piece's -col: slabs this far under the floor, this thick
-BAKE_GRID = 2.0               # the park bake's height sample spacing, m
-SKIRT = 0.6                   # the shell's outer skirt reaches this far under the crest
-CREST_BAND = 2.0              # a chained shell's crest band: this far in from the crest the cross-section is halved (0.35 m apart) and the
-BAND_STEP = 0.5               # z step is this, m, so no long triangle chords across the steep ground just past the crest
-MAX_BEND_DEG = 45.0           # the largest yaw step between chained neighbours END_ZONE was measured for (check_rows enforces it)
-END_ZONE = 15.0               # m from a row's end with no beyond-crest props: measured over the 20 chain pairs (rows 51 to 60 m,
-                              # stamps overlapping about 17 m, bends up to 45 degrees) the next row's lane reaches props at |x| 14.5 to 19.5
-                              # no further than 13.9 m (about the 14 m lane half-width) from the end; 1 m slack
-MIN_STRETCH = 0.88            # the shortest seated row (51.16 m) over the 58 m piece: a metre of row is at most 1 / this in the GLB
-PROP_HALF = 1.5               # a prop's reach along z (boulders to 1.5 m, cones 1.6 m), so its whole body stays out of the zone
+CARVE_DEG = 25.8
+END_SLAB = (6.0, 0.2)
+BAKE_GRID = 2.0
+SKIRT = 0.6
+CREST_BAND = 2.0
+BAND_STEP = 0.5
+MAX_BEND_DEG = 45.0
+END_ZONE = 15.0
+MIN_STRETCH = 0.88
+PROP_HALF = 1.5
 
 si.HEX.update({
     "basalt": "2b2726", "basalt_hi": "433b37", "basalt_lo": "1d1a1a", "scoria": "6e3426", "ash": "6f655c",
@@ -77,24 +75,17 @@ class Piece:
 
     def __init__(self, rid, L, H, W, stamp, look, chained=False):
         self.id, self.L, self.H, self.W, self.kind, self.look = rid, float(L), float(H), float(W), stamp, look
-        # A chained piece seats on rows whose stamps overlap end to end, so its ends land on the neighbour's floor: the
-        # origin is on the floor centre (y 0 the floor, the crest at H), the profile runs across the width only, no taper.
         self.chained = chained
         self.crest = self.H if chained else 0.0
         self.run = max(min(self.W, 0.25 * self.L), 0.001)
         self.wall = max(min(0.2 * self.H, 0.25 * self.W), 0.001)
         if stamp == "channel":
-            # The bake samples the stamp on its 2 m grid (tools/park_bake.gd), so a channel wall narrower than that bakes as a
-            # straight ramp from node to node. west_trench's sides fall on grid nodes (at x -560, W 40, yaw 0), so its baked
-            # wall runs side_m 0 to BAKE_GRID: the liner follows the bake, not the analytic stamp.
             self.wall = max(self.wall, BAKE_GRID)
-        lo, hi = 0.0, self.W / 2  # where the carve band starts across the width, mid-run: the floor's last safe line
+        lo, hi = 0.0, self.W / 2
         for _ in range(40):
             mid = 0.5 * (lo + hi)
             lo, hi = (lo, mid) if self.steep(mid, 0.5 * self.L) else (mid, hi)
         self.carve_x = hi
-        # The dressed span of a chained piece along z: beyond-crest props stand only here, END_ZONE (+ a prop's reach) in from either
-        # end, in GLB metres at the shortest row's stretch. Other pieces dress their whole length.
         self.z_lo = (END_ZONE / MIN_STRETCH + PROP_HALF) if chained else 0.0
         self.z_span = self.L - 2.0 * self.z_lo
 
@@ -137,7 +128,7 @@ class Piece:
             f = 0.2 * self.W
             wall = [f + (hw - f) * i / n_wall for i in range(1, n_wall + 1)]
         floor = [-f + 2 * f * i / n_floor for i in range(n_floor + 1)]
-        if self.chained:  # halve the wall facets inside CREST_BAND of the crest, so vertices there are under 0.4 m apart
+        if self.chained:
             edge = [f] + wall
             wall = [w for a, b in zip(edge, edge[1:]) for w in ((0.5 * (a + b), b) if b > hw - CREST_BAND + 1e-9 else (b,))]
         return [-x for x in reversed(wall)] + floor + wall
@@ -171,14 +162,13 @@ PIECES = {
     "lava_trench_420x6x40": Piece("lava_trench_420x6x40", 420, 6, 40, "channel", "lava"),
     "dry_wash_1500x4x60": Piece("dry_wash_1500x4x60", 1500, 4, 60, "wash", "dry"),
 }
-GRID = {  # (floor facets, wall facets, end step m, middle step m): the render; the collider takes a coarser floor
+GRID = {
     "lava_channel": (14, 12, 1.0, 2.0),
     "lava_trench_420x6x40": (12, 4, 2.0, 10.0),
     "dry_wash_1500x4x60": (10, 7, 4.0, 40.0),
 }
 
 
-# ---------------------------------------------------------------- colour
 def lava_colour(p, x, z):
     """Basalt with ropy folds bowed downstream, the hot seam wandering down the floor, walls banded by depth, the glassy
     carve band where the stamp is too steep to stand on, a cinder rim. Sampled at each vertex, so bands blend."""
@@ -186,12 +176,12 @@ def lava_colour(p, x, z):
     t = abs(2.0 * x / p.W)
     fold = 0.5 + 0.5 * math.sin(2.1 * (z - 0.09 * x * x * 28.0 / p.W) + 0.9 * math.sin(0.27 * z + 0.6 * x))
     rock = lerp(col("basalt_lo"), col("basalt_hi"), 0.25 + 0.6 * fold)
-    if p.steep(x, z):  # polished flow streaks running along the channel
+    if p.steep(x, z):
         streak = 0.5 + 0.5 * math.sin(4.3 * abs(x) + 0.5 * math.sin(0.17 * z + x))
         return lerp(col("glass"), col("glass_hi"), 0.6 * streak ** 3)
     if p.cross(x) >= 0.999:
         seam = abs(x + 1.1 * math.sin(0.19 * z) + 0.5 * math.sin(0.61 * z + 1.1))
-        glow = max(0.0, 1.0 - seam / max(0.9, 0.04 * p.W))  # wider on wide floors, so the coarse facets keep it whole
+        glow = max(0.0, 1.0 - seam / max(0.9, 0.04 * p.W))
         crust = 0.55 + 0.45 * math.sin(1.7 * z + 3.0 * x)
         c = lerp(rock, col("lava_deep"), min(1.0, 2.0 * glow))
         return lerp(c, lerp(col("lava"), col("lava_hot"), crust), max(0.0, 2.0 * glow - 1.0))
@@ -215,7 +205,6 @@ def colour(p, x, z):
     return lava_colour(p, x, z) if p.look == "lava" else dry_colour(p, x, z)
 
 
-# ---------------------------------------------------------------- base and collider
 def build_base(p):
     s = Surf(p.id)
     nf, nw, es, ms = GRID[p.id]
@@ -233,7 +222,7 @@ def build_base(p):
     for z0, z1 in zip(zs, zs[1:]):
         inner = [z for z in zf if z0 < z < z1]
         for x0, x1 in zip(xs, xs[1:]):
-            if xb is not None and min(abs(x0), abs(x1)) >= xb - 1e-9:  # the crest band: its own fine z step
+            if xb is not None and min(abs(x0), abs(x1)) >= xb - 1e-9:
                 zl = [z0] + inner + [z1]
                 for za, zb in zip(zl, zl[1:]):
                     pts = [vert(x0, za), vert(x0, zb), vert(x1, zb), vert(x1, za)]
@@ -244,7 +233,7 @@ def build_base(p):
                 pts = [vert(x0, z0), vert(x0, z1), vert(x1, z1), vert(x1, z0)]
                 s.poly(pts, [colour(p, q[0], q[2]) for q in pts], up=UP)
                 continue
-            xa, xe = (x0, x1) if abs(x1) > abs(x0) else (x1, x0)  # the quad's inner edge xa and its seam edge xe, where the band's finer z nodes land
+            xa, xe = (x0, x1) if abs(x1) > abs(x0) else (x1, x0)
             edge = [z0] + inner + [z1]
             c = min(range(len(edge)), key=lambda k: abs(edge[k] - 0.5 * (z0 + z1)))
             for k in range(c):
@@ -252,7 +241,7 @@ def build_base(p):
             emit((xa, z0), (xe, edge[c]), (xa, z1))
             for k in range(c, len(edge) - 1):
                 emit((xa, z1), (xe, edge[k]), (xe, edge[k + 1]))
-        for sign in (-1, 1):  # the skirt under the crest, so no slit shows where the shell meets the terrain
+        for sign in (-1, 1):
             x = sign * p.W / 2
             zl = [z0] + [z for z in zf if z0 < z < z1] + [z1]
             for za, zb in zip(zl, zl[1:]):
@@ -263,7 +252,7 @@ def build_base(p):
 
 def build_col(p):
     s = Surf(p.id + "-col")
-    if p.chained:  # two thin slabs far under the floor, one at each end: the seat fit's ends, nothing in the ride to hit
+    if p.chained:
         for z0 in (0.0, p.L - END_SLAB[1]):
             s.box((0.0, -END_SLAB[0], z0 + END_SLAB[1] / 2), (p.W, END_SLAB[1], END_SLAB[1]), col("basalt"))
         return s
@@ -275,7 +264,6 @@ def build_col(p):
     return s
 
 
-# ---------------------------------------------------------------- detail shells
 def spatter_cone(s, x, z, r, h, seed):
     """A small spatter cone: a ragged basalt frustum with a hot throat."""
     s.cone((x, -0.1, z), r, h, 7, lerp(col("basalt"), col("scoria"), rnd(seed, 1)), spin=rnd(seed, 2) * math.tau, r_top=r * 0.35)
@@ -319,7 +307,7 @@ def build_d1(p):
     s = Surf(p.id + "_detail1")
     hw = p.W / 2
     n = 26 if p.L < 100 else 30
-    n_rock = max(1, round(n * p.z_span / p.L))  # the same density over the dressed span
+    n_rock = max(1, round(n * p.z_span / p.L))
     for sign in (-1, 1):
         for q in range(n_rock):
             rim_rock(s, p, sign, q, n_rock, 1, (0.5, 1.1), ("basalt", "basalt_hi") if p.look == "lava" else ("gravel", "sandstone"))
@@ -343,7 +331,7 @@ def lerp_f(a, b, t):
 def floor_strip(s, p, pts, w, color, fine=True):
     """A painted strip on the shell through the plan points pts, PAINT_PROUD over it."""
     path = [pts[0]]
-    for (xa, za), (xb, zb) in zip(pts, pts[1:]):  # 0.25 m pieces near the floor's kinks at the open-end run, so no chord bridges one
+    for (xa, za), (xb, zb) in zip(pts, pts[1:]):
         ln = math.hypot(xb - xa, zb - za)
         near = fine and min(abs(z - k) for z in (za, zb) for k in (p.run, p.L - p.run)) < ln + 0.5
         n = max(1, math.ceil(ln / 0.25)) if near else 1
@@ -360,7 +348,7 @@ def build_d2(p):
     s = Surf(p.id + "_detail2")
     hw = p.W / 2
     flat = 0.18 * p.W if p.kind == "wash" else hw - p.wall - 0.5
-    for q in range(28):  # cracks (lava) or drying mud cracks (dry) across the flat floor, off the open ends
+    for q in range(28):
         z0 = p.run * 1.05 + (p.L - 2.1 * p.run) * (q + rnd(q, 1)) / 28
         side = -1 if q % 2 else 1
         x = side * (0.5 + 0.6 * rnd(q, 2))
@@ -371,16 +359,16 @@ def build_d2(p):
         hot = col("lava" if q % 3 else "lava_hot") if p.look == "lava" else col("damp")
         floor_strip(s, p, pts, 0.09, hot)
     zs = p.zs(*GRID[p.id][2:])
-    for sign in ((-1, 1) if p.carve_x < p.W / 2 - 0.01 else ()):  # the pale lip line where the floor ends and the carve band starts
+    for sign in ((-1, 1) if p.carve_x < p.W / 2 - 0.01 else ()):
         x = sign * (p.carve_x - 0.2)
-        floor_strip(s, p, [(x, z) for z in zs], 0.4, col("bone"), fine=False)  # zs holds both kinks, so no chord crosses one
-    for q in range(40 if p.look == "lava" else 0):  # cinder grit on the floor centre, where the threats bite
+        floor_strip(s, p, [(x, z) for z in zs], 0.4, col("bone"), fine=False)
+    for q in range(40 if p.look == "lava" else 0):
         x = 2.4 * (rnd(q, 11) - 0.5) * 2
         z = p.run + (p.L - 2 * p.run) * (q + rnd(q, 12)) / 40
         floor_strip(s, p, [(x, z), (x + 0.25 * (rnd(q, 13) - 0.5), z + 0.3)], 0.22, lerp(col("cinder"), col("ash"), rnd(q, 14)))
     n_grit = max(1, round(26 * p.z_span / p.L))
     for sign in (-1, 1):
-        for q in range(n_grit):  # cinders or pebbles past the crest
+        for q in range(n_grit):
             z = p.z_lo + p.z_span * (q + rnd(q, sign, 5)) / n_grit
             sz = 0.12 + 0.22 * rnd(q, sign, 7)
             x = sign * (hw + CREST_CLEAR + 0.6 * sz + 2.6 * rnd(q, sign, 6))
@@ -392,7 +380,6 @@ def build_d2(p):
     return s
 
 
-# ---------------------------------------------------------------- the lava chute: a raised trough with no stamp
 CHUTE = {"id": "lava_chute_3x0p5x8", "L": 3.0, "H": 0.5, "W": 8.0}
 
 
@@ -416,7 +403,7 @@ def build_chute_base(_p=None):
     xs = chute_xs()
     zs = [L * j / 12 for j in range(13)]
 
-    def tone(x, z):  # the hot seam wandering down the floor, glassy walls, basalt between; sampled per vertex so it blends
+    def tone(x, z):
         glow = max(0.0, 1.0 - abs(x + 0.3 * math.sin(2.0 * z)) / 0.6)
         rock = col("glass") if chute_top(x) > 0.06 else lerp(col("basalt_lo"), col("basalt_hi"), 0.5 + 0.5 * math.sin(3.0 * z + x))
         return lerp(rock, lerp(col("lava_deep"), col("lava_hot"), glow), min(1.0, 1.6 * glow))
@@ -426,7 +413,7 @@ def build_chute_base(_p=None):
             pts = [(x0, chute_top(x0), z0), (x0, chute_top(x0), z1), (x1, chute_top(x1), z1), (x1, chute_top(x1), z0)]
             s.poly(pts, [tone(q[0], q[2]) for q in pts], up=UP)
     inside = (0.0, -0.4, L / 2)
-    for z, flip in ((0.0, 1), (L, -1)):  # the end faces down to the trough's base, 0.4 m under the floor
+    for z, flip in ((0.0, 1), (L, -1)):
         for x0, x1 in zip(xs, xs[1:]):
             s.poly([(x0, -0.4, z), (x1, -0.4, z), (x1, chute_top(x1), z), (x0, chute_top(x0), z)], col("basalt"), inside=inside)
     for sign in (-1, 1):
@@ -465,7 +452,6 @@ def build_chute_d2(_p=None):
     return s
 
 
-# ---------------------------------------------------------------- checks, build, export
 def check_piece(p, base, col_s, shells):
     """The shell is the stamp lifted SHELL_LIFT and the -col the stamp dropped COL_DROP, both tapering with the open ends;
     no shell stands more than SHELL_PROUD over the drawn surface inside the footprint."""
@@ -488,10 +474,10 @@ def check_piece(p, base, col_s, shells):
         for x, z in probes[::2]:
             h_sh = si.height_at(shell, x, z)
             assert h_sh is None or h_sh - si.height_at(base, x, z) <= SHELL_PROUD + 1e-6, (p.id, "shell proud", shell.name, x, z, h_sh)
-        for x, y, z in shell.v:  # every shell vertex over the footprint: nothing stands in the lane but paint on the shell
+        for x, y, z in shell.v:
             if abs(x) < p.W / 2 and 0.0 < z < p.L:
                 assert y - p.shell(x, z) <= SHELL_PROUD + 1e-6, (p.id, "shell vertex in the lane", shell.name, x, y, z)
-            elif p.chained and abs(x) >= p.W / 2:  # a beyond-crest prop in the end zone would stand in the next row's lane at the bends
+            elif p.chained and abs(x) >= p.W / 2:
                 assert END_ZONE / MIN_STRETCH <= z <= p.L - END_ZONE / MIN_STRETCH, (p.id, "prop in the end zone", shell.name, x, y, z)
     return worst
 

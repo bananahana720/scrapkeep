@@ -99,7 +99,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SKETCH = os.path.normpath(os.path.join(HERE, "..", ".."))
 MODELS = os.path.join(SKETCH, "assets", "models")
 sys.path.insert(0, HERE)
-import cycles_device  # noqa: E402
+import cycles_device
 
 WORLDS = {
     "one": ["world_one/enemy_foreman", "world_one/enemy_dispatcher", "world_one/enemy_splitter",
@@ -108,15 +108,11 @@ WORLDS = {
     "two": ["world_two/enemy_lamp_swarm", "warden_swarm", "warden_swarm_kit_drones"],
     "three": ["world_three/enemy_anchor_crew", "world_three/enemy_kite_drone", "warden_mind",
               "bosses/mind_hand"],
-    # Rigid-node boss rigs (no armature); see NODE_RIGS. Files under assets/models/bosses/.
     "bosses": ["bosses/boss_brindle", "bosses/boss_brindle_scooter", "bosses/boss_mind_base",
                "bosses/boss_mind_kit", "bosses/boss_waking_base", "bosses/boss_waking_kit"],
 }
 NODE_RIGS = set(WORLDS["bosses"])
 
-# Clips the game loops. special_rig.gd:12-17 CLIPS (foreman idle, dispatcher idle, splitter
-# crawl, splitter_piece scurry); linker.gd:48 (idle, braced); mind_hand.gd:265 (still_track);
-# hero_assets.gd:2178 replays idle whenever a Warden clip ends.
 LOOPS = {
     "world_one/enemy_foreman": ["idle"],
     "world_one/enemy_dispatcher": ["idle"],
@@ -128,33 +124,19 @@ LOOPS = {
     "warden_swarm_kit_drones": ["idle"],
     "warden_mind": ["idle"],
     "bosses/mind_hand": ["still_track"],
-    # BossModel.loop_clip (boss_model.gd:72): requisition.gd:253 idle_roll, requisition.gd:321 chase
-    # (on the scooter GLB), mind_dress.gd:93 attention. boss_waking_base/kit have none: the game
-    # never loops `sleeping` (waking_dress.gd opens on `wake`, :97). boss_mind_base has no loop.
     "bosses/boss_brindle": ["idle_roll"],
     "bosses/boss_brindle_scooter": ["chase"],
     "bosses/boss_mind_kit": ["attention"],
 }
 
-# Seam failures that --strict does not count: (key, clip) -> reason. Empty: the Brindle drum
-# loops were the last two and are now whole turns. Remove a row once its clip is fixed; --strict
-# then also fails a row whose seam is now clean.
 STRICT_EXCUSED = {
 }
 
-# Kit rigs measured against the body they ride: key -> body GLB and the clips that are excused
-# (designed fly-out and walk-off, warden_swarm.py:42-43 'Not held to it: ... their snip walk along
-# the rope' and ws:721-730 the break drop).
 HOSTS = {"warden_swarm_kit_drones": {"host": "warden_swarm", "skip": ("break", "snip")}}
 HOST_STEP = 1.0 / 15
 
-# The shed rings' cells, Cell7 to Cell51 (fnmatch patterns).
 _SHED_CELLS = ("Cell[7-9]", "Cell[1-4][0-9]", "Cell5[01]")
 
-# Designed detachments and impacts, per GLB and clip: only the listed part pairs (bone names,
-# fnmatch patterns, either order) are excused in that clip; every other pair stays a defect.
-# Each entry cites the source that says the motion is designed. COLLAPSE is never excused.
-# kfm = world_one/kill_first_motion.py; ws = warden_swarm.py; wm = warden_mind.py (tools/blender/).
 LAND_PAIRS = [("Palm", "Finger?_0"), ("Finger?_0", "Finger?_1"), ("Finger?_1", "Finger?_2"), ("Finger?_0", "Knuckle?")]
 DELIBERATE = {
     "world_one/enemy_foreman": {
@@ -177,9 +159,6 @@ DELIBERATE = {
         "cut": {"pairs": [("*", "Dish*"), ("Root", "Boom"), ("Cab", "Crew"), ("Cab", "Ears"), ("Crew", "Ears")],
                 "cite": "kfm:565-568 'The dish drops onto its partner, slides off and lands on its back... The boom, freed of its load, springs up; the crew ducks, then peeks over the cab roof'"},
     },
-    # Procedural rigs: key "proc:<bone>:<axis><sign>" for the in-game extreme of that bone and axis.
-    # lamp_swarm.gd:191-193 _pose_lamps: LampLens scale lerpf(0.001, 1, open) (a point inside the bulb until the
-    # warn opens it) and LampShutter yaw -100 (side 0) or +100 (side 1, B) deg about Y with the same clock.
     "world_two/enemy_lamp_swarm": {
         **{"proc:LampShutter%d%s:rY%s" % (i, b, sign): {
             "pairs": [("LampShutter%d" % i, "LampShutter%dB" % i)],
@@ -211,8 +190,6 @@ DELIBERATE = {
     },
     "warden_swarm": {
         "break": {"pairs": [("*", "*")], "cite": "ws:42 'chunk_shed and break (falling cells)'; cells split off and fall ws:491-498, hull falls ws:528-531"},
-        # Ring bones own no island, so the pairs name the cells: Ring1 is Cell1-6, Ring2 Cell7-18, Ring3 Cell19-30,
-        # Ring4 Cell31-42, Ring5 Cell43-51; the shed rings are Cell7 to Cell51. Pinpricks of the same cell are in DESIGNED_PAIRS.
         "chunk_shed": {"pairs": [("Cell[7-9]", "Yoke"), ("Cell1[0-8]", "Yoke"), ("Cell[7-9]", "Cell[1-6]"), ("Cell1[0-8]", "Cell[1-6]"),
                                  *[(c, "Seam" + n[4:]) for c in _SHED_CELLS for n in _SHED_CELLS]],
                        "cite": "ws:26-29, :42, :110, :483-487, :547-548, :552-563 the shed rings' cells (Cell7 to Cell51) fall away from the Yoke, Ring1 and each other (a shed ring's cells against another shed ring's pinpricks); hero_assets.gd:2310-2318 enables one ring's track"},
@@ -315,13 +292,10 @@ def host_clip(rig, frames, tris):
                 r = tree.find_nearest(tuple(Vk[v]))
                 if r is None or (Vector(Vk[v]) - r[0]).dot(r[1]) >= 0:
                     continue
-                # Behind the nearest face is not enough: a spike (a pinprick) far away has a normal
-                # too. The vertex is inside only if the ray straight out from the axis meets the body.
                 out = Vector((Vk[v][0], Vk[v][1], 0.0))
                 if out.length < 1e-6 or tree.ray_cast(Vector(Vk[v]), out.normalized())[0] is None:
                     continue
                 note("kit_in_body_mm", r[3], t, owner[v])
-            # The other way: body vertices inside a kit part (its prisms are closed, so behind the nearest face is exact).
             ktree = BVHTree.FromPolygons(Vk.tolist(), rig.T.tolist(), all_triangles=True)
             for b, vs in pts.items():
                 lo, hi = Vk[vs].min(0) - 0.01, Vk[vs].max(0) + 0.01
@@ -333,9 +307,6 @@ def host_clip(rig, frames, tris):
     return res
 
 
-# Pairs a rig designs in every pose, whatever the clip: key -> [(regex over "a/b", cite)], either order.
-# Unlike DELIBERATE they do not take a clip out of the range of motion, so every clip still sets the
-# extremes and stress poses. A backreference keeps a pair to one index (Cell3/Seam3, not Cell26/Seam38).
 DESIGNED_PAIRS = {
     "warden_swarm": [
         (r"Cell(\d+)/Seam\1", "ws:35, :113-114, :451-498 the Seam bone sinks a cell's own pinpricks into its lip (SEAM_DIM -0.05, SEAM_OFF -0.13) and "
@@ -364,29 +335,12 @@ def excused(key, clip, a, b):
                for x, y in row["pairs"])
 
 
-# In-game ranges of the procedural rigs (no clips), per bone: rot {axis: (lo, hi)} degrees about
-# the Godot axis, loc {axis: (lo, hi)} metres, scale (lo, hi) uniform; "pivot": "origin" turns
-# about the rig origin instead of the bone head.
-# Body drop: miniboss.gd:374 drop = row.body * HALF_HEIGHT * t (3.45 m): slam_crouch -0.3 gives
-# -1.035 m, charge -0.345. It moves body, fists, plates and halo (their pos adds UP * drop, :386-407)
-# but not the feet (:392), so it is the relative travel; the leap lift raises feet with it (:366).
 _D = math.degrees
 PROCEDURAL = {
-    # miniboss.gd:73-80 POSES, :347-413 _model_pose. Lean about X to -0.35 rad (-20.05 deg) turns
-    # body, fists, plates and halo about the rig origin (:380, :387). Feet: foot_angle -0.6 to
-    # +0.2 rad about X (:363, :368), splay rolls Z by -side*splay*0.5 (max 0.6 -> 0.3 rad, :395)
-    # and moves x by side*splay (+-0.6 m), tuck lifts y to 1.1 m (:366, :394).
-    # Fists offset (0, -0.6..1.8, -0.85..0.5) from the body (:359, :365, :373, :376); the drop and
-    # lean they ride are the Body group pose. Plates yaw +-1.15 rad (:400, weak), move x by
-    # -side*0.45 and y down 0.7 (:399). Halo spins about Y (:406).
     "world_one/enemy_miniboss": {
-        # Lean and body drop move the body, fists, plates and halo as one group about the rig
-        # origin (miniboss.gd:380-407: every non-foot bone takes body_basis and UP * drop); the feet
-        # do not follow, so the group pose is the relative travel.
         "MinibossBody": {"rot": {"X": (-_D(0.35), 0.0)}, "pivot": "origin", "loc": {"Y": (-1.035, 0.0)},
                          "group": ["MinibossFistLeft", "MinibossFistRight", "MinibossPlateLeft", "MinibossPlateRight",
                                    "MinibossHalo"]},
-        # Fists keep only their own offset from the body (:359-376), not the drop they ride.
         "MinibossFistLeft": {"loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
         "MinibossFistRight": {"loc": {"Y": (-0.6, 1.8), "Z": (-0.85, 0.5)}},
         "MinibossFootLeft": {"rot": {"X": (-_D(0.6), _D(0.2)), "Z": (0.0, _D(0.3))},
@@ -397,15 +351,11 @@ PROCEDURAL = {
         "MinibossPlateLeft": {"rot": {"Y": (-_D(1.15), _D(1.15))}, "loc": {"X": (-0.45, 0.0), "Y": (-0.7, 0.0)}},
         "MinibossPlateRight": {"rot": {"Y": (-_D(1.15), _D(1.15))}, "loc": {"X": (0.0, 0.45), "Y": (-0.7, 0.0)}},
     },
-    # plated_brute.gd:290-309 _pose, PAD_RISE 2.5 (:45), REAR_ANGLE -30 (:46); the pads plant
-    # PAD_PLANT -0.47 m below rest on every slam's hit frame (:48, :302: lift = PAD_PLANT / PAD_RISE).
     "world_one/enemy_plated_brute": {
         "SlamPadLeft": {"loc": {"Y": (-0.47, 2.5)}},
         "SlamPadRight": {"loc": {"Y": (-0.47, 2.5)}},
         "BruteRear": {"rot": {"X": (-30.0, 0.0)}},
     },
-    # anchor_crew.gd:119-128: CrewBrace 8 deg about X and -0.08 in Y; ClutchTab i moves
-    # (0, cos, sin)(TAU i / 3) * 0.09; HostileHook -0.2 in Z.
     "world_three/enemy_anchor_crew": {
         "CrewBrace": {"rot": {"X": (0.0, 8.0)}, "loc": {"Y": (-0.08, 0.0)}},
         "ClutchTab0": {"loc": {"Y": (0.0, 0.09)}},
@@ -413,15 +363,12 @@ PROCEDURAL = {
         "ClutchTab2": {"loc": {"Y": (-0.045, 0.0), "Z": (-0.0779, 0.0)}},
         "HostileHook": {"loc": {"Z": (-0.2, 0.0)}},
     },
-    # kite_drone.gd:171-182: wings +-5 deg about Z (left -5, right +5); paws (0, 0.08, -0.08).
     "world_three/enemy_kite_drone": {
         "KiteWingLeft": {"rot": {"Z": (-5.0, 0.0)}},
         "KiteWingRight": {"rot": {"Z": (0.0, 5.0)}},
         "KitePawLeft": {"loc": {"Y": (0.0, 0.08), "Z": (-0.08, 0.0)}},
         "KitePawRight": {"loc": {"Y": (0.0, 0.08), "Z": (-0.08, 0.0)}},
     },
-    # lamp_swarm.gd:183-193: LampShutter yaw -100 (side 0) or +100 (side 1, the B bones) deg
-    # about Y; LampLens scale 0.001 to 1.
     "world_two/enemy_lamp_swarm": {
         **{"LampShutter%d" % i: {"rot": {"Y": (-100.0, 0.0)}} for i in range(3)},
         **{"LampShutter%dB" % i: {"rot": {"Y": (0.0, 100.0)}} for i in range(3)},
@@ -436,11 +383,11 @@ GAP_POSE = 0.03
 SEAM_LOC_MM = 1.0
 SEAM_ROT_DEG = 0.5
 SEAM_SCALE = 0.001
-SEAM_HARSHER = 1.5  # seam velocity change vs the clip's largest interior frame-to-frame change
-SEAM_FLOOR_LOC_MM = 5.0  # per 1/30 s frame, units of the step: mm, degrees, scale
+SEAM_HARSHER = 1.5
+SEAM_FLOOR_LOC_MM = 5.0
 SEAM_FLOOR_ROT_DEG = 0.5
 SEAM_FLOOR_SCALE = 0.01
-MIN_DEPTH = 0.030  # CLIP and GAP flag over max(30 mm, 5% of the smaller island's diagonal)
+MIN_DEPTH = 0.030
 MIN_FRAC = 0.05
 ROT_MOVES = 0.5
 LOC_MOVES = 0.001
@@ -454,11 +401,10 @@ INSIDE_CAP = 1500
 RAY_DIRS = [Vector(d).normalized() for d in [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1),
                                              (1, 1, 0), (-1, 1, 0), (1, -1, 0), (-1, -1, 0), (1, 0, 1), (-1, 0, 1),
                                              (0, 1, 1), (0, -1, 1), (1, 0, -1), (-1, 0, -1), (0, 1, -1), (0, -1, -1)]]
-GAIN_MIN = 0.001  # a vertex counts as newly inside once it has gained 1 mm against rest
-SIBLING_CAP = 1500  # touching island pairs on non-parent/child bones, per rig
+GAIN_MIN = 0.001
+SIBLING_CAP = 1500
 KINDS_GAME = ("extreme", "clip")
 
-# Godot (x, y, z) = C @ Blender (x, y, z).
 C = np.array([[1.0, 0, 0], [0, 0, 1.0], [0, -1.0, 0]])
 AXIS = {"X": np.array([1.0, 0, 0]), "Y": np.array([0, 1.0, 0]), "Z": np.array([0, 0, 1.0])}
 
@@ -491,8 +437,6 @@ def norm_key(path):
     p = p.split("assets/models/")[-1]
     return p[:-4] if p.endswith(".glb") else p
 
-
-# ---------------------------------------------------------------- bitmap font for labels
 
 _FONT = {
     "A": "0E 11 11 1F 11 11 11", "B": "1E 11 11 1E 11 11 1E", "C": "0E 11 10 10 10 11 0E",
@@ -533,9 +477,6 @@ def draw_text(img, x, y, text, scale=2, colour=(1.0, 1.0, 1.0)):
             break
         big = np.kron(bits, np.ones((scale, scale), dtype=bool))
         img[y:y + 7 * scale, px:px + 5 * scale][big] = colour
-
-
-# ---------------------------------------------------------------- scene and rig data
 
 
 def reset_scene():
@@ -704,7 +645,6 @@ class Rig:
                 self.w[i, k] = w
         self.wsum = self.w.sum(1)
 
-    # -- posing
     def chain(self, basis):
         """basis: {bone index: 4x4 matrix_basis}. Returns world-space deltas, (B, 4, 4)."""
         B = len(self.bones)
@@ -788,14 +728,11 @@ def pose_values(rig, spec):
     values, basis = {}, {}
     for name in [spec["bone"]] + list(spec.get("group", [])):
         bi = rig.index[name]
-        m = rig.basis_from_arm_delta(bi, dp)  # the same arm-space move for every bone in the group
+        m = rig.basis_from_arm_delta(bi, dp)
         loc, quat, scale = Mx(m.tolist()).decompose()
         values[name] = (np.array(loc), np.array(quat), np.array(scale))
         basis[bi] = m
     return values, basis
-
-
-# ---------------------------------------------------------------- audit
 
 
 def weight_audit(rig):
@@ -811,8 +748,6 @@ def weight_audit(rig):
             if w > 0.01:
                 weighted.add(b)
     blended = int((infl > 1).sum())
-    # The glTF exporter parks vertices with no group on a joint it names neutral_bone: those are
-    # unweighted, whatever the skin says.
     neutral = {i for i, n in enumerate(rig.names) if n.startswith("neutral_bone")}
     neutral_v = int(sum(1 for row in rig.groups if row and row[0][0] in neutral))
     return {
@@ -917,9 +852,6 @@ def make_specs(ranges, deforming_names):
     return specs
 
 
-# ---------------------------------------------------------------- metrics
-
-
 def union_find_islands(n, tris):
     parent = list(range(n))
 
@@ -948,7 +880,6 @@ class Metrics:
         self.blended_v = infl > 1
         dom = np.array([row[0][0] if row else -1 for row in rig.groups], dtype=np.int64)
         tb_blend = self.blended_v[T].any(1) if len(T) else np.zeros(0, dtype=bool)
-        # A triangle whose single-influence vertices sit on different bones stretches like a blended one.
         tb_cross = ((dom[T[:, 0]] != dom[T[:, 1]]) | (dom[T[:, 1]] != dom[T[:, 2]])) if len(T) else np.zeros(0, dtype=bool)
         tb = tb_blend | tb_cross
         self.cross_bone_tris = int((tb_cross & ~tb_blend).sum())
@@ -956,7 +887,6 @@ class Metrics:
         self.bt = T[tb]
         self.non_bt = np.nonzero(~tb)[0]
         self.bt_area0, self.bt_n0 = self.tri_area_normal(V0, self.bt)
-        # dominant bone: the bone with most weight over the triangle's three vertices
         self.bt_bone = np.zeros(len(self.bt), dtype=np.int64)
         for i, tri in enumerate(self.bt):
             acc = {}
@@ -987,8 +917,6 @@ class Metrics:
         V0, T = rig.V0, rig.T
         N = len(V0)
         dom = np.array([row[0][0] if row else -1 for row in rig.groups], dtype=np.int64)
-        # Weld coincident vertices (same position and dominant bone) so split-normal vertices do not
-        # shred an island into faces.
         keyed = np.concatenate([np.round(V0 / 1e-5).astype(np.int64), dom[:, None]], axis=1)
         _, wid = np.unique(keyed, axis=0, return_inverse=True)
         wid = wid.ravel()
@@ -1117,8 +1045,6 @@ class Metrics:
                     if len(ip) * len(ic) > 4000 and ((lo_a > hi_b + 1.0).any() or (lo_b > hi_a + 1.0).any()):
                         continue
                     add(p, c, a, b, False)
-        # Sibling pairs: any two islands on different bones, whatever their hierarchy, that touch at
-        # rest (min distance under GAP_REST). Island bounds first, then only near pairs, capped.
         R = len(self.rigid)
         if R > 1:
             lo = np.array([box0[i["id"]][0] for i in self.rigid]) - GAP_REST
@@ -1171,8 +1097,6 @@ class Metrics:
             out["normal_dev_max_deg"] = round(float(ang[valid].max()), 3) if valid.any() else 180.0
             fl = np.nonzero((dot < 0) & valid)[0]
             out["normal_flipped"] = int(len(fl))
-            # A flipped triangle counts only if something can see it: a ray from its centroid that
-            # leaves the rest of the mesh (blended triangles excluded) in any of 18 directions.
             vis = 0
             if len(fl):
                 tree = self.bvh(Vp, self.non_bt, rig.T)
@@ -1281,7 +1205,6 @@ def collapse_ratio(m):
     if m["edge_min"] is not None:
         r = max(r, EDGE_FLAG / max(m["edge_min"], 1e-3))
     if m.get("normal_flipped_visible"):
-        # a blended triangle turned inside out where it can be seen is a collapse too
         r = max(r, 1.0 + min(m["normal_flipped_visible"], 999) / 1000.0)
     return r
 
@@ -1291,7 +1214,7 @@ def pose_flags(m, kind):
     flags = []
     pre = "" if kind in KINDS_GAME else "STRESS-"
     if collapse_ratio(m) > 1:
-        flags.append(pre + "COLLAPSE")  # never excused by DELIBERATE
+        flags.append(pre + "COLLAPSE")
     if m["clip_over"]:
         flags.append(pre + "CLIP")
     if m["gap_over"]:
@@ -1318,7 +1241,6 @@ def split_hits(m, key, clip):
         out.update({"clip_depth_mm": h["depth_mm"], "clip_verts": h["verts"], "clip_frac": h["frac"], "clip_thr_mm": h["thr_mm"],
                     "clip_open": h["open"], "clip_pair": h["pair"], "clip_ratio": h["ratio"]})
     else:
-        # nothing over threshold left: the ratio to rank on is the best of what is under it
         out["clip_ratio"] = m["clip_ratio"] if not m["clip_over"] and not x_clip else 0.0
     if d_gap:
         h = max(d_gap, key=lambda h: h["ratio"])
@@ -1349,9 +1271,6 @@ def severity(m, kind, deliberate):
     if gr > 0:
         return gr * scale, "GAP %.0fMM %.0f%%" % (m["gap_mm"], m["gap_frac"] * 100)
     return 0.001 * sc, "OK AREA %s" % ("-" if m["area_min"] is None else "%.2f" % m["area_min"])
-
-
-# ---------------------------------------------------------------- loop seam
 
 
 def seam_check(rig, clip):
@@ -1390,8 +1309,6 @@ def seam_check(rig, clip):
         seq = [steps(fa, fb) for fa, fb in zip(frames[:-1], frames[1:])]
         jumps, inside, floors = [], [], (SEAM_FLOOR_LOC_MM, SEAM_FLOOR_ROT_DEG, SEAM_FLOOR_SCALE)
         for k in range(3):
-            # Mirrors tests/rig_loop_seam_test.gd: the seam's velocity change (first step against
-            # last step) against the clip's own largest frame-to-frame velocity change.
             inside.append(max((float(np.linalg.norm(seq[f][k] - seq[f - 1][k])) for f in range(1, len(seq))), default=0.0))
             jumps.append(float(np.linalg.norm(seq[0][k] - seq[-1][k])) if seq else 0.0)
         vel_fail = [jumps[k] > max(SEAM_HARSHER * inside[k], floors[k]) for k in range(3)]
@@ -1419,9 +1336,6 @@ def seam_check(rig, clip):
             "seam": bool(bad), "failing_bones": sorted(bad), "bones_detail": rows}
 
 
-# ---------------------------------------------------------------- rendering
-
-
 class Stage:
     def __init__(self, rig, size, samples):
         self.rig = rig
@@ -1447,7 +1361,6 @@ class Stage:
                 attr = nodes.new("ShaderNodeVertexColor")
                 attr.layer_name = rig.meshes[0].data.color_attributes[0].name if rig.meshes[0].data.color_attributes else "Color"
                 mat.node_tree.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
-        # Rest bounds: the skinned meshes at rest plus every unskinned mesh in the file.
         pts = [rig.V0]
         for o in bpy.data.objects:
             if o.type == "MESH" and o not in rig.meshes and o.name not in ("Ground",) and not o.name.endswith("-col"):
@@ -1545,9 +1458,6 @@ def hstack(tiles, w, h):
     return row
 
 
-# ---------------------------------------------------------------- per rig
-
-
 def fmt_spec(spec):
     ax = spec["axis"]
     unit = "DEG" if ax[0] == "r" else ("M" if ax[0] == "t" else "X")
@@ -1557,7 +1467,7 @@ def fmt_spec(spec):
 def audit_rig(key, a, sheet_rows, loop_rows):
     t0 = time.time()
     hspec = HOSTS.get(key)
-    frames, tris = host_frames(hspec) if hspec else ({}, None)  # first: Rig() resets the scene
+    frames, tris = host_frames(hspec) if hspec else ({}, None)
     rig = Rig(key)
     audit, deforming = weight_audit(rig)
     names = set(audit["deforming_bones"])
@@ -1571,8 +1481,6 @@ def audit_rig(key, a, sheet_rows, loop_rows):
             if sp["kind"] == "extreme" and tag in delib:
                 sp["deliberate"], sp["src"] = True, tag
     else:
-        # Ranges from the clips the game holds to the thresholds; deliberate clips add only the
-        # extremes that go beyond them, marked deliberate, with no stress pose.
         ranges = clip_ranges(rig, set(rig.clips) - set(delib))
         source = "clips (%d actions sampled every 1/30 s; deliberate: %s)" % (len(rig.clips), ", ".join(sorted(delib)) or "none")
         specs = make_specs(ranges, names)
@@ -1588,7 +1496,6 @@ def audit_rig(key, a, sheet_rows, loop_rows):
                     sp["deliberate"] = True
                     specs.append(sp)
     metrics = Metrics(rig)
-    # Whole-rig clip extreme frames.
     clip_poses = []
     for clip in rig.clips.values():
         best, best_f = -1.0, clip.start
@@ -1637,7 +1544,6 @@ def audit_rig(key, a, sheet_rows, loop_rows):
             check = skin_check(rig, values, Vp)
     if check is None:
         check = {"skipped": "no poses"}
-    # Flags per rig. COLLAPSE counts as a defect whether or not the clip is deliberate.
     flags = {}
     for p in poses:
         for f in p["flags"]:
@@ -1669,7 +1575,6 @@ def audit_rig(key, a, sheet_rows, loop_rows):
     deliberate_collapse = [{"pose": fmt_spec(p) if p["bone"] != "*" else p["axis"], "bone": p["bone"],
                             "area_min": p["area_min"], "edge_min": p["edge_min"], "flags": p["flags"]}
                            for p in poses if p["deliberate"] and any(f.endswith("COLLAPSE") for f in p["flags"])]
-    # Kit against its body: any part past its threshold in a shared game clip is a CLIP defect.
     hostc = host_clip(rig, frames, tris) if hspec else {}
     over = {c: h for c, h in hostc.items() if h["over"]}
     if over:
@@ -1679,7 +1584,6 @@ def audit_rig(key, a, sheet_rows, loop_rows):
         slot["bones"] = sorted(set(slot["bones"]) | {x["part"] for x in over.values()})
         slot["worst"] = {"pose": "clip:%s t=%.3f" % (c, h["t"]), "bone": h["part"], "src": hspec["host"], "clip_depth_mm": h["depth_mm"],
                          "clip_thr_mm": h["thr_mm"], "clip_pair": "%s/%s" % (h["part"], hspec["host"]), "clip_open": True}
-    # Loop seams.
     seams = {}
     for cname in LOOPS.get(key, []):
         if cname not in rig.clips:
@@ -1729,8 +1633,6 @@ def audit_rig(key, a, sheet_rows, loop_rows):
     sys.stdout.flush()
     return result
 
-
-# ---------------------------------------------------------------- rigid-node rigs (bosses)
 
 _NODE_PROP = re.compile(r'^(location|rotation_quaternion|rotation_euler|scale)$')
 
@@ -1806,7 +1708,6 @@ def strict_failures(key, result):
             out.append("%s %s x%s" % (key, f, slot.get("count")))
     for cname, seam in result.get("seams", {}).items():
         if seam.get("seam_untested"):
-            # No tracks measured: an unmeasured clip must not go green.
             out.append("%s seam %s UNTESTED: %s" % (key, cname, seam["seam_untested"]))
             continue
         failing = bool(seam.get("failing_bones")) or "error" in seam
@@ -1843,8 +1744,6 @@ def render_rig(rig, a, key, poses, values_for, seams, sheet_rows, loop_rows, pai
                unweighted=0):
     stage = Stage(rig, a["size"], a["samples"])
     w, h = a["size"], int(a["size"] * 0.75)
-    # In-game poses (clip frames and extremes) first: the top 5, then the top 3 stress poses, each
-    # list deduped on the signed axis so +0.22 and -0.47 of one axis both get a tile.
     def pick(kinds, n):
         out, seen = [], set()
         for i in sorted((i for i in range(len(poses)) if poses[i]["kind"] in kinds), key=lambda i: -poses[i]["severity"]):

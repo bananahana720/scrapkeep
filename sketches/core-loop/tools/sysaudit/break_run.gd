@@ -3,50 +3,6 @@ extends "res://tools/bot_run.gd"
 const Parts := preload("res://src/build/parts.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 
-# Systems audit pass F (docs/systems-audit/break-it/): a bot run that tries to break world 1, with
-# a watch that writes one row a break. Wraps bot_run; the run, the policy and its bots.ndjson row
-# are bot_run's. One seed per process (bot_run forks children that run bot_run.gd itself):
-#
-#   godot --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/sysaudit/break_run.gd \
-#     -- --out=<abs dir> --policy=skipper --seeds=<n> --table=park --until=2 --qa-log=1 --break=spam
-#
-# --break picks the attack (each is seeded from the run seed, so a row's command replays it):
-#   spam   on top of the policy's own input, mashes each play input the ball reads: jump, the go verb
-#          (Sable's boost, Rivet's sprint, Kest's blink), interact, fire, harpoon press and release, cancel,
-#          slot picks, the ultimate, the racked active; short holds of six of them (HOLDS), a random
-#          stick now and then, and the pause toggle pressed and lifted a few ticks later. It keeps
-#          mashing through launches, the gates and the boss, so an input taken in the wrong state (a
-#          sequence break) shows up. A test-mode game ignores key events, so screen keys are not reached.
-#          --spam-until=<s> stops the mash at that run second: a stall that clears once the mash stops
-#          was the bot's hands, not a broken game.
-#   quit   quits the game at seeded moments without a save, as a closed window or a crash does, and
-#          continues from the title's Continue (flow.resume_run) in a fresh Game. The row checks
-#          the resumed run is the saved entrance and never more: cogs, parts, cores, the death save, hull.
-#          --quit-in=<state>:<s> quits once after s seconds in a flow state (beacon is the Warden
-#          fight, gates the open gates after a break, launch the flight, boss the boss arena; the
-#          seconds may be a decimal, and launch lasts 0.6 s headless). A run that is over is never quit.
-#   stack  stacks every buff with every debuff: a random legal build of 6 to 14 parts (item_fuzz's
-#          draft), a curse deal taken, scrap wear on (the default), and the hull set to 15% at each
-#          new stage. Stage modifiers are the run seed's own; a "modifier" row names each stage's.
-# Every mode watches each tick and writes break-<seed>.ndjson:
-#   nonfinite  ball position or velocity, hull or max hull not a finite number
-#   hull_over  hull above max hull
-#   undying    hull at or below zero in play for over UNDYING_S without the run ending
-#   speed      ball speed over SPEED_CAP m/s
-#   abyss      ball below ABYSS_Y or over FAR_M from the origin (the fall rescue is play_watch's "fell")
-#   negative   scrap, cogs or bonus cores below zero
-#   surge      cogs or scrap up by more than SURGE_* within one game second
-#   frozen     the flow sat in one state outside play (title, pilot select; not the death screen or the summary) for FROZEN_S of ticks
-#   paused     the tree left paused for PAUSED_S of ticks after the bot lifted its pause
-#   resume     (quit) the continued run differs from the saved entrance, holds more than it held
-#              at the quit, restarts a stage the quit came after clearing ("cleared_stage_lost"), or
-#              puts a boss beaten before the quit back in front of the player ("won_boss_refought")
-#   resurrect  (quit) a run that ended (death or the summary) still offers a Continue; a "terminal"
-#              row records each check
-# Quit timers and the pause watch count bot_run ticks, which --frame-log=1 resets each frame, so
-# do not combine the two. A row carries the seed and mode; the rest of its command is the run's.
-# Each run also ends with a "summary" row with the peaks and the counts by kind. bot_run's qa-<seed>.ndjson
-# (--qa-log=1) has stuck, hung, wedged and fell.
 
 const UNDYING_S := 1.0
 const SPEED_CAP := 200.0
@@ -66,12 +22,10 @@ const PRESSES := ["jump_pressed", "shift_pressed", "mount_pressed", "interact_pr
 const HOLDS := ["jump_held", "shift_held", "brake_held", "fire_held", "harpoon_held", "mount_held"]
 const RELEASES := {"harpoon_held": "harpoon_released", "fire_held": "fire_released", "shift_held": "shift_released"}
 const QUITS := 2
-# A quit waits this long after the last Continue, so each continued run plays before the next quit.
 const QUIT_GAP_S := 30.0
 const LOW_HULL := 0.15
 
 var _mode := ""
-# --spam-until=<s> stops the mash at that run second, to tell a bot the mash confused from a game left broken.
 var _spam_until := 0.0
 var _rng := RandomNumberGenerator.new()
 var _file: FileAccess = null
@@ -80,13 +34,11 @@ var _counts := {}
 var _peaks := {"speed": 0.0, "cogs": 0, "scrap": 0, "cores": 0, "parts": 0, "hp_max": 0.0}
 var _rows := 0
 var _seed := 0
-# spam
 var _holds := {}
 var _stick := Vector2.ZERO
 var _stick_left := 0
 var _pause_left := 0
 var _paused_since := -1
-# watch
 var _undying := 0
 var _state := ""
 var _state_ticks := 0
@@ -94,7 +46,6 @@ var _frozen_told := false
 var _second := -1.0
 var _cogs_at := 0
 var _scrap_at := 0
-# quit: bot_run ticks across the whole process (a Continue rewinds run_time to the entrance)
 var _quit_at: Array[float] = []
 var _quits := 0
 var _saved := {}
@@ -102,10 +53,8 @@ var _resuming := false
 var _before := {}
 var _terminal_checked := false
 var _resumed_tick := 0
-# --quit-in=<state>:<s> quits once, after s seconds in that flow state, in place of the seeded moments.
 var _quit_state := ""
 var _quit_state_s := 0.0
-# stack
 var _drafted := false
 var _stacked_stages := {}
 
@@ -172,7 +121,6 @@ func _hook() -> void:
 
 func _row(kind: String, data := {}) -> void:
 	_counts[kind] = int(_counts.get(kind, 0)) + 1
-	# Three rows of a kind are enough to place it; the count keeps the rest.
 	if int(_counts[kind]) > 3 and kind != "resume":
 		return
 	var ball: Vector3 = _game.player.ball_position()
@@ -243,8 +191,6 @@ func _watch(_delta: float) -> void:
 		_paused_since = -1
 
 
-# The mash rides on the driver's own input for this tick: the driver rewrites source.hold every
-# tick and Scripted.poll clears source.press after the player reads it.
 func _spam() -> void:
 	var source = _driver.source
 	for key in PRESSES:
@@ -257,7 +203,6 @@ func _spam() -> void:
 		_holds[key] -= 1
 		if _holds[key] < 0:
 			_holds.erase(key)
-			# A real key sends its release on the first tick it is no longer held.
 			if key in RELEASES:
 				source.press[RELEASES[key]] = true
 		else:
@@ -277,9 +222,6 @@ func _spam() -> void:
 		_pause_left = _rng.randi_range(1, 30)
 
 
-# A quit is a free with no save: what is on disk is what the last entrance wrote. bot_run's next
-# game is the same seed with --from-stage at the saved stage, which continues through
-# flow.resume_run, as the title's Continue does.
 func _maybe_quit() -> void:
 	if _quit_state != "":
 		if _quits == 0 and _state == _quit_state and _state_ticks >= int(_quit_state_s * TICK_HZ) and not _game.run.over:
@@ -311,7 +253,6 @@ func _maybe_quit() -> void:
 	_next_pending = true
 
 
-# Called the tick after a continued run's first tick: the run must be the saved entrance.
 func _check_resume() -> void:
 	if _game == null or _game.run == null:
 		_row_dead("resume", {"why": "no game after Continue"})
@@ -323,29 +264,21 @@ func _check_resume() -> void:
 		"parts": (_saved.get("parts", []) as Array).size(), "cores": int(_saved.get("bonus_cores", 0)),
 		"death_save_spent": bool(_saved.get("death_save_spent", false)),
 		"hp": snappedf(float(_saved.get("hp", 0.0)), 0.01)}
-	# A save taken at a cleared stage's launch (SA-F1) continues past that stage: at the next
-	# entrance, or in the world's boss arena on the same stage number.
 	if bool(_saved.get("cleared", false)) and (now["stage"] == want["stage"] + 1 or now["state"] == "boss"):
 		want["stage"] = now["stage"]
 	var wrong := []
 	for key in want:
 		if now[key] != want[key]:
 			wrong.append(key)
-	# More than was held when the game was quit is a duplicate whatever the doc says.
 	if run.cogs > int(_before["cogs"]) and run.stage == int(_before["stage"]):
 		wrong.append("cogs_above_quit")
 	if run.parts.size() > int(_before["parts"]) and run.stage == int(_before["stage"]):
 		wrong.append("parts_above_quit")
 	if bool(_before["death_save_spent"]) and not run.death_save_spent and run.stage == int(_before["stage"]):
 		wrong.append("death_save_refilled")
-	# Quit after the stage was cleared (its Warden broken: the gates, the launch, the boss after a
-	# world's last stage) and continued back at that stage's start with less than was held: the
-	# cleared stage is replayed. A Continue that resumes at the gates or the boss is not this.
 	if String(_before["state"]) in ["gates", "launch", "boss", "victory"] and run.stage == int(_before["stage"]) \
 			and _game.flow.state_name() == "stage" and (run.cogs < int(_before["cogs"]) or run.parts.size() < int(_before["parts"])):
 		wrong.append("cleared_stage_lost")
-	# Quit in the victory beat after a boss fell and continued back into that boss's arena: the run
-	# file is written before the arena, not at the fall, so the win is fought again.
 	if String(_before["state"]) == "victory" and _game.flow.state_name() == "boss":
 		wrong.append("won_boss_refought")
 	_row("resume", {"ok": wrong.is_empty(), "wrong": wrong, "now": now, "saved": want, "before": _before})
@@ -367,12 +300,9 @@ func _stack() -> void:
 		if _game.build != null:
 			_game.build.recompute()
 		_row("stacked", {"parts": Array(_game.run.parts), "cursed": _game.run.cursed()})
-		# The run's first stage_entered fired before this wrapper hooked the game.
 		_on_stage_entered(_game.run.stage, false)
 
 
-# A terminal run must not come back from the title's Continue (BIBLE section 6). Deferred so the
-# run end has cleared the store; it runs before the next tick, when bot_run frees the game.
 func _on_flow_changed(state: String) -> void:
 	if _mode == "quit" and state in ["dead", "summary"] and not _terminal_checked:
 		_terminal_checked = true
@@ -402,7 +332,6 @@ func _low_hull() -> void:
 	_game.run.hp = _game.run.max_hp * LOW_HULL
 
 
-# item_fuzz's draft: 6 to 14 legal parts from the game's own rolls.
 func _draft() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash(["fuzz", _seed])
@@ -430,7 +359,6 @@ func _draft() -> void:
 			run.add_part(part_id, "fuzz")
 
 
-# A curse deal taken on stage 1, as RunState.cursed() reads it.
 func _curse() -> void:
 	var memory: Dictionary = _game.run.trade_memory
 	memory.seen.append({"curse": true, "stage": 1})

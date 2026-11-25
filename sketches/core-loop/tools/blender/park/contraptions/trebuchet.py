@@ -41,43 +41,43 @@ def leg_at(x, y):
 def base(s):
     for sx in (-1, 1):
         x = sx * POST_X
-        s.box((1.8, 0.9, 1.8), (x, GROUND + 0.45, POST_Z), T["concrete"])                # footings
+        s.box((1.8, 0.9, 1.8), (x, GROUND + 0.45, POST_Z), T["concrete"])
         s.box((1.84, 0.04, 1.84), (x, GROUND + 0.3, POST_Z), T["concrete_dk"])
         s.box((1.4, 0.9, 1.4), (x * 1.08, GROUND + 0.45, FOOT_Z), T["concrete"])
-        pk.strut(s, (x, GROUND + 0.9, POST_Z), (x, POST_TOP, POST_Z), 1.1, 1.1, T["iron"])    # post
-        s.box((1.4, 0.3, 1.4), (x, POST_TOP + 0.15, POST_Z), T["copper"])                  # cap plate
-        pk.strut(s, (x, 9.6, POST_Z - 0.4), (x * 1.08, GROUND + 0.9, FOOT_Z), 0.7, 0.7, T["iron_hi"])   # raked rear leg
-        pk.strut(s, (x, 3.2, POST_Z - 0.5), (x * 1.03, 3.2, POST_Z - 3.2), 0.35, 0.35, T["iron"])       # side brace
-        s.box((1.5, 1.5, 1.5), (x, 10.5, POST_Z), T["iron_hi"])                             # bearing block
-        s.box((1.6, 1.6, 1.6), (x, GROUND + 1.4, POST_Z), T["concrete"])                    # concrete collar round the post foot
+        pk.strut(s, (x, GROUND + 0.9, POST_Z), (x, POST_TOP, POST_Z), 1.1, 1.1, T["iron"])
+        s.box((1.4, 0.3, 1.4), (x, POST_TOP + 0.15, POST_Z), T["copper"])
+        pk.strut(s, (x, 9.6, POST_Z - 0.4), (x * 1.08, GROUND + 0.9, FOOT_Z), 0.7, 0.7, T["iron_hi"])
+        pk.strut(s, (x, 3.2, POST_Z - 0.5), (x * 1.03, 3.2, POST_Z - 3.2), 0.35, 0.35, T["iron"])
+        s.box((1.5, 1.5, 1.5), (x, 10.5, POST_Z), T["iron_hi"])
+        s.box((1.6, 1.6, 1.6), (x, GROUND + 1.4, POST_Z), T["concrete"])
         s.box((1.64, 0.04, 1.64), (x, GROUND + 1.5, POST_Z), T["concrete_dk"])
         ys = (2.0, 4.5, 7.0)
-        for y in ys:                                                                       # lattice between post and rear leg
+        for y in ys:
             pk.strut(s, (x, y, POST_Z - 0.4), leg_at(x, y), 0.28, 0.28, T["iron"])
         for y0, y1 in zip(ys, ys[1:] + (9.4,)):
             pk.strut(s, (x, y0, POST_Z - 0.4), leg_at(x, y1), 0.22, 0.22, T["iron_hi"])
-    s.box((7.2, 0.5, 0.8), (0, GROUND + 0.7, FOOT_Z), T["concrete_lt"])                       # rear sill
-    s.box((6.2, 0.5, 0.9), (0, GROUND + 0.7, POST_Z), T["concrete_lt"])                       # front sill
-    pk.tube(s, (-3.7, PIVOT[1], PIVOT[2]), (3.7, PIVOT[1], PIVOT[2]), 0.3, 0.3, 10, T["copper"])   # axle
-    for sx in (-1, 1):                                                                     # form-board joints on the footings
+    s.box((7.2, 0.5, 0.8), (0, GROUND + 0.7, FOOT_Z), T["concrete_lt"])
+    s.box((6.2, 0.5, 0.9), (0, GROUND + 0.7, POST_Z), T["concrete_lt"])
+    pk.tube(s, (-3.7, PIVOT[1], PIVOT[2]), (3.7, PIVOT[1], PIVOT[2]), 0.3, 0.3, 10, T["copper"])
+    for sx in (-1, 1):
         pk.tube(s, (sx * 3.0 - 0.91, GROUND + 0.75, POST_Z), (sx * 3.0 + 0.91, GROUND + 0.75, POST_Z), 0.03, 0.03, 4, T["concrete_dk"])
 
 
 def arm(s):
-    pk.strut(s, (0, 0, -10.0), (0, 0, 6.5), 0.6, 0.7, T["iron"])                           # beam
-    pk.tube(s, (-0.8, 0, 0), (0.8, 0, 0), 0.55, 0.55, 10, T["copper"])                     # hub on the axle
+    pk.strut(s, (0, 0, -10.0), (0, 0, 6.5), 0.6, 0.7, T["iron"])
+    pk.tube(s, (-0.8, 0, 0), (0.8, 0, 0), 0.55, 0.55, 10, T["copper"])
     for z in (-1.5, 1.5):
         s.box((0.74, 0.9, 0.3), (0, 0, z), T["iron_hi"])
-    s.box((2.0, 2.0, 3.6), (0, -0.55, 8.2), T["concrete"])                                 # counterweight block
+    s.box((2.0, 2.0, 3.6), (0, -0.55, 8.2), T["concrete"])
     for y in (-0.9, -0.1):
         s.box((2.04, 0.05, 3.64), (0, y - 0.1, 8.2), T["concrete_dk"])
     for z in (6.7, 9.7):
-        s.box((2.1, 2.1, 0.22), (0, -0.55, z), T["copper"])                                # straps
-    s.box((1.4, 0.18, 1.6), (0, -0.52, -9.0), T["copper"])                                  # sling cradle
+        s.box((2.1, 2.1, 0.22), (0, -0.55, z), T["copper"])
+    s.box((1.4, 0.18, 1.6), (0, -0.52, -9.0), T["copper"])
     for sx in (-1, 1):
         s.box((0.14, 0.7, 1.6), (sx * 0.68, -0.2, -9.0), T["copper_dk"])
     pk.tube(s, (0, -0.1, -10.0), (0, -0.5, -10.0), 0.12, 0.12, 6, T["copper"])
-    pk.strut(s, (0, 0.3, -1.0), (0, 1.1, -1.0), 0.3, 0.3, T["iron_hi"])                      # king post and stay cables
+    pk.strut(s, (0, 0.3, -1.0), (0, 1.1, -1.0), 0.3, 0.3, T["iron_hi"])
     pk.tube(s, (0, 1.1, -1.0), (0, 0.35, -9.8), 0.05, 0.05, 6, T["copper_dk"])
     pk.tube(s, (0, 1.1, -1.0), (0, 0.35, 6.4), 0.05, 0.05, 6, T["copper_dk"])
     for z in (-6.5, -3.5, 3.0, 5.0):
@@ -99,25 +99,25 @@ def detail1(s):
         for dx in (-0.6, 0.6):
             for dz in (-0.6, 0.6):
                 pk.hexstud(s, (x + dx, GROUND + 0.9, POST_Z + dz), (0, 1, 0), 0.07, 0.07, T["iron"])
-        s.box((1.0, 0.6, 0.06), (sx * 3.2, 9.4, POST_Z - 0.6), T["iron_hi"])             # gusset at the rear leg head
+        s.box((1.0, 0.6, 0.06), (sx * 3.2, 9.4, POST_Z - 0.6), T["iron_hi"])
 
 
 def detail2(s):
     for sx in (-1, 1):
         x = sx * POST_X
-        for k in range(8):                                                                # ladder rungs on each post's front
+        for k in range(8):
             s.box((0.7, 0.07, 0.07), (x, 1.2 + k * 1.1, POST_Z + 0.62), T["iron_hi"])
-        s.box((0.5, 0.35, 0.04), (x, 5.2, POST_Z + 0.57), T["copper"])                    # nameplate
+        s.box((0.5, 0.35, 0.04), (x, 5.2, POST_Z + 0.57), T["copper"])
         for dx in (-0.2, 0.2):
             pk.hexstud(s, (x + dx, 5.2, POST_Z + 0.6), (0, 0, 1), 0.022, 0.02, T["copper_dk"])
         pk.tube(s, (x * 1.08, 0.0, FOOT_Z), (x * 1.08, 0.5, FOOT_Z), 0.1, 0.1, 6, T["iron"])
         for dz in (-0.5, 0.5):
             pk.hexstud(s, (x * 1.08 + dz, GROUND + 0.9, FOOT_Z), (0, 1, 0), 0.08, 0.07, T["iron"])
-        pk.tube(s, (x, 10.9, POST_Z + 0.6), (x, 10.9, POST_Z + 0.85), 0.14, 0.1, 6, T["copper"])   # oil cup
+        pk.tube(s, (x, 10.9, POST_Z + 0.6), (x, 10.9, POST_Z + 0.85), 0.14, 0.1, 6, T["copper"])
         for k in range(4):
-            s.box((0.04, 1.2, 0.04), (x + (k - 1.5) * 0.28, GROUND + 0.7 + 0.0, POST_Z + 0.92), T["rust"])  # rust runs on the footing face
+            s.box((0.04, 1.2, 0.04), (x + (k - 1.5) * 0.28, GROUND + 0.7 + 0.0, POST_Z + 0.92), T["rust"])
     for k in range(6):
-        s.box((0.1, 0.1, 0.02), (-2.5 + k, GROUND + 0.7, FOOT_Z + 0.41), T["charcoal"])   # form-tie holes in the rear sill
+        s.box((0.1, 0.1, 0.02), (-2.5 + k, GROUND + 0.7, FOOT_Z + 0.41), T["charcoal"])
 
 
 def check_frame(s):
@@ -133,7 +133,7 @@ def check_arm(s):
     lo, hi = pk.bounds(s)
     assert abs(lo[2] + 10.0) < 0.3 and abs(hi[2] - 10.0) < 0.3 and hi[0] - lo[0] < 3.0 and hi[1] - lo[1] < 3.0, ("arm bounds", lo, hi)
     assert abs(lo[0] + hi[0]) < 0.1, "arm is not centred in x"
-    for x, y, z in s.verts:                                                               # the arm clears the posts' inner faces
+    for x, y, z in s.verts:
         assert abs(x) < POST_X - 0.55 - 0.3, ("arm too wide for the towers", x)
 
 

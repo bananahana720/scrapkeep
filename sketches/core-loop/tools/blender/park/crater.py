@@ -45,28 +45,20 @@ import common
 import kit
 
 MODELS = kit.SKETCH / "assets/models/park"
-# The one material is named for the shared slot `enamel` (src/presentation/material_slots.gd: a vertex-colour standard
-# material), because park_recipes.gd wears a surface in the slot its GLB material names and a GLB material of any other
-# name imports with vertex_color_use_as_albedo off, which draws white (probed 2026-10-11 on 4.7.2).
 MATERIAL = "enamel"
-# Godot's importer strips one "-col" suffix from a node name when it makes the collision body (probed 2026-10-11 on
-# 4.7.2: a node "<id>-col" arrives named "<id>"), while park_recipes.gd recognises the collider mesh by a name that
-# still ends in "-col". The node is therefore authored with the suffix twice, so it arrives as "<id>-col" with the
-# importer's StaticBody3D and ConcavePolygonShape3D under it, which is what the loader reads.
 COL_NODE = "%s-col-col"
 
-# Stamp geometry (park_stamps.gd) and the recipe's own radii, all in stamp radii F.
-LIP_R = 0.7647097548633961      # where the stamp's inside wall crosses y 0 (solved by solve_lip, asserted)
+LIP_R = 0.7647097548633961
 CREST_R = 0.85
 RIM_FROM, RIM_TO = 0.7, 1.0
 BLANKET_R = 1.5
-BLANKET_AMP = 0.07              # ejecta apron peak, in depths h
-LANE_DEG = 20.0                 # fall-line lanes kept clear of blocks, boulders and cobbles
-RIDE_PROUD = 0.05               # most any shell part may stand over the surface inside the footprint (metres)
-FOOT = 1.03                     # inside this stamp radius the RIDE_PROUD rule holds
+BLANKET_AMP = 0.07
+LANE_DEG = 20.0
+RIDE_PROUD = 0.05
+FOOT = 1.03
 
-BUDGET_BASE = [16000, 48000, 2]     # park_large: triangles, vertices, draws
-BUDGET_DETAIL = [1500, 3000, 1]     # detail
+BUDGET_BASE = [16000, 48000, 2]
+BUDGET_DETAIL = [1500, 3000, 1]
 
 SPEC = {
     "crater_event": {"f": 28.0, "h": 8.0, "segs": 96, "col_segs": 48, "blocks": 14, "block": 1.7,
@@ -74,7 +66,6 @@ SPEC = {
     "crater_ending": {"f": 235.0, "h": 60.0, "segs": 128, "col_segs": 64, "blocks": 28, "block": 9.5,
                       "boulders": 30, "boulder": 4.5, "cobbles": 90, "cobble": 0.7, "tufts": 44, "seed": 2},
 }
-# Expected sizes (x, y, z metres) of the base render mesh, checked after export; a drift is a geometry change.
 SIZE_TOL = 0.04
 
 CREAM = (0.88, 0.80, 0.63)
@@ -87,7 +78,6 @@ SAGE = (0.50, 0.56, 0.42)
 JUNIPER = (0.29, 0.37, 0.28)
 
 
-# ---------------------------------------------------------------- the surface
 def h32(a, b=0, c=0):
     """A deterministic hash to [0, 1): integer only, so a rebuild is byte-identical on any machine."""
     x = (a * 73856093 ^ b * 19349663 ^ c * 83492791) & 0xFFFFFFFF
@@ -179,7 +169,6 @@ def in_lane(phi):
     return min(a, math.pi - a) < math.radians(LANE_DEG)
 
 
-# ---------------------------------------------------------------- colour
 def streak(phi, depth, n=11, width=0.07):
     """Desert varnish runs down the wall: each streak wanders a little with depth and thins toward the floor."""
     best = 0.0
@@ -217,7 +206,6 @@ def terrain_color(spec, rho, phi, y, i, j):
     return mixc(col, VARNISH, 0.07 * n)
 
 
-# ---------------------------------------------------------------- mesh parts
 class Mesh:
     """Vertices in Godot space, triangles, a colour per vertex and a smooth flag per triangle."""
 
@@ -261,7 +249,6 @@ def terrain(spec, col):
     m = Mesh()
     f = spec["f"]
     verts, colors = [], []
-    # Vertex 0 is the centre; then rings in order, each `segs` around, bearing phi = 2 pi k / segs.
     verts.append(world(spec, 0.0, 0.0))
     colors.append(terrain_color(spec, 0.0, 0.0, -spec["h"], 0, 0))
     for r, rho in enumerate(rings):
@@ -271,7 +258,6 @@ def terrain(spec, col):
             verts.append(v)
             colors.append(terrain_color(spec, rho, phi, v[1], r + 1, k))
     tris = []
-    # Fan from the centre to ring 0, wound so the face normal is +Y.
     for k in range(segs):
         tris.append((0, 1 + (k + 1) % segs, 1 + k))
     for r in range(len(rings) - 1):
@@ -294,7 +280,6 @@ def block(spec, i, kind, size, rho_lo, rho_hi, base_sink):
             break
     s = size * lerp(0.55, 1.2, h32(seed + 2, i))
     sx, sz = s * lerp(0.8, 1.4, h32(seed + 3, i)), s * lerp(0.8, 1.4, h32(seed + 4, i))
-    # The block's own reach keeps its inner corner outside the footprint.
     rho = lerp(rho_lo, rho_hi, h32(seed + 1, i)) + 0.75 * max(sx, sz) / spec["f"]
     cx, gy, cz = world(spec, rho, phi)
     sy = s * lerp(0.5, 1.0, h32(seed + 5, i))
@@ -332,7 +317,6 @@ def shell1(spec):
     for i in range(spec["boulders"]):
         v, t, c = block(spec, i, 2, spec["boulder"], 1.05, 1.46, 0.3)
         m.add(v, t, c, False, "out")
-    # Strata ribbons: dashes of darker rock along four depths of the wall, 0.03 m proud.
     f = spec["f"]
     width_rho = 0.008
     for b, d in enumerate((0.30, 0.42, 0.58, 0.80)):
@@ -397,7 +381,6 @@ def shell2(spec):
     for i in range(spec["tufts"]):
         v, t, c = tuft(spec, i, 0.9 * (spec["cobble"] / 0.28) ** 0.5)
         m.add(v, t, c, False, None)
-    # Varnish chips: small flat quads on the wall, 0.02 m proud.
     for i in range(60):
         seed = spec["seed"] * 1000 + 50
         phi = math.tau * h32(seed, i)
@@ -410,7 +393,6 @@ def shell2(spec):
             x, z = cx + dx, cz + dz
             quad.append((x, ground_at(spec, x, z)[0] + 0.02, z))
         m.add(quad, [(0, 2, 1), (1, 2, 3)], [mixc(VARNISH, OXIDE, 0.25)] * 4, False)
-    # Cracks: long thin strips across the floor, 0.015 m proud.
     for i in range(14):
         seed = spec["seed"] * 1000 + 60
         phi = math.tau * h32(seed, i)
@@ -425,7 +407,6 @@ def shell2(spec):
     return m
 
 
-# ---------------------------------------------------------------- checks
 def check_mesh(name, m, spec, base, col=False):
     """Fails loud: finite, upward-wound terrain, the surface where the stamp says it is, no part proud inside the footprint."""
     f = spec["f"]
@@ -451,7 +432,6 @@ def check_terrain_matches(spec, m):
     return worst
 
 
-# ---------------------------------------------------------------- export
 def material():
     mat = bpy.data.materials.new(MATERIAL)
     mat.use_nodes = True
@@ -490,7 +470,6 @@ def build(id, spec, out_dir, count_only):
     colm = base_mesh(spec, True)
     s1, s2 = shell1(spec), shell2(spec)
     check_terrain_matches(spec, base)
-    # Base and collider: terrain and blocks only, so inside the footprint the surface is the stamp.
     check_mesh(id, base, spec, True)
     check_mesh(id + "-col", colm, spec, True)
     p1 = check_mesh(id + "_detail1", s1, spec, False)

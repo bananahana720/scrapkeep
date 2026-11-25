@@ -81,7 +81,6 @@ def main():
     if args.previews:
         for kind,count in [("trails",13),("decals",10),("paints",6)]:
             doc = json.loads((args.previews/("preview_"+kind+".json")).read_text())
-            # Each recipe record is confined to this family.
             doc = [r for r in doc if r["id"].startswith("trail_" if kind=="trails" else "decal_" if kind=="decals" else "companion_paint_")]
             assert len(doc)==count,(kind,len(doc))
             for entry in doc:

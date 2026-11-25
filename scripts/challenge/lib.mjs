@@ -1,8 +1,3 @@
-// The challenge lane's pure half: the band targets, which runs a table needs, how one run is
-// graded, and how the grades become a table. scripts/challenge/run.mjs does the running; nothing
-// here starts Godot. The skill bands themselves (Novice, Learner, Expert) live in
-// sketches/core-loop/tools/skill_band.gd.
-
 import os from "node:os";
 import fairnessLines from "./fairness.json" with { type: "json" };
 
@@ -15,17 +10,6 @@ export const PILOTS = [
   "remembered_cannon",
 ];
 
-// Coordinator ruling, DECISIONS.md section 5, 19 Oct 01:58 (verbatim):
-// "Base-tier targets with an ordinary build: bosses and Wardens beat Novice in at least 85% of
-// attempts; Learner wins 15-35% on a first attempt and 60% or more by the fifth; Expert wins 85%
-// or more; a top-decile (cracked) build with an Expert wins 97% or more and keeps the existing
-// growth ratios. Every lethal attack has a readable tell of at least 0.6 s, and no boss kills a
-// Learner in its first 45 s. Parks: Novice reaches the world's Warden in at most half its runs,
-// Learner in 80% or more."
-// "Beat Novice in 85%" is a Novice win rate of at most 15%. Rates are win fractions.
-// Learner attempt 1 is information only at bosses and Wardens (DECISIONS section 5, 19 Oct 19:00,
-// which replaced it as a graded band), so a fight cell has no learner1 target and no ✓/✗ there;
-// LEARNER1_FIGHT_REFERENCE is the old 15-35% range, printed beside the table for reading only.
 export const LEARNER1_FIGHT_REFERENCE = { min: 0.15, max: 0.35 };
 export const TARGETS = {
   fight: {
@@ -39,7 +23,7 @@ export const TARGETS = {
     learner1: { min: 0.8 },
   },
   earliestLearnerBossDeathS: 45,
-  tellS: fairnessLines.tellS, // the one tell time (fairness.json); the readable-tell check itself is the attack sheet's, not this table's
+  tellS: fairnessLines.tellS,
 };
 
 export const COLUMNS = [
@@ -49,10 +33,8 @@ export const COLUMNS = [
   { id: "expert", label: "Expert ordinary", band: "expert", attempt: 1, build: "ordinary" },
   { id: "expertTop", label: "Expert top", band: "expert", attempt: 1, build: "top" },
 ];
-// The worlds' park question is only reach: Novice and Learner on a first attempt.
 export const WORLD_COLUMNS = ["novice", "learner1"];
 
-// stage = the stage the fight happens on; the boss waits after a world's last stage.
 export const BOSSES = [
   { id: "brindle", name: "Admiral Brindle", world: 1, stage: 2 },
   { id: "waking", name: "the Waking", world: 2, stage: 4 },
@@ -69,13 +51,8 @@ export const WORLDS = [1, 2, 3].map((w) => ({
   first: 2 * w - 1,
   last: 2 * w,
 }));
-// World chains are a comparison column only (coordinator ruling, 19 Oct 04:32Z: "chain, information only"):
-// no target, no ✓/✗, never in the fail or incomplete lists.
 const CHAIN_IDS = new Set(WORLDS.map((w) => w.id));
 export const isChain = (cell) => CHAIN_IDS.has(cell);
-// A park cell: resume park N and stop the tick its own Warden is engaged. This is the default park measure: the
-// world chain above has to break the first park's Warden on the way, so it mixes the park target with the Warden one
-// (a Learner who wins that Warden 15-35% of the time cannot reach the second park's Warden 80% of the time).
 export const PARKS = [1, 2, 3, 4, 5, 6].map((n) => ({
   id: "park" + n,
   park: n,
@@ -84,35 +61,19 @@ export const PARKS = [1, 2, 3, 4, 5, 6].map((n) => ({
   last: n,
 }));
 
-// The whole-World-1 clear (wave 36, difficulty-plan.md row D8): one bot run of the dam, the flume and Admiral Brindle in one
-// attempt. It is its own cell, never part of `--only=w1` (that id is the stage 1 Warden) and never in the default cells, so
-// today's band runs stay as they are; ask for it with `--only=w1clear` (`--cells=clear` alone selects nothing). Information only,
-// no target. One run has one persona, so the whole clear plays the Warden persona (skipper, the one `w1` uses and the seeds are
-// shared with, 40300 up) through Brindle too; the `brindle` cell plays the brawler, so its Brindle leg is not comparable.
-// No `--to-boss`: that flag (band_run.gd) calls enter_boss on the first in-stage tick, so a run from stage 1 would fight Brindle
-// at once on an unbuilt ball (seen on 40300 in the first clear receipts, boss entered at 0.01 s). The world's own flow reaches
-// Brindle after the flume's Warden, and `--until=2` ends the run when stage 3 opens, which is after Brindle falls.
 export const W1CLEAR = { id: "w1clear", world: 1, first: 1, last: 2 };
 export const W1CLEAR_COLUMNS = ["novice", "learner1", "learner5", "expert"];
-export const W1CLEAR_TICKS = (2 * 600 + 420 + 120) * 90; // two stages at the 600 s cap, the boss's 420 s limit, a margin
+export const W1CLEAR_TICKS = (2 * 600 + 420 + 120) * 90;
 
-// A Warden run: the fight may last 240 s from engagement (over 3x the 45-85 s stagger bands); the stage cap is lifted
-// to 600 s so it cannot cut an engaged fight first, and the tick guard sits past it.
 export const WARDEN_FIGHT_LIMIT_S = 240;
 export const WARDEN_STAGE_LIMIT_S = 600;
 export const WARDEN_TICKS = (WARDEN_STAGE_LIMIT_S + 100) * 90;
 export const DEFAULT_SEEDS = { fight: 24, world: 16 };
-export const BOSS_TICKS = 480 * 90; // the driver's own boss limit is 420 s
+export const BOSS_TICKS = 480 * 90;
 export const WORLD_TICKS = 700 * 90;
 export const LIBRARY_STAGES = 6;
 export const MIN_BUCKET = 3;
 
-// --- build library --------------------------------------------------------------------------
-
-// Rank a stage's docs by mass, then parts count. ordinary = rank percentile 40 to 60, top = 90 and up.
-// A bucket short of MIN_BUCKET docs widens (ordinary one rank each way, top downward) until it has them or
-// every doc is in. A small library therefore makes the buckets overlap (a doc in both); `overlap` counts those,
-// and the table marks the Expert-top column "(overlaps ordinary)" when it is not zero.
 export function pickBuilds(docs) {
   const ranked = [...docs].sort(
     (a, b) => a.mass - b.mass || a.parts - b.parts || String(a.file).localeCompare(String(b.file)),
@@ -140,7 +101,6 @@ export function pickBuilds(docs) {
   return { ordinary, top, ranked, overlap };
 }
 
-// An entrance file is the RunStore's envelope: { generation, schema, run: { stage, mass, parts, ... } }.
 export function describeDoc(file, text) {
   const doc = JSON.parse(text);
   const run = doc.run ?? doc;
@@ -156,11 +116,6 @@ export function describeDoc(file, text) {
   };
 }
 
-// --- planning the table ---------------------------------------------------------------------
-
-// columns: ids from COLUMNS (run.mjs adds expertTop beside expert unless --no-top).
-// builds: { [stage]: { ordinary: [doc], top: [doc] } } (pickBuilds per stage); doc.file is the path to hand to --entrance.
-// A cell is a fight or a park; a column is a band (and a build bucket); a job is one seed of one column of one cell.
 export function planCells(opts) {
   const {
     builds = {},
@@ -198,7 +153,6 @@ export function planCells(opts) {
     );
     for (const col of cols) {
       const stage = def.kind === "world" ? def.first : def.stage;
-      // Stage 1 is the start of a run: no build to carry, so it plays fresh (the seed picks the pilot).
       const docs = stage === 1 ? [null] : (builds[stage]?.[col.build] ?? []);
       const count =
         seeds ??
@@ -219,9 +173,7 @@ export function planCells(opts) {
   return jobs;
 }
 
-// Seeds depend on the cell and the index only, so columns of a cell face the same seeds.
 function cellSeed(def, i) {
-  // The same seeds as `w1` (the stage 1 Warden), so the two cells pair seed for seed on stage 1.
   if (def.kind === "clear") return 40000 + (3 + W1CLEAR.first - 1) * 100 + i;
   const slot =
     def.kind === "boss"
@@ -282,7 +234,6 @@ function base(def, col, i, persona, wardenPersona, parkPersona, doc = null, tune
   };
 }
 
-// Job i of n goes to shard (i mod n) + 1: an even, deterministic split with each column spread across shards.
 export function shardJobs(jobs, spec) {
   if (!spec) return jobs;
   const m = /^(\d+)\/(\d+)$/.exec(spec);
@@ -311,24 +262,15 @@ export function botArgs(job, out) {
   ];
 }
 
-// --- what a player would report -----------------------------------------------------------------
-
-// Every band run plays the park table with the play watch on (bot_run --qa-log=1, src/core/play_watch.gd,
-// which only reads the game): a run judged on its win or loss is also read for what a player would
-// report. Worst first: a wedge against a wall, a fall through the floor, an empty objective plate and
-// a hull bar off the hull are bugs wherever they happen; stuck and hung are read with the bot's goal (a camper waits by design).
 export const QA_KINDS = ["wedged", "fell", "blank", "bar", "stuck", "hung"];
 const QA_PLACE_M = 10;
 
-// The watch's rows from one run's qa-<seed>.ndjson, without the objective rows (every plate change).
 export function qaRows(text) {
   return parseNdjson(text)
     .filter((row) => QA_KINDS.includes(row.kind))
     .map(({ kind, stage, s, at, flow, goal }) => ({ kind, stage, s, at, flow, goal }));
 }
 
-// runs: the runs.ndjson lines; a line carries `qa` (qaRows of its run) when the watch's file was read.
-// Rows are gathered by kind, stage and place (a QA_PLACE_M square), so one bad spot met by ten runs is one line.
 export function playerReport(runs) {
   const watched = runs.filter((run) => Array.isArray(run.qa));
   const kinds = Object.fromEntries(QA_KINDS.map((kind) => [kind, { rows: 0, runs: 0 }]));
@@ -403,13 +345,6 @@ export function renderPlayerReport(report, limit = 25) {
   return lines.join("\n");
 }
 
-// --- grading --------------------------------------------------------------------------------
-
-// win / loss / timeout / error. A timeout (a stall, a fight cap, a tick guard) is not a win; an error
-// (no row, or no fight reached) is not either, and the table counts both apart from losses.
-// The comps study's per-fight report (research/comps/difficulty/SUMMARY.md, Lab measure), from one fight record:
-// the largest single hit as a share of pilot health and the share of health lost in the fight's first 45 s.
-// A Warden never engaged has no fight to report, so its shares are null, not zero. The study file arrives with #167.
 export function fightReport(note, maxHp, engaged = true) {
   if (!note || !engaged)
     return {
@@ -419,8 +354,6 @@ export function fightReport(note, maxHp, engaged = true) {
       largestHullShare: null,
       hull45Share: null,
     };
-  // hp_lost* and largest_hit are the whole hit before scrap armour; hull_* is what reached the hull. Rows
-  // recorded before the driver kept hull keys read null for the hull, not zero.
   const hullKnown =
     note.hull_lost_45s != null || note.largest_hull_hit != null || note.hull_lost != null;
   return {
@@ -453,7 +386,6 @@ export function gradeRun(kind, row, job = {}) {
         diedS: boss?.died_s ?? boss?.seconds ?? null,
         ...rep,
       };
-    // "boss" is the driver finding no boss module in the boss state: the harness's fault, not a fight.
     if (row.outcome === "boss") return { result: "error", why: "no boss module in the boss state" };
     if (row.outcome === "boss_stalled" || boss)
       return {
@@ -500,9 +432,7 @@ export function gradeRun(kind, row, job = {}) {
     };
   }
   if (kind === "clear") {
-    // Won = Admiral Brindle defeated in the same attempt. Where it ended: the stage reached, and how (death, a cap, or the clear).
     const boss = row.boss;
-    // where: the stage the run was in, or the boss fight when a boss note exists, so a stage 2 death reads apart from a boss death.
     const at = {
       stage: row.stage_reached ?? null,
       gameS: row.game_seconds ?? null,
@@ -538,7 +468,6 @@ export function gradeRun(kind, row, job = {}) {
   throw new Error("unknown kind " + kind);
 }
 
-// bot_driver.gd fight_start_of: the fight clock starts at the later of the bot's turn to the Warden and its engagement.
 export function fightStart(note) {
   const turned = note.warden_fight_s;
   const engaged = note.warden_engaged_s;
@@ -569,8 +498,6 @@ export const EXCLUDED = ["error", "killed"];
 export const INCOMPLETE_SHARE = 0.1;
 const CAPPED = ["fight_capped", "boss_stalled", "ticks_done"];
 
-// One column of one cell: grades is the list of gradeRun results. Errors (no record, boss never entered, doc not
-// resumed) and harness kills are excluded: they are not in n or the rate. Over 10% excluded makes the column incomplete.
 export function aggregate(grades) {
   const total = grades.length;
   const error = grades.filter((g) => g.result === "error").length;
@@ -617,7 +544,6 @@ export function aggregate(grades) {
   };
 }
 
-// ok = the point estimate meets the target; null = no target or no runs.
 export function meets(target, rate) {
   if (!target || rate == null) return null;
   if (target.min != null && rate < target.min - 1e-9) return false;
@@ -625,12 +551,6 @@ export function meets(target, rate) {
   return true;
 }
 
-// Early stop (ruling dg): a column's ✓/✗ is settled when every way its unfinished seeds could
-// end, each a win or not, gives the mark the finished seeds already give. Returns that mark, or
-// null while it can still change. A column with no target, one already over the excluded share,
-// and a boss Learner column while the 45 s tell is still clean are never settled: they run every
-// seed. An unfinished seed that ends as an error or a kill makes the full read's column
-// incomplete at most, never the other mark.
 export function settledMark({ grades, left, target, tellOpen = false }) {
   if (!target || tellOpen || left <= 0) return null;
   const a = aggregate(grades);
@@ -641,7 +561,6 @@ export function settledMark({ grades, left, target, tellOpen = false }) {
   return now;
 }
 
-// The target a cell's column is graded against, as buildTable grades it.
 export function columnTarget(cell, kind, column) {
   return isChain(cell) || kind === "clear" ? null : targetFor(kind, column);
 }
@@ -658,9 +577,6 @@ export function describeTarget(t) {
 
 const pct = (x) => Math.round(x * 100) + "%";
 
-// --- the table ------------------------------------------------------------------------------
-
-// runs: rows as written to runs.ndjson: { job fields..., row }. Returns one entry per cell.
 export function buildTable(runs, buckets = {}) {
   const cells = new Map();
   for (const r of runs) {
@@ -682,7 +598,6 @@ export function buildTable(runs, buckets = {}) {
       }
       const ord = columns.expert?.medianFightS;
       const top = columns.expertTop?.medianFightS;
-      // The 45 s check covers every Learner column that ran (attempt 1 and attempt 5).
       const learners = [columns.learner1, columns.learner5].filter(Boolean);
       const deaths = learners.flatMap((l) => l.deathsS);
       const early = deaths.filter((d) => d < TARGETS.earliestLearnerBossDeathS).length;
@@ -695,7 +610,7 @@ export function buildTable(runs, buckets = {}) {
         overlap,
         info: isChain(c.cell) || c.kind === "clear",
         ...(c.kind === "clear" ? { ends: endsByColumn(c.grades) } : {}),
-        growthRatio: ord && top ? round2(top / ord) : null, // reported, not graded
+        growthRatio: ord && top ? round2(top / ord) : null,
         tell:
           c.kind === "boss" && learners.length
             ? {
@@ -727,7 +642,6 @@ function cellText(c, note = "") {
     .join(", ");
   if (c.incomplete) return `incomplete: ${c.n} of ${c.total} counted (excluded: ${out})${note}`;
   const mark = c.ok === null ? "" : c.ok ? " ✓" : " ✗";
-  // A stall or a fight cap is the fight beating the player, not a win: shown beside the deaths.
   const extra = [
     c.losses ? `${c.losses} died` : "",
     c.capped ? `${c.capped} capped` : "",
@@ -901,7 +815,6 @@ export function renderTable(table, meta = {}) {
     failing.length ? `Cells with a ✗${scope}: ${failing.join(", ")}.` : `No cell has a ✗${scope}.`,
     "",
   );
-  // The fairness marks are their own judgement and are summed apart, so the two sentences cannot disagree.
   if (meta.fairness) {
     const bad = meta.fairness.flatMap((p) =>
       fairnessFails(p).map((f) => `${p.cell} ${p.column} ${f}`),
@@ -914,7 +827,6 @@ export function renderTable(table, meta = {}) {
   return lines.join("\n");
 }
 
-// Where a column's w1clear runs ended, by stage: "s1: 2 died / 0 capped / 0 cleared, s2: ...".
 function endsByColumn(grades) {
   const out = {};
   for (const [id, list] of Object.entries(grades)) {
@@ -930,22 +842,15 @@ function endsByColumn(grades) {
   return out;
 }
 
-// --- fairness: the three numbers wave 37 is judged by (difficulty-plan.md rows F1 to F3) -------------------------------
-
-// The pass lines and the tell time live once, in fairness.json, which tools/bot_fairness.gd reads too.
 export const FAIRNESS = fairnessLines;
 
 const num = (x) => (typeof x === "number" && Number.isFinite(x) ? x : null);
 
-// One run's `row.fairness` (tools/bot_fairness.gd record). A run recorded before the field, or a field missing, is null:
-// not measured. It is never read as 0.
 export function fairnessOf(run) {
   const f = run?.row?.fairness;
   if (!f || typeof f !== "object") return null;
   const hull = f.hull && typeof f.hull === "object" ? f.hull : {};
   const k = f.killing_hit && typeof f.killing_hit === "object" ? f.killing_hit : null;
-  // Scrap taken through lose_scrap (a record from before the field has none and reads as no scrap). It stays in its own
-  // buckets: the hull ones sum to hull_lost, and the pooled readings below are the ones that add the two.
   const scrap = f.scrap && typeof f.scrap === "object" ? f.scrap : {};
   return {
     telegraphed: num(hull.telegraphed),
@@ -967,12 +872,9 @@ export function fairnessOf(run) {
   };
 }
 
-// Runs excluded the way the win table excludes them: no record, an unresumed doc, a harness kill.
 const counted = (run) =>
   !EXCLUDED.includes(run.grade?.result ?? "") && run.row?.resumed !== false && run.row != null;
 
-// The runs of one cell and one arm, pooled. Hull and seconds are summed over the runs that measured them, so a long run counts
-// for more than a short one. Each number is null when no run measured it, and the reason is kept for the table.
 export function fairnessPool(runs) {
   const rows = runs.map(fairnessOf).filter(Boolean);
   const out = { runs: runs.length, measured: rows.length };
@@ -996,18 +898,13 @@ export function fairnessPool(runs) {
   const whole = hullWhole + scrap.telegraphed + scrap.untelegraphed + scrap.contact + scrap.unknown;
   out.hull = hull;
   out.scrap = scrap;
-  // Unknown and contact read over hull as they always did, and unknown again over hull and scrap together (a scrap point counts
-  // as a hull point). Scrap must not dilute the unknown hull, so F1's mark drops when either unknown share is over the line.
   out.unknownShare = hullWhole > 0 ? hull.unknown / hullWhole : null;
   out.pooledUnknownShare = whole > 0 ? (hull.unknown + scrap.unknown) / whole : null;
   out.contactShare = hullWhole > 0 ? hull.contact / hullWhole : null;
-  // F1 is two readings and fails when either is under its line (ruling cu, harder never easier): the hull share as it always
-  // read, and the pooled share with scrap taken through lose_scrap counted a point for a point.
   out.telegraphShare = tel + unt > 0 ? tel / (tel + unt) : null;
   const ptel = tel + scrap.telegraphed;
   const punt = unt + scrap.untelegraphed;
   out.pooledShare = ptel + punt > 0 ? ptel / (ptel + punt) : null;
-  // F1 carries no mark while the loss it could not match is over the line.
   out.shareMarked =
     (out.telegraphShare != null || out.pooledShare != null) &&
     !(out.unknownShare != null && out.unknownShare > FAIRNESS.unknownMaxShare) &&
@@ -1036,15 +933,11 @@ export function fairnessPool(runs) {
         ? "no hull lost at cruise"
         : null;
   if (!out.stopTaxNote) out.stopTax = slowH / slowS / (fastH / fastS);
-  // The same ratio with scrap taken beside hull, a point for a point. F2 fails when either ratio is under its line.
   const slowP = slowH + tax.reduce((a, r) => a + r.slowScrap, 0);
   const fastP = fastH + tax.reduce((a, r) => a + r.fastScrap, 0);
-  // Measured whenever there was time on both sides and loss at cruise, even when the hull alone had none (the recorder's rule).
   out.pooledStopTax =
     tax.length && slowS > 0 && fastS > 0 && fastP > 0 ? slowP / slowS / (fastP / fastS) : null;
   out.fastShare = slowS + fastS > 0 ? fastS / (slowS + fastS) : null;
-  // F3: one reading per stage and for the boss that a pack was met in. A segment with no hit is the best case and reads as
-  // infinitely late, so it can move the median; one a hit itself opened has no pack-to-hit time and is counted apart.
   const segs = rows.flatMap((r) => r.segments ?? []).filter((g) => g && g.contact);
   out.segments = segs.length;
   out.openedByHit = segs.filter((g) => g.opened_by_hit).length;
@@ -1066,8 +959,6 @@ export function fairnessPool(runs) {
   return out;
 }
 
-// One pool per cell and arm (the column), never across cells or across the arms that share a band name:
-// [{ cell, column, ...pool }], or null when no run carries the field.
 export function fairnessByCell(runs) {
   const groups = new Map();
   for (const r of runs.filter(counted)) {
@@ -1083,10 +974,7 @@ export function fairnessByCell(runs) {
   return out.some((p) => p.measured > 0) ? out : null;
 }
 
-// The numbers of one pool that miss their line (marked ones only), as "F1", "F2", "F3".
-// A reading under its line, null reads as not under it (the callers judge a missing reading apart).
 const under = (x, line) => x != null && x < line - 1e-9;
-// The shared either-fails rules: hull alone or hull and scrap pooled under the line fails the number.
 export const f1ShareUnder = (p) =>
   under(p.telegraphShare, FAIRNESS.telegraphShare) || under(p.pooledShare, FAIRNESS.telegraphShare);
 export const f2TaxUnder = (p) =>
@@ -1124,7 +1012,6 @@ export function renderFairness(fair) {
       p.stopTax == null && p.pooledStopTax == null
         ? `F2 not measured (${p.stopTaxNote})`
         : `F2 stop tax ${p.stopTax == null ? "-" : p.stopTax.toFixed(2)}${p.pooledStopTax != null && p.pooledStopTax !== p.stopTax ? ` (hull and scrap together ${p.pooledStopTax.toFixed(2)})` : ""}${mark(p.stopTax == null ? (f2TaxUnder(p) ? false : null) : !f2TaxUnder(p))}, ${pct(p.fastShare)} of time at cruise`;
-    // An infinite median means at least half the readings took no hit: exactly half on an even split, over half otherwise.
     const noHitPart = p.noHit * 2 === p.firstHitN ? "no hit in half" : "no hit in over half";
     const f3 =
       p.firstHitS == null
@@ -1144,24 +1031,17 @@ export function parseNdjson(text) {
     if (!line.trim()) continue;
     try {
       rows.push(JSON.parse(line));
-    } catch {
-      // A line cut short by a kill is itself a missing run.
-    }
+    } catch {}
   }
   return rows;
 }
 
-// Estimated wall seconds per job by kind (measured on the 4-vCPU box; see README), for --dry-run.
-export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330, clear: 300 }; // wall s per job at 4 parallel on the 4-vCPU box, smoke medians; world is a guess (no sample before 19 Oct)
+export const SECONDS_PER_JOB = { boss: 335, warden: 330, world: 330, clear: 300 };
 
-// The most Godot processes a sweep may run at once: one per core and 2 GiB of memory each
-// (a world 1 park bot run to stage 2 peaked at 0.85 GiB; the rest is headroom), never below the old fixed cap of 6.
 export function maxJobs(cpus = os.cpus().length, memBytes = os.totalmem()) {
   return Math.max(6, Math.min(cpus, Math.floor(memBytes / 2 ** 31)));
 }
 
-// Default parallelism for challenge sweeps: scales with host cores (up to 16 on 32-thread boxes,
-// 4 on 2-4 core cloud boxes) while staying within maxJobs().
 export function defaultChallengeJobs(cpus = os.cpus().length, memBytes = os.totalmem()) {
   return Math.min(maxJobs(cpus, memBytes), Math.max(4, Math.min(16, Math.floor(cpus / 2))));
 }
@@ -1175,8 +1055,6 @@ export function estimate(jobs, parallel = 4, perKind = SECONDS_PER_JOB) {
   };
 }
 
-// Library sharding: shards are separate folders with their own index.json (file paths relative to the folder).
-// Returns the joined entries, each with `from` (its shard folder); a file name seen twice keeps the first.
 export function mergeLibraryIndexes(shards) {
   const seen = new Set();
   const out = [];
@@ -1190,7 +1068,6 @@ export function mergeLibraryIndexes(shards) {
   return out.sort((a, b) => a.stage - b.stage || a.file.localeCompare(b.file));
 }
 
-// Wall and game seconds per job by kind, for re-estimating --dry-run.
 export function wallStats(runs) {
   const out = {};
   for (const kind of ["boss", "warden", "world", "clear"]) {
@@ -1206,9 +1083,6 @@ export function wallStats(runs) {
   return out;
 }
 
-// --- identity: plan hash, keys, merge checks -------------------------------------------------
-
-// A cheap stable hash (FNV-1a, 64 bits as two 32-bit lanes) so lib.mjs stays free of node imports.
 export function hashString(text) {
   let a = 0x811c9dc5;
   let b = 0x01000193 ^ text.length;
@@ -1219,11 +1093,8 @@ export function hashString(text) {
   return a.toString(16).padStart(8, "0") + b.toString(16).padStart(8, "0");
 }
 
-// The highest run tier a run can pick: src/core/run_tier.gd TOP (lib.test.mjs checks they agree).
 export const MAX_RUN_TIER = 5;
 
-// What makes two table runs the same experiment: the library, the cells, seeds, columns, personas, tune string and
-// run tier. The shard is not in it: shards of one plan share a hash. Tier 0 adds nothing, so base-tier hashes stay put.
 export function planHash(o) {
   const keys = [
     "libraryLabel",
@@ -1245,7 +1116,6 @@ export function planHash(o) {
 export const jobKey = (job, { libraryLabel, plan, commit }) =>
   `${libraryLabel ?? "-"}:${plan}:${(commit ?? "").slice(0, 8)}:${job.id}`;
 
-// meta: { shard: "i/n" | null, plan_hash, commit, library }. Returns { errors, warnings }: errors refuse the merge.
 export function checkMerge(metas, { allowMixed = false } = {}) {
   const errors = [];
   const warnings = [];
@@ -1289,7 +1159,6 @@ export function checkMerge(metas, { allowMixed = false } = {}) {
   return { errors, warnings, shards: shards.filter(Boolean) };
 }
 
-// Bucket sizes per stage from the pickBuilds results.
 export function bucketInfo(builds) {
   return Object.fromEntries(
     Object.entries(builds).map(([stage, b]) => [
@@ -1299,7 +1168,6 @@ export function bucketInfo(builds) {
   );
 }
 
-// Rows by a field, the last one winning.
 export function dedupeBy(rows, field = "id") {
   const m = new Map();
   for (const r of rows) m.set(r[field], r);

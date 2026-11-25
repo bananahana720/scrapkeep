@@ -30,7 +30,6 @@ def main():
     bpy.ops.import_scene.gltf(filepath=str(glb))
     scene=bpy.context.scene
     cam=rig.studio()
-    # Godot idle chase: 7.5-unit arm, -0.30 pitch, anchor 0.8 above ball.
     target=Vector((0,0,.8))
     cam.location=target+Vector((0,-7.5*math.cos(.30),7.5*math.sin(.30)))
     common._look(cam,target)
@@ -44,8 +43,6 @@ def main():
     scene.render.threads=4
     scene.render.film_transparent=True
     scene.render.image_settings.color_mode='RGBA'
-    # Trace only the occupied pixels, keeping the exact 1080p camera projection.
-    # The compositor restores the transparent border without rescaling.
     scene.render.use_border=True
     scene.render.use_crop_to_border=True
     scene.render.border_min_x=.4

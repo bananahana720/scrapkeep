@@ -5,13 +5,6 @@ const DeckMoves := preload("res://src/presentation/deck_moves.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
 const AceStub := preload("res://tests/support/ace_stub.gd")
 
-# Offline bounce of one scripted Warden fight through AceSequencer.render():
-#   4 bars build -> 4 bars telegraph (posture rising 75..100) -> 2 bars open
-#   -> landed hit -> 4 bars drop -> 4 bars build (18 bars total).
-#
-# Usage:
-#   godot --headless --path sketches/core-loop --script res://tools/deck_bounce.gd -- \
-#     --deck=off|festival|viking [--stems=<sidecar dir>] --out=<wav path>
 
 const BLOCK := 512
 
@@ -46,7 +39,6 @@ func _initialize() -> void:
 	var deck := DeckMoves.new()
 	var room := {"style": deck_mode, "allow": true, "posture": 30.0, "staggered": false}
 
-	# Preroll through the 1-bar pivot so recording begins sample-exact on build bar 0.
 	seq.start_level(0, true)
 	if deck_mode != "off":
 		seq.set_pump(DeckMoves.pump_for(deck_mode))
@@ -72,7 +64,6 @@ func _initialize() -> void:
 	var tele_at := t0 + tele_bar * bar
 	var open_at := t0 + open_bar * bar
 	var drop_at_target := t0 + drop_bar * bar
-	# Trigger transitions just ahead of their target bar so enter="beat" lands sample-exact on the bar line.
 	var tele_trigger := tele_at - 1024
 	var open_trigger := open_at - 1024
 	var hit_trigger := drop_at_target - beat + 100

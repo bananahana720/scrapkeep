@@ -90,8 +90,6 @@ function runCli(scriptRel, argv) {
   });
 }
 
-// --- 1. installed-build-receipt.mjs ----------------------------------------------------------
-
 const INSTALLED_ROW = {
   id: "installed-build",
   plant: "an image built from another commit must read as a miss",
@@ -126,7 +124,6 @@ test("installed-build: rejects mismatched commit, -dirty suffix, dirty: true, ba
   assert.equal(installedBuildReceipt(`commit: ${HEAD}\ndirty: true\n`, HEAD).pass, false);
   assert.equal(installedBuildReceipt("commit: not-hex-value\ndirty: false\n", HEAD).pass, false);
   assert.equal(installedBuildReceipt("built: 20261124\n", HEAD).pass, false);
-  // Planted check still catches mismatch even on a zero-leading head.
   const zeroHead = "0000000abcdef0123456789abcdef01234567890";
   assert.notEqual(mismatchedCommit(zeroHead)[0], "0");
   assert.equal(
@@ -203,8 +200,6 @@ test("installed-build: extracts usr/lib/scrapkeep/BUILD.txt from an executable A
   });
 });
 
-// --- 2. words-on-screen-receipt.mjs ----------------------------------------------------------
-
 const WORDS_ROW = {
   id: "words-on-screen",
   plant: "a label that restates its value must fail the lint",
@@ -255,7 +250,6 @@ test("words-on-screen: grades passing and failing lint, word-budget logs, teardo
   assert.equal(ok.plant_caught, true);
   assert.deepEqual(receiptRow(WORDS_ROW, ok, HEAD), { measured: ok.measured, pass: true });
 
-  // Lint failure
   const lintBad = wordsReceipt({
     lint: {
       status: 1,
@@ -268,7 +262,6 @@ test("words-on-screen: grades passing and failing lint, word-budget logs, teardo
   assert.equal(lintBad.pass, false);
   assert.equal(gradeLintOutput(1, "sketch-lint fail: 1 findings\n").ok, false);
 
-  // Word budget failure
   const budgetBad = wordsReceipt({
     lint: lintPass,
     budget: {
@@ -287,7 +280,6 @@ test("words-on-screen: grades passing and failing lint, word-budget logs, teardo
   assert.equal(budgetBad.pass, false);
   assert.match(budgetBad.measured, /ui_word_budget_first_find_test/);
 
-  // Plant not caught -> receiptRow voids it
   const unCaught = wordsReceipt({
     lint: lintPass,
     budget: budgetPass,
@@ -298,7 +290,6 @@ test("words-on-screen: grades passing and failing lint, word-budget logs, teardo
   assert.equal(unCaught.plant_caught, false);
   assert.match(receiptRow(WORDS_ROW, unCaught, HEAD).measured, /^void, the planted fault/);
 
-  // macOS dummy renderer teardown noise allowed on darwin, rejected on linux
   const teardownLog = makeBudgetLog("ui_word_budget_test", { teardown: true });
   assert.equal(gradeBudgetLog("ui_word_budget_test", teardownLog, { platform: "darwin" }).ok, true);
   assert.equal(gradeBudgetLog("ui_word_budget_test", teardownLog, { platform: "linux" }).ok, false);
@@ -320,8 +311,6 @@ test("words-on-screen: refuses dirty checkout via cleanHead", () => {
     );
   });
 });
-
-// --- 3. six-pilots-receipt.mjs ---------------------------------------------------------------
 
 const SIX_PILOTS_ROW = {
   id: "six-pilots-clear",
@@ -366,7 +355,6 @@ test("six-pilots: passes when all 6 pilots clear cleanly and planted SCRIPT ERRO
   assert.match(r.measured, /all 6 of 6 pilots/);
   assert.deepEqual(receiptRow(SIX_PILOTS_ROW, r, HEAD), { measured: r.measured, pass: true });
 
-  // Verify the planted mutation fails the exact same grader on SCRIPT ERROR.
   const plantedGrade = gradeWorld1Log(injectPlantedScriptError(log));
   assert.equal(plantedGrade.ok, false);
   assert.ok(plantedGrade.errorLines.some((l) => l.includes("SCRIPT ERROR: planted")));
@@ -440,8 +428,6 @@ test("six-pilots: CLI --log mode and dirty-checkout refusal without --log", () =
   });
 });
 
-// --- 4. release-gate-receipt.mjs -------------------------------------------------------------
-
 const RELEASE_GATE_ROW = {
   id: "release-gate",
   plant: "a test made to fail on a scratch copy of the head must turn the tally red",
@@ -499,7 +485,6 @@ test("release-gate: runs real scripts/gate/tally.mjs (no --wave), passes CLEAN p
       pass: true,
     });
 
-    // Deferred release shard MUST fail because --wave is NOT passed.
     const deferredPath = path.join(dir, `w46-${shortHead}-gate-plan.md`);
     writeFileSync(
       deferredPath,
@@ -511,12 +496,10 @@ test("release-gate: runs real scripts/gate/tally.mjs (no --wave), passes CLEAN p
     assert.equal(deferred.pass, false);
     assert.equal(deferred.plant_caught, true);
 
-    // Head mismatch between plan filename and --head fails.
     const wrongHead = releaseGateProduce({ planPath, head: OTHER_HEAD, cwd: root });
     assert.equal(wrongHead.pass, false);
     assert.match(wrongHead.measured, /plan gates/);
 
-    // CLI exit codes: 0 pass, 1 miss, 2 error.
     writeFileSync(planPath, makeFullReleasePlan());
     const outFile = path.join(dir, "release-gate.json");
     const okCli = runCli("scripts/gate/release-gate-receipt.mjs", [
@@ -573,8 +556,6 @@ test("release-gate: voids receipt when injected tally stub fails to reject plant
   });
 });
 
-// --- 5. snag-sweep-receipt.mjs ---------------------------------------------------------------
-
 const SNAG_ROW = {
   id: "snag-sweep",
   plant: "the planted snag of snag_sweep_test must be found",
@@ -626,7 +607,6 @@ function makeControlLog({ missingCheck = null, fail = false, error = false } = {
 
 test("snag-sweep: passes clean dam+flume (allowing moving ride snags and reporting graze wall/cluster hits), verifies control log & planted dam ride snag", () => {
   const dam = makeSnagReport("park_dam", {
-    // Moving bodies (lifts) on ride lanes are judged by their phase tests; graze hits on wall/cactus clusters are reported for visibility.
     snags: [
       { at: [1, 2, 3], hit: "/root/Lift", piece: "/root/Lift", class: "moving", lane: "ride" },
       {
@@ -687,7 +667,6 @@ test("snag-sweep: passes clean dam+flume (allowing moving ride snags and reporti
     pass: true,
   });
 
-  // Verify injectPlantedSnag injects a ride-lane snag and causes the exact same map grader to fail.
   const planted = gradeMapReport(injectPlantedSnag(dam), "park_dam");
   assert.equal(planted.ok, false);
   assert.equal(planted.rideSnags, 1);
@@ -731,7 +710,6 @@ test("snag-sweep: rejects incomplete run, wrong map, unmerged shard, >20% skip, 
     }).pass,
     false,
   );
-  // Single ride snag of each static class (piece, ground, other) MUST fail.
   for (const cls of ["piece", "ground", "other"]) {
     const rideRow = {
       at: [0, 0, 0],
@@ -757,7 +735,6 @@ test("snag-sweep: rejects incomplete run, wrong map, unmerged shard, >20% skip, 
     assert.equal(r.pass, false, `ride snag of class ${cls} must fail`);
     assert.equal(r.plant_caught, true);
   }
-  // A ride snag in raw snags without ride_places (older report shape) still fails.
   assert.equal(
     gradeMapReport(
       makeSnagReport("park_flume", {
@@ -771,7 +748,6 @@ test("snag-sweep: rejects incomplete run, wrong map, unmerged shard, >20% skip, 
     ).ok,
     false,
   );
-  // Open-ground control seam snag MUST fail.
   assert.equal(
     snagSweepReceipt({
       dam: makeSnagReport("park_dam", {
@@ -785,7 +761,6 @@ test("snag-sweep: rejects incomplete run, wrong map, unmerged shard, >20% skip, 
     false,
   );
 
-  // Control log missing the planted lip catch voids the receipt.
   const badCtl = snagSweepReceipt({
     dam,
     flume,
@@ -829,7 +804,6 @@ test("snag-sweep: CLI writes receipt + prints MAPCHECK with --out, handles --map
     assert.match(okCli.stdout, /MAPCHECK park_dam snags 0 pass<=0 PASS/);
     assert.match(okCli.stdout, /MAPCHECK park_flume snags 0 pass<=0 PASS/);
 
-    // Without --out or --mapcheck: stdout is valid JSON receipt.
     const jsonCli = runCli("scripts/gate/snag-sweep-receipt.mjs", [
       "--dam",
       damPath,
@@ -843,7 +817,6 @@ test("snag-sweep: CLI writes receipt + prints MAPCHECK with --out, handles --map
     assert.equal(jsonCli.status, 0);
     assert.equal(JSON.parse(jsonCli.stdout).pass, true);
 
-    // With ride snags injected in flume: exit 1 and MAPCHECK FAIL.
     writeFileSync(
       flumePath,
       JSON.stringify(
@@ -881,7 +854,6 @@ test("snag-sweep: CLI writes receipt + prints MAPCHECK with --out, handles --map
     assert.equal(missCli.status, 1);
     assert.match(missCli.stdout, /MAPCHECK park_flume snags 2 pass<=0 FAIL/);
 
-    // Missing required args -> exit 2.
     const errCli = runCli("scripts/gate/snag-sweep-receipt.mjs", ["--head", HEAD]);
     assert.equal(errCli.status, 2);
   });

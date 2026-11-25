@@ -18,7 +18,6 @@ func _init(options: Dictionary = {}, tree: SceneTree = null) -> void:
 	configure(settings)
 	if tree != null:
 		tree.node_added.connect(_on_node_added)
-	# A park stage's render regions are drawn only; a headless bot run builds the collider alone.
 	ParkTerrain.draw_regions = not _enabled("bot-no-visuals")
 
 
@@ -29,8 +28,6 @@ static func configure(settings: Dictionary) -> void:
 				settings[key] = "1"
 
 
-# --relay-stake=<0..4> (SR10): the stake the skipper puts on the park relay before it rolls in.
-# 0 (and an absent flag) leaves the bot untouched. Returns -1 for anything outside 0..4.
 static func relay_stake(settings: Dictionary) -> int:
 	if not settings.has("relay-stake"):
 		return 0
@@ -41,9 +38,6 @@ static func relay_stake(settings: Dictionary) -> int:
 	return k if k >= 0 and k <= 4 else -1
 
 
-# --explore-by=<s> (pacing lab): the stage second the completionist leaves its optional rolling for
-# the Warden, in place of BotDriver.ENGAGE_BY. Each activity keeps its ACTIVITY_SECONDS, so a site the bot
-# cannot finish costs what it costs by default, not more. 0 when absent, -1 when not a number above ENGAGE_BY.
 static func explore_by(settings: Dictionary) -> float:
 	if not settings.has("explore-by"):
 		return 0.0

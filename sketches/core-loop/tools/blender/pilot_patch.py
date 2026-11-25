@@ -31,10 +31,10 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.normpath(os.path.join(HERE, "..")))
 
-import common  # noqa: E402
-import palette_gd  # noqa: E402
-import polish  # noqa: E402
-from common import Part  # noqa: E402
+import common
+import palette_gd
+import polish
+from common import Part
 
 BONE = palette_gd.HEX["SAND"]
 COPPER = palette_gd.HEX["COPPER"]
@@ -44,7 +44,6 @@ STEEL = palette_gd.HEX["STEEL"]
 BRASS = palette_gd.HEX["BRASS"]
 LEDGER_CREAM = palette_gd.HEX["LEDGER_CREAM"]
 
-# Possum soft-toy fur & Patch's test-card pink / cold-white accent (distinct from HAZARD & KINDNESS).
 POSSUM_FUR = "7e8488"
 POSSUM_FACE = "e8e4da"
 POSSUM_EAR = "2b2d30"
@@ -74,53 +73,41 @@ def build_pilot_patch(out_path):
     root = common.empty("PilotPatch")
     p = Part("Pilot")
 
-    # Plump seated possum torso wearing a patched charcoal/verdigris Keeper vest.
     p.uv("pilot", 0.24, u=12, v=8, loc=(0.0, -0.02, -0.08), scale=(1.05, 0.92, 1.18), color=POSSUM_FUR)
     p.uv("pilot", 0.22, u=10, v=6, loc=(0.0, 0.03, -0.06), scale=(0.95, 0.85, 0.95), color=VERDIGRIS)
-    # Stick-on USB drive lanyard draped across chest (3 colorful 2010 USB sticks!).
     for sx, col in ((-0.09, PATCH_PINK), (0.0, COLD_WHITE), (0.09, COPPER)):
         p.box("hydraulic", (0.045, 0.035, 0.095), loc=(sx, 0.21, -0.04),
               rot=(math.radians(-16.0), 0.0, sx * 2.0), color=col)
 
-    # Oversized graphic-novel possum head with pale cheek mask, pointed pink-tipped snout & round dark ears.
     p.uv("pilot", 0.22, u=14, v=10, loc=(0.0, 0.02, 0.22), scale=(1.08, 1.04, 0.96), color=POSSUM_FACE)
-    # Dark crown ruff sweeping back over head.
     p.uv("pilot", 0.19, u=10, v=8, loc=(0.0, -0.04, 0.26), scale=(1.02, 1.0, 0.88), color=POSSUM_FUR)
-    # Pointed possum snout projecting forward along +Y with bright pink button nose!
     p.cyl("pilot", 0.115, 0.042, 0.20, segs=10, loc=(0.0, 0.21, 0.18),
           rot=(math.radians(-82.0), 0.0, 0.0), color=POSSUM_FACE)
     p.uv("pilot", 0.046, u=8, v=6, loc=(0.0, 0.31, 0.17), scale=(1.1, 0.9, 0.85), color=PATCH_PINK)
 
-    # Big expressive round dark-rimmed possum ears with pink inner cups.
     for sx in (-1.0, 1.0):
         p.cyl("pilot", 0.105, 0.105, 0.040, segs=12, loc=(sx * 0.18, -0.01, 0.38),
               rot=(math.radians(78.0), sx * math.radians(24.0), 0.0), color=POSSUM_EAR)
         p.cyl("pilot", 0.072, 0.072, 0.044, segs=10, loc=(sx * 0.18, 0.00, 0.38),
               rot=(math.radians(78.0), sx * math.radians(24.0), 0.0), color=PATCH_PINK)
 
-    # Chunky 2010 flip-up hacker visor goggles across brow (charcoal rim + glowing pink lens bar).
     p.box("hydraulic", (0.36, 0.12, 0.10), loc=(0.0, 0.15, 0.27), color=CHARCOAL)
     p.box("class_accent", (0.30, 0.06, 0.062), loc=(0.0, 0.195, 0.27))
 
-    # Paws reaching forward to type on the 2010 stickered netbook held in lap/console!
     for sx in (-1.0, 1.0):
         p.rod("pilot", (sx * 0.22, 0.02, 0.02), (sx * 0.20, 0.24, 0.04), 0.065, segs=8, color=POSSUM_FUR)
         p.uv("pilot", 0.062, u=8, v=6, loc=(sx * 0.16, 0.28, 0.04), color=PATCH_PINK)
-        # Seated feet tucked below.
         p.uv("pilot", 0.085, u=8, v=6, loc=(sx * 0.14, 0.14, -0.26), scale=(0.9, 1.3, 0.65), color=POSSUM_EAR)
 
-    # Stickered 2010 clamshell netbook right in front of Patch's paws!
     p.box("hydraulic", (0.34, 0.22, 0.032), loc=(0.0, 0.30, -0.01), color=CHARCOAL)
     p.box("hydraulic", (0.34, 0.030, 0.20), loc=(0.0, 0.40, 0.08),
           rot=(math.radians(-18.0), 0.0, 0.0), color=STEEL)
     p.box("class_accent", (0.28, 0.022, 0.15), loc=(0.0, 0.39, 0.08),
           rot=(math.radians(-18.0), 0.0, 0.0))
-    # Colorful 2010 band/yard stickers slapped across the outer lid!
     for sx, sz, sc in ((-0.09, 0.12, PATCH_PINK), (0.02, 0.06, AMBER), (0.10, 0.11, COLD_WHITE)):
         p.box("hydraulic", (0.075, 0.012, 0.055), loc=(sx, 0.422, sz),
               rot=(math.radians(-18.0), sx * 1.4, 0.0), color=sc)
 
-    # Long prehensile pink possum tail curling up behind Patch's back to hook the upper cockpit rail!
     tail_pts = [
         Vector((0.0, -0.18, -0.20)),
         Vector((0.05, -0.30, -0.06)),
@@ -154,7 +141,6 @@ def build_shell_patch(out_path):
     polish.enable(detail=1, bevel=0.010, bevel_min=0.05, ao_strength=0.30, ao_reach=0.28, edge=0.10)
     root = common.empty("ShellPatch")
 
-    # 1. Core (rolling sphere cage, replaced by cutaway plating under --ball-look=cutaway).
     core = Part("Core")
     for rot_e in ((0.0, 0.0, 0.0), (math.pi / 2.0, 0.0, 0.0), (0.0, math.pi / 2.0, 0.0)):
         core.ring("paint", 0.86, 0.96, 0.09, segs=18, rot=rot_e, color=VERDIGRIS)
@@ -163,53 +149,39 @@ def build_shell_patch(out_path):
     bmesh.ops.recalc_face_normals(core.bm, faces=core.bm.faces[:])
     core_obj = core.to_object((0, 0, 0), root)
 
-    # 2. Pod (level cockpit cradle + side hub mounts + rear wok-cut signal dish!).
     pod = Part("Pod")
-    # Cockpit floor pan & low seat ring inside ball (stays visible inside cutaway window).
     pod.cyl("paint", 0.42, 0.42, 0.06, segs=12, loc=(0.0, 0.0, -0.34), color=CHARCOAL)
     pod.ring("paint", 0.44, 0.56, 0.08, segs=14, loc=(0.0, 0.0, -0.30), color=COPPER)
-    # Rear upper tail-hang bar inside dome.
     pod.rod("bare_metal", (-0.34, -0.14, 0.48), (0.34, -0.14, 0.48), 0.032, segs=8)
-    # Chunky side hub-collar yokes flanking the cutaway sphere (clearance Z >= -0.35 m).
     for sx in (-1.0, 1.0):
         pod.box("paint", (0.22, 0.44, 0.34), loc=(sx * 1.08, 0.0, 0.05), color=VERDIGRIS)
         pod.cyl("paint", 0.18, 0.18, 0.24, segs=10, loc=(sx * 1.18, 0.0, 0.05), rot=ALONG_X, color=COPPER)
 
-    # Wok-cut satellite dish mounted proudly on rear-top shoulder (pilots/patch.md §1!).
     dish_c = Vector((0.0, -0.92, 0.66))
     pod.rod("bare_metal", (0.0, -0.60, 0.24), dish_c, 0.065, segs=8)
     pod.cyl("paint", 0.50, 0.34, 0.12, segs=14, loc=tuple(dish_c),
             rot=(math.radians(52.0), 0.0, 0.0), color=STEEL)
     pod.ring("paint", 0.44, 0.52, 0.06, segs=14, loc=tuple(dish_c + Vector((0.0, -0.04, 0.04))),
              rot=(math.radians(52.0), 0.0, 0.0), color=COPPER)
-    # Glowing test-card pink feed-horn dipole sticking out of wok dish center.
     pod.rod("bare_metal", dish_c, dish_c + Vector((0.0, -0.20, 0.24)), 0.032, segs=6)
     pod.ico("class_accent", 0.085, subdiv=1, loc=tuple(dish_c + Vector((0.0, -0.22, 0.26))))
 
     bmesh.ops.recalc_face_normals(pod.bm, faces=pod.bm.faces[:])
     pod_obj = pod.to_object((0, 0, 0), root)
 
-    # 3. Dome placeholder node (expected by hero_assets.gd & hero_six_pilot_budget_test conventions).
     dome_root = common.empty("Dome", (0.0, 0.0, 0.0), pod_obj)
     common.empty("PilotSeat", (0.0, 0.0, 0.0), dome_root)
 
-    # 4. WeaponRing — Ruling en heroic cutaway-first side mounts (~1.62 m reach, Z >= -0.20 m):
-    #    Right side: chunky Patch-Cable splice reel & RJ-45 jack lance!
-    #    Left side: Pointer signal-burst emitter & twin USB-stick capacitor rack!
     wring = Part("WeaponRing")
-    # Outer azimuth carrier yoke ring hugging the equator.
     wring.ring("paint", 1.00, 1.08, 0.09, segs=18, loc=(0.0, 0.0, 0.04), color=CHARCOAL)
 
-    # Right (+X) heroic Patch-Cable splice cannon + flanged cable drum (reaches ~1.65 m).
     wring.box("paint", (0.38, 0.54, 0.34), loc=(1.30, 0.06, 0.10), color=CHARCOAL)
     wring.cyl("paint", 0.22, 0.22, 0.32, segs=12, loc=(1.34, -0.20, 0.16), rot=ALONG_X, color=COPPER)
     wring.ring("class_accent", 0.20, 0.25, 0.07, segs=12, loc=(1.34, -0.20, 0.16), rot=ALONG_X)
-    # Chunky forward splice barrel + bracket fork muzzle.
     wring.box("bare_metal", (0.18, 0.62, 0.20), loc=(1.32, 0.48, 0.10))
     for sz in (-0.11, 0.11):
         wring.box("class_accent", (0.14, 0.22, 0.055), loc=(1.32, 0.80, 0.10 + sz))
 
-    # Left (-X) heroic Pointer emitter pod + twin vertical bracket antennae (reaches ~1.64 m).
     wring.box("paint", (0.38, 0.52, 0.34), loc=(-1.30, 0.06, 0.10), color=VERDIGRIS)
     wring.cyl("bare_metal", 0.13, 0.10, 0.64, segs=10, loc=(-1.32, 0.44, 0.10), rot=ALONG_Y)
     wring.ring("class_accent", 0.12, 0.19, 0.07, segs=12, loc=(-1.32, 0.74, 0.10), rot=ALONG_Y)
@@ -241,14 +213,11 @@ def build_patch_husk_sticker(out_path):
     root = common.empty("PatchHuskSticker")
     p = Part("PatchHuskStickerMesh")
 
-    # Rounded paw-print sticker plate slapped onto machine chassis.
     p.cyl("paint", 0.24, 0.24, 0.036, segs=12, loc=(0.0, 0.0, 0.24), rot=ALONG_Y, color=COLD_WHITE)
-    # Central paw pad + 4 toe beans in Patch's test-card pink!
     p.cyl("class_accent", 0.085, 0.085, 0.046, segs=10, loc=(0.0, -0.005, 0.20), rot=ALONG_Y)
     for tx, tz in ((-0.10, 0.30), (-0.036, 0.34), (0.036, 0.34), (0.10, 0.30)):
         p.cyl("class_accent", 0.038, 0.038, 0.048, segs=8, loc=(tx, -0.006, tz), rot=ALONG_Y)
 
-    # Cut command cable whipping rearward with frayed copper tip.
     pts = [
         Vector((0.0, 0.04, 0.24)),
         Vector((0.14, 0.22, 0.20)),

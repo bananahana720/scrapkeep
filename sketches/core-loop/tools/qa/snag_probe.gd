@@ -1,21 +1,5 @@
 extends RefCounted
 
-# Snag probe (wave 36, map standard point 8c): rolls the ball at cruise along and over every large
-# static piece of a built scene and records each place it snags. Shared by tools/qa/snag_sweep.gd (a
-# park stage or the Slag Bowl) and tests/snag_sweep_test.gd (a fixture floor with a planted lip).
-#
-# A piece is a ball-blocking static body (layer 1, ground tiles and areas left out) whose footprint
-# is at least LARGE_M on one side. Each piece gets lanes:
-#   ride   a piece no taller than RIDE_H, which the ball is meant to roll over: LANES lanes across it
-#          in each of the four axis directions (forward and backward along each axis).
-#   graze  a taller piece: along each of its four faces in both directions, aimed GRAZE_DEG into the
-#          face, so the ball slides along the whole wall. A flat face gives a contact turned well
-#          off the line of travel; a notch, a corner or a lip gives one that faces it.
-# A snag is a lane where the ball lost at least `loss` of its planar speed within `window_s` while a
-# contact ahead of it faced (in plan) less than `max_angle_deg` off the line of travel. One snag per lane (the
-# ball is stopped there; the lane ends). Calm world, no enemies: only the map answers.
-#
-# The probe only reads the game: ball position, velocity, contacts and the scene's colliders.
 
 const Tuning := preload("res://src/movement/tuning.gd")
 
@@ -24,26 +8,18 @@ const LARGE_M := 6.0
 const RIDE_H := 1.5
 const LANES := 3
 const RUN_M := 10.0
-# Run-out past a rideable piece's far exit rim: covers the ball's radius (1 m) plus the 0.2 s
-# deceleration window at cruise (~2.7 m) with margin, matching park_weir_deck_roll_test's 4 m
-# exit window without driving 9+ m across open ground into a separate tall building.
 const RIDE_RUNOUT_M := 5.0
 const GRAZE_DEG := 15.0
 const COVER_PAD := 0.6
 const CELL := 16.0
 const MAX_LANE_S := 14.0
-# A contact counts as a wall or lip when its normal leans at least this far off the vertical; the
-# angle to the line of travel is then read in plan, so a lip's tilted edge reads as the face it is.
 const MIN_FLAT := 0.3
 
 var loss := 0.5
 var window_s := 0.2
 var max_angle_deg := 45.0
 var min_before := 0.5
-# How many times a contact faced the ball's line of travel, counted over every frame of every lane
-# rolled. The test reads it to tell a probe that saw the lip but missed the loss from a blind one.
 var contacts_seen := 0
-# How many facing contacts were left out because they were on an actor (the test reads it, as above).
 var actors_seen := 0
 
 var _tree: SceneTree
@@ -59,10 +35,6 @@ func _init(tree: SceneTree, game, source) -> void:
 	_source = source
 
 
-# Every large piece under `root`: path, body, AABB (world), the ground it stands on is not asked here.
-# `per_shape` makes each convex or box shape of a body its own piece, path "<body>#<shape owner>",
-# for a body that is a whole map in one (the Slag Bowl: floor, rim and wall are trimeshes and count
-# as ground; its ramps, kickers and masts are the pieces).
 func pieces(root: Node, per_shape := false) -> Array:
 	var player_rid: RID = _game.player.body().get_rid()
 	var out := []
@@ -73,8 +45,6 @@ func pieces(root: Node, per_shape := false) -> Array:
 			continue
 		if co.get_parent() != null and String(co.get_parent().name) == "Tiles":
 			continue
-		# The piece's box in its own yaw frame (a rotated wall is still a box to lanes along it).
-		# A body tilted off the vertical keeps the world frame (yaw 0): its box is read as it stands.
 		var yaw := co.global_transform.basis.get_euler().y if co.global_transform.basis.y.normalized().y > 0.99 else 0.0
 		var unyaw := Basis(Vector3.UP, -yaw)
 		var box := AABB()
@@ -98,14 +68,11 @@ func pieces(root: Node, per_shape := false) -> Array:
 		if per_shape or not any or maxf(box.size.x, box.size.z) < LARGE_M or box.size.y < 0.05:
 			continue
 		out.append({"path": String(co.get_path()), "aabb": box, "yaw": yaw})
-	# Node names carry creation counters (@StaticBody3D@2512), so order by where the piece stands.
 	out.sort_custom(func(a, b): return _key(a) < _key(b))
 	return out
 
 
-# Indexes what is drawn under `roots` (mesh boxes by 16 m cell) so a contact can say whether a shown
 # mesh covers it. Under a headless display MultiMesh instance transforms read as the identity, so
-# `multimesh_trusted` goes false and the report says drawn is a lower bound.
 func index_drawn(roots: Array) -> void:
 	_meshes.clear()
 	multimesh_trusted = DisplayServer.get_name() != "headless"
@@ -150,26 +117,19 @@ static func _key(piece: Dictionary) -> String:
 	return "%09.2f %09.2f %09.2f %09.2f %s" % [c.x + 5000.0, c.z + 5000.0, c.y + 5000.0, piece.aabb.size.x, piece.path]
 
 
-# The piece's centre in world space.
 static func center(piece: Dictionary) -> Vector3:
 	return Basis(Vector3.UP, piece.yaw) * piece.aabb.get_center()
 
 
-# The lanes for one piece: [{kind, from (ground xz), dir (unit xz), length_m}].
 func lanes(piece: Dictionary) -> Array:
 	var box: AABB = piece.aabb
 	var wc := center(piece)
 	var c := Vector2(wc.x, wc.z)
 	var half := Vector2(box.size.x, box.size.z) * 0.5
 	var out := []
-	# Lane axes follow the piece's yaw: Basis(UP, yaw) sends local x to (cos, -sin) in (x, z).
 	var yaw: float = piece.yaw
 	var axes := [Vector2(cos(yaw), -sin(yaw)), Vector2(sin(yaw), cos(yaw))]
 	if box.size.y <= RIDE_H:
-		# A low piece held up over the floor (the Slag Bowl's crossbars on their masts) is not ridden: a lane
-		# rolls on the floor, so it would pass under the piece and only meet what holds it up. Only a piece the
-		# whole ball passes under counts: its clearance over the highest floor under its centre and corners is at
-		# least the ball's height. Lower, the ball can wedge under it, and its lanes find that.
 		if _clearance(piece) >= 2.0 * Tuning.RADIUS:
 			return out
 		for a in axes:
@@ -195,15 +155,12 @@ func lanes(piece: Dictionary) -> Array:
 				for sgn in [1.0, -1.0]:
 					var into: Vector2 = -perp * face
 					var dir: Vector2 = (a * sgn * co + into * s).normalized()
-					# Start RUN_M short of the near end, offset so the ball (radius and all) meets the face 2 m past that end.
 					var start: Vector2 = c + perp * face * (half_perp + Tuning.RADIUS + (RUN_M + 2.0) * tan(deg_to_rad(GRAZE_DEG))) \
 						- a * sgn * (half_along + RUN_M)
 					out.append({"kind": "graze", "from": start, "dir": dir, "length_m": half_along * 2.0 + RUN_M * 2.0})
 	return out
 
 
-# Rolls one lane. Returns {} for no snag, or the snag row. `ignore_path` is not needed: the ball is
-# dropped on the first collider surface under the start.
 func roll(piece: Dictionary, lane: Dictionary) -> Dictionary:
 	var player = _game.player
 	var box: AABB = piece.aabb
@@ -212,8 +169,6 @@ func roll(piece: Dictionary, lane: Dictionary) -> Dictionary:
 	var dir := Vector3(dir2.x, 0.0, dir2.y)
 	var top = _top(Vector3(from.x, 0.0, from.y), box.end.y + 4.0)
 	if top == null:
-		# A lane can start on ground higher than the piece's top (a lift at rest in a hollow): the ray then starts
-		# inside the ground and meets nothing, so drop again from over that ground.
 		var terrain = _game.ctx.terrain
 		if terrain != null:
 			top = _top(Vector3(from.x, 0.0, from.y), terrain.height(from.x, from.y) + 4.0)
@@ -266,8 +221,6 @@ func roll(piece: Dictionary, lane: Dictionary) -> Dictionary:
 			seen["speed_after"] = snappedf(speed, 0.1)
 			seen["t"] = snappedf(t, 0.01)
 			return seen
-		# The lane is over once the ball has crossed its length, or has sat nearly still (a ball stuck
-		# against something that did not face its line is not a snag and would run to the time cap).
 		if (Vector2(ball.x, ball.z) - from).dot(dir2) >= float(lane.length_m):
 			return {}
 		stalled = stalled + dt if speed < 0.1 * cruise else 0.0
@@ -276,7 +229,6 @@ func roll(piece: Dictionary, lane: Dictionary) -> Dictionary:
 	return {}
 
 
-# A contact ahead of the ball whose normal faces within the angle of the line of travel, else {}.
 func _facing_contact(ball: Vector3, dir: Vector3, cos_max: float) -> Dictionary:
 	var body: RigidBody3D = _game.player.body()
 	var state: PhysicsDirectBodyState3D = PhysicsServer3D.body_get_direct_state(body.get_rid())
@@ -289,7 +241,6 @@ func _facing_contact(ball: Vector3, dir: Vector3, cos_max: float) -> Dictionary:
 		if (p - ball).dot(dir) <= 0.0 or flat.length() < MIN_FLAT or absf(flat.normalized().dot(dir)) < cos_max:
 			continue
 		var other = state.get_contact_collider_object(i)
-		# An enemy or a boss piece (anything that takes damage) is an actor, not the map.
 		if other is Object and (other as Object).has_method("take_damage"):
 			actors_seen += 1
 			continue
@@ -297,7 +248,6 @@ func _facing_contact(ball: Vector3, dir: Vector3, cos_max: float) -> Dictionary:
 		var terrain := false
 		if other is Node:
 			path = String((other as Node).get_path())
-		# A body of several shapes names the shape hit; a trimesh among them is the map's own floor.
 		if other is CollisionObject3D and (other as CollisionObject3D).get_shape_owners().size() > 1:
 			var co := other as CollisionObject3D
 			var owner_id := co.shape_find_owner(state.get_contact_collider_shape(i))
@@ -317,7 +267,6 @@ func _top(at: Vector3, from_y: float):
 	return null if hit.is_empty() else hit.position
 
 
-# A piece's height over the highest floor under its centre and its four corners, INF when there is none under any.
 func _clearance(piece: Dictionary) -> float:
 	var box: AABB = piece.aabb
 	var turn := Basis(Vector3.UP, piece.yaw)
@@ -330,8 +279,6 @@ func _clearance(piece: Dictionary) -> float:
 	return INF if highest == -INF else box.position.y - highest
 
 
-# The first surface under `at` that faces up, seen from just inside a piece's base: a ray that starts inside a convex
-# shape passes out of it, and back faces are skipped so a trimesh piece's own underside is passed too.
 func _floor_under(at: Vector3):
 	var space: PhysicsDirectSpaceState3D = _game.player.body().get_world_3d().direct_space_state
 	var q := PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 400.0)
@@ -345,11 +292,7 @@ static func _v(v: Vector3) -> Array:
 	return [snappedf(v.x, 0.01), snappedf(v.y, 0.01), snappedf(v.z, 0.01)]
 
 
-# --- Class, places, bounds, control lanes --------------------------------------------------------
-
 const HOLDERS := ["ParkRows", "Contraptions", "Activities", "Tiles"]
-# A snag on a moving body (a lift, a barge): the lane met it at an unknown point of its cycle, so the row is listed
-# under this class and judged by that piece's phase test (snag_sweep.md, "Moving pieces"), not counted as a catch.
 const MOVING := "moving"
 const PLACE_M := 2.0
 const CONTROL_STEP := 100.0
@@ -357,14 +300,9 @@ const CONTROL_LEN := 60.0
 const CONTROL_PAD := 8.0
 const CONTROL_MAX := 48
 const CONTROL_SAMPLE_M := 2.0
-# Steepest authored heightfield grade for an open-ground tile-seam control lane. Skips canyon
-# cliffs, rock spires and escarpments (52 to 87 deg) while keeping gentle ground, ramps and tile
-# seams (a 0.3 m step across a 2 m cell is 8.5 deg, and collider-only seams read 0 deg).
 const CONTROL_MAX_SLOPE_DEG := 30.0
 
 
-# What a snag hit, against the piece the lane was aimed at: "piece" (that piece's own collider, or one
-# of its parts), "ground" (terrain tiles or the map's own floor body) or "other" (any other collider).
 static func classify(piece_path: String, hit_path: String, terrain := false) -> String:
 	if hit_path == piece_path:
 		return "piece"
@@ -392,8 +330,6 @@ static func loss_of(row: Dictionary) -> float:
 	return snappedf(1.0 - float(row.get("speed_after", 0.0)) / before, 0.01) if before > 0.0 else 0.0
 
 
-# Snags on the same collider (and class) within PLACE_M of each other are one place. Returns rows
-# {at, hit, class, count, pieces, worst_loss, speed_before, speed_after, drawn}, worst loss first.
 static func dedupe(snags: Array) -> Array:
 	var groups := {}
 	for s in snags:
@@ -453,7 +389,6 @@ static func _root(parent: Array, i: int) -> int:
 	return i
 
 
-# The box of the stage's ground tiles (world), or an empty AABB when the map has none.
 func ground_bounds(root: Node) -> AABB:
 	var box := AABB()
 	var any := false
@@ -473,8 +408,6 @@ func ground_bounds(root: Node) -> AABB:
 	return box
 
 
-# True when the piece stands over the stage's ground (plan, with a margin) and not far above or
-# below it, so a scene parked far off the map (the bay's barge) is not a piece of this stage.
 static func inside(piece: Dictionary, bounds: AABB) -> bool:
 	var c := center(piece)
 	return c.x >= bounds.position.x - CONTROL_PAD and c.x <= bounds.end.x + CONTROL_PAD \
@@ -482,10 +415,6 @@ static func inside(piece: Dictionary, bounds: AABB) -> bool:
 		and c.y >= bounds.position.y - 40.0 and c.y <= bounds.end.y + 120.0
 
 
-# Control lanes over rideable open ground: a grid of straight runs along x and z, kept when no
-# piece stands within CONTROL_PAD of the run, ground tiles lie under both ends, and the authored
-# heightfield stays within CONTROL_MAX_SLOPE_DEG (skipping cliffs, spires and rock fins). They
-# cross tile seams at cruise the way a piece lane's approach does. Same lane shape, kind "control".
 func control_lanes(all: Array, bounds: AABB) -> Array:
 	var out := []
 	if bounds.size.x <= 0.0:
@@ -516,7 +445,6 @@ func _rideable_ground(a: Vector2, d: Vector2, length_m: float) -> bool:
 	return max_ground_slope_deg(Callable(terrain, "height"), a, d, length_m) <= CONTROL_MAX_SLOPE_DEG
 
 
-# Steepest terrain grade (degrees) along and across a control lane's 2 m corridor.
 static func max_ground_slope_deg(height_fn: Callable, a: Vector2, d: Vector2, length_m: float) -> float:
 	var perp := Vector2(-d.y, d.x)
 	var max_slope := 0.0

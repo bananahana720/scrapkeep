@@ -1,9 +1,5 @@
 extends RefCounted
 
-# Finds which part of a physics tick a long frame spends its time in (bot_run --physics-probe=1).
-# A marker node goes before each child of the watched parents; physics callbacks of one priority
-# run in tree order, so the time between two markers is the subtree between them. A tick over
-# SLOW_MS writes a row with every gap over GAP_MS, named by the child that follows the marker.
 
 const SLOW_MS := 100.0
 const GAP_MS := 20.0

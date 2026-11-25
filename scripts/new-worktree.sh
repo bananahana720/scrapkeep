@@ -1,6 +1,4 @@
 #!/usr/bin/env bash
-# Creates ../scrapkeep-wt-<task-id> on branch wt/<task-id> at an exact commit.
-# A branch name is refused so the worktree starts at the recorded base commit.
 set -euo pipefail
 
 fail() {

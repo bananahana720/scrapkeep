@@ -79,7 +79,6 @@ CLIPS = {
 }
 GLOVE_AT = (4.3, 0.06, 3.0)
 GLOVE_FROM = (0.0, 14.0, 1.0)
-# Fingers toward the end seat, cuff out toward the rim.
 GLOVE_YAW = -125
 
 
@@ -134,7 +133,6 @@ def materials():
             mat.node_tree.links.new(tex.outputs["Color"], multiply.inputs[2])
             mat.node_tree.links.new(multiply.outputs[0], bsdf.inputs["Base Color"])
         elif name == "glass":
-            # Neutral glass, with the slate shutter and mint core carrying state.
             bsdf.inputs["Alpha"].default_value = .16
             mat.surface_render_method = "BLENDED"
             bsdf.inputs["Coat Weight"].default_value = 1.0
@@ -161,7 +159,6 @@ class Mesh:
     def face(self, points, material="ancient_enamel", tint="bone"):
         start = len(self.verts)
         self.verts.extend(points)
-        # Convex face fan with explicit stable winding and indices.
         for i in range(1, len(points) - 1):
             self.faces.append((start, start + i, start + i + 1))
             self.paint.append((material, tint))
@@ -194,7 +191,6 @@ class Mesh:
                 return (r*math.cos(angle), yy, r*math.sin(angle))
             lo, hi = y-height/2, y+height/2
             tint = "hazard" if i % 4 in (0, 1) else "charcoal"
-            # Front-facing winding, with a skewed strip division on pressure bands.
             skew = .055 if stripe else 0
             self.face([p(radius,lo,a),p(radius,hi,a+skew),p(radius,hi,b+skew),p(radius,lo,b)],
                       "signal_surface" if stripe else slots[0], tint if stripe else "bone")
@@ -229,7 +225,6 @@ class Mesh:
         obj = bpy.data.objects.new(self.name, mesh)
         bpy.context.scene.collection.objects.link(obj)
         obj.parent = parent
-        # Mesh geometry is expressed in its parent's frame before pivot subtraction.
         obj.location = B(at)
         obj.rotation_mode = "XYZ"
         return obj
@@ -247,7 +242,6 @@ def base():
     for side in (-1,1):
         frame.sweep([(side*.9,22,0),(side*5.2,21.4,0),(side*10.3,22.2,0),(side*14,24,0)],
                     [2.7,3.1,3.3,1.2], [3,3.7,3.4,2.3], "petrol")
-        # Cast ridges, not separate bolts or gears.
         frame.sweep([(side*1.3,22.8,-1.5),(side*6,22.1,-1.65),(side*11,23.1,-1.5)],
                     [.38,.45,.32], [.22,.25,.2])
     frame.object((0,22,0), root)
@@ -268,7 +262,6 @@ def base():
         hinge = empty("MantleSocket%d"%i, tuple(Vector(pivot)-Vector((0,22,0))), crown)
         local = [tuple(Vector(p)-Vector(pivot)) for p in points]
         ribbon("Mantle%d"%i, local, widths, depths, hinge, (0,0,0))
-    # Narrow blue seams stay on the load path, well below broad enamel value.
     seam = Mesh("CrownSeams")
     for side in (-1,1):
         for a,b in [((side*1.2,22.2,-1.53),(side*5,21.65,-1.87)),
@@ -286,7 +279,6 @@ def base():
     seat = empty("CombatSeat", (0,1.6,0),root)
     empty("KitMount", (0,0,0),seat)
     body = Mesh("SeatBase")
-    # A continuous low cast enclosure in the inherited cylindrical envelope.
     rings=[]
     for y,r in [(-1.6,2.45),(-1.15,2.8),(.55,2.1),(1.6,1.35)]:
         rings.append([(r*math.cos(i*math.tau/24),y,r*math.sin(i*math.tau/24)) for i in range(24)])
@@ -328,7 +320,6 @@ def crew_bench(root):
         for sx in (-.36,.36):
             for sz in (-.3,.3):
                 block(sx-.06,sx+.06,.12,.5,sz-.06,sz+.06,"dark_joint","charcoal")
-    # One plank under all four, a shallow arc of five flat segments.
     for j in range(5):
         a0, a1 = math.radians(-44 + 17.6 * j), math.radians(-44 + 17.6 * (j + 1))
         p = [(r*math.sin(a), y, r*math.cos(a)) for a in (a0, a1) for r in (3.85, 4.95) for y in (0, .12)]
@@ -362,7 +353,6 @@ def glove_plate(root):
     h = .14
 
     def slab(outline, y0, y1, tint, side="dark_joint"):
-        # Top faces up (+Y): keep every outline clockwise seen from above (x right, z down).
         area = sum(outline[k][0]*outline[(k+1)%len(outline)][1]-outline[(k+1)%len(outline)][0]*outline[k][1]
                    for k in range(len(outline)))
         if area > 0:
@@ -388,7 +378,6 @@ def glove_plate(root):
                (x + d[0]*length*.9 + r[0]*w/2, z0 + d[1]*length*.9 + r[1]*w/2),
                (x + r[0]*width/2, z0 + r[1]*width/2)]
         return pts
-    # Palm: an eight-sided plate, cuff at +z, fingers toward -z.
     slab([(-.62,.55),(.62,.55),(.72,.2),(.7,-.45),(.55,-.62),(-.55,-.62),(-.7,-.45),(-.72,.2)], 0, h, "c9b48a")
     slab([(-.7,.95),(.7,.95),(.68,.55),(-.68,.55)], 0, h*1.25, "6b4a32")
     for x, length in ((-.45, .62), (-.15, .78), (.15, .82), (.44, .7)):
@@ -404,12 +393,10 @@ def optic(parent):
     seats=[]
     for i in range(3):
         a=i*math.tau/3
-        # Godot Vector3.RIGHT.rotated(UP,a) has negative Z, as family_point_at().
         seats.append(empty("LensSeat%d"%i, (1.6*math.cos(a),7.6,-1.6*math.sin(a)),parent))
     root=empty("LensRoot",(1.6,7.6,0),parent)
     empty("WeakPoint",(0,0,0),root)
     glass=Mesh("MainLens")
-    # Shallow optical dome, facing -Z. One material, 16-sided broad highlights.
     rows=[]
     for r,z in [(.9,0),(.78,-.28),(.47,-.5),(.02,-.59)]:
         rows.append([(r*math.cos(i*math.tau/16),r*math.sin(i*math.tau/16),z) for i in range(16)])
@@ -422,7 +409,6 @@ def optic(parent):
     for poly in obj.data.polygons:
         poly.use_smooth=True
     live=Mesh("OpenLens")
-    # Mint core is completely covered at rest by the six opaque shutters.
     ring=[(.66*math.cos(i*math.tau/24),.66*math.sin(i*math.tau/24),-.64) for i in range(24)]
     live.face(list(reversed(ring)),"signal_surface","mint")
     live.object((0,0,0),root)
@@ -435,7 +421,6 @@ def optic(parent):
             b=a-math.pi/6+k*math.pi/12
             pts.append((1.04*math.cos(b),1.04*math.sin(b),-.695))
         shutter.face(list(reversed(pts)),"ancient_enamel","slate")
-        # Rim is the same primitive and material family as its shutter.
         for k in range(4):
             b=a-math.pi/6+k*math.pi/12
             c=b+math.pi/12
@@ -445,11 +430,9 @@ def optic(parent):
                           (.88*math.cos(b),.88*math.sin(b),-.70)],"ancient_enamel","bone")
         hinge=empty("ShutterHinge%d"%i,pivot,root)
         hinge.rotation_euler.y=math.pi/2-a
-        # Mesh in the hinge's rotated local plane, then folded radially by local X.
         inv=hinge.rotation_euler.to_matrix().inverted()
         shutter.verts=[tuple(B(v)) for v in shutter.verts]
         shutter.verts=[tuple((inv@(Vector(v)-B(pivot)))) for v in shutter.verts]
-        # Convert back because Mesh.object performs the single B() conversion.
         shutter.verts=[(v[0],v[2],-v[1]) for v in shutter.verts]
         shutter.object((0,0,0),hinge)
     return root
@@ -463,11 +446,9 @@ def kit():
     for side,suffix in ((-1,"L"),(1,"R")):
         socket=empty("EmitterSocket"+suffix,(side*2,1.4,-1),family)
         mesh=Mesh("Emitter"+suffix)
-        # Two broad sliding shell halves mask the striped working throat at rest.
         mesh.sweep([(-1.2,0,-.025),(0,0,-.025),(1.2,0,-.025)],
                    [.72,.8,.72],[1.4,1.4,1.4],joint=False)
         mesh.object((0,.4,.675),socket)
-        # Fixed mouth is hidden behind the cast cover until the cover lifts.
         throat=Mesh("EmitterThroat"+suffix)
         throat.face([(-1.08,-.22,-.695),(1.08,-.22,-.695),(1.08,.22,-.695),(-1.08,.22,-.695)],"signal_surface","charcoal")
         for i in range(5):
@@ -482,7 +463,6 @@ def kit():
     lip.object((0,0,0),empty("PulseSocket",(0,.6,0),seat))
     socket=empty("BraceSocket",(0,1.4,0),family)
     plate=Mesh("BracePlate")
-    # 90 degree sector, 4 m chord and 2 m depth, 0.3 m thick.
     r=2*math.sqrt(2)
     inner=(r-2)*math.sqrt(2)
     def point(radius,angle,y):
@@ -542,8 +522,6 @@ def pose(clip,t,root,snapshot):
         idx={"phase_break":0,"phase_break_2":1,"phase_break_3":2}[clip]
         slab=obj("Mantle%d"%idx)
         if slab:
-            # A mantle break as a melodramatic beat: the slab shudders against its seat, cracks
-            # loose with a kick, then drifts out and falls away tumbling. End pose unchanged.
             side=-1 if idx%2==0 else 1
             if t<.2:
                 k=t/.2
@@ -566,7 +544,6 @@ def pose(clip,t,root,snapshot):
                 slab.rotation_euler.x=(.09 if i%2 else -.07)*settle
         glove=obj("GlovePlate")
         if glove:
-            # Carried down from the crown, a breath held above the seat, then set down.
             u=ease((t-.15)/.7)
             land=ease((t-.85)/.15)
             at=Vector(GLOVE_FROM).lerp(Vector(GLOVE_AT)+Vector((0,.5,0)),u)
@@ -602,7 +579,6 @@ def pose(clip,t,root,snapshot):
     if clip=="pulse" and obj("PulseLip"):
         obj("PulseLip").location.z=.45*(1-t)-.10*math.sin(math.pi*t)
     if clip in ("family_strike","recovery") and obj("FamilyRecoil"):
-        # The strike kicks back and holds; recovery leaves from that same -0.18 m.
         obj("FamilyRecoil").location.z=-.18*(ease(t/.6) if clip=="family_strike" else 1-ease(t))
     if clip.startswith("choir_change") and obj("LensRoot"):
         start={"choir_change":0,"choir_change_1_2":1,"choir_change_2_0":2}[clip]
@@ -651,7 +627,6 @@ def animate(root,snapshot):
             act=bpy.data.actions.new(clip+"_"+o.name)
             o.animation_data.action=act
             act.use_fake_user=True
-            # Every frame at 30 fps, so sampled curves (sines, kicks, settles) read smooth.
             frames=list(range(1,round(duration*30)+2))
             for f in frames:
                 pose(clip,(f-1)/(duration*30),root,snapshot)
@@ -735,7 +710,6 @@ def export(root,path,snapshot):
             for track in obj.animation_data.nla_tracks:
                 track.mute=True
     freeze_rest_export(path,snapshot)
-    # Sorted vertices too: the polish bake's values must not depend on export order.
     common.canonical_indices(str(path),vertices=True)
     print("EXPORTED",path)
 
@@ -801,7 +775,6 @@ def previews(roots,snapshots,out):
         rendered.append(name+".png")
     for root in roots: reset_pose(root,snapshots[root.name])
     for label,at in [("front",(0,17,-65)),("side",(65,17,0)),("three_quarter",(46,22,-46))]:
-        # Equal-depth ball placement makes its 2 m diameter comparable in each view.
         direction=Vector((at[0],0,at[2])).normalized()
         across=Vector((-direction.z,0,direction.x))
         ball.location=B(across*6+Vector((0,1,0)))
@@ -817,7 +790,6 @@ def previews(roots,snapshots,out):
     for clip,(duration,key) in CLIPS.items():
         for root in roots: pose(clip,key/duration,root,snapshots[root.name])
         render("clip_"+clip,(35,20,-55),(0,15,0))
-    # A close insert for the telegraph mechanism, still retaining a true 2 m ball.
     camdata.ortho_scale=14
     for clip in ("lane_warn","split_lane_warn","rush_warn","plate_warn","pulse_warn","stagger_open"):
         for root in roots: pose(clip,1,root,snapshots[root.name])
@@ -837,7 +809,6 @@ def main():
     materials()
     base_root=base()
     fit_mantle_envelope(base_root)
-    # Baked AO and edge wear only: bevels or subdivision would move the measured envelope.
     polish.enable(ao_reach=.08)
     polish.bake(base_root,polish.options())
     base_rest=rest(base_root)
@@ -852,16 +823,13 @@ def main():
     animate(kit_root,kit_rest)
     export(kit_root,args.out_dir/"boss_mind_kit.glb",kit_rest)
     info={}
-    # warden_base and warden_kit classes, raised for polish (POLISH.md).
     for file,cap in (("boss_mind_base.glb",(20000,38400,32)),("boss_mind_kit.glb",(6000,11200,18))):
         row=glb_info(args.out_dir/file)
         assert all(row[k]<=limit for k,limit in zip(("tris","verts","draws"),cap)),(file,row,cap)
         info[file]=row
         print("MND_BUDGET",file,row["tris"],row["verts"],row["draws"],"bytes",row["bytes"],"sha256",row["sha256"])
         print("MND_CLIPS",file,",".join(row["clips"]))
-    # Restore semantic names for the authoring preview, after all exports are done.
     for obj in common.tree(base_root): obj.name=obj.name.removeprefix("BasePreview_")
-    # CombatSeat/KitMount names may gain .001 here; pose uses only unique controls.
     base_snapshot={obj.name:base_rest[obj.name.removesuffix(".001")] for obj in common.tree(base_root)}
     reset_pose(kit_root,kit_rest)
     kit_snapshot=kit_rest

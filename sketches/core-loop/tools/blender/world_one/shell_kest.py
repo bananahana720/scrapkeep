@@ -1,60 +1,3 @@
-# PD-KEST: Kest's ball as a Hoberman mecha on shell_base.hoberman() (ROSTER-LOOK section 0,
-# pilots/kest.md section 5). Concept: artifacts/local/alpha/push/w13/concepts/codex/kest/hero.png,
-# chase.png and sheet.png with base/base-hero.png and mechanism.png (approved as one set,
-# docs/decisions.tsv w13-look rows of 2026-10-10).
-# E2-03 (wave 46, ruling en): the launchers are two heroic satchel mortar pods flanking the
-# cutaway ball (artifacts/local/w46-concept-art/heroic-cutaway/05-kest-heroic-cutaway.png): a
-# chamfered olive housing between petrol end plates, a flared steel bell forward with a lit
-# fuse in its throat, a brass canister slung under it on oxide straps, hazard stripes on the
-# outer face and the rear plate, and an amber fuse cap on top that reads from the chase camera.
-#
-#   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
-#     --python world_one/shell_kest.py -- [--out <file.glb>] [--variant roost]
-#
-# Default writes assets/models/world_one/shell_kest.glb; --variant roost writes
-# shell_kest_roost.glb, the Roost Frame (CUSTOMIZE section 8): one X-pair per link, a wide
-# open frame like a roost's perch rails, with the same machinery, sockets and sight cone.
-# The heft layers come from world_one/shell_kest_plates.py.
-#
-# Kest's parts and where they ride (ROSTER-LOOK sections 2 and 4):
-#   WeaponRing  the two trunnion yokes clamped on the band under the pods, and four canvas
-#               satchels strapped flat on the ring row at 3, 6, 9 and 7:30 o'clock, each with a
-#               horizontal ochre band, folded into the ring mesh (paint, rubber).
-#               The band faces carry their index in UV2.x (1 to 3 at 3, 6 and 9 o'clock, 4 on
-#               the 7:30 satchel, 0 elsewhere) and the 7:30 satchel's faces carry UV2.y = 4, the
-#               heft class it shows from (pilots/kest.md section 5: volley targets 3, 3, 3, 4, 4),
-#               so one lit_count/heft parameter on the one paint surface picks a band, one draw.
-#   Mortar      its own mesh under WeaponRing, origin on the trunnion line (MORTAR_PIVOT), so
-#               kest_cage_state() pitches it 20 or 45 degrees and recoils it 0.08 m, and a
-#               machinery row (clips/kest.json) kicks it 0.09 m back on each throw: both pods, outboard of
-#               the plating at 2 and 10 o'clock, bells forward; the fuse caps and the throat
-#               fuses are the only glow (paint, class_accent: 2 draws). MortarMouth.L/R mark the
-#               bell mouths.
-#   Pod         the petrol seat (the sheet's "Perch"), FusePlunger (slot 2) and ChargeKey
-#               (slot 3) in the bank, the lap bar, two pedals; a gap bracket from each gimbal
-#               boss to a vent hinge (rubber).
-#   VaneL/R     the vent hinges at the side gaps; each carries its slats as VaneL.Blade /
-#               VaneR.Blade (shell_kest_plates.vane_part), so hero_assets steers the hinge open
-#               for a glide while a machinery row flicks the blade on a throw.
-#   Dome>Pilot  a static head placeholder, hidden in play by fit_pilot_into; hero_assets_test
-#               reads it, and the animated pilot is pilot_kest_anim.glb.
-# Draws: Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2, Mortar 2, VaneL.Blade 1,
-# VaneR.Blade 1, Pilot 1 = 15, 14 in play; the clacker (kest_clacker.py, mounted by hero_assets
-# at the right yoke) adds 2, so Kest draws 16 in play, the 16-draw cap for Hoberman pilot
-# mechas (docs/decisions.tsv w13-PD, 2026-10-10). The lattice struts and tread caps come from
-# shell_base's defaults (0.06 m and 0.10 m since PD-0b).
-#
-# Budget (E2-03): the cutaway look (ruling dm) swaps Core's lattice for the plating, so the
-# lattice's 240 copper pin heads never draw in the hero look. The recipe drops them (960 tris)
-# and keeps the chalk balance mark; the pods spend that room, and the shell stays inside the
-# 6,500-tri band and the class V row of hero_six_pilot_budget_test.
-#
-# Every ring part answers to the carrier bank (carrier_bank_test, baked_bracket_reach_test): a
-# point at horizontal radius rho and height z keeps 0.5 rho - 0.866 z at most BANK_SUPPORT, so a
-# 30 degree slope banks nothing and a wall banks under 60 degrees. The pods stay outside the
-# plating, under the ruling en reach and above Z -0.55 through every pitch and recoil, and clear
-# of the open vents at any ring yaw.
-
 import json
 import math
 import os
@@ -64,59 +7,45 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import bmesh  # noqa: E402
-import bpy  # noqa: E402
-import common  # noqa: E402
-import shell_base as sb  # noqa: E402
-import shell_kest_plates as kp  # noqa: E402
-from common import Part, Vector  # noqa: E402
+import bmesh
+import bpy
+import common
+import shell_base as sb
+import shell_kest_plates as kp
+from common import Part, Vector
 
-# hero_assets_test SHELL_TRIS: the shell without its pilot, 3,000 to 6,500 (the 6,600 target).
 SHELL_BAND = (3000, 6500)
-VERT_CAP = 11600                  # world_one_shell_kest_test SHELL_VERTS
-REACH = 1.70                      # ruling en: the visual weapon reach from the ball centre
-POD_REACH = 1.25                  # ROSTER-LOOK section 3 rule 6: the Pod subtree (vents)
-LOW_Z = -0.55                     # ruling en: slopes never swallow the pods
-PLATING = 1.0                     # the cutaway plating is 0.985 m; pods keep outside 1.0
-BANK_SUPPORT = 0.965              # CarrierBank.LIMIT 0.99 less a bisection margin
-VANE_GAP = 0.02                   # pods keep this far from an open vent at any ring yaw
-# The pods (Blender metres, ring space: +Y forward, +Z up); x is mirrored per side.
-POD_X = 1.24                      # the pod axis, outboard of the plating at about 2 and 10 o'clock
+VERT_CAP = 11600
+REACH = 1.70
+POD_REACH = 1.25
+LOW_Z = -0.55
+PLATING = 1.0
+BANK_SUPPORT = 0.965
+VANE_GAP = 0.02
+POD_X = 1.24
 POD_Z = 0.03
-HOUSING = (0.17, 0.53, 0.15, 0.15, 0.06)        # y0, y1, half width, half height, chamfer
-PLATES = ((0.145, 0.195), (0.505, 0.555))       # rear and front end plates (y0, y1)
-PLATE = (0.168, 0.168, 0.068)                   # their half width, half height, chamfer
-# The bell, a lathe about the pod axis: (y, r) from the buried collar to the throat floor, steel
-# outside, charcoal bore.
+HOUSING = (0.17, 0.53, 0.15, 0.15, 0.06)
+PLATES = ((0.145, 0.195), (0.505, 0.555))
+PLATE = (0.168, 0.168, 0.068)
 BELL = ((0.46, 0.0), (0.46, 0.115), (0.60, 0.115), (0.60, 0.095), (0.71, 0.122), (0.785, 0.19),
         (0.81, 0.215), (0.81, 0.184), (0.73, 0.116), (0.66, 0.082), (0.66, 0.0))
 BELL_SIDES = 12
-BELL_STEEL = 6                    # bands 0..5 are the outside (steel); the rest are the bore
-# The loaded fuse: a glowing disc (y, radius, depth) just proud of the throat floor, its own closed
-# island, because Godot compresses each surface's positions on its own bounds and a ring shared
-# between the charcoal bore and a glowing floor would no longer weld.
+BELL_STEEL = 6
 THROAT_FUSE = (0.668, 0.07, 0.012)
 MOUTH_Y = 0.82
-CANISTER = (0.02, 0.34, -0.215, 0.07, 0.22, 0.48)  # inboard shift, y centre, z, radius, y0, y1
+CANISTER = (0.02, 0.34, -0.215, 0.07, 0.22, 0.48)
 STRAPS = (0.27, 0.43)
-FUSE_CAP = (0.06, 0.245)          # outboard shift, y: the fuse cap on the housing top, rear
-# The trunnion line both pods pitch about runs under them, so a nose-down stance swings the
-# housing tops forward, away from the open vents, instead of lifting them into them.
-TRUNNION = (0.33, -0.17, 0.045)   # y, z, radius of the pin through the cradle lug
+FUSE_CAP = (0.06, 0.245)
+TRUNNION = (0.33, -0.17, 0.045)
 MORTAR_PIVOT = (0.0, TRUNNION[0], TRUNNION[1])
-# The machinery and cage poses the checks hold (Blender rotation x, recoil along -Y): rest, the
-# throw kick (clips/kest.json's 0.09 m recoil; kest_cage_state owns the pitch, so a throw kicks
-# straight back from any stance), the ready stance and the riding stance (kest_cage_state: 20
-# and 45 degrees nose down, its 0.08 m ride-beat recoil covered by the kick's 0.09 m).
 KICK_M = 0.09
 POSES = (("rest", 0.0, 0.0), ("kick", 0.0, KICK_M), ("ready", -20.0, 0.0), ("ready kick", -20.0, KICK_M),
          ("riding", -45.0, KICK_M))
-# Band index by satchel clock; the last satchel shows from heft class IV (kp.SATCHEL4_CLOCK).
 SATCHELS = ((90.0, 1), (180.0, 2), (270.0, 3), (kp.SATCHEL4_CLOCK, 4))
 DRAWS = 15
 BANK = (("FusePlunger", "plunger"), ("ChargeKey", "key"))
 OLIVE = common.mix("petrol", "brass", 0.4)
-STEEL = "9aa0a0"                  # palette.gd STEEL
+STEEL = "9aa0a0"
 STRIPE = common.mix("amber", "brass", 0.5)
 
 
@@ -126,9 +55,6 @@ def flag(name):
         return None
     i = argv.index(name)
     return argv[i + 1] if i + 1 < len(argv) else True
-
-
-# --- closed builders ---------------------------------------------------------------------------
 
 
 def octagon(part, x, z, y0, y1, half_x, half_z, chamfer, color):
@@ -235,9 +161,6 @@ def stripes(part, centre, u, v, normal, size, count, depth=0.004):
     return faces
 
 
-# --- Kest's machinery ----------------------------------------------------------------------------
-
-
 def pod(m, side):
     """One mortar pod, built in ring space on the side x = side * POD_X."""
     x = side * POD_X
@@ -245,28 +168,23 @@ def pod(m, side):
     octagon(m, x, POD_Z, y0, y1, hw, hh, ch, OLIVE)
     for p0, p1 in PLATES:
         octagon(m, x, POD_Z, p0, p1, PLATE[0], PLATE[1], PLATE[2], "petrol")
-    # The bell: steel outside, charcoal bore, the loaded fuse glowing on the throat floor.
     paints = [("paint", STEEL)] * BELL_STEEL + [("paint", "charcoal")] * (len(BELL) - 1 - BELL_STEEL)
     lathe(m, (x, 0, POD_Z), BELL, BELL_SIDES, paints)
     fy, fr, fd = THROAT_FUSE
     disc = [(x + fr * math.cos(k * math.tau / BELL_SIDES), fy, POD_Z + fr * math.sin(k * math.tau / BELL_SIDES))
             for k in range(BELL_SIDES)]
     plug(m, disc, (0, 1, 0), fd, None, "class_accent")
-    # Hazard stripes: the outer face, toward the front, and the rear plate, where the chase camera sees them.
     stripes(m, (x + side * hw, 0.40, POD_Z), (0, 1, 0), (0, 0, 1), (side, 0, 0), (0.20, hh * 2 - ch * 2), 3)
     stripes(m, (x, PLATES[0][0], POD_Z), (side, 0, 0), (0, 0, 1), (0, -1, 0), (0.22, 0.16), 3)
-    # The brass canister on oxide straps, slung under the housing.
     shift, cy, cz, cr, c0, c1 = CANISTER
     cx = x - side * shift
     cylinder_y(m, cx, cz, c0, c1, cr, 10, "brass", "charcoal")
     z0, z1 = cz - cr - 0.012, POD_Z - hh + 0.02
     for sy in STRAPS:
         m.box("paint", (2 * cr + 0.03, 0.026, z1 - z0), loc=(cx, sy, (z0 + z1) / 2), color="oxide")
-    # The fuse cap on top, rear and outboard: a charcoal socket and the amber cap.
     fx = x + side * FUSE_CAP[0]
     cylinder_z(m, "paint", fx, FUSE_CAP[1], POD_Z + hh - 0.01, POD_Z + hh + 0.035, 0.038, 8, "charcoal")
     cylinder_z(m, "class_accent", fx, FUSE_CAP[1], POD_Z + hh + 0.035, POD_Z + hh + 0.075, 0.03, 8)
-    # The cradle lug under the housing's inner edge, and the trunnion pin through it on the pivot line.
     ty, tz, tr = TRUNNION
     inner = x - side * hw
     lug_top = POD_Z - hh + 0.03
@@ -293,7 +211,6 @@ def ring_kit():
     for side in (-1, 1):
         band_x = math.sqrt(mid * mid - ty * ty)
         pin = POD_X - HOUSING[2] - 0.05
-        # The clamp on the band, and the yoke arm from it down and out to the trunnion pin's end.
         r.box("paint", (0.06, 0.15, 0.13), loc=(side * band_x, ty, 0.0), color="charcoal")
         r.beam("rubber", (side * band_x, ty, -0.03), (side * (pin + 0.01), ty, tz), 0.07, 0.10)
     for clock, _ in SATCHELS:
@@ -309,8 +226,6 @@ def band_attributes(ring):
     mesh = ring.data
     col = mesh.color_attributes["Color"]
     ochre = common.rgba(kp.BAND_COLOR)
-    # A new UV layer starts as a per-face unit square, which would split every vertex; UV is
-    # unused (the slots read vertex colour), so both layers are written flat.
     uv = mesh.uv_layers.new(name="UVMap")
     band = mesh.uv_layers.new(name="Band")
     for loop in uv.data:
@@ -468,9 +383,6 @@ def stable_pilot_normals(path):
     print("STABLE_NORMALS Kest static Pilot, component precision 0.001")
 
 
-# --- checks --------------------------------------------------------------------------------------
-
-
 def world_verts(obj):
     mw = obj.matrix_world
     return [mw @ v.co for v in obj.data.vertices]
@@ -517,7 +429,6 @@ def outside_by(hull, p):
         length = math.hypot(ex, ey)
         if length < 1e-12:
             continue
-        # The outward normal of a counter-clockwise edge is (ey, -ex).
         worst = max(worst, ((p[0] - a[0]) * ey - (p[1] - a[1]) * ex) / length)
     return worst
 
@@ -541,8 +452,6 @@ def mortar_report(ring, mortar, vanes):
     ok = True
     regions = {"folded": vane_region(vanes, 0.0), "cracked": vane_region(vanes, math.pi / 6),
                "open": vane_region(vanes, math.pi / 2)}
-    # Which vent state each pose meets in play: kest_cage_state opens them for a glide or the ride
-    # and cracks them when ready; a throw can come at any of those.
     meets = {"rest": ("folded", "open"), "kick": ("folded", "cracked", "open"), "ready": ("cracked", "open"),
              "ready kick": ("cracked", "open"), "riding": ("open",)}
     rest_loc = mortar.location.copy()

@@ -8,28 +8,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 
-# One still of each player-facing screen that no other capture tool reaches: the settings tabs,
-# the camp and its pages, the shop counter, the companion panel, the death screen, both run
-# summaries, the build readout, the hot-wire offer, the pause menu's settings and a fight HUD
-# with a toast and a card. It needs a rendered display; run it headless on the 3060:
-#
-#   source /home/andrew/scratch/world1/env-pc.sh <name> 1 2 <pool>
-#   PULSE_SINK=claude_silent timeout 600 nice -n 10 gamescope --backend headless \
-#     --prefer-vk-device 10de:2504 -W 1920 -H 1080 -w 1920 -h 1080 -- $GODOT_BIN \
-#     --path sketches/core-loop --gpu-index 1 --resolution 1920x1080 --audio-driver Dummy \
-#     --script res://tools/ui_screens_capture.gd -- --out=<absolute dir> \
-#     [--screens=all|name,name] [--profile=fresh|played] [--seed=0]
-#
-# Each screen is a row of SCREENS: its name, its group, the method that drives the game to it
-# (the same calls a key or a click makes), the method that says it has settled, and a line on
-# what the frame shows. A new screen is one new row and two small methods. The tool prints one
-# line per screen (name, file, bytes) and exits 1, naming each screen not reached; 2 on a bad
-# argument. --selftest=1 adds a row whose settle test never comes true, to show that failure.
-# The profile is the game's own test-mode profile (a per-process folder under user://, which the
-# environment line points at the scratch data home); the owner's save is never opened.
 
-# name, group, reach, ready, what the frame shows. "title" rows start from the title; "run"
-# rows start from a fresh run of the seed's pilot.
 const SCREENS := [
 	{"name": "settings-display", "group": "title", "reach": "_reach_settings", "tab": 0, "ready": "_ready_settings", "what": "Settings from the title, Display tab"},
 	{"name": "settings-controls", "group": "title", "reach": "_reach_settings", "tab": 1, "ready": "_ready_settings", "what": "Settings from the title, Controls tab"},
@@ -49,7 +28,6 @@ const SCREENS := [
 	{"name": "summary-loss", "group": "run", "reach": "_reach_summary_loss", "ready": "_ready_summary", "what": "The run summary after a loss"},
 	{"name": "summary-win", "group": "run", "reach": "_reach_summary_win", "ready": "_ready_summary", "what": "The run summary after a win"},
 ]
-# Added by --selftest=1 only: a screen whose ready test never comes true.
 const SELFTEST_ROW := {"name": "selftest-never", "group": "title", "reach": "_reach_nothing", "ready": "_ready_never", "what": "Planted failure"}
 
 const WAIT_FRAMES := 240
@@ -100,7 +78,6 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
-# The rows this run knows, in capture order (the self-test row only on request).
 func table() -> Array:
 	var rows: Array = SCREENS.duplicate()
 	if _selftest:
@@ -143,7 +120,6 @@ var _clock := 0.0
 var _done := false
 
 
-# A drive method that errors leaves its coroutine stuck; the clock ends the run and names what is left.
 func _process(delta: float) -> bool:
 	_clock += delta
 	if _clock > WATCHDOG and not _done and _game != null:
@@ -184,7 +160,6 @@ func _wait_ready(method: String) -> bool:
 	return false
 
 
-# The frame, as the 1920x1080 viewport drew it. Flat means almost every sampled pixel is one colour.
 func _save(index: int, name: String) -> Dictionary:
 	await RenderingServer.frame_post_draw
 	var image := root.get_texture().get_image()
@@ -201,10 +176,6 @@ func _save(index: int, name: String) -> Dictionary:
 	return shot
 
 
-# ---------------------------------------------------------------- profile
-
-# fresh leaves the test profile as the game made it; played owns every pilot, world, paint, tune and
-# achievement, so the pages show their filled state. Both seed one companion piece set so its panel opens.
 func _seed_profile() -> void:
 	var profile = _game.ctx.profile
 	var doc := Companion.new()
@@ -215,7 +186,6 @@ func _seed_profile() -> void:
 			profile.unlock_world(str(row["id"]))
 		for id in Cosmetics.ids():
 			profile.unlock_cosmetic(id)
-		# Unix time, one day apart from 1 Nov 2026, so the board's date column reads as a played save's would.
 		var at := 1793491200.0
 		for id in Achievements.ids():
 			profile.earn(id, at)
@@ -235,8 +205,6 @@ func _seed_profile() -> void:
 	_game.run.companion = doc.to_dict()
 
 
-# ---------------------------------------------------------------- group helpers
-
 func _to_title() -> void:
 	paused = false
 	var menu = _game.get_node_or_null("PauseMenu")
@@ -248,7 +216,6 @@ func _to_title() -> void:
 	await _frames(20)
 
 
-# A run of the seed's pilot, calm, at its first kit card.
 func _fresh_run() -> void:
 	await _to_title()
 	_game.bot_driven = true
@@ -262,8 +229,6 @@ func _fresh_run() -> void:
 func _pick_open() -> bool:
 	return _game.get_node("Workshop").pick.is_open()
 
-
-# ---------------------------------------------------------------- title rows
 
 func _reach_settings() -> void:
 	_game.screens.toggle_settings()
@@ -292,7 +257,6 @@ func _ready_camp() -> bool:
 	return _game.screens.walk_live()
 
 
-# The pages open over the walk the way the stations open them: through screens.
 func _reach_jukebox() -> void:
 	_game.screens.toggle_camp()
 	await _frames(40)
@@ -331,8 +295,6 @@ func _reach_companion() -> void:
 func _ready_companion() -> bool:
 	return _game.get_node("Workshop").companion_panel.is_open()
 
-
-# ---------------------------------------------------------------- run rows
 
 func _reach_hud() -> void:
 	_game.hud.toast_kind("world_entered", {"world": 1})
@@ -414,8 +376,6 @@ func _reach_summary_win() -> void:
 func _ready_summary() -> bool:
 	return _game.flow.state == _game.flow.SUMMARY and not _game.screens.ending_open()
 
-
-# ---------------------------------------------------------------- planted failure
 
 func _reach_nothing() -> void:
 	pass

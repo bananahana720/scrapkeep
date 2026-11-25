@@ -24,7 +24,7 @@ test("each newly foreground family PID counts, including a detached grandchild",
     sample(100, 402, [401, rootPid, 1], 402),
     sample(150, 402, [401, rootPid, 1], 402),
     sample(200, unrelated),
-    sample(250, 403, [1], rootPid), // Reparented child that kept the capture group.
+    sample(250, 403, [1], rootPid),
     sample(300, 901, [unrelated, 1]),
   ];
   assert.equal(windowCounts(rows, rootPid).frontmostChanges, 3);

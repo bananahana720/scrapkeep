@@ -32,10 +32,6 @@ T = pk.TONES
 R = 4.5
 TOP = 0.5
 STRIPES = 16
-# The cap's outline (radius, height), the same numbers as contraptions.gd LIFT_PROFILE, which builds the collider and the
-# code's drum from them (wave 37 lift-drum): the deck is flat to FLAT and falls 1 in 6 to the rim at (R, RIM_Y). The drum is
-# the code's, radius R from RIM_Y down (its length is the row's rise, and its charcoal collar is the rim's side), so the skin
-# is the cap alone: nothing of it hangs under RIM_Y or reaches past R.
 FLAT = 2.7
 RIM_Y = 0.2
 SLOPE = (TOP - RIM_Y) / (R - FLAT)
@@ -75,13 +71,13 @@ def lathe(s, outline, n, color, arc=None):
 
 
 def base(s):
-    for k in range(STRIPES):                                                     # stripes over the deck and its bevel
+    for k in range(STRIPES):
         a0 = math.tau * k / STRIPES
         a1 = math.tau * (k + 1) / STRIPES
         lathe(s, [(1.62, 0.1), (4.2, 0.1), (4.2, deck_y(4.2)), (FLAT, TOP), (1.62, TOP)], 3,
               T["copper"] if k % 2 == 0 else T["charcoal"], arc=(a0, a1))
-    lathe(s, [(4.2, RIM_Y), (R, RIM_Y), (4.2, deck_y(4.2))], 24, T["iron"])     # the rim's bevel ring
-    pk.frustum(s, 1.6, 1.6, 0.1, TOP, 16, T["copper_dk"])                        # hub
+    lathe(s, [(4.2, RIM_Y), (R, RIM_Y), (4.2, deck_y(4.2))], 24, T["iron"])
+    pk.frustum(s, 1.6, 1.6, 0.1, TOP, 16, T["copper_dk"])
 
 
 def detail1(s):
@@ -91,13 +87,13 @@ def detail1(s):
     for k in range(8):
         a = math.tau * k / 8
         pk.hexstud(s, (1.2 * math.cos(a), TOP, 1.2 * math.sin(a)), (0, 1, 0), 0.08, 0.04, T["copper"])
-    for k in range(STRIPES):                                                     # stripe seam studs
+    for k in range(STRIPES):
         a = math.tau * k / STRIPES
         pk.hexstud(s, (2.0 * math.cos(a), TOP, 2.0 * math.sin(a)), (0, 1, 0), 0.05, 0.03, T["charcoal"])
 
 
 def detail2(s):
-    for ring, count, radius in ((0, 24, 2.8), (1, 24, 3.7)):                     # anti-slip studs on the stripes
+    for ring, count, radius in ((0, 24, 2.8), (1, 24, 3.7)):
         for k in range(count):
             a = math.tau * (k + 0.5 * ring) / count
             pk.hexstud(s, (radius * math.cos(a), deck_y(radius), radius * math.sin(a)), bevel_normal(a) if radius > FLAT else (0, 1, 0),
@@ -109,7 +105,6 @@ def check_base(s):
     assert abs(hi[1] - TOP) < 0.02, ("deck top is not the collider top", hi[1])
     assert abs((hi[0] - lo[0]) - 2 * R) < 0.3 and abs((hi[2] - lo[2]) - 2 * R) < 0.3, ("lift plan", lo, hi)
     assert lo[1] >= 0.1 - 1e-6, ("the skin hangs under the cap, into the drum", lo[1])
-    # Nothing outside the outline: over the deck line, or past the rim.
     out = [v for v in s.verts if v[1] > deck_y(math.hypot(v[0], v[2])) + 0.002 or math.hypot(v[0], v[2]) > R + 0.002]
     assert not out, ("the skin leaves the collider outline", len(out), out[:3])
 

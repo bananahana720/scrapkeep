@@ -32,7 +32,6 @@ def bolt(s, center, axis):
 
 
 def hub_bolts(s):
-    # Five bolts on each wheel's outer hub ring (detail 1 puts the ring face at x +- (0.125 + 0.055) from the axle).
     for name, (x, y, z) in oc["SOCKETS"].items():
         if not name.startswith("socket_wheel_"):
             continue
@@ -55,7 +54,6 @@ def hitch_handle(s):
 
 
 def tow_ball(s):
-    # A round ball over the base's six-sided bicone, a little larger so it covers it.
     c = Vector((0, oc["RAIL_Y"], oc["TOW_TIP"] - oc["BALL_R"]))
     r = oc["BALL_R"] * 1.08
     verts = [tuple(c + Vector((0, -r, 0)))]
@@ -73,7 +71,6 @@ def tow_ball(s):
 
 
 def filler(s):
-    # 30 chunks on the same golden-ratio walk as detail 1, phase-shifted into its gaps.
     n = 30
     ex, ez = oc["HEAP_EDGE"][0] - .12, oc["HEAP_EDGE"][1] - .12
     for i in range(n):
@@ -84,7 +81,6 @@ def filler(s):
 
 
 def rim_bevel(s):
-    # A 45-degree chamfer strip on the rim's inner top edge (RIM's last ring), so the edge catches light.
     hw, hl, c, y = oc["RIM"][2]
     outer = oc["ring"](hw + .03, hl + .03, c, y + .012)
     inner = oc["ring"](hw - .02, hl - .02, c, y - .03)
@@ -92,7 +88,6 @@ def rim_bevel(s):
 
 
 def tread(s):
-    # Ten chevron lug blocks round each tyre crown, half sunk into the base tyre; bottom face buried.
     r0, w = oc["WHEEL_R"], oc["WHEEL_W"]
     for name, (x, y, z) in oc["SOCKETS"].items():
         if not name.startswith("socket_wheel_"):

@@ -1,8 +1,4 @@
 #!/usr/bin/env bash
-# One queue per graphics card.
-#   gpu_queue.sh --gpu N --need MIB --name NAME [--display] [--shared] [--timeout S] -- cmd args...
-# Holds /tmp/scrapkeep-gpu$N.lock for the run (unless --shared), waits until card N has MIB free,
-# exports CUDA_VISIBLE_DEVICES and SCRAPKEEP_GPU_INDEX, optionally starts a private Xvnc on :93-:100.
 set -uo pipefail
 gpu=""
 need=0

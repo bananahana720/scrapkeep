@@ -44,21 +44,17 @@ import kit
 import common
 
 MODELS = kit.SKETCH / "assets/models/park"
-# Godot's glTF importer strips ONE "-col" suffix from a mesh node and adds the StaticBody3D with the trimesh under it (probed
-# 2026-10-11 on canal_lip.glb, 4.7.2). park_recipes.gd then looks for a node still ending in "-col", so the mesh object carries
-# the suffix twice: "<id>-col-col" in the file imports as "<id>-col" with its ConcavePolygonShape3D child.
 COL_NODE = "-col-col"
 
 LENGTH = 120.0
 FALL = 3.0
 PITCH = math.atan2(FALL, LENGTH)
-BUDGET = {"base": {"tris": 8000, "draws": 2}, "detail": {"tris": 1500, "draws": 1}}   # asset_budgets.json: landform, detail
-MIN_TOP = 2.0                  # the rideable strip is at least a ball wide
-RIDE_PROUD = 0.02              # nothing on a rideable top stands higher than this above it
-RAIL_STEP = 30.0               # a rail point every 30 m
-END_INSET = 0.5                # the first and last rail points sit this far in from the cut ends
+BUDGET = {"base": {"tris": 8000, "draws": 2}, "detail": {"tris": 1500, "draws": 1}}
+MIN_TOP = 2.0
+RIDE_PROUD = 0.02
+RAIL_STEP = 30.0
+END_INSET = 0.5
 
-# Palette (Southwest set; src/core/palette.gd plus the VISUAL-LANGUAGE extensions in common.HEX).
 SAND = "c6a274"
 CREAM = "dccaa2"
 SLICK = "b0653f"
@@ -72,7 +68,6 @@ JUNIPER = "4f6b4a"
 COPPER = "b77843"
 DARK = "2f2a26"
 
-# Row of the registry per recipe: the nominal size [length, height, width] this build keeps, and the dressing it wears.
 SIZE = {
     "canal_lip": [LENGTH, 3.0, 8.8],
     "flume_span": [LENGTH, 8.0, 8.0],
@@ -164,8 +159,6 @@ def rocks(s, rows, color_a, color_b):
         s.add(low + high, faces, tone(color_a, color_b, k, 0.35))
 
 
-# ---------------------------------------------------------------- canal_lip
-
 CANAL = {"floor": 1.5, "crest_in": 1.9, "crest_out": 4.0, "toe": 4.4, "top": 3.0, "bottom": -4.0, "bay": 6.0}
 CANAL_RAIL_X = (CANAL["crest_in"] + CANAL["crest_out"]) / 2
 
@@ -189,18 +182,13 @@ def canal_body(s):
     for k in range(bays):
         z0, z1 = k * c["bay"], (k + 1) * c["bay"]
         for side in (-1, 1):
-            # Berm core: sandstone fill and red slickrock toe bands, the crest inset 4 cm under the coping.
             ring = [(side * x, y) for x, y in [(c["floor"], c["bottom"]), (c["toe"], c["bottom"]), (c["crest_out"], c["top"] - 0.04), (c["crest_in"], c["top"] - 0.04), (c["floor"], 0.0)]]
             solid(s, ring if side > 0 else ring[::-1], z0, z1, tone(SLICK, SAND, k + (side > 0), 0.35))
-            # Coping: cream cut stone, 2 cm joints between bays, flush at the collider's top.
             xa, xb = sorted((side * c["crest_in"], side * c["crest_out"]))
             block(s, xa, xb, c["top"] - 0.04, c["top"], z0 + 0.02, z1 - 0.02, tone(CREAM, SAND, k * 3 + (side > 0), 0.2))
-            # Inner lining: a panel on the channel wall, 4 cm proud, desert varnish stained at the waterline.
             wall = [(side * (c["floor"] + 0.001), 0.0), (side * (c["crest_in"] + 0.001), c["top"] - 0.04)]
             ring = [wall[0], (wall[0][0] + side * 0.04, wall[0][1]), (wall[1][0] + side * 0.04, wall[1][1]), wall[1]]
             solid(s, ring if side > 0 else ring[::-1], z0 + 0.03, z1 - 0.03, tone(CONCRETE, VARNISH, k + 2 * (side > 0), 0.35))
-        # Waterline stain band on the channel floor edge.
-    # Headgate on the left berm at z 60: two piers, a gate leaf in the channel, a stem and a copper hand wheel.
     gz = 60.0
     for dz in (-1.0, 1.0):
         block(s, -3.7, -2.3, c["top"], c["top"] + 1.6, gz + dz - 0.3, gz + dz + 0.3, tone(CONCRETE, FORM, 3))
@@ -208,7 +196,6 @@ def canal_body(s):
     block(s, -c["floor"] + 0.05, c["floor"] - 0.05, 0.0, 2.2, gz - 0.08, gz + 0.08, tone(IRON, VARNISH, 2))
     strut(s, (-3.0, c["top"] + 1.8, gz), (-0.3, 2.1, gz), 0.1, tone(IRON, VARNISH, 5))
     s.add(*_wheel(-3.0, c["top"] + 2.2, gz, 0.42), color=COPPER)
-    # Outer toe rubble, left and right, a natural-looking spill of sandstone and slickrock.
     rows = []
     for k in range(20):
         side = -1 if k % 2 else 1
@@ -237,7 +224,6 @@ def canal_rail():
 
 def canal_detail1(s):
     c = CANAL
-    # Iron joint straps across every other coping joint (flush with the top), form-board ties on the lining, stake heads.
     for k in range(1, int(LENGTH / c["bay"])):
         z = k * c["bay"]
         if k % 2 == 0:
@@ -247,7 +233,6 @@ def canal_detail1(s):
         for side in (-1, 1):
             for dy in ((0.9, 2.1) if k % 2 else ()):
                 stud(s, (side * (c["floor"] + (c["crest_in"] - c["floor"]) * dy / c["top"] + 0.045), dy, z), (-side, 0.0, 0.0), 0.05, 0.03, tone(IRON, DARK, k))
-    # Pier bolts and gate-leaf rivets.
     for dz in (-1.0, 1.0):
         for dy in (0.3, 0.9, 1.4):
             for sx in (-3.7, -2.3):
@@ -255,7 +240,6 @@ def canal_detail1(s):
     for yy in (0.4, 1.1, 1.8):
         for xx in (-1.1, -0.4, 0.4, 1.1):
             stud(s, (xx, yy, 60.08), (0, 0, 1), 0.05, 0.03, tone(IRON, DARK, 2))
-    # Outer-toe stake posts and a survey peg every 24 m.
     for z in range(6, 120, 24):
         for side in (-1, 1):
             block(s, side * (c["toe"] + 0.7) - 0.07, side * (c["toe"] + 0.7) + 0.07, -0.4, 0.5, z - 0.07, z + 0.07, tone(IRON, VARNISH, z))
@@ -263,7 +247,6 @@ def canal_detail1(s):
 
 def canal_detail2(s):
     c = CANAL
-    # Close range: sage and juniper tufts along both toes, pebbles in the channel, varnish streaks down the lining.
     for k in range(16):
         side = -1 if k % 2 else 1
         tuft(s, side * (c["toe"] + 0.9 + 0.35 * ((k * 5) % 3)), -0.5, 2.0 + k * 7.4, 0.7 + 0.18 * (k % 4), k)
@@ -277,8 +260,6 @@ def canal_detail2(s):
             xin = side * (c["floor"] + (c["crest_in"] - c["floor"]) * 0.5 + 0.052)
             block(s, xin, xin + side * 0.008, 0.4, 2.9, z, z + 0.16, VARNISH)
 
-
-# ---------------------------------------------------------------- flume_span
 
 FLUME = {"floor_y": 5.0, "under": 4.0, "wall_in": 1.6, "crest_in": 1.9, "crest_out": 4.0, "base_out": 3.6, "top": 8.0, "bent": 12.0, "ground": -6.0}
 FLUME_RAIL_X = (FLUME["crest_in"] + FLUME["crest_out"]) / 2
@@ -329,7 +310,6 @@ def flume_body(s):
         block(s, -f["wall_in"], f["wall_in"], f["under"], f["floor_y"], z0, z1, tone(VARNISH, CONCRETE, k, 0.5))
     for k, z in enumerate(flume_bents()):
         flume_frame(s, z, False, k)
-    # Steel hoop straps around the trough under every bay joint of the bents, proud 6 cm on the outer faces.
     for z in flume_bents():
         for side in (-1, 1):
             ring = [(side * f["base_out"], f["under"]), (side * (f["base_out"] + 0.06), f["under"]), (side * (f["crest_out"] + 0.06), f["top"] - 0.5), (side * f["crest_out"], f["top"] - 0.5)]
@@ -359,7 +339,6 @@ def flume_detail1(s):
 
 def flume_detail2(s):
     f = FLUME
-    # Varnish streaks and water staining down the outer faces, hanging weeds at the ground end, rust runs below the straps.
     for k in range(18):
         z = 1.6 + k * 6.7
         side = -1 if k % 2 else 1
@@ -372,8 +351,6 @@ def flume_detail2(s):
         tuft(s, 3.9 + 0.2 * (k % 3), 0.0, z + 0.8, 0.9, k)
         tuft(s, -3.9 - 0.2 * (k % 3), 0.0, z - 0.8, 0.8, k + 1)
 
-
-# ---------------------------------------------------------------- penstock_run
 
 PEN = {"cy": 2.6, "r": 1.8, "n": 16, "deck_y": 5.0, "deck_half": 1.1, "deck_thick": 0.12, "saddle": 15.0, "flange": 10.0, "ground": -6.0}
 PEN_RAIL_X = 0.0
@@ -407,12 +384,10 @@ def pen_body(s):
         block(s, -2.45, 2.45, p["cy"] - p["r"] * 0.55 - 0.3, p["cy"] - p["r"] * 0.55, z - 1.2, z + 1.2, tone(CONCRETE, FORM, int(z) + 1))
     for z, a, b in ((0.0, -1.2, 0.0), (LENGTH, 0.0, 1.2)):
         block(s, -2.2, 2.2, p["ground"], p["cy"] + p["r"] * 0.6, z + a, z + b, tone(CONCRETE, FORM, 9))
-    # Catwalk deck on stanchions every 6 m, flush at its top with the collider (deck_y).
     block(s, -p["deck_half"], p["deck_half"], p["deck_y"] - p["deck_thick"], p["deck_y"], 0.0, LENGTH, tone(IRON, DARK, 4, 0.5))
     for z in range(3, int(LENGTH), 6):
         for sx in (-0.8, 0.8):
             block(s, sx - 0.08, sx + 0.08, p["cy"] + p["r"] - 0.15, p["deck_y"] - p["deck_thick"], z - 0.08, z + 0.08, tone(IRON, DARK, z))
-    # A copper drain valve on the left flank at z 45 and a manway cover at z 90.
     strut(s, (-p["r"] - 0.05, p["cy"] - 0.4, 45.0), (-p["r"] - 0.7, p["cy"] - 0.4, 45.0), 0.18, COPPER)
     s.add(*_rim(-p["r"] - 0.7, p["cy"] - 0.4, 45.0, 0.3), color=COPPER)
     ring = [(-p["r"] + 0.02 - 0.1 * math.cos(a), p["cy"] + 0.45 * math.sin(a)) for a in (math.tau * i / 8 for i in range(8))]
@@ -440,7 +415,6 @@ def pen_detail1(s):
                 continue
             for dz in (-0.14, 0.14):
                 stud(s, (math.cos(a) * (p["r"] + 0.16), p["cy"] + math.sin(a) * (p["r"] + 0.16), z + dz), (0, 0, dz), 0.07, 0.05, tone(IRON, DARK, k + i))
-    # Rivet seams along each 5 m plate edge on the flanks: short heads in rows.
     for k in range(1, int(LENGTH / 5.0)):
         z = k * 5.0
         if k % 4 != 1:
@@ -463,8 +437,6 @@ def pen_detail2(s):
         tuft(s, -2.6, 0.0, z - 0.9, 0.8, k + 1)
     rocks(s, [(((k * 5) % 7 - 3) * 0.9, 0.0, 2.0 + k * 6.3, 0.5 + 0.15 * (k % 3), 0.5 * k) for k in range(18)], SAND, SLICK)
 
-
-# ---------------------------------------------------------------- pipeline_rail
 
 PIPE = {"deck_y": 3.0, "deck_half": 1.2, "deck_thick": 0.12, "beam_lo": 2.4, "pipe_x": 0.7, "pipe_y": 1.55, "pipe_r": 0.55, "tie_y": 0.9, "stand": 8.0, "ground": -5.0, "foot": 2.1}
 PIPE_RAIL_X = 0.0
@@ -504,7 +476,6 @@ def pipe_body(s):
     for z in range(8, int(LENGTH), 8):
         for sx in (-1, 1):
             solid(s, disc(sx * p["pipe_x"], p["pipe_y"], p["pipe_r"] + 0.08, 12), z - 0.12, z + 0.12, tone(IRON, DARK, z))
-    # Copper expansion bellows (two rings) on both pipes at 32, 64 and 96, and a valve with a copper wheel at 60.
     for z in (32.0, 64.0, 96.0):
         for sx in (-1, 1):
             for dz in (-0.22, 0.22):
@@ -546,8 +517,6 @@ def pipe_detail2(s):
         block(s, sx * p["pipe_x"] - 0.12, sx * p["pipe_x"] + 0.12, p["pipe_y"] - p["pipe_r"] - 0.006, p["pipe_y"] - p["pipe_r"] + 0.0, z, z + 0.2, VARNISH)
     rocks(s, [(((k * 5) % 7 - 3) * 0.7, 0.0, 2.0 + k * 6.3, 0.4 + 0.12 * (k % 3), 0.5 * k) for k in range(16)], SAND, SLICK)
 
-
-# ---------------------------------------------------------------- shared
 
 def _stops():
     """Rail points from END_INSET inside the entry to END_INSET inside the exit: the ends sit on the top, never on the cut face."""

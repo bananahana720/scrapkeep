@@ -1,17 +1,4 @@
 #!/usr/bin/env node
-// The alpha checkpoint in one command (design-v3/ALPHA-PLAN.md, "Admission to play").
-//
-//   npm run sketch:checkpoint -- --before [--quick]
-//       bots and fixed checks: is the alpha worth Andrew's time. One table, a pass or
-//       miss per band, exit 1 on any miss.
-//   npm run sketch:checkpoint -- --after <runs.ndjson>
-//       reads his sitting from the game's own run log, one verdict per question.
-//
-// Output goes under artifacts/local/checkpoint/<timestamp>/ with a summary.json.
-// --quick runs 3 seeds per policy and skips perf, for testing this script.
-// --baseline <json> reads { skipperSmashDamagePerFight: <stored pre-chain mean> }.
-// --recorded <bots.ndjson> joins the sibling runs.ndjson and prints bot bands only,
-// without launching Godot. This is fixture replay, not full checkpoint admission.
 
 import { spawn, spawnSync } from "node:child_process";
 import {
@@ -34,7 +21,6 @@ const sketch = path.join(root, "sketches", "core-loop");
 
 export const TABLE = "default";
 
-// The thresholds, as written in ALPHA-PLAN before anything was built.
 export const BANDS = {
   seeds: 16,
   quickSeeds: 3,
@@ -43,12 +29,10 @@ export const BANDS = {
   explorerBestCombo: 2,
   cpuP99Ms: 10,
   gpuP99Ms: 7,
-  zoneSeconds: 60, // coordinator-owned knob: ALPHA-PLAN gives no number for "time in the zone".
+  zoneSeconds: 60,
   ticksPerSecond: 90,
   parallel: 6,
 };
-
-// --- Band arithmetic ---------------------------------------------------------------------
 
 export const atMost = (measured, limit) =>
   measured !== null && measured !== undefined && measured <= limit;
@@ -72,30 +56,23 @@ export function median(values) {
 
 const wins = (runs) => runs.filter((r) => r.outcome === "won");
 
-// A bot run joined to the game's own run-log line: what the band arithmetic reads.
-// heft and parts come from the last stage row that carries them. The fight is the posture
-// block's fight_ticks: first posture gain to the break, not the stage clock, which also
-// counts every second spent exploring before the fight.
 export function summarizeRun(bot, logLine) {
   const stages = (logLine?.stages ?? []).filter((s) => s);
   const last = (key) => {
     for (let i = stages.length - 1; i >= 0; i--)
-      if (stages[i][key] !== null && stages[i][key] !== undefined)
-        return stages[i][key];
+      if (stages[i][key] !== null && stages[i][key] !== undefined) return stages[i][key];
     return null;
   };
   const parts = last("part_ids_at_exit");
   const posture = last("posture");
-  const fightTicks =
-    typeof posture?.fight_ticks === "number" ? posture.fight_ticks : null;
+  const fightTicks = typeof posture?.fight_ticks === "number" ? posture.fight_ticks : null;
   return {
     policy: bot.policy,
     seed: bot.seed,
     outcome: bot.outcome,
     heft: last("heft_at_engage"),
     parts: Array.isArray(parts) ? parts.length : null,
-    fightSeconds:
-      fightTicks === null ? null : fightTicks / BANDS.ticksPerSecond,
+    fightSeconds: fightTicks === null ? null : fightTicks / BANDS.ticksPerSecond,
     smashDamage: logLine?.smash_damage ?? null,
     smashDamageByFight: logLine?.smash_damage_by_fight ?? null,
     chains: logLine?.chains ?? null,
@@ -107,21 +84,14 @@ export function summarizeRun(bot, logLine) {
 const pct = (n, d) => `${n}/${d}`;
 const num = (v, digits = 2) => (v === null ? "n/a" : Number(v).toFixed(digits));
 
-// Every fight slot counts, including zero damage and losing attempts. Total smash
-// damage also includes out-of-fight landings, so it cannot be this band's numerator.
 export function smashDamagePerFight(runs) {
-  if (!runs.length || runs.some((r) => !Array.isArray(r.smashDamageByFight)))
-    return null;
+  if (!runs.length || runs.some((r) => !Array.isArray(r.smashDamageByFight))) return null;
   const fights = runs.flatMap((r) => r.smashDamageByFight);
-  if (
-    !fights.length ||
-    fights.some((v) => typeof v !== "number" || !Number.isFinite(v) || v < 0)
-  )
+  if (!fights.length || fights.some((v) => typeof v !== "number" || !Number.isFinite(v) || v < 0))
     return null;
   return fights.reduce((sum, v) => sum + v, 0) / fights.length;
 }
 
-// `runs` is { completionist: [...], skipper: [...], camper: [...] } of summarizeRun rows.
 export function evaluateBots(runs, baseline = null) {
   const explorer = runs.completionist ?? [];
   const skipper = runs.skipper ?? [];
@@ -172,11 +142,8 @@ export function evaluateBots(runs, baseline = null) {
   });
   const smashMean = smashDamagePerFight(skipper);
   const preChain = baseline?.skipperSmashDamagePerFight;
-  const baselineValid =
-    typeof preChain === "number" && Number.isFinite(preChain) && preChain >= 0;
-  const limit = baselineValid
-    ? preChain * (1 + BANDS.skipperSmashIncrease)
-    : null;
+  const baselineValid = typeof preChain === "number" && Number.isFinite(preChain) && preChain >= 0;
+  const limit = baselineValid ? preChain * (1 + BANDS.skipperSmashIncrease) : null;
   rows.push({
     band: "skipper smash damage per fight",
     measured: `${num(smashMean)} HP mean, pre-chain ${baselineValid ? num(preChain) : "n/a (supply --baseline)"}`,
@@ -201,12 +168,9 @@ export function evaluateBots(runs, baseline = null) {
   return rows;
 }
 
-// Watch rows retain the numerical verdict but do not block the checkpoint.
 export const checkpointPassed = (rows) =>
   rows.every((r) => r.pass !== false || r.status === "watch");
 
-// Perf bench JSON (tools/perf_bench.gd) on the densest scene. CPU main thread is the
-// process pass (every node's _process); GPU is the viewport's measured render time.
 export function evaluatePerf(bench) {
   const rows = [];
   const valid =
@@ -241,7 +205,6 @@ export function evaluatePerf(bench) {
   return rows;
 }
 
-// The sweep still measures the historical slice cell's Warden numbers.
 export function sliceCell(defsText) {
   const plating = /"warden_plating":\s*([\d.]+)/.exec(defsText);
   const curve = /"curve":\s*([\d.]+)/.exec(defsText);
@@ -259,9 +222,7 @@ export function evaluateSweep(tsvText, cell) {
   const header = lines[0]?.split("\t") ?? [];
   const rows = lines
     .slice(1)
-    .map((l) =>
-      Object.fromEntries(l.split("\t").map((v, i) => [header[i], v])),
-    );
+    .map((l) => Object.fromEntries(l.split("\t").map((v, i) => [header[i], v])));
   const hit =
     cell &&
     rows.find(
@@ -286,7 +247,6 @@ export function evaluateSweep(tsvText, cell) {
   };
 }
 
-// A gate receipt (sketch-smoke --receipt gate) for this commit that is clean and ok.
 export function evaluateReceipt(receipts, head) {
   const mine = receipts.filter((r) => r.label === "gate" && r.head === head);
   if (mine.length === 0)
@@ -306,8 +266,6 @@ export function evaluateReceipt(receipts, head) {
   };
 }
 
-// ALPHA-PLAN lines this script does not check. They print as "by hand" and do not count
-// toward the bots-and-fixed-checks verdict, so an ADMIT here never claims them.
 export const BY_HAND = [
   {
     band: "each band fails its deliberately failing calibration case (checkpoint.test.mjs)",
@@ -317,8 +275,7 @@ export const BY_HAND = [
   },
   {
     band: "lair-chaser pays a measured cost",
-    measured:
-      "Hunt is parked (LEGIBILITY decision 4), so no lair-chaser exists on the slice",
+    measured: "Hunt is parked (LEGIBILITY decision 4), so no lair-chaser exists on the slice",
     threshold: "not applicable while Hunt is parked",
   },
   {
@@ -333,8 +290,6 @@ export const BY_HAND = [
   },
 ].map((row) => ({ ...row, pass: null, byHand: true }));
 
-// --- The sitting (--after) -----------------------------------------------------------------
-
 export function readRunLog(text) {
   const byRun = new Map();
   for (const line of (text || "").split("\n")) {
@@ -345,16 +300,14 @@ export function readRunLog(text) {
     } catch {
       continue;
     }
-    if (record && record.run_id !== undefined) byRun.set(record.run_id, record); // lines are cumulative: the last one wins
+    if (record && record.run_id !== undefined) byRun.set(record.run_id, record);
   }
   return [...byRun.values()].filter((r) => r.table === TABLE);
 }
 
 const joinedEvents = (run) =>
   new Set(
-    (run.stages ?? []).flatMap((s) =>
-      Array.isArray(s.events_joined) ? s.events_joined : [],
-    ),
+    (run.stages ?? []).flatMap((s) => (Array.isArray(s.events_joined) ? s.events_joined : [])),
   ).size;
 const engageTicks = (run) => {
   const values = (run.stages ?? [])
@@ -363,9 +316,6 @@ const engageTicks = (run) => {
   return values.length ? Math.max(...values) : null;
 };
 
-// One entry per sitting question. `read` returns the per-run number (null when the run
-// has no value); `reason` marks a question the log cannot answer, and `verdict` reads
-// the whole log.
 export const QUESTIONS = [
   {
     id: "activities",
@@ -391,8 +341,7 @@ export const QUESTIONS = [
       const t = engageTicks(run);
       return t === null ? null : t / BANDS.ticksPerSecond;
     },
-    verdict: (values) =>
-      values.some((v) => v !== null && v >= BANDS.zoneSeconds),
+    verdict: (values) => values.some((v) => v !== null && v >= BANDS.zoneSeconds),
     note: `seconds from stage start to the Warden's engagement on its latest attempt; a run at ${BANDS.zoneSeconds} s or more passes (a knob, ALPHA-PLAN gives no number). A run that never engages reads n/a`,
   },
   {
@@ -438,13 +387,10 @@ export function runRows(runs) {
     events_joined: joinedEvents(r),
     smashes: r.smashes ?? null,
     bites: r.bites ?? null,
-    engage_s:
-      engageTicks(r) === null ? null : engageTicks(r) / BANDS.ticksPerSecond,
+    engage_s: engageTicks(r) === null ? null : engageTicks(r) / BANDS.ticksPerSecond,
     attempts: (r.stages ?? []).reduce((n, s) => n + (s.attempts ?? 0), 0),
   }));
 }
-
-// --- Printing ----------------------------------------------------------------------------
 
 export function formatTable(rows) {
   const result = (r) =>
@@ -461,9 +407,7 @@ export function formatTable(rows) {
     ["band", "measured", "threshold", "result"],
     ...rows.map((r) => [r.band, r.measured, r.threshold, result(r)]),
   ];
-  const widths = cells[0].map((_, i) =>
-    Math.max(...cells.map((row) => String(row[i]).length)),
-  );
+  const widths = cells[0].map((_, i) => Math.max(...cells.map((row) => String(row[i]).length)));
   return cells
     .map((row) =>
       row
@@ -476,17 +420,7 @@ export function formatTable(rows) {
 
 export function formatSitting(runs, verdicts) {
   const out = [];
-  out.push(
-    [
-      "run_id",
-      "outcome",
-      "events",
-      "smashes",
-      "bites",
-      "engage_s",
-      "attempts",
-    ].join("\t"),
-  );
+  out.push(["run_id", "outcome", "events", "smashes", "bites", "engage_s", "attempts"].join("\t"));
   for (const r of runRows(runs))
     out.push(
       [
@@ -510,8 +444,6 @@ export function formatSitting(runs, verdicts) {
   return out.join("\n");
 }
 
-// --- Running things ----------------------------------------------------------------------
-
 function git(args) {
   const r = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
   return r.status === 0 ? r.stdout.trim() : null;
@@ -534,15 +466,12 @@ function runProcess(command, args, options = {}) {
 async function pool(jobs, width) {
   const results = new Array(jobs.length);
   let next = 0;
-  const workers = Array.from(
-    { length: Math.min(width, jobs.length) },
-    async () => {
-      while (next < jobs.length) {
-        const i = next++;
-        results[i] = await jobs[i]();
-      }
-    },
-  );
+  const workers = Array.from({ length: Math.min(width, jobs.length) }, async () => {
+    while (next < jobs.length) {
+      const i = next++;
+      results[i] = await jobs[i]();
+    }
+  });
   await Promise.all(workers);
   return results;
 }
@@ -564,10 +493,7 @@ function readNdjson(file) {
 
 export function readRecordedBots(file) {
   const logs = new Map(
-    readNdjson(path.join(path.dirname(file), "runs.ndjson")).map((r) => [
-      r.run_id,
-      r,
-    ]),
+    readNdjson(path.join(path.dirname(file), "runs.ndjson")).map((r) => [r.run_id, r]),
   );
   const grouped = { completionist: [], skipper: [], camper: [] };
   for (const bot of readNdjson(file)) {
@@ -611,8 +537,7 @@ async function runBots(outDir, seedCount) {
             seed,
             failed: `bot_run exit ${result.code}, no bots.ndjson line`,
           };
-        const line =
-          [...lines].reverse().find((l) => l.run_id === bot.run_id) ?? null;
+        const line = [...lines].reverse().find((l) => l.run_id === bot.run_id) ?? null;
         return summarizeRun(bot, line);
       });
     }
@@ -629,11 +554,10 @@ async function runBots(outDir, seedCount) {
 
 function ensureImported() {
   if (existsSync(path.join(sketch, ".godot", "imported"))) return;
-  spawnSync(
-    GODOT,
-    ["--headless", "--editor", "--import", "--quit", "--path", sketch],
-    { encoding: "utf8", timeout: 600_000 },
-  );
+  spawnSync(GODOT, ["--headless", "--editor", "--import", "--quit", "--path", sketch], {
+    encoding: "utf8",
+    timeout: 600_000,
+  });
 }
 
 async function runPerf(outDir) {
@@ -716,16 +640,10 @@ async function before(options) {
     perf = await runPerf(outDir);
     rows.push(...evaluatePerf(perf.bench));
   }
-  const defs = readFileSync(
-    path.join(sketch, "src", "core", "slice_defs.gd"),
-    "utf8",
-  );
+  const defs = readFileSync(path.join(sketch, "src", "core", "slice_defs.gd"), "utf8");
   const sweepFile = path.join(sketch, "tools", "posture_sweep.tsv");
   rows.push(
-    evaluateSweep(
-      existsSync(sweepFile) ? readFileSync(sweepFile, "utf8") : "",
-      sliceCell(defs),
-    ),
+    evaluateSweep(existsSync(sweepFile) ? readFileSync(sweepFile, "utf8") : "", sliceCell(defs)),
   );
   const head = git(["rev-parse", "HEAD"]);
   rows.push(evaluateReceipt(readReceipts(), head));
@@ -805,11 +723,7 @@ function after(file) {
   console.log(formatSitting(runs, verdicts));
   writeFileSync(
     path.join(outDir, "summary.json"),
-    JSON.stringify(
-      { mode: "after", file, runs: runRows(runs), verdicts },
-      null,
-      2,
-    ) + "\n",
+    JSON.stringify({ mode: "after", file, runs: runRows(runs), verdicts }, null, 2) + "\n",
   );
   console.log(`\n${path.relative(root, outDir)}/summary.json`);
   return verdicts.some((v) => v.verdict === "miss") ? 1 : 0;
@@ -826,8 +740,7 @@ export function parseArgs(argv) {
     else if (argv[i] === "--recorded") {
       options.mode = "recorded";
       options.file = argv[++i] ?? null;
-    } else if (argv[i] === "--baseline")
-      options.baselineFile = argv[++i] ?? null;
+    } else if (argv[i] === "--baseline") options.baselineFile = argv[++i] ?? null;
   }
   return options;
 }
@@ -839,9 +752,7 @@ async function main() {
     try {
       options.baseline = JSON.parse(readFileSync(options.baselineFile, "utf8"));
     } catch (error) {
-      console.error(
-        `checkpoint: cannot read baseline ${options.baselineFile}: ${error.message}`,
-      );
+      console.error(`checkpoint: cannot read baseline ${options.baselineFile}: ${error.message}`);
       process.exit(2);
     }
   }
@@ -852,9 +763,7 @@ async function main() {
       !statSync(options.file).isFile() ||
       !existsSync(path.join(path.dirname(options.file), "runs.ndjson")))
   ) {
-    console.error(
-      "checkpoint --recorded needs a bots.ndjson file and sibling runs.ndjson",
-    );
+    console.error("checkpoint --recorded needs a bots.ndjson file and sibling runs.ndjson");
     process.exit(2);
   }
   if (options.mode === "before") process.exit(await before(options));

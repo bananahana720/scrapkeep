@@ -1,15 +1,5 @@
 extends SceneTree
 
-# Bake-and-Loop Kinetic Keyframe Sheet Capture Tool (W46-ANIM-VFX-FLAIR)
-# Renders deterministic 4x1 keyframe strips (640x480 per tile -> 2560x516 sheet with header)
-# on a WorldLook sunlit packed-sand stage, freezes GPU particles deterministically, computes
-# automated visual gates, and writes kinetic_receipt.json.
-#
-# Usage:
-#   godot --path sketches/core-loop --script tools/kinetic_sheet_capture.gd -- \
-#     --category=enemy --assets=plated_brute,swatter,jolt_layer,netcaster \
-#     --world=1 --frames=idle,windup,attack,death --with-vfx=true --views=front34 \
-#     --out=artifacts/local/kinetic/enemies
 
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
@@ -54,7 +44,6 @@ const ENEMY_SCRIPTS := {
 	"catch_trap": "res://src/combat/catch_trap.gd",
 }
 
-# Tiny 3x5 bitmap font for self-contained header labels (no font resource dependency).
 const FONT_3X5 := {
 	"A": [2, 5, 7, 5, 5], "B": [6, 5, 6, 5, 6], "C": [3, 4, 4, 4, 3], "D": [6, 5, 5, 5, 6],
 	"E": [7, 4, 6, 4, 7], "F": [7, 4, 6, 4, 4], "G": [3, 4, 5, 5, 3], "H": [5, 5, 7, 5, 5],

@@ -8,66 +8,23 @@ const BuildSheet := preload("res://src/build/build_sheet.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
-# The build sweep (SR4, W13-INTEGRATION-3.md; comps/ror2/items-and-stacking.md:96 and
-# comps/isaac/items-and-synergies.md:89). A tool with two arms, headless and pure: no
-# game scene, no physics, only the build data and the same Parts.roll the gates use.
-#
-#   godot --headless --path sketches/core-loop --script res://tools/build_sweep.gd -- --arm=stack
-#   godot --headless --path sketches/core-loop --script res://tools/build_sweep.gd -- --arm=compose [--seed=1] [--builds=10000]
-#   godot --headless --path sketches/core-loop --script res://tools/build_sweep.gd -- --arm=slot_growth
-#
-# stack    every pool row whose effect or charges stack under its rule, plus one
-#          synthetic probe per family the pool does not use yet (the spike family has
-#          no row today), at 1 to 20 copies: the stat, its step, and time to kill a
-#          fixed dummy. Mods-only rows go through BuildSheet.from_parts, the real fold,
-#          and are reported (their copies multiply, so the report names any that pass
-#          the spike ceiling), not gated here.
-# compose  COMPOSE_BUILDS random 6-part builds drawn through Parts.roll, one 2-part offer
-#          per pick, one class per build in turn: the share of builds reaching 3 or more
-#          distinct tags, tag pairs with no specified outcome, parts one offer shows twice
-#          (a structural invariant, gated at zero) and parts a run's offers show again
-#          (the comps measure, compared with REPEAT_TARGET_PER_10K; report-only by ruling).
-# slot_growth  SG14 (W13-INTEGRATION-3.md; comps/gunfire/weapons-and-inscriptions.md:93). One row
-#          per milestone (worlds one to three): the slot count UpgradeTree.depth_cap gives it, and
-#          on the legal pool (class-neutral parts at common, rare and relic) the best paired set
-#          against the same set with its partner missing (refilled while the pair's row stays
-#          unlive), as BuildSheet.power() on the fixed dummy. Greedy search, seeded by each named
-#          pair, so "best" is an approximation the report names.
-#
-# Exit 0 when the arm printed nonzero rows and found no problem, else 1. Evidence limit:
-# a numbers model; time to kill reads the stat as a damage bonus on a fixed dummy, not
-# combat's truth, and nothing here says whether a build feels good.
 
 const MAX_COPIES := 20
 const COPIES_SHOWN := [1, 2, 3, 5, 10, 20]
-# The dummy for time to kill (a report model, not combat's numbers).
 const DUMMY_HP := 1000.0
 const DUMMY_DPS := 100.0
 const DEFAULT_SEED := 1
 const COMPOSE_BUILDS := 10000
 const BUILD_SIZE := 6
 const OFFER_SIZE := 2
-# SG14 (the block's own proposals, which the test writes out again): the worlds whose depth cap
-# gives a milestone's slot count, the widest gate tier's rarities for the legal pool, the paired
-# over unpaired margin band, and the last-over-first ratio.
 const SLOT_WORLDS := [1, 2, 3]
 const SLOT_RARITIES := ["common", "rare", "relic"]
-# 0 since systems audit pass D: maker tricks are rule changes power() mostly cannot see
-# (tests/slot_growth_sweep_test.gd has the reason); the world 1 economy pass re-sets a floor.
 const SLOT_MARGIN_MIN := 0.0
 const SLOT_MARGIN_MAX := 0.40
 const SLOT_RATIO_MAX := 6.0
-# The comps targets (comps/isaac/items-and-synergies.md:89): at least 30% of builds reach
-# 3 or more tags; the report target is at most one within-run repeat per 10,000 draws.
 const TAG3_TARGET := 0.30
 const REPEAT_TARGET_PER_10K := 1.0
-# SR4 round 3 ruling 1 (2026-10-11): stacking families want copies, so within-run
-# repeats are report-only. In-offer duplicates remain a structural invariant at zero.
 const EPS := 1e-6
-# SR4 round 3 ruling 2 (2026-10-11): these tag pairs are declared independent;
-# none is the glyph pair of a Synergies.ROWS trick with a transformer. Include same-tag pairs because
-# different held parts can share a tag. SI4 moves this table beside the synergy rows
-# when the shot bits land. A pair absent from all three tables stays unspecified.
 const INDEPENDENT_PAIRS := [
 	["frost", "frost"], ["frost", "kinetic"], ["frost", "split"], ["frost", "spiral"],
 	["frost", "chain"], ["frost", "anchor"], ["frost", "speed"],
@@ -82,7 +39,6 @@ const INDEPENDENT_PAIRS := [
 	["anchor", "anchor"], ["anchor", "speed"], ["anchor", "mass"],
 	["speed", "speed"], ["speed", "mass"], ["mass", "mass"],
 ]
-# Families the pool may not use yet get one synthetic probe each, so every family runs.
 const PROBES := {
 	"probe_linear": {"stack": "linear", "cap": 0.0, "per": 0.1},
 	"probe_hyperbolic": {"stack": "hyperbolic", "cap": 0.5, "per": 0.1},
@@ -142,8 +98,6 @@ static func _pool_defs() -> Array:
 	return out
 
 
-# One row per stacking number: {id, family, key, per, cap, values, steps, ttk, real}.
-# real is false for a synthetic probe.
 static func stack_arm() -> Array:
 	var rows: Array = []
 	var seen := {}
@@ -176,8 +130,6 @@ static func _curve_row(id: String, rule: String, key: String, per: float, cap: f
 		"real": real, "model": "curve"}
 
 
-# A mods-only row: copies fold through the real sheet, so the reported value is the
-# largest mod product and time to kill reads the sheet's own output estimate.
 static func _fold_row(id: String, d: Resource) -> Dictionary:
 	var values: Array = []
 	var ttk: Array = []
@@ -195,7 +147,6 @@ static func _fold_row(id: String, d: Resource) -> Dictionary:
 		"values": values, "ttk": ttk, "real": true, "model": "fold"}
 
 
-# The copy count at which a ceiling or spike row stops rising, or 0 if it rises to 20.
 static func flat_from(row: Dictionary) -> int:
 	var values: Array = row["values"]
 	for i in range(1, values.size()):
@@ -204,8 +155,6 @@ static func flat_from(row: Dictionary) -> int:
 	return 0
 
 
-# The gated rules per family; [] is clean. Fold rows are reported, not gated, except
-# for finite numbers.
 static func row_problems(row: Dictionary) -> Array:
 	var out: Array = []
 	var values: Array = row["values"]
@@ -262,13 +211,9 @@ static func print_stack_table(rows: Array) -> void:
 		print(line)
 
 
-# A declared outcome: "named:<id>", "rule:<id>", "independent", or "" for an
-# unknown tag or undeclared pair. The override lets the test remove a known pair.
 static func pair_outcome(a: String, b: String, independent_pairs: Array = INDEPENDENT_PAIRS) -> String:
 	if not a in PartDef.TAGS or not b in PartDef.TAGS:
 		return ""
-	# A trick's two glyphs name the pair its rule change is about (tricks wake on maker pieces
-	# since pass D, so tags no longer combine; this table keeps every pair accounted for).
 	for key in Synergies.ROWS:
 		var tags: Array = Synergies.ROWS[key]["tags"]
 		if tags.size() < 2 or Synergies.told_on_wake(key):
@@ -281,7 +226,6 @@ static func pair_outcome(a: String, b: String, independent_pairs: Array = INDEPE
 	return ""
 
 
-# Tag pairs across two different held parts whose outcome is unspecified.
 static func unspecified_pairs(tag_sets: Array, independent_pairs: Array = INDEPENDENT_PAIRS) -> int:
 	var count := 0
 	for i in tag_sets.size():
@@ -293,7 +237,6 @@ static func unspecified_pairs(tag_sets: Array, independent_pairs: Array = INDEPE
 	return count
 
 
-# Parts an offer shows more than once.
 static func offer_repeats(offer: Array) -> int:
 	var seen := {}
 	var repeats := 0
@@ -304,10 +247,6 @@ static func offer_repeats(offer: Array) -> int:
 	return repeats
 
 
-# Parts an offer shows that this run's earlier offers already showed (offered maps id to
-# times shown this run). The comps measure (comps/isaac/items-and-synergies.md:89) is a
-# part repeating within a run; offer_repeats above only sees one offer, which Parts.roll
-# never duplicates.
 static func run_repeats(offered: Dictionary, offer: Array) -> int:
 	var count := 0
 	for key in offer:
@@ -406,14 +345,6 @@ static func print_compose_table(stats: Dictionary) -> void:
 			stats["held_copies"], stats["empty_offers"], stats["outcomes"]])
 
 
-# SG14, one row per milestone. slots is UpgradeTree.depth_cap(world): the pick depth the
-# world-one profile opens (world.gd sets tree.max_depth the same way). Paired: greedy sets
-# seeded by each named pair (shown part plus one partner), filled to slots. Unpaired is the
-# partner missing (comps/gunfire/weapons-and-inscriptions.md:93): the winning paired set with
-# each partner part swapped for the best substitute that keeps that pair's row unlive. unpaired_any
-# is the older search from empty, admitting only sets with no named synergy live; it is
-# report-only. margin is paired over the partner-missing value, minus one; -1 when no pair is
-# available. best is the largest power seen, the ratio's input.
 static func slot_growth_arm() -> Array:
 	var pool := _legal_pool()
 	var seeds := _pair_seeds(pool)
@@ -446,9 +377,6 @@ static func slot_growth_arm() -> Array:
 	return rows
 
 
-# Planted null control: the first named pair whose partner adds no power() on its own (the
-# shown part alone and with the partner give the same power), run through the same paired and
-# partner-missing path as the arm. A row that adds nothing should give a margin near zero.
 static func slot_growth_null(slots: int) -> Dictionary:
 	var pool := _legal_pool()
 	for key in Synergies.ROWS:
@@ -470,9 +398,6 @@ static func slot_growth_null(slots: int) -> Dictionary:
 	return {"row": "", "partner": "", "paired_dps": 0.0, "unpaired_dps": 0.0, "margin": -1.0}
 
 
-# The partner missing: keep the first piece (index 0 of a paired set) and every other held part
-# not of the trick's maker, then refill to slots while the trick stays asleep.
-# With no pair row (no seed at this milestone), this is the no-pair legal set.
 static func _partner_missing(paired: Array, row_key: String, pool: Array, slots: int) -> Array:
 	if row_key == "" or paired.is_empty():
 		return _greedy([], pool, slots, true)
@@ -484,8 +409,6 @@ static func _partner_missing(paired: Array, row_key: String, pool: Array, slots:
 	return _substitute(kept, pool, paired.size(), row_key)
 
 
-# Fills held to size with the admissible part that gives the most power at each step, even when
-# it does not raise power, so the substitute takes the partner's slot and no slot is left empty.
 static func _substitute(seed: Array, pool: Array, size: int, row_key: String) -> Array:
 	var held: Array = seed.duplicate()
 	while held.size() < size:
@@ -507,8 +430,6 @@ static func _substitute(seed: Array, pool: Array, size: int, row_key: String) ->
 	return held
 
 
-# The legal pool a scrap-built weapon can take: class-neutral offers at every gate rarity, with
-# the milestone-only parts (granted by events, never offered) removed. Sorted, so runs repeat.
 static func _legal_pool() -> Array:
 	var milestone: Array = Parts.milestone_ids()
 	var pool: Array = []
@@ -519,8 +440,6 @@ static func _legal_pool() -> Array:
 	return pool
 
 
-# One seed per (trick, partner) where the trick's first callout part and another piece of its
-# maker are both in pool.
 static func _pair_seeds(pool: Array) -> Array:
 	var seeds: Array = []
 	for key in Synergies.ROWS:
@@ -541,8 +460,6 @@ static func _named_pair_count(seeds: Array) -> int:
 	return rows.size()
 
 
-# Greedy fill to slots: add the part that raises power most, stop when none does. unpaired
-# admits a candidate only while no named synergy is live.
 static func _greedy(seed: Array, pool: Array, slots: int, unpaired: bool) -> Array:
 	var held: Array = seed.duplicate()
 	while held.size() < slots:
@@ -568,9 +485,6 @@ static func _power(held: Array) -> float:
 	return BuildSheet.from_parts(held).power()
 
 
-# The gates on the rows: slot count never falls and reaches DEPTHS at the last milestone; each
-# paired margin with a pair available sits in the band; the last best is at most the ratio
-# limit times the first. Empty is a problem: a silent arm proves nothing.
 static func slot_growth_problems(rows: Array) -> Array:
 	var out: Array = []
 	if rows.is_empty():

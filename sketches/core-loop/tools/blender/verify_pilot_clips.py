@@ -49,7 +49,6 @@ SEAM_TOL = 1e-5
 KEPT_TOL = 1e-5
 CLEARANCE = 0.98
 PELVIS = (0.0, 0.0, -0.30)
-# Section 3 rules 5 and 6: idle and ride amplitude caps.
 CAP_SPINE_DEG = 6.0
 CAP_SOFT_DEG = 15.0
 CAP_HAND_M = 0.02
@@ -63,8 +62,6 @@ COMPONENTS = {'SCALAR': 1, 'VEC3': 3, 'VEC4': 4}
 class Failure(Exception):
     pass
 
-
-# --- GLB bytes ---------------------------------------------------------------------------
 
 def read_glb(path):
     blob = Path(path).read_bytes()
@@ -156,8 +153,6 @@ def channel_map(doc, binary, anim):
     return out
 
 
-# --- roster and tables --------------------------------------------------------------------
-
 def roster():
     return json.loads(ROSTER.read_text())
 
@@ -193,8 +188,6 @@ def expected_clips(data, pilot, table):
                        'from': row.get('from', frm), 'to': row.get('to', to)}
     return clips
 
-
-# --- structure (JSON) ----------------------------------------------------------------------
 
 def check_structure(doc, binary, blob, base_doc, base_bin, data, pilot, has_table, table, info):
     names = [a.get('name', '') for a in doc.get('animations', [])]
@@ -285,8 +278,6 @@ def _hierarchy(doc, joints):
             parent[child] = index
     return {doc['nodes'][j].get('name'): doc['nodes'][parent[j]].get('name') if parent.get(j) in joints else None for j in joints}
 
-
-# --- pose (Blender reimport) --------------------------------------------------------------
 
 def check_pose(glb, data, pilot, table, info):
     import bpy
@@ -383,7 +374,6 @@ def check_pose(glb, data, pilot, table, info):
             raise Failure('check 11: %s moves the pelvis by %.7f m' % (clip, drift))
         if rigid and scale_error > 1e-5:
             raise Failure('check 15: %s scales a bone of a rigid cast by %.6f' % (clip, scale_error))
-        # glTF stores float32 quaternions; exact six-degree keys can round above the cap.
         if amplitude > 1.0 + 1e-5:
             raise Failure('check 10: %s exceeds its amplitude cap (%.2f of the cap)' % (clip, amplitude))
         radius = 0.0
@@ -400,13 +390,12 @@ def check_pose(glb, data, pilot, table, info):
     ride = chain['ult_ride_loop'][0] if 'ult_ride_loop' in chain else None
     for clip, end_kind in (('ult_windup', 1), ('ult_strike', 0), ('ult_strike', 1), ('ult_recover', 0)):
         if ride is None or clip not in chain:
-            continue  # a partial table ships no ultimate chain yet
+            continue
         error = _distance(chain[clip][end_kind], ride)
         if error > RIDE_TOL:
             raise Failure('check 8: %s %s is %.6f off the ride pose' % (clip, 'end' if end_kind else 'start', error))
     info['pose'] = report
     if pilot == 'kest':
-        # The retained drop_land is the existing route's mandatory preen positive control.
         import pilot_drop_timing
         arm.animation_data.action = _action(bpy, 'drop_land')
         arm.animation_data.action_slot = arm.animation_data.action.slots[0]
@@ -486,7 +475,6 @@ def _action(bpy, clip):
     exact = [a for a in bpy.data.actions if a.name == clip]
     if exact:
         return exact[0]
-    # The importer may suffix the armature name (render_pilot_reactions.py matches the same way).
     loose = [a for a in bpy.data.actions if a.name.startswith(clip + '_')]
     return loose[0] if len(loose) == 1 else None
 
@@ -531,8 +519,6 @@ def _radius(bpy, meshes):
         evaluated.to_mesh_clear()
     return worst
 
-
-# --- the run -------------------------------------------------------------------------------
 
 def verify(pilot, glb, baseline, has_table=None, pose=True, quiet=False, table=None):
     """Returns (passed, line, info)."""
@@ -604,7 +590,6 @@ def seed(clean, out, defect):
         for column, value in enumerate(quat):
             poke(doc, binary, sampler['output'], len(rows) - 1, column, value)
     elif defect == 'kept':
-        # A brace channel whose output no other clip shares (the exporter reuses identical accessors).
         anim = anims['brace']
         shared = [s['output'] for a in doc['animations'] if a is not anim for s in a['samplers']]
         sampler = next(anim['samplers'][c['sampler']] for c in anim['channels']
@@ -696,7 +681,6 @@ def selftest():
     bpy.context.view_layer.update()
     clean_preen = check_preen(arm)
     print('PILOT_CLIPS_SELFTEST preen-clean: PASS (%.8f)' % clean_preen)
-    # Exercise the same triangle classifier used on reimported Tally clips.
     bpy.ops.wm.read_factory_settings(use_empty=True)
     import pilot_tally
     source, _ = pilot_tally.model()

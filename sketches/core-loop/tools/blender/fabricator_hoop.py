@@ -28,12 +28,9 @@ from lantern_beacon import kit, common, frustum
 import polish
 
 MODELS = kit.SKETCH / "assets/models"
-LANDMARK = [2500, 2000, 2]  # polish: was [900, 2000, 2]; class cap 4,000 T / 8,900 V
+LANDMARK = [2500, 2000, 2]
 NAME = "fabricator_hoop"
 
-# One row per painted part, palette names only (common.HEX mirrors src/core/palette.gd). "state" is the exact mint
-# steel.gdshader swaps for the instance's state_tint. The picture's grey foot pads have no palette grey that is not
-# slate (reserved for "not yet"), so they are bone, the picture's ivory plate tone.
 TONES = {
     "state": "mint",
     "brass": "copper",
@@ -42,24 +39,19 @@ TONES = {
     "plate": "bone",
 }
 
-# Metres at game scale, Godot +Y up; the ring lies in XY and the ball crosses along Z (Basis.looking_at(facing)).
-# Today's ring: TorusMesh inner 4.65, outer 5.0, centre y 3.5 (fabricators.gd:149-155). The inner radius is kept
-# exactly; the outer grows to the picture's chunkier band within the 10 percent footprint rule.
 RING_Y, RING_IN, RING_OUT, RING_DEPTH = 3.5, 4.65, 5.35, .7
-RING_SEGMENTS, RING_CHAMFER = 56, .12  # polish: segments were 28
-RING_CUT_Y = .3                        # the arc's ends stop inside the footings, this high on the centreline
-SILL = (.14, .55, .3)                  # height, half depth at the ground, half depth on top
-NUT = (1.0, 7.85, 9.05)                # circumradius, y0, y1 (hex, a flat facing +Z)
-FOOTING = (2.8, 5.3, .8, .22, 1.9)     # x inner, x outer, half depth, corner chamfer, height
-PLATE = (1.2, .7, 1.3, .06)            # width, height, centre y, thickness (both faces of each footing)
-FOOT = (.3, .6, .72, .28)              # half width, reach out, height at the wall, height at the tip
-# The code anchors: the part glyph at RING - SINK + 1.2 and the price prompt at RING * 2 - SINK (fabricators.gd:162,168).
+RING_SEGMENTS, RING_CHAMFER = 56, .12
+RING_CUT_Y = .3
+SILL = (.14, .55, .3)
+NUT = (1.0, 7.85, 9.05)
+FOOTING = (2.8, 5.3, .8, .22, 1.9)
+PLATE = (1.2, .7, 1.3, .06)
+FOOT = (.3, .6, .72, .28)
 SOCKETS = {"socket_glyph": [0, RING_Y + 1.2, 0], "socket_prompt": [0, 8.5, 0]}
 SIZE = [11.3, 9.05, 2.8]
 
 
 def tone(name):
-    # The TONES row as an sRGB triple, so kit's wear jitter leaves the palette value exact.
     return common.srgb(TONES[name])
 
 
@@ -82,8 +74,6 @@ def ring_arc(s):
 
 
 def sill(s):
-    # The ring's buried lower arc read as an open arch (it1 arena frame), so its chord closes at ground level: a low
-    # state-keyed sill between the footings, chamfered both ways along the crossing, that the ball rolls over.
     x = FOOTING[0] + .05
     h, hz, top = SILL
     verts = [(-x, 0.0, -hz), (-x, 0.0, hz), (-x, h, top), (-x, h, -top), (x, 0.0, -hz), (x, 0.0, hz), (x, h, top), (x, h, -top)]
@@ -115,8 +105,6 @@ def footing(s, side):
 
 
 def foot(s, at, out, along, reach=None):
-    # A brass wedge splayed from the footing's wall, a pale pad laid on its slope. out: unit outward (x, z);
-    # along: unit along the wall.
     hw, full, hwall, htip = FOOT
     reach = reach or full
     ox, oz = out
@@ -126,7 +114,6 @@ def foot(s, at, out, along, reach=None):
     verts = base + top
     faces = [(0, 1, 3, 2), (4, 6, 7, 5), (0, 4, 5, 1), (2, 3, 7, 6), (0, 2, 6, 4), (1, 5, 7, 3)]
     s.add(verts, faces, tone("brass"))
-    # Pad: the slope face inset and lifted 2 cm along its normal.
     slope = (reach, htip - hwall)
     ln = math.hypot(*slope)
     nrm = (-slope[1] / ln, slope[0] / ln)
@@ -143,7 +130,6 @@ def feet(s, side):
     cx = side * (x0 + x1) / 2
     for face in (-1, 1):
         foot(s, (cx, face * hz), (0, face), (1, 0))
-    # The outer foot is shorter: the footprint keeps the whole hoop near today's 10 m ring width.
     foot(s, (side * x1, 0), (side, 0), (0, 1), reach=.35)
 
 
@@ -191,7 +177,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--out-dir", default=str(MODELS))
     args = parser.parse_args(argv)
-    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)  # hard machinery: soft edges, smooth ring, bake (mint state key kept exact)
+    polish.enable(bevel=.03, bevel_min=.15, **kit.BAKE)
     export(NAME, [("Hoop", "steel", False, steel), ("Footings", "enamel", False, enamel)], SOCKETS, args.out_dir)
 
 

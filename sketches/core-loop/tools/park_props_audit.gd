@@ -1,59 +1,5 @@
 extends SceneTree
 
-# Ride-path dressing audit for one park map (Dressing lane, DRESSING-KITS.md "Evidence per park PR"). It boots the
-# park stage like the game does (table "park"), rides the union of the map's lines.json pilot lines and floor line in
-# steps, and at every sample puts the ball on the ground and the player's chase-camera pose behind it. It reports
-#   - dressing in view per sample, by category (math over the built nodes, no render needed),
-#   - which samples are BARE, and the longest bare run,
-#   - draw calls and primitives at a spread of samples (OpenGL compatibility proxy, cloud llvmpipe, not a
-#     frame-cost proof), with and without the "park_props" group, so the props-only delta falls out of one run,
-#   - stills from the player camera at the barest samples plus fixed ones, replayable with --poses.
-#
-#   xvfb-run -a -s "-screen 0 1280x720x24" $GODOT_BIN --rendering-driver opengl3 --path sketches/core-loop \
-#     --resolution 1280x720 --script res://tools/park_props_audit.gd -- --map=park_dam --out=<abs dir> \
-#     [--step=25] [--stills=12] [--draws=40] [--counts-only] [--poses=<poses.json>] [--cam=rest|mid|fast]
-#     [--vignettes [--spots=id,id] [--subject-kind=<kind>]]
-#
-# Writes <out>/<map>/samples.json, summary.json, stills.json, poses.json and <map>-<idx>-<x>_<z>.png, then runs
-# tools/park_props_contact.py for the contact sheet. Needs a display unless --counts-only.
-#
-# --vignettes (Dressing card (c)) does not ride: it reads the map's props file and kit as the runtime does (ParkProps.prepare), expands
-# it with the game's ground, and for each spot (or the --spots filter) takes the subject (the first instance of that vignette, the lead
-# prop) and finds a clear view of it by search, not by hand: bearings from the spot's front of 0, +45, -45, +90, -90, +135, -135 and 180
-# degrees (a yaw offset: Godot +Z is the front, direction (sin yaw, cos yaw)), eye_m = max(5, radius + 1.5) m from the subject's centre at the chase anchor height
-# (ground + 1.8), the first one whose sight line to the centre clears terrain, other props' cylinders, colliders and the eye point itself.
-# If none is clear it takes the front and marks the row blocked_all. Two stills per spot, both replayable (poses.json carries "cam" and
-# "look" for the eye frame; the chase frame is a plain pose): "eye" at that point looking at the centre (fov 72.5), the ball parked 8 m
-# behind the camera, and "chase" with the ball eye_m out on the bearing and 2.5 m to its side, the player camera looking along -d (yaw =
-# the bearing angle, the eye frame's axis) so the subject sits beside the ball, not behind it. bearing_deg is the yaw offset from the
-# spot's front, not a compass bearing. For each frame the
-# subject is hidden and the frame drawn again: subject_px counts pixels inside its projected box that differ by more than 8 in any channel,
-# leaving out pixels that already differ between two unchanged renders (motes, streaks; noise_px), a guide and not a gate (null when the
-# instance cannot be isolated from the built nodes), beside aabb_share, the screen share of that box, and frame_diff_px, the unmasked whole frame.
-# --subject-kind=<kind> makes the subject the first instance of that kind in the spot (spots without one are skipped); vignettes.json
-# records the rule as subject_rule. Each frame also lists rows_in_view: the ids of the park file's park_rows (a footprint grid, 7 points
-# a side at most) and contraption_rows (launchers and the like: the point or a ring of their radius) with any sampled point inside the
-# camera frustum within 150 m (ParkProps.cell_visible, ground height, no occlusion).
-# Known limit: the chase frame is not sight-tested (only the eye frame is searched), and the collider ray does not exclude the subject.
-# The eye distance is max(5, subject radius + 1.5) m (eye_m per row): the frame must stand outside the subject's own footprint, so wide
-# subjects (wrecks, trucks) get a longer one; 5 m stays the rule for props. The subject itself never blocks its own sight line or eye point.
-# Writes <map>-v<spot idx>-<spot>-eye.png and -chase.png, vignettes.json, poses.json, stills.json, summary.json and the contact sheet.
-#
-# What counts as dressing (each item is one entry with a world-space centre; kinds are distinct meshes or dress_kind):
-#   props     nodes in group "park_props": every MultiMesh instance, every MeshInstance3D; kind = meta dress_kind
-#             (on the visual or an ancestor up to the group node), else the mesh.
-#   clutter   SetDressing batches (presentation.set_dressing.batches), air motes excluded; per MultiMesh instance.
-#   scatter   the stage's GroundScatter MultiMeshes; per instance.
-#   anchors   the "Posts" MultiMesh of each ParkRows anchor field; per instance.
-#   rows      a ParkRows Park_* or Landmark_* node with built GLB visuals (greybox stand-ins, colliders and ride
-#             sensors skipped), one item per row at the union of its meshes. Split by the row's budget class:
-#             the park JSON row's "budget", else ParkRecipes.ROWS[recipe].budget, else "landform". Only budget
-#             "detail" (workings kits and the like) is `rows`; landform, park_large and hero_landmark rows are
-#             `landforms`, counted for the record but not dressing and not in the bare rule.
-#   scenery   children of the stage's SpillwayScenery, DigScenery, HighdraftScenery and Cottonwoods nodes: a
-#             MultiMesh counts per instance, any other child as one item (a tree is one). Fx and mist nodes skipped.
-# An item is in view when its centre is inside the camera frustum and within the range; engine visibility ranges
-# (begin/end measured to the node's bounds centre) are honoured.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -65,12 +11,8 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 const NEAR_M := 60.0
 const FAR_M := 120.0
 const DEDUP_M := 10.0
-# A sample is BARE when props+clutter+scenery+rows(non-landform) within NEAR_M in view is below BARE_MIN_NEAR,
-# or distinct kinds within FAR_M in view is below BARE_MIN_KINDS.
 const BARE_MIN_NEAR := 5
 const BARE_MIN_KINDS := 4
-# The density bar (project-guide/coord/AMBITION-BRIEF.md, "Lived-in parks"): every 150 m of track has at least 3 distinct prop kinds
-# visible within 60 m of the player camera. Exempt windows are named in _density_exempt.
 const DENSITY_WINDOW_M := 150.0
 const DENSITY_MIN_KINDS := 3
 const DENSITY_TAIL_MIN_M := 75.0
@@ -89,21 +31,13 @@ const PROPS_GROUP := "park_props"
 const SCENERY_ROOTS := ["SpillwayScenery", "DigScenery", "HighdraftScenery", "Cottonwoods"]
 const SCENERY_SKIP := ["DigFx", "WaterMist"]
 const SIZE := Vector2i(1280, 720)
-# The chase camera (src/movement/chase_camera.gd): the anchor is the ball plus 0.8 m up; the arm runs back and up at
-# pitch -0.30 rad (player pitch default, no bias) and is 7.5 m at rest to 10.5 m at speed (speed_arm), the lens 65 to
-# 80 degrees (FOV_REST, FOV_FAST), far 700. "mid" is half speed, the default for a ride.
 const CAMERAS := {"rest": {"arm": 7.5, "fov": 65.0}, "mid": {"arm": 9.0, "fov": 72.5}, "fast": {"arm": 10.5, "fov": 80.0}}
 const CAM_UP := 0.8
 const CAM_PITCH := -0.30
 const CAM_FAR := 700.0
-# Drawn frames a still waits after a pose: 3 normally, SETTLE_JUMP_FRAMES when the camera moved more than SETTLE_JUMP_M from the
-# previous pose. Reason: LOD fade and visibility ranges after a long jump.
 const SETTLE_DRAWN := 3
 const SETTLE_JUMP_FRAMES := 12
 const SETTLE_JUMP_M := 60.0
-# The vignette search (see the header): eye distance, bearing offsets in degrees, sight samples, the radius around the subject centre
-# that the prop rule ignores, the lens, the ball's parking distance behind the eye camera, the chase ball's sideways offset, the
-# pixel difference threshold and the smallest prop a sight line is blocked by.
 const V_RANGE_M := 5.0
 const V_OUTSIDE_M := 1.5
 const V_BEARINGS := [0.0, 45.0, -45.0, 90.0, -90.0, 135.0, -135.0, 180.0]
@@ -132,12 +66,6 @@ var vignettes := false
 var spot_filter: Array = []
 var subject_kind := ""
 var _prev_cam := Vector3.INF
-# --open=x:z:r:<reason>,... : ruled open spaces (centre and radius, metres) whose windows are exempt from the density bar,
-# each with a reason the audit checks instead of trusting (coordinator ruling #241 6329579296). The reason is everything after
-# the third colon: runout:<kicker> (a kicker run-out lies within 40 m of the window centre) or no_cell (the audit's own probe
-# finds no legal cell in the view cone of any pose in the window) or filled:<cx>:<cz> (every legal cell in that cone is covered by
-# a placed prop, and the named cell is one of them). A missing or unknown reason exits 2; a window whose reason
-# fails is judged on its kinds like any other and listed in the summary's density_open_rejected.
 var open_spaces: Array = []
 var _probe := {}
 
@@ -147,7 +75,6 @@ var stage_index := 0
 var park: Dictionary = {}
 var started_msec := 0
 
-# Items: centre, category, kind id and owning node record.
 var ix := PackedFloat32Array()
 var iy := PackedFloat32Array()
 var iz := PackedFloat32Array()
@@ -372,8 +299,6 @@ func _constants() -> Dictionary:
 		"categories": CATS, "draw_label": DRAW_LABEL}
 
 
-# ---- collecting the dressing ----
-
 func _kind_id(name: String) -> int:
 	if not kind_ids.has(name):
 		kind_ids[name] = kind_names.size()
@@ -480,7 +405,6 @@ func _collect() -> void:
 		for v in _visuals(top):
 			var k := _dress_kind(v, top)
 			if v.has_meta("dress_member_pos"):
-				# A vignette's merged far LOD: one draw, but every member prop counts where it stands.
 				var at: PackedVector3Array = v.get_meta("dress_member_pos")
 				var names: PackedStringArray = v.get_meta("dress_member_kinds")
 				var ni := _register(v, v.global_transform * v.get_aabb().get_center())
@@ -568,8 +492,6 @@ func _collect() -> void:
 				_push(box2.get_center(), C_SCENERY, _kind_id(kname), ni2)
 
 
-# The props views a camera pose draws, by "hero|vignette|litter / LOD / height tier": views in range (the end margin included) whose
-# bounds meet the frustum, which is what the renderer submits (one draw each). Tier is the view's dress_tier meta.
 func _props_breakdown() -> Dictionary:
 	var cp := cam.global_position
 	var planes := cam.get_frustum()
@@ -601,8 +523,6 @@ func _set_props_visible(on: bool) -> void:
 		if is_instance_valid(n) and n is Node3D:
 			n.visible = on
 
-
-# ---- --vignettes ----
 
 func _run_vignettes() -> void:
 	var file := ParkProps.load_json(ParkProps.file_path(map_id))
@@ -645,7 +565,6 @@ func _run_vignettes() -> void:
 		var spos: Vector3 = subject["pos"]
 		var centre := spos + Vector3(0.0, float(subject["height"]) * 0.5, 0.0)
 		var front := deg_to_rad(float(spot.get("yaw_deg", 0.0)))
-		# The frame must stand outside the subject's footprint, so a wide subject gets a longer eye distance; 5 m stays the rule for props.
 		var eye_m := maxf(V_RANGE_M, float(subject["radius"]) + V_OUTSIDE_M)
 		var near: Array = []
 		for k in list.size():
@@ -704,8 +623,6 @@ func _run_vignettes() -> void:
 			var res := {"png": png, "rows_in_view": _rows_in_view(file, terrain), "subject_px": null, "subject_share": null, "aabb_share": snappedf(float(box["share"]), 0.00001),
 				"frame_diff_px": null, "noise_px": null}
 			if not handle.is_empty():
-				# A control (the same frame drawn again, nothing hidden) finds what moves by itself (motes, streaks): those pixels are not
-				# counted. The count is the pixels inside the subject's projected box; frame_diff_px is the whole frame, unmasked.
 				await _drawn(3)
 				var control := _grab()
 				_set_hidden(handle, true)
@@ -751,8 +668,6 @@ func _run_vignettes() -> void:
 	quit(0)
 
 
-# "" when the sight from eye to centre is clear, else why not: inside:<vignette>/<kind> (the eye is in that prop's cylinder; the eye stands
-# above the terrain by construction, so there is no inside:terrain), terrain, prop:<vignette>/<kind> (the blocker's own vignette) or collider:<node name>.
 func _sight_block(eye: Vector3, centre: Vector3, list: Array, near: Array, subject_i: int, terrain, space: PhysicsDirectSpaceState3D, ball_rid: RID) -> String:
 	for k in near:
 		if k != subject_i and _in_cylinder(eye, list[k]):
@@ -776,8 +691,6 @@ func _sight_block(eye: Vector3, centre: Vector3, list: Array, near: Array, subje
 	return ""
 
 
-# Ids of the file's park rows and contraption rows with a sampled point in the camera frustum within V_ROWS_RANGE_M (frustum only, no
-# occlusion). A park row is sampled over its footprint (a V_ROWS_GRID grid, centre included); a contraption row at its point and a ring of its radius.
 func _rows_in_view(file: Dictionary, terrain) -> Array:
 	var spec := {"fov_deg": cam.fov, "aspect": float(SIZE.x) / float(SIZE.y)}
 	var view := cam.global_transform
@@ -830,8 +743,6 @@ func _grab() -> Image:
 	return img
 
 
-# Pixels inside `rect` whose RGB differs by more than V_DIFF in any channel, leaving out those that also differ between a and `ignore`
-# (a control render of the same frame) when it is given.
 func _diff_px(a: Image, b: Image, rect: Rect2i, ignore: Image) -> int:
 	var da := a.get_data()
 	var db := b.get_data()
@@ -849,9 +760,6 @@ func _diff_px(a: Image, b: Image, rect: Rect2i, ignore: Image) -> int:
 	return count
 
 
-# The built views of one instance, to hide: {"views": [MeshInstance3D], "multi": [[MultiMeshInstance3D, index, Transform3D]]}; {} when it cannot be
-# told apart. A hero is a MeshInstance3D per LOD; anything else is a member of a MultiMesh per LOD0 and LOD1 (LOD2 is one merged mesh of the
-# whole vignette, drawn from 90 m (PROP_RANGES, park_props.gd:101), far past any eye_m here, and is not touched).
 func _isolate(pp, inst: Dictionary) -> Dictionary:
 	if pp == null:
 		return {}
@@ -886,9 +794,6 @@ func _set_hidden(handle: Dictionary, hidden: bool) -> void:
 		m[0].multimesh.set_instance_transform(m[1], Transform3D(Basis.from_scale(Vector3.ZERO), t.origin) if hidden else t)
 
 
-# The screen share of the subject's projected box (the 8 corners of its cylinder's bounds from pos, radius and height), clipped to the
-# screen: the box's edges are cut at the near plane, projected with the camera's lens, and their bounds taken. Returns {"share", "rect"}
-# (the bounds in pixels, grown by 4).
 func _aabb(inst: Dictionary) -> Dictionary:
 	var at: Vector3 = inst["pos"]
 	var r := float(inst["radius"])
@@ -933,8 +838,6 @@ func _aabb(inst: Dictionary) -> Dictionary:
 	var y1 := int(ceil((1.0 - lo.y) * 0.5 * SIZE.y)) + 4
 	return {"share": (hi.x - lo.x) * (hi.y - lo.y) / 4.0, "rect": Rect2i(x0, y0, x1 - x0, y1 - y0)}
 
-
-# ---- the ride path ----
 
 func _place_of(id: String) -> Vector2:
 	if id == "drop_in":
@@ -1023,7 +926,6 @@ func _place(s: Dictionary) -> void:
 	body.global_position = Vector3(x, ground + 1.0, z)
 	body.linear_velocity = Vector3.ZERO
 	if s.has("cam"):
-		# An eye pose (--vignettes): the camera stands at "cam" looking at "look"; the ball is parked behind it, out of frame.
 		var at := Vector3(float(s["cam"][0]), float(s["cam"][1]), float(s["cam"][2]))
 		var target := Vector3(float(s["look"][0]), float(s["look"][1]), float(s["look"][2]))
 		cam.global_transform = Transform3D(Basis.looking_at(target - at, Vector3.UP), at)
@@ -1036,15 +938,12 @@ func _place(s: Dictionary) -> void:
 	cam.fov = CAMERAS[cam_name]["fov"]
 
 
-# Drawn frames to wait after _place: more after a long jump of the camera (see SETTLE_JUMP_FRAMES). Remembers the pose it settled at.
 func _settle_frames() -> int:
 	var at := cam.global_position
 	var far := _prev_cam == Vector3.INF or at.distance_to(_prev_cam) > SETTLE_JUMP_M
 	_prev_cam = at
 	return SETTLE_JUMP_FRAMES if far else SETTLE_DRAWN
 
-
-# ---- counting ----
 
 func _count() -> Dictionary:
 	var cp := cam.global_position
@@ -1113,8 +1012,6 @@ func _flag_bare(samples: Array) -> void:
 		s["bare"] = int(s["core_60"]) < BARE_MIN_NEAR or int(s["kinds_120"]) < BARE_MIN_KINDS
 
 
-# A void pose has no usable ground in view: fewer than VOID_GROUND_SHARE of a grid over the view cone (to VOID_VIEW_M
-# ahead, VOID_HALF_FOV_DEG each side) lies within VOID_VERTICAL_M of the ball's height. Reporting only; BARE is unchanged.
 const VOID_VIEW_M := 60.0
 const VOID_HALF_FOV_DEG := 35.0
 const VOID_VERTICAL_M := 40.0
@@ -1132,7 +1029,6 @@ func _flag_void(samples: Array) -> void:
 		for d in [10.0, 20.0, 30.0, 40.0, 50.0, 60.0]:
 			for lateral in [-1.0, -0.5, 0.0, 0.5, 1.0]:
 				var at: Vector2 = Vector2(float(s["x"]), float(s["z"])) + forward * d + side * lateral * d * tan(deg_to_rad(VOID_HALF_FOV_DEG))
-				# The terrain's height function is a smooth floor even where nothing is built, so ask the physics world.
 				var query := PhysicsRayQueryParameters3D.create(Vector3(at.x, ball_y + VOID_VERTICAL_M, at.y), Vector3(at.x, ball_y - VOID_VERTICAL_M, at.y))
 				total += 1
 				if not space.intersect_ray(query).is_empty():
@@ -1173,8 +1069,6 @@ func _pick_stills(samples: Array) -> Array:
 	out.sort()
 	return out
 
-
-# ---- the summary ----
 
 func _sorted(values: Array) -> Array:
 	var v := values.duplicate()
@@ -1232,7 +1126,6 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 	sm["bare_samples"] = bare
 	sm["bare_share_pct"] = snappedf(100.0 * bare / samples.size(), 0.1)
 	sm["longest_bare_run_m"] = longest * step
-	# Ground-only view of the same rule: BARE poses on real ground, and the longest contiguous run of them.
 	var bare_ground := 0
 	var ground_poses := 0
 	var gruns := 0
@@ -1273,7 +1166,6 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 	sm["props_only_primitive_delta"] = {"median": _pct(pdeltas, 0.5), "max": (_sorted(pdeltas).back() if not pdeltas.is_empty() else 0)}
 	sm["draw_sample_idx"] = draw_idx
 	sm.merge(_density(samples))
-	# The props-only peak pose: its breakdown by group / LOD / tier.
 	var peak := -1
 	var peak_at := {}
 	for s in samples:
@@ -1284,14 +1176,6 @@ func _summary(samples: Array, draw_idx: Array, info: Dictionary) -> Dictionary:
 	return sm
 
 
-# The density bar. Per line, 150 m windows of its samples (full windows, and a tail of at least DENSITY_TAIL_MIN_M); a window's kinds are
-# the union of the park-prop kinds (group "park_props" only, not set dressing) in view within 60 m at any of its sample poses. Samples
-# are the audit's deduplicated union (a stretch shared by two lines belongs to the first, floor first). A window is exempt when its
-# midpoint (the window's sample nearest the middle) lies in:
-#   arena      the footprint of a home_rows site (park row, or the activity row's point) or the landmark row, grown by ENGAGE_RING_M
-#   camp       an activity_rows enemy_camp (the camp's `at` point), grown by ENGAGE_RING_M (the validator's camp ring)
-#   telegraph  the footprint of an event_rows site (park row), grown by the event's hold_clear_m (0 when absent)
-#   open       a --open=x:z:r:<reason> space whose reason checks out (runout:<kicker>, no_cell or filled:<cx>:<cz>, see _check_open); a failed reason is not exempt
 func _density(samples: Array) -> Dictionary:
 	var by_line := {}
 	for s in samples:
@@ -1356,7 +1240,6 @@ func _density(samples: Array) -> Dictionary:
 		"density_rule": "%d+ distinct park-prop kinds in view within %.0f m per %.0f m window" % [DENSITY_MIN_KINDS, NEAR_M, DENSITY_WINDOW_M]}
 
 
-# Verifies the --open space holding `at` against its reason: {kind, reason, r, why ("" when it holds), cell}.
 func _check_open(at: Vector2, window_poses: Array) -> Dictionary:
 	var space: Array = []
 	for candidate in open_spaces:
@@ -1384,7 +1267,6 @@ func _check_open(at: Vector2, window_poses: Array) -> Dictionary:
 	return out
 
 
-# Whether any --open space claims filled:, so the probe expands the file once only when it needs the instances.
 func _filled_open() -> bool:
 	return open_spaces.any(func(space: Array) -> bool: return String(space[2]).begins_with("filled:"))
 

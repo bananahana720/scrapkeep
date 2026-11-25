@@ -1,12 +1,3 @@
-# C31 Reactor: a squat, seamless cast cooling waist beneath a faceted dome and three
-# open vent stacks. Petrol enamel, dark grooves and blue vent bands; no bolts or tags.
-# ReactorBody has ancient_enamel and vertex-colour paint. ReactorStack has paint;
-# runtime draws three copies in one MultiMesh, swelling at y 1.6 and radius .8.
-# The cast body radius is 1.178; fully swollen stacks reach radius 1.184,
-# inside the source capsule's actual Godot-clamped 1.2 m radius.
-# Godot Y up maps to Blender Z up; the stack template is centred at the origin.
-# Procedural bmesh only, no external meshes, textures, lights or alpha.
-# Run with the memory-capped headless command in ../common.py.
 import math
 import os
 import sys
@@ -19,8 +10,6 @@ import polish
 from common import Part
 
 common.reset()
-# Polish (POLISH.md): filleted edges and baked AO on the cast. No smoothing level: the
-# cast's lathe profile is the read, so it keeps its exact radii.
 polish.enable(detail=1, subsurf=0, bevel_angle=65.0, sharp_angle=65.0)
 root = common.empty('Reactor')
 
@@ -39,13 +28,10 @@ def shell(part, rows, slot, colors, caps=True, sectors=16):
                    colors[0] if isinstance(colors, list) else colors)
 
 body = Part('ReactorBody')
-# The waist narrows above its flared cast foot, then widens into the dome shoulder.
 shell(body, [(-1.2, 1.55), (-1.02, 1.50), (-0.50, 1.06), (0.16, 1.18), (0.28, 1.50)],
       'ancient_enamel', 'petrol')
-# Broad dome facets converge on a low flattened crown.
 shell(body, [(0.28, 1.50), (0.65, 1.42), (1.05, 1.16), (1.36, 0.72), (1.50, 0.30)],
       'ancient_enamel', 'petrol')
-# Dark cooling recess, cast foot bead and a restrained rubbed shoulder band.
 body.cyl('paint', 1.073, 1.08, 0.22, segs=16, loc=(0, 0, -0.49), color='charcoal')
 body.ring('paint', 1.40, 1.55, 0.12, segs=16, loc=(0, 0, -1.14), color=common.mix('petrol','charcoal',0.35))
 body.ring('paint', 1.40, 1.505, 0.10, segs=16, loc=(0, 0, 0.28), color=(0.29,0.40,0.38))
@@ -56,15 +42,11 @@ for v in body.bm.verts:
 body.to_object(parent=root)
 
 stack = Part('ReactorStack')
-stack.bevel = 0  # thin bands and an open bore; the charge band keeps its exact height
-# Open bore, tapered cast tube and wide blue collar inside a twice-height dark groove.
+stack.bevel = 0
 shell(stack, [(-0.60,0.32), (-0.30,0.30), (0.28,0.28), (0.50,0.28), (0.60,0.28)],
       'paint', [(0.22,0.33,0.31), 'petrol', 'charcoal', 'charcoal'], caps=False, sectors=8)
 stack.ring('paint', 0.20, 0.28, 0.08, segs=8, loc=(0,0,0.56), color=(0.29,0.40,0.38))
 stack.cyl('paint', 0.20, 0.20, 0.18, segs=8, loc=(0,0,0.40), color='charcoal')
-# The Cherenkov band is blue: reactor.gd lights only blue vertex colour. It named the
-# palette's 'ancient' until that turned uranium green in wave 12, and the shipped GLB
-# kept the old blue.
 stack.cyl('paint', 0.284, 0.284, 0.10, segs=8, loc=(0,0,0.39), color='3d8bff', caps=False)
 bmesh.ops.recalc_face_normals(stack.bm, faces=stack.bm.faces[:])
 stack.to_object(parent=root)

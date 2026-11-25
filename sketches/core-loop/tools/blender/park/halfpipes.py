@@ -52,16 +52,15 @@ import common
 import kit
 
 MODELS = kit.SKETCH / "assets/models/park"
-LANDFORM = [8000, 24000, 2]       # tris, verts, draws: assets/asset_budgets.json landform, draws 2 for the -col mesh
+LANDFORM = [8000, 24000, 2]
 DETAIL = [1500, 3000, 1]
-SLOT = "enamel"                   # the material name park_recipes.gd turns into the enamel slot: vertex colour as albedo
-GRADE = 0.03                      # the fall of every channel floor along its path
+SLOT = "enamel"
+GRADE = 0.03
 LENGTH_CONCRETE = 60.0
 LENGTH_SLOT = 48.0
 RADIUS_15 = LENGTH_SLOT / math.radians(15.0)
 RADIUS_30 = LENGTH_SLOT / math.radians(30.0)
 
-# ---------------------------------------------------------------------------------------------------------- palette
 HEX = {
     "sand": "c6a274", "cream": "e0cfa8", "bone": "d2c5a5", "oxide": "9b513a", "rust": "86492f", "varnish": "3b2b24",
     "sage": "7f8f66", "juniper": "4b6045", "copper": "b77843", "charcoal": "242a28", "silt": "cdb487",
@@ -105,7 +104,6 @@ def vnoise(x, seed):
     return h01(i, seed) * (1 - f) + h01(i + 1, seed) * f
 
 
-# ---------------------------------------------------------------------------------------------------------- section
 class Section:
     """The cross-section: a right-half polyline [(x, u, tag)] from (0, 0) outward (x across, u over the floor), cut grooves
     at given arc lengths, mirrored into one station list. A groove is a V of half-width w and depth d cut into the surface."""
@@ -119,7 +117,7 @@ class Section:
         cuts = list(grooves)
         if centre_groove:
             right[0] = (0.0, 0.0, 0.0, poly[0][2], centre_groove)
-            cuts.append((flank, 0.0, 0.0))        # the right flank of the centre groove; its own depth 0
+            cuts.append((flank, 0.0, 0.0))
         for ag, w, d in cuts:
             if d == 0.0 and w == 0.0:
                 right.append((ag, None, None, self._tag(ag), 0.0))
@@ -183,7 +181,6 @@ def arc_pts(cx, cu, r, a0, a1, step, tag):
             for k in range(1, n + 1)]
 
 
-# ---------------------------------------------------------------------------------------------------------- mesh
 class Grid:
     """Rows along the path by stations across the section, in Godot space. verts[j][i] is (x, y, z)."""
 
@@ -344,7 +341,6 @@ class Mesh:
         return obj
 
 
-# ---------------------------------------------------------------------------------------------------------- recipes
 def straight(s):
     return 0.0, s, 0.0
 
@@ -404,7 +400,6 @@ def row_list(length, joints=(), flank=0.07, step=None, extra=()):
     return sorted(out.items())
 
 
-# ---- half_pipe_concrete
 class Concrete(Recipe):
     id = "half_pipe_concrete"
     length = LENGTH_CONCRETE
@@ -431,7 +426,6 @@ class Concrete(Recipe):
         self.section = Section(poly, grooves, centre_groove=0.05)
         joints = [6.0 * k for k in range(1, 10)]
         self.rows = row_list(self.length, joints)
-        # The collider: the same channel without grooves or the coping step, a coarser arc.
         cpoly = [(0.0, 0.0, "floor"), (f, 0.0, "floor")] + arc_pts(f, r, r, -90, 0, 15, "arc")
         cpoly += [top, (xc + 0.6, h, "apron"), (xc + 4.0, h, "apron")]
         self.col_section = Section(cpoly)
@@ -459,13 +453,11 @@ class Concrete(Recipe):
             p = panel(j)
             base = mixc(c("concrete"), c("concrete_pale"), h01(p, 3, 1) * 0.35)
             base = mixc(base, c("concrete_dark"), h01(p, 7, 2) * 0.3)
-            # a form-board course tone: bands up the wall, each its own shade
             course = int(max(0.0, abs(st[6]) - 6.0) // 1.6)
             base = shade(base, 0.94 + 0.11 * h01(p, course, 4))
             depth = max(st[4], zd)
             if depth > 0.0:
                 base = mixc(base, c("joint"), 0.78)
-            # efflorescence streaks below the coping, rust below each anchor line, silt on the floor and the arc's foot
             if tag in ("wall", "arc"):
                 streak = h01(int(s * 0.7), 11, int(st[0] > 0))
                 if u > 5.0 and streak > 0.72:
@@ -475,21 +467,18 @@ class Concrete(Recipe):
             fill = smooth(1.4, 0.0, u) * (0.55 + 0.4 * vnoise(s * 0.18 + x * 0.3, 8))
             if tag in ("floor", "arc"):
                 base = mixc(base, c("silt"), fill * (0.5 + 0.4 * smooth(10.0, 55.0, s)))
-                # the polished line down the middle of the floor where balls run
                 if tag == "floor" and x < 1.4:
                     base = shade(base, 0.93)
             if tag == "coping":
                 base = mixc(base, c("concrete_pale"), 0.55)
                 if h01(int(s * 1.7), 21, int(st[0] > 0)) > 0.78:
-                    base = shade(base, 0.8)       # a chipped patch
+                    base = shade(base, 0.8)
             if tag == "apron":
                 base = mixc(c("sand"), c("silt"), 0.5 + 0.3 * vnoise(s * 0.2, 4))
-            # ambient: the channel is darker low down
             return shade(base, 0.78 + 0.22 * smooth(0.0, 9.0, u))
         return fn
 
 
-# ---- slot_canyon_flow (straight and bends)
 SLOT_POLY = [(0.0, 0.0), (1.3, 0.02), (2.6, 0.08), (3.7, 0.45), (4.6, 1.2), (5.35, 2.3), (5.95, 3.6), (6.4, 5.0), (6.7, 6.5),
              (6.85, 8.0), (6.85, 9.4), (6.7, 10.7), (6.55, 11.8), (6.75, 12.55), (7.2, 12.92), (7.5, 13.0), (8.6, 13.0),
              (10.5, 12.85), (13.0, 12.6)]
@@ -503,7 +492,7 @@ class Slot(Recipe):
     length = LENGTH_SLOT
     HALF_CREST = 7.5
     WALL = 13.0
-    FLUTES = 4          # whole wavelengths over the piece, so the exit end repeats the entry and a chain is seamless
+    FLUTES = 4
 
     def __init__(self, id, bend_deg):
         self.id = id
@@ -512,7 +501,6 @@ class Slot(Recipe):
         self.floor = fall
         self.path = straight if bend_deg == 0.0 else arc_path(self.length / math.radians(bend_deg))
         poly = [(x, u, SLOT_TAGS[k]) for k, (x, u) in enumerate(SLOT_POLY)]
-        # More points up the wall so the flutes have something to bend.
         dense = [poly[0]]
         for p, q in zip(poly, poly[1:]):
             n = max(1, int(math.hypot(q[0] - p[0], q[1] - p[1]) / 0.5))
@@ -564,7 +552,6 @@ class Slot(Recipe):
                     col = c(name)
                     break
             col = shade(col, 0.92 + 0.14 * vnoise(u * 0.9 + s * 0.05, 3))
-            # desert varnish: dark vertical streaks high on the walls
             streak = vnoise(s * 0.55 + (3.0 if x > 0 else 0.0), 13)
             if u > 3.0 and streak > 0.66:
                 col = mixc(col, c("varnish"), 0.55 * smooth(3.0, 9.0, u) * smooth(0.66, 0.85, streak))
@@ -576,12 +563,10 @@ class Slot(Recipe):
                 col = mixc(c("cream"), c("sand"), 0.5 + 0.5 * vnoise(s * 0.3 + x * 0.2, 2))
             if tag == "coping":
                 col = mixc(col, c("cream"), 0.4)
-            # a canyon is dark low down and bright at the rim
             return shade(col, 0.55 + 0.45 * smooth(0.0, 11.0, u))
         return fn
 
 
-# ---- wash_dropin_lip
 class Dropin(Recipe):
     id = "wash_dropin_lip"
     smooth_render = True
@@ -608,7 +593,6 @@ class Dropin(Recipe):
         self.section = Section(poly)
         self.col_section = Section([p for k, p in enumerate(poly) if k % 1 == 0])
         extra = []
-        # one-metre lines through the drop so the curve and the lip crease read, then coarser to the run-out
         deck = [(-self.DECK + 2.0 * k) for k in range(int(self.DECK / 2.0))]
         arcs = [0.9 * k for k in range(0, int(self.zd / 0.9) + 1) if self.zd - 0.9 * k > 0.3] + [self.zd]
         run = [self.zd + 3.0 * k for k in range(1, int((self.length - self.zd) / 3.0) + 1)] + [self.length]
@@ -671,7 +655,6 @@ class Dropin(Recipe):
                 col = mixc(col, c("silt"), 0.8 * smooth(1.5, 0.0, u))
             if tag == "apron" or yy > -0.001 and s <= 0.5:
                 col = mixc(c("cream"), c("sand"), 0.5 + 0.4 * vnoise(s * 0.25 + x * 0.2, 7))
-            # the concrete lip: a grey band over the crease where the deck meets the drop, across the whole width
             y_world = grid.verts[j][i][1]
             if s <= 0.001 or y_world > -0.5:
                 w = smooth(-2.0, -0.3, s) if s <= 0.0 else smooth(1.8, 0.9, s)
@@ -694,7 +677,6 @@ def recipes():
     return RECIPES
 
 
-# ---------------------------------------------------------------------------------------------------------- build
 def grid_of(r):
     return Grid(r.section, r.rows, r.path, r.floor, getattr(r, "warp", None), getattr(r, "clip", None))
 
@@ -713,14 +695,12 @@ def base_meshes(r):
     return g, m, cg, col
 
 
-# ---------------------------------------------------------------------------------------------------------- shells
 def surface_sample(r, grid, x, s):
     """The base surface at lateral x and path s, by the grid's nearest row pair and station pair (props stand on it)."""
     rows = [q[0] for q in r.rows]
     j = max(0, min(len(rows) - 2, next((k for k, v in enumerate(rows) if v > s), len(rows) - 1) - 1))
     tj = (s - rows[j]) / max(1e-9, rows[j + 1] - rows[j])
     st = r.section.stations
-    # lateral lookup along the first monotonic pass of a row
     best = None
     for jj, w in ((j, 1.0 - tj), (j + 1, tj)):
         row = grid.verts[jj]
@@ -779,7 +759,6 @@ def shell_concrete(r, g, which):
     rows = r.rows
     crest_x = r.crest[0]
     if which == 1:
-        # coping cap: raised blocks along both crests with a gap at every joint, chipped at a few
         for side in (-1, 1):
             for p in range(10):
                 s0, s1 = 6.0 * p + 0.25, 6.0 * p + 5.75
@@ -791,14 +770,12 @@ def shell_concrete(r, g, which):
                 m.box((pos.x, pos.y + hgt / 2 - 0.02, pos.z), (0.42, hgt, s1 - s0), 0.0, shade(c("concrete_pale"), 0.95 + 0.1 * h01(p, side, 2)))
                 if h01(p, side, 3) > 0.55:
                     m.box((pos.x + side * 0.1, pos.y + hgt + 0.02, pos.z + (h01(p, side, 4) - 0.5) * 3.0), (0.3, 0.05, 0.5), 0.0, c("concrete_dark"))
-        # efflorescence and rust streaks: painted cells lying 1.5 cm off the wall
         jn = len(rows)
         for side in (-1, 1):
             for k in range(9):
                 s_at = 2.0 + 6.4 * k + 1.7 * h01(k, side, 7)
                 j0 = min(jn - 2, next((q for q, v in enumerate(rows) if v[0] >= s_at), jn - 2))
                 j1 = j0 + 3
-                # stations on this wall between the arc's top (u 6) and the crest
                 ids = [i for i, q in enumerate(st) if q[0] * side > 0 and 6.0 <= q[1] <= 9.9]
                 if len(ids) < 6:
                     continue
@@ -806,7 +783,6 @@ def shell_concrete(r, g, which):
                 i1 = min(ids[-1], i0 + 5 + (k % 2))
                 tint = c("efflor") if k % 3 else c("rust")
                 paint(m, g, base, j0, j1, i0, i1, tint, 0.55, 0.015)
-        # silt drifts along the foot of each wall
         for side in (-1, 1):
             for k in range(9):
                 s_at = 3.0 + 6.0 * k + 2.0 * h01(k, side, 8)
@@ -816,7 +792,6 @@ def shell_concrete(r, g, which):
                 pos, nrm = smp
                 m.lump((pos.x, pos.y + 0.08, pos.z), (1.6 + h01(k, side) * 1.4, 0.25, 2.4 + h01(k, side, 3) * 1.5), k * 3 + side + 40, mixc(c("silt"), c("concrete_dark"), 0.45), 0.04)
     else:
-        # anchor bolts on the coping (copper caps), weep-hole pipes low on the walls, depth-gauge ticks, rebar stubs, cracks
         for side in (-1, 1):
             for p in range(10):
                 smp = surface_sample(r, g, side * (crest_x + 0.34), 6.0 * p + 3.0)
@@ -832,7 +807,6 @@ def shell_concrete(r, g, which):
                 pos, nrm = smp
                 m.prism(tuple(pos + nrm * 0.0), tuple(nrm * 0.22), 0.1, 0.1, 6, c("joint"))
                 m.prism(tuple(pos + nrm * 0.22), tuple(nrm * 0.02), 0.06, 0.06, 6, c("rust"))
-            # depth gauge: a painted strip with ticks every 1.6 m up the wall near the exit
             for tick in range(7):
                 u_at = r.R + 0.4 + tick * 0.5
                 xw = r.F + r.R + max(0.0, u_at - r.R) * r.BATTER
@@ -841,7 +815,6 @@ def shell_concrete(r, g, which):
                     continue
                 pos, nrm = smp
                 m.box(tuple(pos + nrm * 0.02), (0.02, 0.07, 0.5 if tick % 2 == 0 else 0.3), 0.0, c("oxide"))
-        # hairline cracks: thin dark ribbons across the floor panels
         for p in range(10):
             if h01(p, 5, 6) < 0.45:
                 continue
@@ -857,7 +830,6 @@ def shell_concrete(r, g, which):
                 d = (pb - pa)
                 w = Vector((d.z, 0, -d.x)).normalized() * 0.03 if (d.x or d.z) else Vector((0.03, 0, 0))
                 m.add([tuple(pa - w), tuple(pa + w), tuple(pb + w), tuple(pb - w)], [(0, 3, 2, 1)], color=c("joint"))
-        # gravel on the floor
         for k in range(12):
             smp = surface_sample(r, g, -4.5 + 9.0 * h01(k, 3, 3), 2.0 + 56.0 * h01(k, 4, 4))
             if smp is None:
@@ -875,7 +847,6 @@ def shell_slot(r, g, which):
     rows = r.rows
     crest = r.HALF_CREST
     if which == 1:
-        # wedged boulders at the foot of the walls, sand bars on the floor, shrubs along the rim apron
         for k in range(16):
             side = 1 if k % 2 else -1
             s_at = 1.5 + 3.0 * k
@@ -900,7 +871,6 @@ def shell_slot(r, g, which):
                     continue
                 pos, _ = smp
                 m.tuft((pos.x, pos.y, pos.z), 0.9 + 0.7 * h01(k, side, 5), 5, 400 + k + side * 7, c("sage") if k % 3 else c("juniper"))
-        # flow scallops: a shell of pale polish bands across the lower walls
         jn = len(rows)
         for side in (-1, 1):
             ids = [i for i, q in enumerate(st) if q[0] * side > 0 and 1.0 <= q[1] <= 6.0]
@@ -910,7 +880,6 @@ def shell_slot(r, g, which):
                     i0 = ids[0] + (k // 5) % 2
                     paint(m, g, base, j0, j0 + 4, i0, min(ids[-1], i0 + 6), c("cream"), 0.45, 0.02)
     else:
-        # pebbles on the floor, flood sticks at the wall foot, varnish drips high on the walls, small rim stones
         for k in range(34):
             smp = surface_sample(r, g, -2.3 + 4.6 * h01(k, 12, 1), 1.0 + 46.0 * h01(k, 13, 2))
             if smp is None:
@@ -949,7 +918,6 @@ def shell_dropin(r, g, which):
     st = r.section.stations
     crest = r.crest[0]
     if which == 1:
-        # the concrete lip cap: blocks across the crease, 18 cm proud, and its two wing walls
         halfw = crest + 4.0
         n = 11
         for k in range(n):
@@ -959,7 +927,6 @@ def shell_dropin(r, g, which):
                 continue
             pos, _ = smp
             m.box((pos.x, pos.y + 0.06, pos.z - 0.05), (2 * halfw / n - 0.12, 0.2, 1.3), 0.0, shade(c("concrete"), 0.94 + 0.1 * h01(k, 1)))
-        # scour stones at the foot of the drop, sage on the deck
         for k in range(14):
             side = 1 if k % 2 else -1
             smp = surface_sample(r, g, side * (1.0 + 4.0 * h01(k, 2, 2)), r.zd + 1.0 + 5.0 * k * 0.5)
@@ -968,7 +935,6 @@ def shell_dropin(r, g, which):
             pos, _ = smp
             sz = 0.5 + 0.9 * h01(k, 3, 3)
             m.lump((pos.x, pos.y + sz * 0.25, pos.z), (sz * 1.2, sz, sz), 700 + k, shade(mixc(c("sand"), c("oxide"), 0.1 + 0.3 * h01(k, 5)), 0.8), 0.1)
-        # polish bands low on the wash walls and a varnish stain below the crest, painted 2 cm off the surface
         jn = len(r.rows)
         first = next(q for q, v in enumerate(r.rows) if v[0] >= r.zd - 0.5)
         for side in (-1, 1):
@@ -987,7 +953,6 @@ def shell_dropin(r, g, which):
             pos, _ = smp
             m.tuft((pos.x, pos.y, pos.z), 0.9 + 0.8 * h01(k, 8, 8), 5, 800 + k, c("sage") if k % 3 else c("juniper"))
     else:
-        # anchor bolts with copper caps through the lip blocks, cracks in the deck, pebbles on the run-out
         halfw = crest + 4.0
         n = 11
         for k in range(n):
@@ -1029,7 +994,6 @@ def shell_for(r, g, which):
     raise KeyError(r.id)
 
 
-# ---------------------------------------------------------------------------------------------------------- export
 def metrics_of(path):
     return kit.gltf_metrics(Path(path))
 

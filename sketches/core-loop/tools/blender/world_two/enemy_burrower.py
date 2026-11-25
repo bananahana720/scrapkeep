@@ -33,7 +33,6 @@ common.SLOTS["part_state"] = {"vc": True, "rough": 0.85}
 root = common.empty("Burrower")
 body_root = common.empty("BurrowBody", parent=root)
 b = Part("BurrowHull")
-# The rounded shell subdivides once; machinery below keeps crisp bevels.
 with b.region(bevel=0, subsurf=1):
     rows = []
     for y, radius in [(-1.1, 0.38), (-0.95, 0.67), (-0.35, 0.75), (0.25, 0.66), (0.60, 0.43), (0.70, 0.28)]:
@@ -43,7 +42,6 @@ with b.region(bevel=0, subsurf=1):
             x, z = radius * math.cos(a), radius * math.sin(a)
             if z > 0 and y >= -0.35:
                 z *= 0.75
-            # A raked nose slopes forward from the cockpit, rather than a barrel core.
             yy = y - (max(0, z) * 0.55 if y > -0.35 else 0)
             row.append(b.bm.verts.new(Vector(g(x, yy, z))))
         rows.append(row)
@@ -57,7 +55,6 @@ with b.region(bevel=0, subsurf=1):
             b.paint([face], "fleet_paint", col)
     b.paint([b.bm.faces.new(rows[-1])], "fleet_paint", "bone")
 
-# All static subparts are merged into the body; named sockets retain their identity.
 for name, at in [("SidePaddles", (0, -0.95, -0.1)), ("CrewVisor", (0, 0.5, 0.35)),
                  ("Exhaust", (0, 0.925, -0.4)), ("ShovelNose", (0, -0.65, 0.52))]:
     common.empty(name, g(*at), body_root)
@@ -69,8 +66,6 @@ for s in (-1, 1):
     b.box("fleet_paint", (0.035, 0.18, 0.045), loc=g(s * 0.64, -0.35, -0.12), color="bone")
 b.box("fleet_paint", (0.55, 0.25, 0.35), loc=g(0, 0.5, 0.35), color="charcoal")
 b.box("fleet_paint", (0.57, 0.28, 0.04), loc=g(0, 0.68, 0.35), color="bone")
-# Small anonymous operator fits inside the compact visor; no species is selected.
-# Under polish it is the shared soft crew: head and muzzle subdivide twice, ears and paws once.
 with b.region(bevel=0, subsurf=2, detail=1):
     b.uv("fleet_paint", 0.13, u=8, v=4, loc=g(0, 0.50, 0.45), scale=(1, 0.70, 1), color="oxide")
     b.uv("fleet_paint", 1.0, u=6, v=4, loc=g(0, 0.46, 0.55), scale=(0.065, 0.025, 0.03), color="bone")
@@ -81,26 +76,22 @@ with b.region(bevel=0, subsurf=1, detail=1):
 with b.region(bevel=0.004, detail=1):
     for s in (-1, 1):
         b.box("fleet_paint", (0.025, 0.015, 0.025), loc=g(s * 0.045, 0.53, 0.572), color="charcoal")
-# The short exhaust seats in a cast boss on the rear shell, never floats above it.
 b.cyl("fleet_paint", 0.12, 0.10, 0.30, segs=8, loc=g(0, 0.68, -0.4), color="charcoal")
 b.cyl("fleet_paint", 0.09, 0.09, 0.35, segs=8, loc=g(0, 0.925, -0.4), color="petrol")
 b.cyl("fleet_paint", 0.07, 0.07, 0.015, segs=8, loc=g(0, 1.09, -0.4), color="charcoal")
 
-# Chamfered shovel remains inside radius .8, including the front corners.
 blade = [b.bm.verts.new(Vector(g(*p))) for p in [
     (-0.40, -0.90, 0.345), (0.40, -0.90, 0.345), (0.34, -0.90, 0.695), (-0.34, -0.90, 0.695),
     (-0.40, -0.40, 0.345), (0.40, -0.40, 0.345), (0.34, -0.50, 0.695), (-0.34, -0.50, 0.695),
 ]]
 for indices in [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]:
     b.paint([b.bm.faces.new([blade[i] for i in indices])], "working_tool", "charcoal")
-# Hazard stripes are flat decals: no bevel, no subdivision.
 with b.region(bevel=0, subsurf=0):
     for x0 in (-0.29, -0.04, 0.21):
         face = b.bm.faces.new([b.bm.verts.new(Vector(g(x, y, 0.697)))
                               for x, y in [(x0, -0.87), (min(x0 + 0.12, 0.32), -0.87),
                                            (min(x0 + 0.22, 0.32), -0.54), (min(x0 + 0.10, 0.32), -0.54)]])
         b.paint([face], "working_tool", "hazard")
-# Rubbed edges and sparse fastening describe the side-drive paddles and shell seam.
 for s in (-1, 1):
     for y, z in [(-0.22, -0.20), (-0.58, -0.20)]:
         b.rod("fleet_paint", g(s * 0.64, y, z), g(s * 0.67, y, z), 0.028, segs=5,
@@ -110,11 +101,9 @@ bmesh.ops.recalc_face_normals(b.bm, faces=b.bm.faces[:])
 body = b.to_object(parent=body_root)
 
 m = Part("BurrowMarker")
-# The floor pad and its lip stripes stay flat: subdivision would crumple them.
 m.bevel = 0
 m.subsurf = 0
 m.cyl("part_state", 1.6, 1.6, 0.05, segs=24, loc=g(0, -1.1, 0), color="charcoal")
-# Broad ring segments are repairs, not a second floor lane or raised jaw.
 m.ring("part_state", 1.42, 1.58, 0.018, segs=24, loc=g(0, -1.069, 0), color=common.mix("charcoal", "bone", 0.4))
 lip_faces = []
 for i in range(5):
@@ -126,8 +115,6 @@ m.bm.verts.index_update()
 lip_ids = [v.index for v in lip_vertices]
 bmesh.ops.recalc_face_normals(m.bm, faces=m.bm.faces[:])
 marker = m.to_object(parent=root)
-# Godot generates tangents for morph surfaces even without a texture. Supply
-# planar UVs so a fresh import never raises "UVs are required".
 for obj in (body, marker):
     uv = obj.data.uv_layers.new(name="UVMap")
     for loop in obj.data.loops:
@@ -158,7 +145,6 @@ for obj in bpy.context.scene.objects:
     obj.select_set(False)
 for obj in common.tree(root):
     obj.select_set(True)
-# Match common.export with dense morph accessors for the repository inspector.
 bpy.ops.export_scene.gltf(filepath=path, export_format="GLB", use_selection=True, export_apply=True,
                           export_yup=True, export_materials="EXPORT", export_vertex_color="ACTIVE",
                           export_extras=False, export_animations=False, export_cameras=False,
@@ -185,7 +171,6 @@ def preview(outdir):
     world.node_tree.nodes["Background"].inputs["Strength"].default_value = 0.7
     bpy.ops.mesh.primitive_plane_add(size=200, location=(0, 0, -1.13))
     bpy.context.object.data.materials.append(common._flat("floor", "bone"))
-    # Exactly two metres in diameter, neutral fittings, outside the export tree.
     ref = Part("ReferenceBall_2m")
     ref.uv("part_state", 1.0, u=32, v=16, loc=g(2.75, -0.1, 0), color="bone")
     ref.to_object()
@@ -205,7 +190,6 @@ def preview(outdir):
         ("three-quarter", (7, -10, 5.5), (1.2, 0, -0.1), 6.5),
         ("wind-up", (7, -10, 6.5), (1.2, 0, -0.1), 6.5),
     ]:
-        # Side puts the ball beside the rig in depth for equal-scale orthography.
         ball = bpy.data.objects["ReferenceBall_2m"]
         ball.location = (0, -2.75, 0) if label == "side" else (0, 0, 0)
         if label == "side":

@@ -1,10 +1,3 @@
-// One entry point for the Godot sketches: find them across every worktree,
-// launch one, run its headless checks, or render its spawn view.
-//
-// The sketches under review live in sibling worktrees, not in this checkout,
-// so discovery walks `git worktree list` rather than this repo's sketches/
-// directory alone. Binary resolution is imported from sketch-smoke so the
-// pinned 4.7.2 path is stated in exactly one place.
 import { spawn, spawnSync } from "node:child_process";
 import {
   accessSync,
@@ -63,9 +56,6 @@ export function worktrees(repoRoot) {
   }
 }
 
-// A worktree's primary sketch is the one named after it, else the longest
-// sketch name the tree's name contains, else its core-loop sketch, else its
-// only sketch, else the first entry.
 export function pickPrimary(directories, treeName) {
   const named = directories.find((dir) => path.basename(dir) === treeName);
   const contained = directories
@@ -84,8 +74,6 @@ export function pickPrimary(directories, treeName) {
   }
 }
 
-// The question a sketch README puts in bold on its first screen. It is the
-// reason to play that one rather than another, so it belongs in the list.
 function questionOf(directory) {
   const readme = path.join(directory, "README.md");
   if (!existsSync(readme)) {
@@ -96,7 +84,6 @@ function questionOf(directory) {
     if (asked !== null) {
       return asked[1].replace(/\s+/g, " ").trim();
     }
-    // No bolded question: fall back to the README's opening sentence.
     const body = text.replace(/^#[^\n]*\n+/, "").split(/\n\s*\n/)[0] || "";
     const sentence = body.replace(/\s+/g, " ").trim().split(/\.\s/)[0];
     if (sentence.length > 10) {
@@ -107,8 +94,6 @@ function questionOf(directory) {
   }
 }
 
-// Ids must not depend on which checkout asks: `git worktree list` names the
-// main worktree first, and only its primary sketch goes by the bare name.
 export function catalogue(repoRoot) {
   const entries = [];
   const trees = worktrees(repoRoot);
@@ -143,8 +128,6 @@ export function catalogue(repoRoot) {
   return entries.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-// The worktree the command was typed in: the deepest one whose path holds the
-// current directory, since linked worktrees may sit inside the main checkout.
 export function currentTree(repoRoot, cwd) {
   let best = null;
   for (const tree of worktrees(repoRoot)) {
@@ -157,11 +140,6 @@ export function currentTree(repoRoot, cwd) {
   return best;
 }
 
-// Typed names are short and human. An exact id wins, except that a bare
-// sketch name typed inside another worktree means that worktree's sketch.
-// A name that is exactly a sketch's directory name then resolves in the
-// current worktree, else in the first one; prefixes and substrings are tried
-// only when no sketch has that directory name anywhere.
 export function resolve(entries, name, cwdTree = null) {
   const term = name.toLowerCase();
   const exact = entries.filter(
@@ -247,10 +225,7 @@ async function inPool(jobs, limit, onDone) {
         results[index] = await jobs[index]();
         try {
           onDone?.(results[index]);
-        } catch {
-          // A broken reporter must not stop the pool; the checks still
-          // running would outlive watch as orphaned Godot processes.
-        }
+        } catch {}
       }
     }),
   );
@@ -274,9 +249,7 @@ function reportCheck(result) {
       const file = path.join(failureLog, `${stamp}-${slug}.log`);
       writeFileSync(file, result.output);
       console.log(dim(`     full output: ${file}`));
-    } catch {
-      // Never let evidence capture take down the run that produced it.
-    }
+    } catch {}
   }
   return result.ok;
 }
@@ -418,10 +391,6 @@ export function findOnPath(name, env = process.env) {
   return null;
 }
 
-// Default output lives under artifacts/local/shots/, never /tmp (audit A8).
-// A relative name is joined there; an absolute path is honoured so an
-// explicit destination still works. The refusal checks the resolved path, so
-// `..` segments and `//tmp` cannot bring /tmp or os.tmpdir() back in (NB3).
 export function shotOutputPath(repoRoot, entry, requested, { tmpRoots = ["/tmp", tmpdir()] } = {}) {
   const shotsDir = path.join(repoRoot, "artifacts", "local", "shots");
   const name = requested || `${entry.sketch}-spawn.png`;

@@ -105,8 +105,6 @@ def peaks(rows, rests):
     return rot, squash
 
 
-# Read the same script numbers field_motion.py reads, without bpy, so the structural checks
-# run anywhere; keep these two patterns in step with field_motion.const and .configured.
 ATTACK_CAP = 0.6
 
 
@@ -221,7 +219,6 @@ def selftest(lead_table, attack_cap):
     broken["extra mesh"] = pack(meshy, blob)
     wrong = dict(lead_table)
     wrong["chaser"] = (lead_table["chaser"][0] + 0.2, lead_table["chaser"][1])
-    # A broken seam: shift the first output of the idle's first channel.
     seam_blob = bytearray(blob)
     idle = next(a for a in doc["animations"] if a["name"] == "idle")
     sampler = idle["samplers"][idle["channels"][0]["sampler"]]

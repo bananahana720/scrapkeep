@@ -1,18 +1,5 @@
 extends SceneTree
 
-# Stills for PF-53 (the ball's own dust and a kill's burst mark cover the ball or most of the
-# screen when the camera flies through them). The game on stage 1 with the play camera and HUD:
-#   roll        the ball rolling at speed, its dust trail live (the real emitter)
-#   dust_lens   a held ball, a dust column 2 m in front of the lens
-#   dust_play   the same column where the dust sits at the play distance (behind the ball)
-#   mark_lens   a kill mark fired 2 m in front of the lens
-#   mark_play   a kill mark fired at the ball, as a kill is
-# frames.json records, per shot, `share`: the share of screen pixels within TONE_DISTANCE of the
-# effect's colour (SANDSTONE for the dust; for the mark, pixels clearly more cyan than red, since MARK_TINT is
-# cyan and the ground is orange). The HUD is in the frame, so
-# compare shots of one build with each other. The tool stops with an error, writing no still, if
-# the effect is not live at the shot.
-#   gpu-run.sh <worktree> lensfade --path sketches/core-loop --script res://tools/lens_fade_still.gd -- --out=/abs/dir [--stage=1]
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -93,7 +80,6 @@ func _run() -> void:
 	game.camera.snap(ahead)
 	await _frames(SETTLE)
 
-	# The real dust: roll toward the beacon until the ball is fast and the emitter is on.
 	var roll_speed := 0.0
 	for i in ROLL_TICKS:
 		source.hold["move"] = Vector2(0.0, 1.0)
@@ -173,7 +159,6 @@ func _shot(id: String, note: Dictionary, tone: Color) -> void:
 		for x in range(0, w, 2):
 			var c := image.get_pixel(x, y)
 			if tone == MARK_TINT:
-				# The mark's cyan is far from the orange ground, but its lit and inked parts shift the exact tone.
 				if c.b > c.r + 0.2 and c.g > c.r + 0.15:
 					near += 1
 			elif Vector3(c.r - tone.r, c.g - tone.g, c.b - tone.b).length() < TONE_DISTANCE:

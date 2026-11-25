@@ -1,4 +1,3 @@
-// Rules: ALPHA-PLAN Testing and T8's runner, receipt, threshold and dry-run contract.
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
@@ -30,10 +29,7 @@ const git = {
   dirty_paths: [],
 };
 const startedAt = "2026-10-03T12:00:00.000Z";
-const scripts = [
-  "res://tests/deterministic_test.gd",
-  "res://tests/presentation_audio_test.gd",
-];
+const scripts = ["res://tests/deterministic_test.gd", "res://tests/presentation_audio_test.gd"];
 const baseline = {
   L1: ["sketches/core-loop/tests/presentation_audio_test.gd"],
 };
@@ -64,9 +60,7 @@ const data = (step) => {
 const passingRunner = async (step) => ({
   code: 0,
   output:
-    step.kind === "test"
-      ? "[rule] checked -> PASS\nfixture_test: PASS\n"
-      : "tool completed\n",
+    step.kind === "test" ? "[rule] checked -> PASS\nfixture_test: PASS\n" : "tool completed\n",
 });
 
 test("nightly launches bot-tier tests with their smoke marker caps", async () => {
@@ -136,7 +130,6 @@ async function fixture(fn) {
   }
 }
 
-// Rule: parse explicit flags, require positive integral repetition counts, reject typos.
 test("argument parsing defaults and validation", () => {
   assert.deepEqual(parseArgs([]), {
     dryRun: false,
@@ -149,16 +142,7 @@ test("argument parsing defaults and validation", () => {
     export: false,
   });
   assert.equal(parseArgs(["--export"]).export, true);
-  for (const value of [
-    undefined,
-    "0",
-    "-1",
-    "1.1",
-    "NaN",
-    "Infinity",
-    "1e3",
-    "9007199254740992",
-  ]) {
+  for (const value of [undefined, "0", "-1", "1.1", "NaN", "Infinity", "1e3", "9007199254740992"]) {
     assert.throws(
       () => parseArgs(value === undefined ? ["--runs"] : ["--runs", value]),
       /positive integer/,
@@ -167,7 +151,6 @@ test("argument parsing defaults and validation", () => {
   assert.throws(() => parseArgs(["--quick"]), /unknown argument/);
 });
 
-// Rule: >1% flakes is red, exactly 1% is green, no runs is unknown and red.
 test("flake arithmetic and inclusive threshold, including zero runs", () => {
   assert.equal(MAX_FLAKE_RATE, 0.01);
   assert.equal(flakeRate(0, 0), null);
@@ -179,7 +162,6 @@ test("flake arithmetic and inclusive threshold, including zero runs", () => {
   assert.equal(flakeRate(1, 3), 1 / 3);
 });
 
-// Rule: the full checkpoint bot matrix precedes fuzz, perf and repeated full tests.
 test("plan matches checkpoint commands, optional import and serial wall-clock tests", async () =>
   fixture(({ plan, outDir }) => {
     assert.equal(plan.filter((s) => s.kind === "bot").length, 3 * BOT_SEEDS);
@@ -197,25 +179,17 @@ test("plan matches checkpoint commands, optional import and serial wall-clock te
       "--seeds=1",
       "--table=default",
     ]);
-    assert.equal(
-      plan.find((s) => s.kind === "fuzz").args.includes("--seeds=1-200"),
-      true,
-    );
+    assert.equal(plan.find((s) => s.kind === "fuzz").args.includes("--seeds=1-200"), true);
     assert.equal(plan.filter((s) => s.kind === "perf").length, 3);
-    assert.equal(
-      plan.filter((s) => s.kind === "test").length,
-      scripts.length * DEFAULT_RUNS,
-    );
-    for (const step of plan.filter((s) => s.command))
-      assert.ok(step.args.includes("--headless"));
+    assert.equal(plan.filter((s) => s.kind === "test").length, scripts.length * DEFAULT_RUNS);
+    for (const step of plan.filter((s) => s.command)) assert.ok(step.args.includes("--headless"));
     assert.match(plan.find((s) => s.kind === "skip").reason, /headless-only/);
     assert.deepEqual(
       plan.filter((s) => s.kind === "test").map((s) => s.solo),
       [false, true, false, true, false, true],
     );
     assert.equal(
-      buildPlan(options, { directory: outDir, scripts, baseline, outDir, imported: false })[0]
-        .kind,
+      buildPlan(options, { directory: outDir, scripts, baseline, outDir, imported: false })[0].kind,
       "import",
     );
     const helperBaseline = {
@@ -232,7 +206,6 @@ test("plan matches checkpoint commands, optional import and serial wall-clock te
     );
   }));
 
-// Rule: GPU flock surrounds rendered steps only; headless commands take no GPU lock.
 test("GPU lock is conditional on rendering", () => {
   const step = { command: "godot", args: ["--headless"] };
   assert.deepEqual(commandFor(step), step);
@@ -242,7 +215,6 @@ test("GPU lock is conditional on rendering", () => {
   });
 });
 
-// Rule: passing fake processes yield green, even with expensive ungated perf numbers.
 test("green passing fake runner and receipt shape", async () =>
   fixture(async ({ plan, outDir }) => {
     const { exit, receipt } = await runNightly(options, {
@@ -272,10 +244,7 @@ test("green passing fake runner and receipt shape", async () =>
     assert.ok(
       receipt.results
         .filter((r) => r.kind !== "skip")
-        .every(
-          (r) =>
-            r.exit === 0 && r.ms >= 0 && r.command && Array.isArray(r.args),
-        ),
+        .every((r) => r.exit === 0 && r.ms >= 0 && r.command && Array.isArray(r.args)),
     );
     assert.equal(receipt.full_bot_matrix, true);
     assert.ok(receipt.bot_bands.every((r) => r.pass));
@@ -292,15 +261,12 @@ test("green passing fake runner and receipt shape", async () =>
     assert.equal(receipt.thresholds.max_wall_ms, 60 * 60_000);
   }));
 
-// Rule: failing exits or printed FAIL verdicts count as failures, with no retries.
 test("red failing fake runner counts failures over runs", async () =>
   fixture(async ({ plan, outDir }) => {
     let calls = 0;
     const runner = async (step) => {
       calls++;
-      return step.kind === "test" &&
-        step.script === scripts[0] &&
-        step.run === 2
+      return step.kind === "test" && step.script === scripts[0] && step.run === 2
         ? { code: 1, output: "[rule] wrong -> FAIL\nfixture_test: FAIL (1)\n" }
         : passingRunner(step);
     };
@@ -339,7 +305,6 @@ test("red failing fake runner counts failures over runs", async () =>
     assert.equal(bad.exit, 1);
   }));
 
-// Rule: bot band misses, process exceptions, missing artifacts and dirty trees are red.
 test("bot band miss and infrastructure failure cannot pass", async () =>
   fixture(async ({ plan, outDir }) => {
     const run = (extra) =>
@@ -384,7 +349,6 @@ test("bot band miss and infrastructure failure cannot pass", async () =>
     assert.equal((await run({ git: { ...git, clean: false } })).exit, 1);
   }));
 
-// Rule: budget exhaustion prevents spawning and leaves incomplete tests red.
 test("wall budget bounds launch and reports zero completed runs", async () =>
   fixture(async ({ plan, outDir }) => {
     let spawns = 0;
@@ -411,7 +375,6 @@ test("wall budget bounds launch and reports zero completed runs", async () =>
     );
   }));
 
-// Rule: wall-clock tests run alone after all concurrent tests in each repeat.
 test("solo scheduling has no overlapping fake processes", async () =>
   fixture(async ({ plan, outDir }) => {
     let active = 0;
@@ -442,7 +405,6 @@ test("solo scheduling has no overlapping fake processes", async () =>
     assert.ok(peak > 1 && peak <= 6);
   }));
 
-// Rule: dry-run prints every planned command without spawning or writing evidence.
 test("dry-run produces ordered plan without invoking runner", async () =>
   fixture(async ({ plan }) => {
     const lines = [];
@@ -463,7 +425,6 @@ test("dry-run produces ordered plan without invoking runner", async () =>
     assert.equal(lines.filter((line) => line.startsWith("SKIP")).length, 1);
   }));
 
-// Rule: the real CLI dry-run must also succeed with an unusable Godot path.
 test("CLI dry-run never launches Godot", () => {
   const result = spawnSync(
     process.execPath,
@@ -487,17 +448,13 @@ test("CLI dry-run never launches Godot", () => {
     },
   );
   assert.equal(exported.status, 0, exported.stderr);
-  assert.match(
-    exported.stdout,
-    /export win proof: .*sketch-export\.mjs" "--win-proof"/,
-  );
+  assert.match(exported.stdout, /export win proof: .*sketch-export\.mjs" "--win-proof"/);
   assert.doesNotMatch(
     exported.stdout,
     /does\/not\/exist\/nightly-godot" "--headless" "--path" "[^"]*" "--rendering/,
   );
 });
 
-// Rule: artifacts must describe the exact bot seed and complete fuzz workload.
 test("artifact validation rejects missing seeds and hard fuzz violations", async () =>
   fixture(({ outDir }) => {
     const botDir = path.join(outDir, "bot");
@@ -519,8 +476,7 @@ test("artifact validation rejects missing seeds and hard fuzz violations", async
       }) + "\n",
     );
     assert.equal(
-      artifacts({ kind: "bot", policy: "skipper", seed: 1, out: botDir }).bot
-        .fightSeconds,
+      artifacts({ kind: "bot", policy: "skipper", seed: 1, out: botDir }).bot.fightSeconds,
       10,
     );
     assert.throws(
@@ -543,16 +499,10 @@ test("artifact validation rejects missing seeds and hard fuzz violations", async
     assert.equal(artifacts({ kind: "fuzz", out: outDir }).fuzz.seeds, 200);
     rows[0].anomalies.push({ kind: "bolts" });
     fuzz();
-    assert.throws(
-      () => artifacts({ kind: "fuzz", out: outDir }),
-      /hard invariant miss/,
-    );
+    assert.throws(() => artifacts({ kind: "fuzz", out: outDir }), /hard invariant miss/);
     rows[0].anomalies = [{ kind: "frame_time" }];
     fuzz();
-    assert.equal(
-      artifacts({ kind: "fuzz", out: outDir }).fuzz.soft_anomalies,
-      1,
-    );
+    assert.equal(artifacts({ kind: "fuzz", out: outDir }).fuzz.soft_anomalies, 1);
     rows[0].seed = 2;
     fuzz();
     assert.throws(() => artifacts({ kind: "fuzz", out: outDir }), /incomplete/);
@@ -574,7 +524,6 @@ test("artifact validation rejects retired slice run-log records", async () =>
     );
   }));
 
-// Rule: process execution captures exits and output, isolates saves and enforces timeouts.
 test("process runner handles exits, spawn errors and time limits", async () =>
   fixture(async ({ outDir }) => {
     const step = {
@@ -590,21 +539,14 @@ test("process runner handles exits, spawn errors and time limits", async () =>
     assert.match(failed.output, /stderr/);
     assert.ok(failed.output.includes(path.join(outDir, "state/data")));
     assert.equal(failed.timed_out, false);
-    const missing = await runProcess(
-      { ...step, command: "/does/not/exist/nightly-runner" },
-      5000,
-    );
+    const missing = await runProcess({ ...step, command: "/does/not/exist/nightly-runner" }, 5000);
     assert.equal(missing.code, -1);
     assert.match(missing.output, /ENOENT/);
-    const timeout = await runProcess(
-      { ...step, args: ["-e", "setInterval(() => {}, 1000)"] },
-      50,
-    );
+    const timeout = await runProcess({ ...step, args: ["-e", "setInterval(() => {}, 1000)"] }, 50);
     assert.equal(timeout.timed_out, true);
     assert.equal(timeout.code, null);
   }));
 
-// Rule: incomplete matrix or empty test list is never green.
 test("empty receipt is red and contains no fabricated flake rate", () => {
   const receipt = buildReceipt({
     options,
@@ -627,24 +569,17 @@ test("empty receipt is red and contains no fabricated flake rate", () => {
   });
 });
 
-// Rule: the export win proof is opt-in, runs right after import, alone and unrendered.
 test("export step is opt-in, first after import, alone and unrendered", async () =>
   fixture(({ outDir }) => {
     const build = (opts, imported) =>
       buildPlan(opts, { directory: outDir, scripts, baseline, outDir, imported });
     const exportOptions = { ...options, export: true };
-    assert.equal(
-      build(options, true).filter((s) => s.kind === "export").length,
-      0,
-    );
+    assert.equal(build(options, true).filter((s) => s.kind === "export").length, 0);
     const plan = build(exportOptions, true);
     assert.equal(plan.filter((s) => s.kind === "export").length, 1);
     assert.equal(plan[0].kind, "export");
     assert.equal(plan[0].command, process.execPath);
-    assert.deepEqual(plan[0].args, [
-      path.resolve("scripts/sketch-export.mjs"),
-      "--win-proof",
-    ]);
+    assert.deepEqual(plan[0].args, [path.resolve("scripts/sketch-export.mjs"), "--win-proof"]);
     assert.equal(plan[0].render, false);
     assert.equal(plan[0].timeout_ms, EXPORT_TIMEOUT_MS);
     const withImport = build(exportOptions, false);
@@ -653,7 +588,6 @@ test("export step is opt-in, first after import, alone and unrendered", async ()
     assert.equal(plan.filter((s) => s.kind === "bot").length, 3 * BOT_SEEDS);
   }));
 
-// Rule: an export without a won win proof line is never green, in any line order.
 test("export artifacts require a won win proof", () => {
   const out = [
     "win proof: won at stage 6, 900 ticks, 90 s wall, policy skipper seed 1, pack /x/p.pck",
@@ -666,8 +600,7 @@ test("export artifacts require a won win proof", () => {
       version: "v1",
       package: "/x/p.tar.gz",
       executable: "/x/game",
-      win_proof:
-        "won at stage 6, 900 ticks, 90 s wall, policy skipper seed 1, pack /x/p.pck",
+      win_proof: "won at stage 6, 900 ticks, 90 s wall, policy skipper seed 1, pack /x/p.pck",
     },
   });
   assert.throws(
@@ -677,7 +610,6 @@ test("export artifacts require a won win proof", () => {
   assert.throws(() => artifacts({ kind: "export" }, ""), /won win proof/);
 });
 
-// Rule: the receipt carries the export result and a failed export turns it red.
 test("fake export run reports in the receipt and a failing export is red", async () =>
   fixture(async ({ outDir }) => {
     const exportOptions = { ...options, export: true };
@@ -696,9 +628,7 @@ test("fake export run reports in the receipt and a failing export is red", async
         outDir,
         runner,
         readArtifacts: (step) =>
-          step.kind === "export"
-            ? { export: { win_proof: "won at stage 6" } }
-            : data(step),
+          step.kind === "export" ? { export: { win_proof: "won at stage 6" } } : data(step),
         log: () => {},
       });
     const green = await run(passingRunner);
@@ -710,10 +640,7 @@ test("fake export run reports in the receipt and a failing export is red", async
         : passingRunner(step),
     );
     assert.equal(red.exit, 1);
-    assert.equal(
-      red.receipt.results.find((r) => r.kind === "export").ok,
-      false,
-    );
+    assert.equal(red.receipt.results.find((r) => r.kind === "export").ok, false);
     const plain = buildPlan(options, {
       directory: outDir,
       scripts,
@@ -725,12 +652,9 @@ test("fake export run reports in the receipt and a failing export is red", async
     assert.equal(off.receipt.export, null);
   }));
 
-// Rule: the export step sees the real templates through the isolated data home.
 test("export step links real templates into the isolated data home", async () =>
   fixture(async ({ outDir }) => {
-    const realData = mkdtempSync(
-      path.join(os.tmpdir(), "sketch-nightly-data-"),
-    );
+    const realData = mkdtempSync(path.join(os.tmpdir(), "sketch-nightly-data-"));
     const saved = process.env.XDG_DATA_HOME;
     try {
       mkdirSync(path.join(realData, "godot/export_templates/4.7.2.stable"), {

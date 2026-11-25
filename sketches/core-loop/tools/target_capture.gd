@@ -1,10 +1,5 @@
 extends SceneTree
 
-# GPU capture of the look views, one preset per run (always through claude-open):
-#   godot --path sketches/core-loop --script res://tools/target_capture.gd -- --out=<dir> --preset=high|target
-#     [--table=slice] [--ball=x,z] [--face=x,z]
-# --table=slice stages the Cable Reach on Cams.TARGET_REACH; --ball and --face move the ball and
-# turn the chase view. frames.json records the table, the ball and the placed clutter count.
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -56,8 +51,6 @@ func _run() -> void:
 	Cams.aim(camera, play_view.eye, play_view.target, play_view.fov)
 	var viewport_rid := root.get_viewport_rid()
 	RenderingServer.viewport_set_measure_render_time(viewport_rid, true)
-	# Measure the live scene, including simulation and presentation. Discard initial
-	# shader/GI warmup; intervals between presented draws are throughput, not GPU-only time.
 	for i in WARMUP_FRAMES:
 		await RenderingServer.frame_post_draw
 	var samples: Array[float] = []
@@ -80,8 +73,6 @@ func _run() -> void:
 		"cpu_frame_setup": _summary(setup_samples),
 		"samples_ms": samples, "vsync": "disabled", "max_fps": 0,
 		"method": "wall-clock intervals between frame_post_draw signals; live simulation, fixed play camera; engine viewport GPU/CPU timestamps in milliseconds; CPU setup separate; asynchronous GPU timestamps can lag wall samples"}
-	# FPS changes how far simulation advances during measurement. Rebuild from the same
-	# seed and physics count, so the three stills compare identical staged scene state.
 	game.free()
 	await process_frame
 	await _stage()
@@ -144,8 +135,6 @@ func _stage() -> void:
 	game.add_child(camera)
 	camera.current = true
 	camera.far = Cams.FAR
-	# --face turns the chase view to look toward a ground point: the eye 8 m behind the ball and
-	# 3 m up, the target 24 m ahead and 1 m up, as the default row's offsets do looking +z.
 	var face = face_arg if face_arg != null else play.get("face_xz")
 	if face == null:
 		play_view = {"eye": play_ball + play.eye_offset, "target": play_ball + play.target_offset, "fov": play.fov}
@@ -158,8 +147,6 @@ func _shot(id: String, view: Dictionary) -> bool:
 	Cams.aim(camera, view.eye, view.target, view.fov)
 	if is_instance_valid(game.presentation.set_dressing):
 		game.presentation.set_dressing.sync_camera(camera)
-	# SDFGI and volumetric temporal history must settle after a camera jump while the
-	# simulation remains frozen. No animation or physics frames advance between stills.
 	for i in WARMUP_FRAMES:
 		await RenderingServer.frame_post_draw
 	_hide_labels()
@@ -176,7 +163,6 @@ func _shot(id: String, view: Dictionary) -> bool:
 		"ball": [play_ball.x, play_ball.y, play_ball.z], "sha256": FileAccess.get_sha256(path)})
 	return true
 
-# The clutter pieces the target preset placed on this table's stage, from the dressing's own batches.
 func _clutter_instances() -> int:
 	var count := 0
 	if is_instance_valid(game) and is_instance_valid(game.presentation.set_dressing):
@@ -191,9 +177,6 @@ static func _pair(text: String) -> Vector2:
 	return Vector2(float(parts[0]), float(parts[1])) if parts.size() == 2 else Vector2.ZERO
 
 
-# 2026-10-09: target_ground and target_rock left this list when VX-SURF retired both shaders
-# (cand/alpha-w12 34b7ed9, the material slot registry); a listed file that is gone records
-# "missing" instead of an empty hash and an open error.
 func _hashes() -> Dictionary:
 	var result := {}
 	for path in ["src/world/terrain.gd", "src/core/palette.gd", "src/presentation/hero_assets.gd",
@@ -208,8 +191,6 @@ func _hashes() -> Dictionary:
 	return result
 
 
-# WorldPrompt is a screen-space Label, not Label3D. Hide all canvas items as well
-# as their HUD layers, and stop layer processing from revealing prompts again.
 func _hide_labels() -> void:
 	hide_labels(root)
 

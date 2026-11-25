@@ -55,10 +55,6 @@ OBSERVATIONS = {
     "brace": "Motion bottom-middle: forward chest and muzzle, both grips planted; overlap panels, no squash.",
     "heave": "Motion bottom-right: one anatomical RIGHT punch, left counterbrace; one drive then settle.",
 }
-# PD-CANNON round 3 (coordinator ruling R1, 2026-10-11): the muzzle-head rides 0.08 m higher on a
-# short cast neck collar, so it sits above the weapon ring and clears rule 1's 45 px head floor at
-# the chase mid eye (it measured 39 px). The head's shape, snout and lenses are unchanged; the
-# head, snout and jaw controls move up with it.
 HEAD_LIFT = .08
 
 
@@ -97,7 +93,6 @@ def cast_form(p, size, centre, slot="ancient_enamel", colour="bone", u=16, v=10,
             point = Vector((power(math.sin(t)*math.cos(a))*size[0]/2,
                             power(math.sin(t)*math.sin(a))*size[1]/2,
                             power(math.cos(t))*size[2]/2))
-            # Small sculpted chips break cast edges without adding detail draws.
             chip = .976 if (i*7+j*11) % 47 == 0 else 1.0
             row.append(p.bm.verts.new(c+point*chip))
         rows.append(row)
@@ -139,7 +134,6 @@ def carapace(p, upper):
             f.smooth = True
             faces.append(f)
     p.paint(faces, "ancient_enamel", "petrol")
-    # The flat inner face closes the oval's specified 0.20 m total depth.
     inside = [[p.bm.verts.new(Vector((q.co.x, -.02, q.co.z))) for q in row] for row in rows]
     for j in range(8):
         for i in range(12):
@@ -158,7 +152,6 @@ def carapace(p, upper):
     for i in (0, 12):
         for j in range(8):
             p.paint([p.bm.faces.new((rows[j][i], inside[j][i], inside[j+1][i], rows[j+1][i]))], "ancient_enamel", "petrol")
-    # Continuous recessed ribbons avoid disconnected bars and excess hard-edge vertices.
     for slot, width, offset in (("rubber", .02, .002), ("ancient_light", .008, .003)):
         ribbon = []
         for j in range(9):
@@ -169,13 +162,11 @@ def carapace(p, upper):
             f = p.bm.faces.new((ribbon[j][0], ribbon[j+1][0], ribbon[j+1][1], ribbon[j][1]))
             f.smooth = True
             p.paint([f], slot)
-    # Few broad chips at silhouette edges; no bolts on an ancient casting.
     p.paint([faces[14], faces[65]], "ancient_enamel", common.mix("petrol", "bone", .23))
     return faces
 
 
 def fan(p, s):
-    # Three scalloped fused lobes form ONE curl-weighted piece, without finger bones.
     outline = [(-.08, -.026), (-.075, .018), (-.063, .036), (-.049, .04),
                (-.034, .031), (-.020, .04), (0, .043), (.020, .04),
                (.034, .031), (.049, .04), (.063, .036), (.075, .018),
@@ -205,9 +196,7 @@ def model():
                 slot="rubber", u=12, v=8)
         p.piece("head", p.ring, "ancient_enamel", .0275, .038, .014, 12,
                 loc=(s*.11, .156, .24+lift), rot=(math.pi/2, 0, 0), color=common.mix("bone", "charcoal", .18))
-    # One cast collar bridges the chest casting (top at Z .08) and the lifted head (base .14).
     p.piece("neck", cast_form, p, (.18, .16, .12), (0, .03, .12), colour="petrol", u=12, v=6)
-    # An inset front oval and two overlapping rear cast panels carry the torso.
     p.piece("spine_01", cast_form, p, (.56, .41, .43), (0, -.005, -.17), colour="petrol", u=16, v=8)
     p.piece("spine_02", cast_form, p, (.28, .19, .13), (0, .02, .015), colour="petrol", u=12, v=6)
     p.piece("spine_02", carapace, p, True)
@@ -311,7 +300,6 @@ def pose(arm, clip, k):
     for side, target in (("R", right), ("L", left)):
         shared.solve_arm(arm, side, target)
         shared.world_hand(arm, side, (0, 0, 0))
-    # Every part remains cast: inherited scales are always identity.
     assert max(abs(c-1) for b in arm.pose.bones for c in b.scale) < 1e-6
 
 
@@ -333,15 +321,12 @@ def actions(arm):
         action = arm.animation_data.action
         action.name = clip
         action.use_fake_user = True
-        # Linear keys preserve cast dimensions and avoid hidden interpolation overshoot.
         for layer in action.layers:
             for strip in layer.strips:
                 for bag in strip.channelbags:
                     for curve in bag.fcurves:
                         for point in curve.keyframe_points:
                             point.interpolation = "LINEAR"
-        # Bake fixed contacts once per frame after the silhouette keys are authored.
-        # Half-frame verification then measures interpolation rather than assuming it.
         planted = ("R", "L") if clip in ("brace", "drop_land") else (("R",) if clip == "phew" else (("L",) if clip == "heave" else ()))
         baked = []
         for frame in range(1, frames[-1]+1):
@@ -396,7 +381,6 @@ def check(arm, mesh, acts):
         assert root_error < 1e-6, root_error
         assert scale_error < 1e-5, scale_error
         assert neutral_error < 1e-5, neutral_error
-        # Interpolated FK keys approximate fixed controls; require sub-millimetre contact.
         assert grip_error < .001, (act.name, grip_error)
         checks.append({"clip": act.name, "seconds": (end-1)/30, "half_frame_samples": end*2-1,
                        "max_vertex_radius": radius, "pelvis_drift": root_error,
@@ -438,8 +422,6 @@ def previews(arm, mesh, acts, shell):
     cycles_device.use(scene)
     scene.cycles.samples = 12
     scene.render.resolution_x = scene.render.resolution_y = 640
-    # Cycles glass uses a transparent/Fresnel reflection mix; the exported game
-    # material remains common's alpha-0.12 glass, written before studio setup.
     nodes = common.material("glass").node_tree.nodes
     links = common.material("glass").node_tree.links
     transparent = nodes.new("ShaderNodeBsdfTransparent")
@@ -480,18 +462,13 @@ def main():
     args = parser.parse_args(sys.argv[sys.argv.index("--")+1:] if "--" in sys.argv else [])
     OUT.mkdir(parents=True, exist_ok=True)
     common.reset()
-    # Polish (POLISH.md): the cast forms are already smooth; the baked AO gives the
-    # castings their contact shade. The bevel is under polish.shape's 5 mm floor, so edges
-    # stay as authored. Subdivision added 4x triangles for no visible change.
     polish.enable(detail=2, bevel=.004)
     for name, digest in REFERENCES.items():
         assert hashlib.sha256((SHEET_ROOT/name).read_bytes()).hexdigest() == digest, "Inspected reference changed: "+name
     common.SLOTS["ancient_light"] = dict(common.SLOTS["ancient_light"], emit=.45)
-    # Both models precede rigging. Retain the unrigged source and export the shell.
     mesh = model()
     shell = None
     if not args.no_shell:
-        # The shell belongs to world_one/shell_cannon.py, which is unpolished.
         polished, detail = common.POLISH, common.DETAIL
         common.POLISH, common.DETAIL = None, 1
         mod = shell_module()
