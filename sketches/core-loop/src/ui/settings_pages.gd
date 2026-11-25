@@ -42,7 +42,7 @@ const SELECT_ROW := "select_"
 const FIXED := ["roll", "look"]
 # The in-run keys with no row here, by the name the player meets them under.
 const EXTRA_WORDS := {"cl_retry": "New run", "cl_pause": "Pause", "cl_consumable": "Cartridge",
-	"cl_active": "Active", "cl_radio_next": "Next track",
+	"cl_radio_next": "Next track",
 	"cl_radio_prev": "Last track", "cl_radio_skip": "Skip track", "cl_radio_pin": "Keep track"}
 const PAGES := ["display", "controls", "look", "feel"]
 const PAGE_WORDS := {"display": "Display", "controls": "Controls", "look": "Look", "feel": "Feel"}

@@ -27,14 +27,17 @@ const WIDTH := 980.0
 const SCROLL_H := 520.0
 const HEADER_SERIAL := 57
 const OVERRIDE_SERIAL := 71
-const HINT_PARTS := [
+const HINT_PARTS_TOGGLE := [
 	{"cap": "key_q", "say": "Q"},
 	{"cap": "key_e", "say": "E"},
 	{"say": "tabs"},
 	{"cap": "key_enter", "say": "Enter"},
 	{"say": "toggle"},
-	{"cap": "key_esc", "say": "Esc"},
-	{"say": "back"},
+]
+const HINT_PARTS_TABS := [
+	{"cap": "key_q", "say": "Q"},
+	{"cap": "key_e", "say": "E"},
+	{"say": "tabs"},
 ]
 
 var back: Button
@@ -52,6 +55,7 @@ var _header_sub: Label
 var _pinned_row: HBoxContainer
 var _scroll: ScrollContainer
 var _body: VBoxContainer
+var _hints: CreditsHint
 var _focus_ring: Array[Control] = []
 
 
@@ -85,7 +89,7 @@ func _init() -> void:
 	top_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hbox.add_child(top_bar)
 
-	_header_title = _label("SHIFT DISPATCH", UiTokens.LABEL, UiTokens.HANDS[UiTokens.Hand.OLD_WORKS].ink, true)
+	_header_title = _label("Work orders", UiTokens.LABEL, UiTokens.HANDS[UiTokens.Hand.OLD_WORKS].ink, true)
 	_header_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top_bar.add_child(_header_title)
 
@@ -143,10 +147,10 @@ func _init() -> void:
 	foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(foot)
 
-	var hints := CreditsHint.new()
-	hints.name = "Keys"
-	hints.setup(HINT_PARTS)
-	foot.add_child(hints)
+	_hints = CreditsHint.new()
+	_hints.name = "Keys"
+	_hints.setup(HINT_PARTS_TOGGLE)
+	foot.add_child(_hints)
 
 	back = ChoiceButton.new("back", "key_esc", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -158,7 +162,7 @@ func refresh(profile, sitting := false) -> void:
 	_profile = profile
 	_sitting = sitting
 	if _profile != null:
-		WorkOrders.ensure_default_pin(_profile)
+		WorkOrders.ensure_default_pin(_profile, _sitting)
 	_rebuild()
 
 
@@ -243,17 +247,23 @@ func _rebuild() -> void:
 	var active_ov: int = MetaOptions.active_overrides(_profile, false, _sitting).size()
 	match active_tab:
 		"orders":
-			_header_sub.text = "%d of %d crew orders stamped   %d of %d clips pinned" % [done, total, WorkOrders.active_ids(_profile).size(), WorkOrders.MAX_ACTIVE]
+			_header_sub.text = "%d of %d crew orders stamped" % [done, total]
 			_pinned_row.visible = true
+			_hints.setup(HINT_PARTS_TOGGLE)
 			_build_pinned_strip()
 			_build_orders_body()
 		"licenses":
-			_header_sub.text = "Seven yard makers   Three stamp rungs each"
+			var stamps_total := 0
+			for maker in WorkOrders.LICENSES:
+				stamps_total += mini(WorkOrders.license_stamps(String(maker), _profile), WorkOrders.LICENSE_STAMPS_MAX)
+			_header_sub.text = "%d of %d stamps earned" % [stamps_total, WorkOrders.LICENSES.size() * WorkOrders.LICENSE_STAMPS_MAX]
 			_pinned_row.visible = false
+			_hints.setup(HINT_PARTS_TABS)
 			_build_licenses_body()
 		"overrides":
 			_header_sub.text = "%d of %d override codes armed   %d of %d head starts open" % [active_ov, MetaOptions.OVERRIDE_CODES.size(), MetaOptions.level(_profile), MetaOptions.ids().size()]
 			_pinned_row.visible = false
+			_hints.setup(HINT_PARTS_TOGGLE)
 			_build_overrides_body()
 	_scroll.scroll_vertical = 0
 
@@ -287,7 +297,7 @@ func _clip_card(slot_name: String, order_id: String, serial: int) -> PanelContai
 	card.add_child(col)
 	if order_id == "":
 		col.add_child(_label(slot_name, UiTokens.CAPTION, UiTokens.quiet()))
-		col.add_child(_label("Empty clip. Pick one below.", UiTokens.BODY, Palette.SLATE))
+		col.add_child(_label("Empty clip. Pick one below.", UiTokens.BODY, Palette.SAND))
 		return card
 	var row: Dictionary = WorkOrders.order(order_id)
 	var who := WorkOrders.issuer_label(order_id, _profile)
@@ -380,6 +390,15 @@ func _license_card(maker: String) -> PanelContainer:
 	plate.border_color = Palette.AMBER if tier >= 3 else (Palette.COPPER if tier >= 1 else UiTokens.LINE)
 	plate.set_content_margin_all(UiTokens.GAP_M)
 	card.add_theme_stylebox_override("panel", plate)
+	var focus_ring := StyleBoxFlat.new()
+	focus_ring.bg_color = Color.TRANSPARENT
+	focus_ring.border_color = Palette.AMBER
+	focus_ring.set_border_width_all(2)
+	card.draw.connect(func():
+		if card.has_focus():
+			card.draw_style_box(focus_ring, Rect2(Vector2.ZERO, card.size)))
+	card.focus_entered.connect(card.queue_redraw)
+	card.focus_exited.connect(card.queue_redraw)
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", UiTokens.GAP_XS)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -415,7 +434,6 @@ func _license_card(maker: String) -> PanelContainer:
 		icon.custom_minimum_size = Vector2(20.0, 20.0)
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		pips.add_child(icon)
-	pips.add_child(_label("%d of %d stamps" % [mini(stamps, WorkOrders.LICENSE_STAMPS_MAX), WorkOrders.LICENSE_STAMPS_MAX], UiTokens.CAPTION, Palette.SAND))
 	var rungs: Dictionary = WorkOrders.LICENSES[maker]
 	for t in range(1, WorkOrders.LICENSE_STAMPS_MAX + 1):
 		var r: Dictionary = rungs[t]
@@ -467,8 +485,18 @@ func _build_overrides_body() -> void:
 		var open: bool = _profile != null and _profile.has_option(mid)
 		var box := HBoxContainer.new()
 		box.name = "HeadStart_" + mid
+		box.focus_mode = Control.FOCUS_ALL
 		box.add_theme_constant_override("separation", UiTokens.GAP_S)
 		box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var hs_ring := StyleBoxFlat.new()
+		hs_ring.bg_color = Color.TRANSPARENT
+		hs_ring.border_color = Palette.AMBER
+		hs_ring.set_border_width_all(2)
+		box.draw.connect(func():
+			if box.has_focus():
+				box.draw_style_box(hs_ring, Rect2(Vector2.ZERO, box.size)))
+		box.focus_entered.connect(box.queue_redraw)
+		box.focus_exited.connect(box.queue_redraw)
 		var star := TextureRect.new()
 		star.texture = Icons.shape("star" if open else "ring")
 		star.modulate = Palette.AMBER if open else Palette.SLATE
@@ -486,6 +514,7 @@ func _build_overrides_body() -> void:
 		box.add_child(lbl)
 		_body.add_child(box)
 		head_start_rows[mid] = box
+		_focus_ring.append(box)
 
 
 func _grant_hint(grant: String) -> String:
@@ -513,6 +542,9 @@ func _pay_words(pays: Dictionary) -> String:
 	if pays.has("license_stamp"):
 		var mk := String(pays["license_stamp"])
 		out.append("Stamps %s license" % String(MakerSets.SETS.get(mk, {}).get("name", mk.capitalize())))
+	if pays.has("option"):
+		var opt := MetaOptions.row(String(pays["option"]))
+		out.append("Opens %s" % String(opt.get("name", pays["option"])))
 	if pays.has("tune"):
 		out.append("Presses a record")
 	if pays.has("plaque") and out.is_empty():

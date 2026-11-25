@@ -116,11 +116,11 @@ func _init() -> void:
 	footer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(footer)
 	orders_button = ChoiceButton.new("work_orders", "key_o", "Work orders")
-	orders_button.focus_mode = Control.FOCUS_NONE
+	orders_button.focus_mode = Control.FOCUS_ALL
 	orders_button.pressed.connect(func(): work_orders_requested.emit())
 	footer.add_child(orders_button)
 	logbook_button = ChoiceButton.new("logbook", "key_l", "Logbook")
-	logbook_button.focus_mode = Control.FOCUS_NONE
+	logbook_button.focus_mode = Control.FOCUS_ALL
 	logbook_button.pressed.connect(func(): logbook_requested.emit())
 	footer.add_child(logbook_button)
 	back = ChoiceButton.new("back", "key_esc", "Back")
@@ -388,7 +388,11 @@ func _move(direction: int) -> void:
 func _input(event: InputEvent) -> void:
 	if not is_visible_in_tree():
 		return
+	var footer_buttons: Array = [orders_button, logbook_button, back]
+	var held := get_viewport().gui_get_focus_owner()
+	var foot_idx := footer_buttons.find(held)
 	var direction := 0
+	var horiz := 0
 	if event is InputEventKey and event.pressed:
 		var code: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
 		if not event.echo and code == KEY_O:
@@ -399,19 +403,37 @@ func _input(event: InputEvent) -> void:
 			logbook_requested.emit()
 			get_viewport().set_input_as_handled()
 			return
-		if code in [KEY_DOWN, KEY_S, KEY_RIGHT]:
+		if code in [KEY_DOWN, KEY_S]:
 			direction = 1
-		elif code in [KEY_UP, KEY_W, KEY_LEFT]:
+		elif code in [KEY_UP, KEY_W]:
 			direction = -1
-	elif event.is_action_pressed("ui_down", true) or event.is_action_pressed("ui_right", true):
+		elif code == KEY_RIGHT:
+			horiz = 1
+		elif code == KEY_LEFT:
+			horiz = -1
+	elif event.is_action_pressed("ui_down", true):
 		direction = 1
-	elif event.is_action_pressed("ui_up", true) or event.is_action_pressed("ui_left", true):
+	elif event.is_action_pressed("ui_up", true):
 		direction = -1
-	if direction != 0:
-		_move(direction)
+	elif event.is_action_pressed("ui_right", true):
+		horiz = 1
+	elif event.is_action_pressed("ui_left", true):
+		horiz = -1
+	if horiz != 0:
+		if foot_idx >= 0:
+			footer_buttons[posmod(foot_idx + horiz, footer_buttons.size())].grab_focus()
+		else:
+			_move(horiz)
 		get_viewport().set_input_as_handled()
-	elif back.has_focus() and event.is_action_pressed("ui_accept"):
-		back.pressed.emit()
+	elif direction != 0:
+		if foot_idx >= 0:
+			var controls: Array = rows.values() + [back]
+			controls[0 if direction > 0 else controls.size() - 2].grab_focus()
+		else:
+			_move(direction)
+		get_viewport().set_input_as_handled()
+	elif foot_idx >= 0 and event.is_action_pressed("ui_accept"):
+		footer_buttons[foot_idx].pressed.emit()
 		get_viewport().set_input_as_handled()
 
 

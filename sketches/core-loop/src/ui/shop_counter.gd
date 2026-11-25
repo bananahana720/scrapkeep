@@ -18,7 +18,6 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
-const TradePockets := preload("res://src/world/trade_pockets.gd")
 
 # Moss's counter: the shop's verbs as stamped plates on one charcoal panel. It reads
 # the shop's records (CONTRACTS, Moss's shop) and calls its verbs; every answer goes out
@@ -319,7 +318,7 @@ func _build_stock() -> void:
 			"price": offer["price"], "state": state, "revealed": revealed, "headline": offer.get("headline", ""),
 			"name": String(offer.get("name", "")) if revealed else "Sealed crate",
 		}, SHELF_TILE)
-	# Row 2: Pocket Consumables (2 cartridges) + Pocket Belt (2nd slot) + Trade Contracts.
+	# Row 2: Pocket Consumables (2 cartridges) + Pocket Belt (2nd slot).
 	var belt_row := _row()
 	for offer in shop.consumable_offers():
 		var state := "sold" if bool(offer["sold"]) else ("capped" if not bool(offer["can_hold"]) else ("ok" if bool(offer["affordable"]) else "poor"))
@@ -338,21 +337,6 @@ func _build_stock() -> void:
 			"cells": int(belt["slots"]), "cap": int(belt["max_slots"]),
 			"color": Palette.AMBER, "price": int(belt["price"]), "state": b_state,
 		}, CELL_TILE)
-	var ot_row := TradePockets.contract_of(TradePockets.OVERTIME_CONTRACT)
-	var c_state := TradePockets._contract_state(game.run)
-	var ot_signed := bool(c_state.get("overtime_signed", false))
-	_tile(belt_row, {
-		"kind": "contract_overtime", "name": String(ot_row.get("name", "Overtime Contract")),
-		"headline": String(ot_row.get("line", "")), "icon": "res_timer",
-		"color": Palette.COPPER, "price": 0, "state": "spent" if ot_signed else "ok",
-	}, CELL_TILE)
-	var auc_row := TradePockets.contract_of(TradePockets.SALVAGE_AUCTION)
-	var min_bid := int(auc_row.get("min_bid", 40))
-	_tile(belt_row, {
-		"kind": "contract_auction", "name": String(auc_row.get("name", "Scrap Auction")),
-		"headline": String(auc_row.get("line", "")), "icon": "obj_vault",
-		"color": Palette.SAND, "price": min_bid, "state": "ok" if game.run.cogs >= min_bid else "poor",
-	}, CELL_TILE)
 
 
 func _build_fab() -> void:
@@ -493,12 +477,6 @@ func press(tile) -> void:
 		"press":
 			result = shop.press_duplicate(String(rec["part_id"]))
 			fact = "shop_bought"
-		"contract_overtime":
-			result = TradePockets.sign_overtime_contract(game.run)
-			fact = "shop_charge"
-		"contract_auction":
-			result = TradePockets.bid_salvage_auction(game.run, int(rec["price"]))
-			fact = "shop_bought"
 		"ingot_readout":
 			return
 		"pick":
@@ -607,10 +585,6 @@ func _tile_detail(rec: Dictionary) -> String:
 			return "Press a second %s with a matching ingot or spare part." % pname
 		"ingot_readout":
 			return "%s held %d." % [String(rec.get("name", "Ingots")), int(rec.get("count", 0))]
-		"contract_overtime":
-			return "%s. %s" % [String(rec.get("name", "Overtime Contract")), String(rec.get("headline", ""))]
-		"contract_auction":
-			return "%s. Bid %d cogs for a yard crate." % [String(rec.get("name", "Scrap Auction")), int(rec.get("price", 40))]
 	if rec.has("part_id"):
 		return _detail_line(rec)
 	return ""

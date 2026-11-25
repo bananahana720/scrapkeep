@@ -163,9 +163,6 @@ func _draw() -> void:
 			var badge_icon := "obj_scrapper" if String(rec.get("kind", "")) == "scrap" else "obj_part_press"
 			var badge_r := Rect2(Vector2(size.x - 24.0, 6.0), Vector2(18.0, 18.0))
 			draw_texture_rect(Icons.texture(badge_icon), badge_r, false, Icons.tint(badge_icon, Color(Palette.AMBER, dim)))
-		"contract_overtime", "contract_auction":
-			var icon_id := String(rec.get("icon", "res_timer"))
-			draw_texture_rect(Icons.texture(icon_id), icon_rect.grow(-8.0), false, Icons.tint(icon_id, Color(rec.get("color", Palette.SAND), dim)))
 		_:
 			_framed(icon_rect, dim)
 			if int(rec.get("set_pieces", 0)) > 0:

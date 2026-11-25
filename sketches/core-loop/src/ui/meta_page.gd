@@ -86,6 +86,8 @@ func toggle_override(code_id: String) -> bool:
 	if ok and _profile.can_save:
 		_profile.save()
 	refresh(_profile, _sitting)
+	if override_rows.has(code_id) and is_instance_valid(override_rows[code_id]):
+		(override_rows[code_id] as Control).grab_focus()
 	return ok
 
 

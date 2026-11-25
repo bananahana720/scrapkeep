@@ -7,8 +7,7 @@ extends SceneTree
 # 4. Logbook / Codex 5 tabs: Entries, 40-chapter PilotStory arcs (Patch hidden on fresh profile),
 #    15-pair Chemistry + synthesis margins, 6-node Patch Wire Trail, and Old-Works Foreman Habit Ledger
 # 5. In-Run HUD 9-item wordless ConsumableSlot carousel + W50 armed state + Progress listeners
-# 6. Moss's Shop Counter W47-W50 faces: Tri-Terminal, Pocket Consumables, Pocket Belt, Scrapper, Part Press,
-#    and Trade Contracts (Overtime Contract & Scrap Auction)
+# 6. Moss's Shop Counter W47-W50 faces: Tri-Terminal, Pocket Consumables, Pocket Belt, Scrapper, and Part Press
 # 7. Camp Hub new stations (dispatch on camp_shift_board, logbook on camp_tarp) + Settings active/cl_consumable
 # 8. Four-Hand & zero-slop compliance checks across all Stage D UI surfaces.
 
@@ -20,7 +19,6 @@ const PilotStory := preload("res://src/core/pilot_story.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
-const TradePockets := preload("res://src/world/trade_pockets.gd")
 const WorkOrdersPage := preload("res://src/ui/work_orders_page.gd")
 const LogbookPage := preload("res://src/ui/logbook_page.gd")
 const MetaPage := preload("res://src/ui/meta_page.gd")
@@ -241,14 +239,22 @@ func _check_logbook_story_surfaces() -> void:
 	_t.eq("Logbook opens on entries tab", lb.active_tab, "entries")
 	_t.check("Entries tab populates rows", lb.rows.size() > 0)
 
-	# Crew Arcs tab: Patch hidden before ch1 punches.
+	# Crew Arcs tab: Patch hidden before ch1 punches; stays "Unsigned" after ch1 until wo_patch_2.
 	lb.show_tab("arcs")
 	await _frames(1)
 	_t.check("Crew Arcs hides Patch card before ch1 punches", not lb.arc_rows.has("patch") and lb.arc_rows.size() == 7)
-	# Punch patch.ch1 -> Patch card appears!
+	# Punch patch.ch1 -> Patch card appears, still labeled "Unsigned" before wo_patch_2!
 	codex.mark_known("patch.rogue.w1")
+	PilotStory.record_overtime("pylon_engineer", 2, profile)
 	lb.show_tab("arcs")
 	_t.check("Crew Arcs reveals Patch card once patch.rogue.w1 known", lb.arc_rows.has("patch") and lb.arc_rows.size() == 8)
+	_t.check("Crew Arcs keeps Patch named Unsigned before wo_patch_2",
+		(lb.arc_rows["patch"] as Button).text.begins_with("Unsigned") and not (lb.arc_rows["patch"] as Button).text.contains("Patch"))
+	lb.open_arc("patch")
+	_t.check("Patch arc detail stays Unsigned before wo_patch_2", lb.detail.text.begins_with("Unsigned") and not lb.detail.text.contains("Patch"))
+	lb.open_arc("pylon_engineer")
+	_t.check("Crew Arc detail reads real overtime rung and non-empty open chapter lead",
+		lb.detail.text.contains("Overtime rung 2") and lb.detail.text.contains("Next lead"))
 
 	# Chemistry tab: all 15 pairs rendered + synthesis margin updates live.
 	lb.show_tab("pairs")
@@ -263,20 +269,27 @@ func _check_logbook_story_surfaces() -> void:
 	lb.open_pair("rivet_sable")
 	_t.check("Chemistry synthesis margin flips confirmed on linked discovery", lb.detail.text.contains("confirmed in the field"))
 
-	# Wire Trail tab: progressive spoiler gating.
+	# Wire Trail tab: progressive spoiler gating + real "log" body text.
 	lb.show_tab("trail")
 	await _frames(1)
 	_t.check("Wire Trail reveals w1 wire after rogue w1 and keeps w2 wire hidden",
 		lb.trail_rows.has("patch.rogue.w1") and lb.trail_rows.has("patch.wire.w1") and not lb.trail_rows.has("patch.wire.w2"))
+	lb.open_trail_node("patch.rogue.w1")
+	_t.check("Logged Wire Trail node renders PilotStory PATCH_TRAIL log body",
+		lb.detail.text.contains("insulated shears"), lb.detail.text)
 
-	# Foreman Ledger tab: dormant < 3 runs, active axis >= 3 runs, Old-Works hand plate.
+	# Foreman Ledger tab: dormant < 3 runs (never leaks unearned memos), active axis >= 3 runs with real total_runs & axis names.
 	lb.show_tab("foreman")
 	await _frames(1)
 	_t.check("Foreman Ledger reads dormant on < 3 runs", lb.detail.text.contains("DORMANT"))
+	lb._show_foreman_axis("chronic_gambler", PilotStory.classify_habits(profile, []))
+	_t.check("Dormant Foreman refuses to leak unearned axis memos", lb.detail.text.contains("DORMANT"), lb.detail.text)
 	profile.set_stat("habit.runs_total", 4.0)
 	profile.set_stat("habit.trade_risk", 6.0)
 	lb.show_tab("foreman")
-	_t.check("Foreman Ledger shows active axis once 3+ runs recorded", lb.detail.text.contains("CHRONIC GAMBLER"))
+	_t.check("Foreman Ledger reads real total_runs and active axis name",
+		lb._summary_label.text.contains("4 shifts recorded") and lb.detail.text.contains("Risk taker") and not lb.detail.text.contains("Score "),
+		"%s | %s" % [lb._summary_label.text, lb.detail.text])
 	var panel_box = lb._detail_panel.get_theme_stylebox("panel")
 	_t.eq("Foreman Ledger detail plate uses OLD_WORKS hand", panel_box.hand, UiTokens.Hand.OLD_WORKS)
 
@@ -316,14 +329,14 @@ func _check_hud_consumable_carousel_and_shop_faces() -> void:
 	_t.check("ConsumableSlot hides again once empty and disarmed", not slot.showing())
 
 	# 2. Progress -> HUD work_order_changed & story_chapter_punched listeners.
-	_game.progress.work_order_changed.emit("wo_moss_1", "completed", {"license_tier": 1})
+	_game.progress.work_order_changed.emit("wo_moss_1", "completed", {"license_tier": 1, "new_license_tiers": [1]})
 	_game.progress.story_chapter_punched.emit("moss", 1, "moss.ch1")
 	await _frames(2)
 	var waiting: Array = hud.ach_toasts() + hud.ach_waiting()
 	_t.check("HUD listens to work_order_changed and story_chapter_punched", waiting.size() >= 1, str(waiting))
 	hud.clear_achievement_toasts()
 
-	# 3. Shop Counter W47-W50 faces: Stock (Tri-Terminal + Consumables + Belt + Contracts) & Fab (Scrapper + Press).
+	# 3. Shop Counter W47-W50 faces: Stock (Tri-Terminal + Consumables + Belt) & Fab (Scrapper + Press).
 	ws.armed = true
 	shop.enter()
 	run.cogs = 600
@@ -339,10 +352,8 @@ func _check_hud_consumable_carousel_and_shop_faces() -> void:
 	var tri0 = ws.counter.tile_for("tri", 0)
 	var cons0 = ws.counter.tile_for("consumable", 0)
 	var belt_tile = ws.counter.tile_for("belt", 0)
-	var ot_tile = ws.counter.tile_for("contract_overtime", 0)
-	var auc_tile = ws.counter.tile_for("contract_auction", 0)
-	_t.check("Shop stock face shows Tri-Terminal, Consumables, Pocket Belt, and Trade Contracts",
-		tri0 != null and cons0 != null and belt_tile != null and ot_tile != null and auc_tile != null)
+	_t.check("Shop stock face shows Tri-Terminal, Consumables, and Pocket Belt (no un-wired contract tiles)",
+		tri0 != null and cons0 != null and belt_tile != null and ws.counter.tile_for("contract_overtime", 0) == null)
 	# Buy 1 Tri-Terminal choice -> locks remaining 2.
 	ws.counter.press(tri0)
 	await _frames(1)
@@ -352,10 +363,6 @@ func _check_hud_consumable_carousel_and_shop_faces() -> void:
 	ws.counter.press(ws.counter.tile_for("consumable", 0))
 	await _frames(1)
 	_t.eq("buying consumable tile adds cartridge to belt", run.consumables.size(), cons_before + 1)
-	# Sign Overtime Contract.
-	ws.counter.press(ws.counter.tile_for("contract_overtime", 0))
-	await _frames(1)
-	_t.check("Overtime Contract tile signs contract", bool(TradePockets._contract_state(run)["overtime_signed"]))
 
 	# Switch to "fab" face: Scrapper + Part Press.
 	ws.counter.set_face("fab")
@@ -382,14 +389,20 @@ func _check_hud_consumable_carousel_and_shop_faces() -> void:
 
 func _check_settings_and_callers_and_slop_guards() -> void:
 	_t.check("SettingsPages.VERBS includes active", "active" in SettingsPages.VERBS)
-	_t.check("SettingsPages.EXTRA_WORDS includes cl_consumable", SettingsPages.EXTRA_WORDS.has("cl_consumable"))
+	_t.check("SettingsPages.EXTRA_WORDS includes cl_consumable and drops redundant cl_active",
+		SettingsPages.EXTRA_WORDS.has("cl_consumable") and not SettingsPages.EXTRA_WORDS.has("cl_active"))
 	var tile := CallerTile.new()
 	_t.check("CallerTile supports unsigned and patch callers",
 		not tile.look_of("unsigned").is_empty() and not tile.look_of("patch").is_empty()
 		and not tile.look_of("dig_crew").is_empty() and not tile.look_of("crown_watch").is_empty())
 	tile.free()
 
-	# Ruling ek guard: WorkOrdersPage and LogbookPage never reference PAID or Palette.KINDNESS.
+	# Ruling ek & §13 guards: WorkOrdersPage and LogbookPage never reference PAID or Palette.KINDNESS,
+	# and WorkOrdersPage resolves option payouts (e.g. wo_patch_1).
+	var wo_tmp := WorkOrdersPage.new()
+	_t.check("WorkOrdersPage _pay_words handles option payouts",
+		wo_tmp._pay_words({"option": "pocket_key"}).contains("Opens "))
+	wo_tmp.free()
 	for path in ["res://src/ui/work_orders_page.gd", "res://src/ui/logbook_page.gd"]:
 		var src := FileAccess.get_file_as_string(path)
 		_t.check("%s has zero Palette.KINDNESS and zero PAID" % path,

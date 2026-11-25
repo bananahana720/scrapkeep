@@ -9,6 +9,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const PilotStory := preload("res://src/core/pilot_story.gd")
 const WorkOrders := preload("res://src/core/work_orders.gd")
+const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
 # Logbook & Codex (W50 Stage D): preserves the flat Codex entries list (rows, detail,
@@ -37,13 +38,13 @@ const CAST_NAMES := {
 	"patch": "Patch",
 }
 const AXIS_NAMES := {
-	"chronic_gambler": "Chronic Gambler",
-	"kindness_regular": "Kindness Regular",
-	"speed_demon": "Speed Demon",
-	"heavy_roller": "Heavy Roller",
-	"clean_operator": "Clean Operator",
-	"pilot_loyalist": "Pilot Loyalist",
-	"signature_builder": "Signature Builder",
+	"chronic_gambler": "Risk taker",
+	"kindness_regular": "Kindness regular",
+	"cursed_runner": "Cursed runner",
+	"speed_demon": "Fast mover",
+	"heavy_roller": "Heavy roller",
+	"sig_circuit": "Circuit builder",
+	"sig_burst": "Burst builder",
 }
 const PATCH_TRAIL_ORDER := [
 	"patch.rogue.w1", "patch.wire.w1",
@@ -56,8 +57,6 @@ const HINT_PARTS := [
 	{"say": "tabs"},
 	{"cap": "key_enter", "say": "Enter"},
 	{"say": "read"},
-	{"cap": "key_esc", "say": "Esc"},
-	{"say": "back"},
 ]
 
 var rows := {}
@@ -103,20 +102,11 @@ func _init() -> void:
 	hcol.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	header.add_child(hcol)
 
-	var hrow := HBoxContainer.new()
-	hrow.add_theme_constant_override("separation", UiTokens.GAP_M)
-	hrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hcol.add_child(hrow)
-
-	var title := _label("LOGBOOK", UiTokens.LABEL, Palette.AMBER)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hrow.add_child(title)
-
 	var strip := HBoxContainer.new()
 	strip.name = "TabStrip"
 	strip.add_theme_constant_override("separation", UiTokens.GAP_S)
 	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hrow.add_child(strip)
+	hcol.add_child(strip)
 	for tab_id in TABS:
 		var btn := _tab_button(tab_id)
 		btn.pressed.connect(func(): show_tab(tab_id))
@@ -244,9 +234,9 @@ func open_arc(cast_id: String) -> void:
 	var card := PilotStory.card_for(cast_id, _profile, _sitting, _codex)
 	if card.is_empty():
 		return
-	var who := String(CAST_NAMES.get(cast_id, cast_id.capitalize()))
+	var who := _cast_label(cast_id)
 	var lines := PackedStringArray()
-	var ot := int(card.get("overtime_rung", 0))
+	var ot := int(card.get("overtime", 0))
 	var head := "%s   %d of 5 chapters punched" % [who, int(card.get("punched", 0))]
 	if ot > 0:
 		head += "   Overtime rung %d" % ot
@@ -260,11 +250,15 @@ func open_arc(cast_id: String) -> void:
 			lines.append(String(ch.get("note", "")))
 		else:
 			lines.append("%s Chapter %d   Open" % [mark, num])
-			lines.append(String(ch.get("chase", "")))
+			var chase := _chapter_chase(ch)
+			if chase != "":
+				lines.append(chase)
 		lines.append("")
 	var next_ch: Dictionary = card.get("next_chase", {})
 	if not next_ch.is_empty():
-		lines.append("Next chase   %s" % String(next_ch.get("chase", "")))
+		var next_line := _chapter_chase(next_ch)
+		if next_line != "":
+			lines.append("Next lead   %s" % next_line)
 	detail.text = "\n".join(lines).strip_edges()
 
 
@@ -320,7 +314,7 @@ func open_trail_node(node_id: String) -> void:
 	lines.append("%s   %s" % [String(row.get("name", node_id)), "Logged" if found else "Signal tracked"])
 	lines.append("")
 	if found:
-		lines.append(String(row.get("text", "")))
+		lines.append(String(row.get("log", "")))
 	else:
 		lines.append(String(row.get("hint", "")))
 		var clue := String(row.get("clue", ""))
@@ -392,7 +386,7 @@ func _build_arcs() -> void:
 		for ch in card.get("chapters", []):
 			holes += "●" if bool(ch.get("punched", false)) else "○"
 		var btn := _row_button("arc_" + cast_id)
-		btn.text = "%s   %s   %d of 5" % [CAST_NAMES.get(cast_id, cast_id.capitalize()), holes, count]
+		btn.text = "%s   %s" % [_cast_label(cast_id), holes]
 		btn.add_theme_color_override("font_color", Palette.AMBER if count >= 5 else Palette.SAND)
 		btn.pressed.connect(func(): open_arc(cast_id))
 		_list.add_child(btn)
@@ -453,8 +447,7 @@ func _build_trail() -> void:
 		_list.add_child(btn)
 		trail_rows[nid] = btn
 		_focus_ring.append(btn)
-	var revealed: bool = WorkOrders.completed("wo_patch_2", _profile) or (_profile != null and _profile.has_pilot("line_splicer"))
-	var who := "Patch" if revealed else "Unsigned"
+	var who := "Patch" if _patch_revealed() else "Unsigned"
 	_summary_label.text = "%s trail   %d of %d nodes logged" % [who, logged, visible_nodes.size()]
 	if visible_nodes.is_empty():
 		detail.text = "No unsigned signals logged yet. Watch for rogue machines on the line."
@@ -468,17 +461,20 @@ func _build_foreman() -> void:
 	var active_axis := String(habits.get("axis", ""))
 	var suppressed := bool(habits.get("suppressed", false))
 	var scores: Dictionary = habits.get("scores", {})
-	var runs := int(habits.get("runs_total", 0))
+	var runs := int(habits.get("total_runs", 0))
 	_summary_label.text = "Foreman habit audit   %d shifts recorded" % runs
 	for axis in PilotStory.FOREMAN_AXIS_ORDER:
 		var sc := float(scores.get(axis, 0.0))
 		var btn := _row_button("axis_" + axis)
-		var tag := "Active" if axis == active_axis else ("Dormant" if dormant else "Filed")
-		btn.text = "%s   %s   %.1f" % [AXIS_NAMES.get(axis, axis.capitalize()), tag, sc]
+		var tag := "Active" if axis == active_axis else ("Dormant" if dormant else ("Observed" if sc > 0.0 else "Quiet"))
+		btn.text = "%s   %s" % [AXIS_NAMES.get(axis, axis.capitalize()), tag]
+		btn.disabled = dormant
 		btn.add_theme_color_override("font_color", Palette.AMBER if axis == active_axis else UiTokens.HANDS[UiTokens.Hand.OLD_WORKS].ink)
+		btn.add_theme_color_override("font_disabled_color", UiTokens.HANDS[UiTokens.Hand.OLD_WORKS].quiet)
 		btn.pressed.connect(func(): _show_foreman_axis(axis, habits))
 		_list.add_child(btn)
-		_focus_ring.append(btn)
+		if not dormant:
+			_focus_ring.append(btn)
 	if dormant:
 		detail.text = "AUDIT DORMANT\nComplete three shifts before the Foreman opens a habit column."
 	elif active_axis != "":
@@ -490,21 +486,65 @@ func _build_foreman() -> void:
 
 
 func _show_foreman_axis(axis: String, habits: Dictionary) -> void:
+	if bool(habits.get("dormant", true)):
+		detail.text = "AUDIT DORMANT\nComplete three shifts before the Foreman opens a habit column."
+		return
+	var active_axis := String(habits.get("axis", ""))
+	var sc := float(habits.get("scores", {}).get(axis, 0.0))
+	var runs := int(habits.get("total_runs", 0))
+	var lines := PackedStringArray()
+	lines.append(String(AXIS_NAMES.get(axis, axis.capitalize())))
+	lines.append("%s   %d shifts recorded" % ["Active habit" if axis == active_axis else ("Observed" if sc > 0.0 else "Quiet"), runs])
+	lines.append("")
+	if sc <= 0.0 and axis != active_axis:
+		lines.append("No observation filed on this habit yet.")
+		detail.text = "\n".join(lines)
+		return
 	var row: Dictionary = PilotStory.FOREMAN_AXES.get(axis, {})
 	var stage_memos: Array = row.get("stage_memos", [])
 	var loss_memos: Array = row.get("loss_memos", [])
 	var crown_lines: Array = row.get("crown_lines", [])
-	var lines := PackedStringArray()
-	lines.append(String(AXIS_NAMES.get(axis, axis.capitalize())).to_upper())
-	lines.append("Score %.1f   Runs %d" % [float(habits.get("scores", {}).get(axis, 0.0)), int(habits.get("runs_total", 0))])
-	lines.append("")
 	if not stage_memos.is_empty():
 		lines.append(String(stage_memos[0]))
 	if not loss_memos.is_empty():
 		lines.append(String(loss_memos[0]))
-	if not crown_lines.is_empty():
+	if not crown_lines.is_empty() and _profile != null and _profile.earned("highdraft_reached"):
 		lines.append(String(crown_lines[0]))
 	detail.text = "\n".join(lines)
+
+
+func _patch_revealed() -> bool:
+	return WorkOrders.completed("wo_patch_2", _profile) or (_profile != null and _profile.has_pilot("line_splicer"))
+
+
+func _cast_label(cast_id: String) -> String:
+	if cast_id == "patch" and not _patch_revealed():
+		return "Unsigned"
+	return String(CAST_NAMES.get(cast_id, cast_id.capitalize()))
+
+
+func _chapter_chase(ch: Dictionary) -> String:
+	var wo_id := String(ch.get("work_order", ""))
+	if wo_id != "":
+		var orow: Dictionary = WorkOrders.order(wo_id)
+		if not orow.is_empty():
+			return String(orow.get("text", ""))
+	for raw in ch.get("accepts", []):
+		var token := String(raw)
+		if token.begins_with("order:"):
+			var orow: Dictionary = WorkOrders.order(token.trim_prefix("order:"))
+			if not orow.is_empty():
+				return String(orow.get("text", ""))
+		elif token.begins_with("codex:"):
+			var cid := token.trim_prefix("codex:")
+			var trow: Dictionary = PilotStory.PATCH_TRAIL.get(cid, {})
+			if not trow.is_empty():
+				return String(trow.get("clue", trow.get("hint", "")))
+		else:
+			var arow: Dictionary = Achievements.row(token)
+			if not arow.is_empty():
+				return String(arow.get("text", ""))
+	return "Earn this chapter in the field."
 
 
 func _apply_detail_hand(hand: int) -> void:

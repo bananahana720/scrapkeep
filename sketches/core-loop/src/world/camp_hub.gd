@@ -313,6 +313,7 @@ func enter_walk() -> void:
 	walks += 1
 	_quipped.clear()
 	_pair_played_this_walk = false
+	_cached_journal_pages_ready = false
 	_stand_crew()
 	_shelve_records()
 	_prompts.visible = true
@@ -967,12 +968,21 @@ func _quip_from(class_id: String) -> void:
 	pilot_quipped.emit(speaker, String(beat["id"]), words)
 
 
-# Saved run-log pages from the camp scrapbook, passed to PilotStory camp beats.
+var _cached_journal_pages: Array = []
+var _cached_journal_pages_ready := false
+
+
+# Saved run-log pages from the camp scrapbook, cached per camp walk for PilotStory camp beats.
 func _journal_pages() -> Array:
+	if _cached_journal_pages_ready:
+		return _cached_journal_pages
+	_cached_journal_pages_ready = true
 	var dir: String = game.storage_dir if game != null and game.get("storage_dir") != null else ""
 	if dir == "":
-		return []
-	return ScrapbookStore.new(dir).summaries()
+		_cached_journal_pages = []
+	else:
+		_cached_journal_pages = ScrapbookStore.new(dir).summaries()
+	return _cached_journal_pages
 
 
 # The pilot turns the short way round until their face is to the ball, and cheers. A pilot model faces its local -Z

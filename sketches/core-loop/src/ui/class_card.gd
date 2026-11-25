@@ -361,22 +361,28 @@ func _build_overlay(width: float, color: Color) -> void:
 	_alt_row = HBoxContainer.new()
 	_alt_row.name = "AltLoadoutRow"
 	_alt_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_alt_row.add_theme_constant_override("separation", UiTokens.GAP_XS)
 	_alt_row.position = Vector2(PAD, top - 34.0)
 	_alt_row.size = Vector2(width - 2.0 * PAD, 30.0)
 	_alt_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_alt_row.visible = false
 	add_child(_alt_row)
+	var alt_cap := KeycapView.new("key_l", Palette.SAND, 20.0)
+	alt_cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_alt_row.add_child(alt_cap)
 	_alt_button = Button.new()
 	_alt_button.name = "AltLoadoutButton"
-	_alt_button.focus_mode = Control.FOCUS_NONE
+	_alt_button.focus_mode = Control.FOCUS_ALL
+	_alt_button.expand_icon = true
 	_alt_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	_alt_button.add_theme_font_override("font", UiFonts.bold())
 	_alt_button.add_theme_font_size_override("font_size", UiTokens.CAPTION)
 	_alt_button.add_theme_color_override("font_color", Palette.LEDGER_CREAM)
 	_alt_button.add_theme_color_override("font_hover_color", UiTokens.TEXT)
+	_alt_button.add_theme_color_override("font_focus_color", UiTokens.TEXT)
 	for st in ["normal", "hover", "pressed", "focus", "disabled"]:
 		var tag = ScrapFrame.hand_tag(UiTokens.Hand.KEEPER, _serial + 5)
-		tag.border_color = Palette.AMBER if st in ["hover", "pressed"] else Color(color, 0.75)
+		tag.border_color = Palette.AMBER if st in ["hover", "pressed", "focus"] else Color(color, 0.75)
 		_alt_button.add_theme_stylebox_override(st, tag)
 	_alt_button.pressed.connect(func(): if openness > 0.5: cycle_alt_loadout())
 	_alt_row.add_child(_alt_button)
@@ -491,6 +497,8 @@ func _show_alt() -> void:
 	var has := not locked and owns_alt()
 	_alt_row.visible = has
 	var current := alt_shown()
+	var icon_id := "rel_alt_loadout" if current == "" else ("rel_" + current)
+	_alt_button.icon = Icons.texture(icon_id)
 	if current == "":
 		_alt_button.text = "Stock kit"
 	else:

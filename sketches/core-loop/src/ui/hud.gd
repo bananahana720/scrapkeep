@@ -392,7 +392,7 @@ class ConsumableSlot:
 		var bone := NixieRail.BONE
 		var main_w := SLOT_SIZE.x
 		var main_rect := Rect2(Vector2.ZERO, Vector2(main_w, size.y))
-		var accent: Color = Consumables.color_of(_held[0]) if not _held.is_empty() else (Palette.AMBER if _duplicator_left > 0.0 else Palette.ARC)
+		var accent: Color = Consumables.color_of(_held[0]) if not _held.is_empty() else (Palette.AMBER if _duplicator_left > 0.0 else Palette.COPPER)
 		draw_rect(main_rect, Color(steel.r, steel.g, steel.b, 0.94), true)
 		draw_rect(Rect2(BORDER, BORDER, main_w - BORDER * 2.0, STRIPE_H), accent, true)
 		draw_rect(main_rect, Palette.AMBER if (_duplicator_left > 0.0 or _overload_armed) else copper, false, BORDER)
@@ -415,7 +415,7 @@ class ConsumableSlot:
 			var share := clampf(_duplicator_left / Consumables.DUPLICATOR_WINDOW_S, 0.0, 1.0)
 			draw_rect(Rect2(BORDER + 2.0, size.y - 6.0, (main_w - BORDER * 2.0 - 4.0) * share, 3.0), Palette.AMBER, true)
 		elif _overload_armed:
-			draw_rect(Rect2(BORDER + 2.0, size.y - 6.0, main_w - BORDER * 2.0 - 4.0, 3.0), Palette.ARC, true)
+			draw_rect(Rect2(BORDER + 2.0, size.y - 6.0, main_w - BORDER * 2.0 - 4.0, 3.0), Palette.COPPER, true)
 		var pips := maxi(_capacity, _held.size())
 		var span := float(pips - 1) * PIP_GAP
 		var start_x := (main_w - span) * 0.5
@@ -790,8 +790,9 @@ func _on_work_order_changed(order_id: String, phase: String, summary: Dictionary
 	var row: Dictionary = WorkOrders.order(order_id)
 	var title := String(row.get("name", order_id))
 	var sub := "Order stamped"
-	if int(summary.get("license_tier", 0)) > 0:
-		sub = WorkOrders.license_tier_name(int(summary["license_tier"]))
+	var new_tiers = summary.get("new_license_tiers", [])
+	if new_tiers is Array and not (new_tiers as Array).is_empty():
+		sub = WorkOrders.license_tier_name(int((new_tiers as Array)[-1]))
 	_raise_card("%s\n%s" % [title, sub], false)
 
 
