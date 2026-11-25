@@ -101,10 +101,32 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 		var effects := scenery.get_node_or_null("WindEffects")
 		if effects != null and ctx.player != null and ctx.events.has_signal("landed"):
 			ctx.events.connect("landed", effects.on_landed.bind(ctx.player))
+		if effects != null and ctx.events.has_signal("world_fact"):
+			ctx.events.connect("world_fact", effects.on_world_fact)
+		if effects != null:
+			effects.beat_offset = _beat_offset.bind(ctx)
+	var dressed := root.get_node_or_null(NODE_NAME)
+	var live := dressed.get_node_or_null("WindEffects") if dressed != null else null
+	if live != null and park:
+		live.on_stage_entered(landmark_kind(map), _retry)
 	if park:
 		restore_environment(terrain)
 	else:
 		apply_environment(terrain, root)
+
+
+# The park's landmark kind ("sky_island" for the Hanging Isle, "spire" for the Crown Works), or "".
+static func landmark_kind(map) -> String:
+	if map == null or not ("park" in map):
+		return ""
+	return String((map.park as Dictionary).get("landmark", {}).get("kind", ""))
+
+
+# How far the music the player hears is from its nearest beat, in seconds (audio.gd beat_offset_s); INF with no band.
+static func _beat_offset(ctx) -> float:
+	var game = ctx.root if ctx != null else null
+	var sound = game.audio() if game != null and game.has_method("audio") else null
+	return float(sound.beat_offset_s()) if sound != null and sound.has_method("beat_offset_s") else INF
 
 
 static func _world(ctx, stage: int) -> int:
@@ -234,6 +256,7 @@ static func build_park(stage_root: Node3D, map, contraptions = null, ground := C
 			low = minf(low, _height(ground, map, rect.position.x + rect.size.x * i / 16.0, rect.position.y + rect.size.y * j / 16.0))
 	_sky_pieces(scenery, minf(0.0, low - PARK_DECK_DROP - CLOUD_DECK_Y))
 	state.sky = scenery.get_node("Sky")
+	_valley(scenery, state, map, ground)
 	state.fx = HighdraftFx.install(scenery, state, map)
 	return scenery
 
@@ -931,6 +954,278 @@ static func _keepouts(map) -> Array:
 	return rows
 
 
+# ---- World 3 valley dress (W49-MAPS) ----
+
+# The New Mexico pieces (worlds-2-3-storyboard.md section 2, master bible section 3.3), keyed by the park's landmark kind
+# so no map id is written here. Every piece is drawn only: no collider, and every one stands outside the play rect or
+# on a butte top no line reaches, so no ball rolls through a ghost. Rows are [x, z, yaw degrees, scale] in park metres.
+const VALLEY := {
+	"sky_island": {
+		# Shiprock's twin volcanic dikes, black basalt walls framing the Isle east and west past the play rect.
+		"dikes": [[-668.0, -210.0, 90.0, 1.6], [-700.0, 170.0, 96.0, 1.1], [672.0, 40.0, 86.0, 1.7], [700.0, 420.0, 80.0, 1.0]],
+		# The aerial ore tramways: a tower behind each mining cable end that stands clear of every line ([cable id,
+		# 0 for its from end or 1 for its to end]), and the haul line itself, a bucket tramway down the terraces past the
+		# east edge of the play rect ([x, z] tower feet, from the mesa to the bowl).
+		"tram_ends": [["lookout_line", 0], ["lookout_line", 1], ["bench_line", 0], ["ore_line", 1]],
+		"haul_line": [[625.0, -720.0], [625.0, -480.0], [625.0, -240.0], [625.0, 0.0], [625.0, 240.0], [625.0, 470.0]],
+		# The white gypsum cloud sea that rises under the Isle's edges.
+		"gypsum": {"reach": 840.0, "count": 44, "y": 18.0, "rise": 4.0},
+	},
+	"spire": {
+		# Chaco bajada balanced hoodoos past the play rect's flanks.
+		"hoodoos": [[-648.0, -430.0, 20.0, 1.3], [-690.0, -270.0, 70.0, 1.6], [-642.0, -100.0, 140.0, 1.1],
+			[-700.0, 60.0, 200.0, 1.4], [652.0, -470.0, 250.0, 1.5], [694.0, -310.0, 300.0, 1.2], [660.0, -40.0, 330.0, 1.7]],
+		# Grounding rods on butte tops no line reaches, each with its grounding line run down to a stake.
+		"rods": [[-470.0, 285.0, 0.0, 1.0, -530.0, 330.0], [-432.0, 330.0, 40.0, 0.9, -470.0, 400.0],
+			[402.0, 176.0, 15.0, 1.0, 470.0, 210.0]],
+		# The Lightning Field: a grid of rods past the east flank of the bajada.
+		"field": {"x": [625.0, 660.0, 695.0, 730.0], "z": [-380.0, -300.0, -220.0, -140.0, -60.0], "scale": 0.8},
+	},
+}
+const RING_STEP := 45.0
+const RING_FIRST := 28.0
+const RING_RADIUS := 7.0
+const ROD_TIP := 31.5
+const TOWER_SHEAVE := 20.1
+const TOWER_OUT := 6.0
+const HAUL_OFFSET := 3.6
+const BUCKETS_PER_LINE := 4
+const ROPE_WIDTH := 0.16
+const ROPE_COLOUR := Color("2a3231")
+const GROUNDING_COLOUR := Color("8a5f3c")
+
+
+static func _valley(parent: Node3D, state: Node, map, ground: Callable) -> void:
+	var dress: Dictionary = VALLEY.get(landmark_kind(map), {})
+	var root := Node3D.new()
+	root.name = "ValleyDress"
+	parent.add_child(root)
+	_seated(root, "ShiprockDikes", _mesh("w3_shiprock_dike.glb", "ShiprockDike"), dress.get("dikes", []), map, ground)
+	_seated(root, "BalancedHoodoos", _mesh("w3_balanced_hoodoo.glb", "BalancedHoodoo"), dress.get("hoodoos", []), map, ground)
+	_tramways(root, state, map, ground, dress)
+	_rods(root, state, map, ground, dress)
+	_kite_rings(root, state)
+	if dress.has("gypsum"):
+		_gypsum(root, state, dress["gypsum"])
+
+
+# Pieces stood on the sampled ground (the lowest of the centre and four points round it, so a base never hangs).
+static func _seated(root: Node3D, label: String, mesh: Mesh, rows: Array, map, ground: Callable) -> MultiMeshInstance3D:
+	if mesh == null or rows.is_empty():
+		return null
+	var placed: Array[Transform3D] = []
+	for row in rows:
+		var at := Vector2(float(row[0]), float(row[1]))
+		var y := _height(ground, map, at.x, at.y)
+		for k in 4:
+			y = minf(y, _height(ground, map, at.x + cos(k * PI * 0.5) * 6.0, at.y + sin(k * PI * 0.5) * 6.0))
+		var basis := Basis(Vector3.UP, deg_to_rad(float(row[2]))).scaled(Vector3.ONE * float(row[3]))
+		placed.append(Transform3D(basis, Vector3(at.x, y, at.y)))
+	return _multi(root, label, mesh, placed)
+
+
+# Tram towers behind the listed mining cable ends, their sheaves at the cable's height (the grapple cable stays the
+# contraption's), and the haul line: towers down the terraces with a sagging haul rope and ore buckets the fx runs
+# along it.
+static func _tramways(root: Node3D, state: Node, map, ground: Callable, dress: Dictionary) -> void:
+	var ends: Array = dress.get("tram_ends", [])
+	var haul: Array = dress.get("haul_line", [])
+	if ends.is_empty() and haul.is_empty():
+		return
+	var tower := _mesh("w3_tram_tower.glb", "TramTower")
+	var bucket := _mesh("w3_ore_bucket.glb", "OreBucket")
+	if tower == null or bucket == null:
+		return
+	var towers: Array[Transform3D] = []
+	var cables := {}
+	for row: Dictionary in (map.park as Dictionary).get("contraption_rows", []):
+		if String(row.get("kind", "")) == "cable":
+			cables[String(row["id"])] = row
+	for pick in ends:
+		var row: Dictionary = cables.get(String(pick[0]), {})
+		if row.is_empty():
+			continue
+		var from := Vector3(float(row["from"][0]), float(row["from"][1]), float(row["from"][2]))
+		var to := Vector3(float(row["to"][0]), float(row["to"][1]), float(row["to"][2]))
+		var dir := Vector3(to.x - from.x, 0.0, to.z - from.z).normalized()
+		var tip := from if int(pick[1]) == 0 else to
+		var end := tip + (dir * (-1.0 if int(pick[1]) == 0 else 1.0)) * TOWER_OUT
+		var g := _height(ground, map, end.x, end.z)
+		var lift := clampf((tip.y - g) / TOWER_SHEAVE, 0.5, 3.5)
+		towers.append(Transform3D(Basis(Vector3.UP, atan2(-dir.z, dir.x)).scaled(Vector3(1.0, lift, 1.0)), Vector3(end.x, g, end.z)))
+	var rope: Array[Vector3] = []
+	for k in haul.size():
+		var at := Vector3(float(haul[k][0]), 0.0, float(haul[k][1]))
+		at.y = _height(ground, map, at.x, at.z)
+		var next: Array = haul[mini(k + 1, haul.size() - 1)]
+		var prev: Array = haul[maxi(k - 1, 0)]
+		var dir := Vector3(float(next[0]) - float(prev[0]), 0.0, float(next[1]) - float(prev[1])).normalized()
+		var basis := Basis(Vector3.UP, atan2(-dir.z, dir.x))
+		towers.append(Transform3D(basis, at))
+		var sheave := at + Vector3.UP * TOWER_SHEAVE + basis * Vector3(0.0, 0.0, HAUL_OFFSET)
+		if not rope.is_empty():
+			var span := _sag(rope[-1], sheave, 8)
+			span.remove_at(0)
+			rope.append_array(span)
+		else:
+			rope.append(sheave)
+	_multi(root, "TramTowers", tower, towers)
+	if rope.size() < 2:
+		return
+	root.add_child(_line_view("HaulRope", [rope], ROPE_WIDTH * 2.0, ROPE_COLOUR, 0.06))
+	var count := BUCKETS_PER_LINE * (haul.size() - 1)
+	state.buckets.append({"path": rope, "count": count, "phase": 0.0})
+	var hung: Array[Transform3D] = []
+	for k in count:
+		hung.append(Transform3D(Basis.IDENTITY, HighdraftFx.along(rope, (k + 0.5) / float(count))))
+	var view := _multi(root, "OreBuckets", bucket, hung)
+	if view == null:
+		state.buckets.clear()
+		return
+	view.custom_aabb = view.custom_aabb.grow(40.0)
+	state.buckets[0]["view"] = view
+
+
+# The grounding rods: butte-top rods with grounding lines sagging to their stakes, and the Lightning Field grid. The fx
+# strikes their tips (state.rods) when the storm's lightning lands and on the band's bars.
+static func _rods(root: Node3D, state: Node, map, ground: Callable, dress: Dictionary) -> void:
+	var mesh := _mesh("w3_lightning_rod.glb", "LightningRod")
+	if mesh == null:
+		return
+	var placed: Array[Transform3D] = []
+	var lines: Array = []
+	for row in dress.get("rods", []):
+		var at := Vector3(float(row[0]), 0.0, float(row[1]))
+		at.y = _height(ground, map, at.x, at.z)
+		var scale := float(row[3])
+		placed.append(Transform3D(Basis(Vector3.UP, deg_to_rad(float(row[2]))).scaled(Vector3.ONE * scale), at))
+		var tip := at + Vector3.UP * ROD_TIP * scale
+		var stake := Vector3(float(row[4]), 0.0, float(row[5]))
+		stake.y = _height(ground, map, stake.x, stake.z)
+		lines.append(_sag(tip + Vector3.DOWN * 3.0 * scale, stake, 10))
+		state.rods.append({"tip": tip, "ground": stake})
+	var field: Dictionary = dress.get("field", {})
+	for x in field.get("x", []):
+		for z in field.get("z", []):
+			var at := Vector3(float(x), 0.0, float(z))
+			at.y = _height(ground, map, at.x, at.z)
+			var scale := float(field["scale"])
+			placed.append(Transform3D(Basis(Vector3.UP, deg_to_rad(fmod(float(x) * 7.0 + float(z) * 3.0, 360.0))).scaled(Vector3.ONE * scale), at))
+			state.rods.append({"tip": at + Vector3.UP * ROD_TIP * scale, "ground": at})
+	_multi(root, "GroundingRods", mesh, placed)
+	if not lines.is_empty():
+		root.add_child(_line_view("GroundingLines", lines, 0.22, GROUNDING_COLOUR, 0.4))
+
+
+# A rope's polyline from a to b with a parabolic sag of 4% of its span.
+static func _sag(a: Vector3, b: Vector3, segments: int) -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	var span := Vector2(b.x - a.x, b.z - a.z).length()
+	for k in segments + 1:
+		var t := float(k) / segments
+		out.append(a.lerp(b, t) + Vector3.DOWN * span * 0.04 * 4.0 * t * (1.0 - t))
+	return out
+
+
+# One vertex-coloured surface of flat crossed ribbons along every polyline, so a rope reads from any heading.
+static func _line_view(label: String, lines: Array, width: float, colour: Color, metal: float) -> MeshInstance3D:
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	for line in lines:
+		for i in (line as Array).size() - 1:
+			var a: Vector3 = line[i]
+			var b: Vector3 = line[i + 1]
+			var along := (b - a).normalized()
+			var side := along.cross(Vector3.UP).normalized()
+			if side.length() < 0.5:
+				side = Vector3.RIGHT
+			for across in [side, along.cross(side).normalized()]:
+				var off: Vector3 = across * width * 0.5
+				var normal: Vector3 = along.cross(across).normalized()
+				for p in [a - off, b - off, b + off, a - off, b + off, a + off]:
+					vertices.append(p)
+					normals.append(normal)
+					colors.append(colour)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var material := StandardMaterial3D.new()
+	material.vertex_color_use_as_albedo = true
+	material.vertex_color_is_srgb = true
+	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	material.roughness = 0.7
+	material.metallic = metal
+	mesh.surface_set_material(0, material)
+	var view := MeshInstance3D.new()
+	view.name = label
+	view.mesh = mesh
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	GraphicsPreset.register_scenery(view)
+	return view
+
+
+# Kite-tether rings stacked up every thermal column, wider than the column so a ball riding the thermal climbs through
+# their middles; the fx turns them with the updraft.
+static func _kite_rings(root: Node3D, state: Node) -> void:
+	if state.thermals.is_empty():
+		return
+	var mesh := _mesh("w3_kite_ring.glb", "KiteRing")
+	if mesh == null:
+		return
+	var placed: Array[Transform3D] = []
+	for thermal in state.thermals:
+		var base: Vector3 = thermal["base"]
+		var scale := (float(thermal["radius"]) + 1.5) / RING_RADIUS
+		var h := RING_FIRST
+		while h <= float(thermal["height"]) - 12.0:
+			var xf := Transform3D(Basis(Vector3.UP, h * 0.05).scaled(Vector3.ONE * scale), base + Vector3.UP * h)
+			state.rings.append({"index": placed.size(), "rest": xf, "spin": 0.25 + 0.05 * float(placed.size() % 3)})
+			placed.append(xf)
+			h += RING_STEP
+	var view := _multi(root, "KiteRings", mesh, placed)
+	if view == null:
+		state.rings.clear()
+		return
+	view.custom_aabb = view.custom_aabb.grow(4.0)
+	for ring in state.rings:
+		ring["view"] = view
+
+
+# The gypsum cloud sea: white banks hung round the square past the Isle's edges, under its lowest net, that the fx
+# swells and settles. Drawn with the cloud deck's own bank mesh.
+static func _gypsum(root: Node3D, state: Node, spec: Dictionary) -> void:
+	var mesh := _mesh("sky_cloud.glb", "CloudHull")
+	if mesh == null:
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 7_490_005
+	var placed: Array[Transform3D] = []
+	var reach := float(spec["reach"])
+	for k in int(spec["count"]):
+		var t := float(k) / float(spec["count"])
+		var edge := Vector2(-reach + 4.0 * reach * fposmod(t * 4.0, 1.0) * 0.5, -reach)
+		match int(t * 4.0):
+			1:
+				edge = Vector2(reach, -reach + 2.0 * reach * fposmod(t * 4.0, 1.0))
+			2:
+				edge = Vector2(reach - 2.0 * reach * fposmod(t * 4.0, 1.0), reach)
+			3:
+				edge = Vector2(-reach, reach - 2.0 * reach * fposmod(t * 4.0, 1.0))
+		var wide := rng.randf_range(1.4, 2.6)
+		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(wide, rng.randf_range(0.7, 1.1), wide))
+		placed.append(Transform3D(basis, Vector3(edge.x + rng.randf_range(-30.0, 30.0), float(spec["y"]) + rng.randf_range(-3.0, 3.0),
+			edge.y + rng.randf_range(-30.0, 30.0))))
+	state.gypsum = _multi(root, "GypsumSea", mesh, placed)
+	if state.gypsum != null:
+		state.gypsum.custom_aabb = state.gypsum.custom_aabb.grow(float(spec["rise"]) + 1.0)
+		state.gypsum.set_meta("rise", float(spec["rise"]))
+
+
 # ---- Sky: cloud deck and distant silhouettes ----
 
 static func _sky_pieces(parent: Node3D, drop := 0.0) -> void:
@@ -1038,6 +1333,12 @@ class Updater extends Node3D:
 	var player = null
 	var anchors: Array[Dictionary] = []
 	var thermals: Array[Dictionary] = []
+	# W49 valley dress the fx animates: kite rings over thermals, tram buckets on their haul ropes, grounding rods
+	# lightning finds, and the gypsum cloud banks that rise under the Isle.
+	var rings: Array[Dictionary] = []
+	var buckets: Array[Dictionary] = []
+	var rods: Array[Dictionary] = []
+	var gypsum: MultiMeshInstance3D
 	var fx: Node3D
 	# A park's sky, kept centred on the ball (build_park); null on the old maps.
 	var sky: Node3D

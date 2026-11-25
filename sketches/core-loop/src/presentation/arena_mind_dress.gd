@@ -13,9 +13,22 @@ const PARTS := {
 	"Rib": ["island_rib.glb", "HardwareSkin"],
 	"Cloud": ["sky_cloud.glb", "CloudHull"],
 	"Mesa": ["sky_mesa.glb", "MesaHull"],
+	"Post": ["w3_deck_post.glb", "DeckPost"],
 }
 const FLOOR_LIFT := 0.02
 const SKY_RING := 460.0
+# The Crown Sky-Deck (W49-MAPS, storyboard section 2.3): muted copper and iron inlays let into the wet stone, under the
+# telegraph drawing (hazard.gd DRAW_LIFT 0.08) and darker than any live HAZARD mark, so static trim never reads as a
+# telegraph; iron stanchions stand round the open edge just outside the fight's collider.
+const INLAY_LIFT := 0.035
+const INLAY_WIDTH := 0.36
+const INLAY_RINGS := [9.0, 18.0, 27.0, 33.5]
+const INLAY_SPOKES := 12
+const INLAY_IRON := Color("3a403f")
+const INLAY_COPPER := Color("7a5a3f")
+const POST_COUNT := 32
+const POST_OUT := 0.85
+const DECK_ROUGHNESS := 0.6
 
 # A missing-folder fixture uses the same loader as the real fight.
 static var dir := DIR
@@ -219,7 +232,69 @@ func _build(meshes: Dictionary, radius: float) -> void:
 		var basis := Basis(Vector3.UP, -angle).scaled(Vector3(1.5, 1.5, 1.5))
 		ribs.append(Transform3D(basis, Vector3(cos(angle) * (radius - 6.0), -2.5, sin(angle) * (radius - 6.0))))
 	_multi("UndersideRibs", meshes["Rib"], ribs)
+	_wet_deck(island)
+	_inlays(radius)
+	var posts: Array[Transform3D] = []
+	for k in POST_COUNT:
+		var angle := TAU * (k + 0.5) / POST_COUNT
+		var at := radius + POST_OUT
+		posts.append(Transform3D(Basis(Vector3.UP, PI * 0.5 - angle), Vector3(cos(angle) * at, -0.55, sin(angle) * at)))
+	_multi("EdgePosts", meshes["Post"], posts)
 	_sky_pieces(meshes)
+
+
+# The storm has just passed: the stone top keeps a wet sheen (w3-boss-the-mind.png) while its colour stays the kit's.
+func _wet_deck(island: MeshInstance3D) -> void:
+	var mesh := island.mesh as ArrayMesh
+	for i in mesh.get_surface_count():
+		var wet := (mesh.surface_get_material(i) as StandardMaterial3D).duplicate() as StandardMaterial3D
+		wet.roughness = DECK_ROUGHNESS
+		wet.metallic_specular = 0.6
+		mesh.surface_set_material(i, wet)
+
+
+# Concentric rings and radial spokes of muted copper and iron, one vertex-coloured surface, flush with the stone.
+func _inlays(radius: float) -> void:
+	var vertices := PackedVector3Array()
+	var normals := PackedVector3Array()
+	var colors := PackedColorArray()
+	var strip := func(a: Vector2, b: Vector2, colour: Color) -> void:
+		var side := (b - a).orthogonal().normalized() * INLAY_WIDTH * 0.5
+		var quad := [a - side, b - side, b + side, a - side, b + side, a + side]
+		for p: Vector2 in quad:
+			vertices.append(Vector3(p.x, INLAY_LIFT, p.y))
+			normals.append(Vector3.UP)
+			colors.append(colour)
+	for r: float in INLAY_RINGS:
+		var segments := int(ceil(TAU * r / 2.0))
+		for k in segments:
+			var a0 := TAU * k / segments
+			var a1 := TAU * (k + 1) / segments
+			strip.call(Vector2(cos(a0), sin(a0)) * r, Vector2(cos(a1), sin(a1)) * r,
+				INLAY_COPPER if r == INLAY_RINGS[-1] or r == INLAY_RINGS[1] else INLAY_IRON)
+	for k in INLAY_SPOKES:
+		var angle := TAU * k / INLAY_SPOKES
+		var dir := Vector2(cos(angle), sin(angle))
+		strip.call(dir * INLAY_RINGS[0], dir * minf(INLAY_RINGS[-1], radius - 1.5), INLAY_COPPER if k % 3 == 0 else INLAY_IRON)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	arrays[Mesh.ARRAY_NORMAL] = normals
+	arrays[Mesh.ARRAY_COLOR] = colors
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var material := StandardMaterial3D.new()
+	material.resource_name = "inlay"
+	material.vertex_color_use_as_albedo = true
+	material.vertex_color_is_srgb = true
+	material.roughness = 0.45
+	material.metallic = 0.4
+	mesh.surface_set_material(0, material)
+	var view := MeshInstance3D.new()
+	view.name = "DeckInlays"
+	view.mesh = mesh
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(view)
 
 
 # Tuck the nosing inside the real floor edge; flare only the lower skirt past the

@@ -173,7 +173,8 @@ func _surface_checks(dress: Node3D) -> void:
 			var arrays := mesh.surface_get_arrays(i)
 			_t.check("surface keeps authored colours: " + String(view.name), arrays[Mesh.ARRAY_COLOR] != null
 				and arrays[Mesh.ARRAY_COLOR].size() == arrays[Mesh.ARRAY_VERTEX].size())
-	_t.eq("the reused kit uses five surfaces", surfaces, 5)
+	# W49-MAPS: the five reused Highdraft parts, the Sky-Deck's edge posts and its inlay sheet.
+	_t.eq("the summit kit uses seven surfaces", surfaces, 7)
 	# Malformed surface materials are a normal loader rejection, never a null dereference.
 	var null_mat := ArrayMesh.new()
 	null_mat.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, (BoxMesh.new() as Mesh).surface_get_arrays(0))
@@ -185,7 +186,7 @@ func _surface_checks(dress: Node3D) -> void:
 
 
 func _geometry_checks(dress: Node3D) -> void:
-	for label in ["SummitIsland", "EdgeFascia", "UndersideRibs", "CloudDeck", "DistantMesas"]:
+	for label in ["SummitIsland", "EdgeFascia", "UndersideRibs", "CloudDeck", "DistantMesas", "EdgePosts", "DeckInlays"]:
 		_t.check("required summit piece " + label, dress.get_node_or_null(label) != null)
 	var island := dress.get_node("SummitIsland") as MeshInstance3D
 	var bounds: AABB = island.transform * island.mesh.get_aabb()
@@ -213,6 +214,40 @@ func _geometry_checks(dress: Node3D) -> void:
 	var mesas := dress.get_node("DistantMesas") as MultiMeshInstance3D
 	_t.eq("seven far mesas surround the summit", mesas.multimesh.instance_count, 7)
 	_t.check("mesas remain beyond the fight and its buffer", _sky_clear(mesas, false))
+	_deck_checks(dress)
+
+
+# W49-MAPS Crown Sky-Deck (rubric B6): the inlays lie flush under the telegraph drawing (hazard.gd DRAW_LIFT 0.08)
+# inside the fight circle, in muted copper and iron: never HAZARD-bright, never the Kindness purple, never lit. The
+# posts stand wholly outside the 36 m collider so no ball rolls through one.
+func _deck_checks(dress: Node3D) -> void:
+	var inlays := dress.get_node("DeckInlays") as MeshInstance3D
+	var arrays := inlays.mesh.surface_get_arrays(0)
+	var flush := true
+	var inside := true
+	for point: Vector3 in arrays[Mesh.ARRAY_VERTEX]:
+		flush = flush and point.y > 0.02 and point.y < 0.08
+		inside = inside and Vector2(point.x, point.z).length() <= 36.0
+	_t.check("inlays lie between the stone top and the telegraph drawing", flush)
+	_t.check("inlays stay inside the fight circle", inside)
+	var muted := true
+	for c: Color in arrays[Mesh.ARRAY_COLOR]:
+		var hue := c.h * 360.0
+		var purple := c.s > 0.2 and hue >= 300.0 and hue <= 330.0
+		var near_hazard := c.s > 0.5 and c.v > 0.7 and (hue < 25.0 or hue > 350.0)
+		muted = muted and c.v <= 0.55 and c.s <= 0.6 and not purple and not near_hazard
+	_t.check("inlays are muted copper and iron, not HAZARD or Kindness", muted)
+	var material := inlays.mesh.surface_get_material(0) as BaseMaterial3D
+	_t.check("inlays carry no emission", material != null and not material.emission_enabled)
+	var posts := dress.get_node("EdgePosts") as MultiMeshInstance3D
+	var post_points := posts.multimesh.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX] as PackedVector3Array
+	var outside := true
+	for placed: Transform3D in posts.get_meta("placements"):
+		for point: Vector3 in post_points:
+			var at: Vector3 = placed * point
+			outside = outside and Vector2(at.x, at.z).length() > 36.0
+	_t.eq("posts ring the open deck edge", posts.multimesh.instance_count, Dress.POST_COUNT)
+	_t.check("every post stands outside the 36 m collider", outside)
 
 
 func _sky_clear(view: MultiMeshInstance3D, clouds: bool) -> bool:

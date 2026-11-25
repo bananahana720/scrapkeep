@@ -7,6 +7,8 @@ const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
+const LoreRows := preload("res://src/core/lore_rows.gd")
+const StageBeats := preload("res://src/core/stage_beats.gd")
 const SHADER_DIR := "res://assets/materials/highdraft/"
 const CATCH_SECONDS := 0.4
 const CATCH_DEPTH := 0.15
@@ -53,6 +55,44 @@ var _cloud_wait := 0.0
 var _warned_net := false
 var _net_dust: Array[GPUParticles3D] = []
 var _net_dust_next := 0
+# W49-MAPS valley motion: kite rings turn in the updraft, tram buckets ride their haul ropes, the gypsum sea swells,
+# and storm bolts find the grounding rods: when the storm's own lightning lands (world_fact) and on every
+# STRIKE_BEATS-th beat of the band (beat_offset, audio.gd beat_offset_s), so the field strikes in time with the music.
+const RING_SPIN := 0.3
+const BUCKET_SPEED := 3.2
+const GYPSUM_PERIOD := 26.0
+const STRIKE_BEATS := 8
+# With no band playing (headless, muted) the field keeps a slow storm clock instead.
+const STRIKE_FALLBACK_S := 4.0
+const STRIKE_REACH := 160.0
+const BOLT_SECONDS := 0.32
+const BOLT_HEIGHT := 140.0
+const BOLT_SEGMENTS := 9
+const BOLT_WIDTH := 1.1
+# Blue-white storm light: apart from the live mint, HAZARD and the Kindness purple.
+const BOLT_COLOUR := Color("e4ecff")
+const CARD_LAYER := 34
+var rings: Array[Dictionary] = []
+var buckets: Array[Dictionary] = []
+var rods: Array[Dictionary] = []
+var gypsum: MultiMeshInstance3D
+var gypsum_rest: Array[Transform3D] = []
+var bolts: Array[Dictionary] = []
+var beat_offset := Callable()
+var _last_offset := INF
+var _beats := 0
+var _strike_wait := 0.0
+var _strike_next := 0
+var _bolt_material: StandardMaterial3D
+var _card_layer: CanvasLayer
+var _card_title: Label
+var _card_line: Label
+var _card_left := 0.0
+var _tint: ColorRect
+var _tint_from := Color(0, 0, 0, 0)
+var _tint_to := Color(0, 0, 0, 0)
+var _tint_left := 0.0
+var _tint_seconds := 0.0
 
 
 static func install(scenery: Node3D, presence: Node, map) -> Node3D:
@@ -78,6 +118,7 @@ static func install(scenery: Node3D, presence: Node, map) -> Node3D:
 			fx._net_chunk(chunk, sag)
 	fx.clouds = scenery.get_node_or_null("Sky/CloudDeck") as MultiMeshInstance3D
 	fx._clouds()
+	fx._valley(presence)
 	Kit.follow_quality(fx)
 	return fx
 
@@ -209,6 +250,7 @@ func step(delta: float, ball: Vector3) -> void:
 			_density(row)
 		row.material.set_shader_parameter("fx_time", clock)
 	_step_catches(delta)
+	_step_valley(delta)
 	if ball != Vector3.INF and _map.has_method("net_deck_height"):
 		var contact: float = _map.net_deck_height() + Tuning.RADIUS
 		if _last_ball != Vector3.INF and ball.y <= contact + 0.15 and ball.y >= contact - 0.2 \
@@ -314,3 +356,275 @@ func _step_catches(delta: float) -> void:
 		else:
 			_glow_end(row)
 	active_catches = live
+
+
+
+# ---- World 3 valley motion and story cards (W49-MAPS) ----
+
+func _valley(presence: Node) -> void:
+	if presence.get("rings") == null:
+		return
+	rings = presence.rings
+	buckets = presence.buckets
+	rods = presence.rods
+	gypsum = presence.gypsum
+	if gypsum != null:
+		gypsum_rest = gypsum.get_meta("placements")
+	_bolt_material = StandardMaterial3D.new()
+	_bolt_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	_bolt_material.albedo_color = BOLT_COLOUR
+	_bolt_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	_bolt_material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	_bolt_material.emission_enabled = true
+	_bolt_material.emission = BOLT_COLOUR
+	_bolt_material.emission_energy_multiplier = 2.4
+
+
+# The point a share t (0..1) of the way along a polyline, by length.
+static func along(path: Array[Vector3], t: float) -> Vector3:
+	var total := 0.0
+	for i in path.size() - 1:
+		total += path[i].distance_to(path[i + 1])
+	var want := clampf(t, 0.0, 1.0) * total
+	for i in path.size() - 1:
+		var leg := path[i].distance_to(path[i + 1])
+		if want <= leg:
+			return path[i].lerp(path[i + 1], want / maxf(leg, 0.001))
+		want -= leg
+	return path[-1]
+
+
+func _step_valley(delta: float) -> void:
+	if not reduced_motion:
+		for ring in rings:
+			var rest: Transform3D = ring["rest"]
+			var turned := Transform3D(rest.basis.rotated(Vector3.UP, clock * RING_SPIN * float(ring["spin"])),
+				rest.origin + Vector3.UP * sin(clock * 0.7 + float(ring["index"])) * 0.6)
+			(ring["view"] as MultiMeshInstance3D).multimesh.set_instance_transform(int(ring["index"]), turned)
+	for line in buckets:
+		var path: Array[Vector3] = line["path"]
+		var span := 0.0
+		for i in path.size() - 1:
+			span += path[i].distance_to(path[i + 1])
+		for k in int(line["count"]):
+			var t := fposmod(float(line["phase"]) + (k + 0.5) / float(line["count"]) + (0.0 if reduced_motion else clock * BUCKET_SPEED / maxf(span, 1.0)), 1.0)
+			(line["view"] as MultiMeshInstance3D).multimesh.set_instance_transform(k, Transform3D(Basis.IDENTITY, along(path, t)))
+	if gypsum != null and not reduced_motion:
+		var rise := float(gypsum.get_meta("rise", 0.0))
+		for i in gypsum_rest.size():
+			var xf := gypsum_rest[i]
+			xf.origin.y += rise * 0.5 * (1.0 + sin(TAU * clock / GYPSUM_PERIOD + i * 0.4))
+			gypsum.multimesh.set_instance_transform(i, xf)
+	_step_strikes(delta)
+	_step_bolts(delta)
+	_step_cards(delta)
+
+
+# Strike a rod on the band's beat, every STRIKE_BEATS beats; with no band, on the slow storm clock.
+func _step_strikes(delta: float) -> void:
+	if rods.is_empty() or reduced_motion:
+		return
+	var offset := float(beat_offset.call()) if beat_offset.is_valid() else INF
+	if is_inf(offset):
+		_strike_wait += delta
+		if _strike_wait >= STRIKE_FALLBACK_S:
+			_strike_wait = 0.0
+			_strike_ambient()
+		_last_offset = INF
+		return
+	if not is_inf(_last_offset) and _last_offset < 0.0 and offset >= 0.0:
+		_beats += 1
+		if _beats % STRIKE_BEATS == 0:
+			_strike_ambient()
+	_last_offset = offset
+
+
+func _strike_ambient() -> void:
+	strike_rod(_strike_next % rods.size())
+	_strike_next = (_strike_next * 7 + 3) % maxi(1, rods.size() * 5)
+
+
+# The storm's own lightning landing (natural.gd publishes its landing as a world fact) jumps to the nearest rod.
+func on_world_fact(kind: String, at: Vector3) -> void:
+	if kind != "lightning_landed" and kind != "lightning_mark_landed" or rods.is_empty() or not is_inside_tree():
+		return
+	var local := to_local(at)
+	var best := -1
+	var best_d := STRIKE_REACH
+	for i in rods.size():
+		var d := Vector2(local.x - (rods[i]["tip"] as Vector3).x, local.z - (rods[i]["tip"] as Vector3).z).length()
+		if d < best_d:
+			best_d = d
+			best = i
+	if best >= 0:
+		strike_rod(best)
+
+
+# One bolt from the storm into rod i's tip, a jagged blue-white ribbon that fades in BOLT_SECONDS. Public so a capture
+# can frame a strike.
+func strike_rod(i: int) -> void:
+	if i < 0 or i >= rods.size() or _bolt_material == null:
+		return
+	var tip: Vector3 = rods[i]["tip"]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(Vector2i(i, int(clock * 10.0)))
+	var points: Array[Vector3] = []
+	for k in BOLT_SEGMENTS + 1:
+		var t := float(k) / BOLT_SEGMENTS
+		var wander := Vector3(rng.randf_range(-1.0, 1.0), 0.0, rng.randf_range(-1.0, 1.0)) * 9.0 * sin(PI * t)
+		points.append(tip + Vector3.UP * BOLT_HEIGHT * (1.0 - t) + wander)
+	var vertices := PackedVector3Array()
+	for k in BOLT_SEGMENTS:
+		var a := points[k]
+		var b := points[k + 1]
+		var width := BOLT_WIDTH * (1.0 - 0.6 * float(k) / BOLT_SEGMENTS)
+		for side in [Vector3.RIGHT, Vector3.BACK]:
+			var off: Vector3 = side * width * 0.5
+			for p in [a - off, b - off, b + off, a - off, b + off, a + off]:
+				vertices.append(p)
+	var arrays := []
+	arrays.resize(Mesh.ARRAY_MAX)
+	arrays[Mesh.ARRAY_VERTEX] = vertices
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var view := MeshInstance3D.new()
+	view.name = "Bolt_%d" % i
+	view.mesh = mesh
+	var material := _bolt_material.duplicate() as StandardMaterial3D
+	view.material_override = material
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(view)
+	bolts.append({"view": view, "material": material, "age": 0.0})
+
+
+func _step_bolts(delta: float) -> void:
+	if bolts.is_empty():
+		return
+	var live: Array[Dictionary] = []
+	for bolt in bolts:
+		bolt["age"] = float(bolt["age"]) + delta
+		var view: MeshInstance3D = bolt["view"]
+		if float(bolt["age"]) >= BOLT_SECONDS or not is_instance_valid(view):
+			if is_instance_valid(view):
+				view.queue_free()
+			continue
+		var level := FlashGuard.spike(0.0, 1.0 - float(bolt["age"]) / BOLT_SECONDS)
+		(bolt["material"] as StandardMaterial3D).albedo_color.a = level
+		live.append(bolt)
+	bolts = live
+
+
+# Stage entry: the world's cold-open card (LoreRows.world_three_cold_open) and, arriving at the Crown on the launch
+# from the Isle, the golden-hour tint fading out into the storm dusk (StageBeats.LAUNCH_CROSSFADE). Both non-blocking:
+# nothing pauses, the ball keeps every input, and a press skips them. A retry shows neither.
+func on_stage_entered(kind: String, retry: bool) -> void:
+	_dismiss_cards()
+	if retry or kind.is_empty():
+		return
+	var card: Dictionary = LoreRows.world_three_cold_open(kind)
+	if not card.is_empty():
+		_show_card(String(card["title"]), "%s: %s" % [String(card["speaker"]), String(card["line"])], float(card["duration_s"]))
+	var fade: Dictionary = StageBeats.LAUNCH_CROSSFADE
+	if kind == String(fade["to_landmark"]):
+		_start_tint(fade["from_tint"], fade["to_tint"], float(fade["seconds"]))
+
+
+func _ensure_layer() -> void:
+	if is_instance_valid(_card_layer):
+		return
+	_card_layer = CanvasLayer.new()
+	_card_layer.name = "HighdraftStoryCard"
+	_card_layer.layer = CARD_LAYER
+	add_child(_card_layer)
+
+
+func _show_card(title: String, line: String, seconds: float) -> void:
+	_ensure_layer()
+	var panel := PanelContainer.new()
+	panel.name = "ColdOpen"
+	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
+	panel.offset_left = 28.0
+	panel.offset_right = 560.0
+	panel.offset_top = -124.0
+	panel.offset_bottom = -28.0
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.14, 0.16, 0.16, 0.86)
+	style.border_color = Kit.dressing_colour("hd_thermal_edge")
+	style.border_width_left = 5
+	style.content_margin_left = 16.0
+	style.content_margin_right = 16.0
+	style.content_margin_top = 10.0
+	style.content_margin_bottom = 10.0
+	panel.add_theme_stylebox_override("panel", style)
+	var box := VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(box)
+	_card_title = Label.new()
+	_card_title.text = title
+	_card_title.add_theme_font_size_override("font_size", 18)
+	_card_title.add_theme_color_override("font_color", Color(0.90, 0.63, 0.27))
+	box.add_child(_card_title)
+	_card_line = Label.new()
+	_card_line.text = line
+	_card_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_card_line.add_theme_font_size_override("font_size", 15)
+	_card_line.add_theme_color_override("font_color", Color(0.82, 0.77, 0.65))
+	box.add_child(_card_line)
+	_card_layer.add_child(panel)
+	_card_left = seconds
+
+
+func _start_tint(from: Color, to: Color, seconds: float) -> void:
+	_ensure_layer()
+	_tint = ColorRect.new()
+	_tint.name = "GoldenDuskTint"
+	_tint.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_tint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tint.color = from
+	_card_layer.add_child(_tint)
+	_card_layer.move_child(_tint, 0)
+	_tint_from = from
+	_tint_to = to
+	_tint_seconds = maxf(0.1, seconds)
+	_tint_left = _tint_seconds
+
+
+func _step_cards(delta: float) -> void:
+	if _card_left > 0.0:
+		_card_left -= delta
+		var panel := _card_layer.get_node_or_null("ColdOpen") as Control if is_instance_valid(_card_layer) else null
+		if panel != null:
+			panel.modulate.a = clampf(_card_left / 0.4, 0.0, 1.0)
+			if _card_left <= 0.0:
+				panel.queue_free()
+	if _tint_left > 0.0 and is_instance_valid(_tint):
+		_tint_left -= delta
+		var t := 1.0 - clampf(_tint_left / _tint_seconds, 0.0, 1.0)
+		_tint.color = _tint_from.lerp(_tint_to, smoothstep(0.0, 1.0, t))
+		if _tint_left <= 0.0:
+			_tint.queue_free()
+			_tint = null
+
+
+func _dismiss_cards() -> void:
+	_card_left = 0.0
+	_tint_left = 0.0
+	_tint = null
+	if is_instance_valid(_card_layer):
+		_card_layer.free()
+	_card_layer = null
+
+
+func _input(event: InputEvent) -> void:
+	if _card_left <= 0.0 and _tint_left <= 0.0:
+		return
+	var accept := InputMap.has_action("ui_accept") and event.is_action_pressed("ui_accept")
+	var cancel := InputMap.has_action("ui_cancel") and event.is_action_pressed("ui_cancel")
+	var jump := InputMap.has_action("cl_jump") and event.is_action_pressed("cl_jump")
+	if accept or cancel or jump:
+		_dismiss_cards()
+
+
+func _exit_tree() -> void:
+	_dismiss_cards()
