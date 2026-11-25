@@ -313,8 +313,6 @@ func w50_synergy_context(extra := {}) -> Dictionary:
 	if not c.has("has_husk"):
 		var husks = combat.get("ally_husks") if combat != null else null
 		c["has_husk"] = husks != null and husks.has_method("active_count") and int(husks.active_count()) > 0
-	if not c.has("burden_count"):
-		c["burden_count"] = _burden_count()
 	return c
 
 
@@ -447,10 +445,11 @@ func _step_orbitals(delta: float, enemies: Array) -> void:
 	_orbit_angle = wrapf(_orbit_angle + speed * delta, 0.0, TAU)
 	var centre: Vector3 = ctx.player.ball_position()
 	var furnace := has_w50_cross_synergy("orbital_furnace")
+	var furnace_row := Synergies.cross_system_row("orbital_furnace") if furnace else {}
 	var gyro := _evolution_live("gyro_foundry")
 	var dmg := ORBIT_BASE_DAMAGE * _weapon_damage_scale() * (1.0 + 0.20 * float(tier))
 	if furnace:
-		dmg *= ORBITAL_FURNACE_MULT
+		dmg *= float(furnace_row.get("bonus_damage_mult", ORBITAL_FURNACE_MULT))
 	_satellite_positions.clear()
 	if _satellite_mm != null:
 		_satellite_mm.visible_instance_count = count
@@ -505,7 +504,8 @@ func _trigger_gyro_foundry(at: Vector3, primary: Node3D, enemies: Array) -> void
 func _spawn_slag_zone(at: Vector3) -> void:
 	var fx = _effects()
 	var furnace := has_w50_cross_synergy("orbital_furnace")
-	var extra := ORBITAL_FURNACE_SLAG_BONUS if furnace else 0.0
+	var furnace_row := Synergies.cross_system_row("orbital_furnace") if furnace else {}
+	var extra := float(furnace_row.get("slag_radius_bonus", ORBITAL_FURNACE_SLAG_BONUS)) if furnace else 0.0
 	var radius := float(fx.slag_radius(extra)) if fx != null and fx.has_method("slag_radius") else (3.5 + extra)
 	if radius <= 0.0:
 		radius = 3.5 + extra
@@ -591,7 +591,7 @@ func _step_ghost_conductor(enemies: Array) -> void:
 	var width := float(row.get("link_width_m", 1.8))
 	var cd := float(row.get("tick_cooldown_s", 0.50))
 	var max_links := int(row.get("max_links", 4))
-	var dmg := 12.0 * _weapon_damage_scale()
+	var dmg := float(row.get("damage_base", 18.0)) * _weapon_damage_scale()
 	var ball: Vector3 = ctx.player.ball_position()
 	var linked := 0
 	for husk in husk_list:
@@ -635,22 +635,25 @@ func stamp_bolt(record: Dictionary, p: Resource) -> void:
 		if has_bounce or has_pierce:
 			var rrow := Synergies.cross_system_row("railgun_ricochet")
 			record["railgun_ricochet"] = true
-			record["railgun_speed_mult"] = float(rrow.get("speed_mult_per_bounce", 1.40))
-			record["railgun_damage_mult"] = float(rrow.get("damage_mult_per_bounce", 1.35))
+			record["railgun_speed_mult"] = float(rrow.get("speed_mult", 1.40))
+			record["railgun_damage_mult"] = float(rrow.get("damage_mult", 1.35))
 			record["railgun_max_stacks"] = int(rrow.get("max_stacks", 2))
 			if not has_bounce:
 				record["extra_bounces"] = maxi(int(record.get("extra_bounces", 0)), 1)
 	if _has_micro("gatling_heart"):
+		var grow := Parts.micro_mutation("gatling_heart")
+		var every := maxi(1, int(grow.get("every_shots", 12)))
 		_shot_counter += 1
-		if _shot_counter % 12 == 0:
-			_fire_gatling_vent(record)
+		if _shot_counter % every == 0:
+			_fire_gatling_vent(record, grow)
 
 
-func _fire_gatling_vent(record: Dictionary) -> void:
+func _fire_gatling_vent(record: Dictionary, grow: Dictionary) -> void:
 	var origin: Vector3 = Vector3(record.get("origin", ctx.player.ball_position()))
 	var dir: Vector3 = Vector3(record.get("dir", Vector3.FORWARD)).normalized()
-	var dmg := float(record.get("damage", 10.0)) * 0.70
-	var reach := 5.5
+	var dmg := float(grow.get("damage_base", 18.0)) * _weapon_damage_scale()
+	var reach := float(grow.get("radius_m", 5.5))
+	var knock := float(grow.get("knock", 6.0))
 	_fx_beam(origin, origin + dir * reach, Palette.BRASS, 0.16)
 	var hits := 0
 	for enemy in _live_enemies():
@@ -658,9 +661,9 @@ func _fire_gatling_vent(record: Dictionary) -> void:
 		var to_e := e.global_position - origin
 		var dist := to_e.length()
 		if dist <= reach and (dist < 0.1 or to_e.normalized().dot(dir) >= 0.5):
-			_deal_proc(e, dmg, dir, 4.0)
+			_deal_proc(e, dmg, dir, knock)
 			hits += 1
-	_note_proc("gatling_heart", {"shots": _shot_counter, "hits": hits, "damage": dmg})
+	_note_proc("gatling_heart", {"shots": _shot_counter, "hits": hits, "damage": dmg, "radius": reach})
 
 
 func on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, _part := "") -> void:
@@ -751,16 +754,18 @@ func _maybe_prism_refract(bolt: Dictionary, enemy: Node3D, point: Vector3) -> vo
 
 
 func _maybe_horizon_ping(bolt: Dictionary, enemy: Node3D, point: Vector3) -> void:
+	var hrow := Parts.micro_mutation("horizon_optic")
+	var min_range := float(hrow.get("min_range_m", 22.0))
 	var origin: Vector3 = Vector3(bolt.get("fired_from", bolt.get("origin", point)))
 	var dist := maxf(origin.distance_to(point), float(bolt.get("travelled", 0.0)))
-	if dist < 22.0:
+	if dist < min_range:
 		return
 	var eid := enemy.get_instance_id()
 	var key := "horizon_" + str(eid)
 	if float(_enemy_cd.get(key, -INF)) > _clock:
 		return
-	_enemy_cd[key] = _clock + 0.60
-	var bonus := float(bolt.get("damage", 10.0)) * 0.20
+	_enemy_cd[key] = _clock + float(hrow.get("cooldown_s", 0.60))
+	var bonus := float(bolt.get("damage", 10.0)) * float(hrow.get("bonus_share", 0.20))
 	_fx_beam(origin, point, Palette.ARC, 0.16)
 	_deal_proc(enemy, bonus, Vector3(bolt.get("dir", Vector3.FORWARD)), 2.5)
 	_note_proc("horizon_optic", {"dist": dist, "damage": bonus})
@@ -776,14 +781,14 @@ func _maybe_charge_storm() -> void:
 
 
 func _maybe_overclocked_circuit(at: Vector3, primary: Node3D) -> void:
-	var tier := _speed_tier()
-	if tier < SpeedTier.FAST:
-		return
 	var row := Synergies.cross_system_row("overclocked_circuit")
+	var tier := _speed_tier()
+	if tier < int(row.get("min_tier", SpeedTier.FAST)):
+		return
 	if not _cd_ready("overclocked_circuit", float(row.get("cooldown_s", 0.45))):
 		return
 	var radius := float(row.get("radius_m", 9.0))
-	var dmg := 12.0 * float(row.get("damage_mult", 1.35)) * _weapon_damage_scale()
+	var dmg := float(row.get("damage_base", 20.0)) * _weapon_damage_scale()
 	_fx_ring(at, radius, Palette.ARC)
 	var hits := 0
 	for enemy in _live_enemies():
@@ -815,12 +820,12 @@ func strike_mult(_enemy: Node3D, _kind: String, cls: String) -> float:
 	if _has_part("patch_tether"):
 		var held_consumable: bool = ctx.run.has_method("has_consumable") and bool(ctx.run.has_consumable())
 		var fx = _effects()
-		var bonus := float(fx.pocket_aura_bonus(held_consumable)) if fx != null and fx.has_method("pocket_aura_bonus") else (0.25 if held_consumable else 0.0)
+		var bonus := float(fx.pocket_aura_bonus(held_consumable)) if fx != null and fx.has_method("pocket_aura_bonus") else (0.18 if held_consumable else 0.0)
 		if bonus > 0.0:
 			mult *= 1.0 + bonus
 	if has_w50_cross_synergy("heavy_dividend"):
 		var row := Synergies.cross_system_row("heavy_dividend")
-		var per := float(row.get("damage_per_burden", 0.12))
+		var per := float(row.get("per_burden", 0.12))
 		var cap := float(row.get("cap_bonus", 0.60))
 		var burdens := maxi(1, _burden_count())
 		mult *= 1.0 + minf(cap, float(burdens) * per)
@@ -849,12 +854,14 @@ func _on_scrap_collected(amount: int, _at: Vector3, _total: int) -> void:
 	if amount <= 0 or not _in_play():
 		return
 	if _has_micro("magnet_spool"):
+		var mrow := Parts.micro_mutation("magnet_spool")
+		var every := maxi(1, int(mrow.get("every_scrap", 5)))
 		_scrap_counter += 1
-		if _scrap_counter % 5 == 0:
+		if _scrap_counter % every == 0:
 			var ball: Vector3 = ctx.player.ball_position()
-			var target := _nearest_enemy(ball, 9.0)
+			var target := _nearest_enemy(ball, float(mrow.get("reach_m", 10.0)))
 			if target != null:
-				var dmg := 8.0 * _weapon_damage_scale()
+				var dmg := float(mrow.get("damage_base", 12.0)) * _weapon_damage_scale()
 				_fx_arc(ball + Vector3.UP * 0.5, target.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
 				_deal_proc(target, dmg, target.global_position - ball, 2.5)
 				_note_proc("magnet_spool", {"count": _scrap_counter, "damage": dmg})
@@ -865,15 +872,15 @@ func _tick_scrap_magnetron() -> void:
 	if not has_w50_cross_synergy("scrap_magnetron"):
 		return
 	var row := Synergies.cross_system_row("scrap_magnetron")
-	var every := int(row.get("every_pickups", 4))
+	var every := int(row.get("pickup_threshold", 4))
 	_pickup_counter += 1
 	if _pickup_counter % maxi(1, every) != 0:
 		return
 	if not _cd_ready("scrap_magnetron", float(row.get("cooldown_s", 0.50))):
 		return
 	var ball: Vector3 = ctx.player.ball_position()
-	var radius := float(row.get("ring_radius_m", 8.0))
-	var dmg := 12.0 * _weapon_damage_scale()
+	var radius := float(row.get("radius_m", 8.0))
+	var dmg := float(row.get("damage_base", 22.0)) * _weapon_damage_scale()
 	_fx_ring(ball, radius, Palette.ARC)
 	var hits := 0
 	for enemy in _live_enemies():
@@ -882,7 +889,7 @@ func _tick_scrap_magnetron() -> void:
 			_fx_arc(ball + Vector3.UP * 0.5, e.global_position + Vector3.UP * 0.5, Palette.ARC)
 			_deal_proc(e, dmg, e.global_position - ball, 3.5)
 			hits += 1
-	_note_proc("scrap_magnetron", {"pickups": _pickup_counter, "hits": hits, "damage": dmg})
+	_note_proc("scrap_magnetron", {"pickups": _pickup_counter, "hits": hits, "damage": dmg, "radius": radius})
 
 
 func _on_enemy_killed(_kind: String, at: Vector3, _scrap_value: int) -> void:
@@ -896,17 +903,20 @@ func _on_enemy_killed(_kind: String, at: Vector3, _scrap_value: int) -> void:
 func _on_carved(at: Vector3, seconds: float, _speed: float) -> void:
 	if not _in_play():
 		return
-	if _has_micro("grip_tread") and seconds >= 0.35 and _cd_ready("grip_tread", 0.60):
-		var radius := 4.5
-		var dmg := 10.0 * _weapon_damage_scale()
-		_fx_ring(at, radius, Palette.COPPER)
-		var hits := 0
-		for enemy in _live_enemies():
-			var e := enemy as Node3D
-			if e.global_position.distance_to(at) <= radius:
-				_deal_proc(e, dmg, e.global_position - at, 4.0)
-				hits += 1
-		_note_proc("grip_tread", {"seconds": seconds, "hits": hits, "damage": dmg})
+	if _has_micro("grip_tread") and seconds >= 0.35:
+		var grow := Parts.micro_mutation("grip_tread")
+		if _cd_ready("grip_tread", float(grow.get("cooldown_s", 0.60))):
+			var radius := float(grow.get("radius_m", 2.8))
+			var dmg := float(grow.get("damage_base", 12.0)) * _weapon_damage_scale()
+			var knock := float(grow.get("knock", 5.0))
+			_fx_ring(at, radius, Palette.COPPER)
+			var hits := 0
+			for enemy in _live_enemies():
+				var e := enemy as Node3D
+				if e.global_position.distance_to(at) <= radius:
+					_deal_proc(e, dmg, e.global_position - at, knock)
+					hits += 1
+			_note_proc("grip_tread", {"seconds": seconds, "hits": hits, "damage": dmg, "radius": radius})
 	if _has_part("basalt_ram"):
 		_fire_basalt_cone(at, "carve")
 
@@ -979,68 +989,78 @@ func _release_storm_capacitor(at: Vector3, trigger_kind: String) -> void:
 func _on_player_hit(amount: float, _source: String) -> void:
 	if amount <= 0.0 or not _in_play() or not _has_micro("rivet_plating"):
 		return
-	if not _cd_ready("rivet_plating", 1.0):
+	var row := Parts.micro_mutation("rivet_plating")
+	if not _cd_ready("rivet_plating", float(row.get("cooldown_s", 1.0))):
 		return
 	var ball: Vector3 = ctx.player.ball_position()
-	var dmg := 10.0 * _weapon_damage_scale()
-	_fx_ring(ball, 4.5, Palette.STEEL)
+	var radius := float(row.get("radius_m", 4.5))
+	var dmg := float(row.get("damage_base", 14.0)) * _weapon_damage_scale()
+	var knock := float(row.get("knock", 7.0))
+	_fx_ring(ball, radius, Palette.STEEL)
 	var hits := 0
 	for enemy in _live_enemies():
 		var e := enemy as Node3D
-		if e.global_position.distance_to(ball) <= 4.5:
-			_deal_proc(e, dmg, e.global_position - ball, 5.0)
+		if e.global_position.distance_to(ball) <= radius:
+			_deal_proc(e, dmg, e.global_position - ball, knock)
 			hits += 1
-	_note_proc("rivet_plating", {"hits": hits, "damage": dmg})
+	_note_proc("rivet_plating", {"hits": hits, "damage": dmg, "radius": radius})
 
 
 func _on_boosted_or_dashed(direction: Vector3) -> void:
 	if not _in_play() or not _has_micro("vent_baffle"):
 		return
-	if not _cd_ready("vent_baffle", 0.50):
+	var row := Parts.micro_mutation("vent_baffle")
+	if not _cd_ready("vent_baffle", float(row.get("cooldown_s", 0.50))):
 		return
 	var ball: Vector3 = ctx.player.ball_position()
 	var back := -direction
 	back.y = 0.0
 	back = back.normalized() if back.length_squared() > 0.01 else Vector3.BACK
 	var vent_at := ball + back * 2.0
-	var dmg := 9.0 * _weapon_damage_scale()
-	_fx_ring(vent_at, 5.0, Palette.COPPER)
+	var radius := float(row.get("radius_m", 5.0))
+	var dmg := float(row.get("damage_base", 12.0)) * _weapon_damage_scale()
+	var knock := float(row.get("knock", 9.0))
+	_fx_ring(vent_at, radius, Palette.COPPER)
 	var hits := 0
 	for enemy in _live_enemies():
 		var e := enemy as Node3D
-		if e.global_position.distance_to(vent_at) <= 5.0:
-			_deal_proc(e, dmg, back, 4.5)
+		if e.global_position.distance_to(vent_at) <= radius:
+			_deal_proc(e, dmg, back, knock)
 			hits += 1
-	_note_proc("vent_baffle", {"hits": hits, "damage": dmg})
+	_note_proc("vent_baffle", {"hits": hits, "damage": dmg, "radius": radius})
 
 
 func _on_jumped(air: bool) -> void:
 	if air or not _in_play() or not _has_micro("spring_shims"):
 		return
-	if not _cd_ready("spring_shims", 0.50):
+	var row := Parts.micro_mutation("spring_shims")
+	if not _cd_ready("spring_shims", float(row.get("cooldown_s", 0.50))):
 		return
 	var ball: Vector3 = ctx.player.ball_position()
-	var dmg := 8.0 * _weapon_damage_scale()
-	_fx_ring(ball, 4.0, Palette.AMBER)
+	var radius := float(row.get("radius_m", 4.0))
+	var dmg := float(row.get("damage_base", 10.0)) * _weapon_damage_scale()
+	var knock := float(row.get("knock", 6.0))
+	_fx_ring(ball, radius, Palette.AMBER)
 	var hits := 0
 	for enemy in _live_enemies():
 		var e := enemy as Node3D
-		if e.global_position.distance_to(ball) <= 4.0:
-			_deal_proc(e, dmg, e.global_position - ball, 4.0)
+		if e.global_position.distance_to(ball) <= radius:
+			_deal_proc(e, dmg, e.global_position - ball, knock)
 			hits += 1
-	_note_proc("spring_shims", {"hits": hits, "damage": dmg})
+	_note_proc("spring_shims", {"hits": hits, "damage": dmg, "radius": radius})
 
 
 func _on_harpoon_bit(enemy: Node3D, at: Vector3) -> void:
 	if not _in_play() or not _has_micro("live_line"):
 		return
-	if not _cd_ready("live_line", 0.50):
+	var row := Parts.micro_mutation("live_line")
+	if not _cd_ready("live_line", float(row.get("cooldown_s", 0.50))):
 		return
 	var exclude := [enemy.get_instance_id()] if is_instance_valid(enemy) else []
-	var other := _nearest_enemy(at, 7.0, exclude)
+	var other := _nearest_enemy(at, float(row.get("reach_m", 7.0)), exclude)
 	if other == null:
 		return
-	var dmg := 10.0 * _weapon_damage_scale()
+	var dmg := float(row.get("damage_base", 16.0)) * _weapon_damage_scale()
 	_fx_arc(at + Vector3.UP * 0.5, other.global_position + Vector3.UP * 0.5, Palette.ARC)
 	_deal_proc(other, dmg, other.global_position - at, 3.0)
 	_note_proc("live_line", {"damage": dmg})
@@ -1049,35 +1069,41 @@ func _on_harpoon_bit(enemy: Node3D, at: Vector3) -> void:
 func _on_harpoon_smashed(_enemy: Node3D, at: Vector3, _speed: float) -> void:
 	if not _in_play() or not _has_micro("winch_pawl"):
 		return
-	if not _cd_ready("winch_pawl", 0.45):
+	var row := Parts.micro_mutation("winch_pawl")
+	if not _cd_ready("winch_pawl", float(row.get("cooldown_s", 0.45))):
 		return
-	var dmg := 11.0 * _weapon_damage_scale()
-	_fx_ring(at, 4.5, Palette.AMBER)
+	var radius := float(row.get("radius_m", 4.5))
+	var dmg := float(row.get("damage_base", 16.0)) * _weapon_damage_scale()
+	var knock := float(row.get("knock", 7.0))
+	_fx_ring(at, radius, Palette.AMBER)
 	var hits := 0
 	for e in _live_enemies():
 		var en := e as Node3D
-		if en.global_position.distance_to(at) <= 4.5:
-			_deal_proc(en, dmg, en.global_position - at, 5.0)
+		if en.global_position.distance_to(at) <= radius:
+			_deal_proc(en, dmg, en.global_position - at, knock)
 			hits += 1
-	_note_proc("winch_pawl", {"hits": hits, "damage": dmg})
+	_note_proc("winch_pawl", {"hits": hits, "damage": dmg, "radius": radius})
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
 	if kind != "ram" or not _in_play() or not _has_micro("ram_plow"):
 		return
-	if _speed_tier() < SpeedTier.FAST or not is_instance_valid(enemy):
+	var row := Parts.micro_mutation("ram_plow")
+	if _speed_tier() < int(row.get("min_tier", SpeedTier.FAST)) or not is_instance_valid(enemy):
 		return
-	if not _cd_ready("ram_plow", 0.40):
+	if not _cd_ready("ram_plow", float(row.get("cooldown_s", 0.40))):
 		return
 	var at := enemy.global_position
-	var dmg := 9.0 * _weapon_damage_scale()
-	_fx_ring(at, 4.5, Palette.COPPER)
+	var radius := float(row.get("radius_m", 4.5))
+	var dmg := float(row.get("damage_base", 20.0)) * _weapon_damage_scale()
+	var knock := float(row.get("knock", 9.0))
+	_fx_ring(at, radius, Palette.COPPER)
 	var hits := 0
 	for cand in _live_enemies():
 		var ce := cand as Node3D
 		if ce == enemy:
 			continue
-		if ce.global_position.distance_to(at) <= 4.5:
-			_deal_proc(ce, dmg, ce.global_position - at, 4.5)
+		if ce.global_position.distance_to(at) <= radius:
+			_deal_proc(ce, dmg, ce.global_position - at, knock)
 			hits += 1
-	_note_proc("ram_plow", {"hits": hits, "damage": dmg})
+	_note_proc("ram_plow", {"hits": hits, "damage": dmg, "radius": radius})

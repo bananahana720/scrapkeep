@@ -438,7 +438,6 @@ const CROSS_SYSTEM_W50 := {
 		"text": "Held burdens and high heft add +12% hit payout per burden, up to +60%.",
 		"per_burden": 0.12,
 		"cap_bonus": 0.60,
-		"slam_radius_bonus": 2.0,
 	},
 }
 

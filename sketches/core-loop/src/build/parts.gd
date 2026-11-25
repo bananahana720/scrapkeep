@@ -963,7 +963,7 @@ const EXPANSION_PARTS := {
 const EVOLVED_W50 := {
 	"gyro_foundry": {"name": "Gyro Foundry", "verb": "Satellites ring seismic shocks on hit", "text": "Orbital hits ring seismic shocks. From Storm Front.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["spiral", "mass"], "bits": []},
-	"arc_prism": {"name": "Arc Prism", "verb": "Refracted rays bounce and chain arcs", "text": "Prism rays chain arc once. From Live Wire.",
+	"arc_prism": {"name": "Arc Prism", "verb": "Prism rays fire unplated and arc", "text": "Prism rays chain arc once. From Live Wire.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["arc", "split"], "bits": []},
 	"whiplash_spool": {"name": "Whiplash Spool", "verb": "Returning bolts pull light machines inward", "text": "Boomerang return drags light machines. From Lightning Rod.",
 		"rarity": "evolved", "tier": 3, "family": "weapon", "tags": ["anchor", "split"], "bits": []},

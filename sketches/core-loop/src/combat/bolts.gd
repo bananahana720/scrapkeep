@@ -184,7 +184,8 @@ func _initial_draw_offset(bolt: Dictionary) -> Vector3:
 static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	var out := parent.duplicate()
 	for key in ["travelled", "age", "shown", "right", "up", "exclude", "draw_origin", "draw_offset", "bounces", "ricochet_curved",
-			"boomerang", "boomerang_pause", "boomerang_returned", "boomerang_pause_s", "boomerang_damage_mult", "boomerang_width_mult", "whiplash_pull"]:
+			"boomerang", "boomerang_pause", "boomerang_returned", "boomerang_pause_s", "boomerang_damage_mult", "boomerang_width_mult", "whiplash_pull",
+			"railgun_ricochet", "railgun_speed_mult", "railgun_damage_mult", "railgun_max_stacks", "railgun_boosts", "railgun_boosted_last"]:
 		out.erase(key)
 	for key in overrides:
 		out[key] = overrides[key]
@@ -435,6 +436,13 @@ func _flip_boomerang(bolt: Dictionary) -> void:
 	bolt["source"] = "item_proc"
 	bolt["bits"] = 0
 	bolt["spent"] = 0
+	bolt["chain_jumps"] = 0
+	bolt["extra_bounces"] = 0
+	bolt["railgun_ricochet"] = false
+	bolt["railgun_boosts"] = 0
+	bolt["railgun_boosted_last"] = false
+	bolt["ricochet_home"] = false
+	bolt["sixth_hot"] = false
 	bolt["pierce"] = maxi(int(bolt.get("pierce", 0)), BOOMERANG_RETURN_PIERCE)
 	bolt["wave_amp"] = 0.0
 	bolt.erase("draw_origin")

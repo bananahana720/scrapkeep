@@ -338,7 +338,7 @@ func pocket_aura_bonus(has_consumable: bool) -> float:
 	var d: Resource = Parts.def("patch_tether")
 	var fx: Dictionary = d.effect
 	var cap_b := float(fx.get("cap_bonus", 0.65))
-	return cap_b * PartDef.Stacking.value("hyperbolic", float(fx.get("per", 0.22)), n, 0.0)
+	return PartDef.Stacking.value("hyperbolic", float(fx.get("per", 0.22)), n, cap_b)
 
 
 func basalt_cone_damage() -> float:

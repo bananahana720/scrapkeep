@@ -283,15 +283,21 @@ func _check_ror2_stacking_math() -> void:
 	_t.check("slag_furnace radius increases and caps cleanly",
 		sr1 >= 3.0 and sr1 < sr3 and sr3 < sr20 and sr20 <= 8.5, "sr1=%.2f sr3=%.2f sr20=%.2f" % [sr1, sr3, sr20])
 
-	# patch_tether: hold-vs-pop aura
+	# patch_tether: hold-vs-pop aura (+18% at 1 copy, capped at +65%, 0 when popped)
 	fx.refresh(["patch_tether"])
 	var p_held1: float = fx.pocket_aura_bonus(true)
 	var p_popped: float = fx.pocket_aura_bonus(false)
 	fx.refresh(["patch_tether", "patch_tether", "patch_tether"])
 	var p_held3: float = fx.pocket_aura_bonus(true)
-	_t.check("patch_tether grants aura when holding consumable and 0 when popped",
-		p_held1 > 0.10 and p_held3 > p_held1 and p_held3 < 0.70 and is_equal_approx(p_popped, 0.0),
-		"h1=%.3f h3=%.3f pop=%.3f" % [p_held1, p_held3, p_popped])
+	var p20_list: Array = []
+	for _i in 20:
+		p20_list.append("patch_tether")
+	fx.refresh(p20_list)
+	var p_held20: float = fx.pocket_aura_bonus(true)
+	_t.check("patch_tether grants +18% at 1 copy, scales to 0.65 cap, and 0 when popped",
+		is_equal_approx(p_held1, 0.22 / 1.22) and p_held3 > p_held1 and is_equal_approx(p_held20, 0.65)
+		and is_equal_approx(p_popped, 0.0),
+		"h1=%.4f h3=%.4f h20=%.4f pop=%.3f" % [p_held1, p_held3, p_held20, p_popped])
 
 	# basalt_ram & storm_capacitor
 	fx.refresh(["basalt_ram"])
@@ -375,7 +381,7 @@ func _check_evolutions_and_cross_system_tables() -> void:
 # --- 4. Pure Boomerang Physics (Single Return, 0.15 s Pause, Split Children) ------------
 
 func _check_boomerang_physics_pure() -> void:
-	# Split child strips boomerang so proc depth stays strictly 1
+	# Split child strips boomerang & railgun keys so proc depth stays strictly 1
 	var parent := {
 		"origin": Vector3.ZERO, "dir": Vector3.FORWARD, "speed": 40.0, "max_dist": 20.0,
 		"travelled": 5.0, "damage": 12.0, "kind": "rivet", "radius": 0.4, "knock": 4.0,
@@ -383,11 +389,32 @@ func _check_boomerang_physics_pure() -> void:
 		"wave_amp": 0.0, "wave_hz": 0.0, "phase": 0.0, "pierce": 0, "source": "weapon",
 		"bits": ShotBits.bit("split"), "spent": 0, "exclude": [], "up": Vector3.UP,
 		"boomerang": true, "boomerang_pause_s": 0.15, "boomerang_damage_mult": 1.3, "boomerang_width_mult": 1.4,
+		"railgun_ricochet": true, "railgun_boosts": 1, "railgun_boosted_last": true,
 	}
 	var kids := Bolts.split_children(parent, Vector3(0, 0, -5), 999, 5.0)
 	_t.eq("split produces 2 children", kids.size(), 2)
 	for kid in kids:
-		_t.check("split child never inherits boomerang", not bool(kid.get("boomerang", false)), str(kid))
+		_t.check("split child never inherits boomerang or railgun keys",
+			not bool(kid.get("boomerang", false)) and not kid.has("railgun_ricochet")
+			and not kid.has("railgun_boosts") and not kid.has("railgun_boosted_last"), str(kid))
+
+	# Returning boomerang clears outbound modifiers (chain_jumps, extra_bounces, railgun, ricochet_home, sixth_hot)
+	var b := Bolts.new()
+	var flip_bolt := {
+		"origin": Vector3.ZERO, "shown": Vector3(0, 0, -10), "dir": Vector3.FORWARD, "speed": 40.0, "max_dist": 10.0,
+		"travelled": 10.0, "damage": 15.0, "radius": 0.4, "width_scale": 1.0, "pierce": 0, "source": "weapon",
+		"bits": ShotBits.bit("bounce"), "spent": 0, "exclude": [1],
+		"boomerang": true, "boomerang_damage_mult": 1.2, "boomerang_width_mult": 1.25,
+		"chain_jumps": 2, "extra_bounces": 2, "railgun_ricochet": true, "railgun_boosts": 1,
+		"railgun_boosted_last": true, "ricochet_home": true, "sixth_hot": true,
+	}
+	b._flip_boomerang(flip_bolt)
+	_t.check("returning boomerang clears chain_jumps, extra_bounces, railgun, ricochet_home, sixth_hot",
+		int(flip_bolt.get("chain_jumps", -1)) == 0 and int(flip_bolt.get("extra_bounces", -1)) == 0
+		and not bool(flip_bolt.get("railgun_ricochet", true)) and not bool(flip_bolt.get("ricochet_home", true))
+		and not bool(flip_bolt.get("sixth_hot", true)) and String(flip_bolt.get("source", "")) == "item_proc"
+		and int(flip_bolt.get("bits", -1)) == 0, str(flip_bolt))
+	b.free()
 
 
 # --- 5. Live Orbital Satellites + Gyro Foundry + Orbital Furnace ------------------------
@@ -659,8 +686,8 @@ func _check_debt_slag_patch_basalt_storm_live() -> void:
 func _check_flat_micro_mutations_live() -> void:
 	_clear_enemies()
 	var centre: Vector3 = _player.ball_position()
-	var e1 := _spawn_dummy(centre + Vector3(3.0, 0.0, 0.0), 1000.0)
-	var e2 := _spawn_dummy(centre + Vector3(5.0, 0.0, 1.0), 1000.0)
+	var e1 := _spawn_dummy(centre + Vector3(2.2, 0.0, 0.0), 1000.0)
+	var e2 := _spawn_dummy(centre + Vector3(4.5, 0.0, 1.0), 1000.0)
 	var e_rear := _spawn_dummy(centre + Vector3(-2.5, 0.0, 0.0), 1000.0)
 	var e_far := _spawn_dummy(centre + Vector3(26.0, 0.0, 0.0), 1000.0)
 
@@ -680,6 +707,18 @@ func _check_flat_micro_mutations_live() -> void:
 	for fid in Parts.FLAT_MICRO_MUTATIONS:
 		_t.check("flat micro-mutation fires live: %s" % fid, _orbitals.proc_count(fid) >= 1,
 			"count=%d" % _orbitals.proc_count(fid))
+	# Table-to-runtime parity: grip_tread uses authored 2.8 m radius (hits 2.2 m, misses 3.8 m)
+	_clear_enemies()
+	_set_parts(["grip_tread"])
+	_orbitals.reset_attempt()
+	var e_in := _spawn_dummy(centre + Vector3(2.2, 0.0, 0.0), 200.0)
+	var e_out := _spawn_dummy(centre + Vector3(3.8, 0.0, 0.0), 200.0)
+	var hp_in0: float = e_in.hp
+	var hp_out0: float = e_out.hp
+	_game.ctx.events.carved.emit(centre, 0.5, 16.0)
+	_t.check("grip_tread respects authored 2.8 m radius (hits 2.2 m, misses 3.8 m)",
+		e_in.hp < hp_in0 and is_equal_approx(e_out.hp, hp_out0),
+		"in=%.1f->%.1f out=%.1f->%.1f" % [hp_in0, e_in.hp, hp_out0, e_out.hp])
 
 
 func _trigger_all_10_flat_micros(centre: Vector3, e1: Node3D, e2: Node3D, _e_rear: Node3D, e_far: Node3D) -> void:
@@ -779,7 +818,18 @@ func _check_cross_system_synergies_live() -> void:
 	_combat.ally_husks.husks.erase(husk)
 	husk.queue_free()
 
-	# 6) Heavy Dividend: burden + mass boosts strike_mult and caps at +60%
+	# 6) Heavy Dividend: live single-part negative controls at mass 0 / heft class 1, then scales & caps at +60%
+	_game.ctx.run.mass = 0.0
+	_set_parts(["debt_collector"])
+	_t.check("live negative control: debt_collector alone at heft class 1 does NOT wake heavy_dividend",
+		not _orbitals.has_w50_cross_synergy("heavy_dividend")
+		and is_equal_approx(_orbitals.strike_mult(e1, "rivet", "weapon"), 1.0),
+		"awake=%s mult=%.3f" % [str(_orbitals.has_w50_cross_synergy("heavy_dividend")), _orbitals.strike_mult(e1, "rivet", "weapon")])
+	_set_parts(["cracked_plating"])
+	_t.check("live negative control: cracked_plating alone at heft class 1 does NOT wake heavy_dividend",
+		not _orbitals.has_w50_cross_synergy("heavy_dividend")
+		and is_equal_approx(_orbitals.strike_mult(e1, "rivet", "weapon"), 1.0),
+		"awake=%s mult=%.3f" % [str(_orbitals.has_w50_cross_synergy("heavy_dividend")), _orbitals.strike_mult(e1, "rivet", "weapon")])
 	_set_parts(["debt_collector", "rivet_plating"])
 	var hd1: float = _orbitals.strike_mult(e1, "rivet", "weapon")
 	_set_parts(["debt_collector", "debt_collector", "debt_collector", "debt_collector", "debt_collector", "debt_collector", "rivet_plating"])
