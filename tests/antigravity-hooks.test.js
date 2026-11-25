@@ -198,12 +198,14 @@ test("prompts (ask) on pushes to main, global-flag reset/branch, package mutatio
   assert.equal(badJson.decision, "ask");
 });
 
-test("allows safe commands and edits including npm ci and feature-branch pushes", () => {
+test("allows safe commands and edits including npm ci, scratch Godot save paths under artifacts/local/, and feature-branch pushes", () => {
   for (const cmd of [
     "npm ci",
     "npm run check:docs",
     "git push -u origin aifirstify_repo_gemini_workflows",
     "git -C repo status -sb",
+    "cat artifacts/local/verify-game/run1/.local/share/godot/app_userdata/core-loop/profile.json",
+    "XDG_DATA_HOME=/repo/artifacts/local/home ls /repo/artifacts/local/home/.local/share/godot/app_userdata/core-loop",
   ]) {
     const res = runHookCli({
       toolCall: { name: "run_command", args: { CommandLine: cmd } },
@@ -212,9 +214,30 @@ test("allows safe commands and edits including npm ci and feature-branch pushes"
     assert.equal(res.decision, "allow", `Expected allow for: ${cmd}`);
   }
 
-  const safeEdit = runHookCli({
-    toolCall: { name: "edit_file", args: { Path: path.join(root, "GEMINI.md") } },
-    cwd: root,
-  });
-  assert.equal(safeEdit.decision, "allow");
+  for (const scratchPath of [
+    path.join(root, "GEMINI.md"),
+    path.join(
+      root,
+      "artifacts/local/verify-game/run1/.local/share/godot/app_userdata/core-loop/profile.json",
+    ),
+    "artifacts/local/test-home/.local/share/godot/app_userdata/core-loop/settings.cfg",
+  ]) {
+    const safeEdit = runHookCli({
+      toolCall: { name: "edit_file", args: { Path: scratchPath } },
+      cwd: root,
+    });
+    assert.equal(safeEdit.decision, "allow", `Expected allow for edit_file: ${scratchPath}`);
+  }
+
+  for (const bypassCmd of [
+    "cat artifacts/local/../../../home/andrew/.local/share/godot/app_userdata/core-loop/profile.json",
+    "cp artifacts/local/run/.local/share/godot/app_userdata/core-loop/save.json ~/.local/share/godot/app_userdata/core-loop/save.json",
+    "echo hi>~/.local/share/godot/app_userdata/core-loop/save.json",
+  ]) {
+    const res = evaluateHook({
+      toolCall: { name: "run_command", args: { CommandLine: bypassCmd } },
+      cwd: root,
+    });
+    assert.equal(res.decision, "deny", `Expected deny for live-save bypass: ${bypassCmd}`);
+  }
 });

@@ -3,8 +3,9 @@ import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const LIVE_SAVE_PATH =
-  /(?:~|\$HOME|\/home\/[^/\s]+|\/Users\/[^/\s]+)?\/?\.local\/share\/godot\/app_userdata\/core-loop(?:\b|\/|$)/;
+const LIVE_SAVE_SEGMENT = /\.local\/share\/godot\/app_userdata\/core-loop(?:\b|\/|$)/;
+const SCRATCH_ARTIFACTS_PREFIX = /(?:^|\/)artifacts\/local\//;
+const PARENT_TRAVERSAL = /(?:^|\/)\.\.(?:\/|$)/;
 const NPM_PUBLISH = /\bnpm\s+publish\b/;
 const GH_REPO_DELETE = /\bgh\s+repo\s+delete\b/;
 const NPM_PKG_MUTATE = /\bnpm\s+(?:install|i|uninstall)(?:\s|$)/;
@@ -56,6 +57,19 @@ function tokenize(segment) {
     tokens.push(m[1] ?? m[2] ?? m[3]);
   }
   return tokens;
+}
+
+function touchesLiveSavePath(text) {
+  const str = String(text);
+  if (!LIVE_SAVE_SEGMENT.test(str)) return false;
+  for (const token of tokenize(str)) {
+    for (const part of token.split(/[=<>|;&()]+/).filter(Boolean)) {
+      if (!LIVE_SAVE_SEGMENT.test(part)) continue;
+      if (SCRATCH_ARTIFACTS_PREFIX.test(part) && !PARENT_TRAVERSAL.test(part)) continue;
+      return true;
+    }
+  }
+  return false;
 }
 
 function parseGitInvocation(segment) {
@@ -252,7 +266,7 @@ export function evaluateHook(payload, { inspectProjectGodot = defaultInspectProj
     const targetPath = String(
       args.Path ?? args.path ?? args.AbsolutePath ?? args.TargetFile ?? args.target_file ?? "",
     );
-    if (LIVE_SAVE_PATH.test(targetPath)) {
+    if (touchesLiveSavePath(targetPath)) {
       return deny(
         "Blocked by AGENTS.md: never modify Andrew's live Godot saves under ~/.local/share/godot/app_userdata/core-loop. Use artifacts/local/ instead.",
       );
@@ -276,9 +290,9 @@ export function evaluateHook(payload, { inspectProjectGodot = defaultInspectProj
     if (GH_REPO_DELETE.test(cmd)) {
       return deny("Blocked by AGENTS.md: deleting a repository is denied.");
     }
-    if (LIVE_SAVE_PATH.test(cmd)) {
+    if (touchesLiveSavePath(cmd)) {
       return deny(
-        "Blocked by AGENTS.md: never access or modify Andrew's live Godot saves under ~/.local/share/godot/app_userdata/core-loop. Set XDG_DATA_HOME under artifacts/local/.",
+        "Blocked by AGENTS.md: never access or modify Andrew's live Godot saves under ~/.local/share/godot/app_userdata/core-loop. Set XDG_DATA_HOME/HOME under artifacts/local/.",
       );
     }
 

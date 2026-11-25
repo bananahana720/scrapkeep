@@ -19,6 +19,7 @@ Planning does not dispatch writers or start a sprint. Record decisions in the ex
 
 ## Host adapter
 
-- Antigravity: `/plan-session`. Use `ask_question` for bounded choices, `research` for broad read-only exploration, and `GEMINI.md` for Gemini tier mapping.
-- Claude Code: use `AskUserQuestion` when available for bounded choices and `.claude/agents/` for any separately authorized delegation.
+- Antigravity: `/plan-session`. Use `ask_question` for bounded choices, `research` for broad read-only exploration, and `GEMINI.md` / `AGENTS.md` Rule 11 for worker routing.
+- Claude Code: use `AskUserQuestion` when available for bounded choices and `.claude/agents/` as Rule 11's fallback for any separately authorized delegation.
+- Codex (GPT 6.2 Astra/Sol, rulings `ec`/`ee`/`ej`): limited to world 1 promise cards, QA passes, concept art, model drafts, and non-admitting second opinions; use the host's structured input tool when available.
 - If no structured question tool exists, ask one concise question in chat.

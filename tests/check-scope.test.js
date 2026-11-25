@@ -94,7 +94,12 @@ const contentCases = [
       "tests/fixtures/check-scope/cases.json",
     ],
     scope: "tooling-no-build",
-    commands: ["npm test", "npm run check:docs", "npm run check:project"],
+    commands: [
+      "npm test",
+      "npm run check:docs",
+      "npm run check:project",
+      "scenario review of the changed instructions or configuration against ORCHESTRATOR.md and AGENTS.md",
+    ],
     noBuild: true,
     status: 0,
   },

@@ -1,6 +1,6 @@
 # Scrapkeep in Antigravity and Claude Code
 
-Scrapkeep supports **Google Antigravity (Gemini)** and **Claude Code** as first-class hosts (Codex retired on 17 October 2026). Antigravity loads [GEMINI.md](../../GEMINI.md) with [AGENTS.md](../../AGENTS.md), scoped rules in `.agents/rules/`, subagents in `.agents/agents/`, `PreToolUse` hooks in `.agents/hooks.json`, and skills in `.agents/skills/`. Claude Code loads `CLAUDE.md` (which imports `AGENTS.md`), `.claude/agents/`, and `.claude/skills/` symlinks to `.agents/skills/`.
+Scrapkeep supports **Google Antigravity (Gemini)** and **Claude Code** as first-class hosts (the original Codex lane retired on 17 October 2026; rulings `ec`, `ee`, and `ej` reopen GPT 6.2 Astra and Sol on Codex for world 1 promise cards, QA passes, concept art, model drafts, and non-admitting second review opinions — see [AGENTS.md](../../AGENTS.md) Rule 11 and [START-HERE.md](../../project-guide/handoff/START-HERE.md)). Antigravity loads [GEMINI.md](../../GEMINI.md) with [AGENTS.md](../../AGENTS.md), scoped rules in `.agents/rules/`, subagents in `.agents/agents/`, `PreToolUse` hooks in `.agents/hooks.json`, and skills in `.agents/skills/`. Claude Code loads `CLAUDE.md` (which imports `AGENTS.md`), `.claude/agents/`, and `.claude/skills/` symlinks to `.agents/skills/`.
 
 ## Use it
 

@@ -116,6 +116,8 @@ else:
         gate_out = (gate_proc.stdout + "\n" + gate_proc.stderr)[-4000:]
 
         phase(f"Card {cid}: Independent Review")
+        # AGENTS.md Rules 4 & 11 (ruling ej): admission reviews require Gemini 4 Neon at high;
+        # default to "inherit" so a Neon-high coordinator session stays compliant.
         rev_res = await agent(
             (
                 f"Independently review candidate for BACKLOG.md card {cid}.\n"
@@ -129,7 +131,7 @@ else:
             role=f"Reviewer {cid}",
             type_name="scrapkeep-reviewer-medium",
             workspace="inherit",
-            model="pro",
+            model=args.get("reviewer_model") or "inherit",
         )
         return {
             "card_id": cid,

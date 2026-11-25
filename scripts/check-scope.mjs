@@ -170,6 +170,7 @@ function main() {
     if (!groups.has(entry.name)) groups.set(entry.name, []);
     groups.get(entry.name).push(file);
   }
+  const hasConfiguration = groups.has("configuration");
   if (
     toolingNoBuild(
       groups,
@@ -185,6 +186,10 @@ function main() {
   const uiChanged = files.some((file) => uiPaths.some((pattern) => pattern.test(file)));
   const commands = new Set();
   for (const entry of present) for (const command of entry.commands) commands.add(command);
+  if (hasConfiguration) {
+    const configEntry = classes.find((entry) => entry.name === "configuration");
+    for (const command of configEntry.commands) commands.add(command);
+  }
   if (uiChanged)
     commands.add("CONTRIBUTING.md Verification browser checks for the changed UI paths");
 

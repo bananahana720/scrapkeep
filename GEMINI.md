@@ -2,15 +2,15 @@
 
 [AGENTS.md](AGENTS.md) is canonical. Read order: [START-HERE.md](project-guide/handoff/START-HERE.md) -> [STATE.md](project-guide/handoff/STATE.md) -> your brief and cited rows of [DECISIONS.md](project-guide/handoff/DECISIONS.md). See [AI-WORKFLOW.md](docs/project/AI-WORKFLOW.md) for cross-host workflow details.
 
-## Gemini Model Tier Map (Ruling bp / ej fallback)
+## Worker Routing & Fallback Tier Map (Rule 11 / Ruling ej)
 
-Native subagents live in `.agents/agents/scrapkeep-*.md` (fallback to `AGENTS.md` rule 11 / ruling ej):
+`AGENTS.md` Rule 11 (ruling `ej`) owns active worker routing: Claude Fable 5.2 leads design/planning, Claude Opus 5.5 takes 3D units, and Gemini 4 Neon at high effort handles code, tests, formal models, gate runs, and every independent review (Rule 4). Native subagents in `.agents/agents/scrapkeep-*.md` keep the older `ruling bp` tier pins as Rule 11's fallback when a named worker cannot run:
 
 | Tier | Model | Subagents | Scope Notes |
 | --- | --- | --- | --- |
-| Fast | `flash` | `scrapkeep-explorer`, `scrapkeep-writer-low`, `scrapkeep-writer`, built-in `research` / `browser` | Read-only lookup and bounded writer units |
-| Mid | `pro` | `scrapkeep-verifier`, `scrapkeep-reviewer-medium` | Independent test receipts and bounded mechanical PR reviews |
-| Top | `inherit` | `scrapkeep-reviewer` | Consequential Bible, ADR, or contract judgement |
+| Fast | `flash` | `scrapkeep-explorer`, `scrapkeep-writer-low`, `scrapkeep-writer`, built-in `research` / `browser` | Read-only lookup and bounded writer units (fallback pin) |
+| Mid | `pro` | `scrapkeep-verifier`, `scrapkeep-reviewer-medium` | Independent test receipts and fallback mechanical review (Rule 4/11 admission requires Gemini 4 Neon at high) |
+| Top | `inherit` | `scrapkeep-reviewer` | Consequential Bible, ADR, or contract judgement (inherits Neon high) |
 
 Report active Gemini model and tier from runtime metadata if exposed, otherwise state unavailable.
 

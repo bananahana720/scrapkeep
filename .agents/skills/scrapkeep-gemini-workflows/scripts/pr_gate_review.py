@@ -94,8 +94,11 @@ for c in checks:
     log(f"{c['command']} -> exit {c['exit_code']}")
 
 phase("Independent review")
+# AGENTS.md Rules 4 & 11 (ruling ej): every independent admission review must run on a fresh
+# Gemini 4 Neon session at high effort. Defaulting model="inherit" preserves the caller's Neon-high
+# session; an explicit fallback model (e.g. "pro") is advisory only and does not admit a unit.
 reviewer_type = "scrapkeep-reviewer" if consequential else "scrapkeep-reviewer-medium"
-reviewer_model = "inherit" if consequential else "pro"
+reviewer_model = args.get("reviewer_model") or "inherit"
 review_schema = {
     "type": "object",
     "properties": {

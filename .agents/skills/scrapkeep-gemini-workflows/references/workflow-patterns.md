@@ -12,11 +12,11 @@ Use `run_workflow` when orchestration logic is code: fanning out across files or
 ## Included Scripts
 
 1. `scripts/pr_gate_review.py`:
-   - `Args`: `{"base": "<optional; defaults to Open stage in STATE.md>", "candidate": "HEAD", "consequential": false, "acceptance": ""}`.
-   - Runs `node scripts/check-scope.mjs`, executes `npm run check:agents`, `npm run check:skills`, and `check:scope`-selected npm commands via `subprocess.run`, captures `git diff`, and dispatches `scrapkeep-reviewer-medium` (or `scrapkeep-reviewer` when `consequential` is true) with structured `{verdict, findings, evidence_level, summary}`.
+   - `Args`: `{"base": "<optional; defaults to Open stage in STATE.md>", "candidate": "HEAD", "consequential": false, "reviewer_model": "inherit", "acceptance": ""}`.
+   - Runs `node scripts/check-scope.mjs`, executes `npm run check:agents`, `npm run check:skills`, and `check:scope`-selected npm commands via `subprocess.run`, captures `git diff`, and dispatches `scrapkeep-reviewer-medium` (or `scrapkeep-reviewer` when `consequential` is true) with `model="inherit"` by default (so a Gemini 4 Neon high session satisfies `AGENTS.md` Rules 4 & 11; fallback `pro` is advisory only) and structured `{verdict, findings, evidence_level, summary}`.
 2. `scripts/card_batch.py`:
-   - `Args`: `{"cards": ["<ID>"], "section": "", "limit": 2, "dry_run": true}`.
-   - Calls `node scripts/card-runner.mjs --json` to enforce `BACKLOG.md` refusal rules, then optionally runs an isolated `workspace="share"` `scrapkeep-writer`, captures coordinator `git diff` + `npm run sketch:fast` receipts via `subprocess.run`, and passes only card + diff + receipts to `scrapkeep-reviewer-medium` without pushing or stacking.
+   - `Args`: `{"cards": ["<ID>"], "section": "", "limit": 2, "dry_run": true, "reviewer_model": "inherit"}`.
+   - Calls `node scripts/card-runner.mjs --json` to enforce `BACKLOG.md` refusal rules, then optionally runs an isolated `workspace="share"` `scrapkeep-writer`, captures coordinator `git diff` + `npm run sketch:fast` receipts via `subprocess.run`, and passes only card + diff + receipts to `scrapkeep-reviewer-medium` (`model="inherit"` by default per Rule 11) without pushing or stacking.
 
 ## Validation
 
