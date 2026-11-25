@@ -2371,6 +2371,83 @@
    }
   },
   {
+   "id": "grapple_mut_det_cord_line",
+   "path": "res://assets/models/grapple_muts/grapple_mut_det_cord_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Det-Cord Line, burst/split, swaps Line: banded charcoal & brass cord with fuse knots every metre)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_dragnet_siphon_head",
+   "path": "res://assets/models/grapple_muts/grapple_mut_dragnet_siphon_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Dragnet Siphon, salvage, swaps Head: open mesh basket head with salvage rings & mouth bone)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_hot_wire_line",
+   "path": "res://assets/models/grapple_muts/grapple_mut_hot_wire_line.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Hot-Wire Arc Cutter, heat, swaps Line: amber-orange internal glow + heat-coil ribbing)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_live_bus_head",
+   "path": "res://assets/models/grapple_muts/grapple_mut_live_bus_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Live-Bus Conductor, arc/chain, swaps Head: ceramic/bone insulator bells + copper bus bar, AMBER #E5A044)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_sonic_snap_sling_drive",
+   "path": "res://assets/models/grapple_muts/grapple_mut_sonic_snap_sling_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Sonic Snap-Sling, speed, swaps Drive: coil-spring drum with visible ratchet pawl bone)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_tether_slam_drive",
+   "path": "res://assets/models/grapple_muts/grapple_mut_tether_slam_drive.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Tether-Slam Clutch, pull/kinetic, swaps Drive: heavy flywheel clutch drum with inertia weights)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
+   "id": "grapple_mut_wrecking_flail_head",
+   "path": "res://assets/models/grapple_muts/grapple_mut_wrecking_flail_head.glb",
+   "class": "detail",
+   "ships": true,
+   "loader": "W47-GRAPPLE-MUTS-CODE grapple mutation swap (Wrecking Flail, mass/heft, swaps Head: weighted cast-iron demolition shackle head)",
+   "provenance": {
+    "recipe": "tools/blender/grapple_mut_parts.py",
+    "concept": "artifacts/local/w46-gate/asset-kinetic-pipeline/sheets/grounded/g11-universal-grapple-rigs-b.png"
+   }
+  },
+  {
    "id": "anchor_collar",
    "path": "res://assets/models/highdraft/anchor_collar.glb",
    "class": "prop",
@@ -42878,6 +42955,13 @@
   "grapple_kest_head",
   "grapple_kest_line",
   "grapple_kest_mount",
+  "grapple_mut_det_cord_line",
+  "grapple_mut_dragnet_siphon_head",
+  "grapple_mut_hot_wire_line",
+  "grapple_mut_live_bus_head",
+  "grapple_mut_sonic_snap_sling_drive",
+  "grapple_mut_tether_slam_drive",
+  "grapple_mut_wrecking_flail_head",
   "grapple_rivet_drive",
   "grapple_rivet_head",
   "grapple_rivet_line",
