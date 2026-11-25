@@ -233,6 +233,12 @@ test("allows safe commands and edits including npm ci, scratch Godot save paths 
     "cat artifacts/local/../../../home/andrew/.local/share/godot/app_userdata/core-loop/profile.json",
     "cp artifacts/local/run/.local/share/godot/app_userdata/core-loop/save.json ~/.local/share/godot/app_userdata/core-loop/save.json",
     "echo hi>~/.local/share/godot/app_userdata/core-loop/save.json",
+    "rm -rf ~/.local/share/godot/app_userdata/core-loop/artifacts/local/x",
+    "rm -rf ~/.local/share/godot/app_userdata/core-loop/{save.json,x/artifacts/local/y}",
+    "rm -rf /home/andrew/.local/share/godot/app_userdata/core-loop/artifacts/local/x",
+    "rm -rf /home/andrew/.local/share/godot/app_userdata/core-loop/artifacts/local/.local/share/godot/app_userdata/core-loop",
+    "cat $HOME/artifacts/local/x/.local/share/godot/app_userdata/core-loop/save.json",
+    "cat artifacts/local/*/.local/share/godot/app_userdata/core-loop/save.json",
   ]) {
     const res = evaluateHook({
       toolCall: { name: "run_command", args: { CommandLine: bypassCmd } },

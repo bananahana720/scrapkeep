@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 const LIVE_SAVE_SEGMENT = /\.local\/share\/godot\/app_userdata\/core-loop(?:\b|\/|$)/;
 const SCRATCH_ARTIFACTS_PREFIX = /(?:^|\/)artifacts\/local\//;
 const PARENT_TRAVERSAL = /(?:^|\/)\.\.(?:\/|$)/;
+const SHELL_EXPANSION = /[{}*$?[\]`]/;
 const NPM_PUBLISH = /\bnpm\s+publish\b/;
 const GH_REPO_DELETE = /\bgh\s+repo\s+delete\b/;
 const NPM_PKG_MUTATE = /\bnpm\s+(?:install|i|uninstall)(?:\s|$)/;
@@ -59,13 +60,24 @@ function tokenize(segment) {
   return tokens;
 }
 
+function isAllowedScratchSavePath(part) {
+  if (PARENT_TRAVERSAL.test(part) || SHELL_EXPANSION.test(part) || part.startsWith("~")) {
+    return false;
+  }
+  const scratchMatch = SCRATCH_ARTIFACTS_PREFIX.exec(part);
+  if (!scratchMatch) return false;
+  const liveMatch = LIVE_SAVE_SEGMENT.exec(part);
+  if (!liveMatch) return true;
+  return scratchMatch.index < liveMatch.index;
+}
+
 function touchesLiveSavePath(text) {
   const str = String(text);
   if (!LIVE_SAVE_SEGMENT.test(str)) return false;
   for (const token of tokenize(str)) {
     for (const part of token.split(/[=<>|;&()]+/).filter(Boolean)) {
       if (!LIVE_SAVE_SEGMENT.test(part)) continue;
-      if (SCRATCH_ARTIFACTS_PREFIX.test(part) && !PARENT_TRAVERSAL.test(part)) continue;
+      if (isAllowedScratchSavePath(part)) continue;
       return true;
     }
   }
