@@ -66,6 +66,8 @@ func _process(delta: float) -> bool:
 			_report("help reuses the diagram", help.get_script() == ControlsDiagram and help.lit_keys().is_empty()
 					and help.shown_keys().size() == notes.diagram().shown_keys().size(),
 				"help diagram %s with %d keys, lit %s" % [help.get_script().resource_path.get_file(), help.shown_keys().size(), help.lit_keys()])
+			var help_fit: Array = help.text_fit_issues()
+			_report("help diagram fits all labels", help_fit.is_empty(), str(help_fit))
 			_game.flow.press_start()
 			_game.flow.choose_class(_class)
 			_next("hold")
@@ -110,6 +112,10 @@ func _check_pages(notes) -> void:
 	var colours_ok: bool = lit.values().all(func(c): return c == tone)
 	_report("%s lights its keys" % def.display_name, got == own and colours_ok and not lit.has("key_w") and not lit.has("key_tab"),
 		"lit %s in %s; the class row's keys are %s" % [got, tone.to_html(false), own])
+	var fit_issues: Array = notes.diagram().text_fit_issues()
+	_report("%s diagram fits every key without clipping or overlap" % def.display_name,
+		fit_issues.is_empty() and notes.diagram().custom_minimum_size.x <= notes._notes.size.x and notes.diagram().custom_minimum_size.y <= notes._notes.size.y,
+		"issues=%s diag=%s panel=%s" % [fit_issues, notes.diagram().custom_minimum_size, notes._notes.size])
 
 
 func _check_turns(notes) -> void:

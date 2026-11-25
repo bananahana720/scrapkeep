@@ -17,7 +17,6 @@ const STATUS_TEXT := {"none": "", "unencountered": "Unencountered", "new": "New"
 const TABS := ["entries", "arcs", "pairs", "trail", "foreman"]
 const TAB_WORDS := {"entries": "Entries", "arcs": "Crew arcs", "pairs": "Chemistry", "trail": "Wire trail", "foreman": "Foreman"}
 const WIDTH := 1020.0
-const LIST_H := 420.0
 const SERIAL := 81
 const CAST_NAMES := {
 	"pylon_engineer": "Sable",
@@ -78,6 +77,11 @@ func _init() -> void:
 	add_theme_constant_override("separation", UiTokens.GAP_M)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+	var top_pad := Control.new()
+	top_pad.custom_minimum_size.y = UiTokens.GAP_L
+	top_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(top_pad)
+
 	var header := PanelContainer.new()
 	header.name = "LogbookHeader"
 	header.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -112,14 +116,14 @@ func _init() -> void:
 	split.name = "SplitView"
 	split.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	split.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	split.custom_minimum_size = Vector2(WIDTH, LIST_H)
+	split.custom_minimum_size = Vector2(WIDTH, 0.0)
 	split.add_theme_constant_override("separation", UiTokens.GAP_M)
 	split.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(split)
 
 	var list_plate := PanelContainer.new()
 	list_plate.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list_plate.custom_minimum_size = Vector2(440.0, LIST_H)
+	list_plate.custom_minimum_size = Vector2(440.0, 0.0)
 	list_plate.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var lp = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, SERIAL + 1)
 	lp.set_content_margin_all(UiTokens.GAP_S)
@@ -142,7 +146,7 @@ func _init() -> void:
 	_detail_panel.name = "DetailPlate"
 	_detail_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_detail_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_detail_panel.custom_minimum_size = Vector2(540.0, LIST_H)
+	_detail_panel.custom_minimum_size = Vector2(540.0, 0.0)
 	_detail_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_apply_detail_hand(UiTokens.Hand.KEEPER)
 	split.add_child(_detail_panel)
@@ -176,6 +180,11 @@ func _init() -> void:
 	back = ChoiceButton.new("back", "key_esc", "Back")
 	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	foot.add_child(back)
+
+	var bottom_pad := Control.new()
+	bottom_pad.custom_minimum_size.y = UiTokens.GAP_L
+	bottom_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(bottom_pad)
 
 
 func refresh(codex, profile, sitting := false, pages: Array = []) -> void:

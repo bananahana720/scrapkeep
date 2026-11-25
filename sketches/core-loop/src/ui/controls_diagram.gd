@@ -26,16 +26,17 @@ const ROWS := [
 const MOUSE_KEYS := ["key_lmb", "key_rmb"]
 const LOOK := "key_mouse"
 const ARROWS := {"key_w": Vector2.UP, "key_a": Vector2.LEFT, "key_s": Vector2.DOWN, "key_d": Vector2.RIGHT}
-const U := 84.0
-const ROW_H := 88.0
+const U := 98.0
+const ROW_H := 98.0
 const GAP := 6.0
 const CAP := 22.0
 const ICON := 30.0
 const FONT := UiTokens.CAPTION
 const EXTRA_FONT := UiTokens.CAPTION
-const MOUSE_GAP := 34.0
-const MOUSE_SIZE := Vector2(132.0, 206.0)
-const MOUSE_LABEL := 112.0
+const MOUSE_GAP := 24.0
+const MOUSE_SIZE := Vector2(124.0, 200.0)
+const MOUSE_LEFT_LABEL := 54.0
+const MOUSE_RIGHT_LABEL := 108.0
 const ARC_R := 17.0
 const ARC_W := 4.0
 
@@ -45,7 +46,7 @@ var _keys := {}
 
 func _init(class_def: Resource = null) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(_board_width() + MOUSE_GAP + MOUSE_LABEL * 2.0 + MOUSE_SIZE.x, ROWS.size() * ROW_H)
+	custom_minimum_size = Vector2(_board_width() + MOUSE_GAP + MOUSE_LEFT_LABEL + MOUSE_RIGHT_LABEL + MOUSE_SIZE.x, ROWS.size() * ROW_H)
 	set_class(class_def)
 
 
@@ -107,6 +108,43 @@ func drawn_words() -> PackedStringArray:
 			if _keys[key][field] != "":
 				out.append(_keys[key][field])
 	return out
+
+
+func text_fit_issues() -> Array[String]:
+	var issues: Array[String] = []
+	var font := UiFonts.bold()
+	for r in ROWS.size():
+		var x := 0.0
+		for spec in ROWS[r]:
+			var key: String = spec[0]
+			var rect := Rect2(Vector2(x, r * ROW_H), Vector2(spec[1] * U, ROW_H)).grow(-GAP * 0.5)
+			x += spec[1] * U
+			if not _keys.has(key):
+				continue
+			var entry: Dictionary = _keys[key]
+			var below := _label_rect(rect, rect.size.x)
+			if entry["extra"] == "":
+				var ms := font.get_multiline_string_size(entry["label"], HORIZONTAL_ALIGNMENT_CENTER, below.size.x, FONT, 2)
+				if ms.x > below.size.x + 0.5 or ms.y > below.size.y + 0.5:
+					issues.append("%s label '%s' %s > %s" % [key, entry["label"], ms, below.size])
+			elif rect.size.x < 2.0 * U:
+				var band := Vector2(below.size.x, below.size.y * 0.5)
+				var ms1 := font.get_multiline_string_size(entry["label"], HORIZONTAL_ALIGNMENT_CENTER, band.x, FONT, 2)
+				var ms2 := font.get_multiline_string_size(entry["extra"], HORIZONTAL_ALIGNMENT_CENTER, band.x, EXTRA_FONT, 2)
+				if ms1.x > band.x + 0.5 or ms1.y > band.y + 0.5:
+					issues.append("%s label '%s' %s > %s" % [key, entry["label"], ms1, band])
+				if ms2.x > band.x + 0.5 or ms2.y > band.y + 0.5:
+					issues.append("%s extra '%s' %s > %s" % [key, entry["extra"], ms2, band])
+			else:
+				var half := rect.size.x * 0.5
+				var left_box := _label_rect(rect, half)
+				var ms1 := font.get_multiline_string_size(entry["label"], HORIZONTAL_ALIGNMENT_CENTER, left_box.size.x, FONT, 2)
+				var ms2 := font.get_multiline_string_size(entry["extra"], HORIZONTAL_ALIGNMENT_CENTER, left_box.size.x, FONT, 2)
+				if ms1.x > left_box.size.x + 0.5 or ms1.y > left_box.size.y + 0.5:
+					issues.append("%s label '%s' %s > %s" % [key, entry["label"], ms1, left_box.size])
+				if ms2.x > left_box.size.x + 0.5 or ms2.y > left_box.size.y + 0.5:
+					issues.append("%s extra '%s' %s > %s" % [key, entry["extra"], ms2, left_box.size])
+	return issues
 
 
 static func _board_width() -> float:
@@ -184,12 +222,12 @@ static func arc_key() -> String:
 
 
 func _label_rect(tile: Rect2, width: float) -> Rect2:
-	var top := CAP + 14.0
-	return Rect2(tile.position + Vector2(4.0, top), Vector2(width - 8.0, tile.size.y - top - 6.0))
+	var top := CAP + 12.0
+	return Rect2(tile.position + Vector2(2.0, top), Vector2(width - 4.0, tile.size.y - top - 4.0))
 
 
 func _mouse() -> void:
-	var left := _board_width() + MOUSE_GAP + MOUSE_LABEL
+	var left := _board_width() + MOUSE_GAP + MOUSE_LEFT_LABEL
 	var body := Rect2(Vector2(left, (size.y - MOUSE_SIZE.y) * 0.5 - 10.0), MOUSE_SIZE)
 	var split := body.position.y + MOUSE_SIZE.y * 0.42
 	var body_box := _plate(Color(Palette.SAND, 0.8), Color(Palette.CHARCOAL, 0.9), 2)
