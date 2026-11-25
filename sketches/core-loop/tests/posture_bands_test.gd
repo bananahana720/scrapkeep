@@ -110,8 +110,10 @@ const PICK := {"plating": 110.0, "curve": 2.0, "ram_shatters": false}
 # lengthened the small-arm slice fight from 54.4 s to 62.0 s over 24 seeds while grown stayed at 25.0 s (within 10%
 # of 25.6 s, ratio 2.48x over the 1.85x floor, small 24/24, camper 0/24). Pinned on Mac beside Linux 54.4 s via
 # PlatformPin.pick (ruling eb); re-read Linux 54.4 s on a Linux machine before relying on it there.
+# 2026-11-25 (W46-S1, b4381b48a, ahana Linux): re-read Linux small pin alongside Mac 62.0 s —
+# live small 63.3 s (24/24 broke), grown 25.6 s (in 25-45 s, ratio 2.47x >= 1.85x), camper 0/24.
 const GROWTH := 1.85
-const EXPECT_SMALL_S := 54.4
+const EXPECT_SMALL_S := 63.3
 const EXPECT_SMALL_S_MAC := 62.0
 const EXPECT_GROWN_S := 25.6
 const SWEEP := "res://tools/posture_sweep.tsv"

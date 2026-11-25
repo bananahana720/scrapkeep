@@ -566,6 +566,8 @@ func _step_cranes(delta: float, ball: Vector3) -> void:
 			_next_attack = clock + 0.25
 	for i in 2:
 		_step_crane(i, delta, ball)
+		if not ctx.flow.in_play():
+			return
 
 
 # The sector is centred on the ground under the crane's pivot and aimed at the ball's
@@ -592,6 +594,11 @@ func _commit_crane(i: int, ball: Vector3) -> bool:
 	return true
 
 
+func _ball_cruising() -> bool:
+	return ctx != null and ctx.player != null and ctx.tuning != null \
+		and ctx.player.planar_velocity().length() >= ctx.tuning.f("cruise")
+
+
 func _step_crane(i: int, delta: float, ball: Vector3) -> void:
 	var c: Dictionary = _cranes[i]
 	var at: Vector3 = ship.magnet_rest(i)
@@ -606,8 +613,10 @@ func _step_crane(i: int, delta: float, ball: Vector3) -> void:
 			glow = 1.0
 			ship.cue("crane_sweep", h.get_instance_id())
 			at = _head(h, lerpf(h.a_from, h.a_to, h.live_fraction()), head_r)
-			if not c["caught"] and h.contains(ball) and _swept(h, ball):
+			if not c["caught"] and h.contains(ball) and _swept(h, ball) and not _ball_cruising():
 				_crane_catch(i, ball, at)
+				if not ctx.flow.in_play():
+					return
 		c["hold_at"] = at
 	elif c.get("held", 0) > 0:
 		at = c["hold_at"]
@@ -638,12 +647,16 @@ func _crane_catch(i: int, ball: Vector3, magnet_at: Vector3) -> void:
 	c["caught"] = true
 	catches += 1
 	_tug(ball, magnet_at)
-	if ctx.run.mass < 1.0:
-		return
-	var steal_share := Rules.REEL_STEAL_SHARE if reeling() else Rules.STEAL_SHARE
-	var steal_cap := Rules.REEL_STEAL_MAX if reeling() else Rules.STEAL_MAX
-	var amount := clampi(int(round(ctx.run.mass * steal_share)), Rules.STEAL_MIN, steal_cap)
-	var taken: int = ctx.run.lose_scrap(amount, ball, "crane")
+	var taken := 0
+	if ctx.run.mass >= 1.0:
+		var steal_share := Rules.REEL_STEAL_SHARE if reeling() else Rules.STEAL_SHARE
+		var steal_cap := Rules.REEL_STEAL_MAX if reeling() else Rules.STEAL_MAX
+		var amount := clampi(int(round(ctx.run.mass * steal_share)), Rules.STEAL_MIN, steal_cap)
+		taken = ctx.run.lose_scrap(amount, ball, "crane")
+	if not reeling():
+		ctx.run.damage(ChallengeDials.damage("brindle", Rules.CRANE_DAMAGE, phase), "crane")
+		if not ctx.flow.in_play():
+			return
 	if taken <= 0:
 		return
 	var h = c["hazard"]
@@ -1154,16 +1167,20 @@ func _step_vents(ball: Vector3) -> void:
 
 
 func _reel_sear(ball: Vector3, cause: String) -> void:
-	if not reeling() or not ctx.run.armor_mode or ctx.run.mass < 1.0:
+	if not ctx.run.armor_mode or ctx.run.mass < 1.0:
 		return
-	var sear := clampi(int(round(ctx.run.mass * Rules.REEL_SEAR_SHARE)), 0, Rules.REEL_SEAR_MAX)
+	var share := Rules.REEL_SEAR_SHARE if reeling() else Rules.SLOW_SEAR_SHARE
+	var cap := Rules.REEL_SEAR_MAX if reeling() else Rules.SLOW_SEAR_MAX
+	var sear := clampi(int(round(ctx.run.mass * share)), 0, cap)
 	if sear > 0:
 		ctx.run.lose_scrap(sear, ball, cause)
 
 
-func _slag_hit(h, ball: Vector3) -> void:
-	_reel_sear(ball, "brindle_slag")
-	ctx.run.damage(ChallengeDials.damage("brindle", Rules.SLAG_DAMAGE, phase), "brindle_slag")
+func _slag_hit(h, ball: Vector3, skim := false) -> void:
+	if not skim:
+		_reel_sear(ball, "brindle_slag")
+	var dmg := ChallengeDials.damage("brindle", Rules.SLAG_DAMAGE, phase) * (Rules.SKIM_SLAG_MULT if skim else 1.0)
+	ctx.run.damage(dmg, "brindle_slag")
 	# A killing hit ends the run inside damage(), and flow tears the arena down before it returns.
 	if not ctx.flow.in_play():
 		return
@@ -1362,7 +1379,7 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 			and (not h.cued or h.age >= h.warn_seconds + 0.025):
 		var along: float = h.lane_along(ball)
 		if along >= front_before - 1.0 and along <= front + CHARGE_REACH:
-			_charge_hit(h, ball)
+			_charge_hit(h, ball, _ball_cruising())
 			if not ctx.flow.in_play():
 				return
 	var will_hook: bool = not _charge["into_wall"] and not _charge.get("cued", false) \
@@ -1391,9 +1408,11 @@ func _run_charge(delta: float, ball: Vector3) -> void:
 
 # A charge hit shoves the ball sideways out of the lane and up, never along it, so the
 # hull can never carry the ball into the wall.
-func _charge_hit(h, ball: Vector3) -> void:
-	_reel_sear(ball, "brindle_charge")
-	ctx.run.damage(ChallengeDials.damage("brindle", Rules.CHARGE_DAMAGE, phase), "brindle_charge")
+func _charge_hit(h, ball: Vector3, skim := false) -> void:
+	if not skim:
+		_reel_sear(ball, "brindle_charge")
+	var dmg := Rules.CHARGE_DAMAGE if skim else ChallengeDials.damage("brindle", Rules.CHARGE_DAMAGE, phase)
+	ctx.run.damage(dmg, "brindle_charge")
 	if not ctx.flow.in_play():
 		return
 	_grace[h.get_instance_id()] = clock + Rules.CHARGE_GRACE
@@ -1737,7 +1756,7 @@ func _step_hazards(delta: float, ball: Vector3) -> void:
 		if h.shape == Hazard.Shape.ANNULUS and h.is_live() \
 				and (not h.cued or h.age >= h.warn_seconds + 0.025):
 			if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):
-				_slag_hit(h, ball)
+				_slag_hit(h, ball, _ball_cruising())
 				# A killing ring ended the run and exit_arena cleared the list: keep it cleared.
 				if not ctx.flow.in_play():
 					return

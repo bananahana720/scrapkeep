@@ -620,6 +620,7 @@ func _brindle() -> void:
 	var centre: Vector3 = boss.arena.global_position
 	# Through the phase's transition beat, the ball parked at the centre.
 	for i in 90 * 6:
+		_game.run.heal(1000.0)
 		_place(centre + Vector3.UP, Vector3.ZERO)
 		boss.advance(DT)
 		if not boss._in_transition() and boss._charge.get("state", "") == boss.CHARGE_REST:

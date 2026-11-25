@@ -84,9 +84,9 @@ func _check(mult: float) -> void:
 		_place_ball(warden.global_position + Vector3(0.0, 1.0, 0.5))
 		warden._step_pulse(DT, true)
 		guard += 1
-	# This Warden stands on stage 1, where the pulse ships at x1.3 (wave 37 unit D6); the multiplier under test
+	# This Warden stands on stage 1, where the pulse ships at x4.0 (W46-S1); the multiplier under test
 	# multiplies on top of it.
-	_t.check("x%.0f: the pulse landed on the core ring at the dam's x1.3" % mult, not _hits.is_empty() and is_equal_approx(float(_hits[0]), Warden.PULSE_DAMAGE * 1.3 * mult), str(_hits))
+	_t.check("x%.0f: the pulse landed on the core ring at the dam's x4.0" % mult, not _hits.is_empty() and is_equal_approx(float(_hits[0]), Warden.PULSE_DAMAGE * 4.0 * mult), str(_hits))
 	# Slag: a filled lane burns a ball inside it for SLAG_DAMAGE per second.
 	var lane: Dictionary = warden.slag_lanes[0] if warden.slag_lanes.size() == 1 else {}
 	var node = lane.get("node")

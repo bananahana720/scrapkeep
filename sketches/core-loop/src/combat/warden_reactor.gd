@@ -129,7 +129,7 @@ const LINE_REFERENCE_WEAPON := "rapid_laser"
 # cu). Measured medians, small and grown: 0.8 gave 27.0 and 19.4 s, 0.7 gave 33.1 and 22.4 s; 0.7 is the
 # first that puts both at or over the fight before the deck fix (30.9 and 15.8 s).
 # posture_bands_flume_test holds the fight's length.
-const LINE_PAY := 0.7
+const LINE_PAY := 0.60
 
 var gates_opened := 0
 var rides := 0
@@ -612,7 +612,10 @@ func judge_line_bolt(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 	var target = warden.target
 	if target != null and target.has_method("heft"):
 		heft = sheet_heft(warden, target.heft())
-	var share := pow(heft / LINE_REFERENCE_HEFT, posture.curve)
+	# Cap line-bolt heft scaling at grown heft (HEFT_CLASS_AT[2], 2.2), matching DamPosture's
+	# ordinary ceiling so over-grown Stage-2 builds cannot skip the flume line fight while keeping
+	# small (1.0) vs grown (2.2) posture bands intact.
+	var share := pow(minf(heft, Run.HEFT_CLASS_AT[2]) / LINE_REFERENCE_HEFT, posture.curve)
 	var reference_dps := base_dps(LINE_REFERENCE_WEAPON)
 	var fleet = warden.get("fleet")
 	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null

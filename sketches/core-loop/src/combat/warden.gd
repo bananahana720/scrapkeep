@@ -100,6 +100,32 @@ const SLAG_WIDTH := 4.0
 const SLAG_SECONDS := 6.0
 const SLAG_WARN := 1.0
 const SLAG_DAMAGE := 4.0
+# Meltdown Warden (stage 2 Flume): slow (< cruise) balls caught in molten slag or the core pulse
+# sear a share of loose scrap armour before the hit lands so stopped balls cannot face-tank with
+# spilled-scrap recovery (W46-S1, ruling cu; cruising balls are never seared).
+const MELTDOWN_SEAR_SHARE := 0.60
+const MELTDOWN_SEAR_MAX := 600
+# Mounted World 1 reactor splash (dam_face vent ring between sheets; flume molten jet lane
+# down the tether line so a tethered ball dodges tangentially by swinging sideways): commits a
+# telegraphed mark that presses slow (< cruise) balls while cruising balls slip it cleanly.
+# Every warn stays above ChallengeDials.TELL_FLOOR (0.6 s) and gap stays above WARN_GAP (0.2 s).
+const MELTDOWN_JET_LENGTH := 32.0
+const MELTDOWN_JET_WIDTH := 4.5
+const MELTDOWN_JET_HEIGHT := 20.0
+const MELTDOWN_SPLASH_WARN := 1.25
+const MELTDOWN_SPLASH_PERIOD := 1.15
+# Meltdown overheat: once a mounted flume reactor has pulsed this many times without breaking,
+# its thermal vents erupt as wide radial molten rings around a slow ball (still >= TELL_FLOOR 0.6 s
+# and WARN_GAP 0.2 s, slow-only so cruising balls slip cleanly).
+const MELTDOWN_OVERHEAT_PULSES := 5
+const MELTDOWN_OVERHEAT_RADIUS := 8.0
+const MELTDOWN_OVERHEAT_WARN := 0.72
+const MELTDOWN_OVERHEAT_PERIOD := 0.50
+const MELTDOWN_OVERHEAT_MULT := 1.25
+const DAM_VENT_RADIUS := 6.5
+const DAM_VENT_HEIGHT := 12.0
+const DAM_VENT_WARN := 0.88
+const DAM_VENT_PERIOD := 3.6
 # A ball in the air at most this high over a burning lane is jumping it (the codex's slag_hop).
 const SLAG_HOP_HEIGHT := 8.0
 const ADAPT_CYCLE := 8.0
@@ -168,6 +194,11 @@ var _stagger_time := 0.0
 var _counter_spent := false
 var _counter_ring: Node3D
 var _counter_time := 0.0
+var _splash_ring: Node3D
+var _splash_time := 0.0
+var _splash_cool := 1.0
+var _splash_warn := 1.25
+var _splash_overheat := false
 var _since_pulse := INF
 var _look: Node3D
 var _kit: Node3D
@@ -374,6 +405,7 @@ func _physics_process(delta: float) -> void:
 	if family == Roster.SWARM:
 		_step_guard(delta)
 	_step_pulse(delta, inside)
+	_step_splash(delta, inside)
 	_step_shrug(delta)
 	_step_slag(delta)
 	_step_choir(delta)
@@ -411,7 +443,101 @@ func _step_slag(delta: float) -> void:
 	_slag_burn += SLAG_DAMAGE * delta
 	if _slag_burn >= SLAG_DAMAGE:
 		_slag_burn -= SLAG_DAMAGE
+		_meltdown_sear(_ball())
 		hit_player.emit(SLAG_DAMAGE * ChallengeDials.stage_mult("warden.slag_damage", stage), Vector3.ZERO)
+
+
+func _meltdown_sear(ball: Vector3) -> void:
+	if variant != "meltdown" or fleet == null or fleet.ctx == null or target == null:
+		return
+	if _ball_cruising():
+		return
+	var run = fleet.ctx.get("run")
+	if run == null or not run.armor_mode or run.mass < 1.0:
+		return
+	var sear := clampi(int(round(run.mass * MELTDOWN_SEAR_SHARE)), 0, MELTDOWN_SEAR_MAX)
+	if sear > 0:
+		run.lose_scrap(sear, ball, "warden")
+
+
+func _ball_cruising() -> bool:
+	if target == null:
+		return false
+	var tuning = target.get("tuning")
+	if tuning == null or not target.has_method("planar_velocity"):
+		return false
+	return target.planar_velocity().length() >= tuning.f("cruise")
+
+
+func _is_mounted_dam() -> bool:
+	return spec.get("park_landmark", false) and family == Roster.REACTOR and mounting == "dam_face"
+
+
+func _is_mounted_flume() -> bool:
+	return spec.get("park_landmark", false) and variant == "meltdown"
+
+
+func _commit_splash() -> void:
+	_cancel_splash()
+	if target == null:
+		return
+	var is_flume := _is_mounted_flume()
+	var is_dam := _is_mounted_dam()
+	if not is_flume and not is_dam:
+		return
+	_splash_time = 0.0
+	if is_flume:
+		_splash_overheat = pulses >= MELTDOWN_OVERHEAT_PULSES
+		_splash_warn = MELTDOWN_OVERHEAT_WARN if _splash_overheat else MELTDOWN_SPLASH_WARN
+		if _splash_overheat:
+			_splash_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, _ball(), MELTDOWN_OVERHEAT_RADIUS, MELTDOWN_JET_HEIGHT)
+		else:
+			var out := _flat_to_ball()
+			var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
+			_splash_ring = Telegraph.lane(world_root, terrain, Threat.Type.LANE, global_position, dir, MELTDOWN_JET_LENGTH, MELTDOWN_JET_WIDTH, MELTDOWN_JET_HEIGHT)
+	else:
+		_splash_overheat = false
+		_splash_warn = DAM_VENT_WARN
+		_splash_ring = Telegraph.ring(world_root, terrain, Threat.Type.INSTANT, _ball(), DAM_VENT_RADIUS, DAM_VENT_HEIGHT)
+	_splash_ring.owner_voice = String(Roster.faction(family)["voice"]) if family != Roster.MIND else ""
+
+
+func _step_splash(delta: float, inside: bool) -> void:
+	var is_flume := _is_mounted_flume()
+	var is_dam := _is_mounted_dam()
+	if not is_flume and not is_dam:
+		return
+	var dam_sheet: bool = is_dam and mount_driver != null and mount_driver.has_method("sheet_live") and mount_driver.sheet_live()
+	if staggered() or _dead or target == null or dam_sheet:
+		_cancel_splash()
+		return
+	var period := (MELTDOWN_OVERHEAT_PERIOD if pulses >= MELTDOWN_OVERHEAT_PULSES else MELTDOWN_SPLASH_PERIOD) if is_flume else DAM_VENT_PERIOD
+	if is_instance_valid(_splash_ring):
+		_splash_time += delta
+		_splash_ring.set_progress(_splash_time / _splash_warn)
+		if _splash_time < _splash_warn:
+			return
+		var ball := _ball()
+		if _splash_ring.contains(ball) and not _ball_cruising():
+			_meltdown_sear(ball)
+			var mult := MELTDOWN_OVERHEAT_MULT if _splash_overheat else 1.0
+			hit_player.emit(PULSE_DAMAGE * ChallengeDials.stage_mult("warden.pulse_damage", stage) * mult, Vector3.ZERO)
+		_cancel_splash()
+		return
+	_splash_ring = null
+	if not inside:
+		return
+	_splash_cool -= delta
+	if _splash_cool <= 0.0:
+		_splash_cool = period
+		_commit_splash()
+
+
+func _cancel_splash() -> void:
+	if is_instance_valid(_splash_ring):
+		_splash_ring.queue_free()
+	_splash_ring = null
+	_splash_time = 0.0
 
 
 # True where a lane's footprint lies, by the lane node's own hit test, whether or not it
@@ -855,6 +981,7 @@ func _pulse() -> void:
 	if is_instance_valid(_core_ring) and not _dead:
 		_strike_frames = STRIKE_FRAMES
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
+		_meltdown_sear(ball)
 		hit_player.emit(PULSE_DAMAGE * ChallengeDials.stage_mult("warden.pulse_damage", stage), Vector3.ZERO)
 	if _flaring >= 0:
 		_shrug_left = shrug_delay
@@ -881,6 +1008,7 @@ func _pulse() -> void:
 func _exit_tree() -> void:
 	super._exit_tree()
 	_cancel_counter()
+	_cancel_splash()
 	_hook("on_exit", [self])
 	if is_instance_valid(_core_ring):
 		_core_ring.queue_free()

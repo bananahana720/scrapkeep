@@ -5,7 +5,19 @@ const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
+const Rules := preload("res://src/boss/boss_rules.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
+
+
+class MemoryStore extends RefCounted:
+	var refusal := ""
+	var last_error := ""
+	var cleared := false
+
+	func clear() -> bool:
+		cleared = true
+		return true
 
 # The wave 12 boss bug hunt (BUGFIX-BOSS, 2026-10-09), one check per confirmed finding:
 # scrap a magnet still holds when phase 1 ends is paid back as returned pickups (F001);
@@ -42,8 +54,10 @@ func _physics_process(_delta: float) -> bool:
 	_magnet_rest_check()
 	_cable_check()
 	_signal_glow_check()
+	_bare_hull_crane_damage_check()
 	_held_at_phase_end_check()
 	_root_track_checks()
+	_crane_kill_teardown_check()
 	_game.free()
 	quit(_t.verdict())
 	return false
@@ -182,3 +196,60 @@ func _root_track_checks() -> void:
 	_t.eq("F008 split_player leaves the rest on the main player", _paths(split.get_animation("lift")), ["OtherCap0:position"])
 	stripped.get_parent().free()
 	split.get_parent().free()
+
+
+func _bare_hull_crane_damage_check() -> void:
+	if not _t.eq("W46-S1 bare-hull check starts in phase 1", _boss.phase, 1):
+		return
+	var ball: Vector3 = Harness.ground_spot(_boss, 0.0, 20.0)
+	Harness.put_ball(_game, ball, Vector3.ZERO)
+	_game.run.mass = 0.0
+	_game.run.scrap = 0
+	_game.run.hp = _game.run.max_hp
+	var expected: float = ChallengeDials.damage("brindle", Rules.CRANE_DAMAGE, 1)
+	_boss._commit_crane(0, ball)
+	_boss._crane_catch(0, ball, ball)
+	var lost_normal: float = _game.run.max_hp - _game.run.hp
+	_t.check("W46-S1 phase 1 crane catch at mass 0 deals CRANE_DAMAGE when not reeling",
+		is_equal_approx(lost_normal, expected) and _boss._cranes[0].get("held", 0) == 0,
+		"lost %.2f (expected %.2f), held %d" % [lost_normal, expected, _boss._cranes[0].get("held", 0)])
+	_game.run.hp = _game.run.max_hp
+	_game.run.mass = 0.0
+	_boss._posture.chunks = BossPosture.CHUNKS - 1
+	var was_reeling: bool = _boss.reeling()
+	_boss._commit_crane(1, ball)
+	_boss._crane_catch(1, ball, ball)
+	var lost_reeling: float = _game.run.max_hp - _game.run.hp
+	_t.check("W46-S1 phase 1 crane catch at mass 0 deals 0 damage while reeling",
+		was_reeling and is_equal_approx(lost_reeling, 0.0) and _boss._cranes[1].get("held", 0) == 0,
+		"reeling %s, lost %.2f, held %d" % [was_reeling, lost_reeling, _boss._cranes[1].get("held", 0)])
+	_boss.jump_to_phase(1)
+	_game.run.hp = _game.run.max_hp
+
+
+func _crane_kill_teardown_check() -> void:
+	_boss.jump_to_phase(1)
+	var store := MemoryStore.new()
+	_game.flow.store = store
+	_boss._next_attack = _boss.clock + 100.0
+	var pivot: Vector3 = _boss.ship.pivot(0)
+	var raw := Vector3(pivot.x + 10.0, 0.0, pivot.z)
+	var ball := Vector3(raw.x, _boss.arena.ground(raw) + 1.0, raw.z)
+	Harness.put_ball(_game, ball, Vector3.ZERO)
+	_game.run.mass = 0.0
+	_game.run.scrap = 0
+	_game.run.hp = 1.0
+	var committed: bool = _boss._commit_crane(0, ball)
+	var h = _boss._cranes[0].get("hazard")
+	if h != null:
+		h.step(h.warn_seconds)
+		h.step(h.live_seconds * 0.5)
+	_boss._step_cranes(DT, ball)
+	_t.check("W46-S1 killing phase 1 crane hit inside _step_cranes tears down cleanly with store != null",
+		committed and not _game.flow.in_play() and _game.flow.state_name() == "summary"
+			and _boss.ship == null and _boss.arena == null and _boss.state_name() == "idle"
+			and store.cleared and _game.run.hp <= 0.0,
+		"committed %s, flow %s (in_play %s), ship null %s, arena null %s, boss %s, cleared %s, hp %.2f"
+			% [committed, _game.flow.state_name(), _game.flow.in_play(), _boss.ship == null,
+				_boss.arena == null, _boss.state_name(), store.cleared, _game.run.hp])
+	_game.flow.store = null
