@@ -12,7 +12,7 @@ const WEB_PATTERN =
   /^(index\.html|orchard\.html|vite\.config\.js|package\.json|package-lock\.json|public\/|src\/|server\/|scripts\/check-build\.mjs|scripts\/verify\.mjs)/;
 const GODOT_PATTERN = /^sketches\/core-loop\//;
 const NODE_PATTERN =
-  /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|native\/|docs\/playtests\/verdicts\.ndjson|project-guide\/handoff\/sitting-kit\/|\.github\/workflows\/)/;
+  /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|project-guide\/handoff\/sitting-kit\/|\.github\/workflows\/)/;
 const DOCS_PATTERN =
   /(\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/|^scripts\/(?:check-docs|check-project|check-skills|brief-check|wave-state|known-failing|gate\/weekly))/;
 const WORKFLOW_PATTERN = /^(\.github\/workflows\/|scripts\/ci\/)/;

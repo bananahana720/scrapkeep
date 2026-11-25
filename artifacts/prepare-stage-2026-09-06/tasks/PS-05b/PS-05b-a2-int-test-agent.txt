@@ -1,4 +1,0 @@
-Ran 85 tests in 1.211s
-
-OK
-test:agent exit=0

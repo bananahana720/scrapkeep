@@ -42,7 +42,7 @@ extends RefCounted
 # Moving a row to ACT means building the twin first; the test cannot see game changes that add a
 # new warning, only that the new fact is listed.
 
-const OPEN_PINNED := 6
+const OPEN_PINNED := 5
 # Rows read only by name, not traced through code. This number may only go down.
 const UNTRACED_PINNED := 305
 # Not-act rows for a cue in DANGER_SOUNDS (printed by the test with their reasons).
@@ -51,8 +51,27 @@ const DANGER_NOT_ACT_PINNED := 1
 # Files whose scanned call sites are world 1's own (Brindle, the yard locks and overtime, the called shot,
 # the Wardens, the Spillway rogue and miniboss) or core audio and effects that play in every world.
 const WORLD1_FILES := ["boss.gd", "stage_locks.gd", "overtime.gd", "called_shot.gd", "warden.gd", "stub_boss.gd", "miniboss.gd", "rogue.gd", "audio.gd", "juice.gd", "panel_fx.gd", "projectile.gd"]
-# Facts that can fire in world 1 and no rule finds: fact id -> why (none today).
-const WORLD1_EXTRA := {}
+# Facts that can fire in world 1 and no rule finds: fact id -> why.
+const WORLD1_EXTRA := {
+	"WORLD_ROWS:kindness_offered": "stake_devices.gd:_offer_made emits KINDNESS_FACT constant",
+	"UI_ROWS:cadence_rivet_notch_open": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() reload notch open",
+	"UI_ROWS:cadence_rivet_notch_hit": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() reload notch hit",
+	"UI_ROWS:cadence_rivet_spent": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() reload notch spent",
+	"UI_ROWS:cadence_sable_full": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() full charge tick",
+	"UI_ROWS:cadence_sable_bolt": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() charged bolt release",
+	"UI_ROWS:cadence_kest_window": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() snap window open",
+	"UI_ROWS:cadence_kest_snap": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() snap burst",
+	"UI_ROWS:cadence_tarn_window": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() beat-3 window open",
+	"UI_ROWS:cadence_tarn_rend": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() beat-3 heavy rend",
+	"UI_ROWS:cadence_tally_beat": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() stamp beat window",
+	"UI_ROWS:cadence_tally_paid": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() PAID stamp",
+	"UI_ROWS:cadence_cannon_lock": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() lane lock flush",
+	"UI_ROWS:cadence_cannon_rail": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() lane rail crack",
+	"UI_ROWS:cadence_cannon_barrage": "audio.gd:_tend_cadence polls weapon_driver.state_snapshot() lane barrage thump",
+	"UI_ROWS:rail_rise": "audio.gd:_on_buff_changed tracks ctx.buffs active_rows() rise",
+	"UI_ROWS:rail_sink": "audio.gd:_on_buff_expired tracks ctx.buffs visible expiry",
+	"WORLD_ROWS:site_flip": "audio.gd:_play_site_flip tracks site completion and site_markers.visited_sites()",
+}
 # Table facts with no firing site found by the emit scan (their signal is emitted some other way). They
 # sit outside the world 1 check; this number may only go down.
 const UNSITED_PINNED := 130  # +2 (wave 43 sound part 4): guard_critical and the beacon_open state fire from audio.gd with no bus signal of their own
@@ -122,6 +141,8 @@ const ACT := [
 		"script": "res://src/boss/mind.gd", "fn": "_commit_attack", "token": "laid.append(h)"},
 	{"facts": ["cued@boss.gd:_run_charge:charge"], "traced": true, "what": "the hull swings its bow round after the ball through the cue lead",
 		"script": "res://src/boss/boss.gd", "fn": "_step_charges", "token": "_turn_ship(_aim_at(ball), Rules.CHARGE_TURN_RATE, delta)"},
+	{"facts": ["cued@boss.gd:_step_reprise:slag_ring_a"], "traced": true, "what": "Brindle's cued slag ring reprise lays a harmless preview band on the coming ring through the cue lead (W1-105)",
+		"script": "res://src/boss/boss.gd", "fn": "_show_reprise_preview", "token": "_reprise_preview = _bone_ring(\"preview_reprise_slag\""},
 	{"facts": ["cued@miniboss.gd:_after_slam:E04"], "traced": true, "what": "the miniboss raises its fists through the cue lead",
 		"script": "res://src/combat/miniboss.gd", "fn": "_model_pose", "token": "fists = Vector3(0.0, 0.2, -0.5) * t"},
 	{"facts": ["emit:arena_locked@stage_locks.gd:_lock"], "traced": true, "what": "the yard wall rises",
@@ -201,6 +222,45 @@ const ACT := [
 	{"facts": ["roster:hooker.hold", "roster:mag_trapper.hold", "roster:netcaster.hold", "roster:bola_thrower.hold", "roster:winch_drone.hold", "roster:gyro_jammer.hold", "roster:catch_trap.hold"], "traced": true, "what": "holds.gd draws the striped binding line from the holder to the ball and a bracket on the ball for as long as the hold lasts",
 		"script": "res://src/combat/holds.gd", "fn": "_process", "token": "_stripes(mesh, from, ball)",
 		"also": [{"what": "the bracket on the held ball", "script": "res://src/combat/holds.gd", "fn": "_process", "token": "_draw_bracket(ball)"}]},
+	{"facts": ["WORLD_ROWS:quick_sync"], "traced": true, "what": "the Foreman's brass sync ring pulses on the ground while its chasers snap into formation",
+		"script": "res://src/combat/foreman.gd", "fn": "_show_signal", "token": "_sync_ring.visible = level > 0.0 and not _dead"},
+	# Wave 46 E3-04: pilot weapon cadence sound twins (PILOT-CADENCE.md §5.3), Nixie tube rail clacks, and visited-site flip.
+	{"facts": ["UI_ROWS:cadence_rivet_notch_open"], "traced": true, "what": "Rivet's reload notch arc turns live mint on the aim reticle",
+		"script": "res://src/ui/aim_reticle.gd", "fn": "_rivet_marks", "token": "\"role\": \"notch_open\", \"layer\": \"line\""},
+	{"facts": ["UI_ROWS:cadence_rivet_notch_hit"], "traced": true, "what": "Rivet's six chambers fill copper as hot rounds on the aim reticle",
+		"script": "res://src/ui/aim_reticle.gd", "fn": "_rivet_marks", "token": "\"role\": \"chamber_hot\", \"layer\": \"line\""},
+	{"facts": ["UI_ROWS:cadence_rivet_spent"], "traced": true, "what": "Rivet's spent or missed reload notch turns slate on the aim reticle",
+		"script": "res://src/ui/aim_reticle.gd", "fn": "_rivet_marks", "token": "\"role\": \"notch_spent\", \"layer\": \"line\""},
+	{"facts": ["UI_ROWS:cadence_sable_full"], "traced": true, "what": "Sable's charge arc cuts a live mint full-charge tick across twelve on the aim reticle",
+		"script": "res://src/ui/aim_reticle.gd", "fn": "_sable_marks", "token": "\"role\": \"full_tick\", \"layer\": \"line\""},
+	{"facts": ["UI_ROWS:cadence_sable_bolt"], "traced": true, "what": "Sable's charge halo fires its release ring as the charged bolt leaves and the reticle fill empties",
+		"script": "res://src/presentation/player_fx.gd", "fn": "_on_weapon_shot", "token": "_halo.release(dir)",
+		"also": [{"what": "the charge arc on the aim reticle", "script": "res://src/ui/aim_reticle.gd", "fn": "_sable_marks", "token": "\"role\": \"fill\", \"layer\": \"line\""}]},
+	{"facts": ["UI_ROWS:cadence_kest_window"], "traced": true, "what": "Kest's live sticky charge closing fuse ring turns live mint inside the snap window",
+		"script": "res://src/combat/sticky.gd", "fn": "fuse_ring_color", "token": "return Palette.live()",
+		"also": [{"what": "the closing fuse ring repainted on snap state changes", "script": "res://src/combat/sticky.gd", "fn": "sync_snap_state", "token": "_draw_fuse_rings()"}]},
+	{"facts": ["UI_ROWS:cadence_kest_snap"], "traced": true, "what": "Kest's snapped charge bursts with a bone ring and amber edge",
+		"script": "res://src/combat/combat.gd", "fn": "_detonate", "token": "effects.ring(at, radius * 0.88, Palette.SAND)"},
+	{"facts": ["UI_ROWS:cadence_tarn_window"], "traced": true, "what": "Tarn's beat-3 pip turns live mint on the aim reticle",
+		"script": "res://src/ui/aim_reticle.gd", "fn": "_tarn_marks", "token": "\"role\": \"pip_open\", \"layer\": \"line\""},
+	{"facts": ["UI_ROWS:cadence_tarn_rend"], "traced": true, "what": "Tarn's beat-3 heavy rend fires a widened, high-knock sweep bolt",
+		"script": "res://src/combat/combat.gd", "fn": "_fire", "token": "rec[\"knock\"] = float(rec[\"knock\"]) * knock_mult"},
+	{"facts": ["UI_ROWS:cadence_tally_beat"], "traced": true, "what": "Tally's Balance Due ground ring marks the cast rhythm",
+		"script": "res://src/combat/combat.gd", "fn": "_run_balance", "token": "effects.ring(point, Weapons.BALANCE_RADIUS, cue_color)"},
+	{"facts": ["UI_ROWS:cadence_tally_paid"], "traced": true, "what": "Tally's PAID stamp fires a ledger-cream shockwave and stamp ring on struck machines",
+		"script": "res://src/combat/combat.gd", "fn": "_run_balance", "token": "effects.shockwave(point, Weapons.BALANCE_RADIUS, Palette.LEDGER_CREAM)"},
+	{"facts": ["UI_ROWS:cadence_cannon_lock"], "traced": true, "what": "the Cannon's painted ground lane and closing brackets turn live mint at flush lock",
+		"script": "res://src/combat/combat.gd", "fn": "_step_cannon_paint", "token": "ctx.player.indicator.set_shape(\"cannon_paint\", lane_shape)"},
+	{"facts": ["UI_ROWS:cadence_cannon_rail"], "traced": true, "what": "the Cannon's locked Rail fires in bone-white over the lane",
+		"script": "res://src/combat/combat.gd", "fn": "_fire_cannon_lane", "token": "overrides[\"color\"] = Palette.SAND"},
+	{"facts": ["UI_ROWS:cadence_cannon_barrage"], "traced": true, "what": "the Cannon's brackets reopen and turn slate for the Barrage window",
+		"script": "res://src/combat/combat.gd", "fn": "_step_cannon_paint", "token": "ctx.player.indicator.set_shape(\"cannon_bracket_l\", left_bracket)"},
+	{"facts": ["UI_ROWS:rail_rise"], "traced": true, "what": "the Nixie tube housing rises out of the rail socket when a timed or counted buff enters",
+		"script": "res://src/ui/nixie_rail.gd", "fn": "_rise", "token": "return RISE_PX * (1.0 - ease(tube[\"age\"] / RISE, 0.4))"},
+	{"facts": ["UI_ROWS:rail_sink"], "traced": true, "what": "the Nixie tube housing sinks back into the rail socket as the buff expires",
+		"script": "res://src/ui/nixie_rail.gd", "fn": "_rise", "token": "return RISE_PX * minf(1.0, (tube[\"end_age\"] - FADE_DIGIT - COOL) / SINK)"},
+	{"facts": ["WORLD_ROWS:site_flip"], "traced": true, "what": "the site marker records the quiet finished mark (flag, chalk X, scarf post, wreck or severed cable) on first flip",
+		"script": "res://src/presentation/site_markers.gd", "fn": "mark_visited", "token": "_visited[key] = {"},
 ]
 
 const OPEN := [
@@ -212,8 +272,6 @@ const OPEN := [
 		"what": "the Mind's riser, ancient family: same missing mark (world 3, not traced)", "severity": "info"},
 	{"fact": "WORLD_ROWS:sluice_siren", "traced": true, "plays": "src/world/event_director.gd:_advance_park", "pattern": "_park_world(selected, selected.row.telegraph.form, \"telegraph\")",
 		"what": "the flume head gate's siren: industrial.gd handle returns for sluice_surge so no mark is laid; the toast and edge marker show. The water chases but never hurts, hence info. The sound is sluice_siren_two_tone, shared with no other row", "severity": "info"},
-	{"fact": "cued@boss.gd:_step_reprise:slag_ring_a", "traced": true, "plays": "src/boss/boss.gd:_step_reprise", "pattern": "_phases.cue(",
-		"what": "Brindle's slag ring reprise: the cue sounds, the ring commits CUE_LEAD later with the shorter CUED_WARN because the cue paid for it; nothing is drawn during the lead, so a muted player gets a shorter warning and no tell", "severity": "fairness"},
 	{"fact": "sig:weak_point_opened@mind_hand.gd:_go_live", "traced": false, "plays": "src/combat/mind_hand.gd:_go_live", "pattern": "weak_point_opened.emit(",
 		"what": "the Mind hand's lens opens on go-live; world 3, no twin traced", "severity": "info"},
 ]
@@ -248,7 +306,7 @@ const NOT_ACT := [
 	{"why": "a hit taken while the shell is hot: the same hit already sounds hurt and flashes, and this only adds the bite", "traced": true,
 		"facts": ["site:audio.gd:_tend_heat:heat_hot_hit"]},
 	{"why": "a reward, pickup, score or discovery: pays the player and asks nothing", "traced": false,
-		"facts": ["ROWS:achievement_earned", "ROWS:rescue_completed", "ROWS:quick_break", "ROWS:scrap_collected", "ROWS:cogs_collected", "ROWS:part_gained", "ROWS:panel_gained", "ROWS:heft_class_changed", "ROWS:heft_class_dropped", "ROWS:core_gained", "ROWS:synergy_discovered", "ROWS:interaction_found", "ROWS:reward_chosen", "ROWS:tree_offered", "ROWS:tree_picked", "ROWS:ambush_ended", "ROWS:bet_resolved", "ROWS:activity_done", "ROWS:drop_landed", "ROWS:missed_drop", "ROWS:evolution_fired", "site:audio.gd:wire_optional:evolution_fired", "STATE_ROWS:beacon_open", "ROWS:radio_take_found", "ROWS:relay_stake_paid", "ROWS:maker_set_completed", "ROWS:overflow_cashed", "ROWS:trade_taken", "LOOT_ROWS:item_proc", "LOOT_ROWS:par_split", "WORLD_ROWS:ledger_returned"]},
+		"facts": ["ROWS:achievement_earned", "ROWS:rescue_completed", "ROWS:quick_break", "ROWS:scrap_collected", "ROWS:cogs_collected", "ROWS:part_gained", "ROWS:panel_gained", "ROWS:heft_class_changed", "ROWS:heft_class_dropped", "ROWS:core_gained", "ROWS:synergy_discovered", "ROWS:interaction_found", "ROWS:reward_chosen", "ROWS:tree_offered", "ROWS:tree_picked", "ROWS:ambush_ended", "ROWS:bet_resolved", "ROWS:activity_done", "ROWS:drop_landed", "ROWS:missed_drop", "ROWS:evolution_fired", "site:audio.gd:wire_optional:evolution_fired", "STATE_ROWS:beacon_open", "ROWS:radio_take_found", "ROWS:relay_stake_paid", "ROWS:maker_set_completed", "ROWS:overflow_cashed", "ROWS:trade_taken", "LOOT_ROWS:item_proc", "LOOT_ROWS:par_split", "WORLD_ROWS:ledger_returned", "WORLD_ROWS:kindness_offered", "WORLD_ROWS:shift_over"]},
 	{"why": "echo of the player's own move, hit, press or ride; they see it as it happens", "traced": false,
 		"facts": ["UI_ROWS:guard_critical", "ROWS:escape_window", "ROWS:enemy_killed", "ROWS:jumped", "ROWS:boosted", "ROWS:dashed", "ROWS:landed", "ROWS:bumped", "ROWS:slammed", "ROWS:carved", "ROWS:grapple_fired", "ROWS:grapple_released", "ROWS:mounted", "ROWS:dismounted", "ROWS:enemy_struck", "ROWS:shot_fired", "ROWS:special_used", "ROWS:strike_deflected", "ROWS:element_resolved", "ROWS:boss_weak_point_hit", "ROWS:boss_reeled", "ROWS:enemy_rebounded", "ROWS:enemy_pinned", "ROWS:enemy_walled", "ROWS:enemy_ringed_out", "ROWS:vault_kicked", "ROWS:gauge_charging", "ROWS:gauge_released", "ROWS:gauge_cancelled", "ROWS:sprint_started", "ROWS:cc_ignored", "ROWS:cloak_started", "ROWS:cloak_broken", "ROWS:sticky_detonated", "ROWS:rocket_jumped", "ROWS:blink_used", "ROWS:arc_slammed", "ROWS:skid_smashed", "ROWS:demo_slammed", "ROWS:hold_broken", "ROWS:hold_ended", "ROWS:tenacity_gained", "ROWS:shield_vaulted", "ROWS:near_miss", "ROWS:interact_armed", "ROWS:interact_fired", "ROWS:verb_failed", "ROWS:prompt_shown", "ROWS:cause_armed", "ROWS:cause_fired", "ROWS:posture_changed", "ROWS:slot_selected", "ROWS:slot_cast", "ROWS:line_skill_fired", "ROWS:line_skill_expired", "ROWS:active_fired", "ROWS:active_heat", "ROWS:ultimate_started", "ROWS:ultimate_peak", "ROWS:ultimate_landed", "ROWS:ultimate_cancelled", "ROWS:special_broken", "UI_ROWS:posture_break", "UI_ROWS:ability_cooling", "UI_ROWS:ability_active", "UI_ROWS:ability_unavailable", "UI_ROWS:cooldown_refunded", "UI_ROWS:key_glyph", "WORLD_ROWS:drain_gurgle", "WORLD_ROWS:shell_air_shift", "WORLD_ROWS:lift_fired", "WORLD_ROWS:launcher_charging", "WORLD_ROWS:cannon_fired", "WORLD_ROWS:trebuchet_fired", "WORLD_ROWS:glaze_skim", "WORLD_ROWS:cinder_cooled", "WORLD_ROWS:geyser_fired", "WORLD_ROWS:valve_smashed", "WORLD_ROWS:route_opened", "WORLD_ROWS:wall_crumbled", "WORLD_ROWS:steam_lift_fired", "WORLD_ROWS:breach_opened"]},
 	{"why": "danger-listed enemy_arrive: the spawned body appears at the same call (combat.gd spawn_enemy adds it before the emit) and asks nothing until its windup, which is its own row", "traced": true,

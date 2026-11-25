@@ -7,6 +7,8 @@ const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const Pattern := preload("res://src/combat/pattern.gd")
+const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Grip := preload("res://src/movement/grip.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -63,9 +65,11 @@ const BotLoops := preload("res://tools/bot_loops.gd")
 #     Warden gets slams beside it (a slam within 2.6 m of a cap meets plating 0) and its
 #     own pulse is taken for the height; a magnet Warden gets the gun on its magnet while
 #     it tugs. With punch at or above plating the bot rams, as a player would.
-#   - Upgrade-tree picks (tree_policy). "" leaves every offer untaken, so older runs
-#     keep the untouched kit; "random" takes one of the two offered on each tree_offered
-#     from its own seeded stream, so the rest of the bot's choices are unchanged.
+#   - Upgrade-tree picks (tree_policy). "world_one" (default, skipped for traversal) picks
+#     World-1 Depth-1 opposite-feel keystones (balanced across seeds) and Depth-2 perks when
+#     world_one_builds is on; "" leaves every offer untaken; "random" takes one of the two
+#     offered on every tree_offered from its own seeded stream, so the rest of the bot's
+#     choices are unchanged.
 #
 # A run ends on run_ended ("won" or "lost"), death ("died"), a missing boss module
 # ("boss"), a stall ("stalled", "boss_stalled"), or the runner's --until/--stages cap.
@@ -293,6 +297,13 @@ const PULSE_HP_SHARE := 0.45
 # Punch the bot knows it can bring: the best punch_now() it has seen, fading this fast,
 # so "short of plating" is judged on a full-speed ram, not on the ball at rest.
 const PUNCH_FADE := 4.0
+# A hit's knockback is not a ram the bot made: a Scuttle charge threw the ball at a planar speed
+# that read as punch 589 against Brindle's clash punch of 150, and the bot then clashed head-on with
+# a bare ball (bot_brindle_short_test, phase 3). In a boss fight the reading skips this long after a hit.
+const KNOCK_S := 1.5
+# Brindle's Furnace (BrindleRings below): out of the close vent ring, the ball aims this far past
+# the safe radius, so it crosses the ring at speed instead of easing onto its edge.
+const RING_OUT_PAST := 6.0
 # Engineer plants.
 const PLANT_SEARCH := 22.0
 const PLANT_RANGE := 45.0
@@ -428,6 +439,8 @@ const ULT_CROWD_RADIUS := 20.0
 const ULT_TRAVERSE_NEAR := 25.0
 const ULT_TRAVERSE_FAR := 70.0
 const ULT_RETRY := 1.0
+const ACTIVE_RANGE := 32.0
+const ACTIVE_RETRY := 0.5
 
 var game
 var policy := "skipper"
@@ -440,8 +453,10 @@ var rng := RandomNumberGenerator.new()
 var source := Intent.Scripted.new()
 # Set by the runner's --trace: prints the bot's goal and the ball every two seconds.
 var trace := false
-# "" or "random"; set before start(). tree_picks lists the node ids taken, in order.
-var tree_policy := ""
+# "", "world_one" (default: picks World 1 Depth-1 opposite-feel keystones and Depth-2 perks
+# when world_one_builds is on, skipped for traversal), or "random" (every offer); set before start().
+# tree_picks lists the node ids taken, in order.
+var tree_policy := "world_one"
 var tree_picks: Array[String] = []
 # SG8's lab switch (bot_run --late-offer): "" leaves the tree's late_offer off and the bot as it
 # was; "take" or "skip" turns late_offer on and answers only the take_or_skip offer that way.
@@ -612,6 +627,12 @@ const FIRST_45_S := 45.0
 # Seconds the dam's spillway sheet has been open in this cycle, for a band that launches by sight; -1 shut.
 var _sheet_live_s := -1.0
 var _punch_seen := 0.0
+# The tick before which punch_now() is a knockback, not a ram (KNOCK_S); set by a hit in a boss fight.
+var _knock_until := -1
+# Brindle's slag rings as this bot has read them, and the ship boss whose fight move runs this tick
+# (set by _fight_boss, cleared each tick): while it is set, _act keeps every roll off a known ring.
+var _rings := BrindleRings.new()
+var _ring_fight = null
 var _warden_hp_at := -1.0
 var _warden_kinds := {}
 # The harpoon hand: RMB held while a line is on the fight target, and Ctrl held to commit it.
@@ -643,6 +664,8 @@ var _chain_first: Node3D = null
 var _chain_second: Node3D = null
 var _chain_rose := false
 var _chain_launch_y := 0.0
+# True only inside _chain_drive's _drive call: the cadence hand stays out of the chain move.
+var _chain_driving := false
 # The latch arm (_anchor_fight): the anchor Warden's last height, its vertical speed as the
 # ball sees it, whether the ball was on its line last tick, how long a staggered line has hung
 # below the open point, the haul made in this stagger (and whether from over the open point)
@@ -675,6 +698,18 @@ var _cast_hold := 0.0
 var _cast_phase := ""
 var _cast_click_tick := -1
 var _ult_wait := 0.0
+var _active_wait := 0.0
+var _sheet_hold_fire := false
+var _cadence_index := 0
+var _cadence_reload_rolled := false
+var _cadence_reload_hit := false
+var _cadence_reload_pressed := false
+var _cadence_window_rolled := false
+var _cadence_window_hit := false
+var _cadence_window_pressed := false
+var _cadence_lock_late := false
+var _cadence_lob_reach_m := 0.0
+var _cadence_lob_flight_s := 0.0
 var _traverse_point := Vector3.INF
 # The traversal hands (HAND_NAMES) the runner named, and what they decided this tick.
 var hands: Array[String] = []
@@ -691,7 +726,8 @@ var _play_clock := 0.0
 var _fill_from := 0.0
 var _fills: Array[float] = []
 var _fill_open := true
-var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0, "shots": 0}
+var _totals := {"slot_casts_special": 0, "slot_casts_line": 0, "ultimates": 0, "ult_presses": 0, "shots": 0,
+	"cadence_windows": 0, "cadence_hits": 0, "active_presses": 0}
 # The meter's points by source at the first full meter, for the record only.
 var _first_fill_sources := {}
 
@@ -726,16 +762,21 @@ func _init(game_ref, policy_name: String, seed_number: int) -> void:
 # stage plan (events, scrap, spawns); the base seed alone would give every run of a
 # policy the same map draw.
 func start(resume := false) -> void:
-	wire()
+	wire(not resume)
 	if resume and game.flow.resume_run():
+		if game.player != null and game.player.tree != null:
+			tree_picks.assign(game.player.tree.path())
+		_wire_tree()
 		return
+	if resume:
+		_wire_tree()
 	game.flow.press_start()
 	game.flow.choose_class(class_index)
 
 
 # start()'s wiring alone, for a caller that begins the run itself (self-play pressing the menus' keys).
 # Call it once, in place of start(): both together connect every handler twice.
-func wire() -> void:
+func wire(connect_tree := true) -> void:
 	game.ctx.rng.seed = 20260926 + seed_value * 7919
 	game.player.source = source
 	var events = game.events
@@ -807,8 +848,22 @@ func wire() -> void:
 			_boss_set("stolen", int(boss_note.get("stolen", 0)) + amount))
 	if late_offer_policy != "":
 		game.player.tree.late_offer = true
+	if connect_tree:
+		_wire_tree()
+
+
+func _wire_tree() -> void:
 	if tree_policy == "random":
 		_connect_optional("tree_offered", _on_tree_offered)
+		_answer_pending_tree()
+	elif tree_policy == "world_one" and policy != "traversal":
+		_connect_optional("tree_offered", _on_world_one_tree_offered)
+		_answer_pending_tree()
+
+
+func _on_world_one_tree_offered(for_class: String, depth: int, choices: Array) -> void:
+	if game.player != null and game.player.tree != null and game.player.tree.world_one:
+		_on_tree_offered(for_class, depth, choices)
 
 
 func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
@@ -826,9 +881,40 @@ func _on_tree_offered(_class_id: String, depth: int, choices: Array) -> void:
 			tree_picks.append(String(choices[0]))
 			late_offer_counts["taken"] += 1
 		return
-	var choice: String = choices[_tree_rng.randi() % choices.size()]
-	if game.player.tree.pick(choice):
+	var choice := ""
+	if tree.world_one and depth == 1 and choices.size() == 2:
+		# Deterministic balanced split across seeds decoupled from class_index_for (seed % roster),
+		# so both explicit --pilot runs and default mixed-roster runs exercise both opposite-feel
+		# Depth-1 keystones equally (PILOT-CADENCE.md §6.1).
+		var roster_n := maxi(ClassDef.all().size(), 1)
+		choice = String(choices[posmod(seed_value + floori(float(seed_value) / float(roster_n)), choices.size())])
+	else:
+		choice = String(choices[_tree_rng.randi() % choices.size()])
+	if tree.pick(choice):
 		tree_picks.append(choice)
+
+
+func _answer_pending_tree() -> void:
+	if tree_policy not in ["random", "world_one"] or (tree_policy == "world_one" and policy == "traversal"):
+		return
+	var player = game.get("player") if game != null else null
+	var tree = player.get("tree") if player != null else null
+	if tree == null or not tree.pending():
+		return
+	if tree_policy == "world_one" and not tree.world_one:
+		return
+	var guard := 0
+	while tree.pending() and guard < 8:
+		guard += 1
+		var depth: int = tree.picks.size() + 1
+		var offered: Array = tree.offered(tree.class_id, depth)
+		if offered.is_empty():
+			break
+		var ids: Array = offered.map(func(n): return String(n["id"]))
+		var before: int = tree.picks.size()
+		_on_tree_offered(tree.class_id, depth, ids)
+		if tree.picks.size() == before:
+			break
 
 
 func _connect_optional(signal_name: String, handler: Callable) -> void:
@@ -851,6 +937,18 @@ func _throw_hold(aim) -> bool:
 	if gauge == null or not gauge.charging or not _aim_valid(aim):
 		return true
 	var reach: float = _flat(game.player.ball_position(), _aim_point(aim))
+	var combat = game.get("combat")
+	var snap: Dictionary = combat.weapon_driver.state_snapshot() if combat != null and combat.get("weapon_driver") != null else {}
+	if String(snap.get("trigger", "")) == Pattern.TRIGGER_LOB_SNAP:
+		if reach <= 3.5:
+			_cadence_lob_reach_m = 0.0
+			_cadence_lob_flight_s = 0.0
+			return false
+		var tail_frac := Weapons.STICKY_TAIL_HOLD_S / Weapons.STICKY_CHARGE_MAX
+		var want_lob := clampf(reach / float(Weapons.BASE[Weapons.STICKY_CHARGE]["range_m"]), tail_frac + 0.02, 1.0)
+		_cadence_lob_reach_m = reach
+		_cadence_lob_flight_s = clampf(reach / 22.0, 0.35, 1.1)
+		return gauge.fraction() < want_lob
 	var want := clampf((reach - Weapons.STICKY_THROW_MIN) / (Weapons.BASE[Weapons.STICKY_CHARGE]["range_m"] - Weapons.STICKY_THROW_MIN), 0.0, 1.0)
 	return gauge.fraction() < want
 
@@ -880,6 +978,8 @@ func tick(delta: float) -> bool:
 	if not flow.in_play():
 		source.hold = {}
 		return false
+	if tree_policy in ["random", "world_one"] and game.player != null and game.player.tree != null and game.player.tree.pending():
+		_answer_pending_tree()
 	if policy == "completionist" and state not in ["stage", "beacon"]:
 		_clear_chain_hand()
 	# Every stage state, the gates included: a gate the bot cannot reach (seed 5 random put
@@ -903,15 +1003,18 @@ func tick(delta: float) -> bool:
 	_play_clock += delta
 	_min_hp = minf(_min_hp, float(game.run.hp))
 	_ult_wait -= delta
+	_active_wait -= delta
 	_harpoon_held = false
 	_harpoon_commit = false
 	_cruise_hold = false
+	_ring_fight = null
 	_contact_scan()
 	_fair.tick(delta)
 	if flow.in_stage():
 		_content_scan()
 	_plant_cool -= delta
-	_punch_seen = maxf(float(flow.punch_now()), _punch_seen - PUNCH_FADE * delta)
+	var punch_now: float = float(flow.punch_now()) if ticks >= _knock_until else 0.0
+	_punch_seen = maxf(punch_now, _punch_seen - PUNCH_FADE * delta)
 	if trace and ticks % (Engine.physics_ticks_per_second * 2) == 0:
 		var b: Vector3 = game.player.ball_position()
 		print("  trace t=%.0f stage %d %s goal=%s ball=(%.0f, %.0f, %.0f) speed=%.1f hp=%.0f heft=%.2f punch=%.0f" % [game.run.stage_time,
@@ -1048,6 +1151,17 @@ func _end(why: String) -> void:
 func _on_stage_entered(stage: int, _retry: bool) -> void:
 	_plate_hand = {}
 	_clear_chain_hand()
+	_active_wait = 0.0
+	_sheet_hold_fire = false
+	_cadence_reload_rolled = false
+	_cadence_reload_hit = false
+	_cadence_reload_pressed = false
+	_cadence_window_rolled = false
+	_cadence_window_hit = false
+	_cadence_window_pressed = false
+	_cadence_lock_late = false
+	_cadence_lob_reach_m = 0.0
+	_cadence_lob_flight_s = 0.0
 	_close_note()
 	_window_hits = []
 	_stage = stage
@@ -1201,6 +1315,8 @@ func _on_player_hit(amount: float, source_id: String) -> void:
 	if source_id == "brindle_charge":
 		_count("charge_hits")
 	var in_boss := _in_boss()
+	if in_boss:
+		_knock_until = ticks + ceili(KNOCK_S * Engine.physics_ticks_per_second)
 	var into: Dictionary = boss_note if in_boss else _note
 	if not into.is_empty():
 		if not into.has("hit_sources"):
@@ -2761,15 +2877,19 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 		_ignore_walls = launching
 		_slow_time = 0.0
 		_detour_time = 0.0
+		var hold_fire: bool = timed and (staggered or float(target.posture()) >= SHEET_HOLD_FIRE)
+		_sheet_hold_fire = hold_fire
 		_act(steer, target, delta, target, not timed)
+		_sheet_hold_fire = false
 		_ignore_walls = ignore_walls
 		_boost_clock = boost_clock
-		if timed and (staggered or float(target.posture()) >= SHEET_HOLD_FIRE):
+		if hold_fire:
 			# Near a full bar, and in a stagger, any hit but the sheet ram only opens or spends a
 			# stagger that resets the bar (Tarn's claw, seed 3): the weapon, casts and ultimate wait.
 			source.hold.erase("fire_held")
 			source.press.erase("fire_pressed")
 			source.press.erase("ultimate_pressed")
+			source.press.erase("active_pressed")
 		var offset := Vector3(steer.x - ball.x, 0.0, steer.z - ball.z)
 		var planar: Vector3 = game.player.planar_velocity()
 		var desired := offset.normalized() * minf(game.player.tuning.f("cruise"), offset.length() * RUNUP_DROP)
@@ -3184,7 +3304,16 @@ func _explorer_chain(delta: float) -> void:
 			_harpoon_commit = kit.hooked
 			if not kit.hooked:
 				_clear_chain_hand()
-	_drive(player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
+	_chain_drive(delta)
+
+
+# The chain move rides the line and fires nothing of its own: the held button comes off, and the
+# cadence hand sends no press or release while _drive runs. Any other hand's fire_pressed (a cast
+# click, Tally's card press) goes out as before E1-06.
+func _chain_drive(delta: float) -> void:
+	_chain_driving = true
+	_drive(game.player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
+	_chain_driving = false
 	source.hold.erase("fire_held")
 	source.hold.erase("shift_held")
 	source.press.erase("shift_pressed")
@@ -3458,6 +3587,19 @@ func _boss():
 	return boss
 
 
+func trace_snapshot() -> Dictionary:
+	return {
+		"boss": _boss(),
+		"boss_clock": _boss_clock,
+		"goal": _goal,
+		"offers": _offers,
+		"gate_pick": _gate_pick,
+		"gate_time": _gate_time,
+		"gate_run": _gate_run,
+		"fight_climb_pts": _fight_climb.size(),
+	}
+
+
 # A boss without a ship is the stub's one posture Warden on a flat pad (stub_boss.gd, its
 # `warden` field). The bot fights it with the routine it uses on a stage Warden.
 func _fight_posture_boss(boss, delta: float) -> void:
@@ -3573,6 +3715,7 @@ func _fight_boss(delta: float) -> void:
 		_goal = "boss wait"
 		_act(game.player.ball_position() + game.player.planar_velocity(), null, delta)
 		return
+	_ring_fight = boss
 	var ball: Vector3 = game.player.ball_position()
 	var hull: Node3D = ship.hull
 	var punch: float = _punch_seen
@@ -3581,6 +3724,13 @@ func _fight_boss(delta: float) -> void:
 	if scooter != null and is_instance_valid(scooter):
 		_goal = "boss scooter"
 		_ram_laps(scooter, scooter, delta)
+		return
+	var hold := _ring_hold(boss, arena, ball)
+	if hold != Vector3.INF:
+		_goal = "boss ring out"
+		# Inside the safe radius the roll out is the dodge: the generic escape's nearest clear
+		# point from the hull's floor is under the hull, where the ring still reaches the ball.
+		_act(hold, hull, delta, hull, arena.radius_of(ball) >= _rings.safe_radius())
 		return
 	var pickup := _nearest_pickup(boss, ball)
 	# Posture opens through repeated hits even below plating. Orbiting the magnets
@@ -3736,10 +3886,13 @@ func _nearest_pickup(boss, ball: Vector3) -> Vector3:
 		return Vector3.INF
 	var best := Vector3.INF
 	var best_d := PICKUP_CHASE
+	var rings := _brindle_rings(boss)
 	for p in boss.pickups_left():
 		var at: Vector3 = p["at"]
 		var d := _flat(ball, at)
 		if String(p.get("source", "")) == "shed" and d > SHED_CHASE and not _shed_ahead(ball, at):
+			continue
+		if rings.crosses(ball, at):
 			continue
 		if d < best_d:
 			best_d = d
@@ -3793,6 +3946,234 @@ func _ramp_to_cap(boss, arena, ship, delta: float) -> void:
 		return
 	_goal = "boss ramp foot"
 	_act(arena.point_at(ramp, RAMP_BOTTOM), hull, delta, hull)
+
+
+# This bot's read of the boss's slag rings, brought up to this tick.
+func _brindle_rings(boss) -> BrindleRings:
+	_rings.read(boss, ticks, _reaction(), Engine.physics_ticks_per_second, band)
+	return _rings
+
+
+# While the Furnace's close vent ring is known (its cue heard, its warning drawn or its slag
+# burning), the hull's floor is no place for a run-up: the ball rolls straight out to the nearest
+# radius no known ring covers, then circles there until the ring is gone. Vector3.INF when no close
+# ring is known.
+func _ring_hold(boss, arena, ball: Vector3) -> Vector3:
+	var rings := _brindle_rings(boss)
+	if not rings.close_known():
+		return Vector3.INF
+	var r: float = arena.radius_of(ball)
+	var safe := rings.safe_radius()
+	if r < safe:
+		return arena.point_at(arena.angle_of(ball), safe + RING_OUT_PAST)
+	return arena.point_at(arena.angle_of(ball) + 0.5, safe if rings.covers_radius(r) else r)
+
+
+# --- Brindle's slag rings, as a player reads them -----------------------------------------
+
+# The cued Furnace reprise's preview band held as a threat. The game draws the preview as a harmless
+# bone mark with no reach; the ring it announces fills with the slag's reach, so this record tests
+# the preview's band at that reach. It reads the preview's public geometry and never writes to it.
+class CuedRing:
+	extends RefCounted
+	var preview: Node3D
+	var reach: float
+
+	func _init(of: Node3D, height: float) -> void:
+		preview = of
+		reach = height
+
+	func band() -> Vector2:
+		return Vector2(preview.r_in, preview.r_out)
+
+	func centre() -> Vector3:
+		return preview.centre
+
+	func contains(point: Vector3) -> bool:
+		if not is_instance_valid(preview):
+			return false
+		var above: float = point.y - preview.ground_at(point)
+		if above > reach or above < -2.0:
+			return false
+		var r := Vector2(point.x - preview.centre.x, point.z - preview.centre.z).length()
+		return r >= preview.r_in and r <= preview.r_out
+
+
+# Brindle's Furnace slag rings as this bot knows them. A ring is known once a player could have read
+# it: its cue's preview band or its warning on screen for the bot's reaction time, and read by its
+# band. A ring known by its cue stays known when it commits, as a player who saw the preview knows the
+# warning that follows it. The fight asks whether the close vent ring is known, where the safe floor
+# is, whether a roll to a point runs over a known ring, and where to steer so that none does. It
+# reads the boss through reprise_preview() and active_hazards() only; nothing here survives the bot
+# that owns it.
+class BrindleRings:
+	extends RefCounted
+	const Rules := preload("res://src/boss/boss_rules.gd")
+	# A known ring is widened by this on each side when the bot picks where to stand or what scrap
+	# to fetch: the ball's radius and a little slack.
+	const EDGE := 2.0
+	# How finely crosses() samples a roll.
+	const PATH_STEP := 1.0
+	# How far round its band steer_within() leads the ball toward a steer it cannot roll straight to.
+	const GAP_TURN := 0.3
+	# How far ahead rolling_onto() looks along the ball's velocity, in seconds.
+	const BRAKE_LOOK := 0.4
+	# Known rings this tick: {"band": Vector2(r_in, r_out), "centre": Vector3, "state": "cued", "warned" or "live"}.
+	var known: Array[Dictionary] = []
+	var _tick := -1
+	# Source instance id -> tick first seen, for the reaction time.
+	var _first := {}
+	# The CuedRing standing for the current preview, and the preview it stands for.
+	var _cue: CuedRing = null
+	# Band keys whose cue was known, kept while a preview or a ring of that band is up.
+	var _cue_known := {}
+
+	# The cued reprise's threat record, or null when no reprise is cued. The same record for as long
+	# as the same preview is up, so the reaction time runs on one id.
+	func cue_of(boss) -> CuedRing:
+		var preview = boss.reprise_preview() if boss != null and boss.has_method("reprise_preview") else null
+		if preview == null or not is_instance_valid(preview):
+			_cue = null
+			return null
+		if _cue == null or _cue.preview != preview:
+			_cue = CuedRing.new(preview, Rules.SLAG_REACH)
+		return _cue
+
+	func read(boss, now: int, reaction_s: float, tps: int, band) -> void:
+		if now == _tick:
+			return
+		_tick = now
+		known.clear()
+		var up := {}
+		var bands := {}
+		var cue := cue_of(boss)
+		if cue != null:
+			var id := cue.get_instance_id()
+			up[id] = true
+			bands[_key(cue.band())] = true
+			if _seen_for(id, now, reaction_s, tps) and (band == null or band.reads(id)):
+				_cue_known[_key(cue.band())] = true
+				known.append({"band": cue.band(), "centre": cue.centre(), "state": "cued"})
+		var hazards: Array = boss.active_hazards() if boss != null and boss.has_method("active_hazards") else []
+		for h in hazards:
+			if not is_instance_valid(h) or not String(h.attack_id).begins_with("slag_ring"):
+				continue
+			var id: int = h.get_instance_id()
+			var b := Vector2(h.r_in, h.r_out)
+			up[id] = true
+			bands[_key(b)] = true
+			var seen: bool = _seen_for(id, now, reaction_s, tps) and (band == null or band.reads(id))
+			if seen or _cue_known.has(_key(b)):
+				known.append({"band": b, "centre": h.centre, "state": "live" if h.is_live() else "warned"})
+		for id in _first.keys():
+			if not up.has(id):
+				_first.erase(id)
+		for k in _cue_known.keys():
+			if not bands.has(k):
+				_cue_known.erase(k)
+
+	# Whether a known ring covers the hull's close floor, where the bot rams from.
+	func close_known() -> bool:
+		for ring in known:
+			if (ring["band"] as Vector2).y <= Rules.FURNACE_CLOSE_BAND.y + 0.5:
+				return true
+		return false
+
+	# The smallest radius past the close vent ring that no known ring covers, EDGE included.
+	func safe_radius() -> float:
+		var r := Rules.FURNACE_CLOSE_BAND.y + EDGE + 0.5
+		for _pass in known.size() + 1:
+			var moved := false
+			for ring in known:
+				var b: Vector2 = ring["band"]
+				if r >= b.x - EDGE and r <= b.y + EDGE:
+					r = b.y + EDGE + 0.5
+					moved = true
+			if not moved:
+				break
+		return r
+
+	# Whether a known ring, widened by EDGE, covers a point.
+	func covers(point: Vector3) -> bool:
+		for ring in known:
+			var c: Vector3 = ring["centre"]
+			var r := Vector2(point.x - c.x, point.z - c.z).length()
+			var b: Vector2 = ring["band"]
+			if r >= b.x - EDGE and r <= b.y + EDGE:
+				return true
+		return false
+
+	# Whether the straight roll from one point to another runs over a known ring, EDGE included:
+	# scrap inside a ring, on its edge, or across it. Sampled every PATH_STEP m past the start, so a
+	# ball standing on a ring's edge may still roll away from it.
+	func crosses(from: Vector3, to: Vector3) -> bool:
+		if known.is_empty():
+			return false
+		var length := Vector2(to.x - from.x, to.z - from.z).length()
+		var steps := maxi(1, ceili(length / PATH_STEP))
+		for i in range(1, steps + 1):
+			if covers(from.lerp(to, float(i) / float(steps))):
+				return true
+		return false
+
+	# A steer the ball can roll to without crossing a known ring. A ball standing between known rings
+	# (or inside the innermost, in its margin included) keeps to that free band: a steer whose straight
+	# roll runs over a ring becomes a point along the band, at most GAP_TURN radians round toward the
+	# steer, at the steer's radius held EDGE inside the band. A ball on a ring, a band too narrow to
+	# stand in (the hull's own floor inside the close vent ring) or no ring known: the steer as asked.
+	func steer_within(ball: Vector3, steer: Vector3) -> Vector3:
+		if known.is_empty() or not crosses(ball, steer):
+			return steer
+		var c: Vector3 = known[0]["centre"]
+		var r_ball := Vector2(ball.x - c.x, ball.z - c.z).length()
+		var lo := 0.0
+		var hi := INF
+		for ring in known:
+			var b: Vector2 = ring["band"]
+			if r_ball >= b.x and r_ball <= b.y:
+				return steer
+			if b.y < r_ball:
+				lo = maxf(lo, b.y + EDGE)
+			else:
+				hi = minf(hi, b.x - EDGE)
+		if hi - lo < 2.0 * EDGE:
+			return steer
+		var a_ball := atan2(ball.z - c.z, ball.x - c.x)
+		var a_steer := atan2(steer.z - c.z, steer.x - c.x)
+		var a := a_ball + clampf(wrapf(a_steer - a_ball, -PI, PI), -GAP_TURN, GAP_TURN)
+		var r := clampf(Vector2(steer.x - c.x, steer.z - c.z).length(), lo + EDGE * 0.5, hi - EDGE * 0.5)
+		return Vector3(c.x + cos(a) * r, steer.y, c.z + sin(a) * r)
+
+	# Whether a ball off every known ring will roll onto one within BRAKE_LOOK seconds at this velocity.
+	func rolling_onto(ball: Vector3, velocity: Vector3) -> bool:
+		if known.is_empty() or _on_ring(ball):
+			return false
+		return _on_ring(ball + Vector3(velocity.x, 0.0, velocity.z) * BRAKE_LOOK)
+
+	func _on_ring(point: Vector3) -> bool:
+		for ring in known:
+			var c: Vector3 = ring["centre"]
+			var r := Vector2(point.x - c.x, point.z - c.z).length()
+			var b: Vector2 = ring["band"]
+			if r >= b.x and r <= b.y:
+				return true
+		return false
+
+	# Whether a known ring, widened by EDGE, covers this radius from the arena's centre.
+	func covers_radius(r: float) -> bool:
+		for ring in known:
+			var b: Vector2 = ring["band"]
+			if r >= b.x - EDGE and r <= b.y + EDGE:
+				return true
+		return false
+
+	func _seen_for(id: int, now: int, reaction_s: float, tps: int) -> bool:
+		if not _first.has(id):
+			_first[id] = now
+		return float(now - int(_first[id])) / float(tps) >= reaction_s
+
+	static func _key(b: Vector2) -> String:
+		return "%.1f:%.1f" % [b.x, b.y]
 
 
 # --- the gates -------------------------------------------------------------------------
@@ -4068,10 +4449,7 @@ func _gate_round_props(ball: Vector3, target: Vector3, delta: float) -> Vector3:
 func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true) -> void:
 	var player = game.player
 	if policy == "completionist" and _chain_phase != "":
-		_drive(player.ball_position(), _chain_first if _chain_phase == "takeoff" else _chain_second, delta)
-		source.hold.erase("fire_held")
-		source.hold.erase("shift_held")
-		source.press.erase("shift_pressed")
+		_chain_drive(delta)
 		return
 	if player.kit.mounted:
 		_turret(aim, delta)
@@ -4079,7 +4457,17 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 	if _plant_state == "mounted":
 		_plant_state = "idle"
 	_ultimate_hands(fight)
+	_active_hands(fight)
 	_line_hands()
+	# In Brindle's fight no move rolls across a known slag ring (BrindleRings.steer_within), and a ball
+	# kept off a ring brakes, on the ground, when its speed would carry it on anyway (not while it
+	# dodges a threat).
+	var brake := false
+	if _ring_fight != null and is_instance_valid(_ring_fight):
+		var rings := _brindle_rings(_ring_fight)
+		var within := rings.steer_within(player.ball_position(), steer)
+		brake = within != steer and player.state.grounded and rings.rolling_onto(player.ball_position(), player.state.velocity)
+		steer = within
 	var threats := _threats() if evade else []
 	if not threats.is_empty():
 		for h in threats:
@@ -4103,6 +4491,8 @@ func _act(steer: Vector3, aim, delta: float, fight: Node3D = null, evade := true
 				steer = planted
 	_specials(fight, false)
 	_drive(steer, aim, delta)
+	if brake:
+		source.hold["brake_held"] = true
 
 
 # Every committed telegraph the ball is in, or will be within PREDICT, among those seen
@@ -4174,6 +4564,9 @@ func _hazards() -> Array:
 		for h in boss.active_hazards():
 			if is_instance_valid(h) and h.has_method("contains"):
 				out.append(h)
+		var cued = _rings.cue_of(boss)
+		if cued != null:
+			out.append(cued)
 	return out
 
 
@@ -4262,6 +4655,7 @@ func _turret(aim, delta: float) -> void:
 	var look_at: Vector3 = _aim_point(aim) if _aim_valid(aim) else ball + game.camera.yaw_basis() * Vector3.FORWARD
 	_look(ball, look_at, _aim_valid(aim), delta)
 	source.hold = {"fire_held": true}
+	_cadence_fire_hand()
 	var threatened := false
 	for h in _threats():
 		threatened = true
@@ -4463,6 +4857,30 @@ func _ultimate_hands(fight: Node3D) -> void:
 	_totals["ult_presses"] = int(_totals["ult_presses"]) + 1
 
 
+# F-key item active hand (Expert and unbanded only): fires a racked, charged, unlocked active
+# when a live combat target stands within ACTIVE_RANGE or a Warden/boss core is open.
+func _active_hands(fight: Node3D) -> void:
+	if not _kit("active"):
+		return
+	if policy == "traversal" or _active_wait > 0.0 or _set_piece_up() or _cast_phase != "" or _chain_driving or _sheet_hold_fire:
+		return
+	var combat = game.get("combat")
+	if combat == null:
+		return
+	var rack = combat.get("actives")
+	if rack == null or not rack.enabled() or rack.active_id == "" or rack.charges < 1 or rack.winding > 0.0 or rack.locked():
+		return
+	var ball: Vector3 = game.player.ball_position()
+	var near_fight: bool = fight != null and is_instance_valid(fight) \
+		and not (fight.has_method("is_dead") and fight.is_dead()) \
+		and ball.distance_to(fight.global_position) <= ACTIVE_RANGE
+	if not near_fight and _enemies_within(ball, ACTIVE_RANGE) < 1 and not _core_open(fight, ball):
+		return
+	source.press["active_pressed"] = true
+	_active_wait = ACTIVE_RETRY
+	_totals["active_presses"] = int(_totals["active_presses"]) + 1
+
+
 # A staggered Warden or boss hull is an open core: the fight lock, the stage Warden or the boss's.
 func _core_open(fight: Node3D, ball: Vector3) -> bool:
 	var cores: Array = [fight]
@@ -4647,8 +5065,239 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		source.press.erase("movement_pressed")
 		hold.erase("shift_held")
 	source.hold = hold
+	_cadence_fire_hand()
 	_card_hands()
 	_cast_hands()
+
+
+# Deterministic per-window roll shared by unbanded and Expert (same seed and monotonic index).
+func _roll_cadence_window() -> bool:
+	var idx := _cadence_index
+	_cadence_index += 1
+	if band != null:
+		return band.hits_window(idx)
+	return SkillBand.roll_window(seed_value, idx, float(SkillBand.BANDS["expert"]["window_last"]))
+
+
+# Band-driven fire hand for cadence baselines (PILOT-CADENCE.md §§3.1-3.6, §8): plays Rivet's
+# press / active-reload notch, Sable's tap-spark / hold-arc release, Kest's cook-and-snap,
+# Tarn's three-beat cadence, Tally's PAID stamp beat, and Cannon's hold-paint lock according to
+# the band's window_share. Reads only public weapon_driver.state_snapshot(). A missed window
+# yields the plain result with no jam or lockout.
+func _cadence_fire_hand() -> void:
+	# The traversal hand never fires (_traverse); its cast clicks go out after the press gate. The
+	# chain move fires nothing of its own (_chain_drive). Skip while a set piece, Dam sheet hold-fire,
+	# or a non-weapon bar selection would swallow fire so no phantom cadence windows are rolled.
+	if _cast_phase != "" or policy == "traversal" or _chain_driving or _set_piece_up() or _sheet_hold_fire:
+		return
+	var player = game.get("player")
+	var abilities = player.get("abilities") if player != null else null
+	if abilities != null and abilities.selected != AbilityState.WEAPON:
+		return
+	var combat = game.get("combat")
+	if combat == null or combat.get("weapon_driver") == null:
+		return
+	var snap: Dictionary = combat.weapon_driver.state_snapshot()
+	var wid: String = String(snap.get("weapon", ""))
+	if wid == "" and combat.has_method("active_weapon"):
+		wid = combat.active_weapon()
+	var pat: Resource = combat.pattern(wid) if wid != "" and combat.has_method("pattern") else null
+	var trig: String = String(snap.get("trigger", ""))
+	if trig != Pattern.TRIGGER_PRESS and trig != Pattern.TRIGGER_TAP_CHARGE \
+			and trig != Pattern.TRIGGER_LOB_SNAP and trig != Pattern.TRIGGER_BEATS \
+			and trig != Pattern.TRIGGER_STAMP and trig != Pattern.TRIGGER_LOCK:
+		if pat != null:
+			trig = String(pat.trigger)
+	var want_fire: bool = bool(source.hold.get("fire_held", false))
+	if trig == Pattern.TRIGGER_PRESS:
+		# The held button stays (a held press gun fires nothing alone; Fan the Hammer and
+		# sprinting fan while held, and Run and Gun's drain reads it); presses fire plain rounds
+		# and hit the active-reload notch.
+		var fan_hold: bool = pat != null and bool(pat.fan)
+		if not bool(snap.get("reloading", false)):
+			_cadence_reload_rolled = false
+			_cadence_reload_hit = false
+			_cadence_reload_pressed = false
+			if want_fire and not fan_hold and bool(snap.get("ready", false)):
+				source.press["fire_pressed"] = true
+			return
+		if not want_fire:
+			return
+		if not _cadence_reload_rolled:
+			if bool(snap.get("window_spent", false)):
+				return
+			_cadence_reload_rolled = true
+			_cadence_reload_pressed = false
+			_cadence_reload_hit = _roll_cadence_window()
+			_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+		if _cadence_reload_hit and not _cadence_reload_pressed and bool(snap.get("window_open", false)):
+			source.press["fire_pressed"] = true
+			_cadence_reload_pressed = true
+			_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+		return
+	if trig == Pattern.TRIGGER_TAP_CHARGE:
+		if not want_fire:
+			if bool(snap.get("charge_armed", false)) and bool(snap.get("charging", false)) and float(snap.get("charge", 0.0)) >= 0.25:
+				source.press["fire_released"] = true
+			source.hold.erase("fire_held")
+			return
+		if bool(snap.get("charge_armed", false)):
+			if float(snap.get("charge", 0.0)) >= 0.9999:
+				source.hold.erase("fire_held")
+				source.press["fire_released"] = true
+				_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			else:
+				source.hold["fire_held"] = true
+		elif bool(snap.get("ready", false)):
+			var hit := _roll_cadence_window()
+			_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+			source.press["fire_pressed"] = true
+			if hit:
+				source.hold["fire_held"] = true
+			else:
+				source.hold.erase("fire_held")
+		else:
+			source.hold.erase("fire_held")
+		return
+	if trig == Pattern.TRIGGER_LOB_SNAP:
+		if bool(snap.get("lob_charging", false)):
+			_cadence_window_rolled = false
+			_cadence_window_hit = false
+			_cadence_window_pressed = false
+			return
+		var win: String = String(snap.get("window", WeaponDriver.WINDOW_IDLE))
+		if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
+			source.hold.erase("fire_held")
+			if not want_fire or _cadence_lob_reach_m > 14.5:
+				return
+			if not _cadence_window_rolled:
+				_cadence_window_rolled = true
+				_cadence_window_pressed = false
+				_cadence_window_hit = _roll_cadence_window()
+				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+			if _cadence_window_hit and not _cadence_window_pressed and win == WeaponDriver.WINDOW_OPEN:
+				var win_range: Vector2 = snap.get("window_range", Vector2.ZERO)
+				var snap_at: float = clampf(_cadence_lob_flight_s - 0.02, win_range.x, maxf(win_range.x, win_range.y - 0.03))
+				if float(snap.get("window_t", 0.0)) >= snap_at - 0.001:
+					source.press["fire_pressed"] = true
+					_cadence_window_pressed = true
+					_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			return
+		_cadence_window_rolled = false
+		_cadence_window_hit = false
+		_cadence_window_pressed = false
+		if bool(snap.get("snap_locked", false)):
+			source.hold.erase("fire_held")
+			return
+		if want_fire and bool(snap.get("ready", false)):
+			source.press["fire_pressed"] = true
+		else:
+			source.hold.erase("fire_held")
+		return
+	if trig == Pattern.TRIGGER_BEATS:
+		# WeaponDriver enters waiting/open only for the third strike, so reading public
+		# "window" tracks the combo window without touching any audio or beat symbol.
+		var win: String = String(snap.get("window", WeaponDriver.WINDOW_IDLE))
+		if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
+			if not want_fire:
+				return
+			if not _cadence_window_rolled:
+				_cadence_window_rolled = true
+				_cadence_window_pressed = false
+				_cadence_window_hit = _roll_cadence_window()
+				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+			if _cadence_window_hit:
+				if not _cadence_window_pressed and win == WeaponDriver.WINDOW_OPEN:
+					source.press["fire_pressed"] = true
+					_cadence_window_pressed = true
+					_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			elif not _cadence_window_pressed and win == WeaponDriver.WINDOW_WAITING:
+				# Missed roll: early press spends the window so the next plain cycle starts on the floor.
+				source.press["fire_pressed"] = true
+				_cadence_window_pressed = true
+			return
+		_cadence_window_rolled = false
+		_cadence_window_hit = false
+		_cadence_window_pressed = false
+		if want_fire and bool(snap.get("ready", false)):
+			source.press["fire_pressed"] = true
+		return
+	if trig == Pattern.TRIGGER_STAMP:
+		source.hold.erase("fire_held")
+		var win: String = String(snap.get("window", "idle"))
+		if win == WeaponDriver.WINDOW_WAITING or win == WeaponDriver.WINDOW_OPEN:
+			if not want_fire:
+				return
+			# A committed PAID stamp returns immediately from WINDOW_OPEN to WINDOW_WAITING
+			# without passing through idle/spent; reset so each chained stamp rolls once.
+			if win == WeaponDriver.WINDOW_WAITING and _cadence_window_pressed and _cadence_window_hit:
+				_cadence_window_rolled = false
+				_cadence_window_hit = false
+				_cadence_window_pressed = false
+			if not _cadence_window_rolled:
+				_cadence_window_rolled = true
+				_cadence_window_pressed = false
+				_cadence_window_hit = _roll_cadence_window()
+				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+			if _cadence_window_hit:
+				if bool(snap.get("window_open", false)) and bool(snap.get("ready", false)):
+					source.press["fire_pressed"] = true
+					if not _cadence_window_pressed:
+						_cadence_window_pressed = true
+						_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			elif not _cadence_window_pressed and win == WeaponDriver.WINDOW_WAITING:
+				# Missed stamp roll: early press spends the window, then the next ready tick casts plain.
+				source.press["fire_pressed"] = true
+				_cadence_window_pressed = true
+			return
+		_cadence_window_rolled = false
+		_cadence_window_hit = false
+		_cadence_window_pressed = false
+		if want_fire and bool(snap.get("ready", false)):
+			source.press["fire_pressed"] = true
+		return
+	if trig == Pattern.TRIGGER_LOCK:
+		var painted: bool = bool(snap.get("painted", false))
+		if not painted:
+			_cadence_window_rolled = false
+			_cadence_window_hit = false
+			_cadence_window_pressed = false
+			if want_fire and bool(snap.get("ready", false)):
+				_cadence_window_rolled = true
+				_cadence_window_hit = _roll_cadence_window()
+				_cadence_lock_late = (_cadence_index % 2) == 0
+				_totals["cadence_windows"] = int(_totals["cadence_windows"]) + 1
+				source.press["fire_pressed"] = true
+				source.hold["fire_held"] = true
+			else:
+				source.hold.erase("fire_held")
+			return
+		var win_open: bool = bool(snap.get("window_open", false))
+		var win_spent: bool = bool(snap.get("window_spent", false))
+		var win_range: Vector2 = snap.get("window_range", Vector2.ZERO)
+		if not want_fire:
+			source.hold.erase("fire_held")
+			source.press["fire_released"] = true
+			if win_open:
+				_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			return
+		if _cadence_window_hit:
+			if win_open or win_spent or (win_range.y <= win_range.x and float(snap.get("hold", 0.0)) >= 0.30):
+				source.hold.erase("fire_held")
+				source.press["fire_released"] = true
+				if win_open:
+					_totals["cadence_hits"] = int(_totals["cadence_hits"]) + 1
+			else:
+				source.hold["fire_held"] = true
+		elif _cadence_lock_late:
+			if win_spent or float(snap.get("hold", 0.0)) > maxf(win_range.y, 0.46) + 0.02:
+				source.hold.erase("fire_held")
+				source.press["fire_released"] = true
+			else:
+				source.hold["fire_held"] = true
+		else:
+			source.hold.erase("fire_held")
+			source.press["fire_released"] = true
 
 
 # Tally's reader runs a card per press, not while held: the hands turn a held trigger into one
@@ -4674,6 +5323,10 @@ func _card_hands() -> void:
 		_tally_gather_hands()
 	if _kit("ultimate"):
 		_tally_plate_hands()
+	var combat = game.get("combat")
+	if combat != null and combat.get("weapon_driver") != null:
+		if String(combat.weapon_driver.state_snapshot().get("trigger", "")) == Pattern.TRIGGER_STAMP:
+			return
 	if not source.hold.get("fire_held", false):
 		return
 	source.hold.erase("fire_held")
@@ -4904,7 +5557,10 @@ func record(wall_seconds: float) -> Dictionary:
 		# the in-play seconds each fill took (run start or the last set piece to a full meter), and
 		# the in-play seconds played, which bounds a meter that never filled.
 		"slot_casts": {"special": _totals["slot_casts_special"], "line": _totals["slot_casts_line"]},
-		"shots": _totals["shots"], "ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
+		"shots": _totals["shots"], "kills": game.run.kills, "ultimates": _totals["ultimates"], "ult_presses": _totals["ult_presses"],
+		"cadence_windows": _totals["cadence_windows"], "cadence_hits": _totals["cadence_hits"],
+		"active_presses": _totals["active_presses"],
+		"tree_picks": tree_picks.duplicate(),
 		"ult_fill_s": _fills, "play_s": snappedf(_play_clock, 0.01),
 		# The meter's points by source: over the run, and at the first full meter. A record for
 		# reading why a fill band is red; no hand reads either.

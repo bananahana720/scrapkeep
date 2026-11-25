@@ -1,5 +1,0 @@
-TH-12 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-TH-12 revision 1 done (task index last event EV-0365), accepted integrated identity 0bf678357e6c895562ec257865e15634dbfb92a7 (admission event EV-0353).
-git merge-base --is-ancestor 0bf678357e6c895562ec257865e15634dbfb92a7 HEAD: exit 0
-docs/tech/sections/TH-12-hud-dashboard-and-settings.md sha256 at this commit: d0bbb427685407a2405bd61e40a767162f63ffcd28c80c15f8ef808caf6cc407
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

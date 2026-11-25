@@ -2,8 +2,9 @@ extends SceneTree
 
 # The paint shader reads vertex alpha as a take mask (step(0.05, alpha)): alpha 0 keeps a part's baked
 # colour under any paint. This scan pins who may carry a mask. On every shipped shell_* and pilot_* GLB a paint
-# vertex with alpha under 0.05 must be exactly 0 and sit in Sable's SpoolKit or Tally's DrumBrackets; every other paint vertex is
-# 1 or one of Tally's window-index alphas. A planted vertex built in code proves the scan flags a stray mask.
+# vertex with alpha under 0.05 must be exactly 0 and sit in Sable's SpoolKit or Tally's DrumBrackets or Flywheel_R (its brass
+# rims and index slot, wave 46 unit E2-05); every other paint vertex is 1 or one of Tally's window-index alphas. A planted
+# vertex built in code proves the scan flags a stray mask.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const ROOT := "res://assets/models"
@@ -28,7 +29,7 @@ static func _allowed(a: float, mesh_name: String, path: String) -> bool:
 	if a < MASK_BELOW:
 		var file := path.get_file()
 		return a == 0.0 and ((mesh_name == "SpoolKit" and file.begins_with("shell_sable"))
-			or (mesh_name == "DrumBrackets" and file.begins_with("shell_tally")))
+			or (mesh_name in ["DrumBrackets", "Flywheel_R"] and file.begins_with("shell_tally")))
 	if absf(a - 1.0) < 0.001:
 		return true
 	return WINDOWS.any(func(w): return absf(a - w) < TOL)
@@ -126,6 +127,6 @@ func _initialize() -> void:
 		"%d shell/pilot GLBs, %d SpoolKit meshes, %d DrumBrackets meshes" % [files.size(), spool, drum_brackets])
 	_report("paint scanned", seen.get("surfaces", 0) >= MIN_SURFACES and seen.get("vertices", 0) >= MIN_VERTICES,
 		"%d paint surfaces, %d paint vertices scanned (floor %d and %d)" % [seen.get("surfaces", 0), seen.get("vertices", 0), MIN_SURFACES, MIN_VERTICES])
-	_report("no stray paint mask", stray.is_empty(), "paint alpha under 0.05 only in Sable SpoolKit and Tally DrumBrackets, else 1 or a Tally window (%s)" % [stray])
+	_report("no stray paint mask", stray.is_empty(), "paint alpha under 0.05 only in Sable SpoolKit and Tally DrumBrackets and Flywheel_R, else 1 or a Tally window (%s)" % [stray])
 	print("paint_mask_scan_test: %s, %d checks" % ["PASS" if _failures == 0 else "FAIL (%d)" % _failures, _checks])
 	quit(0 if _failures == 0 else 1)

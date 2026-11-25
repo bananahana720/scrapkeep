@@ -718,12 +718,22 @@ static func eject_direction(normal: Vector3, aim: Basis) -> Vector3:
 
 
 static func _mount_spot(kit, body_state) -> Dictionary:
-	var face := _steepest_face(body_state, WORLD_MASK, kit.knob("mount_reach"))
+	return mount_face(kit, body_state.get_space_state(), body_state.transform.origin)
+
+
+# The pylon's one test of where it would plant from `origin`: the steepest face within the ball's
+# reach, or the wall the hook is in when the ball is close to it, both scaled by the mount_reach
+# knob (Sable's depth-1 upgrade doubles it). {point, normal}, or {} when there is nowhere to plant.
+# The mount and the ball's reading of E (player_ball.face_in_reach) ask this one test, so a press the
+# pylon takes is never also refused.
+static func mount_face(kit, space: PhysicsDirectSpaceState3D, origin: Vector3) -> Dictionary:
+	var reach_scale: float = kit.knob("mount_reach")
+	var face := _steepest_face_at(space, origin, WORLD_MASK, reach_scale)
 	if not face.is_empty():
 		return face
 	if kit.hooked and kit.on(GRAPPLE) and not kit.on_body and absf(kit.anchor_normal.y) < FACE_MAX_TILT \
 			and kit.anchor_normal != Vector3.ZERO \
-			and body_state.transform.origin.distance_to(kit.anchor) <= MOUNT_HOOK_REACH * kit.knob("mount_reach"):
+			and origin.distance_to(kit.anchor) <= MOUNT_HOOK_REACH * reach_scale:
 		return {"point": kit.anchor, "normal": kit.anchor_normal.normalized()}
 	return {}
 
@@ -940,8 +950,10 @@ static func _haul(kit, tuning, intent, body_state, step: float) -> void:
 
 
 static func _steepest_face(body_state, mask := WORLD_MASK, reach_scale := 1.0) -> Dictionary:
-	var space: PhysicsDirectSpaceState3D = body_state.get_space_state()
-	var origin: Vector3 = body_state.transform.origin
+	return _steepest_face_at(body_state.get_space_state(), body_state.transform.origin, mask, reach_scale)
+
+
+static func _steepest_face_at(space: PhysicsDirectSpaceState3D, origin: Vector3, mask := WORLD_MASK, reach_scale := 1.0) -> Dictionary:
 	var reach: float = Tuning.RADIUS + FACE_REACH * reach_scale
 	var best := {}
 	var flattest := 2.0

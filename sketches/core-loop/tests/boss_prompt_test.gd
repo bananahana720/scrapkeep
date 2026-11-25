@@ -7,10 +7,11 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# Brindle's name plate follows the UI-regions rule: a screen-space world prompt, never
-# a Label3D, anchored to the ship and to the scooter in the chase. The HUD places it
-# inside the prompts band, so it never covers the objective line and nothing in the
-# arena can hide it. Its colour says whether your punch beats the live plating.
+# Brindle's internal readout prompt is a WorldPrompt, never a Label3D, anchored to the ship
+# and to the scooter in the chase. Its text and colour still track live plating for telemetry
+# and tests, while owner_placed=true and visible=false keep hud.place_prompts() from drawing
+# truncated "BRINDLE · plating/bow/on" text in the prompts band over the player ball (PF-54;
+# BossPlate owns Brindle's HUD readout).
 
 const SIZES := [Vector2(1600.0, 900.0), Vector2(1280.0, 720.0)]
 
@@ -150,11 +151,11 @@ func _plate():
 	return null
 
 
-# The prompt exists, follows the named anchor, and lands inside the prompts band at
-# both window sizes, with the camera looking at its anchor.
+# The prompt exists, follows the named anchor, stays owner_placed and hidden, and is never
+# placed in the prompts band at either window size (PF-54).
 func _check_band(when: String, anchor: Node3D) -> void:
 	var plate = _plate()
-	var ok: bool = plate is WorldPrompt and plate.anchor == anchor and plate.text != ""
+	var ok: bool = plate is WorldPrompt and plate.anchor == anchor and plate.text != "" and plate.owner_placed and not plate.visible
 	var spans: Array[String] = []
 	if ok:
 		var ball: Vector3 = _game.player.ball_position()
@@ -163,10 +164,8 @@ func _check_band(when: String, anchor: Node3D) -> void:
 		await physics_frame
 		for size in SIZES:
 			_game.hud.place_prompts(size, true)
-			var band := ScreenRegions.rect("prompts", size)
-			var placed: Rect2 = _game.hud.prompt_rects.get(plate, Rect2())
-			var inside: bool = placed.size != Vector2.ZERO and band.encloses(placed)
-			ok = ok and inside
-			spans.append("%dx%d at %s in band %s: %s" % [size.x, size.y, placed, band, inside])
-	_report("plate in the prompts band (%s)" % when, ok,
+			var suppressed: bool = not _game.hud.prompt_rects.has(plate) and not plate.visible
+			ok = ok and suppressed
+			spans.append("%dx%d owner_placed=%s visible=%s in_rects=%s" % [size.x, size.y, plate.owner_placed, plate.visible, _game.hud.prompt_rects.has(plate)])
+	_report("plate stays off the prompts band (%s)" % when, ok,
 		"prompt \"%s\" anchored to %s; %s" % [plate.text if plate != null else "none", anchor.name if is_instance_valid(anchor) else "?", "; ".join(spans)])

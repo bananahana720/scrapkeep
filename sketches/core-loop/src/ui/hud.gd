@@ -33,6 +33,7 @@ const PartName := preload("res://src/ui/part_name.gd")
 const DangerMark := preload("res://src/ui/danger_mark.gd")
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
+const NixieRail := preload("res://src/ui/nixie_rail.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const PickupLines := preload("res://src/ui/pickup_lines.gd")
@@ -191,6 +192,7 @@ const PLATE_GAP := float(UiTokens.GAP_M)
 const TOAST_WIDTH := 800.0
 const MARGIN := 18.0
 const BOTTOM_GAP := float(UiTokens.GAP_L)
+const WALLET_GAP := float(UiTokens.GAP_XS)
 const HEALTH_BAR := 190.0
 # The word under each bar (ui/gauge.gd caption): the game's own words for them, as the perk
 # rows say "max health" and the wear stamp says "ARMOUR OFF".
@@ -263,6 +265,8 @@ var _speed: Control
 var _plate: Control
 var _plate_floor := Vector2.ZERO
 var boss_plate: Control
+# The rogue machine the boss plate shows (its instance id), 0 while it shows none.
+var _plate_rogue := 0
 # Whether the Warden is engaged, from warden_engaged, and the tally of a build that is
 # trying without getting anywhere (objectives.gd).
 var _engaged := false
@@ -286,6 +290,7 @@ const ARMOR_PEAK_FLOOR := 100.0
 var _armor: Control
 var _cogs: CogChip
 var chain_counter: Control
+var nixie_rail: Control
 # SR6: floating damage numbers, one layer over the world (presentation/damage_numbers.gd).
 var damage_numbers: Control
 # Grey panel pickup lines at the HUD's edge, off the fight (ui/pickup_lines.gd, PF-14).
@@ -297,6 +302,9 @@ var _armor_peak := ARMOR_PEAK_FLOOR
 var _companion: TextureRect
 var _companion_state := "none"
 var _companion_cues: Array[String] = []
+var _companion_doc := {}
+var _play_pieces: Array[Control] = []
+var _quiet_pieces: Array[Control] = []
 var _threat := 0
 var _laid_out := Vector2.ZERO
 # What layout() last read besides the screen: the pieces whose own size moves their neighbours.
@@ -371,6 +379,8 @@ func setup(game_ref) -> void:
 	add_child(_cogs)
 	chain_counter = ChainCounter.new()
 	add_child(chain_counter)
+	nixie_rail = NixieRail.new()
+	add_child(nixie_rail)
 	damage_numbers = DamageNumbers.new()
 	damage_numbers.project = _project_to_screen
 	damage_numbers.keep_off = func() -> Dictionary:
@@ -398,6 +408,7 @@ func setup(game_ref) -> void:
 	add_child(reticle)
 	reticle.setup(game.player, game.camera.cam)
 	game.events.verb_failed.connect(_on_verb_failed)
+	game.player.talk_claim = _talk_takes_interact
 	why_callout = WhyCallout.new()
 	add_child(why_callout)
 	why_callout.setup(game, profile)
@@ -405,6 +416,8 @@ func setup(game_ref) -> void:
 	add_child(part_name)
 	danger_mark = DangerMark.new()
 	add_child(danger_mark)
+	_play_pieces.assign([_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, damage_numbers, pickup_lines])
+	_quiet_pieces.assign([_toasts, why_callout, damage_numbers, part_name])
 
 	_build_ach_toast()
 	_build_lore_pulse()
@@ -782,13 +795,17 @@ func _begin_engagement(engaged: bool) -> void:
 
 
 # The boss plate is up while a Warden on the posture rule is engaged, or the arena's boss
-# is live (Brindle's hull, or a stub boss's Warden), bound to its posture body.
+# is live (Brindle's hull, or a stub boss's Warden), bound to its posture body. With neither,
+# a live rogue machine takes it (LEGIBILITY section 14.3).
 func _seat_boss_plate() -> void:
 	var warden = game.flow.warden if _engaged else _brindle_hull()
-	if is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture":
+	var posture: bool = is_instance_valid(warden) and warden.has_method("fight") and warden.fight() == "posture"
+	var body = warden if posture else _live_rogue()
+	_plate_rogue = 0 if posture or body == null else body.get_instance_id()
+	if body != null:
 		if boss_plate == null:
 			boss_plate = BossPlate.new()
-		boss_plate.bind(warden, null if _engaged else _arena_phases())
+		boss_plate.bind(body, _arena_phases() if posture and not _engaged else null)
 		mount_plate(boss_plate)
 	elif boss_plate != null:
 		if _plate == boss_plate:
@@ -796,6 +813,22 @@ func _seat_boss_plate() -> void:
 		boss_plate.unbind()
 		boss_plate.queue_free()
 		boss_plate = null
+
+
+# This attempt's rogue machine while it is awake and alive, else null.
+func _live_rogue():
+	var rogue = game.world.rogue if game.world != null else null
+	return rogue if is_instance_valid(rogue) and not rogue.is_dead() else null
+
+
+# A rogue wakes and dies without an event the HUD hears, so the plate follows it: it goes up when
+# one wakes with the slot free and comes down when it dies. A Warden or the arena's fight keeps it.
+func _follow_rogue() -> void:
+	if boss_plate != null and _plate_rogue == 0:
+		return
+	var rogue = _live_rogue()
+	if (rogue.get_instance_id() if rogue != null else 0) != _plate_rogue:
+		_seat_boss_plate()
 
 
 # The posture body of the arena fight that is live, else null: Brindle's hull, or the
@@ -1085,27 +1118,42 @@ func layout(size: Vector2) -> void:
 	_companion.position = Vector2(_armor.position.x - BOTTOM_GAP - _companion.size.x, slot_mid - _companion.size.y * 0.5)
 	_speed.position = Vector2(MARGIN, slot_mid - _speed.size.y * 0.5)
 	_cogs.position = Vector2(_speed.position.x + _speed.size.x + BOTTOM_GAP, slot_mid - _cogs.size.y * 0.5)
+	# The gauges grow left from the bar; when the wallet with Moss's hook pinned would reach the
+	# leftmost one shown, the wallet sits under the speed glyph instead, so neither covers the other.
+	var gauges_from := _health.position.x
+	for gauge in [_armor, _companion]:
+		if gauge.visible:
+			gauges_from = gauge.position.x
+	if _cogs.position.x + _cogs.size.x + BOTTOM_GAP > gauges_from:
+		var pair := _speed.size.y + WALLET_GAP + _cogs.size.y
+		_speed.position.y = slot_mid - pair * 0.5
+		_cogs.position = Vector2(MARGIN, _speed.position.y + _speed.size.y + WALLET_GAP)
 	pickup_lines.layout(size, PanelFx.POP_ROWS)
 	chain_counter.position = Vector2(ability_bar.position.x + bar_size.x + BOTTOM_GAP, slot_mid - chain_counter.size.y * 0.5)
+	# The tube rail last, right-aligned to the margin and growing leftward (ruling ek).
+	nixie_rail.place(Vector2(size.x - MARGIN, bottom.end.y - NixieRail.FLOOR))
 
 
 # The sizes layout() depends on. Relayout when one changes, not every frame: each
 # extent() call shapes text.
 func _piece_sizes() -> Array:
-	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), AbilityBar.NUMBERED + 2), _plate_size()]
+	return [_objective.custom_minimum_size, _health.size, _armor.size, maxi(ability_bar.slots.size(), AbilityBar.NUMBERED + 2), _plate_size(),
+		_cogs.size, _armor.visible, _companion.visible]
 
 
 # The slot's plate: a boss plate (about 420 by 44 at 1080p) that the coordinator mounts. Its
 # size is the larger of its minimum size and its size at mount, so any Control places. It
 # sits top-centre and the objective plate moves directly under it. unmount_plate gives
-# the layout back exactly as it was and leaves the plate for its owner to free.
+# the layout back exactly as it was and leaves the plate for its owner to free. Mounting the plate
+# already up keeps it in the tree (a boss plate unbinds when it leaves) and takes its new size.
 func mount_plate(plate: Control) -> void:
-	unmount_plate()
-	_plate = plate
+	if plate != _plate:
+		unmount_plate()
+		_plate = plate
+		if plate.get_parent() != null:
+			plate.get_parent().remove_child(plate)
+		add_child(plate)
 	_plate_floor = plate.size
-	if plate.get_parent() != null:
-		plate.get_parent().remove_child(plate)
-	add_child(plate)
 	layout(_screen_size())
 
 
@@ -1122,15 +1170,27 @@ func _plate_size() -> Vector2:
 	return _plate.get_combined_minimum_size().max(_plate.custom_minimum_size).max(_plate_floor) if _plate != null else Vector2.ZERO
 
 
-# The screen rect of each piece, for the layout test: {region: [Rect2, ...]}.
+# The screen rect of each piece, for the layout test: {region: [Rect2, ...]}. The cog wallet and the
+# chain counter are listed at their laid-out places even while hidden, so a neighbour can never move onto them.
 func piece_rects() -> Dictionary:
 	return {
 		"top": [_rect_of(_objective), _rect_of(_status)] + ([_rect_of(_plate)] if _plate != null else []),
 		"toasts": [_rect_of(_toasts)],
-		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_speed)]
+		"bottom": [_rect_of(ability_bar), _rect_of(_health), _rect_of(_speed), _rect_of(_cogs), _rect_of(chain_counter)]
 			+ ([_rect_of(_armor)] if _armor.visible else [])
-			+ ([_rect_of(_companion)] if _companion.visible else []),
+			+ ([_rect_of(_companion)] if _companion.visible else [])
+			+ ([nixie_rail.piece_rect()] if nixie_rail.showing() else []),
 	}
+
+
+# The timed effects and counts the tube rail shows: the buff ledger's rows when the game has one
+# (ctx.buffs, E1-02), else none.
+func buff_rows() -> Array:
+	var ctx = game.get("ctx")
+	var buffs = ctx.get("buffs") if ctx != null else null
+	if buffs == null or not buffs.has_method("active_rows"):
+		return []
+	return buffs.active_rows(NixieRail.MAX_TUBES)
 
 
 # The wallet the HUD shows: the cogs the run holds.
@@ -1151,18 +1211,26 @@ static func row_color(id: String) -> Color:
 
 # A change between ready and spent plays that row's chirp; a change from or to "none" is silent.
 func _step_companion(playing: bool) -> void:
-	var state := companion_state_of(game.run.companion)
-	if state != _companion_state and state != "none" and _companion_state != "none":
-		var kind := "companion_" + state
-		_companion_cues.append(kind)
-		var audio = game.audio()
-		if audio != null and audio.has_method("play"):
-			audio.play(kind, 0.0, 1.0, "UI")
-	_companion_state = state
-	if state != "none":
-		var row: Dictionary = EventKinds.UI_ROWS["companion_" + state]
-		_companion.texture = Icons.shape(String(row["shape"]))
-		_companion.modulate = row["color"]
+	var doc: Dictionary = game.run.companion
+	if doc.is_empty() and _companion_state == "none":
+		_companion.visible = false
+		return
+	var state := _companion_state
+	if doc != _companion_doc:
+		_companion_doc = doc.duplicate(true)
+		state = companion_state_of(doc)
+	if state != _companion_state:
+		if state != "none" and _companion_state != "none":
+			var kind := "companion_" + state
+			_companion_cues.append(kind)
+			var audio = game.audio()
+			if audio != null and audio.has_method("play"):
+				audio.play(kind, 0.0, 1.0, "UI")
+		_companion_state = state
+		if state != "none":
+			var row: Dictionary = EventKinds.UI_ROWS["companion_" + state]
+			_companion.texture = Icons.shape(String(row["shape"]))
+			_companion.modulate = row["color"]
 	_companion.visible = playing and state != "none"
 
 
@@ -1400,7 +1468,8 @@ func place_prompts(size: Vector2, playing: bool) -> void:
 		var d: float = cam.global_position.distance_to(at)
 		if d <= prompt.reach:
 			near.append([d, prompt, at])
-	near.sort_custom(func(a, b): return a[0] < b[0])
+	if near.size() > 1:
+		near.sort_custom(func(a, b): return a[0] < b[0])
 	# The pickup lines rise over the band's lower left; a prompt stands clear of them while they show.
 	var taken: Array[Rect2] = []
 	if pickup_lines.rect().has_area():
@@ -1476,17 +1545,18 @@ func _process(delta: float) -> void:
 	pickup_lines.step(delta)
 	_step_ach(delta)
 	_step_lore(delta)
+	_follow_rogue()
 
 	var flow = game.flow
 	var playing: bool = flow.in_play()
 	place_prompts(size, playing)
-	for piece in [_objective, _status, _toasts, ability_bar, _health, _speed, _cogs, reticle, key_glyphs, first_steps, edge_markers, why_callout, damage_numbers, pickup_lines]:
+	for piece in _play_pieces:
 		piece.visible = playing
 	if _plate != null:
 		_plate.visible = playing
 	part_name.visible = playing and part_name.left > 0.0
 	if _quiet:
-		for piece in [_toasts, why_callout, damage_numbers, part_name]:
+		for piece in _quiet_pieces:
 			piece.visible = false
 	danger_mark.show_run(game.combat.near_miss.standing_in() if playing else -1.0)
 	if playing:
@@ -1500,8 +1570,10 @@ func _process(delta: float) -> void:
 		_restart.set_fraction(0.0)
 		chain_counter.step(delta, 0)
 		chain_counter.visible = false
+		nixie_rail.clear()
 		return
 	chain_counter.step(delta, game.player.chain.combo)
+	nixie_rail.set_rows(buff_rows())
 
 	var run = game.run
 	var goal := objective_reading()
@@ -1545,6 +1617,7 @@ func _process(delta: float) -> void:
 	var slots: Array = _slots.slots(game)
 	ability_bar.update_slots(slots, tint, shape)
 	ability_bar.hide_keys(key_glyphs.shown_glyphs())
+	ability_bar.point_at(tip_slot(field_tips.showing, slots))
 	if part_name.visible or danger_mark.visible:
 		var cam: Camera3D = game.camera.cam
 		var top: Vector3 = game.player.shown_position() + cam.global_basis.y * Tuning.RADIUS
@@ -1562,13 +1635,30 @@ func _process(delta: float) -> void:
 	if interact != null:
 		reticle.gauge = maxf(reticle.gauge, interact.hold_fraction())
 	reticle.gauge_color = tint
+	# The weapon's timing instrument reads the one public cadence record (PILOT-CADENCE section 5.3).
+	var combat = game.get("combat")
+	var driver = combat.get("weapon_driver") if combat != null else null
+	reticle.cadence = driver.state_snapshot() if driver != null else {}
+	reticle.cadence_color = tint
 	_step_ultimate(tint)
+	nixie_rail.set_piece = ability_bar.set_piece
 	if _piece_sizes() != _laid_pieces:
 		layout(size)
 
 	var hold: float = game.restart_hold_fraction()
 	_restart.set_fraction(hold)
 	_restart.visible = hold > 0.0
+
+
+# The bar slot a first-meet tip on screen speaks of, so the bar points at it (PF-21): the active's
+# tip names the active's chip. "" for a tip that names no slot, or a slot the bar does not hold.
+static func tip_slot(tip: String, slots: Array) -> String:
+	if tip != "active":
+		return ""
+	for entry in slots:
+		if String(entry.get("id", "")).begins_with("active_"):
+			return AbilityBar.slot_name(entry)
+	return ""
 
 
 # The skill bar's live reads (SKILL-BAR section 5): the ultimate meter on the reticle, the set
@@ -1598,13 +1688,26 @@ func _set_piece_left(fill: float) -> float:
 
 
 # A refused pick shakes the slot the number named (SKILL-BAR section 5). The router emits the
-# refusal on the tick the pick is read, while the intent still holds it.
+# refusal on the tick the pick is read, while the intent still holds it. A refused Ctrl shakes
+# its chip, so the press is seen as well as heard (MG-10).
 func _on_verb_failed(verb: String, _reason: String, _at: Vector3) -> void:
+	if verb == "haul":
+		ability_bar.refuse(AbilitySlots.AbilityState.SMASH)
+		return
 	if verb != "select" or game.player == null:
 		return
 	var pick: int = int(game.player.intent.slot_pick)
 	var bar: Array = AbilitySlots.AbilityState.BAR
 	ability_bar.refuse(bar[pick] if pick >= 0 and pick < bar.size() else "line")
+
+
+# Moss's bubble reads the interact key on an intro or an exchange (moss_bubble.gd takes_interact),
+# so E there is never a refused press. The workshop is built on the way into a run; before it is,
+# nothing speaks.
+func _talk_takes_interact() -> bool:
+	var shop = game.get_node_or_null("Workshop")
+	var bubble = shop.get("bubble") if shop != null else null
+	return bubble != null and bubble.takes_interact()
 
 
 # Simulated time: the tally of a build's trying and the part name's 1.2 s run on the physics

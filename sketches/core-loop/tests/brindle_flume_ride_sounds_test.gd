@@ -14,10 +14,10 @@ const RunState := preload("res://src/core/run_state.gd")
 # their planned sound. Cue decisions are read from audio.cue_log, so this is the director's choice, not a listen.
 
 # Every attack id Brindle publishes on boss_attack_telegraphed (boss.gd), with the sound it must warn with.
-# The two slag rings are one attack: they alternate rings and share a sound.
+# The slag rings are one attack: the outer pair and the inner ring rotate and share a sound.
 const ATTACKS := {
 	"crane_sweep": "tele_crane_sweep", "slag_ring_a": "tele_slag_ring", "slag_ring_b": "tele_slag_ring",
-	"charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
+	"slag_ring_inner": "tele_slag_ring", "charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
 }
 const SIREN := "sluice_siren_two_tone"
 # Ride and movement facts that heard a stand-in, and the sound each now hears.
@@ -92,7 +92,7 @@ func _telegraphs(t) -> void:
 		t.eq("%s plays one telegraph sound" % id, played.size(), 1)
 		if played.size() == 1:
 			heard[id] = played[0]
-	t.eq("looped over every attack id", looped, 6)
+	t.eq("looped over every attack id", looped, 7)
 	var distinct := {}
 	for id in heard:
 		t.eq("%s warns with its own sound" % id, heard[id], ATTACKS[id])
@@ -141,7 +141,7 @@ func _releases(t) -> void:
 
 # boss.gd has no public list of its attack ids, so the source is read: every literal id it publishes
 # must have a row in ATTACKS, and the four publish sites are all that exist (the slag id is computed
-# and its two values are the two slag entries).
+# and its three values are the three slag entries).
 func _attack_sites(t) -> void:
 	var text := FileAccess.get_file_as_string("res://src/boss/boss.gd")
 	var sites := 0

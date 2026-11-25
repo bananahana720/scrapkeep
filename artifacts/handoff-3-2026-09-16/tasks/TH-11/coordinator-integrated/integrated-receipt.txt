@@ -1,2 +1,0 @@
-integrated 8655b47d8b794b73dac785216e3de36a55f7cbdc (no-ff merge of 704c08580b709aa4dbc2a92aa06ed22287fd9747 into main at 82b19e8, then one admission commit: README index line; coordinator factual correction of TH-01 lines 39 and 264 to HF-07a route semantics with a Procedure note; TH-01 hash re-pointed in every citer). check:docs, check:project, check:drift exit 0; five TH paper checks as logged.
-hash fixpoint: three drift iterations after the TH-01 correction (TH-01 to TH-02, TH-03; then TH-05, TH-11), twelve paper checks exit 0 at 8f141c01b04c0b8c8b8249d83bbdf328de0b17c6.

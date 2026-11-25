@@ -10,46 +10,60 @@ extends RefCounted
 # A run's first pick is a depth-1 pair, read before the pilot has rolled a metre, so the three
 # starting pilots' depth-1 rows say the effect in the words the pilot card and the HUD already use
 # (vault kick, mount, charges, cloak, laser), and only what the card itself gives: Sable's two set
-# the weight launch ("a heavier ball launches farther"); Kest's blasts widen with weight whether or
-# not a card is taken, so her cards do not claim it (player's-eye pass, 10 Nov 2026: a first-time
-# reader could not say what either Sable card did).
+# the weight launch, and Cannonball says what makes the ball heavy (scrap, the HUD's "Scrap = heft"
+# callout) before the launch it buys; Kest's blasts widen with weight whether or not a card is taken,
+# so her cards do not claim it (player's-eye pass, 10 Nov 2026: a first-time reader could not say
+# what either Sable card did; PF-01). No row uses the game's own terms for a mounted pilot or the
+# shell's steering: "on a wall" says mounted, and "steer sharper" says what the shell inversion does.
 const ROWS := {
-	# Sable, S1 to S6.
-	"s_cannonball": "Kick off a wall to zap what's near. A heavier ball launches farther.",
+	# Sable, Depth-1 keystones and S1 to S6.
+	"s_static_flutter": "Three sparks on tap. Six pulses charged.",
+	"s_rail_lance": "Longer charge fires one piercing arc lance.",
+	"s_cannonball": "Kick off a wall to zap what's near. Scrap makes you heavier. Heavier launches farther.",
 	"s_beachhead": "Grab a wall from twice as far.",
 	"s_coil_hook": "Let go of the rope to fling yourself.",
-	"s_face_runner": "Kick off a wall to jump again. A heavier shell steers sharper.",
-	"s_arc_nest": "Mounted bolts chain to another target.",
-	"s_bulwark": "Mounted, shrug off crowd control.",
-	# Kest, K1 to K6.
+	"s_face_runner": "Kick off a wall to jump again. Steer sharper after each kick.",
+	"s_arc_nest": "On a wall, bolts chain to another target.",
+	"s_bulwark": "On a wall, nothing shoves or snares you.",
+	# Kest, Depth-1 keystones and K1 to K6.
+	"k_cluster": "Throws scatter three small charges sharing snap.",
+	"k_keg": "One wide slow keg breaks tough props.",
 	"k_trapper": "Charges wait longer. Five can wait at once.",
 	"k_ghost": "Cloaked, machines spot you only up close.",
 	"k_tripwire": "Charges spring when machines approach.",
 	"k_demo_expert": "Smash scatters five payloads.",
-	"k_smoke_trail": "Glide cloaked. Heavy fins steer harder.",
+	"k_smoke_trail": "Glide cloaked. Steer sharper while you glide.",
 	"k_ambush": "Throw payloads without breaking cloak.",
-	# Rivet, R1 to R6.
+	# Rivet, Depth-1 keystones and R1 to R6.
+	"r_fan_hammer": "Twelve light rounds. Hold to fan fire.",
+	"r_big_iron": "Two piercing shells. Heavy knock, breaks props.",
 	"r_gunline": "Your laser fires twin bolts.",
 	"r_juggernaut": "Starting a sprint blasts machines back.",
 	"r_tracer": "Running fire jumps to a neighbour.",
 	"r_run_gun": "Sustain fire. Worn scrap sparks behind you.",
 	"r_ram_fins": "Sprint through bodies instead of bouncing.",
-	"r_second_wind": "Bank two sprints. Heavy fins open during sprint.",
-	# Tarn, T1 to T6.
+	"r_second_wind": "Bank two sprints. Sprinting, you steer freely midair.",
+	# Tarn, Depth-1 keystones and T1 to T6.
+	"t_saw_flurry": "Fast light sweeps. Every fifth hit pierces.",
+	"t_guillotine": "Slow windup. Third beat cleaves, breaks props.",
 	"t_long_claw": "Reach two metres farther. Close the gap.",
 	"t_anchor_line": "Every claw pull throws a shockwave.",
 	"t_twin_talons": "Two lighter talons rake each sweep.",
 	"t_heavy_paw": "Sweeps hurl the crowd twice as far.",
 	"t_spare_claw": "Bank two claw pulls.",
 	"t_vice_grip": "Every clamp refills a claw pull.",
-	# Tally, TL1 to TL6.
+	# Tally, Depth-1 keystones and TL1 to TL6.
+	"tl_petty_cash": "Half cost, half hit, faster beat stamps.",
+	"tl_compound_interest": "Slower beat. Chained stamps climb to 38.",
 	"tl_audit_stamp": "Every stamp slam throws a shockwave.",
 	"tl_steam_bank": "Bank two flywheel surges.",
 	"tl_through_feed": "Every hit winds your next surge closer.",
 	"tl_line_feed": "Harpoon smashes throw a second shockwave.",
 	"tl_spring_vent": "Each surge refills your air jump.",
 	"tl_corner_plate": "Every gather plate refills a surge.",
-	# Remembered cannon, C1 to C6.
+	# Remembered cannon, Depth-1 keystones and C1 to C6.
+	"c_snap_battery": "Quick lock and short wait, lighter lanes.",
+	"c_siege_rail": "Slow lock. 40m rail pierces and breaks props.",
 	"c_quick_lane": "Call lanes a quarter faster.",
 	"c_brace_kick": "Every plate refills a recoil kick.",
 	"c_lane_fever": "Kills speed up your lanes.",

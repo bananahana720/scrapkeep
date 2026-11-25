@@ -486,6 +486,23 @@ func _build_meshes() -> void:
 	bolt.size = Vector3(0.14, 0.9, 0.14)
 	_meshes["bolt"] = bolt
 	_meshes["none"] = dot
+	_meshes["arc"] = _arc_mesh()
+
+
+# Sable's tap arc (wave 46 3D blueprint section 3.2): three jagged segments from the origin to 1 m
+# along -Z, the way a facing glyph points, as two crossed ribbons so it reads from any side.
+static func _arc_mesh() -> ArrayMesh:
+	const WIDTH := 0.06
+	var points := [Vector3.ZERO, Vector3(0.12, 0.05, -0.33), Vector3(-0.1, -0.04, -0.66), Vector3(0.0, 0.0, -1.0)]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for across in [Vector3.RIGHT * WIDTH * 0.5, Vector3.UP * WIDTH * 0.5]:
+		for i in 3:
+			var a: Vector3 = points[i]
+			var b: Vector3 = points[i + 1]
+			for v in [a - across, b - across, b + across, a - across, b + across, a + across]:
+				st.add_vertex(v)
+	return st.commit()
 
 
 # Thin spokes radiating from the centre in the XY plane.
@@ -642,6 +659,7 @@ func _on_struck(enemy: Node3D, _kind: String, force: float) -> void:
 
 func _make_sparkle() -> CPUParticles3D:
 	var p := CPUParticles3D.new()
+	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	p.emitting = false
 	p.one_shot = true
 	p.amount = 10
@@ -685,6 +703,9 @@ func _build_trail() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
+	# The colours written into the mesh are the palette's sRGB values: the switch makes the PC's renderer read them so,
+	# not as linear light, which washed the trail and speed lines out (tools/vertex_colour_probe.gd --marks=1, W46-13).
+	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED

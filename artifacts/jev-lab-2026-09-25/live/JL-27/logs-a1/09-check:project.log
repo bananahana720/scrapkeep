@@ -1,8 +1,0 @@
-node head 8e189bf51442ff19504b30bb51f74baeb16fcafb dirty 0
-
-> scrapkeep@1.0.0 check:project
-> node scripts/check-project.mjs
-
-Project checks passed: 145 Markdown files, 4611 file links, package/lock metadata.
-Remote URLs, anchors, runtime behavior and full import analysis are outside this check.
-exit 0

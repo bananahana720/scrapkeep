@@ -11,11 +11,12 @@ const ClassPreview := preload("res://src/ui/class_preview.gd")
 const Push := preload("res://tests/workshop/push.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const Achievements := preload("res://src/core/achievements.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # The class cards that sell a pilot (v3 W12, playtest entry 8). On the real class
 # select, driven by pushed mouse and key events:
 #   - every card shows its class row's bar (1, 2, 3, Q) over its chips (RMB, Shift, Ctrl) with
-#     the rows' ability icons, plus its Space extra, and wears the row's colour;
+#     the rows' ability icons, plus its Space extra, and wears the row's screen colour (class_def.gd screen_color);
 #   - the whole screen reads in 75 words or fewer, as it opens (on the first card, PF-40) and with
 #     any one card open: the keycaps are the same on every card, so they read on the open card
 #     only (re-pinned 2026-10-10, unit B2);
@@ -111,6 +112,21 @@ func _process(delta: float) -> bool:
 			_report("open words", open_words > _calm and open_words <= CALM_BUDGET and range(now.size()).all(func(j): return j == 1 or now[j] == _calm_cards[j])
 					and open_words - _calm == now[1] - _calm_cards[1],
 				"%d words with Rivet open (budget %d, %d shut); per card %s at rest, %s now" % [open_words, CALM_BUDGET, _calm, _calm_cards, now])
+			# The title deals these cards once and keeps them (MG-09): one leaving pilot select open, shaken and
+			# looked at comes back as a new card stands.
+			var rivet = cards[1]
+			rivet._shake = 0.2
+			rivet.preview.look_drag(Vector2(30.0, 0.0))
+			rivet.preview.look_dragging = true
+			_game.flow.show_title()
+			var preview = rivet.preview
+			_report("a dealt card leaves pilot select at rest", is_instance_valid(rivet) and rivet.openness == 0.0 and rivet.scale == Vector2.ONE
+					and rivet.modulate == Color.WHITE and rivet.rotation == 0.0 and preview.open == 0.0 and preview._time == 0.0
+					and not preview.looking() and preview.look_weight == 0.0,
+				"openness %.2f scale %s modulate %s rotation %.3f; preview open %.2f time %.2f looking %s weight %.2f" % [rivet.openness,
+					rivet.scale, rivet.modulate, rivet.rotation, preview.open, preview._time, preview.looking(), preview.look_weight])
+			_game.flow.press_start()
+			_report("and comes back in the next pilot select", _game.screens.class_cards().has(rivet), "the same card dealt again")
 			var away := InputEventMouseMotion.new()
 			away.position = Vector2(4.0, 4.0)
 			away.global_position = away.position
@@ -209,7 +225,7 @@ func _check_rows(cards: Array) -> void:
 		var extras: Array = shown.slice(want_keys.size()).map(func(k): return k["key"])
 		var worn: Color = card.get_theme_stylebox("normal").border_color
 		_report("%s keys" % def.display_name, slots_ok and rows_ok and extras.all(func(k): return k == "key_space")
-				and card.def == def and Color(worn, 1.0).is_equal_approx(def.color),
+				and card.def == def and Color(worn, 1.0).is_equal_approx(ClassDef.screen_color(def.color)),
 			"shows %s; rows %s; extras %s; edge %s for row colour %s"
 				% [shown.map(func(k): return "%s %s \"%s\"" % [k["key"], k["icon"], k["words"]]), rows, extras, worn.to_html(false), def.color.to_html(false)])
 

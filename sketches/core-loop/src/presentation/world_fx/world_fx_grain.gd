@@ -6,6 +6,10 @@ const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 # The live run's seed; WorldFx sets it on each stage entry, 0 when no run is live.
 static var run_seed := 0
 
+
+static func reset_for_tests() -> void:
+	run_seed = 0
+
 # Run grain (WORLD-FX.md, Specs.GRAIN): one roll per spec per run, from the run seed and the spec id
 # alone, so it draws nothing from any shared stream, a run replays its own look, and a spec added
 # later never shifts another's roll. Seed 0 means "no run" (title, captures, tests): no grain, and the

@@ -333,6 +333,11 @@
     "drums": "telegraph.drums.ogg",
     "bass": "telegraph.bass.ogg",
     "other": "telegraph.other.ogg"
+   },
+   "gain_db": -0.8,
+   "measured": {
+    "true_peak": -1.8,
+    "note": "summed stems after -0.8 dB uniform trim and Ogg re-encode"
    }
   },
   "open": {
@@ -411,6 +416,11 @@
     "drums": "cadence.drums.ogg",
     "bass": "cadence.bass.ogg",
     "other": "cadence.other.ogg"
+   },
+   "gain_db": -0.8,
+   "measured": {
+    "true_peak": -1.7,
+    "note": "summed stems after -0.8 dB uniform trim and Ogg re-encode"
    }
   }
  },

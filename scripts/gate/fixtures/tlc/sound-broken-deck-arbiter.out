@@ -1,0 +1,72 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 109 and seed 6236720451903034044 with 18 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: 5973] (Mac OS X 27.2.1 aarch64, Homebrew 27.0.1.0.3 x86_64, MSBDiskFPSet, DiskStateQueue).
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/tmp.1Apaj7TFWS/SoundArbiter.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
+Semantic processing of module Naturals
+Semantic processing of module SoundArbiter
+Starting... (2026-11-21 21:35:09)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-21 21:35:09.
+Error: Invariant DeckObeysArbiter is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "stage"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 0
+/\ deck_pack = "stage_sec"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+State 2: <EnterBossArena line 195, col 5 to line 205, col 44 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "boss"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 1
+/\ deck_pack = "boss_p1"
+/\ deck_pump = FALSE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+State 3: <DeckEnablePump line 288, col 5 to line 293, col 91 of module SoundArbiter>
+/\ warning_on = FALSE
+/\ ult_armed = FALSE
+/\ flow = "boss"
+/\ melody_owner = "lead_stem"
+/\ shot_epoch = 0
+/\ boss_phase = 1
+/\ radio_state = "live"
+/\ champion_hyped = FALSE
+/\ warden_engaged = FALSE
+/\ trim_epoch = 0
+/\ deck_shot = "none"
+/\ dj_epoch = 1
+/\ deck_pack = "boss_p1"
+/\ deck_pump = TRUE
+/\ trim_active = FALSE
+/\ warden_section = "build"
+/\ warden_sealed = FALSE
+
+201 states generated, 139 distinct states found, 103 states left on queue.
+The depth of the complete state graph search is 6.
+The average outdegree of the complete state graph is 9 (minimum is 7, the maximum 11 and the 95th percentile is 11).
+Finished in 00s at (2026-11-21 21:35:09)

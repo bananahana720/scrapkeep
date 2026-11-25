@@ -111,6 +111,99 @@ static func _place(path: String, parent: Node3D, xform: Transform3D, prefix: Str
 	return out
 
 
+# --- Code-built pieces ---
+# A small shape drawn in code (a cast kiosk, a record sleeve, a crate) is one ArrayMesh built once and shared by every
+# instance: piece(key, build) builds it the first time with build (a Callable taking a SurfaceTool already begun) and
+# hands the same mesh back after. One shared mesh and one shared material per piece keep a repeated piece to one draw
+# each, or one draw in all through a MultiMesh. Never a PrimitiveMesh, so the primitive census has nothing to pin.
+static var _pieces := {}
+
+
+static func piece(key: String, build: Callable) -> ArrayMesh:
+	var mesh: ArrayMesh = _pieces.get(key)
+	if mesh == null:
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		build.call(st)
+		mesh = st.commit()
+		mesh.resource_name = key
+		_pieces[key] = mesh
+	return mesh
+
+
+# A convex solid cut by planes (each Plane's normal points out) added to st with one flat normal per face, so a bevel
+# catches the light as a crisp edge, never a soft blend. A vertex colour per solid lets one material carry two tones.
+static func add_hull(st: SurfaceTool, planes: Array[Plane], color := Color.WHITE, xf := Transform3D.IDENTITY) -> void:
+	var points := Geometry3D.compute_convex_mesh_points(planes)
+	for plane in planes:
+		var on: Array[Vector3] = []
+		for p in points:
+			if absf(plane.distance_to(p)) < 0.0005 and not on.any(func(q: Vector3): return q.is_equal_approx(p)):
+				on.append(p)
+		if on.size() < 3:
+			continue
+		var centre := Vector3.ZERO
+		for p in on:
+			centre += p
+		centre /= on.size()
+		var u := (on[0] - centre).normalized()
+		var v := plane.normal.cross(u)
+		on.sort_custom(func(a: Vector3, b: Vector3): return atan2((a - centre).dot(v), (a - centre).dot(u)) > atan2((b - centre).dot(v), (b - centre).dot(u)))
+		var normal := (xf.basis * plane.normal).normalized()
+		for i in range(1, on.size() - 1):
+			for p in [on[0], on[i], on[i + 1]]:
+				st.set_color(color)
+				st.set_normal(normal)
+				st.add_vertex(xf * p)
+
+
+# The planes of a box from `low` to `high` with every edge chamfered by bevel metres (bevel 0: a plain box). taper
+# pulls the top face in by that many metres on x and z, a cast casing's draft.
+static func bevel_box(low: Vector3, high: Vector3, bevel: float, taper := 0.0) -> Array[Plane]:
+	var c := (low + high) * 0.5
+	var h := (high - low) * 0.5
+	var planes: Array[Plane] = [Plane(Vector3.UP, high.y), Plane(Vector3.DOWN, -low.y)]
+	var rise := high.y - low.y
+	for side: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.BACK, Vector3.FORWARD]:
+		var half: float = h.x if side.x != 0.0 else h.z
+		var lean: Vector3 = Vector3(side.x, taper / rise, side.z).normalized() if taper > 0.0 else side
+		var foot: Vector3 = Vector3(c.x, low.y, c.z) + side * half
+		planes.append(Plane(lean, foot))
+	if bevel <= 0.0:
+		return planes
+	for sx: float in [-1.0, 1.0]:
+		for sz: float in [-1.0, 1.0]:
+			# The upright edge leans with the draft, so its chamfer leans the same way and keeps one width.
+			var n := Vector3(sx, 2.0 * taper / rise, sz).normalized()
+			planes.append(Plane(n, Vector3(c.x, low.y, c.z) + Vector3(sx * (h.x - bevel), 0.0, sz * h.z)))
+	for side: Vector3 in [Vector3.RIGHT, Vector3.LEFT, Vector3.BACK, Vector3.FORWARD]:
+		var half: float = h.x if side.x != 0.0 else h.z
+		var inset := half - taper
+		for up: float in [1.0, -1.0]:
+			var y: float = high.y if up > 0.0 else low.y
+			var reach: float = inset if up > 0.0 else half
+			var n: Vector3 = (side + Vector3.UP * up).normalized()
+			planes.append(Plane(n, Vector3(c.x, y, c.z) + side * (reach - bevel)))
+	return planes
+
+
+# The planes of an upright prism of `sides` faces from y0 to y1, radius r0 at the foot and r1 at the top, with the top
+# rim chamfered by bevel metres; centred on (x, z) of at.
+static func prism(at: Vector3, sides: int, r0: float, r1: float, y0: float, y1: float, bevel := 0.0) -> Array[Plane]:
+	var planes: Array[Plane] = [Plane(Vector3.UP, y1), Plane(Vector3.DOWN, -y0)]
+	var rise := y1 - y0
+	for i in sides:
+		var a := TAU * (i + 0.5) / sides
+		var out := Vector3(cos(a), 0.0, sin(a))
+		var face := out * cos(PI / sides)
+		var n := Vector3(out.x * rise, (r0 - r1) * cos(PI / sides), out.z * rise).normalized()
+		planes.append(Plane(n, Vector3(at.x, y0, at.z) + face * r0))
+		if bevel > 0.0:
+			var nb := (out + Vector3.UP).normalized()
+			planes.append(Plane(nb, Vector3(at.x, y1, at.z) + face * (r1 - bevel)))
+	return planes
+
+
 static func _relative(node: Node3D, top: Node) -> Transform3D:
 	var xf := Transform3D.IDENTITY
 	var walk: Node = node

@@ -1,8 +1,12 @@
 # PD-KEST: Kest's ball as a Hoberman mecha on shell_base.hoberman() (ROSTER-LOOK section 0,
 # pilots/kest.md section 5). Concept: artifacts/local/alpha/push/w13/concepts/codex/kest/hero.png,
 # chase.png and sheet.png with base/base-hero.png and mechanism.png (approved as one set,
-# docs/decisions.tsv w13-look rows of 2026-10-10). Where chase.png puts the launchers on the
-# near arc it is a picture error; they sit on the front arc at 11 and 1 o'clock as hero.png shows.
+# docs/decisions.tsv w13-look rows of 2026-10-10).
+# E2-03 (wave 46, ruling en): the launchers are two heroic satchel mortar pods flanking the
+# cutaway ball (artifacts/local/w46-concept-art/heroic-cutaway/05-kest-heroic-cutaway.png): a
+# chamfered olive housing between petrol end plates, a flared steel bell forward with a lit
+# fuse in its throat, a brass canister slung under it on oxide straps, hazard stripes on the
+# outer face and the rear plate, and an amber fuse cap on top that reads from the chase camera.
 #
 #   prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 \
 #     --python world_one/shell_kest.py -- [--out <file.glb>] [--variant roost]
@@ -13,28 +17,43 @@
 # The heft layers come from world_one/shell_kest_plates.py.
 #
 # Kest's parts and where they ride (ROSTER-LOOK sections 2 and 4):
-#   WeaponRing  the recoil cradles at 11 and 1 o'clock (charcoal saddles under oxide slides) and
-#               four canvas satchels strapped flat on the ring row at 3, 6, 9 and 7:30 o'clock,
-#               each with a horizontal ochre band, folded into the ring mesh (paint, rubber).
+#   WeaponRing  the two trunnion yokes clamped on the band under the pods, and four canvas
+#               satchels strapped flat on the ring row at 3, 6, 9 and 7:30 o'clock, each with a
+#               horizontal ochre band, folded into the ring mesh (paint, rubber).
 #               The band faces carry their index in UV2.x (1 to 3 at 3, 6 and 9 o'clock, 4 on
 #               the 7:30 satchel, 0 elsewhere) and the 7:30 satchel's faces carry UV2.y = 4, the
 #               heft class it shows from (pilots/kest.md section 5: volley targets 3, 3, 3, 4, 4),
 #               so one lit_count/heft parameter on the one paint surface picks a band, one draw.
-#   Mortar      its own mesh under WeaponRing, origin on the cradle line, so kest_cage_state()
-#               can pitch it 20 or 45 degrees and recoil it 0.08 m: the two short launcher tubes,
-#               parallel and pointing forward, with an amber fuse tip in each mouth (class_accent,
-#               the only glow); MortarMouth.L/R mark the mouths (rubber, class_accent: 2 draws).
+#   Mortar      its own mesh under WeaponRing, origin on the trunnion line (MORTAR_PIVOT), so
+#               kest_cage_state() pitches it 20 or 45 degrees and recoils it 0.08 m, and a
+#               machinery row (clips/kest.json) kicks it 0.09 m back on each throw: both pods, outboard of
+#               the plating at 2 and 10 o'clock, bells forward; the fuse caps and the throat
+#               fuses are the only glow (paint, class_accent: 2 draws). MortarMouth.L/R mark the
+#               bell mouths.
 #   Pod         the petrol seat (the sheet's "Perch"), FusePlunger (slot 2) and ChargeKey
 #               (slot 3) in the bank, the lap bar, two pedals; a gap bracket from each gimbal
 #               boss to a vent hinge (rubber).
-#   VaneL/R     the slotted vents, hinged at the side gaps (shell_kest_plates.vane_part).
+#   VaneL/R     the vent hinges at the side gaps; each carries its slats as VaneL.Blade /
+#               VaneR.Blade (shell_kest_plates.vane_part), so hero_assets steers the hinge open
+#               for a glide while a machinery row flicks the blade on a throw.
 #   Dome>Pilot  a static head placeholder, hidden in play by fit_pilot_into; hero_assets_test
 #               reads it, and the animated pilot is pilot_kest_anim.glb.
-# Draws: Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2, Mortar 2, VaneL 1, VaneR 1, Pilot 1
-# = 15. The base alone spends 10 (shell_base.hoberman header), so the shell keeps a registry
-# exception, inside the 16-draw cap for Hoberman pilot mechas (docs/decisions.tsv w13-PD,
-# 2026-10-10). The lattice struts and tread caps come from shell_base's defaults (0.06 m and
-# 0.10 m since PD-0b).
+# Draws: Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2, Mortar 2, VaneL.Blade 1,
+# VaneR.Blade 1, Pilot 1 = 15, 14 in play; the clacker (kest_clacker.py, mounted by hero_assets
+# at the right yoke) adds 2, so Kest draws 16 in play, the 16-draw cap for Hoberman pilot
+# mechas (docs/decisions.tsv w13-PD, 2026-10-10). The lattice struts and tread caps come from
+# shell_base's defaults (0.06 m and 0.10 m since PD-0b).
+#
+# Budget (E2-03): the cutaway look (ruling dm) swaps Core's lattice for the plating, so the
+# lattice's 240 copper pin heads never draw in the hero look. The recipe drops them (960 tris)
+# and keeps the chalk balance mark; the pods spend that room, and the shell stays inside the
+# 6,500-tri band and the class V row of hero_six_pilot_budget_test.
+#
+# Every ring part answers to the carrier bank (carrier_bank_test, baked_bracket_reach_test): a
+# point at horizontal radius rho and height z keeps 0.5 rho - 0.866 z at most BANK_SUPPORT, so a
+# 30 degree slope banks nothing and a wall banks under 60 degrees. The pods stay outside the
+# plating, under the ruling en reach and above Z -0.55 through every pitch and recoil, and clear
+# of the open vents at any ring yaw.
 
 import json
 import math
@@ -54,16 +73,51 @@ from common import Part, Vector  # noqa: E402
 
 # hero_assets_test SHELL_TRIS: the shell without its pilot, 3,000 to 6,500 (the 6,600 target).
 SHELL_BAND = (3000, 6500)
-REACH = 1.25                      # ROSTER-LOOK section 3 rule 6
-TUBE_CLOCK = 28.0                 # 11 and 1 o'clock on the front arc
-TUBE_R = 0.05
-TUBE_Z = 0.03
-TUBE_Y = (0.86, 1.09)
-MORTAR_PIVOT = (0.0, 0.95, TUBE_Z)   # the cradle line, where the tubes sit in their saddles
+VERT_CAP = 11600                  # world_one_shell_kest_test SHELL_VERTS
+REACH = 1.70                      # ruling en: the visual weapon reach from the ball centre
+POD_REACH = 1.25                  # ROSTER-LOOK section 3 rule 6: the Pod subtree (vents)
+LOW_Z = -0.55                     # ruling en: slopes never swallow the pods
+PLATING = 1.0                     # the cutaway plating is 0.985 m; pods keep outside 1.0
+BANK_SUPPORT = 0.965              # CarrierBank.LIMIT 0.99 less a bisection margin
+VANE_GAP = 0.02                   # pods keep this far from an open vent at any ring yaw
+# The pods (Blender metres, ring space: +Y forward, +Z up); x is mirrored per side.
+POD_X = 1.24                      # the pod axis, outboard of the plating at about 2 and 10 o'clock
+POD_Z = 0.03
+HOUSING = (0.17, 0.53, 0.15, 0.15, 0.06)        # y0, y1, half width, half height, chamfer
+PLATES = ((0.145, 0.195), (0.505, 0.555))       # rear and front end plates (y0, y1)
+PLATE = (0.168, 0.168, 0.068)                   # their half width, half height, chamfer
+# The bell, a lathe about the pod axis: (y, r) from the buried collar to the throat floor, steel
+# outside, charcoal bore.
+BELL = ((0.46, 0.0), (0.46, 0.115), (0.60, 0.115), (0.60, 0.095), (0.71, 0.122), (0.785, 0.19),
+        (0.81, 0.215), (0.81, 0.184), (0.73, 0.116), (0.66, 0.082), (0.66, 0.0))
+BELL_SIDES = 12
+BELL_STEEL = 6                    # bands 0..5 are the outside (steel); the rest are the bore
+# The loaded fuse: a glowing disc (y, radius, depth) just proud of the throat floor, its own closed
+# island, because Godot compresses each surface's positions on its own bounds and a ring shared
+# between the charcoal bore and a glowing floor would no longer weld.
+THROAT_FUSE = (0.668, 0.07, 0.012)
+MOUTH_Y = 0.82
+CANISTER = (0.02, 0.34, -0.215, 0.07, 0.22, 0.48)  # inboard shift, y centre, z, radius, y0, y1
+STRAPS = (0.27, 0.43)
+FUSE_CAP = (0.06, 0.245)          # outboard shift, y: the fuse cap on the housing top, rear
+# The trunnion line both pods pitch about runs under them, so a nose-down stance swings the
+# housing tops forward, away from the open vents, instead of lifting them into them.
+TRUNNION = (0.33, -0.17, 0.045)   # y, z, radius of the pin through the cradle lug
+MORTAR_PIVOT = (0.0, TRUNNION[0], TRUNNION[1])
+# The machinery and cage poses the checks hold (Blender rotation x, recoil along -Y): rest, the
+# throw kick (clips/kest.json's 0.09 m recoil; kest_cage_state owns the pitch, so a throw kicks
+# straight back from any stance), the ready stance and the riding stance (kest_cage_state: 20
+# and 45 degrees nose down, its 0.08 m ride-beat recoil covered by the kick's 0.09 m).
+KICK_M = 0.09
+POSES = (("rest", 0.0, 0.0), ("kick", 0.0, KICK_M), ("ready", -20.0, 0.0), ("ready kick", -20.0, KICK_M),
+         ("riding", -45.0, KICK_M))
 # Band index by satchel clock; the last satchel shows from heft class IV (kp.SATCHEL4_CLOCK).
 SATCHELS = ((90.0, 1), (180.0, 2), (270.0, 3), (kp.SATCHEL4_CLOCK, 4))
 DRAWS = 15
 BANK = (("FusePlunger", "plunger"), ("ChargeKey", "key"))
+OLIVE = common.mix("petrol", "brass", 0.4)
+STEEL = "9aa0a0"                  # palette.gd STEEL
+STRIPE = common.mix("amber", "brass", 0.5)
 
 
 def flag(name):
@@ -74,35 +128,177 @@ def flag(name):
     return argv[i + 1] if i + 1 < len(argv) else True
 
 
-def tube_x(side):
-    return side * 1.10 * math.sin(math.radians(TUBE_CLOCK))
+# --- closed builders ---------------------------------------------------------------------------
 
 
-def ring_kit():
-    """Kest's weapon ring parts in ring space (the ring sits at the Pod origin): the recoil
-    cradles and the four satchels. The tubes ride the Mortar mesh (mortar_part)."""
-    r = Part("RingKit")
-    for side in (-1, 1):
-        x = tube_x(side)
-        # The recoil cradle: a charcoal saddle straddling the band under an oxide slide.
-        r.box("rubber", (0.13, 0.05, 0.08), loc=(x, 0.95, TUBE_Z - 0.03))
-        r.box("paint", (0.09, 0.13, 0.025), loc=(x, 0.975, TUBE_Z - 0.062), color="oxide")
-    for clock, _ in SATCHELS:
-        kp.satchel(r, clock)
-    return r
+def octagon(part, x, z, y0, y1, half_x, half_z, chamfer, color):
+    """A box along +Y with its four long edges chamfered: one closed island, 28 triangles."""
+    corners = [(half_x, half_z - chamfer), (half_x - chamfer, half_z), (-half_x + chamfer, half_z),
+               (-half_x, half_z - chamfer), (-half_x, -half_z + chamfer), (-half_x + chamfer, -half_z),
+               (half_x - chamfer, -half_z), (half_x, -half_z + chamfer)]
+    back = [part.bm.verts.new((x + cx, y0, z + cz)) for cx, cz in corners]
+    front = [part.bm.verts.new((x + cx, y1, z + cz)) for cx, cz in corners]
+    faces = [part.bm.faces.new(back), part.bm.faces.new(list(reversed(front)))]
+    faces += [part.bm.faces.new((back[(i + 1) % 8], back[i], front[i], front[(i + 1) % 8])) for i in range(8)]
+    return part.paint(faces, "paint", color)
+
+
+def lathe(part, origin, profile, sides, paints):
+    """A closed surface of revolution about +Y through origin: profile (y, r) from one pole to the
+    other. paints[i] is (slot, colour) for the band from point i to i + 1."""
+    o = Vector(origin)
+    rings = []
+    for y, r in profile:
+        if r == 0.0:
+            rings.append([part.bm.verts.new((o.x, y, o.z))])
+            continue
+        rings.append([part.bm.verts.new((o.x + r * math.cos(k * math.tau / sides), y,
+                                         o.z + r * math.sin(k * math.tau / sides))) for k in range(sides)])
+    faces = []
+    for i in range(len(rings) - 1):
+        a, b = rings[i], rings[i + 1]
+        band = []
+        for k in range(sides):
+            j = (k + 1) % sides
+            if len(a) == 1:
+                band.append(part.bm.faces.new((a[0], b[j], b[k])))
+            elif len(b) == 1:
+                band.append(part.bm.faces.new((a[k], a[j], b[0])))
+            else:
+                band.append(part.bm.faces.new((a[k], a[j], b[j], b[k])))
+        slot, color = paints[i]
+        part.paint(band, slot, color)
+        faces += band
+    return faces
+
+
+def plug(part, corners, normal, depth, color, slot="paint"):
+    """A closed flat mark: the polygon on a face, closed to a point depth behind it."""
+    n = Vector(normal).normalized()
+    pts = [Vector(c) for c in corners]
+    if (pts[1] - pts[0]).cross(pts[2] - pts[0]).dot(n) < 0:
+        pts.reverse()
+    rim = [part.bm.verts.new(p) for p in pts]
+    tip = part.bm.verts.new(sum(pts, Vector()) / len(pts) - n * depth)
+    k = len(rim)
+    faces = [part.bm.faces.new(rim)] + [part.bm.faces.new((rim[(i + 1) % k], rim[i], tip)) for i in range(k)]
+    return part.paint(faces, slot, color)
+
+
+def cylinder_y(part, x, z, y0, y1, r, sides, color, cap_color=None):
+    """A closed cylinder along +Y, its end caps in cap_color."""
+    ring0 = [part.bm.verts.new((x + r * math.cos(k * math.tau / sides), y0, z + r * math.sin(k * math.tau / sides)))
+             for k in range(sides)]
+    ring1 = [part.bm.verts.new((x + r * math.cos(k * math.tau / sides), y1, z + r * math.sin(k * math.tau / sides)))
+             for k in range(sides)]
+    sides_f = [part.bm.faces.new((ring0[k], ring0[(k + 1) % sides], ring1[(k + 1) % sides], ring1[k]))
+               for k in range(sides)]
+    caps = [part.bm.faces.new(list(reversed(ring0))), part.bm.faces.new(ring1)]
+    part.paint(sides_f, "paint", color)
+    part.paint(caps, "paint", cap_color or color)
+    return sides_f + caps
+
+
+def cylinder_z(part, slot, x, y, z0, z1, r, sides, color=None):
+    """A closed upright cylinder."""
+    lo = [part.bm.verts.new((x + r * math.cos(k * math.tau / sides), y + r * math.sin(k * math.tau / sides), z0))
+          for k in range(sides)]
+    hi = [part.bm.verts.new((x + r * math.cos(k * math.tau / sides), y + r * math.sin(k * math.tau / sides), z1))
+          for k in range(sides)]
+    faces = [part.bm.faces.new(list(reversed(lo))), part.bm.faces.new(hi)]
+    faces += [part.bm.faces.new((lo[k], lo[(k + 1) % sides], hi[(k + 1) % sides], hi[k])) for k in range(sides)]
+    return part.paint(faces, slot, color)
+
+
+def stripes(part, centre, u, v, normal, size, count, depth=0.004):
+    """A hazard panel on a flat face: a charcoal plate standing proud by 6 mm with count diagonal
+    stripes on it. centre on the face, u along the panel, v across, size (along, across)."""
+    c, u, v, n = Vector(centre), Vector(u).normalized(), Vector(v).normalized(), Vector(normal).normalized()
+    a, b = size[0] / 2, size[1] / 2
+    lift = n * 0.006
+    plate = [c - u * a - v * b, c + u * a - v * b, c + u * a + v * b, c - u * a + v * b]
+    inner = [p - n * 0.01 for p in plate]
+    lo = [part.bm.verts.new(p) for p in inner]
+    hi = [part.bm.verts.new(p + lift + n * 0.01) for p in inner]
+    faces = [part.bm.faces.new(lo), part.bm.faces.new(hi)]
+    faces += [part.bm.faces.new((lo[i], lo[(i + 1) % 4], hi[(i + 1) % 4], hi[i])) for i in range(4)]
+    bmesh.ops.recalc_face_normals(part.bm, faces=faces)
+    part.paint(faces, "paint", "charcoal")
+    top = c + lift + n * 0.0015
+    w = size[0] / (2 * count + 1)
+    slant = b * 0.9
+    for k in range(count):
+        s0 = -a + w * (2 * k + 1) - slant * 0.5
+        quad = [top + u * (s0 - slant * 0.5) - v * b * 0.9, top + u * (s0 + w - slant * 0.5) - v * b * 0.9,
+                top + u * (s0 + w + slant * 0.5) + v * b * 0.9, top + u * (s0 + slant * 0.5) + v * b * 0.9]
+        plug(part, quad, n, depth, STRIPE)
+    return faces
+
+
+# --- Kest's machinery ----------------------------------------------------------------------------
+
+
+def pod(m, side):
+    """One mortar pod, built in ring space on the side x = side * POD_X."""
+    x = side * POD_X
+    y0, y1, hw, hh, ch = HOUSING
+    octagon(m, x, POD_Z, y0, y1, hw, hh, ch, OLIVE)
+    for p0, p1 in PLATES:
+        octagon(m, x, POD_Z, p0, p1, PLATE[0], PLATE[1], PLATE[2], "petrol")
+    # The bell: steel outside, charcoal bore, the loaded fuse glowing on the throat floor.
+    paints = [("paint", STEEL)] * BELL_STEEL + [("paint", "charcoal")] * (len(BELL) - 1 - BELL_STEEL)
+    lathe(m, (x, 0, POD_Z), BELL, BELL_SIDES, paints)
+    fy, fr, fd = THROAT_FUSE
+    disc = [(x + fr * math.cos(k * math.tau / BELL_SIDES), fy, POD_Z + fr * math.sin(k * math.tau / BELL_SIDES))
+            for k in range(BELL_SIDES)]
+    plug(m, disc, (0, 1, 0), fd, None, "class_accent")
+    # Hazard stripes: the outer face, toward the front, and the rear plate, where the chase camera sees them.
+    stripes(m, (x + side * hw, 0.40, POD_Z), (0, 1, 0), (0, 0, 1), (side, 0, 0), (0.20, hh * 2 - ch * 2), 3)
+    stripes(m, (x, PLATES[0][0], POD_Z), (side, 0, 0), (0, 0, 1), (0, -1, 0), (0.22, 0.16), 3)
+    # The brass canister on oxide straps, slung under the housing.
+    shift, cy, cz, cr, c0, c1 = CANISTER
+    cx = x - side * shift
+    cylinder_y(m, cx, cz, c0, c1, cr, 10, "brass", "charcoal")
+    z0, z1 = cz - cr - 0.012, POD_Z - hh + 0.02
+    for sy in STRAPS:
+        m.box("paint", (2 * cr + 0.03, 0.026, z1 - z0), loc=(cx, sy, (z0 + z1) / 2), color="oxide")
+    # The fuse cap on top, rear and outboard: a charcoal socket and the amber cap.
+    fx = x + side * FUSE_CAP[0]
+    cylinder_z(m, "paint", fx, FUSE_CAP[1], POD_Z + hh - 0.01, POD_Z + hh + 0.035, 0.038, 8, "charcoal")
+    cylinder_z(m, "class_accent", fx, FUSE_CAP[1], POD_Z + hh + 0.035, POD_Z + hh + 0.075, 0.03, 8)
+    # The cradle lug under the housing's inner edge, and the trunnion pin through it on the pivot line.
+    ty, tz, tr = TRUNNION
+    inner = x - side * hw
+    lug_top = POD_Z - hh + 0.03
+    m.box("paint", (0.07, 0.12, lug_top - tz + tr), loc=(inner + side * 0.025, ty, (lug_top + tz - tr) / 2), color="petrol")
+    m.rod("paint", Vector((inner + side * 0.05, ty, tz)), Vector((inner - side * 0.05, ty, tz)), tr, 8, color="charcoal")
 
 
 def mortar_part():
-    """The two launcher tubes and their fuse tips, one mesh that pitches and recoils in the
-    cradles; built in ring space, made into an object with its origin at MORTAR_PIVOT."""
+    """Both pods, one mesh that pitches and recoils on the trunnion line; built in ring space,
+    made into an object with its origin at MORTAR_PIVOT."""
     m = Part("Mortar")
     for side in (-1, 1):
-        x = tube_x(side)
-        a, b = Vector((x, TUBE_Y[0], TUBE_Z)), Vector((x, TUBE_Y[1], TUBE_Z))
-        m.rod("rubber", a, b, TUBE_R, 6, r2=TUBE_R + 0.008)
-        # The fuse tip of the loaded charge, amber in the mouth.
-        sb._disc(m, (x, TUBE_Y[1] + 0.002, TUBE_Z), (0, 1, 0), 0.034, 6, "class_accent")
+        pod(m, side)
+    sb._sharpen(m)
     return m
+
+
+def ring_kit():
+    """Kest's weapon ring parts in ring space (the ring sits at the Pod origin): the trunnion yokes
+    clamped on the band under the pods, and the four satchels."""
+    r = Part("RingKit")
+    mid = (sb.RING_BAND[0] + sb.RING_BAND[1]) / 2
+    ty, tz, _ = TRUNNION
+    for side in (-1, 1):
+        band_x = math.sqrt(mid * mid - ty * ty)
+        pin = POD_X - HOUSING[2] - 0.05
+        # The clamp on the band, and the yoke arm from it down and out to the trunnion pin's end.
+        r.box("paint", (0.06, 0.15, 0.13), loc=(side * band_x, ty, 0.0), color="charcoal")
+        r.beam("rubber", (side * band_x, ty, -0.03), (side * (pin + 0.01), ty, tz), 0.07, 0.10)
+    for clock, _ in SATCHELS:
+        kp.satchel(r, clock)
+    return r
 
 
 def band_attributes(ring):
@@ -137,31 +333,53 @@ def band_attributes(ring):
     return seen, gated
 
 
+def islands(bm):
+    bm.faces.index_update()
+    seen, out = set(), []
+    for start in bm.faces:
+        if start.index in seen:
+            continue
+        group, stack = [], [start]
+        seen.add(start.index)
+        while stack:
+            f = stack.pop()
+            group.append(f)
+            for e in f.edges:
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index)
+                        stack.append(g)
+        out.append(group)
+    return out
+
+
 def strip_neutral_mount(ring):
     """Removes the neutral weapon seat (the mount block and rod at 12 o'clock) from the ring."""
     bm = bmesh.new()
     bm.from_mesh(ring.data)
-    bm.verts.ensure_lookup_table()
-    seen, doomed = set(), []
-    for v in bm.verts:
-        if v in seen:
-            continue
-        island, stack = [], [v]
-        seen.add(v)
-        while stack:
-            u = stack.pop()
-            island.append(u)
-            for e in u.link_edges:
-                w = e.other_vert(u)
-                if w not in seen:
-                    seen.add(w)
-                    stack.append(w)
-        if all(u.co.y > 1.07 and abs(u.co.x) < 0.08 for u in island):
-            doomed += island
-    bmesh.ops.delete(bm, geom=doomed, context="VERTS")
+    doomed = [f for g in islands(bm) for f in g
+              if all(v.co.y > 1.07 and abs(v.co.x) < 0.08 for f2 in g for v in f2.verts)]
+    verts = {v for f in doomed for v in f.verts}
+    bmesh.ops.delete(bm, geom=list(verts), context="VERTS")
     bm.to_mesh(ring.data)
     bm.free()
-    return len(doomed)
+    return len(verts)
+
+
+def strip_pins(core):
+    """Drops the lattice's copper pin heads (shell_base._stud: four faces round four corners) and
+    keeps the chalk balance mark (paint). Returns the count dropped."""
+    copper = [m.name for m in core.data.materials].index("copper")
+    bm = bmesh.new()
+    bm.from_mesh(core.data)
+    pins = [g for g in islands(bm) if len(g) == 4 and all(f.material_index == copper for f in g)
+            and len({v for f in g for v in f.verts}) == 4]
+    verts = sorted({v.index for g in pins for f in g for v in f.verts})
+    bm.verts.ensure_lookup_table()
+    bmesh.ops.delete(bm, geom=[bm.verts[i] for i in verts], context="VERTS")
+    bm.to_mesh(core.data)
+    bm.free()
+    return len(pins)
 
 
 def merge_into(target, part):
@@ -250,34 +468,133 @@ def stable_pilot_normals(path):
     print("STABLE_NORMALS Kest static Pilot, component precision 0.001")
 
 
+# --- checks --------------------------------------------------------------------------------------
+
+
 def world_verts(obj):
     mw = obj.matrix_world
     return [mw @ v.co for v in obj.data.vertices]
 
 
-def vane_report(pod, ring, vanes):
+def edge_points(obj, step=0.03):
+    """World points along every edge of a mesh (its vertices included), so a chord between two
+    far vertices is held too."""
+    mw = obj.matrix_world
+    pts = []
+    for e in obj.data.edges:
+        a, b = mw @ obj.data.vertices[e.vertices[0]].co, mw @ obj.data.vertices[e.vertices[1]].co
+        n = max(1, int((b - a).length / step))
+        pts += [a.lerp(b, i / n) for i in range(n + 1)]
+    return pts
+
+
+def hull2(points):
+    """Convex hull of 2D points (monotone chain), counter-clockwise."""
+    pts = sorted(set(points))
+    if len(pts) < 3:
+        return pts
+
+    def cross(o, a, b):
+        return (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, hi = [], []
+    for p in pts:
+        while len(lo) >= 2 and cross(lo[-2], lo[-1], p) <= 0:
+            lo.pop()
+        lo.append(p)
+    for p in reversed(pts):
+        while len(hi) >= 2 and cross(hi[-2], hi[-1], p) <= 0:
+            hi.pop()
+        hi.append(p)
+    return lo[:-1] + hi[:-1]
+
+
+def outside_by(hull, p):
+    """Signed distance of a 2D point outside a counter-clockwise convex hull (negative inside)."""
+    worst = -math.inf
+    for i in range(len(hull)):
+        a, b = hull[i], hull[(i + 1) % len(hull)]
+        ex, ey = b[0] - a[0], b[1] - a[1]
+        length = math.hypot(ex, ey)
+        if length < 1e-12:
+            continue
+        # The outward normal of a counter-clockwise edge is (ey, -ex).
+        worst = max(worst, ((p[0] - a[0]) * ey - (p[1] - a[1]) * ex) / length)
+    return worst
+
+
+def vane_region(vanes, angle):
+    """The (rho, z) hull of both vents' blades at a hinge angle (radians, 0 folded): a pod point
+    inside it meets a vent at some ring yaw, since the ring turns freely against the Pod."""
+    for hinge, side in vanes:
+        hinge.rotation_euler = (0.0, side * angle, 0.0)
+    bpy.context.view_layer.update()
+    pts = [(math.hypot(p.x, p.y), p.z) for hinge, _ in vanes for c in hinge.children for p in world_verts(c)]
+    for hinge, _ in vanes:
+        hinge.rotation_euler = (0.0, 0.0, 0.0)
+    bpy.context.view_layer.update()
+    return hull2(pts)
+
+
+def mortar_report(ring, mortar, vanes):
+    """Reach, ground clearance, plating clearance and vane clearance of the pods in each pose, and
+    the carrier bank support of every ring part at rest. Returns True when every check holds."""
+    ok = True
+    regions = {"folded": vane_region(vanes, 0.0), "cracked": vane_region(vanes, math.pi / 6),
+               "open": vane_region(vanes, math.pi / 2)}
+    # Which vent state each pose meets in play: kest_cage_state opens them for a glide or the ride
+    # and cracks them when ready; a throw can come at any of those.
+    meets = {"rest": ("folded", "open"), "kick": ("folded", "cracked", "open"), "ready": ("cracked", "open"),
+             "ready kick": ("cracked", "open"), "riding": ("open",)}
+    rest_loc = mortar.location.copy()
+    for name, deg, back in POSES:
+        mortar.rotation_euler = (math.radians(deg), 0.0, 0.0)
+        mortar.location = rest_loc - Vector((0, back, 0))
+        bpy.context.view_layer.update()
+        pts = world_verts(mortar)
+        reach = max(p.length for p in pts)
+        low = min(p.z for p in pts)
+        near = min(p.length for p in pts)
+        samples = [(math.hypot(p.x, p.y), p.z) for p in edge_points(mortar)]
+        gaps = {state: min(outside_by(regions[state], s) for s in samples) for state in meets[name]}
+        good = reach <= REACH and low >= LOW_Z and near >= PLATING and all(g >= VANE_GAP for g in gaps.values())
+        ok = ok and good
+        print("MORTAR %s pitch %+.0f recoil %.2f: reach %.3f (limit %.2f), lowest Z %.3f (limit %.2f), nearest %.3f "
+              "(plating %.2f), vent gap %s %s" % (name, deg, back, reach, REACH, low, LOW_Z, near, PLATING,
+                                                  ", ".join("%s %.3f" % kv for kv in gaps.items()), "ok" if good else "OUT"))
+    mortar.rotation_euler = (0.0, 0.0, 0.0)
+    mortar.location = rest_loc
+    bpy.context.view_layer.update()
+    support = max(0.5 * math.hypot(p.x, p.y) - 0.866 * p.z for o in (ring, mortar) for p in world_verts(o))
+    bank_ok = support <= BANK_SUPPORT
+    print("BANK_SUPPORT ring and pods 0.5 rho - 0.866 z at most %.3f (limit %.3f) %s"
+          % (support, BANK_SUPPORT, "ok" if bank_ok else "OUT"))
+    return ok and bank_ok
+
+
+def vane_report(pod, vanes):
     """Folded and open reach of each vent past the lattice, the open sight cone, and the
     clearance above the weapon band. Returns True when every check holds."""
     ok = True
+    blades = {hinge.name: hinge.children[0] for hinge, _ in vanes}
     bpy.context.view_layer.update()
-    folded = {v.name: max(p.length for p in world_verts(v)) for v in vanes}
-    for v, side in zip(vanes, (-1, 1)):
-        v.rotation_euler = (0.0, side * math.pi / 2, 0.0)
+    folded = {n: max(p.length for p in world_verts(b)) for n, b in blades.items()}
+    for hinge, side in vanes:
+        hinge.rotation_euler = (0.0, side * math.pi / 2, 0.0)
     bpy.context.view_layer.update()
-    opened = {v.name: max(p.length for p in world_verts(v)) for v in vanes}
+    opened = {n: max(p.length for p in world_verts(b)) for n, b in blades.items()}
     band_top = sb.RING_BAND[2] / 2 + sb.RING_BAND[3]
-    low = min(p.z for v in vanes for p in world_verts(v) if p.length > sb.RING_BAND[0] - 0.05)
+    low = min(p.z for b in blades.values() for p in world_verts(b) if p.length > sb.RING_BAND[0] - 0.05)
     cone_open = sb.sight_cone_hits(pod)
-    for v in vanes:
-        v.rotation_euler = (0.0, 0.0, 0.0)
+    for hinge, _ in vanes:
+        hinge.rotation_euler = (0.0, 0.0, 0.0)
     bpy.context.view_layer.update()
     for name in folded:
         f_past, o_past = folded[name] - sb.LATTICE_OUTER, opened[name] - sb.LATTICE_OUTER
-        good = abs(f_past - 0.10) <= 0.03 and abs(o_past - 0.25) <= 0.03 and opened[name] <= REACH
+        good = abs(f_past - 0.10) <= 0.03 and abs(o_past - 0.25) <= 0.03 and opened[name] <= POD_REACH
         ok = ok and good
         print("VANE %s folded %.3f m past the lattice, open %.3f m past (radius %.3f) %s"
               % (name, f_past, o_past, opened[name], "ok" if good else "OUT"))
-    tip = max(world_verts(vanes[1]), key=lambda p: p.length)
+    tip = max(world_verts(blades["VaneR"]), key=lambda p: p.length)
     clock = math.degrees(math.atan2(tip.x, tip.z))
     print("VANE_CLOCK folded tip at %.0f degrees from the top (2 o'clock is 60) %s"
           % (clock, "ok" if 45 <= clock <= 75 else "OUT"))
@@ -290,6 +607,25 @@ def draws(root):
     return sum(len({p.material_index for p in o.data.polygons}) for o in common.tree(root) if o.type == "MESH")
 
 
+def closed_report(root):
+    """Open and non-manifold edges per mesh after welding by position, as check_manifold.py does."""
+    ok = True
+    for o in common.tree(root):
+        if o.type != "MESH":
+            continue
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts[:], dist=1e-5)
+        boundary = sum(1 for e in bm.edges if len(e.link_faces) == 1)
+        many = sum(1 for e in bm.edges if len(e.link_faces) > 2)
+        bm.free()
+        ok = ok and boundary == 0 and many == 0
+        if boundary or many:
+            print("OPEN %s boundary=%d nonmanifold=%d" % (o.name, boundary, many))
+    print("CLOSED every mesh %s" % ("ok" if ok else "OUT"))
+    return ok
+
+
 def main():
     common.reset()
     common.preview_class("amber")
@@ -297,32 +633,55 @@ def main():
     name = "KestRoost" if roost else "Kest"
     shell = sb.hoberman(name, enamel="petrol", seat="petrol", pairs=1 if roost else 2, bank=BANK,
                         pilot=pilot(), hub_sides=8 if roost else 6, cap_sides=8)
-    pod, ring = shell["pod"], shell["ring"]
+    pod_obj, ring = shell["pod"], shell["ring"]
     print("STRIP neutral weapon seat %d vertices" % strip_neutral_mount(ring))
+    print("STRIP lattice pins %d (the cutaway plating covers the lattice)" % strip_pins(shell["core"]))
     merge_into(ring, ring_kit())
     bands, gated = band_attributes(ring)
     print("BANDS Kest ring band faces by index %s, %d faces gated to class IV" % (sorted(bands.items()), gated))
-    merge_into(pod, brackets())
+    merge_into(pod_obj, brackets())
     mortar = mortar_part().to_object(MORTAR_PIVOT, ring)
     for side, tag in ((-1, "L"), (1, "R")):
-        common.empty("MortarMouth." + tag, (tube_x(side), TUBE_Y[1], TUBE_Z), mortar)
-    vanes = [kp.vane_part(vname, side).to_object(kp.vane_hinge(side), pod)
-             for vname, side in (("VaneL", -1), ("VaneR", 1))]
+        common.empty("MortarMouth." + tag, (side * POD_X, MOUTH_Y, POD_Z), mortar)
+    vanes = []
+    for vname, side in (("VaneL", -1), ("VaneR", 1)):
+        hinge = common.empty(vname, kp.vane_hinge(side), pod_obj)
+        blade = kp.vane_part(vname + ".Blade", side)
+        blade.to_object(kp.vane_hinge(side), hinge)
+        vanes.append((hinge, side))
+    bpy.context.view_layer.update()
     root = shell["root"]
-    reach = max(p.length for o in common.tree(pod) if o.type == "MESH" and o.name != "Pilot" for p in world_verts(o))
+    reach = max(p.length for o in common.tree(pod_obj) if o.type == "MESH" and o.name != "Pilot"
+                and o.name != "WeaponRing" and o.name != "Mortar" for p in world_verts(o))
     n_draws = draws(root)
-    print("REACH Kest Pod subtree %.3f m, limit %.2f %s" % (reach, REACH, "ok" if reach <= REACH else "OUT"))
-    print("DRAWS %s %d surfaces (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2, Mortar 2, VaneL 1, VaneR 1, Pilot 1)"
-          % (name, n_draws))
-    vane_ok = vane_report(pod, ring, vanes)
+    print("REACH Kest Pod subtree outside the ring %.3f m, limit %.2f %s" % (reach, POD_REACH, "ok" if reach <= POD_REACH else "OUT"))
+    print("DRAWS %s %d surfaces (Core 3, Pod 3, Gyro 1, GyroInner 1, WeaponRing 2, Mortar 2, VaneL.Blade 1, "
+          "VaneR.Blade 1, Pilot 1)" % (name, n_draws))
+    vane_ok = vane_report(pod_obj, vanes)
+    mortar_ok = mortar_report(ring, mortar, vanes)
+    closed = closed_report(root)
+    verts = sum(len(o.data.vertices) for o in common.tree(root) if o.type == "MESH")
+    print("MORTAR tris %d" % common.tris(mortar))
     out = common.args()["out"] or os.path.join(common.MODELS, "world_one",
                                                "shell_kest_roost.glb" if roost else "shell_kest.glb")
     band = (3000, 11000) if roost else SHELL_BAND
-    sb.finish(name, root, shell["core"], shell["pilot"], shell_band=band, pod_obj=pod, out=out)
+    sb.finish(name, root, shell["core"], shell["pilot"], shell_band=band, pod_obj=pod_obj, out=out)
     stable_pilot_normals(out)
+    exported = glb_vertices(out)
+    print("VERTS %s %d exported (Blender %d), cap %d %s" % (name, exported, verts, VERT_CAP, "ok" if exported <= VERT_CAP else "OUT"))
     bands_ok = sorted(bands) == [1, 2, 3, 4] and gated > 0
-    if reach > REACH or not vane_ok or n_draws != DRAWS or not bands_ok:
+    if reach > POD_REACH or not vane_ok or not mortar_ok or n_draws != DRAWS or not bands_ok or not closed \
+            or exported > VERT_CAP:
         raise SystemExit("Kest machinery checks failed")
+
+
+def glb_vertices(path):
+    """Vertices as Godot loads them: the POSITION count of every primitive."""
+    with open(path, "rb") as f:
+        data = f.read()
+    json_len = struct.unpack_from("<I", data, 12)[0]
+    gltf = json.loads(data[20:20 + json_len])
+    return sum(gltf["accessors"][p["attributes"]["POSITION"]]["count"] for m in gltf["meshes"] for p in m["primitives"])
 
 
 main()

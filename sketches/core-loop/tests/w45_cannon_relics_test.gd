@@ -322,16 +322,18 @@ func _check_walk_reset() -> void:
 		"walk %s, wake %s" % [_combat._walk, _combat._wake])
 
 
-# End to end: held fire through the real tick fires cannon_lane's pattern.
+# End to end: press-hold-release fire through the real tick fires cannon_lane's pattern.
 func _live_start() -> void:
 	_equip_walk()
 	_shots.clear()
 	_fired_before = _combat.volleys
+	_source.press = {"fire_pressed": true}
 	_source.hold = {"fire_held": true}
 
 
 func _live_release() -> void:
 	_source.hold = {}
+	_source.press = {"fire_released": true}
 
 
 func _check_live() -> void:

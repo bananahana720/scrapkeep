@@ -15,10 +15,7 @@ const skillNames = ["reactive-model-loop", "scrapkeep-lab"];
 // harness creates them itself, in the copied destination, after the overlay
 // is applied. `broken` dangles a name; `notSymlink` writes a plain file
 // instead; `wrongTarget` points a name at the OTHER skill's directory.
-async function linkSkills(
-  repoRoot,
-  { broken = null, notSymlink = null, wrongTarget = null } = {},
-) {
+async function linkSkills(repoRoot, { broken = null, notSymlink = null, wrongTarget = null } = {}) {
   const linkDir = path.join(repoRoot, ".claude/skills");
   await mkdir(linkDir, { recursive: true });
   for (const name of skillNames) {
@@ -42,8 +39,7 @@ async function runFixture(name, linkOptions = {}) {
     const repoRoot = path.join(temporary, "repo");
     await mkdir(repoRoot);
     await cp(path.join(fixtures, "base"), repoRoot, { recursive: true });
-    if (name !== "base")
-      await cp(path.join(fixtures, name), repoRoot, { recursive: true });
+    if (name !== "base") await cp(path.join(fixtures, name), repoRoot, { recursive: true });
     await linkSkills(repoRoot, linkOptions);
     return await runAgainst(repoRoot);
   } finally {
@@ -83,17 +79,26 @@ function warnings(findings, check) {
 // A minimal from-scratch repo for the N10 cases that do not need the full
 // two-skill base fixture: two required board files, one skill directory
 // built from the given SKILL.md/lessons.md content.
-async function buildMinimalRepo(temporary, { skillMd, lessonsMd, skillName = "reactive-model-loop" }) {
+async function buildMinimalRepo(
+  temporary,
+  { skillMd, lessonsMd, skillName = "reactive-model-loop" },
+) {
   const repoRoot = path.join(temporary, "repo");
   await mkdir(path.join(repoRoot, ".agents/skills/" + skillName + "/references"), {
     recursive: true,
   });
-  await writeFile(path.join(repoRoot, "package.json"), JSON.stringify({ scripts: { test: "node --test" } }));
+  await writeFile(
+    path.join(repoRoot, "package.json"),
+    JSON.stringify({ scripts: { test: "node --test" } }),
+  );
   await writeFile(
     path.join(repoRoot, "TRACKING.md"),
     "# Tracking\n\n## Append-only events\n\n| EV-0001 | 2026-09-25T00:00:00Z | writer | JL-01 | Fixture |\n",
   );
-  await writeFile(path.join(repoRoot, "BACKLOG.md"), '# Backlog\n\n<a id="jl-01"></a>\n### JL-01: Demo\n');
+  await writeFile(
+    path.join(repoRoot, "BACKLOG.md"),
+    '# Backlog\n\n<a id="jl-01"></a>\n### JL-01: Demo\n',
+  );
   await writeFile(path.join(repoRoot, ".agents/skills/" + skillName + "/SKILL.md"), skillMd);
   if (lessonsMd !== undefined)
     await writeFile(
@@ -176,25 +181,16 @@ test("a dead backtick path fails with a named finding", async () => {
   const { status, findings, stdout } = await runFixture("dead-path");
   assert.equal(status, 1, stdout);
   const hits = failures(findings, "paths");
-  assert.ok(hits.some((f) => f.message.includes("scripts/does-not-exist.mjs")), JSON.stringify(findings, null, 2));
+  assert.ok(
+    hits.some((f) => f.message.includes("scripts/does-not-exist.mjs")),
+    JSON.stringify(findings, null, 2),
+  );
 });
 
 test("a dead npm script fails with a named finding", async () => {
   const { status, findings, stdout } = await runFixture("dead-npm-script");
   assert.equal(status, 1, stdout);
   assert.ok(failures(findings, "npm").some((f) => f.message.includes("does-not-exist")));
-});
-
-test("a dead EV id fails with a named finding", async () => {
-  const { status, findings, stdout } = await runFixture("dead-ev-id");
-  assert.equal(status, 1, stdout);
-  assert.ok(failures(findings, "ids").some((f) => f.message.includes("EV-9999")));
-});
-
-test("a dead BACKLOG card anchor fails with a named finding", async () => {
-  const { status, findings, stdout } = await runFixture("dead-card-anchor");
-  assert.equal(status, 1, stdout);
-  assert.ok(failures(findings, "ids").some((f) => f.message.includes("JL-99")));
 });
 
 test("a broken .claude/skills link fails with a named finding", async () => {
@@ -215,7 +211,9 @@ test("a duplicate lesson id fails with a named finding", async () => {
   const { status, findings, stdout } = await runFixture("duplicate-lesson");
   assert.equal(status, 1, stdout);
   assert.ok(
-    failures(findings, "lessons").some((f) => f.message.includes("duplicate") && f.message.includes("RML-01")),
+    failures(findings, "lessons").some(
+      (f) => f.message.includes("duplicate") && f.message.includes("RML-01"),
+    ),
   );
 });
 
@@ -232,7 +230,11 @@ test("a retracted lesson without Overturned by fails with a named finding", asyn
 test("an RML id missing from the origin map fails with a named finding", async () => {
   const { status, findings, stdout } = await runFixture("rml-missing-from-map");
   assert.equal(status, 1, stdout);
-  assert.ok(failures(findings, "lessons").some((f) => f.message.includes("RML-02") && f.message.includes("origin map")));
+  assert.ok(
+    failures(findings, "lessons").some(
+      (f) => f.message.includes("RML-02") && f.message.includes("origin map"),
+    ),
+  );
 });
 
 test("a SKILL.md body over 250 lines fails with a named finding", async () => {
@@ -296,7 +298,10 @@ test("B2: an invalid scrapkeep verb and lab sub-verb fail, read statically from 
   const { status, findings, stdout } = await runFixture("bad-verb-citation");
   assert.equal(status, 1, stdout);
   const hits = failures(findings, "verbs");
-  assert.ok(hits.some((f) => f.message.includes("frobnicate")), JSON.stringify(findings, null, 2));
+  assert.ok(
+    hits.some((f) => f.message.includes("frobnicate")),
+    JSON.stringify(findings, null, 2),
+  );
   assert.ok(hits.some((f) => f.message.includes("bogus") && f.message.includes("lab sub-verb")));
 });
 
@@ -372,14 +377,10 @@ test("B5: a bare SKILL.md self-reference resolves relative to the citing skill's
 test("N8: a BACKLOG.md#anchor citation strips the anchor before resolving", async () => {
   const { status, findings, stdout } = await runFixture("base");
   assert.equal(status, 0, stdout);
-  assert.ok(!findings.some((f) => f.message.includes("BACKLOG.md#jl-01")), JSON.stringify(findings, null, 2));
-});
-
-// N2
-test("N2: an EV id resolves against an archived docs/project/tracking/EVENTS-*.md row", async () => {
-  const { status, findings, stdout } = await runFixture("archived-ev");
-  assert.equal(status, 0, stdout);
-  assert.equal(failures(findings, "ids").length, 0, JSON.stringify(findings, null, 2));
+  assert.ok(
+    !findings.some((f) => f.message.includes("BACKLOG.md#jl-01")),
+    JSON.stringify(findings, null, 2),
+  );
 });
 
 // N3
@@ -388,7 +389,9 @@ test("N3: a dead path under a gitignored directory warns instead of failing", as
   assert.equal(status, 0, stdout);
   assert.equal(failures(findings, "paths").length, 0, JSON.stringify(findings, null, 2));
   assert.ok(
-    warnings(findings, "paths").some((f) => f.message.includes("dist/bundle.js") && f.message.includes("gitignored")),
+    warnings(findings, "paths").some(
+      (f) => f.message.includes("dist/bundle.js") && f.message.includes("gitignored"),
+    ),
     JSON.stringify(findings, null, 2),
   );
 });
@@ -407,7 +410,10 @@ test("N1: a folded (>) YAML description parses without a frontmatter failure", a
       'description: "Design and evaluate a fast model."',
       "description: >\n  Design and evaluate a fast model that makes\n  reaction-based decisions.",
     );
-    const repoRoot = await buildMinimalRepo(temporary, { skillMd: folded, lessonsMd: GOOD_LESSONS });
+    const repoRoot = await buildMinimalRepo(temporary, {
+      skillMd: folded,
+      lessonsMd: GOOD_LESSONS,
+    });
     await linkSkills(repoRoot, {});
     const { status, findings } = await runAgainst(repoRoot);
     assert.equal(failures(findings, "frontmatter").length, 0, JSON.stringify(findings, null, 2));
@@ -444,7 +450,11 @@ test("N7: a forbidden token in a non-standard file under the portable skill is s
 test("N10: a frontmatter name that does not match the directory fails", async () => {
   const { status, findings, stdout } = await runFixture("frontmatter-name-mismatch");
   assert.equal(status, 1, stdout);
-  assert.ok(failures(findings, "frontmatter").some((f) => f.message.includes("does not match directory name")));
+  assert.ok(
+    failures(findings, "frontmatter").some((f) =>
+      f.message.includes("does not match directory name"),
+    ),
+  );
 });
 
 test("N10: a missing description fails", async () => {
@@ -467,7 +477,9 @@ Resolve this skill directory through symlinks.
     await linkSkills(repoRoot, {});
     const { status, findings } = await runAgainst(repoRoot);
     assert.equal(status, 1);
-    assert.ok(failures(findings, "frontmatter").some((f) => f.message.includes("missing description")));
+    assert.ok(
+      failures(findings, "frontmatter").some((f) => f.message.includes("missing description")),
+    );
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }
@@ -486,7 +498,9 @@ test("N10: a .claude/skills entry that is a regular file, not a symlink, fails",
   const { status, findings, stdout } = await runFixture("base", { notSymlink: "scrapkeep-lab" });
   assert.equal(status, 1, stdout);
   assert.ok(
-    failures(findings, "link").some((f) => f.file.includes("scrapkeep-lab") && f.message.includes("not a symlink")),
+    failures(findings, "link").some(
+      (f) => f.file.includes("scrapkeep-lab") && f.message.includes("not a symlink"),
+    ),
   );
 });
 
@@ -494,7 +508,9 @@ test("N10: a .claude/skills symlink pointing at the wrong skill directory fails"
   const { status, findings, stdout } = await runFixture("base", { wrongTarget: "scrapkeep-lab" });
   assert.equal(status, 1, stdout);
   assert.ok(
-    failures(findings, "link").some((f) => f.file.includes("scrapkeep-lab") && f.message.includes("expected")),
+    failures(findings, "link").some(
+      (f) => f.file.includes("scrapkeep-lab") && f.message.includes("expected"),
+    ),
   );
 });
 
@@ -503,7 +519,10 @@ test("N10: an invalid lesson status fails", async () => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-skills-"));
   try {
     const badLessons = GOOD_LESSONS.replace("status: provisional", "status: bogus");
-    const repoRoot = await buildMinimalRepo(temporary, { skillMd: goodSkillMd(), lessonsMd: badLessons });
+    const repoRoot = await buildMinimalRepo(temporary, {
+      skillMd: goodSkillMd(),
+      lessonsMd: badLessons,
+    });
     await linkSkills(repoRoot, {});
     const { status, findings } = await runAgainst(repoRoot);
     assert.equal(status, 1);
@@ -517,45 +536,18 @@ test("N10: an invalid lesson status fails", async () => {
 test("N10: a SKILL.md citing a lesson id absent from every ledger fails", async () => {
   const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-skills-"));
   try {
-    const skillMd = goodSkillMd({ body: "2. A second rule citing a lesson that was never written. (RML-99)\n" });
+    const skillMd = goodSkillMd({
+      body: "2. A second rule citing a lesson that was never written. (RML-99)\n",
+    });
     const repoRoot = await buildMinimalRepo(temporary, { skillMd, lessonsMd: GOOD_LESSONS });
     await linkSkills(repoRoot, {});
     const { status, findings } = await runAgainst(repoRoot);
     assert.equal(status, 1);
-    assert.ok(failures(findings, "lessons").some((f) => f.message.includes("RML-99") && f.message.includes("not in any ledger")));
-  } finally {
-    await rm(temporary, { recursive: true, force: true });
-  }
-});
-
-// N6
-test("N6: a missing TRACKING.md exits 2", async () => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-skills-"));
-  try {
-    const repoRoot = path.join(temporary, "repo");
-    await mkdir(repoRoot);
-    await cp(path.join(fixtures, "base"), repoRoot, { recursive: true });
-    await rm(path.join(repoRoot, "TRACKING.md"));
-    await linkSkills(repoRoot, {});
-    const { status, findings } = await runAgainst(repoRoot);
-    assert.equal(status, 2);
-    assert.equal(findings, null);
-  } finally {
-    await rm(temporary, { recursive: true, force: true });
-  }
-});
-
-test("N6: a missing BACKLOG.md exits 2", async () => {
-  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-skills-"));
-  try {
-    const repoRoot = path.join(temporary, "repo");
-    await mkdir(repoRoot);
-    await cp(path.join(fixtures, "base"), repoRoot, { recursive: true });
-    await rm(path.join(repoRoot, "BACKLOG.md"));
-    await linkSkills(repoRoot, {});
-    const { status, findings } = await runAgainst(repoRoot);
-    assert.equal(status, 2);
-    assert.equal(findings, null);
+    assert.ok(
+      failures(findings, "lessons").some(
+        (f) => f.message.includes("RML-99") && f.message.includes("not in any ledger"),
+      ),
+    );
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

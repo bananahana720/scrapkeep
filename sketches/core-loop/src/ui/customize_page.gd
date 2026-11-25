@@ -672,9 +672,10 @@ func refresh() -> void:
 		var portrait: Button = _portraits[def.id]
 		var open_pilot: bool = def.id in _pilots
 		portrait.text = def.display_name.substr(0, 1) if open_pilot else "?"
-		portrait.add_theme_stylebox_override("normal", _round(def.color if open_pilot else Palette.CABLE, def.id == pilot))
-		portrait.add_theme_stylebox_override("hover", _round((def.color if open_pilot else Palette.CABLE).lightened(0.2), def.id == pilot))
-		portrait.add_theme_stylebox_override("pressed", _round(def.color if open_pilot else Palette.CABLE, true))
+		var ring: Color = ClassDef.screen_color(def.color) if open_pilot else Palette.CABLE
+		portrait.add_theme_stylebox_override("normal", _round(ring, def.id == pilot))
+		portrait.add_theme_stylebox_override("hover", _round(ring.lightened(0.2), def.id == pilot))
+		portrait.add_theme_stylebox_override("pressed", _round(ring, true))
 	if not slot_shown(slot):
 		slot = "paint"
 	_build_cards()

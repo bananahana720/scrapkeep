@@ -194,8 +194,8 @@ func _bola_cycle() -> void:
 	await _frames(2)
 
 
-# The netcaster's net rides its body's joint; a crew whose tool is away (a thrown cup) breaks up at
-# once instead of playing a death clip without it.
+# The netcaster's net rides its body's joint; a crew killed while its tool is away (a thrown cup)
+# hides the away tool and still plays its baked death clip on the hull before scattering.
 func _carried_parts() -> void:
 	var net = _spawn("netcaster")
 	await _frames(2)
@@ -207,7 +207,22 @@ func _carried_parts() -> void:
 	var parent: Node = trap.get_parent()
 	trap._cup.top_level = true
 	trap.take_damage(trap.hp + 1.0)
-	_t.check("a catch trap killed with its cup out breaks up at once", parent.get_node_or_null("DeathClip") == null and parent.get_node_or_null("DeathScatter") != null)
+	var holder: Node = parent.get_node_or_null("DeathClip")
+	_t.check("a catch trap killed with its cup out hides the away cup and plays its death clip",
+		holder != null and not trap._cup.visible and parent.get_node_or_null("DeathScatter") == null)
+	await _frames(int(ceil(0.5 * Engine.physics_ticks_per_second)) + 4)
+	_t.check("the away-tool death clip scatters and frees its holder",
+		parent.get_node_or_null("DeathScatter") != null and not is_instance_valid(holder))
+	await _frames(Engine.physics_ticks_per_second)
+	var ramp = _spawn("ramp_flipper")
+	await _frames(2)
+	var ramp_parent: Node = ramp.get_parent()
+	ramp._plate.top_level = true
+	ramp.take_damage(ramp.hp + 1.0)
+	var ramp_holder: Node = ramp_parent.get_node_or_null("DeathClip")
+	_t.check("a ramp flipper killed with its plate deployed hides the away plate and plays its death clip",
+		ramp_holder != null and not ramp._plate.visible and ramp_parent.get_node_or_null("DeathScatter") == null)
+	await _frames(int(ceil(0.5 * Engine.physics_ticks_per_second)) + 4)
 	await _frames(Engine.physics_ticks_per_second)
 
 

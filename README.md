@@ -1,6 +1,6 @@
 # SCRAPKEEP
 
-Scrapkeep: Godot alpha in `sketches/core-loop`, 3 worlds. Start at [AGENTS.md](AGENTS.md) and [docs/project/README.md](docs/project/README.md).
+Scrapkeep: Godot alpha in `sketches/core-loop`, 3 worlds. Start at [AGENTS.md](AGENTS.md) and [START-HERE.md](project-guide/handoff/START-HERE.md).
 
 **The game in one line** (Andrew, 9 November 2026, ruling cj): A crew of loose cannons, bulls in the Foreman's china shop, take their world back from a machine that believes life can be run perfectly. What every place, system, enemy and item means under that line is in the [Story map](sketches/core-loop/design-v3/STORY-MAP.md).
 
@@ -9,11 +9,11 @@ A greasy junkyard adventure in a steam-cyberpunk universe. Pilots drive electrom
 ## Start here
 
 - [AGENTS.md](AGENTS.md): project instructions for every agent session.
-- [Project desk](docs/project/README.md): the map of current and historical records.
+- [Start here](project-guide/handoff/START-HERE.md): who owns what, and where to go for each kind of work.
 - [Roadmap](project-guide/handoff/ROADMAP.md), [wave state](project-guide/handoff/STATE.md) and [rulings](project-guide/handoff/DECISIONS.md): live coordination for the alpha.
-- [Art & Game Bible](BIBLE.md): approved product and visual reference.
+- [Art & Game Bible](BIBLE.md): earlier product and visual reference (being replaced in Phase 2).
 - [Engineering ADRs](adr/README.md): accepted production architecture.
-- [Backlog](BACKLOG.md), [Orchestrator](ORCHESTRATOR.md) and [Tracking](TRACKING.md): task definitions, operating rules and the heavy-lane board.
+- [Backlog](BACKLOG.md), [Orchestrator](ORCHESTRATOR.md) and [Tracking](TRACKING.md): task definitions, operating rules and historical heavy-lane board.
 
 The game is a Godot sketch with typed GDScript at `sketches/core-loop`: three worlds of two stages each. Andrew plays a world 1 sitting first, then one full-alpha sitting.
 
@@ -26,13 +26,11 @@ The two browser games remain as preserved proofs, not the current direction. The
 | `/orchard.html` | The Iron Orchard lightning caster playtest: mouse-look shooting, double jump and rebounds, lightning abilities, three waves, rewards, and a paused equipment dashboard | Preserved proof |
 | `/` | Original 15-wave tower-defense expedition, hero classes, collection, and optional figurine signup | Preserved baseline |
 
-The [Increment 01 contract](docs/project/INCREMENT-01-lightning-playtest.md) and [play guide](docs/LIGHTNING-PLAYGUIDE.md) describe the orchard. The [first-build verification record](docs/FIRST-BUILD-VERIFICATION.md) preserves historical evidence from the earlier proof.
-
-The [design desk](docs/DESIGN-INDEX.md) connects the current build to accepted direction, research, concept art, and the broader proposals.
+The [first-build contract](docs/FIRST-BUILD-CONTRACT.md) and [first-build verification record](docs/FIRST-BUILD-VERIFICATION.md) preserve historical evidence from the earlier proof.
 
 ## Developer and project navigation
 
-[Developer guide](CONTRIBUTING.md) · [Project desk](docs/project/README.md) · [Requirements](docs/project/REQUIREMENTS.md) · [Current backlog](BACKLOG.md) · [Browser implementation ADRs](docs/adr/README.md)
+[Developer guide](CONTRIBUTING.md) · [Start here](project-guide/handoff/START-HERE.md) · [Current backlog](BACKLOG.md) · [Engineering ADRs](adr/README.md)
 
 Run `npm run verify` for local structural, automated and built-entry checks. Browser verification remains a separate step described in the developer guide.
 
@@ -58,8 +56,8 @@ Snipcart closes inward. Spreadleg pushes its feet outward. The Pruner arm uses a
 
 Clear three waves, choosing a reward and reconfiguring between fights. Final victory requires defeating all remaining workers and the Pruner. Additional classes, a full expedition, co-op, permanent progression, and a complete multi-arm boss remain later work.
 
-See the [full controls and mechanics](docs/LIGHTNING-PLAYGUIDE.md) and [integration contract](docs/project/INCREMENT-01-lightning-playtest.md). Difficulty, handling and readability remain Andrew's playtest questions. Automated replays and staged fixtures provide separate evidence.
+Difficulty, handling and readability remain Andrew's playtest questions. Automated replays and staged fixtures provide separate evidence.
 
 ## Original yard (preserved baseline)
 
-The preserved baseline has its own [controls, progression and verification guide](docs/BASELINE-GUIDE.md). Historical build and research notes remain under `docs/`; the project desk identifies which records are current.
+Historical build and research notes from the September proofs live in git history.

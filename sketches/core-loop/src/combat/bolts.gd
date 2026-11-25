@@ -28,6 +28,11 @@ const ALPHA_CROWDED := 0.4
 const CROWD_START := 16
 const WAVE_RAMP := 6.0
 const MULTI_BIT_WIDTH := 1.15
+# Visual-only muzzle merge: a bolt drawn from a side muzzle (e.g. Rivet's twin side-sponson rotary
+# cannons at +/- 1.26 m on WeaponRing, rivet_revolvers.py SIDE_X) eases onto its true flight line
+# within DRAW_MERGE_M metres without moving hit detection, bounces, splits or rays.
+const DRAW_MERGE_M := 4.0
+const RIVET_MUZZLE_SIDE_M := 1.26
 # The split bit (start values): two children at +/- SPLIT_ANGLE_DEG off the parent's line,
 # each SPLIT_DAMAGE of its damage, flying the parent's remaining range up to SPLIT_REACH: a
 # burst into the pack around the struck machine, not two more full-range shots that fill
@@ -60,6 +65,7 @@ var fired := 0
 
 var _bolts: Array = []
 var _multimesh: MultiMesh
+var _rivet_muzzle_shot := 0
 
 
 func setup() -> void:
@@ -104,7 +110,9 @@ func live() -> int:
 
 func clear() -> void:
 	_bolts.clear()
-	_multimesh.visible_instance_count = 0
+	_rivet_muzzle_shot = 0
+	if _multimesh != null:
+		_multimesh.visible_instance_count = 0
 
 
 # bolt needs: origin, dir, speed, max_dist, damage, kind, weapon_id, radius, knock,
@@ -112,6 +120,8 @@ func clear() -> void:
 # shot's ShotBits set, is optional and defaults to the empty set, and so is spent, the bits
 # already used up (pierce after its one pass, bounce after its glance, split after its first
 # hit; split_spent() for a split child). exclude, the machines it may not hit, is optional.
+# Optional visual-only draw_origin (world point) or draw_offset starts the drawn streak at a
+# side muzzle and merges it onto the true line within DRAW_MERGE_M without changing physics.
 func fire(bolt: Dictionary) -> void:
 	if not bolt.has("bits"):
 		bolt["bits"] = 0
@@ -127,6 +137,7 @@ func fire(bolt: Dictionary) -> void:
 	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	bolt["right"] = dir.cross(up_hint).normalized()
 	bolt["up"] = (bolt["right"] as Vector3).cross(dir).normalized()
+	bolt["draw_offset"] = _initial_draw_offset(bolt)
 	bolt["travelled"] = 0.0
 	bolt["age"] = 0.0
 	bolt["shown"] = bolt["origin"]
@@ -138,15 +149,33 @@ func fire(bolt: Dictionary) -> void:
 	peak_live = maxi(peak_live, _bolts.size())
 
 
+# Initial visual-only muzzle offset for a newly fired bolt: explicit draw_origin/draw_offset
+# wins, else Rivet's weapon shots alternate left (-RIVET_MUZZLE_SIDE_M, phase 0) and right (+, phase 1).
+func _initial_draw_offset(bolt: Dictionary) -> Vector3:
+	if bolt.has("draw_origin"):
+		var off: Vector3 = (bolt["draw_origin"] as Vector3) - (bolt["origin"] as Vector3)
+		return off if off.is_finite() else Vector3.ZERO
+	if bolt.has("draw_offset"):
+		var off: Vector3 = bolt["draw_offset"]
+		return off if off.is_finite() else Vector3.ZERO
+	if String(bolt.get("weapon_id", "")) == "rapid_laser" and String(bolt.get("source", "weapon")) == "weapon":
+		var side := -1.0 if (_rivet_muzzle_shot % 2) == 0 else 1.0
+		_rivet_muzzle_shot += 1
+		return (bolt["right"] as Vector3) * (side * RIVET_MUZZLE_SIDE_M)
+	return Vector3.ZERO
+
+
 # A child bolt (a split, a chain jump) from its parent: the parent's record with the
 # overrides applied and its flight restarted, and always the parent's ShotBits set and the
 # bits it has spent, so a child can neither gain a bit nor use one twice (SI4).
 static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	var out := parent.duplicate()
-	for key in ["travelled", "age", "shown", "right", "up", "exclude"]:
+	for key in ["travelled", "age", "shown", "right", "up", "exclude", "draw_origin", "draw_offset"]:
 		out.erase(key)
 	for key in overrides:
 		out[key] = overrides[key]
+	if not overrides.has("draw_origin") and not overrides.has("draw_offset"):
+		out["draw_offset"] = Vector3.ZERO
 	out["bits"] = ShotBits.union(0, int(parent.get("bits", 0)))
 	out["spent"] = ShotBits.union(0, int(parent.get("spent", 0)))
 	return out
@@ -317,6 +346,8 @@ func _glance(bolt: Dictionary, at: Vector3, normal: Vector3, used: float) -> boo
 	bolt["max_dist"] = left
 	bolt["travelled"] = 0.0
 	bolt["shown"] = bolt["origin"]
+	bolt.erase("draw_origin")
+	bolt["draw_offset"] = Vector3.ZERO
 	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	bolt["right"] = dir.cross(up_hint).normalized()
 	bolt["up"] = (bolt["right"] as Vector3).cross(dir).normalized()
@@ -447,6 +478,34 @@ func _process(_delta: float) -> void:
 		_multimesh.set_instance_color(i, drawn[1])
 
 
+static func _draw_offset(bolt: Dictionary) -> Vector3:
+	if bolt.has("draw_offset"):
+		var off: Vector3 = bolt["draw_offset"]
+		return off if off.is_finite() else Vector3.ZERO
+	if bolt.has("draw_origin") and bolt.has("origin"):
+		var off: Vector3 = (bolt["draw_origin"] as Vector3) - (bolt["origin"] as Vector3)
+		return off if off.is_finite() else Vector3.ZERO
+	return Vector3.ZERO
+
+
+static func _merge_weight(travelled: float) -> float:
+	var t := clampf(travelled / DRAW_MERGE_M, 0.0, 1.0)
+	return 1.0 - t * t * (3.0 - 2.0 * t)
+
+
+# Visual-only head position of a bolt: starts at its side muzzle (draw_offset) at travelled 0
+# and merges smoothly onto bolt["shown"] by travelled >= DRAW_MERGE_M.
+static func drawn_position(bolt: Dictionary) -> Vector3:
+	var head: Vector3 = bolt.get("shown", bolt.get("origin", Vector3.ZERO))
+	var offset := _draw_offset(bolt)
+	if offset.length_squared() <= 1e-12:
+		return head
+	var travelled := float(bolt.get("travelled", 0.0))
+	if travelled >= DRAW_MERGE_M:
+		return head
+	return head + offset * _merge_weight(travelled)
+
+
 # One bolt as its MultiMesh instance, [Transform3D, Color]: a streak along its line, width()
 # across and tint() at the crowd's alpha.
 static func instance(bolt: Dictionary, alpha: float, tail := 1.0) -> Array:
@@ -455,9 +514,20 @@ static func instance(bolt: Dictionary, alpha: float, tail := 1.0) -> Array:
 		dir = Vector3.FORWARD
 	else:
 		dir = dir.normalized()
-	var streak := minf(maxf(MIN_STREAK, bolt["speed"] * STREAK_SECONDS), maxf(0.2, bolt["travelled"])) * tail
-	var up_hint := Vector3.UP if absf(dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
-	var side := width(bolt)
-	var basis := Basis.looking_at(dir, up_hint) * Basis.from_scale(Vector3(side, side, streak))
+	var travelled := float(bolt.get("travelled", 0.0))
+	var streak := minf(maxf(MIN_STREAK, float(bolt["speed"]) * STREAK_SECONDS), maxf(0.2, travelled)) * tail
+	var offset := _draw_offset(bolt)
+	var vis_dir := dir
 	var head: Vector3 = bolt["shown"]
-	return [Transform3D(basis, head - dir * streak * 0.5), Color(tint(bolt), alpha)]
+	if offset.length_squared() > 1e-12 and travelled < DRAW_MERGE_M:
+		var t := clampf(travelled / DRAW_MERGE_M, 0.0, 1.0)
+		head = head + offset * _merge_weight(travelled)
+		var dw_dd := -6.0 * t * (1.0 - t) / DRAW_MERGE_M
+		var tilt_scale := clampf(travelled / maxf(streak, 0.001), 0.0, 1.0)
+		var tangent := dir + offset * (dw_dd * tilt_scale)
+		if tangent.length_squared() > 1e-6 and tangent.dot(dir) > 0.1:
+			vis_dir = tangent.normalized()
+	var up_hint := Vector3.UP if absf(vis_dir.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
+	var side := width(bolt)
+	var basis := Basis.looking_at(vis_dir, up_hint) * Basis.from_scale(Vector3(side, side, streak))
+	return [Transform3D(basis, head - vis_dir * streak * 0.5), Color(tint(bolt), alpha)]

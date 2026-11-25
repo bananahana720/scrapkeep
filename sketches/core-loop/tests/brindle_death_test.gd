@@ -51,6 +51,7 @@ func _run() -> void:
 	for how in ["slag", "charge", "lane", "ring", "drone"]:
 		await _die_to(how)
 	DirAccess.remove_absolute(PATH)
+	OS.remove_logger(_log)
 	quit(_t.verdict())
 
 

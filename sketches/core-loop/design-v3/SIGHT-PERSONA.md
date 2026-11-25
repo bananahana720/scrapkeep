@@ -47,6 +47,24 @@ Five consequences:
 - **The Shift Boss is not the Foreman** (ruling ck, [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)). The common enemy that sounds a horn is the Shift Boss on every screen, so also on any label or plate drawn on a model. "The Foreman" always means the Mind. The model file keeps its old name, `enemy_foreman.glb`; nothing a player reads does.
 - **The Foreman's signs are typeset; the crew's are written by hand** (working call; it extends the story map's [Foreman's voice](STORY-MAP.md#the-foremans-voice-w-from-andrews-idea-9-nov), which covers words, to how the words are set). An old-works sign reads as a cheerful announcement in one clean, even, aligned type, cast or enamelled, with nothing crossed out. A crew sign is chalk, paint or a stamped plate, a little off level. As there, the joke is the genre of talk, never a named real person or company; on a sign that also rules out a real logo.
 
+### Words and numerals in the world (ruling ek)
+
+Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov 2026) puts hand-made route marks and place signs into the parks ([WAYFINDING.md](WAYFINDING.md)). Each maker writes differently, so a mark says who left it before it says anything else.
+
+| Maker | Words | Numerals |
+| --- | --- | --- |
+| Keepers | Almost none. A chalk arrow, a chalk X, cloth bunting, one square flag. Shape comes before any word, and every mark is hand-made and a little crooked. Chalk is bone; cloth is sand or bone, tied with copper | Hand-stamped on a bone plate, or chalked |
+| The Fleet | A rubber stamp on a brass tag | Ledger digits, punched into the tag |
+| The old works | A place sign in one clean, even, aligned type, cast or enamelled. It uses the place names in [NAMES.md](NAMES.md) and no others | **Cast or typeset. Never stencilled** |
+| Rogues | None | Their number, stencilled large. The stencil is the Rogues' alone |
+
+Four rules:
+
+- A district is named in the world only by an old-works sign. The HUD never prints a place name.
+- No object in the world carries `PAID`. That stamp is Tally's and lands only where she stamps.
+- No cloth, chalk or sign is mint. Mint means press now ([LEGIBILITY.md](LEGIBILITY.md) section 14.3).
+- Uranium green is the old works' mechanism: a seam, the beam, the beads of a command cable. It is never mood light. Frost is ice blue, so it is never mistaken for a seam.
+
 ## 4. What she never does
 
 - Hide a screw on keeper gear, or put one on the old works outside a service part or a bolted-on tool.

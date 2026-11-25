@@ -65,7 +65,7 @@ const CURVES := [
 # and the drop; the fleet row is gated by the difficulty ticks instead (set_fleet_ticks).
 # The melodic layers, in the order they enter: pad, arp, choir, lead, echo, counter.
 const MELODIC := [PAD, ARP, CHOIR, LEAD, ECHO, COUNTER]
-const LEVELS := [0.34, 0.5, 0.22, 0.62, 0.42, 0.42, 0.34, 0.14, 0.3, 0.3, 0.2, 0.2, 0.12, 0.18, 0.3, 1.0]
+const LEVELS := [0.34, 0.54, 0.22, 0.68, 0.44, 0.46, 0.32, 0.13, 0.3, 0.32, 0.22, 0.2, 0.12, 0.18, 0.3, 1.0]
 # The restrained wobble: only in the Warden's and Brindle's drops, at half level.
 const WOB_DROP_GAIN := 0.5
 # The warm layer is not pressure: it is the overcharge, one step per bonus core.
@@ -108,8 +108,10 @@ const BAND_VOICE_CAP := 38
 const OPEN_GAINS := [1.0, 1.0, 0.5, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # Brindle's phase 3 runs at 150.
 const PHASE3_STEP := 4410
-# The sidechain pump: the pumped layers dip under each kick and breathe back.
-const PUMP_ATTACK := 400
+# The sidechain pump: the pumped layers dip under each kick, hold a short pocket for
+# the kick transient, and breathe back smoothly like a 2010s French-house / club limiter.
+const PUMP_ATTACK := 220
+const PUMP_HOLD_FRAC := 0.07
 const PUMPED := [KEYS, SUB, REESE, LEAD, ARP, WARM, WOB, PAD, CHOIR, ECHO, COUNTER]
 # Brindle's phases add layers: phase 1 at 0.8 (pad, arp, choir, lead, half the echo),
 # phase 2 brings the echo and half the counter, phase 3 everything.
@@ -313,6 +315,7 @@ var _build_from := -1
 var _build_len := 1
 var _build_level := -1.0
 var _build_tune := false
+var _build_owner := ""
 var _build_riser: Voice
 var _pending_drop := {}
 var _gap := false
@@ -954,10 +957,10 @@ func restart_boss(kind: String) -> int:
 
 # How broken the Warden is (0..1). The last quarter is the build: the snare roll
 # tightens, the riser climbs and the high-pass opens with every hit.
-func warden_charge(fraction: float) -> void:
+func warden_charge(fraction: float, owner := "warden_charge") -> void:
 	if track != "warden" or section == "drop":
 		return
-	escalate(fraction)
+	escalate(fraction, true, owner)
 
 
 # A lap's window changes the arrangement without restarting the clock or B arc.
@@ -1049,7 +1052,7 @@ func _rotation_state() -> Dictionary:
 # through a pickup bar on the new key's dominant; three quarters starts the break
 # (sinister half time where the track has one) and a build that tightens with the
 # fraction; the payoff (the drop) is the caller's, on the gameplay moment.
-func escalate(fraction: float, sinister := true) -> void:
+func escalate(fraction: float, sinister := true, owner := "") -> void:
 	if not _drop.is_empty() or _cadence_bar >= 0 or mode != PLAY:
 		return
 	if fraction >= WARDEN_LIFT_AT and not _warden_lifted:
@@ -1077,10 +1080,13 @@ func escalate(fraction: float, sinister := true) -> void:
 				brk["esc"] = "break"
 			_queue(brk, {"chord": Harmony.TRITONE, "key": break_key})
 		events_log.append(["break_queued", clock, fraction])
+	var was_building := building()
 	if _build_level < 0.0:
 		_start_riser()
 		events_log.append(["build", clock, track])
 	_build_level = clampf((fraction - WARDEN_BUILD_FROM) / (1.0 - WARDEN_BUILD_FROM), 0.0, 1.0)
+	if not was_building or (owner != "synth_form" and _build_from < 0):
+		_build_owner = owner
 
 
 # An event's end. A win drops home into the level on the next beat; a pass or a loss
@@ -1308,13 +1314,13 @@ func set_boss_state(state: String) -> int:
 # Brindle's HP inside the current phase, as a fraction of the way from the phase's top
 # to its floor, and whether the floor is held for the set piece (with its clock, 0..1).
 # Half way lifts; the held floor is the sinister break tightening with the set piece.
-func brindle_hp(in_phase: float, floor_held := false, piece := 0.0) -> void:
+func brindle_hp(in_phase: float, floor_held := false, piece := 0.0, owner := "brindle_hp") -> void:
 	if not track in BOSS_TRACKS or not section in ["1", "2", "3"]:
 		return
 	if floor_held:
-		escalate(WARDEN_BUILD_FROM + (1.0 - WARDEN_BUILD_FROM) * clampf(piece, 0.0, 1.0))
+		escalate(WARDEN_BUILD_FROM + (1.0 - WARDEN_BUILD_FROM) * clampf(piece, 0.0, 1.0), true, owner)
 	else:
-		escalate(minf(in_phase, 0.74))
+		escalate(minf(in_phase, 0.74), true, owner)
 
 
 # The chase: the heartbeat climbs as the scooter's lead shrinks (closed 0..1). No
@@ -1343,6 +1349,7 @@ func planned_drop(build_bars: int, drop_bars: int, weight: float, change := {}, 
 	_build_len = maxi(1, first + build_bars * bar_len() - clock)
 	_build_level = -1.0
 	_build_tune = false
+	_build_owner = "planned"
 	_start_riser()
 	if not ramp.is_empty():
 		_ramp = ramp.duplicate()
@@ -1357,14 +1364,18 @@ func start_build(expected_seconds: float, tune := false) -> void:
 	_build_len = maxi(1, int(expected_seconds * Harmony.RATE))
 	_build_level = -1.0
 	_build_tune = tune
+	_build_owner = "open"
 	_start_riser()
 	events_log.append(["build", clock, "open"])
 
 
-func cancel_build() -> void:
+func cancel_build(owner := "") -> void:
+	if owner != "" and _build_owner != owner:
+		return
 	_build_from = -1
 	_build_level = -1.0
 	_build_tune = false
+	_build_owner = ""
 	_pending_drop = {}
 	_ramp = {}
 	_gap = false
@@ -1617,9 +1628,13 @@ func render(frames: int) -> void:
 		var n := mini(frames - done, step_len - posmod(clock - grid_origin, step_len))
 		n = mini(n, _to_next_action())
 		if _pump_depth > 0.0:
-			var in_beat := posmod(clock - grid_origin, beat_len())
+			var beat := beat_len()
+			var in_beat := posmod(clock - grid_origin, beat)
+			var hold := maxi(PUMP_ATTACK, int(beat * PUMP_HOLD_FRAC))
 			if in_beat < PUMP_ATTACK:
 				n = mini(n, PUMP_ATTACK - in_beat)
+			elif in_beat < hold:
+				n = mini(n, hold - in_beat)
 		n = maxi(n, 1)
 		_mix(done, n)
 		clock += n
@@ -1991,6 +2006,7 @@ func _run(action: Dictionary) -> void:
 			_build_from = -1
 			_build_level = -1.0
 			_build_tune = false
+			_build_owner = ""
 			_pending_drop = {}
 			_bar_queue.clear()
 			_transition = {}
@@ -3072,8 +3088,8 @@ func _release_all() -> void:
 
 # --- Mixing ---------------------------------------------------------------------------
 
-# The sidechain envelope at a sample: down fast under the kick, back by three-quarters
-# of the beat.
+# The sidechain envelope at a sample: down fast under the kick, holds a short pocket
+# for the kick body, and breathes back smoothly by two-thirds of the beat.
 func _pump_at(sample: int) -> float:
 	if _pump_depth <= 0.0:
 		return 1.0
@@ -3082,7 +3098,10 @@ func _pump_at(sample: int) -> float:
 	var low := 1.0 - _pump_depth
 	if pos < PUMP_ATTACK:
 		return lerpf(1.0, low, float(pos) / PUMP_ATTACK)
-	var x := clampf(float(pos - PUMP_ATTACK) / (beat * 0.75 - PUMP_ATTACK), 0.0, 1.0)
+	var hold := maxi(PUMP_ATTACK, int(beat * PUMP_HOLD_FRAC))
+	if pos < hold:
+		return low
+	var x := clampf(float(pos - hold) / maxf(beat * 0.68 - hold, 1.0), 0.0, 1.0)
 	return low + (1.0 - low) * (1.0 - (1.0 - x) * (1.0 - x))
 
 

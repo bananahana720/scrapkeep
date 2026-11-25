@@ -1,4 +1,0 @@
- docs/tech/sections/TH-01-complete-loop.md | 334 ++++++++++++++++++++++++++++++
- 1 file changed, 334 insertions(+)
-7520a523cb15d19e0c839bae80934a77938ea94a4bc1004cbb5f7c4e0c5f2b26  docs/tech/sections/TH-01-complete-loop.md
-coordinator rerun at eba203191813dea88da29d223029cb9b9c4ef8db, 2026-09-15T23:30Z: check:scope --no-build exit 0 (documentation-only, 1 path); check:docs exit 0 (15 sections); check:project exit 0; check_loop.py (writer paper check, copied and rerun by the coordinator) exit 0: 732 checks, 0 failed, 3/3 negative controls detected

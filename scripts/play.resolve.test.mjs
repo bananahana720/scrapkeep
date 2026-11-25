@@ -33,7 +33,7 @@ function git(cwd, ...args) {
 
 mkdirSync(main, { recursive: true });
 git(main, "init", "-q", "-b", "trunk");
-sketches(main, ["ball-lab", "core-loop", "cable-bench"]);
+sketches(main, ["sandbox", "core-loop", "arena-bench"]);
 cpSync(scripts, path.join(main, "scripts"), { recursive: true });
 git(main, "add", "-A");
 git(main, "commit", "-q", "-m", "fixture");
@@ -44,7 +44,7 @@ git(main, "worktree", "add", "-q", "-b", "plan", plan);
 const job = path.join(scratch, "job-0123abcd");
 git(main, "worktree", "add", "-q", "-b", "job", job);
 for (const tree of [v3, plan, job]) {
-  sketches(tree, ["core-loop", "ball-lab", "cable-bench"]);
+  sketches(tree, ["core-loop", "sandbox", "arena-bench"]);
 }
 
 function opened(cwd, name) {
@@ -82,9 +82,9 @@ test("a worktree named like core-loop-v3 opens that worktree's core-loop", () =>
 });
 
 test("an exact tree/sketch id opens exactly that sketch", () => {
-  const { result, line } = opened(scratch, "plan-abc/cable-bench");
+  const { result, line } = opened(scratch, "plan-abc/arena-bench");
   assert.equal(result.status, 0, result.stderr);
-  assert.ok(line.includes(path.join(plan, "sketches", "cable-bench")), line);
+  assert.ok(line.includes(path.join(plan, "sketches", "arena-bench")), line);
 });
 
 test("a name that matches nothing fails with a list", () => {
@@ -113,10 +113,10 @@ test("job-<hex>/core-loop opens that job's core-loop", () => {
 });
 
 test("an ambiguous name suggests the nearest copy first", () => {
-  const inside = opened(plan, "cable");
+  const inside = opened(plan, "arena");
   assert.equal(inside.result.status, 2);
-  assert.match(inside.result.stderr, /Most likely: scrapkeep plan-abc\/cable-bench/);
-  const outside = opened(scratch, "cable");
+  assert.match(inside.result.stderr, /Most likely: scrapkeep plan-abc\/arena-bench/);
+  const outside = opened(scratch, "arena");
   assert.equal(outside.result.status, 2);
-  assert.match(outside.result.stderr, /Most likely: scrapkeep main\/cable-bench/);
+  assert.match(outside.result.stderr, /Most likely: scrapkeep main\/arena-bench/);
 });

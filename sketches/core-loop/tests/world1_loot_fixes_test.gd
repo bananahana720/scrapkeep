@@ -166,7 +166,7 @@ func _check_shown_damage() -> void:
 	_game.combat.strike(enemy, "arc", PUNCH)
 	var lost := before - float(enemy.hp)
 	_game.ctx.events.enemy_struck.disconnect(listen)
-	_t.check("an arc hit on a wet chaser is raised by its armour", String(enemy.get_meta("armour_read", "")) == "weak" and lost > PUNCH * 1.4,
+	_t.check("an arc hit on a wet chaser is raised by its armour", String(enemy.get_meta("armour_read", "")) == "weak" and is_equal_approx(lost, PUNCH * 1.25),
 		"lost %.2f of %.1f, read %s" % [lost, PUNCH, enemy.get_meta("armour_read", "")])
 	_t.check("the shown damage is the damage removed", shown.size() == 1 and absf(float(shown[0]) - lost) < 0.001,
 		"shown %s, removed %.2f" % [shown, lost])

@@ -1,4 +1,14 @@
 extends SceneTree
+# 2026-11-23 (E2-03, wave 46, ruling en): the launchers become two heroic mortar pods flanking the
+# cutaway ball (heroic-cutaway concept 05): olive housings, flared steel bells forward, brass
+# canisters, hazard stripes, the glow on the fuse caps and in the bell throats. They ride Mortar
+# under WeaponRing (the carrier bank tilts them off walls), pivoting on a trunnion line under the
+# pods (MORTAR_PIVOT moves). Mortar answers to its own reach (MORTAR_REACH, 1.70) and the Pod
+# subtree keeps REACH; each pose (rest, the throw kick, ready, riding) stays outside the plating,
+# above Y -0.55 and clear of the open vents. The vents become hinges carrying their slats as
+# VaneL_Blade / VaneR_Blade, so a throw can flick the blade while hero_assets steers the hinge.
+# Paint gains the Mortar's olive, steel, brass and stripe; the lattice pins go (the cutaway hides
+# them), and every mesh is closed. EXPECTED_CHECKS 67 -> 70.
 # 2026-10-10 (PD-KEST fix round): the gate's findings. Mortar is its own mesh under WeaponRing
 # with its origin on the cradle line, so the tubes and fuse tips pitch and recoil (pilots/kest.md
 # section 5): surfaces 14 -> 15, the one glow moves from WeaponRing to Mortar, and a new check
@@ -22,15 +32,18 @@ extends SceneTree
 #             class; shell plus rig under the 19,000 T / 18,000 V / 21 draw pod ceiling.
 #   tree      named nodes and parents, no FlightStick, exactly two pedals.
 #   materials section 9 slots only, no glass or requisition_tag, paint colours petrol, oxide,
-#             bone or charcoal, one class_accent surface (Mortar, at the launcher mouths),
-#             the petrol seat.
+#             bone or charcoal (the Mortar adds olive, steel, brass and stripe), one class_accent
+#             surface (Mortar, on both fuse caps and in both bell throats), the petrol seat.
 #   lattice   Core radius 0.95 to 0.985 with Hub_00..Hub_31 and Gap_00..Gap_29.
 #   pod       sight cone empty (Gyro, WeaponRing and Dome skipped), no reach past 1.0 below -0.6,
-#             nothing past 1.25.
-#   vents     per vent: hinge radius, folded and open reach, folded clock, open band clearance and
+#             nothing but the Mortar past 1.25.
+#   vents     per vent (the hinge turns, its blade carries the slats): hinge radius, folded and open reach, folded clock, open band clearance and
 #             open sight cone.
-#   ring      launchers forward at 11 and 1 o'clock, satchels at 3, 6 and 9 hanging flat, the band
-#             indices in UV2 and the ochre band colour, Mortar pitching about the cradle line.
+#   ring      pod mouths outboard of the plating and forward, satchels at 3, 6 and 9 hanging flat,
+#             the band indices in UV2 and the ochre band colour, Mortar pitching about the trunnion
+#             line, and in every pose within MORTAR_REACH, above Y -0.55, outside the plating and
+#             out of the open vents at any ring yaw.
+#   closed    every mesh, base and Roost Frame: no open or non-manifold edge.
 #   layers    c2..c5: Core and Pod nodes, surface count, bone and charcoal paint, panels inside
 #             0.92 m, sight cone and low reach; c3's rims on Core; no satchel (it rides the ring).
 #   variant   the Roost Frame keeps the machinery and node tree, with its own lattice.
@@ -38,10 +51,11 @@ extends SceneTree
 # The run must make EXPECTED_CHECKS checks, so an early return or a skipped loop fails it.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const Revolvers := preload("res://tests/rivet_revolvers_test.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
 
-const EXPECTED_CHECKS := 67
+const EXPECTED_CHECKS := 70
 const SHELL := "res://assets/models/world_one/shell_kest.glb"
 const ROOST := "res://assets/models/world_one/shell_kest_roost.glb"
 const LAYER := "res://assets/models/world_one/shell_kest_c%d.glb"
@@ -58,22 +72,40 @@ const MAX_DRAWS := 21
 const LATTICE_OUTER := 0.975
 const CORE_LIMIT := 0.985
 const REACH := 1.25
+# Ruling en: the Mortar's pods reach at most 1.70 m, keep outside the 0.985 m plating (1.0 with
+# margin) and above Y -0.55 (shell_kest.REACH, PLATING, LOW_Z).
+const MORTAR_REACH := 1.70
+const PLATING := 1.0
+const MORTAR_LOW := -0.55
 const PANEL_OUT := 0.92
 const BAND_TOP := 0.04
 # The satchel band stripe: shell_kest_plates.BAND_COLOR, amber mixed 0.3 toward oxide in sRGB.
 const OCHRE := Color(206.8 / 255.0, 136.3 / 255.0, 65.0 / 255.0)
-# Mortar pivots on the cradle line (shell_kest.MORTAR_PIVOT, Blender (0, 0.95, 0.03)).
-const MORTAR_PIVOT := Vector3(0.0, 0.03, -0.95)
+# Mortar pivots on the trunnion line under the pods (shell_kest.MORTAR_PIVOT, Blender (0, 0.33, -0.17)).
+const MORTAR_PIVOT := Vector3(0.0, -0.17, -0.33)
+# The Mortar's poses (shell_kest.POSES): rotation.x degrees and recoil along +Z (back): rest, the
+# throw kick (clips/kest.json, 0.09 m from any stance), ready and riding (kest_kit.kest_cage_state:
+# -pitch, its 0.08 m ride-beat recoil inside the kick's 0.09).
+const POSES := {"rest": [0.0, 0.0], "kick": [0.0, 0.09], "ready": [-20.0, 0.0], "ready kick": [-20.0, 0.09],
+	"riding": [-45.0, 0.09]}
+# The Mortar's extra paint (shell_kest.OLIVE, STEEL, brass, STRIPE: sRGB mixes).
+const OLIVE := Color("365754") * 0.6 + Color("d9b44a") * 0.4
+const STRIPE := Color("e5a044") * 0.5 + Color("d9b44a") * 0.5
+const MORTAR_PAINT := [OLIVE, STRIPE, Palette.STEEL, Palette.BRASS]
+# The fuse caps sit on the housing tops (shell_kest POD_Z + HOUSING half height, 0.18 m); the
+# throats lie within 0.2 m of a bell mouth.
+const CAP_Y := 0.175
+const THROAT := 0.2
 # Godot axes: the head and the chase eyes (cage_contract_test.gd, ROSTER-LOOK section 3 rule 3).
 const HEAD := Vector3(0.0, 0.20, -0.02)
 const EYES := [Vector3(0.0, 1.06, 3.44), Vector3(0.0, 2.22, 7.17), Vector3(0.0, 3.55, 11.46)]
 const SIGHT_HALF_ANGLE := 35.0
 const CONE_SKIP := ["Gyro", "WeaponRing", "Dome"]
 const NODES := ["Core", "Hub_00", "Hub_31", "Gap_00", "Gap_29", "Pod", "Gyro", "GyroInner", "WeaponRing",
-	"Mortar", "MortarMouth_L", "MortarMouth_R", "VaneL", "VaneR", "Dome", "Pilot", "DecalPlate",
+	"Mortar", "MortarMouth_L", "MortarMouth_R", "VaneL", "VaneR", "VaneL_Blade", "VaneR_Blade", "Dome", "Pilot", "DecalPlate",
 	"Control_Grip_L", "Control_Grip_R", "Control_Trigger", "Control_FusePlunger", "Control_ChargeKey",
 	"Control_LapBar", "LapBar_L", "LapBar_R", "Control_Pedal_L", "Control_Pedal_R"]
-const PARENTS := {"VaneL": "Pod", "VaneR": "Pod", "WeaponRing": "Pod", "Mortar": "WeaponRing", "Gyro": "Pod",
+const PARENTS := {"VaneL": "Pod", "VaneR": "Pod", "VaneL_Blade": "VaneL", "VaneR_Blade": "VaneR", "WeaponRing": "Pod", "Mortar": "WeaponRing", "Gyro": "Pod",
 	"GyroInner": "Gyro", "Dome": "Pod", "Pilot": "Dome"}
 const CLIPS := {"drop_land": 2.2, "big_cheer": 2.8, "wince": 0.5, "slump": 1.5, "phew": 0.8, "brace": 0.6, "heave": 0.8}
 const RIG_BONES := [
@@ -228,14 +260,15 @@ func _run() -> void:
 	_t.check("pod low reach", low_reach(shell, pod) == 0, "%d Pod vertices past 1.0 m below Y -0.6" % low_reach(shell, pod))
 	var reach := 0.0
 	for mi in meshes(pod):
-		if not under_any(mi, ["Dome"], pod):
+		if not under_any(mi, ["Dome", "Mortar"], pod):
 			reach = maxf(reach, far(points(mi, shell)))
-	_t.check("pod reach", reach <= REACH, "machinery reaches %.3f m, limit %.2f" % [reach, REACH])
+	_t.check("pod reach", reach <= REACH, "machinery but the Mortar reaches %.3f m, limit %.2f" % [reach, REACH])
 	_vents(shell, pod)
 	_ring(shell)
 	for n in [2, 3, 4, 5]:
 		_layer(n)
 	_variant(shell)
+	_closed("shell", shell)
 	_check_rig(rig)
 	shell.free()
 	rig.free()
@@ -283,20 +316,31 @@ func _materials(shell: Node) -> void:
 				bad.append("%s:%s" % [mi.name, slot])
 			if slot == "class_accent":
 				accents.append(String(mi.name))
+		var allowed := [Palette.VERDIGRIS, Palette.RUST, Palette.SAND, Palette.CHARCOAL, OCHRE]
+		if mi.name == &"Mortar":
+			allowed.append_array(MORTAR_PAINT)
 		for c in colors(mi, "paint"):
-			if not near_any(c, [Palette.VERDIGRIS, Palette.RUST, Palette.SAND, Palette.CHARCOAL, OCHRE]):
+			if not near_any(c, allowed):
 				off += 1
 	_t.check("slots", bad.is_empty(), "section 9 slots, no glass or requisition_tag %s" % [bad])
-	_t.check("paint colours", off == 0, "petrol, oxide, bone, charcoal or the ochre band (%d off)" % off)
+	_t.check("paint colours", off == 0, "petrol, oxide, bone, charcoal, the ochre band or the Mortar's olive, steel, brass and stripe (%d off)" % off)
 	_t.check("one glow", accents == ["Mortar"], "class_accent surfaces on %s, want only Mortar" % [accents])
 	var mortar := shell.find_child("Mortar", true, false) as MeshInstance3D
 	var mouths := [shell.find_child("MortarMouth_L", true, false), shell.find_child("MortarMouth_R", true, false)]
 	var stray := 0
+	var lit := {"cap -1": 0, "cap 1": 0, "throat -1": 0, "throat 1": 0}
 	if mortar != null and mouths[0] != null and mouths[1] != null:
 		for p in points(mortar, shell, "class_accent"):
-			if minf((p - to_root(mouths[0], shell).origin).length(), (p - to_root(mouths[1], shell).origin).length()) > 0.06:
+			var side := int(signf(p.x))
+			var mouth: Vector3 = to_root(mouths[0 if side < 0 else 1], shell).origin
+			if p.y >= CAP_Y:
+				lit["cap %d" % side] += 1
+			elif p.distance_to(mouth) <= THROAT:
+				lit["throat %d" % side] += 1
+			else:
 				stray += 1
-	_t.check("glow at the fuse tips", mortar != null and stray == 0, "%d class_accent vertices away from the launcher mouths" % stray)
+	_t.check("glow on the fuse caps and in the throats", mortar != null and stray == 0 and lit.values().all(func(n): return n > 0),
+		"%d class_accent vertices off a cap or a throat; lit vertices by part and side %s" % [stray, lit])
 	var pod := shell.find_child("Pod", true, false) as MeshInstance3D
 	var seat := AABB(Vector3(-0.25, -0.45, -0.3), Vector3(0.5, 0.4, 0.6))
 	var seat_n := 0
@@ -331,15 +375,16 @@ func _lattice(shell: Node) -> void:
 func _vents(shell: Node, pod: Node) -> void:
 	for side in [-1.0, 1.0]:
 		var name := "VaneL" if side < 0 else "VaneR"
-		var vane := shell.find_child(name, true, false) as MeshInstance3D
-		if vane == null:
+		var vane := shell.find_child(name, true, false) as Node3D
+		var blade := vane.get_node_or_null(name + "_Blade") as MeshInstance3D if vane != null else null
+		if blade == null:
 			for i in 6:
 				_t.check(name, false, "missing")
 			continue
 		var hinge := to_root(vane, shell).origin
 		_t.check(name + " hinge", absf(hinge.length() - 0.90) < 0.01 and signf(hinge.x) == side,
 			"hinge at %s, radius %.3f, side %d" % [hinge, hinge.length(), side])
-		var folded := points(vane, shell)
+		var folded := points(blade, shell)
 		var tip: Vector3 = folded[0]
 		for p in folded:
 			if (p as Vector3).length() > tip.length():
@@ -348,7 +393,7 @@ func _vents(shell: Node, pod: Node) -> void:
 		_t.check(name + " folded", absf(tip.length() - LATTICE_OUTER - 0.10) <= 0.03 and clock >= 45.0 and clock <= 75.0,
 			"tip %.3f m past the lattice (0.10 +/-0.03) at %.0f degrees from the top (2 or 10 o'clock: 45 to 75)" % [tip.length() - LATTICE_OUTER, clock])
 		vane.rotation.z = -side * PI * 0.5
-		var opened := points(vane, shell)
+		var opened := points(blade, shell)
 		var o_far := far(opened)
 		_t.check(name + " open", absf(o_far - LATTICE_OUTER - 0.25) <= 0.03 and o_far <= REACH,
 			"open %.3f m past the lattice (0.25 +/-0.03), radius %.3f, limit %.2f" % [o_far - LATTICE_OUTER, o_far, REACH])
@@ -377,9 +422,8 @@ func _ring(shell: Node) -> void:
 	var ok := true
 	for i in 2:
 		var p: Vector3 = mouths[i]
-		var clock := rad_to_deg(atan2(p.x, -p.z))
-		ok = ok and p.z < -1.0 and absf(absf(clock) - 30.0) <= 8.0 and signf(p.x) == (-1.0 if i == 0 else 1.0)
-	_t.check("launchers at 11 and 1", ok, "mouths %s, forward (Godot -Z) at 22 to 38 degrees each side" % [mouths])
+		ok = ok and p.z < -0.7 and absf(p.x) >= 1.15 and absf(p.x) <= 1.35 and absf(p.y) < 0.15 and signf(p.x) == (-1.0 if i == 0 else 1.0)
+	_t.check("pods flank the plating", ok, "mouths %s: forward (Godot -Z past 0.7), 1.15 to 1.35 m out on their own side, at the band" % [mouths])
 	var ring := shell.find_child("WeaponRing", true, false) as MeshInstance3D
 	var bins := {90: 0, 180: 0, 270: 0}
 	var y_lo := INF
@@ -458,7 +502,58 @@ func _mortar(shell: Node) -> void:
 	for i in before.size():
 		moved = maxf(moved, ((after[i] as Vector3) - (before[i] as Vector3)).length())
 	_t.check("mortar pitches", origin.distance_to(MORTAR_PIVOT) < 0.01 and moved > 0.02,
-		"Mortar origin %s (cradle line %s), tubes move %.3f m at 20 degrees" % [origin, MORTAR_PIVOT, moved])
+		"Mortar origin %s (trunnion line %s), pods move %.3f m at 20 degrees" % [origin, MORTAR_PIVOT, moved])
+	_poses(shell, mortar)
+
+
+# Every Mortar pose stays inside ruling en's reach, above the slope line and outside the plating,
+# and no Mortar vertex enters an open vent's (radius, height) hull, so no ring yaw meets a vent.
+func _poses(shell: Node, mortar: MeshInstance3D) -> void:
+	var rest := mortar.position
+	var hulls := []
+	for name in ["VaneL", "VaneR"]:
+		var vane := shell.find_child(name, true, false) as Node3D
+		var blade := vane.get_node_or_null(name + "_Blade") as MeshInstance3D if vane != null else null
+		if blade == null:
+			continue
+		var side := -1.0 if name == "VaneL" else 1.0
+		vane.rotation.z = -side * PI * 0.5
+		var flat := PackedVector2Array()
+		for p in points(blade, shell):
+			flat.append(Vector2(Vector2((p as Vector3).x, (p as Vector3).z).length(), (p as Vector3).y))
+		hulls.append(Geometry2D.convex_hull(flat))
+		vane.rotation.z = 0.0
+	var report := {}
+	var ok := hulls.size() == 2
+	for pose in POSES:
+		mortar.rotation.x = deg_to_rad(POSES[pose][0])
+		mortar.position = rest + Vector3(0.0, 0.0, POSES[pose][1])
+		var pts := points(mortar, shell)
+		var reach := far(pts)
+		var low := INF
+		var near := INF
+		var in_vent := 0
+		for p in pts:
+			low = minf(low, (p as Vector3).y)
+			near = minf(near, (p as Vector3).length())
+			var q := Vector2(Vector2((p as Vector3).x, (p as Vector3).z).length(), (p as Vector3).y)
+			for h in hulls:
+				if Geometry2D.is_point_in_polygon(q, h):
+					in_vent += 1
+		report[pose] = "reach %.3f, low %.3f, near %.3f, %d in a vent" % [reach, low, near, in_vent]
+		ok = ok and reach <= MORTAR_REACH and low >= MORTAR_LOW and near >= PLATING and in_vent == 0
+	mortar.rotation.x = 0.0
+	mortar.position = rest
+	_t.check("mortar poses", ok, "reach %.2f, low %.2f, plating %.2f, open vents: %s" % [MORTAR_REACH, MORTAR_LOW, PLATING, report])
+
+
+func _closed(label: String, scene: Node) -> void:
+	var open := {}
+	for mi: MeshInstance3D in meshes(scene):
+		var edges: Vector2i = Revolvers.open_edges(mi.mesh)
+		if edges != Vector2i.ZERO:
+			open[String(mi.name)] = edges
+	_t.check(label + " closed: no open or non-manifold edge", open.is_empty(), "open, non-manifold per mesh %s" % [open])
 
 
 func _layer(n: int) -> void:
@@ -515,6 +610,7 @@ func _variant(shell: Node) -> void:
 	var tb: int = counts(b).t
 	var rb := far(points(b, roost))
 	_t.check("roost lattice", tb < ta and rb <= CORE_LIMIT + 0.0001, "Roost Frame Core %d tris against the default %d, radius %.4f" % [tb, ta, rb])
+	_closed("roost", roost)
 	roost.free()
 
 

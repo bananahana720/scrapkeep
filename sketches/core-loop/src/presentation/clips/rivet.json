@@ -2542,6 +2542,198 @@
       "missing_node": true,
       "note": "Slam this chevron panel layer into its assigned gaps on class gain and fling it out on class loss; layer holder is absent from the inspected base recipe.",
       "limitation": "P-D owns layer holder visibility and 0.18 s in / 1.2 overshoot / 0.45 s out. heft_fill is metadata until a layer shader consumes it."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "slide.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "every": 2,
+        "phase": 0,
+        "axis": "y",
+        "m": -0.035,
+        "throw_s": 0.03,
+        "return_s": 0.09,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "The L barrel kicks back along its bore (the bone's -Y) on every second shot, the left tool's turn."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "tool.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "every": 2,
+        "phase": 0,
+        "axis": "x",
+        "deg": 6.0,
+        "throw_s": 0.03,
+        "return_s": 0.12,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "The whole L tool bucks muzzle up about its saddle (the bone's +X lifts the bore toward its +Z) on its shot."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "drum.L",
+      "fact": "shot_fired",
+      "motion": "step",
+      "start": {
+        "every": 2,
+        "phase": 0,
+        "axis": "y",
+        "deg": 60.0,
+        "ease_s": 0.05,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "The L drum ticks one chamber about the bore on its shot; the right drum turns the mirror way."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "crane.L",
+      "fact": "idle_still",
+      "motion": "turn",
+      "start": {
+        "or": [
+          "reloading"
+        ],
+        "axis": "y",
+        "deg": -80.0,
+        "rate": 10.0
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "The crane swings the L drum out of the frame, outboard and down about the hinge, while the weapon reloads or the ball has sat still."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "crane.L",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "y",
+        "deg": 0.0,
+        "throw_s": 0.05,
+        "return_s": 0.0
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "Any shot snaps the L crane shut in 0.05 s from wherever it stands."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "drum.L",
+      "fact": "idle_still",
+      "motion": "spin",
+      "start": {
+        "or": [
+          "reloading"
+        ],
+        "axis": "y",
+        "deg_s": 900.0,
+        "for_s": 0.4
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "On swinging out, the L drum spins one full turn (900 degrees a second for 0.4 s) and stops with its chambers in line."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "slide.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "every": 2,
+        "phase": 1,
+        "axis": "y",
+        "m": -0.035,
+        "throw_s": 0.03,
+        "return_s": 0.09,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "The R barrel kicks back along its bore (the bone's -Y) on every second shot, the right tool's turn."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "tool.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "every": 2,
+        "phase": 1,
+        "axis": "x",
+        "deg": 6.0,
+        "throw_s": 0.03,
+        "return_s": 0.12,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "The whole R tool bucks muzzle up about its saddle (the bone's +X lifts the bore toward its +Z) on its shot."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "drum.R",
+      "fact": "shot_fired",
+      "motion": "step",
+      "start": {
+        "every": 2,
+        "phase": 1,
+        "axis": "y",
+        "deg": -60.0,
+        "ease_s": 0.05,
+        "curve": "out_quad"
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "The R drum ticks one chamber about the bore on its shot; the right drum turns the mirror way."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "crane.R",
+      "fact": "idle_still",
+      "motion": "turn",
+      "start": {
+        "or": [
+          "reloading"
+        ],
+        "axis": "y",
+        "deg": 80.0,
+        "rate": 10.0
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "The crane swings the R drum out of the frame, outboard and down about the hinge, while the weapon reloads or the ball has sat still."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "crane.R",
+      "fact": "shot_fired",
+      "motion": "throw",
+      "start": {
+        "axis": "y",
+        "deg": 0.0,
+        "throw_s": 0.05,
+        "return_s": 0.0
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "Any shot snaps the R crane shut in 0.05 s from wherever it stands."
+    },
+    {
+      "node": "Pod/WeaponRing/Weapon",
+      "bone": "drum.R",
+      "fact": "idle_still",
+      "motion": "spin",
+      "start": {
+        "or": [
+          "reloading"
+        ],
+        "axis": "y",
+        "deg_s": -900.0,
+        "for_s": 0.4
+      },
+      "source": "scratch/w46-gate-handoff/art/OPUS-3D-UI-BLUEPRINT.md section 3.1 (E1-12)",
+      "note": "On swinging out, the R drum spins one full turn (900 degrees a second for 0.4 s) and stops with its chambers in line."
     }
   ]
 }

@@ -82,7 +82,7 @@ func _boot() -> void:
 		[_clamp_start, 81, _clamp_release],
 		[_noop, 2, _check_clamp],
 		[_bonus_start, 20, _bonus_release],
-		[_noop, 20, _bonus_clamp],
+		[_noop, 72, _bonus_clamp],
 		[_bonus_fire, 20, _bonus_release],
 		[_noop, 20, _check_bonus],
 		[_rend_start, 1, _check_rend],
@@ -192,6 +192,7 @@ func _reach_start() -> void:
 	_record["far_hp"] = float(_record["far"].hp)
 	_struck.clear()
 	_shots.clear()
+	_source.press = {"fire_pressed": true}
 	_source.hold = {"fire_held": true}
 
 
@@ -214,13 +215,15 @@ func _check_reach() -> void:
 # --- d. per-hit damage ---------------------------------------------------------------
 
 func _check_top_hit() -> void:
-	var claw := float(Weapons.BASE[Weapons.CLAW_SWEEP]["damage"])
-	var top := true
+	# Re-cut E2-01 (PILOT-CADENCE §1 & §3.4): Tarn's beat 3 standstill (43.0) keeps the
+	# heaviest single baseline hit across Weapons.ALL (exceeding Cannon's 42.0 rail).
+	var claw := Weapons.max_base_hit(Weapons.CLAW_SWEEP)
+	var top := claw > 42.0
 	for id in Weapons.ALL:
-		if id != Weapons.CLAW_SWEEP and float(Weapons.BASE[id]["damage"]) >= claw:
+		if id != Weapons.CLAW_SWEEP and Weapons.max_base_hit(id) >= claw:
 			top = false
 	_t.check("claw_sweep has the highest per-hit damage of all weapons in Weapons.ALL", top,
-		"claw %.1f vs %s" % [claw, Weapons.ALL.map(func(id): return Weapons.BASE[id]["damage"])])
+		"claw %.1f vs %s" % [claw, Weapons.ALL.map(func(id): return Weapons.max_base_hit(id))])
 
 
 # --- e. the claw pull ---------------------------------------------------------------------
@@ -298,6 +301,7 @@ func _bonus_start() -> void:
 	target.max_hp = 100000.0
 	_record = {"target": target, "from": _struck.size()}
 	_note_ids()
+	_source.press = {"fire_pressed": true}
 	_source.hold = {"fire_held": true}
 
 
@@ -318,6 +322,7 @@ func _bonus_clamp() -> void:
 
 
 func _bonus_fire() -> void:
+	_source.press = {"fire_pressed": true}
 	_source.hold = {"fire_held": true}
 
 

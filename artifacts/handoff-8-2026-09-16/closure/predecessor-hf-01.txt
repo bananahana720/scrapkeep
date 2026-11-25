@@ -1,5 +1,0 @@
-HF-01 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-HF-01 revision 3 done (task index last event EV-0075), accepted integrated identity a618e2602b7218efb03ee6be7d2ed05b32f44da6 (admission event EV-0075).
-git merge-base --is-ancestor a618e2602b7218efb03ee6be7d2ed05b32f44da6 HEAD: exit 0
-docs/tech/sections/HF-01-production-conventions.md sha256 at this commit: f562c9ac2447e04998febec12861de5d708995b3f07040dedba2f03daada8dba
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

@@ -64,28 +64,36 @@ func setup() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
+	# The colours written into the mesh are the palette's sRGB values: the switch makes the PC's renderer read them so,
+	# not as linear light, which washed the rings and arcs out (tools/vertex_colour_probe.gd --marks=1, W46-13).
+	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.render_priority = PRIORITY
 	view.material_override = mat
 	view.top_level = true
 	add_child(view)
+	set_process(false)
 
 
 func arc(from: Vector3, to: Vector3, color: Color) -> void:
 	_arcs.append({"from": from, "to": to, "color": color, "life": ARC_LIFE})
+	set_process(true)
 
 
 func ring(at: Vector3, radius: float, color: Color) -> void:
 	_rings.append({"at": at, "radius": radius, "color": color, "life": RING_LIFE})
+	set_process(true)
 
 
 func spark(at: Vector3, color: Color) -> void:
 	_sparks.append({"at": at, "color": color, "life": SPARK_LIFE})
+	set_process(true)
 
 
 # A straight line that fades over `life` seconds: a lance's committed path, drawn once.
 func beam(from: Vector3, to: Vector3, color: Color, life: float) -> void:
 	_beams.append({"from": from, "to": to, "color": color, "life": life, "span": life})
+	set_process(true)
 
 
 # The one shape for a shot bit acting at `point` on a shot flying along `dir`. `aim` is the
@@ -132,6 +140,7 @@ func _add_flair(entry: Dictionary, alpha: float, life: float, cap: int) -> void:
 	for i in maxi(0, same.size() - cap + 1):
 		_flair.erase(same[i])
 	_flair.append(entry)
+	set_process(true)
 
 
 func clear() -> void:
@@ -141,6 +150,7 @@ func clear() -> void:
 	_rings.clear()
 	_sparks.clear()
 	_mesh.clear_surfaces()
+	set_process(false)
 
 
 # Live marks drawn this frame across every combat effect pool.
@@ -150,12 +160,18 @@ func live_mark_count() -> int:
 
 func _process(delta: float) -> void:
 	_mesh.clear_surfaces()
-	_arcs = _age(_arcs, delta)
-	_rings = _age(_rings, delta)
-	_sparks = _age(_sparks, delta)
-	_beams = _age(_beams, delta)
-	_flair = _age(_flair, delta)
+	if not _arcs.is_empty():
+		_arcs = _age(_arcs, delta)
+	if not _rings.is_empty():
+		_rings = _age(_rings, delta)
+	if not _sparks.is_empty():
+		_sparks = _age(_sparks, delta)
+	if not _beams.is_empty():
+		_beams = _age(_beams, delta)
+	if not _flair.is_empty():
+		_flair = _age(_flair, delta)
 	if _arcs.is_empty() and _rings.is_empty() and _sparks.is_empty() and _beams.is_empty() and _flair.is_empty():
+		set_process(false)
 		return
 	_mesh.surface_begin(Mesh.PRIMITIVE_LINES)
 	for entry in _arcs:

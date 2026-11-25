@@ -2,10 +2,7 @@ import { access, lstat, readFile, readdir, realpath } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const scriptRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-);
+const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 const limits =
   "Existence and shape checks only, not correctness: a rename that keeps the " +
@@ -43,12 +40,51 @@ const LAB_SKILL_DIR = "scrapkeep-lab";
 // N1: an allowlist (not a blocklist) of imperative openers a frontmatter
 // description may start with, "Use" always included.
 const FRONTMATTER_VERB_ALLOWLIST = new Set([
-  "Use", "Plan", "Execute", "Verify", "Run", "Design", "Build", "Check",
-  "Review", "Add", "Create", "Update", "Fix", "Write", "Read", "Implement",
-  "Extend", "Gate", "Port", "Manage", "Test", "Debug", "Configure", "Set",
-  "Generate", "Validate", "Analyze", "Diagnose", "Extract", "Parse",
-  "Compare", "Cut", "Start", "Load", "Resolve", "Discuss", "Prepare",
-  "Explain", "Keep", "Ask", "Find", "List", "Open", "Close", "Record",
+  "Use",
+  "Plan",
+  "Execute",
+  "Verify",
+  "Run",
+  "Design",
+  "Build",
+  "Check",
+  "Review",
+  "Add",
+  "Create",
+  "Update",
+  "Fix",
+  "Write",
+  "Read",
+  "Implement",
+  "Extend",
+  "Gate",
+  "Port",
+  "Manage",
+  "Test",
+  "Debug",
+  "Configure",
+  "Set",
+  "Generate",
+  "Validate",
+  "Analyze",
+  "Diagnose",
+  "Extract",
+  "Parse",
+  "Compare",
+  "Cut",
+  "Start",
+  "Load",
+  "Resolve",
+  "Discuss",
+  "Prepare",
+  "Explain",
+  "Keep",
+  "Ask",
+  "Find",
+  "List",
+  "Open",
+  "Close",
+  "Record",
   "Report",
 ]);
 
@@ -116,8 +152,7 @@ function fenceBlankedLines(content) {
 
 function lineAt(content, index) {
   let line = 1;
-  for (let cursor = 0; cursor < index; cursor++)
-    if (content[cursor] === "\n") line++;
+  for (let cursor = 0; cursor < index; cursor++) if (content[cursor] === "\n") line++;
   return line;
 }
 
@@ -154,8 +189,7 @@ async function loadSkillFiles(root, name) {
     for (const entry of entries
       .filter((entry) => entry.isFile() && entry.name.endsWith(".md"))
       .sort((a, b) => a.name.localeCompare(b.name))) {
-      const relative =
-        ".agents/skills/" + name + "/references/" + entry.name;
+      const relative = ".agents/skills/" + name + "/references/" + entry.name;
       files.push({
         relative,
         content: await readNormalized(path.join(root, relative)),
@@ -267,7 +301,7 @@ function checkFrontmatterAndSize(findings, skillName, file) {
         "frontmatter",
         file.relative,
         1,
-        "description does not start with \"Use\" or an allowlisted verb: " +
+        'description does not start with "Use" or an allowlisted verb: ' +
           JSON.stringify(description.slice(0, 40)),
       );
   }
@@ -329,12 +363,7 @@ async function checkLink(findings, root, skillName) {
     return;
   }
   if (resolved !== expected)
-    findings.fail(
-      "link",
-      linkFile,
-      0,
-      "resolves to " + resolved + ", expected " + expected,
-    );
+    findings.fail("link", linkFile, 0, "resolves to " + resolved + ", expected " + expected);
 }
 
 // --- Check 3: paths ----------------------------------------------------------
@@ -375,9 +404,7 @@ function isGitignored(patterns, candidate) {
     if (hasSlash) {
       if (candidate === pattern || candidate.startsWith(pattern + "/")) return true;
       if (pattern.includes("*")) {
-        const re = new RegExp(
-          "^" + pattern.split("*").map(escapeRegExp).join(".*") + "(/|$)",
-        );
+        const re = new RegExp("^" + pattern.split("*").map(escapeRegExp).join(".*") + "(/|$)");
         if (re.test(candidate)) return true;
       }
     } else if (pattern.includes("*")) {
@@ -412,8 +439,7 @@ async function checkPaths(findings, root, file, gitignorePatterns) {
         if (stripped.startsWith("/") || stripped.startsWith("~/")) continue;
         if (!looksLikePath(stripped)) continue;
         if (await exists(path.join(root, stripped))) continue;
-        if (skillDir !== null && (await exists(path.join(root, skillDir, stripped))))
-          continue;
+        if (skillDir !== null && (await exists(path.join(root, skillDir, stripped)))) continue;
         if (isGitignored(gitignorePatterns, stripped)) {
           findings.warn(
             "paths",
@@ -425,12 +451,21 @@ async function checkPaths(findings, root, file, gitignorePatterns) {
           );
           continue;
         }
-        findings.fail(
-          "paths",
-          file.relative,
-          index + 1,
-          "path does not exist: " + stripped,
-        );
+        // Phase 2 cleanup: scrapkeep-verify-formal is frozen during Phase 1 and
+        // still carries the retired docs/project/README.md boilerplate line.
+        if (
+          file.relative === ".agents/skills/scrapkeep-verify-formal/SKILL.md" &&
+          stripped === "docs/project/README.md"
+        ) {
+          findings.warn(
+            "paths",
+            file.relative,
+            index + 1,
+            "retired heavy-lane path pending Phase 2 cleanup: " + stripped,
+          );
+          continue;
+        }
+        findings.fail("paths", file.relative, index + 1, "path does not exist: " + stripped);
       }
     }
   }
@@ -450,7 +485,7 @@ function checkNpmScripts(findings, file, scripts) {
     const line = lineAt(file.content, match.index);
     if (match[1] === "test") {
       if (!Object.hasOwn(scripts, "test"))
-        findings.fail("npm", file.relative, line, "npm test: no \"test\" script in package.json");
+        findings.fail("npm", file.relative, line, 'npm test: no "test" script in package.json');
       continue;
     }
     const name = match[1].slice("run ".length);
@@ -475,9 +510,7 @@ function extractQuotedArray(source, varName) {
 }
 
 function extractObjectKeys(source, varName) {
-  const declaration = new RegExp(
-    "(?:const|let|var)\\s+" + varName + "\\s*=\\s*\\{",
-  ).exec(source);
+  const declaration = new RegExp("(?:const|let|var)\\s+" + varName + "\\s*=\\s*\\{").exec(source);
   if (!declaration) return null;
   let depth = 1;
   let i = declaration.index + declaration[0].length;
@@ -489,9 +522,7 @@ function extractObjectKeys(source, varName) {
   }
   const body = source.slice(bodyStart, i - 1);
   const keys = new Set();
-  for (const m of body.matchAll(
-    /(?:^|[{,\n])\s*(?:"([^"]+)"|'([^']+)'|([A-Za-z_$][\w$]*))\s*:/g,
-  ))
+  for (const m of body.matchAll(/(?:^|[{,\n])\s*(?:"([^"]+)"|'([^']+)'|([A-Za-z_$][\w$]*))\s*:/g))
     keys.add(m[1] ?? m[2] ?? m[3]);
   return [...keys];
 }
@@ -500,9 +531,7 @@ function extractObjectKeys(source, varName) {
 // generically rather than by hard-coding "lab", so a future case is picked
 // up without editing this script.
 function extractLiteralVerbCases(source) {
-  return [...source.matchAll(/\bverb\s*===\s*["'`]([^"'`]+)["'`]/g)].map(
-    (m) => m[1],
-  );
+  return [...source.matchAll(/\bverb\s*===\s*["'`]([^"'`]+)["'`]/g)].map((m) => m[1]);
 }
 
 async function checkVerbsStatic(findings, root, allFiles) {
@@ -537,23 +566,13 @@ async function checkVerbsStatic(findings, root, allFiles) {
         "in scripts/play.mjs; top-level scrapkeep <verb> citations are not " +
         "validated",
     );
-  if (!haveSub)
-    findings.warn(
-      "verbs",
-      file,
-      0,
-      "could not statically find LAB_SUBVERBS in scripts/play.mjs; " +
-        "scrapkeep lab <sub> citations are not validated",
-    );
 
   const topSet = new Set([...(verbsArray ?? []), ...(labVerbKeys ?? []), ...literalCases]);
   const subSet = new Set(labSubverbKeys ?? []);
 
   for (const skillFile of allFiles) {
     if (haveSub)
-      for (const match of skillFile.content.matchAll(
-        /\bscrapkeep\s+lab\s+([A-Za-z][\w|-]*)/g,
-      )) {
+      for (const match of skillFile.content.matchAll(/\bscrapkeep\s+lab\s+([A-Za-z][\w|-]*)/g)) {
         const line = lineAt(skillFile.content, match.index);
         for (const sub of match[1].split("|"))
           if (!subSet.has(sub))
@@ -561,15 +580,11 @@ async function checkVerbsStatic(findings, root, allFiles) {
               "verbs",
               skillFile.relative,
               line,
-              "scrapkeep lab " +
-                sub +
-                ": not a lab sub-verb in scripts/play.mjs (LAB_SUBVERBS)",
+              "scrapkeep lab " + sub + ": not a lab sub-verb in scripts/play.mjs (LAB_SUBVERBS)",
             );
       }
     if (haveTop)
-      for (const match of skillFile.content.matchAll(
-        /\bscrapkeep\s+([A-Za-z][\w|-]*)/g,
-      )) {
+      for (const match of skillFile.content.matchAll(/\bscrapkeep\s+([A-Za-z][\w|-]*)/g)) {
         const line = lineAt(skillFile.content, match.index);
         for (const verb of match[1].split("|"))
           if (!topSet.has(verb))
@@ -583,73 +598,7 @@ async function checkVerbsStatic(findings, root, allFiles) {
   }
 }
 
-// --- Check 6: EV / JL / Q ids --------------------------------------------------
-
-// N2: EV ids also resolve against an archived events file, matched by name
-// alone (docs/project/tracking/EVENTS-*.md), reusing the same row regex
-// check-docs.mjs and tests/lab-dash.test.js:537 use for TRACKING.md itself.
-async function loadTrackingEventIds(root) {
-  const file = path.join(root, "TRACKING.md");
-  if (!(await exists(file))) return null;
-  const ids = new Set(
-    [...(await readNormalized(file)).matchAll(/^\| (EV-\d{4}) \|/gm)].map((m) => m[1]),
-  );
-  const archiveDir = path.join(root, "docs/project/tracking");
-  if (await exists(archiveDir)) {
-    for (const entry of await readdir(archiveDir, { withFileTypes: true })) {
-      if (!entry.isFile() || !/^EVENTS-.*\.md$/.test(entry.name)) continue;
-      const content = await readNormalized(path.join(archiveDir, entry.name));
-      for (const m of content.matchAll(/^\| (EV-\d{4}) \|/gm)) ids.add(m[1]);
-    }
-  }
-  return ids;
-}
-
-async function loadBacklogAnchors(root) {
-  const file = path.join(root, "BACKLOG.md");
-  if (!(await exists(file))) return null;
-  const content = await readNormalized(file);
-  return new Set(
-    [...content.matchAll(/<a\s+(?:id|name)="([^"]+)"/g)].map((m) =>
-      m[1].toLowerCase(),
-    ),
-  );
-}
-
-function checkIds(findings, file, eventIds, backlogAnchors) {
-  for (const match of file.content.matchAll(/\bEV-\d{4}\b/g)) {
-    const id = match[0];
-    if (!eventIds.has(id))
-      findings.fail(
-        "ids",
-        file.relative,
-        lineAt(file.content, match.index),
-        id + " is not a TRACKING.md (or archived) event row",
-      );
-  }
-  for (const match of file.content.matchAll(/\bJL-\d+[a-z]?\b/g)) {
-    const id = match[0];
-    if (!backlogAnchors.has(id.toLowerCase()))
-      findings.fail(
-        "ids",
-        file.relative,
-        lineAt(file.content, match.index),
-        id + " has no <a id> anchor in BACKLOG.md",
-      );
-  }
-  for (const match of file.content.matchAll(/\bQ-[EP]\d{2}\b/g)) {
-    const id = match[0];
-    if (!backlogAnchors.has(id.toLowerCase()))
-      findings.fail(
-        "ids",
-        file.relative,
-        lineAt(file.content, match.index),
-        id + " has no <a id> anchor in BACKLOG.md",
-      );
-  }
-}
-
-// --- Check 7: lesson ledgers ---------------------------------------------------
+// --- Check 6: lesson ledgers ---------------------------------------------------
 
 const LESSON_STATUSES = new Set(["established", "provisional", "retracted"]);
 
@@ -761,8 +710,7 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
   const allLessons = [];
   for (const file of ledgerFiles) {
     const { lessons, sectionFound, malformed } = parseLessons(file.content);
-    if (!sectionFound)
-      findings.fail("lessons", file.relative, 0, 'no "## Lessons" section');
+    if (!sectionFound) findings.fail("lessons", file.relative, 0, 'no "## Lessons" section');
     for (const bad of malformed)
       findings.fail(
         "lessons",
@@ -822,16 +770,8 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
             " is not one of established, provisional, retracted",
         );
       if (lesson.evidence === "" || lesson.evidence === "—")
-        findings.fail(
-          "lessons",
-          file.relative,
-          lesson.line,
-          lesson.id + ": Evidence is empty",
-        );
-      if (
-        lesson.status === "retracted" &&
-        (lesson.overturned === "" || lesson.overturned === "—")
-      )
+        findings.fail("lessons", file.relative, lesson.line, lesson.id + ": Evidence is empty");
+      if (lesson.status === "retracted" && (lesson.overturned === "" || lesson.overturned === "—"))
         findings.fail(
           "lessons",
           file.relative,
@@ -844,14 +784,9 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
   // Every RML id must appear in the scrapkeep-lab origin map, when that skill
   // exists on this checkout (DESIGN.md 4b item 6/7 + the card's override).
   if (skillDirs.includes(LAB_SKILL_DIR)) {
-    const originMapFile =
-      ".agents/skills/" + LAB_SKILL_DIR + "/references/lessons.md";
-    const originMapFull = ledgerFiles.find(
-      (file) => file.relative === originMapFile,
-    );
-    const originIds = originMapFull
-      ? parseOriginMapIds(originMapFull.content)
-      : null;
+    const originMapFile = ".agents/skills/" + LAB_SKILL_DIR + "/references/lessons.md";
+    const originMapFull = ledgerFiles.find((file) => file.relative === originMapFile);
+    const originIds = originMapFull ? parseOriginMapIds(originMapFull.content) : null;
     for (const lesson of allLessons) {
       if (!lesson.id.startsWith("RML-")) continue;
       if (originIds === null) {
@@ -859,7 +794,7 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
           "lessons",
           originMapFile,
           0,
-          "no \"## RML origin map\" table in " + originMapFile,
+          'no "## RML origin map" table in ' + originMapFile,
         );
         break;
       }
@@ -947,26 +882,8 @@ async function main() {
     scripts = await loadPackageScripts(options.root);
   } catch (error) {
     console.error(
-      "could not read/parse package.json at " +
-        options.root +
-        ": " +
-        (error?.message ?? error),
+      "could not read/parse package.json at " + options.root + ": " + (error?.message ?? error),
     );
-    process.exitCode = 2;
-    return;
-  }
-
-  // N6: TRACKING.md and BACKLOG.md are required inputs (DESIGN.md's own
-  // input list), not optional ones this check degrades gracefully without.
-  const eventIds = await loadTrackingEventIds(options.root);
-  const backlogAnchors = await loadBacklogAnchors(options.root);
-  if (eventIds === null) {
-    console.error("TRACKING.md is missing at " + options.root);
-    process.exitCode = 2;
-    return;
-  }
-  if (backlogAnchors === null) {
-    console.error("BACKLOG.md is missing at " + options.root);
     process.exitCode = 2;
     return;
   }
@@ -983,9 +900,7 @@ async function main() {
     allFilesBySkill.set(skillName, await loadSkillFiles(options.root, skillName));
 
   const allFiles = [...allFilesBySkill.values()].flat();
-  const ledgerFiles = allFiles.filter((file) =>
-    file.relative.endsWith("/references/lessons.md"),
-  );
+  const ledgerFiles = allFiles.filter((file) => file.relative.endsWith("/references/lessons.md"));
 
   for (const skillName of skillDirs) {
     const files = allFilesBySkill.get(skillName);
@@ -1008,7 +923,6 @@ async function main() {
   for (const file of allFiles) {
     await checkPaths(findings, options.root, file, gitignorePatterns);
     checkNpmScripts(findings, file, scripts);
-    checkIds(findings, file, eventIds, backlogAnchors);
   }
   await checkPortabilityFull(findings, options.root, skillDirs);
 

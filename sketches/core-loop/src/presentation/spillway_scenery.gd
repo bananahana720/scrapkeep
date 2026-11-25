@@ -10,10 +10,15 @@ const ParkSites := preload("res://src/presentation/park_sites.gd")
 # The existing cast slabs keep their exact geometry. Their finishes share the workshop's
 # concrete/paint/shutter kit; the signal insert adds directional safety paint, open grates
 # and recessed ancient lenses. A missing insert leaves every original material intact.
-static var prop_shader_path := "res://assets/materials/wog_signal.gdshader"
+const PROP_SHADER_PATH := "res://assets/materials/wog_signal.gdshader"
+static var prop_shader_path := PROP_SHADER_PATH
 static var _prop_shaders := {}
 static var _prop_warnings := {}
 static var _prop_materials := {}
+
+
+static func reset_for_tests() -> void:
+	prop_shader_path = PROP_SHADER_PATH
 
 
 static func dress_props(parent: Node, keep: Node = null) -> void:
@@ -374,9 +379,10 @@ static func build_park(stage_root: Node3D, map, ground: Callable, stage: int) ->
 
 
 # The park pass as steps, so it can run whole (build_park) or a step a frame (ParkBuild): the plan and
-# the mist, the cottonwoods' base batches, their detail shells PARK_TREES_PER_STEP trees a step, then the
-# spillway effects. Steps run in the same order either way, and only the plan draws from the seeded
-# stream, so the result is the same.
+# the mist, the cottonwoods' base batches, their detail shells PARK_TREES_PER_STEP trees a step, the
+# spillway effects, then the next stage's smoke on the horizon where the park names one (smoke_column.gd).
+# Steps run in the same order either way, and only the plan draws from the seeded stream, so the result
+# is the same.
 const PARK_TREES_PER_STEP := 4
 
 
@@ -417,7 +423,10 @@ class ParkPass extends RefCounted:
 			3:
 				preload("res://src/presentation/spillway_fx.gd").place(scenery, _stage_root, _map, _sites)
 				_phase = 4
-		return _phase < 4
+			4:
+				preload("res://src/presentation/smoke_column.gd").place(scenery, _map, _sites.height)
+				_phase = 5
+		return _phase < 5
 
 
 # The park's cottonwood seats and its mist batch (under scenery), from the map's own seeded stream.

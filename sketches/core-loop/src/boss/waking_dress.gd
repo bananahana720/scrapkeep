@@ -26,6 +26,11 @@ const CORE := ["CoreShutter0", "CoreShutter1", "CoreShutter2", "CoreLive", "Core
 # Test seam: a test points these at a missing file to prove the stub body stays.
 static var base_path := BASE
 static var kit_path := KIT
+
+
+static func reset_for_tests() -> void:
+	base_path = BASE
+	kit_path = KIT
 const BASE_PARTS := ["CombatSeat", "SpineInner", "IntakeVane0", "IntakeVane1", "IntakeVane2"]
 const KIT_PARTS := ["CombatSeatAnchor", "CoreShutter0", "CoreLive", "CoreUnready", "PressureLip0", "CollarSpoil"]
 

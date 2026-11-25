@@ -446,7 +446,9 @@ func _off_game_checks() -> void:
 	_check("off: damage path", not run.armor_mode and is_equal_approx(run.hp, hp_before - 12.0) and run.mass == mass_before and _game.build.scrap.recovery_count() == 0,
 		"12 damage: hp %.0f -> %.0f, mass %.0f untouched, no spill" % [hp_before, run.hp, run.mass])
 	_check("off: heft", is_equal_approx(run.heft(), 1.0 + run.mass / 450.0 + 0.2), "heft %.4f counts the part" % run.heft())
-	_check("off: hud", not hud._armor.visible and hud.piece_rects()["bottom"].size() == 3, "armour gauge hidden, %d bottom pieces (ability bar, health, speed)" % hud.piece_rects()["bottom"].size())
+	var bottom: Array = hud.piece_rects()["bottom"]
+	_check("off: hud", not hud._armor.visible and bottom.size() == 5 and not bottom.has(hud._rect_of(hud._armor)),
+		"armour gauge hidden and unlisted, %d bottom pieces (ability bar, health, speed, cog wallet, chain counter)" % bottom.size())
 	_game.build._step_armor(_game.player.ball_position(), 60.0)
 	_game.run_log._write("lost")
 	var line := _last_line(_game.run_log.storage_dir.path_join("runs.ndjson"))

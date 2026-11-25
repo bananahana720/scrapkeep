@@ -40,8 +40,9 @@ func _unseal(story: bool) -> void:
 	audio._flush_flow()
 	var engine = audio.engine
 	engine.track = "warden"
-	if story:
-		audio._story_until_ms = 1 << 62  # a sting holding the moment for good
+	# choose_class(0) enters stage 1 and plays cold_open, which opens a 2.5 s real-clock story duck;
+	# in a warm batch bake_now() finishes inside that window, so the plain case clears it explicitly.
+	audio._story_until_ms = 1 << 62 if story else 0
 	game.flow._unseal()
 	audio._flush_flow()
 	var stinger: String = Rows.sound("beacon_unsealed")

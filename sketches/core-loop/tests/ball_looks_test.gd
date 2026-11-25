@@ -12,9 +12,11 @@ const T := preload("res://tests/support/t.gd")
 # and dresses nothing. Under a look a painter fits that look for every pilot and dresses it itself. The gyro and the bell
 # swap the whole shell. The cutaway keeps each pilot's own shell (kit, weapon ring, hub mounts)
 # and plates its rolling part: every heft class has plating inside the collider, the lattice's
-# gap panels are hidden, the window is on every surface of the rolling part but the class
-# accents, an equipped paint reaches the plating, nothing new blends, and what rides the ball
-# (scrap, panel plates) takes the window without touching a mesh another ball shares.
+# gap panels are hidden, the window is on every surface of the rolling part, class accents
+# included, an equipped paint reaches the plating, nothing new blends, and what rides the ball
+# (scrap, panel plates) takes the window without touching a mesh another ball shares. What
+# hero_assets swaps onto a dressed shell later (Kest's bands and fuse, the ready glow) keeps the
+# window and the ink line.
 
 const CORE_LIMIT := 0.985
 const PILOTS: Array = ["pylon_engineer", "runner_gunner", "demolitions_caster", "tarn", "tally", "remembered_cannon"]
@@ -44,6 +46,7 @@ func _run_all() -> void:
 		else:
 			_look(look)
 	_riders()
+	_kept()
 	_glance()
 	quit(t.verdict())
 
@@ -160,8 +163,6 @@ func _plated(look: String) -> void:
 		for view in _views(core):
 			for i in view.mesh.get_surface_count():
 				var mat: Material = view.get_active_material(i)
-				if mat != null and mat.resource_name == "class_accent":
-					continue
 				total += 1
 				if _is_window(mat):
 					cut += 1
@@ -289,6 +290,98 @@ func _riders() -> void:
 	t.eq("cutaway: the window follows the ball", cut.get_shader_parameter("centre_at"), roll.global_position)
 	t.eq("cutaway: riders add one material per look", (roll.get_meta(BallLooks.RIDER_META).cuts as Dictionary).size(), 3)
 	roll.free()
+
+
+# A swap hero_assets makes after the fit keeps the surface's window and ink line: Kest's satchel
+# bands on the weapon ring (gated as the bands gate their satchels), Kest's mortar fuse, and the
+# ready glow on and off on Cannon's barrel seams. Under today's look the swaps are as they were.
+func _kept() -> void:
+	var painter := _painter(_tuning("cutaway"))
+	var paint := Color(0.85, 0.3, 0.55)
+	var ball := Node3D.new()
+	root.add_child(ball)
+	var kest: Dictionary = painter.fit_shell_into(ball, "demolitions_caster", "", 1, {"class": Color.WHITE, "paint": paint})
+	var ring := (kest.pod as Node).get_node_or_null("WeaponRing") as MeshInstance3D
+	var mortar := (kest.pod as Node).get_node_or_null("WeaponRing/Mortar") as MeshInstance3D
+	if not t.check("kept: Kest's shell has a weapon ring and mortar", ring != null and mortar != null):
+		ball.free()
+		painter.free()
+		return
+	var band := _slot(ring, "paint")
+	var fuse := _slot(mortar, "class_accent")
+	var fitted := ring.get_active_material(band) as ShaderMaterial
+	t.check("kept: the fitted ring's paint wears the window and the pilot's line", _is_window(fitted) and _inked(fitted))
+	t.check("kept: the mortar's class accent takes the window at the fit", _is_window(mortar.get_active_material(fuse)))
+	var state := {"lit_count": 2, "heft_class": 1, "mortar_recoil": 0.0, "mortar_pitch": 0.0, "fuse_boost": false,
+		"fuse_glow": 0.6, "fuse_blink": false}
+	painter.apply_kest_state(kest.pod, state, paint)
+	var bands := ring.get_active_material(band) as ShaderMaterial
+	t.check("kept: after Kest's state the ring's bands are behind the window", _is_window(bands) and bands.shader.code.contains("lit_count"))
+	t.check("kept: the bands are the equipped paint's", BallLooks.unwindowed(bands) == painter.kest_band_material(paint)
+		and bands.get_shader_parameter("paint_tint") == painter.kest_band_material(paint).get_shader_parameter("paint_tint"))
+	var same := true
+	for key in ["window", "centre_local", "keep_within", "tube", "back_is_kit", "seat_back_top"]:
+		same = same and bands.get_shader_parameter(key) == fitted.get_shader_parameter(key)
+	t.check("kept: the bands cut the window the fit cut", same)
+	var line := bands.next_pass as ShaderMaterial
+	t.check("kept: the bands keep the pilot's cutaway line, gated as the bands gate their satchels", _inked(bands)
+		and line.get_shader_parameter("centre_local") == fitted.next_pass.get_shader_parameter("centre_local")
+		and line.shader.code.contains("keep_within") and line.shader.code.contains("heft_class"))
+	var lit := mortar.get_active_material(fuse) as ShaderMaterial
+	t.check("kept: the fuse is behind the window", _is_window(lit) and BallLooks.unwindowed(lit) == painter.kest_fuse_material(false)
+		and lit.shader.code.contains("fuse_glow"))
+	painter.apply_kest_state(kest.pod, state, paint)
+	t.check("kept: Kest's state each frame makes nothing new", ring.get_active_material(band) == bands and mortar.get_active_material(fuse) == lit)
+	painter._glow_rec(kest, true)
+	t.check("kept: the ready glow brightens the fuse behind the window", _is_window(mortar.get_active_material(fuse))
+		and BallLooks.unwindowed(mortar.get_active_material(fuse)) == painter.kest_fuse_material(true))
+	painter._glow_rec(kest, false)
+	t.check("kept: and the fuse dims back to the same material", mortar.get_active_material(fuse) == lit)
+	var cannon: Dictionary = painter.fit_shell_into(ball, "remembered_cannon", "", 1, {"class": Color.WHITE})
+	var seams: Array = []
+	for view in _views(cannon.core) + _views(cannon.pod):
+		for i in view.mesh.get_surface_count():
+			if HeroAssets.slot_of(view.mesh, i) == "class_accent":
+				seams.append([view, i, view.get_active_material(i)])
+	var calm := painter.material("class_accent", Color.WHITE)
+	var ready := painter.ready_material(Color.WHITE)
+	var cut := not seams.is_empty()
+	for seam in seams:
+		cut = cut and _is_window(seam[2]) and BallLooks.unwindowed(seam[2]) == calm
+	t.check("kept: Cannon's barrel seams take the window at the fit", cut, "%d seams" % seams.size())
+	t.eq("kept: the ready glow lights every seam", painter._glow_rec(cannon, true), seams.size())
+	var glowing := true
+	for seam in seams:
+		var mat: Material = seam[0].get_active_material(seam[1])
+		glowing = glowing and (_is_window(mat) and BallLooks.unwindowed(mat) == ready
+			and mat.get_shader_parameter("centre_local") == seam[2].get_shader_parameter("centre_local"))
+	t.check("kept: lit seams stay behind the window", glowing)
+	t.eq("kept: the glow goes out on every seam", painter._glow_rec(cannon, false), seams.size())
+	var back := true
+	for seam in seams:
+		back = back and seam[0].get_active_material(seam[1]) == seam[2]
+	t.check("kept: each seam is back on the material the fit gave it", back)
+	var cannon_ring := (cannon.pod as Node).get_node("WeaponRing") as MeshInstance3D
+	t.check("kept: the glow leaves the shell's line", _inked(cannon_ring.get_active_material(_slot(cannon_ring, "paint"))))
+	var plain := _painter(_tuning(BallLooks.TODAY))
+	var today: Dictionary = plain.fit_shell_into(ball, "demolitions_caster", "", 1, {"class": Color.WHITE, "paint": paint})
+	var today_ring := (today.pod as Node).get_node("WeaponRing") as MeshInstance3D
+	plain.apply_kest_state(today.pod, state, paint)
+	t.check("kept: today's Kest wears the bands themselves", today_ring.get_active_material(_slot(today_ring, "paint")) == plain.kest_band_material(paint))
+	ball.free()
+	plain.free()
+	painter.free()
+
+
+func _slot(view: MeshInstance3D, slot: String) -> int:
+	for i in view.mesh.get_surface_count():
+		if HeroAssets.slot_of(view.mesh, i) == slot:
+			return i
+	return -1
+
+
+func _inked(mat: Material) -> bool:
+	return mat != null and mat.next_pass != null and mat.next_pass.get_meta("ink_role", "") == "pilot"
 
 
 # Stands in for the player where the game's own pilot fitting asks for the class colour.

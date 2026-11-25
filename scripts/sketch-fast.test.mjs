@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
+import { shuffleFiles } from "./ci/node-tests.mjs";
 import {
   nodeTestsForPaths,
   defaultWidth,
@@ -22,8 +26,10 @@ import {
   nodeTestsFor,
   parseArgs,
   batchable,
+  seedBaseGodot,
   splitBatch,
   takeBatch,
+  takeBatchPacked,
   placeholderIncrease,
   plan,
   referrers,
@@ -996,4 +1002,42 @@ test("checksRemoved compares a renamed test with its old path and a deleted one 
     { test: "b_test.gd", labels: ["two"] },
     { test: "gone_test.gd", labels: ["three"] },
   ]);
+});
+
+test("takeBatchPacked preserves full warm batches under --shuffle without starving solo rows", () => {
+  const rows = [
+    ...Array.from({ length: 16 }, (_, i) => ({ test: `b${i}`, ms: 2000, ok: true })),
+    ...Array.from({ length: 8 }, (_, i) => ({ test: `n${i}`, ms: 2000, ok: false })),
+  ];
+  const shuffled = shuffleFiles(rows, 42);
+  const expectedBatchOrder = shuffled.filter((r) => r.ok).map((r) => r.test);
+  const queue = [...shuffled];
+  const batches = [];
+  const solos = [];
+  while (queue.length > 0) {
+    const batch = takeBatchPacked(queue, (r) => r.ok);
+    if (batch.length > 1) batches.push(batch.map((r) => r.test));
+    else solos.push((batch[0] ?? queue.shift()).test);
+  }
+  assert.equal(batches.length, 2, "16 shuffled batchable tests pack into 2 full 8-test batches");
+  assert.deepEqual(batches.flat(), expectedBatchOrder, "relative shuffled order is preserved");
+  assert.equal(solos.length, 8, "all 8 non-batchable tests still run alone");
+});
+
+test("seedBaseGodot copies head .godot into base without scrapkeep-import.json", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "fast-seed-base-"));
+  try {
+    const headSketch = path.join(dir, "head");
+    const baseSketch = path.join(dir, "base");
+    mkdirSync(path.join(headSketch, ".godot"), { recursive: true });
+    mkdirSync(baseSketch, { recursive: true });
+    writeFileSync(path.join(headSketch, ".godot", "cache.bin"), "abc");
+    writeFileSync(path.join(headSketch, ".godot", "scrapkeep-import.json"), '{"tree":"x"}');
+    assert.equal(seedBaseGodot(headSketch, baseSketch), true);
+    assert.equal(existsSync(path.join(baseSketch, ".godot", "cache.bin")), true);
+    assert.equal(existsSync(path.join(baseSketch, ".godot", "scrapkeep-import.json")), false);
+    assert.equal(seedBaseGodot(headSketch, baseSketch), false, "existing .godot is untouched");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });

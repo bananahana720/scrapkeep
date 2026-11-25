@@ -25,6 +25,7 @@ import {
   readFileSync,
   readdirSync,
   realpathSync,
+  rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
@@ -34,7 +35,8 @@ import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
 
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
-import { checkImportStamp, writeImportStamp } from "../import-stamp.mjs";
+import { checkImportStamp, sketchState, stampPath, writeImportStamp } from "../import-stamp.mjs";
+import { defaultChallengeJobs } from "../challenge/lib.mjs";
 import { userDataEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -760,9 +762,82 @@ export function nodeSummary(logText) {
   return { tests: read("tests"), fail: read("fail"), pass: read("pass") };
 }
 
+// Copy a .godot directory using copy-on-write reflinks when the OS/filesystem supports them.
+function copyDirFast(src, dst, platform = process.platform) {
+  if (platform === "linux") {
+    const res = spawnSync("cp", ["-a", "--reflink=auto", src, dst], { stdio: "ignore" });
+    if (res.status === 0) return;
+  } else if (platform === "darwin") {
+    const res = spawnSync("cp", ["-Rc", src, dst], { stdio: "ignore" });
+    if (res.status === 0) return;
+  }
+  cpSync(src, dst, { recursive: true });
+}
+
+// Seed a freshly added detached worktree's .godot cache from an already-imported sibling or repo root.
+// An exact-tree verified stamp copies with its stamp intact (zero cold import). A nearby-tree .godot
+// copies WITHOUT scrapkeep-import.json so Godot performs a fast incremental reimport and stamps itself.
+export function seedGodotCache({
+  targetWt,
+  stampedSources = [],
+  seedSources = [],
+  headSketchTree = null,
+  sketch = SKETCH,
+  platform = process.platform,
+}) {
+  const dstGodot = path.join(targetWt, sketch, ".godot");
+  if (existsSync(dstGodot)) return { mode: "existing", from: null };
+  for (const src of stampedSources) {
+    if (!src || path.resolve(src) === path.resolve(targetWt)) continue;
+    const srcGodot = path.join(src, sketch, ".godot");
+    if (!existsSync(srcGodot)) continue;
+    if (!checkImportStamp(src, sketch).ok) continue;
+    if (headSketchTree && sketchState(src, sketch).tree !== headSketchTree) continue;
+    try {
+      copyDirFast(srcGodot, dstGodot, platform);
+      if (checkImportStamp(targetWt, sketch).ok) return { mode: "stamped", from: src };
+      rmSync(stampPath(targetWt, sketch), { force: true });
+      return { mode: "seed", from: src };
+    } catch {
+      rmSync(dstGodot, { recursive: true, force: true });
+    }
+  }
+  for (const src of seedSources) {
+    if (!src || path.resolve(src) === path.resolve(targetWt)) continue;
+    const srcGodot = path.join(src, sketch, ".godot");
+    if (!existsSync(srcGodot)) continue;
+    try {
+      copyDirFast(srcGodot, dstGodot, platform);
+      rmSync(stampPath(targetWt, sketch), { force: true });
+      return { mode: "seed", from: src };
+    } catch {
+      rmSync(dstGodot, { recursive: true, force: true });
+    }
+  }
+  return { mode: "none", from: null };
+}
+
+// Reuse root/node_modules via symlink when package-lock.json matches byte-for-byte; otherwise cold npm ci.
+export function canLinkNodeModules(wt, repoRoot = root) {
+  const rootNm = path.join(repoRoot, "node_modules");
+  const rootLock = path.join(repoRoot, "package-lock.json");
+  const wtLock = path.join(wt, "package-lock.json");
+  if (!existsSync(rootNm) || !existsSync(rootLock) || !existsSync(wtLock)) return false;
+  return Buffer.compare(readFileSync(rootLock), readFileSync(wtLock)) === 0;
+}
+
+// Per-chunk SMOKE_JOBS for non-bot test windows under pc.mjs so concurrent windows fill the box
+// within defaultBudget() without oversubscribing.
+export function shardSmokeJobs(step, threads = os.availableParallelism()) {
+  if (step.kind !== "shard") return null;
+  if (!["tests", "weekly-tests"].includes(step.weightKey)) return null;
+  // shard.mjs runs 2 chunk lanes by default; keep each chunk sized to half the step's thread budget.
+  return Math.max(2, Math.min(8, Math.floor(Math.min(step.weight, threads) / 2) + 1));
+}
+
 async function importOnce(wt, env, log) {
   const marker = path.join(wt, "artifacts", "local", "gate-import.done");
-  if (existsSync(marker) && checkImportStamp(wt, SKETCH).ok) return true;
+  if (checkImportStamp(wt, SKETCH).ok) return true;
   for (let attempt = 1; attempt <= 3; attempt++) {
     const file = `${log}.import-${attempt}`;
     const exit = await runLogged(
@@ -788,9 +863,11 @@ async function runShardStep(step, ctx) {
     "--out",
     ctx.receipt(step),
   ];
+  const jobs = !ctx.env.SMOKE_JOBS ? shardSmokeJobs(step) : null;
+  const env = jobs ? { ...ctx.env, SMOKE_JOBS: String(jobs) } : ctx.env;
   return runLogged(process.execPath, args, {
     cwd: ctx.wt,
-    env: ctx.env,
+    env,
     log: path.join(ctx.receipt(step), "run.log"),
   });
 }
@@ -831,7 +908,8 @@ async function runChallenge(spec, ctx, dir, copyAs) {
   let exit = 0;
   if (!existsSync(path.join(out, "table.md"))) {
     const resume = existsSync(path.join(out, "meta.json"));
-    exit = await runLogged(process.execPath, challengeArgs({ ...spec, label, resume }), {
+    const jobs = spec.jobs ?? defaultChallengeJobs();
+    exit = await runLogged(process.execPath, challengeArgs({ ...spec, jobs, label, resume }), {
       cwd: ctx.wt,
       env: ctx.env,
       log: path.join(dir, `${label}.log`),
@@ -882,12 +960,22 @@ const kinds = {
   },
   async node(step, ctx) {
     const dir = ctx.receipt(step);
-    const ci = await runLogged("npm", ["ci"], {
-      cwd: ctx.wt,
-      env: ctx.env,
-      log: path.join(dir, "npm-ci.log"),
-    });
-    if (ci !== 0) return ci;
+    const wtNm = path.join(ctx.wt, "node_modules");
+    if (!existsSync(wtNm)) rmSync(wtNm, { force: true });
+    if (!existsSync(wtNm) && canLinkNodeModules(ctx.wt, root)) {
+      symlinkSync(path.join(root, "node_modules"), wtNm, "dir");
+      writeFileSync(
+        path.join(dir, "npm-ci.log"),
+        `reused ${path.join(root, "node_modules")} (package-lock.json matches byte-for-byte)\n`,
+      );
+    } else if (!existsSync(wtNm)) {
+      const ci = await runLogged("npm", ["ci", "--prefer-offline", "--no-audit", "--no-fund"], {
+        cwd: ctx.wt,
+        env: ctx.env,
+        log: path.join(dir, "npm-ci.log"),
+      });
+      if (ci !== 0) return ci;
+    }
     const exit = await runLogged("npm", ["test"], {
       cwd: ctx.wt,
       env: { ...ctx.env, SCRAPKEEP_WHOLE_TESTS: "1" },
@@ -1062,6 +1150,7 @@ async function run(options) {
   mkdirSync(wtDir, { recursive: true });
   const ownersFile = path.join(wtDir, "owners.json");
   const owners = existsSync(ownersFile) ? JSON.parse(readFileSync(ownersFile, "utf8")) : {};
+  const headSketchTree = git("rev-parse", `${options.head}:${SKETCH}`);
   const pool = worktreePool({
     dir: wtDir,
     existing: readdirSync(wtDir, { withFileTypes: true })
@@ -1077,6 +1166,20 @@ async function run(options) {
       );
       if (result.status !== 0)
         throw new Error(`git worktree add ${dir} failed: ${result.stderr.trim()}`);
+      const siblings = readdirSync(wtDir, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => path.join(wtDir, entry.name))
+        .filter((candidate) => path.resolve(candidate) !== path.resolve(dir));
+      const seeded = seedGodotCache({
+        targetWt: dir,
+        stampedSources: [...siblings, root],
+        seedSources: [root],
+        headSketchTree,
+      });
+      if (seeded.mode !== "none")
+        console.log(
+          `${new Date().toISOString().slice(11, 19)}Z seed .godot (${seeded.mode}) into ${path.basename(dir)} from ${seeded.from}`,
+        );
     },
   });
   const baseDir = options.base;

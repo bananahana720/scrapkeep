@@ -1,6 +1,0 @@
-{
-  "result": "pass",
-  "method": "Executed balance probe with custom disposable directory and compared SHA-256 of artifacts/balance.json before and after; historical bytes unchanged.",
-  "rows": 6,
-  "probeIsAssertedTest": false
-}

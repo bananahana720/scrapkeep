@@ -1,6 +1,7 @@
 extends RefCounted
 
 const BakeLook := preload("res://src/presentation/bake_look.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 
 # Shared helpers for the boss GLBs (assets/models/bosses/). Every boss keeps its primitive
 # body as the fallback: load_scene returns null when a GLB is missing or unloadable, and the
@@ -20,8 +21,9 @@ static func load_scene(path: String, dressed := true) -> Node3D:
 		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 			colour_view(view)
 		# The polish bake's UV2 shade (tools/blender/POLISH.md); a caller that swaps in its own
-		# materials afterwards calls BakeLook.dress again with them as `owned`.
+		# materials afterwards calls BakeLook.dress again with them as `owned`. Then a Warden's ink line (InkOutline).
 		BakeLook.dress(scene)
+		InkOutline.apply(scene, "warden")
 	return scene
 
 

@@ -59,6 +59,22 @@ func _reasons() -> void:
 	var bar := AbilityBar.new()
 	bar.slots = tally.slots()
 	_t.eq("b: the empty reader shows its pool's three pips", bar.pool_pips(reader), 3)
+	_t.eq("b: empty reader pips are all 0.0", bar.pip_fills(reader), [0.0, 0.0, 0.0])
+	# Fractional pressure (E2-02, PILOT-CADENCE §3.5): 1.5 pressure keeps `charges` as int 1,
+	# publishes `charge_frac` 0.5, validates in AbilitySlots, and partially fills pip 2.
+	tally.grant_amount(w, 1.5)
+	var half_reader := _record(tally, w)
+	bar.slots = tally.slots()
+	_t.check("b: fractional pressure keeps charges int 1 and publishes charge_frac 0.5",
+		half_reader["charges"] is int and half_reader["charges"] == 1
+		and is_equal_approx(float(half_reader.get("charge_frac", -1.0)), 0.5), str(half_reader))
+	_t.eq("b: AbilityBar pip_fills shows partial second pip [1.0, 0.5, 0.0]",
+		bar.pip_fills(half_reader), [1.0, 0.5, 0.0])
+	tally.spend(w, 1.0)
+	var sub_one := _record(tally, w)
+	bar.slots = tally.slots()
+	_t.eq("b: 0.5 pressure shows partial first pip [0.5, 0.0, 0.0]",
+		bar.pip_fills(sub_one), [0.5, 0.0, 0.0])
 	bar.free()
 
 

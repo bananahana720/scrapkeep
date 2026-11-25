@@ -42,8 +42,15 @@ what it finished.
   `speed_before` and `speed_after` at the worst, `pieces` (how many pieces' lanes reached it) and
   `drawn` (a drawn mesh covers the contact; under `--headless` a MultiMesh is not indexed, so false
   is a lower bound, see `multimesh_trusted`).
-- `controls`, `seams`: lanes over open ground, 60 m long, at least 8 m from any piece, crossing tile
-  seams at cruise. A snag there is the ground itself, not a piece, and `seams` lists each place once.
+- `classes_ride_raw`, `classes_ride_places`, `ride_places`: the same counts and deduped places
+  filtered to `ride` lanes (low rideable pieces the ball rolls over). A ride lane runs 10 m before
+  the entry edge (`RUN_M`) and 5 m past the exit edge (`RIDE_RUNOUT_M`), enough to register any
+  exit-rim snag or immediate exit blocker without driving 9+ m across open ground into a separate
+  building.
+- `controls`, `seams`: lanes over rideable open ground, 60 m long, at least 8 m from any piece,
+  whose authored heightfield stays at or below 30 degrees across a 2 m corridor (skipping canyon
+  cliffs, spires and rock fins while keeping gentle ground, ramps and tile seams). A snag there is
+  the ground itself, not a piece, and `seams` lists each place once.
 - `snags`: every raw row.
 
 ## Bounds and exit codes

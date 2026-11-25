@@ -7,7 +7,6 @@ Each directory here is one skill that Claude Code loads. Claude reaches it throu
 | `plan-session` | project | plan the next scope or discuss unresolved decisions |
 | `scrapkeep-task` | project | execute an authorized card with isolated work, review and admission |
 | `scrapkeep-verify` | project | choose and run the checks that qualify an artifact |
-| `scrapkeep-lab` | project | run, extend, gate or port the headless Godot lab |
 | `scrapkeep-blockout` | project | build mojulo blockout pieces and heroes, export them and prove them with the ball |
 | `scrapkeep-verify-game` | project | play the launched game from a step file and keep the proof a feature works |
 | `scrapkeep-verify-build` | project | check and play the packed Linux build Andrew installs |
@@ -15,7 +14,7 @@ Each directory here is one skill that Claude Code loads. Claude reaches it throu
 | `scrapkeep-verify-formal` | project | model-check the run flow and launch swipe under every interruption |
 | `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
 
-`reactive-model-loop` is a mirror. Since 2026-09-26 its canonical copy is the A stack plugin (`/home/andrew/.config/astack/plugin/skills/reactive-model-loop`), so every project on both hosts gets it. Change the A stack copy first, then copy it here byte for byte; `python /home/andrew/.config/astack/verify.py --project <this repo>` fails when the two differ. The RML origin map in `scrapkeep-lab/references/lessons.md` still covers every lesson id.
+`reactive-model-loop` is a mirror. Since 2026-09-26 its canonical copy is the A stack plugin (`/home/andrew/.config/astack/plugin/skills/reactive-model-loop`), so every project on both hosts gets it. Change the A stack copy first, then copy it here byte for byte; `python /home/andrew/.config/astack/verify.py --project <this repo>` fails when the two differ.
 
 The three `scrapkeep-verify-*` skills were made with the A stack's `create-verification-skill` (Andrew, 13 November 2026). Each has a `features/` map, one file per player-facing feature, and helper scripts under `scripts/`; `/astack:create-verification-skill maintain` audits a map against the source and the running app. `scrapkeep-verify` still picks which checks qualify a change; these three show a feature working.
 
@@ -27,7 +26,7 @@ Add a skill only when all three hold:
 - It needs at least two references of its own.
 - It has a distinct owner or reviewer tier.
 
-Otherwise, add a section or a reference to the closest skill. A new stage lab is a row in `.agents/skills/scrapkeep-lab/references/port-a-stage.md`, not a skill.
+Otherwise, add a section or a reference to the closest skill.
 
 ## Name it
 
@@ -44,7 +43,7 @@ The `description` is one or two sentences. Name the artifacts the skill acts on 
 1. Write the body at `.agents/skills/<name>/SKILL.md` and keep it at 120 lines or fewer after the frontmatter.
 2. Put detail under `.agents/skills/<name>/references/`.
 3. Link it for Claude: `ln -s ../../.agents/skills/<name> .claude/skills/<name>`.
-4. Register it in `docs/project/AI-WORKFLOW.md` and on the skills line of `AGENTS.md`.
+4. Register it on the skills line of `AGENTS.md`.
 5. Start `.agents/skills/<name>/references/lessons.md` with the lesson format below, even if it has one lesson.
 6. Run `npm run check:skills` and fix every finding before the coordinator commits.
 
@@ -66,7 +65,7 @@ description: "<Verb> <artifacts> ... Use for <requests>; <neighbour work> stays 
 
 # <Title as a task>
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
 <One paragraph: what this skill owns and which skills own the neighbouring work.>
 

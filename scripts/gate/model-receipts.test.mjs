@@ -511,3 +511,72 @@ test("the deferred effects row holds on the code and every plant breaks its rule
   assert.match(held.measured, /deferred-today: no break in 2,196,005 distinct states/);
   assert.match(held.measured, /deferred-broken-ungated broke NoEchoAcrossAttempt/);
 });
+
+test("the sound arbiter row's pin and plants match captured TLC output, and its page covers the code it models", () => {
+  const sa = ROWS["sound-arbiter-safe"];
+  for (const r of sa.real) {
+    const parsed = parseTlc(fixture(r.cfg.replace(".cfg", "")));
+    assert.equal(parsed.outcome, "clean", r.cfg);
+    assert.equal(parsed.distinct, r.minStates, r.cfg);
+  }
+  assert.deepEqual(sa.plants.map((p) => p.rule).sort(), [
+    "BossMusicInArena",
+    "DeathClearsUltFlight",
+    "DeckObeysArbiter",
+    "NoStaleShot",
+    "NoStaleTrim",
+    "OneMelodyNoClash",
+    "UltimateRestoresChampion",
+    "WardenOwnsFightMusic",
+  ]);
+  for (const p of sa.plants)
+    assert.equal(
+      brokeRule(parseTlc(fixture(p.cfg.replace(".cfg", ""))), cfg(p.cfg), p.rule),
+      true,
+      `${p.cfg} breaks ${p.rule}`,
+    );
+  const covered = coveredFiles(readFileSync(new URL(sa.coverage, SKILL), "utf8"));
+  for (const f of [
+    "presentation/music_arbiter.gd",
+    "presentation/melody_lease.gd",
+    "presentation/deck_moves.gd",
+    "presentation/audio.gd",
+    "presentation/ace_sequencer.gd",
+  ])
+    assert.ok(covered.includes(`sketches/core-loop/src/${f}`), f);
+});
+
+test("the weapon cadence row covers all six pilots, pins 10,122 states, and wires all 16 plants", () => {
+  const wc = ROWS["weapon-cadence-safe"];
+  assert.deepEqual(
+    wc.real.map((r) => [r.cfg, r.minStates]),
+    [["weaponcadence-today.cfg", 10122]],
+  );
+  assert.equal(wc.plants.length, 16);
+  assert.deepEqual([...new Set(wc.plants.map((p) => p.rule))].sort(), [
+    "BoundedReadyAfterInterrupt",
+    "NoShotOutsidePlay",
+    "OneVolleyPerPress",
+    "RefundNeverExceedsSpend",
+    "RestAfterBoundary",
+    "WindowPaysAtMostOnce",
+  ]);
+  for (const name of [
+    "weaponcadence-broken-double-snap.cfg",
+    "weaponcadence-broken-detline-double.cfg",
+    "weaponcadence-broken-snap-hold-lock.cfg",
+    "weaponcadence-broken-beats-hold-repeat.cfg",
+    "weaponcadence-broken-beats-skip.cfg",
+    "weaponcadence-broken-lock-stuck.cfg",
+  ])
+    assert.ok(
+      wc.plants.some((p) => p.cfg === name),
+      name,
+    );
+  assert.ok(wc.gaps.every((g) => !/phase E2 modes/.test(g)));
+  const covered = coveredFiles(readFileSync(new URL(wc.coverage, SKILL), "utf8"));
+  assert.deepEqual(covered, [
+    "sketches/core-loop/src/combat/combat.gd",
+    "sketches/core-loop/src/combat/weapon_driver.gd",
+  ]);
+});

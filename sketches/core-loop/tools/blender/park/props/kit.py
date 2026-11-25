@@ -456,6 +456,199 @@ class Prop:
         return obj
 
 
+# --- shared sight gags (W46-07): jokes told by objects, no words (ruling cx) -------------------------
+# The old works' hand (design-v3/STORY-MAP.md section 2): cast, seamless, no fastener, pristine. The keepers' hand: chalk
+# white and a ball-shaped dent. Each park recipe registers them with K.kind(...)(kit.foreman_billboard), so the dam and
+# the flume carry the same two kinds. Authored in real metres, Blender Z up, front (the joke's face) toward -Y.
+GAG_CAST = "b8b7ae"     # concrete_light: the works' cast body, never rusted, never bolted
+GAG_FACE = "d9d2bc"     # canvas: the notice's pristine face
+GAG_WATER = "5f8a7c"    # verdigris: water on the notice
+GAG_INK = "242a28"      # charcoal: the notice's print
+GAG_CHALK = "e6e3d6"    # chalk white: the keepers' marks
+GAG_GLOVE = "b9b095"    # canvas_dark: a cast work glove
+_FACE_ROT = (math.pi / 2, 0, 0)  # local Z to -Y: a prism outline (x, y) draws as (x, up) on the face
+
+
+def _stroke(p, a, b, z_y, width=0.09, color=GAG_CHALK):
+    """A chalk stroke on a face plane at depth z_y: a thin box from a to b, both (x, up)."""
+    dx, dz = b[0] - a[0], b[1] - a[1]
+    ln = math.hypot(dx, dz)
+    p.box((ln + width * 0.5, 0.03, width), ((a[0] + b[0]) / 2, z_y, (a[1] + b[1]) / 2), color,
+          rot=(0, -math.atan2(dz, dx), 0), style="flat")
+
+
+def _chalk_path(p, pts, z_y, rng, wobble=0.05, width=0.09):
+    """A hand-drawn chalk line through pts, each joint nudged so it never reads as printed."""
+    q = [(x + rng.uniform(-wobble, wobble), z + rng.uniform(-wobble, wobble)) for x, z in pts]
+    for a, b in zip(q, q[1:]):
+        _stroke(p, a, b, z_y, width)
+
+
+def _dent(p, cx, cz, r, face_y, rng):
+    """A ball came through from behind: a dark hole, the face's torn petals curled out toward you, cracks running out.
+    The face is one solid slab (no boolean), so the hole is a dark disc laid just proud of it."""
+    front = face_y - 0.08
+    p.cyl(r, 0.04, (cx, front - 0.02, cz), GAG_INK, segs=20, rot=_FACE_ROT, style="flat")
+    n = 9
+    for k in range(n):
+        a = math.tau * (k + rng.uniform(-0.2, 0.2)) / n
+        rr = r * rng.uniform(0.95, 1.08)
+        p.box((r * 0.55, 0.05, r * 0.5), (cx + rr * math.cos(a), front - 0.14, cz + rr * math.sin(a)), GAG_FACE,
+              rot=(0.75, math.pi / 2 - a, 0), style="fine")
+    for k in range(6):
+        a = rng.uniform(0, math.tau)
+        r0, r1 = r * 1.1, r * rng.uniform(1.5, 2.2)
+        _stroke(p, (cx + r0 * math.cos(a), cz + r0 * math.sin(a)), (cx + r1 * math.cos(a + 0.12), cz + r1 * math.sin(a + 0.12)),
+                front - 0.01, width=0.06, color=GAG_INK)
+
+
+def foreman_billboard(p, v, rng):
+    """The Foreman's notice board: a 10 by 5 m cast face on two seamless legs, a pictogram printed square on it, and
+    the keepers' answer. a: water drop with a barcode, an arrow, a crate (all water is inventory); a ball went through
+    the arrow and chalk rings the hole with a tally. b: four bars climbing to a perfect arrow (efficiency up); a chalk
+    river snakes over the bars to a chalk ball, and a small dent sits where the arrow meets the frame."""
+    W, H, Z0 = 10.0, 5.0, 3.4
+    zc = Z0 + H / 2
+    for s in (-1, 1):
+        p.box((0.7, 0.7, 0.36), (s * 3.4, 0.0, 0.18), GAG_CAST, style="hard_smooth")
+        p.box((0.5, 0.5, Z0 + 0.4), (s * 3.4, 0.05, (Z0 + 0.4) / 2), GAG_CAST, style="hard_smooth")
+    p.box((W + 0.5, 0.5, H + 0.5), (0, 0.1, zc), GAG_CAST, style="hard_smooth")
+    face_y = -0.18
+    p.box((W, 0.08, H), (0, face_y, zc), GAG_FACE, style="flat")
+    for k in range(4):  # the back's cast ribs, one pour with the frame
+        p.box((0.25, 0.3, H + 0.2), (-3.6 + 2.4 * k, 0.45, zc), GAG_CAST, style="hard")
+    for s in (-1, 1):  # fluted legs on round cast footings
+        p.cyl(0.55, 0.3, (s * 3.4, 0.0, 0.5), GAG_CAST, segs=20, style="round")
+        for k in range(4):
+            a = math.tau * k / 4 + math.pi / 4
+            p.box((0.12, 0.12, Z0 - 0.2), (s * 3.4 + 0.3 * math.cos(a), 0.05 + 0.3 * math.sin(a), (Z0 - 0.2) / 2 + 0.35),
+                  GAG_CAST, style="hard_smooth")
+    # The service ledge under the face, one pour with the frame, its grating cast in.
+    p.box((W + 0.2, 1.1, 0.18), (0, -0.55, Z0 - 0.15), GAG_CAST, style="hard_smooth")
+    for k in range(12):
+        p.box((0.08, 1.0, 0.06), (-4.95 + 0.9 * k, -0.6, Z0 - 0.02), GAG_INK, style="fine")
+    # Three lamps on swan-neck arms light the notice from above, so it reads at dusk too.
+    for k in (-1, 0, 1):
+        x = k * 3.4
+        p.rod((x, 0.2, Z0 + H + 0.2), (x, -0.4, Z0 + H + 0.9), 0.09, GAG_CAST, segs=10, style="round")
+        p.rod((x, -0.4, Z0 + H + 0.9), (x, -1.1, Z0 + H + 0.8), 0.09, GAG_CAST, segs=10, style="round")
+        p.cyl(0.42, 0.3, (x, -1.2, Z0 + H + 0.62), GAG_CAST, segs=20, r2=0.18, style="round")
+        p.cyl(0.36, 0.04, (x, -1.2, Z0 + H + 0.46), GAG_FACE, segs=20, style="flat")
+    fy = face_y - 0.06  # print sits just proud of the face
+    if v == "a":
+        drop = [(0.0, 1.55)] + [(1.05 * math.cos(math.radians(a)), -0.35 + 1.05 * math.sin(math.radians(a)))
+                                for a in range(20, -201, -20)]
+        p.prism(drop, 0.05, (-3.2, fy, zc - 0.05), GAG_WATER, rot=_FACE_ROT, style="flat")
+        for k, w in enumerate((0.1, 0.06, 0.14, 0.06, 0.1, 0.16, 0.06)):
+            p.box((w, 0.03, 0.9), (-3.65 + 0.15 * k, fy - 0.03, zc - 0.35), GAG_INK, style="flat")
+        p.box((1.7, 0.04, 0.22), (-0.9, fy, zc), GAG_INK, style="flat")
+        p.prism([(0.0, 0.45), (0.6, 0.0), (0.0, -0.45)], 0.04, (-0.05, fy, zc), GAG_INK, rot=_FACE_ROT, style="flat")
+        for (bx, bz, bw, bh) in ((2.9, zc + 1.0, 2.4, 0.2), (2.9, zc - 1.0, 2.4, 0.2), (1.8, zc, 0.2, 2.2), (4.0, zc, 0.2, 2.2)):
+            p.box((bw, 0.04, bh), (bx, fy, bz), GAG_WATER, style="flat")
+        p.box((2.6, 0.035, 0.16), (2.9, fy, zc), GAG_WATER, rot=(0, -0.72, 0), style="flat")
+        _dent(p, -0.6, zc + 0.15, 0.85, face_y, rng)
+        ring = [(-0.6 + 1.45 * math.cos(a) * (1 + 0.06 * math.sin(3 * a)), zc + 0.15 + 1.3 * math.sin(a))
+                for a in [math.tau * k / 12 for k in range(13)]]
+        _chalk_path(p, ring, fy - 0.04, rng)
+        for k in range(4):
+            _chalk_path(p, [(0.9 + 0.28 * k, zc - 2.05), (0.95 + 0.28 * k, zc - 1.35)], fy - 0.04, rng, wobble=0.03)
+        _chalk_path(p, [(0.75, zc - 1.55), (2.05, zc - 1.8)], fy - 0.04, rng, wobble=0.03)
+    else:
+        for k, h in enumerate((0.8, 1.4, 2.1, 2.9)):
+            p.box((0.8, 0.04, h), (-3.6 + 1.25 * k, fy, Z0 + 0.6 + h / 2), GAG_WATER, style="flat")
+        a0, a1 = (-4.2, Z0 + 1.2), (1.9, Z0 + 4.2)
+        ang = math.atan2(a1[1] - a0[1], a1[0] - a0[0])
+        p.box((math.dist(a0, a1), 0.035, 0.18), ((a0[0] + a1[0]) / 2, fy - 0.02, (a0[1] + a1[1]) / 2), GAG_INK,
+              rot=(0, -ang, 0), style="flat")
+        p.prism([(0.0, 0.4), (0.7, 0.0), (0.0, -0.4)], 0.04, (a1[0], fy - 0.02, a1[1]), GAG_INK,
+                rot=(math.pi / 2, -ang, 0), style="flat")
+        river = [(-4.6 + 0.55 * k, Z0 + 2.4 + 0.75 * math.sin(k * 0.9)) for k in range(15)]
+        _chalk_path(p, river, fy - 0.05, rng, wobble=0.04, width=0.12)
+        end = river[-1]
+        ball = [(end[0] + 0.75 + 0.55 * math.cos(a), end[1] + 0.55 * math.sin(a)) for a in [math.tau * k / 10 for k in range(11)]]
+        _chalk_path(p, ball, fy - 0.05, rng, wobble=0.02, width=0.1)
+        for k in range(3):
+            _chalk_path(p, [(end[0] - 0.1 - 0.25 * k, end[1] + 0.35 - 0.3 * k), (end[0] - 0.7 - 0.25 * k, end[1] + 0.35 - 0.3 * k)],
+                        fy - 0.05, rng, wobble=0.02, width=0.07)
+        _dent(p, 3.7, Z0 + 4.2, 0.55, face_y, rng)
+
+
+def _glove(p, x, y, z, yaw=0.0, color=GAG_GLOVE):
+    """A giant cast work glove lying palm down, fingers toward -Y (before yaw), cuff behind."""
+    c, s = math.cos(yaw), math.sin(yaw)
+
+    def at(lx, ly, lz):
+        return (x + c * lx - s * ly, y + s * lx + c * ly, z + lz)
+    p.box((0.42, 0.44, 0.12), at(0.0, 0.0, 0.06), color, rot=(0, 0, yaw), style="hard")
+    p.cyl(0.19, 0.3, at(0.0, 0.36, 0.1), color, segs=10, rot=(math.pi / 2, 0, yaw), style="hard")
+    for k in range(4):
+        p.box((0.085, 0.3 - 0.03 * abs(k - 1.5), 0.09), at(-0.15 + 0.1 * k, -0.34 + 0.015 * abs(k - 1.5), 0.05), color,
+              rot=(0, 0, yaw), style="hard")
+    p.box((0.09, 0.24, 0.09), at(0.27, -0.1, 0.05), color, rot=(0, 0, yaw - 0.6), style="hard")
+
+
+def shift_table(p, v, rng):
+    """A cast shift table set for a crew that left: benches, a punch clock stopped on the bell, and giant cast gloves
+    laid out square at every place, waiting. a: four places, all set. b: one glove gone, and the keepers chalked its
+    outline on the table where it lay."""
+    L, top = 4.2, 0.95
+    p.box((L, 1.2, 0.12), (0, 0, top), GAG_CAST, style="hard")
+    for s in (-1, 1):
+        p.box((0.32, 0.9, top - 0.06), (s * 1.6, 0, (top - 0.06) / 2), GAG_CAST, style="hard")
+        p.box((L - 0.2, 0.38, 0.1), (0, s * 1.0, 0.5), GAG_CAST, style="hard")
+        for k in (-1, 1):
+            p.box((0.26, 0.32, 0.45), (k * 1.5, s * 1.0, 0.225), GAG_CAST, style="hard")
+    places = (-1.5, -0.5, 0.5, 1.5)
+    for k, x in enumerate(places):
+        if v == "b" and k == 2:
+            outline = [(x - 0.22, -0.2), (x - 0.22, 0.25), (x + 0.22, 0.25), (x + 0.22, -0.2), (x + 0.2, -0.5),
+                       (x - 0.18, -0.5), (x - 0.22, -0.2)]
+            for a, b in zip(outline, outline[1:]):
+                dx, dy = b[0] - a[0], b[1] - a[1]
+                p.box((math.hypot(dx, dy) + 0.03, 0.05, 0.012), ((a[0] + b[0]) / 2, (a[1] + b[1]) / 2, top + 0.066),
+                      GAG_CHALK, rot=(0, 0, math.atan2(dy, dx)), style="flat")
+            continue
+        _glove(p, x, -0.12, top + 0.06)
+        p.cyl(0.09, 0.16, (x, 0.42, top + 0.14), GAG_CAST, segs=10, style="hard")  # a cast cup at each place
+    # The punch clock at the table's head: a cast post, a dial with both hands straight up.
+    hx = L / 2 + 0.6
+    p.box((0.5, 0.5, 0.2), (hx, 0, 0.1), GAG_CAST, style="hard")
+    p.cyl(0.11, 1.5, (hx, 0, 0.95), GAG_CAST, segs=10, style="hard")
+    p.cyl(0.34, 0.14, (hx, -0.02, 1.85), GAG_CAST, segs=16, rot=_FACE_ROT, style="hard")
+    p.cyl(0.28, 0.03, (hx, -0.1, 1.85), GAG_FACE, segs=16, rot=_FACE_ROT, style="flat")
+    p.box((0.04, 0.03, 0.22), (hx, -0.13, 1.95), GAG_INK, style="flat")
+    p.box((0.05, 0.03, 0.15), (hx, -0.135, 1.92), GAG_INK, style="flat")
+
+
+def drop_open_islands(mesh):
+    """Deletes every connected island of mesh that has an open edge or fewer than four faces (a part the collapse shrank
+    to loose triangles, or to a front-and-back pair with no volume, which the export does not keep closed)."""
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    seen, doomed = set(), []
+    for face in bm.faces:
+        if face.index in seen:
+            continue
+        island, stack, open_edge = [], [face], False
+        seen.add(face.index)
+        while stack:
+            f = stack.pop()
+            island.append(f)
+            for e in f.edges:
+                if len(e.link_faces) < 2:
+                    open_edge = True
+                for g in e.link_faces:
+                    if g.index not in seen:
+                        seen.add(g.index)
+                        stack.append(g)
+        if open_edge or len(island) < 4:
+            doomed.extend(island)
+    if doomed:
+        bmesh.ops.delete(bm, geom=doomed, context="FACES")
+    bm.to_mesh(mesh)
+    bm.free()
+
+
 class Kit:
     def __init__(self, park, polish_opts=None, board=None):
         self.park = park
@@ -463,6 +656,10 @@ class Kit:
         if not board:
             print("KIT note: %s declares no board palette; the board check is off" % park, flush=True)
         self.kinds = {}
+        # Kinds whose LODs must stay closed (check_manifold.py --strict): a collapse that shrinks a small closed part to
+        # a lone open triangle drops that part instead. Opt-in, so a kit's other kinds export as they always have.
+        self.closed_lods = set()
+        self._exporting = None
         self.polish_opts = dict(detail=2, bevel=0.04, bevel_min=0.08)
         self.polish_opts.update(polish_opts or {})
         assert self.polish_opts["detail"] >= 1, "polish detail %r: common _segs(n) returns 0 below 1 and every cylinder and sphere vanishes" % (self.polish_opts["detail"],)
@@ -545,6 +742,7 @@ class Kit:
     def export(self, kind, variant, out_dir):
         out_dir.mkdir(parents=True, exist_ok=True)
         root, obj = self.build(kind, variant)
+        self._exporting = kind
         base = "%s_%s" % (kind, variant)
         t0 = common.tris(obj)
         self.check_lod0(kind, variant, t0)
@@ -627,6 +825,8 @@ class Kit:
         common.place(obj, src["world_origin"], root)
         # Collapse can lift or sink the lowest vertex a few centimetres; re-seat the LOD on LOD0's floor so no recipe
         # needs a ground plinth to hold FLOOR_TOL. A shift past RESEAT_MAX means the silhouette broke, so it fails.
+        if self._exporting in self.closed_lods:
+            drop_open_islands(mesh)
         shift = min(v.co.z for v in src.data.vertices) - min(v.co.z for v in mesh.vertices)
         assert abs(shift) <= RESEAT_MAX, "LOD re-seat of %.3f m exceeds %.2f m" % (shift, RESEAT_MAX)
         for v in mesh.vertices:

@@ -32,6 +32,11 @@ const SpillwayStory := preload("res://src/presentation/spillway_story.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const TuneEar := preload("res://src/presentation/tune_ear.gd")
 const SetDirector := preload("res://src/presentation/set_director.gd")
+const DeckMoves := preload("res://src/presentation/deck_moves.gd")
+const MusicArbiter := preload("res://src/presentation/music_arbiter.gd")
+const MelodyLease := preload("res://src/presentation/melody_lease.gd")
+const SfxBudget := preload("res://src/presentation/sfx_budget.gd")
+const MusicDsp := preload("res://src/presentation/music_dsp.gd")
 # SR7: the shortest gap between two chirps of one companion cue (start value, comps
 # ror2/companions.md "Lab measure": at most once per trigger within a cooldown).
 const CHIRP_COOLDOWN := 0.75
@@ -320,6 +325,10 @@ var _ui: AudioStreamPlaybackPolyphonic
 var _sfx_player: AudioStreamPlayer
 var _ui_player: AudioStreamPlayer
 var _voices := {}
+var _sfx_budget := SfxBudget.new()
+var _melody_lease := MelodyLease.new()
+var music_dsp := MusicDsp.new()
+var _boss_arena_track := ""
 var _last_start := {}
 var clock := 0.0
 var hum_on := false
@@ -468,6 +477,23 @@ static var _rest_task := -1
 static var _opening_task := -1
 
 
+static func reset_for_tests() -> void:
+	SfxBank.bake_cancel = true
+	if _bake_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_bake_task)
+		_bake_task = -1
+	if _rest_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_rest_task)
+		_rest_task = -1
+	if _opening_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_opening_task)
+		_opening_task = -1
+	_baked = false
+	_bake_done = false
+	SfxBank.bake_cancel = false
+	SfxBank.reset_voice_sidecar()
+
+
 func _init() -> void:
 	_pitch_rng.seed = 0xA0D10
 
@@ -519,11 +545,13 @@ func setup(ctx_ref) -> void:
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
 	_music_player = _generator_player("Music", "MusicStream")
-	_stinger_player = _generator_player("SFX", "StingerStream")
+	_stinger_player = _generator_player(MusicDsp.STINGER_BUS, "StingerStream")
 	_sfx_player = _poly_player("SFX", "SfxVoices")
 	_ui_player = _poly_player("UI", "UiVoices")
 	_make_overlay()
+	_configure_voice_from_args()
 	_connect_all(ctx.events)
+	_wire_rail()
 	_start_bake()
 	# The worker preloads the take the first title plays (title A when it is on disk).
 	ace_manifest = MusicRows.resolve(title_now())["ace_manifest"]
@@ -698,14 +726,13 @@ static func _ace_loader(manifest: String, slot: Array) -> Callable:
 
 
 func _notification(what: int) -> void:
-	# A node freed outside the tree (the tests) still waits for its stems to finish loading.
+	# A node freed outside the tree (the tests) still settles its bake and stem workers.
 	if what == NOTIFICATION_PREDELETE:
-		if _ace_task >= 0:
-			WorkerThreadPool.wait_for_task_completion(_ace_task)
-			_ace_task = -1
+		_settle_workers()
 		for task in _ace_ahead.values():
 			WorkerThreadPool.wait_for_task_completion(task)
 		_ace_ahead.clear()
+		music_dsp.reset()
 
 
 # Blocks until stage 1's whole band is baked, as a player's time on the title allows for.
@@ -771,6 +798,8 @@ func _exit_tree() -> void:
 		if child is AudioStreamPlayer:
 			child.stop()
 	_sfx = null
+	_sfx_budget.clear()
+	music_dsp.reset()
 	_voice_db.clear()
 	_roomed.clear()
 	_ui = null
@@ -857,6 +886,7 @@ func _make_buses() -> void:
 	if AudioServer.get_bus_effect_count(master) == 0:
 		AudioServer.add_bus_effect(master, _compressor(MixRows.MASTER_COMP))
 		AudioServer.add_bus_effect(master, _limiter(MixRows.MASTER_CEILING_DB))
+	music_dsp.setup()
 	_apply_volumes()
 
 
@@ -898,6 +928,27 @@ func _tend_mix(delta: float) -> void:
 		mix_db[bus] = next
 	if moved:
 		_apply_volumes()
+	music_dsp.step(delta, _dsp_state())
+
+
+func _dsp_state() -> Dictionary:
+	var hp_low := false
+	if ctx != null and ctx.run != null and ctx.run.get("max_hp") != null:
+		var max_hp := float(ctx.run.max_hp)
+		hp_low = max_hp > 0.0 and float(ctx.run.hp) < max_hp * 0.3
+	var armour_low := _hull_seen > 0.0 and ace != null and ace.parameters.has("armour") and float(ace.parameters["armour"]) < 0.3
+	var low_hull := hp_low or armour_low
+	var tension := 0.0
+	if _launch_armed or _ult_armed:
+		tension = 1.0
+	elif ace_playing() and ace.mode == "warden" and ace.section == "telegraph":
+		tension = 0.65
+	return {
+		"focus": clock < _focus_until,
+		"slowed": _slowed,
+		"low_hull": low_hull,
+		"build_tension": tension,
+	}
 
 
 # Room for the Warden form's drop (tuning drop_room, mix_rows.gd DROP_ROOM): the band that
@@ -906,27 +957,34 @@ func _tend_mix(delta: float) -> void:
 var _drop_room := []
 
 
-func _make_drop_room(at: int) -> void:
+func _make_drop_room(at: int, band = null) -> void:
 	var tuning = ctx.get("tuning") if ctx != null else null
 	var name: String = tuning.option(Tuning.DROP_ROOM_KEY) if tuning != null else "off"
 	if not MixRows.DROP_ROOM.has(name):
 		_drop_room = []
 		return
-	var from := at - int(MixRows.DROP_ROOM_LEAD_S * AceSequencer.RATE)
-	_drop_room = [ace, from, at + MixRows.DROP_ROOM_BARS * ace.grid_bar, MixRows.DROP_ROOM[name]]
+	var owner = band if band != null else (ace if ace_playing() else engine)
+	if owner == null:
+		_drop_room = []
+		return
+	var bar: int = ace.grid_bar if owner == ace else engine.bar_len()
+	var from := at - int(MixRows.DROP_ROOM_LEAD_S * Harmony.RATE)
+	_drop_room = [owner, from, at + MixRows.DROP_ROOM_BARS * bar, MixRows.DROP_ROOM[name]]
 
 
 func _drop_room_now() -> Dictionary:
 	if _drop_room.is_empty():
 		return {}
-	if _drop_room[0] != ace or ace == null:
+	var owner = _drop_room[0]
+	var valid: bool = (owner == ace and ace_playing()) or (owner == engine and engine != null)
+	if owner == null or not valid:
 		_drop_room = []
 		return {}
 	# Timed on the sample the player hears, not the render head (as live_key reads the key).
 	var queued := 0
 	if live_output and _music_pb != null:
 		queued = _ring_capacity - _music_pb.get_frames_available()
-	var heard: int = ace.audible_sample(queued)
+	var heard: int = ace.audible_sample(queued) if owner == ace else maxi(engine.clock - queued, 0)
 	if heard >= int(_drop_room[2]):
 		_drop_room = []
 		return {}
@@ -955,6 +1013,7 @@ func _is_telegraph(kind: String, sound: String) -> bool:
 
 func _focus() -> void:
 	_focus_until = clock + float(MixRows.FOCUS["hold_s"])
+	_melody_lease.bump_epoch()
 
 
 # The world slows for a close-up and comes back (game.slow_motion): a falling sweep as it slows,
@@ -1044,6 +1103,8 @@ func _process(delta: float) -> void:
 	_warm_grid_key()
 	_play_due_notes()
 	_tend_tally()
+	_tend_cadence()
+	_tend_site_flips()
 	_tend_hum()
 	_tend_specials()
 	_tend_kettle()
@@ -1320,7 +1381,8 @@ func ace_ready() -> bool:
 		push_warning("ACE music: missing %s; playing the synth engine instead" % ace_missing)
 		return false
 	if ace != null:
-		ace.stop(AceSequencer.STOP_RAMP)
+		var swap_ramp: int = clampi(ace.grid_beat / 2, AceSequencer.STOP_RAMP, int(AceSequencer.RATE * 0.25))
+		ace.stop(swap_ramp)
 		loaded.fading.append_array(ace.fading)
 	ace = loaded
 	_ace_from = ace_manifest
@@ -1328,7 +1390,9 @@ func ace_ready() -> bool:
 	# rendered this block yet: it starts where the block did, or it runs ahead of the transport.
 	ace.clock = _render_from if _render_from >= 0 else engine.clock
 	ace.set_breath(breath())
+	ace.set_pump(DeckMoves.pump_for(deck_style()) if not ace.flat and bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"]) else {})
 	ace.ultimate_lift = _ult_lift
+	_melody_lease.bump_epoch()
 	_prime_band_parameters()
 	return true
 
@@ -1579,6 +1643,9 @@ func radio_play(id: String, record: String, pinned := false) -> bool:
 	var parent := TuneRows.row(record)
 	if parent.is_empty() or not sound_ready:
 		return false
+	if radio_finale and _in_boss_arena():
+		return false
+	var boss_before := _active_boss_track() if _in_boss_arena() else ""
 	var play_id := record
 	var row := parent
 	if id != record and MusicRows.take_manifest(id) != "":
@@ -1593,6 +1660,9 @@ func radio_play(id: String, record: String, pinned := false) -> bool:
 		return false
 	radio_hold = id
 	radio_pinned = pinned
+	_tend_deck()
+	if boss_before != "" and _radio_boss.is_empty():
+		_radio_boss = ["boss_arena_entered", boss_before]
 	_radio_args = [id, record, pinned]
 	_radio_respin_due = false
 	_log_cue(["radio", id, "needle", engine.clock, 1.0])
@@ -1604,20 +1674,35 @@ func _radio_respin() -> void:
 		radio_play(_radio_args[0], _radio_args[1], _radio_args[2])
 
 
-# The score takes the air back on the next beat: the stage's band (or the Warden's, or the
-# miniboss's darkened level) with the live moment's tune, as if the radio had never played.
+# The score takes the air back on the next beat: the arbiter decides which music owner
+# holds the floor now (boss finale, boss arena, Warden, champion, miniboss, moment or stage).
 func radio_release() -> void:
 	if radio_hold == "":
 		return
+	var held_boss := _active_boss_track()
 	_radio_drop("")
-	if not sound_ready or _stage_now <= 0 or ctx == null or ctx.get("flow") == null or not ctx.flow.in_play():
+	if not sound_ready or ctx == null or ctx.get("flow") == null or not ctx.flow.in_play():
+		return
+	var plan := MusicArbiter.resolve(_arbiter_state())
+	if plan["owner"] in [MusicArbiter.OWNER_BOSS, MusicArbiter.OWNER_BOSS_FINALE] and held_boss in MusicEngine.BOSS_TRACKS:
+		engine.cancel_pending()
+		_begin_boss("boss_arena_entered", held_boss)
+		engine.set_brindle_phase(_boss_phase)
+		if _boss_phase > 1 or bool(plan["is_boss_finale"]):
+			_phase_music_done = 1
+			phase_music(_boss_phase)
+		_log_cue(["radio", "score", "bar", engine.next_bar(), 1.0])
+		return
+	if _stage_now <= 0:
 		return
 	engine.cancel_pending()
-	if is_instance_valid(_miniboss):
+	if plan["owner"] == MusicArbiter.OWNER_WARDEN:
+		engine.force_track("warden", _stage_theme(_stage_now))
+	elif is_instance_valid(_miniboss):
 		engine.force_track("level", _stage_theme(_stage_now))
 		engine.begin_miniboss()
 	else:
-		engine.force_track("warden" if _warden_engaged and ctx.flow.get("sealed") else "level", _stage_theme(_stage_now))
+		engine.force_track("level", _stage_theme(_stage_now))
 	_moment_playing = ""
 	_ace_return(_stage_now, engine.next_bar())
 	_log_cue(["radio", "score", "bar", engine.next_bar(), 1.0])
@@ -1738,11 +1823,97 @@ func _ace_named(id: String, at: int, boss := false, won := true) -> void:
 	_ace_end(ace.grid_beat if ace_playing() else AceSequencer.STOP_RAMP)
 
 
-# The stage's recorded band comes back at `at` (after a radio hold, an ultimate's drop, a
-# landing). Inside a sealed Warden fight it goes straight to the fight's sections: the shelf
-# (the world's roaming take) never plays inside an arena.
+func _in_boss_arena() -> bool:
+	if _flow_state == "boss":
+		return true
+	var flow_node = ctx.get("flow") if ctx != null else null
+	return flow_node != null and flow_node.has_method("state_name") and String(flow_node.state_name()) == "boss"
+
+
+func _active_boss_track() -> String:
+	if not _radio_boss.is_empty():
+		return String(_radio_boss[1])
+	if _boss_arena_track != "":
+		return _boss_arena_track
+	if _in_boss_arena():
+		return _boss_track()
+	return ""
+
+
+func _has_live_champion() -> bool:
+	for id in _champions:
+		if is_instance_valid(_champions[id]):
+			return true
+	return false
+
+
+func _champion_pack_id() -> String:
+	for id in _champion_euro:
+		if _champions.has(id) and is_instance_valid(_champions[id]):
+			var final_track := PhaseMusic.champion_final(pack_available)
+			if final_track != "":
+				return final_track
+	var champion := TuneMoments.remixed("champion", PhaseMusic.CHAMPION, _remixes, tune_available)
+	if champion == PhaseMusic.CHAMPION and not pack_available.call(PhaseMusic.CHAMPION):
+		return ""
+	return champion
+
+
+func _arbiter_state() -> Dictionary:
+	var flow_node = ctx.get("flow") if ctx != null else null
+	var in_play := true
+	if flow_node != null and flow_node.has_method("in_play"):
+		in_play = bool(flow_node.in_play())
+	elif _flow_state != "":
+		in_play = _flow_state in ["stage", "beacon", "gates", "launch", "boss"]
+	var boss_active := _in_boss_arena() or _boss_arena_track != ""
+	var sealed := flow_node != null and bool(flow_node.get("sealed"))
+	return {
+		"flow": _flow_state,
+		"in_play": in_play,
+		"boss_active": boss_active,
+		"boss_track": _active_boss_track() if boss_active else "",
+		"boss_finale": radio_finale or (boss_active and PhaseMusic.is_final(_boss_phase)),
+		"launch_armed": _launch_armed,
+		"warden_fighting": _warden_fighting,
+		"warden_engaged": _warden_engaged,
+		"warden_sealed": sealed,
+		"ult_flight": _ult_armed and (_ult_took_band or _ace_flight),
+		"radio_hold": radio_hold,
+		"radio_pinned": radio_pinned,
+		"champion_alive": _has_live_champion() and _champion_pack_id() != "",
+		"moment_id": TuneMoments.top(_moments, tune_available),
+		"miniboss_live": is_instance_valid(_miniboss),
+		"stage": _stage_now,
+	}
+
+
+func _restore_champion_pack(at: int) -> bool:
+	var pack := _champion_pack_id()
+	if pack == "":
+		return false
+	_champion_hyped = true
+	_ace_named(pack, at, true)
+	return true
+
+
+func _disarm_ultimate() -> void:
+	_ult_armed = false
+	_ult_took_band = false
+
+
 func _ace_return(stage: int, at: int) -> void:
-	_ace_stage(stage, at, _warden_engaged and bool(ctx.flow.get("sealed")))
+	var plan := MusicArbiter.resolve(_arbiter_state())
+	match plan["owner"]:
+		MusicArbiter.OWNER_WARDEN:
+			_ace_stage(stage, at, true)
+		MusicArbiter.OWNER_CHAMPION:
+			if not _restore_champion_pack(at):
+				_ace_stage(stage, at, false)
+		MusicArbiter.OWNER_ULT, MusicArbiter.OWNER_LAUNCH, MusicArbiter.OWNER_DEAD:
+			return
+		_:
+			_ace_stage(stage, at, false)
 
 
 # The music has moved on from the stage an ultimate took the recorded band from (a launch,
@@ -1777,6 +1948,8 @@ func _ace_end_at(at: int) -> void:
 	_ace_arrival_stage = 0
 	_ace_arrival_at = -1
 	_ace_flight = false
+	ace.cancel_shots()
+	ace.set_pump({})
 	ace.stop_at(at, AceSequencer.STOP_RAMP)
 	_handover_at = at
 
@@ -2108,7 +2281,7 @@ func _drop_babble() -> void:
 # how long the voice lasts from now, for the card's hold; 0.0 when it stays silent, as it
 # does while an earlier caller is still talking.
 func call_in(kind: String, speaker: String, text: String) -> float:
-	if text == "" or clock < float(_gates.get("call_in", -1000.0)) or not _admit(kind, "babble", 1.0):
+	if text == "" or clock < float(_gates.get("call_in", -1000.0)) or clock < _focus_until or not _admit(kind, "babble", 1.0):
 		return 0.0
 	var step := grid_unit(4)
 	var at := engine.clock + int(CALL_LEAD_S * Harmony.RATE)
@@ -2162,6 +2335,9 @@ func _admit(kind: String, sound: String, pitch: float) -> bool:
 func _start(kind: String, sound: String, stream: AudioStream, volume: float, pitch: float, bus: String) -> void:
 	var playback := _ui if bus == "UI" else _sfx
 	if playback != null:
+		var cls := SfxBudget.voice_class(kind, _is_telegraph(kind, sound), bus)
+		for old_id in _sfx_budget.reserve(cls, playback.is_stream_playing):
+			playback.stop_stream(old_id)
 		var live: Array = _voices.get(sound, [])
 		live = live.filter(func(id: int): return playback.is_stream_playing(id))
 		if live.size() >= int(VOICE_LIMIT.get(sound, MixRows.VOICE_DEFAULT)):
@@ -2170,6 +2346,7 @@ func _start(kind: String, sound: String, stream: AudioStream, volume: float, pit
 		var id := playback.play_stream(stream, 0.0, volume + room, pitch, AudioServer.PLAYBACK_TYPE_DEFAULT, bus)
 		if id != AudioStreamPlaybackPolyphonic.INVALID_ID:
 			live.append(id)
+			_sfx_budget.record(cls, id)
 			if playback == _sfx:
 				_voice_db[id] = [sound, volume, engine.clock]
 				if room != 0.0:
@@ -2287,11 +2464,18 @@ func _connect_all(events) -> void:
 		_ready_for_run()
 		_set_overtime = false
 		_heft_class = 1
+		_boss_phase = 1
+		_phase_music_done = 0
 		_hull_seen = 0.0
 		_fired_this_run.clear()
 		_posture_seen.clear()
 		_guard_steps.clear()
 		_guard_warned.clear()
+		_cadence_prev.clear()
+		_visited_sites_seen.clear()
+		_cable_flips = 0
+		_sync_rail_ids()
+		_synth_form_state = "closed"
 		_line_was = ""
 		_motif = motif_of(class_id)
 		engine.set_class_motif(_motif)
@@ -2299,7 +2483,12 @@ func _connect_all(events) -> void:
 		new_run_tunes()
 		_flow_queue.append(["run"]))
 	events.warden_engaged.connect(func(_stage: int): warden_took_band())
-	events.activity_done.connect(func(id: String, _at: Vector3): end_moment("event", id))
+	events.activity_done.connect(func(id: String, at: Vector3):
+		end_moment("event", id)
+		if id == "cracked_cache":
+			_play_site_flip("cracked_cache:%d,%d" % [roundi(at.x), roundi(at.z)])
+		else:
+			_play_site_flip("activity:%s:%d,%d" % [id, roundi(at.x), roundi(at.z)]))
 	events.synergy_discovered.connect(func(id: String, _category: String, _first: bool): tune_found(id))
 	events.flow_changed.connect(_on_flow_changed)
 	events.world_entered.connect(func(world: int): _flow_queue.append(["world", world]))
@@ -2307,6 +2496,12 @@ func _connect_all(events) -> void:
 	events.stage_cleared.connect(func(stage: int): _flow_queue.append(["clear", stage]))
 	events.run_ended.connect(func(won: bool):
 		engine.set_reactor_pedal(false)
+		_boss_phase = 1
+		_phase_music_done = 0
+		_cadence_prev.clear()
+		_visited_sites_seen.clear()
+		_cable_flips = 0
+		_sync_rail_ids()
 		_line_was = ""
 		_stop_hum()
 		_flow_queue.append(["end", won]))
@@ -2319,7 +2514,8 @@ func _connect_all(events) -> void:
 	events.rescue_completed.connect(func(quest: String):
 		if quest in STORY_QUESTS:
 			_story_until_ms = Time.get_ticks_msec() + STORY_HOLD_MS
-		play("rescue_completed"))
+		play("rescue_completed")
+		_play_site_flip("cage:" + quest))
 	events.part_gained.connect(func(_part: String, _source: String): play("part_gained"))
 	events.player_hit.connect(_on_player_hit)
 	events.player_died.connect(_on_died)
@@ -2379,6 +2575,7 @@ func _connect_all(events) -> void:
 func wire_optional() -> void:
 	var events = ctx.events
 	_wire_armor()
+	_wire_rail()
 	_listen_optional(events, "beacon_unsealed", func(_stage: int):
 		_warden_fighting = false
 		_flow_queue.append(["unseal"]))
@@ -2423,13 +2620,20 @@ func wire_optional() -> void:
 	# v2 W6 world: one row per world_fact kind (event_kinds.gd WORLD_ROWS); a kind with
 	# no row plays nothing here (an empty override would fall back to the bare world_fact row's tick):
 	# its sound is its sender's (a shattered piece's family, the fabricator's tune).
-	_listen_optional(events, "world_fact", func(kind: String, _at: Vector3):
+	_listen_optional(events, "world_fact", func(kind: String, at: Vector3):
 		# A world row's own priority, not the bare world_fact kind's 0: the Overtime ring, the sluice and
 		# the Called Shot results were 6 dB under a pickup and never dipped the band (sound-gaps 12 Nov).
 		var row := EventKinds.world_row(kind)
-		if not row.is_empty():
+		if kind == "kindness_offered" and not row.is_empty():
+			_play_kindness_chime(row)
+		elif not row.is_empty():
 			play("world_fact", 0.0, 1.0, "SFX", Rows.heard(row, cue_context()), int(row.get("priority", 0)))
 		_set_world_fact(kind)
+		if kind == "cache_spent":
+			_play_site_flip("cache_spent:%d,%d" % [roundi(at.x), roundi(at.z)])
+		elif kind == "warden_gate_pip" and _site_markers() == null:
+			_cable_flips += 1
+			_play_site_flip("cable:%d" % _cable_flips)
 		if kind == "bay_jukebox":
 			jukebox_flipped()
 		elif kind == "fabricator_used":
@@ -2472,7 +2676,12 @@ func wire_optional() -> void:
 		_read_ahead_after(engaged)
 		_begin_boss("warden_engaged", "warden")
 		engine.parameter_danger("warden_engaged")
-		if ace_playing():
+		if ace_playing() and ace.flat and radio_hold == "" and _stage_now > 0 \
+				and MusicArbiter.resolve(_arbiter_state())["owner"] == MusicArbiter.OWNER_WARDEN:
+			_champion_hyped = false
+			_moment_playing = ""
+			_ace_stage(_stage_now, engine.next_bar(), true)
+		elif ace_playing():
 			ace.commit_warden()
 		elif _ace_arrival_stage > 0 and _ace_arrival_at >= 0:
 			# A drop still holds the recorded band (an ultimate's, a landing's): the Warden's
@@ -2484,6 +2693,7 @@ func wire_optional() -> void:
 	_listen_optional(events, "boss_arena_entered", func():
 		_read_ahead_phases(_boss_track())
 		_boss_phase = 1
+		_phase_music_done = 0
 		_disarm_launch()
 		_begin_boss("boss_arena_entered", _boss_track()), true)
 	var phase_args := _argc(events, "boss_phase_changed")
@@ -2505,9 +2715,15 @@ func wire_optional() -> void:
 		_disarm_launch()
 		_event_id = ""
 		_chase_lead0 = -1.0
+		_cadence_prev.clear()
+		_visited_sites_seen.clear()
+		_cable_flips = 0
+		_sync_rail_ids()
 		# Arena entry and retry are the fight's stage entry: a flume Warden's break no longer
 		# strips the band, synth or ACE stems, and a Warden-break commit still queued is void.
 		if reason in ["arena", "arena_retry"]:
+			_boss_phase = 1
+			_phase_music_done = 1 if reason == "arena_retry" else 0
 			engine.parameters_arena_entered()
 			if ace != null:
 				ace.clear_release()
@@ -2773,6 +2989,8 @@ func _stop_hum() -> void:
 # Follows the line each frame: its pitch from the gap on a body, and an end the line never
 # announced (a reset or a restore) stops it.
 func _tend_hum() -> void:
+	if ctx == null:
+		return
 	var player = ctx.get("player")
 	if player == null or player.get("kit") == null:
 		return
@@ -3099,6 +3317,13 @@ func mix_state() -> String:
 func _on_stage_entered(stage: int, retry: bool) -> void:
 	_drop_babble()
 	_stage_now = stage
+	_boss_arena_track = ""
+	_boss_phase = 1
+	_phase_music_done = 0
+	_cadence_prev.clear()
+	_visited_sites_seen.clear()
+	_cable_flips = 0
+	_sync_rail_ids()
 	_set_overtime = false
 	_set_incoming_at = -1.0
 	_champions.clear()
@@ -3369,6 +3594,10 @@ func _begin_boss(kind: String, music: String) -> void:
 		return
 	if kind == "boss_arena_entered":
 		radio_finale = false
+		_champion_hyped = false
+		_synth_form_state = "closed"
+	if music in MusicEngine.BOSS_TRACKS:
+		_boss_arena_track = music
 	if radio_hold != "":
 		if radio_pinned:
 			on_beat(kind, 0.0, true)
@@ -3400,16 +3629,48 @@ func _begin_boss(kind: String, music: String) -> void:
 # boss_phase_changed(phase, name) in wave 4; with no phase argument, count up.
 func _on_boss_phase() -> void:
 	_boss_phase += 1
-	on_beat("boss_phase_changed")
-	engine.set_brindle_phase(_boss_phase)
-	phase_music(_boss_phase)
+	_trigger_boss_phase(_boss_phase)
 
 
 func _on_boss_phase_with(phase) -> void:
-	_boss_phase = int(phase)
-	on_beat("boss_phase_changed")
-	engine.set_brindle_phase(_boss_phase)
-	phase_music(_boss_phase)
+	var next := int(phase)
+	# Phase 1 arrives just after the arena entry's own stinger: keep the section and phase plan
+	# as before W46-A1, reset _boss_phase cleanly so a leaked prior-attempt phase never sticks,
+	# and play no second clash on top of the entry.
+	if next <= 1:
+		_boss_phase = maxi(next, 1)
+		engine.set_brindle_phase(_boss_phase)
+		phase_music(_boss_phase)
+		return
+	_boss_phase = next
+	_trigger_boss_phase(_boss_phase)
+
+
+# Locks Brindle's +10/+20 BPM anthem drops onto the phase-turn clash beat: when an ACE phase
+# track is booked, the clash stinger lands on that exact drop sample; on the synth band alone,
+# both the synth phase drop and the clash land together on the next beat.
+func _trigger_boss_phase(phase: int) -> void:
+	engine.set_brindle_phase(phase)
+	var plan := phase_music(phase)
+	if plan.has("at"):
+		_clash_at("boss_phase_changed", int(plan["at"]))
+	else:
+		on_beat("boss_phase_changed")
+
+
+func _clash_at(kind: String, at: int) -> int:
+	var sound := Rows.sound(kind, cue_context())
+	if not sound_ready or sound == "":
+		_log_cue([kind, sound, "skip", -1, 1.0])
+		return -1
+	engine.schedule_stinger_at(sound, at, story_duck_db(kind))
+	var beats: int = SfxBank.STINGER_BEATS.get(sound, 1)
+	var hold := float(maxi(at - engine.clock, 0) + beats * Harmony.BEAT) / Harmony.RATE
+	_duck(0.6, hold)
+	if sound in DANGER_SOUNDS:
+		engine.duck_bass(0.3, hold)
+	_log_cue([kind, sound, "beat", at, 1.0])
+	return at
 
 
 # The ACE band follows the boss phase (INTEGRATION.md section 6): Brindle swaps to its phase
@@ -3420,17 +3681,21 @@ func _on_boss_phase_with(phase) -> void:
 func phase_music(phase: int) -> Dictionary:
 	var boss := engine.track
 	if PhaseMusic.is_final(phase) and sound_ready:
-		if radio_hold != "" and not _radio_boss.is_empty():
-			# The finale takes the air from a pinned track: the boss music it held off starts
-			# now, and the final track lands on it. The deck puts the pin back after the fight.
-			var held: Array = _radio_boss
-			_radio_drop("finale")
-			_begin_boss(held[0], held[1])
-			_phase_music_done = 1
-			boss = String(held[1])
+		if radio_hold != "":
+			var held_kind := String(_radio_boss[0]) if not _radio_boss.is_empty() else "boss_arena_entered"
+			var held_boss := _active_boss_track()
+			if held_boss in MusicEngine.BOSS_TRACKS:
+				# The finale takes the air from a pinned track: the boss music starts now
+				# and the final track lands on it. The deck puts the pin back after the fight.
+				_radio_drop("finale")
+				_begin_boss(held_kind, held_boss)
+				_phase_music_done = 1
+				boss = held_boss
 		radio_finale = true
 	if radio_hold != "":
 		return {}
+	if not boss in MusicEngine.BOSS_TRACKS and (_in_boss_arena() or _boss_arena_track != ""):
+		boss = _active_boss_track()
 	if not sound_ready or phase <= _phase_music_done or not ace_wanted():
 		return {}
 	if not boss in MusicEngine.BOSS_TRACKS:
@@ -3440,7 +3705,7 @@ func phase_music(phase: int) -> Dictionary:
 		var plan := PhaseMusic.final_plan(boss, pack_available)
 		if plan["track"] == "":
 			return {}
-		var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
+		var when := PhaseMusic.drop_plan(engine.clock, _next_bar(), _bar_len(), Harmony.RATE)
 		if plan["hype"]:
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
 			_log_cue(["boss_phase_music", "hype_drop", "beat", int(when["start"]), 1.0])
@@ -3450,7 +3715,7 @@ func phase_music(phase: int) -> Dictionary:
 	var track := PhaseMusic.track_for_phase(boss, phase, pack_available)
 	if track == "" or not pack_available.call(track):
 		return {}
-	var at := engine.next_bar()
+	var at := _next_bar()
 	_ace_named(track, at, true)
 	_log_cue(["boss_phase_music", track, "bar", at, 1.0])
 	return {"track": track, "hype": false, "at": at}
@@ -3467,11 +3732,12 @@ func _champion_joined(enemy: Node3D) -> void:
 	if enemy.has_signal("died"):
 		enemy.connect("died", func(_a = null, _b = null): _champion_gone(id))
 	enemy.tree_exiting.connect(_champion_gone.bind(id), CONNECT_ONE_SHOT)
-	if radio_hold != "" or _champion_hyped or not sound_ready or not ace_wanted() or engine.track != "level":
+	if _champion_hyped or not sound_ready or not ace_wanted() or engine.track != "level":
 		return
-	# A run that rolled the chiptune remix hears it in the champion's place.
-	var champion := TuneMoments.remixed("champion", PhaseMusic.CHAMPION, _remixes, tune_available)
-	if champion == PhaseMusic.CHAMPION and not pack_available.call(PhaseMusic.CHAMPION):
+	if MusicArbiter.resolve(_arbiter_state())["owner"] != MusicArbiter.OWNER_CHAMPION:
+		return
+	var champion := _champion_pack_id()
+	if champion == "":
 		return
 	_champion_hyped = true
 	_ace_named(champion, engine.next_bar(), true)
@@ -3486,8 +3752,10 @@ func _champion_gone(id: int) -> void:
 	if _champions.is_empty() and _champion_hyped:
 		_champion_hyped = false
 		if _stage_now > 0 and engine.track == "level":
-			_ace_stage(_stage_now, engine.next_bar())
-			_log_cue(["champion_gone", "stage", "bar", engine.next_bar(), 1.0])
+			var owner := String(MusicArbiter.resolve(_arbiter_state())["owner"])
+			if owner in [MusicArbiter.OWNER_STAGE, MusicArbiter.OWNER_MOMENT]:
+				_ace_stage(_stage_now, engine.next_bar())
+				_log_cue(["champion_gone", "stage", "bar", engine.next_bar(), 1.0])
 
 
 # --- The place-and-moment tunes (tune_moments.gd, design-v3/sound/tunes.json) -----------
@@ -3603,7 +3871,14 @@ func tune_found(discovery_id: String) -> void:
 func warden_took_band() -> void:
 	_warden_engaged = true
 	_warden_fighting = true
+	_synth_form_state = "closed"
 	_moments.clear()
+	if _champion_hyped:
+		_champion_hyped = false
+		_moment_playing = ""
+		if radio_hold == "" and sound_ready and ace_wanted() and _stage_now > 0:
+			_ace_stage(_stage_now, engine.next_bar(), true)
+		return
 	_refresh_moment(true)
 
 
@@ -3637,6 +3912,8 @@ func _tend_champions() -> void:
 		if not is_instance_valid(enemy) or _champion_euro.has(id):
 			continue
 		if PhaseMusic.champion_in_final_third(_num(enemy, "hp", 1.0), _num(enemy, "max_hp", 1.0)):
+			if MusicArbiter.resolve(_arbiter_state())["owner"] != MusicArbiter.OWNER_CHAMPION:
+				return
 			_champion_euro[id] = true
 			var when := PhaseMusic.drop_plan(engine.clock, engine.next_bar(), engine.bar_len(), Harmony.RATE)
 			engine.schedule_stinger_at("hype_drop", int(when["start"]))
@@ -3652,6 +3929,9 @@ static func _argc(events: Object, signal_name: String) -> int:
 func _on_boss_defeated() -> void:
 	_radio_drop("victory")
 	radio_finale = false
+	_boss_arena_track = ""
+	_boss_phase = 1
+	_phase_music_done = 0
 	on_beat("boss_defeated", 0.0, true)
 	engine.victory()
 
@@ -3692,6 +3972,9 @@ static func miniboss_tune(kind: String) -> String:
 
 
 func _on_kill(_kind: String, _at: Vector3, _value: int) -> void:
+	var killed_kind := _kind
+	if Rogue.ROWS.has(killed_kind) and _site_markers() == null:
+		_play_site_flip("rogue:" + killed_kind)
 	# A rogue and a surge miniboss can share a stage: while another one still fights, the
 	# track holds and the music follows the survivor (each moment ends with its own body).
 	if is_miniboss(_kind) and _miniboss_survivor() != null:
@@ -3776,6 +4059,38 @@ func next_grid(per_beat: int) -> int:
 
 func _next_bar() -> int:
 	return ace.next_bar() if _on_ace_grid() else engine.next_bar()
+
+
+func _bar_len() -> int:
+	return ace.grid_bar if _on_ace_grid() else engine.bar_len()
+
+
+# The Foreman's Kindness trade offer: sterile, pure, on-the-grid quantization matching the
+# Foreman's voice. Never overlaps an active telegraph cue: if a telegraph holds focus while
+# the band plays, the chime waits for the first sixteenth after focus clears.
+func _play_kindness_chime(row: Dictionary) -> int:
+	var sound := Rows.heard(row, cue_context())
+	if sound == "":
+		_log_cue(["world_fact", sound, "skip", -1, 1.0])
+		return -1
+	var priority := int(row.get("priority", 1))
+	if engine != null and engine.mode == MusicEngine.PLAY:
+		if not _admit("world_fact", sound, 1.0):
+			return -1
+		var unit := grid_unit(4)
+		var at := next_grid(4)
+		if clock < _focus_until:
+			var earliest := engine.clock + ceili((_focus_until - clock) * Harmony.RATE)
+			while at < earliest:
+				at += unit
+		engine.schedule_stinger_at(sound, at, PRIORITY_DB[priority])
+		_log_cue(["world_fact", sound, "grid", at, 1.0])
+		return at
+	if clock < _focus_until:
+		_log_cue(["world_fact", sound, "skip", -1, 1.0])
+		return -1
+	play("world_fact", 0.0, 1.0, "SFX", sound, priority)
+	return engine.clock if engine != null else -1
 
 
 # One pitched note of kind's cue in the stinger lane at transport sample at, at the grid note's
@@ -3910,6 +4225,8 @@ func _on_near_miss(_kind: String, _at: Vector3) -> void:
 
 func _on_died() -> void:
 	_line_was = ""
+	_cadence_prev.clear()
+	_sync_rail_ids()
 	_stop_hum()
 	play("player_died")
 	_flow_queue.append(["dead"])
@@ -4317,13 +4634,21 @@ func _on_posture_changed(enemy: Node3D, posture: float, staggered: bool) -> void
 	# The reading that breaks the Warden asks the band for nothing: the break answers it on the
 	# next frame, and a build opened here would be opened only to be thrown away (8 ms on the
 	# break's frame, measured on the PC).
-	if ctx.flow != null and ctx.flow.get("warden") == enemy and chunks > 0:
+	if _is_form_fight(enemy) and chunks > 0:
 		# A hit that fills the bar from low down opens a stagger and passes a quarter on the same
 		# reading: the stagger's held breath answers it, not a drop.
 		# A smash inside the dam's stagger takes a real chunk while the wiped bar reads no
 		# quarter gone: a real chunk shattered with some left lands the drop there too.
 		var fell := _guard_step_fell(enemy, bool(seen[0]) and not staggered)
 		_follow_warden_form(posture, staggered, (fell or (shattered and chunks > 0)) and not staggered)
+
+
+func _is_form_fight(enemy: Node3D) -> bool:
+	if not is_instance_valid(enemy):
+		return false
+	if ctx != null and ctx.flow != null and ctx.flow.get("warden") == enemy:
+		return true
+	return enemy.get("boss") != null and (engine.track in MusicEngine.BOSS_TRACKS or _active_boss_track() in MusicEngine.BOSS_TRACKS)
 
 
 # The guard bar reaching GUARD_CRITICAL while a posture body stands: one warning per climb, re-armed once
@@ -4355,22 +4680,83 @@ func _guard_step_fell(enemy: Node3D, stagger_ended: bool) -> bool:
 	return left < lowest and left > 0
 
 
-# The Warden's fight plays the recorded band like a set (AUDIO-V3 section 1.1, read for the
+# The Warden and Brindle fights play the band like a set (AUDIO-V3 section 1.1, read for the
 # posture fight): the pilot's hits tighten the build, the stagger is the held breath, and
-# the hit that shatters a chunk lands the drop on the next beat. The chunk that breaks the
-# Warden lands no drop: the break and the kill cadence answer it (ruling bt). With the
-# launch switch on "loop" the band is told a guard that never moves, so the build loops.
+# the hit that shatters a chunk lands the drop on the next beat. Both the ACE band and the
+# synth band follow the guard while WARDEN_FORM_KEY == "form" and no radio pin owns the air.
+# The chunk that breaks the Warden lands no drop: the break and the kill cadence answer it
+# (ruling bt). With the launch switch on "loop" the band is told a guard that never moves.
 func _follow_warden_form(posture: float, staggered: bool, landed: bool) -> void:
-	var tuning = ctx.get("tuning")
-	if not ace_playing() or tuning == null:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	if tuning == null or radio_hold != "":
+		return
+	var on_ace := ace_playing()
+	var on_synth := sound_ready and engine != null and engine.mode == MusicEngine.PLAY and (engine.track == "warden" or engine.track in MusicEngine.BOSS_TRACKS)
+	if not on_ace and not on_synth:
 		return
 	if tuning.option(Tuning.WARDEN_FORM_KEY) != "form":
-		ace.follow_guard(0.0, false, false)
+		_warden_posture = 0.0
+		_warden_staggered = false
+		if on_ace:
+			ace.follow_guard(0.0, false, false)
+		if on_synth:
+			_reset_synth_form()
 		return
-	var at: int = ace.follow_guard(posture, staggered, landed)
-	if at >= 0:
-		_log_cue(["warden_form", "drop", "beat", at, 1.0, 0.0])
-		_make_drop_room(at)
+	_warden_posture = posture
+	_warden_staggered = staggered
+	var ace_at := -1
+	if on_ace:
+		ace_at = ace.follow_guard(posture, staggered, landed)
+		if ace_at >= 0:
+			_log_cue(["warden_form", "drop", "beat", ace_at, 1.0, 0.0])
+			_make_drop_room(ace_at)
+			_tend_deck()
+			deck_moves.on_drop(ace, ace_at, deck_style())
+	if on_synth:
+		var synth_at := _follow_synth_form(posture, staggered, landed)
+		if synth_at >= 0 and ace_at < 0:
+			_log_cue(["warden_form", "drop", "beat", synth_at, 1.0, 0.0])
+			_make_drop_room(synth_at, engine)
+
+
+func _reset_synth_form() -> void:
+	if _synth_form_state == "open":
+		engine.hold_dominant(false)
+		if engine.track == "warden" and engine.section == "open":
+			engine.warden_section("build")
+	elif _synth_form_state == "telegraph":
+		engine.cancel_build("synth_form")
+	_synth_form_state = "closed"
+
+
+func _follow_synth_form(posture: float, staggered: bool, landed: bool) -> int:
+	var prev := _synth_form_state
+	var state := AceSequencer.guard_state(prev, posture, staggered)
+	_synth_form_state = state
+	if landed:
+		engine.hold_dominant(false)
+		if engine.track == "warden" or (engine.track in MusicEngine.BOSS_TRACKS and engine.section in ["1", "2", "3"]):
+			return engine.drop_now(4, 0.9)
+		return -1
+	if state == "open":
+		if prev != "open":
+			if engine.track == "warden":
+				engine.warden_section("open")
+			engine.hold_dominant(true)
+		return -1
+	if prev == "open":
+		engine.hold_dominant(false)
+		if engine.track == "warden":
+			engine.warden_section("build")
+	elif prev == "telegraph" and state == "closed":
+		engine.cancel_build("synth_form")
+	if state == "telegraph":
+		var tight := clampf((posture - AceSequencer.GUARD_TIGHT) / (100.0 - AceSequencer.GUARD_TIGHT), 0.0, 1.0)
+		if engine.track == "warden":
+			engine.warden_charge(lerpf(MusicEngine.WARDEN_BUILD_FROM, 1.0, tight), "synth_form")
+		elif engine.track in MusicEngine.BOSS_TRACKS:
+			engine.brindle_hp(clampf(posture / 100.0, 0.0, 1.0), true, tight, "synth_form")
+	return -1
 
 
 func _stagger_chord() -> void:
@@ -4517,6 +4903,7 @@ func _on_active_heat(active_id: String, _at: Vector3, fraction: float) -> void:
 func _on_shot(weapon_id: String, _from: Vector3, _to: Vector3) -> void:
 	var cents := _pitch_rng.randf_range(-25.0, 25.0) / 100.0
 	play("shot_fired", 0.0, Harmony.ratio(WEAPON_PITCH.get(weapon_id, 0.0) + cents))
+	_tend_cadence()
 
 
 func _on_offered(_offers: Array) -> void:
@@ -4550,7 +4937,7 @@ func _on_heft_dropped(heft_class: int, _heft: float) -> void:
 # (the Mind's, the Warden's) keeps the shared boss_telegraph.
 const BRINDLE_TELEGRAPHS := {
 	"crane_sweep": "tele_crane_sweep", "slag_ring_a": "tele_slag_ring", "slag_ring_b": "tele_slag_ring",
-	"charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
+	"slag_ring_inner": "tele_slag_ring", "charge": "tele_charge", "charge_wall": "tele_charge_wall", "eject": "tele_eject",
 }
 
 
@@ -4637,7 +5024,7 @@ func sample_run_parameters() -> Dictionary:
 		var span: float = _parameter_graph.d_landmark(_parameter_graph.spawn_node)
 		var remaining: float = _parameter_graph.d_landmark(at)
 		if span > 0.0 and is_finite(remaining):
-			values["approach"] = 1.0 - remaining / span
+			values["approach"] = clampf(1.0 - remaining / span, 0.0, 1.0)
 	if ctx.run.run_id != _parameter_run:
 		_parameter_run = ctx.run.run_id
 		_parameter_armour_peak = 100.0
@@ -4691,6 +5078,8 @@ func _flush_flow() -> void:
 			"run":
 				_radio_drop("flow")
 				_disarm_launch()
+				_disarm_ultimate()
+				_boss_arena_track = ""
 				engine.cancel_pending()
 				engine.parameters_run_started()
 				var start := on_beat("run_started", 0.0, true)
@@ -4744,6 +5133,8 @@ func _flush_flow() -> void:
 					engine.schedule_cadence(start)
 			"end":
 				_radio_drop("flow")
+				_disarm_ultimate()
+				_boss_arena_track = ""
 				var won: bool = item[1]
 				# A chain the run's end cut short never lands over the summary.
 				_streak_landed_ms = kill_streak.last_ms
@@ -4772,6 +5163,8 @@ func _flush_flow() -> void:
 			"dead":
 				_radio_drop("flow")
 				_disarm_launch()
+				_disarm_ultimate()
+				_boss_arena_track = ""
 				engine.cancel_pending()
 				# A chain the death cut short never lands: the band reads PLAY until the boom's beat.
 				_streak_landed_ms = kill_streak.last_ms
@@ -4784,6 +5177,8 @@ func _flush_flow() -> void:
 						_note_at("player_died", DEATH_FALL_VOICE, DEATH_FALL[i], at + i * grid_unit(2), SfxBank.DEATH_FALL_DB, true)
 			"idle":
 				_radio_drop("flow")
+				_disarm_ultimate()
+				_boss_arena_track = ""
 				var at := engine.next_beat()
 				engine.schedule_mode(at, MusicEngine.IDLE)
 				# The title's own theme, kept across the class select.
@@ -5229,6 +5624,10 @@ func _tally_play(note: Array) -> void:
 # and books that bar's plan: stem trims on the bar, and June's answer as a stinger on the bar.
 # It never moves game time and never touches the synth band.
 var set_director := SetDirector.new()
+var deck_moves := DeckMoves.new()
+var _warden_posture := 0.0
+var _warden_staggered := false
+var _synth_form_state := "closed"
 var _set_bar_at := -1
 var _set_overtime := false
 var _set_incoming_at := -1.0
@@ -5242,7 +5641,18 @@ func set_director_on() -> bool:
 	return tuning != null and tuning.option(Tuning.SET_DIRECTOR_KEY) == "on"
 
 
+func deck_style() -> String:
+	var tuning = ctx.get("tuning") if ctx != null else null
+	return tuning.option(Tuning.DECK_KEY) if tuning != null else "off"
+
+
+func _tend_deck() -> void:
+	var allow := ace_playing() and not ace.flat and _handover_at < 0 and bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"])
+	deck_moves.tend(ace, {"style": deck_style(), "allow": allow, "posture": _warden_posture, "staggered": _warden_staggered})
+
+
 func _tend_set() -> void:
+	_tend_deck()
 	if not ace_playing() or not ace.mode in ["level", "warden", "piece"] or ace.section == "" or not set_director_on():
 		_drop_set_answer()
 		if _set_bar_at >= 0:
@@ -5251,7 +5661,7 @@ func _tend_set() -> void:
 		return
 	if _set_answer != "" and _set_answer_spoiled():
 		_drop_set_answer()
-		ace.trim_at(maxi(ace.clock, _set_answer_at - grid_unit(4)), {}, grid_unit(4))
+		ace.invalidate_trims(grid_unit(4))
 	var at: int = ace.next_bar()
 	if at == _set_bar_at or at - ace.clock > ace.grid_bar / 2:
 		return
@@ -5259,10 +5669,11 @@ func _tend_set() -> void:
 	var plan := set_director.read(set_room(at))
 	var ramp := grid_unit(4)
 	if not plan.trims.is_empty() or plan.sweep > 0.0:
-		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp, plan.sweep)
+		ace.trim_bar(at, plan.trims, ace.grid_bar, ramp, plan.sweep, ace.trim_epoch)
 	if plan.answer != "":
 		_set_answer = SfxBank.SET_ANSWER + plan.answer
 		_set_answer_at = at
+		_melody_lease.book(_set_answer, at)
 		engine.schedule_stinger_at(_set_answer, at, PRIORITY_DB[1], false, ramp)
 		_log_cue(["set_answer", _set_answer, "grid", at, 1.0, PRIORITY_DB[1] + SfxBank.trim_db(_set_answer)])
 	if plan.move != "hold":
@@ -5272,20 +5683,31 @@ func _tend_set() -> void:
 # June's booked answer gives way when the bar it was booked for turns into a fight section,
 # a warning, a caller or a pilot quote after it was booked, through to the end of its bar.
 func _set_answer_spoiled() -> bool:
+	var allowed := bool(MusicArbiter.resolve(_arbiter_state())["allow_dj"]) and not ace.flat
+	var spoiled := _melody_lease.should_preempt({
+		"answer_id": _set_answer,
+		"answer_at": _set_answer_at,
+		"clock_samples": ace.clock,
+		"bar_samples": ace.grid_bar,
+		"allowed": allowed,
+		"warning": clock < _focus_until or _warden_charging,
+		"busy": _set_busy(),
+		"ace_mode": ace.mode,
+		"ace_section": ace.section,
+		"pending_section": String(ace.pending.get("section", "")),
+	})
 	if ace.clock >= _set_answer_at + ace.grid_bar:
 		_set_answer = ""
-		return false
-	var next := String(ace.pending.get("section", ""))
-	if ace.mode == "piece" or ace.section in SET_ANSWER_YIELDS or next in SET_ANSWER_YIELDS:
-		return true
-	return clock < _focus_until or _warden_charging or _set_busy()
+	return spoiled
 
 
 func _drop_set_answer() -> void:
 	if _set_answer != "":
 		engine.cancel_stinger(_set_answer)
-		_log_cue(["set_answer_dropped", _set_answer, "grid", ace.clock, 1.0])
+		var at: int = ace.clock if ace != null else (engine.clock if engine != null else 0)
+		_log_cue(["set_answer_dropped", _set_answer, "grid", at, 1.0])
 		_set_answer = ""
+		_melody_lease.release()
 
 
 # Another melodic cue owns the bar: a caller still talking, or a pilot quote inside two bars.
@@ -5330,3 +5752,342 @@ func _set_world_fact(kind: String) -> void:
 		_set_overtime = true
 	elif kind == "overtime_paid":
 		_set_overtime = false
+
+
+# --- Wave 46 E3-04: Pilot weapon cadence cues, Nixie rail clacks, visited-site flip & opt-in --voice=tts ---
+
+const VOICE_SYNTH := "synth"
+const VOICE_TTS := "tts"
+const VOICE_DEFAULT_SUBPATHS := ["artifacts/local/w46-audio/voice", "artifacts/local/w46-audio", "res://assets/audio/voice"]
+
+var _cadence_prev := {}
+var _rail_ids := {}
+var _rail_wired_buffs: Object = null
+var _visited_sites_seen := {}
+var _cable_flips := 0
+var voice_mode := VOICE_SYNTH
+var voice_dir := ""
+var _voice_clips := {}
+var _voice_manifest_loaded := false
+
+
+func _weapon_cadence() -> Dictionary:
+	var combat = ctx.get("spawner") if ctx != null else null
+	var driver = combat.get("weapon_driver") if combat != null else null
+	if driver == null or not driver.has_method("state_snapshot"):
+		return {}
+	return driver.state_snapshot()
+
+
+func _play_cadence(kind: String) -> void:
+	play(kind, 0.0, 1.0, "SFX")
+
+
+# Polls weapon_driver.state_snapshot() public transitions and fires one plain player-class cue per fact.
+# Never ducks, pins or owns music, and never takes a threat voice.
+func _tend_cadence() -> void:
+	var snap := _weapon_cadence()
+	if snap.is_empty():
+		_cadence_prev.clear()
+		return
+	var trigger := String(snap.get("trigger", ""))
+	var weapon := String(snap.get("weapon", ""))
+	if trigger == "" or trigger == "hold_auto":
+		_cadence_prev = snap
+		return
+	if _cadence_prev.is_empty() or String(_cadence_prev.get("trigger", "")) != trigger or String(_cadence_prev.get("weapon", "")) != weapon:
+		_cadence_prev = snap
+		return
+	var prev_win := String(_cadence_prev.get("window", "idle"))
+	var win := String(snap.get("window", "idle"))
+	match trigger:
+		"press":
+			if bool(snap.get("reloading", false)) and win == "open" and prev_win != "open":
+				_play_cadence("cadence_rivet_notch_open")
+			elif win == "hit" and prev_win != "hit":
+				_play_cadence("cadence_rivet_notch_hit")
+			elif bool(snap.get("reloading", false)) and win == "spent" and prev_win != "spent":
+				_play_cadence("cadence_rivet_spent")
+		"tap_charge":
+			var was_charging := bool(_cadence_prev.get("charging", false))
+			var charging := bool(snap.get("charging", false))
+			var was_full := was_charging and float(_cadence_prev.get("charge", 0.0)) >= 0.999
+			var is_full := charging and float(snap.get("charge", 0.0)) >= 0.999
+			if is_full and not was_full:
+				_play_cadence("cadence_sable_full")
+			elif was_charging and not charging and float(snap.get("recover", 0.0)) > 0.0:
+				_play_cadence("cadence_sable_bolt")
+		"lob_snap":
+			if win == "open" and prev_win != "open":
+				_play_cadence("cadence_kest_window")
+			elif win == "hit" and prev_win != "hit":
+				_play_cadence("cadence_kest_snap")
+		"beats":
+			if win == "open" and prev_win != "open":
+				_play_cadence("cadence_tarn_window")
+			elif win == "hit" and prev_win != "hit":
+				_play_cadence("cadence_tarn_rend")
+		"stamp":
+			if win == "open" and prev_win != "open":
+				_play_cadence("cadence_tally_beat")
+			if int(snap.get("stamp_streak", 0)) > int(_cadence_prev.get("stamp_streak", 0)):
+				_play_cadence("cadence_tally_paid")
+		"lock":
+			var was_painted := bool(_cadence_prev.get("painted", false))
+			var painted := bool(snap.get("painted", false))
+			var prev_stage := String(_cadence_prev.get("lock_stage", "idle"))
+			var stage := String(snap.get("lock_stage", "idle"))
+			if painted and stage == "rail" and not (was_painted and prev_stage == "rail"):
+				_play_cadence("cadence_cannon_lock")
+			elif win == "hit" and prev_win != "hit":
+				_play_cadence("cadence_cannon_rail")
+			elif was_painted and not painted and prev_stage == "barrage" and float(snap.get("recover", 0.0)) > 0.0:
+				_play_cadence("cadence_cannon_barrage")
+	_cadence_prev = snap
+
+
+func _wire_rail() -> void:
+	var buffs = ctx.get("buffs") if ctx != null else null
+	if buffs == null or buffs == _rail_wired_buffs:
+		return
+	if _rail_wired_buffs != null and is_instance_valid(_rail_wired_buffs):
+		if _rail_wired_buffs.has_signal("buff_changed") and _rail_wired_buffs.buff_changed.is_connected(_on_buff_changed):
+			_rail_wired_buffs.buff_changed.disconnect(_on_buff_changed)
+		if _rail_wired_buffs.has_signal("buff_expired") and _rail_wired_buffs.buff_expired.is_connected(_on_buff_expired):
+			_rail_wired_buffs.buff_expired.disconnect(_on_buff_expired)
+	_rail_wired_buffs = buffs
+	if buffs.has_signal("buff_changed") and not buffs.buff_changed.is_connected(_on_buff_changed):
+		buffs.buff_changed.connect(_on_buff_changed)
+	if buffs.has_signal("buff_expired") and not buffs.buff_expired.is_connected(_on_buff_expired):
+		buffs.buff_expired.connect(_on_buff_expired)
+	_sync_rail_ids()
+
+
+func _sync_rail_ids() -> void:
+	_rail_ids.clear()
+	var buffs = ctx.get("buffs") if ctx != null else null
+	if buffs == null or not buffs.has_method("active_rows"):
+		return
+	for row in buffs.active_rows():
+		var id := String(row.get("id", ""))
+		if id != "":
+			_rail_ids[id] = true
+
+
+func _in_play_for_rail() -> bool:
+	var flow = ctx.get("flow") if ctx != null else null
+	if flow == null or not flow.has_method("in_play"):
+		return true
+	return bool(flow.in_play())
+
+
+func _play_rail(kind: String) -> void:
+	play(kind, 0.0, 1.0, "UI")
+
+
+func _on_buff_changed() -> void:
+	var buffs = ctx.get("buffs") if ctx != null else null
+	if buffs == null or not buffs.has_method("active_rows"):
+		_rail_ids.clear()
+		return
+	var now_ids := {}
+	for row in buffs.active_rows():
+		var id := String(row.get("id", ""))
+		if id != "":
+			now_ids[id] = true
+	if not _in_play_for_rail():
+		_rail_ids = now_ids
+		return
+	var added := false
+	for id in now_ids:
+		if not _rail_ids.has(id):
+			added = true
+			break
+	_rail_ids = now_ids
+	if added:
+		_play_rail("rail_rise")
+
+
+# BuffLedger emits buff_expired(id) only on real timer expiry, never on attempt-boundary clear().
+func _on_buff_expired(id: String) -> void:
+	if id == "" or not _rail_ids.has(id):
+		return
+	_rail_ids.erase(id)
+	if _in_play_for_rail():
+		_play_rail("rail_sink")
+
+
+func _site_markers() -> Object:
+	var parent = get_parent()
+	var markers = parent.get("site_markers") if parent != null else null
+	if markers != null and markers.has_method("visited_sites"):
+		return markers
+	return null
+
+
+func _play_site_flip(site_key: String) -> void:
+	if site_key == "" or _visited_sites_seen.has(site_key):
+		return
+	_visited_sites_seen[site_key] = true
+	var flip_kind := "site_flip"
+	play(flip_kind, 0.0, 1.0, "UI")
+
+
+func _tend_site_flips() -> void:
+	var markers := _site_markers()
+	if markers == null:
+		return
+	for row in markers.visited_sites():
+		var key := String(row.get("key", ""))
+		if key != "":
+			_play_site_flip(key)
+
+
+static func parse_voice_args(args: PackedStringArray) -> Dictionary:
+	var mode := VOICE_SYNTH
+	for arg in args:
+		if arg.begins_with("--voice="):
+			var raw := arg.substr("--voice=".length()).strip_edges().to_lower()
+			mode = VOICE_TTS if raw == VOICE_TTS else VOICE_SYNTH
+	return {"mode": mode, "dir": OS.get_environment("SCRAPKEEP_VOICE_DIR").strip_edges()}
+
+
+func _configure_voice_from_args() -> void:
+	var all_args := PackedStringArray()
+	all_args.append_array(OS.get_cmdline_args())
+	all_args.append_array(OS.get_cmdline_user_args())
+	var parsed := parse_voice_args(all_args)
+	set_voice_mode(String(parsed["mode"]), String(parsed["dir"]))
+
+
+func set_voice_mode(mode: String, dir := "") -> void:
+	voice_mode = VOICE_TTS if mode.strip_edges().to_lower() == VOICE_TTS else VOICE_SYNTH
+	voice_dir = dir.strip_edges()
+	_voice_clips.clear()
+	_voice_manifest_loaded = false
+	if voice_mode != VOICE_TTS:
+		SfxBank.set_voice_sidecar(false, {})
+		return
+	_load_voice_manifest()
+	SfxBank.set_voice_sidecar(true, _voice_clips)
+
+
+func voice_manifest_loaded() -> bool:
+	return _voice_manifest_loaded
+
+
+func voice_clip_for(speaker: String, text: String) -> String:
+	if voice_mode != VOICE_TTS or speaker in SfxBank.SYNTH_ONLY_SPEAKERS:
+		return ""
+	return SfxBank.voice_clip_path(speaker, text)
+
+
+func _voice_candidate_dirs() -> Array[String]:
+	var out: Array[String] = []
+	if voice_dir != "":
+		out.append(voice_dir)
+		return out
+	var res_abs := ProjectSettings.globalize_path("res://").trim_suffix("/")
+	var repo_abs := res_abs.path_join("../..").simplify_path()
+	for sub in VOICE_DEFAULT_SUBPATHS:
+		if sub.begins_with("res://") or sub.begins_with("user://"):
+			out.append(sub)
+		else:
+			out.append(repo_abs.path_join(sub))
+	return out
+
+
+func _load_voice_manifest() -> void:
+	for base_dir in _voice_candidate_dirs():
+		if base_dir == "":
+			continue
+		var manifest_path := ""
+		var clip_root := base_dir
+		if base_dir.ends_with(".json") and FileAccess.file_exists(base_dir):
+			manifest_path = base_dir
+			clip_root = base_dir.get_base_dir()
+		elif FileAccess.file_exists(base_dir.path_join("manifest.json")):
+			manifest_path = base_dir.path_join("manifest.json")
+			clip_root = base_dir
+		elif FileAccess.file_exists(base_dir.path_join("voice").path_join("manifest.json")):
+			manifest_path = base_dir.path_join("voice").path_join("manifest.json")
+			clip_root = base_dir
+		elif FileAccess.file_exists(base_dir.get_base_dir().path_join("manifest.json")):
+			manifest_path = base_dir.get_base_dir().path_join("manifest.json")
+			clip_root = base_dir.get_base_dir()
+		if manifest_path == "":
+			continue
+		var raw := FileAccess.get_file_as_string(manifest_path)
+		if raw.strip_edges() == "":
+			continue
+		var parsed = JSON.parse_string(raw)
+		if parsed is Array:
+			_ingest_voice_entries(parsed, clip_root, base_dir)
+			_voice_manifest_loaded = true
+			return
+		if parsed is Dictionary:
+			_ingest_voice_manifest(parsed, clip_root, base_dir)
+			_voice_manifest_loaded = true
+			return
+
+
+func _ingest_voice_entries(items: Array, clip_root: String, base_dir: String) -> void:
+	for entry in items:
+		if not entry is Dictionary:
+			continue
+		if bool(entry.get("audition_only", false)):
+			continue
+		var speaker := String(entry.get("speaker", entry.get("caller", ""))).strip_edges().to_lower()
+		var text := String(entry.get("text", entry.get("line", "")))
+		var file := String(entry.get("file", entry.get("path", entry.get("wav", ""))))
+		_register_voice_clip(speaker, text, file, clip_root, base_dir)
+
+
+func _ingest_voice_manifest(data: Dictionary, clip_root: String, base_dir: String) -> void:
+	for list_key in ["clips", "entries", "lines"]:
+		var items = data.get(list_key)
+		if items is Array:
+			_ingest_voice_entries(items, clip_root, base_dir)
+		elif items is Dictionary:
+			for k in items:
+				var key_s := String(k)
+				var val = items[k]
+				if val is String and key_s.begins_with(SfxBank.SAY):
+					var parts := SfxBank._said(key_s)
+					_register_voice_clip(String(parts[0]).to_lower(), String(parts[1]), val, clip_root, base_dir)
+				elif val is Dictionary:
+					for line_text in val:
+						_register_voice_clip(key_s.to_lower(), String(line_text), String(val[line_text]), clip_root, base_dir)
+	var speakers = data.get("speakers")
+	if speakers is Dictionary:
+		for speaker_key in speakers:
+			var sp := String(speaker_key).strip_edges().to_lower()
+			var lines = speakers[speaker_key]
+			if lines is Dictionary:
+				for line_text in lines:
+					_register_voice_clip(sp, String(line_text), String(lines[line_text]), clip_root, base_dir)
+
+
+func _register_voice_clip(speaker: String, text: String, file: String, clip_root: String, base_dir: String) -> void:
+	if speaker == "" or file == "" or speaker in SfxBank.SYNTH_ONLY_SPEAKERS:
+		return
+	var resolved := _resolve_voice_file(file, clip_root, base_dir)
+	if resolved == "":
+		return
+	var key_text := "*" if text == "" or text == "*" else text
+	_voice_clips["%s|%s" % [speaker, key_text]] = resolved
+	if key_text != "*":
+		_voice_clips["%s|%s" % [speaker, key_text.strip_edges().to_lower()]] = resolved
+
+
+static func _resolve_voice_file(file: String, clip_root: String, base_dir: String) -> String:
+	if file.is_absolute_path() or file.begins_with("res://") or file.begins_with("user://"):
+		return file if FileAccess.file_exists(file) else ""
+	for root_dir in [clip_root, clip_root.get_base_dir(), base_dir, base_dir.get_base_dir(), clip_root.path_join("voice")]:
+		var root_s := String(root_dir)
+		if root_s == "":
+			continue
+		var candidate := root_s.path_join(file)
+		if FileAccess.file_exists(candidate):
+			return candidate
+	return ""

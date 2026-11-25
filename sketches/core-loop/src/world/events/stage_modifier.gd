@@ -1,5 +1,7 @@
 extends RefCounted
 
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
+
 # Stage modifiers (SI3; W13-INTEGRATION-3.md SI3; comps/isaac/pacing-and-trades.md:84). At most one
 # per stage, picked from the run seed and the stage number alone, so the stage card that shows it
 # before the stage starts and the pocket draw that applies it read the same row, and a retry gets
@@ -155,6 +157,8 @@ static func card_line(run, terrain, stage: int) -> String:
 	var lines := []
 	if run != null and run.cursed():
 		lines.append(caption(CURSE))
+	for row in ShiftVariants.card_rows(run, stage):
+		lines.append(caption(row))
 	if run != null and _park_map(terrain, stage) != null:
 		lines.append(memo(int(run.run_seed), stage, for_stage(run, terrain, stage)))
 	return "  /  ".join(lines)

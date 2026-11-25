@@ -163,7 +163,7 @@ func _retained_path_guard() -> void:
 	tree.max_depth = 2
 	tree.reset("pylon_engineer")
 	tree.open_checkpoint()
-	var first := tree.pick("s_cannonball")
+	var first := tree.pick("s_static_flutter")
 	tree.open_checkpoint()
 	var second := tree.pick("s_face_runner")
 	tree.world_one = false

@@ -18,7 +18,7 @@ const NODES := [
 		"icon": "ab_sable_special", "tags": ["air", "burst"], "knob": {"air_charge": 2.0}},
 	{"id": "s_arc_nest", "name": "Arc Nest", "effect": "Turret arcs reach one more machine", "key": "weapon",
 		"icon": "ab_sable_weapon", "tags": ["mounted", "ranged"], "pattern": {"pylon_turret": {"add": {"chain_jumps": 1}}}},
-	{"id": "s_bulwark", "name": "Bulwark", "effect": "Mounted, crowd control slides off you", "key": "movement",
+	{"id": "s_bulwark", "name": "Bulwark", "effect": "On a wall, nothing shoves or snares you", "key": "movement",
 		"icon": "ab_sable_mount", "tags": ["mounted", "cc_immune"], "knob": {"mount_cc_immune": true}},
 
 	{"id": "s_hook_charge", "name": "Hook Charge", "effect": "Hooking a wall sets off a discharge", "key": "movement",
@@ -32,7 +32,7 @@ const NODES := [
 	{"id": "s_twin_prongs", "name": "Twin Prongs", "effect": "Arc bolts fly in pairs", "key": "weapon",
 		"icon": "ab_sable_weapon", "tags": ["ranged"],
 		"pattern": {"arc_caster": {"add": {"count": 1}, "min": {"spread_deg": 6.0}, "mul": {"damage": 0.6}}}, "class_id": "pylon_engineer", "stack_rule": "capped", "swap": {"ultimate": "ball_lightning"}},
-	{"id": "s_overwatch", "name": "Overwatch", "effect": "Mounted, discharges refill twice as fast", "key": "special",
+	{"id": "s_overwatch", "name": "Overwatch", "effect": "On a wall, discharges refill twice as fast", "key": "special",
 		"icon": "ab_sable_special", "tags": ["mounted"], "knob": {"mounted_recharge": 2.0}, "class_id": "pylon_engineer", "stack_rule": "capped", "swap": {"ultimate": "outpost"}},
 	{"id": "s_rope_anchor", "name": "Rope Anchor", "effect": "Winch into a wall to plant", "key": "movement",
 		"icon": "ab_sable_move", "tags": ["mounted", "mobility"], "knob": {"winch_mount": true}, "class_id": "pylon_engineer", "stack_rule": "capped", "swap": {"ultimate": "ball_lightning"}},
@@ -59,7 +59,7 @@ const NODES := [
 		"icon": "ab_sable_weapon", "tags": ["ranged"], "pattern": {"arc_caster": {"add": {"chain_jumps": 2, "chain_range": 4.0}}}, "class_id": "pylon_engineer", "stack_rule": "capped", "knob": {"ult_volley": 1}},
 	{"id": "s_air_turret", "name": "Air Turret", "effect": "Airborne, you fire turret bolts", "key": "weapon",
 		"icon": "ab_sable_weapon", "tags": ["air", "ranged"], "knob": {"ult_beats": 2, "air_turret": true}, "class_id": "pylon_engineer", "stack_rule": "capped"},
-	{"id": "s_auto_gauge", "name": "Auto Gauge", "effect": "Mounted, discharge fills and fires itself", "key": "special",
+	{"id": "s_auto_gauge", "name": "Auto Gauge", "effect": "On a wall, discharge fills and fires itself", "key": "special",
 		"icon": "ab_sable_special", "tags": ["mounted", "sustain"], "knob": {"ult_beats": 2, "mounted_autogauge": true}, "class_id": "pylon_engineer", "stack_rule": "capped"},
 	{"id": "s_turret_fan", "name": "Turret Fan", "effect": "The turret sprays a three-bolt fan", "key": "weapon",
 		"icon": "ab_sable_weapon", "tags": ["mounted", "ranged"],
@@ -68,18 +68,36 @@ const NODES := [
 		"icon": "ab_sable_mount", "tags": ["mounted", "mobility"], "knob": {"ult_encore": true, "winch_bank": 2.0}, "class_id": "pylon_engineer", "stack_rule": "capped"},
 	{"id": "s_sentry_post", "name": "Sentry Post", "effect": "Leaving a pylon leaves a turret behind", "key": "weapon",
 		"icon": "ab_sable_mount", "tags": ["mounted", "ranged"], "knob": {"ult_beats": 2, "sentry": 4.0}, "class_id": "pylon_engineer", "stack_rule": "capped"},
-	{"id": "s_fortress", "name": "Fortress", "effect": "Mounted, discharge every two seconds", "key": "special",
+	{"id": "s_fortress", "name": "Fortress", "effect": "On a wall, discharge every two seconds", "key": "special",
 		"icon": "ab_sable_mount", "tags": ["mounted", "sustain"], "knob": {"ult_radius": 2.0, "mount_pulse": 2.0}, "class_id": "pylon_engineer", "stack_rule": "capped"},
 	{"id": "s_breach_plate", "name": "Breach Plate", "effect": "Planting throws machines twice as hard", "key": "movement",
 		"icon": "ab_sable_mount", "tags": ["mounted", "close"], "knob": {"ult_encore": true, "plant_repel": 2.0}, "class_id": "pylon_engineer", "stack_rule": "capped"},
 ]
 
 
-# The world-one tree (--world-one-builds=on): NODES with index 3 (S4, under Cannonball) the
-# world-one Face Runner in Live Wire's place. Each valid vault restores one air jump and the
-# same face stays locked for the default Augments.VAULT_FACE_COOLDOWN (1.5 s), so no vault_lock
-# knob. The base Face Runner (index 9, 1 s lock) is untouched. Ninja platformer: S1 to S4.
+# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09). Both keep
+# mass_launch so no Sable run loses weight launch, and both shape arc_caster and pylon_turret.
+# Left root: Static Flutter (s_cannonball moves to slot 2 in place of s_coil_hook; Face Runner stays at slot 3).
+# Right root: Rail Lance (s_beachhead moves to slot 4 in place of s_arc_nest; s_bulwark stays at slot 5).
+const STATIC_FLUTTER := {"id": "s_static_flutter", "name": "Static Flutter", "effect": "Three sparks on tap. Six pulses charged.", "key": "weapon",
+	"icon": "ab_sable_weapon", "tags": ["air", "burst"], "knob": {"mass_launch": true},
+	"pattern": {
+		"arc_caster": {"set": {"spark_count": 3, "charge_bolt_mult": 8.0, "charge_pulses": 6, "charge_pulse_span_s": 0.5},
+			"mul": {"damage": 3.0 / 8.0, "charge_s": 0.40 / 0.64}},
+		"pylon_turret": {"set": {"spark_count": 3, "charge_bolt_mult": 9.0, "charge_pulses": 6, "charge_pulse_span_s": 0.5},
+			"mul": {"damage": 3.0 / 9.0, "charge_s": 0.40 / 0.64}},
+	}}
+const RAIL_LANCE := {"id": "s_rail_lance", "name": "Rail Lance", "effect": "Longer charge fires one piercing arc lance.", "key": "weapon",
+	"icon": "ab_sable_weapon", "tags": ["mounted", "ranged"], "knob": {"mass_launch": true},
+	"pattern": {
+		"arc_caster": {"set": {"charge_bolt_mult": 42.0 / 8.0, "charge_pierce": 2, "charge_no_chain": true},
+			"mul": {"charge_s": 1.00 / 0.64}},
+		"pylon_turret": {"set": {"charge_bolt_mult": 45.0 / 9.0, "charge_pierce": 2, "charge_no_chain": true},
+			"mul": {"charge_s": 1.00 / 0.64}},
+	}}
+# The world-one Face Runner stays at index 3 (S4, under Static Flutter): each valid vault restores
+# one air jump and keeps the default Augments.VAULT_FACE_COOLDOWN (1.5 s) lock.
 const FACE_RUNNER_WORLD_ONE := {"id": "s_face_runner", "name": "Face Runner", "effect": "Vault kicks refill your air jump", "key": "movement",
 	"icon": "ab_sable_vault", "tags": ["air", "mobility"], "knob": {"vault_air": true}}
 # A static var, not a const: GDScript cannot fold Array.slice into a constant.
-static var NODES_WORLD_ONE: Array = NODES.slice(0, 3) + [FACE_RUNNER_WORLD_ONE] + NODES.slice(4)
+static var NODES_WORLD_ONE: Array = [STATIC_FLUTTER, RAIL_LANCE, NODES[0], FACE_RUNNER_WORLD_ONE, NODES[1], NODES[5]] + NODES.slice(6)

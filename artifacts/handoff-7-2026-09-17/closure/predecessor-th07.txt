@@ -1,5 +1,0 @@
-TH-07 predecessor reconciliation at integrated commit 09d52a1d4790e948fde979a8d54a9fdc885ec314
-TH-07 revision 1 done at EV-0315, accepted integrated identity 8b925df4d0bca7167857d9bbe1a02f071ebda467.
-docs/tech/sections/TH-07-four-slots-and-milestone-progression.md sha256 at this commit: e55d14ee133292595af8f289c01859964f4465a300024bda86ce7fba32501ced
-git merge-base --is-ancestor 8b925df4d0bca7167857d9bbe1a02f071ebda467 HEAD: exit 0
-npm run check:drift at this commit: exit 0 (closure/check-drift.log); retained checks rerun at this commit: closure/paper-reruns.log

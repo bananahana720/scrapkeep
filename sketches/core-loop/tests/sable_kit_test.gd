@@ -199,7 +199,8 @@ func _run() -> void:
 	_tick({"slot_pick": 1, "fire_pressed": true, "fire_held": true}, 0.0)
 	_tick({"fire_held": true}, 1.0)
 	_tick({"fire_released": true}, 0.0)
-	_t.eq("slot 2 full discharge", [_combat.last_burst["targets"], _combat.last_burst["radius"], _combat.last_burst["damage"]], [8, 30.0, 70.0])
+	# Ruling ek (E1-06): Static Discharge speed term 1.4 -> 0.8 per m/s (14 + 40 * 0.8 = 46.0 at full gauge).
+	_t.eq("slot 2 full discharge", [_combat.last_burst["targets"], _combat.last_burst["radius"], _combat.last_burst["damage"]], [8, 30.0, 46.0])
 	_t.eq("gauge returns home", _player.abilities.selected, "weapon")
 	_fresh(30.0)
 	_t.near("live tap discharge", _combat._discharge_speed(0.0), 22.5)
@@ -255,8 +256,8 @@ func _tree() -> void:
 			var other: Array = Sable.NODES[i + 1].get("knob", {}).keys().filter(func(k): return String(k).begins_with("ult_"))
 			good = good and knobs != other
 	_t.check("every depth-4 leaf has one distinct sibling knob", good)
-	_t.eq("world-one ids", Sable.NODES_WORLD_ONE.slice(0, 6).map(func(n): return n["id"]), ["s_cannonball", "s_beachhead", "s_coil_hook", "s_face_runner", "s_arc_nest", "s_bulwark"])
-	_t.eq("world-one cards read as the table writes them", [Cards.ROWS["s_cannonball"], Cards.ROWS["s_face_runner"]], ["Kick off a wall to zap what's near. A heavier ball launches farther.", "Kick off a wall to jump again. A heavier shell steers sharper."])
+	_t.eq("world-one ids", Sable.NODES_WORLD_ONE.slice(0, 6).map(func(n): return n["id"]), ["s_static_flutter", "s_rail_lance", "s_cannonball", "s_face_runner", "s_beachhead", "s_bulwark"])
+	_t.eq("world-one cards read as the table writes them", [Cards.ROWS["s_cannonball"], Cards.ROWS["s_face_runner"]], ["Kick off a wall to zap what's near. Scrap makes you heavier. Heavier launches farther.", "Kick off a wall to jump again. Steer sharper after each kick."])
 	_t.eq("one crater relic", Relics.ids().filter(func(id): return Relics.fits(id, "pylon_engineer") and Relics.swap_of(id) == "crater_slam"), ["crater_heart"])
 	_t.eq("two Bank Shot relics", Relics.ids().filter(func(id): return Relics.fits(id, "pylon_engineer") and Relics.slot_of(id) == "line"), ["pit_coil", "storm_crater"])
 	var movement_local := true

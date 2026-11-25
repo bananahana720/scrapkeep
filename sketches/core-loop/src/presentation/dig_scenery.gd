@@ -14,10 +14,19 @@ const ParkSites := preload("res://src/presentation/park_sites.gd")
 # A missing GLB is skipped with a warning; a breach whose skin cannot be built keeps its box.
 
 # The directories are static vars so a test can point them at nothing and see the fallback.
-static var stone_dir := "res://assets/models/dig_stone/"
-static var mech_dir := "res://assets/models/dig_mechanical/"
+const STONE_DIR := "res://assets/models/dig_stone/"
+const MECH_DIR := "res://assets/models/dig_mechanical/"
 # The authored ore cart (tools/blender/ore_cart.py) lives with the other recipe GLBs.
-static var cart_dir := "res://assets/models/"
+const CART_DIR := "res://assets/models/"
+static var stone_dir := STONE_DIR
+static var mech_dir := MECH_DIR
+static var cart_dir := CART_DIR
+
+
+static func reset_for_tests() -> void:
+	stone_dir = STONE_DIR
+	mech_dir = MECH_DIR
+	cart_dir = CART_DIR
 # The resource paths come from the one material slot table (material_slots.gd).
 const SLOTS := {
 	"stone": MaterialSlots.SLOTS["stone"]["path"],

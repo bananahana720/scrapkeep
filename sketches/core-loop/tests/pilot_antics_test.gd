@@ -355,18 +355,30 @@ func _openings(display) -> void:
 func _deck(game, display) -> void:
 	var antics: Array = display.deck_antics
 	_t.eq("each deck pilot has a move", antics.filter(func(a): return a != null).size(), 3)
-	display._clock = display.ANTIC_PERIOD + display.ANTIC_DELAY + PilotAntics.LENGTH * 0.5
+	var turn := 1
+	# Whoever the gate pilot is, the bow's hero holds the pose on their turn and the crew take theirs.
+	for bow in ["pylon_engineer", "runner_gunner"]:
+		display.cast_hero(bow)
+		var hero: int = antics.find_custom(func(a): return a != null and a.holder == display._hero)
+		_t.check("%s stands at the bow" % bow, hero >= 0 and String(display.PILOTS[hero].id) == bow)
+		turn = 1 if hero != 1 else 2
+		display._clock = display.ANTIC_PERIOD * turn + display.ANTIC_DELAY + PilotAntics.LENGTH * 0.5
+		display._step_antics()
+		_t.check("with %s at the bow, the crew pilot whose turn it is is out alone" % bow,
+			antics[turn].out and range(antics.size()).all(func(i): return i == turn or not antics[i].out))
+		display._clock = display.ANTIC_PERIOD * hero + display.ANTIC_DELAY + PilotAntics.LENGTH * 0.5
+		display._step_antics()
+		_t.check("and %s holds the pose on their own turn" % bow, antics.all(func(a): return not a.out))
+	display._clock = display.ANTIC_PERIOD * (turn + 1) + 0.5
 	display._step_antics()
-	_t.check("the deck's second pilot is out on its turn", antics[1].out and not antics[0].out and not antics[2].out)
-	display._clock = display.ANTIC_PERIOD * 2.0 + 0.5
-	display._step_antics()
-	_t.check("and back in after it", not antics[1].out)
-	var mid: float = display.ANTIC_PERIOD + display.ANTIC_DELAY + PilotAntics.LENGTH * 0.5
+	_t.check("and back in after it", not antics[turn].out)
+	var mid: float = display.ANTIC_PERIOD * turn + display.ANTIC_DELAY + PilotAntics.LENGTH * 0.5
 	display._clock = mid
 	display._step_antics()
+	_t.check("a crew pilot is out mid-move", antics[turn].out)
 	display.active = false
 	display._sync_dressing()
-	_t.check("a deck stopped mid-move puts its pilot back in", not antics[1].out)
+	_t.check("a deck stopped mid-move puts its pilot back in", not antics[turn].out)
 	display.active = true
 	display._sync_dressing()
 	HighdraftFx.preferred = true
@@ -374,6 +386,7 @@ func _deck(game, display) -> void:
 	display._step_antics()
 	_t.check("reduced motion keeps the deck pilots seated", antics.all(func(a): return not a.out))
 	HighdraftFx.preferred = false
+	display.cast_hero("pylon_engineer")
 	var deck_at: Vector3 = display.camera.global_position
 	display.look_begin()
 	display.look_target = 2
@@ -381,7 +394,7 @@ func _deck(game, display) -> void:
 	for i in 30:
 		display._step_look(1.0 / 30.0)
 	display._frame()
-	var target: Vector3 = Vector3(display.PILOTS[2].at)
+	var target: Vector3 = display.stage.get_node(String(display.PILOTS[2].name)).position
 	_t.check("look closer moves the camera to the pilot", display.camera.global_position.distance_to(target)
 		< deck_at.distance_to(target) * 0.5)
 	display.look_zoom(3.0)
@@ -394,6 +407,25 @@ func _deck(game, display) -> void:
 	display._frame()
 	_t.check("letting go drifts back to the deck", display.look_weight < 0.01
 		and display.camera.global_position.distance_to(deck_at) < 1.5)
+	# A gate pilot from off the deck stands at the bow as HeroShell, and look closer orbits them too.
+	display.cast_hero("tally")
+	var bow: Node3D = display.stage.get_node_or_null("HeroShell")
+	_t.check("an off-deck gate pilot stands at the bow", bow != null and bow == display._hero)
+	if bow != null:
+		display._frame()
+		var away: Vector3 = display.camera.global_position
+		display.look_begin(display.camera.unproject_position(bow.position) / (Vector2(display.viewport.size) / display.get_viewport().get_visible_rect().size))
+		_t.eq("pointing at the bow picks its pilot", display.look_target, display.PILOTS.size())
+		display.look_drag(Vector2(40.0, 10.0))
+		for i in 30:
+			display._step_look(1.0 / 30.0)
+		display._frame()
+		_t.check("look closer orbits the bow's pilot", display.camera.global_position.distance_to(bow.position)
+			< away.distance_to(bow.position) * 0.6, "%.2f from %.2f" % [display.camera.global_position.distance_to(bow.position), away.distance_to(bow.position)])
+		for i in 120:
+			display._step_look(1.0 / 30.0)
+	display.cast_hero("pylon_engineer")
+	display._frame()
 	var press := InputEventMouseButton.new()
 	press.button_index = MOUSE_BUTTON_RIGHT
 	press.pressed = true

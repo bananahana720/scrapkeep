@@ -53,12 +53,30 @@ extends SceneTree
 # `noise` should be next to nothing.
 # --plant=1 greys each script's candidates instead of turning the switch on, to show that the
 # count sees a change on a renderer that ignores the switch.
+#
+# Where the seven code-drawn player marks set their colour (W46-03's hand-off to W46-13): every run
+# writes `mark_sites` into probe.json, and --sites=1 prints them alone, headless, and quits:
+#   <godot> --headless --path sketches/core-loop --script res://tools/vertex_colour_probe.gd -- --sites=1 [--out=/abs/dir]
+# Each row names the file, the line that builds the mark's material and whether that material
+# turns vertex_color_is_srgb on, the line that writes the colour into the mesh, and where the
+# colour comes from. The lines are found by MARK_SITES' text, so they follow the code as it moves;
+# a row whose text is gone says so (tests/world_look_acts_test.gd fails on it).
+#
+# Whether each mark draws its own colour (W46-13): --marks=1 draws, on a display, one row per mark: the mark's tone as a
+# plain material (the reference) beside the same tone written into a mesh with the switch as the mark's own material
+# line sets it (read from the code, as above), added at half strength over charcoal for the marks that add their light.
+# It writes marks-swatches.png and marks.json and prints one MARKSWATCH line per mark: the CIE76 distance between the
+# two, which passes at MARK_DE_MAX or less. --plant-mark=<mark> draws that one mark with the switch off, the washed-out
+# case, which must fail. Every full run writes the same rows into probe.json as `mark_swatches`.
+#   <godot> --path sketches/core-loop --script res://tools/vertex_colour_probe.gd -- --marks=1 --out=/abs/dir [--plant-mark=trail]
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Bars := preload("res://src/core/defence_bars.gd")
 
 const KINDS := ["chaser", "lobber", "mag_trapper", "jolt_layer", "catch_trap", "hooker", "ramp_flipper", "boom_tender", "plated_brute",
 	"splitter", "linker", "foreman", "dispatcher", "miniboss"]
@@ -78,6 +96,26 @@ const MARK_WEAPONS := [Weapons.PYLON_TURRET, Weapons.ARC_CASTER, Weapons.RAPID_L
 	Weapons.LEDGER_READER, Weapons.CANNON_LANE]
 const MARKS_M := 5.0
 const MARK_TICKS := 4
+# The seven marks: [anchor, text] finds the first line holding `text` at or after the first line holding `anchor`.
+const MAT_LINE := ["", "vertex_color_use_as_albedo = true"]
+const MARK_SITES := [
+	{"mark": "bolts", "file": "res://src/combat/bolts.gd", "material": MAT_LINE,
+		"colour": ["", "_multimesh.set_instance_color(i, drawn[1])"], "source": "tint(): the first shot bit's colour, else the weapon's", "tone": Palette.ARC, "add": false},
+	{"mark": "attack lines and rings", "file": "res://src/combat/effects.gd", "material": MAT_LINE,
+		"colour": ["func _line(a", "_mesh.surface_set_color(color)"], "source": "the caller's colour (arc, ring, spark, beam, shockwave)", "tone": Palette.VERDIGRIS, "add": false},
+	{"mark": "trail", "file": "res://src/presentation/vfx.gd", "material": MAT_LINE,
+		"colour": ["func _draw_trail(", "mesh.surface_set_color("], "source": "SpeedTier.COLORS[tier] (src/movement/speed_tier.gd)",
+		"tone": SpeedTier.COLORS[2], "add": true},
+	{"mark": "speed lines", "file": "res://src/presentation/vfx.gd", "material": MAT_LINE,
+		"colour": ["func _draw_lines(", "mesh.surface_set_color("], "source": "SpeedTier.COLORS[tier] (src/movement/speed_tier.gd)",
+		"tone": SpeedTier.COLORS[1], "add": true},
+	{"mark": "aura motes", "file": "res://src/presentation/player_fx.gd", "material": MAT_LINE,
+		"colour": ["", "mm.set_instance_color(i, c.lerp(Color.WHITE"], "source": "heat_tint(part_color()): ELEMENT_COLORS, leaning to HEAT_COLOR", "tone": Palette.ARC, "add": false},
+	{"mark": "cable arcs", "file": "res://src/presentation/machine_fx.gd", "material": MAT_LINE,
+		"colour": ["", "_cable_mesh.surface_set_color(color)"], "source": "Palette.SAND, its alpha the arc's life", "tone": Palette.SAND, "add": true},
+	{"mark": "aim", "file": "res://src/movement/indicator.gd", "material": MAT_LINE,
+		"colour": ["", "_tris.surface_set_color(color)"], "source": "the shape's colour: class_color(), SAND when blocked, CHARCOAL keyline", "tone": Palette.SAND, "add": false},
+]
 # Slower than any weapon's, so the bolts are still in view when the game is held; a bolt's
 # colour does not change with its speed.
 const MARK_SPEED := 20.0
@@ -85,6 +123,9 @@ const ROLL_TICKS := 60
 # The clock while a scene is held, so shader time and particles stand still between stills.
 const HELD := 0.001
 const PLANT := Color(0.5, 0.5, 0.5)
+# A mark drawn within this CIE76 of its plain tone draws its own colour. The switch off moves every mark's tone 10 or
+# more on Forward+ (the planted run's numbers are on the W46-13 pull request); two stills of one tone differ by under 1.
+const MARK_DE_MAX := 3.0
 
 var out := ""
 var boss := true
@@ -95,9 +136,14 @@ var failed := ""
 var _tones := {}
 var _tints := {}
 var _report := {}
+var _plant_mark := ""
 
 
 func _initialize() -> void:
+	var sites := false
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--sites="):
+			sites = arg.trim_prefix("--sites=") != "0"
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			out = arg.trim_prefix("--out=")
@@ -105,6 +151,23 @@ func _initialize() -> void:
 			boss = arg.trim_prefix("--boss=") != "0"
 		elif arg.begins_with("--plant="):
 			plant = arg.trim_prefix("--plant=") != "0"
+	var marks := false
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--marks="):
+			marks = arg.trim_prefix("--marks=") != "0"
+		elif arg.begins_with("--plant-mark="):
+			_plant_mark = arg.trim_prefix("--plant-mark=")
+	if sites:
+		quit(_print_sites())
+		return
+	if marks:
+		if out.is_empty() or DisplayServer.get_name() == "headless":
+			push_error("usage: --marks=1 --out=/abs/dir [--plant-mark=<mark>], on a display")
+			quit(2)
+			return
+		DirAccess.make_dir_recursive_absolute(out)
+		_marks_only.call_deferred()
+		return
 	if out.is_empty() or DisplayServer.get_name() == "headless":
 		push_error("usage: --script res://tools/vertex_colour_probe.gd -- --out=/abs/dir [--boss=0] [--plant=1], on a display")
 		quit(2)
@@ -119,8 +182,9 @@ func _initialize() -> void:
 
 func _run() -> void:
 	_report = {"tool": "vertex_colour_probe.gd", "method": RenderingServer.get_current_rendering_method(),
-		"adapter": RenderingServer.get_video_adapter_name(), "planted": plant}
+		"adapter": RenderingServer.get_video_adapter_name(), "planted": plant, "mark_sites": mark_sites()}
 	await _swatches()
+	_report["mark_swatches"] = await _mark_swatches()
 	await _boot()
 	if failed != "":
 		return
@@ -152,6 +216,137 @@ func _run() -> void:
 	file.store_string(JSON.stringify(_report, "\t"))
 	file.close()
 	quit(0)
+
+
+# --- Where the marks set their colour ---------------------------------------------------------
+
+# One row per MARK_SITES entry: {mark, file, material_line, srgb, colour_line, source}, or with "error" when its text is gone.
+# srgb is whether the material's function turns vertex_color_is_srgb on.
+static func mark_sites() -> Array:
+	var rows := []
+	for site: Dictionary in MARK_SITES:
+		var lines := FileAccess.get_file_as_string(site.file).split("\n")
+		var row := {"mark": site.mark, "file": String(site.file).trim_prefix("res://"), "source": site.source}
+		var at := _find(lines, site.material)
+		var write := _find(lines, site.colour)
+		if at < 0 or write < 0:
+			row["error"] = "the %s text is no longer in the file" % ("material" if at < 0 else "colour")
+			rows.append(row)
+			continue
+		var srgb := false
+		for i in range(at, lines.size()):
+			if i > at and (lines[i].begins_with("func ") or lines[i].begins_with("static func ")):
+				break
+			srgb = srgb or lines[i].contains("vertex_color_is_srgb = true")
+		row["material_line"] = at + 1
+		row["srgb"] = srgb
+		row["colour_line"] = write + 1
+		rows.append(row)
+	return rows
+
+
+static func _find(lines: PackedStringArray, spec: Array) -> int:
+	var from := 0
+	if not String(spec[0]).is_empty():
+		from = -1
+		for i in lines.size():
+			if lines[i].contains(spec[0]):
+				from = i
+				break
+		if from < 0:
+			return -1
+	for i in range(from, lines.size()):
+		if lines[i].contains(spec[1]):
+			return i
+	return -1
+
+
+func _print_sites() -> int:
+	var rows := mark_sites()
+	var bad := 0
+	for row: Dictionary in rows:
+		if row.has("error"):
+			bad += 1
+			print("MARK %s  %s  %s" % [row.mark, row.file, row.error])
+		else:
+			print("MARK %s  material %s:%d (srgb %s)  colour %s:%d  from %s" % [row.mark, row.file, row.material_line,
+				"on" if row.srgb else "off", row.file, row.colour_line, row.source])
+	if not out.is_empty():
+		DirAccess.make_dir_recursive_absolute(out)
+		var file := FileAccess.open(out.path_join("mark_sites.json"), FileAccess.WRITE)
+		if file != null:
+			file.store_string(JSON.stringify(rows, "\t"))
+	return 1 if bad > 0 else 0
+
+
+# --- The marks' own colours -------------------------------------------------------------------
+
+func _marks_only() -> void:
+	var rows := await _mark_swatches()
+	var bad := 0
+	for row: Dictionary in rows:
+		bad += 0 if row.ok else 1
+		print("MARKSWATCH %s  srgb %s%s  tone %s  plain %s  drawn %s  CIE76 %.1f  %s" % [row.mark, "on" if row.srgb else "off",
+			" (planted off)" if row.planted else "", row.tone, str(row.plain), str(row.drawn), row.de, "ok" if row.ok else "WASHED OUT"])
+	var file := FileAccess.open(out.path_join("marks.json"), FileAccess.WRITE)
+	if file != null:
+		file.store_string(JSON.stringify({"method": RenderingServer.get_current_rendering_method(),
+			"adapter": RenderingServer.get_video_adapter_name(), "plant_mark": _plant_mark, "max_de": MARK_DE_MAX, "rows": rows}, "\t"))
+		file.close()
+	quit(1 if bad > 0 else 0)
+
+
+# One row per mark: its tone as a plain material, then written into a mesh with the switch its material line sets
+# (an additive mark at half strength over charcoal, both columns). {mark, srgb, planted, tone, plain, drawn, de, ok}.
+func _mark_swatches() -> Array:
+	var sites := mark_sites()
+	var stage := Node3D.new()
+	stage.name = "MarkSwatches"
+	root.add_child(stage)
+	var environment := Environment.new()
+	environment.background_mode = Environment.BG_COLOR
+	environment.background_color = Color(0.5, 0.5, 0.5)
+	var world := WorldEnvironment.new()
+	world.environment = environment
+	stage.add_child(world)
+	var rows := MARK_SITES.size()
+	var camera := Camera3D.new()
+	camera.projection = Camera3D.PROJECTION_ORTHOGONAL
+	camera.size = float(rows) + 1.0
+	camera.position = Vector3(0.5, (rows - 1) * 0.5, 5.0)
+	stage.add_child(camera)
+	camera.make_current()
+	var cells := []
+	for i in MARK_SITES.size():
+		var site: Dictionary = MARK_SITES[i]
+		var row: Dictionary = sites[i]
+		var planted: bool = String(site.mark) == _plant_mark
+		var srgb: bool = bool(row.get("srgb", false)) and not planted
+		var add: bool = site.add
+		var tone: Color = Color(site.tone, GLOW_ALPHA) if add else Color(site.tone, 1.0)
+		var y := float(rows - 1 - i)
+		if add:
+			for x in 2:
+				_quad(stage, Palette.CHARCOAL, false, false, Vector2(x, y), false, 1.0, -0.1)
+		_quad(stage, tone, false, false, Vector2(0.0, y), add, 0.6 if add else 0.9)
+		_quad(stage, tone, true, srgb, Vector2(1.0, y), add, 0.6 if add else 0.9)
+		cells.append({"mark": site.mark, "srgb": srgb, "planted": planted, "tone": (site.tone as Color).to_html(false), "y": y})
+	await _frames(6)
+	await RenderingServer.frame_post_draw
+	var image := root.get_texture().get_image()
+	if not out.is_empty():
+		image.save_png(out.path_join("marks-swatches.png"))
+	var scale := Vector2(image.get_size()) / root.get_visible_rect().size
+	var result := []
+	for cell: Dictionary in cells:
+		var plain := image.get_pixelv(Vector2i(camera.unproject_position(Vector3(0.0, cell.y, 0.0)) * scale))
+		var drawn := image.get_pixelv(Vector2i(camera.unproject_position(Vector3(1.0, cell.y, 0.0)) * scale))
+		var de := Bars.cie76(plain, drawn)
+		cell.erase("y")
+		cell.merge({"plain": _rgb(plain), "drawn": _rgb(drawn), "de": snappedf(de, 0.1), "ok": de <= MARK_DE_MAX})
+		result.append(cell)
+	stage.free()
+	return result
 
 
 # --- Swatches ---------------------------------------------------------------------------------

@@ -6,15 +6,25 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 44, main 579fdc85, #1179 |
-| Open stage | stage/alpha-w45 |
-| Live board | #1180 |
-| Red team | line-rider |
-| Compare against | artifacts/local/gate/w44-923c46e2/ on the Mac Studio (published on branch scratch/gate-receipts-w44-923c46e2) |
+| Last promotion | wave 45, main 16963bef, #1185 |
+| Open stage | stage/alpha-w46 |
+| Live board | #1186 |
+| Red team | speedrunner |
+| Compare against | artifacts/local/gate/w45-dc88e552/ on the Mac Studio (published on branch scratch/gate-receipts-w45-dc88e552) |
 
 The board is the GitHub issue in the table. It also holds the file fences of the open pull requests. The stage log (`git log --first-parent origin/stage/alpha-w<N>`) is the stack queue. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch. The Gate updates the table as its first commit on a new stage: `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` (the red team persona rotates by itself).
 
-## Now (22 Nov 2026, wave 45 closing)
+## Now (25 Nov 2026, wave 46 fast-closing under ruling eo)
+
+**Wave 46 closes fast on the Mac Studio (25 Nov) under [ruling eo](DECISIONS.md)** (approved by Andrew for active multi-wave development before Waves 47-50+) after stacking Wave 46A/46B (`#1264`–`#1276`, PR `#1278` `W46-ANIM-VFX-FLAIR`, and PR `#1277` `W46-S1` World 1 calibration):
+- **Wave 46A stacked units (`#1264`–`#1276` -> `892332498`):** Sound V4 arbiter/DJ, poteto perf enhancements, Spillway/Flume park calibration prep, pilot cutaway weapons/VFX/model passes, `boss.gd` & combat fixes, and Wave 46A gate cleanup.
+- **PR #1278 (`W46-ANIM-VFX-FLAIR` -> `d2d7677a5`):** 3D/VFX/animation flair reviewed `VERDICT: PASS` (Gemini 4 Neon High) and stacked cleanly (`11/11` focused tests, `sketch:lint`, `check:docs`, `node-tests --shuffle`).
+- **PR #1277 (`W46-S1` World 1 calibration -> `25580c9ae`):** Dam/Flume/Brindle calibration (`warden_plating 90 -> 105`, slow-only `DAM_VENT` / `MELTDOWN` splashes & sear, `LINE_PAY 0.7 -> 0.60`, heft cap `2.2`, Brindle crane teardown + `mass < 1.0` damage fix, and `park_reactor_repeat_test.gd` deterministic `seed(1)` + hull top-up + `>= 1.5x` cycle parity), reviewed `VERDICT: PASS` (Gemini 4 Neon High). Note: unverified commit `93a09edcf` on `origin/w46/s1-world1-calibration` was intentionally excluded.
+- **Cleared posture ledger rows (`KNOWN-FAILING.tsv`):** `posture_bands_test`, `posture_bands_reactor_test` (`3.19x` Linux / `2.79x` Mac, grown `28.9 s`), and `posture_bands_flume_test` all passed on both Mac Studio (`ba46f103a`) and Linux `ahana` (`ba46f103a`) and are removed from [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv). (`run_tier_test`, `bot_fairness_test`, `stage_modifier_test`, and `park_reactor_fight_test` remain tracked on [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv).)
+- **48-seed World 1 band baseline on Linux `ahana` (`w46-s1-ba46f103`, 1,104 jobs on `ba46f103a`):** `w1` 100% green (`6.3% / 58.3% / 97.9% / 97.9%`), `warden-fairness` 0 failures across all 21 pools, `strong-build-shows` PASS, `novice-deaths` PASS, `brindle-stop-tax` PASS. Four narrow tails remain open for Wave 47+: `w2:learner5` `72.9%` (band `30-60%`), `w2:expert` `83.3%` (floor `>=85%`), `brindle` 2 learner deaths `<45s`, and `brindle:expertTop` `95.8%` (floor `>=97%`, with `w1clear:learner5` dam `113.6% > brindle 97.7%`).
+- **Fast dev-wave promotion (`ruling eo`):** Multi-hour Sitting Gate ceremonies (second 48-seed sweep, `E4-05` whole-run PC film, `run_tier_test` hash re-pin, and 35-row Sitting Gate harvest) are skipped between dev waves until a human playtest sitting or milestone build.
+
+### Earlier (22 Nov 2026, wave 45 closing)
 
 **Wave 45 closes on the Mac Studio (22 Nov)** after stacking every approved wave 45 unit (rulings `ef`–`ej`), eight live-TLC formal models, and World 1 exploration/polish hardening on `stage/alpha-w45` (`fc8507686..aac84da9f`):
 - **Hygiene & authored diversity:** W45-A (`d679c682f`, flood post-`live_s` stall, `edge_markers` fixes, CI promotion cap, 23 Nov ledger triage) and W45-B1 (`9e788ad40`, `storm_lattice`, `linked_spiral`, `thermal_shock`, `glacier_hull`, `fan_spread`, `helix_drill` wired into drop pools).

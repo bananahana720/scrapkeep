@@ -1,6 +1,0 @@
-bench-climb knocked>=3 kinematic	scripted 5/20 [0.11, 0.47]	random 19/20 [0.76, 0.99]	random-scripted 0.70 [0.41, 0.84]
-bench-climb ram>=1 kinematic	scripted 1/20 [0.01, 0.24]	random 10/20 [0.30, 0.70]	random-scripted 0.45 [0.18, 0.65]
-pillar-weave gates>=2 kinematic	scripted 0/20 [0.00, 0.16]	random 19/20 [0.76, 0.99]	random-scripted 0.95 [0.70, 0.99]
-bench-climb knocked>=3 rigid	scripted 1/20 [0.01, 0.24]	random 1/20 [0.01, 0.24]	random-scripted 0.00 [-0.19, 0.19]
-bench-climb ram>=1 rigid	scripted 0/20 [0.00, 0.16]	random 2/20 [0.03, 0.30]	random-scripted 0.10 [-0.08, 0.30]
-pillar-weave gates>=2 rigid	scripted 6/20 [0.15, 0.52]	random 18/20 [0.70, 0.97]	random-scripted 0.60 [0.30, 0.77]

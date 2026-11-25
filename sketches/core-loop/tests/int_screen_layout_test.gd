@@ -12,6 +12,8 @@ const AimReticle := preload("res://src/ui/aim_reticle.gd")
 # Integration I2, the screen layout from the first windowed visual QA pass:
 #   - the four bands (top, toasts, prompts, bottom) never overlap at 1600x900 or
 #     1280x720, and every HUD piece sits inside its own band at both sizes;
+#   - on the 1600x900 canvas no two bottom pieces overlap, the cog wallet and the chain counter
+#     included, with every gauge shown, Moss's hook pinned on the wallet and four tubes on the rail;
 #   - three identical toasts show once, and the band holds one (v2: the newest wins);
 #   - a reward gate's name is a plate on its own gate (tests/reward_gate_nameplate_test.gd holds its
 #     rules), and a prompt whose anchor stands high above the camera is placed inside the prompts band;
@@ -126,7 +128,36 @@ func _check_pieces() -> void:
 			_report("hud pieces %dx%d%s" % [size.x, size.y, " with the stage card" if card else ""], outside.is_empty(),
 				"every HUD piece inside its band; outside: %s" % [outside])
 	_hud._restart.set_fraction(0.0)
+	_check_bottom_apart()
 	_hud.layout(_hud._screen_size())
+
+
+# Every bottom piece against every other on the canvas a window draws (stretch keep), quiet and crowded.
+func _check_bottom_apart() -> void:
+	var size := Vector2(1600.0, 900.0)
+	var tubes := []
+	for i in 4:
+		tubes.append({"id": "t%d" % i, "filament": "heat", "seconds_left": 8.0, "seconds_total": 12.0})
+	for crowded in [false, true]:
+		_hud._armor.visible = crowded
+		_hud._companion.visible = crowded
+		_hud._cogs.set_hook(3 if crowded else 0)
+		_hud.chain_counter.visible = crowded
+		_hud.layout(size)
+		_hud.nixie_rail.set_rows(tubes if crowded else [])
+		var pieces: Array = _hud.piece_rects()["bottom"]
+		var clash := []
+		for i in pieces.size():
+			for j in range(i + 1, pieces.size()):
+				if (pieces[i] as Rect2).intersects(pieces[j]):
+					clash.append([pieces[i], pieces[j]])
+		var listed: bool = pieces.has(Hud._rect_of(_hud._cogs)) and pieces.has(Hud._rect_of(_hud.chain_counter))
+		_report("bottom pieces apart%s" % (", every gauge, hook pinned, four tubes" if crowded else ""), clash.is_empty() and listed
+			and pieces.size() == (8 if crowded else 5), "%d pieces, wallet and chain counter listed %s; overlaps %s" % [pieces.size(), listed, clash])
+	_hud.nixie_rail.clear()
+	_hud._cogs.set_hook(0)
+	_hud._companion.visible = false
+	_hud.chain_counter.visible = false
 
 
 func _check_toasts() -> void:

@@ -26,6 +26,7 @@ const ParkProps := preload("res://src/presentation/park_props.gd")
 const AmbientLife := preload("res://src/presentation/ambient_life.gd")
 const WorkMachines := preload("res://src/presentation/work_machines.gd")
 const SiteMarkers := preload("res://src/presentation/site_markers.gd")
+const ConduitCable := preload("res://src/presentation/conduit_cable.gd")
 const Parts := preload("res://src/build/parts.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -80,6 +81,8 @@ var park_props: Node3D
 var ambient_life: Node3D
 var work_machines: Node3D
 var site_markers: Node3D
+# The Warden's command cables, one per gate pip, drawn on the park's ground (design-v3/WAYFINDING.md section 3).
+var conduit_cable: Node3D
 var title_stage: Node
 var ui_hidden := false
 # Presentation shows the discovery banner itself. Set false if the HUD shows its own.
@@ -162,6 +165,9 @@ func setup(ctx_ref) -> void:
 	site_markers = SiteMarkers.new()
 	add_child(site_markers)
 	site_markers.setup(ctx)
+	conduit_cable = ConduitCable.new()
+	add_child(conduit_cable)
+	conduit_cable.setup(ctx, site_markers)
 	wire_optional()
 	GraphicsPreset.register_dressing_host(self)
 	if not get_tree().node_added.is_connected(_on_node_added):

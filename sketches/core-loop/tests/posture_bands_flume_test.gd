@@ -127,12 +127,17 @@ const WALL_S := 1100.0
 # after the clamp the same, 0.5 s over the 15 s floor; campers never break. The Linux 26.5 / 18.5 / 18.5 stay as they
 # were but are stale: this stage carries W1-31 (flume spawn interval x0.7, PR 1101), recorded on no Linux machine yet;
 # re-read them on Linux before relying on them there.
-const EXPECT_SMALL_S := 26.5
-const EXPECT_SMALL_S_MAC := 24.71
-const EXPECT_GROWN_S := 18.5
-const EXPECT_GROWN_S_MAC := 15.54
-const EXPECT_GROWN_OPEN_S := 18.5
-const EXPECT_GROWN_OPEN_S_MAC := 15.54
+# 2026-11-25 (W46-S1, b4381b48a, Flume LINE_PAY 0.70 -> 0.60, heft share capped at grown 2.2, slow-only jet/overheat):
+# Linux (ahana): small [120.0, 35.63, 120.0, 36.85, 120.0] median 120.0 s, grown [29.1, 22.49, 28.99, 120.0, 34.15]
+# median 29.1 s (4/5 broke, inside 15-35 s), ratio 4.12, campers 0.
+# Mac Studio: small [120.0, 120.0, 120.0, 34.06, 38.76] median 120.0 s, grown [21.19, 30.1, 30.82, 33.49, 24.01]
+# median 30.1 s (5/5 broke, inside 15-35 s), ratio 3.99, campers 0.
+const EXPECT_SMALL_S := 120.0
+const EXPECT_SMALL_S_MAC := 120.0
+const EXPECT_GROWN_S := 29.10
+const EXPECT_GROWN_S_MAC := 30.10
+const EXPECT_GROWN_OPEN_S := 29.10
+const EXPECT_GROWN_OPEN_S_MAC := 30.10
 const TOLERANCE := 0.10
 
 

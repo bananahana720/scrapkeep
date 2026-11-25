@@ -63,6 +63,8 @@ const EXPECTED_LAYERS := {
 	# 2026-11-21 W45-B2 U7: the five verb items are effect rows that read no weapon stat (global).
 	"backwash": "global", "barbed_reel": "global", "faultline_cap": "global", "second_bell": "global",
 	"long_leash": "global",
+	# 2026-11-24 W46 E2-09: Brass Drum and Heavy Breech are pure-data pattern items (local).
+	"brass_drum": "local", "heavy_breech": "local",
 }
 const FIXED_CHECKS := 29
 const FITTED_PARTS := ["hot_rivets", "hot_rivets", "slag_rounds", "rivet_plating", "quick_spool",
@@ -149,7 +151,7 @@ func _esc_setup() -> void:
 	workshop.armed = true
 	var def = ClassDef.all()[0]
 	workshop.pick.open(def.id, 2, UpgradeTree.nodes(def.id).slice(0, 2), [], def.color)
-	_esc_view = workshop.pick.cards()[0].find_children("BuildReadout", "", true, false)[0]
+	_esc_view = workshop.pick.parts_button()
 	_esc_view.pressed.emit()
 
 
@@ -415,8 +417,10 @@ func _check_tree() -> void:
 	_report("depth table", rows.size() == 3 and rows.map(func(r): return r["depth"]) == [2, 3, 4]
 		and rows.all(func(r): return r["depth"] == UpgradeTree.depth_cap(r["world"]))
 		and "2" in card.depth_text() and "3" in card.depth_text() and "4" in card.depth_text(), card.depth_text())
-	var views: Array = card.find_children("BuildReadout", "", true, false)
-	_report("build screen wired", views.size() == 1, "tree card carries clickable Build readout")
+	# One parts button on the pick screen (PF-01), not a "Build" button on each card.
+	var views: Array = workshop.pick.find_children("BuildReadout", "", true, false)
+	_report("build screen wired", views.size() == 1 and views[0] == workshop.pick.parts_button() and card.find_children("BuildReadout", "", true, false).is_empty(),
+		"the pick screen carries one clickable parts readout and the card none")
 	if views.size() == 1:
 		views[0].pressed.emit()
 		_report("live build opens", views[0].popup_visible() and views[0].snapshot()["parts"].size() > 0, views[0].visible_text())

@@ -111,7 +111,8 @@ func _run() -> void:
 	_player.fit_class(ClassDef.by_id(CLASS_ID))
 	await _ticks(30)
 	var build = _game.build
-	var r6 := ["r_juggernaut", "r_second_wind"]
+	# Re-pinned 2026-11-24 (E2-09, PILOT-CADENCE §6.2): R6 sits under Big Iron in World 1.
+	var r6 := ["r_big_iron", "r_second_wind"]
 
 	# Before a sprint x0.75; a real sprint start cancels; release restores.
 	_setup(r6, true, true)
@@ -158,7 +159,7 @@ func _run() -> void:
 	_release()
 
 	# No R6 (another node): stays x0.75 through a sprint.
-	_setup(["r_juggernaut"], true, true)
+	_setup(["r_big_iron"], true, true)
 	_sprint_start()
 	await _ticks(STEP_TICKS + 3)
 	_check("no R6 stays x0.75", _player.kit.sprinting and _is(0.75), _fmt())
@@ -177,8 +178,8 @@ func _run() -> void:
 	await _ticks(STEP_TICKS + 1)
 	_check("no shell after sprint x1.0", _is(1.0), _fmt())
 
-	# World-one profile off: R6 taken but the ratio stays x0.75 through a sprint.
-	_setup(r6, false, true)
+	# World-one profile off: R6 taken (under base root r_juggernaut) but the ratio stays x0.75 through a sprint.
+	_setup(["r_juggernaut", "r_second_wind"], false, true)
 	_sprint_start()
 	await _ticks(STEP_TICKS + 3)
 	_check("world-one off stays x0.75", _player.kit.sprinting and _is(0.75) and not build._second_wind_r6(),

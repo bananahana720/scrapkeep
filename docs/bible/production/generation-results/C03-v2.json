@@ -1,4 +1,0 @@
-{
-  "image_url": "[PNG payload preserved unmodified in C03-v2.png]",
-  "output_hint": "Generated images are saved to /home/andrew/.codex/generated_images/01a076ee-31a7-7fa1-bb16-196e0855520a as /home/andrew/.codex/generated_images/01a076ee-31a7-7fa1-bb16-196e0855520a/exec-86f3207b-d0bb-47ff-954d-c669381cdb53.png by default.\nIf you need to use a generated image at another path, copy it and leave the original in place unless the user explicitly asks you to delete it.\nThe generated image is already displayed to the user. There is no need to render it in the final response as a Markdown image or file link."
-}

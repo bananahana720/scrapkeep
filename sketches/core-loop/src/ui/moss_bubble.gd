@@ -100,6 +100,8 @@ var _calls_played := {}
 var _call := {}
 var _call_fresh := 0.0
 var _call_quiet := LoreRows.CALL_GAP_S
+# The physics frame on which the bubble last acted on the interact key (takes_interact).
+var _took_interact := -1000
 
 
 class ExchangeInput extends Node:
@@ -167,6 +169,7 @@ func _on_run_started(_class_id: String) -> void:
 	if mood == "call":
 		_clear_line()
 	_hello_due = 0
+	_took_interact = -1000
 	_zones_played.clear()
 	_intros_played.clear()
 
@@ -342,6 +345,8 @@ func _exchange_input(event: InputEvent) -> void:
 		return
 	if _intro_showing:
 		if event.is_action_pressed("cl_interact") or event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
+			if event.is_action_pressed("cl_interact"):
+				_took_interact = Engine.get_physics_frames()
 			_end_intro()
 		return
 	if _exchange.is_empty():
@@ -351,15 +356,36 @@ func _exchange_input(event: InputEvent) -> void:
 		# the beat as any spare key does (flourish_player.gd), and the hello comes back.
 		if _exchange_held:
 			return
+		_took_interact = Engine.get_physics_frames()
 		_advance_exchange()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("cl_fire") or event.is_action_pressed("cl_harpoon"):
 		_end_exchange()
 
 
+# Whether the interact key is this bubble's now (MG-10: the ball never refuses a press it takes):
+# while an intro or an unheld exchange line is up, and on the physics frame the bubble acted on a
+# press and the one after, since a press that closes the last line has already cleared it by the
+# time the ball reads the key. A call-in, a bark or a beat never reads the key.
+func takes_interact() -> bool:
+	return _intro_showing or (not _exchange.is_empty() and not _exchange_held) \
+			or Engine.get_physics_frames() - _took_interact <= 1
+
+
 # Ends a zone-entry exchange early, as the fire and hook keys do. Public so a test can clear it.
 func dismiss_exchange() -> void:
 	_end_exchange()
+
+
+# Moss lets go of all he has to say: the hello that is up, held or waiting its turn, an intro up
+# or queued, a call waiting, and the line on screen. None of it comes back this stage. Public so a
+# test or a capture tool can silence Moss through one call.
+func stand_down() -> void:
+	_hello_due = 0
+	_call = {}
+	_end_exchange(false)
+	_end_intro()
+	hush()
 
 
 # --- Call-ins ---------------------------------------------------------------------------------
@@ -609,21 +635,24 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 		_tween.kill()
 	_tween = create_tween().set_parallel(true)
 	_tween.tween_property(self, "modulate:a", 1.0, 0.12).set_ease(Tween.EASE_OUT)
+	# Moss is a Keeper: his bubble moves on the Keeper's row, and with less motion it comes up whole and
+	# straight, with no turn, squash or overshoot.
+	var still := reduced_motion
 	match mood_now:
 		"restart":
-			_spin = -0.35
-			_pop = 0.7
+			_spin = 0.0 if still else -0.35
+			_pop = 1.0 if still else 0.7
 			_tween.tween_property(self, "_spin", 0.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "_pop", 1.0, 0.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "shown_exasperation", 0.0, 0.45)
 		"relent":
 			_spin = 0.0
-			_pop = 0.6
-			_tween.tween_property(self, "_pop", 1.0, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			_pop = 1.0 if still else 0.6
+			_tween.tween_property(self, "_pop", 1.0, 0.4).set_trans(UiTokens.hand(UiTokens.Hand.KEEPER).trans).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "shown_exasperation", 0.0, 0.3)
 		_:
 			_spin = 0.0
-			_pop = 0.9 if grumbles else 0.96
+			_pop = 1.0 if still else (0.9 if grumbles else 0.96)
 			_tween.tween_property(self, "_pop", 1.0, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(self, "shown_exasperation", exasperation, 0.2).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 

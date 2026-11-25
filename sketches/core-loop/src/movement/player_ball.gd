@@ -66,6 +66,8 @@ const DRY_FIRE_HOLD := 0.25
 const LET_GO_HOLD := 0.15
 const BROKE_HOLD := 0.3
 const LANDS_HOLD := 0.1
+# Planar speed (m/s) at or under which a grounded ball has nothing for the brake to slow (MG-10).
+const REFUSE_REST := 0.5
 # A line or mount on a piece's face counts as on the piece within this many metres when it breaks.
 const SHATTER_MARGIN := 0.25
 
@@ -106,6 +108,9 @@ var hulk_launch := Callable()
 # E's first claim (world's interact system, claims(face_in_reach: bool) -> bool): true
 # when an interactable takes this press, so it never also plants a pylon.
 var interact_claim := Callable()
+# E's other reader, the talk bubble (the HUD wires it, () -> bool): true while a line on screen
+# takes the interact key, so a press that turns it is never refused.
+var talk_claim := Callable()
 # The arc slam's tagged faces: [{point, left}].
 var face_tags: Array = []
 var _cc_ignored_at := {}
@@ -240,6 +245,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 		chain.reset()
 		redline.set_mode(tuning.option("heat"))
 		redline.reset_counts()
+		tree.world_one = tuning.world_one()
 		tree.open_checkpoint())
 	# The workshop visits after stages 1 to 3 each open one more pick: world's bay opens
 	# it on entry, or at the stage's clear when the bay was skipped (world.gd).
@@ -1122,12 +1128,25 @@ func _read_ctrl() -> void:
 			_fail("haul", _haul_refusal())
 		elif on_body:
 			_fail("haul", "committed")
+		elif not kit.hooked and _ctrl_idle():
+			_fail("haul", "no_line")
 	if line_stands():
 		_ctrl_claimed = true
 	if not intent.brake_held:
 		_ctrl_claimed = false
 	if _ctrl_claimed:
 		intent.brake_held = false
+
+
+# Ctrl with no line has nothing to do (MG-10): the ball sits on the ground below REFUSE_REST with
+# nothing to brake, or it is in the air with no slam to start. Held, planted or in the set piece,
+# the hold owns the press. The refusal is a cue only; the brake still reads the key as before.
+func _ctrl_idle() -> bool:
+	if Augments.holding(kit) or in_set_piece():
+		return false
+	if not state.grounded:
+		return not kit.on(Augments.SLAM)
+	return planar_velocity().length() <= REFUSE_REST
 
 
 func _emit_line(id: String, target: Node3D, at: Vector3, cause := "", hold := 0.0) -> void:
@@ -1216,33 +1235,25 @@ func _publish_line(delta: float) -> void:
 func _route_interact() -> void:
 	if not intent.mount_pressed or kit.mounted or mobility_started() or not interact_claim.is_valid():
 		return
-	if interact_claim.call(kit.on(Augments.PYLON) and face_in_reach()):
+	var face: bool = kit.on(Augments.PYLON) and face_in_reach()
+	if interact_claim.call(face):
 		intent.mount_pressed = false
 		intent.interact_pressed = true
+	elif not _frozen and not face and not (talk_claim.is_valid() and talk_claim.call()):
+		# Nothing in reach takes E and no face could hold a pylon (MG-10): a quiet refusal.
+		_fail("interact", "nothing")
 
 
 func mobility_started() -> bool:
 	return (kit.hooked and kit.on(Augments.PYLON)) or kit.plant_time > 0.0 or kit.slingshot.charging
 
 
-# The pylon's own test (augments.gd _mount_spot): a steep face within a ball's reach,
-# or the wall the hook is in when the ball is close to it.
+# The pylon's own test (Augments.mount_face, the one the mount asks): a steep face within the
+# ball's reach, or the wall the hook is in when the ball is close to it, at the kit's mount_reach.
 func face_in_reach() -> bool:
-	var origin := ball_position()
-	if kit.hooked and kit.on(Augments.GRAPPLE) and not kit.on_body and kit.anchor_normal != Vector3.ZERO \
-			and absf(kit.anchor_normal.y) < Augments.FACE_MAX_TILT and origin.distance_to(kit.anchor) <= Augments.MOUNT_HOOK_REACH:
-		return true
 	if not is_inside_tree():
 		return false
-	var space := get_world_3d().direct_space_state
-	var reach: float = Tuning.RADIUS + Augments.FACE_REACH
-	for i in Augments.FACE_RAYS:
-		var angle := TAU * float(i) / float(Augments.FACE_RAYS)
-		var dir := Vector3(cos(angle), 0.0, sin(angle))
-		var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK))
-		if not hit.is_empty() and absf((hit["normal"] as Vector3).y) < Augments.FACE_MAX_TILT:
-			return true
-	return false
+	return not Augments.mount_face(kit, get_world_3d().direct_space_state, ball_position()).is_empty()
 
 
 # Mass-S: under --world-one-builds a pilot who took the depth-1 pick has the mass launch verb.

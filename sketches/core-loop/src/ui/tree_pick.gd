@@ -4,12 +4,16 @@ const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const TreeCard := preload("res://src/ui/tree_card.gd")
-const TreeCrumb := preload("res://src/ui/tree_crumb.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
+const BuildReadout := preload("res://src/ui/build_readout.gd")
+const Parts := preload("res://src/build/parts.gd")
+const Icons := preload("res://src/ui/icons.gd")
 
-# The upgrade pick: two cards and the path so far, over a veil. It only shows and
-# animates; workshop.gd decides when it opens and what a choice does. A click, a number
+# The upgrade pick: two cards over a veil, and from the second pick on, the run's parts as one
+# button of their icons beside Later. It only shows and animates; workshop.gd decides when it
+# opens and what a choice does. No tree diagram and no "Build" word: a first-timer could read
+# neither (PF-01); the slot's depth notches on each card carry how deep the pick is. A click, a number
 # key, or left and right plus confirm all land on the same card. Transitions never wait:
 # the cards take input the frame they appear, and a closing screen gives up focus and
 # the mouse at once, so a transition cut short leaves nothing focused behind it.
@@ -23,6 +27,9 @@ const DROP := 26.0
 const STAGGER := 0.06
 const POP := 1.12
 const CARD_GAP := 36.0
+# The parts button shows at most this many part icons, then a count of the rest.
+const PART_ICONS := 6
+const PART_ICON := 26.0
 # Says the screen is a choice, in the crew's voice; the briefing's start pick answers it
 # (workshop.gd BRIEF_WORDS).
 const HEADING := "Rig your kit. Pick one."
@@ -42,9 +49,11 @@ var _hidden: Array = []
 # the queue survives a reopen and the toast fires once, after the veil is gone.
 var _taken_names: Array = []
 var _offered: Array = []
-var _crumb
 var _row: HBoxContainer
 var _later: Button
+var _parts: Button
+var _part_icons: HBoxContainer
+var _foot: HBoxContainer
 var _tween: Tween
 var _open := false
 # False from each open until the pad's first A or a focus move, so an A mashed as the
@@ -86,21 +95,39 @@ func _init() -> void:
 	_held_line.add_theme_color_override("font_color", Palette.AMBER)
 	_held_line.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_held_line)
-	_crumb = TreeCrumb.new()
-	_crumb.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_column.add_child(_crumb)
 	_row = HBoxContainer.new()
 	_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_row.add_theme_constant_override("separation", int(CARD_GAP))
 	_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_column.add_child(_row)
+	_foot = HBoxContainer.new()
+	_foot.alignment = BoxContainer.ALIGNMENT_CENTER
+	_foot.add_theme_constant_override("separation", int(CARD_GAP))
+	_foot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_column.add_child(_foot)
+	# The run's parts: the readout's own button, worn as the parts' icons instead of its word. A
+	# click opens the readout's page; its hover says how deep the picks go in each world.
+	_parts = BuildReadout.new()
+	_parts.text = ""
+	_parts.accessibility_name = "Parts"
+	_parts.tooltip_text = TreeCard.depth_sentence()
+	_parts.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_parts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_part_icons = HBoxContainer.new()
+	_part_icons.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_part_icons.alignment = BoxContainer.ALIGNMENT_CENTER
+	_part_icons.add_theme_constant_override("separation", UiTokens.GAP_XS)
+	_part_icons.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_parts.add_child(_part_icons)
+	_parts.visible = false
+	_foot.add_child(_parts)
 	_later = ChoiceButton.new("later", "key_esc", "Later")
 	_later.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_later.pressed.connect(func(): later.emit())
 	_later.mouse_entered.connect(func():
 		if not _later.disabled:
 			_later.grab_focus())
-	_column.add_child(_later)
+	_foot.add_child(_later)
 
 
 func _ready() -> void:
@@ -126,6 +153,11 @@ func later_button() -> Button:
 	return _later
 
 
+# The parts button: shown from the second pick on while the run holds a part.
+func parts_button() -> Button:
+	return _parts
+
+
 # Shows a pair. Reopening while open swaps the cards in place with the same drop.
 func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: Color) -> void:
 	_generation += 1
@@ -144,14 +176,52 @@ func open(class_id: String, pick_depth: int, nodes: Array, path: Array, color: C
 		var card := TreeCard.new(nodes[i], "key_%d" % (i + 1), color, pick_depth, _world_one(), _shell(), TreeCard.WorldOneCards.SET_PIECE_LINES, class_id)
 		card.pressed.connect(func(): chosen.emit(i))
 		_row.add_child(card)
-	_crumb.set_path(class_id, path, nodes.map(func(n): return n["id"]), color, _world_one())
-	# The tree diagram has nothing to show before the first pick; it comes in with the second.
-	_crumb.visible = not path.is_empty()
+	_show_parts(pick_depth)
 	_set_live(true)
 	var first: Array = cards()
 	if not first.is_empty():
 		first[0].grab_focus()
 	_play_in()
+
+
+# The parts button's face: one icon a held part, in the order they were taken, up to PART_ICONS and
+# then the count of the rest. Hidden on a first pick and while the run holds nothing.
+func _show_parts(pick_depth: int) -> void:
+	for child in _part_icons.get_children():
+		_part_icons.remove_child(child)
+		child.queue_free()
+	var held := _held_parts()
+	_parts.visible = pick_depth > 1 and not held.is_empty()
+	if not _parts.visible:
+		return
+	for id in held.slice(0, PART_ICONS):
+		var icon_id := Parts.icon_of(String(id))
+		var icon := TextureRect.new()
+		icon.texture = Icons.texture(icon_id)
+		icon.modulate = Icons.tint(icon_id, Palette.SAND)
+		icon.custom_minimum_size = Vector2(PART_ICON, PART_ICON)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_part_icons.add_child(icon)
+	if held.size() > PART_ICONS:
+		var more := Label.new()
+		more.text = "+%d" % (held.size() - PART_ICONS)
+		more.add_theme_font_override("font", UiFonts.bold())
+		more.add_theme_font_size_override("font_size", UiTokens.CAPTION)
+		more.add_theme_color_override("font_color", Palette.SAND)
+		more.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_part_icons.add_child(more)
+	var shown := mini(held.size(), PART_ICONS) + (1 if held.size() > PART_ICONS else 0)
+	_parts.custom_minimum_size = Vector2(maxf(UiTokens.TARGET, 20.0 + shown * (PART_ICON + 6.0)), maxf(UiTokens.TARGET, PART_ICON + 18.0))
+
+
+func _held_parts() -> Array:
+	var host = get_parent()
+	if host == null or host.get("game") == null or host.game.get("run") == null:
+		return []
+	return host.game.run.parts
 
 
 # --world-one-builds, read through the workshop this screen sits under (its game's tuning);
@@ -277,6 +347,7 @@ func _set_live(live: bool) -> void:
 	_veil.mouse_filter = Control.MOUSE_FILTER_STOP if live else Control.MOUSE_FILTER_IGNORE
 	var buttons: Array = cards()
 	buttons.append(_later)
+	buttons.append(_parts)
 	for button in buttons:
 		(button as BaseButton).disabled = not live
 		(button as Control).mouse_filter = Control.MOUSE_FILTER_STOP if live else Control.MOUSE_FILTER_IGNORE
@@ -290,12 +361,10 @@ func _play_in() -> void:
 	_veil.modulate.a = maxf(_veil.modulate.a, 0.0)
 	_tween = create_tween().set_parallel(true)
 	_tween.tween_property(_veil, "modulate:a", 1.0, FADE_IN).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_crumb.modulate.a = 0.0
-	_tween.tween_property(_crumb, "modulate:a", 1.0, FADE_IN).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_heading.modulate.a = 0.0
 	_tween.tween_property(_heading, "modulate:a", 1.0, FADE_IN).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	_later.modulate.a = 0.0
-	_tween.tween_property(_later, "modulate:a", 1.0, FADE_IN).set_delay(STAGGER * 2.0)
+	_foot.modulate.a = 0.0
+	_tween.tween_property(_foot, "modulate:a", 1.0, FADE_IN).set_delay(STAGGER * 2.0)
 	var list := cards()
 	for i in list.size():
 		var card: Control = list[i]
@@ -320,14 +389,15 @@ func _play_out(chosen_index: int) -> void:
 		var card: Control = list[i]
 		_nudge(card, 0.0)
 		if i == chosen_index:
-			_tween.tween_property(card, "scale", Vector2.ONE * POP, FADE_OUT * 0.45).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			# The Keeper's pop, held still with less motion: the taken edge alone says which was picked.
+			var pop := 1.0 if UiTokens.reduced_motion else POP
+			_tween.tween_property(card, "scale", Vector2.ONE * pop, FADE_OUT * 0.45).set_trans(UiTokens.hand(UiTokens.Hand.KEEPER).trans).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(card, "modulate:a", 0.0, FADE_OUT).set_delay(FADE_OUT * 0.45).set_ease(Tween.EASE_IN)
 		else:
 			_tween.tween_property(card, "modulate:a", 0.0, FADE_OUT).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
 	_tween.tween_property(_veil, "modulate:a", 0.0, FADE_OUT * 1.45).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	_tween.tween_property(_crumb, "modulate:a", 0.0, FADE_OUT).set_ease(Tween.EASE_IN)
 	_tween.tween_property(_heading, "modulate:a", 0.0, FADE_OUT).set_ease(Tween.EASE_IN)
-	_tween.tween_property(_later, "modulate:a", 0.0, FADE_OUT).set_ease(Tween.EASE_IN)
+	_tween.tween_property(_foot, "modulate:a", 0.0, FADE_OUT).set_ease(Tween.EASE_IN)
 	_tween.chain().tween_callback(func():
 		if generation == _generation and not _open:
 			visible = false

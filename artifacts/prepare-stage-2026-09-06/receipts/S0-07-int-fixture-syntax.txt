@@ -1,8 +1,0 @@
-parse ok native/proofs/tadr-004/fixtures/interruption_ambiguous/save.json
-parse ok native/proofs/tadr-004/fixtures/interruption/save.json
-parse ok native/proofs/tadr-004/fixtures/lifecycle/older.json
-parse ok native/proofs/tadr-004/fixtures/lifecycle/save.json
-parse ok native/proofs/tadr-004/fixtures/lifecycle/terminal.json
-parse ok native/proofs/tadr-004/fixtures/newer-version/save.json
-parse ok native/proofs/tadr-004/fixtures/interruption_ambiguous/save.json.tmp-txn-0004
-parse FAIL native/proofs/tadr-004/fixtures/interruption/save.json.tmp-txn-0004

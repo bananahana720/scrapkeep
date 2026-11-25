@@ -88,6 +88,13 @@ const TABLE := {
 	"halo_rig": {"maker": "highdraft_roosts", "touches": "fire", "base": "pattern", "rarity": "uncommon", "stack": "linear", "cap": 3, "tags": ["split"],
 		"verb": "Fires shots in a wide ring", "text": "Adds 6 ring bolts at 55% damage",
 		"patterns": {"halo": 1}},
+	# Wave 46 E2-09 (END-TO-END-EXPANSION-PLAN.md §4.7): pure-data weapon cadence transformers.
+	"brass_drum": {"maker": "fleet_surplus", "touches": "fire", "base": "pattern", "rarity": "uncommon", "stack": "capped", "cap": 2, "tags": ["speed", "split"],
+		"verb": "More rounds, faster fire", "text": "Adds 4 rounds, +35% fire rate, 72% damage",
+		"patterns": {"brass_drum": 1}},
+	"heavy_breech": {"maker": "redjaw", "touches": "fire", "base": "pattern", "rarity": "rare", "stack": "capped", "cap": 1, "tags": ["kinetic", "mass"],
+		"verb": "Heavy slow shots break props", "text": "55% rate, 180% damage, 2x knock, breaks props",
+		"patterns": {"heavy_breech": 1}},
 
 	# Designed happy accidents (5): rare, capped, fun because they are bounded.
 	"scrap_geyser": {"maker": "spillway_works", "base": "utility", "rarity": "rare", "trigger": "on_pickup", "stack": "capped", "cap": 1,

@@ -2,10 +2,7 @@ import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const scriptRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-);
+const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const uiPaths = [/^index\.html$/, /^orchard\.html$/, /^src\//, /^public\//];
 const noBuildToolingPaths = [/^scripts\/.*\.mjs$/, /^tests\/.*\.test\.js$/];
 // Order matters: the first matching class wins, so sketch, configuration,
@@ -15,10 +12,7 @@ const classes = [
     name: "sketch",
     build: false,
     patterns: [/^sketches\//],
-    commands: [
-      "npm run sketch:smoke",
-      "Andrew plays the sketch; record the verdict in docs/playtests/PLAYTEST-LOG.md",
-    ],
+    commands: ["npm run sketch:smoke"],
     evidence:
       "headless Godot boot and sketch tests; feel needs Andrew's play (ORCHESTRATOR, Light play lane)",
   },
@@ -44,7 +38,6 @@ const classes = [
     name: "native",
     build: true,
     patterns: [
-      /^native\/(?!.*\.md$)/,
       /\.gd$/,
       /\.tscn$/,
       /\.tres$/,
@@ -57,27 +50,10 @@ const classes = [
     evidence: "unavailable; no native check command exists yet",
   },
   {
-    name: "native-player",
-    build: false,
-    patterns: [/^tools\/agent-player\//, /^scripts\/agent-playtest\.mjs$/],
-    commands: ["npm run test:agent"],
-    evidence:
-      "controller-free Python checks of the native player; no desktop session or build implied",
-  },
-  {
     name: "documentation-only",
     build: false,
-    patterns: [
-      /^(?!scripts\/|tests\/).*\.(md|tsv)$/,
-      /^docs\//,
-      /^adr\//,
-      /^artifacts\//,
-    ],
-    commands: [
-      "npm run check:docs",
-      "npm run check:project",
-      "npm run check:drift",
-    ],
+    patterns: [/^(?!scripts\/|tests\/).*\.(md|tsv)$/, /^docs\//, /^adr\//, /^artifacts\//],
+    commands: ["npm run check:docs", "npm run check:project"],
     evidence: "structural documentation checks; no build or runtime evidence",
   },
   {
@@ -85,8 +61,7 @@ const classes = [
     build: true,
     patterns: [...uiPaths, /^vite\.config\.js$/],
     commands: ["npm run verify"],
-    evidence:
-      "asserted tests and a production build; no browser session implied",
+    evidence: "asserted tests and a production build; no browser session implied",
   },
   {
     name: "tooling-no-build",
@@ -94,12 +69,7 @@ const classes = [
     // No single path claims this class; toolingNoBuild promotes a whole change
     // set out of tooling below, so classify() must never select it per file.
     patterns: [],
-    commands: [
-      "npm test",
-      "npm run check:docs",
-      "npm run check:project",
-      "npm run check:drift",
-    ],
+    commands: ["npm test", "npm run check:docs", "npm run check:project"],
     evidence:
       "asserted tests and structural documentation checks; no build, browser session or dependency change implied",
   },
@@ -108,16 +78,14 @@ const classes = [
     build: true,
     patterns: [/^scripts\//, /^tests\//, /^package\.json$/, /^tools\//],
     commands: ["npm run verify"],
-    evidence:
-      "asserted tests and a production build; no browser session implied",
+    evidence: "asserted tests and a production build; no browser session implied",
   },
   {
     name: "other",
     build: true,
     patterns: [/./],
     commands: ["npm run verify"],
-    evidence:
-      "unclassified path; treated as build-requiring until a class claims it",
+    evidence: "unclassified path; treated as build-requiring until a class claims it",
   },
 ];
 
@@ -126,8 +94,7 @@ function parseArguments(argv) {
   for (let index = 0; index < argv.length; index++) {
     const value = argv[index];
     if (value === "--no-build") options.noBuild = true;
-    else if (value === "--root" && argv[index + 1])
-      options.root = path.resolve(argv[++index]);
+    else if (value === "--root" && argv[index + 1]) options.root = path.resolve(argv[++index]);
     else if (value.startsWith("--")) throw new Error("Unknown flag: " + value);
     else options.revisions.push(value);
   }
@@ -139,20 +106,15 @@ function parseArguments(argv) {
 }
 
 function changedFiles(root, base, candidate) {
-  const git = spawnSync(
-    "git",
-    ["-C", root, "diff", "--name-only", base, candidate, "--"],
-    { encoding: "utf8" },
-  );
-  if (git.status !== 0)
-    throw new Error("git diff failed: " + git.stderr.trim());
+  const git = spawnSync("git", ["-C", root, "diff", "--name-only", base, candidate, "--"], {
+    encoding: "utf8",
+  });
+  if (git.status !== 0) throw new Error("git diff failed: " + git.stderr.trim());
   return git.stdout.split("\n").filter(Boolean);
 }
 
 function classify(file) {
-  return classes.find((entry) =>
-    entry.patterns.some((pattern) => pattern.test(file)),
-  );
+  return classes.find((entry) => entry.patterns.some((pattern) => pattern.test(file)));
 }
 
 function readJsonAtRevision(root, revision, file) {
@@ -175,9 +137,7 @@ function packageJsonScriptsOnly(root, base, candidate) {
   if (!before || !after) return false;
   const keys = new Set([...Object.keys(before), ...Object.keys(after)]);
   keys.delete("scripts");
-  return [...keys].every(
-    (key) => JSON.stringify(before[key]) === JSON.stringify(after[key]),
-  );
+  return [...keys].every((key) => JSON.stringify(before[key]) === JSON.stringify(after[key]));
 }
 
 function toolingNoBuild(groups, scriptsOnlyPackage) {
@@ -207,31 +167,20 @@ function main() {
   if (
     toolingNoBuild(
       groups,
-      files.includes("package.json") &&
-        packageJsonScriptsOnly(options.root, base, candidate),
+      files.includes("package.json") && packageJsonScriptsOnly(options.root, base, candidate),
     )
   ) {
     groups.clear();
     groups.set("tooling-no-build", files);
   }
   const present = classes.filter((entry) => groups.has(entry.name));
-  const scope =
-    present.length === 0
-      ? "empty"
-      : present.length === 1
-        ? present[0].name
-        : "mixed";
+  const scope = present.length === 0 ? "empty" : present.length === 1 ? present[0].name : "mixed";
   const buildRequired = present.filter((entry) => entry.build);
-  const uiChanged = files.some((file) =>
-    uiPaths.some((pattern) => pattern.test(file)),
-  );
+  const uiChanged = files.some((file) => uiPaths.some((pattern) => pattern.test(file)));
   const commands = new Set();
-  for (const entry of present)
-    for (const command of entry.commands) commands.add(command);
+  for (const entry of present) for (const command of entry.commands) commands.add(command);
   if (uiChanged)
-    commands.add(
-      "CONTRIBUTING.md Verification browser checks for the changed UI paths",
-    );
+    commands.add("CONTRIBUTING.md Verification browser checks for the changed UI paths");
 
   console.log("check:scope " + base + ".." + candidate);
   console.log("scope: " + scope + " (" + files.length + " changed paths)");

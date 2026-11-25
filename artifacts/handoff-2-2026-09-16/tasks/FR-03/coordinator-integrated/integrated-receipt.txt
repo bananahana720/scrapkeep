@@ -1,1 +1,0 @@
-integrated c9efb828a963bb3d01cf719d486c2a39be289b87 (no-ff merge of af43ab2c87dfb83ca629e45263c87c7585e6d3b7 into main at 655b747). check:docs exit 0; check:project exit 0; check:drift exit 0 (no DRIFT across 15 sections); HF-07a, HF-07b, HF-08, HF-09 retained checks exit 0 from copies; check:scope documentation-only.

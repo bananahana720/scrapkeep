@@ -51,6 +51,18 @@ static var _warned := {}
 static var _coloured := {}
 
 
+static func reset_for_tests() -> void:
+	if _cloud_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_cloud_task)
+		_cloud_task = -1
+	dir = DIR
+	_sky = null
+	_cloud = null
+	_cloud_image = null
+	_warned.clear()
+	_coloured.clear()
+
+
 # ---- Hook and environment ----
 
 static func is_highdraft(map) -> bool:

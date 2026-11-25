@@ -7,6 +7,7 @@ This folder is `ctx.spawner`. It owns the two class kits, the weapon pattern sys
 | File | Holds |
 | --- | --- |
 | `combat.gd` | the entry script: the spawner API, the pattern API for parts, the fire and special loop, the shoulder hook, the stage reset |
+| `weapon_driver.gd` | the weapon trigger, cadence, magazine/reload, charge/beat/window state machine and read-only reticle snapshot owned by `combat.gd` |
 | `pattern.gd` | the emission pattern Resource and the transformer catalogue |
 | `weapons.gd` | the base pattern per weapon, strike kinds, colours, overdrive and the pylon discharge |
 | `hitscan.gd` | the shared aim query every weapon reads |

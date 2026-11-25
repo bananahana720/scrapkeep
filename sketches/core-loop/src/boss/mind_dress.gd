@@ -16,6 +16,11 @@ const KIT := "res://assets/models/bosses/boss_mind_kit.glb"
 # Test seam: a test points these at a missing file to prove the stub body stays.
 static var base_path := BASE
 static var kit_path := KIT
+
+
+static func reset_for_tests() -> void:
+	base_path = BASE
+	kit_path = KIT
 const BASE_PARTS := ["CombatSeat", "CrownFrame", "Mantle0", "Mantle5"]
 const KIT_PARTS := ["CombatSeat", "LensRoot", "Shutter0", "PulseLip", "FamilyRecoil", "EmitterL", "BracePlate", "RushCollar"]
 const FAMILY_CLIPS := {"lane": "lane_warn", "split_lane": "split_lane_warn", "rush": "rush_warn", "plate": "plate_warn"}

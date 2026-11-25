@@ -7,6 +7,7 @@ const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
 # The Requisition: a rolling furnace-fortress several times the ball's height, with
@@ -37,6 +38,12 @@ const SCOOTER_MODEL := "res://assets/models/bosses/boss_brindle_scooter.glb"
 # Test seam: a test points these at a missing file to prove the primitive fallback builds.
 static var model_path := MODEL
 static var scooter_path := SCOOTER_MODEL
+
+
+static func reset_for_tests() -> void:
+	drop_ahead()
+	model_path = MODEL
+	scooter_path = SCOOTER_MODEL
 # The model parts the loader needs; a model that lacks any of them is dropped, not half used.
 # The model parts drawn_boxes() lists.
 const BODY_PARTS := ["Hull", "BowRam", "CockpitShield", "CraneMasts", "CraneElbowPort", "CraneElbowStarboard", "DeckDressing",
@@ -50,8 +57,9 @@ var hull
 var magnets: Array = []
 var caps: Array = []
 var heading := Vector3.FORWARD
-# Brindle's name plate: a screen prompt the HUD keeps in the prompts band (CONTRACTS,
-# UI regions), anchored to the ship and, in the chase, to the scooter.
+# Brindle's internal readout prompt: kept updated for tests and telemetry, never placed by
+# hud.place_prompts() in the bottom prompts band (where TITLE_WORDS=3 truncated it into
+# "BRINDLE · plating/bow/on" over the player ball, PF-54; BossPlate owns Brindle's HUD readout).
 var plate: WorldPrompt
 
 var _cables: Array = []
@@ -59,6 +67,7 @@ var _magnet_mats: Array = []
 var _cap_meshes: Array = []
 var _plates: Array = []
 var _cockpit: MeshInstance3D
+var _hull_prim_mat: StandardMaterial3D
 # The model and its parts, when it loaded; null model means the primitives are the body.
 var model: Node3D
 var _prims: Array = []
@@ -70,7 +79,9 @@ var _model_cranes: Array = []
 var _model_armour: Array = []
 var _model_magnets: Array = []
 var _model_magnet_meshes: Array = []
+var _model_bow_ram: MeshInstance3D
 var _model_shield: Node3D
+var _bracing := false
 var _pending_hides := {}
 # [node, local AABB] of each drawn part, found once (drawn_boxes).
 var _drawn_parts: Array = []
@@ -86,7 +97,8 @@ func build(boss) -> void:
 	hull.position = Vector3.UP * HULL.y * 0.5
 	add_child(hull)
 	hull.body_boxes = drawn_boxes
-	_box(hull, HULL, Palette.solid(Palette.RUST), Vector3.ZERO)
+	_hull_prim_mat = Palette.solid(Palette.RUST)
+	_box(hull, HULL, _hull_prim_mat, Vector3.ZERO)
 	for side in [-1.0, 1.0]:
 		for z in [-3.5, 3.5]:
 			var plate_mat := Palette.solid(Color("5d6b78"))
@@ -124,6 +136,8 @@ func build(boss) -> void:
 	_dress()
 	plate = WorldPrompt.new()
 	plate.name = "BrindlePlate"
+	plate.owner_placed = true
+	plate.visible = false
 	plate.attach(self, Vector3.UP * PLATE_LIFT, PLATE_REACH)
 	add_child(plate)
 	_build_camera_bodies()
@@ -414,6 +428,7 @@ func _dress() -> void:
 		BossModel.strip_tracks(_anim, "Cap1", ["drone_deploy"])
 		BossModel.strip_tracks(_anim, "Cap2", ["drone_deploy"])
 	_model_shield = model.find_child("CockpitShield", true, false)
+	_model_bow_ram = model.find_child("BowRam", true, false) as MeshInstance3D
 	_model_cranes = [model.find_child("CraneMasts", true, false), model.find_child("CranePort", true, false),
 		model.find_child("CraneStarboard", true, false), model.find_child("MagnetSocketPort", true, false),
 		model.find_child("MagnetSocketStarboard", true, false)]
@@ -438,10 +453,37 @@ func cue(clip: String, token := 0) -> void:
 	_cue(clip, token)
 
 
-func _cue(clip: String, token: int) -> void:
+# W1-106 (A11): visible hull brace ahead of the Scuttle's hook turn. Crouches and pitches the
+# drawn fortress bow-down, plays the charge_warn pull-back clip, and lights the BowRam's M4
+# signal lip in HAZARD so the brace reads on High and Low presets without moving any collider.
+const BRACE_DROP := 0.35
+const BRACE_PITCH := -0.075
+const BRACE_GLOW := 3.0
+
+
+func set_hook_brace(on: bool, token := 0) -> void:
+	var changed := on != _bracing
+	_bracing = on
+	if model != null:
+		model.position.y = -BRACE_DROP if on else 0.0
+		model.rotation.x = BRACE_PITCH if on else 0.0
+		BossModel.signal_glow(_model_bow_ram, Palette.HAZARD, BRACE_GLOW if on else 0.0)
+	if _hull_prim_mat != null:
+		_hull_prim_mat.emission_enabled = on
+		_hull_prim_mat.emission = Palette.HAZARD
+		_hull_prim_mat.emission_energy_multiplier = 1.6 if on else 0.0
+	if on and changed:
+		_cue("charge_warn", token, "hook")
+
+
+func bracing() -> bool:
+	return _bracing
+
+
+func _cue(clip: String, token: int, tag := "") -> void:
 	if model == null or _anim == null:
 		return
-	var key := "%s:%d" % [clip, token]
+	var key := "%s:%d:%s" % [clip, token, tag] if tag != "" else "%s:%d" % [clip, token]
 	if key == _cue_key:
 		return
 	_cue_key = key
@@ -517,6 +559,9 @@ static func warm() -> bool:
 			var view: MeshInstance3D = views.pop_back()
 			BossModel.colour_view(view)
 			BakeLook.warm_view(view)
+			# The ink line's welded copy of what dress() will draw, made here a view a frame, not all at once at the end.
+			if view.mesh != null:
+				InkOutline.hull(BakeLook.tangent_safe(view.mesh))
 			return false
 		_ahead[path] = _finish(_dressing[path][0])
 		_dressing.erase(path)
@@ -527,12 +572,12 @@ static func warm() -> bool:
 # Frees what warm() holds outside the tree, when the run that read it goes.
 static func drop_ahead() -> void:
 	for scene in _ahead.values():
-		if scene != null:
+		if is_instance_valid(scene):
 			scene.free()
 	_ahead.clear()
 	_ahead_reads.clear()
 	for entry in _dressing.values():
-		if entry[0] != null:
+		if is_instance_valid(entry[0]):
 			entry[0].free()
 	_dressing.clear()
 
@@ -554,10 +599,11 @@ static func _instance(path: String) -> Node3D:
 	return _finish(scene)
 
 
-# A coloured scene dressed by the bake's look, with its own clips.
+# A coloured scene dressed by the bake's look and a Warden's ink line, with its own clips.
 static func _finish(scene: Node3D) -> Node3D:
 	if scene != null:
 		BakeLook.dress(scene)
+		InkOutline.apply(scene, "warden")
 		var player := BossModel.player_of(scene)
 		if player != null:
 			BossModel.own_clips(player)

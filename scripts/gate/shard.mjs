@@ -25,6 +25,7 @@ import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -46,19 +47,23 @@ import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
 import {
   IMPORT_TRIES,
+  binary as smokeGodotBinary,
   failingLines,
   importTry,
   isBot,
+  jobCount,
   scriptErrorCount,
   testScripts,
   testTimeoutMs,
   timeScale,
   withoutTeardownNoise,
 } from "../sketch-smoke.mjs";
-import { writeImportStamp } from "../import-stamp.mjs";
+import { checkImportStamp, godotIdentity, writeImportStamp } from "../import-stamp.mjs";
+import { scratchHomeEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
+const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
 const CLOUD_GODOT = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
 const IMPORT_TIMEOUT_MS = 900_000;
 const DEFAULT_CHUNK = 60;
@@ -156,6 +161,41 @@ export function chunks(names, size) {
   for (let index = 0; index < names.length; index += size)
     out.push(names.slice(index, index + size));
   return out;
+}
+
+function readShardTimings(file = TIMINGS_FILE) {
+  try {
+    return JSON.parse(readFileSync(file, "utf8")).tests ?? {};
+  } catch {
+    return {};
+  }
+}
+
+// Order non-bot tests inside a shard window slowest-first (LPT) across chunks of at most `size`,
+// so straggler tests start at the beginning of each chunk and chunks finish together without
+// changing the window's test set.
+export function orderChunksByDuration(names, size, timings = {}) {
+  if (names.length === 0) return [];
+  const durationOf = (name) => {
+    const raw = timings[`tests/${name}.gd`];
+    return typeof raw === "number" && Number.isFinite(raw) && raw >= 0 ? raw : 0;
+  };
+  const sorted = [...names].sort(
+    (a, b) => durationOf(b) - durationOf(a) || (a < b ? -1 : a > b ? 1 : 0),
+  );
+  const count = Math.ceil(names.length / size);
+  if (count <= 1) return [sorted];
+  const bins = Array.from({ length: count }, () => ({ totalMs: 0, tests: [] }));
+  for (const name of sorted) {
+    let best = null;
+    for (const bin of bins) {
+      if (bin.tests.length >= size) continue;
+      if (!best || bin.totalMs < best.totalMs) best = bin;
+    }
+    best.tests.push(name);
+    best.totalMs += durationOf(name);
+  }
+  return bins.filter((bin) => bin.tests.length > 0).map((bin) => bin.tests);
 }
 
 // The runner prints one "PASS|FAIL <sketch> res://tests/<name>.gd exit=<n> <s>s" line per test.
@@ -775,9 +815,11 @@ export async function retime({
   return verdict.code;
 }
 
-function godotBinary() {
-  const godot = process.env.GODOT_BIN || (existsSync(CLOUD_GODOT) ? CLOUD_GODOT : null);
-  if (!godot || !existsSync(godot))
+export function godotBinary(env = process.env, exists = existsSync) {
+  const godot =
+    env.GODOT_BIN ||
+    (exists(CLOUD_GODOT) ? CLOUD_GODOT : exists(smokeGodotBinary) ? smokeGodotBinary : null);
+  if (!godot || !exists(godot))
     throw new Error("Godot not found; run `bash tools/cloud/setup.sh` or set GODOT_BIN");
   return godot;
 }
@@ -895,35 +937,65 @@ async function run(options) {
   const threads = os.availableParallelism();
   state.threads ??= threads;
 
-  // Two imports always (the second is quick and is the one that counts), and a third when the
-  // second was not clean. A crashed import is the engine's, so it is tried again; the shard stops
-  // only when the last try was not clean, before any test can print a misleading red.
-  let imported = "failed";
-  for (let pass = 1; pass <= IMPORT_TRIES && (pass <= 2 || imported !== "ok"); pass++) {
-    const file = path.join(options.out, `import-${pass}.log`);
-    await step(`import-${pass}`, async () => {
-      const ran = await runToFile(
-        godot,
-        ["--headless", "--path", sketchDir, "--import"],
-        file,
-        env,
-        IMPORT_TIMEOUT_MS,
+  // Skip redundant --import passes when .godot already has a verified import stamp for HEAD.
+  // Otherwise run two imports always (the second is quick and is the one that counts), and a third
+  // when the second was not clean. A crashed import is the engine's, so it is tried again; the shard
+  // stops only when the last try was not clean, before any test can print a misleading red.
+  const cachedImport =
+    process.env.SMOKE_FORCE_IMPORT !== "1"
+      ? checkImportStamp(root, SKETCH, { godot: godotIdentity(godot) })
+      : { ok: false };
+  if (cachedImport.ok) {
+    await step("import-1", async () => {
+      writeFileSync(
+        path.join(options.out, "import-1.log"),
+        `import cached: ${SKETCH}/.godot stamp matches HEAD ${head.slice(0, 9)}\n`,
       );
-      return { ...ran, outcome: importOutcome(ran.exit, readFileSync(file, "utf8")) };
+      return { exit: 0, seconds: 0, outcome: "ok", cached: true };
     });
-    imported = state.steps[`import-${pass}`].outcome ?? "ok"; // a step from before outcomes were recorded
-    if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);
+  } else {
+    let imported = "failed";
+    for (let pass = 1; pass <= IMPORT_TRIES && (pass <= 2 || imported !== "ok"); pass++) {
+      const file = path.join(options.out, `import-${pass}.log`);
+      await step(`import-${pass}`, async () => {
+        const importEnv = {
+          ...env,
+          ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "gate-import-"))),
+        };
+        const ran = await runToFile(
+          godot,
+          ["--headless", "--path", sketchDir, "--import"],
+          file,
+          importEnv,
+          IMPORT_TIMEOUT_MS,
+        );
+        return { ...ran, outcome: importOutcome(ran.exit, readFileSync(file, "utf8")) };
+      });
+      imported = state.steps[`import-${pass}`].outcome ?? "ok"; // a step from before outcomes were recorded
+      if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);
+    }
+    if (imported !== "ok")
+      throw new Error(
+        `the last import was not clean (${imported}); no test ran. Read ${options.out}/import-*.log, then start again in a new folder`,
+      );
+    writeImportStamp(root, SKETCH, { godot: godotIdentity(godot) });
   }
-  if (imported !== "ok")
-    throw new Error(
-      `the last import was not clean (${imported}); no test ran. Read ${options.out}/import-*.log, then start again in a new folder`,
-    );
-  writeImportStamp(root, SKETCH);
 
-  const groups = options.bots ? names.map((name) => [name]) : chunks(names, options.chunk);
+  const groups = options.bots
+    ? names.map((name) => [name])
+    : orderChunksByDuration(names, options.chunk, readShardTimings());
   const groupName = (index) =>
     options.bots ? `bot-${names[index]}` : `chunk${String(index).padStart(2, "0")}`;
-  const firstEnv = { ...env, SMOKE_LOG_DIR: path.join(options.out, "logs") };
+  const activeLanes = Math.min(options.lanes, groups.length);
+  const autoChunkJobs =
+    !options.bots && !env.SMOKE_JOBS && activeLanes > 1
+      ? String(Math.max(2, Math.floor(jobCount() / activeLanes)))
+      : null;
+  const firstEnv = {
+    ...env,
+    ...(autoChunkJobs ? { SMOKE_JOBS: autoChunkJobs } : {}),
+    SMOKE_LOG_DIR: path.join(options.out, "logs"),
+  };
   const runGroup = (index) =>
     step(groupName(index), () =>
       runToFile(

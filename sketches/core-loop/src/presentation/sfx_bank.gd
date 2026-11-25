@@ -93,7 +93,9 @@ const DANGER_SOUNDS := ["hurt", "enemy_arrive", "boss_telegraph", "ratchet_cue",
 	# The park hazards' own warnings, each family's falling tone and the ground's grind: they took over the
 	# threat whistle and tick, so they pull the bass down as those do.
 	"flood_falling_pure", "fleet_falling_pure", "boiler_falling_pure", "lightning_falling_pure", "ancient_falling_pure",
-	"rock_grind_dust_hiss"]
+	"rock_grind_dust_hiss",
+	# Wave 46 C2/C3: Works sluice valve warning took over the shared whistle and stays in the danger lane.
+	"sluice_valve_warning"]
 # Pitched cues that follow the live key (a lifted Warden plays its chimes in Eb). The combat
 # feedback percussion (feedback_set.py) has no key, so it is not here.
 const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_reclaim", "scrap_tick", "cog_tick", "part_get", "core_socket", "found_chime", "gate_through",
@@ -129,6 +131,10 @@ const KEYED_SOUNDS := ["panel_note", "panel_jackpot", "line_claw_drag", "armor_r
 	# --- P-C Tally keyed sounds ---
 	"plate_tally", "clip_tally", "stroke_tally", "settle_tally",
 	# --- end Tally ---
+	# Wave 46 C2/C3/C4 pitched cues: Foreman's Kindness chime, Works sluice valve warning, Shift Boss quick-sync horn.
+	"kindness_chime", "sluice_valve_warning", "quick_sync_horn",
+	# Wave 46 E3-04 pitched cadence and wayfinding flip cues (D Dorian, never threat tritone).
+	"cadence_tarn_window", "cadence_cannon_lock", "site_flip",
 ]
 # --- P-C Kest sounds ---
 const KEST_SOUNDS := ["cable_kest_fizz", "cable_kest_set", "cable_kest_blast", "raid_kest_tick",
@@ -312,6 +318,20 @@ const TRIM_DB := {
 	"ballast_brace_tell": -4.0, "ballast_brace_slam": -2.0, "gap_net_charge_tell": -6.0, "gap_net_charge_live": -4.0,
 	"ring_out_fall": -8.0,
 	"stinger_world": -5.0, "stinger_world_down5": -5.0, "stinger_world_up5": -5.0,
+	# Wave 46 C2/C3/C4 own sounds: Foreman's Kindness sterile chime, Works sluice valve warning/open,
+	# Shift Boss quick-sync horn snap, and downed-machine shift-over spinning-tag sigh.
+	"kindness_chime": -6.0, "sluice_valve_warning": -8.0, "sluice_valve_open": -3.0,
+	"quick_sync_horn": -5.0, "shift_over_sigh": -5.0,
+	# Wave 46 E3-04: pilot weapon cadence cues (player voice class), Nixie tube rail relay clacks,
+	# and visited-site flip chime.
+	"cadence_rivet_notch_open": -11.0, "cadence_rivet_notch_hit": -6.0, "cadence_rivet_spent": -11.0,
+	"cadence_sable_full": -8.0, "cadence_sable_bolt": -5.0,
+	"cadence_kest_window": -9.0, "cadence_kest_snap": -4.0,
+	"cadence_tarn_window": -8.0, "cadence_tarn_rend": -4.0,
+	"cadence_tally_beat": -10.0, "cadence_tally_paid": -5.0,
+	"cadence_cannon_lock": -7.0, "cadence_cannon_rail": -4.0, "cadence_cannon_barrage": -5.0,
+	"rail_rise": -10.0, "rail_sink": -11.0,
+	"site_flip": -7.0,
 }
 # The Warden's break phrase (LEGIBILITY section 4): four notes that climb with the guard,
 # one per quarter, then the same notes together when it staggers. Variant 0 is wired in;
@@ -426,6 +446,11 @@ const BENCH_SIGH := 0.9
 const BENCH_SIGH_LEVEL := 0.75
 # A caller id with no row, warned about once (say_id) and given Moss's voice.
 static var unknown_callers := {}
+# Opt-in TTS voice sidecar (--voice=tts). Default is strictly false ("synth").
+# Cannon always stays procedural synth chime per SOUND-BIBLE.md:129.
+const SYNTH_ONLY_SPEAKERS := ["cannon"]
+static var _voice_tts := false
+static var _voice_clips := {}
 
 static var _samples := {}
 # The live key and level a keyed or themed bake is for (see samples_at).
@@ -1087,7 +1112,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"panel_note":
 			return _cut(_n("mallet", 74), 0.22)
 		"panel_jackpot":
-			return _arpeggio([74, 81, 86, 93], 0.04, "bell", 0.9)
+			return _mix([[_arpeggio([74, 81, 86, 93], 0.04, "bell", 0.9), 0, 0.92],
+				[_cut(_n("keys", 62), 0.65, 1800), Synth.seconds(0.12), 0.28],
+				[_cut(_n("keys", 69), 0.65, 1800), Synth.seconds(0.12), 0.26],
+				[_cut(_n("keys", 76), 0.65, 1800), Synth.seconds(0.12), 0.22]])
 		"panel_cache":
 			# A rib cache's call: two high bell notes, then rest, one 1.86 s bar at 129 BPM, looped.
 			var chime := _mix([[_cut(_n("bell", 86), 0.3), 0, 0.8], [_cut(_n("bell", 93), 0.4), Synth.seconds(0.233), 0.6]])
@@ -1128,9 +1156,10 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"stinger_milestone":
 			return Synth.render_score(_score_milestone(), 1.2)
 		"gates_open":
-			return Synth.render_score([[0, 62, 2, "bell", 0.5], [1, 65, 2, "bell", 0.5], [2, 69, 2, "bell", 0.5],
-				[3, 72, 2, "bell", 0.5], [4, 76, 6, "bell", 0.6], [4, 57, 12, "keys", 0.35], [4, 60, 12, "keys", 0.35],
-				[4, 64, 12, "keys", 0.35], [4, 65, 12, "keys", 0.35], [4, 0, 2, "open_hat", 0.5]], 1.0)
+			return Synth.render_score([[0, 62, 2, "bell", 0.5], [1, 65, 2, "bell", 0.54], [2, 69, 2, "bell", 0.58],
+				[3, 72, 2, "bell", 0.6], [4, 76, 6, "bell", 0.64], [4, 76, 8, "lead", 0.38], [4, 38, 10, "sub", 0.45],
+				[4, 57, 12, "keys", 0.36], [4, 60, 12, "keys", 0.36],
+				[4, 64, 12, "keys", 0.36], [4, 65, 12, "keys", 0.36], [4, 0, 2, "open_hat", 0.48]], 1.0)
 		"stinger_unseal":
 			return _unseal()
 		"class_up":
@@ -1452,11 +1481,13 @@ static func _bake(id: String) -> PackedFloat32Array:
 		"bay_slingshot_out":
 			return _bay_slingshot_out()
 		"menu_move":
-			return _cut(_n("mallet", 79), 0.09)
+			return _mix([[_cut(_n("mallet", 79), 0.09), 0, 0.9], [_cut(_n("bell", 91), 0.08), 0, 0.16]])
 		"menu_confirm":
-			return _mix([[_cut(_n("mallet", 74), 0.18), 0, 0.7], [_cut(_n("mallet", 81), 0.22), Synth.seconds(0.07), 0.8]])
+			return _mix([[_cut(_n("mallet", 74), 0.18), 0, 0.72], [_cut(_n("mallet", 81), 0.24), Synth.seconds(0.065), 0.82],
+				[_cut(_n("keys", 62), 0.24), Synth.seconds(0.065), 0.2], [_cut(_n("bell", 93), 0.2), Synth.seconds(0.065), 0.2]])
 		"menu_back":
-			return _mix([[_cut(_n("mallet", 81), 0.18), 0, 0.7], [_cut(_n("mallet", 77), 0.22), Synth.seconds(0.07), 0.7]])
+			return _mix([[_cut(_n("mallet", 81), 0.18), 0, 0.7], [_cut(_n("mallet", 77), 0.22), Synth.seconds(0.065), 0.72],
+				[_cut(_n("keys", 57), 0.22), Synth.seconds(0.065), 0.16]])
 		"ultimate_ready":
 			return _ultimate_ready()
 		"found_twinkle":
@@ -1473,6 +1504,9 @@ static func _bake(id: String) -> PackedFloat32Array:
 			return _beacon_open_chime()
 		"callout_warden_chime":
 			return _callout_warden_chime()
+	var cadence := _cadence_rail_flip(id)
+	if not cadence.is_empty():
+		return cadence
 	var own := _world1_own(id)
 	if not own.is_empty():
 		return own
@@ -1723,10 +1757,10 @@ static func _ceremony_build() -> PackedFloat32Array:
 # The lid bursts on a D chord with a kick and a crash, then a little tune walks A, B, C up
 # to the home D: a rice cooker's end-of-cycle song, resolved.
 static func _score_ceremony_resolve() -> Array:
-	return [[0, 0, 2, "kick", 1.0], [0, 0, 12, "crash", 0.6], [0, 38, 10, "sub", 0.7],
-		[0, 62, 10, "keys", 0.4], [0, 69, 10, "keys", 0.4], [0, 74, 10, "keys", 0.4], [0, 77, 10, "keys", 0.4],
-		[0, 86, 2, "bell", 0.5], [2, 81, 1, "mallet", 0.7], [3, 83, 1, "mallet", 0.7], [4, 84, 1, "mallet", 0.75],
-		[5, 86, 6, "bell", 0.8], [5, 74, 6, "lead", 0.45], [5, 98, 6, "bell", 0.25]]
+	return [[0, 0, 2, "kick", 1.0], [0, 0, 12, "crash", 0.6], [0, 38, 10, "sub", 0.72],
+		[0, 62, 10, "keys", 0.42], [0, 69, 10, "keys", 0.4], [0, 74, 10, "keys", 0.4], [0, 77, 10, "keys", 0.4], [0, 76, 10, "keys", 0.3],
+		[0, 86, 2, "bell", 0.5], [2, 81, 1, "mallet", 0.68], [3, 83, 1, "mallet", 0.72], [4, 84, 1, "mallet", 0.78],
+		[5, 86, 6, "bell", 0.84], [5, 74, 6, "lead", 0.52], [5, 62, 6, "brass", 0.28], [5, 98, 6, "bell", 0.26]]
 
 
 # --- Recipe helpers --------------------------------------------------------------------
@@ -2731,15 +2765,15 @@ static func _pickup_fountain() -> PackedFloat32Array:
 # Two causes become one: A below and D above close in on F, the minor third of the home
 # key, which rings as a chord of bells over the keys.
 static func _synergy_fired() -> PackedFloat32Array:
-	var score := [[0, 69, 2, "mallet", 0.7], [1, 86, 2, "bell", 0.6], [3, 77, 5, "mallet", 0.85], [3, 77, 5, "bell", 0.4],
-		[3, 65, 5, "keys", 0.35], [3, 62, 5, "keys", 0.3]]
+	var score := [[0, 69, 2, "mallet", 0.72], [1, 86, 2, "bell", 0.62], [3, 77, 5, "mallet", 0.85], [3, 77, 5, "bell", 0.44],
+		[3, 77, 5, "lead", 0.34], [3, 65, 5, "keys", 0.38], [3, 62, 5, "keys", 0.34], [3, 69, 5, "keys", 0.3]]
 	return Synth.render_score(score, 0.05)
 
 
 # Something became more: the fourth A to D, then the octave over it, ringing.
 static func _evolution_fired() -> PackedFloat32Array:
-	var score := [[0, 69, 2, "mallet", 0.7], [2, 74, 2, "mallet", 0.8], [4, 86, 4, "mallet", 0.9], [4, 86, 4, "bell", 0.5],
-		[4, 74, 4, "keys", 0.35], [4, 62, 4, "sub808", 0.4]]
+	var score := [[0, 69, 2, "mallet", 0.72], [2, 74, 2, "mallet", 0.82], [4, 86, 4, "mallet", 0.9], [4, 86, 4, "bell", 0.54],
+		[4, 74, 4, "lead", 0.36], [4, 62, 4, "brass", 0.28], [4, 74, 4, "keys", 0.36], [4, 62, 4, "sub808", 0.45]]
 	return Synth.render_score(score, 0.05)
 
 
@@ -2814,7 +2848,8 @@ static func _arena_wave_whistle() -> PackedFloat32Array:
 # The yard opens: a latch clicks, then three bells climb the pentatonic to the home D, the
 # same walk up as the ceremony's, short.
 static func _arena_unlock_bells() -> PackedFloat32Array:
-	var score := [[0, 69, 1, "mallet", 0.6], [1, 72, 1, "mallet", 0.65], [2, 74, 4, "bell", 0.8], [2, 86, 4, "bell", 0.3]]
+	var score := [[0, 69, 1, "mallet", 0.62], [1, 72, 1, "mallet", 0.68], [2, 74, 4, "bell", 0.82],
+		[2, 86, 4, "bell", 0.32], [2, 62, 4, "keys", 0.28], [2, 69, 4, "keys", 0.24]]
 	return _mix([[_noise(0.04, 2800.0, 1400.0, 80.0), 0, 0.5],
 		[Synth.render_score(score, 0.05), Synth.seconds(0.04), 1.0]])
 
@@ -2835,7 +2870,8 @@ static func _warden_gate_release() -> PackedFloat32Array:
 	var parts := []
 	for i in 6:
 		parts.append([_noise(0.03, 2200.0 + 300.0 * i, 1200.0, 80.0), Synth.seconds(0.05 * i), 0.5])
-	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 74, 6, "bell", 0.6], [0, 38, 6, "sub", 0.6]]
+	var chord := [[0, 62, 6, "keys", 0.45], [0, 66, 6, "keys", 0.4], [0, 69, 6, "keys", 0.4], [0, 76, 6, "keys", 0.3],
+		[0, 74, 6, "bell", 0.62], [0, 86, 6, "bell", 0.3], [0, 38, 6, "sub", 0.62]]
 	parts.append([Synth.render_score(chord, 0.05), Synth.seconds(0.3), 1.0])
 	return _mix(parts)
 
@@ -2886,7 +2922,8 @@ static func _overtime_pay() -> PackedFloat32Array:
 	var parts := []
 	for i in 5:
 		parts.append([_noise(0.025, 3600.0 + 400.0 * i, 2400.0, 90.0), Synth.seconds(0.04 * i), 0.4])
-	var chord := [[0, 62, 5, "keys", 0.5], [0, 66, 5, "keys", 0.4], [0, 69, 5, "keys", 0.4], [0, 78, 5, "bell", 0.55]]
+	var chord := [[0, 62, 5, "keys", 0.5], [0, 66, 5, "keys", 0.4], [0, 69, 5, "keys", 0.4], [0, 76, 5, "keys", 0.3],
+		[0, 78, 5, "bell", 0.55], [0, 86, 5, "bell", 0.32]]
 	parts.append([Synth.render_score(chord, 0.1), Synth.seconds(0.2), 1.0])
 	return _mix(parts)
 
@@ -3052,9 +3089,11 @@ static func _sluice_gush_roar() -> PackedFloat32Array:
 static func _lounge_flip() -> PackedFloat32Array:
 	var parts := [[_noise(0.9, 3000.0, 5000.0, 3.0, 0.01), 0, 0.12], [_tone(0.09, _hz(43), _hz(38), "sine", 30.0), 0, 0.8],
 		[_noise(0.03, 2000.0, 900.0, 80.0, 0.001), 0, 0.5]]
-	var tune := [[69, 0.12, 0.2], [74, 0.26, 0.2], [77, 0.4, 0.2], [76, 0.54, 0.15], [74, 0.68, 0.45]]
+	var tune := [[69, 0.12, 0.22], [74, 0.26, 0.22], [77, 0.4, 0.22], [76, 0.54, 0.16], [74, 0.68, 0.48]]
 	for note in tune:
-		parts.append([_cut(_n("keys", note[0]), note[2]), Synth.seconds(note[1]), 0.6])
+		parts.append([_cut(_n("keys", note[0]), note[2]), Synth.seconds(note[1]), 0.62])
+	for chord_midi in [50, 57, 65, 69]:
+		parts.append([_cut(_n("keys", chord_midi), 0.48, 1800), Synth.seconds(0.68), 0.22])
 	return _mix(parts)
 
 
@@ -3079,10 +3118,12 @@ static func _pins_crash() -> PackedFloat32Array:
 	return _mix(parts, true)
 
 
-# Back in the workshop: a soft rising fifth on the keys over a breath of room.
+# Back in the workshop: a soft rising fifth on the keys over a warm D5 pillow and room breath.
 static func _bay_lounge_in() -> PackedFloat32Array:
 	return _mix([[_arch(_noise(0.5, 400.0, 1500.0, 0.0, 0.05), 0.5), 0, 0.15], [_cut(_n("keys", 67), 0.35), 0, 0.6],
-		[_cut(_n("keys", 74), 0.5), Synth.seconds(0.1), 0.65]])
+		[_cut(_n("keys", 74), 0.52, 1800), Synth.seconds(0.1), 0.68],
+		[_cut(_n("keys", 62), 0.52, 1800), Synth.seconds(0.1), 0.26],
+		[_cut(_n("keys", 69), 0.52, 1800), Synth.seconds(0.1), 0.24]])
 
 
 # Out of the workshop: the slingshot's band stretches, then lets go.
@@ -3091,22 +3132,28 @@ static func _bay_slingshot_out() -> PackedFloat32Array:
 		[_noise(0.25, 800.0, 4000.0, 9.0, 0.01), Synth.seconds(0.16), 0.35]])
 
 
-# The big move is charged: D, F, A, D climbing fast on the mallet, then a bell and its high shimmer on top.
+# The big move is charged: D, F, A, D climbing fast on the mallet, then a warm Rhodes
+# fifth-and-ninth cushion (D-A-E) and bell shimmer on top.
 static func _ultimate_ready() -> PackedFloat32Array:
 	var parts := []
 	var notes := [74, 77, 81, 86]
 	for i in notes.size():
-		parts.append([_cut(_n("mallet", notes[i]), 0.25), Synth.seconds(i * 0.06), 0.7])
-	parts.append([_cut(_n("bell", 86), 0.8, 2400), Synth.seconds(0.2), 0.8])
-	parts.append([_cut(_n("bell", 93), 0.6, 2400), Synth.seconds(0.24), 0.35])
-	parts.append([_fm_sweep(0.24, 300.0, 1400.0, 0.5, 6.0), 0, 0.3])
+		parts.append([_cut(_n("mallet", notes[i]), 0.26), Synth.seconds(i * 0.06), 0.65 + 0.07 * i])
+	for chord_midi in [62, 69, 76]:
+		parts.append([_cut(_n("keys", chord_midi), 0.55, 1600), Synth.seconds(0.18), 0.28])
+	parts.append([_cut(_n("bell", 86), 0.8, 2400), Synth.seconds(0.2), 0.85])
+	parts.append([_cut(_n("bell", 93), 0.6, 2400), Synth.seconds(0.24), 0.36])
+	parts.append([_fm_sweep(0.24, 300.0, 1400.0, 0.5, 6.0), 0, 0.28])
 	return _mix(parts)
 
 
-# A discovery: a bright three-note twinkle up the pentatonic and a glint on top.
+# A discovery: a bright three-note twinkle up the pentatonic over a warm Rhodes pillow and glint.
 static func _found_twinkle() -> PackedFloat32Array:
-	return _mix([[_cut(_n("mallet", 86), 0.2), 0, 0.7], [_cut(_n("mallet", 89), 0.2), Synth.seconds(0.07), 0.7],
-		[_cut(_n("bell", 93), 0.5, 1800), Synth.seconds(0.14), 0.8], [_noise(0.15, 6000.0, 6000.0, 22.0, 0.002), Synth.seconds(0.14), 0.15]])
+	return _mix([[_cut(_n("mallet", 86), 0.2), 0, 0.7], [_cut(_n("mallet", 89), 0.2), Synth.seconds(0.07), 0.72],
+		[_cut(_n("bell", 93), 0.5, 1800), Synth.seconds(0.14), 0.82],
+		[_cut(_n("keys", 74), 0.45, 1600), Synth.seconds(0.14), 0.24],
+		[_cut(_n("keys", 81), 0.45, 1600), Synth.seconds(0.14), 0.22],
+		[_noise(0.15, 6000.0, 6000.0, 22.0, 0.002), Synth.seconds(0.14), 0.15]])
 
 
 # --- The fight facts that had no sound ---------------------------------------------------------
@@ -3317,7 +3364,100 @@ static func _caller_voice(speaker: String) -> String:
 
 # How long a caller's line lasts, chirp included, at the band's sixteenth.
 static func say_seconds(speaker: String, text: String, step := Harmony.STEP) -> float:
+	var clip := voice_clip_path(speaker, text)
+	if clip != "":
+		var info := _read_wav_info(clip)
+		if not info.is_empty():
+			return float(int(info["frames"])) / float(Harmony.RATE)
 	return float(_say_plan(speaker, text, step)[1]) + 0.3
+
+
+static func set_voice_sidecar(enabled: bool, clips: Dictionary) -> void:
+	_cache_lock.lock()
+	if _voice_tts == enabled and _voice_clips == clips:
+		_cache_lock.unlock()
+		return
+	_voice_tts = enabled
+	_voice_clips = clips.duplicate(true)
+	for key in _samples.keys():
+		if String(key).begins_with(SAY):
+			_samples.erase(key)
+	for key in _streams.keys():
+		if String(key).begins_with(SAY):
+			_streams.erase(key)
+	_cache_lock.unlock()
+
+
+static func reset_voice_sidecar() -> void:
+	set_voice_sidecar(false, {})
+
+
+static func _norm_voice_text(text: String) -> String:
+	return text.strip_edges().to_lower()
+
+
+static func voice_clip_path(speaker: String, text: String) -> String:
+	if not _voice_tts or speaker == "" or text == "" or speaker in SYNTH_ONLY_SPEAKERS:
+		return ""
+	var path := ""
+	_cache_lock.lock()
+	if not _voice_clips.is_empty():
+		var exact := "%s|%s" % [speaker, text]
+		var norm := "%s|%s" % [speaker, _norm_voice_text(text)]
+		var wild := "%s|*" % speaker
+		if _voice_clips.has(exact):
+			path = String(_voice_clips[exact])
+		elif _voice_clips.has(norm):
+			path = String(_voice_clips[norm])
+		elif _voice_clips.has(wild):
+			path = String(_voice_clips[wild])
+	_cache_lock.unlock()
+	if path != "" and FileAccess.file_exists(path):
+		return path
+	return ""
+
+
+static func _read_wav_info(path: String) -> Dictionary:
+	if path == "" or not FileAccess.file_exists(path):
+		return {}
+	var bytes := FileAccess.get_file_as_bytes(path)
+	if bytes.size() < 44:
+		return {}
+	if bytes.slice(0, 4).get_string_from_ascii() != "RIFF" or bytes.slice(8, 12).get_string_from_ascii() != "WAVE":
+		return {}
+	var audio_format := 0
+	var channels := 0
+	var sample_rate := 0
+	var bits_per_sample := 0
+	var data_offset := -1
+	var data_size := 0
+	var at := 12
+	while at + 8 <= bytes.size():
+		var chunk_id := bytes.slice(at, at + 4).get_string_from_ascii()
+		var size := bytes.decode_u32(at + 4)
+		var body := at + 8
+		if chunk_id == "fmt " and size >= 16 and body + 16 <= bytes.size():
+			audio_format = bytes.decode_u16(body)
+			channels = bytes.decode_u16(body + 2)
+			sample_rate = bytes.decode_u32(body + 4)
+			bits_per_sample = bytes.decode_u16(body + 14)
+		elif chunk_id == "data" and body <= bytes.size():
+			data_offset = body
+			data_size = mini(int(size), bytes.size() - body)
+		at = body + int(size) + (int(size) & 1)
+	if audio_format != 1 or channels != 1 or bits_per_sample != 16 or sample_rate != RATE or data_offset < 0 or data_size < 2:
+		return {}
+	return {"bytes": bytes, "offset": data_offset, "size": data_size, "frames": data_size / 2}
+
+
+static func load_voice_wav(path: String) -> PackedFloat32Array:
+	var info := _read_wav_info(path)
+	if info.is_empty():
+		return PackedFloat32Array()
+	var bytes: PackedByteArray = info["bytes"]
+	var offset: int = int(info["offset"])
+	var size: int = int(info["size"])
+	return Synth.declick(_pcm16(bytes.slice(offset, offset + size), false), 16, 600)
 
 
 # A caller's line laid out as [seconds, midi, seconds long, gain, bend, voice, letter] and where
@@ -3394,6 +3534,11 @@ static func _moss_call(text: String) -> Array:
 
 
 static func _say(speaker: String, text: String) -> PackedFloat32Array:
+	var clip := voice_clip_path(speaker, text)
+	if clip != "":
+		var loaded := load_voice_wav(clip)
+		if not loaded.is_empty():
+			return loaded
 	var plan := _say_plan(speaker, text, Synth.score_step)
 	var row := _caller(speaker)
 	var buf := Synth.buffer(roundi((float(plan[1]) + 0.3) * Harmony.RATE))
@@ -3488,7 +3633,7 @@ static func _world1_own(id: String) -> PackedFloat32Array:
 
 const MOTIF_CUES := ["motif_accumulate", "motif_line", "motif_stinger"]
 const LANDINGS := ["flood_drop", "fleet_anvil_brass_drop", "lightning_strike", "rockfall_boom", "crater_crump_sub_boom",
-	"steam_whistle_percussion_drop", "ancient_family_drop"]
+	"steam_whistle_percussion_drop", "ancient_family_drop", "sluice_valve_open"]
 const LANDING_S := 0.8
 # The generic motif cues, heard only with no class in context: a plain D, A, D on the mallet.
 const NEUTRAL_MOTIF := {"cells": [[0, 62, 1], [1, 69, 1], [2, 74, 2]], "voice": "mallet"}
@@ -3655,6 +3800,38 @@ static func _world1_recipe(id: String) -> PackedFloat32Array:
 			# The arc slam rings: D3 and A3 on the mallet, the octave over them.
 			return _mix([[_cut(_n("mallet", 50), 0.45, 1200), 0, 0.9], [_cut(_n("mallet", 57), 0.45, 1200), Synth.seconds(0.03), 0.8],
 				[_cut(_n("mallet", 62), 0.35), Synth.seconds(0.06), 0.35]])
+		"kindness_chime":
+			# Foreman's Kindness: clinical pure-sine chime on the grid with flat shoulders, no bend, D5-A5-D6.
+			var step_s := float(Harmony.STEP) / float(Harmony.RATE)
+			return _mix([[_letter(PURE, 74, step_s * 0.7, 0.0), 0, 0.85],
+				[_letter(PURE, 81, step_s * 0.7, 0.0), Synth.seconds(step_s), 0.9],
+				[_letter(PURE, 86, step_s * 1.4, 0.0), Synth.seconds(step_s * 2.0), 0.75]])
+		"sluice_valve_warning":
+			# Works sluice valve warning: brass valve clicks, pressurized hiss, and a taut falling tone Ab5-Eb5.
+			return _mix([[_noise(0.025, 3200.0, 1800.0, 110.0, 0.002), 0, 0.55],
+				[_noise(0.025, 3600.0, 2000.0, 110.0, 0.002), Synth.seconds(0.08), 0.55],
+				[_noise(0.7, 1600.0, 3200.0, 2.2, 0.08), Synth.seconds(0.04), 0.35],
+				[_pure_fall(0.72, 80, 75, 1.9, 6.0, 0.18), Synth.seconds(0.06), 1.0]])
+		"sluice_valve_open":
+			# Works sluice valve open: iron unlatch clank, low hydraulic thud, and surging water release.
+			return _mix([[_fm(0.09, 340.0, 2.7, 3.0, 28.0), 0, 0.75],
+				[_tone(0.28, 95.0, 40.0, "sine", 9.5), 0, 0.95],
+				[_noise(0.75, 2600.0, 450.0, 3.8, 0.015), Synth.seconds(0.02), 0.85],
+				[_noise(0.45, 500.0, 1600.0, 5.0, 0.04), Synth.seconds(0.08), 0.45]], true)
+		"quick_sync_horn":
+			# Shift Boss "Quick sync." horn snap: crisp twin-horn brass punch D4-A4-D5 with relay click.
+			return _mix([[_noise(0.02, 2800.0, 1400.0, 120.0, 0.002), 0, 0.45],
+				[_cut(_n("brass", 62), 0.14, 1200), 0, 0.85],
+				[_cut(_n("brass", 69), 0.14, 1200), Synth.seconds(0.06), 0.9],
+				[_cut(_n("brass", 74), 0.24, 1600), Synth.seconds(0.12), 0.95]])
+		"shift_over_sigh":
+			# Downed Foreman "shift_over" sigh: slowing brass tag ticks over a releasing steam exhale.
+			return _mix([[_noise(0.68, 3600.0, 650.0, 3.2, 0.04), 0, 0.75],
+				[_pure_fall(0.58, 72, 60, 2.8), Synth.seconds(0.02), 0.55],
+				[_fm(0.04, 1480.0, 2.3, 1.5, 45.0), Synth.seconds(0.03), 0.55],
+				[_fm(0.045, 1340.0, 2.3, 1.5, 42.0), Synth.seconds(0.13), 0.5],
+				[_fm(0.055, 1180.0, 2.3, 1.5, 36.0), Synth.seconds(0.26), 0.42],
+				[_fm(0.07, 1020.0, 2.3, 1.5, 30.0), Synth.seconds(0.43), 0.35]])
 	return PackedFloat32Array()
 
 
@@ -3705,3 +3882,139 @@ static func _cracked_wall_crumble() -> PackedFloat32Array:
 		var f := rng.randf_range(900.0, 1500.0)
 		parts.append([_noise(0.07, f, 400.0, 35.0, 0.001), Synth.seconds(0.04 + 0.07 * i + rng.randf_range(0.0, 0.03)), 0.55 - 0.04 * i])
 	return _mix(parts)
+
+
+# Wave 46 E3-04: dedicated procedural recipes for pilot weapon cadence cues (player voice class),
+# Nixie tube rail mechanical relay clacks (ui voice class), and visited-site flip chime.
+static func _cadence_rail_flip(id: String) -> PackedFloat32Array:
+	match id:
+		"cadence_rivet_notch_open":
+			# Crisp steel cylinder detent click entering the reload notch.
+			return _mix([
+				[_noise(0.022, 4200.0, 2600.0, 150.0, 0.001), 0, 0.85],
+				[_fm(0.068, 2240.0, 2.76, 1.4, 52.0), 0, 0.72],
+			])
+		"cadence_rivet_notch_hit":
+			# Crisp brass/steel revolver cylinder snap locking six hot rounds home.
+			return _mix([
+				[_noise(0.028, 4800.0, 2200.0, 115.0, 0.001), 0, 0.9],
+				[_fm(0.085, 1680.0, 2.41, 2.6, 36.0, 2.0), 0, 0.85],
+				[_fm(0.145, 2960.0, 1.5, 1.1, 24.0), Synth.seconds(0.02), 0.75],
+				[_tone(0.075, 290.0, 145.0, "sine", 42.0), 0, 0.55],
+			])
+		"cadence_rivet_spent":
+			# Dull hollow cylinder click when the reload notch is missed or spent early.
+			return _mix([
+				[_noise(0.03, 1250.0, 520.0, 85.0, 0.002), 0, 0.85],
+				[_tone(0.088, 210.0, 118.0, "sine", 34.0), 0, 0.7],
+				[_fm(0.055, 640.0, 1.83, 0.8, 48.0, -3.0), Synth.seconds(0.012), 0.45],
+			])
+		"cadence_sable_full":
+			# Clean electric-coil full-charge ready tick ("let go now").
+			return _mix([
+				[_noise(0.018, 5600.0, 3800.0, 180.0, 0.001), 0, 0.6],
+				[_fm(0.105, 2680.0, 2.0, 1.8, 34.0, 3.0), 0, 0.92],
+				[_tone(0.082, 1340.0, 1780.0, "sine", 36.0), Synth.seconds(0.015), 0.55],
+			])
+		"cadence_sable_bolt":
+			# Snappy charged arc bolt release: capacitor crack + resonant electric sweep.
+			return _mix([
+				[_noise(0.04, 5800.0, 2000.0, 75.0, 0.001), 0, 0.9],
+				[_fm_sweep(0.19, 1950.0, 420.0, 3.4, 15.0), 0, 0.9],
+				[_tone(0.16, 260.0, 95.0, "saw_dark", 18.0), Synth.seconds(0.01), 0.65],
+				[_noise(0.14, 3400.0, 5200.0, 20.0, 0.01), Synth.seconds(0.085), 0.35],
+			], true)
+		"cadence_kest_window":
+			# Taut fuse-cap metallic tick announcing the cook-and-snap window.
+			return _mix([
+				[_noise(0.02, 5200.0, 3200.0, 165.0, 0.001), 0, 0.78],
+				[_fm(0.092, 1980.0, 3.12, 1.7, 42.0), 0, 0.85],
+				[_tone(0.045, 520.0, 760.0, "sine", 55.0), 0, 0.42],
+			])
+		"cadence_kest_snap":
+			# Punchy bone-dry concussive snap burst with crisp transient pop.
+			return _mix([
+				[_noise(0.048, 4600.0, 1400.0, 62.0, 0.001), 0, 0.95],
+				[_tone(0.18, 175.0, 52.0, "sine", 14.0), 0, 1.0],
+				[_fm(0.11, 1320.0, 2.6, 2.8, 30.0, -4.0), Synth.seconds(0.008), 0.72],
+				[_noise(0.18, 2200.0, 680.0, 14.0, 0.006), Synth.seconds(0.065), 0.45],
+			], true)
+		"cadence_tarn_window":
+			# Mechanical piston-draw chime in D Dorian (D5-A5) signalling beat-3 readiness.
+			return _mix([
+				[_noise(0.055, 2400.0, 4400.0, 36.0, 0.004), 0, 0.45],
+				[_fm(0.09, _hz(74), 2.0, 1.2, 34.0), 0, 0.8],
+				[_fm(0.115, _hz(81), 2.0, 1.0, 28.0), Synth.seconds(0.03), 0.88],
+			])
+		"cadence_tarn_rend":
+			# Heavy industrial beat-3 rend cleave: iron sweep + gritty sub crunch.
+			return _mix([
+				[_noise(0.075, 2800.0, 780.0, 28.0, 0.002), 0, 0.9],
+				[_tone(0.24, 155.0, 46.0, "saw_dark", 10.5), 0, 0.95],
+				[_fm_sweep(0.22, 680.0, 180.0, 3.2, 12.0), Synth.seconds(0.015), 0.82],
+				[_tone(0.285, 110.0, 48.0, "sine", 9.0), 0, 0.75],
+			], true)
+		"cadence_tally_beat":
+			# Crisp flywheel escapement / mechanical ledger beat tick.
+			return _mix([
+				[_noise(0.016, 4900.0, 2900.0, 190.0, 0.001), 0, 0.72],
+				[_fm(0.078, 2460.0, 1.62, 1.2, 46.0), 0, 0.84],
+			])
+		"cadence_tally_paid":
+			# Firm PAID ink-press mechanical stamp thud + brief crisp till chime.
+			return _mix([
+				[_tone(0.11, 185.0, 68.0, "sine", 24.0), 0, 0.95],
+				[_noise(0.036, 1900.0, 760.0, 68.0, 0.001), 0, 0.82],
+				[_fm(0.165, 2120.0, 2.0, 0.9, 22.0), Synth.seconds(0.04), 0.74],
+				[_fm(0.13, 3180.0, 1.5, 0.6, 26.0), Synth.seconds(0.065), 0.48],
+			])
+		"cadence_cannon_lock":
+			# Resonant industrial bracket-flush lock chime in D Dorian (A4-D5-A5).
+			return _mix([
+				[_noise(0.02, 3400.0, 1800.0, 130.0, 0.001), 0, 0.48],
+				[_fm(0.11, _hz(69), 2.0, 1.3, 30.0), 0, 0.76],
+				[_fm(0.135, _hz(74), 2.0, 1.1, 24.0), Synth.seconds(0.015), 0.86],
+				[_fm(0.125, _hz(81), 1.5, 0.8, 26.0), Synth.seconds(0.03), 0.65],
+			])
+		"cadence_cannon_rail":
+			# Sharp hyper-velocity railgun crack + tight metallic rail ring.
+			return _mix([
+				[_noise(0.045, 5600.0, 1900.0, 65.0, 0.001), 0, 0.98],
+				[_fm_sweep(0.24, 2400.0, 320.0, 3.8, 12.0), 0, 0.92],
+				[_tone(0.21, 145.0, 44.0, "sine", 11.0), 0, 0.88],
+				[_fm(0.22, 1840.0, 2.75, 1.6, 14.0), Synth.seconds(0.045), 0.55],
+			], true)
+		"cadence_cannon_barrage":
+			# Wide heavy double-thump barrage burst.
+			return _mix([
+				[_tone(0.14, 135.0, 48.0, "sine", 15.0), 0, 0.92],
+				[_noise(0.065, 2200.0, 620.0, 34.0, 0.002), 0, 0.8],
+				[_tone(0.18, 120.0, 42.0, "sine", 12.0), Synth.seconds(0.095), 0.98],
+				[_noise(0.14, 1900.0, 480.0, 18.0, 0.003), Synth.seconds(0.095), 0.76],
+				[_tone(0.18, 220.0, 90.0, "saw_dark", 14.0), Synth.seconds(0.115), 0.52],
+			], true)
+		"rail_rise":
+			# Nixie tube rail rises: crisp two-contact mechanical relay clack stepping up.
+			return _mix([
+				[_noise(0.016, 2600.0, 1400.0, 170.0, 0.001), 0, 0.72],
+				[_fm(0.045, 920.0, 2.3, 1.4, 58.0), 0, 0.65],
+				[_noise(0.018, 3800.0, 2100.0, 155.0, 0.001), Synth.seconds(0.026), 0.84],
+				[_fm(0.056, 1380.0, 2.1, 1.1, 48.0), Synth.seconds(0.026), 0.78],
+			])
+		"rail_sink":
+			# Nixie tube rail sinks/expires: damped two-contact mechanical relay release stepping down.
+			return _mix([
+				[_noise(0.018, 3000.0, 1500.0, 155.0, 0.001), 0, 0.74],
+				[_fm(0.05, 1140.0, 2.2, 1.1, 52.0), 0, 0.68],
+				[_noise(0.022, 1800.0, 780.0, 120.0, 0.001), Synth.seconds(0.032), 0.8],
+				[_tone(0.062, 310.0, 165.0, "sine", 42.0), Synth.seconds(0.032), 0.65],
+			])
+		"site_flip":
+			# Visited-site flip chime: light wind flutter into a crisp rising D Dorian metallic pennant chime (D5-F5-A5).
+			return _mix([
+				[_noise(0.11, 2200.0, 4200.0, 22.0, 0.012), 0, 0.32],
+				[_fm(0.14, _hz(74), 2.0, 0.9, 20.0), 0, 0.72],
+				[_fm(0.15, _hz(77), 2.0, 0.85, 18.0), Synth.seconds(0.055), 0.78],
+				[_fm(0.165, _hz(81), 2.0, 0.75, 15.0), Synth.seconds(0.11), 0.88],
+			])
+	return PackedFloat32Array()

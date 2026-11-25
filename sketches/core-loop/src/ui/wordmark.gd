@@ -8,6 +8,9 @@ const PATH := "res://assets/ui/wordmark.svg"
 const NAME := "Scrapkeep"
 # Width over height of the drawing, so a caller sizes it by height alone.
 const ASPECT := 900.0 / 240.0
+# On the title the name thumps on the music's bar (title_stage.gd thump()), like a press stamping the poster: it
+# swells from its middle by up to THUMP of its size and settles.
+const THUMP := 0.035
 
 static var _texture: Texture2D
 
@@ -34,6 +37,12 @@ static func dress(label: Label) -> TextureRect:
 	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	label.add_child(rect)
 	return rect
+
+
+# amount: 1 on the bar line, falling to 0; 0 leaves the name at rest.
+static func thump(rect: TextureRect, amount: float) -> void:
+	rect.pivot_offset = rect.size * 0.5
+	rect.scale = Vector2.ONE * (1.0 + THUMP * clampf(amount, 0.0, 1.0))
 
 
 static func _picture() -> TextureRect:

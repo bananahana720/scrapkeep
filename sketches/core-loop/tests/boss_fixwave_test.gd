@@ -192,6 +192,8 @@ func _charge_checks() -> void:
 	_double.punch_override = -1.0
 	_report("clash preview is ram only", shown == "slate" and readout.contains("bow plating 150") and plate_colour != Palette.AMBER and plating == Rules.CLASH_PUNCH and text.contains("Ram 0 / bow plating 150"),
 		"charging, with a 160 weapon and a standing ball: tint %s, readout \"%s\", objective \"%s\", live plating %.0f" % [shown, readout, text, plating])
+	_report("ship plate stays off prompts band", _boss.ship.plate.owner_placed and not _boss.ship.plate.visible,
+		"PF-54: owner_placed %s, visible %s" % [_boss.ship.plate.owner_placed, _boss.ship.plate.visible])
 	_double.strike(hull, "ram", _double.force_for("ram", 151.0))
 	var verb_stunned: String = hull.tint_verb() if hull.has_method("tint_verb") else "?"
 	_report("tint verb", verb_charging == "ram" and verb_stunned == "",

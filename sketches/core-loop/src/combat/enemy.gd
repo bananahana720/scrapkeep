@@ -2,6 +2,7 @@ extends CharacterBody3D
 
 const Palette := preload("res://src/core/palette.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
@@ -13,6 +14,8 @@ const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const EnemyGait := preload("res://src/presentation/enemy_gait.gd")
+# Not "Roster": counter, crew_fitter, swarm_remnant and warden extend this script and declare their own.
+const _Roster := preload("res://src/combat/roster.gd")
 
 # What every enemy shares: health, plating, weight, knockback, the flash, the plating
 # tint, death and its telegraph. The spine's ball calls knock() and flash() on contact
@@ -32,6 +35,13 @@ const EnemyGait := preload("res://src/presentation/enemy_gait.gd")
 const GRAVITY := 26.0
 const KNOCK_DECAY := 16.0
 const FLOOR_RESCUE := 30.0
+# Formation rally (foreman.gd "Quick sync."): a chaser told to snap into a slot sprints there
+# through _move() and hands straight back to its own chase the tick it arrives or the beat ends,
+# so it is never held in place and never overrides a committed attack telegraph or a player knock.
+const RALLY_ARRIVE := 0.5
+const RALLY_MAX_SPEED := 48.0
+const RALLY_MIN_SPEED := 8.0
+const RALLY_INTERRUPT_KNOCK := 5.0
 # Ring-outs (design-v3/WORLD-ROSTERS.md, Andrew's "Ring-outs" tap, 17 Oct 20:03Z): in the
 # Highdraft an enemy knocked off an island edge is gone, a kill for the pilot. Only a knock
 # counts: one that walks off is still rescued. A knock opens the fall; in the air over ground
@@ -44,6 +54,8 @@ const RING_OUT_DROP := 6.0
 # move on their own _move, so a knock never drops them.
 const RING_OUT_KEPT := ["warden", "vault", "miniboss", "reactor_relic", "swarm_remnant", "mind_hand",
 	"foreman", "dispatcher", "splitter", "linker", "rogue_crane", "rogue_skip", "rogue_tender"]
+static var _ring_out_kept := _as_set(RING_OUT_KEPT)
+const _NON_ORDINARY := {"warden": true, "vault": true, "miniboss": true, "rogue_crane": true, "rogue_skip": true, "rogue_tender": true}
 # The plating dress reads the colour law (LEGIBILITY, STATE_ROWS): "breaks now" is a rim and
 # an open-crack glyph in the live colour, pulsing; "not yet" is a steady slate rim and no
 # crack. The tint_state names ("amber" for will break, "slate" for glances) stay as combat
@@ -136,6 +148,8 @@ var wall_slams := 0
 var _walled_knock := -1
 
 var _knock := Vector3.ZERO
+var _rally_left := 0.0
+var _rally_target := Vector3.ZERO
 var _flash := 0.0
 # The attack's release flash (FX-05): physics frames of the HAZARD tint still to show, or
 # STRIKE_DONE when the last has shown and the rest look is owed.
@@ -215,8 +229,26 @@ func _visual_parent() -> Node3D:
 	return reaction_pivot
 
 
+var _ordinary_kind := ""
+var _ordinary_cached := true
+
+
+static func is_ordinary_kind(enemy_kind: String) -> bool:
+	return not _NON_ORDINARY.has(enemy_kind) and not _Roster.is_boss_piece(enemy_kind)
+
+
 func _ordinary_reaction() -> bool:
-	return kind not in ["warden", "vault", "miniboss", "rogue_crane", "rogue_skip", "rogue_tender"] and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
+	if kind != _ordinary_kind:
+		_ordinary_kind = kind
+		_ordinary_cached = is_ordinary_kind(kind)
+	return _ordinary_cached
+
+
+static func _as_set(names: Array) -> Dictionary:
+	var out := {}
+	for entry in names:
+		out[entry] = true
+	return out
 
 
 # `struck` false is a reaction to something seen, not a blow: it plays no hit clip.
@@ -331,7 +363,9 @@ func _update_reaction(delta: float) -> void:
 			lean_pose = Quaternion(_reaction_axis(_reaction_ball() - global_position), deg_to_rad(LINE_LEAN) * _line_lean)
 		# The reaction and line lean are in the body's frame; the turn carries the model, and the
 		# idle, wind-up and release poses ride inside it, so a nose-up stays nose-up when it is turned.
-		reaction_pivot.transform = tilt * Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO) * turn * Transform3D(_idle_pose, idle_offset)
+		var next_xform := tilt * Transform3D(Basis(lean_pose * _react_pose), Vector3.ZERO) * turn * Transform3D(_idle_pose, idle_offset)
+		if reaction_pivot.transform != next_xform:
+			reaction_pivot.transform = next_xform
 
 
 # The model breathes between attacks and holds still (or takes its row's pose) through
@@ -414,7 +448,11 @@ func _attack_pose() -> Basis:
 # An attack is open: a wind-up or strike instance, a committed telegraph, or the state the
 # Warden and swarm remnant publish instead.
 func winding_up() -> bool:
-	return not _atk.is_empty() or telegraph() != null or not WindupRows.state_facts(self).is_empty()
+	if not _atk.is_empty() or telegraph() != null:
+		return true
+	if not WindupRows.has_state_facts(kind):
+		return false
+	return not WindupRows.state_facts(self).is_empty()
 
 
 func _death_direction() -> Vector3:
@@ -572,6 +610,7 @@ func telegraph() -> Node3D:
 # The break-up (EnemyMotion.scatter) lives in its own detached node and frees itself.
 func _die() -> void:
 	_dead = true
+	_rally_left = 0.0
 	_settle_look()
 	_facts_end(true)
 	collision_layer = 0
@@ -583,6 +622,9 @@ func _die() -> void:
 	var land := Callable(terrain, "height") if not ringed_out and is_on_floor() and terrain != null else Callable()
 	if ringed_out or not (is_instance_valid(_clips) and _clips.die(_death_direction(), land)):
 		EnemyMotion.scatter(self, kind, _death_direction(), land)
+	if not ringed_out and is_ordinary_kind(kind):
+		var tag_land := Callable(terrain, "height") if terrain != null else Callable()
+		EnemyMotion.pop_shift_tag(self, kind, _death_direction(), tag_land)
 	died.emit(global_position, scrap_value)
 	queue_free()
 
@@ -631,11 +673,52 @@ func _flat_to_ball() -> Vector3:
 	return to
 
 
+func can_rally() -> bool:
+	return not _dead and not winding_up() and _knocked_speed() < RALLY_INTERRUPT_KNOCK
+
+
+func rally_to(spot: Vector3, seconds: float) -> bool:
+	if seconds <= 0.0 or not can_rally():
+		return false
+	_rally_target = spot
+	_rally_left = seconds
+	return true
+
+
+func is_rallying() -> bool:
+	return _rally_left > 0.0 and not _dead
+
+
+func cancel_rally() -> void:
+	_rally_left = 0.0
+
+
+func _rally_velocity(delta: float, desired: Vector3) -> Vector3:
+	if _rally_left <= 0.0:
+		return desired
+	_rally_left = maxf(0.0, _rally_left - delta)
+	if winding_up():
+		_rally_left = 0.0
+		return desired
+	var to_slot := Vector3(_rally_target.x - global_position.x, 0.0, _rally_target.z - global_position.z)
+	var dist := to_slot.length()
+	if dist <= RALLY_ARRIVE:
+		_rally_left = 0.0
+		return desired
+	var rem := maxf(delta, _rally_left)
+	var speed := clampf(dist / rem, maxf(desired.length(), RALLY_MIN_SPEED), RALLY_MAX_SPEED)
+	return to_slot / dist * speed
+
+
 # Knockback wins over the enemy's own intent until it has bled below walking pace.
 func _move(delta: float, desired: Vector3) -> void:
+	if _knocked_speed() >= RALLY_INTERRUPT_KNOCK:
+		_rally_left = 0.0
 	var horizontal := Vector3(_knock.x, 0.0, _knock.z)
 	if horizontal.length() < 1.0:
-		horizontal = desired
+		horizontal = _rally_velocity(delta, desired)
+	elif _rally_left > 0.0:
+		_rally_left = maxf(0.0, _rally_left - delta)
 	velocity.x = horizontal.x
 	velocity.z = horizontal.z
 	if _knock.y > 0.0:
@@ -654,7 +737,9 @@ func _move(delta: float, desired: Vector3) -> void:
 
 
 func _knocked_speed() -> float:
-	return Vector3(_knock.x, 0.0, _knock.z).length()
+	if _knock.x == 0.0 and _knock.z == 0.0:
+		return 0.0
+	return Vector2(_knock.x, _knock.z).length()
 
 
 # A knock that drives this enemy into a world face lands as a slam: a stagger and one enemy_walled,
@@ -718,8 +803,9 @@ func open_ring_out() -> void:
 
 
 func ring_outs_here() -> bool:
-	return terrain != null and terrain.has_method("world") and terrain.world() == RING_OUT_WORLD \
-		and not kind in RING_OUT_KEPT and not preload("res://src/combat/roster.gd").is_boss_piece(kind)
+	if terrain == null or not terrain.has_method("world") or terrain.world() != RING_OUT_WORLD:
+		return false
+	return not _ring_out_kept.has(kind) and not _Roster.is_boss_piece(kind)
 
 
 # Knocked off the edge: a kill the pilot earned, whatever health or plating was left.
@@ -734,12 +820,25 @@ func ring_out() -> void:
 	_die()
 
 
+var _rescue_cell := Vector2i(1 << 20, 1 << 20)
+var _rescue_ground := -INF
+var _rescue_terrain_id := 0
+
+
 # An enemy that falls through the map is put back on the ground, not killed: a kill
 # would hand out scrap nobody earned.
 func _rescue() -> void:
 	if terrain == null:
 		return
+	var terrain_id: int = terrain.get_instance_id()
+	var cell := Vector2i(floori(global_position.x * 0.5), floori(global_position.z * 0.5))
+	if is_on_floor() and terrain_id == _rescue_terrain_id and cell == _rescue_cell \
+			and global_position.y >= _rescue_ground - FLOOR_RESCUE * 0.5:
+		return
 	var ground: float = terrain.height(global_position.x, global_position.z)
+	_rescue_terrain_id = terrain_id
+	_rescue_cell = cell
+	_rescue_ground = ground
 	if global_position.y < ground - FLOOR_RESCUE:
 		global_position = terrain.drop_point(global_position.x, global_position.z, half_height + 0.5)
 		velocity = Vector3.ZERO
@@ -949,6 +1048,7 @@ func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 		box.size = Vector3(0.09, size * 0.45, 0.06)
 		stroke.mesh = box
 		stroke.material_override = mat
+		stroke.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		stroke.position = Vector3((i - 1) * size * 0.18, (1 - i) * size * 0.28, 0.0)
 		stroke.rotation.z = 0.6 if i % 2 == 0 else -0.6
 		glyph.add_child(stroke)
@@ -980,10 +1080,12 @@ func _notification(what: int) -> void:
 
 # The polish bake reaches every swapped-in material (BakeLook): the body paint the flash
 # brightens, tints and state materials all keep the model's baked occlusion and wear.
-# Scripts that swap materials onto a baked surface later call it again.
+# Scripts that swap materials onto a baked surface later call it again. Then the ink line (InkOutline), heavier on a Warden.
 func _dress_bake() -> void:
 	if is_inside_tree():
-		BakeLook.dress(self, owned_materials())
+		var owned := owned_materials()
+		BakeLook.dress(self, owned)
+		InkOutline.apply(self, "warden" if kind in ["warden", "miniboss"] else "enemy", owned)
 
 
 # The materials this enemy's script holds in its own variables: the ones it mutates.

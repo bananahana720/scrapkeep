@@ -131,6 +131,12 @@ class DuelDriver extends BotDriver:
 	var _dodge_rng := RandomNumberGenerator.new()
 	var _answers := {}
 
+	func _init(game_ref, policy_name: String, seed_number: int) -> void:
+		super(game_ref, policy_name, seed_number)
+		# Arena duels measure pilot combat and weapon cadence, not the explorer's two-hook
+		# traversal chain; keep the one-bite harpoon hand (as on Wardens and bosses).
+		chain_hand_enabled = false
+
 	# Each telegraph is answered or missed once, when first seen, from the run's own stream.
 	func _threats() -> Array:
 		var out: Array = []
@@ -145,6 +151,9 @@ class DuelDriver extends BotDriver:
 	func _roam(delta: float) -> void:
 		if idle:
 			source.hold = {}
+			return
+		if policy == "completionist" and _chain_phase != "":
+			_explorer_chain(delta)
 			return
 		var target := pick()
 		if target == null:

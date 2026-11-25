@@ -30,29 +30,96 @@ const ALL := [RAPID_LASER, ARC_CASTER, PYLON_TURRET, STICKY_CHARGE, CLAW_SWEEP, 
 # OVERDRIVE_KNOCK), and a ram pushes as hard (Augments.RAM_KNOCK). The numbers live in
 # EventKinds.IMPACT; these read them.
 const BASE := {
-	RAPID_LASER: {"damage": 7.0, "rate": 12.0, "range_m": 85.0, "speed": 190.0, "bolt_radius": 0.25,
-		"knock": EventKinds.IMPACT["runner"]["knock"]},
-	ARC_CASTER: {"damage": 12.0, "rate": 5.0, "range_m": 70.0, "speed": 110.0, "bolt_radius": 0.55,
-		"knock": EventKinds.IMPACT["arc"]["knock"], "chain_jumps": 1, "chain_range": 9.0, "chain_falloff": 0.7},
-	PYLON_TURRET: {"damage": 11.0, "rate": 9.0, "range_m": 95.0, "speed": 150.0, "bolt_radius": 0.5,
-		"knock": EventKinds.IMPACT["turret"]["knock"], "chain_jumps": 2, "chain_range": 16.0, "chain_falloff": 0.75},
-	# Kest's sticky charge: damage is the charge's, bolt_radius its blast, range_m the
-	# longest throw; the throw cadence is the weapon slot's cooldown, not the rate.
-	STICKY_CHARGE: {"damage": 16.0, "rate": 1.0, "range_m": 30.0, "speed": 22.0, "bolt_radius": 3.0,
-		"knock": EventKinds.IMPACT["sticky"]["knock"]},
-	# Tarn's claw sweep: short, heavy and slow, the highest per-hit weapon. Plating
-	# tuning for Tarn belongs to the Tarn verification unit.
-	CLAW_SWEEP: {"damage": 32.0, "rate": 2.0, "range_m": 5.0, "speed": 140.0, "bolt_radius": 1.1,
-		"knock": EventKinds.IMPACT["claw"]["knock"]},
-	# Tally's ledger reader: the row gives _patterns, pattern() and _damage_mod a weapon to
-	# read. Combat runs her cards instead and never calls _fire for it.
-	LEDGER_READER: {"damage": 10.0, "rate": 2.5, "range_m": 30.0, "speed": 140.0, "bolt_radius": 0.5,
-		"knock": EventKinds.IMPACT["ledger"]["knock"]},
-	# The remembered cannon's lane: the row gives _rate, pattern ops and a volley proc a
-	# pattern to read. Combat commits a Mind lane for it instead of firing bolts.
-	CANNON_LANE: {"damage": LANE_DAMAGE, "rate": 1.0, "range_m": CANNON_LANE_REACH, "speed": 120.0, "bolt_radius": 0.6,
-		"knock": EventKinds.IMPACT["cannon"]["knock"]},
+	RAPID_LASER: {"damage": 12.0, "rate": 12.0, "range_m": 85.0, "speed": 190.0, "bolt_radius": 0.25,
+		"knock": EventKinds.IMPACT["runner"]["knock"],
+		"trigger": Pattern.TRIGGER_PRESS, "floor_s": 0.20, "mag": 6, "reload_s": 0.95,
+		"window_s": Vector2(0.38, 0.54), "window_mult": 1.2},
+	ARC_CASTER: {"damage": 8.0, "rate": 5.0, "range_m": 70.0, "speed": 110.0, "bolt_radius": 0.55,
+		"knock": EventKinds.IMPACT["arc"]["knock"], "chain_jumps": 1, "chain_range": 9.0, "chain_falloff": 0.7,
+		"trigger": Pattern.TRIGGER_TAP_CHARGE, "floor_s": 0.30, "tap_threshold_s": 0.16,
+		"charge_s": 0.64, "charge_min": 0.25, "recover_s": 0.12},
+	PYLON_TURRET: {"damage": 9.0, "rate": 9.0, "range_m": 95.0, "speed": 150.0, "bolt_radius": 0.5,
+		"knock": EventKinds.IMPACT["turret"]["knock"], "chain_jumps": 2, "chain_range": 16.0, "chain_falloff": 0.75,
+		"trigger": Pattern.TRIGGER_TAP_CHARGE, "floor_s": 0.30, "tap_threshold_s": 0.16,
+		"charge_s": 0.64, "charge_min": 0.25, "recover_s": 0.12},
+	# Kest's sticky charge (PILOT-CADENCE.md section 3.3): plain 11, snap 22 (2x) in [0.30, 0.55] s
+	# inside the 0.60 s throw floor; bolt_radius is its 3.0 m plain blast (4.05 m snapped).
+	STICKY_CHARGE: {"damage": 11.0, "rate": 1.0, "range_m": 30.0, "speed": 22.0, "bolt_radius": 3.0,
+		"knock": EventKinds.IMPACT["sticky"]["knock"],
+		"trigger": Pattern.TRIGGER_LOB_SNAP, "floor_s": 0.60,
+		"window_s": Vector2(0.30, 0.55), "window_mult": 2.0},
+	# Tarn's claw sweep (PILOT-CADENCE.md section 3.4): three beats (18 / 22 / 43 + 0.5 * speed to 30 m/s),
+	# one swing per press; beat 3 keeps the heaviest single baseline hit at every ball speed (43.0 > 42.0).
+	CLAW_SWEEP: {"damage": 18.0, "rate": 2.0, "range_m": 5.0, "speed": 140.0, "bolt_radius": 1.1,
+		"knock": EventKinds.IMPACT["claw"]["knock"],
+		"trigger": Pattern.TRIGGER_BEATS, "beat_floors_s": [0.45, 0.55], "beat_window_s": 0.75,
+		"window_s": Vector2(0.30, 0.54), "recover_s": 0.50,
+		"beat_mults": [1.0, 22.0 / 18.0, 43.0 / 18.0], "beat_speed_mult": 0.5 / 18.0, "beat_knock_mult": 2.0},
+	# Tally's ledger reader (PILOT-CADENCE.md section 3.5): Balance Due stamps on the beat.
+	# Damage is min(22, 8 + planar_speed) (full weight at 14 m/s cruise); window [0.40, 0.60] s
+	# stamps PAID for 1.2x (26.4) and refunds 0.5 pressure (strictly <= cast_cost 1.0).
+	LEDGER_READER: {"damage": STAMP_MAX, "rate": 2.5, "range_m": 30.0, "speed": 140.0, "bolt_radius": 0.5,
+		"knock": EventKinds.IMPACT["ledger"]["knock"],
+		"trigger": Pattern.TRIGGER_STAMP, "floor_s": 0.40,
+		"window_s": Vector2(0.40, 0.60), "window_mult": 1.2,
+		"cast_cost": 1.0, "refund": 0.5},
+	# The remembered cannon's lane (PILOT-CADENCE.md section 3.6): hold to paint closing brackets;
+	# release < 0.30 s fires Pulse (16, 16 m, 1.5x width), [0.30, 0.46] s fires Rail (42, 26 m,
+	# 1.0x width, pierces at 50% chip), > 0.46 s fires Barrage (26, 26 m, 2.0x width); 0.70 s recover.
+	CANNON_LANE: {"damage": CANNON_PULSE_DAMAGE, "rate": 1.0, "range_m": CANNON_LANE_REACH, "speed": 120.0, "bolt_radius": 0.6,
+		"knock": EventKinds.IMPACT["cannon"]["knock"],
+		"trigger": Pattern.TRIGGER_LOCK, "window_s": Vector2(0.30, 0.46), "recover_s": 0.70,
+		"lock_rail_damage": CANNON_RAIL_DAMAGE, "lock_barrage_damage": CANNON_BARRAGE_DAMAGE,
+		"lock_pulse_reach": CANNON_PULSE_REACH, "lock_rail_reach": CANNON_LANE_REACH,
+		"lock_pulse_width_mult": CANNON_PULSE_WIDTH_MULT, "lock_rail_width_mult": 1.0,
+		"lock_barrage_width_mult": CANNON_BARRAGE_WIDTH_MULT},
 }
+
+# PILOT-CADENCE.md section 4: the hold_auto rows. Setting a BASE row's `trigger` to hold_auto
+# returns that weapon to hold-to-fire with no code change (resolve_row).
+# BASE keeps each row's hold_auto `rate`; this table holds only what else differs.
+const HOLD_AUTO := {
+	RAPID_LASER: {"damage": 7.0},
+	ARC_CASTER: {"damage": 12.0},
+	PYLON_TURRET: {"damage": 11.0},
+	STICKY_CHARGE: {"damage": 16.0, "floor_s": 0.0, "window_s": Vector2.ZERO, "window_mult": 1.0},
+	CLAW_SWEEP: {"damage": 32.0},
+	LEDGER_READER: {"damage": 26.8, "rate": 0.5, "floor_s": 0.0, "window_s": Vector2.ZERO, "window_mult": 1.0,
+		"cast_cost": 1.0, "refund": 0.0},
+	CANNON_LANE: {"damage": LANE_DAMAGE, "window_s": Vector2.ZERO, "recover_s": 0.0,
+		"lock_rail_damage": 0.0, "lock_barrage_damage": 0.0,
+		"lock_pulse_reach": 0.0, "lock_rail_reach": 0.0,
+		"lock_pulse_width_mult": 1.0, "lock_rail_width_mult": 1.0, "lock_barrage_width_mult": 1.0},
+}
+
+# PILOT-CADENCE.md sections 2.5, 3.1-3.6 cadence constants.
+const PIERCE_CHIP := 0.5
+const RIVET_FAN_FLOOR_S := 0.10
+const RIVET_FAN_DAMAGE := 0.5
+const RIVET_FAN_SPREAD_DEG := 5.0
+const CHARGE_BOLT_DAMAGE := {
+	ARC_CASTER: 34.0,
+	PYLON_TURRET: 36.0,
+}
+const CHARGE_MOUNT_BOOST_S := 3.0
+const CHARGE_FAST_RATE := 1.5
+const CHARGE_BLAZING_RATE := 2.0
+const STICKY_TAIL_HOLD_S := 0.10
+const STICKY_TAIL_OFFSET := 1.2
+const STICKY_CHARGE_MAX := 0.60
+const STICKY_SNAP_MULT := 2.0
+const STICKY_SNAP_RADIUS_MULT := 1.35
+const STICKY_SNAP_KNOCK_MULT := 1.5
+const BEAT_SPEED_CAP := 30.0
+const STAMP_BASE := 8.0
+const STAMP_PER_SPEED := 1.0
+const STAMP_MAX := 22.0
+const CANNON_PULSE_DAMAGE := 16.0
+const CANNON_RAIL_DAMAGE := 42.0
+const CANNON_BARRAGE_DAMAGE := 26.0
+const CANNON_PULSE_REACH := 16.0
+const CANNON_PULSE_WIDTH_MULT := 1.5
+const CANNON_BARRAGE_WIDTH_MULT := 2.0
 
 const STRIKE_KIND := {RAPID_LASER: "runner", ARC_CASTER: "arc", PYLON_TURRET: "turret", STICKY_CHARGE: "sticky",
 	CLAW_SWEEP: "claw", LEDGER_READER: "ledger", CANNON_LANE: "cannon"}
@@ -145,7 +212,7 @@ const BURST_RADIUS := 12.0
 const BURST_RADIUS_PER_SPEED := 0.45
 const BURST_MAX_RADIUS := 30.0
 const BURST_DAMAGE := 14.0
-const BURST_DAMAGE_PER_SPEED := 1.4
+const BURST_DAMAGE_PER_SPEED := 0.8
 const BURST_KNOCK := EventKinds.IMPACT["burst"]["knock"]
 # Kest's detonation line: a bomb's shove along the line, radial from each charge.
 const LINE_KNOCK := EventKinds.IMPACT["line"]["knock"]
@@ -245,6 +312,61 @@ static func base(weapon_id: String, loadout := {}) -> Resource:
 	return Pattern.make(_attached(weapon_id, loadout, {}))
 
 
+# PILOT-CADENCE.md section 4: the legacy hold_auto Pattern for `weapon_id`, the BASE row with
+# its trigger field alone set to hold_auto.
+static func hold_auto_base(weapon_id: String) -> Resource:
+	var row: Dictionary = BASE.get(weapon_id, BASE[RAPID_LASER]).duplicate()
+	row["trigger"] = Pattern.TRIGGER_HOLD_AUTO
+	return Pattern.make(resolve_row(weapon_id, row))
+
+
+# A BASE row as its trigger mode fires it. A row whose trigger is hold_auto takes its
+# HOLD_AUTO damage, so setting `trigger` alone turns a cadence weapon back into today's gun
+# (PILOT-CADENCE.md section 4).
+static func resolve_row(weapon_id: String, row: Dictionary) -> Dictionary:
+	if String(row.get("trigger", Pattern.TRIGGER_HOLD_AUTO)) != Pattern.TRIGGER_HOLD_AUTO or not HOLD_AUTO.has(weapon_id):
+		return row
+	var out := row.duplicate()
+	for key in HOLD_AUTO[weapon_id]:
+		out[key] = HOLD_AUTO[weapon_id][key]
+	return out
+
+
+# The damage `weapon_id`'s base pattern fires, after its trigger mode (resolve_row).
+static func base_damage(weapon_id: String) -> float:
+	return float(resolve_row(weapon_id, BASE.get(weapon_id, BASE[RAPID_LASER]))["damage"])
+
+
+# Multiplier from spark base damage to full charged-bolt damage for tap_charge weapons.
+static func charge_bolt_mult(weapon_id: String) -> float:
+	if not CHARGE_BOLT_DAMAGE.has(weapon_id) or not BASE.has(weapon_id):
+		return 1.0
+	var spark: float = float(BASE[weapon_id].get("damage", 0.0))
+	return (float(CHARGE_BOLT_DAMAGE[weapon_id]) / spark) if spark > 0.0 else 1.0
+
+
+# Heaviest single baseline hit for `weapon_id` at a standstill (PILOT-CADENCE.md section 1).
+# Tarn's beat 3 standstill (43.0) stays the heaviest of the six baselines at every speed.
+static func max_base_hit(weapon_id: String) -> float:
+	var row: Dictionary = resolve_row(weapon_id, BASE.get(weapon_id, BASE[RAPID_LASER]))
+	var dmg: float = float(row.get("damage", 0.0))
+	match String(row.get("trigger", Pattern.TRIGGER_HOLD_AUTO)):
+		Pattern.TRIGGER_PRESS, Pattern.TRIGGER_LOB_SNAP, Pattern.TRIGGER_STAMP:
+			return dmg * maxf(1.0, float(row.get("window_mult", 1.0)))
+		Pattern.TRIGGER_TAP_CHARGE:
+			return maxf(dmg, float(CHARGE_BOLT_DAMAGE.get(weapon_id, dmg)))
+		Pattern.TRIGGER_BEATS:
+			var mults: Array = row.get("beat_mults", [])
+			var top := 1.0
+			for m in mults:
+				top = maxf(top, float(m))
+			return dmg * top
+		Pattern.TRIGGER_LOCK:
+			return maxf(dmg, maxf(float(row.get("lock_rail_damage", dmg)), float(row.get("lock_barrage_damage", dmg))))
+		_:
+			return dmg
+
+
 # SQ11: the top tier's second fire mode over the attached primary; null below the top tier
 # or for a loadout that belongs to another weapon.
 static func second_mode(weapon_id: String, loadout: Dictionary) -> Resource:
@@ -259,7 +381,7 @@ static func second_mode(weapon_id: String, loadout: Dictionary) -> Resource:
 # The BASE row with the loadout's attachment mods (attachments.gd), then `extra`, multiplied in.
 # A loadout for another weapon, or none, leaves the row untouched.
 static func _attached(weapon_id: String, loadout: Dictionary, extra: Dictionary) -> Dictionary:
-	var row: Dictionary = BASE.get(weapon_id, BASE[RAPID_LASER])
+	var row: Dictionary = resolve_row(weapon_id, BASE.get(weapon_id, BASE[RAPID_LASER]))
 	if String(loadout.get("weapon", "")) != weapon_id:
 		return row
 	var scales: Dictionary = Attachments.mods(loadout)

@@ -10,7 +10,8 @@ const T := preload("res://tests/support/t.gd")
 # Both tables produced these same six rows. The spec omits the fleet's object references.
 # Re-pinned 2026-10-13: stages 3 to 6 carry WT-BANDS's contact-gain posture tuning (907bfef), which the park
 # table mirrors; every other field is unchanged. 2026-10-23: stage 3's hive takes HIVE_HEAVY_RATIO
-# 0.7 (swarm hive option 1, alpha_defs.gd).
+# 0.7 (swarm hive option 1, alpha_defs.gd). 2026-11-24 (W46-S1): stage 1 dam warden_plating moved 90 -> 105
+# (alpha_defs.gd and park_defs.gd) to hold posture_bands_reactor_test grown in 25-45 s with ratio >= 2.0.
 const UNCHANGED := [
   {
     "harpoon_anchor": false,
@@ -19,7 +20,7 @@ const UNCHANGED := [
     "spec": {
       "family": "reactor",
       "hp": 650.0,
-      "plating": 90.0,
+      "plating": 105.0,
       "posture": {
         "curve": 2.0,
         "ram_shatters": false

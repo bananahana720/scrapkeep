@@ -45,7 +45,9 @@ So the score is one set, and the player is the room the DJ is reading. Every mov
 | Mix in key | Each world has one key (D, E, G) and each pack declares it | Declared; not checked when a pack is swapped |
 | Answer the phrase: the lead steps back and June plays a bar | The room's mood and colour, on each phrase's last bar | The set director, behind `--set-director=on` |
 | Swap the bass out the bar before a peak | The room rising toward the peak; a set piece announced to land next bar | The set director, behind `--set-director=on` |
-| Ride the filter into a drop, pump the chords against the kick, tape stop, switch-hit | A set piece's lead time, a kill chain, the last phase | After the world 1 sitting |
+| Pump the chords against the kick | The Warden fight's build, tight build and drop | Behind `--deck=festival` or `--deck=viking` |
+| Ride a build into the drop | The Warden's guard tightening toward breaking, the held breath on a stagger, and the chunk-shattering hit | Behind `--deck=festival` or `--deck=viking` |
+| Tape stop, switch-hit | A kill chain, the last phase | After the world 1 sitting |
 | Cue the next record before the room needs it | The conductor's warning of what is coming | After the world 1 sitting |
 
 ### The DJ at the decks: the set director
@@ -131,6 +133,13 @@ He gave the threads their own judgement on mechanics and tuning for this build-o
 - The director stays out of the fight's sections: it adds June's answer while the guard holds, never in the breath, the drop or the break, and never trims a directed section.
 - The combat feedback sounds (rule 7) sit at about the loudness they had, the shot a little under (it plays ten times a second): trims weapon_zap -9, hit_thwack -1, crit_ping -5, kill_pop -5, kill_chain_tier 0, ui_tick -8, and the on-beat clap about at a ranged hit's level, 8 dB under where the sax stab sat. Over the recorded world 1 fight these cut the effects' cover of the melody from a median 6.8 dB to 2.0 dB, and every cue still leads its best third of an octave over the band; over Brindle's anthem the chain's ratchet sits 3 dB under its own kill, so it is heard as part of the kill. The PC take of a world 1 run (13 November, job P) found the hit buried under its own shot, so the shot's crack sits at 2.5 to 5 kHz and the hit's tick above 5 kHz, and the hit and the chain went up 2 and 5 dB; in a rebuild of that run the hit leads its best band by +2.1 dB and the shot by +1.8. A chain link that lands with a special's blast stays under it, as a tick under its own event's big sound.
 - Kest's kick reads a tenth of a decibel over the peak line after its trim. It is left alone: the limiter holds it, and lowering it would change how loud it is.
+- The deck moves sit behind `--deck=festival` and `--deck=viking`, off by default until Andrew has heard them on and off, and run only on sectioned stage packs while the music arbiter allows the DJ.
+- Pump depths by section (`deck_moves.gd` `PUMP` / `PUMP_VIKING`): festival pumps 0.45 in the Warden build, 0.60 in the tight build and 0.55 in the drop; viking pumps deeper at 0.58, 0.72 and 0.68; every other section is 0, and only the bass and chords pump, never the drums.
+- Pump shape across each beat (`deck_moves.gd` `PUMP_SHAPE`): drops over the first 220 frames (5 ms) to avoid clicks, holds full depth to 0.07 of the beat, and recovers piecewise linearly through 0.20, 0.345 and 0.49 to full level by 0.62 of the beat; depth changes ramp over one beat.
+- Warden tight-build roll tiers by posture (`deck_moves.gd` `BUILD_TIERS`): quarter notes from 75, eighth notes from 85, and sixteenths turning to thirty-seconds on the bar's last beat from 95, booked one bar at a time half a bar before each bar line.
+- Festival deck one-shot levels and lengths (`deck_fx.gd`): snare roll at 0.28 and rising noise at 0.08 per build bar, one-bar falling breath noise at 0.02 on entering open, up-to-one-beat rising noise swell at 0.07 ending on the drop sample, and a drop impact combining a 0.34 s 125-to-40 Hz sub sweep at 0.26 with a 2.2 s crash at 0.13.
+- Viking deck preset (`--deck=viking`, `deck_fx.gd`): layers a 0.18 s warehouse kick (170-to-48 Hz body with a 4.8 kHz high-pass beater click) into each tight-build bar at 0.24 alongside the snare roll (0.85x) and rising noise (1.15x), and into the drop impact at 0.34 alongside the sub sweep and 3.6 kHz high-pass crash (1.05x).
+- Every deck one-shot is notched with a fourth-order bandstop from 1.8 to 4.4 kHz so the 2 to 4 kHz warning lane stays at least 12 dB under its own loudest band, edge-faded to exact zero after filtering, and capped under 0.58 peak.
 
 ## Tone: a game that loves having fun
 
@@ -288,6 +297,138 @@ ACE-Step 1.5 XL turbo on the RTX 4080, draft mode, two seeds each. Files sit in 
 ## Sound that answers play
 
 The full event set (49 cues, named after the game's `sfx_bank.gd` keys) and the plan for wiring music to play live in [sound/INTEGRATION.md](sound/INTEGRATION.md). In short: gameplay sound on the frame, music on the beat, the drums follow rolling speed, the sax follows the combo, kill chains and scrap streaks play rising D Dorian phrases, and every boss fight is a duel that ends on a knockout hit. Two targets are checked by tools: every instant cue's onset is within 5 ms of its start, and every musical stinger starts on the next beat.
+
+## Weapon timing, tube rail and wayfinding cues (ruling ek)
+
+**Status: cue list for wave 46 unit E3-04, written 22 November 2026 against `stage/alpha-w46` at `49b4dbbb5`. Nothing here is built, baked or heard.** Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov) gives each pilot's weapon a small act of timing, adds the tube rail to the HUD and marks finished sites in the world. This section is the one home for what each of those facts sounds like. E3-04 builds the cues from it.
+
+It owns no timer, mark or colour. When each fact happens is [PILOT-CADENCE.md](PILOT-CADENCE.md) sections 2 and 3, and that page's section 2.2 defines the words used here: floor, window, spent, rest. What the player sees is PILOT-CADENCE section 5.3, [LEGIBILITY.md](LEGIBILITY.md) section 14.2 and [WAYFINDING.md](WAYFINDING.md) sections 3 and 4. Every id, level and frequency below is a start value that E3-04 may change; the trigger, the mark it twins and the rules under "What E3-04 may not do" are fixed.
+
+### Rules for every cue here
+
+1. **Hardware from the garage, played dry.** Each cue is one piece of a pilot's machine: a hammer, a latch, a piston, a relay. It sounds the way Arlo samples the garage for the 2010 band: close, dry, no room and no tail past 0.4 s. A pilot's cues use the material of that pilot's voice in the band ([SOUND-STORY.md](../SOUND-STORY.md) sections 2 and 8).
+2. **Percussion, not notes** (rule 7 under "Who has the melody"). A weapon fires many times a minute, so its cues stay in rule 7's two lanes: a body from 120 to 300 Hz, and a crack or ring above 4.4 kHz. A shot's crack may keep the shot's own 2.5 to 5 kHz lane if it is shorter than 0.1 s. Anything longer keeps out of 1.8 to 4.4 kHz, where the warnings live, as the deck one-shots do. No weapon cue plays a note in the melody's band. The Cannon's lock chime is the one weapon cue with a real pitch, and it sits above 4.4 kHz. Outside the weapons, the site flip is a reward and keeps a pitched chime, as rule 7 lets pickups and rewards do.
+3. **On the frame.** Every cue starts on the frame its fact happens and none waits for the beat. A timing window is the weapon's own clock: Tally's "beat" is her flywheel's, counted from her last hit, and is not the band's beat. A press on the band's beat earns nothing here: rule 8's band answer stays with specials, gauge releases and line skills.
+4. **One read for the mark and the sound.** The cue fires on a change in the weapon module's one public state call, the same call the reticle instrument reads (PILOT-CADENCE section 7), so a sound and its mark cannot disagree.
+5. **A window cue ends with its window.** A cue that says "the window is open" is no longer than the window it marks, so it is never still sounding once the press has stopped paying.
+6. **Where no cue is listed, today's sound stays.** Rivet's plain round, Kest's throw and plain blast and Tally's plain cast sound as they do now. A shot fired by an item, a tree proc or a device (PILOT-CADENCE section 2.4) sounds the plain shot and never a window, hit or spent cue.
+7. **An interruption is silent.** When an event in PILOT-CADENCE section 2.3 drops a charge or spends a window, any held voice stops and nothing new sounds: the ultimate, the death or the stage card owns that moment. A pause holds a held voice as it holds the timer.
+
+### The six pilots
+
+"Level" is the cue row's priority (0 plays 6 dB down, 1 plays 3 dB down, and neither dips the band) and the cue's own trim in `SfxBank.TRIM_DB`.
+
+**Rivet.** Closed hat and clav stab, dry and clean: the revolvers are small, hard, bright metal with copper and brass in them.
+
+| Fact (start id) | Sounds on | Seen as | Heard as | Level |
+| --- | --- | --- | --- | --- |
+| Dry click (`rivet_dry_click`) | A press that finds the cylinder empty: any press during a reload that is outside the notch and is not buffered | The six hollow chambers; the notch going slate on the first such press | A hammer falling on nothing: one small dull click with no ring | 0, -10 dB |
+| Cylinder out (`rivet_cylinder_out`) | The sixth round leaving, which starts the reload | The reload sweep starting round the ring | A hinge clack, then spent brass tinkling out: a short scatter of high metal, over before the notch opens | 1, -8 dB |
+| Notch (`rivet_notch_tick`) | The notch opening | The mint notch on the sweep | One closed-hat tick, as long as the notch | 1, -6 dB |
+| Latch snap (`rivet_latch_snap`) | A press in the notch | The six chambers filling copper | The cylinder slammed shut: a hard low clack with a click on top. The first hot round fires on the same frame and its crack rides over it | 1, -4 dB |
+| Hot round (`rivet_hot_crack`) | Each hot round leaving | The copper bolt | The shot's punch with a harder, brighter crack and a short brass ring over it. The sixth, which pierces, sounds the same | 1, -8 dB |
+| Cylinder shut (`rivet_cylinder_shut`) | A reload ending with plain rounds: at its full time, or at once on a Skid landing or Line Drive | The six chambers filled plain | A soft latch, half the weight of the snap | 0, -10 dB |
+
+**Sable.** Mallet and bell, bright with a short ring: the caster is a coil that crackles, whines and rings.
+
+| Fact (start id) | Sounds on | Seen as | Heard as | Level |
+| --- | --- | --- | --- | --- |
+| Spark (`sable_spark_crackle`) | The press | The spark | A dry electric crackle: three or four grains of high noise in 40 ms over a small body | 1, -9 dB |
+| Charge rise (`sable_charge_rise`) | The charge starting to fill; it stops at full or at the release | The arc filling; the coil mast lighting from foot to tip | A coil whine that climbs: one narrow band of noise sliding up from 4.5 kHz. It is played faster at the fast and blazing speed tiers, so a quick charge is heard as a shorter, higher climb. One voice | 1, -10 dB |
+| Full (`sable_full_tick`) | The charge reaching full | The one mint tick on the arc | One short bell strike in her own voice, with every partial above 4.4 kHz | 1, -6 dB |
+| Hold (`sable_hold_hum`) | From the full tick until the button comes up | The full arc holding with its mint tick | A quiet coil hum: a low band of noise with a slow flutter and no steady note. A loop, one voice | 0, -12 dB |
+| Bolt (`sable_bolt_thunder`) | The release, at a quarter charge or more | The arc emptying; the bolt's release ring | Arc thunder: a crack, then a short low roll in the body lane with nothing held under 100 Hz. Its level follows the charge, 6 dB down at a quarter and full at full | 1, -4 dB |
+
+Mounted on a pylon she uses the same five cues.
+
+**Kest.** Tuned floor tom and sub: the charges are heavy and soft until they go off.
+
+| Fact (start id) | Sounds on | Seen as | Heard as | Level |
+| --- | --- | --- | --- | --- |
+| Plant (`kest_plant_thud`) | The thrown or dropped charge sticking to the ground or a machine | The charge where it sits, with its fuse ring | A wet, dead thud: putty on plate | 1, -8 dB |
+| Cook (`kest_cook_tick`) | A live charge's window opening. Charges that share one window sound it once | The fuse ring turning mint; the mint tick on the reticle | A fuse tick: one bright dry tick with a short fizz, as long as the window | 1, -6 dB |
+| Snap (`kest_snap_pop`) | A press in the window bursting the charge, or Detonation Line catching an open window | The bone burst ring with an amber edge | A hard pop on top of the blast. The blast keeps its own sound; the pop is the crack a plain blast lacks | 1, -5 dB |
+
+**Tarn.** Round bass and the drum ratchet: the claws are a saw that rasps and a piston that vents. The machine snarls while Tarn stays gentle, so nothing here is sharp for long.
+
+| Fact (start id) | Sounds on | Seen as | Heard as | Level |
+| --- | --- | --- | --- | --- |
+| Beats one and two (`tarn_saw_rasp`) | Each of the two swings starting | Pips one and two filling; the sweep ribbon | A saw rasp: a short burst of toothed noise. Beat two is the same rasp played lower and a little longer, so the count is heard as one, two | 1, -7 dB |
+| Piston (`tarn_piston_hiss`) | The window opening after beat two | Pip three turning mint; the piston drawing in beside the ball | A piston hiss: air let go through a valve, as long as the window | 1, -6 dB |
+| Beat three (`tarn_cleave_crunch`) | A press in the window, as the third swing starts | Pip three filling in his colour; the ribbon | The heaviest sound of the six weapons: a blade's drop and a crunch of plate, body first, with a short torn edge above it | 1, -3 dB |
+
+**Tally.** Electric piano and the ledger's works: a flywheel, a stamp and a counter wheel. Her cues are the most regular of the six, because the ledger is honest.
+
+| Fact (start id) | Sounds on | Seen as | Heard as | Level |
+| --- | --- | --- | --- | --- |
+| Flywheel (`tally_flywheel_whirr`) | The window opening after a Balance Due lands | The square tick turning mint; the drum's notch passing the index shoe | A flywheel coming round: a short whirr that ends on the shoe's tick, as long as the window | 1, -6 dB |
+| Stamp (`tally_stamp_clunk`) | A PAID cast landing | The PAID stamp on the machine and the tick filling, both in ledger cream | A stamp press: one square, heavy clunk | 1, -4 dB |
+| Refund (`tally_refund_tick`) | The stamp's pressure coming back | The pressure pip filling partway | A counter wheel clicking over: two quick small ticks just after the clunk, so the pair is heard as one machine. A tick and not a bell, because the shop bell means a purchase and nothing else | 0, -8 dB |
+
+**The Cannon.** The chime: the Foreman's clean tone, bent, in a gun that chose a side.
+
+| Fact (start id) | Sounds on | Seen as | Heard as | Level |
+| --- | --- | --- | --- | --- |
+| Lock (`cannon_lock_chime`) | The brackets closing flush | The mint brackets on the ground lane, mirrored on the reticle | One clean high tone with the Cannon's slow bend, on home three octaves above its motif's last note (near 4.7 kHz), as long as the lock. It follows the live key | 1, -6 dB |
+| Pulse (`cannon_pulse_shot`) | A release before the lock | The wide, short shot | The lightest of the three: one short dull thump | 1, -8 dB |
+| Rail (`cannon_rail_shot`) | A release inside the lock | The bone shot with a thin uranium-green edge | A hard crack and a long thin ring running out down the lane: the only one of the three that rings | 1, -3 dB |
+| Barrage (`cannon_barrage_shot`) | A release after the lock | The shot at twice the lane's width | Three ragged low thuds close together, wide and dull, with no ring | 1, -6 dB |
+
+The three shots are told apart by shape before level: one thump, one ringing crack, three thuds.
+
+**The spent tick, shared.** One cue, `window_spent_tick`, sounds when a window is spent by an early press or closes unpressed, for Kest, Tarn, Tally and the Cannon's lost lock, and for Rivet's notch closing unpressed. It twins the mark going slate, which is one colour for every pilot, so it is one sound for every pilot: a single dull tick, level 0 at -10 dB, quieter than any cue that pays. Rivet's early press sounds his dry click in its place. Sable has no spent state and no spent cue. It is information and never a penalty (PILOT-CADENCE section 2.1, rule 3): it has no buzz, no fall and no minor colour.
+
+### The tube rail
+
+LEGIBILITY section 14.2 gives a tube appearing and a tube running out one short clack each, in the player voice class. They are the quietest cues in a run: a dry relay in the register of the menu's switch clicks, heard when the fight is thin and gone under it when the fight is thick. The tube is the fact; the clack only confirms it.
+
+| Fact (start id) | Sounds on | Seen as | Heard as | Level |
+| --- | --- | --- | --- | --- |
+| Tube rises (`tube_rise_clack`) | A row entering what the rail draws (`BuffLedger.active_rows(4)`) | The tube rising in `nixie_rail.gd` | A relay pulling in: one soft clack with a faint glassy tick after it | 0, -12 dB |
+| Tube sinks (`tube_sink_click`) | A row leaving because its time ran out or its count reached zero | The tube sinking | A relay letting go: one click, shorter and duller than the rise | 0, -12 dB |
+
+- When a fifth effect takes a tube's place, only the rise sounds.
+- An attempt boundary clears the ledger in silence.
+- A count changing its digit makes no rail sound: whatever spent it already has one.
+- Both are on the crowd list (`MixRows.CROWD_SOUNDS`), so they step back first when effect voices pile up. At most one rail cue starts in any 90 ms.
+
+### Finished sites and command cables
+
+WAYFINDING section 4 makes a finished site quiet to the eye. Its sound is quiet in the same way: small, heard from the site's own place (`audio.gd` `play_at`, which lowers a sound with distance) and never an announcement.
+
+| Fact (start id) | Sounds on | Seen as | Heard as | Level |
+| --- | --- | --- | --- | --- |
+| Cable severed (`cable_sever_snap`) | A command cable dying, which is the frame its gate pip lights (WAYFINDING section 3) | The cable's beads stopping; two capped ends and a gap | A taut cable parting: one dry snap and a small cap ring, from the gap. It has no chime of its own. The pip keeps today's `warden_gate_pip` chime, and the snap is the same fact heard on the ground | 0, -8 dB |
+| Site flipped (`site_flip_set`) | A cache, a crew home or a cage showing its finished mark | The flag, the chalk X or the scarf (`site_markers.gd`) | Something set down: a cloth snap, then two soft mallet notes falling a fifth to home, A5 to D5. It falls where a pickup rises, so it reads as done and not as got. It follows the live key | 0, -9 dB |
+
+- When the camp or the clock opens the clamp and several cables die at once, one snap sounds, under today's `warden_gate_release`.
+- A flip within 0.2 s of a pip's chime or the clamp's release stays silent: the gate is the bigger news, and one finished sound a moment is enough.
+- The site's own reward sound (the rescue fanfare, the cache's open, today's `found_chime`) stays as it is. The flip is the mark arriving, 3 dB or more under it.
+- A rogue's wreck and a broken shortcut have no flip cue: the break that made the mark is its sound. The furnace never flips.
+- The flip plays under the finishing event's own kind, so it takes that kind's voice class: reward where `sfx_budget.gd` already lists the kind, otherwise player.
+
+### What E3-04 may not do
+
+The Sound V4 music code decides who owns the music, and `SoundArbiter.tla` holds its rules ([what the model covers](../../../.agents/skills/scrapkeep-verify-formal/references/sound-coverage.md)). The plan keeps that model unchanged on one condition: every cue in this section is a plain effect. Each line below is a way a plain effect could stop being one.
+
+1. **Its own recipe.** Every start id above has its own row in `SfxBank.TRIM_DB` and its own branch in the bank's bake, so `SfxBank.plays_own(id)` is true and none bakes the fallback blip. `sound_own_recipes_test` holds this as the gate row `sound-own-recipes`; its pinned count rises on purpose, and E3-04's receipt names the new figure. A held voice (Sable's rise and hum) is one voice per cue, and the hum meets its own start as every loop must (`sound_edges_test`).
+2. **A visible twin.** Every fact above has a row in `sound_twins.gd` whose token is the drawing call named in its "Seen as" column. The window, full-charge and tube-sinks facts tell the player to act, so they are `ACT` rows; a shot, a hit and a flip echo what the player did. No row is `OPEN`, `OPEN_PINNED` stays 5, and every new row is traced.
+3. **Never dip the band.** Priority 0 or 1 only. `audio.gd` `play` dips the band for any cue of priority 2 or 3.
+4. **Never a warning.** No id joins `SfxBank.DANGER_SOUNDS`, and no kind joins `EventKinds.THREAT_ROWS` or `SfxBudget.THREAT_KINDS`. A cue on one of those lists takes a threat voice, or pulls the bass and the music bus down and moves the melody lease on, which takes June's answer away. No cue uses Eb, Ab or Bb, the threat notes.
+5. **Never melodic to the band.** No cue is booked on the band's grid (`schedule_stinger_at`, `on_beat`), none is a music cue in `MusicRows.CUES`, and none is a skill answer or a pilot quote. A cue that did any of these would count as a melody against June's lease.
+6. **Never own or pin the deck.** No cue adds a field to the state `MusicArbiter.resolve` reads, or a row to `MixRows.MAKE_ROOM`, `FOCUS` or `STATES`. `music_arbiter.gd`, `melody_lease.gd`, `deck_moves.gd`, `deck_fx.gd`, `ace_sequencer.gd` and `set_director.gd` are not edited. E3-04 does edit `audio.gd`, which the model covers: it changes none of the functions the coverage page lists, and the Gate reruns the model's receipt on the unit's head (`node scripts/gate/model-receipts.mjs --out <dir> --row sound-arbiter-safe`). A unit that finds it needs one of those files stops and reports.
+7. **Never move a level ceiling.** The gate row `sound-levels` measures the music clips only: loudness, true peak and loop seams on the packed Ogg build. These cues add no clip and no stem, so the row reads as it did before the unit, clip for clip, on the PC's real Ogg build. On the effects side nothing in `MixRows.BUS_DB` or the two ceilings (`SFX_CEILING_DB`, `MASTER_CEILING_DB`) changes, and each cue passes `sound_edges_test`.
+8. **Never hide the melody or each other.** The cues that fire with every shot (Rivet's hot round, Sable's spark, Tarn's rasp, the Cannon's pulse) join `MixRows.CROWD_SOUNDS` as today's shot does. The window cues stay off it, because they carry the timing. Every cue takes a `VOICE_LIMIT` row and the fast ones a `MIN_GAP_MS` row. All three tables are in `mix_rows.gd`, so the unit's brief names that file. With the cues in, the effects' cover of the melody in a recorded world 1 fight is no higher than the same head measured without them, and each window cue leads its best third of an octave over the band ("How it is checked"). Both are read on the PC.
+
+### Calls made for Andrew, his to overturn
+
+- A missed window has a sound: one quiet dull tick, shared by the pilots. It could be silence.
+- Tally's refund is a counter tick and not a till bell, so Moss's bell keeps its one meaning.
+- Sable's charge is a rising whine of noise and not a climbing scale, so a weapon fired every second plays no tune against the band.
+- The Cannon's lock is a real tone, high and on home. If it fights the lead, it becomes an inharmonic ring like the others.
+- The rail's clacks may be lost in a thick fight on purpose. The tube is always there to see.
+- A crew home that lights a pip sounds the pip and not the flip.
+- A hit on a window earns no answer from the band, even on the band's beat.
 
 ## Wiring notes for the wave coordinator
 

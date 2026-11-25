@@ -8,7 +8,12 @@ const BURST_SECONDS := 0.85
 const GRIT_REACH := 22.0
 const GRIT_INTERVAL := 0.2
 # Mutable only to exercise the missing-resource fallback without moving an asset.
-static var lamp_shader_path := "res://assets/materials/dig_mechanical/lamp_motion.gdshader"
+const LAMP_SHADER_PATH := "res://assets/materials/dig_mechanical/lamp_motion.gdshader"
+static var lamp_shader_path := LAMP_SHADER_PATH
+
+
+static func reset_for_tests() -> void:
+	lamp_shader_path = LAMP_SHADER_PATH
 
 var available := false
 var lamp_views: Array[MultiMeshInstance3D] = []

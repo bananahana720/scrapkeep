@@ -13,6 +13,8 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
 const CompanionPanel := preload("res://src/ui/companion_panel.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const ClassDef := preload("res://src/core/class_def.gd")
 
 # Moss's counter: the shop's verbs as stamped plates on one charcoal panel. It reads
 # the shop's records (CONTRACTS, Moss's shop) and calls its verbs; every answer goes out
@@ -58,6 +60,8 @@ var _open := false
 var _tween: Tween
 var _generation := 0
 var _rest_x := 0.0
+# The counter itself: one Keeper plate, taped where its top joins the hatch.
+var _frame = _counter_frame()
 
 
 class ScrapChip extends Control:
@@ -72,7 +76,7 @@ class ScrapChip extends Control:
 
 	func _draw() -> void:
 		var mid := size.y * 0.5
-		draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(0.0, mid - 12.0), Vector2(24.0, 24.0)), false, Icons.tint("res_scrap", Palette.ARC))
+		draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(0.0, mid - 12.0), Vector2(24.0, 24.0)), false, Icons.tint("res_scrap", Palette.STEEL))
 		UiDraw.text(self, 32.0, mid, str(amount), UiTokens.LABEL, Palette.SAND, true)
 
 
@@ -112,7 +116,7 @@ func _init() -> void:
 		b.add_theme_color_override("icon_hover_color", UiTokens.TEXT)
 		b.add_theme_color_override("icon_focus_color", UiTokens.TEXT)
 		for state in ["normal", "hover", "pressed", "focus", "disabled"]:
-			b.add_theme_stylebox_override(state, ChoiceButton.plate(Palette.SAND if state in ["hover", "focus"] else UiTokens.LINE, 3 if state == "focus" else 2, 8.0, state != "focus"))
+			b.add_theme_stylebox_override(state, _face_plate(state, f[0].hash()))
 		b.pressed.connect(set_face.bind(f[0]))
 		b.mouse_entered.connect(func(): b.grab_focus())
 		_wallet.add_child(b)
@@ -319,7 +323,7 @@ func _part_rec(kind: String, part_id: String, price: int, state: String) -> Dict
 
 
 func _class_color() -> Color:
-	return game.run.class_def.color if game.run.class_def != null else Palette.SAND
+	return ClassDef.screen_color(game.run.class_def.color) if game.run.class_def != null else Palette.SAND
 
 
 func _row() -> HBoxContainer:
@@ -477,4 +481,29 @@ func _set_live(live: bool) -> void:
 
 
 func _draw() -> void:
-	UiDraw.panel(self, Rect2(Vector2.ZERO, size))
+	draw_style_box(_frame, Rect2(Vector2.ZERO, size))
+
+
+# A face's plate in the Keeper's hand: copper at rest, sand under the mouse, and focus a sand ring
+# over the plate, its edge alone.
+static func _face_plate(state: String, serial: int) -> StyleBox:
+	var box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
+	# The margins a face's ChoiceButton plate had, so the verb's icon keeps its size.
+	box.content_margin_left = 8.0
+	box.content_margin_right = ChoiceButton.PAD * 1.5
+	box.content_margin_top = UiTokens.GAP_S
+	box.content_margin_bottom = UiTokens.GAP_S
+	if state in ["hover", "focus"]:
+		box.border_color = Palette.SAND
+	if state == "focus":
+		box.border_width = 3.0
+		box.bg_color = Color(box.bg_color, 0.0)
+		box.rivets = false
+		box.halftone = false
+	return box
+
+
+static func _counter_frame() -> StyleBox:
+	var box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, 61)
+	box.tape = 0.5
+	return box

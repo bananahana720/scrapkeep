@@ -5,12 +5,14 @@ extends RefCounted
 # tool names the row to fix. An empty array means the park loads.
 #
 # Rule keys: missing, type, enum, duplicate, reference, waymarks, mounting, pack, family,
-# lead_floor, water_depth, handling, recipe, home_landform, guardrail, line, music_layer.
+# lead_floor, water_depth, handling, recipe, home_landform, guardrail, line, music_layer,
+# cable, district, approach.
 
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Director := preload("res://src/world/director.gd")
+const LockRows := preload("res://src/world/lock_rows.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 
 const SCHEMA := "scrapkeep-park/1"
@@ -73,8 +75,9 @@ const CONTRAPTION_KEYS := {
 	"thermal": ["at", "radius", "height"],
 	"cinder": ["strips", "drag"],
 	"glaze": ["strips", "push", "cap"],
+	"sluice_valve": ["at", "lane", "charge", "price"],
 }
-const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal", "cinder", "glaze"]
+const CONTRAPTION_KINDS := ["barge", "lift", "launcher", "cable", "valve", "cracked_wall", "thermal", "cinder", "glaze", "sluice_valve"]
 const CONTRAPTION_RECIPES := ["", "gauge", "geyser_vent", "cannon", "trebuchet", "lift_platform", "barge"]
 
 # Activity presentation uses an ACTIVITY_ROWS key or the kind's existing cue.view alias.
@@ -163,6 +166,8 @@ const PARK_FIELDS := {
 # ground at its own ends (park_recipes.gd tile_fit); "drape" stands a ground-conforming GLB on the seat of its stamp
 # (park_recipes.gd fits_drape, seat), with no `y`, so the graph reads no deck.
 const FITS := ["seat", "tile", "drape"]
+# Optional on a park row: explicit map standard point 5 cover tag (park_recipes.gd COVER_KINDS).
+const COVERS := ["hard", "soft", "surface"]
 # Optional on a park row: "clear_view" keeps trees out of the strip behind the row's rear edge, so a ball
 # arriving over the row sees what lies past it (spillway_scenery.gd, park_sites.gd in_clear_view). depth_m is how
 # far back from the rear edge, half_width_m how far either side of the row's centre line.
@@ -183,8 +188,22 @@ const WEAR_FIELDS := {"id": "s", "points": "a", "width_m": "n"}
 const SURVIVAL_FIELDS := {"id": "s", "form": ["yard", "muster", "ring"], "at": "v2"}
 # Optional at the top: "approach", the last of the floor line dressed as the way to the boss's bowl
 # (bowl_approach.gd, only with --approach=on). to names the bowl; smoke is where its furnace stands, which may be
-# off the map, in the direction the stage's launch leaves.
+# off the map, in the direction the stage's launch leaves; optional far_card places a flat horizon card along the
+# exit line outside play_rect (design-v3/WAYFINDING.md sections 2.1 and 6).
 const APPROACH_FIELDS := {"to": "s", "smoke": "v2"}
+const FAR_CARD_FIELDS := {"at": "v2", "to": "s"}
+# Optional at the top (design-v3/WAYFINDING.md sections 3 and 6, ruling ek): command cables from the clamp to crew
+# homes, ordered by pip 1..N where N is the park gate's packs in lock_rows.gd (0 packs -> no cables).
+const CABLE_FIELDS := {"id": "s", "pip": "n", "to": "s", "via": "a"}
+# Optional at the top (design-v3/WAYFINDING.md sections 2.2, 6 and 7, ruling ek): non-overlapping park districts.
+# World 1 names are checked against design-v3/NAMES.md ("Places in world 1"); parked worlds 2 and 3 accept any
+# unique non-empty name until their name tables land, with no code change.
+const DISTRICT_NAMES := [
+	"Intake Catwalks", "Spillway Apron", "Sunken Pump Yard",
+	"Weir Bobsled", "Trestle Span", "Headhouse Overlook",
+]
+const WORLD_DISTRICT_NAMES := {1: DISTRICT_NAMES}
+const DISTRICT_FIELDS := {"id": "s", "name": "s", "rect": "v4", "grade": "s"}
 const LANDMARK_FIELDS := {
 	"id": "s", "kind": LANDMARK_KINDS, "at": "v2", "size": "v3", "yaw_deg": "n", "recipe": "s",
 	"budget": ["hero_landmark"], "sight_top": "v3", "sight_share": "n", "beacon": "v2", "reach_m": "n",
@@ -240,7 +259,8 @@ static func stage_context(map_id: String) -> Dictionary:
 				packs.append(pack)
 	# The director's ancient pack, named by the world's ancient kind.
 	packs.append(WORLD_ANCIENTS[world])
-	return {"stage": stage, "world": world, "warden_family": WORLD_KINDS[world], "packs": packs}
+	return {"stage": stage, "world": world, "warden_family": WORLD_KINDS[world], "packs": packs,
+		"gate_packs": int(LockRows.row(map_id).get("gate", {}).get("packs", 0))}
 
 
 # Parse a park or line file. {"data": Dictionary, "errors": Array}; a file that is not a JSON
@@ -298,7 +318,11 @@ static func validate(park: Dictionary, ctx: Dictionary = {}) -> Array:
 		for id in lanes:
 			_wear_row(out, id, lanes[id])
 	if park.has("approach"):
-		_fields(out, "approach", park["approach"], APPROACH_FIELDS)
+		_approach(out, park["approach"], park["play_rect"])
+	if park.has("cable_rows"):
+		_cable_rows(out, park, homes, ctx)
+	if park.has("district_rows"):
+		_district_rows(out, park, ctx)
 
 	var landmark: Dictionary = park["landmark"]
 	_landmark(out, landmark, ctx)
@@ -452,6 +476,99 @@ static func _wear_row(out: Array, id: String, row: Dictionary) -> void:
 		_add(out, id, "width", "width_m %s must be above 0" % str(row["width_m"]))
 
 
+static func _approach(out: Array, approach, play_rect: Array) -> void:
+	if not _fields(out, "approach", approach, APPROACH_FIELDS):
+		return
+	if String(approach["to"]).strip_edges() == "":
+		_add(out, "approach", "missing", "approach.to must be non-empty")
+	if not approach.has("far_card"):
+		return
+	var card = approach["far_card"]
+	if not _fields(out, "approach", card, FAR_CARD_FIELDS):
+		return
+	if String(card["to"]).strip_edges() == "":
+		_add(out, "approach", "missing", "approach.far_card.to must be non-empty")
+	if card.has("size"):
+		if not _is_vec(card["size"], 2) or float(card["size"][0]) <= 0.0 or float(card["size"][1]) <= 0.0:
+			_add(out, "approach", "approach", "far_card.size %s must be [width, height] above 0" % str(card["size"]))
+	if card.has("yaw_deg") and not _is_num(card["yaw_deg"]):
+		_add(out, "approach", "type", "far_card.yaw_deg %s is not n" % str(card["yaw_deg"]))
+	var at: Array = card["at"]
+	var px := float(at[0])
+	var pz := float(at[1])
+	var rx := float(play_rect[0])
+	var rz := float(play_rect[1])
+	if px >= rx and px <= rx + float(play_rect[2]) and pz >= rz and pz <= rz + float(play_rect[3]):
+		_add(out, "approach", "approach", "far_card.at %s must stand outside play_rect %s" % [str(at), str(play_rect)])
+
+
+static func _cable_rows(out: Array, park: Dictionary, homes: Dictionary, ctx: Dictionary) -> void:
+	if not park["cable_rows"] is Array:
+		_add(out, "cable_rows", "type", "cable_rows is not an array")
+		return
+	var raw: Array = park["cable_rows"]
+	var cables := _rows(out, park, "cable_rows", CABLE_FIELDS)
+	var want: int = int(ctx.get("gate_packs", LockRows.row(String(park["map"])).get("gate", {}).get("packs", 0)))
+	if want <= 0:
+		if not raw.is_empty():
+			_add(out, "cable_rows", "cable", "gate asks for no packs, so park has no cables (got %d)" % raw.size())
+		return
+	var seen_pips := {}
+	for id in cables:
+		var row: Dictionary = cables[id]
+		if not homes.has(row["to"]):
+			_add(out, id, "reference", "cable to %s is no home row" % str(row["to"]))
+		var via: Array = row["via"]
+		if not via.all(func(p): return _is_vec(p, 2)):
+			_add(out, id, "type", "cable via must hold [x, z] pairs")
+		var pip_f := float(row["pip"])
+		var pip := int(pip_f)
+		if pip_f < 1.0 or pip_f != floorf(pip_f):
+			_add(out, id, "cable", "pip %s must be a whole number from 1" % str(row["pip"]))
+		elif seen_pips.has(pip):
+			_add(out, id, "duplicate", "pip %d repeats in cable_rows" % pip)
+		else:
+			seen_pips[pip] = id
+			if pip > want:
+				_add(out, id, "cable", "pip %d exceeds gate packs %d" % [pip, want])
+	for k in range(1, want + 1):
+		if not seen_pips.has(k):
+			_add(out, "cable_rows", "cable", "missing cable for pip %d of %d" % [k, want])
+
+
+static func _district_rows(out: Array, park: Dictionary, ctx: Dictionary) -> void:
+	if not park["district_rows"] is Array:
+		_add(out, "district_rows", "type", "district_rows is not an array")
+		return
+	var districts := _rows(out, park, "district_rows", DISTRICT_FIELDS)
+	var allowed = ctx.get("district_names", WORLD_DISTRICT_NAMES.get(int(ctx.get("world", 0)), []))
+	var seen_names := {}
+	var boxes: Array = []
+	for id in districts:
+		var row: Dictionary = districts[id]
+		if String(row["grade"]).strip_edges() == "":
+			_add(out, id, "district", "district grade key must be non-empty")
+		var title := String(row["name"]).strip_edges()
+		if title == "":
+			_add(out, id, "district", "district name must be non-empty")
+		elif allowed is Array and not allowed.is_empty() and not allowed.has(String(row["name"])):
+			_add(out, id, "enum", "name %s is not in its list" % str(row["name"]))
+		if title != "":
+			if seen_names.has(title):
+				_add(out, id, "duplicate", "district name %s repeats" % title)
+			else:
+				seen_names[title] = id
+		var r: Array = row["rect"]
+		if float(r[2]) <= 0.0 or float(r[3]) <= 0.0:
+			_add(out, id, "district", "rect %s needs width and height above 0" % str(r))
+			continue
+		var box := Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
+		for prior in boxes:
+			if box.intersects(prior["rect"], false):
+				_add(out, id, "district", "district %s overlaps %s" % [id, prior["id"]])
+		boxes.append({"id": id, "rect": box})
+
+
 static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary, routes: Dictionary, events := {}) -> void:
 	if row["home"] != "" and not homes.has(row["home"]):
 		_add(out, id, "reference", "home %s is no home row" % row["home"])
@@ -467,6 +584,8 @@ static func _park_row(out: Array, id: String, row: Dictionary, homes: Dictionary
 			_add(out, id, "enum", "fit %s is not in its list" % str(row["fit"]))
 		elif String(row["recipe"]) == "" or String(row["recipe"]).begins_with("greybox:"):
 			_add(out, id, "fit", "fit %s needs a GLB recipe, not %s" % [row["fit"], str(row["recipe"])])
+	if row.has("cover") and not COVERS.has(row["cover"]):
+		_add(out, id, "enum", "cover %s is not in its list" % str(row["cover"]))
 	# Optional: "off_spine": true keeps the row's graph zone an off-spine dead end for the rib pay rate
 	# (director.off_spine), whatever the graph reads (ruling bd).
 	if row.has("off_spine") and not row["off_spine"] is bool:

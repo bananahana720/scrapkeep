@@ -126,6 +126,10 @@ const LOOK_DRAG := 0.009
 static var _sitting_unlocks := {}
 
 
+static func reset_for_tests() -> void:
+	_sitting_unlocks.clear()
+
+
 func _init(class_def: Resource = null, size_hint := Vector2(380.0, 260.0)) -> void:
 	def = class_def
 	stretch = true
@@ -156,6 +160,30 @@ func _notification(what: int) -> void:
 
 func playing() -> bool:
 	return open > 0.5
+
+
+# Back to how a new preview stands: closed, its clock at zero (no antic for a period), the pilot seated and the look
+# let go, the camera at rest.
+func reset() -> void:
+	open = 0.0
+	clock = 0.0
+	_time = 0.0
+	_focused = false
+	look_dragging = false
+	look_weight = 0.0
+	_look_idle = LOOK_HOLD
+	_look = {"yaw": 0.0, "pitch": 0.2, "dist": LOOK_DIST}
+	if antic != null:
+		antic.apply(-1.0)
+	seat_pilot()
+	if ball != null:
+		# A card dealt away mid-antic comes back at rest, not on the frame it left on.
+		if def != null and HeroAssets.SHELLS.has(def.id):
+			# Two poses, as _init does, so the pod's heading is the rest move's and not the jump back.
+			_pose(_rest_phase() - 0.01)
+			_pose(_rest_phase())
+		_follow = ball.position
+		_frame(0.0)
 
 
 func _rest_phase() -> float:

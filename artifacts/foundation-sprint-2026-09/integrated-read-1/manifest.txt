@@ -1,7 +1,0 @@
-f562c9ac2447e04998febec12861de5d708995b3f07040dedba2f03daada8dba  docs/tech/sections/HF-01-production-conventions.md
-c025eadc6a59d79e497df183345aa68ae994c5216046f46757310507f6e8382d  docs/tech/sections/HF-02-constraints-evidence.md
-95fbd03d067fd0da2d122130ae3c54284116adc92f40c7f69c91946fd941e4cc  docs/tech/sections/HF-03a-module-map.md
-7c29b6ee0fcff3749c0d30d69b3977d529732338dd794ee0019d6a6a1392d183  docs/tech/sections/HF-03b-dependency-graph.md
-7eb7ad2c909b715e62051d2d73e353f445b96270f3140b38c1c38c4c3fc171fb  docs/tech/sections/HF-04a-runtime-lifecycle.md
-edb1be2392fb5828627b02556482c336cc8e2174497ba5cff262880436b21475  docs/tech/sections/HF-04b-runtime-patterns.md
-7ef95df2fb25f05b7b544cd7dbf2239cd1106c382aab0e8bc5e76288146259a6  docs/tech/sections/HF-05-content-admission.md

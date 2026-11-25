@@ -158,7 +158,8 @@ func _run() -> void:
 	_player.fit_class(ClassDef.by_id(CLASS_ID))
 	await _ticks(30)
 	var build = _game.build
-	var k5 := ["k_ghost", "k_smoke_trail"]
+	# Re-pinned 2026-11-24 (E2-09, PILOT-CADENCE §6.2): K5 sits under Keg in World 1; sibling is Ghost.
+	var k5 := ["k_keg", "k_smoke_trail"]
 
 	_setup(k5, true, true)
 	await _ticks(STEP_TICKS)
@@ -191,8 +192,8 @@ func _run() -> void:
 	_check("glide keeps the cloak", _player.kit.gliding and _player.kit.cloaked, "gliding %s, cloaked %s" % [_player.kit.gliding, _player.kit.cloaked])
 	_release()
 
-	# K6 path: no change through a glide.
-	_setup(["k_ghost", "k_ambush"], true, true)
+	# Control path (Ghost under Keg): no change through a glide.
+	_setup(["k_keg", "k_ghost"], true, true)
 	var n6: int = await _to_glide()
 	await _ticks(STEP_TICKS)
 	_check("K6 path stays x0.75", n6 > 0 and _player.kit.gliding and _is(0.75) and not build._smoke_trail_k5(), "%s, K5 %s" % [_fmt(), build._smoke_trail_k5()])
@@ -211,8 +212,8 @@ func _run() -> void:
 	await _ticks(STEP_TICKS)
 	_check("no shell after glide x1.0", _is(1.0), _fmt())
 
-	# World-one profile off: K5 taken (base tree), stays x0.75.
-	_setup(k5, false, true)
+	# World-one profile off: K5 taken (base tree under k_ghost), stays x0.75.
+	_setup(["k_ghost", "k_smoke_trail"], false, true)
 	var nw: int = await _to_glide()
 	await _ticks(STEP_TICKS)
 	_check("world-one off stays x0.75", nw > 0 and _player.kit.gliding and _is(0.75) and not build._smoke_trail_k5(),
@@ -287,7 +288,7 @@ func _run() -> void:
 	_setup(k5, true, false)
 	var no_shell: Dictionary = await _trace()
 	_release()
-	_setup(["k_ghost", "k_ambush"], true, true)
+	_setup(["k_keg", "k_ghost"], true, true)
 	var no_k5: Dictionary = await _trace()
 	_release()
 	_check("glide happened in trace", with_k5["start"] > 0 and with_k5["glide_ticks"] > 30, "starts tick %d, %d gliding ticks" % [with_k5["start"], with_k5["glide_ticks"]])

@@ -56,13 +56,13 @@ func _physics_process(_delta: float) -> bool:
 		4:
 			_tint_before = _tint_dummy.tint_state
 			_tint_punch_before = _combat.punch_now()
-			# Crossing the line: a damage tier lifts the laser from 7 to 8.75 against plating 8.
+			# Crossing the line: a damage tier lifts the laser from 12 to 15 against plating 13.
 			_game.run.add_part("damage_tier", "test")
 		5:
 			var after: String = _tint_dummy.tint_state
 			var punch: float = _combat.punch_now()
-			_report("tint", _tint_before == "slate" and after == "amber" and _tint_punch_before < 8.0 and punch >= 8.0,
-				"plating 8: slate at punch %.2f, amber on the next tick at punch %.2f" % [_tint_punch_before, punch])
+			_report("tint", _tint_before == "slate" and after == "amber" and _tint_punch_before < 13.0 and punch >= 13.0,
+				"plating 13: slate at punch %.2f, amber on the next tick at punch %.2f" % [_tint_punch_before, punch])
 			return _finish()
 	_step += 1
 	return false
@@ -160,7 +160,8 @@ func _start_tint() -> void:
 	_game.player.reset_to(at)
 	_game.player.body().global_position = at
 	_tint_dummy = _spawn_far(PI)
-	_tint_dummy.plating = 8.0
+	# 13, not 8: Rivet's press round is 12 since E1-06 (PILOT-CADENCE.md section 3.1), so it must sit under the plating.
+	_tint_dummy.plating = 13.0
 
 
 func _finish() -> bool:

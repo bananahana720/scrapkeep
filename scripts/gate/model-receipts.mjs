@@ -3,7 +3,8 @@
 // "run-always-ends" (RunFlow.tla) and "rewards-banked-once" (Rewards.tla), which scripts/world1-bands.mjs reads,
 // "flood-never-held" (ParkFlood.tla), "hazards-hit-everyone" (HazardCycle.tla, W44), "destructibles-safe"
 // (Destructibles.tla, W45), "yard-lock-safe" (YardLock.tla, W45 FV-2), "earned-save-safe" (EarnedSave.tla, W45 FV-3)
-// and "deferred-effects-safe" (DeferredEffects.tla, W45 FV-3), which no band row reads yet.
+// "deferred-effects-safe" (DeferredEffects.tla, W45 FV-3), "brindle-presses" (BrindleReel.tla, W46-05),
+// "sound-arbiter-safe" (SoundArbiter.tla, Sound V4) and "weapon-cadence-safe" (WeaponCadence.tla, W46 E1-17), which no band row reads yet.
 //   { head, pass, measured, plant_caught }
 // For each row it runs TLC, the TLA+ model checker, on every config that stands for the code (the skill's today-*
 // configs) and on each planted fault (a broken-* config with one guard off). It passes only when every code config
@@ -282,6 +283,88 @@ export const ROWS = {
       "each queue holds one waiting item, one bolt lineage is followed through a split and one enemy carries the exposure marks; MAX_LIVE eviction, seconds and geometry are left to tests/w45_combat_formal_fixes_test.gd",
       "the upgrade tree's own procs are kept from leading back to their trigger by UpgradeTree.problems at build time, which the model does not check; it checks only that the verb items and shot bits named here stay at depth 1",
       "Backwash's strip is laid on a dash or boost fact without an in_play check; the model lets the ball dash only in play (its input is frozen otherwise)",
+    ],
+  },
+  "brindle-presses": {
+    spec: "BrindleReel.tla",
+    real: [
+      {
+        cfg: "brindlereel-today.cfg",
+        minStates: 635,
+        label:
+          "Brindle keeps pressing across phases 1 to 3 while reeling, with every tell >= 0.6 s and no gap over 6 s without a committed attack (W46-05)",
+      },
+    ],
+    plants: [
+      { cfg: "brindlereel-broken-stop.cfg", rule: "NoLongReelGap" },
+      { cfg: "brindlereel-broken-unclamped.cfg", rule: "NoLongReelGap" },
+      { cfg: "brindlereel-broken-shorttell.cfg", rule: "TellFloor" },
+      { cfg: "brindlereel-broken-transition.cfg", rule: "NoTransitionCommit" },
+      { cfg: "brindlereel-broken-dropcue.cfg", rule: "CuedPromiseKept" },
+    ],
+    coverage: "references/brindlereel-coverage.md",
+    gaps: [
+      "the model steps in 1 s ticks over the three hull phases with shortened phase floors (12 s vs 28/24/22 s) and tracks commit cadence, transition beats, stuns, cued promises and reel gaps; 3D geometry, aim lead, physics knockback and the chase scooter are checked by tests/brindle_reel_test.gd, tests/boss_telegraph_test.gd and tests/boss_lead_line_test.gd",
+      "the Phase 1 reel-entry clamp under a raised brindle.period_mult dial is not modelled (the model's crane cadence is fixed); tests/brindle_reel_test.gd checks it",
+    ],
+  },
+  "sound-arbiter-safe": {
+    spec: "SoundArbiter.tla",
+    real: [
+      {
+        cfg: "sound-today.cfg",
+        minStates: 4890,
+        label:
+          "music deck ownership arbiter, melody lease, epoch-stamped trims and deck pump/shots across stage, champion, Warden, boss, radio, ultimate, warning and death (Sound V4)",
+      },
+    ],
+    plants: [
+      { cfg: "sound-broken-warden-champ.cfg", rule: "WardenOwnsFightMusic" },
+      { cfg: "sound-broken-unpin-boss.cfg", rule: "BossMusicInArena" },
+      { cfg: "sound-broken-ult-champ.cfg", rule: "UltimateRestoresChampion" },
+      { cfg: "sound-broken-death-ult.cfg", rule: "DeathClearsUltFlight" },
+      { cfg: "sound-broken-melody-clash.cfg", rule: "OneMelodyNoClash" },
+      { cfg: "sound-broken-stale-trim.cfg", rule: "NoStaleTrim" },
+      { cfg: "sound-broken-deck-arbiter.cfg", rule: "DeckObeysArbiter" },
+      { cfg: "sound-broken-stale-shot.cfg", rule: "NoStaleShot" },
+    ],
+    coverage: "references/sound-coverage.md",
+    gaps: [
+      "sample-accurate timing, Music bus DSP filter cutoffs and StingerMusic reverb (music_dsp.gd) are left to tests/music_dsp_test.gd; SFX voice-class budgets (sfx_budget.gd) are left to tests/sound_arbiter_test.gd; festival deck synthesis and warning-lane spectrum (deck_fx.gd) are left to tests/deck_moves_test.gd",
+      "jukebox title spins, launch-to-next-stage landings (covered by RunFlow.tla), and miniboss or moment tunes below champion priority are not modelled",
+    ],
+  },
+  "weapon-cadence-safe": {
+    spec: "WeaponCadence.tla",
+    real: [
+      {
+        cfg: "weaponcadence-today.cfg",
+        minStates: 10122,
+        label:
+          "all six pilots (Rivet press, Sable tap_charge, Kest lob_snap, Tarn beats, Tally stamp, Cannon lock), boundaries, interrupts and proc isolation (W46 E1-17, E2-08, WC-1 closed by W46-FIX1)",
+      },
+    ],
+    plants: [
+      { cfg: "weaponcadence-broken-play-gate.cfg", rule: "NoShotOutsidePlay" },
+      { cfg: "weaponcadence-broken-boundary-reset.cfg", rule: "RestAfterBoundary" },
+      { cfg: "weaponcadence-broken-title-reset.cfg", rule: "RestAfterBoundary" },
+      { cfg: "weaponcadence-broken-jam-freeze.cfg", rule: "BoundedReadyAfterInterrupt" },
+      { cfg: "weaponcadence-broken-interrupt-hold.cfg", rule: "BoundedReadyAfterInterrupt" },
+      { cfg: "weaponcadence-broken-lock-stuck.cfg", rule: "BoundedReadyAfterInterrupt" },
+      { cfg: "weaponcadence-broken-hold-repeat.cfg", rule: "OneVolleyPerPress" },
+      { cfg: "weaponcadence-broken-beats-hold-repeat.cfg", rule: "OneVolleyPerPress" },
+      { cfg: "weaponcadence-broken-snap-hold-lock.cfg", rule: "OneVolleyPerPress" },
+      { cfg: "weaponcadence-broken-proc-touch.cfg", rule: "OneVolleyPerPress" },
+      { cfg: "weaponcadence-broken-early-mash.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-double-notch.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-double-snap.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-detline-double.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-beats-skip.cfg", rule: "WindowPaysAtMostOnce" },
+      { cfg: "weaponcadence-broken-refund.cfg", rule: "RefundNeverExceedsSpend" },
+    ],
+    coverage: "references/weaponcadence-coverage.md",
+    gaps: [
+      "seconds, DPS ceilings, Overdrive Sprint fan, speed-tier charge multipliers, multi-charge Cluster scatter, Beat 3 speed scaling, Compound Interest streak cap and lane geometry are left to weapon_driver_test.gd, weapon_cadence_test.gd and weapon_envelope_test.gd",
     ],
   },
 };

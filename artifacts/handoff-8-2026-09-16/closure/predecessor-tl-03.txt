@@ -1,5 +1,0 @@
-TL-03 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-TL-03 revision 1 done (task index last event EV-0360), accepted integrated identity 15eb87f50568aec5db2b27703e2ed30b3f079c37 (admission event EV-0360).
-git merge-base --is-ancestor 15eb87f50568aec5db2b27703e2ed30b3f079c37 HEAD: exit 0
-scripts/check-drift.mjs sha256 at this commit: 254764f3f36ab68e6d2891408e3a37ec2e363fb6607982066adbe33ef6e69e70
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

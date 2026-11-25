@@ -1,2 +1,0 @@
-check:docs pass: 103 Markdown files, 2892 local links, 59 cards, 26 events, 0 sections, 7 interim rows, 0 failures. Report: /home/andrew/Projects/scrapkeep/artifacts/local/check-docs/report.json
-check:docs exit=0

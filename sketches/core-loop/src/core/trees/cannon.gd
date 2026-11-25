@@ -74,5 +74,17 @@ const NODES := [
 ]
 
 
-# The remembered cannon's world-one profile retains every node in the full tree's heap order.
-const NODES_WORLD_ONE := NODES
+# World-one Depth-1 opposite-feel keystones (PILOT-CADENCE.md §§6.1-6.2, E2-09).
+# Left root: Snap Battery (c_lane_fever stays at slot 2; c_quick_lane moves to slot 3 in place of c_spare_kick).
+# Right root: Siege Rail (c_brace_kick moves to slot 4 in place of c_spare_plate; c_rush_shock stays at slot 5).
+const SNAP_BATTERY := {"id": "c_snap_battery", "name": "Snap Battery", "effect": "Quick lock and short wait, lighter lanes.", "key": "weapon",
+	"icon": "ab_cannon_weapon", "tags": ["ranged", "sustain"],
+	"pattern": {"cannon_lane": {"set": {"window_s": [0.15, 0.31], "recover_s": 0.40,
+		"lock_rail_damage": 26.0, "lock_barrage_damage": 16.0}, "mul": {"damage": 9.0 / 16.0}}}}
+const SIEGE_RAIL := {"id": "c_siege_rail", "name": "Siege Rail", "effect": "Slow lock fires a 40m prop-breaking rail.", "key": "weapon",
+	"icon": "ab_cannon_weapon", "tags": ["ranged", "burst"],
+	"pattern": {"cannon_lane": {"set": {"window_s": [0.60, 0.76], "recover_s": 1.00,
+		"lock_rail_damage": 66.0, "lock_barrage_damage": 30.0, "lock_rail_width_mult": 0.5,
+		"lock_rail_reach": 40.0, "lock_rail_breaks_props": true}}}}
+# A static var, not a const: GDScript cannot fold Array.slice into a constant.
+static var NODES_WORLD_ONE: Array = [SNAP_BATTERY, SIEGE_RAIL, NODES[2], NODES[0], NODES[1], NODES[5]] + NODES.slice(6)

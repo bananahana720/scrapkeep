@@ -3,6 +3,19 @@
  "map": "park_flume",
  "kit": "res://assets/models/park/props/flume/manifest.json",
  "templates": {
+  "foreman_notice": {
+   "story": "The Foreman's notice over the weir: water drop, arrow, crate, and a ball-shaped hole where the arrow was.",
+   "props": [
+    {"kind": "foreman_billboard", "v": "a", "at": [0.0, 0.0], "yaw_deg": 0, "scale": 1.0, "tilt_deg": 0},
+    {"kind": "saltbush", "v": "*", "at": [-3.6, 1.6], "yaw_deg": 40, "scale": 0.9, "tilt_deg": 0}
+   ]
+  },
+  "shift_break": {
+   "story": "A cast shift table set for a crew that left, one glove gone and chalked where it lay.",
+   "props": [
+    {"kind": "shift_table", "v": "b", "at": [0.0, 0.0], "yaw_deg": 0, "scale": 1.0, "tilt_deg": 0}
+   ]
+  },
   "cold_hearth": {
    "story": "A cold hearth and a dragged-out cot: the crew went up the ledge for the shift.",
    "props": [
@@ -1537,6 +1550,25 @@
      "scale": 1.0,
      "tilt_deg": 0
     }
+   ]
+  },
+  "chalk_fork": {
+   "story": "Keeper chalk at a branch: an arrow and a tally saying which way the crew went.",
+   "props": [
+    {"kind": "chalk_turn", "v": "b", "at": [0, 0], "yaw_deg": 0, "scale": 1.3, "tilt_deg": 0},
+    {"kind": "chalk_turn", "v": "c", "at": [3, 2], "yaw_deg": 30, "scale": 0.9, "tilt_deg": 0}
+   ]
+  },
+  "chalk_arrow": {
+   "story": "One keeper's arrow chalked where the side route leaves the line.",
+   "props": [
+    {"kind": "chalk_turn", "v": "a", "at": [0, 0], "yaw_deg": 0, "scale": 1.3, "tilt_deg": 0}
+   ]
+  },
+  "keeper_bunting": {
+   "story": "Keeper bunting strung between two poles over a side route, sand and bone cloth on copper rope.",
+   "props": [
+    {"kind": "keeper_bunting", "v": "b", "at": [0, 0], "yaw_deg": 0, "scale": 1.5, "tilt_deg": 0}
    ]
   }
  },
@@ -3167,7 +3199,16 @@
    ],
    "yaw_deg": -50.9,
    "near": "pad_bank_5: A yard of spare ties and pipe, bundled and left where the"
-  }
+  },
+  {"id": "flume_g01", "template": "foreman_notice", "at": [-432.0, -478.0], "yaw_deg": -170.8, "near": "weir_mesa: the notice the drop-in faces"},
+  {"id": "flume_g02", "template": "shift_break", "at": [64.0, 464.0], "yaw_deg": -165.0, "near": "forecourt turn: the table past the bank the floor line rides"},
+  {"id": "chalk_fork_weir", "template": "chalk_fork", "at": [-446, -612], "yaw_deg": 30, "near": "weir deck fork: keeper chalk, the canal doubled, the flume chute beside it"},
+  {"id": "keeper_bunting_weir", "template": "keeper_bunting", "at": [-420, -646], "yaw_deg": 62, "near": "weir deck: keeper bunting over the flume chute's mouth"},
+  {"id": "chalk_fork_gap", "template": "chalk_fork", "at": [-297, -217], "yaw_deg": 45, "near": "butte gap fork: keeper chalk, the canal doubled, the trestles beside it"},
+  {"id": "keeper_bunting_gap", "template": "keeper_bunting", "at": [-323, -201], "yaw_deg": -8, "near": "butte gap: keeper bunting over the lateral canal's mouth"},
+  {"id": "chalk_fork_siphon", "template": "chalk_fork", "at": [10, 186], "yaw_deg": -5, "near": "siphon fork: keeper chalk, the bench doubled, the flume entry beside it"},
+  {"id": "chalk_arrow_siphon", "template": "chalk_arrow", "at": [-6, 228], "yaw_deg": -40, "near": "siphon runout: keeper arrow toward the bench wash"},
+  {"id": "keeper_bunting_siphon", "template": "keeper_bunting", "at": [18, 178], "yaw_deg": 25, "near": "siphon: keeper bunting over the flume entry's mouth"}
  ],
  "litter": {
   "kinds": [
@@ -3195,5 +3236,5 @@
   ],
   "seed": 1021
  },
- "pin": 1521978673
+ "pin": 513074924
 }

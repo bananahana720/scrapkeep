@@ -1,5 +1,0 @@
-TH-09 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-TH-09 revision 1 done (task index last event EV-0325), accepted integrated identity dacf866298031db6fec1d9558591f1c53772a106 (admission event EV-0324).
-git merge-base --is-ancestor dacf866298031db6fec1d9558591f1c53772a106 HEAD: exit 0
-docs/tech/sections/TH-09-themed-loot-attunement-and-fixed-secrets.md sha256 at this commit: 44e3fed5de5f33d6c1ad290c0ab705f00e18ae0fd30aa62676e184a751973169
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

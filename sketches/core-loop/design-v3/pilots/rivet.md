@@ -2,6 +2,8 @@
 
 Status: design sheet for wave 13, unit A2, pilot Rivet (ClassDef id `runner_gunner`). Written 2026-10-10 on `cand/alpha-w13` at `22b8bb6`. Nothing here is built or played. Paths without a prefix are under `sketches/core-loop/`. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 lists them as the veto list.
 
+**Weapon fire (ruling ek, 22 Nov 2026):** how this pilot's weapon fires, with its timers, damage and first tree pick, is now [PILOT-CADENCE.md](../PILOT-CADENCE.md) section 3.1. Where this sheet's weapon text differs, that page wins.
+
 Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the bar, the line-skill hook and the set-piece contract; this sheet uses its names exactly), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the Hoberman mecha, section 0) and the sibling sheets in this folder. It supersedes the Rivet kit text in `design-v2/I1-character-kits.md:56-77`, `DESIGN-V2.md:30-50` and `docs/CHARACTER-BIBLE.md:64-74` where they disagree. The code wins over all three: Rivet's colour is copper (`src/core/class_def.gd:14`), not the mint of `CHARACTER-BIBLE.md:68`, and the sprint is on Shift (`src/movement/player_ball.gd:484-495`), not the RMB of `DESIGN-V2.md:34`.
 
 Terms used here, defined once:

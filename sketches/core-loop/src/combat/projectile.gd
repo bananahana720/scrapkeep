@@ -72,6 +72,10 @@ static var _shell_material: StandardMaterial3D
 static var _rim_quad: QuadMesh
 static var _held_rim: StandardMaterial3D
 
+
+static func reset_for_tests() -> void:
+	_held_rim = null
+
 var _age := 0.0
 var _rim: MeshInstance3D
 var _rim_material: StandardMaterial3D

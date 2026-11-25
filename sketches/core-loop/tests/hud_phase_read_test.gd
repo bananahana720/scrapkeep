@@ -302,6 +302,8 @@ func _sight_checks(at: Vector3) -> void:
 	var cam: Camera3D = _game.camera.cam
 	var size: Vector2 = cam.get_viewport().get_visible_rect().size
 	var was := cam.global_transform
+	var cam_processing: bool = _game.camera.is_processing()
+	_game.camera.set_process(false)
 	_marks()
 	cam.look_at_from_position(at + Vector3(0.0, 0.0, 20.0), at)
 	var want: Vector2 = cam.unproject_position(at)
@@ -335,6 +337,7 @@ func _sight_checks(at: Vector3) -> void:
 		"marks %s" % [shown])
 	panel.free()
 	cam.global_transform = was
+	_game.camera.set_process(cam_processing)
 
 
 static func _on_rim(view: Rect2, at: Vector2) -> bool:
@@ -394,7 +397,7 @@ func _pause_checks() -> void:
 		menu._show_build()
 		var label := "all twelve panels" if held.size() > 0 else "no panels"
 		# W1-46: the pilot's own shell turns in the view, never the grey stand-in sphere.
-		_t.check("R2 %s: the view wears the pilot's shell" % label, not read._worn.is_empty() and read._worn.core.is_inside_tree() and not read._ball.visible, str(read._worn.keys()))
+		_t.check("R2 %s: the view wears the pilot's shell" % label, not read._worn.is_empty() and read._worn.core.is_inside_tree() and read._ball == null, str(read._worn.keys()))
 		var pilot: Node3D = read._worn.pod.get_node_or_null("AnimatedPilot")
 		_t.check("R2 %s: the pilot's model is in the shell" % label, pilot != null and pilot.scene_file_path.contains("pilot_"))
 		_t.check("R2 %s: the preview opens with the pilot facing the eye" % label, (-read._worn.pod.global_basis.z).dot(Vector3.BACK) > 0.9)

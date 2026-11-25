@@ -1,5 +1,0 @@
-TH-08 predecessor reconciliation at integrated commit b04b826b02ba239c1035be92f8e127e7b16be81f
-TH-08 revision 1 done (task index last event EV-0325), accepted integrated identity a8b874c0bd6ab814bdbbe8cf73ac0f8376fa0ab1 (admission event EV-0302).
-git merge-base --is-ancestor a8b874c0bd6ab814bdbbe8cf73ac0f8376fa0ab1 HEAD: exit 0
-docs/tech/sections/TH-08-inventory-equipment-and-transformations.md sha256 at this commit: f6d4803df2bec10ee61d0d450da6d9c636cd6b21b0f193454826721e71566818
-npm run check:drift and the schemas scan at this commit: exit 0 (closure/check-drift.log, closure/check-drift-schemas.log); retained checks rerun at this commit: closure/paper-reruns.log

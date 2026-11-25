@@ -8,6 +8,50 @@ const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const HazardHits := preload("res://src/world/events/hazard_hits.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const Interactables := preload("res://src/world/interactables.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+
+
+# Registered interactable for paying a works sluice valve's scrap price through world.interact.
+# Uses the ally family (cost: scrap, consent: hold) so an accidental tap never spends scrap, and
+# draws only the family glyph + gauge (zero new words on screen, ruling cx).
+class SluicePayDevice extends "res://src/world/device.gd":
+	var owner_contraptions
+	var valve_id := ""
+
+	func _init() -> void:
+		family = "ally"
+
+	func build() -> void:
+		pass
+
+	func ready_now() -> bool:
+		return owner_contraptions != null and is_instance_valid(owner_contraptions) \
+			and bool(owner_contraptions.sluice_pay_read(valve_id)["can_pay"])
+
+	func gauge() -> float:
+		return float(owner_contraptions.sluice_pay_read(valve_id)["gauge"]) \
+			if owner_contraptions != null and is_instance_valid(owner_contraptions) else -1.0
+
+	func show_prompt(_targeted: bool) -> void:
+		if prompt == null or _prompt_anchor == null:
+			return
+		_prompt_anchor.global_position = reach_point() + Vector3.UP * 2.2
+		var info: Dictionary = owner_contraptions.sluice_pay_read(valve_id) \
+			if owner_contraptions != null and is_instance_valid(owner_contraptions) else {"active": false}
+		if not bool(info["active"]):
+			prompt.set_interact("", "", "", -1.0)
+			return
+		var icon: String = Interactables.row(family)["icon"]
+		prompt.set_interact(icon, "", "", float(info["gauge"]) if not bool(info["can_pay"]) else -1.0)
+
+	func fire() -> bool:
+		return owner_contraptions != null and is_instance_valid(owner_contraptions) \
+			and owner_contraptions.pay_sluice(valve_id)
 
 # The gorge's contraptions, built from the map's specs and run from world's physics
 # tick (DESIGN-V2 section 9, VISUAL-LANGUAGE section 11). Every one is a momentum tool
@@ -32,6 +76,24 @@ const THERMAL_LIFT := 34.0
 const THERMAL_GAP := 1.5
 const WALL_REACH := 3.6
 const WALL_SPEED := 8.0
+# Works sluice valve (W46-04, W1-142, ruling cu): a ram at speed, a slam, or a scrap payment
+# opens it. After SURGE_WARN_S of visible lane warning (>= SURGE_MIN_WARN, 0.6 s fairness floor)
+# it sends a surge down its fixed lane: throws crews, breaks destructible props (props only,
+# Q-P22), and hurts and tosses a ball below cruise (SpeedTier.CRUISE). A ball rolling through at
+# cruise or faster rides out unhurt. Fires once per charge and pays nothing twice.
+const SURGE_WARN_S := 1.0
+const SURGE_MIN_WARN := 0.6
+const SURGE_LIVE_S := 0.6
+const SURGE_DEFAULT_CHARGE := 12.0
+const SURGE_DEFAULT_LENGTH := 24.0
+const SURGE_DEFAULT_HALF_WIDTH := 4.5
+const SURGE_REACH := 3.0
+const SURGE_ENEMY_DAMAGE := 25.0
+const SURGE_ENEMY_TOSS := 18.0
+const SURGE_BALL_DAMAGE := 16.0
+const SURGE_BALL_TOSS := 16.0
+const SURGE_BALL_LIFT := 8.0
+const SURGE_SOURCE := "works_surge"
 const DOOR_SINK := 6.5
 const DOOR_SECONDS := 0.6
 # The valve door model (tools/blender/world_one/valve_door.py), built 12 by 6 by 1 m and scaled to each door.
@@ -96,6 +158,11 @@ const LIFT_DRUM_BELOW := 2.5
 const LIFT_BAND := 0.35
 const LIFT_BAND_EVERY := 2.5
 const SKIN_BARGE_SIDE := 14.0
+# Code-built contraption parts and local valve/dial fittings fade out past these ranges, matching the skinned
+# contraption budgets (detail base_end 250 m for gauges, 420 m for lifts, valves, rings and walls).
+const PART_VIEW_END_M := 420.0
+const DIAL_VIEW_END_M := 250.0
+const PART_VIEW_MARGIN_M := 30.0
 
 var map
 var ground: Callable
@@ -113,10 +180,13 @@ var lifts: Array[Dictionary] = []
 var launchers: Array[Dictionary] = []
 var cables: Array[Dictionary] = []
 var valves: Array[Dictionary] = []
+var sluice_valves: Array[Dictionary] = []
 var walls: Array[Dictionary] = []
 var thermals: Array[Dictionary] = []
 var cinders: Array[Dictionary] = []
 var glazes: Array[Dictionary] = []
+# Planted fault hook for tests/works_surge_test.gd only; gameplay never sets this.
+var test_no_warn := false
 # One material for every cinder band, so the glow lights the whole floor at once.
 var _cinder_mat: ShaderMaterial = null
 var _cinder_glow := 0.0
@@ -126,6 +196,8 @@ var live := true
 
 var _puffs: Array[Dictionary] = []
 var _slams: Array[Vector3] = []
+var _pending_facts: Array[Dictionary] = []
+var _ctx: Variant = null
 var _thermal_quiet := 0.0
 var _glaze_quiet := 0.0
 var _gauge_mat: Material
@@ -194,6 +266,8 @@ func build_next() -> void:
 			cables.append(_build_cable(spec))
 		"valve":
 			valves.append(_build_valve(spec))
+		"sluice_valve":
+			sluice_valves.append(_build_sluice_valve(spec))
 		"cracked_wall":
 			walls.append(_build_wall(spec))
 		"thermal":
@@ -260,10 +334,14 @@ func reset() -> void:
 	for v in valves:
 		v["open"] = false
 		v["sink"] = 0.0
+		v["spin"] = 0.0
 		v["door"].position = v["door_home"]
 		v["wheel"].rotation.z = 0.0
 		if v["plume"] != null:
 			v["plume"].visible = false
+	for s in sluice_valves:
+		_reset_sluice_valve(s)
+	_register_sluice_devices()
 	for w in walls:
 		w["broken"] = false
 		w["body"].position = w["home"]
@@ -271,6 +349,14 @@ func reset() -> void:
 	for d in _sealed():
 		_seal_cache(d)
 	_slams.clear()
+	_pending_facts.clear()
+	for p in _puffs:
+		if is_instance_valid(p.get("node")):
+			(p["node"] as Node).free()
+	_puffs.clear()
+	for child in get_children():
+		if child is GPUParticles3D:
+			child.free()
 	_thermal_quiet = 0.0
 	_glaze_quiet = 0.0
 	# Cache side walls are rebuilt by reset; finish them along with this zone's devices.
@@ -318,9 +404,71 @@ func note_slam(at: Vector3) -> void:
 	_slams.append(at)
 
 
+# Optional context binding for standalone tests or callers without an ancestor holding `ctx`.
+# Accepts a Context object or a Dictionary with any of {run, player, destructibles, interact, root, calm}.
+func bind_context(ctx_ref: Variant) -> void:
+	_ctx = ctx_ref
+	_register_sluice_devices()
+
+
+# One small call to pay a sluice valve's scrap price and arm its warning. Returns true only
+# when the stage is active, the valve is ready, price > 0, and the scrap spend succeeded.
+func pay_sluice(id: String, run_ref: Variant = null) -> bool:
+	if not _sluice_active():
+		return false
+	for s in sluice_valves:
+		if String(s["spec"]["id"]) == id:
+			return _try_pay_sluice(s, run_ref if run_ref != null else _ctx_field("run"), _pending_facts)
+	return false
+
+
+# Read-only snapshot of a sluice valve's state for callers and tests (never reach into internals).
+func sluice_state(id: String) -> Dictionary:
+	for s in sluice_valves:
+		if String(s["spec"]["id"]) == id:
+			var h: Hazard = s["hazard"]
+			var warn_vis := h != null and is_instance_valid(h) and h.state == Hazard.WARN and h.visible and h.painter() != null
+			return {
+				"state": String(s["state"]),
+				"warn_elapsed": float(s["warn_elapsed"]),
+				"warn_seconds": float(s["warn_seconds"]),
+				"last_warn_visible_s": float(s["last_warn_visible_s"]),
+				"charge_left": float(s["charge_left"]),
+				"charges_fired": int(s["charges_fired"]),
+				"times_paid": int(s["times_paid"]),
+				"enemies_thrown": int(s["enemies_thrown"]),
+				"ball_hits": int(s["ball_hits"]),
+				"props_broken": int(s["props_broken"]),
+				"warning_visible": warn_vis,
+				"last_ball_toss": s["last_ball_toss"],
+				"lane_front": h.lane_front if h != null and is_instance_valid(h) else -1.0,
+				"device": s.get("device"),
+			}
+	return {}
+
+
+# Published telegraphs for tools/bot_fairness.gd (group "world_telegraphs").
+func telegraphs(ball: Vector3) -> Array:
+	var out: Array = []
+	if not _sluice_active():
+		return out
+	for s in sluice_valves:
+		var h: Hazard = s["hazard"]
+		if h != null and is_instance_valid(h) and not h.is_done():
+			out.append({"id": h.get_instance_id(), "cause": SURGE_SOURCE, "covers": h.contains(ball)})
+	return out
+
+
+func _sluice_active() -> bool:
+	return live and is_inside_tree() and is_visible_in_tree()
+
+
 # One physics tick. riding is true while world already holds the ball to a rail.
 func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, steering := false) -> Array:
 	var facts := []
+	if not _pending_facts.is_empty():
+		facts.append_array(_pending_facts)
+		_pending_facts.clear()
 	for b in barges:
 		b["time"] += delta
 		_place_barge(b, ball)
@@ -372,6 +520,10 @@ func step(delta: float, ball: Vector3, velocity: Vector3, kit, riding: bool, ste
 		riding = true
 	for v in valves:
 		_step_valve(v, delta, ball, planar, facts)
+	if not sluice_valves.is_empty():
+		var motion := {"pos": ball, "vel": velocity, "planar": planar, "riding": riding}
+		for s in sluice_valves:
+			_step_sluice_valve(s, delta, motion, facts)
 	for w in walls:
 		_step_wall(w, ball, velocity, kit, facts)
 	_thermal_quiet = maxf(0.0, _thermal_quiet - delta)
@@ -451,13 +603,63 @@ func _build_cinder(spec: Dictionary) -> Dictionary:
 
 
 # A glaze spec's strips are [x, z, yaw_deg, length, inner, outer]: the band between inner and outer metres off the
-# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band).
+# tube's centre line, both walls. The wash models draw it (tools/blender/park/sinkhole_tubes.py's polished band); a
+# spec with "sheen": true sits on a wall no model polishes (the dam's culvert), so it draws its own wet band.
 func _build_glaze(spec: Dictionary) -> Dictionary:
 	var strips := []
 	for s: Array in spec["strips"]:
 		var yaw := deg_to_rad(float(s[2]))
 		strips.append({"centre": Vector2(float(s[0]), float(s[1])), "along": Vector2(sin(yaw), cos(yaw)), "half": float(s[3]) * 0.5, "inner": float(s[4]), "outer": float(s[5])})
+	if bool(spec.get("sheen", false)):
+		_glaze_sheen(strips)
 	return {"spec": spec, "strips": strips}
+
+
+# The sheen: a polished band laid on the ground over each strip's two walls, dashed along its length, so the fast line
+# reads as a slick lane before the glaze_skim tell plays. A mesh built in code that follows the ground, not a primitive.
+const SHEEN_STEP_M := 6.0
+const SHEEN_ACROSS_M := 2.0
+const SHEEN_LIFT := 0.06
+
+
+func _glaze_sheen(strips: Array) -> void:
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.vertex_color_is_srgb = true
+	mat.roughness = 0.25
+	mat.metallic_specular = 0.6
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_material(mat)
+	for strip: Dictionary in strips:
+		var along: Vector2 = strip["along"]
+		var side := Vector2(along.y, -along.x)
+		var half: float = strip["half"]
+		var rows := maxi(1, ceili(half * 2.0 / SHEEN_STEP_M))
+		var cols := maxi(1, ceili((float(strip["outer"]) - float(strip["inner"])) / SHEEN_ACROSS_M))
+		for sign_v: float in [-1.0, 1.0]:
+			for r in rows:
+				for c in cols:
+					var quad: Array[Vector3] = []
+					for corner: Vector2 in [Vector2(r, c), Vector2(r + 1, c), Vector2(r + 1, c + 1), Vector2(r, c + 1)]:
+						var u: float = -half + half * 2.0 * corner.x / rows
+						var v: float = lerpf(float(strip["inner"]), float(strip["outer"]), corner.y / cols) * sign_v
+						var p: Vector2 = strip["centre"] + along * u + side * v
+						quad.append((ground.call(p.x, p.y, 0.0) as Vector3) + Vector3.UP * SHEEN_LIFT)
+					# Alternate rows light and dark, so the band reads as dashes running down the line.
+					st.set_color(Palette.VERDIGRIS.lightened(0.35) if r % 2 == 0 else Palette.VERDIGRIS)
+					for tri: Array in [[quad[0], quad[1], quad[2]], [quad[0], quad[2], quad[3]]]:
+						# Godot faces the normal against (b - a) x (c - a): keep every triangle facing up.
+						if (tri[1] - tri[0]).cross(tri[2] - tri[0]).y > 0.0:
+							tri = [tri[0], tri[2], tri[1]]
+						for p3: Vector3 in tri:
+							st.add_vertex(p3)
+	st.generate_normals()
+	var band := MeshInstance3D.new()
+	band.name = "GlazeSheen"
+	band.mesh = st.commit()
+	band.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	add_child(band)
 
 
 func _on_glaze(g: Dictionary, ball: Vector3, velocity: Vector3) -> bool:
@@ -492,16 +694,40 @@ func _on_cinder(c: Dictionary, ball: Vector3) -> bool:
 func _process(delta: float) -> void:
 	for p in _puffs.duplicate():
 		p["left"] -= delta
-		var f: float = 1.0 - p["left"] / PUFF_SECONDS
+		var f: float = clampf(1.0 - p["left"] / PUFF_SECONDS, 0.0, 1.0)
 		var node: MeshInstance3D = p["node"]
-		node.scale = Vector3.ONE * lerpf(0.4, 1.0, f) * p["size"]
+		node.scale = Vector3.ONE * lerpf(0.4, 1.15, f) * p["size"]
 		node.position.y += delta * 3.0
+		node.transparency = clampf(f * f, 0.0, 1.0)
 		if p["left"] <= 0.0:
 			node.queue_free()
 			_puffs.erase(p)
 	for v in valves:
 		if v["plume"] != null and v["plume"].visible:
 			v["plume"].rotate_y(delta * 0.8)
+	for s in sluice_valves:
+		if s["state"] == "warning" or s["state"] == "surging":
+			(s["wheel"] as Node3D).rotation.z += delta * 4.0
+
+
+# A stage parked out of sight (terrain.gd _park, park_all) mid-warning or mid-surge drops its surge, so no
+# hazard stays in Threat.GROUP for near_miss.gd to mark in the arena or the next run's stage 1. The valve
+# goes to its recharge, as after a surge; the next stage entry resets it.
+func _notification(what: int) -> void:
+	if what != NOTIFICATION_VISIBILITY_CHANGED or is_visible_in_tree():
+		return
+	for s in sluice_valves:
+		if s["state"] == "warning" or s["state"] == "surging":
+			_enter_sluice_charge(s)
+
+
+func _exit_tree() -> void:
+	for s in sluice_valves:
+		_drop_sluice_hazard(s)
+		var dev: Node3D = s.get("device")
+		if dev != null and is_instance_valid(dev) and dev.system != null and is_instance_valid(dev.system) and dev.system.has_method("unregister"):
+			dev.system.unregister(dev)
+			dev.system = null
 
 
 static func _at_mouth(ball: Vector3, mouth: Vector3, radius: float) -> bool:
@@ -585,6 +811,23 @@ static func _node_in(node: Node3D, top: Node) -> Transform3D:
 # Turns the GLB's +Z onto a launcher's aim.
 static func _aim_basis(aim: Vector3) -> Basis:
 	return Basis(Vector3.UP, atan2(aim.x, aim.z))
+
+
+static func _range_part(view: GeometryInstance3D, end_m := PART_VIEW_END_M) -> void:
+	if view == null or view.visibility_range_end > 0.0:
+		return
+	view.visibility_range_end = end_m
+	view.visibility_range_end_margin = PART_VIEW_MARGIN_M
+	view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+
+
+static func _range_tree(root: Node, end_m := PART_VIEW_END_M) -> void:
+	if root == null:
+		return
+	if root is GeometryInstance3D:
+		_range_part(root as GeometryInstance3D, end_m)
+	for child in root.get_children():
+		_range_tree(child, end_m)
 
 
 # ---- Barges ----
@@ -759,6 +1002,7 @@ func _drum_view(r: float, top: float, length: float) -> Node3D:
 		mi.name = part[0]
 		mi.mesh = (part[1] as SurfaceTool).commit()
 		mi.material_override = part[2]
+		_range_part(mi)
 		view.add_child(mi)
 	return view
 
@@ -852,6 +1096,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			barrel.position = mouth - aim * 5.0 + Vector3.UP * 2.0
 			barrel.basis = Basis.looking_at(aim + Vector3.UP * 0.9, Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 			root.add_child(barrel)
+			arm = barrel
 			var band := MeshInstance3D.new()
 			var km := TorusMesh.new()
 			km.inner_radius = 2.2
@@ -909,6 +1154,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			column.position = mouth + Vector3.UP * 4.0
 			root.add_child(column)
 			arm = column
+	_range_tree(root)
 	var needle := _dial(mouth + aim.cross(Vector3.UP) * (float(spec["radius"]) + 2.0) + Vector3.DOWN * 1.0, spec)
 	return {"spec": spec, "root": root, "mouth": mouth, "aim": aim, "needle": needle, "arm": arm, "cycle": null}
 
@@ -925,6 +1171,8 @@ func _launcher_pose(l: Dictionary) -> void:
 			arm.basis = Basis.looking_at(aim.rotated(aim.cross(Vector3.UP).normalized(), lerpf(-0.9, 0.7, g)), Vector3.UP)
 		"geyser", "steam_lift":
 			arm.scale = Vector3(1.0, lerpf(0.2, 1.3, g), 1.0)
+		"cannon":
+			arm.scale = Vector3(1.0 + 0.08 * g, 1.0 - 0.14 * g, 1.0 + 0.08 * g)
 
 
 # ---- The grapple line ----
@@ -950,6 +1198,7 @@ func _build_cable(spec: Dictionary) -> Dictionary:
 	hook.material_override = _hook_mat
 	hook.position = from
 	hook.basis = Basis.looking_at(Vector3(to.x - from.x, 0.0, to.z - from.z).normalized(), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
+	_range_part(hook)
 	add_child(hook)
 	return {"spec": spec, "from": from, "to": to, "rest": 0.0}
 
@@ -967,9 +1216,11 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 	wheel.position = foot + Vector3.UP * 1.6
 	wheel.rotation.x = PI * 0.5
 	add_child(wheel)
-	RecipeProps.base("valve_wheel", wheel, Transform3D.IDENTITY)
+	for v in RecipeProps.base("valve_wheel", wheel, Transform3D.IDENTITY):
+		_range_part(v)
 	RecipeProps.shells("valve_wheel", wheel, Transform3D.IDENTITY)
-	RecipeProps.base("valve_wheel_mount", self, Transform3D(Basis.IDENTITY, foot))
+	for v in RecipeProps.base("valve_wheel_mount", self, Transform3D(Basis.IDENTITY, foot)):
+		_range_part(v)
 	RecipeProps.shells("valve_wheel_mount", self, Transform3D(Basis.IDENTITY, foot))
 	var d: Dictionary = spec["door"]
 	var dat: Vector2 = d["at"]
@@ -994,6 +1245,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 		door.add_child(mesh)
 	door.position = door_foot + Vector3.UP * (size.y * 0.5 - 0.5)
 	door.rotation.y = d["turn"]
+	_range_tree(door)
 	add_child(door)
 	var plume: MeshInstance3D = null
 	var vent = spec.get("vent")
@@ -1012,11 +1264,15 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 		add_child(plume)
 		_dashed_ring(vfoot + Vector3.UP * 0.1, vent["radius"])
 	return {"spec": spec, "wheel": wheel, "door": door, "door_home": door.position, "plume": plume, "open": false,
-		"sink": 0.0, "at": wheel.position}
+		"sink": 0.0, "spin": 0.0, "at": wheel.position}
 
 
 func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, facts: Array) -> void:
 	if v["open"]:
+		if float(v["spin"]) < 1.0:
+			v["spin"] = minf(1.0, float(v["spin"]) + delta / 0.45)
+			var u := 1.0 - pow(1.0 - float(v["spin"]), 3.0)
+			v["wheel"].rotation.z = TAU * u
 		if v["sink"] < 1.0:
 			v["sink"] = minf(1.0, v["sink"] + delta / DOOR_SECONDS)
 			v["door"].position = (v["door_home"] as Vector3) + Vector3.DOWN * DOOR_SINK * v["sink"]
@@ -1031,7 +1287,8 @@ func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, fact
 	if not smashed:
 		return
 	v["open"] = true
-	v["wheel"].rotation.z = 0.8
+	v["spin"] = 0.08
+	v["wheel"].rotation.z = 0.5
 	facts.append({"kind": "fact", "fact": "valve_smashed", "at": at})
 	facts.append({"kind": "fact", "fact": "route_opened", "at": v["door_home"]})
 	_open_cache(v, at, facts)
@@ -1043,6 +1300,427 @@ func _step_valve(v: Dictionary, delta: float, ball: Vector3, planar: float, fact
 		facts.append({"kind": "fact", "fact": "reactor_vented", "at": v["plume"].position})
 		if Vector2(ball.x, ball.z).distance_to(vat) > float(vent["radius"]):
 			facts.append({"kind": "codex", "id": "do_not_open_until_clear", "at": at})
+
+
+# ---- Works sluice valves (W46-04) ----
+
+func _build_sluice_valve(spec: Dictionary) -> Dictionary:
+	var id := String(spec["id"])
+	var at_2d := _vec2_of(spec.get("at", Vector2.ZERO))
+	var foot: Vector3 = ground.call(at_2d.x, at_2d.y, 0.0)
+	var holder := Node3D.new()
+	holder.name = id
+	add_child(holder)
+	var wheel := Node3D.new()
+	wheel.name = id + "_wheel"
+	wheel.position = foot + Vector3.UP * 1.6
+	wheel.rotation.x = PI * 0.5
+	holder.add_child(wheel)
+	if RecipeProps.base("valve_wheel", wheel, Transform3D.IDENTITY).is_empty():
+		var rim := MeshInstance3D.new()
+		var tm := TorusMesh.new()
+		tm.inner_radius = 0.75
+		tm.outer_radius = 1.0
+		rim.mesh = tm
+		rim.material_override = _rust_mat
+		wheel.add_child(rim)
+	else:
+		RecipeProps.shells("valve_wheel", wheel, Transform3D.IDENTITY)
+	if RecipeProps.base("valve_wheel_mount", holder, Transform3D(Basis.IDENTITY, foot)).is_empty():
+		var post := MeshInstance3D.new()
+		var pm := CylinderMesh.new()
+		pm.top_radius = 0.25
+		pm.bottom_radius = 0.35
+		pm.height = 1.6
+		post.mesh = pm
+		post.material_override = _copper_mat
+		post.position = foot + Vector3.UP * 0.8
+		holder.add_child(post)
+	else:
+		RecipeProps.shells("valve_wheel_mount", holder, Transform3D(Basis.IDENTITY, foot))
+	var lane: Dictionary = spec.get("lane", {})
+	var from_2d := _vec2_of(lane.get("from", at_2d), at_2d)
+	var lane_from: Vector3 = ground.call(from_2d.x, from_2d.y, 0.0)
+	var dir := Vector3.FORWARD
+	var length := SURGE_DEFAULT_LENGTH
+	if lane.has("to"):
+		var to_2d := _vec2_of(lane["to"], from_2d + Vector2(0.0, SURGE_DEFAULT_LENGTH))
+		var span := to_2d - from_2d
+		if span.length() > 0.01:
+			dir = Vector3(span.x, 0.0, span.y).normalized()
+			length = float(lane.get("length", span.length()))
+	else:
+		var dir_2d := _vec2_of(lane.get("dir", Vector2(0.0, 1.0)), Vector2(0.0, 1.0))
+		if dir_2d.length() > 0.01:
+			dir = Vector3(dir_2d.x, 0.0, dir_2d.y).normalized()
+		length = float(lane.get("length", SURGE_DEFAULT_LENGTH))
+	length = maxf(1.0, length)
+	var half_width := maxf(0.5, float(lane.get("half_width", float(lane.get("width", SURGE_DEFAULT_HALF_WIDTH * 2.0)) * 0.5)))
+	var reach := maxf(0.5, float(lane.get("reach", SURGE_REACH)))
+	var charge := maxf(0.1, float(spec.get("charge", SURGE_DEFAULT_CHARGE)))
+	var price := maxi(0, int(spec.get("price", 0)))
+	var side := Vector3.UP.cross(dir).normalized()
+	var needle := _dial(foot + side * 2.2, spec)
+	var pay_ring: MeshInstance3D = null
+	var pay_device: SluicePayDevice = null
+	if price > 0:
+		pay_ring = MeshInstance3D.new()
+		pay_ring.name = id + "_pay_ring"
+		var pr := TorusMesh.new()
+		pr.inner_radius = 0.65
+		pr.outer_radius = 0.85
+		pay_ring.mesh = pr
+		pay_ring.material_override = _ring_mat
+		pay_ring.position = foot + Vector3.UP * 0.45
+		holder.add_child(pay_ring)
+		pay_device = SluicePayDevice.new()
+		pay_device.owner_contraptions = self
+		pay_device.valve_id = id
+		pay_device.position = foot
+		holder.add_child(pay_device)
+		pay_device.setup(_resolve_ctx(), _resolve_interact(), {"id": id})
+	_range_tree(holder)
+	if not is_in_group("world_telegraphs"):
+		add_to_group("world_telegraphs")
+	return {
+		"spec": spec,
+		"holder": holder,
+		"wheel": wheel,
+		"needle": needle,
+		"pay_ring": pay_ring,
+		"device": pay_device,
+		"at": wheel.position,
+		"lane_from": lane_from,
+		"dir": dir,
+		"length": length,
+		"half_width": half_width,
+		"reach": reach,
+		"charge": charge,
+		"price": price,
+		"state": "ready",
+		"charge_left": 0.0,
+		"warn_elapsed": 0.0,
+		"warn_seconds": SURGE_WARN_S,
+		"last_warn_visible_s": 0.0,
+		"hazard": null,
+		"struck_enemies": {},
+		"ball_hit": false,
+		"props_broken_this_surge": false,
+		"charges_fired": 0,
+		"times_paid": 0,
+		"enemies_thrown": 0,
+		"ball_hits": 0,
+		"props_broken": 0,
+		"last_ball_toss": Vector3.ZERO,
+	}
+
+
+func _reset_sluice_valve(s: Dictionary) -> void:
+	_drop_sluice_hazard(s)
+	var charge: float = s["charge"]
+	var offset: float = float(s["spec"].get("offset", charge))
+	var ready := offset >= charge
+	s["state"] = "ready" if ready else "charging"
+	s["charge_left"] = 0.0 if ready else clampf(charge - offset, 0.0, charge)
+	s["warn_elapsed"] = 0.0
+	s["warn_seconds"] = maxf(SURGE_MIN_WARN, float(s["spec"].get("warn", SURGE_WARN_S)))
+	s["last_warn_visible_s"] = 0.0
+	s["struck_enemies"] = {}
+	s["ball_hit"] = false
+	s["props_broken_this_surge"] = false
+	s["charges_fired"] = 0
+	s["times_paid"] = 0
+	s["enemies_thrown"] = 0
+	s["ball_hits"] = 0
+	s["props_broken"] = 0
+	s["last_ball_toss"] = Vector3.ZERO
+	(s["wheel"] as Node3D).rotation.z = 0.0
+	_needle(s["needle"], 1.0 if ready else 1.0 - float(s["charge_left"]) / charge)
+	if s["pay_ring"] != null:
+		(s["pay_ring"] as MeshInstance3D).visible = ready
+
+
+func _drop_sluice_hazard(s: Dictionary) -> void:
+	var h: Hazard = s.get("hazard")
+	if h != null and is_instance_valid(h):
+		h.finish()
+		if h.is_in_group(Threat.GROUP):
+			h.remove_from_group(Threat.GROUP)
+		h.queue_free()
+	s["hazard"] = null
+
+
+func _try_pay_sluice(s: Dictionary, run_ref: Variant, facts: Array) -> bool:
+	if not _sluice_active() or s["state"] != "ready":
+		return false
+	var price: int = int(s["price"])
+	if price <= 0:
+		return false
+	if run_ref == null or not run_ref.has_method("spend_scrap") or not bool(run_ref.spend_scrap(price)):
+		return false
+	return _arm_sluice(s, facts, true)
+
+
+func _arm_sluice(s: Dictionary, facts: Array, paid: bool) -> bool:
+	if s["state"] != "ready":
+		return false
+	_drop_sluice_hazard(s)
+	var h := Hazard.new()
+	var g := ground
+	h.ground = func(point: Vector3) -> float: return (g.call(point.x, point.z, 0.0) as Vector3).y
+	var warn := 0.0
+	if test_no_warn:
+		# Tiny epsilon avoids 0.0/0.0 NaN in Hazard.descriptor() while still going live on tick 0.
+		h.warn_floor = 0.0001
+		warn = 0.0001
+	else:
+		h.warn_floor = SURGE_MIN_WARN
+		warn = maxf(SURGE_MIN_WARN, float(s["spec"].get("warn", SURGE_WARN_S)))
+	h.commit_lane(SURGE_SOURCE + "_" + String(s["spec"]["id"]), Threat.Type.LANE,
+		s["lane_from"], s["dir"], 0.0, float(s["length"]), float(s["half_width"]),
+		float(s["reach"]), warn, SURGE_LIVE_S)
+	add_child(h)
+	s["hazard"] = h
+	s["state"] = "warning"
+	s["warn_elapsed"] = 0.0
+	s["warn_seconds"] = h.warn_seconds
+	s["struck_enemies"] = {}
+	s["ball_hit"] = false
+	s["props_broken_this_surge"] = false
+	if paid:
+		s["times_paid"] = int(s["times_paid"]) + 1
+	if s["pay_ring"] != null:
+		(s["pay_ring"] as MeshInstance3D).visible = false
+	facts.append({"kind": "fact", "fact": "sluice_warning", "at": s["at"]})
+	_puff(s["at"], 4.5)
+	return true
+
+
+func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: Array) -> void:
+	if s.get("device") != null and (s["device"] as Node3D).system == null:
+		_register_sluice_device(s)
+	var ball: Vector3 = motion["pos"]
+	var planar: float = float(motion["planar"])
+	match String(s["state"]):
+		"ready":
+			var at: Vector3 = s["at"]
+			var flat_dist := Vector2(ball.x - at.x, ball.z - at.z).length()
+			var rammed := planar >= cruise * Activities.RAM_MIN_PER_CRUISE and flat_dist <= RAM_REACH and absf(ball.y - at.y) < 3.0
+			for slam_at in _slams:
+				if slam_at.distance_to(at) <= SLAM_REACH:
+					rammed = true
+			if rammed:
+				_arm_sluice(s, facts, false)
+		"warning":
+			var h: Hazard = s["hazard"]
+			if h == null or not is_instance_valid(h):
+				_enter_sluice_charge(s)
+				return
+			var age_before := h.age
+			var vis_before := h.state == Hazard.WARN and h.visible and h.painter() != null
+			h.step(delta)
+			if vis_before:
+				s["warn_elapsed"] = float(s["warn_elapsed"]) + minf(delta, maxf(0.0, h.warn_seconds - age_before))
+			if h.state == Hazard.WARN:
+				return
+			s["last_warn_visible_s"] = float(s["warn_elapsed"])
+			s["state"] = "surging"
+			s["charges_fired"] = int(s["charges_fired"]) + 1
+			facts.append({"kind": "fact", "fact": "sluice_open", "at": s["lane_from"]})
+			var lane_from: Vector3 = s["lane_from"]
+			var lane_dir: Vector3 = s["dir"]
+			var lane_len: float = float(s["length"])
+			_puff(lane_from + Vector3.UP * 1.2, 5.0)
+			_puff(lane_from + lane_dir * (lane_len * 0.5) + Vector3.UP * 1.2, 4.0)
+			if is_inside_tree():
+				for frac in [0.1, 0.38, 0.68, 0.94]:
+					var spot := lane_from + lane_dir * (lane_len * float(frac)) + Vector3.UP * 0.9
+					FxLibrary.burst(self, "steam_puff", spot, 8, Color("e8efe9"))
+					FxLibrary.burst(self, "slam_dust", spot, 6)
+			_apply_surge(s, h, motion)
+			if h.is_done():
+				_enter_sluice_charge(s)
+		"surging":
+			var h: Hazard = s["hazard"]
+			if h == null or not is_instance_valid(h):
+				_enter_sluice_charge(s)
+				return
+			h.step(delta)
+			if h.is_live():
+				_apply_surge(s, h, motion)
+			if h.is_done():
+				_enter_sluice_charge(s)
+		"charging":
+			var left := maxf(0.0, float(s["charge_left"]) - delta)
+			s["charge_left"] = left
+			_needle(s["needle"], 1.0 - left / float(s["charge"]))
+			if left <= 0.0:
+				s["state"] = "ready"
+				_needle(s["needle"], 1.0)
+				if s["pay_ring"] != null:
+					(s["pay_ring"] as MeshInstance3D).visible = true
+
+
+func _enter_sluice_charge(s: Dictionary) -> void:
+	_drop_sluice_hazard(s)
+	s["state"] = "charging"
+	s["charge_left"] = float(s["charge"])
+	s["struck_enemies"] = {}
+	s["ball_hit"] = false
+	s["props_broken_this_surge"] = false
+	_needle(s["needle"], 0.0)
+
+
+func _apply_surge(s: Dictionary, h: Hazard, motion: Dictionary) -> void:
+	var ball: Vector3 = motion["pos"]
+	var velocity: Vector3 = motion["vel"]
+	var planar: float = float(motion["planar"])
+	var riding: bool = bool(motion["riding"])
+	var dir: Vector3 = s["dir"]
+	if not bool(s["props_broken_this_surge"]):
+		s["props_broken_this_surge"] = true
+		s["props_broken"] = int(s["props_broken"]) + _break_lane_props(h)
+	var tree := get_tree() if is_inside_tree() else null
+	if tree != null:
+		var push := (dir + Vector3.UP * 0.35).normalized()
+		var thrown := HazardHits.strike(tree, h.contains, SURGE_SOURCE, SURGE_ENEMY_DAMAGE, SURGE_ENEMY_TOSS,
+			s["struck_enemies"], func(_p: Vector3) -> Vector3: return push)
+		s["enemies_thrown"] = int(s["enemies_thrown"]) + thrown
+	if bool(s["ball_hit"]) or riding or bool(_ctx_field("calm", false)):
+		return
+	if not h.contains(ball):
+		return
+	if SpeedTier.of(planar, cruise) >= SpeedTier.CRUISE:
+		return
+	s["ball_hit"] = true
+	s["ball_hits"] = int(s["ball_hits"]) + 1
+	var run_ref = _ctx_field("run")
+	if run_ref != null and run_ref.has_method("damage"):
+		run_ref.damage(SURGE_BALL_DAMAGE, SURGE_SOURCE)
+	var toss := dir * SURGE_BALL_TOSS + Vector3.UP * SURGE_BALL_LIFT
+	s["last_ball_toss"] = toss
+	var player_ref = _ctx_field("player")
+	if player_ref != null and player_ref.has_method("set_velocity_now"):
+		player_ref.set_velocity_now(velocity + toss, SURGE_SOURCE)
+
+
+# Breaks intact destructible props inside the committed lane (props only, Q-P22; never deforms terrain).
+func _break_lane_props(h: Hazard) -> int:
+	var props = _ctx_field("destructibles")
+	if props == null or not is_instance_valid(props) or not props.has_method("ids") or not props.has_method("on_blast"):
+		return 0
+	var run_ref = _ctx_field("run")
+	var heft := int(run_ref.heft_class()) if run_ref != null and run_ref.has_method("heft_class") else -1
+	var before: int = int(props.intact_count())
+	for id: String in props.ids():
+		if props.state_of(id) != "intact":
+			continue
+		var box: AABB = props.bounds_of(id)
+		var centre := box.get_center()
+		var foot := Vector3(centre.x, box.position.y + 0.1, centre.z)
+		if h.contains(centre) or h.contains(foot):
+			props.on_blast(centre, 0.25, SURGE_SOURCE, 1, heft)
+	return maxi(0, before - int(props.intact_count()))
+
+
+func _resolve_ctx() -> Variant:
+	if _ctx != null:
+		return _ctx
+	var owner_node := get_parent()
+	while owner_node != null and not "ctx" in owner_node:
+		owner_node = owner_node.get_parent()
+	if owner_node != null and owner_node.get("ctx") != null:
+		_ctx = owner_node.get("ctx")
+	return _ctx
+
+
+func _ctx_field(key: String, fallback: Variant = null) -> Variant:
+	var c: Variant = _resolve_ctx()
+	if c == null:
+		return fallback
+	if c is Dictionary:
+		return (c as Dictionary).get(key, fallback)
+	if c is Object:
+		var val: Variant = (c as Object).get(key)
+		return fallback if val == null else val
+	return fallback
+
+
+func _sluice_by_id(id: String) -> Dictionary:
+	for s in sluice_valves:
+		if String(s["spec"]["id"]) == id:
+			return s
+	return {}
+
+
+func sluice_pay_read(id: String) -> Dictionary:
+	var active := _sluice_active()
+	var s := _sluice_by_id(id)
+	if s.is_empty():
+		return {"active": false, "can_pay": false, "gauge": -1.0}
+	var price: int = int(s["price"])
+	var run_ref = _ctx_field("run")
+	var can_pay: bool = active and s["state"] == "ready" and price > 0 \
+		and run_ref != null and run_ref.has_method("spend_scrap") and int(run_ref.get("scrap")) >= price
+	var g := -1.0
+	if s["state"] == "warning" or s["state"] == "surging":
+		g = 0.0
+	elif s["state"] == "charging":
+		g = clampf(1.0 - float(s["charge_left"]) / float(s["charge"]), 0.0, 1.0)
+	elif s["state"] == "ready" and price > 0 and run_ref != null:
+		g = clampf(float(run_ref.get("scrap")) / float(price), 0.0, 1.0)
+	return {"active": active, "can_pay": can_pay, "gauge": g}
+
+
+func _resolve_interact() -> Variant:
+	var direct = _ctx_field("interact")
+	if direct != null and is_instance_valid(direct) and direct.has_method("register"):
+		return direct
+	var root_node = _ctx_field("root")
+	if root_node is Node and is_instance_valid(root_node):
+		var found := (root_node as Node).get_node_or_null("Interact")
+		if found != null and found.has_method("register"):
+			return found
+	var walk := get_parent()
+	while walk != null:
+		var found := walk.get_node_or_null("Interact")
+		if found != null and found.has_method("register"):
+			return found
+		walk = walk.get_parent()
+	return null
+
+
+func _register_sluice_devices() -> void:
+	for s in sluice_valves:
+		_register_sluice_device(s)
+
+
+func _register_sluice_device(s: Dictionary) -> void:
+	var dev: Node3D = s.get("device")
+	if dev == null or not is_instance_valid(dev):
+		return
+	var interact = _resolve_interact()
+	if interact == null or not is_instance_valid(interact) or not interact.has_method("register"):
+		return
+	if dev.system != null and dev.system != interact and is_instance_valid(dev.system) and dev.system.has_method("unregister"):
+		dev.system.unregister(dev)
+	dev.ctx = _resolve_ctx()
+	dev.system = interact
+	interact.register(dev)
+
+
+static func _vec2_of(value: Variant, fallback := Vector2.ZERO) -> Vector2:
+	if value is Vector2:
+		return value
+	if value is Vector3:
+		return Vector2((value as Vector3).x, (value as Vector3).z)
+	if value is Array:
+		var a := value as Array
+		if a.size() == 2:
+			return Vector2(float(a[0]), float(a[1]))
+		if a.size() >= 3:
+			return Vector2(float(a[0]), float(a[2]))
+	return fallback
 
 
 # ---- The cracked wall (Rivet) ----
@@ -1072,6 +1750,7 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 			face[0].transform = Transform3D(turn * Basis.from_scale(fit), turn * (-aabb.get_center() * fit + Vector3(0.0, 0.0, size.z * 0.25)))
 		body.position = foot + Vector3.UP * (size.y * 0.5 - 0.6)
 		body.rotation.y = spec["turn"]
+		_range_tree(body)
 		add_child(body)
 		return {"spec": spec, "body": body, "home": body.position, "broken": false}
 	var mesh := MeshInstance3D.new()
@@ -1091,6 +1770,7 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 		body.add_child(crack)
 	body.position = foot + Vector3.UP * (size.y * 0.5 - 0.6)
 	body.rotation.y = spec["turn"]
+	_range_tree(body)
 	add_child(body)
 	return {"spec": spec, "body": body, "home": body.position, "broken": false}
 
@@ -1169,6 +1849,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 		needle.mesh = nm
 		needle.material_override = _needle_mat
 		needle.position = at + Vector3.UP * 3.4 + Vector3(0.0, 0.0, 0.12)
+		_range_part(needle, DIAL_VIEW_END_M)
 		add_child(needle)
 		return needle
 	var post := MeshInstance3D.new()
@@ -1179,6 +1860,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	post.mesh = pm
 	post.material_override = _copper_mat
 	post.position = at + Vector3.UP * 1.5
+	_range_part(post, DIAL_VIEW_END_M)
 	add_child(post)
 	var face := MeshInstance3D.new()
 	var fm := CylinderMesh.new()
@@ -1189,6 +1871,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	face.material_override = _gauge_mat
 	face.position = at + Vector3.UP * 3.4
 	face.rotation.x = PI * 0.5
+	_range_part(face, DIAL_VIEW_END_M)
 	add_child(face)
 	var redline := MeshInstance3D.new()
 	var rm := BoxMesh.new()
@@ -1197,6 +1880,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	redline.material_override = _rust_mat
 	redline.position = face.position + Vector3(0.75, 0.55, 0.1)
 	redline.rotation.z = -0.8
+	_range_part(redline, DIAL_VIEW_END_M)
 	add_child(redline)
 	var needle := MeshInstance3D.new()
 	var nm := BoxMesh.new()
@@ -1204,6 +1888,7 @@ func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	needle.mesh = nm
 	needle.material_override = _needle_mat
 	needle.position = face.position + Vector3(0.0, 0.0, 0.12)
+	_range_part(needle, DIAL_VIEW_END_M)
 	add_child(needle)
 	return needle
 
@@ -1220,9 +1905,12 @@ func _puff(at: Vector3, size: float) -> void:
 	s.height = 2.0
 	node.mesh = s
 	node.material_override = _steam_mat
+	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.position = to_local(at) if is_inside_tree() else at
 	add_child(node)
 	_puffs.append({"node": node, "left": PUFF_SECONDS, "size": size})
+	if is_inside_tree():
+		FxLibrary.burst(self, "steam_puff", at, 8)
 
 
 func _dashed_ring(at: Vector3, radius: float) -> void:
@@ -1235,4 +1923,5 @@ func _dashed_ring(at: Vector3, radius: float) -> void:
 		dash.material_override = _gauge_mat
 		dash.position = at + Vector3(cos(a), 0.0, sin(a)) * radius
 		dash.rotation.y = -a
+		_range_part(dash)
 		add_child(dash)

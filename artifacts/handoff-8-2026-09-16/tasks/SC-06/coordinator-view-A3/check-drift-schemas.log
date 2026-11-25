@@ -1,3 +1,0 @@
-check:drift technical pass: 4 sections, 51 stated hashes, 0 mismatches, 0 unbound. Scanned docs/tech/schemas, dependencies resolved from each citing file
-check:drift pass: 4 sections, 51 stated hashes, 0 mismatches, 0 unbound over 1 corpus: technical
-Hash agreement only. A match proves the dependency's bytes are the ones the citing section recorded; it proves nothing about whether the citation, the line numbers or the claim built on them is still correct, and a mismatch is a finding for a card and a reviewer, not a defect this check judges.

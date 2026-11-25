@@ -1,8 +1,0 @@
- docs/tech/sections/TH-01-complete-loop.md          | 67 +++++++++++-----------
- .../TH-02-movement-camera-and-active-aim.md        | 16 +++---
- ...TH-03-a-committed-attack-means-what-it-shows.md | 24 ++++----
- 3 files changed, 57 insertions(+), 50 deletions(-)
-1f376980806df1783bebdffbaee0b0d288ca7c995c5fe14b5247a55ae603e5af  docs/tech/sections/TH-01-complete-loop.md
-1d1c6bb88d0e6d3396c6c8b406bcefcbf3d2cbfbbf4c668a3263541e9bf79d1b  docs/tech/sections/TH-02-movement-camera-and-active-aim.md
-e1a2b17a9dba2001ca8a60d958e2fcaa608972a162a147dc0e05bc51913f4a90  docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md
-coordinator rerun at e3760c3efa4fd17a86a75f7f8d670c505a814349, 2026-09-16T14:45Z: check:scope --no-build exit 0 (documentation-only, 3 paths); check:docs exit 0; check:project exit 0; check:drift exit 0; check_loop.py exit 0 (762 checks, 3/3 controls); check_movement.py exit 0; check_attack.py exit 0 (976 checks). Spot checks: RL1 enters through Transition S; the successful-run paragraph closes through RL8 and RL9 on Transition D; carried-state row names run.start; EC-06 names run.start.entrance_id; TH-01 line 80 and TH-03 line 105 class the D02 diagnostic read F-CONTROL; TH-02 MP-14 gates Q-P21, Q-P22.

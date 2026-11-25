@@ -27,6 +27,7 @@ import {
   shardJobs,
   wilson,
   maxJobs,
+  defaultChallengeJobs,
   settledMark,
   columnTarget,
   MAX_RUN_TIER,
@@ -1346,6 +1347,15 @@ test("the job cap follows cores and memory, never below 6", () => {
   assert.equal(maxJobs(32, 64 * gib), 32); // one a core when memory allows
   assert.equal(maxJobs(32, 40 * gib), 20); // memory binds at 2 GiB a job
   assert.equal(maxJobs(2, 4 * gib), 6);
+});
+
+test("defaultChallengeJobs scales with host cores within maxJobs", () => {
+  const gib = 2 ** 30;
+  assert.equal(defaultChallengeJobs(32, 62 * gib), 16);
+  assert.equal(defaultChallengeJobs(18, 36 * gib), 9);
+  assert.equal(defaultChallengeJobs(4, 15 * gib), 4);
+  assert.equal(defaultChallengeJobs(2, 4 * gib), 4);
+  assert.equal(defaultChallengeJobs(32, 16 * gib), 8);
 });
 
 test("early stop settles a column only when the seeds left cannot change its mark (ruling dg)", () => {

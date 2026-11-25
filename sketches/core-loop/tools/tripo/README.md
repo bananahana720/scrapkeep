@@ -13,9 +13,9 @@ add its own `res://` path and a one-line reason to `REJECTED` in `src/presentati
 `tests/tripo_variants_test.gd` fails when the list and the rows disagree. `--models=tripo-all` loads every
 sibling, rejected ones too, so a rejected model can still be judged in the game.
 
-Rejected today (14 November 2026, by the board's PC looks and the render check):
+Rejected today (24 November 2026): none.
 
-- One file is rejected today: the generated chaser, `world_one/enemy_chaser_tripo.glb`. The first generated chaser failed the render check below (view 1 sent 0.54 of the authored chaser's brightness, with loose black faces on the shell). The tall slab that replaced it passes the render check but failed the PC look on 15 November 2026: in the wind-up the slab lifts clear of its short claws and floats. A retry needs legs that stay joined at full rear-up.
+- The generated chaser, `world_one/enemy_chaser_tripo.glb`, was rejected from 15 November to 24 November 2026. The first generated chaser failed the render check below (view 1 sent 0.54 of the authored chaser's brightness, with loose black faces on the shell). The tall slab that replaced it passed the render check but failed the PC look on 15 November 2026: in the wind-up the slab lifted clear of its short claws and floated. Wave 46 finished it with `tripo_finish.py` (below): two rubber rods run from the claws up into the body, hidden inside the slab at rest, and wind-up stills at half and full rear-up show the claws joined to the body as the authored legs are. It is accepted again and still needs the PC look.
 - The first generated sluice shed was rejected by the PC look of PR 1024 because it lost the big red water wheel. A second shed that keeps the wheel replaced it and is accepted (see its row below); it still needs the PC look.
 
 **The render check (generated enemy models, from 14 November 2026).** `tools/model_render_check.gd` judges a
@@ -91,6 +91,30 @@ Both are accepted again. The netcaster's view 1 is near the floor, so it still n
 file changes, run `$GODOT_BIN --headless --path sketches/core-loop --import` before a shoot: a script run draws
 the last imported copy, and a shoot taken before the import still showed the old dark barrel.
 
+**The finish (24 November 2026).** Wave 46 gave Fleet paint a bone edge and a pale rim (`src/presentation/bake_look.gd`),
+read from the polish bake in a model's second UV set. A mesh from `tripo_fit.py`, or a whole node from `tripo_swap.py`,
+has no second set, so the game skipped it, and the generated chaser and boom tender hull fell to 0.78 and 0.79 of the
+authored brightness on the 4080 while the authored ones gained the edge. `tripo_finish.py` runs `polish.py`'s own bake
+over the fitted model and writes that set on every mesh that lacks it; vertex colours and a part that already has the
+set (an authored part a swap kept) are left alone:
+
+`blender -b --factory-startup -P tools/tripo/tripo_finish.py -- --in <fitted.glb> --out <out.glb> [--lift "Node=1.2"] [--drop-under "Node=12"] [--strut "Node:x0,y0,z0:x1,y1,z1:radius:slot;..."]`
+
+`--strut` adds a closed eight-sided rod to a node between two points (metres, glTF axes, Y up), in that node's named
+slot; the chaser's two rods keep its claws joined to its rearing body without poking through the side walls at rest.
+`--drop-under` drops disconnected islands under that unique-vertex count (removing a stray 10-vertex split sliver on
+the chaser's claws). `--lift` multiplies a node's vertex colours (in sRGB) for a body snapped darker than the authored
+paint. The output rebuilds byte for byte. Shot again on the 4080 with all six kinds (gamescope, 24 November 2026; view
+brightness against the authored, near-black in brackets):
+
+| Enemy | View 0 | View 1 | Result |
+| --- | --- | --- | --- |
+| Chaser (finished, rods) | 1.24 (0.02, authored 0.11) | 0.97 (0.09, authored 0.08) | pass |
+| Boom tender (refitted `--fit fill`, finished) | 1.15 (0.08, authored 0.08) | 1.01 (0.01, authored 0.06) | pass |
+
+The swatter and the lobber are whole generated meshes without the set as well; they pass the check (0.84 and 0.93 in
+their weaker view) and were left as the PC look passed them.
+
 Earlier generated-mesh trials were rejected (docs/decisions.tsv rows 352 to 361, TADR-011): lumps at
 budget, licence problems, colour loss. Row 361 allows a reopen "only with a different model class".
 Tripo's v3.1 smart_low_poly mode is that different class, and Andrew asked for it on 13 Nov 2026. The
@@ -118,12 +142,12 @@ outputs with the account holder. Outputs made on a free account are public domai
 | sibling | Tripo task | prompt | credits | tris (authored) | draws (authored) | fit |
 | --- | --- | --- | --- | --- | --- | --- |
 | camp/camp_pet_tripo.glb | 4bbd2038-8fe8-48d9-8fda-afda32599557 | prompts/camp_pet.txt | 30 | 2,000 (1,100) | 1 (1) | yaw -90, height, 8 sockets |
-| world_one/enemy_chaser_tripo.glb | Studio workspace 2f2966ab-1a15-41d1-bc51-94a44505dede (replaces API task 6013f673, which failed the render check, and Studio workspace 2635ebdc, a squat wedge never shipped) | prompts/enemy_chaser_slab.txt | 240 Studio (two generations of four candidates, two textures) plus 30 API for the first | 3,176 (3,176) | 5 (5) | yaw 180, `--yaw 180 --fit fill --radius 0.97 --max-tris 3176 --slots "fleet_paint;-1,-1,-1.6,1,1.1,-1.02=rubber;-1,-1,1.0,1,1.1,1.6=rubber;-0.43,0.59,0.1,0.47,0.86,0.8=rubber;-0.37,0.45,0.12,0.42,0.745,0.78=requisition_tag" --split "ChaserClaws=zmax:0.22:rubber,ChaserFin=zmin:0.8:rubber"` (body fleet_paint, top and bottom rubber, visor frame rubber, visor panel requisition_tag; claws below 22 %, fin above 80 %). The Studio export it starts from is not in the repo; this command rebuilds the shipped file byte for byte from it |
+| world_one/enemy_chaser_tripo.glb | Studio workspace 2f2966ab-1a15-41d1-bc51-94a44505dede (replaces API task 6013f673, which failed the render check, and Studio workspace 2635ebdc, a squat wedge never shipped) | prompts/enemy_chaser_slab.txt | 240 Studio (two generations of four candidates, two textures) plus 30 API for the first | 3,222 (3,176) | 5 (5) | yaw 180, `--yaw 180 --fit fill --radius 0.97 --max-tris 3176 --slots "fleet_paint;-1,-1,-1.6,1,1.1,-1.02=rubber;-1,-1,1.0,1,1.1,1.6=rubber;-0.43,0.59,0.1,0.47,0.86,0.8=rubber;-0.37,0.45,0.12,0.42,0.745,0.78=requisition_tag" --split "ChaserClaws=zmax:0.22:rubber,ChaserFin=zmin:0.8:rubber"` (body fleet_paint, top and bottom rubber, visor frame rubber, visor panel requisition_tag; claws below 22 %, fin above 80 %), then tripo_finish.py `--drop-under "ChaserClaws=12" --strut "ChaserClaws:-0.20,-1.25,-0.38:-0.22,-0.15,0.05:0.07:rubber;ChaserClaws:0.44,-1.25,-0.38:0.22,-0.15,0.05:0.07:rubber"` (24 November 2026; 3,222 triangles with the rods and stray 10-vertex sliver removed). The Studio export it starts from is not in the repo (the PC keeps it as `~/Downloads/hunter robot 3d model.glb`); these two commands rebuild the shipped file byte for byte from it |
 | world_one/enemy_lobber_tripo.glb | 904d0a41-6627-44d7-a982-ce68527c27f0 | prompts/enemy_lobber_whole.txt | 120 (four candidates over two prompts) | 6,699 (6,720) | 5 (5) | tripo_fit.py, yaw 90, `--name LobberBody --max-tris 6700`, then lobber_parts.py |
 | world_one/enemy_swatter_tripo.glb (SwatterBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the second candidate; the row named the first candidate's id until 14 November 2026) | prompts/enemy_swatter_body.txt | 60 | 2,753 (2,760) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 2650 --bright match` |
 | world_one/enemy_hooker_tripo.glb (the barrel and head of HookerBody only) | fbbb83dd-0bbc-4636-9f2b-172f3a03d2dd (the swatter body, used a second time; the first barrel, task 27fecf60-4f86-4d56-92cd-e06c64efbf31, 60 credits, was replaced on 14 November 2026) | prompts/enemy_swatter_body.txt | 0 (a candidate already paid for) | 6,381 (6,414) | 3 (3) | tripo_swap.py, yaw 90, `--fit fill --max-tris 6100 --bright match --region "-0.8,-0.8,-1.15,0.72,0.8,1.65" --crop "0.2,1"` (the crop drops the generated feet, after the PC look of PR 1029 noted them) |
 | world_one/enemy_netcaster_tripo.glb (the control box of NetcasterBody only) | ff17498a-5ed6-4f6b-b933-5f27f62e4cab (the first swatter body candidate, unused by the swatter) | prompts/enemy_swatter_body.txt | 0 (an unused candidate) | 6,993 (7,048) | 2 (2) | tripo_swap.py, yaw 90, `--fit fill --region ... --max-tris 7000 --bright match` |
-| world_one/enemy_boom_tender_tripo.glb (TenderHull only) | cfa436e8-08dc-42f8-b416-53dee2a7619b | prompts/enemy_boom_tender.txt | 30 | 7,375 (7,928) | as authored | tripo_swap.py, yaw 90, box |
+| world_one/enemy_boom_tender_tripo.glb (TenderHull only) | cfa436e8-08dc-42f8-b416-53dee2a7619b | prompts/enemy_boom_tender.txt | 30 | 7,376 (7,928) | as authored | tripo_swap.py, `--yaw 90 --fit fill --max-tris 5000`, then tripo_finish.py (24 November 2026; the first file was `--yaw 90 --max-tris 5000`, box, 1.7 m wide under the 2.5 m authored reel) |
 | park/props/dam/gate_wheelhouse_a{,_lod1,_lod2}_tripo.glb | 7f215046-0286-4f10-b0cd-6d0121db046e | prompts/gate_wheelhouse.txt | 30 | 6,000 / 3,000 / 900 (16,588 / 8,294 / 2,488) | 1 | box |
 | park/props/dam/mixer_wreck_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/mixer_wreck.txt | 60 (2 candidates) | 6,000 / 3,000 / 898 (12,740 / 6,370 / 1,904) | 1 | box |
 | park/props/dam/survey_tent_a{,_lod1,_lod2}_tripo.glb | see registry row | prompts/survey_tent.txt | 60 (2 candidates) | 5,000 / 2,500 / 750 (8,840 / 4,420 / 1,326) | 1 | box |

@@ -16,6 +16,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", ".
 const ZERO_SHA = "0000000000000000000000000000000000000000";
 export const HOOK_BUDGET_S = 9;
 
+const KNOWN_FAILING_LEDGER = "project-guide/handoff/KNOWN-FAILING.tsv";
 const DOCS_OR_PKG =
   /(?:\.md$|^package(?:-lock)?\.json$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/)/;
 
@@ -71,7 +72,8 @@ export function planHookChecks(changedFiles, exists = (f) => existsSync(path.joi
   const jsFiles = filterFormatTargets(changedFiles, exists);
   const hasSketch = changedFiles.some((f) => f.startsWith("sketches/core-loop/"));
   const hasDocsOrPkg = changedFiles.some((f) => DOCS_OR_PKG.test(f));
-  return { jsFiles, hasSketch, hasDocsOrPkg };
+  const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
+  return { jsFiles, hasSketch, hasDocsOrPkg, hasKnownFailing };
 }
 
 function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
@@ -195,6 +197,14 @@ if (isMain()) {
         ]);
         if (!r2.ok) ok = false;
       }
+    }
+    if (ok && plan.hasKnownFailing) {
+      ranLabels.push("known-failing");
+      const r = runStep("known-failing", process.execPath, [
+        "--test",
+        path.join(root, "scripts/known-failing.test.mjs"),
+      ]);
+      if (!r.ok) ok = false;
     }
 
     const elapsedS = (performance.now() - started) / 1000;

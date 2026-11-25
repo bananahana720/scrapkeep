@@ -185,6 +185,8 @@ func show_build(mass: float, parts: Array, synergies: Array, heft_class := 1) ->
 	var want := chunks_for(mass)
 	while _chunks.size() > want:
 		_chunks.pop_back().queue_free()
+	if _chunks.size() < want or parts != _shown_parts:
+		set_process(true)
 	while _chunks.size() < want:
 		_add_chunk(_chunks.size())
 	if parts != _shown_parts:
@@ -205,6 +207,8 @@ func fling(count: int, at: Vector3, fx_parent: Node3D) -> void:
 		var from := chunk.global_position
 		chunk.reparent(fx_parent)
 		_flung.append({"node": chunk, "from": from, "to": at, "t": 0.0})
+	if not _flung.is_empty():
+		set_process(true)
 
 
 func flung_count() -> int:
@@ -224,6 +228,7 @@ func _add_chunk(index: int) -> void:
 	var chunk := MeshInstance3D.new()
 	chunk.mesh = _chunk_mesh
 	chunk.material_override = _chunk_material
+	chunk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var dir := _slot(index, MAX_CHUNKS)
 	chunk.position = chunk_point(index)
 	chunk.basis = _facing(dir) * Basis(Vector3.UP, float(index) * 1.3)
@@ -241,6 +246,8 @@ func _rebuild_pieces(parts: Array) -> void:
 	for i in shown:
 		var part_id: String = parts[i]
 		var piece := _piece(part_id)
+		for mesh: MeshInstance3D in piece.find_children("*", "MeshInstance3D", true, false):
+			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var dir := _slot(i, MAX_PIECES, 1.1)
 		piece.position = dir * 1.0
 		piece.basis = _facing(dir)
@@ -286,6 +293,8 @@ func _piece(part_id: String) -> Node3D:
 			var torus := TorusMesh.new()
 			torus.inner_radius = 0.18
 			torus.outer_radius = 0.34
+			torus.rings = 20
+			torus.ring_segments = 10
 			coil.mesh = torus
 			coil.material_override = mat
 			coil.position = Vector3(0.0, 0.25, 0.0)
@@ -379,6 +388,8 @@ func _rod(parent: Node3D, length: float, mat: Material, radius := 0.08) -> void:
 	cyl.top_radius = radius
 	cyl.bottom_radius = radius * 1.3
 	cyl.height = length
+	cyl.radial_segments = 12
+	cyl.rings = 1
 	node.mesh = cyl
 	node.material_override = mat
 	node.position = Vector3(0.0, length * 0.5, 0.0)
@@ -390,6 +401,8 @@ func _ball(parent: Node3D, radius: float, at: Vector3, mat: Material) -> void:
 	var sphere := SphereMesh.new()
 	sphere.radius = radius
 	sphere.height = radius * 2.0
+	sphere.radial_segments = 16
+	sphere.rings = 8
 	node.mesh = sphere
 	node.material_override = mat
 	node.position = at
@@ -420,8 +433,11 @@ func _build_halo(synergy_id: String) -> Node3D:
 		var torus := TorusMesh.new()
 		torus.inner_radius = inner
 		torus.outer_radius = outer
+		torus.rings = 32
+		torus.ring_segments = 12
 		ring.mesh = torus
 		ring.material_override = mat
+		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ring.rotation = rot
 		halo.add_child(ring)
 	halo.visible = false
@@ -444,9 +460,14 @@ func _process(delta: float) -> void:
 			node.global_position = (fx["from"] as Vector3).lerp(fx["to"], t) + Vector3.UP * 4.0 * t * (1.0 - t)
 		i -= 1
 	var settle := minf(1.0, POP_RATE * delta)
+	var settling := false
 	for chunk in _chunks:
 		if chunk.scale.x > 1.001:
 			chunk.scale = chunk.scale.lerp(Vector3.ONE, settle)
+			settling = settling or chunk.scale.x > 1.001
 	for piece in _pieces:
 		if piece.scale.x > 1.001:
 			piece.scale = piece.scale.lerp(Vector3.ONE, settle)
+			settling = settling or piece.scale.x > 1.001
+	if _flung.is_empty() and not settling:
+		set_process(false)

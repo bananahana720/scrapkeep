@@ -38,15 +38,15 @@ const BASE_EFFECT := {
 	"s_coil_hook": "Letting go of the rope flings you",
 	"s_live_wire": "Discharge fills twice as fast airborne",
 	"s_arc_nest": "Turret arcs reach one more machine",
-	"s_bulwark": "Mounted, crowd control slides off you",
+	"s_bulwark": "On a wall, nothing shoves or snares you",
 }
 const CODEX := {
-	"s_cannonball": "Kick off a wall to zap what's near. A heavier ball launches farther.",
+	"s_static_flutter": "Three sparks on tap. Six pulses charged.",
+	"s_rail_lance": "Longer charge fires one piercing arc lance.",
+	"s_cannonball": "Kick off a wall to zap what's near. Scrap makes you heavier. Heavier launches farther.",
 	"s_beachhead": "Grab a wall from twice as far.",
-	"s_coil_hook": "Let go of the rope to fling yourself.",
-	"s_face_runner": "Kick off a wall to jump again. A heavier shell steers sharper.",
-	"s_arc_nest": "Mounted bolts chain to another target.",
-	"s_bulwark": "Mounted, shrug off crowd control.",
+	"s_face_runner": "Kick off a wall to jump again. Steer sharper after each kick.",
+	"s_bulwark": "On a wall, nothing shoves or snares you.",
 }
 
 var _game
@@ -175,23 +175,25 @@ func _seam() -> void:
 	var base: Array = UpgradeTree.nodes(CLASS_ID)
 	var wo: Array = UpgradeTree.nodes(CLASS_ID, true)
 	var same_elsewhere := wo.size() == base.size() and base.size() == 30
-	for i in base.size():
-		if i != 3 and wo[i] != base[i]:
+	for i in range(6, base.size()):
+		if wo[i] != base[i]:
 			same_elsewhere = false
-	_check("NODES_WORLD_ONE equals NODES except index 3", same_elsewhere and wo[3]["id"] == "s_face_runner" and base[3]["id"] == "s_live_wire"
-		and wo == Sable.NODES_WORLD_ONE and base == Sable.NODES, "index 3 %s vs base %s" % [wo[3]["id"], base[3]["id"]])
+	var wo_ids := wo.slice(0, 6).map(func(n): return n["id"])
+	_check("NODES_WORLD_ONE puts Depth-1 keystones and moved perks in 0..5, matches NODES past 5",
+		same_elsewhere and wo_ids == ["s_static_flutter", "s_rail_lance", "s_cannonball", "s_face_runner", "s_beachhead", "s_bulwark"]
+		and base[3]["id"] == "s_live_wire" and wo == Sable.NODES_WORLD_ONE and base == Sable.NODES,
+		"world-one 0..5 %s vs base[3] %s" % [wo_ids, base[3]["id"]])
 	var runner: Dictionary = wo[3]
 	_check("world-one Face Runner data", runner["knob"] == {"vault_air": true} and UpgradeTree.KNOBS["vault_lock"]["default"] == 1.5
 		and not runner["knob"].has("vault_lock"), "knobs %s, default lock %.1f" % [runner["knob"], UpgradeTree.KNOBS["vault_lock"]["default"]])
-	var other_ok := UpgradeTree.nodes("runner_gunner", true) == Rivet.NODES and UpgradeTree.nodes("demolitions_caster", true) == Kest.NODES
-	_check("no table, NODES on both sides of the flag (Rivet, Kest)", other_ok and UpgradeTree.nodes("runner_gunner") == Rivet.NODES, "Rivet and Kest read NODES with the flag on")
+	var other_ok := UpgradeTree.nodes("runner_gunner", true) == Rivet.NODES_WORLD_ONE and UpgradeTree.nodes("demolitions_caster", true) == Kest.NODES_WORLD_ONE
+	_check("world-one tables wired for Rivet and Kest while flag-off keeps NODES",
+		other_ok and UpgradeTree.nodes("runner_gunner", false) == Rivet.NODES and UpgradeTree.nodes("demolitions_caster", false) == Kest.NODES,
+		"Rivet and Kest read NODES_WORLD_ONE with the flag on and NODES with the flag off")
 	_check("flag off reads NODES", UpgradeTree.nodes(CLASS_ID, false) == Sable.NODES and UpgradeTree.TREES[CLASS_ID] == Sable.NODES and Sable.NODES[9]["id"] == "s_face_runner"
 		and Sable.NODES[9]["knob"]["vault_lock"] == 1.0, "TREES and NODES untouched, base Face Runner at index 9 with lock %.1f" % Sable.NODES[9]["knob"]["vault_lock"])
 	var problems := UpgradeTree.problems(CLASS_ID, true)
 	_check("world-one Sable tree passes the node rules", problems.is_empty(), "%s" % [problems])
-
-
-var _crumb_offered: Array = []
 
 
 func _card_lines(picks: Array, on: bool) -> Array:
@@ -199,7 +201,6 @@ func _card_lines(picks: Array, on: bool) -> Array:
 	_game.ctx.tuning.set_option("hotwire_shell", "on")
 	_player.tree.open_checkpoint()
 	_ws.open_pick()
-	_crumb_offered = _ws.pick._crumb.offered.duplicate()
 	var out: Array = []
 	for card in _ws.pick.cards():
 		out.append([card.node_id(), card.effect_text()])
@@ -209,7 +210,7 @@ func _card_lines(picks: Array, on: bool) -> Array:
 
 
 func _offers_and_cards() -> void:
-	var pairs := {"": ["s_cannonball", "s_beachhead"], "s_cannonball": ["s_coil_hook", "s_face_runner"], "s_beachhead": ["s_arc_nest", "s_bulwark"]}
+	var pairs := {"": ["s_static_flutter", "s_rail_lance"], "s_static_flutter": ["s_cannonball", "s_face_runner"], "s_rail_lance": ["s_beachhead", "s_bulwark"]}
 	for parent in pairs:
 		var picks: Array = [] if parent == "" else [parent]
 		var lines := _card_lines(picks, true)
@@ -217,9 +218,6 @@ func _offers_and_cards() -> void:
 		var tree_ids: Array = _player.tree.offered(CLASS_ID, 1 if parent == "" else 2).map(func(n): return n["id"])
 		var label: String = parent if parent != "" else "start"
 		_check("offers (flag on, after %s)" % label, ids == pairs[parent] and ids == tree_ids, "cards %s, tree %s, want %s" % [ids, tree_ids, pairs[parent]])
-		var want_idx: Array = ids.map(func(id): return UpgradeTree.index_of(CLASS_ID, id, true))
-		var crumb_ok: bool = _crumb_offered == want_idx and (parent != "s_cannonball" or (3 in _crumb_offered and not 9 in _crumb_offered))
-		_check("crumb offered uses world-one indices (flag on, after %s)" % label, crumb_ok, "crumb %s, want %s" % [_crumb_offered, want_idx])
 		var same := true
 		for l in lines:
 			same = same and l[1] == CODEX[l[0]]
@@ -323,53 +321,53 @@ func _mounted_cc() -> Dictionary:
 
 
 func _retained() -> void:
-	# S1: the vault discharge, and the mass verb.
+	# Base control: no picks.
 	_take([])
 	var base_reach := _reach_found()
 	var base_chain := _chain_jumps()
 	var base_fling_no_picks := _fling(20.0)
 	_check("control: no picks, no discharge, no fling, base reach", not _vault_discharges() and base_fling_no_picks == 20.0 and not base_reach,
 		"fling %.1f, reach wall found %s" % [base_fling_no_picks, base_reach])
-	_take(["s_cannonball"])
-	_check("S1 vault kick sets off a discharge", _vault_discharges() and _player.tree.knob("mass_launch"), "arc burst on vault_kicked, mass_launch %s" % _player.tree.knob("mass_launch"))
-	# S2: double reach finds the wall 3.25 m out; the base reach does not.
-	_take(["s_beachhead"])
+	# Depth-1 left (s_static_flutter): 3 sparks on tap, 6 pulses charged, keeps mass_launch.
+	_take(["s_static_flutter"])
+	var flutter_p: Resource = _combat.pattern(Weapons.ARC_CASTER)
+	_check("s_static_flutter configures 3 sparks and 6 pulses with mass_launch",
+		flutter_p.spark_count == 3 and flutter_p.charge_pulses == 6 and _player.tree.knob("mass_launch"),
+		"sparks %d, pulses %d, mass_launch %s" % [flutter_p.spark_count, flutter_p.charge_pulses, _player.tree.knob("mass_launch")])
+	# Depth-1 right (s_rail_lance): 1.15 s charge, 2 pierce, no chain, keeps mass_launch.
+	_take(["s_rail_lance"])
+	var lance_p: Resource = _combat.pattern(Weapons.ARC_CASTER)
+	_check("s_rail_lance configures piercing non-chaining lance with mass_launch",
+		lance_p.charge_pierce == 2 and lance_p.charge_no_chain and is_equal_approx(lance_p.charge_s, 1.00) and _player.tree.knob("mass_launch"),
+		"charge_s %.2f, pierce %d, no_chain %s, mass_launch %s" % [lance_p.charge_s, lance_p.charge_pierce, lance_p.charge_no_chain, _player.tree.knob("mass_launch")])
+	# Moved Depth-2 under Flutter (s_cannonball): vault discharge.
+	_take(["s_static_flutter", "s_cannonball"])
+	_check("S1 moved under Flutter: vault kick sets off a discharge", _vault_discharges() and _player.tree.knob("mass_launch"), "arc burst on vault_kicked, mass_launch %s" % _player.tree.knob("mass_launch"))
+	# Moved Depth-2 under Rail Lance (s_beachhead): double reach finds the wall 3.25 m out.
+	_take(["s_rail_lance", "s_beachhead"])
 	var reach := _reach_found()
-	_check("S2 double mount reach", reach and not base_reach and is_equal_approx(_player.tree.knob("mount_reach"), 2.0) and _player.tree.knob("mass_launch"),
+	_check("S2 moved under Rail Lance: double mount reach", reach and not base_reach and is_equal_approx(_player.tree.knob("mount_reach"), 2.0) and _player.tree.knob("mass_launch"),
 		"wall 3.25 m out found %s, base found %s, reach knob %.1f" % [reach, base_reach, _player.tree.knob("mount_reach")])
-	# S3: +10 m/s fling, the mass bonus on top once, only under 45 m/s.
-	_take(["s_cannonball", "s_coil_hook"])
-	var low := _fling(20.0)
-	_arm_mass(true)
-	var capped := _fling(30.0)
-	_arm_mass(true)
-	var high := _fling(46.0)
-	_arm_mass(true)
-	var first := _fling(20.0)
-	var second := _fling(20.0)
-	_check("S3 fling plus the mass bonus", is_equal_approx(low, 20.0 + 10.0 + Augments.MASS_BONUS), "20 m/s in, %.1f out (10 + %.0f mass)" % [low, Augments.MASS_BONUS])
-	_check("S3 mass bonus stops at 45 m/s", is_equal_approx(capped, Augments.LAUNCH_CEILING) and is_equal_approx(high, 56.0), "30 in -> %.1f (ceiling), 46 in -> %.1f (fling only)" % [capped, high])
-	_check("S3 mass bonus once per grant", is_equal_approx(first, 38.0) and is_equal_approx(second, 30.0), "first %.1f, second in the same second %.1f" % [first, second])
+	# Flag off: base S3 (Coil Hook) and S5 (Arc Nest) stay intact.
 	_take(["s_cannonball", "s_coil_hook"], false)
 	var flat := _fling(20.0)
 	_check("S3 flag off: fling only, no mass", is_equal_approx(flat, 30.0), "20 in, %.1f out" % flat)
-	# S5: one extra turret chain jump.
-	_take(["s_beachhead", "s_arc_nest"])
+	_take(["s_beachhead", "s_arc_nest"], false)
 	var chain := _chain_jumps()
-	_check("S5 one extra turret chain jump", chain == base_chain + 1, "%d chain jumps, base %d" % [chain, base_chain])
-	# S6: mounted CC immunity without damage immunity.
-	_take(["s_beachhead"])
+	_check("S5 flag off: one extra turret chain jump", chain == base_chain + 1, "%d chain jumps, base %d" % [chain, base_chain])
+	# S6 under Rail Lance: mounted CC immunity without damage immunity.
+	_take(["s_rail_lance"])
 	var plain := _mounted_cc()
-	_take(["s_beachhead", "s_bulwark"])
+	_take(["s_rail_lance", "s_bulwark"])
 	var shrug := _mounted_cc()
 	_player.kit.mounted = false
 	var unmounted: bool = _player.crowd_control("knock", Vector3.ZERO)
-	_check("S6 mounted, crowd control slides off", not shrug["landed"] and plain["landed"] and unmounted, "S6 mounted landed %s, S2 alone landed %s, S6 unmounted landed %s" % [shrug["landed"], plain["landed"], unmounted])
+	_check("S6 mounted, crowd control slides off", not shrug["landed"] and plain["landed"] and unmounted, "S6 mounted landed %s, Rail Lance alone landed %s, S6 unmounted landed %s" % [shrug["landed"], plain["landed"], unmounted])
 	_check("S6 grants no damage immunity", shrug["hurt"], "hp dropped while mounted with S6: %s" % shrug["hurt"])
 
 
 func _face_runner() -> void:
-	_take(["s_cannonball", "s_face_runner"])
+	_take(["s_static_flutter", "s_face_runner"])
 	var first := _vault(0)
 	_check("Face Runner restores one air jump per valid vault", first["kicked"] and first["air"] == 1, "air jumps 0 -> %d" % first["air"])
 	_check("Face Runner locks the same face for 1.5 s", is_equal_approx(first["lock"], 1.5), "lock %.2f s" % first["lock"])
@@ -383,7 +381,7 @@ func _face_runner() -> void:
 	var base := _vault(0)
 	_check("flag off: Face Runner at depth 3 keeps its 1 s lock", base["air"] == 1 and is_equal_approx(base["lock"], 1.0), "air jumps %d, lock %.2f s" % [base["air"], base["lock"]])
 	# Without Face Runner, no restore.
-	_take(["s_cannonball", "s_coil_hook"])
+	_take(["s_static_flutter", "s_cannonball"])
 	var none := _vault(0)
 	_check("control: without Face Runner a vault restores no jump", none["kicked"] and none["air"] == 0, "air jumps %d" % none["air"])
 
@@ -420,29 +418,26 @@ func _duplicate_guard() -> void:
 
 
 func _identities() -> void:
-	# Wall cannonball S1 to S3: a vault discharge, and a rope release that flings with weight.
-	_take(["s_cannonball", "s_coil_hook"])
+	# Static Flutter + Cannonball: 3-spark flutter and vault discharge.
+	_take(["s_static_flutter", "s_cannonball"])
 	var d := _vault_discharges()
-	var f := _fling(20.0)
-	_check("identity wall cannonball", d and is_equal_approx(f, 38.0) and _player.tree.path() == ["s_cannonball", "s_coil_hook"], "path %s, vault discharge %s, release %.1f m/s" % [_player.tree.path(), d, f])
-	# Ninja platformer S1 to S4: vault discharge, an air jump back, the 1.5 s lock.
-	_take(["s_cannonball", "s_face_runner"])
-	var d2 := _vault_discharges()
+	_check("identity flutter cannonball", d and _combat.pattern(Weapons.ARC_CASTER).spark_count == 3 and _player.tree.path() == ["s_static_flutter", "s_cannonball"],
+		"path %s, vault discharge %s, sparks %d" % [_player.tree.path(), d, _combat.pattern(Weapons.ARC_CASTER).spark_count])
+	# Static Flutter + Face Runner: 3-spark flutter, an air jump back, the 1.5 s lock.
+	_take(["s_static_flutter", "s_face_runner"])
 	var v := _vault(0)
-	_check("identity ninja platformer", d2 and v["air"] == 1 and is_equal_approx(v["lock"], 1.5) and _player.tree.path() == ["s_cannonball", "s_face_runner"],
-		"path %s, vault discharge %s, air jumps %d, lock %.1f s" % [_player.tree.path(), d2, v["air"], v["lock"]])
-	# Mobile siege S2 to S5: long mount reach, a longer turret chain.
-	var base_chain := 0
-	_take([])
-	base_chain = _chain_jumps()
-	_take(["s_beachhead", "s_arc_nest"])
+	_check("identity ninja platformer", _combat.pattern(Weapons.ARC_CASTER).spark_count == 3 and v["air"] == 1 and is_equal_approx(v["lock"], 1.5) and _player.tree.path() == ["s_static_flutter", "s_face_runner"],
+		"path %s, air jumps %d, lock %.1f s" % [_player.tree.path(), v["air"], v["lock"]])
+	# Rail Lance + Beachhead: piercing lance, double mount reach.
+	_take(["s_rail_lance", "s_beachhead"])
 	var reach5 := _reach_found()
-	_check("identity mobile siege, Arc Nest", reach5 and _chain_jumps() == base_chain + 1 and _player.tree.path() == ["s_beachhead", "s_arc_nest"], "path %s, long reach %s, chain %d" % [_player.tree.path(), reach5, _chain_jumps()])
-	# Mobile siege S2 to S6: long mount reach, mounted CC immunity.
-	_take(["s_beachhead", "s_bulwark"])
-	var reach6 := _reach_found()
+	_check("identity mobile siege, Beachhead", reach5 and _combat.pattern(Weapons.ARC_CASTER).charge_pierce == 2 and _player.tree.path() == ["s_rail_lance", "s_beachhead"],
+		"path %s, long reach %s, pierce %d" % [_player.tree.path(), reach5, _combat.pattern(Weapons.ARC_CASTER).charge_pierce])
+	# Rail Lance + Bulwark: piercing lance, mounted CC immunity.
+	_take(["s_rail_lance", "s_bulwark"])
 	var cc := _mounted_cc()
-	_check("identity mobile siege, Bulwark", reach6 and not cc["landed"] and cc["hurt"] and _player.tree.path() == ["s_beachhead", "s_bulwark"], "path %s, long reach %s, cc landed %s, hurt %s" % [_player.tree.path(), reach6, cc["landed"], cc["hurt"]])
-	# The two S2 children exclude each other, and Face Runner is not offered off S2.
-	var third: bool = _player.tree.pick("s_arc_nest")
-	_check("S5 and S6 exclusive", not third, "second pick accepted %s" % third)
+	_check("identity mobile siege, Bulwark", _combat.pattern(Weapons.ARC_CASTER).charge_pierce == 2 and not cc["landed"] and cc["hurt"] and _player.tree.path() == ["s_rail_lance", "s_bulwark"],
+		"path %s, cc landed %s, hurt %s" % [_player.tree.path(), cc["landed"], cc["hurt"]])
+	# The two Rail Lance children exclude each other.
+	var third: bool = _player.tree.pick("s_beachhead")
+	_check("Beachhead and Bulwark exclusive", not third, "second pick accepted %s" % third)

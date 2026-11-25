@@ -180,7 +180,8 @@ func _run() -> void:
 		"row %s" % [row])
 
 	# --- S4 (Sable), shell on -------------------------------------------------------------
-	var s4 := ["s_cannonball", "s_face_runner"]
+	# Re-pinned 2026-11-24 (E2-09, PILOT-CADENCE §6.2): S4 sits under Static Flutter.
+	var s4 := ["s_static_flutter", "s_face_runner"]
 	_setup("pylon_engineer", s4, true)
 	await _ticks(STEP)
 	_reset()
@@ -245,7 +246,8 @@ func _run() -> void:
 	# --- R6 (Rivet), shell on -------------------------------------------------------------
 	_fit("runner_gunner")
 	await _sim(0.3)
-	var r6 := ["r_juggernaut", "r_second_wind"]
+	# Re-pinned 2026-11-24 (E2-09, PILOT-CADENCE §6.2): R6 sits under Big Iron.
+	var r6 := ["r_big_iron", "r_second_wind"]
 	# Grounded first (before any lift): the factor still moves, so the cue still fires. The hero
 	# is still rolling down the spawn slope here, and where it is on that slope depends on how many
 	# physics ticks the sound bake took (wall time), so the same scenario runs at many phases of the
@@ -300,7 +302,7 @@ func _run() -> void:
 	_check("no shell: a sprint gives 0 cues", not build.shell_fitted() and _tally() == [0, 0, 0], "tally %s" % [_tally()])
 
 	# Without the inversion picked (R6 not taken) a sprint changes nothing, so no cue.
-	_setup("runner_gunner", ["r_juggernaut"], true)
+	_setup("runner_gunner", ["r_big_iron"], true)
 	_lift()
 	await _ticks(STEP)
 	_reset()
@@ -315,7 +317,8 @@ func _run() -> void:
 	# the lifted ball never touched ground), the held jump glides once the ball falls.
 	_fit("demolitions_caster")
 	await _sim(0.3)
-	_setup("demolitions_caster", ["k_ghost", "k_smoke_trail"], true)
+	# Re-pinned 2026-11-24 (E2-09, PILOT-CADENCE §6.2): K5 sits under Keg.
+	_setup("demolitions_caster", ["k_keg", "k_smoke_trail"], true)
 	_lift()
 	_player.state.air_actions = 1
 	await _ticks(STEP)

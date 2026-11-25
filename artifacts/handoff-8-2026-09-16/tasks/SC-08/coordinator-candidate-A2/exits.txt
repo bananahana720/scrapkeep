@@ -1,6 +1,0 @@
-check-scope EXIT=0 :: npm run -s check:scope -- 87e88ccd578a999c79f25755bc9fa8a56bfc154a fd698d30b89564cea292affdeab9969aa4abea80 --no-build
-check-docs EXIT=1 :: npm run -s check:docs
-check-project EXIT=1 :: npm run -s check:project
-check-drift EXIT=0 :: npm run -s check:drift
-check-drift-schemas EXIT=1 :: node scripts/check-drift.mjs --sections docs/tech/schemas
-paper-check EXIT=1 :: python3 /home/andrew/Projects/scrapkeep/artifacts/handoff-8-2026-09-16/tasks/SC-08/coordinator-candidate-A2/check_sc08.py /home/andrew/Projects/scrapkeep-wt-SC-08 --out /home/andrew/Projects/scrapkeep/artifacts/handoff-8-2026-09-16/tasks/SC-08/coordinator-candidate-A2/paper-check

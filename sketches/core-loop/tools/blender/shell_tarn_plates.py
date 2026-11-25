@@ -6,13 +6,14 @@ just inside the lattice (outer face 0.92, 0.04 thick, ROSTER-LOOK sections 2 and
 enters the sight cone, the front face gap or a claw arm's gap.
 
   II   the six lowest gaps, every panel below Z -0.35
-  III  the side gaps, the claw hooks out to 0.18 m past the lattice, and (Core part) thicker
+  III  the side gaps, the claw hooks out to 0.70 m past the lattice, and (Core part) thicker
        tread-cap rims, so class III is two draws (registry exception); the hooks (here and at IV
        and V) are their own ClawHooks mesh under Pod, one more draw, so the carrier bank tilts
        them with the claw arms (hero_assets BRACKET_PARTS)
-  IV   most remaining gaps (the crown stays open), hooks to 0.21 m, hinge guards on both claw
+  IV   most remaining gaps (the crown stays open), hooks to 0.73 m, hinge guards on both claw
        arms and a slab skirt round the pull drum
-  V    every remaining non-sight gap, the heavy hooks to 0.25 m with a second tooth row
+  V    every remaining non-sight gap, the heavy hooks to 0.765 m (1.74 m from the centre) with a
+       second tooth row
 
 Concept: artifacts/local/alpha/push/w13/concepts/codex/tarn/sheet.png (GAP PANEL, heft I, III
 and V) and hero.png.
@@ -137,12 +138,21 @@ def slab(p, g, corners, index):
         p.paint([f], "paint", score)
 
 
+# The hook's offset along the hinge pin, to the side away from the chase camera: it lies beside the
+# jaws' swing plane (the jaws are JAW_THICK thick, the ram sits on the camera side), so the jaws
+# open round it at any angle and never pass through it (E2-04).
+HOOK_OFFSET = 0.095
+HOOK_THICK = 0.06
+HOOK_HEIGHT = 2.6      # the hook's depth over the 2026-10 outline, chunky to match the jaws
+
+
 def hook(p, side_sign, reach, teeth=False):
-    """A fixed hooked claw finger over the jaws on the claw arm's bracket, out to reach past the
-    lattice; teeth adds the second tooth row along its lower edge (class V)."""
+    """A fixed hooked claw finger beside the jaws on the claw arm's bracket, out to reach past the
+    lattice; teeth adds the second tooth row along its lower edge (class V). From the chase
+    camera it sits behind the closed jaws and shows past their tips: the longer reach."""
     d, axis, up, hinge, tip = st.claw_points(side_sign, reach)
     length = (tip - hinge).length
-    base = hinge + up * 0.055
+    base = hinge - axis * (side_sign * HOOK_OFFSET)
     pts = [(0.0, 0.0), (0.0, 0.03), (0.6 * length, 0.045), (0.92 * length, 0.03),
            (length, -0.005), (0.97 * length, -0.05), (0.90 * length, -0.012)]
     if teeth:
@@ -150,7 +160,8 @@ def hook(p, side_sign, reach, teeth=False):
             u0 = 0.78 * length - k * 0.16 * length
             pts += [(u0 - 0.04 * length, -0.03), (u0 - 0.08 * length, -0.004)]
     pts.append((0.1 * length, -0.004))
-    st._plane_prism(p, "paint", list(reversed(pts)), 0.032, base, d, up, color="bone")
+    pts = [(u, v * HOOK_HEIGHT) for u, v in pts]
+    st._plane_prism(p, "paint", list(reversed(pts)), HOOK_THICK, base, d, up, color="bone")
     return tip
 
 
@@ -173,11 +184,12 @@ def thick_caps(p):
         p.paint(faces, "paint", "charcoal")
 
 
-def guards(p):
-    """Class IV: a petrol guard round each claw hinge and a bone slab skirt under the drum."""
+def guards(p, hooks):
+    """Class IV: a petrol guard round each claw hinge, on the banked ClawHooks mesh so it stays
+    on the banked hinge against a wall (E2-04b), and a bone slab skirt under the drum on the Pod."""
     for sign in (1, -1):
         _, axis, up, hinge, _ = st.claw_points(sign, st.CLAW_REACH[0])
-        p.rod("paint", hinge - axis * 0.07, hinge + axis * 0.07, 0.05, 6, color="petrol")
+        hooks.rod("paint", hinge - axis * (st.BOSS[1] + 0.02), hinge + axis * (st.BOSS[1] + 0.02), st.BOSS[0] + 0.025, 6, color="petrol")
     c = st.DRUM_CENTRE
     # Half shell below and behind the drum, inside the gimbal sweep (0.829).
     p.ring("paint", st.DRUM_RADIUS + 0.018, st.DRUM_RADIUS + 0.03, 2 * st.DRUM_HALF + 0.04, 6,
@@ -197,7 +209,7 @@ def layer(n, gaps):
         for sign in (1, -1):
             tips.append(hook(hooks, sign, reach, teeth=(n == 5)))
     if n == 4:
-        guards(pod)
+        guards(pod, hooks)
     sb._sharpen(pod)
     if n == 3:
         core = Part("Core")

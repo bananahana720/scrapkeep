@@ -12,6 +12,7 @@ extends RefCounted
 #   replate()      the rolling part's mesh becomes plating, at every heft class
 #   strip()        hides the lattice's gap panels, which would float inside the plating
 #   dress()        after the fit: the window on the plating and on the outer kit
+#   keep_window()  a later swap (the ready glow, Kest's bands and fuse) keeps the surface's window and ink line
 #   ride()         every frame: the window on scrap, parts and panel plates riding the ball
 # Shapes come from tools/blender/ball_looks.py.
 
@@ -84,6 +85,20 @@ uniform float back_behind = 0.05;
 uniform bool plated = false;
 uniform sampler2D plate : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
 uniform float plate_scale = 0.667;
+#ifdef BANDS
+// Kest's satchel bands (hero_assets.kest_band_material): the band in UV2.x lights up to lit_count, and a
+// satchel's heft class in UV2.y shows it from that class.
+uniform vec4 class_color : source_color = vec4(1.0);
+instance uniform int lit_count = 0;
+instance uniform int heft_class = 1;
+#endif
+#ifdef FUSE
+// Kest's mortar fuse (hero_assets.kest_fuse_material): its glow, dark at the tip once loaded.
+uniform vec4 class_color : source_color = vec4(1.0);
+uniform float strength = 0.5;
+instance uniform float fuse_glow = 0.2;
+instance uniform bool fuse_loaded = false;
+#endif
 varying vec3 local_pos;
 varying vec3 local_normal;
 varying float model_scale;
@@ -103,6 +118,11 @@ void vertex() {
 	to_eye = INV_VIEW_MATRIX[2].xyz;
 }
 void fragment() {
+#ifdef BANDS
+	if (UV2.y > float(heft_class) + 0.1) {
+		discard;
+	}
+#endif
 	float facing = dot(normalize(from_centre), normalize(to_camera));
 	if (tube > 0.0) {
 		vec3 axis = normalize(to_camera);
@@ -141,22 +161,35 @@ void fragment() {
 		vec3 p = local_pos * plate_scale;
 		base *= texture(plate, p.yz).rgb * weights.x + texture(plate, p.xz).rgb * weights.y + texture(plate, p.xy).rgb * weights.z;
 	}
+	vec3 emit = glow;
+#ifdef BANDS
+	if (UV2.x > 0.5) {
+		bool lit = UV2.x <= float(lit_count) + 0.1;
+		base *= lit ? 1.0 : 0.35;
+		emit = lit ? class_color.rgb * 0.5 : vec3(0.0);
+	}
+#endif
+#ifdef FUSE
+	emit = class_color.rgb * strength * (fuse_loaded && local_pos.x < 0.0 ? 0.0 : fuse_glow);
+#endif
 	float edge = window - ink_width;
 	if (facing > edge) {
 		base = ink;
+		emit = vec3(0.0);
 	} else if (facing > edge - fringe) {
 		// Halftone dots that grow toward the ink line, fixed to the screen like print.
 		vec2 cell = fract(FRAGCOORD.xy / 7.0) - 0.5;
 		float grow = (facing - (edge - fringe)) / fringe;
 		if (length(cell) < grow * 0.55) {
 			base = ink;
+			emit = vec3(0.0);
 		}
 	}
 	if (FRONT_FACING) {
 		ALBEDO = base;
 		METALLIC = metal;
 		ROUGHNESS = rough;
-		EMISSION = glow;
+		EMISSION = emit;
 	} else {
 		if (!inside) {
 			discard;
@@ -367,7 +400,6 @@ static func light_pilot(look: String, pilot: Node) -> void:
 
 
 # Every surface of the rolling part takes the window, keeping the colour it was painted with.
-# A class_accent surface keeps hero_assets' own material, which the ready glow swaps by identity.
 static func _cut(core: Node) -> void:
 	var cuts := {}
 	for view in _views(core):
@@ -375,8 +407,6 @@ static func _cut(core: Node) -> void:
 		var centre := _centre_in(view, core)
 		for i in view.mesh.get_surface_count():
 			var was: Material = view.get_active_material(i)
-			if was != null and was.resource_name == "class_accent":
-				continue
 			var key := [was, enamel, centre]
 			if not cuts.has(key):
 				var cut := _windowed(was)
@@ -387,6 +417,70 @@ static func _cut(core: Node) -> void:
 					cut.set_shader_parameter("enamel_take", 1.0)
 				cuts[key] = cut
 			_wear(view, i, cuts[key])
+
+
+# The material surface `surface` of `view` wears for `mat`: once the look has dressed that surface, `mat` behind the same
+# window, with the same ink line (gated as `mat` gates its satchels); otherwise `mat` itself. hero_assets passes the
+# materials it swaps live on a fitted shell through this, so the ready glow and Kest's bands and fuse keep the window. One twin
+# per material and surface, held on the view, so a swap made every frame makes nothing new.
+const SOURCE_META := "ball_window_source"
+const TWINS_META := "ball_window_twins"
+# What a surface's window is, read off the material it wears.
+const WINDOW_PARAMETERS := ["window", "ink_width", "fringe", "inside", "held", "centre_at", "centre_local", "keep_within",
+	"tube", "back_is_kit", "seat_back_top", "back_above", "back_behind", "enamel", "enamel_take"]
+
+static func keep_window(view: MeshInstance3D, surface: int, mat: Material) -> Material:
+	var worn := view.get_surface_override_material(surface) as ShaderMaterial
+	if mat == null or worn == null or worn == mat or not worn.has_meta(SOURCE_META):
+		return mat
+	if worn.get_meta(SOURCE_META) == mat:
+		return worn
+	if not _takes_window(mat):
+		return mat
+	var twins: Dictionary = view.get_meta(TWINS_META, {})
+	var key := "%d:%d" % [surface, mat.get_instance_id()]
+	if not twins.has(key):
+		var cut := _windowed(mat)
+		for name in WINDOW_PARAMETERS:
+			var value = worn.get_shader_parameter(name)
+			if value != null:
+				cut.set_shader_parameter(name, value)
+		cut.next_pass = _gated(worn.next_pass) if _variant(mat) == "bands" else worn.next_pass
+		twins[key] = cut
+		# The swap back finds the material the look dressed the surface with.
+		var back_key := "%d:%d" % [surface, (worn.get_meta(SOURCE_META) as Object).get_instance_id()]
+		if not twins.has(back_key):
+			twins[back_key] = worn
+		view.set_meta(TWINS_META, twins)
+	return twins[key]
+
+
+# The material a windowed one stands for (keep_window's `mat`, or what dress cut), or `mat` itself.
+static func unwindowed(mat: Material) -> Material:
+	return mat.get_meta(SOURCE_META) as Material if mat != null and mat.has_meta(SOURCE_META) else mat
+
+
+# A copy of an ink line (a next pass) that leaves out what the bands variant hides, the satchels above the heft class:
+# a line round a hidden satchel draws it as a solid ink shape. No line at all if the pass is not one it can gate.
+const GATE_AT := "void fragment() {"
+const GATE := """instance uniform int lit_count = 0;
+instance uniform int heft_class = 1;
+void fragment() {
+	if (UV2.y > float(heft_class) + 0.1) {
+		discard;
+	}"""
+
+static func _gated(line: Material) -> Material:
+	var source := line as ShaderMaterial
+	if source == null or source.shader == null:
+		return null
+	if source.shader.code.contains("heft_class"):
+		return source
+	if source.shader.code.count(GATE_AT) != 1:
+		return null
+	var gated := source.duplicate() as ShaderMaterial
+	gated.shader = _shader("gated:%d" % source.shader.code.hash(), source.shader.code.replace(GATE_AT, GATE))
+	return gated
 
 
 # A node's metadata outlives its rendering instance, which must not outlive a material it draws
@@ -418,15 +512,31 @@ static func _centre_in(view: Node3D, root: Node) -> Vector3:
 	return to_root.affine_inverse().origin.snappedf(0.001)
 
 
-# What may take the window: plain opaque lit surfaces and hero_assets' plain paint. Glass, an
-# unshaded halo, class accents (the ready glow swaps them by identity) and a live shader of a
-# pilot's or a part's own keep their materials, because the window's material cannot draw them.
+# What may take the window: plain opaque lit surfaces (the class accents among them), hero_assets'
+# plain paint and the live shaders VARIANTS names. Glass, an unshaded halo and any other live
+# shader of a pilot's or a part's own keep their materials, because the window's material cannot draw them.
 static func _takes_window(was: Material) -> bool:
-	if was == null or was.resource_name == "class_accent":
+	if was == null:
 		return false
 	if was is BaseMaterial3D:
 		return was.transparency == BaseMaterial3D.TRANSPARENCY_DISABLED and was.shading_mode != BaseMaterial3D.SHADING_MODE_UNSHADED
+	if _variant(was) != "":
+		return true
 	return was is ShaderMaterial and was.get_shader_parameter("paint_take") != null and was.get_shader_parameter("class_color") == null
+
+
+# hero_assets' live shaders the window draws in a variant of its own, known by the instance uniform each reads: Kest's
+# satchel bands on the weapon ring and Kest's mortar fuse. The variant reads the same instance uniforms, so what
+# hero_assets sets on the view each frame still reaches it.
+const VARIANTS := {"bands": "instance uniform int lit_count", "fuse": "instance uniform float fuse_glow"}
+
+static func _variant(was: Material) -> String:
+	var shader: Shader = (was as ShaderMaterial).shader if was is ShaderMaterial else null
+	if shader != null:
+		for kind in VARIANTS:
+			if shader.code.contains(VARIANTS[kind]):
+				return kind
+	return ""
 
 
 # The level part: kit that stands outside the ball (weapon ring, hoods, drums) takes the window
@@ -464,10 +574,15 @@ static func _cut_kit(pod: Node, pilot: String) -> void:
 			_wear(view, i, cuts[key])
 
 
-# A material's colour, metal, roughness, glow and equipped paint behind the window.
+# A material's colour, metal, roughness, glow and equipped paint behind the window. The cut names
+# what it was cut from (unwindowed()), so hero_assets still finds a class accent's material by identity.
 static func _windowed(was: Material) -> ShaderMaterial:
 	var cut := ShaderMaterial.new()
-	cut.shader = _shader("cutaway", CUTAWAY_SHADER)
+	var kind := _variant(was)
+	cut.shader = _shader("cutaway", CUTAWAY_SHADER) if kind == "" else \
+		_shader("cutaway:" + kind, CUTAWAY_SHADER.replace("shader_type spatial;\n", "shader_type spatial;\n#define %s\n" % kind.to_upper()))
+	if was != null:
+		cut.set_meta(SOURCE_META, was)
 	# The slot name stays, so what finds a surface by it (the decal's fallback onto the weapon
 	# ring's paint) still does.
 	cut.resource_name = was.resource_name if was != null else ""
@@ -496,10 +611,15 @@ static func _windowed(was: Material) -> ShaderMaterial:
 		if was.get_shader_parameter("plate_texture") != null:
 			cut.set_shader_parameter("plated", true)
 			cut.set_shader_parameter("plate", was.get_shader_parameter("plate_texture"))
-		for key in ["paint_tint", "lift", "paint_take"]:
+		for key in ["paint_tint", "lift", "paint_take", "class_color", "strength"]:
 			var value = was.get_shader_parameter(key)
 			if value != null:
 				cut.set_shader_parameter(key, value)
+		if kind == "fuse":
+			# The fuse is flat class colour: no vertex colour, no plate.
+			cut.set_shader_parameter("vertex_tint", false)
+			cut.set_shader_parameter("tint", was.get_shader_parameter("class_color"))
+			cut.set_shader_parameter("rough", 0.5)
 	return cut
 
 

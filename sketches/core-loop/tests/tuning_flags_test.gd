@@ -21,6 +21,7 @@ const EXPECTED := {
 	"warden-form": ["warden_form", "loop", "bogus", "launch"],
 	"drop-room": ["drop_room", "duck", "bogus", "launch"],
 	"set-director": ["set_director", "on", "bogus", "launch"],
+	"deck": ["deck", "festival", "bogus", "launch"],
 	"discovery": ["discovery", "cards", "bogus", "launch"],
 	"telegraph": ["telegraph", "haze", "bogus", "launch"],
 	"ball-look": ["ball_look", "cutaway", "bogus", "launch"],
@@ -100,6 +101,10 @@ func _initialize() -> void:
 	_check("earned sitting set (W1-78)", earned.sitting_earned() and not earned.sitting() and earned.option("heat") == "on" \
 		and earned.option("carry_core") == "on" and not sit.sitting_earned(),
 		"--profile=sitting-earned turns the sitting's loops on and opens nothing in advance")
+	var viking := Tuning.new()
+	var viking_applied := viking.apply_args(PackedStringArray(["--deck=viking"]))
+	_check("--deck=viking", viking_applied.get("deck") == "viking" and viking.option(Tuning.DECK_KEY) == "viking" and bare.option(Tuning.DECK_KEY) == "off",
+		"valid viking -> %s, default stays off" % [viking_applied])
 	print("tuning_flags_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)
 

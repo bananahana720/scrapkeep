@@ -1,0 +1,39 @@
+{
+  "brindle-presses": {
+    "spec": "BrindleReel.tla",
+    "coverage": "references/brindlereel-coverage.md",
+    "real": [
+      {
+        "cfg": "brindlereel-today.cfg",
+        "minStates": 635,
+        "label": "Brindle keeps pressing across phases 1 to 3 while reeling, with every tell >= 0.6 s and no gap over 6 s without a committed attack (W46-05)"
+      }
+    ],
+    "plants": [
+      {
+        "cfg": "brindlereel-broken-stop.cfg",
+        "rule": "NoLongReelGap"
+      },
+      {
+        "cfg": "brindlereel-broken-unclamped.cfg",
+        "rule": "NoLongReelGap"
+      },
+      {
+        "cfg": "brindlereel-broken-shorttell.cfg",
+        "rule": "TellFloor"
+      },
+      {
+        "cfg": "brindlereel-broken-transition.cfg",
+        "rule": "NoTransitionCommit"
+      },
+      {
+        "cfg": "brindlereel-broken-dropcue.cfg",
+        "rule": "CuedPromiseKept"
+      }
+    ],
+    "gaps": [
+      "the model steps in 1 s ticks over the three hull phases with shortened phase floors (12 s vs 28/24/22 s) and tracks commit cadence, transition beats, stuns, cued promises and reel gaps; 3D geometry, aim lead, physics knockback and the chase scooter are checked by tests/brindle_reel_test.gd, tests/boss_telegraph_test.gd and tests/boss_lead_line_test.gd",
+      "the Phase 1 reel-entry clamp under a raised brindle.period_mult dial is not modelled (the model's crane cadence is fixed); tests/brindle_reel_test.gd checks it"
+    ]
+  }
+}

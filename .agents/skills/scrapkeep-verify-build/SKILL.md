@@ -5,7 +5,7 @@ description: "Verify the packed Linux build of Scrapkeep (the exported core-loop
 
 # Verify the packed Linux build
 
-Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `docs/project/README.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
+Resolve this skill directory through symlinks, then run `git -C <resolved-skill-directory> rev-parse --show-toplevel` to identify the repository root. Read `AGENTS.md` and `project-guide/handoff/START-HERE.md`. Use root-relative source paths below. The linked Claude skill resolves to this same body.
 
 This skill owns one thing: a proof that the packed game starts and plays as a player would meet it, outside the editor. It reuses the driver and the step files of `scrapkeep-verify-game`; read that skill's Drive section for the step list. It does not replace the release gate, the 4080 frame budget, the boss smoke on Vulkan or Andrew's sitting, and a cloud test build is never a package to ship.
 

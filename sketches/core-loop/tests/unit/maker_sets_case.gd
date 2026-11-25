@@ -16,7 +16,8 @@ func run(t) -> void:
 	var items: Array = Items.TABLE.keys() + Parts.PATTERN_PARTS
 	# 2026-11-21 (wave 45 U6): Slag Pike and Halo Rig; was 62.
 	# 2026-11-21 (wave 45 U7): Backwash, Barbed Reel, Faultline Cap, Second Bell and Long Leash; was 64.
-	t.eq("69 items", items.size(), 69)
+	# 2026-11-24 (wave 46 E2-09): Brass Drum and Heavy Breech; was 69.
+	t.eq("71 items", items.size(), 71)
 	t.check("every item has a maker", items.all(func(id): return MakerSets.SETS.has(MakerSets.maker_of(id))))
 	t.check("every active has a maker", ActiveDefs.ROWS.keys().all(func(id): return MakerSets.SETS.has(String(ActiveDefs.row(id).get("maker", "")))))
 	t.eq("a generated recipe has no maker", MakerSets.maker_of("gen:weapon:rare:arc:on_hit"), "")

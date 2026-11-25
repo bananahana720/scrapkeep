@@ -3,11 +3,13 @@ extends VBoxContainer
 const Secrets := preload("res://src/core/secrets.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const ShiftBoard := preload("res://src/core/shift_board.gd")
+const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
+const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 # The title's list of every achievement, in table order (Achievements.ROWS): an amber
 # star, the name and the date for an earned row; a slate ring, the name and the words
@@ -17,20 +19,37 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 # is written twice: every word is a table row. Back presses A, as A opened it.
 # Above the list stands the shift board (shift_board.gd): how many stamps, the next rung and what it
 # opens, and the time card's holes, so the wall always names one thing to go and do next.
+#
+# The board is the one mixed surface (LEGIBILITY section 14.3): an old-works split-flap board the Keepers
+# reclaimed. Its frame is cast, with the uranium-green seam; the count and the time card are flap rows in
+# the works' mono face that settle left to right in a straight line (at once with less motion); the next
+# rung is the Keepers' chalk over it. A row that signed on a pilot carries a three-hole timecard stamped
+# HIRED (PAID is Tally's alone).
 
 const COLUMNS := 2
 const ROW_WIDTH := 600.0
+const VARIANT_WIDTH := 396.0
 const PLATE_PAD := 10.0
 const HIDDEN_NAME := "???"
 const HIDDEN_TEXT := "Keep playing."
+const BOARD_SERIAL := 49
+# A flap row settles over FLAP_SECONDS, each row FLAP_STAGGER after the one above.
+const FLAP_SECONDS := 0.36
+const FLAP_STAGGER := 0.08
+const HIRED := "HIRED"
+const TIMECARD := Vector2(76.0, 34.0)
+const PUNCH := 3.0
 
 var back: Button
 var rows := {}
+var variant_cards := {}
 
 var _grid: GridContainer
 var _plate: PanelContainer
 var _scroll: ScrollContainer
 var _board: VBoxContainer
+var _board_frame: PanelContainer
+var _flaps: Tween
 
 
 func _init() -> void:
@@ -39,12 +58,23 @@ func _init() -> void:
 	size_flags_vertical = Control.SIZE_EXPAND_FILL
 	add_theme_constant_override("separation", 24)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_board_frame = PanelContainer.new()
+	_board_frame.name = "ShiftBoardFrame"
+	_board_frame.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	_board_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var cast = ScrapFrame.hand_plate(UiTokens.Hand.OLD_WORKS, BOARD_SERIAL)
+	cast.content_margin_left = UiTokens.GAP_L
+	cast.content_margin_right = UiTokens.GAP_L
+	cast.content_margin_top = UiTokens.GAP_M
+	cast.content_margin_bottom = UiTokens.GAP_XL
+	_board_frame.add_theme_stylebox_override("panel", cast)
+	add_child(_board_frame)
 	_board = VBoxContainer.new()
 	_board.name = "ShiftBoard"
-	_board.add_theme_constant_override("separation", 4)
+	_board.add_theme_constant_override("separation", UiTokens.GAP_XS)
 	_board.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_board.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_board)
+	_board_frame.add_child(_board)
 	# The list stands on its own plate in the middle of the screen, as wide as its two columns, so
 	# the camp behind does not read through the words and the scroll bar sits beside the list.
 	_plate = PanelContainer.new()
@@ -95,6 +125,7 @@ func refresh(profile, progress, sitting := false) -> void:
 		var row := _row(id, profile, progress)
 		_grid.add_child(row)
 		rows[id] = row
+	_scroll.scroll_vertical = 0
 	_focus_first.call_deferred()
 
 
@@ -115,21 +146,178 @@ static func board_lines(profile, sitting := false) -> PackedStringArray:
 	return out
 
 
+# Built shift variants shown on the board, each paired with the rung that opens it.
+static func variant_entries(profile, sitting := false) -> Array:
+	return ShiftVariants.board_entries(profile, sitting)
+
+
 func _fill_board(profile, sitting: bool) -> void:
 	for child in _board.get_children():
 		_board.remove_child(child)
 		child.queue_free()
+	variant_cards.clear()
 	var lines := board_lines(profile, sitting)
+	var flaps: Array[Label] = []
 	for i in lines.size():
-		var label := _label(lines[i], 26 if i == 0 else 18, Palette.AMBER if i == 0 else Palette.SAND)
-		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		var label: Label
+		if i == 1:
+			label = chalk(lines[i])
+		else:
+			label = flap(lines[i], UiTokens.LABEL if i == 0 else UiTokens.BODY)
+			flaps.append(label)
 		label.name = ["Count", "Next", "Card"][i]
 		_board.add_child(label)
+	_settle(flaps)
+	var variants := variant_entries(profile, sitting)
+	if variants.is_empty():
+		return
+	var strip := HBoxContainer.new()
+	strip.name = "Variants"
+	strip.alignment = BoxContainer.ALIGNMENT_CENTER
+	strip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	strip.add_theme_constant_override("separation", UiTokens.GAP_M)
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for entry in variants:
+		var card := _variant_card(entry)
+		strip.add_child(card)
+		variant_cards[String(entry["id"])] = card
+	_board.add_child(strip)
+
+
+# A split-flap row: the works' mono face in the works' ink on a dark flap cell, hinged at its middle. The
+# summary's chase plate sets its rung the same way.
+static func flap(text: String, font_size: int) -> Label:
+	var works: Dictionary = UiTokens.HANDS[UiTokens.Hand.OLD_WORKS]
+	var label := _word(text, UiFonts.face(UiTokens.Hand.OLD_WORKS, true), font_size, works.ink)
+	var cell := StyleBoxFlat.new()
+	cell.bg_color = Color(works.fill.darkened(0.45), 1.0)
+	cell.content_margin_left = UiTokens.GAP_S
+	cell.content_margin_right = UiTokens.GAP_S
+	cell.content_margin_top = UiTokens.GAP_XS
+	cell.content_margin_bottom = UiTokens.GAP_XS
+	label.add_theme_stylebox_override("normal", cell)
+	label.draw.connect(_hinges.bind(label))
+	return label
+
+
+# The flap's split, shown as a hinge at each end of the cell in the margin, so it never strikes a letter.
+static func _hinges(label: Label) -> void:
+	var works: Dictionary = UiTokens.HANDS[UiTokens.Hand.OLD_WORKS]
+	var y := label.size.y * 0.5
+	var reach := float(UiTokens.GAP_XS)
+	label.draw_line(Vector2(0.0, y), Vector2(reach, y), works.edge, 2.0)
+	label.draw_line(Vector2(label.size.x - reach, y), Vector2(label.size.x, y), works.edge, 2.0)
+
+
+# The Keepers' chalk on the board: their poster face in ledger cream, laid over the cast frame with no cell.
+static func chalk(text: String, font_size := UiTokens.BODY) -> Label:
+	return _word(text, UiFonts.face(UiTokens.Hand.KEEPER), font_size, UiTokens.HANDS[UiTokens.Hand.KEEPER].ink)
+
+
+static func _word(text: String, font: Font, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return label
+
+
+# The flap rows settle left to right in a straight line, one after another; with less motion, or off the
+# tree, they stand settled at once.
+func _settle(flaps: Array[Label]) -> void:
+	if _flaps != null:
+		_flaps.kill()
+		_flaps = null
+	if UiTokens.reduced_motion or not is_inside_tree():
+		for flap in flaps:
+			flap.visible_ratio = 1.0
+		return
+	_flaps = create_tween().set_parallel(true).set_trans(UiTokens.hand(UiTokens.Hand.OLD_WORKS).trans)
+	for i in flaps.size():
+		flaps[i].visible_ratio = 0.0
+		_flaps.tween_property(flaps[i], "visible_ratio", 1.0, FLAP_SECONDS).set_delay(FLAP_STAGGER * i)
+
+
+# Whether an achievement row is the one that signs on a pilot: a HIRED rung's grant row.
+static func hires(id: String) -> bool:
+	for rung in ShiftBoard.RUNGS.values():
+		if String(rung["stamp"]) == HIRED and String((rung["when"] as Dictionary).get("earned", "")) == id:
+			return true
+	return false
+
+
+# A three-hole timecard stamped HIRED: a cream card, three punched holes along its top, the stamp under them.
+func _timecard() -> Control:
+	var card := Control.new()
+	card.name = "Timecard"
+	card.custom_minimum_size = TIMECARD
+	card.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.draw.connect(func():
+		var face := Rect2(Vector2.ZERO, card.size)
+		card.draw_rect(face, Palette.LEDGER_CREAM)
+		for i in 3:
+			card.draw_circle(Vector2(card.size.x * (i + 1) / 4.0, UiTokens.GAP_XS + PUNCH), PUNCH, UiTokens.INK)
+		var font := UiFonts.face(UiTokens.Hand.OLD_WORKS, true)
+		var wide := font.get_string_size(HIRED, HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION).x
+		card.draw_string(font, Vector2((card.size.x - wide) * 0.5, card.size.y - UiTokens.GAP_XS - font.get_descent(UiTokens.CAPTION)), HIRED,
+			HORIZONTAL_ALIGNMENT_LEFT, -1, UiTokens.CAPTION, UiTokens.INK))
+	return card
+
+
+func _variant_card(entry: Dictionary) -> PanelContainer:
+	var open := bool(entry["open"])
+	var card := PanelContainer.new()
+	card.name = String(entry["id"])
+	card.custom_minimum_size = Vector2(VARIANT_WIDTH, 0.0)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
+	style.border_color = UiTokens.ACCENT if open else UiTokens.LINE
+	style.set_border_width_all(UiTokens.EDGE)
+	style.set_corner_radius_all(UiTokens.RADIUS)
+	style.corner_detail = 1
+	style.content_margin_left = UiTokens.GAP_M
+	style.content_margin_right = UiTokens.GAP_M
+	style.content_margin_top = UiTokens.GAP_S
+	style.content_margin_bottom = UiTokens.GAP_S
+	card.add_theme_stylebox_override("panel", style)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", UiTokens.GAP_XS)
+	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(body)
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", UiTokens.GAP_S)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	body.add_child(head)
+	var mark := TextureRect.new()
+	mark.texture = Icons.shape("star" if open else "ring")
+	mark.modulate = UiTokens.ACCENT if open else UiTokens.quiet(UiTokens.TEXT)
+	mark.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	mark.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	mark.custom_minimum_size = Vector2(UiTokens.BODY, UiTokens.BODY)
+	mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	mark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(mark)
+	var rung := _label(String(entry["rung_name"]), UiTokens.BODY, UiTokens.ACCENT if open else UiTokens.TEXT)
+	rung.name = "Rung"
+	head.add_child(rung)
+	var text := _label(String(entry["text"]), UiTokens.CAPTION, UiTokens.TEXT if open else UiTokens.quiet(UiTokens.TEXT))
+	text.name = "Text"
+	text.custom_minimum_size = Vector2(VARIANT_WIDTH - 2.0 * (UiTokens.GAP_M + UiTokens.EDGE), 0.0)
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_child(text)
+	return card
 
 
 func _focus_first() -> void:
 	if is_visible_in_tree() and not rows.is_empty():
 		rows.values()[0].grab_focus()
+		_scroll.scroll_vertical = 0
+		_scroll.set_deferred("scroll_vertical", 0)
 
 
 func _move(direction: int) -> void:
@@ -214,6 +402,8 @@ func _row(id: String, profile, progress) -> Control:
 	var text := _label(read["text"], UiTokens.BODY, Color(shade, 0.9))
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	words.add_child(text)
+	if earned and hires(id):
+		box.add_child(_timecard())
 	if read["note"] != "":
 		var note := _label(read["note"], UiTokens.BODY, Palette.AMBER if earned else Palette.SAND)
 		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT

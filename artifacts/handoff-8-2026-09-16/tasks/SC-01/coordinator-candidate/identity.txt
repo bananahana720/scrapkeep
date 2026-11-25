@@ -1,8 +1,0 @@
-worktree /home/andrew/Projects/scrapkeep-wt-SC-01
-head 46c5c199ad1bb00d0d7f117e5316aa47ecf43df8
-branch wt/SC-01
-parent bb97c4111d1e7b2dd40cae575eccde17878b07c5
-status-porcelain-lines 0
-diff-names:
-A	docs/tech/schemas/SC-01.md
-commits-since-base 1

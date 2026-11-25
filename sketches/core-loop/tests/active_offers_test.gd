@@ -136,7 +136,9 @@ func _run() -> void:
 	_game.tuning.set_option("actives", "on")
 	_player.reset_to(_ground(0.0) + Vector3.UP)
 	await _sim(0.2)
-	_t.eq("09 on: the run opens racked with the starter", rack.active_id, ActiveDefs.SCRAP_ROCKET)
+	_t.check("09 on: the run opens racked with the starter empty",
+		rack.active_id == ActiveDefs.SCRAP_ROCKET and rack.charges == 0,
+		"racked '%s' charges %d" % [rack.active_id, rack.charges])
 	var drawn := {}
 	var on_rng := _seeded(13)
 	for i in 200:
@@ -218,7 +220,8 @@ func _run() -> void:
 		_game.ctx.run.add_cogs(record["price"] + 50)
 		var wallet_before: int = _game.ctx.run.cogs
 		var bought: Dictionary = shop.buy(at)
-		_t.check("25 buying it racks it and drops the old one", bought["ok"] and rack.active_id == shelved
+		_t.check("25 buying it racks it full and drops the old one", bought["ok"] and rack.active_id == shelved
+			and rack.charges == int(row["max_charges"])
 			and rack.dropped.any(func(e): return e["id"] == ActiveDefs.SCRAP_ROCKET), str(bought))
 		_t.eq("26 still no part gained", _game.ctx.run.parts, parts_before)
 		# Bought off the shelf curve, it can never sell back at the shelf's: a racked active is not

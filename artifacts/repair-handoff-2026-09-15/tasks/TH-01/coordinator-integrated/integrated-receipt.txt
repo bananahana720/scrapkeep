@@ -1,1 +1,0 @@
-integrated 1b7eae43f9d00dd943bce3a0c4d22612d2a19ace: no-ff merge of eba203191813dea88da29d223029cb9b9c4ef8db into main at 54368bd plus one admission commit adding the README index line. check:docs exit 0 (15 sections); check:project exit 0; check:scope documentation-only; check_loop.py rerun exit 0 (732 checks, 0 failed, 3/3 controls).

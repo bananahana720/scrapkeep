@@ -1,8 +1,0 @@
-{
-  "protocol": "scrapkeep-jev/1",
-  "seq": 2,
-  "intent": "ram_target",
-  "arm": "scripted",
-  "source": "rule",
-  "meta": {}
-}

@@ -2,6 +2,8 @@
 
 Status: design spec for wave P-C, unit A2-kest of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `38ceda3`. Nothing here is built or played. Every `file:line` cites that commit. Paths without a prefix are under `sketches/core-loop/`; `docs/`, `adr/` and `BIBLE.md` are under the repo root. A number marked (start) is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
 
+**Weapon fire (ruling ek, 22 Nov 2026):** how this pilot's weapon fires, with its timers, damage and first tree pick, is now [PILOT-CADENCE.md](../PILOT-CADENCE.md) section 3.3. Where this sheet's weapon text differs, that page wins.
+
 Reads with: [SKILL-BAR.md](../SKILL-BAR.md) (the framework; every slot, signal, field and knob name here is its name), [ROSTER-LOOK.md](../ROSTER-LOOK.md) (the Hoberman mecha, section 0), and the A5 animation spec, [PILOT-CLIPS.md](../PILOT-CLIPS.md) (clip ids).
 
 **Name.** The display name is Kest (`src/core/class_def.gd:101`). The class id stays `demolitions_caster`. Older docs, and the row's `bible_home` (`class_def.gd:105`), call this pilot "Fuse"; this sheet says Kest.

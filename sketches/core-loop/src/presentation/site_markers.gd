@@ -29,9 +29,18 @@ extends Node3D
 
 const Shade := preload("res://src/presentation/site_markers.gdshader")
 const Arena := preload("res://src/boss/arena.gd")
+const Palette := preload("res://src/core/palette.gd")
+const Rogue := preload("res://src/combat/rogue.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
+const CrackedCache := preload("res://src/world/cracked_cache.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const CREW_SMOKE := Color("ece6d8")
+# A spent cracked pocket's flag: this far out from its pedestal, this far aside, found on a ring of FLAG_RING probes.
+const FLAG_OUT_M := 9.0
+const FLAG_ASIDE_M := 4.0
+const FLAG_RING := 16
+const FLAG_LEVEL_M := 0.6
 const WORKS_SMOKE := Color("262826")
 # The furnace's light on the foot of its column: the bowl's own melt at its working heat (arena_bowl_yard.gd MELT), on
 # the gold side of MELT_MIN_HUE as the melt is, so it never reads as the live slag's or HAZARD's red-orange.
@@ -48,6 +57,18 @@ const KINDS := {
 	"furnace": {"tint": WORKS_SMOKE, "height": 170.0, "width": 80.0, "alpha": 1.8, "foot": 0.3, "crown": 0.95, "rim_dark": 0.7,
 		"sway": 0.06, "sway_hz": 0.05, "rise": 0.035, "grain": Vector2(2.0, 3.5), "puffs": 0.0, "stutter": 0.0,
 		"glow": Color(FURNACE_GLOW, 0.85), "far": true, "near": Vector2(60.0, 140.0)},
+}
+# What each site kind shows once finished (design-v3/WAYFINDING.md section 4, ruling ek).
+# Every finished mark is quiet (no glow, no motion, no text label) and never mint (Palette.ARC /
+# Palette.live() is strictly "press now" / "act here"). Furnace never flips.
+const VISITED_SPECS := {
+	"cache": {"flips": true, "mark": "flag", "color": Palette.SAND, "tie": Palette.COPPER, "glow": 0.0, "still": true},
+	"crew": {"flips": true, "mark": "chalk_x", "color": Palette.SAND, "tie": Palette.SAND, "glow": 0.0, "still": true},
+	"cage": {"flips": true, "mark": "scarf_post", "color": Palette.SAND, "tie": Palette.COPPER, "glow": 0.0, "still": true},
+	"rogue": {"flips": true, "mark": "wreck", "color": Palette.CHARCOAL, "tie": Palette.CHARCOAL, "glow": 0.0, "still": true},
+	"shortcut": {"flips": true, "mark": "scorched_frame", "color": Palette.CHARCOAL, "tie": Palette.CHARCOAL, "glow": 0.0, "still": true},
+	"cable": {"flips": true, "mark": "severed", "color": Palette.CHARCOAL, "tie": Palette.CHARCOAL, "glow": 0.0, "still": true},
+	"furnace": {"flips": false, "mark": "", "color": WORKS_SMOKE, "tie": WORKS_SMOKE, "glow": 0.0, "still": true},
 }
 # The boss whose bowl stands a furnace column, by Worlds' boss kind.
 const FURNACE_BOSS := "brindle"
@@ -76,6 +97,13 @@ var _clock := 0.0
 var _last_eye := Vector3.INF
 # The furnace column's foot for the stage it was read on: [stage, foot], foot null for none. Read once a stage.
 var _furnace: Array = [0, null]
+# key -> {key, kind, at, mark, color, tie, glow, still}: finished sites that flipped this attempt.
+# Instance state only (zero static var leaks); cleared on stage entry, retry, stage clear and reset_visited().
+var _visited := {}
+# The sleeping rogue plume's key for this stage attempt, kept across wake so enemy_killed flips it at death.
+var _rogue_key := ""
+# The keeper flags standing over this stage attempt's spent cracked caches (CrackedCache.raise_flag); freed on leaving.
+var flags: Array[Node3D] = []
 static var _materials := {}
 static var _meshes := {}
 
@@ -88,17 +116,134 @@ func setup(ctx_ref) -> void:
 		# A new stage reads its sites on the next frame; leaving one takes every plume down at once.
 		events.stage_entered.connect(_on_stage_entered)
 		events.stage_content_cleared.connect(_on_cleared)
+		if events.has_signal("rescue_completed"):
+			events.rescue_completed.connect(_on_rescue_completed)
+		if events.has_signal("enemy_killed"):
+			events.enemy_killed.connect(_on_enemy_killed)
+		if events.has_signal("activity_done"):
+			events.activity_done.connect(_on_activity_done)
 
 
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	sync([])
+	reset_visited()
+	_drop_flags()
 	_furnace = [0, null]
 	_clock = 0.0
 
 
 func _on_cleared(_reason: String) -> void:
 	sync([])
+	reset_visited()
+	_drop_flags()
 	_clock = READ_EVERY
+
+
+# Crew and cache sites flip only by their plume keys, through sync's fade: a crew home when director.live_homes() drops
+# it, a rib cache when scrap_field.caches() does. An activity's activity_done is no plume site (an enemy_camp is no crew
+# home, a field find keeps no sign), with one exception: a cracked cache's pocket, whose done puts up its keeper flag.
+func _on_rescue_completed(quest_id: String) -> void:
+	var key := "cage:" + quest_id
+	# A cage whose plume already came down flipped then; one that never stood a plume has no site to mark.
+	if views.has(key):
+		mark_visited(key, "cage", views[key].get_meta("at"))
+
+
+# A cracked cache's pocket is spent: the same keeper flag the cache device raises when its part is taken (W46 E1-15)
+# goes up on the open ground before the pocket's mouth, beside it, so it stands clear of the cliff the pocket is cut
+# into and out of the line to the pedestal (`at`, the pocket floor).
+func _on_activity_done(id: String, at: Vector3) -> void:
+	if id != "cracked_cache":
+		return
+	var key := "cracked_cache:%d,%d" % [roundi(at.x), roundi(at.z)]
+	if not mark_visited(key, "cache", at):
+		return
+	var terrain = ctx.get("terrain") if ctx != null else null
+	var raised := CrackedCache.raise_flag(self, pocket_flag_foot(at, terrain), UiTokens.reduced_motion)
+	if raised != null:
+		flags.append(raised)
+
+
+# Where a spent pocket's flag stands: on the ground FLAG_OUT_M from the pedestal (`at`, the pocket floor), the way out of
+# a ring of FLAG_RING whose ground is nearest the floor's own height (the mouth opens on the floor; the cliff the pocket
+# is cut into does not), the way's ground across it breaking ties; then FLAG_ASIDE_M to that way's left when the ground
+# there is level with the floor too, so it stands beside the mouth's line, not on it.
+static func pocket_flag_foot(at: Vector3, terrain) -> Vector3:
+	if terrain == null or not terrain.has_method("height"):
+		return at
+	var best := Vector3.FORWARD
+	var low := INF
+	for k in FLAG_RING:
+		var way := Vector3.FORWARD.rotated(Vector3.UP, TAU * k / FLAG_RING)
+		var probe := at + way * FLAG_OUT_M
+		var across := way.cross(Vector3.UP) * FLAG_OUT_M * 0.7
+		var off: float = absf(terrain.height(probe.x, probe.z) - at.y) + 0.05 * (
+			absf(terrain.height(probe.x + across.x, probe.z + across.z) - at.y)
+			+ absf(terrain.height(probe.x - across.x, probe.z - across.z) - at.y))
+		if off < low - 0.01:
+			low = off
+			best = way
+	var foot := at + best * FLAG_OUT_M
+	var aside := foot + best.cross(Vector3.UP) * -FLAG_ASIDE_M
+	if absf(terrain.height(aside.x, aside.z) - at.y) <= FLAG_LEVEL_M:
+		foot = aside
+	return Vector3(foot.x, terrain.height(foot.x, foot.z), foot.z)
+
+
+func _drop_flags() -> void:
+	for raised in flags:
+		if is_instance_valid(raised):
+			raised.queue_free()
+	flags.clear()
+
+
+func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
+	if not Rogue.ROWS.has(kind):
+		return
+	# A rogue killed before any sync stood its plume has no site key to flip, so it is keyed by its kind.
+	var key := _rogue_key if _rogue_key != "" else "rogue:" + kind
+	mark_visited(key, "rogue", at)
+
+
+# Read-only spec for one site kind's finished state, or {} for an unknown kind.
+static func visited_spec(kind: String) -> Dictionary:
+	return VISITED_SPECS.get(kind, {}).duplicate()
+
+
+# Flips site `key` of `kind` from unvisited to visited once; returns true only on the first flip.
+# Idempotent on repeat calls, and false for unknown kinds, empty keys, or kinds that never flip (furnace).
+func mark_visited(key: String, kind: String, at: Vector3 = Vector3.ZERO) -> bool:
+	if key == "" or _visited.has(key) or not VISITED_SPECS.has(kind):
+		return false
+	var spec: Dictionary = VISITED_SPECS[kind]
+	if not bool(spec["flips"]):
+		return false
+	_visited[key] = {
+		"key": key, "kind": kind, "at": at, "mark": String(spec["mark"]),
+		"color": spec["color"], "tie": spec["tie"], "glow": float(spec["glow"]),
+		"still": bool(spec["still"]),
+	}
+	return true
+
+
+func is_visited(key: String) -> bool:
+	return _visited.has(key)
+
+
+func visited_state(key: String) -> Dictionary:
+	return _visited.get(key, {}).duplicate()
+
+
+func visited_sites() -> Array:
+	var out := []
+	for row: Dictionary in _visited.values():
+		out.append(row.duplicate())
+	return out
+
+
+func reset_visited() -> void:
+	_visited.clear()
+	_rogue_key = ""
 
 
 # The share of a plume's alpha it shows for an eye distance_m away (horizontal): the one rule for distance. A far kind
@@ -172,6 +317,8 @@ func sync(list: Array, fade := false) -> void:
 	var wanted := {}
 	for s in list:
 		wanted[s["key"]] = true
+		if String(s["kind"]) == "rogue":
+			_rogue_key = String(s["key"])
 		if not views.has(s["key"]):
 			views[s["key"]] = _plume(String(s["kind"]), s["at"], String(s["key"]))
 			_last_eye = Vector3.INF
@@ -179,6 +326,11 @@ func sync(list: Array, fade := false) -> void:
 		if not wanted.has(key):
 			var view: MeshInstance3D = views[key]
 			views.erase(key)
+			var kind := String(view.get_meta("kind"))
+			# A sleeping rogue's plume leaves when the machine wakes at 63 m (world.gd _watch_rogue),
+			# not when it dies; _on_enemy_killed flips the rogue once it actually falls.
+			if fade and kind != "rogue":
+				mark_visited(key, kind, view.get_meta("at"))
 			if fade and view.visible:
 				view.set_meta("leave", 1.0)
 				leaving.append(view)

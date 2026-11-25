@@ -33,6 +33,10 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 # wedge with a sand hand at its edge and the icon over it, so the slot is never a blank grey
 # square; an empty charge that time does not refill (refill "contact", Tally's pressure) is a
 # dashed frame over hollow pips, the same hollow pips its pool slot wears, and no clock.
+#
+# A tip that speaks of a slot ("Your active waits on the bar", w37 film 014, PF-21) is answered
+# by the bar, not by more words: while the HUD names a slot (point_at), a chevron in the class
+# colour bobs over it, pointing down at it. Less motion holds the chevron still.
 
 const SLOT := UiTokens.TARGET
 const GAP := float(UiTokens.GAP_M)
@@ -57,6 +61,11 @@ const BADGE := 18.0
 const SET_PIECE_ALPHA := 0.4
 const HAND := 2.0
 const DASHES := 4
+const POINT_W := 22.0
+const POINT_H := 14.0
+const POINT_GAP := float(UiTokens.GAP_S)
+const POINT_BOB := 4.0
+const POINT_HZ := 2.0
 
 # Reduced motion (Game.set_reduced_motion keeps it current): a refused pick no longer shakes.
 static var reduced_motion := false
@@ -86,6 +95,7 @@ var _glyph_from := 0.0
 var _glyph_to := -1.0
 var _glyph_t := GLYPH_SLIDE
 var _refusals := {}
+var _pointed := ""
 var _clock := 0.0
 var _hidden: Array[String] = []
 var _pulses := {}
@@ -97,6 +107,11 @@ var _refund_flashes := {}
 var _refund_count := 0
 # The set piece's solid plates behind the dimmed slots: a child, so self_modulate leaves it whole.
 var _plates := Plates.new()
+var _sb_back := StyleBoxFlat.new()
+var _sb_wash := StyleBoxFlat.new()
+var _sb_frame := StyleBoxFlat.new()
+var _sb_outer := StyleBoxFlat.new()
+var _sb_cap := StyleBoxFlat.new()
 
 
 func _init() -> void:
@@ -159,6 +174,30 @@ func pool_pips(entry: Dictionary) -> int:
 		if slot_name(other) == pool:
 			return int(other["max_charges"])
 	return int(entry["max_charges"])
+
+
+# Per-pip fill share (0.0 to 1.0) for a slot: whole charges fill full pips, and optional
+# `charge_frac` (Tally's fractional pressure, PILOT-CADENCE.md §3.5) partially fills the next pip.
+func pip_fills(entry: Dictionary) -> Array[float]:
+	var reason := slot_reason(entry)
+	var max_charges: int = pool_pips(entry) if reason == "empty" else int(entry["max_charges"])
+	var full: int = 0 if reason == "empty" else int(entry["charges"])
+	var partial: float = clampf(float(entry.get("charge_frac", 0.0)), 0.0, 1.0)
+	if reason == "empty" and partial <= 0.0:
+		var pool := String(entry.get("pool", slot_name(entry)))
+		for other in slots:
+			if slot_name(other) == pool:
+				partial = clampf(float(other.get("charge_frac", 0.0)), 0.0, 1.0)
+				break
+	var fills: Array[float] = []
+	for c in max_charges:
+		if c < full:
+			fills.append(1.0)
+		elif c == full and partial > 0.001:
+			fills.append(partial)
+		else:
+			fills.append(0.0)
+	return fills
 
 
 # The bar's size for `count` published slots: up to NUMBERED numbered slots, the rest chips.
@@ -301,6 +340,24 @@ func _step_refunds(delta: float) -> void:
 		queue_redraw()
 
 
+# The slot a tip on screen speaks of, by slot name; "" for none. A name the bar does not hold
+# points at nothing.
+func point_at(slot: String) -> void:
+	if slot == _pointed:
+		return
+	_pointed = slot
+	queue_redraw()
+
+
+# The rect of the chevron over the pointed slot in bar space, at its rest (no bob); empty when none.
+func pointer_rect() -> Rect2:
+	var rects := slot_rects()
+	if _pointed == "" or not rects.has(_pointed):
+		return Rect2()
+	var slot: Rect2 = rects[_pointed]
+	return Rect2(Vector2(slot.get_center().x - POINT_W * 0.5, slot.position.y - POINT_GAP - POINT_H), Vector2(POINT_W, POINT_H))
+
+
 # A pick the ball refused: the slot shakes and flashes slate for SHAKE_TIME.
 func refuse(slot: String) -> void:
 	_refusals[slot] = SHAKE_TIME
@@ -381,7 +438,8 @@ func step(delta: float) -> void:
 		glyph_x = lerpf(_glyph_from, _glyph_to, smoothstep(0.0, 1.0, _glyph_t / GLYPH_SLIDE))
 	# Only the swell, a refusal, the glide and the draining underline animate on their own;
 	# slot readings redraw in update_slots.
-	if not _pulses.is_empty() or _was_pulsing or refusing or gliding or underline_share() > 0.0:
+	if not _pulses.is_empty() or _was_pulsing or refusing or gliding or underline_share() > 0.0 \
+			or (_pointed != "" and not reduced_motion):
 		queue_redraw()
 	_was_pulsing = not _pulses.is_empty()
 
@@ -405,6 +463,20 @@ func _draw() -> void:
 		_draw_slot(entry, rects[name], CHIP_SCALE if is_chip(entry) else 1.0)
 	if not slots.is_empty():
 		_draw_glyph()
+	_draw_pointer()
+
+
+# The chevron over the pointed slot: ink-edged, in the class colour, bobbing toward the slot.
+func _draw_pointer() -> void:
+	var rect := pointer_rect()
+	if not rect.has_area():
+		return
+	if not reduced_motion:
+		rect.position.y -= POINT_BOB * 0.5 * (1.0 + sin(_clock * TAU * POINT_HZ))
+	var tip := Vector2(rect.get_center().x, rect.end.y)
+	var points := PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), tip])
+	draw_colored_polygon(points, tint)
+	draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[0]]), UiTokens.INK, 1.5)
 
 
 func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
@@ -422,10 +494,9 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 		rect = rect.grow(2.0)
 	rect.position.y -= look["lift"]
 	var radius := int(UiTokens.RADIUS * scale)
-	var back := StyleBoxFlat.new()
-	back.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA) if state != "unavailable" else Color(Palette.VERDIGRIS, 0.5)
-	back.set_corner_radius_all(radius)
-	draw_style_box(back, rect)
+	_sb_back.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA) if state != "unavailable" else Color(Palette.VERDIGRIS, 0.5)
+	_sb_back.set_corner_radius_all(radius)
+	draw_style_box(_sb_back, rect)
 
 	var reason := slot_reason(entry)
 	if reason == "clock":
@@ -440,33 +511,30 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 		draw_line(rect.position + Vector2(inset, rect.size.y - inset), rect.end - Vector2(inset, rect.size.y - inset), Color(color, 0.9), 3.0)
 	var flash := flash_color(name)
 	if flash.a > 0.0:
-		var wash := StyleBoxFlat.new()
-		wash.bg_color = Color(flash, flash.a * 0.55)
-		wash.set_corner_radius_all(radius)
-		draw_style_box(wash, rect)
+		_sb_wash.bg_color = Color(flash, flash.a * 0.55)
+		_sb_wash.set_corner_radius_all(radius)
+		draw_style_box(_sb_wash, rect)
 
 	var frame_color: Color = tint if left > 0.0 else (Color(flash, 1.0) if flash.a > 0.0 else color)
 	if reason == "empty":
 		_draw_dashed(rect, frame_color)
 	else:
-		var frame := StyleBoxFlat.new()
-		frame.draw_center = false
-		frame.border_color = frame_color
-		frame.set_border_width_all({"ready": 3, "active": 3, "cooling": 1, "unavailable": 1}[state])
-		frame.set_corner_radius_all(radius)
-		draw_style_box(frame, rect)
+		_sb_frame.draw_center = false
+		_sb_frame.border_color = frame_color
+		_sb_frame.set_border_width_all({"ready": 3, "active": 3, "cooling": 1, "unavailable": 1}[state])
+		_sb_frame.set_corner_radius_all(radius)
+		draw_style_box(_sb_frame, rect)
 	var refund_left := refund_flash_left(name)
 	if refund_left > 0.0:
 		var row: Dictionary = EventKinds.UI_ROWS["cooldown_refunded"]
 		var refund_color := Color(row["color"], refund_left / PULSE_SECONDS)
 		draw_texture_rect(Icons.shape(row["shape"]), rect.grow(-rect.size.x * 0.2), false, refund_color)
 	if look["doubled"]:
-		var outer := StyleBoxFlat.new()
-		outer.draw_center = false
-		outer.border_color = Color(color, 0.55)
-		outer.set_border_width_all(2)
-		outer.set_corner_radius_all(radius + 3)
-		draw_style_box(outer, rect.grow(5.0))
+		_sb_outer.draw_center = false
+		_sb_outer.border_color = Color(color, 0.55)
+		_sb_outer.set_border_width_all(2)
+		_sb_outer.set_corner_radius_all(radius + 3)
+		draw_style_box(_sb_outer, rect.grow(5.0))
 
 	if left > 0.0:
 		var t := 1.0 - left / PULSE_SECONDS
@@ -478,18 +546,27 @@ func _draw_slot(entry: Dictionary, rect: Rect2, scale: float) -> void:
 		draw_texture_rect(Icons.texture(Icons.REEL), badge, false, Icons.tint(Icons.REEL, tint))
 	if not key_hidden(entry):
 		_draw_cap(key_centre + Vector2(shake.x, 0.0), entry["key"], look, KEY_H * scale)
-	var max_charges: int = entry["max_charges"]
-	var full: int = entry["charges"]
-	if reason == "empty":
-		max_charges = pool_pips(entry)
-		full = 0
+	var fills := pip_fills(entry)
+	var max_charges := fills.size()
 	if max_charges > 1 or reason == "empty":
 		var step_x := PIP * 3.0
 		var y := SLOT + KEY_GAP + KEY_H + PIP_GAP + PIP
+		var tex: Texture2D = Icons.shape(motif)
+		var ts: Vector2 = tex.get_size() if tex != null else Vector2.ZERO
 		for c in max_charges:
 			var at := Vector2(key_centre.x + (c - (max_charges - 1) * 0.5) * step_x, y)
 			var pip := Rect2(at - Vector2(PIP, PIP) * 1.3, Vector2(PIP, PIP) * 2.6)
-			draw_texture_rect(Icons.shape(motif), pip, false, tint if c < full else Color(tint, 0.25))
+			var fill := fills[c]
+			if fill >= 0.999:
+				draw_texture_rect(tex, pip, false, tint)
+			else:
+				draw_texture_rect(tex, pip, false, Color(tint, 0.25))
+				if fill > 0.01 and ts.x > 0.0 and ts.y > 0.0:
+					var fill_h := pip.size.y * fill
+					var dst := Rect2(Vector2(pip.position.x, pip.end.y - fill_h), Vector2(pip.size.x, fill_h))
+					var src_h := ts.y * fill
+					var src := Rect2(Vector2(0.0, ts.y - src_h), Vector2(ts.x, src_h))
+					draw_texture_rect_region(tex, dst, src, tint)
 
 
 # A slot's keycap: the shared drawn key, or on the selected slot the inverted cap (sand fill,
@@ -499,13 +576,12 @@ func _draw_cap(at: Vector2, key: String, look: Dictionary, height: float) -> voi
 		Keycap.draw(self, at, key, look["cap_ink"], height)
 		return
 	var cap := Keycap.size_of(key, height)
-	var box := StyleBoxFlat.new()
-	box.bg_color = look["cap_fill"]
-	box.border_color = look["cap_fill"]
-	box.set_border_width_all(2)
-	box.border_width_bottom = 4
-	box.set_corner_radius_all(int(cap.y * 0.2))
-	draw_style_box(box, Rect2(at - cap * 0.5, cap))
+	_sb_cap.bg_color = look["cap_fill"]
+	_sb_cap.border_color = look["cap_fill"]
+	_sb_cap.set_border_width_all(2)
+	_sb_cap.border_width_bottom = 4
+	_sb_cap.set_corner_radius_all(int(cap.y * 0.2))
+	draw_style_box(_sb_cap, Rect2(at - cap * 0.5, cap))
 	var fs := Keycap.font_size(height)
 	var text := Keycap.label(key)
 	var font := UiFonts.bold()

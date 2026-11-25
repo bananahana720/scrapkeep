@@ -50,6 +50,7 @@ SLAT_W = (-0.06, 0.11)                # across the span: outward (-) to inward (
 SLAT_ROOT = 0.03
 SLAT_COLORS = ("oxide", "oxide", "bone")
 VANE_CLEAR = 0.15                     # no panel vertex this close to a hinge (metres)
+SLIT_DEPTH = 0.008                    # a louvre slit's buried point, inside the slat
 
 
 def vane_hinge(side):
@@ -86,13 +87,17 @@ def vane_part(name, side):
         def at(w, ds):
             s = s0 + SLAT_SPAN / 2 + SLAT_SWEEP * (w - SLAT_W[0]) / (SLAT_W[1] - SLAT_W[0]) + ds
             return h + span * s + across * w
+        # E2-03: each slit closes to a point buried in the slat, so every vent piece is a closed island.
         wa, wb = SLAT_W[0] + 0.03, SLAT_W[1] - 0.03
         for face_y in (-1, 1):
             off = y * face_y * (VANE_DEPTH / 2 + 0.002)
             quad = [at(wa, -0.012) + off, at(wa, 0.012) + off, at(wb, 0.012) + off, at(wb, -0.012) + off]
             if (quad[1] - quad[0]).cross(quad[3] - quad[0]).dot(y * face_y) < 0:
                 quad.reverse()
-            p.paint([p.bm.faces.new([p.bm.verts.new(v) for v in quad])], "paint", "charcoal")
+            rim = [p.bm.verts.new(v) for v in quad]
+            tip = p.bm.verts.new(sum(quad, Vector()) / 4 - y * face_y * SLIT_DEPTH)
+            slit = [p.bm.faces.new(rim)] + [p.bm.faces.new((rim[(k + 1) % 4], rim[k], tip)) for k in range(4)]
+            p.paint(slit, "paint", "charcoal")
     # The hinge barrel on the fore-aft axis.
     p.rod("paint", h - y * 0.07, h + y * 0.07, 0.028, 6, color="charcoal")
     return p
@@ -280,15 +285,9 @@ def satchel(p, clock_deg, radius=1.14, z=-0.025):
     body = p.box("paint", (0.22, 0.11, 0.13), loc=loc, rot=(0, 0, yaw), color="oxide")
     flap = p.box("paint", (0.226, 0.03, 0.05), loc=loc + out * 0.05 + Vector((0, 0, 0.045)), rot=(0, 0, yaw), color="petrol")
     p.box("paint", (0.228, 0.118, 0.03), loc=loc + Vector((0, 0, -0.025)), rot=(0, 0, yaw), color=BAND_COLOR)
-    # Faces nobody sees: the body's back against the weapon band, and the flap's underside and
-    # back buried in the body (16 tris for four satchels, which keeps the shell under 6,500).
-    hidden = []
-    for faces, dirs in ((body, (-out,)), (flap, (-out, Vector((0, 0, -1))))):
-        for f in faces:
-            f.normal_update()
-            if any(f.normal.dot(d) > 0.9 for d in dirs):
-                hidden.append(f)
-    bmesh.ops.delete(p.bm, geom=hidden, context="FACES")
+    # E2-03: the body and flap stay whole boxes (closed islands); the 16 hidden faces they cost
+    # come out of the lattice pins shell_kest.py drops.
+    return body + flap
 
 
 def layer(n, by_class):

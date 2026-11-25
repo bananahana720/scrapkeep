@@ -73,6 +73,7 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 # One pose table per pilot (PILOT-CLIPS section 4.2), by the PILOTS glb stem.
@@ -124,6 +125,18 @@ const SHELLS := {
 	"tally": "res://assets/models/world_one/shell_tally.glb",
 	"remembered_cannon": "res://assets/models/world_one/shell_cannon.glb",
 }
+# A pilot's weapon model, mounted at identity under the shell's WeaponRing (its origin is the ball
+# centre), so it yaws to the aim and banks with the ring, and the bank hull reads its vertices with
+# the ring's. Rivet's twin rivet revolvers are their own skinned file (E1-09, wave 46 3D blueprint
+# section 2.2): the shell had no triangle room left, and their bones need a skeleton of their own.
+# Kest's clacker (E2-03, ruling en) is the detonator her throw snaps, clamped at her right yoke: it
+# rides the Pod (COCKPIT_WEAPONS), so it stays at her hands while the ring and its mortar pods aim.
+const WEAPONS := {
+	"runner_gunner": "res://assets/models/world_one/rivet_revolvers.glb",
+	"demolitions_caster": "res://assets/models/world_one/kest_clacker.glb",
+}
+const COCKPIT_WEAPONS := ["demolitions_caster"]
+const WEAPON_NODE := "Weapon"
 const DEFAULT_CLASS := "pylon_engineer"
 const CHUNKS_PATH := "res://assets/models/chunks.glb"
 const GATE_PATH := "res://assets/models/reward_gate.glb"
@@ -408,6 +421,12 @@ static func _surface_material(view: MeshInstance3D, surface: int, mat: Material)
 	var held: Dictionary = view.get_meta("hero_surface_materials", {})
 	held[surface] = mat
 	view.set_meta("hero_surface_materials", held)
+
+
+# A live swap on a fitted shell (Kest's bands and fuse, the ready glow): a surface the ball look
+# has dressed keeps its window and ink line (BallLooks.keep_window).
+static func _swap_material(view: MeshInstance3D, surface: int, mat: Material) -> void:
+	_surface_material(view, surface, BallLooks.keep_window(view, surface, mat))
 
 
 # Paints every surface under root from SLOTS. tints: {"class": Color, "rarity": Color}.
@@ -728,7 +747,7 @@ func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE)
 	if ring != null:
 		for i in ring.mesh.get_surface_count():
 			if slot_of(ring.mesh, i) == "paint":
-				_surface_material(ring, i, kest_band_material(paint_tint))
+				_swap_material(ring, i, kest_band_material(paint_tint))
 		ring.set_instance_shader_parameter("lit_count", int(state["lit_count"]))
 		ring.set_instance_shader_parameter("heft_class", int(state["heft_class"]))
 	var mortar := pod.get_node_or_null("WeaponRing/Mortar") as MeshInstance3D
@@ -739,7 +758,7 @@ func apply_kest_state(pod: Node3D, state: Dictionary, paint_tint := Color.WHITE)
 		mortar.rotation.x = -float(state["mortar_pitch"])
 		for i in mortar.mesh.get_surface_count():
 			if slot_of(mortar.mesh, i) == "class_accent":
-				_surface_material(mortar, i, kest_fuse_material(bool(state["fuse_boost"])))
+				_swap_material(mortar, i, kest_fuse_material(bool(state["fuse_boost"])))
 		mortar.set_instance_shader_parameter("fuse_glow", float(state["fuse_glow"]))
 		mortar.set_instance_shader_parameter("fuse_loaded", bool(state["fuse_blink"]))
 
@@ -1299,6 +1318,25 @@ static func _split(scene: Node) -> Dictionary:
 	return {"core": core, "pod": pod}
 
 
+# Mounts the pilot's WEAPONS model at identity, once, as WEAPON_NODE: under the pod's WeaponRing,
+# or on the pod itself for COCKPIT_WEAPONS. Returns it, or null when the pilot has none, the shell
+# has no ring for it or the file is missing.
+func mount_weapon(pod: Node3D, pilot: String) -> Node3D:
+	var seat := pod if pilot in COCKPIT_WEAPONS else pod.get_node_or_null("WeaponRing") as Node3D
+	if seat == null or not WEAPONS.has(pilot):
+		return null
+	var held := seat.get_node_or_null(WEAPON_NODE) as Node3D
+	if held != null:
+		return held
+	var weapon := _addon(String(WEAPONS[pilot])) as Node3D
+	if weapon == null:
+		return null
+	weapon.name = WEAPON_NODE
+	weapon.transform = Transform3D.IDENTITY
+	seat.add_child(weapon)
+	return weapon
+
+
 # Builds the shell under ball: HeroCore and HeroPod plus one holder per layer, painted with
 # tints, layers shown up to heft_class. pod_parent receives HeroPod (the player's level pod mount);
 # null puts it under ball (previews). The game's _fit, the class card preview and the customize
@@ -1322,6 +1360,7 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	pod.name = "HeroPod"
 	BallLooks.replate(ball_look(), core)
 	BallLooks.furnish(ball_look(), pod)
+	mount_weapon(pod, pilot)
 	var rec := {"core": core, "pod": pod, "layers": {}, "pilot": pilot, "variant": variant, "heft": 1, "shown": {}, "tints": tints}
 	var ring_holders: Array = []
 	for i in HEFT_LAYERS.size():
@@ -1373,8 +1412,10 @@ func fit_shell_into(ball: Node3D, pilot: String, variant: String, heft_class: in
 	# visibility_changed fires only inside the tree; a fit outside it syncs here.
 	for pair in ring_holders:
 		pair[1].visible = pair[0].visible
-	# Every caller's shell wears the look's own materials: the game, the pause read, the previews.
+	# Every caller's shell wears the look's own materials: the game, the pause read, the previews. Then the ink line.
 	BallLooks.dress(ball_look(), rec)
+	InkOutline.apply(core, "pilot")
+	InkOutline.apply(pod, "pilot")
 	if _ready_glow:
 		_glow_rec(rec, true)
 	return rec
@@ -1467,7 +1508,8 @@ func _on_heft_class(heft_class: int, _heft: float) -> void:
 
 
 # The ready glow (SKILL-BAR asks the cage's machinery to glow when the ultimate is ready):
-# every class_accent surface swaps between two cached materials per class colour. No light.
+# every class_accent surface swaps between two cached materials per class colour, read through
+# the ball look's window (BallLooks.unwindowed). No light.
 func ready_material(tint: Color) -> Material:
 	var key := "class_accent_ready:%s" % tint.to_html()
 	if _materials.has(key):
@@ -1494,17 +1536,17 @@ func _glow_rec(rec: Dictionary, on: bool) -> int:
 			if not (mi is MeshInstance3D) or mi.mesh == null:
 				continue
 			for i in mi.mesh.get_surface_count():
-				var current: Material = mi.get_surface_override_material(i)
+				var current: Material = BallLooks.unwindowed(mi.get_surface_override_material(i))
 				if on and current == calm:
-					_surface_material(mi, i, lit)
+					_swap_material(mi, i, lit)
 					swapped += 1
 				elif not on and current == lit:
-					_surface_material(mi, i, calm)
+					_swap_material(mi, i, calm)
 					swapped += 1
 				elif current != null and current.resource_name in ["kest_fuse", "kest_fuse_ready"]:
 					var fuse := kest_fuse_material(on)
 					if current != fuse:
-						_surface_material(mi, i, fuse)
+						_swap_material(mi, i, fuse)
 						swapped += 1
 	return swapped
 
@@ -1751,6 +1793,7 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 	pod.add_child(pilot)
 	paint(pilot, {"class": class_color})
 	BallLooks.light_pilot(ball_look(), pilot)
+	InkOutline.apply(pilot, "pilot")
 	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	return {"pilot": pilot, "animator": animator}
 
@@ -2050,6 +2093,7 @@ func _mecha_event(what: String) -> void:
 			continue
 		match what:
 			"shot":
+				rec["still_s"] = 0.0
 				mecha.shot()
 			"kick":
 				mecha.kick()
@@ -2069,6 +2113,9 @@ func _step_mecha(rec: Dictionary, player, delta: float) -> void:
 	var mecha = rec.get("mecha")
 	if mecha == null:
 		return
+	# How long the ball has sat below the glance speed; moving or a shot starts it again.
+	var velocity: Vector3 = player.state.velocity if player.get("state") != null else Vector3.ZERO
+	rec["still_s"] = float(rec.get("still_s", 0.0)) + delta if velocity.length() < GLANCE_STILL_SPEED else 0.0
 	mecha.step(delta, _mecha_facts(rec, player) if mecha.needs_facts() else {})
 
 
@@ -2076,7 +2123,8 @@ func _step_mecha(rec: Dictionary, player, delta: float) -> void:
 func _mecha_facts(rec: Dictionary, player) -> Dictionary:
 	var velocity: Vector3 = player.state.velocity if player.get("state") != null else Vector3.ZERO
 	var facts := {"pressure": _pressure, "set_piece_phase": _set_piece_phase(rec), "heft_class": _run_heft_class(),
-		"aim": _aim_of(velocity)}
+		"aim": _aim_of(velocity), "idle_still": float(rec.get("still_s", 0.0)) >= MechaMotion.IDLE_STILL_S,
+		"reloading": false, "gauge_fill": 0.0}
 	var kit = player.get("kit")
 	if kit != null:
 		facts["gliding"] = kit.get("gliding") == true
@@ -2091,9 +2139,19 @@ func _mecha_facts(rec: Dictionary, player) -> Dictionary:
 		for slot in ["weapon", "special", "line"]:
 			ready[slot] = bool(abilities.ready(slot))
 		facts["slot_ready"] = ready
+		# The charging hold the reticle ring draws (ability_state.gd slots()'s gauge).
+		if abilities.has_method("slots"):
+			for record in abilities.slots():
+				facts["gauge_fill"] = maxf(facts["gauge_fill"], float(record.get("gauge", 0.0)))
 	var spawner = ctx.get("spawner") if ctx != null else null
 	if spawner != null and spawner.has_method("line_load"):
 		facts["line_load"] = 0.0 if (spawner.line_load() as Dictionary).is_empty() else 1.0
+	# The weapon's one public cadence record (PILOT-CADENCE section 5.3), as the HUD reads it.
+	var driver = spawner.get("weapon_driver") if spawner != null else null
+	if driver != null and driver.has_method("state_snapshot"):
+		var cadence: Dictionary = driver.state_snapshot()
+		facts["reloading"] = cadence.get("reloading", false) == true
+		facts["gauge_fill"] = maxf(facts["gauge_fill"], clampf(float(cadence.get("charge", 0.0)), 0.0, 1.0))
 	return facts
 
 
@@ -2309,6 +2367,7 @@ void fragment() {
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)
 	_add_warden_strokes(base, warden._look, warden, rec)
+	InkOutline.apply(base, "warden", _warden_owned(rec))
 	_wardens[warden.get_instance_id()] = rec
 	warden.fit_camera_shell()
 	warden.tree_exiting.connect(_forget_warden.bind(warden.get_instance_id()), CONNECT_ONE_SHOT)
@@ -2385,6 +2444,7 @@ func _dress_warden_body(warden) -> void:
 	_hide_warden_tree(warden._look._jaws, rec)
 	_hide_warden_tree(warden._kit, rec)
 	warden.add_child(body)
+	InkOutline.apply(body, "warden", _warden_owned(rec))
 	var id: int = warden.get_instance_id()
 	for p in rec.players:
 		(p as AnimationPlayer).mixer_applied.connect(_hold_body.bind(id))
@@ -2403,6 +2463,16 @@ func _dress_warden_body(warden) -> void:
 			bus.posture_changed.connect(_warden_posture_changed)
 		if not bus.stage_entered.is_connected(_warden_stage_entered):
 			bus.stage_entered.connect(_warden_stage_entered)
+
+
+# The Warden's own materials, which its updates brighten and recolour (enamel, lights, the mantle's tool): the ink line
+# takes them in place. The rest come from the shared slot cache and take an inked twin.
+func _warden_owned(rec: Dictionary) -> Array:
+	var shared := _materials.values()
+	var out: Array = rec.materials.values().filter(func(mat): return not shared.has(mat))
+	if rec.get("mantle_tool") != null:
+		out.append(rec.mantle_tool)
+	return out
 
 
 func _driver_count(warden, key: String) -> int:

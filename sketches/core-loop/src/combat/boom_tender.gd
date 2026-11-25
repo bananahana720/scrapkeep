@@ -1,6 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The boom tender (Boom Tender No. 22, design-v3/SPILLWAY-ROSTER.md; world 1): a low tug on
 # tracks paying out a debris boom of five floats and an end buoy. It stows the boom to one side
@@ -224,12 +225,19 @@ func _bowl_through(ball: Vector3) -> void:
 		pops += 1
 		_pops_live += 1
 		_pop_float(i)
+		if world_root != null and is_inside_tree():
+			FxLibrary.burst(world_root, "plate_chunks", at + Vector3.UP * 0.5, 8)
+			FxLibrary.burst(world_root, "brass_spark", at + Vector3.UP * 0.6, 10)
+			FxLibrary.burst(world_root, "steam_puff", at + Vector3.UP * 0.5, 5)
 		_pay(at)
 		if fleet != null:
 			fleet.discover("boom_pop", at)
 	if _pops_live == FLOAT_OUT.size():
 		_pops_live = 0
 		strikes += 1
+		if world_root != null and is_inside_tree():
+			FxLibrary.burst(world_root, "brass_spark", ball + Vector3.UP * 1.2, 16, Palette.BRASS)
+			FxLibrary.burst(world_root, "steam_puff", ball + Vector3.UP * 0.8, 8)
 		if fleet != null:
 			fleet.discover("boom_strike", ball)
 

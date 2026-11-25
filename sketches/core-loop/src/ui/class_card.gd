@@ -55,6 +55,8 @@ const CHIP_CAP := 20.0
 const TRADEOFF_H := 48.0
 const WORD_SIZE := UiTokens.CAPTION
 const SHAKE := 0.25
+const HINT_GAP := 4.0
+const HINT_INSET := 8.0
 const LOCK_DIM := 0.4
 const GREY := """shader_type canvas_item;
 uniform float level = 0.4;
@@ -138,7 +140,7 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	custom_minimum_size = Vector2(width, HEIGHT)
 	size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	accessibility_name = String(def.display_name) if def != null else ""
-	var color: Color = def.color if def != null else Palette.SAND
+	var color: Color = ClassDef.screen_color(def.color) if def != null else Palette.SAND
 	_serial = hash(def.id) if def != null else 0
 	add_theme_stylebox_override("normal", _frame(Color(color, 0.6), 2))
 	add_theme_stylebox_override("hover", _frame(color, 3))
@@ -282,7 +284,7 @@ func shrink_preview(by: float) -> void:
 	_preview_h = maxf(PREVIEW_MIN, PREVIEW_H - by)
 	preview.custom_minimum_size.y = _preview_h
 	var top := PAD + KEY_H + 8.0 + _preview_h - 40.0
-	_hint.position.y = top
+	_seat_hint()
 	_paint_row.position.y = top
 	_fade_rect.position.y = PAD + KEY_H + 8.0 + _preview_h - UiTokens.EDGE
 	queue_redraw()
@@ -292,21 +294,45 @@ func is_open() -> bool:
 	return has_focus()
 
 
+# Back to how a new card stands: closed, unshaken, full size and colour, its pilot seated and the look let go. A card
+# kept for the next pilot select (screens.gd's deck) is reset as it leaves the screen.
+func reset() -> void:
+	openness = 0.0
+	_shake = 0.0
+	rotation = 0.0
+	_apply()
+	if preview != null:
+		preview.reset()
+
+
 func words() -> String:
 	return "%s, %s. %s" % [def.display_name, ClassKit.role_line(def), ClassKit.fantasy(def)] if def != null else ""
 
 
 # The foot of the preview: the locked hint, or the paint swatch and name. Both are card
 # details, so they read only on the open card and the calm screen keeps its word count.
+# The hint sits on a plate whose bottom edge is pinned to the preview's foot and grows upward
+# over the greyed shell as it wraps, so at six cards its four or five lines never reach the
+# name and the tag below the preview (PF-40).
 func _build_overlay(width: float, color: Color) -> void:
 	var top := PAD + KEY_H + 8.0 + PREVIEW_H - 40.0
 	var span := Vector2(width - 2.0 * PAD, 34.0)
 	_hint = _text("", UiTokens.CAPTION, Color(Palette.SAND, 0.9))
-	_hint.position = Vector2(PAD, top)
-	_hint.size = span
-	_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_hint.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	var plate := ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, _serial + 2)
+	plate.content_margin_left = HINT_INSET
+	plate.content_margin_right = HINT_INSET
+	plate.content_margin_top = 4.0
+	plate.content_margin_bottom = 4.0
+	_hint.add_theme_stylebox_override("normal", plate)
+	_hint.add_theme_constant_override("line_spacing", -2)
+	# The plate spans the card's face, not the padded column, so a six-card hint wraps to fewer lines.
+	_hint.position.x = HINT_INSET
+	_hint.size.x = width - 2.0 * HINT_INSET
 	_hint.visible = false
 	add_child(_hint)
+	_seat_hint()
 	_details.append(_hint)
 	_paint_row = HBoxContainer.new()
 	_paint_row.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -328,13 +354,26 @@ func _build_overlay(width: float, color: Color) -> void:
 	_details.append(_paint_row)
 
 
+# The hint's plate ends HINT_GAP above the preview's foot; the plate's height is the wrapped
+# text's own, grown upward (grow_vertical), so a longer hint covers more shell, never the name.
+func _seat_hint() -> void:
+	var foot := PAD + KEY_H + 8.0 + _preview_h - HINT_GAP
+	_hint.offset_bottom = foot
+	_hint.offset_top = foot - 34.0
+
+
+# The locked hint's plate as drawn, in global coordinates (zero size while it is hidden).
+func hint_rect() -> Rect2:
+	return _hint.get_global_rect() if _hint.visible else Rect2()
+
+
 # A locked pilot's card: still clickable (the gate refuses it), but slate, grey and quiet.
 func set_locked(is_locked: bool, hint := "") -> void:
 	locked = is_locked
 	hint_text = hint
 	if def == null:
 		return
-	var color: Color = def.color
+	var color: Color = ClassDef.screen_color(def.color)
 	var edge := Palette.SLATE if locked else color
 	if _styles.is_empty():
 		for state in ["normal", "hover", "pressed", "focus"]:
@@ -639,21 +678,26 @@ func _backdrop(tint: Color) -> void:
 	draw_rect(Rect2(rect.position + Vector2(0.0, mid), Vector2(rect.size.x, rect.size.y - mid)), warm)
 
 
-# Every state shares the card's serial, so the plate keeps its cuts, rivets and tape
-# when it lights up.
+# A Keeper plate (LEGIBILITY.md section 14.3): every state shares the card's serial, so the plate
+# keeps its cuts, rivets, tape and lean when it lights up. The edge is the pilot's colour, the one
+# "yours" accent.
 func _frame(edge: Color, width: int, fill := true) -> StyleBox:
-	return ScrapFrame.plate(edge, _serial, Color(Palette.CHARCOAL, 0.94 if fill else 0.0), width, 0.5)
+	return keeper_plate(edge, _serial, width, fill)
 
 
-# The tree pick's cards still draw this flat plate.
-static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
-	var box := StyleBoxFlat.new()
-	box.draw_center = fill
-	box.bg_color = Color(UiTokens.INK, UiTokens.PLATE_ALPHA)
+# The Keeper's plate under a card (this one and the tree pick's): its serial's cuts and lean, the
+# given edge and a strip of tape along the top. Without fill it is a focus ring drawn over the normal
+# plate: the edge alone, so the plate's rivets, dots and tape are not drawn twice.
+static func keeper_plate(edge: Color, serial: int, width: int, fill := true) -> StyleBox:
+	var box = ScrapFrame.hand_plate(UiTokens.Hand.KEEPER, serial)
 	box.border_color = edge
-	box.set_border_width_all(width)
-	box.set_corner_radius_all(UiTokens.RADIUS)
-	box.corner_detail = 3
+	box.border_width = width
+	box.tape = 0.5
+	if not fill:
+		box.bg_color = Color(box.bg_color, 0.0)
+		box.rivets = false
+		box.halftone = false
+		box.tape = -1.0
 	return box
 
 
@@ -661,7 +705,9 @@ static func _plate(edge: Color, width: int, fill := true) -> StyleBoxFlat:
 func _tagged(label: Label, color: Color, serial: int) -> Label:
 	label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	label.add_theme_stylebox_override("normal", ScrapFrame.tag(Color(color, 0.55), serial))
+	var tag = ScrapFrame.hand_tag(UiTokens.Hand.KEEPER, serial)
+	tag.border_color = Color(color, 0.55)
+	label.add_theme_stylebox_override("normal", tag)
 	return label
 
 
@@ -715,7 +761,7 @@ func _rival_open() -> bool:
 
 
 func _draw() -> void:
-	var tint: Color = def.color if def != null else Palette.SAND
+	var tint: Color = ClassDef.screen_color(def.color) if def != null else Palette.SAND
 	Keycap.draw(self, Vector2(PAD + Keycap.size_of(key, KEY_H).x * 0.5, PAD + KEY_H * 0.5), key,
 		Color.WHITE if is_open() else Palette.SAND, KEY_H)
 	if def == null:

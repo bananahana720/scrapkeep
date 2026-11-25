@@ -65,6 +65,7 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     jsFiles: [],
     hasSketch: true,
     hasDocsOrPkg: true,
+    hasKnownFailing: false,
   });
 
   const jsOnly = planHookChecks(["scripts/ci/affected.mjs"], (f) => existing.has(f));
@@ -72,6 +73,25 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     jsFiles: ["scripts/ci/affected.mjs"],
     hasSketch: false,
     hasDocsOrPkg: false,
+    hasKnownFailing: false,
+  });
+
+  const knownFailing = planHookChecks(["project-guide/handoff/KNOWN-FAILING.tsv"], (f) =>
+    existing.has(f),
+  );
+  assert.deepEqual(knownFailing, {
+    jsFiles: [],
+    hasSketch: false,
+    hasDocsOrPkg: true,
+    hasKnownFailing: true,
+  });
+
+  const nearMissLedger = planHookChecks(["docs/KNOWN-FAILING.tsv"], (f) => existing.has(f));
+  assert.deepEqual(nearMissLedger, {
+    jsFiles: [],
+    hasSketch: false,
+    hasDocsOrPkg: false,
+    hasKnownFailing: false,
   });
 });
 

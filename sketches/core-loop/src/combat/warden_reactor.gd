@@ -3,6 +3,11 @@ extends RefCounted
 const Tuning := preload("res://src/movement/tuning.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Run := preload("res://src/core/run_state.gd")
+const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+static var _sheet_shader: Shader
 
 # The reactor relic's driver (design-v3/wardens/reactor.md sections 3 and 4; unit KF2). warden.gd's
 # per-kind hook loads this file for every park Warden of the reactor family (spec "harpoon_anchor":
@@ -124,7 +129,7 @@ const LINE_REFERENCE_WEAPON := "rapid_laser"
 # cu). Measured medians, small and grown: 0.8 gave 27.0 and 19.4 s, 0.7 gave 33.1 and 22.4 s; 0.7 is the
 # first that puts both at or over the fight before the deck fix (30.9 and 15.8 s).
 # posture_bands_flume_test holds the fight's length.
-const LINE_PAY := 0.7
+const LINE_PAY := 0.60
 
 var gates_opened := 0
 var rides := 0
@@ -448,8 +453,8 @@ func _ride(warden, delta: float) -> void:
 		target.add_external_accel(Vector3(push.x, maxf(up, 0.0), push.z))
 
 
-# A plain water slab over the footprint (its open lane), in the ride colour; collides with nothing.
-# The charge draws the lane faint (LANE_TELL_ALPHA) and the pulse replaces it with the water.
+# A cel-inked scrolling spillway water sheet over the open lane; collides with nothing.
+# The charge draws the lane faint (LANE_TELL_ALPHA) and the pulse replaces it with live water + foot spray.
 func _show_sheet(warden, alpha := SHEET_ALPHA) -> void:
 	_close_sheet()
 	var root = warden.world_root
@@ -460,18 +465,63 @@ func _show_sheet(warden, alpha := SHEET_ALPHA) -> void:
 	var box := BoxMesh.new()
 	box.size = Vector3(lane_width(), 0.3, SHEET_RUN - SHEET_TOP)
 	view.mesh = box
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(SHEET_COLOR, alpha)
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	view.material_override = material
+	var is_live := alpha >= SHEET_ALPHA * 0.9
+	view.material_override = _make_sheet_material(alpha, is_live)
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(view)
 	var mid: Vector3 = warden.home + sheet_dir * (SHEET_TOP + (SHEET_RUN - SHEET_TOP) * 0.5) \
 			+ sheet_dir.cross(Vector3.UP) * lane_offset()
 	var ground: float = warden.terrain.height(mid.x, mid.z) if warden.terrain != null else warden.home.y
 	view.global_transform = Transform3D(Basis.looking_at(-sheet_dir, Vector3.UP), Vector3(mid.x, ground + 0.2, mid.z))
+	if is_live and EnemyMotion.motion_scale > 0.0 and view.is_inside_tree():
+		view.scale = Vector3(1.0, 1.0, 0.15)
+		var tw := view.create_tween()
+		tw.tween_property(view, "scale:z", 1.0, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		var foot: Vector3 = warden.home + sheet_dir * SHEET_RUN + sheet_dir.cross(Vector3.UP) * lane_offset()
+		var foot_y: float = warden.terrain.height(foot.x, foot.z) if warden.terrain != null else ground
+		var at := Vector3(foot.x, foot_y + 0.4, foot.z)
+		FxLibrary.burst(view, "steam_puff", at, 10, Color("e8efe9"), Vector3.ZERO, true)
+		FxLibrary.burst(view, "slam_dust", at, 8, Color.TRANSPARENT, Vector3.ZERO, true)
 	_sheet_view = view
+
+
+static func _make_sheet_material(alpha: float, is_live: bool) -> ShaderMaterial:
+	if _sheet_shader == null:
+		_sheet_shader = Shader.new()
+		_sheet_shader.code = """shader_type spatial;
+render_mode unshaded, cull_disabled, depth_draw_opaque;
+uniform vec3 deep_col : source_color = vec3(0.08, 0.28, 0.30);
+uniform vec3 mid_col : source_color = vec3(0.16, 0.44, 0.45);
+uniform vec3 crest_col : source_color = vec3(0.88, 0.92, 0.88);
+uniform vec3 tell_col : source_color = vec3(0.76, 0.68, 0.56);
+uniform vec3 ink_col : source_color = vec3(0.11, 0.10, 0.10);
+uniform float opacity = 0.72;
+uniform float live = 1.0;
+uniform float motion = 1.0;
+varying vec3 loc;
+void vertex() {
+	loc = VERTEX;
+}
+void fragment() {
+	float t = TIME * 5.2 * motion;
+	float streak = 0.5 + 0.5 * sin(loc.x * 2.1 + sin(loc.z * 0.45 - t * 0.6) * 1.6);
+	float wave = 0.5 + 0.5 * sin(loc.z * 1.15 - t + streak * 1.4);
+	float foam = step(0.72, pow(streak, 1.8) * 0.55 + wave * 0.55);
+	float mid_band = step(0.45, streak * 0.6 + wave * 0.4);
+	float lip = smoothstep(5.5, 7.9, loc.z) + smoothstep(5.8, 7.9, -loc.z);
+	float edge = step(0.92, abs(UV.x - 0.5) * 2.0);
+	vec3 water = mix(deep_col, mid_col, mid_band);
+	water = mix(water, crest_col, clamp(foam * 0.85 + lip * 0.65, 0.0, 1.0));
+	vec3 base = mix(tell_col, water, live);
+	ALBEDO = mix(base, ink_col, edge * 0.78);
+	ALPHA = clamp(opacity + (foam * 0.2 + edge * 0.22) * live, 0.0, 0.95);
+}"""
+	var mat := ShaderMaterial.new()
+	mat.shader = _sheet_shader
+	mat.set_shader_parameter("opacity", clampf(alpha + (0.22 if is_live else 0.08), 0.0, 0.92))
+	mat.set_shader_parameter("live", 1.0 if is_live else 0.0)
+	mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or EnemyMotion.motion_scale <= 0.0 else 1.0)
+	return mat
 
 
 # --- flume: the pour channel -----------------------------------------------------------------
@@ -500,19 +550,19 @@ static func line_reference_damage() -> float:
 		var total := 0.0
 		var pilots: Array = ClassDef.all()
 		for def in pilots:
-			total += float(Weapons.BASE[def.weapon_id]["damage"])
+			total += Weapons.base_damage(def.weapon_id)
 		_line_reference = total / pilots.size()
 	return _line_reference
 
 
-# A weapon's base damage per second, from its Weapons.BASE row. A pressure weapon (Tally's reader)
-# fires at its refill rate, one charge per Weapons.PRESSURE_ROLL_S, not its row rate: time never
-# refills pressure, so latched she measured 0.5 shots a second against the row's 2.5 (ruling BL1).
+# A weapon's careless baseline damage per second (PILOT-CADENCE.md section 2.5). A pressure
+# weapon (Tally's reader) fires at its refill rate, one charge per Weapons.PRESSURE_ROLL_S,
+# not its row rate (ruling BL1); every other weapon reads WeaponDriver.base_dps().
 static func base_dps(weapon: String) -> float:
 	var row: Dictionary = Weapons.BASE[weapon]
 	if preload("res://src/core/ability_state.gd").ABILITIES.get(weapon, {}).has("pressure"):
 		return float(row["damage"]) / Weapons.PRESSURE_ROLL_S
-	return float(row["damage"]) * float(row["rate"])
+	return WeaponDriver.base_dps(Weapons.base(weapon))
 
 
 # The objective plate's reading of this mounting (ui/hud.gd, core/objectives.gd): which road
@@ -562,7 +612,10 @@ func judge_line_bolt(warden, posture, hit: Dictionary, result: Dictionary) -> vo
 	var target = warden.target
 	if target != null and target.has_method("heft"):
 		heft = sheet_heft(warden, target.heft())
-	var share := pow(heft / LINE_REFERENCE_HEFT, posture.curve)
+	# Cap line-bolt heft scaling at grown heft (HEFT_CLASS_AT[2], 2.2), matching DamPosture's
+	# ordinary ceiling so over-grown Stage-2 builds cannot skip the flume line fight while keeping
+	# small (1.0) vs grown (2.2) posture bands intact.
+	var share := pow(minf(heft, Run.HEFT_CLASS_AT[2]) / LINE_REFERENCE_HEFT, posture.curve)
 	var reference_dps := base_dps(LINE_REFERENCE_WEAPON)
 	var fleet = warden.get("fleet")
 	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null

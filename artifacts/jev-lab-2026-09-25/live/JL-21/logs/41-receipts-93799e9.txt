@@ -1,3 +1,0 @@
-npm run sketch:smoke exit 0 46 s at 93799e9
-npm run test exit 0 29 s at 93799e9
-npm run verify exit 0 33 s at 93799e9

@@ -1,4 +1,0 @@
- docs/tech/sections/TH-14-randomness-generation.md | 398 ++++++++++++++++++++++
- 1 file changed, 398 insertions(+)
-85cd7cd558a08d93004fd81dfd7ca33ca610f93a1ecaa7954dc8d510271d6832  docs/tech/sections/TH-14-randomness-generation.md
-coordinator corrections at bc6d6b9d9b34a8512c87916d462bf802bf1eeb52 (eight review notes and the three Seam 5 rulings; the gated-value control re-anchored to the reworded GP-09 in the retained check; section sha256 940eb35a91918b1603e1305389e30d531114f9c01cf77dc692fc57640e4acf9c). Integrated at 2a60fa70dcf7c7bc1ff7313dea71b65bccb90329 (no-ff merge plus the README index line after TH-13 and the TH-13 XD-06 and XT-05 out-of-lease wording corrections): check:scope --no-build documentation-only (5 paths), check:docs 0, check:project 0, check:drift 0 (28 sections, 228 hashes), TH-14 and TH-13 paper checks rerun exit 0.

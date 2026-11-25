@@ -1,5 +1,7 @@
 extends "res://src/combat/counter.gd"
 
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+
 # The swatter (DESIGN-V2 section 15.4): a crew figure behind a long low paddle arm. The
 # warning is a wedge swept by the paddle, low (PADDLE_REACH), so a jump clears it. When
 # it fills the paddle swings: a ball the wedge contains is batted along the sweep, a
@@ -15,10 +17,14 @@ const BAT := 0.35
 const KNOCK := 16.0
 const HP := 45.0
 
+const SWING_S := 0.09
+const RETURN_S := 0.28
+
 var swats := 0
 var _paddle: Node3D
 var _sweep_dir := Vector3.RIGHT
 var _swung := false
+var _return_t := 0.0
 static var _shared: Array = []
 
 
@@ -97,6 +103,7 @@ static func _parts() -> Array:
 func _commit(to_ball: Vector3) -> Node3D:
 	_facing(to_ball)
 	_swung = false
+	_return_t = 0.0
 	var heading := to_ball.normalized() if to_ball.length() > 0.1 else Vector3.FORWARD
 	_sweep_dir = heading.cross(Vector3.UP) * (1.0 if _strafe > 0.0 else -1.0)
 	_clear_telegraph()
@@ -107,12 +114,20 @@ func _commit(to_ball: Vector3) -> Node3D:
 func _go_live() -> void:
 	_swung = true
 	swats += 1
+	if world_root != null and is_inside_tree():
+		var tip := _paddle.to_global(Vector3(0.0, 0.3, 3.2)) if is_instance_valid(_paddle) else global_position + _sweep_dir * 2.5 + Vector3.UP * 0.9
+		FxLibrary.burst(world_root, "brass_spark", tip, 10)
+		FxLibrary.burst(world_root, "steam_puff", tip, 5)
 	var wedge := telegraph()
 	if wedge == null or not wedge.contains(_real_ball()):
 		broken_by = "missed"
 		return
 	var step := get_physics_process_delta_time()
 	_catch(BAT, _sweep_dir * KNOCK / step)
+
+
+func _on_end() -> void:
+	_return_t = RETURN_S if EnemyMotion.motion_scale > 0.0 else 0.0
 
 
 func _on_broken(method: String) -> void:
@@ -129,7 +144,14 @@ func _pose() -> void:
 		return
 	var swing := 0.0
 	if phase == Phase.WARN:
-		swing = -0.6 * clampf(_t / warn_seconds, 0.0, 1.0)
+		var u := clampf(_t / warn_seconds, 0.0, 1.0)
+		swing = -0.65 * (u * u * (3.0 - 2.0 * u))
 	elif phase == Phase.LIVE:
-		swing = 1.2
+		var u := clampf(_t / SWING_S, 0.0, 1.0)
+		var eased := 1.0 - pow(1.0 - u, 3.0)
+		swing = lerpf(-0.65, 1.25, eased)
+	elif _return_t > 0.0:
+		_return_t = maxf(0.0, _return_t - get_physics_process_delta_time())
+		var r := _return_t / RETURN_S
+		swing = 1.25 * (r * r) * cos((1.0 - r) * PI * 0.65 * EnemyMotion.motion_scale)
 	_paddle.rotation.y = swing * (1.0 if _strafe > 0.0 else -1.0)

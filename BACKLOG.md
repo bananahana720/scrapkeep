@@ -8,7 +8,7 @@ This file turns the approved planning into bounded work. It contains no live exe
 
 Godot 4.7.2 standard, typed GDScript, explicit hybrid/session ownership, native Resource/scene content, JSON aggregate saves and offline solo are settled. The approved art direction and 1/2/4/8 branching trees are settled. Old engine-open, matte-only and fan-shaped-tree references do not reopen them.
 
-The initial authorization covered preparation documents. Andrew subsequently authorized private publication in PUB-01 and the [operational Sprint 0 proof scope](docs/project/sprint-0/AUTHORIZATION.md). The fourteen-card foundation set below is a dependency programme, not a dispatch authorization; it was authorized as documentation-only work on 6 September 2026. Authorization lives in `TRACKING.md` ([program authorization](TRACKING.md#program-authorization)); this file never grants it. TECH_BIBLE.md and its full AUDIT_REPORT.md remain future outputs; no production feature work is authorized by these definitions.
+The initial authorization covered preparation documents. Andrew subsequently authorized private publication in PUB-01 and the operational Sprint 0 proof scope (`docs/project/sprint-0/AUTHORIZATION.md`). The fourteen-card foundation set below is a dependency programme, not a dispatch authorization; it was authorized as documentation-only work on 6 September 2026. Authorization lives in `TRACKING.md` ([program authorization](TRACKING.md#program-authorization)); this file never grants it. TECH_BIBLE.md and its full AUDIT_REPORT.md remain future outputs; no production feature work is authorized by these definitions.
 
 ## Navigation
 
@@ -16,7 +16,7 @@ The initial authorization covered preparation documents. Andrew subsequently aut
 - [Task catalogue](#task-catalogue) and individual cards, including the [asset production cards](#asset-production-cards-16-september-2026)
 - [World 1 and scaling backlog](#world-1-and-scaling-backlog-12-november-2026): the buildable rows for world 1 now and the groundwork for more stages, worlds and features
 - [Open questions](#open-questions)
-- [Source dispositions and inventory](docs/project/SOURCE-DISPOSITIONS.md)
+- Source dispositions and inventory (`docs/project/SOURCE-DISPOSITIONS.md`)
 
 ## Task contract
 
@@ -142,9 +142,9 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [Andrew's exact publication scope](artifacts/publication-2026-09-06/AUTHORIZATION.md), [Q-E07](#q-e07) and [TRACKING](TRACKING.md).
+- Andrew's exact publication scope (`artifacts/publication-2026-09-06/AUTHORIZATION.md`), [Q-E07](#q-e07) and [TRACKING](TRACKING.md).
 - Existing checkout at `dc72a02cd7a0fbe1f00b3ce71d36448364f93294`, branch `codex/lightning-playtest`, plus the completed uncommitted Bible/preparation package. The publication baseline manifest pins these existing files before editing.
-- [Completed concurrent workflow package](artifacts/publication-2026-09-06/concurrent-package.json): repository-local instructions admitted unchanged from its frozen manifest; its unverified Claude runtime checks remain explicitly pending.
+- Completed concurrent workflow package (`artifacts/publication-2026-09-06/concurrent-package.json`): repository-local instructions admitted unchanged from its frozen manifest; its unverified Claude runtime checks remain explicitly pending.
 - [Contribution gates](CONTRIBUTING.md#handoff-and-version-control), [swarm manual](ORCHESTRATOR.md#serial-integration-and-completion), and retained preparation evidence.
 
 **Dependencies:** None. **Blocking questions:** [Q-E07](#q-e07), satisfied by Andrew's recorded destination/visibility/branch authorization before dispatch.
@@ -179,8 +179,8 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision) (scene/Resource ownership, source assets and generated imports)
 - [CONTRIBUTING.md § Editing conventions](CONTRIBUTING.md#editing-conventions)
 - [CONTRIBUTING.md § Handoff and version control](CONTRIBUTING.md#handoff-and-version-control) (commit and PR rules)
-- [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) (both browser entries stay preserved)
-- [docs/project/ASSETS.md](docs/project/ASSETS.md) and [artifacts/README.md](artifacts/README.md) (asset provenance and output retention)
+- `docs/adr/0001-two-playable-entries.md` (both browser entries stay preserved)
+- `docs/project/ASSETS.md` and [artifacts/README.md](artifacts/README.md) (asset provenance and output retention)
 - [BIBLE.md § Architecture and implementation handoff](BIBLE.md#architecture-and-implementation-handoff)
 - Godot 4.7 project-organization documentation, resolved by the coordinator and supplied in the packet; the card cites the resolved page, not memory.
 
@@ -213,10 +213,10 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Source and inputs:**
 
 - [adr/TADR-001-engine-language-platforms.md § Later qualification and reconsideration](adr/TADR-001-engine-language-platforms.md#later-qualification-and-reconsideration)
-- [docs/LIGHTNING-VERIFICATION.md § Sustained rendered load](docs/LIGHTNING-VERIFICATION.md#sustained-rendered-load)
+- docs/LIGHTNING-VERIFICATION.md § Sustained rendered load (`docs/LIGHTNING-VERIFICATION.md`)
 - [docs/FIRST-BUILD-VERIFICATION.md](docs/FIRST-BUILD-VERIFICATION.md), [artifacts/performance-stress.json](artifacts/performance-stress.json) and [artifacts/performance-stress-final.json](artifacts/performance-stress-final.json) (historical browser measurements)
 - [adr/TADR-004-persistence.md § Consequences](adr/TADR-004-persistence.md#consequences)
-- [Q-E03](#q-e03), [Q-E04](#q-e04) and [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) row D28
+- [Q-E03](#q-e03), [Q-E04](#q-e04) and `docs/project/DECISION-REGISTER.md` row D28
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
 **Dependencies:** None. **Blocking questions:** None.
@@ -277,7 +277,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Source and inputs:**
 
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
-- [docs/adr/0003-authoritative-attack-geometry.md](docs/adr/0003-authoritative-attack-geometry.md) (attack walkthrough precedent)
+- `docs/adr/0003-authoritative-attack-geometry.md` (attack walkthrough precedent)
 - [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows), [BIBLE.md § Inventory, equipment and transformations](BIBLE.md#inventory-equipment-and-transformations) and [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies)
 - `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 
@@ -308,7 +308,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision)
 - [adr/TADR-002-runtime-model.md § Later qualification and reconsideration](adr/TADR-002-runtime-model.md#later-qualification-and-reconsideration) (pause qualification)
-- [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md) (focus-loss precedent the production rule preserves)
+- `docs/adr/0005-caster-input-and-dashboard.md` (focus-loss precedent the production rule preserves)
 - [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings) and [BIBLE.md § Movement, camera and active aim](BIBLE.md#movement-camera-and-active-aim)
 - `docs/tech/sections/HF-02-constraints-evidence.md` from [HF-02](#hf-02) (unresolved rates land in its register)
 - `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
@@ -345,7 +345,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - Godot 4.7 static-typing documentation, resolved by the coordinator and supplied in the packet.
 - `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (must be admitted before assignment)
 - `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (owner map, admitted before assignment)
-- [docs/tech/proofs/S0-04-runtime-ownership.md](docs/tech/proofs/S0-04-runtime-ownership.md), particularly Contract, Scenarios, Unresolved questions and Evidence limits
+- `docs/tech/proofs/S0-04-runtime-ownership.md`, particularly Contract, Scenarios, Unresolved questions and Evidence limits
 - The seven source scripts under `native/proofs/tadr-002/`, pinned to their admitted source identity
 - `artifacts/prepare-stage-2026-09-06/tasks/S0-04/S0-04-int-proof-run.txt` and `S0-04-int-proof-fault.txt`
 
@@ -378,7 +378,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (catalogue/content revisions and pinning)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (path families)
 - `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
-- [docs/project/ASSETS.md](docs/project/ASSETS.md)
+- `docs/project/ASSETS.md`
 - [BIBLE.md § 6. Core Systems](BIBLE.md#6-core-systems) (Product invariants; cite the specific relevant system pages in the output.)
 
 **Dependencies:** [HF-03a](#hf-03a). **Blocking questions:** None.
@@ -474,7 +474,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 - [adr/TADR-004-persistence.md § Context](adr/TADR-004-persistence.md#context) and [§ Decision](adr/TADR-004-persistence.md#decision)
 - [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves) and [BIBLE.md § HUD, dashboard and settings](BIBLE.md#hud-dashboard-and-settings) (preferences)
-- [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) rows D26 and D27
+- `docs/project/DECISION-REGISTER.md` rows D26 and D27
 - `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (owning modules)
 - `docs/tech/sections/HF-06b-persistence-projection.md` from [HF-06b](#hf-06b) (must be admitted before assignment)
 
@@ -505,7 +505,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 - [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision) (revival and interruption hold on a failed write)
 - [Q-P16](#q-p16) and [Q-E09](#q-e09)
-- [docs/project/DECISION-REGISTER.md](docs/project/DECISION-REGISTER.md) rows D26 and D27
+- `docs/project/DECISION-REGISTER.md` rows D26 and D27
 - [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves)
 - `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (level completion seam)
 - `docs/tech/sections/HF-07a-save-envelope.md` from [HF-07a](#hf-07a) (must be admitted before assignment)
@@ -649,7 +649,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 - [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision) (pinned editor, typed GDScript)
 - [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision) and [§ Later qualification and reconsideration](adr/TADR-005-networking-scope.md#later-qualification-and-reconsideration) (offline solo)
-- [docs/adr/0001-two-playable-entries.md](docs/adr/0001-two-playable-entries.md) (the root stays disjoint from both browser entries)
+- `docs/adr/0001-two-playable-entries.md` (the root stays disjoint from both browser entries)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01), or the interim root path the coordinator records in TRACKING as a question answer
 - [TRACKING.md](TRACKING.md) event EV-0024, the install record (editor at `/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64`, version `4.7.2.stable.official.ed1daf0bf`, official 4.7.2-stable release, SHA512 verified against the release sums)
 - Godot 4.7 command-line reference, resolved by the coordinator and supplied in the packet; the card cites the resolved page, not memory.
@@ -689,7 +689,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - [TRACKING.md](TRACKING.md) (event sequence and index-row rules)
 - [§ Task contract](#task-contract) above (card field set and required output headings)
 - `scripts/check-project.mjs` (reuse its link regex and fence stripping)
-- [artifacts/publication-2026-09-06/document-checks.json](artifacts/publication-2026-09-06/document-checks.json) (the unpreserved PUB-01 anchor check)
+- `artifacts/publication-2026-09-06/document-checks.json` (the unpreserved PUB-01 anchor check)
 
 **Dependencies:** None. **Blocking questions:** None. **Blocking item:** coordinator ruling on whether a tooling card may run the build-containing `verify`.
 
@@ -752,7 +752,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 - [adr/TADR-002-runtime-model.md § Decision](adr/TADR-002-runtime-model.md#decision), [§ Consequences](adr/TADR-002-runtime-model.md#consequences) and [§ Later qualification and reconsideration](adr/TADR-002-runtime-model.md#later-qualification-and-reconsideration)
 - [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision) and [§ Later qualification and reconsideration](adr/TADR-005-networking-scope.md#later-qualification-and-reconsideration) (pause and menu focus)
-- [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md)
+- `docs/adr/0005-caster-input-and-dashboard.md`
 - `src/orchard/simulation.js:140`, `:347-374`, `:417-421` and `tests/orchard.test.js:12-15`, `:327-337`, the browser precedent to differ from and not port
 - S0-01 evidence and toolchain record
 - Godot 4.7 documentation for `_physics_process`, `Node.process_mode`, `SceneTree.paused`, `SceneTree.physics_frame`, `Engine.physics_ticks_per_second`, `Engine.is_in_physics_frame`, application focus notifications and `SceneTree.quit(exit_code)`, resolved by the coordinator and supplied in the packet.
@@ -904,7 +904,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 ### S0-09: Export presets and CI smoke workflow
 
-**Revised under operational Sprint 0.** [The implementation request](docs/project/sprint-0/AUTHORIZATION.md) authorizes templates, local exports and the private CI workflow. Previous parked history remains in TRACKING.
+**Revised under operational Sprint 0.** The implementation request (`docs/project/sprint-0/AUTHORIZATION.md`) authorizes templates, local exports and the private CI workflow. Previous parked history remains in TRACKING.
 
 **Card revision:** 3 · **Owner:** Verification · **Size:** M · **Lane:** prepare
 
@@ -942,7 +942,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- Approved implementation scope (`docs/project/sprint-0/AUTHORIZATION.md`).
 - [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
 
 **Dependencies:** None. **Blocking questions:** None within the synthetic proof scope.
@@ -968,7 +968,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- Approved implementation scope (`docs/project/sprint-0/AUTHORIZATION.md`).
 - [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
 
 **Dependencies:** [S0-10](#s0-10). **Blocking questions:** None within the synthetic proof scope.
@@ -994,7 +994,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- Approved implementation scope (`docs/project/sprint-0/AUTHORIZATION.md`).
 - [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
 
 **Dependencies:** [S0-10](#s0-10); [S0-04](#s0-04); [S0-06](#s0-06); [S0-08](#s0-08). **Blocking questions:** None within the synthetic proof scope.
@@ -1020,7 +1020,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- Approved implementation scope (`docs/project/sprint-0/AUTHORIZATION.md`).
 - [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
 
 **Dependencies:** [S0-10](#s0-10); [S0-11](#s0-11). **Blocking questions:** None within the synthetic proof scope.
@@ -1046,7 +1046,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [Approved implementation scope](docs/project/sprint-0/AUTHORIZATION.md).
+- Approved implementation scope (`docs/project/sprint-0/AUTHORIZATION.md`).
 - [Sprint closure](ORCHESTRATOR.md#sprint-closure) and [accepted ADRs](adr/README.md).
 
 **Dependencies:** [S0-09](#s0-09); [S0-10](#s0-10); [S0-11](#s0-11); [S0-12](#s0-12); [S0-13](#s0-13). **Blocking questions:** None within the synthetic proof scope.
@@ -1073,8 +1073,8 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Source and inputs:**
 
 - [BIBLE.md § 7. Art Direction](BIBLE.md#7-art-direction)
-- [COHESION_REPORT.md § Contradictions, persistent outliers and limits](COHESION_REPORT.md#contradictions-persistent-outliers-and-limits)
-- [docs/project/ASSETS.md § Asset and tool provenance](docs/project/ASSETS.md#asset-and-tool-provenance)
+- COHESION_REPORT.md § Contradictions, persistent outliers and limits (`COHESION_REPORT.md`)
+- docs/project/ASSETS.md § Asset and tool provenance (`docs/project/ASSETS.md`)
 - `docs/tech/sections/HF-01-production-conventions.md` from [HF-01](#hf-01) (must be admitted before assignment)
 
 **Dependencies:** [HF-01](#hf-01). **Blocking questions:** None.
@@ -1107,7 +1107,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 - [BIBLE.md § Four slots and milestone progression](BIBLE.md#four-slots-and-milestone-progression)
 - [BIBLE.md § Inventory, equipment and transformations](BIBLE.md#inventory-equipment-and-transformations)
 - [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves)
-- [docs/LIGHTNING-VERIFICATION.md § Result and limits](docs/LIGHTNING-VERIFICATION.md#result-and-limits)
+- docs/LIGHTNING-VERIFICATION.md § Result and limits (`docs/LIGHTNING-VERIFICATION.md`)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -1136,8 +1136,8 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Source and inputs:**
 
 - [BIBLE.md § 8. Audio & Feel](BIBLE.md#8-audio--feel)
-- [BIBLE_DECISIONS.md § Sound and presentation proposal](BIBLE_DECISIONS.md#sound-and-presentation-proposal)
-- [docs/project/ASSETS.md § Asset and tool provenance](docs/project/ASSETS.md#asset-and-tool-provenance)
+- BIBLE_DECISIONS.md § Sound and presentation proposal (`BIBLE_DECISIONS.md`)
+- docs/project/ASSETS.md § Asset and tool provenance (`docs/project/ASSETS.md`)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -1543,7 +1543,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Source and inputs:**
 
 - [BIBLE.md § A committed attack means what it shows](BIBLE.md#a-committed-attack-means-what-it-shows)
-- [docs/RUNTIME-BLUEPRINT.md § 3.5 Chaos magician](docs/RUNTIME-BLUEPRINT.md#35-chaos-magician)
+- docs/RUNTIME-BLUEPRINT.md § 3.5 Chaos magician (`docs/RUNTIME-BLUEPRINT.md`)
 - `docs/tech/sections/TH-03-a-committed-attack-means-what-it-shows.md` from [TH-03](#th-03) (must be admitted before assignment)
 - `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md` from [TH-04](#th-04) (must be admitted before assignment)
 
@@ -1571,7 +1571,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/RUNTIME-BLUEPRINT.md § 3.4 World, level and randomness definitions](docs/RUNTIME-BLUEPRINT.md#34-world-level-and-randomness-definitions)
+- docs/RUNTIME-BLUEPRINT.md § 3.4 World, level and randomness definitions (`docs/RUNTIME-BLUEPRINT.md`)
 - [adr/TADR-002-runtime-model.md § Consequences](adr/TADR-002-runtime-model.md#consequences)
 - `docs/tech/sections/TH-06-encounters-waves-and-enemies.md` from [TH-06](#th-06) (must be admitted before assignment)
 - `docs/tech/sections/TH-11-runs-regions-exits-and-saves.md` from [TH-11](#th-11) (must be admitted before assignment)
@@ -1660,7 +1660,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Source and inputs:**
 
 - [BIBLE.md § 8. Audio & Feel](BIBLE.md#8-audio--feel)
-- [docs/RUNTIME-BLUEPRINT.md § 8. Audio and character expression](docs/RUNTIME-BLUEPRINT.md#8-audio-and-character-expression)
+- docs/RUNTIME-BLUEPRINT.md § 8. Audio and character expression (`docs/RUNTIME-BLUEPRINT.md`)
 - `docs/tech/sections/TH-04-abilities-ultimates-and-combat-rhythm.md` from [TH-04](#th-04) (must be admitted before assignment)
 - `docs/tech/sections/TH-12-hud-dashboard-and-settings.md` from [TH-12](#th-12) (must be admitted before assignment)
 - `docs/product/sections/PD-03-sound-feel-events.md` from [PD-03](#pd-03) (must be admitted before assignment)
@@ -1689,7 +1689,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Source and inputs:**
 
 - [adr/TADR-001-engine-language-platforms.md § Decision](adr/TADR-001-engine-language-platforms.md#decision)
-- [docs/adr/0005-caster-input-and-dashboard.md](docs/adr/0005-caster-input-and-dashboard.md)
+- `docs/adr/0005-caster-input-and-dashboard.md`
 - `docs/tech/sections/HF-04a-runtime-lifecycle.md` from [HF-04a](#hf-04a) (must be admitted before assignment)
 - `docs/tech/sections/TH-02-movement-camera-and-active-aim.md` from [TH-02](#th-02) (must be admitted before assignment)
 - `docs/tech/sections/TH-12-hud-dashboard-and-settings.md` from [TH-12](#th-12) (must be admitted before assignment)
@@ -1719,7 +1719,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 **Source and inputs:**
 
 - [adr/TADR-003-content-pipeline.md § Decision](adr/TADR-003-content-pipeline.md#decision)
-- [docs/project/ASSETS.md](docs/project/ASSETS.md)
+- `docs/project/ASSETS.md`
 - `.gitignore` native import-sidecar exclusion and `scripts/native-smoke.mjs` copy/hash exclusions, as observed during HF-01; re-inspect at assignment.
 - Godot 4.7 import-process documentation: https://docs.godotengine.org/en/4.7/tutorials/assets_pipeline/import_process.html (source-adjacent import settings versus generated cache).
 - `docs/tech/sections/HF-05-content-admission.md` from [HF-05](#hf-05) (must be admitted before assignment)
@@ -1846,7 +1846,7 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/RUNTIME-BLUEPRINT.md § 9. Validation strategy](docs/RUNTIME-BLUEPRINT.md#9-validation-strategy)
+- docs/RUNTIME-BLUEPRINT.md § 9. Validation strategy (`docs/RUNTIME-BLUEPRINT.md`)
 - [CONTRIBUTING.md § Verification](CONTRIBUTING.md#verification)
 - `docs/tech/sections/TH-01-complete-loop.md` from [TH-01](#th-01) (must be admitted before assignment)
 - `docs/tech/sections/TH-13-chaos-outcomes.md` from [TH-13](#th-13) (must be admitted before assignment)
@@ -1947,9 +1947,9 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Carry-forward map](docs/project/AGENT-PLAYTEST-ENGINEERING.md#carry-forward-map)
+- docs/project/AGENT-PLAYTEST-ENGINEERING.md § Carry-forward map (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`)
 - [adr/TADR-002-runtime-model.md § Consequences](adr/TADR-002-runtime-model.md#consequences)
-- [tools/agent-player/README.md](tools/agent-player/README.md)
+- `tools/agent-player/README.md`
 - `docs/tech/sections/HF-03a-module-map.md` from [HF-03a](#hf-03a) (must be admitted before assignment)
 - `docs/tech/sections/TH-14-randomness-generation.md` from [TH-14](#th-14) (must be admitted before assignment)
 - `docs/tech/sections/TH-23-gameplay-native-tests.md` from [TH-23](#th-23) (must be admitted before assignment)
@@ -2456,11 +2456,11 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks](docs/project/AGENT-PLAYTEST-ENGINEERING.md#ordered-work-and-completion-checks)
-- [tools/agent-player/README.md](tools/agent-player/README.md)
-- [artifacts/agent-recovery-2026-09-06/README.md](artifacts/agent-recovery-2026-09-06/README.md)
-- [docs/LIGHTNING-PLAYGUIDE.md](docs/LIGHTNING-PLAYGUIDE.md)
-- [docs/project/INCREMENT-01-lightning-playtest.md](docs/project/INCREMENT-01-lightning-playtest.md)
+- docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`)
+- `tools/agent-player/README.md`
+- `artifacts/agent-recovery-2026-09-06/README.md`
+- `docs/LIGHTNING-PLAYGUIDE.md`
+- `docs/project/INCREMENT-01-lightning-playtest.md`
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -2485,10 +2485,10 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks](docs/project/AGENT-PLAYTEST-ENGINEERING.md#ordered-work-and-completion-checks)
-- [tools/agent-player/README.md](tools/agent-player/README.md)
-- [artifacts/agent-recovery-2026-09-06/README.md](artifacts/agent-recovery-2026-09-06/README.md)
-- [docs/LIGHTNING-VERIFICATION.md § Result and limits](docs/LIGHTNING-VERIFICATION.md#result-and-limits)
+- docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`)
+- `tools/agent-player/README.md`
+- `artifacts/agent-recovery-2026-09-06/README.md`
+- docs/LIGHTNING-VERIFICATION.md § Result and limits (`docs/LIGHTNING-VERIFICATION.md`)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -2513,9 +2513,9 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks](docs/project/AGENT-PLAYTEST-ENGINEERING.md#ordered-work-and-completion-checks)
-- [tools/agent-player/README.md](tools/agent-player/README.md)
-- [artifacts/agent-recovery-2026-09-06/README.md](artifacts/agent-recovery-2026-09-06/README.md)
+- docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`)
+- `tools/agent-player/README.md`
+- `artifacts/agent-recovery-2026-09-06/README.md`
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -2541,9 +2541,9 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks](docs/project/AGENT-PLAYTEST-ENGINEERING.md#ordered-work-and-completion-checks)
-- [tools/agent-player/README.md](tools/agent-player/README.md)
-- [artifacts/agent-recovery-2026-09-06/README.md](artifacts/agent-recovery-2026-09-06/README.md)
+- docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`)
+- `tools/agent-player/README.md`
+- `artifacts/agent-recovery-2026-09-06/README.md`
 - `docs/project/playtests/agent-comparison-protocol.md` from [LG-03](#lg-03) (must be admitted before assignment)
 
 **Dependencies:** [LG-03](#lg-03). **Blocking questions:** None.
@@ -2569,9 +2569,9 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks](docs/project/AGENT-PLAYTEST-ENGINEERING.md#ordered-work-and-completion-checks)
-- [tools/agent-player/README.md](tools/agent-player/README.md)
-- [artifacts/agent-recovery-2026-09-06/README.md](artifacts/agent-recovery-2026-09-06/README.md)
+- docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`)
+- `tools/agent-player/README.md`
+- `artifacts/agent-recovery-2026-09-06/README.md`
 - `docs/project/playtests/agent-comparison-protocol.md` from [LG-03](#lg-03) (must be admitted before assignment)
 
 **Dependencies:** [LG-03](#lg-03), [LG-04](#lg-04). **Blocking questions:** None.
@@ -2597,9 +2597,9 @@ HF covers foundation contracts; S0 covers prepare-stage tooling and executable A
 
 **Source and inputs:**
 
-- [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks](docs/project/AGENT-PLAYTEST-ENGINEERING.md#ordered-work-and-completion-checks)
-- [tools/agent-player/README.md](tools/agent-player/README.md)
-- [artifacts/agent-recovery-2026-09-06/README.md](artifacts/agent-recovery-2026-09-06/README.md)
+- docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`)
+- `tools/agent-player/README.md`
+- `artifacts/agent-recovery-2026-09-06/README.md`
 - `docs/project/playtests/agent-comparison-protocol.md` from [LG-03](#lg-03) (must be admitted before assignment)
 
 **Dependencies:** [LG-03](#lg-03). **Blocking questions:** None.
@@ -2642,7 +2642,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E03: Hardware, OS support details and budgets
 
-**Source:** [docs/project/DECISION-REGISTER.md § Tier B: gates a later increment](docs/project/DECISION-REGISTER.md#tier-b-gates-a-later-increment) (D28); [adr/TADR-001-engine-language-platforms.md § Later qualification and reconsideration](adr/TADR-001-engine-language-platforms.md#later-qualification-and-reconsideration)
+**Source:** docs/project/DECISION-REGISTER.md § Tier B: gates a later increment (`docs/project/DECISION-REGISTER.md`) (D28); [adr/TADR-001-engine-language-platforms.md § Later qualification and reconsideration](adr/TADR-001-engine-language-platforms.md#later-qualification-and-reconsideration)
 
 **Missing information:** Which representative Windows/Linux hardware, distributions/drivers and controller devices define qualification, and which measured frame, memory, loading and asset budgets are accepted?
 
@@ -2670,7 +2670,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E05: Browser retention and save import policy
 
-**Source:** [adr/TADR-001-engine-language-platforms.md § Consequences](adr/TADR-001-engine-language-platforms.md#consequences); [adr/TADR-004-persistence.md § Consequences](adr/TADR-004-persistence.md#consequences); [docs/project/DECISION-REGISTER.md § Tier B: gates a later increment](docs/project/DECISION-REGISTER.md#tier-b-gates-a-later-increment) (D27)
+**Source:** [adr/TADR-001-engine-language-platforms.md § Consequences](adr/TADR-001-engine-language-platforms.md#consequences); [adr/TADR-004-persistence.md § Consequences](adr/TADR-004-persistence.md#consequences); docs/project/DECISION-REGISTER.md § Tier B: gates a later increment (`docs/project/DECISION-REGISTER.md`) (D27)
 
 **Missing information:** Should any browser profile or discovery data be imported into production, or only preserved as historical proof, and when if ever may either browser entry be retired?
 
@@ -2684,7 +2684,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E06: Project licensing and distribution terms
 
-**Source:** [docs/project/DECISION-REGISTER.md § Tier B: gates a later increment](docs/project/DECISION-REGISTER.md#tier-b-gates-a-later-increment) (D32); [docs/project/BACKLOG.md](docs/project/BACKLOG.md) (T04); [docs/project/ASSETS.md](docs/project/ASSETS.md)
+**Source:** docs/project/DECISION-REGISTER.md § Tier B: gates a later increment (`docs/project/DECISION-REGISTER.md`) (D32); `docs/project/BACKLOG.md` (T04); `docs/project/ASSETS.md`
 
 **Missing information:** Which project license and intended distribution scope apply, and which shipped source assets/dependencies require notices or replacement before release?
 
@@ -2698,7 +2698,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E07: Remote publication authorization
 
-**Source:** [docs/project/DECISION-REGISTER.md § Tier A: historical sequence and remaining delivery decisions](docs/project/DECISION-REGISTER.md#tier-a-historical-sequence-and-remaining-delivery-decisions) (D04); [docs/project/BACKLOG.md](docs/project/BACKLOG.md) (T01)
+**Source:** docs/project/DECISION-REGISTER.md § Tier A: historical sequence and remaining delivery decisions (`docs/project/DECISION-REGISTER.md`) (D04); `docs/project/BACKLOG.md` (T01)
 
 **Missing information:** Which remote, visibility and branches, if any, may receive this local checkout?
 
@@ -2712,7 +2712,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E08: Browser QA release packaging
 
-**Source:** [docs/project/DECISION-REGISTER.md § Tier A: historical sequence and remaining delivery decisions](docs/project/DECISION-REGISTER.md#tier-a-historical-sequence-and-remaining-delivery-decisions) (D05); [CONTRIBUTING.md § Verification](CONTRIBUTING.md#verification)
+**Source:** docs/project/DECISION-REGISTER.md § Tier A: historical sequence and remaining delivery decisions (`docs/project/DECISION-REGISTER.md`) (D05); [CONTRIBUTING.md § Verification](CONTRIBUTING.md#verification)
 
 **Missing information:** If either browser proof is distributed, should its mutable QA hooks be development-only, part of a separate test build, or explicitly present in release?
 
@@ -2726,7 +2726,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E09: Permanent discovery write timing
 
-**Source:** [docs/project/DECISION-REGISTER.md § Tier B: gates a later increment](docs/project/DECISION-REGISTER.md#tier-b-gates-a-later-increment) (D26); [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision)
+**Source:** docs/project/DECISION-REGISTER.md § Tier B: gates a later increment (`docs/project/DECISION-REGISTER.md`) (D26); [adr/TADR-004-persistence.md § Decision](adr/TADR-004-persistence.md#decision)
 
 **Missing information:** Which discovery facts become durable immediately and which wait for a completed-level or terminal commit?
 
@@ -2740,7 +2740,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E10: Encounter attack admission policy
 
-**Source:** [docs/project/DECISION-REGISTER.md § Tier B: gates a later increment](docs/project/DECISION-REGISTER.md#tier-b-gates-a-later-increment) (D15 and D21); [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies)
+**Source:** docs/project/DECISION-REGISTER.md § Tier B: gates a later increment (`docs/project/DECISION-REGISTER.md`) (D15 and D21); [BIBLE.md § Encounters, waves and enemies](BIBLE.md#encounters-waves-and-enemies)
 
 **Missing information:** For the first selected encounter, what readable overlapping-attack admission policy and pressure limits apply? Completion and objective rules belong to Q-P38. Scope recorded (17 September 2026, TRACKING EV-0303): the policy and its pressure limits govern every attack commitment, enemy or player, so a limit may refuse a player ability or ultimate activation; TH-04 AV-08 and TH-06 AM-06 read it that way.
 
@@ -2754,7 +2754,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E11: Browser tooling comparison work-wave scope
 
-**Source:** [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks](docs/project/AGENT-PLAYTEST-ENGINEERING.md#ordered-work-and-completion-checks) (Orders 4 and 5); [CONTRIBUTING.md § Handoff and version control](CONTRIBUTING.md#handoff-and-version-control)
+**Source:** docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`) (Orders 4 and 5); [CONTRIBUTING.md § Handoff and version control](CONTRIBUTING.md#handoff-and-version-control)
 
 **Missing information:** Which browser/tooling work wave and temporary regression fixture may be used for the development comparison, with exact game-file ownership and cleanup criteria?
 
@@ -2768,7 +2768,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E12: Additional desktop tool coverage
 
-**Source:** [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks](docs/project/AGENT-PLAYTEST-ENGINEERING.md#ordered-work-and-completion-checks) (Order 6)
+**Source:** docs/project/AGENT-PLAYTEST-ENGINEERING.md § Ordered work and completion checks (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`) (Order 6)
 
 **Missing information:** Which concrete game-development operation is blocked by missing Godot/editor/Qt/compositor control, if any?
 
@@ -2782,7 +2782,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E13: Production diagnostics admission
 
-**Source:** [adr/TADR-002-runtime-model.md § Consequences](adr/TADR-002-runtime-model.md#consequences); [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision); [docs/project/AGENT-PLAYTEST-ENGINEERING.md § Carry-forward map](docs/project/AGENT-PLAYTEST-ENGINEERING.md#carry-forward-map)
+**Source:** [adr/TADR-002-runtime-model.md § Consequences](adr/TADR-002-runtime-model.md#consequences); [adr/TADR-005-networking-scope.md § Decision](adr/TADR-005-networking-scope.md#decision); docs/project/AGENT-PLAYTEST-ENGINEERING.md § Carry-forward map (`docs/project/AGENT-PLAYTEST-ENGINEERING.md`)
 
 **Missing information:** Which local Godot diagnostic commands and observation paths may future tests use, and which must be absent from distributed builds?
 
@@ -2796,7 +2796,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-E14: Same-tick defeat and completion candidate ordering
 
-**Source:** TH-06 review note 2 (17 September 2026): [docs/tech/sections/TH-06-encounters-waves-and-enemies.md](docs/tech/sections/TH-06-encounters-waves-and-enemies.md) EE-07 and ET-18; [docs/tech/sections/HF-07b-commit-boundaries.md](docs/tech/sections/HF-07b-commit-boundaries.md) Transitions A, C and D (Transition A carries `revival_spent` unchanged and Transition C changes nothing else, so the two facts cannot share one candidate).
+**Source:** TH-06 review note 2 (17 September 2026): `docs/tech/sections/TH-06-encounters-waves-and-enemies.md` EE-07 and ET-18; `docs/tech/sections/HF-07b-commit-boundaries.md` Transitions A, C and D (Transition A carries `revival_spent` unchanged and Transition C changes nothing else, so the two facts cannot share one candidate).
 
 **Missing information:** When a lethal hero outcome and an objective completion are published from the same tick, in what order does Session stage the resulting HF-07b candidates, and what does a crash between the two leave in the save? The product half is answered: defeat wins (Q-P38 partial answer, TRACKING EV-0296), so the lethal side's Transition C or D is settled before any completion candidate and the completion counts only if the hero is alive after the R2 revive.
 
@@ -2810,7 +2810,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P01: Sable construction
 
-**Source:** [BIBLE_DECISIONS.md § Character direction picks](BIBLE_DECISIONS.md#character-direction-picks)
+**Source:** BIBLE_DECISIONS.md § Character direction picks (`BIBLE_DECISIONS.md`)
 
 **Missing information:** If Sable enters the selected production scope, which construction should its production brief use: compact paired winches, offset crane arch, or crescent collar, or an explicitly described revision?
 
@@ -2824,7 +2824,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P02: Kest construction
 
-**Source:** [BIBLE_DECISIONS.md § Character direction picks](BIBLE_DECISIONS.md#character-direction-picks)
+**Source:** BIBLE_DECISIONS.md § Character direction picks (`BIBLE_DECISIONS.md`)
 
 **Missing information:** If Kest enters the selected production scope, which construction should its production brief use: guarded fans, hoop rotor, or distributed ducts, or an explicitly described revision?
 
@@ -2838,7 +2838,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P03: Tarn construction
 
-**Source:** [BIBLE_DECISIONS.md § Character direction picks](BIBLE_DECISIONS.md#character-direction-picks)
+**Source:** BIBLE_DECISIONS.md § Character direction picks (`BIBLE_DECISIONS.md`)
 
 **Missing information:** If Tarn enters the selected production scope, which construction should its production brief use: paired piston claws, dominant braced claw, or folding talons, or an explicitly described revision?
 
@@ -2852,7 +2852,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P04: Fuse construction
 
-**Source:** [BIBLE_DECISIONS.md § Character direction picks](BIBLE_DECISIONS.md#character-direction-picks)
+**Source:** BIBLE_DECISIONS.md § Character direction picks (`BIBLE_DECISIONS.md`)
 
 **Missing information:** If Fuse enters the selected production scope, which construction should its production brief use: pressure stack, switchboard collar, or cable hoop, or an explicitly described revision?
 
@@ -2866,7 +2866,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P05: Rivet construction
 
-**Source:** [BIBLE_DECISIONS.md § Character direction picks](BIBLE_DECISIONS.md#character-direction-picks)
+**Source:** BIBLE_DECISIONS.md § Character direction picks (`BIBLE_DECISIONS.md`)
 
 **Missing information:** If Rivet enters the selected production scope, which construction should its production brief use: optical bench, split yoke, or mirror tower, or an explicitly described revision?
 
@@ -2880,7 +2880,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P06: Playable cast and first production character
 
-**Source:** [BIBLE_DECISIONS.md § Character direction picks](BIBLE_DECISIONS.md#character-direction-picks)
+**Source:** BIBLE_DECISIONS.md § Character direction picks (`BIBLE_DECISIONS.md`)
 
 **Missing information:** Which candidates, species and roles enter the initial production scope, and which character supplies the first complete kit? Does that scope retain an animal-only cast?
 
@@ -2894,7 +2894,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P07: World catalogue and first production region
 
-**Source:** [BIBLE_DECISIONS.md § World and fiction choices](BIBLE_DECISIONS.md#world-and-fiction-choices)
+**Source:** BIBLE_DECISIONS.md § World and fiction choices (`BIBLE_DECISIONS.md`)
 
 **Missing information:** Which of the five Bible regions enter production, which older candidates remain available, and which region is built first?
 
@@ -2908,7 +2908,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P08: Conflict and antagonist canon
 
-**Source:** [BIBLE_DECISIONS.md § World and fiction choices](BIBLE_DECISIONS.md#world-and-fiction-choices)
+**Source:** BIBLE_DECISIONS.md § World and fiction choices (`BIBLE_DECISIONS.md`)
 
 **Missing information:** Which proposed repair-history and Furnace Fleet premise, motive and antagonist details become canon?
 
@@ -2922,7 +2922,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P09: Civilization names and relationships
 
-**Source:** [BIBLE_DECISIONS.md § World and fiction choices](BIBLE_DECISIONS.md#world-and-fiction-choices)
+**Source:** BIBLE_DECISIONS.md § World and fiction choices (`BIBLE_DECISIONS.md`)
 
 **Missing information:** Which Switchback Enclaves, Highdraft Roosts and Redjaw Workshops names, practices and relationships become canon?
 
@@ -2936,7 +2936,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P10: Material conversion and milestone supply
 
-**Source:** [BIBLE_DECISIONS.md § System gaps carried from planning](BIBLE_DECISIONS.md#system-gaps-carried-from-planning)
+**Source:** BIBLE_DECISIONS.md § System gaps carried from planning (`BIBLE_DECISIONS.md`)
 
 **Missing information:** How does recovered material support earned upgrades: what costs, supply guarantees and visible mass changes apply, if any?
 
@@ -2950,7 +2950,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P11: Character node content and input-to-slot mapping
 
-**Source:** [BIBLE_DECISIONS.md § System gaps carried from planning](BIBLE_DECISIONS.md#system-gaps-carried-from-planning)
+**Source:** BIBLE_DECISIONS.md § System gaps carried from planning (`BIBLE_DECISIONS.md`)
 
 **Missing information:** For the first selected character, what effects belong to its four trees, what node costs and milestones apply, and how do the prototype two combat abilities and devices map into the four slots?
 
@@ -2964,7 +2964,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P12: Route policy and final encounter placement
 
-**Source:** [BIBLE_DECISIONS.md § System gaps carried from planning](BIBLE_DECISIONS.md#system-gaps-carried-from-planning)
+**Source:** BIBLE_DECISIONS.md § System gaps carried from planning (`BIBLE_DECISIONS.md`)
 
 **Missing information:** What starting-world, repeat and destination-eligibility rules, levels-per-world allocation and final-encounter placement apply?
 
@@ -2978,7 +2978,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P13: Chaos elements and miscast limits
 
-**Source:** [BIBLE_DECISIONS.md § System gaps carried from planning](BIBLE_DECISIONS.md#system-gaps-carried-from-planning)
+**Source:** BIBLE_DECISIONS.md § System gaps carried from planning (`BIBLE_DECISIONS.md`)
 
 **Missing information:** Which elements and effects can the chaos kit produce, which actions can miscast, and what frequency, severity and warning rules bound harmful or inconvenient failures?
 
@@ -2992,7 +2992,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P14: Loot attunement and fixed secret recipes
 
-**Source:** [BIBLE_DECISIONS.md § System gaps carried from planning](BIBLE_DECISIONS.md#system-gaps-carried-from-planning)
+**Source:** BIBLE_DECISIONS.md § System gaps carried from planning (`BIBLE_DECISIONS.md`)
 
 **Missing information:** Which item and endpoint combinations are eligible, what fixed bonuses or harmful tradeoffs apply, and what does the player learn before and after discovery?
 
@@ -3006,7 +3006,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P15: Companion assembly and device lifecycle
 
-**Source:** [BIBLE_DECISIONS.md § System gaps carried from planning](BIBLE_DECISIONS.md#system-gaps-carried-from-planning)
+**Source:** BIBLE_DECISIONS.md § System gaps carried from planning (`BIBLE_DECISIONS.md`)
 
 **Missing information:** What companion chassis/components, autonomous support and commands apply, and what device capacity, lifetime, recall, resource and cross-level persistence rules apply?
 
@@ -3020,7 +3020,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P16: Revival and unfinished-level interruption
 
-**Source:** [BIBLE_DECISIONS.md § System gaps carried from planning](BIBLE_DECISIONS.md#system-gaps-carried-from-planning)
+**Source:** BIBLE_DECISIONS.md § System gaps carried from planning (`BIBLE_DECISIONS.md`)
 
 **Missing information:** What health and placement follow the single standard revival, and what happens when the player quits or crashes inside an unfinished level?
 
@@ -3034,7 +3034,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P17: Production music state and transition details
 
-**Source:** [BIBLE_DECISIONS.md § Sound and presentation proposal](BIBLE_DECISIONS.md#sound-and-presentation-proposal)
+**Source:** BIBLE_DECISIONS.md § Sound and presentation proposal (`BIBLE_DECISIONS.md`)
 
 **Missing information:** Within the approved dry physical instrumentation, workshop percussion, restrained synthesis and regional direction, which music states, transition triggers and interruption rules should the first production score support?
 
@@ -3090,7 +3090,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P21: Production movement and defensive rhythm
 
-**Source:** [docs/DISCOVERY.md § Publisher direction](docs/DISCOVERY.md#publisher-direction)
+**Source:** docs/DISCOVERY.md § Publisher direction (`docs/DISCOVERY.md`)
 
 **Missing information:** Which class movement interactions and baseline defensive responses belong in the first production kit, and what observations establish acceptable handling and camera comfort?
 
@@ -3118,7 +3118,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P23: Procedural level technique and encounter scope
 
-**Source:** [docs/project/DECISION-REGISTER.md § Tier B: gates a later increment](docs/project/DECISION-REGISTER.md#tier-b-gates-a-later-increment) (D08); [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves); [docs/LEVEL-DESIGN.md § Procedural generation technique (open)](docs/LEVEL-DESIGN.md#procedural-generation-technique-open)
+**Source:** docs/project/DECISION-REGISTER.md § Tier B: gates a later increment (`docs/project/DECISION-REGISTER.md`) (D08); [BIBLE.md § Runs, regions, exits and saves](BIBLE.md#runs-regions-exits-and-saves); docs/LEVEL-DESIGN.md § Procedural generation technique (open) (`docs/LEVEL-DESIGN.md`)
 
 **Missing information:** Which seeded generation technique and initial spatial/content module set should the production generator use? Name the approved encounter/terrain fixtures that establish correctness.
 
@@ -3146,7 +3146,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P25: Enemy and boss production roster
 
-**Source:** [docs/ENEMY-ROSTER.md § World library and encounter rewards](docs/ENEMY-ROSTER.md#world-library-and-encounter-rewards)
+**Source:** docs/ENEMY-ROSTER.md § World library and encounter rewards (`docs/ENEMY-ROSTER.md`)
 
 **Missing information:** Which named workers, pressure roles, veterans, minibosses and complete bosses enter the first production region, and which proposed defensive grades or immunity rules apply?
 
@@ -3160,7 +3160,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P26: Production art batch and runtime budgets
 
-**Source:** [COHESION_REPORT.md § Contradictions, persistent outliers and limits](COHESION_REPORT.md#contradictions-persistent-outliers-and-limits)
+**Source:** COHESION_REPORT.md § Contradictions, persistent outliers and limits (`COHESION_REPORT.md`)
 
 **Missing information:** Which selected pilot, chassis, mounted tools, growth states, enemies and environment modules form the first authored asset batch, and what measured budget constrains it?
 
@@ -3188,7 +3188,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P28: Supporting cast and narrative content budget
 
-**Source:** [docs/CHARACTER-BIBLE.md § Supporting cast and the Scrapbook voice](docs/CHARACTER-BIBLE.md#supporting-cast-and-the-scrapbook-voice); [BIBLE.md § 4.6 Supporting cast and relationships](BIBLE.md#46-supporting-cast-and-relationships)
+**Source:** docs/CHARACTER-BIBLE.md § Supporting cast and the Scrapbook voice (`docs/CHARACTER-BIBLE.md`); [BIBLE.md § 4.6 Supporting cast and relationships](BIBLE.md#46-supporting-cast-and-relationships)
 
 **Missing information:** Which supporting characters, optional exchanges, Scrapbook author, entries, barks and interstitials enter the initial scope, with what text and voice budgets?
 
@@ -3202,7 +3202,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P29: Companion appearance and naming
 
-**Source:** [docs/CHARACTER-BIBLE.md § Companions](docs/CHARACTER-BIBLE.md#companions)
+**Source:** docs/CHARACTER-BIBLE.md § Companions (`docs/CHARACTER-BIBLE.md`)
 
 **Missing information:** For the selected main companion assembly, which chassis personality, module silhouettes, naming and expression conventions are approved? Distinguish a chassis-type epithet from an assembled-instance name so UI and saves identify each consistently.
 
@@ -3258,7 +3258,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P33: Regional lighting, weather and wayfinding
 
-**Source:** [docs/WORLD-ENVIRONMENTS.md § Shared world systems](docs/WORLD-ENVIRONMENTS.md#shared-world-systems)
+**Source:** docs/WORLD-ENVIRONMENTS.md § Shared world systems (`docs/WORLD-ENVIRONMENTS.md`)
 
 **Missing information:** For admitted regions, which lighting/weather behavior, civic signs, faction notices and route landmarks enter production?
 
@@ -3272,7 +3272,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P34: Figurine companion-product scope
 
-**Source:** [docs/audit-2026-09-05/worker-4-universe.md § 5. Figurine-readiness](docs/audit-2026-09-05/worker-4-universe.md#5-figurine-readiness)
+**Source:** docs/audit-2026-09-05/worker-4-universe.md § 5. Figurine-readiness (`docs/audit-2026-09-05/worker-4-universe.md`)
 
 **Missing information:** Should figurine work remain parked or receive a bounded design scope, and if selected which character, size, parts, material and physical validation method apply?
 
@@ -3286,7 +3286,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P35: Next player and demand evidence
 
-**Source:** [docs/MARKET-RESEARCH.md § Research team and next evidence](docs/MARKET-RESEARCH.md#research-team-and-next-evidence)
+**Source:** docs/MARKET-RESEARCH.md § Research team and next evidence (`docs/MARKET-RESEARCH.md`)
 
 **Missing information:** Which next evidence question merits a bounded study: human movement/camera comfort, long-run readability and pacing, solo device workload, or prospective-player demand?
 
@@ -3300,7 +3300,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P36: Occupational-reference qualification scope
 
-**Source:** [docs/ENEMY-ROSTER.md § Evidence limits](docs/ENEMY-ROSTER.md#evidence-limits)
+**Source:** docs/ENEMY-ROSTER.md § Evidence limits (`docs/ENEMY-ROSTER.md`)
 
 **Missing information:** Which admitted inference-only or ungrounded enemy additions need occupational-reference qualification? Reconcile the admitted names rather than inheriting the old contradictory count of 13.
 
@@ -3314,7 +3314,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P37: Permanent option and challenge content
 
-**Source:** [docs/DISCOVERY.md § Defeat, saving and permanent progression](docs/DISCOVERY.md#defeat-saving-and-permanent-progression)
+**Source:** docs/DISCOVERY.md § Defeat, saving and permanent progression (`docs/DISCOVERY.md`)
 
 **Missing information:** Which classes, items, companion parts, discoveries and challenges unlock between runs, and what initial eligibility and discovery presentation apply? Specify which offers, sightings, declined drops and demonstrated behaviors create discovery facts; Q-E09 owns their durable write timing.
 
@@ -3328,7 +3328,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ### Q-P38: Events, secrets and defense objective content
 
-**Source:** [docs/LEVEL-DESIGN.md § Defense arena patterns (proposal)](docs/LEVEL-DESIGN.md#defense-arena-patterns-proposal)
+**Source:** docs/LEVEL-DESIGN.md § Defense arena patterns (proposal) (`docs/LEVEL-DESIGN.md`)
 
 **Missing information:** Which event, secret-room, branch and defense-objective types enter the first region, and what completion, failure, reward and reconfiguration boundaries apply?
 
@@ -3481,7 +3481,7 @@ An affected documentation card can record an unknown where its DoD explicitly al
 
 ## Source records
 
-Source dispositions and the source inventory live in [docs/project/SOURCE-DISPOSITIONS.md](docs/project/SOURCE-DISPOSITIONS.md), moved there verbatim on 6 September 2026. The coordinator owns that file. It preserves every P/T/R/D/BD identifier, the unnumbered planning obligations, core-system headings, selected concept-art receipts and requested engineering sections, and its task and question links point back to the cards and questions in this file. A disposition row grants no task completion, native support claim or implementation authorization.
+Source dispositions and the source inventory live in `docs/project/SOURCE-DISPOSITIONS.md`, moved there verbatim on 6 September 2026. The coordinator owns that file. It preserves every P/T/R/D/BD identifier, the unnumbered planning obligations, core-system headings, selected concept-art receipts and requested engineering sections, and its task and question links point back to the cards and questions in this file. A disposition row grants no task completion, native support claim or implementation authorization.
 
 ## Audit repair cards (10 September 2026)
 
@@ -3499,7 +3499,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 - `TRACKING.md` § Task record schema (`:30` state vocabulary) and § Task state index
 - `scripts/check-docs.mjs` (existing `tracking` checks)
-- [Audit finding L6-01 and card L6-A](artifacts/audit-2026-09-10/lane-6-code-tooling.md)
+- Audit finding L6-01 and card L6-A (`artifacts/audit-2026-09-10/lane-6-code-tooling.md`)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -3526,7 +3526,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 - `docs/project/sprint-0/closure.json` (12 pinned `path` + `sha256` entries)
 - `artifacts/local/sprint-0/closed/` (the disposable location those pins currently resolve to)
-- [Audit findings H-01, T5-1 and T5-6](artifacts/audit-2026-09-10/lane-5-hygiene.md)
+- Audit findings H-01, T5-1 and T5-6 (`artifacts/audit-2026-09-10/lane-5-hygiene.md`)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -3554,7 +3554,7 @@ and verification behaviour only; none of them changes game rules, product direct
 - `src/game.js` `PATH` (`:2-23`, 20 points)
 - `tests/expedition-balance.mjs` (hard-coded 18-point route, a different shape)
 - `scripts/verify.mjs` (asserted victory stage) and `tests/balance.mjs` (non-asserted probe)
-- [Audit finding L6-05](artifacts/audit-2026-09-10/lane-6-code-tooling.md)
+- Audit finding L6-05 (`artifacts/audit-2026-09-10/lane-6-code-tooling.md`)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -3580,7 +3580,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 - `scripts/native-smoke.mjs` (`:30`, `:147` scan 16 of 32 native files)
 - `TRACKING.md:276` (the recorded, unimplemented follow-up)
-- [Audit finding L6-07 and card L6-E](artifacts/audit-2026-09-10/lane-6-code-tooling.md)
+- Audit finding L6-07 and card L6-E (`artifacts/audit-2026-09-10/lane-6-code-tooling.md`)
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -3604,7 +3604,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 **Source and inputs:**
 
-- [Audit finding H-09](artifacts/audit-2026-09-10/lane-5-hygiene.md) and [card L6-F](artifacts/audit-2026-09-10/lane-6-code-tooling.md)
+- Audit finding H-09 (`artifacts/audit-2026-09-10/lane-5-hygiene.md`) and card L6-F (`artifacts/audit-2026-09-10/lane-6-code-tooling.md`)
 - `docs/project/ASSETS.md` (retain the original file names)
 - `public/art/` (8 PNGs, 22,149,367 bytes) and the tracked documents that reference them
 
@@ -3631,7 +3631,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 **Source and inputs:**
 
-- [Wave review AR-03/AR-04](artifacts/audit-2026-09-10/review-wave-ar03-ar04.md) — the accepted notes
+- Wave review AR-03/AR-04 (`artifacts/audit-2026-09-10/review-wave-ar03-ar04.md`) — the accepted notes
 - `tests/expedition-balance.mjs` (AR-03 comments), `scripts/native-smoke.mjs` (AR-04 comment), `artifacts/README.md` (the cited-but-unpinned list)
 - `docs/project/sprint-0/closure.json` (which cites `artifacts/local/sprint-0/final/dispatch-validation.json`)
 
@@ -3658,7 +3658,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 **Source and inputs:**
 
-- [Audit finding L3-25/L3-30 and card L3 Task 6](artifacts/audit-2026-09-10/lane-3-canonical.md)
+- Audit finding L3-25/L3-30 and card L3 Task 6 (`artifacts/audit-2026-09-10/lane-3-canonical.md`)
 - `scripts/check-docs.mjs` (the `tracking` event checks, including the AR-01 rules)
 - `TRACKING.md` (112 events; 117 index rows whose `Last event` is at or before EV-0057)
 
@@ -3686,7 +3686,7 @@ and verification behaviour only; none of them changes game rules, product direct
 
 **Source and inputs:**
 
-- [Repository audit of 12 September 2026](artifacts/audit-2026-09-12/README.md), its `checks.log` and `git-hygiene.sh`
+- Repository audit of 12 September 2026 (`artifacts/audit-2026-09-12/README.md`), its `checks.log` and `git-hygiene.sh`
 - `TRACKING.md` task state index and events EV-0099 to EV-0125 (the admitted state the records must match)
 - `docs/FIRST-BUILD-CONTRACT.md` line 3 (the historical-banner form to copy)
 
@@ -3722,7 +3722,7 @@ foundation sections in place; none changes game rules, product direction, an ADR
 
 **Source and inputs:**
 
-- [HF-10 foundation review](artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md), required fixes RF-1 to RF-9 with their exact path and line, and its notes N-01 onward
+- HF-10 foundation review (`artifacts/foundation-sprint-2026-09/HF-10-foundation-review.md`), required fixes RF-1 to RF-9 with their exact path and line, and its notes N-01 onward
 - The admitted sections `docs/tech/sections/HF-04b-runtime-patterns.md`, `HF-06a-schema-inventory.md`, `HF-06b-persistence-projection.md`, `HF-07a-save-envelope.md` and `.csv`, `HF-07b-commit-boundaries.md`, `HF-08-save-recovery.md` at the closure commit
 - `docs/tech/sections/HF-03a-module-map.md` lines 31, 32, 49 and `HF-03b-dependency-graph.md` line 185 (the names RF-1 and RF-6 must align to)
 - The retained paper checks under `artifacts/foundation-sprint-2026-09/tasks/<id>/attempt-1/` for each section touched
@@ -5207,7 +5207,7 @@ Every sound card waits on TH-17 for cue ownership and mix, on PD-03's questions,
 **Boundary:** As ART-17. No cue definitions, which belong to SC-07. No bus or mix. Re-size check: split by owner unit if the Q-P31 answer's batch exceeds one M card.
 ## Jev Lab cards (25 September 2026)
 
-Authorized at EV-0484. The program plan is retained at [artifacts/jev-lab-2026-09-25/plan.md](artifacts/jev-lab-2026-09-25/plan.md); its architecture sections are the design source for every JL card. Every JL card runs in the heavy lane: worktree from `scripts/new-worktree.sh`, packet, attempt record and event before dispatch, `check:scope` receipts under `artifacts/local/tasks/JL-NN/`, a fresh independent reviewer and serial coordinator integration. No JL card mixes `tools/` or `scripts/` with `sketches/`. Automated play is never a feel verdict. Cards are added one wave at a time so each wave's retro can change the next wave's cards.
+Authorized at EV-0484. The program plan is retained at `artifacts/jev-lab-2026-09-25/plan.md`; its architecture sections are the design source for every JL card. Every JL card runs in the heavy lane: worktree from `scripts/new-worktree.sh`, packet, attempt record and event before dispatch, `check:scope` receipts under `artifacts/local/tasks/JL-NN/`, a fresh independent reviewer and serial coordinator integration. No JL card mixes `tools/` or `scripts/` with `sketches/`. Automated play is never a feel verdict. Cards are added one wave at a time so each wave's retro can change the next wave's cards.
 
 <a id="jl-00"></a>
 
@@ -6101,7 +6101,7 @@ Andrew approved the trimmed plan at EV-0542. Jev-as-player is parked (EV-0527, E
 
 **Source and inputs:**
 
-- JL-21 review F1, F5, F6 ([report](artifacts/jev-lab-2026-09-25/reviews/JL-21.md)); JL-21 evidence under `artifacts/jev-lab-2026-09-25/live/JL-21/`
+- JL-21 review F1, F5, F6 (report (`artifacts/jev-lab-2026-09-25/reviews/JL-21.md`)); JL-21 evidence under `artifacts/jev-lab-2026-09-25/live/JL-21/`
 - `sketches/ball-lab/src/jev/{jev_state,scenarios,jev_run}.gd`; `scripts/lab/arms.mjs`; `scripts/lab/harness.mjs`
 
 **Dependencies:** [JL-21](#jl-21). **Blocking questions:** None.
@@ -6293,7 +6293,7 @@ Andrew authorized this documentation-only round at TRACKING EV-0579 after playin
 
 **Card revision:** 1 · **Owner:** Content · **Size:** S · **Lane:** Direction foundation (follow-up)
 
-**Source and inputs:** `docs/playtests/PLAYTEST-LOG.md` entry 6 (Andrew's principles, verbatim); `BIBLE.md` § 1 Pillars & Fantasy and § 8 Audio & Feel; TADR-006 to TADR-010; the DF-04 review notes ([report](artifacts/direction-foundation-2026-09-26/reviews/DF-04-A1.md)).
+**Source and inputs:** `docs/playtests/PLAYTEST-LOG.md` entry 6 (Andrew's principles, verbatim); `BIBLE.md` § 1 Pillars & Fantasy and § 8 Audio & Feel; TADR-006 to TADR-010; the DF-04 review notes (report (`artifacts/direction-foundation-2026-09-26/reviews/DF-04-A1.md`)).
 
 **Dependencies:** [DF-04](#df-04). **Blocking questions:** None.
 
@@ -6315,7 +6315,7 @@ Andrew authorized this documentation-only round at TRACKING EV-0579 after playin
 
 **Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Asset tooling
 
-**Source and inputs:** Andrew's 27 September 2026 tooling investment request and subsequent instruction to proceed; [asset provenance](docs/project/ASSETS.md); [TADR-001](adr/TADR-001-engine-language-platforms.md); the GLB container, accessors, meshes and scene graph in the [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html). The paused V3 worktree supplies read-only exported fixtures, identified by hashes in the execution evidence; it is not a code dependency.
+**Source and inputs:** Andrew's 27 September 2026 tooling investment request and subsequent instruction to proceed; asset provenance (`docs/project/ASSETS.md`); [TADR-001](adr/TADR-001-engine-language-platforms.md); the GLB container, accessors, meshes and scene graph in the [glTF 2.0 specification](https://registry.khronos.org/glTF/specs/2.0/glTF-2.0.html). The paused V3 worktree supplies read-only exported fixtures, identified by hashes in the execution evidence; it is not a code dependency.
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -6339,7 +6339,7 @@ Andrew authorized this documentation-only round at TRACKING EV-0579 after playin
 
 **Card revision:** 1 · **Owner:** Tooling · **Size:** M · **Lane:** Asset tooling
 
-**Source and inputs:** Andrew's tooling request, instruction to proceed and subsequent "keep going"; [AT-01](#at-01); [asset provenance](docs/project/ASSETS.md); [TADR-001](adr/TADR-001-engine-language-platforms.md). The paused V3 session's chunky silhouette and material-role lessons inform the kit; its unapproved hero designs and dirty source files are not inputs.
+**Source and inputs:** Andrew's tooling request, instruction to proceed and subsequent "keep going"; [AT-01](#at-01); asset provenance (`docs/project/ASSETS.md`); [TADR-001](adr/TADR-001-engine-language-platforms.md). The paused V3 session's chunky silhouette and material-role lessons inform the kit; its unapproved hero designs and dirty source files are not inputs.
 
 **Dependencies:** [AT-01](#at-01). **Blocking questions:** None.
 
@@ -6418,9 +6418,9 @@ Andrew installed Risk of Rain 2, Gunfire Reborn, Roboquest and The Binding of Is
 
 ## Systems audit add-on (11 November 2026)
 
-Andrew asked on 11 November 2026 for an add-on workstream: find and fix the weakest parts of the game's systems, mechanics and features, with evidence from running the game. It runs beside the world 1 polish program and never pauses or re-scopes a wave. Step 0 is [docs/systems-audit/PLAN.md](docs/systems-audit/PLAN.md); it fills the two numbers Andrew's request left in brackets (first 15 minutes; 10 hours of game time per player type), names which file stands in for the absent `TECH_BIBLE.md`, and records that a headless harness exists, so no harness card is filed. Scope is world 1 (the title, the camp, the dam, the flume and Brindle) and early progression; worlds 2 and 3 are parked (ruling at). Outputs go in `docs/systems-audit/`.
+Andrew asked on 11 November 2026 for an add-on workstream: find and fix the weakest parts of the game's systems, mechanics and features, with evidence from running the game. It runs beside the world 1 polish program and never pauses or re-scopes a wave. Step 0 is `docs/systems-audit/PLAN.md`; it fills the two numbers Andrew's request left in brackets (first 15 minutes; 10 hours of game time per player type), names which file stands in for the absent `TECH_BIBLE.md`, and records that a headless harness exists, so no harness card is filed. Scope is world 1 (the title, the camp, the dam, the flume and Brindle) and early progression; worlds 2 and 3 are parked (ruling at). Outputs go in `docs/systems-audit/`.
 
-Order and regression rule: [PLAN.md section 5](docs/systems-audit/PLAN.md#5-how-the-passes-run). Live state, including which files each open pull request holds, is on the wave board named in [STATE.md](project-guide/handoff/STATE.md), not here.
+Order and regression rule: PLAN.md section 5 (`docs/systems-audit/PLAN.md`). Live state, including which files each open pull request holds, is on the wave board named in [STATE.md](project-guide/handoff/STATE.md), not here.
 
 Rules for every card: evidence, not claims ("it compiles" or "tests pass" closes nothing; a DoD without its artifact is rejected). A pass that shows the Bible is wrong files a change request and never edits BIBLE.md or an ADR. A pass stays in its own files; a file another thread or an open pull request holds waits or becomes a dependency note to its owner. NEEDS ANDREW only for a cut or merge of a feature, a change that conflicts with a pillar, or a balance fix that needs a design change rather than a number change; every other call is decided and logged as a one-line assumption he can overturn. Each pass ends with a per-system summary (pass status, top open issue, last sim or bot result, what changed, one finding in plain words) for the coordinator's "Systems health" digest. Gate per pull request: the per-PR tier of [ORCHESTRATOR's tiered gate](ORCHESTRATOR.md#light-play-lane), its only owner; docs-only cards use the scoped docs checks in AGENTS.md.
 
@@ -6432,7 +6432,7 @@ Every card leaves alone the files another thread or an open pull request holds; 
 
 **Card revision:** 1 · **Owner:** Systems audit thread · **Size:** M · **Lane:** Systems audit (docs only)
 
-**Source and inputs:** BIBLE.md section 1 (Pillars & Fantasy) and section 6 (Core Systems); [STORY-MAP.md](sketches/core-loop/design-v3/STORY-MAP.md) section 4; adr/README.md (TADR-008, TADR-010, TADR-011) standing in for TECH_BIBLE.md; [PLAN.md](docs/systems-audit/PLAN.md) section 2; the 9 Nov "Game systems: audit and plan" doc; world 1 bot runs with a resource ledger.
+**Source and inputs:** BIBLE.md section 1 (Pillars & Fantasy) and section 6 (Core Systems); [STORY-MAP.md](sketches/core-loop/design-v3/STORY-MAP.md) section 4; adr/README.md (TADR-008, TADR-010, TADR-011) standing in for TECH_BIBLE.md; PLAN.md (`docs/systems-audit/PLAN.md`) section 2; the 9 Nov "Game systems: audit and plan" doc; world 1 bot runs with a resource ledger.
 
 **Dependencies:** None. **Blocking questions:** None.
 
@@ -6450,7 +6450,7 @@ Every card leaves alone the files another thread or an open pull request holds; 
 
 **Card revision:** 1 · **Owner:** a new thread · **Size:** M · **Lane:** Systems audit
 
-**Source and inputs:** BIBLE.md section 6, "Electromagnetic collection, recycling and growth" and "Four slots and milestone progression"; STORY-MAP.md section 4 rows Scrap, Cogs, Cores, Grey panels, Mint items, Cobalt items, the keeper's gamble and the foreman's kindness; TADR-010 ("stage time may scale threat, never gate progression"); [systems-map.md](docs/systems-audit/systems-map.md); the 10 Nov balance re-measure (`handoff/balance-remeasure.md` in the project's shared Library, outside the repo: band win counts at 24 seeds are not a balance sensor).
+**Source and inputs:** BIBLE.md section 6, "Electromagnetic collection, recycling and growth" and "Four slots and milestone progression"; STORY-MAP.md section 4 rows Scrap, Cogs, Cores, Grey panels, Mint items, Cobalt items, the keeper's gamble and the foreman's kindness; TADR-010 ("stage time may scale threat, never gate progression"); systems-map.md (`docs/systems-audit/systems-map.md`); the 10 Nov balance re-measure (`handoff/balance-remeasure.md` in the project's shared Library, outside the repo: band win counts at 24 seeds are not a balance sensor).
 
 **Dependencies:** [SA-A](#sa-a). **Blocking questions:** None.
 
@@ -6468,7 +6468,7 @@ Every card leaves alone the files another thread or an open pull request holds; 
 
 **Card revision:** 1 · **Owner:** a new thread · **Size:** M · **Lane:** Systems audit
 
-**Source and inputs:** BIBLE.md section 1 "Joyful physical mastery" and section 6 "Movement, camera and active aim", "A committed attack means what it shows" and "Abilities, ultimates and combat rhythm"; TADR-008 (the ability contract); TADR-006 (physics as rates); [LEGIBILITY.md](sketches/core-loop/design-v3/LEGIBILITY.md) section 13; [systems-map.md](docs/systems-audit/systems-map.md).
+**Source and inputs:** BIBLE.md section 1 "Joyful physical mastery" and section 6 "Movement, camera and active aim", "A committed attack means what it shows" and "Abilities, ultimates and combat rhythm"; TADR-008 (the ability contract); TADR-006 (physics as rates); [LEGIBILITY.md](sketches/core-loop/design-v3/LEGIBILITY.md) section 13; systems-map.md (`docs/systems-audit/systems-map.md`).
 
 **Dependencies:** [SA-A](#sa-a). **Blocking questions:** None.
 
@@ -6486,7 +6486,7 @@ Every card leaves alone the files another thread or an open pull request holds; 
 
 **Card revision:** 1 · **Owner:** a new thread · **Size:** S · **Lane:** Systems audit (docs only)
 
-**Source and inputs:** BIBLE.md section 1 (the three pillars and their decision tests) and section 6; [BIBLE_DECISIONS.md](BIBLE_DECISIONS.md); TADR-007 (sketch promotion), TADR-011 (crew); STORY-MAP.md sections 4 and 5; [systems-map.md](docs/systems-audit/systems-map.md); [PLAN.md](docs/systems-audit/PLAN.md) section 2; the candidate mechanics from the thread "Design loops you can't put down" (Heat, Reservoir, Called Shot; `docs/design/loops.md` on draft pull request 763), judged beside this pass's own three. Andrew accepted those three on 11 Nov 2026 at 18:42Z and wants them in before the sitting (ruling da, [DECISIONS.md](project-guide/handoff/DECISIONS.md)), so feature-fit.md logs them as Andrew-approved, not as NEEDS ANDREW; the loops thread builds them behind flags and owns their files.
+**Source and inputs:** BIBLE.md section 1 (the three pillars and their decision tests) and section 6; `BIBLE_DECISIONS.md`; TADR-007 (sketch promotion), TADR-011 (crew); STORY-MAP.md sections 4 and 5; systems-map.md (`docs/systems-audit/systems-map.md`); PLAN.md (`docs/systems-audit/PLAN.md`) section 2; the candidate mechanics from the thread "Design loops you can't put down" (Heat, Reservoir, Called Shot; `docs/design/loops.md` on draft pull request 763), judged beside this pass's own three. Andrew accepted those three on 11 Nov 2026 at 18:42Z and wants them in before the sitting (ruling da, [DECISIONS.md](project-guide/handoff/DECISIONS.md)), so feature-fit.md logs them as Andrew-approved, not as NEEDS ANDREW; the loops thread builds them behind flags and owns their files.
 
 **Dependencies:** [SA-A](#sa-a). **Blocking questions:** None.
 
@@ -6534,7 +6534,7 @@ Every card leaves alone the files another thread or an open pull request holds; 
 
 **Boundary:** fixes severity high and above only.
 
-**Pass F's open rows** (11 Nov 2026; repro and evidence in [docs/systems-audit/break-it/](docs/systems-audit/break-it/README.md)):
+**Pass F's open rows** (11 Nov 2026; repro and evidence in docs/systems-audit/break-it/ (`docs/systems-audit/break-it/README.md`)):
 
 | Row | What | Severity | Owner | Done when |
 | --- | --- | --- | --- | --- |
@@ -6546,7 +6546,7 @@ Every card leaves alone the files another thread or an open pull request holds; 
 
 ## World 1 and scaling backlog (12 November 2026)
 
-Andrew asked on 12 November 2026 for as many buildable items as possible: for world 1 now, and for the groundwork that lets the game scale later to more stages, more worlds and deeper features. This section is that list. Each row is one unit: one branch from the open stage, one pull request against it, focused tests plus `npm run sketch:fast`, one independent review, then the board thread stacks it ([ORCHESTRATOR's tiered gate](ORCHESTRATOR.md#light-play-lane) owns the gate). Live state, who holds which file and what is stacked stay on the wave board named in [STATE.md](project-guide/handoff/STATE.md); the order of the alpha stays in [ROADMAP.md](project-guide/handoff/ROADMAP.md). Rows were gathered from the open play findings ([PLAY-FINDINGS.tsv](project-guide/handoff/PLAY-FINDINGS.tsv)), the systems audit ([docs/systems-audit/](docs/systems-audit/PLAN.md)), the world 1 audits ([shared/world1/](project-guide/handoff/shared/world1/)), the wave 38 board (issue 814) and the sound gaps the music thread found on 12 November (`music/soundcheck/sound-gaps-2026-11-12.md` in the project Library).
+Andrew asked on 12 November 2026 for as many buildable items as possible: for world 1 now, and for the groundwork that lets the game scale later to more stages, more worlds and deeper features. This section is that list. Each row is one unit: one branch from the open stage, one pull request against it, focused tests plus `npm run sketch:fast`, one independent review, then the board thread stacks it ([ORCHESTRATOR's tiered gate](ORCHESTRATOR.md#light-play-lane) owns the gate). Live state, who holds which file and what is stacked stay on the wave board named in [STATE.md](project-guide/handoff/STATE.md); the order of the alpha stays in [ROADMAP.md](project-guide/handoff/ROADMAP.md). Rows were gathered from the open play findings ([PLAY-FINDINGS.tsv](project-guide/handoff/PLAY-FINDINGS.tsv)), the systems audit (docs/systems-audit/ (`docs/systems-audit/PLAN.md`)), the world 1 audits ([shared/world1/](project-guide/handoff/shared/world1/)), the wave 38 board (issue 814) and the sound gaps the music thread found on 12 November (`music/soundcheck/sound-gaps-2026-11-12.md` in the project Library).
 
 **How to pull a row.** The ready rows also stand as GitHub issues 818 to 843, labelled "world 1 now" or "scaling groundwork"; each issue links back here, and this page stays the one definition. Read the row's source, check the wave board's fences for its files, claim it with one board comment, and build it. World 1 rows rank ahead of scaling rows (ruling at, ruling cs). A row marked "owned" belongs to the named thread: it is listed so nothing is lost, and another thread does not build it. Mechanics and tuning taste are decided by the builder and logged as one-line assumptions Andrew can overturn. Words a player reads follow ruling cx and [LEGIBILITY.md](sketches/core-loop/design-v3/LEGIBILITY.md) section 13.
 
@@ -6556,8 +6556,8 @@ Andrew asked on 12 November 2026 for as many buildable items as possible: for wo
 
 | ID | What the player gets | Files | Size | Proof | Source |
 | --- | --- | --- | --- | --- | --- |
-| W1-01 | Moss's scale (sell mass for cogs) is on in the sitting launch, like the other two resource mechanics of ruling dd. Today `SITTING_SET` turns on marked hull and carry a core but not the scale, so the sitting would miss one of the three. Taste call: on | `src/movement/tuning.gd` `SITTING_SET`, `tests/tuning_flags_test.gd` | S | `tuning_flags_test`; bots and bands never pass the profile, so no band moves | ruling dd; [economy README](docs/systems-audit/economy/README.md) (scale arm measured). Built 12 Nov on branch `claude/project-thread-cnftmf` |
-| W1-02 | The eleven record-only achievements pay something: each gives a paint (a colour row, no new art), so finding a Signal cache or riding a sluice flap is worth chasing in a completionist run | `src/core/achievements.gd`, `src/core/cosmetics.gd`, `src/core/content_registry.gd` (re-pin), `tests/achievement_fill_test.gd` | S | `achievement_fill_test` with `RECORD_ONLY` empty; the cosmetics and content-registry tests | [feature-fit.md](docs/systems-audit/feature-fit.md) row 30. Built 12 Nov on branch `claude/project-thread-cnftmf` |
+| W1-01 | Moss's scale (sell mass for cogs) is on in the sitting launch, like the other two resource mechanics of ruling dd. Today `SITTING_SET` turns on marked hull and carry a core but not the scale, so the sitting would miss one of the three. Taste call: on | `src/movement/tuning.gd` `SITTING_SET`, `tests/tuning_flags_test.gd` | S | `tuning_flags_test`; bots and bands never pass the profile, so no band moves | ruling dd; economy README (`docs/systems-audit/economy/README.md`) (scale arm measured). Built 12 Nov on branch `claude/project-thread-cnftmf` |
+| W1-02 | The eleven record-only achievements pay something: each gives a paint (a colour row, no new art), so finding a Signal cache or riding a sluice flap is worth chasing in a completionist run | `src/core/achievements.gd`, `src/core/cosmetics.gd`, `src/core/content_registry.gd` (re-pin), `tests/achievement_fill_test.gd` | S | `achievement_fill_test` with `RECORD_ONLY` empty; the cosmetics and content-registry tests | feature-fit.md (`docs/systems-audit/feature-fit.md`) row 30. Built 12 Nov on branch `claude/project-thread-cnftmf` |
 | W1-03 | **Built in wave 38, awaiting a film check** (70a6abb4, a leader line from each gate's name up to its gate; the names still sit in the prompts band). An alternative is parked as a patch: each name hangs from its own gate's crossbar in larger type, clear of the ball and reticle, with tests (`/mnt/project-files/handoff/w1-03-signs/gate-signs-on-stage-w39-618dfc9b.patch`). The next player's-eye film checks the gate scenes and picks between them. Each reward gate carries its own part name and line on the gate, not in small blue text by the ball, so a player can tell which gate gives what (PF-22, major) | `src/ui/world_prompt.gd`, the gate's presentation | M | first-timer reader pass; cloud film stills of both gate scenes; word budget test | PF-22 |
 | W1-04 | **Built in wave 38, awaiting a film check** (5e29c585 and 3e4cdab2, an edge marker points at an announced event's place); the next player's-eye film re-reads PF-16's warning half. An event warning points at its place: the "incoming" line gets an edge arrow or ground ring at the spot, not the event's name alone (PF-16, the warning half) | event warning UI, `src/world/events/` presentation only | M | film stills of four events; first-timer reader | PF-16 |
 | W1-05 | **Built in waves 38 to 42, three follow-ups open**: Brindle's ram lane keeps a light fill and its ! until the hull arrives (750a124e). The way out is painted for every threat the dodge watch tracks (75de44b43, 0d59d128b). A crew body that runs its lane after the warning (the chaser's lunge, the miniboss's charge) keeps the mark, the way out and the light fill until its reach covers the ball (`Telegraph.run_body`, `body_run_warning_test`); its near-miss award is still decided when the warning ends. Open: the swarm's dive, the rogue crane's out-and-back sweep, the Haul Skip's haul (`src/combat/rogue.gd`, around lines 21 and 57), the safe bar lying inside a second live warning, and the landing: the lane still plays its crack ring and dust on the tick the warning ends while the held mark says the hit is still coming (`telegraph.gd` `lands_on_live`, left for a film read). A danger zone shows its safe side: Brindle's ram and the yard telegraphs draw where to go, not only where the hit lands (PF-16, the telegraph half) | telegraph presentation (`src/presentation/`), boss telegraph rows | M | film stills at the ram's 0.7 s mark; `telegraph` tests | PF-16; [map-audit.md](project-guide/handoff/shared/world1/map-audit.md) unit 2 |
@@ -6570,7 +6570,7 @@ Andrew asked on 12 November 2026 for as many buildable items as possible: for wo
 | W1-12 | **Built on branch `claude/project-thread-75chxx`, awaiting a PC still**: every threat mark fades by distance from the lens (gone at 1 m, whole at 3 m, inside the 4.2 m mount arm), and a synergy ring (the pink and cream rings round the ball) is whole for 2.5 s, then settles to 30% for the run. The cream rings at the flume's arrival (048) are the 0.25 s landing ring, caught by the film on the landing frame; left as is. Numbers are assumptions Andrew can overturn. Fewer see-through shapes over the view: arrival rings, the orange frame and the red cage lines thin out once read (PF-27) | the owning fx modules | S | film stills 048, 059, 090; PC still | PF-27 |
 | W1-13 | **Built on branch `claude/project-thread-75chxx`, awaiting a PC still**: the cone is the ball's speed trail, not a light. After a drop at top speed it lay back over the camera. A trail point nearer the eye than 40% to 80% of the ball's distance now fades out (`vfx.gd` `TRAIL_NEAR`, an assumption Andrew can overturn). Cloud films of world 1, seed 1: the trail changed up to 23.4% of the view on the stage (11.6% in the dam yard), at most 4.1% with the fix. The light cone over the dam yard and the flume Warden fight no longer washes out the middle of the view (PF-07) | the cone's material | S | PC stills against the 12-21% washout measure | PF-07 |
 | W1-14 | **Built, on stage/alpha-w42 (PR 1055, 15 Nov); open until the PC film.** With a wall close behind, the camera rises over the ball (`chase_camera.gd`, `camera_tight_test`). Open for the film: the lift drops in one frame on leaving a low wall, flicker near rims, and the low-wall view. The boss arm reach (`set_boss_reach`) has no caller in a real run and is held for the same film. The camera keeps the ball out of the lens and walls out of half the view in tight fights (PF-06) | camera rig | M | PC film of Brindle's pillars and the dam Warden hit; feel goes on the sitting watch list | PF-06 |
-| W1-15 | **Built in wave 37** (70e56f5f, PR 780): the dial hangs its own keys while the radio tip is up (radio_dial.gd teach). The radio tip stops sending the player to the notes: the dial draws its own keys the first time it shows (first 15 minutes, change 3) | `src/ui/field_tips.gd`, the radio dial | S | `field_tips` tests; film of the first stage | [first-15 README](docs/systems-audit/first-15/README.md) section 5 |
+| W1-15 | **Built in wave 37** (70e56f5f, PR 780): the dial hangs its own keys while the radio tip is up (radio_dial.gd teach). The radio tip stops sending the player to the notes: the dial draws its own keys the first time it shows (first 15 minutes, change 3) | `src/ui/field_tips.gd`, the radio dial | S | `field_tips` tests; film of the first stage | first-15 README (`docs/systems-audit/first-15/README.md`) section 5 |
 | W1-16 | **Lobber half on the difficulty stack** (cdddde1f, a lobber meets the ball on the way into the dam yard; PR 845, owned by the thread "Tune dam yard and Brindle pressure"); the ultimate prompt's own moment is still open. The dam Warden's lessons split: the lobber's shell is met on the yard crew's ground before the Warden, and the ultimate prompt gets its own moment when the meter first fills outside a fight (first 15 minutes, change 4; harder sooner, ruling cu) | park dam sites or director rows, `field_tips.gd` | M | 24-seed w1 band read (must not get easier); first-timer probes | first-15 README section 5 |
 | W1-17 | More to find on the flume: two or three more side spots (caches on the skill lines, a cracked wall), toward the 30-minute completionist run (the flume has 3 cache spots, the dam many more) | `assets/park/park_flume/` sites and lines | M | map checks; 24-seed band read; completionist bot minutes before and after | map-audit.md "Flume"; ROADMAP completionist re-read (ruling ag). Built 12 Nov on branch `claude/project-thread-cppr1p`: `trestle_cache`, a standing cracked cache on the low canal country under the trestle's turn (the flume's second reward pocket), and `grade_wall`, a hidden cache room on the canal grade sealed by a cracked wall that files the codex row "Overtime Locker" (camp count 8). A cracked wall can now seal a cache as a valve does (`contraptions.gd`); `tests/flume_side_spots_test.gd`. Assumptions Andrew can overturn: the trestle cache pays common or rare, the locker no marker |
 | W1-18 | A power read: a lab run where a bot plays the parts' abilities and buys toward a maker pair, to say whether 16 parts beat 3 and whether a maker pair is worth chasing | `tools/sysaudit/` (lab only, no game code) | M | the run's ledger and its exact command in `docs/systems-audit/economy/` | economy README "Follow-ups" |
@@ -6930,3 +6930,6 @@ Andrew approved five World 1 creative catalysts and their Souls-like difficulty-
 | W46-C4 | **Living Universe — Purple Foreman's Kindness, Sight Gags, Cute Babble Call-Ins & Living Camp:** Foreman's Kindness seamless cast-metal body with World 1's only flat purple glow (`hue 300–330`, ruling `ci`) & sterile chime opposite Keeper's Gamble; 3–4 main-sightline defaced Foreman billboards & looping Old Works set pieces; live corner comic call-in cards with cute babble voices (`STORY-MAP.md` §3, never pausing the ball or crossing telegraphs, off headless) + Foreman memos on every stage & death screen (`W1-75`, crew last word); freed pilots & physical B-side vinyl shelves + next-rung chase display in Camp (`W1-72`) | `src/world/stake_devices.gd`, `src/ui/caller_tile.gd`, `src/presentation/audio.gd`, `src/core/lore_rows.gd`, `src/world/camp_hub.gd`, `src/core/shift_board.gd`, `src/ui/screens.gd`, `src/world/park/park_dam.json`, `src/world/park/park_flume.json` | M–L (split into Call-Ins/Memos + Camp/Kindness/Sight-Gags) | `sketch:lint`, `words-on-screen`, `ui_text_floor_test`, `shift_board_test`, `sound-own-recipes`, `sound-levels`, blind `first-timer-read` with zero new UI clutter | Ruling `ei`; queued for Wave 46A |
 | W46-C5 | **Replay Addiction Engine — *Dam Night Shift*, Rotating Sites & Escalating Mastery:** wire `dam_night_shift` (sodium floodlights + uranium-green seams on existing Dam geometry, zero new snags) and `overtime` / `crew_short` modifiers from `ShiftBoard.SEEDS` unlocked by Brindle/Warden/Sable marks; wire `W1-70` rotating activity sites (2–3 seeded alternatives per site) & `W1-71` multi-variant call-ins; preserve HARD Rungs 1–5 (`run_tier.gd`) & 3-hole Time Card with zero stat-grind | `src/core/shift_board.gd`, `src/world/events/stage_modifier.gd`, `src/world/activities.gd`, `src/core/lore_rows.gd`, `src/core/run_tier.gd`, Dam twilight lighting preset | M | `park_variety_test`, `shift_board_test`, `run_tier_test`, `rewards-banked-once`, `EarnedSave.tla` live TLC PASS, RTX 4080 Night Shift 60 fps | Ruling `ei`; queued for Wave 46A/B |
 | W46-S1 | **Wave 46 Spine, Souls-Like Calibration & Sitting Release Cut:** replay & fix `PF-48` (Flume exit stall) & `PF-49` (Brindle 420 s stall), close remaining open World 1 `PLAY-FINDINGS.tsv` (`PF-01`, `14`, `19`, `21`, `28`, `40`, `47`), `MG-09`/`MG-10` (<100 ms menu/refusal response), retarget only ready promise drafts (`PRs 1144–1158`, ruling `ef`), settle carried Flume small (`21.9 s` vs `24.71 s`) & Swarm grown (`30.38 s` vs `33.95 s`) pins, Linux `run_tier_test` pins (`W1-147`), and `park_reactor_fight_test` second green gate (`MG-03`); run final **ruling-`cu` Souls-like calibration pass** (ruling `cy`) against full Wave 45+46 power; idle RTX 4080 frame capture, whole-run First-Timer Release Film (closing 10 `ruling dz` rows), full Release Gate (`tally.mjs`, zero deferred shards, zero overdue ledger), packed Linux export (`core-loop.x86_64`), `scrapkeep-verify-build`, Sitting Kit refresh, rollback-safe install | `src/core/challenge_dials.gd`, `project-guide/handoff/PLAY-FINDINGS.tsv`, `project-guide/handoff/KNOWN-FAILING.tsv`, `sketches/core-loop/` export & Sitting Kit | L (staged: Spine → Calibration → Release Cut) | `npm run sketch:world1-bands -- --sitting --head <sha>` prints **`READY` (35/35 gate rows)** | Rulings `cu`, `cy`, `dz`, `ef`, `ei`; closes Wave 46 for Andrew's World 1 Sitting |
+| W46-15 | **Waking heft phase hold:** `boss_phase_hold_test` check "waking heft rising over the threshold mid-fight stays held" reads 0.97 s against 2.30 s for the first phase, red since the wave 45 promotion (1266fec1) and unlisted until 22 Nov; find which wave 45 change moved it (likely P2 Warden phases, 0b3624907) and fix it in the module that owns the phase hold, without easing the fight (ruling cu) | `src/boss/` phase-hold owner, `tests/boss_phase_hold_test.gd` | S | `boss_phase_hold_test` 40/40, red on 1266fec1 and green on the fix | KNOWN-FAILING row; Wave 46 Gate. Done on `stage/alpha-w46` (PR 1198): the phase hold was never broken; wave 45 P2 (0b3624907) wired posture hit-stops, whose wall-clock gate and sum order move the later chunk clocks by up to 0.06 s. The test now pins exact break frames and compares clocks within 0.1 s, 40/40 |
+| W46-16 | **Carried test reds from wave 45:** (1) pin the 18 `activities.gd` primitive surfaces (mend wards, lore plates) in `tools/prim_census_pin.tsv`, each as code or as a stand-in with the BACKLOG row that owes it; (2) find why `hero_assets_test` fails 7 checks in the warm batch even alone, then fix the leak or mark it solo with the reason | `tools/prim_census_pin.tsv`, `tests/hero_assets_test.gd`, `tools/test_batch_driver.gd` only if a reset is missing | S | `prim_census_test` 11/11; `hero_assets_test` green in the warm batch or solo-marked with its cause | KNOWN-FAILING rows; Wave 46 Gate. Done on `stage/alpha-w46` (PR 1194): 18 surfaces pinned (the ward post box as a W46-18 stand-in, the ward pads and plates as code); `hero_assets_test` kept its pods out of the tree for the out-of-tree check and removes its logger, so it passes in the warm batch |
+| W46-18 | **Mend ward post model:** the mend ward post (`activities.gd` `_build_ward`) is a 0.9 by 2.4 m solid slate `BoxMesh` stand-in pinned in `tools/prim_census_pin.tsv`; model a ward post in the world 1 kit and drop the stand-in row | `src/world/activities.gd`, the ward post asset, `tools/prim_census_pin.tsv` | S | the ward post is a modelled mesh; no `Ward_*` `BoxMesh` row in the pin; `prim_census_test` green | Opus 5.5 3D unit, after Wave 46A |

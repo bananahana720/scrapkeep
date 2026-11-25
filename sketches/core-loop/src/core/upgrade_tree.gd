@@ -153,6 +153,10 @@ func _init(events_ref = null) -> void:
 static var unknown_warned := {}
 
 
+static func reset_for_tests() -> void:
+	unknown_warned.clear()
+
+
 static func depth_cap(world_index: int) -> int:
 	return clampi(world_index + 1, WORLD_ONE_DEPTHS, DEPTHS)
 
@@ -352,7 +356,7 @@ static func problems(for_class: String, world_one := false) -> Array[String]:
 			var base: Resource = Weapons.base(weapon)
 			for part in n["pattern"][weapon]:
 				for key in n["pattern"][weapon][part]:
-					if not part in ["add", "mul", "min"] or base.get(key) == null:
+					if not part in ["set", "add", "mul", "min"] or base.get(key) == null:
 						out.append("%s: pattern %s.%s" % [id, part, key])
 		for p in n.get("proc", []):
 			if not ACTIONS.has(p.get("do", "")) or not bus.has_script_signal(p.get("on", "")):
@@ -549,6 +553,8 @@ func path() -> Array[String]:
 func gives_swap(slot: String, ability: String) -> bool:
 	for node_id in picks:
 		var n := node(class_id, node_id, world_one)
+		if n.is_empty() and not world_one:
+			n = node(class_id, node_id, true)
 		if n.get("swap", {}).get(slot, "") == ability:
 			return true
 	return false
@@ -595,6 +601,8 @@ func _resolve() -> void:
 	_tags = []
 	for id in picks:
 		var n := node(class_id, id, world_one)
+		if n.is_empty() and not world_one:
+			n = node(class_id, id, true)
 		for k in n.get("knob", {}):
 			var value = n["knob"][k]
 			if KNOBS[k].get("time", false) and float(value) > 0.0:

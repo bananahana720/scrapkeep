@@ -1043,6 +1043,24 @@ const UI_ROWS := {
 	# chirp read this row. Companion verdigris, an outward arrow; the rising ready pair stands in
 	# until companion_chirp_escape is baked.
 	"escape_acted": {"group": "combat", "color": Palette.VERDIGRIS, "shape": "arrow", "sound": "companion_chirp_ready", "sound_next": "companion_chirp_escape", "hud": "", "objective": "", "priority": 1},
+	# Wave 46 E3-04: pilot weapon cadence cues (PILOT-CADENCE.md §5.3, player voice class, priority 1 — never threat/music)
+	# and Nixie tube rail mechanical relay clacks (ui voice class).
+	"cadence_rivet_notch_open": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "cadence_rivet_notch_open", "hud": "", "objective": "", "priority": 1},
+	"cadence_rivet_notch_hit": {"group": "combat", "color": ClassDef.RIVET_COLOR, "shape": "burst", "sound": "cadence_rivet_notch_hit", "hud": "", "objective": "", "priority": 1},
+	"cadence_rivet_spent": {"group": "combat", "color": Palette.SLATE, "shape": "bar", "sound": "cadence_rivet_spent", "hud": "", "objective": "", "priority": 1},
+	"cadence_sable_full": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "cadence_sable_full", "hud": "", "objective": "", "priority": 1},
+	"cadence_sable_bolt": {"group": "combat", "color": Palette.COBALT, "shape": "burst", "sound": "cadence_sable_bolt", "hud": "", "objective": "", "priority": 1},
+	"cadence_kest_window": {"group": "combat", "color": Palette.SAND, "shape": "ring", "sound": "cadence_kest_window", "hud": "", "objective": "", "priority": 1},
+	"cadence_kest_snap": {"group": "combat", "color": ClassDef.KEST_COLOR, "shape": "burst", "sound": "cadence_kest_snap", "hud": "", "objective": "", "priority": 1},
+	"cadence_tarn_window": {"group": "combat", "color": Palette.SAND, "shape": "cross", "sound": "cadence_tarn_window", "hud": "", "objective": "", "priority": 1},
+	"cadence_tarn_rend": {"group": "combat", "color": ClassDef.TARN_COLOR, "shape": "burst", "sound": "cadence_tarn_rend", "hud": "", "objective": "", "priority": 1},
+	"cadence_tally_beat": {"group": "combat", "color": Palette.SAND, "shape": "square", "sound": "cadence_tally_beat", "hud": "", "objective": "", "priority": 1},
+	"cadence_tally_paid": {"group": "combat", "color": Palette.LEDGER_CREAM, "shape": "square", "sound": "cadence_tally_paid", "hud": "", "objective": "", "priority": 1},
+	"cadence_cannon_lock": {"group": "combat", "color": Palette.SAND, "shape": "lane", "sound": "cadence_cannon_lock", "hud": "", "objective": "", "priority": 1},
+	"cadence_cannon_rail": {"group": "combat", "color": ClassDef.CANNON_COLOR, "shape": "lane", "sound": "cadence_cannon_rail", "hud": "", "objective": "", "priority": 1},
+	"cadence_cannon_barrage": {"group": "combat", "color": Palette.SLATE, "shape": "lane", "sound": "cadence_cannon_barrage", "hud": "", "objective": "", "priority": 1},
+	"rail_rise": {"group": "flow", "color": Palette.SAND, "shape": "bar", "sound": "rail_rise", "hud": "", "objective": "", "priority": 1},
+	"rail_sink": {"group": "flow", "color": Palette.SLATE, "shape": "bar", "sound": "rail_sink", "hud": "", "objective": "", "priority": 1},
 }
 
 # v2 W7 enemies
@@ -1261,7 +1279,7 @@ const WORLD_ROWS := {
 	"overtime_offered": {"group": "event", "color": Palette.BRASS, "shape": "ring", "sound": "overtime_offer", "hud": "", "objective": "", "priority": 1},
 	"overtime_rung": {"group": "event", "color": Palette.BRASS, "shape": "burst", "sound": "overtime_ring", "hud": "", "objective": "", "priority": 2},
 	"overtime_paid": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "overtime_pay", "hud": "", "objective": "", "priority": 2},
-	"sluice_warning": {"group": "event", "color": Palette.HAZARD, "shape": "arrow", "sound": "threat_whistle", "sound_next": "arena_wave_whistle", "hud": "", "objective": "", "priority": 2},
+	"sluice_warning": {"group": "event", "color": Palette.HAZARD, "shape": "arrow", "sound": "threat_whistle", "sound_next": "sluice_valve_warning", "hud": "", "objective": "", "priority": 2},
 	# Called Shot (src/build/called_shot.gd, loops.md Spec 3): the window opens on a pip (no hazard
 	# colour or threat sound: a call is the player's, LEGIBILITY section 1), the call inks with a
 	# stamp that climbs (call_ink), a met call rings the gate's release, a miss drops dry (call_drop).
@@ -1269,7 +1287,13 @@ const WORLD_ROWS := {
 	"shot_called": {"group": "event", "color": Palette.BRASS, "shape": "square", "sound": "clank", "sound_next": "call_ink", "hud": "", "objective": "", "priority": 2},
 	"call_met": {"group": "event", "color": Palette.BRASS, "shape": "star", "sound": "found_chime", "sound_next": "warden_gate_release", "hud": "", "objective": "", "priority": 2},
 	"call_missed": {"group": "event", "color": Palette.CHARCOAL, "shape": "square", "sound": "clank", "sound_next": "call_drop", "hud": "", "objective": "", "priority": 1},
-	"sluice_open": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "slam_boom", "sound_next": "arena_lock_slam", "hud": "", "objective": "", "priority": 2},
+	"sluice_open": {"group": "event", "color": Palette.HAZARD, "shape": "ring", "sound": "slam_boom", "sound_next": "sluice_valve_open", "hud": "", "objective": "", "priority": 2},
+	# Wave 46 C2/C3/C4: Foreman's Kindness sterile chime, Shift Boss quick-sync horn snap, and downed-machine shift-over sigh.
+	"kindness_offered": {"group": "event", "color": Palette.KINDNESS, "shape": "ring", "sound": "kindness_chime", "hud": "", "objective": "", "priority": 1},
+	"quick_sync": {"group": "event", "color": Palette.BRASS, "shape": "ring", "sound": "quick_sync_horn", "hud": "", "objective": "", "priority": 2},
+	"shift_over": {"group": "event", "color": Palette.AMBER, "shape": "burst", "sound": "shift_over_sigh", "hud": "", "objective": "", "priority": 2},
+	# Wave 46 E3-04: visited-site flip chime (wayfinding flip, ui/reward class, priority 1 — never threat/music).
+	"site_flip": {"group": "event", "color": Palette.SAND, "shape": "diamond", "sound": "site_flip", "hud": "", "objective": "", "priority": 1},
 }
 
 

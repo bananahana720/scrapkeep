@@ -53,16 +53,19 @@ func _rules() -> void:
 	_t.eq("a six-entry list parses", parsed["mobs.damage_by_stage"], [2.0, 1.0, 1.5, 1.0, 1.0, 0.5])
 	_t.eq("a short list parses as given", parsed["warden.pulse_cycle_by_stage"], [3.0])
 	for key in KEYS:
-		# The dam's mob hits ship at x2 (w19 world 1 bands x1.5, wave 37 unit D5's payment x2); its own checks are below.
+		# World 1 mob hits ship at x2.6 on the dam and x2.5 on the flume (W46-S1), W2/3 at identity; its own checks are below.
 		if key == "mobs.damage_by_stage":
-			_t.eq("mobs.damage_by_stage ships x2 on the dam only", ChallengeDials.value(key), [2.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+			_t.eq("mobs.damage_by_stage ships x2.6 on the dam and x2.5 on the flume (W46-S1)", ChallengeDials.value(key), [2.6, 2.5, 1.0, 1.0, 1.0, 1.0])
 			continue
-		# World 1's Wardens pulse x1.3, the flume's on a x0.85 cycle (wave 37 unit D6, wave 39); their own checks are below.
+		# World 1's Wardens pulse x4.0 / x4.5 (W46-S1), the flume's on a x0.85 cycle and x4.5 slag; their own checks are below.
 		if key == "warden.pulse_damage_by_stage":
-			_t.eq("warden.pulse_damage_by_stage ships x1.3 on world 1 only", ChallengeDials.value(key), [1.3, 1.3, 1.0, 1.0, 1.0, 1.0])
+			_t.eq("warden.pulse_damage_by_stage ships x4.0/x4.5 on world 1 only (W46-S1)", ChallengeDials.value(key), [4.0, 4.5, 1.0, 1.0, 1.0, 1.0])
 			continue
 		if key == "warden.pulse_cycle_by_stage":
 			_t.eq("warden.pulse_cycle_by_stage ships x0.85 on the flume only", ChallengeDials.value(key), [1.0, 0.85, 1.0, 1.0, 1.0, 1.0])
+			continue
+		if key == "warden.slag_damage_by_stage":
+			_t.eq("warden.slag_damage_by_stage ships x4.5 on the flume only (W46-S1)", ChallengeDials.value(key), [1.0, 4.5, 1.0, 1.0, 1.0, 1.0])
 			continue
 		if key == "mobs.interval_scale_by_stage":
 			_t.eq("mobs.interval_scale_by_stage ships x0.7 on the flume only (W1-31)", ChallengeDials.value(key), [1.0, 0.7, 1.0, 1.0, 1.0, 1.0])
@@ -92,7 +95,7 @@ func _rules() -> void:
 	_t.eq("a bad command-line list is refused", ChallengeDials.rejected.size(), 4)
 	ChallengeDials.set_overrides({"mobs.damage_by_stage": 1.5, "brindle.damage_by_phase": 2.0})
 	_t.eq("a scalar for a list dial is refused (by_stage and by_phase)", ChallengeDials.rejected.size(), 6)
-	_t.eq("and leaves the (tuned) default", ChallengeDials.value("brindle.damage_by_phase"), [1.0, 3.0, 2.0, 1.0])
+	_t.eq("and leaves the (tuned) default", ChallengeDials.value("brindle.damage_by_phase"), [2.5, 3.2, 2.5, 1.0])
 	ChallengeDials.reset()
 
 
@@ -110,14 +113,14 @@ func _run() -> void:
 	_game.run.max_hp = 100000.0
 	_game.run.hp = 100000.0
 	_game.ctx.events.player_hit.connect(func(amount: float, source: String): _hits.append([source, amount]))
-	# Mobs at the defaults: the dam (stage 1) takes x2, stage 2 the base.
+	# Mobs at the defaults: the dam (stage 1) takes x2.6, the flume (stage 2) takes x2.5 (W46-S1).
 	ChallengeDials.reset()
 	for stage in [1, 2]:
 		_game.run.stage = stage
 		_hits.clear()
 		_game.combat._on_player_hit(10.0, Vector3.ZERO, "chaser")
 		var got := float(_hits[-1][1]) if not _hits.is_empty() else -1.0
-		_t.near("default stage %d chaser hit" % stage, got, 20.0 if stage == 1 else 10.0)
+		_t.near("default stage %d chaser hit" % stage, got, 26.0 if stage == 1 else 25.0)
 	# Mobs: stage 1 triples, stage 3 does not.
 	ChallengeDials.set_overrides({"mobs.damage_by_stage": [3, 1, 1, 1, 1, 1]})
 	for stage in [1, 3]:
@@ -126,12 +129,12 @@ func _run() -> void:
 		_game.combat._on_player_hit(10.0, Vector3.ZERO, "chaser")
 		var got := float(_hits[-1][1]) if not _hits.is_empty() else -1.0
 		_t.near("stage %d chaser hit with mobs.damage_by_stage [3,1,..]" % stage, got, 30.0 if stage == 1 else 10.0)
-	# Warden at the defaults (wave 37 unit D6): the dam's and the flume's pulse hits x1.3, the flume's on a 5.1 s
+	# Warden at the defaults (W46-S1): the dam's pulse hits x4.0 and the flume's hits x4.5 on a 5.1 s
 	# cycle (the dam keeps 6 s, wave 39), the Dig's is the base; the ring charges the same PULSE_TELEGRAPH seconds everywhere, so no tell is shorter.
 	ChallengeDials.reset()
 	for stage in [1, 2, 3]:
-		var w1: bool = stage <= 2
-		_t.near("default stage %d pulse hit" % stage, _pulse_at(stage), Warden.PULSE_DAMAGE * (1.3 if w1 else 1.0), 0.001)
+		var pulse_mult := 4.0 if stage == 1 else (4.5 if stage == 2 else 1.0)
+		_t.near("default stage %d pulse hit" % stage, _pulse_at(stage), Warden.PULSE_DAMAGE * pulse_mult, 0.001)
 		_t.near("default stage %d pulse cycle" % stage, Warden.pulse_cycle(stage), Warden.PULSE_CYCLE * (0.85 if stage == 2 else 1.0), 0.001)
 		_t.near("default stage %d pulse telegraph is the whole PULSE_TELEGRAPH" % stage, Warden.pulse_telegraph(stage), Warden.PULSE_TELEGRAPH, 0.0)
 		_t.near("default stage %d pulse charged that long on the Warden" % stage, _last_charge, Warden.PULSE_TELEGRAPH, DT + 0.0001)

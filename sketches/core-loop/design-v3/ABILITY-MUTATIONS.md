@@ -2,6 +2,8 @@
 
 Status: design proposal for wave 45 unit W45-B2, written 21 Nov 2026 against `stage/alpha-w45` at `fc8507686`. Nothing here changes code. Numbers marked (start) are starting values until the lab ranks them. The follow-on code is split into units in section 10, each with its permitted files.
 
+**Weapon cadence (ruling ek, 22 Nov 2026):** each pilot's baseline trigger, its timers and its first tree pick are in [PILOT-CADENCE.md](PILOT-CADENCE.md). A kit swap or shot bit on this page changes a weapon through the `Pattern` cadence fields that page defines in its section 7.
+
 The ask this answers: the six ability slots already know how to be swapped, and a closed set of five shot bits already exists, yet a World 1 run almost never changes what a verb does. Items are the heart of progression (ruling in [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 23 Oct, "Items are the heart of progression"), and a cobalt fleet-grade item "changes a verb's look and play". Today most of that rung is a cooldown scalar. This page says what the rung should do instead, grounded in what the code can already carry.
 
 Read first: [LEGIBILITY.md](LEGIBILITY.md) section 13 (no slop, ruling cx), [STORY-MAP.md](STORY-MAP.md) for the voice, [POLES-FLAILS.md](POLES-FLAILS.md) for the structure and the weight rule this page borrows, [SKILL-BAR.md](SKILL-BAR.md) and [FIELDS-AND-CASTS.md](FIELDS-AND-CASTS.md) for the slots and the cast and jam rules, and the repo rules in [AGENTS.md](../../../AGENTS.md) (rules 7, 8 and 10).

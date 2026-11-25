@@ -157,6 +157,10 @@ static func motif(id: String) -> Dictionary:
 static var unknown_warned := {}
 
 
+static func reset_for_tests() -> void:
+	unknown_warned.clear()
+
+
 # The row a cue indexes directly: the id's own, else the first pilot's, warned once per
 # unknown id. A pilot added later gets its own row and never reaches the fallback.
 static func motif_or_first(id: String) -> Dictionary:
