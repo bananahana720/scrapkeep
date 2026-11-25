@@ -26,6 +26,8 @@ const Posture := preload("res://src/combat/boss_posture.gd")
 const ID_PREFIX := "waking_floor_"
 # Height between tiers, and from the pit to the lowest floor.
 const SPACING := 4.0
+# Three-phase anthem pacing (Base / +10 BPM / +20 BPM): Spoil -> Seam -> Bedrock & Pit finale.
+const ANTHEM_BPM_DELTA := [0, 10, 20]
 
 var names: Array
 var chunks: int
@@ -100,6 +102,22 @@ func current_floor() -> int:
 
 func defeated() -> bool:
 	return shattered >= chunks
+
+
+# 3-phase anthem index (1..3): Spoil=1 (Base), Seam=2 (+10 BPM), Bedrock & Pit share 3 (+20 BPM).
+func music_phase() -> int:
+	return clampi(shattered + 1, 1, Rules.PHASE_NAMES.size())
+
+
+func phase_name() -> String:
+	var k := current_floor()
+	if k > 0 and k <= names.size():
+		return String(names[k - 1])
+	return "Pit"
+
+
+func anthem_bpm_delta() -> int:
+	return ANTHEM_BPM_DELTA[music_phase() - 1]
 
 
 func objective() -> String:

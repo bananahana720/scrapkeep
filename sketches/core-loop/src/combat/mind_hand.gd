@@ -3,6 +3,7 @@ extends "res://src/combat/counter.gd"
 const Habits := preload("res://src/combat/habits.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
+const AllyHusk := preload("res://src/combat/ally_husk.gd")
 
 # One of the Mind's hands (DESIGN-V2 section 10, superintelligence; STORY-THREADS T5):
 # a tall, thin, many-jointed arm on a cast foot, a lens cluster at the top that always
@@ -30,6 +31,8 @@ const PLATING_SCALE := 0.5
 const HP := 90.0
 const ARM_HEIGHT := 4.2
 const LENS_RADIUS := 0.7
+const TAKEOVER_RANGE := 24.0
+const TAKEOVER_COOLDOWN := 8.0
 const HIT_FLASH_SECONDS := 0.08
 # enemy.gd's _update_flash decays _flash at this rate per second (its literal 2.5).
 const FLASH_DECAY := 2.5
@@ -51,8 +54,13 @@ var habit := ""
 var braced_kinds: Array = []
 var adaptations := 0
 var strikes_landed := 0
+var takeovers_started := 0
+var takeovers_interrupted := 0
+var takeovers_completed := 0
 # The Mind's phase, kept current by mind.gd, for the mind.damage_by_phase dial.
 var boss_phase := 1
+var _takeover_husk: AllyHusk.HuskUnit = null
+var _takeover_cd := 2.0
 var _lens: Node3D
 var _lens_glass: MeshInstance3D
 var _icon: Sprite3D
@@ -92,6 +100,8 @@ func lens_point() -> Vector3:
 
 
 func plating_for(hit_kind: String, part: String) -> float:
+	if part == "takeover_node" and is_instance_valid(_takeover_husk) and _takeover_husk.takeover_active:
+		return 0.0
 	if part == "lens" and braced():
 		return 0.0
 	if braced() and hit_kind in braced_kinds:
@@ -100,9 +110,76 @@ func plating_for(hit_kind: String, part: String) -> float:
 
 
 func weak_points() -> Array:
-	if not braced():
-		return []
-	return [{"id": "lens", "at": lens_point(), "radius": LENS_RADIUS}]
+	var out: Array = []
+	if is_instance_valid(_takeover_husk) and _takeover_husk.takeover_active:
+		out.append({"id": "takeover_node", "at": _takeover_husk.takeover_node_pos, "radius": AllyHusk.TAKEOVER_NODE_RADIUS})
+	if braced():
+		out.append({"id": "lens", "at": lens_point(), "radius": LENS_RADIUS})
+	return out
+
+
+func _physics_process(delta: float) -> void:
+	super(delta)
+	if _dead or not _in_play():
+		return
+	_takeover_cd = maxf(0.0, _takeover_cd - delta)
+	if is_instance_valid(_takeover_husk):
+		if not _takeover_husk.takeover_active:
+			_takeover_husk = null
+		return
+	if phase == Phase.ROAM and not stunned() and _takeover_cd <= 0.0:
+		_try_husk_takeover()
+
+
+func _ally_husks():
+	if world_root == null:
+		return null
+	var combat = world_root.get_node_or_null("Combat")
+	return combat.get("ally_husks") if combat != null else null
+
+
+func _try_husk_takeover() -> bool:
+	var mgr = _ally_husks()
+	if mgr == null or not mgr.has_method("first_takeover_target"):
+		return false
+	var husk: AllyHusk.HuskUnit = mgr.first_takeover_target(global_position, TAKEOVER_RANGE)
+	if husk == null:
+		return false
+	return attempt_husk_takeover(husk)
+
+
+func attempt_husk_takeover(husk: AllyHusk.HuskUnit) -> bool:
+	var mgr = _ally_husks()
+	if mgr == null or husk == null or not is_instance_valid(husk):
+		return false
+	if not mgr.begin_takeover(husk, self, AllyHusk.TAKEOVER_WARN_SECONDS):
+		return false
+	_takeover_husk = husk
+	takeovers_started += 1
+	_facing(husk.global_position - global_position)
+	return true
+
+
+func on_struck(hit_kind: String, part: String, _result: Dictionary) -> void:
+	if is_instance_valid(_takeover_husk) and _takeover_husk.takeover_active:
+		var mgr = _ally_husks()
+		if mgr != null and (part == "takeover_node" or hit_kind != ""):
+			mgr.interrupt_takeover(_takeover_husk, "shot" if part == "takeover_node" else hit_kind)
+
+
+func on_takeover_interrupted(_husk) -> void:
+	_takeover_husk = null
+	_takeover_cd = TAKEOVER_COOLDOWN
+	takeovers_interrupted += 1
+	_end()
+	staggers += 1
+	stun_left = maxf(stun_left, AllyHusk.TAKEOVER_STUN_SECONDS)
+
+
+func on_takeover_completed(_husk) -> void:
+	_takeover_husk = null
+	_takeover_cd = TAKEOVER_COOLDOWN
+	takeovers_completed += 1
 
 
 func _wants_attack(to_ball: Vector3) -> bool:

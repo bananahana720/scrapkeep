@@ -5,7 +5,7 @@
  "time_of_day": "noon",
  "spawn": {"at": [-560, -770], "heading_deg": 15.0},
  "play_rect": [-780, -790, 1560, 1580],
- "landmark": {"id": "headframe", "kind": "headframe", "at": [0, 255], "size": [40, 120, 30], "yaw_deg": 180, "recipe": "landmark_headframe", "budget": "hero_landmark", "sight_top": [0, 20, 255], "sight_share": 0.85, "beacon": [0, 255], "reach_m": 42, "warden": {"mounting": "headframe", "anchor": [0, -96, 255], "path": [[0, -96, 255], [0, -66, 255]], "hardpoints": 3, "family": "swarm", "harpoon_anchor": true}, "bay_dock": {"at": [60, 300], "facing_deg": 0}, "gate_slots": [{"at": [60, 280], "facing_deg": 0}], "light": "", "music": "landmark_hum", "fragment": "mining_headframe_cage"},
+ "landmark": {"id": "headframe", "kind": "headframe", "at": [0, 255], "size": [40, 120, 30], "yaw_deg": 180, "recipe": "landmark_headframe", "budget": "hero_landmark", "sight_top": [0, 20, 255], "sight_share": 0.85, "beacon": [0, 255], "reach_m": 42, "warden": {"mounting": "headframe", "anchor": [0, -108, 255], "path": [[0, -108, 255], [0, -78, 255]], "hardpoints": 3, "family": "swarm", "harpoon_anchor": true}, "bay_dock": {"at": [60, 300], "facing_deg": 0}, "gate_slots": [{"at": [60, 280], "facing_deg": 0}], "light": "", "music": "landmark_hum", "fragment": "mining_headframe_cage"},
  "waymarks": ["drop_in", "canal_lip", "switchback_camp", "landmark"],
  "routes": [
   {"id": "main", "from": "drop_in", "to": "landmark", "via": ["spoil_dump", "dump_wash_1", "dump_wash_2", "canal_lip", "rim_haul_ramp", "pit", "haul_road_west_1", "haul_road_west_2", "haul_road_west_3", "haul_road_west_4", "haul_road_west_5", "collar_dish", "gate_apron"]},

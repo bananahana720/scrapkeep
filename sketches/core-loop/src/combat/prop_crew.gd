@@ -14,6 +14,8 @@ extends "res://src/combat/counter.gd"
 const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
+const FloorRule := preload("res://src/combat/floor_rule.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 const HP := 60.0
 # The body (tools/blender/world_two/enemy_prop_crew.py, PR #64) carries a 5.2 m by 4.0 m
@@ -35,12 +37,34 @@ const SETTLE_M := 2.5
 const WALK := 3.4
 const PROP_OFFSET := Vector3(0.75, 0.0, 0.35)
 
+# Secondary attack (W48-COMBAT): Jack-Hammer Shockwave. Fires only when a ball stalls/camps
+# on the floor within JACK_RANGE for STALL_TRIGGER_S (ruling cu; never stops a moving/carving
+# ball). Commits a >= 0.70 s Palette.HAZARD INSTANT ring obeying AttackBudget + 0.2 s gap.
+# Wall-ramming the crew (from off-floor/bank/carve, >= FAST ram, or mid-shockwave ram)
+# triggers a 2x ceiling collapse on the pack.
+const JACK_RANGE := 11.0
+const JACK_RADIUS := 5.5
+const JACK_WARN := 0.85
+const JACK_LIVE := 0.30
+const JACK_REST := 3.5
+const JACK_DAMAGE := 9.0
+const JACK_POP := 6.0
+const JACK_SHOVE := 4.0
+const STALL_TRIGGER_S := 0.35
+const WALL_RAM_COLLAPSE_MULT := 2.0
+const WALL_RAM_RADIUS_MULT := 1.35
+
 static var _shared := {}
 
 var prop_up := true
 var drops := 0
+var jack_hammers := 0
+var wall_ram_collapses := 0
+var last_collapse_mult := 1.0
+var jack_primed := false
 var last_fall: Node3D
 var _threat := 1.0
+var _stall_s := 0.0
 var _prop: Node3D
 var _roof: Node3D
 var _prop_from_glb := false
@@ -163,12 +187,53 @@ func _build_roof() -> Node3D:
 	return roof
 
 
-func _wants_attack(_to_ball: Vector3) -> bool:
-	return false
+func _wants_attack(to_ball: Vector3) -> bool:
+	var player = _player()
+	if player == null or not FloorRule.on_floor(player.state) or player.speed_tier() >= SpeedTier.CRUISE:
+		return false
+	if to_ball.length() > JACK_RANGE:
+		return false
+	return jack_primed or _stall_s >= STALL_TRIGGER_S
+
+
+func _commit(_to_ball: Vector3) -> Node3D:
+	jack_primed = false
+	_stall_s = 0.0
+	warn_seconds = JACK_WARN
+	live_seconds = JACK_LIVE
+	rest_seconds = JACK_REST
+	return _commit_ring(Threat.Type.INSTANT, global_position, JACK_RADIUS, 2.5)
+
+
+func _go_live() -> void:
+	jack_hammers += 1
+	var ring := telegraph()
+	if ring == null:
+		return
+	var player = _player()
+	var ball := _real_ball()
+	if player == null or not FloorRule.on_floor(player.state) or player.speed_tier() >= SpeedTier.CRUISE:
+		return
+	if ring.contains(ball):
+		var out: Vector3 = ball - ring.center
+		out.y = 0.0
+		var dir := out.normalized() if out.length() > 0.1 else Vector3.FORWARD
+		hit_player.emit(JACK_DAMAGE, dir * JACK_SHOVE + Vector3.UP * JACK_POP)
+
+
+func _on_end() -> void:
+	warn_seconds = ROOF_WARN
 
 
 # It walks to its pack, not to the ball; alone, it keeps its distance like any crew.
+# Also tracks floor-stalling proximity for Jack-Hammer Shockwave (ruling cu).
 func _roam(to_ball: Vector3) -> Vector3:
+	var dt := get_physics_process_delta_time()
+	var player = _player()
+	if player != null and FloorRule.on_floor(player.state) and player.speed_tier() < SpeedTier.CRUISE and to_ball.length() <= JACK_RANGE:
+		_stall_s += dt
+	else:
+		_stall_s = maxf(0.0, _stall_s - dt * 2.0)
 	if not prop_up:
 		return super._roam(to_ball)
 	var mates := pack_centre()
@@ -205,17 +270,38 @@ func roof_centre() -> Vector3:
 	return _roof.global_position if _roof != null and _roof.is_inside_tree() else global_position
 
 
+func _is_wall_ram(kind_hit: String) -> bool:
+	if kind_hit != "ram":
+		return false
+	if phase == Phase.WARN or phase == Phase.LIVE:
+		return true
+	var player = _player()
+	if player == null:
+		return false
+	if not FloorRule.on_floor(player.state):
+		return true
+	return player.speed_tier() >= SpeedTier.FAST
+
+
 func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
 	if kind_hit in ["ram", "stomp", "slam"]:
-		knock_prop()
+		var mult := WALL_RAM_COLLAPSE_MULT if _is_wall_ram(kind_hit) else 1.0
+		if phase == Phase.WARN or phase == Phase.LIVE:
+			_end()
+		knock_prop(mult)
 
 
 # The prop goes and the roof falls. Returns the fall, or null when the prop was already out.
-func knock_prop() -> Node3D:
+# A wall-ram (off-floor/carve, fast ram, or interrupting Jack-Hammer Shockwave) doubles
+# ceiling collapse damage and widens the rubble drop radius on its pack.
+func knock_prop(collapse_mult := 1.0) -> Node3D:
 	if not prop_up or world_root == null:
 		return null
 	prop_up = false
 	drops += 1
+	last_collapse_mult = maxf(1.0, collapse_mult)
+	if last_collapse_mult > 1.0:
+		wall_ram_collapses += 1
 	var at := roof_centre()
 	var ground_y: float = terrain.height(at.x, at.z) if terrain != null else at.y - ROOF_HEIGHT
 	var slab := _roof
@@ -236,9 +322,10 @@ func knock_prop() -> Node3D:
 	if fleet != null and fleet.combat != null:
 		ball_hit = Callable(fleet.combat, "_on_player_hit").bind(ROOF_BALL_DAMAGE, ROOF_SHOVE, kind)
 	var fall_key := "prop_roof_%d" % get_instance_id()
-	fall.configure(fall_key, Vector3(at.x, ground_y, at.z), ROOF_RADIUS, ROOF_WARN,
+	var drop_radius := ROOF_RADIUS * (WALL_RAM_RADIUS_MULT if last_collapse_mult > 1.0 else 1.0)
+	fall.configure(fall_key, Vector3(at.x, ground_y, at.z), drop_radius, ROOF_WARN,
 		terrain,
-		_player(), ball_hit, ROOF_DAMAGE * _threat, slab)
+		_player(), ball_hit, ROOF_DAMAGE * _threat * last_collapse_mult, slab)
 	fall.voice = Roster.voiced(String(Roster.faction(faction)["voice"]), _motif())
 	fall.tag = String(row.get("tag", ""))
 	fall.on_crush = _crush_discovery(fleet)

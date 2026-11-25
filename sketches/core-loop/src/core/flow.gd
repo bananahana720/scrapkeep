@@ -17,6 +17,7 @@ const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const VictoryLap := preload("res://src/world/victory_lap.gd")
 const SlagBowl := preload("res://src/boss/arena.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
 
 # The run as one state machine: title, class select, then per stage roam, beacon,
 # gates and launch, and a summary after stage 3. Death is its own state with a
@@ -257,6 +258,7 @@ func _exit_tree() -> void:
 			script = ResourceLoader.load_threaded_get(path)
 		if script is Script and script.get_script_method_list().any(func(m): return m.name == "settle_arena"):
 			script.call("settle_arena")
+	EventDirector.settle_prewarm()
 	SlagBowl.drop_ahead()
 
 
@@ -671,17 +673,27 @@ func _apply_tree_picks() -> void:
 	if tree == null:
 		return
 	var world: int = ctx.stages.world_of(ctx.run.stage)
+	var final_world_one: bool = ctx.tuning.world_one() and world == 1
 	tree.max_depth = UpgradeTree.depth_cap(world) if ctx.tuning.world_one() else UpgradeTree.DEPTHS
-	tree.world_one = ctx.tuning.world_one() and world == 1
+	tree.world_one = final_world_one
 	var saved: Array[String] = ctx.run.tree_picks.duplicate()
 	var allowed: int = ctx.run.tree_allowed
 	# A saved late skip goes back first, so the replay and the owed pick see the forced sibling (SG8).
 	tree.restore_late_skip(ctx.run.tree_late_skipped)
 	tree.allowed = saved.size()
 	for id in saved:
-		if not tree.pick(id):
+		var picked_ok: bool = tree.pick(id)
+		# Depth 1..2 picks earned in World 1 under world_one_builds (e.g. opposite-feel keystones)
+		# live in the World-1 table even when continuing in World 2 or 3; replay them there and
+		# restore the resumed world's table flag for later depths.
+		if not picked_ok and ctx.tuning.world_one() and not tree.world_one and tree.picks.size() < UpgradeTree.depth_cap(1):
+			tree.world_one = true
+			picked_ok = tree.pick(id)
+			tree.world_one = final_world_one
+		if not picked_ok:
 			warn_once("resume_pick", "flow: saved tree pick %s does not fit the tree; later picks dropped" % id)
 			break
+	tree.world_one = final_world_one
 	if allowed > tree.picks.size():
 		tree.allowed = allowed - 1
 		tree.open_checkpoint()
@@ -1102,6 +1114,8 @@ func warn_once(key: String, message: String) -> void:
 
 func physics_step(delta: float) -> void:
 	if state == VICTORY:
+		if not run_ends_after(ctx.run.stage):
+			_prewarm_next_stage_events()
 		_victory_left -= delta
 		if _victory_left <= 0.0:
 			_advance_from(ctx.run.stage)
@@ -1115,6 +1129,8 @@ func physics_step(delta: float) -> void:
 	ctx.run.advance(delta, ctx.player.speed_tier() >= SpeedTier.CRUISE)
 	if state == BEACON or state == GATES or state == LAUNCH:
 		_read_boss_ahead()
+	if state == GATES or state == LAUNCH:
+		_prewarm_next_stage_events()
 	var ball: Vector3 = ctx.player.ball_position()
 	match state:
 		STAGE, BEACON:
@@ -1178,7 +1194,33 @@ func _advance_from(cleared: int, velocity = null) -> void:
 	if run_ends_after(cleared):
 		_end_run_won()
 		return
+	_settle_brindle_cobalt_pick()
 	enter_stage(cleared + 1, ctx.player.state.velocity if velocity == null else velocity, false)
+
+
+# Grants Brindle's cobalt pick fallback at most once when continuing into World 2 if the player
+# left the Slag Bowl before rolling through one of the two cobalt arches (ruling ap, W49-COMBAT).
+func _settle_brindle_cobalt_pick() -> void:
+	if ctx == null or ctx.run == null or not ctx.run.extra.has("brindle_cobalt_pending"):
+		return
+	var pending := String(ctx.run.extra["brindle_cobalt_pending"])
+	ctx.run.extra.erase("brindle_cobalt_pending")
+	if pending == "" or String(ctx.run.extra.get("brindle_cobalt_picked", "")) != "":
+		return
+	if ctx.build != null and ctx.build.has_method("scrapless") and ctx.build.scrapless():
+		return
+	ctx.run.extra["brindle_cobalt_picked"] = pending
+	ctx.run.add_part(pending, "boss_cobalt")
+
+
+# Pre-warms the next stage's EventFamilies scripts and NaturalEvents worker plan on the launch rail
+# (notably Stage 4->5, eliminating the 69 ms EventFamilies.build entry hitch).
+func _prewarm_next_stage_events() -> void:
+	if ctx == null or ctx.terrain == null or ctx.run == null or ctx.stages == null:
+		return
+	var next_stage: int = ctx.run.stage + 1
+	if next_stage <= int(ctx.stages.COUNT):
+		EventDirector.prewarm_stage_families(ctx.terrain, next_stage)
 
 
 # A Continue from a save written at a boss's fall (_save_boss_won) skips the arena the player already won. The next
@@ -1362,6 +1404,7 @@ func _on_launched(velocity: Vector3) -> void:
 		_set_state(LAUNCH)
 		_launched = true
 		_flight = 0.0
+		_prewarm_next_stage_events()
 		_save_cleared(velocity)
 		_seam_take = _play_seam_take()
 

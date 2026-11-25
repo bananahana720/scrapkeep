@@ -26,6 +26,8 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
+const Worlds := preload("res://src/core/worlds.gd")
 
 # Writer E's module: Admiral Brindle and the Requisition in the Slag Bowl (DEMO-SPEC
 # Brindle, BOSS-BRINDLE). Flow calls enter_arena(entry_velocity) after stage 3's
@@ -135,6 +137,11 @@ var _last_commit_at := -INF
 var _was_reeling := false
 # Planted fault seam for tests/brindle_reel_test.gd only ("stop" or "no_brace"); always "" in play.
 var _reel_plant := ""
+# Brindle's cobalt pick (ruling ap, W49-COMBAT): rare/cobalt gate pair opened in the Slag Bowl
+# on rout when continuing into World 2, alongside Admiral's Crest.
+var brindle_cobalt_offers: Array = []
+var brindle_cobalt_picked := ""
+var _cobalt_gates: Node3D = null
 
 
 func setup(ctx_ref) -> void:
@@ -249,6 +256,8 @@ func exit_arena() -> void:
 	_was_reeling = false
 	_drones.clear()
 	_ghost_until = -1.0
+	_close_cobalt_gates()
+	brindle_cobalt_offers = []
 	if state != DEFEATED:
 		state = IDLE
 	phase = 0
@@ -265,6 +274,10 @@ func _on_flow_changed(flow_state: String) -> void:
 func _physics_process(delta: float) -> void:
 	if active() and ctx.flow.state_name() == "boss":
 		advance(delta)
+	elif state == DEFEATED and is_instance_valid(_cobalt_gates) and _cobalt_gates.is_open():
+		var heading: Vector3 = ctx.player.planar_velocity()
+		heading = heading.normalized() if heading.length() > 0.5 else ctx.heading()
+		_cobalt_gates.step(ctx.player.ball_position(), heading)
 
 
 func advance(delta: float) -> void:
@@ -1636,6 +1649,7 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	ctx.run.record_kill("brindle", at, 0, source)
 	ctx.run.add_part(Rules.CREST_PART, "boss")
 	_sync_crest()
+	_offer_cobalt_pick()
 	ctx.flow.boss_active = false
 	# A freed ship ends its own lift in the camera, and a freed object cannot be passed as a Node3D.
 	if is_instance_valid(ship):
@@ -1647,6 +1661,62 @@ func _defeat(kind: String, at: Vector3, source := "") -> void:
 	_publish("boss_defeated")
 	if is_instance_valid(scooter):
 		scooter.visible = false
+
+
+# Restores Brindle's rare/cobalt pick (ruling ap, W49-COMBAT) when continuing into World 2 while
+# keeping Admiral's Crest. Opens two cobalt arches in the Slag Bowl during the victory beat and
+# records a single idempotent fallback in run.extra["brindle_cobalt_pending"] so neither a fast
+# victory-beat exit nor quit-and-Continue loses or double-grants the pick.
+func _offer_cobalt_pick() -> void:
+	_close_cobalt_gates()
+	brindle_cobalt_offers = []
+	brindle_cobalt_picked = ""
+	if not Worlds.BRINDLE_COBALT_PICK or ctx == null or ctx.flow == null or ctx.run == null:
+		return
+	if ctx.flow.run_ends_after(ctx.run.stage):
+		return
+	if ctx.build != null and ctx.build.has_method("scrapless") and ctx.build.scrapless():
+		return
+	if String(ctx.run.extra.get("brindle_cobalt_picked", "")) != "":
+		return
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash([ctx.rng.seed if ctx.rng != null else 0, ctx.flow.run_key(), ctx.run.stage, "brindle_cobalt"])
+	var class_id: String = ctx.run.class_id() if ctx.run.has_method("class_id") else ""
+	var picks := RewardGates.roll_cobalt_boss_picks(rng, class_id, ctx.run.parts, 2)
+	if picks.is_empty():
+		return
+	brindle_cobalt_offers = picks
+	ctx.run.extra["brindle_cobalt_pending"] = String(picks[0])
+	if is_instance_valid(arena):
+		_cobalt_gates = RewardGates.new()
+		_cobalt_gates.name = "BrindleCobaltGates"
+		arena.add_child(_cobalt_gates)
+		_cobalt_gates.setup(arena.ground_query())
+		_cobalt_gates.chosen.connect(_on_cobalt_pick_chosen)
+		var heading: Vector3 = ctx.player.planar_velocity()
+		heading = heading.normalized() if heading.length() > 0.5 else ctx.heading()
+		_cobalt_gates.open(picks, ctx.player.ball_position(), heading, ctx.run.parts)
+
+
+func _on_cobalt_pick_chosen(part_id: String) -> void:
+	if part_id == "" or ctx == null or ctx.run == null:
+		return
+	if String(ctx.run.extra.get("brindle_cobalt_picked", "")) != "":
+		return
+	brindle_cobalt_picked = part_id
+	ctx.run.extra.erase("brindle_cobalt_pending")
+	ctx.run.extra["brindle_cobalt_picked"] = part_id
+	if ctx.build == null or not ctx.build.has_method("scrapless") or not ctx.build.scrapless():
+		ctx.run.add_part(part_id, "boss_cobalt")
+	if ctx.flow != null and ctx.flow.has_method("_save_boss_won"):
+		ctx.flow._save_boss_won()
+
+
+func _close_cobalt_gates() -> void:
+	if is_instance_valid(_cobalt_gates):
+		_cobalt_gates.close()
+		_cobalt_gates.queue_free()
+	_cobalt_gates = null
 
 
 # The admiral's crest rides on the ball for as long as the run holds the part.

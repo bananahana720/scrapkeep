@@ -10,7 +10,8 @@ const GLB := "res://assets/models/world_three/enemy_line_cutter.glb"
 # throw, RING_REACH 40.0). _commit was 9c7b7d6b, _live was f50d2057, RING_REACH was 6.0; the disc now
 # flies to _target (the predicted point) instead of the ring centre.
 # _live re-pinned for FX-26 (12 Nov 2026): one display-only ring.land() as the disc arrives.
-const GAMEPLAY_HASHES := {"_configure": "795bc13a5e8b56c01f956ee245b69e9e37b7cb387e815941481c669d844119c7", "_wants_attack": "a290113ca61d5941095555662d4bba4637500e0cd15e89494e201ecaa0817b84", "_commit": "30d702469086c3951b6385f7004fd94986b27172fc36be67e5572b28e93dec0a", "_warn_progress": "a2b5cadd237634ac87eece61d02998ec5d88646599c2157fa0bbd1b6b1876061", "_go_live": "a887f9155c41b358c2e87592d5186c8baea4f41c37529f59bf2fbb0e26e7aeb1", "_live": "eb5908eb14a30534b57b8ffd2d05881820e94fa9db9037f68737d7006594ae2c", "_on_end": "501af355811ac1887dc2dca6735c23df7c343b1eecb3044ae5ea798451b7473c", "_rest_disc": "be6103f0498890eba09f9880718efd36de6f401ec2504b715e47a4ff92502d32"}
+# W49-COMBAT re-pin: primary warn_seconds floor 0.75 s and Boomerang Rim-Slice secondary attack.
+const GAMEPLAY_HASHES := {"_configure": "db59d0f8a712b24626d6ccc067d8c23d37f483bf2f7562f515c18decd09d76c2", "_wants_attack": "b843e7c2cde7c63fe9e8733ab5ad2ef6fa32a7bd46a50e7b86ba4afc9570e5d3", "_commit": "092e94109440f0aac8dae2580d7f2097034ebdd9fcfc6ba505a7f99d3d4f8309", "_warn_progress": "a4f133b9c6623dc807158da687bc519cdfe48d7ef888189b0c583251fdb293c6", "_go_live": "b48c5a203c92e8808916aedef2fa85986393bb0378ebb490c41e891152db95eb", "_live": "f7a09fce77f96a32fc4694c2bee5be96c45a308d7cbdd7bb251ba9037a8e3b12", "_on_end": "ebacebd4af88841033c31417698ebd62dc672fecd55fbbf6b8f74c5810054548", "_rest_disc": "be6103f0498890eba09f9880718efd36de6f401ec2504b715e47a4ff92502d32"}
 
 var t := T.new("enemy_line_cutter_asset_test")
 var game

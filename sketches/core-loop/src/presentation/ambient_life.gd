@@ -46,6 +46,9 @@ var _ground: Callable
 var _prev := {}
 var _loop_now := {}
 var _fade_now := {}
+var _plan_stage := -1
+var _plan_wait := 0
+var _planner: AmbientHomes.Planner
 
 
 func setup(context) -> void:
@@ -73,31 +76,51 @@ func _stage_entered(stage: int, _retry: bool) -> void:
 	_latched = false
 	# A retry keeps its homes. A new stage's structures join the physics space on the next physics
 	# steps, so the plan waits for them and the cover veto (unfit) sees a gatehouse built this frame.
-	var serial := _entries + 1
-	_entries = serial
+	_entries += 1
+	_cancel_plan()
 	if stage == _built_for and pool != null:
 		_build_stage(stage)
 		return
 	_release_all()
 	pool = null
-	var tree := get_tree()
-	for i in PLAN_AFTER_STEPS:
-		await tree.physics_frame
-	if serial != _entries or not is_inside_tree():
+	# Planned via _physics_process instead of awaiting tree.physics_frame so freeing this node
+	# mid-stage-entry never resumes a dangling coroutine on a freed instance.
+	_plan_stage = stage
+	_plan_wait = PLAN_AFTER_STEPS
+
+
+func _physics_process(_delta: float) -> void:
+	if _plan_stage < 0 or not is_inside_tree():
 		return
-	# The plan a kind a physics step (AmbientHomes.Planner): planned whole it was 28 ms of one frame
-	# just after the flume's entry on the cloud (scrapkeep#494). A newer entry drops this one.
-	var planner = _begin_plan(stage)
-	if planner == null:
-		return
-	while planner.step():
-		await tree.physics_frame
-		if serial != _entries or not is_inside_tree():
+	if _plan_wait > 0:
+		_plan_wait -= 1
+		if _plan_wait > 0:
 			return
-	_finish_plan(planner.homes)
+		# The plan a kind a physics step (AmbientHomes.Planner): planned whole it was 28 ms of one frame
+		# just after the flume's entry on the cloud (scrapkeep#494). A newer entry drops this one.
+		_planner = _begin_plan(_plan_stage)
+		if _planner == null:
+			_plan_stage = -1
+			return
+	if _planner != null and not _planner.step():
+		var homes := _planner.homes
+		_planner = null
+		_plan_stage = -1
+		_finish_plan(homes)
+
+
+func _cancel_plan() -> void:
+	_plan_stage = -1
+	_plan_wait = 0
+	_planner = null
+
+
+func _exit_tree() -> void:
+	_cancel_plan()
 
 
 func _clear_stage(_reason: String) -> void:
+	_cancel_plan()
 	_active = false
 	_latched = true
 	visible = false

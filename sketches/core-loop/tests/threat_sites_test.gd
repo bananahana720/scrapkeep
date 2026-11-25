@@ -46,13 +46,15 @@ const AUDIT := {
 	"res://src/combat/mind_hand.gd": ["LANE"],
 	"res://src/combat/bola_thrower.gd": ["PROJECTILE"],
 	# 2026-10-04 (wave 9): six new enemies, one telegraph each.
+	# 2026-11-25 (W48-COMBAT): 5 Dig 2-attack kits add secondary LANE/INSTANT/PROJECTILE sites.
 	"res://src/combat/anchor_crew.gd": ["LANE"],
-	"res://src/combat/burrower.gd": ["INSTANT"],
-	"res://src/combat/drill_crew.gd": ["INSTANT"],
-	"res://src/combat/kite_drone.gd": ["INSTANT"],
-	"res://src/combat/lamp_swarm.gd": ["WAVE"],
-	"res://src/combat/line_cutter.gd": ["PROJECTILE"],
-	"res://src/combat/pit_jaw.gd": ["INSTANT"],
+	"res://src/combat/burrower.gd": ["LANE", "INSTANT"],
+	"res://src/combat/drill_crew.gd": ["LANE", "INSTANT"],
+	"res://src/combat/kite_drone.gd": ["LANE", "INSTANT"],
+	"res://src/combat/lamp_swarm.gd": ["LANE", "WAVE"],
+	"res://src/combat/line_cutter.gd": ["LANE", "PROJECTILE"],
+	"res://src/combat/pit_jaw.gd": ["PROJECTILE", "INSTANT"],
+	"res://src/combat/prop_crew.gd": ["INSTANT"],
 	"res://src/combat/boom_tender.gd": ["LANE"],
 	# 2026-10-17 (wave 18): the Splitter's fuse blast.
 	"res://src/combat/splitter_pod.gd": ["INSTANT"],
@@ -63,8 +65,9 @@ const AUDIT := {
 	# 2026-11-24 W47-E3: Foreman's Overtime Sync Whistle commits an INSTANT HAZARD ring.
 	"res://src/combat/foreman.gd": ["INSTANT"],
 	"res://src/combat/jolt_layer.gd": ["LANE", "INSTANT"],  # 2026-11-25 (W47-E2): Cable Whip Overload lane + primary mat ring.
-	# 2026-10-17 Highdraft roster: the ballast heavy and the gap net, one telegraph each.
-	"res://src/combat/ballast_heavy.gd": ["INSTANT"],
+	# 2026-10-17 Highdraft roster: the ballast heavy and the gap net.
+	# 2026-11-25 (W49-COMBAT): Highdraft 2-attack kits add secondary LANE sites.
+	"res://src/combat/ballast_heavy.gd": ["LANE", "INSTANT"],
 	"res://src/combat/gap_net.gd": ["LANE"],
 	# 2026-10-23 rogue fleet mini-bosses (#385): sweep, haul and harpoon lanes; drop and dump rings; the whip ring.
 	# 2026-11-17 MG-11: the sweep's lane leads a held line, so it commits apart from haul and harpoon.

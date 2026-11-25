@@ -5,15 +5,16 @@ const T := preload("res://tests/support/t.gd")
 const GLB := "res://assets/models/world_two/enemy_burrower.glb"
 const NAMED := ["BurrowBody", "BurrowHull", "ShovelNose", "SidePaddles", "CrewVisor", "Exhaust",
 	"BurrowMarker", "MarkerWorkingLip", "burrow_root", "nose_forward", "marker_center", "lane_origin"]
+# 2026-11-25 (W48-COMBAT): re-pinned _commit, _go_live, _on_end, _on_slammed for Wall-Skim Eruption secondary attack.
 const GAMEPLAY := {
 	"setup": "384e4992a7096daa0b6843767cd1a0c25483c29222eb2929931aad54de7428e9",
 	"_configure": "6fb461ab724a89e299b4929526b6afdac9bf4c46056bd1a996438f8c5ebb1c81",
 	"_set_hidden": "53c14e3ea8cf7301302172fa4101c6927662909322c42c6b9d123db8f71d2600",
-	"_commit": "fab3d91032df3b60b0ede5687ebccf67035567e0807dbf0ed8cb01e946e036c6",
-	"_go_live": "519a4fc5c02b7bc5fcca3f14e1b5350ce35aafc26cfa0d226d8866c743b37ee3",
+	"_commit": "c4841a82fa65be2e19afe87974017a84a0b767ff68ed0361eea6345b764320b3",
+	"_go_live": "a4b05a08a2aa474874a729e4aef5dd04c7f6942e02b1f89bdf87fa47ec2cb834",
 	"_live_motion": "878a18a155fc065e65f4e88b8994818c120c689bc24979ccab0c46bf6875c0e6",
-	"_on_end": "2523f6c39b4a3ee0d17ccc02e032dbc819d70b1ca6234de430923d4327edaa3f",
-	"_on_slammed": "bc9bedd95b1c791e7df221d303b1cefc5815a2f0984cd9d74c502505b9bbcaf0",
+	"_on_end": "4b5c7390967b4478dcb887967e11dfa25dd49a8ad277c44a0d93d9813166abb4",
+	"_on_slammed": "6cdbd3a8dc29544ff19c363c56926084e1c041c57d62b00d25d9138e7847eb05",
 }
 # 2026-10-17 (world rosters, design-v3/WORLD-ROSTERS.md): the lunge lane became a floor burst
 # under a ball on the floor, so the gameplay pins and constants moved with it.

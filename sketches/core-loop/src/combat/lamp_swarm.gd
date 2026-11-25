@@ -19,14 +19,39 @@ const BLOOM_SPEED := 6.0
 const BLOOM_REACH := 3.0
 const LURE := 6.0
 const SCATTER_SPEED := 7.0
+const PRIMARY_WARN := 0.9
+const PRIMARY_LIVE := 3.0
+
+# Secondary attack (W48-COMBAT): Flash-Focus Beam. Commits a >= 0.70 s Palette.HAZARD lane;
+# slow/stalling balls inside the beam take flash damage (ruling cu), while boosting or
+# cruising through the beam apex scatters the lamps and pays +25 Warden posture.
+const BEAM_WARN := 0.85
+const BEAM_LIVE := 1.6
+const BEAM_LENGTH := 16.0
+const BEAM_WIDTH := 2.8
+const BEAM_APEX_OFFSET := 4.5
+const BEAM_APEX_RADIUS := 3.2
+const BEAM_DAMAGE := 6.0
+const BEAM_SHOVE := 5.0
+const APEX_WARDEN_POSTURE := 25.0
 
 var lamps: Array = []
 var blooms := 0
 var lured_ticks := 0
 var scatters := 0
+var flash_beams := 0
+var apex_breaks := 0
+var warden_posture_paid := 0.0
+var next_attack := ""
+var last_apex_break := {}
 var _flung := false
 # This bloom already met the ball at cruise inside it (lure_bloom), so it reports once.
 var _bloom_met := false
+var _flash_beam := false
+var _beam_dir := Vector3.FORWARD
+var _beam_apex := Vector3.ZERO
+var _beam_hit := false
+var _beam_apex_paid := false
 var _fling: Array = []
 var _lamp_rig: Skeleton3D
 var _lamp_bones: Array[int] = []
@@ -109,7 +134,34 @@ func _lamp_rest(index: int) -> Vector3:
 	return Vector3(cos(angle) * LAMP_RING, LAMP_HEIGHT, sin(angle) * LAMP_RING)
 
 
-func _commit(_to_ball: Vector3) -> Node3D:
+func _use_flash_beam() -> bool:
+	if next_attack == "flash_beam":
+		return true
+	if next_attack == "bloom":
+		return false
+	return blooms > flash_beams
+
+
+func beam_apex() -> Vector3:
+	return _beam_apex
+
+
+func _commit(to_ball: Vector3) -> Node3D:
+	var is_beam := _use_flash_beam()
+	_flash_beam = is_beam
+	next_attack = ""
+	if is_beam:
+		warn_seconds = BEAM_WARN
+		live_seconds = BEAM_LIVE
+		var flat := Vector3(to_ball.x, 0.0, to_ball.z)
+		_beam_dir = flat.normalized() if flat.length() > 0.1 else Vector3.FORWARD
+		_beam_apex = global_position + _beam_dir * BEAM_APEX_OFFSET
+		_beam_hit = false
+		_beam_apex_paid = false
+		_facing(_beam_dir)
+		return _commit_lane(Threat.Type.LANE, global_position, _beam_dir, BEAM_LENGTH, BEAM_WIDTH, 3.0)
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	_clear_telegraph()
 	_telegraph = Telegraph.wave(world_root, terrain, global_position, BLOOM_RADIUS, BLOOM_SPEED, warn_seconds, BLOOM_REACH)
 	_bloom_met = false
@@ -118,16 +170,84 @@ func _commit(_to_ball: Vector3) -> Node3D:
 
 
 func _go_live() -> void:
+	if _flash_beam:
+		flash_beams += 1
+		_beam_hit = false
+		_beam_apex_paid = false
+		return
 	blooms += 1
 	var tele := telegraph()
 	if tele != null:
 		tele.age = warn_seconds
 
 
+func _is_boosting_or_fast(player) -> bool:
+	if player == null:
+		return false
+	if player.speed_tier() >= SpeedTier.CRUISE:
+		return true
+	var state = player.get("state")
+	if state != null and "boost_left" in state and float(state.boost_left) > 0.0:
+		return true
+	return false
+
+
+func _pay_warden_posture() -> float:
+	if not is_inside_tree():
+		return 0.0
+	var paid := 0.0
+	for enemy in get_tree().get_nodes_in_group("enemy"):
+		if not is_instance_valid(enemy) or String(enemy.get("kind")) != "warden":
+			continue
+		if enemy.has_method("is_dead") and enemy.is_dead():
+			continue
+		if enemy.has_method("judge_hit") and enemy.has_method("_apply_posture"):
+			var before: float = float(enemy.posture()) if enemy.has_method("posture") else 0.0
+			var was_staggered: bool = bool(enemy.staggered()) if enemy.has_method("staggered") else false
+			enemy._apply_posture(enemy.judge_hit("guard_rack", 0.0, false, 0))
+			if not was_staggered:
+				var after: float = float(enemy.posture()) if enemy.has_method("posture") else before
+				paid = APEX_WARDEN_POSTURE if (enemy.has_method("staggered") and enemy.staggered()) or after > before else 0.0
+			break
+	warden_posture_paid += paid
+	return paid
+
+
+func _fling_lamps() -> void:
+	_flung = true
+	for i in lamps.size():
+		var out: Vector3 = lamps[i].position
+		out.y = 0.0
+		_fling[i] = out.normalized() * SCATTER_SPEED + Vector3.UP * 3.0
+
+
 func _live(delta: float) -> bool:
 	var tele := telegraph()
 	if tele == null:
 		return false
+	if _flash_beam:
+		var player = _player()
+		if player == null:
+			return true
+		var ball := _real_ball()
+		var to_apex := Vector2(ball.x - _beam_apex.x, ball.z - _beam_apex.z).length()
+		if not _beam_apex_paid and _is_boosting_or_fast(player) and (to_apex <= BEAM_APEX_RADIUS or tele.contains(ball)):
+			_beam_apex_paid = true
+			apex_breaks += 1
+			scatters += 1
+			broken_by = "apex_boost"
+			_fling_lamps()
+			var paid := _pay_warden_posture()
+			last_apex_break = {"at": _beam_apex, "posture": paid, "frame": Engine.get_physics_frames()}
+			var to_me: Vector3 = global_position - ball
+			to_me.y = 0.0
+			_meet_bloom(to_me)
+			return false
+		if not _beam_hit and tele.contains(ball) and player.speed_tier() < SpeedTier.CRUISE:
+			_beam_hit = true
+			var side := _beam_dir.cross(Vector3.UP).normalized()
+			hit_player.emit(BEAM_DAMAGE, side * BEAM_SHOVE)
+		return true
 	tele.step(delta)
 	if tele.is_spent():
 		return false
@@ -162,11 +282,7 @@ func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
 	to.y = 0.0
 	_meet_bloom(to)
 	broken_by = "scattered"
-	_flung = true
-	for i in lamps.size():
-		var out: Vector3 = lamps[i].position
-		out.y = 0.0
-		_fling[i] = out.normalized() * SCATTER_SPEED + Vector3.UP * 3.0
+	_fling_lamps()
 
 
 func _pose() -> void:
@@ -194,6 +310,9 @@ func _pose_lamps(reset := false) -> void:
 
 
 func _on_end() -> void:
+	_flash_beam = false
+	warn_seconds = PRIMARY_WARN
+	live_seconds = PRIMARY_LIVE
 	_flung = false
 	for i in lamps.size():
 		lamps[i].position = _lamp_rest(i)

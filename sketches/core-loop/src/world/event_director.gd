@@ -73,6 +73,90 @@ const PARK_LAND_FACTS := {
 	"sluice_siren": "sluice_landed",
 }
 
+# Stage 4->5 launch rail pre-warm (W49-COMBAT, ROADMAP perf fix): pre-loads EventFamilies scripts
+# and warms NaturalEvents' worker plan for the upcoming park stage off the entry frame, eliminating
+# the 69 ms Stage 5 EventFamilies.build entry hitch.
+const FAMILIES_SCRIPT_PATH := "res://src/world/events/families.gd"
+const NATURAL_SCRIPT_PATH := "res://src/world/events/natural.gd"
+const EVENT_GROUND_SCRIPT_PATH := "res://src/world/events/event_ground.gd"
+static var _prewarmed_stages := {}
+static var _prewarmed_scripts := {}
+
+
+static func reset_prewarm() -> void:
+	_prewarmed_stages.clear()
+	_prewarmed_scripts.clear()
+
+
+static func prewarm_status(stage: int) -> Dictionary:
+	return _prewarmed_stages.get(stage, {})
+
+
+static func prewarm_stage_families(terrain, next_stage: int) -> Dictionary:
+	if _prewarmed_scripts.is_empty():
+		var families_script = load(FAMILIES_SCRIPT_PATH)
+		if families_script != null and "SCRIPTS" in families_script:
+			for family in families_script.SCRIPTS:
+				var path: String = String(families_script.SCRIPTS[family])
+				if ResourceLoader.exists(path):
+					_prewarmed_scripts[family] = load(path)
+	var result := {"stage": next_stage, "scripts_loaded": _prewarmed_scripts.size(), "status": "scripts_only", "key": 0}
+	if terrain == null or next_stage < 1 or not ("maps" in terrain) or next_stage > terrain.maps.size():
+		_prewarmed_stages[next_stage] = result
+		return result
+	if terrain.has_method("is_ready") and not terrain.is_ready(next_stage):
+		if terrain.has_method("prepare"):
+			terrain.prepare(next_stage)
+		result["status"] = "terrain_preparing"
+		_prewarmed_stages[next_stage] = result
+		return result
+	var natural_script = _prewarmed_scripts.get("natural", load(NATURAL_SCRIPT_PATH))
+	var ground_script = load(EVENT_GROUND_SCRIPT_PATH)
+	if natural_script == null or ground_script == null:
+		_prewarmed_stages[next_stage] = result
+		return result
+	var key: int = natural_script._root_key(terrain, next_stage)
+	var map = terrain.map_for(next_stage) if terrain.has_method("map_for") else null
+	result["key"] = key
+	if key == 0 or map == null or not ("park" in map) or map.park.is_empty():
+		result["status"] = "non_park"
+		_prewarmed_stages[next_stage] = result
+		return result
+	if natural_script._plans.has(key):
+		var entry: Dictionary = natural_script._plans[key]
+		if entry.has("task") and WorkerThreadPool.is_task_completed(entry.task):
+			natural_script._settle(key)
+		result["status"] = "ready" if not natural_script._plans[key].has("task") else "worker_running"
+		_prewarmed_stages[next_stage] = result
+		return result
+	for old in natural_script._plans.keys():
+		if not is_instance_id_valid(old) and (not natural_script._plans[old].has("task") or WorkerThreadPool.is_task_completed(natural_script._plans[old].task)):
+			natural_script._settle(old)
+			natural_script._plans.erase(old)
+	var snapshot = ground_script.snapshot(terrain, next_stage, false)
+	var park: Dictionary = map.park.duplicate(true)
+	var out := {}
+	var work := func() -> void:
+		snapshot.copy_roofs()
+		out.merge(natural_script.plan(snapshot, park))
+	natural_script._plans[key] = {
+		"task": WorkerThreadPool.add_task(work, false, "natural prewarm"),
+		"out": out,
+		"rows": natural_script._rows_hash(map.park),
+		"snapshot": snapshot,
+	}
+	result["status"] = "worker_started"
+	_prewarmed_stages[next_stage] = result
+	return result
+
+
+static func settle_prewarm() -> void:
+	var natural_script = _prewarmed_scripts.get("natural")
+	if natural_script != null and natural_script.has_method("settle_plans"):
+		natural_script.settle_plans()
+	_prewarmed_stages.clear()
+
+
 var rng := RandomNumberGenerator.new()
 var stage_time := 0.0
 var flood: FloodCycle
