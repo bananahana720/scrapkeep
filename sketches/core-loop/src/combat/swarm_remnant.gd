@@ -246,7 +246,6 @@ func _build_body() -> void:
 	_slab.add_child(_seam)
 
 
-# The threat stripe the telegraphs paint (Threat.Painter.stripe_texture), lit as a surface.
 static func hazard_stripe() -> StandardMaterial3D:
 	if _hazard_stripe == null:
 		_hazard_stripe = StandardMaterial3D.new()
@@ -312,7 +311,6 @@ static func _parts() -> Array:
 	if not valid or names != ["RemnantBody", "RemnantSeam"] or high <= low:
 		_asset_warning()
 		return []
-	# Stand the casting SLAB_HEIGHT tall with its underside on the floor of the box.
 	var stand := SLAB_HEIGHT / (high - low)
 	var lift := Transform3D(Basis.from_scale(Vector3(1.0, stand, 1.0)), Vector3.UP * (-0.3 - low * stand))
 	for part in parts:
@@ -321,8 +319,6 @@ static func _parts() -> Array:
 	return _shared
 
 
-# One flashing hull surface (enamel and paint as vertex colour) and one surface of the
-# faces toward the heading, in the threat stripe; still three draws with the seam.
 static func _leading_split(mesh: Mesh, slots: Array) -> ArrayMesh:
 	var hull := SurfaceTool.new()
 	var edge := SurfaceTool.new()

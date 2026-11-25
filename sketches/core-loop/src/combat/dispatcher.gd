@@ -1,29 +1,8 @@
 extends "res://src/combat/counter.gd"
 
-# The Dispatcher (design-v3/ENEMY-PRIORITY.md section 4, lever 4): a kill-first spawner. The
-# cache chassis clamped to a perch 6 to 10 m up, fixed, and it never attacks with its body. Every
-# DROP_EVERY seconds it fires one chaser down its pneumatic tube at the ball: the landing ring is
-# committed with the tube's suck-up tell, the pod flies the drawn trace and lands on the ring's
-# centre on the strike frame, and the landing hurts a ball the ring contains then. The pod opens
-# into a chaser that comes out ready to lunge and carries no scrap, so the stream cannot be farmed.
-#
-# - A drop is an attack like any counter's: it asks the attacker budget (attack_budget.gd) first,
-#   so the stream fills the cap rather than breaking it, and its warning keeps the 0.2 s gap to
-#   any other threat. Its own chasers each ask again before they lunge.
-# - It stops dropping while ADD_CAP of its chasers stand.
-# - A hard hit in the suck-up breaks the drop (the counter's stagger window), so reaching it in
-#   the wind-up is a play.
-# - The perch: spec "perch" is a park high point's top (stage builders, lever 5). Without one it
-#   brings its own dispatch mast, PERCH_HEIGHT tall, a world collider the harpoon can bite, so
-#   reaching it means going up: grapple, vault or a long gun.
-# - special_tell("tell") fires on the committed-telegraph frame (design-v3/MACHINE-VFX.md, the
-#   specials contract), through SpecialCues.tell(self) once special_cues.gd is in the tree
-#   (CONTRACTS.md "Special cues"); `dispatched` reports each chaser it lands.
-
 const Projectile := preload("res://src/combat/projectile.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-# Loaded, not preloaded, until the special cues branch lands; then this becomes a preload.
 const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 
 signal special_tell(moment: String)
@@ -33,25 +12,18 @@ signal cargo_returned(dispatcher: Node3D)
 
 const SpecialRig := preload("res://src/presentation/special_rig.gd")
 const MODEL := "res://assets/models/world_one/enemy_dispatcher.glb"
-# A chaser's health: reaching it is the test, not grinding it down.
 const HP := 60.0
 const SCRAP := 8
-# The perch band the design asks for, and the mast's height when no park perch is given.
 const PERCH_MIN := 6.0
 const PERCH_MAX := 10.0
 const PERCH_HEIGHT := 8.0
 const MAST_WIDTH := 1.6
 const DECK_SIZE := Vector3(3.6, 0.3, 3.6)
-# The model's floor sits on its clamp pads 1.5 m under its origin (enemy_dispatcher.py).
 const FLOOR_DROP := 1.5
 const BODY_SIZE := Vector3(2.9, 2.3, 2.9)
-# Start values (ENEMY-PRIORITY lever 4): one chaser every 8 s. The ring sits where the ball is
-# when the drop is committed, with no lead: rolling off it beats it at any speed, and a ball
-# circling under the perch gets hit (a lead missed a curving ball by 9 m on the median in the lab).
 const DROP_EVERY := 8.0
 const FIRST_DROP := 2.0
 const DROP_RANGE := 45.0
-# The tell: the tube sucks up for SUCK seconds (dispatcher_tell's sweep), then the pod flies.
 const SUCK := 0.45
 const FLIGHT := 0.75
 const WARN := SUCK + FLIGHT
@@ -59,8 +31,6 @@ const DROP_RADIUS := 4.0
 const DROP_DAMAGE := 10.0
 const DROP_SHOVE := 6.0
 const ADD_CAP := 4
-# Express Cargo Flush (W47-E3): 0.95 s pressure siren when perch ignored > 14 s; drops a heavy
-# scrap-pod + chaser. Ramming the falling cargo pod fires it back up the chute, one-shotting the perch.
 const FLUSH_IGNORE_S := 14.0
 const FLUSH_SIREN := 0.95
 const FLUSH_FLIGHT := 0.90
@@ -72,10 +42,6 @@ const CARGO_RAM_REACH := 3.2
 const CARGO_RAM_HEIGHT := 3.5
 const CARGO_RAM_SPEED := 8.0
 const CARGO_RETURN_FLIGHT := 0.35
-# Escalate (Andrew's card, 17 Oct): each drop landed with no hit on the Dispatcher since the
-# last one climbs a step, so a Dispatcher left alone snowballs; each hit on it steps back
-# down one. A step names the add the next pod opens into, the drop-to-drop interval and the
-# landing's damage (a heavier pod).
 const ESCALATION := [
 	{"kind": "chaser", "every": DROP_EVERY, "damage": DROP_DAMAGE},
 	{"kind": "hooker", "every": 4.5, "damage": 15.0},
@@ -123,8 +89,6 @@ static var _special_cues_checked := false
 static var _warmed := false
 
 
-# Pre-warms shared GLB, Jolt shapes, mast geometry, pod mesh and cues once so Sinkhole
-# Dispatcher spawns stay under the 8 ms frame budget instead of stalling on first spawn.
 static func warm_shared() -> void:
 	if _warmed:
 		return
@@ -251,7 +215,7 @@ func _configure(threat: float) -> void:
 	_set_health(HP * threat)
 	plating = 0.0
 	scrap_value = SCRAP
-	weight = 4.0  # past the Tarn claw's largest tow limit (3.5); what a hit's interrupt is read against
+	weight = 4.0
 	walk_speed = 0.0
 	attack_range = DROP_RANGE
 	warn_seconds = WARN
@@ -283,8 +247,6 @@ func _build_tool() -> void:
 	if parts.is_empty():
 		_fallback_body()
 		return
-	# On screen the glb's own scene stands in, so its idle, tell and break clips play (the
-	# radar's turn is the clip's then); sockets, collider and signals are as before.
 	var model := SpecialRig.seat(self, _visual_parent(), MODEL, "dispatcher")
 	for part in parts:
 		var mi: MeshInstance3D = model.find_child(part.name, true, false) as MeshInstance3D if model != null else null
@@ -308,7 +270,6 @@ func _build_tool() -> void:
 	_mouth = _sockets.get("drop_mouth", _mouth)
 
 
-# A body that still reads as the Dispatcher if the model is missing: the box and the tube.
 func _fallback_body() -> void:
 	var pivot := _visual_parent()
 	_box(BODY_SIZE * 0.95, Palette.VERDIGRIS, Vector3.ZERO, 0.0, pivot)
@@ -344,7 +305,6 @@ static func _parts() -> Array:
 	return _shared
 
 
-# A node's transform in the model's root space, read before the scene is in a tree.
 static func _in_scene(node: Node3D, scene: Node3D) -> Transform3D:
 	var xform := node.transform
 	var ancestor := node.get_parent()
@@ -360,7 +320,6 @@ static func _asset_warning() -> void:
 		push_warning("dispatcher: missing or malformed model; using fallback body")
 
 
-# Puts the body on its perch: a park perch top from the spec, else its own mast where it spawned.
 func _perch() -> void:
 	var foot := global_position
 	var ground: float = terrain.height(foot.x, foot.z) if terrain != null else foot.y
@@ -372,8 +331,6 @@ func _perch() -> void:
 	global_position = perch_top + Vector3.UP * FLOOR_DROP
 
 
-# The dispatch mast: four legs, cross braces and a deck, one world collider (layer 1) so the
-# ball and the harpoon meet it as terrain, not as the enemy. It stands as long as its Dispatcher.
 func _build_mast(height: float) -> void:
 	mast = StaticBody3D.new()
 	mast.name = "DispatchMast"
@@ -407,8 +364,6 @@ func perch_height() -> float:
 	return perch_top.y - terrain.height(perch_top.x, perch_top.z) if terrain != null else 0.0
 
 
-# A hit never moves it, but one hard enough still breaks the drop: the knock is kept as the
-# speed it would give a free body of its weight, for the counter's interrupt read only.
 func knock(direction: Vector3, force: float) -> void:
 	if _dead or direction.length_squared() < 0.0001:
 		return
@@ -429,7 +384,6 @@ func _physics_process(delta: float) -> void:
 		_check_cargo_ram()
 
 
-# It never leaves its perch.
 func _move(delta: float, _desired: Vector3) -> void:
 	velocity = Vector3.ZERO
 	_knock = _knock.move_toward(Vector3.ZERO, KNOCK_DECAY * delta)
@@ -618,8 +572,6 @@ func _go_live() -> void:
 	_hit_since_drop = false
 	if add == null:
 		return
-	# Out of the tube ready to go: its first lunge waits only on the attacker budget. It carries
-	# no scrap, so the stream can never be farmed for mass (Isaac's spawner adds drop nothing).
 	if "_rest" in add:
 		add._rest = 0.0
 	add.scrap_value = 0
@@ -628,7 +580,6 @@ func _go_live() -> void:
 	dispatched.emit(add)
 
 
-# Each hit answers it one step, and a drop after any hit does not climb.
 func take_damage(amount: float) -> float:
 	if amount > 0.0 and not _dead:
 		ignored_seconds = 0.0
@@ -641,7 +592,6 @@ func _escalate(step: int) -> void:
 	var before := rest_seconds
 	escalation = step
 	rest_seconds = float(ESCALATION[step]["every"]) - WARN - live_seconds
-	# A step down between drops pushes the running countdown back now, not a cycle late.
 	if phase == Phase.ROAM and rest_seconds > before:
 		_rest += rest_seconds - before
 
@@ -653,7 +603,6 @@ func _on_end() -> void:
 	_free_pod()
 
 
-# Killed with its stream running: the trick fires and the chute goes quiet.
 func _die() -> void:
 	if (drops > 0 or cargo_returns > 0) and fleet != null:
 		fleet.discover("stream_cut", global_position)
@@ -666,8 +615,6 @@ func _free_pod() -> void:
 	_pod = null
 
 
-# The tell on the body: the signal lamps light through the suck-up and the radar turns a quarter
-# per beat; the pod leaves the tube at SUCK and flies the committed trace onto the ring's centre.
 func _pose() -> void:
 	if _radar != null:
 		_radar.rotate_y(RADAR_TURN * get_physics_process_delta_time())
@@ -681,7 +628,6 @@ func _pose() -> void:
 			var pulse := 0.5 + 0.5 * sin(_t * TAU * 4.0)
 			_signal_material.emission_energy_multiplier = FlashGuard.spike(0.8, 3.2 * pulse)
 		else:
-			# Between drops the lamp holds a glow per escalation step, so a climbing Dispatcher reads.
 			_signal_material.emission_enabled = warn or escalation > 0
 			_signal_material.emission = Palette.AMBER
 			_signal_material.emission_energy_multiplier = FlashGuard.spike(0.6 * escalation, 2.5 * clampf(_t / SUCK, 0.0, 1.0)) if warn else 0.6 * escalation

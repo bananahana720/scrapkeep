@@ -4,20 +4,10 @@ const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 
-# Flails (design-v3/POLES-FLAILS.md section 5): an enemy at least Grip.BAND lighter than the
-# ball, bitten and held, flies to the ball and swings behind it on the line. While it hangs it
-# is out of the fight: its warning is cancelled, its own processing stops, it leaves the
-# attacker count and it cannot touch the ball. It strikes what it swings through, harder the
-# faster the ball rolls and the heavier the flail, each strike costing it SELF_COST of its
-# health, so a full-health flail lives through HITS strikes; after HITS strikes or HOLD_MAX it
-# is thrown, and a let-go throws it at once. A thrown flail strikes each enemy it meets once
-# more for THROW_FLIGHT. An enemy counts as one chain link per chain, and only in the air.
-
 const HANG := 5.0
 const YANK_SPEED := 16.0
 const HITS := 3
 const SELF_COST := 0.25
-# The thrown body starts nothing for this long, chaser or counter alike.
 const THROW_OPEN := 1.25
 const HIT_GAP := 0.4
 const HOLD_MAX := 2.5
@@ -26,7 +16,6 @@ const TOUCH := 0.6
 const BASE_DAMAGE := 18.0
 const KNOCK := 14.0
 const MIN_SPEED_SCALE := 0.5
-# The attacker budget's group (attack_budget.gd, SQ2): leaving it frees the slot.
 const BUDGET_GROUP := "attack_budget"
 
 var ctx
@@ -105,7 +94,6 @@ func _take(node: Node3D) -> void:
 		node.velocity = Vector3.ZERO
 
 
-# The warning ends with a visible fizzle (the telegraph clears) and nothing it committed lands.
 static func _cancel_attack(node: Node3D) -> void:
 	var phase = node.get("phase")
 	if phase != null and int(phase) != 0 and node.has_method("_stagger"):
@@ -169,8 +157,6 @@ static func _touching(a: Node3D, b: Node3D) -> bool:
 	return a.global_position.distance_to(b.global_position) <= reach
 
 
-# The throw: the body goes back to its own processing, flung on along the ball's velocity, and
-# stands open for its stagger window so it starts nothing on landing.
 func _let_go(player) -> void:
 	var node := body
 	body = null

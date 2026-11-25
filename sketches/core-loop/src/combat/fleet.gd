@@ -9,22 +9,6 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 
-# The v2 W7 enemies inside combat (DESIGN-V2 sections 10, 11 and 15). Combat owns it and
-# hands it three things: the spawner asks it for the units it knows (make), for their
-# spec (dress), and tells it each spawn (on_spawned). It owns:
-#
-# - the holds node (holds.gd): the one crowd-control and tenacity clock every counter
-#   asks before it may touch the ball;
-# - the habit counts (habits.gd) the Mind's hands adapt to and the director's build
-#   read tests, both reset on run_started, so the Mind learns within a run only;
-# - the Mind's memory for this run: every adaptation, in order;
-# - pack arrivals. The director times a pack's members to arrive together, so every
-#   reinforcement spawned in one physics frame is one pack: pack_arrived goes out once
-#   per faction in it, with the faction and the middle of the pack, for the faction
-#   motif and the fac_ edge marker;
-# - swarm formations, and C11's following drones leading a pin;
-# - the class colour the plating rim draws in.
-
 const SCRIPTS := {
 	"mag_trapper": preload("res://src/combat/mag_trapper.gd"),
 	"hooker": preload("res://src/combat/hooker.gd"),
@@ -42,12 +26,10 @@ const SCRIPTS := {
 	"mind_hand": preload("res://src/combat/mind_hand.gd"),
 	"crew_fitter": preload("res://src/combat/crew_fitter.gd"),
 }
-# A plated unit's plating as a share of this stage's Warden plating.
 const PLATING_SCALE := {"plated_brute": 0.6, "mind_hand": 0.5}
 const PIN_WINDOW_FRAMES := 60
 
 
-# The guard shape the Warden reads (alive, following, scatters) around one enemy.
 class SingleGuard extends RefCounted:
 	var scatters := 0
 	var _enemy: Node3D
@@ -65,7 +47,6 @@ var ctx
 var combat
 var holds
 var habits := Habits.new()
-# This run's adaptations, in order: [{habit, icon}]. Reset on run_started.
 var mind_memory: Array = []
 var swarms: Array = []
 var packs: Array = []
@@ -76,9 +57,7 @@ var follower_pins := 0
 var _batch: Array = []
 var _joining = null
 var _launched := {}
-# Roster-row scripts loaded by make, by kind.
 var _loaded := {}
-# Script paths with a threaded load in flight, not yet taken by make.
 var _requested := {}
 
 
@@ -108,8 +87,6 @@ func reset_run() -> void:
 	last_pack = {}
 
 
-# A declared later-world kind is made from its roster row's script once that file exists;
-# until then it is unmakeable and must not reach a spawn table.
 func makes(kind: String) -> bool:
 	return SCRIPTS.has(kind) or (Roster.row(kind).has("script") and Roster.built(kind))
 
@@ -125,19 +102,11 @@ func make(kind: String) -> Node3D:
 			_loaded[kind] = ResourceLoader.load_threaded_get(path)
 			_requested.erase(path)
 		else:
-			# Not ready: load now, as before. Waiting on the loader thread would run the message
-			# queue mid-frame and split a frame's pack across several flushes.
 			_loaded[kind] = load(path)
 	return _loaded[kind].new()
 
 
-# Asks the loader thread for every built later-world roster script on the stage-entry beat,
-# so the first spawn of a kind mid-fight does not load (and compile) its script then. A bot
-# run (SimClock.ticks) skips it: a spawn that finds its load still in flight joins it, the
-# wait can run the message queue mid-frame, and when that happens depends on CPU load, so a
-# seed would stop replaying. A played game keeps the warm-up, and so does a frame-capture bot
-# run (--threaded-stages=1), which has already given up exact replay to time frames as play does:
-# without it the first stage-3 spawn read its script on the tick, a 420 ms frame on the 4080.
+# Godot main-thread load() stalls ~420 ms on first spawn; skip threaded warm-up in deterministic bot runs.
 func _warm_scripts() -> void:
 	if SimClock.ticks and not Terrain.threaded_in_bot_runs:
 		return
@@ -150,8 +119,6 @@ func _warm_scripts() -> void:
 				_requested[path] = true
 
 
-# The spec a W7 unit is set up with: the kind, the holds, this node, a plated unit's
-# plating, and a swarm drone's formation.
 func dress(kind: String, spec: Dictionary) -> Dictionary:
 	if not makes(kind) and kind != "warden":
 		return spec
@@ -172,8 +139,6 @@ func dress(kind: String, spec: Dictionary) -> Dictionary:
 	return out
 
 
-# Every spawn the spawner made, after setup. A swarm's first drone brings its wingmates
-# in the same frame; every reinforcement joins this frame's pack.
 func on_spawned(enemy: Node3D, kind: String) -> void:
 	if kind == "swarm_remnant" and _joining != null:
 		var swarm = _joining
@@ -190,8 +155,6 @@ func on_spawned(enemy: Node3D, kind: String) -> void:
 	_batch.append({"kind": kind, "at": enemy.global_position})
 
 
-# A hive Warden's guard: a full rack of drones kept between the hive and the ball. Any
-# other kind (a brood Warden's lamp_swarm) is one enemy behind a guard that never follows.
 func spawn_guard(home: Vector3, at: Vector3, kind := "swarm_remnant") -> Object:
 	if kind != "swarm_remnant":
 		return SingleGuard.new(combat.spawn_enemy(kind, at))
@@ -215,20 +178,16 @@ func on_follower_launched(_drone: Node3D, victim: Node3D) -> void:
 	_launched[victim.get_instance_id()] = Engine.get_physics_frames()
 
 
-# The Mind read a habit: its hands' quote goes out now, and the codex page keeps it.
 func mind_adapt(habit: String, icon: String, at: Vector3) -> void:
 	mind_memory.append({"habit": habit, "icon": icon})
 	ctx.events.mind_adapted.emit(habit, icon)
 	discover("what_it_learned", at)
 
 
-# A W7 codex trick (combat/codex_entries.gd), marked through combat's own discovery.
 func discover(id: String, at: Vector3) -> void:
 	combat._discover(id, at)
 
 
-# What the director tests against: the class, each habit's share of lately, and W3's
-# upgrade-tree branch tags (upgrade_tree.gd branch_tags(), in pick order).
 func build_read() -> Dictionary:
 	var class_id := ""
 	if ctx.run.class_def != null:

@@ -1,13 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The catch-trap (DESIGN-V2 section 15.4): a crew figure setting a spring-jawed cup. It
-# sets the cup where the ball will roll, and the warning is a small instant ring over
-# it. Live, a grounded ball rolling onto the cup is cupped and held dead still: its
-# speed is bled hard and it is pulled to the cup's centre. It is the one counter that
-# stops you outright, so it is the easiest to read and the shortest: tenacity cuts it
-# at 1.8 s and its own limit is HOLD. Boost or smash out; or ram or shoot the crew
-# before the jaws close, since the cup dies with its crew.
-
 const CUP_RADIUS := 2.6
 const LEAD := 0.8
 const HOLD := 1.4

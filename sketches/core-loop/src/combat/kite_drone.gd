@@ -6,29 +6,6 @@ const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const SwingArc := preload("res://src/combat/swing_arc.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
-# The kite drone (roster_highdraft.gd): it marks where the ball will be in DIVE + warn seconds
-# and, when the mark fills, dives onto it in DIVE seconds. A ball that meets the diving drone at
-# cruise or faster bats it back up; a slower ball just takes the dive.
-#
-# Between dives it rides a thermal (design-v3/WORLD-ROSTERS.md): every RETARGET seconds it takes
-# the map's thermal column nearest the ball within THERMAL_REACH and circles it at RIDE_ABOVE over
-# the ground under the ball, held inside the column. That height is fixed while it rides, so a
-# ball that glides up the same column reaches it, and an airborne ball that hits it there (an
-# air ram: AIR_REACH centre to centre, at AIR_RAM_SPEED or more, while the drone is AIR_CLEAR
-# off the ground, so its own dive landing on a hopping ball is no ram) kills it outright. Its pool is deep, so a ground answer
-# (bolts while it circles) still works, slowly. A map with no thermal leaves it hovering HOVER
-# over the ball's own height, as before.
-#
-# A latched ball is not on the ground, so a ground mark (MARK_REACH) would never touch it. While
-# the line stands the lead follows the pendulum arc (swing_arc.gd), not the ball's straight-line
-# velocity, and a forecast above AIR_MIN hangs the mark in the air: a ring at the forecast
-# height, AIR_BAND tall, drawn and hit-tested as that band. The drone dives to the band's middle.
-# The warn is still warn_seconds (0.8), so the telegraph stays above the 0.6 s floor.
-#
-# Grown remix: it circles over the nearest gap instead (GAP_OUT past the rim nearest the ball),
-# and the air-ram kill drops the ball (DROP_KICK down, FLING on along its heading) toward the
-# next island.
-
 const HOVER := 6.0
 const CLIMB := 4.0
 const DIVE := 0.7
@@ -54,9 +31,6 @@ const DROP_KICK := 8.0
 const FLING := 4.0
 const PRIMARY_WARN := 0.8
 const PRIMARY_LIVE := DIVE + 0.3
-# Secondary attack (W49-COMBAT): Updraft Slipstream Swoop. Commits a >= 0.75 s Palette.HAZARD
-# lane, swoops across the corridor leaving a 3.0 s updraft slipstream wake that carries an
-# airborne or gliding ball +20 m across chasms. Never stops moving/carving balls (ruling cu).
 const SWOOP_WARN := 0.85
 const SWOOP_LIVE := 1.0
 const SWOOP_LENGTH := 26.0
@@ -78,7 +52,6 @@ var slipstream_origin := Vector3.ZERO
 var slipstream_dir := Vector3.FORWARD
 var slipstream_carry_m := 0.0
 var next_attack := ""
-# Where it circles and at what height while riding, or ride_y INF when it hovers by the ball.
 var ride_at := Vector3.ZERO
 var ride_y := INF
 var riding := ""
@@ -364,8 +337,6 @@ func _step_slipstream(delta: float) -> void:
 	var dy := ball.y - slipstream_origin.y
 	if along < -2.0 or along > SWOOP_LENGTH + 2.0 or lateral > SWOOP_WIDTH * 0.85 or dy < -6.0 or dy > 10.0:
 		return
-	# Only boost unhooked airborne / gliding riders moving with the wake across a chasm; never
-	# launch a grounded or harpoon-latched ball fighting on an island off its line (ruling cu).
 	if player.state.grounded or player.kit.hooked or player.planar_velocity().dot(slipstream_dir) < 2.0:
 		return
 	if not _swoop_ridden:
@@ -394,10 +365,6 @@ func _exit_tree() -> void:
 	super._exit_tree()
 
 
-# The dive moves the body by setting its position, so a step that ended inside the ball's collider
-# would be resolved by the solver as a depenetration impulse (two drones on one forecast launched
-# the ball past 90 m/s). Walk from `from` toward `to` and stop where the capsule touches the
-# ball's sphere. The hit test is the ring, not contact, so the dive still lands on the mark.
 func _short_of_ball(from: Vector3, to: Vector3) -> Vector3:
 	var ball := _real_ball()
 	if _touching(to, ball):
@@ -422,7 +389,6 @@ func _short_of_ball(from: Vector3, to: Vector3) -> Vector3:
 	return to
 
 
-# Whether the capsule centred at `at` is within contact distance of a ball centred at `ball`.
 func _touching(at: Vector3, ball: Vector3) -> bool:
 	var spine := maxf(half_height - radius, 0.0)
 	var offset := ball - at
@@ -431,7 +397,6 @@ func _touching(at: Vector3, ball: Vector3) -> bool:
 	return gap < Tuning.RADIUS + radius
 
 
-# Where the dive ends: just above a ground ring, the middle of an aerial one's band.
 func _dive_goal(ring: Node3D) -> Vector3:
 	return ring.center + Vector3.UP * (ring.reach_up * 0.5 if ring.aerial else 0.5)
 
@@ -452,7 +417,6 @@ func _physics_process(delta: float) -> void:
 	_watch_air_ram()
 
 
-# The column (or, grown, the gap) it rides until the next retarget.
 func _pick_ride() -> void:
 	var ball := _real_ball()
 	var under: float = terrain.height(ball.x, ball.z) if terrain != null else ball.y
@@ -482,8 +446,6 @@ func _pick_ride() -> void:
 	ride_y = clampf(under + RIDE_ABOVE, base + 4.0, base + float(best["height"]) - 2.0)
 
 
-# The thermals of the stage map. Combat hands enemies its ground (combat/ground.gd), which
-# carries the context; a bare terrain answers map() itself.
 func _thermals() -> Array:
 	var out := []
 	if terrain == null:
@@ -500,8 +462,6 @@ func _thermals() -> Array:
 	return out
 
 
-# An airborne ball that reaches it while it rides kills it outright; the dive and its landing
-# are not riding, so the bat stays the dive's answer.
 func _watch_air_ram() -> void:
 	var player = _player()
 	if player == null or phase == Phase.LIVE or player.state.grounded:

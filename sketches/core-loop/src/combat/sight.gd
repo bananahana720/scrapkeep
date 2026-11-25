@@ -2,12 +2,6 @@ extends RefCounted
 
 const Weapons := preload("res://src/combat/weapons.gd")
 
-# What one enemy sees of the player. Enemies read their target only through
-# ball_position(), planar_velocity(), add_external_accel() and crowd_control(), so this
-# stands in for the player. While Kest's dust cloak is up, an enemy farther than
-# CLOAK_SIGHT of its acquisition range sees only the smoke where the cloak began, and
-# fights that.
-
 const REACH := {"chaser": 40.0, "lobber": 75.0, "miniboss": 40.0}
 const DEFAULT_REACH := 40.0
 
@@ -30,7 +24,6 @@ func sees() -> bool:
 	var enemy = _enemy.get_ref()
 	if enemy == null:
 		return true
-	# Ghost takes the share to nothing, so no enemy sees through the cloak.
 	var share: float = combat.cloak_sight() if combat.has_method("cloak_sight") else Weapons.CLOAK_SIGHT
 	return enemy.global_position.distance_to(player.ball_position()) <= reach * share
 

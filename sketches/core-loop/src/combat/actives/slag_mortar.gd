@@ -5,12 +5,6 @@ const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# Slag Mortar (Redjaw Workshops): a heavy kiln shell lobbed onto a committed ground ring.
-# On impact it breaks soft destructibles (Destructibles.on_blast with +1 heft tier bonus),
-# applies the heat element to trigger Steam Cloud / Flash Melt / heat fusions, and leaves
-# a committed molten heat zone that ticks heat damage inside its shown radius.
-# Note: keep every draw call strictly routed through ActiveFx.peak().
-
 const RADIUS := 4.8
 const BONUS_RADIUS := 0.45
 const BASE_DAMAGE := 28.0
@@ -31,9 +25,7 @@ const ELEMENT := "heat"
 
 var ctx
 var combat
-# Committed wind-up ring waiting for fire(): {"ring": telegraph, "at": Vector3, "radius": float, "warn": float, "age": float}
 var pending := {}
-# Live lingering slag heat zones: {"ring": telegraph, "at": Vector3, "radius": float, "left": float, "tick": float, "damage": float, "source": String}
 var zones: Array = []
 var blasts := 0
 var last_at := Vector3.ZERO

@@ -2,9 +2,6 @@ extends RefCounted
 
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# World 2, the Dig: Fleet crews that work the ground under the ball. Rows in roster.gd's
-# shape plus "script", the kind's behaviour file, and "world". A row is declared here
-# before its script exists; Roster.built(kind) turns true the moment the file does.
 const DIG_KINDS := ["burrower", "drill_crew", "lamp_swarm", "prop_crew", "pit_jaw"]
 const DRAIN_BUDGET_USEC := 8000
 
@@ -25,15 +22,12 @@ const ROWS := {
 		"breaks": ["ram"], "tag": "", "tests": "contact", "script": "res://src/combat/prop_crew.gd", "world": 2,
 		"secondary": "jack_hammer", "secondary_counter": "wall_ram_2x_collapse",
 		"line": "Shores a cracked roof over its pack; ram the prop from the wall side and the roof comes down on them, and on you if you are on the floor."},
-	# The Spillway catch trap re-homed (design-v3/WORLD-ROSTERS.md): it bites only a ball on the floor.
 	"pit_jaw": {"faction": "fleet", "role": "controller", "mechanic": "floor_jaw", "telegraph": Threat.Type.INSTANT, "holds": true,
 		"breaks": ["boost", "smash"], "tag": "", "hold": "", "tests": "steer", "script": "res://src/combat/pit_jaw.gd", "world": 2,
 		"secondary": "spring_spit", "secondary_counter": "slam_clenched_cannon",
 		"line": "A jaw in the floor that bites a ball rolling over it; carve round it on the wall, or slam it shut from above."},
 }
 
-# Tile-drained warm-up cursor for Dig enemy GLB part caches & Jolt shape templates so stage
-# entry and Dig pit beacon bursts stay within World 1's <= 8 ms frame budget.
 static var _drain_index := 0
 static var _shared_capsule: CapsuleShape3D = null
 
@@ -54,7 +48,6 @@ static func drain_complete() -> bool:
 	return _drain_index >= DIG_KINDS.size()
 
 
-# Warms at least one Dig kind per call, stopping once elapsed reaches budget_usec (<= 8 ms).
 static func tile_drain_step(budget_usec := DRAIN_BUDGET_USEC) -> Dictionary:
 	var start := Time.get_ticks_usec()
 	var warmed: Array[String] = []

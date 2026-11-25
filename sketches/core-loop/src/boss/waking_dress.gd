@@ -5,28 +5,16 @@ const Warden := preload("res://src/combat/warden.gd")
 const Palette := preload("res://src/core/palette.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 
-# The Waking's body: the hanging architecture (boss_waking_base.glb) and the combat seat's
-# kit (boss_waking_kit.glb). Visual only. waking.gd still owns the floors, the drop timing
-# and the Warden's seat; this node reads that state every physics frame and cues the clip
-# that matches it, never a timer of its own. The architecture stays at the pit's centre;
-# the kit rides under the Warden, so the core sits exactly at the Warden's family point.
-# When either GLB is missing attach() returns null and the stub's Warden body is untouched.
-
 const BASE := "res://assets/models/bosses/boss_waking_base.glb"
 const KIT := "res://assets/models/bosses/boss_waking_kit.glb"
 const CROWN := "res://assets/models/bosses/waking_drill_crown.glb"
 const COLLARS := ["CollarSpoil", "CollarSeam", "CollarBedrock"]
-# Floor k's collar and the clips that warn of its drop and show it.
 const FLOOR_CLIPS := [["floor_warn", "floor_drop"], ["floor_warn_seam", "floor_drop_seam"], ["floor_warn_bedrock", "floor_drop_bedrock"]]
-# The pulse clips key only these parts; they ride their own players so a charge beside a floor
-# warn neither cuts the collar's rise nor leaves floor_drop starting from a half-raised collar.
 const PULSE_KIT := ["PressureLip0", "PressureLip1", "PressureLip2"]
 const PULSE_BASE := ["IntakeVane0", "IntakeVane1", "IntakeVane2"]
 const PULSE_CLIPS := ["pulse_warn", "pulse"]
-# The vanes also move in these base clips, so their tracks ride the vane player with the pulse.
 const VANE_CLIPS := PULSE_CLIPS + ["sleeping", "wake", "pit_defeat"]
 const CORE := ["CoreShutter0", "CoreShutter1", "CoreShutter2", "CoreLive", "CoreUnready", "ReactorCore"]
-# Test seam: a test points these at a missing file to prove the stub body stays.
 static var base_path := BASE
 static var kit_path := KIT
 static var crown_path := CROWN
@@ -58,7 +46,6 @@ var _dropping := 0
 var _defeated := false
 
 
-# Builds the dress for a Waking module that has entered its arena; null leaves the stub body.
 static func attach(owner_module):
 	var base_scene := BossModel.load_scene(base_path)
 	var kit_scene := BossModel.load_scene(kit_path)
@@ -90,7 +77,6 @@ func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
 	base.name = "WakingBase"
 	kit.name = "WakingKit"
 	add_child(base)
-	# The kit's root is the floor under the seat: the Warden stands HALF_HEIGHT above it.
 	module.warden.add_child(kit)
 	kit.position = Vector3.DOWN * Warden.HALF_HEIGHT
 	_seat = base.find_child("CombatSeat", true, false)
@@ -101,12 +87,9 @@ func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
 	_kit_anim = BossModel.player_of(kit)
 	BossModel.own_clips(_base_anim)
 	BossModel.own_clips(_kit_anim)
-	# Each collar keeps the pose its own floor clips leave; the spine keeps the length the last
-	# floor drop gave it, instead of every other clip resetting it.
 	for i in COLLARS.size():
 		BossModel.strip_except(_kit_anim, COLLARS[i], FLOOR_CLIPS[i])
 	BossModel.strip_except(_base_anim, "SpineInner", FLOOR_CLIPS[0] + FLOOR_CLIPS[1] + FLOOR_CLIPS[2] + ["pit_defeat"])
-	# The core opens on its own player so a floor or pulse clip never closes it mid-stagger.
 	_core_anim = BossModel.split_player(_kit_anim, ["core_open"], CORE)
 	_pulse_kit_anim = BossModel.split_player(_kit_anim, PULSE_CLIPS, PULSE_KIT)
 	_pulse_base_anim = BossModel.split_player(_base_anim, VANE_CLIPS, PULSE_BASE)
@@ -115,8 +98,6 @@ func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
 	_show_intro_card()
 
 
-# Guard 1: Old Works petrol enamel (#365754) + uranium-glass green (#9DFF3C) seams only;
-# replace any legacy blue vane inlay or warm brass highlight on the boss body.
 static func _enforce_guard1_materials(root: Node) -> void:
 	for view: MeshInstance3D in root.find_children("*", "MeshInstance3D", true, false):
 		if view.mesh == null:
@@ -149,8 +130,6 @@ static func _enforce_guard1_materials(root: Node) -> void:
 				view.set_surface_override_material(s, updated)
 
 
-# Cast petrol-enamel excavator drill crown with uranium-green seams (w2-boss-the-waking.png & g08).
-# Attached to CombatSeat (under WakingBase, zero primitives) so it rides with the boss seat.
 func _attach_drill_crown() -> void:
 	if _seat == null or not ResourceLoader.exists(crown_path):
 		return
@@ -178,7 +157,6 @@ func _attach_drill_crown() -> void:
 	_crown = scene
 
 
-# Guard 4: non-blocking, skippable freeze-frame intro card for The Waking (never pauses gameplay).
 func _show_intro_card() -> void:
 	var card := LoreRows.WAKING_INTRO_CARD
 	var pilot_id := ""

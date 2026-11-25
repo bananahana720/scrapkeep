@@ -1,13 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The drill crew (roster_dig.gd, world 2): a plated rig that bores where the ball will be.
-# It aims at the ball plus its velocity times LEAD and commits an instant ring there; the
-# floor caves in when the wind-up ends. Its plate takes the first breaking hit whole before
-# the body (the plated brute's rule), and a slam on the rig during the wind-up stops the
-# bore. It holds nothing. Dying leaves bore_fact, a read-only dict for the breach system.
-# The cave-in only takes a ball on the floor (FloorRule, design-v3/WORLD-ROSTERS.md): a ball
-# carving the bank or in the air over the ring is past it.
-
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -20,10 +12,6 @@ const BORE_SHOVE := 7.0
 const PRIMARY_WARN := 1.2
 const PRIMARY_LIVE := 0.2
 
-# Secondary attack (W48-COMBAT): Horizontal Core-Jet. Commits a >= 0.70 s Palette.HAZARD
-# lane straight ahead; baiting the jet into rubble walls / destructibles shatters them to
-# open shortcuts. Only punishes stalling balls on the floor (ruling cu); never stops a
-# moving/cruise or carving ball.
 const JET_WARN := 0.90
 const JET_LIVE := 0.55
 const JET_LENGTH := 18.0
@@ -42,8 +30,6 @@ var shortcuts_opened := 0
 var next_attack := ""
 var last_bore := {}
 var last_jet := {}
-# Set by _die(): breach.gd reads enemy.bore_fact inside a died handler, where this node is
-# still readable (the died signal fires before queue_free). Empty while the rig lives.
 var bore_fact := {}
 var _absorb := false
 var _core_jet := false
@@ -130,7 +116,6 @@ static func _parts() -> Array:
 	return _shared
 
 
-# E20 reads the same WARN clock as the committed floor ring; only the screw moves.
 func _pose() -> void:
 	if _bit == null:
 		return
@@ -143,8 +128,6 @@ func _pose() -> void:
 	_bit.position = _bit_rest - Vector3(0.0, 0.0, 0.25 * withdrawal)
 
 
-# True when on_struck will pop a plate for this hit, so it removes nothing (combat marks the
-# result "absorbed" before the hit is announced, and no damage number rises for it).
 func absorbs_hit(result: Dictionary) -> bool:
 	return bool(result.get("full", false)) and plates > 0
 

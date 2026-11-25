@@ -5,22 +5,6 @@ const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
-# The Waking's three Dig attack families as pure rules (design page "The Waking's Attacks",
-# Andrew's "Give it attacks" tap, 2026-10-17). Each commit turns a seed, the ball, its
-# velocity, the floor centre, the phase and the bound radius into hazard descriptors in
-# mind_attacks.gd's shape, so MindAttacks.build lays them and MindAttacks.covers tests them.
-# Nothing here touches the tree.
-#
-# Every family is a floor threat: waking.gd lands it only on a ball that FloorRule calls on
-# the floor, so a ball carving the rim bank or in the air is spared.
-#
-# Phase k is the Waking's floor: 1 Spoil, 2 Seam, 3 Bedrock, 4 the pit. Phase k exposes
-# families 1..min(k, 3); the pit is the same three, faster, with lanes out of every bore.
-#
-# Extra descriptor field: delay, seconds after the attack's first warning that this one's
-# warning starts. Delays are multiples of GAP, so no two warnings start within GAP seconds
-# (the warning gap ruling, "Gap wins", 2026-10-17 20:11Z).
-
 const FAMILIES := ["burrow", "cave_in", "bore"]
 const PIT_PHASE := 4
 const GAP := 0.2
@@ -32,19 +16,16 @@ const TIGHTEN_PHASES := 3
 const LANE_HALF := 1.6
 const BURROW_WARN := 1.4
 const BURROW_LIVE := 0.7
-# Seam on: a second lane off the first by this bearing, radians.
 const BURROW_OFF := Vector2(0.4, 0.8)
 const CAVE_COUNT := 3
 const CAVE_R := 4.0
 const CAVE_WARN := 1.5
 const CAVE_LIVE := 0.6
-# The holes walk down the ball's line: the first this far ahead, then every CAVE_STEP.
 const CAVE_LEAD := 3.0
 const CAVE_STEP := 8.0
 const BORE_R := 6.0
 const BORE_WARN := 1.6
 const BORE_LIVE := 0.8
-# Pit: lanes fanned out of the bore hole.
 const PIT_SPRAY := 3
 
 const DAMAGE := {"burrow": 8.0, "cave_in": 8.0, "bore": 12.0}
@@ -56,14 +37,12 @@ const SEARCH_STEP := 0.5
 const SEARCH_BEARINGS := 72
 
 
-# removed: families a broken weak point took away (weak_points.gd); never all of them.
 static func exposed(phase: int, removed := []) -> Array:
 	var open := FAMILIES.slice(0, clampi(phase, 1, FAMILIES.size()))
 	var kept := open.filter(func(f): return not removed.has(f))
 	return kept if not kept.is_empty() else open
 
 
-# The family a phase introduces, the one it teaches first.
 static func newest(phase: int, removed := []) -> String:
 	return exposed(phase, removed)[-1]
 
@@ -73,7 +52,6 @@ static func choose(seed: int, phase: int, removed := []) -> String:
 	return open[_rng(seed).randi() % open.size()]
 
 
-# Maps any floor/pit phase (1..4) onto the 3-phase boss anthem ruling (1=Base, 2=+10 BPM, 3=+20 BPM).
 static func anthem_phase(phase: int) -> int:
 	return clampi(phase, 1, FAMILIES.size())
 
@@ -90,8 +68,6 @@ static func commit(family: String, seed: int, ball: Vector3, velocity: Vector3, 
 	return []
 
 
-# The set laid always leaves escape_point non-null: a set with none is recommitted on other
-# seeds, then trimmed from the last descriptor, else nothing is laid ("none").
 static func commit_safe(family: String, seed: int, ball: Vector3, velocity: Vector3, center: Vector3, phase: int, cruise_speed: float,
 		radius: float, removed := []) -> Dictionary:
 	var first: Array = []
@@ -108,7 +84,6 @@ static func commit_safe(family: String, seed: int, ball: Vector3, velocity: Vect
 	return {"descriptors": [], "path": "none"}
 
 
-# A tunnel from the Waking straight down the ball's bearing; Seam on, a second one 0.2 s behind.
 static func burrow(seed: int, ball: Vector3, center: Vector3, phase: int, radius: float) -> Array:
 	var rng := _rng(seed)
 	var bearing := _bearing(rng, ball, center)
@@ -122,7 +97,6 @@ static func burrow(seed: int, ball: Vector3, center: Vector3, phase: int, radius
 	return out
 
 
-# Three holes down the ball's line, each warning GAP after the last.
 static func cave_in(seed: int, ball: Vector3, velocity: Vector3, center: Vector3, phase: int, radius: float) -> Array:
 	var rng := _rng(seed)
 	var heading := _flat(velocity)
@@ -139,7 +113,6 @@ static func cave_in(seed: int, ball: Vector3, velocity: Vector3, center: Vector3
 	return out
 
 
-# The drill up through the floor under the ball. In the pit, lanes spray out of the hole.
 static func bore(seed: int, ball: Vector3, center: Vector3, phase: int, radius: float, removed := []) -> Array:
 	var rng := _rng(seed)
 	var at := _inside(_flat(ball), center, radius - BORE_R)
@@ -155,9 +128,6 @@ static func bore(seed: int, ball: Vector3, center: Vector3, phase: int, radius: 
 	return out
 
 
-# The nearest point inside the bound, CLEAR outside every region, that the ball reaches at
-# cruise before the first warning ends; null when there is none. Banks count only as floor
-# here: a ball crawling up a bank below grip speed is not carving.
 static func escape_point(descriptors: Array, ball: Vector3, cruise_speed: float, center: Vector3, radius: float):
 	if descriptors.is_empty():
 		return Vector3(ball.x, center.y, ball.z)
@@ -210,7 +180,6 @@ static func _base(family: String, n: int, shape: String, type: int, warn: float,
 		"type": type, "warn": warn, "live": live, "height": HEIGHT, "delay": 0.0}
 
 
-# How far a ray from `from` along `dir` runs before it leaves the bound circle.
 static func _chord(from: Vector3, dir: Vector3, center: Vector3, radius: float) -> float:
 	var p := _flat(from - center)
 	var u := _flat(dir).normalized()

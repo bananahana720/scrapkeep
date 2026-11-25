@@ -1,32 +1,12 @@
 extends Resource
 
-# One weapon's emission pattern as data (TADR-008): how many bolts a volley throws,
-# at what angles, how the volley turns from one trigger pull to the next, and how
-# each bolt travels. Parts never touch a weapon's code; they name transformer ids,
-# and combat folds those ids over the weapon's base pattern. README.md in this folder
-# is the contract writer B's parts use.
-#
-# Geometry of a volley, around the aim line (the centre ray the reticle marks):
-# - arms == 1: a flat fan of `count` bolts, `spread_deg` apart, across the aim line.
-# - arms >= 2: one centre bolt on the aim line, plus `arms` radial arms spaced evenly
-#   around it. Each arm holds `count` bolts, the first `arm_offset_deg` off the aim
-#   line and each next one `spread_deg` further out. A cross is four arms.
-# - rotation_deg rolls the whole pattern about the aim line; spin_deg adds that much
-#   roll per volley, which is what turns a cross into a spiral.
-# - wave_amp (metres) and wave_hz corkscrew each off-centre bolt around its own line.
-#   The centre bolt never waves, so the reticle's point is always hit dead on.
-
 const MAX_VOLLEY := 16
 const MAX_RATE := 20.0
-# A rate of 0 makes the cooldown infinite (the gun dies for the run) and one below 0 fires
-# every tick, so no transformer or recipe takes a pattern under one shot in twenty seconds
-# (the slowest authored rate is 0.25).
 const MIN_RATE := 0.05
 const MAX_WAVE := 1.2
 const MAX_ARM_OFFSET := 14.0
 const MAX_ARMS := 8
 const MAX_PIERCE := 3
-# Pilot cadence modes and safety clamps (PILOT-CADENCE.md section 7).
 const TRIGGER_HOLD_AUTO := "hold_auto"
 const TRIGGER_PRESS := "press"
 const TRIGGER_TAP_CHARGE := "tap_charge"
@@ -74,7 +54,6 @@ const MAX_LIVE_CAP := 16
 @export var spin_deg := 0.0
 @export var wave_amp := 0.0
 @export var wave_hz := 0.0
-# Machines a bolt passes through before it stops (helix drill).
 @export var pierce := 0
 @export var damage := 10.0
 @export var rate := 5.0
@@ -85,12 +64,9 @@ const MAX_LIVE_CAP := 16
 @export var chain_jumps := 0
 @export var chain_range := 0.0
 @export var chain_falloff := 0.7
-# Zero means no lattice bonus; its final jump can differ from the weapon falloff.
 @export var lattice_chain_falloff := 0.0
-# Class-mod scales the specials read: the pylon's opening burst and the runner's overdrive.
 @export var burst_scale := 1.0
 @export var special_scale := 1.0
-# Pilot cadence fields (PILOT-CADENCE.md section 7). Omitted rows default to hold_auto.
 @export var trigger := DEFAULT_TRIGGER
 @export var floor_s := 0.0
 @export var beat_floors_s: Array = []
@@ -143,8 +119,6 @@ const FIELDS := ["count", "spread_deg", "arms", "arm_offset_deg", "rotation_deg"
 	"spark_count", "charge_bolt_mult", "charge_pulses", "charge_pulse_span_s", "charge_pierce", "charge_no_chain",
 	"pierce_every", "breaks_props", "beat_breaks_props", "max_live"]
 
-# The transformer catalogue. Each row is pure data: `add` then `mul` then `min` (a
-# floor), applied in that order, once per stack. Writer B's parts name these ids.
 const TRANSFORMERS := {
 	"cross_split": {
 		"label": "Cross split", "text": "every shot splits into a cross around your aim",
@@ -222,8 +196,6 @@ static func has_transformer(id: String) -> bool:
 	return TRANSFORMERS.has(id)
 
 
-# A new pattern with every id applied in order. Unknown ids are skipped, so a part
-# with no weapon effect costs nothing. The caps are applied last, whatever stacked.
 func transformed(ids: Array) -> Resource:
 	var out: Resource = copy()
 	for id in ids:
@@ -275,8 +247,6 @@ static func _clamp_f(value: float, lo: float, hi: float) -> float:
 	return lo if not is_finite(value) else clampf(value, lo, hi)
 
 
-# The visual-clarity caps (principle 4): stacking can multiply damage without limit,
-# but never the number of things on screen or how far they wander off the aim line.
 func _clamp() -> void:
 	arms = clampi(arms, 1, MAX_ARMS)
 	count = clampi(count, 1, MAX_VOLLEY)
@@ -336,9 +306,6 @@ func volley_size() -> int:
 	return mini(raw, MAX_VOLLEY)
 
 
-# The bolt layout of volley number `volley`, centre first and then inner to outer, so
-# trimming to MAX_VOLLEY drops the outermost bolts. Each entry is a Dictionary:
-# `dir` (unit), `phase` (radians, the arm's roll, for the corkscrew) and `centre`.
 func layout(forward: Vector3, volley: int) -> Array:
 	var fwd := forward.normalized()
 	var up_hint := Vector3.UP if absf(fwd.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
@@ -353,8 +320,6 @@ func layout(forward: Vector3, volley: int) -> Array:
 			out.append({"dir": _tilt(fwd, right, up, deg_to_rad(absf(off)), phase), "phase": phase, "centre": is_zero_approx(off)})
 	else:
 		out.append({"dir": fwd, "phase": roll, "centre": true})
-		# Bolts further out along an arm step by the fan spread, or 3 degrees for a
-		# single-line weapon, so no two bolts of a volley ever share a line.
 		var step := spread_deg if spread_deg > 0.1 else 3.0
 		for j in count:
 			for a in arms:

@@ -1,11 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The anchor crew (DESIGN-V2 section 10, the Highdraft): a deck winch on a post. Its warning
-# is a cable lane from the post toward the ball; when it fills, a ball the lane contains is
-# hooked and winched down and toward the anchor at PULL for up to WINCH seconds, through
-# the hold bound (holds.gd). A jump slips the hook for good. The pull is modest because
-# deck_winch is not in holds.BOUNDED.
-
 const LANE_LENGTH := 18.0
 const LANE_WIDTH := 2.4
 const PULL := 6.0

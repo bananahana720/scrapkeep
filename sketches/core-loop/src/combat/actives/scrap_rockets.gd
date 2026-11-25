@@ -3,19 +3,8 @@ extends RefCounted
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# The Scrap Rocket Rack (Spillway Works): pressure bottles packed with scrap whose noses are
-# scrap magnets, the same pull that draws scrap into the ball, so each one steers onto a
-# machine. A fire locks up to `count` targets (amber sparks on each: the tell), launches the
-# volley up and out along the aim, and each rocket turns onto its lock, taking the nearest live
-# machine if its lock dies. A rocket bursts on contact or when its fuel runs out.
-#
-# It stacks into a strong build: weapon damage mods and punch scale every rocket, Cross Split
-# adds a rocket per level, Chain Arc makes each burst jump, and a full ultimate meter's
-# overflow arrives as extra rockets (the rack's bonus).
-
 const ROCKETS := 4
 const BASE_DAMAGE := 16.0
-# Share of a burst's damage that every other machine in BLAST_RADIUS takes.
 const SPLASH := 0.5
 const BLAST_RADIUS := 3.0
 const HIT_RADIUS := 1.4
@@ -24,7 +13,6 @@ const SEEK_REACH := 24.0
 const LAUNCH_SPEED := 18.0
 const MAX_SPEED := 40.0
 const ACCEL := 46.0
-# Radians a second a rocket's heading can turn; it starts loose and tightens as it flies.
 const TURN := 5.0
 const TURN_LATE := 11.0
 const FUEL := 2.6
@@ -39,7 +27,6 @@ var ctx
 var combat
 var rockets: Array = []
 var bursts := 0
-# Bumped by clear(), so a burst whose kill clears the stage mid-step drops the survivors.
 var _generation := 0
 
 
@@ -97,7 +84,6 @@ func step(delta: float) -> void:
 	rockets = flying
 
 
-# One rocket's tick. True when it burst this tick.
 func _fly(rocket: Dictionary, delta: float) -> bool:
 	var pos: Vector3 = rocket["pos"]
 	var target = rocket["target"]

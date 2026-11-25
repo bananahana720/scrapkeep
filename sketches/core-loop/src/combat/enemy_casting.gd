@@ -3,12 +3,6 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 
-# Reads an enemy's authored GLB (or its Tripo sibling under --models=tripo, model_variants.gd) into the parts its script casts into meshes: one
-# {name, mesh, xform, flash} per MeshInstance3D, every surface set to one white
-# vertex-coloured finish, flash = the surface whose source material is "fleet_paint"
-# (-1 when none). Returns [] when the file is missing or is not a scene. The caller
-# keeps the result in its own static cache. A surface with no material pushes
-# "<tag>: surface has no material; using default finish" once per tag.
 static var _warned: Dictionary = {}
 
 

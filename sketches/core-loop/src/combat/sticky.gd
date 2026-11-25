@@ -4,12 +4,6 @@ const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 
-# Kest's sticky charges. A thrown charge flies the lobbed arc its throw committed and
-# sticks where that arc lands (or where the world cuts it short); a dropped one (the
-# demo slam's) sits where it fell. A charge goes off when its fuse runs out, or when an
-# enemy's hull comes within CONTACT_REACH once it is armed. The manager only moves and
-# times charges; combat resolves each detonation it hands back.
-
 const GRAVITY := 26.0
 const CONTACT_REACH := 0.6
 const WORLD_MASK := 1
@@ -21,19 +15,14 @@ const RING_SEGMENTS := 32
 const RING_MIN_RADIUS := 0.45
 
 var charges: Array = []
-# The device ledger (devices.gd) combat hands in: every charge holds a slot of its kind
-# (thrown "sticky" or dropped "mini") while it stands. Null outside combat.
 var ledger = null
-# Charges a deploy at the cap pushed out; they go off on the next step, never vanish.
 var _evicted: Array = []
 var _ring_mesh: ImmediateMesh
 var _ring_view: MeshInstance3D
 
-# A thrown charge bit into the world here; presentation pops on it. Read-only.
 signal stuck(at: Vector3)
 
 
-# The flight time a throw of this length takes, shared by the arc drawn and the throw.
 static func flight_time(origin: Vector3, landing: Vector3) -> float:
 	var flat := Vector2(landing.x - origin.x, landing.z - origin.z).length()
 	return clampf(flat / FLIGHT_SPEED, FLIGHT_MIN, FLIGHT_MAX)
@@ -47,7 +36,6 @@ static func arc_point(origin: Vector3, velocity: Vector3, t: float) -> Vector3:
 	return origin + velocity * t + Vector3.DOWN * 0.5 * GRAVITY * t * t
 
 
-# The committed arc, sampled; the indicator draws exactly these points.
 static func arc_points(origin: Vector3, landing: Vector3) -> PackedVector3Array:
 	var flight := flight_time(origin, landing)
 	var velocity := launch_velocity(origin, landing, flight)
@@ -57,10 +45,6 @@ static func arc_points(origin: Vector3, landing: Vector3) -> PackedVector3Array:
 	return points
 
 
-# reach is how close (hull to charge) an enemy must come to set it off; born is the
-# caller's clock, for charges that grow while they wait; a riding charge (Hitchhiker)
-# sticks to the first enemy it touches and goes off on its fuse. A tail drop (< 0.10 s
-# gauge hold) drops directly at the ball's tail and starts stuck on the ground.
 func throw(origin: Vector3, landing: Vector3, damage: float, radius: float, fuse: float, crit: bool,
 		reach := CONTACT_REACH, born := 0.0, ride := false, tail_drop := false) -> Dictionary:
 	var flight := 0.0 if tail_drop else flight_time(origin, landing)
@@ -83,7 +67,6 @@ func drop(at: Vector3, damage: float, radius: float, fuse: float, arm: float, re
 		"snap_token": 0, "snap_window": Vector2.ZERO, "snap_state": ""})
 
 
-# Arms the world closing-fuse ring cue on a live thrown charge (PILOT-CADENCE.md §§5.2-5.3).
 func set_snap_cue(charge: Dictionary, window_s: Vector2, token: int) -> void:
 	charge["snap_token"] = token
 	charge["snap_window"] = window_s
@@ -91,8 +74,6 @@ func set_snap_cue(charge: Dictionary, window_s: Vector2, token: int) -> void:
 	_draw_fuse_rings()
 
 
-# Updates the visual snap window state ("waiting", "open", "spent", "hit") for charges
-# sharing `token`. Purely visual; never mutates damage or fuses.
 func sync_snap_state(token: int, state: String) -> void:
 	if token <= 0:
 		return
@@ -106,7 +87,6 @@ func sync_snap_state(token: int, state: String) -> void:
 		_draw_fuse_rings()
 
 
-# Color for a live thrown charge's closing fuse ring (PILOT-CADENCE.md §§5.2-5.3).
 static func fuse_ring_color(charge: Dictionary) -> Color:
 	var state := String(charge.get("snap_state", ""))
 	if state == "open":
@@ -117,8 +97,6 @@ static func fuse_ring_color(charge: Dictionary) -> Color:
 	return ClassDef.KEST_COLOR
 
 
-# Closing ring radius for a live thrown charge: shrinks from its blast radius into the
-# mint snap band [win.x, win.y] and then down to RING_MIN_RADIUS by fuse end.
 static func fuse_ring_radius(charge: Dictionary) -> float:
 	var max_r := maxf(float(charge.get("radius", 3.0)), RING_MIN_RADIUS)
 	var fuse_max := float(charge.get("fuse_max", 1.2))
@@ -137,7 +115,6 @@ func is_idle() -> bool:
 	return charges.is_empty() and _evicted.is_empty()
 
 
-# Steps every charge; returns the ones that go off this tick, already removed.
 func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> Array:
 	var gone := []
 	for charge in charges:
@@ -169,7 +146,6 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array) -> Arr
 	return gone
 
 
-# A charge leaves the world (it went off, was caught or cleared): it leaves the count.
 func take(charge: Dictionary) -> Dictionary:
 	_forget(charge)
 	_free(charge)
@@ -177,7 +153,6 @@ func take(charge: Dictionary) -> Dictionary:
 	return charge
 
 
-# The ledger recalled this charge past the leash: it leaves without going off.
 func recall(device_id: int) -> bool:
 	for charge in charges:
 		if int(charge.get("device_id", 0)) == device_id:
@@ -196,7 +171,6 @@ func clear() -> void:
 		_ring_mesh.clear_surfaces()
 
 
-# take() and tree exit can both run for the same charge. Forget its id before release.
 func _forget(charge: Dictionary) -> void:
 	charges.erase(charge)
 	if ledger != null:
@@ -231,7 +205,6 @@ func _fly(charge: Dictionary, delta: float, space: PhysicsDirectSpaceState3D) ->
 		charge["pos"] = after
 
 
-# The first live enemy within the charge's reach, or null.
 func _touching(charge: Dictionary, enemies: Array):
 	var reach: float = charge.get("reach", CONTACT_REACH)
 	for enemy in enemies:

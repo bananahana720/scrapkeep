@@ -4,31 +4,20 @@ const Pattern := preload("res://src/combat/pattern.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
-# Weapon trigger and cadence driver (PILOT-CADENCE.md sections 2, 3.1-3.6, 4 and 7).
-# Owned by Combat, one instance per Combat with no static state, so warm-batched tests need
-# no reset. Combat calls step() once per physics tick and lifecycle hooks on attempt
-# boundaries and interruptions; the reticle, sound twins and tests read state_snapshot().
-# Procs never call into this module.
-
-# One-press input buffer (PILOT-CADENCE.md section 2.2): a press inside BUFFER_S before ready
-# acts the instant the trigger is ready.
 const BUFFER_S := 0.10
 const EPS := 0.00001
 
-# Window states published in state_snapshot().
 const WINDOW_IDLE := "idle"
 const WINDOW_WAITING := "waiting"
 const WINDOW_OPEN := "open"
 const WINDOW_SPENT := "spent"
 const WINDOW_HIT := "hit"
 
-# Interrupt reasons (PILOT-CADENCE.md section 2.3).
 const INTERRUPT_ATTEMPT := "attempt"
 const INTERRUPT_ULTIMATE := "ultimate"
 const INTERRUPT_MOUNT := "mount"
 const INTERRUPT_SWAP := "swap"
 
-# Shot kinds emitted by step().
 const SHOT_PLAIN := "plain"
 const SHOT_PRESS := "press"
 const SHOT_HOT := "hot"
@@ -111,21 +100,9 @@ var _breaks_props := false
 var _beat_breaks_props := false
 var _hit_seq := 0
 var _pending_pulses: Array = []
-# W47-H1 Sable Vault-Kick instant max-charge window on next arc_caster bolt (0.0 s charge time).
 var _instant_charge_left := 0.0
 
 
-# Advances trigger timers by `delta` and interprets `intent` for `weapon` under `pattern`.
-# Returns an array of shot descriptors ({kind, weapon, damage_mult, pierce, spread_deg}) to
-# fire this tick. Optional `context` supplies live cadence modifiers:
-#   rate_mult (float, default 1.0): overdrive / weapon_rate floor divisor
-#   reload_rate_mult (float, default 1.0): reload pace (rate parts; never Overdrive)
-#   sprinting (bool, default false): Rivet Overdrive Sprint fan
-#   charge_rate (float, default 1.0): Sable speed-tier charge multiplier (1.0 / 1.5 / 2.0)
-#   planar_speed (float, default 0.0): Tarn Beat 3 speed term (capped at BEAT_SPEED_CAP)
-#   managed_gauge (bool, default false): Kest live Combat owns AbilityState.Gauge
-#   slot_ready (bool, default true): Kest AbilityState.WEAPON readiness
-#   lob_charging (bool, default false): Kest live gauge.charging mirror for state_snapshot()
 func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: float, context: Dictionary = {}) -> Array:
 	var trigger: String = String(pattern.trigger) if pattern != null else Pattern.DEFAULT_TRIGGER
 	if _weapon != weapon or _trigger != trigger:
@@ -162,8 +139,6 @@ func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: floa
 		if _recover_s > 0.0:
 			_recover_s = maxf(0.0, _recover_s - delta)
 		shots = _step_hold_auto(weapon, pattern, rate_hz, pressed, held)
-	# The buffer ages after the trigger has had its chance to spend it, and never on the
-	# tick it was latched, so a press kept BUFFER_S before ready fires on the ready tick.
 	if _buffered and not _buffer_latched:
 		_buffer_s -= delta
 		if _buffer_s <= EPS:
@@ -172,8 +147,6 @@ func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: floa
 	return shots
 
 
-# Refreshes cached magazine, reload, floor, charge and window limits after a mid-run
-# pattern rebuild even when the weapon id and trigger mode are unchanged.
 func sync_pattern(weapon: String, pattern: Resource) -> void:
 	if pattern == null or (_weapon != "" and _weapon != weapon):
 		return
@@ -184,9 +157,6 @@ func sync_pattern(weapon: String, pattern: Resource) -> void:
 	_sync_pattern(pattern, false)
 
 
-# Rivet's Skid landing or Line Drive (PILOT-CADENCE.md section 3.1): ends a reload at once,
-# or tops a part-used cylinder up to six. Added rounds are plain and fire after any loaded
-# hot rounds already in the cylinder.
 func top_up_cylinder() -> bool:
 	if _trigger != Pattern.TRIGGER_PRESS or _mag <= 0:
 		return false
@@ -206,8 +176,6 @@ func top_up_cylinder() -> bool:
 	return false
 
 
-# Rail Vault hot-reload (Rule 7): ensures the weapon/pattern is bound, tops up the
-# cylinder, and loads hot piercing rounds inside the driver rather than from outside.
 func hot_reload_cylinder(weapon: String, pattern: Resource) -> int:
 	if pattern != null and (_weapon != weapon or _mag <= 0):
 		step(0.0, null, weapon, pattern, 0.0)
@@ -219,13 +187,10 @@ func hot_reload_cylinder(weapon: String, pattern: Resource) -> int:
 	return _hot_rounds
 
 
-# Charges a flat recovery floor after a tap/card weapon commits a cast.
 func commit_recovery(seconds: float) -> void:
 	_cooldown = maxf(_cooldown, 0.0) + maxf(seconds, 0.0)
 
 
-# Tally's stamp: commits a landed Balance Due cast, sets the cast floor and opens the PAID
-# stamp window. Updating streak here keeps sky-aim and dry presses from faking a beat.
 func commit_stamp(paid: bool, rate_mult := 1.0) -> void:
 	_cooldown = _floor_s / maxf(rate_mult, 0.1)
 	_window_t = 0.0
@@ -235,8 +200,6 @@ func commit_stamp(paid: bool, rate_mult := 1.0) -> void:
 	_buffer_s = 0.0
 
 
-# Kest's lob_snap: opens the snap window for a newly committed throw and arms the throw floor.
-# Returns the opaque throw token carried by the charge(s) of this throw.
 func commit_lob_throw(rate_mult := 1.0) -> int:
 	var floor_s: float = _floor_s / maxf(rate_mult, 0.1)
 	_cooldown = floor_s
@@ -250,8 +213,6 @@ func commit_lob_throw(rate_mult := 1.0) -> int:
 	return _snap_token
 
 
-# Consumes an open snap window on behalf of Detonation Line (PILOT-CADENCE.md section 3.3).
-# Returns true iff `token` matches the live charge whose window is currently open.
 func consume_snap_window(token: int) -> bool:
 	if _trigger != Pattern.TRIGGER_LOB_SNAP or token <= 0 or token != _snap_token:
 		return false
@@ -261,7 +222,6 @@ func consume_snap_window(token: int) -> bool:
 	return true
 
 
-# Called when all live charges belonging to `token` have detonated or been cleared.
 func notify_lob_charge_gone(token: int) -> void:
 	if _trigger != Pattern.TRIGGER_LOB_SNAP or token <= 0 or token != _snap_token:
 		return
@@ -270,19 +230,15 @@ func notify_lob_charge_gone(token: int) -> void:
 		_window_t = 0.0
 
 
-# Consumes a latched one-press buffer when live Combat opens a managed lob gauge.
 func consume_buffer() -> void:
 	_buffered = false
 	_buffer_s = 0.0
 
 
-# Syncs managed lob-gauge charging state immediately when Combat opens or closes the gauge.
 func set_lob_charging(active: bool) -> void:
 	_lob_charging = active
 
 
-# Sable Vault-Kick (W47-H1): arms an instant max-charge (0.0 s charge wait) on her next
-# arc_caster bolt. If a hold is already armed, snaps it straight to full charge.
 func arm_instant_max_charge(duration_s := Weapons.VAULT_INSTANT_CHARGE_S) -> void:
 	_instant_charge_left = maxf(_instant_charge_left, maxf(duration_s, 0.0))
 	if _trigger == Pattern.TRIGGER_TAP_CHARGE and _charge_armed:
@@ -290,8 +246,6 @@ func arm_instant_max_charge(duration_s := Weapons.VAULT_INSTANT_CHARGE_S) -> voi
 		_charge = 1.0
 
 
-# Returns the driver to rest (PILOT-CADENCE.md section 2.2): zero cooldown, full plain
-# chamber, no charge, beat zero, no window open, no painted lane.
 func reset(pattern: Resource = null) -> void:
 	_cooldown = 0.0
 	_recover_s = 0.0
@@ -326,7 +280,6 @@ func reset(pattern: Resource = null) -> void:
 		_chamber = _mag
 
 
-# Handles a cycle interruption (PILOT-CADENCE.md section 2.3).
 func interrupt(reason: String) -> void:
 	match reason:
 		INTERRUPT_ATTEMPT, INTERRUPT_SWAP:
@@ -358,8 +311,6 @@ func interrupt(reason: String) -> void:
 			_buffer_s = 0.0
 
 
-# Read-only snapshot for the aim reticle, sound twins and tests. Mutating the returned
-# dictionary never alters internal state.
 func state_snapshot() -> Dictionary:
 	var reload_frac := clampf(_reload_t / _reload_s, 0.0, 1.0) if _reloading and _reload_s > 0.0 else 0.0
 	var slot_ok := _slot_ready if (_trigger == Pattern.TRIGGER_LOB_SNAP or _trigger == Pattern.TRIGGER_STAMP) else true
@@ -407,17 +358,14 @@ func state_snapshot() -> Dictionary:
 	}
 
 
-# Current cadence cooldown in seconds (may be negative mid-hold before release clamps it).
 func cooldown_s() -> float:
 	return _cooldown
 
 
-# Sets cadence cooldown directly (compatibility path for legacy kit tests).
 func set_cooldown_s(seconds: float) -> void:
 	_cooldown = seconds
 
 
-# Charge fill speed multiplier from a SpeedTier (PILOT-CADENCE.md section 3.2).
 static func charge_rate_for_tier(tier: int) -> float:
 	if tier >= SpeedTier.BLAZING:
 		return Weapons.CHARGE_BLAZING_RATE
@@ -426,7 +374,6 @@ static func charge_rate_for_tier(tier: int) -> float:
 	return 1.0
 
 
-# Careless baseline DPS for a pattern (PILOT-CADENCE.md sections 1 and 2.5).
 static func base_dps(pattern: Resource) -> float:
 	if pattern == null:
 		return 0.0
@@ -555,15 +502,12 @@ func _step_press(delta: float, weapon: String, pattern: Resource, pressed: bool,
 		shots.append(_fire_press_round(weapon, floor_s, false, rate_mult))
 		return shots
 
-	# Fan fire: pattern.fan (Fan the Hammer) holds to fan at pattern floor/damage in a 5 deg cone;
-	# baseline Overdrive Sprint fans remaining rounds at 0.10 s / 0.5x / 5 deg.
 	if (_fan or sprinting) and held and not pressed and _cooldown <= 0.0 and _loaded():
 		_window_state = WINDOW_IDLE
 		shots.append(_fire_press_round(weapon, floor_s, true, rate_mult))
 	return shots
 
 
-# A press weapon with no cylinder (mag 0) never runs dry.
 func _loaded() -> bool:
 	return _mag <= 0 or _chamber > 0
 

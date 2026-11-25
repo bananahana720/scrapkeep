@@ -36,11 +36,9 @@ const Grip := preload("res://src/movement/grip.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
-# v2 W7 enemies: the reinforcements, the ancients and their holds (fleet.gd).
 const Fleet := preload("res://src/combat/fleet.gd")
 const Dunk := preload("res://src/combat/dunk.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
-# The roster row fleet.gd's own reinforcement-pack system reads (M0's "adds" classification).
 const Roster := preload("res://src/combat/roster.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
@@ -58,78 +56,30 @@ const Consumables := preload("res://src/build/consumables.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const BallTuning := preload("res://src/movement/tuning.gd")
-const OrbitalSatellites := preload("res://src/combat/orbital_satellites.gd") # --- W50-ISAAC-PARTS ---
+const OrbitalSatellites := preload("res://src/combat/orbital_satellites.gd")
 const BallRules := preload("res://src/movement/ball_rules.gd")
 const AllyHusk := preload("res://src/combat/ally_husk.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const HeroFx := preload("res://src/presentation/hero_fx.gd")
 
-# Writer A's module: the two class kits, the pattern system parts transform, enemies
-# with committed telegraphs, the miniboss, damage and drops, and the shoulder view
-# while mounted. It is ctx.spawner. README.md in this folder is the contract other
-# modules read (spawner kinds, pattern transformer ids, the part registration call).
-#
-# The loop each physics tick, only while the flow is in play:
-# 1. The shoulder view follows the mount: shoulder_target is 1 exactly while mounted.
-# 2. Held fire throws one volley per weapon interval. The volley is aimed with the
-#    shared aim query (hitscan.gd), laid out by the weapon's Pattern, and published
-#    once as shot_fired(weapon, muzzle, the point the centre bolt is sent to).
-# 3. The special is a hold-gauge-release shot (DESIGN-V2 section 4), dispatched by the
-#    class row's special_id through _specials: Sable's detonation gauge, Rivet's
-#    overdrive blast, Kest's detonation line. Hold draws the committed geometry on the
-#    player's indicator; release fires exactly that geometry, with FORGIVENESS allowed
-#    past its edge in the hit test. Planting a pylon as Sable still fires a free
-#    discharge powered by the banked speed (the turret's opening burst).
-# 4. Bolts and sticky charges step; a hit is resolved once through strike().
-# 5. Knocked enemies that fly into others pin them (the bowling-ball contact's pins).
-# 6. Every plated enemy is tinted amber if punch_now() beats its plating, slate if not.
-#
-# Plating (DEMO-SPEC Rules) lives in one function, resolve(): punch for a ball contact
-# is (base + force * k) * heft, punch for a weapon hit is its damage after parts; punch
-# at or above the target's plating lands in full, below it chips CHIP. strike(), the
-# tint, punch_now(), plating_of() and would_crush() all read that one function.
-#
-# Shred (Andrew, 2026-09-27): every landed hit, a chip included, strips SHRED_PER_PUNCH
-# of its punch off that enemy's plating, up to the whole plating. While the hits keep
-# coming the strip bleeds off at SHRED_HOLD_DECAY a second, so held fire settles at a
-# strip in proportion to its damage per second: the base kit's gun barely dents Warden
-# III and an engaged build's strips it bare. SHRED_GRACE after the last hit the plate
-# knits back at SHRED_REST_DECAY. The strip is kept per enemy instance and subtracted
-# from whatever plating_for answers, so the miniboss, vaults and Brindle's pieces shed
-# (a Warden fights on posture and never sheds), and a weak point already at 0 stays 0.
-
 const MUZZLE := 1.25
 const AIM_SLACK := 14.0
 const KINDS := ["chaser", "lobber", "miniboss", "warden", "vault"]
 const CONTACT_KINDS := ["stomp", "ram", "slam"]
-# SG1 arc mark (comps/gunfire/elements-and-fusion.md, shock +10% for 5 s, a start value): an
-# "arc" strike marks its target for ARC_MARK_SECONDS, and while the mark holds every strike
-# through the damage door deals 1 + ARC_MARK_FRACTION. The mark is its own entry kind in
-# _exposed, read once in the door's caps stage (_strike_mult). The wear trail and primer-mesh
-# shares bypass the door (_trail_deal), so the mark never raises them.
 const ARC_MARK_FRACTION := 0.10
 const ARC_MARK_SECONDS := 5.0
 const ARC_MARK_KIND := "arc"
-# Mass-K: radius bonus at full mass, and the mass that counts as full (BUILD-SYSTEMS.md).
 const MASS_K_RADIUS := 0.25
 const MASS_K_SATURATION := 990.0
-# A build synergy's strike: its force is the punch (build scales it by heft), and it
-# always meets body plating, since it is never a landing on a weak point.
 const SYNERGY := "synergy"
-# A shattered destructible's shrapnel (world/destructibles.gd _shrapnel): a strike like any other through the
-# damage door, so crit, armour, elite affixes and every on-hit listener see it. Its source is one class, whatever
-# piece threw it, so the delivered-damage ledger keeps one bucket instead of one per piece. It is not a ball
-# contact, so Redline (SPEND_KINDS) never spends on it.
 const DEBRIS := "debris"
 const FIGHT_GROUPS := ["enemy", "enemy_shot", "telegraph", "ally_husk", "ally_zone"]
 const CHIP := 0.2
-# The spec's values, used only for a warden field a stage def is missing.
 const WARDEN_FALLBACK := [
 	{"warden_plating": 30.0, "warden_hp": 400.0},
 	{"warden_plating": 60.0, "warden_hp": 700.0},
 	{"warden_plating": 95.0, "warden_hp": 1000.0},
 ]
-# The last stage's vault has no next Warden, so it sits this far above its own.
 const VAULT_TOP_SCALE := 1.2
 const MINIBOSS_PLATING_SCALE := 1.25
 const SHELL_RETURN_DAMAGE := 40.0
@@ -142,142 +92,68 @@ const SHRED_HOLD_DECAY := 0.05
 const SHRED_REST_DECAY := 1.0
 const SHRED_GRACE := 1.5
 const SHRED_FLOOR := 0.5
-# Companion ram-brace family: the prow's shove beats every INTERRUPT (10) once per foe per
-# PROW_STAGGER s; a landed ram arms the spring for SPRING_WINDOW s and the next shot pays it.
 const PROW_SHOVE := 12.0
 const PROW_STAGGER := 0.8
 const SPRING_WINDOW := 3.0
 const SPRING_MULT := 1.5
-# Rake Heart: the return sweep comes this long after the first, at this share of its damage (start).
 const RAKE_DELAY := 0.25
 const RAKE_DAMAGE := 0.6
-# Walking Lane (cannon_lane_walk): a lane called within WALK_WINDOW of the last starts where it ended
-# and runs WALK_REACH further; the chain is two links, so the next call starts fresh.
 const WALK_WINDOW := 2.0
 const WALK_REACH := 6.0
-# Rush Wake (cannon_rush_wake): the landing lays one lane back along the rush's travel line at this share
-# of the lane's damage. A drift under WAKE_MIN_TRAVEL (a straight drop) lays it back along the aim. The
-# slam's start stays valid for WAKE_GRACE after the slam ends, so a landing a tick later still finds it.
 const WAKE_DAMAGE := 0.5
 const WAKE_MIN_TRAVEL := 1.0
 const WAKE_GRACE := 0.5
-# Slag Pike's fused bolt is this many times as wide (both hit test and drawn streak) as one plain bolt.
 const PIKE_RADIUS_MULT := 2.0
-# The copper ring that lights the muzzle on the volley before the fuse, in metres.
 const PIKE_RING_RADIUS := 1.5
-# Evolutions that rewrite a verb (design-v3/ABILITY-MUTATIONS.md section 7 D, start values).
-# Only the player's own press carries one, so every strike they add is item_proc (proc depth 1).
-# Grapeshot Press: split children fly GRAPESHOT_ANGLE_DEG off the line instead of
-# Bolts.SPLIT_ANGLE_DEG, and knock at least GRAPESHOT_KNOCK_SHARE of a slam's knock.
 const GRAPESHOT_ANGLE_DEG := 8.0
 const GRAPESHOT_KNOCK_SHARE := 0.5
-# Hoar Barrel: a piercing weapon shot frosts this far round each machine it hits.
 const HOAR_FROST_RADIUS := 2.0
-# Fault Hammer: an aftershock over the slam's own ring, FAULT_DELAY after it, at FAULT_DAMAGE of the
-# slam's damage with the slam's falloff. Its ring is drawn in the pilot's colour from the landing on.
 const FAULT_DELAY := 0.45
 const FAULT_DAMAGE := 0.5
 const FAULT_LAYER := "fault_hammer"
 
-# Ball contacts: base damage plus a share of the contact's force.
 const STRIKE_DAMAGE := {
 	"stomp": [30.0, 1.1],
 	"ram": [14.0, 1.3],
 	"slam": [0.0, 1.2],
 }
 
-# M0: delivered-damage baseline and provenance (design-v3/STRATEGY-SPINE.md §7 row M0,
-# §8 row 1). strike() is the one place a hit becomes damage (TADR-008), so it is the
-# one place the ledger is written; no double counting is possible across combat.gd and
-# enemy.gd because enemy.take_damage() only ever returns the HP it actually removed,
-# clamped to what was left (overkill), and never records anything itself.
-# Range buckets are metres from the ball at the moment of the hit; near/mid match a
-# weapon's close reach and mid-fight spacing, not measured play data yet.
 const RANGE_NEAR_M := 6.0
 const RANGE_MID_M := 16.0
-# source: weapon (fired bolts, chains); ram_or_contact (a ball contact, a pin, a batted
-# shell); drop_or_slam (the slam contact kind); special (a gauge release); item_proc (a build
-# synergy, an element-field proc, an upgrade-tree proc or timed upgrade); persistent_actor
-# (a standing structure's own attack, e.g. the Sentry Post). Any strike() call from
-# outside this file (build.gd, element_field.gd) that does not name its source falls
-# through to item_proc: SEAMS.md says those strikes are never the player's own weapon
-# fire or gauge release, both of which always tag themselves below.
-# target_class: enemy (a v1 kind or the v2 Fleet roster's own field population), Warden,
-# adds (a Fleet reinforcement pack, fleet.gd's own name for it), boss (Brindle) or
-# boss_adds (something spawned while ctx.flow.in_arena is true, e.g. Brindle's
-# drone-dropped lobbers; boss.gd is out of this unit's allowed files, so the tag comes
-# from spawn provenance in spawn_enemy() below, not a caller-set flag). Fleet-roster
-# kinds keep "adds" (fleet.gd calls its own spawns "reinforcement packs", asserted in
-# _target_class_of_kind against Roster.is_reinforcement rather than left as an implicit
-# complement of KINDS, review finding 3, fix round 2, confirmed rather than renamed: see
-# that function for the evidence). cache (the vault: static, never attacks, never moves)
-# is its own class, not "enemy" (finding 3, fix round 1).
-# "Scenery" is excluded by construction: a piece that cannot be hit (boss_target.gd's
-# world-layer wrecked hull) never reaches strike() to begin with.
 
 var ctx
 var fleet
 var bolts
 var effects
-# The ground enemies, telegraphs and shells stand on (ground.gd): the terrain, or the
-# boss floor in the arena.
 var ground
 var volleys := 0
-# Slag Pike's cadence (item_effects.gd pike): weapon volleys fired since the last fuse, and the
-# clock of the last one. Both clear on every attempt and when the pike leaves the build.
 var _pike_count := 0
 var _pike_last := -INF
-# The verb items (ABILITY-MUTATIONS.md C3 to C7, item_effects.gd verb_row). Live committed strips
-# (Backwash's wake, Faultline Cap's crack): each is one record that the indicator draws and the hit
-# test reads, and it strikes each machine once. Pending Second Bell repeats, rung once each. This
-# frame's reel-in impacts by machine id, for Barbed Reel. All clear on every attempt.
 var _strips: Array = []
 var _bells: Array = []
 var _verb_serial := 0
 var _reel_hits := {}
 var _reel_frame := -1
 var _wake_frame := -1
-# The last strip laid, the last arc jumped and the last bell rung, for tests and bots.
 var last_strip := {}
 var last_reel_arc := {}
 var last_bell := {}
-# The last committed volley and discharge, for tests and anything that wants to read them.
 var last_shot := {}
 var last_burst := {}
-# A test knob: a heft to use instead of ctx.run.heft(). Negative means off.
 var heft_override := -1.0
-# Every deflected hit, counted here as well as published, so a test on a spine without
-# strike_deflected still sees them.
 var deflections := 0
-# Codex ids discovered this run, in order, with where (also sent to ctx.codex).
 var discovered := {}
 var discovery_log: Array = []
-# M0's delivered-damage ledger, reset on run_started only (a per-run measure; a stage
-# retry does not clear it). Mirrored onto ctx.run's meta after every change so run_log
-# can read it without a new reference or bus signal. delivered_damage() reads it.
 var _ledger := {}
-# This stage attempt's damaging stomp and slam hits on the Warden. Reset every attempt
-# (_start_attempt) and snapshotted into _ledger's warden_slam_hits on beacon_unsealed.
 var _warden_slam_hits := 0
-# Instance ids spawned while ctx.flow.in_arena was true (M0, review fix round 1): the
-# only spawner call reachable there is boss.gd's own drone drop, so this is how a boss
-# add is told apart from an ordinary field enemy without a flag boss.gd would have to
-# set (boss.gd is not in this unit's allowed files). Entries are erased on death.
 var _boss_add_ids := {}
-# A block of hits' source when the kind string alone cannot say it (a discharge, an
-# overdrive blast, an upgrade proc): set right before the calls and restored right after,
-# so a block nested inside another keeps the outer block's tag.
-# strike()'s own `source` argument always wins over this when given.
 var _forced_source := ""
-# Where warden_spec reads a stage other than the current one. A test may swap in any
-# object with of(stage) -> Dictionary; null reads the context's table.
 var _warden_warned := {}
 var stage_defs = null
 
 var _patterns := {}
 var _part_map := {}
 var weapon_driver := WeaponDriver.new()
-# Legacy compatibility property for kit tests outside E1-01 that still read/write _cooldown.
 var _cooldown: float:
 	get:
 		return weapon_driver.cooldown_s()
@@ -291,73 +167,39 @@ var _last_flight_weapon := ""
 var _since_slingshot := INF
 var _crushes: Array = []
 var _clock := 0.0
-# A reel impact's mark on a body and how long a kill after it still counts as the reel's.
 const REEL_MARK := "panel_reel_at"
 const REEL_KILL_WINDOW := 0.25
-# The strike whose facts are going out: {id, kind, force, part}, empty otherwise.
 var _pending := {}
-# Shred by enemy instance id: {amount, cap (the most plating it has shown), idle
-# (seconds since its last landed hit)}.
 var _shred := {}
-# Linker guards (linker.gd): partner instance id -> the Linker whose dish braces over it.
 var _guards := {}
 
-# special_id -> {geometry: Callable(fraction) -> shape, fire: Callable(fraction, shape)}, or
-# {tap: Callable() -> bool} for a row with no gauge.
 var _specials := {}
-var relic_swaps  # --- W50-ISAAC-RELICS ---
-# The line skill's dispatch table (built in setup) and the load waiting for the next bite:
-# {} or {id, fraction, left}.
+var relic_swaps
 var _line_skills := {}
 var _line_load := {}
-# The last line skill that fired: {id, on, target, at, fraction, mult}. Read only outside.
 var last_line := {}
 var sticky
-# The device ledger (devices.gd): per-kind caps, refills and the leash for sticky and mini
-# charges and the Sentry Post. Cleared with the fight. Read only outside.
 var devices
-# Rivet's Run and Gun wear trail (world one, --wear=on); wear_trail.gd.
 var wear_trail
-# The last gauge release: {id, fraction, geometry}, the geometry exactly as drawn.
 var last_committed := {}
-# Kest's dust cloak: seconds left and where it began (what hidden enemies see).
 var cloak_left := 0.0
 var cloak_at := Vector3.ZERO
 var _rocket_left := 0.0
-# Items shorten the rocket jump's self-launch cooldown through this; it floors at 0.4 s.
 var rocket_cooldown_scale := 1.0
-# Pins already paid, "carrier:knock:victim" -> clock, and how many landed this attempt.
 var _pinned := {}
-# Hulks (KNOCKBACK-FEEL): a body a ram or a pin killed keeps flying for a moment and bowls
-# what lies ahead of it. {at, vel, radius, id, hit: {victim id: true}}; cleared each attempt.
 var _hulks: Array = []
 var pins := 0
-# Upgrade-tree state (upgrade_tree.gd): each proc's next allowed time by node:fact, the
-# pending special echo, marked targets (instance id -> clock the mark ends), the blink's
-# smoke cloud, the Sentry Post, the timed-upgrade clock and how long the cloak has held.
 var _proc_ready := {}
 var _echo := {}
 var _echoing := false
 var _marks := {}
-# Conductive-primer expiries by instance id (transient, never saved). Cleared on run start and every attempt; a kill drops its entry.
 var _primed := {}
-# Ram-brace state: prow stagger ends by instance id, and the clock the spring stays armed until. Both maps clear on run start and every attempt; a kill drops its entry.
 var _prow_until := {}
 var _spring_until := -1.0
-# Escape corridor: the act in progress ({piece, style, until}) and the lane it laid ({from,
-# dir, length, half_width, friction, hold, until}), both cleared on run start and stage entry.
-# escape_acts counts acts this run, and escape_acted fires once per act.
 signal escape_acted(piece: String, style: String)
-# The companion's driver rows (Companion.DRIVERS); every module act asks Companion.pick()
-# against this table, so a test or the lab can reorder rows without a code edit.
 var drivers: Dictionary = Companion.DRIVERS
-# COMPANION-GROWS: the assist gauge (0 to Companion.ASSIST_FULL) and the assists called this
-# run. companion_assisted carries {id, name, word, cue, at, radius, knock, layers, hits,
-# mark}; companion_body.gd shows it. The gauge clears on run start and every attempt.
 signal companion_assisted(assist: Dictionary)
 signal companion_assist_full
-# A swung or thrown body (flail_hit) landed on `enemy`, whatever path the hit then takes: a
-# Warden's posture path never emits enemy_struck, so Called Shot reads BOWL from this.
 signal flung(enemy: Node3D)
 var assist_charge := 0.0
 var assists := 0
@@ -365,20 +207,14 @@ var last_assist := {}
 var escape_acts := 0
 var escape_lane := {}
 var _escape := {}
-# Tarn's clamp: caught enemies (instance id -> clock the clamp ends) take CLAMP_BONUS from claw sweeps. Cleared on run start and every attempt; a kill drops its entry.
 var _clamped := {}
-# Rake Heart: return passes waiting on their clock, {at, weapon, forward, damage, volley}.
 var _rakes: Array = []
-# Fault Hammer: aftershocks waiting on their clock, {at, radius, damage, born, due}.
 var _aftershocks: Array = []
 var _fault_layer_count := 0
-# Cached verb-evolution flags, refreshed in _rebuild_patterns() on every build change.
 var _has_grapeshot := false
 var _has_hoar := false
 var _has_fault := false
-var orbitals # --- W50-ISAAC-PARTS ---
-# W47-C2: transient micro-mutation & cross-system synergy state. Cleared on _start_attempt(),
-# _on_player_died() and run_started so no window, pin or buff ever outlives its attempt.
+var orbitals
 var _air_steer_surge_left := 0.0
 var _air_dash_bat_left := 0.0
 var _boost_active_left := 0.0
@@ -395,9 +231,6 @@ var last_micro_mutation := {}
 var last_cross_synergy := {}
 var _micro_counts := {}
 var _cross_counts := {}
-# W47-GRAPPLE-MUTS-CODE: transient runtime state for the 7 single-part-swap grapple mutations.
-# All queues, timers, and marks clear on _start_attempt(), _on_player_died(), and run_started
-# (DeferredEffects.tla NoEchoAcrossAttempt & ProcDepthOne).
 var _hot_wire_cd := {}
 var _det_cord_queue: Array = []
 var _tether_live := {}
@@ -407,37 +240,18 @@ var _tether_slam_armed := {}
 var _grapple_mut_counts := {}
 var last_grapple_mut := {}
 var _active_grapple_slots := {}
-# The heat bit (ShotBits "heat", design-v3/ABILITY-MUTATIONS.md B3, starting values): a heated
-# bolt leaves the machine it hits glowing for HEAT_GLOW seconds, and a heated hit on a glowing
-# machine deals HEAT_BONUS, at most once per machine per HEAT_GLOW seconds. instance id ->
-# {"glow": clock the glow ends, "ready": clock the next bonus may land}; cleared like _clamped.
 const HEAT_GLOW := 2.0
 const HEAT_BONUS := 1.15
 var _heated := {}
-# The pull bit (ShotBits "pull", ABILITY-MUTATIONS.md B3, starting values): a struck machine
-# no heavier than the pilot (Grip.heft_of against heft()) takes one PULL_KNOCK toward the
-# ball, up to PULL_RATIO_CAP harder the lighter it is; a heavier one holds. A piercing bolt
-# pulls each machine it passes once, each PULL_FALLOFF of the one before. The ball never moves.
 const PULL_KNOCK := 7.0
 const PULL_RATIO_CAP := 1.5
 const PULL_FALLOFF := 0.6
-# The remembered cannon: committed volleys ({family, hazards, damage, source, struck,
-# expose, verb, window, and the commit's seed, target, centre, radius and phase}), how many it has committed (its seed counter),
-# and plate-exposed enemies (instance id -> {until, verb}) that take MindAttacks.BRACE_MULT
-# from any contact strike. _exposed clears on run start and every attempt; a kill drops its entry.
-# SG1's arc mark rides the same table under _arc_key(id) ({kind, id, until, window, radius,
-# mark}), so a plate row and an arc row on one enemy never collide.
 var _cannon := []
 var _cannon_count := 0
-# Walking Lane's open link ({} or {"end", "at"}) and Rush Wake's slam start ({} or {"from", "until"}).
-# Both clear with the committed volleys, on a run start and every attempt.
 var _walk := {}
 var _wake := {}
 var _exposed := {}
 var last_cannon_paint := {}
-# Tally's program cards. bay is the selected card (0, 1 or 2); plate is Gather's plate ({}
-# or {"at", "until"}); link_group the live clips ({} or {"ids", "until", "spent"}); last_card
-# the last run ({"card", "at", "hits", "spent"}). All read only outside this file.
 var bay := 0
 var plate := {}
 var link_group := {}
@@ -447,15 +261,7 @@ var _arcing := false
 var _gather_tick := 0.0
 var _roll_clock := 0.0
 var _restored_frame := {}
-# Tally's wave P-C state (pilots/tally.md sections 2 and 3). clip_post is the world-latch post
-# ({} or {at, until, shape}); tally_piece the set piece riding (one of TALLY_PIECES, or "");
-# ride_clips the enemies clipped this ride (instance id -> true); tally_last_settle the last
-# landing ({at, hits, settles, ids}); all read only outside. The run and stage counters feed the
-# eyeshade and punch tape discoveries, and _tally_cards queues her codex cards behind the
-# framework card they extend (B6's rule), one card per tick.
 const TALLY_PIECES := ["plate_return", "plate_audit", "plate_flywheel"]
-# The discoveries behind her three grants (CUSTOMIZE section 8): ledger clips fired in one
-# stage, clips one landing settles, clips settled in one run.
 const PUNCH_TAPE_CASTS := 10
 const BOOKS_SETTLES := 6
 const EYESHADE_SETTLES := 20
@@ -469,24 +275,15 @@ var _run_settles := 0
 var _stage_clip_casts := 0
 var _tally_cards := {}
 var _tally_card_frame := -1
-# The ledger clip ids (link_double is Double Entry's swap of link_clips). Ink Heart's books: a
-# machine the stamp reached (instance id -> {"until", "mark"}), settled by balance due.
 const CLIP_IDS := ["link_clips", "link_double"]
 const INK_SECONDS := 3.0
 const INK_HEIGHT := 2.2
 var _ink := {}
 static var _ink_mesh: ArrayMesh
-# The dodge read (near_miss.gd), and the last hit the ball took: where it came from, for
-# presentation's edge flash. last_impact names the IMPACT row and the enemy of the strike
-# whose enemy_struck is out right now, because a blast publishes under a gun kind; it is
-# empty outside that emission and for a strike that names no row. All read only.
 var near_miss
 var flail
-# The set piece on Q (ultimate.gd), a child like near_miss; it owns the meter.
 var ultimate
-# The active slot on F (src/combat/actives), behind --actives.
 var actives
-# W47-TALLY-B-CODE Ghost Shift ally-husk manager (src/combat/ally_husk.gd).
 var ally_husks
 var last_player_hit := {}
 var _hit_attack := ""
@@ -495,13 +292,8 @@ var _cloud := {}
 var _sentry := {}
 var _pulse_left := 0.0
 var _cloak_held := 0.0
-# UpgradeTree.ACTIONS name -> Callable(scale).
 var _actions := {}
-# SR1: every strike passes this door (damage_door.gd), which runs the stages below in its
-# declared order and then its hooks; the primer mesh and the companion ram ride as "hit" hooks.
 var door := DamageDoor.new()
-# The world 1 pack pressure experiments (pack_pressure.gd): chasers spawned under a flank dial, every second
-# one a flanker; the churned silt (idle at its identity dial) and the silt boils (on in world 1).
 var _pressure_chasers := 0
 var churn
 var boils
@@ -564,7 +356,6 @@ func setup(ctx_ref) -> void:
 	add_child(flail)
 	flail.setup(ctx, self)
 	near_miss.setup(ctx.events, Callable(ctx.player, "ball_position"))
-	# The way out of the warning the ball stands in, painted on the floor (W1-05).
 	var way_out := WayOutPaint.new()
 	near_miss.add_child(way_out)
 	way_out.setup(near_miss, Callable(ctx.player, "ball_position"), Callable(ground, "height"))
@@ -578,35 +369,17 @@ func setup(ctx_ref) -> void:
 		"cannon_plate": {"geometry": _plate_geometry, "fire": _fire_plate},
 		"gather_plate": {"tap": _tap_gather, "commit": _card_aim},
 	}
-	# line_id -> {on_body: Callable(target, fraction, chain_mult), on_world: Callable(anchor,
-	# fraction, chain_mult), geometry: Callable(fraction)} (SKILL-BAR section 7). Each pilot owns
-	# one marked block for its wave P-C row (section 12, item 4).
 	_line_skills = {
 		"line_reel": {"on_body": _line_reel_body, "on_world": _reel_burst, "geometry": _line_reel_geometry},
-		# --- P-C Sable line skill ---
 		"bank_shot": {"on_body": _bank_body, "on_world": _bank_world, "geometry": _bank_geometry},
-		# --- end Sable ---
-		# --- P-C Rivet line skill ---
 		"line_drive": preload("res://src/combat/rivet_kit.gd").line_row(self),
-		# --- end Rivet ---
-		# --- P-C Kest line skill ---
 		"cable_charge": KestKit.line_row(self),
-		# --- end Kest ---
-		# --- P-C Tarn line skill ---
 		"claw_drag": preload("res://src/combat/tarn_claw.gd").line_row(self),
-		# --- end Tarn ---
-		# --- P-C Tally line skill ---
 		"link_clips": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
 		"link_double": {"on_body": _link_clips_body, "on_world": _link_clips_world, "geometry": _clip_geometry},
-		# --- end Tally ---
-		# --- P-C Cannon line skill ---
 		"cannon_lane_charge": {"on_body": _cannon_line_body, "on_world": _cannon_line_world, "geometry": _cannon_line_geometry},
-		# --- end Cannon ---
 	}
 	ctx.player.line_load_of = line_load
-	# The set piece (SKILL-BAR section 4) and the shared placeholder every pilot carries until
-	# wave P-C: paths line then arc, a volley of the pilot's own weapon per beat, the default
-	# landing. A pilot's own row goes in its marked block in ultimate.gd's _ult_rows.
 	ultimate = KestKit.new()
 	add_child(ultimate)
 	ultimate.setup(ctx, self)
@@ -617,15 +390,12 @@ func setup(ctx_ref) -> void:
 	ally_husks = AllyHusk.new()
 	add_child(ally_husks)
 	ally_husks.setup(ctx, self)
-	orbitals = OrbitalSatellites.new() # --- W50-ISAAC-PARTS ---
+	orbitals = OrbitalSatellites.new()
 	add_child(orbitals)
 	orbitals.setup(ctx, self)
-	# --- W50-ISAAC-RELICS ---
 	relic_swaps = preload("res://src/combat/relic_swaps.gd").new()
 	add_child(relic_swaps)
 	relic_swaps.setup(ctx, self)
-	# A loaded line skill rides the next bite, body or world (grapple_fired goes out for both,
-	# after the latch is set). A reset point drops the load.
 	ctx.events.grapple_fired.connect(func(anchor: Vector3):
 		_bite_load()
 		_on_grapple_fired_muts(anchor)
@@ -645,7 +415,6 @@ func setup(ctx_ref) -> void:
 				ally_husks.refresh_all_shifts())
 	_wire_tally()
 	_actions = _proc_actions()
-	# Every bus fact any tree's procs listen for, connected once; the tree decides who fires.
 	var facts := {}
 	for class_id in UpgradeTree.TREES:
 		for n in UpgradeTree.TREES[class_id]:
@@ -757,12 +526,6 @@ func setup(ctx_ref) -> void:
 	ctx.events.beacon_unsealed.connect(func(stage: int):
 		_ledger["warden_slam_hits"][str(stage)] = _warden_slam_hits
 		_warden_slam_hits = 0)
-	# review finding 1, fix round 2: Brindle's parts are never spawned through
-	# spawn_enemy(), so the died-signal retirement path below never sees him; boss_defeated
-	# (already a bus fact, game_events.gd:73 / event_kinds.gd:81, published once by
-	# boss.gd's own _defeat()) is the one signal every boss kill fires, whatever finished
-	# him (the scooter catch or, if a future path lets a hull hit zero the pool directly,
-	# that too), so it is where the "boss" retirement belongs instead.
 	ctx.events.boss_defeated.connect(func(): _record_retirement("boss"))
 	ctx.events.dismounted.connect(func(v: Vector3):
 		_mounted_boost_left = 0.0
@@ -786,12 +549,6 @@ func setup(ctx_ref) -> void:
 	_declare_codex()
 
 
-# --- Spawner API (CONTRACTS.md) -----------------------------------------------------
-
-# kind is "chaser", "lobber", "miniboss", "warden" or "vault". An unknown kind spawns a
-# chaser, with a warning, so a typo in an event table never leaves a stage empty. The
-# Warden and the vault sit on the ground under `at`; the others are placed at `at`.
-# `health_scale` multiplies the health the enemy would otherwise spawn with (the survival yard's later counts).
 func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF, health_scale: float = 1.0) -> Node3D:
 	var enemy: Node3D
 	match kind:
@@ -813,19 +570,10 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 			push_warning("spawn_enemy: unknown kind '%s', spawning a chaser" % kind)
 			kind = "chaser"
 			enemy = Chaser.new()
-	# Placed before it joins the tree, so its body enters the physics space where it stands.
-	# Jolt reads a kinematic body moved after that as a velocity over the next step: one moved
-	# from the world origin to `at` shoved a ball rolling at the origin out at 500 m/s
-	# (item_fuzz seed 2751, 243.9 m/s against the 60 m/s ceiling).
 	enemy.position = ctx.root.global_transform.affine_inverse() * at
 	ctx.root.add_child(enemy)
-	# M0 (review fix round 1, finding 2): the only spawner call reachable while the boss
-	# arena is up is boss.gd's own drone drop, so a spawn landing here is a boss add, not
-	# an ordinary field enemy, whatever kind string it uses (currently always "lobber").
 	if ctx.flow != null and ctx.flow.in_arena:
 		_boss_add_ids[enemy.get_instance_id()] = true
-	# Fodder sees the player through its sight, which Kest's cloak can fool; the Warden
-	# and the vault are set pieces and always see the ball.
 	var target = Sight.new(ctx.player, self, enemy, kind) if Sight.REACH.has(kind) or fleet.makes(kind) else ctx.player
 	var health := _threat()
 	var enemy_spec: Dictionary = fleet.dress(kind, _spec_for(kind))
@@ -833,7 +581,6 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		enemy_spec["lead"] = ChallengeDials.by_stage_or("mobs.lobber_lead_by_stage", ctx.flow.stage(), Lobber.LEAD)
 	if affix_id == EliteAffixes.PLATED:
 		enemy_spec["armour"] = EliteAffixes.PLATED
-	# A park perch top (terrain.perch_near) is the Dispatcher's spec["perch"]; with none it builds its own mast.
 	if kind == "dispatcher" and perch.is_finite():
 		enemy_spec["perch"] = perch
 	if kind not in ["warden", "vault"]:
@@ -853,18 +600,13 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 				_pressure_chasers += 1
 				pressure["flanker"] = _pressure_chasers % 2 == 0
 			enemy_spec["pressure"] = pressure
-		# A chaser runs at its stage's speed (ChallengeDials mobs.chaser_speed_by_stage); boss adds keep their own.
 		if kind == "chaser" and ctx.flow.in_stage():
 			enemy_spec["run_speed"] = Chaser.stage_speed(int(ctx.run.stage))
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health * health_scale, enemy_spec)
-	# The vault and the Warden settle onto the ground or their landmark anchor in setup.
 	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
 		_reenter_space(enemy)
-	# Poles and flails weigh a body by its stage threat, as the trap ratings do (movement/grip.gd).
 	if "threat_level" in enemy:
 		enemy.threat_level = _threat()
-	# A body with more than one attack says which one landed (miniboss.gd, rogue.gd); connected
-	# first, so _on_player_hit files it on last_player_hit for the RUN OVER cause line.
 	if "landed_attack" in enemy:
 		enemy.hit_player.connect(func(_amount: float, _shove: Vector3): _hit_attack = String(enemy.landed_attack))
 	enemy.hit_player.connect(_on_player_hit.bind(kind))
@@ -874,7 +616,6 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		var source: String = enemy.last_damage_source if "last_damage_source" in enemy else ""
 		if enemy.has_meta(HazardHits.STRUCK):
 			source = "hazard"
-		# A fuse death is an enemy spent by its own blast (splitter_pod.gd): nobody killed it.
 		if source != "fuse":
 			ctx.run.kill_tags = _kill_tags(enemy, affix_id)
 			ctx.run.record_kill(kind, where, scrap, source)
@@ -899,15 +640,12 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 			ally_husks.record_wreck(enemy))
 	if enemy.has_signal("fired"):
 		enemy.fired.connect(_on_lobber_fired.bind(enemy))
-	# A kill-first special gets its special_tell signal before its listeners hear it arrive.
 	SpecialCues.attach(enemy)
 	ctx.events.enemy_spawned.emit(enemy, kind)
 	fleet.on_spawned(enemy, kind)
 	return enemy
 
 
-# A body moved after it entered the space would push what stands at its old spot along the
-# move; leaving the space and entering it again at the new transform places it with no push.
 static func _reenter_space(body: CollisionObject3D) -> void:
 	var rid := body.get_rid()
 	var space := PhysicsServer3D.body_get_space(rid)
@@ -916,9 +654,6 @@ static func _reenter_space(body: CollisionObject3D) -> void:
 	PhysicsServer3D.body_set_space(rid, space)
 
 
-# What a kill was, for the panel drop (build.gd): an elite-pack member or an affixed elite,
-# a jackpot when a reel impact or dunk struck it inside REEL_KILL_WINDOW, and a yard lock's crew
-# (stage_locks.gd), which the cleared yard pays for instead.
 func _kill_tags(enemy: Node3D, affix_id: String) -> Dictionary:
 	var reel_at = enemy.get_meta(REEL_MARK) if enemy.has_meta(REEL_MARK) else null
 	return {"elite": bool(enemy.get_meta("elite_pack", false)) or affix_id != "",
@@ -926,22 +661,15 @@ func _kill_tags(enemy: Node3D, affix_id: String) -> Dictionary:
 		"yard": bool(enemy.get_meta("yard_crew", false))}
 
 
-# What the director weights reinforcement packs against (fleet.gd build_read).
 func build_read() -> Dictionary:
 	return fleet.build_read()
 
 
-# A hit the spine or a weapon made, resolved into damage exactly once. The bus facts go
-# out before the damage so a kill never publishes a freed node: enemy_struck always,
-# then strike_deflected when the punch fell short of the plating. `part` names a weak
-# point ("" for the body; a ball contact finds its own through contact_part()).
 func strike(enemy: Node3D, kind: String, force: float, part := "", source := "", impact := "", chip := CHIP) -> void:
 	if not is_instance_valid(enemy) or not enemy.has_method("take_damage"):
 		return
 	if enemy.has_method("is_dead") and enemy.is_dead():
 		return
-	# The ball's own contacts while the set piece rides count under its 45-posture cap on a
-	# closed Warden guard, volleys and landing together (SKILL-BAR section 12, item 7).
 	if ultimate != null and ultimate.active() and kind in CONTACT_KINDS and enemy.has_method("_apply_posture") \
 			and enemy.has_method("staggered") and not enemy.staggered():
 		ultimate.warden_posture(enemy, resolve(enemy, kind, force, part, 0.0,
@@ -950,7 +678,6 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	var dunk := _dunk_bonus(enemy, kind)
 	var reel: bool = ctx != null and ctx.player != null and ctx.player.get("kit") != null \
 		and is_reel_impact(kind, ctx.player.smash_landing == enemy)
-	# A reel impact or a dunk marks the body, so a kill it lands is a jackpot (grey panels).
 	if ctx != null and ctx.player != null and ctx.player.get("kit") != null and (dunk > 0.0 or reel):
 		enemy.set_meta(REEL_MARK, _clock)
 	var hit := door.pass_hit({"enemy": enemy, "kind": kind, "force": force, "part": part, "source": source,
@@ -958,8 +685,6 @@ func strike(enemy: Node3D, kind: String, force: float, part := "", source := "",
 	if reel:
 		_note_reel(enemy, float(hit.get("result", {}).get("dealt", 0.0)))
 
-
-# --- SR1: strike()'s stages, in damage_door.gd's ORDER --------------------------------
 
 func _door_armour(hit: Dictionary) -> void:
 	hit["cls"] = _classify_source(hit["kind"], hit["source"] if hit["source"] != "" else _forced_source)
@@ -974,8 +699,6 @@ func _door_armour(hit: Dictionary) -> void:
 func _door_caps(hit: Dictionary) -> void:
 	var enemy: Node3D = hit["enemy"]
 	var result: Dictionary = hit["result"]
-	# The plating rule's figure before the multipliers: the crit read compares this to the punch,
-	# so an arc mark or a weak armour read alone is not a crit (damage_numbers.gd is_crit).
 	result["base_dealt"] = float(result["dealt"])
 	result["dealt"] = float(result["dealt"]) * _strike_mult(enemy, hit["kind"], hit["cls"])
 	if ctx != null and ctx.run != null and ctx.run.has_method("override_on") and ctx.run.override_on("impact_force_2x"):
@@ -983,9 +706,6 @@ func _door_caps(hit: Dictionary) -> void:
 	_read_armour(enemy, hit, result)
 	if enemy.has_method("absorbs_hit") and enemy.absorbs_hit(result):
 		result["absorbed"] = true
-	# An absorbed hit (a miniboss turn, a popped plate, a crew fitter) bites nothing, so the
-	# charge stays held for the next reel, unless the charge did the work: a plate the plain
-	# reel would only chip, popped because the stored slam lifted the reel over the plating.
 	if hit["dunk"] > 0.0:
 		if bool(result.get("absorbed", false)) and enemy.absorbs_hit(
 				resolve(enemy, hit["kind"], hit["force"], hit["part"], 0.0, hit["bonus"])):
@@ -996,41 +716,24 @@ func _door_caps(hit: Dictionary) -> void:
 	if hit["kind"] in CONTACT_KINDS and _exposed.has(enemy.get_instance_id()) \
 			and float(_exposed[enemy.get_instance_id()]["until"]) <= _clock:
 		_drop_exposed(enemy.get_instance_id())
-	# SG1: the mark was read above, so the hit that sets or refreshes it is never raised by
-	# its own mark.
 	if hit["kind"] == ARC_MARK_KIND:
 		_arc_mark(enemy)
 
 
-# The dunk charge (dunk.gd) pays on a reel impact on the body the line bit: the stored slam
-# damage joins the hit's punch, so it meets the same plating, chip, weak point and armour
-# rules as the reel it rides on. Read here, spent in _door_caps once the hit is known to be
-# neither guard-blocked nor absorbed; knockback and the struck force are untouched.
 func _dunk_bonus(enemy: Node3D, kind: String) -> float:
 	if ctx == null or ctx.player == null or not ctx.player.get("dunk"):
 		return 0.0
 	var smash: bool = ctx.player.smash_landing == enemy
 	var kit = ctx.player.kit
-	# A reel impact is a smash landing, or a stomp, ram or slam while (or just after) a
-	# right-mouse reel hauls the ball onto this body.
 	var reeled: bool = kind in ["stomp", "ram", "slam"] and kit.reel_body == enemy and kit.reel_left > 0.0
 	if not reeled and (not is_reel_impact(kind, smash) or not (smash or kit.anchor_body == enemy)):
 		return 0.0
 	return ctx.player.dunk.peek()
 
 
-# The reel test punch_of's winch branch already uses (a smash landing counts as hooked: the
-# landing lets the line go before its strikes resolve), shared with the dunk charge.
 func is_reel_impact(kind: String, smash: bool) -> bool:
 	var kit = ctx.player.kit
 	return Dunk.is_reel_impact(kind, smash, kit.hooked, kit.winching)
-
-
-# Damage families (DamageFamilies, FIELDS-AND-CASTS section 6): a hit that beat the plating
-# meets its target's armour row, resisted about 60% and weak about 150%. The read rides on the
-# target as meta "armour_read" for this hit's enemy_struck listeners (presentation stamps DENT
-# or ZZAP! on the first of each per run), and the first read of an armour class discovers its
-# codex entry, after which the class wears its icon.
 
 
 func _read_armour(enemy: Node3D, hit: Dictionary, result: Dictionary) -> void:
@@ -1055,11 +758,6 @@ func _door_crit(hit: Dictionary) -> void:
 	hit["spent"] = _primer_hit(hit["enemy"], hit["kind"], hit["cls"])
 
 
-# review finding 1, fix round 2: a Brindle piece's hp is a getter over the boss's one
-# shared pool (boss_target.gd), and a listener on enemy_struck can remove HP from that
-# pool synchronously (boss.gd's _on_enemy_struck -> _defeat, the scooter catch) before
-# take_damage() ever runs. hp_before is read before the emit so the health stage's
-# measure (DamageDoor.health) catches that removal too.
 func _door_announce(hit: Dictionary) -> void:
 	var enemy: Node3D = hit["enemy"]
 	var kind: String = hit["kind"]
@@ -1087,8 +785,6 @@ func _door_plates(hit: Dictionary) -> void:
 	var result: Dictionary = hit["result"]
 	if enemy.has_method("on_struck"):
 		enemy.on_struck(hit["kind"], result["part"], result)
-	# Counted before take_damage() because a killing hit unseals the stage
-	# (beacon_unsealed, which snapshots this count) inside it.
 	if hit["kind"] in ["stomp", "slam"] and float(result["dealt"]) > 0.0 and _target_class(enemy) == "Warden":
 		_warden_slam_hits += 1
 
@@ -1121,10 +817,6 @@ func _hook_companion_ram(hit: Dictionary) -> void:
 	_companion_ram(hit["enemy"], hit["kind"], hit["result"])
 
 
-# --- Companion: the assist (companion.gd ASSIST_*) ----------------------------------
-# A hit that removed HP fills the gauge; a ram with the gauge full calls the assist at the
-# struck foe. The assist deals through _trail_deal, so it takes no door pass, fires no hook
-# and never refills the gauge. Posture fighters keep their own rules and are left out.
 func _hook_companion_assist(hit: Dictionary) -> void:
 	if ctx.run.companion.is_empty() or float(hit["result"].get("dealt", 0.0)) <= 0.0:
 		return
@@ -1150,7 +842,6 @@ func assist_ready() -> bool:
 	return assist_charge >= Companion.ASSIST_FULL
 
 
-# 0 to 1, for the halo.
 func assist_fill() -> float:
 	return clampf(assist_charge / Companion.ASSIST_FULL, 0.0, 1.0)
 
@@ -1168,7 +859,6 @@ func _call_assist(at: Vector3, dealt: float) -> void:
 	if dir.length_squared() < 0.01:
 		dir = Vector3.FORWARD
 	var damage := maxf(dealt, Companion.ASSIST_DAMAGE_FLOOR)
-	# Spent before any damage, so nothing a kill sets off can call it twice.
 	assist_charge = 0.0
 	assists += 1
 	var struck := _assist_targets(row["shape"], at, ball, dir, radius)
@@ -1198,8 +888,6 @@ func _call_assist(at: Vector3, dealt: float) -> void:
 	companion_assisted.emit(last_assist)
 
 
-# The foes an assist of this shape hits: the nearest one ("single"), every one within radius
-# of at ("ring"), or every one in a lane from the ball along dir for twice the radius.
 func _assist_targets(shape: String, at: Vector3, ball: Vector3, dir: Vector3, radius: float) -> Array:
 	var found := []
 	var nearest: Node3D = null
@@ -1228,12 +916,6 @@ func _assist_targets(shape: String, at: Vector3, ball: Vector3, dir: Vector3, ra
 	return found
 
 
-# --- Companion: conductive primer (companion.gd PRIMER_*) ---------------------------
-# A weapon hit primes; the next ball contact or special on a primed foe consumes it and
-# returns the seated piece. Posture fighters, items and persistent actors never take part.
-
-# The primer_coil's PRIMER_COIL_MULT is applied through _strike_mult, before this consumes
-# the prime; _result stays for the companion tests that pass one and is not changed.
 func _primer_hit(enemy: Node3D, kind: String, cls: String, _result := {}) -> String:
 	var row := _primer_driver(enemy, kind, cls)
 	var id := enemy.get_instance_id()
@@ -1250,9 +932,6 @@ func _primer_hit(enemy: Node3D, kind: String, cls: String, _result := {}) -> Str
 	return ""
 
 
-# The primer driver row a hit of this kind and source class picks on this enemy now, or {}.
-# The trigger is "weapon" for a weapon hit, "contact" for a ball contact, "special" for a
-# special, else "other". Posture fighters never take part.
 func _primer_driver(enemy: Node3D, kind: String, cls: String) -> Dictionary:
 	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
 	if piece == "" or _fights_posture(enemy):
@@ -1262,19 +941,12 @@ func _primer_driver(enemy: Node3D, kind: String, cls: String) -> Dictionary:
 		"primed": float(_primed.get(enemy.get_instance_id(), -1.0)) > _clock}, drivers)
 
 
-# The seated primer piece a hit of this kind and source class would consume on this
-# enemy now, or "". Reads only; _primer_hit does the consuming.
 func _primer_consumes(enemy: Node3D, kind: String, cls: String) -> String:
 	if _primer_driver(enemy, kind, cls).get("act", "") != "consume":
 		return ""
 	return Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
 
 
-# What strike() multiplies resolve()'s dealt by, beyond the plating rule: the cannon's
-# plate exposure (any contact deals BRACE_MULT while the window holds; the damage scales,
-# not the force, because a contact's punch is affine in its force), a seated primer
-# coil consuming a live prime, and SG1's arc mark on every kind. Reads only, so would_crush() asks the same question the
-# strike will answer (F005).
 func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 	var mult := 1.0
 	if kind in CONTACT_KINDS and float(_exposed.get(enemy.get_instance_id(), {}).get("until", -INF)) > _clock:
@@ -1289,12 +961,11 @@ func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 		mult *= float(Parts.GRAPPLE_MUTATIONS["live_bus"]["bonus_mult"])
 	if _tether_slam_matches(enemy, kind):
 		mult *= float(Parts.GRAPPLE_MUTATIONS["tether_slam"]["crush_mult"])
-	if orbitals != null: # --- W50-ISAAC-PARTS ---
+	if orbitals != null:
 		mult *= orbitals.strike_mult(enemy, kind, cls)
 	return mult
 
 
-# Mesh shares go through _trail_deal, never strike(): no bus fact, no proc, no prime.
 func _primer_mesh(at: Vector3, struck_id: int, dealt: float) -> void:
 	var found := []
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -1324,9 +995,6 @@ func primer_expired(enemy_id: int) -> bool:
 	return _primed.has(enemy_id) and float(_primed[enemy_id]) <= _clock
 
 
-# --- Companion: ram brace ------------------------------------------------------------
-# Runs after the strike resolved and its facts went out; it shoves and arms, and never
-# strikes, hits or fires itself. Posture fighters (staggered()) keep their own rules.
 func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 	var piece := Companion.seated(ctx.run.companion, Companion.RAM_BRACE)
 	if piece == "":
@@ -1338,7 +1006,6 @@ func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 		"dealt": float(result.get("dealt", 0.0)) > 0.0}, drivers)
 	match String(row.get("act", "")):
 		"shove":
-			# A row edited to drop foe_free still never shoves a freed foe.
 			if not valid:
 				return
 			_prow_until[enemy.get_instance_id()] = _clock + PROW_STAGGER
@@ -1356,11 +1023,6 @@ func _companion_ram(enemy: Node3D, kind: String, result: Dictionary) -> void:
 			effects.spark(ctx.player.ball_position(), Palette.VERDIGRIS)
 
 
-# --- Companion: escape corridor ------------------------------------------------------
-# Run state has just spent the charge and opened the window after a survived low-hull hit;
-# this applies the seated piece's style. It adds velocity or a lane and never touches the
-# hull, the retries or the charge itself. The hit direction comes from last_player_hit when
-# that hit is this frame's, else the ball's own travel: no random draw.
 func _escape_act() -> void:
 	var piece := Companion.seated(ctx.run.companion, Companion.ESCAPE_CORRIDOR)
 	var esc := Companion.escape_of(piece)
@@ -1398,8 +1060,6 @@ func _escape_act() -> void:
 	escape_acted.emit(piece, style)
 
 
-# Inside the lane the ball keeps its hold speed along it: each tick returns all but
-# LANE_FRICTION of the shortfall. Leaving the lane, or its time running out, ends it.
 func _step_escape_lane() -> void:
 	if escape_lane.is_empty():
 		return
@@ -1417,8 +1077,6 @@ func _step_escape_lane() -> void:
 		ctx.player.add_external_accel(dir * short * (1.0 - float(escape_lane["friction"])) / get_physics_process_delta_time())
 
 
-# "none" without a seated escape piece; "acting" for the act's seconds; then "spent" until a
-# fresh stage re-arms the charge, else "ready".
 func escape_phase() -> String:
 	if Companion.seated(ctx.run.companion, Companion.ESCAPE_CORRIDOR) == "":
 		return "none"
@@ -1439,15 +1097,9 @@ func spring_armed() -> bool:
 	return _clock < _spring_until
 
 
-# hp is not part of the enemy protocol (README.md), but every implementation carries it
-# (enemy.gd's own var, boss_target.gd's getter over boss.hp); a target without one (the
-# scenery-guard's plain Node3D, which never reaches here because it fails the
-# has_method("take_damage") check above) reads 0.0 and never inflates a delta.
 func _hp_of(enemy: Node3D) -> float:
 	return DamageDoor.hp_of(enemy)
 
-
-# --- M0: delivered-damage ledger (see the constants above for the categories) --------
 
 func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, known_class := "") -> void:
 	if _ledger.is_empty():
@@ -1465,13 +1117,8 @@ func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float
 	_bump(_ledger["by_range"], _range_bucket(enemy), removed)
 
 
-# A wear-trail patch's damage (wear_trail.gd): straight to take_damage, never strike(), so no
-# bus fact goes out, but the HP it removes is still delivered damage. The class is read before
-# the hit because a kill retires a boss add's tag. Action "spark", source persistent_actor.
 func _trail_deal(enemy: Node3D, amount: float, action := "spark", source := "persistent_actor") -> float:
 	var target_class := _target_class(enemy)
-	# Same measure as strike()'s health stage: a Brindle piece's return value undercounts (M0
-	# delivered damage). The bypass takes no door pass and fires no door hook.
 	var removed := DamageDoor.health(enemy, amount, _hp_of(enemy))
 	_record_delivered(enemy, action, removed, amount, source, target_class)
 	return removed
@@ -1505,18 +1152,12 @@ func _target_class(enemy: Node3D) -> String:
 	return _class_for_id(enemy.get_instance_id(), _spawn_kind_of(enemy))
 
 
-# Boss-add provenance wins over the kind name (finding 2, fix round 1): shared by
-# _target_class (a live strike) and spawn_enemy's died handler (a retirement), so both
-# read the same tag instead of two derivations that could drift apart.
 func _class_for_id(id: int, kind: String) -> String:
 	if _boss_add_ids.has(id):
 		return "boss_adds"
 	return _target_class_of_kind(kind)
 
 
-# The kind an enemy was spawned as: a Fleet unit and the Warden carry it on spec
-# (fleet.dress); the base kinds (chaser, lobber, miniboss, vault) set their own `kind`
-# var instead, since dress() never touches their spec.
 func _spawn_kind_of(enemy: Node3D) -> String:
 	var spec_val = enemy.get("spec")
 	if spec_val is Dictionary and (spec_val as Dictionary).has("kind"):
@@ -1530,30 +1171,10 @@ func _target_class_of_kind(kind: String) -> String:
 		return "Warden"
 	if Roster.is_boss_piece(kind):
 		return "boss"
-	# The vault (roster.gd role "cache") never moves and never attacks (vault.gd's own
-	# header); it is the one static, non-combatant damageable in the game, so it earns
-	# its own class rather than inflating "enemy" (finding 3, fix round 1).
 	if kind == "vault":
 		return "cache"
 	if kind in KINDS or Rogue.ROWS.has(kind):
 		return "enemy"
-	# review finding 3, fix round 2 (confidence 0.6, evidence a director-composed
-	# mag_trapper landing in "adds"): rejected as a bug, kept as a deliberate reading,
-	# confirmed rather than renamed. spawn_enemy()'s match above only ever builds a v1
-	# KINDS enemy, the Warden, the vault, or a fleet.makes(kind) enemy, so any kind
-	# reaching here is a Fleet SCRIPTS kind, whoever spawned it. fleet.gd's own
-	# reinforcement-pack system (on_spawned, Roster.is_reinforcement, the per-frame batch
-	# it flushes into pack_arrived: "every reinforcement spawned in one physics frame is
-	# one pack") already calls every one of those kinds a reinforcement, director-composed
-	# or not; chaser and lobber, KINDS' only other director-spawned kinds, are not
-	# reinforcements and land in "enemy" above. "adds" names that system, so it is
-	# asserted against Roster.is_reinforcement here instead of left as an implicit
-	# complement of KINDS, so the two names cannot silently drift apart. A kind that is
-	# neither is a real gap (a KINDS or SCRIPTS addition this unit missed), so it still
-	# counts under "adds" but is warned once rather than counted silently.
-	# A special's spawn (roster_specials.gd "spawned") is an add, but not a reinforcement.
-	# So is a world's own kind (a row with "world", e.g. drill_crew, boom_tender): the
-	# director composes it into authored packs, never the reinforcement clock.
 	if not Roster.is_reinforcement(kind) and not Roster.row(kind).has("priority") and not Roster.is_world_kind(kind):
 		push_warning("_target_class_of_kind: '%s' is neither a v1 kind nor a Fleet reinforcement; counting it under 'adds'" % kind)
 	return "adds"
@@ -1577,32 +1198,17 @@ func _reset_ledger() -> void:
 		"retirements": {}, "warden_slam_hits": {},
 	}
 	_warden_slam_hits = 0
-	# review finding 4, fix round 2: a duplicate(true) on every hit is a hot-path
-	# allocation (measured ~36x the rest of a hit's bookkeeping; a multi-target discharge
-	# can spend roughly 0.8 ms of a ~26 ms frame on copies that are thrown away every time
-	# but the run's end). GDScript Dictionaries are references, so publishing this once
-	# and mutating it in place (_bump and friends assign into the same object) keeps
-	# ctx.run's meta current without a copy; run_log._write() reads it once, right before
-	# JSON.stringify serialises the line synchronously, so no caller ever observes a
-	# half-written ledger.
 	if ctx != null and ctx.run != null:
 		ctx.run.set_meta("delivered_damage", _ledger)
 
 
-# Read-only: run_log mirrors this onto ctx.run's meta (delivered_damage) at every
-# change; a test may read it directly.
 func delivered_damage() -> Dictionary:
 	return _ledger
 
 
-# The one plating rule. Returns {punch, plating, full, dealt, part}. Asked from an
-# enemy_struck or strike_deflected handler with that strike's enemy, kind and force, it
-# answers with the strike's own part, so the handler sees the plating the hit meets.
 func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0, bonus := 0.0, chip := CHIP) -> Dictionary:
 	if not _pending.is_empty() and _pending["id"] == enemy.get_instance_id() \
 			and _pending["kind"] == kind and _pending["force"] == force:
-		# Inside the strike's own announce the hit is settled: answer with its result after the
-		# caps (strike multiplier, armour), so a damage number shows what the hit removes.
 		if _pending.has("result") and (part == "" or part == _pending["part"]):
 			return (_pending["result"] as Dictionary).duplicate()
 		if part == "":
@@ -1614,18 +1220,13 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0,
 		part = enemy.contact_part(ctx.player.ball_position(), kind)
 	if kind == SYNERGY:
 		part = ""
-	# The dunk's stored slam rides the punch, so every rule below treats it as part of the reel,
-	# and so does a weapon hit's or a contact's panel punch (bonus, panel_punch).
 	var punch := punch_of(kind, force) + dunk + bonus
 	if enemy.has_method("fight") and enemy.fight() == "posture":
 		var tier: int = SpeedTier.of(force, ctx.player.tuning.tier_cruise()) if kind == "ram" else 0
 		var smash: bool = ctx.player.smash_landing == enemy
-		# A judge that takes the part (warden.gd) meets plating_for(kind, part) (F004);
-		# BossContract's judge_hit is four arguments, so a boss piece gets four.
 		var judged: Dictionary = enemy.judge_hit(kind, punch, smash, tier, part) \
 				if enemy.get_method_argument_count("judge_hit") >= 5 else enemy.judge_hit(kind, punch, smash, tier)
 		if not judged.is_empty():
-			# A reel impact, by the one reel test the dunk charge also reads (is_reel_impact).
 			judged["reel"] = is_reel_impact(kind, smash)
 			return judged
 	var guard := guard_of(enemy)
@@ -1640,7 +1241,6 @@ func resolve(enemy: Node3D, kind: String, force: float, part := "", dunk := 0.0,
 	return {"punch": punch, "plating": plating, "full": full, "dealt": dealt, "part": part}
 
 
-# The Linker bracing a dish over this enemy, or null (linker.gd; blocks() decides each hit).
 func guard_of(enemy: Node3D) -> Node3D:
 	if enemy == null or not is_instance_valid(enemy):
 		return null
@@ -1650,7 +1250,6 @@ func guard_of(enemy: Node3D) -> Node3D:
 	return linker
 
 
-# One Linker per partner: a second asks and is refused while the first still holds it.
 func guard(partner: Node3D, linker: Node3D) -> bool:
 	var held = _guards.get(partner.get_instance_id())
 	if held != null and held != linker and is_instance_valid(held) and held.holds_partner(partner):
@@ -1674,28 +1273,20 @@ func unguard(partner: Node3D, linker: Node3D) -> void:
 		_guards.erase(partner.get_instance_id())
 
 
-# Punch for a hit of this kind and force: a ball contact scales with heft, a weapon hit
-# is its damage.
 func punch_of(kind: String, force: float) -> float:
 	if STRIKE_DAMAGE.has(kind):
 		var row: Array = STRIKE_DAMAGE[kind]
 		var scale := 1.0
 		if ctx != null and ctx.player.kit.sprinting:
 			scale = _knob("sprint_punch")
-		# Winch Ram: hauling in on the rope, you hit like a sprint.
 		elif ctx != null and ctx.player.kit.hooked and ctx.player.kit.winching:
 			scale = _knob("winch_punch")
-		# Ram Bumper panels (the build's ram_force mod).
 		if kind == "ram" and ctx != null and ctx.tuning != null:
 			scale *= ctx.tuning.mod("ram_force")
 		return (row[0] + force * row[1]) * heft() * scale
 	return force
 
 
-# Punch Rivet panels' flat damage (build.panel_punch) for a hit of this kind and source class:
-# a weapon hit or the ball's own contact (the panel's "+damage per hit"); 0 for procs, for
-# specials (an ultimate's punches strike as "ram" with source "special") and for actives,
-# which read the build's punch_bonus themselves.
 func panel_punch(kind: String, cls: String) -> float:
 	if not (cls == "weapon" or (kind in CONTACT_KINDS and cls in ["ram_or_contact", "drop_or_slam"])):
 		return 0.0
@@ -1713,18 +1304,12 @@ func heft() -> float:
 	return 1.0
 
 
-# The best punch you have right now: a ram at your planar speed (from CRUISE up), or one
-# hit of the weapon in your hands. The HUD's "Punch 48 / plating 60" reads this.
 func punch_now() -> float:
 	var weapon := active_weapon()
 	var shot: float = _patterns[weapon].damage * _damage_mod(weapon) + panel_punch("", "weapon") if _patterns.has(weapon) else 0.0
 	return maxf(ram_punch_now(), shot)
 
 
-# A ram at your planar speed, from CRUISE up; 0 below it. No weapon term: for a target
-# only a ram can beat (a clash), this is the whole punch.
-# The tier reads base cruise like resolve()'s ram tier (tier_cruise), so a cruise up never
-# drops the preview below CRUISE (coordinator ruling 24 Oct, principle 5).
 func ram_punch_now() -> float:
 	var planar: float = ctx.player.planar_velocity().length()
 	if SpeedTier.of(planar, ctx.player.tuning.tier_cruise()) < SpeedTier.CRUISE:
@@ -1732,8 +1317,6 @@ func ram_punch_now() -> float:
 	return punch_of("ram", planar) + panel_punch("ram", "ram_or_contact")
 
 
-# Build owns tuning mods (CONTRACTS). Combat reads its weapon keys live, at the moment
-# of use, so it never depends on which module heard part_gained first.
 func _damage_mod(weapon: String) -> float:
 	var scale: float = ctx.tuning.mod("weapon_damage")
 	if weapon == Weapons.PYLON_TURRET:
@@ -1741,21 +1324,18 @@ func _damage_mod(weapon: String) -> float:
 	return scale
 
 
-# The body plating a hit would meet now, shred taken off.
 func plating_of(enemy: Node3D) -> float:
 	if not is_instance_valid(enemy) or not enemy.has_method("plating_now"):
 		return 0.0
 	return maxf(0.0, enemy.plating_now() - shred_of(enemy))
 
 
-# How much plating landed hits have stripped off this enemy right now.
 func shred_of(enemy: Node3D) -> float:
 	if not is_instance_valid(enemy):
 		return 0.0
 	return float(_shred.get(enemy.get_instance_id(), {}).get("amount", 0.0))
 
 
-# Puts back all the plating hits have stripped off this enemy (foreman.gd's wipe).
 func wipe_shred(enemy: Node3D) -> void:
 	if not is_instance_valid(enemy):
 		return
@@ -1763,7 +1343,6 @@ func wipe_shred(enemy: Node3D) -> void:
 	_show_shred(enemy, 0.0)
 
 
-# hp / max_hp, 1.0 for an invalid enemy (as the spec says), 0.0 for a dead one.
 func integrity_of(enemy: Node3D) -> float:
 	if not is_instance_valid(enemy):
 		return 1.0
@@ -1772,10 +1351,6 @@ func integrity_of(enemy: Node3D) -> float:
 	return clampf(float(enemy.get("hp")) / float(enemy.get("max_hp")), 0.0, 1.0)
 
 
-# True when this contact would kill an unplated target outright: the spine's crush
-# pass-through asks before it decides to skip the knock. A plated break-through is
-# not a crush, and neither is a hit on a target whose crushable() says it cannot die
-# at its current HP (a boss held at a phase floor): the ball would end inside it.
 func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 	if not is_instance_valid(enemy) or enemy.is_dead():
 		return false
@@ -1784,17 +1359,11 @@ func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 	var cls := _classify_source(kind, _forced_source)
 	var result := resolve(enemy, kind, force, "", 0.0, panel_punch(kind, cls))
 	var dealt: float = float(result["dealt"]) * _strike_mult(enemy, kind, cls)
-	# The armour read the strike will apply (_read_armour), asked without recording it (F005).
 	if bool(result.get("full", false)):
 		dealt *= DamageFamilies.mult(DamageFamilies.armour_of(enemy), kind, cls)
 	return result["plating"] <= 0.0 and dealt >= enemy.hp
 
 
-# --- Pattern API for parts (README.md) ----------------------------------------------
-
-# A part applies these transformer ids once per stack in run.parts. Build calls this
-# from its setup (combat is set up first). A part whose id is itself a transformer id
-# needs no registration.
 func register_part(part_id: String, transformer_ids: Array) -> void:
 	_part_map[part_id] = transformer_ids.duplicate()
 	_rebuild_patterns()
@@ -1809,7 +1378,6 @@ func transformer_info(id: String) -> Dictionary:
 	return {"label": row.get("label", id), "text": row.get("text", "")}
 
 
-# The transformer ids the current parts apply, in part order.
 func active_transformers() -> Array:
 	var ids := []
 	if ctx == null or ctx.run == null:
@@ -1822,7 +1390,6 @@ func active_transformers() -> Array:
 	return ids
 
 
-# A copy of a weapon's current pattern, after every part.
 func pattern(weapon_id: String) -> Resource:
 	return (_patterns[weapon_id] as Resource).copy()
 
@@ -1838,25 +1405,18 @@ func active_weapon() -> String:
 	var abilities = ctx.player.abilities
 	var weapon: String = abilities.id_of(AbilityState.WEAPON)
 	var mounted_as = abilities.cap(AbilityState.WEAPON, "mounted", null)
-	# Air Turret: airborne counts as mounted for the weapon.
 	if mounted_as != null and (ctx.player.kit.mounted or (_knob("air_turret") and not ctx.player.state.on_floor())):
 		return mounted_as
-	# A swapped row that borrows another weapon's pattern (claw_rake plays claw_sweep) fires
-	# through that weapon, so every pattern op and transformer on it applies unchanged.
 	return String(abilities.cap(AbilityState.WEAPON, "pattern", weapon))
 
 
-# The discharge a given speed would fire right now, with the current parts.
 func discharge_preview(speed: float) -> Dictionary:
 	var p: Resource = _patterns[Weapons.PYLON_TURRET]
 	var scale: float = p.damage * _damage_mod(Weapons.PYLON_TURRET) / Weapons.base_damage(Weapons.PYLON_TURRET)
 	var burst := Weapons.burst(speed, p.burst_scale, scale)
-	# Splash Skirt panels widen the ring the telegraph draws and the hit reads alike.
 	burst["radius"] = float(burst["radius"]) + ctx.tuning.add("area_radius")
 	return burst
 
-
-# --- The tick -----------------------------------------------------------------------
 
 func _physics_process(delta: float) -> void:
 	if ctx == null:
@@ -1899,8 +1459,6 @@ func _physics_process(delta: float) -> void:
 		_weapon_step_context(weapon, p, cadence_rate))
 	if _overclock_left > 0.0 and not shots.is_empty():
 		shots = _apply_overclock_shots(shots, p)
-	# Tally's reader runs cards, never bolts: this branch comes first so _fire never sees
-	# the ledger_reader row, which exists only for _patterns and _damage_mod.
 	if is_cards:
 		_step_cards(delta, shots)
 	elif is_lane:
@@ -1927,7 +1485,7 @@ func _physics_process(delta: float) -> void:
 	_step_grapple_mutations(delta, enemies)
 	_step_kinetic_pylon(delta, enemies)
 	_step_kest_fuse_trace(delta, enemies)
-	if relic_swaps != null: relic_swaps.step(delta, enemies)  # --- W50-ISAAC-RELICS ---
+	if relic_swaps != null: relic_swaps.step(delta, enemies)
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	bolts.step(delta, space, enemies, shells)
@@ -1936,7 +1494,7 @@ func _physics_process(delta: float) -> void:
 	_step_devices(delta)
 	if ally_husks != null:
 		ally_husks.step(delta, enemies)
-	if orbitals != null: # --- W50-ISAAC-PARTS ---
+	if orbitals != null:
 		orbitals.step(delta, enemies)
 	wear_trail.step(delta, enemies)
 	PackPressure.observe(ctx.player.planar_velocity(), ctx.player.tuning.f("cruise"))
@@ -1949,9 +1507,6 @@ func _physics_process(delta: float) -> void:
 	_tint(enemies)
 
 
-# Plated targets glow amber when your punch beats their plating right now, slate when
-# it does not. Same function as the strike, re-read every physics tick. A target whose
-# tint_verb() is "ram" is compared with the ram alone, since only a ram counts there.
 func _tint(enemies = null) -> void:
 	var punch := punch_now()
 	var ram := ram_punch_now()
@@ -1997,13 +1552,11 @@ func _decay_shred(delta: float) -> void:
 			_show_shred(enemy, entry["amount"])
 
 
-# An enemy that draws its shred (the Warden's glowing seams) is told the amount.
 func _show_shred(enemy: Node3D, amount: float) -> void:
 	if enemy.has_method("set_shred"):
 		enemy.set_shred(amount)
 
 
-# A rolling ball at CRUISE or faster (or air-dashing with Dash Vane) that reaches a shell in flight bats it home.
 func _bat_by_ball(shells: Array) -> void:
 	var dash_bat: bool = _air_dash_bat_left > 0.0 and _has_micro_mutation("dash_vane")
 	if ctx.player.speed_tier() < SpeedTier.CRUISE and not dash_bat:
@@ -2036,8 +1589,6 @@ func _weapon_step_context(weapon: String, p: Resource, cadence_rate: float) -> D
 		var base_rate := float(Weapons.BASE[weapon].get("rate", 1.0))
 		if base_rate > 0.0:
 			rate_mult = cadence_rate / base_rate
-	# Overdrive shortens only the shot floor (0.20 -> 0.125 s, PILOT-CADENCE §3.1); build
-	# rate parts (gatling_heart, vent_louvre) scale reload pace in step with shot pace.
 	var reload_rate_mult := (rate_mult / Weapons.OVERDRIVE_RATE) if _overdrive > 0.0 else rate_mult
 	var charge_rate := 1.0
 	if weapon == Weapons.PYLON_TURRET:
@@ -2119,8 +1670,6 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		layout_pat.count = clampi(int(layout_pat.count) + spark_count - 1, 1, Pattern.MAX_VOLLEY)
 		layout_pat.spread_deg = maxf(float(layout_pat.spread_deg), 6.0)
 	var layout: Array = layout_pat.layout(forward, volleys)
-	# Only the player's own press carries the build's shot bits; a proc volley carries none,
-	# so proc depth stays 1 (ABILITY-MUTATIONS.md B1).
 	var shot: int = _shot_bits() if source == "weapon" else 0
 	var ricochet_carve: bool = source == "weapon" and ctx.player.state.carving and _has_cross_synergy("ricochet_canyon")
 	var rc_row: Dictionary = Synergies.cross_system_row("ricochet_canyon") if ricochet_carve else {}
@@ -2191,7 +1740,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	if rake_follows(source, ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", "")):
 		_rakes.append({"at": _clock + RAKE_DELAY, "weapon": weapon, "forward": forward,
 			"damage": p.damage * _damage_mod(weapon), "volley": volleys})
-	if relic_swaps != null: relic_swaps.on_weapon_fire(weapon, source, shot_desc, muzzle, forward, reach, damage)  # --- W50-ISAAC-RELICS ---
+	if relic_swaps != null: relic_swaps.on_weapon_fire(weapon, source, shot_desc, muzzle, forward, reach, damage)
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": aim["to"], "point": point,
 		"blocked": aim["blocked"], "bolts": fired, "volley": volleys, "sprung": sprung, "fused": pike.get("fuse", false),
@@ -2202,17 +1751,12 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 	ctx.events.shot_fired.emit(weapon, muzzle, aim["to"])
 
 
-# --- Slag Pike (ABILITY-MUTATIONS.md C1) ----------------------------------------------
-
-# The pike's table while the build holds it, else empty.
 func _pike_row() -> Dictionary:
 	var build = ctx.build if ctx != null else null
 	var held = build.get("effects") if build != null else null
 	return held.pike_fuse() if held != null and held.has_method("pike_fuse") else {}
 
 
-# Where this press falls in the pike's cycle: {} for a proc volley or with no pike, else
-# {"ring": volley five, "fuse": volley six}. Only the player's own press advances the count.
 func _pike_press(source: String) -> Dictionary:
 	if source != "weapon":
 		return {}
@@ -2232,8 +1776,6 @@ func _pike_press(source: String) -> Dictionary:
 	return step
 
 
-# The next count after one weapon press at `now`: the count restarts after `idle_s` without a
-# press; the press that reaches `every` fuses and the count resets. Pure, so tests can walk it.
 static func pike_advance(count: int, last: float, now: float, row: Dictionary) -> Dictionary:
 	var every := int(row.get("every", 6))
 	var n := 0 if now - last >= float(row.get("idle_s", 3.0)) else count
@@ -2242,8 +1784,6 @@ static func pike_advance(count: int, last: float, now: float, row: Dictionary) -
 	return {"count": 0 if fuse else n, "ring": n == every - 1, "fuse": fuse}
 
 
-# The fused bolt: the volley's damage summed and capped at cap_mult times one bolt, range and
-# width up, the pierce colour, and the held bits with pierce on.
 static func pike_bolt(record: Dictionary, volley_size: int, row: Dictionary) -> Dictionary:
 	var out := record.duplicate()
 	var one: float = float(record["damage"])
@@ -2256,8 +1796,6 @@ static func pike_bolt(record: Dictionary, volley_size: int, row: Dictionary) -> 
 	return out
 
 
-# Held bits with pierce on, never past MAX_SHOT_BITS: a full set without pierce gives its
-# last bit in table order up to it, on this one bolt.
 static func fused_bits(bits: int) -> int:
 	var pierce := ShotBits.bit("pierce")
 	if ShotBits.has(bits, pierce):
@@ -2278,33 +1816,23 @@ func _pike_cue() -> void:
 		audio.play("shot_pierce", 0.0, 1.0, "SFX", String(ShotBits.TABLE["pierce"]["sound"]))
 
 
-# --- Verb items (ABILITY-MUTATIONS.md C3 to C7) ---------------------------------------
-# Each follow-up strike here is a SYNERGY strike with source item_proc and no shot bits: it never
-# procs an item (Triggers.STRIKE_PROC), is never a ball contact (no heft scaling, no dunk, no Warden
-# slam count) and never reaches the verb that laid it, so proc depth stays 1 (section 8).
-
-# A held verb item's numbers, {} while the build does not hold it.
 func _verb(effect_id: String) -> Dictionary:
 	var build = ctx.build if ctx != null else null
 	var held = build.get("effects") if build != null else null
 	return held.verb_row(effect_id) if held != null and held.has_method("verb_row") else {}
 
 
-# Long Leash: how many times the row's load_seconds a loaded line waits (1 without it).
 func leash_scale() -> float:
 	var row := _verb("line_leash")
 	return maxf(1.0, float(row.get("load_mult", 1.0))) if not row.is_empty() else 1.0
 
 
-# One plain weapon hit now: the active weapon's pattern damage under the build's weapon mods.
 func _weapon_hit() -> float:
 	var weapon := active_weapon()
 	var p: Resource = _patterns.get(weapon)
 	return p.damage * _damage_mod(weapon) if p != null else 0.0
 
 
-# Lays one committed strip: the indicator draws the record's own shape and the same record is the
-# hit test (in_line with FORGIVENESS), striking each machine once while it lives. It strikes now.
 func _lay_strip(item: String, from: Vector3, to: Vector3, width: float, damage: float, life: float, knock: float) -> Dictionary:
 	_verb_serial += 1
 	var strip := {"item": item, "layer": "verb_strip_%d" % _verb_serial, "damage": damage, "knock": knock,
@@ -2333,7 +1861,6 @@ func _strike_strip(strip: Dictionary, enemies = null) -> void:
 			"", "item_proc", "proc")
 
 
-# The strips strike what enters them and go when their life ends; a bell rings when it is due.
 func _step_verb_items(enemies = null) -> void:
 	if not _strips.is_empty():
 		for strip in _strips.duplicate():
@@ -2360,8 +1887,6 @@ func _clear_verb_items() -> void:
 	_wake_frame = -1
 
 
-# Backwash (C3): a dash or a boost lays a strip behind the ball, once per frame however many of
-# the two facts it published. The dash itself is untouched: this only reads where it began.
 func _on_wake_dash(dir: Vector3) -> void:
 	var row := _verb("dash_wake")
 	var frame := Engine.get_physics_frames()
@@ -2375,8 +1900,6 @@ func _on_wake_dash(dir: Vector3) -> void:
 		float(row.get("mult", 0.4)) * _weapon_hit(), float(row.get("life", 1.5)), float(row.get("knock", 4.0)))
 
 
-# Barbed Reel (C4): this frame's reel-in damage on each machine (the landing contact and its
-# shockwave). A jump's SYNERGY strike is never a reel impact, so it never lands here.
 func _note_reel(enemy: Node3D, dealt: float) -> void:
 	var frame := Engine.get_physics_frames()
 	if frame != _reel_frame:
@@ -2386,8 +1909,6 @@ func _note_reel(enemy: Node3D, dealt: float) -> void:
 	_reel_hits[id] = float(_reel_hits.get(id, 0.0)) + dealt
 
 
-# The reel-in impact jumps once to the nearest other live machine within reach, at mult of that
-# impact's damage, through _chain with one jump. It never emits harpoon_smashed, so it cannot re-arm.
 func _on_reel_chain(enemy: Node3D, at: Vector3, _speed: float) -> void:
 	var row := _verb("reel_chain")
 	if row.is_empty() or _reel_frame != Engine.get_physics_frames() or _reel_hits.is_empty():
@@ -2405,9 +1926,6 @@ func _on_reel_chain(enemy: Node3D, at: Vector3, _speed: float) -> void:
 	last_reel_arc = {"from": from, "damage": damage * mult, "source": "item_proc", "bits": 0, "target": next}
 
 
-# Faultline Cap (C5): a smash landing cracks a lane ahead along the ball's heading at mult of the
-# smash's own punch (worked out once here; the strike is SYNERGY, so it is not scaled again), and
-# breaks props at three points down it through break_props, whose tier bonus is +1 and never more.
 func _on_slam_crack(at: Vector3, strength: float, _flatness: float) -> void:
 	var row := _verb("slam_crack")
 	if row.is_empty() or strength < 0.05 or ctx.run.class_def == null:
@@ -2424,15 +1942,10 @@ func _on_slam_crack(at: Vector3, strength: float, _flatness: float) -> void:
 		ctx.break_props(from + heading * minf(float(along), length), float(row.get("prop_radius", 2.5)), "faultline_cap")
 
 
-# Second Bell (C6): the burst record a kit special's release replaces, read before it fires.
 func _bell_mark() -> Dictionary:
 	return {"burst": last_burst}
 
 
-# Hung on the two kit special exits only (the gauge release and a SPECIAL tap landing), after the
-# spend. A damaging release keeps its footprint lit and rings it again `delay` later at mult of its
-# damage; Gather Plate rings a gather of gather_scale its radius at the plate. The repeat spends
-# and refills nothing, and _toll never reaches this, so it cannot ring again.
 func _ring_bell(id: String, shape: Dictionary, mark: Dictionary) -> void:
 	var row := _verb("second_bell")
 	if row.is_empty():
@@ -2495,7 +2008,6 @@ func _toll(bell: Dictionary, enemies = null) -> void:
 	last_bell["rung_at"] = _clock
 
 
-# A committed area the release drew: ring, line or cone, each with the forgiveness.
 static func in_shape(shape: Dictionary, enemy: Node3D) -> bool:
 	match String(shape.get("kind", "")):
 		"ring":
@@ -2526,8 +2038,6 @@ static func _shape_origin(shape: Dictionary) -> Vector3:
 	return shape.get("centre", Vector3.ZERO)
 
 
-# Where a footprint's props break: a ring as itself, a line as three circles down it, a cone as
-# the circle round its middle.
 static func _shape_blasts(shape: Dictionary) -> Array:
 	match String(shape.get("kind", "")):
 		"line":
@@ -2555,7 +2065,6 @@ func _draw_shape(shape: Dictionary, color: Color) -> void:
 				effects.beam(apex, apex + edge * float(shape["length"]), color, Effects.RING_LIFE)
 
 
-# One bolt of a volley: the pattern's numbers for this layout entry, fired from `muzzle`.
 func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector3, reach: float, damage: float, source: String, bits := 0) -> Dictionary:
 	var record := {
 		"origin": muzzle, "fired_from": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": reach,
@@ -2568,14 +2077,11 @@ func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector
 		"bits": bits,
 	}
 	_evolve_record(record, p)
-	if orbitals != null: # --- W50-ISAAC-PARTS ---
+	if orbitals != null:
 		orbitals.stamp_bolt(record, p)
 	return record
 
 
-# The verb evolutions a player's own press carries; a proc bolt carries none. Grapeshot Press
-# stamps the split it throws (Bolts.split_children reads it); Hoar Barrel marks a shot that
-# pierces, by its pattern or its pierce bit, and keeps the ids of the slabs its frost made.
 func _evolve_record(record: Dictionary, p: Resource) -> void:
 	if String(record.get("source", "")) != "weapon":
 		return
@@ -2587,19 +2093,15 @@ func _evolve_record(record: Dictionary, p: Resource) -> void:
 		record["hoar_spared"] = []
 
 
-# True while the run holds this Evolved part with both its ingredients.
 func _evolution_live(part_id: String) -> bool:
 	return ctx != null and ctx.run != null and Synergies.evolved_live(part_id, ctx.run.parts)
 
 
-# The build's element field, or null with no build (a bare test harness).
 func _field():
 	var build = ctx.build if ctx != null else null
 	return build.get("field") if build != null else null
 
 
-# Hoar Barrel: a marked shot bursts every slab it flew over into a forward shard cone, except the
-# one the ball stands on and the ones its own frost made. True when one burst.
 func _on_bolt_flight(bolt: Dictionary, from: Vector3, to: Vector3) -> bool:
 	_last_flight_breaks_props = bool(bolt.get("breaks_props", false)) and String(bolt.get("source", "")) == "weapon"
 	_last_flight_break_radius = float(bolt.get("prop_break_radius", 2.2))
@@ -2614,9 +2116,6 @@ func _on_bolt_flight(bolt: Dictionary, from: Vector3, to: Vector3) -> bool:
 	return int(burst["detonated"]) > 0
 
 
-# Hoar Barrel: frost round a machine the marked shot hit, with an ice crystal where the shot
-# struck (`point`, on the body's near face, so the body never hides it); a slab that frost froze
-# is spared from the same shot's crossing, so it never bursts the ice it just laid.
 func _hoar_patch(bolt: Dictionary, at: Vector3, point: Vector3) -> void:
 	var field = _field()
 	if field == null:
@@ -2627,9 +2126,6 @@ func _hoar_patch(bolt: Dictionary, at: Vector3, point: Vector3) -> void:
 		(bolt["hoar_spared"] as Array).append(int(slab["id"]))
 
 
-# --- Fault Hammer (ABILITY-MUTATIONS.md section 7 D) ----------------------------------
-
-# A slam lands: its aftershock is committed now, drawn now, and lands FAULT_DELAY later.
 func _on_fault_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05 or not ctx.flow.in_play() or not _has_fault:
 		return
@@ -2638,8 +2134,6 @@ func _on_fault_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	_draw_aftershock()
 
 
-# The aftershock's damage at its centre: FAULT_DAMAGE of the slam's own (Dunk.slam_damage, the
-# row and heft the slam strikes with). It falls off to the ring's edge as the slam does.
 static func fault_damage(strength: float, pilot_heft: float) -> float:
 	return Dunk.slam_damage(Augments.SLAM_KNOCK * strength, STRIKE_DAMAGE["slam"], pilot_heft) * FAULT_DAMAGE
 
@@ -2660,8 +2154,6 @@ func _tick_aftershocks() -> void:
 	_draw_aftershock()
 
 
-# One aftershock, once: the build's own strike kind (no contact, no dunk, no proc, no slam fact)
-# as item_proc on every machine in the ring, then the ice and the props in that same ring.
 func _aftershock(shock: Dictionary) -> void:
 	var at: Vector3 = shock["at"]
 	var radius: float = shock["radius"]
@@ -2685,7 +2177,6 @@ static func _fault_layer(index: int) -> String:
 	return FAULT_LAYER if index == 0 else "%s_%d" % [FAULT_LAYER, index]
 
 
-# Every waiting aftershock's ring, in the pilot's colour, its sweep filling to the landing.
 func _draw_aftershock() -> void:
 	var indicator = ctx.player.indicator
 	for i in _aftershocks.size():
@@ -2705,13 +2196,10 @@ func _clear_aftershocks() -> void:
 	_fault_layer_count = 0
 
 
-# Rake Heart (claw_rake): only the player's own press queues a return, so the return pass,
-# which fires as item_proc, can never queue another (proc depth 1).
 static func rake_follows(source: String, mutation: String) -> bool:
 	return source == "weapon" and mutation == "claw_rake"
 
 
-# The queued return passes whose time has come; each fires once and leaves the queue.
 func _tick_rakes() -> void:
 	var waiting: Array = []
 	for rake in _rakes:
@@ -2722,8 +2210,6 @@ func _tick_rakes() -> void:
 	_rakes = waiting
 
 
-# The same arc mirrored about the aim line, from where the ball is now: item_proc, no bits,
-# RAKE_DAMAGE of the sweep's damage. It fires through bolts directly, so it queues nothing.
 func _rake_return(rake: Dictionary) -> void:
 	var weapon: String = rake["weapon"]
 	if not _patterns.has(weapon):
@@ -2756,15 +2242,12 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 			damage *= Weapons.CLAMP_BONUS
 		else:
 			_clamped.erase(id)
-	# The bits this hit sets off: pierce and split from the flight (bolts.gd), heat and pull here.
 	var acts := int(bolt.get("acts", 0))
 	if ShotBits.has(int(bolt.get("bits", 0)), ShotBits.bit("heat")):
 		var heat := _heat(enemy, point)
 		damage *= float(heat["mult"])
 		if heat["lit"] or heat["bonus"]:
 			acts = ShotBits.union(acts, ShotBits.bit("heat"))
-	# Decide pull before _hit so the weapon's away-knock never out-muscles a pull (Enemy.knock
-	# keeps only the stronger shove, so when a pull will land it replaces the weapon shove).
 	var pull_plan := _pull_plan(enemy, bolt) if Bolts.bit_ready(bolt, "pull") else {}
 	var hit_knock := 0.0 if not pull_plan.is_empty() else float(bolt["knock"])
 	var long_barrel_stagger := false
@@ -2793,30 +2276,24 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 		_resolve_rivet_armor_ricochet(bolt, enemy, point, part)
 	if bolt["chain_jumps"] > 0:
 		_chain(enemy, from, bolt)
-	if orbitals != null: # --- W50-ISAAC-PARTS ---
+	if orbitals != null:
 		orbitals.on_bolt_hit(bolt, enemy, point, part)
 
 
-# A bounce-bit glance off a wall: the bounce V and its one sound. Not a hit, so it pulls and
-# heats nothing (pair rows bounce+pull, bounce+heat).
 func _on_bolt_bounce(bolt: Dictionary, at: Vector3) -> void:
 	if bool(bolt.get("sixth_hot", false)) and not bool(bolt.get("sixth_hot_ricocheted", false)):
 		_resolve_rivet_wall_ricochet(bolt, at)
 		return
 	_bit_tell(ShotBits.bit("bounce"), bolt, at)
-	if orbitals != null: # --- W50-ISAAC-PARTS ---
+	if orbitals != null:
 		orbitals.on_bolt_bounce(bolt, at)
 
 
-# The one bit sound for a hit or glance: the first acting bit in ShotBits.NAMES order, read
-# off its TABLE row, so a three-bit hit never stacks three sounds. "" when no bit acted.
 static func hit_tell(acts: int) -> String:
 	var tells := ShotBits.tells(acts)
 	return String(tells[0]["sound"]) if not tells.is_empty() else ""
 
 
-# The hit's one bit tell, sight and sound from the same first acting bit: its shape where it
-# acted (effects.bit_hit) and its sound.
 func _bit_tell(acts: int, bolt: Dictionary, point: Vector3) -> void:
 	var sound := hit_tell(acts)
 	if sound == "":
@@ -2830,8 +2307,6 @@ func _bit_tell(acts: int, bolt: Dictionary, point: Vector3) -> void:
 		audio.play("shot_" + String(ShotBits.names(acts)[0]), 0.0, 1.0, "SFX", sound)
 
 
-# A bit tell's second direction: pull points from the hit to the ball, bounce back the way the
-# shot came in (its record already flies the way out, lifted off the wall along the normal).
 func _bit_aim(bit_name: String, bolt: Dictionary, point: Vector3) -> Vector3:
 	if bit_name == "pull" and ctx != null and ctx.player != null:
 		return ctx.player.ball_position() - point
@@ -2842,8 +2317,6 @@ func _bit_aim(bit_name: String, bolt: Dictionary, point: Vector3) -> Vector3:
 	return Vector3.ZERO
 
 
-# Plan one pull on a struck machine from a pull-ready bolt: the knock toward the ball,
-# softer for each machine the bolt has already reached. Empty when the machine holds.
 func _pull_plan(enemy: Node3D, bolt: Dictionary) -> Dictionary:
 	var nth := int(bolt.get("pulled", 0))
 	bolt["pulled"] = nth + 1
@@ -2857,22 +2330,17 @@ func _pull_plan(enemy: Node3D, bolt: Dictionary) -> Dictionary:
 	return {"dir": toward.normalized(), "force": force}
 
 
-# The pull rule: lighter comes, heavier holds. 0 when the machine outweighs the pilot or has
-# no heft (a Warden, the vault); else PULL_KNOCK scaled by the heft ratio and the falloff.
 static func pull_force(pilot_heft: float, body_heft: float, nth: int) -> float:
 	if body_heft == INF or body_heft > pilot_heft:
 		return 0.0
 	return PULL_KNOCK * minf(pilot_heft / maxf(body_heft, 0.01), PULL_RATIO_CAP) * pow(PULL_FALLOFF, nth)
 
 
-# The build's shot bits for a weapon press; 0 with no build (a bare test harness).
 func _shot_bits() -> int:
 	var build = ctx.build if ctx != null else null
 	return int(build.shot_bits()) if build != null and build.has_method("shot_bits") else 0
 
 
-# One heated hit on enemy: heat_hit()'s answer, with a ring in the heat row's colour as the
-# machine starts to glow and again when the bonus lands; the hit's one sound is _bit_tell's.
 func _heat(enemy: Node3D, point: Vector3) -> Dictionary:
 	var hit := heat_hit(_heated, enemy.get_instance_id(), _clock)
 	if hit["lit"] or hit["bonus"]:
@@ -2881,14 +2349,10 @@ func _heat(enemy: Node3D, point: Vector3) -> Dictionary:
 	return hit
 
 
-# Whether a machine is glowing from a heated hit right now.
 func heated(enemy: Node3D) -> bool:
 	return float(_heated.get(enemy.get_instance_id(), {}).get("glow", -INF)) > _clock
 
 
-# The heat rule on its own state, for one heated hit on the machine with this id at now:
-# {"mult" (HEAT_BONUS or 1), "lit" (it was not glowing), "bonus" (the bonus landed)}. Every
-# heated hit renews the glow; the bonus needs a glow already lit and HEAT_GLOW since the last.
 static func heat_hit(state: Dictionary, id: int, now: float) -> Dictionary:
 	var entry: Dictionary = state.get(id, {"glow": -INF, "ready": -INF})
 	var glowing := float(entry["glow"]) > now
@@ -2900,7 +2364,6 @@ static func heat_hit(state: Dictionary, id: int, now: float) -> Dictionary:
 	return {"mult": HEAT_BONUS if bonus else 1.0, "lit": not glowing, "bonus": bonus}
 
 
-# Public deep-module doors (Rule 7) for actives, consumables, orbitals, and ally husks.
 func deal_proc_hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "item_proc", impact := "", chip := CHIP) -> void:
 	_hit(enemy, kind, damage, direction, knock, part, source, impact, chip)
 
@@ -2933,7 +2396,6 @@ func floor_at(at: Vector3) -> Vector3:
 	return _floor_at(at)
 
 
-# One resolved weapon hit: the shove, the flash, then strike() for damage and the fact.
 func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "", chip := CHIP) -> void:
 	var push := Vector3(direction.x, 0.0, direction.z)
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
@@ -2942,7 +2404,6 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 		enemy.react(String(EventKinds.impact(impact if impact != "" else kind)["react"]), push, true)
 	enemy.flash()
 	strike(enemy, kind, damage, part, source, impact, chip)
-	# Death Mark: a marked enemy that dies here bursts like a charge.
 	var id := enemy.get_instance_id()
 	if _marks.has(id) and enemy.is_dead():
 		var live: bool = _marks[id] > _clock
@@ -2953,8 +2414,6 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 				"_source": "item_proc"})
 
 
-# The arc jumps from the struck enemy to the nearest one it has not touched, losing
-# chain_falloff of its damage per jump. Returns the first jumped target, or null.
 func _chain(first: Node3D, from: Vector3, bolt: Dictionary, knock_scale := 0.5) -> Node3D:
 	var visited := [first]
 	var damage: float = bolt["damage"]
@@ -3006,18 +2465,10 @@ func _nearest_list(at: Vector3, reach: float, limit: int) -> Array:
 	return out
 
 
-# --- Specials -----------------------------------------------------------------------
-
 func _knob(name: String):
 	return ctx.player.tree.knob(name)
 
 
-# The one hold-gauge-release loop for every class's special. A press starts the gauge
-# if a charge is in; a second press or RMB drops it with nothing spent; the key coming
-# up, or a full gauge held past its grace, fires the geometry drawn at that fraction.
-# The slot's ability id picks the row in _specials, so a swapped variant plays here too.
-# A row with no gauge is a tap (SKILL-BAR section 1): it casts on the press, through its
-# `tap` callable, which answers whether it landed and spends nothing itself.
 func _step_special(intent, delta: float) -> void:
 	var abilities = ctx.player.abilities
 	var kit = ctx.player.kit
@@ -3027,7 +2478,6 @@ func _step_special(intent, delta: float) -> void:
 		return
 	var row: Dictionary = _specials[id]
 	if gauge == null:
-		# A second press or right mouse drops a running cast with nothing spent, like a gauge.
 		if abilities.casting == AbilityState.SPECIAL:
 			if intent.special_pressed or intent.cancel_pressed:
 				var dropped: String = abilities.cancel_cast()
@@ -3039,7 +2489,6 @@ func _step_special(intent, delta: float) -> void:
 		return
 	if not gauge.charging and intent.special_pressed and not abilities.ready(AbilityState.SPECIAL):
 		_refuse_cast(AbilityState.SPECIAL, "cooling")
-	# Auto Gauge: mounted, the gauge starts and holds by itself, so it fires at full.
 	var auto: bool = _knob("mounted_autogauge") and kit.mounted
 	if gauge.charging and (intent.special_pressed or intent.cancel_pressed):
 		gauge.cancel()
@@ -3050,7 +2499,6 @@ func _step_special(intent, delta: float) -> void:
 			and (not row.has("can") or row["can"].call()):
 		gauge.begin()
 		ctx.events.gauge_charging.emit(id)
-		# Hip Fire: pressed mid-sprint, the gauge is already full and fires now.
 		if _knob("sprint_full_blast") and kit.sprinting:
 			gauge.held = gauge.charge_max
 	if not gauge.charging:
@@ -3065,7 +2513,6 @@ func _step_special(intent, delta: float) -> void:
 	var shape: Dictionary = row["geometry"].call(f)
 	ctx.player.indicator.set_shape("special", shape)
 	ctx.player.indicator.clear("special")
-	# The plate can expire while the gauge fills: a release with nothing to return spends nothing.
 	if row.has("can") and not row["can"].call():
 		ctx.events.gauge_cancelled.emit(id, "blocked")
 		return
@@ -3073,7 +2520,6 @@ func _step_special(intent, delta: float) -> void:
 	last_committed = {"id": id, "fraction": f, "geometry": shape}
 	var mark := _bell_mark()
 	row["fire"].call(f, shape)
-	# Twin Discharge and Vortex: the same release again, smaller, a moment later.
 	if _knob("special_echo") > 0.0:
 		_echo = {"row": row, "fraction": f * 0.6, "left": _knob("special_echo")}
 	_ring_bell(id, shape, mark)
@@ -3082,11 +2528,6 @@ func _step_special(intent, delta: float) -> void:
 	ctx.events.slot_cast.emit(AbilityState.SPECIAL, id, ctx.player.ball_position())
 
 
-# One tap cast on a bar slot: refused while cooling, refused with no target, else spent and
-# published. Nothing is spent on a refusal, and the selection and its timer stay. A row with a
-# `cast` time starts its cast here instead and lands through _step_cast when it finishes; an
-# interrupting hit drops it first with nothing spent (FIELDS-AND-CASTS section 4). A row's
-# `commit` aims at the press: an invalid aim is refused then, and the cast lands where it aimed.
 func _tap(slot: String, id: String, cast: Callable, commit := Callable()) -> void:
 	var abilities = ctx.player.abilities
 	if abilities.casting == slot:
@@ -3111,14 +2552,12 @@ func _tap(slot: String, id: String, cast: Callable, commit := Callable()) -> voi
 	_land_tap(slot, id, cast)
 
 
-# A cast that ran its time lands now as the tap it started from, with the same refusals.
 func _step_cast() -> void:
 	var done: String = ctx.player.abilities.take_cast_done()
 	var swapped: String = ctx.player.abilities.take_swap_dropped()
 	if _cast_pending.is_empty():
 		return
 	if swapped != "":
-		# A pick or relic swapped the casting slot: the cast ends as any cancel does.
 		ctx.player.indicator.collapse(String(_cast_pending["slot"]))
 		ctx.events.gauge_cancelled.emit(swapped, "swap")
 		_cast_pending = {}
@@ -3151,8 +2590,6 @@ func _land_tap(slot: String, id: String, cast: Callable) -> void:
 	ctx.events.slot_cast.emit(slot, id, at)
 
 
-# A cast left click asked for that cannot go. Only a click the bar routed answers with a cue;
-# a module test or a bot writing special_* directly hears nothing new.
 func _refuse_cast(slot: String, reason: String) -> void:
 	if reason == "cooling" and ctx.player.abilities.silenced(slot):
 		reason = "jammed"
@@ -3169,8 +2606,6 @@ func _tick_echo(delta: float) -> void:
 	var row: Dictionary = _echo["row"]
 	var f: float = _echo["fraction"]
 	_echo = {}
-	# A special that needs live state (Tally's plate) echoes only while its can() still holds
-	# (wave 15, 2026-10-05); a stale echo fired at the ball otherwise.
 	if row.has("can") and not row["can"].call():
 		return
 	_echoing = true
@@ -3178,14 +2613,12 @@ func _tick_echo(delta: float) -> void:
 	_echoing = false
 
 
-# Hull within the drawn radius plus the forgiveness counts as inside a ring.
 static func in_ring(centre: Vector3, radius: float, enemy: Node3D) -> bool:
 	var flat := enemy.global_position - centre
 	flat.y = 0.0
 	return flat.length() - _hull(enemy) <= radius * (1.0 + AbilityState.FORGIVENESS)
 
 
-# Hull within the drawn half-width plus the forgiveness, and along the drawn length.
 static func in_line(from: Vector3, to: Vector3, width: float, point: Vector3, hull := 0.0) -> bool:
 	var a := Vector2(from.x, from.z)
 	var b := Vector2(to.x, to.z)
@@ -3211,7 +2644,6 @@ func _ground_under(at: Vector3) -> Vector3:
 	return at + Vector3.DOWN * 0.9
 
 
-# The ground straight below a point, for charges a proc drops from the air.
 func _floor_at(at: Vector3) -> Vector3:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at, at + Vector3.DOWN * 80.0, 1))
@@ -3224,8 +2656,6 @@ func _flat_aim() -> Vector3:
 	return dir.normalized() if dir.length_squared() > 0.0001 else Vector3.FORWARD
 
 
-# Sable: the gauge stands in for speed in the discharge curve, and the bank counts if
-# you are mounted and it is bigger.
 func _discharge_speed(f: float) -> float:
 	var speed := maxf(f * Weapons.DISCHARGE_FULL_SPEED, 0.75 * ctx.player.state.velocity.length())
 	if ctx.player.kit.mounted:
@@ -3260,7 +2690,6 @@ func _fire_overdrive(f: float, shape: Dictionary) -> void:
 	_forced_source = prev_source
 
 
-# Point Blank, Rivet's variant: half the radius, double the damage, same gauge.
 func _point_blank_geometry(f: float) -> Dictionary:
 	var shape := _overdrive_geometry(f)
 	shape["radius"] = float(shape["radius"]) * Weapons.POINT_BLANK_RADIUS
@@ -3276,7 +2705,6 @@ func _fire_point_blank(f: float, shape: Dictionary) -> void:
 	_forced_source = prev_source
 
 
-# Tarn's clamp: the ring catches every enemy in it, drags it in and holds it for claw sweeps.
 func _clamp_geometry(f: float) -> Dictionary:
 	return ctx.player.yours({"kind": "ring", "centre": _ground_under(ctx.player.ball_position()),
 		"radius": AbilityState.Gauge.scaled(f, Weapons.CLAMP_RADIUS_MIN, Weapons.CLAMP_RADIUS_MAX),
@@ -3314,12 +2742,6 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 	_forced_source = prev_source
 
 
-# --- The remembered cannon (BIBLE "Mind and the remembered cannon") ------------------
-# Every cannon attack is one of the Mind's four families, committed through
-# MindAttacks with the ball as the source and the aim or an enemy as the target, laid as
-# a real Hazard in the cannon's colour. A non-hostile colour keeps it out of Threat.GROUP;
-# a hit lands only where the Hazard's own contains() holds, while it is live.
-
 func _cannon_phase() -> int:
 	return clampi(ctx.stages.world_of(ctx.run.stage), 1, 3) if ctx.stages != null else 1
 
@@ -3342,8 +2764,6 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 			if overrides.has(key):
 				d[key] = overrides[key]
 		var h = MindAttacks.build(d)
-		# The one-second floor belongs to hostile hazards. Friendly cable and beat calls
-		# use the committed warn, including zero for the last landing-beat call.
 		if overrides.has("warn"):
 			h.warn_seconds = maxf(0.0, float(overrides["warn"]))
 		h.color = overrides["color"] if overrides.has("color") else ClassDef.CANNON_COLOR
@@ -3430,7 +2850,6 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 			_cannon_expose(enemy, float(entry["window"]), entry["verb"])
 
 
-# Every cannon Hazard leaves the tree now and is freed at the end of the frame.
 func _free_cannon() -> void:
 	_recital_index = 0
 	_recital_at = -INF
@@ -3458,8 +2877,6 @@ func _clear_cannon_paint() -> void:
 		ctx.player.indicator.clear("cannon_bracket_r")
 
 
-# Computes the committed ground lane geometry shared by the hold-paint preview and the release
-# Hazard (PILOT-CADENCE.md §3.6: what is drawn while held is what will hit).
 func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true) -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
@@ -3492,8 +2909,6 @@ func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true)
 	}
 
 
-# Draws the Cannon's live painted lane and closing brackets while held (PILOT-CADENCE.md §3.6, §5.3):
-# closing in Cannon's colour before lock, flush in mint inside [0.30, 0.46] s, reopening & slate past 0.46 s.
 func _step_cannon_paint() -> void:
 	var is_lane: bool = ctx.player.abilities.cap(AbilityState.WEAPON, "family", "") == "lane"
 	var snap: Dictionary = weapon_driver.state_snapshot()
@@ -3543,7 +2958,6 @@ func _step_cannon_paint() -> void:
 		"air_lock_overpen": air_overpen}
 
 
-# The weapon: one Mind lane from the ground under the ball down the aim, per lock release or hold_auto tick.
 func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> void:
 	var p: Resource = _patterns.get(weapon)
 	var shot_kind := String(shot_desc.get("kind", "plain"))
@@ -3564,19 +2978,13 @@ func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> v
 		overrides["color"] = Palette.SAND
 	var entry := _commit_cannon("lane", plan["target"], plan["centre"], plan["radius"], damage, source, false, overrides)
 	var h = entry["hazards"][0]
-	# The body the ball's line holds is struck when the lane's footprint covers it, however high it
-	# hangs: the lane reaches 3 m over the ground, and the stage-2 flume relic hangs 12 m over the
-	# drum floor, so latched lanes landed 0 of about 80 (ruling BL2). The line charge strikes its
-	# anchor the same way (_cannon_line_fire's "forced").
 	var kit = ctx.player.kit
 	if kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
 		var held: Vector3 = kit.anchor_body.global_position
-		# A body already inside the lane at its real position takes the normal strike, not the forced one.
 		if h.contains(Vector3(held.x, h.ground_at(held) + 1.0, held.z)) and not h.contains(held):
 			(entry["options"] as Dictionary)["forced"] = kit.anchor_body
 	var end: Vector3 = (h.centre as Vector3) + (h.heading as Vector3) * float(h.length)
 	if shot_kind == WeaponDriver.SHOT_RAIL:
-		# PILOT-CADENCE.md §5.3: bone shot with a thin uranium-green edge, no recoil kick (§9.12).
 		var side: Vector3 = Vector3.UP.cross(h.heading as Vector3).normalized() * float(h.half_width)
 		effects.beam((h.centre as Vector3) + side, end + side, ClassDef.CANNON_COLOR, Effects.RING_LIFE)
 		effects.beam((h.centre as Vector3) - side, end - side, ClassDef.CANNON_COLOR, Effects.RING_LIFE)
@@ -3603,14 +3011,10 @@ func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> v
 	ctx.events.shot_fired.emit(weapon, muzzle, end)
 
 
-# Walking Lane: the call extends the open link when it comes within WALK_WINDOW of the last lane.
-# One link is open at most, and the extension closes it, so a third call never extends again.
 static func walk_extends(mutation: String, walk: Dictionary, clock: float) -> bool:
 	return mutation == "cannon_lane_walk" and not walk.is_empty() and clock - float(walk["at"]) <= WALK_WINDOW
 
 
-# The movement: the recoil kicks the ball along the aim; the split lands behind it.
-# While Cannon's explosive piton is staked, the stake cancels recoil kick so it holds its firing lane.
 func _on_cannon_dashed(dir: Vector3) -> void:
 	if ctx.player.abilities.cap(AbilityState.MOVEMENT, "family", "") != "split_lane":
 		return
@@ -3635,7 +3039,6 @@ func _on_cannon_dashed(dir: Vector3) -> void:
 		_cannon_recoil_air_grace = Weapons.CANNON_RECOIL_AIR_GRACE_S
 
 
-# The special: the gauge draws the plate's own band as a cone; the release commits it.
 func _plate_geometry(f: float) -> Dictionary:
 	return ctx.player.yours({"kind": "cone", "apex": _ground_under(ctx.player.ball_position()), "dir": _flat_aim(),
 		"length": 2.0 * MindAttacks.PLATE_HALF_BAND, "half_angle": MindAttacks.PLATE_HALF_SPAN, "fill": f})
@@ -3649,8 +3052,6 @@ func _fire_plate(f: float, shape: Dictionary) -> void:
 	last_burst = {"at": apex, "damage": damage * _damage_mod(Weapons.CANNON_LANE), "kind": "cannon_plate", "breaks_props": false}
 
 
-# The smash: after the shared slam, a rush ring about the landing over the nearest enemy.
-# Recoil-Surf Slam Reset (W47-H2): landing cannon_rush immediately resets cannon_recoil.
 func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05 or ctx.player.abilities.cap(AbilityState.SMASH, "family", "") != "rush":
 		return
@@ -3677,14 +3078,10 @@ func _on_cannon_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 		_lay_wake(landing)
 
 
-# Rush Wake: only the player's own rush landing lays a wake. The wake lane commits as item_proc and
-# is a lane, never a rush landing, so it can neither lay another nor walk (proc depth 1).
 static func wake_follows(source: String, mutation: String) -> bool:
 	return source == "drop_or_slam" and mutation == "cannon_rush_wake"
 
 
-# Remembers where a Rush Wake slam began: the ball's position on the tick the slam starts, kept until
-# WAKE_GRACE after it ends. A slam that never lands is overwritten by the next one.
 func _track_wake() -> void:
 	if ctx.player.abilities.cap(AbilityState.SMASH, "mutation", "") != "cannon_rush_wake":
 		if not _wake.is_empty():
@@ -3697,8 +3094,6 @@ func _track_wake() -> void:
 		_wake["until"] = _clock + WAKE_GRACE
 
 
-# One lane from the landing back along the rush's flattened travel line, at half lane damage and the
-# lane's own telegraph. No recorded start, or a start gone stale, lays nothing.
 func _lay_wake(landing: Vector3) -> void:
 	var wake := _wake
 	_wake = {}
@@ -3711,7 +3106,6 @@ func _lay_wake(landing: Vector3) -> void:
 	_commit_cannon("lane", landing + back * 10.0, landing, reach, Weapons.LANE_DAMAGE * WAKE_DAMAGE, "item_proc")
 
 
-# --- PC-CANNON: the cable lane and the set-piece zones --------------------------------
 const CannonAugments := preload("res://src/movement/augments.gd")
 var _recital_index := 0
 var _recital_at := -INF
@@ -3782,8 +3176,6 @@ func _cannon_line_fire(fraction: float, mult: float, target: Node3D) -> void:
 		audio.cannon_line(ctx.player.chain.combo)
 
 
-# A call needs a real floor. Unlike _floor_at this never substitutes the terrain sample
-# when a ray misses, so a gap cannot silently become a zone.
 func _cannon_floor(at: Vector3):
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(at + Vector3.UP * 0.1,
@@ -3859,10 +3251,6 @@ func _cannon_expose(enemy: Node3D, window: float, verb: String) -> void:
 	_exposed[id] = {"until": _clock + window, "verb": verb, "window": window, "mark": mark}
 
 
-# --- SG1 arc mark ----------------------------------------------------------------------
-# The committed geometry is the marked enemy's hull (_hull, the radius area hits test
-# against), recorded once on the row; the ring is drawn at that radius under the enemy and
-# lives exactly as long as the row, so what is drawn and what raises damage are one record.
 static var _arc_mark_mesh: ArrayMesh
 
 
@@ -3883,7 +3271,6 @@ func _arc_mark(enemy: Node3D) -> void:
 	if mark == null or mark.is_queued_for_deletion():
 		mark = arc_mark_view()
 		enemy.add_child(mark)
-	# Scale against the enemy's own, so the drawn radius is the committed one in world units.
 	var parent_scale: Vector3 = enemy.global_basis.get_scale()
 	mark.scale = Vector3(radius / maxf(parent_scale.x, 0.0001), 1.0, radius / maxf(parent_scale.z, 0.0001))
 	mark.set_instance_shader_parameter("left", 1.0)
@@ -3898,7 +3285,6 @@ static func arc_mark_view() -> MeshInstance3D:
 	return mark
 
 
-# A unit-radius dashed ring (outer edge 1.0), tinted the arc colour and fading with "left".
 static func _arc_ring() -> ArrayMesh:
 	if _arc_mark_mesh != null:
 		return _arc_mark_mesh
@@ -3927,7 +3313,6 @@ func _drop_exposed(key) -> void:
 	if row is Dictionary:
 		var mark = row.get("mark")
 		if is_instance_valid(mark):
-			# Out of the tree now, so a mark set again this frame takes the name at once.
 			if mark.get_parent() != null:
 				mark.get_parent().remove_child(mark)
 			mark.queue_free()
@@ -3949,30 +3334,16 @@ func _step_cannon_exposure() -> void:
 		elif is_instance_valid(mark):
 			mark.set_instance_shader_parameter("left", left / float(row["window"]))
 
-
-# --- The line skill (design-v3/SKILL-BAR.md section 3) --------------------------------
-# Slot 3 sends the pilot's flavour along the harpoon. With a line standing it fires now along
-# it; with none the cast loads, and the next bite within the row's load_seconds carries it. A
-# dry fire keeps the load; a load that runs out publishes line_skill_expired and refunds
-# nothing (the cooldown started at the cast). The flavour adds no chain link and scales by
-# chain.multiplier() when it fires.
-
 const LINE_LOAD_SECONDS := 4.0
-# The shared placeholder until wave P-C (SKILL-BAR section 3, start): on a body a 10 damage
-# yank toward the ball, about 4 m, times the chain multiplier; on the world a reel burst.
 const LINE_REEL_DAMAGE := 10.0
 const LINE_REEL_KNOCK := 12.0
 const REEL_BURST := 8.0
 
-# The tap whose cast is running, {slot, id, fire}, or {} (FIELDS-AND-CASTS section 4).
 var _cast_pending := {}
-# Armour classes read this run; the codex dedupes too, this skips the call.
 var _armour_known := {}
-# A bite this tick waits for _step_line, so it fires after the bite's chain link is counted.
 var _bite_pending := false
 
 
-# The load waiting for the next bite, {id, fraction, left}, or {} (HUD and bots read it).
 func line_load() -> Dictionary:
 	return _line_load.duplicate()
 
@@ -4039,7 +3410,6 @@ func _line_cast_ok() -> bool:
 	return true
 
 
-# The cast commits: spent, published, then fired along a standing line or loaded.
 func _cast_line(id: String, fraction: float) -> void:
 	var abilities = ctx.player.abilities
 	abilities.spend(AbilityState.LINE)
@@ -4072,17 +3442,12 @@ func _fire_line_skill(id: String, fraction: float) -> void:
 	ctx.events.line_skill_fired.emit(id, target, at, on)
 
 
-# line_reel on a body: the bitten enemy is yanked toward the ball and struck.
 func _line_reel_body(target: Node3D, _fraction: float, mult: float) -> void:
 	if target.has_method("is_dead") and target.is_dead():
 		return
 	_hit(target, "line", LINE_REEL_DAMAGE * mult, ctx.player.ball_position() - target.global_position, LINE_REEL_KNOCK, "", "special")
 
 
-# --- ult_default, the placeholder set piece (SKILL-BAR section 4) -----------------------
-
-# One volley a beat: the pilot's own weapon at up to volley_targets() enemies within 10 m of
-# the ball, those within 25 degrees of the reticle first. Returns the hits.
 func _ult_volley(_beat: int, ball: Vector3, aim: Vector3, _heft_mult: float) -> int:
 	var picks: Array = []
 	var bias := deg_to_rad(Ultimate.VOLLEY_BIAS_DEG)
@@ -4111,8 +3476,6 @@ func _ult_peak(at: Vector3) -> void:
 	effects.ring(at, Ultimate.VOLLEY_RADIUS, ctx.player.class_color())
 
 
-# The landing strike: 60 x heft multiplier x chain multiplier within the class's landing
-# radius, knock 26. Returns [hits, damage].
 func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	var radius: float = ultimate.landing_radius()
 	effects.ring(at, radius, ctx.player.class_color())
@@ -4129,9 +3492,6 @@ func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	return [hits, dealt]
 
 
-# One set-piece hit. A Warden fights on posture: an open core takes the landing as a harpoon
-# smash (it shatters); a closed guard takes posture under the set piece's 45 cap, the volleys
-# at half, and shows the slate glance. A boss takes half and its windows stay as they are.
 func _ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing: bool) -> float:
 	if enemy.has_method("_apply_posture") and enemy.has_method("staggered"):
 		if landing and enemy.staggered():
@@ -4155,7 +3515,6 @@ func _ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing
 	return damage
 
 
-# The default on a world latch: one +8 m/s burst toward the anchor.
 func _reel_burst(anchor: Vector3, _fraction: float, _mult: float) -> void:
 	var body: RigidBody3D = ctx.player.body()
 	var toward: Vector3 = anchor - body.global_position
@@ -4163,20 +3522,12 @@ func _reel_burst(anchor: Vector3, _fraction: float, _mult: float) -> void:
 		body.linear_velocity += toward.normalized() * REEL_BURST
 
 
-# The committed geometry a line gauge draws: the cable from the ball to the anchor, or along
-# the aim with no line.
 func _line_reel_geometry(f: float) -> Dictionary:
 	var ball: Vector3 = ctx.player.ball_position()
 	var kit = ctx.player.kit
 	var to: Vector3 = kit.anchor if kit.hooked else ball + _flat_aim() * ctx.player.grapple_range()
 	return ctx.player.yours({"kind": "line", "from": ball, "to": to, "width": 1.0, "full_to": to, "fill": f})
 
-
-# --- Tally's kit (pilots/tally.md sections 2 and 3, wave P-C) ----------------------------
-# Slot 1 runs Balance Due, the one card left in the reader, and is the only slot that spends
-# pressure. Slot 2 plants the gather plate on its own cooldown. Slot 3 is the ledger clip line
-# skill, which pays pressure. Q is Plate Return or a depth-3 variant, which settles the clips.
-# Rolling, contact, the stamp, the surge and the clips refill pressure; time never does.
 
 func _reset_cards() -> void:
 	bay = 0
@@ -4198,7 +3549,6 @@ func _reset_cards() -> void:
 
 func _wire_tally() -> void:
 	var ev = ctx.events
-	# Flywheel Surge pays SURGE_PRESSURE (A2-CRITIC); the surge is Tally's only dashed source.
 	ev.dashed.connect(func(_dir: Vector3):
 		if ctx.player.abilities.id_of(AbilityState.MOVEMENT) == "flywheel_surge":
 			_grant_pressure(Weapons.SURGE_PRESSURE)
@@ -4227,9 +3577,6 @@ func _wire_tally() -> void:
 		_tally_card_frame = Engine.get_physics_frames())
 
 
-# Since the skill bar (SKILL-BAR section 1, "Tally's deck, re-cut") the reader holds one card,
-# balance due, on slot 1, so `bay` stays 0. The same tick runs her plates, the clip post, the
-# clip preview and her codex queue.
 func _step_cards(delta: float, shots: Array) -> void:
 	var abilities = ctx.player.abilities
 	var cards: Array = abilities.cap(AbilityState.WEAPON, "cards", [])
@@ -4270,7 +3617,6 @@ func _step_cards(delta: float, shots: Array) -> void:
 	ctx.events.shot_fired.emit(card, ctx.player.ball_position(), aim["point"])
 
 
-# Where a card lands: the shared aim query's point, valid within CARD_REACH and unblocked.
 func _card_aim() -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
@@ -4279,7 +3625,6 @@ func _card_aim() -> Dictionary:
 	return {"point": point, "valid": not aim["blocked"] and ball.distance_to(point) <= Weapons.CARD_REACH}
 
 
-# Slot 2's tap: plant the plate at the aim. The tap path spends slot 2's own charge.
 func _tap_gather(aim := {}) -> bool:
 	if aim.is_empty():
 		aim = _card_aim()
@@ -4296,7 +3641,6 @@ func _ordinary(enemy: Node3D) -> bool:
 	return Roster.has(kind) and Roster.faction_of(kind) == Roster.SWARM and _target_class(enemy) == "adds"
 
 
-# The plate pulls every GATHER_TICK; Plate Return's peak widens it to the landing radius.
 func _step_plate(delta: float) -> void:
 	if plate.is_empty():
 		return
@@ -4309,7 +3653,6 @@ func _step_plate(delta: float) -> void:
 		_gather_pull(plate["at"], float(plate.get("radius", Weapons.GATHER_RADIUS)))
 
 
-# One pull tick: ordinary enemies within `radius` roll toward `at`, harder from farther out.
 func _gather_pull(at: Vector3, radius: float, enemies = null) -> void:
 	var pool: Array = enemies if enemies is Array else get_tree().get_nodes_in_group("enemy")
 	var pulled: Array = []
@@ -4372,7 +3715,6 @@ func _spend_card(card: String, at: Vector3, cost := 1.0) -> bool:
 	return true
 
 
-# Gather Plate spends no pressure: the tap path spends slot 2's own charge (6 s cooldown).
 func _run_gather(point: Vector3, valid: bool) -> bool:
 	if not valid:
 		return false
@@ -4386,7 +3728,6 @@ func _run_gather(point: Vector3, valid: bool) -> bool:
 	return true
 
 
-# A dry press answers verb_failed("fire", "cooling") and spends nothing.
 func _run_balance(point: Vector3, valid: bool, shot_desc := {}, source := "weapon") -> bool:
 	if not valid:
 		return false
@@ -4422,7 +3763,6 @@ func _run_balance(point: Vector3, valid: bool, shot_desc := {}, source := "weapo
 		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, source)
 		hits += 1
 		if paid:
-			# Beat-window wire-tap discharge in warm amber (never mint).
 			effects.ring(enemy.global_position, 1.35, Palette.AMBER)
 			effects.spark(enemy.global_position + Vector3.UP * 1.1, Palette.AMBER)
 		if not is_proc:
@@ -4437,14 +3777,10 @@ func _run_balance(point: Vector3, valid: bool, shot_desc := {}, source := "weapo
 		last_card["damage"] = damage
 		last_card["paid"] = paid
 		last_card["stamp_color"] = cue_color
-		if relic_swaps != null: relic_swaps.on_ledger_cast(point, damage, shot_desc)  # --- W50-ISAAC-RELICS ---
+		if relic_swaps != null: relic_swaps.on_ledger_cast(point, damage, shot_desc)
 	return true
 
 
-# --- The ledger clip, slot 3 --------------------------------------------------------------
-
-# The committed geometry: a LINK_NEIGHBOUR_REACH ring round the latched enemy, or a
-# CLIP_POST_RADIUS ring at a world anchor. The cast clips exactly what the drawn ring holds.
 func _clip_geometry(_f: float) -> Dictionary:
 	var kit = ctx.player.kit
 	if kit.hooked and kit.on_body and is_instance_valid(kit.anchor_body):
@@ -4457,7 +3793,6 @@ func _clip_ring(centre: Vector3, radius: float) -> Dictionary:
 	return ctx.player.yours({"kind": "ring", "centre": centre, "radius": radius, "full_radius": radius, "fill": 1.0, "ticks": "square"})
 
 
-# While slot 3 is picked and a line stands, the ring the clip will commit to is drawn.
 func _step_clip_preview() -> void:
 	var abilities = ctx.player.abilities
 	if abilities.selected == AbilityState.LINE and abilities.id_of(AbilityState.LINE) in CLIP_IDS and ctx.player.kit.hooked:
@@ -4466,9 +3801,6 @@ func _step_clip_preview() -> void:
 		ctx.player.indicator.clear("tally_clip")
 
 
-# On a body: the latched enemy and its LINK_NEIGHBOURS nearest neighbours inside the drawn ring
-# become clips, each paying CLIP_PRESSURE. The chain multiplier at the cast rides with the
-# group and pays on the arc.
 func _link_clips_body(target: Node3D, _fraction: float, mult: float) -> void:
 	_clear_clip_post()
 	_link_from(target, mult, _clip_ring(target.global_position, Weapons.LINK_NEIGHBOUR_REACH))
@@ -4476,8 +3808,6 @@ func _link_clips_body(target: Node3D, _fraction: float, mult: float) -> void:
 		ally_husks.raise_drive_by(target.global_position)
 
 
-# On the world: the default reel burst, and a clip post that clips the first CLIP_POST_MAX
-# enemies inside its ring within CLIP_POST_SECONDS.
 func _link_clips_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	_reel_burst(anchor, fraction, mult)
 	link_group = _new_link_group(Weapons.CLIP_POST_SECONDS, mult)
@@ -4489,8 +3819,6 @@ func _link_clips_world(anchor: Vector3, fraction: float, mult: float) -> void:
 		ally_husks.raise_drive_by(anchor)
 
 
-# Clips `first` and up to LINK_NEIGHBOURS live enemies inside `shape` (default: the clip ring
-# round `first`). Returns how many it clipped.
 func _link_from(first: Node3D, mult := 1.0, shape := {}) -> int:
 	var centre: Vector3 = shape.get("centre", first.global_position)
 	var radius: float = shape.get("radius", Weapons.LINK_NEIGHBOUR_REACH)
@@ -4509,7 +3837,6 @@ func _link_from(first: Node3D, mult := 1.0, shape := {}) -> int:
 	return clips.size()
 
 
-# Double Entry (link_double) marks its group "double": one settled clip may jump once.
 func _new_link_group(seconds: float, mult: float) -> Dictionary:
 	return {"ids": [], "until": _clock + seconds, "spent": false, "mult": mult, "jumped": false,
 		"double": ctx.player.abilities.cap(AbilityState.LINE, "mutation", "") == "link_double"}
@@ -4549,9 +3876,6 @@ func _clear_clip_post() -> void:
 		ctx.player.indicator.clear("tally_post")
 
 
-# The arc and the pressure a contact restores. A direct hit on a clip (anything but the arcs
-# themselves) spends the group and arcs once to every other live clip, at the chain multiplier
-# stored at the cast. Arcs are ledger strikes: posture only on a Warden, half on a boss.
 func _on_card_struck(enemy: Node3D, kind: String, force: float) -> void:
 	if kind == "ram" or kind == "stomp":
 		var frame := Engine.get_physics_frames()
@@ -4582,10 +3906,6 @@ func _on_card_struck(enemy: Node3D, kind: String, force: float) -> void:
 	_arcing = false
 
 
-# Double Entry: the settled machine's clip jumps once to the nearest live machine inside
-# LINK_NEIGHBOUR_REACH that holds no clip, as a fresh ledger link and one ledger strike. The group's
-# "jumped" flag is set before this runs and the strike is tagged item_proc inside the _arcing
-# guard, so a jumped clip settles nothing and never jumps again.
 func _clip_jump(from: Vector3, damage: float) -> void:
 	var ids: Array = link_group["ids"]
 	var best: Node3D = null
@@ -4603,12 +3923,6 @@ func _clip_jump(from: Vector3, damage: float) -> void:
 	effects.arc(from, best.global_position, Palette.AMBER)
 	_ledger_hit(best, damage, from, Weapons.LEDGER_KNOCK, "item_proc")
 
-
-# --- Ink Heart (stamp_ink) --------------------------------------------------------------
-# The stamp books every live machine in its disc for INK_SECONDS, a ledger tick floating over each.
-# A balance due strike on a booked machine takes the book and refills one pressure (the bank's
-# own cap holds), so each machine pays once per stamp. The stamp itself still pays its base
-# pressure (flavour stamp), and nothing here touches the ball.
 
 func _book_ink(at: Vector3) -> void:
 	var reach: float = ctx.player.slam_radius()
@@ -4642,7 +3956,6 @@ func _step_ink() -> void:
 		if enemy == null or not is_instance_valid(enemy) or DamageDoor.dead(enemy) or left <= 0.0:
 			_drop_ink(id)
 		elif is_instance_valid(row["mark"]):
-			# The tick blinks through its last three-quarters of a second.
 			row["mark"].visible = left > 0.75 or int(left * 8.0) % 2 == 0
 
 
@@ -4671,7 +3984,6 @@ func _ink_mark(enemy: Node3D) -> MeshInstance3D:
 	return mark
 
 
-# A ledger tick (a check mark of two bars), always facing the camera, in the Tally ledger colour.
 static func _ink_tick() -> ArrayMesh:
 	if _ink_mesh != null:
 		return _ink_mesh
@@ -4694,7 +4006,6 @@ static func _ink_tick() -> ArrayMesh:
 	return _ink_mesh
 
 
-# One ledger strike from a Tally source: a boss takes BOSS_MULT and no knock.
 func _ledger_hit(enemy: Node3D, damage: float, from: Vector3, knock: float, source: String) -> float:
 	if _target_class(enemy) == "boss":
 		damage *= Ultimate.BOSS_MULT
@@ -4705,11 +4016,6 @@ func _ledger_hit(enemy: Node3D, damage: float, from: Vector3, knock: float, sour
 	_hit(enemy, "ledger", damage, enemy.global_position - from, knock, "", source)
 	return damage
 
-
-# --- Plate Return, Audit Trail and Flywheel Throw (Q) ---------------------------------------
-# ultimate.gd's Tally rows call these. A ride clips what its beats strike, up to CLIP_CAP by heft
-# class; the peak plants the plate at B; the landing strikes the radius, then settles every clip
-# outside it once, refills pressure and (in ultimate.gd) ends the chain.
 
 func _clear_tally_piece() -> void:
 	tally_piece = ""
@@ -4726,8 +4032,6 @@ static func _flat_gap(a: Vector3, b: Vector3) -> float:
 	return Vector2(a.x - b.x, a.z - b.z).length()
 
 
-# B is her plate when it lies within reach (rope range; the arc's reach for Flywheel Throw)
-# and within ULT_PLATE_AIM_DEG of the aim: a line to it, or Flywheel Throw's arc onto it.
 func tally_target(id: String, ball: Vector3, aim: Dictionary) -> Dictionary:
 	if plate.is_empty():
 		return {}
@@ -4743,9 +4047,6 @@ func tally_target(id: String, ball: Vector3, aim: Dictionary) -> Dictionary:
 	return {"path": "arc" if id == "plate_flywheel" else "line", "to": at, "target": null}
 
 
-# One beat. Plate Return punches up to volley_targets() enemies within VOLLEY_RADIUS, those
-# near the reticle first; Audit Trail stamps a ring on the ground under the ball; Flywheel
-# Throw throws a small plate at the densest knot near the ground track. Returns the clips made.
 func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 	var cap: int = Weapons.CLIP_CAP[ultimate._heft_index()]
 	var made := 0
@@ -4783,9 +4084,6 @@ func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float
 	return made
 
 
-# Up to `count` live enemies within VOLLEY_RADIUS of the ball: those not yet clipped this ride
-# first, so the clips grow beat by beat up to the cap; then those within VOLLEY_BIAS_DEG of the
-# reticle; then nearest.
 func _volley_picks(ball: Vector3, aim: Vector3, count: int) -> Array:
 	var picks: Array = []
 	var bias := deg_to_rad(Ultimate.VOLLEY_BIAS_DEG)
@@ -4800,7 +4098,6 @@ func _volley_picks(ball: Vector3, aim: Vector3, count: int) -> Array:
 	return picks.slice(0, count).map(func(entry): return entry[1])
 
 
-# A clip made this ride, under the class cap; a boss or Warden is clipped once like anyone.
 func _ride_clip(enemy: Node3D, cap: int) -> int:
 	var id := enemy.get_instance_id()
 	if ride_clips.has(id) or ride_clips.size() >= cap:
@@ -4809,8 +4106,6 @@ func _ride_clip(enemy: Node3D, cap: int) -> int:
 	return 1
 
 
-# A set-piece hit from a beat or a settle: a Warden takes posture only, under the set piece's
-# cap and never on the core; a boss takes half; anything else takes a ledger strike.
 func _piece_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> float:
 	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
 		return _ult_hit(enemy, "ledger", damage, from, false)
@@ -4821,8 +4116,6 @@ func _piece_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> fl
 	return damage
 
 
-# A flail strike (flail.gd, POLES-FLAILS section 5): a swung or thrown body, not a weapon, so
-# the habit read never counts it. A Warden or a boss takes it through its posture like a volley.
 func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> void:
 	flung.emit(enemy)
 	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
@@ -4834,15 +4127,12 @@ func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> voi
 	_hit(enemy, "flail", damage, enemy.global_position - from, knock, "", "flail")
 
 
-# Ground under the ball within AUDIT_GROUND_REACH, or null.
 func _audit_ground(ball: Vector3):
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(ball, ball + Vector3.DOWN * Weapons.AUDIT_GROUND_REACH, 1))
 	return hit["position"] if not hit.is_empty() else null
 
 
-# The live enemy within FLY_KNOT_SEARCH of the ground track with the most neighbours inside
-# a gather plate's radius (nearest wins a tie), as a floor point; null with none in reach.
 func _densest_knot(ball: Vector3):
 	var enemies := _tally_enemies()
 	var best = null
@@ -4862,8 +4152,6 @@ func _densest_knot(ball: Vector3):
 	return _floor_at(best + Vector3.UP) if best != null else null
 
 
-# The peak: the plate goes home. A plate lands at B (or her plate at B grows) with the landing
-# radius and pulls until the landing.
 func tally_peak(id: String, at: Vector3) -> void:
 	var legs: Array = ultimate._plan.get("legs", [])
 	var b: Vector3 = legs.back()["to"] if not legs.is_empty() else at
@@ -4878,9 +4166,6 @@ func tally_peak(id: String, at: Vector3) -> void:
 	effects.ring(plate["at"], float(plate["radius"]), Palette.COPPER)
 
 
-# The landing: the strike within the radius, then one settle arc to each clip outside it at
-# the ult_settle share (each enemy paid once), then pressure to full. Returns [strike hits plus
-# settles, damage], which ultimate_landed carries.
 func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	var radius: float = ultimate.landing_radius() + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
 	var amount: float = Ultimate.LANDING_DAMAGE * heft * chain
@@ -4927,8 +4212,6 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 	return [hits + settled.size(), dealt]
 
 
-# Flywheel Throw's small plates pull while they last; FLY_PULL_LEAD s before its strike every
-# ordinary enemy within the landing radius plus FLY_PULL is thrown FLY_PULL inward.
 func _step_tally_piece(delta: float) -> void:
 	for p in _fly_plates.duplicate():
 		if float(p["until"]) <= _clock:
@@ -4959,8 +4242,6 @@ func _step_tally_piece(delta: float) -> void:
 		enemy.knock(inward, Weapons.FLY_PULL / Weapons.FLY_PULL_LEAD * (float(weight) if weight != null else 1.0))
 
 
-# Her codex cards queue behind the framework card they extend and open one per physics tick,
-# never on a tick another card opened (B6's rule).
 func _tally_discover(id: String, after: String, at: Vector3) -> void:
 	if discovered.has(id):
 		return
@@ -5002,8 +4283,6 @@ func _caught_line(shape: Dictionary) -> Array:
 	return live.filter(func(c): return not c.get("_inert", false) and in_line(shape["from"], shape["to"], shape["width"], c["pos"]))
 
 
-# Kest's detonation line: every live charge in the line goes off early, then the line
-# itself hits, +25% per charge caught up to three. A shot out of the cloak crits.
 func _fire_line(f: float, shape: Dictionary) -> void:
 	var caught := []
 	for charge in _caught_line(shape):
@@ -5011,8 +4290,6 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 	var bonus := 1.0 + Weapons.LINE_PER_CHARGE * mini(caught.size(), Weapons.LINE_MAX_CAUGHT)
 	var damage := AbilityState.Gauge.scaled(f, Weapons.LINE_DAMAGE_MIN, Weapons.LINE_DAMAGE_MAX) * bonus \
 		* _damage_mod(Weapons.STICKY_CHARGE) * _cloak_shot()
-	# PILOT-CADENCE.md §3.3: any caught live charge whose snap window is open at this instant
-	# takes the snap burst and consumes its one press.
 	var snapped_tokens := {}
 	for charge in caught:
 		var tok: int = int(charge.get("snap_token", 0))
@@ -5027,12 +4304,10 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if enemy.is_dead() or not in_line(from, to, shape["width"], enemy.global_position, _hull(enemy)):
 			continue
-		# Marked: the line tags what it hits, and charges hit tagged targets harder.
 		if _knob("line_marks") > 0.0:
 			_marks[enemy.get_instance_id()] = _clock + _knob("line_marks")
 		_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, "", "special")
 		hit += 1
-	# Fuse Line: charges left along the line.
 	var along: int = _knob("line_charges")
 	for i in along:
 		var spot: Vector3 = from.lerp(to, (float(i) + 0.5) / float(along))
@@ -5045,8 +4320,6 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 		"breaks_props": not caught.is_empty()}
 
 
-# The pylon's opening burst: planting fires the special free when its row says so
-# (Sable's detonation gauge). Siege Plate lets it reach everything in range.
 func _on_mounted(at: Vector3, banked_speed: float) -> void:
 	if ultimate != null and ultimate.active() and ultimate._id == "outpost":
 		return
@@ -5064,9 +4337,6 @@ func _on_mounted(at: Vector3, banked_speed: float) -> void:
 	ctx.events.special_used.emit(abilities.id_of(AbilityState.SPECIAL), at)
 
 
-# A released gauge passes its drawn centre, and its targets are chosen with the
-# forgiveness; the plant's free burst has no drawing and keeps the plain radius.
-# Chain Reaction arcs on from every target to one more at half damage.
 func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, limit := -1) -> void:
 	var burst := discharge_preview(speed)
 	var count: int = burst["targets"] if limit < 0 else limit
@@ -5105,8 +4375,6 @@ func _nearest_in_ring(centre: Vector3, radius: float, limit: int) -> Array:
 	return found.slice(0, limit).map(func(pair): return pair[1])
 
 
-# Rivet's blast. Magnet Blast pulls instead of pushing; its echo (Vortex) pushes. A
-# proc blast (boost false) knocks without granting the fire-rate boost.
 func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.0, damage_scale := 1.0, boost := true) -> void:
 	var p: Resource = _patterns[Weapons.RAPID_LASER]
 	var damage: float = Weapons.OVERDRIVE_DAMAGE * scale * damage_scale * p.damage * _damage_mod(Weapons.RAPID_LASER) \
@@ -5128,7 +4396,6 @@ func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.
 		"overdrive": _overdrive, "breaks_props": false}
 
 
-# The fire-rate boost; Unstoppable makes crowd control slide off while it runs.
 func _boost(seconds: float) -> void:
 	_overdrive = minf(Weapons.OVERDRIVE_MAX, _overdrive + seconds) if _overdrive > 0.0 else seconds
 	_post_buff("overdrive", {"icon": "overdrive", "tone": Palette.COPPER, "kind": BuffLedger.KIND_TIMER,
@@ -5137,12 +4404,6 @@ func _boost(seconds: float) -> void:
 		ctx.player.grant_immunity(_overdrive)
 
 
-# --- Kest: sticky charges, the cloak, the rocket jump ---------------------------------
-
-# LMB is a hold-release throw (PILOT-CADENCE.md §3.3): press opens the lob gauge, release
-# under 0.10 s drops at the ball's tail, longer hold lobs along the drawn arc up to 30 m.
-# A press inside the live charge's snap window [0.30, 0.55] s bursts it bigger and never
-# opens the lob gauge even if held. Under hold_auto rollback, legacy hold-lob behaviour holds.
 func _step_sticky_weapon(intent, delta: float, shots: Array = []) -> void:
 	var abilities = ctx.player.abilities
 	var gauge = abilities.gauge(AbilityState.WEAPON)
@@ -5227,11 +4488,6 @@ func _lob_pattern() -> Resource:
 	return _patterns[abilities.cap(AbilityState.WEAPON, "pattern", abilities.id_of(AbilityState.WEAPON))]
 
 
-# Where a throw at this fraction lands: along the flat aim, on the ground under it.
-# Under lob_snap, a release under STICKY_TAIL_HOLD_S (0.10 s) drops at the ball's tail;
-# longer holds lob along the drawn arc up to range_m (30 m at 0.6 s).
-# Over a void there is no ground to stick to, so the aim is blocked (RR-03): it draws
-# in bone with a cross and a release throws nothing and spends nothing.
 func _throw_landing(f: float, held_s := -1.0) -> Dictionary:
 	var p: Resource = _lob_pattern()
 	var tail_drop := false
@@ -5265,18 +4521,12 @@ func _draw_throw(landing: Dictionary) -> void:
 		"radius": _lob_pattern().bolt_radius * mass_radius_scale(), "blocked": blocked}))
 
 
-# Mass-K (--world-one-builds=on): a thrown or slammed charge's blast radius is multiplied by
-# 1 + 0.25q, q = clamp(mass / 990, 0, 1). Read once where the charge is committed (the throw,
-# the slam) and by the aim ring, so the hit test and the preview share one number. Damage,
-# blink and glide never read it. Flag off it is exactly 1.
 func mass_radius_scale() -> float:
 	if not ctx.tuning.world_one():
 		return 1.0
 	return 1.0 + MASS_K_RADIUS * clampf(ctx.run.mass / MASS_K_SATURATION, 0.0, 1.0)
 
 
-# One throw. A lob row with more than one charge (Sticky Rain) scatters that many smaller
-# charges around the landing ring, splitting the damage.
 func _throw_sticky(landing: Vector3, snap_token := 0, tail_drop := false) -> void:
 	var p: Resource = _lob_pattern()
 	var ability_lob: int = ctx.player.abilities.cap(AbilityState.WEAPON, "lob", 1)
@@ -5314,12 +4564,6 @@ func _throw_sticky(landing: Vector3, snap_token := 0, tail_drop := false) -> voi
 	ctx.events.shot_fired.emit(Weapons.STICKY_CHARGE, origin, landing)
 
 
-# One charge going off: its blast (the drawn landing radius plus the forgiveness), a
-# rocket jump if Kest holds Space inside it, and the cloak. Time Bomb grows a charge by
-# how long it waited; Demolition and Marked hit plated and marked targets harder;
-# Daisy Chain sets off every charge within reach, each once. A snapped charge (PILOT-CADENCE §3.3)
-# bursts for window_mult damage (2x), 1.35x radius, 1.5x knock, a bone ring with amber edge,
-# and never refreshes the rocket jump cooldown.
 func _detonate(charge: Dictionary, snapped := false) -> void:
 	var at: Vector3 = charge["pos"]
 	var radius: float = charge["radius"]
@@ -5364,7 +4608,6 @@ func _detonate(charge: Dictionary, snapped := false) -> void:
 		if not still_live:
 			weapon_driver.notify_lob_charge_gone(tok)
 	if _knob("sticky_chain") > 0.0:
-		# A nested detonation can already have taken a charge from this snapshot (F001).
 		var live: Array = sticky.charges.duplicate()
 		live.append_array(ultimate.caught_charges())
 		for other in live:
@@ -5374,9 +4617,6 @@ func _detonate(charge: Dictionary, snapped := false) -> void:
 				_detonate(sticky.take(other) if sticky.charges.has(other) else ultimate.take_charge(other))
 
 
-# Kest's rocket jump: Space held inside your own blast throws you away from it, harder
-# the closer you are (Blast Jumper needs no Space). Its own cooldown and the throw
-# cadence bound the chain.
 func _rocket_jump(at: Vector3) -> void:
 	var player = ctx.player
 	if not player.abilities.cap(AbilityState.MOVEMENT, "rocket", false) or _rocket_left > 0.0:
@@ -5397,8 +4637,6 @@ func _rocket_jump(at: Vector3) -> void:
 	ctx.events.rocket_jumped.emit(at, speed)
 
 
-# Kest's demo slam. Demo Expert scatters more; Dive Bomber grows them with the fall;
-# Scorched Earth leaves them armed at once and lingering.
 func _on_demo_slammed(at: Vector3) -> void:
 	if not ctx.flow.in_play():
 		return
@@ -5418,8 +4656,6 @@ func _on_demo_slammed(at: Vector3) -> void:
 		slam_charge["_source"] = "drop_or_slam"
 
 
-# The blink's smoke. Phantom cuts whatever the blink passed through; Smoke Screen
-# leaves a cloud that hides you while you are inside it.
 func _on_blink(from: Vector3, to: Vector3) -> void:
 	effects.ring(from, 2.5, ClassDef.KEST_COLOR)
 	_start_cloak()
@@ -5444,9 +4680,6 @@ func _start_cloak() -> void:
 		ctx.events.cloak_started.emit(cloak_left)
 
 
-# The cloak fades on its clock. Nightfall holds it while you keep rolling fast (never
-# standing still, never past CLOAK_HOLD_MAX); Smoke Trail holds it while gliding; Smoke
-# Screen while you stay in the blink's cloud.
 func _tick_cloak(delta: float) -> void:
 	var kit = ctx.player.kit
 	if not _cloud.is_empty():
@@ -5472,8 +4705,6 @@ func _tick_cloak(delta: float) -> void:
 		ctx.events.cloak_broken.emit("faded")
 
 
-# The first shot out of the cloak crits and ends it; any other shot is plain. Ambush
-# keeps the cloak up, so every shot inside it crits.
 func _cloak_shot() -> float:
 	if cloak_left <= 0.0:
 		return 1.0
@@ -5485,19 +4716,13 @@ func _cloak_shot() -> float:
 	return Weapons.CLOAK_CRIT
 
 
-# The sight proxy's reach share while cloaked: Ghost hides you from everyone.
 func cloak_sight() -> float:
 	return _knob("cloak_sight")
 
 
-# --- Upgrade procs and timed upgrades --------------------------------------------------
-
-# A proc (upgrade_tree.gd) runs its action when its bus fact fires, at most once per its
-# gap. No build's actions can lead back to their own trigger (UpgradeTree.problems).
 func _on_proc_fact(kind: String) -> void:
 	if ctx == null or not ctx.flow.in_play() or ctx.run.class_def == null:
 		return
-	# A spark kill (wear_trail) or a hazard kill (hazard_hits.gd) procs no tree effect.
 	if kind == "enemy_killed" and ctx.run.last_kill_triggerless:
 		return
 	for proc in ctx.player.tree.procs():
@@ -5510,8 +4735,6 @@ func _on_proc_fact(kind: String) -> void:
 		(_actions[proc["do"]] as Callable).call(float(proc.get("scale", 1.0)))
 
 
-# One callable per UpgradeTree.ACTIONS name, each taking the proc's scale, so a new
-# proc action is one row here and one row there.
 func _proc_actions() -> Dictionary:
 	var abilities = func(): return ctx.player.abilities
 	return {
@@ -5529,9 +4752,6 @@ func _proc_actions() -> Dictionary:
 	}
 
 
-# A special that spends another slot's charges (Tally's gather plate pays from slot 1's
-# pressure, SKILL-BAR section 2) takes its grant there. Pressure never refills by time, so a
-# refund on such a pool returns one charge instead; the proc's gap is its throttle.
 func _grant_special(abilities) -> void:
 	abilities.grant(abilities.pool_of(AbilityState.SPECIAL))
 
@@ -5567,7 +4787,6 @@ func _proc_volley(scale: float) -> void:
 			_fire(weapon, "item_proc")
 
 
-# The upgrade-tree proc actions (M0: item_proc, never the player's own gauge release).
 func _proc_discharge(scale: float) -> void:
 	var prev_source := _forced_source
 	_forced_source = "item_proc"
@@ -5600,7 +4819,6 @@ func _proc_charges(scale: float) -> void:
 		proc_charge["_source"] = "item_proc"
 
 
-# Upgrades that run on a clock: Anchor Storm, Fortress, Carpet Bomb, the Sentry Post.
 func _tick_upgrades(delta: float) -> void:
 	var kit = ctx.player.kit
 	_tick_echo(delta)
@@ -5629,11 +4847,9 @@ func _tick_upgrades(delta: float) -> void:
 	_tick_sentry(delta)
 
 
-# Sentry Post: stepping off a pylon leaves it firing turret bolts at the nearest enemy.
 func _on_dismounted_sentry(_velocity: Vector3) -> void:
 	if _knob("sentry") > 0.0 and ctx.flow.in_play():
 		var at: Vector3 = ctx.player.kit.mount_face + ctx.player.kit.mount_normal * 1.2
-		# At the cap the standing sentry is replaced; with its slot still refilling, none stands.
 		var placed: Dictionary = devices.deploy(Devices.SENTRY, at)
 		if int(placed["id"]) <= 0:
 			return
@@ -5669,8 +4885,6 @@ func _tick_sentry(delta: float) -> void:
 	})
 
 
-# The device ledger's clock: refills tick, and a device left past the leash is recalled
-# (it leaves without acting: a charge does not go off, the sentry stops firing).
 func _step_devices(delta: float) -> void:
 	if not _sentry.is_empty():
 		devices.move(int(_sentry.get("id", 0)), _sentry["at"])
@@ -5690,7 +4904,6 @@ func _step_devices(delta: float) -> void:
 			sticky.recall(int(gone["id"]))
 
 
-# Crater Slam: a smash row that spends the special fires a full discharge on landing.
 func _on_slammed_upgrade(at: Vector3, _strength: float, _flatness: float) -> void:
 	var abilities = ctx.player.abilities
 	if not ctx.flow.in_play() or not abilities.cap(AbilityState.SMASH, "spends_special", false):
@@ -5700,11 +4913,6 @@ func _on_slammed_upgrade(at: Vector3, _strength: float, _flatness: float) -> voi
 		ctx.events.special_used.emit(abilities.id_of(AbilityState.SPECIAL), at)
 
 
-# --- Pins ---------------------------------------------------------------------------
-
-# A knocked enemy flying faster than PIN_MIN_SPEED at another within PIN_RADIUS (hull
-# to hull) hits it once per knock, keyed by the carrier's instance and knock count, and
-# hands on PIN_CARRY of its speed, so a chain always runs down below the bar.
 func _pin_step(enemies: Array) -> void:
 	if not _pinned.is_empty():
 		for key in _pinned.keys():
@@ -5737,10 +4945,6 @@ func _pin_step(enemies: Array) -> void:
 			_pin(victim, to, speed)
 
 
-# One pin: the victim takes the pin strike and flies on at PIN_CARRY of the carrier's speed.
-# A victim the pin kills becomes a hulk in its turn, so a strike runs down a crowd. A hulk's
-# pins hit with the heft that threw it (mult), so a grown ball's strike still kills what it
-# scatters instead of knocking it clear of the roll-up.
 func _pin(victim: Node3D, to: Vector3, speed: float, mult := 1.0) -> void:
 	var damage := minf(Weapons.PIN_CAP, Weapons.PIN_BASE + Weapons.PIN_PER_SPEED * speed) * mult
 	pins += 1
@@ -5752,10 +4956,6 @@ func _pin(victim: Node3D, to: Vector3, speed: float, mult := 1.0) -> void:
 		bowl_hulk(victim, to, speed * Weapons.PIN_CARRY)
 
 
-# A body killed by a ram, a crush or a pin keeps its throw as a hulk for up to HULK_SECONDS:
-# it travels along `direction` at `speed`, slowing as a knock does, and pins each body it
-# reaches once, as a knocked enemy would. A posture fighter (a Warden) and a boss piece are
-# never a hulk's victims, so stagger timing is untouched. Below PIN_MIN_SPEED it is spent.
 func bowl_hulk(enemy: Node3D, direction: Vector3, speed: float) -> void:
 	var flat := Vector3(direction.x, 0.0, direction.z)
 	if speed <= Weapons.PIN_MIN_SPEED or flat.length_squared() < 0.0001 or not is_instance_valid(enemy) or enemy.get("swarm") != null:
@@ -5767,7 +4967,6 @@ func bowl_hulk(enemy: Node3D, direction: Vector3, speed: float) -> void:
 func _hulk_step(enemies: Array, delta: float) -> void:
 	if _hulks.is_empty():
 		return
-	# A pin that kills launches a new hulk into _hulks; it is stepped from the next tick.
 	var stepping := _hulks
 	_hulks = []
 	var live: Array = []
@@ -5806,10 +5005,6 @@ static func _pinnable(enemy) -> bool:
 	return enemy.has_method("knock") and enemy.has_method("is_dead") and not enemy.is_dead()
 
 
-# --- Enemy attacks ------------------------------------------------------------------
-
-# The stage director, which world.gd names "World" under the root. A harness or a scene
-# variant without it reads neutral scales, as build.gd _rib_mult and attack_budget.gd do.
 func _director():
 	var world = ctx.root.get_node_or_null("World") if ctx.root != null else null
 	var director = world.get("director") if world != null else null
@@ -5827,8 +5022,6 @@ func _warn_no_director() -> void:
 		push_warning("combat: no World director; enemy and hit scales read neutral")
 
 
-# An enemy's committed attack reached the ball. The run takes the damage; the shove is
-# the hit's weight (a hit taken is the player's performance, principle 1).
 func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 	var attack := _hit_attack
 	_hit_attack = ""
@@ -5840,7 +5033,6 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 		var director = _director()
 		if director != null:
 			amount *= director.damage_scale()
-		# The Mind's hand is a boss part: it takes the mind.* dials in mind_hand.gd, not the mobs dial.
 		if source != "mind_hand":
 			amount *= ChallengeDials.stage_mult("mobs.damage", ctx.run.stage)
 	if ctx.run != null and ctx.run.class_def != null and ctx.run.class_def.id == "tarn":
@@ -5851,22 +5043,15 @@ func _on_player_hit(amount: float, shove: Vector3, source: String) -> void:
 				amount *= armor_mult
 				shove *= 0.35
 	last_player_hit = {"from": ctx.player.ball_position() - shove, "shove": shove, "source": source, "frame": Engine.get_physics_frames(), "attack": attack}
-	# The set piece's defence: no knockback here; damage x0.2 and the health floor of 1 run
-	# inside ctx.run.damage through its defend_hook (SKILL-BAR section 4).
 	var riding: bool = ultimate != null and ultimate.active()
 	ctx.run.damage(amount, source)
 	if not riding:
 		_charge_assist("hull")
 	if ctx.calm or riding:
 		return
-	# The damage always lands; what the hit may take is the stop, and that goes through
-	# the player's crowd-control door, which Rivet's sprint shuts.
 	ctx.player.crowd_control("knock", shove / get_physics_process_delta_time())
 
 
-# Heat on the shell (redline.gd, loops.md Spec 1): a hot shell scales every hit at the run's one
-# damage choke point, and a cook-off takes its share of the hull. The blast itself is the
-# ball's (player_ball.gd), struck through the same slam path as any other.
 func _wire_redline() -> void:
 	var redline = ctx.player.get("redline") if ctx.player != null else null
 	if redline == null:
@@ -5889,7 +5074,6 @@ func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: 
 	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): effects.ring(at, blast, Palette.HAZARD))
 
 
-# A batted shell's blast hits every enemy its amber ring contains.
 func _on_shell_returned(shell: Node3D) -> void:
 	var ring: Node3D = shell.ring
 	for enemy in get_tree().get_nodes_in_group("enemy"):
@@ -5905,9 +5089,6 @@ func _threat() -> float:
 	return ctx.flow.stage_def()["threat"]
 
 
-# A stage's Warden numbers: the current stage from flow's stage_def(), any other stage
-# (the vault's next one) from stage_defs.of(stage). A missing field falls back to the
-# spec's per-stage value.
 func _warn_warden_once(stage: int, text: String) -> void:
 	if not _warden_warned.has(stage):
 		_warden_warned[stage] = true
@@ -5965,8 +5146,6 @@ func _spec_for(kind: String) -> Dictionary:
 	return {}
 
 
-# --- Codex (category "enemy") -------------------------------------------------------
-
 func codex_entries() -> Array:
 	return CodexEntries.all()
 
@@ -5983,10 +5162,7 @@ func _declare_codex() -> void:
 		codex.declare(entry)
 
 
-# Every time a trick fires. The codex dedupes per run and per attempt, so a trick first
-# pulled in a retried attempt pays again after the retry (CONTRACTS, Codex).
 func _discover(id: String, at: Vector3) -> void:
-	# The camp's sandbox fights happen outside play and never mark the codex.
 	if ctx.flow != null and not ctx.flow.in_play():
 		return
 	if not discovered.has(id):
@@ -5997,20 +5173,17 @@ func _discover(id: String, at: Vector3) -> void:
 		codex.mark_discovered(id, at, ["player"])
 
 
-# The chain card: the player's chain reached three links. The codex dedupes per run.
 func _on_chain_state(state: String, _target: Node3D, at: Vector3, _cause: String) -> void:
 	if state == "chain_link" and ctx.player.chain.combo >= 3:
 		_discover("chain", at)
 
 
-# Tricks that read the target's state before the hit lands.
 func _detect_before(enemy: Node3D, kind: String, _result: Dictionary) -> void:
 	var target_kind = enemy.get("kind")
 	if kind == "ram" and target_kind == "chaser" and enemy.state_name() == "windup":
 		_discover("counter_ram", enemy.global_position)
 
 
-# Tricks that read the outcome.
 func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 	if not enemy.has_method("is_dead") or not enemy.is_dead():
 		return
@@ -6025,10 +5198,6 @@ func _detect_after(enemy: Node3D, kind: String, result: Dictionary) -> void:
 		_discover("parting_shot", at)
 
 
-# --- Stage reset --------------------------------------------------------------------
-
-# A stage entry or retry starts the fight clean, and recomputes every pattern from the
-# restored part list, so a retry restores the build exactly.
 func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	_start_attempt()
 	churn.reset()
@@ -6058,20 +5227,15 @@ func _on_player_died() -> void:
 	_clear_consumables_runtime()
 	if ally_husks != null:
 		ally_husks.reset()
-	if orbitals != null: # --- W50-ISAAC-PARTS ---
+	if orbitals != null:
 		orbitals.reset_attempt()
-	if relic_swaps != null: relic_swaps.reset()  # --- W50-ISAAC-RELICS ---
+	if relic_swaps != null: relic_swaps.reset()
 	_clear_aftershocks()
 	_rakes.clear()
 	_clear_cannon_paint()
 	weapon_driver.reset()
 
 
-# The arena is not a stage (DESIGN-NOTES spine call 34). Flow publishes this before the
-# boss module's enter_arena, on entry and on every arena retry, so nothing of Brindle's
-# exists yet and every enemy, shell and telegraph standing now came from the stage or
-# from the attempt being retried. The class kit keeps working, and its cooldowns start
-# fresh as they do on a stage retry.
 func _on_stage_content_cleared(_reason: String) -> void:
 	_start_attempt()
 	_line_load = {}
@@ -6088,8 +5252,6 @@ func _start_attempt() -> void:
 	_pinned.clear()
 	_hulks.clear()
 	pins = 0
-	# The upgrade tree's pending specials and clocks belong to the attempt that made
-	# them: no echo, sentry, cloud or marks fire into the next one (F002).
 	_echo = {}
 	_marks = {}
 	_cloud = {}
@@ -6115,9 +5277,9 @@ func _start_attempt() -> void:
 	_clear_consumables_runtime()
 	if ally_husks != null:
 		ally_husks.reset()
-	if orbitals != null: # --- W50-ISAAC-PARTS ---
+	if orbitals != null:
 		orbitals.reset_attempt()
-	if relic_swaps != null: relic_swaps.reset()  # --- W50-ISAAC-RELICS ---
+	if relic_swaps != null: relic_swaps.reset()
 	if ctx != null and ctx.run != null:
 		_consumable_rng.seed = hash(["consumable_drops", ctx.run.run_seed, ctx.run.stage])
 	_spring_until = -1.0
@@ -6134,9 +5296,6 @@ func _start_attempt() -> void:
 	ctx.player.indicator.clear_all()
 
 
-# Every enemy, shell and telegraph leaves its group, stops acting and stops colliding
-# now, and is freed at the end of the frame, so a count or a hit test straight after
-# the clear already sees an empty field.
 func _clear_fight() -> void:
 	for group in FIGHT_GROUPS:
 		for node in get_tree().get_nodes_in_group(group):
@@ -6177,8 +5336,6 @@ func _rebuild_patterns() -> void:
 	_sync_grapple_mutations()
 	var ids := active_transformers()
 	var lattice_falloff := 0.0
-	# Combat hears part_gained before Build. Derive from the current held list so a
-	# newly completed lattice works on its first volley and retry cannot retain it.
 	if ctx != null and ctx.run != null:
 		var sheet: RefCounted = preload("res://src/build/build_sheet.gd").from_parts(ctx.run.parts)
 		for _jump in sheet.lattice_chain_jumps():
@@ -6187,7 +5344,6 @@ func _rebuild_patterns() -> void:
 	for weapon in Weapons.ALL:
 		var p: Resource = Weapons.base(weapon).transformed(ids)
 		p.lattice_chain_falloff = lattice_falloff
-		# Tree pattern ops land after the parts; the clarity caps hold whatever stacked.
 		if ctx != null:
 			for row in ctx.player.tree.pattern_ops(weapon):
 				p._apply(row)
@@ -6225,7 +5381,6 @@ static func _signal_argc(obj: Object, kind: String) -> int:
 	return 0
 
 
-# --- PC-SABLE Bank Shot ---------------------------------------------------------------
 func _bank_body(target: Node3D, _fraction: float, mult: float) -> void:
 	var launch: Dictionary = ctx.player.bank_geometry()
 	var damage := 10.0 * mult * (0.5 if _target_class(target) == "boss" else 1.0)
@@ -6253,11 +5408,6 @@ func _bank_geometry(_fraction: float) -> Dictionary:
 	return ctx.player.bank_geometry()
 
 
-# --- W47-C2: 6 Common-Part Micro-Mutations & 6 Cross-System Synergies ------------------
-# Every proc here stays strictly at depth 1 (SYNERGY / item_proc, bits 0, never re-emitting its
-# source fact or recursively breaking props) and every transient timer, pin or set clears on
-# _start_attempt(), _on_player_died() and run_started (DeferredEffects.tla).
-
 func _reset_w47_c2_state(clear_counts := false) -> void:
 	_air_steer_surge_left = 0.0
 	_air_dash_bat_left = 0.0
@@ -6276,6 +5426,7 @@ func _reset_w47_c2_state(clear_counts := false) -> void:
 		last_cross_synergy = {}
 		_micro_counts.clear()
 		_cross_counts.clear()
+	assert(_pendulum_zapped.is_empty() and _thermobaric_pins.is_empty() and _pulled_recent.is_empty())
 
 
 func _has_micro_mutation(part_id: String) -> bool:
@@ -6390,8 +5541,6 @@ func _stamp_ricochet_canyon(rec: Dictionary, rc_row: Dictionary) -> void:
 	rec["ricochet_home_turn"] = float(rc_row.get("home_turn", Bolts.RICOCHET_HOME_TURN))
 
 
-# Micro-mutations ticked in play: Tread Plating (wall-carve Movement refill +25%) and Long Spool
-# (0.4 s air-steer surge after grapple release), plus countdown of the Dash Vane & Boost Coil windows.
 func _step_micro_mutations(delta: float) -> void:
 	if _has_micro_mutation("tread_plating") and ctx.player.state.carving:
 		var bonus := float(_micro_row("tread_plating").get("rate_bonus", 0.25))
@@ -6453,7 +5602,6 @@ func _on_boosted_micro(_dir: Vector3) -> void:
 		_boost_active_left = maxf(_boost_active_left, float(_micro_row("boost_coil").get("window_s", 0.5)))
 
 
-# Loose Trigger: landing a Skilled cadence window extends the next window by +25%.
 func _step_cadence_micro(weapon: String, p: Resource, shots: Array) -> void:
 	var wsnap: Dictionary = weapon_driver.state_snapshot()
 	var cur_state := String(wsnap.get("window", WeaponDriver.WINDOW_IDLE))
@@ -6482,8 +5630,6 @@ func _step_cadence_micro(weapon: String, p: Resource, shots: Array) -> void:
 	_prev_window_state = cur_state
 
 
-# Heft Destructible shatter listener: Boost Coil (50% CD refresh while boosting) + Demolition Derby
-# (12 m debris shockwave + instant boost refill, depth 1, never breaks props recursively).
 func _on_world_fact_w47(kind: String, at: Vector3) -> void:
 	if kind != "piece_shattered" or not ctx.flow.in_play():
 		return
@@ -6520,8 +5666,6 @@ func _on_world_fact_w47(kind: String, at: Vector3) -> void:
 		_note_cross("demolition_derby", {"at": at, "radius": radius, "hits": hits})
 
 
-# Per-tick cross-system synergy steppers: Pendulum Tesla (taut harpoon cable arcs) and Thermobaric
-# Dunk (launched flaming pins detonating once on impact).
 func _step_cross_synergies(_delta: float, enemies: Array) -> void:
 	_step_pendulum_tesla(enemies)
 	_step_thermobaric_pins(enemies)
@@ -6577,8 +5721,6 @@ func _step_pendulum_tesla(enemies: Array) -> void:
 		_note_cross("pendulum_tesla", {"zapped": zapped_now})
 
 
-# Thermobaric Dunk: air-slamming a heated machine launches nearby machines skyward as flaming pins
-# that detonate once on impact (depth 1, never re-emits slammed or re-tags pins).
 func _on_thermobaric_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 	if strength < 0.05 or not ctx.flow.in_play() or not _has_cross_synergy("thermobaric_dunk"):
 		return
@@ -6654,7 +5796,6 @@ func _step_thermobaric_pins(enemies: Array) -> void:
 				impacted = true
 		if not impacted:
 			continue
-		# Erase before detonation so each pin detonates strictly once (depth 1).
 		_thermobaric_pins.erase(id)
 		var det_r := float(pin["radius"])
 		var det_dmg := float(pin["damage"])
@@ -6671,8 +5812,6 @@ func _step_thermobaric_pins(enemies: Array) -> void:
 		_note_cross("thermobaric_dunk", {"stage": "detonate", "at": pos, "hits": hits})
 
 
-# Gravity Ledger: pulling 2+ machines together slams them into each other for bonus crush damage
-# and drops a guaranteed cog shower (depth 1, throttled by cooldown_s).
 func _check_gravity_ledger(centre: Vector3, pulled_enemies: Array) -> void:
 	if not ctx.flow.in_play() or not _has_cross_synergy("gravity_ledger"):
 		return
@@ -6714,8 +5853,6 @@ func _check_gravity_ledger(centre: Vector3, pulled_enemies: Array) -> void:
 	_note_cross("gravity_ledger", {"at": mid, "crushed": cluster.size(), "cogs": cogs})
 
 
-# Catalyst Cartridge: popping a Pocket Consumable adds +40% Active charge and fires the racked
-# Active's visual burst ring for free without spending a charge or firing a recursive proc.
 func on_consumable_used(consumable_id: String, at := Vector3.INF) -> Dictionary:
 	if ctx == null or ctx.flow == null or not ctx.flow.in_play():
 		return {}
@@ -6743,12 +5880,6 @@ func on_consumable_used(consumable_id: String, at := Vector3.INF) -> Dictionary:
 	return result
 
 
-# --- W47-GRAPPLE-MUTS-CODE: 7 Single-Part-Swap Grapple Build Mutations ----------------
-# Every mutation swaps strictly ONE hardware part (Head, Line, or Drive; Rule G1) on the
-# player's ONE ChainState (Rule G0) and consumes the committed tether geometry (TADR-008).
-# All deferred procs stay strictly depth-1 (SYNERGY / item_proc / bits 0) and clear on
-# _start_attempt(), _on_player_died(), and run_started (DeferredEffects.tla & Destructibles.tla).
-
 func _reset_grapple_muts_state(clear_counts := false) -> void:
 	_hot_wire_cd.clear()
 	_det_cord_queue.clear()
@@ -6762,6 +5893,7 @@ func _reset_grapple_muts_state(clear_counts := false) -> void:
 	if clear_counts:
 		_grapple_mut_counts.clear()
 		last_grapple_mut = {}
+	assert(_det_cord_queue.is_empty() and _tether_live.is_empty() and _tether_slam_armed.is_empty())
 
 
 func _sync_grapple_mutations() -> void:
@@ -6919,7 +6051,6 @@ func _is_powered_world_prop(body: Node3D, anchor: Vector3) -> bool:
 		for kw in ["sluice", "valve", "relay", "mast", "pylon", "conduit", "warden"]:
 			if kw in bname:
 				return true
-	# Proximity fallback for static relay/sluice world geometry latched without a distinct body group.
 	if ctx != null and ctx.root != null:
 		for grp in ["sluice_valve_bite", "powered_prop", Augments.STAKE_GROUP, Augments.WORLD_ANCHOR_GROUP]:
 			for node in get_tree().get_nodes_in_group(grp):
@@ -6941,10 +6072,8 @@ func _on_grapple_released_muts() -> void:
 	_sync_grapple_mutations()
 	var from: Vector3 = snap.get("from", ctx.player.ball_position())
 	var to: Vector3 = snap.get("to", from)
-	# 2. Det-Cord Line: enqueue sequenced shaped charges down the released tether path (depth-1).
 	if has_grapple_mutation("det_cord"):
 		_enqueue_det_cord(from, to)
-	# 4. Sonic Snap-Sling: pendulum apex release grants +12 m/s Blazing burst + Air-Jump refresh.
 	if has_grapple_mutation("sonic_snap_sling"):
 		var ball: Vector3 = ctx.player.ball_position()
 		var vel: Vector3 = ctx.player.state.velocity
@@ -6987,8 +6116,8 @@ func _step_det_cord(enemies: Array) -> void:
 		if _clock < float(entry["due"]):
 			i += 1
 			continue
-		# Remove before detonating so a node never fires twice (DeferredEffects.tla ProcDepthOne).
 		_det_cord_queue.remove_at(i)
+		assert(not _det_cord_queue.has(entry))
 		var at: Vector3 = entry["at"]
 		var radius := float(entry["radius"])
 		var dmg := float(entry["damage"])
@@ -7088,7 +6217,6 @@ func _step_grapple_mutations(delta: float, enemies: Array) -> void:
 		ctx.destructibles.set_swing_heft_bonus(0)
 
 
-# 1. Hot-Wire Arc Cutter: AMBER #E5A044 taut sweep slicing ordinary enemies, boom floats, and Tier 1-2 props.
 func _step_hot_wire(ball: Vector3, anchor: Vector3, enemies: Array) -> void:
 	var row := _grapple_mut_row("hot_wire")
 	var width := float(row.get("line_width_m", 1.6))
@@ -7142,7 +6270,6 @@ func _step_hot_wire(ball: Vector3, anchor: Vector3, enemies: Array) -> void:
 		})
 
 
-# 3. Dragnet Siphon: tether span vacuums scrap, cogs, and W47-C1 pocket consumable cradles within 5 m.
 func _step_dragnet_siphon(delta: float, ball: Vector3, anchor: Vector3) -> void:
 	var row := _grapple_mut_row("dragnet_siphon")
 	var radius := float(row.get("vacuum_radius_m", 5.0))
@@ -7164,7 +6291,6 @@ func _step_dragnet_siphon(delta: float, ball: Vector3, anchor: Vector3) -> void:
 		_note_grapple_mut("dragnet_siphon", {"scrap_pulled": pulled_scrap, "consumables_pulled": pulled_consumables})
 
 
-# 6. Tether-Slam Clutch: Smash while tethered yanks target/prop and ball to mid-point for 2x crush slam.
 func _step_tether_slam(ball: Vector3, anchor: Vector3, kit, enemies: Array) -> void:
 	var is_smash: bool = kit.line_state == Augments.LINE_SMASH
 	var is_winch: bool = bool(kit.winching)
@@ -7229,7 +6355,6 @@ func _detonate_tether_slam_midpoint(at: Vector3, enemies: Array) -> void:
 	var base_dmg := maxf(float(row.get("damage_base", 32.0)), punch_of("slam", Augments.SLAM_KNOCK))
 	var dmg := base_dmg * mult
 	var knock := float(row.get("knock", 16.0))
-	# Clear before striking so crush resolves strictly once (depth-1).
 	_tether_slam_armed.clear()
 	effects.shockwave(at, radius, Palette.COPPER)
 	var hits := 0
@@ -7255,7 +6380,6 @@ func _tether_slam_matches(enemy: Node3D, kind: String) -> bool:
 	return target == null or target == enemy
 
 
-# 7. Wrecking Flail (Andrew Call #4): taut swing through Heft Destructibles/armor adds +1 effective Heft tier.
 func _step_wrecking_flail(delta: float, ball: Vector3, _anchor: Vector3, _kit, taut: bool, enemies: Array) -> void:
 	var row := _grapple_mut_row("wrecking_flail")
 	var bonus := clampi(int(row.get("heft_bonus", 1)), 0, 1) if taut else 0
@@ -7305,7 +6429,6 @@ func _consume_grapple_mut_strike(hit: Dictionary) -> void:
 		var row := _grapple_mut_row("live_bus")
 		var bonus_flat := float(row.get("bonus_flat", 24.0))
 		var arc_r := float(row.get("arc_radius_m", 8.0))
-		# Spend charge before any side-effect so it discharges strictly once (depth-1).
 		_live_bus_charges = 0
 		_live_bus_charged_until = -1.0
 		_clear_buff("grapple_mut_live_bus")
@@ -7334,9 +6457,6 @@ func _consume_grapple_mut_strike(hit: Dictionary) -> void:
 		_add_shred(enemy, float(_grapple_mut_row("wrecking_flail").get("armor_shred_bonus", 25.0)))
 		if "plates" in enemy and int(enemy.plates) > 0:
 			enemy.plates = maxi(0, int(enemy.plates) - 1)
-
-
-# --- W47-C1 Pocket Consumable Belt runtime ------------------------------------------
 
 var _nitro_left := 0.0
 var _overclock_left := 0.0
@@ -7399,17 +6519,13 @@ func _step_consumables(delta: float, enemies: Array) -> void:
 		if not is_instance_valid(d):
 			continue
 		if d.step(delta, ball_pos, ctx.run):
-			# --- W50-ISAAC-ECONOMY ---
 			Consumables.try_clone_pickup(ctx, self, "consumable", d.consumable_id, ball_pos)
-			# --- end W50-ISAAC-ECONOMY ---
 			d.remove_from_group(Consumables.DROP_GROUP)
 			d.queue_free()
 			continue
 		kept_drops.append(d)
 	_consumable_drops = kept_drops
-	# --- W50-ISAAC-ECONOMY ---
 	Consumables.step_w50(ctx, delta)
-	# --- end W50-ISAAC-ECONOMY ---
 
 	if ctx.run.has_consumable() and _consumable_tap_pressed():
 		use_consumable()
@@ -7452,7 +6568,6 @@ func _step_consumables(delta: float, enemies: Array) -> void:
 			_clear_buff("consumable_anchor_flare")
 
 
-# Fires the front cartridge on the Pocket Consumable Belt instantaneously with zero movement tax.
 func use_consumable(override_id := "") -> Dictionary:
 	if ctx == null or ctx.flow == null or not ctx.flow.in_play() or ctx.run == null or ctx.player == null:
 		return {}
@@ -7474,10 +6589,8 @@ func use_consumable(override_id := "") -> Dictionary:
 			result.merge(_fire_foreman_memo(at), true)
 		Consumables.MOSS_PATCH:
 			result.merge(_fire_moss_patch(at), true)
-		# --- W50-ISAAC-ECONOMY ---
 		Consumables.SCRAP_DICE, Consumables.DUPLICATOR_SPOOL, Consumables.OVERLOAD_FUSE:
 			result.merge(Consumables.fire_w50(cid, ctx, self, at), true)
-		# --- end W50-ISAAC-ECONOMY ---
 	consumable_uses += 1
 	last_consumable = result
 	if ctx.events != null and ctx.events.has_signal("consumable_used"):
@@ -7701,7 +6814,6 @@ func _fire_foreman_memo(at: Vector3) -> Dictionary:
 		if enemy.has_method("plating_now") and float(enemy.plating_now()) > 0.0:
 			_add_shred(enemy, float(enemy.plating_now()) / maxf(SHRED_PER_PUNCH, 0.01))
 		enemy.process_mode = Node.PROCESS_MODE_DISABLED
-	# B6 strict: NEVER spawn a purple floor glow/grid; Nixie buff tube uses Palette.SAND, never KINDNESS purple.
 	_post_consumable_buff("consumable_foreman_memo", String(row["icon"]), Palette.SAND, _memo_left)
 	return {"duration_s": dur, "frozen": targets.size(), "cost": paid_cost}
 
@@ -7786,12 +6898,8 @@ func _clear_consumables_runtime() -> void:
 	_consumable_drops.clear()
 	for id in ["consumable_nitro_siphon", "consumable_anchor_flare", "consumable_overclock_card", "consumable_foreman_memo", "consumable_duplicator_spool"]:
 		_clear_buff(id)
-	# --- W50-ISAAC-ECONOMY ---
 	Consumables.clear_w50(ctx.run if ctx != null else null)
-	# --- end W50-ISAAC-ECONOMY ---
 
-
-# --- W47-TALLY-B-CODE Ghost Shift Tree Queries & Ally-Husk Strikes -------------------------
 
 func _ghost_shift_ops() -> Array:
 	var out: Array = []
@@ -7821,9 +6929,6 @@ func ghost_shift_inherits_bits() -> bool:
 	return ops.has("seat_and_bits") or ops.has("severance_and_bits")
 
 
-# Resolves one raised Ghost-Shift husk attack on a live enemy as `persistent_actor` (depth-1,
-# never re-entering player weapon procs or DeferredEffects queues), respecting Warden
-# noncontact posture, Boss 0.5x chip, and depth-3 ShotBits inheritance.
 func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3, shot_bits := 0) -> float:
 	if enemy == null or not is_instance_valid(enemy) or DamageDoor.dead(enemy):
 		return 0.0
@@ -7858,7 +6963,6 @@ func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3,
 	if pull_mag > 0.0 and pull_dir != Vector3.ZERO and is_instance_valid(enemy) and not enemy.is_dead():
 		enemy.knock(pull_dir, pull_mag)
 	if ShotBits.has(shot_bits, ShotBits.bit("split")):
-		# Single depth-1 split spark to 1 nearest neighbor within 6 m (bits=0, never cascades).
 		var best: Node3D = null
 		var best_d := 6.0
 		for other in get_tree().get_nodes_in_group("enemy"):
@@ -7874,8 +6978,6 @@ func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3,
 	return dealt
 
 
-# --- W47-H1 Hero Baselines Part 1: Sable, Rivet, Kest ----------------------------------
-# Zero static mutable state: every field resets in _reset_w47_h1_state() across runs/stages/deaths.
 var _beachhead_pylon := {}
 var last_kinetic_arc := {}
 var last_ricochet := {}
@@ -7904,8 +7006,6 @@ func _h1_audio():
 	var pres = ctx.root.get("presentation") if ctx != null and ctx.root != null else null
 	return pres.get("audio") if pres != null else null
 
-
-# --- Sable: Kinetic Orbit Pylon & Vault-Kick Instant Max-Charge ------------------------
 
 func _plant_beachhead_pylon(at: Vector3) -> void:
 	_beachhead_pylon = {
@@ -7990,7 +7090,6 @@ func _step_kinetic_pylon(delta: float, enemies: Array) -> void:
 	var speed: float = player.state.velocity.length()
 	var moving_at_speed: bool = not player.kit.mounted and speed >= cruise
 	var hfx = _hero_fx()
-	# Zero camping: mounted or slow Sable NEVER gains orbit overcharge or fires kinetic-orbit arcs.
 	if not moving_at_speed:
 		_beachhead_pylon["overcharge_left"] = maxf(0.0, float(_beachhead_pylon["overcharge_left"]) - delta)
 		_beachhead_pylon["prev_angle"] = INF
@@ -8063,8 +7162,6 @@ func _step_kinetic_pylon(delta: float, enemies: Array) -> void:
 func kinetic_pylon_state() -> Dictionary:
 	return _beachhead_pylon.duplicate()
 
-
-# --- Rivet: Southwest Ricochet 6th Hot Round (Rock & Armor, Once) ----------------------
 
 func _stamp_rivet_sixth_hot(rec: Dictionary) -> void:
 	rec["sixth_hot"] = true
@@ -8194,8 +7291,6 @@ func _play_rivet_klang_ping(at: Vector3) -> void:
 	audio.play_at("ricochet_ping", at, -2.0, 1.25, "SFX", "crit_ping")
 
 
-# --- Kest: Visible Direct-Sightline Amber Fuse-Spark Trace (ZERO Wall-Hack) ------------
-
 func refresh_kest_fuse_trace(seconds := Weapons.KEST_FUSE_TRACE_HOLD_S) -> void:
 	if ctx == null or ctx.run == null or ctx.run.class_def == null or ctx.run.class_def.id != "demolitions_caster":
 		return
@@ -8225,8 +7320,6 @@ func _step_kest_fuse_trace(delta: float, enemies: Array) -> void:
 		hfx.set_kest_fuse_trace(last_kest_trace)
 
 
-# --- W47-H2 Hero Baselines Part 2: The Cannon (its) Runtime State -----------------------
-# Zero static mutable state: every field resets cleanly in _reset_w47_h2_state().
 var _cannon_recoil_airborne := false
 var _cannon_recoil_air_grace := 0.0
 var _cannon_piton := {}
@@ -8306,13 +7399,10 @@ func _step_cannon_piton() -> void:
 			_detonate_cannon_piton()
 
 
-# Explosive Piton Breach: releasing a staked piton pops its shaped-charge cap at the anchor,
-# striking nearby enemies and breaking Tier 1-3 Heft Destructibles (Destructibles.tla safe).
 func _detonate_cannon_piton() -> Dictionary:
 	if _cannon_piton.is_empty():
 		return {}
 	var piton := _cannon_piton
-	# Clear before breaking props or striking enemies so piece_shattered -> cut_line never re-enters.
 	_cannon_piton = {}
 	var anchor: Vector3 = piton["anchor"]
 	var mult: float = float(piton.get("mult", 1.0))

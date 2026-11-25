@@ -1,26 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The Splitter (kill-first special, roster_specials.gd; ENEMY-PRIORITY.md 7b and 4a; Andrew,
-# 2026-10-17 18:19Z: "they chase the player ... keep splitting ... the one that's the mama"):
-# a fat crawler of three welded pods that chases the ball and keeps budding fuse pods off
-# itself (splitter_pod.gd), each one a small mech that chases you and blows up. The mama is
-# the source: while it lives the pods keep coming, faster each time, up to POD_CAP at once,
-# so the read is to find it and kill it. How it dies matters too:
-#
-# - killed at ground level from close (a ram, a close shot or claw): its seams flare white
-#   for POP_DELAY and it pops into SPLIT_PODS more pods;
-# - killed by a stomp or slam from above, or by any hit from CLEAN_RANGE or more: one clean
-#   pop, and nothing follows.
-#
-# It never attacks itself, so it never asks the attacker budget; each pod asks before its
-# fuse, as every counter does. Pods keep the mama's director pack, so the budget reads pods
-# fusing together as one volley.
-#
-# The effects contract (design-v3/MACHINE-VFX.md, PR #51, and the special cues): each bud's
-# seam flare fires SpecialCues.tell(self) (which emits special_tell("tell")) on its first frame, and
-# meta "split" is set before died goes out.
-
-# The specials' cue hub (CONTRACTS.md "Special cues"); loaded only once that file lands.
 const CUES := "res://src/combat/special_cues.gd"
 const POD := "splitter_pod"
 const SpecialRig := preload("res://src/presentation/special_rig.gd")
@@ -32,16 +11,11 @@ signal special_tell(moment: String)
 const HP := 140.0
 const SCRAP := 6
 const WEIGHT := 2.0
-# The recipe's suggested collider (tools/blender/world_one/enemy_splitter.py).
 const BODY_RADIUS := 1.3
 const BODY_HALF := 1.35
 const WALK := 6.0
-# It follows inside this band: close enough to keep its pods coming, far enough that it has
-# to be picked out of the crowd and gone after, not rammed by accident.
 const NEAR := 7.0
 const FAR := 13.0
-# Each bud comes sooner than the last (BUD_STEP), down to BUD_FASTEST: leaving it alone gets
-# worse the longer it lives.
 const BUD_FIRST := 1.2
 const BUD_EVERY := 4.0
 const BUD_STEP := 0.5
@@ -56,7 +30,6 @@ const SEAM_IDLE := 0.4
 const SEAM_FLARE := 4.0
 const SEAM_WHITE := Color("f4efe2")
 const SEAM_BRASS := Palette.BRASS
-# A seam flare not yet popped: enemies still to come (the priority proof waits on it).
 const PENDING := "enemy_pending"
 
 var split := false
@@ -77,7 +50,6 @@ func _configure(threat: float) -> void:
 	keep_far = FAR
 
 
-# It follows you in its band and circles there; it stands still while a pod buds.
 func _roam(to_ball: Vector3) -> Vector3:
 	return Vector3.ZERO if _flare_left > 0.0 else super(to_ball)
 
@@ -105,7 +77,6 @@ func _physics_process(delta: float) -> void:
 				special_tell.emit("tell")
 
 
-# One pod comes off the side facing the ball and runs at it.
 func _bud() -> void:
 	_bud_clock = bud_interval(buds + 1)
 	if fleet == null or fleet.combat == null:
@@ -126,7 +97,6 @@ static func _join_pack(pod: Node3D, pack: int) -> void:
 		pod.set_meta("pack_seq", pack)
 
 
-# Seconds until the next bud once `count` pods have budded.
 static func bud_interval(count: int) -> float:
 	return maxf(BUD_FASTEST, BUD_EVERY - BUD_STEP * (count - 1))
 
@@ -135,17 +105,12 @@ func pods() -> Array:
 	return _pods.filter(func(pod): return is_instance_valid(pod) and not pod.is_dead())
 
 
-# The body (enemy_splitter.glb, PR #24): the three pods on fleet paint, which flashes, and
-# one lit seam surface (seams, caps, eyes and the fuse lamp) that flares white as a pod
-# buds. The collider is the recipe's suggested capsule, not the counter crew's.
 func _build_crew() -> void:
 	radius = BODY_RADIUS
 	half_height = BODY_HALF
 	_add_capsule(BODY_RADIUS, BODY_HALF * 2.0, Palette.RUST).free()
 	_seam_material = Palette.solid(SEAM_BRASS, SEAM_IDLE)
 	var parts := body_parts()
-	# On screen the glb's own scene stands in, so its crawl, tell and break clips play; the
-	# collider, sockets and signals are as before (a headless run copies meshes).
 	var model := SpecialRig.seat(self, _visual_parent(), BODY_GLB, "splitter")
 	for part in parts["meshes"]:
 		var mi: MeshInstance3D = model.find_child(part.name, true, false) as MeshInstance3D if model != null else null
@@ -167,8 +132,6 @@ func _build_crew() -> void:
 static var _parts := {}
 
 
-# A glb's meshes, each flagged paint (fleet_paint) or lit (anything else), and its sockets;
-# read once per path.
 static func parts(path: String) -> Dictionary:
 	if not _parts.has(path):
 		_parts[path] = _read(path)
@@ -202,7 +165,6 @@ static func piece_parts() -> Dictionary:
 	return parts(PIECE_GLB)
 
 
-# Where each split pod pops out: straight out from its socket, POD_SPREAD from the middle.
 func pod_offsets() -> Array[Vector3]:
 	var out: Array[Vector3] = []
 	var sockets: Dictionary = body_parts()["sockets"]
@@ -219,7 +181,6 @@ func pod_offsets() -> Array[Vector3]:
 	return out
 
 
-# The seams flare white as a pod buds off.
 func _pose() -> void:
 	if _seam_material == null:
 		return
@@ -229,14 +190,12 @@ func _pose() -> void:
 	_seam_material.emission_energy_multiplier = FlashGuard.spike(SEAM_IDLE, lerpf(SEAM_IDLE, SEAM_FLARE, flare))
 
 
-# Every door hit lands here on the frame of its damage, so a kill on this frame is the last one seen.
 func on_struck(kind: String, _part: String, _result: Dictionary) -> void:
 	var ball := _real_ball()
 	_last_hit = {"kind": kind, "range": Vector2(ball.x - global_position.x, ball.z - global_position.z).length(),
 		"frame": Engine.get_physics_frames()}
 
 
-# Whether a hit of this kind from this far kills the Splitter clean.
 static func clean_kill(hit_kind: String, hit_range: float) -> bool:
 	return hit_kind in CLEAN_KINDS or hit_range >= CLEAN_RANGE
 
@@ -259,8 +218,6 @@ func _die() -> void:
 		pop.global_position = at
 
 
-# The seam flare of a rammed Splitter: a white shell where it stood, POP_DELAY long, then
-# its pods.
 class Pop extends Node3D:
 	var combat
 	var pack := -1
@@ -270,7 +227,6 @@ class Pop extends Node3D:
 
 	func _ready() -> void:
 		add_to_group(PENDING)
-		# A stage reset clears the fight; a flare from the old attempt goes with it.
 		if is_instance_valid(combat) and combat.ctx != null:
 			combat.ctx.events.stage_content_cleared.connect(_on_cleared)
 		var sphere := SphereMesh.new()

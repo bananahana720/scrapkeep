@@ -1,19 +1,5 @@
 extends Node3D
 
-# Every live player projectile, as data, drawn with one MultiMesh. Combat fires bolts
-# in here and steps them once per physics tick; a hit is reported back through
-# `on_hit`, which resolves it once through the spawner's strike (TADR-008).
-#
-# The visual-clarity rules (principle 4) live here:
-# - At most MAX_LIVE bolts exist. A new bolt past the cap retires the oldest, which is
-#   the one furthest out and least likely to matter, so held fire never stalls.
-# - The more bolts are live, the fainter each one draws (crowd_alpha), so a stacked
-#   spiral-and-cross build thickens into a haze, never a wall.
-# - Bolts draw at PRIORITY, below every enemy telegraph (Telegraph.PRIORITY), and never
-#   in HAZARD, the colour telegraphs own.
-# - A bolt carrying shot bits draws in its first bit's TABLE colour (ShotBits.NAMES order)
-#   and MULTI_BIT_WIDTH wider when it carries two or three (ABILITY-MUTATIONS.md B3).
-
 const Density := preload("res://src/presentation/density.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -29,48 +15,25 @@ const ALPHA_CROWDED := 0.4
 const CROWD_START := 16
 const WAVE_RAMP := 6.0
 const MULTI_BIT_WIDTH := 1.15
-# Visual-only muzzle merge: a bolt drawn from a side muzzle (e.g. Rivet's twin side-sponson rotary
-# cannons at +/- 1.26 m on WeaponRing, rivet_revolvers.py SIDE_X) eases onto its true flight line
-# within DRAW_MERGE_M metres without moving hit detection, bounces, splits or rays.
 const DRAW_MERGE_M := 4.0
 const RIVET_MUZZLE_SIDE_M := 1.26
-# The split bit (start values): two children at +/- SPLIT_ANGLE_DEG off the parent's line,
-# each SPLIT_DAMAGE of its damage, flying the parent's remaining range up to SPLIT_REACH: a
-# burst into the pack around the struck machine, not two more full-range shots that fill
-# MAX_LIVE and retire the player's own (principle 4). A record may carry its own
-# split_angle_deg and split_knock (Grapeshot Press, combat _bolt_record): the children then fly
-# at that angle and knock at least that hard.
 const SPLIT_ANGLE_DEG := 18.0
 const SPLIT_DAMAGE := 0.5
 const SPLIT_REACH := 12.0
-# A bounced bolt leaves the wall this far out along the normal, so it never meets it again.
 const BOUNCE_LIFT := 0.05
-# W47-C2 Ricochet Canyon: hard ceiling on extra canyon-wall bounces (beyond the base bounce bit)
-# and homing curve parameters when a bounced bolt/shard curves toward the nearest live machine.
 const MAX_EXTRA_BOUNCES := 2
 const RICOCHET_HOME_REACH := 26.0
 const RICOCHET_HOME_TURN := 0.75
-# W50-ISAAC-PARTS Boomerang Spool & Railgun Ricochet: strictly bounded single return pass and
-# bounded railgun acceleration cap.
 const BOOMERANG_PAUSE_S := 0.15
 const BOOMERANG_MAX_DAMAGE_MULT := 2.0
 const BOOMERANG_MAX_WIDTH_MULT := 2.25
 const BOOMERANG_RETURN_PIERCE := 4
 const RAILGUN_MAX_BOOSTS := 2
 
-# Called as on_hit.call(bolt: Dictionary, enemy: Node3D, point: Vector3, part: String);
-# part is a weak point id from enemy.weak_points(), or "" for the body.
 var on_hit: Callable
-# Called as on_shell.call(bolt: Dictionary, shell: Node3D) when a bolt reaches a shell in flight.
 var on_shell: Callable
-# Called as on_stop.call(point: Vector3, color: Color) when a bolt hits the world.
 var on_stop: Callable
-# Called as on_bounce.call(bolt: Dictionary, point: Vector3) when a bolt glances off a wall
-# with its bounce bit; the glance is not a hit, so it pulls and heats nothing.
 var on_bounce: Callable
-# Called as on_flight.call(bolt: Dictionary, from: Vector3, to: Vector3) -> bool once per bolt per
-# step, after its hits, over the stretch it actually flew (to the wall, the machine that stopped
-# it, or the step's end). True when it struck something, so the reach snapshot is read again.
 var on_flight: Callable
 var peak_live := 0
 var retired := 0
@@ -97,15 +60,10 @@ func setup() -> void:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
-	# The tints are the palette's sRGB values, written by code: without this the PC's renderer read
-	# them as linear light and drew every bolt a pale cream (sight's colour probe, 10 Nov 2026: the
-	# bolts were most of what the switch moved, cream 190,184,157 to 176,162,113), a pale burst
-	# that hid three kinds' deaths on the PC reel. The cloud's renderer ignores the switch.
 	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.render_priority = PRIORITY
 	view.material_override = mat
-	# The pool is drawn in world space from the bolt records; it never moves itself.
 	view.top_level = true
 	add_child(view)
 
@@ -128,13 +86,6 @@ func clear() -> void:
 		_multimesh.visible_instance_count = 0
 
 
-# bolt needs: origin, dir, speed, max_dist, damage, kind, weapon_id, radius, knock,
-# chain_jumps, chain_range, chain_falloff, color, wave_amp, wave_hz, phase; bits, the
-# shot's ShotBits set, is optional and defaults to the empty set, and so is spent, the bits
-# already used up (pierce after its one pass, bounce after its glance, split after its first
-# hit; split_spent() for a split child). exclude, the machines it may not hit, is optional.
-# Optional visual-only draw_origin (world point) or draw_offset starts the drawn streak at a
-# side muzzle and merges it onto the true line within DRAW_MERGE_M without changing physics.
 func fire(bolt: Dictionary) -> void:
 	if not bolt.has("bits"):
 		bolt["bits"] = 0
@@ -162,8 +113,6 @@ func fire(bolt: Dictionary) -> void:
 	peak_live = maxi(peak_live, _bolts.size())
 
 
-# Initial visual-only muzzle offset for a newly fired bolt: explicit draw_origin/draw_offset
-# wins, else Rivet's weapon shots alternate left (-RIVET_MUZZLE_SIDE_M, phase 0) and right (+, phase 1).
 func _initial_draw_offset(bolt: Dictionary) -> Vector3:
 	if bolt.has("draw_origin"):
 		var off: Vector3 = (bolt["draw_origin"] as Vector3) - (bolt["origin"] as Vector3)
@@ -178,9 +127,6 @@ func _initial_draw_offset(bolt: Dictionary) -> Vector3:
 	return Vector3.ZERO
 
 
-# A child bolt (a split, a chain jump) from its parent: the parent's record with the
-# overrides applied and its flight restarted, and always the parent's ShotBits set and the
-# bits it has spent, so a child can neither gain a bit nor use one twice (SI4).
 static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	var out := parent.duplicate()
 	for key in ["travelled", "age", "shown", "right", "up", "exclude", "draw_origin", "draw_offset", "bounces", "ricochet_curved",
@@ -198,8 +144,6 @@ static func child(parent: Dictionary, overrides: Dictionary) -> Dictionary:
 	return out
 
 
-# How many more machines the bolt passes through: its pattern pierce plus one while it holds
-# the pierce bit unspent (ABILITY-MUTATIONS.md B3), so the two add.
 static func passes_left(bolt: Dictionary) -> int:
 	return int(bolt.get("pierce", 0)) + (1 if _pierce_bit_ready(bolt) else 0)
 
@@ -208,24 +152,16 @@ static func _pierce_bit_ready(bolt: Dictionary) -> bool:
 	return bit_ready(bolt, "pierce")
 
 
-# Whether the bolt holds the named bit and has not spent it.
 static func bit_ready(bolt: Dictionary, bit_name: String) -> bool:
 	var b := ShotBits.bit(bit_name)
 	return ShotBits.has(int(bolt.get("bits", 0)), b) and not ShotBits.has(int(bolt.get("spent", 0)), b)
 
 
-# What a split child has spent: its parent's spent plus split (a child never splits again, so
-# one bolt's family is at most three) and pull (only the first hit pulls), minus pierce (a
-# piercing parent's children still pierce once each). ABILITY-MUTATIONS.md B3 pair rows.
 static func split_spent(parent_spent: int) -> int:
 	var spent := ShotBits.union(parent_spent, ShotBits.bit("split") | ShotBits.bit("pull"))
 	return ShotBits.without(spent, ShotBits.bit("pierce"))
 
 
-# The two children a split-ready bolt throws from `point` when it strikes the machine with
-# `struck_id`: +/- SPLIT_ANGLE_DEG about its up axis, SPLIT_DAMAGE of its damage, the rest of
-# its range up to SPLIT_REACH (measured at `used_dist` when given, so fast bolts do not lose
-# a step of range), and that machine excluded. [] when the bolt cannot split or has no range left.
 static func split_children(parent: Dictionary, point: Vector3, struck_id: int, used_dist := -1.0) -> Array:
 	if not bit_ready(parent, "split"):
 		return []
@@ -253,15 +189,11 @@ static func split_children(parent: Dictionary, point: Vector3, struck_id: int, u
 	return out
 
 
-# The colour a bolt draws in: its first shot bit's TABLE colour in ShotBits.NAMES order, or
-# its weapon's colour when it carries none. TABLE never holds HAZARD (shot_bits.gd).
 static func tint(bolt: Dictionary) -> Color:
 	var held := ShotBits.names(int(bolt.get("bits", 0)))
 	return ShotBits.TABLE[held[0]]["color"] if not held.is_empty() else bolt["color"]
 
 
-# The bolt's drawn width: width_scale (e.g. Slag Pike's fused bolt) times MULTI_BIT_WIDTH
-# when it carries two or three bits.
 static func width(bolt: Dictionary) -> float:
 	return WIDTH * float(bolt.get("width_scale", 1.0)) * (MULTI_BIT_WIDTH if ShotBits.count(int(bolt.get("bits", 0))) >= 2 else 1.0)
 
@@ -275,10 +207,8 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		return
 	var survivors: Array = []
 	var spawned: Array = []
-	# Built once per tick; struck entries refresh in place and dead enemies are skipped lazily.
 	var snapshot: Array = _snapshot(enemies)
 	for bolt in _bolts:
-		# W50-ISAAC-PARTS Boomerang Spool: pause BOOMERANG_PAUSE_S at max range, then whip back once.
 		if float(bolt.get("boomerang_pause", 0.0)) > 0.0:
 			bolt["age"] += delta
 			bolt["boomerang_pause"] = maxf(0.0, float(bolt["boomerang_pause"]) - delta)
@@ -309,7 +239,6 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		var flown := end
 		while not target.is_empty():
 			var hit_id: int = target["enemy"].get_instance_id()
-			# The bits this hit sets off in flight, so the hit plays one tell for them all.
 			var acts := 0
 			var hit_used := before + from.distance_to(target["point"])
 			if int(bolt["pierce"]) < 1 and _pierce_bit_ready(bolt):
@@ -321,13 +250,9 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 				on_hit.call(bolt, target["enemy"], target["point"], target["part"])
 			bolt["acts"] = 0
 			_refresh_entry(target["entry"])
-			# The split bit spends on the first machine and throws two children from it.
 			if ShotBits.has(acts, ShotBits.bit("split")):
 				spawned.append_array(split_children(bolt, target["point"], hit_id, hit_used))
 				bolt["spent"] = ShotBits.union(int(bolt["spent"]), ShotBits.bit("split"))
-			# A piercing bolt passes through: it keeps its line and corkscrew phase and
-			# looks for the next machine further along the same segment. The pattern's
-			# pierce goes first, then the pierce bit's one pass, which it then spends.
 			if bolt["pierce"] > 0:
 				bolt["pierce"] -= 1
 			elif _pierce_bit_ready(bolt):
@@ -362,10 +287,6 @@ func step(delta: float, space: PhysicsDirectSpaceState3D, enemies: Array, shells
 		fire(kid)
 
 
-# The bounce bit: the first wall reflects the bolt about its normal with the range it has
-# left, and spends bounce, so a second wall stops it. With Ricochet Canyon (W47-C2, wall-carve
-# weapon shot only), up to MAX_EXTRA_BOUNCES extra glances are allowed (strictly bounded) and
-# each glance curves toward the nearest live non-excluded machine.
 func _glance(bolt: Dictionary, at: Vector3, normal: Vector3, used: float, snapshot: Array = []) -> bool:
 	var left := float(bolt["max_dist"]) - used
 	var bounce_ready := bit_ready(bolt, "bounce")
@@ -413,8 +334,6 @@ func _glance(bolt: Dictionary, at: Vector3, normal: Vector3, used: float, snapsh
 	return true
 
 
-# W50-ISAAC-PARTS: flips a paused boomerang bolt back along its line strictly once.
-# Returning pass runs as source="item_proc" with bits=0 so proc depth stays strictly 1.
 func _flip_boomerang(bolt: Dictionary) -> void:
 	var back_dir: Vector3 = -(bolt["dir"] as Vector3)
 	if back_dir.length_squared() < 1e-6:
@@ -452,7 +371,6 @@ func _flip_boomerang(bolt: Dictionary) -> void:
 	bolt["up"] = (bolt["right"] as Vector3).cross(back_dir).normalized()
 
 
-# Ricochet Canyon: curves a bounced direction toward the nearest live, non-excluded machine within reach.
 static func _ricochet_curve(reflected: Vector3, origin: Vector3, snapshot: Array, exclude: Array,
 		reach: float, turn: float) -> Vector3:
 	var best_dir := Vector3.ZERO
@@ -476,8 +394,6 @@ static func _ricochet_curve(reflected: Vector3, origin: Vector3, snapshot: Array
 	return mixed.normalized() if mixed.length_squared() > 0.0001 else best_dir
 
 
-# Where the bolt is now: along its line, plus the corkscrew for a waving bolt. The
-# corkscrew ramps in over the first metres so every bolt leaves the muzzle on its line.
 func _position(bolt: Dictionary) -> Vector3:
 	var along: Vector3 = bolt["origin"] + (bolt["dir"] as Vector3) * bolt["travelled"]
 	var amp: float = bolt["wave_amp"]
@@ -488,9 +404,6 @@ func _position(bolt: Dictionary) -> Vector3:
 	return along + ((bolt["right"] as Vector3) * cos(angle) + (bolt["up"] as Vector3) * sin(angle)) * amp * ramp
 
 
-# The first enemy the segment passes within reach of, measured against each enemy's
-# weak-point spheres first and then its upright capsule (its axis, widened by its
-# radius and the bolt's). A weak point wins a tie with the body it sits on.
 func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, snapshot: Array, exclude := []) -> Dictionary:
 	var best := {}
 	var best_along := INF
@@ -537,7 +450,6 @@ func _first_enemy(from: Vector3, to: Vector3, bolt_radius: float, snapshot: Arra
 	return best
 
 
-# What _first_enemy reads of each live enemy, read once for a run of bolts.
 func _snapshot(enemies: Array) -> Array:
 	var out: Array = []
 	for enemy in enemies:
@@ -613,8 +525,6 @@ static func _merge_weight(travelled: float) -> float:
 	return 1.0 - t * t * (3.0 - 2.0 * t)
 
 
-# Visual-only head position of a bolt: starts at its side muzzle (draw_offset) at travelled 0
-# and merges smoothly onto bolt["shown"] by travelled >= DRAW_MERGE_M.
 static func drawn_position(bolt: Dictionary) -> Vector3:
 	var head: Vector3 = bolt.get("shown", bolt.get("origin", Vector3.ZERO))
 	var offset := _draw_offset(bolt)
@@ -626,8 +536,6 @@ static func drawn_position(bolt: Dictionary) -> Vector3:
 	return head + offset * _merge_weight(travelled)
 
 
-# One bolt as its MultiMesh instance, [Transform3D, Color]: a streak along its line, width()
-# across and tint() at the crowd's alpha.
 static func instance(bolt: Dictionary, alpha: float, tail := 1.0) -> Array:
 	var dir: Vector3 = bolt["dir"]
 	if dir.length_squared() < 1e-6:

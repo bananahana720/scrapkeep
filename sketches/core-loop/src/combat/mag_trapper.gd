@@ -1,13 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The mag trapper (DESIGN-V2 section 10): a crew cart with a stack of pit discs on its
-# back. It throws a disc at where the ball will be, and the disc's instant ring closes
-# over the warning. Live, it is a magnetic pit: a ball inside it lighter than the
-# disc's heft rating has its line pulled toward the centre, through the hold bound
-# (holds.gd): the pull bends the path and never lowers the speed. Heft at or above the
-# rating rolls straight through, so growing is the counter. A jump or a smash shatters
-# the disc.
-
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 const PIT_RADIUS := 4.5
@@ -35,7 +27,7 @@ const PUNT_LIFE := 1.6
 signal disc_punted(at: Vector3, hits: int)
 
 var rating := RATING_BASE
-var windup_pose_enabled := true # Test seam: presentation only.
+var windup_pose_enabled := true
 var polarity_flips := 0
 var repulse_blasts := 0
 var disc_punts := 0
@@ -72,20 +64,12 @@ func _configure(threat: float) -> void:
 	rating = RATING_BASE + RATING_PER_THREAT * (threat - 1.0)
 
 
-# C12 dressing (enemy_mag_trapper.glb). The counter's capsule crew is replaced by the glb's
-# crew and cart (the collider _add_capsule laid stays), and the pit discs ride a pivot at the
-# cart bed. The glb is read once; every trapper shares its meshes and adds its own flashing body and disc materials as
-# surface overrides.
 const BODY_LEAN := 0.22
 const HOIST := 1.4
 const SPIN := TAU * 1.25
 const CORE_EMISSION := 0.6
-# The mast that links the stack to the lifted disc, in stack space: its foot sits in the stack's
-# top disc (the top face is at y 0.6) and its head in the lifted disc, so the disc never hangs free.
 const LINK_FOOT := 0.5
 const LINK_RADIUS := 0.16
-# The seated 0.30 m profile exposes the casing above the live paint. Only the
-# vertical mesh axis grows. The floor contact and the disc's plan are preserved.
 const CASING_HALF_HEIGHT := 0.10
 const DEPLOYED_PROFILE := 1.5
 const DISC_RADIUS := 1.05
@@ -173,9 +157,6 @@ static func _parts() -> Dictionary:
 	return _shared
 
 
-# The discs' own material answers the hit event the body's does: enemy.flash() sets _flash,
-# the base decays it, and this mirrors the same neutral pulse on the discs and settles them to plain white at rest
-# (the discs carry no plating tint). The release flash (FX-05) reaches the discs the same way.
 func _update_flash(delta: float) -> void:
 	super(delta)
 	if _disc_material == null:
@@ -200,8 +181,6 @@ func _go_live() -> void:
 	var pit := telegraph()
 	if pit == null or not windup_pose_enabled:
 		return
-	# The missing top disc is now the tool in the pit. Its mesh is a child of the
-	# existing mark, so an interrupted, expired or destroyed pit takes it along.
 	var disc := MeshInstance3D.new()
 	disc.name = "DeployedDisc"
 	disc.mesh = _top_disc.mesh
@@ -458,9 +437,6 @@ func _on_broken(_method: String) -> void:
 		fleet.discover("heavy_roll", _real_ball())
 
 
-# E05 e05_stack_hoist: one disc rises clear and accelerates its spin on WARN's clock.
-# Counter resets _t before calling _pose on release: LIVE at _t == 0 is that same
-# endpoint, with the thrown disc hidden. No independent clock or pivot transform writes.
 func _pose() -> void:
 	if _top_disc == null:
 		return
@@ -474,7 +450,6 @@ func _pose() -> void:
 	_body.rotation.x = -BODY_LEAN * raised
 	_top_disc.position = _top_rest + Vector3.UP * HOIST * raised
 	_top_disc.rotation.y = SPIN * t * t
-	# The mast runs from the stack to the disc's centre and goes with the disc when it is thrown.
 	var head := _top_disc.position.y
 	_top_link.scale = Vector3(1.0, maxf(head - LINK_FOOT, 0.0001), 1.0)
 	_top_link.position = Vector3(_top_disc.position.x, (head + LINK_FOOT) * 0.5, _top_disc.position.z)

@@ -1,26 +1,11 @@
 extends "res://src/combat/counter.gd"
 
-# A Splitter pod (roster_specials.gd): one torn-off pod of the Splitter (splitter.gd),
-# budded off it or popped out of it when it is rammed. It chases the ball, and close in it
-# lights a FUSE-second fuse that commits a ring round itself, then blows up. A ball still in
-# the ring takes the blast; one that rolled out of it has found the trick. The spent husk
-# sits out the shared recovery, then crumbles: that is no kill, so it pays and counts nothing
-# (combat.gd skips record_kill for a "fuse" death).
-# It asks the attacker budget before its fuse like every counter, and a pod destroyed
-# before its blast pops like any enemy. Light enough (WEIGHT) for a grown ball to flail.
-
 const Splitter := preload("res://src/combat/splitter.gd")
-# The piece glb (PR #24), read through the Splitter's cache.
 const BODY := "res://assets/models/world_one/enemy_splitter_piece.glb"
-# The fuse wind-up is the roster's existing "gather, then burst" pose (windup_poses.gd,
-# e03_leap_spread: nose back 6 degrees, 0.80 tall, wider to keep the volume), shivering over the
-# last quarter (SHIVER_FROM, SHIVER_HZ). It reads progress and age from the warn clock the seam
-# glow and the ring already read, so nothing here has a timer of its own.
 const WIND_POSE := "e03_leap_spread"
 
 const HP := 40.0
 const WEIGHT := 0.6
-# The piece recipe's collider core (tools/blender/world_one/enemy_splitter_piece.py).
 const BODY_RADIUS := 0.6
 const BODY_HALF := 0.9
 const WALK := 10.0
@@ -32,7 +17,6 @@ const FUSE := 1.0
 const GLOW_IDLE := 1.0
 const GLOW_FUSE := 5.0
 const GLOW_SPENT := 0.1
-# How long a spent husk stands after its recovery before it crumbles.
 const CRUMBLE := 0.15
 
 var blasts := 0
@@ -40,10 +24,8 @@ var spent := false
 var _crumble := 0.0
 var _ring_had_ball := false
 var _glow: StandardMaterial3D
-# The visual pivot's child that holds the body and takes the fuse wind-up; never a collider.
 var _body: Node3D
 var _rig: Node
-# Seconds since the blast went live; -1 before it.
 var _husk_age := -1.0
 
 
@@ -61,7 +43,6 @@ func _configure(threat: float) -> void:
 	first_rest = 0.5
 
 
-# It runs straight at the ball, until it has blown.
 func _roam(to_ball: Vector3) -> Vector3:
 	if spent:
 		return Vector3.ZERO
@@ -69,8 +50,6 @@ func _roam(to_ball: Vector3) -> Vector3:
 	return to_ball / distance * walk_speed if distance > 0.5 else Vector3.ZERO
 
 
-# The piece glb (PR #24) over the recipe's collider: the shell on fleet paint, which
-# flashes, and the lit seam edges, which burn brighter as the fuse runs.
 func _build_crew() -> void:
 	radius = BODY_RADIUS
 	half_height = BODY_HALF
@@ -79,8 +58,6 @@ func _build_crew() -> void:
 	_body = Node3D.new()
 	_body.name = "PodBody"
 	_visual_parent().add_child(_body)
-	# On screen the glb's own scene stands in, so its scurry and pop_in clips play; it is born
-	# out of the burst (pop_in once, then the scurry loop). A headless run copies meshes.
 	var model := Splitter.SpecialRig.seat(self, _body, BODY, "splitter_piece")
 	if model != null:
 		_rig = get_node_or_null("SpecialRig")
@@ -120,7 +97,6 @@ func _go_live() -> void:
 		hit_player.emit(BLAST_DAMAGE, dir * BLAST_SHOVE + Vector3.UP * 3.0)
 	elif ring != null and _ring_had_ball and fleet != null:
 		fleet.discover("fuse_pod", ball)
-	# Spent: from here a kill pays nothing, and it never fuses again.
 	spent = true
 	_husk_age = 0.0
 	scrap_value = 0
@@ -140,8 +116,6 @@ func _physics_process(delta: float) -> void:
 		_die()
 
 
-# E25 e25_pod_glow: the seam glow blinks faster and burns brighter as the fuse runs, then
-# goes dark on the spent husk. It reads the counter's warn clock; no timer of its own.
 func _pose() -> void:
 	if _glow == null:
 		return
@@ -154,21 +128,16 @@ func _pose() -> void:
 	_glow.emission_energy_multiplier = FlashGuard.spike(GLOW_IDLE, lerpf(GLOW_IDLE, GLOW_FUSE, burn * blink))
 
 
-# The fuse's body read: the committed warn progress and age drive the wind-up pose, and the
-# scurry slows to a stop as it fills. Rotation and squash on the body node only.
 func fuse_progress() -> float:
 	return clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN and not spent else 0.0
 
 
-# The shiver phase is the committed telegraph's age, as enemy.gd feeds WindupPoses.
 func wind_basis() -> Basis:
 	var tele := telegraph()
 	var age: float = tele.age if tele != null and is_instance_valid(tele) else _t
 	return WindupPoses.windup(WIND_POSE, fuse_progress(), age, EnemyMotion.motion_scale)
 
 
-# The husk stays standing through the shared recovery and CRUMBLE after the blast (_physics_process
-# frees it only then), so the pose snaps through the release and settles, as enemy.gd does.
 func release_basis() -> Basis:
 	return WindupPoses.release(WIND_POSE, _husk_age, EnemyMotion.motion_scale)
 
@@ -180,7 +149,6 @@ func _wind_up() -> void:
 			_husk_age += get_physics_process_delta_time()
 		else:
 			_body.basis = wind_basis()
-		# Squash about the feet (the capsule's floor is -BODY_HALF), so the pod crouches, not floats.
 		_body.position = Vector3(0.0, -BODY_HALF * (1.0 - _body.basis.y.length()), 0.0)
 	if _rig != null:
 		_rig.player.speed_scale = 0.0 if spent else 1.0 - fuse_progress()

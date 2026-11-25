@@ -1,13 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The pit jaw (roster_dig.gd, world 2; the Spillway catch trap re-homed, Andrew's "Re-home a
-# few" tap, design-v3/WORLD-ROSTERS.md): a toothed jaw set flush in the Dig's floor. It slides
-# under where the ball is heading and the warning is a small instant ring over it. Live, a ball
-# rolling over it ON THE FLOOR (FloorRule) is bitten and held: its speed is bled hard and it is
-# pulled to the jaw's centre. A ball carving a bank or wall, or in the air, passes over it. A
-# slam that lands on the open jaw before it bites shuts it for good, so a lip drop is the kill.
-# Boost or smash out of a bite.
-
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -20,17 +12,9 @@ const BITE_DAMAGE := 6.0
 const HP := 40.0
 const PRIMARY_WARN := 1.0
 const PRIMARY_LIVE := 2.0
-# E30's wind-up (event_kinds.gd, e30_jaw_part; coordinator call 2026-10-18, "no silent wind-ups"):
-# through the warn the jaw parts at the ring, its teeth spreading JAW_SPREAD wider and rising
-# JAW_RISE out of the floor; it stays parted live until it bites, then snaps shut. Presentation
-# only: the ring, the bite and the timing are unchanged.
 const JAW_SPREAD := 0.35
 const JAW_RISE := 0.18
 const JAW_GAPE := 0.6
-# Secondary attack (W48-COMBAT): Spring-Spit Launch. The jaw clenches shut, coils its spring,
-# commits a >= 0.70 s Palette.HAZARD PROJECTILE ring, and spits a slag bolus at a stalling ball
-# on the floor (ruling cu). Slamming the clenched jaw fires its coiled spring as a vertical
-# bench-skip cannon (BENCH_SKIP_LIFT m/s upward launch, horizontal speed preserved).
 const SPIT_WARN := 0.85
 const SPIT_LIVE := 0.70
 const SPIT_RADIUS := 3.2
@@ -72,7 +56,6 @@ func _configure(threat: float) -> void:
 	attack_range = 20.0
 
 
-# BODY's glb, its jaw sunk to the floor; a flat ring with hazard teeth if it does not load.
 func _build_tool() -> void:
 	var parts := _parts()
 	if parts.is_empty():
@@ -114,7 +97,6 @@ static func _parts() -> Array:
 	return _shared
 
 
-# It sets only for a ball it can bite: one on the floor.
 func _wants_attack(to_ball: Vector3) -> bool:
 	var player = _player()
 	if player == null or not FloorRule.on_floor(player.state):
@@ -219,8 +201,6 @@ func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
 		_fire_bench_skip_cannon(global_position)
 
 
-# A slam on the clenched jaw during Spring-Spit Launch fires it as a vertical bench-skip cannon;
-# a slam on the open jaw before it has bitten shuts it for good.
 func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
 	if is_dead() or _holding() or (phase != Phase.WARN and phase != Phase.LIVE):
 		return
@@ -229,8 +209,6 @@ func _on_slammed(at: Vector3, _strength: float, _flatness: float) -> void:
 		if Vector2(at.x - jaw_pos.x, at.z - jaw_pos.z).length() <= CANNON_RADIUS:
 			_fire_bench_skip_cannon(at)
 		return
-	# Once it has bitten this live phase it is shut: a smash out of the bite, or a slam after the
-	# hold runs out, does not kill it.
 	if phase == Phase.LIVE and caught_live > 0:
 		return
 	var ring := telegraph()
@@ -254,8 +232,6 @@ func _on_end() -> void:
 		_jaw.scale = Vector3.ONE
 
 
-# E30's pose, e30_jaw_part: the jaw parts through the warn and holds open until it bites.
-# During Spring-Spit Launch it clenches tight and coils down before snapping up.
 func _pose() -> void:
 	if _jaw == null or not _jaw.top_level:
 		return

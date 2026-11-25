@@ -5,33 +5,16 @@ const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
-# Quake Knock (Waking-made): a bore tooth struck against the ground, and the floor carries the
-# blow outward. The press commits one ring around the ball; for the 0.5 s wind-up the ring of
-# cracks draws itself (the committed telegraph fills while cracks run out from the centre), then
-# the ring hits. Only machines the telegraph's contains() takes are struck, so damage lands only
-# inside the warning shown. The blow is kinetic: it shatters ice slabs inside the ring through
-# build.apply_element.
-#
-# It stacks into a strong build: weapon damage mods and punch scale the knock, each Cross Split
-# level adds an aftershock ring further out (shown the moment the first ring hits), each Chain
-# Arc level jumps every struck machine's hit to another machine inside the same ring, and a full
-# ultimate meter's overflow widens the ring and hits harder (the rack's bonus).
-
 const BASE_DAMAGE := 30.0
 const RADIUS := 7.0
-# Metres of ring per banked overflow piece, and the share of damage each piece adds.
 const BONUS_RADIUS := 0.75
 const BONUS_DAMAGE := 0.15
-# Height above the ground the knock reaches: a machine in the air rides over it.
 const REACH_UP := 2.5
 const KNOCK := 12.0
-# Aftershocks (Cross Split): each ring sits AFTERSHOCK_GROW further out than the last, is
-# shown when the ring before it hits and lands AFTERSHOCK_WARN later at AFTERSHOCK_SCALE damage.
 const AFTERSHOCK_GROW := 3.0
 const AFTERSHOCK_WARN := 0.3
 const AFTERSHOCK_SCALE := 0.6
 const CHAIN_FALLOFF := 0.7
-# How long a ring that has hit stays on the ground before it clears.
 const LINGER := 0.2
 const CRACKS := 7
 const CRACK_EVERY := 0.06
@@ -39,15 +22,11 @@ const COLOR := Palette.AMBER
 const KIND := "quake"
 const SOURCE := "special"
 const ELEMENT := "kinetic"
-# The knock lands like a slam: the heavy stop and the launch reaction.
 const IMPACT := "slam"
 
 var ctx
 var combat
-# Rings still to hit: {"ring": telegraph, "left": seconds, "warn": seconds, "damage": float,
-# "rack": true for the wind-up's ring, which the rack's fire() hits, false for an aftershock}.
 var pending: Array = []
-# Rings that hit and are lingering: [telegraph, seconds left].
 var spent: Array = []
 var knocks := 0
 var _crack_clock := 0.0
@@ -67,7 +46,6 @@ func clear() -> void:
 	spent.clear()
 
 
-# A Jam during the wind-up drops the wind-up's ring; aftershocks already shown still land.
 func cancel() -> void:
 	_drop_rack_ring()
 
@@ -93,8 +71,6 @@ func damage(bonus := 0) -> float:
 	return (BASE_DAMAGE + punch) * (1.0 + BONUS_DAMAGE * bonus) * ctx.tuning.mod("weapon_damage")
 
 
-# The wind-up's tell: commit the ring the fire will hit with, at the ball, sized by the
-# overflow banked at the press.
 func begin(rack, row: Dictionary) -> void:
 	_drop_rack_ring()
 	var bonus := int(rack.bonus)
@@ -104,12 +80,9 @@ func begin(rack, row: Dictionary) -> void:
 	_crack_clock = 0.0
 
 
-# The wind-up ended: the first ring hits now; any aftershocks are committed and land later.
-# Returns the rings this fire will hit with. A rack row with no wind-up commits and hits at once.
 func fire(rack, row: Dictionary, bonus: int) -> int:
 	var heads := pending.filter(func(entry): return entry["rack"] and is_instance_valid(entry["ring"]))
 	if heads.is_empty():
-		# A wind-up whose ring is gone hits nothing: there is no warning to land inside.
 		if float(row["windup"]) > 0.0:
 			return 0
 		begin(rack, row)
@@ -118,7 +91,6 @@ func fire(rack, row: Dictionary, bonus: int) -> int:
 	pending.erase(first)
 	var ring: Node3D = first["ring"]
 	var rings := 1
-	# The ring's size was committed at the press; overflow banked since then still hits harder.
 	var dmg := maxf(float(first["damage"]), damage(bonus))
 	var hit := dmg
 	var radius: float = ring.radius
@@ -157,7 +129,6 @@ func step(delta: float) -> void:
 		ring.set_progress(progress)
 		if draw:
 			_cracks(ring, progress)
-		# The rack hits the wind-up's ring when the wind-up ends; aftershocks hit on their own clock.
 		if float(entry["left"]) <= 0.0 and not entry["rack"]:
 			_strike(ring, float(entry["damage"]))
 		else:
@@ -171,8 +142,6 @@ func _commit(at: Vector3, radius: float) -> Node3D:
 	return ring
 
 
-# One ring hits: every live machine its committed geometry contains, then the kinetic blow on
-# any ice inside it.
 func _strike(ring: Node3D, dmg: float) -> void:
 	knocks += 1
 	ring.set_progress(1.0)
@@ -190,8 +159,6 @@ func _strike(ring: Node3D, dmg: float) -> void:
 	spent.append([ring, LINGER])
 
 
-# Chain Arc: each level jumps every struck machine's hit to the nearest other machine inside the
-# same ring, losing CHAIN_FALLOFF a jump. It never reaches past the ring.
 func _chain(struck: Array, dmg: float) -> void:
 	var jumps := _pattern("chain_arc")
 	if jumps < 1 or struck.size() < 2:
@@ -219,8 +186,6 @@ func _chain(struck: Array, dmg: float) -> void:
 			at = next.global_position
 
 
-# The kinetic blow: the element applied once on each ice slab whose centre lies inside the ring,
-# like a slam landing on it. A slab an earlier blow already broke is skipped.
 func _shatter(ring: Node3D) -> void:
 	var build = ctx.build
 	if build == null or not build.has_method("apply_element") or build.get("field") == null:
@@ -235,8 +200,6 @@ func _shatter(ring: Node3D) -> void:
 			build.apply_element(ELEMENT, Vector3(slab["at"].x, float(slab["top"]) + 0.3, slab["at"].z), "active")
 
 
-# The tell's cracks: jagged lines running out from the centre to the ring's edge as it fills,
-# and the rim cracking around as it closes.
 func _cracks(ring: Node3D, progress: float) -> void:
 	var center: Vector3 = ring.center + Vector3.UP * 0.15
 	var reach: float = ring.radius * clampf(progress * 1.15, 0.1, 1.0)

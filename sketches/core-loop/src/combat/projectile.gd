@@ -8,34 +8,15 @@ const Icons := preload("res://src/ui/icons.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# The lobber's shell. Its landing ring is committed the moment it is fired, as a
-# PROJECTILE threat: a reticle whose brackets close as the shell falls, under a dotted
-# trace of the flight. The flight is solved exactly, so the shell flies the drawn trace
-# and lands on the ring's centre at FLIGHT seconds, and the blast hurts only a ball the
-# ring contains at that instant. Killing the lobber does not recall a shell
-# already in the air; what was shown still lands.
-#
-# A shell can be batted: a bolt or a rolling ball that reaches it in flight sends it
-# back at the lobber that fired it (bat()). The return is committed the same way, as
-# a new ring, drawn in AMBER because it is yours now: it never hurts the player, and
-# combat resolves its blast against every enemy the ring contains.
-
 const GRAVITY := 26.0
 const BLAST_RADIUS := 3.6
 const DAMAGE := 12.0
 const SHOVE := 5.0
 const HIT_RADIUS := 0.9
 const RETURN_FLIGHT := 0.9
-# The first seconds of a covered flight in which the muzzle is clear of cover, and the collision layer
-# terrain and landform bodies are on (Godot's default 1; the ball is alone on layer 2).
 const COVER_CLEAR_SECONDS := 0.15
 const COVER_MASK := 1
-# How far above its ring's seat a hit still counts as the landing ground, not cover (metres).
 const COVER_SEAT_BAND := 0.25
-# The batting cue (LEGIBILITY section 6): while the ball could reach the landing point before
-# the shell lands, the shell wears the will_break row's rim, and a rising ping sounds when the
-# rim first lights. The ping is SfxBank's "vault_rise", the breathy rising sweep. Visual and
-# sound only: the flight, the ring and combat's BAT_REACH are untouched.
 const RIM_SIZE := 3.6
 const RIM_PING := "vault_rise"
 const RIM_PING_DB := -2.0
@@ -55,18 +36,11 @@ var flight := 1.9
 var launch := Vector3.ZERO
 var ring: Node3D
 var returned := false
-# Whether terrain and landforms stop this shell in flight (the stage's hazard.shell_cover_by_stage, passed in
-# by combat): a covered shell bursts harmlessly where its path meets static geometry short of its landing.
 var covered := false
-# Test seam: the rim and its ping off, nothing else changes.
 var rim_cue_enabled := true
 var pings := 0
 
-# The shell's sphere, its glow and the rim's quad are the same for every shot and never written
-# after, so they are made once, not per shot inside the lobber's physics step. The rim's material
-# pulses per shot, so each shot keeps its own; the first one is held for the session, because
-# freeing the last rim material frees its shader and the next shot compiled it again (about 5 ms
-# on the 4080, in a lobber volley's physics tick).
+# Godot frees a StandardMaterial3D shader when its last instance is freed (~5 ms compile hitch per volley).
 static var _shell_mesh: SphereMesh
 static var _shell_material: StandardMaterial3D
 static var _rim_quad: QuadMesh
@@ -83,7 +57,6 @@ var _pinged := false
 var _rim_clock := 0.0
 
 
-# Fixed flight time turns the arc into one solve instead of an iterative aim.
 static func lob_velocity(from: Vector3, to: Vector3, seconds: float) -> Vector3:
 	var v := (to - from) / seconds
 	v.y += 0.5 * GRAVITY * seconds
@@ -118,8 +91,6 @@ func setup(target_ref, terrain_ref, root_ref: Node, live_ref: Callable, from: Ve
 	ring.set_flight(from, Threat.lob_bump(GRAVITY, seconds))
 
 
-# Sends the shell back at its lobber, or back where it came from if the lobber is gone.
-# Returns false for a shell already batted.
 func bat() -> bool:
 	if returned or _age >= flight:
 		return false
@@ -169,8 +140,6 @@ func _physics_process(delta: float) -> void:
 	queue_free()
 
 
-# Casts the step just flown against static geometry. A hit short of the landing ring bursts the shell
-# there, harmlessly. Returns true when the shell is gone.
 func _burst_on_cover(from: Vector3) -> bool:
 	if not is_inside_tree():
 		return false
@@ -181,8 +150,6 @@ func _burst_on_cover(from: Vector3) -> bool:
 	var at: Vector3 = hit["position"]
 	if Vector2(at.x - landing.x, at.z - landing.z).length() <= BLAST_RADIUS:
 		return false
-	# Cover stands above the ground the ring is seated on. A hit no higher than that seat is the shell meeting
-	# its own landing ground (an arena floor raised over the aim point, say), so it flies on and lands.
 	if is_instance_valid(ring) and at.y <= ring.center.y + COVER_SEAT_BAND:
 		return false
 	exploded.emit(at, BLAST_RADIUS, false)
@@ -192,8 +159,6 @@ func _burst_on_cover(from: Vector3) -> bool:
 	return true
 
 
-# Whether the ball can bat this shell: at cruise or faster (combat._bat_by_ball's floor), and at its
-# planar speed it reaches the landing point before the shell lands.
 func ball_can_reach() -> bool:
 	if returned or target == null or _age >= flight or not target.has_method("planar_velocity"):
 		return false

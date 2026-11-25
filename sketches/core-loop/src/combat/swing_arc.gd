@@ -3,16 +3,7 @@ extends RefCounted
 const Tuning := preload("res://src/movement/tuning.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# Where a latched ball will be in `seconds`, found by swinging it on its rope instead of
-# extending its velocity in a line. It replays Augments._grapple/_ride at the physics rate: the
-# rope never stretches, so past its length the ball loses its outward speed against the anchor
-# (and is pulled back by the rope spring), then gravity and the step move it. A fall becomes a
-# pendulum about the anchor at constant rope length, and a mob that commits a mark `seconds` ahead
-# aims at the arc the ball is on rather than the line its velocity points along. The air's
-# over-speed drag (Rules.over_speed_drag) is replayed too, so a fast swing is forecast as well.
 
-
-# Vector3.INF when the ball is not latched.
 static func forecast(player, seconds: float) -> Vector3:
 	if player == null or not player.kit.hooked:
 		return Vector3.INF

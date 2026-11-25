@@ -1,12 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-# The gyro jammer (DESIGN-V2 section 15.4): a crew figure hunched under a tall aerial.
-# It throws your gyroscope off. The warning is an instant ring laid over the ball;
-# live, a ball inside the field is held in a drift: a sideways push across its line,
-# swinging left and right at DRIFT_HZ, so the steering wanders while the screen and the
-# camera stay exactly where they are (never nauseating). It never slows you; it steals
-# your line. Rolling out of the field ends it, and a jump, a boost or a smash breaks it.
-
 const FIELD_RADIUS := 7.0
 const DRIFT := 11.0
 const DRIFT_HZ := 0.7

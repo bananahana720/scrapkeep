@@ -3,16 +3,6 @@ extends "res://src/combat/counter.gd"
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
-# The ramp-flipper (DESIGN-V2 section 15.4): a crew figure hauling a hinged floor plate.
-# It drops the plate where the ball will roll and the warning is an instant ring over
-# it; the plate is drawn tilting up over the warning, so the fling is shown before it
-# happens. Live, a grounded ball on the plate is flung up and off its line, sideways,
-# for TILT seconds. Jump while it tilts and you ride it as a ramp instead: the fling
-# turns into lift along your own line, with the break refund.
-# Flow (design-v3/SPILLWAY-ROSTER.md): in the Spillway it is a sluice flap, and speed is the
-# other answer. A ball that reaches the plate at FAST tier or above is never caught: it rides
-# the plate as a launch ramp along its own line, RIDE_UP lift plus a RIDE_KICK shove forward.
-
 const PLATE_RADIUS := 3.6
 const LEAD := 0.9
 const TILT := 0.35

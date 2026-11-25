@@ -5,21 +5,6 @@ const Icons := preload("res://src/ui/icons.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const AllyHusk := preload("res://src/combat/ally_husk.gd")
 
-# One of the Mind's hands (DESIGN-V2 section 10, superintelligence; STORY-THREADS T5):
-# a tall, thin, many-jointed arm on a cast foot, a lens cluster at the top that always
-# follows the ball. Still, then exact. It reads the habit you use most this run (the
-# fleet's habit counts, which reset every run) and answers it:
-#
-# - The quote is the telegraph. It commits its strike lane with its voice set to your
-#   class motif played back inverted, one note flat (the mind_ cue for your class), and
-#   its lens shows the trigger icon of the habit it read, in HAZARD. mind_adapted goes
-#   out on the same frame. Nothing it does lands without that quote first.
-# - The strike lands down the lane after WARN.
-# - Then it braces for BRACE seconds against that one verb: hits of the braced kinds
-#   meet BRACE_MULT times its plating (still chipping 20%), every other verb meets the
-#   plating as usual, and its lens stays open as a weak point any hit breaks through.
-#   Bounded twice over: the brace ends, and it costs the hand its lens.
-
 const LANE_LENGTH := 18.0
 const LANE_WIDTH := 2.6
 const STRIKE_DAMAGE := 10.0
@@ -34,14 +19,10 @@ const LENS_RADIUS := 0.7
 const TAKEOVER_RANGE := 24.0
 const TAKEOVER_COOLDOWN := 8.0
 const HIT_FLASH_SECONDS := 0.08
-# enemy.gd's _update_flash decays _flash at this rate per second (its literal 2.5).
 const FLASH_DECAY := 2.5
 const HIT_FLASH_SPEEDUP := 1.0 / (FLASH_DECAY * HIT_FLASH_SECONDS)
-# The skinned hand (tools/blender/bosses). The cylinders and spheres built below stay as the
-# fallback and are only hidden when the model loads.
 const MODEL := "res://assets/models/bosses/mind_hand.glb"
 
-# Test seam: a test points this at a missing file to prove the primitive hand builds.
 static var model_path := MODEL
 static var _warned_models := {}
 static var _rim_masks := {}
@@ -57,7 +38,6 @@ var strikes_landed := 0
 var takeovers_started := 0
 var takeovers_interrupted := 0
 var takeovers_completed := 0
-# The Mind's phase, kept current by mind.gd, for the mind.damage_by_phase dial.
 var boss_phase := 1
 var _takeover_husk: AllyHusk.HuskUnit = null
 var _takeover_cd := 2.0
@@ -228,7 +208,6 @@ func _show_icon(id: String) -> void:
 	_icon.visible = true
 
 
-# The arm: a cast foot, three thin segments with joints, and the lens cluster on top.
 func _build_crew() -> void:
 	radius = 0.7
 	half_height = 1.8
@@ -290,8 +269,6 @@ func _build_crew() -> void:
 	_dress_model()
 
 
-# Puts the skinned hand over the primitives. The collider, the lens node (lens_point and the
-# habit icon ride on it) and every number above stay as they were; only the meshes change.
 func _dress_model() -> void:
 	var loaded := BossModel.load_scene(model_path)
 	if loaded == null:
@@ -344,14 +321,11 @@ func _dress_model() -> void:
 	_anim = player
 	BossModel.own_clips(_anim)
 	BossModel.loop_clip(_anim, "still_track")
-	# A queued clip takes the pair's blend: the brace eases out of the strike's last frames and
-	# the hand settles back into its still track after the recovery.
 	_anim.set_blend_time("exact_strike", "brace", BossModel.blend_for("brace"))
 	_anim.set_blend_time("recover", "still_track", BossModel.blend_for("still_track"))
 	BossModel.play(_anim, "still_track")
 
 
-# Only the blue seam texels carry plating light; the striped working face stays authored.
 func _skin_rim_mask(texture: Texture2D) -> ImageTexture:
 	if _rim_masks.has(texture):
 		return _rim_masks[texture]
@@ -383,8 +357,6 @@ func set_tint(state: String) -> void:
 		_skin_rim.albedo_color = _skin_rim_albedo
 
 
-# Cues the clip for the phase the counter is in: still, the quote's warn, the exact strike
-# then the brace, then the recovery. Edge-triggered on the phase, so it adds no timing.
 func _cue_model() -> void:
 	if _anim == null or phase == _seen_phase:
 		return
@@ -402,7 +374,6 @@ func _cue_model() -> void:
 				_anim.queue("still_track")
 
 
-# Still, then exact: the lens always follows the ball; the brace opens it wide.
 func _pose() -> void:
 	_cue_model()
 	if _lens == null or target == null:

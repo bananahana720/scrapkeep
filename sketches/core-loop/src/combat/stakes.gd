@@ -143,8 +143,6 @@ func recall(device_id: int) -> void:
 			return
 
 
-# Flight stakes start their six-second anchor life together at landing; a bail arms
-# only those already planted. This leaves the whole committed route usable afterwards.
 func arm() -> void:
 	for stake in nodes:
 		stake.armed = true

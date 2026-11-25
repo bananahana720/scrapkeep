@@ -7,17 +7,9 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 
-# The active slot: one racked active on F (Bindings "active"), behind --actives (off by
-# default). It holds charges that refill over time and from kills, so fighting feeds it,
-# and while the ultimate meter sits full each kill banks one overflow piece for the next fire
-# instead of throwing the points away ("Overpowered pays"). Combat owns this node
-# (combat.actives); the HUD reads slot_record(); the field-lock unit ("Jam") calls lock().
-
 const REFUSE_NONE := "empty"
 const REFUSE_COOLING := "cooling"
 const REFUSE_JAMMED := "jammed"
-# A dropped active racks again when the ball rolls within PICKUP of it, once the ball has first
-# been REARM away from it, so the drop under the ball never swaps straight back.
 const PICKUP := 2.5
 const REARM := 4.0
 
@@ -25,21 +17,15 @@ var ctx
 var combat
 var active_id := ""
 var charges := 0
-# 0 to 1 toward the next charge.
 var progress := 0.0
-# Overflow pieces banked for the next fire.
 var bonus := 0
 var fires := 0
 var echo_fires := 0
 var _locked := 0.0
-# A big active's wind-up: seconds left, 0 when none is winding.
 var winding := 0.0
 var _granted := false
 var _kinds := {}
-# Actives dropped by a swap, lying where the ball stood: {id, charges, progress, at, armed, node}.
 var dropped: Array = []
-# The rack as the current attempt began (a stage, or an arena), so a retry rewinds it with the
-# run's parts and cogs: {id, charges, progress, bonus, granted}.
 var _saved := {}
 
 
@@ -81,7 +67,6 @@ func reset() -> void:
 	_clear_dropped()
 
 
-# Racks `id`, replacing whatever was racked. Arrives full unless `fill` is false (the opening starter).
 func rack(id: String, fill := true) -> bool:
 	if _row(id).is_empty():
 		return false
@@ -92,11 +77,6 @@ func rack(id: String, fill := true) -> bool:
 	return true
 
 
-# Takes an offered active (a gate, the vault or Moss's shelf, by its offer id or its active id):
-# racks it full, and the active it replaces drops at `at` keeping its charges, so rolling back
-# over it swaps again without a free refill. A drop lasts the stage; a gate launches the ball on,
-# so taking a gate's active leaves the old one behind for good. False when it is not an active or
-# already racked.
 func take(id: String, at: Vector3) -> bool:
 	var new_id := ActiveOffers.active_of(id) if ActiveOffers.is_offer(id) else id
 	if new_id == active_id or _row(new_id).is_empty():
@@ -110,12 +90,10 @@ func take(id: String, at: Vector3) -> bool:
 	return true
 
 
-# Every active a draw may offer; a test may add rows.
 func rows() -> Dictionary:
 	return ActiveDefs.ROWS
 
 
-# The actives this run already holds, racked or lying dropped: a draw never offers them.
 func held() -> Array:
 	var out: Array = [active_id] if active_id != "" else []
 	for entry in dropped:
@@ -123,8 +101,6 @@ func held() -> Array:
 	return out
 
 
-# A fresh attempt saves the rack; a retry rewinds it to that save, as run_state rewinds the
-# parts and cogs that paid for what it racked.
 func _attempt(retry: bool) -> void:
 	if not retry:
 		_saved = {"id": active_id, "charges": charges, "progress": progress, "bonus": bonus, "granted": _granted}
@@ -143,14 +119,11 @@ func row_of(id: String) -> Dictionary:
 	return _row(id)
 
 
-# An electric field's Jam: no fire for `seconds` (the longest lock wins). A wind-up in progress
-# is cancelled and its charge refunded.
 func lock(seconds: float) -> void:
 	_locked = maxf(_locked, seconds)
 	_cancel_windup()
 
 
-# A wind-up in progress stops and refunds its charge.
 func _cancel_windup() -> void:
 	if winding > 0.0:
 		winding = 0.0
@@ -172,7 +145,6 @@ func _physics_process(delta: float) -> void:
 			rack(ActiveDefs.STARTER, false)
 	_locked = maxf(0.0, _locked - delta)
 	if active_id != "":
-		# Cell Bracket panels raise the recharge rate (the build's active_recharge mod).
 		var rate: float = ctx.tuning.mod("active_recharge") if ctx.tuning != null else 1.0
 		_recharge(delta * rate / float(_row(active_id)["recharge"]))
 	for id in _kinds:
@@ -187,7 +159,6 @@ func _physics_process(delta: float) -> void:
 		press()
 
 
-# The F press. Returns "" when it fired, else the refusal reason it announced.
 func press() -> String:
 	var reason := ""
 	if active_id == "":
@@ -215,10 +186,8 @@ func press() -> String:
 func _release() -> void:
 	var row := _row(active_id)
 	var count: int = _kinds[active_id].fire(self, row, bonus)
-	# Open Frame (the Highdraft Roosts set, maker_sets.gd): an active fired in the air fires twice.
 	if ctx.build != null and ctx.build.has_method("maker_fires_twice") and ctx.build.maker_fires_twice():
 		count += int(_kinds[active_id].fire(self, row, bonus))
-	# Breaker Fuse (`overload_fuse`, W50-ISAAC-ECONOMY): next Active echoes strictly once at 0.75x (item_proc).
 	if ctx.run != null and Consumables.consume_overload_fuse(ctx.run):
 		echo_fires += 1
 		if _kinds[active_id].has_method("fire_echo"):
@@ -258,7 +227,6 @@ func _on_killed(_kind: String, _at: Vector3, _scrap: int) -> void:
 		bonus = mini(bonus + 1, int(row["bonus_cap"]))
 
 
-# The active's row; a test may override it to wind up an active that fires on the press.
 func _row(id: String) -> Dictionary:
 	return ActiveDefs.row(id)
 
@@ -306,7 +274,6 @@ func _clear_dropped() -> void:
 	dropped.clear()
 
 
-# The dropped active on the ground: its rarity's star, spinning, with its name as a prompt.
 func _drop_node(id: String, at: Vector3) -> Node3D:
 	if combat == null or not combat.is_inside_tree():
 		return null
@@ -337,7 +304,6 @@ func _clear_flight() -> void:
 		_kinds[id].clear()
 
 
-# The bar's chip for the racked active, in AbilitySlots' record shape, or {} with none racked.
 func slot_record() -> Dictionary:
 	if not enabled() or active_id == "":
 		return {}

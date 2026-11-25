@@ -8,16 +8,8 @@ const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
-# The Mind's body: the open crown over the pad (boss_mind_base.glb) and the combat seat's kit
-# (boss_mind_kit.glb) under the choir Warden. Visual only. mind.gd still owns every attack,
-# hazard and hand; this node reads that state each physics frame and cues the clip that
-# matches it, so a body cue starts on the frame its hazard commits, goes live and ends.
-# The lens follows the Warden's real open choir seat (family_point_at) and never moves a
-# collider. A missing GLB makes attach() return null and the stub's Warden body stays.
-
 const BASE := "res://assets/models/bosses/boss_mind_base.glb"
 const KIT := "res://assets/models/bosses/boss_mind_kit.glb"
-# Test seam: a test points these at a missing file to prove the stub body stays.
 static var base_path := BASE
 static var kit_path := KIT
 
@@ -28,29 +20,18 @@ static func reset_for_tests() -> void:
 const BASE_PARTS := ["CombatSeat", "CrownFrame", "Mantle0", "Mantle5"]
 const KIT_PARTS := ["CombatSeat", "LensRoot", "Shutter0", "PulseLip", "FamilyRecoil", "EmitterL", "BracePlate", "RushCollar"]
 const FAMILY_CLIPS := {"lane": "lane_warn", "split_lane": "split_lane_warn", "rush": "rush_warn", "plate": "plate_warn"}
-# Phase p breaks one more mantle: phase 2 sheds the first, 3 the second, 4 the third.
 const PHASE_CLIPS := {2: "phase_break", 3: "phase_break_2", 4: "phase_break_3"}
-# All hands (Andrew, 2026-10-18): the crew were the Mind's hands, so a body built as a hand
-# carries the old roster's stencils on its fingers and clocks one out per phase, little finger
-# (04) first, and its defeat sets a glove down by the empty place. A base with these clips
-# plays them in place of the mantle breaks and final_quiet; one without them keeps those.
 const CLOCK_OUT_CLIPS := {2: "clock_out_04", 3: "clock_out_03", 4: "clock_out_02"}
 const DEFEAT_CLIP := "glove_down"
 const SHUTTERS := ["Shutter0", "Shutter1", "Shutter2", "Shutter3", "Shutter4", "Shutter5"]
-# How fast the lens settles onto a new choir seat; the clips' own change is 0.6 s.
 const LENS_SETTLE := 8.0
-# How far a warn clip may be stretched or squeezed to fit its sim timer.
 const WARN_SPEED_MIN := 0.5
 const WARN_SPEED_MAX := 2.0
-# The two story cards (W49-MAPS). Both sit on a CanvasLayer under this node, ignore the mouse, never
-# pause the tree and never take input from the ball; a press of jump, accept or cancel only dismisses.
 const CALL_IN_NODE := "ForemanCallIn"
 const HIRED_NODE := "HiredStamp"
 const TAKEOVER_NODE := "TakeoverPanel"
 const CARD_LAYER := 40
-# The last part of a card's life fades it out.
 const CARD_FADE_S := 0.45
-# The stamp lands tilted and a size too big, then settles (TONE-BIBLE: cards ink-stamp on).
 const STAMP_TILT_DEG := -8.0
 const STAMP_LAND_SCALE := 1.35
 const STAMP_LAND_S := 0.1
@@ -72,17 +53,14 @@ var _hands_seen := 0
 var _current := {}
 var _defeated := false
 var _lens_placed := false
-# Each card's layer and the seconds it has left on screen; 0 means it is not up.
 var _call_in: CanvasLayer
 var _call_in_left := 0.0
 var _hired: CanvasLayer
 var _hired_left := 0.0
 
 
-# Reads the base and kit ahead on loader threads while the approach runs (mind.gd's prepare_arena):
-# loading them took 18 to 31 ms of the boss-entry frame on the cloud (scrapkeep#241).
 static func prepare() -> void:
-	# Headless loads stay on the main thread: the dummy rasterizer's mesh RIDs are not thread-safe.
+	# Godot's headless dummy rasterizer mesh RIDs are not thread-safe; keep loads on the main thread.
 	if AppShell.headless():
 		return
 	for path in [base_path, kit_path]:
@@ -90,7 +68,6 @@ static func prepare() -> void:
 			ResourceLoader.load_threaded_request(path)
 
 
-# Teardown: collects the files prepare() asked for that attach never took.
 static func settle() -> void:
 	for path in [base_path, kit_path]:
 		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
@@ -99,7 +76,6 @@ static func settle() -> void:
 
 static func attach(owner_module):
 	preload("res://src/presentation/quiet_gun.gd").attach(owner_module)
-	# The loader thread's copies, held so load_scene's load() finds them in the cache.
 	var _read := [_take(base_path), _take(kit_path)]
 	var base_scene := BossModel.load_scene(base_path)
 	var kit_scene := BossModel.load_scene(kit_path)
@@ -118,8 +94,6 @@ static func attach(owner_module):
 	return dress
 
 
-# A file prepare() asked for, from its loader thread (waiting if it is still loading); null when
-# nothing asked, and load_scene loads it.
 static func _take(path: String) -> Resource:
 	if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 		return ResourceLoader.load_threaded_get(path)
@@ -148,8 +122,6 @@ func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
 	BossModel.loop_clip(_kit_anim, "attention")
 	_lens = kit.find_child("LensRoot", true, false)
 	_recoil = kit.find_child("FamilyRecoil", true, false)
-	# Code owns where the lens is and what it faces; the lens shutters and the pulse lip each
-	# get their own player so a stagger or a pulse can run beside any family cue.
 	BossModel.strip_tracks(_kit_anim, "LensRoot")
 	_lens_anim = BossModel.split_player(_kit_anim, ["stagger_open"], SHUTTERS)
 	_pulse_anim = BossModel.split_player(_kit_anim, ["pulse_warn", "pulse"], ["PulseLip"])
@@ -191,7 +163,6 @@ func _physics_process(delta: float) -> void:
 		show_hired()
 
 
-# The lens sits on the seat the Warden has open and faces the ball.
 func _step_lens(warden, delta: float) -> void:
 	var seat: Vector3 = warden.family_point_at()
 	if _lens_placed:
@@ -204,8 +175,6 @@ func _step_lens(warden, delta: float) -> void:
 		_lens.global_basis = Basis.looking_at(to.normalized(), Vector3.UP if absf(to.normalized().y) < 0.95 else Vector3.FORWARD)
 
 
-# One clip per committed attack: the warn on commit, the snap when its hazard goes live, the
-# release when every hazard of the attack is done.
 func _step_attack() -> void:
 	if module.attack_count != _attack_seen and not module.attacks.is_empty():
 		_attack_seen = module.attack_count
@@ -234,9 +203,6 @@ func _step_attack() -> void:
 		_current = {}
 
 
-# From phase 2 the sim tightens each warn below its clip's authored length, so the strike cut
-# the clip short. The clip is stretched to end exactly when the hazard's own warn timer does;
-# the timer itself is only read.
 func _warn_speed(clip: String, attack: Dictionary) -> float:
 	var hazards: Array = attack["hazards"]
 	if hazards.is_empty() or not is_instance_valid(hazards[0]) or not _kit_anim.has_animation(clip):
@@ -247,7 +213,6 @@ func _warn_speed(clip: String, attack: Dictionary) -> float:
 	return clampf(_kit_anim.get_animation(clip).length / warn, WARN_SPEED_MIN, WARN_SPEED_MAX)
 
 
-# Emitters yaw to the committed bearing: a lane's heading, or the middle of a plate's sector.
 func _aim(attack: Dictionary) -> void:
 	for h in attack["hazards"]:
 		if not is_instance_valid(h):
@@ -263,10 +228,6 @@ func _aim(attack: Dictionary) -> void:
 		return
 
 
-# --- The single flat executive-purple takeover panel (W49-MAPS, rubric B6) ---
-
-# Strictly ONE flat matte non-emissive Palette.KINDNESS (#D936B0, hue 315 deg) takeover panel inset
-# in a cast charcoal bezel on The Mind's CrownFrame casting. Never a glow, beam, field or telegraph.
 func _attach_takeover_panel() -> void:
 	if base == null:
 		return
@@ -279,7 +240,6 @@ func _attach_takeover_panel() -> void:
 static func build_takeover_panel() -> Node3D:
 	var holder := Node3D.new()
 	holder.name = TAKEOVER_NODE
-	# Front face of CrownFrame's central cast beam (mind_body.py: crossbar at y=22, half-depth ~1.65 m).
 	holder.position = Vector3(0.0, 0.0, 1.78)
 	var bezel := MeshInstance3D.new()
 	bezel.name = "Bezel"
@@ -311,9 +271,6 @@ static func build_takeover_panel() -> Node3D:
 	return holder
 
 
-# --- The story cards (W49-MAPS) ---
-
-# The Foreman's scheduled call-in, a small card in the top right corner.
 func show_call_in() -> void:
 	dismiss_call_in()
 	var card := LoreRows.FOREMAN_CALL_IN
@@ -350,7 +307,6 @@ func show_call_in() -> void:
 	_call_in_left = float(card["duration_s"])
 
 
-# The defeat edge: a giant ink HIRED over the screen's middle and the Mind's memo under it.
 func show_hired() -> void:
 	dismiss_hired()
 	var card := LoreRows.HIRED_CEREMONY
@@ -374,7 +330,6 @@ func show_hired() -> void:
 	memo.add_theme_color_override("font_outline_color", Palette.CHARCOAL)
 	memo.add_theme_constant_override("outline_size", 5)
 	box.add_child(memo)
-	# The stamp lands: tilted, a size too big, settling in STAMP_LAND_S.
 	stamp.rotation_degrees = STAMP_TILT_DEG
 	stamp.scale = Vector2.ONE * STAMP_LAND_SCALE
 	stamp.resized.connect(func(): stamp.pivot_offset = stamp.size * 0.5)
@@ -397,7 +352,6 @@ func dismiss_hired() -> void:
 	_hired = null
 
 
-# Retries and new runs leave no card behind.
 func _exit_tree() -> void:
 	dismiss_call_in()
 	dismiss_hired()
@@ -434,7 +388,6 @@ static func _fade(layer: CanvasLayer, left: float) -> void:
 		(layer.get_child(0) as Control).modulate.a = clampf(left / CARD_FADE_S, 0.0, 1.0)
 
 
-# A card's layer and its full-screen root, which lets every click through.
 func _card_layer(node_name: String) -> CanvasLayer:
 	var layer := CanvasLayer.new()
 	layer.name = node_name

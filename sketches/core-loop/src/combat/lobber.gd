@@ -4,12 +4,6 @@ const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
-# The lobber stands and shells. Its job is to make a predictable line expensive: its
-# muzzle glows for TELEGRAPH seconds, then it commits a landing ring LEAD of the way
-# along your held line (half the ball's FLIGHT travel, DESIGN-NOTES rule 12), and the
-# shell lands there FLIGHT seconds later. Only that ring hurts (projectile.gd), so a
-# change of line or a jump beats it at any speed.
-
 const CYCLE := 3.6
 const TELEGRAPH := 1.3
 const FLIGHT := 1.9
@@ -18,9 +12,6 @@ const LEAD := 0.5
 const HP := 26.0
 const SCRAP := 4
 const BODY_PAINT := Palette.RUST
-# Secondary attack (W47-E1): Bung-Cluster Fan. Triggered when the player closes < 10 m or
-# stalls behind cover. 0.85 s whistle commits a 35-degree HAZARD fan and lobs 3 short-range
-# bungs; rolling fast into ANY 1 bung chain-bats the other 2 for a 3x chain blast.
 const CLUSTER_RANGE := 10.0
 const CLUSTER_COVER_RANGE := 28.0
 const CLUSTER_COVER_SPEED := 9.0
@@ -36,14 +27,11 @@ const CHAIN_BAT_MIN_SPEED := 14.0
 const COVER_MASK := 1
 
 signal fired(origin: Vector3, landing: Vector3, flight: float)
-# Emitted right after fired, once the shell exists: the shell's own committed landing-ring
-# descriptor ({} if nothing took the shot). The attack facts read it; nothing else does.
 signal released(ring: Dictionary)
 
 var shots := 0
 var cluster_shots := 0
 var chain_detonations := 0
-# The wind-up, 0 to 1: the value the muzzle glow is drawn from and the attack facts read.
 var charge := 0.0
 var recovery_seconds := TelegraphRecord.RECOVERY
 var recover_left := 0.0
@@ -56,7 +44,6 @@ var _cluster_dist := 8.0
 var _cluster_tele: Node3D
 var _muzzle: MeshInstance3D
 var _muzzle_material: StandardMaterial3D
-# Test control: only the body pose is disabled; bulb, attack and reactions still run.
 var windup_pose_enabled := true
 var _cart: Node3D
 var _barrel: MeshInstance3D
@@ -84,13 +71,8 @@ func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float,
 	box.size = Vector3(2.4, 4.0, 2.4)
 	shape.shape = box
 	add_child(shape)
-	# C11 correction: _base_color is the event/UI colour (the hit flash lerps from it), so it stays
-	# verdigris; the resting body paints Fleet oxide (the Chaser's RUST) through BODY_PAINT.
 	_base_color = Palette.VERDIGRIS
 	_material = Palette.solid(BODY_PAINT)
-	# The C11 mortar cart (enemy_lobber.glb): a braced tower on wheels under a loading bulb and a
-	# stout leaning tube. LobberBody carries the flashing body material as its paint surface; the
-	# bulb is the muzzle, and _show_charge swells and lights it exactly as before.
 	_muzzle_material = Palette.solid(Palette.HAZARD, 0.2)
 	var dressing := Node3D.new()
 	dressing.name = "LobberBody"
@@ -119,8 +101,6 @@ static var _warned_asset := false
 static var _shared: Array = []
 
 
-# The glb is read once; every lobber shares its meshes and carries only its own flashing
-# body and muzzle materials as surface overrides.
 static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
@@ -144,7 +124,6 @@ static func _parts() -> Array:
 	return _shared
 
 
-# The resting look ends on the Fleet oxide body paint, not the verdigris event colour.
 func _apply_rest_look() -> void:
 	super()
 	if _material != null:
@@ -186,7 +165,6 @@ func _physics_process(delta: float) -> void:
 		_step_cluster(delta)
 		return
 	_clock += delta
-	# Clocked out (its Foreman fell): the muzzle does not start to glow; a glow already lit fires.
 	if charge <= 0.0 and AttackBudget.clocked_out(self):
 		AttackBudget.withdraw(self)
 		_clock = minf(_clock, CYCLE - TELEGRAPH)
@@ -195,7 +173,6 @@ func _physics_process(delta: float) -> void:
 		recover_left = maxf(0.0, recover_left - delta)
 		_show_charge(0.0)
 		return
-	# When the idle cooldown expires, check secondary trigger (< 10 m or stalling behind cover).
 	if charge <= 0.0 and _clock >= CYCLE - TELEGRAPH and _wants_cluster(to_ball):
 		if AttackBudget.ask(self):
 			_begin_cluster(to_ball)
@@ -212,15 +189,12 @@ func _physics_process(delta: float) -> void:
 	var aim: Vector3 = _ball() + lead
 	var landing := Vector3(aim.x, Telegraph.ground_under(terrain, aim), aim.z)
 	shots += 1
-	# _show_charge(0) retains the bulb's original release behavior. The body reaches
-	# its full e02_tube_raise pose on this same frame, before either release signal.
 	_pose(1.0)
 	recover_left = recovery_seconds
 	fired.emit(muzzle_point(), landing, FLIGHT)
 	released.emit(_shell_ring())
 
 
-# Bung-Cluster Fan triggers when player closes < 10 m or stalls behind static cover.
 func _wants_cluster(to_ball: Vector3) -> bool:
 	var flat_dist := Vector2(to_ball.x, to_ball.z).length()
 	if flat_dist < CLUSTER_RANGE:
@@ -333,8 +307,6 @@ func _clear_cluster_tele() -> void:
 	_cluster_tele = null
 
 
-# Watches one 3-bung fan cluster: batting any 1 bung fast chain-bats the remaining siblings
-# and triggers a 3x chain blast that wipes nearby chaff, even if the lobber dies mid-flight.
 class ClusterWatcher extends Node:
 	var _lobber: WeakRef
 	var _bungs: Array = []
@@ -411,7 +383,6 @@ class ClusterWatcher extends Node:
 				enemy.take_damage(CHAIN_BLAST_DAMAGE)
 
 
-# The descriptor of the ring the shell just committed: the newest of this lobber's shells.
 func _shell_ring() -> Dictionary:
 	var shells := get_tree().get_nodes_in_group("enemy_shot")
 	for i in range(shells.size() - 1, -1, -1):
@@ -443,8 +414,6 @@ func _reset_parts() -> void:
 	_barrel.transform = _barrel_rest
 
 
-# e02_tube_raise uses only the existing charge and cycle clock. The cart and barrel
-# are below ReactionPivot; their local transforms never replace its hit/line lean.
 func _pose(progress := -1.0) -> void:
 	if _cart == null or _barrel == null:
 		return
@@ -466,7 +435,6 @@ func _pose(progress := -1.0) -> void:
 		_reset_parts()
 		return
 	_parts_off_rest = true
-	# Rock about the rear wheel axle rather than sliding the enemy or its collider.
 	var axle := Vector3(0.0, -1.5, -0.68)
 	var cart_turn := Basis(Vector3.RIGHT, -CART_SETTLE * lift + rock)
 	_cart.transform = Transform3D(cart_turn, axle - cart_turn * axle) * _cart_rest

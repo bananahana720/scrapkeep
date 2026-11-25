@@ -1,39 +1,23 @@
 extends RefCounted
 
-# A boss's named weak points as one rule object with no scene access (challenge lane, #241).
-# A point is SHUT until a tell opens it; a reel impact on an OPEN point lands at full posture
-# gain and wears its seal, and a broken seal removes that point's attack family. Every other hit
-# is chipped, except while the body stands bare: from a break, with no point open, until a tell
-# opens one again. judge() answers what a hit would do and changes nothing, apply() is the one
-# place a hit changes state, step() runs the re-seal clock and the crew's fit clock.
-# Off (no parts, or enabled false) is the identity: judge() scales nothing and no state moves.
-
 enum { SHUT, OPEN, BROKEN }
 
 const CHIP := 0.3
 const OPEN_SECONDS := 6.0
 const FIT_SECONDS := 3.5
 const FIT_MIN := 2
-# An opened point stays open at least this long, by any re-seal path: ChallengeDials.TELL_FLOOR, so the opening reads.
 const OPEN_MIN := 0.6
 
-# The numbers this rule runs on. A caller's dictionary overrides any of them by key
-# ("chip", "open_seconds", "fit_seconds", "fit_min"); a missing key keeps the constant above.
 var chip := CHIP
 var open_seconds := OPEN_SECONDS
 var fit_seconds := FIT_SECONDS
 var fit_min := FIT_MIN
 var enabled := true
 
-# id -> {seal_hp, max_hp, removes, state, opened_at, first_open, fit_since, fitters, fit_seals}
 var _parts := {}
-# Set by a break, cleared by the next open. A break removes the family whose tell opened the point, so in a
-# phase with no other family nothing could open again, and a chipped body made the skipper's world 2
-# Waking (bot_posture_boss_test) a 170 s first phase it lost.
 var _bare := false
 
 
-# parts: [{id, seal_hp, removes}]. An empty list is the off rule.
 func _init(parts := [], numbers := {}, on := true) -> void:
 	chip = float(numbers.get("chip", CHIP))
 	open_seconds = float(numbers.get("open_seconds", OPEN_SECONDS))
@@ -46,7 +30,6 @@ func _init(parts := [], numbers := {}, on := true) -> void:
 				"state": SHUT, "opened_at": 0.0, "first_open": 0.0, "fit_since": -1.0, "fitters": 0, "fit_seals": 0}
 
 
-# The identity rule: every hit counts in full and nothing ever changes.
 static func off() -> RefCounted:
 	return load("res://src/boss/weak_points.gd").new([], {}, false)
 
@@ -55,8 +38,6 @@ func active() -> bool:
 	return enabled and not _parts.is_empty()
 
 
-# hit: {point ("" for the body), reel, punch, gain}. The answer is
-# {gain_scale, point, damage, broke, removes}.
 func judge(hit: Dictionary) -> Dictionary:
 	var id := String(hit.get("point", ""))
 	var result := {"gain_scale": 1.0, "point": id, "damage": 0.0, "broke": false, "removes": ""}
@@ -69,13 +50,10 @@ func judge(hit: Dictionary) -> Dictionary:
 		result["broke"] = punch >= float(part["seal_hp"])
 		result["removes"] = part["removes"] if result["broke"] else ""
 		return result
-	# A point still open is the place to hit, so the body stays chipped until none is.
 	result["gain_scale"] = 1.0 if _bare and open_points().is_empty() else chip
 	return result
 
 
-# Lands a judged answer. Only a reel impact on an OPEN point (damage or a break) changes anything;
-# it also restarts that point's re-seal clock.
 func apply(answer: Dictionary, now: float) -> void:
 	if not active():
 		return
@@ -92,7 +70,6 @@ func apply(answer: Dictionary, now: float) -> void:
 		_bare = true
 
 
-# A tell opens a SHUT point. False when the id is unknown, the point is not SHUT, or the rule is off.
 func open(id: String, now: float) -> bool:
 	if not active() or state(id) != SHUT:
 		return false
@@ -105,7 +82,6 @@ func open(id: String, now: float) -> bool:
 	return true
 
 
-# The crew: a fitter joins a point, and the fit clock runs while fit_min or more are on it.
 func begin_fit(id: String, now: float) -> void:
 	if not active() or not _parts.has(id):
 		return
@@ -115,7 +91,6 @@ func begin_fit(id: String, now: float) -> void:
 		part["fit_since"] = now
 
 
-# A fitter is knocked off (or gives up): one fewer, and the clock stops below fit_min.
 func knock_fit(id: String) -> void:
 	if not active() or not _parts.has(id):
 		return
@@ -129,8 +104,6 @@ func fitters(id: String) -> int:
 	return int(_parts[id]["fitters"]) if _parts.has(id) else 0
 
 
-# Re-seals an OPEN point whose window ran out or whose fit was held long enough, never before OPEN_MIN
-# seconds after it opened.
 func step(now: float) -> void:
 	if not active():
 		return
@@ -148,19 +121,16 @@ func step(now: float) -> void:
 				part["fit_seals"] = int(part["fit_seals"]) + 1
 
 
-# How many times the crew's fit has sealed this point.
 func fit_seals(id: String) -> int:
 	return int(_parts[id]["fit_seals"]) if _parts.has(id) else 0
 
 
-# The fit clock as 0 to 1 of fit_seconds: 0 while fewer than fit_min fitters are on the point.
 func fit_progress(id: String, now: float) -> float:
 	if not _parts.has(id) or float(_parts[id]["fit_since"]) < 0.0 or fit_seconds <= 0.0:
 		return 0.0
 	return clampf((now - float(_parts[id]["fit_since"])) / fit_seconds, 0.0, 1.0)
 
 
-# True from a break until the next open: every hit counts in full.
 func bare() -> bool:
 	return _bare
 
@@ -169,7 +139,6 @@ func has(id: String) -> bool:
 	return _parts.has(id)
 
 
-# SHUT, OPEN or BROKEN; an unknown id (the body) reads SHUT.
 func state(id: String) -> int:
 	return int(_parts[id]["state"]) if _parts.has(id) else SHUT
 
@@ -186,7 +155,6 @@ func seal_hp(id: String) -> float:
 	return float(_parts[id]["seal_hp"]) if _parts.has(id) else 0.0
 
 
-# The attack families whose point is BROKEN, without repeats.
 func removed_families() -> Array:
 	var out := []
 	for id in _parts:

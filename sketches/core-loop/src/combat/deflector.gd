@@ -2,17 +2,6 @@ extends "res://src/combat/counter.gd"
 
 const Augments := preload("res://src/movement/augments.gd")
 
-# The deflector (DESIGN-V2 section 10.6): a crew figure behind a big curved dish shield.
-# It braces the dish toward the ball, and the warning is a lane out from the dish's
-# face: the zone it will throw you back from. Braced, a ball in that zone rolling into
-# the face is reflected across the dish's normal at RESTITUTION 0.9, through the CC
-# door, so you lose your line but keep most of your speed. The counterplay is the
-# opportunity: jump within VAULT_WINDOW of the rebound and it becomes a vault for any
-# class, exit speed = the rebound speed the ball carries when it jumps x 1.8 (the vault
-# kick's gain, Augments.vault_exit, which also gains on the ball's speed at the kick),
-# with the break refund. The rebound has already paid RESTITUTION on the normal part.
-# Rivet's sprint ignores the dish and rolls through.
-
 const RESTITUTION := 0.9
 const FACE_LENGTH := 6.0
 const FACE_WIDTH := 5.0
@@ -31,11 +20,7 @@ var _wall: MeshInstance3D
 var _body: MeshInstance3D
 var _wall_full := Transform3D.IDENTITY
 var _wall_rest := Transform3D.IDENTITY
-# Test seam: the carried pose remains, but the attack clock no longer moves any mesh.
 var windup_pose_enabled := true
-# The vault cue (LEGIBILITY section 6): while a jump would vault, the dish's rim wears the
-# will_break row and the jump prompt sits on the dish (vault_anchor, read by key_glyphs.gd).
-# Test seam: the cue off leaves the window, the rebound and the vault unchanged.
 var body_cue_enabled := true
 var _rim: MeshInstance3D
 var _rim_material: StandardMaterial3D
@@ -54,13 +39,6 @@ func _configure(threat: float) -> void:
 	rest_seconds = 2.5
 
 
-# C17 dressing (enemy_deflector.glb). The counter's capsule crew, head, ears and tag and the base
-# disc and torus are replaced by the glb's crew behind one concave dish whose bead rim is the
-# rebound edge. The dish sits where the base disc did (0, 0.2, CREW_RADIUS + 0.6), so it still turns
-# with the enemy's yaw toward the ball (_facing, at commit); the lane the mechanic throws through
-# is committed by _commit below, untouched. The glb is read once; every deflector shares its mesh
-# and adds only its own flashing body material as a surface override. The resting body is the
-# Fleet oxide _add_capsule already set (RUST), so the hit flash and the event colour are unchanged.
 static var _warned_asset := false
 static var _shared: Dictionary = {}
 
@@ -113,8 +91,6 @@ static func _parts() -> Dictionary:
 	return _shared
 
 
-# E10 e10_dish_wall: only child meshes move. The counter advances WARN to LIVE before
-# calling this hook, so full travel first lands on the release frame and holds while live.
 func _pose() -> void:
 	var progress := 0.0
 	if windup_pose_enabled and not _dead and not is_queued_for_deletion():
@@ -129,12 +105,10 @@ func _pose() -> void:
 	_paint_rim()
 
 
-# True from a rebound until VAULT_WINDOW has run out or the jump has vaulted.
 func vault_open() -> bool:
 	return phase == Phase.LIVE and _rebound_v != Vector3.ZERO and _window > 0.0 and not _dead
 
 
-# Where the jump prompt belongs while the vault is open: the dish. Vector3.INF otherwise.
 func vault_anchor() -> Vector3:
 	if not body_cue_enabled or not vault_open() or not is_instance_valid(_wall):
 		return Vector3.INF
@@ -149,9 +123,6 @@ func vault_rim_color() -> Color:
 	return _rim_material.emission
 
 
-# A torus laid on the dish's rim: the wall mesh's thinnest axis is its normal and half its
-# widest is the rim radius. It is a child of the wall, so it travels with the dish, and it
-# is in the tree only in the vault window, so at rest it adds no mesh to the dressing.
 func _build_rim(wall_mesh: Mesh) -> void:
 	var box := wall_mesh.get_aabb()
 	var sizes := [box.size.x, box.size.y, box.size.z]
@@ -254,7 +225,6 @@ func _on_end() -> void:
 func _exit_tree() -> void:
 	if is_instance_valid(_rim) and not _rim.is_inside_tree():
 		_rim.free()
-	# A dead deflector's pivot lives on in its death clip; the wall falls from where it stood.
 	if is_instance_valid(_wall) and not is_dead():
 		_wall.transform = _wall_rest
 		_body.transform = Transform3D.IDENTITY

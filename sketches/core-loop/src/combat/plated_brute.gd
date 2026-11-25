@@ -5,19 +5,6 @@ const SwingArc := preload("res://src/combat/swing_arc.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
-# The plated brute (DESIGN-V2 section 10): a mini-Warden, bolted plate layers visibly
-# one layer more than any other crew. It keeps the Warden's plating grammar (a punch
-# below its plating chips 20%, the class-colour rim and open crack say "breaks now")
-# with one extra rule: its outer plate takes the first breaking hit whole and pops off,
-# so the body takes only the second. It walks you down and slams the ground around
-# itself: an instant ring that knocks you out of it. It holds nothing; as the
-# director's punisher it lands on a ball a controller is holding.
-#
-# A pilot latched on a line is out of the slam's reach, so the brute hurls a plate: when the
-# line stands and the ball is HURL_MIN or more above the ground, it commits an aerial ring
-# (telegraph.gd aerial_ring) at the swing arc's forecast (swing_arc.gd) over its warn, within
-# HURL_RANGE on the flat. The band is HURL_BAND tall, the same geometry it draws and hits with.
-
 const PLATING_SCALE := 0.6
 const SLAM_RADIUS := 6.0
 const SLAM_RANGE := 6.5
@@ -26,18 +13,12 @@ const SLAM_SHOVE := 9.0
 const HP := 110.0
 const HURL_RANGE := 22.0
 const HURL_MIN := 3.0
-# A thrown plate climbs about as far as it flies on the flat (22 m out, 20 m up is a steep lob);
-# a pilot latched higher than that over the brute is out of its throw.
 const HURL_MAX_UP := 20.0
 const HURL_RADIUS := 3.0
 const HURL_BAND := 5.0
 const HURL_LOB := 4.0
 const HURL_DAMAGE := 10.0
 const HURL_SHOVE := 5.0
-# Secondary attack (W47-E1): Bulldoze Shield-Charge. Triggered when the player orbits 7-16 m
-# after a slam. 0.85 s horn + front stoplog drop commits a 16 m HAZARD ram lane; baiting it
-# into a Heft Destructible, pillar/wall, or another Brute opens shortcuts at ANY heft and
-# strips the outer plate immediately.
 const CHARGE_WARN := 0.85
 const CHARGE_MIN_RANGE := 7.0
 const CHARGE_MAX_RANGE := 16.0
@@ -73,23 +54,15 @@ var _charge_primed := false
 var _charge_dir := Vector3.FORWARD
 var _charge_hit_player := false
 var _charge_crashed := false
-# A hauler bounty's brute (world/activities.gd): it stands at bounty_home until the ball comes
-# within bounty_wake or it is hit, follows the ball while the ball is within bounty_leash of
-# home, and walks back at bounty_return_speed once the ball is further. Unset, it is an
-# ordinary brute.
 var bounty_home := Vector3.INF
 var bounty_wake := 30.0
 var bounty_leash := 40.0
 var bounty_return_speed := 9.0
 var bounty_woken := false
-# Whether the ball has ever woken it. It falls asleep again each time it walks home, so a ball
-# shooting it from beyond its leash wakes it with every bolt; what reads "the player has met this
-# hauler" (the objective plate, through world/activities.gd at_hand) reads this.
 var bounty_met := false
 var _crate: MeshInstance3D
 var _absorb := false
 var _plate: MeshInstance3D
-# Visual-only seam for the seeded physics control.
 var windup_pose_enabled := true
 var _windup_rig: Skeleton3D
 var _pad_bones: Array[int] = []
@@ -123,17 +96,9 @@ func _configure(threat: float) -> void:
 		set_meta("elite_stat", {"id": affix.stat, "value": get(affix.stat), "world": step + 1})
 
 
-# C15 dressing (enemy_plated_brute.glb). The counter's capsule crew is replaced by the glb's
-# body (the collider _add_capsule laid stays) and the plate slab and pads by one plate group
-# (front slab, shoulder and rear cladding) that shows exactly while plates > 0. The glb is read
-# once; every brute shares its meshes and adds only its own flashing body material as a surface
-# override and its own tinted plate material.
 static var _warned_asset := false
 static var _shared: Dictionary = {}
 
-# The crack glyph sits on the slab's face (front face at z = 1.35), 0.07 m off it so its strokes
-# clear the face and the lit bolts, centred between the two ribs and under the brow lip. Sized
-# 1.5 so it reads at asset-front30 (about 40 px tall) and at asset-use6.
 const GLYPH_AT := Vector3(0.0, -0.05, 1.42)
 const GLYPH_SIZE := 1.5
 
@@ -191,7 +156,6 @@ static func _parts() -> Dictionary:
 	var rig := scene.find_child("Skeleton3D", true, false) as Skeleton3D
 	var source := scene.find_child("BruteBody", true, false) as MeshInstance3D
 	var skin := source.skin
-	# Cache only the rest rig; the live body and plate keep their existing names/parents.
 	for child in rig.get_children():
 		child.free()
 	rig.get_parent().remove_child(rig)
@@ -203,9 +167,6 @@ static func _parts() -> Dictionary:
 	return _shared
 
 
-# The amber cue's mask. The recipe paints the plate's rim and bolts vertex-colour black;
-# each vertex's UV is moved to the lit texel (right) or the dark one (left) of a 2x1 mask,
-# so the emission lands on the rim and bolts of the one plate surface.
 static var _mask: ImageTexture
 
 
@@ -239,7 +200,6 @@ func is_charging() -> bool:
 	return _charging and phase != Phase.ROAM
 
 
-# Secondary attack trigger: player orbits 7-16 m away after a primary slam.
 func _can_charge(to_ball: Vector3) -> bool:
 	if not _charge_primed or not is_on_floor():
 		return false
@@ -247,12 +207,10 @@ func _can_charge(to_ball: Vector3) -> bool:
 	return dist >= CHARGE_MIN_RANGE and dist <= CHARGE_MAX_RANGE
 
 
-# The ball hangs on a line, above the slam and inside the hurl's flat range.
 func _can_hurl(to_ball: Vector3) -> bool:
 	var player = _player()
 	if player == null or not player.kit.hooked:
 		return false
-	# to_ball is flat; the ball's own height is what the slam cannot reach.
 	var ball := _real_ball()
 	var ground: float = terrain.height(ball.x, ball.z) if terrain != null else 0.0
 	return ball.y - ground >= HURL_MIN and ball.y - global_position.y <= HURL_MAX_UP \
@@ -263,12 +221,8 @@ func is_bounty() -> bool:
 	return bounty_home != Vector3.INF
 
 
-# Marks this brute as the bounty: the crate on its back wears the activity colour, apart from
-# its plates, so the plate cue still reads.
 func carry_bounty(home: Vector3, color: Color) -> void:
 	bounty_home = home
-	# The crew's cache chest and lid (CrackedCache's model) in the bounty's glowing colour, about 1.4 by 1.1 by
-	# 1.4 m, riding the brute's back; a plain box when the model is missing.
 	var glow := Palette.solid(color, 1.6)
 	_crate = CrackedCache.model_part("CacheChest", self)
 	if _crate != null:
@@ -287,7 +241,6 @@ func carry_bounty(home: Vector3, color: Color) -> void:
 	_crate.material_override = glow
 
 
-# The ball is out of the leash, or the brute has been walked off by it and now heads home.
 func _homeward(to_ball: Vector3) -> bool:
 	var ball := global_position + to_ball
 	var out := Vector2(ball.x - bounty_home.x, ball.z - bounty_home.z).length()
@@ -449,8 +402,6 @@ func _destructibles() -> Node:
 	return null
 
 
-# Baiting the Bulldoze Shield-Charge into any Heft Destructible smashes the shortcut open
-# at ANY player heft (heft class 5) and strips the Brute's outer plate immediately.
 func _try_break_destructible() -> bool:
 	var props := _destructibles()
 	if props == null:
@@ -596,13 +547,10 @@ func on_struck(_kind: String, _part: String, result: Dictionary) -> void:
 			_plate.visible = false
 
 
-# True when on_struck will pop a plate for this hit, so it removes nothing (combat marks the
-# result "absorbed" before the hit is announced, and no damage number rises for it).
 func absorbs_hit(result: Dictionary) -> bool:
 	return bool(result.get("full", false)) and plates > 0
 
 
-# The popped plate took that hit whole: the body is untouched this once.
 func take_damage(amount: float) -> float:
 	if _absorb:
 		_absorb = false
@@ -611,8 +559,6 @@ func take_damage(amount: float) -> float:
 	return super.take_damage(amount)
 
 
-# E09 e09_pads_raise: glTF joint nodes preserve the body's two surfaces. Every value reads the counter's clock; no tween, timer or pivot write.
-# During Bulldoze Shield-Charge, pads drop forward-low (front stoplog drop) and the torso leans into the ram.
 func _pose() -> void:
 	if _windup_rig == null:
 		return
@@ -634,10 +580,8 @@ func _pose() -> void:
 			lift = progress * progress
 			rear = lift
 		elif phase == Phase.LIVE:
-			# LIVE starts at t=0 on the release frame, so that frame is full pose.
 			rear = 1.0 - clampf(_t / PAD_DROP_SECONDS, 0.0, 1.0)
 			lift = lerpf(PAD_PLANT / PAD_RISE, 1.0, rear)
-	# Rigid weights make each pad's complete arm/fist travel together in enemy space.
 	for bone in _pad_bones:
 		var rest := _windup_rig.get_bone_rest(bone)
 		_windup_rig.set_bone_pose_position(bone, rest.origin + Vector3.UP * PAD_RISE * lift)

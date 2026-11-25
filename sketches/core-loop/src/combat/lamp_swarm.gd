@@ -2,13 +2,6 @@ extends "res://src/combat/counter.gd"
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# The lamp swarm (DESIGN-V2 section 10, World 2): one crew rig carrying a formation of
-# three lure lamps. Warn blooms a WAVE ring. While the bloom is live, a ball inside it
-# that is under cruise speed is steered toward the lamps by a damage-free shove; a ball
-# at cruise or faster is not touched, so boosting straight through is the counter. A ram
-# at cruise or faster scatters the lamps and ends the attack; a slower ram does not.
-# The lure never deals damage and never holds: hit_player(0.0, shove) only bends the line.
-
 const HP := 35.0
 const LAMP_COUNT := 3
 const LAMP_RING := 1.3
@@ -22,9 +15,6 @@ const SCATTER_SPEED := 7.0
 const PRIMARY_WARN := 0.9
 const PRIMARY_LIVE := 3.0
 
-# Secondary attack (W48-COMBAT): Flash-Focus Beam. Commits a >= 0.70 s Palette.HAZARD lane;
-# slow/stalling balls inside the beam take flash damage (ruling cu), while boosting or
-# cruising through the beam apex scatters the lamps and pays +25 Warden posture.
 const BEAM_WARN := 0.85
 const BEAM_LIVE := 1.6
 const BEAM_LENGTH := 16.0
@@ -45,7 +35,6 @@ var warden_posture_paid := 0.0
 var next_attack := ""
 var last_apex_break := {}
 var _flung := false
-# This bloom already met the ball at cruise inside it (lure_bloom), so it reports once.
 var _bloom_met := false
 var _flash_beam := false
 var _beam_dir := Vector3.FORWARD
@@ -265,7 +254,6 @@ func _live(delta: float) -> bool:
 	return true
 
 
-# A ball at cruise or faster inside the bloom went through the light: lure_bloom, once per bloom.
 func _meet_bloom(to: Vector3) -> void:
 	if _bloom_met or to.length() > BLOOM_RADIUS or fleet == null:
 		return

@@ -1,6 +1,5 @@
 extends "res://src/combat/enemy.gd"
 
-# The fastest the body may read as moving while mounted, m/s.
 const MOUNT_SPEED_MAX: float = preload("res://src/movement/contact.gd").SOFT_CAP_SPEED
 const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -13,63 +12,6 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 
-# The Warden: one per stage, an immobile clamp at the base of the beacon mast. Breaking
-# it is the stage's one MUST (DEMO-SPEC). It never moves, never pins, never pushes you
-# sideways. Every Warden fights on posture (boss_posture.gd): hits fill a posture bar, a
-# full bar staggers the Warden for STAGGER_SECONDS and opens its core, and only a contact
-# on the open core removes health, one chunk of four per stagger. Plating is the stage's
-# number, read by the posture rule for its glance line. The plating fight (caps, magnet,
-# mind brace, shred, the 20% chip) was retired once every Warden fought on posture.
-#
-# - The pulse. While you are inside its reach (the beacon ring), it charges for
-#   PULSE_TELEGRAPH seconds every PULSE_CYCLE, showing a ring the size of its reach and
-#   a small core ring. Then it pulses: a ball the reach ring contains gains PULSE_LIFT
-#   m/s straight up for one tick, horizontal speed untouched, and a ball the core ring
-#   contains also takes PULSE_DAMAGE. The pulse pauses in a stagger and a charge in
-#   flight is cancelled.
-# - The family kit (DESIGN-V2 section 11) is the shared clamp's look: reactor vents on the
-#   pulse, the swarm keeps a guard rack of drones that pays GUARD_RACK_POSTURE once for
-#   the cruise-or-faster ram that scatters it (reform and respawn on GUARD_RESPAWN), the
-#   mind's lens follows you and opens on a stagger.
-# - The variant (a stage row's "warden_variant", through fleet.dress) changes one thing
-#   per family; "" changes nothing. meltdown (reactor): every vent pulse leaves a slag
-#   lane toward the ball that burns a grounded ball, and the core window lasts
-#   MELTDOWN_WINDOW times longer. brood (swarm): the guard is a lamp_swarm once that
-#   enemy is built, else the drone rack. choir (mind): the open lens moves among three
-#   seats every ADAPT_CYCLE and a stagger braces against the ball's top habit, as a
-#   Mind hand does. The point keeps the name "lens"; drawing three lenses is
-#   warden_kit's job and is not done here.
-# - The harpoon anchor (PARK.md section 7, unit KF1). Three hardpoints take the bite and
-#   a line on one rides as a world line that follows the body (augments.gd anchor_line),
-#   never dropping inside the minimum rope. The mounting is the stage's (MOUNTINGS, by
-#   family and variant). The spec's "hardpoints" is a count, as in the park row
-#   (park_schema.gd WARDEN_FIELDS): the first n of HARDPOINTS; "hardpoint_offsets" names
-#   them outright. A per-kind driver (spec "mount_driver" or set_mount_driver)
-#   moves the body from its home, and the rope carries the ball at anchor_velocity. Once
-#   per pulse cycle the lined hardpoint flares through the charge and the pulse shrugs the
-#   line off, shrug_delay seconds late (the island's swing); the ball keeps its velocity.
-#   A stagger cancels the charge, so every hardpoint holds through it.
-#   A Warden is an anchor only when its spec says "harpoon_anchor": true (unit KF1b; the
-#   park loader sets it beside landmark.warden, whose "anchor" is a position, so the key
-#   differs); the authored boss arenas' Wardens are not, so their fights are unchanged. Ctrl on an anchor line hauls only inside the stagger
-#   (Augments.haul_open). The flare is picked once per charge, and the shrug cuts only the
-#   flaring hardpoint's line; the flare goes out when that line does.
-# - The per-kind hook (KF1, widened 2026-10-11 for KF2 to KF4). The driver must answer
-#   mount_offset(warden, clock) -> Vector3 and may answer step(warden, delta) every physics
-#   tick after the body moved,
-#   charge_allowed(warden) -> bool before a charge starts (false
-#   lets the pulse clock run and starts no charge), on_charge(warden, seconds), on_pulse(warden,
-#   lifted), on_stagger(warden, open), on_chunk_lost(warden, left) and on_exit(warden) as the
-#   Warden leaves the tree (a kill or a stage unload), so a driver frees what it drew outside
-#   the Warden; each is called only
-#   when the driver has it. A park Warden (spec "harpoon_anchor": true) that names no
-#   "mount_driver" loads res://src/combat/warden_<family>.gd when that file exists, so a
-#   kind's file attaches itself to every park Warden of its kind and to none of the authored
-#   boss arenas (KF2 to KF4 write those files; _kind_driver below). A driver may also answer
-#   lane_origin(warden) -> Vector3, where a meltdown slag lane is laid from (KF2c); without it the
-#   lane starts at the body, and the windup, strike and recover facts publish "at" the lane's origin.
-
-# The counter-pulse's hit, apart from hit_player so the combat layer records it as "warden_counter".
 signal counter_hit(amount: float, shove: Vector3)
 
 const HALF_HEIGHT := 1.6
@@ -79,14 +21,12 @@ const PULSE_CYCLE := 6.0
 const PULSE_TELEGRAPH := 2.0
 const PULSE_LIFT := 10.0
 const PULSE_DAMAGE := 10.0
-# The least rest between a pulse and the next charge however far the cycle has ratcheted (cycle_now).
 const REST_FLOOR := 1.0
 const CORE_RADIUS := 6.0
 const LIFT_REACH_UP := 8.0
 const GUARD_RESPAWN := 10.0
 const GUARD_OFFSET := 9.0
 const GUARD_RACK_POSTURE := 25.0
-# The most posture a held Warden shows: floors to 99 on the bar, below the stagger line.
 const HOLD_CAP := BossPosture.FULL - 0.5
 const FAMILY_POINT_RADIUS := 1.3
 const FAMILY_REACH := 3.2
@@ -100,23 +40,13 @@ const SLAG_WIDTH := 4.0
 const SLAG_SECONDS := 6.0
 const SLAG_WARN := 1.0
 const SLAG_DAMAGE := 4.0
-# Meltdown Warden (stage 2 Flume): slow (< cruise) balls caught in molten slag or the core pulse
-# sear a share of loose scrap armour before the hit lands so stopped balls cannot face-tank with
-# spilled-scrap recovery (W46-S1, ruling cu; cruising balls are never seared).
 const MELTDOWN_SEAR_SHARE := 0.60
 const MELTDOWN_SEAR_MAX := 600
-# Mounted World 1 reactor splash (dam_face vent ring between sheets; flume molten jet lane
-# down the tether line so a tethered ball dodges tangentially by swinging sideways): commits a
-# telegraphed mark that presses slow (< cruise) balls while cruising balls slip it cleanly.
-# Every warn stays above ChallengeDials.TELL_FLOOR (0.6 s) and gap stays above WARN_GAP (0.2 s).
 const MELTDOWN_JET_LENGTH := 32.0
 const MELTDOWN_JET_WIDTH := 4.5
 const MELTDOWN_JET_HEIGHT := 20.0
 const MELTDOWN_SPLASH_WARN := 1.25
 const MELTDOWN_SPLASH_PERIOD := 1.15
-# Meltdown overheat: once a mounted flume reactor has pulsed this many times without breaking,
-# its thermal vents erupt as wide radial molten rings around a slow ball (still >= TELL_FLOOR 0.6 s
-# and WARN_GAP 0.2 s, slow-only so cruising balls slip cleanly).
 const MELTDOWN_OVERHEAT_PULSES := 5
 const MELTDOWN_OVERHEAT_RADIUS := 8.0
 const MELTDOWN_OVERHEAT_WARN := 0.72
@@ -126,36 +56,24 @@ const DAM_VENT_RADIUS := 6.5
 const DAM_VENT_HEIGHT := 12.0
 const DAM_VENT_WARN := 0.88
 const DAM_VENT_PERIOD := 3.6
-# A ball in the air at most this high over a burning lane is jumping it (the codex's slag_hop).
 const SLAG_HOP_HEIGHT := 8.0
 const ADAPT_CYCLE := 8.0
 const CHOIR_RADIUS := 1.6
 const CHOIR_BRACE_MULT := 1.6
-# The mounting each kind and variant fights from (PARK.md section 7 table); a row's
-# "mounting" overrides it.
 const MOUNTINGS := {"reactor:": "dam_face", "reactor:meltdown": "flume", "swarm:": "headframe",
 		"swarm:brood": "sinkhole", "mind:": "under_island", "mind:choir": "spires"}
-# Under the island the line drops when the swing stops, 1.2 s after the pulse (wardens/mind.md
-# section 10, call 1); every other mounting drops it on the pulse.
 const SHRUG_DELAYS := {"under_island": 1.2}
-# The crown and the two flanks, from the body's centre; a mounting row may place its own.
-# A bite closer than this to the body's centre is a lock's, which names no side.
 const CENTRE_BITE := 0.5
 const HARDPOINTS := [Vector3(0.0, HALF_HEIGHT, 0.0), Vector3(RADIUS, 0.0, 0.0), Vector3(-RADIUS, 0.0, 0.0)]
 
-# Variant values already warned about, so a bad row warns once, not once per Warden.
 static var warned_variants := {}
-# The family driver scripts start loading on a worker when the first Warden is set up, so a later
-# world's first Warden finds its script compiled: a main-thread load() of warden_swarm.gd was 20 ms
-# of the Dig's entry tick (cloud, 13 Nov 2026).
+# Godot main-thread load() of warden_swarm.gd stalls ~20 ms; pre-request on loader thread.
 static var _drivers_requested := false
 
 var stage := 1
 var reach := DEFAULT_REACH
 var pulses := 0
-# Counter-pulse rings committed (dial warden.counter_damage_by_stage); 0 at the defaults.
 var counters := 0
-# Whether the last pulse's reach ring contained the ball (and so lifted it).
 var last_pulse_lifted := false
 var min_pulse_telegraph := INF
 var family := Roster.REACTOR
@@ -163,14 +81,9 @@ var fleet
 var guard
 var family_opens := 0
 var variant := ""
-# meltdown: [{from, dir, length, width, left, age, phase, instance, node}], newest last.
 var slag_lanes: Array = []
-# choir: the lens seat open now (0..2) and the strike kinds the stagger braces against.
 var open_lens := 0
 var braced_kinds: Array = []
-# The harpoon anchor: the mounting id, the hardpoints as offsets from the body, the shrug's
-# lateness, the per-kind driver ({mount_offset(warden, clock) -> Vector3} or null), where
-# the body stands with no offset, how fast the mounting moves it, and the shrugs so far.
 var mounting := ""
 var hardpoints: Array = []
 var pulse_radius := DEFAULT_REACH
@@ -183,13 +96,10 @@ var harpoon_anchor := false
 
 var _pulse_clock := 0.0
 var _lost_peak := 0
-# The chunks lost when this pulse cycle started (cycle_now).
 var _cycle_lost := 0
 var _charging := false
 var _charge_time := 0.0
 var _core_ring: Node3D
-# The counter-pulse (off at counter damage 0): seconds into this stagger, whether this stagger's
-# counter is already committed, and its ring and charge.
 var _stagger_time := 0.0
 var _counter_spent := false
 var _counter_ring: Node3D
@@ -206,21 +116,15 @@ var _guard_wait := 0.0
 var _charge_len := PULSE_TELEGRAPH
 var _posture: BossPosture
 var _armed := 0.0
-# How many on_struck calls are inside _apply_posture with a judged result (see _apply_posture). A depth, not a
-# flag, so a strike nested inside another strike's posture cannot clear the outer one's mark.
 var _judged := 0
 var _guard_scatter_frame := -1
 var _guard_paid_scatters := 0
 var _slag_burn := 0.0
 var _lens_clock := 0.0
 var _mount_clock := 0.0
-# The hardpoint flaring for this charge (-1 for none) and the seconds left on a late shrug.
 var _flaring := -1
 var _shrug_left := -1.0
-# Whether this charge has picked its flare, so a re-bite after the flared line went cannot
-# flare a second hardpoint late in the same charge.
 var _flare_picked := false
-# The hardpoint the current line bit (anchor_point), -1 before any bite.
 var _bitten := -1
 
 
@@ -302,9 +206,6 @@ func weak_points() -> Array:
 	return points
 
 
-# --- The family kit (v2 W7) ---------------------------------------------------------
-
-# The kit's weak point, named by family, open for the length of a stagger.
 func family_point() -> String:
 	return FAMILY_POINTS.get(family, "core")
 
@@ -320,7 +221,6 @@ func family_open() -> bool:
 	return _posture.staggered
 
 
-# Swaps in a mounted posture, carrying the current one's script variables over.
 func replace_posture(next) -> void:
 	for property in _posture.get_property_list():
 		if property.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
@@ -334,8 +234,6 @@ func on_guard_scattered(swarm, _at: Vector3) -> void:
 		_guard_scatter_frame = Engine.get_physics_frames()
 
 
-# Both ball contacts and weapon knocks scatter before enemy_struck. Only the ram
-# on that scatter's frame pays the rack, never a later hit on following drones.
 func _on_guard_struck(enemy: Node3D, hit_kind: String, force: float) -> void:
 	if hit_kind != "ram" or guard == null or not is_instance_valid(enemy):
 		return
@@ -353,7 +251,6 @@ func _step_guard(delta: float) -> void:
 		return
 	if guard != null and not guard.alive().is_empty():
 		return
-	# The first tick the brood's lamp guard is down; the respawn wait starts full.
 	if guard != null and variant == "brood" and guard_kind() == "lamp_swarm" and _guard_wait >= GUARD_RESPAWN:
 		fleet.discover("brood_dark", global_position)
 	_guard_wait -= delta
@@ -386,7 +283,6 @@ func on_struck(hit_kind: String, part: String, result: Dictionary) -> void:
 	var weak_judge = spec.get("weak_judge")
 	if weak_judge is Callable and weak_judge.is_valid() and not staggered():
 		result = weak_judge.call(result, part, hit_kind)
-	# The judge has answered: _apply_posture must not ask it again.
 	_judged += 1
 	_apply_posture(result)
 	_judged -= 1
@@ -411,10 +307,6 @@ func _physics_process(delta: float) -> void:
 	_step_choir(delta)
 
 
-# meltdown: a lane fills over SLAG_WARN, then burns a grounded ball it contains until it
-# ages out. The lane publishes one attack (windup, strike, recover) as the W01 row, since
-# the roster lookup in enemy.gd finds no row for a Warden; it keeps its own instance
-# because the Warden's pulse owns the single _atk slot.
 func _step_slag(delta: float) -> void:
 	for lane in slag_lanes.duplicate():
 		lane["left"] = float(lane["left"]) - delta
@@ -438,8 +330,6 @@ func _step_slag(delta: float) -> void:
 	if ball_state == null or not ball_state.on_floor() or not _slag_burns(_ball()):
 		_slag_burn = 0.0
 		return
-	# One hit per SLAG_DAMAGE burned, so the burn is SLAG_DAMAGE a second without a hit
-	# (and its interrupt) every tick.
 	_slag_burn += SLAG_DAMAGE * delta
 	if _slag_burn >= SLAG_DAMAGE:
 		_slag_burn -= SLAG_DAMAGE
@@ -540,8 +430,6 @@ func _cancel_splash() -> void:
 	_splash_time = 0.0
 
 
-# True where a lane's footprint lies, by the lane node's own hit test, whether or not it
-# has finished filling.
 func in_slag(point: Vector3) -> bool:
 	for lane in slag_lanes:
 		var node = lane["node"]
@@ -550,7 +438,6 @@ func in_slag(point: Vector3) -> bool:
 	return false
 
 
-# True where a lane that has finished filling contains the point.
 func _slag_burns(point: Vector3) -> bool:
 	for lane in slag_lanes:
 		if lane["phase"] == PHASE_STRIKE and is_instance_valid(lane["node"]) and lane["node"].contains(point):
@@ -558,7 +445,6 @@ func _slag_burns(point: Vector3) -> bool:
 	return false
 
 
-# True where a ball in the air hangs over a burning lane, low enough to be jumping it.
 func _over_slag(point: Vector3) -> bool:
 	for lane in slag_lanes:
 		var node = lane["node"]
@@ -601,7 +487,6 @@ func _leave_slag() -> void:
 	_slag_phase(lane, PHASE_WINDUP)
 
 
-# choir: the open lens moves to the next seat every ADAPT_CYCLE while the Warden stands.
 func _step_choir(delta: float) -> void:
 	if variant != "choir" or staggered():
 		return
@@ -611,17 +496,10 @@ func _step_choir(delta: float) -> void:
 		open_lens = (open_lens + 1) % 3
 
 
-# --- The harpoon anchor (PARK.md section 7, unit KF1) ---------------------------------
-
-# Where hardpoint `index` is now, in the world.
 func hardpoint_at(index: int) -> Vector3:
 	return global_position + (hardpoints[index] as Vector3)
 
 
-# Where the line rides: the bitten hardpoint. At the bite (Augments.attach passes the line's
-# origin `from`) a shot on the body takes the hardpoint nearest the bite; a lock bites the
-# body's centre (harpoon.gd _lock), so it takes the hardpoint facing the ball. Later calls
-# (Augments._follow) keep that hardpoint. A committed haul still homes on the bite itself.
 func anchor_point(point: Vector3, from = null) -> Vector3:
 	if from is Vector3:
 		var bite := point - global_position
@@ -631,24 +509,19 @@ func anchor_point(point: Vector3, from = null) -> Vector3:
 	return hardpoint_at(_bitten)
 
 
-# How fast the anchor moves this tick; the rope carries the ball at it (Augments._ride_anchor).
 func anchor_velocity() -> Vector3:
 	return mount_velocity
 
 
-# The hook's last view of the stagger and the chunk count, so on_stagger and on_chunk_lost
-# fire once per change, on the frame of the hit or the tick that closed the stagger.
 var _hook_staggered := false
 var _hook_chunks := -1
 
 
-# Calls the driver's optional `method` with `args` when it has one (see the header).
 func _hook(method: String, args: Array) -> void:
 	if mount_driver != null and mount_driver.has_method(method):
 		mount_driver.callv(method, args)
 
 
-# Whether the driver lets a charge start now; a driver without the method always does.
 func _charge_allowed() -> bool:
 	if mount_driver == null or not mount_driver.has_method("charge_allowed"):
 		return true
@@ -681,7 +554,6 @@ static func _request_drivers() -> void:
 			ResourceLoader.load_threaded_request(path)
 
 
-# The kind's own driver file, once KF2 to KF4 have written it; no file is no driver.
 func _kind_driver():
 	var path := _driver_path(family)
 	if not ResourceLoader.exists(path):
@@ -692,14 +564,11 @@ func _kind_driver():
 	return _driver_or_null(script.new())
 
 
-# The per-kind hook: an object with mount_offset(warden, clock) -> Vector3, the body's
-# offset from home at that mounting clock; null stands the body at home.
 func set_mount_driver(driver) -> void:
 	mount_driver = _driver_or_null(driver)
 	_mount_clock = 0.0
 
 
-# Whether a spec opts this Warden in as a harpoon anchor: only a literal true does.
 static func anchor_from(spec_in: Dictionary) -> bool:
 	var value = spec_in.get("harpoon_anchor", false)
 	return value is bool and value
@@ -713,26 +582,21 @@ func set_harpoon_anchor(on: bool) -> void:
 		remove_from_group(Augments.ANCHOR_GROUP)
 
 
-# Park data reaches the spec as JSON, so a driver is kept only if it can answer mount_offset.
 static func _driver_or_null(driver):
 	if is_instance_valid(driver) and driver.has_method("mount_offset"):
 		return driver
 	return null
 
 
-# The hardpoint the ball's line is on, or -1.
 func lined_hardpoint() -> int:
 	var kit = target.get("kit") if target != null else null
 	if kit == null or not kit.hooked or not kit.on_body or kit.anchor_body != self:
 		return -1
-	# A committed haul homes on its bite, off the hardpoints, so the shrug leaves it be.
 	if kit.line_state != Augments.LINE_LATCHED or _bitten >= hardpoints.size():
 		return -1
 	return _bitten
 
 
-# How brightly the lined hardpoint flares: the charge's fill, then full while a late shrug
-# waits; 0 when nothing flares. Read by the look.
 func shrug_flare() -> float:
 	if _flaring < 0:
 		return 0.0
@@ -743,9 +607,6 @@ func flaring_hardpoint() -> int:
 	return _flaring
 
 
-# The hardpoint offsets a spec asks for: "hardpoint_offsets" if given, else the first
-# "hardpoints" (a count, 1 to 3) of HARDPOINTS. Never empty. JSON brings offsets as arrays
-# of three numbers; those become Vector3 and any other entry is dropped.
 static func hardpoints_for(spec_in: Dictionary) -> Array:
 	var count_in = spec_in.get("hardpoints", HARDPOINTS.size())
 	var count := HARDPOINTS.size()
@@ -785,7 +646,6 @@ func _nearest_hardpoint(offset: Vector3) -> int:
 var _mount_home := Vector3.INF
 
 
-# The mounting moves the body from home; the pulse rings committed this charge go with it.
 func _step_mounting(delta: float) -> void:
 	if mount_driver == null or delta <= 0.0:
 		mount_velocity = Vector3.ZERO
@@ -798,13 +658,8 @@ func _step_mounting(delta: float) -> void:
 	var before := global_position
 	global_position = home + offset
 	var shift := global_position - before
-	# The first tick of a mounting, or one after home moved, jumps the body from wherever it stood
-	# to the mount: that jump is a placement, not motion, and read as velocity it would fling a
-	# ball latched on the anchor line (augments.gd _ride) by offset x 90 m/s.
 	var placed := _mount_home != home or _mount_clock <= delta
 	_mount_home = home
-	# An authored offset that jumps mid-mounting is a placement too; no real mount moves faster
-	# than the contact soft cap, and a faster read would fling a latched ball the same way.
 	mount_velocity = Vector3.ZERO if placed else (shift / delta).limit_length(MOUNT_SPEED_MAX)
 	var flat := Vector3(shift.x, 0.0, shift.z)
 	if flat.length_squared() > 0.0:
@@ -819,8 +674,6 @@ func _carry_ring(ring: Node3D, flat: Vector3) -> void:
 	ring.global_position += flat
 
 
-# A late shrug counts down after its pulse; a stagger cancels it. The flare goes out, and
-# no shrug comes, once the flaring hardpoint's line is gone.
 func _step_shrug(delta: float) -> void:
 	if _flaring >= 0 and lined_hardpoint() != _flaring:
 		_flaring = -1
@@ -832,8 +685,6 @@ func _step_shrug(delta: float) -> void:
 		_shrug()
 
 
-# The pulse shrugs the line off the flaring hardpoint. The ball keeps its velocity: the line
-# is cut, nothing else, and the pulse's lift has already been given.
 func _shrug() -> void:
 	var flared := _flaring
 	_flaring = -1
@@ -844,8 +695,6 @@ func _shrug() -> void:
 	shrugs += 1
 
 
-# The pulse cycle runs while you are in reach; once charging starts it is committed and
-# lands even if you leave, but only a ball its rings contain feels it.
 func _step_pulse(delta: float, inside: bool) -> void:
 	if staggered():
 		_step_counter(delta)
@@ -881,10 +730,6 @@ func _step_pulse(delta: float, inside: bool) -> void:
 		_hook("on_charge", [self, _charge_len])
 
 
-# Counter-pulse (challenge dial warden.counter_damage_by_stage > 0): once per stagger, counter_delay
-# seconds in, the core ring is committed again and charges for counter_telegraph seconds. If it lands
-# with the ball inside it hits for the counter damage and lifts like the pulse. A stagger that ends first
-# cancels it. It leaves the stagger, the posture and the pulse clock alone.
 func _step_counter(delta: float) -> void:
 	if counter_damage(stage) <= 0.0 and not is_instance_valid(_counter_ring):
 		return
@@ -912,7 +757,6 @@ func _step_counter(delta: float) -> void:
 		fleet.events().vent_charging.emit(global_position, counter_telegraph(stage))
 
 
-# The stagger is over (or never was): drop an unlanded ring and re-arm for the next stagger.
 func _end_counter() -> void:
 	_cancel_counter()
 	_stagger_time = 0.0
@@ -929,7 +773,6 @@ static func counter_damage(at_stage := 0) -> float:
 	return ChallengeDials.by_stage_or("warden.counter_damage_by_stage", at_stage, 0.0)
 
 
-# Never under the boss tell floor, whatever the dial says.
 static func counter_telegraph(at_stage := 0) -> float:
 	return maxf(ChallengeDials.TELL_FLOOR, ChallengeDials.by_stage_or("warden.counter_telegraph_by_stage", at_stage, 0.8))
 
@@ -938,26 +781,15 @@ static func counter_delay(at_stage := 0) -> float:
 	return ChallengeDials.by_stage_or("warden.counter_delay_by_stage", at_stage, 1.0)
 
 
-# Challenge dial warden.pulse_cycle_mult: the pulse cycle never drops under the boss tell floor,
-# and the telegraph is PULSE_TELEGRAPH, never longer than the cycle. at_stage is the Warden's stage
-# for warden.pulse_cycle_by_stage; the default 0 (a caller with no Warden) reads that list as 1.0.
 static func pulse_cycle(at_stage := 0) -> float:
 	return ChallengeDials.floored(PULSE_CYCLE, ChallengeDials.stage_mult("warden.pulse_cycle", at_stage))
 
 
-# The most chunks this Warden has lost at once, by the count its fight phases read (phase_chunks_left).
-# It never goes back: the dam's bar can drain, and its fight does not relax with it.
 func chunks_lost() -> int:
 	_lost_peak = maxi(_lost_peak, BossPosture.CHUNKS - phase_chunks_left())
 	return _lost_peak
 
 
-# The pulse cycle this Warden runs now (W1-67): the stage's cycle times the stage's ratchet
-# (challenge dial warden.pulse_ratchet_by_stage) once per chunk lost, as the fight phases count
-# chunks (phase_chunks_left, so the dam's sheet counts its bar's quarters). The count is read when
-# the pulse clock starts a cycle (_cycle_lost), so a chunk lost mid-cycle tightens the next cycle,
-# never the one running, and the charge it starts keeps its whole tell. The rest between pulses
-# never drops under REST_FLOOR, or under a mount driver's own rest_floor (the dam's sheet runs out).
 func cycle_now() -> float:
 	var base := pulse_cycle(stage)
 	var rest := REST_FLOOR
@@ -977,7 +809,6 @@ func _pulse() -> void:
 	last_pulse_lifted = ring != null and ring.contains(ball)
 	if last_pulse_lifted:
 		target.crowd_control("warden_pulse", Vector3.UP * PULSE_LIFT / get_physics_process_delta_time())
-	# The core ring's landing (it reached progress 1 this tick): the body wears the release flash.
 	if is_instance_valid(_core_ring) and not _dead:
 		_strike_frames = STRIKE_FRAMES
 	if is_instance_valid(_core_ring) and _core_ring.contains(ball):
@@ -1024,8 +855,6 @@ func _build_body() -> void:
 	cylinder.height = HALF_HEIGHT * 2.0
 	shape.shape = cylinder
 	add_child(shape)
-	# Everything seen is in warden_look.gd and collides with nothing; this node keeps the
-	# collider above and every number the fight uses.
 	_look = WardenLook.new()
 	add_child(_look)
 	_look.build(self, HALF_HEIGHT)
@@ -1037,20 +866,11 @@ func _build_body() -> void:
 	fit_camera_shell()
 
 
-# The widest camera drum that a ball touching the contact cylinder leaves clear of the arm's probe: the ball's centre
-# sits RADIUS + the ball's radius from the axis, and a cast that starts inside a shape skips it. The drawn body may stand
-# up to about 0.4 m outside the drum on its widest parts.
 static func camera_shell_reach() -> float:
 	return RADIUS + Tuning.RADIUS - ChaseCamera.PROBE_RADIUS - 0.05
 
 
-# A camera-only drum round what the Warden draws now, so the lens never sits inside its body. The contact
-# cylinder and the weak-point sphere are damage geometry and stay as they are. Sized from the drawn meshes
-# (those still on a render layer, outside the floating badge), so the primitive look, the clamp base and a
-# hero body each get their own: built with the look, refitted by hero_assets once it has dressed the body.
 func fit_camera_shell() -> void:
-	# The mind hangs and sprawls (a 12 m reach), so no cylinder fits it; a shell that big would wall off the air
-	# round it. The camera meets it as it did before.
 	if family == Roster.MIND:
 		var old := get_node_or_null("CameraShell")
 		if old != null:
@@ -1100,8 +920,6 @@ func _process(delta: float) -> void:
 		_kit.update(delta)
 
 
-# --- Read by the look --------------------------------------------------------------
-
 func charge_fraction() -> float:
 	return clampf(_charge_time / _charge_len, 0.0, 1.0) if _charging else 0.0
 
@@ -1109,8 +927,6 @@ func charge_fraction() -> float:
 func flat_to_ball() -> Vector3:
 	return _flat_to_ball() if target != null else Vector3.ZERO
 
-
-# --- The posture fight (boss_posture.gd) --------------------------------------------
 
 func fight() -> String:
 	return "posture"
@@ -1132,15 +948,12 @@ func chunks_left() -> int:
 	return _posture.chunks
 
 
-# The chunks the park's fight phases read as left (world.gd pulses chunk_N from them). A mount driver
-# whose rule breaks every chunk in one hit (the dam's sheet rams) reports posture quarters instead.
 func phase_chunks_left() -> int:
 	if mount_driver != null and mount_driver.has_method("phase_chunks_left"):
 		return mount_driver.phase_chunks_left(self)
 	return chunks_left()
 
 
-# Hits the rule counted as glances so far.
 func glances() -> int:
 	return _posture.glances
 
@@ -1149,23 +962,17 @@ func chunk_cracked() -> bool:
 	return _posture.cracked
 
 
-# What the rule says a hit does. The judge meets the plating this kind and part meet
-# (plating_for: the choir brace, the open point), so combat.resolve passes the part (F004).
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "") -> Dictionary:
 	_posture.set_monster(monster_build())
 	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating_for(hit_kind, part), "smash": smash, "tier": tier,
 			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point()})
 	if hit_kind == "guard_rack":
-		# A rack is posture pressure, not a contact on the core. Keep judge/apply's
-		# stagger and shatter-frame boundaries while fixing its gain independently of heft.
 		result["gain"] = GUARD_RACK_POSTURE if not staggered() and Engine.get_physics_frames() != _posture.shatter_frame else 0.0
 		result["glance"] = false
 		result["full"] = true
 	return result
 
 
-# The run's heft: from the fleet's run, else from a spec "heft" Callable (an arena Warden has no
-# fleet: the stub boss hands one in), else 0.0, so a Warden with no heft source is never a monster.
 func pilot_heft() -> float:
 	var run = fleet.ctx.run if fleet != null and fleet.ctx != null else null
 	if run != null and run.has_method("heft"):
@@ -1176,8 +983,6 @@ func pilot_heft() -> float:
 	return 0.0
 
 
-# The heft a pilot must be strictly above to be a monster build here: the spec's "monster_heft", else
-# the library's top-bucket maximum for this fight's stage (MonsterHeft), else INF (never a monster).
 func monster_threshold() -> float:
 	var given = spec.get("monster_heft")
 	if given is float or given is int:
@@ -1194,21 +999,15 @@ func monster_build() -> bool:
 	return pilot_heft() > monster_threshold()
 
 
-# Public door for posture pressure from set pieces, consumables, and counter-hacks (Rule 7).
 func apply_posture_hit(result: Dictionary) -> void:
 	_apply_posture(result)
 
 
 func _apply_posture(result: Dictionary) -> void:
-	# A boss at weak-point dial 1 (spec "weak_judge_all") judges every posture hit, including one that skips
-	# on_struck (the ultimate's set piece, ultimate.gd warden_posture). Off, this is never reached.
 	if spec.get("weak_judge_all", false) and _judged == 0 and not _posture.staggered:
 		var weak_judge = spec.get("weak_judge")
 		if weak_judge is Callable and weak_judge.is_valid():
 			result = weak_judge.call(result, "", "")
-	# A boss module's phase-minimum hold (stub_boss.gd hold_active): the hit lands in full but the bar
-	# stops at HOLD_CAP, so no stagger starts before the hold ends. A hit that would have gained still
-	# restarts the drain clock, so a pressed bar stays full.
 	var hold = spec.get("posture_hold")
 	if hold is Callable and hold.is_valid() and not _posture.staggered and hold.call():
 		result = result.duplicate()
@@ -1217,8 +1016,6 @@ func _apply_posture(result: Dictionary) -> void:
 		result["gain"] = clampf(float(result.get("gain", 0.0)), 0.0, maxf(0.0, HOLD_CAP - _posture.posture))
 		result["crack"] = false
 		result["shatter"] = false
-	# A park Warden's clamp (world/stage_locks.gd): shut, a hit lands and gains nothing, so the bar
-	# stays where it is and no stagger opens the core until the clamp lets go.
 	var gate = spec.get("posture_gate")
 	if gate is Callable and gate.is_valid() and not _posture.staggered and gate.call():
 		result = result.duplicate()
@@ -1280,7 +1077,6 @@ func _publish_posture(before: Array) -> void:
 		fleet.events().posture_changed.emit(self, _posture.posture, _posture.staggered)
 
 
-# Health falls only by what the last shattering strike armed.
 func take_damage(_amount: float) -> float:
 	var armed := _armed
 	_armed = 0.0

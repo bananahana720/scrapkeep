@@ -4,26 +4,6 @@ const RosterHighdraft := preload("res://src/combat/roster_highdraft.gd")
 const IslandEdge := preload("res://src/combat/island_edge.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# The line cutter (World 3, roster_highdraft.gd): a crew figure that throws a spinning
-# cutter at where the ball will be. The reticle waits through the wind-up and closes over the
-# flight; the disc flies the committed arc to the ball's predicted point. If the ball is inside
-# the landing ring when the disc lands and is on a harpoon line, the line is cut: it goes through
-# the ball's own cut_line and nothing else of the harpoon is touched. A glide under the arc, or a
-# ball that landed early, dodges it. A hard hit in the wind-up breaks the throw (counter.gd).
-#
-# The Highdraft rules (design-v3/WORLD-ROSTERS.md): a cut costs you only over a gap, so a ball
-# less than GAP_HEIGHT over the ground under it is grazed, not cut. A fresh harpoon bite within
-# REBITE_WINDOW of the cut saves the swing and adds REBITE_KICK along the ball's heading. The
-# re-bite is the player's event, not the cutter's, so a cutter killed meanwhile still pays it.
-#
-# Secondary attack (W49-COMBAT): Boomerang Rim-Slice. Commits a >= 0.75 s Palette.HAZARD lane,
-# slices outward along the rim (cutting hooked lines over gaps with the <= 0.5 s re-hook kick),
-# then arcs back to the Cutter. Batting the returning disc at cruise or faster sends it back to
-# ring-out the Cutter off its cliff. Never stops moving or carving grounded balls (ruling cu).
-#
-# Grown remix: every other throw (the odd ones) lands on where the ball will touch down. A ball
-# grounded inside that ring when the disc lands takes LANDING_DAMAGE.
-
 const FLIGHT := 1.1
 const RING_RADIUS := 2.6
 const RING_REACH := 40.0
@@ -58,7 +38,6 @@ var boomerangs_batted := 0
 var returning_disc := false
 var next_attack := ""
 var last_bat := {}
-# What this throw aims at: "line", "boomerang", or (grown) "landing".
 var aim := "line"
 
 var _disc: MeshInstance3D
@@ -307,7 +286,6 @@ func _over_gap(ball: Vector3) -> bool:
 	return terrain == null or ball.y - Telegraph.ground_under(terrain, ball) >= GAP_HEIGHT
 
 
-# One fresh bite within REBITE_WINDOW pays REBITE_KICK once; a later bite pays nothing.
 func _offer_rebite(player) -> void:
 	if player.get("events") == null:
 		return

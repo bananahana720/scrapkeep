@@ -4,34 +4,11 @@ const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 
-# The Cutting Torch (Redjaw Workshops): a shipbreaker's plate torch on the ball's nose. The press
-# winds up for WINDUP (the row's) with a guide line out along the aim, the outline of exactly the
-# lane the beam will burn; then the beam lights for BEAM_SECONDS and sweeps after the aim at up to
-# SWEEP radians a second. Damage lands only inside the lane drawn this tick, tested by combat's
-# shared lane rule (Combat.in_line: flat, hull and forgiveness as every lane skill), and a wall
-# stops the lane where it stops the drawing.
-#
-# It beats plating: every machine in the lane soaks heat at the torch's burn rate, and a cut
-# lands when its heat reaches the machine's plating (combat's own plating rule, shred taken off),
-# so every cut lands in full and plating only sets the size of each bite; heat over time is the
-# same on any plate. A machine keeps its heat between burns until the stage clears, so a plate
-# heavier than one burn delivers (a stage-3 miniboss, a last vault) is cut by the next burn, never
-# shrugged off. That suits the Dig, the Plate world. A posture fighter (a Warden, a boss) is cut
-# on the plain cadence and keeps its own rules. While a plate's heat builds, a ring tightens onto
-# the machine and warms from rust to the flame's colour in HEAT_STEPS, each with a sizzle
-# (active_heat) that climbs with it, so a first burn on a heavy plate is seen and heard working. A press during a live burn ends it and winds up
-# the next; the heat carries over.
-#
-# It stacks into a strong build: weapon damage mods and punch raise the burn, Spiral Wave fans out
-# one more beam per level, and a full ultimate meter's overflow (the rack's bonus) burns longer.
-
 const BEAM_SECONDS := 1.6
 const BONUS_SECONDS := 0.25
 const REACH := 14.0
 const WIDTH := 0.9
 const SWEEP := 3.5
-# Heat a second while a machine sits in the lane; a cut lands at CUT_DAMAGE or the plating,
-# whichever is more, so an unplated machine takes a cut every CUT_DAMAGE / BURN seconds.
 const BURN := 60.0
 const CUT_DAMAGE := 7.5
 const FAN_DEG := 12.0
@@ -53,12 +30,10 @@ var guiding := false
 var beam_left := 0.0
 var heading := Vector3.FORWARD
 var cuts := 0
-# The lanes drawn this tick, one per beam: {from, to, width}. What is drawn is what cuts.
 var lanes: Array = []
 var _beams := 1
 var _burn := BURN
 var _heat := {}
-# The heat step each machine last showed.
 var _glow := {}
 
 
@@ -67,14 +42,12 @@ func setup(context, owner_combat) -> void:
 	combat = owner_combat
 
 
-# A stage clear, a death or a new run: the burn, its drawing and every machine's heat go.
 func clear() -> void:
 	_heat.clear()
 	_glow.clear()
 	_end()
 
 
-# A Jam in the wind-up: the guide goes; heat already built stays.
 func cancel() -> void:
 	_end()
 
@@ -89,7 +62,6 @@ func beams_for() -> int:
 	return 1 + _pattern("spiral_wave")
 
 
-# Heat a second, after the build: punch adds to a cut, weapon damage mods scale it.
 func burn() -> float:
 	var punch := 0.0
 	if ctx.build != null and ctx.build.has_method("punch_bonus"):
@@ -135,7 +107,6 @@ func _turn(delta: float) -> void:
 	heading = want if angle <= turn else heading.slerp(want, turn / angle).normalized()
 
 
-# Lays this tick's lanes and draws them: the guide as an outline, the beam filled.
 func _commit() -> void:
 	var from: Vector3 = ctx.player.ball_position()
 	lanes.clear()
@@ -194,8 +165,6 @@ func _in_lanes(enemy: Node3D) -> bool:
 	return false
 
 
-# The plating a torch cut meets now, by the same rule combat.resolve() applies; 0 for a posture
-# fighter, which judges its own hits.
 func _plate(enemy: Node3D) -> float:
 	if enemy.has_method("fight") and enemy.fight() == "posture":
 		return 0.0

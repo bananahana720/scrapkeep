@@ -1,22 +1,7 @@
 class_name BossContract
 extends RefCounted
 
-# The duck-typed surface a boss answers, written down once. Nothing here is enforced at
-# runtime; tests/boss_contract_test.gd checks a candidate against it. Two surfaces:
-#
-# TARGET: what combat, the plate, the ring, audio and the run log call on the boss's
-#   body (an enemy node). combat.resolve() sends any enemy whose fight() is "posture"
-#   through judge_hit() before the plating rule.
-# MODULE: what flow and others call on the boss module (ctx.boss).
-#
-# Each row is [name, argument count, declared return type]. TYPE_NIL means no return value.
-# The type is checked from the method's declaration when it has one, and by the test
-# against a live call. A call may leave optional parameters off, so a method conforms when
-# the count sits between its required and its declared parameters. TARGET_PROPERTIES lists
-# [name, type] for the fields combat reads or writes on any struck body without a guard.
-
 const TARGET := [
-	# The posture fight (warden.gd, "The posture fight").
 	["fight", 0, TYPE_STRING],
 	["posture", 0, TYPE_FLOAT],
 	["staggered", 0, TYPE_BOOL],
@@ -27,13 +12,10 @@ const TARGET := [
 	["judge_hit", 4, TYPE_DICTIONARY],
 	["take_damage", 1, TYPE_FLOAT],
 	["is_dead", 0, TYPE_BOOL],
-	# The enemy protocol combat reads (combat.gd resolve and strike).
 	["plating_for", 2, TYPE_FLOAT],
 	["hit_mult", 2, TYPE_FLOAT],
 	["contact_part", 2, TYPE_STRING],
 	["on_struck", 3, TYPE_NIL],
-	# What combat calls on any struck body with no has_method guard (combat.gd strike, the
-	# plate tint, the pin carry).
 	["knock", 2, TYPE_NIL],
 	["flash", 0, TYPE_NIL],
 	["set_tint", 1, TYPE_NIL],
@@ -59,10 +41,7 @@ const MODULE := [
 ]
 
 
-# The missing or mistyped names in obj against a surface (TARGET or MODULE). Empty means
-# it conforms. A wrong argument count or a declared return type that differs reports the
-# name with the reason. The TARGET surface also checks TARGET_PROPERTIES.
-static func conforms(obj, surface: Array) -> Array:
+static func conforms(obj: Object, surface: Array) -> Array:
 	var missing: Array = []
 	var props: Array = TARGET_PROPERTIES if surface == TARGET else []
 	if obj == null:

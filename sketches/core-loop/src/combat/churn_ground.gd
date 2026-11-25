@@ -2,14 +2,6 @@ extends RefCounted
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
-# Pack pressure D, churned silt (pack_pressure.gd; idle while ground.churn_by_stage reads 0). The Spillway's
-# floors are wet silt: roll over the same ground again within WINDOW and it churns. A cell of CELL metres
-# counts one pass each time the ball comes back to it after AWAY seconds elsewhere; from the second pass it
-# drags a ball below FAST tier by DRAG per extra pass (capped at MAX_LEVEL), times the dial. A ball at FAST
-# tier or above skims churned silt untouched (the Spillway lesson: speed beats Flow), so only a ball that
-# circles the same ground at cruise pays. Churned cells show as dark silt discs that deepen with each pass
-# and fade when the cell settles.
-
 const CELL := 3.0
 const WINDOW := 14.0
 const AWAY := 1.5
@@ -39,7 +31,6 @@ func strength() -> float:
 	return ChallengeDials.by_stage_or("ground.churn_by_stage", int(_ctx.run.stage), 0.0)
 
 
-# The churn level under the ball now: 0 fresh ground, 1 to MAX_LEVEL churned.
 func level_at(at: Vector3) -> int:
 	var rec: Dictionary = _cells.get(_cell(at), {})
 	if rec.is_empty() or _clock - float(rec.last) > WINDOW:
@@ -47,8 +38,6 @@ func level_at(at: Vector3) -> int:
 	return mini(int(rec.passes) - 1, MAX_LEVEL)
 
 
-# Combat calls this on every stage entry (retries included) and, with counts, on a run start: no churn
-# or disc outlives the attempt that made it.
 func reset(counts := false) -> void:
 	_clear()
 	if counts:
@@ -56,7 +45,6 @@ func reset(counts := false) -> void:
 		churned_cells = 0
 
 
-# Stage play only: the boss arena and the camp never churn.
 func step(delta: float) -> void:
 	var k := strength()
 	if k <= 0.0 or not _ctx.flow.in_stage():
@@ -116,7 +104,6 @@ func _paint(cell: Vector2i, ball: Vector3) -> void:
 		return
 	if not _discs.has(cell):
 		churned_cells += 1
-		# Past MAX_DISCS the oldest disc goes, so every dragging cell shows.
 		if _discs.size() >= MAX_DISCS:
 			_drop_disc(_discs.keys()[0])
 		var disc := MeshInstance3D.new()

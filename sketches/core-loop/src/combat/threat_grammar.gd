@@ -7,50 +7,6 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 
-# One grammar for every enemy threat, drawn by combat's telegraph.gd and the boss's
-# hazard.gd. The attack type decides how a threat draws; its committed geometry decides
-# where. Each node builds its descriptor from the same fields its contains() reads, so
-# the drawing and the damage use the same numbers (TH-03 AO-08, TH-16 RR-01).
-#
-# Four types, told apart by shape, fill, motion and sound, never by colour alone
-# (VISUAL-LANGUAGE.md sections 3 and 4).
-#   INSTANT     a sharp edge; a striped fill grows from the centre over the warning,
-#               and a solid flash marks the landing.
-#   WAVE        the whole reach dashed and faint; a bright front at its real position
-#               (speed x elapsed) with chevrons the way it travels, a curtain as tall as
-#               its height band, and 15% stripes over the ground it has swept.
-#   PROJECTILE  a thin dashed flight arc from the launcher that ends on the landing point,
-#               eaten as the shell flies, over an edge and a fill that grows from the centre.
-#               Its height band stands as spikes, not a fenced box, and it wears no centre
-#               cross: a cage with a cross in it read as a goal to reach (PF-25).
-#   LANE        rails along the strip, and a striped fill that grows from its centre line.
-#
-# The pending fill (wave 36, PF-16): every ground hit but a wave fills from the shape's
-# centre (its centre point, its centre line, or a band's middle) toward its outline, and
-# its front meets the outline's inner face on the hit tick and not before (fill_span), so a
-# shape that looks full means now. The fill never draws under the outline. The live look
-# (fill_tint, the live lane's class) is unchanged.
-#
-# The tone says whose it is. HAZARD is hostile: its areas carry 45-degree HAZARD and
-# charcoal stripes, it warns with its type's sound, and a boss's brass `owner` becomes a
-# tick every 30 degrees on the rim. AMBER is the player's own: clean fills, no stripes,
-# no warn sound. Bone (Palette.SAND) is a harmless field: a dashed ring and nothing else.
-# Every line sits on a charcoal keyline, because HAZARD on sandstone is only 1.3:1.
-# Instant and lane draw their height band (RR-02) as posts and a top rail at `reach`, a
-# projectile as spikes whose points stand at `reach`; a wave draws it as a curtain on its front.
-#
-# A descriptor is a Dictionary:
-#   type      Type
-#   form      "radial" (centre, r_in, r_out, a0, a1, open) or "lane" (centre, dir, back,
-#             length, half_width); angles are atan2(z, x) about +y
-#   reach     the height band above the ground a jump clears
-#   progress  0 to 1 across the warning; live: true once the attack has landed or runs
-#   front     WAVE: the front's radius (full circle) or angle offset from a0 (sector); -1
-#             while arming
-#   launch, bump   PROJECTILE: flight_point() from launch to centre
-#   tone, live_tone, pull (a wedge that pulls toward its apex), owner (a rim tick colour)
-#   air       true when only a ball in the air can be caught (the netcaster); drawing only
-
 enum Type { INSTANT, WAVE, PROJECTILE, LANE }
 
 const UNSET := -1
@@ -58,12 +14,6 @@ const KINDS := ["threat_instant", "threat_wave", "threat_projectile", "threat_la
 const GROUP := "threat"
 
 const PRIORITY := 40
-# Draw layers by render priority, back to front: the charcoal keylines under the fills
-# (their base look), the fills at PRIORITY, a live lane's band one above (it wins over the
-# other fills), then every hot P1 line above that band (FEEL-READABILITY.md section 1.1: a
-# P1 line is never covered by a fill). A keyline stays under the fills, because lifting it
-# over them changes every telegraph's look (measured 0.3 to 0.7 percent of the frame,
-# over the still budget); inside a live band it is dimmed, the hot line above it is not.
 const LIVE_PRIORITY := PRIORITY + 1
 const LINE_UNDER_PRIORITY := PRIORITY - 1
 const LINE_PRIORITY := PRIORITY + 2
@@ -77,15 +27,7 @@ const RUN_ALPHA := 0.35
 const LIVE_ALPHA := 0.8
 const FLASH_ALPHA := 0.9
 const FLASH_SECONDS := 0.22
-# The landing (FX-05, effects critique E5): when a hostile ground mark goes live, an ink crack
-# ring and a dust kick at its edge put the hit's cause on the floor at its moment, after the
-# telegraph that drew the edge is gone. The ring is the edge redrawn as a jagged charcoal line
-# with short cracks running out of it; the dust is bone puffs thrown outward from the edge.
-# Ink, not light, so Reduce flashes leaves it whole; Reduced motion keeps the puffs in place.
-# Crack: one per CRACK_STEP metres of edge (CRACK_MIN to CRACK_MAX), each CRACK_LENGTH of the
-# mark's size long (clamped), held CRACK_HOLD seconds and gone by CRACK_SECONDS.
 const CRACK_SECONDS := 0.5
-# The crack layer's sorting offset inside LINE_PRIORITY: drawn before the hot lines there.
 const CRACK_SORT := -1000.0
 const CRACK_HOLD := 0.2
 const CRACK_ALPHA := 0.95
@@ -97,45 +39,28 @@ const CRACK_MAX := 28
 const CRACK_LENGTH := 0.18
 const CRACK_SHORT := 0.5
 const CRACK_LONG := 1.2
-# The crack's zigzag: its middle steps sideways this share of its length; the ring's corners
-# step in or out by up to CRACK_RING_JAG metres.
 const CRACK_JAG := 0.3
 const CRACK_RING_JAG := 0.12
-# Dust: one puff per crack, DUST_SIZE across at the edge, thrown DUST_KICK metres out and
-# swelling by DUST_SWELL while it fades over DUST_SECONDS.
 const DUST_SECONDS := 0.35
 const DUST_ALPHA := 0.75
 const DUST_SIZE := 0.45
 const DUST_KICK := 1.1
 const DUST_SWELL := 0.8
-# Bone dust, lighter than the sand it kicks off (SAND toward white).
 const DUST_TONE := Color(0.902, 0.871, 0.792)
 const EDGE_MIN := 0.35
 const EDGE_PER_METRE := 0.04
-# The widest an outline is drawn, metres: a 30 m ring's edge was 1.2 m of solid line.
 const EDGE_MAX := 0.6
-# The shell's flight arc: the dash's share of each step, and the half width of its ribbon.
 const TRACE_DASH := 0.7
 const TRACE_HALF := 0.07
 const RAIL := 0.25
-# A lane's far cap is this deep (_edge_tris); its pending fill stops at the cap's inner face.
 const CAP := RAIL * 2.0
-# A pull wedge's dashed outline: half width, standing RAIL inside r_out (_lane).
 const DASH_HALF := RAIL * 1.4
-# A shell's ring edge is this share of edge_width (_projectile).
 const SHELL_EDGE := 0.6
-# A live lane's band runs this share of its half width, the full length (as before wave 36).
 const LIVE_LANE := 0.9
 const UNDERLAY := 0.35
-# The keyline is opaque: HAZARD (L* 60.7) sits level with the pale floors, so the edge's lightness
-# step is the keyline's, and Forward+ blends in linear light, where 0.85 charcoal over the noon
-# Slag Bowl deck left only 18.8 to 21.0 L* (3060, #498 comment 6428905151; tools/keyline_floor_capture.gd).
 const UNDERLAY_ALPHA := 1.0
-# Half the width of a wave's front: the band drawn and the band contains() tests.
 const WAVE_EDGE := 1.0
 const DASH := 2.2
-# Dash rhythm tells owner apart by shape: hostile edges are solid, the player's own (AMBER) are
-# dashed every OWN_DASH metres, and a harmless bone ring every DASH, over twice as sparse.
 const OWN_DASH := 1.0
 const CHEVRON_HALF := 1.6
 const CHEVRON_DEPTH := 1.3
@@ -154,83 +79,22 @@ const STRIPE_PITCH := 0.5
 const POST_SPACING := 4.0
 const POST_HALF := 0.06
 const POST_ALPHA := 0.35
-# A shell's landing: its spikes' half-width at the foot, their alpha, and the static area's alpha
-# (a striped hostile floor that reads as the place not to be, PF-25).
 const SPIKE_HALF := 0.22
 const SPIKE_ALPHA := 0.7
 const SHELL_AREA_ALPHA := 0.24
-# Every mark fades with its distance from the lens: gone at LENS_CLEAR metres, whole at LENS_FULL.
-# In haze and classic marks draw with no depth test, so a lane or fence passing by the camera stood over half the view
-# as flat orange slabs (PF-27, film 059 and 090). The ball rides at the arm's 8 m, or 4.2 m on a
-# mount, so a mark at the ball stays whole unless a wall pulls the arm in past LENS_FULL.
 const LENS_CLEAR := 1.0
 const LENS_FULL := 3.0
 const RAIL_ALPHA := 0.7
 const OWNER_STEP := PI / 6.0
 const OWNER_SPACING := 4.0
 
-# --telegraph=haze (Tuning.FLAGS; clear, the default, and edges build on it; classic has stripes): a hostile floor
-# fill becomes a red haze with no hazard stripes. Every fill alpha scales by the one
-# HAZE_FILL, so each stencil class still holds one alpha and the LIVE / RUN ratio the drive
-# hands the shader is unchanged; the P1 lines, their keylines, the geometry, contains() and
-# the drive clips are not touched. LIVE_SCORCH is the live INSTANT slag layer's tone.
-# HAZE_FILL is the first 0.05 step at which the fill clears every place by at least 0.5 over the
-# 10 CIE76 floor (tools/grade_probe.gd; rulings #241 6328893598 and 6331787112). On the 3060
-# (#241 comment 6331769617) the lowest gap, camp ledger, was 8.65 at 1.0, 10.03 at 1.1 and 10.72
-# at 1.15.
-# Above 1.25 the live alpha (LIVE_ALPHA x HAZE_FILL) passes 1.0.
-# LIVE_SCORCH / LIVE_SCORCH_ALPHA: the live slag is drawn over the pending fill, which stays on
-# (p = 1 once live), and live must read clearly different from pending at chase distance
-# (ATTACK-READS.md:27: "Clear live/pending distinctions and safe holes survive haze."). More
-# HAZARD cannot add value contrast: ff5a3c is L* 60.7 and the pale floors are L* 64 to 67, so on
-# the 3060 live minus pending was -1.2 L* at stage 2 and +0.3 in the arena (#241 6342833117).
-# So the live slag is a dark scorched core, HAZARD.lerp(CHARCOAL, LIVE_SCORCH) at
-# LIVE_SCORCH_ALPHA, under the unchanged HAZARD edge and keyline. Linear-light model over grey
-# L* 67: pending 64.2, live about 48 at (0.4, 0.8), a 16 L* step. The 3060 sweep at 512b636f
-# (#241 6345835130) measured live 13.0 L* under pending in stage 2 and 11.4 in the arena, and the
-# coordinator kept 0.4 / 0.8 (#241 6345854759); haze_pose_capture --scorch / --live-alpha sweeps
-# the candidates either side.
-# AIR_LIVE_ALPHA: an air-only mark (the netcaster's net, which catches the ball only in the air)
-# must not wear the scorch, which reads as the strongest ground hit and sends the player off the
-# ground. It keeps the pre-scorch look at this fill: HAZARD at 0.61, the HAZE_SOLID that cf302195
-# paired with HAZE_FILL 1.15 (ruling #241 6331787112; the stage's 0.4 would sit level with the
-# 0.4025 pending fill). Rulings #241 6347013047 section 4 and 6347979378. On the 3060 this tint
-# read -1.2 / +0.3 L* live minus pending (6342833117), so E07's live cue belongs in the air band
-# (the wave 19 card), not in this fill.
 const HAZE_FILL := 1.15
 const LIVE_SCORCH := 0.4
 const LIVE_SCORCH_ALPHA := 0.8
 const AIR_LIVE_ALPHA := 0.61
-# A live ring's fill breathes (PF-16, w42 film: Brindle's live slag ring read as floor paint
-# because a full fill reads no time). The tint runs from its scorched core at the moment the ring
-# goes live toward charcoal by LIVE_PULSE_MIX and back, once every LIVE_PULSE_SECONDS. It swings
-# darker, never toward HAZARD, so the live ring keeps at least the core's lightness step under the
-# pending warning (threat_grammar_test) at every age.
-# Only the tint moves: alpha, geometry and contains() are the committed ring's.
 const LIVE_PULSE_SECONDS := 1.6
 const LIVE_PULSE_MIX := 0.35
 const TELEGRAPH_FLAG := "telegraph"
-# The telegraph row's looks, Tuning's option order. "clear" and "edges" are the haze look made less
-# obstructive (Andrew, 13 Nov 2026: the warnings hid the attack they warn of; ruling cq candidates):
-#   clear  the fence a jump clears stands as thin posts and a thin rail with no charcoal keyline in
-#          the air, and fades out near the lens (FENCE_CLEAR, FENCE_FULL: still near half strength at
-#          the 4.2 m mount arm, whole at the 8 m arm), so a camera inside a lane is not caged; a live lane's band is lighter (CLEAR_LIVE_ALPHA); and the driven marks draw
-#          behind bodies: depth tested, pulled DEPTH_PULL metres toward the eye so the ground under
-#          them never wins, so the crew winding up and the ball stay whole over a fill. A wall or ridge
-#          between the lens and a mark now hides it too. The tinted layers (TINTED_LAYERS: a landing's
-#          flash, crack ring and dust) are depth tested too, and the Flash moves each one DEPTH_PULL
-#          metres along the line to the eye, so a ridge between the lens and the landing hides them
-#          and the ground under them does not (PF-52: a landing behind a ridge painted the screen
-#          flat orange). Haze and classic keep their no-depth-test draw, as for every other mark.
-#   edges  clear, with every area fill at EDGES_FILL of its alpha: the outline and its keyline carry
-#          the shape, the fill only the timing.
-#   tape   clear, with the hostile stripes back as a faint pattern in the haze: bands of the same red
-#          TAPE_SHADE as light, TAPE_SHARE of each period, where classic's are charcoal and half. A
-#          hostile floor then differs from the player's own clean amber fill by shape, which holds
-#          under red-green colour blindness, where the two hues read as one (UI findings UF-02 and
-#          UF-03; Andrew, 13 Nov 2026: keep the colours, add shapes). A candidate until the PC has
-#          measured how much of the attack it covers.
-# The ground outlines, their keylines and contains() are the same in every look.
 const LOOKS := ["classic", "haze", "clear", "edges", "tape"]
 const TAPE_SHADE := 0.55
 const TAPE_SHARE := 0.35
@@ -243,16 +107,9 @@ const CLEAR_LIVE_ALPHA := 0.55
 const EDGES_FILL := 0.5
 const FENCE_CLEAR := 3.0
 const FENCE_FULL := 6.0
-# 0.3 m: at 0.6 the fill still covered the lowest part of a crew standing on it (4080, 6 to 7% of the
-# crew's pixels at e5f85f07, against the 5% line); with the 0.2 m lift it still clears the floor between
-# the ground samples.
 const DEPTH_PULL := 0.3
 
 
-# Whether the haze look is on: set_haze() (tests, tools), else the launcher flag, read once
-# through Tuning's own parse so a repeated flag resolves the same way (the last wins). A
-# running game re-reads the telegraph row at each stage entry and retry (follow_row).
-# The state lives on Painter, whose static code cannot call this class's statics.
 static func haze() -> bool:
 	return Painter.haze_on()
 
@@ -261,7 +118,6 @@ static func set_haze(on: bool) -> void:
 	Painter._look = "haze" if on else "classic"
 
 
-# The telegraph row's look (LOOKS); set_look() for tests and tools.
 static func look() -> String:
 	return Painter.look_now()
 
@@ -278,18 +134,14 @@ static func reset_for_tests() -> void:
 	Painter._warmed = false
 
 
-# Whether hostile fills carry the stripe pattern in this look (classic, tape).
 static func striped() -> bool:
 	return Painter.striped_on()
 
 
-# Whether the look is one of the less obstructive candidates (clear, edges, tape).
 static func soft() -> bool:
 	return Painter.soft_on()
 
 
-# The F1 telegraph row takes effect at the next stage entry or retry. A flip re-warms the
-# mark pipelines, since the haze look draws with a different material key.
 static func follow_row(tuning) -> void:
 	var row: String = tuning.option(Tuning.TELEGRAPH_KEY)
 	if row != look():
@@ -297,41 +149,18 @@ static func follow_row(tuning) -> void:
 		Painter._warmed = false
 
 
-# Layers whose name starts with "stripe" draw the hostile stripe pattern.
-# "fence" holds a soft look's height fence (posts, rail, spikes), which fades out near the lens;
-# a painter makes it only when a mark draws on it.
 const STATIC_LAYERS := ["under", "stripe", "base", "fill", "fence"]
-# The layers tint() writes: the live INSTANT fill and the landing's crack and dust.
 const TINTED_LAYERS := ["fill", "crack", "dust"]
 const MOTION_LAYERS := ["motion_under", "stripe_motion", "motion"]
-# The layers a driven painter draws with threat_mark.gdshaderinc.
 const DRIVEN_LAYERS := ["stripe", "stripe_motion", "motion", "motion_under"]
 
-# How a driven mark follows the frame (threat_mark.gdshaderinc names each one).
 enum Drive { PASS, RADIAL, LANE, DOTS, CHEVRON, CURTAIN }
 const FAR := 1.0e9
 const CURTAIN_STEPS := 48
-# P6 fill classes: the stencil value a class writes and tests, so overlapping fills of
-# one class draw once (E1-DENSITY.md section 2), and a sorting offset that runs each class
-# as one contiguous batch under every line at the same priority. A class writes over
-# another's value, so the batches must not interleave for the union to hold. Fills unioned
-# in one class must share an alpha, or the overlap shows whichever drew first and flips
-# with camera depth, so a class exists per alpha:
-#   area   INSTANT and LANE footprints (AREA_ALPHA)
-#   reach  a PROJECTILE's footprint (SHELL_AREA_ALPHA), its own class since fix round 2
-#   fill, swept, run  the INSTANT fill, a WAVE's swept ground, a pending LANE's run
-#   live   a LANE that is damaging (LIVE_ALPHA). It renders one priority above the other
-#          fills (LIVE_PRIORITY), so its band draws over a pending run, a fill and a swept
-#          ring from every camera depth, as the base drew it whenever the lane sorted nearer.
-#          Every P1 line (LINE_UNDER_PRIORITY, LINE_PRIORITY) draws above it. Lanes still
-#          union with lanes of their own class.
 const FILL_STENCIL := {"fill": 1, "area": 2, "swept": 4, "run": 8, "live": 16, "reach": 32}
-# Offsets are spaced at least 1000 apart: only their order matters, and a gap under the
-# camera far plane (700 m) could let depth sort reorder two classes.
 const FILL_SORT := {"area": -6000.0, "reach": -5000.0, "fill": -4000.0, "run": -3000.0, "swept": -2000.0, "live": -1000.0}
 
 
-# hostile (HAZARD), owned (the player's, AMBER) or neutral (a harmless bone field).
 static func stance(tone: Color) -> String:
 	if tone == Palette.HAZARD:
 		return "hostile"
@@ -348,7 +177,6 @@ static func kind(type: int) -> String:
 	return KINDS[type] if valid(type) else ""
 
 
-# The event_kinds row: sound id, glyph shape and priority for this type.
 static func row(type: int) -> Dictionary:
 	return EventKinds.THREAT_ROWS.get(kind(type), {})
 
@@ -357,14 +185,10 @@ static func bright(tone: Color) -> Color:
 	return tone.lightened(0.35)
 
 
-# A shell's flight line: a hostile shell's in full HAZARD, the colour of every other danger (its
-# lightened salmon read as a friendly guide, PF-25); the player's own batted shell keeps its bright.
 static func trace_tone(tone: Color) -> Color:
 	return Color(tone if stance(tone) == "hostile" else bright(tone), TRACE_ALPHA)
 
 
-# A lob with a fixed flight time is a straight line plus a parabola: projectile.gd's
-# ballistic solve is this with bump = 0.5 * gravity * flight^2.
 static func flight_point(launch: Vector3, landing: Vector3, bump: float, s: float) -> Vector3:
 	return launch.lerp(landing, s) + Vector3.UP * bump * s * (1.0 - s)
 
@@ -377,14 +201,10 @@ static func edge_width(d: Dictionary) -> float:
 	return clampf(float(d.get("r_out", 0.0)) * EDGE_PER_METRE, EDGE_MIN, EDGE_MAX)
 
 
-# How far the warning has run for the pending fill: 0 at commit, 1 on the hit tick and live.
 static func fill_share(d: Dictionary) -> float:
 	return 1.0 if d.get("live", false) else clampf(float(d.get("progress", 0.0)), 0.0, 1.0)
 
 
-# The ground the outline leaves for the fill: [lo, hi] between the outline's inner faces, in
-# radius for a radial, in |lateral| for a lane (whose far cap ends it at fill_end()).
-# Clamped: a shape narrower than its outline leaves no room, never a reversed span.
 static func fill_room(d: Dictionary) -> Vector2:
 	if d["form"] == "lane":
 		return Vector2(0.0, maxf(0.0, float(d["half_width"]) - RAIL))
@@ -399,8 +219,6 @@ static func fill_room(d: Dictionary) -> Vector2:
 	return Vector2(lo, hi)
 
 
-# How far a radial outline reaches in from its edge: a ring's edge (a shell's is SHELL_EDGE of
-# it), or a pull wedge's dashed outline, RAIL in plus DASH_HALF.
 static func outline_width(d: Dictionary) -> float:
 	match int(d["type"]):
 		Type.PROJECTILE:
@@ -410,28 +228,18 @@ static func outline_width(d: Dictionary) -> float:
 	return edge_width(d)
 
 
-# A lane's pending fill runs from its back end to the inner face of its far cap (_edge_tris).
 static func fill_end(d: Dictionary) -> float:
 	return maxf(-float(d["back"]), float(d["length"]) - CAP)
 
 
-# A live LANE's band, as before wave 36: LIVE_LANE of the half width along the full length, or
-# a radial one from r_in to r_out.
 static func _live_lane(d: Dictionary) -> bool:
 	return int(d["type"]) == Type.LANE and live_band(d)
 
 
-# Whether a live mark draws its dense live band. A lane with a running front (`front_m`, Brindle's
-# charge: only the hull's nose hurts) keeps its pending look, a light full fill inside strong
-# rails, so a camera inside it still sees the floor, the ball and the edges (PF-16: the live band
-# turned the lower screen flat orange before the hull arrived).
 static func live_band(d: Dictionary) -> bool:
 	return d.get("live", false) and not d.has("front_m") and not d.has("body_m")
 
 
-# The fill now, along the grow axis (a live lane's band: _live_lane): from the centre (a disc from r 0, a band from
-# its middle out to both edges, a lane from its centre line out to both rails), reaching
-# fill_room's faces at fill_share 1 and inside them before.
 static func fill_span(d: Dictionary) -> Vector2:
 	if _live_lane(d):
 		return Vector2(0.0, float(d["half_width"]) * LIVE_LANE) if d["form"] == "lane" else Vector2(d["r_in"], d["r_out"])
@@ -448,7 +256,6 @@ static func is_full(d: Dictionary) -> bool:
 	return absf(float(d["a1"]) - float(d["a0"])) >= TAU - 0.001
 
 
-# WAVE on a sector: the angle the front stands at.
 static func front_angle(d: Dictionary) -> float:
 	var a0: float = d["a0"]
 	var a1: float = d["a1"]
@@ -456,8 +263,6 @@ static func front_angle(d: Dictionary) -> float:
 	return a0 + sweep * clampf(maxf(float(d["front"]), 0.0), 0.0, absf(a1 - a0))
 
 
-# The solid layer shows only while an INSTANT area is live (slag stays molten); the
-# landing flash reuses its geometry.
 static func fill_tint(d: Dictionary) -> Color:
 	if int(d["type"]) != Type.INSTANT or not d.get("live", false):
 		return Color(0.0, 0.0, 0.0, 0.0)
@@ -469,19 +274,13 @@ static func fill_tint(d: Dictionary) -> Color:
 	return Color(_pulsed(live_tone, Palette.CHARCOAL, d), LIVE_ALPHA)
 
 
-# `core` while the mark has no live age (a descriptor that does not carry one stays still), else
-# a slow swing from `core` toward `deeper` and back, starting at `core` the moment it goes live.
 static func _pulsed(core: Color, deeper: Color, d: Dictionary) -> Color:
 	if not d.has("live_age"):
 		return core
 	var swing := 0.5 - 0.5 * cos(TAU * float(d["live_age"]) / LIVE_PULSE_SECONDS)
-	# Squared, so the first moments after going live are still the scorched core's own tone.
 	return core.lerp(deeper, LIVE_PULSE_MIX * swing * swing)
 
 
-# Every mark a descriptor draws, static (drawn once) or motion (redrawn as it runs).
-# A mark: role, layer, tone, tris (y is height above the ground unless abs), and the
-# numbers its role stands for, which the tests compare with contains().
 static func marks(d: Dictionary, motion: bool) -> Array:
 	var out: Array = []
 	if stance(d["tone"]) == "neutral":
@@ -517,14 +316,6 @@ static func roles(d: Dictionary) -> Array:
 	return out
 
 
-# --- Driven drawing (E1-DENSITY.md section 1) ----------------------------------------
-# A combat telegraph builds its motion marks once, at full extent, each vertex tagged with
-# how it follows the frame; drive(d) then hands the frame's numbers to the shader. The
-# numbers are the same expressions marks(d, true) draws, so both paths draw one shape. A
-# sector wave (a boss hazard's) stays on marks(), and so does a wave that is not hostile:
-# its swept ground would share the "motion" layer with its front, and drive() gives a
-# layer one clip, so the swept clip would overwrite the front's (E1 fix round, finding 5b).
-
 static func can_drive(d: Dictionary) -> bool:
 	if int(d["type"]) != Type.WAVE:
 		return true
@@ -557,14 +348,11 @@ static func driven_marks(d: Dictionary) -> Array:
 	return out
 
 
-# Per layer, the frame's clip and alpha scale (threat_mark.gdshaderinc), plus the numbers
-# they stand for, which the tests compare with contains().
 static func drive(d: Dictionary) -> Dictionary:
 	var out := {}
 	var live: bool = d.get("live", false)
 	match int(d["type"]):
 		Type.INSTANT:
-			# No "live" key: a live INSTANT keeps its fill class, under the scorch tint (as base).
 			out[_area_layer(d, true)] = _span_clip(d, 1.0)
 		Type.LANE:
 			var band := live_band(d)
@@ -586,15 +374,12 @@ static func drive(d: Dictionary) -> Dictionary:
 		Type.PROJECTILE:
 			if stance(d["tone"]) == "hostile":
 				out[_area_layer(d, true)] = _span_clip(d, 1.0)
-			# The flight arc keeps a dash while the shell has not passed its end.
 			var arc := {"clip": Vector4(0.0, 0.0, float(d["progress"]), 0.0), "alpha": 1.0}
 			out["motion"] = arc
 			out["motion_under"] = arc
 	return out
 
 
-# A pending fill's clip (threat_mark: radial keeps r in [clip.x, clip.y]; a lane keeps along in
-# [clip.x, clip.y] and |lateral| in [clip.z, clip.w]) and the span it stands for.
 static func _span_clip(d: Dictionary, alpha: float) -> Dictionary:
 	var span := fill_span(d)
 	var clip := Vector4(span.x, span.y, 0.0, 0.0)
@@ -608,8 +393,6 @@ static func _driven(m: Dictionary, drive_mode: int, scaled := 0.0, grow := 0.0) 
 	return m
 
 
-# One hot line and its charcoal keyline, as _lined draws them; build(grow) returns the
-# line's mark widened by grow.
 static func _driven_lined(out: Array, role: String, hot: Color, build: Callable) -> void:
 	var under: Dictionary = build.call(UNDERLAY)
 	under.merge({"role": role + "_under", "layer": "motion_under", "tone": Color(Palette.CHARCOAL, UNDERLAY_ALPHA)}, true)
@@ -665,8 +448,6 @@ static func _driven_wave(d: Dictionary, out: Array) -> void:
 
 
 static func _driven_projectile(d: Dictionary, out: Array) -> void:
-	# Only a hostile shell's landing fills: a batted (AMBER) shell is the player's own, and its fill
-	# would share the "motion" layer with the trace, a governed fill beside an exempt line.
 	if stance(d["tone"]) == "hostile":
 		out.append(_driven(_mark("fill", _area_layer(d, true), _area_tone(d, FILL_ALPHA), _footprint(d)), Drive.RADIAL))
 	if not d.has("launch"):
@@ -682,11 +463,6 @@ static func _driven_projectile(d: Dictionary, out: Array) -> void:
 	out.append(trace)
 
 
-# The shell's flight as a thin dashed arc (PF-25: a chain of squares read as placeholders):
-# one dash per step, two crossed ribbons TRACE_HALF + grow wide, so it reads as a line from any
-# camera. Dash i covers [i + 1 - TRACE_DASH, i + 1] / steps of the flight, so the last dash
-# ends on the landing point; a dash whose end the shell has passed (share < from) is left out.
-# tris; points, each dash's end on the flight; shares, each vertex's dash end (Drive.DOTS).
 static func _flight_arc(d: Dictionary, grow: float, from := 0.0) -> Dictionary:
 	var c: Vector3 = d["centre"]
 	var launch: Vector3 = d["launch"]
@@ -714,8 +490,6 @@ static func _flight_arc(d: Dictionary, grow: float, from := 0.0) -> Dictionary:
 			shares.append_array([s1, 0.0, 0.0, 0.0])
 	return {"tris": tris, "points": points, "shares": shares}
 
-
-# --- The four types ----------------------------------------------------------------
 
 static func _instant(d: Dictionary, motion: bool, out: Array) -> void:
 	var tone: Color = d["tone"]
@@ -833,15 +607,12 @@ static func _lane(d: Dictionary, motion: bool, out: Array) -> void:
 		{"pull": pull})
 
 
-# Hostile areas draw on the stripe layers in white, so the stripe texture shows through
-# (under haze, in HAZARD red with no texture).
 static func _area_layer(d: Dictionary, motion: bool) -> String:
 	if stance(d["tone"]) == "hostile":
 		return "stripe_motion" if motion else "stripe"
 	return "motion" if motion else "base"
 
 
-# A live lane band's alpha in this look.
 static func live_alpha() -> float:
 	return CLEAR_LIVE_ALPHA if soft() else LIVE_ALPHA
 
@@ -854,8 +625,6 @@ static func _area_tone(d: Dictionary, alpha: float) -> Color:
 	return Color(Palette.HAZARD, alpha * HAZE_FILL) if haze() else Color(1.0, 1.0, 1.0, alpha)
 
 
-# The pending fill of the one ground grammar: the room between the outline's inner faces, from
-# the centre out (fill_span). span and share are the numbers the tests compare with contains().
 static func _grown_fill(d: Dictionary, role: String, tone: Color, layer := "") -> Dictionary:
 	var span := fill_span(d)
 	var tris: PackedVector3Array
@@ -866,8 +635,6 @@ static func _grown_fill(d: Dictionary, role: String, tone: Color, layer := "") -
 	return _mark(role, layer if layer != "" else _area_layer(d, true), tone, tris, {"span": span, "share": fill_share(d)})
 
 
-# RR-02 for the ground types: posts every POST_SPACING metres along the outer boundary
-# and a rail at `reach`, the height a jump must clear.
 static func _fence(out: Array, d: Dictionary) -> void:
 	var reach: float = d["reach"]
 	if reach <= 0.05:
@@ -898,9 +665,6 @@ static func _fence(out: Array, d: Dictionary) -> void:
 	_lined(out, "band_top", false, Color(tone, RAIL_ALPHA), func(grow: float): return _rail(lines, reach, BAND_TOP + grow), {"height": reach})
 
 
-# A shell's height band: a spike every POST_SPACING metres round the landing, SPIKE_HALF wide at
-# the foot and pointed at `reach`, two crossed blades so it reads from any camera. No rail joins
-# them, so the band never draws as a box.
 static func _spikes(lines: Array, reach: float) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	for line in lines:
@@ -926,7 +690,6 @@ static func _rail(lines: Array, h: float, half: float) -> PackedVector3Array:
 	return tris
 
 
-# The outer boundary as polylines, broken where a quenched span leaves a gap.
 static func _boundary(d: Dictionary) -> Array:
 	var lines: Array = []
 	if d["form"] == "lane":
@@ -958,8 +721,6 @@ static func _boundary(d: Dictionary) -> Array:
 	return lines
 
 
-# A boss's mark on its own attack: a brass tick every 30 degrees on the rim, or every
-# OWNER_SPACING metres along a lane's rails (VISUAL-LANGUAGE.md section 4).
 static func _owner_ticks(d: Dictionary, grow: float) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	if d["form"] == "lane":
@@ -1013,23 +774,17 @@ static func _spoke(c: Vector3, angle: float, r0: float, r1: float, half: float) 
 	return tris
 
 
-# --- Shared pieces ------------------------------------------------------------------
-
 static func _mark(role: String, layer: String, tone: Color, tris: PackedVector3Array, extra := {}) -> Dictionary:
 	var m := {"role": role, "layer": layer, "tone": tone, "tris": tris, "abs": false}
 	m.merge(extra, true)
 	return m
 
 
-# A line and the wider charcoal band under it, so HAZARD still reads on the orange
-# Spillway checker. draw(grow) returns the line's tris widened by grow.
 static func _lined(out: Array, role: String, motion: bool, tone: Color, draw: Callable, extra: Dictionary) -> void:
 	out.append(_mark(role + "_under", "motion_under" if motion else "under", Color(Palette.CHARCOAL, UNDERLAY_ALPHA), draw.call(UNDERLAY), extra))
 	out.append(_mark(role, "motion" if motion else "base", tone, draw.call(0.0), extra))
 
 
-# A curtain along a ground line, as tall as the band a jump clears, with a bright rail
-# along its top: the height the attack reaches is drawn, not implied (RR-02).
 static func _band(out: Array, line: Array, reach: float, hot: Color) -> void:
 	var wall := PackedVector3Array()
 	var top := PackedVector3Array()
@@ -1040,7 +795,6 @@ static func _band(out: Array, line: Array, reach: float, hot: Color) -> void:
 	out.append(_mark("band_top", "motion", Color(hot, top_alpha() * hot.a), top, {"height": reach}))
 
 
-# A wave curtain's top rail: its half height and alpha in this look.
 static func rail_half() -> float:
 	return CLEAR_RAIL_HALF if soft() else BAND_TOP
 
@@ -1055,7 +809,6 @@ static func _footprint(d: Dictionary) -> PackedVector3Array:
 	return _arc(d, d["r_in"], d["r_out"], d["a0"], d["a1"])
 
 
-# The solid boundary: rings inside the radial edge, or rails and a far cap on a lane.
 static func _edge_tris(d: Dictionary, grow: float) -> PackedVector3Array:
 	if stance(d["tone"]) == "owned":
 		return _own_edge_tris(d, grow)
@@ -1083,8 +836,6 @@ static func _edge_tris(d: Dictionary, grow: float) -> PackedVector3Array:
 	return tris
 
 
-# The player's own edge: _edge_tris' shape cut into OWN_DASH dashes, so it reads as neither a
-# hostile solid edge nor a bone ring.
 static func _own_edge_tris(d: Dictionary, grow: float) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	if d["form"] == "lane":
@@ -1140,8 +891,6 @@ static func _dashed_outline(d: Dictionary, grow: float) -> PackedVector3Array:
 	return tris
 
 
-# A harmless lane (a phase preview, boss.gd FX-03): dashes down both rails from the back to the
-# far end and across the far cap, the radial outline's DASH spacing.
 static func _dashed_lane(d: Dictionary, half: float) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	var back: float = d["back"]
@@ -1169,7 +918,6 @@ static func _dashes(d: Dictionary, r: float, half: float, a0: float, a1: float, 
 	return tris
 
 
-# A band between two radii over an angle range, leaving quenched segments undrawn.
 static func _arc(d: Dictionary, r0: float, r1: float, a0: float, a1: float) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	r0 = maxf(0.0, r0)
@@ -1241,29 +989,17 @@ static func _quad(tris: PackedVector3Array, a: Vector3, b: Vector3, c: Vector3, 
 	tris.append_array(PackedVector3Array([a, b, c, a, c, d]))
 
 
-# --- Drawing ------------------------------------------------------------------------
-
-# One top-level mesh per layer in world space. Underlays draw at PRIORITY - 1 and the
-# rest at PRIORITY, with no depth test, above every player effect (combat note 10).
 class Painter:
 	extends Node3D
 
-	# (Vector3) -> float, the ground under a point; unset draws flat at floor_y.
 	var ground := Callable()
-	# (PackedVector2Array) -> PackedFloat64Array, the ground under many (x, z) points in one ask;
-	# an empty answer leaves each point to ground.
 	var ground_many := Callable()
 	var floor_y := 0.0
 	var lift := 0.2
-	# A driven painter (a combat telegraph) draws DRIVEN_LAYERS with the shared
-	# threat_mark shaders, builds its motion marks once and moves them with drive().
 	var driven := false
 	var centre := Vector3.ZERO
 	var heading := Vector2(0.0, -1.0)
-	# The P6 class of the stripe_motion layer: "fill" (an INSTANT fill, a LANE run) or
-	# "swept" (a WAVE's swept ground).
 	var motion_class := "fill"
-	# The stencil class of the "stripe" (footprint) layer; a PROJECTILE's is "reach".
 	var area_class := "area"
 	var _live := false
 	var _governed := {}
@@ -1271,12 +1007,9 @@ class Painter:
 	var _driven_values := {}
 
 	static var _stripes := {}
-	# The first material of each look a line layer draws with (plain or striped), held for the
-	# session. A mark's StandardMaterial3D is its own, since tint() writes it, and when the last
-	# material with a look is freed Godot frees that look's shader too: the next mark compiled it
-	# again, about 5 ms on the 4080, once a lobber volley came after the last ring had gone.
+	# Godot frees a shader when its last material referencing it is freed (~5 ms compile hitch).
 	static var _held_looks := {}
-	static var _look := ""  # "" unread, else one of LOOKS
+	static var _look := ""
 
 	static func look_now() -> String:
 		if _look == "":
@@ -1285,7 +1018,6 @@ class Painter:
 			_look = flags.option(Tuning.FLAGS[TELEGRAPH_FLAG][0])
 		return _look
 
-	# Every look but classic draws the haze fill.
 	static func haze_on() -> bool:
 		return look_now() != "classic"
 
@@ -1296,14 +1028,9 @@ class Painter:
 		return look_now() in ["classic", "tape"]
 
 	static var _materials := {}
-	# Materials created so far; a run that has warmed up must not raise it.
 	static var materials_built := 0
 	static var _warmed := false
 
-	# One shared material per (stencil class, stripes, priority, governed), so every driven
-	# telegraph draws with the same few materials. governed comes from the layer's roles
-	# (layer_governed), not from the stencil class.
-	# The material cache's key; a soft look's depth-tested materials are their own.
 	static func mark_key(fill_class: String, stripes: bool, priority: int, governed: bool) -> String:
 		return "%s/%s/%d/%s/%s" % [fill_class, stripes, priority, governed, soft_on()]
 
@@ -1336,8 +1063,6 @@ class Painter:
 		materials_built += 1
 		return mat
 
-	# Every (class, stripes, priority, governed) a driven telegraph can ask mark_material
-	# for: each fill class governed or not, and the two line layers.
 	static func warm_keys() -> Array:
 		var keys := []
 		for fill_class in FILL_STENCIL:
@@ -1346,14 +1071,10 @@ class Painter:
 		keys.append(["", false, LINE_UNDER_PRIORITY, false])
 		keys.append(["", false, LINE_PRIORITY, false])
 		if soft_on():
-			# A soft look draws its static marks with these too (_layer): the areas and the fence.
 			keys.append(["", false, PRIORITY, false])
 			keys.append(["fence", false, LINE_PRIORITY, false])
 		return keys
 
-	# Compiles every mark pipeline before play: one driven-format triangle per key, at zero
-	# alpha, kept in view for a few frames and then freed. Without it the first live lane or
-	# projectile compiles its shader mid-fight. Once per process; the materials are shared.
 	static func warm_up(parent: Node) -> Node3D:
 		if _warmed or parent == null:
 			return null
@@ -1369,7 +1090,6 @@ class Painter:
 			arrays[Mesh.ARRAY_VERTEX] = PackedVector3Array([Vector3.ZERO, Vector3(0.01, 0.0, 0.0), Vector3(0.0, 0.0, 0.01)])
 			arrays[Mesh.ARRAY_COLOR] = PackedColorArray([Color.WHITE, Color.WHITE, Color.WHITE])
 			var flags := 0
-			# A soft look's static marks draw these materials without CUSTOM arrays, another pipeline.
 			if custom:
 				arrays[Mesh.ARRAY_CUSTOM0] = PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 				arrays[Mesh.ARRAY_CUSTOM1] = PackedFloat32Array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
@@ -1406,9 +1126,6 @@ class Painter:
 		if is_instance_valid(node):
 			node.queue_free()
 
-	# The look's stripes at 45 degrees, one period per texture repeat: HAZARD and charcoal halves
-	# (classic), or white with a TAPE_SHARE band at TAPE_SHADE (tape), which the haze fill's own
-	# red multiplies, so the band is the same red, darker.
 	static func stripe_texture() -> ImageTexture:
 		var tape := soft_on()
 		if not _stripes.has(tape):
@@ -1453,7 +1170,6 @@ class Painter:
 				continue
 			_set_layer(layer, verts, colors, c0, c1, custom and layer_governed(all, layer))
 
-	# The ground under every grounded vertex paint() will draw, read in one ask of ground_many.
 	func _heights_under(all: Array, layers: Array) -> Dictionary:
 		var heights := {}
 		if not ground_many.is_valid():
@@ -1474,11 +1190,6 @@ class Painter:
 			heights[key] = ys[heights[key]]
 		return heights
 
-	# Whether the density governor fades a driven layer: every role on it is a governed
-	# class in Density.CLASS_OF_ROLE (P6 fills). P6 is hostile ground, so only the stripe
-	# layers qualify; an owned or neutral fill on "motion" stays as it drew before E1. A
-	# layer that mixes a governed role with an exempt one stays exempt and reports it,
-	# since fading it would fade a P1 line.
 	static func layer_governed(all: Array, layer: String) -> bool:
 		var governed := 0
 		var exempt := 0
@@ -1493,8 +1204,6 @@ class Painter:
 			push_error("Painter: layer %s mixes governed and exempt roles; left ungoverned" % layer)
 		return governed > 0 and exempt == 0 and layer.begins_with("stripe")
 
-	# The frame's numbers for each driven layer (Threat.drive); only changed values reach
-	# the renderer.
 	func drive(values: Dictionary) -> void:
 		for layer in values:
 			var instance: MeshInstance3D = _layers.get(layer)
@@ -1553,7 +1262,6 @@ class Painter:
 		mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays, [], {}, flags)
 		instance.mesh = mesh
 
-	# The stencil class a driven layer's fills union in, "" for a line layer.
 	func _fill_class(layer: String) -> String:
 		if not layer.begins_with("stripe"):
 			return ""
@@ -1561,7 +1269,6 @@ class Painter:
 			return area_class
 		return "live" if _live else motion_class
 
-	# The layer's shared material and batch for its current stencil class.
 	func _apply_class(layer: String) -> void:
 		var instance: MeshInstance3D = _layers[layer]
 		var fill_class := _fill_class(layer)
@@ -1577,10 +1284,6 @@ class Painter:
 			return LINE_PRIORITY
 		return PRIORITY
 
-	# A material cannot pull its vertices, so a depth-tested tinted layer is moved instead: DEPTH_PULL
-	# metres along the line from its middle to the camera, so the ground under it never hides it and
-	# a ridge between the lens and it still does. Every owner of a Painter (a telegraph, a boss
-	# hazard, a landing's Flash) gets this from _process; a Flash also calls it as it repaints.
 	func pull_toward_eye() -> void:
 		var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 		if cam == null:
@@ -1597,7 +1300,7 @@ class Painter:
 
 	var _pulls := false
 
-	# Godot switches processing on at ready for any script with _process, so it is set here, not in _init.
+	# Godot auto-enables _process at _ready for any script defining _process, so gate it here.
 	func _ready() -> void:
 		set_process(_pulls)
 
@@ -1618,10 +1321,6 @@ class Painter:
 			_layers[layer] = instance
 			_apply_class(layer)
 			return instance
-		# A soft look draws every mark but the tinted ones with the shared depth-tested shader, so a
-		# body standing on a line or an area draws over it too; the fence keeps its far fade ("fence").
-		# A tinted layer (the landing's flash, crack and dust) keeps its own StandardMaterial3D, which
-		# tint() writes. A soft look depth tests it (below), and the Painter pulls it toward the eye.
 		if soft_on() and not layer in TINTED_LAYERS:
 			instance.material_override = mark_material("fence" if layer == "fence" else "", layer.begins_with("stripe") and striped_on(), _priority(layer), false)
 			add_child(instance)
@@ -1650,8 +1349,6 @@ class Painter:
 		if not _held_looks.has(look):
 			_held_looks[look] = mat
 		instance.material_override = mat
-		# The landing's crack ink sits over every fill and live band but under every hot line
-		# (LINE_PRIORITY, sorted first), so a lane still live after its landing keeps its rails.
 		if layer == "crack":
 			instance.sorting_offset = CRACK_SORT
 		add_child(instance)
@@ -1659,10 +1356,6 @@ class Painter:
 		return instance
 
 
-# What a hostile mark leaves where it lands, on the tick it goes live: an INSTANT's solid flash
-# over its footprint, and for every ground mark but a wave (its running front is its landing)
-# the ink crack ring and dust kick at its edge (landing()). It outlives the telegraph its owner
-# frees on the landing tick, then fades.
 class Flash:
 	extends Painter
 
@@ -1674,9 +1367,6 @@ class Flash:
 	var _life := 0.0
 	var _crack_alpha := Callable()
 
-	# fill: the INSTANT's solid marks; crack: the ink marks; crack_alpha(age) their alpha;
-	# dust(age): the dust mark at that age, or unset with no dust. The painter's own code
-	# cannot call the grammar's statics, so Threat.flash hands them in.
 	func start(fill: Array, tone: Color, crack: Array, crack_alpha: Callable, dust: Callable, life: float) -> void:
 		_tone = tone
 		_fill = not fill.is_empty()
@@ -1693,7 +1383,6 @@ class Flash:
 		set_process(true)
 		_show(0.0)
 
-	# A landing ages and fades in every look, so it always processes, pull or not.
 	func _ready() -> void:
 		set_process(true)
 
@@ -1727,25 +1416,17 @@ class Flash:
 			tint("dust", Color(1.0, 1.0, 1.0, dust["alpha"]))
 
 
-# The crack ring's alpha at `age` seconds after the landing: held, then gone by CRACK_SECONDS.
 static func crack_alpha(age: float) -> float:
 	if age <= CRACK_HOLD:
 		return CRACK_ALPHA
 	return CRACK_ALPHA * clampf(1.0 - (age - CRACK_HOLD) / (CRACK_SECONDS - CRACK_HOLD), 0.0, 1.0)
 
 
-# Whether a descriptor leaves the landing marks when it goes live: a hostile mark on the
-# ground. A wave's landing is its running front; an air-only net and an aerial ring hit the
-# ball in the air, where a floor crack would point the wrong way.
 static func lands(d: Dictionary) -> bool:
 	return stance(d["tone"]) == "hostile" and int(d["type"]) != Type.WAVE \
 		and not d.get("air", false) and not d.get("aerial", false)
 
 
-# The landing's marks from the committed descriptor: "crack" (the ink ring and its cracks, on
-# the crack layer) and "dust" (no tris; its "puffs" are [edge point, outward] pairs the Flash
-# throws each frame through dust_tris). Seeded by the mark's centre, so a landing draws the
-# same every time. Empty when the mark does not land (lands()).
 static func landing(d: Dictionary) -> Array:
 	if not lands(d):
 		return []
@@ -1758,8 +1439,6 @@ static func landing(d: Dictionary) -> Array:
 	for line in _boundary(d):
 		_jagged(tris, line, rng)
 	var edge := _edge_points(d, rng)
-	# A lane's rails and their keyline stay drawn while it runs live, so its cracks start at the
-	# keyline's outer face; a ring's edge sits inside r_out, so its cracks start on it.
 	var from := RAIL + UNDERLAY if d["form"] == "lane" else 0.0
 	var puffs: Array = []
 	for e in edge:
@@ -1779,8 +1458,6 @@ static func landing(d: Dictionary) -> Array:
 		_mark("dust", "dust", DUST_TONE, PackedVector3Array(), {"puffs": puffs})]
 
 
-# The dust puffs `throw` (0 to 1) of the way out and `t` (0 to 1) through their life: a
-# diamond per puff, DUST_SIZE across at the edge, swelling by DUST_SWELL.
 static func dust_tris(puffs: Array, throw: float, t: float) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	var half := DUST_SIZE * 0.5 * (1.0 + DUST_SWELL * t)
@@ -1793,7 +1470,6 @@ static func dust_tris(puffs: Array, throw: float, t: float) -> PackedVector3Arra
 	return tris
 
 
-# The edge redrawn in ink: each boundary step split at a midpoint stepped in or out.
 static func _jagged(tris: PackedVector3Array, line: Array, rng: RandomNumberGenerator) -> void:
 	for i in line.size() - 1:
 		var p: Vector3 = line[i]
@@ -1804,8 +1480,6 @@ static func _jagged(tris: PackedVector3Array, line: Array, rng: RandomNumberGene
 		_seg(tris, mid, q, CRACK_RING_HALF)
 
 
-# Where the cracks and puffs leave the edge, as [point, outward] pairs: spaced about
-# CRACK_STEP along a radial mark's rim (skipping its open gaps) or a lane's rails and far cap.
 static func _edge_points(d: Dictionary, rng: RandomNumberGenerator) -> Array:
 	var out: Array = []
 	if d["form"] == "lane":
@@ -1837,10 +1511,6 @@ static func _edge_points(d: Dictionary, rng: RandomNumberGenerator) -> Array:
 	return out
 
 
-# The landing a mark leaves on the tick it goes live (Flash), or null when it leaves none: an
-# INSTANT's solid flash and, when it lands(), the crack ring and dust kick. `ground` is the
-# mark's own ground under a point (unset draws flat at floor_y); the crack follows it, and each
-# puff reads it once here, so the dust's per-frame repaint asks the ground nothing.
 static func flash(parent: Node, d: Dictionary, floor_y: float, lift: float, ground := Callable(), ground_many := Callable()) -> Node3D:
 	var instant := int(d["type"]) == Type.INSTANT
 	var landed := landing(d)
@@ -1865,7 +1535,6 @@ static func flash(parent: Node, d: Dictionary, floor_y: float, lift: float, grou
 	return node
 
 
-# How long a landing's Flash lives: the longest of its parts.
 static func flash_life(fill: bool, crack: bool, dust: bool) -> float:
 	var out := FLASH_SECONDS if fill else 0.0
 	if crack:
@@ -1875,8 +1544,6 @@ static func flash_life(fill: bool, crack: bool, dust: bool) -> float:
 	return out
 
 
-# The dust mark `age` seconds after the landing, with its layer alpha: thrown out on an
-# ease-out (not at all under Reduced motion) and fading over DUST_SECONDS.
 static func dust_at(puffs: Array, age: float) -> Dictionary:
 	var t := clampf(age / DUST_SECONDS, 0.0, 1.0)
 	var throw := (1.0 - (1.0 - t) * (1.0 - t)) * EnemyMotion.motion_scale

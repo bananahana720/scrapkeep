@@ -26,7 +26,6 @@ var drag := {}
 var tow: Array = []
 var hurls: Array = []
 var rake_shapes: Array = []
-# W47-H2 Tarn baseline runtime state (zero static mutable state; cleared in _clear()).
 var seized := {}
 var clamp_hurls: Array = []
 var last_clamp_hurl := {}
@@ -109,8 +108,6 @@ func _movable(enemy) -> bool:
 	return _alive(enemy) and not _protected(enemy) and enemy.get("weight") != null and float(enemy.weight) <= tow_limit(_class())
 
 
-# A held body (tow, hurl, drag target) leaves the claw the moment it leaves the tree, so a
-# freed enemy is never carried into the next physics step.
 func _hold(enemy: Node3D) -> void:
 	var drop := _release.bind(enemy)
 	if not enemy.tree_exiting.is_connected(drop):
@@ -138,8 +135,6 @@ func _mark(enemy: Node3D, seconds: float) -> void:
 		combat._clamped[enemy.get_instance_id()] = combat._clock + seconds
 
 
-# knock() supplies weight compensation. Retain vertical momentum instead of adding its
-# default hop on every sustained pull tick (enemy.gd's knock lifts by force * 0.2).
 func _pull(enemy: Node3D, toward: Vector3, speed: float) -> void:
 	var vertical: float = enemy._knock.y
 	enemy._knock = Vector3(0.0, vertical, 0.0)
@@ -229,7 +224,6 @@ func step(delta: float) -> void:
 
 
 func _discover(id: String, after: String, at: Vector3) -> void:
-	# Framework cards take their own tick. A pilot's card follows on a later physics tick.
 	_cards[id] = {"after": after, "at": at, "queued": Engine.get_physics_frames()}
 
 
@@ -271,8 +265,6 @@ func _step_drag(delta: float) -> void:
 	var flat := to - target.global_position
 	flat.y = 0.0
 	if flat.length() <= DRAG_SPEED * delta + 0.1:
-		# Stop within reach without teleporting through collision. Remove the controlled
-		# planar knock on arrival; a cut instead leaves the body's momentum intact.
 		var push: Vector3 = target._knock
 		target._knock = Vector3(0.0, push.y, 0.0)
 		combat._hit(target, "claw", DRAG_DAMAGE * mult, flat, 0.0, "", "special")
@@ -463,7 +455,6 @@ func _step_piece(delta: float) -> void:
 		h["time"] = minf(float(h["seconds"]), float(h["time"]) + delta)
 		var f := float(h["time"]) / float(h["seconds"])
 		var next: Vector3 = (h["from"] as Vector3).lerp(h["to"], f) + Vector3.UP * sin(PI * f) * 3.0
-		# A thrown body follows its committed arc through collision, never a teleport.
 		enemy.velocity = (next - enemy.global_position) / maxf(delta, 0.001)
 		enemy.move_and_slide()
 		enemy._knock = Vector3.ZERO
@@ -508,9 +499,6 @@ func _clear() -> void:
 	_rakes.clear()
 
 
-# --- W47-H2: Clamp-and-Hurl, Unstoppable 3rd-Beat Lunge & Inward Pendulum Guard/Strafe ---
-# Worn-steel articulated mechanical claw only (Call #4; inward pendulum guard).
-
 func _seizable(enemy) -> bool:
 	if not _alive(enemy) or _protected(enemy):
 		return false
@@ -520,7 +508,6 @@ func _seizable(enemy) -> bool:
 	return float(w) <= maxf(Weapons.CLAMP_HURL_MAX_WEIGHT, tow_limit(_class()))
 
 
-# Seizes the nearest light/medium enemy caught by clamp for 0.6 s, then hurls it down aim at 30 m/s.
 func try_seize(candidates: Array) -> Node3D:
 	if not seized.is_empty():
 		_launch_seized()
@@ -651,7 +638,6 @@ func _step_clamp_hurl(delta: float) -> void:
 			clamp_hurls.erase(h)
 
 
-# Unstoppable 3rd-Beat Lunge: +6 m forward lunge with CC immunity and brief frontal armor.
 func trigger_beat3_lunge(aim_dir: Vector3) -> Dictionary:
 	var flat := Vector3(aim_dir.x, 0.0, aim_dir.z)
 	var dir: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else combat._flat_aim()
@@ -701,8 +687,6 @@ func _step_beat3_lunge(delta: float) -> void:
 		beat3_lunge = {}
 
 
-# Inward-Facing Pendulum Guard/Strafe on claw_drag around heavy anchors/enemies.
-# Front worn-steel articulated mechanical claw shields Tarn's face toward the anchor.
 func _start_pendulum_guard(anchor_body: Node3D, anchor_pos: Vector3, is_world: bool) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var to_anchor := anchor_pos - ball
@@ -757,7 +741,6 @@ func _step_pendulum_guard(delta: float) -> void:
 		ctx.player.add_external_accel(delta_v / maxf(delta, 0.016))
 
 
-# Returns the frontal damage multiplier (0.50 when shielded from the front, else 1.0).
 func frontal_armor_scale(shove: Vector3) -> float:
 	var guard_dir := Vector3.ZERO
 	var guard_source := ""

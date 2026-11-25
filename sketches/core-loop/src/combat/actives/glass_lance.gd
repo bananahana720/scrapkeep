@@ -3,36 +3,17 @@ extends RefCounted
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
 
-# The Glass Lance (Mind-glass): a shard of the Mind that wants to be thrown. A fire commits a
-# straight band along the aim, REACH long and HALF_WIDTH either side, skimming the ground at the
-# ball's own ride height (sampled every SAMPLE metres on the press, so it climbs a slope to
-# the machines on it), and draws it in pale uranium-glass green (the tell: the band's centre
-# and both edges, held until the shard has passed). The shard leaves on the same press and runs the band at SPEED, piercing every
-# machine whose body touches it, once each, with no cap. The band drawn is the band that hits:
-# a machine outside it, or one that steps in behind the shard, is never struck.
-#
-# It stacks into a strong build: weapon damage mods and punch scale every lance, Cross Split
-# fans one more lance per level, Chain Arc makes each pierced machine jump, and a full ultimate
-# meter's overflow arrives as extra lances (the rack's bonus).
-
 const BASE_DAMAGE := 34.0
 const REACH := 40.0
 const HALF_WIDTH := 0.9
-# Metres above or below the band's height a machine's body may reach past and still be pierced.
 const HEIGHT := 1.5
-# Metres between the band's height samples, and the most it may climb above or dive below the
-# ball over a ledge or a drop.
 const SAMPLE := 2.5
 const CLIMB := 12.0
 const DIVE := 6.0
-# The ride height the band keeps over the ground: the ball's own at the press, held in this
-# range so a press in the air dips to the ground and one under a deck never sinks into it.
 const RIDE_MIN := 0.4
 const RIDE_MAX := 1.6
 const SPEED := 120.0
-# Degrees between fanned lances.
 const FAN_DEG := 7.0
-# Seconds the tell stays up after the shard reaches the far end.
 const TELL_HOLD := 0.12
 const DRAW_LIFT := 0.3
 const KNOCK := 8.0
@@ -47,7 +28,6 @@ var ctx
 var combat
 var lances: Array = []
 var pierced := 0
-# Bumped by clear(), so a pierce whose kill clears the stage mid-step drops the survivors.
 var _generation := 0
 
 
@@ -87,8 +67,6 @@ func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	return count
 
 
-# The band's height at each sample: the ground plus the ball's ride height, held within CLIMB
-# and DIVE of the ball. Flat at the ball's height with no terrain.
 func _skim(from: Vector3, dir: Vector3) -> PackedFloat32Array:
 	var heights := PackedFloat32Array()
 	var terrain = ctx.terrain
@@ -101,7 +79,6 @@ func _skim(from: Vector3, dir: Vector3) -> PackedFloat32Array:
 	return heights
 
 
-# The band's height `along` metres out, between its samples.
 static func band_y(lance: Dictionary, along: float) -> float:
 	var heights: PackedFloat32Array = lance["heights"]
 	var at := clampf(along / SAMPLE, 0.0, float(heights.size() - 1))
@@ -114,7 +91,6 @@ func _point(lance: Dictionary, along: float) -> Vector3:
 	return Vector3(at.x, band_y(lance, along) + DRAW_LIFT, at.z)
 
 
-# The committed band, centre bright and edges faint, up for the whole flight.
 func _tell(lance: Dictionary) -> void:
 	var life := REACH / SPEED + TELL_HOLD
 	var side: Vector3 = lance["dir"].cross(Vector3.UP).normalized() * HALF_WIDTH
@@ -140,8 +116,6 @@ func step(delta: float) -> void:
 	lances = flying
 
 
-# One lance's tick: the shard runs its band from s to s + SPEED * delta and pierces what it
-# crosses. True when it has reached the far end.
 func _fly(lance: Dictionary, delta: float) -> bool:
 	var before: float = lance["s"]
 	var after := minf(REACH, before + SPEED * delta)

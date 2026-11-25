@@ -7,25 +7,6 @@ const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const AllyHuskLook := preload("res://src/presentation/ally_husk_look.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 
-# W47-TALLY-B-CODE Ghost Shift Ally-Husk Manager & AI:
-# - Ordinary defeated Fleet machines leave 6.0 s wrecks (NEVER Wardens, bosses, Rogues,
-#   ancient enemies, or Fleet spectators; ZERO "Spare Shift" boss-room fallback husks).
-# - Raised husks live 12.0 s, deal 60% base enemy damage, obey the dedicated Ally Attack Budget
-#   (attack_budget.gd), and obey strict headcount seat caps: 2 (Heft I-II), 3 (III-IV), 4 (V),
-#   plus +1 with depth-3 tl_plate_rack; Elites occupy 2 seats.
-# - Kit interactions:
-#     gather_plate   -> raises wrecks inside beacon ring
-#     link_clips     -> drive-by raises wrecks at latch / anchor
-#     stamp_slam     -> refreshes active husks' 12.0 s shift timers
-#     flywheel_surge -> overclocks passed husks (+50% speed & attack rate for 3.0 s)
-#     plate_return   -> flight beats raise passed wrecks; landing commands husks to charge landing
-# - Depth-3 upgrades:
-#     tl_plate_rack  -> +1 headcount seat + ShotBits inheritance
-#     tl_return_slip -> Severance Blast (AMBER #E5A044 electric pop on shift-end or Tally ram)
-#                       + ShotBits inheritance
-# - Mandatory B6 contract: every allied attack zone uses AllyHuskLook.AllyZone in warm
-#   Palette.AMBER #E5A044 ONLY — zero HAZARD, zero 45-deg stripes, zero enemy telegraphs.
-
 const GROUP := "ally_husk"
 const WRECK_SECONDS := 6.0
 const SHIFT_SECONDS := 12.0
@@ -48,9 +29,6 @@ const SEVERANCE_RAM_MIN_SPEED := 12.0
 const SEVERANCE_RAM_GRACE := 0.35
 const LINK_HUSK_RADIUS := 5.5
 const ATTACK_SEARCH_RADIUS := 34.0
-# W49-COMBAT Mind / Mind's Hand husk re-possession counter-hack (strictly B6 Palette.HAZARD #FF5A3C,
-# NEVER purple beam/grid!). Shooting or tapping the takeover node within 1.0 s interrupts The Mind
-# and overcharges the husk.
 const TAKEOVER_WARN_SECONDS := 1.0
 const TAKEOVER_NODE_RADIUS := 1.6
 const TAKEOVER_OVERCHARGE_SECONDS := 5.0
@@ -79,8 +57,6 @@ const PROFILES := {
 		"zone_shape": "lane", "zone_length": 8.4, "zone_width": 3.0, "at_target": false,
 		"radius": 1.3, "half_height": 1.3,
 	},
-	# World 2 Dig ordinary Fleet husks (W48-COMBAT): strictly B6 AMBER #E5A044 AllyZones,
-	# zero HAZARD telegraphs or hostile klaxons.
 	"burrower": {
 		"base_damage": 10.0, "speed": 6.8, "range": 14.0, "warn": 0.70, "live": 0.25, "rest": 1.25,
 		"zone_shape": "ring", "zone_radius": 3.0, "at_target": true,
@@ -106,8 +82,6 @@ const PROFILES := {
 		"zone_shape": "ring", "zone_radius": 3.2, "at_target": true,
 		"radius": 1.1, "half_height": 0.9,
 	},
-	# World 3 Highdraft ordinary Fleet husks (W49-COMBAT): strictly B6 AMBER #E5A044 AllyZones,
-	# zero HAZARD telegraphs or hostile klaxons.
 	"line_cutter": {
 		"base_damage": 10.0, "speed": 6.2, "range": 16.0, "warn": 0.70, "live": 0.25, "rest": 1.30,
 		"zone_shape": "lane", "zone_length": 14.0, "zone_width": 2.8, "at_target": false,
@@ -344,8 +318,6 @@ func raise_in_radius(at: Vector3, radius: float) -> Array:
 	return raised
 
 
-# Jumper Splice (link_clips) drive-by latch: raises nearest wreck(s) near the latch/anchor
-# without slowing Tally down.
 func raise_drive_by(at: Vector3, radius := LINK_HUSK_RADIUS) -> Array:
 	return raise_in_radius(at, radius)
 
@@ -384,7 +356,6 @@ func command_charge(at: Vector3) -> int:
 func step(delta: float, enemies: Array) -> void:
 	if ctx == null or ctx.root == null:
 		return
-	# 1. Tick 6 s wreck timers.
 	if not wrecks.is_empty():
 		var live_wrecks: Array = []
 		for w in wrecks:
@@ -395,12 +366,10 @@ func step(delta: float, enemies: Array) -> void:
 				live_wrecks.append(w)
 		wrecks = live_wrecks
 
-	# 2. Tick flywheel_surge pass-by overclock window.
 	if _surge_window > 0.0:
 		_surge_window = maxf(0.0, _surge_window - delta)
 		_apply_pass_by_overclock()
 
-	# 3. Step live raised husks.
 	if husks.is_empty():
 		return
 	var hc := 1
@@ -422,20 +391,17 @@ func step(delta: float, enemies: Array) -> void:
 			h.overcharged = false
 		h.charge_left = maxf(0.0, h.charge_left - delta)
 
-		# Step active Mind / Mind's Hand re-possession takeover telegraph (1.0 s Palette.HAZARD #FF5A3C).
 		if h.takeover_active:
 			if _step_takeover(h, delta, ball_pos):
 				_free_husk(h)
 				continue
 
-		# Depth-3 Severance Blast on shift expiry.
 		if h.shift_left <= 0.0:
 			if has_severance:
 				_severance_blast(h, enemies, "shift_end")
 			_free_husk(h)
 			continue
 
-		# Depth-3 Severance Blast on Tally high-speed ram-through.
 		if has_severance and h.age >= SEVERANCE_RAM_GRACE and ball_speed >= SEVERANCE_RAM_MIN_SPEED:
 			var flat_ball := Vector2(ball_pos.x - h.global_position.x, ball_pos.z - h.global_position.z).length()
 			if flat_ball <= SEVERANCE_RAM_RADIUS:
@@ -455,7 +421,6 @@ func _raise_wreck(w: Dictionary) -> HuskUnit:
 	var cap := seat_cap()
 	if cost > cap:
 		return null
-	# Evict oldest husks cleanly when needed so seats_used <= seat_cap ALWAYS holds.
 	while seats_used() + cost > cap and not husks.is_empty():
 		var oldest: HuskUnit = husks.pop_front()
 		_free_husk(oldest)
@@ -701,10 +666,6 @@ func _free_husk(h: HuskUnit) -> void:
 	h.queue_free()
 
 
-# --- Mind / Mind's Hand Husk Re-Possession Counter-Hack (W49-COMBAT, B6 compliant) ----------
-# Strictly Palette.HAZARD (#FF5A3C) 1.0 s takeover telegraph + floating takeover node (NEVER purple).
-# Shooting or tapping the takeover node interrupts The Mind / Mind's Hand and overcharges the husk.
-
 func first_takeover_target(origin: Vector3, max_range := 26.0) -> HuskUnit:
 	var best: HuskUnit = null
 	var best_d := max_range
@@ -727,6 +688,7 @@ func active_takeovers() -> Array:
 
 
 func begin_takeover(h: HuskUnit, source: Node, duration := TAKEOVER_WARN_SECONDS) -> bool:
+	assert(TAKEOVER_COLOR == Palette.HAZARD)
 	if h == null or not is_instance_valid(h) or h.takeover_active or not husks.has(h):
 		return false
 	if source == null or not is_instance_valid(source):
@@ -750,7 +712,6 @@ func interrupt_takeover(h: HuskUnit, by := "tap") -> bool:
 	var node_pos := h.takeover_node_pos
 	h.clear_takeover()
 	takeovers_interrupted += 1
-	# Overcharge the husk: boosted damage, speed, attack rate, and refreshed 12.0 s shift.
 	h.overcharged = true
 	h.overcharge_left = maxf(h.overcharge_left, TAKEOVER_OVERCHARGE_SECONDS)
 	h.overclock_left = maxf(h.overclock_left, TAKEOVER_OVERCHARGE_SECONDS)
@@ -781,7 +742,6 @@ func _build_takeover_visual(h: HuskUnit, source: Node) -> Node3D:
 	root_vis.name = "MindTakeoverTelegraph"
 	root_vis.set_meta("color", TAKEOVER_COLOR)
 	root_vis.set_meta("warn_seconds", h.takeover_duration)
-	# Strictly Palette.HAZARD #FF5A3C — NEVER purple beam or grid (B6).
 	var ring := MeshInstance3D.new()
 	ring.name = "TakeoverRing"
 	var torus := TorusMesh.new()
@@ -847,7 +807,6 @@ func _step_takeover(h: HuskUnit, delta: float, ball_pos: Vector3) -> bool:
 		h.clear_takeover()
 		return false
 	h.takeover_node_pos = _takeover_node_at(h)
-	# Ball tap / ram through the takeover node interrupts The Mind and overcharges the husk.
 	if ball_pos.is_finite():
 		var dist3 := ball_pos.distance_to(h.takeover_node_pos)
 		var flat_d := Vector2(ball_pos.x - h.takeover_node_pos.x, ball_pos.z - h.takeover_node_pos.z).length()

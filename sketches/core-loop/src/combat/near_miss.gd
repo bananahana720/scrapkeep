@@ -3,20 +3,7 @@ extends Node
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 
-# The dodge read (playtest entry 8: "I don't know if I was dodging"). It watches every
-# committed hostile threat (the "threat" group: combat's telegraphs and the boss's
-# hazards) through the threat's own contains(), the same test its damage uses, and
-# publishes near_miss when the ball was inside while the threat warned and outside when
-# it landed, or left within the grace without being hurt. It reads and publishes; it
-# never changes an outcome.
-#
-# The same watch answers the question before the landing: standing_in() is how far along
-# the furthest warning the ball stands in has run, for the HUD's mark over the ball
-# (ui/danger_mark.gd). A floor mark cannot say "you are in me" to a camera inside it. And
-# escape() is the way out of that same warning, for the ground paint (W1-05).
-
 var events
-# The ball's position; combat points it at the real ball, a test at a scripted point.
 var ball: Callable
 var grace := float(EventKinds.juice("near_miss").get("grace_ms", 250)) / 1000.0
 var fired := 0
@@ -40,37 +27,22 @@ func _physics_process(delta: float) -> void:
 	step(delta)
 
 
-# How far along the furthest warning the ball stands in has run, 0 to 1, as of the last
-# step, or -1 when it stands in none: the ball is inside a threat that has not landed.
 func standing_in() -> float:
 	return _standing
 
 
-# The way out of the warning the ball stands in, as of the last step: {dir, metres, run, source}, the
-# flat unit way to its nearest edge, how far that edge is and how far the warning has run; {}
-# when it stands in none. The ground paint (presentation/way_out_paint.gd) draws it on the floor.
 func escape() -> Dictionary:
 	return _escape
 
 
-# Where the attack comes from, for the danger mark's pointer (PF-16: the mark said "you are in
-# danger" and not "from there"): a shell's launch point, else the committed centre, which is a
-# lane's start and a ring's middle.
 static func source_of(d: Dictionary) -> Vector3:
 	return d.get("launch", d.get("centre", Vector3.ZERO))
 
 
-# The shortest way out of a warning for a ball at `at`, flat and unit length, from its committed
-# shape (the descriptor its damage reads): a ring or wave outward, a band (a ring with a hole)
-# inward or outward, a wedge also across its nearer side, a lane sideways or off either end.
-# Zero when the shape gives no way (the ball on a ring's very centre still gets one: outward
-# along the ring's own first edge).
 static func way_out(d: Dictionary, at: Vector3) -> Vector3:
 	return way_out_reach(d, at)["dir"]
 
 
-# The same way out with how far it runs: {dir, metres}, metres the flat distance from `at` to
-# that nearest edge (0 when there is no way).
 static func way_out_reach(d: Dictionary, at: Vector3) -> Dictionary:
 	var centre: Vector3 = d.get("centre", at)
 	var flat := Vector3(at.x - centre.x, 0.0, at.z - centre.z)
@@ -90,8 +62,6 @@ static func way_out_reach(d: Dictionary, at: Vector3) -> Dictionary:
 			var a1 := float(d.get("a1", TAU))
 			if a1 - a0 < TAU - 0.01 and r > 0.01:
 				var angle := atan2(flat.z, flat.x)
-				# Across a side: straight at the side's edge line, the shortest way over it, while the
-				# ball is within a right angle of that side (a wide sector's far side is no way out).
 				for edge in [a0, a1]:
 					var off := wrapf(angle - edge, -PI, PI)
 					if absf(off) >= PI * 0.5:
@@ -112,7 +82,6 @@ static func way_out_reach(d: Dictionary, at: Vector3) -> Dictionary:
 			if float(d.get("length", 0.0)) - along < best:
 				best = float(d.get("length", 0.0)) - along
 				way = dir
-			# A lane reaches `back` metres behind its start (hazard.gd: along >= -back).
 			if along + float(d.get("back", 0.0)) < best:
 				best = along + float(d.get("back", 0.0))
 				way = -dir
@@ -125,7 +94,6 @@ func step(delta: float) -> void:
 	_clock += delta
 	_standing = -1.0
 	_escape = {}
-	# A hit this tick counts from this tick, whichever ran first, the attack or this watch.
 	if _hit_pending:
 		_hit_pending = false
 		_last_hit = _clock
@@ -147,7 +115,6 @@ func step(delta: float) -> void:
 			continue
 		var inside: bool = node.contains(at)
 		if w["resolved"] < 0.0:
-			# One read of the committed numbers serves every test below this tick.
 			var d: Dictionary = node.descriptor()
 			if _landed(node, at, d):
 				_resolve(id, inside, at)
@@ -155,9 +122,6 @@ func step(delta: float) -> void:
 				if not w["entered"]:
 					w["entered_at"] = _clock
 				w["entered"] = true
-				# An air-only mark (the netcaster's net) catches only a ball off the ground, and
-				# its answer is to stay down: a mark that says "get out or jump" would say the
-				# wrong thing, so it raises none.
 				if not bool(d.get("air", false)):
 					var ran := _run_of(node, at, d)
 					if ran >= _standing:
@@ -175,16 +139,9 @@ func step(delta: float) -> void:
 	_hold_body_runs(at)
 
 
-# A crew lane whose body runs it after the warning ends (the chaser's lunge, the miniboss's charge,
-# telegraph.gd run_body) is judged exactly as any other lane above: it lands, and a near miss is
-# paid, when the warning ends. But the ball standing in it is still in danger until the body's
-# reach covers it, so that stretch keeps the mark and the way out up (PF-16). Display only.
 func _hold_body_runs(at: Vector3) -> void:
 	for id in _watch.keys():
 		var node: Node = _watch[id]["node"]
-		# Done watches stay: a lunge outlasts the grace, and a ball that steps in after the warning
-		# ended has no open watch. Only a lane that takes run_body can carry a body, so the rest
-		# build no descriptor.
 		if not is_instance_valid(node) or not node.has_method("run_body"):
 			continue
 		var d: Dictionary = node.descriptor()
@@ -198,9 +155,6 @@ func _hold_body_runs(at: Vector3) -> void:
 		_escape["source"] = source_of(d)
 
 
-# Whether a running body's reach covers the ball: the flat distance from the body's centre to the
-# ball is within the reach its own hit test uses (a ball off the lane's axis is reached later than
-# one on it), or the body has run past the ball.
 static func _body_arrived(at: Vector3, d: Dictionary) -> bool:
 	var along := _lane_along(at, d)
 	var body := float(d["body_m"])
@@ -218,8 +172,6 @@ static func _landed(node: Node, at: Vector3, d := {}) -> bool:
 		d = node.descriptor()
 	if _front_wave(node, d):
 		return node.is_spent() or node.front_radius() - Threat.WAVE_EDGE > _flat_from(node, at, d)
-	# A lane with a running front (Brindle's charge) lands for the ball once its front has
-	# reached the ball, not when it goes live: the mark over the ball stays up until the hull arrives.
 	if d.has("front_m") and bool(d.get("live", false)):
 		return float(d["front_m"]) >= _lane_along(at, d)
 	return bool(d.get("live", false)) or float(d.get("progress", 0.0)) >= 1.0
@@ -231,18 +183,12 @@ static func _lane_along(at: Vector3, d: Dictionary) -> float:
 	return Vector3(at.x - c.x, 0.0, at.z - c.z).dot(Vector3(dir.x, 0.0, dir.z).normalized())
 
 
-# A WAVE telegraph (telegraph.gd) hurts only on its running front, so contains() is false
-# all through the warning (F003). Its watch reads the front instead: the ball is in while
-# it stands inside the ring and the front has not run past it, and the wave lands for the
-# ball once the front has run past it or the wave is spent.
 static func _front_wave(node: Node, d := {}) -> bool:
 	if not (node.has_method("front_radius") and node.has_method("is_spent")):
 		return false
 	return int((d if not d.is_empty() else node.descriptor()).get("type", -1)) == Threat.Type.WAVE
 
 
-# How far a warning has run for a ball at `at`: its progress, and for a front wave half for
-# the arming and half for the front's run from the centre out to the ball.
 static func _run_of(node: Node, at: Vector3, d: Dictionary) -> float:
 	var progress := clampf(float(d.get("progress", 0.0)), 0.0, 1.0)
 	if not _front_wave(node, d):
@@ -281,8 +227,6 @@ func _resolve(id: int, inside: bool, at: Vector3) -> void:
 	if not w["entered"]:
 		w["done"] = true
 		return
-	# A front wave or a running lane (Brindle's ram) lands after its front reached the ball, so a
-	# hit since the ball was in already came from it.
 	if _runs_front(w["node"]) and _last_hit >= float(w.get("entered_at", INF)):
 		w["done"] = true
 		return
@@ -291,7 +235,6 @@ func _resolve(id: int, inside: bool, at: Vector3) -> void:
 		_fire(id, at)
 
 
-# A threat freed in the tick it landed still counts, judged where the ball is now.
 func _on_exiting(id: int) -> void:
 	if not _watch.has(id):
 		return
