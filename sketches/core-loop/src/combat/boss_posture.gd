@@ -49,6 +49,8 @@ var drain_delay := DRAIN_DELAY
 var drain_rate := DRAIN_RATE
 # Set by a mounted driver before step; zero keeps the ordinary idle clock and drain.
 var contact_drain_delay := 0.0
+# Multiplier on drain_rate set by a mounted driver (e.g. 0.0 while a hoisted hive is out of floor reach).
+var drain_rate_scale := 1.0
 var stagger_seconds := STAGGER_SECONDS
 var shatter_tier := SHATTER_TIER
 var curve := 1.0
@@ -215,10 +217,12 @@ func step(delta: float) -> void:
 	if contact_drain_delay > 0.0:
 		idle = 0.0
 		return
+	if drain_rate_scale <= 0.0:
+		return
 	idle += delta
 	var draining := minf(delta, idle - drain_delay)
 	if draining > 0.0:
-		posture = maxf(0.0, posture - drain_rate * draining)
+		posture = maxf(0.0, posture - drain_rate * drain_rate_scale * draining)
 
 
 func _end_stagger() -> void:

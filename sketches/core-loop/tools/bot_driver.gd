@@ -2947,11 +2947,14 @@ func _anchor_fight(target: Node3D, short: bool, delta: float) -> void:
 	_goal = "latch %s%s" % [target.get("kind"), " finish" if finish else ""]
 	if not kit.hooked:
 		_anchor_bite(target, ball)
-	# From the ground the camera looks up about 30 degrees at most: wait out from under the body.
+	# From the ground the camera looks up about 30 degrees at most: wait out from under the body,
+	# while staying inside LATCH_REACH in 3D so high-dwell headframe hardpoints stay bittable (PF-42).
 	var away := Vector3(ball.x - at.x, 0.0, ball.z - at.z)
 	if away.length() < 0.5:
 		away = Vector3.FORWARD
-	var standoff := clampf((at.y - ball.y) * LATCH_STANDOFF, LINE_FINISH_STANDOFF if finish else 0.0, LATCH_STANDOFF_MAX)
+	var dy := maxf(0.0, at.y - ball.y)
+	var reach_cap := sqrt(maxf(0.0, (LATCH_REACH - 3.0) * (LATCH_REACH - 3.0) - dy * dy))
+	var standoff := clampf(dy * LATCH_STANDOFF, LINE_FINISH_STANDOFF if finish else 0.0, minf(LATCH_STANDOFF_MAX, reach_cap))
 	_act(at + away.normalized() * standoff, target, delta, target)
 
 
@@ -2995,9 +2998,19 @@ func _anchor_open(target: Node3D, short: bool, ball: Vector3, delta: float) -> v
 	var point := _open_point(target)
 	var grounded: bool = game.player.state.grounded
 	var spent: bool = _drop_jumped and not grounded and game.player.state.air_actions <= 0 and game.player.state.velocity.y < 0.0
-	# A point beyond the jump's reach (the park stage-3 Warden staggers on a floor 7 to 15 m over
-	# the ball's ground) is bitten from where the ball is.
+	# A point beyond the jump's reach (a staggered hive above the ball's ground) is bitten from where the ball is.
 	var beyond_jump := point.y - ball.y > DROP_REACH_UP
+	# On an elevated finisher deck (the pit's tipple deck, PF-42): launch off the lip toward the open
+	# queen and bite from above for the tipple-drop finisher.
+	var high_deck := grounded and ball.y > point.y + LEVEL_BAND
+	if high_deck:
+		_act(point, target, delta, target)
+		_goal = "tipple drop"
+		if _flat(ball, point) <= 22.0 and game.player.verb_ready("jump"):
+			source.press["jump_pressed"] = true
+			_drop_jumped = true
+		_anchor_bite(target, ball)
+		return
 	var bite := (not grounded and ball.y > point.y + DROP_ABOVE) or spent or (grounded and _drop_jumped) or beyond_jump
 	_ground_fight(target, short, delta)
 	_goal = "drop climb"

@@ -3,6 +3,7 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
+const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 # The swarm remnant's per-kind driver (unit KF3, design-v3/wardens/swarm.md sections 3 and 4).
 # warden.gd loads it for every park Warden of the swarm family (spec "harpoon_anchor": true,
@@ -42,6 +43,8 @@ const CYCLE := 2.0 * (DWELL + MOVE)
 const RISE := 30.0
 const BRAKE_DROP := 0.9
 const RIDE_MIN := 1.0
+# Height above the ground under the hive at which floor rams can no longer reach it (PF-42).
+const HEADFRAME_FLOOR_REACH := 5.0
 # The ball must still be rising at least this fast at the stop to be thrown.
 const THROW_SPEED := 5.0
 const POOL_STEP := 5.0
@@ -77,12 +80,14 @@ var pool_centre := Vector3.ZERO
 var pool_radius := POOL_RADIUS
 var pool_floor := 0.0
 var pool_target := 0.0
+var _pool_base := 0.0
 var swell_left := -1.0
 var held := 0.0
 var swells := 0
 var lifts := 0
 var _pool_ready := false
 var _slab: Node3D
+var _post_break_target = null
 
 # The lamp guard.
 var lamp_pays := 0
@@ -167,10 +172,14 @@ func step(warden, delta: float) -> void:
 # --- The hoist ride ------------------------------------------------------------------
 
 func _step_hoist(warden, delta: float) -> void:
+	var lined: bool = warden.lined_hardpoint() >= 0
+	if warden.get("_posture") != null:
+		var engaged_in_reach: bool = warden.target != null and warden._flat_to_ball().length() <= warden.reach
+		var out_of_floor_reach := _headframe_out_of_floor_reach(warden)
+		warden._posture.drain_rate_scale = 0.0 if (out_of_floor_reach and not lined and engaged_in_reach) else 1.0
 	if dropping:
 		_ride = 0.0
 		return
-	var lined: bool = warden.lined_hardpoint() >= 0
 	if clock > DWELL and clock <= DWELL + MOVE and _prev_clock >= DWELL:
 		_ride = _ride + delta if lined else 0.0
 		return
@@ -178,6 +187,17 @@ func _step_hoist(warden, delta: float) -> void:
 	if stopped and lined and _ride >= RIDE_MIN:
 		_throw(warden)
 	_ride = 0.0
+
+
+func _headframe_out_of_floor_reach(warden) -> bool:
+	if height > HEADFRAME_FLOOR_REACH:
+		return true
+	var terrain = warden.get("terrain")
+	if terrain != null and terrain.has_method("height"):
+		var floor_y: float = terrain.height(warden.global_position.x, warden.global_position.z)
+		if warden.global_position.y - floor_y > HEADFRAME_FLOOR_REACH:
+			return true
+	return false
 
 
 func _throw(warden) -> void:
@@ -201,6 +221,7 @@ func set_pool(centre: Vector3, floor_y: float, radius := POOL_RADIUS) -> void:
 	pool_centre = centre
 	pool_floor = floor_y
 	pool_target = floor_y
+	_pool_base = floor_y
 	pool_radius = radius
 	_pool_ready = true
 	_pending_slab = true
@@ -218,6 +239,7 @@ func _ready_pool(warden) -> void:
 		pool_centre = centre if centre is Vector3 else warden.home + POOL_OFFSET
 		pool_floor = float(spec.get("pool_floor", warden.home.y - POOL_BELOW_NEST))
 		pool_target = pool_floor
+		_pool_base = pool_floor
 		pool_centre.y = pool_floor
 		_pool_ready = true
 	_pending_slab = false
@@ -233,6 +255,21 @@ static func _vec(value):
 	if value is Array and value.size() == 3:
 		return Vector3(float(value[0]), float(value[1]), float(value[2]))
 	return null
+
+
+class _PostBreakPoolFlood extends Node:
+	var driver
+
+	func _physics_process(delta: float) -> void:
+		if driver == null or not is_instance_valid(driver._slab):
+			driver = null
+			queue_free()
+			return
+		driver._step_pool_rise(driver._post_break_target, delta)
+		if driver.swell_left < 0.0 and driver.pool_floor >= driver.pool_target:
+			driver._post_break_target = null
+			driver = null
+			queue_free()
 
 
 func _build_slab(warden) -> void:
@@ -263,16 +300,54 @@ func _build_slab(warden) -> void:
 	parent.add_child(body)
 	body.global_position = Vector3(pool_centre.x, pool_floor - POOL_THICKNESS * 0.5, pool_centre.z)
 	_slab = body
+	# PF-43: When the Warden exits because it was broken (chunks_left == 0), keep SwarmPoolFloor
+	# alive so the final chunk floods pool_floor flush to gallery_ring (y -100) and free it on
+	# stage unload instead. Non-break exits (stage unload before break, retry, or mock Wardens
+	# without chunks_left) still free the slab immediately so zero leaks occur.
 	SignalLifetime.listen(body, warden.tree_exiting, func():
-		if is_instance_valid(body):
-			body.queue_free())
+		if not is_instance_valid(body):
+			return
+		var broken: bool = is_instance_valid(warden) and warden.has_method("chunks_left") and int(warden.chunks_left()) <= 0
+		if not broken:
+			body.queue_free()
+			return
+		_persist_slab(warden, body))
 
 
-func on_chunk_lost(warden, _left: int) -> void:
+func _persist_slab(warden, body: Node3D) -> void:
+	pool_target = maxf(pool_target, _pool_base + float(BossPosture.CHUNKS) * POOL_STEP)
+	_post_break_target = warden.get("target")
+	var flood := _PostBreakPoolFlood.new()
+	flood.name = "PostBreakPoolFlood"
+	flood.driver = self
+	body.add_child(flood)
+	var fleet = warden.get("fleet")
+	if fleet != null and fleet.has_method("events"):
+		var events = fleet.events()
+		if events != null:
+			if events.has_signal("stage_content_cleared"):
+				SignalLifetime.listen(body, events.stage_content_cleared, func(_reason = ""):
+					if is_instance_valid(body):
+						body.queue_free())
+			if events.has_signal("stage_entered"):
+				SignalLifetime.listen(body, events.stage_entered, func(_next_stage = 0, _retry = false):
+					if is_instance_valid(body):
+						body.queue_free())
+	var terrain = warden.get("terrain")
+	var own_stage := int(warden.get("stage")) if warden.get("stage") != null else -1
+	if terrain != null and terrain.has_signal("stage_freed"):
+		SignalLifetime.listen(body, terrain.stage_freed, func(freed_stage: int):
+			if (own_stage < 0 or freed_stage == own_stage) and is_instance_valid(body):
+				body.queue_free())
+
+
+func on_chunk_lost(warden, left: int) -> void:
 	if warden.mounting != SINKHOLE:
 		return
 	_ready_pool(warden)
-	pool_target += POOL_STEP
+	var lost_total := clampi(BossPosture.CHUNKS - maxi(0, left), 1, BossPosture.CHUNKS)
+	var ceiling := _pool_base + float(BossPosture.CHUNKS) * POOL_STEP
+	pool_target = clampf(maxf(pool_target + POOL_STEP, _pool_base + float(lost_total) * POOL_STEP), _pool_base, ceiling)
 	swell_left = SWELL_SECONDS
 	swells += 1
 	_fact(warden, SWELL_FACT, Vector3(pool_centre.x, pool_floor, pool_centre.z))
@@ -280,6 +355,10 @@ func on_chunk_lost(warden, _left: int) -> void:
 
 func _step_pool(warden, delta: float) -> void:
 	_ready_pool(warden)
+	_step_pool_rise(warden.target, delta)
+
+
+func _step_pool_rise(target, delta: float) -> void:
 	if swell_left >= 0.0:
 		swell_left -= delta
 		if swell_left > 0.0:
@@ -288,10 +367,10 @@ func _step_pool(warden, delta: float) -> void:
 	if pool_floor >= pool_target:
 		held = 0.0
 		return
-	if _ball_on_pool(warden):
+	if _ball_on_pool_target(target):
 		held += delta
 		if held >= HOLD_FALLBACK:
-			_lift(warden, delta)
+			_lift_target(target, delta)
 			held = 0.0
 		return
 	held = 0.0
@@ -306,8 +385,11 @@ func swell_fraction() -> float:
 
 
 func _ball_on_pool(warden) -> bool:
-	var target = warden.target
-	if target == null:
+	return _ball_on_pool_target(warden.target)
+
+
+func _ball_on_pool_target(target) -> bool:
+	if target == null or not is_instance_valid(target):
 		return false
 	var state = target.get("state")
 	if state == null or not state.on_floor():
@@ -319,8 +401,11 @@ func _ball_on_pool(warden) -> bool:
 
 # The fallback: the swell pops a ball that would not leave the floor, straight up, as the pulse does.
 func _lift(warden, delta: float) -> void:
-	var target = warden.target
-	if target != null and target.has_method("crowd_control") \
+	_lift_target(warden.target, delta)
+
+
+func _lift_target(target, delta: float) -> void:
+	if target != null and is_instance_valid(target) and target.has_method("crowd_control") \
 			and target.crowd_control("pool_swell", Vector3.UP * LIFT / maxf(delta, 0.0001)):
 		lifts += 1
 

@@ -1,27 +1,27 @@
 {
-  "bake_sha256": "af0a7625224b090f359ea72beed3fee2da6f47a5203d6b185eda63e655bb3201",
+  "bake_sha256": "178d232d08563dc9acd0841152e7b53304ae3dbea36c3f6e0a12a4deb9cec78c",
   "beacon_ok": true,
   "breaches": [],
-  "bytes": 946108,
-  "edges": 314851,
+  "bytes": 947088,
+  "edges": 314872,
   "first_failed": "",
   "flags": {
     "deck": 37,
     "door_ok": 39877,
     "line": 404,
     "open": 40420,
-    "sight_ok": 9661,
+    "sight_ok": 9677,
     "under": 18
   },
-  "full_visit_m": 1913,
-  "full_visit_ratio": "1.361",
-  "graph_sha256": "2f341082897b810eebf6ac98774dd6c7c32bb6c30f87d28fd6c18163aa225049",
+  "full_visit_m": 1906,
+  "full_visit_ratio": "1.356",
+  "graph_sha256": "c319951d54428625b6c11ee489bcb169e08c6fef0439b207381515ce3a90d425",
   "line_errors": [],
   "line_path_nodes": 175,
   "longest_est_m": 2038,
   "map": "park_sinkhole",
   "nodes": 40438,
-  "park_sha256": "cf301ecbf2e8119b0fb211bb95945ffc03b8e4c74423372605c92c02e10916c7",
+  "park_sha256": "3d4df816e6d4d57eddd50c92af0564a9df64267835fe1aa6674ffcbb72eea4d4",
   "pockets": [
     {
       "clear_ring": [],
@@ -131,7 +131,7 @@
       "site": "crosscut_drift"
     }
   ],
-  "reward_ratio": "0.832",
+  "reward_ratio": "0.833",
   "ride_edges": 51,
   "routes": {
     "bore_shaft": [],
@@ -164,13 +164,13 @@
   },
   "schema": "scrapkeep-park-graph/1",
   "spawn": {
-    "d_landmark": 1406,
+    "d_landmark": 1405,
     "farther_share": "0.008",
     "ok": true,
     "run": true
   },
-  "spawn_beacon_m": 1406,
-  "spawn_beacon_share": "0.690",
+  "spawn_beacon_m": 1405,
+  "spawn_beacon_share": "0.689",
   "stage_checked": [
     "beacon_ok",
     "spawn"
@@ -180,15 +180,23 @@
       "name": "full_visit_ratio",
       "ok": true,
       "target": "at most 3.0",
-      "value": 1.361
+      "value": 1.356
     }
   ],
-  "tool_sha256": "53ce9ae2ec1d853571c748cebaa79a6ac9a050d2af06a896522c4b175e617bf5",
+  "tool_sha256": "b09fdadd9beb4d2b40cf13cd29ee9b8bda2406c6eae871d127357c472129d115",
   "zones": {
     "anchors": [
       {
+        "cost": 1377.7,
+        "d_landmark": 11.4,
+        "name": "caisson_exit_ramp_e",
+        "on_route": true,
+        "rank": 0,
+        "viable": false
+      },
+      {
         "cost": 1292.7,
-        "d_landmark": 307.2,
+        "d_landmark": 307.0,
         "name": "bore_apron",
         "on_route": false,
         "rank": 1,
@@ -196,7 +204,7 @@
       },
       {
         "cost": 1211.8,
-        "d_landmark": 459.8,
+        "d_landmark": 459.6,
         "name": "east_mesa",
         "on_route": false,
         "rank": 2,
@@ -204,7 +212,7 @@
       },
       {
         "cost": 1182.4,
-        "d_landmark": 368.8,
+        "d_landmark": 368.7,
         "name": "east_chamber",
         "on_route": false,
         "rank": 3,
@@ -212,7 +220,7 @@
       },
       {
         "cost": 918.7,
-        "d_landmark": 441.6,
+        "d_landmark": 441.5,
         "name": "west_chamber",
         "on_route": false,
         "rank": 4,
@@ -220,7 +228,7 @@
       },
       {
         "cost": 679.2,
-        "d_landmark": 654.1,
+        "d_landmark": 654.0,
         "name": "west_cenote",
         "on_route": false,
         "rank": 5,
@@ -228,7 +236,7 @@
       },
       {
         "cost": 661.1,
-        "d_landmark": 764.8,
+        "d_landmark": 764.7,
         "name": "trench_granaries",
         "on_route": false,
         "rank": 0,
@@ -236,18 +244,18 @@
       },
       {
         "cost": 581.6,
-        "d_landmark": 1001.4,
+        "d_landmark": 1001.6,
         "name": "crater_breach",
         "on_route": false,
         "rank": 0,
         "viable": false
       }
     ],
-    "count": 185,
+    "count": 187,
     "crossings": {
       "drop": 32,
       "ride": 41,
-      "walk": 460
+      "walk": 463
     },
     "hidden": [
       {
