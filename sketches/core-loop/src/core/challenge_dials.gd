@@ -35,8 +35,8 @@ const ZEROS6 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # 6 s gap (wave 39): at 5.1 s a ball rolling at cruise lost hull faster per second than one stopped (bot_fairness
 # F2 stop tax 1.05 pooled over six seeds, line 2.0; 3.71 at 6 s), so speed stopped being safety on the first
 # stage. A ladder rung multiplies on top of these.
-const PULSE_DAMAGE_W1 := [4.0, 4.5, 1.0, 1.0, 1.0, 1.0]
-const SLAG_DAMAGE_W1 := [1.0, 4.5, 1.0, 1.0, 1.0, 1.0]
+const PULSE_DAMAGE_W1 := [4.0, 5.0, 1.0, 1.0, 1.0, 1.0]
+const SLAG_DAMAGE_W1 := [1.0, 5.0, 1.0, 1.0, 1.0, 1.0]
 const PULSE_CYCLE_W1 := [1.0, 0.85, 1.0, 1.0, 1.0, 1.0]
 # The Wardens escalate (W1-67, gameplay critique finding 5): each chunk the Warden has lost multiplies its
 # pulse cycle by this, so the fight tightens as it goes (5.1 s, 4.59, 4.13, 3.72 on the flume). The tell is
@@ -64,7 +64,7 @@ const LEAD_CRUISE_W1 := [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 # (8 wins of 12 against the base's 4); at x2 with all seven units it reads 3 of 12, 7 deaths, 1.72 hits a
 # second before armour against the base's 1.47 and the same hull lost a run (178). Hit size again, for the
 # reason above. A stalled ball's boil now hits 40 (10 x strength 2 x 2).
-const MOBS_DAMAGE_W1 := [2.6, 2.5, 1.0, 1.0, 1.0, 1.0]
+const MOBS_DAMAGE_W1 := [2.6, 1.6, 1.0, 1.0, 1.0, 1.0]
 # Chasers run at 9 m/s, up from 4.8 (wave 37 unit D2, ruling cu call 4: faster than walking pace,
 # slower than cruise). A ball that stops or dawdles is run down; a ball at cruise (14 m/s) is never caught by
 # running. The lunge, its lane and its wind-up are as they were. Stages 3 to 6 inherit the stage 2 baseline.
@@ -86,7 +86,7 @@ const DEFAULTS := {
 	# 30% of a 120 hull, and the fight asks for more dodges, not one-shot luck. Eight random-policy runs a side
 	# (seeds 2860 to 2867, PR 787): the worst minute at Brindle took a median 40% of max hull before and 71% after,
 	# against 76% to 79% at the dam Warden. Every run that reached Brindle cleared it.
-	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [2.5, 3.2, 2.5, 1.0],
+	"brindle.damage_mult": 1.0, "brindle.damage_by_phase": [2.0, 3.6, 2.0, 1.0],
 	"brindle.period_mult": 1.0, "brindle.period_by_phase": [0.6, 0.35, 0.5, 1.0],
 	"brindle.tell_mult": 1.0, "brindle.punish_mult": 1.0, "brindle.combo": 0.0,
 	# Fight phases (fight_phases.gd, Andrew 23 Oct 19:02Z): cued follow-ups after each lead attack, per

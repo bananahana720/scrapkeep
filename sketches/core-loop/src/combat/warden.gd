@@ -112,8 +112,8 @@ const MELTDOWN_SEAR_MAX := 600
 const MELTDOWN_JET_LENGTH := 32.0
 const MELTDOWN_JET_WIDTH := 4.5
 const MELTDOWN_JET_HEIGHT := 20.0
-const MELTDOWN_SPLASH_WARN := 1.25
-const MELTDOWN_SPLASH_PERIOD := 1.15
+const MELTDOWN_SPLASH_WARN := 1.20
+const MELTDOWN_SPLASH_PERIOD := 0.35
 # Meltdown overheat: once a mounted flume reactor has pulsed this many times without breaking,
 # its thermal vents erupt as wide radial molten rings around a slow ball (still >= TELL_FLOOR 0.6 s
 # and WARN_GAP 0.2 s, slow-only so cruising balls slip cleanly).
@@ -121,7 +121,7 @@ const MELTDOWN_OVERHEAT_PULSES := 5
 const MELTDOWN_OVERHEAT_RADIUS := 8.0
 const MELTDOWN_OVERHEAT_WARN := 0.72
 const MELTDOWN_OVERHEAT_PERIOD := 0.50
-const MELTDOWN_OVERHEAT_MULT := 1.25
+const MELTDOWN_OVERHEAT_MULT := 1.35
 const DAM_VENT_RADIUS := 6.5
 const DAM_VENT_HEIGHT := 12.0
 const DAM_VENT_WARN := 0.88

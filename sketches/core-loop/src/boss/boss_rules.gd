@@ -45,10 +45,10 @@ const REEL_STEAL_MAX := 700
 # armour (capped) before the hit lands, so overfed late-World-1 builds cannot shrug off 6+ hits.
 # Outside a reel, slow (< cruise) slag and charge hits still sear a smaller share so stopped balls
 # cannot face-tank with spilled scrap recovery (W46-S1, ruling cu).
-const REEL_SEAR_SHARE := 0.45
-const REEL_SEAR_MAX := 650
-const SLOW_SEAR_SHARE := 0.35
-const SLOW_SEAR_MAX := 450
+const REEL_SEAR_SHARE := 0.50
+const REEL_SEAR_MAX := 700
+const SLOW_SEAR_SHARE := 0.40
+const SLOW_SEAR_MAX := 500
 # Cruising balls (>= cruise) skim molten slag for a light finite graze instead of full melt+sear,
 # keeping World 1's speed-is-safety grammar while keeping stop_tax finite across every band pool.
 const SKIM_SLAG_MULT := 0.20
