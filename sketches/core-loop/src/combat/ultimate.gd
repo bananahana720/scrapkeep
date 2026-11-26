@@ -8,6 +8,7 @@ const RideRail := preload("res://src/world/ride_rail.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Stakes := preload("res://src/combat/stakes.gd")
+const BallTuning := preload("res://src/movement/tuning.gd")
 
 const IDLE := "idle"
 const WINDUP := "windup"
@@ -107,6 +108,7 @@ var _chunks := {}
 var _was_full := false
 var _fill_since := 0.0
 var _record_fill := 0.0
+var _ult_buffer := 0.0
 
 
 func setup(ctx_ref, combat_ref) -> void:
@@ -405,6 +407,7 @@ func start(p: Dictionary) -> void:
 		_outpost_second = false
 	_plan = p
 	last_plan = p
+	_ult_buffer = 0.0
 	meter.locked = true
 	_was_full = false
 	_phase = WINDUP
@@ -466,6 +469,7 @@ func _plant() -> void:
 func recall() -> void:
 	if _phase != WINDUP:
 		return
+	_ult_buffer = 0.0
 	meter.locked = false
 	meter.refund(UltimateMeter.CAP)
 	_was_full = true
@@ -484,6 +488,7 @@ func bail() -> void:
 
 func _abort(reason: String) -> void:
 	_outpost_encore = false
+	_ult_buffer = 0.0
 	if _phase == IDLE:
 		return
 	if _phase == RECOVER:
@@ -507,22 +512,54 @@ func _physics_process(delta: float) -> void:
 	step(delta)
 
 
+func _ult_bufferable() -> bool:
+	if ctx.flow == null or not ctx.flow.in_play() or ctx.player.frozen():
+		return false
+	if ctx.flow.state_name() == "launch":
+		return meter.full()
+	if ctx.terrain != null and ctx.terrain.has_method("in_bay") and ctx.terrain.in_bay(ctx.player.ball_position()):
+		return false
+	return not meter.full() and UltimateMeter.CAP - meter.value <= 5.0
+
+
 func step(delta: float) -> void:
 	_clock += delta
 	var player = ctx.player
 	var intent = player.intent
+	if intent.cancel_pressed:
+		_ult_buffer = 0.0
 	if _phase == IDLE:
 		if _fills():
 			meter.tick(delta, player.speed_tier())
 			_check_full()
+		var had_buffer := _ult_buffer > 0.0
+		if had_buffer:
+			_ult_buffer = maxf(0.0, _ult_buffer - delta)
 		if intent.ultimate_pressed:
-			press()
+			if can_start() == "":
+				_ult_buffer = 0.0
+				press()
+			elif _ult_bufferable():
+				_ult_buffer = BallTuning.ACTION_BUFFER_S
+			else:
+				press()
+		elif had_buffer:
+			if can_start() == "":
+				_ult_buffer = 0.0
+				press()
+			elif _ult_buffer <= 0.0 and ctx.flow != null and ctx.flow.in_play():
+				press()
 		return
+	if _ult_buffer > 0.0:
+		_ult_buffer = maxf(0.0, _ult_buffer - delta)
 	if intent.ultimate_pressed:
 		if _phase == WINDUP:
 			recall()
 			return
-		ctx.events.verb_failed.emit("ultimate", "busy", player.ball_position())
+		if _phase == RECOVER and _left <= BallTuning.ACTION_BUFFER_S + 0.0001:
+			_ult_buffer = BallTuning.ACTION_BUFFER_S
+		else:
+			ctx.events.verb_failed.emit("ultimate", "busy", player.ball_position())
 	match _phase:
 		WINDUP:
 			_left -= delta
@@ -540,6 +577,9 @@ func step(delta: float) -> void:
 			if _left <= 0.0:
 				_phase = IDLE
 				meter.locked = false
+				if _ult_buffer > 0.0 and can_start() == "":
+					_ult_buffer = 0.0
+					press()
 
 
 func _begin_flight() -> void:

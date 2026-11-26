@@ -174,6 +174,9 @@ var _shred := {}
 var _guards := {}
 
 var _specials := {}
+var _special_buffer := 0.0
+var _line_buffer := 0.0
+var _active_buffer := 0.0
 var relic_swaps
 var _line_skills := {}
 var _line_load := {}
@@ -469,12 +472,14 @@ func setup(ctx_ref) -> void:
 	ctx.events.run_ended.connect(func(_won: bool):
 		_clear_devices()
 		_clear_cannon_paint()
+		_clear_input_buffers()
 		_reset_w47_h1_state()
 		_reset_w47_h2_state()
 		weapon_driver.reset())
 	ctx.events.flow_changed.connect(func(state_name: String):
 		if state_name in ["summary", "title"]:
 			_clear_cannon_paint()
+			_clear_input_buffers()
 			_reset_w47_h1_state()
 			_reset_w47_h2_state()
 			weapon_driver.reset())
@@ -506,6 +511,7 @@ func setup(ctx_ref) -> void:
 		_reset_cards()
 		_line_load = {}
 		_cast_pending = {}
+		_clear_input_buffers()
 		_bite_pending = false
 		_pike_count = 0
 		_pike_last = -INF
@@ -543,6 +549,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.mounted.connect(_on_mounted)
 	ctx.events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
 		weapon_driver.interrupt(WeaponDriver.INTERRUPT_ULTIMATE)
+		_clear_input_buffers()
 		_clear_cannon_paint()
 		var wg = ctx.player.abilities.gauge(AbilityState.WEAPON)
 		if wg != null and wg.cancel():
@@ -1481,6 +1488,7 @@ func _physics_process(delta: float) -> void:
 	_step_cast()
 	_step_special(intent, delta)
 	_step_line(intent, delta)
+	_step_active_buffer(intent, delta)
 	_step_cannon(delta)
 	var enemies := get_tree().get_nodes_in_group("enemy")
 	_step_verb_items(enemies)
@@ -2497,7 +2505,77 @@ func _knob(name: String):
 	return ctx.player.tree.knob(name)
 
 
+func _clear_input_buffers() -> void:
+	_special_buffer = 0.0
+	_line_buffer = 0.0
+	_active_buffer = 0.0
+
+
+func _slot_ready_wait(abilities, slot_name: String) -> float:
+	var s = abilities.slot(slot_name)
+	if not s.available:
+		return INF
+	var wait := 0.0
+	if abilities.silenced(slot_name):
+		wait = maxf(wait, float(abilities.jam_left))
+	if abilities.casting != AbilityState.UNSTARTED and abilities.casting != slot_name:
+		wait = maxf(wait, float(abilities.cast_left))
+	var payer_name: String = abilities.pool_of(slot_name)
+	var payer = abilities.slot(payer_name)
+	if payer.is_pressure:
+		if payer.pressure_val + AbilityState.PRESSURE_EPS < 1.0:
+			return INF
+	elif payer.charges <= 0:
+		var cd: float = abilities.cooldown_of(payer_name)
+		if cd <= 0.0:
+			return INF
+		wait = maxf(wait, maxf(0.0, cd - payer.recharge))
+	return wait
+
+
+func _step_active_buffer(intent, delta: float) -> void:
+	if actives == null or not actives.enabled() or actives.active_id == "":
+		_active_buffer = 0.0
+		return
+	var had_buffer := _active_buffer > 0.0
+	if had_buffer:
+		_active_buffer = maxf(0.0, _active_buffer - delta)
+	if intent.cancel_pressed:
+		_active_buffer = 0.0
+		had_buffer = false
+	var row: Dictionary = actives.row_of(actives.active_id)
+	var rate: float = ctx.tuning.mod("active_recharge") if ctx.tuning != null else 1.0
+	var recharge_s: float = float(row.get("recharge", 0.0))
+	var lock_wait: float = maxf(0.0, float(actives._locked) - delta)
+	var charge_wait := 0.0
+	if actives.charges < 1:
+		if recharge_s > 0.0 and rate > 0.0:
+			var prog_after: float = float(actives.progress) + delta * rate / recharge_s
+			charge_wait = 0.0 if prog_after >= 1.0 else (1.0 - prog_after) * recharge_s / rate
+		else:
+			charge_wait = INF
+	var ready_this_tick: bool = actives.winding <= 0.0 and lock_wait <= 0.0 and charge_wait <= 0.0
+	var wait_s: float = maxf(maxf(lock_wait, charge_wait), float(actives.winding) if actives.winding > 0.0 else 0.0)
+	if intent.active_pressed:
+		if ready_this_tick:
+			_active_buffer = 0.0
+			return
+		if wait_s <= BallTuning.ACTION_BUFFER_S + 0.0001:
+			_active_buffer = BallTuning.ACTION_BUFFER_S
+			intent.active_pressed = false
+		return
+	if had_buffer and ready_this_tick:
+		_active_buffer = 0.0
+		intent.active_pressed = true
+
+
 func _step_special(intent, delta: float) -> void:
+	var had_buffer := _special_buffer > 0.0
+	if had_buffer:
+		_special_buffer = maxf(0.0, _special_buffer - delta)
+	if intent.cancel_pressed:
+		_special_buffer = 0.0
+		had_buffer = false
 	var abilities = ctx.player.abilities
 	var kit = ctx.player.kit
 	var id: String = abilities.id_of(AbilityState.SPECIAL)
@@ -2508,23 +2586,42 @@ func _step_special(intent, delta: float) -> void:
 	if gauge == null:
 		if abilities.casting == AbilityState.SPECIAL:
 			if intent.special_pressed or intent.cancel_pressed:
+				_special_buffer = 0.0
 				var dropped: String = abilities.cancel_cast()
 				if dropped != "":
 					ctx.events.gauge_cancelled.emit(dropped, "cancel")
 			return
-		if row.has("tap") and intent.special_pressed:
-			_tap(AbilityState.SPECIAL, id, row["tap"], row.get("commit", Callable()))
+		if row.has("tap"):
+			if intent.special_pressed:
+				if abilities.ready(AbilityState.SPECIAL) and abilities.casting == AbilityState.UNSTARTED:
+					_special_buffer = 0.0
+					_tap(AbilityState.SPECIAL, id, row["tap"], row.get("commit", Callable()))
+				else:
+					var tap_wait := _slot_ready_wait(abilities, AbilityState.SPECIAL)
+					if tap_wait > 0.0 and tap_wait <= BallTuning.ACTION_BUFFER_S + 0.0001:
+						_special_buffer = BallTuning.ACTION_BUFFER_S
+					else:
+						_tap(AbilityState.SPECIAL, id, row["tap"], row.get("commit", Callable()))
+			elif had_buffer and abilities.ready(AbilityState.SPECIAL) and abilities.casting == AbilityState.UNSTARTED:
+				_special_buffer = 0.0
+				_tap(AbilityState.SPECIAL, id, row["tap"], row.get("commit", Callable()))
 		return
-	if not gauge.charging and intent.special_pressed and not abilities.ready(AbilityState.SPECIAL):
-		_refuse_cast(AbilityState.SPECIAL, "cooling")
 	var auto: bool = _knob("mounted_autogauge") and kit.mounted
 	if gauge.charging and (intent.special_pressed or intent.cancel_pressed):
+		_special_buffer = 0.0
 		gauge.cancel()
 		ctx.player.indicator.collapse("special")
 		ctx.events.gauge_cancelled.emit(id, "cancel")
 		return
-	if not gauge.charging and (intent.special_pressed or auto) and abilities.ready(AbilityState.SPECIAL) \
+	if not gauge.charging and intent.special_pressed and not abilities.ready(AbilityState.SPECIAL):
+		var wait := _slot_ready_wait(abilities, AbilityState.SPECIAL)
+		if wait > 0.0 and wait <= BallTuning.ACTION_BUFFER_S + 0.0001:
+			_special_buffer = BallTuning.ACTION_BUFFER_S
+		else:
+			_refuse_cast(AbilityState.SPECIAL, "cooling")
+	if not gauge.charging and (intent.special_pressed or had_buffer or auto) and abilities.ready(AbilityState.SPECIAL) \
 			and (not row.has("can") or row["can"].call()):
+		_special_buffer = 0.0
 		gauge.begin()
 		ctx.events.gauge_charging.emit(id)
 		if _knob("sprint_full_blast") and kit.sprinting:
@@ -3382,6 +3479,12 @@ func _bite_load() -> void:
 
 
 func _step_line(intent, delta: float) -> void:
+	var had_buffer := _line_buffer > 0.0
+	if had_buffer:
+		_line_buffer = maxf(0.0, _line_buffer - delta)
+	if intent.cancel_pressed:
+		_line_buffer = 0.0
+		had_buffer = false
 	var abilities = ctx.player.abilities
 	var kit = ctx.player.kit
 	if _bite_pending:
@@ -3404,13 +3507,28 @@ func _step_line(intent, delta: float) -> void:
 	var fraction := 1.0
 	if gauge != null:
 		if gauge.charging and (intent.line_pressed or intent.cancel_pressed):
+			_line_buffer = 0.0
 			gauge.cancel()
 			ctx.player.indicator.collapse(AbilityState.LINE)
 			ctx.events.gauge_cancelled.emit(id, "cancel")
 			return
-		if not gauge.charging and intent.line_pressed and _line_cast_ok():
-			gauge.begin()
-			ctx.events.gauge_charging.emit(id)
+		if not gauge.charging:
+			if intent.line_pressed:
+				if _line_load.is_empty() and abilities.ready(AbilityState.LINE):
+					_line_buffer = 0.0
+					gauge.begin()
+					ctx.events.gauge_charging.emit(id)
+				else:
+					var load_wait := float(_line_load["left"]) if not _line_load.is_empty() else 0.0
+					var wait := maxf(load_wait, _slot_ready_wait(abilities, AbilityState.LINE))
+					if wait > 0.0 and wait <= BallTuning.ACTION_BUFFER_S + 0.0001:
+						_line_buffer = BallTuning.ACTION_BUFFER_S
+					else:
+						_line_cast_ok()
+			elif had_buffer and _line_load.is_empty() and abilities.ready(AbilityState.LINE):
+				_line_buffer = 0.0
+				gauge.begin()
+				ctx.events.gauge_charging.emit(id)
 		if not gauge.charging:
 			ctx.player.indicator.clear(AbilityState.LINE)
 			return
@@ -3423,7 +3541,20 @@ func _step_line(intent, delta: float) -> void:
 			ctx.events.gauge_cancelled.emit(id, "blocked")
 			return
 		ctx.events.gauge_released.emit(id, fraction)
-	elif not intent.line_pressed or not _line_cast_ok():
+	elif intent.line_pressed:
+		if _line_load.is_empty() and abilities.ready(AbilityState.LINE):
+			_line_buffer = 0.0
+		else:
+			var load_wait := float(_line_load["left"]) if not _line_load.is_empty() else 0.0
+			var wait := maxf(load_wait, _slot_ready_wait(abilities, AbilityState.LINE))
+			if wait > 0.0 and wait <= BallTuning.ACTION_BUFFER_S + 0.0001:
+				_line_buffer = BallTuning.ACTION_BUFFER_S
+			else:
+				_line_cast_ok()
+			return
+	elif had_buffer and _line_load.is_empty() and abilities.ready(AbilityState.LINE):
+		_line_buffer = 0.0
+	else:
 		return
 	_cast_line(id, fraction)
 
@@ -5246,6 +5377,7 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 func _on_player_died() -> void:
 	_line_load = {}
 	_cast_pending = {}
+	_clear_input_buffers()
 	_bite_pending = false
 	_clear_verb_items()
 	_reset_w47_c2_state()
@@ -5275,6 +5407,7 @@ func _on_stage_content_cleared(_reason: String) -> void:
 
 func _start_attempt() -> void:
 	_clear_fight()
+	_clear_input_buffers()
 	_deferred_procs.clear()
 	_crushes.clear()
 	_shred.clear()

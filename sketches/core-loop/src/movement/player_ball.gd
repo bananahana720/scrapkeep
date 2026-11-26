@@ -638,7 +638,7 @@ func _physics_process(delta: float) -> void:
 	abilities.movement_key = _burst_key()
 	_read_mass()
 	_route_interact()
-	_read_grammar()
+	_read_grammar(delta)
 	abilities.tick(delta)
 	immune_left = maxf(0.0, immune_left - delta)
 	if kit.mounted and tree.knob("mounted_recharge") > 1.0:
@@ -659,6 +659,7 @@ func _physics_process(delta: float) -> void:
 	if redline.mode != Redline.OFF:
 		redline.tick(delta, state.tier, ball_position(), state.velocity.length())
 	_tick_chain(delta)
+	_try_buffered_harpoon()
 	_recheck_bow()
 	_tick_face_tags(delta)
 	_mark_slots()
@@ -871,21 +872,26 @@ func snap_slots(reason: String, latch := true) -> void:
 	events.slot_selected.emit(AbilityState.WEAPON, reason)
 
 
-func _read_grammar() -> void:
-	_read_shift()
+func _read_grammar(delta := 0.0) -> void:
+	_read_shift(delta)
 	if intent.harpoon_pressed and _charging():
 		intent.harpoon_pressed = false
 		intent.cancel_pressed = true
+		kit.harpoon_buffer = 0.0
+		kit.harpoon_buffer_reason = ""
 		snap_slots("cancel")
-	_read_ctrl()
-	if _frozen or not kit.on(Augments.GRAPPLE):
-		return
-	if intent.harpoon_pressed and not kit.hooked:
-		_press_harpoon()
-	elif intent.harpoon_released and kit.hooked:
+	if not _frozen and kit.on(Augments.GRAPPLE) and intent.harpoon_released and kit.hooked:
 		_fling()
 		_pole_exit()
 		release_grapple()
+	_read_ctrl(delta)
+	if _frozen or not kit.on(Augments.GRAPPLE):
+		kit.harpoon_buffer = 0.0
+		kit.harpoon_buffer_reason = ""
+		return
+	_step_harpoon_buffer(delta)
+	if intent.harpoon_pressed and not kit.hooked:
+		_press_harpoon()
 	if tree.knob("winch_mount") and kit.hooked and kit.winching and not kit.mounted \
 			and ball_position().distance_to(kit.anchor) <= Augments.MIN_ROPE + 2.5:
 		intent.mount_pressed = true
@@ -900,13 +906,23 @@ func _burst_pilot() -> bool:
 		or kit.on(Augments.RECOIL)
 
 
-func _read_shift() -> void:
+func _read_shift(delta := 0.0) -> void:
+	if delta > 0.0 and kit.movement_buffer > 0.0:
+		kit.movement_buffer = maxf(0.0, kit.movement_buffer - delta)
+	if intent.cancel_pressed or (kit.on(Augments.SPRINT) and intent.shift_released):
+		kit.movement_buffer = 0.0
 	if _burst_pilot():
-		intent.movement_pressed = intent.movement_pressed or (intent.shift_pressed and Harpoon.burst_ready(kit))
 		intent.movement_held = intent.movement_held or intent.shift_held
 		intent.movement_released = intent.movement_released or intent.shift_released
-		if intent.shift_pressed and not Harpoon.burst_ready(kit):
-			_fail("boost", "busy" if Augments.holding(kit) else "uncharged")
+		if intent.shift_pressed:
+			var wait: float = Harpoon.burst_wait(kit)
+			if wait <= 0.0:
+				kit.movement_buffer = 0.0
+				intent.movement_pressed = true
+			elif wait <= Tuning.ACTION_BUFFER_S + 0.0001:
+				kit.movement_buffer = Tuning.ACTION_BUFFER_S
+			else:
+				_fail("boost", "busy" if kit.mounted else "uncharged")
 	else:
 		intent.boost_pressed = intent.boost_pressed \
 				or (intent.shift_pressed and (state.boost_cooldown <= Tuning.BOOST_BUFFER or kit.plant_time > 0.0))
@@ -924,7 +940,7 @@ func verb_ready(verb: String) -> bool:
 	match verb:
 		"harpoon":
 			return not _frozen and kit.on(Augments.GRAPPLE) and not kit.hooked and not _charging() \
-					and not Augments.holding(kit) and _harpoon_refusal() == "" and chain.miss_left <= 0.0
+					and not kit.mounted and _harpoon_refusal() == "" and chain.miss_left <= 0.0
 		"interact":
 			if _frozen or kit.mounted:
 				return false
@@ -936,14 +952,14 @@ func verb_ready(verb: String) -> bool:
 				return false
 			if kit.mounted:
 				return true
-			return not Augments.holding(kit) and (state.grounded or state.coyote > 0.0 or state.air_actions > 0)
+			return not kit.mounted and (state.grounded or state.coyote > 0.0 or state.air_actions > 0 or kit.plant_time > 0.0)
 		"haul":
 			return not _frozen and not Augments.holding(kit) and kit.hooked \
 					and (not kit.on_body or (kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit)))
 		"boost":
 			if _burst_pilot():
 				return Harpoon.burst_ready(kit)
-			return state.boost_cooldown <= 0.0 and not Augments.holding(kit)
+			return state.boost_cooldown <= 0.0 and not kit.mounted
 	return false
 
 
@@ -957,24 +973,70 @@ func _harpoon_refusal() -> String:
 		return "rewinding"
 	if kit.aim.get("state", Augments.AIM_NONE) == Augments.AIM_NONE:
 		return "no_aim"
-	if Augments.holding(kit):
+	if kit.mounted:
 		return "busy"
 	return ""
 
 
-func _press_harpoon() -> void:
+func _harpoon_wait() -> float:
+	if kit.mounted:
+		return INF
+	return maxf(kit.rewind_left, chain.miss_left)
+
+
+func _emit_harpoon_refusal() -> void:
 	if chain.miss_left > 0.0:
 		_fail("harpoon", "cooldown")
 		return
 	var reason := _harpoon_refusal()
 	if reason == "":
-		grapple_to(kit.aim["point"], kit.aim["normal"], kit.aim.get("body"))
 		return
 	if not kit.hooked:
 		_emit_line("dry_fire", null, ball_position(), "", DRY_FIRE_HOLD)
 		if reason == "no_aim":
 			_publish_chain(chain.dry_fire(), null, ball_position())
 	_fail("harpoon", reason)
+
+
+func _try_buffered_harpoon() -> bool:
+	if kit.harpoon_buffer <= 0.0 or _frozen or kit.hooked or not kit.on(Augments.GRAPPLE) or _charging():
+		return false
+	if chain.miss_left > 0.0 or _harpoon_refusal() != "":
+		return false
+	kit.harpoon_buffer = 0.0
+	kit.harpoon_buffer_reason = ""
+	grapple_to(kit.aim["point"], kit.aim["normal"], kit.aim.get("body"))
+	return true
+
+
+func _step_harpoon_buffer(delta: float) -> void:
+	if intent.harpoon_released or intent.cancel_pressed or kit.hooked or _charging():
+		kit.harpoon_buffer = 0.0
+		kit.harpoon_buffer_reason = ""
+		return
+	if kit.harpoon_buffer <= 0.0:
+		return
+	if _try_buffered_harpoon():
+		return
+	kit.harpoon_buffer = maxf(0.0, kit.harpoon_buffer - delta)
+	if kit.harpoon_buffer <= 0.0:
+		kit.harpoon_buffer_reason = ""
+		if not intent.harpoon_pressed:
+			_emit_harpoon_refusal()
+
+
+func _press_harpoon() -> void:
+	if chain.miss_left <= 0.0 and _harpoon_refusal() == "":
+		kit.harpoon_buffer = 0.0
+		kit.harpoon_buffer_reason = ""
+		grapple_to(kit.aim["point"], kit.aim["normal"], kit.aim.get("body"))
+		return
+	var wait := _harpoon_wait()
+	if wait > 0.0 and wait <= Tuning.ACTION_BUFFER_S + 0.0001:
+		kit.harpoon_buffer = Tuning.ACTION_BUFFER_S
+		kit.harpoon_buffer_reason = "cooldown" if chain.miss_left > 0.0 else "rewinding"
+		return
+	_emit_harpoon_refusal()
 
 
 func _haul_refusal() -> String:
@@ -989,7 +1051,11 @@ func line_stands() -> bool:
 	return kit.hooked
 
 
-func _read_ctrl() -> void:
+func _read_ctrl(delta := 0.0) -> void:
+	if delta > 0.0 and kit.slam_buffer > 0.0:
+		kit.slam_buffer = maxf(0.0, kit.slam_buffer - delta)
+	if intent.cancel_pressed or _frozen or kit.mounted or in_set_piece():
+		kit.slam_buffer = 0.0
 	var edge: bool = intent.brake_held and not _brake_was_held
 	_brake_was_held = intent.brake_held
 	var on_body: bool = kit.hooked and kit.on_body
@@ -998,13 +1064,19 @@ func _read_ctrl() -> void:
 		if on_body and kit.line_state == Augments.LINE_LATCHED and Augments.holding(kit):
 			_fail("haul", "busy")
 		elif on_body and kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit):
+			kit.slam_buffer = 0.0
 			Augments.commit_smash(kit, tuning, _rigid.linear_velocity)
 		elif on_body and kit.line_state == Augments.LINE_LATCHED:
 			_fail("haul", _haul_refusal())
 		elif on_body:
 			_fail("haul", "committed")
-		elif not kit.hooked and _ctrl_idle():
+		elif kit.hooked:
+			if kit.on(Augments.SLAM) and not Augments.holding(kit) and not in_set_piece():
+				kit.slam_buffer = Tuning.SLAM_BUFFER_S
+		elif _ctrl_idle():
 			_fail("haul", "no_line")
+		elif kit.on(Augments.SLAM) and not Augments.holding(kit) and not in_set_piece():
+			kit.slam_buffer = Tuning.SLAM_BUFFER_S
 	if line_stands():
 		_ctrl_claimed = true
 	if not intent.brake_held:
@@ -1018,6 +1090,8 @@ func _ctrl_idle() -> bool:
 		return false
 	if not state.grounded:
 		return not kit.on(Augments.SLAM)
+	if kit.on(Augments.SLAM) and (state.jump_buffer > 0.0 or intent.jump_pressed or state.velocity.y > 0.5):
+		return false
 	return planar_velocity().length() <= REFUSE_REST
 
 
