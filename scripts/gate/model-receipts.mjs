@@ -20,9 +20,9 @@
 //
 // It refuses a checkout with uncommitted changes under the skill folder or sketches/core-loop/src, and names the
 // checked-out commit as the head. TLC is plain TLC (the skill's rewards-coverage.md command): java -XX:+UseParallelGC
-// -cp <jar> tlc2.TLC. The jar is --jar, else $TLA2TOOLS, else the pinned jar that the astack statechart skill's
-// `statechart install-tlc` puts in ${XDG_DATA_HOME:-~/.local/share}/astack/tlc. Java is $JAVA, else java on PATH. Each
-// run works in a new temp folder, so nothing is written beside the models.
+// -cp <jar> tlc2.TLC. The jar is --jar, else $TLA2TOOLS, else the pinned jar at
+// ${XDG_DATA_HOME:-~/.local/share}/tlc/tla2tools-<TLC_PIN>.jar (DEVICES.md says how to fetch it). Java is $JAVA,
+// else java on PATH. Each run works in a new temp folder, so nothing is written beside the models.
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
@@ -513,7 +513,7 @@ function git(root, args) {
 function findJar(arg) {
   const data = process.env.XDG_DATA_HOME || join(homedir(), ".local/share");
   return (
-    [arg, process.env.TLA2TOOLS, join(data, "astack/tlc", `tla2tools-${TLC_PIN}.jar`)].find(
+    [arg, process.env.TLA2TOOLS, join(data, "tlc", `tla2tools-${TLC_PIN}.jar`)].find(
       (p) => p && existsSync(p),
     ) ?? null
   );
@@ -606,7 +606,7 @@ function main(argv) {
       );
     if (!jar)
       console.error(
-        `model-receipts: no TLC jar; pass --jar, set TLA2TOOLS, or run the astack statechart skill's install-tlc (TLC ${TLC_PIN})`,
+        `model-receipts: no TLC jar; pass --jar, set TLA2TOOLS, or put TLC ${TLC_PIN} at ~/.local/share/tlc/tla2tools-${TLC_PIN}.jar (DEVICES.md)`,
       );
     return 2;
   }

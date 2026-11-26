@@ -14,9 +14,9 @@ Each directory here is one skill that Claude Code loads. Claude reaches it throu
 | `scrapkeep-verify-formal` | project | model-check the run flow and launch swipe under every interruption |
 | `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
 
-`reactive-model-loop` is a mirror. Since 2026-09-26 its canonical copy is the A stack plugin (`/home/andrew/.config/astack/plugin/skills/reactive-model-loop`), so every project on both hosts gets it. Change the A stack copy first, then copy it here byte for byte; `python /home/andrew/.config/astack/verify.py --project <this repo>` fails when the two differ.
+`reactive-model-loop` was a mirror of the retired A stack plugin's copy. Since ruling ep (26 November 2026) the copy here is the canonical one; pstack has no such skill, so change it here.
 
-The three `scrapkeep-verify-*` skills were made with the A stack's `create-verification-skill` (Andrew, 13 November 2026). Each has a `features/` map, one file per player-facing feature, and helper scripts under `scripts/`; `/astack:create-verification-skill maintain` audits a map against the source and the running app. `scrapkeep-verify` still picks which checks qualify a change; these three show a feature working.
+The three `scrapkeep-verify-*` skills were made with a `create-verification-skill` workflow (Andrew, 13 November 2026). Each has a `features/` map, one file per player-facing feature, and helper scripts under `scripts/`; `/pstack:maintain-verification-skill` audits a map against the source and the running app. `scrapkeep-verify` still picks which checks qualify a change; these three show a feature working.
 
 ## Decide whether it is a skill
 

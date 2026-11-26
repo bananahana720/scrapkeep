@@ -2,7 +2,7 @@
 
 `models/Rewards.tla` checks one promise in two parts: an earned reward is banked at most once, and it is never lost, through crashes, failed saves, two game processes on one profile and a run file that an older build left. This page names the code behind every variable and action. Line numbers are at the sync commit at the end of this page.
 
-Run it the same way as the run-flow model: `bash models/make-rewards-configs.sh` writes every `rewards-*.cfg`, and each config runs through the `astack:statechart` skill. A config with two game processes checks one rule and has millions of states, so run it with plain TLC and several workers: `java -XX:+UseParallelGC -cp <tla2tools jar> tlc2.TLC -workers 4 -config rewards-<name>.cfg Rewards.tla`. The reach configs hold several probes; run each probe on its own (TLC stops at the first break, and `-continue` crashed TLC 1.7.4 on `rewards-reach`).
+Run it the same way as the run-flow model: `bash models/make-rewards-configs.sh` writes every `rewards-*.cfg`, and each config runs through pstack's `statechart` skill. A config with two game processes checks one rule and has millions of states, so run it with plain TLC and several workers: `java -XX:+UseParallelGC -cp <tla2tools jar> tlc2.TLC -workers 4 -config rewards-<name>.cfg Rewards.tla`. The reach configs hold several probes; run each probe on its own (TLC stops at the first break, and `-continue` crashed TLC 1.7.4 on `rewards-reach`).
 
 ## The rules
 
