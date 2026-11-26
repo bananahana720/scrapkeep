@@ -21,6 +21,16 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 const REDUCED_FLASH: float = SettingsStore.REDUCED_FLASH
 const SPINE_CAP_MS := 60.0
 const SHAKE_CAP := 0.5
+const IMPACT_ZOOM_FRAMES := 2
+const IMPACT_ZOOM_S := 2.0 / 60.0
+const IMPACT_ZOOM_CAP := 5.0
+const IMPACT_ZOOM := {
+	"heavy": -3.2,
+	"crit": -2.4,
+	"harpoon_bit": -2.2,
+	"boss_weak_point_hit": -3.8,
+	"enemy_rebounded": -2.8,
+}
 const STRIKE_STOP_FACTS := ["enemy_struck", "boss_weak_point_hit", "multi_kill", "harpoon_bit", "posture_changed",
 	"posture_break", "boss_defeated", "piece_shattered", "test", "comfort"]
 const STOP_FLOOR_MS := 4.0
@@ -183,6 +193,7 @@ func wire_optional() -> void:
 
 func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
 	request_hit_stop(BITE_STOP_MS / 1000.0, "harpoon_bit")
+	impact_zoom("harpoon_bit")
 	rumble("harpoon_bit")
 
 
@@ -551,6 +562,8 @@ func _flush_hits() -> Dictionary:
 		stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
 	if crit and audio != null:
 		audio.play("enemy_struck", 0.0, 1.0, "SFX", String(row["crit"]["sound"]))
+	if crit and not heavy and stop > 0.0:
+		impact_zoom("crit")
 	if heavy:
 		_thump(contact, float(row["heavy"]["kick"]), int(row["heavy"]["dust"]), "enemy_struck")
 		var throw_max := 0.0
@@ -565,6 +578,7 @@ func _thump(at: Vector3, kick: float, dust: int, fact: String) -> void:
 	var travel: Vector3 = player.planar_velocity()
 	var along: Vector3 = travel.normalized() if travel.length() > 0.5 else (at - player.shown_position()).normalized()
 	_camera("kick", fact, along, kick)
+	impact_zoom("enemy_rebounded" if fact == "enemy_rebounded" else "heavy")
 	squash(0.28, along)
 	if vfx != null:
 		vfx.burst("dust", at - Vector3.UP * 0.5, EventKinds.color("landed"), dust)
@@ -580,6 +594,7 @@ func _on_rebounded(enemy: Node3D, _speed: float) -> void:
 
 func _on_weak_point(_point_id: String) -> void:
 	_camera("kick", "boss_weak_point_hit", Vector3.DOWN, 0.25)
+	impact_zoom("boss_weak_point_hit")
 	rumble("boss_weak_point_hit")
 	request_hit_stop(stop_ms_for(30.0, true) / 1000.0, "boss_weak_point_hit")
 
@@ -878,10 +893,29 @@ func _wire_loop_rumble(events) -> void:
 			rumble(kind))
 
 
+func impact_zoom(fact: String, scale := 1.0) -> float:
+	var amount := clampf(float(IMPACT_ZOOM.get(fact, 0.0)) * clampf(scale, 0.0, 1.5), -IMPACT_ZOOM_CAP, IMPACT_ZOOM_CAP)
+	if is_zero_approx(amount):
+		return 0.0
+	_camera("punch_fov", fact, Vector3.ZERO, amount, IMPACT_ZOOM_S)
+	return amount
+
+
+func effective_shake_cap() -> float:
+	var cap := SHAKE_CAP
+	if camera != null and camera.has_method("active_profiles"):
+		var profiles = camera.get("PROFILES")
+		if profiles is Dictionary:
+			for row in camera.active_profiles():
+				if profiles.has(row):
+					cap = minf(cap, float(profiles[row].get("shake_cap", cap)))
+	return cap
+
+
 func request_shake(amount: float, time: float, _fact: String) -> void:
 	if camera == null:
 		return
-	camera.shake(minf(amount, SHAKE_CAP), time)
+	camera.shake(minf(amount, effective_shake_cap()), time)
 
 
 func request_hit_stop(seconds: float, fact: String) -> void:
@@ -899,7 +933,7 @@ func request_hit_stop(seconds: float, fact: String) -> void:
 			recent += float(stop[1])
 	var sent := minf(wanted, minf(EventKinds.STOP_BUDGET_MS - spent, EventKinds.STOP_WINDOW_BUDGET_MS - recent))
 	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) - float(_stops.back()[1]) >= EventKinds.STOP_GAP_MS
-	var in_play: bool = ctx.flow == null or ctx.flow.in_play()
+	var in_play: bool = ctx == null or ctx.flow == null or ctx.flow.in_play()
 	if not in_play or not spaced or wanted < STOP_FLOOR_MS or sent < minf(wanted, STOP_TRIM_FLOOR_MS):
 		_log_push(hit_stop_log, [seconds, 0.0, fact, now])
 		return

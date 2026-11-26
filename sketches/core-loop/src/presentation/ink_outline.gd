@@ -7,13 +7,20 @@ const BallLooks := preload("res://src/presentation/ball_looks.gd")
 
 
 const INK := Color(0.08, 0.09, 0.11)
-const ROLES := ["pilot", "enemy", "warden"]
-const WIDTH_PX := {"pilot": 1.6, "enemy": 1.8, "warden": 2.5}
-const WIDTH_CAP := {"pilot": 0.03, "enemy": 0.06, "warden": 0.12}
+const ROLES := ["pilot", "enemy", "warden", "boss"]
+const WIDTH_PX := {"pilot": 1.75, "enemy": 2.0, "warden": 2.5, "boss": 3.4}
+const WIDTH_CAP := {"pilot": 0.036, "enemy": 0.072, "warden": 0.135, "boss": 0.22}
 const FADE_FROM := 65.0
 const FADE_TO := 95.0
+const FADE_RANGE := {
+	"pilot": Vector2(85.0, 150.0),
+	"enemy": Vector2(80.0, 145.0),
+	"warden": Vector2(FADE_FROM, FADE_TO),
+	"boss": Vector2(115.0, 185.0),
+}
+const BOSS_KINDS := ["boss", "brindle", "waking", "mind"]
 const SKIP_NAMES := ["glass", "lens", "glow", "canopy", "window", "visor", "lamp", "screen", "flame", "class_accent", "kest_fuse",
-	"ancient_light"]
+	"ancient_light", "hazard", "weak_point"]
 const SKIP_NODES := ["Cockpit", "Control"]
 const GLOW_LIMIT := 0.3
 const WELD := 0.0001
@@ -161,18 +168,36 @@ static func reset_for_tests() -> void:
 	_stripped.clear()
 
 
+static func role_for(kind: String) -> String:
+	var low := kind.to_lower()
+	if low in BOSS_KINDS:
+		return "boss"
+	if low in ["warden", "miniboss"]:
+		return "warden"
+	if low == "pilot":
+		return "pilot"
+	return "enemy"
+
+
+static func fade_range(role: String) -> Vector2:
+	if not role in ROLES:
+		role = "enemy"
+	return FADE_RANGE[role]
+
+
 static func ink(role: String) -> ShaderMaterial:
 	if not role in ROLES:
 		role = "enemy"
 	if not _inks.has(role):
+		var fade := fade_range(role)
 		var mat := ShaderMaterial.new()
 		mat.shader = _shader_for(false)
 		mat.resource_name = "ink_" + role
 		mat.set_shader_parameter("ink", INK)
 		mat.set_shader_parameter("width_px", WIDTH_PX[role])
 		mat.set_shader_parameter("width_cap", WIDTH_CAP[role])
-		mat.set_shader_parameter("fade_from", FADE_FROM)
-		mat.set_shader_parameter("fade_to", FADE_TO)
+		mat.set_shader_parameter("fade_from", fade.x)
+		mat.set_shader_parameter("fade_to", fade.y)
 		mat.set_meta("ink_role", role)
 		_inks[role] = mat
 	return _inks[role]
@@ -181,7 +206,8 @@ static func ink(role: String) -> ShaderMaterial:
 static func width_at(role: String, depth: float, per_px: float) -> float:
 	if not role in ROLES:
 		role = "enemy"
-	return minf(WIDTH_PX[role] * per_px, WIDTH_CAP[role]) * (1.0 - smoothstep(FADE_FROM, FADE_TO, depth))
+	var fade := fade_range(role)
+	return minf(WIDTH_PX[role] * per_px, WIDTH_CAP[role]) * (1.0 - smoothstep(fade.x, fade.y, depth))
 
 
 static func drawable(mesh: Mesh, surface: int, mat: Material) -> bool:
