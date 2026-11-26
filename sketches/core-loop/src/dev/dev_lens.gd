@@ -81,8 +81,43 @@ func use(id: String) -> String:
 	return "camera %s: %s" % [id, row.blurb]
 
 
+func _exit_tree() -> void:
+	if live():
+		_release()
+
+
 func live() -> bool:
 	return mode != "game"
+
+
+func snapshot() -> Dictionary:
+	return {"mode": mode, "yaw": yaw, "pitch": pitch, "distance": distance, "fov": fov, "ortho": ortho, "size": ortho_size,
+		"lift": lift, "spin": spin, "tilt": tilt_shift, "cut": cutaway, "follow": follow}
+
+
+func restore(data: Dictionary) -> void:
+	var id := String(data.get("mode", "game"))
+	if not MODES.has(id):
+		id = "game"
+	if id == "game":
+		if live():
+			mode = "game"
+			_release()
+	elif not live():
+		use(id)
+	mode = id
+	yaw = float(data.get("yaw", yaw))
+	pitch = float(data.get("pitch", pitch))
+	distance = float(data.get("distance", distance))
+	fov = float(data.get("fov", fov))
+	ortho = bool(data.get("ortho", ortho))
+	ortho_size = float(data.get("size", ortho_size))
+	lift = float(data.get("lift", lift))
+	spin = float(data.get("spin", spin))
+	tilt_shift = float(data.get("tilt", tilt_shift))
+	cutaway = float(data.get("cut", cutaway))
+	follow = bool(data.get("follow", follow))
+	_apply_attributes()
 
 
 func set_knob(key: String, amount: float) -> String:
@@ -223,13 +258,14 @@ func _take() -> void:
 
 func _release() -> void:
 	_dragging = false
-	var chase = game.camera.cam if game != null and game.camera != null else null
-	var playing: bool = game != null and game.flow != null and game.flow.in_play()
+	var alive: bool = game != null and is_instance_valid(game)
+	var chase = game.camera.cam if alive and game.camera != null and is_instance_valid(game.camera) else null
+	var playing: bool = alive and game.flow != null and game.flow.in_play()
 	if playing and chase != null:
 		chase.current = true
 	elif is_instance_valid(_held):
 		_held.current = true
-	elif chase != null:
+	elif chase != null and is_instance_valid(chase):
 		chase.current = true
 	_held = null
 	_apply_attributes()
