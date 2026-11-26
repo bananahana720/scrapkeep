@@ -34,7 +34,7 @@ Each rule is one promise to the player. [references/coverage.md](references/cove
 ## Run it
 
 1. Run `bash $F/models/make-configs.sh`. It rewrites every `.cfg` from the one table of guards in that script, so a config never drifts from its neighbours. (design choice)
-2. Check each config with the `astack:statechart` skill, giving it `RunFlow.tla` and the config. That skill owns the checker command and reads a result as a shortest path in plain words; give each run a new output folder outside the repository. Each run takes a few seconds.
+2. Check each config with pstack's `statechart` skill, giving it `RunFlow.tla` and the config. The skill is slash-only (`/pstack:statechart`), so an agent runs the `statechart` command in the installed skill's scripts folder with `RunFlow.tla --config <cfg> --out <dir>`. That skill owns the checker command and reads a result as a shortest path in plain words; give each run a new output folder outside the repository. Each run takes a few seconds.
 3. Compare with this table. Anything else is a result to explain, in "Read a result".
 
 | Config                                                 | Stands for                                                                                               | Must report                                                                    |
@@ -148,7 +148,7 @@ Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-
 
 ## Lessons and updates
 
-[references/lessons.md](references/lessons.md) holds VFM-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. `/astack:create-formal-verification-skill maintain` brings the model back in line after changes that skipped this skill.
+[references/lessons.md](references/lessons.md) holds VFM-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. `/pstack:maintain-formal-verification-skill` brings the model back in line after changes that skipped this skill.
 
 ## Host adapter
 
