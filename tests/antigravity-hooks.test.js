@@ -6,7 +6,7 @@ import path from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { evaluateHook } from "../.agents/hooks/safety-gate.mjs";
+import { defaultInspectProjectGodot, evaluateHook } from "../.agents/hooks/safety-gate.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const hookScript = path.join(root, ".agents/hooks/safety-gate.mjs");
@@ -80,7 +80,6 @@ test("denies git commit (including relative git -C and chained git add && git co
       '[autoload]\nMcpBridge="*res://addons/mcp/bridge.gd"\n',
     );
 
-    // Chained `git add -A && git commit` catches McpBridge in working tree before staging.
     const chained = runHookCli({
       toolCall: {
         name: "run_command",
@@ -91,7 +90,6 @@ test("denies git commit (including relative git -C and chained git add && git co
     assert.equal(chained.decision, "deny");
     assert.match(chained.reason, /McpBridge/);
 
-    // Combined `-am` stages modified tracked files like project.godot without `git add`.
     const amCommit = runHookCli({
       toolCall: { name: "run_command", args: { CommandLine: 'git commit -am "combined"' } },
       cwd: sub,
@@ -99,7 +97,6 @@ test("denies git commit (including relative git -C and chained git add && git co
     assert.equal(amCommit.decision, "deny");
     assert.match(amCommit.reason, /McpBridge/);
 
-    // Explicit pathspec `git commit project.godot` or `--pathspec-from-file` reads working tree without `-a`.
     const pathspecCommit = runHookCli({
       toolCall: {
         name: "run_command",
@@ -122,7 +119,6 @@ test("denies git commit (including relative git -C and chained git add && git co
       assert.match(pfCommit.reason, /McpBridge/);
     }
 
-    // Relative `git -C repo commit` AND subdirectory cwd (`sketches/core-loop`) catch staged McpBridge.
     git("add", "sketches/core-loop/project.godot");
     const relCommit = runHookCli({
       toolCall: { name: "run_command", args: { CommandLine: 'git -C repo commit -m "rel"' } },
@@ -248,5 +244,79 @@ test("allows safe commands and edits including npm ci, scratch Godot save paths 
       cwd: root,
     });
     assert.equal(res.decision, "deny", `Expected deny for live-save bypass: ${bypassCmd}`);
+  }
+});
+
+test("defaultInspectProjectGodot fast-paths clean project.godot without spawning git and bounds git calls to 3000ms", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-fastpath-"));
+  try {
+    mkdirSync(path.join(tmp, ".git"));
+    mkdirSync(path.join(tmp, "sketches/core-loop/src"), { recursive: true });
+    writeFileSync(
+      path.join(tmp, "sketches/core-loop/project.godot"),
+      '[application]\nconfig/name="core-loop"\n',
+    );
+
+    const calls = [];
+    const spySpawn = (cmd, args, opts) => {
+      calls.push({ cmd, args, opts });
+      return { status: 0, stdout: "" };
+    };
+
+    assert.equal(
+      defaultInspectProjectGodot(path.join(tmp, "sketches/core-loop/src"), {
+        checkWorkingTree: false,
+        spawn: spySpawn,
+      }),
+      false,
+    );
+    assert.equal(calls.length, 0);
+
+    writeFileSync(
+      path.join(tmp, "sketches/core-loop/project.godot"),
+      '[autoload]\nMcpBridge="*res://addons/mcp/bridge.gd"\n',
+    );
+    assert.equal(
+      defaultInspectProjectGodot(tmp, { checkWorkingTree: true, spawn: spySpawn }),
+      true,
+    );
+    assert.equal(calls.length, 0);
+
+    const spyStaged = (cmd, args, opts) => {
+      calls.push({ cmd, args, opts });
+      if (args.includes("diff")) {
+        return { status: 0, stdout: "sketches/core-loop/project.godot\n" };
+      }
+      if (args.includes("show")) {
+        return { status: 0, stdout: '[autoload]\nMcpBridge="x"\n' };
+      }
+      return { status: 0, stdout: "" };
+    };
+    assert.equal(
+      defaultInspectProjectGodot(tmp, { checkWorkingTree: false, spawn: spyStaged }),
+      true,
+    );
+    assert.equal(calls.length, 2);
+    for (const call of calls) {
+      assert.equal(call.opts.timeout, 3000);
+    }
+
+    const noGitCalls = [];
+    assert.equal(
+      defaultInspectProjectGodot(os.tmpdir(), {
+        checkWorkingTree: false,
+        spawn: (cmd, args, opts) => {
+          noGitCalls.push(opts);
+          return { status: 1, stdout: "" };
+        },
+      }),
+      false,
+    );
+    assert.ok(noGitCalls.length >= 1);
+    for (const opts of noGitCalls) {
+      assert.equal(opts.timeout, 3000);
+    }
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
   }
 });

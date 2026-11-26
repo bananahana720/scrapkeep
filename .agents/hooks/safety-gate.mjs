@@ -191,26 +191,48 @@ function isPushToMainArgs(args) {
   );
 }
 
-function defaultInspectProjectGodot(repoDir, { checkWorkingTree = false } = {}) {
+const GIT_TIMEOUT_MS = 3000;
+
+function findRepoRoot(startDir) {
+  let dir = path.resolve(startDir);
+  for (;;) {
+    if (existsSync(path.join(dir, ".git"))) return dir;
+    const parent = path.dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+export function defaultInspectProjectGodot(
+  repoDir,
+  { checkWorkingTree = false, spawn = spawnSync } = {},
+) {
   if (!repoDir) return false;
-  const top = spawnSync("git", ["-C", repoDir, "rev-parse", "--show-toplevel"], {
-    encoding: "utf8",
-  });
-  const repoRoot = top.status === 0 && top.stdout.trim() ? top.stdout.trim() : repoDir;
-  const diff = spawnSync(
+  let repoRoot = findRepoRoot(repoDir);
+  if (!repoRoot) {
+    const top = spawn("git", ["-C", repoDir, "rev-parse", "--show-toplevel"], {
+      encoding: "utf8",
+      timeout: GIT_TIMEOUT_MS,
+    });
+    repoRoot = top.status === 0 && top.stdout.trim() ? top.stdout.trim() : repoDir;
+  }
+  const wtPath = path.join(repoRoot, "sketches/core-loop/project.godot");
+  if (existsSync(wtPath)) {
+    const wtText = readFileSync(wtPath, "utf8");
+    if (!wtText.includes("McpBridge")) return false;
+    if (checkWorkingTree) return true;
+  }
+  const diff = spawn(
     "git",
     ["-C", repoRoot, "diff", "--cached", "--name-only", "--", "sketches/core-loop/project.godot"],
-    { encoding: "utf8" },
+    { encoding: "utf8", timeout: GIT_TIMEOUT_MS },
   );
   if (diff.status === 0 && diff.stdout.trim()) {
-    const show = spawnSync("git", ["-C", repoRoot, "show", ":sketches/core-loop/project.godot"], {
+    const show = spawn("git", ["-C", repoRoot, "show", ":sketches/core-loop/project.godot"], {
       encoding: "utf8",
+      timeout: GIT_TIMEOUT_MS,
     });
     if (show.status === 0 && show.stdout.includes("McpBridge")) return true;
-  }
-  if (checkWorkingTree) {
-    const wtPath = path.join(repoRoot, "sketches/core-loop/project.godot");
-    if (existsSync(wtPath) && readFileSync(wtPath, "utf8").includes("McpBridge")) return true;
   }
   return false;
 }

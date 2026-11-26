@@ -24,6 +24,10 @@ git -C "$repo" worktree add -b "$branch" "$target" "$base" >/dev/null
 head="$(git -C "$target" rev-parse HEAD)"
 [ "$head" = "$base" ] || fail "HEAD $head differs from base $base in $target"
 
+if command -v node >/dev/null 2>&1; then
+  node "$repo/scripts/ensure-node-modules.mjs" --worktree "$target" || true
+fi
+
 echo "worktree: $target"
 echo "branch: $branch"
 echo "head: $head"

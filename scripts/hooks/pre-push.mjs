@@ -2,13 +2,25 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { filterFormatTargets } from "../ci/format-changed.mjs";
+import { ensureNodeModules } from "../ensure-node-modules.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ZERO_SHA = "0000000000000000000000000000000000000000";
 export const HOOK_BUDGET_S = 9;
+export const HIGH_LOAD_RATIO = 0.5;
+
+export function isHighLoad({ loadStart, loadEnd, cpus }) {
+  if (!Number.isFinite(cpus) || cpus <= 0) return false;
+  const peak = Math.max(
+    Number.isFinite(loadStart) ? loadStart : 0,
+    Number.isFinite(loadEnd) ? loadEnd : 0,
+  );
+  return peak >= cpus * HIGH_LOAD_RATIO;
+}
 
 const KNOWN_FAILING_LEDGER = "project-guide/handoff/KNOWN-FAILING.tsv";
 const DOCS_OR_PKG =
@@ -78,13 +90,144 @@ function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
   return { ok: ran.status === 0, ms };
 }
 
-function binPath(name) {
+function binPath(name, cwd = root) {
   return path.join(
-    root,
+    cwd,
     "node_modules",
     ".bin",
     process.platform === "win32" ? `${name}.cmd` : name,
   );
+}
+
+export function executeHookPlan(
+  plan,
+  {
+    cwd = root,
+    exists = existsSync,
+    spawn = spawnSync,
+    ensureModules = ensureNodeModules,
+    errLog = console.error,
+  } = {},
+) {
+  let ok = true;
+  const ranLabels = [];
+
+  if (plan.jsFiles.length > 0) {
+    ensureModules(cwd);
+    const oxfmt = binPath("oxfmt", cwd);
+    const oxlint = binPath("oxlint", cwd);
+    if (!exists(oxfmt) || !exists(oxlint)) {
+      ok = false;
+      ranLabels.push("oxfmt/oxlint(missing)");
+      errLog("pre-push: node_modules/.bin/{oxfmt,oxlint} missing; run npm ci to enable JS checks");
+    } else {
+      ranLabels.push(`oxfmt(${plan.jsFiles.length})`);
+      const r1 = runStep(
+        "oxfmt",
+        oxfmt,
+        ["-c", path.join(cwd, "scripts/ci/oxfmt.json"), "--check", ...plan.jsFiles],
+        { cwd, spawn },
+      );
+      if (!r1.ok) ok = false;
+
+      ranLabels.push(`oxlint(${plan.jsFiles.length})`);
+      const r2 = runStep(
+        "oxlint",
+        oxlint,
+        ["-c", path.join(cwd, "scripts/ci/oxlint.json"), ...plan.jsFiles],
+        { cwd, spawn },
+      );
+      if (!r2.ok) ok = false;
+    }
+  }
+  if (plan.hasSketch) {
+    ranLabels.push("sketch:lint");
+    const r = runStep(
+      "sketch:lint",
+      process.execPath,
+      [path.join(cwd, "scripts/sketch-lint.mjs"), "--sketch", "core-loop"],
+      { cwd, spawn },
+    );
+    if (!r.ok) ok = false;
+  }
+  if (plan.hasDocsOrPkg) {
+    ranLabels.push("check:project");
+    const r1 = runStep(
+      "check:project",
+      process.execPath,
+      [path.join(cwd, "scripts/check-project.mjs")],
+      {
+        cwd,
+        spawn,
+      },
+    );
+    if (!r1.ok) ok = false;
+
+    ranLabels.push("check:docs");
+    const r2 = runStep("check:docs", process.execPath, [path.join(cwd, "scripts/check-docs.mjs")], {
+      cwd,
+      spawn,
+    });
+    if (!r2.ok) ok = false;
+  }
+  if (plan.hasKnownFailing) {
+    ranLabels.push("known-failing");
+    const r = runStep(
+      "known-failing",
+      process.execPath,
+      ["--test", path.join(cwd, "scripts/known-failing.test.mjs")],
+      { cwd, spawn },
+    );
+    if (!r.ok) ok = false;
+  }
+
+  return { ok, ranLabels };
+}
+
+export function evaluateHookOutcome({
+  ok,
+  elapsedS,
+  budgetS = HOOK_BUDGET_S,
+  loadStart,
+  loadEnd,
+  cpus,
+  ranLabels = [],
+}) {
+  const elapsedDisplay =
+    elapsedS > budgetS && elapsedS.toFixed(2) === budgetS.toFixed(2)
+      ? elapsedS.toFixed(3)
+      : elapsedS.toFixed(2);
+  const summary = ranLabels.length > 0 ? ranLabels.join(", ") : "no matching files";
+  if (!ok) {
+    return {
+      exitCode: 1,
+      status: "FAIL",
+      message: `pre-push: FAIL in ${elapsedDisplay}s (${summary})`,
+    };
+  }
+  if (elapsedS > budgetS) {
+    if (isHighLoad({ loadStart, loadEnd, cpus })) {
+      const peak = Math.max(
+        Number.isFinite(loadStart) ? loadStart : 0,
+        Number.isFinite(loadEnd) ? loadEnd : 0,
+      );
+      return {
+        exitCode: 0,
+        status: "PASS_UNDER_LOAD",
+        message: `pre-push: PASS_UNDER_LOAD (${elapsedDisplay}s > ${budgetS}s; load=${peak.toFixed(2)}/${cpus}; ${summary})`,
+      };
+    }
+    return {
+      exitCode: 1,
+      status: "OVER_BUDGET",
+      message: `pre-push: OVER_BUDGET (${elapsedDisplay}s > ${budgetS}s; ${summary})`,
+    };
+  }
+  return {
+    exitCode: 0,
+    status: "PASS",
+    message: `pre-push: PASS in ${elapsedDisplay}s / ${budgetS}s (${summary})`,
+  };
 }
 
 export function parseHookArgs(argv) {
@@ -113,6 +256,8 @@ function isMain() {
 
 if (isMain()) {
   const started = performance.now();
+  const loadStart = os.loadavg()[0];
+  const cpus = os.cpus().length;
   try {
     const opts = parseHookArgs(process.argv.slice(2));
     let files = [];
@@ -135,85 +280,24 @@ if (isMain()) {
     }
 
     const plan = planHookChecks(files);
-    let ok = true;
-    const ranLabels = [];
-
-    if (plan.jsFiles.length > 0) {
-      const oxfmt = binPath("oxfmt");
-      const oxlint = binPath("oxlint");
-      if (!existsSync(oxfmt) || !existsSync(oxlint)) {
-        ranLabels.push("js-lint/format skipped (missing node_modules; run npm ci)");
-        console.warn(
-          "pre-push: node_modules/.bin/{oxfmt,oxlint} missing; run npm ci to enable JS checks",
-        );
-      } else {
-        ranLabels.push(`oxfmt(${plan.jsFiles.length})`);
-        const r1 = runStep("oxfmt", oxfmt, [
-          "-c",
-          path.join(root, "scripts/ci/oxfmt.json"),
-          "--check",
-          ...plan.jsFiles,
-        ]);
-        if (!r1.ok) ok = false;
-        if (ok) {
-          ranLabels.push(`oxlint(${plan.jsFiles.length})`);
-          const r2 = runStep("oxlint", oxlint, [
-            "-c",
-            path.join(root, "scripts/ci/oxlint.json"),
-            ...plan.jsFiles,
-          ]);
-          if (!r2.ok) ok = false;
-        }
-      }
-    }
-    if (ok && plan.hasSketch) {
-      ranLabels.push("sketch:lint");
-      const r = runStep("sketch:lint", process.execPath, [
-        path.join(root, "scripts/sketch-lint.mjs"),
-        "--sketch",
-        "core-loop",
-      ]);
-      if (!r.ok) ok = false;
-    }
-    if (ok && plan.hasDocsOrPkg) {
-      ranLabels.push("check:project");
-      const r1 = runStep("check:project", process.execPath, [
-        path.join(root, "scripts/check-project.mjs"),
-      ]);
-      if (!r1.ok) ok = false;
-      if (ok) {
-        ranLabels.push("check:docs");
-        const r2 = runStep("check:docs", process.execPath, [
-          path.join(root, "scripts/check-docs.mjs"),
-        ]);
-        if (!r2.ok) ok = false;
-      }
-    }
-    if (ok && plan.hasKnownFailing) {
-      ranLabels.push("known-failing");
-      const r = runStep("known-failing", process.execPath, [
-        "--test",
-        path.join(root, "scripts/known-failing.test.mjs"),
-      ]);
-      if (!r.ok) ok = false;
-    }
-
+    const { ok, ranLabels } = executeHookPlan(plan);
+    const loadEnd = os.loadavg()[0];
     const elapsedS = (performance.now() - started) / 1000;
-    const elapsedDisplay =
-      elapsedS > HOOK_BUDGET_S && elapsedS.toFixed(2) === HOOK_BUDGET_S.toFixed(2)
-        ? elapsedS.toFixed(3)
-        : elapsedS.toFixed(2);
-    const summary = ranLabels.length > 0 ? ranLabels.join(", ") : "no matching files";
-    if (!ok) {
-      console.error(`pre-push: FAIL in ${elapsedDisplay}s (${summary})`);
-      process.exitCode = 1;
-    } else if (elapsedS > HOOK_BUDGET_S) {
-      console.error(`pre-push: OVER_BUDGET (${elapsedDisplay}s > ${HOOK_BUDGET_S}s; ${summary})`);
-      process.exitCode = 1;
+    const outcome = evaluateHookOutcome({
+      ok,
+      elapsedS,
+      budgetS: HOOK_BUDGET_S,
+      loadStart,
+      loadEnd,
+      cpus,
+      ranLabels,
+    });
+    if (outcome.exitCode === 0) {
+      console.log(outcome.message);
     } else {
-      console.log(`pre-push: PASS in ${elapsedDisplay}s / ${HOOK_BUDGET_S}s (${summary})`);
-      process.exitCode = 0;
+      console.error(outcome.message);
     }
+    process.exitCode = outcome.exitCode;
   } catch (error) {
     console.error(`pre-push: ${error.message}`);
     process.exitCode = 2;

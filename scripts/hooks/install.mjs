@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { chmodSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureNodeModules } from "../ensure-node-modules.mjs";
 
 if (/^(true|1)$/i.test(process.env.CI || "")) {
   process.exit(0);
@@ -14,6 +15,8 @@ const check = spawnSync("git", ["rev-parse", "--git-dir"], { cwd: root, encoding
 if (check.status !== 0) {
   process.exit(0);
 }
+
+ensureNodeModules(root, { log: (msg) => console.log(msg) });
 
 const hookFile = path.join(root, "scripts", "hooks", "pre-push");
 if (existsSync(hookFile)) {
