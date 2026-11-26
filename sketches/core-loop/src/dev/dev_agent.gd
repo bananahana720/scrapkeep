@@ -134,11 +134,13 @@ func run_scenario(steps: Array, options := {}) -> Dictionary:
 	var state_snap: Dictionary = insp.snapshot("state") if insp != null else {}
 	var dead_shot := shots.any(func(s): return s is Dictionary and bool(s.get("dead_frame", false)))
 	var all_ok := failed == 0 and int(assertions.get("failed", 0)) == 0 and not dead_shot
+	var elapsed_ms := snappedf((Time.get_ticks_usec() - t0) / 1000.0, 0.001)
 	var receipt := {
 		"ok": all_ok,
 		"steps_total": step_rows.size(),
 		"steps_passed": passed,
 		"steps_failed": failed,
+		"steps": step_rows,
 		"assertions": assertions,
 		"shots": shots,
 		"anomalies": anomalies,
@@ -146,16 +148,15 @@ func run_scenario(steps: Array, options := {}) -> Dictionary:
 		"renderer": RenderingServer.get_current_rendering_method(),
 		"headless": AppShell.headless(),
 		"audio_driver": AudioServer.get_driver_name(),
-		"ms": snappedf((Time.get_ticks_usec() - t0) / 1000.0, 0.001),
+		"ms": elapsed_ms,
+		"elapsed_ms": elapsed_ms,
 	}
 	var target_out := String(options.get("out", ""))
 	if not target_out.is_empty():
 		var written := _write_artifacts(target_out, step_rows, receipt)
 		receipt["receipt_path"] = written["receipt_path"]
 		receipt["steps_path"] = written["steps_path"]
-	var out_result := receipt.duplicate(true)
-	out_result["steps"] = step_rows
-	return out_result
+	return receipt
 
 
 func _run_batch() -> void:
@@ -266,6 +267,7 @@ func _handle_mailbox_request(req_path: String) -> void:
 		"id": req_id,
 		"ok": all_ok,
 		"results": results,
+		"shots": shots,
 		"text": "\n".join(texts),
 		"ms": snappedf((Time.get_ticks_usec() - t0) / 1000.0, 0.001),
 		"quitting": want_quit,
@@ -380,9 +382,13 @@ func _exec_until(step: String, words: Array[String]) -> Dictionary:
 
 
 func _exec_shot(step: String, shot_name: String, scripted: bool, shots: Array) -> Dictionary:
-	if not is_instance_valid(console) or not console.has_method("shot"):
-		return {"cmd": step, "ok": false, "text": "!console cannot capture shots", "tone": "warn", "data": null}
-	var reply = await console.shot(shot_name, scripted)
+	if not is_instance_valid(console):
+		return {"cmd": step, "ok": false, "text": "!no console", "tone": "warn", "data": null}
+	var reply: Variant = "!console cannot capture shots"
+	if console.has_method("shot_detailed"):
+		reply = await console.shot_detailed(shot_name, scripted)
+	elif console.has_method("shot"):
+		reply = await console.shot(shot_name, scripted)
 	return _normalize_capture(step, "shot", shot_name, reply, shots)
 
 
@@ -397,7 +403,9 @@ func _exec_sheet(step: String, words: Array[String], scripted: bool, shots: Arra
 	else:
 		sheet_name = DevCommands.word(words, 1, "")
 	var reply: Variant = "!console cannot capture contact sheets"
-	if console.has_method("contact_sheet_mode"):
+	if console.has_method("sheet_detailed"):
+		reply = await console.sheet_detailed(mode, sheet_name, scripted)
+	elif console.has_method("contact_sheet_mode"):
 		reply = await console.contact_sheet_mode(mode, sheet_name, scripted)
 	elif console.has_method("contact_sheet"):
 		var argc := _method_argc(console, "contact_sheet")
@@ -415,8 +423,17 @@ func _normalize_capture(step: String, kind: String, cap_name: String, reply: Var
 		var ok := bool(reply.get("ok", false))
 		var text := String(reply.get("text", ""))
 		var data = reply.get("data", reply)
+		var dead_tile := false
+		if data is Dictionary and data.get("tiles") is Array:
+			for tile in data.tiles:
+				if tile is Dictionary and bool(tile.get("dead", false)):
+					dead_tile = true
+					break
+		var dead_frame := bool(reply.get("dead_frame", false))
+		if data is Dictionary:
+			dead_frame = dead_frame or bool(data.get("dead_frame", false)) or (int(data.get("dead_count", 0)) > 0) or dead_tile
 		var entry := {"kind": kind, "name": cap_name, "ok": ok, "path": String(reply.get("path", data.get("path", "") if data is Dictionary else "")),
-			"dead_frame": bool(reply.get("dead_frame", data.get("dead_frame", false) if data is Dictionary else false))}
+			"dead_frame": dead_frame}
 		shots.append(entry)
 		return {"cmd": step, "ok": ok and not entry.dead_frame, "text": text, "tone": "ok" if (ok and not entry.dead_frame) else "warn", "data": data}
 	var text := String(reply)

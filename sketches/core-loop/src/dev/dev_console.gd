@@ -44,7 +44,7 @@ const LIGHT_KEYS := ["exposure", "saturation", "contrast", "brightness", "ambien
 	"sun_size", "fog", "fog_sky", "air", "glow", "bloom", "ssao", "white", "ink_width"]
 const TONEMAPS := ["Linear", "Reinhard", "Filmic", "ACES", "AgX"]
 const LENS_KNOBS := DevLens.LENS_KNOBS
-const SCRIPT_STEPS := ["wait", "shot", "sheet", "quit"]
+const SCRIPT_STEPS := ["wait", "tick", "until", "shot", "sheet", "quit"]
 const LENS_RANGES := {"fov": [10.0, 120.0, 0.5], "distance": [2.0, 200.0, 0.5], "pitch": [-89.5, 60.0, 0.5],
 	"yaw": [-180.0, 180.0, 1.0], "size": [2.0, 300.0, 0.5], "lift": [-5.0, 30.0, 0.1], "spin": [-90.0, 90.0, 1.0], "tilt": [0.0, 1.0, 0.01], "cut": [0.0, 200.0, 0.5]}
 const WORLDS := ["all", "1", "2", "3"]
@@ -248,6 +248,21 @@ func run(line: String, keep := true) -> void:
 
 
 func run_script(script: String, scripted := false) -> void:
+	if agent != null and agent.has_method("run_scenario"):
+		for part in script.split(";", false):
+			var text := part.strip_edges()
+			if not text.is_empty():
+				_echo(text)
+		var receipt: Dictionary = await agent.run_scenario([script], {"scripted": scripted, "reset_assertions": false})
+		_refresh_rows()
+		_sync_dots()
+		_sweep_input.call_deferred()
+		for row in receipt.get("steps", []):
+			if row is Dictionary and row.get("data") is Dictionary and bool(row.data.get("quitting", false)):
+				if is_inside_tree():
+					get_tree().quit(0 if bool(receipt.get("ok", false)) else 1)
+				return
+		return
 	for part in script.split(";", false):
 		var text := part.strip_edges()
 		var words := text.split(" ", false)
@@ -258,6 +273,12 @@ func run_script(script: String, scripted := false) -> void:
 				await get_tree().process_frame
 				if not is_inside_tree():
 					return
+			continue
+		if head == "tick":
+			_echo(text)
+			if fight.has_method("step_physics"):
+				var res: Dictionary = await fight.step_physics(DevCommands.whole(words, 1, 1))
+				_say(String(res.get("text", "")), "ok" if bool(res.get("ok", false)) else "warn")
 			continue
 		if head == "sheet":
 			_echo(text)
@@ -322,7 +343,7 @@ func _register() -> void:
 			return "commands: " + ", ".join(commands.names())
 		if args[0] == "json" and not commands.has("json"):
 			var data = commands.schema() if commands.has_method("schema") else commands.names()
-			return JSON.stringify({"ok": true, "text": "commands: " + ", ".join(commands.names()), "data": data})
+			return {"ok": true, "text": JSON.stringify({"ok": true, "text": "commands: " + ", ".join(commands.names()), "data": data}), "data": data}
 		return "%s: %s" % [commands.usage(args[0]), commands.help(args[0])] if commands.has(args[0]) else "!no command '%s'" % args[0])
 	commands.add("look", "[preset]", "apply a look preset, or describe the current overrides", func(args: Array[String]):
 		return look.describe() if args.is_empty() else look.apply_preset(" ".join(args)))
@@ -549,11 +570,12 @@ func sheet_detailed(axis := "presets", id := "", close_menu := false) -> Diction
 	if err != OK:
 		return _answer(false, "!could not save the sheet (%d)" % err)
 	var grid := sheet_grid(ids.size())
+	var dead := rows.filter(func(r): return r.dead).size()
 	var data := {"path": ProjectSettings.globalize_path(path), "axis": axis, "header": header, "width": sheet.get_width(),
-		"height": sheet.get_height(), "columns": grid.x, "rows": grid.y, "tiles": rows, "cam": lens.mode, "look": look.preset_name,
+		"height": sheet.get_height(), "columns": grid.x, "rows": grid.y, "tiles": rows, "dead_count": dead,
+		"dead_frame": dead > 0, "cam": lens.mode, "look": look.preset_name,
 		"quality": GraphicsPreset.current, "stage": _stage_name()}
 	SafeStore.write_atomic(shot_dir.path_join(stem + ".json"), JSON.stringify(data, "\t"))
-	var dead := rows.filter(func(r): return r.dead).size()
 	return _answer(true, "sheet of %d %s (%s)%s -> %s" % [ids.size(), axis, ", ".join(ids),
 		("  %d dead" % dead) if dead > 0 else "", data.path], data)
 
@@ -1042,8 +1064,8 @@ func _page_debug() -> void:
 	steps.add_theme_constant_override("separation", UiTokens.GAP_XS)
 	for pair in [["Step +1", "tick 1"], ["+10", "tick 10"]]:
 		var line: String = pair[1]
-		var button := _button(pair[0], func(): run(line))
-		button.disabled = not commands.has("tick")
+		var button := _button(pair[0], func(): run_script(line))
+		button.disabled = agent == null and not fight.has_method("step_physics")
 		button.add_theme_font_size_override("font_size", UiTokens.CAPTION)
 		steps.add_child(button)
 	_page.add_child(steps)

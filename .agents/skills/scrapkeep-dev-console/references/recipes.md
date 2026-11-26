@@ -8,7 +8,7 @@ Entry point: `npm run dev:console -- <subcommand> [options]` (`scripts/dev-conso
 | --- | --- | --- |
 | `smoke` | `--headless` | Boot into World 1 stage 1, dismiss start card, inspect state/player/perf, assert stage + finite |
 | `combat-probe` | `--headless` | Spawn chasers, lobber, and jolt layer; tick 90 frames; inspect enemies/telegraphs/events; clear hard and assert 0 |
-| `boss-retry-probe` | `--headless` | Enter stage 2 boss, jump to phase 2, take lethal damage, retry, and assert clean boss recovery with zero anomalies |
+| `boss-retry-probe` | `--headless` | Enter stage 2 boss, jump to phase 2, retry arena cleanly, then verify lethal death to summary with zero anomalies |
 | `look-sheet` | `--drawn` | Hide HUD, freeze frame, capture labeled `sheet presets look_sheet` offscreen |
 | `cam-sheet` | `--drawn` | Hide HUD, freeze frame, capture labeled `sheet cams cam_sheet` offscreen |
 | `quality-pair` | `--drawn` | Hide HUD, freeze frame, capture side-by-side `sheet quality quality_pair` offscreen |

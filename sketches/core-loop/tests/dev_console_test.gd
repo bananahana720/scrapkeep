@@ -1,9 +1,12 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const SafeStore := preload("res://src/core/safe_store.gd")
 const DevConsole := preload("res://src/dev/dev_console.gd")
 const DevLook := preload("res://src/dev/dev_look.gd")
 const DevLens := preload("res://src/dev/dev_lens.gd")
+const DevInspect := preload("res://src/dev/dev_inspect.gd")
+const DevSession := preload("res://src/dev/dev_session.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("dev_console_test")
@@ -21,6 +24,9 @@ func _run() -> void:
 
 	DevConsole.hook(game)
 	_t.eq("the hook mounts nothing in a test or a plain launch", game.get_node_or_null("DevConsole"), null)
+	game.dev = true
+	DevConsole.hook(game)
+	_t.eq("the hook still mounts nothing in test_mode even with dev=true", game.get_node_or_null("DevConsole"), null)
 
 	var console := DevConsole.new()
 	game.add_child(console)
@@ -190,7 +196,150 @@ func _run() -> void:
 	_t.check("that node gets its input back on close", late.is_processing_input(), "")
 	late.free()
 
+	await _test_structured_and_fight(game, console)
+	await _test_inspect_and_assertions(game, console)
+	await _test_agent(console)
+
 	Engine.time_scale = 1.0
 	console.free()
 	game.free()
+
+	await _test_session()
 	quit(_t.verdict())
+
+
+func _test_structured_and_fight(game, console) -> void:
+	var schema: Array = console.commands.schema()
+	_t.check("commands.schema() lists all registered commands", schema.size() == console.commands.names().size() and schema.size() > 25, str(schema.size()))
+	var help_res: Dictionary = console.commands.run_one_detailed("help json")
+	_t.check("help json returns structured data array", help_res.ok and help_res.data is Array and help_res.data.size() == schema.size(), str(help_res))
+	var bad_res: Dictionary = console.commands.run_one_detailed("not_a_cmd")
+	_t.check("unknown detailed command returns ok=false", not bad_res.ok and bad_res.tone == "warn", str(bad_res))
+
+	_t.check("seed sets override", console.commands.run_one_detailed("seed 42").ok, "")
+	_t.check("stage jumps to stage 2", console.commands.run_one_detailed("stage 2").ok and game.run.stage == 2, "")
+	await process_frame
+	_t.check("retry succeeds from stage 2", console.commands.run_one_detailed("retry").ok, "")
+	await process_frame
+	console.commands.run_one("pick 1")
+	await process_frame
+	_t.check("assert state stage passes after stage retry", console.commands.run_one_detailed("assert state stage").ok, "")
+
+	_t.check("warp spawn moves safely", console.commands.run_one_detailed("warp spawn").ok, "")
+	_t.check("warp beacon moves safely", console.commands.run_one_detailed("warp beacon").ok, "")
+	_t.check("warp ahead moves safely", console.commands.run_one_detailed("warp ahead 5").ok, "")
+	_t.check("vel applies", console.commands.run_one_detailed("vel 2 0 0").ok, "")
+	_t.check("speed applies", console.commands.run_one_detailed("speed 12").ok, "")
+	_t.check("give grants part", console.commands.run_one_detailed("give hot_rivets 2").ok and "hot_rivets" in game.run.parts, "")
+	_t.check("parts list succeeds", console.commands.run_one_detailed("parts list").ok, "")
+	_t.check("parts clear empties parts", console.commands.run_one_detailed("parts clear").ok and game.run.parts.is_empty(), "")
+	_t.check("panel grants panel", console.commands.run_one_detailed("panel hull_tile 2").ok, "")
+	_t.check("drop_scale updates dropper", console.commands.run_one_detailed("drop_scale 3").ok and is_equal_approx(game.build.dropper.scale, 3.0), "")
+	_t.check("relic adds pilot relic", console.commands.run_one_detailed("relic crater_heart").ok, "")
+	_t.check("tune overrides cruise", console.commands.run_one_detailed("tune cruise 15").ok and is_equal_approx(game.tuning.base("cruise"), 15.0), "")
+	_t.check("tune reset restores defaults", console.commands.run_one_detailed("tune reset").ok, "")
+	_t.check("quality low switches preset", console.commands.run_one_detailed("quality low").ok, "")
+	_t.check("quality high restores preset", console.commands.run_one_detailed("quality high").ok, "")
+	_t.check("warden command answers cleanly", console.commands.run_one("warden") != "", "")
+	_t.check("beacon status succeeds in stage", console.commands.run_one_detailed("beacon").ok, "")
+	_t.check("flood command answers cleanly", console.commands.run_one("flood") != "", "")
+
+	console.run("freeze")
+	_t.check("freeze pauses the tree without zeroing Engine.time_scale", paused and Engine.time_scale > 0.0, "")
+	var before_rt: float = game.run.run_time
+	var tick_res: Dictionary = await console.fight.step_physics(5)
+	_t.check("step_physics advances while frozen and keeps freeze", tick_res.ok and paused and game.run.run_time > before_rt and Engine.time_scale > 0.0, str(tick_res))
+	game.toggle_pause()
+	var paused_tick: Dictionary = await console.fight.step_physics(2)
+	_t.check("step_physics refuses while pause menu wants pause", not paused_tick.ok, str(paused_tick))
+	game.toggle_pause()
+	console.run("freeze")
+	_t.check("unfreeze resumes", not paused, "")
+
+
+func _test_inspect_and_assertions(game, console) -> void:
+	var insp: DevInspect = console.inspect
+	_t.check("DevInspect is mounted", insp != null and insp.is_inside_tree(), "")
+	insp.clear_events()
+	insp.reset_assertions()
+	_t.check("events recording turns on", console.commands.run_one_detailed("events on").ok, "")
+	_t.check("damage hurts hull", console.commands.run_one_detailed("damage 15").ok, "")
+	_t.check("events tail records player_hit", console.commands.run_one_detailed("events tail 10").ok and insp.event_count("player_hit") >= 1, "")
+
+	for topic in DevInspect.TOPICS:
+		var snap: Dictionary = insp.snapshot(topic)
+		var json_str := JSON.stringify(snap)
+		_t.check("inspect topic '%s' serializes to JSON cleanly" % topic, JSON.parse_string(json_str) != null, topic)
+
+	for ok_cmd in [
+		"assert finite",
+		"assert no_anomalies",
+		"assert state beacon",
+		"assert stage 2",
+		"assert enemies 0",
+		"assert hp > 0",
+		"assert event player_hit 1",
+		"assert no_event boss_defeated",
+		"assert expr flow.in_play()",
+	]:
+		var res: Dictionary = console.commands.run_one_detailed(ok_cmd)
+		_t.check("%s passes" % ok_cmd, res.ok, str(res))
+
+	var fail_state: Dictionary = console.commands.run_one_detailed("assert state dead")
+	_t.check("assert state dead fails as negative control", not fail_state.ok, str(fail_state))
+	var fail_enemies: Dictionary = console.commands.run_one_detailed("assert enemies 99")
+	_t.check("assert enemies 99 fails as negative control", not fail_enemies.ok, str(fail_enemies))
+	insp.reset_assertions()
+	console.commands.run_one("events off")
+
+
+func _test_agent(console) -> void:
+	var out_dir := "user://dev_test_out_%d" % OS.get_process_id()
+	var receipt: Dictionary = await console.agent.run_scenario(["inspect state", "assert finite"], {"out": out_dir, "reset_assertions": true})
+	_t.check("DevAgent.run_scenario passes and writes receipt", receipt.ok and int(receipt.steps_total) == 2 and FileAccess.file_exists(String(receipt.receipt_path)) and FileAccess.file_exists(String(receipt.steps_path)), str(receipt))
+	var parsed_receipt = SafeStore.parse(FileAccess.get_file_as_string(String(receipt.receipt_path)), TYPE_DICTIONARY)
+	_t.check("receipt.json contains steps array and elapsed_ms", parsed_receipt is Dictionary and parsed_receipt.has("steps") and parsed_receipt.has("elapsed_ms"), "")
+	_rm_dir_recursive(ProjectSettings.globalize_path(out_dir))
+
+	var fail_receipt: Dictionary = await console.agent.run_scenario(["assert enemies 99"], {"reset_assertions": true})
+	_t.check("DevAgent.run_scenario returns ok=false when assertion fails", not fail_receipt.ok and int(fail_receipt.steps_failed) == 1, str(fail_receipt))
+
+	var inbox := "user://dev_test_inbox_%d" % OS.get_process_id()
+	var g_inbox := ProjectSettings.globalize_path(inbox)
+	console.agent.inbox_dir = inbox
+	console.agent._start_mailbox()
+	_t.check("mailbox writes ready.json", FileAccess.file_exists(g_inbox.path_join("ready.json")), g_inbox)
+	SafeStore.write_atomic(g_inbox.path_join("in").path_join("0001.req.json"), JSON.stringify({"id": "0001", "cmd": "inspect state; assert finite"}))
+	var res_path := g_inbox.path_join("out").path_join("0001.res.json")
+	for i in 20:
+		await process_frame
+		if FileAccess.file_exists(res_path):
+			break
+	var res_doc = SafeStore.parse(FileAccess.get_file_as_string(res_path), TYPE_DICTIONARY) if FileAccess.file_exists(res_path) else null
+	_t.check("mailbox answers atomic request cleanly", res_doc is Dictionary and bool(res_doc.get("ok", false)) and (res_doc.get("results", []) as Array).size() == 2, str(res_doc))
+	console.agent._cleanup_ready()
+	_t.check("mailbox cleanup removes ready.json", not FileAccess.file_exists(g_inbox.path_join("ready.json")), "")
+	console.agent.inbox_dir = ""
+	_rm_dir_recursive(g_inbox)
+
+
+func _test_session() -> void:
+	var session := DevSession.start(self, {"calm": true, "seed": 77, "start_run": true})
+	await process_frame
+	await session.tick(3)
+	var snap: Dictionary = session.inspect("player")
+	_t.check("DevSession runs in-process and inspects player", not snap.is_empty() and snap.has("hp"), str(snap))
+	var ok_res: Dictionary = session.assert_ok("assert finite")
+	_t.check("DevSession.assert_ok succeeds", ok_res.ok, str(ok_res))
+	session.close()
+
+
+static func _rm_dir_recursive(dir_path: String) -> void:
+	var d := DirAccess.open(dir_path)
+	if d == null:
+		return
+	for sub in d.get_directories():
+		_rm_dir_recursive(dir_path.path_join(sub))
+	for f in d.get_files():
+		d.remove(f)
+	DirAccess.remove_absolute(dir_path)

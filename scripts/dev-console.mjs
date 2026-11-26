@@ -56,9 +56,10 @@ export const RECIPES = {
   "boss-retry-probe": {
     name: "boss-retry-probe",
     mode: "headless",
-    description: "Enter boss arena, advance phase, die, retry, and assert clean boss recovery",
+    description:
+      "Enter boss arena, advance phase, retry arena cleanly, then verify lethal death to summary",
     script:
-      "calm on; events on; run 1; wait 60; pick 1; tick 15; stage 2; tick 30; boss; tick 60; boss 2; tick 60; inspect boss; assert state boss; damage 9999; tick 10; assert state dead; retry; tick 60; inspect boss; assert state boss; assert no_anomalies; quit",
+      "calm on; events on; run 1; wait 60; pick 1; tick 15; stage 2; tick 30; boss; tick 60; boss 2; tick 60; inspect boss; assert state boss; retry; tick 60; inspect boss; assert state boss; assert no_anomalies; damage 99999; tick 10; assert state summary; assert event player_died 1; assert no_anomalies; quit",
   },
   "look-sheet": {
     name: "look-sheet",
@@ -86,7 +87,7 @@ export const RECIPES = {
     mode: "drawn",
     description: "Render debug overlays over an active fight from high camera offscreen",
     script:
-      "calm on; hud off; run 1; wait 90; pick 1; wait 60; spawn chaser 2; spawn jolt_layer 1; tick 90; overlay all; freeze; cam high; shot overlay_check; assert finite; quit",
+      "calm on; hud off; run 1; wait 90; pick 1; wait 60; spawn chaser 2; spawn jolt_layer 1; tick 90; overlay all; overlay perf on; freeze; cam high; shot overlay_check; assert finite; quit",
   },
   "perf-budget": {
     name: "perf-budget",
@@ -1345,19 +1346,26 @@ async function cmdBench({ flags }) {
   const mode = flags.mode ?? "headless";
   const godotBin = resolveGodotBinary();
 
-  const warmCommands = [
-    "calm on; run 1; wait 60; pick 1; tick 5; assert state stage",
-    "inspect player",
-    "spawn chaser 2; tick 5",
-    "inspect enemies",
-    "assert enemies 2",
-    "inspect perf",
-    "clear hard; tick 5",
-    "assert enemies 0",
-    "inspect anomalies",
-    "assert finite",
+  const boot = "calm on; run 1; wait 60; pick 1; tick 5";
+  const benchSteps = [
+    { warm: `${boot}; assert state stage`, cold: `${boot}; assert state stage` },
+    { warm: "inspect player", cold: `${boot}; inspect player` },
+    { warm: "spawn chaser 2; tick 5", cold: `${boot}; spawn chaser 2; tick 5` },
+    { warm: "inspect enemies", cold: `${boot}; spawn chaser 2; tick 5; inspect enemies` },
+    { warm: "assert enemies 2", cold: `${boot}; spawn chaser 2; tick 5; assert enemies 2` },
+    { warm: "inspect perf", cold: `${boot}; inspect perf` },
+    { warm: "clear hard; tick 5", cold: `${boot}; spawn chaser 2; tick 5; clear hard; tick 5` },
+    { warm: "assert enemies 0", cold: `${boot}; assert enemies 0` },
+    { warm: "inspect anomalies", cold: `${boot}; inspect anomalies` },
+    { warm: "assert finite", cold: `${boot}; assert finite` },
   ];
-  const turnCmd = (index) => warmCommands[index % warmCommands.length];
+  const stepFor = (index) => {
+    const entry = benchSteps[index % benchSteps.length];
+    if (index > 0 && index % benchSteps.length === 0) {
+      return { ...entry, warm: "inspect state; assert state stage" };
+    }
+    return entry;
+  };
 
   // 1. Cold batch runs
   const coldMs = [];
@@ -1366,10 +1374,7 @@ async function cmdBench({ flags }) {
     const turnDir = path.join(outDir, `cold-${i + 1}`);
     mkdirSync(turnDir, { recursive: true });
     const scriptFile = path.join(turnDir, "script.dev");
-    const cmd =
-      i === 0
-        ? `${turnCmd(i)}; quit`
-        : `calm on; run 1; wait 60; pick 1; tick 5; ${turnCmd(i)}; quit`;
+    const cmd = `${stepFor(i).cold}; quit`;
     writeFileSync(scriptFile, cmd + "\n", "utf8");
     const { env } = scratchEnv(path.join(turnDir, "home"));
     const userArgs = buildUserArgs({
@@ -1410,7 +1415,7 @@ async function cmdBench({ flags }) {
     await cmdServe({ flags: serveFlags, silent: true });
     warmBootMs = Date.now() - bootStart;
     for (let i = 0; i < turns; i++) {
-      const res = await sendMailboxRequest(paths.inbox, turnCmd(i), {
+      const res = await sendMailboxRequest(paths.inbox, stepFor(i).warm, {
         timeoutMs: flags.timeout ?? 30_000,
       });
       if (!res.ok) {
