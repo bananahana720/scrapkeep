@@ -39,6 +39,14 @@ const PUFF_LIFE := 0.6
 const SHRAPNEL_M := 2.5
 const SHRAPNEL_MAX := 3
 const SHRAPNEL_COS := 0.7071
+const HEAVY_SHRAPNEL_M := 4.0
+const HEAVY_SHRAPNEL_MULT := 1.25
+const CHAIN_MIN_SPEED_PER_CRUISE := 1.25
+const CHAIN_MIN_HEFT := 3
+const CHAIN_SHATTER_M := 3.6
+const CHAIN_MAX_TIER := 2
+const CHAIN_MAX_PIECES := 2
+const CHAIN_MAX_DEPTH := 1
 const BASE_FORCE := 12.0
 const TIER_SCALE := [0.5, 0.7, 1.0, 1.3, 1.6]
 
@@ -75,6 +83,7 @@ var _scrap_paid := 0
 var _cogs_paid := 0
 var _consumables_paid := 0
 var _shrapnel_hits := 0
+var _chain_breaks := 0
 var _clock := 0.0
 var _prev := Vector3.ZERO
 var _have_prev := false
@@ -255,6 +264,7 @@ func teardown() -> void:
 	_cogs_paid = 0
 	_consumables_paid = 0
 	_shrapnel_hits = 0
+	_chain_breaks = 0
 	_clock = 0.0
 	_have_prev = false
 	_swing_heft_bonus = 0
@@ -329,6 +339,10 @@ func shrapnel_hits() -> int:
 	return _shrapnel_hits
 
 
+func chain_breaks() -> int:
+	return _chain_breaks
+
+
 func live_shards() -> int:
 	return _live_of(_shards)
 
@@ -380,7 +394,7 @@ func on_ball(ball_pos: Vector3, velocity: Vector3, heft_class: int, dt: float = 
 		if dist > reach or heading.dot(dir) < HEADING_COS:
 			continue
 		if effective_heft >= p.tier and flat >= _bar(p.tier):
-			_shatter(p, seen["at"], heading, flat, false)
+			_shatter(p, seen["at"], heading, flat, false, "", effective_heft)
 		elif dist <= CONTACT_M and flat >= REFUSED_FLOOR * _live_cruise():
 			_refuse(p, seen["at"], heading)
 
@@ -404,7 +418,7 @@ func on_segment_cut(from: Vector3, to: Vector3, max_tier: int = 2, width: float 
 		var seen := _sweep(p, from, to)
 		if float(seen["dist"]) > width:
 			continue
-		_shatter(p, seen["at"], dir, cruise, false, source)
+		_shatter(p, seen["at"], dir, cruise, false, source, 1)
 		broken.append(p.id)
 	return broken
 
@@ -427,7 +441,7 @@ func on_taut_swing(ball_pos: Vector3, velocity: Vector3, heft_class: int, tier_b
 		var seen := _sweep(p, ball_pos, to)
 		if float(seen["dist"]) > reach:
 			continue
-		_shatter(p, seen["at"], heading, flat, false, "wrecking_flail")
+		_shatter(p, seen["at"], heading, flat, false, "wrecking_flail", effective)
 		broken.append(p.id)
 	return broken
 
@@ -443,7 +457,7 @@ func on_blast(at: Vector3, radius: float, source: String, tier_bonus: int = 1, h
 		if at.distance_to(near) > radius:
 			continue
 		var away := Vector3(p.centre.x - at.x, 0.0, p.centre.z - at.z)
-		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, cruise, true, source)
+		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, cruise, true, source, heft)
 
 
 func on_hurled_enemy(from: Vector3, to: Vector3, heft_class: int, radius: float = 1.8, source: String = "tarn_hurl") -> Array[String]:
@@ -462,7 +476,7 @@ func on_hurled_enemy(from: Vector3, to: Vector3, heft_class: int, radius: float 
 		var seen := _sweep(p, from, to)
 		if float(seen["dist"]) > radius:
 			continue
-		_shatter(p, seen["at"], dir, cruise, false, source)
+		_shatter(p, seen["at"], dir, cruise, false, source, effective)
 		broken.append(p.id)
 	return broken
 
@@ -483,7 +497,7 @@ func on_rail_breach(from: Vector3, to: Vector3, half_width: float, max_tier: int
 		var seen := _sweep(p, from, to)
 		if float(seen["dist"]) > reach:
 			continue
-		_shatter(p, seen["at"], dir, cruise, false, source)
+		_shatter(p, seen["at"], dir, cruise, false, source, _last_heft)
 		broken.append(p.id)
 	return broken
 
@@ -501,7 +515,7 @@ func on_piton_breach(at: Vector3, radius: float, max_tier: int = 3, source: Stri
 		if at.distance_to(near) > radius:
 			continue
 		var away := Vector3(p.centre.x - at.x, 0.0, p.centre.z - at.z)
-		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, cruise, true, source)
+		_shatter(p, near, away.normalized() if away.length() > 0.01 else Vector3.FORWARD, cruise, true, source, _last_heft)
 		broken.append(p.id)
 	return broken
 
@@ -516,7 +530,13 @@ func _bar(tier: int) -> float:
 	return WALL_SPEED if tier <= 1 else _live_cruise() * RAM_MIN_PER_CRUISE
 
 
-func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, source: String = "") -> void:
+func _is_high_energy(speed: float, heft: int) -> bool:
+	return heft >= CHAIN_MIN_HEFT or speed >= _live_cruise() * CHAIN_MIN_SPEED_PER_CRUISE
+
+
+func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, source: String = "", heft: int = -1, chain_depth: int = 0) -> void:
+	if not p.intact:
+		return
 	p.intact = false
 	_breaks.append(p.id)
 	if p.body != null and is_instance_valid(p.body):
@@ -527,6 +547,8 @@ func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, s
 	if p.mesh != null and is_instance_valid(p.mesh):
 		p.mesh.visible = false
 	_unfile(p)
+	var resolved_heft := heft if heft >= 0 else _last_heft
+	var high_energy := chain_depth == 0 and _is_high_energy(speed, resolved_heft)
 	if not _no_visuals:
 		var n := SHARDS_LIGHT if p.tier <= 2 else SHARDS_HEAVY
 		for i in n:
@@ -536,11 +558,13 @@ func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, s
 			_sfx.call(Kit.sfx_id(p.tier), at)
 		if _weight.is_valid():
 			_weight.call(p.tier, at)
-	_shrapnel(p, at, dir, speed, radial)
+	_shrapnel(p, at, dir, speed, radial, high_energy)
 	_pay(p)
 	piece_shattered.emit(p.bounds)
 	if is_instance_valid(_events) and _events.has_signal("world_fact"):
 		_events.emit_signal("world_fact", "piece_shattered", at)
+	if high_energy and chain_depth < CHAIN_MAX_DEPTH:
+		_propagate_chain(p, at, dir, speed, radial, resolved_heft, chain_depth + 1)
 
 
 func _refuse(p: Piece, at: Vector3, dir: Vector3) -> void:
@@ -555,31 +579,62 @@ func _refuse(p: Piece, at: Vector3, dir: Vector3) -> void:
 		_cue.call(at)
 
 
-func _shrapnel(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool) -> void:
+func _shrapnel(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, high_energy: bool = false) -> void:
+	var reach := HEAVY_SHRAPNEL_M if high_energy else SHRAPNEL_M
 	var found: Array = []
 	for enemy in _enemy_list():
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		var out: Vector3 = enemy.global_position - at
 		var away := Vector3(out.x, 0.0, out.z)
-		if out.length() > SHRAPNEL_M:
+		if out.length() > reach:
 			continue
 		if not radial and away.length() > 0.01 and dir.dot(away.normalized()) < SHRAPNEL_COS:
 			continue
 		found.append([out.length(), enemy.get_instance_id(), enemy, away])
 	found.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
-	var force := BASE_FORCE * float(TIER_SCALE[p.tier - 1]) * clampf(speed / maxf(_live_cruise(), 0.01), 0.6, 1.4)
+	var energy_mult := HEAVY_SHRAPNEL_MULT if high_energy else 1.0
+	var force := BASE_FORCE * float(TIER_SCALE[p.tier - 1]) * clampf(speed / maxf(_live_cruise(), 0.01), 0.6, 1.4) * energy_mult
 	for i in mini(found.size(), SHRAPNEL_MAX):
 		var enemy: Object = found[i][2]
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
 			continue
 		var away: Vector3 = found[i][3]
-		var push := (away.normalized() if away.length() > 0.01 else dir) + Vector3.UP * 0.3
+		var flat_push := away.normalized() if away.length() > 0.01 else dir
+		if high_energy and not radial and dir.length_squared() > 0.0001:
+			flat_push = flat_push.lerp(dir.normalized(), 0.35).normalized()
+		var push := flat_push + Vector3.UP * (0.35 if high_energy else 0.3)
 		if enemy.has_method("knock"):
 			enemy.knock(push, force)
 		if _combat != null and _combat.has_method("strike"):
 			_combat.strike(enemy, "debris", force, "", "debris:" + p.id)
 		_shrapnel_hits += 1
+
+
+func _propagate_chain(origin: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, heft: int, next_depth: int) -> void:
+	var max_tier := mini(CHAIN_MAX_TIER, heft + 1)
+	var candidates: Array = []
+	for adj in _near(at, at, CHAIN_SHATTER_M):
+		if adj == origin or not adj.intact or adj.tier > max_tier:
+			continue
+		var near := _closest(adj, at)
+		var dist := at.distance_to(near)
+		if dist > CHAIN_SHATTER_M:
+			continue
+		var away := Vector3(near.x - at.x, 0.0, near.z - at.z)
+		if not radial and away.length() > 0.01 and dir.dot(away.normalized()) < SHRAPNEL_COS:
+			continue
+		candidates.append([dist, adj.order, adj, near, away])
+	candidates.sort_custom(func(a: Array, b: Array) -> bool: return a[0] < b[0] or (a[0] == b[0] and a[1] < b[1]))
+	for i in mini(candidates.size(), CHAIN_MAX_PIECES):
+		var adj: Piece = candidates[i][2]
+		if not adj.intact:
+			continue
+		var near: Vector3 = candidates[i][3]
+		var away: Vector3 = candidates[i][4]
+		var push_dir := away.normalized() if away.length() > 0.01 else dir
+		_chain_breaks += 1
+		_shatter(adj, near, push_dir, speed * 0.75, false, "shrapnel_chain", heft, next_depth)
 
 
 func _is_scrapless() -> bool:
