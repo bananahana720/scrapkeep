@@ -395,6 +395,13 @@ export function selfPlayPresetText(presetText, name = preset) {
   throw new Error(`preset "${name}" has no exclude_filter`);
 }
 
+export function winProofEnv(state, repoRoot = root, baseEnv = process.env) {
+  return {
+    ...isolatedXdgEnv(baseEnv, state),
+    SCRAPKEEP_REPO_ROOT: repoRoot,
+  };
+}
+
 export function winProofBotArgs(proof, out) {
   return [
     "--out=" + out,
@@ -783,12 +790,7 @@ async function playWinProof(base, pack, proof) {
     {
       cwd: path.dirname(pack),
       timeout: winProofTimeoutMs(proof),
-      env: {
-        ...process.env,
-        XDG_DATA_HOME: path.join(state, "data"),
-        XDG_CONFIG_HOME: path.join(state, "config"),
-        XDG_CACHE_HOME: path.join(state, "cache"),
-      },
+      env: winProofEnv(state),
     },
   );
   const botText = bot.stdout + bot.stderr;

@@ -30,9 +30,54 @@ var _segment := ""
 var _segments := {}
 
 
+static func _walk_up_config(start_dir: String) -> String:
+	var dir := start_dir
+	for _depth in range(7):
+		var candidate := dir.path_join(CONFIG_FILE).simplify_path()
+		if FileAccess.file_exists(candidate):
+			return candidate
+		var parent := dir.path_join("..").simplify_path()
+		if parent == dir:
+			break
+		dir = parent
+	return ""
+
+
+static func resolve_config_path(env_root := "", res_root := "", cwd_root := "") -> String:
+	var fallback := ""
+	if env_root != "":
+		var from_env := env_root.path_join(CONFIG_FILE).simplify_path()
+		if FileAccess.file_exists(from_env):
+			return from_env
+		fallback = from_env
+	if res_root != "":
+		var from_res := res_root.path_join("../../" + CONFIG_FILE).simplify_path()
+		if FileAccess.file_exists(from_res):
+			return from_res
+		if fallback == "":
+			fallback = from_res
+	if cwd_root != "":
+		var found := _walk_up_config(cwd_root)
+		if found != "":
+			return found
+		if fallback == "":
+			fallback = cwd_root.path_join(CONFIG_FILE).simplify_path()
+	return fallback if fallback != "" else CONFIG_FILE
+
+
 static func config() -> Dictionary:
 	if _config.is_empty():
-		var path := ProjectSettings.globalize_path("res://").path_join("../../" + CONFIG_FILE).simplify_path()
+		var env_root := OS.get_environment("SCRAPKEEP_REPO_ROOT")
+		var res_root := ProjectSettings.globalize_path("res://")
+		var cwd_dir := DirAccess.open(".")
+		var cwd_root := cwd_dir.get_current_dir() if cwd_dir != null else ProjectSettings.globalize_path(".")
+		var path := resolve_config_path(env_root, res_root, cwd_root)
+		if not FileAccess.file_exists(path):
+			var exe_dir := OS.get_executable_path().get_base_dir()
+			if exe_dir != "" and exe_dir != cwd_root:
+				var from_exe := resolve_config_path("", "", exe_dir)
+				if FileAccess.file_exists(from_exe):
+					path = from_exe
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else null
 		if parsed is Dictionary:
 			_config = parsed
