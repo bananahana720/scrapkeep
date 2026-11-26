@@ -83,9 +83,11 @@ static func _on_stage_entered(stage: int, _retry: bool, ctx) -> void:
 			ctx.events.connect("world_fact", effects.on_world_fact)
 		if effects != null:
 			effects.beat_offset = _beat_offset.bind(ctx)
+			effects.bind_events(ctx.events)
 	var dressed := root.get_node_or_null(NODE_NAME)
 	var live := dressed.get_node_or_null("WindEffects") if dressed != null else null
 	if live != null and park:
+		live.bind_events(ctx.events)
 		live.on_stage_entered(landmark_kind(map), _retry)
 	if park:
 		restore_environment(terrain)

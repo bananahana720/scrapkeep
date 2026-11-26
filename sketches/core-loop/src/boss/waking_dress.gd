@@ -178,8 +178,8 @@ func _show_intro_card() -> void:
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 48.0
 	panel.offset_right = -48.0
-	panel.offset_top = -152.0
-	panel.offset_bottom = -32.0
+	panel.offset_top = -268.0
+	panel.offset_bottom = -172.0
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(Palette.CHARCOAL, 0.88)
@@ -221,6 +221,10 @@ func dismiss_intro_card() -> void:
 		_intro_layer.queue_free()
 	_intro_layer = null
 	_intro_root = null
+
+
+func _exit_tree() -> void:
+	dismiss_intro_card()
 
 
 func _input(event: InputEvent) -> void:

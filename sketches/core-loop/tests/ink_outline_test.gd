@@ -239,6 +239,23 @@ func _filter() -> void:
 	var twin: Material = shared.material_override
 	_t.check("apply() twice lines nothing twice", InkOutline.apply(holder, "warden", [owned_paint]) == 3 and shared.material_override == twin
 		and twin.next_pass == InkOutline.ink("warden") and InkOutline.ink("warden").next_pass == null and owned_paint.next_pass == InkOutline.ink("warden"))
+	var vfx_holder := Node3D.new()
+	var puff := _view(_cube(), _body())
+	puff.name = "JetPuff"
+	var dust := _view(_cube(), _body())
+	dust.name = "DigDustQuad"
+	var faded := _view(_cube(), _body())
+	faded.transparency = 0.35
+	var tagged_view := _view(_cube(), _body())
+	tagged_view.set_meta("no_ink", true)
+	var semi_mat := _body()
+	semi_mat.albedo_color.a = 0.7
+	var semi := _view(_cube(), semi_mat)
+	for node in [puff, dust, faded, tagged_view, semi]:
+		vfx_holder.add_child(node)
+	var vfx_lined := InkOutline.apply(vfx_holder, "pilot")
+	_t.eq("translucent, puff, dust, and no_ink VFX meshes receive zero ink outlines", vfx_lined, 0)
+	vfx_holder.free()
 	holder.free()
 
 
