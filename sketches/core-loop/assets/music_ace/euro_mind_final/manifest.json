@@ -11,46 +11,52 @@
   "bass",
   "other"
  ],
- "level_db": 0.0,
+ "level_db": 0,
  "pre_roll": 4096,
  "post_roll": 1024,
  "loop_join": 441,
- "join_ms": 10.0,
- "silent_db": -80.0,
+ "join_ms": 10,
+ "silent_db": -80,
  "sources": {
   "main": {
-   "take": "833d62fa-f2d0-88e3-fb58-333fecb27266.wav",
-   "source": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/renders/lab-round8-1/euro-mind-final/833d62fa-f2d0-88e3-fb58-333fecb27266.wav",
-   "stretched": "/home/andrew/scratch/w16/phase/stretched/euro_mind_final.wav",
-   "bpm_before": 141.96,
-   "bpm_after": 142.0,
+   "take": "euro_mind_final-lyria-3.5",
+   "source": "lyria-work:euro_mind_final/lyria_raw.wav",
+   "source_sha256": "e02a85d78e2fd278e73be43e71a41a62ac0c9ef135e2538dd94bd096bfc61555",
+   "stretched": "lyria-work:euro_mind_final/stretched.wav",
+   "stretched_sha256": "4fbe34a9ecdaa5ace179b814b315a3b6edc7de1a75389a46775c66f44960d43c",
+   "model": "lyria-3.5",
+   "analyzer": "gemini-4-neon",
+   "bpm_before": 128,
+   "bpm_after": 142.07,
+   "stretch_mode": "rubberband:1.109375",
    "stems": {
     "drums": {
-     "path": "/home/andrew/scratch/w16/phase/stems/htdemucs/euro_mind_final/drums.wav",
-     "sha256": "d575c78063b2d71fa8b0aa203de96f4b086d20ccb135647d4074410f8e5f00a3"
+     "path": "lyria-work:euro_mind_final/stems/drums.wav",
+     "sha256": "fa56d56d6e65bc9e71c0daf15ea8f8875830aab8de116af3d5855ddcddce546c"
     },
     "bass": {
-     "path": "/home/andrew/scratch/w16/phase/stems/htdemucs/euro_mind_final/bass.wav",
-     "sha256": "c9df390cc06e8237f16ab9300b17730f777e663894fe2a92ce471df6e80a6e9a"
+     "path": "lyria-work:euro_mind_final/stems/bass.wav",
+     "sha256": "2ca81b0da65903ffc35deebe10de852ef92687e1cb3dc664963fcc7769c06a4a"
     },
     "other": {
-     "path": "/home/andrew/scratch/w16/phase/stems/htdemucs/euro_mind_final/other.wav",
-     "sha256": "d01cf9d9daae8542b9cb4fce461c61563b17bbfdea875c123e97cea3d980e8cd"
+     "path": "lyria-work:euro_mind_final/stems/other.wav",
+     "sha256": "a99af09d4365c5e9171cfa1d23ff86e71525f0df37952d3197c82aebfa238a87"
     },
     "vocals": {
-     "path": "/home/andrew/scratch/w16/phase/stems/htdemucs/euro_mind_final/vocals.wav",
-     "sha256": "b3fb6c50fbff150714039ec614105b7c128edce5bf2bea6a5df27a30ac7f80de"
+     "path": "lyria-work:euro_mind_final/stems/vocals.wav",
+     "sha256": "f0485bf92eb21883f64db1c8492107f6a0f836b7ca21f2e0b10ea6cc3418ba2b"
     }
    },
-   "note": "htdemucs; vocals summed into other"
+   "note": "htdemucs; vocals folded into other"
   }
  },
  "clips": {
   "main": {
    "parent": "single",
-   "take": "euro-mind-final",
-   "source_start": 298208,
-   "take_start": 298208,
+   "take": "euro_mind_final-lyria-3.5",
+   "source_bars": "28-43",
+   "source_start": 2079638,
+   "take_start": 2079638,
    "bpm": 142,
    "beat": 18634,
    "bar": 74536,
@@ -68,6 +74,16 @@
     "drums": "main.drums.ogg",
     "bass": "main.bass.ogg",
     "other": "main.other.ogg"
+   },
+   "gain_db": -4.3,
+   "measured": {
+    "lufs": -16.1,
+    "true_peak": -3.9,
+    "note": "summed decoded Ogg stems"
+   },
+   "seam": {
+    "wrap": 0.0144,
+    "p999": 0.1561
    }
   }
  },
@@ -84,29 +100,29 @@
  "profiles": {
   "full": {
    "drums": {
-    "volume_db": 0.0,
+    "volume_db": 0,
     "lowpass_hz": null
    },
    "bass": {
-    "volume_db": 0.0,
+    "volume_db": 0,
     "lowpass_hz": null
    },
    "other": {
-    "volume_db": 0.0,
+    "volume_db": 0,
     "lowpass_hz": null
    }
   },
   "lounge": {
    "drums": {
-    "volume_db": -12.0,
+    "volume_db": -12,
     "lowpass_hz": null
    },
    "bass": {
-    "volume_db": -4.0,
+    "volume_db": -4,
     "lowpass_hz": null
    },
    "other": {
-    "volume_db": 0.0,
+    "volume_db": 0,
     "lowpass_hz": null
    }
   }
@@ -115,77 +131,83 @@
   "raw": {
    "stems": {
     "drums": {
-     "volume_db": 0.0,
+     "volume_db": 0,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "bass": {
-     "volume_db": 0.0,
+     "volume_db": 0,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "other": {
-     "volume_db": 0.0,
+     "volume_db": 0,
      "lowpass_hz": null,
      "lowpass_order": null
     }
    },
-   "ramp_in_ms": 8.0,
-   "ramp_out_ms": 8.0,
+   "ramp_in_ms": 8,
+   "ramp_out_ms": 8,
    "source": "the take as ACE played it: every stem at 0 dB"
   },
   "hard": {
    "stems": {
     "drums": {
-     "volume_db": -80.0,
+     "volume_db": -80,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "bass": {
-     "volume_db": -80.0,
+     "volume_db": -80,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "other": {
-     "volume_db": -8.0,
+     "volume_db": -8,
      "lowpass_hz": 900,
      "lowpass_order": 2
     }
    },
-   "ramp_in_ms": 8.0,
-   "ramp_out_ms": 8.0,
+   "ramp_in_ms": 8,
+   "ramp_out_ms": 8,
    "source": "round2/automation/open.json"
   },
   "gentle": {
    "stems": {
     "drums": {
-     "volume_db": -12.0,
+     "volume_db": -12,
      "lowpass_hz": 2000,
      "lowpass_order": 2
     },
     "bass": {
-     "volume_db": -6.0,
+     "volume_db": -6,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "other": {
-     "volume_db": 0.0,
+     "volume_db": 0,
      "lowpass_hz": null,
      "lowpass_order": null
     }
    },
-   "ramp_in_ms": 60.0,
-   "ramp_out_ms": 20.0,
+   "ramp_in_ms": 60,
+   "ramp_out_ms": 20,
    "source": "round2/automation/open-gentle.json"
   }
  },
  "breath_default": "hard",
- "cuts": "measured-beat-phase",
- "timing_verified": false,
- "gain_db": -2.0,
+ "cuts": "lyria-3.5-stem-context",
+ "timing_verified": true,
+ "gain_db": -4.3,
  "measured": {
-  "lufs": -16.0,
-  "true_peak": -3.6,
-  "note": "summed stems before Ogg encode"
+  "lufs": -16.1,
+  "true_peak": -3.9,
+  "note": "summed decoded Ogg stems"
+ },
+ "lyria_context": {
+  "model": "lyria-3.5",
+  "analyzer": "gemini-4-neon",
+  "tonal_centre_audit": "Harmonic identity is obscured during the long 0:00-0:18 ambient pad and pitch-riser buildup, only locking onto a root at 0:19. The progression sits in a generic diatonic minor feel leaning closer to D minor / G minor rather than establishing an immediate, unmistakable bright E minor / E Dorian tonal anchor with raised-sixth jazz-funk lift from bar 1.",
+  "gems_compliance": "Passes strict instrumental and negative-artifact rules (zero vocals, zero vocal chops, zero dubstep wobble/talking growls, zero East Asian instruments). However, it fails core G1-G11 creative targets: missing jazz-funk harmony (G1), missing expressive synth-sax and brass call-and-response, insufficient Euro-club funk bounce across the full clip (G3/G4), weak non-melodic bassline (G8), no layered overlapping counter-melodies (G10), and relies on an EDM drop/breakdown structure rather than steady additive layering (G11)."
  }
 }

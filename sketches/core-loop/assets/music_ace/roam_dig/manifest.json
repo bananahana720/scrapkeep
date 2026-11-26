@@ -10,93 +10,111 @@
   "bass",
   "other"
  ],
- "level_db": 0.0,
+ "level_db": 0,
  "pre_roll": 4096,
  "post_roll": 1024,
  "loop_join": 441,
- "join_ms": 10.0,
- "silent_db": -80.0,
+ "join_ms": 10,
+ "silent_db": -80,
  "sources": {
   "calm": {
-   "take": "roam-dig-current",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-dig-current.wav",
-   "render_sha256": "f665447ab4e1a6004ad5bee0d46c3bda6af3474bf71e4cfc1fcac2ceaeb593c5",
-   "tempo_read": 172.0,
-   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "take": "roam_dig-lyria-3.5",
+   "render": "lyria-work:roam_dig/lyria_raw.wav",
+   "render_sha256": "93dcce6e08114b95480ed1683337658d8f27567a94aea41333e24aa22aea2772",
+   "stretched": "lyria-work:roam_dig/stretched.wav",
+   "stretched_sha256": "b7abd47c4d257cb940e1359ccc67ffcd8dbe545f3f17c046f8ee6efc9902a449",
+   "model": "lyria-3.5",
+   "analyzer": "gemini-4-neon",
+   "tempo_read": 174.11,
+   "bpm_after": 172.01,
+   "stretch_mode": "rubberband:0.987881",
+   "timing": "grid-locked downbeat from drums and bass stems, ear-gated and seam-verified",
    "split": {
     "tool": "htdemucs, vocals folded into other",
     "stems": {
      "drums": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-current/drums.wav",
-      "sha256": "956fdf62aaee981369cbd2d84527ff9b2bf968e524545268cd4f521b9666501b"
+      "path": "lyria-work:roam_dig/stems/drums.wav",
+      "sha256": "692ef6b6c917227f8f4259090aae17d35d734d1bfc17d9f08299982a4bcc0627"
      },
      "bass": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-current/bass.wav",
-      "sha256": "f75a2b28accefb2ff5a34818ec55d9623113370076f0ee7d3bbd8a1dceaa9b81"
+      "path": "lyria-work:roam_dig/stems/bass.wav",
+      "sha256": "e296788a70ce4de8a0f8e10331442b94acce15a240c4a5b1641c74e9af43aba6"
      },
      "other": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-current/other.wav",
-      "sha256": "730ac53f7dfcc588caf811a13e5b8b617e5d328644bfafec7f14daa2d15063b5"
+      "path": "lyria-work:roam_dig/stems/other.wav",
+      "sha256": "518af37c804152d625a88e658c5d7c6dad8970c029f0517380cfff3739ac1e4b"
      },
      "vocals": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-current/vocals.wav",
-      "sha256": "5f8eb03de99d29249b90ad14af206c01bf8fd646c51ccc31154f4772723690fc"
+      "path": "lyria-work:roam_dig/stems/vocals.wav",
+      "sha256": "c268fc85ac4e54512c2fb9f154e9fb1d5e3df9cf00bf4bf1e57feb776daa6088"
      }
     }
    }
   },
   "travel": {
-   "take": "roam-dig-current",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-dig-current.wav",
-   "render_sha256": "f665447ab4e1a6004ad5bee0d46c3bda6af3474bf71e4cfc1fcac2ceaeb593c5",
-   "tempo_read": 172.0,
-   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "take": "roam_dig-lyria-3.5",
+   "render": "lyria-work:roam_dig/lyria_raw.wav",
+   "render_sha256": "93dcce6e08114b95480ed1683337658d8f27567a94aea41333e24aa22aea2772",
+   "stretched": "lyria-work:roam_dig/stretched.wav",
+   "stretched_sha256": "b7abd47c4d257cb940e1359ccc67ffcd8dbe545f3f17c046f8ee6efc9902a449",
+   "model": "lyria-3.5",
+   "analyzer": "gemini-4-neon",
+   "tempo_read": 174.11,
+   "bpm_after": 172.01,
+   "stretch_mode": "rubberband:0.987881",
+   "timing": "grid-locked downbeat from drums and bass stems, ear-gated and seam-verified",
    "split": {
     "tool": "htdemucs, vocals folded into other",
     "stems": {
      "drums": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-current/drums.wav",
-      "sha256": "956fdf62aaee981369cbd2d84527ff9b2bf968e524545268cd4f521b9666501b"
+      "path": "lyria-work:roam_dig/stems/drums.wav",
+      "sha256": "692ef6b6c917227f8f4259090aae17d35d734d1bfc17d9f08299982a4bcc0627"
      },
      "bass": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-current/bass.wav",
-      "sha256": "f75a2b28accefb2ff5a34818ec55d9623113370076f0ee7d3bbd8a1dceaa9b81"
+      "path": "lyria-work:roam_dig/stems/bass.wav",
+      "sha256": "e296788a70ce4de8a0f8e10331442b94acce15a240c4a5b1641c74e9af43aba6"
      },
      "other": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-current/other.wav",
-      "sha256": "730ac53f7dfcc588caf811a13e5b8b617e5d328644bfafec7f14daa2d15063b5"
+      "path": "lyria-work:roam_dig/stems/other.wav",
+      "sha256": "518af37c804152d625a88e658c5d7c6dad8970c029f0517380cfff3739ac1e4b"
      },
      "vocals": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-current/vocals.wav",
-      "sha256": "5f8eb03de99d29249b90ad14af206c01bf8fd646c51ccc31154f4772723690fc"
+      "path": "lyria-work:roam_dig/stems/vocals.wav",
+      "sha256": "c268fc85ac4e54512c2fb9f154e9fb1d5e3df9cf00bf4bf1e57feb776daa6088"
      }
     }
    }
   },
   "cadence": {
-   "take": "roam-dig-spiced",
-   "render": "/home/andrew/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/spice/roam-dig-spiced.wav",
-   "render_sha256": "d5dfc0d3ca9b63eda72b0f28fc8fdf8cf4131b4fe6726a0e8cfce3e374bc4756",
-   "tempo_read": 172.0,
-   "timing": "measured beat phase of the drums stem; downbeat identity unverified",
+   "take": "roam_dig-lyria-3.5",
+   "render": "lyria-work:roam_dig/lyria_raw.wav",
+   "render_sha256": "93dcce6e08114b95480ed1683337658d8f27567a94aea41333e24aa22aea2772",
+   "stretched": "lyria-work:roam_dig/stretched.wav",
+   "stretched_sha256": "b7abd47c4d257cb940e1359ccc67ffcd8dbe545f3f17c046f8ee6efc9902a449",
+   "model": "lyria-3.5",
+   "analyzer": "gemini-4-neon",
+   "tempo_read": 174.11,
+   "bpm_after": 172.01,
+   "stretch_mode": "rubberband:0.987881",
+   "timing": "grid-locked downbeat from drums and bass stems, ear-gated and seam-verified",
    "split": {
     "tool": "htdemucs, vocals folded into other",
     "stems": {
      "drums": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-spiced/drums.wav",
-      "sha256": "ba513217946343cd3e599107d5fc4c40c880897592ff8a731f1814752c9fa4f9"
+      "path": "lyria-work:roam_dig/stems/drums.wav",
+      "sha256": "692ef6b6c917227f8f4259090aae17d35d734d1bfc17d9f08299982a4bcc0627"
      },
      "bass": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-spiced/bass.wav",
-      "sha256": "83d0a96670bf3a334465c15de2ffd4dfb80bf36cc26c80800da9d073cf904639"
+      "path": "lyria-work:roam_dig/stems/bass.wav",
+      "sha256": "e296788a70ce4de8a0f8e10331442b94acce15a240c4a5b1641c74e9af43aba6"
      },
      "other": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-spiced/other.wav",
-      "sha256": "27e31dff051ee01dd55970967dd2524a98d9f97889c5063abbce7db3292048d5"
+      "path": "lyria-work:roam_dig/stems/other.wav",
+      "sha256": "518af37c804152d625a88e658c5d7c6dad8970c029f0517380cfff3739ac1e4b"
      },
      "vocals": {
-      "path": "/home/andrew/scratch/w16/core-packs/stems/htdemucs/roam-dig-spiced/vocals.wav",
-      "sha256": "7da239a1012245277ad5f1d4a7492e19050ef059cccf3c9f060d15005f9cc466"
+      "path": "lyria-work:roam_dig/stems/vocals.wav",
+      "sha256": "c268fc85ac4e54512c2fb9f154e9fb1d5e3df9cf00bf4bf1e57feb776daa6088"
      }
     }
    }
@@ -105,12 +123,12 @@
  "clips": {
   "calm": {
    "parent": "roam",
-   "take": "roam-dig-current",
-   "source_state": "roam-dig-current bars 4-19",
-   "source_bars": "5-20",
-   "source_start": 246204,
-   "take_start": 246204,
-   "bpm": 172.0,
+   "take": "roam_dig-lyria-3.5",
+   "source_state": "roam_dig-lyria-3.5 bars 8-23",
+   "source_bars": "8-23",
+   "source_start": 484200,
+   "take_start": 484200,
+   "bpm": 172,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -128,23 +146,25 @@
     "bass": "calm.bass.ogg",
     "other": "calm.other.ogg"
    },
-   "mix": "cur",
-   "grid_snap_ms": 1.45,
-   "gain_db": 0.0,
+   "gain_db": 0,
    "measured": {
-    "lufs": -16.0,
-    "true_peak": -2.8,
-    "note": "summed stems before Ogg encode"
+    "lufs": -16,
+    "true_peak": -2,
+    "note": "summed decoded Ogg stems"
+   },
+   "seam": {
+    "wrap": 0.0259,
+    "p999": 0.2466
    }
   },
   "travel": {
    "parent": "roam",
-   "take": "roam-dig-current",
-   "source_state": "roam-dig-current bars 20-35",
-   "source_bars": "21-36",
-   "source_start": 1230698,
-   "take_start": 1230698,
-   "bpm": 172.0,
+   "take": "roam_dig-lyria-3.5",
+   "source_state": "roam_dig-lyria-3.5 bars 30-45",
+   "source_bars": "30-45",
+   "source_start": 1837992,
+   "take_start": 1837992,
+   "bpm": 172,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -162,23 +182,25 @@
     "bass": "travel.bass.ogg",
     "other": "travel.other.ogg"
    },
-   "mix": "cur",
-   "grid_snap_ms": 0.0,
-   "gain_db": -0.1,
+   "gain_db": -1.9,
    "measured": {
-    "lufs": -16.0,
-    "true_peak": -2.9,
-    "note": "summed stems before Ogg encode"
+    "lufs": -16.1,
+    "true_peak": -2,
+    "note": "summed decoded Ogg stems"
+   },
+   "seam": {
+    "wrap": 0.0147,
+    "p999": 0.1935
    }
   },
   "cadence": {
    "parent": "roam",
-   "take": "roam-dig-spiced",
-   "source_state": "roam-dig-spiced bars 42-43",
-   "source_bars": "43-44",
-   "source_start": 2584465,
-   "take_start": 2584465,
-   "bpm": 172.0,
+   "take": "roam_dig-lyria-3.5",
+   "source_state": "roam_dig-lyria-3.5 bars 80-81",
+   "source_bars": "80-81",
+   "source_start": 4914792,
+   "take_start": 4914792,
+   "bpm": 172,
    "beat": 15384,
    "bar": 61536,
    "beats_per_bar": 4,
@@ -196,13 +218,11 @@
     "bass": "cadence.bass.ogg",
     "other": "cadence.other.ogg"
    },
-   "mix": "high",
-   "grid_snap_ms": 0.0,
-   "gain_db": -0.05,
+   "gain_db": -1.7,
    "measured": {
-    "lufs": -21.3,
-    "true_peak": -6.6,
-    "note": "summed stems before Ogg encode"
+    "lufs": -16.1,
+    "true_peak": -3.9,
+    "note": "summed decoded Ogg stems"
    }
   }
  },
@@ -299,29 +319,29 @@
  "profiles": {
   "full": {
    "drums": {
-    "volume_db": 0.0,
+    "volume_db": 0,
     "lowpass_hz": null
    },
    "bass": {
-    "volume_db": 0.0,
+    "volume_db": 0,
     "lowpass_hz": null
    },
    "other": {
-    "volume_db": 0.0,
+    "volume_db": 0,
     "lowpass_hz": null
    }
   },
   "lounge": {
    "drums": {
-    "volume_db": -12.0,
+    "volume_db": -12,
     "lowpass_hz": null
    },
    "bass": {
-    "volume_db": -4.0,
+    "volume_db": -4,
     "lowpass_hz": null
    },
    "other": {
-    "volume_db": 0.0,
+    "volume_db": 0,
     "lowpass_hz": null
    }
   }
@@ -330,72 +350,78 @@
   "raw": {
    "stems": {
     "drums": {
-     "volume_db": 0.0,
+     "volume_db": 0,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "bass": {
-     "volume_db": 0.0,
+     "volume_db": 0,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "other": {
-     "volume_db": 0.0,
+     "volume_db": 0,
      "lowpass_hz": null,
      "lowpass_order": null
     }
    },
-   "ramp_in_ms": 8.0,
-   "ramp_out_ms": 8.0,
+   "ramp_in_ms": 8,
+   "ramp_out_ms": 8,
    "source": "the take as ACE played it: every stem at 0 dB"
   },
   "hard": {
    "stems": {
     "drums": {
-     "volume_db": -80.0,
+     "volume_db": -80,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "bass": {
-     "volume_db": -80.0,
+     "volume_db": -80,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "other": {
-     "volume_db": -8.0,
+     "volume_db": -8,
      "lowpass_hz": 900,
      "lowpass_order": 2
     }
    },
-   "ramp_in_ms": 8.0,
-   "ramp_out_ms": 8.0,
+   "ramp_in_ms": 8,
+   "ramp_out_ms": 8,
    "source": "round2/automation/open.json"
   },
   "gentle": {
    "stems": {
     "drums": {
-     "volume_db": -12.0,
+     "volume_db": -12,
      "lowpass_hz": 2000,
      "lowpass_order": 2
     },
     "bass": {
-     "volume_db": -6.0,
+     "volume_db": -6,
      "lowpass_hz": null,
      "lowpass_order": null
     },
     "other": {
-     "volume_db": 0.0,
+     "volume_db": 0,
      "lowpass_hz": null,
      "lowpass_order": null
     }
    },
-   "ramp_in_ms": 60.0,
-   "ramp_out_ms": 20.0,
+   "ramp_in_ms": 60,
+   "ramp_out_ms": 20,
    "source": "round2/automation/open-gentle.json"
   }
  },
  "breath_default": "hard",
- "cuts": "measured-beat-phase",
- "timing_verified": false,
- "pick": "sound-bible-2026-10-16/spice"
+ "cuts": "lyria-3.5-stem-context",
+ "timing_verified": true,
+ "pick": "lyria-3.5-stem-context",
+ "lyria_context": {
+  "model": "lyria-3.5",
+  "analyzer": "gemini-4-neon",
+  "tonal_centre_audit": "Centers on E minor with subtle Phrygian colour, but filtered pad wash blurs chord clarity and leaves the cadence resolution slightly vague.",
+  "gems_compliance": "Cleanly instrumental with zero vocals, zero East Asian motifs, and zero R1/R2 wobble artifacts, but under-delivers on tight clav/EP comping (G5), crisp bass articulation (G8), and overlapping brass/sax counter-melodies (G10)."
+ }
 }
