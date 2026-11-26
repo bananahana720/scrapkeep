@@ -317,12 +317,16 @@ static func _weld(mesh: Mesh) -> ArrayMesh:
 	out.custom_aabb = source.custom_aabb
 	if not packed:
 		out.shadow_mesh = source.shadow_mesh
+	if source.get_meta("bake_tangents_ok", false):
+		out.set_meta("bake_tangents_ok", true)
 	out.set_meta("ink_hull_of", source.get_instance_id())
 	return out
 
 
 static func _line(view: MeshInstance3D, surface: int, role: String, owned: Array) -> bool:
 	var mat := view.get_active_material(surface)
+	if mat == null:
+		return false
 	if mat.has_meta("ink_source") or (mat.next_pass != null and mat.next_pass.has_meta("ink_role")):
 		return true
 	if mat in owned or mat is ShaderMaterial:

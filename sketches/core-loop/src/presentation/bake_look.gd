@@ -222,7 +222,7 @@ static func warm_view(view: MeshInstance3D) -> void:
 
 
 static func tangent_safe(mesh: Mesh) -> Mesh:
-	if not (mesh is ArrayMesh) or mesh.get_meta("bake_tangents_ok", false):
+	if not (mesh is ArrayMesh) or mesh.get_meta("bake_tangents_ok", false) or mesh.has_meta("ink_hull_of"):
 		return mesh
 	if mesh.has_meta("bake_safe"):
 		return mesh.get_meta("bake_safe")
