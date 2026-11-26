@@ -39,6 +39,9 @@ const T := preload("res://tests/support/t.gd")
 # Re-pinned 2026-10-10 for the set piece (wave P-B unit B3): SKILL-BAR sections 2 and 4 let Q
 # through during the set piece as recall (a full refund in the wind-up), so in set_piece the
 # roll, Space (bail) and Q (recall) read, and nothing else.
+# Re-pinned 2026-11-26: C returned in Bindings.EXTRA_ACTIONS["cl_consumable"] for held
+# consumables (never cl_dash), so FieldNotes may list "C" only for consumables while cl_dash
+# stays banned and KEY_C still changes no movement Intent field.
 
 const CUT_NAMES := ["cl_reel", "cl_dash", "KEY_Q", "WHEEL"]
 const MENU_GLYPHS := ["key_tab", "key_p", "key_r"]
@@ -325,12 +328,15 @@ func _readers() -> void:
 			detail.append("%s: keys %s caps %s" % [verb, row["keys"], row["caps"]])
 	_t.check("the field notes list the ten verbs with their table keys, in order", verb_rows_ok and FieldNotes.VERB_ROWS.size() == 10
 		and not FieldNotes.VERB_ROWS.any(func(r): return r[0] == "special"), "; ".join(detail))
+	var c_is_consumable: bool = KEY_C in Bindings.EXTRA_ACTIONS.get(Bindings.CONSUMABLE_ACTION, {}).get("keys", [])
 	var named: Array = []
 	for row in rows:
 		var keys: String = row["keys"]
-		if (keys.begins_with("Q") and keys != Bindings.label("ultimate")) or keys.contains("wheel") or keys == "C":
+		var does: String = String(row.get("does", "")).to_lower()
+		var c_cut := keys == "C" and (not c_is_consumable or not does.contains("consumable"))
+		if (keys.begins_with("Q") and keys != Bindings.label("ultimate")) or keys.contains("wheel") or c_cut:
 			named.append(keys)
-	_t.eq("no field-notes row names Q, C or the wheel as a key", named, [])
+	_t.eq("no field-notes row names a cut key (Q reel, C dash or wheel)", named, [])
 	var cap_strays: Array = []
 	for row in rows:
 		for cap in row.get("caps", []):
