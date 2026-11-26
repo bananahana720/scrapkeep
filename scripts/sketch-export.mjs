@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { copyFile, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -364,7 +364,7 @@ export function howToRun({ sha7 }) {
       "3. Run ./core-loop.x86_64 from any directory.",
       "4. Saves live in ~/.local/share/godot/app_userdata/core-loop/. For a fresh first launch, rename that folder first and rename it back afterwards to keep your progress.",
       "5. On the title, press H for how to play and the controls.",
-      "6. To open all six pilots for a sitting, leaving your save alone: ./core-loop.x86_64 -- --profile=sitting",
+      "6. World 1 sitting (stages 1-2): ./core-loop.x86_64 -- --profile=sitting (all pilots, save untouched) or --profile=sitting-earned (fresh profile). Add --final-world=last for full-alpha (all 6 stages).",
     ].join("\n") + "\n"
   );
 }
@@ -448,6 +448,40 @@ function bossSmoke(crash) {
   return smoke;
 }
 
+export const EXPORT_TEMPLATE_REL = "godot/export_templates/4.7.2.stable/linux_release.x86_64";
+
+export function resolveExportTemplate({
+  env = process.env,
+  home = os.homedir(),
+  exists = existsSync,
+} = {}) {
+  const candidates = [];
+  if (env.XDG_DATA_HOME) candidates.push(path.join(env.XDG_DATA_HOME, EXPORT_TEMPLATE_REL));
+  const fallback = path.join(home, ".local/share", EXPORT_TEMPLATE_REL);
+  if (!candidates.includes(fallback)) candidates.push(fallback);
+  return candidates.find((candidate) => exists(candidate)) ?? null;
+}
+
+export function isolatedXdgEnv(baseEnv, stateDir) {
+  return {
+    ...baseEnv,
+    XDG_DATA_HOME: path.join(stateDir, "data"),
+    XDG_CONFIG_HOME: path.join(stateDir, "config"),
+    XDG_CACHE_HOME: path.join(stateDir, "cache"),
+  };
+}
+
+export async function withIsolatedXdg(fn, { baseEnv = process.env, tmpRoot = os.tmpdir() } = {}) {
+  const stateDir = await mkdtemp(path.join(tmpRoot, "scrapkeep-export-xdg-"));
+  try {
+    for (const dir of ["data", "config", "cache"])
+      await mkdir(path.join(stateDir, dir), { recursive: true });
+    return await fn(isolatedXdgEnv(baseEnv, stateDir), stateDir);
+  } finally {
+    await rm(stateDir, { recursive: true, force: true });
+  }
+}
+
 function fail(message) {
   console.error("sketch:export FAIL: " + message);
   process.exit(1);
@@ -472,9 +506,12 @@ async function main() {
     bossSmoke(crash);
     return;
   }
-  const dataHome = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
-  const template = path.join(dataHome, "godot/export_templates/4.7.2.stable/linux_release.x86_64");
-  if (!existsSync(template)) fail("export template missing: " + template);
+  const template = resolveExportTemplate();
+  if (!template)
+    fail(
+      "export template missing: " + path.join(os.homedir(), ".local/share", EXPORT_TEMPLATE_REL),
+    );
+  const templateDataHome = path.resolve(template, "../../../..");
 
   const tracks = trackedManifests(stemRoot);
   if (!tracks.includes("spillway"))
@@ -535,90 +572,101 @@ async function main() {
       fail(`export include check "${name}"\n` + included.problems.join("\n"));
   }
 
-  const imported = run(binary, ["--headless", "--path", project, "--editor", "--import"]);
-  if (imported.status !== 0 || errorLine.test(imported.stdout + imported.stderr))
-    fail("editor import failed\n" + (imported.stdout + imported.stderr).slice(-2000));
-
-  const gate = run(
-    binary,
-    ["--headless", "--path", project, "--script", "res://tests/release_gate_placeholder_test.gd"],
-    { env: { ...process.env, SCRAPKEEP_RELEASE_GATE: "1" } },
-  );
-  const gateFailures = releaseGateFailures(gate.stdout + gate.stderr, gate.status);
-  if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
-
-  const placeholders = run(process.execPath, [
-    path.join(root, "scripts/placeholder-gate.mjs"),
-    "--project",
-    project,
-    "--limit",
-    "0",
-  ]);
-  const placeholderLine =
-    ((placeholders.stdout ?? "") + (placeholders.stderr ?? "")).trim().split("\n").pop() ||
-    "no output";
-  console.log("placeholder report (not blocking): " + placeholderLine);
-
-  const smoke = bossSmoke(crash);
-
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\..*/, "");
   const outDir = path.join(root, "artifacts/local/core-loop-export", stamp);
-  await mkdir(outDir, { recursive: true });
   const exe = path.join(outDir, "core-loop.x86_64");
-  const presetPath = path.join(project, "export_presets.cfg");
-  const restorePreset = () => writeFileSync(presetPath, presetText);
-  let exported;
-  try {
-    if (args.selfPlay) {
-      process.once("exit", restorePreset);
-      for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => process.exit(128));
-      await writeFile(presetPath, selfPlayPresetText(presetText));
-    }
-    exported = run(binary, ["--headless", "--path", project, "--export-release", preset, exe]);
-  } finally {
-    if (args.selfPlay) {
-      restorePreset();
-      process.removeListener("exit", restorePreset);
-    }
-  }
-  const exportText = exported.stdout + exported.stderr;
-  if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(exe))
-    fail("export failed\n" + exportText.slice(-2000));
+  const { smoke, bootText, stemCount } = await withIsolatedXdg(async (xdgEnv) => {
+    const imported = run(binary, ["--headless", "--path", project, "--editor", "--import"], {
+      env: xdgEnv,
+    });
+    if (imported.status !== 0 || errorLine.test(imported.stdout + imported.stderr))
+      fail("editor import failed\n" + (imported.stdout + imported.stderr).slice(-2000));
 
-  await cp(stemsFrom, path.join(outDir, "music_ace"), {
-    recursive: true,
-    filter: (source) => !source.endsWith(".import") && !source.endsWith(".gdignore"),
-  });
-  let stemCount = 0;
-  for (const track of tracks) {
-    await mkdir(path.join(outDir, "music_ace", track), { recursive: true });
-    await copyFile(
-      path.join(stemRoot, track, "manifest.json"),
-      path.join(outDir, "music_ace", track, "manifest.json"),
+    const gate = run(
+      binary,
+      ["--headless", "--path", project, "--script", "res://tests/release_gate_placeholder_test.gd"],
+      { env: { ...xdgEnv, SCRAPKEEP_RELEASE_GATE: "1" } },
     );
-    stemCount += Object.keys(manifests[track].clips).length * manifests[track].stems.length;
-  }
+    const gateFailures = releaseGateFailures(gate.stdout + gate.stderr, gate.status);
+    if (gateFailures.length > 0) fail("release gate\n" + gateFailures.join("\n"));
 
-  const boot = run(exe, ["--headless", "--quit-after", "300", "--music=ace", "--ace-check"], {
-    cwd: outDir,
+    const placeholders = run(process.execPath, [
+      path.join(root, "scripts/placeholder-gate.mjs"),
+      "--project",
+      project,
+      "--limit",
+      "0",
+    ]);
+    const placeholderLine =
+      ((placeholders.stdout ?? "") + (placeholders.stderr ?? "")).trim().split("\n").pop() ||
+      "no output";
+    console.log("placeholder report (not blocking): " + placeholderLine);
+
+    const smokeRun = bossSmoke(crash);
+
+    await mkdir(outDir, { recursive: true });
+    const presetPath = path.join(project, "export_presets.cfg");
+    const restorePreset = () => writeFileSync(presetPath, presetText);
+    let exported;
+    try {
+      if (args.selfPlay) {
+        process.once("exit", restorePreset);
+        for (const signal of ["SIGINT", "SIGTERM"]) process.once(signal, () => process.exit(128));
+        await writeFile(presetPath, selfPlayPresetText(presetText));
+      }
+      exported = run(binary, ["--headless", "--path", project, "--export-release", preset, exe], {
+        env: { ...xdgEnv, XDG_DATA_HOME: templateDataHome },
+      });
+    } finally {
+      if (args.selfPlay) {
+        restorePreset();
+        process.removeListener("exit", restorePreset);
+      }
+    }
+    const exportText = exported.stdout + exported.stderr;
+    if (exported.status !== 0 || errorLine.test(exportText) || !existsSync(exe))
+      fail("export failed\n" + exportText.slice(-2000));
+
+    await cp(stemsFrom, path.join(outDir, "music_ace"), {
+      recursive: true,
+      filter: (source) => !source.endsWith(".import") && !source.endsWith(".gdignore"),
+    });
+    let stemsCopied = 0;
+    for (const track of tracks) {
+      await mkdir(path.join(outDir, "music_ace", track), { recursive: true });
+      await copyFile(
+        path.join(stemRoot, track, "manifest.json"),
+        path.join(outDir, "music_ace", track, "manifest.json"),
+      );
+      stemsCopied += Object.keys(manifests[track].clips).length * manifests[track].stems.length;
+    }
+
+    const boot = run(exe, ["--headless", "--quit-after", "300", "--music=ace", "--ace-check"], {
+      cwd: outDir,
+      env: xdgEnv,
+    });
+    const bootOutput = boot.stdout + boot.stderr;
+    const failures = bootFailures(bootOutput);
+    if (boot.status !== 0) failures.push("boot exit " + boot.status);
+    if (failures.length > 0) fail(failures.join("; ") + "\n" + bootOutput.slice(-2000));
+
+    const parkBoot = run(exe, ["--headless", "--table=park", "--quit-after", "600"], {
+      cwd: outDir,
+      env: xdgEnv,
+    });
+    const parkText = parkBoot.stdout + parkBoot.stderr;
+    const parkErrors = parkText.split("\n").filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line));
+    if (parkBoot.status !== 0 || parkErrors.length > 0)
+      fail(
+        "park table boot exit " +
+          parkBoot.status +
+          "\n" +
+          parkErrors.join("\n") +
+          "\n" +
+          parkText.slice(-1000),
+      );
+    return { smoke: smokeRun, bootText: bootOutput, stemCount: stemsCopied };
   });
-  const bootText = boot.stdout + boot.stderr;
-  const failures = bootFailures(bootText);
-  if (boot.status !== 0) failures.push("boot exit " + boot.status);
-  if (failures.length > 0) fail(failures.join("; ") + "\n" + bootText.slice(-2000));
-
-  const parkBoot = run(exe, ["--headless", "--table=park", "--quit-after", "600"], { cwd: outDir });
-  const parkText = parkBoot.stdout + parkBoot.stderr;
-  const parkErrors = parkText.split("\n").filter((line) => /^(SCRIPT ERROR|ERROR)\b/.test(line));
-  if (parkBoot.status !== 0 || parkErrors.length > 0)
-    fail(
-      "park table boot exit " +
-        parkBoot.status +
-        "\n" +
-        parkErrors.join("\n") +
-        "\n" +
-        parkText.slice(-1000),
-    );
 
   const head = run("git", ["-C", root, "rev-parse", "HEAD"]);
   if (head.status !== 0) fail("git HEAD not found\n" + head.stderr);

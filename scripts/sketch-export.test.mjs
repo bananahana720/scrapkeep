@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import test from "node:test";
 import {
   BOSS_SMOKE,
+  EXPORT_TEMPLATE_REL,
   bootFailures,
   bossSmokeCommand,
   bossSmokeFailures,
@@ -17,6 +20,7 @@ import {
   runBossSmoke,
   defaultStemsFrom,
   howToRun,
+  isolatedXdgEnv,
   nextStepLine,
   missingStems,
   missingStemsMessage,
@@ -26,6 +30,7 @@ import {
   parsePresets,
   proofPresetDrift,
   releaseGateFailures,
+  resolveExportTemplate,
   tarArgs,
   trackedManifests,
   winProofFailures,
@@ -34,6 +39,7 @@ import {
   WIN_PROOF_TIMEOUT_S,
   winProofBotArgs,
   winProofTimeoutMs,
+  withIsolatedXdg,
   proofLibraries,
   selfPlayPresetText,
 } from "./sketch-export.mjs";
@@ -247,6 +253,8 @@ test("howToRun names the files, the save folder and H, with no table", () => {
     "app_userdata/core-loop",
     "press H",
     "./core-loop.x86_64 -- --profile=sitting",
+    "--profile=sitting-earned",
+    "--final-world=last",
   ])
     assert.ok(text.includes(part), part);
   assert.ok(!text.includes("|"));
@@ -728,4 +736,82 @@ test("nextStepLine points at sketch:appimage and the launcher check", () => {
   assert.ok(!line.includes("\n"));
   assert.match(line, /npm run sketch:appimage/);
   assert.match(line, /app menu/);
+});
+
+test("resolveExportTemplate checks XDG_DATA_HOME first and falls back to homedir/.local/share", () => {
+  const xdgPath = path.join("/xdg-data", EXPORT_TEMPLATE_REL);
+  const homePath = path.join("/home/andrew/.local/share", EXPORT_TEMPLATE_REL);
+  assert.equal(
+    resolveExportTemplate({
+      env: { XDG_DATA_HOME: "/xdg-data" },
+      home: "/home/andrew",
+      exists: (p) => p === xdgPath || p === homePath,
+    }),
+    xdgPath,
+  );
+  assert.equal(
+    resolveExportTemplate({
+      env: { XDG_DATA_HOME: "/xdg-data" },
+      home: "/home/andrew",
+      exists: (p) => p === homePath,
+    }),
+    homePath,
+  );
+  assert.equal(
+    resolveExportTemplate({
+      env: {},
+      home: "/home/andrew",
+      exists: (p) => p === homePath,
+    }),
+    homePath,
+  );
+  assert.equal(
+    resolveExportTemplate({
+      env: { XDG_DATA_HOME: "/xdg-data" },
+      home: "/home/andrew",
+      exists: () => false,
+    }),
+    null,
+  );
+});
+
+test("isolatedXdgEnv and withIsolatedXdg isolate XDG dirs and clean up on return or throw", async () => {
+  const built = isolatedXdgEnv({ PATH: "/bin", XDG_DATA_HOME: "/live" }, "/tmp/iso");
+  assert.equal(built.PATH, "/bin");
+  assert.equal(built.XDG_DATA_HOME, "/tmp/iso/data");
+  assert.equal(built.XDG_CONFIG_HOME, "/tmp/iso/config");
+  assert.equal(built.XDG_CACHE_HOME, "/tmp/iso/cache");
+
+  const tmpRoot = mkdtempSync(path.join(os.tmpdir(), "sketch-export-test-"));
+  try {
+    let seenDir = null;
+    await withIsolatedXdg(
+      async (env, dir) => {
+        seenDir = dir;
+        assert.equal(env.XDG_DATA_HOME, path.join(dir, "data"));
+        assert.equal(env.XDG_CONFIG_HOME, path.join(dir, "config"));
+        assert.equal(env.XDG_CACHE_HOME, path.join(dir, "cache"));
+        assert.ok(existsSync(env.XDG_DATA_HOME));
+        assert.ok(existsSync(env.XDG_CONFIG_HOME));
+        assert.ok(existsSync(env.XDG_CACHE_HOME));
+      },
+      { baseEnv: { XDG_DATA_HOME: "/live" }, tmpRoot },
+    );
+    assert.ok(seenDir && !existsSync(seenDir));
+
+    let failedDir = null;
+    await assert.rejects(
+      withIsolatedXdg(
+        async (_env, dir) => {
+          failedDir = dir;
+          throw new Error("boom");
+        },
+        { baseEnv: {}, tmpRoot },
+      ),
+      /boom/,
+    );
+    assert.ok(failedDir && !existsSync(failedDir));
+  } finally {
+    rmSync(tmpRoot, { recursive: true, force: true });
+  }
 });

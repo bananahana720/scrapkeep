@@ -74,7 +74,7 @@ test("the desktop entry names the game, its icon and the Game category", () => {
   assert.match(entry, /^Categories=Game;ActionGame;$/m);
   assert.match(entry, /^Terminal=false$/m);
   assert.doesNotMatch(entry, /TryExec/);
-  assert.match(entry, /^Actions=sitting-earned;sitting;$/m);
+  assert.match(entry, /^Actions=sitting-earned;sitting;sitting-alpha-earned;sitting-alpha;$/m);
   assert.ok(
     entry.includes(
       "\n[Desktop Action sitting-earned]\nName=Scrapkeep sitting (fresh profile, unlocks earned)\nExec=scrapkeep -- --profile=sitting-earned\n",
@@ -82,8 +82,20 @@ test("the desktop entry names the game, its icon and the Game category", () => {
     entry,
   );
   assert.ok(
+    entry.includes(
+      "\n[Desktop Action sitting]\nName=Scrapkeep sitting (all pilots, save untouched)\nExec=scrapkeep -- --profile=sitting\n",
+    ),
+    entry,
+  );
+  assert.ok(
+    entry.includes(
+      "\n[Desktop Action sitting-alpha-earned]\nName=Scrapkeep full-alpha sitting (fresh profile, unlocks earned)\nExec=scrapkeep -- --profile=sitting-earned --final-world=last\n",
+    ),
+    entry,
+  );
+  assert.ok(
     entry.endsWith(
-      "[Desktop Action sitting]\nName=Scrapkeep sitting (all pilots, save untouched)\nExec=scrapkeep -- --profile=sitting\n",
+      "[Desktop Action sitting-alpha]\nName=Scrapkeep full-alpha sitting (all pilots, save untouched)\nExec=scrapkeep -- --profile=sitting --final-world=last\n",
     ),
     entry,
   );
@@ -284,7 +296,12 @@ test("the AppImage installs and uninstalls itself with --install and --uninstall
   assert.equal(readFileSync(app, "utf8"), "image");
   const entry = readFileSync(path.join(dataHome, "applications/scrapkeep.desktop"), "utf8");
   assert.ok(entry.includes(`\nExec="${app}"\nTryExec=${app}\n`), entry);
-  assert.ok(entry.endsWith(`\nExec="${app}" -- --profile=sitting\n`), entry);
+  assert.match(entry, /^Actions=sitting-earned;sitting;sitting-alpha-earned;sitting-alpha;$/m);
+  assert.ok(
+    entry.includes(`\nExec="${app}" -- --profile=sitting-earned --final-world=last\n`),
+    entry,
+  );
+  assert.ok(entry.endsWith(`\nExec="${app}" -- --profile=sitting --final-world=last\n`), entry);
   assert.equal(entry.match(/^TryExec=/gm).length, 1);
   assert.match(entry, /^Name=Scrapkeep$/m);
   assert.match(entry, new RegExp(`^StartupWMClass=${WM_CLASS}$`, "m"));

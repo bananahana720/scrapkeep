@@ -2,9 +2,22 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const CASE_DIR := "res://tests/unit/"
 const MIN_CASES := 3
 const REQUIRED_CASES: Array[String] = ["weight_table_case.gd"]
+
+
+func _check_full_alpha_sitting(t: T) -> void:
+	var full := Tuning.new()
+	full.apply_args(PackedStringArray(["--profile=sitting-earned", "--final-world=last"]))
+	t.check("full-alpha sitting earned sets sitting_earned", full.sitting_earned())
+	t.eq("full-alpha sitting earned heat", full.option("heat"), "on")
+	t.eq("full-alpha sitting earned overtime", full.option("overtime"), "on")
+	t.eq("full-alpha sitting earned final_world", full.final_world(), 0)
+	var world1 := Tuning.new()
+	world1.apply_args(PackedStringArray(["--profile=sitting-earned"]))
+	t.eq("world 1 sitting earned final_world", world1.final_world(), 1)
 
 
 func _initialize() -> void:
@@ -26,6 +39,7 @@ func _initialize() -> void:
 		instance.run(t)
 		ran += 1
 		print("case %s: %d checks" % [file.trim_suffix("_case.gd"), t.checks - before])
+	_check_full_alpha_sitting(t)
 	if t.failures > 0:
 		quit(t.verdict())
 		return
