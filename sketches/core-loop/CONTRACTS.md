@@ -107,7 +107,7 @@ These fields and methods are readable:
 - `class_def`, a `ClassDef` resource with `id`, `display_name`, `weapon_id`, `special_id`, `color` and `pitch`.
 - `death_save_hook` (Callable() -> the hull to live on at, or 0.0 when no earned save is held; run once per lethal hit before `player_died`), the `death_saved(hp)` signal it raises and the `death_save_spent` run-doc field (once per run, survives a save and Continue, never goes back to false), like `ward_hook` and `deflect_hook` beside it in `run_state.gd`.
 - `run_id`, `stage`, `hp`, `max_hp`, `cogs` (the spend wallet), `scrap` (the old wallet, now a tally nothing in build spends), `mass`, `parts` (an array of part ids, one entry per stack), `panels` (mounted grey panel ids), `consumables` / `consumable_slots`, `bonus_cores`, `kills`, `events_won`, `run_time`, `stage_time`, `retries` and `metrics` / `_snapshot` extra state (including `hotwire`).
-- `heft()`, which is `1 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size() + panels.size() * Panels.PANEL_MASS * HEFT_PER_MASS`, currently `1 + mass/450 + 0.2 * parts.size() + panel_heft` (`panel_heft` stays applied even under scrapless).
+- `heft()`, which is `1 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size() + panels.size() * Panels.PANEL_MASS * HEFT_PER_MASS`, currently `1 + mass/450 + 0.2 * parts.size() + panel_heft` (`armor_mode` omits `HEFT_PER_PART * parts.size()` while keeping `panel_heft`).
 - `heft_class()`, which returns 1 to 5 (classes start at heft 1.0, 1.5, 2.2, 3.2 and 4.6), and `heft_progress()`, the share of the way to the next class.
 - `gate_tier_bonus()`, which returns 0, 1 or 2 for 0, 1 or 2+ bonus cores. Build reads it when it builds its offers.
 - `RunState.roman(n)`, a class numeral for display.
@@ -812,14 +812,14 @@ Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The t
 
 `AlphaDefs.DEFS` (`src/core/alpha_defs.gd`) and `ParkDefs.DEFS` (`src/core/park_defs.gd`), one row per stage with its world, map name, Warden family and variant. Map names resolve through `Terrain.MAPS` (`src/world/terrain.gd`).
 
-| Stage | World | Alpha map / Park map | Family and `alpha_defs` variant | Where |
+| Stage | World | Alpha map / Park map | Family and `warden_variant` | Where |
 | --- | --- | --- | --- | --- |
 | 1 | 1 | `spillway` / `park_dam` | `reactor`, none | `alpha_defs.gd` / `park_defs.gd` |
-| 2 | 1 | `reach` / `park_flume` | `reactor`, `meltdown` (none on park) | `alpha_defs.gd` / `park_defs.gd` |
+| 2 | 1 | `reach` / `park_flume` | `reactor`, `meltdown` | `alpha_defs.gd` / `park_defs.gd` |
 | 3 | 2 | `dig` / `park_pit` | `swarm`, none | `alpha_defs.gd` / `park_defs.gd` |
-| 4 | 2 | `dig_deep` / `park_sinkhole` | `swarm`, `brood` (`"park"` on park) | `alpha_defs.gd` / `park_defs.gd` |
+| 4 | 2 | `dig_deep` / `park_sinkhole` | `swarm`, `brood` | `alpha_defs.gd` / `park_defs.gd` |
 | 5 | 3 | `highdraft` / `park_islands` | `mind`, none | `alpha_defs.gd` / `park_defs.gd` |
-| 6 | 3 | `highdraft_crown` / `park_crown` | `mind`, none | `alpha_defs.gd` / `park_defs.gd` |
+| 6 | 3 | `highdraft_crown` / `park_crown` | `mind`, `choir` | `alpha_defs.gd` / `park_defs.gd` |
 
 Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
 

@@ -356,3 +356,66 @@ test("--write supports --flat-main --direct --wave <N> --board none", async () =
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("--write preserves flatMain, direct, and wave across --compare and --wave updates with historical promotions", () => {
+  const { root, commit } = repo();
+  try {
+    writeFileSync(path.join(root, STATE_FILE), state());
+    commit("Promote alpha wave 46 (stage/alpha-w46 8f12596a) to main (#1279)");
+    commit("Flat alpha wave 52 baseline");
+    const first = spawnSync(
+      process.execPath,
+      [
+        script,
+        "--write",
+        "--root",
+        root,
+        "--flat-main",
+        "--direct",
+        "--wave",
+        "52",
+        "--board",
+        "none",
+        "--compare",
+        "gate/w52-a/",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(first.status, 0, first.stderr);
+
+    const head2 = commit("Second flat-main commit");
+    const refreshCompare = spawnSync(
+      process.execPath,
+      [script, "--write", "--root", root, "--compare", "gate/w52-b/"],
+      { encoding: "utf8" },
+    );
+    assert.equal(refreshCompare.status, 0, refreshCompare.stderr);
+    let parsed = parseWaveFacts(readFileSync(path.join(root, STATE_FILE), "utf8"));
+    assert.deepEqual(parsed.facts, {
+      wave: 52,
+      mainSha: head2.slice(0, 8),
+      direct: true,
+      flatMain: true,
+      redTeam: "greedy",
+      compare: "gate/w52-b/",
+    });
+
+    const bumpWave = spawnSync(
+      process.execPath,
+      [script, "--write", "--root", root, "--wave", "53", "--compare", "gate/w53-a/"],
+      { encoding: "utf8" },
+    );
+    assert.equal(bumpWave.status, 0, bumpWave.stderr);
+    parsed = parseWaveFacts(readFileSync(path.join(root, STATE_FILE), "utf8"));
+    assert.deepEqual(parsed.facts, {
+      wave: 53,
+      mainSha: head2.slice(0, 8),
+      direct: true,
+      flatMain: true,
+      redTeam: "line-rider",
+      compare: "gate/w53-a/",
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

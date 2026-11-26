@@ -370,8 +370,8 @@ async function write(options) {
   const boardNone = options.board === "none";
   if (options.board !== undefined && !boardNum && !boardNone)
     throw new Error("--board must be an issue number or 'none'");
-  const flatMain = Boolean(options.flatMain || (old.flatMain && !boardNum && !options.wave));
-  const direct = Boolean(options.direct || (old.direct && !boardNum && !repo?.promotion));
+  const flatMain = Boolean(options.flatMain || (old.flatMain && !boardNum));
+  const direct = Boolean(options.direct || (old.direct && !boardNum));
   if (!direct && !repo?.promotion)
     throw new Error("no promotion commit is reachable from HEAD; fetch more history first");
   if (direct && !repo?.head)
@@ -384,7 +384,9 @@ async function write(options) {
     options.wave !== undefined
       ? Number(options.wave)
       : direct
-        ? (repo.promotion?.wave ?? old.wave)
+        ? old.direct
+          ? old.wave
+          : (repo.promotion?.wave ?? old.wave)
         : repo.promotion.wave;
   const advanced = old.wave !== wave;
   if (advanced && !flatMain && !boardNum && !boardNone)
