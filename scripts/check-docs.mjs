@@ -51,20 +51,27 @@ async function walk(root, directory, keep, skipDir = () => false) {
   return files;
 }
 
+const PRUNE_EXACT_DIRS = new Set([
+  "artifacts/local",
+  "tests/fixtures",
+  "sketches/core-loop/addons",
+]);
+const PRUNE_DIR_NAMES = new Set([
+  ".git",
+  "node_modules",
+  ".godot",
+  "dist",
+  "build",
+  ".venv",
+  "__pycache__",
+]);
+
+function shouldSkipDir(dir) {
+  return PRUNE_EXACT_DIRS.has(dir) || PRUNE_DIR_NAMES.has(path.posix.basename(dir));
+}
+
 async function markdownFiles(root) {
-  const files = [];
-  for (const item of await readdir(root, { withFileTypes: true }))
-    if (item.isFile() && item.name.endsWith(".md")) files.push(item.name);
-  files.push(...(await walk(root, "adr", (file) => file.endsWith(".md"))));
-  files.push(...(await walk(root, "docs", (file) => file.endsWith(".md"))));
-  files.push(
-    ...(await walk(
-      root,
-      "artifacts",
-      (file) => path.posix.basename(file) === "README.md",
-      (dir) => dir === "artifacts/local",
-    )),
-  );
+  const files = await walk(root, "", (file) => file.endsWith(".md"), shouldSkipDir);
   return files.sort();
 }
 
@@ -157,7 +164,14 @@ async function checkLinks(docs, file) {
       if (/^[a-z][a-z0-9+.-]*:/i.test(target)) continue;
       checked++;
       if (target.startsWith("/")) {
-        docs.fail("links", file, number, "non-portable absolute link: " + target);
+        docs.fail(
+          "links",
+          file,
+          number,
+          "non-portable absolute link: " +
+            target +
+            "; replace with a repo-relative path from this file",
+        );
         continue;
       }
       const [rawPath, rawAnchor] = target.split("#");
@@ -178,11 +192,17 @@ async function checkLinks(docs, file) {
           continue;
         }
         if (!(await docs.hasFile(targetFile))) {
-          docs.fail("links", file, number, "missing link target: " + target);
+          docs.fail(
+            "links",
+            file,
+            number,
+            "missing link target: " + target + "; update to an existing repo-relative path",
+          );
           continue;
         }
       }
       if (!anchor || !targetFile.endsWith(".md")) continue;
+      if (/^L\d+(?:-L?\d+)?$/.test(anchor)) continue;
       const { anchors } = await docs.load(targetFile);
       if (!anchors.has(anchor))
         docs.fail(
