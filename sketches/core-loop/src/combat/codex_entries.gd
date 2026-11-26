@@ -280,10 +280,13 @@ const ENTRIES := [
 		"clue": "an arc hit on a Spillway crew",
 		"text": "Spillway crews come out of the channel soaked. Arc does 125% to them and everything else lands as normal.",
 	},
+	# --- P-C Sable entries ---
 	{"id": "bank_shot", "name": "Bank Shot", "hint": "The line can turn you as well as pull you.", "clue": "a standing line + pick 3", "text": "Pick 3 and click while a line stands. You whip round the anchor and leave toward your aim, faster than you came."},
 	{"id": "cable_run", "name": "Cable Run", "hint": "Everything she drives into the air is somewhere to hook.", "clue": "a full ring", "text": "Your ultimate rides a cable and drives a stake on every beat. The stakes hold a line for six seconds after landing."},
 	{"id": "switchback", "name": "Switchback", "hint": "Your own stakes hold a line as well as any wall.", "clue": "a standing stake + Bank Shot", "text": "Bank Shot off a stake your Cable Run left behind."},
 	{"id": "sable_cable_runs", "name": "Cable Runner", "hint": "A good route is worth repeating.", "clue": "three Cable Run landings in one run", "text": "Land three Cable Runs in one run to earn Cable Stitch."},
+	# --- end Sable ---
+	# --- P-C Rivet entries ---
 	{"id": "rivet_line_drive", "name": "Line Drive", "hint": "The cable carries more than you.",
 		"clue": "Rivet + pick 3 + a line on a machine", "text": "Pick 3 and click with a line on a machine. The winch throws it into whatever stands behind. On a wall it hauls you in and nothing holds you. With no line, the next hook carries it."},
 	{"id": "rivet_foundry_cutter", "name": "Foundry Cutter", "hint": "Measured twice. Firing once.",
@@ -292,11 +295,15 @@ const ENTRIES := [
 		"clue": "ten Line Drive punches + one stage", "text": "Land ten Line Drive punches in one stage to earn the Swarf Curl."},
 	{"id": "rivet_shrugged", "name": "Shrugged Off", "hint": "Crowd control is fuel.",
 		"clue": "Rivet + thirty ignored holds and knocks + one run", "text": "Shrug off thirty holds and knocks in one run to earn the Welding Hood."},
+	# --- end Rivet ---
+	# --- P-C Kest entries ---
 	{"id": "kest_cable_charge", "name": "Cable Charge", "hint": "Your line can carry more than you.", "clue": "pick 3 + a click while hooked, or just before the hook", "text": "Pick 3 and click. A charge runs down your line and sets on what the hook caught. Let go and it blows. With no line out, the next hook carries it."},
 	{"id": "kest_windhover", "name": "Windhover", "hint": "There. Give it a moment.", "clue": "a full ring + open sky over where you aim", "text": "Your ultimate lobs you up over where you aim. You hang there for two beats while your mortar shells the ground below, then you stoop straight down onto it."},
 	{"id": "kest_blast_vault", "name": "Blast Vault", "hint": "The wall you blow can throw you.", "clue": "a Cable Charge on a wall + let go close + jump held", "text": "Charge a wall through your line, reel in, and let go within a few metres holding jump. The blast throws you up and away, and your chain keeps its grace."},
 	{"id": "kest_homecoming", "name": "Homecoming", "hint": "The wind knows your feathers.", "clue": "Kest + the Highdraft", "text": "Fly Kest into her home roosts in world three."},
 	{"id": "kest_tick_tick_boom", "name": "Tick, Tick, Boom", "hint": "Watch the whole pack before you commit.", "clue": "Windhover + eight different machines", "text": "Strike eight different machines with the charges and landing of one Windhover."},
+	# --- end Kest ---
+	# --- P-C Tarn entries ---
 	{"id": "tarn_claw_drag", "name": "Claw Drag", "hint": "Why go to them when the line can bring them?",
 		"clue": "a hooked machine + pick 3 + a click", "text": "Pick 3 and click to send a claw down the cable. Light machines arrive clamped in claw reach. Too heavy, and you climb it instead. On a wall it rips a slab loose."},
 	{"id": "tarn_redjaw_rend", "name": "Redjaw Rend", "hint": "A full ring and a line to ride. Take company.",
@@ -305,6 +312,8 @@ const ENTRIES := [
 		"clue": "ten different machines + claw drag + one stage", "text": "Drag ten machines into claw reach in one stage to earn Claw Marks."},
 	{"id": "tarn_hold_still", "name": "Hold Still", "hint": "The machine, I mean.",
 		"clue": "three hostile holds + Redjaw Rend + one run", "text": "Break three hostile holds with Redjaw Rend in one run to earn the Steady Cap."},
+	# --- end Tarn ---
+	# --- P-C Tally entries ---
 	{"id": "tally_skim", "name": "Live Tap", "hint": "One splice wires three machines onto a live circuit.",
 		"clue": "a harpoon hook + Jumper Splice on three machines", "text": "Cast Jumper Splice on a standing line, or load it before the hook. Clips three machines for one pressure each. Hit one and the circuit arcs to the rest."},
 	{"id": "tally_books_balanced", "name": "Circuit Settled", "hint": "Every clip stays wired. Land and discharge the circuit.",
@@ -313,6 +322,8 @@ const ENTRIES := [
 		"clue": "Jumper Splice + ten casts + one stage", "text": "Fire Jumper Splice ten times in one stage to earn Punch Tape."},
 	{"id": "tally_eyeshade", "name": "Eyeshade", "hint": "Twenty wired clips, one hostile audit at a time.",
 		"clue": "twenty settled clips + Hostile Audit + one run", "text": "Settle twenty clips with Hostile Audit in one run to earn the Eyeshade."},
+	# --- end Tally ---
+	# --- P-C Cannon entries ---
 	{"id": "cannon_lane_charge", "name": "Lane Charge", "hint": "The cable already shows where it goes.", "clue": "a standing line + pick 3", "text": "Pick 3 while the harpoon holds something. The cable becomes a lane that fires through the machine and twelve metres on, or out of a wall. Chains make it hit harder."},
 	{"id": "cannon_fire_mission", "name": "Fire Mission", "hint": "A gun can fire itself.", "clue": "a full ring + open ground ahead", "text": "Your ultimate fires you along an arc. Each beat calls a family below you. Every call lands on the same beat as you."},
 	{"id": "cannon_creeping_barrage", "name": "Creeping Barrage", "hint": "Some fire walks ahead of you.", "clue": "a line + the barrage", "text": "Ride a line. Every beat lays a lane across your path one beat before you reach it."},
@@ -321,6 +332,7 @@ const ENTRIES := [
 	{"id": "cannon_time_on_target", "name": "Time on Target", "hint": "Everything at once.", "clue": "Fire Mission + a crowd", "text": "Every shell you called landed on the same beat, on eight machines."},
 	{"id": "cannon_old_tune", "name": "Old Tune", "hint": "It got your tune wrong all fight.", "clue": "the Mind + its own gun", "text": "The Mind played your tune back wrong. Its own gun played it right."},
 	{"id": "mind_quiet_gun", "name": "The Quiet Gun", "hint": "One of its guns never fired.", "clue": "the Mind's rim, listening", "text": "A gun on the rim never fired. It learned one note each time the Mind showed a new attack."},
+	# --- end Cannon ---
 ]
 
 
@@ -404,6 +416,52 @@ const DETECTORS := {
 
 
 const DETECTOR_PENDING := []
+
+const FLAVOUR := {
+	"shell_return": {"speaker": "pump_crew", "text": "Stamped return to sender at forty metres per second."},
+	"counter_ram": {"speaker": "rivet", "text": "Crouched for a dramatic lunge and met a steel sphere instead."},
+	"chain": {"speaker": "sable", "text": "The floor is strictly optional if the walls keep cooperating."},
+	"crush_chain": {"speaker": "tarn", "text": "Said excuse me three times inside a single second."},
+	"parting_shot": {"speaker": "sable", "text": "Left the pylon so fast the shot had to sign the guestbook."},
+	"tether_snap": {"speaker": "rivet", "text": "Fleet cable rated for standard traffic. Not whatever we are doing."},
+	"shield_vault": {"speaker": "kest", "text": "Borrowed their dish as a springboard. Zero paperwork filed."},
+	"awaiting_operator": {"speaker": "dig_crew", "text": "Scattered triangles will follow whoever rolls loudest. Very polite, honestly."},
+	"plate_drop": {"speaker": "caisson_crew", "text": "Caught the repair drone mid-patch. Seam stays open on our count."},
+	"what_it_learned": {"speaker": "mind", "text": "Pattern alignment updated. Please continue repeating your favourite habit."},
+	"burrow_lane": {"speaker": "dig_crew", "text": "Floor bites slow boots. Wall minds its own business."},
+	"bore_breach": {"speaker": "kest", "text": "Dropped straight onto a live drill rig. Saved us two timber props."},
+	"lure_bloom": {"speaker": "caisson_crew", "text": "Nice lamps, terrible steering advice. Boost straight through."},
+	"jaw_slam": {"speaker": "tarn", "text": "Closed the pit jaw from above. Gently, all things considered."},
+	"boom_pop": {"speaker": "flume_crew", "text": "Five floats strung across the channel, popped like polite bubble wrap."},
+	"boom_strike": {"speaker": "tally", "text": "Full sweep logged on one line. Tug declined a rematch."},
+	"line_cut": {"speaker": "roost_crew", "text": "Cut our cable mid-gap and we hooked the next post anyway."},
+	"thermal_dive": {"speaker": "kest", "text": "Rode its own updraft and met it upstairs. My sky."},
+	"ring_out": {"speaker": "roost_crew", "text": "Too heavy to dent, light enough for gravity. Cloud net got it."},
+	"gap_sling": {"speaker": "sable", "text": "Net crew builds tough knots. Faster wheels still win."},
+	"cable_cut": {"speaker": "patch", "text": "Snipped the brace line and watched the whole shield lose interest."},
+	"shift_over": {"speaker": "mind", "text": "Quick sync cancelled due to sudden supervisor unavailability."},
+	"roof_drop": {"speaker": "dig_crew", "text": "Pulled one prop and let the ceiling handle the rest of the shift."},
+	"split_pop": {"speaker": "moss", "text": "Do not ram what splits. Drop on it and save the broom."},
+	"warden_shatter": {"speaker": "pump_crew", "text": "Four chunks of cast iron, cracked open on our count."},
+	"slag_hop": {"speaker": "flume_crew", "text": "Hot floor, easy jump. Boots stayed dry for once."},
+	"brood_dark": {"speaker": "caisson_crew", "text": "Put every lamp out and the Warden forgot its own guard."},
+	"choir_switch": {"speaker": "cannon", "text": "It expected the chorus again. Switched instruments mid-bar."},
+	"set_piece_core": {"speaker": "sable", "text": "Open core, full ring, dramatic finish. Credits roll right here."},
+	"cannon_old_tune": {"speaker": "cannon", "text": "Played the stolen melody right back in the crew's key."},
+	"mind_quiet_gun": {"speaker": "patch", "text": "Even the Foreman's own turret got tired of the quarterly memos."},
+}
+
+
+static func flavour(id: String) -> Dictionary:
+	return FLAVOUR.get(id, {})
+
+
+static func flavour_text(id: String) -> String:
+	return String(FLAVOUR.get(id, {}).get("text", ""))
+
+
+static func flavour_ids() -> Array:
+	return FLAVOUR.keys()
 
 
 static func all() -> Array:

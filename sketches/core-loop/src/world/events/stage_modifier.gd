@@ -13,22 +13,25 @@ const LOOKS := ["id", "word", "line", "fx"]
 const WORLD_FX := "res://src/presentation/world_fx/world_fx.gd"
 const WORLD_FX_ANCHOR := "res://src/presentation/world_fx/world_fx_anchor.gd"
 const ROWS := [
-	{"id": "surplus", "word": "Surplus Yard", "line": "A forecasting win. More pockets.", "fx": "plenty", "count_scale": 2.0},
+	{"id": "surplus", "word": "Surplus Yard", "line": "Synergistic forecasting win. More pockets.", "fx": "plenty", "count_scale": 2.0},
 	{"id": "lean", "word": "Lean Haul", "line": "More with less. Mostly less. Fewer pockets.", "fx": "scarce", "count_scale": 0.5},
-	{"id": "floodlit", "word": "Floodlit", "line": "Transparency is a value. Beacons read far.", "sight_scale": 1.75},
-	{"id": "blackout", "word": "Blackout", "line": "Lighting, right-sized. Beacons read near.", "fx": "hidden", "sight_scale": 0.5},
-	{"id": "far_haul", "word": "Far Haul", "line": "Value was relocated to the edges.", "far": true},
-	{"id": "overstock", "word": "Overstock", "line": "Inventory spilled to the rims. More pockets.", "fx": "plenty", "count_scale": 1.5, "far": true},
-	{"id": "audit_flare", "word": "Audit Flare", "line": "Full visibility mandated. Beacons read far.", "fx": "plenty", "sight_scale": 2.25, "far": true},
-	{"id": "brownout", "word": "Brownout", "line": "Margins trimmed in the dark. Fewer pockets.", "fx": "hidden", "count_scale": 0.5, "sight_scale": 0.7},
+	{"id": "floodlit", "word": "Floodlit", "line": "Radical transparency deployed. Beacons read far.", "sight_scale": 1.75},
+	{"id": "blackout", "word": "Blackout", "line": "Lighting right-sized for alignment. Beacons read near.", "fx": "hidden", "sight_scale": 0.5},
+	{"id": "far_haul", "word": "Far Haul", "line": "Value relocated to synergistic outer edges.", "far": true},
+	{"id": "overstock", "word": "Overstock", "line": "Inventory scaled to the rims. More pockets.", "fx": "plenty", "count_scale": 1.5, "far": true},
+	{"id": "audit_flare", "word": "Audit Flare", "line": "Full metric visibility mandated. Beacons read far.", "fx": "plenty", "sight_scale": 2.25, "far": true},
+	{"id": "brownout", "word": "Brownout", "line": "Sunsetting redundant light and supply. Fewer pockets.", "fx": "hidden", "count_scale": 0.5, "sight_scale": 0.7},
 ]
 const NOMINAL := [
-	"Conditions nominal. Morale is optional.",
-	"Nothing to report. That is the report.",
-	"No changes. Stability is our product.",
-	"Everything is aligned. Proceed as scheduled.",
+	"Conditions nominal. Morale remains optional.",
+	"Synergistic efficiencies achieved. No action required.",
+	"Everything is aligned. Grateful for your metrics.",
 	"This stage is fully optimised. You're welcome.",
-	"Conditions nominal. Gratitude is appreciated in advance.",
+	"Nothing to report. That is the report.",
+	"Sunsetting friction today. Proceed as scheduled.",
+	"No changes. Stability is our flagship product.",
+	"Alignment up four percent. Gratitude noted.",
+	"Conditions nominal. Thank you for scaling smoothly.",
 ]
 
 
