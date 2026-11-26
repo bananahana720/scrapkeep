@@ -4,6 +4,7 @@ extends RefCounted
 const ELEMENTS := ["frost", "arc", "kinetic"]
 const ELEMENTS_W50 := ["frost", "arc", "kinetic", "heat"]
 const MATERIALS := ["water", "ice"]
+const MATERIALS_W50 := ["water", "ice", "steam"]
 
 const SURFACES := {
 	"ice": {"material": "ice", "radius": 3.6, "thickness": 0.9, "seconds": 9.0, "fade": 1.5},
@@ -25,6 +26,10 @@ const ROWS_W50 := {
 		"found": "Heat on water raises a scalding steam updraft."},
 	"heat:ice": {"behaviour": "flash_melt", "radius": 6.5, "damage": 34.0,
 		"found": "Heat on ice triggers an explosive flash-melt nova."},
+	"arc:steam": {"behaviour": "storm_pulse", "damage": 24.0,
+		"found": "Arc through steam discharges a storm-cloud shock pulse."},
+	"frost:steam": {"behaviour": "flash_condense", "surface": "ice", "damage": 18.0,
+		"found": "Frost into steam flash-condenses an ice slab and hail chill."},
 }
 
 
@@ -59,6 +64,9 @@ const FUSIONS_W50 := {
 		"damage": 7.5, "elite_share": 0.1,
 		"found": "Arc meets heat: superheated plasma burns on a beat.",
 		"immunity": "Elites and bosses take a tenth of the grind."},
+	"heat+kinetic": {"behaviour": "overload", "kind": "burst", "radius": 5.5, "seconds": 0.0, "damage": 38.0,
+		"found": "Heat meets a heavy hit: molten slag detonates across the yard.",
+		"immunity": "Elites and bosses take the full burst."},
 }
 
 const LAYER_MULT := {
@@ -75,6 +83,10 @@ const LAYER_MULT_W50 := {
 
 static func all_elements() -> Array:
 	return ELEMENTS_W50.duplicate()
+
+
+static func all_materials() -> Array:
+	return MATERIALS_W50.duplicate()
 
 
 static func all_rows() -> Dictionary:
@@ -125,21 +137,21 @@ static func resolve(element_id: String, material_id: String) -> Dictionary:
 
 
 static func problems() -> Array[String]:
-	return _validate_tables(ELEMENTS, ROWS, FUSIONS)
+	return _validate_tables(ELEMENTS, MATERIALS, ROWS, FUSIONS)
 
 
 static func all_problems() -> Array[String]:
-	return _validate_tables(ELEMENTS_W50, all_rows(), all_fusions())
+	return _validate_tables(ELEMENTS_W50, MATERIALS_W50, all_rows(), all_fusions())
 
 
-static func _validate_tables(elements: Array, rows: Dictionary, fusions: Dictionary) -> Array[String]:
+static func _validate_tables(elements: Array, materials: Array, rows: Dictionary, fusions: Dictionary) -> Array[String]:
 	var found: Array[String] = []
 	for row_key in rows:
 		var pair: PackedStringArray = String(row_key).split(":")
-		if pair.size() != 2 or not pair[0] in elements or not pair[1] in MATERIALS:
+		if pair.size() != 2 or not pair[0] in elements or not pair[1] in materials:
 			found.append("row %s names an unknown element or material" % row_key)
 		var row: Dictionary = rows[row_key]
-		if row.get("behaviour", "") == "create_surface" and not SURFACES.has(row.get("surface", "")):
+		if row.get("behaviour", "") in ["create_surface", "flash_condense"] and not SURFACES.has(row.get("surface", "")):
 			found.append("row %s names a missing surface" % row_key)
 	for fusion_id in fusions:
 		var parts: PackedStringArray = String(fusion_id).split("+")

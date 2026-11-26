@@ -159,7 +159,48 @@ func apply(element_id: String, at: Vector3, source := "") -> Dictionary:
 	return _resolve(element_id, at, source)
 
 
+func _steam_cloud_at(point: Vector3, reach := REACH) -> int:
+	var best := -1
+	var best_dist := INF
+	for i in _steam_clouds.size():
+		var cloud: Dictionary = _steam_clouds[i]
+		var at: Vector3 = cloud["at"]
+		var d := Vector2(point.x - at.x, point.z - at.z).length()
+		if d <= float(cloud["radius"]) and point.y >= at.y - 2.0 and point.y <= at.y + reach + 4.0 and d < best_dist:
+			best = i
+			best_dist = d
+	return best
+
+
+func _remove_steam_cloud(index: int) -> Dictionary:
+	var cloud: Dictionary = _steam_clouds[index]
+	_steam_clouds.remove_at(index)
+	if is_instance_valid(cloud["node"]):
+		cloud["node"].queue_free()
+	return cloud
+
+
 func _resolve(element_id: String, at: Vector3, source: String) -> Dictionary:
+	var cloud_idx := _steam_cloud_at(at)
+	if cloud_idx >= 0:
+		var steam_row := Elements.resolve(element_id, "steam")
+		if not steam_row.is_empty():
+			var cloud_at: Vector3 = _steam_clouds[cloud_idx]["at"]
+			var steam_result := {
+				"element": element_id,
+				"material": "steam",
+				"behaviour": steam_row["behaviour"],
+				"key": Elements.key(element_id, "steam"),
+				"at": cloud_at,
+				"source": source,
+			}
+			match steam_row["behaviour"]:
+				"storm_pulse":
+					_storm_pulse(cloud_idx, steam_row, steam_result)
+				"flash_condense":
+					_flash_condense(cloud_idx, steam_row, steam_result)
+			resolved.emit(steam_result)
+			return steam_result
 	var hit := material_at(at)
 	if hit.is_empty():
 		return {}
@@ -297,9 +338,7 @@ func _steam_cloud(row: Dictionary, result: Dictionary) -> void:
 	var updraft: float = float(row["updraft"])
 	var damage: float = float(row["damage"])
 	while _steam_clouds.size() >= MAX_STEAM_CLOUDS:
-		var old: Dictionary = _steam_clouds.pop_front()
-		if is_instance_valid(old["node"]):
-			old["node"].queue_free()
+		_remove_steam_cloud(0)
 	var node := MeshInstance3D.new()
 	node.name = "SteamCloud"
 	var cyl := CylinderMesh.new()
@@ -313,11 +352,12 @@ func _steam_cloud(row: Dictionary, result: Dictionary) -> void:
 	node.global_position = at + Vector3.UP * 0.2
 	flash_ring(at + Vector3.UP * 0.12, radius, HEAT.lerp(STEAM, 0.5))
 	var struck := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
-		var p: Vector3 = (enemy as Node3D).global_position
-		if Vector2(p.x - at.x, p.z - at.z).length() <= radius and absf(p.y - at.y) <= REACH + 1.5:
-			if _evolution_strike(enemy, damage, "item_proc"):
-				struck += 1
+	if is_inside_tree():
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			var p: Vector3 = (enemy as Node3D).global_position
+			if Vector2(p.x - at.x, p.z - at.z).length() <= radius and absf(p.y - at.y) <= REACH + 1.5:
+				if _evolution_strike(enemy, damage, "item_proc"):
+					struck += 1
 	var cloud := {
 		"at": at, "radius": radius, "left": seconds, "updraft": updraft,
 		"node": node, "lifts": 0,
@@ -327,6 +367,55 @@ func _steam_cloud(row: Dictionary, result: Dictionary) -> void:
 	result["radius"] = radius
 	result["updraft"] = updraft
 	result["struck"] = struck
+	result["source"] = "item_proc"
+
+
+func _storm_pulse(cloud_idx: int, row: Dictionary, result: Dictionary) -> void:
+	var cloud := _remove_steam_cloud(cloud_idx)
+	var at: Vector3 = cloud["at"]
+	var radius: float = float(cloud["radius"])
+	var damage: float = float(row["damage"])
+	flash_ring(at + Vector3.UP * 0.25, radius, Palette.ARC.lerp(STEAM, 0.35))
+	var struck := 0
+	if is_inside_tree():
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			var node := enemy as Node3D
+			if not is_instance_valid(node) or (node.has_method("is_dead") and node.is_dead()):
+				continue
+			var p: Vector3 = node.global_position
+			if Vector2(p.x - at.x, p.z - at.z).length() <= radius and absf(p.y - at.y) <= REACH + 4.0:
+				if _evolution_strike(node, damage, "item_proc"):
+					struck += 1
+				zap_line(at + Vector3.UP * 0.6, p + Vector3.UP * 0.6)
+				touch(node, "arc")
+	result["radius"] = radius
+	result["struck"] = struck
+	result["discharged"] = true
+	result["source"] = "item_proc"
+
+
+func _flash_condense(cloud_idx: int, row: Dictionary, result: Dictionary) -> void:
+	var cloud := _remove_steam_cloud(cloud_idx)
+	var at: Vector3 = cloud["at"]
+	var radius: float = float(cloud["radius"])
+	var damage: float = float(row["damage"])
+	_create_surface(Elements.SURFACES[row["surface"]], result)
+	flash_ring(at + Vector3.UP * 0.15, radius, FROST.lerp(ICE, 0.5))
+	puff(at + Vector3.UP * 0.3)
+	var struck := 0
+	if is_inside_tree():
+		for enemy in get_tree().get_nodes_in_group("enemy"):
+			var node := enemy as Node3D
+			if not is_instance_valid(node) or (node.has_method("is_dead") and node.is_dead()):
+				continue
+			var p: Vector3 = node.global_position
+			if Vector2(p.x - at.x, p.z - at.z).length() <= radius and absf(p.y - at.y) <= REACH + 4.0:
+				if _evolution_strike(node, damage, "item_proc"):
+					struck += 1
+				touch(node, "frost")
+	result["radius"] = radius
+	result["struck"] = struck
+	result["condensed"] = true
 	result["source"] = "item_proc"
 
 
