@@ -38,6 +38,7 @@ import {
   WIN_PROOFS,
   WIN_PROOF_TIMEOUT_S,
   winProofBotArgs,
+  winProofEnv,
   winProofTimeoutMs,
   withIsolatedXdg,
   proofLibraries,
@@ -814,4 +815,21 @@ test("isolatedXdgEnv and withIsolatedXdg isolate XDG dirs and clean up on return
   } finally {
     rmSync(tmpRoot, { recursive: true, force: true });
   }
+});
+
+test("winProofEnv passes SCRAPKEEP_REPO_ROOT beside isolated XDG dirs and playWinProof uses it", () => {
+  const env = winProofEnv("/tmp/proof/state", "/repo", { PATH: "/bin" });
+  assert.equal(env.PATH, "/bin");
+  assert.equal(env.SCRAPKEEP_REPO_ROOT, "/repo");
+  assert.equal(env.XDG_DATA_HOME, "/tmp/proof/state/data");
+  assert.equal(env.XDG_CONFIG_HOME, "/tmp/proof/state/config");
+  assert.equal(env.XDG_CACHE_HOME, "/tmp/proof/state/cache");
+
+  const defaultEnv = winProofEnv("/tmp/proof/state", undefined, {});
+  assert.ok(
+    existsSync(path.join(defaultEnv.SCRAPKEEP_REPO_ROOT, "scripts/challenge/fairness.json")),
+  );
+
+  const source = readFileSync(new URL("./sketch-export.mjs", import.meta.url), "utf8");
+  assert.match(source, /env:\s*winProofEnv\(state\)/);
 });

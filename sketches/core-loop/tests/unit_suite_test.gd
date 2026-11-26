@@ -3,6 +3,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const BotFairness := preload("res://tools/bot_fairness.gd")
 const CASE_DIR := "res://tests/unit/"
 const MIN_CASES := 3
 const REQUIRED_CASES: Array[String] = ["weight_table_case.gd"]
@@ -18,6 +19,28 @@ func _check_full_alpha_sitting(t: T) -> void:
 	var world1 := Tuning.new()
 	world1.apply_args(PackedStringArray(["--profile=sitting-earned"]))
 	t.eq("world 1 sitting earned final_world", world1.final_world(), 1)
+
+
+func _check_bot_fairness_config(t: T) -> void:
+	var repo_root := ProjectSettings.globalize_path("res://").path_join("../..").simplify_path()
+	var want := repo_root.path_join(BotFairness.CONFIG_FILE).simplify_path()
+	t.eq(
+		"bot_fairness resolves from env_root with empty res_root",
+		BotFairness.resolve_config_path(repo_root, "", ""),
+		want,
+	)
+	var win_proof_cwd := repo_root.path_join("artifacts/local/core-loop-export/sample-win-proof")
+	t.eq(
+		"bot_fairness resolves by walking up from win-proof cwd with empty res_root",
+		BotFairness.resolve_config_path("", "", win_proof_cwd),
+		want,
+	)
+	BotFairness._config = {}
+	var cfg := BotFairness.config()
+	t.check(
+		"bot_fairness config loads cleanly",
+		cfg is Dictionary and cfg.has("tellS") and cfg.has("contactM"),
+	)
 
 
 func _initialize() -> void:
@@ -40,6 +63,7 @@ func _initialize() -> void:
 		ran += 1
 		print("case %s: %d checks" % [file.trim_suffix("_case.gd"), t.checks - before])
 	_check_full_alpha_sitting(t)
+	_check_bot_fairness_config(t)
 	if t.failures > 0:
 		quit(t.verdict())
 		return
