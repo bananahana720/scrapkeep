@@ -40,15 +40,29 @@ func complete(text: String) -> Array[String]:
 	return matches
 
 
+func schema() -> Array[Dictionary]:
+	var rows: Array[Dictionary] = []
+	for name in _order:
+		rows.append({"name": name, "usage": String(_rows[name].usage), "help": String(_rows[name].help)})
+	return rows
+
+
 func run(line: String, keep := true) -> Array[String]:
 	var replies: Array[String] = []
+	for row in run_detailed(line, keep):
+		replies.append(String(row.get("text", "")))
+	return replies
+
+
+func run_detailed(line: String, keep := true) -> Array[Dictionary]:
+	var replies: Array[Dictionary] = []
 	var trimmed := line.strip_edges()
 	if trimmed.is_empty():
 		return replies
 	if keep:
 		remember(trimmed)
 	for part in trimmed.split(";", false):
-		replies.append(run_one(part))
+		replies.append(run_one_detailed(part))
 	return replies
 
 
@@ -61,23 +75,37 @@ func remember(line: String) -> void:
 
 
 func run_one(text: String) -> String:
-	var words := text.strip_edges().split(" ", false)
+	return String(run_one_detailed(text).get("text", ""))
+
+
+func run_one_detailed(text: String) -> Dictionary:
+	var trimmed := text.strip_edges()
+	var words := trimmed.split(" ", false)
 	if words.is_empty():
-		return ""
+		return {"cmd": "", "ok": true, "text": "", "data": null, "tone": "ok"}
 	var name := words[0].to_lower()
 	if not _rows.has(name):
 		var near := complete(name)
 		var reply := "!no command '%s'%s" % [name, (", try: " + ", ".join(near.slice(0, 4))) if not near.is_empty() else ""]
 		said.emit(reply, "warn")
-		return reply
+		return {"cmd": trimmed, "ok": false, "text": reply, "data": null, "tone": "warn"}
 	var args: Array[String] = []
 	for i in range(1, words.size()):
 		args.append(words[i])
 	var result = _rows[name].run.call(args)
-	var reply := String(result) if result != null else ""
+	if result is Dictionary:
+		var reply := String(result.get("text", ""))
+		var ok := bool(result["ok"]) if result.has("ok") else not reply.begins_with("!")
+		var tone := String(result.get("tone", "ok" if ok else "warn"))
+		if not reply.is_empty():
+			said.emit(reply, tone)
+		return {"cmd": trimmed, "ok": ok, "text": reply, "data": result.get("data", null), "tone": tone}
+	var reply := str(result) if result != null else ""
+	var ok := not reply.begins_with("!")
+	var tone := "ok" if ok else "warn"
 	if not reply.is_empty():
-		said.emit(reply, "warn" if reply.begins_with("!") else "ok")
-	return reply
+		said.emit(reply, tone)
+	return {"cmd": trimmed, "ok": ok, "text": reply, "data": null, "tone": tone}
 
 
 static func number(args: Array[String], index: int, fallback: float) -> float:
