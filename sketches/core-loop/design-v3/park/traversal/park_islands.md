@@ -1,5 +1,7 @@
 # park_islands traversal
 
+> **Historical wave-13/18 traversal receipt:** Preserved measurement log; live park traversal qualification runs via `sketches/core-loop/tests/park_*_test.gd` and `sketches/core-loop/tests/w50_*_test.gd`.
+
 ## Decoration-only pass, head vs base, 2026-10-19 (revised after review)
 
 The pass draws six rows as decoration-only liners and sets three to `scatter` (see `stages/5-park_islands.md`); `slickrock_run`, `fan_band`, `net_carve` and `isle_apron` were reverted to their greybox recipes after review because a scatter row's sensor stands on the raw ground and scatter would have opened the `twin_fins`, `west_wing` and `lens_rocks` event footprints. Method: `tools/traversal_line.gd --table=park --stage=5 --seeds=1,2,3,4,5,6,7,8 --child-timeout=900`, headless, `--fixed-fps 90`, `nice`, for Rivet, Tally and Sable (Kest, Tarn, Cannon, the floor line and the skill line were not re-run for this revision). Head: the revision commit on `claude/eloquent-rubin-83eps3-islands`; base: `137db801`, the true parent (park_flume and park_pit liners, no islands change), in a detached worktree. One pilot at a time, head and base run side by side (two Godot children on a shared 4-vCPU box). Receipts (not committed): `artifacts/local/isles-trav-r2/` (`head/`, `base/` first batch; `re-head/`, `re-base/` the seeds 1, 2, 5, 7 rerun; `re6-head/`, `re6-base/` the seed 6 rerun; `sum.py` summarises them).

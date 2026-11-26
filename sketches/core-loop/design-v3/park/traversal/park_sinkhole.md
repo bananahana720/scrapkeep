@@ -1,5 +1,7 @@
 # Traversal bands: park_sinkhole (stage 4)
 
+> **Historical wave-13/18 traversal receipt:** Preserved measurement log; live park traversal qualification runs via `sketches/core-loop/tests/park_*_test.gd` and `sketches/core-loop/tests/w50_*_test.gd`.
+
 ## Dressed-rows check, 2026-10-19 (World lane, W19/20)
 
 Head: `9aadfc10aebabcb90059eeaa3c4d2dbbb51da5f1` (branch `claude/eloquent-rubin-83eps3-greybox`, over `b95e1799`), which seats the sinkhole's 24 `greybox:half_pipe` rows (`lava_channel_1..21`, `west_trench`, `south_flats`, `lava_chute`) on their lava GLBs with `"fit": "seat"`. Base: the read-only worktree at `1a7a7299`, nine commits behind head's parent. Those nine change radio audio, special-audio code and `project.godot`; the `project.godot` difference is app identity (name, icon, splash, `use_custom_user_dir`), and the physics settings (Jolt, 90 ticks) are identical on both trees. Nothing in the world or movement differs.

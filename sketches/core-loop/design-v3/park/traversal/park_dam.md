@@ -1,5 +1,7 @@
 # park_dam traversal receipts
 
+> **Historical wave-13/18 traversal receipt:** Preserved measurement log; live park traversal qualification runs via `sketches/core-loop/tests/park_*_test.gd` and `sketches/core-loop/tests/w50_*_test.gd`.
+
 ## 2026-10-12: round 5 final greybox
 
 Measured on runtime head `c3c143ed114d1c7194ace87cbd29039b498f0606`, after merge `76757a256dfc31145f92d06dbb105a629c8584fe` of candidate `d8e507777a8c46ef641b5842e04a83116de9bc83`, using the committed traversal tool at fixed 90 FPS through the CPU queue at nice 10. All seven untraced eight-seed batches are complete, 56 rows. The independent PARK.md section 8 audit judges each gated worst seed and each required median. The floor uses its own row with Rivet as reference. Later page edits preserve these runtime inputs, checked by SHA256 across 391 files. Verdict: PASS+NOTES, evidence level 4. Evidence: `/home/andrew/scratch/w13/sol/kd1-dam-r5/final-sweep/`.

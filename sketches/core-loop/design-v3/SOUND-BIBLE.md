@@ -1,5 +1,7 @@
 # Scrapkeep sound bible
 
+> **Implementation status:** Live score, `SetDirector` (`src/presentation/set_director.gd`), and Warden build/breath/drop cues follow sections below; unbuilt W2/W3/post-sitting cues noted as `After the world 1 sitting` / unbuilt remain roadmap design rather than shipped audio assets.
+
 One page for how Scrapkeep sounds, written 2026-10-16 from Andrew's direction: **gritty steampunk and cyberpunk crossed with house, with jazz built into how the songs and notes are written.** It sits on top of [AUDIO-V3.md](AUDIO-V3.md) (the engine grammar), [SOUND-STORY.md](../SOUND-STORY.md) (registers and motifs) and the 2026-10-11 listening packet in `~/Music/Scrapkeep-sound-direction/`, whose mechanical swing track is the one Andrew approved ("huge 180"). Nothing here changes the game. The wiring notes at the end are for the wave coordinator.
 
 ## The one sentence

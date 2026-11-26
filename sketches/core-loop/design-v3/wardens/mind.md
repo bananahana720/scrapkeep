@@ -1,5 +1,7 @@
 # Warden kind sheet: `mind`, the Mind's hand
 
+> **Historical / Built spec (10 Oct 2026):** Live implementation owns tuned stats in `sketches/core-loop/src/combat/warden*.gd`, `src/core/park_defs.gd`, and `src/core/alpha_defs.gd` (ignore any retired `QUARANTINE.tsv` references; use `KNOWN-FAILING.tsv`).
+
 World 3, The Highdraft. Mountings `under_island` (stage 5, `park_islands`, variant `""`) and `spires` (stage 6, `park_crown`, variant `choir`). Board id `warden-mind`. Status: draft for Andrew's approval (unit K-W3, 2026-10-10). Numbers without a file:line are starting values to tune in play.
 
 The kind id is the existing family id `mind` (`src/combat/roster.gd:33`, via PARK.md:420), so the posture rule, the kit switch (`warden_kit.gd:39-40`) and the asset key (`hero_assets.gd:7`) keep working. The stage pages are `design-v3/park/stages/5-park_islands.md` and `6-park_crown.md`. The Mind boss (`src/boss/mind.gd`) and the ending (`src/ui/ending_sequence.gd`) stay authored; nothing on this sheet changes them.

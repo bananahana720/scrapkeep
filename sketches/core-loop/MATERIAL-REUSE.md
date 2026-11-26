@@ -1,5 +1,7 @@
 # Contraption material reuse VD-03-A1
 
+> **Historical single-unit receipt:** Contraption material reuse (`cf2363e`); live contract ownership is in [CONTRACTS.md](CONTRACTS.md).
+
 Contraptions now allocate seven solid materials per owner: sand, charcoal, rust, copper, and amber emitting at 0.6, 0.8 and 1.2. Existing gauge and needle materials supply sand and charcoal. Matching static prop surfaces reuse these resources. The resources are treated as immutable after setup; each owner receives its own set. The existing striped and unshaded materials remain unchanged.
 
 Palette.solid still returns a new resource. Enemy flashes, surge gates, boss magnets, fabricator readiness and melting ice retain their independent mutable resources. No global cache, arbitrary-color registry or lifetime policy is introduced.

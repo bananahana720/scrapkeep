@@ -1,5 +1,7 @@
 # Stage 4, park_sinkhole: fixes for the wave 19 dressing
 
+> **Historical / Superseded wave-19 patch note:** Live sinkhole dressing owns placement in `sketches/core-loop/src/world/park/props/park_sinkhole.json` and [DRESSING-KITS.md](../DRESSING-KITS.md).
+
 Written 17 October 2026 from the intent check at `2fce8953` (originally stored in retired `/mnt/project-files/alpha-status/intent-check/results/w16-2fce8953.md`) and a read of `src/world/park/park_sinkhole.json` at the same commit. The check flagged three things: ride facts on 5% of rows, 16 near-identical zip cables and 9 geysers, and 466 placeholders, the most in the game. (Historical wave 19 dressing log; anchor posts and `lava_tube_run` work subsequently integrated.)
 
 ## What the numbers really say

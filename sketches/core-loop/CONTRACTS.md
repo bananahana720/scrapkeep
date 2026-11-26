@@ -75,15 +75,15 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 
 Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates`, `launch` and `boss`.
 
-`stage_def()` returns the current row of `src/core/stage_defs.gd`, with these fields:
+`stage_def()` returns the current stage row (`ParkDefs` / `AlphaDefs` across 6 stages / 3 worlds, falling back to `src/core/stage_defs.gd`), with these fields:
 
 - `stage`, `name`.
 - `threat` (a multiplier) and `event_mix` (event id to weight).
 - `scrap_density` (a multiplier).
 - `beacon_seconds` and `beacon_radius`, used only by the unsealed presence path.
-- `warden_plating` (45, 80, 140), `warden_hp` (800, 2200, 7500) and `warden_hint` (the objective line's last sentence). Every Warden fights on the posture rule; the plating fight, its `warden_fight` key and the lessons were retired by F6 (2026-10-04). `warden_lesson` stays in the rows as `""` and nothing reads it.
+- `warden_plating`, `warden_hp` and `warden_hint` (the objective line's last sentence; baseline fallback stages are 45, 80, 140 plating and 800, 2200, 7500 HP, while park/alpha tables tune stages 1–6 up to 190 plating / 1400 HP). Every Warden fights on the posture rule; the plating fight, its `warden_fight` key and the lessons were retired by F6 (2026-10-04). `warden_lesson` stays in the rows as `""` and nothing reads it.
 
-Every number there is a starting value; tuning edits `stage_defs.gd`, the heft constants in `run_state.gd` and the part catalogue.
+Every number there is a starting value; tuning edits `park_defs.gd` / `alpha_defs.gd` (`stage_defs.gd` fallback), the heft constants in `run_state.gd` and the part catalogue.
 
 ## Run state (`src/core/run_state.gd`)
 
@@ -106,8 +106,8 @@ These fields and methods are readable:
 
 - `class_def`, a `ClassDef` resource with `id`, `display_name`, `weapon_id`, `special_id`, `color` and `pitch`.
 - `death_save_hook` (Callable() -> the hull to live on at, or 0.0 when no earned save is held; run once per lethal hit before `player_died`), the `death_saved(hp)` signal it raises and the `death_save_spent` run-doc field (once per run, survives a save and Continue, never goes back to false), like `ward_hook` and `deflect_hook` beside it in `run_state.gd`.
-- `run_id`, `stage`, `hp`, `max_hp`, `cogs` (the spend wallet), `scrap` (the old wallet, now a tally nothing in build spends), `mass`, `parts` (an array of part ids, one entry per stack), `bonus_cores`, `kills`, `events_won`, `run_time`, `stage_time` and `retries`.
-- `heft()`, which is `1 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size()`, currently `1 + mass/450 + 0.2 * parts.size()`.
+- `run_id`, `stage`, `hp`, `max_hp`, `cogs` (the spend wallet), `scrap` (the old wallet, now a tally nothing in build spends), `mass`, `parts` (an array of part ids, one entry per stack), `panels` (mounted grey panel ids), `consumables` / `consumable_slots`, `bonus_cores`, `kills`, `events_won`, `run_time`, `stage_time`, `retries` and `metrics` / `_snapshot` extra state (including `hotwire`).
+- `heft()`, which is `1 + mass * HEFT_PER_MASS + HEFT_PER_PART * parts.size() + panels.size() * Panels.PANEL_MASS * HEFT_PER_MASS`, currently `1 + mass/450 + 0.2 * parts.size() + panel_heft` (`panel_heft` stays applied even under scrapless).
 - `heft_class()`, which returns 1 to 5 (classes start at heft 1.0, 1.5, 2.2, 3.2 and 4.6), and `heft_progress()`, the share of the way to the next class.
 - `gate_tier_bonus()`, which returns 0, 1 or 2 for 0, 1 or 2+ bonus cores. Build reads it when it builds its offers.
 - `RunState.roman(n)`, a class numeral for display.
@@ -790,19 +790,19 @@ Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The t
 
 ### Per-boss modules
 
-- **Table.** `Worlds.BOSSES` (`src/core/worlds.gd:22-29`) names, for `brindle`, `waking` and `mind`, the module `script`, the `music` section, the `title` and the `built` flag. All three rows are built. An optional `stamp` (the Mind's `HIRED`) is inked under the victory title by `screens.gd`.
-- **Lookup.** `flow._module_for(world)` (`src/core/flow.gd:141-147`) reads the row's `script`, returns the scene's module for the scene boss, and otherwise loads and sets up the script once and caches it by path in `_row_modules`, shared by every row that names it. `flow.boss_row(world)` (`:167`) is the row, with `boss_row_override` for tests.
-- **Scripts.** Brindle is `src/boss/boss.gd`. `src/boss/waking.gd` and `src/boss/mind.gd` extend `src/boss/stub_boss.gd`, which answers `MODULE` (`stub_boss.gd:45-223`: `active`, `enter_arena`, `exit_arena`, `ground_height_at`, `music_state`, `objective_text`).
-- **The Waking** fights three floors over the stub's pit: `FLOOR_NAMES` Spoil, Seam, Bedrock (`waking.gd:14`), each shattered chunk telegraphs the highest live floor and drops it `FLOOR_WARN` later (`waking.gd:16`, `:66`).
-- **The Mind** uses the `mind_attacks.gd` families `lane`, `split_lane`, `rush` and `plate` (`mind_attacks.gd:26`), a choir Warden whose stagger braces against the ball's habit (`warden.gd:511-518`; the objective line names the braced kinds, `mind.gd:191-192`) and `mind_hand` spawns from phase 2 (`mind.gd:11`, `:173`).
+- **Table.** `Worlds.BOSSES` (`src/core/worlds.gd`) names, for `brindle`, `waking` and `mind`, the module `script`, the `music` section, the `title` and the `built` flag. All three rows are built. An optional `stamp` (the Mind's `HIRED`) is inked under the victory title by `screens.gd`.
+- **Lookup.** `flow._module_for(world)` (`src/core/flow.gd`) reads the row's `script`, returns the scene's module for the scene boss, and otherwise loads and sets up the script once and caches it by path in `_row_modules`, shared by every row that names it. `flow.boss_row(world)` is the row, with `boss_row_override` for tests.
+- **Scripts and shared dress loader.** Brindle is `src/boss/boss.gd` (with `requisition.gd`). `src/boss/waking.gd` (`waking_dress.gd`, `waking_attacks.gd`, `waking_floors.gd`) and `src/boss/mind.gd` (`mind_dress.gd`, `mind_attacks.gd`) extend `src/boss/stub_boss.gd`, which answers `MODULE` (`active`, `enter_arena`, `exit_arena`, `ground_height_at`, `music_state`, `objective_text`). `src/boss/boss_model.gd` (`BossModel`) owns the shared GLB scene load, vertex colouring, `BakeLook.dress`, and `InkOutline.apply` path for boss/miniboss scenes.
+- **The Waking** fights three floors over the stub's pit: `FLOOR_NAMES` Spoil, Seam, Bedrock (`waking.gd`), each shattered chunk telegraphs the highest live floor and drops it `FLOOR_WARN` later.
+- **The Mind** uses the `mind_attacks.gd` families `lane`, `split_lane`, `rush` and `plate`, a choir Warden whose stagger braces against the ball's habit (`warden.gd`; the objective line names the braced kinds, `mind.gd`) and `mind_hand` spawns from phase 2.
 
 ### Breach plates
 
-`src/world/breach.gd:5-13` is the rule: a plate is `{id, rect: Rect2(x, z, w, d), drop_to}`, a slam inside an unbroken plate's rect breaks it, once per stage entry, and `slam()` returns the opened ids. The map supplies the plates (`map_dig.gd:28` `BREACH_PLATES`); `world.gd:189` builds a `Breach` for a map that has `breach_plates`, and `world.gd:384-394` swaps the overlay and the cover box for each opened id, sends one `breach_opened` fact (the `WORLD_ROWS` row copied as `Breach.ROW`) and marks it. `world.gd:399` `_breach_strike` strikes the tier below.
+`src/world/breach.gd` (`Breach`): a plate is `{id, rect: Rect2(x, z, w, d), drop_to}`, a slam inside an unbroken plate's rect breaks it, once per stage entry, and `slam()` returns the opened ids. The map supplies the plates (`map_dig.gd` `BREACH_PLATES`); `world.gd` builds a `Breach` for a map that has `breach_plates`, swaps the overlay and the cover box for each opened id, sends one `breach_opened` fact (the `WORLD_ROWS` row copied as `Breach.ROW`) and marks it. `_breach_strike` strikes the tier below.
 
 ### Net deck
 
-`src/world/map_highdraft.gd:3` and `:12`: islands stand over a flat net deck at `NET_H` (10.0). Only two ramps exist, both on the beacon island's bridge-mouth shoulders, listed in `RAMPS` (`:33-36`, `RAMP_HALF` `:37`, `RAMP_GRADE` `:38`), so a ball that falls to the deck can climb back toward the Warden. `highdraft_crown` inherits them through `_ramps()`; no other island has one.
+`src/world/map_highdraft.gd`: islands stand over a flat net deck at `NET_H` (10.0). Only two ramps exist, both on the beacon island's bridge-mouth shoulders, listed in `RAMPS`, so a ball that falls to the deck can climb back toward the Warden. `highdraft_crown` inherits them through `_ramps()`; no other island has one.
 
 ### Row-level packs
 
@@ -810,22 +810,22 @@ Limitation: `ctx.boss` is one slot, so two modules cannot both be current. The t
 
 ### Table rows 1 to 6
 
-`AlphaDefs.DEFS` (`src/core/alpha_defs.gd`), one row per stage with its world, map name, Warden family and variant. Map names resolve through `Terrain.MAPS` (`src/world/terrain.gd:13`).
+`AlphaDefs.DEFS` (`src/core/alpha_defs.gd`) and `ParkDefs.DEFS` (`src/core/park_defs.gd`), one row per stage with its world, map name, Warden family and variant. Map names resolve through `Terrain.MAPS` (`src/world/terrain.gd`).
 
-| Stage | World | Map | Family and variant | Rows at |
+| Stage | World | Alpha map / Park map | Family and `alpha_defs` variant | Where |
 | --- | --- | --- | --- | --- |
-| 1 | 1 | `spillway` | reactor, none | `alpha_defs.gd:49-54` |
-| 2 | 1 | `reach` | swarm, none | `:55-60` |
-| 3 | 2 | `dig` | reactor, `meltdown` | `:61-70` |
-| 4 | 2 | `dig_deep` | swarm, `brood` | `:71-80` |
-| 5 | 3 | `highdraft` | mind, `choir` | `:81-90` |
-| 6 | 3 | `highdraft_crown` | mind, `choir` | `:91-100` |
+| 1 | 1 | `spillway` / `park_dam` | `reactor`, none | `alpha_defs.gd` / `park_defs.gd` |
+| 2 | 1 | `reach` / `park_flume` | `reactor`, `meltdown` (none on park) | `alpha_defs.gd` / `park_defs.gd` |
+| 3 | 2 | `dig` / `park_pit` | `swarm`, none | `alpha_defs.gd` / `park_defs.gd` |
+| 4 | 2 | `dig_deep` / `park_sinkhole` | `swarm`, `brood` (`"park"` on park) | `alpha_defs.gd` / `park_defs.gd` |
+| 5 | 3 | `highdraft` / `park_islands` | `mind`, none | `alpha_defs.gd` / `park_defs.gd` |
+| 6 | 3 | `highdraft_crown` / `park_crown` | `mind`, none | `alpha_defs.gd` / `park_defs.gd` |
 
 Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
 
 ### Relic spot
 
-`relic_spot` is an optional one-Vector2 map slot (`src/world/zone_schema.gd:7-9`, checked at `:59`). A map that has it gets a relic cache that always offers a relic (`src/world/interact.gd:57-66`), built after the terrain swap so the pedestals read the new ground. `map_dig.gd:45`, `map_dig_deep.gd:48`, `map_highdraft.gd:59` and `map_highdraft_crown.gd:62` set it.
+`relic_spot` is an optional one-Vector2 map slot (`src/world/zone_schema.gd`). A map that has it gets a relic cache that always offers a relic (`src/world/interact.gd`), built after the terrain swap so the pedestals read the new ground. `map_dig.gd`, `map_dig_deep.gd`, `map_highdraft.gd` and `map_highdraft_crown.gd` set it.
 
 ## Run store (RS2)
 
@@ -839,10 +839,10 @@ Rows 3 to 6 carry their own `packs`; rows 1 and 2 use the table's `PACKS`.
 
 ## Profile (`src/core/profile.gd`, META-7 and RS4)
 
-`Profile.new(path)` keeps `profile.json`, schema 2. Preferences stay in `settings_store.gd`.
+`Profile.new(path)` keeps `profile.json`, currently `SCHEMA := 4`. Preferences stay in `settings_store.gd`.
 
-- **Schema 2 adds three fields.** `companion` is the companion's own dictionary (`Companion.to_dict()`: owned pieces, sockets, escape flag), stored and returned opaque through `companion()` and `set_companion(doc)`; the loader that applies it is `Companion.from_dict`, which refuses a bad one. `settled` is the list of settled one-time grant ids. `rewards_settled` is a bool marker, set once through `mark_rewards_settled()`.
-- **Migration.** `MIGRATIONS` maps `0` and `1` to their steps. `_migrate_1` passes every schema-1 field through and adds the new ones empty. The first save of a migrated file keeps the old bytes as `profile.json.v1` (`.v0` for schema 0). A file with a schema above this build's (schema 3 today) is never saved over.
+- **Schema fields.** Schema 2 added `companion` (`Companion.to_dict()`: owned pieces, sockets, escape flag, loaded via `Companion.from_dict`), `settled` (settled one-time grant ids), and `rewards_settled` (set once through `mark_rewards_settled()`). Schemas 3–4 extend persistent pilot/meta state via `MIGRATIONS`.
+- **Migration.** `MIGRATIONS` maps `0..3` to their upgrade steps (`_migrate_0`..`_migrate_3`). The first save of a migrated file keeps the old bytes as `profile.json.v<from_version>`. A file with a schema above this build's (`SCHEMA := 4`) is never saved over.
 - **Merge** (two writers, one file): `settled` and owned pieces are unions, the saver's assembly and escape flag win when it has an assembly (else theirs), and `rewards_settled` never goes back to false.
 - **Settle-once (RS4).** `Progress.settle(id) -> bool` is true the first time only. The run document's optional `settled` list (`RunState.settled`, entrance key `settled`, strings) and the profile's `settled` list are one set: an id in either is settled and settling copies it to both. `reconcile_settled()` unions the two after a run document loads. `grant_once(id, kind, target)` settles then unlocks a pilot, cosmetic or world and saves; achievement rewards go through it as `reward:<achievement>:<kind>`.
 - **Owed.** Wire trail settle (`activities.gd`) calls `ctx.progress.settle(wire_id)`; remaining offers outside the profile — `build.gd` `_hotwire_id` / discovery-part offers and companion piece finds — live outside profile files and each needs `progress.settle(id)` before it fires. Tests: `profile_store_test`, `unlock_settle_once_test`.

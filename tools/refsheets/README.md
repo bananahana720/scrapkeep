@@ -1,6 +1,6 @@
 # Reference sheets through Codex
 
-Andrew asked on 23 Oct for multi-angle reference images before anything is modelled. These two scripts draw them with the Codex image engine (current pin `gpt-6.2-astra` per [AGENTS.md](../../AGENTS.md) rule 11; `tools/refsheets/draw.sh` still defaults to `gpt-6-astra` and requires a separate tooling fix) and run as many units in parallel as you name.
+Andrew asked on 23 Oct for multi-angle reference images before anything is modelled. These two scripts draw them with the Codex image engine (`tools/refsheets/draw.sh` defaults to `gpt-6.2-astra` per [AGENTS.md](../../AGENTS.md) rule 11) and run as many units in parallel as you name.
 
 1. Write a `PROMPTS.md` with a `## Shared preamble` section and one `## <Title>, \`<unit>\`` section per unit (`split.py` requires backticks around `<unit>`). Each unit section names the exact image files to write. The historical rogue prompts (`docs/art/reference/rogues/PROMPTS.md`, in git history) are the worked example: turnaround (front, side, back, three-quarter, top with a 1.84 m scale ball and metre callouts) plus a details sheet.
 2. Run `python3 tools/refsheets/split.py <PROMPTS.md> <scratch>/w<N>/<set>` (outside the repo, e.g. `~/scratch/w<N>/<set>`) to write one `PROMPT.md` per unit.

@@ -1,5 +1,7 @@
 # Heft destructibles (Wave 45, W45-C, spec only)
 
+> **Shipped status:** `sketches/core-loop/src/world/destructibles.gd` (`Destructibles.build`, `on_ball`, `on_blast`) and its formal model (`Destructibles.tla`) have since landed. This file preserves the W45-C design spec verbatim; verify live rules and values against `destructibles.gd` and `destructibles_test.gd`.
+
 Andrew approved the payoff: **combat, optional shortcuts and capped light loot**. A heavier ball breaks heavier world props without losing a metre per second, and a lighter ball sees why it cannot. This page is the spec. It changes no code, data or test. Build units are in [section 10](#10-build-units-and-verification); nothing starts until the Gate admits a card.
 
 Read with [AGENTS.md](../../../AGENTS.md) rules 7 to 10, [BIBLE.md](../../../BIBLE.md) (movement and growth), [Q-P22](../../../BACKLOG.md#q-p22), [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md) ("Research first" and "Fixed outline"), [DRESSING-KITS.md](park/DRESSING-KITS.md), [LEGIBILITY.md](LEGIBILITY.md) section 13 and the economy audit (`docs/systems-audit/economy/README.md`, archived in git history).

@@ -1,5 +1,7 @@
 # Warden kind sheet: `reactor`, the reactor relic
 
+> **Historical / Built spec (10 Oct 2026):** Live implementation owns tuned stats in `sketches/core-loop/src/combat/warden*.gd`, `src/core/park_defs.gd`, and `src/core/alpha_defs.gd` (ignore any retired `QUARANTINE.tsv` references; use `KNOWN-FAILING.tsv`).
+
 World 1, Spillway Works. Mountings `dam_face` (stage 1, `park_dam`, variant `""`) and `flume` (stage 2, `park_flume`, variant `meltdown`). Board id `warden-reactor`. Status: draft for Andrew's approval (unit K-W1, 2026-10-10). Numbers without a file:line are starting values to tune in play.
 
 The kind id is the existing family id `reactor` (`src/combat/roster.gd:31-33`, via PARK.md:420), so the posture rule, the kit switch (`warden_kit.gd:34-40`) and the asset key (`hero_assets.gd:7`) keep working. The stage pages are `design-v3/park/stages/1-park_dam.md` and `2-park_flume.md`.

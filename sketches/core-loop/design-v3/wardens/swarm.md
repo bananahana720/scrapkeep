@@ -1,5 +1,7 @@
 # Warden kind sheet: `swarm`, the swarm remnant
 
+> **Historical / Built spec (10 Oct 2026):** Live implementation owns tuned stats in `sketches/core-loop/src/combat/warden*.gd`, `src/core/park_defs.gd`, and `src/core/alpha_defs.gd` (ignore any retired `QUARANTINE.tsv` references; use `KNOWN-FAILING.tsv`).
+
 The Warden kind for world 2, The Dig. Unit K-W2, wave 13, 10 October 2026. Status: **draft for Andrew's click approval** of board `warden-swarm`. Every number is a starting value to tune in play unless it cites code. Paths are under `sketches/core-loop/` unless they start with `adr/`, `docs/` or `BIBLE.md`.
 
 Read with [PARK.md](../PARK.md) section 7 (the kinds and mountings), [TADR-011](../../../../adr/TADR-011-park-terrain-and-warden-kinds.md), the reactor sheet [reactor.md](reactor.md) for the shared layout, and the two stage pages, [3-park_pit.md](../park/stages/3-park_pit.md) and [4-park_sinkhole.md](../park/stages/4-park_sinkhole.md).

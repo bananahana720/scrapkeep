@@ -1,5 +1,7 @@
 # park_pit traversal measurements
 
+> **Historical wave-13/18 traversal receipt:** Preserved measurement log; live park traversal qualification runs via `sketches/core-loop/tests/park_*_test.gd` and `sketches/core-loop/tests/w50_*_test.gd`.
+
 ## Liners vs greybox slabs, 2026-10-19 (wave 18 dress unit)
 
 The six last greybox rows became decoration-only liners. The three unstamped ones (`haul_road_west_5`, `bench2_camp_lane`, `bench2_east_bank`) lost their 0.1 m box colliders, so the lines that cross them were re-measured. This section is added beside the 2026-10-12 table below, which stays as history.

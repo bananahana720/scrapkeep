@@ -1,5 +1,7 @@
 # Happy accidents
 
+> **Historical snapshot (Oct 2026, 3-pilot `32dff63` era):** Early 200-seed fuzz notes; live fuzz and regression harnesses run via `scripts/redteam/` and `tests/`.
+
 Andrew's rule (2026-09-27): "making sure we do things in a standardized manner so we wouldn't have any unforeseen bugs or hidden glitches or exploits ... But also exploits can be fun too if they're accidental in a fun way."
 
 This file is where the two meet. The item fuzzer (`tools/item_fuzz.gd`, DESIGN-V2 section 7) plays random legal builds and lists anything that escapes an invariant or runs far past its peers. Andrew marks each line **KEEP** or **KILL**:

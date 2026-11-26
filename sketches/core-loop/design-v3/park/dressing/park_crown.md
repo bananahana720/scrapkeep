@@ -1,5 +1,7 @@
 # Crown (`park_crown`) dressing kit
 
+> **Historical wave-18/20 dressing receipt:** Live prop placement and pins live in `sketches/core-loop/src/world/park/props/park_crown.json`, `sketches/core-loop/tests/fixtures/pins/park_crown.pin`, and [DRESSING-KITS.md](../DRESSING-KITS.md).
+
 Dressing lane (DRESSING-KITS.md): the Blender kit and its placement. Recipe `tools/blender/park/props/crown.py`; GLBs, `manifest.json` and import stubs under `assets/models/park/props/crown/`; registry rows in `assets/registry.d/park_props_crown.json` (the Gate lane folds `registry.json`). Placement is in `src/world/park/props/park_crown.json`.
 
 ## What and why

@@ -1,5 +1,7 @@
 # Traversal: stage 6, the crown (`park_crown`)
 
+> **Historical wave-13/18 traversal receipt:** Preserved measurement log; live park traversal qualification runs via `sketches/core-loop/tests/park_*_test.gd` and `sketches/core-loop/tests/w50_*_test.gd`.
+
 ## Round 8, 13 October 2026: current qualification
 
 PASS+NOTES under park ruling 29 and round-8 rulings X1 to X4. Automated native evidence level 4. STEP 0 merge `065996e4d2fe6f007319feaac7bb211665abcbd8` imports candidate `74ea6b2e876458367bf2b8e1deb1b26b06742712`. Crown geometry remains at `d7099a6ca3efaab376ac15af6f8c49693f8bbecf`. The complete round-7 verifier receipt set is retained under X3, with round-8 structural checks in `/home/andrew/scratch/w13/sol/kd6-crown-r8`. No geometry change or further repair is made. Tarn airborne share and Rivet/Kest length ratios remain measured MISS; their open carry rows belong to Crown dressing. Coordinator admission and Andrew's feel verdict remain separate.

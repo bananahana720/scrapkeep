@@ -1,5 +1,7 @@
 # VD-01 playable visual slice
 
+> **Historical / Superseded receipt:** Clear glass shell superseded by the Hoberman mecha and picked cutaway ball look in [ROSTER-LOOK.md](design-v3/ROSTER-LOOK.md) (ruling `dm`).
+
 Andrew selected Style A, painted workshop miniature, and asked for a clear spherical hull with the pilot inside. This slice replaces the previous opaque rolling core and rooftop bust with that arrangement. The existing collision sphere, movement, chase camera, combat, growth, parts and theft logic remain unchanged.
 
 ## What is implemented

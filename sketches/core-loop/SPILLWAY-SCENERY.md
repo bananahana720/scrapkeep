@@ -1,5 +1,7 @@
 # Spillway scenery slice VD-02-A1
 
+> **Historical single-unit receipt:** External heightfield scenery slice; superseded by the 1.6 km `park_dam` layout in [PARK.md](design-v3/PARK.md).
+
 The downstream dam and sandstone shoulders extend Style A's regional silhouette beyond the existing playable Spillway. Cottonwood-like crowns sit on external rock shelves, with denser clusters toward the basin end. This is distant scenery; the terrain remains an enclosed heightfield. It does not implement the layered pinball map or a new river route.
 
 `src/presentation/spillway_scenery.gd` builds seven opaque mesh batches under stage 1's geometry root. One setup hook in `src/game.gd` attaches them. Stage parking supplies visibility and lifecycle. There are no colliders, navigation nodes, scripts on scene nodes, frame callbacks, emission, decorative shadows or edits to map, camera, warnings, attachment faces or terrain vertices. No StageMap prop helpers are used because those create colliders.
