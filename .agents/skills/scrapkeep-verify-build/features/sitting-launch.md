@@ -1,6 +1,6 @@
 # The sitting launch
 
-The app menu entry's sitting action, `"Scrapkeep sitting (all pilots, save untouched)"`, launches the game with `--profile=sitting`: all six pilots are open on a new save, world 1 is pinned (`stages=2`), and the loop mechanics Andrew wants at the sitting are on. A sibling action, `"Scrapkeep sitting (fresh profile, unlocks earned)"`, launches with `--profile=sitting-earned`. The default launch opens Sable only and runs all three worlds (`stages=6`).
+The app menu entry's sitting actions launch world 1 (`stages=2`) with `"Scrapkeep sitting (all pilots, save untouched)"` (`--profile=sitting`) or `"Scrapkeep sitting (fresh profile, unlocks earned)"` (`--profile=sitting-earned`), and full-alpha (`stages=6`) with `"Scrapkeep full-alpha sitting (all pilots, save untouched)"` (`--profile=sitting --final-world=last`) or `"Scrapkeep full-alpha sitting (fresh profile, unlocks earned)"` (`--profile=sitting-earned --final-world=last`). The default launch opens Sable only and runs all three worlds (`stages=6`).
 
 ## Sub-features
 

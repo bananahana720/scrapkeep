@@ -1,13 +1,13 @@
 # Package and installer
 
-On the PC, `npm run sketch:export` cuts `scrapkeep-core-loop-<sha7>.tar.gz` (the game, the recorded band in `music_ace/`, `HOW-TO-RUN.txt` and `BUILD.txt`), and `npm run sketch:appimage` wraps it as `Scrapkeep-<sha>-x86_64.AppImage` and installs it for the current user with an icon and an app menu entry that has two sitting actions: `"Scrapkeep sitting (fresh profile, unlocks earned)"` (`--profile=sitting-earned`) and `"Scrapkeep sitting (all pilots, save untouched)"` (`--profile=sitting`).
+On the PC, `npm run sketch:export` cuts `scrapkeep-core-loop-<sha7>.tar.gz` (the game, the recorded band in `music_ace/`, `HOW-TO-RUN.txt` and `BUILD.txt`), and `npm run sketch:appimage` wraps it as `Scrapkeep-<sha>-x86_64.AppImage` and installs it for the current user with an icon and an app menu entry that has four sitting actions: `"Scrapkeep sitting (fresh profile, unlocks earned)"` (`--profile=sitting-earned`), `"Scrapkeep sitting (all pilots, save untouched)"` (`--profile=sitting`), `"Scrapkeep full-alpha sitting (fresh profile, unlocks earned)"` (`--profile=sitting-earned --final-world=last`), and `"Scrapkeep full-alpha sitting (all pilots, save untouched)"` (`--profile=sitting --final-world=last`).
 
 ## Sub-features
 
 - `PK-1` The tarball unpacks to a folder whose game runs from any directory, with `music_ace/` beside it.
 - `PK-2` `HOW-TO-RUN.txt` names the build; `BUILD.txt` records the win proof lines.
 - `PK-3` The AppImage installs with `--install` and leaves with `--uninstall`; saves survive an uninstall.
-- `PK-4` The app menu shows "Scrapkeep" with the two sitting actions (`--profile=sitting-earned` and `--profile=sitting`).
+- `PK-4` The app menu shows "Scrapkeep" with the four sitting actions (`--profile=sitting-earned`, `--profile=sitting`, and both with `--final-world=last`).
 
 ## How to get to it (user POV)
 

@@ -71,7 +71,7 @@ export function desktopEntry({ exec, icon = APP_ID }) {
       "StartupWMClass=" + WM_CLASS,
       "Categories=Game;ActionGame;",
       "Keywords=scrap;mech;harpoon;roguelite;",
-      "Actions=sitting-earned;sitting;",
+      "Actions=sitting-earned;sitting;sitting-alpha-earned;sitting-alpha;",
       "",
       "[Desktop Action sitting-earned]",
       "Name=Scrapkeep sitting (fresh profile, unlocks earned)",
@@ -80,6 +80,14 @@ export function desktopEntry({ exec, icon = APP_ID }) {
       "[Desktop Action sitting]",
       "Name=Scrapkeep sitting (all pilots, save untouched)",
       "Exec=" + exec + " -- --profile=sitting",
+      "",
+      "[Desktop Action sitting-alpha-earned]",
+      "Name=Scrapkeep full-alpha sitting (fresh profile, unlocks earned)",
+      "Exec=" + exec + " -- --profile=sitting-earned --final-world=last",
+      "",
+      "[Desktop Action sitting-alpha]",
+      "Name=Scrapkeep full-alpha sitting (all pilots, save untouched)",
+      "Exec=" + exec + " -- --profile=sitting --final-world=last",
     ].join("\n") + "\n"
   );
 }
