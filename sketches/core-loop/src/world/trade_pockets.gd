@@ -16,6 +16,9 @@ const DOOR_WORDS := {
 	"risk": {"name": "Keeper's gamble", "line": "Nobody makes you."},
 	"safe": {"name": "Foreman's kindness", "line": "A small efficiency fee. You're welcome."},
 }
+const KINDNESS_RARITIES := ["common"]
+const GAMBLE_RARITIES := ["rare"]
+const GAMBLE_HIGH_RARITIES := ["rare", "relic"]
 
 const OVERTIME_CONTRACT := "overtime_contract"
 const SALVAGE_AUCTION := "salvage_auction"
@@ -104,12 +107,32 @@ static func door_words(offer: Dictionary, counter: String) -> String:
 	var row: Dictionary = DOOR_WORDS[String(offer.family)]
 	return "%s: %s\n%s" % [row.name, counter, row.line]
 
+static func is_risky_offer(offer: Dictionary) -> bool:
+	return String(offer.get("family", "safe")) == "risk" \
+		or String(offer.get("owner", "")) == "gamble" \
+		or String(offer.get("id", "")) == OVERTIME_CONTRACT
+
+
+static func reward_rarities_for(offer: Dictionary, stage := -1) -> Array:
+	if not is_risky_offer(offer):
+		return KINDNESS_RARITIES.duplicate()
+	var at_stage := int(offer.get("stage", 1)) if stage < 0 else stage
+	if bool(offer.get("curse", false)) or bool(offer.get("sacrifice", false)) \
+			or int(offer.get("tier", 1)) >= 2 or at_stage >= 3 or String(offer.get("id", "")) == OVERTIME_CONTRACT:
+		return GAMBLE_HIGH_RARITIES.duplicate()
+	return GAMBLE_RARITIES.duplicate()
+
+
 static func devices(offer: Dictionary) -> Array:
-	var risk: bool = offer.family == "risk"
+	var risk: bool = String(offer.get("family", "safe")) == "risk"
 	var owner := "gamble" if risk else "kindness"
+	var stage := int(offer.get("stage", 1))
+	var chest_tier := 1 if not risk else maxi(2, int(offer.get("tier", 1)))
+	var rarities := reward_rarities_for(offer, stage)
 	return [{"device": "blood_shrine" if risk else "healing_ward", "tier": 1,
-		"pay": "health" if risk else "cores", "owner": owner},
-		{"device": "trade_chest", "tier": int(offer.get("tier", 1)), "pay": "health" if risk else "cogs", "owner": owner}]
+		"pay": "health" if risk else "cores", "owner": owner, "rarities": rarities, "high_impact": risk},
+		{"device": "trade_chest", "tier": chest_tier, "pay": "health" if risk else "cogs",
+		"owner": owner, "rarities": rarities, "high_impact": risk}]
 
 static func curse_tier(rng: RandomNumberGenerator) -> int:
 	var weights := [1.0, 0.5, POOL_FLOOR]
@@ -341,7 +364,16 @@ static func settle_overtime_contract(run, clear_seconds: float, at := Vector3.ZE
 		var payout := int(row["payout_cogs"])
 		run.add_cogs(payout)
 		run.add_core("overtime_contract", at)
-		return {"ok": true, "won": true, "cogs_paid": payout, "hp_lost": 0.0}
+		var PartsScript = load("res://src/build/parts.gd")
+		var rarities: Array = GAMBLE_HIGH_RARITIES.duplicate() if int(run.stage) >= 3 else GAMBLE_RARITIES.duplicate()
+		var contract_rng := RandomNumberGenerator.new()
+		contract_rng.seed = hash([run.run_seed, run.stage, "overtime_contract"])
+		var picks: Array = PartsScript.roll_high_impact(contract_rng, rarities, run.class_id(), run.parts, 1, [], {}, int(run.stage), int(run.stage) >= 3)
+		var granted := ""
+		if not picks.is_empty():
+			granted = String(picks[0])
+			run.add_part(granted, "overtime_contract")
+		return {"ok": true, "won": true, "cogs_paid": payout, "hp_lost": 0.0, "part_id": granted, "rarities": rarities}
 	var floor_hp: float = ceilf(float(run.max_hp) * float(row["floor_share"]))
 	var want_loss: float = round(float(run.max_hp) * float(row["penalty_hp_share"]))
 	var actual_loss: float = maxf(0.0, minf(want_loss, float(run.hp) - floor_hp))
@@ -362,12 +394,15 @@ static func bid_salvage_auction(run, bid_cogs: int, rng: RandomNumberGenerator =
 	if int(run.cogs) < bid_cogs:
 		return {"ok": false, "reason": "cant_afford", "cogs": int(run.cogs)}
 	var PartsScript = load("res://src/build/parts.gd")
-	var rarities: Array = ["rare", "relic"] if bid_cogs >= int(row["relic_threshold"]) else (["rare"] if bid_cogs >= int(row["rare_threshold"]) else ["common"])
+	var high_bid := bid_cogs >= int(row["rare_threshold"])
+	var relic_bid := bid_cogs >= int(row["relic_threshold"])
+	var rarities: Array = GAMBLE_HIGH_RARITIES.duplicate() if relic_bid else (GAMBLE_RARITIES.duplicate() if high_bid else KINDNESS_RARITIES.duplicate())
 	var roll_rng := rng
 	if roll_rng == null:
 		roll_rng = RandomNumberGenerator.new()
 		roll_rng.seed = hash([run.run_seed, run.stage, "salvage_auction", bid_cogs, int(st.get("auctions_won", 0))])
-	var picks: Array = PartsScript.roll(roll_rng, rarities, run.class_id(), run.parts, 1)
+	var picks: Array = PartsScript.roll_high_impact(roll_rng, rarities, run.class_id(), run.parts, 1, [], {}, int(run.stage), relic_bid) \
+		if high_bid else PartsScript.roll(roll_rng, rarities, run.class_id(), run.parts, 1)
 	if picks.is_empty():
 		picks = PartsScript.roll(roll_rng, ["common", "rare"], run.class_id(), run.parts, 1)
 	if picks.is_empty():
@@ -378,4 +413,4 @@ static func bid_salvage_auction(run, bid_cogs: int, rng: RandomNumberGenerator =
 	run.add_part(part_id, "salvage_auction")
 	st["auction_spent"] = true
 	st["auctions_won"] = int(st.get("auctions_won", 0)) + 1
-	return {"ok": true, "contract": SALVAGE_AUCTION, "bid": bid_cogs, "part_id": part_id, "rarities": rarities}
+	return {"ok": true, "contract": SALVAGE_AUCTION, "bid": bid_cogs, "part_id": part_id, "rarities": rarities, "high_impact": high_bid}

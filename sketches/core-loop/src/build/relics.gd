@@ -132,6 +132,21 @@ const ALT_ROWS := {
 		"pilots": ["demolitions_caster"], "slot": AbilityState.SPECIAL, "swap": "snare_detonate", "world": 3, "alt_loadout": true},
 }
 
+const WORLD_SWAPS := {
+	"storm_sling": {"maker": "spillway_works", "name": "Storm Sling", "text": "Bank exit leaves a live chord arc",
+		"pilots": ["pylon_engineer"], "slot": AbilityState.LINE, "swap": "bank_arc", "world": 2, "overdrive": 1.3},
+	"flare_cluster": {"maker": "redjaw", "name": "Flare Cluster", "text": "Trolley drops live cluster charges on wire",
+		"pilots": ["demolitions_caster"], "slot": AbilityState.LINE, "swap": "cable_cluster", "world": 2, "overdrive": 1.35},
+	"march_lane": {"maker": "waking", "name": "March Lane", "text": "Second call walks the barrage further out",
+		"pilots": ["remembered_cannon"], "slot": AbilityState.WEAPON, "swap": "cannon_lane_walk", "world": 2, "overdrive": 1.3},
+	"hot_cylinder": {"maker": "fleet_surplus", "name": "Hot Cylinder", "text": "Three staggered rounds, strong sixth ricochet",
+		"pilots": RIVET, "slot": AbilityState.WEAPON, "swap": "fan_burst", "world": 3, "overdrive": 1.35},
+	"maul_chain": {"maker": "waking", "name": "Maul Chain", "text": "Claw drag whips grabbed machine full arc",
+		"pilots": ["tarn"], "slot": AbilityState.LINE, "swap": "claw_whirl", "world": 3, "overdrive": 1.35},
+	"audit_loop": {"maker": "mind_glass", "name": "Audit Loop", "text": "Splice pulse echoes harder 0.3 s later",
+		"pilots": ["tally"], "slot": AbilityState.WEAPON, "swap": "ledger_echo", "world": 3, "overdrive": 1.35},
+}
+
 
 static func ids() -> Array:
 	return ROWS.keys()
@@ -143,10 +158,18 @@ static func alt_ids(world := 0) -> Array:
 	return ALT_ROWS.keys().filter(func(id): return int(ALT_ROWS[id]["world"]) == world)
 
 
+static func world_swap_ids(world := 0) -> Array:
+	if world == 0:
+		return WORLD_SWAPS.keys()
+	return WORLD_SWAPS.keys().filter(func(id): return int(WORLD_SWAPS[id]["world"]) == world)
+
+
 static func all_rows() -> Dictionary:
 	var out := ROWS.duplicate(false)
 	for id in ALT_ROWS:
 		out[id] = ALT_ROWS[id]
+	for id in WORLD_SWAPS:
+		out[id] = WORLD_SWAPS[id]
 	return out
 
 
@@ -181,13 +204,19 @@ static func alt_loadouts(pilot := "", world := 0) -> Array:
 
 
 static func has(relic_id: String) -> bool:
-	return ROWS.has(relic_id) or ALT_ROWS.has(relic_id)
+	return ROWS.has(relic_id) or ALT_ROWS.has(relic_id) or WORLD_SWAPS.has(relic_id)
 
 
 static func row(relic_id: String) -> Dictionary:
 	if ROWS.has(relic_id):
 		return ROWS[relic_id]
-	return ALT_ROWS.get(relic_id, {})
+	if ALT_ROWS.has(relic_id):
+		return ALT_ROWS[relic_id]
+	return WORLD_SWAPS.get(relic_id, {})
+
+
+static func overdrive_of(relic_id: String) -> float:
+	return float(row(relic_id).get("overdrive", 1.0))
 
 
 static func slot_of(relic_id: String) -> String:
@@ -246,6 +275,23 @@ static func eligible(pilot: String, held: Dictionary, tree = null, world := 0, i
 		if world != 0 and int(r["world"]) != world:
 			continue
 		if tree != null and swap_of(id) != "" and tree.gives_swap(r["slot"], swap_of(id)):
+			continue
+		out.append(id)
+	return out
+
+
+static func eligible_swaps(pilot: String, held: Dictionary, tree = null, world := 0, include_prior := false) -> Array:
+	var out := eligible(pilot, held, tree, world, true).filter(func(id): return swap_of(id) != "")
+	if not out.is_empty() or not include_prior or world <= 1:
+		return out
+	var table := all_rows()
+	for id in table:
+		var r: Dictionary = table[id]
+		if not fits(id, pilot) or held.has(r["slot"]) or swap_of(id) == "":
+			continue
+		if int(r["world"]) > world:
+			continue
+		if tree != null and tree.gives_swap(r["slot"], swap_of(id)):
 			continue
 		out.append(id)
 	return out
@@ -322,9 +368,19 @@ static func validate_alt(rows: Dictionary = ALT_ROWS) -> Array:
 			bad.append("%s: alt relic must declare a swap" % id)
 		if r.has("cooldown") or r.has("charges"):
 			bad.append("%s: alt swap relic must not carry cooldown or charges" % id)
+	for id in WORLD_SWAPS:
+		if ROWS.has(id) or ALT_ROWS.has(id):
+			bad.append("%s: duplicates an existing relic id" % id)
+		var r: Dictionary = WORLD_SWAPS[id]
+		if String(r.get("swap", "")) == "":
+			bad.append("%s: world swap relic must declare a swap" % id)
+		if r.has("cooldown") or r.has("charges"):
+			bad.append("%s: world swap relic must not carry cooldown or charges" % id)
 	var table := all_rows()
 	if rows != ALT_ROWS:
 		table = ROWS.duplicate(false)
+		for id in WORLD_SWAPS:
+			table[id] = WORLD_SWAPS[id]
 		for id in rows:
 			table[id] = rows[id]
 	bad.append_array(validate(table))

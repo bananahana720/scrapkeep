@@ -981,12 +981,15 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	Companion.on_salvage_kill(ctx.run)
 	if kind == "vault":
 		_vaults_paid += 1
+		var stage: int = ctx.flow.stage()
+		var vault_rarities := Parts.source_rarities("vault", stage)
 		var vault_rng := _offer_rng("vault_%d" % _vaults_paid)
-		var picks: Array = Parts.roll(vault_rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
+		var tree = ctx.player.tree if ctx.player != null else null
+		var picks: Array = Parts.roll_high_impact(vault_rng, vault_rarities, _class_id(), ctx.run.parts, 1, [], _offered, stage, stage >= Parts.WORLD_ESCALATION_STAGE_W2, tree)
 		if not picks.is_empty() and not scrapless():
 			ctx.run.add_part(picks[0], "vault")
 		ctx.run.add_core("vault", at)
-		var active := active_offer("vault", Parts.SOURCE_RARITIES["vault"], vault_rng)
+		var active := active_offer_for_channel("vault", vault_rarities, vault_rng, stage >= Parts.WORLD_ESCALATION_STAGE_W2)
 		if active != "" and not scrapless():
 			active_rack().take(active, ctx.player.ball_position())
 
@@ -1023,15 +1026,22 @@ func overtime_paid(at: Vector3, rings: int) -> void:
 	if scrapless() or rings <= 0:
 		return
 	_overtimes_paid += 1
+	var stage: int = ctx.flow.stage()
 	var rng := _offer_rng("overtime_%d" % _overtimes_paid)
+	var tree = ctx.player.tree if ctx.player != null else null
 	scrap.drop_panel(at, Panels.draw(rng, _class_id()))
 	var rares := (1 if rings >= 2 else 0) + (1 if rings >= 3 else 0)
 	for i in rares:
-		var picks: Array = Parts.roll(rng, Parts.SOURCE_RARITIES["vault"], _class_id(), ctx.run.parts, 1)
+		var is_top := rings >= 3 and i == rares - 1
+		var table: Array = ["rare", "relic"] if is_top else ["rare"]
+		var picks: Array = Parts.roll_high_impact(rng, table, _class_id(), ctx.run.parts, 1, [], _offered, stage, is_top, tree)
 		if not picks.is_empty():
 			ctx.run.add_part(picks[0], "overtime")
 	if rings >= 3:
 		ctx.run.add_core("overtime", at)
+		var active := active_offer_for_channel("vault", ["rare", "relic"], rng, true)
+		if active != "":
+			active_rack().take(active, ctx.player.ball_position())
 
 
 func _rib_mult(at: Vector3) -> float:
@@ -1124,6 +1134,33 @@ func active_offer(source: String, rarities: Array, rng: RandomNumberGenerator) -
 	return ActiveOffers.roll(rng, source, rack.rows(), rarities, rack.held())
 
 
+func active_offer_for_channel(source: String, rarities: Array, rng: RandomNumberGenerator, boosted := false) -> String:
+	var rack = active_rack()
+	if rack == null:
+		return ""
+	var rows: Dictionary = rack.rows()
+	var ids := ActiveOffers.pool(rows, rarities, rack.held())
+	if ids.is_empty():
+		return ""
+	var base_share := float(ActiveOffers.SHARE.get(source, 0.0))
+	var spell_lean := Parts.dominant_archetype(ctx.run.parts) == "spell_cast"
+	var counted := maker_counts()
+	var set_ids: Array = []
+	for aid in ids:
+		var m := String(rows[aid].get("maker", ""))
+		if m != "" and MakerSets.SETS.has(m) and int(counted.get(m, 0)) == int(MakerSets.SETS[m]["pieces"]) - 1:
+			set_ids.append(aid)
+	var share := base_share
+	if boosted:
+		share = minf(0.85, share + 0.2)
+	if spell_lean or not set_ids.is_empty():
+		share = minf(0.85, share + 0.15)
+	if rng.randf() >= share:
+		return ""
+	var pool := set_ids if not set_ids.is_empty() else ids
+	return ActiveOffers.offer_id(String(pool[rng.randi_range(0, pool.size() - 1)]))
+
+
 func _active_row(id: String) -> Dictionary:
 	var rack = active_rack()
 	return rack.row_of(id) if rack != null else {}
@@ -1132,30 +1169,42 @@ func _active_row(id: String) -> Dictionary:
 func _on_flow_changed(state: String) -> void:
 	if state != "gates" or gates.is_open():
 		return
+	var stage: int = ctx.flow.stage()
 	var rarities: Array = called_shot.gate_rarities()
+	var call_met: bool = called_shot.high_impact_met()
 	var gate_rng := _offer_rng("gates")
-	var picks: Array = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, ctx.flow.stage(), _offered)
+	var tree = ctx.player.tree if ctx.player != null else null
+	var picks: Array
+	if call_met:
+		picks = Parts.roll_high_impact(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, [], _offered, stage, "relic" in rarities, tree)
+	elif stage >= Parts.WORLD_ESCALATION_STAGE_W2:
+		picks = Parts.roll_for_stage(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, [], _offered, false)
+	else:
+		picks = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, _offered)
 	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
 	var quick: Array = []
 	if clock.quick_break():
-		quick = Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
+		quick = Parts.roll_for_stage(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, stage, picks, _offered, stage >= Parts.WORLD_ESCALATION_STAGE_W2) \
+			if stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+			else Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
 		picks += quick
 	var stake_rolls := StakeDevices.warden_gate_bonus_rolls(ctx.run)
 	if stake_rolls > 0:
-		picks += Parts.roll(_offer_rng("challenge_stake"), rarities, _class_id(), ctx.run.parts, stake_rolls, picks, _offered)
+		var stake_rarities: Array = ["rare", "relic"] if stake_rolls >= 2 or stage >= Parts.WORLD_ESCALATION_STAGE_W2 else ["rare"]
+		picks += Parts.roll_high_impact(_offer_rng("challenge_stake"), stake_rarities, _class_id(), ctx.run.parts, stake_rolls, picks, _offered, stage, stake_rolls >= 2, tree)
 	if ctx.run.override_on("warden_extra_cobalt"):
-		picks += Parts.roll(_offer_rng("override_cobalt"), ["rare"], _class_id(), ctx.run.parts, 1, picks, _offered)
+		picks += Parts.roll_high_impact(_offer_rng("override_cobalt"), ["rare"], _class_id(), ctx.run.parts, 1, picks, _offered, stage, false, tree)
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
-	var active := active_offer("gate", rarities, gate_rng)
+	var active := active_offer_for_channel("gate", rarities, gate_rng, call_met or stake_rolls > 0 or stage >= Parts.WORLD_ESCALATION_STAGE_W2)
 	if active != "":
 		picks.append(active)
 	var offers: Array = gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts)
 	ctx.events.reward_offered.emit(offers)
 	for offer in offers:
 		if offer["part_id"] in quick:
-			ctx.events.quick_break.emit(ctx.flow.stage(), clock.fight_seconds(), offer["at"])
+			ctx.events.quick_break.emit(stage, clock.fight_seconds(), offer["at"])
 
 
 func _offer_rng(source: String) -> RandomNumberGenerator:
