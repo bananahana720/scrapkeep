@@ -107,6 +107,7 @@ func _run() -> void:
 	_check_ghost_shift_dig(base + Vector3(0.0, 1.0, 0.0))
 	_check_tile_drain_and_dispatcher(base + Vector3(0.0, 1.0, 0.0))
 	_check_waking_3phase_anthems()
+	await _check_audit_guards(base + Vector3(0.0, 1.0, 0.0))
 
 	pad.free()
 	_game.free()
@@ -385,3 +386,18 @@ func _check_waking_3phase_anthems() -> void:
 	_t.eq("Waking pit sharing phase 3 does not re-trigger clash", audio.named.size(), 2)
 	audio.free()
 	events.free()
+
+
+func _check_audit_guards(base: Vector3) -> void:
+	var pc = _game.combat.spawn_enemy("prop_crew", base + Vector3(8.0, 0.5, 0.0))
+	pc.set_physics_process(false)
+	var first_drop = pc.knock_prop(1.0)
+	var second_drop = pc.knock_prop(1.0)
+	_t.check("prop_crew knock_prop drops once and guards repeat calls cleanly",
+		first_drop != null and second_drop == null and not pc.prop_up and pc.drops == 1,
+		"first=%s second=%s drops=%d" % [str(first_drop), str(second_drop), pc.drops])
+	if is_instance_valid(first_drop):
+		first_drop.free()
+	if is_instance_valid(pc):
+		pc.free()
+	await physics_frame

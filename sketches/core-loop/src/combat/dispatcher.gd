@@ -534,6 +534,8 @@ func _on_cargo_pod_impact() -> void:
 func _go_live() -> void:
 	drops += 1
 	_free_pod()
+	if fleet == null or fleet.combat == null:
+		return
 	var ring := telegraph()
 	if ring == null:
 		return

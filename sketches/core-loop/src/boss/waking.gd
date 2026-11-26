@@ -52,6 +52,12 @@ const PLATE_FITTED_CLEAR := 0.7
 const PLATE_FALL_SPEED := 9.0
 const PLATE_FALL_SECONDS := 1.2
 const PLATE_REST_TILT := 0.35
+const STALL_SPEED_SHARE := 0.75
+const STALL_GRACE := 1.5
+const STALL_RAMP := 2.0
+const STALL_DECAY := 2.0
+const STALL_ATTACK_PERIOD := 2.4
+const STALL_PIT_PERIOD := 2.0
 const SEAL_CUE_KIND := "weak_point_opened"
 const SEAL_SOUND := "seal_ratchet"
 const SEAL_GAP_SLOW := 0.55
@@ -102,6 +108,8 @@ var weak_open_at_end: Dictionary = weak_stats["open_at_end"]
 var _weak_open_phase := {}
 var _seals_seen := {}
 var _weak_last := {}
+var _stall_s := 0.0
+var _stall_clock_seen := 0.0
 
 
 func setup(ctx_ref) -> void:
@@ -125,6 +133,8 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_music_phase_emitted = 1
 	_attack_clock = 0.0
 	_combo_left = -1
+	_stall_s = 0.0
+	_stall_clock_seen = 0.0
 	_dress = WakingDress.attach(self)
 	_arena_dress = ArenaWakingDress.attach(self)
 	if weak.active():
@@ -162,6 +172,8 @@ func exit_arena() -> void:
 	_banked.clear()
 	_pulse_charging = false
 	_music_phase_emitted = 1
+	_stall_s = 0.0
+	_stall_clock_seen = 0.0
 	super()
 
 
@@ -203,6 +215,7 @@ func _physics_process(delta: float) -> void:
 		_step_seal_cue(delta)
 	_read_pulse()
 	_read_ball()
+	_step_stall(delta)
 	_open_by_lip()
 	_step_attacks(delta)
 	_lay_pending()
@@ -217,14 +230,50 @@ func _physics_process(delta: float) -> void:
 		_attack_clock = GAP
 	else:
 		_combo_left = -1
-		_attack_clock = ChallengeDials.period("waking", PIT_PERIOD if phase >= WakingAttacks.PIT_PHASE else ATTACK_PERIOD, phase)
+		_attack_clock = current_attack_period()
 	_commit_attack()
 
 
 func _end_combo() -> void:
 	if _combo_left > 0:
-		_attack_clock = ChallengeDials.period("waking", PIT_PERIOD if phase >= WakingAttacks.PIT_PHASE else ATTACK_PERIOD, phase)
+		_attack_clock = current_attack_period()
 	_combo_left = -1
+
+
+func _planar_speed() -> float:
+	if ctx == null or ctx.player == null:
+		return 0.0
+	var body = ctx.player.body() if ctx.player.has_method("body") else null
+	if body == null:
+		return 0.0
+	var v: Vector3 = body.linear_velocity
+	return Vector2(v.x, v.z).length()
+
+
+func _step_stall(delta: float) -> void:
+	if clock < _stall_clock_seen:
+		_stall_s = 0.0
+	_stall_clock_seen = clock
+	if clock < Rules.INTRO_SECONDS:
+		return
+	var cruise := maxf(1.0, float(ctx.tuning.f("cruise")))
+	var speed := _planar_speed()
+	if carving_now() or speed >= cruise:
+		_stall_s = maxf(0.0, _stall_s - delta * STALL_DECAY)
+	elif speed < cruise * STALL_SPEED_SHARE:
+		_stall_s = minf(STALL_GRACE + STALL_RAMP, _stall_s + delta)
+
+
+func stall_pressure() -> float:
+	if _stall_s <= STALL_GRACE:
+		return 0.0
+	return clampf((_stall_s - STALL_GRACE) / STALL_RAMP, 0.0, 1.0)
+
+
+func current_attack_period() -> float:
+	var base := PIT_PERIOD if phase >= WakingAttacks.PIT_PHASE else ATTACK_PERIOD
+	var tight := STALL_PIT_PERIOD if phase >= WakingAttacks.PIT_PHASE else STALL_ATTACK_PERIOD
+	return ChallengeDials.period("waking", lerpf(base, tight, stall_pressure()), phase)
 
 
 func _warn_open() -> bool:
@@ -295,7 +344,6 @@ func _lay_pending() -> void:
 func _step_attacks(delta: float) -> void:
 	var ball: Vector3 = ctx.player.ball_position()
 	var state = ctx.player.state
-	var on_floor := FloorRule.on_floor(state)
 	var carving := carving_now()
 	var kept: Array = []
 	for attack in attacks:
@@ -308,7 +356,7 @@ func _step_attacks(delta: float) -> void:
 				continue
 			h.step(delta)
 			if h.is_live() and h.contains(ball):
-				if on_floor and not carving and not attack["landed"]:
+				if state.grounded and not carving and not attack["landed"]:
 					attack["landed"] = true
 					landings.append({"id": h.attack_id, "frame": Engine.get_physics_frames()})
 					ctx.run.damage(ChallengeDials.damage("waking", float(WakingAttacks.DAMAGE[attack["family"]]), phase), "waking_%s" % attack["family"])
@@ -552,9 +600,19 @@ func _top() -> float:
 	return super()
 
 
+func _bank_rise_at(point: Vector3) -> float:
+	var r := Vector2(point.x - _center.x, point.z - _center.z).length()
+	if r <= BANK_IN or r > PAD_RADIUS:
+		return 0.0
+	var s := clampf((r - BANK_IN) / BANK_RISE, 0.0, 1.0)
+	return BANK_RISE * (1.0 - sqrt(maxf(0.0, 1.0 - s * s)))
+
+
 func ground_height_at(point: Vector3) -> float:
-	if is_instance_valid(pad) and Vector2(point.x - _center.x, point.z - _center.z).length() > PAD_RADIUS:
-		return super._top()
+	if is_instance_valid(pad):
+		if Vector2(point.x - _center.x, point.z - _center.z).length() > PAD_RADIUS:
+			return super._top()
+		return _top() + _bank_rise_at(point)
 	return super(point)
 
 
