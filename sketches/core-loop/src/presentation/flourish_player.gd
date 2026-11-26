@@ -162,6 +162,7 @@ func _start(row_id: String, seed_value: int, anchors: Dictionary, form: String) 
 	_seen_key = key if profile != null and not short else ""
 	for entry in _live.duplicate():
 		_drop(entry)
+	_clear_lines()
 	_pieces = Rows.resolve(row_id, short, run_seed)
 	_started.clear()
 	_started.resize(_pieces.size())
@@ -267,8 +268,7 @@ func _finish(cut: String, next := true) -> void:
 		if tween.is_valid():
 			tween.kill()
 	_tweens.clear()
-	_lines.set("mode", "")
-	_lines.set("tint", Color.WHITE)
+	_clear_lines()
 	var done := id
 	id = ""
 	_anchors = {}
@@ -318,11 +318,18 @@ func _drop(entry: Dictionary) -> void:
 	if String(entry.piece.kind) in FACT_KINDS:
 		_room_changed()
 	if String(entry.piece.kind) == "speed_lines":
-		_lines.set("mode", "")
-		_lines.set("tint", Color.WHITE)
+		_clear_lines()
 	var node = entry.node
 	if is_instance_valid(node) and node is Node:
 		node.queue_free()
+
+
+func _clear_lines() -> void:
+	if _lines == null:
+		return
+	_lines.set("mode", "")
+	_lines.set("tint", Color.WHITE)
+	_lines.queue_redraw()
 
 
 func _yield_words(node: Control) -> void:

@@ -144,13 +144,19 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 	add_child(_fade_rect)
 	_build_overlay(width, color)
 	box.add_child(_name_row(color, width))
+	var _tag_row := HBoxContainer.new()
+	_tag_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_tag_row.add_theme_constant_override("separation", UiTokens.GAP_S)
+	_tag_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(_tag_row)
 	var role := _tagged(_text(ClassKit.role_line(def), UiTokens.CAPTION, Color(Palette.SAND, 0.8)), color, _serial + 1)
 	if role.get_combined_minimum_size().x > width - 2.0 * PAD:
 		role.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		role.custom_minimum_size.x = width - 2.0 * PAD
 	_role_label = role
-	box.add_child(role)
+	_tag_row.add_child(role)
 	_details.append(role)
+	_build_alt_row(_tag_row, color)
 	var line := _text(ClassKit.fantasy(def), UiTokens.BODY, Palette.SAND)
 	line.custom_minimum_size = Vector2(0.0, 58.0)
 	line.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -189,9 +195,11 @@ func _init(class_def: Resource = null, key_id := "", width := 420.0) -> void:
 		var chip: bool = row_records == chips
 		var room: float = width - 2.0 * PAD - 4.0 * (row_records.size() - 1)
 		var fit := _fit_cells(row_records, room / maxf(1.0, row_records.size()), floorf(room))
+		var layout := {} if chip else _cell_layout(row_records, floorf(room), fit["scale"])
 		var keys_in_row: Array = []
-		for record in row_records:
-			row.add_child(_chip(record, color, fit["scale"]) if chip else _cell(record, color, fit["side"], fit["scale"]))
+		for i in row_records.size():
+			var record: Dictionary = row_records[i]
+			row.add_child(_chip(record, color, fit["scale"]) if chip else _cell(record, color, float(layout["widths"][i]), fit["scale"], int(layout["word_size"]), bool(layout["wrap"])))
 			keys_in_row.append(record["key"])
 		_rows_shown.append(keys_in_row)
 	_apply()
@@ -248,8 +256,6 @@ func shrink_preview(by: float) -> void:
 	var top := PAD + KEY_H + 8.0 + _preview_h - 40.0
 	_seat_hint()
 	_paint_row.position.y = top
-	if _alt_row != null:
-		_alt_row.position.y = top - 34.0
 	_fade_rect.position.y = PAD + KEY_H + 8.0 + _preview_h - UiTokens.EDGE
 	queue_redraw()
 
@@ -308,15 +314,17 @@ func _build_overlay(width: float, color: Color) -> void:
 	_paint_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	_paint_row.add_child(_paint_label)
 	_details.append(_paint_row)
+
+
+func _build_alt_row(parent: HBoxContainer, color: Color) -> void:
 	_alt_row = HBoxContainer.new()
 	_alt_row.name = "AltLoadoutRow"
 	_alt_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_alt_row.add_theme_constant_override("separation", UiTokens.GAP_XS)
-	_alt_row.position = Vector2(PAD, top - 34.0)
-	_alt_row.size = Vector2(width - 2.0 * PAD, 30.0)
+	_alt_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_alt_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_alt_row.visible = false
-	add_child(_alt_row)
+	parent.add_child(_alt_row)
 	var alt_cap := KeycapView.new("key_l", Palette.SAND, 20.0)
 	alt_cap.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_alt_row.add_child(alt_cap)
@@ -657,7 +665,42 @@ func _chip(record: Dictionary, color: Color, _cap_scale: float) -> VBoxContainer
 	return cell
 
 
-func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> VBoxContainer:
+func _cell_layout(records: Array, room: float, cap_scale: float) -> Dictionary:
+	var font := UiFonts.bold()
+	var word_size := WORD_SIZE
+	var need: Array = []
+	var total := 0.0
+	while word_size >= 10:
+		need.clear()
+		total = 0.0
+		for record in records:
+			var words := String(record["words"])
+			var gap := words.find(" ")
+			var lines: Array = [words] if gap < 0 else [words.left(gap), words.substr(gap + 1)]
+			var text_w := 0.0
+			for part in lines:
+				text_w = maxf(text_w, ceilf(font.get_string_size(String(part), HORIZONTAL_ALIGNMENT_LEFT, -1, word_size).x) + 2.0)
+			var cap_w := Keycap.size_of(String(record["key"]), _cap_height(String(record["key"])) * cap_scale).x
+			var w := maxf(maxf(MIN_ICON_SIDE, cap_w), text_w)
+			need.append(w)
+			total += w
+		if total <= room or word_size == 10:
+			break
+		word_size -= 1
+	var out: Array = []
+	var wrap := total > room
+	if not wrap:
+		var extra := (room - total) / maxf(1.0, float(need.size()))
+		for w in need:
+			out.append(floorf(float(w) + extra))
+	else:
+		var scale := room / maxf(total, 1.0)
+		for w in need:
+			out.append(maxf(MIN_ICON_SIDE, floorf(float(w) * scale)))
+	return {"widths": out, "word_size": word_size, "wrap": wrap}
+
+
+func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0, word_size := WORD_SIZE, wrap := false) -> VBoxContainer:
 	var cell := VBoxContainer.new()
 	cell.custom_minimum_size = Vector2(width, 0.0)
 	cell.add_theme_constant_override("separation", 4)
@@ -678,7 +721,8 @@ func _cell(record: Dictionary, color: Color, width: float, cap_scale := 1.0) -> 
 	_details.append(cap)
 	var words: String = record["words"]
 	var gap := words.find(" ")
-	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), WORD_SIZE, Palette.SAND)
+	var label := _text(words if gap < 0 else words.left(gap) + "\n" + words.substr(gap + 1), word_size, Palette.SAND)
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART if wrap else TextServer.AUTOWRAP_OFF
 	label.custom_minimum_size.y = UiFonts.bold().get_height(WORD_SIZE) * 2.0
 	label.max_lines_visible = 2
 	cell.add_child(label)

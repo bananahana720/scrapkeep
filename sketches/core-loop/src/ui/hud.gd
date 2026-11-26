@@ -535,7 +535,12 @@ func setup(game_ref) -> void:
 	game.events.boss_arena_entered.connect(func():
 		var presentation = game.get("presentation")
 		if presentation == null or not presentation.names_boss():
-			launch_card.show_card("fac_fleet", EventKinds.hud("boss_arena_entered"), EventKinds.color("boss_arena_entered")))
+			var row: Dictionary = game.flow.boss_row(game.ctx.stages.world_of(game.run.stage))
+			var kind := String(row.get("kind", "brindle"))
+			var title := String(row.get("name", EventKinds.hud("boss_arena_entered")))
+			var icon := "fac_fleet" if kind == "brindle" else "obj_warden"
+			var tint := EventKinds.color("boss_arena_entered") if kind == "brindle" else Palette.ANCIENT
+			launch_card.show_card(icon, title, tint))
 	game.events.run_started.connect(func(_class_id: String):
 		_title_world = 0
 		_title_stage = 0
@@ -1330,11 +1335,24 @@ func objective_reading() -> Dictionary:
 		return {"id": "", "icon": "", "words": "", "color": Palette.SAND, "progress": -1.0, "distance": -1, "step": 0}
 	var words := Objectives.words(id)
 	var icon := Objectives.glyph(id)
+	var color := row_color(id)
 	if id == "find_activity":
 		words = Objectives.activity_words(String(site.id), activities.called(String(site.id)))
 	elif id in OPEN_ROWS and reading.get("open", false):
 		icon = Objectives.COCKPIT_GLYPH
-	return {"id": id, "icon": icon, "words": words, "color": row_color(id),
+	elif id == "break_brindle":
+		var boss_kind := String(flow.boss_row(game.ctx.stages.world_of(game.run.stage)).get("kind", ""))
+		var boss_body = _brindle_hull()
+		var boss_open: bool = is_instance_valid(boss_body) and boss_body.has_method("staggered") and boss_body.staggered()
+		if boss_kind == "waking":
+			words = "Smash the Waking's core" if boss_open else "Break the Waking's plates"
+			icon = "cat_damage" if boss_open else "obj_warden"
+			color = EventKinds.state_color("open") if boss_open else Palette.ANCIENT
+		elif boss_kind == "mind":
+			words = "Smash the Mind's core" if boss_open else "Break the Mind's guard"
+			icon = "cat_damage" if boss_open else "obj_warden"
+			color = EventKinds.state_color("open") if boss_open else Palette.ANCIENT
+	return {"id": id, "icon": icon, "words": words, "color": color,
 		"progress": _clamp_fraction(gate) if id == "break_clamp_crews" else gate.yard_fraction() if id == "break_yard_crew" \
 			else game.beacon.fraction() if id in RING_ROWS else -1.0,
 		"distance": int(distance) if id == "find_warden" and distance < INF else -1,

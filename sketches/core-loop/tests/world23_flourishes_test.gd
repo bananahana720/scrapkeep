@@ -159,7 +159,17 @@ func _waking_live(player) -> void:
 		and dress._materials["ancient_light"].emission_energy_multiplier >= 2.8,
 		"glass=%.2f ancient=%.2f" % [dress._materials["glass"].emission_energy_multiplier if dress != null else 0.0,
 			dress._materials["ancient_light"].emission_energy_multiplier if dress != null else 0.0])
+	var lines_control: Control = player._lines
+	_t.eq("31b waking_arrival activates speed lines", String(lines_control.get("mode")), "speed")
+	var redraws := [0]
+	var on_draw := func(): redraws[0] += 1
+	lines_control.draw.connect(on_draw)
 	player.advance(Rows.length("waking_arrival", false) + 0.01)
+	await _frames(2)
+	lines_control.draw.disconnect(on_draw)
+	_t.check("31c waking_arrival finish clears speed lines and triggers redraw",
+		String(lines_control.get("mode")) == "" and redraws[0] >= 1,
+		"mode=%s redraws=%d" % [lines_control.get("mode"), redraws[0]])
 	_t.check("32 waking_arrival marks profile seen after full play",
 		_game.ctx.profile.is_seen(Rows.SEEN_PREFIX + "waking_arrival"), "")
 	_game.events.boss_phase_changed.emit(2, "Seam")

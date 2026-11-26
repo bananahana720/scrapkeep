@@ -14,6 +14,7 @@ const HighdraftScenery := preload("res://src/presentation/highdraft_scenery.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const SpillwayScenery := preload("res://src/presentation/spillway_scenery.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
+const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 
 const WORLD_SECONDS := 12.0
 const ESTABLISH_SECONDS := 2.0
@@ -62,6 +63,11 @@ var _credits_band: ColorRect
 var _cut: ColorRect
 var _at := Vector3.ZERO
 var _dig_deep := false
+var _order: Array[int] = [0, 1, 2]
+var _park_stage := false
+var _cam_fwd := Vector3.BACK
+var _active_heights := PackedFloat32Array()
+var _park_heights := {}
 var quiet_gun: Node3D
 var crater: Node3D
 var cannon_answered := false
@@ -84,6 +90,7 @@ func start(game_ref, lap_stats := {}, prelude_only := false) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	var began := Time.get_ticks_usec()
+	_order = _world_order()
 	_build_view()
 	if lap.is_empty():
 		_build_worlds()
@@ -247,13 +254,22 @@ func _build_worlds() -> void:
 		holder.name = "World%d" % int(row.id)
 		_scene.add_child(holder)
 		if stage > 0:
-			if game.ctx.terrain.is_built(stage):
-				_snapshot(game.ctx.terrain.geometry_root(stage), holder, true)
+			var map_id := String(game.ctx.stages.of(stage).map)
+			if map_id.begins_with("park_"):
+				if game.ctx.terrain.is_built(stage):
+					_snapshot(game.ctx.terrain.geometry_root(stage), holder, true)
+				else:
+					_place_park_landmark(holder, stage, game.ctx.terrain.map_for(stage), map_id)
+				_build_park_ground(holder, stage, int(row.id), map_id)
 				_dress_world(holder, stage, int(row.id))
 			else:
-				_build_uncached(holder, stage, int(row.id))
-		if int(row.id) == 3:
-			_hide_grid_floor(holder)
+				if game.ctx.terrain.is_built(stage):
+					_snapshot(game.ctx.terrain.geometry_root(stage), holder, true)
+					_dress_world(holder, stage, int(row.id))
+				else:
+					_build_uncached(holder, stage, int(row.id))
+				if int(row.id) == 3:
+					_hide_grid_floor(holder)
 		worlds.append(holder)
 		stages.append(stage)
 		holder.visible = false
@@ -414,12 +430,112 @@ func _dress_world(holder: Node3D, stage: int, world: int) -> void:
 		return
 	var map = game.ctx.terrain.map_for(stage)
 	var map_id := String(game.ctx.stages.of(stage).map)
-	if world == 1:
+	if world == 1 and not map_id.begins_with("park_"):
 		SpillwayScenery.build(holder)
 	elif world == 2 and map_id in ["dig", "dig_deep"]:
 		DigScenery.build(holder, map, map_id)
 	elif world == 3 and HighdraftScenery.is_highdraft(map):
 		HighdraftScenery.build(holder, map)
+
+
+func _park_spot_and_fwd(map, map_id: String) -> Dictionary:
+	if map_id == "park_dam":
+		return {"spot": Vector2(0.0, 445.0), "fwd": Vector3(0.0, 0.0, 1.0)}
+	if map_id == "park_flume":
+		return {"spot": Vector2(180.0, 460.0), "fwd": Vector3(90.0, 0.0, 50.0).normalized()}
+	if map_id == "park_pit":
+		return {"spot": Vector2(0.0, 145.0), "fwd": Vector3(0.0, 0.0, 1.0)}
+	if map_id == "park_sinkhole":
+		return {"spot": Vector2(0.0, 210.0), "fwd": Vector3(0.0, 0.0, 1.0)}
+	var h: Vector3 = map.heading
+	var fwd := Vector3(h.x, 0.0, h.z).normalized() if Vector2(h.x, h.z).length() > 0.01 else Vector3.BACK
+	return {"spot": map.spawn, "fwd": fwd}
+
+
+func _load_park_heights(stage: int, map_id: String) -> PackedFloat32Array:
+	if _park_heights.has(stage):
+		return _park_heights[stage]
+	if game.ctx.terrain.is_built(stage):
+		var pg = game.ctx.terrain.park_ground(stage)
+		if pg != null and not pg.heights.is_empty():
+			_park_heights[stage] = pg.heights
+			return pg.heights
+	if ParkTerrain.has_bake(map_id):
+		var dir := ParkTerrain.bake_dir(map_id)
+		var arr := ParkTerrain._read_zstd(dir + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
+		_park_heights[stage] = arr
+		return arr
+	return PackedFloat32Array()
+
+
+func _park_height(heights: PackedFloat32Array, x: float, z: float) -> float:
+	if heights.is_empty():
+		return 0.0
+	var fx := clampf((x + ParkTerrain.HALF) / ParkTerrain.STEP, 0.0, float(ParkTerrain.SIDE - 2))
+	var fz := clampf((z + ParkTerrain.HALF) / ParkTerrain.STEP, 0.0, float(ParkTerrain.SIDE - 2))
+	var ix := int(floorf(fx))
+	var iz := int(floorf(fz))
+	var tx := fx - float(ix)
+	var tz := fz - float(iz)
+	var s := ParkTerrain.SIDE
+	var h00 := heights[iz * s + ix]
+	var h10 := heights[iz * s + ix + 1]
+	var h01 := heights[(iz + 1) * s + ix]
+	var h11 := heights[(iz + 1) * s + ix + 1]
+	return lerpf(lerpf(h00, h10, tx), lerpf(h01, h11, tx), tz)
+
+
+func _build_park_ground(holder: Node3D, stage: int, world: int, map_id: String) -> void:
+	var heights := _load_park_heights(stage, map_id)
+	if heights.is_empty():
+		return
+	var map = game.ctx.terrain.map_for(stage)
+	var pose := _park_spot_and_fwd(map, map_id)
+	var spot: Vector2 = pose["spot"]
+	var fwd: Vector3 = pose["fwd"]
+	var center := Vector2(spot.x + fwd.x * 260.0, spot.y + fwd.z * 260.0)
+	var step := 16
+	var half_span := 448
+	var min_x := maxi(int(-ParkTerrain.HALF), int(floorf((center.x - half_span) / step)) * step)
+	var max_x := mini(int(ParkTerrain.HALF) - step, int(ceilf((center.x + half_span) / step)) * step)
+	var min_z := maxi(int(-ParkTerrain.HALF), int(floorf((center.y - half_span) / step)) * step)
+	var max_z := mini(int(ParkTerrain.HALF) - step, int(ceilf((center.y + half_span) / step)) * step)
+	var base := Color(0.75, 0.61, 0.44)
+	if world == 2:
+		base = Color(0.45, 0.49, 0.54)
+	elif world == 3:
+		base = Color(0.68, 0.56, 0.47)
+	var surface := SurfaceTool.new()
+	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for z in range(min_z, max_z, step):
+		for x in range(min_x, max_x, step):
+			for corner in [Vector2(x, z), Vector2(x + step, z), Vector2(x, z + step),
+				Vector2(x + step, z), Vector2(x + step, z + step), Vector2(x, z + step)]:
+				var h := _park_height(heights, corner.x, corner.y)
+				var shade := clampf(0.86 + h * 0.0022, 0.68, 1.16)
+				surface.set_color(Color(base.r * shade, base.g * shade, base.b * shade, 1.0))
+				surface.add_vertex(Vector3(corner.x, h, corner.y))
+	surface.generate_normals()
+	var ground := Node3D.new()
+	ground.name = "ParkGround"
+	holder.add_child(ground)
+	var mesh := MeshInstance3D.new()
+	mesh.mesh = surface.commit()
+	mesh.material_override = Palette.ground_material()
+	ground.add_child(mesh)
+
+
+func _place_park_landmark(holder: Node3D, stage: int, map, map_id: String) -> void:
+	if not ("park" in map) or not (map.park is Dictionary) or not map.park.has("landmark"):
+		return
+	var heights := _load_park_heights(stage, map_id)
+	var ground_fn := func(x: float, z: float) -> float: return _park_height(heights, x, z)
+	var placed := ParkRecipes.place(map.park["landmark"], holder, ground_fn, Callable())
+	if placed == null:
+		return
+	for body in placed.find_children("*", "CollisionObject3D", true, false):
+		body.get_parent().remove_child(body)
+		body.free()
 
 
 func _build_crew() -> void:
@@ -467,7 +583,8 @@ func advance(delta: float) -> void:
 	if elapsed >= TOTAL_SECONDS or (prelude and elapsed >= WORLD_SECONDS * 3.0):
 		skip()
 		return
-	var index := mini(2, int(elapsed / WORLD_SECONDS))
+	var slot := mini(2, int(elapsed / WORLD_SECONDS))
+	var index: int = _order[slot]
 	if index != world_index:
 		_enter_world(index)
 	if elapsed >= WORLD_SECONDS * 3.0:
@@ -498,7 +615,15 @@ func advance(delta: float) -> void:
 	_copy.modulate.a = clampf(fmod(maxf(0.0, local - ESTABLISH_SECONDS), LINE_SECONDS) / 0.4, 0.0, 1.0)
 	var p := local / WORLD_SECONDS
 	var sweep := lerpf(5.0, -5.0, smoothstep(0.0, 1.0, p))
-	if world_index == 2:
+	if _park_stage:
+		var side := _cam_fwd.cross(Vector3.UP).normalized()
+		var cam_pos := _at - _cam_fwd * 16.0 + side * (sweep * 0.55) + Vector3.UP * 3.8
+		var cam_floor := _park_height(_active_heights, cam_pos.x, cam_pos.z)
+		cam_pos.y = maxf(cam_pos.y, cam_floor + 2.5)
+		var lift := maxf(0.0, cam_pos.y - (_at.y + 3.8))
+		camera.position = cam_pos
+		camera.look_at(_at + _cam_fwd * 8.0 + Vector3.UP * (0.2 + lift * 0.5))
+	elif world_index == 2:
 		camera.position = _at + Vector3(sweep, 7.0, 23.0)
 		camera.look_at(_at + Vector3(1.0, 2.5, -4.0))
 	elif world_index == 1 and _dig_deep:
@@ -535,6 +660,15 @@ func _set_credits_copy(credits_at: float) -> void:
 	_copy.modulate.a = clampf(fmod(credits_at, CREDITS_LINE_SECONDS) / 0.4, 0.0, 1.0) if slot < close.size() else 1.0
 
 
+func _world_order() -> Array[int]:
+	if game == null or game.ctx == null or game.ctx.stages == null or game.run == null:
+		return [0, 1, 2]
+	var first_map := String(game.ctx.stages.of(1).get("map", ""))
+	if first_map.begins_with("park_") and game.ctx.stages.world_of(int(game.run.stage)) == 3:
+		return [2, 1, 0]
+	return [0, 1, 2]
+
+
 func _enter_world(index: int) -> void:
 	world_index = index
 	for i in worlds.size():
@@ -542,21 +676,35 @@ func _enter_world(index: int) -> void:
 	var stage: int = stages[index]
 	_at = Vector3.ZERO
 	_dig_deep = false
+	_park_stage = false
+	_cam_fwd = Vector3.BACK
+	_active_heights = PackedFloat32Array()
 	if stage > 0:
 		var map = game.ctx.terrain.map_for(stage)
+		var map_id := String(game.ctx.stages.of(stage).map)
+		_park_stage = map_id.begins_with("park_")
 		var spot: Vector2 = map.spawn
-		if index == 0:
-			spot = Vector2(0.0, 196.0)
-		elif index == 1:
-			_dig_deep = String(game.ctx.stages.of(stage).map) == "dig_deep"
-			spot = Vector2(63.0, 184.0) if _dig_deep else Vector2(-27.0, 178.0)
-		_at = Vector3(spot.x, float(map.sample(spot.x, spot.y)[0]) + 2.0, spot.y)
+		if _park_stage:
+			var pose := _park_spot_and_fwd(map, map_id)
+			spot = pose["spot"]
+			_cam_fwd = pose["fwd"]
+			_active_heights = _load_park_heights(stage, map_id)
+			_at = Vector3(spot.x, _park_height(_active_heights, spot.x, spot.y) + 2.0, spot.y)
+		else:
+			if index == 0:
+				spot = Vector2(0.0, 196.0)
+			elif index == 1:
+				_dig_deep = map_id == "dig_deep"
+				spot = Vector2(63.0, 184.0) if _dig_deep else Vector2(-27.0, 178.0)
+			_at = Vector3(spot.x, float(map.sample(spot.x, spot.y)[0]) + 2.0, spot.y)
 	camera.fov = 46.0 if _dig_deep else 48.0
+	var side := _cam_fwd.cross(Vector3.UP).normalized() if _park_stage else Vector3.RIGHT
+	var back := -_cam_fwd if _park_stage else Vector3.FORWARD
 	if quiet_gun != null:
 		quiet_gun.visible = index == 2
-		quiet_gun.position = _at + Vector3(-3.0, -0.8, -0.5)
+		quiet_gun.position = _at - side * 3.0 + Vector3.UP * -0.4 + back * 0.5
 	shell.position = _at
-	companion.position = _at + Vector3(3.0, -0.8, -0.5)
+	companion.position = _at + side * 3.0 + Vector3.UP * -0.4 + back * 0.5
 	_world_label.text = "%s\n%s" % [Worlds.ENDING.title, Worlds.ROWS[index].name]
 	if index == 2:
 		_highdraft_light(stage)

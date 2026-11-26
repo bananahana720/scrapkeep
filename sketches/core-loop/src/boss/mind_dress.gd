@@ -278,9 +278,9 @@ func show_call_in() -> void:
 	_call_in = _card_layer(CALL_IN_NODE)
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	panel.offset_left = -392.0
-	panel.offset_right = -32.0
-	panel.offset_top = 32.0
+	panel.offset_left = -378.0
+	panel.offset_right = -18.0
+	panel.offset_top = 132.0
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(Palette.CHARCOAL, 0.9)

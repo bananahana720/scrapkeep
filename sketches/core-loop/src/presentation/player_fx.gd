@@ -204,10 +204,10 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 
 const DUNK_RADIUS := 1.06
 const DUNK_ARC := deg_to_rad(140.0)
-const DUNK_TUBE := 0.16
-const DUNK_INK := 0.045
+const DUNK_TUBE := 0.08
+const DUNK_INK := 0.0
 const DUNK_PIPS := 3
-const DUNK_PIP_RADIUS := 0.21
+const DUNK_PIP_RADIUS := 0.11
 const DUNK_EMISSION := 1.1
 const DUNK_PIP_EMISSION := 1.5
 const DUNK_BASE := 0.35
@@ -223,40 +223,26 @@ func _build_dunk_glow() -> void:
 	_dunk_coil = _dunk_emissive()
 	_dunk_glow = MeshInstance3D.new()
 	_dunk_glow.name = "DunkGlow"
+	_dunk_glow.set_meta("no_ink", true)
 	_dunk_glow.mesh = _dunk_arc_mesh(_dunk_coil, DUNK_TUBE)
 	_dunk_glow.top_level = true
 	_dunk_glow.visible = false
 	_dunk_glow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	root.add_child(_dunk_glow)
-	var rim := MeshInstance3D.new()
-	rim.name = "Ink"
-	rim.mesh = _dunk_arc_mesh(_dunk_ink(), DUNK_TUBE + DUNK_INK)
-	rim.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	_dunk_glow.add_child(rim)
 	var pip_mesh := SphereMesh.new()
 	pip_mesh.radius = DUNK_PIP_RADIUS
 	pip_mesh.height = DUNK_PIP_RADIUS * 2.0
 	pip_mesh.radial_segments = 10
 	pip_mesh.rings = 5
-	var pip_ink := SphereMesh.new()
-	pip_ink.radius = DUNK_PIP_RADIUS + DUNK_INK
-	pip_ink.height = pip_ink.radius * 2.0
-	pip_ink.radial_segments = 10
-	pip_ink.rings = 5
-	pip_ink.material = _dunk_ink()
 	for i in DUNK_PIPS:
 		var pip := MeshInstance3D.new()
 		pip.name = "Pip%d" % i
+		pip.set_meta("no_ink", true)
 		pip.mesh = pip_mesh
 		var mat := _dunk_emissive()
 		pip.material_override = mat
 		pip.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		pip.position = _dunk_arc_point(_dunk_pip_angle(i), DUNK_RADIUS + DUNK_TUBE * 0.5) + Vector3.UP * (DUNK_TUBE + DUNK_PIP_RADIUS * 0.4)
-		var ink := MeshInstance3D.new()
-		ink.name = "Ink"
-		ink.mesh = pip_ink
-		ink.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		pip.add_child(ink)
 		_dunk_glow.add_child(pip)
 		_dunk_pips.append(mat)
 		_dunk_pip_lit.append(false)
@@ -264,17 +250,11 @@ func _build_dunk_glow() -> void:
 
 func _dunk_emissive() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
+	mat.set_meta("no_ink", true)
+	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.emission_enabled = true
 	mat.roughness = 0.4
-	mat.render_priority = RENDER_PRIORITY
-	return mat
-
-
-func _dunk_ink() -> StandardMaterial3D:
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.cull_mode = BaseMaterial3D.CULL_FRONT
-	mat.albedo_color = INK
 	mat.render_priority = RENDER_PRIORITY
 	return mat
 
@@ -335,14 +315,14 @@ func _draw_dunk_glow() -> void:
 	var share := clampf(dunk.left() / dunk.WINDOW, 0.0, 1.0)
 	var pulse := 0.5 + 0.5 * sin(_clock * TAU * FlashGuard.rate(1.0 + 1.5 * (1.0 - share)))
 	var colour: Color = record["color"]
-	_dunk_coil.albedo_color = colour * Color(DUNK_BASE, DUNK_BASE, DUNK_BASE)
+	_dunk_coil.albedo_color = Color(colour.r, colour.g, colour.b, 0.78)
 	_dunk_coil.emission = colour
 	_dunk_coil.emission_energy_multiplier = FlashGuard.spike(DUNK_EMISSION, DUNK_EMISSION * (1.0 + 0.6 * pulse))
 	var lit := ceili(share * DUNK_PIPS)
 	for i in _dunk_pips.size():
 		var burning := i < lit
 		_dunk_pip_lit[i] = burning
-		_dunk_pips[i].albedo_color = colour * Color(DUNK_BASE, DUNK_BASE, DUNK_BASE) if burning else INK
+		_dunk_pips[i].albedo_color = Color(colour.r, colour.g, colour.b, 0.88) if burning else Color(INK.r, INK.g, INK.b, 0.35)
 		_dunk_pips[i].emission = colour if burning else Color.BLACK
 		_dunk_pips[i].emission_energy_multiplier = DUNK_PIP_EMISSION if burning else 0.0
 	var v: Vector3 = _velocity()

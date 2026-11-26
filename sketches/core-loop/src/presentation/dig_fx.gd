@@ -81,10 +81,28 @@ func bind_context(ctx, stage: int) -> void:
 		ctx.events.world_fact.connect(_on_world_fact)
 		ctx.events.stage_entered.connect(_on_stage_entered)
 		ctx.events.stage_content_cleared.connect(_on_content_cleared)
+		if ctx.events.has_signal("boss_arena_entered"):
+			ctx.events.boss_arena_entered.connect(_dismiss_cards)
+		if ctx.events.has_signal("flow_changed"):
+			ctx.events.flow_changed.connect(_on_flow_changed)
 		if ctx.events.has_signal("rescue_completed"):
 			ctx.events.rescue_completed.connect(_on_rescue_completed)
 		ctx.terrain.stage_freed.connect(_on_stage_freed)
 	_on_stage_entered(stage, false)
+
+
+func _on_flow_changed(flow_state: String) -> void:
+	if flow_state not in ["stage", "beacon", "gates"]:
+		_dismiss_cards()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		_dismiss_cards()
+
+
+func _exit_tree() -> void:
+	_dismiss_cards()
 
 
 func _on_stage_freed(stage: int) -> void:
@@ -94,6 +112,10 @@ func _on_stage_freed(stage: int) -> void:
 			[_ctx.events.stage_content_cleared, _on_content_cleared], [_ctx.terrain.stage_freed, _on_stage_freed]]:
 		if row[0].is_connected(row[1]):
 			row[0].disconnect(row[1])
+	if _ctx.events.has_signal("boss_arena_entered") and _ctx.events.boss_arena_entered.is_connected(_dismiss_cards):
+		_ctx.events.boss_arena_entered.disconnect(_dismiss_cards)
+	if _ctx.events.has_signal("flow_changed") and _ctx.events.flow_changed.is_connected(_on_flow_changed):
+		_ctx.events.flow_changed.disconnect(_on_flow_changed)
 	if _ctx.events.has_signal("rescue_completed") and _ctx.events.rescue_completed.is_connected(_on_rescue_completed):
 		_ctx.events.rescue_completed.disconnect(_on_rescue_completed)
 	_dismiss_cards()
@@ -332,9 +354,9 @@ func _ensure_card_ui() -> void:
 	var panel := PanelContainer.new()
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	panel.offset_left = 28.0
-	panel.offset_right = 560.0
-	panel.offset_top = -124.0
-	panel.offset_bottom = -28.0
+	panel.offset_right = 520.0
+	panel.offset_top = -268.0
+	panel.offset_bottom = -172.0
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var bg_col: Color = card_colours.get("bg", Color(0.14, 0.16, 0.16, 1.0))
 	var border_col: Color = card_colours.get("border", Kit.dressing_colour("dig_spent"))

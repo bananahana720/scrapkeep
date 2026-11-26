@@ -608,8 +608,11 @@ func _on_cinder(c: Dictionary, ball: Vector3) -> bool:
 func _process(delta: float) -> void:
 	for p in _puffs.duplicate():
 		p["left"] -= delta
+		var node = p.get("node")
+		if node == null or not is_instance_valid(node):
+			_puffs.erase(p)
+			continue
 		var f: float = clampf(1.0 - p["left"] / PUFF_SECONDS, 0.0, 1.0)
-		var node: MeshInstance3D = p["node"]
 		node.scale = Vector3.ONE * lerpf(0.4, 1.15, f) * p["size"]
 		node.position.y += delta * 3.0
 		node.transparency = clampf(f * f, 0.0, 1.0)
@@ -617,11 +620,13 @@ func _process(delta: float) -> void:
 			node.queue_free()
 			_puffs.erase(p)
 	for v in valves:
-		if v["plume"] != null and v["plume"].visible:
-			v["plume"].rotate_y(delta * 0.8)
+		var plume = v.get("plume")
+		if plume != null and is_instance_valid(plume) and plume.visible:
+			plume.rotate_y(delta * 0.8)
 	for s in sluice_valves:
-		if s["state"] == "warning" or s["state"] == "surging":
-			(s["wheel"] as Node3D).rotation.z += delta * 4.0
+		var wheel = s.get("wheel")
+		if (s["state"] == "warning" or s["state"] == "surging") and wheel != null and is_instance_valid(wheel):
+			(wheel as Node3D).rotation.z += delta * 4.0
 
 
 func _notification(what: int) -> void:
@@ -635,10 +640,11 @@ func _notification(what: int) -> void:
 func _exit_tree() -> void:
 	for s in sluice_valves:
 		_drop_sluice_hazard(s)
-		var dev: Node3D = s.get("device")
+		var dev = s.get("device")
 		if dev != null and is_instance_valid(dev) and dev.system != null and is_instance_valid(dev.system) and dev.system.has_method("unregister"):
 			dev.system.unregister(dev)
 			dev.system = null
+		s["device"] = null
 
 
 static func _at_mouth(ball: Vector3, mouth: Vector3, radius: float) -> bool:
@@ -1307,7 +1313,7 @@ func _reset_sluice_valve(s: Dictionary) -> void:
 
 
 func _drop_sluice_hazard(s: Dictionary) -> void:
-	var h: Hazard = s.get("hazard")
+	var h = s.get("hazard")
 	if h != null and is_instance_valid(h):
 		h.finish()
 		if h.is_in_group(Threat.GROUP):
@@ -1364,15 +1370,18 @@ func _arm_sluice(s: Dictionary, facts: Array, paid: bool) -> bool:
 func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: Array) -> void:
 	if _delegated_to_grapple_sluice(String(s["spec"]["id"])):
 		_drop_sluice_hazard(s)
-		var delegated_dev: Node3D = s.get("device")
+		var delegated_dev = s.get("device")
 		if delegated_dev != null and is_instance_valid(delegated_dev) and delegated_dev.system != null \
 				and is_instance_valid(delegated_dev.system) and delegated_dev.system.has_method("unregister"):
 			delegated_dev.system.unregister(delegated_dev)
 			delegated_dev.system = null
-		if s.get("pay_ring") != null:
-			(s["pay_ring"] as MeshInstance3D).visible = false
+		s["device"] = null
+		var ring = s.get("pay_ring")
+		if ring != null and is_instance_valid(ring):
+			(ring as MeshInstance3D).visible = false
 		return
-	if s.get("device") != null and (s["device"] as Node3D).system == null:
+	var live_dev = s.get("device")
+	if live_dev != null and is_instance_valid(live_dev) and live_dev.system == null:
 		_register_sluice_device(s)
 	var ball: Vector3 = motion["pos"]
 	var planar: float = float(motion["planar"])
@@ -1387,12 +1396,12 @@ func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: 
 			if rammed:
 				_arm_sluice(s, facts, false)
 		"warning":
-			var h: Hazard = s["hazard"]
+			var h = s.get("hazard")
 			if h == null or not is_instance_valid(h):
 				_enter_sluice_charge(s)
 				return
-			var age_before := h.age
-			var vis_before := h.state == Hazard.WARN and h.visible and h.painter() != null
+			var age_before: float = float(h.age)
+			var vis_before: bool = h.state == Hazard.WARN and h.visible and h.painter() != null
 			h.step(delta)
 			if vis_before:
 				s["warn_elapsed"] = float(s["warn_elapsed"]) + minf(delta, maxf(0.0, h.warn_seconds - age_before))

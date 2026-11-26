@@ -82,6 +82,33 @@ var _tint_from := Color(0, 0, 0, 0)
 var _tint_to := Color(0, 0, 0, 0)
 var _tint_left := 0.0
 var _tint_seconds := 0.0
+var _events
+
+
+func bind_events(events) -> void:
+	if _events == events or events == null:
+		return
+	_events = events
+	if events.has_signal("boss_arena_entered") and not events.boss_arena_entered.is_connected(_dismiss_cards):
+		events.boss_arena_entered.connect(_dismiss_cards)
+	if events.has_signal("stage_content_cleared") and not events.stage_content_cleared.is_connected(_on_content_cleared):
+		events.stage_content_cleared.connect(_on_content_cleared)
+	if events.has_signal("flow_changed") and not events.flow_changed.is_connected(_on_flow_changed):
+		events.flow_changed.connect(_on_flow_changed)
+
+
+func _on_content_cleared(_reason: String) -> void:
+	_dismiss_cards()
+
+
+func _on_flow_changed(flow_state: String) -> void:
+	if flow_state not in ["stage", "beacon", "gates"]:
+		_dismiss_cards()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and not is_visible_in_tree():
+		_dismiss_cards()
 
 
 static func install(scenery: Node3D, presence: Node, map) -> Node3D:
@@ -514,9 +541,9 @@ func _show_card(title: String, line: String, seconds: float) -> void:
 	panel.name = "ColdOpen"
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	panel.offset_left = 28.0
-	panel.offset_right = 560.0
-	panel.offset_top = -124.0
-	panel.offset_bottom = -28.0
+	panel.offset_right = 520.0
+	panel.offset_top = -268.0
+	panel.offset_bottom = -172.0
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.14, 0.16, 0.16, 0.86)
@@ -597,4 +624,12 @@ func _input(event: InputEvent) -> void:
 
 
 func _exit_tree() -> void:
+	if _events != null and is_instance_valid(_events):
+		if _events.has_signal("boss_arena_entered") and _events.boss_arena_entered.is_connected(_dismiss_cards):
+			_events.boss_arena_entered.disconnect(_dismiss_cards)
+		if _events.has_signal("stage_content_cleared") and _events.stage_content_cleared.is_connected(_on_content_cleared):
+			_events.stage_content_cleared.disconnect(_on_content_cleared)
+		if _events.has_signal("flow_changed") and _events.flow_changed.is_connected(_on_flow_changed):
+			_events.flow_changed.disconnect(_on_flow_changed)
+	_events = null
 	_dismiss_cards()

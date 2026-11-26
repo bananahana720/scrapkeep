@@ -135,7 +135,9 @@ func _name() -> String:
 	if rogue():
 		return ""
 	if _warden.has_meta("plate_name"):
-		return String(_warden.get_meta("plate_name"))
+		var tagged := String(_warden.get_meta("plate_name"))
+		if not tagged.is_empty():
+			return tagged
 	if _fleet_body():
 		return String(EventKinds.hud("boss_arena_entered"))
 	var variant = _warden.get("variant")
@@ -314,7 +316,7 @@ func _draw() -> void:
 	var mid := SIZE.y * 0.5
 	if which == UiTokens.Hand.ROGUE:
 		_hand_text(which, MARGIN, mid, crew())
-	elif not name_held():
+	else:
 		_hand_text(which, MARGIN, mid, plate_name())
 	var x := MARGIN + name_width()
 	var right := size.x - MARGIN - stamp_room()

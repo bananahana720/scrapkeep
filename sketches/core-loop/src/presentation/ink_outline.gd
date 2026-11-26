@@ -20,7 +20,7 @@ const FADE_RANGE := {
 }
 const BOSS_KINDS := ["boss", "brindle", "waking", "mind"]
 const SKIP_NAMES := ["glass", "lens", "glow", "canopy", "window", "visor", "lamp", "screen", "flame", "class_accent", "kest_fuse",
-	"ancient_light", "hazard", "weak_point"]
+	"ancient_light", "hazard", "weak_point", "puff", "dust", "smoke", "plume", "trail", "vfx", "jet", "spark", "mote", "dunk"]
 const SKIP_NODES := ["Cockpit", "Control"]
 const GLOW_LIMIT := 0.3
 const WELD := 0.0001
@@ -125,7 +125,7 @@ static func apply(root: Node, role := "enemy", owned: Array = []) -> int:
 		views.append(root)
 	var lined := 0
 	for view: MeshInstance3D in views:
-		if view.mesh == null or _sheltered(view, root):
+		if view.mesh == null or _sheltered(view, root) or view.transparency > 0.0 or view.get_meta("no_ink", false) or _named_off(String(view.name)):
 			continue
 		var wanted := []
 		for i in view.mesh.get_surface_count():
@@ -215,11 +215,11 @@ static func drawable(mesh: Mesh, surface: int, mat: Material) -> bool:
 		return false
 	if mesh is ArrayMesh and _named_off((mesh as ArrayMesh).surface_get_name(surface)):
 		return false
-	if _named_off(mat.resource_name) or mat.get_meta("no_bake", false):
+	if _named_off(mat.resource_name) or mat.get_meta("no_bake", false) or mat.get_meta("no_ink", false):
 		return false
 	if mat is BaseMaterial3D:
 		var base := mat as BaseMaterial3D
-		if base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or base.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED \
+		if base.transparency != BaseMaterial3D.TRANSPARENCY_DISABLED or base.albedo_color.a < 0.99 or base.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED \
 				or base.blend_mode != BaseMaterial3D.BLEND_MODE_MIX:
 			return false
 		if base.emission_enabled and base.emission.get_luminance() * base.emission_energy_multiplier > GLOW_LIMIT:
