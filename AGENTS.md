@@ -26,6 +26,24 @@ Read the rest only when the task needs it: [ROADMAP.md](project-guide/handoff/RO
 12. **Evidence.** Save disposable evidence under `artifacts/local/`; preserve historical evidence and owner changes. Report the checked version and the method. Automated play does not establish human feel or physical hardware support.
 13. **Use locked dependencies and free local tools.** The go-ahead list below covers what changes what Andrew pays for or ships.
 
+## Rule enforcement
+
+| Rule | Automated check / gate | Human / review boundary |
+| --- | --- | --- |
+| 1. Finish every to-do | None (task list tracking) | Session & coordinator sign-off against ask |
+| 2. One thread, one writer | Isolated worktrees (`scripts/card-runner.mjs` / delegation) | Coordinator & review verify single-unit ownership |
+| 3. Only the Gate lands changes | Branch / PR workflow onto open branch (`main`) | Gate session alone stacks & pushes |
+| 4. Focused tests, `sketch:fast`, independent review | `npm run sketch:fast`, `npm run sketch:lint`, `scripts/hooks/pre-push` | Fresh Gemini 4 Neon (`high`) read-only PR review |
+| 5. Context-free writing | `npm run check:docs` (all repo `.md` links, `/home/andrew/` ban) | Reviewer clarity check on briefs & receipts |
+| 6. One home for every fact | `npm run check:docs`, `npm run check:skills`, `npm run check:project`, `scripts/gate/model-receipts.mjs` | Reviewer catches duplicated specs or drift |
+| 7. Deep modules, simple interfaces | `npm run sketch:lint` (L6–L10 isolation rules), GDScript unit tests | Reviewer checks module ownership & thin APIs |
+| 8. No slop in player UI/text | `npm run sketch:lint` (W1–W7/S8 UI word lint), `tests/codex_notes_words_test.gd`, `tests/ui_contract_test.gd` | Visual & tone check on real screens |
+| 9. World 1 & map standard | Tier-0 `PATH_RULES` in `scripts/sketch-fast.mjs`, `tests/park_props_test.gd`, `tests/site_markers_test.gd`, `tests/w50_*_test.gd` | Hardware render & feel verification |
+| 10. Read story & tone first | Creative brief pre-flight reading (`STORY-MAP.md`, `TONE-BIBLE.md`) | Coordinator & creative review |
+| 11. Workers by kind of work & model pins | `npm run check:agents` (banned IDs, `.claude/settings.json`, workflow pins), `scripts/gate/model-receipts.mjs` | Coordinator dispatch & mandatory review receipt |
+| 12. Evidence & artifact hygiene | `tests/fixtures/pins/`, `artifacts/local/` separation, `model-receipts.mjs` | Human judgement on shipped PC feel & audio/visuals |
+| 13. Locked dependencies & free local tools | `npm run check:project` (package/lock metadata checks) | Explicit Andrew approval before `package.json` or external changes |
+
 ## Steps that need no approval
 
 Act, then report. Andrew's standing approval covers these (27 October, widened 9 November):
