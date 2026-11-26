@@ -73,6 +73,7 @@ func _boot() -> void:
 	_steps = [
 		[_noop, 1, _check_walk_resolves],
 		[_noop, 1, _check_walk_chain],
+		[_noop, 1, _check_walk_march_overdrive],
 		[_noop, 1, _check_walk_window],
 		[_noop, 1, _check_walk_plain],
 		[_noop, 1, _check_walk_reset],
@@ -270,6 +271,56 @@ func _check_walk_chain() -> void:
 		and is_equal_approx(h3.length, reach - MindAttacks.LANE_HALF), "starts %s, link 2 ended %s" % [h3.centre, end2])
 	_t.check("and opens a fresh chain", not _combat._walk.is_empty() and _combat._walk["end"] == _end_of(h3), str(_combat._walk))
 	_t.check("the ball's velocity is untouched", _player.state.velocity == velocity, "%s vs %s" % [_player.state.velocity, velocity])
+
+
+func _check_walk_march_overdrive() -> void:
+	var march_od := Relics.overdrive_of("march_lane")
+	_t.near("World 2 march_lane carries 1.3 overdrive", march_od, 1.3, 0.0001)
+	_t.near("World 1 walking_lane keeps 1.0 overdrive", Relics.overdrive_of("walking_lane"), 1.0, 0.0001)
+	_as_cannon()
+	var run = _game.ctx.run
+	var build = _game.ctx.build
+	run.parts.clear()
+	run.add_part(Relics.part_of("walking_lane"), "test")
+	build.sync_relics()
+	_combat._free_cannon()
+	var w1_first := _fire_walk()
+	_combat._clock += 0.5
+	var w1_second := _fire_walk()
+	var w1_h2 = _lane(w1_second)
+	_t.near("World 1 walking_lane walked length stays WALK_REACH", w1_h2.length, Combat.WALK_REACH, 0.001)
+	_t.near("World 1 walking_lane walked damage stays baseline", float(w1_second["damage"]), float(w1_first["damage"]), 0.001)
+	_t.near("World 1 walking_lane records 1.0 overdrive", float(_combat.last_shot["overdrive"]), 1.0, 0.001)
+
+	run.parts.clear()
+	run.add_part(Relics.part_of("march_lane"), "test")
+	build.sync_relics()
+	_combat._free_cannon()
+	var m_first := _fire_walk()
+	var m_h1 = _lane(m_first)
+	_t.near("World 2 march_lane first link stays baseline damage", float(m_first["damage"]), float(w1_first["damage"]), 0.001)
+	_t.near("World 2 march_lane first link records 1.0 overdrive", float(_combat.last_shot["overdrive"]), 1.0, 0.001)
+	var m_end1 := _end_of(m_h1)
+	_combat._clock += 0.5
+	var m_second := _fire_walk()
+	var m_h2 = _lane(m_second)
+	_t.check("World 2 march_lane second link still starts where link 1 ended",
+		_flat(m_h2.centre).distance_to(_flat(m_end1)) < 0.01, "starts %s, last ended %s" % [m_h2.centre, m_end1])
+	_t.near("World 2 march_lane overdrives walked reach by 1.3x", m_h2.length, Combat.WALK_REACH * march_od, 0.001)
+	_t.near("World 2 march_lane overdrives walked damage by 1.3x", float(m_second["damage"]), float(m_first["damage"]) * march_od, 0.001)
+	_t.near("World 2 march_lane records 1.3 overdrive on walked shot", float(_combat.last_shot["overdrive"]), march_od, 0.001)
+	_t.check("World 2 march_lane resets the chain after two links", _combat._walk.is_empty(), str(_combat._walk))
+
+	run.parts.clear()
+	_player.abilities.swap(AbilityState.WEAPON, "cannon_lane_walk")
+	_player._refit()
+	_combat._free_cannon()
+	var p_first := _fire_walk()
+	_combat._clock += 0.5
+	var p_second := _fire_walk()
+	_t.near("planted: removing march_lane drops walked length back to WALK_REACH", _lane(p_second).length, Combat.WALK_REACH, 0.001)
+	_t.near("planted: removing march_lane drops walked damage back to baseline", float(p_second["damage"]), float(p_first["damage"]), 0.001)
+	_t.near("planted: removing march_lane drops recorded overdrive back to 1.0", float(_combat.last_shot["overdrive"]), 1.0, 0.001)
 
 
 func _check_walk_window() -> void:

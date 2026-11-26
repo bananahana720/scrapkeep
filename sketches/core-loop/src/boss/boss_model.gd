@@ -15,7 +15,7 @@ static func load_scene(path: String, dressed := true) -> Node3D:
 		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 			colour_view(view)
 		BakeLook.dress(scene)
-		InkOutline.apply(scene, "warden")
+		InkOutline.apply(scene, "boss")
 	return scene
 
 

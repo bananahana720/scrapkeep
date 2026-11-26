@@ -376,7 +376,7 @@ func _mounted() -> void:
 	if brindle != null:
 		world.add_child(brindle)
 		census = _census(brindle)
-		_t.check("Brindle's Requisition draws the Warden's line, its glass none", census.roles.keys() == ["warden"]
+		_t.check("Brindle's Requisition draws the boss's line, its glass none", census.roles.keys() == ["boss"]
 			and census.lined >= 20 and census.glass_lined == 0, "%s" % census)
 	else:
 		_t.check("Brindle's model loads", false)

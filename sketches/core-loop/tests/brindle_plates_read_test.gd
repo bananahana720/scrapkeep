@@ -64,7 +64,7 @@ func _fittings_untinted(panel: MeshInstance3D, hull) -> bool:
 	if override != null:
 		if hull._tint_materials.has(override):
 			return false
-		if InkOutline.strip(override) != base or override.next_pass == null or override.next_pass.get_meta("ink_role", "") != "warden":
+		if InkOutline.strip(override) != base or override.next_pass == null or override.next_pass.get_meta("ink_role", "") != "boss":
 			return false
 	return (active.vertex_color_use_as_albedo and active.vertex_color_use_as_albedo == base.vertex_color_use_as_albedo
 		and active.albedo_color.is_equal_approx(Color.WHITE) and active.albedo_color.is_equal_approx(base.albedo_color)
