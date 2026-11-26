@@ -649,10 +649,16 @@ func _stock() -> Array:
 					for fill_id in Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE - focused_out.size(), used_ids):
 						focused_out.append({"part_id": fill_id, "sold": false, "odds": focused_odds})
 				return focused_out
-	var set_pick: String = _set_pick() if last_call() else ""
-	var floor_pick: Array = [set_pick] if set_pick != "" else Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1)
-	var picks: Array = Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
-		SHELF_SIZE - floor_pick.size(), floor_pick)
+	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
+	var deep_world := stage >= Parts.WORLD_ESCALATION_STAGE_W2
+	var near_set := deep_world and _set_near_complete()
+	var set_pick: String = _set_pick() if (last_call() or near_set) else ""
+	var floor_pick: Array = [set_pick] if set_pick != "" else (
+		Parts.roll_high_impact(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1, [], {}, stage, false)
+		if deep_world else Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1))
+	var picks: Array = Parts.roll_for_stage(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
+		SHELF_SIZE - floor_pick.size(), stage, floor_pick) if deep_world \
+		else Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE - floor_pick.size(), floor_pick)
 	var out: Array = []
 	for part_id in floor_pick:
 		var entry := {"part_id": part_id, "sold": false, "odds": [] if set_pick != "" else OddsReadout.odds_for(FLOOR_RARITIES, ctx.run.class_id())}
@@ -664,10 +670,17 @@ func _stock() -> Array:
 		out.append({"part_id": part_id, "sold": false, "odds": odds})
 	var rack = _rack()
 	if rack != null and not out.is_empty():
-		var active := ActiveOffers.roll(_rng, "shop", rack.rows(), SHELF_RARITIES, rack.held())
+		var active: String = build.active_offer_for_channel("shop", SHELF_RARITIES, _rng, deep_world) \
+			if build != null and build.has_method("active_offer_for_channel") \
+			else ActiveOffers.roll(_rng, "shop", rack.rows(), SHELF_RARITIES, rack.held())
 		if active != "":
 			out[-1] = {"part_id": active, "sold": false, "odds": odds}
 	return out
+
+
+func _set_near_complete() -> bool:
+	var target := set_piece()
+	return not target.is_empty() and int(target["pieces"]) - int(target["held"]) == 1
 
 
 func last_call() -> bool:
@@ -777,9 +790,12 @@ func _roll_one(rarities: Array, exclude: Array = []) -> String:
 
 
 func _roll_hook(exclude: Array = []) -> Dictionary:
+	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
 	if Parts.listed_only() and not Parts.offer_pool(ctx.run.class_id(), TOP_RARITIES).is_empty():
 		for table in [TOP_RARITIES, TOP_FALLBACK]:
-			var picks: Array = Parts.roll(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude)
+			var picks: Array = Parts.roll_high_impact(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude, {}, stage, false) \
+				if table == TOP_FALLBACK and stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+				else Parts.roll(_rng, table, ctx.run.class_id(), ctx.run.parts, 1, exclude)
 			if not picks.is_empty():
 				return {"part_id": picks[0], "table": table}
 		return {"part_id": _roll_one(SHELF_RARITIES, exclude), "table": SHELF_RARITIES}
@@ -850,7 +866,10 @@ func press_duplicate(target_part_id: String) -> Dictionary:
 
 
 func _stock_tri_terminal() -> Array:
-	var picks: Array = Parts.roll(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE)
+	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
+	var picks: Array = Parts.roll_for_stage(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE, stage) \
+		if stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+		else Parts.roll(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE)
 	var out: Array = []
 	for i in picks.size():
 		out.append({"part_id": String(picks[i]), "sold": false, "chosen": false, "revealed": i == 0})

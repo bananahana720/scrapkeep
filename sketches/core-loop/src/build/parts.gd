@@ -158,6 +158,58 @@ const SOURCE_RARITIES := {
 	"milestone": ["relic"],
 }
 
+const WORLD_ESCALATION_STAGE_W2 := 3
+const WORLD_ESCALATION_STAGE_W3 := 5
+
+const SOURCE_RARITIES_BY_WORLD := {
+	1: {"fabricator": ["common"], "vault": ["rare"], "milestone": ["relic"]},
+	2: {"fabricator": ["common", "rare"], "vault": ["rare", "relic"], "milestone": ["relic"]},
+	3: {"fabricator": ["common", "rare"], "vault": ["rare", "relic"], "milestone": ["relic"]},
+}
+
+const STAGE_RARE_MULT := {1: 1.0, 2: 2.8, 3: 5.5}
+
+const VERB_EFFECTS := [
+	"pike_fuse", "dash_wake", "reel_chain", "slam_crack", "second_bell", "line_leash",
+	"boomerang_return", "orbital_satellites", "prism_refract", "coin_shot",
+	"slag_zone", "pocket_aura", "seismic_cone", "air_static",
+]
+
+const WORLD_VERB_PARTS := [
+	"slag_pike", "halo_rig", "backwash", "barbed_reel", "faultline_cap", "second_bell",
+	"long_leash", "fan_spread", "helix_drill", "basalt_ram", "storm_capacitor",
+	"boomerang_spool", "orbital_flywheel", "prism_splitter", "slag_furnace",
+]
+
+const MAKER_SET_PIECES := {
+	"spillway_works": 3, "fleet_surplus": 3, "redjaw": 3, "highdraft_roosts": 3,
+	"waking": 3, "mind_glass": 3, "moss": 2,
+}
+
+const ARCHETYPES := {
+	"heavy_melee": {
+		"makers": ["fleet_surplus", "waking", "moss"],
+		"anchors": ["ram_plow", "basalt_ram", "drop_weight", "ballast_drum", "faultline_cap",
+			"barbed_reel", "impact_driver", "winch_pawl", "ten_pin", "pin_setter",
+			"warhead_slug", "orbital_flywheel", "brace_frame", "re_rack"],
+		"grapple_muts": ["wrecking_flail", "tether_slam", "dragnet_siphon"],
+	},
+	"run_n_gun": {
+		"makers": ["redjaw", "fleet_surplus", "highdraft_roosts"],
+		"anchors": ["gatling_heart", "fan_spread", "helix_drill", "double_feed", "slag_pike",
+			"halo_rig", "brass_drum", "heavy_breech", "cross_split", "spiral_wave",
+			"chain_arc", "boomerang_spool", "prism_splitter", "slag_furnace", "runner_overclock"],
+		"grapple_muts": ["det_cord", "sonic_snap_sling"],
+	},
+	"spell_cast": {
+		"makers": ["spillway_works", "highdraft_roosts", "mind_glass"],
+		"anchors": ["spare_cell", "storm_capacitor", "second_bell", "overcharge_coil",
+			"echo_charge", "cap_relay", "quick_spool", "reserve_tank", "backwash",
+			"long_leash", "galvanic_rounds", "rime_rounds", "arc_coil", "pylon_capacitor"],
+		"grapple_muts": ["hot_wire", "live_bus"],
+	},
+}
+
 const MILESTONE_FOR_EVENT := {
 	"surge_run": "rime_heart",
 	"hold_the_relay": "tempest_core",
@@ -165,10 +217,16 @@ const MILESTONE_FOR_EVENT := {
 const MILESTONE_ORDER := ["scrap_gravity", "tempest_core", "rime_heart"]
 
 const SYNERGY_BAIT := 0.35
+const HIGH_IMPACT_SYNERGY_BAIT := 0.50
 
 const MAKER_NUDGE_AT := 2
 const MAKER_NUDGE := 1.1
+const ARCHETYPE_NUDGE_AT := 2
+const ARCHETYPE_NUDGE := 1.45
+const WORLD_VERB_NUDGE := 1.35
+const WORLD_SIGNATURE_NUDGE := 1.6
 static var maker_nudge_on := true
+static var archetype_nudge_on := true
 
 const ANSWERS := {
 	"long_barrel": ["range"], "focus_lens": ["range"], "horizon_optic": ["range"],
@@ -804,12 +862,18 @@ static func active_tier() -> int:
 
 
 static func _pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
-	if active_tier() == 0:
+	return _pick_rarity_scaled(rng, allowed, 1.0)
+
+
+static func _pick_rarity_scaled(rng: RandomNumberGenerator, allowed: Array, rare_mult := 1.0) -> String:
+	var tier_mult: float = float(RunTier.row(active_tier()).rare_weight) if active_tier() != 0 else 1.0
+	var combined_rare := tier_mult * rare_mult
+	if is_equal_approx(combined_rare, 1.0):
 		return ItemGen.pick_rarity(rng, allowed)
 	var total := 0.0
 	var weights := {}
 	for rarity in allowed:
-		weights[rarity] = ItemGen.weight_of(rarity) * (RunTier.row(active_tier()).rare_weight if rarity == "rare" else 1.0)
+		weights[rarity] = ItemGen.weight_of(rarity) * (combined_rare if rarity == "rare" else 1.0)
 		total += weights[rarity]
 	var x := rng.randf() * total
 	for rarity in allowed:
@@ -826,6 +890,7 @@ static var opened_items := {}
 
 static func reset_for_tests() -> void:
 	maker_nudge_on = true
+	archetype_nudge_on = true
 	answer_nudge_on = true
 	_run_ref = null
 	seams = {}
@@ -1287,8 +1352,34 @@ static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: Strin
 
 
 static func changes_behaviour(part_id: String) -> bool:
+	if is_grapple_mutation_part(part_id):
+		return true
 	var d: Resource = def(part_id)
-	return d != null and d.changes_behaviour()
+	if d == null:
+		return false
+	return d.changes_behaviour() or String(d.effect.get("do", "")) in VERB_EFFECTS
+
+
+static func is_high_impact(part_id: String) -> bool:
+	if Relics.is_relic(part_id) or is_grapple_mutation_part(part_id) or changes_behaviour(part_id):
+		return true
+	if Items.grapple_mutation_of(part_id) != "":
+		return true
+	var d: Resource = def(part_id)
+	return d != null and d.bits != 0 and rung_of(part_id) >= RUNG_FLOOR
+
+
+static func world_for_stage(stage: int) -> int:
+	return 1 if stage < WORLD_ESCALATION_STAGE_W2 else (2 if stage < WORLD_ESCALATION_STAGE_W3 else 3)
+
+
+static func stage_rare_mult(stage: int) -> float:
+	return float(STAGE_RARE_MULT.get(world_for_stage(stage), 1.0))
+
+
+static func source_rarities(source: String, stage := 1) -> Array:
+	var table: Dictionary = SOURCE_RARITIES_BY_WORLD.get(world_for_stage(stage), SOURCE_RARITIES)
+	return (table.get(source, SOURCE_RARITIES.get(source, ["common"])) as Array).duplicate()
 
 
 static func rung_of(part_id: String) -> int:
@@ -1296,7 +1387,16 @@ static func rung_of(part_id: String) -> int:
 	return maxi(0, ItemGen.RARITIES.find(ItemGen.resolve_rarity(String(d.rarity)))) if d != null else 0
 
 
-static func gate_rarities(bonus_cores: int) -> Array:
+static func gate_rarities(bonus_cores: int, stage := 1) -> Array:
+	var world := world_for_stage(stage)
+	if world >= 3:
+		return ["rare", "relic"] if bonus_cores >= 1 else ["common", "rare"]
+	if world == 2:
+		if bonus_cores >= 2:
+			return ["rare", "relic"]
+		if bonus_cores == 1:
+			return ["rare"]
+		return ["common", "rare"]
 	if bonus_cores >= 2:
 		return ["rare", "relic"]
 	if bonus_cores == 1:
@@ -1665,6 +1765,217 @@ static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictio
 
 static func holds_pattern(held: Array) -> bool:
 	return held.any(func(key): return def(key) != null and not def(key).patterns.is_empty())
+
+
+static func dominant_archetype(held: Array) -> String:
+	if held.is_empty():
+		return ""
+	var scores := {}
+	var seen := {}
+	for raw_id in held:
+		var part_id := String(raw_id)
+		if seen.has(part_id):
+			continue
+		seen[part_id] = true
+		var gmut := grapple_mutation_id_of(part_id)
+		var maker := maker_of(part_id)
+		for arch in ARCHETYPES:
+			var spec: Dictionary = ARCHETYPES[arch]
+			var pts := 0
+			if part_id in (spec["anchors"] as Array):
+				pts += 2
+			elif gmut != "" and gmut in (spec["grapple_muts"] as Array):
+				pts += 2
+			elif Relics.is_relic(part_id) and maker in (spec["makers"] as Array):
+				pts += 1
+			if pts > 0:
+				scores[arch] = int(scores.get(arch, 0)) + pts
+	var best_arch := ""
+	var best_score := 0
+	for arch in ARCHETYPES:
+		var sc := int(scores.get(arch, 0))
+		if sc >= ARCHETYPE_NUDGE_AT * 2 and sc > best_score:
+			best_score = sc
+			best_arch = arch
+	return best_arch
+
+
+static func archetype_nudge(held: Array, pool: Array) -> Dictionary:
+	if not archetype_nudge_on:
+		return {}
+	var arch := dominant_archetype(held)
+	if arch == "":
+		return {}
+	var spec: Dictionary = ARCHETYPES[arch]
+	var anchors: Array = spec["anchors"]
+	var gmuts: Array = spec["grapple_muts"]
+	var out := {}
+	for part_id in pool:
+		var pid := String(part_id)
+		if pid in held:
+			continue
+		var gm := Items.grapple_mutation_of(pid)
+		if pid in anchors or (gm != "" and gm in gmuts):
+			out[pid] = ARCHETYPE_NUDGE
+	return out
+
+
+static func world_nudge(stage: int, pool: Array) -> Dictionary:
+	var world := world_for_stage(stage)
+	if world <= 1:
+		return {}
+	var table := all_rows()
+	var out := {}
+	for part_id in pool:
+		var pid := String(part_id)
+		var row_world := int(table.get(pid, {}).get("world", 0))
+		if row_world == world:
+			out[pid] = WORLD_SIGNATURE_NUDGE
+		elif pid in WORLD_VERB_PARTS or changes_behaviour(pid):
+			out[pid] = WORLD_VERB_NUDGE
+	return out
+
+
+static func _merge_nudges(base: Dictionary, extra: Dictionary) -> Dictionary:
+	if extra.is_empty():
+		return base
+	var out := base.duplicate()
+	for key in extra:
+		out[key] = float(out.get(key, 1.0)) * float(extra[key])
+	return out
+
+
+static func completing_archetype_part(held: Array, pool: Array) -> String:
+	var base := completing_part(held, pool)
+	if base != "":
+		return base
+	var evos := Synergies.all_evolutions()
+	for evo_id in evos:
+		if evo_id in held:
+			continue
+		var pair: Array = evos[evo_id]
+		if pair.size() != 2:
+			continue
+		if pair[0] in held and not pair[1] in held and pair[1] in pool:
+			return String(pair[1])
+		if pair[1] in held and not pair[0] in held and pair[0] in pool:
+			return String(pair[0])
+	var counted := maker_counts(held)
+	for maker in MAKER_SET_PIECES:
+		var need := int(MAKER_SET_PIECES[maker])
+		if int(counted.get(maker, 0)) == need - 1:
+			for key in pool:
+				if not key in held and maker_of(String(key)) == maker:
+					return String(key)
+	return ""
+
+
+static func roll_for_stage(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
+		stage := 1, exclude: Array = [], offered: Dictionary = {}, high_impact := false) -> Array:
+	rarities = ItemGen.resolve_rarities(rarities)
+	var full_pool: Array = offer_pool(class_id, rarities).filter(func(key): return not key in exclude and not maxed(key, held) and not stacked_out(key, held))
+	if full_pool.is_empty():
+		return []
+	var pool := full_pool
+	if high_impact:
+		var impact_pool: Array = full_pool.filter(func(key): return is_high_impact(key))
+		if impact_pool.size() >= count:
+			pool = impact_pool
+		elif not impact_pool.is_empty():
+			pool = impact_pool
+	var picks: Array = []
+	var leans := KITS.has(class_id)
+	var nudge := maker_nudge(held, pool)
+	nudge = _merge_nudges(nudge, archetype_nudge(held, pool))
+	nudge = _merge_nudges(nudge, world_nudge(stage, pool))
+	nudge = answer_nudge(class_id, pool, nudge)
+	var bait_pool := _near(class_id, _uncapped(class_id, pool, offered)) if leans else pool
+	var bait := completing_archetype_part(held, bait_pool)
+	if bait == "" and not bait_pool.is_empty():
+		bait = completing_archetype_part(held, pool)
+	var bait_chance := HIGH_IMPACT_SYNERGY_BAIT if high_impact else SYNERGY_BAIT
+	if bait != "" and rng.randf() < bait_chance:
+		picks.append(bait)
+		pool.erase(bait)
+	var rare_mult := stage_rare_mult(stage)
+	var tries := 0
+	while picks.size() < count and not pool.is_empty() and tries < count * 8:
+		tries += 1
+		var rarity := _pick_rarity_scaled(rng, rarities, rare_mult)
+		if leans:
+			var slot := _lean_slot(rng, rarity, class_id, pool, offered, picks, exclude, nudge)
+			if slot != "":
+				picks.append(slot)
+				pool.erase(slot)
+			continue
+		if not listed_only() and rng.randf() < GENERATED_SHARE:
+			var recipe := ItemGen.roll_id(rng, rarity)
+			if not recipe in picks and not recipe in exclude and not stacked_out(recipe, held):
+				picks.append(recipe)
+			continue
+		var bucket: Array = pool.filter(func(key): return String(all_rows().get(key, {}).get("rarity", "common")) == rarity)
+		if bucket.is_empty():
+			bucket = pool
+		var chosen := _weighted(rng, bucket, offered, {}, nudge)
+		picks.append(chosen)
+		pool.erase(chosen)
+	if picks.size() < count and pool != full_pool:
+		var rest: Array = full_pool.filter(func(key): return not key in picks)
+		for extra in roll(rng, rarities, class_id, held, count - picks.size(), exclude + picks, offered):
+			if not extra in picks:
+				picks.append(extra)
+		if picks.size() < count and not rest.is_empty():
+			for key in rest:
+				if picks.size() >= count:
+					break
+				if not key in picks:
+					picks.append(key)
+	if picks.size() >= 2 and not picks.any(func(key): return def(key).hits_harder()):
+		var harder: Array = pool.filter(func(key): return def(key).hits_harder())
+		if leans:
+			var kit: Array = harder.filter(func(key): return in_kit(class_id, key))
+			var still: Array = kit.filter(func(key): return bucket_of(key) != "movement")
+			var shelf: Array = _neutral_slot(class_id, harder, offered)
+			for side in [still, kit, shelf, _uncapped(class_id, harder, offered)]:
+				if not side.is_empty():
+					harder = side
+					break
+		var at := picks.size() - 1
+		if leans:
+			var first := 1 if not picks.is_empty() and picks[0] == bait else 0
+			for i in range(picks.size() - 1, first - 1, -1):
+				if not (in_kit(class_id, picks[i]) and bucket_of(picks[i]) == "movement"):
+					at = i
+					break
+		if not harder.is_empty():
+			picks[at] = harder[rng.randi_range(0, harder.size() - 1)]
+	if leans and not high_impact:
+		_keep_a_neutral(rng, class_id, picks, pool, offered, 1 if not picks.is_empty() and picks[0] == bait else 0)
+	return _swap_stacked_out(rng, class_id, held, picks, full_pool, offered)
+
+
+static func roll_high_impact(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
+		exclude: Array = [], offered: Dictionary = {}, stage := 1, allow_pilot_relic := false, tree = null) -> Array:
+	rarities = ItemGen.resolve_rarities(rarities)
+	var picks: Array = []
+	var slice_locked: bool = listed_only() and not Synergies.table.part_in_play("slag_pike")
+	if allow_pilot_relic and not slice_locked and "relic" in rarities and count >= 1 and class_id in Relics.PILOTS:
+		var world := world_for_stage(stage)
+		var relic_pool := Relics.eligible_swaps(class_id, Relics.held(held), tree, world, world >= 2)
+		if relic_pool.is_empty():
+			relic_pool = Relics.eligible(class_id, Relics.held(held), tree, world, true)
+		relic_pool = relic_pool.filter(func(id): return not Relics.part_of(id) in exclude)
+		if not relic_pool.is_empty():
+			var has_other := not offer_pool(class_id, rarities.filter(func(r): return r != "relic")).is_empty()
+			var relic_chance := 0.45 if has_other else 1.0
+			if rng.randf() < relic_chance:
+				var chosen_relic := String(relic_pool[rng.randi_range(0, relic_pool.size() - 1)])
+				picks.append(Relics.part_of(chosen_relic))
+	var need := count - picks.size()
+	if need > 0:
+		var rolled := roll_for_stage(rng, rarities, class_id, held, need, stage, exclude + picks, offered, true)
+		picks.append_array(rolled)
+	return picks
 
 
 static func roll_gate(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,

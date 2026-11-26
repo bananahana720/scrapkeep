@@ -67,11 +67,19 @@ static func showing(seconds: float) -> String:
 	return VERBS[int(floor(seconds / CYCLE_S) - 1.0) % VERBS.size()]
 
 
+func high_impact_met() -> bool:
+	return verdict == "met"
+
+
 func gate_rarities() -> Array:
 	settle()
-	var rarities: Array = Parts.gate_rarities(ctx.run.gate_tier_bonus())
+	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
+	var bonus: int = ctx.run.gate_tier_bonus() if ctx != null and ctx.run != null else 0
+	var rarities: Array = Parts.gate_rarities(bonus, stage)
 	if verdict != "met":
 		return rarities
+	if bonus >= 1 or stage >= Parts.WORLD_ESCALATION_STAGE_W2:
+		return ["rare", "relic"]
 	var lifted: Array = rarities.filter(func(r): return r != "common")
 	return lifted if not lifted.is_empty() else ["rare"]
 

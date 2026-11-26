@@ -183,6 +183,10 @@ func reroll_offers(rng: RandomNumberGenerator, class_id: String, held: Array) ->
 		var pool: Array = Parts.offer_pool(class_id, rarities).filter(func(id):
 			var pd: Resource = Parts.def(id)
 			return pd != null and int(pd.tier) >= min_tier and not (id in used) and not Parts.maxed(id, held))
+		if min_tier >= 2:
+			var impact_pool: Array = pool.filter(func(id): return Parts.is_high_impact(id))
+			if not impact_pool.is_empty():
+				pool = impact_pool
 		if not pool.is_empty():
 			pool.sort()
 			var picked := String(pool[rng.randi_range(0, pool.size() - 1)])
@@ -351,11 +355,11 @@ static func rarity_color(rarity: String) -> Color:
 	return ItemGen.RARITY[id]["color"] if id != "" else ItemGen.RARITY["common"]["color"]
 
 
-static func roll_cobalt_boss_picks(rng: RandomNumberGenerator, class_id: String, held: Array, count := 2) -> Array:
+static func roll_cobalt_boss_picks(rng: RandomNumberGenerator, class_id: String, held: Array, count := 2, stage := 1) -> Array:
 	var plain: Array = Parts.offer_pool(class_id, ["rare"]).filter(func(key): return not Parts.changes_behaviour(key))
-	var picks: Array = Parts.roll(rng, ["rare"], class_id, held, count, plain)
+	var picks: Array = Parts.roll_for_stage(rng, ["rare"], class_id, held, count, stage, plain, {}, true)
 	if picks.size() < count:
-		var more: Array = Parts.roll(rng, ["rare"], class_id, held, count - picks.size(), picks)
+		var more: Array = Parts.roll_for_stage(rng, ["rare"], class_id, held, count - picks.size(), stage, picks, {}, true)
 		picks.append_array(more)
 	return picks
 

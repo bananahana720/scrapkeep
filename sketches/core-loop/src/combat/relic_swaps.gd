@@ -9,6 +9,7 @@ const Grip := preload("res://src/movement/grip.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Relics := preload("res://src/build/relics.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
@@ -207,6 +208,13 @@ func _record(id: String, detail: Dictionary) -> void:
 	last_swap["id"] = id
 
 
+func _overdrive_for(slot: String) -> float:
+	if ctx == null or ctx.run == null:
+		return 1.0
+	var relic_id := String(Relics.held(ctx.run.parts).get(slot, ""))
+	return Relics.overdrive_of(relic_id) if relic_id != "" else 1.0
+
+
 func _alive(enemy) -> bool:
 	return enemy != null and is_instance_valid(enemy) and not DamageDoor.dead(enemy)
 
@@ -270,11 +278,13 @@ func _spawn_arc_chord(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 		to_pt = from_pt + combat._flat_aim() * 6.0
 	if _arc_chords.size() >= ARC_CHORD_CAP:
 		_arc_chords.pop_front()
-	var dmg: float = ARC_CHORD_DAMAGE * mult * combat._damage_mod(Weapons.ARC_CASTER)
+	var od := _overdrive_for(AbilityState.LINE)
+	var width := ARC_CHORD_WIDTH * (1.25 if od > 1.0 else 1.0)
+	var dmg: float = ARC_CHORD_DAMAGE * mult * od * combat._damage_mod(Weapons.ARC_CASTER)
 	var rec := {
 		"from": from_pt,
 		"to": to_pt,
-		"width": ARC_CHORD_WIDTH,
+		"width": width,
 		"damage": dmg,
 		"left": ARC_CHORD_DURATION,
 		"tick": 0.0,
@@ -283,7 +293,7 @@ func _spawn_arc_chord(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 	}
 	_arc_chords.append(rec)
 	combat.effects.arc(from_pt + Vector3.UP * 0.5, to_pt + Vector3.UP * 0.5, ClassDef.SABLE_COLOR)
-	_record("bank_arc", {"from": from_pt, "to": to_pt, "width": ARC_CHORD_WIDTH, "color": ClassDef.SABLE_COLOR})
+	_record("bank_arc", {"from": from_pt, "to": to_pt, "width": width, "overdrive": od, "color": ClassDef.SABLE_COLOR})
 
 
 func _step_arc_chords(delta: float, enemies: Array) -> void:
@@ -372,6 +382,7 @@ func _queue_fan_burst(weapon: String, shot_desc: Dictionary, muzzle: Vector3, fo
 	var is_sixth: bool = bool(shot_desc.get("sixth_hot", false)) or _fan_shot_index == FAN_CYLINDER_ROUNDS
 	if is_sixth:
 		_fan_shot_index = 0
+	var od := _overdrive_for(AbilityState.WEAPON)
 	var up_hint := Vector3.UP if absf(forward.dot(Vector3.UP)) < 0.98 else Vector3.FORWARD
 	var right := forward.cross(up_hint).normalized()
 	for i in 2:
@@ -382,8 +393,9 @@ func _queue_fan_burst(weapon: String, shot_desc: Dictionary, muzzle: Vector3, fo
 			"weapon": weapon,
 			"dir": dir,
 			"reach": reach,
-			"damage": damage * FAN_FOLLOW_MULT,
+			"damage": damage * FAN_FOLLOW_MULT * od,
 			"ricochet": false,
+			"bounces": 0,
 			"color": ClassDef.RIVET_COLOR,
 		})
 	if is_sixth:
@@ -392,12 +404,13 @@ func _queue_fan_burst(weapon: String, shot_desc: Dictionary, muzzle: Vector3, fo
 			"weapon": weapon,
 			"dir": forward,
 			"reach": reach * 1.15,
-			"damage": damage * FAN_SIXTH_MULT,
+			"damage": damage * FAN_SIXTH_MULT * od,
 			"ricochet": true,
+			"bounces": FAN_SIXTH_BOUNCES + (1 if od > 1.0 else 0),
 			"color": Palette.COPPER,
 		})
 		combat.effects.beam(muzzle, muzzle + forward * minf(reach, 24.0), Palette.COPPER, 0.16)
-	_record("fan_burst", {"round": FAN_CYLINDER_ROUNDS if is_sixth else _fan_shot_index, "sixth_ricochet": is_sixth, "queued": 3 if is_sixth else 2, "color": Palette.COPPER})
+	_record("fan_burst", {"round": FAN_CYLINDER_ROUNDS if is_sixth else _fan_shot_index, "sixth_ricochet": is_sixth, "queued": 3 if is_sixth else 2, "overdrive": od, "color": Palette.COPPER})
 
 
 func _step_fan_queue(delta: float) -> void:
@@ -418,8 +431,9 @@ func _step_fan_queue(delta: float) -> void:
 		var rec: Dictionary = combat._bolt_record(weapon, p, entry, muzzle, float(item["reach"]), float(item["damage"]), "item_proc", 0)
 		rec["color"] = item["color"]
 		if bool(item["ricochet"]):
-			rec["extra_bounces"] = FAN_SIXTH_BOUNCES
-			rec["bounces_left"] = FAN_SIXTH_BOUNCES
+			var bounces := int(item.get("bounces", FAN_SIXTH_BOUNCES))
+			rec["extra_bounces"] = bounces
+			rec["bounces_left"] = bounces
 			rec["ricochet_home"] = true
 		combat.bolts.fire(rec)
 	_fan_queue = kept
@@ -563,16 +577,18 @@ func _cable_cluster_world(at: Vector3, fraction: float, mult: float) -> void:
 
 func _drop_wire_cluster(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 	var dropped := 0
-	var dmg: float = Weapons.MINI_DAMAGE * CLUSTER_DAMAGE_MULT * mult * combat._damage_mod(Weapons.STICKY_CHARGE)
-	for i in CLUSTER_COUNT:
-		var t: float = float(i + 1) / float(CLUSTER_COUNT + 1)
+	var od := _overdrive_for(AbilityState.LINE)
+	var count := CLUSTER_COUNT + (1 if od > 1.0 else 0)
+	var dmg: float = Weapons.MINI_DAMAGE * CLUSTER_DAMAGE_MULT * mult * od * combat._damage_mod(Weapons.STICKY_CHARGE)
+	for i in count:
+		var t: float = float(i + 1) / float(count + 1)
 		var spot: Vector3 = combat._floor_at(from_pt.lerp(to_pt, t) + Vector3.UP)
 		var charge: Dictionary = combat.sticky.drop(spot, dmg, Weapons.MINI_RADIUS, Weapons.MINI_FUSE, Weapons.MINI_ARM, 0.0, combat._clock)
 		charge["_source"] = "item_proc"
 		charge["_cluster"] = true
 		combat.effects.ring(spot, Weapons.MINI_RADIUS, ClassDef.KEST_COLOR)
 		dropped += 1
-	_record("cable_cluster", {"from": from_pt, "to": to_pt, "dropped": dropped, "color": ClassDef.KEST_COLOR})
+	_record("cable_cluster", {"from": from_pt, "to": to_pt, "dropped": dropped, "overdrive": od, "color": ClassDef.KEST_COLOR})
 
 
 func _tarn_claw():
@@ -611,6 +627,7 @@ func _claw_whirl_body(target: Node3D, _fraction: float, mult: float) -> void:
 	offset.y = 0.0
 	var radius: float = clampf(offset.length(), WHIRL_RADIUS_MIN, WHIRL_RADIUS_MAX)
 	var start_angle: float = atan2(offset.z, offset.x) if offset.length() > 0.01 else 0.0
+	var od := _overdrive_for(AbilityState.LINE)
 	var whirl := {
 		"enemy": weakref(target),
 		"eid": target.get_instance_id(),
@@ -620,14 +637,14 @@ func _claw_whirl_body(target: Node3D, _fraction: float, mult: float) -> void:
 		"start_angle": start_angle,
 		"elapsed": 0.0,
 		"duration": WHIRL_DURATION,
-		"damage": WHIRL_BOWL_DAMAGE * mult * combat._damage_mod(Weapons.CLAW_SWEEP),
+		"damage": WHIRL_BOWL_DAMAGE * mult * od * combat._damage_mod(Weapons.CLAW_SWEEP),
 		"struck": {target.get_instance_id(): true},
 		"bowled": 0,
 		"color": ClassDef.TARN_COLOR,
 	}
 	_whirls.append(whirl)
 	combat.effects.arc(centre + Vector3.UP * 0.5, target.global_position + Vector3.UP * 0.5, ClassDef.TARN_COLOR)
-	_record("claw_whirl", {"whirled": true, "arc_deg": 180.0, "radius": radius, "color": ClassDef.TARN_COLOR})
+	_record("claw_whirl", {"whirled": true, "arc_deg": 180.0, "radius": radius, "overdrive": od, "color": ClassDef.TARN_COLOR})
 
 
 func _step_whirls(delta: float, enemies: Array) -> void:
@@ -672,13 +689,14 @@ func on_ledger_cast(point: Vector3, damage: float, _shot_desc: Dictionary) -> vo
 	var mut: String = String(ctx.player.abilities.cap(AbilityState.WEAPON, "mutation", ""))
 	if not tape_echo_follows("weapon", mut):
 		return
+	var od := _overdrive_for(AbilityState.WEAPON)
 	_tape_echoes.append({
 		"point": point,
-		"damage": damage * TAPE_ECHO_MULT,
+		"damage": damage * TAPE_ECHO_MULT * od,
 		"left": TAPE_ECHO_DELAY,
 		"color": ClassDef.TALLY_COLOR,
 	})
-	_record("ledger_echo", {"point": point, "delay": TAPE_ECHO_DELAY, "source": "item_proc", "color": ClassDef.TALLY_COLOR})
+	_record("ledger_echo", {"point": point, "delay": TAPE_ECHO_DELAY, "overdrive": od, "source": "item_proc", "color": ClassDef.TALLY_COLOR})
 
 
 func _step_tape_echoes(delta: float) -> void:
