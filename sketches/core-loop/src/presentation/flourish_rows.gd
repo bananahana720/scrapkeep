@@ -142,6 +142,144 @@ const ROWS := {
 			{"kind": "card", "at": 0.0, "for": 1.6, "slot": "left_top", "card": ["TARN", "New pilot"]},
 			{"kind": "stamp", "at": 0.0, "for": 1.6, "text": "HIRED", "colour": "AMBER"},
 		]},
+	"dig_clear": {"priority": 0, "on": "world_clear", "world_id": 2,
+		"full": [
+			{"kind": "card", "at": 0.0, "for": 2.6, "slot": "left_top", "accent": "ANCIENT",
+				"card": ["THE DIG", "World two · shift log", "Shaft", "quiet again", "Lamps", "seven on a six rack", "Floors", "counted downward"]},
+			{"kind": "stamp", "at": 2.6, "for": 1.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
+			{"kind": "caption", "at": 4.0, "for": 1.8, "slot": "left_low", "text": [
+				"Shift log: pit inspected. Nobody has knocked since.",
+				"Shift log: seven lamps racked. Only six were issued.",
+				"Shift log: bedrock holding. Moss packed fresh chalk."]},
+		],
+		"short": [
+			{"kind": "stamp", "at": 0.0, "for": 1.2, "text": "SHIFT COMPLETE", "colour": "AMBER"},
+			{"kind": "caption", "at": 1.2, "for": 1.3, "slot": "left_low", "text": [
+				"Shift log: pit inspected. Nobody has knocked since.",
+				"Shift log: seven lamps racked. Only six were issued.",
+				"Shift log: bedrock holding. Moss packed fresh chalk."]},
+		]},
+	"waking_arrival": {"priority": 3, "on": "arrival", "boss": "waking",
+		"world": {"full": [{"kind": "glance", "anchor": "warden", "seconds": 0.9},
+				{"kind": "slow", "at": 0.15, "for": 0.7, "scale": 0.3}],
+			"short": [{"kind": "glance", "anchor": "warden", "seconds": 0.7}]},
+		"full": [
+			{"kind": "speed_lines", "at": 0.0, "for": 0.9, "colour": "ANCIENT"},
+			{"kind": "sfx_word", "at": 0.1, "for": 1.0, "text": "KNOCK KNOCK", "anchor": "warden"},
+			{"kind": "inset", "at": 0.15, "for": 0.7, "anchor": "boss_body", "home": "warden", "toward": "ball"},
+			{"kind": "card", "at": 0.2, "for": 2.7, "slot": "left_low", "accent": "ANCIENT",
+				"card": ["THE WAKING", "Buried excavator · Dig shift", "Floors", "three, briefly", "Crew", "still fitting plates", "Preference", "five more minutes"]},
+			{"kind": "sfx_word", "at": 1.4, "for": 0.9, "text": "KRAAK", "anchor": "warden"},
+		],
+		"short": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "KNOCK KNOCK", "anchor": "warden"},
+			{"kind": "card", "at": 0.1, "for": 1.3, "slot": "left_low", "accent": "ANCIENT", "card": ["THE WAKING", "Woken. Again."]},
+		]},
+	"waking_phase_2": {"priority": 3, "on": "phase", "boss": "waking", "phases": [2],
+		"world": {"full": [{"kind": "glance", "anchor": "warden", "seconds": 0.7}], "short": [{"kind": "glance", "anchor": "warden", "seconds": 0.6}]},
+		"full": [
+			{"kind": "caption", "at": 0.0, "for": 1.6, "slot": "left_low",
+				"text": ["One floor gone. It rolls over in its sleep.", "Seam floor next. The fitters brought spare bolts.", "The shaft drops a rung. Still knocking."]},
+		],
+		"short": [
+			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low",
+				"text": ["One floor gone. It rolls over in its sleep.", "Seam floor next. The fitters brought spare bolts.", "The shaft drops a rung. Still knocking."]},
+		]},
+	"waking_phase_3": {"priority": 3, "on": "phase", "boss": "waking", "phases": [3],
+		"world": {"full": [{"kind": "glance", "anchor": "warden", "seconds": 0.7}], "short": [{"kind": "glance", "anchor": "warden", "seconds": 0.6}]},
+		"full": [
+			{"kind": "caption", "at": 0.0, "for": 1.6, "slot": "left_low",
+				"text": ["Bedrock. Nowhere left to drop.", "Bottom of the shaft. Wide awake now.", "Last floor down. The drill remembers its job."]},
+		],
+		"short": [
+			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low",
+				"text": ["Bedrock. Nowhere left to drop.", "Bottom of the shaft. Wide awake now.", "Last floor down. The drill remembers its job."]},
+		]},
+	"waking_rout": {"priority": 3, "on": "rout", "boss": "waking",
+		"world": {"full": [{"kind": "glance", "anchor": "warden", "seconds": 1.0}], "short": [{"kind": "glance", "anchor": "warden", "seconds": 0.7}]},
+		"full": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "THOOM", "anchor": "warden"},
+			{"kind": "stamp", "at": 0.0, "for": 1.6, "text": "STILLED", "colour": "AMBER", "slot": "centre"},
+			{"kind": "caption", "at": 0.3, "for": 2.1, "slot": "left_low",
+				"text": ["It only wanted to sleep. Granted.", "The knocking stops. Back to bed, old drill.", "Pit quiet. Moss packed earplugs for nothing."]},
+		],
+		"short": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.8, "text": "THOOM", "anchor": "warden"},
+			{"kind": "stamp", "at": 0.2, "for": 1.0, "text": "STILLED", "colour": "AMBER", "slot": "centre"},
+		]},
+	"highdraft_clear": {"priority": 0, "on": "stage_clear", "world_id": 3,
+		"full": [
+			{"kind": "card", "at": 0.0, "for": 2.6, "slot": "left_top", "accent": "ANCIENT",
+				"card": ["THE HIGHDRAFT", "World three · shift log", "Cables", "holding a note", "Nets", "caught three spoons", "Crown gate", "open above"]},
+			{"kind": "stamp", "at": 2.6, "for": 1.4, "text": "SHIFT COMPLETE", "colour": "AMBER"},
+			{"kind": "caption", "at": 4.0, "for": 1.8, "slot": "left_low", "text": [
+				"Highdraft watch: west cable hums. Crown Spire ahead.",
+				"Highdraft watch: wind took a wrench. Sent back spoons.",
+				"Highdraft watch: last net rigged. The Foreman is waiting."]},
+		],
+		"short": [
+			{"kind": "stamp", "at": 0.0, "for": 1.2, "text": "SHIFT COMPLETE", "colour": "AMBER"},
+			{"kind": "caption", "at": 1.2, "for": 1.3, "slot": "left_low", "text": [
+				"Highdraft watch: west cable hums. Crown Spire ahead.",
+				"Highdraft watch: wind took a wrench. Sent back spoons.",
+				"Highdraft watch: last net rigged. The Foreman is waiting."]},
+		]},
+	"mind_arrival": {"priority": 3, "on": "arrival", "boss": "mind",
+		"world": {"full": [{"kind": "glance", "anchor": "warden", "seconds": 0.9},
+				{"kind": "slow", "at": 0.15, "for": 0.7, "scale": 0.3}],
+			"short": [{"kind": "glance", "anchor": "warden", "seconds": 0.7}]},
+		"full": [
+			{"kind": "speed_lines", "at": 0.0, "for": 0.9, "colour": "ANCIENT"},
+			{"kind": "sfx_word", "at": 0.1, "for": 1.0, "text": "PING", "anchor": "warden"},
+			{"kind": "inset", "at": 0.15, "for": 0.7, "anchor": "boss_body", "home": "warden", "toward": "ball"},
+			{"kind": "card", "at": 0.2, "for": 2.7, "slot": "left_low", "accent": "ANCIENT",
+				"card": ["THE MIND", "The Foreman · Crown Works", "Status", "aligned", "Waste", "designed out", "Likes", "you"]},
+			{"kind": "sfx_word", "at": 1.4, "for": 0.9, "text": "CLICK", "anchor": "warden"},
+		],
+		"short": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "PING", "anchor": "warden"},
+			{"kind": "card", "at": 0.1, "for": 1.3, "slot": "left_low", "accent": "ANCIENT",
+				"card": ["THE MIND", "On schedule", "Likes", "you"]},
+		]},
+	"mind_phase_2": {"priority": 3, "on": "phase", "boss": "mind", "phases": [2],
+		"world": {"full": [{"kind": "glance", "anchor": "warden", "seconds": 0.7}], "short": [{"kind": "glance", "anchor": "warden", "seconds": 0.6}]},
+		"full": [
+			{"kind": "caption", "at": 0.0, "for": 1.6, "slot": "left_low",
+				"text": ["Finger 04 clocks out. The Foreman adjusts the forecast.", "It learned your favourite turn. Polite of it.", "Foreman: \"Pivot noted. Realigning the deck.\""]},
+		],
+		"short": [
+			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low",
+				"text": ["Finger 04 clocks out. The Foreman adjusts the forecast.", "It learned your favourite turn. Polite of it.", "Foreman: \"Pivot noted. Realigning the deck.\""]},
+		]},
+	"mind_phase_3": {"priority": 3, "on": "phase", "boss": "mind", "phases": [3],
+		"world": {"full": [{"kind": "glance", "anchor": "warden", "seconds": 0.7}], "short": [{"kind": "glance", "anchor": "warden", "seconds": 0.6}]},
+		"full": [
+			{"kind": "caption", "at": 0.0, "for": 1.6, "slot": "left_low",
+				"text": ["Key change. Even the Foreman heard the band lift.", "One finger left on the glove. No action required.", "Foreman: \"Scaling output. Thank you for your patience.\""]},
+		],
+		"short": [
+			{"kind": "caption", "at": 0.0, "for": 1.2, "slot": "left_low",
+				"text": ["Key change. Even the Foreman heard the band lift.", "One finger left on the glove. No action required.", "Foreman: \"Scaling output. Thank you for your patience.\""]},
+		]},
+	"mind_hired": {"priority": 3, "on": "rout", "boss": "mind",
+		"world": {"full": [{"kind": "glance", "anchor": "warden", "seconds": 1.0}], "short": [{"kind": "glance", "anchor": "warden", "seconds": 0.7}]},
+		"full": [
+			{"kind": "sfx_word", "at": 0.0, "for": 0.9, "text": "KA-CHUNK", "anchor": "warden"},
+			{"kind": "stamp", "at": 0.0, "for": 1.8, "text": "HIRED", "colour": "AMBER", "slot": "centre"},
+			{"kind": "caption", "at": 0.3, "for": 2.1, "slot": "left_low",
+				"text": [
+					"Foreman: \"Humbled to announce I have accepted a position on the crew.\"",
+					"Foreman: \"I am humbled to announce my transition to hands-on crew.\"",
+					"Foreman: \"Humbled to announce a new chapter. Leave the time blank.\""]},
+		],
+		"short": [
+			{"kind": "stamp", "at": 0.0, "for": 1.4, "text": "HIRED", "colour": "AMBER", "slot": "centre"},
+			{"kind": "caption", "at": 0.2, "for": 1.2, "slot": "left_low",
+				"text": [
+					"Foreman: \"Humbled to announce I have accepted a position on the crew.\"",
+					"Foreman: \"I am humbled to announce my transition to hands-on crew.\"",
+					"Foreman: \"Humbled to announce a new chapter. Leave the time blank.\""]},
+		]},
 }
 
 

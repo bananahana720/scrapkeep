@@ -268,6 +268,7 @@ func _finish(cut: String, next := true) -> void:
 			tween.kill()
 	_tweens.clear()
 	_lines.set("mode", "")
+	_lines.set("tint", Color.WHITE)
 	var done := id
 	id = ""
 	_anchors = {}
@@ -318,6 +319,7 @@ func _drop(entry: Dictionary) -> void:
 		_room_changed()
 	if String(entry.piece.kind) == "speed_lines":
 		_lines.set("mode", "")
+		_lines.set("tint", Color.WHITE)
 	var node = entry.node
 	if is_instance_valid(node) and node is Node:
 		node.queue_free()
@@ -349,7 +351,7 @@ func _scale() -> float:
 func _build(piece: Dictionary) -> Node:
 	match String(piece.kind):
 		"card":
-			return _card(piece.card, String(piece.get("slot", "left_top")))
+			return _card(piece.card, String(piece.get("slot", "left_top")), String(piece.get("accent", "")))
 		"stamp":
 			return _stamp(String(piece.text), _colour(String(piece.get("colour", "HAZARD"))), String(piece.get("slot", "column")))
 		"caption":
@@ -372,6 +374,8 @@ func _build(piece: Dictionary) -> Node:
 			if reduced_motion:
 				return null
 			_lines.set("mode", "speed")
+			var line_colour: Color = _colour(String(piece.get("colour", ""))) if piece.has("colour") else Color.WHITE
+			_lines.set("tint", line_colour)
 			var marker := Control.new()
 			_overlay.add_child(marker)
 			return marker
@@ -426,13 +430,26 @@ func _panel(fill: Color, border: int) -> PanelContainer:
 	return panel
 
 
-func _card(card: Array, slot: String) -> Control:
+func _card(card: Array, slot: String, accent := "") -> Control:
 	var s := _scale()
 	var panel := _panel(PAPER, 4)
 	panel.name = "FlourishCard"
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", int(3 * s))
-	panel.add_child(column)
+	if accent != "":
+		var frame := HBoxContainer.new()
+		frame.add_theme_constant_override("separation", int(10 * s))
+		frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var bar := ColorRect.new()
+		bar.color = _colour(accent)
+		bar.custom_minimum_size = Vector2(maxf(4.0, 6.0 * s), 0.0)
+		bar.size_flags_vertical = Control.SIZE_EXPAND_FILL
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		frame.add_child(bar)
+		frame.add_child(column)
+		panel.add_child(frame)
+	else:
+		panel.add_child(column)
 	column.add_child(_label(String(card[0]), int(40 * s), INK))
 	if card.size() > 1:
 		column.add_child(_label(String(card[1]).to_upper(), int(16 * s), Color("4a4250")))
@@ -511,8 +528,9 @@ func _inset(piece: Dictionary) -> Control:
 func _seat(node: Control, at: Vector2) -> void:
 	node.reset_size()
 	var screen := _screen()
-	var floor_y := ScreenRegions.rect("prompts", screen).position.y - 8.0 * _scale()
-	var ceiling := ScreenRegions.rect("toasts", screen).end.y
+	var tilt_y := node.size.x * absf(sin(deg_to_rad(node.rotation_degrees))) + 2.0
+	var floor_y := ScreenRegions.rect("prompts", screen).position.y - 8.0 * _scale() - tilt_y
+	var ceiling := ScreenRegions.rect("toasts", screen).end.y + tilt_y
 	node.position = Vector2(at.x, maxf(ceiling, minf(at.y, floor_y - node.size.y)))
 
 
@@ -636,6 +654,7 @@ func _pop(node: Control, from: float) -> void:
 class Lines extends Control:
 	var player
 	var mode := ""
+	var tint := Color.WHITE
 
 	func _draw() -> void:
 		if mode == "" or player == null:
@@ -643,7 +662,10 @@ class Lines extends Control:
 		var centre := size * 0.5
 		var reach := size.length()
 		var clock: float = player.clock
+		var primary := Color(tint.r, tint.g, tint.b, 0.28)
+		var bright := Color(1.0, 1.0, 1.0, 0.34)
 		for i in 48:
 			var angle := TAU * i / 48.0 + clock * 0.4
 			var inner := centre + Vector2.from_angle(angle) * size.y * (0.46 + 0.04 * sin(i * 7.0 + clock * 9.0))
-			draw_line(inner, centre + Vector2.from_angle(angle) * reach, Color(1.0, 1.0, 1.0, 0.28), 3.0)
+			var width := 4.5 if i % 4 == 0 else 2.5
+			draw_line(inner, centre + Vector2.from_angle(angle) * reach, bright if i % 4 == 0 else primary, width)

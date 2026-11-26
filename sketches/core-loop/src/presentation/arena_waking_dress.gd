@@ -47,22 +47,27 @@ void fragment() {
 	float grain = texture(tex_grain, p * 0.4).r;
 	// Quarter-pipe vertical rib plates (24 orthogonal sectors around the 36 m shaft rim, y = 1.0..7.0).
 	float sector = mod(angle + 3.14159265, 6.28318530 / 24.0) / (6.28318530 / 24.0);
-	float rib_seam = 1.0 - smoothstep(0.035, 0.07, min(sector, 1.0 - sector));
-	float horiz_seam = 1.0 - smoothstep(0.05, 0.11, abs(fract(local_at.y * 0.5) - 0.5));
+	float rib_edge = min(sector, 1.0 - sector);
+	float rib_seam = 1.0 - smoothstep(0.035, 0.075, rib_edge);
+	float rib_bevel = smoothstep(0.07, 0.14, rib_edge) * (1.0 - smoothstep(0.14, 0.24, rib_edge));
+	float horiz_seam = 1.0 - smoothstep(0.045, 0.10, abs(fract(local_at.y * 0.5) - 0.5));
 	float bank_mask = smoothstep(1.15, 2.05, local_at.y);
-	float coping_band = smoothstep(5.85, 6.25, local_at.y);
+	float datum_band = smoothstep(1.25, 1.55, local_at.y) * (1.0 - smoothstep(1.75, 2.15, local_at.y));
+	float coping_band = smoothstep(5.80, 6.22, local_at.y);
 	// Orthogonal coping bays: charcoal plate, bone lip, central amber marker — never 45-deg hazard stripes.
-	float amber_bay = step(0.32, sector) * step(sector, 0.68);
-	float bone_bay = step(0.14, sector) * step(sector, 0.86) * (1.0 - amber_bay);
+	float amber_bay = step(0.30, sector) * step(sector, 0.70);
+	float bone_bay = step(0.12, sector) * step(sector, 0.88) * (1.0 - amber_bay);
 	vec3 floor_col = base_color.rgb * (0.78 + tone * 0.18 + grain * 0.08);
-	vec3 cast_wall = mix(seam_color.rgb * 1.35, petrol_color.rgb * 0.88, 0.42) * (0.82 + tone * 0.16 + grain * 0.08);
-	cast_wall = mix(cast_wall, seam_color.rgb * 0.60, max(rib_seam * 0.78, horiz_seam * 0.56));
-	vec3 coping_col = mix(seam_color.rgb * 1.05, bone_color.rgb * 0.88, bone_bay);
-	coping_col = mix(coping_col, amber_color.rgb * 0.96, amber_bay);
+	vec3 cast_wall = mix(seam_color.rgb * 1.12, petrol_color.rgb * 0.94, 0.48) * (0.78 + tone * 0.18 + grain * 0.08);
+	cast_wall += bone_color.rgb * rib_bevel * 0.10;
+	cast_wall = mix(cast_wall, seam_color.rgb * 0.42, max(rib_seam * 0.86, horiz_seam * 0.64));
+	cast_wall = mix(cast_wall, seam_color.rgb * 0.65, datum_band * 0.55);
+	vec3 coping_col = mix(seam_color.rgb * 0.85, bone_color.rgb * 0.94, bone_bay);
+	coping_col = mix(coping_col, amber_color.rgb * 1.02, amber_bay);
 	vec3 bank_col = mix(cast_wall, coping_col, coping_band);
 	ALBEDO = mix(floor_col, bank_col, bank_mask);
-	ROUGHNESS = mix(0.92, 0.72, bank_mask);
-	METALLIC = mix(0.0, 0.18, bank_mask);
+	ROUGHNESS = mix(0.92, 0.64, bank_mask);
+	METALLIC = mix(0.0, 0.28, bank_mask);
 }
 """
 const ENV_PROPERTIES := ["background_mode", "background_color", "ambient_light_source", "ambient_light_color", "ambient_light_energy", "reflected_light_source", "fog_enabled", "fog_density", "fog_light_color", "fog_light_energy", "fog_sun_scatter"]
@@ -71,9 +76,9 @@ const WALL_RADIUS := 60.0
 const WALL_SECTORS := 16
 const LIGHTS := {
 	"rim_pool": {"energy": 1.0, "range": 34.0, "radius": 28.0, "height": 6.0},
-	"lamp_pool": {"energy": 1.2, "range": 24.0},
-	"reactor": {"energy": 3.0, "range": 48.0},
-	"core_key": {"energy": 2.8, "range": 55.0, "angle": 55.0},
+	"lamp_pool": {"energy": 1.2, "range": 26.0},
+	"reactor": {"energy": 3.1, "range": 52.0},
+	"core_key": {"energy": 2.9, "range": 58.0, "angle": 55.0},
 	"core_key_low": {"angle": 30.0},
 }
 const FLOOR_PLATE_PITCH := 4.0
@@ -151,19 +156,19 @@ func _prepare() -> bool:
 		var material := StandardMaterial3D.new()
 		material.resource_name = slot
 		material.vertex_color_use_as_albedo = slot != "ancient_light"
-		material.roughness = 0.82 if slot == "steel" else (0.66 if slot == "ancient_enamel" else 0.87)
-		material.metallic = 0.22 if slot == "steel" else (0.16 if slot == "ancient_enamel" else 0.0)
+		material.roughness = 0.68 if slot == "steel" else (0.56 if slot == "ancient_enamel" else 0.87)
+		material.metallic = 0.34 if slot == "steel" else (0.24 if slot == "ancient_enamel" else 0.0)
 		if slot == "glass":
-			material.roughness = 0.38
+			material.roughness = 0.32
 			material.emission_enabled = true
 			material.emission = DigScenery.LAMP_LIGHT
-			material.emission_energy_multiplier = 0.25
+			material.emission_energy_multiplier = 0.95
 		elif slot == "ancient_light":
 			material.albedo_color = Palette.ANCIENT
-			material.roughness = 0.30
+			material.roughness = 0.28
 			material.emission_enabled = true
 			material.emission = Palette.ANCIENT
-			material.emission_energy_multiplier = 2.2
+			material.emission_energy_multiplier = 3.0
 		_materials[slot] = material
 	for file in STONE_FILES:
 		if not _load_parts(stone_dir + file):
@@ -256,7 +261,7 @@ func _build() -> void:
 		_reactor_light.name = "ReactorBounce"
 		_light_pool.add_child(_reactor_light)
 	_reactor_light.reparent(self, false)
-	_reactor_light.light_color = Color("91b4ce")
+	_reactor_light.light_color = Color("82b8d8")
 	_reactor_light.light_energy = LIGHTS.reactor.energy
 	_reactor_light.omni_range = LIGHTS.reactor.range
 	_reactor_light.shadow_enabled = false
@@ -270,6 +275,7 @@ func _build() -> void:
 	_core_key.light_energy = LIGHTS.core_key.energy
 	_core_key.spot_range = LIGHTS.core_key.range
 	_core_key.spot_angle = LIGHTS.core_key.angle
+	_core_key.light_specular = 1.35
 	_core_key.shadow_enabled = true
 	_follow_reactor()
 	var lights := []
@@ -395,6 +401,12 @@ func _works() -> void:
 			_put(batches, "strut_bent.glb" if line % 3 == 0 else "strut_tall.glb", Transform3D(basis.scaled(Vector3.ONE * 1.4), foot))
 			if line % 2 == 0:
 				_put(batches, "shell_saddle.glb" if tier % 2 == 0 else "shell_crescent.glb", Transform3D(basis.scaled(Vector3.ONE * 1.3), foot + Vector3.DOWN * 2.0))
+	for arch in 8:
+		var angle := arch * TAU / 8.0
+		var basis := Basis(Vector3.UP, angle)
+		var crown := Vector3(sin(angle) * (WALL_RADIUS - 4.2), 20.0, cos(angle) * (WALL_RADIUS - 4.2))
+		_put(batches, "strut_tall.glb", Transform3D(basis.scaled(Vector3(1.4, 1.5, 1.4)), crown))
+		_put(batches, "shell_crescent.glb", Transform3D(basis.scaled(Vector3.ONE * 1.3), crown + Vector3.UP * 2.5))
 	_flush(works, batches)
 
 
@@ -441,8 +453,9 @@ void fragment() {
 	vec2 d = UV * 2.0 - 1.0;
 	float r = length(d);
 	float core = smoothstep(1.0, 0.08, r);
-	ALBEDO = glow_color.rgb * (0.55 + 0.65 * core);
-	ALPHA = core * core * 0.42;
+	float ring = smoothstep(0.68, 0.52, r) * smoothstep(0.26, 0.42, r);
+	ALBEDO = glow_color.rgb * (0.58 + 0.72 * core + 0.35 * ring);
+	ALPHA = clamp(core * core * 0.44 + ring * 0.14, 0.0, 0.52);
 }
 """
 	var mat := ShaderMaterial.new()

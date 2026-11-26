@@ -18,6 +18,8 @@ var ctx
 var player
 var _played_this_run := {}
 var _earned_in_fight := {}
+var _world_beaten := {}
+var _clear_due := ""
 var _chain: Array[String] = []
 var _victory_ids := {}
 var _chain_from := ""
@@ -35,9 +37,16 @@ func setup(ctx_ref, player_ref) -> void:
 	var events = ctx.events
 	events.run_started.connect(func(_class_id: String):
 		_played_this_run.clear()
+		_world_beaten.clear()
+		_drop_clear()
 		_chain.clear())
 	events.boss_arena_entered.connect(_on_arena_entered)
 	events.boss_phase_changed.connect(_on_phase)
+	events.boss_defeated.connect(_on_boss_defeated)
+	events.world_entered.connect(_on_world_entered)
+	events.beacon_unsealed.connect(_on_beacon_unsealed)
+	events.stage_entered.connect(_on_stage_entered)
+	events.warden_engaged.connect(_on_warden_engaged)
 	events.achievement_earned.connect(func(id: String): _earned_in_fight[id] = true)
 	events.flow_changed.connect(_on_flow_changed)
 	if player != null and player.has_signal("finished"):
@@ -112,8 +121,18 @@ static func matching(on: String, boss: String) -> Array[String]:
 	return out
 
 
+static func matching_world(on: String, world: int) -> Array[String]:
+	var out: Array[String] = []
+	for id in FlourishRows.ROWS:
+		var row: Dictionary = FlourishRows.ROWS[id]
+		if String(row.get("on", "")) == on and int(row.get("world_id", 0)) == world:
+			out.append(String(id))
+	return out
+
+
 static func world_beats(id: String, short: bool) -> Array:
-	return FlourishRows.row(id).get("world", {}).get("short" if short else "full", [])
+	var world = FlourishRows.row(id).get("world", {})
+	return world.get("short" if short else "full", []) if world is Dictionary else []
 
 
 func length_of(id: String) -> float:
@@ -142,15 +161,104 @@ func _anchors() -> Dictionary:
 	var out := {}
 	var boss = ctx.get("boss")
 	if boss != null:
-		for key in ["ship", "scooter", "arena"]:
+		for key in ["ship", "scooter", "arena", "warden", "pad"]:
 			var node = boss.get(key)
 			if node is Node3D and is_instance_valid(node):
 				out[key] = node
 		if out.has("ship"):
 			out["ship_body"] = out.ship.model if out.ship.get("model") is Node3D else out.ship
+		if out.has("warden") and not out.has("boss_body"):
+			out["boss_body"] = out.warden
+		if out.has("pad") and not out.has("arena"):
+			out["arena"] = out.pad
 	if ctx.player != null and ctx.player.has_method("body"):
 		out["ball"] = ctx.player.body()
 	return out
+
+
+func _on_boss_defeated() -> void:
+	if ctx.run != null and ctx.stages != null:
+		_world_beaten[ctx.stages.world_of(int(ctx.run.stage))] = true
+
+
+func _on_world_entered(world: int) -> void:
+	var cleared_world := world - 1
+	if not _world_beaten.get(cleared_world, false):
+		return
+	var rows := matching_world("world_clear", cleared_world)
+	if rows.is_empty():
+		return
+	_world_beaten.erase(cleared_world)
+	var id := rows[0]
+	if _played_this_run.has(id):
+		return
+	_drop_clear()
+	_clear_due = id
+	var busy = ctx.get("screen_busy")
+	if busy != null:
+		busy.request(_clear_due, true)
+	set_process(true)
+	_ask_clear()
+
+
+func _on_beacon_unsealed(stage: int) -> void:
+	if ctx.stages == null or not ctx.stages.is_world_last(stage):
+		return
+	var world: int = ctx.stages.world_of(stage)
+	for id in matching_world("stage_clear", world):
+		if _played_this_run.has(id):
+			continue
+		_played_this_run[id] = true
+		_play(id)
+
+
+func _on_stage_entered(_stage: int, retry: bool) -> void:
+	if retry:
+		_drop_clear()
+
+
+func _on_warden_engaged(_stage: int) -> void:
+	if _clear_due != "":
+		_drop_clear()
+	if player != null and player.playing:
+		var on := String(FlourishRows.row(player.id).get("on", ""))
+		if on in ["world_clear", "stage_clear"]:
+			player.stop_all()
+
+
+func _ask_clear() -> void:
+	if _clear_due == "":
+		return
+	var hud = ctx.root.get("hud") if ctx.root != null else null
+	var busy = ctx.get("screen_busy")
+	if hud != null and hud.launch_card.showing():
+		if busy != null:
+			busy.ready(_clear_due)
+		return
+	if busy != null and not busy.may_show(_clear_due, 0.0):
+		return
+	var id := _clear_due
+	_clear_due = ""
+	if _slow.is_empty():
+		set_process(false)
+	_played_this_run[id] = true
+	if player == null or not player.play(id, _seed(), _anchors()):
+		if busy != null:
+			busy.done(id)
+	else:
+		_playing[id] = {"held": 0.0, "full": not _short(id), "busy": true}
+
+
+func _drop_clear() -> void:
+	if _clear_due == "":
+		return
+	var id := _clear_due
+	_clear_due = ""
+	var busy = ctx.get("screen_busy") if ctx != null else null
+	if busy != null:
+		busy.done(id)
+	if _slow.is_empty():
+		set_process(false)
 
 
 func _on_finished(id: String, skipped: bool) -> void:
@@ -158,6 +266,8 @@ func _on_finished(id: String, skipped: bool) -> void:
 		return
 	var info: Dictionary = _playing.get(id, {})
 	_playing.erase(id)
+	if bool(info.get("busy", false)) and ctx.get("screen_busy") != null:
+		ctx.screen_busy.done(id)
 	if String(_slow.get("id", "")) == id:
 		_end_slow()
 	var held := float(info.get("held", 0.0))
@@ -183,9 +293,13 @@ func _on_finished(id: String, skipped: bool) -> void:
 
 func _on_flow_changed(state: String) -> void:
 	if state in ["title", "class_select", "summary", "dead"]:
+		_drop_clear()
 		_chain.clear()
 		_victory_ids.clear()
 		_chain_from = ""
+		for active_id in _playing.keys():
+			if bool(_playing[active_id].get("busy", false)) and ctx.get("screen_busy") != null:
+				ctx.screen_busy.done(active_id)
 		_playing.clear()
 		_end_slow()
 		for node in _world:
@@ -240,6 +354,12 @@ func _slow_for(id: String, at: float, seconds: float, scale: float) -> void:
 
 
 func _process(_delta: float) -> void:
+	if _clear_due != "":
+		_ask_clear()
+	if _slow.is_empty():
+		if _clear_due == "":
+			set_process(false)
+		return
 	if not player.has(String(_slow.id)):
 		_end_slow()
 		return
@@ -251,7 +371,8 @@ func _end_slow() -> void:
 	if _slow.is_empty():
 		return
 	_slow = {}
-	set_process(false)
+	if _clear_due == "":
+		set_process(false)
 	ctx.root.slow_motion(1.0)
 
 
