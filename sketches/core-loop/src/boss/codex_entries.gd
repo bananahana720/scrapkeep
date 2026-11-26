@@ -114,6 +114,36 @@ const MIND := [
 ]
 
 
+const FLAVOUR := {
+	CRANE_DROP: {"speaker": "tally", "text": "Logged under unsolicited scrap returns. Brindle still invoiced the drop."},
+	WALL_BAIT: {"speaker": "sable", "text": "Stadium-sized furnace, zero steering lock. Classic Fleet procurement."},
+	QUENCH_RIDE: {"speaker": "flume_crew", "text": "Poured river onto slag and rolled across. Management called it unscheduled paving."},
+	SCOOTER_STOMP: {"speaker": "moss", "text": "Two paws tall, furious clipboard, still flattened from above."},
+	WAKING_FLOOR_DROP: {"speaker": "dig_crew", "text": "Floor left the room before we did. Nobody signed the slip."},
+	WAKING_BREACH_SLAM: {"speaker": "kest", "text": "Followed the ceiling down and landed first. Zero hesitation, for once."},
+	WAKING_FLOOR_CHAIN: {"speaker": "rivet", "text": "Two floors broken in a row. Good acoustics all the way down."},
+	WAKING_FINAL_FLOOR: {"speaker": "moss", "text": "Bottom of the shaft, quiet at last. I packed a fresh lamp."},
+	WAKING_LIP_DROP: {"speaker": "sable", "text": "Carved the bank, vaulted the rim, dropped straight onto a jammed drill."},
+	WAKING_WALL_HOME: {"speaker": "caisson_crew", "text": "Floor tried everything. Wall kept its manners the whole shift."},
+	MIND_LANE: {"speaker": "mind", "text": "Your sidestep deviated from our forecast. We are grateful for the data."},
+	MIND_SPLIT_LANE: {"speaker": "patch", "text": "Two tidy lanes and a gap wide enough for a whole possum."},
+	MIND_RUSH: {"speaker": "tarn", "text": "Stepped inside the circle and said excuse me. Still counted."},
+	MIND_PLATE: {"speaker": "cannon", "text": "It braced for yesterday's habit. Switching tools mid-bar ruins its spreadsheet."},
+}
+
+
+static func flavour(id: String) -> Dictionary:
+	return FLAVOUR.get(id, {})
+
+
+static func flavour_text(id: String) -> String:
+	return String(FLAVOUR.get(id, {}).get("text", ""))
+
+
+static func flavour_ids() -> Array:
+	return FLAVOUR.keys()
+
+
 static func for_boss(id: String) -> Array:
 	match id:
 		"brindle":

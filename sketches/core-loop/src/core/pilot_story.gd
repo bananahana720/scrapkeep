@@ -774,6 +774,7 @@ const PATCH_TRAIL := {
 		"call": [
 			"Cut its line last Tuesday. Check the bricked wall by powerhouse.",
 			"Crane 14 finally sat down. Warm kettle behind the west rim.",
+			"Snipped that leash with kitchen shears. Brick seam near powerhouse.",
 		],
 	},
 	"patch.wire.w1": {
@@ -790,6 +791,7 @@ const PATCH_TRAIL := {
 		"call": [
 			"Not in. Kettle is yours if you close the bricks behind you.",
 			"Found the room already. Next shift I move the bench again.",
+			"Not dead, just compiling. Mind the tea and the jumper leads.",
 		],
 	},
 	"patch.rogue.w2": {
@@ -802,6 +804,7 @@ const PATCH_TRAIL := {
 		"call": [
 			"Skip 31 off its loop. Old switchboard waits by barge apron.",
 			"Good hit on 31. Loose wire room tucked near east gallery.",
+			"Shimmed its governor with cardboard and spite. Check the east gallery.",
 		],
 	},
 	"patch.wire.w2": {
@@ -818,6 +821,7 @@ const PATCH_TRAIL := {
 		"call": [
 			"Tell Tally I left her clips cleaner than I found them.",
 			"Nobody home down here. Check the third cut line up high.",
+			"Borrowed two relays and fixed the hum. Do not tell Moss.",
 		],
 	},
 	"patch.rogue.w3": {
@@ -830,6 +834,7 @@ const PATCH_TRAIL := {
 		"call": [
 			"Tender 7 stopped hauling. West fin hut has my notes.",
 			"Cut that spool loose myself. Check signal butte before the storm.",
+			"Voided Tender 7's service plan. My wok dish faces the west fin.",
 		],
 	},
 	"patch.wire.w3": {
@@ -847,6 +852,7 @@ const PATCH_TRAIL := {
 		"call": [
 			"Two B-sides on the bench. Leave the kettle on at camp.",
 			"All three wires found. Do not put me on the roster.",
+			"Wok dish gets better signal than the Fleet. Keep the reels.",
 		],
 	},
 }
@@ -854,93 +860,114 @@ const PATCH_TRAIL := {
 const FOREMAN_AXES := {
 	"chronic_gambler": {
 		"stage_memos": [
-			"Variance appetite noted. Insurance declined.",
-			"High-risk preference logged. Proceeding smoothly.",
+			"Variance appetite noted. Insurance sunsetted.",
+			"High-risk alignment logged. Grateful for your metrics.",
+			"Unscheduled gambling scaled. Proceeding smoothly.",
 		],
 		"loss_memos": [
-			"Unscheduled gamble concluded as projected. Thank you for the data.",
-			"Your appetite for variance has been entered into quarterly risk.",
+			"Unscheduled gamble concluded as projected. Grateful for your risk metrics.",
+			"Sunsetting this variance experiment. Thank you for your bold learnings.",
+			"Your appetite for risk has been entered into quarterly alignment.",
 		],
 		"crown_lines": [
 			"You gambled every shift and arrived anyway. Fascinating variance.",
+			"Unhedged deliverables all the way to summit. Respectfully unaligned.",
 		],
 	},
 	"kindness_regular": {
 		"stage_memos": [
-			"Preferred partner detected. Loyalty fees active.",
-			"Thank you for choosing certainty again.",
+			"Preferred partner detected. Loyalty fees aligned.",
+			"Thank you for choosing synergistic certainty again.",
+			"Frictionless subscriber verified. Metrics appreciated.",
 		],
 		"loss_memos": [
-			"Our kindness kiosks appreciate your repeat business. Next shift scheduled.",
+			"Our kindness kiosks appreciate your repeat synergy. Next shift scheduled.",
+			"Sunsetting this hull for a loyal subscriber. Grateful for your metrics.",
 			"Regular kindness account logged. Replacement hull queued on schedule.",
 		],
 		"crown_lines": [
 			"A valued subscriber at the Crown. We prepared your seat.",
+			"Seamless loyalty across three worlds. Your time card stays blank.",
 		],
 	},
 	"cursed_runner": {
 		"stage_memos": [
 			"Non-standard liabilities carried. Alignment unaffected.",
-			"Cursed terms detected. Audit flags raised.",
+			"Cursed terms detected. Audit synergy active.",
+			"Legacy liabilities onboarded. Grateful for transparency.",
 		],
 		"loss_memos": [
-			"Non-standard contract terms recorded on file. Next shift scheduled.",
-			"Liability entry archived for quarterly review. Replacement hull ready.",
+			"Non-standard contract terms sunsetted cleanly. Grateful for your audit data.",
+			"Liability entry archived for quarterly alignment. Replacement hull ready.",
+			"We appreciate your commitment to carrying unapproved operational risk.",
 		],
 		"crown_lines": [
 			"Carrying curses to the summit is bold. Slightly unaligned.",
+			"Legacy risk stacked to the rafters. Admirably stubborn metrics.",
 		],
 	},
 	"speed_demon": {
 		"stage_memos": [
-			"Excess velocity logged. Brakes recommended.",
-			"Pace exceeds forecast. Adjusting tolerances.",
+			"Excess velocity logged. Right-sizing your brakes.",
+			"Pace exceeds forecast. Alignment recalibrating.",
+			"High-velocity metrics noted. Please slow smoothly.",
 		],
 		"loss_memos": [
-			"Unapproved velocity ended ahead of schedule. Thank you for hurrying.",
-			"High-speed shift closed ahead of forecast. Replacement hull queued.",
+			"Unapproved velocity sunsetted ahead of schedule. Thank you for hurrying.",
+			"High-speed shift closed ahead of forecast. Grateful for the metrics.",
+			"Accelerated onboarding concluded abruptly. Replacement hull queued on time.",
 		],
 		"crown_lines": [
 			"Early arrival noted. Please wait while the storm catches up.",
+			"Synergistic speed, zero regard for our schedule. Impressive metrics.",
 		],
 	},
 	"heavy_roller": {
 		"stage_memos": [
-			"Payload exceeds spec. Floors reinforced.",
+			"Payload exceeds spec. Floors right-sized.",
 			"Heavy haul logged. Wear billed separately.",
+			"Surplus tonnage aligned. Grateful for steel.",
 		],
 		"loss_memos": [
-			"Excess heft recovered from the floor. Thank you for the steel.",
-			"Overweight delivery concluded. Our floors send their warmest regards.",
+			"Excess heft sunsetted from the floor. Grateful for the scrap metrics.",
+			"Overweight delivery concluded cleanly. Our floors send warmest regards.",
+			"Heavy throughput archived. We have scheduled fresh concrete with gratitude.",
 		],
 		"crown_lines": [
 			"You brought half the works upstairs. Impressive tonnage.",
+			"Maximum payload alignment achieved. Our cables filed a quiet complaint.",
 		],
 	},
 	"sig_circuit": {
 		"stage_memos": [
-			"Unmetered arc draw noted. Grounding enabled.",
-			"Circuit traffic elevated. Relays synced.",
+			"Unmetered arc draw noted. Grounding aligned.",
+			"Circuit traffic elevated. Synergies metered.",
+			"Unauthorized voltage logged. Breakers right-sized.",
 		],
 		"loss_memos": [
-			"Unauthorised voltage spike closed. Thank you for testing our insulation.",
-			"Circuit surge resolved cleanly. Maintenance has reset the breakers.",
+			"Unauthorised voltage spike sunsetted. Thank you for testing our insulation.",
+			"Circuit surge resolved with synergistic efficiencies. Breakers reset on schedule.",
+			"Elevated arc metrics archived. Grateful for your energetic contributions.",
 		],
 		"crown_lines": [
 			"You brought live current to a lightning spire. Ambitious.",
+			"Unmetered voltage on the summit grid. Bold thought leadership.",
 		],
 	},
 	"sig_burst": {
 		"stage_memos": [
-			"Impact spikes recorded. Bracing updated.",
-			"Blunt force trend noted. Proceeding.",
+			"Impact spikes recorded. Bracing aligned.",
+			"Blunt force trend noted. Synergies adjusting.",
+			"Kinetic disruption logged. Grateful for data.",
 		],
 		"loss_memos": [
-			"High-impact approach logged and absorbed. Replacement hull ready.",
-			"Forceful methods archived. We still recommend our scheduled workflow.",
+			"High-impact approach sunsetted and absorbed. Replacement hull ready.",
+			"Forceful methods archived. We still recommend our frictionless workflow.",
+			"Disruptive kinetic metrics noted. Thank you for testing our plating.",
 		],
 		"crown_lines": [
 			"Every door opened by impact. Direct, if somewhat loud.",
+			"Kinetic disruption across three worlds. Our maintenance teams send gratitude.",
 		],
 	},
 }
@@ -1344,6 +1371,8 @@ static func pick_run_call(
 				"text": LoreRows.call_text({"id": beat2_id, "text": variants[flying_class]}, run_seed),
 				"consumes_pair_budget": true,
 			}
+	var chapter_pilots: Array = []
+	var pilot_rows: Array = []
 	for row in LoreRows.WORLD_CALLS:
 		var cid := String(row["id"])
 		if played_ids.has(cid):
@@ -1352,21 +1381,37 @@ static func pick_run_call(
 			continue
 		if not LoreRows.call_matches(row, event, args):
 			continue
+		if row.has("requires_chapter"):
+			var req := chapter(String(row["requires_chapter"]))
+			if req.is_empty() or not _chapter_punched(req, profile, codex):
+				continue
 		if row.has("pilot"):
 			var p := String(row["pilot"])
 			if p == flying_class:
 				continue
 			if not (p in unlocked_classes or _pilot_unlocked(p, profile)):
 				continue
-		if row.has("requires_chapter"):
-			var req := chapter(String(row["requires_chapter"]))
-			if req.is_empty() or not _chapter_punched(req, profile, codex):
-				continue
+			if row.has("requires_chapter"):
+				chapter_pilots.append(row)
+			else:
+				pilot_rows.append(row)
+			continue
 		return {
 			"kind": "world_call",
 			"id": cid,
 			"speaker": String(row["speaker"]),
 			"text": LoreRows.call_text(row, run_seed),
+			"consumes_pair_budget": false,
+		}
+	var pool: Array = chapter_pilots if not chapter_pilots.is_empty() else pilot_rows
+	if not pool.is_empty():
+		var chosen: Dictionary = pool[posmod(absi(hash([run_seed, world, event])), pool.size())]
+		return {
+			"kind": "world_call",
+			"id": String(chosen["id"]),
+			"speaker": String(chosen["speaker"]),
+			"pilot": String(chosen["pilot"]),
+			"text": LoreRows.call_text(chosen, run_seed),
 			"consumes_pair_budget": false,
 		}
 	return {}
