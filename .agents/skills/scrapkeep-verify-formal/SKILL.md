@@ -148,7 +148,7 @@ Run `bash $F/models/make-yardlock-configs.sh`, then plain TLC on each `yardlock-
 
 ## Lessons and updates
 
-[references/lessons.md](references/lessons.md) holds VFM-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. `/astack:create-formal-verification-skill maintain` brings the model back in line after changes that skipped this skill.
+[references/lessons.md](references/lessons.md) holds VFM-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. `/pstack:maintain-formal-verification-skill` brings the model back in line after changes that skipped this skill.
 
 ## Host adapter
 
