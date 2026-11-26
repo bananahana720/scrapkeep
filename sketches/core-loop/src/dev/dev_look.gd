@@ -3,6 +3,7 @@ extends Node
 const SafeStore := preload("res://src/core/safe_store.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const PRINT_SHADER := preload("res://src/dev/dev_print.gdshader")
 const PAINT_SHADER := preload("res://src/dev/dev_paint.gdshader")
 
@@ -48,6 +49,7 @@ const FILTERS := {
 	"normal_cut": {"pass": PAINT, "param": "normal_cut", "range": [0.05, 1.5, 0.01], "rest": 0.5},
 	"fade_from": {"pass": PAINT, "param": "fade_from", "range": [10.0, 300.0, 1.0], "rest": 80.0},
 	"fade_to": {"pass": PAINT, "param": "fade_to", "range": [20.0, 600.0, 1.0], "rest": 170.0},
+	"subject_guard": {"pass": PAINT, "param": "subject_guard", "range": [0.0, 1.0, 0.01], "rest": 0.0},
 	"pixel": {"pass": PRINT, "param": "pixel_size", "range": [1.0, 16.0, 1.0], "rest": 1.0},
 	"posterize": {"pass": PRINT, "param": "posterize", "range": [0.0, 16.0, 1.0], "rest": 0.0},
 	"dither": {"pass": PRINT, "param": "dither", "range": [0.0, 1.0, 0.01], "rest": 0.0},
@@ -65,6 +67,7 @@ const FILTERS := {
 	"vignette": {"pass": PRINT, "param": "vignette", "range": [0.0, 1.5, 0.01], "rest": 0.0},
 	"speed_lines": {"pass": PRINT, "param": "speed_lines", "range": [0.0, 1.0, 0.01], "rest": 0.0},
 	"impact": {"pass": PRINT, "param": "impact", "range": [0.0, 1.0, 0.01], "rest": 0.0},
+	"signal_keep": {"pass": PRINT, "param": "signal_keep", "range": [0.0, 1.0, 0.01], "rest": 0.75},
 }
 const CHARCOAL := Color("242a28")
 const COLOURS := {
@@ -79,6 +82,9 @@ const IMPACT_FADE_S := 0.12
 const SHOCK_FLOOR := 0.35
 const PAINT_PRIORITY := -10
 const FAR_BOX := 100000.0
+const LINE_INK_FROM := 0.5
+const LINE_INK_SHARE := 0.5
+const LINE_PIXEL_SHARE := 0.6
 
 const PRESETS := {
 	"shipped": {"blurb": "the game as it ships: no overrides"},
@@ -129,6 +135,7 @@ var _gain := Vector3.ONE
 var _impact_left := -1.0
 var _impact_strength := 0.0
 var impact_on_hits := true
+var _sim_time := 0.0
 var preset_name := "shipped"
 
 
@@ -169,6 +176,8 @@ func setup(game_ref) -> void:
 
 
 func _exit_tree() -> void:
+	if not _filter.is_empty() or not _colour.is_empty() or _ink_scale != 1.0 or not _env_touched.is_empty() or not _sun_touched.is_empty():
+		clear()
 	if game != null and is_instance_valid(game.player):
 		if game.player.struck.is_connected(_on_struck):
 			game.player.struck.disconnect(_on_struck)
@@ -185,7 +194,7 @@ func _on_shockwave(_at, strength: float) -> void:
 
 
 func environment() -> Environment:
-	if game == null or game.ctx == null or game.ctx.terrain == null:
+	if game == null or not is_instance_valid(game) or game.ctx == null or not is_instance_valid(game.ctx.terrain):
 		return null
 	return game.ctx.terrain.environment
 
@@ -194,6 +203,8 @@ func sun() -> DirectionalLight3D:
 	if is_instance_valid(_sun) and _sun.is_inside_tree() and _sun.is_visible_in_tree():
 		return _sun
 	_sun = null
+	if game == null or not is_instance_valid(game) or not game.is_inside_tree():
+		return null
 	for light in game.find_children("*", "DirectionalLight3D", false, false) + game.get_tree().root.find_children("*", "DirectionalLight3D", true, false):
 		if light.name != "SkyFill" and light.is_visible_in_tree():
 			_sun = light
@@ -397,6 +408,9 @@ func _apply_row(row: Dictionary) -> void:
 		set_value(key, float(row.sun[key]))
 	for key in row.get("filter", {}):
 		set_value(key, float(row.filter[key]))
+	var lines := float(row.get("filter", {}).get("lines", 0.0))
+	if lines >= LINE_INK_FROM and not row.has("ink_width"):
+		set_value("ink_width", 1.0 - LINE_INK_SHARE * lines)
 	for key in row.get("colour", {}):
 		set_colour(key, row.colour[key])
 	if row.has("tint"):
@@ -422,7 +436,26 @@ func _process(delta: float) -> void:
 			if row.has("needs"):
 				light.set(row.needs, true)
 			_write(light, row.prop, _sun_touched[key])
+	if not get_tree().paused:
+		_sim_time += delta
 	_step_overlays(delta / maxf(Engine.time_scale, 0.05))
+	_step_guard()
+
+
+func _step_guard() -> void:
+	if not _layer.visible and not _quad.visible:
+		return
+	_print.set_shader_parameter("sim_time", _sim_time)
+	var cam := get_viewport().get_camera_3d()
+	if cam == null or game.player == null or not is_instance_valid(game.player):
+		return
+	var at: Vector3 = game.player.shown_position()
+	var size := get_viewport().get_visible_rect().size
+	if not cam.is_position_behind(at) and size.x > 0.0 and size.y > 0.0:
+		var uv := cam.unproject_position(at) / size
+		_print.set_shader_parameter("guard_uv", uv)
+		_paint.set_shader_parameter("guard_uv", uv)
+	_paint.set_shader_parameter("fade_origin", maxf(0.0, (at - cam.global_position).dot(-cam.global_basis.z)))
 
 
 func _step_overlays(real_delta: float) -> void:
@@ -439,7 +472,7 @@ func _step_overlays(real_delta: float) -> void:
 			_impact_left -= real_delta
 			var t := _impact_left
 			level = 1.0 if t > IMPACT_FADE_S else clampf(t / IMPACT_FADE_S, 0.0, 1.0)
-		_print.set_shader_parameter("impact", impact_max * _impact_strength * level)
+		_print.set_shader_parameter("impact", FlashGuard.whiten(impact_max * _impact_strength * level))
 
 
 func pulse_impact(strength := 1.0) -> void:
@@ -461,6 +494,8 @@ func _sync_filters() -> void:
 			live[row.pass] = true
 		elif _filter.has(key):
 			live[PRINT] = true
+	var pixel := float(_filter.get("pixel", FILTERS.pixel.rest))
+	_paint.set_shader_parameter("line_px", maxf(float(_filter.get("line_px", FILTERS.line_px.rest)), LINE_PIXEL_SHARE * pixel))
 	for key in COLOURS:
 		for pass_id in COLOURS[key].passes:
 			_material_for(pass_id).set_shader_parameter(COLOURS[key].param, _colour.get(key, COLOURS[key].rest))

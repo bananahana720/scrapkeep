@@ -28,8 +28,13 @@ uniform float scanlines : hint_range(0.0, 1.0) = 0.0;
 uniform float vignette : hint_range(0.0, 1.5) = 0.0;
 
 uniform float speed_lines : hint_range(0.0, 1.0) = 0.0;
-uniform vec2 speed_centre = vec2(0.5, 0.55);
+uniform vec2 speed_centre = vec2(-1.0, -1.0);
 uniform float impact : hint_range(0.0, 1.0) = 0.0;
+
+uniform vec2 guard_uv = vec2(0.5, 0.5);
+uniform vec4 keep_hue : source_color = vec4(1.0, 0.353, 0.235, 1.0);
+uniform float signal_keep : hint_range(0.0, 1.0) = 0.75;
+uniform float sim_time = 0.0;
 
 float luma(vec3 c) {
 	return dot(c, vec3(0.299, 0.587, 0.114));
@@ -77,7 +82,17 @@ float screen_dots(vec2 frag, float value, float angle_deg, float cell) {
 	mat2 turn = mat2(vec2(cos(a), -sin(a)), vec2(sin(a), cos(a)));
 	vec2 local = fract(turn * frag / cell) - 0.5;
 	float radius = sqrt(clamp(value, 0.0, 1.0)) * 0.62;
-	return 1.0 - smoothstep(radius - 0.06, radius + 0.06, length(local));
+	float soft = max(fwidth(length(local)), 0.01);
+	return (1.0 - smoothstep(radius - soft, radius + soft, length(local))) * smoothstep(0.0, 0.04, value);
+}
+
+float signal(vec3 c) {
+	float top = max(c.r, max(c.g, c.b));
+	float sat = (top - min(c.r, min(c.g, c.b))) / max(top, 0.0001);
+	vec3 want = keep_hue.rgb / max(max(keep_hue.r, max(keep_hue.g, keep_hue.b)), 0.0001);
+	vec3 have = c / max(top, 0.0001);
+	float hue = 1.0 - smoothstep(0.18, 0.42, distance(have, want));
+	return signal_keep * hue * smoothstep(0.45, 0.7, sat) * smoothstep(0.25, 0.45, top);
 }
 
 void fragment() {
@@ -85,16 +100,18 @@ void fragment() {
 	vec2 uv = SCREEN_UV;
 	vec2 frag = uv / px;
 	vec2 block = floor(frag / max(pixel_size, 1.0));
-	vec3 c = graded(fetch(uv, px));
+	vec3 raw = fetch(uv, px);
+	float hold = signal(raw);
+	vec3 c = mix(graded(raw), raw, hold);
 
 	if (posterize > 0.0) {
-		c = floor(c * posterize + 0.5 + vec3(bayer4(block) * dither)) / posterize;
+		c = mix(floor(c * posterize + 0.5 + vec3(bayer4(block) * dither)) / posterize, c, hold);
 	} else if (dither > 0.0) {
 		c += vec3(bayer4(block) * dither * 0.08);
 	}
 
 	if (riso > 0.0) {
-		vec2 centred = (uv - 0.5) * vec2(px.y / max(px.x, 0.00001), 1.0);
+		vec2 centred = (uv - guard_uv) * vec2(px.y / max(px.x, 0.00001), 1.0);
 		float guard = mix(1.0, smoothstep(0.10, 0.44, length(centred)), centre_guard);
 		vec2 shift = vec2(1.0, -0.5) * riso_shift * guard;
 		float la = 1.0 - luma(graded(fetch(uv + shift * px, px)));
@@ -104,27 +121,27 @@ void fragment() {
 		vec3 sheet = paper.rgb;
 		sheet = mix(sheet, sheet * riso_a.rgb, clamp(da * 0.9 + la * 0.25, 0.0, 1.0));
 		sheet = mix(sheet, sheet * riso_b.rgb, clamp(db * 0.9 + lb * 0.25, 0.0, 1.0));
-		c = mix(c, sheet, riso);
+		c = mix(c, sheet, riso * (1.0 - hold));
 	}
 
 	if (speed_lines > 0.0) {
-		vec2 from = uv - speed_centre;
+		vec2 from = uv - (speed_centre.x < 0.0 ? guard_uv : speed_centre);
 		float ang = atan(from.y, from.x);
-		float streak = hash(vec2(floor(ang * 90.0), floor(TIME * 18.0)));
+		float streak = hash(vec2(floor(ang * 90.0), floor(sim_time * 18.0)));
 		float far = smoothstep(0.34, 0.78, length(from * vec2(1.6, 1.0)));
 		c = mix(c, paper.rgb, step(1.0 - speed_lines * 0.16, streak) * far * 0.7);
 	}
 
 	if (impact > 0.0) {
 		vec3 frame = mix(ink.rgb, paper.rgb, step(0.42, luma(c)));
-		c = mix(c, frame, impact);
+		c = mix(c, frame, impact * (1.0 - hold));
 	}
 
 	if (tooth > 0.0) {
 		c += (hash(floor(frag * 0.5)) - 0.5) * 2.0 * tooth;
 	}
 	if (grain > 0.0) {
-		c += (hash(frag + fract(TIME) * 91.0) - 0.5) * grain;
+		c += (hash(frag + fract(sim_time) * 91.0) - 0.5) * grain;
 	}
 	if (scanlines > 0.0) {
 		c *= 1.0 - scanlines * 0.35 * step(0.5, fract(frag.y / max(2.0, pixel_size * 2.0)));

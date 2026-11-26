@@ -21,6 +21,9 @@ uniform float normal_cut : hint_range(0.05, 1.5) = 0.5;
 uniform float fade_from : hint_range(10.0, 300.0) = 80.0;
 uniform float fade_to : hint_range(20.0, 600.0) = 170.0;
 uniform vec4 ink : source_color = vec4(0.141, 0.165, 0.157, 1.0);
+uniform vec2 guard_uv = vec2(0.5, 0.5);
+uniform float subject_guard : hint_range(0.0, 1.0) = 0.0;
+uniform float fade_origin = 0.0;
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -63,7 +66,11 @@ void fragment() {
 	if (here > 50000.0 || strength <= 0.0) {
 		ALBEDO = col;
 	} else {
-		float near = 1.0 - smoothstep(fade_from, max(fade_to, fade_from + 1.0), here);
+		float away = max(0.0, here - fade_origin);
+		float near = 1.0 - smoothstep(fade_from, max(fade_to, fade_from + 1.0), away);
+		vec2 aspect = vec2(VIEWPORT_SIZE.x / max(VIEWPORT_SIZE.y, 1.0), 1.0);
+		float subject = 1.0 - smoothstep(0.06, 0.12, length((SCREEN_UV - guard_uv) * aspect));
+		float keep = 1.0 - subject_guard * subject;
 		float lum = display_luma(col);
 		vec3 styled = col;
 
@@ -89,8 +96,8 @@ void fragment() {
 			vec2 p = FRAGCOORD.xy;
 			float a1 = (p.x * 0.93969 - p.y * 0.34202) + sin(p.y * 0.07) * 0.9;
 			float a2 = (p.x * 0.34202 + p.y * 0.93969) + sin(p.x * 0.07) * 0.9;
-			float mid = smoothstep(shadow_cut, shadow_cut - 0.12, lum);
-			float deep = smoothstep(shadow_cut * 0.5, shadow_cut * 0.5 - 0.1, lum);
+			float mid = 1.0 - smoothstep(shadow_cut - 0.12, shadow_cut, lum);
+			float deep = 1.0 - smoothstep(shadow_cut * 0.5 - 0.1, shadow_cut * 0.5, lum);
 			float strokes = max(pen(a1, hatch_px, 0.22) * mid * 0.65, pen(a2, hatch_px, 0.22) * deep * 0.85);
 			styled = mix(styled, ink.rgb, clamp(strokes * hatch, 0.0, 1.0));
 		}
@@ -112,6 +119,6 @@ void fragment() {
 			float turn_edge = smoothstep(normal_cut, normal_cut * 1.8, length(facing(u0) - facing(u1)) + length(facing(u2) - facing(u3)));
 			styled = mix(styled, ink.rgb, max(depth_edge, turn_edge) * lines * ink.a);
 		}
-		ALBEDO = mix(col, styled, strength * near);
+		ALBEDO = mix(col, styled, strength * near * keep);
 	}
 }
