@@ -52,6 +52,7 @@ const SiltBoil := preload("res://src/combat/silt_boil.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Parts := preload("res://src/build/parts.gd")
+const Relics := preload("res://src/build/relics.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
@@ -2546,7 +2547,7 @@ func _step_active_buffer(intent, delta: float) -> void:
 	var row: Dictionary = actives.row_of(actives.active_id)
 	var rate: float = ctx.tuning.mod("active_recharge") if ctx.tuning != null else 1.0
 	var recharge_s: float = float(row.get("recharge", 0.0))
-	var lock_wait: float = maxf(0.0, float(actives._locked) - delta)
+	var lock_wait: float = maxf(0.0, actives.lock_remaining() - delta)
 	var charge_wait := 0.0
 	if actives.charges < 1:
 		if recharge_s > 0.0 and rate > 0.0:
@@ -3002,6 +3003,13 @@ func _clear_cannon_paint() -> void:
 		ctx.player.indicator.clear("cannon_bracket_r")
 
 
+func _relic_overdrive(slot: String) -> float:
+	if ctx == null or ctx.run == null:
+		return 1.0
+	var relic_id := String(Relics.held(ctx.run.parts).get(slot, ""))
+	return Relics.overdrive_of(relic_id) if relic_id != "" else 1.0
+
+
 func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true) -> Dictionary:
 	var space: PhysicsDirectSpaceState3D = ctx.root.get_world_3d().direct_space_state
 	var ball: Vector3 = ctx.player.ball_position()
@@ -3017,20 +3025,23 @@ func _cannon_lane_plan(reach_base: float, width_mult: float, allow_walk := true)
 	var half: float = MindAttacks.LANE_HALF * maxf(width_mult, Pattern.MIN_LOCK_WIDTH_MULT)
 	var radius := reach
 	var ahead: float = maxf(1.0, reach - half)
+	var walk_od := 1.0
 	if walked:
+		walk_od = _relic_overdrive(AbilityState.WEAPON)
+		var walk_reach := WALK_REACH * walk_od
 		var flat := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
 		var dir_w := flat.normalized() if flat.length_squared() > 0.0001 else _flat_aim()
 		var end_at: Vector3 = _walk["end"]
 		centre = _floor_at(end_at + Vector3.UP)
 		target = centre + dir_w * 10.0
-		radius = WALK_REACH + half
-		ahead = WALK_REACH
+		radius = walk_reach + half
+		ahead = walk_reach
 	var flat_dir := Vector3(target.x - centre.x, 0.0, target.z - centre.z)
 	var heading := flat_dir.normalized() if flat_dir.length_squared() > 0.0001 else _flat_aim()
 	return {
 		"aim": aim, "point": point, "centre": centre, "target": target, "heading": heading,
 		"radius": radius, "ahead": ahead, "half": half, "to": centre + heading * ahead,
-		"walked": walked, "mutation": mutation, "ball": ball,
+		"walked": walked, "overdrive": walk_od, "mutation": mutation, "ball": ball,
 	}
 
 
@@ -3095,6 +3106,9 @@ func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> v
 	var overpenetrate: bool = source == "weapon" and (bool(shot_desc.get("overpenetrate", false)) or air_lock_overpen)
 	var breaks_props: bool = source == "weapon" and (bool(shot_desc.get("breaks_props", false)) or air_lock_overpen)
 	var plan := _cannon_lane_plan(reach_base, width_mult, source == "weapon")
+	var walk_od: float = float(plan["overdrive"])
+	if bool(plan["walked"]):
+		damage *= walk_od
 	var aim: Dictionary = plan["aim"]
 	var point: Vector3 = plan["point"]
 	var ball: Vector3 = plan["ball"]
@@ -3131,7 +3145,7 @@ func _fire_cannon_lane(weapon: String, shot_desc := {}, source := "weapon") -> v
 	volleys += 1
 	last_shot = {"weapon_id": weapon, "from": muzzle, "to": end, "point": point, "blocked": aim["blocked"], "bolts": 0,
 		"volley": volleys, "sprung": false, "kind": shot_kind, "pierce_chip": pierce,
-		"damage": damage, "width_mult": width_mult, "reach": reach_base, "breaks_props": breaks_props,
+		"damage": damage, "overdrive": walk_od, "width_mult": width_mult, "reach": reach_base, "breaks_props": breaks_props,
 		"air_lock_overpen": air_lock_overpen, "overpenetrate": overpenetrate, "breached_props": breached_props}
 	ctx.events.shot_fired.emit(weapon, muzzle, end)
 

@@ -520,7 +520,7 @@ static func _instance(path: String) -> Node3D:
 static func _finish(scene: Node3D) -> Node3D:
 	if scene != null:
 		BakeLook.dress(scene)
-		InkOutline.apply(scene, "warden")
+		InkOutline.apply(scene, "boss")
 		var player := BossModel.player_of(scene)
 		if player != null:
 			BossModel.own_clips(player)

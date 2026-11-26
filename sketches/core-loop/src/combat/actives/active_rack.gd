@@ -136,6 +136,10 @@ func locked() -> bool:
 	return _locked > 0.0
 
 
+func lock_remaining() -> float:
+	return maxf(0.0, _locked)
+
+
 func _physics_process(delta: float) -> void:
 	if not enabled() or ctx.flow == null or not ctx.flow.in_play() or ctx.run.class_def == null:
 		return

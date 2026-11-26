@@ -72,6 +72,7 @@ const ScrapField := preload("res://src/build/scrap_field.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -457,6 +458,11 @@ func _run() -> void:
 	t.check("InkOutline.reset_for_tests switches the line back on and drops its passes and stripped copies",
 		InkOutline.enabled and InkOutline._inks.is_empty() and InkOutline._lifts.is_empty()
 		and InkOutline._stripped.is_empty() and InkOutline.ink("warden") != held_ink)
+
+	WorldLook._park_fog["__probe__"] = {"density": 0.1}
+	t.check("WorldLook holds a cached park fog before reset", not WorldLook._park_fog.is_empty())
+	driver._reset()
+	t.check("WorldLook.reset_for_tests clears cached park fog", WorldLook._park_fog.is_empty())
 
 	quit(t.verdict())
 
