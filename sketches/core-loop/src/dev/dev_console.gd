@@ -26,7 +26,8 @@ const TABS := ["Look", "Paint", "Print", "Lens", "Fight", "Bake"]
 const LIGHT_KEYS := ["exposure", "saturation", "contrast", "brightness", "ambient", "sun", "sun_pitch", "sun_yaw", "shadow",
 	"sun_size", "fog", "fog_sky", "air", "glow", "bloom", "ssao", "white", "ink_width"]
 const TONEMAPS := ["Linear", "Reinhard", "Filmic", "ACES", "AgX"]
-const LENS_KNOBS := ["fov", "distance", "pitch", "yaw", "size", "lift", "spin", "tilt", "cut"]
+const LENS_KNOBS := DevLens.LENS_KNOBS
+const SCRIPT_STEPS := ["wait", "shot", "sheet", "quit"]
 const LENS_RANGES := {"fov": [10.0, 120.0, 0.5], "distance": [2.0, 200.0, 0.5], "pitch": [-89.5, 60.0, 0.5],
 	"yaw": [-180.0, 180.0, 1.0], "size": [2.0, 300.0, 0.5], "lift": [-5.0, 30.0, 0.1], "spin": [-90.0, 90.0, 1.0], "tilt": [0.0, 1.0, 0.01], "cut": [0.0, 200.0, 0.5]}
 const WORLDS := ["all", "1", "2", "3"]
@@ -50,14 +51,15 @@ var _lines: Array[String] = []
 var _history_at := -1
 var _status_wait := 0.0
 var _slide: Tween
-var _keyboard_was := true
+var _keyboard_was := false
+var _menu_was := false
+var _held_input: Array = []
 var _rows := {}
 var _spawn_world := "1"
 var _spawn_count := 1
 var _spawn_affix := ""
 var _shots := 0
 var _busy := false
-var _scripted := false
 
 
 static func hook(game_ref) -> void:
@@ -86,9 +88,19 @@ func setup(game_ref) -> void:
 	commands.said.connect(_say)
 	_build()
 	_drawer.visible = false
+	game.events.flow_changed.connect(_on_flow_changed)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--dev-run="):
-			run_script.call_deferred(arg.trim_prefix("--dev-run="))
+			run_script.call_deferred(arg.trim_prefix("--dev-run="), true)
+
+
+func _exit_tree() -> void:
+	if get_viewport().size_changed.is_connected(_on_viewport_resized):
+		get_viewport().size_changed.disconnect(_on_viewport_resized)
+	if get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.disconnect(_on_node_added)
+	if game != null and game.events.flow_changed.is_connected(_on_flow_changed):
+		game.events.flow_changed.disconnect(_on_flow_changed)
 
 
 func toggle() -> void:
@@ -107,19 +119,88 @@ func set_open(on: bool) -> void:
 		_drawer.visible = true
 		_drawer.position.x = -WIDTH
 		_slide.tween_property(_drawer, "position:x", MARGIN, SLIDE_S)
+		_menu_was = game.menu_held()
 		game.set_menu_held(true)
 		game.capture_mouse(false)
-		game.set_process_input(false)
+		_hold_keyboard()
+		_hold_input(true)
 		_show_tab(_tab)
-		_line.grab_focus.call_deferred()
+		_focus_line.call_deferred()
 	else:
 		_slide.tween_property(_drawer, "position:x", -WIDTH - MARGIN, SLIDE_S)
 		_slide.tween_callback(func(): _drawer.visible = open)
-		_line.release_focus()
-		_typing(false)
-		game.set_process_input(true)
-		game.set_menu_held(false)
+		var holder := get_viewport().gui_get_focus_owner()
+		if holder != null and _drawer.is_ancestor_of(holder):
+			holder.release_focus()
+		_hold_input(false)
+		var keyboard = game.get("keyboard")
+		if keyboard != null:
+			keyboard.enabled = _keyboard_was
+		game.set_menu_held(_menu_was)
 		game.recapture_mouse()
+
+
+func _focus_line() -> void:
+	if open and is_instance_valid(_line):
+		_line.grab_focus()
+
+
+func _hold_keyboard() -> void:
+	var keyboard = game.get("keyboard")
+	if keyboard == null:
+		return
+	_keyboard_was = keyboard.enabled
+	keyboard.enabled = false
+
+
+func _on_flow_changed(_state: String) -> void:
+	if not open:
+		return
+	_hold_keyboard()
+	game.capture_mouse(false)
+	_focus_line.call_deferred()
+
+
+func _hold_input(on: bool) -> void:
+	if on:
+		_held_input.clear()
+		for node in get_tree().root.find_children("*", "", true, false):
+			_hold_node(node)
+		get_tree().node_added.connect(_on_node_added)
+		return
+	if get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.disconnect(_on_node_added)
+	for held in _held_input:
+		var node: Node = held[0]
+		if not is_instance_valid(node):
+			continue
+		var flags: Array = held[1]
+		if flags[0]:
+			node.set_process_input(true)
+		if flags[1]:
+			node.set_process_unhandled_input(true)
+		if flags[2]:
+			node.set_process_unhandled_key_input(true)
+		if flags[3]:
+			node.set_process_shortcut_input(true)
+	_held_input.clear()
+
+
+func _hold_node(node: Node) -> void:
+	if not open or not is_instance_valid(node) or node == self or is_ancestor_of(node):
+		return
+	var flags := [node.is_processing_input(), node.is_processing_unhandled_input(), node.is_processing_unhandled_key_input(), node.is_processing_shortcut_input()]
+	if not true in flags:
+		return
+	_held_input.append([node, flags])
+	node.set_process_input(false)
+	node.set_process_unhandled_input(false)
+	node.set_process_unhandled_key_input(false)
+	node.set_process_shortcut_input(false)
+
+
+func _on_node_added(node: Node) -> void:
+	_hold_node.call_deferred(node)
 
 
 func run(line: String) -> void:
@@ -128,25 +209,39 @@ func run(line: String) -> void:
 	_refresh_rows()
 
 
-func run_script(script: String) -> void:
-	_scripted = true
+func run_script(script: String, scripted := false) -> void:
 	for part in script.split(";", false):
 		var text := part.strip_edges()
-		if text.begins_with("wait"):
-			var frames := DevCommands.whole(text.split(" ", false), 1, 30)
-			for i in frames:
+		var words := text.split(" ", false)
+		var head := words[0] if not words.is_empty() else ""
+		if head == "wait":
+			_echo(text)
+			for i in DevCommands.whole(words, 1, 30):
 				await get_tree().process_frame
+				if not is_inside_tree():
+					return
 			continue
-		if text.begins_with("sheet"):
-			await contact_sheet()
-			continue
-		if text.begins_with("shot"):
-			await shot(text.trim_prefix("shot").strip_edges())
-			continue
-		if text == "quit":
+		if head == "sheet":
+			_echo(text)
+			await contact_sheet(scripted)
+		elif head == "shot":
+			_echo(text)
+			await shot(DevCommands.word(words, 1), scripted)
+		elif head == "quit":
 			get_tree().quit()
 			return
-		run(text)
+		elif head != "":
+			run(text)
+		if not is_inside_tree():
+			return
+
+
+static func needs_script(line: String) -> bool:
+	for part in line.split(";", false):
+		var words := part.strip_edges().split(" ", false)
+		if not words.is_empty() and words[0] in SCRIPT_STEPS:
+			return true
+	return false
 
 
 func _input(event: InputEvent) -> void:
@@ -168,6 +263,9 @@ func _input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if not open:
 		return
+	var keyboard = game.get("keyboard")
+	if keyboard != null and keyboard.enabled:
+		_hold_keyboard()
 	_status_wait -= delta / maxf(Engine.time_scale, 0.05)
 	if _status_wait <= 0.0:
 		_status_wait = STATUS_EVERY
@@ -179,17 +277,6 @@ func _over_drawer(event: InputEvent) -> bool:
 	if not (event is InputEventMouse):
 		return false
 	return _drawer.get_global_rect().has_point(event.position)
-
-
-func _typing(on: bool) -> void:
-	var keyboard = game.get("keyboard")
-	if keyboard == null:
-		return
-	if on:
-		_keyboard_was = keyboard.enabled
-		keyboard.enabled = false
-	else:
-		keyboard.enabled = _keyboard_was
 
 
 func _register() -> void:
@@ -276,7 +363,10 @@ func _register() -> void:
 		for node in game.find_children("*", "", true, false):
 			if node.get_script() == TreePick and node.is_open():
 				var start: int = node.focused_index()
-				node.step_focus(index - maxi(start, 0))
+				if start < 0:
+					node.step_focus(0)
+					start = 0
+				node.step_focus(index - start)
 				node.confirm()
 				return "kit card %d taken" % (index + 1)
 		if game.flow.take_start_pick(index):
@@ -299,8 +389,11 @@ func unpause() -> bool:
 	return true
 
 
-func shot(id := "") -> String:
-	if _scripted:
+func shot(id := "", close_menu := false) -> String:
+	if _busy:
+		return "!a still or sheet is already running"
+	_busy = true
+	if close_menu:
 		unpause()
 	DirAccess.make_dir_recursive_absolute(SHOT_DIR)
 	_shots += 1
@@ -310,20 +403,23 @@ func shot(id := "") -> String:
 	_drawer.visible = false
 	await RenderingServer.frame_post_draw
 	await RenderingServer.frame_post_draw
+	if not is_inside_tree():
+		return "!the console closed before the still"
 	var image := get_viewport().get_texture().get_image()
 	_drawer.visible = was
+	_busy = false
 	var err := image.save_png(path)
 	var reply := ("still -> %s" % ProjectSettings.globalize_path(path)) if err == OK else "!could not save %s (%d)" % [path, err]
 	_say(reply, "warn" if err != OK else "ok")
 	return reply
 
 
-func contact_sheet() -> String:
+func contact_sheet(close_menu := false) -> String:
 	if _busy:
-		return "!a sheet is already running"
+		return "!a still or sheet is already running"
 	_busy = true
 	var held := look.snapshot()
-	if _scripted:
+	if close_menu:
 		unpause()
 	var was_frozen := fight.frozen()
 	var scale := fight.time_scale()
@@ -336,6 +432,8 @@ func contact_sheet() -> String:
 		look.apply_preset(id)
 		for i in SETTLE_FRAMES:
 			await RenderingServer.frame_post_draw
+		if not is_inside_tree():
+			return "!the console closed before the sheet"
 		var image := get_viewport().get_texture().get_image()
 		image.resize(int(image.get_width() * SHEET_SCALE), int(image.get_height() * SHEET_SCALE), Image.INTERPOLATE_LANCZOS)
 		tiles.append(image)
@@ -373,7 +471,7 @@ func _build() -> void:
 	_drawer.custom_minimum_size = Vector2(WIDTH, 0.0)
 	_drawer.size = Vector2(WIDTH, get_viewport().get_visible_rect().size.y - MARGIN * 2.0)
 	root.add_child(_drawer)
-	get_viewport().size_changed.connect(func(): _drawer.size.y = get_viewport().get_visible_rect().size.y - MARGIN * 2.0)
+	get_viewport().size_changed.connect(_on_viewport_resized)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override("separation", UiTokens.GAP_S)
 	_drawer.add_child(column)
@@ -434,13 +532,15 @@ func _build() -> void:
 	_line.text_submitted.connect(_submit)
 	_line.text_changed.connect(_hint_for)
 	_line.gui_input.connect(_line_keys)
-	_line.focus_entered.connect(func(): _typing(true))
-	_line.focus_exited.connect(func(): _typing(false))
 	prompt.add_child(_line)
 	_hint = _text("` or F10 closes. Tab completes, Up/Down recalls.", UiTokens.CAPTION, _quiet(), UiFonts.mono())
 	_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	column.add_child(_hint)
 	_tabs[0].button_pressed = true
+
+
+func _on_viewport_resized() -> void:
+	_drawer.size.y = get_viewport().get_visible_rect().size.y - MARGIN * 2.0
 
 
 func _show_tab(id: String) -> void:
@@ -507,7 +607,7 @@ func _page_colours() -> void:
 	_section("Inks")
 	for key in DevLook.COLOURS:
 		var picker := ColorPickerButton.new()
-		picker.color = DevLook.COLOURS[key].rest
+		picker.color = look.colour(key)
 		picker.edit_alpha = false
 		picker.custom_minimum_size = Vector2(0.0, 30.0)
 		picker.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -616,8 +716,6 @@ func _page_bake() -> void:
 	name_box.placeholder_text = "name"
 	name_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	name_box.add_theme_font_override("font", UiFonts.mono())
-	name_box.focus_entered.connect(func(): _typing(true))
-	name_box.focus_exited.connect(func(): _typing(false))
 	row.add_child(name_box)
 	row.add_child(_button("Bake", func():
 		run("bake %s" % name_box.text.strip_edges().replace(" ", "-"))
@@ -662,10 +760,11 @@ func _slider_row(key: String, span: Array, current: float, apply: Callable, echo
 	slider.drag_ended.connect(func(changed: bool):
 		if changed:
 			_echo(echo % _fmt(slider.value)))
-	name_label.gui_input.connect(func(event: InputEvent):
-		if event is InputEventMouseButton and event.double_click:
-			run("reset %s" % key)
-			_show_tab(_tab))
+	if key in look.keys():
+		name_label.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.double_click:
+				run("reset %s" % key)
+				_show_tab(_tab))
 	_rows[key] = {"slider": slider, "shown": shown, "label": name_label}
 	_page.add_child(row)
 
@@ -728,9 +827,8 @@ func _submit(text: String) -> void:
 	_hint_for("")
 	if text.strip_edges().is_empty():
 		return
-	if text.strip_edges().begins_with("sheet") or text.strip_edges().begins_with("shot") or text.contains("wait"):
-		_echo(text)
-		commands.history.append(text.strip_edges())
+	if needs_script(text):
+		commands.remember(text.strip_edges())
 		run_script(text)
 		return
 	run(text)

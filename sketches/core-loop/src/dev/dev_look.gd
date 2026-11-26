@@ -125,7 +125,7 @@ var _print: ShaderMaterial
 var _paint: ShaderMaterial
 var _quad: MeshInstance3D
 var _sun: DirectionalLight3D
-var _sun_wait := 0.0
+var _gain := Vector3.ONE
 var _impact_left := -1.0
 var _impact_strength := 0.0
 var impact_on_hits := true
@@ -162,9 +162,26 @@ func setup(game_ref) -> void:
 	_quad.custom_aabb = AABB(Vector3.ONE * -FAR_BOX, Vector3.ONE * FAR_BOX * 2.0)
 	_quad.visible = false
 	add_child(_quad)
+	_sync_filters()
 	if game.player != null:
-		game.player.struck.connect(func(_enemy, _kind, force: float): _on_hit(clampf(force / 30.0, SHOCK_FLOOR, 1.0)))
-		game.player.shockwave.connect(func(_at, strength: float): _on_hit(clampf(strength, SHOCK_FLOOR, 1.0)))
+		game.player.struck.connect(_on_struck)
+		game.player.shockwave.connect(_on_shockwave)
+
+
+func _exit_tree() -> void:
+	if game != null and is_instance_valid(game.player):
+		if game.player.struck.is_connected(_on_struck):
+			game.player.struck.disconnect(_on_struck)
+		if game.player.shockwave.is_connected(_on_shockwave):
+			game.player.shockwave.disconnect(_on_shockwave)
+
+
+func _on_struck(_enemy, _kind, force: float) -> void:
+	_on_hit(clampf(force / 30.0, SHOCK_FLOOR, 1.0))
+
+
+func _on_shockwave(_at, strength: float) -> void:
+	_on_hit(clampf(strength, SHOCK_FLOOR, 1.0))
 
 
 func environment() -> Environment:
@@ -174,10 +191,10 @@ func environment() -> Environment:
 
 
 func sun() -> DirectionalLight3D:
-	if is_instance_valid(_sun) and _sun.is_inside_tree():
+	if is_instance_valid(_sun) and _sun.is_inside_tree() and _sun.is_visible_in_tree():
 		return _sun
 	_sun = null
-	for light in game.get_tree().root.find_children("*", "DirectionalLight3D", true, false):
+	for light in game.find_children("*", "DirectionalLight3D", false, false) + game.get_tree().root.find_children("*", "DirectionalLight3D", true, false):
 		if light.name != "SkyFill" and light.is_visible_in_tree():
 			_sun = light
 			break
@@ -250,13 +267,17 @@ func set_colour(key: String, colour: Color) -> String:
 	return "%s #%s" % [key, colour.to_html(false)]
 
 
+func colour(key: String) -> Color:
+	return _colour.get(key, COLOURS[key].rest) if COLOURS.has(key) else Color.BLACK
+
+
 func release(key: String) -> String:
 	if _env_touched.has(key):
 		_env_touched.erase(key)
-		_restore(environment(), _env_rest, ENV[key])
+		_restore(environment(), _env_rest, ENV[key], _shares_needs(ENV, _env_touched, ENV[key]))
 	elif _sun_touched.has(key):
 		_sun_touched.erase(key)
-		_restore(sun(), _sun_rest, SUN[key])
+		_restore(sun(), _sun_rest, SUN[key], _shares_needs(SUN, _sun_touched, SUN[key]))
 	elif _filter.has(key):
 		_filter.erase(key)
 		_sync_filters()
@@ -275,7 +296,7 @@ func clear() -> String:
 		release(key)
 	_filter.clear()
 	_colour.clear()
-	_print.set_shader_parameter("gain", Vector3.ONE)
+	_gain = Vector3.ONE
 	_ink_scale = 1.0
 	_sync_ink()
 	_sync_filters()
@@ -306,7 +327,10 @@ func snapshot() -> Dictionary:
 	var light := {}
 	for key in _sun_touched:
 		light[key] = _sun_touched[key]
-	return {"from": preset_name, "env": env, "sun": light, "filter": _filter.duplicate(), "colour": colours, "ink_width": _ink_scale}
+	var shot := {"from": preset_name, "env": env, "sun": light, "filter": _filter.duplicate(), "colour": colours, "ink_width": _ink_scale}
+	if _gain != Vector3.ONE:
+		shot["tint"] = "#" + Color(_gain.x, _gain.y, _gain.z).to_html(false)
+	return shot
 
 
 func bake(id: String) -> String:
@@ -345,7 +369,10 @@ func load_snapshot(data: Dictionary) -> void:
 	var colours := {}
 	for key in data.get("colour", {}):
 		colours[key] = Color(String(data.colour[key]))
-	_apply_row({"env": data.get("env", {}), "sun": data.get("sun", {}), "filter": data.get("filter", {}), "colour": colours})
+	var row := {"env": data.get("env", {}), "sun": data.get("sun", {}), "filter": data.get("filter", {}), "colour": colours}
+	if data.has("tint"):
+		row["tint"] = Color(String(data.tint))
+	_apply_row(row)
 	if data.has("ink_width"):
 		set_value("ink_width", float(data.ink_width))
 	preset_name = String(data.get("from", "shipped"))
@@ -376,9 +403,9 @@ func _apply_row(row: Dictionary) -> void:
 		set_colour(key, row.colour[key])
 	if row.has("tint"):
 		var tint: Color = row.tint
-		_print.set_shader_parameter("gain", Vector3(tint.r, tint.g, tint.b))
+		_gain = Vector3(tint.r, tint.g, tint.b)
 	else:
-		_print.set_shader_parameter("gain", Vector3.ONE)
+		_gain = Vector3.ONE
 	_sync_filters()
 
 
@@ -443,8 +470,9 @@ func _sync_filters() -> void:
 		_print.set_shader_parameter(key, 0.0)
 	if _colour.has("paper") or _colour.has("riso_a") or _colour.has("riso_b"):
 		live[PRINT] = true
+	_print.set_shader_parameter("gain", _gain)
 	_quad.visible = live[PAINT]
-	_layer.visible = live[PRINT] or _print.get_shader_parameter("gain") != Vector3.ONE
+	_layer.visible = live[PRINT] or _gain != Vector3.ONE
 
 
 func _material_for(pass_id: String) -> ShaderMaterial:
@@ -471,13 +499,22 @@ static func _remember(store: Dictionary, object: Object, row: Dictionary) -> voi
 		store[row.needs] = object.get(row.needs)
 
 
-static func _restore(object: Object, store: Dictionary, row: Dictionary) -> void:
+static func _shares_needs(table: Dictionary, still: Dictionary, row: Dictionary) -> bool:
+	if not row.has("needs"):
+		return false
+	for other in still:
+		if table[other].get("needs", "") == row.needs:
+			return true
+	return false
+
+
+static func _restore(object: Object, store: Dictionary, row: Dictionary, keep_needs := false) -> void:
 	if object == null:
 		return
 	if store.has(row.prop):
 		_write(object, row.prop, store[row.prop])
 		store.erase(row.prop)
-	if row.has("needs") and store.has(row.needs):
+	if not keep_needs and row.has("needs") and store.has(row.needs):
 		object.set(row.needs, store[row.needs])
 		store.erase(row.needs)
 

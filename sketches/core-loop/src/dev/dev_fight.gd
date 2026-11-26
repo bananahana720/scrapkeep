@@ -21,6 +21,8 @@ var game
 var god := false
 var _time_scale := 1.0
 var _frozen := false
+var _paused_before := false
+var _held_hook := Callable()
 var _spawned := 0
 
 
@@ -117,8 +119,13 @@ func set_god(on: bool) -> String:
 	var c = ctx()
 	if c == null or c.run == null:
 		return "!no run state yet"
+	if on and not god:
+		_held_hook = c.run.defend_hook
+		c.run.defend_hook = func(_amount: float, _hp: float) -> float: return 0.0
+	elif not on and god:
+		c.run.defend_hook = _held_hook
+		_held_hook = Callable()
 	god = on
-	c.run.defend_hook = (func(_amount: float, _hp: float) -> float: return 0.0) if on else Callable()
 	if on:
 		c.run.heal(c.run.max_hp)
 	return "god mode %s" % ("on: hull refills and hits deal nothing" if on else "off")
@@ -158,8 +165,12 @@ func set_calm(on: bool) -> String:
 
 func set_time(scale: float) -> String:
 	scale = clampf(scale, TIME_MIN, TIME_MAX)
-	_frozen = scale < TIME_FLOOR
-	game.get_tree().paused = _frozen
+	var freeze := scale < TIME_FLOOR
+	if freeze != _frozen:
+		if freeze:
+			_paused_before = game.get_tree().paused
+		game.get_tree().paused = freeze or _paused_before
+		_frozen = freeze
 	if _frozen:
 		return "time frozen: photo mode (the dev camera and looks still move; 'time 1' resumes)"
 	_time_scale = scale
@@ -186,10 +197,12 @@ func boss(phase := 0) -> String:
 	if not game.flow.in_play():
 		return "!start a run first"
 	if phase > 0:
-		if c.boss == null or not c.boss.has_method("jump_to_phase"):
-			return "!no boss with phases is running"
+		if c.boss == null or not c.boss.has_method("jump_to_phase") or not c.boss.active():
+			return "!no boss is awake: 'boss' enters the arena first"
 		c.boss.jump_to_phase(phase)
 		return "boss phase %d%s" % [phase, " (4 ejects: the defeat path)" if phase >= 4 else ""]
+	if c.stages.BOSS == "":
+		return "!this stage table has no boss"
 	game.flow.enter_boss(Vector3.ZERO)
 	return "into the boss arena of this world"
 

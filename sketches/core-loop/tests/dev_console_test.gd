@@ -38,6 +38,20 @@ func _run() -> void:
 
 	var env: Environment = look.environment()
 	_t.check("the world environment is reachable", env != null, "")
+	console.run("set dots 0.5")
+	_t.check("a paint key on a fresh console leaves the print pass off", not look.passes_live()[DevLook.PRINT], str(look.passes_live()))
+	console.run("reset dots")
+	_t.check("resetting the only paint key turns the paint pass off", not look.passes_live()[DevLook.PAINT], str(look.passes_live()))
+
+	var adjust_rest := env.adjustment_enabled
+	console.run("set saturation 1.5")
+	console.run("set contrast 1.3")
+	await process_frame
+	console.run("reset saturation")
+	await process_frame
+	console.run("reset contrast")
+	_t.eq("two keys that share an enable flag hand it back once both reset", env.adjustment_enabled, adjust_rest)
+
 	var shipped_exposure := env.tonemap_exposure
 	console.run("set exposure 1.73")
 	await process_frame
@@ -76,6 +90,10 @@ func _run() -> void:
 			_t.check("camera '%s' takes the view" % id, game.get_viewport().get_camera_3d() == console.lens.get_node("DevCamera"), "")
 	console.run("cam game")
 	_t.eq("cam game gives the view back to the chase camera", game.get_viewport().get_camera_3d(), shipped_cam)
+	console.run("cam fov 40")
+	_t.near("a knob set from the chase camera keeps its value", console.lens.fov, 40.0)
+	_t.eq("a knob set from the chase camera takes the view", console.lens.mode, "orbit")
+	console.run("cam game")
 	console.run("cam iso")
 	await process_frame
 	_t.eq("iso is orthographic", console.lens.get_node("DevCamera").projection, Camera3D.PROJECTION_ORTHOGONAL)
@@ -93,11 +111,13 @@ func _run() -> void:
 	_t.eq("clear leaves no ordinary enemy standing", console.fight.living().size(), 0)
 	_t.check("the world 1 kind list is not empty and holds the chaser", "chaser" in console.fight.kinds(1), "")
 
+	var prior_hook: Callable = game.run.defend_hook
 	console.run("god on")
 	var hp: float = game.run.hp
 	game.run.damage(25.0, "dev_console_test")
 	_t.near("god mode takes no hull", game.run.hp, hp)
 	console.run("god off")
+	_t.eq("god off hands back the defend hook it replaced", game.run.defend_hook, prior_hook)
 	game.run.damage(5.0, "dev_console_test")
 	_t.check("god off lets hits land again", game.run.hp < hp, "%s < %s" % [game.run.hp, hp])
 
@@ -105,6 +125,11 @@ func _run() -> void:
 	_t.near("time scale applies", Engine.time_scale, 0.25)
 	console.run("time 1")
 	_t.near("time scale resets", Engine.time_scale, 1.0)
+	paused = true
+	console.run("time 0")
+	console.run("time 1")
+	_t.check("unfreezing keeps a pause the game already held", paused, "")
+	paused = false
 
 	console.run("look riso zine")
 	console.run("set exposure 1.4")
@@ -117,12 +142,28 @@ func _run() -> void:
 	_t.near("the baked print value survives the round trip", look.value("riso"), float(DevLook.PRESETS["riso zine"].filter.riso), 0.001)
 	_t.near("the baked light value survives the round trip", look.value("exposure"), 1.4, 0.001)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(DevLook.LOOK_DIR.path_join(id + ".json")))
+	console.run("look blueprint")
+	console.commands.run_one("bake %s" % id)
 	console.run("reset all")
+	_t.check("reset all clears the blueprint tint", not look.passes_live()[DevLook.PRINT], str(look.passes_live()))
+	console.commands.run_one("load %s" % id)
+	_t.check("the blueprint tint survives a bake and load", look.snapshot().has("tint") and look.passes_live()[DevLook.PRINT], str(look.snapshot()))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(DevLook.LOOK_DIR.path_join(id + ".json")))
+	console.run("reset all")
+
+	_t.check("a name with 'wait' in it is a plain command", not DevConsole.needs_script("bake wait-room"), "")
+	_t.check("a chain with a still in it runs as a script", DevConsole.needs_script("cam iso; shot a"), "")
 
 	console.set_open(true)
 	_t.check("opening holds the game's own input", not game.is_processing_input(), "")
+	_t.check("opening keeps the console's own input", console.is_processing_input(), "")
 	console.set_open(false)
 	_t.check("closing gives input back", game.is_processing_input(), "")
+	game.set_menu_held(true)
+	console.set_open(true)
+	console.set_open(false)
+	_t.check("closing keeps a menu hold the game already had", game.menu_held(), "")
+	game.set_menu_held(false)
 
 	Engine.time_scale = 1.0
 	console.free()

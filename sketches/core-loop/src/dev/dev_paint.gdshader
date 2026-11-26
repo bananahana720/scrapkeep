@@ -36,7 +36,9 @@ float metres(vec2 uv, mat4 inv_proj) {
 }
 
 vec3 facing(vec2 uv) {
-	return normalize(texture(normal_tex, clamp(uv, vec2(0.0), vec2(1.0))).xyz * 2.0 - 1.0);
+	vec3 n = texture(normal_tex, clamp(uv, vec2(0.0), vec2(1.0))).xyz * 2.0 - 1.0;
+	float len = length(n);
+	return len > 0.0001 ? n / len : vec3(0.0, 0.0, 1.0);
 }
 
 float display_luma(vec3 c) {

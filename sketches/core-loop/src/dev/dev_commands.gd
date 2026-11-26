@@ -40,18 +40,24 @@ func complete(text: String) -> Array[String]:
 	return matches
 
 
-func run(line: String, remember := true) -> Array[String]:
+func run(line: String, keep := true) -> Array[String]:
 	var replies: Array[String] = []
 	var trimmed := line.strip_edges()
 	if trimmed.is_empty():
 		return replies
-	if remember and (history.is_empty() or history[-1] != trimmed):
-		history.append(trimmed)
-		if history.size() > HISTORY_CAP:
-			history.pop_front()
+	if keep:
+		remember(trimmed)
 	for part in trimmed.split(";", false):
 		replies.append(run_one(part))
 	return replies
+
+
+func remember(line: String) -> void:
+	if line.is_empty() or (not history.is_empty() and history[-1] == line):
+		return
+	history.append(line)
+	if history.size() > HISTORY_CAP:
+		history.pop_front()
 
 
 func run_one(text: String) -> String:

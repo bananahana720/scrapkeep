@@ -23,6 +23,7 @@ const DRAG_SCALE := 0.25
 const WHEEL_STEP := 1.12
 const FOLLOW_RATE := 10.0
 const CUTAWAY := 14.0
+const LENS_KNOBS := ["fov", "distance", "pitch", "yaw", "size", "lift", "spin", "tilt", "cut"]
 
 var game
 var mode := "game"
@@ -85,6 +86,10 @@ func live() -> bool:
 
 
 func set_knob(key: String, amount: float) -> String:
+	if not key in LENS_KNOBS:
+		return "!no camera knob '%s' (%s)" % [key, " ".join(LENS_KNOBS)]
+	if not live() and key != "cut":
+		use("orbit")
 	match key:
 		"fov":
 			fov = clampf(amount, 10.0, 120.0)
@@ -105,10 +110,6 @@ func set_knob(key: String, amount: float) -> String:
 			_apply_attributes()
 		"cut":
 			cutaway = clampf(amount, 0.0, 200.0)
-		_:
-			return "!no camera knob '%s' (fov distance pitch yaw size lift spin tilt cut)" % key
-	if not live() and not key in ["tilt", "cut"]:
-		use("orbit")
 	return "camera %s %.2f" % [key, amount]
 
 
@@ -222,10 +223,14 @@ func _take() -> void:
 
 func _release() -> void:
 	_dragging = false
-	if is_instance_valid(_held):
+	var chase = game.camera.cam if game != null and game.camera != null else null
+	var playing: bool = game != null and game.flow != null and game.flow.in_play()
+	if playing and chase != null:
+		chase.current = true
+	elif is_instance_valid(_held):
 		_held.current = true
-	elif game != null and game.camera != null and game.camera.cam != null:
-		game.camera.cam.current = true
+	elif chase != null:
+		chase.current = true
 	_held = null
 	_apply_attributes()
 
