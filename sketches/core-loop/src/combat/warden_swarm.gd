@@ -126,7 +126,7 @@ func step(warden, delta: float) -> void:
 func _step_hoist(warden, delta: float) -> void:
 	var lined: bool = warden.lined_hardpoint() >= 0
 	if warden.get("_posture") != null:
-		var engaged_in_reach: bool = warden.target != null and warden._flat_to_ball().length() <= warden.reach
+		var engaged_in_reach: bool = warden.target != null and is_instance_valid(warden.target) and warden._flat_to_ball().length() <= warden.reach
 		var out_of_floor_reach := _headframe_out_of_floor_reach(warden)
 		warden._posture.drain_rate_scale = 0.0 if (out_of_floor_reach and not lined and engaged_in_reach) else 1.0
 	if dropping:
@@ -154,10 +154,11 @@ func _headframe_out_of_floor_reach(warden) -> bool:
 
 func _throw(warden) -> void:
 	var target = warden.target
-	var body = target.body() if target != null and target.has_method("body") else null
+	var valid_target: bool = target != null and is_instance_valid(target)
+	var body = target.body() if valid_target and target.has_method("body") else null
 	var rising: float = body.linear_velocity.y if body != null else 0.0
-	var at: Vector3 = target.ball_position() if target.has_method("ball_position") else warden.global_position
-	if rising >= THROW_SPEED and target.has_method("cut_line"):
+	var at: Vector3 = target.ball_position() if valid_target and target.has_method("ball_position") else warden.global_position
+	if rising >= THROW_SPEED and valid_target and target.has_method("cut_line"):
 		target.cut_line("shrugged")
 	rides += 1
 	_fact(warden, HOIST_FACT, at)
@@ -358,7 +359,7 @@ func _listen(warden) -> void:
 		return
 	_listening = true
 	SignalLifetime.listen(warden, warden.fleet.events().enemy_struck, func(enemy: Node3D, hit_kind: String, force: float):
-		if hit_kind != "ram" or enemy == null or enemy != _lamp or not is_instance_valid(warden) or warden.target == null:
+		if hit_kind != "ram" or enemy == null or enemy != _lamp or not is_instance_valid(warden) or not is_instance_valid(warden.target):
 			return
 		if SpeedTier.of(force, warden.target.tuning.tier_cruise()) >= SpeedTier.CRUISE:
 			_lamp_ram_frame = Engine.get_physics_frames())

@@ -3,7 +3,13 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
 const Waking := preload("res://src/boss/waking.gd")
+const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
 const WakingFloors := preload("res://src/boss/waking_floors.gd")
+const MindAttacks := preload("res://src/boss/mind_attacks.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
+const Threat := preload("res://src/combat/threat_grammar.gd")
+const BossRules := preload("res://src/boss/boss_rules.gd")
+const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -43,6 +49,8 @@ func _run() -> void:
 		await physics_frame
 	await _walk()
 	_game.free()
+	await _check_rim_and_stall()
+	ChallengeDials.reset()
 	quit(_t.verdict())
 
 
@@ -142,3 +150,120 @@ func _until(done: Callable) -> void:
 	while not done.call() and frames < STATE_FRAMES:
 		frames += 1
 		await physics_frame
+
+
+func _make_rim_hazard(mod, family: String, at: Vector3) -> Dictionary:
+	var d := {"family": family, "family_index": 1, "id": "waking_rim_%s" % family, "shape": "annulus",
+		"type": Threat.Type.INSTANT, "warn": 1.0, "live": 0.6, "height": WakingAttacks.HEIGHT,
+		"at": at, "band": Vector2(0.0, 4.0), "delay": 0.0}
+	var h = MindAttacks.build(d)
+	h.ground = Callable(mod, "ground_height_at")
+	mod.ctx.root.add_child(h)
+	var attack := {"hazards": [h], "family": family, "landed": false, "descs": [d]}
+	mod.attacks.append(attack)
+	return attack
+
+
+func _check_rim_and_stall() -> void:
+	ChallengeDials.reset()
+	var game := Game.new()
+	game.test_mode = true
+	root.add_child(game)
+	while game.flow == null:
+		await physics_frame
+	Harness.boot(game)
+	Harness.enter_world(game, 2)
+	var mod = Harness.module(game, 2)
+	mod.set_physics_process(false)
+	mod._attack_clock = 1.0e9
+	game.run.max_hp = 1000.0
+	game.run.hp = 1000.0
+	var hits: Array = []
+	game.ctx.events.player_hit.connect(func(amount: float, source: String): hits.append([source, amount]))
+	var player = game.ctx.player
+	player.set_physics_process(false)
+	var center := Vector3(mod._center.x, mod._top(), mod._center.z)
+	var rim_xz := center + Vector3(34.5, 0.0, 0.0)
+	var rim_y: float = mod.ground_height_at(rim_xz)
+	_t.check("RimBank ground_height_at tracks bank slope elevation", rim_y > mod._top() + 1.0, "%.2f vs %.2f" % [rim_y, mod._top()])
+	var rim_ball := Vector3(rim_xz.x, rim_y + 0.8, rim_xz.z)
+	player.body().global_position = rim_ball
+	player.body().linear_velocity = Vector3.ZERO
+	player.state.velocity = Vector3.ZERO
+	player.state.grounded = true
+	player.state.carving = false
+	player.state.tier = SpeedTier.WALK
+	player.state.contact_normal = Vector3(-0.75, 0.66, 0.0).normalized()
+	var parked_atk := _make_rim_hazard(mod, "burrow", Vector3(rim_xz.x, mod._top(), rim_xz.z))
+	for _i in 3:
+		mod._step_attacks(0.6)
+	_t.check("parked slow ball on RimBank takes hazard damage", parked_atk["landed"] and hits.size() == 1 and hits[0][0] == "waking_burrow", str(hits))
+	mod._clear_attacks()
+	hits.clear()
+	player.body().linear_velocity = Vector3(0.0, 0.0, -24.0)
+	player.state.velocity = Vector3(0.0, 0.0, -24.0)
+	player.state.grounded = true
+	player.state.carving = true
+	player.state.tier = SpeedTier.FAST
+	var carve_atk := _make_rim_hazard(mod, "cave_in", Vector3(rim_xz.x, mod._top(), rim_xz.z))
+	for _i in 3:
+		mod._step_attacks(0.6)
+	_t.check("fast carving ball on RimBank rides safely and awards _bank_ride", not carve_atk["landed"] and hits.is_empty() and mod._banked.has("cave_in"), str(hits))
+	mod._clear_attacks()
+	hits.clear()
+	player.body().global_position = rim_xz + Vector3.UP * (WakingAttacks.HEIGHT + 1.5)
+	player.body().linear_velocity = Vector3.ZERO
+	player.state.grounded = false
+	player.state.carving = false
+	player.state.tier = SpeedTier.WALK
+	var jump_atk := _make_rim_hazard(mod, "bore", Vector3(rim_xz.x, mod._top(), rim_xz.z))
+	for _i in 3:
+		mod._step_attacks(0.6)
+	_t.check("airborne jump above HEIGHT clears RimBank hazard", not jump_atk["landed"] and hits.is_empty(), str(hits))
+	mod._clear_attacks()
+	var cruise := float(game.ctx.tuning.f("cruise"))
+	mod.clock = BossRules.INTRO_SECONDS + 1.0
+	mod._stall_clock_seen = mod.clock
+	mod._stall_s = 0.0
+	mod.phase = 1
+	player.state.carving = false
+	player.body().linear_velocity = Vector3(0.0, 0.0, -cruise)
+	for _i in 40:
+		mod.clock += 0.1
+		mod._step_stall(0.1)
+	var cruise_p1: float = mod.current_attack_period()
+	mod.phase = WakingAttacks.PIT_PHASE
+	var cruise_pit: float = mod.current_attack_period()
+	_t.near("cruise-rolling ball keeps ATTACK_PERIOD 3.4s", cruise_p1, Waking.ATTACK_PERIOD, 0.001)
+	_t.near("cruise-rolling ball keeps PIT_PERIOD 2.6s", cruise_pit, Waking.PIT_PERIOD, 0.001)
+	player.body().linear_velocity = Vector3(0.0, 0.0, cruise * 0.4)
+	for _i in 40:
+		mod.clock += 0.1
+		mod._step_stall(0.1)
+	mod.phase = 1
+	var stall_p1: float = mod.current_attack_period()
+	mod.phase = WakingAttacks.PIT_PHASE
+	var stall_pit: float = mod.current_attack_period()
+	_t.check("stalled ball receives tighter Waking cadence in phases 1-3", stall_p1 < cruise_p1 and is_equal_approx(stall_p1, Waking.STALL_ATTACK_PERIOD), "%.2f vs %.2f" % [stall_p1, cruise_p1])
+	_t.check("stalled ball receives tighter Waking cadence in pit phase", stall_pit < cruise_pit and is_equal_approx(stall_pit, Waking.STALL_PIT_PERIOD), "%.2f vs %.2f" % [stall_pit, cruise_pit])
+	var min_warn := INF
+	var escape_ok := true
+	for p in range(1, WakingAttacks.PIT_PHASE + 1):
+		for fam in WakingAttacks.exposed(p):
+			var safe := WakingAttacks.commit_safe(fam, 101 + p, rim_ball, player.body().linear_velocity, center, p, cruise, Waking.PAD_RADIUS)
+			var descs: Array = safe["descriptors"]
+			if WakingAttacks.escape_point(descs, rim_ball, cruise, center, Waking.PAD_RADIUS) == null:
+				escape_ok = false
+			for d in descs:
+				var hz = MindAttacks.build(d)
+				min_warn = minf(min_warn, hz.warn_seconds)
+				hz.free()
+	_t.check("commit_safe escape corridors stay valid and warn_seconds >= Hazard.MIN_WARN", escape_ok and min_warn >= Hazard.MIN_WARN - 1e-6, "escape=%s warn=%.2f" % [str(escape_ok), min_warn])
+	player.body().linear_velocity = Vector3(0.0, 0.0, cruise)
+	for _i in 30:
+		mod.clock += 0.1
+		mod._step_stall(0.1)
+	mod.phase = 1
+	_t.near("returning to cruise restores ATTACK_PERIOD 3.4s", mod.current_attack_period(), Waking.ATTACK_PERIOD, 0.001)
+	game.free()
+	await physics_frame

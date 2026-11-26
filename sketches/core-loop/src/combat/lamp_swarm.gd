@@ -81,17 +81,19 @@ func _build_tool() -> void:
 					push_warning("lamp_swarm: surface has no material; using default finish")
 				var slot := surface_material.resource_name if surface_material != null else ""
 				mi.set_surface_override_material(surface, _material if slot == "fleet_paint" else _painted)
-		_lamp_rig = model.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
+		var rigs := model.find_children("*", "Skeleton3D", true, false)
+		_lamp_rig = rigs[0] as Skeleton3D if not rigs.is_empty() else null
 		for i in LAMP_COUNT:
 			var lamp := Node3D.new()
 			lamp.name = "LampTransform%d" % i
 			_visual_parent().add_child(lamp)
 			lamp.position = _lamp_rest(i)
 			lamps.append(lamp)
-			_lamp_bones.append(_lamp_rig.find_bone("LampBulb%d" % i))
-			_lens_bones.append(_lamp_rig.find_bone("LampLens%d" % i))
-			_shutter_bones.append(_lamp_rig.find_bone("LampShutter%d" % i))
-			_shutter_bones.append(_lamp_rig.find_bone("LampShutter%dB" % i))
+			if _lamp_rig != null:
+				_lamp_bones.append(_lamp_rig.find_bone("LampBulb%d" % i))
+				_lens_bones.append(_lamp_rig.find_bone("LampLens%d" % i))
+				_shutter_bones.append(_lamp_rig.find_bone("LampShutter%d" % i))
+				_shutter_bones.append(_lamp_rig.find_bone("LampShutter%dB" % i))
 		_fling.resize(LAMP_COUNT)
 		_fling.fill(Vector3.ZERO)
 		_pose_lamps()

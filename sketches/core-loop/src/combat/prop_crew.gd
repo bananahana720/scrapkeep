@@ -259,7 +259,7 @@ func on_struck(kind_hit: String, _part: String, _result: Dictionary) -> void:
 
 
 func knock_prop(collapse_mult := 1.0) -> Node3D:
-	if not prop_up or world_root == null:
+	if not prop_up or world_root == null or not is_instance_valid(_roof):
 		return null
 	prop_up = false
 	drops += 1
