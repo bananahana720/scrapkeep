@@ -17,6 +17,7 @@ const EventDirector := preload("res://src/world/event_director.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const T := preload("res://tests/support/t.gd")
@@ -115,6 +116,7 @@ func _run() -> void:
 	_check_stage5_event_prewarm()
 	_check_mind_3phase_anthems()
 	await _check_full_alpha_and_brindle_cobalt()
+	await _check_mind_ruling_cu_and_posture()
 
 	_clear_enemies()
 	EventDirector.settle_prewarm()
@@ -523,4 +525,69 @@ func _check_full_alpha_and_brindle_cobalt() -> void:
 		and _game.ctx.run.parts.has(pending_id) and not _game.ctx.run.extra.has("brindle_cobalt_pending"),
 		"before=%d after=%d twice=%d" % [count_before, count_after, count_twice])
 	_game.boss.exit_arena()
+	await physics_frame
+
+
+func _check_mind_ruling_cu_and_posture() -> void:
+	_game.flow.enter_stage(_game.ctx.stages.last_of(3), Vector3.ZERO, false)
+	_game.flow.enter_boss(Vector3.ZERO)
+	await physics_frame
+	var mind_boss = _game.ctx.boss
+	var cruise := float(_game.ctx.tuning.f("cruise"))
+	var ball_pos: Vector3 = _game.player.ball_position()
+	_set_player(ball_pos, Vector3.FORWARD * cruise)
+	mind_boss.clock = Rules.INTRO_SECONDS + 0.1
+	_step_node(mind_boss, 0.5)
+	_t.check("MindBoss rolling at >= cruise keeps ATTACK_PERIOD=3.5 and stall_pressure=0",
+		not mind_boss.ball_slow_or_camping() and is_zero_approx(mind_boss.stall_pressure())
+		and is_equal_approx(mind_boss.effective_attack_period(), 3.5),
+		"period=%.3f pressure=%.3f" % [mind_boss.effective_attack_period(), mind_boss.stall_pressure()])
+	mind_boss.phase = 2
+	mind_boss._send_hand()
+	var hand_before: int = mind_boss.hands.size()
+	var rest_before := 3.0
+	if hand_before > 0 and is_instance_valid(mind_boss.hands[0]):
+		mind_boss.hands[0]._rest = 3.0
+	var lens_before := float(mind_boss.warden._lens_clock)
+	_set_player(ball_pos, Vector3.ZERO, true, false, SpeedTier.WALK)
+	_step_node(mind_boss, 1.8)
+	var rest_after := float(mind_boss.hands[0]._rest) if hand_before > 0 and is_instance_valid(mind_boss.hands[0]) else 3.0
+	var hand_rest_cfg := float(mind_boss.hands[0].rest_seconds) if hand_before > 0 and is_instance_valid(mind_boss.hands[0]) else 3.0
+	var lens_gain := float(mind_boss.warden._lens_clock) - lens_before
+	_t.check("MindBoss slowing < 0.75*cruise tightens period toward 2.4s and accelerates hand timers",
+		mind_boss.ball_slow_or_camping() and mind_boss.effective_attack_period() <= 2.45
+		and hand_rest_cfg < 3.0 and (rest_before - rest_after) > 0.1 and lens_gain > 0.3,
+		"period=%.3f rest_cfg=%.2f rest=%.2f lens_gain=%.2f" % [mind_boss.effective_attack_period(), hand_rest_cfg, rest_after, lens_gain])
+	var w = mind_boss.warden
+	w._posture.posture = 50.0
+	w._posture.idle = 5.0
+	_set_player(ball_pos, Vector3.ZERO, true, false, SpeedTier.WALK)
+	w._step_posture(0.25)
+	var drained_slow := 50.0 - float(w.posture())
+	w._posture.posture = 50.0
+	w._posture.idle = 5.0
+	_set_player(ball_pos, Vector3.FORWARD * cruise, true, false, SpeedTier.CRUISE)
+	w._step_posture(0.25)
+	var drained_cruise := 50.0 - float(w.posture())
+	_t.check("Mind Warden drains at honest rate when slow/disengaged and pauses >= cruise",
+		drained_slow > 2.5 and is_zero_approx(drained_cruise),
+		"drained_slow=%.3f drained_cruise=%.3f" % [drained_slow, drained_cruise])
+	var s5: Dictionary = _game.ctx.stages.of(5)
+	var s6: Dictionary = _game.ctx.stages.of(6)
+	_t.check("Mind warden_hp stays frozen at 1250 / 1400",
+		is_equal_approx(float(s5["warden_hp"]), 1250.0) and is_equal_approx(float(s6["warden_hp"]), 1400.0),
+		"s5=%s s6=%s" % [s5["warden_hp"], s6["warden_hp"]])
+	_set_player(ball_pos, Vector3.FORWARD * cruise, true, false, SpeedTier.CRUISE)
+	_game.ctx.run.mass = 0.0
+	var low_bolt: Dictionary = w.judge_hit("bolt", 12.0, false, 0, "")
+	_game.ctx.run.mass = 1800.0
+	var high_bolt: Dictionary = w.judge_hit("bolt", 12.0, false, 0, "")
+	_t.check("Mind ranged non-weakpoint gain scales with pilot heft against Mind plating",
+		float(high_bolt["gain"]) > float(low_bolt["gain"]),
+		"low=%.4f high=%.4f" % [float(low_bolt["gain"]), float(high_bolt["gain"])])
+	_game.ctx.run.mass = (MonsterHeft.mind_threshold() + 1.0) * 450.0
+	mind_boss.latch_monster()
+	_t.check("MindBoss preserves monster-build hold bypass",
+		not mind_boss.hold_active(), "hold_active=%s" % mind_boss.hold_active())
+	mind_boss.exit_arena()
 	await physics_frame

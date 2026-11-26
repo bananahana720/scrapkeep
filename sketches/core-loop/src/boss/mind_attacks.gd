@@ -69,20 +69,20 @@ static func choose(seed: int, phase: int, removed := []) -> String:
 	return open[rng.randi() % open.size()]
 
 
-static func commit_any(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, removed := []) -> Array:
-	return commit(choose(seed, phase, removed), seed, ball, center, phase, radius)
+static func commit_any(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, removed := [], warn_scale := 1.0) -> Array:
+	return commit(choose(seed, phase, removed), seed, ball, center, phase, radius, warn_scale)
 
 
-static func commit(family: String, seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Array:
+static func commit(family: String, seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, warn_scale := 1.0) -> Array:
 	match family:
 		"lane":
-			return lane(seed, ball, center, phase, radius)
+			return lane(seed, ball, center, phase, radius, warn_scale)
 		"split_lane":
-			return split_lane(seed, ball, center, phase, radius)
+			return split_lane(seed, ball, center, phase, radius, warn_scale)
 		"rush":
-			return rush(seed, ball, center, phase, radius)
+			return rush(seed, ball, center, phase, radius, warn_scale)
 		"plate":
-			return plate(seed, ball, center, phase, radius)
+			return plate(seed, ball, center, phase, radius, warn_scale)
 	push_error("mind_attacks: unknown family %s" % family)
 	return []
 
@@ -92,11 +92,11 @@ const RECOMMIT_STRIDE := 104729
 const FALLBACK_PATHS := ["drop", "single", "none"]
 
 
-static func commit_safe(family: String, seed: int, ball: Vector3, center: Vector3, phase: int, cruise_speed: float, radius := Arena.FLOOR_R, removed := []) -> Dictionary:
+static func commit_safe(family: String, seed: int, ball: Vector3, center: Vector3, phase: int, cruise_speed: float, radius := Arena.FLOOR_R, removed := [], warn_scale := 1.0) -> Dictionary:
 	var first: Array = []
 	for k in RECOMMITS + 1:
 		var s := seed + k * RECOMMIT_STRIDE
-		var descs: Array = commit_any(s, ball, center, phase, radius, removed) if family == "" else commit(family, s, ball, center, phase, radius)
+		var descs: Array = commit_any(s, ball, center, phase, radius, removed, warn_scale) if family == "" else commit(family, s, ball, center, phase, radius, warn_scale)
 		if k == 0:
 			first = descs
 		if escape_point(descs, ball, cruise_speed, center, radius) != null:
@@ -105,49 +105,49 @@ static func commit_safe(family: String, seed: int, ball: Vector3, center: Vector
 		var kept := first.slice(0, n)
 		if escape_point(kept, ball, cruise_speed, center, radius) != null:
 			return {"descriptors": kept, "path": "drop"}
-	var away := [away_lane(ball, center, phase, radius)]
+	var away := [away_lane(ball, center, phase, radius, warn_scale)]
 	if escape_point(away, ball, cruise_speed, center, radius) != null:
 		return {"descriptors": away, "path": "single"}
 	return {"descriptors": [], "path": "none"}
 
 
-static func away_lane(ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Dictionary:
+static func away_lane(ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, warn_scale := 1.0) -> Dictionary:
 	var v := _flat(ball - center)
 	var bearing := (atan2(v.z, v.x) if v.length() > 0.0 else 0.0) + PI
-	var d := _lane_desc("lane", 0, center, bearing, _warn(LANE_WARN, phase), LANE_LIVE, radius)
+	var d := _lane_desc("lane", 0, center, bearing, _warn(LANE_WARN, phase, warn_scale), LANE_LIVE, radius)
 	d["from"] = center + _flat(d["dir"]) * CLEAR
 	d["ahead"] = float(d["ahead"]) - CLEAR
 	return d
 
 
-static func lane(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Array:
+static func lane(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, warn_scale := 1.0) -> Array:
 	var rng := _rng(seed)
 	var bearing := _bearing(rng, ball, center)
-	return [_lane_desc("lane", 0, center, bearing, _warn(LANE_WARN, phase), LANE_LIVE, radius)]
+	return [_lane_desc("lane", 0, center, bearing, _warn(LANE_WARN, phase, warn_scale), LANE_LIVE, radius)]
 
 
-static func split_lane(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Array:
+static func split_lane(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, warn_scale := 1.0) -> Array:
 	var rng := _rng(seed)
 	var bearing := _bearing(rng, ball, center)
 	var off := rng.randf_range(SPLIT_OFF.x, SPLIT_OFF.y) * (1.0 if rng.randf() < 0.5 else -1.0)
-	var warn := _warn(SPLIT_WARN, phase)
+	var warn := _warn(SPLIT_WARN, phase, warn_scale)
 	return [_lane_desc("split_lane", 0, center, bearing, warn, SPLIT_LIVE, radius),
 		_lane_desc("split_lane", 1, center, bearing + off, warn, SPLIT_LIVE, radius)]
 
 
-static func rush(_seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Array:
+static func rush(_seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, warn_scale := 1.0) -> Array:
 	var rb := _flat(ball - center).length()
-	var d := _base("rush", 0, "annulus", Threat.Type.INSTANT, _warn(RUSH_WARN, phase), RUSH_LIVE)
+	var d := _base("rush", 0, "annulus", Threat.Type.INSTANT, _warn(RUSH_WARN, phase, warn_scale), RUSH_LIVE)
 	d["at"] = center
 	d["band"] = Vector2(maxf(0.0, rb - RUSH_HALF_BAND), minf(radius, rb + RUSH_HALF_BAND))
 	return [d]
 
 
-static func plate(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R) -> Array:
+static func plate(seed: int, ball: Vector3, center: Vector3, phase: int, radius := Arena.FLOOR_R, warn_scale := 1.0) -> Array:
 	var rng := _rng(seed)
 	var bearing := _bearing(rng, ball, center)
 	var rb := _flat(ball - center).length()
-	var d := _base("plate", 0, "sector", Threat.Type.WAVE, _warn(PLATE_WARN, phase), PLATE_LIVE)
+	var d := _base("plate", 0, "sector", Threat.Type.WAVE, _warn(PLATE_WARN, phase, warn_scale), PLATE_LIVE)
 	d["at"] = center
 	d["band"] = Vector2(maxf(0.0, rb - PLATE_HALF_BAND), minf(radius, rb + PLATE_HALF_BAND))
 	d["from_angle"] = bearing - PLATE_HALF_SPAN
@@ -244,8 +244,9 @@ static func _base(family: String, n: int, shape: String, type: int, warn: float,
 		"type": type, "warn": warn, "live": live, "height": HEIGHT}
 
 
-static func _warn(base: float, phase: int) -> float:
-	return ChallengeDials.tell("mind", base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1), WARN_FLOOR)
+static func _warn(base: float, phase: int, warn_scale := 1.0) -> float:
+	var scaled := (base - PHASE_TIGHTEN * (clampi(phase, 1, TIGHTEN_PHASES) - 1)) * clampf(warn_scale, 0.5, 1.0)
+	return maxf(WARN_FLOOR, ChallengeDials.tell("mind", scaled, WARN_FLOOR))
 
 
 static func _bearing(rng: RandomNumberGenerator, ball: Vector3, center: Vector3) -> float:

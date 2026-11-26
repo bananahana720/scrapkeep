@@ -487,6 +487,11 @@ func _leave_slag() -> void:
 	_slag_phase(lane, PHASE_WINDUP)
 
 
+func advance_choir_clock(delta: float) -> void:
+	if variant == "choir" and not staggered() and delta > 0.0:
+		_lens_clock += delta
+
+
 func _step_choir(delta: float) -> void:
 	if variant != "choir" or staggered():
 		return
@@ -965,7 +970,8 @@ func chunk_cracked() -> bool:
 func judge_hit(hit_kind: String, punch: float, smash: bool, tier: int, part := "") -> Dictionary:
 	_posture.set_monster(monster_build())
 	var result := _posture.judge({"kind": hit_kind, "punch": punch, "plating": plating_for(hit_kind, part), "smash": smash, "tier": tier,
-			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point()})
+			"charging": _charging, "frame": Engine.get_physics_frames(), "hp": hp, "max_hp": max_hp, "point": family_point(),
+			"heft": pilot_heft(), "speed_ratio": _ball_speed_ratio()})
 	if hit_kind == "guard_rack":
 		result["gain"] = GUARD_RACK_POSTURE if not staggered() and Engine.get_physics_frames() != _posture.shatter_frame else 0.0
 		result["glance"] = false
@@ -1036,7 +1042,34 @@ func _apply_posture(result: Dictionary) -> void:
 	_hook_posture()
 
 
+func _ball_speed_ratio() -> float:
+	if target == null:
+		return 0.0
+	var tuning = target.get("tuning")
+	if tuning == null:
+		return 0.0
+	var cruise: float = float(tuning.f("cruise"))
+	if cruise <= 0.0:
+		return 0.0
+	var vel_len := 0.0
+	var ball_state = target.get("state")
+	if ball_state != null and "velocity" in ball_state:
+		vel_len = (ball_state.velocity as Vector3).length()
+	elif target.has_method("planar_velocity"):
+		vel_len = float(target.planar_velocity().length())
+	return vel_len / cruise
+
+
+func _ball_latched() -> bool:
+	if target == null:
+		return false
+	var ball_kit = target.get("kit")
+	return ball_kit != null and ball_kit.hooked and ball_kit.on_body and ball_kit.anchor_body == self
+
+
 func _step_posture(delta: float) -> void:
+	if _posture.drain_engaged_pause:
+		_posture.drain_rate_scale = 0.0 if (_ball_latched() or _ball_speed_ratio() >= 1.0) else 1.0
 	var before := _posture_signature()
 	_posture.step(delta)
 	if not _posture.staggered:
