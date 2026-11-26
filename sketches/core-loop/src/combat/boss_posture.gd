@@ -35,6 +35,9 @@ var contact_gain_floor := 0.0
 var hit_cap := FULL
 var hit_cap_until_stagger := false
 var heavy_ratio := 0.0
+var ranged_heft_scale := 0.0
+var ranged_speed_floor := 0.15
+var drain_engaged_pause := false
 
 var posture := 0.0
 var staggered := false
@@ -74,6 +77,9 @@ func _init(numbers := {}) -> void:
 	hit_cap = float(numbers.get("hit_cap", FULL))
 	hit_cap_until_stagger = bool(numbers.get("hit_cap_until_stagger", false))
 	heavy_ratio = float(numbers.get("heavy_ratio", 0.0))
+	ranged_heft_scale = float(numbers.get("ranged_heft_scale", 0.0))
+	ranged_speed_floor = float(numbers.get("ranged_speed_floor", 0.15))
+	drain_engaged_pause = bool(numbers.get("drain_engaged_pause", false))
 
 
 func ordinary_ceiling() -> float:
@@ -92,7 +98,12 @@ func judge(hit: Dictionary) -> Dictionary:
 	var plating := float(hit.get("plating", 0.0))
 	var frame := int(hit.get("frame", 0))
 	var contact := base.has(kind)
-	var ratio := punch / plating if plating > 0.0 else mult_max
+	var effective_punch := punch
+	if not contact and ranged_heft_scale > 0.0 and plating > 0.0:
+		var hit_heft := maxf(1.0, float(hit.get("heft", 1.0)))
+		var speed_ratio := clampf(float(hit.get("speed_ratio", ranged_speed_floor)), ranged_speed_floor, 2.5)
+		effective_punch = punch * hit_heft * speed_ratio * ranged_heft_scale
+	var ratio := effective_punch / plating if plating > 0.0 else mult_max
 	var glance := ratio <= mult_min
 	var result := {"kind": kind, "punch": punch, "plating": plating, "full": not glance, "dealt": 0.0, "part": "", "shred": false,
 			"gain": 0.0, "glance": glance, "shatter": false, "crack": false, "contact": contact}

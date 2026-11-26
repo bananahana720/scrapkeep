@@ -22,6 +22,15 @@ const SEAT_REACH := Warden.FAMILY_REACH
 const TAKEOVER_COOLDOWN := 9.0
 const TAKEOVER_RANGE := 42.0
 const TAKEOVER_POSTURE_BONUS := 18.0
+const STALL_SPEED_SHARE := 0.75
+const CAMP_PERIOD_MIN := 2.4
+const STALL_RAMP_SECONDS := 1.5
+const CAMP_RADIUS := 6.0
+const CAMP_DELAY := 1.5
+const WARN_STALL_SCALE := 0.85
+const HAND_STALL_SUMMON_PERIOD := 2.4
+const HAND_REST_DEFAULT := 3.0
+const HAND_REST_STALL := 1.8
 
 var attacks: Array = []
 var landings: Array = []
@@ -45,6 +54,10 @@ var _brace_due := false
 var _plate_until := -INF
 var _dress
 var _arena_dress
+var _stall_seconds := 0.0
+var _camp_seconds := 0.0
+var _camp_anchor := Vector3.ZERO
+var _hand_summon_clock := 0.0
 
 
 func setup(ctx_ref) -> void:
@@ -105,6 +118,10 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_plate_until = -INF
 	_takeover_husk = null
 	_takeover_cd = 3.0
+	_stall_seconds = 0.0
+	_camp_seconds = 0.0
+	_camp_anchor = ctx.player.ball_position()
+	_hand_summon_clock = 0.0
 	_arena_dress = ArenaMindDress.attach(self)
 	_dress = MindDress.attach(self)
 
@@ -149,8 +166,13 @@ func _physics_process(delta: float) -> void:
 	_step_attacks(delta)
 	if clock < Rules.INTRO_SECONDS:
 		return
-	_step_husk_takeover(delta)
-	_attack_clock -= delta
+	_step_movement_pressure(delta)
+	var base_period := ChallengeDials.period("mind", ATTACK_PERIOD, phase)
+	var eff_period := effective_attack_period()
+	var accel := base_period / maxf(eff_period, 0.1)
+	_step_husk_takeover(delta * accel)
+	_step_hand_timers(delta, accel)
+	_attack_clock -= delta * (1.0 if _combo_left > 0 else accel)
 	if _attack_clock > 0.0:
 		return
 	_combo_left = ChallengeDials.combo_step("mind", _combo_left)
@@ -158,10 +180,93 @@ func _physics_process(delta: float) -> void:
 		_attack_clock = ChallengeDials.WARN_GAP
 	else:
 		_combo_left = -1
-		_attack_clock = ChallengeDials.period("mind", ATTACK_PERIOD, phase)
+		_attack_clock = base_period
 	_commit_attack("plate" if _brace_due else "")
 	_brace_due = false
 	_send_hand()
+
+
+func _player_speed() -> float:
+	if ctx == null or ctx.player == null:
+		return 0.0
+	var vel: float = (ctx.player.state.velocity as Vector3).length() if ctx.player.get("state") != null else 0.0
+	return maxf(float(ctx.player.planar_velocity().length()), vel)
+
+
+func ball_slow_or_camping() -> bool:
+	if ctx == null or ctx.player == null or ctx.tuning == null:
+		return false
+	var cruise := float(ctx.tuning.f("cruise"))
+	var speed := _player_speed()
+	if speed >= cruise:
+		return false
+	return speed < STALL_SPEED_SHARE * cruise or _camp_seconds >= CAMP_DELAY
+
+
+func stall_pressure() -> float:
+	if not ball_slow_or_camping():
+		return 0.0
+	return lerpf(0.35, 1.0, clampf(_stall_seconds / STALL_RAMP_SECONDS, 0.0, 1.0))
+
+
+func effective_attack_period() -> float:
+	var base := ChallengeDials.period("mind", ATTACK_PERIOD, phase)
+	var p := stall_pressure()
+	if p <= 0.0:
+		return base
+	return minf(base, lerpf(base, CAMP_PERIOD_MIN, p))
+
+
+func effective_warn_scale() -> float:
+	return lerpf(1.0, WARN_STALL_SCALE, stall_pressure())
+
+
+func _step_movement_pressure(delta: float) -> void:
+	if ctx == null or ctx.player == null or ctx.tuning == null:
+		return
+	var cruise := float(ctx.tuning.f("cruise"))
+	var speed := _player_speed()
+	var ball: Vector3 = ctx.player.ball_position()
+	if speed >= cruise:
+		_stall_seconds = 0.0
+		_camp_seconds = 0.0
+		_camp_anchor = ball
+		return
+	if Vector2(ball.x - _camp_anchor.x, ball.z - _camp_anchor.z).length() <= CAMP_RADIUS:
+		_camp_seconds += delta
+	else:
+		_camp_seconds = 0.0
+		_camp_anchor = ball
+	if speed < STALL_SPEED_SHARE * cruise or _camp_seconds >= CAMP_DELAY:
+		_stall_seconds = minf(STALL_RAMP_SECONDS, _stall_seconds + delta)
+	else:
+		_stall_seconds = maxf(0.0, _stall_seconds - delta)
+
+
+func _step_hand_timers(delta: float, accel: float) -> void:
+	var p := stall_pressure()
+	if p <= 0.0:
+		_hand_summon_clock = 0.0
+		for hand in hands:
+			if is_instance_valid(hand) and not hand.is_dead() and "rest_seconds" in hand:
+				hand.rest_seconds = HAND_REST_DEFAULT
+		return
+	_hand_summon_clock += delta * accel
+	if phase >= HAND_PHASE and _hand_summon_clock >= HAND_STALL_SUMMON_PERIOD:
+		_hand_summon_clock = 0.0
+		_send_hand()
+	var bonus := delta * maxf(0.0, accel - 1.0)
+	for hand in hands:
+		if not is_instance_valid(hand) or hand.is_dead():
+			continue
+		if "rest_seconds" in hand:
+			hand.rest_seconds = lerpf(HAND_REST_DEFAULT, HAND_REST_STALL, p)
+		if "_rest" in hand and float(hand._rest) > 0.0:
+			hand._rest = maxf(0.0, float(hand._rest) - bonus)
+		if "_takeover_cd" in hand and float(hand._takeover_cd) > 0.0:
+			hand._takeover_cd = maxf(0.0, float(hand._takeover_cd) - bonus)
+	if is_instance_valid(warden) and not warden.staggered() and warden.variant == "choir":
+		warden._lens_clock += bonus
 
 
 func _end_combo() -> void:
@@ -312,7 +417,7 @@ func _commit_attack(family := "") -> void:
 	center.y = _top()
 	attack_count += 1
 	var seed: int = attack_count * 7919 + ctx.run.stage
-	var safe := MindAttacks.commit_safe(family, seed, ball, center, phase, ctx.tuning.f("cruise"), PAD_RADIUS, _removed_families())
+	var safe := MindAttacks.commit_safe(family, seed, ball, center, phase, ctx.tuning.f("cruise"), PAD_RADIUS, _removed_families(), effective_warn_scale())
 	var descriptors: Array = safe["descriptors"]
 	if MindAttacks.FALLBACK_PATHS.has(safe["path"]):
 		push_warning("mind: attack %d had no escape; fell back to %s" % [attack_count, safe["path"]])

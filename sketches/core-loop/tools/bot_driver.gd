@@ -2410,7 +2410,8 @@ func _anchor_bite(target: Node3D, ball: Vector3) -> void:
 		swallowed = true
 	if swallowed or kit.rewind_left > 0.0 or kit.aim.get("body") != target or ball.distance_to(target.global_position) > LATCH_REACH:
 		return
-	_cast(3)
+	if not (target.has_method("staggered") and target.staggered()):
+		_cast(3)
 	source.press["harpoon_pressed"] = true
 	_harpoon_held = true
 	_count("latch_presses")
@@ -4002,6 +4003,8 @@ func _line_hands() -> void:
 	var body: Node3D = kit.anchor_body
 	if not body.is_in_group("enemy"):
 		return
+	if body.has_method("staggered") and body.staggered():
+		return
 	if game.player.ball_position().distance_to(body.global_position) <= LINE_CAST_REACH:
 		_cast(3)
 
@@ -4219,7 +4222,13 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 		elif player.state.velocity.y < 0.0 and not player.kit.slamming:
 			hold["jump_held"] = true
 	var chain_hand: bool = policy == "completionist" and chain_hand_enabled and _chain_phase != "" and not _in_boss()
-	if not chain_hand and (_harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH)):
+	var haul_commit: bool = _harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH)
+	var kest_drop_hang: bool = class_id() == "demolitions_caster" and not player.state.grounded \
+			and is_instance_valid(_fight_target) and _anchor_warden(_fight_target) \
+			and (_fight_target.staggered() or (player.kit.hooked and player.kit.on_body and player.kit.anchor_body == _fight_target))
+	if (haul_commit or kest_drop_hang) and _cast_phase == "":
+		hold.erase("fire_held")
+	if not chain_hand and haul_commit:
 		source.press.erase("jump_pressed")
 		source.press.erase("shift_pressed")
 		source.press.erase("movement_pressed")

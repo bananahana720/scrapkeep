@@ -6,6 +6,7 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Habits := preload("res://src/combat/habits.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -72,6 +73,8 @@ func _walk() -> void:
 	var warden = Harness.target(mod)
 	_t.check("the Warden is a MIND choir Warden with the fleet", warden.family == Roster.MIND and warden.variant == "choir"
 			and warden.fleet == fleet, "family %s, variant %s, fleet %s" % [warden.family, warden.variant, warden.fleet == fleet])
+
+	_check_movement_pressure(game, mod)
 
 	var points_before: int = seen.points.size()
 	var defeated_before: int = seen.defeated
@@ -143,6 +146,41 @@ func _landings(landings: Array) -> void:
 			late.append(landing)
 	_t.check("every landing was telegraphed at least 90% of its warn earlier", late.is_empty(),
 		"%d of %d landing(s) untold or early: %s" % [late.size(), landings.size(), late])
+
+
+func _check_movement_pressure(game, mod) -> void:
+	var cruise := float(game.ctx.tuning.f("cruise"))
+	var center: Vector3 = mod.pad.global_position if is_instance_valid(mod.pad) else mod.warden.global_position
+	var ball: Vector3 = game.player.ball_position()
+	var saved_vel: Vector3 = game.player.state.velocity
+	game.player.body().linear_velocity = Vector3.FORWARD * cruise
+	game.player.state.velocity = Vector3.FORWARD * cruise
+	mod._step_movement_pressure(0.2)
+	_t.check("rolling at >= cruise preserves ATTACK_PERIOD and zero stall pressure",
+		not mod.ball_slow_or_camping() and is_zero_approx(mod.stall_pressure())
+		and is_equal_approx(mod.effective_attack_period(), mod.ATTACK_PERIOD),
+		"period=%.3f pressure=%.3f" % [mod.effective_attack_period(), mod.stall_pressure()])
+	var safe_roll := MindAttacks.commit_safe("", 17, ball, center, 2, cruise, mod.PAD_RADIUS, [], mod.effective_warn_scale())
+	_t.check("rolling escape corridor stays intact",
+		not safe_roll["descriptors"].is_empty()
+		and MindAttacks.escape_point(safe_roll["descriptors"], ball, cruise, center, mod.PAD_RADIUS) != null,
+		"path=%s" % safe_roll["path"])
+	game.player.body().linear_velocity = Vector3.FORWARD * (0.4 * cruise)
+	game.player.state.velocity = Vector3.FORWARD * (0.4 * cruise)
+	for _i in 20:
+		mod._step_movement_pressure(0.1)
+	_t.check("slowing < 0.75 * cruise tightens attack period toward 2.4 s",
+		mod.ball_slow_or_camping() and mod.effective_attack_period() < mod.ATTACK_PERIOD
+		and mod.effective_attack_period() <= 2.55 and mod.effective_attack_period() >= 2.39,
+		"period=%.3f pressure=%.3f" % [mod.effective_attack_period(), mod.stall_pressure()])
+	var safe_stall := MindAttacks.commit_safe("", 17, ball, center, 3, cruise, mod.PAD_RADIUS, [], mod.effective_warn_scale())
+	var warn_ok: bool = (safe_stall["descriptors"] as Array).all(func(d): return float(d["warn"]) >= MindAttacks.WARN_FLOOR)
+	_t.check("stalled warns stay >= WARN_FLOOR and keep escape corridor at cruise",
+		warn_ok and MindAttacks.escape_point(safe_stall["descriptors"], ball, cruise, center, mod.PAD_RADIUS) != null,
+		"warn_ok=%s path=%s" % [warn_ok, safe_stall["path"]])
+	game.player.body().linear_velocity = saved_vel
+	game.player.state.velocity = saved_vel
+	mod._step_movement_pressure(0.1)
 
 
 func _until(done: Callable) -> void:
