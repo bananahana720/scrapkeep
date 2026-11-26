@@ -57,6 +57,8 @@ const PinHash := preload("res://tests/support/pin_hash.gd")
 # the 60 m of flat plateau between. Stage 2 park_flume 1001921675 -> 3830422007 in the same PR, because five east-west
 # washes now end 12 m short of the new east canyon wall's foot and the scatter reads the rebaked ground. The others
 # unchanged.
+# 2026-11-26 park_dam floor line + prop clear re-pin (w52 correct): stage 1 park_dressing_1 re-pinned because
+# moving the park_dam floor scrap line off slot_fin_east shifts scatter keep-outs along that corridor. The others unchanged.
 const PINS := {
 	1: ["park_dam", 13],
 	2: ["park_flume", 13],

@@ -2066,8 +2066,8 @@
    "id": "crown_02",
    "template": "net_lesson",
    "at": [
-    146.0,
-    -370.0
+    142.0,
+    -368.0
    ],
    "yaw_deg": 135,
    "near": "kick_emid_1, net-weaver gear"
