@@ -91,7 +91,7 @@ On not built, the round record is pushed, the measure row stays red at `report`,
 
 **The lane.** `node scripts/gate/display-run.mjs --offscreen <script> -- <args>` keeps scratch saves (`scratchEnv`) and process-group kill cleanly off Andrew's screen.
 
-**Which tools use it.** Currently qualified `watchedTools` entrypoints in `scripts/gate/display-run.mjs`: `sketches/core-loop/tools/water_flow_stills.gd` and `sketches/core-loop/tools/offscreen_probe.gd` (with `tools/dam_look_capture.gd` and `tools/offscreen_window.gd` hashed as dependencies under `offscreen_probe.gd`). Future tools (look harness, film tools, W1-137a collision sweep, W1-144a Mac timing probe) must qualify via `watchedTools` in `scripts/gate/display-run.mjs` + `scripts/gate/display-run.test.mjs` before running on Mac.
+**Which tools use it.** Currently qualified `watchedTools` entrypoints in `scripts/gate/display-run.mjs`: `sketches/core-loop/tools/water_flow_stills.gd` and `sketches/core-loop/tools/offscreen_probe.gd` (with `sketches/core-loop/tools/dam_look_capture.gd` and `sketches/core-loop/tools/offscreen_window.gd` hashed as dependencies under `sketches/core-loop/tools/offscreen_probe.gd`). Future tools (look harness, film tools, W1-137a collision sweep, W1-144a Mac timing probe) must qualify via `watchedTools` in `scripts/gate/display-run.mjs` + `scripts/gate/display-run.test.mjs` before running on Mac.
 
 **How a tool qualifies.** Add its path and SHA-256 of loaded files to `watchedTools` in `scripts/gate/display-run.mjs` (and `scripts/gate/display-run.test.mjs`) with the kept watcher result from its offscreen run.
 
