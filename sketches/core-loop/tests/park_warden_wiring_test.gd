@@ -95,11 +95,14 @@ const UNCHANGED := [
       "hp": 1250.0,
       "plating": 170.0,
       "posture": {
-        "contact_gain_floor": 0.35,
-        "contact_gain_scale": 10.0,
+        "contact_gain_floor": 0.55,
+        "contact_gain_scale": 150.0,
         "curve": 2.2,
-        "drain_rate": 0.5,
-        "ram_shatters": false
+        "drain_engaged_pause": true,
+        "drain_rate": 10.5,
+        "ram_shatters": false,
+        "ranged_heft_scale": 2.5,
+        "ranged_speed_floor": 0.15
       },
       "reach": 30.0,
       "stage": 5,
@@ -115,11 +118,14 @@ const UNCHANGED := [
       "hp": 1400.0,
       "plating": 190.0,
       "posture": {
-        "contact_gain_floor": 0.35,
-        "contact_gain_scale": 10.0,
+        "contact_gain_floor": 0.55,
+        "contact_gain_scale": 150.0,
         "curve": 2.2,
-        "drain_rate": 0.5,
-        "ram_shatters": false
+        "drain_engaged_pause": true,
+        "drain_rate": 10.5,
+        "ram_shatters": false,
+        "ranged_heft_scale": 2.5,
+        "ranged_speed_floor": 0.15
       },
       "reach": 30.0,
       "stage": 6,

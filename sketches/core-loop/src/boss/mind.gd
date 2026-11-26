@@ -172,7 +172,8 @@ func _physics_process(delta: float) -> void:
 	var accel := base_period / maxf(eff_period, 0.1)
 	_step_husk_takeover(delta * accel)
 	_step_hand_timers(delta, accel)
-	_attack_clock -= delta * (1.0 if _combo_left > 0 else accel)
+	var clock_rate := 1.0 if (_combo_left > 0 or (_family == "plate" and clock <= _plate_until) or warden.staggered()) else accel
+	_attack_clock -= delta * clock_rate
 	if _attack_clock > 0.0:
 		return
 	_combo_left = ChallengeDials.combo_step("mind", _combo_left)
