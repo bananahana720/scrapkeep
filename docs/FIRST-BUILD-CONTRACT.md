@@ -10,7 +10,7 @@ Goal authorized 5 September 2026. New playable entry `/orchard.html`, preserving
 - Ground height: 0 for z >= -14, rises linearly to 2.5 from z -14 to -23, then 2.5. Export `groundHeight(x,z)` from simulation; renderer uses it.
 - Player movement is camera-relative acceleration with braking, a low cooldown forward ram burst, bounded growth radius 1 to 1.65, ground-following Y and visual wobble independent of collision envelope. Spatial evasion, no mandatory parry.
 - Introduction places one Snipcart near (-4,8), one Spreadleg near (6,-4), an optional worker pair near (-8,-12)/(8,-14), and a single Grand Pruner arm near (0,-29). Enemies can activate by proximity; the player can approach the boss without killing every worker. Win when the arm is dismantled. Defeat on player HP zero; restart resets.
-- Source/pose intent: docs/ORCHARD-ENCOUNTER-STUDY.md. First build may simplify full boss greenhouse to a backdrop plus one moving arm. New module exports below are the agreement between writers.
+- Source/pose intent: `docs/ORCHARD-ENCOUNTER-STUDY.md` (archived in git history). First build may simplify full boss greenhouse to a backdrop plus one moving arm. New module exports below are the agreement between writers.
 
 ## Simulation module: src/orchard/simulation.js
 Export `OrchardGame`, `groundHeight(x,z)`, `ARENA`, `ENEMY_CONFIG`. No DOM or Three dependency.

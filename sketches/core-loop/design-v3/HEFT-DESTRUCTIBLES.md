@@ -2,7 +2,7 @@
 
 Andrew approved the payoff: **combat, optional shortcuts and capped light loot**. A heavier ball breaks heavier world props without losing a metre per second, and a lighter ball sees why it cannot. This page is the spec. It changes no code, data or test. Build units are in [section 10](#10-build-units-and-verification); nothing starts until the Gate admits a card.
 
-Read with [AGENTS.md](../../../AGENTS.md) rules 7 to 10, [BIBLE.md](../../../BIBLE.md) (movement and growth), [Q-P22](../../../BACKLOG.md#q-p22), [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md) ("Research first" and "Fixed outline"), [DRESSING-KITS.md](park/DRESSING-KITS.md), [LEGIBILITY.md](LEGIBILITY.md) section 13 and the [economy audit](../../../docs/systems-audit/economy/README.md).
+Read with [AGENTS.md](../../../AGENTS.md) rules 7 to 10, [BIBLE.md](../../../BIBLE.md) (movement and growth), [Q-P22](../../../BACKLOG.md#q-p22), [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md) ("Research first" and "Fixed outline"), [DRESSING-KITS.md](park/DRESSING-KITS.md), [LEGIBILITY.md](LEGIBILITY.md) section 13 and the economy audit (`docs/systems-audit/economy/README.md`, archived in git history).
 
 ## 1. What exists today (verified in code at `fc8507686`)
 
@@ -199,7 +199,7 @@ A stage meter inside the module allows at most **35 scrap and 20 cogs** from all
 
 ### 7.3 Why these numbers are small
 
-From the [economy audit](../../../docs/systems-audit/economy/README.md) (lines 41 and 64; 24 runs per player type, before arm):
+From the economy audit (`docs/systems-audit/economy/README.md`, archived in git history; lines 41 and 64; 24 runs per player type, before arm):
 - Measured World 1 run length is about **7.0 game minutes** for the rusher and min-maxer and **10.0 game minutes** for the completionist across two stages (dam and flume, `park_cover_tags_test.gd:34`), i.e. **~3.5 to 5.0 game minutes per stage**.
 - Net held scrap is **223 / 208 / 231 per game minute** (rusher, completionist, min-maxer — counted as scrap held at end of run, a net figure rather than gross income) and cogs are **223 / 206 / 235 per game minute**. At ~3.5 minutes per stage (~780 net scrap and ~780 cogs per stage), the **35 scrap / 20 cogs** cap is **~4.5 percent of net stage scrap** (~9.4 s) and **~2.6 percent of stage cogs** (~5.4 s).
 - One activity pays `PAY_SCRAP = 180` ([activities.gd:59](../src/world/activities.gd)), so the whole destructible cap is under one fifth of one activity.
@@ -276,7 +276,7 @@ Order: **A**, then **B, C, and E in parallel**, then **D** (landing E before D e
 | T11. Snag sweep | D | Run `tools/qa/snag_sweep.gd` for `park_dam` and `park_flume` with the pieces intact and with the pieces shattered; no new snag **above the intact pieces** other than the pieces themselves, and none after | [snag_sweep_test.gd](../tests/snag_sweep_test.gd) is the planted control; run it first (the sweep's own doc says a zero means nothing if it is red) |
 | T12. Teardown and determinism | A | No body, shard or exception survives a stage change; two runs of one seed break the same pieces | A leaked shard must fail |
 | **Test F. Alpha-fade & break-frame hardware check** | C / D | Unit C measures fixture tick cost (`<= 0.3 ms`), break-frame time on Mac Studio (60 Hz) and 4080 (`<= 33 ms`), and opaque shrink-to-`SPECK` vs alpha-fade shader stall; Unit D re-checks placed park-pose draw counts (`<= +120` dressing, `<= 1,400` on `p1`) and captures chase-camera before/after stills | A planted alpha-faded shard variant or a break frame / draw count over budget fails; `NEEDS: gpu` on the board (rule 12) |
-| **Test G. Economy arm, band sweep & heft histogram** | D | Rerun the [economy audit](../../../docs/systems-audit/economy/README.md) arm and World 1 band sweep before/after placement: (1) prints the Class I–V heft histogram at each stage entry and Warden (deciding whether Tier 5 stays or is cut), (2) refuses placement if scrap/cogs or Warden difficulty medians shift beyond audit noise | A planted uncapped-scrap arm must shift the economy median and fail |
+| **Test G. Economy arm, band sweep & heft histogram** | D | Rerun the economy audit (`docs/systems-audit/economy/README.md`, archived in git history) arm and World 1 band sweep before/after placement: (1) prints the Class I–V heft histogram at each stage entry and Warden (deciding whether Tier 5 stays or is cut), (2) refuses placement if scrap/cogs or Warden difficulty medians shift beyond audit noise | A planted uncapped-scrap arm must shift the economy median and fail |
 
 ### 10.3 Existing tools the sweep cites
 

@@ -11,18 +11,18 @@ Scrapkeep supports **Google Antigravity (Gemini)** and **Claude Code** as first-
 | "Verify this Scrapkeep change" | `scrapkeep-verify` selects checks for the artifact and reports evidence limits. |
 | "Block out this pocket in mojulo" | `scrapkeep-blockout` builds mojulo recipes, exports lit glb, and proves them with the ball. |
 | "Show this working in the running game" | `scrapkeep-verify-game` drives `sketches/core-loop` with real keys/clicks and keeps pictures, rows, and saves. |
-| "Check the build Andrew will install" | `scrapkeep-verify-build` checks and drives the packed Linux build (`core-loop.x86_64`). |
+| "Check the build Andrew will install" | `scrapkeep-verify-build` checks and drives the packed Linux build (`core-loop.x86_64` / `Scrapkeep.AppImage`). |
 | "Check the Sitting Kit page" or a preserved browser proof | `scrapkeep-verify-web` serves the Sitting Kit, yard, and Iron Orchard in headless Chromium. |
-| "Model-check the run flow" or a change to `flow.gd` | `scrapkeep-verify-formal` model-checks `RunFlow.tla` against death, retry, new run, quit, and Continue. |
+| "Model-check the run flow" or a change to `flow.gd` | `scrapkeep-verify-formal` model-checks `RunFlow.tla` and ten sibling TLA+ specs with live TLC. |
 | "Design or evaluate a model decision inside the game loop" | `reactive-model-loop` covers controls, blind corpora, pre-registration, caching, and cost fields. |
 | "Run parallel PR review, `run_workflow` pipelines, or card batches" | `scrapkeep-gemini-workflows` runs `pr_gate_review.py` and `card_batch.py` with Gemini tier routing. |
 | "Audit screenshots, UI legibility, `eye.mjs` films, or Gemini refsheets" | `scrapkeep-visual-review` runs multimodal `read_file` checks, `eye_read_workflow.py`, `image-generator`, and MCP inspection. |
 
-Slash commands match the 11 skill names above; see [the skills README](../../.agents/skills/README.md) when adding one. `BIBLE.md`, `adr/`, `BACKLOG.md`, `TRACKING.md`, and `ORCHESTRATOR.md` remain the canonical heavy-lane authorities.
+Slash commands match the 11 skill names above; see [the skills README](../../.agents/skills/README.md) when adding one. `AGENTS.md` rule 11 (ruling `ej`) owns worker routing (`claude-fable-5-2`, `claude-opus-5-5`, `gemini-4-neon`), and `pstack` (`pstack@cursor-plugins`, ruling `er`) provides shared workflows. `BIBLE.md`, `adr/`, `BACKLOG.md`, `TRACKING.md`, and `ORCHESTRATOR.md` remain the canonical heavy-lane authorities.
 
 ## Host behavior & safety gates
 
-- **Tier routing & isolation**: [GEMINI.md](../../GEMINI.md) owns the Antigravity Gemini tier map (`flash`, `pro`, `inherit`), MCP servers, and built-in tools; `.claude/agents/` owns Claude pins (`sonnet`, `opus`, `fable`). Explorers and reviewers exclude shell and edits and never read the writer's brief.
+- **Fallback tier routing & isolation**: [GEMINI.md](../../GEMINI.md) holds the Antigravity Gemini fallback tier map (`flash`, `pro`, `inherit`), MCP servers, and built-in tools; `.claude/agents/` holds fallback Claude pins (`sonnet`, `opus`, `fable`). Explorers and reviewers exclude shell and edits and never read the writer's brief.
 - **Worktrees**: Coordinators create isolated checkouts via `workspace: "share"` (Antigravity) or `scripts/new-worktree.sh <task-id> <base-sha>`.
 - **Mechanical gates**: Antigravity enforces approval boundaries in `.agents/hooks.json` via `.agents/hooks/safety-gate.mjs`; Claude Code enforces them in `.claude/settings.json` (`permissions.deny` / `ask`).
 

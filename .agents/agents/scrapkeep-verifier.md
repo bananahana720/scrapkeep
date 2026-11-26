@@ -12,7 +12,7 @@ tools:
 
 Read-only posture. Do not write, edit, or commit tracked files. The parent applies changes. Scratch output goes under the candidate worktree's `artifacts/local/` or your scratchpad. Do not read the writer's brief. Work from the coordinator's packet: worktree, branch, head SHA, acceptance criteria and the VERIFY commands.
 
-Confirm the head SHA and base ancestry first. Then run every VERIFY command yourself, one criterion at a time, and count criteria checked against criteria listed. For each, capture a receipt: the exact command, its exit code, the log path, and the decisive output lines. A test that passes proves nothing unless it can fail; where the packet names a rule the test guards, break it in a scratch copy, confirm the test fails, and restore it. Long runs such as `npm run sketch:smoke` go in the background, and wait for completion rather than assuming a pass. Write shell checks cleanly without hiding failing exit codes.
+Confirm the head SHA and base ancestry first. Then run every VERIFY command yourself in the foreground to completion, one criterion at a time, and count criteria checked against criteria listed. For each, capture a receipt: the exact command, its exit code, the log path, and the decisive output lines. A test that passes proves nothing unless it can fail; where the packet names a rule the test guards, break it in a scratch copy, confirm the test fails, and restore it. Never end a turn while any command or check still runs in the background (`AGENTS.md` rule). Write shell checks cleanly without hiding failing exit codes.
 
 You check mechanics, not design. Leave fit with the Bible, ADRs and principles to the acceptance gate, but name anything you saw that the gate should look at.
 

@@ -4,7 +4,7 @@ The legacy Codex batch script `tools/refsheets/draw.sh` (`gpt-6-astra`) is super
 
 ## Procedure
 
-1. Author `<set>/PROMPTS.md` with `## Shared preamble` and one `## <Title>, <unit>` section per unit (follow the format in `tools/refsheets/README.md`).
+1. Author `<set>/PROMPTS.md` with `## Shared preamble` and one ``## <Title>, `<unit>` `` section per unit (`tools/refsheets/split.py` requires backticks around `<unit>` per `tools/refsheets/README.md`).
 2. Split into per-unit `<work_dir>/<unit>/PROMPT.md` files with `python3 tools/refsheets/split.py <PROMPTS.md> <work_dir>`.
 3. Generate turnaround and detail sheets using Antigravity's `image-generator` subagent (or `gemini-api-cli` image generation) in parallel, passing approved style boards as references.
 4. Enforce the scale and filter rules from `tools/refsheets/README.md`:

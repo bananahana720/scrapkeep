@@ -1,6 +1,6 @@
 # World 3, The Highdraft: the journey to the Mind's hand
 
-**Status: journey draft, waiting for Andrew's approval.** Wave 13, 10 October 2026. This page builds no new mechanic. It strings the two stage pages and the kind sheet into one ordered ride, beat by beat, with the pull that carries the ball from each beat to the next. Nothing here is built; every number is the source page's starting value.
+**Status: historical wave 13 journey draft (2026-10-10); World 3 is now unparked and shipped flat on `main` under rulings `ep`/`eq` with `Worlds.FULL_ALPHA := true`.** This page builds no new mechanic. It strings the two stage pages and the kind sheet into one ordered ride, beat by beat, with the pull that carries the ball from each beat to the next; numbers below are the original wave-13 starting values. Historical `artifacts/local/alpha/push/w13/concepts/...` paths refer to the wave-13 candidate worktree.
 
 **Cite keys.** Every `(KEY:line)` resolves against one file in this repository:
 
@@ -464,7 +464,7 @@ The floor line uses no harpoon and no contraption (S5:273, S6:267). Its anchor l
 
 ## Overhead route
 
-The plot tool draws each route from the park file's `routes[].via` row ids, placing each id at its row's `at` [x, z]; hung rows carry an absolute `y` (S5:137, S6:132). `p1_overhead` from `tools/park_plot.py` is still due (PARK:393).
+The planned plot tool would draw each route from the park file's `routes[].via` row ids, placing each id at its row's `at` [x, z]; hung rows carry an absolute `y` (S5:137, S6:132). `p1_overhead` from unbuilt `tools/park_plot.py` (not in checkout) stays due (PARK:393).
 
 **Stage 5, `park_islands`** (appendix S5:445-552). Start: spawn [0, -720], heading 0 (S5:455). Warden: landmark [0, 520], anchor [0, 80, 520] (S5:460, S5:469). Bay dock [0, 650]; gates at z 720 (S5:470-471).
 

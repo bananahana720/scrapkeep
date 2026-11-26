@@ -1,6 +1,6 @@
 # The Spillway roster
 
-Status: wave 19, world 1 unit 1. Working default of the open roster card (Andrew, 23 Oct): bring three stored Spillway kinds back reworked around Flow, plus one new Mojulo body. That card reverses part of the 17 Oct "Re-home a few" ruling (the six spare Spillway kinds stayed out of the alpha); if Andrew picks another option, this file changes with it. Paths are under `sketches/core-loop/`. Plan: https://claude.ai/artifact/GzjpkrydUYjV787yaYhVor.
+Status: wave 19, world 1 unit 1 brief (historical card default subsequently implemented on `main`). Brought three stored Spillway kinds back reworked around Flow, plus one new Mojulo body, reversing part of the 17 Oct "Re-home a few" ruling. Paths are under `sketches/core-loop/`.
 
 ## The ask
 
@@ -97,6 +97,6 @@ The lane, the pin and the pops all read the committed heading; the swing is pres
 
 ## Checks
 
-- Scorecard (`/mnt/project-files/alpha-status/intent-check/scorecard.py`): own-world kinds on the dam and the flume go from 1 to 5 (chaser, jolt layer, hooker, ramp flipper, boom tender); packs 2 to 5 and 3 to 6.
+- Historical shared scorecard path (outside this repo): `/mnt/project-files/alpha-status/intent-check/scorecard.py` — own-world kinds on the dam and the flume go from 1 to 5 (chaser, jolt layer, hooker, ramp flipper, boom tender); packs 2 to 5 and 3 to 6.
 - `tests/spillway_roster_test.gd`: the packs and elite, the soaked row, the flap's speed ride, the hooker's hook-out, the wet mat, and the boom tender's pin, pops and strike.
 - Bands and the attack budget re-read on 24 seeds with `--warm-band=1` before the gate; Learner unchanged or better.

@@ -2,7 +2,7 @@
 
 Status: design spec for wave P-B, unit A1 of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `e2e364a`. Nothing here is built or played. Every `file:line` cites that commit; paths without a prefix are under `sketches/core-loop/`. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
 
-Settled by Andrew today (the plan's "Decisions settled today" table, `~/.claude/plans/let-s-plan-this-session-glowing-beaver.md`): a 1-2-3 bar plus one ultimate for every pilot; snap-back firing; F retires into slot 2; slot 3 is the line skill (Sable motion, Rivet force, Kest payload, Tarn claw drag, Tally ledger clip, Cannon lane charge); ultimate on Q, charged by performance, scaled by heft class, never spends heft, a full meter lifts the music one layer; the ultimate is a directed set piece on the line; harpoon, Shift, Space and Ctrl stay instant; tree depths 3 and 4 hold ultimate variants; keys 1, 2, 3 reuse `cl_bay_1..3`.
+Settled in the wave-13 session decisions: a 1-2-3 bar plus one ultimate for every pilot; snap-back firing; F retires into slot 2; slot 3 is the line skill (Sable motion, Rivet force, Kest payload, Tarn claw drag, Tally ledger clip, Cannon lane charge); ultimate on Q, charged by performance, scaled by heft class, never spends heft, a full meter lifts the music one layer; the ultimate is a directed set piece on the line; harpoon, Shift, Space and Ctrl stay instant; tree depths 3 and 4 hold ultimate variants; keys 1, 2, 3 reuse `cl_bay_1..3`.
 
 Reads with: `design-v3/PILOTS.md` (A2 fills the per-pilot contracts named here), `design-v3/CUSTOMIZE.md` (A4), the A5 animation spec, [LEGIBILITY.md](LEGIBILITY.md) and [HOOK-CHAIN.md](HOOK-CHAIN.md).
 
@@ -391,7 +391,7 @@ Quit moves off Q (`src/ui/pause_menu.gd:46`, `:355-357`) to X held for 0.6 s (st
 | `cl_bay_2` | `select` | `slot_pick = 1` | 2 | none | D-pad up | same (`:51`) |
 | `cl_bay_3` | `select` | `slot_pick = 2` | 3 | none | D-pad right | same (`:52`) |
 | `cl_ultimate` (new) | `ultimate` (new) | `ultimate_pressed` | Q | none | LB | new; glyph `key_q`, fail `verb_fail_ultimate` |
-| `cl_special` | `special` | none | F | none | LB | **retired**; F is unbound in play; `special_*` stay as routed outputs |
+| `cl_special` | `special` | none | — (retired; `bindings.gd:26`, `keys: []`) | none | — | **retired** in `bindings.gd`; `F` now triggers active items (`cl_active`, `bindings.gd:36`, pad D-pad Down), while `special_*` stay as routed outputs |
 | `cl_fire` | `fire` | `fire_*` | none | LMB | RT | reading becomes "cast the picked slot" |
 | `cl_harpoon` | `harpoon` | `harpoon_*` | none | RMB | LT | unchanged; refused during a set piece |
 | `cl_boost` | `boost` | `shift_*` | Shift | none | B | unchanged; never selectable |

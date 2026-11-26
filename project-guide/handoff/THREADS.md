@@ -1,20 +1,15 @@
-# Roles and who owns what (15 Nov 2026)
+# Roles and who owns what
 
-Since 15 Nov 2026 one local Claude Code session on Andrew's PC is the coordinator and the Gate (ruling ds); it holds the first two roles below, and the unit work is done by that session or by its writer agents in separate worktrees. The rows after those two keep the claude.ai project wording of 12 to 14 Nov (ruling dh); those threads are stopped, and their open work is listed in [STATE.md](STATE.md). Earlier set-ups (the PC-coordinator lanes of 22 Oct, the project roles at the 10 Nov hand-off, the local PC coordinator of 10 to 11 Nov) are in git history.
+Since ruling `eb` (16 Nov) and ruling `ep` (25 Nov), one local session on the Mac Studio coordinates and gates in flat `main` mode, assigning units under [AGENTS.md](../../AGENTS.md) rule 11 (`ruling ej`, widened 21 Nov). Legacy `claude.ai` project threads (`ruling dh`), PC-as-Gate (`ruling ds`), and nightly `2:00` housekeeping are retired in git history.
 
-| Role | Where | What it does |
+| Role | Where / Model | What it does |
 | --- | --- | --- |
-| Coordinator | the local session on the PC (ruling ds) | Talks to Andrew in its own chat, starts writer agents, writes the register and memory. A fresh coordinator also reads [STATE.md](STATE.md), [ROADMAP.md](ROADMAP.md) and [DECISIONS.md](DECISIONS.md). The library map and phone start page of the claude.ai period are on branch `project-files-export-2026-11-14` |
-| Gate | the same local session | The only one that stacks onto the open stage. Runs the PC work directly, with no Remote Control session. Cuts each `stage/alpha-w<N>`, opens the wave board, stacks reviewed pull requests, runs the wave gate per promotion and the release gate once per sprint (ruling cy), promotes. Owns the shared flow, launch, arena, boss and world files,, and the PC lane ([DEVICES.md](DEVICES.md)) |
-| Unit threads | cloud threads | One unit each, built from the open stage: claim on the board with a file fence, build, run focused tests and `sketch:fast`, one independent review, a draft pull request with its receipt, a "ready" comment on the board ([COMMS.md](COMMS.md)) |
-| Systems audit | thread "Audit and improve game systems" | The systems audit passes A to F (`docs/systems-audit/`), cards SA-A to SA-F in [BACKLOG.md](../../BACKLOG.md). Brings Andrew only a cut or merge of a feature, a pillar conflict, or a balance fix that needs a design change |
-| Full-game audit | thread "Audit the whole game" | Audits the whole game on the open stage, started 14 Nov; its UI part runs on [the UI audit loop](../../sketches/core-loop/design-v3/ui-audit/README.md) |
-| Tripo models | thread "Upgrade game models with Tripo" | Generated models for every world 1 prop, point of interest, set piece, enemy, creature and attack prop, behind `--models=tripo` (ruling do). Its permission check wants Andrew's approvals typed in its own thread |
-| Nightly housekeeping | routine at 2:00 America/Phoenix | Keeps the library: new pages in `/mnt/project-files/INDEX.md` and on the Library page, the shared-folder copies of repo documents, and the decisions register doc in step with [DECISIONS.md](DECISIONS.md). Deletes nothing; candidates go in `/mnt/project-files/housekeeping/pending-deletes.md`, its log is `housekeeping/LOG.md`. At most one small docs pull request a night, never merged by the run |
-| Reviewers | read-only agents a thread starts | One independent review per finished diff, naming the head it read. A thread never reviews its own work (ruling by) |
+| Coordinator & Gate | Mac Studio local session (`claude-fable-5-2` or active coordinator under `ruling ep`) | Talks to Andrew, plans work, dispatches workers in isolated worktrees, integrates reviewed PRs onto `main`, runs gates and [STATE.md](STATE.md) updates |
+| 3D & UI Writer | `claude-opus-5-5` (high effort) | Meshes, map and park geometry, placement, blockout, look and lighting, UI screens, HUD and controls, and stills |
+| Code, Research, Test & Formal Writer | `gemini-4-neon` (high effort) | Game code, research, tests, formal models, band reads, gate runs, re-pins and records |
+| Independent Reviewer | Fresh `gemini-4-neon` (high effort) | Rule 4/11 read-only diff review for every unit (3D and UI included); receives diff and acceptance criteria, never writer reasoning |
+| Promise Card & QA Helpers | `gpt-6.2-astra` / `gpt-6.2-sol` (rulings `ec`, `ee`) | Promise-card subtasks, QA passes, concept art, model drafts, and non-admitting second review opinions |
 
-**Every thread finishes every to-do before it goes idle** (ruling dn, [AGENTS.md](../../AGENTS.md) rule 1). Every brief says so, and the coordinator checks a "done" task by task and nudges a thread that stopped partway.
+**Finish every to-do before going idle** (ruling `dn`, [AGENTS.md](../../AGENTS.md) rule 1).
 
-**Restate the head in every message that carries a ruling.** A thread reads the board only when it pages it, and a thread stopped by usage limits does not resume by itself; the coordinator re-messages it with its head SHA.
-
-**Gate steps.** The recipe is [GATE.md](GATE.md), with the step scripts under `scripts/gate/`. Before relaunching a "missing" step, check the board and the thread list.
+**Gate steps.** The recipe is [GATE.md](GATE.md), with scripts under `scripts/gate/`.

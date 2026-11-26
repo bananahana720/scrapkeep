@@ -614,7 +614,7 @@ The shipped park file:
 
 ## 14. Storyboard
 
-Board `park-1-park_dam`, panels per PARK.md:406. `p1_overhead` is plotted from section 13 by `tools/park_plot.py`; the rest are generated. The concept board `artifacts/local/alpha/push/w13/concepts/boards/park-w1.json` carries three vista subjects for this stage.
+Board `park-1-park_dam`, panels per PARK.md:406. `p1_overhead` was planned to be plotted from section 13 by `tools/park_plot.py` (an unbuilt helper not in this checkout); the rest are generated. The concept board `artifacts/local/alpha/push/w13/concepts/boards/park-w1.json` carries three vista subjects for this stage.
 
 | Panel | Frame |
 | --- | --- |

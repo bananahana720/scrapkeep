@@ -6,18 +6,18 @@ The stage, the board and the receipts folder to compare against are in the Wave 
 
 ## The wave gate and the release gate
 
-Since 11 November 2026 (ruling cy) a promotion runs the wave gate, and the full gate below is the release gate, run once at the end of a sprint on the head a sitting build is cut from. [ORCHESTRATOR.md](../../ORCHESTRATOR.md) has the rule. The wave gate's method:
+Since ruling `ep` (25 Nov) and ruling `eq` (26 Nov), development runs flat on `main` (`Open stage: main` in [STATE.md](STATE.md)); per-wave `stage/alpha-w<N>` stacking and legacy wave boards are retired, while fast dev verification follows `ruling eo` and the full release gate runs once before a human sitting (`ruling cy`). Where steps below name a wave stage or `/mnt/project-files/gate/`, substitute `origin/main` and a `scratch/gate-receipts-*` branch / `artifacts/local/` on the Mac Studio (`ruling eb`, Gate host since 16 Nov) or Linux `ahana`. [ORCHESTRATOR.md](../../ORCHESTRATOR.md) owns the gate rule. The wave gate's method:
 
 1. The node suite and the three test windows, as below.
-2. The scoped set, one shard run by name: the bot-tier tests and posture-band proofs the fast lane's receipt names for the stage diff, `world1_run_test`, and any fight, stage or bot run the diff plainly touches. Write the list and the reason for each name in the gate plan.
+2. The scoped set, one shard run by name: the bot-tier tests and posture-band proofs the fast lane's receipt names for the diff, `world1_run_test`, and any fight, stage or bot run the diff plainly touches. Write the list and the reason for each name in the gate plan.
 3. The plan's tally has the test-window rows and one `scoped` row. A release shard may have a row that opens with DEFERRED and names the receipt of its last full read.
 4. `node scripts/gate/tally.mjs --wave --plan <plan>` must exit 0. Without `--wave` the tally is the release gate's and defers nothing.
 
-On the PC one command runs steps 1 to 4: `node scripts/gate/pc.mjs run --wave N --head <sha> --scoped-from <the stage's sketch:fast receipt.json> [--scoped a_test,b_test] --tally`. `--scoped-from` takes the bot shards that receipt names, `--scoped` adds more by name, and `world1_run_test` is always in. A non-bot name is left out, because the windows run the whole non-bot list. The weekly sweep runs as in a release gate (ruling ca), because the tally holds a wave gate to it too. `plan` with the same flags prints the scoped names. The reason for each name still goes in the gate plan.
+On the Gate host (`Mac Studio` under ruling `eb`, or `ahana`), one command runs steps 1 to 4: `node scripts/gate/pc.mjs run --wave N --head <sha> --scoped-from <the diff's sketch:fast receipt.json> [--scoped a_test,b_test] --tally`. `--scoped-from` takes the bot shards that receipt names, `--scoped` adds more by name, and `world1_run_test` is always in. A non-bot name is left out, because the windows run the whole non-bot list. `plan` with the same flags prints the scoped names. The reason for each name still goes in the gate plan.
 
 ## What a full gate is
 
-The full gate is the release gate, once per sprint (ruling cy). Since 10 Nov it runs on the PC with `scripts/gate/pc.mjs` (above), driven by the local session that is the Gate (ruling ds; the board thread under ruling dh until 14 Nov). The shard table and shard-thread rules below are the cloud-era recipe, kept for a cloud overflow run; the wall times are for a 4 vCPU cloud box. The Gate thread writes a plan at `/mnt/project-files/gate/w<N>-<head>-gate-plan.md`; for a cloud run, about 13 shard threads start from one post:
+The full gate is the release gate (`ruling cy`). Since 10 Nov it runs via `scripts/gate/pc.mjs` (Mac Studio under `ruling eb`, Linux `ahana` as free hardware). Shard threads follow `AGENTS.md` rule 11 (Gemini 4 Neon at high effort, fallback `.agents/agents/scrapkeep-verifier.md` / `.claude/agents/scrapkeep-verifier.md`). For an overflow cloud run:
 
 | Shard | What it runs | Usual wall time on a 4 vCPU cloud box |
 | --- | --- | --- |
@@ -90,7 +90,7 @@ The band shards read numbers, not only pass or fail, so they keep their own lane
 
 ## The weekly list
 
-`project-guide/handoff/WEEKLY.tsv`, beside the ledger, names the tests a promotion does not run (ruling ca): worlds 2 and 3, parked by ruling at, and whole-run bot proofs on maps the launched game does not use, and (group `no-catch`, Andrew, 10 Nov 2026) 20 long tests that ran six or more of the 22 planted world 1 faults and caught none. The measurement behind that group is the Gate Catch Table (shared folder `testing/plant-measure/`); bots stay in every promotion until they are re-measured with balance faults, and the four tests that are the only catcher of a planted fault (`dunk_charge_test`, `park_recipes_dam_dressing_test`, `build_codex_test`, `panels_isolation_test`) never join the list. Columns: test, group, reason, returns-when. The testing lane owns the rows and lands the file; `scripts/gate/shard.mjs` reads it.
+`project-guide/handoff/WEEKLY.tsv` is currently empty on `main`: Worlds 2–3 unparked (`ruling ep`) and all rows graduated in `1e0de5210`. Historically (`ruling ca`), it held parked worlds, old-map bot proofs, and 20 `no-catch` long tests (while keeping the four single-catcher tests `dunk_charge_test`, `park_recipes_dam_dressing_test`, `build_codex_test`, and `panels_isolation_test` in every gate). `scripts/gate/shard.mjs` and `npm run check:docs` validate `WEEKLY.tsv` schema whenever rows exist.
 
 - `list`, `list --bots` and both `run` windows leave the weekly names out, so the windows in a gate plan count the shortened lists.
 - `--weekly` with `list` or `run` selects the weekly names instead: the weekly sweep is the same command with one flag, and its receipt says "weekly" in its title.
@@ -191,10 +191,6 @@ The order. Each step is one small pull request with before and after numbers fro
 6. Fast lane: record width, slot wait and per-test start in the receipt; stop taking the width from the load at start; a selected test deferred by the budget is listed for the gate to prove it ran.
 7. Test speed, family by family with a before and after compare of check lines: a fixed-frame-rate marker for tests that count ticks, one shared game for the tests whose body is under 2 s, the music trace run once.
 
-## After the promotion
+## After promotion or milestone updates
 
-The steps are in STATE.md ("After each promotion"). The first one keeps the docs honest: on the new stage, `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>`. The check passes while the stage head is still the promotion commit itself; from the first commit after it, `npm run check:docs` fails on the new stage until this lands, on purpose.
-
-The check finds the last promotion by its commit subject, so a promotion is merged with the subject `Promote alpha wave N (stage/alpha-wN <head>) to main (#PR)`. Under GitHub's default "Merge pull request" subject (waves 24 to 30) the promotion is invisible to it and the table can fall behind unnoticed.
-
-The fast lane orders and prices its tests from the gate's times, so refresh them in the same pull request: `node scripts/sketch-fast.mjs --fold-timings /mnt/project-files/gate/w<N>-<head>/*/shard.json`. Passing tests only; a test that did not pass keeps its old row.
+On legacy staged promotions, `node scripts/wave-state.mjs --write` updated [STATE.md](STATE.md); under flat `main` mode (`ruling ep`), keep `Wave facts` accurate (`--direct` / manual update when a milestone closes; see `scripts/wave-state.mjs:359-387`) and fold passing test timings with `node scripts/sketch-fast.mjs --fold-timings <receipt-glob>`.

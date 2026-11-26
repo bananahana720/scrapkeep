@@ -1,6 +1,6 @@
 # Game verification map
 
-This directory is the maintained source for verifying what a player meets in the Godot game at `sketches/core-loop`. Read this index before driving the game, then use the matching feature file as the recipe. Every step file under `steps/` passed at `46576920` on 25 November 2026 (macOS offscreen `--embedded` Metal).
+This directory is the maintained source for verifying what a player meets in the Godot game at `sketches/core-loop`. Read this index before driving the game, then use the matching feature file as the recipe. Every step file under `steps/` and a live `bot-run.sh --offscreen` sitting run passed at `aa5c74047` on 26 November 2026 (macOS offscreen `--embedded` Metal).
 
 ## Baseline preconditions
 
@@ -22,7 +22,7 @@ This directory is the maintained source for verifying what a player meets in the
 - A proof is the pictures, the `steps.ndjson` rows and, for anything saved, the file under `saves/`.
 - Name the feature file and the sub-feature ids covered with every receipt.
 - A path that could not be reached is reported with the step that failed and its `FAILED` picture, never as verified through another path.
-- Limits to state every time: software renderer, synth music, fixed frame step, no sound heard, no feel judged.
+- Limits to state every time: dummy audio, fixed 30 fps frame step, synth music when stems are absent, offscreen renderer (Linux software `opengl3` or macOS `--embedded` Metal), no sound heard, no feel or RTX 4080 frame time judged.
 
 ## Feature entry contract
 

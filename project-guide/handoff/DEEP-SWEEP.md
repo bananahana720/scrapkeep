@@ -4,23 +4,22 @@ Andrew, 8 Nov 2026: after every promotion to main, sweep the newly promoted code
 
 The sweep changes structure, never behaviour. No gameplay, tuning, timing, signal-order, RNG-draw-order or save-format change rides on it, and the bands must not move.
 
-## The Gate lane's promotion step
+## The Gate's post-promotion / milestone step
 
-The Gate lane runs this as the last step of every scripted promotion, right after the stage PR merges to main and before it cuts the next stage (coordinator, 8 Nov: a promotion step, no clock routine):
+The Gate runs this on `origin/main` after a promotion or milestone merge ([STATE.md](STATE.md)):
 
 ```bash
 git fetch origin main && git checkout --detach origin/main
-node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-w<N>.md
-cp artifacts/local/deep-sweep-w<N>.md /mnt/project-files/gate/deep-sweep-w<N>.md
+node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-<tag>.md
 ```
 
-Then it posts the report's header and counts on the new wave's board issue with a link to the shared copy, and tells the coordinator, who opens one sweep thread per promotion that has leads. A report with zero leads closes the step. The step never holds a promotion or the next stage cut.
+A report with leads is reviewed by the coordinator, who opens focused cleanup units; zero leads closes the step. The sweep never blocks landing urgent fixes.
 
-The fast lane also runs the sweep on each pull request's own lines and puts the counts in its receipt as `deep_sweep` ([ORCHESTRATOR.md](../../ORCHESTRATOR.md), the tiered gate). That report never fails the lane; it lets a reach into another module's private members be seen at review, before promotion.
+The fast lane also runs the sweep on each pull request's own lines and puts the counts in its receipt as `deep_sweep` ([ORCHESTRATOR.md](../../ORCHESTRATOR.md), the tiered gate). That report never fails the lane; it lets a reach into another module's private members be seen at review, before merge.
 
-## Steps for the sweep thread
+## Steps for the sweep worker
 
-1. On the promoted main, run `node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-w<N>.md`. With no `--base` it compares the promotion merge against main before it. It lists leads, not defects:
+1. On `origin/main`, run `node scripts/deep-sweep.mjs --out artifacts/local/deep-sweep-<tag>.md`. With no `--base` it compares against the parent commit on `main`. It lists leads, not defects:
    - D1 a new public function whose whole body forwards its own parameters to one other call;
    - D2 new code that touches another object's underscore member (`boss._phase`, `w.get("_state")`, or through a chain, `game.flow.warden._age`), read in `tools/` as well as `src/`;
    - D3 a new function with six or more parameters, or three or more bools;
@@ -28,8 +27,8 @@ The fast lane also runs the sweep on each pull request's own lines and puts the 
    - D5 a file over 1500 lines that grew by 100 or more.
 2. Read each lead in the code. Keep it only if a caller would stop needing to know something after the change. Drop leads that are Godot idiom (`_ready`, `_process`, signal callbacks), test seams already named in a test, or data-row keys that a schema module already owns.
 3. Rank the keepers by payoff (what callers stop knowing, times how often the code changes; world 1 first) against risk (physics timing, frame order, RNG draw order, signal order, save format, anything a bot band or posture test reads is high risk).
-4. Ship the top few as small PRs on the next stage, one seam per PR, claimed on the board. Each PR: the focused tests of the files it touches, `npm run sketch:fast -- --base stage/alpha-w<N+1>`, and an independent reviewer who checks it is behaviour-preserving. High-risk leads go to the owning lane instead.
-5. Post the ranked list on the board, and the leads left open, so the next sweep does not re-read them.
+4. Ship the top few as small PRs against `origin/main` (`--base main`), one seam per PR: focused tests of the files touched, `npm run sketch:fast -- --base origin/main`, and one independent Gemini 4 Neon High reviewer who checks it preserves behaviour. High-risk leads go to the owning domain unit instead.
+5. Record remaining open leads in the Gate report so the next sweep does not re-read them.
 
 ## Patterns that pay here
 

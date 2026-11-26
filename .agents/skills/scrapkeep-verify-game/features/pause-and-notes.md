@@ -12,7 +12,7 @@ In play, P or Esc opens the pause menu over a stopped game: Resume, New run, Fie
 
 ## How to get to it (user POV)
 
-- In play: P or Esc; Tab held; a click on a row of the pause menu (or hotkeys `P` Resume, `N` New run, `Tab` Field notes, `V` Radio, `O` Settings, `X` Quit; `--dev` with ACE music also shows `B` Breath).
+- In play: P or Esc; hold Tab for quick-view notes (`Field notes` in the pause menu pins them open); click a pause-menu row or press its hotkey (`P` Resume, `N` New run, `V` Radio, `O` Settings, `X` Quit; `--dev` with ACE music also shows `B` Breath). Note: `Tab` is hold-only (`field_notes.gd`) and does not trigger inside `pause_menu.gd`.
 
 ## Driving it with drive.sh
 

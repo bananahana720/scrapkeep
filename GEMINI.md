@@ -4,7 +4,7 @@
 
 ## Worker Routing & Fallback Tier Map (Rule 11 / Ruling ej)
 
-`AGENTS.md` Rule 11 (ruling `ej`) owns active worker routing: Claude Fable 5.2 leads design/planning, Claude Opus 5.5 takes 3D units, and Gemini 4 Neon at high effort handles code, tests, formal models, gate runs, and every independent review (Rule 4). Native subagents in `.agents/agents/scrapkeep-*.md` keep the older `ruling bp` tier pins as Rule 11's fallback when a named worker cannot run:
+`AGENTS.md` Rule 11 (ruling `ej`) owns worker routing: Claude Fable 5.2 leads design, planning, coordination and orchestration; Claude Opus 5.5 takes 3D and UI units; Gemini 4 Neon at high effort handles code, research, tests, formal models, band reads, gate runs, records, and every independent review (Rule 4). Native subagents in `.agents/agents/scrapkeep-*.md` keep the older `ruling bp` tier pins as Rule 11's fallback when a named worker cannot run:
 
 | Tier | Model | Subagents | Scope Notes |
 | --- | --- | --- | --- |

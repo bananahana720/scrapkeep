@@ -4,7 +4,7 @@ Design proposal, 2026-09-28. Scope ends at Brindle. Static inspection at `f86f24
 
 ## Purpose and boundary
 
-The tree chooses how you drive a pilot. Parts give that driving style opportunities and complications. Scrap supplies size, temporary armour and force; cogs buy choice. A tree path must be worth playing with ordinary loot and without a hot-wired part. This follows the useful-starting-kit test in `BIBLE.md:50–69` and the separation recommended in [design-v3/research/PURPOSE-AUDIT-1.md](../../archive/research/PURPOSE-AUDIT-1.md), entries 6, 13, 14 and 27.
+The tree chooses how you drive a pilot. Parts give that driving style opportunities and complications. Scrap supplies size, temporary armour and force; cogs buy choice. A tree path must be worth playing with ordinary loot and without a hot-wired part. This follows the useful-starting-kit test in `BIBLE.md:50–69` and the separation recommended in `design-v3/research/PURPOSE-AUDIT-1.md` (archived in git history), entries 6, 13, 14 and 27.
 
 The latest rulings govern this sketch: `design-v3/ROADMAP.md:5–11,143–191`. Keep armour over hull, slow rolling wear, class hysteresis, recoverable spills and size-neutral handling. The audit's no-wallet recommendation predates the cog ruling and is superseded. No currency objection here; prices and drop cadence remain the economy design's responsibility.
 

@@ -4,7 +4,7 @@ Design only, no code. Answers playtest entry 8 (`docs/playtests/PLAYTEST-LOG.md`
 
 Base: `proto/core-loop-v2` at 19fc173. Sources read: `DESIGN-V2.md`, `DEMO-SPEC.md`, `DESIGN-NOTES.md` (writer D, writer L, W4, W6, W7), `design-v2/WARDEN-DESIGN.md` (branch `proto/core-loop-v2-bossdesign`), `design-v2/I3-vertical-stage.md`, `design-v2/PROGRESSION.md`, `design-v2/visual-development/LAYERED-SPILLWAY.md`, `SOUND-STORY.md` §3, and the code under `src/core`, `src/world`, `src/combat/warden*.gd`, `src/build`, `tools/bot_driver.gd`, `tests/world_route_test.gd`.
 
-The two research briefs are beside this file: [research/R1-why-stay-and-windows.md](archive/research/R1-why-stay-and-windows.md) and [research/R2-five-games-replay-juice.md](archive/research/R2-five-games-replay-juice.md). Both are web-search summaries (leads, not verified facts); §10 says which leads this design takes. Andrew's later direction, forwarded by the coordinator on the same day, is folded into §2 (the three reads), §7 (the fun lab), §8 (chaos and replay) and §9 (the interact key).
+The two research briefs are archived in git history: `research/R1-why-stay-and-windows.md` and `research/R2-five-games-replay-juice.md`. Both are web-search summaries (leads, not verified facts); §10 says which leads this design takes. Andrew's later direction, forwarded by the coordinator on the same day, is folded into §2 (the three reads), §7 (the fun lab), §8 (chaos and replay) and §9 (the interact key).
 
 ## 0. Diagnosis: four facts in the code that make skipping correct
 
@@ -323,7 +323,7 @@ Andrew asked for "the same universal interaction key" for consenting to travel, 
 
 ## 10. What the research briefs gave this design
 
-From [research/R1-why-stay-and-windows.md](archive/research/R1-why-stay-and-windows.md) and [research/R2-five-games-replay-juice.md](archive/research/R2-five-games-replay-juice.md), both web-summary leads.
+From `research/R1-why-stay-and-windows.md` and `research/R2-five-games-replay-juice.md` (archived in git history), both web-summary leads.
 
 | Lead | Where it landed |
 | --- | --- |

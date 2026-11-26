@@ -528,7 +528,7 @@ Eight frames, in play order. Panels p1 to p6 of the stage board map onto frames 
 7. **The exit.** The hand dark in the bowl; the gates on the Crown Apron in the rain; Moss's bay docking above them; the beam still climbing into the storm.
 8. **The alcove (spare).** The ball riding the alcove ledge past a small stone room tucked under the overhang, untouched; the rock horns above with a harpoon line on one.
 
-p1_overhead is plotted from this park file by `tools/park_plot.py`, not generated.
+`p1_overhead` was planned to be plotted from this park file by `tools/park_plot.py` (an unbuilt helper not present in the checkout), not generated.
 
 ## 15. Calls made here, and open questions
 

@@ -1,6 +1,6 @@
 # Kest: pilot sheet
 
-Status: design spec for wave P-C, unit A2-kest of wave 13. Written 2026-10-10 on `cand/alpha-w13` at `38ceda3`. Nothing here is built or played. Every `file:line` cites that commit. Paths without a prefix are under `sketches/core-loop/`; `docs/`, `adr/` and `BIBLE.md` are under the repo root. A number marked (start) is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
+Status: historical wave 13 design spec (`unit A2-kest`, 2026-10-10, `demolitions_caster`); kit rows, line skill (`cable_charge`), and ultimate (`windhover`) have since landed in `sketches/core-loop/src/` (`PILOT-CADENCE.md` owns current weapon timing). Paths without a prefix are under `sketches/core-loop/`; `docs/`, `adr/` and `BIBLE.md` are under the repo root. A number marked (start) was a starting tune value. A line marked **Call** is a decision made under the creative charge; section 11 collects them as the veto list.
 
 **Weapon fire (ruling ek, 22 Nov 2026):** how this pilot's weapon fires, with its timers, damage and first tree pick, is now [PILOT-CADENCE.md](../PILOT-CADENCE.md) section 3.3. Where this sheet's weapon text differs, that page wins.
 

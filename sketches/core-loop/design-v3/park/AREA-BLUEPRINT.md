@@ -16,7 +16,7 @@ Most of the blueprint is already written down or built. This page links to it an
 | Pockets | The inside of a small curated place: entrance, enemies, obstacles, hazards, a safe path | `src/world/pockets/w1/` (25 files on 19 November), drawn per run by `pocket_draw.gd` | One library, named for world 1, used by every world (BACKLOG SG-06) |
 | Triggers | An event becomes eligible on the stage clock, on a Warden's phase, or when the player starts an activity; among the eligible ones a weighted draw picks | `event_rows[].trigger` (`clock_tier`, `warden_phase`, `activity`) in the park file; `src/world/event_director.gd` | Clock and Warden events on all six stages; a player-started event on the flume only (its surge course). Per-run alternatives for an activity exist on the dam and the flume only |
 | The map standard | Ten points every map is held to, each with a check by code or by picture | Ruling ct; [map-audit.md](../../../../project-guide/handoff/shared/world1/map-audit.md) | Ruling ct holds world 1's maps to it, and the receipt covers the dam and the flume. Landmark sight over open ground runs on every baked park; landmark sight along the riding lines runs on world 1 only |
-| Art | Approved landmark boards for all six stages; three approved world journeys | [storyboards/](storyboards/), `docs/art/reference/` | Named places with any picture: dam 27%, flume 45%, pit 39%, sinkhole 43%, islands 77%, crown 87%. These counts include drafts and approved pictures whose files were not found (inventory of 19 November, below) |
+| Art | Approved landmark boards for all six stages; three approved world journeys | [storyboards/](../storyboards/), `docs/art/reference/` | Named places with any picture: dam 27%, flume 45%, pit 39%, sinkhole 43%, islands 77%, crown 87%. These counts include drafts and approved pictures whose files were not found (inventory of 19 November, below) |
 
 ## What is missing
 
@@ -101,4 +101,4 @@ From Andrew's interviews, playtest notes and the design pages, each checked agai
 
 ## What this page does not decide
 
-When worlds 2 and 3 start (ruling at stands), which unused ideas are taken, any change to the ten map points, and any new field in the park file. The first build steps, AB-03 and AB-02, add a rule and a tool and no data.
+Worlds 1–3 are unparked on `main` (ruling `ep`; Worlds 2 and 3 build steps in this file were originally gated on retired ruling `at`). This page does not decide unused design picks, any change to the ten map points, or new park schema fields beyond `AB-02`/`AB-03`.

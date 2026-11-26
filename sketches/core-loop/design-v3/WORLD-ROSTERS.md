@@ -1,6 +1,6 @@
 # World rosters: the Dig and the Highdraft
 
-Status: decided 2026-10-17 by Andrew's card taps, relayed by the project coordinator. Page: https://claude.ai/artifact/BJ1vsvShzMEaC6cnjEyeWR. This file is the brief that the build threads share. Paths are under `sketches/core-loop/`.
+Status: decided 2026-10-17 by Andrew's card taps, relayed by the project coordinator (subsequently implemented for full-alpha Worlds 2 & 3, unparked under ruling `ep` in [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)). This file is the brief that the build threads shared. Paths are under `sketches/core-loop/`.
 
 ## The ask
 

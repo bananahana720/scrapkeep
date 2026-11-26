@@ -35,8 +35,12 @@ else
   say OK "no McpBridge autoload in project.godot"
 fi
 
-if [ "${VERIFY_GAME_DISPLAY:-}" = 1 ] && [ -n "${DISPLAY:-}" ]; then
-  say OK "drawing on the machine's own display $DISPLAY (VERIFY_GAME_DISPLAY=1)"
+if [ "${VERIFY_GAME_DISPLAY:-}" = 1 ]; then
+  if is_macos || [ -n "${DISPLAY:-}" ]; then
+    say OK "drawing on the machine's own display (${DISPLAY:-macOS Metal window}, VERIFY_GAME_DISPLAY=1)"
+  else
+    say FAIL "VERIFY_GAME_DISPLAY=1 on Linux needs DISPLAY set"
+  fi
 elif is_macos; then
   say OK "macOS offscreen mode available: Godot --embedded --rendering-driver metal (no Cocoa window)"
 elif [ "$offscreen" = 1 ]; then

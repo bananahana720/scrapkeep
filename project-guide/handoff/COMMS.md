@@ -23,30 +23,30 @@ Write for an intelligent reader who has no context. The reader has not seen your
 
 Where these rules do not apply: code, paths, commands and hashes stay verbatim. Sentence length is not a target, so do not chop a causal chain into fragments. The game's voice and playful touches stay.
 
-## What a cloud session cannot see
+## What another session cannot see
 
 A path on one machine is not a reference. `~/scratch/...`, `artifacts/local/...` and "my notes" mean nothing to a reader on another machine. Anything another session needs is one of these:
 
 - a pushed branch and a path on it,
-- a pull request or a board comment, with its link,
+- a pull request or issue link,
 - a file in the repository,
 - or the decisive lines pasted into the message.
 
-Before a session goes quiet it pushes its branch and copies any evidence worth keeping into the pull request or a pushed branch. The PC coordinator's log, briefs and helper scripts are published on a `scratch/coordinator-notes-<date>` branch, and gate receipts on `scratch/gate-receipts-w<N>-<head>`. [STATE.md](STATE.md) names the current ones.
+Before a session ends it pushes its branch and copies any kept evidence into the pull request or a pushed branch. Gate receipts live on `scratch/gate-receipts-*` branches ([STATE.md](STATE.md)).
 
 ## What each kind of message carries
 
 | Message | Where | It opens with | It also carries |
 | --- | --- | --- | --- |
-| Claim | wave board | The unit in plain words and the branch | The stage it builds on, the files it will change |
-| Receipt | pull request comment | `VERDICT <PASS, PASS+NOTES, FAIL, BLOCKED or INCONCLUSIVE> head <sha>` and one sentence on what a player or the next engineer now gets | The commands run with exit codes and nonzero test counts, the evidence level, what was not checked, the model and effort |
-| Ready | wave board | "Ready to stack", the pull request link and its head | The receipt link, anything the Gate must know before stacking |
-| Raised hand | wave board | `NEEDS: coordinator`, `gpu` or `andrew`, and the question in one sentence | The context inside the question, the options, a recommendation, and what the session builds meanwhile |
-| Ruling passed on | wave board or pull request | The ruling in one sentence, with its letter and what it is | Andrew's words quoted, the date and time in UTC, the head it applies to |
-| Brief to a writer | the brief file or the spawn message | The end state in one sentence a stranger could act on | Scope, context, acceptance, verify, stop conditions, time box, what is forbidden, what to report ([ORCHESTRATOR.md](../../ORCHESTRATOR.md), Handoff and review) |
-| Report back | to the session that asked | The verdict and what now works | What ran, what did not, deviations, the one next step |
-| Hand-off | wave board, with the state in [STATE.md](STATE.md) | Where things stand, in a table | What to do next, in order, with the exact command for each step; the calls Andrew can overturn; what is open |
-| Message to Andrew | chat | What he must do, or what changed | See below |
+| Claim / Dispatch | Coordinator brief or PR | The unit in plain words and the branch | Base commit (`origin/main`), permitted files |
+| Receipt | Pull request comment | `VERDICT <PASS, PASS+NOTES, FAIL, BLOCKED or INCONCLUSIVE> head <sha>` and what changed | Commands run with exit codes and nonzero test counts, evidence level, what was not checked, model and effort |
+| Ready | Report back / PR update | "Ready to integrate", the pull request link and its head | Receipt link, anything the Gate must check before merging |
+| Raised hand | Coordinator message / PR | `NEEDS: coordinator`, `gpu` or `andrew`, and the question in one sentence | Context inside the question, options, default recommendation |
+| Ruling passed on | PR or [DECISIONS.md](DECISIONS.md) | Ruling letter and summary | Andrew's words quoted, date/time UTC, head it applies to |
+| Brief to a writer | Spawn brief | End state in one sentence a stranger could act on | Scope, base SHA, acceptance, verify, stop conditions, what is forbidden, what to report ([ORCHESTRATOR.md](../../ORCHESTRATOR.md)) |
+| Report back | To coordinator | Verdict and what now works | What ran, what did not, deviations, next step |
+| Hand-off | Coordinator / [STATE.md](STATE.md) | Current state in a table | Exact next commands, open calls Andrew can overturn |
+| Message to Andrew | Chat | What he must do, or what changed | See below |
 
 ## Writing to Andrew
 

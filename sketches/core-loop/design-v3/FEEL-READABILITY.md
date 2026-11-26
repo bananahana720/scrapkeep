@@ -2,7 +2,7 @@
 
 Contract for feel and readability in motion and dense combat. Feel lead handoff, 2026-09-28, in `proto/core-loop-v3-feel`, supplied base `9b9eb78`. This document owns ROADMAP **5, Feel**, and **6, Readability**, and contributes to **2, the Warden's eye**, and **7, selling the pilot**. Music and the ACE-Step decision belong entirely to [AUDIO-V3.md](AUDIO-V3.md). These are proposed build contracts, not implemented features or a new build authorization.
 
-Read against `ROADMAP.md`, `LOOP-REDESIGN.md` and `research/CODEX-REVIEW-1.md` at coordinator revision `494cd44`; Systems' current [SYSTEMS-CHAOS.md](archive/SYSTEMS-CHAOS.md) §§1.5, 10 and 11; Andrew's playtest entries 7 and 8; and the current sketch's telegraph, camera, HUD, VFX and capture code. The independent review's findings 5 and 6 override the older draft's hit-stop, dodge and hit-count claims here. The coordinator must carry these corrections into the loop and Systems documents at reconciliation. §6 separates executed tool checks from pending display evidence; §9 reserves each writer's files.
+Read against `ROADMAP.md`, `LOOP-REDESIGN.md` and `research/CODEX-REVIEW-1.md` (archived in git history) at coordinator revision `494cd44`; Systems' `SYSTEMS-CHAOS.md` §§1.5, 10 and 11 (archived in git history); Andrew's playtest entries 7 and 8; and the current sketch's telegraph, camera, HUD, VFX and capture code. The independent review's findings 5 and 6 override the older draft's hit-stop, dodge and hit-count claims here. The coordinator must carry these corrections into the loop and Systems documents at reconciliation. §6 separates executed tool checks from pending display evidence; §9 reserves each writer's files.
 
 **Andrew's words this answers.** "Very sparse and tightly knit" (the HUD). "I was just going around in circles and I don't know if I was dodging" (the Warden). "Juicy feedback", "eye candy" that makes him want "to know what's gonna happen next with these upgrades", "visceral feedback from myself and how I interact with the game", bombs more satisfying, knockback per weapon. The target is a "crazy chaotic mess" in the family of Isaac, Gunfire Reborn, RoR, Hades and Vampire Survivors. His entry-7 rule stands: say at a glance what to press, what hurts and how to grow; icons over words; information timed to need; 25 words in a fight.
 
@@ -341,13 +341,13 @@ Two overlays are written. `*-occlusion.png` is the older HAZARD-colour diagnosti
 Run from this worktree on Andrew's **real Hyprland display**, one GPU job at a time. Do not set `--headless` for capture. The import command is headless and only prepares assets; it does not provide evidence. Runtime storage and caches stay under disposable evidence. `claude-open` launches on workspace 10 without taking focus; explicit `env` arguments carry the artifact directories into the compositor-launched process; inspect the final log and JSON because the launcher returning is not capture completion.
 
 ```sh
-cd /home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-feel
+# Example from a clean worktree on the Linux/PC X11/Wayland compositor:
 mkdir -p artifacts/local/stress-v3
 export XDG_DATA_HOME="$PWD/artifacts/local/stress-v3/userdata"
 export XDG_CACHE_HOME="$PWD/artifacts/local/stress-v3/cache"
 export XDG_CONFIG_HOME="$PWD/artifacts/local/stress-v3/config"
-/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --headless --editor --import --path sketches/core-loop
-/home/andrew/.local/bin/claude-open /usr/bin/env XDG_DATA_HOME="$XDG_DATA_HOME" XDG_CACHE_HOME="$XDG_CACHE_HOME" XDG_CONFIG_HOME="$XDG_CONFIG_HOME" /home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --path "$PWD/sketches/core-loop" --resolution 1920x1080 --log-file "$PWD/artifacts/local/stress-v3/capture.log" --script res://tools/stress_capture.gd -- --out="$PWD/artifacts/local/stress-v3"
+"$GODOT_BIN" --headless --editor --import --path sketches/core-loop
+claude-open /usr/bin/env XDG_DATA_HOME="$XDG_DATA_HOME" XDG_CACHE_HOME="$XDG_CACHE_HOME" XDG_CONFIG_HOME="$XDG_CONFIG_HOME" "$GODOT_BIN" --path "$PWD/sketches/core-loop" --resolution 1920x1080 --log-file "$PWD/artifacts/local/stress-v3/capture.log" --script res://tools/stress_capture.gd -- --out="$PWD/artifacts/local/stress-v3"
 ```
 
 Expect `stress.json`, 18 source PNGs, six overlay PNGs and optional `contact-stress.jpg` when ImageMagick's `montage` is installed. It quits after three scenes, with a 120 s wall timeout. JSON records source hashes, engine, GPU adapter, display, size, scene validity, raw count samples and timings. No API call, music generation or paid service is involved.

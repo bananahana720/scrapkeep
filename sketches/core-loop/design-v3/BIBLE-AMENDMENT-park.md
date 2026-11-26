@@ -28,7 +28,7 @@ Line numbers are `BIBLE.md` on `cand/alpha-w13` at 38ceda3. Each amendment gives
 
 **Insert:**
 
-> On [approval date] the map, encounter and Warden passages were harmonized with Andrew's park decisions of 10 October 2026 ([TADR-011](adr/TADR-011-park-terrain-and-warden-kinds.md), [park design](sketches/core-loop/design-v3/PARK.md)): every stage is an Arizona park about 1.6 km square around one hero landmark, each world has one Warden kind in two mountings, and stage events come in four families from one table.
+> On [approval date] the map, encounter and Warden passages were harmonized with Andrew's park decisions of 10 October 2026 (`adr/TADR-011-park-terrain-and-warden-kinds.md`, `sketches/core-loop/design-v3/PARK.md`): every stage is an Arizona park about 1.6 km square around one hero landmark, each world has one Warden kind in two mountings, and stage events come in four families from one table.
 
 **Why:** the header already records each harmonization with its date and sources.
 

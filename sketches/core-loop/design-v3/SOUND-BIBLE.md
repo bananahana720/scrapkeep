@@ -8,7 +8,7 @@ A house pulse you can't sit still to, played by a rusty machine band whose lead 
 
 ## The band: Local 172, recorded in 2010
 
-Ruled by Andrew on 10 November 2026, on one card for sight and sound together: the game looks and sounds as if it was made in **2010, the festival years**. He picked it by ear from Brindle's fight theme and anthem played three ways. The band's page, with the clips and the three generations in full, is https://claude.ai/artifact/4vBSSMqa4L23bGCrnYSzom; the render brief is [PERSONA-AUDITIONS.md](sound/PERSONA-AUDITIONS.md). The matching sight artist is Dot Marrow, on the same year.
+Ruled by Andrew on 10 November 2026, on one card for sight and sound together: the game looks and sounds as if it was made in **2010, the festival years**. He picked it by ear from Brindle's fight theme and anthem played three ways. The render brief for the three Castellan/Local 172 generations is [PERSONA-AUDITIONS.md](sound/PERSONA-AUDITIONS.md) (superseding the original session preview card). The matching sight artist is Dot Marrow, on the same year.
 
 The score is played by the crews' own house band, working name Local 172, from Flagstaff: three generations of one family (working name Castellan, "keeper of a keep") playing one book of tunes, each with the gear of its day. The tunes stay; the year changes how they are recorded. The names are working names until Andrew has seen them; nothing ships carrying one.
 
@@ -155,7 +155,7 @@ Andrew, 2026-10-16: carefree, experimental and **melodramatic, like an anime ope
 
 Andrew loves both title themes, so there is no single title. Each title theme pairs with its own alternate title screen, and the game picks one per launch: A (sax noir) and B (machine lead), chosen by the rotating opening (`TITLE-INTROS.md`). Never play the same one twice in a row. C (the show opening, built from opening-sequence tropes, at the band's 172 BPM; Andrew picked take 1, `title-c2-show-opening-s2301`, on 2026-10-16) is not a title screen: Andrew's 17 Oct ruling (project DECISIONS register) gives it to the won run's summary and the ending.
 
-The themes also have jobs past the title screen, matching the tone bible (`tone/TONE-BIBLE.md` in the project library, draft of 2026-10-16), which wins on feel:
+The themes also have jobs past the title screen, matching [TONE-BIBLE.md](TONE-BIBLE.md) (consolidated from retired `tone/TONE-BIBLE.md`, draft of 2026-10-16), which wins on feel:
 
 | Theme | Belongs to | Where its hook returns |
 | --- | --- | --- |
@@ -292,7 +292,7 @@ In the game so far (9 November 2026): the pilot quote answers a long kill chain,
 
 ## Renders from this pass
 
-ACE-Step 1.5 XL turbo on the RTX 4080, draft mode, two seeds each. Files sit in `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`, outside the repo like every other music render. [sound/RENDERS.md](sound/RENDERS.md) lists them with checksums. They are linear previews. Seamless loops, stems and final bf16 renders come after Andrew picks by ear.
+ACE-Step 1.5 XL turbo on the RTX 4080, draft mode, two seeds each. Render files live outside the repo (originally staged under `~/Music/Scrapkeep-sound-direction/sound-bible-2026-10-16/`), and [sound/RENDERS.md](sound/RENDERS.md) lists them with checksums. They are linear previews. Seamless loops, stems and final bf16 renders come after Andrew picks by ear.
 
 ## Sound that answers play
 
@@ -300,7 +300,7 @@ The full event set (49 cues, named after the game's `sfx_bank.gd` keys) and the 
 
 ## Weapon timing, tube rail and wayfinding cues (ruling ek)
 
-**Status: cue list for wave 46 unit E3-04, written 22 November 2026 against `stage/alpha-w46` at `49b4dbbb5`. Nothing here is built, baked or heard.** Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov) gives each pilot's weapon a small act of timing, adds the tube rail to the HUD and marks finished sites in the world. This section is the one home for what each of those facts sounds like. E3-04 builds the cues from it.
+**Status: cue spec for wave 46 unit E3-04 (22 November 2026, originally targeted at `stage/alpha-w46` at `49b4dbbb5`; check `src/` and [STATE.md](../../../project-guide/handoff/STATE.md) for current landed cues).** Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov) gives each pilot's weapon a small act of timing, adds the tube rail to the HUD and marks finished sites in the world. This section is the one home for what each of those facts sounds like. E3-04 builds the cues from it.
 
 It owns no timer, mark or colour. When each fact happens is [PILOT-CADENCE.md](PILOT-CADENCE.md) sections 2 and 3, and that page's section 2.2 defines the words used here: floor, window, spent, rest. What the player sees is PILOT-CADENCE section 5.3, [LEGIBILITY.md](LEGIBILITY.md) section 14.2 and [WAYFINDING.md](WAYFINDING.md) sections 3 and 4. Every id, level and frequency below is a start value that E3-04 may change; the trigger, the mark it twins and the rules under "What E3-04 may not do" are fixed.
 

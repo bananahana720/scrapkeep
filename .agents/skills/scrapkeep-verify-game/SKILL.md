@@ -13,11 +13,11 @@ All commands run from the repository root. `S=.agents/skills/scrapkeep-verify-ga
 
 ## Launch
 
-1. Godot 4.7.2 must be found: `GODOT_BIN`, else `godot` on `PATH`, else `~/Applications/Godot_4.7.2.app/Contents/MacOS/Godot` on macOS, else the cloud toolchain at `/opt/scrapkeep-toolchain/` (`tools/cloud/setup.sh` installs it). (design choice)
-2. Import once per checkout, and again after assets change: `node scripts/import-stamp.mjs import` (or `"$GODOT_BIN" --headless --path sketches/core-loop --import`). It takes about ten minutes in the cloud and under a minute on the Mac Studio. A first import can crash or print `SCRIPT ERROR`; run it up to three times and accept the first run that exits 0 with no `SCRIPT ERROR` line (`scripts/sketch-smoke.mjs` `importWithRetry` has the rule). (VGM-01)
-3. There is no server to keep alive. Each drive is its own short game process: `$S/drive.sh [--offscreen] <steps file> [<evidence name>] [-- <game flags>]`. On Linux it starts the game on a virtual display (`xvfb-run` + `opengl3`); on macOS it defaults to offscreen (`--embedded --rendering-driver metal --debug`, zero Cocoa window, `HOME` isolated under `artifacts/local/` so `~/Library/Application Support/Godot/app_userdata/core-loop` is never touched). It runs at 1280x720 and a fixed 30 frames a game second, plays the step file and quits. A menu drive takes about a minute in the cloud and seconds on the Mac Studio. (VGM-02, VGM-06)
-4. Ready means the line `SCRAPKEEP_MENU_READY` in `<evidence>/game.log` and a first step that waits for the menu: `until clickable "Settings" 120`, then `until read get_node_or_null("/root/Boot") == null 30` so the boot card has gone. (VGM-03)
-5. Useful game flags after `--`: `--no-intro` (skip the title opening), `--table=park|slice|default`, `--profile=sitting` (all six pilots open), `--dev`. On a machine with a graphics card and somebody watching, set `VERIFY_GAME_DISPLAY=1` and add `--drive-live=1`.
+1. Godot 4.7.2 must be found: `GODOT_BIN`, else `godot` on `PATH`, else `~/Applications/Godot_4.7.2.app/Contents/MacOS/Godot` on macOS, else `$HOME/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64` or `/opt/scrapkeep-toolchain/` on Linux (`tools/cloud/setup.sh`). (design choice)
+2. Import once per checkout, and again after assets change: `node scripts/import-stamp.mjs import` (or `"$GODOT_BIN" --headless --path sketches/core-loop --import`). Run it up to three times and take the first exit 0 with no `SCRIPT ERROR` (`scripts/sketch-smoke.mjs` `importWithRetry`). (VGM-01)
+3. Each drive runs a short isolated game process: `$S/drive.sh [--offscreen] <steps file> [<evidence name>] [-- <game flags>]`. On Linux it draws under `xvfb-run` + `opengl3`; on macOS it runs offscreen (`--embedded --rendering-driver metal --debug --audio-driver Dummy`, zero Cocoa window, `HOME` isolated under `artifacts/local/`). Both run at `1280x720` and 30 fixed frames per game second. (VGM-02, VGM-06)
+4. Ready means `SCRAPKEEP_MENU_READY` in `<evidence>/game.log`, plus first steps `until clickable "Settings" 120` and `until read get_node_or_null("/root/Boot") == null 30`. (VGM-03)
+5. Useful flags after `--`: `--no-intro`, `--table=park|alpha|slice|default`, `--profile=sitting` (6 pilots open), `--dev`. Set `VERIFY_GAME_DISPLAY=1` and `--drive-live=1` only when watching a live window is intended.
 
 ## Doctor
 
@@ -39,31 +39,32 @@ Start from the feature file under [features/](features/README.md) that matches t
 
 ## Evidence
 
-Everything lands in `artifacts/local/verify-game/<evidence name>/`: the pictures (`NN-<name>.png`), `steps.ndjson` (one row a step: the step, pass or fail, game seconds, flow state, paused), `NN-ui.txt`, `game.log`, `identity.txt` (commit, branch, dirty paths, Godot version, exit code), `steps.txt`, and a `saves` folder with `files-written.txt` (a copy of the game's save folder as the run left it). That folder is gitignored scratch: attach the decisive pictures and rows to the pull request's receipt, or copy them to the area's folder under `/mnt/project-files/`.
+Everything lands in `artifacts/local/verify-game/<evidence name>/`: pictures (`NN-<name>.png`), `steps.ndjson`, `NN-ui.txt`, `game.log`, `identity.txt`, `steps.txt`, `files-written.txt`, and the saves folder. Attach decisive pictures and rows to the pull request receipt.
 
 Proof standards:
 
-- Drive the player's path. `read` may confirm a value; it never sets one, and a call that changes game state is not a proof.
-- Show the action and the result: a picture before the press and one after, not only the last screen.
-- Check the side effect on disk when there is one: the settings, run, profile and run-log files in the evidence's `saves` folder (`files-written.txt` lists them).
-- Open the pictures yourself (the Read tool shows them). A passing step list says the steps ran; only the picture says what the player saw. (VGM-05)
-- State the limits in the receipt: software renderer, synth music (no recorded stems in the cloud), fixed frame step, no sound heard, no feel judged.
+- Drive the player's path; `read` confirms state without changing it.
+- Capture a picture before and after each key press, and inspect the save files listed in `<evidence>/files-written.txt`.
+- Open captured images with `read_file` before claiming a pass. (VGM-05)
+- State renderer and audio limits: dummy audio driver, fixed frame step, synth music if Oggs are absent, software `opengl3` on Linux `xvfb-run` or Metal offscreen on macOS (never an RTX 4080 look or frame-time proxy).
 
 ## Cleanup
 
-`drive.sh` removes its own scratch save folder when the game exits. After a failed or interrupted drive, run `$S/cleanup.sh`: it removes stale pid files and scratch save folders and keeps every evidence folder. It leaves running drives alone (another agent may own one); `--stop <evidence name>` stops yours by its pid file. Pass a shared save folder (`VERIFY_GAME_HOME`) to remove it too. Never kill Godot by name: the Gate, the Godot MCP or Andrew may be running one.
+`drive.sh` removes its own scratch save folder on exit. Run `$S/cleanup.sh` after failed or interrupted drives (`--stop <name>` stops one running drive by PID file; pass `VERIFY_GAME_HOME` to clean a shared save folder). Never kill Godot by name.
 
 ## Helpers
 
-- `$S/doctor.sh [--offscreen]`: the read-only health check.
-- `$S/drive.sh [--offscreen] <steps file> [<evidence name>] [-- <game flags>]`: one drive. Exit 0 every step passed, 1 a step failed (it takes a `FAILED` picture first), 2 a bad flag or evidence name, 3 the game quit by itself before the file ended (end with `quits <step>` when it should), 143 interrupted, 1 with no passed row a display that did not start, 124 the wall timeout (137 if it had to be killed; `VERIFY_GAME_TIMEOUT`, default 1500 s; run a long drive in the background so the tool's own limit does not cut it). `VERIFY_GAME_HOME=<dir>` keeps one save folder across drives; `VERIFY_GAME_OFFSCREEN=1` or `--offscreen` forces offscreen mode.
-- `$S/bot-run.sh [--offscreen] <evidence name> [-- <game flags>]`: films the repo's bot playing a whole run with scratch saves, for flows too long to script (the sitting launch to Brindle: `-- --profile=sitting`). Exit 0 the goal was reached, 1 the run ended first, 3 a stall, 2 a bad argument or no Godot, 124 the wall timeout (`VERIFY_GAME_TIMEOUT`, default 7000 s; 137 if it had to be killed), 143 interrupted. A 1 or 3 with no `self-play:` line in `game.log` is the display failing to start, not the bot. A long run: start it in the background.
-- `$S/cleanup.sh [--stop <evidence name>] [<shared save folder>]`: teardown that keeps evidence.
-- `scripts/drive.gd`: the driver the game loads; its header is the step reference.
+| Script | Role | Exit codes / notes |
+| --- | --- | --- |
+| `$S/doctor.sh [--offscreen]` | Read-only check | `0` ok, `1` missing Godot/import/display or `McpBridge` in `project.godot` |
+| `$S/drive.sh [--offscreen] <steps> [<name>] [-- <flags>]` | Real-input step drive | `0` pass, `1` step fail (or display fail if 0 rows), `2` bad args, `3` unexpected quit, `124`/`137` timeout (`VERIFY_GAME_TIMEOUT`, default `1500` s), `143` stopped; `VERIFY_GAME_HOME=<dir>` shares saves |
+| `$S/bot-run.sh [--offscreen] <name> [-- <flags>]` | Offscreen bot film & saves | `0` goal reached, `1` ended early, `3` stall, `2` bad args, `124`/`137` timeout (default `7000` s), `143` stopped |
+| `$S/cleanup.sh [--stop <name>] [<shared dir>]` | Safe teardown | Keeps evidence folders and removes scratch home dirs |
+| `scripts/drive.gd` | In-game step driver | Header lists every step verb and `read` rule |
 
 ## Lessons and updates
 
-[references/lessons.md](references/lessons.md) holds VGM-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. Audit `features/` against source when player-facing flows change.
+[references/lessons.md](references/lessons.md) holds VGM-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. Keep `features/` current with `/pstack:maintain-verification-skill`.
 
 ## Host adapter
 

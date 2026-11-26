@@ -1,11 +1,11 @@
 # Shared reference files
 
-Reference copies that threads read. The coordinator owns them (the local session on the PC since 15 Nov 2026, ruling ds). Put a new file in an area folder below, never the root, and add it here. Delete a superseded file; git keeps it.
+Reference copies that units read. The local Mac Studio coordinator owns them (`rulings eb, ep`). Put a new file in an area folder below, never the root, and add it here. Record retired files as deletion candidates for Andrew's go-ahead (`AGENTS.md`).
 
 | File | What it holds |
 | --- | --- |
-| [alpha-status/ambition-map.md](alpha-status/ambition-map.md) | One hard target per facet for waves 16 to 21, and the proof for each |
-| [alpha-status/attack-ids.md](alpha-status/attack-ids.md) | Registry of attack E-numbers. Claim an id here and on board #241 before you add it |
+| [alpha-status/ambition-map.md](alpha-status/ambition-map.md) | Historical wave 16–21 `#241` facet proposals (superseded by [ROADMAP.md](../ROADMAP.md)) |
+| [alpha-status/attack-ids.md](alpha-status/attack-ids.md) | Historical wave 17 `#241` E-number claims (live table in `event_kinds.gd`, `telegraph_record.gd`, `LEGIBILITY.md`) |
 | [alpha-status/sitting-watch-list.md](alpha-status/sitting-watch-list.md) | Calls Andrew judges at the playtest sitting |
 | [alpha-status/intent-check/METHOD.md](alpha-status/intent-check/METHOD.md) | The every-park intentionality check. Its script is [scorecard.py](alpha-status/intent-check/scorecard.py) |
 | [gate/BOT-SHARDS.md](gate/BOT-SHARDS.md) | Bot-tier shard commands for the Gate lane |

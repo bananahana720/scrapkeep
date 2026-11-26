@@ -3,10 +3,11 @@
 # any launch switches the caller adds (the sitting launch, a look switch). For flows too long to script
 # as steps. The bot's saves go to a scratch folder under the evidence, never the player's own.
 # Usage: .agents/skills/scrapkeep-verify-game/scripts/bot-run.sh [--offscreen] <evidence name> [-- <game flags>]
-#   default goal: the run is won (--self-play-until=win); a flag given after -- wins over a default,
-#   e.g. -- --profile=sitting   or   -- --self-play-until=2 --ball-look=cutaway
-# Env: GODOT_BIN, VERIFY_GAME_OFFSCREEN=1, VERIFY_GAME_TIMEOUT (wall seconds, default 7000: a software renderer takes about four
-#      wall seconds a game second, so run it in the background).
+#   bot-run.sh always runs offscreen (--offscreen is accepted for symmetry with drive.sh);
+#   default goal: --self-play-until=win; caller flags after -- override defaults,
+#   e.g. -- --profile=sitting   or   -- --profile=sitting --self-play-until=2
+# Env: GODOT_BIN, VERIFY_GAME_TIMEOUT (wall seconds, default 7000: a software renderer takes about four
+#      wall seconds per game second on Linux).
 # Evidence: <evidence>/film/ (the kept frames and film.ndjson, what the game knew at each), game.log,
 #      identity.txt, saves/ (run.json, runs.ndjson).
 # Exit: the bot's own: 0 the goal was reached, 1 the run ended first, 3 a stall; 2 a bad argument or no

@@ -17,9 +17,9 @@ Run `npm run sketch:smoke` from the repository root. The focused check is the pi
 The rendered tool uses the real game and a seeded synthetic encounter. Run from the repository root on the target GPU:
 
 ```sh
-/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 \
+"$GODOT_BIN" \
   --path sketches/core-loop --script res://tools/visual_capture.gd \
-  -- --out=/tmp/scrapkeep-vd-dense --class=0 --mode=dense --samples=1800
+  -- --out=artifacts/local/scrapkeep-vd-dense --class=0 --mode=dense --samples=1800
 ```
 
 The render target is fixed at 1920×1080 using Window viewport scaling; the preview window starts at 1280×720. `capture.json` records final render texture, PNG, root and physical window dimensions separately. Both texture and PNG must actually be 1920×1080 to qualify. Vsync is disabled. The tool waits at least 180 rendered frames and 450 physics ticks, plus an active attack in dense/boss mode, before saving `scene.png`. Readback, encoding and the following interval are excluded from timing.

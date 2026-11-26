@@ -1,10 +1,10 @@
 # Pilots: the roster index
 
-Status: design spec, wave 13 unit A2-CRITIC, written 2026-10-10 on `cand/alpha-w13`. Nothing here is built or played. This page supersedes the pilot text in `design-v2/I1-character-kits.md`, `DESIGN-V2.md` and `docs/CHARACTER-BIBLE.md`. Paths without a prefix are under `sketches/core-loop/`. A number marked (start) is a starting value to tune in play.
+Status: wave 13 unit A2-CRITIC design spec (2026-10-10 on `cand/alpha-w13`; subsequently implemented across waves 13–46 — see [PILOT-CADENCE.md](PILOT-CADENCE.md) under ruling `ek` and `src/` for current code and numbers). This page superseded the older pilot text in `design-v2/I1-character-kits.md`, `DESIGN-V2.md` and `docs/CHARACTER-BIBLE.md`. Paths without a prefix are under `sketches/core-loop/`. A number marked (start) is a starting value to tune in play.
 
-Reads with: [SKILL-BAR.md](SKILL-BAR.md), the framework, whose section 12 holds the eight cross-pilot rules this pass added; the six sheets in [pilots/](pilots/), which own every detail; [ROSTER-LOOK.md](ROSTER-LOOK.md), the body language. Where this page and a sheet disagree, the sheet's number wins and this page is stale.
+Reads with: [SKILL-BAR.md](SKILL-BAR.md), the framework, whose section 12 holds the eight cross-pilot rules this pass added; [PILOT-CADENCE.md](PILOT-CADENCE.md), which owns weapon firing/timers under ruling `ek`; the six sheets in [pilots/](pilots/), which own per-pilot design intent; [ROSTER-LOOK.md](ROSTER-LOOK.md), the body language.
 
-Ruled and not built (ruling dl): a hidden seventh pilot, Patch the possum, who clocks broken machines back in on the crew's side. Its sheet is [pilots/patch.md](pilots/patch.md); it is for after the world 1 sitting.
+Patch the possum (`line_splicer`, ruling `dl`) has a design sheet at [pilots/patch.md](pilots/patch.md) and partial asset wiring (`AllyHusk` / achievements), while its playable kit remains unbuilt.
 
 Terms, once. **Slot 2** is the old F special. **Slot 3** is the line skill: the harpoon flavour. **Set piece** is the ultimate's ride from A to B on Q. **Peak** is its middle beat. **Shift** is the pilot's instant movement chip. **Smash** is the Ctrl slam flavour. **Heft class** is the I to V weight class that scales the payoff.
 

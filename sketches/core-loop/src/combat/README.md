@@ -1,6 +1,6 @@
 # Combat and classes (writer A)
 
-This folder is `ctx.spawner`. It owns the two class kits, the weapon pattern system that parts transform, the plating rule, the enemies and their committed telegraphs, the miniboss, the Warden and the vault, damage and drops, the `enemy` codex entries, and the shoulder view while mounted. Other modules reach it only through `ctx.spawner` and the `GameEvents` bus, as [CONTRACTS.md](../../CONTRACTS.md) requires. Nothing here reads another module's folder.
+This folder is `ctx.spawner`. Originally structured around two class kits in v2, it now owns all six playable pilot kits (`src/core/class_def.gd`, `weapons.gd`, `weapon_driver.gd`; see `design-v3/PILOT-CADENCE.md`), the weapon pattern system that parts transform, the plating rule, the enemies and their committed telegraphs, the miniboss, the Warden and the vault, damage and drops, the `enemy` codex entries, and the shoulder view while mounted. Other modules reach it only through `ctx.spawner` and the `GameEvents` bus, as [CONTRACTS.md](../../CONTRACTS.md) requires. Nothing here reads another module's folder.
 
 ## Files
 
@@ -86,6 +86,8 @@ The pattern fields are `count`, `spread_deg`, `arms`, `arm_offset_deg`, `rotatio
 ## Weapons and specials
 
 Build owns tuning mods (CONTRACTS). Combat reads `tuning.mod("weapon_damage")`, `weapon_rate`, `weapon_range` and, for the turret, `turret_damage` at the moment it fires, on top of the transformer pattern. They scale shots, `punch_now()`, overdrive and the discharge. A part should use a transformer or a mod for a stat, not both.
+
+*(Note: `weapons.gd` now defines 7 weapon patterns across the six pilots — `rapid_laser`, `arc_caster`, `pylon_turret`, `sticky_charge`, `claw_sweep`, `ledger_reader`, `cannon_lane` — and active items replace the retired `F` special binding; see [design-v3/PILOT-CADENCE.md](../../design-v3/PILOT-CADENCE.md) and `src/core/bindings.gd`. The table below preserves the initial two-class baseline.)*
 
 | Class | Weapon id | Fires | F (special id) |
 | --- | --- | --- | --- |

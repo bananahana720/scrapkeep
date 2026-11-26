@@ -65,7 +65,7 @@ One mechanism per mounting (PARK.md:428-429).
 
 ### 3.1 `under_island` (stage 5): the pendulum tilt
 
-The hand cups the Hanging Isle's tip from beneath and holds the mountain up. Anchor [0, 80, 520]. The palm is at 82 m, the three knuckle hardpoints at 88 m, each 6 m off the axis toward one knuckle butte (west, east, north), and the lens at 72 m. The arena is the net bowl: floor 44 m, three knuckle buttes 60 m from the axis with tops at 80 m. `landmark.warden.path` is empty: the hand moves with the island, not along a path.
+The hand cups the Hanging Isle's tip from beneath and holds the mountain up. Live `park_islands.json` places the anchor at `[0, 66, 520]` (PW1 adjusted from drafted `[0, 80, 520]` so ground lock reaches inside 45 m rope). At the original 80 m design datum, the palm sat at 82 m, the three knuckle hardpoints at 88 m, each 6 m off the axis toward one knuckle butte (west, east, north), and the lens at 72 m (`park_islands.json` places them relative to the `[0, 66, 520]` anchor). The arena is the net bowl: floor 44 m, three knuckle buttes 60 m from the axis with tops at 80 m. `landmark.warden.path` is empty: the hand moves with the island, not along a path.
 
 1. **The charge (2 s).** The island creaks. The thin waterfall off its rim leans toward the ball. The lens narrows. The wrong note sounds (section 6).
 2. **The pulse.** The normal lift lands. On the same frame the island pivots 10 degrees toward the ball (its top deck dips toward you, PARK.md:428).
@@ -86,7 +86,7 @@ The hand cups the Hanging Isle's tip from beneath and holds the mountain up. Anc
 
 Three perch spires stand in the Crown's bowl, 45 m from the Crown's axis at [0, 470] and 78 m from each other: perches at [0, 515], [39, 447.5] and [-39, 447.5], tops at 12 m. The bowl's rim is at 0 m and its floor at -12 m. The hand grips a perch top palm down, lens at 18 m. Anchor [0, 18, 515]. `landmark.warden.path` lists the three perch anchors in flight order. This is today's `choir` variant, placed.
 
-1. **Every 8 s it flies to the next perch** (`ADAPT_CYCLE`, `warden.gd:63`; the lens clock, `warden.gd:347-354`). The flight is a 3 s arc that peaks 15 m above the perch tops (27 m). The arc is about 85 m long, so the hand averages about 28 m/s, the blazing tier. Today the open lens seat steps round a 1.6 m circle (`CHOIR_RADIUS`, `warden.gd:64`, `176-180`). The mounting spreads the three seats to the three perches: the open seat is the current perch.
+1. **Every 8 s it flies to the next perch** (`ADAPT_CYCLE`, `warden.gd:63`; the lens clock, `warden.gd:347-354`). The flight is a `FLIGHT_SECONDS := 3.0 s` arc with `ARC_RISE := 9.0 m` peak above the perches (`warden_mind.gd`; originally drafted as 15 m). The horizontal span is about 78 m, averaging ~26–28 m/s (blazing tier). Today the open lens seat steps round a 1.6 m circle (`CHOIR_RADIUS`, `warden.gd:64`, `176-180`). The mounting spreads the three seats to the three perches: the open seat is the current perch.
 2. **It never charges in flight.** If the 8 s perch clock runs out during a charge, the hand waits for the pulse and takes off right after it. A pulse therefore always comes from a perch, and its ring is drawn round that perch's foot. The wait is at most 2 s.
 3. **A stagger stops the flight clock** (`warden.gd:349`). A stagger on a perch leaves the hand on the perch. **A stagger in flight knocks the hand out of the air:** it falls to the bowl floor under its flight path over 1 s, lies there open for the stagger, then climbs back to the nearest perch over 2 s. Knocking it down is the stage's best moment, and it is earned: you need a line or a long jump to hit it in flight.
 4. **The brace.** On every stagger the quote plays, the lens shows the habit's icon, and the hand braces against that habit (`warden.gd:535-540`; `fleet.mind_adapt`). Change the tune (`choir_switch`, `codex_entries.gd:143-146`).
@@ -165,7 +165,7 @@ The KF7 body exports these clips in the shape of the boss bodies' clip tables (`
 | camper | never breaks it | never breaks it |
 | world 3 pilots (`alpha_posture_bands_w23_test.gd`) | 24.5 to 128 s, re-measured on the park after KD5, dated header | the same after KD6 |
 
-The sweep runs with the mechanism on (coordinator ruling at the KF4 merge, 2026-10-11 w13-wardens: the bot cannot yet latch an anchored Warden, so until KF-BOT adds the latch arm `posture_bands_mind_test` sits in `tests/QUARANTINE.tsv`, and the anchor-off numbers it recorded, grown 46.5 to 53.8 s, are not the band). The tuning dials are the mechanism's, not the band: under the island, the lens height and the tilt angle; on the spires, the flight time and the perch spacing. If the knock-down makes the Crown's grown arm faster than 25 s, the knock-down's 4 s on the floor shortens before anything else.
+The sweep runs with the mechanism on. Historically at KF4 (2026-10-11), `posture_bands_mind_test` waited on anchor-latching; under ruling `eq` (26 Nov 2026), it graduated off [KNOWN-FAILING.tsv](../../../../project-guide/handoff/KNOWN-FAILING.tsv) at `29.6 s` grown / `2.25x` / `0` camper (`tests/QUARANTINE.tsv` does not exist). The tuning dials are the mechanism's, not the band: under the island, the lens height and the tilt angle; on the spires, the flight time and the perch spacing. If the knock-down makes the Crown's grown arm faster than 25 s, the knock-down's 4 s on the floor shortens before anything else.
 
 ## 8. K-F implementation units
 
@@ -193,7 +193,7 @@ Each unit writes in its own worktree, gets a verifier and one fix round; red-the
 - Order: after this sheet is approved.
 
 **KF8 Mountings and wiring.** SCOPE: `src/combat/warden_look.gd`, `warden_kit.gd` (read the kind body), and the `landmark.warden` object in `src/world/park/park_islands.json` and `park_crown.json` only. ACCEPTANCE:
-- The island hand sits at [0, 80, 520] with knuckles at 88 m toward the three knuckle buttes.
+- Live `park_islands.json` places the island hand at `[0, 66, 520]` (PW1 adjustment from `[0, 80, 520]`) with knuckles offset toward the three knuckle buttes.
 - The Crown hand starts on the perch at [0, 18, 515] and flies the three-perch path.
 - The bot (KF1's test) latches, rides 3 s, fires from the line, is dragged by the swing on stage 5 and by a flight on stage 6, survives a shrug with its velocity, and finishes with a drop on both stages.
 - Order: after KD5, KD6 and KF7.

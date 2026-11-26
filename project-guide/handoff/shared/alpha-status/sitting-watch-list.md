@@ -64,7 +64,7 @@ Does it read, does it show: the wave's PC film (ruling cp) looks before Andrew d
 
 ## Worlds 2 and 3
 
-Waiting until those worlds are in scope (ruling at). The world 1 sitting does not reach them.
+Historical items recorded while Worlds 2–3 were parked under `ruling at` (now unparked under `ruling ep` and calibrated under `ruling eq`; check while playing the Full-Alpha sitting build).
 
 - Hive campers: can a pilot who only shoots from range still break a hive? (Coordinator, #15 follow-up 968096cb: with "All at hives" in, a ranged-only camper still breaks a hive on about 1 seed in 16, seed 8 at 222 s; the seed moves with any crowd change. The only full fix is the earlier "Never" option, where ranged-only play cannot finish a hive.)
 - Stage 6 beacon top (the Highdraft crown): does it feel cramped? (Coordinator, #62 at f43284a6: the exit-gate stall was the bot, fixed bot-only with no layout change; the gates sit 5 m from a 25 m drop and the relic cache is beside the east gate's lane.)

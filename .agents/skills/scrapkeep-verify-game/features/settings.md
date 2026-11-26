@@ -6,7 +6,10 @@ Settings has four pages, Display, Controls, Look and Feel. Each row is a toggle 
 
 - `ST-1` Settings opens from the title (S or a click) and from the pause menu.
 - `ST-2` Display lists Fullscreen, Quality, Less motion, Fewer flashes, Frame smoothing, Wide picture.
-- `ST-3` The page tabs Display, Controls, Look, Feel each open their page (and `Q`/`E` step tabs). Controls lists the 11 rebindable verbs (`Jump`, `Fire`, `Harpoon`, `Haul`, `Boost`, `Pick 1`–`Pick 3`, `Ultimate`, `Active`, `Interact`), Reset keys, and fixed `Roll`/`Look` (`cl_consumable` / `Cartridge` on `C` is named in conflict notices). Look lists Stick speed, Invert Y, Dead zone, Mouse speed, Aim assist. Feel lists Music, Effects, Screen shake, Hit-stop, and Find cards (`full`/`short`).
+- `ST-3` The page tabs Display, Controls, Look, Feel each open their page (and `Q`/`E` step tabs):
+  - **Controls**: 11 rebindable verbs (`Jump`, `Fire`, `Harpoon`, `Haul`, `Boost`, `Pick 1` to `Pick 3`, `Ultimate`, `Active`, `Interact`), Reset keys, and fixed `Roll`/`Look` (`cl_consumable` / `Cartridge` on `C` appears in conflict notices).
+  - **Look**: Stick speed, Invert Y, Dead zone, Mouse speed, Aim assist.
+  - **Feel**: Music, Effects, Screen shake, Hit-stop, and Find cards (`full`/`short`).
 - `ST-4` A changed row is written to `settings.json` in the save folder.
 - `ST-5` Esc or Back returns to where Settings was opened from.
 
@@ -29,5 +32,5 @@ Preconditions: baseline; game flag `--no-intro`.
 ## Gotchas
 
 - A row is one control whose words are its name ("Less motion"); the value is drawn, not written. Prove a change with the two pictures and the file, not with `expect text`.
-- A drive never follows the Fullscreen setting: a game with no player's save folder keeps the window its command gave it. Prove fullscreen on the PC.
-- Quality changes what is drawn; under the software renderer the pictures are not a look proof.
+- `--self-play` forces windowed mode regardless of `Fullscreen` unless `--fullscreen=1` is passed (`game.gd:1096-1101`); test true fullscreen on a real display.
+- Under Linux software rendering (`opengl3`), Quality shows toggles/file state, not PC RTX 4080 look fidelity.

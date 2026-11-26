@@ -2,7 +2,7 @@
 
 Design proposal, 2026-09-28. Build a reason to choose the next target, route and purchase. Prime a pack, move to a better angle, spend a ram, drop or special to cash it out, then collect toward a transformation that changes the next lap.
 
-This tightens [SYSTEMS-CHAOS](archive/SYSTEMS-CHAOS.md); it grants no gameplay-build authorization. Supplied worktree base is `7144a9e`. Inventory below comes from the current files, not their older comments. Reconciliation inputs are `CODEX-REVIEW-2-systems.md` at `a278b05`, `ROADMAP.md` at `6f525de`, and the working `FEEL-READABILITY.md` in sibling `core-loop-v3-feel`. Incorporate accepted decisions into the roadmap's single `DESIGN-V3.md`, then archive this input with the other lead documents. No production ADR changes are made by this proposal.
+This tightens `SYSTEMS-CHAOS.md` (archived in git history); it grants no gameplay-build authorization. Supplied worktree base is `7144a9e`. Inventory below comes from the current files, not their older comments. Reconciliation inputs are `CODEX-REVIEW-2-systems.md` at `a278b05`, `ROADMAP.md` at `6f525de`, and the working `FEEL-READABILITY.md` in sibling `core-loop-v3-feel`. Incorporate accepted decisions into the roadmap's single `DESIGN-V3.md`, then archive this input with the other lead documents. No production ADR changes are made by this proposal.
 
 ## 1. Effect rarity, separate from strength
 

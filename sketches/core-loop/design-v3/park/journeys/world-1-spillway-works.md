@@ -1,6 +1,6 @@
 # World 1, Spillway Works: the journey
 
-Wave 13 journey board for world 1. Status: draft for Andrew's veto (2026-10-10). It strings the two stage pages and the reactor kind sheet into one ride from the first drop to the exit toward the Dig. It adds no mechanic: every rule here is already on a stage page, PARK.md, the kind sheet or today's code. Where a beat needed something undefined, section 7 says so and names the smallest existing mechanism picked.
+Wave 13 journey board for world 1 (2026-10-10; park terrain, reactor mountings, and Brindle have since shipped on `main` under rulings `ep`/`eq`). It strings the two stage pages and the reactor kind sheet into one ride from the first drop to the exit toward the Dig. Historical `artifacts/local/alpha/push/w13/concepts/...` paths below refer to the wave-13 candidate worktree. It adds no mechanic: every rule here is already on a stage page, PARK.md, the kind sheet or code. Where a beat needed something undefined, section 7 says so and names the smallest existing mechanism picked.
 
 **Cite key.** `1-park_dam.md` and `2-park_flume.md` are under `sketches/core-loop/design-v3/park/stages/`. `reactor.md` is `design-v3/wardens/reactor.md`. `PARK.md` and `DESIGN-V3.md` are under `design-v3/`. `flow.gd`, `bay.gd` and `reward_gates.gd` are under `sketches/core-loop/src/` (`core/`, `world/`, `build/`). `BIBLE.md` and `decisions.tsv` (`docs/`) are at the repository root. Pictures are under `artifacts/local/alpha/push/w13/concepts/codex/park/` in the candidate worktree; paths are given in full where a beat uses one.
 
@@ -429,7 +429,7 @@ Latch and ride are met on the line before the dam, but only on harpoon lines; fi
 
 ## 5. Overhead route
 
-`tools/park_plot.py` is still due with the KD greybox (`PARK.md:393`); these lists are the polylines it draws. Position fields in each appendix: `spawn.at` and `heading_deg`; `park_rows` carry `at` [x, z], `y`, `size` [x, y, z] and `yaw_deg`; `landmark` carries `at`, `sight_top`, `beacon`, `warden.anchor`, `bay_dock.at` and `gate_slots`; contraption rows carry `at`, or `from` and `to`, and `target`; activity rows carry `at`; event and home rows carry only a `site` row id (`1-park_dam.md:290-378`; `2-park_flume.md:279-361`). Pilot waypoints are `[x, z]` points or waymark ids (`1-park_dam.md:390-397`; `2-park_flume.md:373-380`).
+`tools/park_plot.py` was planned as an unbuilt plot helper (`PARK.md:393`, not in the checkout); these lists are the polylines it would draw. Position fields in each appendix: `spawn.at` and `heading_deg`; `park_rows` carry `at` [x, z], `y`, `size` [x, y, z] and `yaw_deg`; `landmark` carries `at`, `sight_top`, `beacon`, `warden.anchor`, `bay_dock.at` and `gate_slots`; contraption rows carry `at`, or `from` and `to`, and `target`; activity rows carry `at`; event and home rows carry only a `site` row id (`1-park_dam.md:290-378`; `2-park_flume.md:279-361`). Pilot waypoints are `[x, z]` points or waymark ids (`1-park_dam.md:390-397`; `2-park_flume.md:373-380`).
 
 **Stage 1, `park_dam`** (routes `1-park_dam.md:294-313`).
 

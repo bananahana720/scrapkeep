@@ -58,7 +58,9 @@ case "${1:-}" in
     if [ "$served" = "$head" ]; then say OK "the Sitting Kit on $kit_port names this checkout's commit"; else say FAIL "the Sitting Kit on $kit_port names '${served:0:8}', not ${head:0:8}"; fi
     say INFO "the kit writes verdicts to $verdicts, never artifacts/local/sitting-kit/verdicts.json (Andrew's)"
     pw_chrome="$(cd "$repo" && node -e 'import("playwright").then(p => process.stdout.write(p.chromium.executablePath() || ""))' 2>/dev/null || true)"
-    if command -v chromium >/dev/null || [ -x /opt/pw-browsers/chromium ] || [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ] || { [ -n "$pw_chrome" ] && [ -x "$pw_chrome" ]; } || [ -n "${CHROMIUM_PATH:-}" ]; then
+    if [ -n "${CHROMIUM_PATH:-}" ]; then
+      if [ -x "$CHROMIUM_PATH" ]; then say OK "Chromium at CHROMIUM_PATH ($CHROMIUM_PATH)"; else say FAIL "CHROMIUM_PATH is not executable: $CHROMIUM_PATH"; fi
+    elif command -v chromium >/dev/null || [ -x /opt/pw-browsers/chromium ] || [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ] || { [ -n "$pw_chrome" ] && [ -x "$pw_chrome" ]; }; then
       say OK "a Chromium is present"
     else
       say FAIL "no Chromium: set CHROMIUM_PATH"

@@ -4,7 +4,7 @@ The game in one line (Andrew, 9 November 2026, ruling cj): A crew of loose canno
 
 Current gameplay design after checkpoint 1, as of base `981214373fecdad3c53be83b242993b62a1aa5ef`.
 Refresh: written against base `981214373fecdad3c53be83b242993b62a1aa5ef` before wave 3 landed. Wave 3 added the boss contract, the alpha table, the entrance document, the rarity ladder, the companion model, the guard-rack burst, hero asset guards, wind-up rows, lore rows, Spillway zone 1-1 and the nightly runner.
-[Playtest entry 12](../../../docs/playtests/PLAYTEST-LOG.md#12-checkpoint-1-the-cable-reach-first-human-play) and EV-0624 record the verdict.
+Playtest entry 12 (`docs/playtests/PLAYTEST-LOG.md#12-checkpoint-1-the-cable-reach-first-human-play`, archived in git history) and EV-0624 record the verdict.
 [Decision trail](../../../docs/decisions.tsv) row numbers below are physical file lines, including its header.
 The later 4 October UTC rulings win over the 3 October plans' pending-sitting text.
 [ALPHA-PLAN](ALPHA-PLAN.md) refinements at lines 63–72 win over its historical unit tables.
@@ -366,30 +366,30 @@ The coordinator's later archive unit performs the moves and repairs incoming lin
 | [DESIGN-V3.md](DESIGN-V3.md) | current spec, kept | Single current gameplay design after the sitting. |
 | [E1-DENSITY.md](E1-DENSITY.md) | superseded by this document, to archive | Historical optimization evidence remains preserved. |
 | [FEEL-READABILITY.md](FEEL-READABILITY.md) | superseded by this document, to archive | Retained constraints are summarized; old HUD and loop proposals are historical. |
-| [HANDOFF.md](HANDOFF.md) | superseded by this document, to archive | Old handoff status is replaced by the base-bound inventory above. |
+| `HANDOFF.md` (archived in git history) | superseded by this document, to archive | Old handoff status is replaced by the base-bound inventory above and [STATE.md](../../../project-guide/handoff/STATE.md). |
 | [HOOK-CHAIN.md](HOOK-CHAIN.md) | current spec, kept | Detailed chain contract retains decided calls and unfinished acceptance work. |
 | [LEGIBILITY.md](LEGIBILITY.md) | superseded by this document, to archive | Accepted grammar is consolidated with later rulings and the sitting verdict. |
 | [LOOP-REDESIGN.md](LOOP-REDESIGN.md) | superseded by this document, to archive | Drop and laps alternatives were retired. |
-| [OWNER-INTERVIEW-2026-10-02.md](OWNER-INTERVIEW-2026-10-02.md) | superseded by this document, to archive | Accepted answers now live in the current run, camp and progression rules. |
+| `OWNER-INTERVIEW-2026-10-02.md` (archived in git history) | superseded by this document, to archive | Accepted answers now live in the current run, camp and progression rules. |
 | [ROADMAP.md](ROADMAP.md) | current spec, kept | Completion checkpoints and required unlock sequence remain useful. |
-| [STAGES-2-3-LOOPS.md](archive/STAGES-2-3-LOOPS.md) | superseded by this document, to archive | Historical world-one loop layouts do not define the three-world alpha. |
+| `archive/STAGES-2-3-LOOPS.md` (archived in git history) | superseded by this document, to archive | Historical world-one loop layouts do not define the three-world alpha. |
 | [STRATEGY-SPINE.md](STRATEGY-SPINE.md) | superseded by this document, to archive | Retained build relationships are consolidated; old rarity labels are superseded. |
-| [STRESS-CAPTURE-1.md](archive/STRESS-CAPTURE-1.md) | superseded by this document, to archive | Historical stress evidence is preserved without claiming current performance. |
-| [SYSTEMS-CHAOS.md](archive/SYSTEMS-CHAOS.md) | superseded by this document, to archive | Older systems proposals no longer provide independent alpha scope. |
+| `archive/STRESS-CAPTURE-1.md` (archived in git history) | superseded by this document, to archive | Historical stress evidence is preserved without claiming current performance. |
+| `archive/SYSTEMS-CHAOS.md` (archived in git history) | superseded by this document, to archive | Older systems proposals no longer provide independent alpha scope. |
 | [TESTING.md](TESTING.md) | current spec, kept | Historical runner measurements explain the current test method. |
 | [TRAVERSAL.md](TRAVERSAL.md) | superseded by this document, to archive | Historical line measurements remain evidence, not a second design. |
-| [research/CODEX-REVIEW-1.md](research/CODEX-REVIEW-1.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/CODEX-REVIEW-2-systems.md](research/CODEX-REVIEW-2-systems.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/PURPOSE-AUDIT-1.md](archive/research/PURPOSE-AUDIT-1.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/R1-why-stay-and-windows.md](archive/research/R1-why-stay-and-windows.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/R2-five-games-replay-juice.md](archive/research/R2-five-games-replay-juice.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/R3-adaptive-music.md](archive/research/R3-adaptive-music.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/R3-tools-and-expertise.md](archive/research/R3-tools-and-expertise.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| `research/CODEX-REVIEW-1.md` (archived in git history) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| `research/CODEX-REVIEW-2-systems.md` (archived in git history) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| `archive/research/PURPOSE-AUDIT-1.md` (archived in git history) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| `archive/research/R1-why-stay-and-windows.md` (archived in git history) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| `archive/research/R2-five-games-replay-juice.md` (archived in git history) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| `archive/research/R3-adaptive-music.md` (archived in git history) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| `archive/research/R3-tools-and-expertise.md` (archived in git history) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
 | [research/attack-reads/ATTACK-READS.md](research/attack-reads/ATTACK-READS.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
 | [research/build-systems/BUILD-SYSTEMS.md](research/build-systems/BUILD-SYSTEMS.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [research/economy/ECONOMY.md](archive/research/economy/ECONOMY.md) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
-| [stages/stage2.svg](archive/stages/stage2.svg) | superseded by this document, to archive | Diagram of the retired world-one loop layout. |
-| [stages/stage3.svg](archive/stages/stage3.svg) | superseded by this document, to archive | Diagram of the retired world-one loop layout. |
+| `archive/research/economy/ECONOMY.md` (archived in git history) | superseded by this document, to archive | Historical research informs the consolidated rules; it grants no scope. |
+| `archive/stages/stage2.svg` (archived in git history) | superseded by this document, to archive | Diagram of the retired world-one loop layout. |
+| `archive/stages/stage3.svg` (archived in git history) | superseded by this document, to archive | Diagram of the retired world-one loop layout. |
 | [storyboards/.gitignore](storyboards/.gitignore) | superseded by this document, to archive | Archive it with the historical storyboard package rules. |
 | [storyboards/CRITIQUE.md](storyboards/CRITIQUE.md) | superseded by this document, to archive | Historical storyboard guidance or review evidence stays with its package. |
 | [storyboards/HANDOFF.md](storyboards/HANDOFF.md) | superseded by this document, to archive | Historical storyboard guidance or review evidence stays with its package. |
@@ -399,28 +399,28 @@ The coordinator's later archive unit performs the moves and repairs incoming lin
 | [storyboards/catalog.json](storyboards/catalog.json) | superseded by this document, to archive | Historical storyboard inventory and provenance remain with the package. |
 | [storyboards/index.html](storyboards/index.html) | superseded by this document, to archive | Older concept review page is superseded by the approved Sol look bar. |
 | [storyboards/manifest.json](storyboards/manifest.json) | superseded by this document, to archive | Historical storyboard inventory and provenance remain with the package. |
-| [storyboards/prompts/01-entry-v1.txt](storyboards/prompts/01-entry-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/01-entry-v2.txt](storyboards/prompts/01-entry-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/02-chute-v1.txt](storyboards/prompts/02-chute-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/03-window-v1.txt](storyboards/prompts/03-window-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/03-window-v2.txt](storyboards/prompts/03-window-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/04-impact-v1.txt](storyboards/prompts/04-impact-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/04-impact-v2.txt](storyboards/prompts/04-impact-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/04-impact-v3.txt](storyboards/prompts/04-impact-v3.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/05-return-v1.txt](storyboards/prompts/05-return-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/05-return-v2.txt](storyboards/prompts/05-return-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/05-return-v3.txt](storyboards/prompts/05-return-v3.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/06-choice-v1.txt](storyboards/prompts/06-choice-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/06-choice-v2.txt](storyboards/prompts/06-choice-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/07-warden-states-v1.txt](storyboards/prompts/07-warden-states-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/07-warden-states-v2.txt](storyboards/prompts/07-warden-states-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/08-interactables-v1.txt](storyboards/prompts/08-interactables-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/08-interactables-v2.txt](storyboards/prompts/08-interactables-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/09-anticipation-v1.txt](storyboards/prompts/09-anticipation-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/09-anticipation-v2.txt](storyboards/prompts/09-anticipation-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/10-sable-v1.txt](storyboards/prompts/10-sable-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/11-rivet-v1.txt](storyboards/prompts/11-rivet-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/11-rivet-v2.txt](storyboards/prompts/11-rivet-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/12-kest-v1.txt](storyboards/prompts/12-kest-v1.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
-| [storyboards/prompts/12-kest-v2.txt](storyboards/prompts/12-kest-v2.txt) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/01-entry-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/01-entry-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/02-chute-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/03-window-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/03-window-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/04-impact-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/04-impact-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/04-impact-v3.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/05-return-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/05-return-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/05-return-v3.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/06-choice-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/06-choice-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/07-warden-states-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/07-warden-states-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/08-interactables-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/08-interactables-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/09-anticipation-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/09-anticipation-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/10-sable-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/11-rivet-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/11-rivet-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/12-kest-v1.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
+| `storyboards/prompts/12-kest-v2.txt` (pruned provenance entry) | superseded by this document, to archive | Historical image prompt preserves provenance for an older concept round. |
 | [storyboards/verification/package-checks.json](storyboards/verification/package-checks.json) | superseded by this document, to archive | Historical package check receipt, not current gameplay acceptance. |

@@ -1,6 +1,6 @@
 # Sable title intro: storyboard stills
 
-Rough Blender Cycles stills for the eleven shots in [TITLE-INTROS.md](../../TITLE-INTROS.md), rendered from the game's own glb models with a Freestyle ink pass. Published for review at https://claude.ai/artifact/SP2Rcy3tzwhpwK3hcHAsBk, where captions, name cards and sound words are drawn over the stills in HTML.
+Rough Blender Cycles stills for the eleven shots in [TITLE-INTROS.md](../../TITLE-INTROS.md), rendered from the game's own glb models with a Freestyle ink pass (originally published as an HTML review artifact with captions, name cards, and sound words overlaid on the stills).
 
 ```sh
 # from the repo root; shots are comma-separated, quality is draft (480x270) or final (960x540)

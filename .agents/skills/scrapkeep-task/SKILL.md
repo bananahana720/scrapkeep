@@ -9,9 +9,9 @@ Resolve this skill directory through symlinks, then run `git -C <resolved-skill-
 
 ORCHESTRATOR owns the assignment packet, concurrency, leases, review and acceptance; do not substitute an external planning board. The coordinator is the sole canonical record writer. Each step below links the record that owns its rule instead of restating it.
 
-## In a claude.ai project thread
+## In legacy staged threads (`ruling by`)
 
-The thread is the writer (ruling by; [ORCHESTRATOR.md#roles-and-concurrency](../../../ORCHESTRATOR.md#roles-and-concurrency)). Its branch and its claim on the wave board are its isolation and its lease, so steps 3 to 6 do not apply: no writer worktree, packet, lease record or dispatch. The thread reads the sources, writes the change, runs the checks in step 7 itself, and starts one fresh read-only reviewer for step 8. The Gate thread stacks the pull request; steps 9 and 10 are the coordinator's. The procedure below is the heavy lane, for a coordinator that runs writers inside one local session.
+When a coordinator assigns isolated branches against `main` (`ruling ep`), follow steps 1–10 below; in legacy wave-board threads (`ruling by`), the branch and claim served as isolation and lease.
 
 ## Procedure
 
@@ -32,9 +32,11 @@ When the selected sprint has no remaining active work, follow [ORCHESTRATOR.md#s
 
 ## Host adapter and base identity
 
-- Antigravity: use `invoke_subagent` with `.agents/agents/scrapkeep-*.md` (or `scrapkeep-gemini-workflows` with `run_workflow` for card batches), isolate writers with `workspace: "share"` or `scripts/new-worktree.sh`, follow `AGENTS.md` Rule 11 (Gemini 4 Neon at high for admission reviews), and report active Gemini model/tier from runtime metadata.
-- Claude Code: in any session, write the change yourself and use sub-agents only for wide search (`scrapkeep-explorer`), research, a noisy run and the independent review (`scrapkeep-reviewer-medium`, or `scrapkeep-reviewer` for a consequential seam) (ruling by). `scrapkeep-writer` and `scrapkeep-writer-low` are for a coordinator that has already split work into parallel units with their own worktrees. `.claude/agents/` holds the fallback tier pins to `AGENTS.md` Rule 11 (ruling `ej`).
-- Codex (GPT 6.2 Astra/Sol, rulings `ec`/`ee`/`ej`): create distinct worktrees explicitly at the accepted revision for ruled assistive work (world 1 promise cards, QA, concept art, model drafts, second review opinions); Codex verdicts are evidence and never admit a unit.
-- On any host, verify the requested model/tier against `AGENTS.md` Rule 11 and actual runtime metadata; a review or gate verdict on a non-compliant model does not count. Verify the actual worktree base and write scope before admission. The coordinator runs executable checks and supplies the exact artifact and evidence to review.
+Follow `AGENTS.md` Rule 11 (`ruling ej`) for worker routing and [DEVICES.md](../../../project-guide/handoff/DEVICES.md) / [GEMINI.md](../../../GEMINI.md) for host setup:
+
+- **Antigravity**: invoke subagents with `.agents/agents/scrapkeep-*.md` (or `scrapkeep-gemini-workflows` with `run_workflow`), isolate writers with `workspace: "share"` or `scripts/new-worktree.sh`, and report active Gemini model/tier from runtime metadata.
+- **Claude Code**: write single-session changes yourself (`ruling by`), reserving subagents for search, research, noisy runs, and independent review (`.claude/agents/` fallback pins).
+- **Codex (GPT 6.2 Astra/Sol, rulings `ec`/`ee`)**: use distinct worktrees at the verified base; Codex verdicts are evidence and do not admit a unit.
+- On any host, verify the base commit (`git rev-parse HEAD`) and runtime model/tier before admission. Run executable checks yourself and pass only diff, acceptance, and receipts to the reviewer.
 
 Use `scrapkeep-verify` for the candidate and integrated result. Resume from TRACKING and artifacts, not a remembered PID or a chat summary. Report actual runtime identities and evidence limits.

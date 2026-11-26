@@ -7,7 +7,7 @@ Finds the slice Warden's numbers (LEGIBILITY section 4) by playing bots whose ar
 One command, from the repository root (Godot 4.7.2, headless). It keeps six child processes going, one run each, so run it alone on the machine.
 
 ```
-/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64 --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/posture_sweep.gd -- --out=$PWD/artifacts/local/posture_sweep.tsv --runs=$PWD/artifacts/local/posture_sweep_runs.tsv
+"$GODOT_BIN" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/posture_sweep.gd -- --out=$PWD/artifacts/local/posture_sweep.tsv --runs=$PWD/artifacts/local/posture_sweep_runs.tsv
 ```
 
 `--out` and `--runs` must be absolute paths, and belong under `artifacts/local/`. Copy the two files into `tools/` only when a sweep's data is the one to keep. Options after `--`:
@@ -167,7 +167,7 @@ The grid took **2820.6 s (47.0 minutes)**. Load averages at start were 3.1 / 3.6
 Commands from the assigned repository root, with the same Godot 4.7.2 binary as above. `E` is the absolute path to `artifacts/local/posture-sweep-full-2026-10-04` in this worktree; set the three `XDG_*_HOME` variables to `$E/data`, `$E/config` and `$E/cache` for the run commands.
 
 ```sh
-G=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+G="${GODOT_BIN:-godot}"
 E="$PWD/artifacts/local/posture-sweep-full-2026-10-04"
 "$G" --headless --path sketches/core-loop --import
 export XDG_DATA_HOME="$E/data"
@@ -219,7 +219,7 @@ Wall time for the eight-seed run was about 224 s (start 19:12:00, end 19:15:44 l
 Commands from the worktree root:
 
 ```sh
-G=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+G="${GODOT_BIN:-godot}"
 "$G" --headless --path sketches/core-loop --import
 # one of each per seed s in 1..8, all at once
 "$G" --headless --fixed-fps 90 --path sketches/core-loop --script res://tools/bot_run.gd -- --out=artifacts/local/w23-posture-bands-2026-10-04/w2-$s --policy=skipper --seeds=$s --table=alpha --from-stage=3 --until=4
@@ -261,7 +261,7 @@ Wall time: 121 s (start 15:00:23, end 15:02:24 local). Load averages: 5.94 / 8.4
 Commands from the worktree root:
 
 ```sh
-G=/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64
+G="${GODOT_BIN:-godot}"
 "$G" --headless --path sketches/core-loop --import
 # one of each per (s, p) in (1 runner_gunner) (2 demolitions_caster) (3 tarn) (4 pylon_engineer)
 # (5 tally) (6 remembered_cannon) (7 tarn) (8 pylon_engineer), all at once
