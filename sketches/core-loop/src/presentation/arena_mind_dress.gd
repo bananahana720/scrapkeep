@@ -18,14 +18,15 @@ const PARTS := {
 const FLOOR_LIFT := 0.02
 const SKY_RING := 460.0
 const INLAY_LIFT := 0.035
-const INLAY_WIDTH := 0.7
-const INLAY_RINGS := [9.0, 18.0, 27.0, 33.5]
+const INLAY_WIDTH := 0.78
+const INLAY_RINGS := [6.5, 13.5, 22.0, 30.0, 34.2]
+const INLAY_THRESHOLD_RING := 33.1
 const INLAY_SPOKES := 12
-const INLAY_IRON := Color("3a403f")
-const INLAY_COPPER := Color("7a5a3f")
+const INLAY_IRON := Color("272d30")
+const INLAY_COPPER := Color("84603e")
 const POST_COUNT := 32
-const POST_OUT := 0.85
-const DECK_ROUGHNESS := 0.6
+const POST_OUT := 1.05
+const DECK_ROUGHNESS := 0.46
 
 static var dir := DIR
 static var _sky_material: ShaderMaterial
@@ -179,7 +180,10 @@ static func _slot_material(slot: String, texture: Texture2D) -> StandardMaterial
 	material.resource_name = slot
 	material.vertex_color_use_as_albedo = true
 	material.albedo_texture = texture
-	material.roughness = 0.95 if slot in ["stone", "M1_stone"] else 0.85
+	material.roughness = 0.92 if slot in ["stone", "M1_stone"] else 0.52
+	if slot == "steel":
+		material.metallic = 0.32
+		material.metallic_specular = 0.65
 	if slot == "glass":
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		material.albedo_color = Color(1.0, 1.0, 1.0, 0.62)
@@ -205,9 +209,9 @@ func _build(meshes: Dictionary, radius: float) -> void:
 		rim.append(Transform3D(basis, Vector3(cos(angle) * reach, 0.025, sin(angle) * reach)))
 	_multi("EdgeFascia", meshes["Rim"], rim)
 	var ribs: Array[Transform3D] = []
-	for k in 12:
-		var angle := TAU * k / 12.0
-		var basis := Basis(Vector3.UP, -angle).scaled(Vector3(1.5, 1.5, 1.5))
+	for k in 16:
+		var angle := TAU * k / 16.0
+		var basis := Basis(Vector3.UP, -angle).scaled(Vector3(1.65, 1.85, 1.65))
 		ribs.append(Transform3D(basis, Vector3(cos(angle) * (radius - 6.0), -2.5, sin(angle) * (radius - 6.0))))
 	_multi("UndersideRibs", meshes["Rib"], ribs)
 	_wet_deck(island)
@@ -216,7 +220,9 @@ func _build(meshes: Dictionary, radius: float) -> void:
 	for k in POST_COUNT:
 		var angle := TAU * (k + 0.5) / POST_COUNT
 		var at := radius + POST_OUT
-		posts.append(Transform3D(Basis(Vector3.UP, PI * 0.5 - angle), Vector3(cos(angle) * at, -0.55, sin(angle) * at)))
+		var pylon := k % 4 == 0
+		var scale_post := Vector3(1.18, 1.55, 1.18) if pylon else Vector3(0.95, 1.0, 0.95)
+		posts.append(Transform3D(Basis(Vector3.UP, PI * 0.5 - angle).scaled(scale_post), Vector3(cos(angle) * at, -0.55, sin(angle) * at)))
 	_multi("EdgePosts", meshes["Post"], posts)
 	_sky_pieces(meshes)
 
@@ -226,7 +232,8 @@ func _wet_deck(island: MeshInstance3D) -> void:
 	for i in mesh.get_surface_count():
 		var wet := (mesh.surface_get_material(i) as StandardMaterial3D).duplicate() as StandardMaterial3D
 		wet.roughness = DECK_ROUGHNESS
-		wet.metallic_specular = 0.6
+		wet.metallic_specular = 0.75
+		wet.albedo_color = Color("cfd4df")
 		mesh.surface_set_material(i, wet)
 
 
@@ -234,24 +241,34 @@ func _inlays(radius: float) -> void:
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var colors := PackedColorArray()
-	var strip := func(a: Vector2, b: Vector2, colour: Color) -> void:
-		var side := (b - a).orthogonal().normalized() * INLAY_WIDTH * 0.5
+	var strip := func(a: Vector2, b: Vector2, colour: Color, width := INLAY_WIDTH) -> void:
+		var side := (b - a).orthogonal().normalized() * width * 0.5
 		var quad := [a - side, b - side, b + side, a - side, b + side, a + side]
 		for p: Vector2 in quad:
 			vertices.append(Vector3(p.x, INLAY_LIFT, p.y))
 			normals.append(Vector3.UP)
 			colors.append(colour)
-	for r: float in INLAY_RINGS:
+	var all_rings: Array = INLAY_RINGS.duplicate()
+	all_rings.append(INLAY_THRESHOLD_RING)
+	for r: float in all_rings:
 		var segments := int(ceil(TAU * r / 2.0))
+		var col := INLAY_COPPER if r == INLAY_RINGS[-1] or r == INLAY_RINGS[2] else INLAY_IRON
+		var width := INLAY_WIDTH * 1.15 if r == INLAY_RINGS[-1] or r == INLAY_THRESHOLD_RING else INLAY_WIDTH
 		for k in segments:
 			var a0 := TAU * k / segments
 			var a1 := TAU * (k + 1) / segments
-			strip.call(Vector2(cos(a0), sin(a0)) * r, Vector2(cos(a1), sin(a1)) * r,
-				INLAY_COPPER if r == INLAY_RINGS[-1] or r == INLAY_RINGS[1] else INLAY_IRON)
+			strip.call(Vector2(cos(a0), sin(a0)) * r, Vector2(cos(a1), sin(a1)) * r, col, width)
 	for k in INLAY_SPOKES:
 		var angle := TAU * k / INLAY_SPOKES
 		var dir := Vector2(cos(angle), sin(angle))
-		strip.call(dir * INLAY_RINGS[0], dir * minf(INLAY_RINGS[-1], radius - 1.5), INLAY_COPPER if k % 3 == 0 else INLAY_IRON)
+		var cardinal := k % 3 == 0
+		var col := INLAY_COPPER if cardinal else INLAY_IRON
+		strip.call(dir * INLAY_RINGS[0], dir * minf(INLAY_RINGS[-1], radius - 1.5), col, INLAY_WIDTH * (1.25 if cardinal else 0.85))
+		if cardinal:
+			var perp := dir.orthogonal()
+			var base_pt := dir * INLAY_RINGS[3]
+			strip.call(base_pt - perp * 1.9, dir * (INLAY_RINGS[3] + 1.8), INLAY_COPPER, INLAY_WIDTH * 0.85)
+			strip.call(base_pt + perp * 1.9, dir * (INLAY_RINGS[3] + 1.8), INLAY_COPPER, INLAY_WIDTH * 0.85)
 	var arrays := []
 	arrays.resize(Mesh.ARRAY_MAX)
 	arrays[Mesh.ARRAY_VERTEX] = vertices
@@ -264,8 +281,9 @@ func _inlays(radius: float) -> void:
 	material.vertex_color_use_as_albedo = true
 	material.vertex_color_is_srgb = true
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	material.roughness = 0.45
-	material.metallic = 0.4
+	material.roughness = 0.34
+	material.metallic = 0.58
+	material.metallic_specular = 0.72
 	mesh.surface_set_material(0, material)
 	var view := MeshInstance3D.new()
 	view.name = "DeckInlays"
@@ -398,9 +416,9 @@ static func _paint_panorama() -> Image:
 	noise.seed = 301006
 	noise.frequency = 1.0
 	noise.fractal_octaves = 2
-	var haze := Color("798c9e")
-	var high := Color("a9b6c0")
-	var cream := Color("ece7da")
+	var haze := Color("72829c")
+	var high := Color("566682")
+	var cream := Color("f2dec4")
 	for y in 256:
 		var elevation := (0.5 - float(y) / 255.0) * PI
 		for x in 512:
