@@ -99,7 +99,7 @@ func _rule_toasts(table: Dictionary, kind: String) -> bool:
 
 # Celebration stamps drawn in the hazard colour, as "row form text", and how many were seen.
 func _hazard_celebrations(rows: Dictionary) -> Dictionary:
-	var celebrate := ["CLOCKED IN", "SHIFT COMPLETE", "ROUTED", "HIRED"]
+	var celebrate := ["CLOCKED IN", "SHIFT COMPLETE", "ROUTED", "HIRED", "STILLED"]
 	var seen := 0
 	var bad: Array = []
 	for id in rows:
@@ -166,7 +166,7 @@ func _tables() -> void:
 # Every stamp resolves to a colour: a celebration is amber, never the hazard colour.
 func _colours() -> void:
 	var live := _hazard_celebrations(Rows.ROWS)
-	_t.check("10 every celebration stamp is amber", live.seen == 8 and live.bad.is_empty(), "%d stamps, hazard: %s" % [live.seen, live.bad])
+	_t.check("10 every celebration stamp is amber", live.seen == 16 and live.bad.is_empty(), "%d stamps, hazard: %s" % [live.seen, live.bad])
 	# Planted: one celebration stamp set back to the hazard colour in a copy of the rows is reported.
 	var planted: Dictionary = Rows.ROWS.duplicate(true)
 	for piece in planted["brindle_rout"]["full"]:

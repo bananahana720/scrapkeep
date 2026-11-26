@@ -2,6 +2,7 @@ extends SceneTree
 
 const Probe := preload("res://tests/support/lighting_harness.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 const T := preload("res://tests/support/t.gd")
 var _t := T.new("hunt_hl_world_lighting_test")
 
@@ -21,7 +22,7 @@ func _run() -> void:
 		return
 	var before := Probe.lighting(game)
 	Harness.enter_world(game, 2)
-	_t.eq("HL02 real Waking applies pit ambient", Probe.lighting(game).ambient, Color("9ba8a3"))
+	_t.eq("HL02 real Waking applies pit ambient", Probe.lighting(game).ambient, WorldLook.ARENAS["waking"]["ambient"])
 	var fight := await Harness.fight(game, Harness.module(game, 2), 5400)
 	if _t.check("HL02 real Waking fight reaches victory", fight.defeated and fight.victory_state == "victory"):
 		game.flow.physics_step(game.flow.VICTORY_SECONDS + 0.1)

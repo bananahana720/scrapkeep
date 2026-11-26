@@ -167,6 +167,12 @@ const SOURCE_RARITIES_BY_WORLD := {
 	3: {"fabricator": ["common", "rare"], "vault": ["rare", "relic"], "milestone": ["relic"]},
 }
 
+const GATE_RARITIES_BY_WORLD := {
+	1: [["common"], ["common", "rare"], ["rare", "relic"]],
+	2: [["common", "rare"], ["rare"], ["rare", "relic"]],
+	3: [["common", "rare"], ["rare", "relic"], ["rare", "relic"]],
+}
+
 const STAGE_RARE_MULT := {1: 1.0, 2: 2.8, 3: 5.5}
 
 const VERB_EFFECTS := [
@@ -1388,20 +1394,8 @@ static func rung_of(part_id: String) -> int:
 
 
 static func gate_rarities(bonus_cores: int, stage := 1) -> Array:
-	var world := world_for_stage(stage)
-	if world >= 3:
-		return ["rare", "relic"] if bonus_cores >= 1 else ["common", "rare"]
-	if world == 2:
-		if bonus_cores >= 2:
-			return ["rare", "relic"]
-		if bonus_cores == 1:
-			return ["rare"]
-		return ["common", "rare"]
-	if bonus_cores >= 2:
-		return ["rare", "relic"]
-	if bonus_cores == 1:
-		return ["common", "rare"]
-	return ["common"]
+	var tiers: Array = GATE_RARITIES_BY_WORLD.get(world_for_stage(stage), GATE_RARITIES_BY_WORLD[1])
+	return (tiers[clampi(bonus_cores, 0, tiers.size() - 1)] as Array).duplicate()
 
 
 static func listed_only() -> bool:
@@ -1821,9 +1815,9 @@ static func archetype_nudge(held: Array, pool: Array) -> Dictionary:
 
 
 static func world_nudge(stage: int, pool: Array) -> Dictionary:
-	var world := world_for_stage(stage)
-	if world <= 1:
+	if stage < WORLD_ESCALATION_STAGE_W2:
 		return {}
+	var world := world_for_stage(stage)
 	var table := all_rows()
 	var out := {}
 	for part_id in pool:
@@ -1961,7 +1955,7 @@ static func roll_high_impact(rng: RandomNumberGenerator, rarities: Array, class_
 	var slice_locked: bool = listed_only() and not Synergies.table.part_in_play("slag_pike")
 	if allow_pilot_relic and not slice_locked and "relic" in rarities and count >= 1 and class_id in Relics.PILOTS:
 		var world := world_for_stage(stage)
-		var relic_pool := Relics.eligible_swaps(class_id, Relics.held(held), tree, world, world >= 2)
+		var relic_pool := Relics.eligible_swaps(class_id, Relics.held(held), tree, world, stage >= WORLD_ESCALATION_STAGE_W2)
 		if relic_pool.is_empty():
 			relic_pool = Relics.eligible(class_id, Relics.held(held), tree, world, true)
 		relic_pool = relic_pool.filter(func(id): return not Relics.part_of(id) in exclude)

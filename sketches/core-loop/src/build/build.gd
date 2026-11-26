@@ -1197,7 +1197,8 @@ func _on_flow_changed(state: String) -> void:
 	for part_id in picks:
 		_offered[part_id] = _offered.get(part_id, 0) + 1
 	picks += _hotwire_gate_ids()
-	var active := active_offer_for_channel("gate", rarities, gate_rng, call_met or stake_rolls > 0 or stage >= Parts.WORLD_ESCALATION_STAGE_W2)
+	var active := active_offer_for_channel("gate", rarities, gate_rng, call_met or stake_rolls > 0) \
+		if (ctx.run.bonus_cores > 0 or call_met or stake_rolls > 0) else ""
 	if active != "":
 		picks.append(active)
 	var offers: Array = gates.open(picks, ctx.player.ball_position(), _heading(), ctx.run.parts)

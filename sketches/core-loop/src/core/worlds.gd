@@ -12,12 +12,24 @@ const ROWS := [
 
 const BOSSES := {
 	"brindle": {"name": "Admiral Brindle", "title": "SPILLWAY RECLAIMED", "script": "res://src/boss/boss.gd", "kind": "brindle", "music": "brindle",
-		"built": true, "victory": "Back on the crew's books, kettle and all.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
+		"built": true, "card_icon": "fac_fleet", "card_event_tint": true,
+		"victory": "Back on the crew's books, kettle and all.", "epitaph": "Brindle, crane parked over the Slag Bowl. Anchors accounted for."},
 	"waking": {"name": "The Waking", "title": "THE WAKING STILLED", "script": "res://src/boss/waking.gd", "kind": "waking", "music": "waking",
-		"built": true, "victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig. Fallen floors await pit inspection."},
+		"built": true, "card_icon": "obj_warden", "card_event_tint": false,
+		"obj_closed": "Break the Waking's plates", "obj_open": "Smash the Waking's core",
+		"victory": "The Waking is stilled.", "epitaph": "The Waking, stilled in the Dig. Fallen floors await pit inspection."},
 	"mind": {"name": "The Mind", "title": "THE MIND QUIETED", "script": "res://src/boss/mind.gd", "kind": "mind", "music": "mind",
-		"built": true, "victory": "The Mind is quiet.", "stamp": "HIRED", "finale_lift_semitones": 2,
+		"built": true, "card_icon": "obj_warden", "card_event_tint": false,
+		"obj_closed": "Break the Mind's guard", "obj_open": "Smash the Mind's core",
+		"victory": "The Mind is quiet.", "stamp": "HIRED", "finale_lift_semitones": 2,
 		"epitaph": "The Mind, quieted in the Highdraft. Glove set by the empty place."},
+}
+
+const ENDING_PARK_SPOTS := {
+	"park_dam": {"spot": Vector2(0.0, 445.0), "fwd": Vector3(0.0, 0.0, 1.0)},
+	"park_flume": {"spot": Vector2(180.0, 460.0), "fwd": Vector3(90.0, 0.0, 50.0)},
+	"park_pit": {"spot": Vector2(0.0, 145.0), "fwd": Vector3(0.0, 0.0, 1.0)},
+	"park_sinkhole": {"spot": Vector2(0.0, 210.0), "fwd": Vector3(0.0, 0.0, 1.0)},
 }
 
 

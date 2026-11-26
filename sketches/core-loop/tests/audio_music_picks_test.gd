@@ -43,7 +43,9 @@ func _structure(theme: String, m: Dictionary) -> void:
 	var boss := theme.begins_with("boss_")
 	var want: Array = BOSS_CLIPS if boss else ["calm", "travel", "cadence"]
 	t.eq("%s has its clips" % theme, m["clips"].keys(), want)
-	t.check("%s says its downbeat is unverified" % theme, m["timing_verified"] == false and m["cuts"] in ["nominal-unverified", "measured-beat-phase"])
+	var verified_cuts: bool = m["timing_verified"] == true and m["cuts"] == "lyria-3.5-stem-context"
+	var unverified_cuts: bool = m["timing_verified"] == false and m["cuts"] in ["nominal-unverified", "measured-beat-phase"]
+	t.check("%s records valid cut provenance" % theme, verified_cuts or unverified_cuts)
 	for cid in m["clips"]:
 		var clip: Dictionary = m["clips"][cid]
 		var bpm := float(clip["bpm"])
