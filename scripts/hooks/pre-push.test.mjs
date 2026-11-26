@@ -1,7 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  HIGH_LOAD_RATIO,
+  HOOK_BUDGET_S,
   changedFilesForRange,
+  evaluateHookOutcome,
+  executeHookPlan,
+  isHighLoad,
   parseHookArgs,
   parsePushStdin,
   planHookChecks,
@@ -101,4 +106,98 @@ test("parseHookArgs validates --base values", () => {
   assert.throws(() => parseHookArgs(["--base"]), /--base requires/);
   assert.throws(() => parseHookArgs(["--base", ""]), /--base requires/);
   assert.throws(() => parseHookArgs(["--bogus"]), /unknown argument/);
+});
+
+test("isHighLoad checks max(loadStart, loadEnd) >= cpus * HIGH_LOAD_RATIO", () => {
+  assert.equal(HIGH_LOAD_RATIO, 0.5);
+  assert.equal(isHighLoad({ loadStart: 4, loadEnd: 1, cpus: 8 }), true);
+  assert.equal(isHighLoad({ loadStart: 1, loadEnd: 4, cpus: 8 }), true);
+  assert.equal(isHighLoad({ loadStart: 3.9, loadEnd: 3.9, cpus: 8 }), false);
+  assert.equal(isHighLoad({ loadStart: 4, loadEnd: 4, cpus: 0 }), false);
+});
+
+test("evaluateHookOutcome waives OVER_BUDGET with PASS_UNDER_LOAD only when ok and isHighLoad", () => {
+  const overNormal = evaluateHookOutcome({
+    ok: true,
+    elapsedS: HOOK_BUDGET_S + 1,
+    loadStart: 1,
+    loadEnd: 1,
+    cpus: 8,
+    ranLabels: ["oxfmt(1)"],
+  });
+  assert.equal(overNormal.exitCode, 1);
+  assert.equal(overNormal.status, "OVER_BUDGET");
+  assert.match(overNormal.message, /OVER_BUDGET/);
+
+  const overHighLoad = evaluateHookOutcome({
+    ok: true,
+    elapsedS: HOOK_BUDGET_S + 1,
+    loadStart: 1,
+    loadEnd: 5,
+    cpus: 8,
+    ranLabels: ["oxfmt(1)"],
+  });
+  assert.equal(overHighLoad.exitCode, 0);
+  assert.equal(overHighLoad.status, "PASS_UNDER_LOAD");
+  assert.match(overHighLoad.message, /PASS_UNDER_LOAD/);
+
+  const failedHighLoad = evaluateHookOutcome({
+    ok: false,
+    elapsedS: HOOK_BUDGET_S + 1,
+    loadStart: 8,
+    loadEnd: 8,
+    cpus: 8,
+    ranLabels: ["oxfmt(1)"],
+  });
+  assert.equal(failedHighLoad.exitCode, 1);
+  assert.equal(failedHighLoad.status, "FAIL");
+});
+
+test("executeHookPlan runs all planned checks strictly with zero skipped checks and fails on missing bins", () => {
+  const ran = [];
+  const resAll = executeHookPlan(
+    {
+      jsFiles: ["scripts/a.mjs"],
+      hasSketch: true,
+      hasDocsOrPkg: true,
+      hasKnownFailing: true,
+    },
+    {
+      cwd: "/repo",
+      exists: () => true,
+      ensureModules: () => ({ ok: true }),
+      spawn: (cmd, args) => {
+        ran.push([cmd, ...args]);
+        return { status: ran.length === 1 ? 1 : 0 };
+      },
+    },
+  );
+  assert.equal(resAll.ok, false);
+  assert.deepEqual(resAll.ranLabels, [
+    "oxfmt(1)",
+    "oxlint(1)",
+    "sketch:lint",
+    "check:project",
+    "check:docs",
+    "known-failing",
+  ]);
+  assert.equal(ran.length, 6);
+
+  const missingBins = executeHookPlan(
+    {
+      jsFiles: ["scripts/a.mjs"],
+      hasSketch: true,
+      hasDocsOrPkg: false,
+      hasKnownFailing: false,
+    },
+    {
+      cwd: "/repo",
+      exists: () => false,
+      ensureModules: () => ({ ok: false }),
+      errLog: () => {},
+      spawn: () => ({ status: 0 }),
+    },
+  );
+  assert.equal(missingBins.ok, false);
+  assert.deepEqual(missingBins.ranLabels, ["oxfmt/oxlint(missing)", "sketch:lint"]);
 });

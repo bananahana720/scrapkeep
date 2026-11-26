@@ -24,8 +24,10 @@ import {
   indexFromFiles,
   lanePool,
   nodeTestsFor,
+  normalizeTestPattern,
   parseArgs,
   batchable,
+  resolveNamedTests,
   seedBaseGodot,
   splitBatch,
   takeBatch,
@@ -452,6 +454,7 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
     shuffle: false,
     seed: null,
     pre: [],
+    tests: [],
   });
   assert.deepEqual(parseArgs(["--shuffle", "--seed", "42"]).shuffle, true);
   assert.deepEqual(parseArgs(["--shuffle", "--seed", "42"]).seed, 42);
@@ -459,6 +462,22 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
   assert.throws(() => parseArgs(["--pre", "abc"]));
   assert.equal(parseArgs(["--base", "stage/alpha-w17", "--budget", "600"]).budgetS, 600);
   assert.throws(() => parseArgs(["--budget", "0"]));
+  assert.deepEqual(parseArgs(["--test", "a_test", "--test", "b_*"]), {
+    base: "origin/main",
+    budgetS: 900,
+    dryRun: false,
+    receipt: "fast",
+    width: null,
+    baseCheck: false,
+    batch: true,
+    shuffle: false,
+    seed: null,
+    pre: [],
+    tests: ["a_test", "b_*"],
+  });
+  assert.equal(parseArgs(["--test", "a_test", "--base-check"]).baseCheck, true);
+  assert.equal(parseArgs(["--base-check", "--test", "a_test"]).baseCheck, true);
+  assert.throws(() => parseArgs(["--test"]), /--test requires/);
 });
 
 test("import: an engine crash or a script error is tried again, up to three tries, and only the last try decides", async () => {
@@ -1029,4 +1048,54 @@ test("seedBaseGodot copies head .godot into base without scrapkeep-import.json",
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("resolveNamedTests strips prefixes/suffixes, matches globs, and plan allowBots keeps bot/solo tests direct", () => {
+  assert.equal(
+    normalizeTestPattern("res://sketches/core-loop/tests/bot_isle_stage5_test.gd"),
+    "bot_isle_stage5_test",
+  );
+  assert.equal(
+    normalizeTestPattern("sketches/core-loop/tests/unit_suite_test.gd"),
+    "unit_suite_test",
+  );
+  assert.equal(normalizeTestPattern("tests/park_*_test.gd"), "park_*_test");
+
+  const allTests = [
+    "tests/bot_isle_stage5_test.gd",
+    "tests/park_park_dam_test.gd",
+    "tests/unit_suite_test.gd",
+  ];
+  assert.deepEqual(
+    resolveNamedTests(allTests, [
+      "res://tests/unit_suite_test.gd",
+      "sketches/core-loop/tests/bot_*",
+    ]),
+    ["tests/bot_isle_stage5_test.gd", "tests/unit_suite_test.gd"],
+  );
+  assert.deepEqual(resolveNamedTests(allTests, ["nonexistent_*"]), []);
+
+  const picked = new Map([
+    ["tests/bot_isle_stage5_test.gd", { tier: 0, why: "named (--test)" }],
+    ["tests/unit_suite_test.gd", { tier: 0, why: "named (--test)" }],
+  ]);
+  const out = plan({
+    picked,
+    timings: {},
+    budgetMs: Infinity,
+    width: 4,
+    solo: (test) => test.includes("bot_"),
+    bots: () => false,
+    allowBots: true,
+  });
+  assert.deepEqual(out.bots, []);
+  assert.deepEqual(out.deferred, []);
+  assert.deepEqual(
+    out.parallel.map((r) => r.test),
+    ["tests/unit_suite_test.gd"],
+  );
+  assert.deepEqual(
+    out.solo.map((r) => r.test),
+    ["tests/bot_isle_stage5_test.gd"],
+  );
 });

@@ -4,6 +4,7 @@ import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureNodeModules } from "../ensure-node-modules.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -136,6 +137,7 @@ if (isMain()) {
       );
       process.exitCode = 0;
     } else {
+      ensureNodeModules(root);
       const ran = spawnSync(process.execPath, args, { cwd: root, stdio: "inherit" });
       if (ran.error) throw ran.error;
       process.exitCode = ran.status ?? 1;

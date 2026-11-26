@@ -30,6 +30,7 @@ import {
   isBot,
   isSolo,
   judge,
+  matchesGlob,
   expiredLine,
   expiredQuarantine,
   quarantineNote,
@@ -131,6 +132,24 @@ export const SHARD_RULES = [
 ];
 const TEXT_EXTENSIONS = new Set([".gd", ".tscn", ".tres", ".godot", ".cfg", ".json", ".gdshader"]);
 
+export function normalizeTestPattern(pattern) {
+  return String(pattern)
+    .replace(/^res:\/\//, "")
+    .replace(/^sketches\/core-loop\//, "")
+    .replace(/^tests\//, "")
+    .replace(/\.gd$/, "");
+}
+
+export function resolveNamedTests(allTests, patterns) {
+  const normalized = patterns.map(normalizeTestPattern);
+  return allTests
+    .filter((rel) => {
+      const name = path.posix.basename(rel, ".gd");
+      return normalized.some((glob) => matchesGlob(glob, name));
+    })
+    .sort();
+}
+
 export function parseArgs(argv) {
   const options = {
     base: "origin/main",
@@ -143,7 +162,9 @@ export function parseArgs(argv) {
     shuffle: false,
     seed: null,
     pre: [],
+    tests: [],
   };
+  let explicitBaseCheck = null;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--base" && argv[i + 1]) options.base = argv[++i];
@@ -151,10 +172,16 @@ export function parseArgs(argv) {
     else if (arg === "--dry-run") options.dryRun = true;
     else if (arg === "--receipt" && argv[i + 1]) options.receipt = argv[++i];
     else if (arg === "--width" && argv[i + 1]) options.width = Number(argv[++i]);
-    else if (arg === "--no-base-check") options.baseCheck = false;
+    else if (arg === "--base-check") explicitBaseCheck = true;
+    else if (arg === "--no-base-check") explicitBaseCheck = false;
     else if (arg === "--no-batch") options.batch = false;
     else if (arg === "--shuffle") options.shuffle = true;
-    else if (arg === "--seed") {
+    else if (arg === "--test") {
+      if (i + 1 >= argv.length || !argv[i + 1] || argv[i + 1].startsWith("-")) {
+        throw new Error("--test requires a test name or glob");
+      }
+      options.tests.push(argv[++i]);
+    } else if (arg === "--seed") {
       if (i + 1 >= argv.length) throw new Error("--seed requires a value");
       const raw = argv[++i];
       if (raw.trim() === "" || !Number.isFinite(Number(raw))) {
@@ -163,6 +190,7 @@ export function parseArgs(argv) {
       options.seed = Math.trunc(Number(raw)) >>> 0;
     } else if (arg === "--pre" && argv[i + 1]) options.pre.push(argv[++i].replace(/^#/, ""));
   }
+  options.baseCheck = explicitBaseCheck ?? options.tests.length === 0;
   if (!Number.isFinite(options.budgetS) || options.budgetS <= 0)
     throw new Error("--budget needs seconds above zero");
   if (options.pre.some((pr) => !/^\d+$/.test(pr))) throw new Error("--pre takes PR numbers");
@@ -321,10 +349,12 @@ export function plan({
   width,
   solo = () => false,
   bots: knownBots = () => false,
+  allowBots = false,
 }) {
   const bots = (test) =>
-    knownBots(test) ||
-    (timings[test] === undefined && UNKNOWN_BOT_NAME.test(path.posix.basename(test)));
+    !allowBots &&
+    (knownBots(test) ||
+      (timings[test] === undefined && UNKNOWN_BOT_NAME.test(path.posix.basename(test))));
   const rows = [...picked].map(([test, row]) => ({ test, ...row, ms: estimate(timings, test) }));
   const botRows = rows.filter((row) => bots(row.test));
   const runnable = rows
@@ -863,7 +893,10 @@ async function main() {
   const startedAt = new Date().toISOString();
   const started = Date.now();
   const sketchDir = path.join(root, SKETCH);
-  const mergeBase = git(["merge-base", options.base, "HEAD"]);
+  const namedMode = options.tests.length > 0;
+  const headSha = git(["rev-parse", "HEAD"]);
+  const mergeBase =
+    namedMode && !options.baseCheck ? headSha : git(["merge-base", options.base, "HEAD"]);
   for (const pr of options.pre) {
     git(["fetch", "-q", "origin", `+refs/pull/${pr}/head:refs/remotes/pr/${pr}`]);
     if (
@@ -879,7 +912,7 @@ async function main() {
   const receipt = {
     schema: RECEIPT_SCHEMA,
     label: options.receipt,
-    head: git(["rev-parse", "HEAD"]),
+    head: headSha,
     base: options.base,
     merge_base: mergeBase,
     started_at: startedAt,
@@ -918,11 +951,14 @@ async function main() {
     return baseTree;
   };
   const diffBase = options.pre.length > 0 ? git(["rev-parse", "HEAD"], baseDir()) : mergeBase;
-  const changedPaths = git(["diff", "--name-only", diffBase, "HEAD"]).split("\n").filter(Boolean);
+  const changedPaths = namedMode
+    ? []
+    : git(["diff", "--name-only", diffBase, "HEAD"]).split("\n").filter(Boolean);
   const changed = classify(changedPaths);
   receipt.diff_base = diffBase;
   receipt.pre = options.pre;
   receipt.changed = changedPaths.length;
+  if (namedMode) receipt.named_tests = options.tests;
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
     if (baseTree) spawnSync("git", ["-C", root, "worktree", "remove", "--force", baseTree]);
@@ -936,151 +972,187 @@ async function main() {
     process.exit(code ?? (receipt.ok ? 0 : 1));
   };
 
-  log(
-    `sketch:fast: ${changedPaths.length} changed paths (${changed.godot.length} sketch, ${changed.node.length} node, ${changed.docs.length} docs) since ${diffBase.slice(0, 8)}${options.pre.length ? ` (merge base plus ${options.pre.map((pr) => "#" + pr).join(", ")})` : ""}`,
-  );
-
-  const baseTop = new Set(git(["ls-tree", "--name-only", diffBase]).split("\n").filter(Boolean));
-  const hygiene = [
-    ...hygieneFindings(
-      git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"),
-      baseTop,
-    ),
-    ...bridgeFindings(
-      spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], {
-        encoding: "utf8",
-      }).stdout ?? "",
-    ),
-  ];
-  if (
-    !stage("tree hygiene", hygiene.length === 0, {
-      note: hygiene.length
-        ? hygiene.slice(0, 5).join("; ")
-        : "no symlink, root file or new top-level folder",
-      findings: hygiene,
-    }) &&
-    !options.dryRun
-  )
-    finish();
-  const show = (ref, file) => {
-    const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], {
-      encoding: "utf8",
-      maxBuffer: 64 * 1024 * 1024,
-    });
-    return r.status === 0 ? r.stdout : null;
-  };
-  receipt.checks_removed = checksRemoved(
-    git(["diff", "--name-status", "-M", diffBase, "HEAD"]).split("\n"),
-    show,
-    diffBase,
-    "HEAD",
-  );
-  for (const row of receipt.checks_removed)
-    log(`  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`);
-  if (receipt.checks_removed.length > 0)
-    log("  name each removed check in the pull request and say what now covers it");
-  const deepSweepPromise = spawnText(
-    process.execPath,
-    [path.join(root, "scripts", "deep-sweep.mjs"), "--base", mergeBase, "--head", "HEAD"],
-    { timeoutMs: 60_000 },
-  );
-  const merges = git(["rev-list", "--first-parent", "--merges", "--parents", `${mergeBase}..HEAD`])
-    .split("\n")
-    .filter(Boolean)
-    .map((line) => line.split(" "))
-    .filter(
-      ([, , second]) =>
-        second &&
-        spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", second, mergeBase]).status !==
-          0,
-    )
-    .map(([merge, , carried]) => ({
-      merge,
-      carried,
-      subject: git(["log", "-1", "--format=%s", merge]),
-    }));
-  const recordDeepSweep = async () => {
-    const swept = await deepSweepPromise;
-    receipt.deep_sweep =
-      swept.status === 0
-        ? Object.fromEntries(
-            [...swept.stdout.matchAll(/^## (D\d) .*\((\d+)\)$/gm)].map((m) => [m[1], Number(m[2])]),
-          )
-        : null;
-    if (receipt.deep_sweep === null) log("  deep sweep did not run");
-    else if (Object.values(receipt.deep_sweep).some((n) => n > 0))
-      log(
-        `  deep sweep leads on this branch: ${Object.entries(receipt.deep_sweep)
-          .filter(([, n]) => n > 0)
-          .map(([rule, n]) => `${rule} ${n}`)
-          .join(", ")} (node scripts/deep-sweep.mjs --base ${mergeBase.slice(0, 10)} lists them)`,
-      );
-  };
-  if (merges.length > 0) {
-    const heads = { prHeads: new Map(), branchHeads: new Map() };
-    const remote = spawnSync(
-      "git",
-      ["-C", root, "ls-remote", "origin", "refs/pull/*/head", "refs/heads/*"],
-      { encoding: "utf8", timeout: 60_000 },
+  if (namedMode) {
+    log(`sketch:fast: --test filter (${options.tests.join(", ")})`);
+  } else {
+    log(
+      `sketch:fast: ${changedPaths.length} changed paths (${changed.godot.length} sketch, ${changed.node.length} node, ${changed.docs.length} docs) since ${diffBase.slice(0, 8)}${options.pre.length ? ` (merge base plus ${options.pre.map((pr) => "#" + pr).join(", ")})` : ""}`,
     );
-    for (const line of (remote.stdout || "").split("\n")) {
-      const pull = /^([0-9a-f]{40})\trefs\/pull\/(\d+)\/head$/.exec(line);
-      if (pull) heads.prHeads.set(pull[2], pull[1]);
-      const branch = /^([0-9a-f]{40})\trefs\/heads\/(.+)$/.exec(line);
-      if (branch) heads.branchHeads.set(branch[2], branch[1]);
-    }
-    const isAncestor = (sha) => {
-      spawnSync("git", ["-C", root, "fetch", "-q", "origin", sha]);
-      return (
-        spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", sha, "HEAD"]).status === 0
-      );
-    };
-    const carried = carriedPrs(merges, heads, isAncestor);
-    receipt.carried = carried;
-    const label = (row) =>
-      row.prs.length
-        ? row.prs.map((pr) => "#" + pr).join(", ")
-        : (row.branch ?? "an unnamed branch");
-    for (const row of carried)
-      log(
-        `  carries ${label(row)} at ${row.carried.slice(0, 8)}${row.stale ? ` (stale: its head is now ${row.head.slice(0, 8)})` : ""}${row.subject && !row.branch ? ` (${row.subject})` : ""}`,
-      );
-    const stale = carried.filter((row) => row.stale);
+
+    const baseTop = new Set(git(["ls-tree", "--name-only", diffBase]).split("\n").filter(Boolean));
+    const hygiene = [
+      ...hygieneFindings(
+        git(["diff", "--raw", "--no-abbrev", "--diff-filter=A", diffBase, "HEAD"]).split("\n"),
+        baseTop,
+      ),
+      ...bridgeFindings(
+        spawnSync("git", ["-C", root, "show", "HEAD:sketches/core-loop/project.godot"], {
+          encoding: "utf8",
+        }).stdout ?? "",
+      ),
+    ];
     if (
-      !stage("carried branches current", stale.length === 0, {
-        note: stale.length
-          ? stale
-              .map(
-                (row) =>
-                  `${label(row)} carried at ${row.carried.slice(0, 8)}, now ${row.head.slice(0, 8)}`,
-              )
-              .join("; ")
-          : `${carried.length} merges, none stale`,
+      !stage("tree hygiene", hygiene.length === 0, {
+        note: hygiene.length
+          ? hygiene.slice(0, 5).join("; ")
+          : "no symlink, root file or new top-level folder",
+        findings: hygiene,
       }) &&
       !options.dryRun
-    ) {
-      await recordDeepSweep();
-      log("  merge each stale branch's current head into the PR (or drop the carry), then rerun");
+    )
       finish();
+    const show = (ref, file) => {
+      const r = spawnSync("git", ["-C", root, "show", `${ref}:${file}`], {
+        encoding: "utf8",
+        maxBuffer: 64 * 1024 * 1024,
+      });
+      return r.status === 0 ? r.stdout : null;
+    };
+    receipt.checks_removed = checksRemoved(
+      git(["diff", "--name-status", "-M", diffBase, "HEAD"]).split("\n"),
+      show,
+      diffBase,
+      "HEAD",
+    );
+    for (const row of receipt.checks_removed)
+      log(
+        `  checks removed from ${row.test}: ${row.labels.map((label) => `"${label}"`).join(", ")}`,
+      );
+    if (receipt.checks_removed.length > 0)
+      log("  name each removed check in the pull request and say what now covers it");
+    const deepSweepPromise = spawnText(
+      process.execPath,
+      [path.join(root, "scripts", "deep-sweep.mjs"), "--base", mergeBase, "--head", "HEAD"],
+      { timeoutMs: 60_000 },
+    );
+    const merges = git([
+      "rev-list",
+      "--first-parent",
+      "--merges",
+      "--parents",
+      `${mergeBase}..HEAD`,
+    ])
+      .split("\n")
+      .filter(Boolean)
+      .map((line) => line.split(" "))
+      .filter(
+        ([, , second]) =>
+          second &&
+          spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", second, mergeBase])
+            .status !== 0,
+      )
+      .map(([merge, , carried]) => ({
+        merge,
+        carried,
+        subject: git(["log", "-1", "--format=%s", merge]),
+      }));
+    const recordDeepSweep = async () => {
+      const swept = await deepSweepPromise;
+      receipt.deep_sweep =
+        swept.status === 0
+          ? Object.fromEntries(
+              [...swept.stdout.matchAll(/^## (D\d) .*\((\d+)\)$/gm)].map((m) => [
+                m[1],
+                Number(m[2]),
+              ]),
+            )
+          : null;
+      if (receipt.deep_sweep === null) log("  deep sweep did not run");
+      else if (Object.values(receipt.deep_sweep).some((n) => n > 0))
+        log(
+          `  deep sweep leads on this branch: ${Object.entries(receipt.deep_sweep)
+            .filter(([, n]) => n > 0)
+            .map(([rule, n]) => `${rule} ${n}`)
+            .join(", ")} (node scripts/deep-sweep.mjs --base ${mergeBase.slice(0, 10)} lists them)`,
+        );
+    };
+    if (merges.length > 0) {
+      const heads = { prHeads: new Map(), branchHeads: new Map() };
+      const remote = spawnSync(
+        "git",
+        ["-C", root, "ls-remote", "origin", "refs/pull/*/head", "refs/heads/*"],
+        { encoding: "utf8", timeout: 60_000 },
+      );
+      for (const line of (remote.stdout || "").split("\n")) {
+        const pull = /^([0-9a-f]{40})\trefs\/pull\/(\d+)\/head$/.exec(line);
+        if (pull) heads.prHeads.set(pull[2], pull[1]);
+        const branch = /^([0-9a-f]{40})\trefs\/heads\/(.+)$/.exec(line);
+        if (branch) heads.branchHeads.set(branch[2], branch[1]);
+      }
+      const isAncestor = (sha) => {
+        spawnSync("git", ["-C", root, "fetch", "-q", "origin", sha]);
+        return (
+          spawnSync("git", ["-C", root, "merge-base", "--is-ancestor", sha, "HEAD"]).status === 0
+        );
+      };
+      const carried = carriedPrs(merges, heads, isAncestor);
+      receipt.carried = carried;
+      const label = (row) =>
+        row.prs.length
+          ? row.prs.map((pr) => "#" + pr).join(", ")
+          : (row.branch ?? "an unnamed branch");
+      for (const row of carried)
+        log(
+          `  carries ${label(row)} at ${row.carried.slice(0, 8)}${row.stale ? ` (stale: its head is now ${row.head.slice(0, 8)})` : ""}${row.subject && !row.branch ? ` (${row.subject})` : ""}`,
+        );
+      const stale = carried.filter((row) => row.stale);
+      if (
+        !stage("carried branches current", stale.length === 0, {
+          note: stale.length
+            ? stale
+                .map(
+                  (row) =>
+                    `${label(row)} carried at ${row.carried.slice(0, 8)}, now ${row.head.slice(0, 8)}`,
+                )
+                .join("; ")
+            : `${carried.length} merges, none stale`,
+        }) &&
+        !options.dryRun
+      ) {
+        await recordDeepSweep();
+        log("  merge each stale branch's current head into the PR (or drop the carry), then rerun");
+        finish();
+      }
     }
+    await recordDeepSweep();
   }
-  await recordDeepSweep();
 
   const index = buildIndex(sketchDir);
   const timings = readTimings();
-  const selection = selectTests(index, changed.godot);
-  if (changed.godot.length > 0)
-    for (const test of canaries(index, timings))
-      if (!selection.picked.has(test)) selection.picked.set(test, { tier: 3, why: "canary" });
   const width = options.width ?? defaultWidth();
-  const lanePlan = plan({
-    picked: selection.picked,
-    timings,
-    budgetMs: options.budgetS * 1000,
-    width,
-    solo: (test) => isSolo(sourceOf(sketchDir, test)),
-    bots: (test) => isBot(sourceOf(sketchDir, test)),
-  });
+  let selection;
+  let lanePlan;
+  if (namedMode) {
+    const matched = resolveNamedTests(index.tests, options.tests);
+    if (matched.length === 0) {
+      console.error(`sketch:fast: no tests/*.gd matched ${options.tests.join(", ")}`);
+      process.exit(2);
+    }
+    const picked = new Map(matched.map((test) => [test, { tier: 0, why: "named (--test)" }]));
+    selection = { picked, hubs: [], unmapped: [], shards: new Map() };
+    lanePlan = plan({
+      picked: selection.picked,
+      timings,
+      budgetMs: Infinity,
+      width,
+      solo: (test) => isSolo(sourceOf(sketchDir, test)),
+      bots: () => false,
+      allowBots: true,
+    });
+  } else {
+    selection = selectTests(index, changed.godot);
+    if (changed.godot.length > 0)
+      for (const test of canaries(index, timings))
+        if (!selection.picked.has(test)) selection.picked.set(test, { tier: 3, why: "canary" });
+    lanePlan = plan({
+      picked: selection.picked,
+      timings,
+      budgetMs: options.budgetS * 1000,
+      width,
+      solo: (test) => isSolo(sourceOf(sketchDir, test)),
+      bots: (test) => isBot(sourceOf(sketchDir, test)),
+    });
+  }
   receipt.selection = {
     hubs: selection.hubs,
     unmapped: selection.unmapped,
@@ -1112,40 +1184,48 @@ async function main() {
     process.exit(0);
   }
 
-  const pathNodeTests = nodeTestsForPaths(changed.godot);
+  let lint = null;
+  let placeholderPair = null;
+  let docs = null;
+  let node = null;
   let nodeTests = [];
-  if (changed.node.length > 0 || pathNodeTests.length > 0) {
-    const all = git(["ls-files", "*.test.mjs", "*.test.js"])
-      .split("\n")
-      .filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
-    nodeTests = [
-      ...new Set([
-        ...nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8")),
-        ...pathNodeTests,
+  if (!namedMode) {
+    const pathNodeTests = nodeTestsForPaths(changed.godot);
+    if (changed.node.length > 0 || pathNodeTests.length > 0) {
+      const all = git(["ls-files", "*.test.mjs", "*.test.js"])
+        .split("\n")
+        .filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
+      nodeTests = [
+        ...new Set([
+          ...nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8")),
+          ...pathNodeTests,
+        ]),
+      ].sort();
+    }
+    const baseSketchForPlaceholders =
+      changed.godot.length > 0 ? path.join(baseDir(), SKETCH) : null;
+    [lint, placeholderPair, docs, node] = await Promise.all([
+      spawnText(process.execPath, [
+        path.join(root, "scripts", "sketch-lint.mjs"),
+        "--sketch",
+        "core-loop",
       ]),
-    ].sort();
+      baseSketchForPlaceholders
+        ? Promise.all([
+            placeholderRowsAsync(baseSketchForPlaceholders),
+            placeholderRowsAsync(sketchDir),
+          ])
+        : Promise.resolve(null),
+      changed.docs.length > 0
+        ? spawnText(process.execPath, [path.join(root, "scripts", "check-docs.mjs")])
+        : Promise.resolve(null),
+      nodeTests.length > 0
+        ? spawnText(process.execPath, ["--test", ...nodeTests], { cwd: root, timeoutMs: 300_000 })
+        : Promise.resolve(null),
+    ]);
   }
-  const baseSketchForPlaceholders = changed.godot.length > 0 ? path.join(baseDir(), SKETCH) : null;
-  const [lint, placeholderPair, docs, node] = await Promise.all([
-    spawnText(process.execPath, [
-      path.join(root, "scripts", "sketch-lint.mjs"),
-      "--sketch",
-      "core-loop",
-    ]),
-    baseSketchForPlaceholders
-      ? Promise.all([
-          placeholderRowsAsync(baseSketchForPlaceholders),
-          placeholderRowsAsync(sketchDir),
-        ])
-      : Promise.resolve(null),
-    changed.docs.length > 0
-      ? spawnText(process.execPath, [path.join(root, "scripts", "check-docs.mjs")])
-      : Promise.resolve(null),
-    nodeTests.length > 0
-      ? spawnText(process.execPath, ["--test", ...nodeTests], { cwd: root, timeoutMs: 300_000 })
-      : Promise.resolve(null),
-  ]);
   if (
+    lint &&
     !stage("sketch-lint", lint.status === 0, { note: (lint.stdout || "").trim().split("\n").pop() })
   ) {
     log(lint.stdout + lint.stderr);
@@ -1181,7 +1261,11 @@ async function main() {
       finish();
     }
   }
-  if (lanePlan.parallel.length + lanePlan.solo.length === 0 && changed.godot.length === 0) {
+  if (
+    !namedMode &&
+    lanePlan.parallel.length + lanePlan.solo.length === 0 &&
+    changed.godot.length === 0
+  ) {
     stage("godot", true, { note: "no sketch change" });
     finish();
   }
@@ -1244,12 +1328,14 @@ async function main() {
       finish();
     writeImportStamp(root, SKETCH, { godot: godotIdentity(binary) });
   }
-  const boot = await spawnCollect(binary, [...base, "--quit-after", "300"], {
-    timeoutMs: 180_000,
-    env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) },
-  });
-  const bootVerdict = judge({ status: boot.status, output: boot.output });
-  if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
+  if (!namedMode) {
+    const boot = await spawnCollect(binary, [...base, "--quit-after", "300"], {
+      timeoutMs: 180_000,
+      env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) },
+    });
+    const bootVerdict = judge({ status: boot.status, output: boot.output });
+    if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
+  }
 
   const results = [];
   const flaky = [];
