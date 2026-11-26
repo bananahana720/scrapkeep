@@ -571,7 +571,9 @@ function parseLessons(content) {
     const loose = /^- \*\*([^*]+)\*\*/.exec(line);
     if (loose) {
       const header =
-        /^- \*\*((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR)-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(line);
+        /^- \*\*((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)\*\*\s*·\s*status:\s*(\S+)/.exec(
+          line,
+        );
       if (header) {
         current = {
           id: header[1],
@@ -758,7 +760,7 @@ function checkLessonLedgers(findings, ledgerFiles, skillDirs) {
 
 function checkLessonCitations(findings, file, lessonIds) {
   for (const match of file.content.matchAll(
-    /\(((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR)-\d+(?:,\s*(?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR)-\d+)*)\)/g,
+    /\(((?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+(?:,\s*(?:RML|SKL|BLK|VGM|VBD|VWB|VFM|AGW|SVR|DEV)-\d+)*)\)/g,
   )) {
     const line = lineAt(file.content, match.index);
     for (const id of match[1].split(",").map((entry) => entry.trim()))

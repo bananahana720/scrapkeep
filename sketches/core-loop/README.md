@@ -90,16 +90,19 @@ Launch with `--dev` and press `` ` `` (or F10) in any screen. A drawer opens on 
 - **Paint** (`set cel 5`, `set dots 0.4`, `set hatch 0.8`, `set lines 0.9`): a stylise pass on 3D surfaces only. It draws before the transparent pass, so telegraphs, VFX and the HUD stay crisp on top, and it fades out with distance (`fade_from`, `fade_to`).
 - **Print** (`set pixel 3`, `set riso 0.5`, `set speed_lines 0.6`, `set impact 1`): a pass over the whole 3D frame, telegraphs included, under the HUD: pixelate, posterize and dither, two-ink riso, grade, paper tooth, grain, scanlines, vignette, speed lines that grow with the ball's speed, and inked impact frames on big hits.
 - **Lens**: `cam orbit|iso|side|top|hero|high|cinema|game`. Iso, side and top are orthographic (the flat 2D read) and cut away whatever stands between the camera and the ball (`cam cut 0` turns that off). Knobs: `cam fov 40`, `cam distance 20`, `cam tilt 0.6` (tilt-shift miniature). Right-drag orbits, the wheel zooms.
-- **Fight**: `spawn <kind> [count] [affix]` ahead of the ball (`kinds 1` lists world 1's), `clear [hard]`, `god`, `heal`, `scrap 500`, `cogs 200`, `calm`, `time 0.25`, `freeze` (pauses the world; the dev camera and looks still move), `boss`, `boss 3`, `pick 1`.
-- **Bake**: `bake <name>` saves every override to `user://dev_looks/<name>.json` and `load <name>` brings it back. `shot` saves a still without the drawer, `hud off` hides the HUD, and `sheet` freezes the frame and captures it once per preset into one contact sheet under `user://dev_shots/`.
+- **Fight & state**: `spawn <kind> [count] [affix]` ahead of the ball (`kinds 1` lists world 1's), `clear [hard]`, `god`, `heal`, `damage <n>`, `scrap 500`, `cogs 200`, `calm`, `time 0.25`, `freeze` (pauses the world via `freeze_for_dev`; the dev camera and looks still move), `tick <n>` (steps exact physics ticks while frozen), `stage <1..6|dam|flume|...>`, `warp <x z|spawn|beacon|landmark|moss|vault|warden|ahead>`, `give <part> [count]`, `panel <id> <tier>`, `quality <preset>`, `boss`, `boss 3`, `retry`, `pick 1`.
+- **Inspect, assert & overlays**: `inspect <state|player|enemies|warden|boss|telegraphs|build|look|lens|perf|prims|ui|events|anomalies>` emits structured state; `events <on|off|tail|clear>` records the signal ring buffer; `assert <finite|no_anomalies|state|stage|enemies|hp|draws|event|no_event|expr>` records pass/fail checks; `overlay <all|none|bounds|telegraphs|spawns|sight|nav|vel>` draws live debug geometry.
+- **Bake & sheets**: `bake <name>` saves every override to `user://dev_looks/<name>.json` and `load <name>` brings it back. `shot` saves a still without the drawer, `hud off` hides the HUD, and `sheet [presets|cams|quality] [name]` freezes the frame and captures a labeled contact sheet under `--dev-out` (or `user://dev_shots/`).
 
-A launch can run commands unattended, separated by `;`, with `wait <frames>` and `quit`:
+For unattended runs, warm multi-turn File-Mailbox sessions, built-in recipes, and PNG diffs, use the agent CLI lever (`scripts/dev-console.mjs`), which defaults to `--headless --audio-driver Dummy` with scratch saves under `artifacts/local/dev-console/` and uses silent offscreen rendering (`--drawn`) only when visuals are requested:
 
 ```sh
-godot --path sketches/core-loop -- --dev "--dev-run=wait 200; run 1; wait 500; pick 1; wait 60; pick 1; wait 200; calm on; hud off; sheet; cam iso; shot iso; quit"
+npm run dev:console -- recipe smoke --json
+npm run dev:console -- recipe look-sheet --json
+npm run dev:console -- serve --session probe && npm run dev:console -- send --session probe "inspect state" --json && npm run dev:console -- stop --session probe
 ```
 
-Scripted runs close the pause menu that opens when the window loses focus before each still. The code lives in `src/dev/`; `tests/dev_console_test.gd` drives every command against the real game.
+Scripted runs close the pause menu that opens when the window loses focus before each still, and in-process GDScript probes can use `DevSession` under `src/dev/` for boilerplate-free headless scenarios. The code lives in `src/dev/`; `tests/dev_console_test.gd` drives commands against the real game.
 
 ## Field notes
 
