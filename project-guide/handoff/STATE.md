@@ -6,15 +6,22 @@ Heads and open pull requests change by the hour, so read them live (`git ls-remo
 
 | Fact | Value |
 | --- | --- |
-| Last promotion | wave 50, main fc9680f8, direct |
+| Last promotion | wave 51, main ba4b8bef, direct |
 | Open stage | main |
 | Live board | none |
 | Red team | cautious |
-| Compare against | w50-pre-alpha-fc9680f8 (prior 48-seed baseline w46-s1-ba46f103 on ahana) |
+| Compare against | full-alpha-ba4b8bef (26 Nov ruling eq; prior 48-seed baseline w46-s1-ba46f103 on ahana) |
 
-Under [ruling ep](DECISIONS.md), work runs directly in flat `main` mode (`Open stage` is `main`, `Live board` is `none`) instead of per-wave `stage/alpha-w<N>` stacking. For legacy wave promotions, the stage log (`git log --first-parent origin/stage/alpha-w<N>`) held the stack queue and `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` rotated the table. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch.
+Under [ruling ep](DECISIONS.md) and [ruling eq](DECISIONS.md), work runs directly in flat `main` mode (`Open stage` is `main`, `Live board` is `none`) instead of per-wave `stage/alpha-w<N>` stacking; `Last promotion` records the 26 Nov 2026 Full-Alpha milestone (`ruling eq`) on `main`. For legacy wave promotions, the stage log (`git log --first-parent origin/stage/alpha-w<N>`) held the stack queue and `node scripts/wave-state.mjs --write --board <new board issue> --compare <receipts folder>` rotated the table. "Compare against" names the receipts the next full gate reads its base values from, published on a `scratch/gate-receipts-<folder>` branch.
 
-## Now (25 Nov 2026, pre-alpha flattened on main under ruling ep)
+## Now (26 Nov 2026, Full-Alpha milestone on main under ruling eq)
+
+**Full-Alpha milestone closes flat on `main` under [ruling eq](DECISIONS.md)** (`ba4b8bef` plus Mac/Linux determinism re-pins and ledger graduation):
+- **Visual, HUD & combat polish (Worlds 1–3):** Borderlands graphic-novel visual/HUD elevation across Worlds 1–3 (ink outlines, boss plates, flourishes, Pilot Select, ending framing, contraptions), BoI Rebirth-inspired risk/reward items/relics/swaps, Molten Slag & Steam element chains, and `120 ms` input buffers with slam-plant cancels.
+- **Music pipeline & posture calibration:** Hybrid Stem-Context Gemini CLI + Lyria 3.5 -> `htdemucs` 3-stem `AceSequencer` music pipeline (flagship World 2 and World 3 tracks), plus World 2/3 Warden and boss posture calibration under rulings `ct`, `cu` and `cv` (`posture_bands_mind_test` graduated at `29.6 s` grown, `2.25x` ratio, `0` camper).
+- **Tooling, formal proofs, determinism & Linux pack:** Four `/reflect` tooling helpers, 11/11 TLA+ formal proofs synced and passing live TLC, cross-platform `run_tier_test` determinism re-pins on both Mac Studio (`BASE_SCHEDULE_MAC`, `BASE_RUN_MAC`) and Linux `ahana` (`BASE_SCHEDULE`, `BASE_RUN`) graduating `run_tier_test` and `posture_bands_mind_test` off [KNOWN-FAILING.tsv](KNOWN-FAILING.tsv), and packed Linux `Scrapkeep.AppImage` + 4-action `.desktop` launcher. Rule 11 substitution note: Fable 5.2 / Opus 5.5 capacity fallback routed writing to Gemini 4 Hydrogen + Gemini 4 Neon High with independent admitting reviews on fresh Gemini 4 Neon High sessions.
+
+### Earlier (25 Nov 2026, pre-alpha flattened on main under ruling ep)
 
 **Waves 47-50 and open branches flatten onto `main` as a unified pre-alpha baseline under [ruling ep](DECISIONS.md)** across Phases 1-3 (`fc9680f8` plus this gate close):
 - **Phase 1 unified pre-UI & W44 wins:** Flattened `w50/pre-ui-unified` (Stages A-D across 26 `w47/*`–`w50/*` branches + `stage/alpha-w47`), rebased `aifirstify_repo_gemini_workflows` (`.agents/` skills, hooks, workflows and `check:agents`), and folded audited W44 wins (`water-flows`, `area-blueprint` reconciled under ruling `ep`, `audit-launch-ring-ramp`, `W1-131`, `W1-137a`, `W1-143b`, `W1-144-mac-launch`). Worlds 1–3 are unparked in `game.gd` and Patch (7th pilot) is active behind `HIDDEN_PILOTS`/`HIDDEN_SHELLS`.
