@@ -385,11 +385,9 @@ func describe() -> String:
 			parts.append("%s=%s" % [key, _show(value(key))])
 	for key in _colour:
 		parts.append("%s=#%s" % [key, _colour[key].to_html(false)])
+	if _gain != Vector3.ONE:
+		parts.append("tint=#%s" % Color(_gain.x, _gain.y, _gain.z).to_html(false))
 	return "%s  %s" % [preset_name, " ".join(parts) if not parts.is_empty() else "(no overrides)"]
-
-
-func filters_live() -> bool:
-	return not _filter.is_empty() or not _colour.is_empty()
 
 
 func _apply_row(row: Dictionary) -> void:

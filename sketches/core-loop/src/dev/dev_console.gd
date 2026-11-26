@@ -51,9 +51,7 @@ var _lines: Array[String] = []
 var _history_at := -1
 var _status_wait := 0.0
 var _slide: Tween
-var _keyboard_was := false
-var _menu_was := false
-var _held_input: Array = []
+var _held_input := {}
 var _rows := {}
 var _spawn_world := "1"
 var _spawn_count := 1
@@ -95,6 +93,10 @@ func setup(game_ref) -> void:
 
 
 func _exit_tree() -> void:
+	if open:
+		_hold_input(false)
+		if is_instance_valid(game):
+			game.hold_for_dev(false)
 	if get_viewport().size_changed.is_connected(_on_viewport_resized):
 		get_viewport().size_changed.disconnect(_on_viewport_resized)
 	if get_tree().node_added.is_connected(_on_node_added):
@@ -119,10 +121,7 @@ func set_open(on: bool) -> void:
 		_drawer.visible = true
 		_drawer.position.x = -WIDTH
 		_slide.tween_property(_drawer, "position:x", MARGIN, SLIDE_S)
-		_menu_was = game.menu_held()
-		game.set_menu_held(true)
-		game.capture_mouse(false)
-		_hold_keyboard()
+		game.hold_for_dev(true)
 		_hold_input(true)
 		_show_tab(_tab)
 		_focus_line.call_deferred()
@@ -133,11 +132,7 @@ func set_open(on: bool) -> void:
 		if holder != null and _drawer.is_ancestor_of(holder):
 			holder.release_focus()
 		_hold_input(false)
-		var keyboard = game.get("keyboard")
-		if keyboard != null:
-			keyboard.enabled = _keyboard_was
-		game.set_menu_held(_menu_was)
-		game.recapture_mouse()
+		game.hold_for_dev(false)
 
 
 func _focus_line() -> void:
@@ -145,36 +140,25 @@ func _focus_line() -> void:
 		_line.grab_focus()
 
 
-func _hold_keyboard() -> void:
-	var keyboard = game.get("keyboard")
-	if keyboard == null:
-		return
-	_keyboard_was = keyboard.enabled
-	keyboard.enabled = false
-
-
 func _on_flow_changed(_state: String) -> void:
 	if not open:
 		return
-	_hold_keyboard()
-	game.capture_mouse(false)
+	_sweep_input.call_deferred()
 	_focus_line.call_deferred()
 
 
 func _hold_input(on: bool) -> void:
 	if on:
 		_held_input.clear()
-		for node in get_tree().root.find_children("*", "", true, false):
-			_hold_node(node)
+		_sweep_input()
 		get_tree().node_added.connect(_on_node_added)
 		return
 	if get_tree().node_added.is_connected(_on_node_added):
 		get_tree().node_added.disconnect(_on_node_added)
-	for held in _held_input:
-		var node: Node = held[0]
+	for node in _held_input:
 		if not is_instance_valid(node):
 			continue
-		var flags: Array = held[1]
+		var flags: Array = _held_input[node]
 		if flags[0]:
 			node.set_process_input(true)
 		if flags[1]:
@@ -192,7 +176,10 @@ func _hold_node(node: Node) -> void:
 	var flags := [node.is_processing_input(), node.is_processing_unhandled_input(), node.is_processing_unhandled_key_input(), node.is_processing_shortcut_input()]
 	if not true in flags:
 		return
-	_held_input.append([node, flags])
+	var before: Array = _held_input.get(node, [false, false, false, false])
+	for i in flags.size():
+		flags[i] = flags[i] or before[i]
+	_held_input[node] = flags
 	node.set_process_input(false)
 	node.set_process_unhandled_input(false)
 	node.set_process_unhandled_key_input(false)
@@ -203,17 +190,29 @@ func _on_node_added(node: Node) -> void:
 	_hold_node.call_deferred(node)
 
 
-func run(line: String) -> void:
+func _sweep_input() -> void:
+	if not open:
+		return
+	for node in get_tree().root.find_children("*", "", true, false):
+		_hold_node(node)
+
+
+func held_input() -> Array:
+	return _held_input.keys()
+
+
+func run(line: String, keep := true) -> void:
 	_echo(line)
-	commands.run(line)
+	commands.run(line, keep)
 	_refresh_rows()
+	_sweep_input.call_deferred()
 
 
 func run_script(script: String, scripted := false) -> void:
 	for part in script.split(";", false):
 		var text := part.strip_edges()
 		var words := text.split(" ", false)
-		var head := words[0] if not words.is_empty() else ""
+		var head := words[0].to_lower() if not words.is_empty() else ""
 		if head == "wait":
 			_echo(text)
 			for i in DevCommands.whole(words, 1, 30):
@@ -231,7 +230,7 @@ func run_script(script: String, scripted := false) -> void:
 			get_tree().quit()
 			return
 		elif head != "":
-			run(text)
+			run(text, false)
 		if not is_inside_tree():
 			return
 
@@ -239,7 +238,7 @@ func run_script(script: String, scripted := false) -> void:
 static func needs_script(line: String) -> bool:
 	for part in line.split(";", false):
 		var words := part.strip_edges().split(" ", false)
-		if not words.is_empty() and words[0] in SCRIPT_STEPS:
+		if not words.is_empty() and words[0].to_lower() in SCRIPT_STEPS:
 			return true
 	return false
 
@@ -263,12 +262,10 @@ func _input(event: InputEvent) -> void:
 func _process(delta: float) -> void:
 	if not open:
 		return
-	var keyboard = game.get("keyboard")
-	if keyboard != null and keyboard.enabled:
-		_hold_keyboard()
 	_status_wait -= delta / maxf(Engine.time_scale, 0.05)
 	if _status_wait <= 0.0:
 		_status_wait = STATUS_EVERY
+		_sweep_input()
 		_status.text = "%d fps  %s  cam %s  %s" % [Engine.get_frames_per_second(), look.preset_name, lens.mode,
 			"frozen" if fight.frozen() else "x%.2f" % fight.time_scale()]
 
@@ -391,6 +388,7 @@ func unpause() -> bool:
 
 func shot(id := "", close_menu := false) -> String:
 	if _busy:
+		_say("!a still or sheet is already running", "warn")
 		return "!a still or sheet is already running"
 	_busy = true
 	if close_menu:
@@ -406,7 +404,7 @@ func shot(id := "", close_menu := false) -> String:
 	if not is_inside_tree():
 		return "!the console closed before the still"
 	var image := get_viewport().get_texture().get_image()
-	_drawer.visible = was
+	_drawer.visible = was and open
 	_busy = false
 	var err := image.save_png(path)
 	var reply := ("still -> %s" % ProjectSettings.globalize_path(path)) if err == OK else "!could not save %s (%d)" % [path, err]
@@ -416,6 +414,7 @@ func shot(id := "", close_menu := false) -> String:
 
 func contact_sheet(close_menu := false) -> String:
 	if _busy:
+		_say("!a still or sheet is already running", "warn")
 		return "!a still or sheet is already running"
 	_busy = true
 	var held := look.snapshot()
@@ -451,7 +450,7 @@ func contact_sheet(close_menu := false) -> String:
 	look.clear()
 	look.load_snapshot(held)
 	fight.set_time(0.0 if was_frozen else scale)
-	_drawer.visible = was
+	_drawer.visible = was and open
 	_busy = false
 	var reply := ("contact sheet of %d looks (%s) -> %s" % [ids.size(), ", ".join(ids), ProjectSettings.globalize_path(path)]) if err == OK else "!could not save the sheet (%d)" % err
 	_say(reply, "warn" if err != OK else "ok")
@@ -738,7 +737,8 @@ func _slider_row(key: String, span: Array, current: float, apply: Callable, echo
 	var name_label := _text(key, UiTokens.CAPTION, UiTokens.ACCENT if touched else _ink(), UiFonts.mono())
 	name_label.custom_minimum_size = Vector2(112.0, 0.0)
 	name_label.mouse_filter = Control.MOUSE_FILTER_STOP
-	name_label.tooltip_text = "double-click to hand back to the game"
+	if key in look.keys():
+		name_label.tooltip_text = "double-click to hand back to the game"
 	row.add_child(name_label)
 	var slider := HSlider.new()
 	slider.min_value = float(span[0])

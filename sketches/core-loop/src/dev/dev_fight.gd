@@ -21,7 +21,6 @@ var game
 var god := false
 var _time_scale := 1.0
 var _frozen := false
-var _paused_before := false
 var _held_hook := Callable()
 var _spawned := 0
 
@@ -167,15 +166,18 @@ func set_time(scale: float) -> String:
 	scale = clampf(scale, TIME_MIN, TIME_MAX)
 	var freeze := scale < TIME_FLOOR
 	if freeze != _frozen:
-		if freeze:
-			_paused_before = game.get_tree().paused
-		game.get_tree().paused = freeze or _paused_before
 		_frozen = freeze
+		game.freeze_for_dev(freeze)
 	if _frozen:
 		return "time frozen: photo mode (the dev camera and looks still move; 'time 1' resumes)"
 	_time_scale = scale
 	Engine.time_scale = _time_scale
 	return "time x%.2f" % _time_scale
+
+
+func _process(_delta: float) -> void:
+	if _frozen and not get_tree().paused:
+		game.freeze_for_dev(true)
 
 
 func toggle_freeze() -> String:

@@ -92,12 +92,13 @@ class Keyboard:
 	extends Source
 
 	var enabled := true
+	var held := false
 	var walk := false
 	var tuning
 
 	func poll(out) -> void:
 		out.clear()
-		if not enabled:
+		if not enabled or held:
 			return
 		out.move = Input.get_vector("cl_left", "cl_right", "cl_back", "cl_forward")
 		out.jump_pressed = Input.is_action_just_pressed("cl_jump")

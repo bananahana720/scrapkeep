@@ -110,7 +110,7 @@ func set_knob(key: String, amount: float) -> String:
 			_apply_attributes()
 		"cut":
 			cutaway = clampf(amount, 0.0, 200.0)
-	return "camera %s %.2f" % [key, amount]
+	return "camera %s %.2f" % [key, knob(key)]
 
 
 func knob(key: String) -> float:

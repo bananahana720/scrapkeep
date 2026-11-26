@@ -131,6 +131,8 @@ var _menu_requested := -1
 var notes
 var panel
 var keyboard
+var _dev_held := false
+var _dev_frozen := false
 var codex
 var run_log
 var run_moments
@@ -740,7 +742,27 @@ func notes_held() -> bool:
 
 
 func _apply_pause() -> void:
-	get_tree().paused = _pause_toggled or _notes_held
+	get_tree().paused = _pause_toggled or _notes_held or _dev_frozen
+
+
+func pause_wanted() -> bool:
+	var shop := get_node_or_null("Workshop")
+	return _pause_toggled or _notes_held or (shop != null and shop.pausing())
+
+
+func freeze_for_dev(on: bool) -> void:
+	_dev_frozen = on
+	get_tree().paused = on or pause_wanted()
+
+
+func hold_for_dev(on: bool) -> void:
+	_dev_held = on
+	if keyboard != null:
+		keyboard.held = on
+	if on:
+		capture_mouse(false)
+	else:
+		recapture_mouse()
 
 
 func _on_flow_changed(_state: String) -> void:
@@ -1156,7 +1178,7 @@ func _windowed() -> bool:
 func capture_mouse(capture: bool) -> void:
 	if test_mode or not _windowed():
 		return
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if capture else Input.MOUSE_MODE_VISIBLE
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if capture and not _dev_held else Input.MOUSE_MODE_VISIBLE
 
 
 func mouse_captured() -> bool:
@@ -1164,7 +1186,7 @@ func mouse_captured() -> bool:
 
 
 func menu_held() -> bool:
-	return get_meta("menu_held", false)
+	return _dev_held or get_meta("menu_held", false)
 
 
 func set_menu_held(held: bool) -> void:
