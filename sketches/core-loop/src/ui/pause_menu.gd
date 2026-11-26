@@ -479,6 +479,9 @@ func _menu_key(event: InputEvent) -> bool:
 		if event.echo:
 			return false
 		match code:
+			KEY_TAB:
+				press("notes")
+				return true
 			KEY_N:
 				press("restart")
 				return true

@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # The pause menu, its settings and the title's help page (v2 W10), driven by real mouse
@@ -76,6 +77,12 @@ func _process(delta: float) -> bool:
 			_game.player.source = Intent.Scripted.new()
 			_next("help")
 		"help":
+			var prev_music = _game.tuning.option(Tuning.MUSIC_KEY)
+			var prev_breath = _game.tuning.option(Tuning.BREATH_KEY)
+			_game.tuning.set_option(Tuning.MUSIC_KEY, "ace")
+			var b_ignored: bool = not _game.dev and not _game._screen_key(KEY_B) and _game.tuning.option(Tuning.BREATH_KEY) == prev_breath
+			_game.tuning.set_option(Tuning.MUSIC_KEY, prev_music)
+			_report("title B gated on dev", b_ignored, "non-dev title ignores B (breath %s)" % _game.tuning.option(Tuning.BREATH_KEY))
 			var help_button: Button = _game.screens.button_for("help")
 			Push.click(root, help_button)
 			_next("help_open")
@@ -186,6 +193,11 @@ func _process(delta: float) -> bool:
 			_click_at(Vector2(20.0, 20.0))
 			var unpinned: bool = not _menu.notes_pinned() and not _game.notes_held() and _menu.is_open() and paused
 			_report("notes unpin", hidden and unpinned, "the menu hid under the notes %s; a click put it back, still paused %s" % [hidden, unpinned])
+			Push.key(root, KEY_TAB)
+			var tab_pinned: bool = _menu.notes_pinned() and _game.notes_held() and paused
+			_report("Tab pins notes from pause menu", tab_pinned, "Tab press+release pinned %s held %s paused %s" % [_menu.notes_pinned(), _game.notes_held(), paused])
+			if _menu.notes_pinned():
+				_click_at(Vector2(20.0, 20.0))
 			_next("resume")
 		"resume":
 			Push.click(root, _menu.row("resume"))

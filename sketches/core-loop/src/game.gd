@@ -1276,7 +1276,7 @@ func _screen_key(key: int) -> bool:
 			if key == KEY_K:
 				screens.toggle_camp()
 				return true
-			if key == KEY_B and tuning.option(Tuning.MUSIC_KEY) == "ace":
+			if dev and key == KEY_B and tuning.option(Tuning.MUSIC_KEY) == "ace":
 				cycle_breath()
 				screens.refresh_lab_row()
 				return true

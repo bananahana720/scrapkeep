@@ -177,7 +177,7 @@ static func handover() -> Dictionary:
 	return {
 		"stage": "slag_bowl",
 		"atlas": {"over": "exit", "ahead_m": ENTRY_AHEAD, "heading_deg": 0.0},
-		"exit": {"kind": "none", "why": "the way out to world 2 is parked"},
+		"exit": {"kind": "none", "why": "the spillway ends at Brindle; the next world opens from the world pick"},
 		"arrives": {"kind": "land", "at": Vector2(cos(angle), sin(angle)) * ENTRY_R,
 			"heading_deg": rad_to_deg(atan2(heading.x, heading.z)), "speed_cruise": 1.0, "from": "flume gate"},
 	}

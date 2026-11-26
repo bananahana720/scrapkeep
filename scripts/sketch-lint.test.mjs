@@ -358,27 +358,24 @@ test("L4 flags stray files under tests/ and a unit file that is not a case", () 
 const header = "test\towner\treason\tadded\tdeadline";
 const row = (name) => `${name}\tO1\treason\t2026-10-01\twave 3`;
 
-test("L5 passes a well-formed file", () => {
-  assert.deepEqual(
-    lintL5([header, row("a_test"), row("b_test")].join("\n") + "\n", new Set(["a_test", "b_test"])),
-    [],
-  );
+test("L5 passes a retired header-only file", () => {
+  assert.deepEqual(lintL5(header + "\n", new Set(["a_test", "b_test"])), []);
 });
 
-test("L5 fails on four entries, a missing test, a duplicate, a bad header and a short row", () => {
-  const names = ["a", "b", "c", "d"].map((name) => `${name}_test`);
+test("L5 fails on any entry when retired (max 0), a missing test, a duplicate, a bad header and a short row", () => {
+  const names = ["a", "b"].map((name) => `${name}_test`);
   const exists = new Set(names);
-  assert.match(lintL5([header, ...names.map(row)].join("\n"), exists)[0].message, /4 entries/);
   assert.match(
-    lintL5([header, row("gone_test")].join("\n"), exists)[0].message,
-    /not an existing top-level test/,
+    lintL5([header, row("a_test")].join("\n"), exists)[0].message,
+    /1 entries; QUARANTINE\.tsv is retired \(max 0\), use KNOWN-FAILING\.tsv/,
   );
-  assert.match(
-    lintL5([header, row("a_test"), row("a_test")].join("\n"), exists)[0].message,
-    /listed twice/,
-  );
+  const missing = lintL5([header, row("gone_test")].join("\n"), exists);
+  assert.ok(missing.some((f) => /not an existing top-level test/.test(f.message)));
+  const dup = lintL5([header, row("a_test"), row("a_test")].join("\n"), exists);
+  assert.ok(dup.some((f) => /listed twice/.test(f.message)));
   assert.match(lintL5("test\towner\n", exists)[0].message, /header/);
-  assert.match(lintL5([header, "a_test\tO1"].join("\n"), exists)[0].message, /needs test, owner/);
+  const shortRow = lintL5([header, "a_test\tO1"].join("\n"), exists);
+  assert.ok(shortRow.some((f) => /needs test, owner/.test(f.message)));
 });
 
 test("the baseline silences listed offenders and shrinks only", () => {
