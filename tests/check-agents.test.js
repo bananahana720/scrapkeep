@@ -184,3 +184,98 @@ test("catches undefined call_tool() in Antigravity Python workflows", async () =
     await rm(tmp, { recursive: true, force: true });
   }
 });
+
+test("catches retired astack, gpt-6-astra, and claude-opus-4-6 tokens in scripts/ and tools/", async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-agents-"));
+  try {
+    const repo = await buildCleanRepo(tmp);
+    await mkdir(path.join(repo, "scripts/gate"), { recursive: true });
+    await mkdir(path.join(repo, "tools/refsheets"), { recursive: true });
+    await writeFile(
+      path.join(repo, "scripts/gate/old.mjs"),
+      'const p = "astack/tlc"; // also claude-opus-4-6\n',
+    );
+    await writeFile(path.join(repo, "tools/refsheets/draw.sh"), "codex -m gpt-6-astra\n");
+    const { status, findings } = runCheck(repo);
+    assert.equal(status, 1);
+    assert.ok(
+      findings.some(
+        (f) =>
+          f.check === "tokens" && f.file === "scripts/gate/old.mjs" && f.message.includes("astack"),
+      ),
+    );
+    assert.ok(
+      findings.some(
+        (f) =>
+          f.check === "tokens" &&
+          f.file === "scripts/gate/old.mjs" &&
+          f.message.includes("claude-opus-4-6"),
+      ),
+    );
+    assert.ok(
+      findings.some(
+        (f) =>
+          f.check === "tokens" &&
+          f.file === "tools/refsheets/draw.sh" &&
+          f.message.includes("gpt-6-astra"),
+      ),
+    );
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test("catches hardcoded flash/pro model pins in .agents/skills/*/scripts/*.py", async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-agents-"));
+  try {
+    const repo = await buildCleanRepo(tmp);
+    await writeFile(
+      path.join(repo, ".agents/skills/demo/scripts/pinned.py"),
+      'res = await agent("hi", model="flash")\nother = await agent("yo", model="pro")\n',
+    );
+    const { status, findings } = runCheck(repo);
+    assert.equal(status, 1);
+    const hits = findings.filter(
+      (f) => f.check === "workflows" && f.file === ".agents/skills/demo/scripts/pinned.py",
+    );
+    assert.equal(hits.length, 2);
+    assert.match(hits[0].message, /Rule 11/);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test("enforces pstack@cursor-plugins registration when .claude/settings.json exists", async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-agents-"));
+  try {
+    const repo = await buildCleanRepo(tmp);
+    await writeFile(
+      path.join(repo, ".claude/settings.json"),
+      JSON.stringify({ model: "opus[1m]" }),
+    );
+    const failRun = runCheck(repo);
+    assert.equal(failRun.status, 1);
+    assert.ok(
+      failRun.findings.some(
+        (f) => f.check === "settings" && f.message.includes("pstack@cursor-plugins"),
+      ),
+    );
+    assert.ok(
+      failRun.findings.some((f) => f.check === "settings" && f.message.includes("cursor-plugins")),
+    );
+
+    await writeFile(
+      path.join(repo, ".claude/settings.json"),
+      JSON.stringify({
+        extraKnownMarketplaces: {
+          "cursor-plugins": { source: { source: "github", repo: "cursor/plugins" } },
+        },
+        enabledPlugins: { "pstack@cursor-plugins": true },
+      }),
+    );
+    const passRun = runCheck(repo);
+    assert.equal(passRun.status, 0, JSON.stringify(passRun.findings));
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});

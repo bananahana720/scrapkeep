@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test } from "node:test";
 
 import {
@@ -8,6 +10,7 @@ import {
   buildReceipt,
   cfgRules,
   coveredFiles,
+  findJar,
   parseTlc,
   syncCommit,
   timedOut,
@@ -566,4 +569,29 @@ test("the weapon cadence row covers all six pilots, pins 10,122 states, and wire
     "sketches/core-loop/src/combat/combat.gd",
     "sketches/core-loop/src/combat/weapon_driver.gd",
   ]);
+});
+
+test("findJar resolves XDG_DATA_HOME/tlc/tla2tools-1.7.4.jar instead of retired astack path", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-tlc-"));
+  const prevXdg = process.env.XDG_DATA_HOME;
+  const prevTla = process.env.TLA2TOOLS;
+  try {
+    delete process.env.TLA2TOOLS;
+    process.env.XDG_DATA_HOME = tmp;
+    const expected = path.join(tmp, "tlc/tla2tools-1.7.4.jar");
+    mkdirSync(path.dirname(expected), { recursive: true });
+    writeFileSync(expected, "");
+    assert.equal(findJar(), expected);
+    const retired = path.join(tmp, "astack/tlc/tla2tools-1.7.4.jar");
+    rmSync(expected);
+    mkdirSync(path.dirname(retired), { recursive: true });
+    writeFileSync(retired, "");
+    assert.equal(findJar(), null);
+  } finally {
+    if (prevXdg === undefined) delete process.env.XDG_DATA_HOME;
+    else process.env.XDG_DATA_HOME = prevXdg;
+    if (prevTla === undefined) delete process.env.TLA2TOOLS;
+    else process.env.TLA2TOOLS = prevTla;
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });

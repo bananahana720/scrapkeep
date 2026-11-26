@@ -25,6 +25,22 @@ const VALID_HOOK_EVENTS = new Set([
   "Stop",
 ]);
 const ASTACK_PATTERN = /\bastack\b|\bA[- ]stack\b|\/home\/andrew\/\.config\/astack/i;
+const RETIRED_SCRIPT_TOKENS = [
+  {
+    pattern: /\bastack\b/i,
+    message: "retired 'astack' reference; use pstack / ~/.local/share/tlc",
+  },
+  {
+    pattern: /\bgpt-6-astra\b/,
+    message: "retired 'gpt-6-astra' model pin; use gpt-6.2-astra (AGENTS.md Rule 11)",
+  },
+  {
+    pattern: /\bclaude-opus-4-6\b/,
+    message: "retired 'claude-opus-4-6' model pin; use AGENTS.md Rule 11 models",
+  },
+];
+const HARDCODED_PY_MODEL_PIN = /\bmodel\s*=\s*["'](?:flash|flash_lite|pro)["']/;
+const SCRIPT_EXTS = new Set([".mjs", ".js", ".sh", ".py"]);
 const MAX_RULE_BYTES = 24_000;
 
 function parseArguments(argv) {
@@ -437,6 +453,63 @@ async function checkEntrypointsAndAstack(findings, root) {
   }
 }
 
+async function walkScriptFiles(root, dir, out = []) {
+  const absDir = path.join(root, dir);
+  if (!(await exists(absDir))) return out;
+  for (const e of await readdir(absDir, { withFileTypes: true })) {
+    const rel = `${dir}/${e.name}`;
+    if (e.isDirectory()) {
+      await walkScriptFiles(root, rel, out);
+    } else if (e.isFile() && SCRIPT_EXTS.has(path.extname(e.name))) {
+      if (rel.includes(".test.") || rel === "scripts/check-agents.mjs") continue;
+      out.push(rel);
+    }
+  }
+  return out;
+}
+
+async function checkScriptTokens(findings, root) {
+  const files = [];
+  for (const dir of ["scripts", "tools"]) await walkScriptFiles(root, dir, files);
+  for (const rel of files.sort()) {
+    const lines = (await readNormalized(path.join(root, rel))).split("\n");
+    for (let i = 0; i < lines.length; i += 1) {
+      for (const { pattern, message } of RETIRED_SCRIPT_TOKENS) {
+        if (pattern.test(lines[i])) findings.fail("tokens", rel, i + 1, message);
+      }
+    }
+  }
+}
+
+async function checkClaudeSettings(findings, root) {
+  const rel = ".claude/settings.json";
+  const abs = path.join(root, rel);
+  if (!(await exists(abs))) return;
+  let parsed;
+  try {
+    parsed = JSON.parse(await readNormalized(abs));
+  } catch (err) {
+    findings.fail("settings", rel, 0, `invalid JSON: ${err.message}`);
+    return;
+  }
+  if (parsed?.enabledPlugins?.["pstack@cursor-plugins"] !== true) {
+    findings.fail(
+      "settings",
+      rel,
+      0,
+      'missing enabledPlugins["pstack@cursor-plugins"]: true (ruling er)',
+    );
+  }
+  if (!parsed?.extraKnownMarketplaces?.["cursor-plugins"]) {
+    findings.fail(
+      "settings",
+      rel,
+      0,
+      'missing extraKnownMarketplaces["cursor-plugins"] marketplace registration (ruling er)',
+    );
+  }
+}
+
 async function checkPythonWorkflows(findings, root) {
   const skillsDir = path.join(root, ".agents/skills");
   if (!(await exists(skillsDir))) return;
@@ -452,6 +525,20 @@ async function checkPythonWorkflows(findings, root) {
     }
   }
   if (pyFiles.length === 0) return;
+  for (const rel of pyFiles.sort()) {
+    const lines = (await readNormalized(path.join(root, rel))).split("\n");
+    for (let i = 0; i < lines.length; i += 1) {
+      if (/^\s*#/.test(lines[i])) continue;
+      if (HARDCODED_PY_MODEL_PIN.test(lines[i])) {
+        findings.fail(
+          "workflows",
+          rel,
+          i + 1,
+          'hardcoded model tier pin violates AGENTS.md Rule 11; use model=args.get(...) or "inherit"',
+        );
+      }
+    }
+  }
   const checkScript =
     "import ast, sys\nfor p in sys.argv[1:]:\n  src = open(p, encoding='utf8').read()\n  compile(src, p, 'exec', flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT)\n  tree = compile(src, p, 'exec', flags=ast.PyCF_ALLOW_TOP_LEVEL_AWAIT | ast.PyCF_ONLY_AST)\n  defined = {n.name for n in ast.walk(tree) if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))}\n  if 'call_tool' not in defined:\n    for node in ast.walk(tree):\n      if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == 'call_tool':\n        sys.stderr.write(f'{p}:{node.lineno}: undefined call_tool() is not provided by Antigravity run_workflow; use subprocess.run\\n')\n        sys.exit(1)\n";
   const res = spawnSync(
@@ -498,6 +585,8 @@ async function main() {
   await checkRulesDir(findings, options.root);
   await checkHooksFile(findings, options.root);
   await checkEntrypointsAndAstack(findings, options.root);
+  await checkScriptTokens(findings, options.root);
+  await checkClaudeSettings(findings, options.root);
   await checkPythonWorkflows(findings, options.root);
 
   const failures = findings.list.filter((f) => f.level === "failure");

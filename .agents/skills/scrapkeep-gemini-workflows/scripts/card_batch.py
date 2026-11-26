@@ -82,7 +82,7 @@ else:
             role=f"Writer {cid}",
             type_name="scrapkeep-writer",
             workspace="share",
-            model="flash",
+            model=args.get("writer_model") or "inherit",
         )
 
         if write_res.get("status") != "COMMITTED":
@@ -106,6 +106,7 @@ else:
         if len(diff_body) > 90000:
             diff_body = diff_body[:90000] + "\n[diff truncated at 90000 characters]"
 
+        subprocess.run(["node", "scripts/ensure-node-modules.mjs"], cwd=wt, check=True)
         gate_proc = subprocess.run(
             ["npm", "run", "sketch:fast", "--", "--base", base_sha, "--budget", "600"],
             cwd=wt,

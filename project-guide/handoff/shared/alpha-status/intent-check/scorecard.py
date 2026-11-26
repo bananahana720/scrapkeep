@@ -247,7 +247,7 @@ def score(repo):
     for r in rows:
         r["world_effects"] = len(world_fx[r["world"]])
     camp = {
-        "camp_level_files": sorted(f for f in os.listdir(os.path.join(game, "src/world")) if "camp" in f),
+        "camp_level_files": sorted(f for f in os.listdir(os.path.join(game, "src/world")) if "camp" in f and f.endswith(".gd")),
         "camp_ui_files": sorted(f for f in os.listdir(os.path.join(game, "src/ui")) if "camp" in f and f.endswith(".gd")),
     }
     return {"parks": rows, "bosses": bosses, "camp": camp, "placeholders_total": (ph or {}).get("total"),
@@ -336,9 +336,11 @@ def main():
         res["commit"] = ""
     md = f"Scorecard at {res['commit']}\n\n" + to_md(res)
     if a.json:
-        json.dump(res, open(a.json, "w"), indent=1)
+        with open(a.json, "w", encoding="utf8") as f:
+            json.dump(res, f, indent=1)
     if a.md:
-        open(a.md, "w").write(md)
+        with open(a.md, "w", encoding="utf8") as f:
+            f.write(md)
     sys.stdout.write(md)
 
 

@@ -473,10 +473,10 @@ function git(root, args) {
   return r.stdout.trim();
 }
 
-function findJar(arg) {
+export function findJar(arg) {
   const data = process.env.XDG_DATA_HOME || join(homedir(), ".local/share");
   return (
-    [arg, process.env.TLA2TOOLS, join(data, "astack/tlc", `tla2tools-${TLC_PIN}.jar`)].find(
+    [arg, process.env.TLA2TOOLS, join(data, "tlc", `tla2tools-${TLC_PIN}.jar`)].find(
       (p) => p && existsSync(p),
     ) ?? null
   );
@@ -569,7 +569,7 @@ function main(argv) {
       );
     if (!jar)
       console.error(
-        `model-receipts: no TLC jar; pass --jar, set TLA2TOOLS, or run the astack statechart skill's install-tlc (TLC ${TLC_PIN})`,
+        `model-receipts: no TLC jar; pass --jar, set TLA2TOOLS, or place tla2tools-${TLC_PIN}.jar in ~/.local/share/tlc/ (see .agents/skills/scrapkeep-verify-formal/SKILL.md)`,
       );
     return 2;
   }
