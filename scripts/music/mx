@@ -15,6 +15,7 @@
 #   scripts/music/mx audio-gate [args]          node scripts/audio-gate.mjs
 #   scripts/music/mx stems-sync [args]          copy the packed Oggs STEMS.sha256 lists into this worktree
 #   scripts/music/mx stem-hashes [args]         rewrite assets/music_ace/STEMS.sha256 after any pack
+#   scripts/music/mx lyria [args]               hybrid stem-context Gemini -> Lyria 3.5 -> 3-stem pack pipeline
 #   scripts/music/mx commit <msg file> <path>...  stage the paths and commit with the message file
 #   scripts/music/mx push                       push this thread's branch
 #   scripts/music/mx merge-main                 fetch and merge origin/main, no edit
@@ -28,7 +29,7 @@ score="${MX_SCORE:-/tmp/claude-1000/-home-andrew-Projects-scrapkeep--claude-work
 branch="claude/project-thread-d1uvzh"
 
 if [ "$#" -lt 1 ]; then
-    sed -n '2,20p' "${BASH_SOURCE[0]}" >&2
+    sed -n '2,21p' "${BASH_SOURCE[0]}" >&2
     exit 2
 fi
 step="$1"
@@ -77,6 +78,9 @@ case "$step" in
         ;;
     stems-sync)
         node "$repo/scripts/stems-sync.mjs" "$@"
+        ;;
+    lyria)
+        node "$repo/scripts/music/lyria-tune.mjs" "$@"
         ;;
     commit)
         msg="$1"
