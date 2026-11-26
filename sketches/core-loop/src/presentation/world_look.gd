@@ -11,46 +11,47 @@ const ROWS := {
 		"air": {"volumetric_fog_density": 0.0012, "volumetric_fog_albedo": Color("e9d2a6"),
 			"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.55,
 			"volumetric_fog_length": 160.0, "volumetric_fog_ambient_inject": 0.2, "volumetric_fog_sky_affect": 0.0}},
-	2: {"name": "dig", "sky": "dome", "background": Color("0b0f12"),
-		"ambient": Color("6d7f92"), "energy": 0.12, "exposure": 1.1, "saturation": 1.1,
-		"fog": {"color": Color("56636f"), "density": 0.018},
-		"sun_color": Color("e8dcc8"), "sun_energy": 0.7, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
-		"sun_visible": true, "fill": 0.15, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"),
-		"air": {"volumetric_fog_density": 0.018, "volumetric_fog_albedo": Color("56636f"),
-			"volumetric_fog_emission": Color("06090d"), "volumetric_fog_anisotropy": 0.15,
-			"volumetric_fog_length": 120.0, "volumetric_fog_ambient_inject": 0.2, "volumetric_fog_sky_affect": 0.0},
-		"lamps": {"count": 6, "energy": 4.0, "range": 30.0, "attenuation": 1.1, "every": 0.25}},
-	3: {"name": "highdraft", "sky": "hdri", "background": Color("243b43"),
-		"ambient": Color("ece7da"), "energy": 0.28, "exposure": 1.05, "saturation": 1.15,
+	2: {"name": "dig", "sky": "dome", "background": Color("0a1018"),
+		"ambient": Color("587496"), "energy": 0.12, "exposure": 1.12, "saturation": 1.22,
+		"fog": {"color": Color("3f546b"), "density": 0.018},
+		"sun_color": Color("ffcb88"), "sun_energy": 0.7, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
+		"sun_visible": true, "fill": 0.18, "fill_pitch": -50.0, "fill_color": Color("7ea8d8"),
+		"air": {"volumetric_fog_density": 0.018, "volumetric_fog_albedo": Color("486078"),
+			"volumetric_fog_emission": Color("04080e"), "volumetric_fog_anisotropy": 0.28,
+			"volumetric_fog_length": 125.0, "volumetric_fog_ambient_inject": 0.2, "volumetric_fog_sky_affect": 0.0},
+		"lamps": {"count": 6, "energy": 5.2, "range": 34.0, "attenuation": 0.95, "every": 0.25}},
+	3: {"name": "highdraft", "sky": "hdri", "background": Color("1f3444"),
+		"ambient": Color("ece7da"), "energy": 0.28, "exposure": 1.08, "saturation": 1.24,
 		"fog": {},
 		"sun_color": Color("ffa35c"), "sun_energy": 1.9, "sun_rotation": Vector3(-16.0, 20.0, 0.0),
-		"sun_visible": true, "fill": 0.5, "fill_pitch": -40.0, "fill_color": Color("a9b6c0"), "haze": Color("798c9e"), "cloud": Color("ece7da"),
-		"air": {"volumetric_fog_density": 0.0025, "volumetric_fog_albedo": Color("fff1dc"),
-			"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.6,
-			"volumetric_fog_length": 300.0, "volumetric_fog_ambient_inject": 0.3, "volumetric_fog_sky_affect": 0.0}},
+		"sun_visible": true, "fill": 0.46, "fill_pitch": -40.0, "fill_color": Color("96aec4"), "haze": Color("6d86a0"), "cloud": Color("ece7da"),
+		"air": {"volumetric_fog_density": 0.0022, "volumetric_fog_albedo": Color("ffebd0"),
+			"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.68,
+			"volumetric_fog_length": 300.0, "volumetric_fog_ambient_inject": 0.26, "volumetric_fog_sky_affect": 0.0}},
 }
 const PARK_ROWS := {
-	2: {"sky": "hdri", "fill": ROWS[1]["fill"], "fill_pitch": ROWS[1]["fill_pitch"], "fill_color": ROWS[1]["fill_color"], "air": {}},
+	2: {"sky": "hdri", "fill": 0.42, "fill_pitch": -46.0, "fill_color": Color("7ea6d6"), "saturation": 1.24, "air": {}},
 }
 const PARK_DIR := "res://src/world/park/"
 static var _park_fog := {}
 const ARENAS := {
-	"waking": {"name": "waking", "sky": "dome", "background": Color("171e1d"),
-		"ambient": Color("9ba8a3"), "energy": 0.16, "exposure": 1.1, "saturation": 1.2,
-		"fog": {"color": Color("242a28"), "density": 0.008, "light_energy": 0.3, "sun_scatter": 0.0},
+	"waking": {"name": "waking", "sky": "dome", "background": Color("101922"),
+		"ambient": Color("6e88a6"), "energy": 0.16, "exposure": 1.14, "saturation": 1.26,
+		"fog": {"color": Color("182532"), "density": 0.0075, "light_energy": 0.36, "sun_scatter": 0.0},
 		"sun_color": Color("ffd49a"), "sun_energy": 2.35, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
-		"sun_visible": false, "fill": 0.5, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"),
-		"key": Color("a8c2d4"), "floor_accent": Palette.AMBER,
-		"air": {"volumetric_fog_density": 0.025, "volumetric_fog_albedo": Color("4f5d63"),
-			"volumetric_fog_emission": Color("05080a"), "volumetric_fog_anisotropy": 0.35,
-			"volumetric_fog_length": 90.0, "volumetric_fog_ambient_inject": 0.15, "volumetric_fog_sky_affect": 0.0}},
-	"mind": {"name": "mind", "sky": "own", "background": Color("243b43"),
-		"ambient": Color("9097bd"), "energy": 0.32, "exposure": 1.15, "saturation": 0.95,
+		"sun_visible": false, "fill": 0.5, "fill_pitch": -50.0, "fill_color": Color("8db4dc"),
+		"key": Color("b6cade"), "floor_accent": Palette.AMBER,
+		"air": {"volumetric_fog_density": 0.022, "volumetric_fog_albedo": Color("425b70"),
+			"volumetric_fog_emission": Color("04080e"), "volumetric_fog_anisotropy": 0.42,
+			"volumetric_fog_length": 95.0, "volumetric_fog_ambient_inject": 0.15, "volumetric_fog_sky_affect": 0.0}},
+	"mind": {"name": "mind", "sky": "own", "background": Color("1a2638"),
+		"ambient": Color("9097bd"), "energy": 0.30, "exposure": 1.16, "saturation": 1.22,
 		"fog": {},
-		"sun_color": Color("e6bcae"), "sun_energy": 2.1, "sun_rotation": Vector3(-14.0, 60.0, 0.0),
-		"sun_visible": true, "fill": 0.55, "fill_pitch": -40.0, "fill_color": Color("9ba0cc"), "air": {},
-		"grade": {"top": Color("6c6fae"), "horizon": Color("ffa07a"), "recolor": 0.45, "highlight": 2.0,
-			"glow": Color("b8502a"), "energy": 0.85}},
+		"sun_color": Color("ffc68a"), "sun_energy": 2.25, "sun_rotation": Vector3(-14.0, 60.0, 0.0),
+		"sun_visible": true, "fill": 0.48, "fill_pitch": -40.0, "fill_color": Color("7f88c8"),
+		"seam_accent": Palette.ANCIENT, "air": {},
+		"grade": {"top": Color("4c52a6"), "horizon": Color("ffae6e"), "recolor": 0.52, "highlight": 2.2,
+			"glow": Color("c8682c"), "energy": 0.95}},
 }
 const BOWL_SCRIPT := "res://src/boss/arena.gd"
 const DAYLIT_ARENAS := {"brindle": {"world": 1, "time": "noon", "over": {
@@ -158,6 +159,10 @@ static func consumed_material(albedo: Color) -> StandardMaterial3D:
 		material.emission = CONSUMED_GLOW.color
 		material.emission_energy_multiplier = CONSUMED_GLOW.energy
 	return material
+
+
+static func reset_for_tests() -> void:
+	_park_fog.clear()
 
 
 static func row(world: int) -> Dictionary:

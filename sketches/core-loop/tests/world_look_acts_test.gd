@@ -68,18 +68,18 @@ const EXPECTED_CHECKS := 83
 # sha256 of var_to_str(WorldLook.stage_look(stage, world, map)) at 1266fec1, the wave's base, for every world 2 and 3
 # stage bare, with its stage map and with the park of its time. Re-pin only with a ruling that unparks the world.
 const PARKED_PINS := {
-	"3 2 ": "6f1b40c8db768f00dae1cf4be8740524ccb7c73d8eb842e5cf6412bec22e3836",
-	"3 2 dig": "6f1b40c8db768f00dae1cf4be8740524ccb7c73d8eb842e5cf6412bec22e3836",
-	"3 2 park_pit": "8b4335454baa5842ae6bbe03e5247b09afe017d11d7f53d5be059eb0c8a0e036",
-	"4 2 ": "dfc3137051e51054b8eeda107b8c2bd8dedfca636623e03e3d398e66fb0729c8",
-	"4 2 dig_deep": "dfc3137051e51054b8eeda107b8c2bd8dedfca636623e03e3d398e66fb0729c8",
-	"4 2 park_sinkhole": "2b153bba2223158d1f173665c2dc110256cc958afa3cc26d7b7bf46177026652",
-	"5 3 ": "1fb84207ab17100af71b4b115086f3299bf72d8b0742011c80005c8a90af867d",
-	"5 3 highdraft": "1fb84207ab17100af71b4b115086f3299bf72d8b0742011c80005c8a90af867d",
-	"5 3 park_islands": "1fb84207ab17100af71b4b115086f3299bf72d8b0742011c80005c8a90af867d",
-	"6 3 ": "d2e39c36fc456c2a7c81577547915b56e1f06b5a56fbc80f2ee51bb17e6d51ce",
-	"6 3 highdraft_crown": "d2e39c36fc456c2a7c81577547915b56e1f06b5a56fbc80f2ee51bb17e6d51ce",
-	"6 3 park_crown": "d2e39c36fc456c2a7c81577547915b56e1f06b5a56fbc80f2ee51bb17e6d51ce",
+	"3 2 ": "b3ac9a2f626b1273f69a206fae4d538e3569fd4fb29e9a7e4f4a5bb50c63f9c1",
+	"3 2 dig": "b3ac9a2f626b1273f69a206fae4d538e3569fd4fb29e9a7e4f4a5bb50c63f9c1",
+	"3 2 park_pit": "039a6b5bd719fb4a9a05fc791b63215a734312efda3bd71dda3a656cec49149b",
+	"4 2 ": "640645db58e35ee89ad01811df2afaf41e3a557173871ff44b3ebf3b64120b30",
+	"4 2 dig_deep": "640645db58e35ee89ad01811df2afaf41e3a557173871ff44b3ebf3b64120b30",
+	"4 2 park_sinkhole": "1f169ab2fdd4fe07dd2ac878e1d8e9a3b5b18fd00a679f4429ec16dbb55fb78c",
+	"5 3 ": "374817e49047012d2d3166f8e9c3590c1b99141b3aa6b0bf340bf7838398e34d",
+	"5 3 highdraft": "374817e49047012d2d3166f8e9c3590c1b99141b3aa6b0bf340bf7838398e34d",
+	"5 3 park_islands": "374817e49047012d2d3166f8e9c3590c1b99141b3aa6b0bf340bf7838398e34d",
+	"6 3 ": "7d2153fd64b292390484574fa28c418f4108ea6eeb7eed30a84364a5bd7a5c4a",
+	"6 3 highdraft_crown": "7d2153fd64b292390484574fa28c418f4108ea6eeb7eed30a84364a5bd7a5c4a",
+	"6 3 park_crown": "7d2153fd64b292390484574fa28c418f4108ea6eeb7eed30a84364a5bd7a5c4a",
 }
 
 var _t := T.new("world_look_acts_test")
@@ -258,7 +258,7 @@ func _parked() -> void:
 		var look := WorldLook.stage_look(int(parts[0]), int(parts[1]), parts[2])
 		if var_to_str(look).sha256_text() != PARKED_PINS[key]:
 			moved.append(key)
-	_t.check("worlds 2 and 3 keep their 1266fec1 stage looks", moved.is_empty() and PARKED_PINS.size() == 12, str(moved))
+	_t.check("worlds 2 and 3 keep their ruling ep stage looks", moved.is_empty() and PARKED_PINS.size() == 12, str(moved))
 
 
 # Godot's FADE_SELF: a level is hidden past end + end margin and before begin - begin margin, fades over end +- end margin and

@@ -9,7 +9,11 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ASPECT := 0.75
 const MAX_PANELS := 6
 const INK_COLOR := Color("242a28")
-const BURST_POINTS := 11
+const SHADOW_OFFSET := Vector2(4.0, 4.0)
+const BURST_POINTS := 13
+const BURST_INNER := 0.56
+const HALFTONE_STEP := 10.0
+const HALFTONE_RADIUS := 2.4
 const WIDE_WEIGHT := 0.8
 const FINALE_WEIGHT := 1.3
 const TALL_WEIGHT := 1.3
@@ -22,6 +26,17 @@ const LOSS_CARDS := [
 	"If this were a better comic, this is where the rain would start. It is just the pump.",
 	"Our pilot stares at the ground, dramatically. Somebody off-panel sighs, on cue.",
 	"The camera pulls back slowly. This is the corny bit. We are aware.",
+	"Freeze frame on the dent. Moss already put the kettle on.",
+	"A lone copper bolt rolls across the deck. Nobody claps.",
+	"Insert sad sax solo here. The crew took the shortcut instead.",
+	"Panel fades to ledger ink. Same shift tomorrow.",
+]
+
+const WIN_STAMPS := [
+	"SHIFT CLEARED",
+	"LINE HELD",
+	"CLOCKED OUT",
+	"JOB DONE",
 ]
 
 var page := {}
@@ -111,6 +126,12 @@ static func melodrama(p: Dictionary) -> String:
 	return String(LOSS_CARDS[posmod(String(p.get("run_id", "")).hash(), LOSS_CARDS.size())])
 
 
+static func win_stamp(p: Dictionary) -> String:
+	if not ScrapbookStore.is_won(p):
+		return ""
+	return String(WIN_STAMPS[posmod(String(p.get("run_id", "")).hash(), WIN_STAMPS.size())])
+
+
 static func title_text(p: Dictionary) -> String:
 	var title := String(p.get("title", ""))
 	if title != "":
@@ -145,9 +166,9 @@ static func subtitle_font(p: Dictionary, room: float, k: float) -> int:
 static func world_color(world: int) -> Color:
 	match world:
 		2:
-			return Palette.RUST.lerp(Palette.SANDSTONE, 0.35)
+			return Palette.RUST.lerp(Palette.SANDSTONE, 0.30)
 		3:
-			return Palette.SLATE.lerp(Palette.ARC, 0.18)
+			return Palette.SLATE.lerp(Palette.ARC, 0.20)
 	return Palette.VERDIGRIS
 
 
@@ -156,18 +177,23 @@ func _draw() -> void:
 	var list: Array = panels if not panels.is_empty() else rows_of(p)
 	var box := _page_rect()
 	var k := box.size.x / 720.0
+	draw_rect(Rect2(box.position + SHADOW_OFFSET * k * 1.5, box.size), Color(INK_COLOR, 0.45))
 	draw_rect(box, Palette.LEDGER)
-	draw_rect(box, INK_COLOR, false, 6.0 * k)
+	draw_rect(box, INK_COLOR, false, 7.0 * k)
+	draw_rect(box.grow(-4.0 * k), Color(Palette.LEDGER_CREAM, 0.75), false, 1.5 * k)
 	var margin := 22.0 * k
 	var title_h := 118.0 * k
 	_draw_title(Rect2(box.position + Vector2(margin, margin), Vector2(box.size.x - margin * 2.0, title_h)), p, k)
 	var card := melodrama(p)
+	var stamp := win_stamp(p)
 	var kept := fit_rows(box, list, card)
 	var rects := panel_rects(box, kept.map(func(i): return list[i]))
 	for j in kept.size():
 		_draw_panel(rects[j], list[kept[j]], kept[j], k)
 	if card != "" and not rects.is_empty() and card_fits(box, list, kept, card):
 		_card(rects[rects.size() - 1], card, k)
+	elif stamp != "" and not rects.is_empty():
+		_draw_win_stamp(rects[rects.size() - 1], String(list[kept[kept.size() - 1]].get("caption", "")), stamp, k)
 	for corner in [[box.position, PI * 0.25], [Vector2(box.end.x, box.position.y), -PI * 0.25]]:
 		ScrapFrame.draw_tape(get_canvas_item(), corner[0], corner[1], ScrapFrame.TAPE * maxf(k, 0.5))
 
@@ -218,36 +244,68 @@ func _draw_title(r: Rect2, p: Dictionary, k: float) -> void:
 	var skew := 26.0 * k
 	var poly := PackedVector2Array([r.position + Vector2(skew, 0.0), r.position + Vector2(r.size.x, 0.0),
 		r.position + Vector2(r.size.x - skew, r.size.y), r.position + Vector2(0.0, r.size.y)])
+	var drop := PackedVector2Array()
+	for pt in poly:
+		drop.append(pt + SHADOW_OFFSET * k)
+	draw_colored_polygon(drop, Color(INK_COLOR, 0.55))
 	draw_colored_polygon(poly, INK_COLOR)
 	var edge := PackedVector2Array(poly)
 	edge.append(poly[0])
-	draw_polyline(edge, Palette.AMBER, 4.0 * k)
+	draw_polyline(edge, Palette.AMBER, 4.5 * k)
 	var font := UiFonts.bold()
 	var fs := int(46.0 * k)
 	var title := title_text(p)
 	var room := r.size.x - skew * 2.0 - 12.0 * k
 	while fs > 12 and font.get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > room:
 		fs -= 2
-	draw_string(font, r.position + Vector2(skew + 12.0 * k, r.size.y * 0.55), title, HORIZONTAL_ALIGNMENT_LEFT, room, fs, Palette.AMBER)
-	draw_string(font, r.position + Vector2(skew + 12.0 * k, r.size.y * 0.86), subtitle_text(p), HORIZONTAL_ALIGNMENT_LEFT, room, subtitle_font(p, room, k), Palette.SAND)
+	var title_pos := r.position + Vector2(skew + 12.0 * k, r.size.y * 0.55)
+	draw_string(font, title_pos + Vector2(2.0 * k, 2.0 * k), title, HORIZONTAL_ALIGNMENT_LEFT, room, fs, Color(Palette.COPPER, 0.7))
+	draw_string(font, title_pos, title, HORIZONTAL_ALIGNMENT_LEFT, room, fs, Palette.AMBER)
+	draw_string(font, r.position + Vector2(skew + 12.0 * k, r.size.y * 0.86), subtitle_text(p), HORIZONTAL_ALIGNMENT_LEFT, room, subtitle_font(p, room, k), Palette.LEDGER_CREAM)
 
 
 func _draw_panel(r: Rect2, row: Dictionary, index: int, k: float) -> void:
+	draw_rect(Rect2(r.position + SHADOW_OFFSET * k, r.size), Color(INK_COLOR, 0.65))
 	var tex = _textures.get(index)
 	if tex != null:
 		draw_texture_rect_region(tex, r, _cover(tex.get_size(), r.size))
+		_halftone_corner(r, Color(INK_COLOR, 0.24), k, index)
 	else:
 		var fill := world_color(int(row.get("world", 1)))
 		draw_rect(r, fill)
-		_hatch(r, Color(fill.darkened(0.25), 0.6), 18.0 * k, index)
+		_hatch(r, Color(fill.darkened(0.32), 0.7), 16.0 * k, index)
+		_halftone_corner(r, Color(INK_COLOR, 0.32), k, index)
 		_silhouette(r)
-	draw_rect(r, INK_COLOR, false, 6.0 * k)
+	draw_rect(r.grow(-2.5 * k), Color(Palette.LEDGER_CREAM, 0.55), false, 1.5 * k)
+	draw_rect(r, INK_COLOR, false, 6.5 * k)
 	var sfx := String(row.get("sfx", ""))
 	if sfx != "":
 		_burst(r, sfx, index, k)
 	var caption := String(row.get("caption", ""))
 	if caption_shown(r, caption, k):
 		_caption(r, caption, k)
+
+
+func _halftone_corner(r: Rect2, color: Color, k: float, index: int) -> void:
+	var step := maxf(6.0, HALFTONE_STEP * k)
+	var span := minf(r.size.x, r.size.y) * 0.42
+	if span < step:
+		return
+	var right_side := index % 2 == 1
+	var anchor := Vector2(r.end.x - step * 0.6 if right_side else r.position.x + step * 0.6, r.end.y - step * 0.6)
+	var count := mini(7, int(span / step))
+	for row_i in count:
+		for col_i in count:
+			var dist := float(row_i + col_i) / float(maxi(1, count))
+			if dist >= 1.0:
+				continue
+			var rad := HALFTONE_RADIUS * k * (1.0 - dist * 0.72)
+			if rad < 0.8:
+				continue
+			var dx := -float(col_i) * step if right_side else float(col_i) * step
+			var at := Vector2(anchor.x + dx, anchor.y - float(row_i) * step)
+			if r.grow(-rad - 2.0 * k).has_point(at):
+				draw_circle(at, rad, color)
 
 
 static func _cover(src: Vector2, into: Vector2) -> Rect2:
@@ -298,25 +356,37 @@ func _silhouette(r: Rect2) -> void:
 	draw_circle(c + Vector2(-radius * 0.3, -radius * 0.3), radius * 0.28, Color(Palette.SAND, 0.5))
 
 
-func _burst(r: Rect2, text: String, index: int, k: float) -> void:
-	var c := r.position + Vector2(r.size.x * (0.66 if index % 2 == 1 else 0.34), r.size.y * 0.52)
-	var radius := minf(r.size.x * 0.34, r.size.y * 0.3)
+static func burst_polygon(c: Vector2, radius: float, index: int, inner_ratio := BURST_INNER) -> PackedVector2Array:
 	var pts := PackedVector2Array()
 	for i in BURST_POINTS * 2:
 		var angle := TAU * i / (BURST_POINTS * 2.0) + 0.2 * index
-		pts.append(c + Vector2.from_angle(angle) * radius * (1.0 if i % 2 == 0 else 0.62))
+		var tip := 1.0 + (0.08 if i % 4 == 0 else 0.0)
+		pts.append(c + Vector2.from_angle(angle) * radius * (tip if i % 2 == 0 else inner_ratio))
+	return pts
+
+
+func _burst(r: Rect2, text: String, index: int, k: float) -> void:
+	var c := r.position + Vector2(r.size.x * (0.66 if index % 2 == 1 else 0.34), r.size.y * 0.52)
+	var radius := minf(r.size.x * 0.34, r.size.y * 0.3)
+	var pts := burst_polygon(c, radius, index, BURST_INNER)
+	var shadow := PackedVector2Array()
+	for pt in pts:
+		shadow.append(pt + SHADOW_OFFSET * k)
+	draw_colored_polygon(shadow, Color(INK_COLOR, 0.72))
 	draw_colored_polygon(pts, Palette.HAZARD)
+	var inner := burst_polygon(c, radius * 0.78, index + 1, 0.52)
+	draw_colored_polygon(inner, Palette.AMBER)
 	var ring := PackedVector2Array(pts)
 	ring.append(pts[0])
-	draw_polyline(ring, INK_COLOR, 5.0 * k)
+	draw_polyline(ring, INK_COLOR, 5.5 * k)
 	var font := UiFonts.bold()
-	var fs := maxi(8, int(radius * 0.7))
+	var fs := maxi(8, int(radius * 0.72))
 	while fs > 8 and font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x > radius * 1.5:
 		fs -= 2
 	var w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
 	var at := c + Vector2(-w * 0.5, fs * 0.35)
-	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, int(6.0 * k), INK_COLOR)
-	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.LEDGER)
+	draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, int(7.0 * k), INK_COLOR)
+	draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, Palette.LEDGER_CREAM)
 
 
 static func caption_font(k: float) -> int:
@@ -339,8 +409,9 @@ func _caption(r: Rect2, text: String, k: float) -> void:
 	var fs := caption_font(k)
 	var pad := 6.0 * k
 	var box := caption_rect(r, text, k)
-	draw_rect(box, Palette.SAND)
-	draw_rect(box, INK_COLOR, false, 3.0 * k)
+	draw_rect(Rect2(box.position + Vector2(3.0, 3.0) * k, box.size), Color(INK_COLOR, 0.75))
+	draw_rect(box, Palette.LEDGER_CREAM)
+	draw_rect(box, INK_COLOR, false, 3.5 * k)
 	draw_multiline_string(UiFonts.bold(), box.position + Vector2(pad, pad + fs), text, HORIZONTAL_ALIGNMENT_LEFT, box.size.x - pad * 2.0, fs, -1, INK_COLOR)
 
 
@@ -356,6 +427,29 @@ func _card(r: Rect2, text: String, k: float) -> void:
 	var fs := caption_font(k)
 	var pad := 6.0 * k
 	var box := card_rect(r, text, k)
+	draw_rect(Rect2(box.position + Vector2(3.0, 3.0) * k, box.size), Color(Palette.AMBER, 0.55))
 	draw_rect(box, INK_COLOR)
-	draw_rect(box, Palette.AMBER, false, 2.0 * k)
+	draw_rect(box, Palette.AMBER, false, 3.0 * k)
 	draw_multiline_string(UiFonts.bold(), box.position + Vector2(pad, pad + fs), text, HORIZONTAL_ALIGNMENT_LEFT, box.size.x - pad * 2.0, fs, -1, Palette.AMBER)
+
+
+static func win_stamp_rect(r: Rect2, text: String, k: float) -> Rect2:
+	var fs := caption_font(k)
+	var pad := 7.0 * k
+	var sz := UiFonts.bold().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs)
+	var box_sz := Vector2(sz.x + pad * 2.0, sz.y + pad * 1.4)
+	return Rect2(Vector2(r.end.x - box_sz.x - 10.0 * k, r.end.y - box_sz.y - 10.0 * k), box_sz)
+
+
+func _draw_win_stamp(r: Rect2, caption: String, text: String, k: float) -> void:
+	var box := win_stamp_rect(r, text, k)
+	if not r.encloses(box):
+		return
+	if caption != "" and box.intersects(caption_rect(r, caption, k)):
+		return
+	var fs := caption_font(k)
+	var pad := 7.0 * k
+	draw_rect(Rect2(box.position + Vector2(3.0, 3.0) * k, box.size), Color(INK_COLOR, 0.78))
+	draw_rect(box, Palette.AMBER)
+	draw_rect(box, INK_COLOR, false, 3.5 * k)
+	draw_string(UiFonts.bold(), box.position + Vector2(pad, box.size.y - pad * 0.75), text, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, INK_COLOR)
