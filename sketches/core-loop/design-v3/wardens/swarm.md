@@ -177,7 +177,7 @@ The evidence behind the world 2 row. PARK.md:548 has `tests/posture_bands_test.g
 | Predicted, `headframe` | 60 to 85 s (the hive is out of ram reach 8 s in every 12) | this sheet |
 | Predicted, `sinkhole` | 45 to 70 s (the first stagger is from 21 m below) | this sheet |
 
-**The band for the swarm kind:** grown median 25 to 45 s and small at least twice grown on each mounting, measured with the latch arm on (the table above); the 24.5 to 128 s world band applies to the pilots row only (historical coordinator ruling at KF3 merge, 2026-10-11; note `KNOWN-FAILING.tsv` is the sole red ledger since `tests/QUARANTINE.tsv` does not exist). Two mechanism checks ride with it, so a win that skips the mechanism fails the test instead of passing quietly:
+**The band for the swarm kind:** grown median 25 to 45 s and small at least twice grown on each mounting, measured with the latch arm on (the table above); the 24.5 to 128 s world band applies to the pilots row only (historical coordinator ruling at KF3 merge, 2026-10-11; `KNOWN-FAILING.tsv` is the sole live red ledger while `tests/QUARANTINE.tsv` is an empty header-only stub). Two mechanism checks ride with it, so a win that skips the mechanism fails the test instead of passing quietly:
 
 - `headframe`: at least half the seeds land a stagger during a low dwell and at least one finish from a latch.
 - `sinkhole`: the pool rises one step per chunk lost in every seed, and no step rises under a grounded ball.

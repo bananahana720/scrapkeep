@@ -12,7 +12,7 @@ A board is required before any build round on a subject a card lists under Board
 
 | Subject | Rows |
 | --- | --- |
-| Crew kind or boss part | front, side, rear and top (a 25 degree lens, the eye at three bound radii on the kind's axes); the rider at speed (chase camera at full speed: arm 10.5 m, `sketches/core-loop/src/movement/chase_camera.gd` `ARM_MAX_M`; lens `FOV_FAST`, `sketches/core-loop/src/movement/chase_camera.gd`; the ball 25 m from the subject at cruise speed in `sketches/core-loop/src/movement/tuning.gd`); a silhouette at 30 m (the subject black, everything else the flat sky colour); and for a crew with a wind-up, the rider view at the wind-up's last frame and at the strike's first |
+| Crew kind or boss part | front, side, rear and top (a 25 degree lens, the eye at three bound radii on the kind's axes); the rider at speed (chase camera at full speed: `PROFILES` `arm` 12.0 m in `sketches/core-loop/src/movement/chase_camera.gd:44-48`; lens `FOV_FAST`, `sketches/core-loop/src/movement/chase_camera.gd:17`; the ball 25 m from the subject at cruise speed in `sketches/core-loop/src/movement/tuning.gd`); a silhouette at 30 m (the subject black, everything else the flat sky colour); and for a crew with a wind-up, the rider view at the wind-up's last frame and at the strike's first |
 | Place | the plan (top-down, 55 degree lens, as the `arb_bowl` `top_down` camera in `sketches/core-loop/tools/look_subjects.gd`), the rider entry and the rider exit on the place's route; for an arrival, the frame the arrival camera already shows |
 | Look topic | each of the card's stations on High and Low, today against proposed, plus a greyscale strip the composer makes from the proposed panel (never painted) |
 | Sign | the look rows plus the moment frame (for a fight's end, the frame 1.0 s after the clear) |
@@ -91,7 +91,7 @@ On not built, the round record is pushed, the measure row stays red at `report`,
 
 **The lane.** `node scripts/gate/display-run.mjs --offscreen <script> -- <args>` keeps scratch saves (`scratchEnv`) and process-group kill cleanly off Andrew's screen.
 
-**Which tools use it.** Currently qualified in `scripts/gate/display-run.mjs` (`watchedTools`): `sketches/core-loop/tools/water_flow_stills.gd`, `sketches/core-loop/tools/offscreen_probe.gd`, and `sketches/core-loop/tools/dam_look_capture.gd`. Future tools (look harness, film tools, W1-137a collision sweep, W1-144a Mac timing probe) must qualify via `watchedTools` in `scripts/gate/display-run.mjs` + `scripts/gate/display-run.test.mjs` before running on Mac.
+**Which tools use it.** Currently qualified `watchedTools` entrypoints in `scripts/gate/display-run.mjs`: `sketches/core-loop/tools/water_flow_stills.gd` and `sketches/core-loop/tools/offscreen_probe.gd` (with `tools/dam_look_capture.gd` and `tools/offscreen_window.gd` hashed as dependencies under `offscreen_probe.gd`). Future tools (look harness, film tools, W1-137a collision sweep, W1-144a Mac timing probe) must qualify via `watchedTools` in `scripts/gate/display-run.mjs` + `scripts/gate/display-run.test.mjs` before running on Mac.
 
 **How a tool qualifies.** Add its path and SHA-256 of loaded files to `watchedTools` in `scripts/gate/display-run.mjs` (and `scripts/gate/display-run.test.mjs`) with the kept watcher result from its offscreen run.
 

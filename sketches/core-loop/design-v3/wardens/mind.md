@@ -165,7 +165,7 @@ The KF7 body exports these clips in the shape of the boss bodies' clip tables (`
 | camper | never breaks it | never breaks it |
 | world 3 pilots (`alpha_posture_bands_w23_test.gd`) | 24.5 to 128 s, re-measured on the park after KD5, dated header | the same after KD6 |
 
-The sweep runs with the mechanism on. Historically at KF4 (2026-10-11), `posture_bands_mind_test` waited on anchor-latching; under ruling `eq` (26 Nov 2026), it graduated off [KNOWN-FAILING.tsv](../../../../project-guide/handoff/KNOWN-FAILING.tsv) at `29.6 s` grown / `2.25x` / `0` camper (`tests/QUARANTINE.tsv` does not exist). The tuning dials are the mechanism's, not the band: under the island, the lens height and the tilt angle; on the spires, the flight time and the perch spacing. If the knock-down makes the Crown's grown arm faster than 25 s, the knock-down's 4 s on the floor shortens before anything else.
+The sweep runs with the mechanism on. Historically at KF4 (2026-10-11), `posture_bands_mind_test` waited on anchor-latching; under ruling `eq` (26 Nov 2026), it graduated off [KNOWN-FAILING.tsv](../../../../project-guide/handoff/KNOWN-FAILING.tsv) at `29.6 s` grown / `2.25x` / `0` camper (`tests/QUARANTINE.tsv` is an empty header-only stub superseded by `KNOWN-FAILING.tsv`). The tuning dials are the mechanism's, not the band: under the island, the lens height and the tilt angle; on the spires, the flight time and the perch spacing. If the knock-down makes the Crown's grown arm faster than 25 s, the knock-down's 4 s on the floor shortens before anything else.
 
 ## 8. K-F implementation units
 

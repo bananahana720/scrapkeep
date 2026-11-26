@@ -391,7 +391,7 @@ Quit moves off Q (`src/ui/pause_menu.gd:46`, `:355-357`) to X held for 0.6 s (st
 | `cl_bay_2` | `select` | `slot_pick = 1` | 2 | none | D-pad up | same (`:51`) |
 | `cl_bay_3` | `select` | `slot_pick = 2` | 3 | none | D-pad right | same (`:52`) |
 | `cl_ultimate` (new) | `ultimate` (new) | `ultimate_pressed` | Q | none | LB | new; glyph `key_q`, fail `verb_fail_ultimate` |
-| `cl_special` | `special` | none | — (retired; `bindings.gd:26`, `keys: []`) | none | — | **retired** in `bindings.gd`; `F` now triggers active items (`cl_active`, `bindings.gd:36`, pad D-pad Down), while `special_*` stay as routed outputs |
+| `cl_special` | `special` | none | — (retired; `bindings.gd:29-30`, `keys: []`) | none | — | **retired** in `bindings.gd`; `F` now triggers active items (`cl_active`, `bindings.gd:41-42`, pad D-pad Down), while `special_*` stay as routed outputs |
 | `cl_fire` | `fire` | `fire_*` | none | LMB | RT | reading becomes "cast the picked slot" |
 | `cl_harpoon` | `harpoon` | `harpoon_*` | none | RMB | LT | unchanged; refused during a set piece |
 | `cl_boost` | `boost` | `shift_*` | Shift | none | B | unchanged; never selectable |
