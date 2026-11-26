@@ -480,8 +480,8 @@ func _show_sheet(warden, alpha := SHEET_ALPHA) -> void:
 		var foot: Vector3 = warden.home + sheet_dir * SHEET_RUN + sheet_dir.cross(Vector3.UP) * lane_offset()
 		var foot_y: float = warden.terrain.height(foot.x, foot.z) if warden.terrain != null else ground
 		var at := Vector3(foot.x, foot_y + 0.4, foot.z)
-		FxLibrary.burst(view, "steam_puff", at, 10, Color("e8efe9"))
-		FxLibrary.burst(view, "slam_dust", at, 8)
+		FxLibrary.burst(view, "steam_puff", at, 10, Color("e8efe9"), Vector3.ZERO, true)
+		FxLibrary.burst(view, "slam_dust", at, 8, Color.TRANSPARENT, Vector3.ZERO, true)
 	_sheet_view = view
 
 
@@ -508,7 +508,7 @@ void fragment() {
 	float wave = 0.5 + 0.5 * sin(loc.z * 1.15 - t + streak * 1.4);
 	float foam = step(0.72, pow(streak, 1.8) * 0.55 + wave * 0.55);
 	float mid_band = step(0.45, streak * 0.6 + wave * 0.4);
-	float lip = smoothstep(5.5, 7.9, loc.z) + smoothstep(-5.8, -7.9, loc.z);
+	float lip = smoothstep(5.5, 7.9, loc.z) + smoothstep(5.8, 7.9, -loc.z);
 	float edge = step(0.92, abs(UV.x - 0.5) * 2.0);
 	vec3 water = mix(deep_col, mid_col, mid_band);
 	water = mix(water, crest_col, clamp(foam * 0.85 + lip * 0.65, 0.0, 1.0));

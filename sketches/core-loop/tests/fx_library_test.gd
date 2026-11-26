@@ -102,4 +102,13 @@ func _run() -> void:
 	t.check("re-reading heat from the emitter's own look follows the toggle", is_equal_approx(spark.get_instance_shader_parameter("heat"), hot_on))
 	FlashGuard.on = false
 	spark.free()
+	var holder := Node3D.new()
+	root.add_child(holder)
+	holder.global_position = Vector3(4.0, 1.0, -2.0)
+	holder.scale = Vector3(1.0, 1.0, 0.15)
+	var iso := FxLibrary.burst(holder, "steam_puff", Vector3(10.0, 2.0, -5.0), 6, Color.TRANSPARENT, Vector3.ZERO, true)
+	t.check("isolated burst keeps unit scale and exact world position under a scaled parent",
+		iso != null and iso.top_level and iso.global_position.is_equal_approx(Vector3(10.0, 2.0, -5.0))
+		and iso.global_transform.basis.get_scale().is_equal_approx(Vector3.ONE))
+	holder.free()
 	quit(t.verdict())

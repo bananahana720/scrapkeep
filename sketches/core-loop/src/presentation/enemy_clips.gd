@@ -261,6 +261,11 @@ func _detach_away_tools() -> void:
 		for part in (row.joint as Node3D).get_children():
 			if part is Node3D and (part as Node3D).top_level:
 				(part as Node3D).visible = false
+	var pivot := get_parent() as Node3D
+	if pivot != null:
+		for child in pivot.get_children():
+			if child is Node3D and (child as Node3D).top_level:
+				(child as Node3D).visible = false
 
 
 func _physics_process(delta: float) -> void:

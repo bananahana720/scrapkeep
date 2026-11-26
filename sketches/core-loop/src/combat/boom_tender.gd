@@ -1,6 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # The boom tender (Boom Tender No. 22, design-v3/SPILLWAY-ROSTER.md; world 1): a low tug on
 # tracks paying out a debris boom of five floats and an end buoy. It stows the boom to one side
@@ -210,9 +211,6 @@ func _live(_delta: float) -> bool:
 		pinned += 1
 		hit_player.emit(STING_DAMAGE, shove)
 	return true
-
-
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 
 # A fast ball bursts every standing float within POP_REACH of it.

@@ -531,14 +531,18 @@ static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Ve
 
 
 # Standalone one-shot burst attached to `parent` (world or capture stage) that frees itself once
-# finished while leaving frozen capture bursts (speed_scale == 0) intact.
-static func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> GPUParticles3D:
+# finished while leaving frozen capture bursts (speed_scale == 0) intact. `isolate` sets
+# `top_level = true` so a scaling or moving parent never distorts or drags the burst while still
+# owning its lifetime.
+static func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> GPUParticles3D:
 	if parent == null or not parent.is_inside_tree():
 		return null
 	var p := build(id)
 	p.one_shot = true
 	p.explosiveness = float(spec(id).get("explosive", 1.0))
 	parent.add_child(p)
+	if isolate:
+		p.top_level = true
 	var n := count if count > 0 else int(spec(id)["max"])
 	fire(p, id, "", n, at, tint, toward)
 	var tree := parent.get_tree()
