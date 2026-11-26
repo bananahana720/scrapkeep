@@ -34,6 +34,22 @@ const PIPS := 8
 const PIP_RADIUS := 0.9
 const PIP_HEIGHT := 2.5
 const KILL_MARK_M := 3.0
+const SHOCKWAVE_MIN_SPEED := 14.0
+const SHOCKWAVE_FULL_SPEED := 36.0
+const FUSION_SIGNATURES := {
+	"arc+frost": {"style": 0, "primary": Palette.ICE, "accent": Palette.ARC, "shapes": ["diamond", "ring"],
+		"burst": "dust", "burst_count": 10, "fx": ["spark_core", "spark_halo"], "life": 0.42},
+	"arc+kinetic": {"style": 1, "primary": Palette.COBALT, "accent": Palette.BRASS, "shapes": ["burst", "bolt"],
+		"burst": "debris", "burst_count": 10, "fx": ["crit_core", "crit_halo"], "life": 0.38},
+	"frost+kinetic": {"style": 2, "primary": Palette.ANCIENT, "accent": Palette.COPPER, "shapes": ["star", "square"],
+		"burst": "debris", "burst_count": 10, "fx": ["spark_core"], "life": 0.48},
+	"frost+heat": {"style": 3, "primary": Palette.SODIUM, "accent": Palette.ICE, "shapes": ["star", "wave"],
+		"burst": "dust", "burst_count": 12, "fx": ["crit_core", "crit_halo"], "life": 0.42},
+	"arc+heat": {"style": 4, "primary": Palette.DAWN_VIOLET, "accent": Palette.APRICOT, "shapes": ["wave", "bolt"],
+		"burst": "fountain", "burst_count": 14, "fx": ["spark_core", "spark_halo"], "life": 0.46},
+	"heat+kinetic": {"style": 5, "primary": Palette.AMBER, "accent": Palette.COPPER, "shapes": ["burst", "ring"],
+		"burst": "debris", "burst_count": 12, "fx": ["crit_core", "crit_halo"], "life": 0.44},
+}
 
 var ctx
 var player
@@ -55,6 +71,7 @@ var _launch_boost := 0.0
 var _rings := {}
 var _heft_class := 1
 var _found_wired := false
+var _fusion_wired := false
 var _bursts := {}
 var _burst_next := {}
 var _fx := {}
@@ -159,7 +176,9 @@ func setup(ctx_ref) -> void:
 		glyph("harpoon_bit", at, 0.3, 1.0, 0.3, Vector3.ZERO, "", player.class_color())
 		play_fx("harpoon_bit", at, player.class_color(), "", player.shown_position() - at))
 	events.harpoon_smashed.connect(func(_enemy: Node3D, at: Vector3, speed: float):
-		glyph("harpoon_smashed", at, 0.6, 2.0 + speed * 0.05, 0.4, Vector3.ZERO, "", player.class_color()))
+		glyph("harpoon_smashed", at, 0.6, 2.0 + speed * 0.05, 0.4, Vector3.ZERO, "", player.class_color())
+		if speed >= SHOCKWAVE_MIN_SPEED:
+			impact_shockwave(at, speed, Vector3.UP, player.class_color(), "dunk_shockwave"))
 	events.shot_fired.connect(_on_shot)
 	events.enemy_struck.connect(_on_struck)
 	events.scrap_collected.connect(_on_scrap)
@@ -198,6 +217,12 @@ func wire_optional() -> void:
 		_found_wired = true
 		var argc := SignalWire.arg_count(events, "interaction_found")
 		events.connect("interaction_found", _on_found.unbind(argc) if argc > 0 else _on_found)
+	var build_node = ctx.get("build") if ctx != null else null
+	var field = build_node.get("field") if build_node != null else null
+	if field != null and not _fusion_wired:
+		_fusion_wired = true
+		SignalWire.listen(field, "fused", _on_fusion_result)
+		SignalWire.listen(field, "extended_fused", _on_fusion_result)
 
 
 func _on_interact_armed(family: String, _id: String, at: Vector3) -> void:
@@ -296,9 +321,84 @@ func _on_found() -> void:
 
 
 func _on_element(_element: String, _material: String, behaviour: String, at: Vector3) -> void:
+	if behaviour == "steam_cloud":
+		glyph("element_resolved", at + Vector3.UP * 0.6, 0.8, 2.8, 0.42, Vector3.UP, "wave", Palette.LEDGER_CREAM)
+		burst("dust", at + Vector3.UP * 0.4, Palette.LEDGER_CREAM, 10)
+		return
+	if behaviour == "flash_melt":
+		glyph("element_resolved", at + Vector3.UP * 0.6, 0.7, 3.2, 0.36, Vector3.ZERO, "star", Palette.SODIUM)
+		impact_shockwave(at + Vector3.UP * 0.2, 24.0, Vector3.UP, Palette.SODIUM, "shatter_shockwave")
+		return
 	var sound := Rows.element_sound(behaviour)
 	var shape: String = {"ice_form": "diamond", "zap_hum": "burst", "shatter": "star"}.get(sound, "burst")
 	glyph("element_resolved", at + Vector3.UP * 0.5, 0.4, 1.5, 0.3, Vector3.ZERO, shape)
+	if sound == "shatter":
+		impact_shockwave(at + Vector3.UP * 0.2, 22.0, Vector3.UP, Palette.ICE, "shatter_shockwave")
+
+
+static func fusion_key(raw: String) -> String:
+	var pair := raw.split("+")
+	if pair.size() != 2:
+		return raw
+	return "%s+%s" % [pair[0], pair[1]] if pair[0] < pair[1] else "%s+%s" % [pair[1], pair[0]]
+
+
+static func fusion_signature(key: String) -> Dictionary:
+	return FUSION_SIGNATURES.get(fusion_key(key), {})
+
+
+func _on_fusion_result(result: Dictionary) -> void:
+	var key := String(result.get("key", ""))
+	if key == "":
+		return
+	var at: Vector3 = result.get("at", Vector3.ZERO)
+	var radius := float(result.get("radius", 4.5))
+	play_fusion(key, at, radius)
+
+
+func play_fusion(key: String, at: Vector3, radius := 4.5) -> Dictionary:
+	var canonical := fusion_key(key)
+	var sig := fusion_signature(canonical)
+	if sig.is_empty() or root == null or not root.is_inside_tree():
+		return {}
+	var primary: Color = sig["primary"]
+	var accent: Color = sig["accent"]
+	var shapes: Array = sig["shapes"]
+	var life := float(sig["life"])
+	var scale_m := clampf(radius * 0.72, 2.4, 5.2) * (1.0 + MIGHT_GLYPH * might)
+	var governed := Density.live().apply("P4", 1.0, 1.0, 1.0)
+	if kill_mark != null:
+		kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
+		kill_mark.fusion_burst(at + Vector3.UP * 0.9, scale_m, primary, accent, int(sig["style"]), governed)
+	glyph("fusion_glyph", at + Vector3.UP * 0.7, 0.8, maxf(2.4, radius * 0.7), life, Vector3.ZERO, String(shapes[0]), primary, "P4")
+	glyph("fusion_glyph", at + Vector3.UP * 0.22, 0.9, maxf(2.8, radius), life * 0.92, Vector3.UP, String(shapes[1]), accent, "P4")
+	burst(String(sig["burst"]), at + Vector3.UP * 0.5, accent if String(sig["burst"]) != "debris" else Palette.CHARCOAL, int(sig["burst_count"]))
+	for fx_id in sig["fx"]:
+		if _fx.has(fx_id):
+			_fire_fx(String(fx_id), "enemy_struck", 16, at + Vector3.UP * 0.6, primary)
+	spawned["fusion_" + canonical] = int(spawned.get("fusion_" + canonical, 0)) + 1
+	return sig
+
+
+func impact_shockwave(at: Vector3, speed: float, normal := Vector3.UP, tint := Color.TRANSPARENT, kind := "dunk_shockwave") -> Dictionary:
+	if root == null or not root.is_inside_tree():
+		return {}
+	var intensity := clampf((speed - SHOCKWAVE_MIN_SPEED) / (SHOCKWAVE_FULL_SPEED - SHOCKWAVE_MIN_SPEED), 0.25, 1.0)
+	var primary: Color = tint if tint.a > 0.0 else (player.class_color() if player != null and player.has_method("class_color") else Palette.AMBER)
+	var accent := Palette.LEDGER_CREAM
+	var axis := normal.normalized() if normal.length_squared() > 0.001 else Vector3.UP
+	var radius := lerpf(2.8, 5.4, intensity) * (1.0 + MIGHT_GLYPH * might)
+	var governed := Density.live().apply(Density.class_of_kind("slammed"), 1.0, 1.0, 1.0)
+	if kill_mark != null:
+		kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
+		kill_mark.shockwave(at + axis * 0.25, radius, primary, accent, governed)
+	glyph("shockwave_glyph", at + axis * 0.14, 0.9, radius * 1.15, lerpf(0.24, 0.36, intensity), axis, "ring", primary)
+	glyph("shockwave_glyph", at + axis * 0.65, 0.5, radius * 0.65, lerpf(0.18, 0.28, intensity), Vector3.ZERO, "star", accent)
+	burst("dust", at + axis * 0.2, Palette.SANDSTONE, int(round(lerpf(6.0, 12.0, intensity))))
+	if intensity >= 0.55:
+		burst("debris", at + axis * 0.35, Palette.CHARCOAL, int(round(lerpf(6.0, 10.0, intensity))))
+	spawned[kind] = int(spawned.get(kind, 0)) + 1
+	return {"kind": kind, "intensity": intensity, "radius": radius, "color": primary, "accent": accent}
 
 
 const MAX_RINGS := 4
@@ -358,6 +458,8 @@ func clear() -> void:
 		for p in _bursts[kind]:
 			p.emitting = false
 	_chain = 0
+	_chain_rung = 0
+	_pip_pop = 0.0
 	if kill_mark != null:
 		kill_mark.clear()
 	if hero_fx != null:
@@ -369,7 +471,7 @@ func clear() -> void:
 	_density_target = 0.0
 	_density_wait = 0.0
 	_publish_fill_scale(1.0)
-	if ctx.run.has_method("heft_class"):
+	if ctx != null and ctx.run != null and ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
 
 
@@ -547,6 +649,8 @@ func _on_slammed(at: Vector3, strength: float, _flatness: float) -> void:
 		return
 	glyph("slammed", at + Vector3.UP * 0.15, 1.0, player.slam_radius() if player.has_method("slam_radius") else Augments.SLAM_RADIUS, 0.35, player.state.contact_normal)
 	play_fx("slammed", at + Vector3.UP * 0.15)
+	if strength >= 0.65:
+		impact_shockwave(at + Vector3.UP * 0.2, 16.0 + strength * 18.0, player.state.contact_normal, Palette.AMBER, "slam_shockwave")
 
 
 func _on_mounted(at: Vector3, _banked: float) -> void:
@@ -854,6 +958,8 @@ func _fire_fx(id: String, kind: String, count: int, at: Vector3, tint := Color.T
 func _on_world_fact_fx(kind: String, at: Vector3) -> void:
 	if not FxLibrary.effects(kind).is_empty() and kind != "breach_opened":
 		play_fx(kind, at)
+	if kind in ["wall_crumbled", "piece_shattered"]:
+		impact_shockwave(at, 26.0, Vector3.UP, Palette.COPPER, "shatter_shockwave")
 
 
 func stop_embers() -> void:
@@ -898,13 +1004,32 @@ func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
 	if root == null or not root.is_inside_tree():
 		return
 	var tint := (pilot if pilot.a > 0.0 else kill_tint()).lerp(HEAT_GLYPH, heat)
+	var cap := float(maxi(1, int(row.get("chain_cap", 7))))
+	var punch := clampf(float(_chain_rung) / cap, 0.0, 1.0)
 	kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
 	kill_mark.fire(at + Vector3.UP * 0.8, KILL_MARK_M * scale, tint,
+		Density.live().apply(Density.class_of_kind("enemy_killed"), 1.0, 1.0, 1.0), punch)
+	var fx := FxLibrary.effects("enemy_killed")
+	for id in fx:
+		_fire_fx(id, "enemy_killed", int(ceil(float(fx[id]) * scale)), at + Vector3.UP * 0.6, tint)
+	burst("debris", at + Vector3.UP * 0.5, Palette.CHARCOAL, int(ceil(float(row["debris"]) * scale)))
+	spawned["enemy_killed"] = spawned.get("enemy_killed", 0) + 1
+
+
+func shift_over_kill(at: Vector3, scale := 1.0, pilot := Color.TRANSPARENT) -> void:
+	var row := EventKinds.juice("enemy_killed")
+	scale *= 1.0 + MIGHT_GLYPH * might
+	if root == null or not root.is_inside_tree():
+		return
+	var tint := (pilot if pilot.a > 0.0 else kill_tint()).lerp(HEAT_GLYPH, heat)
+	kill_mark.reduced_motion = camera != null and camera.get("reduced_motion") == true
+	kill_mark.shift_over(at + Vector3.UP * 0.85, KILL_MARK_M * scale, tint,
 		Density.live().apply(Density.class_of_kind("enemy_killed"), 1.0, 1.0, 1.0))
 	var fx := FxLibrary.effects("enemy_killed")
 	for id in fx:
 		_fire_fx(id, "enemy_killed", int(ceil(float(fx[id]) * scale)), at + Vector3.UP * 0.6, tint)
 	burst("debris", at + Vector3.UP * 0.5, Palette.CHARCOAL, int(ceil(float(row["debris"]) * scale)))
+	spawned["shift_over"] = int(spawned.get("shift_over", 0)) + 1
 	spawned["enemy_killed"] = spawned.get("enemy_killed", 0) + 1
 
 
@@ -977,18 +1102,21 @@ func chain_pips() -> int:
 func _draw_pips(delta: float) -> void:
 	_pip_pop = maxf(0.0, _pip_pop - delta * 5.0)
 	var top := float(EventKinds.juice("enemy_killed").get("chain_cap", 7))
-	var heat := clampf(_chain_rung / top, 0.0, 1.0)
-	_pip_mat.albedo_color = EventKinds.color("enemy_killed").lerp(EventKinds.color("part_gained"), minf(heat * 1.6, 1.0)).lerp(Color.WHITE, maxf(0.0, heat - 0.7) * 2.0)
+	var charge := clampf(_chain_rung / top, 0.0, 1.0)
+	_pip_mat.albedo_color = EventKinds.color("enemy_killed").lerp(EventKinds.color("part_gained"), minf(charge * 1.6, 1.0)).lerp(Palette.LEDGER_CREAM, maxf(0.0, charge - 0.7) * 2.0)
 	var centre: Vector3 = player.shown_position() + Vector3.UP * PIP_HEIGHT
+	var spin_rate := 2.2 + 1.4 * charge
+	var orbit_r := PIP_RADIUS + 0.14 * _pip_pop + 0.08 * charge
+	var beat := 0.08 * charge * sin(_clock * (6.0 + 4.0 * charge)) if _chain_rung >= 3 else 0.0
 	for i in PIPS:
 		var pip: MeshInstance3D = _pips[i]
 		pip.visible = i < _chain
 		if not pip.visible:
 			continue
-		var angle := _clock * 2.2 + TAU * float(i) / maxf(1.0, _chain)
-		var size := 1.0 + (0.8 * _pip_pop if i == _chain - 1 else 0.0) + 0.25 * heat
+		var angle := _clock * spin_rate + TAU * float(i) / maxf(1.0, _chain)
+		var size := 1.0 + (0.8 * _pip_pop if i == _chain - 1 else 0.0) + 0.25 * charge + beat
 		pip.global_transform = Transform3D(Basis(Vector3.UP, angle * 2.0).scaled(Vector3.ONE * size),
-			centre + Vector3(cos(angle), 0.0, sin(angle)) * PIP_RADIUS)
+			centre + Vector3(cos(angle), 0.0, sin(angle)) * orbit_r)
 
 
 func edge_flash(direction: Vector2, color: Color, strength: float, seconds: float) -> void:

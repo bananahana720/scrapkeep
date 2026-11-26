@@ -6,11 +6,13 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 
 
 const TYPES := ["kinetic", "frost", "arc"]
+const HEAT_COLOUR := Color("ff7a29")
+const ALL_TYPES := ["kinetic", "frost", "arc", "heat"]
 const TEAMS := ["player", "monster", "neutral"]
 
-const PLAYER_COLOURS := {"kinetic": Palette.COPPER, "frost": Palette.ANCIENT, "arc": Palette.ARC}
+const PLAYER_COLOURS := {"kinetic": Palette.COPPER, "frost": Palette.ANCIENT, "arc": Palette.ARC, "heat": HEAT_COLOUR}
 
-const KIND_TYPES := {"arc": "arc", "frost": "frost"}
+const KIND_TYPES := {"arc": "arc", "frost": "frost", "heat": "heat", "burn": "heat", "thermal": "heat", "torch": "heat", "cinder": "heat"}
 
 const GROUP := "damage_numbers"
 const MERGE_WINDOW_S := 0.25
@@ -24,11 +26,24 @@ const MEGA_FONT := 60
 const RISE := 46.0
 const OUTLINE_MIN := 6
 const FADE_FROM := 0.6
+const POP_WINDOW_S := 0.14
+const POP_PEAK_T := 0.36
+const POP_START_SCALE := 0.82
+const CRIT_POP_PEAK := 1.38
+const BIG_CRIT_POP_PEAK := 1.44
+const BIG_POP_PEAK := 1.24
+const CRIT_OUTLINE_EXTRA := 4
+const CRIT_RIM_COLOUR := Palette.LEDGER_CREAM
 
 var project: Callable
 var keep_off: Callable
+var reduced_motion := false
 
 var _numbers: Array = []
+
+
+static func all_types() -> Array:
+	return ALL_TYPES.duplicate()
 
 
 static func type_of_kind(kind: String) -> String:
@@ -60,6 +75,31 @@ static func is_crit(result: Dictionary, body_plating: float) -> bool:
 
 static func outline_px(size: int) -> int:
 	return maxi(OUTLINE_MIN, roundi(size * 0.3))
+
+
+static func crit_outline_style(size: int, crit: bool) -> Dictionary:
+	var base := outline_px(size)
+	if not crit:
+		return {"ink_px": base, "rim_px": 0, "rim_color": Color.TRANSPARENT}
+	return {"ink_px": base + CRIT_OUTLINE_EXTRA, "rim_px": maxi(2, roundi(base * 0.5)), "rim_color": CRIT_RIM_COLOUR}
+
+
+static func pop_scale(age: float, value: float, crit := false, still := false) -> float:
+	if still or age < 0.0 or age >= POP_WINDOW_S:
+		return 1.0
+	var peak := 1.0
+	if crit:
+		peak = BIG_CRIT_POP_PEAK if value >= BIG_FROM else CRIT_POP_PEAK
+	elif value >= BIG_FROM:
+		peak = BIG_POP_PEAK
+	if peak <= 1.0:
+		return 1.0
+	var u := clampf(age / POP_WINDOW_S, 0.0, 1.0)
+	if u <= POP_PEAK_T:
+		return lerpf(POP_START_SCALE, peak, ease(u / POP_PEAK_T, 0.35))
+	var settle := (u - POP_PEAK_T) / (1.0 - POP_PEAK_T)
+	var dip := -0.04 * (peak - 1.0) * sin(settle * PI) * (1.0 - settle)
+	return maxf(1.0, lerpf(peak, 1.0, ease(settle, 0.5)) + dip)
 
 
 static func font_size(value: float, crit := false) -> int:
@@ -206,14 +246,26 @@ func _draw() -> void:
 		var p = _screen(number)
 		if p == null:
 			continue
-		var t: float = number["age"] / LIFE_S
+		var age: float = number["age"]
+		var t: float = age / LIFE_S
 		var colour: Color = number["color"]
 		colour.a = 1.0 if t < FADE_FROM else 1.0 - (t - FADE_FROM) / (1.0 - FADE_FROM)
-		var size := font_size(number["value"], number["crit"])
-		var text := str(maxi(1, roundi(number["value"])))
+		var crit: bool = bool(number["crit"])
+		var value: float = float(number["value"])
+		var base_size := font_size(value, crit)
+		var pop := pop_scale(age, value, crit, reduced_motion)
+		var draw_size := clampi(roundi(float(base_size) * pop), 1, roundi(float(MEGA_FONT) * BIG_CRIT_POP_PEAK))
+		var text := str(maxi(1, roundi(value)))
 		var font := UiFonts.mono()
-		var spot: Vector2 = p + Vector2(-_text_width(number, size) * 0.5, -RISE * t)
+		var lift := float(draw_size - base_size) * 0.35
+		var spot: Vector2 = p + Vector2(-_text_width(number, draw_size) * 0.5, -RISE * t + lift)
+		var style := crit_outline_style(draw_size, crit)
 		var ink := Palette.CHARCOAL
 		ink.a = colour.a
-		draw_string_outline(font, spot, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, outline_px(size), ink)
-		draw_string(font, spot, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, colour)
+		draw_string_outline(font, spot, text, HORIZONTAL_ALIGNMENT_LEFT, -1, draw_size, int(style["ink_px"]), ink)
+		var rim_px := int(style["rim_px"])
+		if rim_px > 0:
+			var rim: Color = style["rim_color"]
+			rim.a = colour.a
+			draw_string_outline(font, spot, text, HORIZONTAL_ALIGNMENT_LEFT, -1, draw_size, rim_px, rim)
+		draw_string(font, spot, text, HORIZONTAL_ALIGNMENT_LEFT, -1, draw_size, colour)
