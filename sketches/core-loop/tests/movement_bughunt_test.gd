@@ -236,8 +236,12 @@ func _harpoon_busy() -> void:
 		var ready: bool = _player.verb_ready("harpoon")
 		_player._press_harpoon()
 		var hooked: bool = _player.kit.hooked
-		_report("3 harpoon refused while %s" % hold, not ready and not hooked and fails.has(["harpoon", "busy"]),
-			"verb_ready %s, after the press hooked %s, failures %s" % [ready, hooked, fails])
+		if hold == "plant_time":
+			_report("3 harpoon cancels slam plant_time", ready and hooked and fails.is_empty(),
+				"verb_ready %s, after the press hooked %s, failures %s" % [ready, hooked, fails])
+		else:
+			_report("3 harpoon refused while %s" % hold, not ready and not hooked and fails.has(["harpoon", "busy"]),
+				"verb_ready %s, after the press hooked %s, failures %s" % [ready, hooked, fails])
 		_player.release_grapple()
 		_player.kit.plant_time = 0.0
 		_player.kit.mounted = false

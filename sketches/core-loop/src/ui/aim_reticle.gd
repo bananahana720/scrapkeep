@@ -54,6 +54,10 @@ const BRACKET_H := 4.5
 const BRACKET_SERIF := 2.0
 const BRACKET_HIT := 1.4
 const MARK_BACK := 2.0
+const ACK_PULSE_S := 0.08
+const ACK_INNER := 1.5
+const ACK_OUTER := 5.5
+const ACK_WIDTH := 2.0
 
 var player
 var camera: Camera3D
@@ -71,6 +75,9 @@ var _hit_seen := []
 var _hit_age := INF
 var _shake_left := 0.0
 var _shake_clock := 0.0
+var _ack_left := 0.0
+var _ack_color := Color.WHITE
+var _ack_strength := 1.0
 var _breath_clock := 0.0
 var _cover := 0.0
 const OUT_OF_RANGE_FRAMES := 6
@@ -113,6 +120,14 @@ func setup(player_ref, camera_ref: Camera3D) -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if player.get("events") != null:
 		player.events.line_state_changed.connect(_on_line_state)
+		player.events.grapple_fired.connect(func(_anchor: Vector3): pulse(1.0, EventKinds.line_color("locked")))
+		player.events.shot_fired.connect(func(_weapon: String, _from: Vector3, _to: Vector3): pulse(0.75))
+		player.events.boosted.connect(func(_dir: Vector3): pulse(0.85))
+		player.events.dashed.connect(func(_dir: Vector3): pulse(0.85))
+		player.events.slot_cast.connect(func(_slot: String, _id: String, _at: Vector3): pulse(1.0))
+		player.events.active_fired.connect(func(_id: String, _at: Vector3, _count: int): pulse(1.0))
+		player.events.ultimate_started.connect(func(_id: String, _path: String, _from: Vector3, _to: Vector3, _seconds: float):
+			pulse(1.15, EventKinds.role_color("live")))
 
 
 func reading() -> Dictionary:
@@ -141,7 +156,7 @@ func _process(delta: float) -> void:
 	var cam_xform := camera.global_transform if has_snap and camera != null else Transform3D()
 	var cam_fov := camera.fov if has_snap and camera != null else 0.0
 	var glyph := q_glyph() if q_shown() else ""
-	var animating := _shake_left > 0.0 or meter_full
+	var animating := _shake_left > 0.0 or _ack_left > 0.0 or meter_full
 	var cadence_now := cadence_key(cadence, _hit_age)
 	var dirty := not _has_drawn or animating or _was_animating \
 		or aim_state != _d_aim_state or _out_of_range_cached != _d_far \
@@ -202,6 +217,7 @@ func _refresh_out_of_range(aim: Dictionary) -> void:
 func step(delta: float) -> void:
 	_shake_left = maxf(0.0, _shake_left - delta)
 	_shake_clock += delta
+	_ack_left = maxf(0.0, _ack_left - delta)
 	_breath_clock = _breath_clock + delta if meter_full else 0.0
 	harpoon_fill = harpoon_readiness()
 	var hit := cadence_hit(cadence)
@@ -271,6 +287,17 @@ func _on_line_state(state: String, _target: Node3D, _at: Vector3, _cause: String
 	if state == "dry_fire":
 		_shake_left = DRY_SHAKE_TIME
 		_shake_clock = 0.0
+
+
+func pulse(strength := 1.0, color := Color.TRANSPARENT) -> void:
+	_ack_left = ACK_PULSE_S
+	_ack_strength = clampf(strength, 0.25, 1.5)
+	_ack_color = color if color.a > 0.0 else EventKinds.role_color("neutral")
+	queue_redraw()
+
+
+func ack_fraction() -> float:
+	return clampf(_ack_left / ACK_PULSE_S, 0.0, 1.0)
 
 
 func harpoon_readiness() -> float:
@@ -365,6 +392,21 @@ func _draw() -> void:
 				at + Vector2(0.0, DIAMOND), at + Vector2(-DIAMOND, 0.0), at + Vector2(0.0, -DIAMOND)])
 			draw_polyline(points, color, 2.5)
 	_draw_cadence(centre)
+	_draw_ack(centre)
+
+
+func _draw_ack(centre: Vector2) -> void:
+	if _ack_left <= 0.0:
+		return
+	var frac := ack_fraction()
+	var expand := 0.0 if reduced_motion else (1.0 - frac) * 3.0 * _ack_strength
+	var inner := RING + ACK_INNER + expand
+	var outer := RING + ACK_OUTER + expand
+	var c := _thin(Color(_ack_color, 0.85 * frac))
+	var width := ACK_WIDTH * (0.5 + 0.5 * frac)
+	for i in 4:
+		var dir := Vector2.from_angle(PI * 0.25 + PI * 0.5 * float(i))
+		draw_line(centre + dir * inner, centre + dir * outer, c, width)
 
 
 func _thin(c: Color) -> Color:

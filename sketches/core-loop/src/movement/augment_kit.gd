@@ -73,6 +73,10 @@ var mass_gap := 0.0
 
 var sprinting := false
 var sprint_left := 0.0
+var movement_buffer := 0.0
+var harpoon_buffer := 0.0
+var harpoon_buffer_reason := ""
+var slam_buffer := 0.0
 
 var facts: Array = []
 
@@ -167,6 +171,10 @@ func clear_runtime() -> void:
 	slingshot_aim = {}
 	lock_body = null
 	rewind_left = 0.0
+	movement_buffer = 0.0
+	harpoon_buffer = 0.0
+	harpoon_buffer_reason = ""
+	slam_buffer = 0.0
 	facts.clear()
 
 
@@ -175,18 +183,22 @@ func _stop(key: String) -> void:
 		Augments.GRAPPLE:
 			drop_line("reset")
 			aim = Augments.no_aim()
+			harpoon_buffer = 0.0
+			harpoon_buffer_reason = ""
 		Augments.GLIDE:
 			gliding = false
 		Augments.SLAM:
 			slamming = false
 			slam_fall = 0.0
 			plant_time = 0.0
+			slam_buffer = 0.0
 		Augments.PYLON:
 			mounted = false
 			slingshot.cancel()
 		Augments.SPRINT:
 			sprinting = false
 			sprint_left = 0.0
+			movement_buffer = 0.0
 			abilities.slot(AbilityState.MOVEMENT).active = false
 		Augments.VAULT:
 			vault_aim = {}

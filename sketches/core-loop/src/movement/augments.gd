@@ -103,13 +103,20 @@ static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 		return
 	var step: float = body_state.step
 	kit.tick_timers(step)
-	_sprint(kit, state, tuning, intent, aim, body_state, step)
 	kit.vault_aim = {}
 	if _mount(kit, state, tuning, intent, aim, body_state, step):
+		if kit.on(SPRINT):
+			kit.abilities.slot(AbilityState.MOVEMENT).active = false
+			state.cruise_boost = 1.0
 		_keep_body_line(kit, tuning, body_state)
 		return
 	if _hold_plant(kit, state, intent, body_state, step):
+		if kit.on(SPRINT) and kit.sprinting:
+			kit.sprinting = false
+			kit.abilities.slot(AbilityState.MOVEMENT).active = false
+			state.cruise_boost = 1.0
 		return
+	_sprint(kit, state, tuning, intent, aim, body_state, step)
 	_vault(kit, state, tuning, aim, body_state)
 	_blink(kit, tuning, intent, aim, body_state)
 	_claw_pull(kit, tuning, intent, aim, body_state)
@@ -178,12 +185,26 @@ static func _vault(kit, state, tuning, aim: Basis, body_state) -> void:
 	kit.facts.append(["dashed", [dir]])
 
 
+static func _burst_can_spend(kit) -> bool:
+	if kit.mounted:
+		return false
+	if kit.on(SPRINT):
+		return kit.abilities.ready(AbilityState.MOVEMENT) and not kit.sprinting
+	if kit.on(BLINK):
+		return kit.abilities.ready(AbilityState.MOVEMENT) or (kit.cloaked and kit.knob("cloak_free_blink"))
+	if kit.on(CLAW_PULL) or kit.on(SURGE) or kit.on(RECOIL):
+		return kit.abilities.ready(AbilityState.MOVEMENT)
+	return false
+
+
 static func _sprint(kit, state, tuning, intent, aim: Basis, body_state, step: float) -> void:
 	if not kit.on(SPRINT):
 		kit.sprinting = false
 		state.cruise_boost = 1.0
 		return
 	var slot = kit.abilities.slot(AbilityState.MOVEMENT)
+	if intent.movement_released:
+		kit.movement_buffer = 0.0
 	if kit.sprinting:
 		var drain: float = kit.knob("sprint_fire_drain") if intent.fire_held else 1.0
 		if kit.knob("sprint_perpetual") and state.tier >= SpeedTier.FAST:
@@ -195,7 +216,8 @@ static func _sprint(kit, state, tuning, intent, aim: Basis, body_state, step: fl
 			var v: Vector3 = body_state.linear_velocity
 			v.y += tuning.f("gravity") * (1.0 - kit.knob("sprint_float")) * step
 			body_state.linear_velocity = v
-	elif intent.movement_pressed and kit.abilities.spend(AbilityState.MOVEMENT):
+	elif (intent.movement_pressed or kit.movement_buffer > 0.0) and kit.abilities.spend(AbilityState.MOVEMENT):
+		kit.movement_buffer = 0.0
 		kit.sprinting = true
 		kit.sprint_left = slot.duration
 		var v: Vector3 = body_state.linear_velocity
@@ -210,10 +232,11 @@ static func _sprint(kit, state, tuning, intent, aim: Basis, body_state, step: fl
 
 
 static func _blink(kit, tuning, intent, aim: Basis, body_state) -> void:
-	if not kit.on(BLINK) or not intent.movement_pressed:
+	if not kit.on(BLINK) or not (intent.movement_pressed or kit.movement_buffer > 0.0):
 		return
 	if not (kit.cloaked and kit.knob("cloak_free_blink")) and not kit.abilities.spend(AbilityState.MOVEMENT):
 		return
+	kit.movement_buffer = 0.0
 	var v: Vector3 = body_state.linear_velocity
 	var dir := _flat_forward(aim, v)
 	var from: Vector3 = body_state.transform.origin
@@ -255,10 +278,11 @@ static func _blink_clear(space: PhysicsDirectSpaceState3D, query: PhysicsShapeQu
 
 
 static func _claw_pull(kit, tuning, intent, aim: Basis, body_state) -> void:
-	if not kit.on(CLAW_PULL) or not intent.movement_pressed:
+	if not kit.on(CLAW_PULL) or not (intent.movement_pressed or kit.movement_buffer > 0.0):
 		return
 	if not kit.abilities.spend(AbilityState.MOVEMENT):
 		return
+	kit.movement_buffer = 0.0
 	var v: Vector3 = body_state.linear_velocity
 	var dir := _flat_forward(aim, v)
 	var from: Vector3 = body_state.transform.origin
@@ -277,10 +301,11 @@ static func _claw_pull(kit, tuning, intent, aim: Basis, body_state) -> void:
 
 
 static func _surge(kit, tuning, intent, aim: Basis, body_state) -> void:
-	if not kit.on(SURGE) or not intent.movement_pressed:
+	if not kit.on(SURGE) or not (intent.movement_pressed or kit.movement_buffer > 0.0):
 		return
 	if not kit.abilities.spend(AbilityState.MOVEMENT):
 		return
+	kit.movement_buffer = 0.0
 	var v: Vector3 = body_state.linear_velocity
 	var planar := Vector2(v.x, v.z).length()
 	var dir := Vector3(v.x, 0.0, v.z) / planar if planar > SURGE_MIN_SPEED else _flat_forward(aim, v)
@@ -290,10 +315,11 @@ static func _surge(kit, tuning, intent, aim: Basis, body_state) -> void:
 
 
 static func _recoil(kit, tuning, intent, aim: Basis, body_state) -> void:
-	if not kit.on(RECOIL) or not intent.movement_pressed:
+	if not kit.on(RECOIL) or not (intent.movement_pressed or kit.movement_buffer > 0.0):
 		return
 	if not kit.abilities.spend(AbilityState.MOVEMENT):
 		return
+	kit.movement_buffer = 0.0
 	var v: Vector3 = body_state.linear_velocity
 	var dir := _flat_forward(aim, v)
 	var speed := maxf(Vector2(v.x, v.z).length(), tuning.f("dash_impulse") * RECOIL_SCALE)
@@ -316,6 +342,7 @@ static func attach(kit, from: Vector3, point: Vector3, normal := Vector3.ZERO, b
 	kit.line_state = LINE_LATCHED
 	kit.smash_left = 0.0
 	kit.slamming = false
+	kit.slam_buffer = 0.0
 
 
 static func commit_smash(kit, tuning, velocity: Vector3) -> void:
@@ -436,6 +463,7 @@ static func _slam(kit, state, tuning, intent, body_state, step: float) -> void:
 	if kit.slamming:
 		if state.grounded:
 			kit.slamming = false
+			kit.slam_buffer = 0.0
 			_plant(kit, state, tuning, body_state)
 			_hold_plant(kit, state, intent, body_state, step)
 			return
@@ -444,13 +472,15 @@ static func _slam(kit, state, tuning, intent, body_state, step: float) -> void:
 		kit.slam_velocity = v
 		body_state.linear_velocity = v
 		return
-	if not intent.brake_held:
+	if not intent.brake_held and kit.slam_buffer <= 0.0:
 		kit.brake_from_ground = false
-	elif state.grounded:
+	elif state.grounded and kit.slam_buffer <= 0.0:
 		kit.brake_from_ground = true
-	if kit.on(SLAM) and intent.brake_held and not state.grounded and not kit.brake_from_ground \
-			and not kit.hooked:
+	var want_slam: bool = (intent.brake_held and not kit.brake_from_ground) or kit.slam_buffer > 0.0
+	if kit.on(SLAM) and want_slam and not state.grounded and not kit.hooked:
 		kit.slamming = true
+		kit.slam_buffer = 0.0
+		kit.brake_from_ground = false
 		kit.slam_fall = maxf(0.0, -v.y)
 		kit.slam_velocity = v
 
@@ -495,17 +525,33 @@ static func _skid(kit, n: Vector3, hit: Vector3, into: float, body_state) -> voi
 static func _hold_plant(kit, state, intent, body_state, step: float) -> bool:
 	if kit.plant_time <= 0.0:
 		return false
-	if state.jump_buffer > 0.0:
-		kit.plant_jump = true
-		state.jump_buffer = 0.0
-	if intent.boost_pressed:
-		kit.plant_boost = true
+	if intent.boost_pressed and state.boost_cooldown > 0.0 and state.boost_cooldown <= Tuning.BOOST_BUFFER:
+		state.boost_buffer = Tuning.BOOST_BUFFER
+	var jump_cancel: bool = state.jump_buffer > 0.0 or intent.jump_pressed
+	var boost_cancel: bool = (intent.boost_pressed or state.boost_buffer > 0.0) and state.boost_cooldown <= 0.0
+	var burst_cancel: bool = (intent.movement_pressed or kit.movement_buffer > 0.0) and _burst_can_spend(kit)
+	var harpoon_cancel: bool = kit.hooked
+	if jump_cancel or boost_cancel or burst_cancel or harpoon_cancel:
+		kit.plant_time = 0.0
+		kit.plant_jump = false
+		kit.plant_boost = false
+		if body_state.linear_velocity.length_squared() < kit.plant_exit.length_squared():
+			body_state.linear_velocity = kit.plant_exit
+		state.velocity = body_state.linear_velocity
+		var cancel_axis: Vector3 = Rules.roll_axis(body_state.linear_velocity, kit.plant_normal)
+		body_state.angular_velocity = cancel_axis / Tuning.RADIUS if cancel_axis != Vector3.ZERO else Vector3.ZERO
+		if jump_cancel:
+			state.jump_buffer = maxf(state.jump_buffer, Tuning.JUMP_BUFFER)
+		if boost_cancel:
+			intent.boost_pressed = true
+		return false
 	kit.plant_time -= step
 	if kit.plant_time > 0.0:
 		_pin(body_state, kit.plant_at)
 		return true
 	kit.plant_time = 0.0
 	body_state.linear_velocity = kit.plant_exit
+	state.velocity = kit.plant_exit
 	var axis: Vector3 = Rules.roll_axis(kit.plant_exit, kit.plant_normal)
 	body_state.angular_velocity = axis / Tuning.RADIUS if axis != Vector3.ZERO else Vector3.ZERO
 	if kit.plant_jump:
@@ -563,6 +609,7 @@ static func _mount(kit, state, tuning, intent, aim: Basis, body_state, step: flo
 	kit.mount_point = kit.mount_face + kit.mount_normal * MOUNT_OFFSET
 	kit.mount_planted = true
 	kit.slamming = false
+	kit.slam_buffer = 0.0
 	kit.plant_time = 0.0
 	kit.gliding = false
 	kit.sprinting = false
