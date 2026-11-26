@@ -66,8 +66,8 @@ const DRIVER_PATH := "res://src/combat/warden_mind.gd"
 # grown [63.48, 27.16, 19.29] median 27.2 s (inside 25..45 s band; matches base 6d64bb411bff grown
 # median 27.16 s), ratio 3.93x (>= 2.0x), camper 0/3 breaks. Re-pinned both medians per KNOWN-FAILING.tsv
 # with all design bands and 10% tolerance unchanged.
-const EXPECT_SMALL_S := 98.6
-const EXPECT_GROWN_S := 30.8
+const EXPECT_SMALL_S := 66.6
+const EXPECT_GROWN_S := 29.6
 const TOLERANCE := 0.10
 
 var _settings := {}

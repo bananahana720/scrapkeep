@@ -99,7 +99,7 @@ func judge(hit: Dictionary) -> Dictionary:
 	var frame := int(hit.get("frame", 0))
 	var contact := base.has(kind)
 	var effective_punch := punch
-	if not contact and ranged_heft_scale > 0.0 and plating > 0.0:
+	if not contact and ranged_heft_scale > 0.0 and plating > 0.0 and (hit.has("speed_ratio") or hit.has("heft")):
 		var hit_heft := maxf(1.0, float(hit.get("heft", 1.0)))
 		var speed_ratio := clampf(float(hit.get("speed_ratio", ranged_speed_floor)), ranged_speed_floor, 2.5)
 		effective_punch = punch * hit_heft * speed_ratio * ranged_heft_scale

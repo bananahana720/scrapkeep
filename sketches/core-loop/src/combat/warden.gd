@@ -487,6 +487,11 @@ func _leave_slag() -> void:
 	_slag_phase(lane, PHASE_WINDUP)
 
 
+func advance_choir_clock(delta: float) -> void:
+	if variant == "choir" and not staggered() and delta > 0.0:
+		_lens_clock += delta
+
+
 func _step_choir(delta: float) -> void:
 	if variant != "choir" or staggered():
 		return

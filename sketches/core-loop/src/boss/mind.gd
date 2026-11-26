@@ -265,8 +265,8 @@ func _step_hand_timers(delta: float, accel: float) -> void:
 			hand._rest = maxf(0.0, float(hand._rest) - bonus)
 		if "_takeover_cd" in hand and float(hand._takeover_cd) > 0.0:
 			hand._takeover_cd = maxf(0.0, float(hand._takeover_cd) - bonus)
-	if is_instance_valid(warden) and not warden.staggered() and warden.variant == "choir":
-		warden._lens_clock += bonus
+	if is_instance_valid(warden):
+		warden.advance_choir_clock(bonus)
 
 
 func _end_combo() -> void:
