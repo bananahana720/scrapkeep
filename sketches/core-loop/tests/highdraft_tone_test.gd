@@ -6,6 +6,7 @@ const Highdraft := preload("res://src/world/map_highdraft.gd")
 const MindDress := preload("res://src/presentation/arena_mind_dress.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
+const WorldLook := preload("res://src/presentation/world_look.gd")
 var t := T.new("highdraft_tone_test")
 
 class ProbeTerrain extends "res://src/world/terrain.gd":
@@ -84,7 +85,7 @@ func _aerial_gradient(mesh: Mesh) -> bool:
 	var greatest_error := 0.0
 	for i in mini(before.size(), after.size()):
 		var height := clampf((vertices[i].y - bounds.position.y) / maxf(bounds.size.y, 0.01), 0.0, 1.0)
-		var sky := Color("798c9e").lerp(Color("a9b6c0"), height).srgb_to_linear()
+		var sky := (WorldLook.ROWS[3]["haze"] as Color).lerp(WorldLook.ROWS[3]["fill_color"], height).srgb_to_linear()
 		var value := lerpf(0.5, 1.05, height)
 		var expected := before[i].lerp(sky, lerpf(0.55, 0.4, height)) * Color(value, value, value)
 		var error := Vector3(after[i].r - expected.r, after[i].g - expected.g, after[i].b - expected.b).abs()

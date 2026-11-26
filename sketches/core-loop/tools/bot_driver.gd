@@ -2238,6 +2238,11 @@ func _anchor_warden(target) -> bool:
 	return target != null and is_instance_valid(target) and target.get("harpoon_anchor") == true
 
 
+func _is_flume_warden(target) -> bool:
+	return target != null and is_instance_valid(target) \
+			and target.get("family") == "reactor" and target.get("mounting") == "flume"
+
+
 func _sheet_warden(target: Node3D) -> bool:
 	return target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
 			and target.spec.get("park_landmark", false) and target.mount_driver != null \
@@ -2410,7 +2415,7 @@ func _anchor_bite(target: Node3D, ball: Vector3) -> void:
 		swallowed = true
 	if swallowed or kit.rewind_left > 0.0 or kit.aim.get("body") != target or ball.distance_to(target.global_position) > LATCH_REACH:
 		return
-	if not (target.has_method("staggered") and target.staggered()):
+	if not (not _is_flume_warden(target) and target.has_method("staggered") and target.staggered()):
 		_cast(3)
 	source.press["harpoon_pressed"] = true
 	_harpoon_held = true
@@ -4003,7 +4008,7 @@ func _line_hands() -> void:
 	var body: Node3D = kit.anchor_body
 	if not body.is_in_group("enemy"):
 		return
-	if body.has_method("staggered") and body.staggered():
+	if not _is_flume_warden(body) and body.has_method("staggered") and body.staggered():
 		return
 	if game.player.ball_position().distance_to(body.global_position) <= LINE_CAST_REACH:
 		_cast(3)
@@ -4223,10 +4228,11 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 			hold["jump_held"] = true
 	var chain_hand: bool = policy == "completionist" and chain_hand_enabled and _chain_phase != "" and not _in_boss()
 	var haul_commit: bool = _harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH)
+	var flume_target: bool = _is_flume_warden(_fight_target)
 	var kest_drop_hang: bool = class_id() == "demolitions_caster" and not player.state.grounded \
-			and is_instance_valid(_fight_target) and _anchor_warden(_fight_target) \
+			and not flume_target and is_instance_valid(_fight_target) and _anchor_warden(_fight_target) \
 			and (_fight_target.staggered() or (player.kit.hooked and player.kit.on_body and player.kit.anchor_body == _fight_target))
-	if (haul_commit or kest_drop_hang) and _cast_phase == "":
+	if ((haul_commit and not flume_target) or kest_drop_hang) and _cast_phase == "":
 		hold.erase("fire_held")
 	if not chain_hand and haul_commit:
 		source.press.erase("jump_pressed")

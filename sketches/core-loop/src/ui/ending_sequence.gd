@@ -438,15 +438,17 @@ func _dress_world(holder: Node3D, stage: int, world: int) -> void:
 		HighdraftScenery.build(holder, map)
 
 
+const PARK_GROUND_TINTS := {
+	1: Color(0.75, 0.61, 0.44),
+	2: Color(0.45, 0.49, 0.54),
+	3: Color(0.68, 0.56, 0.47),
+}
+
+
 func _park_spot_and_fwd(map, map_id: String) -> Dictionary:
-	if map_id == "park_dam":
-		return {"spot": Vector2(0.0, 445.0), "fwd": Vector3(0.0, 0.0, 1.0)}
-	if map_id == "park_flume":
-		return {"spot": Vector2(180.0, 460.0), "fwd": Vector3(90.0, 0.0, 50.0).normalized()}
-	if map_id == "park_pit":
-		return {"spot": Vector2(0.0, 145.0), "fwd": Vector3(0.0, 0.0, 1.0)}
-	if map_id == "park_sinkhole":
-		return {"spot": Vector2(0.0, 210.0), "fwd": Vector3(0.0, 0.0, 1.0)}
+	if Worlds.ENDING_PARK_SPOTS.has(map_id):
+		var row: Dictionary = Worlds.ENDING_PARK_SPOTS[map_id]
+		return {"spot": row["spot"], "fwd": (row["fwd"] as Vector3).normalized()}
 	var h: Vector3 = map.heading
 	var fwd := Vector3(h.x, 0.0, h.z).normalized() if Vector2(h.x, h.z).length() > 0.01 else Vector3.BACK
 	return {"spot": map.spawn, "fwd": fwd}
@@ -500,11 +502,7 @@ func _build_park_ground(holder: Node3D, stage: int, world: int, map_id: String) 
 	var max_x := mini(int(ParkTerrain.HALF) - step, int(ceilf((center.x + half_span) / step)) * step)
 	var min_z := maxi(int(-ParkTerrain.HALF), int(floorf((center.y - half_span) / step)) * step)
 	var max_z := mini(int(ParkTerrain.HALF) - step, int(ceilf((center.y + half_span) / step)) * step)
-	var base := Color(0.75, 0.61, 0.44)
-	if world == 2:
-		base = Color(0.45, 0.49, 0.54)
-	elif world == 3:
-		base = Color(0.68, 0.56, 0.47)
+	var base: Color = PARK_GROUND_TINTS.get(world, PARK_GROUND_TINTS[1])
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
 	for z in range(min_z, max_z, step):

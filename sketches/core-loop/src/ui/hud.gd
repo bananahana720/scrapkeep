@@ -536,10 +536,9 @@ func setup(game_ref) -> void:
 		var presentation = game.get("presentation")
 		if presentation == null or not presentation.names_boss():
 			var row: Dictionary = game.flow.boss_row(game.ctx.stages.world_of(game.run.stage))
-			var kind := String(row.get("kind", "brindle"))
 			var title := String(row.get("name", EventKinds.hud("boss_arena_entered")))
-			var icon := "fac_fleet" if kind == "brindle" else "obj_warden"
-			var tint := EventKinds.color("boss_arena_entered") if kind == "brindle" else Palette.ANCIENT
+			var icon := String(row.get("card_icon", "fac_fleet"))
+			var tint: Color = EventKinds.color("boss_arena_entered") if bool(row.get("card_event_tint", true)) else Palette.ANCIENT
 			launch_card.show_card(icon, title, tint))
 	game.events.run_started.connect(func(_class_id: String):
 		_title_world = 0
@@ -1341,15 +1340,11 @@ func objective_reading() -> Dictionary:
 	elif id in OPEN_ROWS and reading.get("open", false):
 		icon = Objectives.COCKPIT_GLYPH
 	elif id == "break_brindle":
-		var boss_kind := String(flow.boss_row(game.ctx.stages.world_of(game.run.stage)).get("kind", ""))
-		var boss_body = _brindle_hull()
-		var boss_open: bool = is_instance_valid(boss_body) and boss_body.has_method("staggered") and boss_body.staggered()
-		if boss_kind == "waking":
-			words = "Smash the Waking's core" if boss_open else "Break the Waking's plates"
-			icon = "cat_damage" if boss_open else "obj_warden"
-			color = EventKinds.state_color("open") if boss_open else Palette.ANCIENT
-		elif boss_kind == "mind":
-			words = "Smash the Mind's core" if boss_open else "Break the Mind's guard"
+		var boss_row: Dictionary = flow.boss_row(game.ctx.stages.world_of(game.run.stage))
+		if boss_row.has("obj_closed"):
+			var boss_body = _brindle_hull()
+			var boss_open: bool = is_instance_valid(boss_body) and boss_body.has_method("staggered") and boss_body.staggered()
+			words = String(boss_row["obj_open"]) if boss_open else String(boss_row["obj_closed"])
 			icon = "cat_damage" if boss_open else "obj_warden"
 			color = EventKinds.state_color("open") if boss_open else Palette.ANCIENT
 	return {"id": id, "icon": icon, "words": words, "color": color,

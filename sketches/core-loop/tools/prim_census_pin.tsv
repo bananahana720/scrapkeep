@@ -17,6 +17,7 @@ rescue_site.gd	BoxMesh	*_cage/Node3D/MeshInstance3D	code	-	the cage's dashed gro
 game.gd	BoxMesh	Node3D/ReactorSheet	code	-	the reactor warden's water sheet (warden_reactor.gd _show_sheet): a translucent 24 by 16 m footprint live for 3 s, an attack effect hung on the world root
 accretion.gd	BoxMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	CylinderMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
+accretion.gd	SphereMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	CylinderMesh	*/Foot_*/MeshInstance3D	code	-	tier foot under a part (W1-26 tier mark: the shape is the read)
 activity_view.gd	BoxMesh	*/View_*/Column	code	-	activity column, glyph and ring: marks
 activity_view.gd	BoxMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks

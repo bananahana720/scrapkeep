@@ -1071,11 +1071,13 @@ func _read_ctrl(delta := 0.0) -> void:
 		elif on_body:
 			_fail("haul", "committed")
 		elif kit.hooked:
-			if kit.on(Augments.SLAM) and not Augments.holding(kit) and not in_set_piece():
+			if kit.on(Augments.SLAM) and not Augments.holding(kit) and not in_set_piece() \
+					and (not state.grounded or state.jump_buffer > 0.0 or intent.jump_pressed or state.velocity.y > 0.5):
 				kit.slam_buffer = Tuning.SLAM_BUFFER_S
 		elif _ctrl_idle():
 			_fail("haul", "no_line")
-		elif kit.on(Augments.SLAM) and not Augments.holding(kit) and not in_set_piece():
+		elif kit.on(Augments.SLAM) and not Augments.holding(kit) and not in_set_piece() \
+				and (not state.grounded or state.jump_buffer > 0.0 or intent.jump_pressed or state.velocity.y > 0.5):
 			kit.slam_buffer = Tuning.SLAM_BUFFER_S
 	if line_stands():
 		_ctrl_claimed = true

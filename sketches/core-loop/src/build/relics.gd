@@ -282,14 +282,14 @@ static func eligible(pilot: String, held: Dictionary, tree = null, world := 0, i
 
 static func eligible_swaps(pilot: String, held: Dictionary, tree = null, world := 0, include_prior := false) -> Array:
 	var out := eligible(pilot, held, tree, world, true).filter(func(id): return swap_of(id) != "")
-	if not out.is_empty() or not include_prior or world <= 1:
+	if not out.is_empty() or not include_prior:
 		return out
 	var table := all_rows()
 	for id in table:
 		var r: Dictionary = table[id]
 		if not fits(id, pilot) or held.has(r["slot"]) or swap_of(id) == "":
 			continue
-		if int(r["world"]) > world:
+		if int(r["world"]) >= world:
 			continue
 		if tree != null and tree.gives_swap(r["slot"], swap_of(id)):
 			continue
