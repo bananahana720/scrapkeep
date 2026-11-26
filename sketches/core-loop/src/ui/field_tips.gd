@@ -230,7 +230,6 @@ func _step_showing(delta: float) -> void:
 	_release()
 
 
-# A fight or a reward choice takes the showing tip down until the next quiet stretch of play.
 func _withdraw() -> void:
 	if showing == "":
 		return

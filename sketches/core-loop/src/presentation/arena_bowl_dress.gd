@@ -363,7 +363,6 @@ func _surfaces(arena: Node3D) -> void:
 	ramp_mat.albedo_color = Palette.COPPER
 	var mast_mat := _slot_material("foundry_steel")
 	mast_mat.resource_name = "bowl_crane_masts"
-	# A weathered steel upright against the copper of the inward ramp and the rim repairs.
 	mast_mat.albedo_color = Palette.MAST_STEEL
 	# Only arena-owned views carry this metadata. Combat/hazards and vent pads stay live.
 	for view: MeshInstance3D in arena.get_children().filter(func(n): return n is MeshInstance3D):

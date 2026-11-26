@@ -379,9 +379,6 @@ export function engineContext(args, platform = process.platform) {
   return { target: args.exe ? "packed" : "debug-editor", cache };
 }
 
-// The engine capture's scratch HOME: a fresh one in the run folder, or --home=<dir>, which must
-// already exist under artifacts/local/, so a reading never runs on the player's own HOME. Both paths
-// are resolved through links first, so a link inside artifacts/local/ cannot lead out of it.
 export function engineHome(args, outDir, localRoot = path.join(root, "artifacts/local")) {
   if (!args.home) return path.join(outDir, "home");
   if (!existsSync(args.home)) throw new FrametimeError("no folder at --home=" + args.home);
@@ -501,8 +498,6 @@ function collect(run, args, outDir, noLogMessage, context = null) {
   return analyse(logFile, args, outDir, selfPlay, context);
 }
 
-// The game runs while this reading holds the machine quiet (holdQuietSync in scripts/sketch-smoke.mjs). The hold is
-// taken only here, after the arguments and the target are checked, and is given back when the game exits.
 function launchQuiet(quiet, launch) {
   if (!quiet) return launch();
   let held;

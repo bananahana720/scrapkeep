@@ -459,9 +459,6 @@ static func _plan(scenery: Node3D, sites, map) -> Array:
 		puff.size = Vector2(2, 2)
 		puff.flip_faces = true
 		_batch(scenery, "WaterMist", puff, mist, Color("bcd4da"))
-	# A row that carries clear_view keeps the strip behind its rear edge free of trees, so the ball
-	# arrives with the row and what lies past it in one view. Filter after seating so the other
-	# trees and mist retain their seed.
 	for row in map.park["park_rows"]:
 		if row.has("clear_view"):
 			var frame := ParkSites.frame(row)

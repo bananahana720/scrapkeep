@@ -49,8 +49,6 @@ const CORE_EMISSION := 0.6
 # top disc (the top face is at y 0.6) and its head in the lifted disc, so the disc never hangs free.
 const LINK_FOOT := 0.5
 const LINK_RADIUS := 0.16
-# The seated 0.30 m profile exposes the casing above the live paint. Only the
-# vertical mesh axis grows. The floor contact and the disc's plan are preserved.
 const CASING_HALF_HEIGHT := 0.10
 const DEPLOYED_PROFILE := 1.5
 const DISC_RADIUS := 1.05
@@ -164,8 +162,6 @@ func _go_live() -> void:
 	var pit := telegraph()
 	if pit == null or not windup_pose_enabled:
 		return
-	# The missing top disc is now the tool in the pit. Its mesh is a child of the
-	# existing mark, so an interrupted, expired or destroyed pit takes it along.
 	var disc := MeshInstance3D.new()
 	disc.name = "DeployedDisc"
 	disc.mesh = _top_disc.mesh

@@ -70,8 +70,6 @@ export function windowCounts(samples, pid) {
     periodMs: 50, maxGapMs, missed, onScreen, targetOnScreen, frontmostChanges };
 }
 
-// The first reading precedes spawn, and a new reading brackets exit. Failure to sample
-// never becomes a receipt with zero windows. The positive control must match the child's PID.
 function startSampler() {
   return spawn("/usr/bin/osascript", ["-l", "JavaScript", "-e", SAMPLER], { stdio: ["ignore", "pipe", "pipe"] });
 }

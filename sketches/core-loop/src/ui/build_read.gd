@@ -15,7 +15,6 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 const VIEW := Vector2i(300, 240)
 const TURN := 0.6
-# The pod faces -Z; open on the pilot almost head-on before the turn shows the panels.
 const OPEN_ANGLE := deg_to_rad(175.0)
 const LABEL_LIFT := 1.75
 # A panel tag's letter height in the view's world units.
@@ -126,7 +125,6 @@ func refresh(run, overflow := 0, class_id := "", effective := {}) -> void:
 		_list.add_child(_line(line))
 
 
-# Fits the worn shell and its pilot. The sphere stays for a missing shell or painter.
 func wear(painter, player) -> void:
 	if painter == null or player == null:
 		return

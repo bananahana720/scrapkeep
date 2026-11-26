@@ -527,8 +527,6 @@ func _build_companion() -> void:
 	_freeze_visual(model)
 
 
-# Reject malformed imported scenes before they enter any physics space. With strip_collision, a scene that
-# carries collision (a park recipe imports its -col mesh and body) has it removed instead of being refused.
 func visual_scene(path: String, strip_collision := false) -> Node3D:
 	var packed := load(path) as PackedScene if ResourceLoader.exists(path) else null
 	if packed == null:

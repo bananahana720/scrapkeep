@@ -1,24 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "models-render" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// What it measures: no generated (Tripo) enemy model renders darker than its authored one, for the 6 enemy kinds that
-// have one, in two views. sketches/core-loop/tools/model_render_check.gd shoots each kind in the real game, measures
-// only the parts drawn from the model file (code-built nets, masts and lamps are masked out), and its compare needs at
-// least 0.80 of the authored brightness with at most 0.15 more near-black pixels. The compare ends with one line:
-//   SUMMARY {"judged": n, "pinned": 6, "failed": [kind...], "missing": [kind...], "plant": ""}
-// The receipt passes only when the real compare printed one verdict line per pinned kind, judged all 6, found no kind
-// missing its generated model and none too dark, ran with no plant, and the planted compare (RENDER_PLANT=dark_models:
-// every kind's model parts painted near-black as it is shot, the fault of the rejected dark hooker body) shows the
-// plant in its stats and failed every one of the 6 kinds. A plant switch left in the caller's environment reaches the
-// real shoot (the authored shoot refuses it), so the receipt fails.
-// The head comes from cleanHead (clean-head.mjs).
-//
-// A shoot needs a graphics display, so every run goes through display-run.mjs (a machine slot, a window, a scratch
-// HOME): the authored shoot, the --models=tripo-all shoot, the compare, then the planted tripo-all shoot and its
-// compare. Shoots and sheets land in a new folder under artifacts/local/. Where display-run.mjs has no display (Linux
-// without one; the PC's gamescope lane is not built), the receipt fails with that reason.
-//
-//   node scripts/gate/model-render-receipt.mjs --out <file>
 import { mkdirSync, mkdtempSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,7 +20,6 @@ const summaryOf = (text) => {
 };
 const kindLines = (text) => String(text ?? "").split("\n").filter((l) => /^(PASS|FAIL) \w+: /.test(l));
 
-// real and plant: { log } of the real compare and the planted compare.
 export function buildReceipt(real, plant, head) {
   const s = summaryOf(real.log);
   const p = summaryOf(plant.log);
@@ -71,10 +50,8 @@ export function buildReceipt(real, plant, head) {
   return { head, pass, measured, plant_caught: caught };
 }
 
-// A failed step's log: what ran, its exit, and the output's last lines (no SUMMARY in it, so the receipt misses).
 const stepFailed = (name, r) => `${name} ${r.timedOut ? "timed out" : `exit ${r.exit}`}: ${String(r.output).trim().split("\n").slice(-4).join(" | ")}`;
 
-// The real shoot and compare, then the planted ones, each through display-run.mjs. window is injectable for the tests.
 export async function runShoots(cwd, { window = runWindowed } = {}) {
   mkdirSync(path.join(cwd, "artifacts/local"), { recursive: true });
   const dir = mkdtempSync(path.join(cwd, "artifacts/local/model-render-"));
@@ -99,7 +76,6 @@ export async function runShoots(cwd, { window = runWindowed } = {}) {
   return { real: { log: real.output }, plant: { log: plant.output }, dir };
 }
 
-// The receipt for the checkout at cwd. run is injectable so the refusal can be tested without Godot.
 export async function produce({ cwd = root, run = runShoots } = {}) {
   const head = cleanHead(cwd);
   const { real, plant } = await run(cwd);

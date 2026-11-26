@@ -1028,8 +1028,6 @@ def build_penstock_tower():
         if name != "E":
             surface.poly([L(*point) for point in points], color, up=inward)
             return
-        # The grade cuts through the terrain beneath this draw-only liner. Keep the same opening
-        # in the formwork, its stains and the mid view, so the eye and the ball have the same way out.
         outline = [(z, y) for _, y, z in points]
         for normal, limit in (((1, 0), opening[0]), ((-1, 0), -opening[1])):
             section = clip(outline, normal, limit)

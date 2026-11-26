@@ -1,7 +1,3 @@
-// Run a pixel-producing script with scratch saves, a machine slot and an exclusive drawn-run lock.
-// On the Mac, --offscreen uses the native embedded Metal display and a 50 ms window watcher.
-// Mac callers need a watched qualification for each tool. Only the Gate runs the visible CLI reference.
-// Linux library callers supply their own display (the PC uses headless gamescope).
 import { createHash } from "node:crypto";
 import { spawn, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -14,18 +10,14 @@ import { root } from "./clean-head.mjs";
 
 export const SKETCH = "sketches/core-loop";
 export const TIMEOUT_MS = 600_000;
-// Engine flags a caller may not pass: each would defeat the window or point Godot at another project.
 export const REFUSED_ENGINE_ARGS = ["--headless", "--display-driver", "--rendering-driver", "--path"];
 
-// Why a window cannot open here, or "" when it can.
 export function displayProblem(platform = process.platform, env = process.env) {
   if (platform === "darwin") return "";
   if (platform === "linux") return env.DISPLAY || env.WAYLAND_DISPLAY ? "" : "not supported here: no DISPLAY or WAYLAND_DISPLAY (the PC lane is gamescope headless, not built in display-run.mjs)";
   return `not supported here: no display lane for ${platform}`;
 }
 
-// The scratch environment for one run: a new folder under <cwd>/artifacts/local/display-run, refused if it would
-// resolve anywhere else. Every home variable points into it, whatever the platform.
 export function scratchEnv(cwd) {
   const local = path.resolve(cwd, "artifacts/local");
   const homes = path.resolve(local, "display-run");
@@ -42,11 +34,9 @@ export function scratchEnv(cwd) {
 }
 
 const killGroup = (child) => {
-  try { process.kill(-child.pid, "SIGKILL"); } catch { try { child.kill("SIGKILL"); } catch { /* already gone */ } }
+  try { process.kill(-child.pid, "SIGKILL"); } catch { try { child.kill("SIGKILL"); } catch {   } }
 };
 
-// Starts a process in its own group and resolves { exit, signal, output, timedOut }. At the timeout, or on SIGINT or
-// SIGTERM to this process while it runs, the whole group is killed. A seam for the tests.
 export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellation }) {
   cancellation?.throwIfAborted();
   return new Promise((resolve) => {
@@ -89,7 +79,6 @@ export function launch(command, argv, { env, cwd, timeoutMs, signal: cancellatio
   });
 }
 
-// Share the drawn lock across worktrees, while still participating in the ordinary machine-slot pool.
 export async function acquireDrawnSlot({ directory = "/tmp/scrapkeep-drawn.slots", log = console.error,
   machine = acquireSlot, pollMs = 2000 } = {}) {
   const drawn = await acquireSlot({ directory, slots: 1, pollMs, log: msg => log("display-run waiting: " + msg) });
@@ -149,10 +138,6 @@ async function runScript({
 
 const PROBE = "res://tools/offscreen_probe.gd";
 
-// Each admitted tool version has a kept Mac watcher receipt. During the owning subtask,
-// the candidate registration and its watched trial stay on that subtask's isolated branch.
-// Keep the receipt before admitting the registration to the stage. A helper marker alone
-// does not qualify a tool. The probe inherits the dam capture, so pin both scripts.
 const watchedTools = new Map([
   [PROBE, {
     // proof/W1-131 at 2c2dfa665, artifacts/proof/W1-131a/capture.json
@@ -171,8 +156,6 @@ function hasWatchedVersion(script, cwd) {
   });
 }
 
-// Whitelist engine options used by capture callers. An injected --script or project
-// selector would run a different entry point after qualification.
 function checkCaptureEngineArgs(argv) {
   for (let i = 0; i < argv.length; i += 2) {
     const [key, value] = argv.slice(i, i + 2);
@@ -213,8 +196,6 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
   const refusal = new Error("Mac capture refused before launch: no watched qualification for this script version: " + script);
   const refused = { exit: null, supported: false, timedOut: false, home: null, output: refusal.message };
   if (!hasWatchedVersion(script, cwd)) return refused;
-  // Both the machine slot and the first watcher sample may take time. Recheck the
-  // files after each wait, immediately before the corresponding Godot invocation.
   const verifyBeforeSpawn = () => {
     if (!hasWatchedVersion(script, cwd)) throw refusal;
   };
@@ -238,8 +219,6 @@ async function macCapture({ script, args = [], reference = false, cwd = root, en
       const recorded = reference ? w.targetOnScreen > 0 :
         w.onScreen === 0 && w.frontmostChanges === 0 && (!requireMarker || result.output.split(/\r?\n/).includes("OFFSCREEN_WINDOW " + result.pid + " embedded"));
       if (result.timedOut || w.missed !== 0 || !recorded) {
-        // The models-render producer reads SUMMARY even when its planted compare exits 1.
-        // A run with invalid display evidence cannot supply that producer with a verdict.
         const message = "display-run: invalid capture; see window counts and helper acknowledgement";
         const output = requireMarker ? result.output + "\n" + message : message;
         return { ...result, output, exit: result.exit || 1 };

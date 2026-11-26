@@ -41,7 +41,6 @@ const RADIUS := 2.3
 # How close the body must come to the ball to hit it; the lane's running-body mark reads the same.
 const HIT_REACH := RADIUS + 1.6
 const HALF_HEIGHT := 3.45
-# How near the ball's centre can come to the body's before the body stops it; PackPressure.lead_aim cuts its lead there.
 const BODY_CONTACT := RADIUS + Tuning.RADIUS
 const WALK := 5.5
 const STALK := 1.6
@@ -51,8 +50,6 @@ const SLAM_RADIUS := 7.0
 const SLAM_HEIGHT := 9.0
 const SLAM_DAMAGE := 24.0
 const SLAM_SHOVE := 9.0
-# _slam_spot: the world layer it checks, how far short of a wall the body lands (its radius and a margin),
-# the height its ray runs above the ground, and how far above and below the spot it looks for ground.
 const WORLD_LAYER := 1
 const LEAP_CLEAR := RADIUS + 0.5
 const LEAP_RAY_LIFT := 0.5
@@ -274,10 +271,6 @@ func _begin_attack(to_ball: Vector3) -> void:
 	_next_attack = 1 - _next_attack
 
 
-# Where a slam led to `led` may land. The leap sets the body's position with no collision check, so it
-# is never sent through a wall or off the stage: a ray from the ball toward the led point stops LEAP_CLEAR
-# short of the first thing on the world layer, and a ray down there must find ground. Otherwise the slam
-# lands on the ball, as an unled one does.
 func _slam_spot(led: Vector3) -> Vector3:
 	var ball := _ball()
 	var flat := Vector3(led.x - ball.x, 0.0, led.z - ball.z)

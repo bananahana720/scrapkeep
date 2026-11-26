@@ -12,12 +12,9 @@ const KIND := "arena_wave"
 const ARM_M := 1.6
 const INNER_M := 0.66
 const ARM_WIDTH_M := 0.34
-# The full opening mark spans at most 8% of screen height (58 px at 720p).
 const MAX_HEIGHT_SHARE := 0.08
 const SPAN_M := (2.0 * ARM_M + ARM_WIDTH_M) * 0.70710678
 const START_SCALE := 2.2
-# The share of screen height a cross spans before it opens into tips, and the lower share it keeps them
-# down to: the gap is the hold that stops a cross at the line from flickering between meshes with sway.
 const TIPS_OPEN_SHARE := 0.04
 const TIPS_KEEP_SHARE := 0.036
 
@@ -60,7 +57,6 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 
-# Reproject after the chase camera moves, including frames between physics ticks.
 func _process(_delta: float) -> void:
 	_close()
 
@@ -75,7 +71,6 @@ func _close() -> void:
 			var centre: Vector2 = camera.unproject_position(arms.global_position)
 			var top: Vector2 = camera.unproject_position(arms.global_position + camera.global_basis.y)
 			var full_span := centre.distance_to(top) * SPAN_M * START_SCALE
-			# At distance the strokes meet. Up close they open over the live shell.
 			var screen_h := get_viewport().get_visible_rect().size.y
 			tips = full_span >= screen_h * (TIPS_KEEP_SHARE if arms.mesh == _tips else TIPS_OPEN_SHARE)
 			if full_span > 0.0:
@@ -86,7 +81,6 @@ func _close() -> void:
 		arms.scale = Vector3.ONE * unit * lerpf(1.0, START_SCALE, left)
 
 
-# Four diagonal tips keep the centre open over a live attack, all on one surface.
 static func _mesh(inner: float, stroke: float) -> ArrayMesh:
 	var verts := PackedVector3Array()
 	var indices := PackedInt32Array()

@@ -68,7 +68,6 @@ func _run() -> void:
 	var base: Vector3 = terrain.drop_point(-65.0, -130.0, 0.0)
 	game.player.reset_to(base + Vector3(0, 0, -60))
 	game.player.visible = false
-	# The launch lip hides the feet on the dam; its open apron leaves ground beneath the tools.
 	var at: Vector3 = terrain.drop_point(10.0, 540.0, 1.2) if dam_apron else terrain.drop_point(base.x + 30.0, base.z + 25.0, 1.2)
 	var centre: Vector3 = at + Vector3.UP * (1.6 if dam_apron else 0.6)
 	for kind in kinds:

@@ -1,8 +1,5 @@
 extends RefCounted
 
-# Headless witness of the crew's collider through the rider's lens. The drawn
-# footprint at a mouth is a separate look-harness measurement. World geometry
-# is layer 1; the ball and other moving crews use different layers.
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 
 var _active := {}
@@ -10,7 +7,6 @@ var _rows := {}
 
 
 func spawned(body: Node3D, kind: String) -> void:
-	# These two anchored set pieces also pass through spawn_enemy.
 	if kind in ["warden", "vault"]:
 		return
 	var row := {"kind": kind, "seen": false, "pop_in": false, "warned": false,
@@ -31,8 +27,6 @@ func _phase(fact: Dictionary, row: Dictionary) -> void:
 		row.warned = true
 
 
-# Cache body-local samples from the actual shapes at spawn. The centre and
-# six face centres capture a shoulder or crown emerging before the origin.
 func _points(body: Node3D) -> PackedVector3Array:
 	var points := PackedVector3Array()
 	if body is CollisionObject3D:
@@ -67,8 +61,6 @@ func _visible(cam: Camera3D, body: Node3D, points: PackedVector3Array) -> bool:
 	return false
 
 
-# Call once per physics tick. An interval is credited only after the body
-# was actually visible. A warning before its first visible tick keeps zero.
 func sample(cam: Camera3D, delta: float) -> void:
 	for id in _active.keys():
 		var track: Dictionary = _active[id]

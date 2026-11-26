@@ -46,9 +46,6 @@ const BASES := {
 const BASE_BLEND := 0.1
 
 
-# Seats a pilot in its idle loop from the first frame (PILOT-CLIPS section 3 rule 9), for a pilot
-# shown where no reaction drives it (the class card, the Build preview). A GLB with no idle_loop
-# gets the animator stopped and its bones at rest pose. Returns the clip now playing, or "".
 static func seat_idle(animator: AnimationPlayer, pilot: Node) -> String:
 	if animator == null or pilot == null:
 		return ""

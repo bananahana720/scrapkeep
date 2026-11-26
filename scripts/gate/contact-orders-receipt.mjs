@@ -1,17 +1,4 @@
 #!/usr/bin/env node
-// The receipt for the world 1 done read's row "same-seed-same-run" (scripts/world1-bands.rows.json):
-//   { head, pass, measured, plant_caught }
-// It runs sketches/core-loop/tests/contact_orders_all_test.gd twice, alone, through the project's runner, on this
-// checkout, and takes the head from git (cleanHead refuses a dirty checkout):
-//   1. as it ships: every arrival order of five contact sets of up to four same-tick contacts, each order on a fresh
-//      game, touches delivered at the first touch's place (the first body_entered of a tick tells every enemy met
-//      that tick, src/movement/rigid_ball.gd:353-362, so no fact can land between two touches taking effect). The
-//      count of orders is pinned here and in the test. A set whose orders end in different states fails the receipt.
-//   2. with CONTACT_PLANT=nosort, a test-only switch that bypasses the game's contact sort on the checks that carry
-//      the claim: the test must fail them. A pass whose plant was not seen to fail is void.
-// Not claimed: a pickup with any damage in the same tick ends in a state that depends on which lands first.
-//
-//   node scripts/gate/contact-orders-receipt.mjs --out <file>
 import { realpathSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
@@ -34,7 +21,6 @@ const SAME = /^\[same state (\S+(?: \S+)*?): ([^\]]+)\] (\d+) orders ran, (\d+) 
 const sameRows = (text) => text.split("\n").map((l) => l.match(SAME)).filter(Boolean)
   .map((m) => ({ mode: m[1], set: m[2], ran: Number(m[3]), differ: Number(m[4]), detail: m[5].replace(/^; /, ""), ok: m[6] === "ok" }));
 
-// run and plant: { ok, log } of the shipped run and the planted run, ok from the runner.
 export function buildReceipt(run, plant, head) {
   const main = run.log;
   const lines = main.split("\n");
@@ -61,7 +47,6 @@ export function buildReceipt(run, plant, head) {
   return { head, pass, measured, plant_caught: caught };
 }
 
-// The receipt for the checkout at cwd. run is injectable so the refusal can be tested without Godot.
 export function produce({ cwd = root, run = runAlone } = {}) {
   const head = cleanHead(cwd);
   const main = run(cwd, TEST);

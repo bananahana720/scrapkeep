@@ -48,8 +48,6 @@ func setup(world_ref) -> void:
 			active = true
 
 
-# The warning disc of each live fall as [{id, cause, covers}], cause the one lose_scrap is called with. The bot's fairness
-# record reads this (tools/bot_fairness.gd).
 func telegraphs(ball: Vector3) -> Array:
 	var out: Array = []
 	for fall in _live:
