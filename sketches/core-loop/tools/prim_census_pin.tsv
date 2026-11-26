@@ -18,6 +18,7 @@ game.gd	BoxMesh	Node3D/ReactorSheet	code	-	the reactor warden's water sheet (war
 accretion.gd	BoxMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	CylinderMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	SphereMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
+accretion.gd	TorusMesh	Accretion/Halo_*/MeshInstance3D	code	-	synergy halo rings on the ball (accretion.gd _build_halo)
 accretion.gd	CylinderMesh	*/Foot_*/MeshInstance3D	code	-	tier foot under a part (W1-26 tier mark: the shape is the read)
 activity_view.gd	BoxMesh	*/View_*/Column	code	-	activity column, glyph and ring: marks
 activity_view.gd	BoxMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks

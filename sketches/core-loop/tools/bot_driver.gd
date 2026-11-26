@@ -2243,6 +2243,17 @@ func _is_flume_warden(target) -> bool:
 			and target.get("family") == "reactor" and target.get("mounting") == "flume"
 
 
+func _is_flume_stage() -> bool:
+	if _is_flume_warden(_fight_target) or _is_flume_warden(_anchor_target):
+		return true
+	if game != null and game.flow != null:
+		if _is_flume_warden(game.flow.warden):
+			return true
+		if game.flow.has_method("stage_def") and String(game.flow.stage_def().get("map", "")) == "park_flume":
+			return true
+	return false
+
+
 func _sheet_warden(target: Node3D) -> bool:
 	return target.get("family") == "reactor" and target.get("mounting") == "dam_face" \
 			and target.spec.get("park_landmark", false) and target.mount_driver != null \
@@ -4228,11 +4239,11 @@ func _drive(steer: Vector3, aim, delta: float) -> void:
 			hold["jump_held"] = true
 	var chain_hand: bool = policy == "completionist" and chain_hand_enabled and _chain_phase != "" and not _in_boss()
 	var haul_commit: bool = _harpoon_commit or (player.kit.hooked and player.kit.line_state == Augments.LINE_SMASH)
-	var flume_target: bool = _is_flume_warden(_fight_target)
+	var flume_stage: bool = _is_flume_stage()
 	var kest_drop_hang: bool = class_id() == "demolitions_caster" and not player.state.grounded \
-			and not flume_target and is_instance_valid(_fight_target) and _anchor_warden(_fight_target) \
+			and not flume_stage and is_instance_valid(_fight_target) and _anchor_warden(_fight_target) \
 			and (_fight_target.staggered() or (player.kit.hooked and player.kit.on_body and player.kit.anchor_body == _fight_target))
-	if ((haul_commit and not flume_target) or kest_drop_hang) and _cast_phase == "":
+	if ((haul_commit and not flume_stage) or kest_drop_hang) and _cast_phase == "":
 		hold.erase("fire_held")
 	if not chain_hand and haul_commit:
 		source.press.erase("jump_pressed")
