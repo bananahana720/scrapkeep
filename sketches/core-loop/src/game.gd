@@ -322,6 +322,7 @@ func _ready() -> void:
 	var auto_pause: Node = load("res://src/ui/auto_pause.gd").new()
 	add_child(auto_pause)
 	auto_pause.setup(self)
+	load("res://src/dev/dev_console.gd").hook(self)
 	if test_mode:
 		menu_modules()
 	else:
