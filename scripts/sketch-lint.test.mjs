@@ -10,6 +10,7 @@ import {
   L15_HZ_BASELINE,
   applyBaseline,
   baselineFrom,
+  buildScriptGraph,
   formatFinding,
   lintL1,
   lintL2,
@@ -27,10 +28,12 @@ import {
   lintL13,
   lintL14,
   lintL15,
+  lintL16,
   lintSketch,
   parseBatchDriverRefs,
   parseBatchDriverVars,
   parseTuning,
+  stronglyConnectedComponents,
 } from "./sketch-lint.mjs";
 import {
   SOURCES,
@@ -641,6 +644,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
     L2: [],
     L3: [],
     L4: [],
+    L16: [],
     W1: {},
     W2: {},
     W4: {},
@@ -1059,4 +1063,156 @@ test("L15 blocks hardcoded 60 Hz physics frame math and passes Engine.physics_ti
   assert.equal(ratcheted.length, 3);
   assert.match(ratcheted[0].message, /Engine\.physics_ticks_per_second/);
   assert.match(ratcheted[0].message, /L15_HZ_BASELINE allows 2/);
+});
+
+test("L16 extracts edges from preload, load, extends, path constants, data rows and class_name, and skips self, prefixes, strings and comments", () => {
+  const files = [
+    {
+      path: "sketches/core-loop/src/a/entry.gd",
+      text: [
+        'extends "res://src/a/base.gd"',
+        'const PRE := preload("res://src/a/preloaded.gd")',
+        'const PATH := "res://src/a/const_ref.gd"',
+        'const ROWS := [{"script": "res://src/a/row_ref.gd"}]',
+        'const SELF := "res://src/a/entry.gd"',
+        'const UID := "res://src/a/b.gd.uid"',
+        'const OTHER := "res://src/a/bb.gd"',
+        'const LABEL := "NamedClass inside string"',
+        'const DOC := """',
+        "NamedClass inside triple-quoted string",
+        '"""',
+        "# NamedClass in full comment",
+        "func _run() -> void:",
+        '\tvar dyn = load("res://src/a/loaded.gd")',
+        "\tvar ok := NamedClass.make() # OtherClass in inline comment",
+        "\tvar near := NamedClassExtra.make()",
+        "",
+      ].join("\n"),
+    },
+    { path: "sketches/core-loop/src/a/base.gd", text: "extends RefCounted\n" },
+    { path: "sketches/core-loop/src/a/preloaded.gd", text: "extends RefCounted\n" },
+    { path: "sketches/core-loop/src/a/loaded.gd", text: "extends RefCounted\n" },
+    { path: "sketches/core-loop/src/a/const_ref.gd", text: "extends RefCounted\n" },
+    { path: "sketches/core-loop/src/a/row_ref.gd", text: "extends RefCounted\n" },
+    { path: "sketches/core-loop/src/a/b.gd", text: "extends RefCounted\n" },
+    { path: "sketches/core-loop/src/a/bb.gd", text: "extends RefCounted\n" },
+    {
+      path: "sketches/core-loop/src/a/named.gd",
+      text: "class_name NamedClass\nextends RefCounted\nstatic func make():\n\treturn NamedClass.new()\n",
+    },
+    {
+      path: "sketches/core-loop/src/a/other.gd",
+      text: "class_name OtherClass\nextends RefCounted\n",
+    },
+    {
+      path: "sketches/core-loop/src/a/only_string.gd",
+      text: "const TEXT := \"NamedClass\"\nconst SINGLE := 'NamedClass'\n",
+    },
+  ];
+  const graph = buildScriptGraph(files);
+  assert.deepEqual(graph.get("sketches/core-loop/src/a/entry.gd"), [
+    "sketches/core-loop/src/a/base.gd",
+    "sketches/core-loop/src/a/bb.gd",
+    "sketches/core-loop/src/a/const_ref.gd",
+    "sketches/core-loop/src/a/loaded.gd",
+    "sketches/core-loop/src/a/named.gd",
+    "sketches/core-loop/src/a/preloaded.gd",
+    "sketches/core-loop/src/a/row_ref.gd",
+  ]);
+  assert.deepEqual(graph.get("sketches/core-loop/src/a/named.gd"), []);
+  assert.deepEqual(graph.get("sketches/core-loop/src/a/only_string.gd"), []);
+});
+
+test("L16 stronglyConnectedComponents finds 2-loop, 3-loop, acyclic tree, two separate loops and deep chains iteratively", () => {
+  const cyclesOf = (graph) =>
+    stronglyConnectedComponents(graph).filter((component) => component.length >= 2);
+
+  const twoLoop = new Map([
+    ["a", ["b"]],
+    ["b", ["a"]],
+  ]);
+  assert.deepEqual(cyclesOf(twoLoop), [["a", "b"]]);
+
+  const threeLoop = new Map([
+    ["a", ["b"]],
+    ["b", ["c"]],
+    ["c", ["a"]],
+  ]);
+  assert.deepEqual(cyclesOf(threeLoop), [["a", "b", "c"]]);
+
+  const tree = new Map([
+    ["root", ["left", "right"]],
+    ["left", ["leaf1", "leaf2"]],
+    ["right", ["leaf3"]],
+    ["leaf1", []],
+    ["leaf2", []],
+    ["leaf3", []],
+  ]);
+  assert.deepEqual(cyclesOf(tree), []);
+  assert.equal(stronglyConnectedComponents(tree).length, 6);
+
+  const twoLoops = new Map([
+    ["a", ["b"]],
+    ["b", ["a", "c"]],
+    ["c", ["d"]],
+    ["d", ["e"]],
+    ["e", ["c"]],
+  ]);
+  assert.deepEqual(cyclesOf(twoLoops), [
+    ["c", "d", "e"],
+    ["a", "b"],
+  ]);
+
+  const deepChain = new Map();
+  for (let i = 0; i < 4000; i++) {
+    deepChain.set(`n${i}`, i + 1 < 4000 ? [`n${i + 1}`] : []);
+  }
+  assert.deepEqual(cyclesOf(deepChain), []);
+  assert.equal(stronglyConnectedComponents(deepChain).length, 4000);
+});
+
+test("L16 reports one finding per file in a cycle with size and in-loop neighbours, and ratchets through the baseline", () => {
+  const files = [
+    {
+      path: "sketches/core-loop/src/a.gd",
+      text: 'const B := preload("res://src/b.gd")\nconst C := preload("res://src/c.gd")\nconst D := preload("res://src/d.gd")\nconst E := preload("res://src/e.gd")\nconst LEAF := preload("res://src/leaf.gd")\n',
+    },
+    { path: "sketches/core-loop/src/b.gd", text: 'const A := preload("res://src/a.gd")\n' },
+    { path: "sketches/core-loop/src/c.gd", text: 'const A := preload("res://src/a.gd")\n' },
+    { path: "sketches/core-loop/src/d.gd", text: 'const A := preload("res://src/a.gd")\n' },
+    { path: "sketches/core-loop/src/e.gd", text: 'const A := preload("res://src/a.gd")\n' },
+    { path: "sketches/core-loop/src/leaf.gd", text: "extends RefCounted\n" },
+  ];
+  const findings = lintL16(files);
+  assert.deepEqual(
+    findings.map((item) => item.path),
+    [
+      "sketches/core-loop/src/a.gd",
+      "sketches/core-loop/src/b.gd",
+      "sketches/core-loop/src/c.gd",
+      "sketches/core-loop/src/d.gd",
+      "sketches/core-loop/src/e.gd",
+    ],
+  );
+  assert.match(
+    findings[0].message,
+    /5-file script dependency cycle \(depends on src\/b\.gd, src\/c\.gd, src\/d\.gd \(\+1 more\)\)/,
+  );
+  assert.ok(!findings[0].message.includes("src/leaf.gd"));
+
+  const baseline = {
+    L16: [
+      "sketches/core-loop/src/a.gd",
+      "sketches/core-loop/src/b.gd",
+      "sketches/core-loop/src/c.gd",
+      "sketches/core-loop/src/d.gd",
+      "sketches/core-loop/src/leaf.gd",
+    ],
+  };
+  const after = applyBaseline(findings, baseline, () => true);
+  assert.deepEqual(
+    after.map((item) => `${item.rule} ${item.path}`),
+    ["L16 sketches/core-loop/src/e.gd", "BASELINE sketches/core-loop/src/leaf.gd"],
+  );
+  assert.match(after[1].message, /L16 no longer offends: remove from baseline/);
 });
