@@ -5,6 +5,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const AreaField := preload("res://src/combat/area_field.gd")
 const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
+const WavIo := preload("res://src/presentation/wav_io.gd")
 const T := preload("res://tests/support/t.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
@@ -154,7 +155,7 @@ func _voice() -> void:
 	data.resize(4 + 8)
 	data.encode_u32(0, 8)
 	riff.append_array(data)
-	var wav: AudioStreamWAV = JoltAudio._from_riff(riff)
+	var wav: AudioStreamWAV = WavIo.from_riff(riff)
 	_t.eq("a raw RIFF reads as 16-bit mono at its rate", [wav != null, wav.stereo if wav else true,
 		wav.mix_rate if wav else 0, wav.data.size() if wav else 0], [true, false, 44100, 8])
 
