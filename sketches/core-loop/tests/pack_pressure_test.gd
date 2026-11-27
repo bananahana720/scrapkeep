@@ -102,6 +102,7 @@ class FakeCtx:
 	var player := FakePlayer.new()
 	var tuning := FakeTuning.new()
 	var terrain := FakeTerrain.new()
+	var calm := false
 	var root: Node3D
 
 
@@ -316,6 +317,8 @@ func _boils() -> void:
 	_t.eq("26d a roaming pack still is", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	_t.eq("26g the exit run (gates, launch) never boils", _loop_boils(boils, ctx, enemy, func(): ctx.flow.state = "gates"), 0)
 	ctx.flow.state = "stage"
+	_t.eq("26n a calm context never boils", _loop_boils(boils, ctx, enemy, func(): ctx.calm = true), 0)
+	ctx.calm = false
 	_stall(boils, ctx, enemy)
 	_quelled(boils, ctx, enemy, dealt, beacon)
 	ChallengeDials.set_overrides({})
@@ -410,6 +413,7 @@ func _quelled(boils, ctx, enemy, dealt: Array, beacon: Node3D) -> void:
 		["26h a rumbling ring quells when the Warden breaks (gates)", func(): ctx.flow.state = "gates"],
 		["26i a rumbling ring quells when the launch run starts", func(): ctx.flow.state = "launch"],
 		["26j a rumbling ring quells when the ball enters an engaged Warden's ring", _enter_warden_ring.bind(ctx, beacon)],
+		["26o a rumbling ring quells when calm turns on", func(): ctx.calm = true],
 	]
 	var dt := 1.0 / 90.0
 	for row in exemptions:
@@ -417,6 +421,7 @@ func _quelled(boils, ctx, enemy, dealt: Array, beacon: Node3D) -> void:
 		beacon.position = Vector3(200.0, 0.0, 0.0)
 		ctx.flow.warden_engaged = false
 		ctx.flow.state = "stage"
+		ctx.calm = false
 		_t.eq(label + ": armed", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 		var ring = boils._ring
 		var center: Vector3 = ring.center
@@ -442,6 +447,7 @@ func _quelled(boils, ctx, enemy, dealt: Array, beacon: Node3D) -> void:
 	beacon.position = Vector3(200.0, 0.0, 0.0)
 	ctx.flow.warden_engaged = false
 	ctx.flow.state = "stage"
+	ctx.calm = false
 	_t.eq("26k with no exemption the same ring still erupts", _loop_boils(boils, ctx, enemy, func(): pass), 1)
 	ctx.player.at = boils._ring.center
 	for i in int(SiltBoil.WARN * 90.0) + 2:

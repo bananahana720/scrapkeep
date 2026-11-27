@@ -143,7 +143,7 @@ func _looping() -> bool:
 
 
 func _exempt(ball: Vector3) -> bool:
-	return exempt(_ctx.flow, ball)
+	return _ctx.get("calm") == true or exempt(_ctx.flow, ball)
 
 
 static func exempt(flow, ball: Vector3) -> bool:
