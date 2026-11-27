@@ -1,6 +1,6 @@
 [gd_scene load_steps=13 format=3]
 
-[ext_resource type="Script" uid="uid://w23cr4ft8m9k2p" path="res://src/presentation/world23_chunk_craft.gd" id="1_craft"]
+[ext_resource type="Script" uid="uid://ucvvi1c6qi38" path="res://src/presentation/world23_chunk_craft.gd" id="1_craft"]
 
 [sub_resource type="BoxShape3D" id="Shape_CanyonDeck"]
 size = Vector3(68, 1, 60)
@@ -233,6 +233,18 @@ metadata/cover_kind = "hard"
 [node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/BlastShieldEast"]
 shape = SubResource("Shape_BlastShield")
 
+[node name="CatwalkPierNW" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 3.55, -21)
+
+[node name="CatwalkPierNE" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 3.55, -21)
+
+[node name="CatwalkPierSW" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 3.55, 21)
+
+[node name="CatwalkPierSE" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 3.55, 21)
+
 [node name="Tier2_HydraulicGantry" type="Node3D" parent="."]
 
 [node name="PressBridge" type="StaticBody3D" parent="Tier2_HydraulicGantry"]
@@ -248,6 +260,18 @@ shape = SubResource("Shape_PressBridge")
 
 [node name="OverheadHoistRail" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20.4, 0)
+
+[node name="BridgeStanchionWest" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.5, 7.9, 17)
+
+[node name="BridgeStanchionEast" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.5, 7.9, 17)
+
+[node name="CranePortalWest" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.8, 10.2, 0)
+
+[node name="CranePortalEast" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.8, 10.2, 0)
 
 [node name="SightlineLandmark" type="Node3D" parent="."]
 

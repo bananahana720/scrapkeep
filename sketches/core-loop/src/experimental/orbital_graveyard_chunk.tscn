@@ -1,6 +1,6 @@
 [gd_scene load_steps=13 format=3]
 
-[ext_resource type="Script" uid="uid://w23cr4ft8m9k2p" path="res://src/presentation/world23_chunk_craft.gd" id="1_craft"]
+[ext_resource type="Script" uid="uid://ucvvi1c6qi38" path="res://src/presentation/world23_chunk_craft.gd" id="1_craft"]
 
 [sub_resource type="BoxShape3D" id="Shape_MainHullDeck"]
 size = Vector3(64, 1, 64)
@@ -79,7 +79,7 @@ metadata/cover_kind = "basin_floor"
 shape = SubResource("Shape_MainHullDeck")
 
 [node name="RelayWellCollar" type="MeshInstance3D" parent="Tier0_HullDeck"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.19, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.24, 0)
 
 [node name="CoamingNorth" type="StaticBody3D" parent="Tier0_HullDeck"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -32)
@@ -239,6 +239,18 @@ metadata/cover_kind = "hard"
 [node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/ShieldFinEast"]
 shape = SubResource("Shape_ShieldFin")
 
+[node name="DeckPierNW" type="MeshInstance3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 3.8, -22)
+
+[node name="DeckPierNE" type="MeshInstance3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 3.8, -22)
+
+[node name="DeckPierSW" type="MeshInstance3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 3.8, 22)
+
+[node name="DeckPierSE" type="MeshInstance3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 3.8, 22)
+
 [node name="Tier2_ChoirCrane" type="Node3D" parent="."]
 
 [node name="CraneWalkway" type="StaticBody3D" parent="Tier2_ChoirCrane"]
@@ -254,6 +266,18 @@ shape = SubResource("Shape_CraneWalkway")
 
 [node name="ChoirSpanBeam" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20.6, 0)
+
+[node name="BridgeStanchionWest" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.4, 8.15, 18)
+
+[node name="BridgeStanchionEast" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.4, 8.15, 18)
+
+[node name="CranePortalWest" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20.8, 10.3, 0)
+
+[node name="CranePortalEast" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.8, 10.3, 0)
 
 [node name="SightlineLandmark" type="Node3D" parent="."]
 

@@ -1437,6 +1437,10 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 static var _anchor_lod_cache: Dictionary = {}
 
 
+static func _reset() -> void:
+	_anchor_lod_cache.clear()
+
+
 static func _anchor_lod_mesh(source: Mesh) -> ArrayMesh:
 	var key := source.get_instance_id() if source != null else 0
 	if _anchor_lod_cache.has(key):

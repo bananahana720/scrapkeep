@@ -335,3 +335,6 @@ func _check_perf_fixes() -> void:
 	BakeWarm.warm_mind_shaders()
 	_t.check("BakeWarm.warm_mind_shaders runs cleanly", BakeWarm._warm.has("mind_shaders_cpu"))
 	BakeWarm.settle()
+	ParkRecipes._reset()
+	ChunkCraft._reset()
+	_t.check("ParkRecipes._reset and ChunkCraft._reset clear static caches", ParkRecipes._anchor_lod_cache.is_empty() and ChunkCraft._mesh_cache.is_empty())

@@ -31,8 +31,16 @@ const COMPACTOR_CANYON_SPECS := {
 	"Tier1_QuarryCatwalks/CatwalkEast/Mesh": "dig_catwalk_ew",
 	"Tier1_QuarryCatwalks/BlastShieldWest/Mesh": "dig_blast_shield",
 	"Tier1_QuarryCatwalks/BlastShieldEast/Mesh": "dig_blast_shield",
+	"Tier1_QuarryCatwalks/CatwalkPierNW": "dig_catwalk_pier",
+	"Tier1_QuarryCatwalks/CatwalkPierNE": "dig_catwalk_pier",
+	"Tier1_QuarryCatwalks/CatwalkPierSW": "dig_catwalk_pier",
+	"Tier1_QuarryCatwalks/CatwalkPierSE": "dig_catwalk_pier",
 	"Tier2_HydraulicGantry/PressBridge/Mesh": "dig_gantry_bridge",
 	"Tier2_HydraulicGantry/OverheadHoistRail": "dig_hoist_rail",
+	"Tier2_HydraulicGantry/BridgeStanchionWest": "dig_bridge_stanchion",
+	"Tier2_HydraulicGantry/BridgeStanchionEast": "dig_bridge_stanchion",
+	"Tier2_HydraulicGantry/CranePortalWest": "dig_crane_portal",
+	"Tier2_HydraulicGantry/CranePortalEast": "dig_crane_portal",
 	"SightlineLandmark/BoreDerrickBody/DerrickMesh": "dig_bore_derrick",
 	"SightlineLandmark/DerrickBeacon": "dig_derrick_beacon",
 }
@@ -57,8 +65,16 @@ const ORBITAL_GRAVEYARD_SPECS := {
 	"Tier1_SalvageDecks/DeckEast/Mesh": "orbital_catwalk_ew",
 	"Tier1_SalvageDecks/ShieldFinWest/Mesh": "orbital_shield_fin",
 	"Tier1_SalvageDecks/ShieldFinEast/Mesh": "orbital_shield_fin",
+	"Tier1_SalvageDecks/DeckPierNW": "orbital_catwalk_pier",
+	"Tier1_SalvageDecks/DeckPierNE": "orbital_catwalk_pier",
+	"Tier1_SalvageDecks/DeckPierSW": "orbital_catwalk_pier",
+	"Tier1_SalvageDecks/DeckPierSE": "orbital_catwalk_pier",
 	"Tier2_ChoirCrane/CraneWalkway/Mesh": "orbital_gantry_bridge",
 	"Tier2_ChoirCrane/ChoirSpanBeam": "orbital_crane_beam",
+	"Tier2_ChoirCrane/BridgeStanchionWest": "orbital_bridge_stanchion",
+	"Tier2_ChoirCrane/BridgeStanchionEast": "orbital_bridge_stanchion",
+	"Tier2_ChoirCrane/CranePortalWest": "orbital_crane_portal",
+	"Tier2_ChoirCrane/CranePortalEast": "orbital_crane_portal",
 	"SightlineLandmark/ChoirMastBody/MastMesh": "orbital_choir_mast",
 	"SightlineLandmark/ZenithCrown": "orbital_zenith_crown",
 }
@@ -103,6 +119,10 @@ func _ready() -> void:
 	if not _dressed:
 		_dressed = true
 		dress_chunk(self)
+
+
+static func _reset() -> void:
+	reset_for_tests()
 
 
 static func reset_for_tests() -> void:
@@ -1413,6 +1433,12 @@ static func get_chunk_mesh(kind: String) -> ArrayMesh:
 			mesh = _build_gantry_bridge("dig_gantry_deck", "dig_bore_steel", "dig_hydraulic_hull", "dig_copper_ram", Vector3(48.0, 1.0, 5.6))
 		"dig_hoist_rail":
 			mesh = _build_overhead_rail("dig_bore_steel", "dig_hydraulic_hull", "dig_copper_ram", "dig_amber_beacon", Vector3(44.0, 1.3, 2.4))
+		"dig_catwalk_pier":
+			mesh = _build_stanchion_column("dig_bore_steel", "dig_hydraulic_hull", "dig_copper_ram", 7.1, 1.25, 3.8)
+		"dig_bridge_stanchion":
+			mesh = _build_stanchion_column("dig_bore_steel", "dig_hydraulic_hull", "dig_copper_ram", 15.8, 1.35, 4.4)
+		"dig_crane_portal":
+			mesh = _build_stanchion_column("dig_bore_steel", "dig_hydraulic_hull", "dig_copper_ram", 20.4, 1.45, 4.6)
 		"dig_bore_derrick":
 			mesh = _build_bore_derrick(44.0)
 		"dig_derrick_beacon":
@@ -1420,7 +1446,7 @@ static func get_chunk_mesh(kind: String) -> ArrayMesh:
 		"orbital_hull_floor":
 			mesh = _build_flat_floor("orbital_hull_deck", Vector3(64.0, 1.0, 64.0))
 		"orbital_relay_collar":
-			mesh = _build_orbital_relay_collar(10.0, 11.4, 12.4, 0.38)
+			mesh = _build_orbital_relay_collar(10.0, 11.4, 12.4, 0.42)
 		"orbital_coaming_ns":
 			mesh = _build_orbital_coaming(Vector3(64.0, 3.6, 5.0), true)
 		"orbital_coaming_ew":
@@ -1443,6 +1469,12 @@ static func get_chunk_mesh(kind: String) -> ArrayMesh:
 			mesh = _build_gantry_bridge("orbital_gantry_deck", "orbital_charcoal", "orbital_rib_hull", "orbital_copper", Vector3(48.0, 1.0, 5.6))
 		"orbital_crane_beam":
 			mesh = _build_overhead_rail("orbital_charcoal", "orbital_mast_steel", "orbital_copper", "orbital_ice_arc", Vector3(42.0, 1.2, 2.2))
+		"orbital_catwalk_pier":
+			mesh = _build_stanchion_column("orbital_charcoal", "orbital_verdigris", "orbital_copper", 7.6, 1.20, 3.8)
+		"orbital_bridge_stanchion":
+			mesh = _build_stanchion_column("orbital_charcoal", "orbital_verdigris", "orbital_copper", 16.3, 1.32, 4.4)
+		"orbital_crane_portal":
+			mesh = _build_stanchion_column("orbital_charcoal", "orbital_mast_steel", "orbital_copper", 20.6, 1.42, 4.6)
 		"orbital_choir_mast":
 			mesh = _build_choir_mast(44.0)
 		"orbital_zenith_crown":
@@ -1475,7 +1507,7 @@ static func _build_crusher_channel_lip(r_in: float, r_out_top: float, r_out_bot:
 static func _build_orbital_relay_collar(r_in: float, r_out_top: float, r_out_bot: float, height: float) -> ArrayMesh:
 	var canvas := _new_canvas()
 	_add_beveled_annulus(canvas, "orbital_verdigris", Transform3D.IDENTITY, 24, r_in, r_out_top, r_out_bot, height, 0.14, 0.36, 0.0, 0.84)
-	_add_beveled_annulus(canvas, "orbital_ice_arc", Transform3D(Basis.IDENTITY, Vector3(0.0, 0.02, 0.0)), 24, r_in - 0.10, r_in + 0.14, r_in + 0.16, height * 0.65, 0.18, 0.18, 0.90, 0.50)
+	_add_beveled_annulus(canvas, "orbital_ice_arc", Transform3D(Basis.IDENTITY, Vector3(0.0, 0.08, 0.0)), 24, r_in - 0.12, r_in + 0.18, r_in + 0.22, height * 0.72, 0.18, 0.16, 0.92, 0.50)
 	for i in 6:
 		var ang := TAU * float(i) / 6.0
 		var rad := Vector3(cos(ang), 0.0, sin(ang))
@@ -1484,6 +1516,47 @@ static func _build_orbital_relay_collar(r_in: float, r_out_top: float, r_out_bot
 			Vector3(1.10, height * 0.92, 1.55), 0.05, 0.18, 0.36, 0.0, 0.86
 		)
 	return canvas.commit({"asset_kind": "orbital_relay_collar"})
+
+
+static func _build_stanchion_column(
+	frame_slot: String,
+	hull_slot: String,
+	accent_slot: String,
+	height: float,
+	width: float,
+	flange_span: float
+) -> ArrayMesh:
+	var canvas := _new_canvas()
+	var hy := height * 0.5
+	HeroSculptor.add_chamfered_plate(
+		canvas, frame_slot, Transform3D.IDENTITY,
+		Vector3(width * 0.52, height, width * 0.92), 0.06, 0.16, 0.48, 0.0, 0.86
+	)
+	for sx in [-1.0, 1.0]:
+		HeroSculptor.add_chamfered_plate(
+			canvas, hull_slot, Transform3D(Basis.IDENTITY, Vector3(sx * width * 0.34, 0.0, 0.0)),
+			Vector3(width * 0.28, height - 0.2, width * 1.18), 0.05, 0.18, 0.42, 0.0, 0.86
+		)
+	HeroSculptor.add_chamfered_plate(
+		canvas, frame_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, -hy + 0.35, 0.0)),
+		Vector3(width * 1.65, 0.70, width * 1.85), 0.08, 0.16, 0.62, 0.0, 0.86
+	)
+	HeroSculptor.add_chamfered_plate(
+		canvas, hull_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, hy - 0.35, 0.0)),
+		Vector3(width * 1.55, 0.70, flange_span), 0.08, 0.18, 0.38, 0.0, 0.88
+	)
+	var collars := maxi(int(height / 5.2), 2)
+	for i in collars:
+		var cy := lerpf(-hy + 2.4, hy - 2.4, float(i) / float(maxi(collars - 1, 1)))
+		HeroSculptor.add_chamfered_plate(
+			canvas, accent_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, cy, 0.0)),
+			Vector3(width * 1.32, 0.42, width * 1.38), 0.04, 0.22, 0.34, 0.0, 0.90
+		)
+	for sz in [-1.0, 1.0]:
+		var p_bot := Vector3(0.0, hy - minf(height * 0.32, 3.6), sz * (width * 0.55))
+		var p_top := Vector3(0.0, hy - 0.45, sz * (flange_span * 0.46))
+		HeroSculptor.add_truss_rib(canvas, accent_slot, p_bot, p_top, 0.34, 0.06)
+	return canvas.commit({"asset_kind": "structural_stanchion"})
 
 
 static func _build_canyon_wall(size: Vector3, span_x: bool) -> ArrayMesh:
