@@ -97,8 +97,7 @@ var moments: Array = []
 const LOG_KEEP := 64
 var reduced_motion := false
 
-var _fx := {}
-var _fx_next := {}
+var _fx := FxLibrary.Pools.new()
 var _busy := {}
 var _follows: Array = []
 var _windups := {}
@@ -136,17 +135,7 @@ func setup(ctx_ref) -> void:
 	root = Node3D.new()
 	root.name = "MachineEffects"
 	ctx.root.add_child(root)
-	for id in FxLibrary.SPECS:
-		if FxLibrary.SPECS[id].get("owner", "vfx") != "machine":
-			continue
-		var pool: Array = []
-		for i in int(FxLibrary.SPECS[id]["pool"]):
-			var p := FxLibrary.build(id)
-			p.name = "%s_%d" % [p.name, i]
-			root.add_child(p)
-			pool.append(p)
-		_fx[id] = pool
-		_fx_next[id] = 0
+	_fx = FxLibrary.pools(root, "machine")
 	_word_root = Node3D.new()
 	_word_root.name = "Words"
 	root.add_child(_word_root)
@@ -195,9 +184,7 @@ static func special_sound(special: String, moment: String) -> String:
 
 
 func clear() -> void:
-	for id in _fx:
-		for p: GPUParticles3D in _fx[id]:
-			p.emitting = false
+	_fx.stop()
 	_busy.clear()
 	_follows.clear()
 	_windups.clear()
@@ -222,10 +209,7 @@ func fire(effects: Dictionary, at: Vector3, tint := Color.TRANSPARENT, cls := "P
 		var count := _thin(int(effects[id]), _class_of(id, cls))
 		if count <= 0 or not _fx.has(id) or FxLibrary.SPECS[id]["attach"] != "world":
 			continue
-		var pool: Array = _fx[id]
-		var p: GPUParticles3D = pool[_fx_next[id]]
-		_fx_next[id] = (_fx_next[id] + 1) % pool.size()
-		FxLibrary.fire(p, id, "enemy_struck", count, at, tint if FxLibrary.SPECS[id]["colour"] == "row" else Color.TRANSPARENT)
+		_fx.fire(id, "enemy_struck", count, at, tint if FxLibrary.SPECS[id]["colour"] == "row" else Color.TRANSPARENT)
 		spawned[id] = spawned.get(id, 0) + 1
 		fired += 1
 	return fired
@@ -250,7 +234,7 @@ func _thin(count: int, cls: String) -> int:
 func follow(id: String, node: Node3D, count: int, lift: float, seconds := INF, tint := Color.TRANSPARENT, spin := 0.0) -> GPUParticles3D:
 	if not _fx.has(id) or not is_instance_valid(node) or count <= 0:
 		return null
-	for p: GPUParticles3D in _fx[id]:
+	for p: GPUParticles3D in _fx.list(id):
 		if _busy.has(p):
 			continue
 		_busy[p] = true

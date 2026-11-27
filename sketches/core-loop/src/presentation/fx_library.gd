@@ -457,6 +457,60 @@ static func fire(p: GPUParticles3D, id: String, kind: String, count: int, at: Ve
 	p.emitting = true
 
 
+static func pools(parent: Node, owner: String) -> Pools:
+	var nodes := {}
+	var next := {}
+	for id in SPECS:
+		if SPECS[id].get("owner", "vfx") != owner:
+			continue
+		var pool: Array = []
+		for i in int(SPECS[id]["pool"]):
+			var p := build(id)
+			p.name = "%s_%d" % [p.name, i]
+			parent.add_child(p)
+			pool.append(p)
+		nodes[id] = pool
+		next[id] = 0
+	return Pools.new(nodes, next, fire)
+
+
+class Pools:
+	extends RefCounted
+
+	var _nodes := {}
+	var _next := {}
+	var _fire: Callable
+
+	func _init(nodes := {}, next := {}, fire_fn := Callable()) -> void:
+		_nodes = nodes
+		_next = next
+		_fire = fire_fn
+
+	func has(id: String) -> bool:
+		return _nodes.has(id)
+
+	func list(id: String) -> Array:
+		return _nodes.get(id, [])
+
+	func values() -> Array:
+		return _nodes.values()
+
+	func fire(id: String, kind: String, count: int, at: Vector3, tint := Color.TRANSPARENT, toward := Vector3.ZERO) -> GPUParticles3D:
+		if not _nodes.has(id):
+			return null
+		var pool: Array = _nodes[id]
+		var idx: int = _next[id]
+		var p: GPUParticles3D = pool[idx]
+		_next[id] = (idx + 1) % pool.size()
+		_fire.call(p, id, kind, count, at, tint, toward)
+		return p
+
+	func stop(ids: Array = []) -> void:
+		for id in (_nodes.keys() if ids.is_empty() else ids):
+			for p: GPUParticles3D in _nodes.get(id, []):
+				p.emitting = false
+
+
 static func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> GPUParticles3D:
 	if parent == null or not parent.is_inside_tree():
 		return null
