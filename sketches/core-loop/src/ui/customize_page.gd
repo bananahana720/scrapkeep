@@ -262,11 +262,20 @@ func _init() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_ENTER_TREE and not get_viewport().size_changed.is_connected(_on_resize):
 		get_viewport().size_changed.connect(_on_resize)
+	elif what == NOTIFICATION_VISIBILITY_CHANGED and _viewport != null:
+		_sync_viewport_update_mode()
+		_sync_viewport_update_mode.call_deferred()
 	elif what == NOTIFICATION_PREDELETE:
 		if _painter != null:
 			_painter.free()
 		if _decal_view != null:
 			_decal_view.free()
+
+
+func _sync_viewport_update_mode() -> void:
+	if _viewport == null:
+		return
+	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if visible else SubViewport.UPDATE_DISABLED
 
 
 static func attach(camp) -> void:
@@ -327,7 +336,7 @@ func _build_preview() -> void:
 	add_child(_container)
 	_viewport = SubViewport.new()
 	_viewport.own_world_3d = true
-	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if is_visible_in_tree() else SubViewport.UPDATE_DISABLED
 	_viewport.msaa_3d = Viewport.MSAA_4X
 	_container.add_child(_viewport)
 	var world := WorldEnvironment.new()
@@ -505,6 +514,8 @@ func open(profile, progress = null) -> void:
 	_seen_dirty = false
 	_seen_clock.clear()
 	show()
+	if _viewport != null:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	layout(_screen())
 	refresh()
 	focus("pilot")
@@ -825,6 +836,8 @@ func close() -> void:
 	trying = {}
 	_intro_left = -1.0
 	hide()
+	if _viewport != null:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	position = Vector2.ZERO
 	modulate.a = 1.0
 	if _camp != null:

@@ -116,8 +116,11 @@ func _build_tool() -> void:
 			if part.name == "DiveChin":
 				_chin = mi
 		return
-	_box(Vector3(3.2, 0.12, 0.7), Palette.CHARCOAL, Vector3(0.0, CREW_HALF + 0.4, 0.0), 0.0, _crew)
-	_cylinder(0.5, 0.9, Palette.RUST, Vector3(0.0, CREW_HALF + 0.1, 0.0), 0.0, _crew)
+	var fallback := MeshInstance3D.new()
+	fallback.name = "KiteChassisFallback"
+	fallback.mesh = preload("res://src/presentation/world23_chunk_craft.gd").get_kite_chassis_mesh()
+	fallback.position = Vector3(0.0, CREW_HALF + 0.38, 0.0)
+	_crew.add_child(fallback)
 
 
 static func _parts() -> Dictionary:
@@ -137,6 +140,7 @@ static func _parts() -> Dictionary:
 	var meshes := []
 	var painted := Palette.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
+	preload("res://src/presentation/world23_chunk_craft.gd").enrich_standard_pbr(painted, 0.34, 0.35)
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var source := node as MeshInstance3D
 		var mesh: Mesh = source.mesh.duplicate()
@@ -305,13 +309,14 @@ func _start_slipstream(origin: Vector3, dir: Vector3) -> void:
 	slipstream_carry_m = 0.0
 	_swoop_ridden = false
 	if world_root != null:
+		var craft := preload("res://src/presentation/world23_chunk_craft.gd")
 		var ribbon := Node3D.new()
 		ribbon.name = "SlipstreamWake"
 		var mesh := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(SWOOP_WIDTH * 0.8, 0.14, SWOOP_LENGTH)
-		mesh.mesh = box
-		mesh.material_override = Palette.unshaded(Color(Palette.ICE, 0.28))
+		mesh.mesh = craft.get_kite_wake_mesh(SWOOP_LENGTH)
+		mesh.scale = Vector3(SWOOP_WIDTH * 1.4, 1.0, 1.0)
+		mesh.material_override = craft.build_slipstream_wake_material(Color(Palette.ICE, 0.34))
+		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ribbon.add_child(mesh)
 		world_root.add_child(ribbon)
 		ribbon.global_position = origin + dir * (SWOOP_LENGTH * 0.5)

@@ -50,12 +50,11 @@ class ElectricAura extends Node3D:
 		left = duration
 		radius = aura_radius
 		damage = aura_damage
-		var torus := TorusMesh.new()
-		torus.inner_radius = 1.4
-		torus.outer_radius = 1.65
+		var craft := preload("res://src/presentation/world23_chunk_craft.gd")
 		_ring = MeshInstance3D.new()
-		_ring.mesh = torus
-		_ring.material_override = Palette.solid(Palette.ICE, 2.2)
+		_ring.mesh = craft.get_gap_net_aura_mesh(1.52)
+		_ring.material_override = craft.build_electric_aura_material(Palette.ICE)
+		_ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_ring)
 		if player != null and is_instance_valid(player):
 			player.set_meta("electric_aura_active", true)
@@ -157,7 +156,11 @@ func _build_tool() -> void:
 				mi.set_surface_override_material(part.flash, _material)
 			_visual_parent().add_child(mi)
 		return
-	_cylinder(0.15, POST_HEIGHT, Palette.CHARCOAL, Vector3(0.0, POST_HEIGHT * 0.5 - CREW_HALF, -CREW_RADIUS - 0.3), 0.0, _visual_parent())
+	var fallback_post := MeshInstance3D.new()
+	fallback_post.name = "GapNetPostFallback"
+	fallback_post.mesh = preload("res://src/presentation/world23_chunk_craft.gd").get_gap_net_post_mesh(POST_HEIGHT)
+	fallback_post.position = Vector3(0.0, POST_HEIGHT * 0.5 - CREW_HALF, -CREW_RADIUS - 0.3)
+	_visual_parent().add_child(fallback_post)
 
 
 func _physics_process(delta: float) -> void:
@@ -210,10 +213,8 @@ func _hang(center: Vector3, normal: Vector3, low: float, high: float) -> void:
 	mesh.global_transform = Transform3D(Basis(side, Vector3.UP, normal), Vector3(center.x, low, center.z))
 	var tile := _span()
 	if tile.is_empty():
-		var box := BoxMesh.new()
-		box.size = Vector3(NET_WIDTH, high - low, 0.06)
 		var flat := MeshInstance3D.new()
-		flat.mesh = box
+		flat.mesh = preload("res://src/presentation/world23_chunk_craft.gd").get_gap_net_panel_mesh(NET_WIDTH, high - low)
 		flat.position = Vector3(0.0, (high - low) * 0.5, 0.0)
 		mesh.add_child(flat)
 	else:
@@ -233,12 +234,8 @@ func _hang(center: Vector3, normal: Vector3, low: float, high: float) -> void:
 
 func _build_post_b() -> void:
 	var post := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = 0.15
-	cyl.bottom_radius = 0.15
-	cyl.height = POST_HEIGHT
-	post.mesh = cyl
-	post.material_override = Palette.solid(Palette.CHARCOAL)
+	post.name = "GapNetPostB"
+	post.mesh = preload("res://src/presentation/world23_chunk_craft.gd").get_gap_net_post_mesh(POST_HEIGHT)
 	post.top_level = true
 	add_child(post)
 	post.global_position = post_b + Vector3.UP * POST_HEIGHT * 0.5

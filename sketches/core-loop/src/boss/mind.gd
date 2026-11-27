@@ -54,6 +54,8 @@ var _brace_due := false
 var _plate_until := -INF
 var _dress
 var _arena_dress
+var _hidden_stage_nodes: Array = []
+var _paused_viewports: Array = []
 var _stall_seconds := 0.0
 var _camp_seconds := 0.0
 var _camp_anchor := Vector3.ZERO
@@ -124,9 +126,51 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	_hand_summon_clock = 0.0
 	_arena_dress = ArenaMindDress.attach(self)
 	_dress = MindDress.attach(self)
+	_hide_stage_behind_arena()
+
+
+func _hide_stage_behind_arena() -> void:
+	_restore_stage_behind_arena()
+	if _arena_dress == null or ctx == null or ctx.terrain == null:
+		return
+	var stage_root: Node3D = ctx.terrain.geometry_root(ctx.terrain.stage)
+	if stage_root != null and is_instance_valid(stage_root) and stage_root != pad:
+		_hidden_stage_nodes.append({"node": stage_root, "visible": stage_root.visible})
+		stage_root.visible = false
+	if ctx.root != null and is_instance_valid(ctx.root):
+		for child in ctx.root.get_children():
+			var cname := String(child.name)
+			if cname.begins_with("ParkRender"):
+				if child is Node3D:
+					_hidden_stage_nodes.append({"node": child, "visible": (child as Node3D).visible})
+					(child as Node3D).visible = false
+				for sv: SubViewport in child.find_children("*", "SubViewport", true, false):
+					_paused_viewports.append({"vp": sv, "mode": sv.render_target_update_mode})
+					sv.render_target_update_mode = SubViewport.UPDATE_DISABLED
+		for sv: SubViewport in ctx.root.find_children("*", "SubViewport", true, false):
+			if sv.render_target_update_mode == SubViewport.UPDATE_DISABLED:
+				continue
+			var parent := sv.get_parent()
+			if parent is CanvasItem and not (parent as CanvasItem).is_visible_in_tree():
+				_paused_viewports.append({"vp": sv, "mode": sv.render_target_update_mode})
+				sv.render_target_update_mode = SubViewport.UPDATE_DISABLED
+
+
+func _restore_stage_behind_arena() -> void:
+	for entry in _hidden_stage_nodes:
+		var node: Node3D = entry["node"]
+		if is_instance_valid(node):
+			node.visible = bool(entry["visible"])
+	_hidden_stage_nodes.clear()
+	for entry in _paused_viewports:
+		var vp: SubViewport = entry["vp"]
+		if is_instance_valid(vp):
+			vp.render_target_update_mode = int(entry["mode"])
+	_paused_viewports.clear()
 
 
 func exit_arena() -> void:
+	_restore_stage_behind_arena()
 	if is_instance_valid(_arena_dress):
 		_arena_dress.release()
 		_arena_dress.get_parent().remove_child(_arena_dress)

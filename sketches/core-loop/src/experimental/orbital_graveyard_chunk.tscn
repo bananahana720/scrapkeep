@@ -1,0 +1,412 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" uid="uid://w23cr4ft8m9k2p" path="res://src/presentation/world23_chunk_craft.gd" id="1_craft"]
+
+[sub_resource type="BoxShape3D" id="Shape_MainHullDeck"]
+size = Vector3(64, 1, 64)
+
+[sub_resource type="BoxShape3D" id="Shape_CoamingNS"]
+size = Vector3(64, 3.6, 5)
+
+[sub_resource type="BoxShape3D" id="Shape_CoamingEW"]
+size = Vector3(5, 3.6, 64)
+
+[sub_resource type="BoxShape3D" id="Shape_SalvageDeckNS"]
+size = Vector3(44, 0.8, 6.5)
+
+[sub_resource type="BoxShape3D" id="Shape_SalvageDeckEW"]
+size = Vector3(6.5, 0.8, 44)
+
+[sub_resource type="BoxShape3D" id="Shape_ShieldFin"]
+size = Vector3(5.2, 2.7, 1.4)
+
+[sub_resource type="BoxShape3D" id="Shape_CraneWalkway"]
+size = Vector3(48, 1.0, 5.6)
+
+[sub_resource type="CylinderShape3D" id="Shape_ChoirMast"]
+height = 44.0
+radius = 5.0
+
+[sub_resource type="BoxShape3D" id="Shape_BulkheadBay"]
+size = Vector3(3.2, 4.4, 7.6)
+
+[sub_resource type="CylinderShape3D" id="Shape_CryoPod"]
+height = 3.2
+radius = 1.1
+
+[sub_resource type="NavigationMesh" id="NavMesh_OrbitalGraveyard"]
+vertices = PackedVector3Array(-28, 0.1, -28, 28, 0.1, -28, 28, 0.1, 28, -28, 0.1, 28, -22, 8.1, -22, 22, 8.1, -22, 22, 8.1, 22, -22, 8.1, 22, -18.75, 8.1, -18.75, 18.75, 8.1, -18.75, 18.75, 8.1, 18.75, -18.75, 8.1, 18.75, -24, 17.1, 15.2, 24, 17.1, 15.2, 24, 17.1, 20.8, -24, 17.1, 20.8)
+polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 9, 8), PackedInt32Array(5, 6, 10, 9), PackedInt32Array(11, 10, 6, 7), PackedInt32Array(7, 4, 8, 11), PackedInt32Array(12, 13, 14, 15)]
+geometry_parsed_geometry_type = 1
+agent_height = 2.0
+agent_radius = 1.0
+agent_max_climb = 0.6
+agent_max_slope = 45.0
+
+[node name="OrbitalGraveyardChunk" type="Node3D"]
+script = ExtResource("1_craft")
+metadata/chunk_id = "orbital_graveyard_v1"
+metadata/biome = "highdraft_orbital_graveyard"
+metadata/footprint_m = Vector2(80, 80)
+metadata/collision_layer_doc = "layer_1=world_hard_cover_grapple;mask_0=static_env"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavMesh_OrbitalGraveyard")
+
+[node name="NavLink_DeckToWestSalvage" type="NavigationLink3D" parent="NavigationRegion3D"]
+start_position = Vector3(-20, 0.5, 18)
+end_position = Vector3(-22, 8.1, 4)
+
+[node name="NavLink_DeckToEastSalvage" type="NavigationLink3D" parent="NavigationRegion3D"]
+start_position = Vector3(20, 0.5, -12)
+end_position = Vector3(22, 8.1, -4)
+
+[node name="NavLink_SalvageToChoirCrane" type="NavigationLink3D" parent="NavigationRegion3D"]
+start_position = Vector3(-22, 8.1, 18)
+end_position = Vector3(-18, 17.1, 18)
+
+[node name="Tier0_HullDeck" type="Node3D" parent="."]
+
+[node name="MainHullDeck" type="StaticBody3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "basin_floor"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_HullDeck/MainHullDeck"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_HullDeck/MainHullDeck"]
+shape = SubResource("Shape_MainHullDeck")
+
+[node name="RelayWellCollar" type="MeshInstance3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.19, 0)
+
+[node name="CoamingNorth" type="StaticBody3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, -32)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "rim"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_HullDeck/CoamingNorth"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_HullDeck/CoamingNorth"]
+shape = SubResource("Shape_CoamingNS")
+
+[node name="CoamingSouth" type="StaticBody3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.8, 32)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "rim"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_HullDeck/CoamingSouth"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_HullDeck/CoamingSouth"]
+shape = SubResource("Shape_CoamingNS")
+
+[node name="CoamingWest" type="StaticBody3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32, 1.8, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "rim"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_HullDeck/CoamingWest"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_HullDeck/CoamingWest"]
+shape = SubResource("Shape_CoamingEW")
+
+[node name="CoamingEast" type="StaticBody3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32, 1.8, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "rim"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_HullDeck/CoamingEast"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_HullDeck/CoamingEast"]
+shape = SubResource("Shape_CoamingEW")
+
+[node name="HullRibArchWest" type="MeshInstance3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -31.5, 3.6, 0)
+
+[node name="HullRibArchEast" type="MeshInstance3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 31.5, 3.6, 0)
+
+[node name="UpdraftPadSW" type="MeshInstance3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0.25, 18)
+
+[node name="UpdraftPadNE" type="MeshInstance3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0.25, -12)
+
+[node name="BulkheadBayWest" type="StaticBody3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.8, 2.2, 23)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_HullDeck/BulkheadBayWest"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_HullDeck/BulkheadBayWest"]
+shape = SubResource("Shape_BulkheadBay")
+
+[node name="BulkheadBayEast" type="StaticBody3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4.8, 2.2, 23)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_HullDeck/BulkheadBayEast"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_HullDeck/BulkheadBayEast"]
+shape = SubResource("Shape_BulkheadBay")
+
+[node name="CryoCapacitorPod" type="StaticBody3D" parent="Tier0_HullDeck"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11, 1.6, -2)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "prop"
+metadata/prop_pairing = "cryo_pipe_quenches_slag"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_HullDeck/CryoCapacitorPod"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_HullDeck/CryoCapacitorPod"]
+shape = SubResource("Shape_CryoPod")
+
+[node name="Tier1_SalvageDecks" type="Node3D" parent="."]
+
+[node name="DeckNorth" type="StaticBody3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.6, -22)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_SalvageDecks/DeckNorth"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/DeckNorth"]
+shape = SubResource("Shape_SalvageDeckNS")
+
+[node name="DeckSouth" type="StaticBody3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.6, 22)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_SalvageDecks/DeckSouth"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/DeckSouth"]
+shape = SubResource("Shape_SalvageDeckNS")
+
+[node name="DeckWest" type="StaticBody3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 7.6, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_SalvageDecks/DeckWest"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/DeckWest"]
+shape = SubResource("Shape_SalvageDeckEW")
+
+[node name="DeckEast" type="StaticBody3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 7.6, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_SalvageDecks/DeckEast"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/DeckEast"]
+shape = SubResource("Shape_SalvageDeckEW")
+
+[node name="ShieldFinWest" type="StaticBody3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.6, 9.35, -10)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_SalvageDecks/ShieldFinWest"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/ShieldFinWest"]
+shape = SubResource("Shape_ShieldFin")
+
+[node name="ShieldFinEast" type="StaticBody3D" parent="Tier1_SalvageDecks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.6, 9.35, 10)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_SalvageDecks/ShieldFinEast"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/ShieldFinEast"]
+shape = SubResource("Shape_ShieldFin")
+
+[node name="Tier2_ChoirCrane" type="Node3D" parent="."]
+
+[node name="CraneWalkway" type="StaticBody3D" parent="Tier2_ChoirCrane"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 16.5, 18)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier2_ChoirCrane/CraneWalkway"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_ChoirCrane/CraneWalkway"]
+shape = SubResource("Shape_CraneWalkway")
+
+[node name="ChoirSpanBeam" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20.6, 0)
+
+[node name="SightlineLandmark" type="Node3D" parent="."]
+
+[node name="ChoirMastBody" type="StaticBody3D" parent="SightlineLandmark"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 22.0, -34)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "landmark"
+
+[node name="MastMesh" type="MeshInstance3D" parent="SightlineLandmark/ChoirMastBody"]
+
+[node name="MastCollider" type="CollisionShape3D" parent="SightlineLandmark/ChoirMastBody"]
+shape = SubResource("Shape_ChoirMast")
+
+[node name="ZenithCrown" type="MeshInstance3D" parent="SightlineLandmark"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 45.6, -34)
+
+[node name="Sockets" type="Node3D" parent="."]
+
+[node name="HullDeckLoop" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 17)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "hull_deck_loop"
+metadata/tier = 0
+metadata/clearance_m = 6.0
+metadata/route_links = PackedStringArray("updraft_pad_sw", "updraft_pad_ne")
+
+[node name="UpdraftPadSW" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_jump_pad"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20, 0.5, 18)
+metadata/socket_kind = "JUMP_PAD"
+metadata/socket_id = "updraft_pad_sw"
+metadata/tier = 0
+metadata/clearance_m = 6.0
+metadata/route_links = PackedStringArray("salvage_rail_west")
+
+[node name="UpdraftPadNE" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_jump_pad"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 0.5, -12)
+metadata/socket_kind = "JUMP_PAD"
+metadata/socket_id = "updraft_pad_ne"
+metadata/tier = 0
+metadata/clearance_m = 6.0
+metadata/route_links = PackedStringArray("salvage_rail_east")
+
+[node name="SalvageRailWest" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 8.1, 4)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "salvage_rail_west"
+metadata/tier = 1
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("salvage_rail_north", "harpoon_choir_west", "hull_deck_loop")
+
+[node name="SalvageRailNorth" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8.1, -22)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "salvage_rail_north"
+metadata/tier = 1
+metadata/clearance_m = 5.5
+metadata/vantage_point = true
+metadata/route_links = PackedStringArray("salvage_rail_east", "harpoon_choir_east")
+
+[node name="SalvageRailEast" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 8.1, -4)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "salvage_rail_east"
+metadata/tier = 1
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("salvage_rail_south", "harpoon_choir_east", "hull_deck_loop")
+
+[node name="SalvageRailSouth" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8.1, 22)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "salvage_rail_south"
+metadata/tier = 1
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("salvage_rail_west", "hull_deck_loop")
+
+[node name="HarpoonChoirWest" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_harpoon_anchor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 17.5, 18)
+metadata/socket_kind = "HARPOON_ANCHOR"
+metadata/socket_id = "harpoon_choir_west"
+metadata/tier = 2
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("rail_choir_crane")
+
+[node name="RailChoirCrane" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 17.1, 18)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "rail_choir_crane"
+metadata/tier = 2
+metadata/clearance_m = 5.5
+metadata/vantage_point = true
+metadata/route_links = PackedStringArray("harpoon_choir_east", "salvage_rail_east", "hull_deck_loop")
+
+[node name="HarpoonChoirEast" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_harpoon_anchor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 17.5, 18)
+metadata/socket_kind = "HARPOON_ANCHOR"
+metadata/socket_id = "harpoon_choir_east"
+metadata/tier = 2
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("salvage_rail_east", "hull_deck_loop")
+
+[node name="SetpieceEMCrane" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_setpiece_trigger"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20.2, 0)
+metadata/socket_kind = "SETPIECE_TRIGGER"
+metadata/socket_id = "setpiece_em_crane"
+metadata/setpiece_kind = "em_crane"
+metadata/tier = 2
+
+[node name="SetpieceSlagFurnace" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_setpiece_trigger"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+metadata/socket_kind = "SETPIECE_TRIGGER"
+metadata/socket_id = "setpiece_slag_furnace"
+metadata/setpiece_kind = "slag_furnace"
+metadata/tier = 0
+
+[node name="SetpieceCompactorVent" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_setpiece_trigger"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 23)
+metadata/socket_kind = "SETPIECE_TRIGGER"
+metadata/socket_id = "setpiece_compactor_vent"
+metadata/setpiece_kind = "compactor_vent"
+metadata/tier = 0
+
+[node name="PropCryoPod" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_setpiece_trigger"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -11, 1.6, -2)
+metadata/socket_kind = "SETPIECE_TRIGGER"
+metadata/socket_id = "prop_cryo_pipe"
+metadata/setpiece_kind = "cryo_pipe"
+metadata/tier = 0
+
+[node name="CoverSlotWest" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_cover_slot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -14, 0.0, 6)
+metadata/socket_kind = "COVER_SLOT"
+metadata/socket_id = "cover_slot_west"
+metadata/cover_slot_index = 0
+metadata/tier = 0
+
+[node name="CoverSlotEast" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_cover_slot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0.0, -6)
+metadata/socket_kind = "COVER_SLOT"
+metadata/socket_id = "cover_slot_east"
+metadata/cover_slot_index = 1
+metadata/tier = 0
+
+[node name="CoverSlotNorthWest" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_cover_slot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.0, -10)
+metadata/socket_kind = "COVER_SLOT"
+metadata/socket_id = "cover_slot_nw"
+metadata/cover_slot_index = 2
+metadata/tier = 0
+
+[node name="LandmarkChoirMast" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_sightline_landmark"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0, -34)
+metadata/socket_kind = "SIGHTLINE_LANDMARK"
+metadata/socket_id = "landmark_choir_mast"
+metadata/landmark_height_m = 47.0
+metadata/tier = 2
