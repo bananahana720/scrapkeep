@@ -421,6 +421,7 @@ export const CANONICAL_IDS = [
   "tarn",
   "tally",
   "remembered_cannon",
+  "line_splicer",
 ];
 
 export const ID_COMPARE_LEGACY = {
