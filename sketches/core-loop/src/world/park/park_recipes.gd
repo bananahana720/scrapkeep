@@ -1397,14 +1397,95 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 	for k in xfs.size():
 		multi.set_instance_transform(k, xfs[k])
 	view.multimesh = multi
+	var dense_field := kit and xfs.size() > 24
+	view.visibility_range_begin = 0.0
+	view.visibility_range_begin_margin = 0.0
+	view.visibility_range_end = 115.0 if dense_field else 260.0
+	view.visibility_range_end_margin = 12.0 if dense_field else 20.0
+	view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	view.set_meta(RecipeProps.META_FADE, true)
 	node.add_child(view)
+	if dense_field:
+		var lod_multi := MultiMesh.new()
+		lod_multi.transform_format = MultiMesh.TRANSFORM_3D
+		lod_multi.mesh = _anchor_lod_mesh(multi.mesh)
+		lod_multi.instance_count = xfs.size()
+		for k in xfs.size():
+			lod_multi.set_instance_transform(k, xfs[k])
+		var lod_view := MultiMeshInstance3D.new()
+		lod_view.name = "PostsLod"
+		lod_view.multimesh = lod_multi
+		if view.material_override != null:
+			lod_view.material_override = view.material_override
+		lod_view.visibility_range_begin = 115.0
+		lod_view.visibility_range_begin_margin = 12.0
+		lod_view.visibility_range_end = 260.0
+		lod_view.visibility_range_end_margin = 20.0
+		lod_view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+		lod_view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		lod_view.set_meta(RecipeProps.META_FADE, true)
+		node.add_child(lod_view)
 	if body.get_shape_owners().is_empty():
 		body.collision_layer = 0
 	node.set_meta("anchor_posts", posts.size())
 	node.set_meta("anchor_kit", kit)
 	tag_cover(node, row)
 	return node
+
+
+static var _anchor_lod_cache: Dictionary = {}
+
+
+static func _reset() -> void:
+	_anchor_lod_cache.clear()
+
+
+static func _anchor_lod_mesh(source: Mesh) -> ArrayMesh:
+	var key := source.get_instance_id() if source != null else 0
+	if _anchor_lod_cache.has(key):
+		return _anchor_lod_cache[key] as ArrayMesh
+	var box := source.get_aabb() if source != null else AABB(Vector3(-0.6, 0.0, -0.6), Vector3(1.2, 10.0, 1.2))
+	var r := maxf(0.35, minf(box.size.x, box.size.z) * 0.45)
+	var y0 := box.position.y
+	var y1 := box.end.y
+	var cx := box.position.x + box.size.x * 0.5
+	var cz := box.position.z + box.size.z * 0.5
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var sides := 4
+	var bot: Array[Vector3] = []
+	var top: Array[Vector3] = []
+	for i in sides:
+		var ang := TAU * float(i) / float(sides) + PI * 0.25
+		bot.append(Vector3(cx + cos(ang) * r, y0, cz + sin(ang) * r))
+		top.append(Vector3(cx + cos(ang) * r * 0.78, y1, cz + sin(ang) * r * 0.78))
+	for i in sides:
+		var ni := (i + 1) % sides
+		var a := bot[i]
+		var b := bot[ni]
+		var c := top[ni]
+		var d := top[i]
+		var n := (d - a).cross(b - a).normalized()
+		st.set_normal(n)
+		st.set_color(Color(0.72, 0.68, 0.62, 1.0))
+		st.add_vertex(a)
+		st.add_vertex(b)
+		st.add_vertex(c)
+		st.add_vertex(a)
+		st.add_vertex(c)
+		st.add_vertex(d)
+	st.set_normal(Vector3.UP)
+	st.set_color(Color(0.78, 0.74, 0.68, 1.0))
+	st.add_vertex(top[0])
+	st.add_vertex(top[3])
+	st.add_vertex(top[2])
+	st.add_vertex(top[0])
+	st.add_vertex(top[2])
+	st.add_vertex(top[1])
+	var mesh := st.commit()
+	_anchor_lod_cache[key] = mesh
+	return mesh
 
 
 static func anchor_variant(row: Dictionary) -> int:

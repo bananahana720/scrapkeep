@@ -209,16 +209,14 @@ func _show_icon(id: String) -> void:
 
 
 func _build_crew() -> void:
+	var craft := preload("res://src/presentation/world23_chunk_craft.gd")
 	radius = 0.7
 	half_height = 1.8
 	_crew = _add_capsule(0.7, 3.6, Roster.ANCIENT_ENAMEL)
-	var foot := CylinderMesh.new()
-	foot.top_radius = 0.5
-	foot.bottom_radius = 1.1
-	foot.height = 0.5
+	_crew.mesh = craft.get_mind_hand_rod_mesh(0.55, 0.65, 3.4)
 	var base := MeshInstance3D.new()
-	base.mesh = foot
-	base.material_override = _enamel()
+	base.mesh = craft.get_mind_hand_foot_mesh()
+	base.scale = Vector3(2.4, 2.0, 2.4)
 	base.position = Vector3(0.0, -1.55, 0.0)
 	_visual_parent().add_child(base)
 	var at := Vector3(0.0, -1.3, 0.0)
@@ -228,35 +226,31 @@ func _build_crew() -> void:
 		_visual_parent().add_child(joint)
 		_joints.append(joint)
 		var bone := MeshInstance3D.new()
-		var rod := CylinderMesh.new()
-		rod.top_radius = 0.14
-		rod.bottom_radius = 0.18
-		rod.height = 1.6
-		bone.mesh = rod
-		bone.material_override = _plate_material() if i == 1 else _enamel()
+		bone.mesh = craft.get_mind_hand_rod_mesh(0.14, 0.18, 1.6)
+		if i == 1:
+			bone.material_override = _plate_material()
 		bone.position = Vector3(0.0, 0.8, 0.0)
 		joint.add_child(bone)
 		if i == 1:
-			_add_crack(bone, Vector3(0.0, 0.0, 0.2), 0.7)
-		_seam(Vector3(0.4, 0.06, 0.4), Vector3.ZERO, joint)
+			var crack := MeshInstance3D.new()
+			crack.mesh = craft.get_mind_hand_crack_mesh()
+			crack.position = Vector3(0.0, 0.0, 0.2)
+			bone.add_child(crack)
+		var seam := MeshInstance3D.new()
+		seam.mesh = craft.get_mind_hand_seam_mesh()
+		joint.add_child(seam)
 		at += Vector3.UP * 1.6
 	_lens = Node3D.new()
 	_lens.position = Vector3(0.0, ARM_HEIGHT - 0.8, 0.0)
 	add_child(_lens)
-	var glass := SphereMesh.new()
-	glass.radius = LENS_RADIUS
-	glass.height = LENS_RADIUS * 2.0
 	_lens_glass = MeshInstance3D.new()
-	_lens_glass.mesh = glass
-	_lens_glass.material_override = Palette.solid(Roster.ANCIENT_LIGHT, 1.2)
+	_lens_glass.mesh = craft.get_mind_hand_lens_mesh(LENS_RADIUS)
+	_lens_glass.material_override = craft.make_weathered_pbr(Roster.ANCIENT_LIGHT, 0.28, 0.22, Roster.ANCIENT_LIGHT, 1.2, 0.55, 0.28)
 	_lens.add_child(_lens_glass)
 	for side in [-1.0, 1.0]:
-		var small := SphereMesh.new()
-		small.radius = 0.25
-		small.height = 0.5
 		var eye := MeshInstance3D.new()
-		eye.mesh = small
-		eye.material_override = Palette.solid(Roster.ANCIENT_LIGHT, 0.8)
+		eye.mesh = craft.get_mind_hand_lens_mesh(0.25)
+		eye.material_override = craft.make_weathered_pbr(Roster.ANCIENT_LIGHT, 0.28, 0.22, Roster.ANCIENT_LIGHT, 0.8, 0.65, 0.28)
 		eye.position = Vector3(side * 0.75, -0.2, 0.2)
 		_lens.add_child(eye)
 	_icon = Sprite3D.new()

@@ -72,7 +72,7 @@ var _last_offset := INF
 var _beats := 0
 var _strike_wait := 0.0
 var _strike_next := 0
-var _bolt_material: StandardMaterial3D
+var _bolt_material: Material
 var _card_layer: CanvasLayer
 var _card_title: Label
 var _card_line: Label
@@ -153,8 +153,7 @@ func _thermal(row: Dictionary, shader: Shader) -> void:
 	material.set_shader_parameter("edge_tint", Kit.dressing_colour("hd_thermal_edge"))
 	material.set_shader_parameter("idle_opacity", Kit.dressing_alpha("hd_thermal_idle"))
 	material.set_shader_parameter("occupied_opacity", Kit.dressing_alpha("hd_thermal_occupied"))
-	var mote := BoxMesh.new()
-	mote.size = Vector3.ONE * 0.22
+	var mote := preload("res://src/presentation/world23_chunk_craft.gd").get_thermal_mote_mesh()
 	var streak := _lift_chevron()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 6_310_006 + thermals.size()
@@ -375,14 +374,7 @@ func _valley(presence: Node) -> void:
 	gypsum = presence.gypsum
 	if gypsum != null:
 		gypsum_rest = gypsum.get_meta("placements")
-	_bolt_material = StandardMaterial3D.new()
-	_bolt_material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_bolt_material.albedo_color = BOLT_COLOUR
-	_bolt_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	_bolt_material.cull_mode = BaseMaterial3D.CULL_DISABLED
-	_bolt_material.emission_enabled = true
-	_bolt_material.emission = BOLT_COLOUR
-	_bolt_material.emission_energy_multiplier = 2.4
+	_bolt_material = preload("res://src/presentation/world23_chunk_craft.gd").build_lightning_bolt_material()
 
 
 static func along(path: Array[Vector3], t: float) -> Vector3:
@@ -490,7 +482,7 @@ func strike_rod(i: int) -> void:
 	var view := MeshInstance3D.new()
 	view.name = "Bolt_%d" % i
 	view.mesh = mesh
-	var material := _bolt_material.duplicate() as StandardMaterial3D
+	var material := _bolt_material.duplicate() as ShaderMaterial
 	view.material_override = material
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	add_child(view)
@@ -509,7 +501,11 @@ func _step_bolts(delta: float) -> void:
 				view.queue_free()
 			continue
 		var level := FlashGuard.spike(0.0, 1.0 - float(bolt["age"]) / BOLT_SECONDS)
-		(bolt["material"] as StandardMaterial3D).albedo_color.a = level
+		var mat = bolt["material"]
+		if mat is ShaderMaterial:
+			(mat as ShaderMaterial).set_shader_parameter("fade_alpha", level)
+		elif mat is StandardMaterial3D:
+			(mat as StandardMaterial3D).albedo_color.a = level
 		live.append(bolt)
 	bolts = live
 

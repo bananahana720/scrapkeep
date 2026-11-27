@@ -118,7 +118,7 @@ func _build_view() -> void:
 	viewport.name = "EndingView"
 	viewport.own_world_3d = true
 	viewport.size = Vector2i(get_viewport_rect().size)
-	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if visible else SubViewport.UPDATE_DISABLED
 	viewport.gui_disable_input = true
 	add_child(viewport)
 	var view := TextureRect.new()
@@ -744,6 +744,11 @@ func skip() -> void:
 		return
 	cancel()
 	finished.emit()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_VISIBILITY_CHANGED and viewport != null:
+		viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if active and visible else SubViewport.UPDATE_DISABLED
 
 
 func cancel() -> void:

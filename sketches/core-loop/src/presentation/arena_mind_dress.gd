@@ -176,6 +176,7 @@ static func _rebuild_mesh(source: Mesh) -> ArrayMesh:
 static func _slot_material(slot: String, texture: Texture2D) -> StandardMaterial3D:
 	if slot not in ["stone", "M1_stone", "steel", "glass"]:
 		return null
+	var craft := preload("res://src/presentation/world23_chunk_craft.gd")
 	var material := StandardMaterial3D.new()
 	material.resource_name = slot
 	material.vertex_color_use_as_albedo = true
@@ -188,6 +189,8 @@ static func _slot_material(slot: String, texture: Texture2D) -> StandardMaterial
 		material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 		material.albedo_color = Color(1.0, 1.0, 1.0, 0.62)
 		material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	else:
+		craft.enrich_standard_pbr(material, 0.42 if slot == "steel" else 0.34, 0.18)
 	return material
 
 
@@ -284,6 +287,7 @@ func _inlays(radius: float) -> void:
 	material.roughness = 0.34
 	material.metallic = 0.58
 	material.metallic_specular = 0.72
+	preload("res://src/presentation/world23_chunk_craft.gd").enrich_standard_pbr(material, 0.36, 0.25)
 	mesh.surface_set_material(0, material)
 	var view := MeshInstance3D.new()
 	view.name = "DeckInlays"

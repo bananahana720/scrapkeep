@@ -238,34 +238,19 @@ func _attach_takeover_panel() -> void:
 
 
 static func build_takeover_panel() -> Node3D:
+	var craft := preload("res://src/presentation/world23_chunk_craft.gd")
 	var holder := Node3D.new()
 	holder.name = TAKEOVER_NODE
 	holder.position = Vector3(0.0, 0.0, 1.78)
 	var bezel := MeshInstance3D.new()
 	bezel.name = "Bezel"
-	var bezel_box := BoxMesh.new()
-	bezel_box.size = Vector3(4.3, 1.85, 0.16)
-	bezel.mesh = bezel_box
-	var bezel_mat := StandardMaterial3D.new()
-	bezel_mat.albedo_color = Palette.CHARCOAL
-	bezel_mat.roughness = 0.86
-	bezel_mat.metallic = 0.15
-	bezel_mat.emission_enabled = false
-	bezel.material_override = bezel_mat
+	bezel.mesh = craft.get_takeover_bezel_mesh()
 	bezel.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	holder.add_child(bezel)
 	var plate := MeshInstance3D.new()
 	plate.name = "Plate"
-	var plate_box := BoxMesh.new()
-	plate_box.size = Vector3(3.85, 1.4, 0.12)
-	plate.mesh = plate_box
+	plate.mesh = craft.get_takeover_plate_mesh()
 	plate.position = Vector3(0.0, 0.0, 0.06)
-	var plate_mat := StandardMaterial3D.new()
-	plate_mat.albedo_color = Palette.KINDNESS
-	plate_mat.roughness = 0.88
-	plate_mat.metallic = 0.0
-	plate_mat.emission_enabled = false
-	plate.material_override = plate_mat
 	plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	holder.add_child(plate)
 	return holder
