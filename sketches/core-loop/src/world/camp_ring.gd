@@ -5,6 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Records := preload("res://src/world/camp_records.gd")
 const SurvivalCount := preload("res://src/world/survival_count.gd")
+const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 
 
 const STATION := "camp_ring"
@@ -138,12 +139,12 @@ func _show() -> void:
 	if running():
 		board.text = str(count.count)
 		board.modulate = Palette.HAZARD
-		_lamp.material_override = Palette.solid(Palette.HAZARD, 2.0, false)
+		_lamp.set_surface_override_material(1, CampCraftMeshes.lantern_bulb_material(Palette.HAZARD, 2.0, "camp_ring_lamp_active"))
 	else:
 		var kept := best()
 		board.text = "BEST %d" % kept if kept > 0 else ""
 		board.modulate = Palette.AMBER
-		_lamp.material_override = Palette.solid(Palette.AMBER, 1.0, false)
+		_lamp.set_surface_override_material(1, CampCraftMeshes.lantern_bulb_material(Palette.AMBER, 1.0, "camp_ring_lamp_idle"))
 
 
 func _post(at: Vector3) -> MeshInstance3D:
@@ -158,19 +159,15 @@ func _post(at: Vector3) -> MeshInstance3D:
 		foot.rotation.y = atan2(at.z - _centre.z, _centre.x - at.x)
 	else:
 		var pole := MeshInstance3D.new()
-		var shaft := CylinderMesh.new()
-		shaft.top_radius = 0.14
-		shaft.bottom_radius = 0.2
-		shaft.height = POST_HEIGHT
-		pole.mesh = shaft
-		pole.material_override = Palette.solid(Palette.CHARCOAL)
-		pole.position = Vector3.UP * POST_HEIGHT * 0.5
+		pole.name = "RingPostShaft"
+		pole.mesh = CampCraftMeshes.ring_post_mesh(POST_HEIGHT)
+		pole.material_override = CampCraftMeshes.iron_material()
 		foot.add_child(pole)
 	var lamp := MeshInstance3D.new()
-	var bulb := SphereMesh.new()
-	bulb.radius = 0.34
-	bulb.height = 0.68
-	lamp.mesh = bulb
+	lamp.name = "RingLantern"
+	lamp.mesh = CampCraftMeshes.signal_lantern_mesh(0.34)
+	lamp.set_surface_override_material(0, CampCraftMeshes.iron_material())
+	lamp.set_surface_override_material(1, CampCraftMeshes.lantern_bulb_material(Palette.AMBER, 1.0, "camp_ring_lamp_idle"))
 	foot.add_child(lamp)
 	lamp.top_level = true
 	lamp.global_position = foot.global_position + Vector3.UP * (top + 0.2)

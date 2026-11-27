@@ -22,6 +22,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 
 const FEATURES: Array = [
 	preload("res://src/world/camp_skee.gd"),
@@ -466,24 +467,12 @@ func _build_ground() -> void:
 	shape.shape = cylinder
 	shape.position.y = -GROUND_THICK * 0.5
 	ground.add_child(shape)
-	var sand := StandardMaterial3D.new()
-	sand.albedo_color = Palette.SANDSTONE
-	sand.roughness = 1.0
 	var disc := MeshInstance3D.new()
 	disc.name = "SandstoneDisc"
-	var mesh := CylinderMesh.new()
-	mesh.top_radius = GROUND_R
-	mesh.bottom_radius = GROUND_R
-	mesh.height = GROUND_THICK
-	mesh.radial_segments = 96
-	mesh.rings = 1
-	mesh.material = sand
-	disc.mesh = mesh
+	disc.mesh = CampCraftMeshes.sandstone_plaza_mesh(GROUND_R, GROUND_THICK, 96)
+	disc.material_override = CampCraftMeshes.sandstone_material()
 	disc.position.y = -GROUND_THICK * 0.5
 	ground.add_child(disc)
-	var berm_material := StandardMaterial3D.new()
-	berm_material.albedo_color = Palette.SANDSTONE.darkened(0.18)
-	berm_material.roughness = 1.0
 	var chord := TAU * GROUND_R / BERM_SEGMENTS * 1.08
 	for i in BERM_SEGMENTS:
 		var angle := TAU * i / BERM_SEGMENTS
@@ -496,14 +485,11 @@ func _build_ground() -> void:
 		collider.shape = box
 		collider.transform = segment
 		ground.add_child(collider)
-		var view := MeshInstance3D.new()
-		view.name = "Berm%d" % i
-		var box_mesh := BoxMesh.new()
-		box_mesh.size = box.size
-		box_mesh.material = berm_material
-		view.mesh = box_mesh
-		view.transform = segment
-		ground.add_child(view)
+	var berm_ring := MeshInstance3D.new()
+	berm_ring.name = "CampBermRing"
+	berm_ring.mesh = CampCraftMeshes.perimeter_berm_mesh(GROUND_R, BERM_SEGMENTS, BERM_HEIGHT, BERM_DEPTH, BERM_STAGGER_M)
+	berm_ring.material_override = CampCraftMeshes.berm_material()
+	ground.add_child(berm_ring)
 
 
 func _place_layout() -> void:
