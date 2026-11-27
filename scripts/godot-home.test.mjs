@@ -1,12 +1,9 @@
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import {
-  GODOT_VERSION,
-  resolveGodotBinary,
-  scratchHomeEnv,
-  userDataEnv,
-} from "./godot-home.mjs";
+import { fileURLToPath } from "node:url";
+import { GODOT_VERSION, resolveGodotBinary, scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 
 const CLOUD_BIN = `/opt/scrapkeep-toolchain/Godot_v${GODOT_VERSION}-stable_linux.x86_64`;
 const PC_HOME = "/home/andrew";
@@ -27,6 +24,30 @@ const MAC_APP_BIN = path.join(
   "MacOS",
   "Godot",
 );
+
+const SCRIPTS_DIR = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(SCRIPTS_DIR, "..");
+
+const HOME_ANDREW_ALLOWLIST = {
+  "scripts/music/lyria-tune.mjs":
+    "remote SSH paths on Linux PC ahana; parked under Needs the owner",
+};
+
+const GODOT_BIN_OWNER = "scripts/godot-home.mjs";
+const GODOT_BIN_ALLOWLIST = {};
+
+function nonTestScriptFiles(dir) {
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...nonTestScriptFiles(full));
+    } else if (entry.isFile() && entry.name.endsWith(".mjs") && !entry.name.endsWith(".test.mjs")) {
+      files.push(full);
+    }
+  }
+  return files.sort();
+}
 
 test("GODOT_VERSION exposes the pinned editor version", () => {
   assert.equal(GODOT_VERSION, "4.7.2");
@@ -213,6 +234,51 @@ test("requireExplicit refuses fallback binaries on every machine when GODOT_BIN 
 test("userDataEnv and scratchHomeEnv isolate HOME only on darwin", () => {
   assert.deepEqual(userDataEnv("/tmp/d", "darwin"), { XDG_DATA_HOME: "/tmp/d", HOME: "/tmp/d" });
   assert.deepEqual(userDataEnv("/tmp/d", "linux"), { XDG_DATA_HOME: "/tmp/d" });
-  assert.deepEqual(scratchHomeEnv(() => "/tmp/s", "darwin"), { HOME: "/tmp/s" });
-  assert.deepEqual(scratchHomeEnv(() => "/tmp/s", "linux"), {});
+  assert.deepEqual(
+    scratchHomeEnv(() => "/tmp/s", "darwin"),
+    { HOME: "/tmp/s" },
+  );
+  assert.deepEqual(
+    scratchHomeEnv(() => "/tmp/s", "linux"),
+    {},
+  );
+});
+
+test("non-test scripts contain no unapproved /home/andrew/ literals or direct process.env.GODOT_BIN reads", () => {
+  const files = nonTestScriptFiles(SCRIPTS_DIR);
+  assert.ok(files.length > 0);
+  const badHome = [];
+  const badEnv = [];
+  const seenHomeAllow = new Set();
+  const seenEnvAllow = new Set();
+
+  for (const file of files) {
+    const rel = path.relative(REPO_ROOT, file).split(path.sep).join("/");
+    const source = readFileSync(file, "utf8");
+    if (source.includes("/home/andrew/")) {
+      if (rel in HOME_ANDREW_ALLOWLIST) seenHomeAllow.add(rel);
+      else badHome.push(rel);
+    }
+    if (rel !== GODOT_BIN_OWNER && /\bprocess\.env\.GODOT_BIN\b/.test(source)) {
+      if (rel in GODOT_BIN_ALLOWLIST) seenEnvAllow.add(rel);
+      else badEnv.push(rel);
+    }
+  }
+
+  assert.deepEqual(badHome, [], `unexpected /home/andrew/ literal in: ${badHome.join(", ")}`);
+  assert.deepEqual(
+    badEnv,
+    [],
+    `unexpected process.env.GODOT_BIN read outside ${GODOT_BIN_OWNER} in: ${badEnv.join(", ")}`,
+  );
+  assert.deepEqual(
+    Object.keys(HOME_ANDREW_ALLOWLIST).filter((rel) => !seenHomeAllow.has(rel)),
+    [],
+    "stale HOME_ANDREW_ALLOWLIST entries must be removed",
+  );
+  assert.deepEqual(
+    Object.keys(GODOT_BIN_ALLOWLIST).filter((rel) => !seenEnvAllow.has(rel)),
+    [],
+    "stale GODOT_BIN_ALLOWLIST entries must be removed",
+  );
 });
