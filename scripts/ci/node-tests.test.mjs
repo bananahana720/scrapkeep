@@ -1,11 +1,19 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   buildNodeTestArgs,
-  resolveTestFiles,
+  discoverTestFiles,
+  EXCLUDED_TESTS,
   selectShardFiles,
   shuffleFiles,
 } from "./node-tests.mjs";
+
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 test("selectShardFiles partitions files cleanly across shards with and without shuffle", () => {
   const input = ["a.test.js", "b.test.js", "c.test.js", "d.test.js", "e.test.js", "f.test.js"];
@@ -41,9 +49,74 @@ test("shuffleFiles is deterministic per seed and preserves exact file set", () =
   assert.deepEqual([...s1].sort(), input);
 });
 
-test("resolveTestFiles expands package.json globs into sorted concrete paths", () => {
-  const files = resolveTestFiles("node --test scripts/ci/*.test.mjs scripts/check-docs.mjs");
-  assert.ok(files.includes("scripts/ci/affected.test.mjs"));
-  assert.ok(files.includes("scripts/ci/check-budget.test.mjs"));
-  assert.ok(files.includes("scripts/check-docs.mjs"));
+test("discoverTestFiles scans the three scopes, skips nested tests/ and excluded entries", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-node-tests-"));
+  try {
+    for (const rel of [
+      "tests/alpha.test.js",
+      "tests/helper.js",
+      "tests/legacy/leads.test.js",
+      "scripts/top.test.mjs",
+      "scripts/nested/deep.test.mjs",
+      "scripts/nested/skip-me.test.mjs",
+      "scripts/nested/not-a-test.mjs",
+      "project-guide/handoff/sitting-kit/serve.test.mjs",
+      "project-guide/handoff/sitting-kit/sub/ignored.test.mjs",
+    ]) {
+      const full = path.join(tmp, rel);
+      mkdirSync(path.dirname(full), { recursive: true });
+      writeFileSync(full, "\n", "utf8");
+    }
+    const files = discoverTestFiles(tmp, {
+      excluded: { "scripts/nested/skip-me.test.mjs": "fixture exclusion reason" },
+    });
+    assert.deepEqual(files, [
+      "project-guide/handoff/sitting-kit/serve.test.mjs",
+      "scripts/nested/deep.test.mjs",
+      "scripts/top.test.mjs",
+      "tests/alpha.test.js",
+    ]);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("every tracked scripts/**/*.test.mjs is either discovered or listed in EXCLUDED_TESTS with a reason", () => {
+  const tracked = spawnSync("git", ["ls-files", "--", "scripts"], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  assert.equal(tracked.status, 0, tracked.stderr);
+  const trackedScriptTests = tracked.stdout
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((file) => file.endsWith(".test.mjs"))
+    .sort();
+  assert.ok(trackedScriptTests.length > 0);
+
+  const discovered = discoverTestFiles(repoRoot);
+  const discoveredSet = new Set(discovered);
+  const excludedEntries = Object.entries(EXCLUDED_TESTS);
+  const excludedSet = new Set(Object.keys(EXCLUDED_TESTS));
+  const trackedSet = new Set(trackedScriptTests);
+
+  for (const [file, reason] of excludedEntries) {
+    assert.equal(typeof reason, "string", `${file} exclusion reason must be a string`);
+    assert.ok(reason.trim().length > 0, `${file} exclusion reason must be non-empty`);
+    assert.ok(trackedSet.has(file), `${file} in EXCLUDED_TESTS is not a tracked scripts test`);
+    assert.ok(!discoveredSet.has(file), `${file} in EXCLUDED_TESTS must not also be discovered`);
+  }
+
+  const unaccounted = trackedScriptTests.filter(
+    (file) => !discoveredSet.has(file) && !excludedSet.has(file),
+  );
+  assert.deepEqual(unaccounted, []);
+
+  assert.ok(discoveredSet.has("tests/game.test.js"));
+  assert.ok(discoveredSet.has("scripts/ci/node-tests.test.mjs"));
+  assert.ok(discoveredSet.has("project-guide/handoff/sitting-kit/serve.test.mjs"));
+  assert.ok(!discoveredSet.has("tests/legacy/leads.test.js"));
+
+  const pkg = JSON.parse(readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+  assert.equal(pkg.scripts?.test, "node scripts/ci/node-tests.mjs");
 });
