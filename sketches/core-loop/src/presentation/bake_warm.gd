@@ -46,6 +46,9 @@ const WORLD_RIGS := {
 		"res://assets/models/highdraft/boss_mind_kit.glb",
 	],
 }
+const WORLD_FIRST_SHADERS := {
+	3: "mind_shaders",
+}
 
 const FIRSTS := ["scrap_pickup", "armour_read", "synergy_ring", "arc_mark", "machine_words", "hero_chunks"]
 const GLYPHS_A_FRAME := 4
@@ -90,10 +93,11 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 					_queue.append(item)
 			if not _firsts_done and _first_queue.is_empty():
 				_first_queue = firsts()
-			if world == 3:
+			var world_shader: String = String(WORLD_FIRST_SHADERS.get(world, ""))
+			if not world_shader.is_empty():
 				warm_mind_shaders()
-				if not _first_queue.has("mind_shaders") and not _warm.has("mind_shaders"):
-					_first_queue.push_front("mind_shaders")
+				if not _first_queue.has(world_shader) and not _warm.has(world_shader):
+					_first_queue.push_front(world_shader)
 			return
 
 
