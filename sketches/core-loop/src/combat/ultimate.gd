@@ -167,6 +167,10 @@ func active() -> bool:
 	return _phase != IDLE
 
 
+func current_beat() -> int:
+	return _beat
+
+
 func _on_stage_entered(_stage: int, retry: bool) -> void:
 	_outpost_encore = false
 	_abort("stage")

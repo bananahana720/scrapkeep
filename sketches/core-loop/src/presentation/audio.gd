@@ -2623,11 +2623,7 @@ func _park_director():
 
 func _park_event_state(event_id: String) -> Dictionary:
 	var director = _park_director()
-	if director != null:
-		for state in director._park_states:
-			if state.row.id == event_id and not state.weather:
-				return state
-	return {}
+	return director.park_event_state(event_id) if director != null else {}
 
 
 func _park_event_row(event_id: String) -> Dictionary:
@@ -2663,9 +2659,8 @@ func _on_event_announced(event_id: String, seconds: float, _at: Vector3) -> void
 	var lead := roundi(seconds * Harmony.RATE)
 	var landing_s := -1.0
 	if not state.is_empty():
-		var fact: Dictionary = _park_director()._park_fact(state, "announced")
-		landing_s = float(fact.landing_s)
-		lead = roundi((landing_s - float(fact.time_s)) * Harmony.RATE)
+		landing_s = float(state.due_s)
+		lead = roundi((landing_s - float(state.time_s)) * Harmony.RATE)
 	_set_incoming_at = clock + float(lead) / Harmony.RATE
 	_park_cues[event_id] = {"row": row, "options": options, "due": engine.clock + lead,
 		"landing_s": landing_s, "booked": true, "transport": _park_transport_snapshot.duplicate()}
@@ -2704,9 +2699,8 @@ func _guard_park_bookings() -> void:
 		if state.phase == director.LIVE:
 			_restore_park_drop(event_id, cue)
 			continue
-		var safe: bool = not state.holding and director.stage_time >= director._park_quiet_until \
-			and director._park_capacity(state) and director._park_route_safe(state) \
-			and director._park_clear(state, ctx.player.ball_position(), ctx.player.state.velocity, state.context)
+		var safe: bool = ctx != null and ctx.get("player") != null \
+			and director.park_booking_safe(event_id, ctx.player.ball_position(), ctx.player.state.velocity)
 		if not safe:
 			engine.cancel_park_drop(event_id)
 			cue.booked = false
@@ -4791,9 +4785,10 @@ func _tend_tally() -> void:
 	if combat != null and combat.get("ultimate") != null and combat.get("tally_piece") != null:
 		var ult = combat.ultimate
 		if ult.phase() == "flight" and String(combat.tally_piece) != "":
-			if int(ult._beat) != _tally_beat and int(ult._beat) > 0:
-				_tally_cue("tally_stroke", int(ult._beat) - 1)
-			_tally_beat = int(ult._beat)
+			var beat: int = ult.current_beat()
+			if beat != _tally_beat and beat > 0:
+				_tally_cue("tally_stroke", beat - 1)
+			_tally_beat = beat
 		else:
 			_tally_beat = -1
 	var waiting: Array = []

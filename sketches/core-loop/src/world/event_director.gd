@@ -405,6 +405,29 @@ func is_park_land_fact(kind: String) -> bool:
 	return not _park.is_empty() and (PARK_LAND_FACTS.has(kind) or PARK_LAND_FACTS.values().has(kind))
 
 
+func park_event_state(event_id: String) -> Dictionary:
+	var state := _park_state_for(event_id)
+	if state.is_empty():
+		return {}
+	return {"row": state.row, "phase": state.phase, "due_s": state.due_s, "holding": state.holding, "time_s": stage_time}
+
+
+func park_booking_safe(event_id: String, ball: Vector3, velocity: Vector3) -> bool:
+	var state := _park_state_for(event_id)
+	if state.is_empty():
+		return false
+	return not state.holding and stage_time >= _park_quiet_until \
+		and _park_capacity(state) and _park_route_safe(state) \
+		and _park_clear(state, ball, velocity, state.context)
+
+
+func _park_state_for(event_id: String) -> Dictionary:
+	for state in _park_states:
+		if state.row.id == event_id and not state.weather:
+			return state
+	return {}
+
+
 func notify_warden_phase(phase: String) -> void:
 	if phase == "broken":
 		_park_quiet_until = stage_time + PARK_QUIET_S
