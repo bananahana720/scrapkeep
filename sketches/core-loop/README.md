@@ -66,6 +66,7 @@ If you are scrapped, a death ends the run as RUN OVER: there is no free stage re
 | F1         | launched with --dev only: tuning panel (frees the mouse)                                                                                                                                                                                                                                      |
 | F3         | launched with --dev only: frame smoothing on/off for this session (Settings, Display keeps it)                                                                                                                                                                                                                       |
 | F4         | launched with --dev only: save every tuning value to user://tuning-<time>.json                                                                                                                                                                                                                |
+| `` ` ``, F10 | launched with --dev only: the developer console (see "Developer console" below)                                                                                                                                                                                                               |
 | Esc        | outside play: quit                                                                                                                                                                                                                                                                            |
 
 In play the game pauses itself: the pause menu opens when the window loses focus or the pad in use disconnects, and it stays open until you resume.
@@ -80,6 +81,28 @@ On the screens outside play, every choice is also a button: click it, or press t
 | N                                | summary: new run as the same pilot (pad A on the summary)                                                              |
 | 1 or 2, A/D then Enter, or click | upgrade pick (run start, Moss's bay, or stage clear if you skipped the bay); Esc is "Later" and keeps the pick waiting |
 | roll up slowly to Moss's counter | opens the shop: click a plate or move focus with the keys; T talks to Moss                                             |
+
+## Developer console
+
+Launch with `--dev` and press `` ` `` (or F10) in any screen. A drawer opens on the left; the game stops reading its own keys and mouse until it closes. It is for tuning the look and testing fights, and it never mounts in a plain launch or a test. Every slider and button runs a typed command, and the log shows that command, so a setting found by hand can be repeated or scripted. `help` lists them; Tab completes, Up and Down recall.
+
+- **Look**: ten presets (`look graphic press`, `look ligne claire`, `look riso zine`, `look pixel spill`, ...) and live light: exposure, tonemap, saturation, sun energy and angle, shadows, fog, volumetric air, glow, SSAO and ink-outline width. `reset all` hands everything back to the game.
+- **Paint** (`set cel 5`, `set dots 0.4`, `set hatch 0.8`, `set lines 0.9`): a stylise pass on 3D surfaces only. It draws before the transparent pass, so telegraphs, VFX and the HUD stay crisp on top, and it fades out with distance (`fade_from`, `fade_to`).
+- **Print** (`set pixel 3`, `set riso 0.5`, `set speed_lines 0.6`, `set impact 1`): a pass over the whole 3D frame, telegraphs included, under the HUD: pixelate, posterize and dither, two-ink riso, grade, paper tooth, grain, scanlines, vignette, speed lines that grow with the ball's speed, and inked impact frames on big hits.
+- **Lens**: `cam orbit|iso|side|top|hero|high|cinema|game`. Iso, side and top are orthographic (the flat 2D read) and cut away whatever stands between the camera and the ball (`cam cut 0` turns that off). Knobs: `cam fov 40`, `cam distance 20`, `cam tilt 0.6` (tilt-shift miniature). Right-drag orbits, the wheel zooms.
+- **Fight & state**: `spawn <kind> [count] [affix]` ahead of the ball (`kinds 1` lists world 1's), `clear [hard]`, `god`, `heal`, `damage <n>`, `scrap 500`, `cogs 200`, `calm`, `time 0.25`, `freeze` (pauses the world via `freeze_for_dev`; the dev camera and looks still move), `tick <n>` (steps exact physics ticks while frozen), `stage <1..6|dam|flume|...>`, `warp <x z|spawn|beacon|landmark|moss|vault|warden|ahead>`, `give <part> [count]`, `panel <id> <tier>`, `quality <preset>`, `boss`, `boss 3`, `retry`, `pick 1`.
+- **Inspect, assert & overlays**: `inspect <state|player|enemies|warden|boss|telegraphs|build|look|lens|perf|prims|ui|events|anomalies>` emits structured state; `events <on|off|tail|clear>` records the signal ring buffer; `assert <finite|no_anomalies|state|stage|enemies|hp|draws|event|no_event|expr>` records pass/fail checks; `overlay <all|none|bounds|telegraphs|spawns|sight|nav|vel>` draws live debug geometry.
+- **Bake & sheets**: `bake <name>` saves every override to `user://dev_looks/<name>.json` and `load <name>` brings it back. `shot` saves a still without the drawer, `hud off` hides the HUD, and `sheet [presets|cams|quality] [name]` freezes the frame and captures a labeled contact sheet under `--dev-out` (or `user://dev_shots/`).
+
+For unattended runs, warm multi-turn File-Mailbox sessions, built-in recipes, and PNG diffs, use the agent CLI lever (`scripts/dev-console.mjs`), which defaults to `--headless --audio-driver Dummy` with scratch saves under `artifacts/local/dev-console/` and uses silent offscreen rendering (`--drawn`) only when visuals are requested:
+
+```sh
+npm run dev:console -- recipe smoke --json
+npm run dev:console -- recipe look-sheet --json
+npm run dev:console -- serve --session probe && npm run dev:console -- send --session probe "inspect state" --json && npm run dev:console -- stop --session probe
+```
+
+Scripted runs close the pause menu that opens when the window loses focus before each still, and in-process GDScript probes can use `DevSession` under `src/dev/` for boilerplate-free headless scenarios. The code lives in `src/dev/`; `tests/dev_console_test.gd` drives commands against the real game.
 
 ## Field notes
 

@@ -313,6 +313,10 @@ func card_holds_only() -> bool:
 	return _start_pointer_held and not _held and not get_tree().paused
 
 
+func pausing() -> bool:
+	return _paused
+
+
 func _apply_hold() -> void:
 	var briefed := briefing()
 	_hold_quiet(armed and _start_card_showing())

@@ -14,6 +14,7 @@ Each directory here is one skill that Antigravity loads natively from `.agents/s
 | `scrapkeep-verify-formal` | project | model-check the run flow and launch swipe under every interruption |
 | `scrapkeep-gemini-workflows` | project | orchestrate Antigravity `run_workflow` pipelines, Gemini tier routing, and card batches |
 | `scrapkeep-visual-review` | project | run Gemini multimodal UI audits, blind `eye.mjs` film reads, and reference sheets |
+| `scrapkeep-dev-console` | project | drive the dev console CLI lever, warm File-Mailbox sessions, recipes, and silent offscreen sheets |
 | `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
 
 `reactive-model-loop` is a portable skill with no project-specific paths or rules; `scripts/check-skills.mjs` enforces that portability boundary.
