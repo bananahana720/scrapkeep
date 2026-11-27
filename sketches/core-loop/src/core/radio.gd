@@ -163,6 +163,10 @@ func current_mixtape() -> Dictionary:
 	return mixtapes[clampi(mixtape, 0, mixtapes.size() - 1)]
 
 
+func pick_mixtape(list: int) -> void:
+	mixtape = list
+
+
 func new_mixtape() -> int:
 	if mixtapes.size() >= MAX_MIXTAPES:
 		return -1

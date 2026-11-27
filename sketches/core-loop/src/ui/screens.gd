@@ -1091,7 +1091,7 @@ func radio_key(key: int) -> bool:
 		KEY_N:
 			var made: int = radio.new_mixtape()
 			if made >= 0:
-				radio.mixtape = made
+				radio.pick_mixtape(made)
 		KEY_X:
 			var rng := RandomNumberGenerator.new()
 			rng.randomize()
@@ -1100,7 +1100,7 @@ func radio_key(key: int) -> bool:
 			radio.tune(radio.MIXTAPE)
 		_:
 			if key >= KEY_1 and key < KEY_1 + radio.mixtapes.size():
-				radio.mixtape = key - KEY_1
+				radio.pick_mixtape(key - KEY_1)
 			else:
 				return true
 	_radio.refresh(game.ctx.profile, radio)

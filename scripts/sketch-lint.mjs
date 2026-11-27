@@ -1076,7 +1076,6 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/ui/class_card.gd:reduced_motion",
   "src/ui/class_preview.gd:reduced_motion",
   "src/ui/ending_sequence.gd:_highdraft_skies",
-  "src/ui/field_notes.gd:CONTROLS",
   "src/ui/icons.gd:_cache",
   "src/ui/icons.gd:_from_file",
   "src/ui/moss_bubble.gd:reduced_motion",

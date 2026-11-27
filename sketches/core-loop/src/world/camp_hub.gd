@@ -28,6 +28,7 @@ const FEATURES: Array = [
 	preload("res://src/world/camp_skee.gd"),
 	preload("res://src/world/camp_trial.gd"),
 	preload("res://src/world/camp_sandbox.gd"),
+	preload("res://src/ui/camp_enemy_picker.gd"),
 	preload("res://src/world/camp_ring.gd"),
 	preload("res://src/ui/camp_scrapbook.gd"),
 ]
