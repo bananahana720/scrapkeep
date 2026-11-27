@@ -1623,10 +1623,20 @@ static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, 
 		var at := picks.size() - 1
 		if leans:
 			var first := 1 if picks[0] == bait else 0
-			for i in range(picks.size() - 1, first - 1, -1):
-				if not (in_kit(class_id, picks[i]) and bucket_of(picks[i]) == "movement"):
-					at = i
-					break
+			var prefer_kit: bool = not (KITS[class_id] as Dictionary).has("weapon") and not harder.is_empty() and in_kit(class_id, harder[0])
+			var chosen := -1
+			if prefer_kit:
+				for i in range(picks.size() - 1, first - 1, -1):
+					if in_kit(class_id, picks[i]) and bucket_of(picks[i]) != "movement":
+						chosen = i
+						break
+			if chosen < 0:
+				for i in range(picks.size() - 1, first - 1, -1):
+					if not (in_kit(class_id, picks[i]) and bucket_of(picks[i]) == "movement"):
+						chosen = i
+						break
+			if chosen >= 0:
+				at = chosen
 		if not harder.is_empty():
 			picks[at] = harder[rng.randi_range(0, harder.size() - 1)]
 	if leans:
@@ -1937,10 +1947,20 @@ static func roll_for_stage(rng: RandomNumberGenerator, rarities: Array, class_id
 		var at := picks.size() - 1
 		if leans:
 			var first := 1 if not picks.is_empty() and picks[0] == bait else 0
-			for i in range(picks.size() - 1, first - 1, -1):
-				if not (in_kit(class_id, picks[i]) and bucket_of(picks[i]) == "movement"):
-					at = i
-					break
+			var prefer_kit: bool = not (KITS[class_id] as Dictionary).has("weapon") and not harder.is_empty() and in_kit(class_id, harder[0])
+			var chosen := -1
+			if prefer_kit:
+				for i in range(picks.size() - 1, first - 1, -1):
+					if in_kit(class_id, picks[i]) and bucket_of(picks[i]) != "movement":
+						chosen = i
+						break
+			if chosen < 0:
+				for i in range(picks.size() - 1, first - 1, -1):
+					if not (in_kit(class_id, picks[i]) and bucket_of(picks[i]) == "movement"):
+						chosen = i
+						break
+			if chosen >= 0:
+				at = chosen
 		if not harder.is_empty():
 			picks[at] = harder[rng.randi_range(0, harder.size() - 1)]
 	if leans and not high_impact:
