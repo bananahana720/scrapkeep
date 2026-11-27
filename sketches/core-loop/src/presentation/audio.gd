@@ -2171,6 +2171,14 @@ func wire_optional() -> void:
 		end_moment("shop", "bay"))
 	_listen_optional(events, "world_fact", func(kind: String, at: Vector3):
 		var row := EventKinds.world_row(kind)
+		var director = _park_director()
+		if director != null and director.is_park_land_fact(kind) and not row.is_empty():
+			var sound := Rows.heard(row, cue_context())
+			var pitch := Harmony.ratio(live_key())
+			if _admit("world_fact", sound, pitch):
+				_start("world_fact", sound, SfxBank.stream(sound),
+					SfxBank.trim_db(sound) + PRIORITY_DB[Rows.priority("world_fact")], pitch, "SFX")
+			return
 		if kind == "kindness_offered" and not row.is_empty():
 			_play_kindness_chime(row)
 		elif not row.is_empty():
@@ -2607,7 +2615,10 @@ func _park_director():
 	if ctx == null or ctx.get("root") == null:
 		return null
 	var world = ctx.root.get("world")
-	return world.events if world != null else null
+	if world != null:
+		return world.events
+	var events = ctx.root.get("events")
+	return events if events != null and events.has_method("is_park_land_fact") else null
 
 
 func _park_event_state(event_id: String) -> Dictionary:

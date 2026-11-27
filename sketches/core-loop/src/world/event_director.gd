@@ -401,6 +401,10 @@ func pilot_lines() -> Array:
 	return _park_pilot_lines
 
 
+func is_park_land_fact(kind: String) -> bool:
+	return not _park.is_empty() and (PARK_LAND_FACTS.has(kind) or PARK_LAND_FACTS.values().has(kind))
+
+
 func notify_warden_phase(phase: String) -> void:
 	if phase == "broken":
 		_park_quiet_until = stage_time + PARK_QUIET_S
