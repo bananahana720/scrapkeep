@@ -76,11 +76,22 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 3
     steps:
-      - name: Checkout (blobless)
+      - name: Checkout (blobless, sparse)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
           fetch-depth: 0
+          sparse-checkout: |
+            /*
+            !/sketches/core-loop/assets/models/
+            !/sketches/core-loop/assets/audio/
+            !/sketches/core-loop/assets/park/**/*.bin
+            !/sketches/core-loop/assets/sky/
+            !/sketches/core-loop/assets/textures/
+            !/sketches/core-loop/assets/fonts/
+            !/sketches/core-loop/assets/concepts/
+            !/sketches/core-loop/addons/
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Setup Node
@@ -123,11 +134,22 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 3
     steps:
-      - name: Checkout (blobless)
+      - name: Checkout (blobless, sparse)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
           fetch-depth: 0
+          sparse-checkout: |
+            /*
+            !/sketches/core-loop/assets/models/
+            !/sketches/core-loop/assets/audio/
+            !/sketches/core-loop/assets/park/**/*.bin
+            !/sketches/core-loop/assets/sky/
+            !/sketches/core-loop/assets/textures/
+            !/sketches/core-loop/assets/fonts/
+            !/sketches/core-loop/assets/concepts/
+            !/sketches/core-loop/addons/
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Setup Node
@@ -151,11 +173,24 @@ jobs:
       matrix:
         shard: [1, 2]
     steps:
-      - name: Checkout (blobless, read-only token for lazy blob fetch)
+      - name: Checkout (shallow, blobless, sparse)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
-          fetch-depth: 0
+          fetch-depth: 1
+          sparse-checkout: |
+            /*
+            !/sketches/core-loop/assets/models/*
+            /sketches/core-loop/assets/models/park/
+            !/sketches/core-loop/assets/models/park/*
+            /sketches/core-loop/assets/models/park/half_pipe_concrete.glb
+            !/sketches/core-loop/assets/audio/
+            !/sketches/core-loop/assets/sky/
+            !/sketches/core-loop/assets/textures/
+            !/sketches/core-loop/assets/fonts/
+            !/sketches/core-loop/assets/concepts/
+            !/sketches/core-loop/addons/
+          sparse-checkout-cone-mode: false
           persist-credentials: true
 
       - name: Setup Node
@@ -228,11 +263,23 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 3
     steps:
-      - name: Checkout (shallow, blobless)
+      - name: Checkout (shallow, blobless, sparse)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
           fetch-depth: 1
+          sparse-checkout: |
+            /index.html
+            /orchard.html
+            /vite.config.js
+            /package.json
+            /package-lock.json
+            /src/
+            /public/
+            /tests/
+            /scripts/check-build.mjs
+            /scripts/ci/
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Setup Node
