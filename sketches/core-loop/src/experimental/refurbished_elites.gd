@@ -17,6 +17,10 @@ const DEFAULT_ELITE_PATHS: Array[String] = [
 	"res://src/experimental/resources/director/elite_slag_spill_exhaust.tres",
 	"res://src/experimental/resources/director/elite_coolant_cryo_hauler.tres",
 	"res://src/experimental/resources/director/elite_overclocked_foreman_spec.tres",
+	"res://src/experimental/resources/director/elite_corrosive_bore_warden.tres",
+	"res://src/experimental/resources/director/elite_cryo_slurry_tanker.tres",
+	"res://src/experimental/resources/director/elite_gale_shear_harrier.tres",
+	"res://src/experimental/resources/director/elite_choir_resonator_pylon.tres",
 ]
 
 const MIN_TELL_S := 0.6
@@ -437,7 +441,7 @@ class RefurbishedInstance extends RefCounted:
 					})
 			&"execute":
 				phase_timer -= delta
-				if variant_id == &"magnetic_tow_winch":
+				if float(def.get("pull_accel", 0.0)) > 0.0:
 					out["ball_accel"] = _magnetic_tether_accel(ball_pos, ball_vel, cruise_mps)
 				if phase_timer <= 0.0:
 					phase = &"idle"

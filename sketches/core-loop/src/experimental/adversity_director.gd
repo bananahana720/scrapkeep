@@ -4,6 +4,8 @@ extends RefCounted
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 
 const DEFAULT_CONFIG_PATH := "res://src/experimental/resources/director/spillway_adversity_config.tres"
+const DIG_CONFIG_PATH := "res://src/experimental/resources/director/dig_adversity_config.tres"
+const HIGHDRAFT_CONFIG_PATH := "res://src/experimental/resources/director/highdraft_adversity_config.tres"
 const MIN_SPAWN_GAP_M := 25.0
 const ARRIVAL_TELL_S := 1.0
 const HAZARD_TELL_FLOOR_S := 0.6
@@ -148,27 +150,49 @@ func effective_income_rate() -> float:
 	return tier_base * stall_mult
 
 
-func current_sightline_m() -> float:
+func _sightline_hazard_def() -> Dictionary:
 	var hdefs := _hazard_defs()
-	var squall: Dictionary = hdefs.get(&"corrosive_steam_squall", {})
+	if active_hazard_id != &"" and hdefs.has(active_hazard_id):
+		var active_def: Dictionary = hdefs[active_hazard_id]
+		if active_def.has("min_sightline_m"):
+			return active_def
+	for key in hdefs:
+		var def: Dictionary = hdefs[key]
+		if def.has("min_sightline_m"):
+			return def
+	return {}
+
+
+func current_sightline_m() -> float:
+	var squall := _sightline_hazard_def()
 	var base_m := float(squall.get("base_sightline_m", 360.0))
-	if active_hazard_id != &"corrosive_steam_squall":
+	var hdefs := _hazard_defs()
+	if active_hazard_id == &"" or not hdefs.has(active_hazard_id):
 		return base_m
-	return lerpf(base_m, float(squall.get("min_sightline_m", 85.0)), hazard_intensity())
+	var active_def: Dictionary = hdefs[active_hazard_id]
+	if not active_def.has("min_sightline_m"):
+		return base_m
+	return lerpf(base_m, float(active_def.get("min_sightline_m", 85.0)), hazard_intensity())
 
 
 func close_silhouette_boost() -> float:
-	if active_hazard_id != &"corrosive_steam_squall":
+	var hdefs := _hazard_defs()
+	if active_hazard_id == &"" or not hdefs.has(active_hazard_id):
 		return 1.0
-	var squall: Dictionary = _hazard_defs().get(&"corrosive_steam_squall", {})
-	return lerpf(1.0, float(squall.get("silhouette_boost_max", 1.65)), hazard_intensity())
+	var active_def: Dictionary = hdefs[active_hazard_id]
+	if not active_def.has("silhouette_boost_max"):
+		return 1.0
+	return lerpf(1.0, float(active_def.get("silhouette_boost_max", 1.65)), hazard_intensity())
 
 
 func telegraph_contrast_boost() -> float:
-	if active_hazard_id != &"corrosive_steam_squall":
+	var hdefs := _hazard_defs()
+	if active_hazard_id == &"" or not hdefs.has(active_hazard_id):
 		return 1.0
-	var squall: Dictionary = _hazard_defs().get(&"corrosive_steam_squall", {})
-	return lerpf(1.0, float(squall.get("telegraph_contrast_max", 1.4)), hazard_intensity())
+	var active_def: Dictionary = hdefs[active_hazard_id]
+	if not active_def.has("telegraph_contrast_max"):
+		return 1.0
+	return lerpf(1.0, float(active_def.get("telegraph_contrast_max", 1.4)), hazard_intensity())
 
 
 func slag_tide_depth_m() -> float:
@@ -279,6 +303,75 @@ func compute_magnetic_force(
 			return (inward * float(def["pull_strength"]) * 0.45 + swirl * float(def["swirl_strength"]) * 0.25) * falloff
 		_:
 			return Vector3.ZERO
+
+
+func compute_crosswind_force(
+		entity_pos: Vector3,
+		entity_vel: Vector3,
+		mass_class: StringName,
+		cruise_mps: float = -1.0) -> Vector3:
+	if active_hazard_id != &"gale_shear_crosswind":
+		return Vector3.ZERO
+	var intensity := hazard_intensity()
+	if intensity <= 0.0:
+		return Vector3.ZERO
+	var hdefs := _hazard_defs()
+	if not hdefs.has(&"gale_shear_crosswind"):
+		return Vector3.ZERO
+	var def: Dictionary = hdefs[&"gale_shear_crosswind"]
+	var radius := float(def.get("radius_m", 52.0))
+	var dist := Vector2(entity_pos.x - hazard_origin.x, entity_pos.z - hazard_origin.z).length()
+	if dist > radius:
+		return Vector3.ZERO
+	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var fast_ratio := float(_cfg("fast_speed_ratio", 0.85))
+	var strength := float(def.get("crosswind_strength", 13.5)) * intensity
+	var wind_dir := Vector3(0.0, 0.0, 1.0) if int(hazard_cycles_completed) % 2 == 0 else Vector3(1.0, 0.0, 0.0)
+	match mass_class:
+		&"loose_scrap", &"metallic_prop":
+			return wind_dir * strength * 1.15
+		&"metal_projectile":
+			return wind_dir * float(def.get("projectile_deflect", 14.0)) * intensity
+		&"player_ball":
+			var flat_v := Vector3(entity_vel.x, 0.0, entity_vel.z)
+			var speed := flat_v.length()
+			if speed >= cruise * fast_ratio:
+				var forward := flat_v.normalized()
+				var lateral := wind_dir - forward * wind_dir.dot(forward)
+				var boost_scale := 0.0 if speed >= cruise * 1.65 else 1.0
+				var raw := lateral * strength * 0.45 + forward * float(def.get("slingshot_boost", 11.5)) * intensity * boost_scale
+				return RefurbishedElites.never_brake(raw, entity_vel)
+			return wind_dir * strength * 0.55
+		_:
+			return Vector3.ZERO
+
+
+func compute_tremor_force(
+		entity_pos: Vector3,
+		entity_vel: Vector3,
+		cruise_mps: float = -1.0) -> Vector3:
+	if active_hazard_id != &"subterranean_tremor":
+		return Vector3.ZERO
+	var intensity := hazard_intensity()
+	if intensity <= 0.0:
+		return Vector3.ZERO
+	var hdefs := _hazard_defs()
+	if not hdefs.has(&"subterranean_tremor"):
+		return Vector3.ZERO
+	var def: Dictionary = hdefs[&"subterranean_tremor"]
+	var radius := float(def.get("radius_m", 48.0))
+	var dist := Vector2(entity_pos.x - hazard_origin.x, entity_pos.z - hazard_origin.z).length()
+	if dist > radius:
+		return Vector3.ZERO
+	var cruise := float(_cfg("default_cruise_mps", 14.0)) if cruise_mps <= 0.0 else cruise_mps
+	var fast_ratio := float(_cfg("fast_speed_ratio", 0.85))
+	var pulse_sign := 1.0 if sin(hazard_elapsed_s * 5.0) >= 0.0 else -1.0
+	var lateral_dir := Vector3(pulse_sign, 0.0, -pulse_sign * 0.5).normalized()
+	var raw := lateral_dir * float(def.get("tremor_lateral_accel", 11.5)) * intensity
+	var flat_v := Vector3(entity_vel.x, 0.0, entity_vel.z)
+	if flat_v.length() >= cruise * fast_ratio:
+		return RefurbishedElites.never_brake(raw * 0.35, entity_vel)
+	return raw
 
 
 func advance(
@@ -708,6 +801,14 @@ func _apply_active_hazard_effects(
 	if active_hazard_id == &"magnetic_storm":
 		result["ball_accel"] = (result["ball_accel"] as Vector3) + compute_magnetic_force(
 			ball_pos, ball_vel, &"player_ball", cruise_mps
+		)
+	elif active_hazard_id == &"gale_shear_crosswind":
+		result["ball_accel"] = (result["ball_accel"] as Vector3) + compute_crosswind_force(
+			ball_pos, ball_vel, &"player_ball", cruise_mps
+		)
+	elif active_hazard_id == &"subterranean_tremor":
+		result["ball_accel"] = (result["ball_accel"] as Vector3) + compute_tremor_force(
+			ball_pos, ball_vel, cruise_mps
 		)
 
 

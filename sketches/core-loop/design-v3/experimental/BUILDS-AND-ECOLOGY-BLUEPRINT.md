@@ -47,7 +47,7 @@ Extending `src/build/elements.gd`'s default-deny discipline, `EnvTags.REACTIONS`
 | `burning + coolant_brittle` | `&"thermal_shatter_steam"` | Violent flash-quench shatters brittle armor (`1.85x`, `0.5` armor shred) and leaves wet condensate. | `burning`, `coolant_brittle` | `&"soaked_conductive"` (`3.5 s`) |
 | `electrified + magnetic` | `&"rail_surge"` | Electromagnetic Lorentz kick snaps metal targets inward (`knock: 18`) and boosts ball speed (`+6.5 m/s`). | `magnetic` | — |
 | `electrified + soaked_conductive` | `&"spillway_discharge"` | Spillway's wet-conducts-arc rule (`SPILLWAY-ROSTER.md`): wide `8.0 m` discharge severs tethers (`1.5x`). | `soaked_conductive` | — |
-| `burning + slag_coated` | `&"molten_rekindle"` | Re-liquefies cooling slag, scorching armor (`0.25` shred, `1.35x`). | `burning` | — |
+| `burning + slag_coated` | `&"molten_rekindle"` | Re-liquefies cooling slag, scorching armor (`0.35` shred, `1.35x`) and dropping braced shields. | `burning` | — |
 | `coolant_brittle + slag_coated` | `&"quench_slag_crust"` | Rapidly hardens molten slag into brittle crust that breaks **1 heft tier lower** (composes with `destructibles.gd` and Slag-Pour cover berms!). | `slag_coated` | — |
 | `burning + soaked_conductive` | `&"boiler_cloud"` | Steam pressure ring shoves stalled enemies outward (`knock: 12`). | `burning`, `soaked_conductive` | — |
 | `coolant_brittle + magnetic` | `&"cryo_clamp"` | Supercooled magnetic lock slows non-elite machines (`0.45x` speed; elites resist per `Elements.elite_rules`). | `magnetic` | — |
@@ -91,10 +91,23 @@ Dropping a brand-new 9th `.tres` part into `resources/parts/` automatically comp
 | **A: Flow & Arc** | `magnetized_sawblades.tres` | Redjaw | `WEAPON` | `on_weapon_fire` | Emits `magnetic` / Consumes `slag_coated`, `electrified`, `soaked_conductive`, `coolant_brittle` | `+14` | Blades curve toward live magnetic zones (skill shot or self-deflection) and add volley heat. |
 | **A: Flow & Arc** | `harpoon_grounding_spike.tres` | Mind-glass | `DASH_LINE` | `on_harpoon_snap` | Emits `electrified` / Consumes `magnetic`, `slag_coated`, `soaked_conductive` | `-15` | Clean snaps dump heat; slow or missed tether reels add `+12` line heat instead. |
 | **B: Foundry & Quench** | `slag_skid_crucible.tres` | Fleet Surplus | `DASH_LINE` | `on_slam` | Emits `slag_coated`, `burning` | `+24` | Requires fast roll (`>= 10 m/s`) to spill cleanly; slow slams dump heat back into the rig. |
-| **B: Foundry & Quench** | `brine_tap_vent.tres` | Spillway Works | `CORE_HUSK` | `on_overheat` | Emits `coolant_brittle`, `soaked_conductive` / Consumes `burning` | `-65` | Slows passive airflow cooling (`0.7x`) below redline, daring you to run hot and slam-vent. |
-| **B: Foundry & Quench** | `thermite_flail_spool.tres` | Waking-made | `CORE_HUSK` | `on_tag_reaction` | Emits `burning` | `+10` | Grants `+1` temporary heft break tier on nearby reactions, but spikes heat straight into redline. |
+| **B: Foundry & Quench** | `brine_tap_vent.tres` | Spillway Works | `CORE_HUSK` | `on_overheat` | Emits `coolant_brittle`, `soaked_conductive` (`5.0 s` TTL, `7.5 m` radius) / Consumes `burning` | `-65` | Slows passive airflow cooling (`0.7x`) below redline, daring you to run hot and slam-vent. |
+| **B: Foundry & Quench** | `thermite_flail_spool.tres` | Waking-made | `CORE_HUSK` | `on_tag_reaction` | Emits `burning` | `+14` | Grants `+1` temporary heft break tier on nearby reactions, but spikes heat straight into redline. |
 | **C: Salvage & Audit** | `hoard_coil_ballast.tres` | Moss's Spares | `CORE_HUSK` | `on_scrap_pickup` | Emits `magnetic` | `+8` | Builds pickup heat; stalling while magnetized pulls metal enemy shells closer. |
 | **C: Salvage & Audit** | `requisition_leech.tres` | Fleet Surplus | `WEAPON` | `on_prop_rupture` | Consumes `coolant_brittle`, `burning`, `electrified` | `+16` | Doubles prop salvage and fires a homing siphon bolt, but broadcasts a Fleet audit ping (`22 m`). |
+
+### 3.2.1 Batch 2 — Six Cross-World `.tres` Jury-Rigged Parts (Dig & Highdraft Depth)
+
+Loaded via `JuryRigSynergies.catalogue_batch2()` and `JuryRigSynergies.all_catalogue()` (`14` total `.tres` assets validated by `validate_all_catalogues()`, zero flat stat-sticks, zero hardcoded pairwise item-ID checks):
+
+| Batch | `.tres` Asset | Maker | Slot | Trigger | Tags (Emit / Consume) | Heat | Give-and-Take Trade-Off |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| **D: Dig Bore & Slurry** | `caustic_bore_auger.tres` | Redjaw | `WEAPON` | `on_weapon_fire` | Emits `soaked_conductive`, `slag_coated` / Consumes `coolant_brittle`, `burning` | `+16` | Stacks auger heat and kicks `+8` extra overpressure heat when fired while stalled (`< 6 m/s`). |
+| **D: Dig Bore & Slurry** | `tremor_pile_driver.tres` | Waking-made | `DASH_LINE` | `on_slam` | Emits `burning`, `magnetic` / Consumes `coolant_brittle`, `slag_coated` | `+20` | Heavy piston heat; slams below rolling speed (`< 10 m/s`) lose the magnetic pull and heft tier bump. |
+| **D: Dig Bore & Slurry** | `cryo_slurry_manifold.tres` | Spillway Works | `CORE_HUSK` | `on_prop_rupture` | Emits `coolant_brittle` / Consumes `burning`, `slag_coated` | `-18` | Slows passive airflow cooling (`0.75x`) below redline, asking you to keep popping arena props to vent. |
+| **E: Highdraft Shear & Choir** | `choir_arc_lance.tres` | Mind-glass | `WEAPON` | `on_weapon_fire` | Emits `electrified` / Consumes `magnetic`, `soaked_conductive`, `slag_coated` | `+18` | Heavy capacitor heat; firing below `10 m/s` halves lance reach and adds `+6` bleed heat. |
+| **E: Highdraft Shear & Choir** | `gale_shear_slipstream.tres` | Highdraft Roosts | `DASH_LINE` | `on_dash` | Emits `magnetic`, `coolant_brittle` / Consumes `burning`, `electrified` | `+14` | Stacks turbine heat on dash and narrows passive cooling (`0.8x`) below redline. |
+| **E: Highdraft Shear & Choir** | `overclock_capacitor_shunt.tres` | Moss's Spares | `CORE_HUSK` | `on_tag_reaction` | Emits `electrified` / Consumes `soaked_conductive`, `magnetic` | `+12` | Spikes shunt heat on every triggered cascade, racing toward redline meltdown if you stall. |
 
 ### 3.3 Documented Multi-Part Synergy Chains per Item Batch
 
@@ -113,6 +126,11 @@ Each batch produces 2–3 distinct emergent multi-part chains purely through `En
 **Batch C — Salvage & Audit Manipulators**
 1. **Audit Detonation Chain** (`requisition_leech.tres` + `thermite_flail_spool.tres`): Punting a Slag Drum or popping a Coolant Tank fires `on_prop_rupture` -> `Requisition Leech` doubles salvage and fires a homing siphon bolt -> `signal_chain_synergy` wakes `Thermite Flail Spool` to ignite adjacent props into a room-clearing cascade.
 2. **Magnet-Bowl Harvester** (`hoard_coil_ballast.tres` + `requisition_leech.tres`): Picking up loose scrap yanks nearby Scrap Piles and Slag Drums inward (`magnetic`); slamming through the gathered cluster bowls enemies AND fires Requisition Leech bolts while daring the Fleet audit ping!
+
+**Batch 2 — Three Cross-World Multi-Part Synergies (Zero Pairwise Hardcoding)**
+1. **Dig Corrosive-Cryo Bore Cascade** (`cryo_slurry_manifold.tres` + `tremor_pile_driver.tres` + `caustic_bore_auger.tres`): Rupturing a pit drum or coolant tank fires `on_prop_rupture` -> `Cryo-Slurry Manifold` vents `-18` heat and coats the basin in `coolant_brittle` -> slamming at speed with `Tremor Pile-Driver` triggers `thermal_shatter_steam` (`tag_reaction_synergy`, `1.85x` shatter + `0.5` shred) and drops `magnetic` + `soaked_conductive` -> `Caustic Bore Auger` bridges the primed caustic-cryo lane (`tag_bridge_synergy`) for amplified corrosive hits.
+2. **Highdraft Gale-Choir Railstorm** (`gale_shear_slipstream.tres` + `choir_arc_lance.tres` + `overclock_capacitor_shunt.tres`): Dashing with `Gale-Shear Slipstream` leaves a chilled `coolant_brittle` + `magnetic` slipstream -> firing `Choir Arc Lance` bridges the magnetic wake (`tag_bridge_synergy`), triggering `rail_surge` (`+6.5 m/s` ball boost + `tag_reaction_synergy`) -> that reaction wakes `Overclock Capacitor Shunt` via `on_tag_reaction` (`signal_chain_synergy`), jumping a second live arc through the magnetized pack while pushing heat into `HOT`/`REDLINE` for extra hops.
+3. **Cross-World Quench-Discharge Press** (`slag_skid_crucible.tres` [Batch 1] + `caustic_bore_auger.tres` [Batch 2] + `overclock_capacitor_shunt.tres` [Batch 2]): Fast slam pours `burning` + `slag_coated` -> `Caustic Bore Auger` sprays corrosive `soaked_conductive` straight into the flame, triggering `boiler_cloud` (`tag_reaction_synergy`) -> `on_tag_reaction` wakes `Overclock Capacitor Shunt` (`signal_chain_synergy`), firing `electrified` across the surviving `slag_coated` corridor (`conductive_arc_chain`) for a room-wide chain without any hardcoded part-ID pair check.
 
 ### 3.4 Overclock Heat Curve (Rule 9 Verification)
 
@@ -134,7 +152,7 @@ Interactive props complement `src/world/destructibles.gd` (heft-tiered obstacles
 | --- | --- | --- | --- |
 | **Pressurized Coolant Tank** | Any ball impact ruptures immediately. | `burning` auto-ruptures it. | Emits `coolant_brittle` (`6.5 m`) + `soaked_conductive` (`5.5 m`) + `-30` quench cooling bonus for Overclock rigs! |
 | **Explosive Fuel / Slag Drum** | Ball at `>= 12 m/s` **punts** it forward as a sliding kinetic bomb; slam detonates on the spot. | `burning` or `electrified` detonates it; pulled by `magnetic`. | Colliding with an enemy detonates for `32` blast damage + `burning` + `slag_coated` pool. |
-| **Harvestable / Throwable Scrap Pile** | Roll gently (`< 14 m/s`) to harvest `4` scrap + `1` cog; slam or roll at `>= 14 m/s` to **bowl** it through up to 4 enemies (`24` dmg each). | Pulled inward by `magnetic` zones (easy grouping!). | Forces a crisp split-second decision: safe scrap now, or kinetic bowling strike + bonus scrap! |
+| **Harvestable / Throwable Scrap Pile** (`radius_m = 1.4 m`, `2.5 m` bowling sweep) | Roll gently (`< 14 m/s`) to harvest `4` scrap + `1` cog; slam or roll at `>= 14 m/s` to **bowl** it through up to 4 enemies (`24` dmg each). | Pulled inward by `magnetic` zones (easy grouping!). | Forces a crisp split-second decision: safe scrap now, or kinetic bowling strike + bonus scrap! |
 | **Live Exposed Power Conduit** | Striking discharges `electrified` (`5.0 m`) then enters an `8.0 s` bounded cooldown. | Automatically arcs if adjacent (`<= 5 m`) to `soaked_conductive` or `slag_coated`. | Turns flooded lanes and slag trails into reusable environmental traps without infinite spam. |
 
 ### 4.2 Lore-Safe Neutral Mechanical Couriers

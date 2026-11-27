@@ -1,0 +1,27 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"tremor_pile_driver"
+display_name = "Tremor Pile-Driver"
+maker = &"waking"
+slot = 1
+rarity = &"fleet_grade"
+trigger = &"on_slam"
+emits_tags = Array[StringName]([&"burning", &"magnetic"])
+consumes_tags = Array[StringName]([&"coolant_brittle", &"slag_coated"])
+heat_cost = 20.0
+effect_id = &"tremor_shock_slam"
+params = {
+"heft_bonus_tiers": 1,
+"min_speed_mps": 10.0,
+"shock_damage": 24.0,
+"shock_radius_m": 6.8,
+"ttl_s": 4.5
+}
+summary = "Fast slams drive a fiery magnetic shockwave that shatters brittle ground and raises break heft."
+trade_off = "Heavy piston heat and no magnetic pull if slammed below rolling speed."
+visual_tell = "Copper fracture ring with inward cobalt brackets erupting from the impact point."
+audio_tell = "Twin subterranean knock into resonant steel chime."

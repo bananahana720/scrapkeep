@@ -1,0 +1,28 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"choir_arc_lance"
+display_name = "Choir Arc Lance"
+maker = &"mind_glass"
+slot = 0
+rarity = &"relic"
+trigger = &"on_weapon_fire"
+emits_tags = Array[StringName]([&"electrified"])
+consumes_tags = Array[StringName]([&"magnetic", &"soaked_conductive", &"slag_coated"])
+heat_cost = 18.0
+effect_id = &"harmonic_lance_beam"
+params = {
+"base_hops": 3,
+"lance_damage": 20.0,
+"lance_radius_m": 9.0,
+"min_speed_mps": 10.0,
+"slow_bleed_heat": 6.0,
+"ttl_s": 3.5
+}
+summary = "Fires a tuned arc lance that bridges magnetic or wet lanes into multi-target chains."
+trade_off = "Heavy capacitor heat and halved reach with extra bleed heat when firing below roll speed."
+visual_tell = "Mint tuning beam snapping bright rail arcs across nearby magnetic brackets."
+audio_tell = "Pure glass chime breaking into crisp arc crackle."
