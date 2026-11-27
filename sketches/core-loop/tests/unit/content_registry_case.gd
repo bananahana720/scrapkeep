@@ -3,7 +3,7 @@ extends RefCounted
 # T5 rule: registered content is well formed, resolves references, is selectable,
 # meets its admission floor, and matches a typed golden hash. Each bad-row fixture
 # must fail its named rule; deleting any registered table must fail minimum_rows.
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 const FIXTURES := "res://tests/fixtures/content_registry/"
 const TABLE_COUNT := 27
 # These two content pins exclude the stage table; unrelated registry pins stay canonical.

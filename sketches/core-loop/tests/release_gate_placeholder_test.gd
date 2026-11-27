@@ -4,7 +4,7 @@ const StageDefs := preload("res://src/core/stage_defs.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const T := preload("res://tests/support/t.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
-const PendingContent := preload("res://src/core/pending_content.gd")
+const PendingContent := preload("res://tests/support/pending_content.gd")
 
 # The release gate for the default table. A row whose name contains "placeholder" is a
 # stage that cannot ship. While placeholders are expected this test reports each one as a

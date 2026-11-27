@@ -7,14 +7,14 @@ extends SceneTree
 # sits in a forbidden domain without a KNOWN row. A KNOWN row whose file no longer uses its
 # colour fails too, so a fixed overload deletes its row and the count printed here falls.
 
-const Meanings := preload("res://src/core/colour_meanings.gd")
+const Meanings := preload("res://tests/support/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const T := preload("res://tests/support/t.gd")
 
 const ROOT := "res://src"
 const PALETTE_PATH := "res://src/core/palette.gd"
-const HOME := "res://src/core/colour_meanings.gd"
+const HOME := "res://tests/support/colour_meanings.gd"
 
 var _t := T.new("colour_meanings_test")
 var _palette: Dictionary = (Palette as GDScript).get_script_constant_map()

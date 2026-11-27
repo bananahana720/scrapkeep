@@ -8,7 +8,7 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const Bars := preload("res://src/core/defence_bars.gd")
+const Bars := preload("res://tests/support/defence_bars.gd")
 
 const KINDS := ["chaser", "lobber", "mag_trapper", "jolt_layer", "catch_trap", "hooker", "ramp_flipper", "boom_tender", "plated_brute",
 	"splitter", "linker", "foreman", "dispatcher", "miniboss"]

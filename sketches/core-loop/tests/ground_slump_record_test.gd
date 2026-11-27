@@ -1,6 +1,6 @@
 extends SceneTree
 const T := preload("res://tests/support/t.gd")
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 const Kinds := preload("res://src/core/event_kinds.gd")
 func _initialize() -> void:
 	var t := T.new("ground_slump_record_test")

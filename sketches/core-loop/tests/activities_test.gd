@@ -38,7 +38,7 @@ const RAM_AT := 1.3
 # A held stick's speed into a face on a 10-22 m run-up (12.6-13.8 m/s at cruise 14): under cruise,
 # and it breaks the wall (Activities.RAM_MIN_PER_CRUISE).
 const RAM_HELD := 0.92
-const SIDE_CONTENT_PENDING := preload("res://src/core/pending_content.gd").SIDE_CONTENT_PENDING
+const SIDE_CONTENT_PENDING := preload("res://tests/support/pending_content.gd").SIDE_CONTENT_PENDING
 const LINE_FRAMES := 24
 const PICKUP_FRAMES := 40
 const PICKUP_SPEED := 14.0
