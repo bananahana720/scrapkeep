@@ -17,9 +17,13 @@ test("full mode and empty changed-file list fail safe to full suite", () => {
     node: true,
     web: true,
     godot: true,
+    godot_shards: 1,
+    godot_matrix: "[1]",
     changedCount: 0,
   });
   assert.equal(classifyAffected([]).full, true);
+  assert.equal(classifyAffected([]).godot_shards, 1);
+  assert.equal(classifyAffected([]).godot_matrix, "[1]");
 });
 
 test("docs-only change skips web build and godot tests", () => {
@@ -29,14 +33,36 @@ test("docs-only change skips web build and godot tests", () => {
   assert.equal(res.node, false);
   assert.equal(res.web, false);
   assert.equal(res.godot, false);
+  assert.equal(res.godot_shards, 1);
+  assert.equal(res.godot_matrix, "[1]");
 });
 
 test("godot sketch change triggers godot and node tests without web build", () => {
-  const res = classifyAffected(["sketches/core-loop/src/game.gd"]);
-  assert.equal(res.godot, true);
-  assert.equal(res.node, true);
-  assert.equal(res.web, false);
-  assert.equal(res.docs, false);
+  const small = classifyAffected(["sketches/core-loop/src/ui/badge.gd"]);
+  assert.equal(small.godot, true);
+  assert.equal(small.node, true);
+  assert.equal(small.web, false);
+  assert.equal(small.docs, false);
+  assert.equal(small.godot_shards, 1);
+  assert.equal(small.godot_matrix, "[1]");
+
+  const hub = classifyAffected(["sketches/core-loop/src/game.gd"]);
+  assert.equal(hub.godot, true);
+  assert.equal(hub.godot_shards, 2);
+  assert.equal(hub.godot_matrix, "[1, 2]");
+
+  const park = classifyAffected(["sketches/core-loop/assets/park/park_dam/lines.json"]);
+  assert.equal(park.godot, true);
+  assert.equal(park.godot_shards, 2);
+  assert.equal(park.godot_matrix, "[1, 2]");
+
+  const sevenFiles = Array.from({ length: 7 }, (_, i) => `sketches/core-loop/src/ui/item_${i}.gd`);
+  assert.equal(classifyAffected(sevenFiles).godot_shards, 1);
+  assert.equal(classifyAffected(sevenFiles).godot_matrix, "[1]");
+
+  const eightFiles = Array.from({ length: 8 }, (_, i) => `sketches/core-loop/src/ui/item_${i}.gd`);
+  assert.equal(classifyAffected(eightFiles).godot_shards, 2);
+  assert.equal(classifyAffected(eightFiles).godot_matrix, "[1, 2]");
 });
 
 test("sitting-kit and weekly.mjs trigger node and docs surfaces", () => {
@@ -65,6 +91,8 @@ test("CLI --stdin writes github-output and rejects unknown arguments", () => {
     assert.equal(parsed.docs, true);
     assert.equal(parsed.web, false);
     assert.match(readFileSync(out, "utf8"), /godot=true/);
+    assert.match(readFileSync(out, "utf8"), /godot_shards=2/);
+    assert.match(readFileSync(out, "utf8"), /godot_matrix=\[1, 2\]/);
 
     const bad = spawnSync(process.execPath, [affectedScript, "--bogus"], { encoding: "utf8" });
     assert.equal(bad.status, 2);
