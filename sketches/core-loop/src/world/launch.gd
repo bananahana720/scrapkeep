@@ -192,6 +192,10 @@ func _process(delta: float) -> void:
 			clear_landing()
 
 
+func ring_nodes() -> Array[MeshInstance3D]:
+	return _rings.duplicate()
+
+
 func landing_rings() -> int:
 	return _landing.filter(func(ring: MeshInstance3D): return ring.visible).size()
 

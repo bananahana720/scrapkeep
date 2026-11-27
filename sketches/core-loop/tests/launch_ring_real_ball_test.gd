@@ -74,7 +74,7 @@ func _fire() -> void:
 	player.set_velocity_now(facing * ENTRY)
 	launch.aim(_cases[_case]["heading"], _game.camera)
 	_game.world._on_reward_chosen("")
-	_rings = launch.get_children().filter(func(c): return c is MeshInstance3D and c.mesh is TorusMesh).slice(0, Launch.RINGS)
+	_rings = launch.ring_nodes()
 	_samples = [player.ball_position()]
 	_times = [0.0]
 	_firing = true
@@ -98,6 +98,9 @@ func _sample() -> bool:
 
 
 func _report_case(label: String) -> void:
+	if _rings.size() != Launch.RINGS:
+		_fail("%s: want %d rings, got %d" % [label, Launch.RINGS, _rings.size()])
+		return
 	if not _game.world.launch._turn == 0.0 and _cases[_case]["heading"] == Vector3.ZERO:
 		_fail("%s: the launch turned" % label)
 	if _cases[_case]["heading"] != Vector3.ZERO and _game.world.launch._turn == 0.0:

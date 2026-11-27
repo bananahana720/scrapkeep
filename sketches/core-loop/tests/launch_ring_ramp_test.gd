@@ -46,7 +46,11 @@ func _ramped(dt: float, heading: Vector3, label: String) -> void:
 	var launch := _launch(heading)
 	var origin := Vector3(3.0, 10.0, -7.0)
 	launch.fire(origin, velocity, from)
-	var rings: Array = launch.get_children().filter(func(c): return c is MeshInstance3D and c.mesh is TorusMesh).slice(0, Launch.RINGS)
+	var rings: Array = launch.ring_nodes()
+	if rings.size() != Launch.RINGS:
+		_fail("%s: want %d rings, got %d" % [label, Launch.RINGS, rings.size()])
+		launch.queue_free()
+		return
 	var at := origin
 	var held := Vector3(from.x, 0.0, from.z)
 	var time := 0.0
@@ -81,7 +85,11 @@ func _unramped(dt: float) -> void:
 	var low := 0.0
 	var launch := _launch(Vector3.ZERO)
 	launch.fire(origin, velocity, velocity)
-	var rings: Array = launch.get_children().filter(func(c): return c is MeshInstance3D and c.mesh is TorusMesh).slice(0, Launch.RINGS)
+	var rings: Array = launch.ring_nodes()
+	if rings.size() != Launch.RINGS:
+		_fail("no ramp, no turn: want %d rings, got %d" % [Launch.RINGS, rings.size()])
+		launch.queue_free()
+		return
 	for i in Launch.RINGS:
 		var arc := Launch.arc_point(origin, velocity, launch.gravity, _ring_time(i))
 		var off: Vector3 = rings[i].position - arc
