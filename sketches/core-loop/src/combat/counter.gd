@@ -52,6 +52,7 @@ var _strafe := 1.0
 var _crew: MeshInstance3D
 var _stride := Vector3.ZERO
 var _eye: Node3D
+var _absorb := false
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -475,3 +476,11 @@ func _settle_look() -> void:
 
 func _facing_yaw(to_ball: Vector3) -> float:
 	return atan2(to_ball.x, to_ball.z)
+
+
+func take_damage(amount: float) -> float:
+	if _absorb:
+		_absorb = false
+		flash()
+		return 0.0
+	return super.take_damage(amount)

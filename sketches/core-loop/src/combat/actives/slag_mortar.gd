@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://src/combat/actives/active_base.gd"
 
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -23,17 +23,10 @@ const SOURCE := "special"
 const PROC_SOURCE := "item_proc"
 const ELEMENT := "heat"
 
-var ctx
-var combat
 var pending := {}
 var zones: Array = []
 var blasts := 0
 var last_at := Vector3.ZERO
-
-
-func setup(context, owner_combat) -> void:
-	ctx = context
-	combat = owner_combat
 
 
 func clear() -> void:
@@ -59,16 +52,11 @@ func radius_for(bonus: int) -> float:
 
 
 func impact_damage(scale := 1.0) -> float:
-	var punch := 0.0
-	if ctx != null and ctx.build != null and ctx.build.has_method("punch_bonus"):
-		punch = float(ctx.build.punch_bonus())
-	var mult := float(ctx.tuning.mod("weapon_damage")) if ctx != null and ctx.tuning != null else 1.0
-	return (BASE_DAMAGE + punch) * mult * scale
+	return scaled_damage(BASE_DAMAGE) * scale
 
 
 func zone_damage(scale := 1.0) -> float:
-	var mult := float(ctx.tuning.mod("weapon_damage")) if ctx != null and ctx.tuning != null else 1.0
-	return ZONE_DAMAGE * mult * scale
+	return ZONE_DAMAGE * weapon_damage_mult() * scale
 
 
 func _target_spot() -> Vector3:
@@ -76,10 +64,7 @@ func _target_spot() -> Vector3:
 	var near: Array = combat.nearest_enemies(ball, LOCK_REACH, 1)
 	if not near.is_empty() and is_instance_valid(near[0]):
 		return (near[0] as Node3D).global_position
-	var forward: Vector3 = ctx.aim_forward()
-	forward.y = 0.0
-	forward = forward.normalized() if forward.length() > 0.01 else Vector3.FORWARD
-	return ball + forward * AHEAD
+	return ball + flat_aim() * AHEAD
 
 
 func begin(rack, row: Dictionary) -> void:

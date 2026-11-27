@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://src/combat/actives/active_base.gd"
 
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -20,19 +20,12 @@ const KIND := "silo"
 const IMPACT := "cannon"
 const SOURCE := "special"
 
-var ctx
-var combat
 var rings: Array = []
 var falling := -1.0
 var strikes := 0
 var _bonus_at_begin := 0
 var _age := 0.0
 var _warn := 0.0
-
-
-func setup(context, owner_combat) -> void:
-	ctx = context
-	combat = owner_combat
 
 
 func clear() -> void:
@@ -56,14 +49,11 @@ func heft_class() -> int:
 
 
 func count_for(bonus: int) -> int:
-	return RINGS + maxi(0, heft_class() - 1) + _pattern("cross_split") + bonus
+	return RINGS + maxi(0, heft_class() - 1) + pattern_level("cross_split") + bonus
 
 
 func damage() -> float:
-	var punch := 0.0
-	if ctx.build != null and ctx.build.has_method("punch_bonus"):
-		punch = float(ctx.build.punch_bonus())
-	return (BASE_DAMAGE + punch) * ctx.tuning.mod("weapon_damage")
+	return scaled_damage(BASE_DAMAGE)
 
 
 func begin(rack, row: Dictionary) -> void:
@@ -107,7 +97,7 @@ func step(delta: float) -> void:
 
 func _land() -> void:
 	var dmg := damage()
-	var jumps := _pattern("chain_arc")
+	var jumps := pattern_level("chain_arc")
 	for entry in rings:
 		var ring = entry["ring"]
 		if not is_instance_valid(ring):
@@ -136,18 +126,10 @@ func _centres(count: int) -> Array:
 	var out: Array = []
 	for target in combat._nearest_list(ball, LOCK_REACH, count):
 		out.append(target.global_position)
-	var forward: Vector3 = ctx.aim_forward()
-	forward.y = 0.0
-	forward = forward.normalized() if forward.length() > 0.01 else Vector3.FORWARD
+	var forward := flat_aim()
 	var side := forward.cross(Vector3.UP).normalized()
 	for i in count - out.size():
 		var across := float(i % 3 - 1) * SPREAD
 		var out_by := AHEAD + float(i / 3) * SPREAD
 		out.append(ball + forward * out_by + side * across)
 	return out
-
-
-func _pattern(id: String) -> int:
-	if ctx.build != null and ctx.build.has_method("pattern_level"):
-		return int(ctx.build.pattern_level(id))
-	return ctx.run.parts.count(id) if ctx.run != null else 0

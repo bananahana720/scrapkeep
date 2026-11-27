@@ -351,12 +351,6 @@ func _open_weak_window() -> void:
 	_enter(State.WEAK)
 
 
-func _fill(value: float) -> void:
-	var shown := telegraph()
-	if shown != null:
-		shown.set_progress(value)
-
-
 func _build_body() -> void:
 	_shape = CollisionShape3D.new()
 	_shape.shape = CapsuleShape3D.new()
