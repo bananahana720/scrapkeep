@@ -415,7 +415,11 @@ test("L12's switch table matches the game source, and a planted write from src/ 
     assert.equal(lintL12(row.home, row.home, home + plant).length, 1, `${row.home} ${name}`);
     assert.equal(lintL12(other, other, world + plant).length, 1, `${other} ${name}`);
     assert.match(lintL12(other, other, world + plant)[0].message, new RegExp(name));
-    for (const write of [`holder.${name}[0] = null`, `holder.${name}.append(null)`, `holder.${name}.push_back(null)`]) {
+    for (const write of [
+      `holder.${name}[0] = null`,
+      `holder.${name}.append(null)`,
+      `holder.${name}.push_back(null)`,
+    ]) {
       const indexed = `\nfunc _planted(holder) -> void:\n\t${write}\n`;
       assert.equal(lintL12(other, other, world + indexed).length, 1, `${other} ${write}`);
     }
