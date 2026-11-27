@@ -3,6 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
 import {
   WIN_PROOFS,
   playProofTries,
@@ -16,7 +17,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const project = path.join(root, "sketches/core-loop");
-const binary = process.env.GODOT_BIN;
+const binary = resolveGodotBinary({ requireExplicit: true });
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 const winProof = process.argv.includes("--win-proof");
 
@@ -44,7 +45,7 @@ function step(label, result, extra = []) {
 }
 
 if (!binary || !existsSync(binary))
-  fail("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
+  fail(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor (the cloud SessionStart hook does)`);
 
 step("editor import", run(binary, ["--headless", "--path", project, "--editor", "--import"]));
 const gate = run(

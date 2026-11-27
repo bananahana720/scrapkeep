@@ -12,6 +12,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveGodotBinary } from "./godot-home.mjs";
 import * as smoke from "./sketch-smoke.mjs";
 import {
   BANDS,
@@ -97,7 +98,7 @@ export function buildPlan(
     plan.push({
       id,
       kind,
-      command: smoke.binary,
+      command: resolveGodotBinary() ?? "",
       args,
       render: false,
       timeout_ms: TOOL_TIMEOUT_MS,

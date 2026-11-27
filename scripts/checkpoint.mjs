@@ -13,7 +13,9 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { binary as GODOT } from "./sketch-smoke.mjs";
+import { resolveGodotBinary } from "./godot-home.mjs";
+
+const GODOT = resolveGodotBinary() ?? "";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");

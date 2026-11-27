@@ -21,6 +21,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 
+import { GODOT_VERSION, resolveGodotBinary as resolveSharedGodotBinary } from "./godot-home.mjs";
 import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
 import { buildVisualQaPack } from "./visual-qa-pack.mjs";
 import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
@@ -179,34 +180,19 @@ export function resolveGodotBinary({
   existsFn = existsSync,
   whichFn = (name) => whichTool(name, env),
 } = {}) {
-  if (env.GODOT_BIN && env.GODOT_BIN.trim() !== "") {
-    return env.GODOT_BIN.trim();
-  }
-  if (platform === "darwin") {
-    const macApp = path.join(
-      homeDir,
-      "Applications",
-      "Godot_4.7.2.app",
-      "Contents",
-      "MacOS",
-      "Godot",
+  const found = resolveSharedGodotBinary({
+    env,
+    platform,
+    homeDir,
+    exists: existsFn,
+    which: whichFn,
+  });
+  if (!found) {
+    throw new Error(
+      `Could not locate Godot binary. Set GODOT_BIN or install Godot ${GODOT_VERSION} before running dev-console.`,
     );
-    if (existsFn(macApp)) return macApp;
   }
-  const onPath = whichFn("godot");
-  if (onPath && existsFn(onPath)) return onPath;
-
-  const fallbacks = [
-    "/usr/bin/godot",
-    "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64",
-    "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64",
-  ];
-  for (const candidate of fallbacks) {
-    if (existsFn(candidate)) return candidate;
-  }
-  throw new Error(
-    "Could not locate Godot binary. Set GODOT_BIN or install Godot 4.7.2 before running dev-console.",
-  );
+  return found;
 }
 
 export function assertUnderArtifactsLocal(targetPath, repoRoot = REPO_ROOT) {

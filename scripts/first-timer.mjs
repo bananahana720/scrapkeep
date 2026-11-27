@@ -2,7 +2,9 @@ import { spawn } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { binary } from "./sketch-smoke.mjs";
+import { resolveGodotBinary } from "./godot-home.mjs";
+
+const binary = resolveGodotBinary() ?? "";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches", "core-loop");

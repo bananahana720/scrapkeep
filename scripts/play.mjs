@@ -14,7 +14,10 @@ import { cpus, tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { binary, judge, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
+import { resolveGodotBinary } from "./godot-home.mjs";
+import { judge, sketchDirectories, testScripts } from "./sketch-smoke.mjs";
+
+const binary = resolveGodotBinary();
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const tty = process.stdout.isTTY === true;
@@ -609,8 +612,8 @@ async function main(argv) {
     command = "list";
   }
 
-  if (!existsSync(binary)) {
-    console.error(`Godot binary not found at ${binary}; set GODOT_BIN.`);
+  if (!binary || !existsSync(binary)) {
+    console.error(`Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN.`);
     process.exit(2);
   }
 

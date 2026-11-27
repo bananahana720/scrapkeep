@@ -3,6 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
 import {
   HITCH_MS,
   PILOTS,
@@ -21,7 +22,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const sketch = path.join(root, "sketches/core-loop");
-const godot = process.env.GODOT_BIN;
+const godot = resolveGodotBinary({ requireExplicit: true });
 
 const opts = {
   wave: null,
@@ -48,7 +49,7 @@ for (const arg of process.argv.slice(2)) {
   else die("unknown option " + arg);
 }
 if (!godot || !existsSync(godot))
-  die("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
+  die(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor (the cloud SessionStart hook does)`);
 if (opts.wave === null || Number.isNaN(opts.wave))
   die("--wave=<n> is required; it picks the seeds and the persona x pilot cells");
 
