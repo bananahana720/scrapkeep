@@ -25,11 +25,18 @@ export function formatFinding(item) {
   return `${item.rule} ${item.path}:${item.line} ${item.message}`;
 }
 
+const codeLinesCache = new Map();
+
 function codeLines(text) {
-  return text
+  let cached = codeLinesCache.get(text);
+  if (cached) return cached;
+  cached = text
     .split("\n")
     .map((raw, index) => ({ raw, number: index + 1, code: raw.trim() }))
     .filter((line) => !line.code.startsWith("#") && !line.code.startsWith("//"));
+  if (codeLinesCache.size > 4096) codeLinesCache.clear();
+  codeLinesCache.set(text, cached);
+  return cached;
 }
 
 const wallClock =
@@ -100,37 +107,55 @@ const tuningCall = /\.(?:option|set_option|f|set_value)\(\s*"([^"]+)"/g;
 export function lintL3(files, tuning) {
   const parsed = new Set();
   for (const file of files) {
+    if (!file.text.includes("--")) continue;
     for (const line of codeLines(file.text)) {
+      if (!line.raw.includes("--")) continue;
       for (const match of line.raw.matchAll(parsedFlag)) parsed.add(match[1]);
     }
   }
+  const ownedCache = new Map();
+  const owned = (name) => {
+    if (parsed.has(name)) return true;
+    let found = ownedCache.get(name);
+    if (found === undefined) {
+      const needle = `"${name}"`;
+      found = files.some((other) => other.text.includes(needle));
+      ownedCache.set(name, found);
+    }
+    return found;
+  };
   const findings = [];
   for (const file of files) {
-    const owned = (name) =>
-      parsed.has(name) || files.some((other) => other.text.includes(`"${name}"`));
+    const hasDash = file.text.includes("--");
+    const hasParen = file.text.includes("(");
+    if (!hasDash && !hasParen) continue;
     for (const line of codeLines(file.text)) {
-      for (const match of line.raw.matchAll(flagLiteral)) {
-        if (!tuning.flags.has(match[1]) && !owned(match[1])) {
-          findings.push(
-            finding(
-              "L3",
-              file.path,
-              line.number,
-              `launch flag --${match[1]}= is not a FLAGS name in tuning.gd`,
-            ),
-          );
+      if (hasDash && line.raw.includes("--")) {
+        for (const match of line.raw.matchAll(flagLiteral)) {
+          if (!tuning.flags.has(match[1]) && !owned(match[1])) {
+            findings.push(
+              finding(
+                "L3",
+                file.path,
+                line.number,
+                `launch flag --${match[1]}= is not a FLAGS name in tuning.gd`,
+              ),
+            );
+          }
         }
       }
-      for (const match of line.raw.matchAll(tuningCall)) {
-        if (!tuning.keys.has(match[1])) {
-          findings.push(
-            finding(
-              "L3",
-              file.path,
-              line.number,
-              `tuning key "${match[1]}" is not a row key in tuning.gd`,
-            ),
-          );
+      if (hasParen && line.raw.includes("(")) {
+        for (const match of line.raw.matchAll(tuningCall)) {
+          if (!tuning.keys.has(match[1])) {
+            findings.push(
+              finding(
+                "L3",
+                file.path,
+                line.number,
+                `tuning key "${match[1]}" is not a row key in tuning.gd`,
+              ),
+            );
+          }
         }
       }
     }
@@ -671,30 +696,40 @@ const topLevel = /^(?:static\s+)?(?:func|var|const|class|signal|enum)\b|^@/;
 
 const faultSubscript = "(?:\\s*\\[(?:[^\\[\\]]|\\[[^\\[\\]]*\\])*\\])*";
 
+const faultWriteCache = new Map();
+
 function faultWrite(name) {
-  return new RegExp(
-    `(?<!\\w)${name}\\b${faultSubscript}\\s*(?:[-+*/%]?=(?!=)|\\.\\s*(?:${collectionWrite})\\s*\\()|\\bset(?:_deferred|_indexed)?\\(\\s*&?["']${name}["']`,
-  );
+  let re = faultWriteCache.get(name);
+  if (!re) {
+    re = new RegExp(
+      `(?<!\\w)${name}\\b${faultSubscript}\\s*(?:[-+*/%]?=(?!=)|\\.\\s*(?:${collectionWrite})\\s*\\()|\\bset(?:_deferred|_indexed)?\\(\\s*&?["']${name}["']`,
+    );
+    faultWriteCache.set(name, re);
+  }
+  return re;
 }
 
 export function lintL12(file, rel, text, switches = FAULT_SWITCHES) {
   const out = [];
-  let resetting = false;
   const names = Object.keys(switches);
-  for (const line of codeLines(text)) {
-    if (line.raw.length > 0 && !/^\s/.test(line.raw) && topLevel.test(line.raw))
-      resetting = faultReset.test(line.raw);
-    for (const name of names) {
-      if (!faultWrite(name).test(line.raw)) continue;
-      if (resetting && switches[name].home === rel) continue;
-      out.push(
-        finding(
-          "L12",
-          file,
-          line.number,
-          `game code writes the fault switch ${name}; only a test or a tool may set it, and ${switches[name].home} clears it in reset_for_tests()`,
-        ),
-      );
+  const activeNames = names.filter((name) => text.includes(name));
+  if (activeNames.length > 0) {
+    let resetting = false;
+    for (const line of codeLines(text)) {
+      if (line.raw.length > 0 && !/^\s/.test(line.raw) && topLevel.test(line.raw))
+        resetting = faultReset.test(line.raw);
+      for (const name of activeNames) {
+        if (!faultWrite(name).test(line.raw)) continue;
+        if (resetting && switches[name].home === rel) continue;
+        out.push(
+          finding(
+            "L12",
+            file,
+            line.number,
+            `game code writes the fault switch ${name}; only a test or a tool may set it, and ${switches[name].home} clears it in reset_for_tests()`,
+          ),
+        );
+      }
     }
   }
   for (const name of names) {
@@ -716,7 +751,7 @@ export function lintL12(file, rel, text, switches = FAULT_SWITCHES) {
 const displayNameRead = /\bDisplayServer\s*\.\s*get_name\s*\(/;
 
 export function lintL13(file, rel, text) {
-  if (rel === "src/core/app_shell.gd") return [];
+  if (rel === "src/core/app_shell.gd" || !text.includes("DisplayServer")) return [];
   return codeLines(text)
     .filter((line) => displayNameRead.test(line.raw))
     .map((line) =>
@@ -1105,6 +1140,7 @@ export function lintL14(
   baseline = L14_STATIC_VAR_BASELINE,
   driverVars = new Set(),
 ) {
+  if (!text.includes("static") || !/\bstatic\s+var\b/.test(text)) return [];
   const registered = driverRefs.has(rel);
   const resetBody = registered ? resetMethodText(text) : "";
   const out = [];
@@ -1214,6 +1250,7 @@ const physicsTestSignal = /\b(?:physics_frame|_physics_process)\b/;
 const hardcoded60Hz = /\b1\.0\s*\/\s*60(?:\.0)?\b|\*\s*60\.0\b/g;
 
 export function lintL15(file, rel, text, baseline = L15_HZ_BASELINE) {
+  if (!text.includes("60") || !physicsTestSignal.test(text)) return [];
   const lines = codeLines(text);
   if (!lines.some((line) => physicsTestSignal.test(line.raw))) return [];
   const sites = lines.flatMap((line) =>
