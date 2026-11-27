@@ -7,6 +7,7 @@ const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const BALL_MASK := 1 | 4
 const VISUAL_LAYER := 1 << 23
@@ -213,7 +214,7 @@ func _run() -> void:
 func _save_frame_if_requested() -> bool:
 	if not OS.get_cmdline_user_args().has("--frame"):
 		return true
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		return false
 	await RenderingServer.frame_post_draw
 	var frame := root.get_texture().get_image()
@@ -246,7 +247,7 @@ func _sweep_map(places_unavailable: String) -> void:
 		body.queue_free()
 	if identity_multimeshes > 0:
 		printerr("collision_sweep: %d MultiMeshes read every instance at one transform (headless renderer?): run under xvfb-run --rendering-driver opengl3" % identity_multimeshes)
-	if area != "wall_fixture" and DisplayServer.get_name() == "headless":
+	if area != "wall_fixture" and AppShell.headless():
 		places_unavailable = "map places require a real renderer for MultiMesh transforms"
 	elif identity_multimeshes > 0 or visual_count == 0 or blockers.is_empty() or totals["samples"] == 0:
 		places_unavailable = "incomplete blocker or visual geometry"

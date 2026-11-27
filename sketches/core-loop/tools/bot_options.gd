@@ -2,6 +2,7 @@ extends RefCounted
 
 const BotDriver := preload("res://tools/bot_driver.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const FAST_FLAGS := ["bot-no-mix", "bot-no-visuals", "bot-no-pilot-tracks"]
 const UNREAD_VISUALS := [
@@ -53,7 +54,7 @@ func apply_audio(audio: Node) -> void:
 
 
 func _enabled(key: String) -> bool:
-	return settings.get(key, "0") == "1" and DisplayServer.get_name() == "headless"
+	return settings.get(key, "0") == "1" and AppShell.headless()
 
 
 func _on_node_added(node: Node) -> void:

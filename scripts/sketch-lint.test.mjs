@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   FAULT_SWITCHES,
   ID_COMPARE_LEGACY,
+  L13_ALLOWED,
   L14_STATIC_VAR_BASELINE,
   L15_HZ_BASELINE,
   applyBaseline,
@@ -464,6 +465,51 @@ test("L13 flags raw DisplayServer.get_name() in src/ outside app_shell.gd and na
     ),
     [],
   );
+});
+
+test("L13 flags raw DisplayServer.get_name() in tools/ and tests/, honors L13_ALLOWED counts, and flags stale entries", () => {
+  const raw = 'if DisplayServer.get_name() == "headless":\n\tquit(2)\n';
+  for (const rel of ["tools/new_capture.gd", "tests/new_test.gd"]) {
+    const bad = lintL13(`sketches/core-loop/${rel}`, rel, raw);
+    assert.equal(bad.length, 1, rel);
+    assert.equal(bad[0].rule, "L13");
+    assert.equal(bad[0].line, 1);
+    assert.match(bad[0].message, /AppShell\.headless\(\)/);
+  }
+  const allowed = { "tools/offscreen_window.gd": { sites: 1, why: "embedded check" } };
+  assert.deepEqual(
+    lintL13(
+      "sketches/core-loop/tools/offscreen_window.gd",
+      "tools/offscreen_window.gd",
+      "var d := DisplayServer.get_name().to_lower()\n",
+      allowed,
+    ),
+    [],
+  );
+  assert.equal(
+    lintL13(
+      "sketches/core-loop/tools/offscreen_window.gd",
+      "tools/offscreen_window.gd",
+      'var d := DisplayServer.get_name().to_lower()\nif DisplayServer.get_name() == "headless":\n\tpass\n',
+      allowed,
+    ).length,
+    2,
+  );
+  assert.match(
+    lintL13(
+      "sketches/core-loop/tools/offscreen_window.gd",
+      "tools/offscreen_window.gd",
+      "var ok := true\n",
+      allowed,
+    )[0].message,
+    /tighten or remove/,
+  );
+  for (const [rel, entry] of Object.entries(L13_ALLOWED)) {
+    const text = readFileSync(path.join(sketchDir, rel), "utf8");
+    assert.deepEqual(lintL13(rel, rel, text), [], rel);
+    assert.equal(lintL13(rel, rel, text, {}).length, entry.sites, rel);
+    assert.equal(lintL13(rel, rel, `${text}\n${raw}`).length, entry.sites + 1, rel);
+  }
 });
 
 test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {

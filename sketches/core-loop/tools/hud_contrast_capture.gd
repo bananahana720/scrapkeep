@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SIZE := Vector2i(1280, 720)
 const STAGES := [1, 2]
@@ -31,7 +32,7 @@ func _initialize() -> void:
 			out = a.trim_prefix("--out=")
 		elif a.begins_with("--plant="):
 			plant = a.trim_prefix("--plant=")
-	if DisplayServer.get_name() == "headless" or out == "":
+	if AppShell.headless() or out == "":
 		printerr("needs a display and --out")
 		quit(2)
 		return

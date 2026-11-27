@@ -4,6 +4,7 @@ extends SceneTree
 const OffscreenWindow := preload("res://tools/offscreen_window.gd")
 const Palette := preload("res://src/core/palette.gd")
 const HeroKitbashSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SIZE := Vector2i(1600, 900)
 
@@ -95,7 +96,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out = arg.trim_prefix("--out=")
-	if _out.is_empty() or DisplayServer.get_name() == "headless":
+	if _out.is_empty() or AppShell.headless():
 		printerr("craft_sculptor_capture: needs Metal display and -- --out=<absolute dir>")
 		quit(2)
 		return

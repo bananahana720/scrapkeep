@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const SIZE := Vector2i(800, 600)
@@ -51,7 +52,7 @@ func _initialize() -> void:
 		printerr("model_render_check: RENDER_PLANT=%s plants only in a --models=tripo-all shoot (known: %s)" % [plant, ", ".join(PLANTS)])
 		quit(2)
 		return
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		printerr("model_render_check: a shoot needs a display (headless gamescope on the PC)")
 		quit(2)
 		return

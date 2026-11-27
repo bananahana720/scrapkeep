@@ -2,6 +2,7 @@ extends SceneTree
 const Model := preload("res://tests/consumed_light_test.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const SIZE := Vector2i(960, 540)
 const LIFE := Color("b89ad6")
 const BALLS := ["true", "sun_tinted", "held", "life"]
@@ -12,7 +13,7 @@ func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--out="):
 			out = a.trim_prefix("--out=")
-	if DisplayServer.get_name() == "headless" or out == "":
+	if AppShell.headless() or out == "":
 		printerr("needs a display and --out")
 		quit(2)
 		return

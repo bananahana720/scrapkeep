@@ -3,6 +3,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const FAR_M := 300.0
 const MID_M := 130.0
@@ -23,7 +24,7 @@ func _initialize() -> void:
 			out = arg.trim_prefix("--out=")
 		elif arg.begins_with("--stages="):
 			stages = Array(arg.trim_prefix("--stages=").split(",")).map(func(v): return int(v))
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		print("site_markers_stills: needs --out=<dir> and a rendered display")
 		quit(2)
 		return

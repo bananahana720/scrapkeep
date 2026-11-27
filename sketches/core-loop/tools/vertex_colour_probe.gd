@@ -9,6 +9,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Bars := preload("res://src/core/defence_bars.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const KINDS := ["chaser", "lobber", "mag_trapper", "jolt_layer", "catch_trap", "hooker", "ramp_flipper", "boom_tender", "plated_brute",
 	"splitter", "linker", "foreman", "dispatcher", "miniboss"]
@@ -83,14 +84,14 @@ func _initialize() -> void:
 		quit(_print_sites())
 		return
 	if marks:
-		if out.is_empty() or DisplayServer.get_name() == "headless":
+		if out.is_empty() or AppShell.headless():
 			push_error("usage: --marks=1 --out=/abs/dir [--plant-mark=<mark>], on a display")
 			quit(2)
 			return
 		DirAccess.make_dir_recursive_absolute(out)
 		_marks_only.call_deferred()
 		return
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		push_error("usage: --script res://tools/vertex_colour_probe.gd -- --out=/abs/dir [--boss=0] [--plant=1], on a display")
 		quit(2)
 		return

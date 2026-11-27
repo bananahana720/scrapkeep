@@ -3,6 +3,7 @@ extends SceneTree
 
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const Palette := preload("res://src/core/palette.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const VIEW_SIZE := Vector2i(1600, 900)
 const HERO_PRESETS := [
@@ -23,7 +24,7 @@ func _initialize() -> void:
 		printerr("craft_lookdev_capture: pass --out=<dir>")
 		quit(2)
 		return
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		printerr("craft_lookdev_capture: requires a GPU display driver (use --embedded --rendering-driver metal)")
 		quit(2)
 		return

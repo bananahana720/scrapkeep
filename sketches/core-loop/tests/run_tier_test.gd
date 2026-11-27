@@ -24,6 +24,7 @@ const StartCard := preload("res://src/ui/start_pick_card.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 const Cards := preload("res://src/world/director_cards.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 # Re-pinned 2026-10-14 (coordinator): the KD2 flume merge c81cec4a changed stage 2's park data, so every
 # whole run moved. SG10 proved tier 0 equal to the pre-SG10 game on the old pins (b8b6605b passes them);
@@ -703,7 +704,7 @@ func _continue_replay() -> void:
 	elif continue_mode == "bot":
 		game.bot_driven = true
 	else:
-		t.check(label + " headless default is bot driven", game.bot_driven and DisplayServer.get_name() == "headless")
+		t.check(label + " headless default is bot driven", game.bot_driven and AppShell.headless())
 	t.check(label + " resumes without retry", game.flow.resume_run())
 	await process_frame
 	var card = game.flow.start_card

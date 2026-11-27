@@ -1,6 +1,7 @@
 extends SceneTree
 
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const WARNING := Rect2(40.0, 300.0, 200.0, 200.0)
 const BACKGROUND := Color(0.6, 0.6, 0.6)
@@ -10,7 +11,7 @@ var _rects: Array[Rect2] = []
 
 
 func _initialize() -> void:
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		printerr("impact_frame_render_check: needs a display (run under xvfb-run)")
 		quit(2)
 		return
