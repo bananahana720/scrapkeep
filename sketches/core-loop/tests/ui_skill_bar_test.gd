@@ -7,7 +7,7 @@ const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const AimReticle := preload("res://src/ui/aim_reticle.gd")
 const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
-const FieldNotes := preload("res://src/ui/field_notes.gd")
+const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
@@ -418,12 +418,12 @@ func _check_set_piece() -> void:
 
 
 func _check_notes() -> void:
-	var verbs: Array = FieldNotes.VERB_ROWS.map(func(r): return r[0])
+	var verbs: Array = ControlsDiagram.VERB_ROWS.map(func(r): return r[0])
 	var rows := {}
-	for r in FieldNotes.VERB_ROWS:
+	for r in ControlsDiagram.VERB_ROWS:
 		rows[r[0]] = r[1]
 	var menu: String = ""
-	for r in FieldNotes.MENU_ROWS:
+	for r in ControlsDiagram.MENU_ROWS:
 		if String(r["keys"]).begins_with("P"):
 			menu = r["does"]
 	_report("field notes", not "special" in verbs and "select" in verbs and "ultimate" in verbs

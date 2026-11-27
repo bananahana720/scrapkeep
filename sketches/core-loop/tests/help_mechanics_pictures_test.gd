@@ -32,7 +32,7 @@ func _run() -> void:
 	var controls_words: Dictionary = WordBudget.count(game.screens)
 	_t.check("controls page fits 40 words", controls_words.hud <= 40, "%d words: %s" % [controls_words.hud, controls_words.items])
 	var expected_keys := []
-	for row in FieldNotes.CONTROLS:
+	for row in ControlsDiagram.controls():
 		if row.has("caps") and row.has("short"):
 			expected_keys.append_array(row["caps"])
 	var shown_keys: Array = help.diagram.shown_keys()
