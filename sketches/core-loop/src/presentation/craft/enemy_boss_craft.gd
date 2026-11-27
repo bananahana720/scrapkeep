@@ -712,6 +712,340 @@ static func reward_canister_band(radius: float, height: float) -> ArrayMesh:
 	var key := "reward_canister_band:%.3f:%.3f" % [radius, height]
 	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
 		var st := _slot_st(surfaces, order, "hull_plating")
-		_bevel_ring(st, Vector3.ZERO, radius * 0.90, radius, height, 14, 0.018, 1.2, Transform3D.IDENTITY, _vc(0.18, 0.22), _vc(0.90, 0.12))
+		_bevel_ring(st, Vector3.ZERO, radius * 0.90, radius, height, 14, 0.018, 1.2, Transform3D.IDENTITY, _vc(0.18, 0.06), _vc(0.88, 0.04))
 		_bolt_ring(st, Vector3(0.0, 0.0, 0.0), radius * 0.99, 6, 0.022, 0.025)
 	)
+
+
+static func reward_bone_band_material() -> StandardMaterial3D:
+	var cache_key := "reward_bone_band_std"
+	if _mat_cache.has(cache_key):
+		return _mat_cache[cache_key] as StandardMaterial3D
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = "enemy_boss_reward_bone_band"
+	mat.albedo_color = Palette.SAND
+	mat.roughness = 0.56
+	mat.metallic = 0.08
+	Palette.surface_grain(mat)
+	mat.next_pass = BakeLook.edge_lift()
+	_mat_cache[cache_key] = mat
+	return mat
+
+
+static func reward_canister_shell(radius: float, height: float) -> ArrayMesh:
+	var key := "reward_canister_shell:%.3f:%.3f" % [radius, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "reward_canister")
+		var c_body := Palette.AMBER
+		var c_edge := Palette.AMBER.lightened(0.16)
+		var c_cap := Palette.AMBER.darkened(0.08)
+		_bevel_cyl(st, Vector3.ZERO, radius * 0.98, radius * 0.96, height, 14, 0.045, 0.85, Transform3D.IDENTITY, c_body, c_edge, c_cap)
+		_bevel_ring(st, Vector3(0.0, height * 0.34, 0.0), radius * 0.84, radius * 1.03, height * 0.12, 14, 0.022, 1.0, Transform3D.IDENTITY, c_cap, c_edge)
+		_bevel_ring(st, Vector3(0.0, -height * 0.34, 0.0), radius * 0.84, radius * 1.04, height * 0.12, 14, 0.022, 1.0, Transform3D.IDENTITY, c_cap, c_edge)
+		for i in 4:
+			var a := TAU * float(i) / 4.0
+			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * radius * 0.96, 0.0, sin(a) * radius * 0.96))
+			_bevel_box(st, Vector3.ZERO, Vector3(0.06, height * 0.64, 0.06), 0.014, 1.2, xf, c_cap, c_edge, c_cap)
+	)
+
+
+static func reward_scrap_fallback(size: float) -> ArrayMesh:
+	var key := "reward_scrap_fallback:%.3f" % size
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "field")
+		var c_main := Palette.AMBER
+		var c_hi := Palette.AMBER.lightened(0.14)
+		var c_lo := Palette.AMBER.darkened(0.12)
+		_bevel_box(st, Vector3.ZERO, Vector3(size * 0.82, size * 0.68, size * 0.82), size * 0.12, 0.9, Transform3D.IDENTITY, c_main, c_hi, c_lo)
+		_bevel_ring(st, Vector3.ZERO, size * 0.24, size * 0.44, size * 0.20, 8, 0.025, 1.0, Transform3D(Basis(Vector3.RIGHT, 0.35), Vector3.ZERO), c_lo, c_hi)
+	)
+
+
+static func brindle_scooter_hull(size: Vector3) -> ArrayMesh:
+	var key := "brindle_scooter_hull:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "hull_plating")
+		_bevel_box(st, Vector3(0.0, 0.0, 0.0), Vector3(size.x * 0.92, size.y * 0.72, size.z * 0.92), 0.14, 0.6, Transform3D.IDENTITY, _vc(0.12, 0.24), _vc(0.90, 0.14), _vc(0.14, 0.78))
+		_bevel_box(st, Vector3(0.0, size.y * 0.22, -size.z * 0.28), Vector3(size.x * 0.68, size.y * 0.44, size.z * 0.44), 0.10, 0.7, Transform3D.IDENTITY, _vc(0.16, 0.20), _vc(0.92, 0.12), _vc(0.14, 0.72))
+		for sx_v in [-1.0, 1.0]:
+			var sx := float(sx_v)
+			_bevel_cyl(st, Vector3.ZERO, size.y * 0.24, size.y * 0.20, size.z * 0.48, 10, 0.04, 0.8, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(sx * size.x * 0.44, -size.y * 0.08, size.z * 0.26)), _vc(0.16, 0.42, 0.72), _vc(0.90, 0.14, 0.85), _vc(0.22, 0.24, 0.95))
+	)
+
+
+static func admirals_crest_badge(radius: float, height: float) -> ArrayMesh:
+	var key := "admirals_crest_badge:%.3f:%.3f" % [radius, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "copper_coil")
+		_bevel_cyl(st, Vector3.ZERO, radius, radius * 0.94, height, 10, 0.024, 1.0, Transform3D.IDENTITY, _vc(0.14, 0.24, 0.20), _vc(0.94, 0.10, 0.45), _vc(0.20, 0.18, 0.35))
+		_bevel_ring(st, Vector3(0.0, height * 0.32, 0.0), radius * 0.64, radius * 0.92, height * 0.42, 10, 0.018, 1.1, Transform3D.IDENTITY, _vc(0.18, 0.30, 0.30), _vc(0.94, 0.10, 0.60))
+		_bevel_cyl(st, Vector3(0.0, height * 0.38, 0.0), radius * 0.34, radius * 0.22, height * 0.45, 5, 0.018, 1.2, Transform3D.IDENTITY, _vc(0.22, 0.16, 0.85), _vc(0.94, 0.10, 0.95), _vc(0.30, 0.12, 1.0))
+		_bolt_ring(st, Vector3(0.0, height * 0.48, 0.0), radius * 0.78, 5, 0.036, 0.028)
+	)
+
+
+static func dig_cable_coupler(radius: float) -> ArrayMesh:
+	var key := "dig_cable_coupler:%.3f" % radius
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "emissive_core")
+		_bevel_cyl(st, Vector3.ZERO, radius * 0.94, radius * 0.88, radius * 1.15, 8, radius * 0.14, 0.9, Transform3D.IDENTITY, _vc(0.14, 0.34, 0.0), _vc(0.86, 0.18, 0.0), _vc(0.16, 0.42, 0.0))
+		_bevel_ring(st, Vector3(0.0, radius * 0.34, 0.0), radius * 0.72, radius * 1.06, radius * 0.26, 8, radius * 0.06, 1.0, Transform3D.IDENTITY, _vc(0.16, 0.44, 0.0), _vc(0.90, 0.14, 0.0))
+		_bevel_ring(st, Vector3(0.0, -radius * 0.34, 0.0), radius * 0.72, radius * 1.06, radius * 0.26, 8, radius * 0.06, 1.0, Transform3D.IDENTITY, _vc(0.16, 0.56, 0.0), _vc(0.90, 0.16, 0.0))
+		_bevel_ring(st, Vector3.ZERO, radius * 0.84, radius * 1.02, radius * 0.30, 8, radius * 0.05, 1.0, Transform3D.IDENTITY, _vc(0.18, 0.10, 0.96), _vc(0.42, 0.08, 1.0))
+		_bolt_ring(st, Vector3(0.0, radius * 0.58, 0.0), radius * 0.62, 4, radius * 0.12, radius * 0.12)
+	)
+
+
+static func dig_cable_coupler_material() -> ShaderMaterial:
+	var mat := craft_shader_material("dig_cable_coupler", "plasma_conduit_core", Palette.VERDIGRIS.darkened(0.24), Palette.CHARCOAL, 0.62, 0.34, Palette.ANCIENT, 2.4)
+	mat.set_shader_parameter("emissive_pulse_speed", 1.8)
+	mat.set_shader_parameter("emissive_pulse_amount", 0.18)
+	return mat
+
+
+static func dig_cable_segment(width: float, height: float, length: float) -> ArrayMesh:
+	var key := "dig_cable_segment:%.3f:%.3f:%.3f" % [width, height, length]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "iron_frame")
+		_bevel_box(st, Vector3.ZERO, Vector3(width, height, length), minf(0.045, minf(width, height) * 0.28), 0.75, Transform3D.IDENTITY, _vc(0.10, 0.30), _vc(0.84, 0.18), _vc(0.12, 0.82))
+		for zf in [-0.34, 0.34]:
+			_bevel_box(st, Vector3(0.0, 0.015, length * zf), Vector3(width * 1.16, height * 1.16, minf(0.14, length * 0.16)), 0.025, 0.95, Transform3D.IDENTITY, _vc(0.16, 0.42), _vc(0.90, 0.14), _vc(0.14, 0.84))
+	)
+
+
+static func dig_conduit_material() -> ShaderMaterial:
+	return craft_shader_material("dig_conduit", "oil_slicked_iron", Palette.VERDIGRIS.darkened(0.16), Palette.CHARCOAL, 0.66, 0.32, Palette.ANCIENT, 0.0)
+
+
+static func dig_skylight_beam(top_r: float, bot_r: float, height: float, segs := 20) -> ArrayMesh:
+	var key := "dig_skylight_beam:%.2f:%.2f:%.2f:%d" % [top_r, bot_r, height, segs]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "skylight_beam")
+		var hh := height * 0.5
+		var bands := 4
+		for b in bands:
+			var f0 := float(b) / float(bands)
+			var f1 := float(b + 1) / float(bands)
+			var y0 := lerpf(hh, -hh, f0)
+			var y1 := lerpf(hh, -hh, f1)
+			var r0 := lerpf(top_r, bot_r, f0)
+			var r1 := lerpf(top_r, bot_r, f1)
+			for i in segs:
+				var a0 := TAU * float(i) / float(segs)
+				var a1 := TAU * float(i + 1) / float(segs)
+				var u0 := float(i) / float(segs)
+				var u1 := float(i + 1) / float(segs)
+				var p00 := Vector3(cos(a0) * r0, y0, sin(a0) * r0)
+				var p10 := Vector3(cos(a1) * r0, y0, sin(a1) * r0)
+				var p11 := Vector3(cos(a1) * r1, y1, sin(a1) * r1)
+				var p01 := Vector3(cos(a0) * r1, y1, sin(a0) * r1)
+				var mid := Vector3(cos((a0 + a1) * 0.5), 0.0, sin((a0 + a1) * 0.5))
+				var dy := y0 - y1
+				var dr := r1 - r0
+				var n := (mid * dy + Vector3.UP * dr).normalized()
+				_add_quad_uv(st, p00, p10, p11, p01, n, Vector2(u0, f0), Vector2(u1, f0), Vector2(u1, f1), Vector2(u0, f1), Color.WHITE, Color.WHITE, Color.WHITE, Color.WHITE)
+	)
+
+
+static func dig_skylight_collar(top_r: float) -> ArrayMesh:
+	var key := "dig_skylight_collar:%.2f" % top_r
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "iron_frame")
+		var r_in := maxf(1.2, top_r * 0.94)
+		var r_out := top_r * 1.18
+		var col_h := clampf(top_r * 0.24, 0.9, 3.6)
+		_bevel_ring(st, Vector3.ZERO, r_in, r_out, col_h, 16, minf(0.18, col_h * 0.2), 0.25, Transform3D.IDENTITY, _vc(0.12, 0.44), _vc(0.88, 0.16))
+		_bevel_ring(st, Vector3(0.0, -col_h * 0.46, 0.0), r_in * 0.98, r_out * 1.04, col_h * 0.34, 16, minf(0.10, col_h * 0.12), 0.28, Transform3D.IDENTITY, _vc(0.14, 0.62), _vc(0.90, 0.14))
+		var lugs := 8
+		for i in lugs:
+			var a := TAU * float(i) / float(lugs)
+			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * ((r_in + r_out) * 0.5), 0.0, sin(a) * ((r_in + r_out) * 0.5)))
+			_bevel_box(st, Vector3.ZERO, Vector3((r_out - r_in) * 0.92, col_h * 1.12, maxf(0.45, top_r * 0.10)), 0.06, 0.4, xf, _vc(0.18, 0.50), _vc(0.92, 0.14), _vc(0.14, 0.80))
+	)
+
+
+static func dig_skylight_collar_material() -> ShaderMaterial:
+	return craft_shader_material("dig_skylight_collar", "oil_slicked_iron", Palette.CHARCOAL.lightened(0.08), Palette.VERDIGRIS.darkened(0.28), 0.68, 0.44, Palette.ANCIENT, 0.0)
+
+
+static func swarm_pool_disc(radius: float, thickness: float) -> ArrayMesh:
+	var key := "swarm_pool_disc:%.2f:%.2f" % [radius, thickness]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "swarm_pool")
+		var segs := 32
+		var hh := thickness * 0.5
+		var lip := minf(1.2, radius * 0.04)
+		var r_inner := maxf(1.0, radius - lip)
+		var top_c := Vector3(0.0, hh, 0.0)
+		var bot_c := Vector3(0.0, -hh, 0.0)
+		for i in segs:
+			var a0 := TAU * float(i) / float(segs)
+			var a1 := TAU * float(i + 1) / float(segs)
+			var c0 := cos(a0)
+			var s0 := sin(a0)
+			var c1 := cos(a1)
+			var s1 := sin(a1)
+			var ti0 := Vector3(c0 * r_inner, hh, s0 * r_inner)
+			var ti1 := Vector3(c1 * r_inner, hh, s1 * r_inner)
+			var to0 := Vector3(c0 * radius, hh - 0.12, s0 * radius)
+			var to1 := Vector3(c1 * radius, hh - 0.12, s1 * radius)
+			var bo0 := Vector3(c0 * radius, -hh + 0.10, s0 * radius)
+			var bo1 := Vector3(c1 * radius, -hh + 0.10, s1 * radius)
+			var bi0 := Vector3(c0 * r_inner, -hh, s0 * r_inner)
+			var bi1 := Vector3(c1 * r_inner, -hh, s1 * r_inner)
+			var radial := Vector3(cos((a0 + a1) * 0.5), 0.0, sin((a0 + a1) * 0.5))
+			_add_tri(st, top_c, ti0, ti1, Vector3.UP, _vc(0.08, 0.12, 0.35), _vc(0.14, 0.18, 0.65), _vc(0.14, 0.18, 0.65), 0.08)
+			var n_top_chamfer := (radial * 0.12 + Vector3.UP * lip).normalized()
+			_add_quad(st, ti0, ti1, to1, to0, n_top_chamfer, _vc(0.86, 0.14, 0.88), 0.16)
+			_add_quad(st, to0, to1, bo1, bo0, radial, _vc(0.24, 0.64, 0.25), 0.16)
+			var n_bot_chamfer := (radial * 0.10 + Vector3.DOWN * lip).normalized()
+			_add_quad(st, bo0, bo1, bi1, bi0, n_bot_chamfer, _vc(0.14, 0.86, 0.0), 0.16)
+			_add_tri(st, bot_c, bi1, bi0, Vector3.DOWN, _vc(0.10, 0.90, 0.0), _vc(0.10, 0.90, 0.0), _vc(0.10, 0.90, 0.0), 0.08)
+	)
+
+
+static func swarm_pool_material() -> ShaderMaterial:
+	var cache_key := "swarm_pool_mat:%s" % str(FlashGuard.on)
+	if _mat_cache.has(cache_key):
+		return _mat_cache[cache_key] as ShaderMaterial
+	var sh := Shader.new()
+	sh.code = """
+shader_type spatial;
+render_mode blend_mix, cull_back, depth_draw_opaque;
+uniform vec4 base_color : source_color = vec4(0.16, 0.36, 0.34, 0.72);
+uniform vec4 foam_color : source_color = vec4(0.56, 0.88, 0.66, 1.0);
+uniform float calm = 0.0;
+void fragment() {
+	float t = TIME * mix(1.2, 0.15, calm);
+	vec2 p = UV * 6.0;
+	float w1 = sin(p.x * 2.1 + t) * cos(p.y * 1.9 - t * 0.8);
+	float w2 = sin((p.x + p.y) * 1.5 - t * 1.3);
+	float ripple = clamp(0.5 + 0.28 * w1 + 0.22 * w2, 0.0, 1.0);
+	float rim = clamp(COLOR.r, 0.0, 1.0);
+	float seam = clamp(COLOR.b, 0.0, 1.0);
+	vec3 col = mix(base_color.rgb * 0.78, base_color.rgb * 1.18, ripple);
+	col = mix(col, foam_color.rgb * 0.82, rim * 0.45 + smoothstep(0.76, 0.96, ripple) * 0.22);
+	ALBEDO = col;
+	ROUGHNESS = mix(0.28, 0.56, rim);
+	METALLIC = 0.12;
+	EMISSION = foam_color.rgb * (seam * 0.14 + smoothstep(0.80, 0.98, ripple) * 0.10) * mix(1.0, 0.45, calm);
+	ALPHA = clamp(mix(0.62, 0.92, rim), 0.0, 1.0);
+}
+"""
+	var mat := ShaderMaterial.new()
+	mat.shader = sh
+	mat.resource_name = "enemy_boss_swarm_pool"
+	mat.set_shader_parameter("base_color", Color(Palette.VERDIGRIS, 0.72))
+	mat.set_shader_parameter("foam_color", Palette.ANCIENT)
+	mat.set_shader_parameter("calm", 1.0 if FlashGuard.on else 0.0)
+	_mat_cache[cache_key] = mat
+	return mat
+
+
+static func waking_arena_pad(radius: float, thickness: float) -> ArrayMesh:
+	var key := "waking_arena_pad:%.2f:%.2f" % [radius, thickness]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "waking_pad")
+		var segs := 48
+		var hh := thickness * 0.5
+		var bevel := 0.14
+		var r_flat := maxf(1.0, radius - bevel)
+		var r_skirt := maxf(1.0, radius - 0.55)
+		var y_mid := -hh + 0.48
+		var top_c := Vector3(0.0, hh, 0.0)
+		var bot_c := Vector3(0.0, -hh, 0.0)
+		for i in segs:
+			var a0 := TAU * float(i) / float(segs)
+			var a1 := TAU * float(i + 1) / float(segs)
+			var c0 := cos(a0)
+			var s0 := sin(a0)
+			var c1 := cos(a1)
+			var s1 := sin(a1)
+			var radial := Vector3(cos((a0 + a1) * 0.5), 0.0, sin((a0 + a1) * 0.5))
+			var t0 := Vector3(c0 * r_flat, hh, s0 * r_flat)
+			var t1 := Vector3(c1 * r_flat, hh, s1 * r_flat)
+			var e0 := Vector3(c0 * radius, hh - bevel, s0 * radius)
+			var e1 := Vector3(c1 * radius, hh - bevel, s1 * radius)
+			var m0 := Vector3(c0 * radius, y_mid, s0 * radius)
+			var m1 := Vector3(c1 * radius, y_mid, s1 * radius)
+			var b0 := Vector3(c0 * r_skirt, -hh, s0 * r_skirt)
+			var b1 := Vector3(c1 * r_skirt, -hh, s1 * r_skirt)
+			_add_tri(st, top_c, t0, t1, Vector3.UP, _vc(0.06, 0.10, 0.0), _vc(0.08, 0.14, 0.0), _vc(0.08, 0.14, 0.0), 0.12)
+			var n_chamfer := (radial + Vector3.UP).normalized()
+			_add_quad(st, t0, t1, e1, e0, n_chamfer, _vc(0.86, 0.14, 0.0), 0.25)
+			_add_quad(st, e0, e1, m1, m0, radial, _vc(0.16, 0.42, 0.0), 0.25)
+			var dy := y_mid - (-hh)
+			var dr := radius - r_skirt
+			var n_skirt := (radial * dy + Vector3.DOWN * dr).normalized()
+			_add_quad(st, m0, m1, b1, b0, n_skirt, _vc(0.20, 0.72, 0.0), 0.25)
+			_add_tri(st, bot_c, b1, b0, Vector3.DOWN, _vc(0.10, 0.90, 0.0), _vc(0.10, 0.90, 0.0), _vc(0.10, 0.90, 0.0), 0.12)
+	)
+
+
+static func pit_jaw_fallback_mesh(radius := 1.5, height := 0.12) -> ArrayMesh:
+	var key := "pit_jaw_fallback:%.2f:%.2f" % [radius, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "iron_frame")
+		_bevel_cyl(st, Vector3.ZERO, radius, radius * 0.94, height, 16, 0.03, 0.6, Transform3D.IDENTITY, _vc(0.12, 0.46), _vc(0.90, 0.14), _vc(0.14, 0.64))
+		_bevel_ring(st, Vector3(0.0, height * 0.35, 0.0), radius * 0.74, radius * 0.98, 0.08, 16, 0.02, 0.8, Transform3D.IDENTITY, _vc(0.16, 0.48), _vc(0.92, 0.12))
+		for i in 8:
+			var a := TAU * float(i) / 8.0
+			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * (radius * 0.86), 0.15, sin(a) * (radius * 0.86)))
+			_bevel_box(st, Vector3.ZERO, Vector3(0.24, 0.32, 0.20), 0.04, 1.0, xf, _vc(0.22, 0.28, 0.65), _vc(0.92, 0.12, 0.85), _vc(0.16, 0.68, 0.0))
+	)
+
+
+static func burrow_marker_mesh(radius: float, height: float) -> ArrayMesh:
+	var key := "burrow_marker:%.2f:%.2f" % [radius, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "part_state")
+		_bevel_cyl(st, Vector3.ZERO, radius, radius * 0.94, height, 20, minf(0.018, height * 0.35), 0.6, Transform3D.IDENTITY, _vc(0.12, 0.56), _vc(0.88, 0.16), _vc(0.14, 0.52))
+		_bevel_ring(st, Vector3(0.0, height * 0.35, 0.0), radius * 0.72, radius * 0.96, height * 0.8, 20, 0.012, 0.7, Transform3D.IDENTITY, _vc(0.16, 0.44), _vc(0.90, 0.14))
+		_bolt_ring(st, Vector3(0.0, height * 0.55, 0.0), radius * 0.84, 6, 0.08, 0.03)
+	)
+
+
+static func swarm_remnant_body(size: float, height: float) -> ArrayMesh:
+	var key := "swarm_remnant_body:%.2f:%.2f" % [size, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "ancient_enamel")
+		_bevel_cyl(st, Vector3.ZERO, size, size * 0.92, height, 3, 0.035, 0.8, Transform3D.IDENTITY, _vc(0.10, 0.18), _vc(0.86, 0.14), _vc(0.12, 0.22))
+		_bevel_cyl(st, Vector3(0.0, height * 0.35, 0.0), size * 0.68, size * 0.56, height * 0.42, 3, 0.025, 0.9, Transform3D.IDENTITY, _vc(0.14, 0.20), _vc(0.90, 0.12), _vc(0.16, 0.20))
+	)
+
+
+static func swarm_remnant_seam(size: float, height: float) -> ArrayMesh:
+	var key := "swarm_remnant_seam:%.2f:%.2f" % [size, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "ancient_light")
+		_bevel_cyl(st, Vector3.ZERO, size, size * 0.88, height, 3, 0.025, 1.0, Transform3D.IDENTITY, _vc(0.20, 0.10, 0.95), _vc(0.75, 0.08, 1.0), _vc(0.25, 0.08, 1.0))
+	)
+
+
+static func ramp_flipper_plate(size: Vector3) -> ArrayMesh:
+	var key := "ramp_flipper_plate:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "working_tool")
+		_bevel_box(st, Vector3.ZERO, size, minf(0.055, size.y * 0.32), 0.35, Transform3D.IDENTITY, _vc(0.10, 0.24), _vc(0.90, 0.14), _vc(0.12, 0.82))
+		for sx_v in [-0.42, 0.42]:
+			var sx := float(sx_v)
+			_bevel_box(st, Vector3(size.x * sx, size.y * 0.18, 0.0), Vector3(0.24, size.y * 0.68, size.z * 0.90), 0.028, 0.6, Transform3D.IDENTITY, _vc(0.18, 0.36), _vc(0.92, 0.14), _vc(0.14, 0.76))
+		for sz_v in [-0.36, 0.0, 0.36]:
+			var sz := float(sz_v)
+			_bevel_box(st, Vector3(0.0, -size.y * 0.22, size.z * sz), Vector3(size.x * 0.86, size.y * 0.56, 0.22), 0.026, 0.6, Transform3D.IDENTITY, _vc(0.16, 0.52), _vc(0.88, 0.16), _vc(0.14, 0.84))
+	)
+
+
+static func waking_enamel_material(base_mat: StandardMaterial3D, is_brass_override := false) -> StandardMaterial3D:
+	var updated := base_mat.duplicate() as StandardMaterial3D if base_mat != null else StandardMaterial3D.new()
+	if is_brass_override:
+		updated.albedo_color = Palette.VERDIGRIS
+		updated.metallic = 0.18
+		updated.roughness = 0.58
+	else:
+		updated.roughness = 0.48
+		updated.metallic = maxf(updated.metallic, 0.14)
+	Palette.surface_grain(updated)
+	if updated.next_pass == null:
+		updated.next_pass = BakeLook.edge_lift()
+	return updated

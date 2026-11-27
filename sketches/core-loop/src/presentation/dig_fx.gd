@@ -4,6 +4,8 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Kit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const RUPTURE_SECONDS := 0.45
 const BURST_SECONDS := 0.85
 const GRIT_REACH := 22.0
@@ -286,18 +288,21 @@ func _process(delta: float) -> void:
 
 
 func _tick_wayfinding_fx() -> void:
+	var calm := UiTokens.reduced_motion or FlashGuard.on
 	for row in cable_pulses:
 		var node: MeshInstance3D = row["node"]
 		if not is_instance_valid(node):
 			continue
-		var wave := 0.5 + 0.5 * sin(_clock * 3.8 - float(row["phase"]))
-		var s := float(row["base_scale"]) * (0.72 + 0.58 * wave)
+		var s := float(row["base_scale"])
+		if not calm:
+			var wave := 0.5 + 0.5 * sin(_clock * 3.8 - float(row["phase"]))
+			s *= (0.86 + 0.28 * wave)
 		node.scale = Vector3(s, s, s)
 	for row in skylight_shafts:
 		var node: MeshInstance3D = row["node"]
 		if not is_instance_valid(node):
 			continue
-		var shimmer := 0.85 + 0.15 * sin(_clock * 1.4 + float(row["phase"]))
+		var shimmer := 1.0 if calm else (0.85 + 0.15 * sin(_clock * 1.4 + float(row["phase"])))
 		if node.material_override is ShaderMaterial:
 			(node.material_override as ShaderMaterial).set_shader_parameter("alpha_scale", float(row["base_alpha"]) * shimmer)
 		elif node.material_override is StandardMaterial3D:

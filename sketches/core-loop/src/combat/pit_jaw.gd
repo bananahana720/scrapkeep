@@ -2,6 +2,9 @@ extends "res://src/combat/counter.gd"
 
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
+const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const JAW_RADIUS := 2.4
 const LEAD := 0.7
@@ -36,6 +39,7 @@ var _spit_hit := false
 var _jaw: MeshInstance3D
 var _jaw_rest := Vector3.ZERO
 var _jaw_set := Vector3.ZERO
+var _jaw_rig: PropMotionRig
 
 static var _shared: Array = []
 
@@ -61,20 +65,13 @@ func _build_tool() -> void:
 	if parts.is_empty():
 		_jaw = MeshInstance3D.new()
 		_jaw.name = "PitJaw"
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = 1.5
-		mesh.bottom_radius = 1.5
-		mesh.height = 0.12
-		mesh.radial_segments = 16
-		_jaw.mesh = mesh
-		_jaw.material_override = Palette.solid(Palette.CHARCOAL, 0.0)
+		_jaw.mesh = EnemyBossCraft.pit_jaw_fallback_mesh(1.5, 0.12)
+		_jaw.material_override = EnemyBossCraft.craft_shader_material("pit_jaw_fallback", "oil_slicked_iron", Palette.CHARCOAL, Palette.RUST, 0.64, 0.42, Palette.HAZARD, 0.85)
 		_visual_parent().add_child(_jaw)
-		for i in 8:
-			var angle := TAU * float(i) / 8.0
-			_box(Vector3(0.22, 0.3, 0.22), Palette.HAZARD, Vector3(cos(angle) * 1.3, 0.15, sin(angle) * 1.3), 0.6, _jaw)
 	else:
 		_crew.free()
 		_crew = null
+		Palette.surface_grain(_material)
 		for part in parts:
 			var mi := MeshInstance3D.new()
 			mi.name = part.name
@@ -89,6 +86,19 @@ func _build_tool() -> void:
 			_jaw = _visual_parent().get_child(-1) as MeshInstance3D
 	_jaw_rest = Vector3(0.0, -half_height + 0.06, 0.0)
 	_jaw.position = _jaw_rest
+	_jaw_rig = PropMotionRig.new()
+	if _jaw != null and PropMotionRig.is_visual_pivot(_jaw):
+		_jaw_rig.add_part("jaw", _jaw, {
+			"sway": true,
+			"sway_stiffness": 18.0,
+			"sway_damping": 5.2,
+			"sway_gain": 0.014,
+			"sway_max_rad": 0.12,
+			"sway_ambient_amp": 0.032,
+			"sway_ambient_hz": 0.72,
+			"bob_amp": 0.025,
+			"bob_hz": 0.85,
+		})
 
 
 static func _parts() -> Array:
@@ -233,8 +243,15 @@ func _on_end() -> void:
 
 
 func _pose() -> void:
-	if _jaw == null or not _jaw.top_level:
+	if _jaw == null:
 		return
+	if not _jaw.top_level:
+		if _jaw_rig != null:
+			_jaw_rig.reduced_motion = UiTokens.reduced_motion or EnemyMotion.motion_scale <= 0.0
+			_jaw_rig.step(get_physics_process_delta_time(), Vector3.ZERO)
+		return
+	if _jaw_rig != null:
+		_jaw_rig.reset()
 	if clenched and _spring_spit:
 		var coil := clampf(_warn_progress(), 0.0, 1.0) if phase == Phase.WARN else 0.0
 		_jaw.global_position = _jaw_set + Vector3.UP * (0.04 * (1.0 - coil))

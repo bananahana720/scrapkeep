@@ -12,6 +12,7 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 const HULL := Vector3(9.0, 5.0, 14.0)
 const DECK := 5.0
@@ -64,8 +65,12 @@ var _model_armour: Array = []
 var _model_magnets: Array = []
 var _model_magnet_meshes: Array = []
 var _model_bow_ram: MeshInstance3D
+var _model_hull: MeshInstance3D
 var _model_shield: Node3D
 var _bracing := false
+var _strike_flash_left := 0.0
+var _strike_flash_duration := 0.22
+var _strike_flash_color := Palette.HAZARD
 var _pending_hides := {}
 var _drawn_parts: Array = []
 var _camera_bodies: Array = []
@@ -179,6 +184,7 @@ func follow_shoved_rider(rider: Node3D) -> void:
 func _physics_process(delta: float) -> void:
 	_follow_drawn_parts()
 	step_magnet_motion(delta)
+	_step_strike_flash(delta)
 
 
 func _bind_magnet_rigs() -> void:
@@ -490,6 +496,7 @@ func _dress() -> void:
 		BossModel.strip_tracks(_anim, "Cap1", ["drone_deploy"])
 		BossModel.strip_tracks(_anim, "Cap2", ["drone_deploy"])
 	_model_shield = model.find_child("CockpitShield", true, false)
+	_model_hull = model.find_child("Hull", true, false) as MeshInstance3D
 	_model_bow_ram = model.find_child("BowRam", true, false) as MeshInstance3D
 	_model_cranes = [model.find_child("CraneMasts", true, false), model.find_child("CranePort", true, false),
 		model.find_child("CraneStarboard", true, false), model.find_child("MagnetSocketPort", true, false),
@@ -532,6 +539,41 @@ func set_hook_brace(on: bool, token := 0) -> void:
 
 func bracing() -> bool:
 	return _bracing
+
+
+func trigger_strike_flash(color := Palette.HAZARD, duration := 0.22) -> void:
+	_strike_flash_color = color
+	_strike_flash_duration = maxf(0.05, duration * (0.75 if FlashGuard.on else 1.0))
+	_strike_flash_left = _strike_flash_duration
+	_apply_strike_flash(1.0)
+
+
+func strike_flashing() -> bool:
+	return _strike_flash_left > 0.0
+
+
+func _step_strike_flash(delta: float) -> void:
+	if _strike_flash_left <= 0.0:
+		return
+	_strike_flash_left = maxf(0.0, _strike_flash_left - delta)
+	var frac := _strike_flash_left / maxf(_strike_flash_duration, 0.001)
+	_apply_strike_flash(frac)
+
+
+func _apply_strike_flash(frac: float) -> void:
+	var scale := 0.45 if FlashGuard.on else 1.0
+	var hull_energy := 1.45 * frac * scale
+	var ram_energy := maxf(BRACE_GLOW if _bracing else 0.0, 2.2 * frac * scale)
+	if model != null:
+		if _model_hull != null:
+			BossModel.signal_glow(_model_hull, _strike_flash_color, hull_energy)
+		if _model_bow_ram != null:
+			BossModel.signal_glow(_model_bow_ram, _strike_flash_color if frac > 0.0 else Palette.HAZARD, ram_energy)
+	if _hull_prim_mat != null:
+		var prim_energy := maxf(1.6 if _bracing else 0.0, 1.5 * frac * scale)
+		_hull_prim_mat.emission_enabled = prim_energy > 0.001
+		_hull_prim_mat.emission = _strike_flash_color if frac > 0.0 else Palette.HAZARD
+		_hull_prim_mat.emission_energy_multiplier = prim_energy
 
 
 func _cue(clip: String, token: int, tag := "") -> void:

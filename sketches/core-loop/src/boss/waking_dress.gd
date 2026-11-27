@@ -4,6 +4,7 @@ const BossModel := preload("res://src/boss/boss_model.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Palette := preload("res://src/core/palette.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 const BASE := "res://assets/models/bosses/boss_waking_base.glb"
 const KIT := "res://assets/models/bosses/boss_waking_kit.glb"
@@ -119,15 +120,12 @@ static func _enforce_guard1_materials(root: Node) -> void:
 				updated.emission = Palette.ANCIENT
 				updated.emission_energy_multiplier = maxf(mat.emission_energy_multiplier, 2.4)
 				view.set_surface_override_material(s, updated)
-			elif brass_like or mat_name == "ancient_enamel":
-				var updated := mat.duplicate() as StandardMaterial3D
-				if brass_like:
-					updated.albedo_color = Palette.VERDIGRIS
-					updated.metallic = 0.16
-					updated.roughness = 0.64
-				else:
-					updated.roughness = 0.60
+			elif brass_like or mat_name == "ancient_enamel" or String(view.name).begins_with("BellHousing"):
+				var updated := EnemyBossCraft.waking_enamel_material(mat, brass_like)
 				view.set_surface_override_material(s, updated)
+			elif not mat.emission_enabled:
+				var polished := EnemyBossCraft.waking_enamel_material(mat, false)
+				view.set_surface_override_material(s, polished)
 
 
 func _attach_drill_crown() -> void:
@@ -145,12 +143,14 @@ func _attach_drill_crown() -> void:
 			var src := view.mesh.surface_get_material(s)
 			var slot := String(src.resource_name) if src != null else ""
 			if slot == "ancient_light":
-				view.set_surface_override_material(s, Palette.solid(Palette.ANCIENT, 2.8, false))
+				var glow := Palette.solid(Palette.ANCIENT, 2.8, false)
+				Palette.surface_grain(glow)
+				view.set_surface_override_material(s, glow)
 			else:
-				var enamel := StandardMaterial3D.new()
+				var enamel := EnemyBossCraft.waking_enamel_material(null, false)
 				enamel.vertex_color_use_as_albedo = true
-				enamel.roughness = 0.62
-				enamel.metallic = 0.14
+				enamel.roughness = 0.54
+				enamel.metallic = 0.18
 				view.set_surface_override_material(s, enamel)
 	_seat.add_child(scene)
 	scene.position = Vector3(0.0, -Warden.HALF_HEIGHT, 0.0)

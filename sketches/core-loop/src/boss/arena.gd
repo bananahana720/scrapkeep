@@ -275,10 +275,28 @@ func _show_crust(vent: int, on: bool) -> void:
 
 func _ready() -> void:
 	name = "SlagBowl"
+	if not child_entered_tree.is_connected(_on_arena_child_entered):
+		child_entered_tree.connect(_on_arena_child_entered)
 	while not build_step():
 		pass
 	BowlDress.bind_yard(self)
 	StandCrew.bind_bowl(self)
+
+
+func _on_arena_child_entered(node: Node) -> void:
+	if node is Node3D and node.find_child("RewardCanister", false, false) != null:
+		_dress_reward_canister(node as Node3D)
+
+
+func _dress_reward_canister(reward: Node3D) -> void:
+	var canister := reward.find_child("RewardCanister", false, false) as MeshInstance3D
+	if canister == null:
+		return
+	canister.mesh = EnemyBossCraft.reward_canister_shell(0.38, 0.72)
+	var band := canister.find_child("BoneBand", false, false) as MeshInstance3D
+	if band != null:
+		band.mesh = EnemyBossCraft.reward_canister_band(0.405, 0.12)
+		band.material_override = EnemyBossCraft.reward_bone_band_material()
 
 
 var _built := 0

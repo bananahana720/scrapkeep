@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 const HEADFRAME := "headframe"
 const SINKHOLE := "sinkhole"
@@ -234,17 +235,9 @@ func _build_slab(warden) -> void:
 	shape.shape = cylinder
 	body.add_child(shape)
 	var mesh := MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = pool_radius
-	disc.bottom_radius = pool_radius
-	disc.height = POOL_THICKNESS
-	disc.radial_segments = 32
-	mesh.mesh = disc
-	var material := StandardMaterial3D.new()
-	material.albedo_color = Color(Palette.VERDIGRIS, 0.55)
-	material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mesh.material_override = material
+	mesh.name = "SwarmPoolMesh"
+	mesh.mesh = EnemyBossCraft.swarm_pool_disc(pool_radius, POOL_THICKNESS)
+	mesh.material_override = EnemyBossCraft.swarm_pool_material()
 	body.add_child(mesh)
 	var parent: Node = warden.get("world_root") if warden.get("world_root") is Node else warden.get_parent()
 	parent.add_child(body)
