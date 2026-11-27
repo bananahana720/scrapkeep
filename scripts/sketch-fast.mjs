@@ -387,15 +387,21 @@ export function plan({
       spent += cost;
     } else deferred.push(row);
   }
-  const order = (a, b) =>
+  const parallelOrder = (a, b) =>
+    a.tier === 0 && b.tier !== 0
+      ? -1
+      : b.tier === 0 && a.tier !== 0
+        ? 1
+        : b.ms - a.ms || a.test.localeCompare(b.test);
+  const soloOrder = (a, b) =>
     a.tier === 0 && b.tier !== 0
       ? -1
       : b.tier === 0 && a.tier !== 0
         ? 1
         : a.ms - b.ms || a.test.localeCompare(b.test);
   return {
-    parallel: kept.filter((row) => !solo(row.test)).sort(order),
-    solo: kept.filter((row) => solo(row.test)).sort(order),
+    parallel: kept.filter((row) => !solo(row.test)).sort(parallelOrder),
+    solo: kept.filter((row) => solo(row.test)).sort(soloOrder),
     deferred,
     bots: botRows.map((row) => row.test).sort(),
     estimateMs: Math.round(spent),
@@ -817,6 +823,61 @@ function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}, fixedFps = nu
   });
 }
 
+function runBoot(sketchDir, timeoutMs = 180_000) {
+  return new Promise((resolve) => {
+    const started = Date.now();
+    const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
+    const child = spawn(binary, ["--headless", "--path", sketchDir, "--quit-after", "300"], {
+      env: { ...process.env, ...userDataEnv(dataHome) },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    running.add(child);
+    let output = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      child.kill("SIGKILL");
+    }, timeoutMs);
+    let settled = false;
+    const done = (status, signal, extra = "") => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      running.delete(child);
+      rmSync(dataHome, { recursive: true, force: true });
+      const text = output + extra;
+      const verdict = judge({ status, output: text });
+      resolve({
+        ok: verdict.ok,
+        status,
+        signal: signal ?? null,
+        ms: Date.now() - started,
+        reason: verdict.reason,
+        output: text,
+        killed: child.killedByLane === true,
+        timedOut,
+      });
+    };
+    child.on("error", (error) => done(null, null, String(error.message)));
+    child.on("close", (code, signal) => done(code, signal));
+  });
+}
+
+export async function runBootTask({ inLane, shouldStop, run, onStop, stage }) {
+  return inLane(async () => {
+    if (shouldStop()) return { ok: true, killed: true };
+    const boot = await run();
+    if (boot.killed) return { ok: true, killed: true };
+    const ok = stage("boot", boot.ok, { note: boot.reason ?? "300 frames" });
+    if (!ok) onStop();
+    return { ok, killed: false };
+  });
+}
+
 function stopChild(child) {
   child.killedByLane = true;
   child.kill("SIGKILL");
@@ -826,7 +887,10 @@ function stopRunning() {
   for (const child of running) stopChild(child);
 }
 
-export function defaultWidth(cpus = os.cpus().length, load = os.loadavg()[0]) {
+export function defaultWidth(cpus = os.cpus().length, load = os.loadavg()[0], env = process.env) {
+  if (env?.CI === "true" || env?.GITHUB_ACTIONS === "true") {
+    return Math.min(16, Math.max(2, cpus));
+  }
   return Math.min(16, Math.max(2, Math.round(cpus - load)));
 }
 
@@ -1345,21 +1409,14 @@ async function main() {
       finish();
     writeImportStamp(root, SKETCH, { godot: godotIdentity(binary) });
   }
-  if (!namedMode) {
-    const boot = await spawnCollect(binary, [...base, "--quit-after", "300"], {
-      timeoutMs: 180_000,
-      env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) },
-    });
-    const bootVerdict = judge({ status: boot.status, output: boot.output });
-    if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
-  }
-
   const results = [];
   const flaky = [];
   const ledgerFlaky = [];
   const flakeRows = ledgerFlakes((await readLedger(root))?.rows ?? []);
   const baseRed = [];
   let prRed = null;
+  let bootFailed = false;
+  const shouldStop = () => Boolean(prRed || bootFailed);
   const inLane = lanePool(width);
   const stopped = (test) => ({
     test,
@@ -1421,7 +1478,7 @@ async function main() {
     };
   const godot = (dir, test, timeoutMs, onChild, skip = () => false) =>
     inLane(() =>
-      prRed || skip()
+      shouldStop() || skip()
         ? stopped(test)
         : runGodot(dir, test, timeoutMs, onChild).then(
             keepRed(dir === sketchDir ? "head" : "base"),
@@ -1454,13 +1511,13 @@ async function main() {
     }
     const baseSketch = path.join(baseDir(), SKETCH);
     if (!existsSync(path.join(baseSketch, test))) return null;
-    if (cancel.cancelled || prRed) return null;
+    if (cancel.cancelled || shouldStop()) return null;
     baseImport ??= inLane(async () => {
-      if (prRed) return false;
+      if (shouldStop()) return false;
       seedBaseGodot(sketchDir, baseSketch);
       const args = ["--headless", "--path", baseSketch];
       for (let attempt = 1; attempt <= IMPORT_TRIES; attempt++) {
-        if (prRed) return false;
+        if (shouldStop()) return false;
         if ((await importAsync(args)) === 0) return true;
         if (attempt < IMPORT_TRIES)
           log(`${SKETCH} (base) import try ${attempt} of ${IMPORT_TRIES} failed; trying again`);
@@ -1614,14 +1671,14 @@ async function main() {
       0,
     );
     const batch = await inLane(() =>
-      prRed
+      shouldStop()
         ? { runs: [], unfinished: [], killed: true }
         : runBatch(sketchDir, tests, timeoutMs, () => {}, fixedFps),
     );
     receipt.batch.batches++;
     receipt.batch.tests += batch.runs.length;
     for (const run of batch.runs) {
-      if (prRed) return;
+      if (shouldStop()) return;
       if (run.ok) {
         await handle(run);
         continue;
@@ -1632,12 +1689,12 @@ async function main() {
       receipt.batch.reruns.push({ test: run.test, batch_reason: run.reason, alone_ok: alone.ok });
       await handle(alone);
     }
-    if (!batch.killed)
+    if (!batch.killed && !shouldStop())
       for (const test of batch.unfinished.reverse())
         queue.unshift({ ...rows.find((row) => row.test === test), alone: true });
   }
   async function worker() {
-    while (queue.length > 0 && !prRed) {
+    while (queue.length > 0 && !shouldStop()) {
       const firstFps = fixedFpsFor(sketchDir, queue[0].test);
       const rows = takeBatchPacked(
         queue,
@@ -1652,9 +1709,25 @@ async function main() {
       await handle(result);
     }
   }
-  await Promise.all(Array.from({ length: Math.min(width, queue.length) }, worker));
+  const bootPromise = !namedMode
+    ? runBootTask({
+        inLane,
+        shouldStop,
+        run: () => runBoot(sketchDir),
+        onStop: () => {
+          bootFailed = true;
+          stopRunning();
+        },
+        stage,
+      })
+    : Promise.resolve({ ok: true, killed: false });
+  await Promise.all([
+    bootPromise,
+    ...Array.from({ length: Math.min(width, queue.length) }, worker),
+  ]);
+  if (bootFailed) finish();
   for (const row of lanePlan.solo) {
-    if (prRed) break;
+    if (shouldStop()) break;
     await handle(
       await runGodot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test))).then(
         keepRed("head"),

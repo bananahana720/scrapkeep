@@ -28,6 +28,7 @@ import {
   parseArgs,
   batchable,
   resolveNamedTests,
+  runBootTask,
   seedBaseGodot,
   splitBatch,
   takeBatch,
@@ -187,7 +188,7 @@ test("canaries are the cheapest timed tests that load the whole game", () => {
   assert.deepEqual(canaries(index, timings, 2), ["tests/b_test.gd", "tests/c_test.gd"]);
 });
 
-test("plan keeps tiers within the budget, keeps changed tests, runs cheapest first and lists bots", () => {
+test("plan selects cheapest-first within the budget, keeps changed tests, schedules parallel longest-first (LPT) and lists bots", () => {
   const picked = new Map([
     ["tests/changed_test.gd", { tier: 0, why: "changed" }],
     ["tests/slow_direct_test.gd", { tier: 1, why: "names" }],
@@ -213,7 +214,7 @@ test("plan keeps tiers within the budget, keeps changed tests, runs cheapest fir
   });
   assert.deepEqual(
     out.parallel.map((row) => row.test),
-    ["tests/changed_test.gd", "tests/fast_direct_test.gd", "tests/slow_direct_test.gd"],
+    ["tests/changed_test.gd", "tests/slow_direct_test.gd", "tests/fast_direct_test.gd"],
   );
   assert.deepEqual(
     out.solo.map((row) => row.test),
@@ -443,7 +444,7 @@ test("a bot-named test with no timings row goes to the bot shards; a test with a
   ]);
   assert.deepEqual(
     out.parallel.map((row) => row.test),
-    ["tests/known_fast_test.gd", "tests/bot_known_test.gd"],
+    ["tests/bot_known_test.gd", "tests/known_fast_test.gd"],
   );
 });
 
@@ -882,14 +883,150 @@ test("a crash signal is named as a crash, and only a plain kill points at the me
   assert.match(signalReason(null), /memory limit/);
 });
 
-test("the default width is one lane per idle core, between 2 and 16", () => {
-  assert.equal(defaultWidth(4, 0.1), 4);
-  assert.equal(defaultWidth(4, 1.6), 2);
-  assert.equal(defaultWidth(4, 0), 4);
-  assert.equal(defaultWidth(18, 2), 16);
-  assert.equal(defaultWidth(32, 30), 2);
-  assert.equal(defaultWidth(32, 4), 16);
-  assert.equal(defaultWidth(2, 0), 2);
+test("the default width is one lane per idle core locally and full cpu count in CI, between 2 and 16", () => {
+  assert.equal(defaultWidth(4, 0.1, {}), 4);
+  assert.equal(defaultWidth(4, 1.6, {}), 2);
+  assert.equal(defaultWidth(4, 0, {}), 4);
+  assert.equal(defaultWidth(18, 2, {}), 16);
+  assert.equal(defaultWidth(32, 30, {}), 2);
+  assert.equal(defaultWidth(32, 4, {}), 16);
+  assert.equal(defaultWidth(2, 0, {}), 2);
+  assert.equal(defaultWidth(4, 3.8, { CI: "true" }), 4);
+  assert.equal(defaultWidth(4, 3.8, { GITHUB_ACTIONS: "true" }), 4);
+  assert.equal(defaultWidth(8, 6.0, { CI: "true" }), 8);
+  assert.equal(defaultWidth(32, 30, { CI: "true" }), 16);
+  assert.equal(defaultWidth(1, 0, { GITHUB_ACTIONS: "true" }), 2);
+});
+
+test("plan orders parallel tier 0 and tier > 0 longest-first (LPT) with deterministic tie-break while keeping cheapest-first budget selection", () => {
+  const picked = new Map([
+    ["tests/t0_short_test.gd", { tier: 0, why: "always" }],
+    ["tests/t0_long_test.gd", { tier: 0, why: "changed" }],
+    ["tests/t0_tie_b_test.gd", { tier: 0, why: "always" }],
+    ["tests/t0_tie_a_test.gd", { tier: 0, why: "always" }],
+    ["tests/t1_short_test.gd", { tier: 1, why: "names" }],
+    ["tests/t1_long_test.gd", { tier: 1, why: "names" }],
+    ["tests/t1_over_budget_test.gd", { tier: 1, why: "names" }],
+  ]);
+  const timings = {
+    "tests/t0_short_test.gd": 1_000,
+    "tests/t0_long_test.gd": 20_000,
+    "tests/t0_tie_b_test.gd": 5_000,
+    "tests/t0_tie_a_test.gd": 5_000,
+    "tests/t1_short_test.gd": 3_000,
+    "tests/t1_long_test.gd": 15_000,
+    "tests/t1_over_budget_test.gd": 50_000,
+  };
+  const out = plan({ picked, timings, budgetMs: 50_000, width: 1 });
+  assert.deepEqual(
+    out.parallel.map((r) => r.test),
+    [
+      "tests/t0_long_test.gd",
+      "tests/t0_tie_a_test.gd",
+      "tests/t0_tie_b_test.gd",
+      "tests/t0_short_test.gd",
+      "tests/t1_long_test.gd",
+      "tests/t1_short_test.gd",
+    ],
+  );
+  assert.deepEqual(
+    out.deferred.map((r) => r.test),
+    ["tests/t1_over_budget_test.gd"],
+  );
+});
+
+test("runBootTask overlaps with parallel tests in lanePool and stops queued work cleanly on boot failure", async () => {
+  const inLane = lanePool(2);
+  let live = 0;
+  let peak = 0;
+  let stopped = false;
+  const stages = [];
+  const stage = (name, ok, detail) => {
+    stages.push({ name, ok, detail });
+    return ok;
+  };
+  const bootPass = runBootTask({
+    inLane,
+    shouldStop: () => stopped,
+    run: async () => {
+      live++;
+      peak = Math.max(peak, live);
+      await new Promise((r) => setTimeout(r, 25));
+      live--;
+      return { ok: true, killed: false, reason: null };
+    },
+    onStop: () => {
+      stopped = true;
+    },
+    stage,
+  });
+  const parallelTest = inLane(async () => {
+    live++;
+    peak = Math.max(peak, live);
+    await new Promise((r) => setTimeout(r, 25));
+    live--;
+    return "ran";
+  });
+  const [bootRes, testRes] = await Promise.all([bootPass, parallelTest]);
+  assert.equal(bootRes.ok, true);
+  assert.equal(testRes, "ran");
+  assert.equal(peak, 2, "boot and parallel test must overlap in the lane pool");
+  assert.deepEqual(stages, [{ name: "boot", ok: true, detail: { note: "300 frames" } }]);
+
+  // Boot failure stops queued lanes before they start
+  const failPool = lanePool(2);
+  let failStopped = false;
+  let stopCalls = 0;
+  let queuedRan = false;
+  const failStages = [];
+  const failBoot = runBootTask({
+    inLane: failPool,
+    shouldStop: () => failStopped,
+    run: async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      return { ok: false, killed: false, reason: "the test exited with code 1" };
+    },
+    onStop: () => {
+      failStopped = true;
+      stopCalls++;
+    },
+    stage: (name, ok, detail) => {
+      failStages.push({ name, ok, detail });
+      return ok;
+    },
+  });
+  const inFlight = failPool(async () => {
+    await new Promise((r) => setTimeout(r, 30));
+    return "in-flight";
+  });
+  const queued = failPool(async () => {
+    if (failStopped) return "skipped";
+    queuedRan = true;
+    return "ran";
+  });
+  const [fb, , q] = await Promise.all([failBoot, inFlight, queued]);
+  assert.equal(fb.ok, false);
+  assert.equal(stopCalls, 1);
+  assert.equal(q, "skipped");
+  assert.equal(queuedRan, false);
+  assert.deepEqual(failStages, [
+    { name: "boot", ok: false, detail: { note: "the test exited with code 1" } },
+  ]);
+
+  // Killed boot (due to another test's prRed) does not record a false boot failure
+  const killStages = [];
+  const killedBoot = await runBootTask({
+    inLane: lanePool(2),
+    shouldStop: () => false,
+    run: async () => ({ ok: false, killed: true, reason: "killed" }),
+    onStop: () => assert.fail("killed boot should not trigger onStop"),
+    stage: (name, ok, detail) => {
+      killStages.push({ name, ok, detail });
+      return ok;
+    },
+  });
+  assert.deepEqual(killedBoot, { ok: true, killed: true });
+  assert.deepEqual(killStages, []);
 });
 
 test("a plain SceneTree test batches; a timed, solo or extended one does not", () => {
