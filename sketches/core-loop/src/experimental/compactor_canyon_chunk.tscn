@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" uid="uid://ucvvi1c6qi38" path="res://src/presentation/world23_chunk_craft.gd" id="1_craft"]
 
@@ -33,6 +33,15 @@ size = Vector3(3.4, 4.8, 8.2)
 [sub_resource type="CylinderShape3D" id="Shape_CoolantTank"]
 height = 3.3
 radius = 1.15
+
+[sub_resource type="BoxShape3D" id="Shape_CatwalkPier"]
+size = Vector3(2.06, 7.1, 2.31)
+
+[sub_resource type="BoxShape3D" id="Shape_BridgeStanchion"]
+size = Vector3(2.23, 15.8, 2.5)
+
+[sub_resource type="BoxShape3D" id="Shape_CranePortal"]
+size = Vector3(2.39, 20.4, 2.68)
 
 [sub_resource type="NavigationMesh" id="NavMesh_CompactorCanyon"]
 vertices = PackedVector3Array(-30, 0.1, -26, 30, 0.1, -26, 30, 0.1, 26, -30, 0.1, 26, -23, 7.6, -21, 23, 7.6, -21, 23, 7.6, 21, -23, 7.6, 21, -19.8, 7.6, -17.8, 19.8, 7.6, -17.8, 19.8, 7.6, 17.8, -19.8, 7.6, 17.8, -24, 16.6, 14.2, 24, 16.6, 14.2, 24, 16.6, 19.8, -24, 16.6, 19.8)
@@ -236,14 +245,46 @@ shape = SubResource("Shape_BlastShield")
 [node name="CatwalkPierNW" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 3.55, -21)
 
+[node name="CatwalkPierNWBody" type="StaticBody3D" parent="Tier1_QuarryCatwalks/CatwalkPierNW"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkPierNW/CatwalkPierNWBody"]
+shape = SubResource("Shape_CatwalkPier")
+
 [node name="CatwalkPierNE" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 3.55, -21)
+
+[node name="CatwalkPierNEBody" type="StaticBody3D" parent="Tier1_QuarryCatwalks/CatwalkPierNE"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkPierNE/CatwalkPierNEBody"]
+shape = SubResource("Shape_CatwalkPier")
 
 [node name="CatwalkPierSW" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 3.55, 21)
 
+[node name="CatwalkPierSWBody" type="StaticBody3D" parent="Tier1_QuarryCatwalks/CatwalkPierSW"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkPierSW/CatwalkPierSWBody"]
+shape = SubResource("Shape_CatwalkPier")
+
 [node name="CatwalkPierSE" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 3.55, 21)
+
+[node name="CatwalkPierSEBody" type="StaticBody3D" parent="Tier1_QuarryCatwalks/CatwalkPierSE"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkPierSE/CatwalkPierSEBody"]
+shape = SubResource("Shape_CatwalkPier")
 
 [node name="Tier2_HydraulicGantry" type="Node3D" parent="."]
 
@@ -262,16 +303,48 @@ shape = SubResource("Shape_PressBridge")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20.4, 0)
 
 [node name="BridgeStanchionWest" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.5, 7.9, 17)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.25, 7.9, 17)
+
+[node name="BridgeStanchionWestBody" type="StaticBody3D" parent="Tier2_HydraulicGantry/BridgeStanchionWest"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/BridgeStanchionWest/BridgeStanchionWestBody"]
+shape = SubResource("Shape_BridgeStanchion")
 
 [node name="BridgeStanchionEast" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.5, 7.9, 17)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.25, 7.9, 17)
+
+[node name="BridgeStanchionEastBody" type="StaticBody3D" parent="Tier2_HydraulicGantry/BridgeStanchionEast"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/BridgeStanchionEast/BridgeStanchionEastBody"]
+shape = SubResource("Shape_BridgeStanchion")
 
 [node name="CranePortalWest" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.8, 10.2, 0)
 
+[node name="CranePortalWestBody" type="StaticBody3D" parent="Tier2_HydraulicGantry/CranePortalWest"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/CranePortalWest/CranePortalWestBody"]
+shape = SubResource("Shape_CranePortal")
+
 [node name="CranePortalEast" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.8, 10.2, 0)
+
+[node name="CranePortalEastBody" type="StaticBody3D" parent="Tier2_HydraulicGantry/CranePortalEast"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/CranePortalEast/CranePortalEastBody"]
+shape = SubResource("Shape_CranePortal")
 
 [node name="SightlineLandmark" type="Node3D" parent="."]
 

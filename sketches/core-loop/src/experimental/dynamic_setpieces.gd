@@ -74,6 +74,17 @@ const COMPACTOR_BOOST_ACCEL := 10.0
 const COMPACTOR_STALL_ENEMY_DMG := 45.0
 const COMPACTOR_STALL_BALL_DMG := 14.0
 
+const PAD_TRIGGER_RADIUS_M := 2.4
+const PAD_TRIGGER_HEIGHT_M := 2.6
+const PAD_BODY_MASK := 7
+const PAD_REARM_S := 0.45
+const PAD_MIN_UP_MPS := 16.5
+const PAD_APEX_CLEAR_M := 1.4
+const PAD_MAX_PLANAR_MPS := 9.0
+const PAD_FLIGHT_MAX_S := 3.0
+const PAD_DECK_CLEAR_M := 0.1
+const PAD_DEFAULT_BODY_RADIUS_M := 1.0
+
 var cruise_speed := DEFAULT_CRUISE_MPS
 var _rng := RandomNumberGenerator.new()
 var _berm_phase_offset := 0.0
@@ -85,6 +96,10 @@ var _crane: Dictionary = {}
 var _furnace: Dictionary = {}
 var _compactor: Dictionary = {}
 var _cryo_pipes: Array[Dictionary] = []
+var _pads: Array[Dictionary] = []
+var _pad_decks: Array[StaticBody3D] = []
+var _pad_flights: Array[Dictionary] = []
+var _pad_facts: Array[Dictionary] = []
 
 
 
@@ -161,7 +176,13 @@ func setup_from_chunk(chunk_root: Node, opts: Dictionary = {}) -> Dictionary:
 	var furnace_id := "setpiece_slag_furnace"
 	var compactor_id := "setpiece_compactor_vent"
 	var cryo_specs: Array[Dictionary] = []
+	var pad_sockets: Array[Dictionary] = []
+	var local_by_id := {}
 
+	for s in sockets:
+		local_by_id[String(s["id"])] = _to_local_point(s["position"] as Vector3)
+		if s["kind"] == ChunkSockets.SOCKET_JUMP_PAD:
+			pad_sockets.append(s)
 	for s in sockets:
 		var local_pos := _to_local_point(s["position"] as Vector3)
 		if s["kind"] == ChunkSockets.SOCKET_COVER_SLOT:
@@ -206,6 +227,9 @@ func setup_from_chunk(chunk_root: Node, opts: Dictionary = {}) -> Dictionary:
 			"cooldown_left": 0.0,
 			"ruptures": 0,
 		})
+	_pad_decks = _collect_decks(chunk_root)
+	for pad_socket in pad_sockets:
+		_build_jump_pad(pad_socket, local_by_id)
 
 	return {
 		"crane_id": crane_id,
@@ -213,12 +237,19 @@ func setup_from_chunk(chunk_root: Node, opts: Dictionary = {}) -> Dictionary:
 		"compactor_id": compactor_id,
 		"cryo_pipe_id": String(_cryo_pipes[0]["id"]),
 		"cover_slot_count": cover_slots.size(),
+		"jump_pad_count": _pads.size(),
 	}
 
 
 func teardown() -> void:
 	_active_tags.clear()
 	_clock_s = 0.0
+	for flight in _pad_flights:
+		_end_pad_flight(flight)
+	_pad_flights.clear()
+	_pads.clear()
+	_pad_decks.clear()
+	_pad_facts.clear()
 	for child in get_children():
 		_disable_colliders_recursive(child)
 		if not _exiting:
@@ -479,12 +510,21 @@ func snapshot() -> Dictionary:
 			"stalled_crushes": int(_compactor["stalled_crushes"]),
 			"fast_boosts": int(_compactor["fast_boosts"]),
 		}
+	var pad_snaps: Array[Dictionary] = []
+	for pad in _pads:
+		pad_snaps.append({
+			"id": pad["id"],
+			"origin": _to_world_point(pad["origin"] as Vector3),
+			"launches": int(pad["launches"]),
+			"armed": float(pad["cooldown_left"]) <= 0.0,
+		})
 	return {
 		"clock_s": _clock_s,
 		"active_tag_count": _active_tags.size(),
 		"crane": crane_snap,
 		"furnace": furnace_snap,
 		"compactor": compactor_snap,
+		"jump_pads": pad_snaps,
 	}
 
 
@@ -509,8 +549,208 @@ func step(delta: float, ball_pos: Vector3, ball_vel: Vector3, heft_class: int = 
 		_step_compactor(delta, ball_local, vel_local, fast_enough, actors, facts)
 	for pipe in _cryo_pipes:
 		pipe["cooldown_left"] = maxf(0.0, float(pipe["cooldown_left"]) - delta)
+	facts.append_array(_pad_facts)
+	_pad_facts.clear()
 
 	return facts
+
+
+func _physics_process(delta: float) -> void:
+	_step_pad_flights(delta)
+	for pad in _pads:
+		pad["cooldown_left"] = maxf(0.0, float(pad["cooldown_left"]) - delta)
+		if float(pad["cooldown_left"]) > 0.0:
+			continue
+		var area := pad["area"] as Area3D
+		if not is_instance_valid(area) or not area.is_inside_tree():
+			continue
+		for body in area.get_overlapping_bodies():
+			if body is RigidBody3D and not (body as RigidBody3D).freeze:
+				_launch_from_pad(pad, body as RigidBody3D)
+
+
+static func _collect_decks(chunk_root: Node) -> Array[StaticBody3D]:
+	var decks: Array[StaticBody3D] = []
+	if chunk_root == null or not is_instance_valid(chunk_root):
+		return decks
+	var stack: Array[Node] = [chunk_root]
+	while not stack.is_empty():
+		var cur: Node = stack.pop_back()
+		if cur is StaticBody3D and String(cur.get_meta(ChunkSockets.META_COVER_KIND, "")) == "deck":
+			decks.append(cur as StaticBody3D)
+		for child in cur.get_children():
+			stack.append(child)
+	return decks
+
+
+func _build_jump_pad(socket: Dictionary, local_by_id: Dictionary) -> void:
+	var id := String(socket["id"])
+	var origin: Vector3 = local_by_id[id]
+	var has_target := false
+	var target := origin
+	for link in socket["route_links"]:
+		if local_by_id.has(String(link)):
+			target = local_by_id[String(link)]
+			has_target = true
+			break
+
+	var area := Area3D.new()
+	area.name = "JumpPadTrigger_" + id
+	area.collision_layer = 0
+	area.collision_mask = PAD_BODY_MASK
+	area.monitorable = false
+	area.position = Vector3(origin.x, origin.y + PAD_TRIGGER_HEIGHT_M * 0.5 - 0.3, origin.z)
+	var shape := CollisionShape3D.new()
+	var cyl := CylinderShape3D.new()
+	cyl.radius = PAD_TRIGGER_RADIUS_M
+	cyl.height = PAD_TRIGGER_HEIGHT_M
+	shape.shape = cyl
+	area.add_child(shape)
+	add_child(area)
+
+	_pads.append({
+		"id": id,
+		"origin": origin,
+		"target": target,
+		"has_target": has_target,
+		"area": area,
+		"cooldown_left": 0.0,
+		"launches": 0,
+	})
+
+
+static func _body_radius(body: RigidBody3D) -> float:
+	for child in body.get_children():
+		if child is CollisionShape3D and (child as CollisionShape3D).shape is SphereShape3D:
+			return ((child as CollisionShape3D).shape as SphereShape3D).radius
+	return PAD_DEFAULT_BODY_RADIUS_M
+
+
+static func _body_gravity(body: RigidBody3D) -> float:
+	var base := float(ProjectSettings.get_setting("physics/3d/default_gravity", 9.8))
+	return maxf(0.5, base * body.gravity_scale)
+
+
+func _pad_launch_velocity(pad: Dictionary, from_local: Vector3, gravity_mps2: float, body_radius_m: float) -> Vector3:
+	var gravity := maxf(0.5, gravity_mps2)
+	if not bool(pad["has_target"]):
+		return Vector3(0.0, PAD_MIN_UP_MPS, 0.0)
+	var target: Vector3 = pad["target"]
+	var land_y := target.y + body_radius_m
+	var rise := maxf(0.0, land_y + PAD_APEX_CLEAR_M - from_local.y)
+	var up := maxf(PAD_MIN_UP_MPS, sqrt(2.0 * gravity * rise))
+	var climb := land_y - from_local.y
+	var flight_s := (up + sqrt(maxf(0.0, up * up - 2.0 * gravity * climb))) / gravity
+	var planar := Vector3(target.x - from_local.x, 0.0, target.z - from_local.z) / maxf(flight_s, 0.05)
+	if planar.length() > PAD_MAX_PLANAR_MPS:
+		planar = planar.normalized() * PAD_MAX_PLANAR_MPS
+	return Vector3(planar.x, up, planar.z)
+
+
+func _launch_from_pad(pad: Dictionary, body: RigidBody3D) -> void:
+	var radius := _body_radius(body)
+	var from_world := body.global_position
+	var velocity := _to_world_dir(_pad_launch_velocity(pad, _to_local_point(from_world), _body_gravity(body), radius))
+	pad["cooldown_left"] = PAD_REARM_S
+	pad["launches"] = int(pad["launches"]) + 1
+	_begin_pad_flight(body, radius)
+	var rider := body.get_parent()
+	if rider != null and rider.has_method("set_velocity_now"):
+		rider.call("set_velocity_now", velocity)
+	elif body.has_method("set_velocity_now"):
+		body.call("set_velocity_now", velocity)
+	else:
+		body.linear_velocity = velocity
+	var pad_world := _to_world_point(pad["origin"] as Vector3)
+	prop_interaction_triggered.emit(String(pad["id"]), "jump_pad_launch", pad_world)
+	_pad_facts.append({
+		"kind": "jump_pad_launched",
+		"pad_id": pad["id"],
+		"position": pad_world,
+		"velocity": velocity,
+	})
+
+
+func _begin_pad_flight(body: RigidBody3D, radius: float) -> void:
+	for flight in _pad_flights:
+		if flight["body"] == body:
+			_end_pad_flight(flight)
+	_pad_flights = _pad_flights.filter(func(f: Dictionary) -> bool: return f["body"] != body)
+	var held: Array[StaticBody3D] = []
+	for deck in _pad_decks:
+		if is_instance_valid(deck):
+			_set_deck_exception(body, deck, true)
+			held.append(deck)
+	_pad_flights.append({"body": body, "radius": radius, "decks": held, "left_s": PAD_FLIGHT_MAX_S})
+
+
+func _step_pad_flights(delta: float) -> void:
+	if _pad_flights.is_empty():
+		return
+	var kept: Array[Dictionary] = []
+	for flight in _pad_flights:
+		var body: Variant = flight["body"]
+		if not is_instance_valid(body):
+			continue
+		var rigid := body as RigidBody3D
+		flight["left_s"] = float(flight["left_s"]) - delta
+		var radius := float(flight["radius"])
+		var y := rigid.global_position.y
+		var falling := rigid.linear_velocity.y <= 0.0
+		var still_held: Array[StaticBody3D] = []
+		for deck in flight["decks"]:
+			if not is_instance_valid(deck):
+				continue
+			var slab := _deck_slab(deck)
+			var above := y - radius >= slab.y + PAD_DECK_CLEAR_M
+			var below := y + radius <= slab.x - PAD_DECK_CLEAR_M
+			if above or (below and falling) or float(flight["left_s"]) <= 0.0:
+				_set_deck_exception(rigid, deck, false)
+			else:
+				still_held.append(deck)
+		flight["decks"] = still_held
+		if not still_held.is_empty():
+			kept.append(flight)
+	_pad_flights = kept
+
+
+func _end_pad_flight(flight: Dictionary) -> void:
+	var body: Variant = flight["body"]
+	if not is_instance_valid(body):
+		return
+	for deck in flight["decks"]:
+		if is_instance_valid(deck):
+			_set_deck_exception(body as RigidBody3D, deck, false)
+	flight["decks"] = []
+
+
+static func _set_deck_exception(body: RigidBody3D, deck: StaticBody3D, held: bool) -> void:
+	if held:
+		body.add_collision_exception_with(deck)
+	else:
+		body.remove_collision_exception_with(deck)
+	for child in body.get_children():
+		if child is ShapeCast3D:
+			if held:
+				(child as ShapeCast3D).add_exception(deck)
+			else:
+				(child as ShapeCast3D).remove_exception(deck)
+
+
+static func _deck_slab(deck: StaticBody3D) -> Vector2:
+	var low := INF
+	var high := -INF
+	for child in deck.get_children():
+		if child is CollisionShape3D and (child as CollisionShape3D).shape is BoxShape3D:
+			var cs := child as CollisionShape3D
+			var half := (cs.shape as BoxShape3D).size.y * 0.5
+			var centre := cs.global_position.y if cs.is_inside_tree() else deck.position.y + cs.position.y
+			low = minf(low, centre - half)
+			high = maxf(high, centre + half)
+	if low == INF:
+		var at := deck.global_position.y if deck.is_inside_tree() else deck.position.y
+		return Vector2(at, at)
+	return Vector2(low, high)
 
 
 
