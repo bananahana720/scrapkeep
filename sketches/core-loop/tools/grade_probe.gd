@@ -6,6 +6,7 @@ const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const ThreatGrammar := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const SIZE := Vector2i(1000, 600)
 const CELL := 200
 const GRID_LAYER := 1 << 19
@@ -34,7 +35,7 @@ func _initialize() -> void:
 			gate = true
 		elif a.begins_with("--stills="):
 			stills = a.trim_prefix("--stills=")
-	if DisplayServer.get_name() == "headless" or out == "":
+	if AppShell.headless() or out == "":
 		printerr("needs a display and --out")
 		quit(2)
 		return

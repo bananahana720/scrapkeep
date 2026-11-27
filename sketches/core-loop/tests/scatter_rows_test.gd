@@ -29,6 +29,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const ParkStamps := preload("res://src/world/park/park_stamps.gd")
 const PinHash := preload("res://tests/support/pin_hash.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 # Every old-map scatter transform (kind, seed, instance buffer, maps sorted) is pinned in OLD_MAPS_PIN through
 # tests/support/pin_hash.gd. A change there moves an old map's scatter. Until 16 Nov 2026 this was a SHA-256 of the
@@ -299,7 +300,7 @@ func _park_chunks() -> void:
 	# The glb source is requested on the loader thread with the cache bypassed, so the main thread never
 	# loads it and the build is cold whatever the process has cached (KB5's receipt ran warm). Headless (the
 	# dummy rasterizer, whose mesh RID owner is not thread-safe) the sources load on the main thread instead.
-	if DisplayServer.get_name() != "headless":
+	if not AppShell.headless():
 		t.eq("the glb mesh sources load on the loader thread, not the main thread", chunks.get("threaded_loads"), 1)
 		t.check("the slot materials that are resources load on the loader thread", int(chunks.get("threaded_materials")) >= 1, str(chunks.get("threaded_materials")))
 	else:

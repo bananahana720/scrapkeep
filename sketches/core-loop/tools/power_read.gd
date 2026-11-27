@@ -6,6 +6,7 @@ const Parts := preload("res://src/build/parts.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const BALL := Vector3(0.0, 500.0, 0.0)
@@ -58,7 +59,7 @@ func _run() -> void:
 func _measure(row: Dictionary) -> String:
 	var pilot: String = _args.get("pilot", "pylon_engineer")
 	var depth := int(_args.get("depth", "0"))
-	var render: bool = _args.get("render", "1") != "0" and DisplayServer.get_name() != "headless"
+	var render: bool = _args.get("render", "1") != "0" and not AppShell.headless()
 	row["pilot"] = pilot
 	row["depth"] = depth
 	row["slam_speed"] = SLAM_SPEED

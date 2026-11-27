@@ -9,6 +9,7 @@ const PilotReactions := preload("res://src/presentation/pilot_reactions.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const PilotLiveliness := preload("res://src/presentation/pilot_liveliness.gd")
 const PilotGearKit := preload("res://src/presentation/pilot_gear_kit.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SIZE := Vector2i(1600, 900)
 
@@ -62,7 +63,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out = arg.trim_prefix("--out=")
-	if _out.is_empty() or DisplayServer.get_name() == "headless":
+	if _out.is_empty() or AppShell.headless():
 		printerr("pilot_liveliness_capture: needs Metal display and -- --out=<absolute dir>")
 		quit(2)
 		return

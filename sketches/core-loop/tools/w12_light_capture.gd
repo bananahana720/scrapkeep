@@ -2,6 +2,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 var out := ""
 var scene := ""
 var only := ""
@@ -19,7 +20,7 @@ func _initialize() -> void:
 		elif a.begins_with("--only="): only = a.trim_prefix("--only=")
 		elif a.begins_with("--sun-bias="): bias = PackedFloat64Array(Array(a.trim_prefix("--sun-bias=").split(",")).map(func(v): return float(v)))
 		elif a.begins_with("--hdri="): hdri = a.trim_prefix("--hdri=")
-	if DisplayServer.get_name() == "headless" or out == "" or scene == "":
+	if AppShell.headless() or out == "" or scene == "":
 		printerr("needs native display, --out, --scene"); quit(2); return
 	root.size = Vector2i(1920, 1080)
 	root.content_scale_size = root.size

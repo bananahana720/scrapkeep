@@ -11,6 +11,7 @@ const FieldNotes := preload("res://src/ui/field_notes.gd")
 const Palette := preload("res://src/core/palette.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 # The skill bar's HUD (design-v3/SKILL-BAR.md sections 5 and 10, unit B2), on the real game:
 #   - the bar draws three numbered slots and two chips at 0.75 scale, 24 px right of slot 3, and
@@ -114,7 +115,7 @@ func _process(_delta: float) -> bool:
 			_phase = "pixels"
 			_wait = 0
 		"pixels":
-			if DisplayServer.get_name() == "headless":
+			if AppShell.headless():
 				print("[selected vs active pixels] SKIP: headless runs the dummy renderer; run windowed for the pixel case and the 1080p still")
 				_phase = "pause"
 				_wait = 0

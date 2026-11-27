@@ -5,6 +5,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 var game
 var fx
@@ -19,7 +20,7 @@ func _initialize() -> void:
 			out = arg.trim_prefix("--out=")
 		elif arg.begins_with("--pilot="):
 			pilot = int(arg.trim_prefix("--pilot="))
-	if out.is_empty() or DisplayServer.get_name() == "headless":
+	if out.is_empty() or AppShell.headless():
 		quit(2)
 		return
 	DirAccess.make_dir_recursive_absolute(out)

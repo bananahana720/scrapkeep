@@ -5,6 +5,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 const Cams := preload("res://tools/capture_cameras.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const SEED := 280928
 const SAMPLE_FRAMES := 240
 const WARMUP_FRAMES := 180
@@ -32,7 +33,7 @@ func _initialize() -> void:
 			ball_arg = _pair(arg.trim_prefix("--ball="))
 		if arg.begins_with("--face="):
 			face_arg = _pair(arg.trim_prefix("--face="))
-	if out.is_empty() or DisplayServer.get_name() == "headless" or not Preset.PRESETS.has(preset):
+	if out.is_empty() or AppShell.headless() or not Preset.PRESETS.has(preset):
 		quit(2)
 		return
 	if DirAccess.make_dir_recursive_absolute(out) != OK:

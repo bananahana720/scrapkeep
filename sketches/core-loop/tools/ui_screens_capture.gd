@@ -7,6 +7,7 @@ const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const SCREENS := [
@@ -63,7 +64,7 @@ func _initialize() -> void:
 		printerr("ui_screens_capture: needs -- --out=<absolute dir>, --profile=fresh|played and screens from: %s%s" % [", ".join(known), (" (unknown: %s)" % ", ".join(unknown)) if not unknown.is_empty() else ""])
 		quit(2)
 		return
-	if DisplayServer.get_name() == "headless":
+	if AppShell.headless():
 		printerr("ui_screens_capture: needs a rendered display (gamescope headless backend), not --headless")
 		quit(2)
 		return

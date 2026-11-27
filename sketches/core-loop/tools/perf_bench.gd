@@ -43,6 +43,7 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 const TerrainFaces := preload("res://src/combat/terrain_faces.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const ABLATIONS := ["no-music", "no-audio", "no-vfx", "no-telegraph-draw", "no-hud", "no-enemy-ai", "no-trails", "cold-band", "no-machine-fx", "no-stills"]
 const PACK_ORDER := ["grounded", "strung", "netted", "rebound", "reeled", "wobble", "flung", "cupped"]
 const EXTRA_COPIES := ["spiral_wave", "chain_arc", "cross_split", "gatling_heart", "double_feed", "arc_coil"]
@@ -170,7 +171,7 @@ func _initialize() -> void:
 	if _table == "":
 		_table = String(SCENES[_scene_id].get("table", ""))
 	DirAccess.make_dir_recursive_absolute(_out.get_base_dir())
-	_native = DisplayServer.get_name() != "headless"
+	_native = not AppShell.headless()
 	for asset in ["shell_sable", "shell_rivet", "shell_kest"]:
 		if load("res://assets/models/" + asset + ".glb") == null:
 			printerr("perf_bench: import this project with --headless --editor --import first")
