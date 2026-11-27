@@ -307,19 +307,14 @@ jobs:
           rm -f "$GODOT_DIR/editor.zip"
           printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
 
-      - name: Compute sketch tree hash
-        id: sketch-tree
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf 'tree=%s\n' "$(git rev-parse HEAD:sketches/core-loop)" >> "$GITHUB_OUTPUT"
-
       - name: Restore Godot import cache
         id: import-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: sketches/core-loop/.godot
-          key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-${{ steps.sketch-tree.outputs.tree }}
+          key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-${{ hashFiles('sketches/core-loop/project.godot', 'sketches/core-loop/assets/**', 'sketches/core-loop/**/*.import') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-
 
       - name: Validate Godot import cache or run clean import
         shell: bash
@@ -328,10 +323,25 @@ jobs:
         run: |
           set -euo pipefail
           if ! node scripts/import-stamp.mjs check; then
-            echo "Import cache miss or stamp mismatch; running clean import"
-            rm -rf sketches/core-loop/.godot
-            node scripts/import-stamp.mjs import
+            if [[ -d sketches/core-loop/.godot ]]; then
+              echo "Import cache miss or stamp mismatch; trying incremental import"
+              if ! node scripts/import-stamp.mjs import; then
+                echo "Incremental import failed; running clean import"
+                rm -rf sketches/core-loop/.godot
+                node scripts/import-stamp.mjs import
+              fi
+            else
+              echo "Import cache miss; running clean import"
+              node scripts/import-stamp.mjs import
+            fi
           fi
+
+      - name: Save Godot import cache
+        if: github.event_name == 'push' && steps.import-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: sketches/core-loop/.godot
+          key: ${{ steps.import-cache.outputs.cache-primary-key }}
 
       - name: Run affected Godot tests (or seed cache on push)
         shell: bash
@@ -340,6 +350,7 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CACHE_KEY: ${{ steps.import-cache.outputs.cache-primary-key }}
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
@@ -347,7 +358,7 @@ jobs:
             node scripts/ci/check-budget.mjs --label godot-affected --budget 900 -- \
               node scripts/sketch-fast.mjs --base "$PR_BASE_SHA" --no-base-check --budget 120
           else
-            echo "Cache seeded for Godot ${GODOT_VERSION} (${{ steps.sketch-tree.outputs.tree }}) on ${REF_NAME}"
+            echo "Cache seeded for Godot ${GODOT_VERSION} (${CACHE_KEY}) on ${REF_NAME}"
           fi
 
   godot-full:
@@ -398,19 +409,14 @@ jobs:
           rm -f "$GODOT_DIR/editor.zip"
           printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
 
-      - name: Compute sketch tree hash
-        id: sketch-tree
-        shell: bash
-        run: |
-          set -euo pipefail
-          printf 'tree=%s\n' "$(git rev-parse HEAD:sketches/core-loop)" >> "$GITHUB_OUTPUT"
-
       - name: Restore Godot import cache
         id: import-cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: sketches/core-loop/.godot
-          key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-${{ steps.sketch-tree.outputs.tree }}
+          key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-${{ hashFiles('sketches/core-loop/project.godot', 'sketches/core-loop/assets/**', 'sketches/core-loop/**/*.import') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-
 
       - name: Validate Godot import cache or run clean import
         shell: bash
@@ -419,10 +425,25 @@ jobs:
         run: |
           set -euo pipefail
           if ! node scripts/import-stamp.mjs check; then
-            echo "Import cache miss or stamp mismatch; running clean import"
-            rm -rf sketches/core-loop/.godot
-            node scripts/import-stamp.mjs import
+            if [[ -d sketches/core-loop/.godot ]]; then
+              echo "Import cache miss or stamp mismatch; trying incremental import"
+              if ! node scripts/import-stamp.mjs import; then
+                echo "Incremental import failed; running clean import"
+                rm -rf sketches/core-loop/.godot
+                node scripts/import-stamp.mjs import
+              fi
+            else
+              echo "Import cache miss; running clean import"
+              node scripts/import-stamp.mjs import
+            fi
           fi
+
+      - name: Save Godot import cache
+        if: github.event_name == 'push' && steps.import-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: sketches/core-loop/.godot
+          key: ${{ steps.import-cache.outputs.cache-primary-key }}
 
       - name: Run duration-balanced Godot shard ${{ matrix.shard }}/8
         shell: bash
