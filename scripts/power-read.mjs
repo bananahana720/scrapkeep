@@ -9,10 +9,10 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveGodotBinary } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
-const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
 
 export const PILOTS = [
   { id: "pylon_engineer", name: "Sable" },
@@ -330,9 +330,11 @@ export async function main(argv = process.argv.slice(2)) {
   let rows;
   if (args.rows) rows = readRows(args.rows);
   else {
-    const binary = process.env.GODOT_BIN || recordedBinary;
-    if (!existsSync(binary))
-      throw new PowerReadError(`Godot binary not found at ${binary}; set GODOT_BIN`);
+    const binary = resolveGodotBinary();
+    if (!binary || !existsSync(binary))
+      throw new PowerReadError(
+        `Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`,
+      );
     let render = args.render;
     if (render === "xvfb" && spawnSync("sh", ["-c", "command -v xvfb-run"]).status !== 0) {
       console.error(

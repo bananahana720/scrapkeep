@@ -18,20 +18,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
-import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
+import { resolveGodotBinary, scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
-const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
-function defaultGodotBinary() {
-  if (process.env.GODOT_BIN) return process.env.GODOT_BIN;
-  const candidates =
-    process.platform === "darwin"
-      ? [path.join(os.homedir(), "Applications/Godot_4.7.2.app/Contents/MacOS/Godot")]
-      : ["/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64", recordedBinary];
-  return candidates.find((candidate) => existsSync(candidate)) ?? recordedBinary;
-}
-export const binary = defaultGodotBinary();
+export const binary = resolveGodotBinary() ?? "";
 const errorLine = /^(SCRIPT ERROR|ERROR|FAIL)\b/m;
 // On macOS the headless engine reports the dummy renderer's unreleased handles and the resources
 const TEARDOWN_NOISE =
@@ -1172,8 +1163,8 @@ async function main() {
     options.sketches.length === 0
       ? all
       : all.filter((directory) => options.sketches.includes(path.basename(directory)));
-  if (!existsSync(binary)) {
-    console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
+  if (!binary || !existsSync(binary)) {
+    console.error(`Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`);
     process.exit(2);
   }
   if (sketches.length === 0) {

@@ -22,6 +22,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { ensureNodeModules } from "./ensure-node-modules.mjs";
+import { resolveGodotBinary } from "./godot-home.mjs";
 import {
   godotIdentity,
   hasValidUidCache,
@@ -922,11 +923,12 @@ if (isMain()) {
   try {
     const { cmd, opts } = parseCliArgs(process.argv.slice(2));
     if (cmd === "prepare") {
+      const godotBin = resolveGodotBinary({ requireExplicit: true });
       const box = materializeSandbox({
         ref: opts.ref,
         slot: opts.slot,
-        godotBin: process.env.GODOT_BIN || null,
-        skipImport: opts.skipImport || !process.env.GODOT_BIN,
+        godotBin,
+        skipImport: opts.skipImport || !godotBin,
         overlayMode: opts.overlayMode,
       });
       box.release();

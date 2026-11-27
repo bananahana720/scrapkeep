@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
+import { GODOT_VERSION, resolveGodotBinary } from "./godot-home.mjs";
 import {
   bootFailures,
   defaultStemsFrom,
@@ -203,9 +204,11 @@ async function main() {
   }
   if (process.platform !== "darwin")
     fail("the Mac export runs on macOS; on Linux use npm run sketch:export");
-  const binary = process.env.GODOT_BIN;
-  if (!binary || !existsSync(binary))
-    fail("set GODOT_BIN to the Godot 4.7.2 editor binary: " + binary);
+  const binary = resolveGodotBinary({ requireExplicit: true });
+  if (!binary)
+    fail(`GODOT_BIN is not set; set GODOT_BIN to the Godot ${GODOT_VERSION} editor binary`);
+  if (!existsSync(binary))
+    fail(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor binary: ${binary}`);
   const realTemplates = path.join(templatesDir(os.homedir()), TEMPLATE_VERSION);
   if (!existsSync(path.join(realTemplates, "macos.zip")))
     fail("export template missing: " + path.join(realTemplates, "macos.zip"));

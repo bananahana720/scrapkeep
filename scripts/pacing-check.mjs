@@ -3,11 +3,11 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveGodotBinary } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
 export const DEFAULT_BUDGET = path.join(sketch, "design-v3/pacing/world1-pacing.json");
-const recordedBinary = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
 const RUN_TIMEOUT_MS = 1_800_000;
 
 export class PacingError extends Error {}
@@ -401,9 +401,11 @@ async function main() {
   const header = { budget: path.relative(root, args.budget) };
   let jobResults = [];
   if (args.run) {
-    const binary = process.env.GODOT_BIN || recordedBinary;
-    if (!existsSync(binary)) {
-      console.error(`pacing-check: Godot binary not found at ${binary}; set GODOT_BIN`);
+    const binary = resolveGodotBinary();
+    if (!binary || !existsSync(binary)) {
+      console.error(
+        `pacing-check: Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`,
+      );
       process.exit(2);
     }
     const jobs = buildJobs(budget, args, outDir);

@@ -5,6 +5,7 @@ import { watchDrawnRun } from "./window-watch.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
+import { resolveGodotBinary } from "../godot-home.mjs";
 import { acquireSlot } from "../sketch-smoke.mjs";
 import { root } from "./clean-head.mjs";
 
@@ -150,7 +151,7 @@ async function runScript({
   extraEnv = {},
   cwd = root,
   env = process.env,
-  binary = env.GODOT_BIN,
+  binary = resolveGodotBinary({ env, requireExplicit: true }),
   timeoutMs = TIMEOUT_MS,
   platform = process.platform,
   acquire = acquireDrawnSlot,
@@ -255,7 +256,7 @@ export async function measureFrame(
   {
     cwd = root,
     env = process.env,
-    binary = env.GODOT_BIN,
+    binary = resolveGodotBinary({ env, requireExplicit: true }),
     acquire = acquireSlot,
     start = launch,
   } = {},
@@ -291,7 +292,7 @@ async function macCapture(
     engineArgs = [],
     extraEnv = {},
     platform = process.platform,
-    binary = env.GODOT_BIN,
+    binary = resolveGodotBinary({ env, requireExplicit: true }),
     acquire,
     start = launch,
     observe = watchDrawnRun,

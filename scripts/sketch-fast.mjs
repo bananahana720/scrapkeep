@@ -22,7 +22,6 @@ import {
   batchable,
   countChecks,
   acquireMachine,
-  binary,
   IMPORT_TRIES,
   importWithRetry,
   spawnCollect,
@@ -44,8 +43,10 @@ import {
 } from "./sketch-smoke.mjs";
 import { readLedger } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
-import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
+import { resolveGodotBinary, scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 import { shuffleFiles } from "./ci/node-tests.mjs";
+
+const binary = resolveGodotBinary();
 
 export {
   BATCH_MAX_MS,
@@ -1299,8 +1300,8 @@ async function main() {
     })
   )
     finish();
-  if (!existsSync(binary)) {
-    console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
+  if (!binary || !existsSync(binary)) {
+    console.error(`Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`);
     stage("godot", false, { note: "no Godot binary, so no test ran" });
     finish(2);
   }

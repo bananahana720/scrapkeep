@@ -13,7 +13,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { userDataEnv } from "./godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, userDataEnv } from "./godot-home.mjs";
 import { holdQuietSync } from "./sketch-smoke.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -481,10 +481,10 @@ function launchQuiet(quiet, launch) {
 function engineCapture(args, env, outDir, platform, quiet) {
   if (args.hud)
     throw new FrametimeError("--hud is MangoHud's overlay; the engine capture has none");
-  const godotBin = env.GODOT_BIN;
+  const godotBin = resolveGodotBinary({ env, requireExplicit: true });
   if (!args.exe && !(godotBin && existsSync(godotBin))) {
     console.error(
-      "The engine capture needs GODOT_BIN set to the Godot 4.7.2 editor binary, or --exe=<a packed build's binary>.",
+      `The engine capture needs GODOT_BIN set to the Godot ${GODOT_VERSION} editor binary, or --exe=<a packed build's binary>.`,
     );
     return 2;
   }

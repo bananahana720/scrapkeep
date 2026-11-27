@@ -6,10 +6,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
+import { resolveGodotBinary } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const recordedBinary = "/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64";
-const binary = process.env.GODOT_BIN || recordedBinary;
+const binary = resolveGodotBinary();
 const project = path.join(root, "sketches/core-loop");
 const stemRoot = path.join(project, "assets/music_ace");
 const manifestRel = "spillway/manifest.json";
@@ -501,7 +501,8 @@ async function main() {
   } catch (error) {
     fail(error.message);
   }
-  if (!existsSync(binary)) fail("Godot binary missing: " + binary);
+  if (!binary || !existsSync(binary))
+    fail("Godot binary missing: " + (binary ?? "(not found; set GODOT_BIN)"));
   let crash = null;
   try {
     crash = bossSmokeCrash(process.env);

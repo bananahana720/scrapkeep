@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
 import {
   FILMS,
   FILM_OF,
@@ -60,9 +61,9 @@ function die(message) {
 }
 
 if (!opts.from) {
-  const godot = process.env.GODOT_BIN;
+  const godot = resolveGodotBinary({ requireExplicit: true });
   if (!godot || !existsSync(godot))
-    die("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
+    die(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor (the cloud SessionStart hook does)`);
   mkdirSync(filmDir, { recursive: true });
   const game = [
     godot,

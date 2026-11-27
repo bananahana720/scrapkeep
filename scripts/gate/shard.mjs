@@ -24,7 +24,6 @@ import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 export { WEEKLY_FILE, WEEKLY_HEADER, parseWeekly } from "./weekly.mjs";
 import {
   IMPORT_TRIES,
-  binary as smokeGodotBinary,
   failingLines,
   importTry,
   isBot,
@@ -42,12 +41,11 @@ import {
   isCleanImportPass,
   writeImportStamp,
 } from "../import-stamp.mjs";
-import { scratchHomeEnv } from "../godot-home.mjs";
+import { resolveGodotBinary, scratchHomeEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
-const CLOUD_GODOT = "/opt/scrapkeep-toolchain/Godot_v4.7.2-stable_linux.x86_64";
 const IMPORT_TIMEOUT_MS = 900_000;
 const DEFAULT_CHUNK = 90;
 const DEFAULT_SOLO_RUNS = 2;
@@ -740,9 +738,7 @@ export async function retime({
 }
 
 export function godotBinary(env = process.env, exists = existsSync) {
-  const godot =
-    env.GODOT_BIN ||
-    (exists(CLOUD_GODOT) ? CLOUD_GODOT : exists(smokeGodotBinary) ? smokeGodotBinary : null);
+  const godot = resolveGodotBinary({ env, exists });
   if (!godot || !exists(godot))
     throw new Error("Godot not found; run `bash tools/cloud/setup.sh` or set GODOT_BIN");
   return godot;

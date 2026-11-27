@@ -46,10 +46,11 @@ import {
   wallStats,
 } from "./lib.mjs";
 import { pool, runProcess, stateEnv } from "./proc.mjs";
+import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
 import { checkImportStamp, REIMPORT_HINT } from "../import-stamp.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const godot = process.env.GODOT_BIN;
+const godot = resolveGodotBinary({ requireExplicit: true });
 const outRoot = path.join(root, "artifacts/local/challenge");
 const KIND_TIMEOUT_MS = 40 * 60_000;
 
@@ -176,7 +177,7 @@ function mergeRuns() {
 
 function needGodot() {
   if (!godot || !existsSync(godot))
-    die("set GODOT_BIN to the Godot 4.7.2 editor (the cloud SessionStart hook does)");
+    die(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor (the cloud SessionStart hook does)`);
   const stamp = checkImportStamp(root);
   if (!stamp.ok && !opts.staleImportOk)
     die(`refusing to run on a stale import: ${stamp.reason}; ${REIMPORT_HINT}`);
