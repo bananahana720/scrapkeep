@@ -534,6 +534,13 @@ static func _finish_opening() -> void:
 		_opening_task = -1
 
 
+static func finish_band_bakes() -> void:
+	_finish_opening()
+	if _rest_task >= 0:
+		WorkerThreadPool.wait_for_task_completion(_rest_task)
+		_rest_task = -1
+
+
 static func _start_band_bakes() -> void:
 	if _opening_task < 0:
 		_opening_task = WorkerThreadPool.add_task(MusicEngine.prepare_opening, false, "presentation opening band bake")
@@ -552,16 +559,24 @@ func bake_now() -> void:
 	_on_ready()
 
 
+func set_threat_watch(enabled: bool) -> void:
+	var tree := get_tree()
+	if tree == null:
+		return
+	if enabled and not tree.node_added.is_connected(_on_node_added):
+		tree.node_added.connect(_on_node_added)
+	elif not enabled and tree.node_added.is_connected(_on_node_added):
+		tree.node_added.disconnect(_on_node_added)
+
+
 func _enter_tree() -> void:
-	if not get_tree().node_added.is_connected(_on_node_added):
-		get_tree().node_added.connect(_on_node_added)
+	set_threat_watch(true)
 	if not get_viewport().gui_focus_changed.is_connected(_on_focus_changed):
 		get_viewport().gui_focus_changed.connect(_on_focus_changed)
 
 
 func _exit_tree() -> void:
-	if get_tree().node_added.is_connected(_on_node_added):
-		get_tree().node_added.disconnect(_on_node_added)
+	set_threat_watch(false)
 	if get_viewport().gui_focus_changed.is_connected(_on_focus_changed):
 		get_viewport().gui_focus_changed.disconnect(_on_focus_changed)
 	_settle_workers()
@@ -585,10 +600,7 @@ func _settle_workers() -> void:
 		WorkerThreadPool.wait_for_task_completion(_bake_task)
 		_bake_task = -1
 		_baked = _bake_done
-	_finish_opening()
-	if _rest_task >= 0:
-		WorkerThreadPool.wait_for_task_completion(_rest_task)
-		_rest_task = -1
+	finish_band_bakes()
 	SfxBank.bake_cancel = false
 	if _ace_task >= 0:
 		WorkerThreadPool.wait_for_task_completion(_ace_task)
@@ -959,7 +971,7 @@ func _render_music(frames: int, ace_live: bool) -> void:
 
 func _commit_band_parameters(at: int, values: Dictionary, released: bool, lift: bool, reason: String) -> void:
 	if ace != null:
-		ace.commit_parameters(at, values, released and not _release_answered, lift, reason, {"phrase_step": engine._bar_step, "phrase": engine._parameter_phrase_due})
+		ace.commit_parameters(at, values, released and not _release_answered, lift, reason, engine.parameter_timing())
 	if values.has("approach"):
 		landmark_moment(_landmark_id(), float(values["approach"]))
 
@@ -1025,6 +1037,10 @@ func _fade_in_band(from: int, frames: int, landmark := PackedVector2Array()) -> 
 # Godot audio buffer (512-1024 frames) is under half the queue.
 func _gap_is_stall(gap_usec: int) -> bool:
 	return gap_usec * Harmony.RATE * 2 > queue_target * 1000000
+
+
+func music_skips() -> int:
+	return _music_pb.get_skips() if _music_pb != null else -1
 
 
 func _deepen_on_skip() -> void:
@@ -1107,22 +1123,18 @@ func ace_ready() -> bool:
 
 
 func _ace_fight_floor() -> float:
-	if engine.mode != MusicEngine.PLAY or engine.track == "level":
-		return 0.0
-	if engine.track == "warden" and engine.section == "open" and engine._cadence_bar < 0:
-		return 0.0
-	return engine._floor()
+	return engine.fight_floor()
 
 
 func _prime_band_parameters() -> void:
 	ace.set_fight_floor(_ace_fight_floor())
-	ace.parameter_enabled = engine.parameter_source.is_valid()
-	if ace.parameter_enabled:
-		ace.parameters = engine.parameter_committed_values.duplicate()
-		ace.parameter_released = engine.parameter_committed_released and not _release_answered
-		ace._parameter_danger_floor = engine.parameter_committed_danger_floor
-		ace.pressure = float(ace.parameters.get("threat", 0.0))
-		ace.ultimate_lift = engine.ultimate_lift
+	ace.prime_parameters(
+		engine.parameter_source.is_valid(),
+		engine.parameter_committed_values,
+		engine.parameter_committed_released and not _release_answered,
+		engine.parameter_committed_danger_floor,
+		engine.ultimate_lift,
+	)
 
 
 var _music_warned := {}
@@ -3756,7 +3768,7 @@ func _on_ultimate_landed(_id: String, _at: Vector3, _hits: int, _damage: float) 
 		var at: int
 		if _id.begins_with("cannon_"):
 			at = touchdown
-			engine._add_action(at, {"type": "drop", "bars": 4, "weight": 0.85, "then": {}, "theme": -1, "set": {"ult": false}})
+			engine.drop_at_sample(at, 4, 0.85, {}, -1, {"ult": false})
 		else:
 			at = engine.drop_now(4, 0.85, {}, -1, {"ult": false})
 		_log_drop([touchdown, at])
@@ -4306,6 +4318,11 @@ func _on_pressure(pressure: float) -> void:
 		engine.set_pressure(pressure)
 	if ace_playing() and not engine.parameter_source.is_valid():
 		ace.set_pressure(pressure)
+
+
+func play_ending_summary() -> void:
+	_flush_flow()
+	engine.menu_theme("summary", true)
 
 
 func _flush_flow() -> void:
@@ -5229,7 +5246,7 @@ func _ingest_voice_manifest(data: Dictionary, clip_root: String, base_dir: Strin
 				var key_s := String(k)
 				var val = items[k]
 				if val is String and key_s.begins_with(SfxBank.SAY):
-					var parts := SfxBank._said(key_s)
+					var parts := SfxBank.parse_said(key_s)
 					_register_voice_clip(String(parts[0]).to_lower(), String(parts[1]), val, clip_root, base_dir)
 				elif val is Dictionary:
 					for line_text in val:
