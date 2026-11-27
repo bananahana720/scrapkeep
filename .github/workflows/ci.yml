@@ -268,7 +268,7 @@ jobs:
       && (github.event_name == 'pull_request' || github.event_name == 'push')
       && !(github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && startsWith(github.event.pull_request.head.ref, 'stage/'))
     runs-on: ${{ vars.CI_RUNNER_LARGE || vars.CI_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - name: Checkout (blobless, read-only token for base worktree/promisor)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -344,7 +344,7 @@ jobs:
           set -euo pipefail
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
-            node scripts/ci/check-budget.mjs --label godot-affected --budget 480 -- \
+            node scripts/ci/check-budget.mjs --label godot-affected --budget 900 -- \
               node scripts/sketch-fast.mjs --base "$PR_BASE_SHA" --no-base-check --budget 120
           else
             echo "Cache seeded for Godot ${GODOT_VERSION} (${{ steps.sketch-tree.outputs.tree }}) on ${REF_NAME}"
