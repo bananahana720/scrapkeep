@@ -5,6 +5,7 @@ const Meanings := preload("res://src/core/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
@@ -20,8 +21,8 @@ const SIGHTS := {
 }
 const CLOSE := {
 	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd RARITY) and its gate topper is a prism where a boss fact never is (reward_gates.gd); Brindle's ground warnings carry brass rim ticks (hazard.gd, threat_grammar.gd); Brindle's caller plate uses fleet hand frame and fac_fleet icon in brass (caller_tile.gd); all checked below. An event toast in either colour relies on its words", "finding": ""},
-	"AMBER|HAZARD": {"carrier": "a relic reward is a doubled bolt-headed frame or a prism topper, the cost strike on a shop tile is one diagonal line, and the pilot's danger mark is a diamond with a bang; relic is never drawn as a ground fill; on the ground the player's own ring has a dashed edge every OWN_DASH metres in every look where a hostile ring's edge is solid", "finding": ""},
-	"BRASS|HAZARD": {"carrier": "Brindle's ground warning is a danger-toned warning plus brass rim ticks in every look (threat_grammar.gd, checked below); Brindle's caller plate is brass on a fleet hand frame with fac_fleet icon and no caller uses HAZARD (caller_tile.gd, checked below); boss_attack_telegraphed and attack_cued use chevron where danger events event_announced and event_started use wave (event_kinds.gd, checked below); a boss's body and badge are brass solids where danger is a ground fill", "finding": "UF-03: hostile floor telegraph default look stays clear rather than striped pending tape cover measure"},
+	"AMBER|HAZARD": {"carrier": "a relic reward is a doubled bolt-headed frame or a prism topper, the cost strike on a shop tile is one diagonal line, and the pilot's danger mark is a diamond with a bang; relic is never drawn as a ground fill; on the ground the player's own ring has a dashed edge every OWN_DASH metres in every look where a hostile ring's edge is solid, and in the default tape look a hostile fill carries faint stripes of its own red where the player's own fill carries none (threat_grammar.gd, checked below)", "finding": ""},
+	"BRASS|HAZARD": {"carrier": "Brindle's ground warning is a danger-toned warning plus brass rim ticks in every look (threat_grammar.gd, checked below); Brindle's caller plate is brass on a fleet hand frame with fac_fleet icon and no caller uses HAZARD (caller_tile.gd, checked below); boss_attack_telegraphed and attack_cued use chevron where danger events event_announced and event_started use wave (event_kinds.gd, checked below); a boss's body and badge are brass solids where danger is a ground fill, and in the default tape look that fill carries faint stripes of its own red (threat_grammar.gd, checked below)", "finding": ""},
 	"ANCIENT|ARC": {"carrier": "ancient seams carry a pattern cue (material_slots.gd, the pattern field)", "finding": ""},
 }
 const SHARED := {
@@ -86,6 +87,17 @@ func _initialize() -> void:
 	var hostile_area := _edge_area(ring.merged({"tone": Palette.HAZARD}))
 	_t.check("the player's own ring edge is dashed where a hostile ring's is solid (%.2f against %.2f m2)" % [own_area, hostile_area],
 		hostile_area > 0.0 and own_area > 0.0 and own_area < hostile_area * 0.8)
+	Threat.reset_for_tests()
+	var world := Node3D.new()
+	root.add_child(world)
+	var hostile_stripes := _striped_layers(world, Palette.HAZARD)
+	_t.check("the default look is tape, and a hostile fill carries stripes there", Threat.look() == "tape" and "stripe" in hostile_stripes and "stripe_motion" in hostile_stripes,
+		"look %s, striped layers %s" % [Threat.look(), hostile_stripes])
+	_t.eq("the player's own amber fill carries no stripes in the default look", _striped_layers(world, Palette.AMBER), [])
+	Threat.set_look("clear")
+	_t.eq("planted: the clear look, the default before 27 Nov, stripes no hostile fill", _striped_layers(world, Palette.HAZARD), [])
+	Threat.reset_for_tests()
+	world.free()
 	var shapes := {}
 	for rung in ["common", "rare", "relic"]:
 		var topper: MeshInstance3D = RewardGates._topper(rung, null)
@@ -96,6 +108,26 @@ func _initialize() -> void:
 		"b": {"color": Color.BLUE, "width": 2.0, "double": false, "notches": "", "dashed": false}}
 	_t.eq("planted: two frames that differ only by colour are named", frame_faults(["a", "b", "c"], twins), ["a and b differ by colour alone", "c has no frame"])
 	quit(_t.verdict())
+
+
+class Flat:
+	func height(_x: float, _z: float) -> float:
+		return 0.0
+
+
+func _striped_layers(world: Node3D, tone: Color) -> Array:
+	var ring: Node3D = Telegraph.ring(world, Flat.new(), Threat.Type.INSTANT, Vector3.ZERO, 3.0, 3.5, tone)
+	var out := []
+	for layer in ring.painter()._layers:
+		var view: MeshInstance3D = ring.painter()._layers[layer]
+		if view.mesh == null or view.mesh.get_surface_count() == 0:
+			continue
+		var mat = view.material_override
+		if (mat is ShaderMaterial and mat.shader.code.contains("#define STRIPES")) or (mat is StandardMaterial3D and mat.albedo_texture != null):
+			out.append(layer)
+	ring.free()
+	out.sort()
+	return out
 
 
 func _hazard(colour: Color) -> Node3D:

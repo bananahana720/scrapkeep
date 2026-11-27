@@ -87,5 +87,6 @@ func _run() -> void:
 	_t.check("classic's bar is darker and wider than tape's", classic["dark"] < tape["dark"] and classic["share"] > tape["share"], "%s against %s" % [classic, tape])
 	_t.check("planted: a band as light as the rest carries no shape", not _faint_but_there({"light": 1.0, "dark": 1.0, "share": 0.35}))
 	_t.check("planted: classic's charcoal bar is not faint", not _faint_but_there(classic))
-	Threat.set_look("clear")
+	Threat.reset_for_tests()
+	_t.check("with no look set, the shipping default is tape", Threat.look() == "tape" and "stripe" in _striped_layers(world, Palette.HAZARD), Threat.look())
 	quit(_t.verdict())

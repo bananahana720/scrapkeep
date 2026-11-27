@@ -433,22 +433,79 @@ export const ID_COMPARE_LEGACY = {
   "src/core/pilot_story.gd": { sites: 7, why: "pre-MG-16 pilot story branches" },
   "src/game.gd": { sites: 1, why: "pre-MG-16 pilot check" },
   "src/movement/player_ball.gd": { sites: 4, why: "pre-MG-16 pilot/map branches" },
+  "src/presentation/audio.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
   "src/presentation/dig_scenery.gd": { sites: 3, why: "pre-MG-16 dig map checks" },
+  "src/presentation/grapple_rig.gd": { sites: 2, why: "pre-MG-16 pilot match arms" },
   "src/presentation/hero_assets.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/presentation/park_props.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
+  "src/presentation/pilot_antics.gd": { sites: 6, why: "pre-MG-16 pilot match arms" },
   "src/presentation/player_fx.gd": { sites: 1, why: "pre-MG-16 pilot check" },
   "src/presentation/quiet_gun.gd": { sites: 1, why: "pre-MG-16 pilot check" },
-  "src/presentation/sfx_bank.gd": { sites: 1, why: "pre-MG-16 map check" },
-  "src/ui/ending_sequence.gd": { sites: 3, why: "pre-MG-16 pilot ending branches" },
+  "src/presentation/sfx_bank.gd": { sites: 3, why: "pre-MG-16 map check and pilot match arms" },
+  "src/presentation/world_look.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
+  "src/ui/class_preview.gd": { sites: 10, why: "pre-MG-16 pilot match arms" },
+  "src/ui/ending_sequence.gd": {
+    sites: 7,
+    why: "pre-MG-16 pilot ending branches and park prefix checks",
+  },
+  "src/world/director.gd": { sites: 2, why: "pre-MG-16 park prefix checks" },
+  "src/world/terrain.gd": { sites: 2, why: "pre-MG-16 park prefix checks" },
 };
 
+export const ID_FAMILY_PREFIXES = ["park_"];
+
 const idAlternation = CANONICAL_IDS.join("|");
+const idLiteral = `(?:&|StringName\\(\\s*)?["'](?:${idAlternation})["']`;
 const rawIdCompare = new RegExp(
-  `(?:==|!=)\\s*["'](?:${idAlternation})["']|["'](?:${idAlternation})["']\\s*(?:==|!=)|\\bin\\s*\\[[^\\]]*["'](?:${idAlternation})["']`,
+  `(?:==|!=)\\s*${idLiteral}|${idLiteral}\\s*\\)?\\s*(?:==|!=)|\\bin\\s*\\[[^\\]]*${idLiteral}`,
 );
+const rawIdPrefix = new RegExp(
+  `\\.begins_with\\(\\s*&?["'](?:${[...CANONICAL_IDS, ...ID_FAMILY_PREFIXES].join("|")})["']\\s*\\)`,
+);
+const rawIdPattern = new RegExp(idLiteral);
+const matchOpen = /^match\s.+:\s*(?:#.*)?$/;
+
+function armPatterns(code) {
+  let quote = null;
+  let depth = 0;
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i];
+    if (quote) {
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === "#") return null;
+    else if ("([{".includes(ch)) depth++;
+    else if (")]}".includes(ch)) depth--;
+    else if (ch === ":" && depth === 0) return code.slice(0, i);
+  }
+  return null;
+}
+
+export function idMatchArms(text) {
+  const arms = new Set();
+  const open = [];
+  for (const line of codeLines(text)) {
+    if (line.code === "") continue;
+    const indent = line.raw.length - line.raw.trimStart().length;
+    while (open.length > 0 && indent <= open.at(-1).indent) open.pop();
+    const block = open.at(-1);
+    if (block) {
+      block.arm ??= indent;
+      const patterns = indent === block.arm ? armPatterns(line.code) : null;
+      if (patterns !== null && rawIdPattern.test(patterns)) arms.add(line.number);
+    }
+    if (matchOpen.test(line.code)) open.push({ indent, arm: null });
+  }
+  return arms;
+}
 
 export function lintL11(file, rel, text, allowed = ID_COMPARE_LEGACY, owners = ID_COMPARE_OWNERS) {
   if (owners.has(rel) || rel.startsWith("src/dev/")) return [];
-  const sites = codeLines(text).filter((line) => rawIdCompare.test(line.raw));
+  const arms = idMatchArms(text);
+  const sites = codeLines(text).filter(
+    (line) => rawIdCompare.test(line.raw) || rawIdPrefix.test(line.raw) || arms.has(line.number),
+  );
   const listed = allowed[rel]?.sites ?? 0;
   if (sites.length === listed) return [];
   if (sites.length === 0) {
@@ -463,8 +520,8 @@ export function lintL11(file, rel, text, allowed = ID_COMPARE_LEGACY, owners = I
   }
   const message =
     listed === 0
-      ? "raw map or pilot ID string comparison outside owning table (MG-16); query the owning def/capability instead of branching on ID strings"
-      : `${sites.length} raw map/pilot ID comparisons, ID_COMPARE_LEGACY lists ${listed}; move branching to owning table fields (MG-16)`;
+      ? "raw map or pilot ID branch (string or StringName compare, match arm, or begins_with) outside owning table (MG-16); query the owning def/capability instead of branching on ID strings"
+      : `${sites.length} raw map/pilot ID branches, ID_COMPARE_LEGACY lists ${listed}; move branching to owning table fields (MG-16)`;
   return sites.map((line) => finding("L11", file, line.number, message));
 }
 

@@ -4,11 +4,14 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
+import { godotIdentity } from "./import-stamp.mjs";
 import {
   acquireSlotLock,
   applyDevOverlay,
   assertNotPrimaryCheckout,
   assertUnderSandboxRoot,
+  ensureSandboxImport,
+  IMPORT_STAMP_FILENAME,
   patchGameGd,
   patchIntentGd,
   patchWorkshopGd,
@@ -16,6 +19,7 @@ import {
   REPO_ROOT,
   resolveGitRef,
   slotLockPath,
+  unimportedAssets,
   validateSlotName,
 } from "./worktree-sandbox.mjs";
 
@@ -285,5 +289,168 @@ describe("worktree-sandbox idempotent console seam overlay", () => {
       () => resolveGitRef("refs/heads/does-not-exist-xyz", REPO_ROOT),
       /Could not resolve/,
     );
+  });
+});
+
+describe("worktree-sandbox import completeness", () => {
+  const SKETCH = "sketches/core-loop";
+  const SHA = "a".repeat(40);
+
+  function writeAsset(sketchDir, rel, { sidecar = true, imported = true } = {}) {
+    const full = path.join(sketchDir, rel);
+    mkdirSync(path.dirname(full), { recursive: true });
+    writeFileSync(full, "asset");
+    const dest = `.godot/imported/${path.basename(rel)}-0123.scn`;
+    if (sidecar) {
+      writeFileSync(
+        `${full}.import`,
+        `[remap]\n\nimporter="scene"\npath="res://${dest}"\n\n[deps]\n\nsource_file="res://${rel}"\ndest_files=["res://${dest}"]\n`,
+      );
+    }
+    if (imported) {
+      mkdirSync(path.join(sketchDir, ".godot", "imported"), { recursive: true });
+      writeFileSync(path.join(sketchDir, dest), "imported");
+    }
+  }
+
+  function sandboxWith(build) {
+    const worktreeDir = mkdtempSync(path.join(os.tmpdir(), "sandbox-import-"));
+    const sketchDir = path.join(worktreeDir, SKETCH);
+    mkdirSync(path.join(sketchDir, ".godot"), { recursive: true });
+    writeFileSync(path.join(sketchDir, ".godot", "uid_cache.bin"), "uids");
+    build(sketchDir);
+    return {
+      worktreeDir,
+      sketchDir,
+      stampFile: path.join(sketchDir, ".godot", IMPORT_STAMP_FILENAME),
+    };
+  }
+
+  function stampAsImported(stampFile) {
+    writeFileSync(
+      stampFile,
+      JSON.stringify({
+        sha: SHA,
+        overlay_hash: "",
+        godot: godotIdentity(process.execPath),
+        passes: 1,
+      }),
+    );
+  }
+
+  it("lists an asset with no sidecar or no imported file, and skips folders Godot does not import", () => {
+    const box = sandboxWith((sketchDir) => {
+      writeAsset(sketchDir, "assets/models/world_one/poi_siren_mast.glb");
+      writeAsset(sketchDir, "assets/models/world_one/poi_bare.glb", {
+        sidecar: false,
+        imported: false,
+      });
+      writeAsset(sketchDir, "assets/textures/lost.png", { imported: false });
+      writeAsset(sketchDir, "tools/blender/shells/draft.glb", { sidecar: false, imported: false });
+      writeFileSync(path.join(sketchDir, "tools/blender/shells/.gdignore"), "");
+      writeFileSync(path.join(sketchDir, ".godot", "imported", "stray.png"), "cache");
+      writeAsset(sketchDir, ".hidden/icon.png", { sidecar: false, imported: false });
+      writeAsset(sketchDir, "tools/nested/art/logo.png", { sidecar: false, imported: false });
+      writeFileSync(path.join(sketchDir, "tools/nested/project.godot"), "");
+      writeFileSync(path.join(sketchDir, "assets", "notes.txt"), "not an asset");
+    });
+    try {
+      assert.deepEqual(unimportedAssets(box.worktreeDir, SKETCH), [
+        { asset: "assets/models/world_one/poi_bare.glb", reason: "no .import sidecar" },
+        {
+          asset: "assets/textures/lost.png",
+          reason: "imported file .godot/imported/lost.png-0123.scn is missing",
+        },
+      ]);
+    } finally {
+      rmSync(box.worktreeDir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not trust a matching stamp when a sidecar is missing: it imports, then caches", () => {
+    const box = sandboxWith((sketchDir) => {
+      writeAsset(sketchDir, "assets/models/world_one/poi_siren_mast.glb", {
+        sidecar: false,
+        imported: false,
+      });
+    });
+    try {
+      stampAsImported(box.stampFile);
+      let passes = 0;
+      const runPass = () => {
+        passes += 1;
+        writeAsset(box.sketchDir, "assets/models/world_one/poi_siren_mast.glb");
+        return { status: 0, stdout: "", stderr: "" };
+      };
+      const args = {
+        worktreeDir: box.worktreeDir,
+        godotBin: process.execPath,
+        sha: SHA,
+        homeDir: path.join(box.worktreeDir, "home"),
+        sketch: SKETCH,
+        runPass,
+      };
+      const first = ensureSandboxImport(args);
+      assert.deepEqual(
+        [first.imported, first.cached, first.unimportedBefore, passes],
+        [true, false, 1, 1],
+      );
+      assert.deepEqual(unimportedAssets(box.worktreeDir, SKETCH), []);
+      const second = ensureSandboxImport(args);
+      assert.deepEqual([second.imported, second.cached, passes], [false, true, 1]);
+    } finally {
+      rmSync(box.worktreeDir, { recursive: true, force: true });
+    }
+  });
+
+  it("runs a second import when the first leaves an asset unimported", () => {
+    const box = sandboxWith((sketchDir) => {
+      writeAsset(sketchDir, "assets/models/a.glb", { sidecar: false, imported: false });
+    });
+    try {
+      let passes = 0;
+      const result = ensureSandboxImport({
+        worktreeDir: box.worktreeDir,
+        godotBin: process.execPath,
+        sha: SHA,
+        homeDir: path.join(box.worktreeDir, "home"),
+        sketch: SKETCH,
+        runPass: () => {
+          passes += 1;
+          if (passes === 2) writeAsset(box.sketchDir, "assets/models/a.glb");
+          return { status: 0, stdout: "", stderr: "" };
+        },
+      });
+      assert.deepEqual([result.imported, result.passes, passes], [true, 2, 2]);
+      assert.equal(JSON.parse(readFileSync(box.stampFile, "utf8")).sha, SHA);
+    } finally {
+      rmSync(box.worktreeDir, { recursive: true, force: true });
+    }
+  });
+
+  it("fails and writes no stamp when the import never produces the sidecar", () => {
+    const box = sandboxWith((sketchDir) => {
+      writeAsset(sketchDir, "assets/models/world_one/poi_siren_mast.glb", {
+        sidecar: false,
+        imported: false,
+      });
+    });
+    try {
+      assert.throws(
+        () =>
+          ensureSandboxImport({
+            worktreeDir: box.worktreeDir,
+            godotBin: process.execPath,
+            sha: SHA,
+            homeDir: path.join(box.worktreeDir, "home"),
+            sketch: SKETCH,
+            runPass: () => ({ status: 0, stdout: "", stderr: "" }),
+          }),
+        /1 asset not imported: assets\/models\/world_one\/poi_siren_mast\.glb \(no \.import sidecar\); no stamp written/,
+      );
+      assert.equal(existsSync(box.stampFile), false);
+    } finally {
+      rmSync(box.worktreeDir, { recursive: true, force: true });
+    }
   });
 });

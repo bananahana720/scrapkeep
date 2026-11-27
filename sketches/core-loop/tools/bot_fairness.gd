@@ -28,7 +28,8 @@ var _fast_hull := 0.0
 var _fast := false
 var _segment := ""
 var _segments := {}
-var _tick_consumed_ids := {}
+var _hull_spent := {"tick": {}, "stood": {}}
+var _scrap_spent := {"tick": {}, "stood": {}}
 
 
 static func _walk_up_config(start_dir: String) -> String:
@@ -94,11 +95,14 @@ func setup(game_ref, boss_hazards_call: Callable) -> void:
 
 func tick(delta: float) -> void:
 	_clock += delta
-	_tick_consumed_ids.clear()
+	_hull_spent["tick"].clear()
+	_scrap_spent["tick"].clear()
 	var flow = game.flow
 	var in_boss: bool = flow.state_name() == "boss"
 	if not (flow.in_stage() or in_boss) or not game.run.alive():
 		_prev = []
+		_hull_spent["stood"].clear()
+		_scrap_spent["stood"].clear()
 		return
 	_open_segment("boss" if in_boss else "s%d" % int(game.run.stage))
 	_fast = game.player.planar_velocity().length() >= game.player.tuning.f("cruise")
@@ -163,6 +167,12 @@ func _scan(mark: bool) -> Array:
 		for id in _seen.keys():
 			if not ids.has(id):
 				_seen.erase(id)
+	if mark:
+		for spent in [_hull_spent, _scrap_spent]:
+			var stood: Dictionary = spent["stood"]
+			for id in stood.keys():
+				if not ids.has(id):
+					stood.erase(id)
 	return out
 
 
@@ -184,12 +194,7 @@ func _add_row(out: Array, ids: Dictionary, id: int, owner: String, attack: Strin
 
 
 func hit(source: String, hull: float, warning_id := 0) -> void:
-	var now: Array = _scan(false)
-	var matched := classify_with_id(source, now, _prev, _published, {}, warning_id, _tick_consumed_ids)
-	var bucket := String(matched["bucket"])
-	var matched_id := int(matched["matched_id"])
-	if matched_id != 0:
-		_tick_consumed_ids[matched_id] = true
+	var bucket := _charge(source, warning_id, _hull_spent)
 	_hull[bucket] = float(_hull[bucket]) + hull
 	_sources[source] = float(_sources.get(source, 0.0)) + hull
 	_killing = {"source": source, "bucket": bucket}
@@ -198,6 +203,15 @@ func hit(source: String, hull: float, warning_id := 0) -> void:
 	else:
 		_slow_hull += hull
 	_note_first_hit()
+
+
+func _charge(source: String, warning_id: int, spent: Dictionary) -> String:
+	var matched := classify_with_id(source, _scan(false), _prev, _published, {}, warning_id, spent["tick"], spent["stood"])
+	var matched_id := int(matched["matched_id"])
+	if matched_id != 0:
+		spent["tick"][matched_id] = true
+		spent["stood"][matched_id] = true
+	return String(matched["bucket"])
 
 
 func _note_first_hit() -> void:
@@ -213,11 +227,7 @@ func _note_first_hit() -> void:
 func loss(cause: String, amount: float, warning_id := 0) -> void:
 	if amount <= 0.0:
 		return
-	var matched := classify_with_id(cause, _scan(false), _prev, _published, {}, warning_id, _tick_consumed_ids)
-	var bucket := String(matched["bucket"])
-	var matched_id := int(matched["matched_id"])
-	if matched_id != 0:
-		_tick_consumed_ids[matched_id] = true
+	var bucket := _charge(cause, warning_id, _scrap_spent)
 	_scrap[bucket] = float(_scrap[bucket]) + amount
 	_scrap_sources[cause] = float(_scrap_sources.get(cause, 0.0)) + amount
 	if _fast:
@@ -235,7 +245,8 @@ static func classify_with_id(
 	published: Dictionary,
 	cfg := {},
 	warning_id := 0,
-	consumed_ids := {}
+	consumed_ids := {},
+	credited_ids := {}
 ) -> Dictionary:
 	if cfg.is_empty():
 		cfg = config()
@@ -247,14 +258,28 @@ static func classify_with_id(
 	if not mine.is_valid():
 		return {"bucket": "unknown", "matched_id": 0}
 	var tell: float = float(cfg["tellS"])
+	var young_id := 0
+	var credited_id := 0
 	for row in now + before:
 		var row_id := int(row.get("id", 0))
 		if warning_id != 0 and row_id != warning_id:
 			continue
 		if warning_id == 0 and row_id != 0 and consumed_ids.has(row_id):
 			continue
-		if mine.call(row) and bool(row["covers"]) and float(row["age_s"]) >= tell:
-			return {"bucket": "telegraphed", "matched_id": row_id}
+		if not (mine.call(row) and bool(row["covers"])):
+			continue
+		var credited: bool = warning_id == 0 and row_id != 0 and credited_ids.has(row_id)
+		if float(row["age_s"]) >= tell:
+			if not credited:
+				return {"bucket": "telegraphed", "matched_id": row_id}
+			if credited_id == 0:
+				credited_id = row_id
+		elif not credited and young_id == 0:
+			young_id = row_id
+	if young_id != 0 and warning_id == 0:
+		return {"bucket": "untelegraphed", "matched_id": young_id}
+	if credited_id != 0:
+		return {"bucket": "telegraphed", "matched_id": credited_id}
 	return {"bucket": "untelegraphed", "matched_id": 0}
 
 
@@ -265,9 +290,10 @@ static func classify(
 	published: Dictionary,
 	cfg := {},
 	warning_id := 0,
-	consumed_ids := {}
+	consumed_ids := {},
+	credited_ids := {}
 ) -> String:
-	return String(classify_with_id(source, now, before, published, cfg, warning_id, consumed_ids)["bucket"])
+	return String(classify_with_id(source, now, before, published, cfg, warning_id, consumed_ids, credited_ids)["bucket"])
 
 
 static func _owner_match(source: String, published: Dictionary, cfg: Dictionary) -> Callable:

@@ -6,7 +6,8 @@ const BotFairness := preload("res://tools/bot_fairness.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const T := preload("res://tests/support/t.gd")
 
-const SEEDS := [40303, 40304, 40305, 40306]
+const TRACKED_SEED := 40301
+const SEEDS := [40301, 40302, 40303, 40304]
 const TICKS := 30000
 const PARALLEL := 4
 const TOL_SHARE := 0.15
@@ -110,6 +111,148 @@ func _fixtures() -> void:
 		"%s" % [pooled_fixture])
 
 
+class FakeFlow:
+	extends RefCounted
+
+	func state_name() -> String:
+		return "stage"
+
+	func in_stage() -> bool:
+		return true
+
+
+class FakeRun:
+	extends RefCounted
+	var stage := 1
+
+	func alive() -> bool:
+		return true
+
+
+class FakeTuning:
+	extends RefCounted
+
+	func f(_key: String) -> float:
+		return 10.0
+
+
+class FakePlayer:
+	extends RefCounted
+	var tuning := FakeTuning.new()
+
+	func planar_velocity() -> Vector3:
+		return Vector3.ZERO
+
+	func ball_position() -> Vector3:
+		return Vector3.ZERO
+
+
+class FakeGame:
+	extends Node
+	var flow := FakeFlow.new()
+	var run := FakeRun.new()
+	var player := FakePlayer.new()
+
+
+class FakeTell:
+	extends Node3D
+	var attack_id := ""
+
+	func contains(_point: Vector3) -> bool:
+		return true
+
+
+class FakeEnemy:
+	extends Node3D
+	var kind := "chaser"
+	var tell: Node3D
+
+	func telegraph() -> Node3D:
+		return tell if is_instance_valid(tell) else null
+
+
+func _live_game() -> FakeGame:
+	var game := FakeGame.new()
+	root.add_child(game)
+	return game
+
+
+func _live_warn(game: FakeGame, kind: String) -> FakeEnemy:
+	var enemy := FakeEnemy.new()
+	enemy.kind = kind
+	enemy.add_to_group("enemy")
+	game.add_child(enemy)
+	enemy.tell = FakeTell.new()
+	enemy.add_child(enemy.tell)
+	return enemy
+
+
+func _live_pair(gap_ticks: int) -> Dictionary:
+	var game := _live_game()
+	var fair := BotFairness.new()
+	fair.setup(game, Callable())
+	_live_warn(game, "chaser")
+	fair.tick(0.0)
+	fair.tick(1.9)
+	_live_warn(game, "chaser")
+	fair.tick(0.0)
+	fair.tick(0.1)
+	fair.hit("chaser", 40.0)
+	for _i in gap_ticks:
+		fair.tick(1.0 / 90.0)
+	fair.hit("chaser", 40.0)
+	var hull: Dictionary = fair.record(false)["hull"]
+	game.free()
+	return hull
+
+
+func _live_recorder() -> void:
+	var tell := float(_line["tellS"])
+	var same_tick := _live_pair(0)
+	_t.check("live recorder: an old tell (2.0 s) and a sibling's young tell (0.10 s) hitting in one tick read one shown and one hidden",
+		same_tick["telegraphed"] == 40.0 and same_tick["untelegraphed"] == 40.0, "%s" % [same_tick])
+	var later := _live_pair(3)
+	_t.check("live recorder: the sibling's hit three ticks later cannot reuse the old tell already credited",
+		later["telegraphed"] == 40.0 and later["untelegraphed"] == 40.0, "%s" % [later])
+
+	var game := _live_game()
+	var fair := BotFairness.new()
+	fair.setup(game, Callable())
+	_live_warn(game, "chaser")
+	fair.tick(0.0)
+	fair.tick(tell + 0.4)
+	fair.hit("chaser", 40.0)
+	fair.tick(0.5)
+	fair.hit("chaser", 40.0)
+	var held: Dictionary = fair.record(false)["hull"]
+	_t.check("live recorder: a standing old tell that hits again with no young sibling stays shown",
+		held["telegraphed"] == 80.0 and held["untelegraphed"] == 0.0, "%s" % [held])
+	fair.tick(0.5)
+	fair.hit("chaser", 40.0)
+	fair.hit("chaser", 40.0)
+	var doubled: Dictionary = fair.record(false)["hull"]
+	_t.check("live recorder: one tell answers for one hit in a tick, so a second same-tick hit is hidden",
+		doubled["telegraphed"] == 120.0 and doubled["untelegraphed"] == 40.0, "%s" % [doubled])
+	game.free()
+
+	game = _live_game()
+	var ring := FakeTell.new()
+	ring.attack_id = "slag_ring_a"
+	game.add_child(ring)
+	fair = BotFairness.new()
+	fair.setup(game, func() -> Array: return [ring])
+	fair.tick(0.0)
+	fair.tick(tell + 0.4)
+	fair.loss("brindle_slag", 6.0)
+	fair.hit("brindle_slag", 40.0)
+	var strike: Dictionary = fair.record(false)
+	_t.check("live recorder: one strike that takes scrap and hull in one tick under its own old ring reads shown on both",
+		strike["hull"]["telegraphed"] == 40.0 and strike["hull"]["untelegraphed"] == 0.0
+			and strike["scrap"]["telegraphed"] == 6.0 and strike["scrap"]["untelegraphed"] == 0.0,
+		"hull %s scrap %s" % [strike["hull"], strike["scrap"]])
+	game.free()
+
+
 func _args(out: String, seed_val: int, plant: String) -> Array:
 	var args := ["--out=" + out, "--policy=skipper", "--seeds=%d" % seed_val, "--until=1", "--band=novice", "--attempt=1", "--ticks=%d" % TICKS]
 	if plant != "":
@@ -120,6 +263,10 @@ func _args(out: String, seed_val: int, plant: String) -> Array:
 func _run() -> void:
 	_line = BotFairness.config()
 	_fixtures()
+	_live_recorder()
+	_t.check("the pool starts at the seed the ledger tracked and skips none after it",
+		SEEDS[0] == TRACKED_SEED and range(SEEDS.size()).all(func(i: int) -> bool: return SEEDS[i] == TRACKED_SEED + i),
+		"seeds %s" % [SEEDS])
 	var base := OS.get_user_data_dir().path_join("bot-fairness-%d" % OS.get_process_id())
 	var arms := {"plain": "", "drain": "drain=0.2", "fast_tax": "fast_tax=0.6", "ringless": "ringless=0.3", "scrap": "scrap=0.5"}
 	var jobs := []
@@ -151,6 +298,8 @@ func _run() -> void:
 		_t.check("%s seed %d record carries fairness" % [name, seed_val], f is Dictionary, "%d rows in %s" % [rows.size(), path])
 		if f is Dictionary:
 			(by_arm[name] as Array).append(f)
+			if name == "plain":
+				print("plain seed %d alone: stop_tax %s (slow %s hull / %s s, fast %s hull / %s s)" % [seed_val, f.get("stop_tax"), f.get("slow_hull"), f.get("slow_s"), f.get("fast_hull"), f.get("fast_s")])
 	var fair := {}
 	for name in arms:
 		fair[name] = BotFairness.pool(by_arm[name])

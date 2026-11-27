@@ -37,7 +37,7 @@ const SPECS := [
 	{"key": "set_director", "label": "Set director", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
 	{"key": "deck", "label": "Deck", "min": 0.0, "max": 2.0, "step": 1.0, "value": 0.0, "options": ["off", "festival", "viking"]},
 	{"key": "discovery", "label": "Discovery", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["banner", "cards"]},
-	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 4.0, "step": 1.0, "value": 2.0, "options": ["classic", "haze", "clear", "edges", "tape"]},
+	{"key": "telegraph", "label": "Telegraph", "min": 0.0, "max": 4.0, "step": 1.0, "value": 4.0, "options": ["classic", "haze", "clear", "edges", "tape"]},
 	{"key": "ball_look", "label": "Ball look", "min": 0.0, "max": 3.0, "step": 1.0, "value": 3.0, "options": ["today", "gyro", "bell", "cutaway"]},
 	{"key": "world_one_builds", "label": "World-one builds", "min": 0.0, "max": 1.0, "step": 1.0, "value": 1.0, "options": ["off", "on"]},
 	{"key": "pole_flail", "label": "Poles and flails", "min": 0.0, "max": 1.0, "step": 1.0, "value": 0.0, "options": ["off", "on"]},
