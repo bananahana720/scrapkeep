@@ -132,5 +132,5 @@ func _run() -> void:
 		var shell_fill := Threat.SHELL_AREA_ALPHA * (Threat.EDGES_FILL if look == "edges" else 1.0)
 		_t.near("%s: the own shell's fill alpha is unchanged" % look, _mark(shell, "area")["tone"].a, shell_fill)
 	_t.eq("all five looks were checked", counted, 5)
-	Threat.set_look("clear")
+	Threat.set_look("tape")
 	quit(_t.verdict())
