@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   appendFileSync,
   copyFileSync,
@@ -45,8 +45,8 @@ import {
   shardJobs,
   wallStats,
 } from "./lib.mjs";
+import { pool, runProcess, stateEnv } from "./proc.mjs";
 import { checkImportStamp, REIMPORT_HINT } from "../import-stamp.mjs";
-import { userDataEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const godot = process.env.GODOT_BIN;
@@ -184,55 +184,6 @@ function needGodot() {
     console.warn(`challenge: running on a stale import (--stale-import-ok): ${stamp.reason}`);
 }
 
-function runProcess(args, { env, timeout, logFile }) {
-  return new Promise((resolve) => {
-    const t0 = Date.now();
-    const child = spawn(godot, args, { cwd: root, env: { ...process.env, ...env } });
-    let text = "";
-    let timedOut = false;
-    child.stdout.on("data", (d) => (text += d));
-    child.stderr.on("data", (d) => (text += d));
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
-    }, timeout);
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      if (logFile) writeFileSync(logFile, text);
-      resolve({
-        exit: code ?? (signal ? 128 : 1),
-        signal,
-        timedOut,
-        text,
-        wallS: (Date.now() - t0) / 1000,
-      });
-    });
-  });
-}
-
-async function pool(tasks, slots) {
-  const results = new Array(tasks.length);
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: Math.min(slots, tasks.length) }, async () => {
-      while (next < tasks.length) {
-        const i = next++;
-        results[i] = await tasks[i]();
-      }
-    }),
-  );
-  return results;
-}
-
-function stateEnv(dir) {
-  for (const d of ["data", "config", "cache"]) mkdirSync(path.join(dir, d), { recursive: true });
-  return {
-    ...userDataEnv(path.join(dir, "data")),
-    XDG_CONFIG_HOME: path.join(dir, "config"),
-    XDG_CACHE_HOME: path.join(dir, "cache"),
-  };
-}
-
 async function buildLibrary() {
   const label = opts.label ?? "lib-" + stamp;
   const dir = path.join(outRoot, "library", label);
@@ -256,6 +207,8 @@ async function buildLibrary() {
     mkdirSync(out, { recursive: true });
     log("start " + name);
     const p = await runProcess(
+      godot,
+      root,
       [
         "--headless",
         "--fixed-fps",
@@ -465,7 +418,7 @@ async function runTable() {
     const dir = path.join(outDir, "jobs", job.id + (attempt > 1 ? "-rerun" : ""));
     const out = path.join(dir, "out");
     mkdirSync(out, { recursive: true });
-    const p = await runProcess(botArgs(job, out), {
+    const p = await runProcess(godot, root, botArgs(job, out), {
       env: stateEnv(path.join(dir, "state")),
       timeout: KIND_TIMEOUT_MS,
       logFile: path.join(dir, "log.txt"),
