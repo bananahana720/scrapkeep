@@ -598,3 +598,40 @@ test("--json prints a well-shaped findings array", async () => {
     assert.ok("message" in finding);
   }
 });
+
+test("skills README table parity passes on exact match and fails on missing or extra entries", async () => {
+  const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-skills-"));
+  try {
+    const repoRoot = await buildMinimalRepo(temporary, {
+      skillMd: goodSkillMd(),
+      lessonsMd: GOOD_LESSONS,
+    });
+    const linkDir = path.join(repoRoot, ".claude/skills");
+    await mkdir(linkDir, { recursive: true });
+    await symlink(
+      "../../.agents/skills/reactive-model-loop",
+      path.join(linkDir, "reactive-model-loop"),
+    );
+
+    const readmePath = path.join(repoRoot, ".agents/skills/README.md");
+    await writeFile(
+      readmePath,
+      "# Project skills\n\n| Skill | Kind | Use it to |\n| --- | --- | --- |\n| `reactive-model-loop` | portable | demo |\n",
+    );
+    const clean = await runAgainst(repoRoot);
+    assert.equal(clean.status, 0, JSON.stringify(clean.findings, null, 2));
+    assert.equal(failures(clean.findings, "index").length, 0);
+
+    await writeFile(
+      readmePath,
+      "# Project skills\n\n| Skill | Kind | Use it to |\n| --- | --- | --- |\n| `ghost-skill` | project | stale |\n",
+    );
+    const mismatch = await runAgainst(repoRoot);
+    assert.equal(mismatch.status, 1, JSON.stringify(mismatch.findings, null, 2));
+    const hits = failures(mismatch.findings, "index");
+    assert.ok(hits.some((f) => f.message.includes("reactive-model-loop")));
+    assert.ok(hits.some((f) => f.message.includes("ghost-skill")));
+  } finally {
+    await rm(temporary, { recursive: true, force: true });
+  }
+});

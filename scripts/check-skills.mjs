@@ -793,6 +793,59 @@ async function checkPortabilityFull(findings, root, skillDirs) {
   }
 }
 
+async function checkSkillsReadmeIndex(findings, root, skillDirs) {
+  const readmeRel = ".agents/skills/README.md";
+  const readmePath = path.join(root, readmeRel);
+  if (!(await exists(readmePath))) return;
+  const content = await readNormalized(readmePath);
+  const lines = content.split("\n");
+  const headerIdx = lines.findIndex((line) => /^\|\s*Skill\s*\|/i.test(line));
+  if (headerIdx === -1) {
+    findings.fail("index", readmeRel, 1, 'no "| Skill |" table found in .agents/skills/README.md');
+    return;
+  }
+  const indexed = new Map();
+  for (let i = headerIdx + 1; i < lines.length; i += 1) {
+    const line = lines[i];
+    if (!line.startsWith("|")) break;
+    if (/^\|\s*-{3,}/.test(line)) continue;
+    const rawCell = line.split("|")[1]?.trim() ?? "";
+    const name = rawCell.replace(/^`|`$/g, "").trim();
+    if (!name) continue;
+    if (indexed.has(name)) {
+      findings.fail(
+        "index",
+        readmeRel,
+        i + 1,
+        "duplicate skill entry " + JSON.stringify(name) + " in .agents/skills/README.md",
+      );
+      continue;
+    }
+    indexed.set(name, i + 1);
+  }
+  const dirSet = new Set(skillDirs);
+  for (const dir of skillDirs) {
+    if (!indexed.has(dir)) {
+      findings.fail(
+        "index",
+        readmeRel,
+        headerIdx + 1,
+        "skill directory " + JSON.stringify(dir) + " is missing from .agents/skills/README.md",
+      );
+    }
+  }
+  for (const [name, line] of indexed.entries()) {
+    if (!dirSet.has(name)) {
+      findings.fail(
+        "index",
+        readmeRel,
+        line,
+        "indexed skill " + JSON.stringify(name) + " has no directory under .agents/skills/",
+      );
+    }
+  }
+}
+
 async function main() {
   let options;
   try {
@@ -860,6 +913,7 @@ async function main() {
   for (const file of allFiles) checkLessonCitations(findings, file, lessonIds);
 
   await checkVerbsStatic(findings, options.root, allFiles);
+  await checkSkillsReadmeIndex(findings, options.root, skillDirs);
 
   const failures = findings.list.filter((finding) => finding.level === "failure");
   if (options.json) {

@@ -17,8 +17,9 @@ Scrapkeep supports **Google Antigravity (Gemini)** and **Claude Code** as first-
 | "Design or evaluate a model decision inside the game loop" | `reactive-model-loop` covers controls, blind corpora, pre-registration, caching, and cost fields. |
 | "Run parallel PR review, `run_workflow` pipelines, or card batches" | `scrapkeep-gemini-workflows` runs `pr_gate_review.py` and `card_batch.py` with Gemini tier routing. |
 | "Audit screenshots, UI legibility, `eye.mjs` films, or Gemini refsheets" | `scrapkeep-visual-review` runs multimodal `read_file` checks, `eye_read_workflow.py`, `image-generator`, and MCP inspection. |
+| "Inspect live game state, spawn encounters, or render offscreen sheets via the dev console" | `scrapkeep-dev-console` drives `scripts/dev-console.mjs` (`npm run dev:console`) and `sketches/core-loop/src/dev/` for headless probes, recipes, and warm sessions. |
 
-Slash commands match the 11 skill names above; see [the skills README](../../.agents/skills/README.md) when adding one. `AGENTS.md` rule 11 (ruling `ej`) owns worker routing (`claude-fable-5-2`, `claude-opus-5-5`, `gemini-4-neon`), and `pstack` (`pstack@cursor-plugins`, ruling `er`) provides shared workflows. `BIBLE.md`, `adr/`, `BACKLOG.md`, `TRACKING.md`, and `ORCHESTRATOR.md` remain the canonical heavy-lane authorities.
+Slash commands match the 12 skill names above; see [the skills README](../../.agents/skills/README.md) when adding one. `AGENTS.md` rule 11 (ruling `ej`) owns worker routing (`claude-fable-5-2`, `claude-opus-5-5`, `gemini-4-neon`), and `pstack` (`pstack@cursor-plugins`, ruling `er`) provides shared workflows. `BIBLE.md`, `adr/`, `BACKLOG.md`, `TRACKING.md`, and `ORCHESTRATOR.md` remain the canonical heavy-lane authorities.
 
 ## Host behavior & safety gates
 

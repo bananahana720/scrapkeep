@@ -11,7 +11,7 @@ This skill owns Gemini multimodal inspection of Scrapkeep screenshots, UI legibi
 
 ## Procedure
 
-1. Classify the task (UI legibility audit, player's-eye film read, live 3D/scene check, or art reference turnaround) and read `sketches/core-loop/design-v3/STORY-MAP.md` plus `project-guide/handoff/shared/tone/TONE-BIBLE.md` before any creative judgement. (design choice)
+1. Classify the task (UI legibility audit, player's-eye film read, live 3D/scene check, or art reference turnaround) and read `sketches/core-loop/design-v3/STORY-MAP.md` plus `sketches/core-loop/design-v3/TONE-BIBLE.md` before any creative judgement. (design choice)
 2. Open every captured PNG or JPG directly with `read_file` for Gemini multimodal inspection; never infer a visual pass from step logs or exit codes alone. (SVR-01)
 3. For HUD, cards, tips, menus, or prompts, run `npm run sketch:ui-audit` (when Godot is present) and audit against `sketches/core-loop/design-v3/LEGIBILITY.md` section 13 (ruling `cx`), `sketches/core-loop/design-v3/SIGHT-PERSONA.md`, and `project-guide/handoff/ART-MISTAKES.md`; log new defects in `project-guide/handoff/UI-FINDINGS.tsv` and add a mechanical guard in the same PR if a defect class appears twice. (SVR-02)
 4. For player's-eye films from `scripts/redteam/eye.mjs`, run `scripts/eye_read_workflow.py` via `run_workflow` so the cold Reader inspects only `<eye_dir>/reader/` frames and `<eye_dir>/reader/BRIEF.md` (blind to `film.ndjson` and `<eye_dir>/judge/`), then a separate Judge compares against `<eye_dir>/judge/SHEET.md`. (SVR-03)

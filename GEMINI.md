@@ -16,7 +16,7 @@ Report active Gemini model and tier from runtime metadata if exposed, otherwise 
 
 ## Skills, Rules, Hooks & MCP Servers
 
-- **Project skills (11)**: listed in [.agents/skills/README.md](.agents/skills/README.md); includes `scrapkeep-gemini-workflows` (`run_workflow` PR gate & card batching) and `scrapkeep-visual-review` (multimodal UI/film/art QA).
+- **Project skills**: listed in [.agents/skills/README.md](.agents/skills/README.md); includes `scrapkeep-gemini-workflows` (`run_workflow` PR gate & card batching) and `scrapkeep-visual-review` (multimodal UI/film/art QA).
 - **Antigravity built-ins**: `run-workflow`, `gemini-api-dev`, `gemini-api-cli`, `gemini-live-api-dev`, `modern-web-guidance`, `context7-mcp`, `ai-firstify`, `agy-customizations`, plus `research`, `browser`, and `image-generator`.
 - **MCP servers**: `godot_godot` (`projectPath: "sketches/core-loop"`, saves in `artifacts/local/`, always call `stop_project` before committing), `blender_blender`, `gemini-api_gemini-api-docs`, `context7_context7`.
 - **Scoped rules & safety gates**: `.agents/rules/` auto-loads `godot-core-loop.md`, `browser-proofs.md`, and `creative-and-visual.md`; `.agents/hooks.json` invokes `.agents/hooks/safety-gate.mjs` on `PreToolUse` to enforce `AGENTS.md` approval and `McpBridge` boundaries mechanically.
