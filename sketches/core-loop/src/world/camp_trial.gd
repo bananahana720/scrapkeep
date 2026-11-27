@@ -4,6 +4,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Records := preload("res://src/world/camp_records.gd")
+const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 
 const TRACK := "camp_trial_track"
 const ARCH := "camp_trial_arch"
@@ -226,16 +227,10 @@ func _build_lamps() -> void:
 	for medal in MEDALS:
 		var at: Vector3 = hub.socket(ARCH, "light_" + medal).origin
 		var bulb := MeshInstance3D.new()
-		var sphere := SphereMesh.new()
-		sphere.radius = 0.4
-		sphere.height = 0.8
-		bulb.mesh = sphere
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = colours[medal].darkened(0.6)
-		mat.emission_enabled = true
-		mat.emission = colours[medal]
-		mat.emission_energy_multiplier = 0.0
-		bulb.material_override = mat
+		bulb.mesh = CampCraftMeshes.signal_lantern_mesh(0.4)
+		var mat := CampCraftMeshes.lantern_bulb_material(colours[medal], 0.0)
+		bulb.set_surface_override_material(0, CampCraftMeshes.iron_material())
+		bulb.set_surface_override_material(1, mat)
 		bulb.name = "Bulb_" + medal
 		hub.root.add_child(bulb)
 		bulb.global_position = at
@@ -255,10 +250,7 @@ func _light(earned: Array) -> void:
 func _build_ghost() -> void:
 	ghost_mesh = MeshInstance3D.new()
 	ghost_mesh.name = "BestLapGhost"
-	var sphere := SphereMesh.new()
-	sphere.radius = 1.0
-	sphere.height = 2.0
-	ghost_mesh.mesh = sphere
+	ghost_mesh.mesh = CampCraftMeshes.ghost_sphere_mesh(1.0)
 	var mat := StandardMaterial3D.new()
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.albedo_color = Color(Palette.ARC, 0.3)
@@ -276,12 +268,7 @@ func _build_ghost() -> void:
 func _build_guide() -> void:
 	var multi := MultiMesh.new()
 	multi.transform_format = MultiMesh.TRANSFORM_3D
-	var dot := SphereMesh.new()
-	dot.radius = 0.16
-	dot.height = 0.32
-	dot.radial_segments = 8
-	dot.rings = 4
-	multi.mesh = dot
+	multi.mesh = CampCraftMeshes.guide_pip_mesh(0.16)
 	multi.instance_count = 32
 	for i in 32:
 		var at: Vector3 = hub.socket(TRACK, "ghost_%02d" % i).origin
