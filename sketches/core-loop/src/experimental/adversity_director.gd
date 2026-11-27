@@ -1,6 +1,7 @@
 extends RefCounted
 
 
+const EventDirector := preload("res://src/world/event_director.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 
 const DEFAULT_CONFIG_PATH := "res://src/experimental/resources/director/spillway_adversity_config.tres"
@@ -299,7 +300,7 @@ func compute_magnetic_force(
 				var boost_scale := 0.0 if speed >= cruise * 1.65 else 1.0
 				var raw := lateral * float(def["pull_strength"]) * 0.55 * falloff \
 					+ forward * float(def["slingshot_boost"]) * falloff * boost_scale
-				return RefurbishedElites.never_brake(raw, entity_vel)
+				return EventDirector.never_brake(raw, entity_vel)
 			return (inward * float(def["pull_strength"]) * 0.45 + swirl * float(def["swirl_strength"]) * 0.25) * falloff
 		_:
 			return Vector3.ZERO
@@ -340,7 +341,7 @@ func compute_crosswind_force(
 				var lateral := wind_dir - forward * wind_dir.dot(forward)
 				var boost_scale := 0.0 if speed >= cruise * 1.65 else 1.0
 				var raw := lateral * strength * 0.45 + forward * float(def.get("slingshot_boost", 11.5)) * intensity * boost_scale
-				return RefurbishedElites.never_brake(raw, entity_vel)
+				return EventDirector.never_brake(raw, entity_vel)
 			return wind_dir * strength * 0.55
 		_:
 			return Vector3.ZERO
@@ -370,7 +371,7 @@ func compute_tremor_force(
 	var raw := lateral_dir * float(def.get("tremor_lateral_accel", 11.5)) * intensity
 	var flat_v := Vector3(entity_vel.x, 0.0, entity_vel.z)
 	if flat_v.length() >= cruise * fast_ratio:
-		return RefurbishedElites.never_brake(raw * 0.35, entity_vel)
+		return EventDirector.never_brake(raw * 0.35, entity_vel)
 	return raw
 
 

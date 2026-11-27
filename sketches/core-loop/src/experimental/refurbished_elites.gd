@@ -1,6 +1,8 @@
 extends RefCounted
 
 
+const EventDirector := preload("res://src/world/event_director.gd")
+
 const ENV_TAGS: Array[StringName] = [
 	&"electrified",
 	&"burning",
@@ -59,17 +61,6 @@ static func is_valid_env_tag_payload(payload: Dictionary) -> bool:
 	if float(payload["radius_m"]) <= 0.0 or float(payload["ttl_s"]) <= 0.0 or float(payload["intensity"]) < 0.0:
 		return false
 	return String(payload["source_id"]) != ""
-
-
-static func never_brake(accel: Vector3, velocity: Vector3) -> Vector3:
-	var flat := Vector3(velocity.x, 0.0, velocity.z)
-	if flat.length() < 0.5:
-		return accel
-	var along := flat.normalized()
-	var against := accel.dot(along)
-	if against < 0.0:
-		accel -= along * against
-	return accel
 
 
 static func load_default_pool() -> Array:
@@ -270,16 +261,6 @@ class RefurbishedInstance extends RefCounted:
 			"ttl_s": maxf(0.1, ttl_s),
 		}
 
-	static func _never_brake_local(accel: Vector3, velocity: Vector3) -> Vector3:
-		var flat := Vector3(velocity.x, 0.0, velocity.z)
-		if flat.length() < 0.5:
-			return accel
-		var along := flat.normalized()
-		var against := accel.dot(along)
-		if against < 0.0:
-			accel -= along * against
-		return accel
-
 	func apply_hit(
 			damage: float,
 			hit_speed_mps: float,
@@ -465,5 +446,5 @@ class RefurbishedInstance extends RefCounted:
 			var lateral := inward - tangent * inward.dot(tangent)
 			var boost_scale := 0.0 if speed >= cruise_mps * 1.65 else 1.0
 			var boost := tangent * (pull * 0.35 * float(def.get("slingshot_bonus", 1.35)) * boost_scale)
-			return _never_brake_local(lateral * pull * 0.65 + boost, ball_vel)
+			return EventDirector.never_brake(lateral * pull * 0.65 + boost, ball_vel)
 		return inward * pull
