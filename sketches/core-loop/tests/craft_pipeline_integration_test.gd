@@ -45,7 +45,7 @@ func _run() -> void:
 		"IndustrialPerimeterFraming/OverheadGantryTruss/Chord_NorthLow",
 	]:
 		var pmi := arena.get_node_or_null(perim_path) as MeshInstance3D
-		var pmat := pmi.get_surface_override_material(0) as ShaderMaterial if pmi != null else null
+		var pmat := pmi.get_active_material(0) as ShaderMaterial if pmi != null else null
 		_t.check("perimeter mesh %s uses craft_master_weathering.gdshader (unmasked)" % perim_path.get_file(),
 			pmat != null and pmat.shader != null and pmat.shader.resource_path == Lookdev.MASTER_SHADER_PATH
 			and bool(pmat.get_shader_parameter("use_vertex_masks")) == false)
