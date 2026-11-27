@@ -4,6 +4,7 @@ extends RefCounted
 
 
 const Palette := preload("res://src/core/palette.gd")
+const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 
 const GEAR_GOGGLES := &"riveted_goggles"
 const GEAR_HARNESS := &"shoulder_harness"
@@ -138,10 +139,6 @@ class ManifoldCanvas extends RefCounted:
 		return mesh
 
 
-static func _vc(wear: float, grime: float, emit: float = 0.0) -> Color:
-	return Color(clampf(wear, 0.0, 1.0), clampf(grime, 0.0, 1.0), clampf(emit, 0.0, 1.0), 1.0)
-
-
 static func _frame_from_dir(dir: Vector3) -> Basis:
 	var y_axis := dir.normalized()
 	var ref := Vector3.FORWARD if absf(y_axis.dot(Vector3.FORWARD)) < 0.92 else Vector3.RIGHT
@@ -169,10 +166,10 @@ static func _add_chamfered_box(
 	var iy := hy - b
 	var iz := hz - b
 
-	var c_flat := _vc(wear, grime, emit)
+	var c_flat := CraftLookdev.encode_mask(wear, grime, emit)
 	var edge_g := grime * 0.85 if grime > 0.5 else minf(grime * 0.65, 0.12)
-	var c_edge := _vc(edge_wear if emit < 0.5 else 0.30, edge_g, emit)
-	var c_bot := _vc(wear, maxf(grime, 0.72), emit)
+	var c_edge := CraftLookdev.encode_mask(edge_wear if emit < 0.5 else 0.30, edge_g, emit)
+	var c_bot := CraftLookdev.encode_mask(wear, maxf(grime, 0.72), emit)
 
 	var px0 := xf * Vector3(hx, iy, iz)
 	var px1 := xf * Vector3(hx, iy, -iz)
@@ -230,7 +227,7 @@ static func _add_chamfered_box(
 	c.add_quad(slot, px1, nz0, nz3, px2, (rx - rz).normalized(), c_edge, c_edge, c_edge, c_edge)
 	c.add_quad(slot, nz1, nx0, nx3, nz2, (-rx - rz).normalized(), c_edge, c_edge, c_edge, c_edge)
 
-	var c_cnr := _vc(minf(edge_wear + 0.06, 1.0) if emit < 0.5 else 0.30, edge_g, emit)
+	var c_cnr := CraftLookdev.encode_mask(minf(edge_wear + 0.06, 1.0) if emit < 0.5 else 0.30, edge_g, emit)
 	var corners := [
 		[py2, px0, pz1, rx + ry + rz],
 		[py3, pz0, nx1, -rx + ry + rz],
@@ -269,9 +266,9 @@ static func _add_chamfered_prism(
 	var brt := clampf(bev_r, 0.001, rt * 0.40)
 
 	var edge_g := grime * 0.85 if grime > 0.5 else minf(grime * 0.6, 0.12)
-	var c_flat := _vc(0.0 if emit > 0.5 else wear, 0.0 if emit > 0.5 else grime, emit)
-	var c_bot := _vc(0.0 if emit > 0.5 else wear, 0.0 if emit > 0.5 else maxf(grime, 0.76), emit)
-	var c_bev := _vc(0.0 if emit > 0.5 else edge_wear, 0.0 if emit > 0.5 else edge_g, emit)
+	var c_flat := CraftLookdev.encode_mask(0.0 if emit > 0.5 else wear, 0.0 if emit > 0.5 else grime, emit)
+	var c_bot := CraftLookdev.encode_mask(0.0 if emit > 0.5 else wear, 0.0 if emit > 0.5 else maxf(grime, 0.76), emit)
+	var c_bev := CraftLookdev.encode_mask(0.0 if emit > 0.5 else edge_wear, 0.0 if emit > 0.5 else edge_g, emit)
 
 	var rings := [
 		{"y": -hy, "r": rb - brb},
@@ -318,9 +315,9 @@ static func _add_bezel_ring(
 	var hy := maxf(height * 0.5, 0.003)
 	var ri := maxf(r_inner, 0.004)
 	var ro := maxf(r_outer, ri + 0.005)
-	var c_flat := _vc(wear, grime, 0.0)
-	var c_edge := _vc(edge_wear, minf(grime * 0.7, 0.14), 0.0)
-	var c_in := _vc(0.18, maxf(grime, 0.82), 0.0)
+	var c_flat := CraftLookdev.encode_mask(wear, grime, 0.0)
+	var c_edge := CraftLookdev.encode_mask(edge_wear, minf(grime * 0.7, 0.14), 0.0)
+	var c_in := CraftLookdev.encode_mask(0.18, maxf(grime, 0.82), 0.0)
 
 	var o_bot: Array[Vector3] = []
 	var o_top: Array[Vector3] = []
@@ -393,9 +390,9 @@ static func _add_closed_tube(
 			row.append(pts[i] + normals[i] * (cos(ang) * radius_x) + binormals[i] * (sin(ang) * radius_y))
 		rings.append(row)
 
-	var c_main := _vc(wear, grime, 0.0)
-	var c_edge := _vc(edge_wear, minf(grime * 0.8, 0.16), 0.0)
-	var c_end := _vc(wear, maxf(grime, 0.78), 0.0)
+	var c_main := CraftLookdev.encode_mask(wear, grime, 0.0)
+	var c_edge := CraftLookdev.encode_mask(edge_wear, minf(grime * 0.8, 0.16), 0.0)
+	var c_end := CraftLookdev.encode_mask(wear, maxf(grime, 0.78), 0.0)
 	for i in segs:
 		for j in ns:
 			var nj := (j + 1) % ns
