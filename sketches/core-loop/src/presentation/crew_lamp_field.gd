@@ -1,7 +1,12 @@
 extends MultiMeshInstance3D
 
 const Palette := preload("res://src/core/palette.gd")
-const CrewLamp := preload("res://src/presentation/crew_lamp.gd")
+
+const LENS := 0.085
+const LENS_DEPTH := 0.06
+const PEAK := 1.3
+const REST_COLOUR := Palette.LEDGER
+const FIELD_ROOM := 48
 
 
 const SHADER := """
@@ -28,8 +33,8 @@ var _lamps: Array[Node3D] = []
 static func lens() -> Mesh:
 	if _lens == null:
 		var dome := SphereMesh.new()
-		dome.radius = CrewLamp.LENS
-		dome.height = CrewLamp.LENS_DEPTH
+		dome.radius = LENS
+		dome.height = LENS_DEPTH
 		dome.is_hemisphere = true
 		dome.radial_segments = 10
 		dome.rings = 3
@@ -37,10 +42,10 @@ static func lens() -> Mesh:
 		shader.code = SHADER
 		var mat := ShaderMaterial.new()
 		mat.shader = shader
-		mat.set_shader_parameter("rest", CrewLamp.REST_COLOUR)
+		mat.set_shader_parameter("rest", REST_COLOUR)
 		mat.set_shader_parameter("danger", Palette.HAZARD)
 		mat.set_shader_parameter("dark", Palette.CHARCOAL)
-		mat.set_shader_parameter("peak", CrewLamp.PEAK)
+		mat.set_shader_parameter("peak", PEAK)
 		dome.material = mat
 		_lens = dome
 	return _lens
@@ -52,7 +57,7 @@ func _init() -> void:
 	multimesh.transform_format = MultiMesh.TRANSFORM_3D
 	multimesh.use_custom_data = true
 	multimesh.mesh = lens()
-	multimesh.instance_count = CrewLamp.FIELD_ROOM
+	multimesh.instance_count = FIELD_ROOM
 	multimesh.visible_instance_count = 0
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 

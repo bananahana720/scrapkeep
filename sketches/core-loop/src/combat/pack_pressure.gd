@@ -1,16 +1,5 @@
 extends RefCounted
 
-const W1 := [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
-const HALF_W1 := [0.5, 0.5, 1.0, 1.0, 1.0, 1.0]
-
-const PRESETS := {
-	"A": {"pack.lead_by_stage": W1},
-	"B": {"pack.crew_extra_by_stage": W1, "pack.rest_by_stage": HALF_W1},
-	"C": {"pack.flank_by_stage": W1},
-	"D": {"ground.churn_by_stage": W1},
-	"E": {"hazard.boil_by_stage": [2.0, 2.0, 0.0, 0.0, 0.0, 0.0]},
-}
-
 const PRESSURE_CUE_S := 0.5
 const MAX_LEAD_S := 2.5
 const MAX_TURN := 2.5
@@ -80,20 +69,6 @@ static func reset_for_tests() -> void:
 	_have_heading = false
 	_cruise = 0.0
 	_record.clear()
-
-
-static func tune_spec(value: String, unknown: Array = []) -> String:
-	var merged := {}
-	for letter in value.to_upper().split("+", false):
-		var key := letter.strip_edges()
-		if not PRESETS.has(key):
-			unknown.append(key)
-			continue
-		merged.merge(PRESETS[key], true)
-	var pairs: Array[String] = []
-	for k in merged:
-		pairs.append("%s=%s" % [k, "/".join((merged[k] as Array).map(func(x): return str(x)))])
-	return ",".join(pairs)
 
 
 static func crew_row(stage: int) -> Dictionary:

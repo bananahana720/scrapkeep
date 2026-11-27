@@ -43,7 +43,6 @@ static func style() -> Dictionary:
 	return {
 		"categories": categories,
 		"order": ["build", "world", "enemy", "npc", "coop"],
-		"banner_script": load("res://src/presentation/codex_banner.gd"),
 		"font_size": {"title": 30, "body": 17},
 		"undiscovered": Color(0.55, 0.55, 0.55, 0.8),
 	}
