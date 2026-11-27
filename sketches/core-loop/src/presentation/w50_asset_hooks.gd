@@ -344,7 +344,7 @@ static func dress_sable_stake(stake: Node3D) -> bool:
 	for child in stake.get_children():
 		if child is MeshInstance3D:
 			var mi := child as MeshInstance3D
-			if mi.mesh is CylinderMesh or mi.mesh is TorusMesh:
+			if mi.mesh is PrimitiveMesh:
 				mi.layers = 0
 				mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	stake.add_child(model)

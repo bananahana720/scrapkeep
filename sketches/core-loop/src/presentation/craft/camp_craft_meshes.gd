@@ -15,15 +15,15 @@ static func reset_for_tests() -> void:
 
 
 static func vc(wear: float, grime: float, emissive := 0.0) -> Color:
-	return _vc(wear, grime, emissive)
-
-
-static func add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel: float, uv_scale: float, xf: Transform3D, c_flat: Color, c_edge: Color, c_bot: Color) -> void:
-	_add_bevel_box(st, center, size, bevel, uv_scale, xf, c_flat, c_edge, c_bot)
+	return Color(clampf(wear, 0.0, 1.0), clampf(grime, 0.0, 1.0), clampf(emissive, 0.0, 1.0), 1.0)
 
 
 static func _vc(wear: float, grime: float, emissive := 0.0) -> Color:
-	return Color(clampf(wear, 0.0, 1.0), clampf(grime, 0.0, 1.0), clampf(emissive, 0.0, 1.0), 1.0)
+	return vc(wear, grime, emissive)
+
+
+static func _add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel: float, uv_scale: float, xf: Transform3D, c_flat: Color, c_edge: Color, c_bot: Color) -> void:
+	add_bevel_box(st, center, size, bevel, uv_scale, xf, c_flat, c_edge, c_bot)
 
 
 static func _uv_for(p: Vector3, n: Vector3, uv_scale: float) -> Vector2:
@@ -71,7 +71,7 @@ static func _add_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Ve
 	_add_tri(st, a, c, d, n, c0, c2, c3, uv_scale)
 
 
-static func _add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel: float, uv_scale: float, xf: Transform3D, c_flat: Color, c_edge: Color, c_bot: Color) -> void:
+static func add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel: float, uv_scale: float, xf: Transform3D, c_flat: Color, c_edge: Color, c_bot: Color) -> void:
 	var h := size * 0.5
 	var b := minf(bevel, minf(h.x, minf(h.y, h.z)) * 0.42)
 	var xi := h.x - b
