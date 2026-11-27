@@ -106,7 +106,7 @@ static func tint(name: String) -> Color:
 
 
 func _process(delta: float) -> void:
-	visible = deck != null and deck._live()
+	visible = deck != null and deck.live()
 	if not visible:
 		_said = ""
 		_peek = 0.0
@@ -120,7 +120,7 @@ func _process(delta: float) -> void:
 	if said != _said:
 		_said = said
 		_peek = PEEK
-	var engine = deck._audio.engine if deck._audio != null else null
+	var engine = deck.music_engine()
 	for i in LAYERS:
 		var want := 0.0
 		if engine != null and not _read.get("off", false):
