@@ -166,7 +166,7 @@ func _banked() -> Dictionary:
 	var stats := {}
 	for key in doc["stats"]:
 		# Clock readings and per-run ids differ between two plays of the same win.
-		var fall_banked: bool = String(key).begins_with("door.") or String(key) in FALL_BANKED
+		var fall_banked: bool = String(key).begins_with("door.") or String(key).begins_with("ach.crown_mark_") or String(key).begins_with("ach.dig_mark_") or String(key) in FALL_BANKED
 		if not fall_banked and not (String(key).contains("time") or String(key).contains("run_tally") or String(key).contains("-")):
 			stats[key] = doc["stats"][key]
 	return {"stats": stats, "earned": earned, "settled": settled}

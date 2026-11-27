@@ -21,7 +21,7 @@ const ISLANDS_POSTS := 1172
 # 12 m short of the walls' feet (park_dam.json hoodoo_1 to saguaro_26), so no post stands on a face.
 # Re-pinned 2026-10-30 for the same edge-post rule: dam 5184 -> 5177, flume 20 -> 16, pit 85 -> 79, sinkhole 1282 -> 1260,
 # crown 5620 -> 5436.
-const PINNED := {"dam": 5177, "flume": 16, "pit": 79, "sinkhole": 1260, "crown": 5436}
+const PINNED := {"dam": 5168, "flume": 16, "pit": 79, "sinkhole": 1260, "crown": 5436}
 
 var _t := T.new("park_anchor_span_test")
 

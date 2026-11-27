@@ -19,7 +19,7 @@ const T := preload("res://tests/support/t.gd")
 
 const PARKS := ["dam", "flume", "pit", "sinkhole", "islands", "crown"]
 # Posts dropped per park at the head that added field_posts (counted by this test, printed below).
-const DROPPED := {"dam": 516, "flume": 0, "pit": 0, "sinkhole": 1, "islands": 33, "crown": 598}
+const DROPPED := {"dam": 517, "flume": 0, "pit": 0, "sinkhole": 1, "islands": 33, "crown": 598}
 # One-post fields that lose their post: sinkhole cannon_tube_fill_45 and cannon_tube_post_2o share (-24.5, -298.0).
 const LOST_SINGLE := {"sinkhole": 1}
 

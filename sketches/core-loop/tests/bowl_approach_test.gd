@@ -133,6 +133,7 @@ func _run() -> void:
 	_game.run.run_seed = RUN_SEED
 	var approach = _game.world.bowl_approach
 	var terrain = _game.ctx.terrain
+	terrain.map_for(6).approach = {}
 	# Find the flume stage (whose approach and tally fields this test measures) and the first stage whose map names none.
 	var named := 0
 	var other := 0

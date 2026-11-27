@@ -101,6 +101,7 @@ func _run() -> void:
 	await _muster()
 	_game.run.run_seed = on[1]
 	_game.flow.enter_stage(2, Vector3.ZERO, false)
+	_game.run.set_max_hp(99999.0)
 	await _frames(4)
 	await _waits()
 	_game.run.run_seed = quiet

@@ -68,8 +68,13 @@ func _run() -> void:
 	_t.check("the cloud deck never collides", deck != null and deck.find_children("*", "CollisionObject3D", true, false).is_empty()
 		and not (deck.get_parent() is CollisionObject3D))
 	var cloud := deck.material_override as StandardMaterial3D if deck != null else null
-	_t.check("the cloud deck is cream with soft noise", cloud != null and cloud.albedo_texture != null
-		and _near(cloud.albedo_texture.get_image().get_pixel(0, 0), SHEET_CREAM.lerp(SHEET_COOL, 0.3)))
+	var cloud_sh := deck.material_override as ShaderMaterial if deck != null else null
+	var cloud_tex: Texture2D = cloud.albedo_texture if cloud != null else (cloud_sh.get_shader_parameter("cloud_tex") as Texture2D if cloud_sh != null else null)
+	var cloud_ok: bool = cloud_tex != null and (
+		(cloud != null and _near(cloud_tex.get_image().get_pixel(0, 0), SHEET_CREAM.lerp(SHEET_COOL, 0.3)))
+		or (cloud_sh != null and _near(Color(cloud_sh.get_shader_parameter("cloud_tint")), SHEET_CREAM))
+	)
+	_t.check("the cloud deck is cream with soft noise", cloud_ok)
 
 	var holder := stage.get_parent()
 	var key: DirectionalLight3D = null

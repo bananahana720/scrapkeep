@@ -767,6 +767,8 @@ func _place_moab_arches(batches: Dictionary, sites: ParkSites) -> void:
 	]
 	for spec in specs:
 		var at: Vector2 = spec["at"]
+		if not sites.clear(at, 0.0):
+			continue
 		var yaw: float = spec["yaw"]
 		var s: float = spec["scale"]
 		var right := Vector2(cos(yaw), -sin(yaw))
@@ -794,6 +796,8 @@ func _place_copper_benches(batches: Dictionary, sites: ParkSites) -> void:
 			var rad := deg_to_rad(float(deg))
 			var dir := Vector2(cos(rad), sin(rad))
 			var at := c + dir * r
+			if not sites.clear(at, 0.0):
+				continue
 			var inward := -dir
 			var yaw := ParkSites.yaw_toward(inward)
 			var y: float = sites.height(at) - 0.6 * s
@@ -815,6 +819,8 @@ func _place_moab_struts(batches: Dictionary, sites: ParkSites) -> void:
 	]
 	for spec in specs:
 		var at: Vector2 = spec["at"]
+		if not sites.clear(at, 0.0):
+			continue
 		var s: float = spec["scale"]
 		var y: float = sites.height(at) - 0.15 * s
 		var xf := Transform3D(Basis(Vector3.UP, float(spec["yaw"])).scaled(Vector3.ONE * s), Vector3(at.x, y, at.y))
@@ -849,6 +855,8 @@ func _place_malpais_basalt(batches: Dictionary, sites: ParkSites) -> void:
 	]
 	for spec in specs:
 		var at: Vector2 = spec["at"]
+		if not sites.clear(at, 0.0):
+			continue
 		var s: float = spec["scale"]
 		var y: float = sites.height(at) - 0.8 * s
 		var xf := Transform3D(Basis(Vector3.UP, float(spec["yaw"])).scaled(Vector3.ONE * s), Vector3(at.x, y, at.y))

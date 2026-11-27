@@ -126,4 +126,11 @@ func power() -> float:
 	for jump in mini(pattern.chain_jumps, POWER_CONTRACT["neighbours"]):
 		chain += pow(pattern.chain_falloff, jump + 1)
 	var rate: float = clampf(pattern.rate * mod("weapon_rate"), Pattern.MIN_RATE, Pattern.MAX_RATE) / base.rate
-	return pattern.damage / base.damage * mod("weapon_damage") * rate * pattern.volley_size() * chain
+	var bolt_power: float = pattern.damage / base.damage * mod("weapon_damage") * rate * pattern.volley_size() * chain
+	var vent_power := 0.0
+	if "gatling_heart" in ids:
+		var grow: Dictionary = Parts.micro_mutation("gatling_heart")
+		if float(POWER_CONTRACT["distance_m"]) <= float(grow.get("radius_m", 5.5)):
+			var every := float(maxi(1, int(grow.get("every_shots", 12))))
+			vent_power = (rate / every) * (float(grow.get("damage_base", 18.0)) * mod("weapon_damage") / base.damage)
+	return bolt_power + vent_power

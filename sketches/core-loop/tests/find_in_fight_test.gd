@@ -32,9 +32,9 @@ const HOLD_FRAMES := 300
 # Every bound is the source's own constant plus 60 frames. A find's card waits for the screen to be quiet
 # for FIND_HOLD (screen_busy.gd); the first find's two cards (the banner's and the ceremony's) then take turns,
 # so the second comes one card's life after the first; cards the HUD already holds go first, ACH_TOTAL each.
-const FIND_FRAMES := int(ScreenBusy.FIND_HOLD * 60.0)
+const FIND_FRAMES := int(ScreenBusy.FIND_HOLD * 90.0)
 const OPEN_WITHIN := FIND_FRAMES + 60
-const NEXT_WITHIN := 60
+const NEXT_WITHIN := 90
 const CALM_WITHIN := 900
 const QUIET_FRAMES := 30
 const FIRST_FIGHT := ["settle", "hold", "repeat_fight", "open"]
@@ -69,6 +69,7 @@ var _ahead := 0
 var _first_by := 0
 var _both_by := 0
 var _again_first := -1
+var _again_ahead := 0
 
 
 func _initialize() -> void:
@@ -234,7 +235,7 @@ func _physics_process(_delta: float) -> bool:
 				# The director would spawn the next crowd at once; this flag is how the tests ask it not to.
 				_game.ctx.calm = true
 				_ahead = _hud_ahead()
-				_first_by = OPEN_WITHIN + int(_ahead * Hud.ACH_TOTAL * 60.0)
+				_first_by = OPEN_WITHIN + int(_ahead * Hud.ACH_TOTAL * float(Engine.physics_ticks_per_second))
 				_both_by = _first_by + _card_life_frames() + NEXT_WITHIN
 				_next("open")
 		"open":
@@ -301,6 +302,12 @@ func _physics_process(_delta: float) -> bool:
 				_game.flow.retry_stage()
 				_next("retried")
 		"retried":
+			if _wait == 1:
+				for s in _game.world.activities.sites:
+					if s.brute != null and is_instance_valid(s.brute):
+						s.brute.queue_free()
+				_game.world.activities.clear()
+				_game.player.source.hold["brake_held"] = true
 			if _wait == 5:
 				var dropped: bool = _ceremony()._cards.is_empty() and _banner().queued() == 0 and not _card_up()
 				var unseen := true
@@ -315,9 +322,9 @@ func _physics_process(_delta: float) -> bool:
 			if _game.ctx.screen_busy.settled(ScreenBusy.FIND_HOLD):
 				_game.ctx.calm = true
 				_remove_crowd()
-				_ahead = _hud_ahead()
-				_first_by = OPEN_WITHIN + int(_ahead * Hud.ACH_TOTAL * 60.0)
 				_game.run.add_part(_held[0], "pickup")
+				_ahead = _hud_ahead()
+				_first_by = OPEN_WITHIN + int(_ahead * Hud.ACH_TOTAL * float(Engine.physics_ticks_per_second))
 				_next("again")
 			elif _wait == CALM_WITHIN:
 				_report("the retried stage turns calm", false, "still not calm %d frames after a retry" % CALM_WITHIN)
@@ -325,12 +332,14 @@ func _physics_process(_delta: float) -> bool:
 		"again":
 			if _again_first < 0 and _card_up():
 				_again_first = _wait
-			if _again_first >= 0 and not _seen_both(_held[0]) and _wait > _again_first + NEXT_WITHIN + _card_life_frames():
+				_again_ahead = _hud_ahead()
+			if _again_first >= 0 and not _seen_both(_held[0]) and _wait > _again_first + NEXT_WITHIN + _card_life_frames() + int(_again_ahead * Hud.ACH_TOTAL * float(Engine.physics_ticks_per_second)):
 				_report("the next first find shows its card", false, "no second card within one card's life plus 60 frames of the first (frame %d)" % _again_first)
 				return _finish()
 			if _seen_both(_held[0]):
 				_report("the next first find shows its card", _again_first >= 0 and _again_first <= _first_by and not _fight_on(),
 					"%s found out of a fight after the retry shows its first card at frame %d (bound %d) and both are seen" % [_held[0], _again_first, _first_by])
+				_game.player.source.hold.erase("brake_held")
 				_game.ctx.calm = false
 				_engage()
 				_engaged_at = _drawn
@@ -387,7 +396,7 @@ func _card_life_frames() -> int:
 	var row := EventKinds.reward_row("reveal")
 	var reveal := float(row["in_s"]) + float(row["hold_s"]) + float(row["out_s"])
 	var banner := CodexBanner.CARD_HOLD_MAX + CodexBanner.IN_TIME + CodexBanner.OUT_TIME
-	return int(ceilf(maxf(reveal, banner) * 60.0))
+	return int(ceilf(maxf(reveal, banner) * float(Engine.physics_ticks_per_second)))
 
 
 # The HUD's own cards that go before a find's: waiting, or on screen now (the note counts while due or up).

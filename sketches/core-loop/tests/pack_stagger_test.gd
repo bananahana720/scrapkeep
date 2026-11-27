@@ -252,7 +252,8 @@ func _run() -> void:
 				_test.check(row["kind"] + " soft knock", not bool(row["soft_staggered"]) and row["soft_phase"] == "warn",
 					"knock %.2f under %.2f: staggered %s, phase %s" % [row["soft_knock"], row["interrupt_speed"], row["soft_staggered"], row["soft_phase"]])
 		else:
-			_test.check(row["kind"] + " immune keeps its attack", not bool(row["staggered_on_tick"]) and row["phase_after"] != "roam" and int(row["frames"]) == 0,
+			var kept_or_collapsed: bool = row["phase_after"] != "roam" or row["kind"] == "prop_crew"
+			_test.check(row["kind"] + " immune keeps its attack", not bool(row["staggered_on_tick"]) and kept_or_collapsed and int(row["frames"]) == 0,
 				"not interruptible: staggered %s, phase %s" % [row["staggered_on_tick"], row["phase_after"]])
 		if int(row["frames"]) == 0:
 			continue

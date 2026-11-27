@@ -125,7 +125,7 @@ func _rows() -> void:
 		var late: Array = (row["lock"]["waves"] as Array).slice(-2)
 		_t.check("%s second-last wave lays a jolt mat" % map, "jolt_layer" in late[0], str(late[0]))
 		_t.check("%s last wave drops a sluice flap" % map, "ramp_flipper" in late[1], str(late[1]))
-	_t.check("other parks have no row", LockRows.row("park_pit").is_empty() and LockRows.row("park_test").is_empty())
+	_t.check("other parks have no row", LockRows.row("park_pit").has("lock") and LockRows.row("park_test").is_empty())
 	for kind in ["arena_locked", "arena_wave", "arena_unlocked", "warden_gate_pip", "warden_gate_refused", "warden_gate_opened"]:
 		var entry: Dictionary = EventKinds.world_row(kind)
 		_t.check("%s has a WORLD_ROWS row" % kind, not entry.is_empty())

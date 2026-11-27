@@ -8,11 +8,13 @@ const Posture = preload("res://src/combat/boss_posture.gd")
 const Run = preload("res://src/core/run_state.gd")
 const Tuning = preload("res://src/movement/tuning.gd")
 const Combat = preload("res://src/combat/combat.gd")
+const StageLocks = preload("res://src/world/stage_locks.gd")
 const T = preload("res://tests/support/t.gd")
 var t = T.new("park_reactor_rhythm_test")
 var game
 func _initialize() -> void: _run.call_deferred()
 func _setup(heft: float) -> void:
+	StageLocks.active = false
 	game = Game.new()
 	game.test_mode = true
 	game.table = "park"
@@ -21,6 +23,8 @@ func _setup(heft: float) -> void:
 	game.flow.force_warden = true
 	game.flow.press_start()
 	game.flow.choose_class(1)
+	game.run.set_max_hp(99999.0)
+	game.run.defend_hook = func(_amount: float, _hp: float) -> float: return 0.0
 	game.player.source = Intent.Scripted.new()
 	game.run.grant_start_mass((heft - Run.HEFT_CLASS_AT[0]) / Run.HEFT_PER_MASS)
 	for i in 40: await physics_frame
@@ -77,6 +81,7 @@ func _run() -> void:
 		var expected: float = w._posture.base.ram * pow(clampf(punch / w.plating_for("ram", ""), w._posture.mult_min, w._posture.mult_max), w._posture.curve)
 		t.near("dry-face contact keeps today's gain", w.posture(), expected)
 	game.free()
+	StageLocks.active = true
 	quit(t.verdict())
 func _cycles(heft: float, label: String) -> Dictionary:
 	await _setup(heft)
@@ -101,7 +106,8 @@ func _cycles(heft: float, label: String) -> Dictionary:
 			last_cycle = sheet.gates_opened
 			pulse_times.append(game.run.stage_time)
 			var foot: Vector3 = w.home + sheet.sheet_dir * (Reactor.SHEET_RUN - Tuning.RADIUS)
-			game.player.reset_to(game.ctx.terrain.drop_point(foot.x, foot.z, Tuning.RADIUS), -sheet.sheet_dir * game.player.tuning.f("cruise"))
+			var start_at: Vector3 = game.ctx.terrain.drop_point(foot.x, foot.z, Tuning.RADIUS)
+			game.player.reset_to(start_at, -sheet.sheet_dir * game.player.tuning.f("cruise"))
 		elif not sheet.sheet_live():
 			var wait: Vector3 = w.home + Vector3.FORWARD * (Reactor.SHEET_RUN - Tuning.RADIUS)
 			game.player.reset_to(game.ctx.terrain.drop_point(wait.x, wait.z, Tuning.RADIUS), Vector3.ZERO)

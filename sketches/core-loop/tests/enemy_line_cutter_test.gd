@@ -59,6 +59,7 @@ func _spawn():
 # cannot clear them before the landing.
 func _throw(unit, hooked: bool, gliding: bool, interrupt := false, height := 0.0) -> void:
 	unit._rest = 99.0
+	unit.next_attack = "line"
 	unit.phase = unit.Phase.ROAM
 	unit._warn(unit._flat_to_ball())
 	if interrupt:

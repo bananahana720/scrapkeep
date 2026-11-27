@@ -3,6 +3,7 @@ extends SceneTree
 const DIR := "res://assets/models/dig_mechanical/"
 const PROP := [270, 610, 1]
 const SCENERY := [120, 110, 2]
+const W50_EXTRA := ["timber_rock_strut.glb"]
 const REQUIRED := {
 	"impeller_rim_sector": ["RimSector", "socket_join_a", "socket_join_b"],
 	"impeller_hub": ["Hub", "socket_vane_0", "socket_vane_1", "socket_vane_2", "socket_vane_3", "socket_vane_4"],
@@ -85,7 +86,7 @@ func _run() -> void:
 	expected.sort()
 	actual.sort()
 	_check(expected == actual, "exactly 26 contracted assets in manifest")
-	var on_disk := Array(DirAccess.get_files_at(asset_dir)).filter(func(f: String) -> bool: return f.ends_with(".glb"))
+	var on_disk := Array(DirAccess.get_files_at(asset_dir)).filter(func(f: String) -> bool: return f.ends_with(".glb") and not f in W50_EXTRA)
 	_check(on_disk.size() == wanted.size(), "all exported GLBs covered by test")
 	for name: String in wanted:
 		if not rows.has(name):

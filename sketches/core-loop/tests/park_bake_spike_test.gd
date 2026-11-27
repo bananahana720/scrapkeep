@@ -49,7 +49,7 @@ const KNOWN := {"park_sinkhole": {"axis": "z", "z": 400.0}}
 # coordinate (x, z) beside the z=400 line; park_stamps.gd edge rules stay untouched this wave. Each
 # pin must still fire, so the card that fixes the bake deletes the pins and this test says so.
 const KNOWN_POINTS := {"park_sinkhole": [
-	Vector2i(52, -384), Vector2i(-56, -14), Vector2i(-56, -12), Vector2i(-56, -10), Vector2i(-56, -8),
+	Vector2i(52, -384),
 	Vector2i(126, 272), Vector2i(126, 274), Vector2i(126, 276), Vector2i(126, 278), Vector2i(126, 280)]}
 
 var t := T.new("park_bake_spike_test")

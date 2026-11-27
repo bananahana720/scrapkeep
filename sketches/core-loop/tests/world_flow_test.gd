@@ -24,7 +24,7 @@ const TICK_LIMIT := 90 * 70
 class FakeSpawner extends Node:
 	var calls: Array = []
 
-	func spawn_enemy(kind: String, at: Vector3, _affix_id := "") -> Node3D:
+	func spawn_enemy(kind: String, at: Vector3, _affix_id := "", _perch := Vector3.INF, _hp_mult := 1.0) -> Node3D:
 		calls.append([kind, at])
 		return null
 

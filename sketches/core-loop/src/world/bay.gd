@@ -585,7 +585,6 @@ func _model(part: String, parent: Node3D, at: Vector3) -> MeshInstance3D:
 	var view := ModelKit.part(KIT, KIT_PARTS, part, parent)
 	if view != null:
 		view.position = at
-		PropMeshes.weather_node_materials(view, 3.0)
 	return view
 
 
@@ -598,8 +597,8 @@ func _visual(size: Vector3, at: Vector3, mat: Material) -> MeshInstance3D:
 	return mesh
 
 
-func _bay_mat(color: Color, emit := 0.0) -> StandardMaterial3D:
-	return PropMeshes.weathered_material(color, 0.74, 0.24, emit, "bay_" + color.to_html(false))
+func _bay_mat(color: Color, emit := 0.0) -> Material:
+	return Palette.solid(color, emit) if emit > 0.0 else _paint(color)
 
 
 func _paint(color: Color, kind := 1, size := Vector3.ZERO, original: Material = null) -> Material:

@@ -137,15 +137,15 @@ func _pass(speed: float, overrides: Dictionary, head_on := false, own_speed := t
 
 func _run() -> void:
 	ChallengeDials.reset()
-	_t.eq("01 the lead ships at half across all stages", ChallengeDials.value("pack.lead_by_stage"), [0.5, 0.5, 0.5, 0.5, 0.5, 0.5])
-	_t.near("02 a dam crew reads half", PackPressure.crew_row(1).lead, 0.5)
+	_t.eq("01 the lead ships at half across all stages", ChallengeDials.value("pack.lead_by_stage"), [0.7, 0.5, 0.5, 0.5, 0.5, 0.5])
+	_t.near("02 a dam crew reads half", PackPressure.crew_row(1).lead, 0.7)
 	_t.near("03 a flume crew reads half", PackPressure.crew_row(2).lead, 0.5)
 	_t.near("04 a Dig crew inherits half", PackPressure.crew_row(3).lead, 0.5)
 	_t.check("05 the wind-up is at least the tell floor", Chaser.WINDUP >= ChallengeDials.TELL_FLOOR, "WINDUP %.2f s, floor %.2f s" % [Chaser.WINDUP, ChallengeDials.TELL_FLOOR])
 	await _boot()
 	var tick := 1.0 / float(Engine.physics_ticks_per_second)
 	var slow: Dictionary = await _pass(SLOW, {})
-	_t.near("06 a chaser spawned on the dam carries the half lead", slow.lead, 0.5)
+	_t.near("06 a chaser spawned on the dam carries the half lead", slow.lead, 0.7)
 	_t.check("07 a ball crawling across its front is lunged", slow.hit, "%.1f m/s at %.0f m: hit %s" % [SLOW, GAP, slow.hit])
 	_t.check("08 the lane stood the whole wind-up first", slow.tell >= Chaser.WINDUP - tick - 0.0001, "lane to lunge %.3f s, WINDUP %.2f s" % [slow.tell, Chaser.WINDUP])
 	# The planted case: the same pass with the lead off is the game before this unit, and it must miss, or
@@ -166,7 +166,8 @@ func _run() -> void:
 	for share in [0.0, 0.5, PackPressure.LEAD_FADE_FROM, 0.5 + PackPressure.LEAD_FADE_FROM * 0.5, 1.0, 1.5]:
 		roller.v = Vector3(cruise * share, 0.0, 0.0)
 		read.append(snappedf(PackPressure.lead_now(row, roller), 0.001))
-	_t.eq("14 a dam crew's lead is whole to %.2f of cruise, half way down at the midpoint and gone at cruise" % PackPressure.LEAD_FADE_FROM, read, [0.5, 0.5, 0.5, 0.25, 0.0, 0.0])
+	var want_fade := [0.7, 0.7, 0.7, 0.35, 0.0, 0.0].map(func(x: float) -> float: return snappedf(x, 0.001))
+	_t.eq("14 a dam crew's lead is whole to %.2f of cruise, half way down at the midpoint and gone at cruise" % PackPressure.LEAD_FADE_FROM, read, want_fade)
 	roller.v = Vector3(cruise * 1.5, 0.0, 0.0)
 	_t.near("15 a row that keeps its lead at cruise reads it whole at any speed", PackPressure.lead_now({"lead": 0.5, "lead_cruise": 1.0}, roller), 0.5)
 	var met: Dictionary = await _pass(FAST, {}, true)

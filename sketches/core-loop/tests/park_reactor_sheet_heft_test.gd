@@ -6,6 +6,7 @@ const Reactor = preload("res://src/combat/warden_reactor.gd")
 const Warden = preload("res://src/combat/warden.gd")
 const Run = preload("res://src/core/run_state.gd")
 const Tuning = preload("res://src/movement/tuning.gd")
+const StageLocks = preload("res://src/world/stage_locks.gd")
 const T = preload("res://tests/support/t.gd")
 var t = T.new("park_reactor_sheet_heft_test")
 var game
@@ -61,12 +62,14 @@ func _one_sheet_one_ram() -> void:
 	mount.target.rigid.touching.clear()
 
 func _run() -> void:
+	StageLocks.active = false
 	_one_sheet_one_ram()
 	var small: Dictionary = await _rams(Run.HEFT_CLASS_AT[0], 0)
 	t.check("a heft-1.0 ball breaks the dam on its seventh sheet ram", small.broken and small.rams == 7, str(small))
 	var worn: Dictionary = await _rams(Run.HEFT_CLASS_AT[2], 1)
 	t.check("the worn ball sits under the grown mark and still holds the grown class", worn.heft < Run.HEFT_CLASS_AT[2] and worn.held == 3, str(worn))
 	t.check("a grown-class ball one wear unit under the mark breaks on its third sheet ram", worn.broken and worn.rams == 3, str(worn))
+	StageLocks.active = true
 	quit(t.verdict())
 
 func _rams(heft: float, worn_units: int) -> Dictionary:
@@ -78,6 +81,8 @@ func _rams(heft: float, worn_units: int) -> Dictionary:
 	game.flow.force_warden = true
 	game.flow.press_start()
 	game.flow.choose_class(1)
+	game.run.set_max_hp(99999.0)
+	game.run.defend_hook = func(_amount: float, _hp: float) -> float: return 0.0
 	game.player.source = Intent.Scripted.new()
 	game.run.grant_start_mass((heft - Run.HEFT_CLASS_AT[0]) / Run.HEFT_PER_MASS)
 	for i in 40: await physics_frame
@@ -92,13 +97,15 @@ func _rams(heft: float, worn_units: int) -> Dictionary:
 	game.events.enemy_struck.connect(func(enemy, kind, _force):
 		if enemy == w and kind in ["ram", "stomp", "slam"] and sheet.sheet_live(): result.rams += 1)
 	game.events.beacon_unsealed.connect(func(_stage): result.broken = true)
+	var core_at: Vector3 = w.family_point_at()
 	var last_cycle := -1
 	for tick in roundi(Warden.PULSE_CYCLE * 20 * Engine.physics_ticks_per_second):
 		if result.broken: break
 		if sheet.sheet_live() and sheet.gates_opened != last_cycle:
 			last_cycle = sheet.gates_opened
 			var foot: Vector3 = w.home + sheet.sheet_dir * (Reactor.SHEET_RUN - Tuning.RADIUS)
-			game.player.reset_to(game.ctx.terrain.drop_point(foot.x, foot.z, Tuning.RADIUS), -sheet.sheet_dir * game.player.tuning.f("cruise"))
+			var start_at: Vector3 = game.ctx.terrain.drop_point(foot.x, foot.z, Tuning.RADIUS)
+			game.player.reset_to(start_at, -sheet.sheet_dir * game.player.tuning.f("cruise"))
 		elif not sheet.sheet_live():
 			var wait: Vector3 = w.home + Vector3.FORWARD * (Reactor.SHEET_RUN - Tuning.RADIUS)
 			game.player.reset_to(game.ctx.terrain.drop_point(wait.x, wait.z, Tuning.RADIUS), Vector3.ZERO)

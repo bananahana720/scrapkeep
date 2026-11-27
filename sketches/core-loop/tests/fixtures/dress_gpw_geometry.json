@@ -108,31 +108,31 @@
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "CylinderMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/7",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "CylinderMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/8",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "CylinderMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/9",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "CylinderMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/10",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/11",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
@@ -156,19 +156,19 @@
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/13",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/14",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/15",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
@@ -216,7 +216,7 @@
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/23",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
@@ -228,13 +228,13 @@
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "SphereMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/25",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/26",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
@@ -276,7 +276,7 @@
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/29",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
@@ -390,31 +390,31 @@
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "CylinderMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/36",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/37",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/38",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "BoxMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/0/39",
 		"surfaces": 1,
 		"type": "MeshInstance3D"
 	},
 	{
-		"mesh": "TorusMesh",
+		"mesh": "ArrayMesh",
 		"path": "root/3/1/0",
 		"surfaces": 1,
 		"type": "MeshInstance3D"

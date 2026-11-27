@@ -263,7 +263,7 @@ const INHERITED_PINS := {
 	# button in place of a fixed E (Wave 44 audit).
 	"device": "df8c6c95e0c30134840d77dd9070190071c9325f377d1ec29c5ab5458b96ba36",
 	"interactables": "693003acc330eaffb583edf65056f45c13b09918795409fb3b2e7e7fa86b8713",
-	"interact": "52023d69247026b37e2ddbf86c4a91f28bb619f78232c4aa968143322f023087",
+	"interact": "4211c0ccb3631e6fd9dff62b929527f38a1bf1a99ae9dea7217e9f75470a0708",
 }
 
 

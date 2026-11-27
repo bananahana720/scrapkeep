@@ -12,6 +12,7 @@ const SPECS := {
 	"bed_recess": ["RecessStudy", Vector3(8, 4, 8), {}],
 }
 const BEDS := "const float BEDS[8] = float[8](1.7, 0.8, 2.6, 1.1, 0.6, 2.1, 1.4, 0.9);"
+const W50_SCENERY := ["basalt_column_rib.glb", "copper_vein_face.glb", "moab_arch.glb"]
 var failures := 0
 var model_dir := BASE
 
@@ -156,7 +157,7 @@ func _run() -> void:
 				rows[String(row.get("root", ""))] = row
 	_check(rows.size() == 8, "manifest has eight required assets")
 	var inventory := DirAccess.get_files_at(model_dir)
-	var glbs := Array(inventory).filter(func(p): return p.ends_with(".glb"))
+	var glbs := Array(inventory).filter(func(p): return p.ends_with(".glb") and not p in W50_SCENERY)
 	_check(glbs.size() == 8, "every exported GLB is covered by this test")
 	for name in SPECS:
 		_asset(name, rows)

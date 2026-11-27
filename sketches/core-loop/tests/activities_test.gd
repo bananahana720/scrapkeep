@@ -500,8 +500,10 @@ func _cache() -> void:
 	_put(_ground(s.pedestal + back * 3.0))
 	await _hold(3)
 	var own_before: int = _game.run.parts.count(s.pickup_part)
+	var spares_before: int = int(_game.ctx.build.makers.fires.get("packed_a_spare", 0))
 	var onto: Dictionary = await _line(_ground(s.pedestal + back * 4.0), heading * 8.0, 40)
-	_t.eq("touching the pedestal's pickup adds exactly one part", _game.run.parts.count(s.pickup_part), own_before + 1)
+	var spares_added: int = int(_game.ctx.build.makers.fires.get("packed_a_spare", 0)) - spares_before
+	_t.eq("touching the pedestal's pickup adds exactly one part", _game.run.parts.count(s.pickup_part), own_before + 1 + spares_added)
 	var own_after: int = _game.run.parts.size()
 	var onto_control: Dictionary = await _line(_ground(s.pedestal + back * 4.0), heading * 8.0, 40)
 	_t.eq("a second pass adds nothing", _game.run.parts.size(), own_after)
