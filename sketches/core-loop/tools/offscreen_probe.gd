@@ -6,7 +6,7 @@ extends "res://tools/dam_look_capture.gd"
 const OffscreenWindow := preload("res://tools/offscreen_window.gd")
 const Harness := preload("res://tools/look_harness.gd")
 const Subjects := preload("res://tools/look_subjects.gd")
-const Bars := preload("res://src/core/defence_bars.gd")
+const Bars := preload("res://tests/support/defence_bars.gd")
 
 
 func _initialize() -> void:

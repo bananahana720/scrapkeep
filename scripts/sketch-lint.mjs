@@ -936,8 +936,6 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/core/beacon.gd:_shared_torus",
   "src/core/beacon.gd:_slot_materials",
   "src/core/build_stamp.gd:_stamp",
-  "src/core/content_registry.gd:_pass",
-  "src/core/content_registry.gd:_pass_depth",
   "src/core/palette.gd:_checkers",
   "src/core/palette.gd:_grain_normal",
   "src/core/palette.gd:_grain_rough",

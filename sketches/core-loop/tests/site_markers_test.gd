@@ -35,7 +35,7 @@ const RogueDirector := preload("res://src/world/rogue_director.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 const Game := preload("res://src/game.gd")
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 
 const WORLD1 := ["park_dam", "park_flume"]
 const COLOUR_GAP := 35.0
