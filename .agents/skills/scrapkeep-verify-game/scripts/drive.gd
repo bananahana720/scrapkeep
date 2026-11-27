@@ -14,7 +14,7 @@ extends Node
 #   wait <s>
 #   until state <name> [<timeout s>]      title, class_select, stage, beacon, gates, launch,
 #                                         summary, dead, boss, victory, lap
-#   until play [<timeout s>]              the ball is in play (a stage, the gates, a launch, a boss)
+#   until play [<timeout s>]              the ball is in play (stage, beacon, gates, launch, boss, lap)
 #   until text "<words>" [<timeout s>]    the words are drawn somewhere, even under another layer
 #   until no_text "<words>" [<timeout s>]
 #   until clickable "<words>" [<timeout s>]  the words are drawn AND the pointer over them lands on them
@@ -22,7 +22,7 @@ extends Node
 #   until read <expression> [<timeout s>] until the expression is true (see read)
 #   key <NAME> [<hold s>]                 SPACE, E, 1, ESCAPE, TAB, W ... (Godot key names)
 #   down <NAME> / up <NAME>               hold a key across other steps
-#   tap_until <NAME> <state|play|text|no_text|read> <what> [<timeout s>]
+#   tap_until <NAME> <state|play|text|no_text|clickable|read> <what> [<timeout s>]
 #                                         tap the key every 0.6 s until the condition holds (a page
 #                                         turner: tap_until E no_text "FIRST SHIFT")
 #   mouse <left|right> [<hold s>]         a mouse button at the pointer
@@ -77,7 +77,7 @@ func _ready() -> void:
 		get_tree().quit(2)
 		return
 	if DisplayServer.get_name() == "headless":
-		push_error("drive: needs a drawn display (xvfb-run), not --headless")
+		push_error("drive: needs a drawn display (macOS --embedded --rendering-driver metal or Linux xvfb-run), not --headless")
 		get_tree().quit(2)
 		return
 	DirAccess.make_dir_recursive_absolute(_out)

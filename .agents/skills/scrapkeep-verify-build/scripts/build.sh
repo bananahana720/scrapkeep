@@ -47,7 +47,7 @@ case "${1:-}" in
     say OK "packed game $exe ($(du -h "$exe" | cut -f1), built $(date -u -r "$exe" +%FT%TZ))"
     # The boot's save folder is scratch under artifacts/local/; without one the game would use the player's own.
     mkdir -p "$VERIFY_GAME_EVIDENCE_ROOT" && scratch="$(mktemp -d "$VERIFY_GAME_EVIDENCE_ROOT/doctor-boot.XXXXXX")" && [ -d "$scratch" ] || { say FAIL "could not make a scratch save folder under $VERIFY_GAME_EVIDENCE_ROOT"; exit 1; }
-    stamp="$(cd "$(dirname "$exe")" && XDG_DATA_HOME="$scratch" XDG_CONFIG_HOME="$scratch" XDG_CACHE_HOME="$scratch" timeout 120 "$exe" --headless --quit-after 2 2>&1 | grep -m1 '^SCRAPKEEP_BUILD')"
+    stamp="$(cd "$(dirname "$exe")" && XDG_DATA_HOME="$scratch" XDG_CONFIG_HOME="$scratch" XDG_CACHE_HOME="$scratch" timeout 120 "$exe" --headless --audio-driver Dummy --quit-after 2 2>&1 | grep -m1 '^SCRAPKEEP_BUILD')"
     rm -rf "${scratch:?}"
     case "$stamp" in
       *"commit=$head"*) say OK "the build names this checkout's commit: $stamp" ;;

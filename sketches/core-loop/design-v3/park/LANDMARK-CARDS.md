@@ -1,5 +1,7 @@
 # Hero landmark build cards
 
+> **Historical / Partially superseded build spec (16 Oct 2026):** Landmarks and P1–P6/P8 port items are built in `assets/models/park/landmarks/` and `park_*.json`; only `hero_landmark` draw-range widening (P7, currently `300/900 m` in `assets/asset_budgets.json`) remains unbuilt.
+
 One card per hero landmark: `landmark_dam`, `landmark_penstock_tower`, `landmark_headframe`, `landmark_sinkhole`, `landmark_sky_island` and `landmark_spire` (PARK.md section 4, the `hero_landmark` budget class). Each card gives the silhouette and parts, the Warden mounting points, the LOD budgets, the materials, the existing models and Blender recipes to reuse, how the stage's park rows fit with PARK-SEAT and PARK-TILE, and the test that would pin the result.
 
 Written 2026-10-16 from `main` at 77b99de, by reading the sources named in each line. Blender and Godot were not run, so nothing here is measured in the engine. Triangle counts of existing GLBs come from their glTF accessors (index count / 3), read with a script.

@@ -15,6 +15,10 @@ chunk_size = int(args.get("chunk_size", 50))
 frames = sorted(glob.glob(os.path.join(reader_dir, "*.jpg")))
 if not frames:
     raise FileNotFoundError(f"No .jpg frames found in {reader_dir}")
+if not os.path.isfile(brief_path):
+    raise FileNotFoundError(f"Missing reader brief: {brief_path}")
+if not os.path.isfile(judge_sheet_path):
+    raise FileNotFoundError(f"Missing judge sheet: {judge_sheet_path}")
 
 # Stage a clean reader-only view under artifacts/local/eye-reader-staging/ so paths
 # passed to the blind Reader never expose `eye_dir` directory flags (such as --plant)
@@ -75,7 +79,7 @@ chunk_reports = await parallel(
         role=f"Blind Film Reader {pair[0] + 1}/{len(chunks)}",
         type_name="scrapkeep-explorer",
         workspace="inherit",
-        model="pro",
+        model=args.get("reader_model") or "inherit",
     ),
 )
 
@@ -114,7 +118,7 @@ judge_report = await agent(
     role="Film Judge",
     type_name="scrapkeep-reviewer-medium",
     workspace="inherit",
-    model="pro",
+    model=args.get("judge_model") or "inherit",
 )
 
 result = {"eye_dir": eye_dir, "frames": len(frames), "chunks": len(chunks), "reader_chunks": chunk_reports, "judge": judge_report}

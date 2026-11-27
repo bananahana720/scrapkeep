@@ -17,7 +17,7 @@ Read [references/gotchas.md](references/gotchas.md) before the first call. It li
 2. Drive it with `npx -y mojulo@3.0.0 call <tool> --json @<absolute args file>`. Pass an absolute path: a relative args file resolves against another directory (BLK-03).
 3. Export with `MOJULO_MCP_TOOL_TIMEOUT_MS=600000`. The 120 s default budget kills big exports and writes no glb (BLK-04).
 4. Read the manual for a kind before using it: `call get_solid_vocab --json '{"id":"workbench"}'`, or `code`, `scad`, or `get_view_vocab` for `terrain`.
-5. Keep work under `artifacts/` on a lab or greybox branch. Run CPU work at `nice -n 10`, and take no GPU while `~/scratch/w18/gates/timing.lock` is held (design choice).
+5. Keep work under `artifacts/` on a lab or greybox branch. Run CPU work at `nice -n 10`, and isolate GPU captures from other render/perf runs per `project-guide/handoff/DEVICES.md` (design choice).
 
 ## 2. Pick the input
 
@@ -53,7 +53,7 @@ Work in mojulo units: cm, z up. Put the toe or floor at z = 0.
 
 ## 6. Stills for Andrew
 
-Render a board-camera still and a top-down still in Blender, Cycles on the CPU (`artifacts/mojulo-lab/local/C/hero_stills.py`). Keep each JPEG under 500 KB. Keep any glb over 50 MB out of git (design choice).
+Render a board-camera still and a top-down still in Blender, Cycles on the CPU (`artifacts/mojulo-lab/local/C/hero_stills.py` sets the Spillway dam camera angles; adapt its view coordinates for other arenas). Keep each JPEG under 500 KB, and keep any glb over 50 MB out of git (design choice).
 
 ## Lessons and updates
 

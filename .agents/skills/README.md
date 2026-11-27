@@ -11,15 +11,15 @@ Each directory here is one skill that Antigravity loads natively from `.agents/s
 | `scrapkeep-verify-game` | project | play the launched game from a step file and keep the proof a feature works |
 | `scrapkeep-verify-build` | project | check and play the packed Linux build Andrew installs |
 | `scrapkeep-verify-web` | project | drive the Sitting Kit and the two preserved browser proofs in a real browser |
-| `scrapkeep-verify-formal` | project | model-check the run flow and launch swipe under every interruption |
+| `scrapkeep-verify-formal` | project | model-check RunFlow, Rewards, HazardCycle, ParkFlood, Destructibles, YardLock, EarnedSave, DeferredEffects, BrindleReel, SoundArbiter, and WeaponCadence |
 | `scrapkeep-gemini-workflows` | project | orchestrate Antigravity `run_workflow` pipelines, Gemini tier routing, and card batches |
 | `scrapkeep-visual-review` | project | run Gemini multimodal UI audits, blind `eye.mjs` film reads, and reference sheets |
 | `scrapkeep-dev-console` | project | drive the dev console CLI lever, warm File-Mailbox sessions, recipes, and silent offscreen sheets |
 | `reactive-model-loop` | portable | design and evaluate a fast model that decides inside a running system |
 
-`reactive-model-loop` is a portable skill with no project-specific paths or rules; `scripts/check-skills.mjs` enforces that portability boundary.
+`reactive-model-loop` is canonical in this repository (`ruling er`, 26 November 2026) with no project-specific paths or rules; `scripts/check-skills.mjs` enforces that portability boundary.
 
-The three `scrapkeep-verify-*` skills each maintain a `features/` map (one file per player-facing feature) and helper scripts under `scripts/`; audit each map directly against source and the running app when features change. `scrapkeep-verify` picks which checks qualify a diff; these three show a feature working.
+The three feature-map verification skills (`scrapkeep-verify-game`, `scrapkeep-verify-build`, `scrapkeep-verify-web`) each maintain a `features/` map (one file per player-facing feature) and helper scripts under `scripts/`; `/pstack:maintain-verification-skill` audits each map against source and the running app, and `/pstack:maintain-formal-verification-skill` maintains `scrapkeep-verify-formal`. `scrapkeep-verify` picks which checks qualify a diff.
 
 ## Decide whether it is a skill
 

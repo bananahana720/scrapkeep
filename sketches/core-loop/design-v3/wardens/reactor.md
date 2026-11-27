@@ -1,5 +1,7 @@
 # Warden kind sheet: `reactor`, the reactor relic
 
+> **Historical / Built spec (10 Oct 2026):** Live implementation owns tuned stats in `sketches/core-loop/src/combat/warden*.gd`, `src/core/park_defs.gd`, and `src/core/alpha_defs.gd` (ignore any retired `QUARANTINE.tsv` references; use `KNOWN-FAILING.tsv`).
+
 World 1, Spillway Works. Mountings `dam_face` (stage 1, `park_dam`, variant `""`) and `flume` (stage 2, `park_flume`, variant `meltdown`). Board id `warden-reactor`. Status: draft for Andrew's approval (unit K-W1, 2026-10-10). Numbers without a file:line are starting values to tune in play.
 
 The kind id is the existing family id `reactor` (`src/combat/roster.gd:31-33`, via PARK.md:420), so the posture rule, the kit switch (`warden_kit.gd:34-40`) and the asset key (`hero_assets.gd:7`) keep working. The stage pages are `design-v3/park/stages/1-park_dam.md` and `2-park_flume.md`.
@@ -63,7 +65,7 @@ The relic clamps to the centreline of the dam's curved face, anchor [0, 22, 590]
 
 ### 3.2 `flume` (stage 2): it boils the flume
 
-The relic clamps onto the flume's pour channel inside the head house, anchor [230, 41, 470], 12 m above the drum floor. This is today's `meltdown` variant, placed:
+The relic clamps onto the flume's pour channel inside the head house; live `park_flume.json` places the anchor at `[230, -2, 470]` (originally drafted as `[230, 41, 470]` 12 m above the drum floor). This is the `meltdown` variant, placed:
 
 - **Slag lanes.** Every pulse leaves a lane toward the ball, 14 m long and 4 m wide, that fills over 1 s and burns a grounded ball inside it for 6 s at 4 damage a second (`warden.gd:29-31`, `56-60`, `263-291`). In the head house each lane pours out of the flume's channel and runs down the drum floor, so the lanes always start from one readable place.
 - **The counter is air.** A ball over a burning lane, no more than 8 m above it, is safe and earns `slag_hop` (`warden.gd:62`, `312-321`; `codex_entries.gd:131-135`).
@@ -118,7 +120,7 @@ The KF5 body exports these clips in the shape of the boss bodies' clip tables (`
 
 **The reactor band** that KF2 adds to `posture_bands_test.gd` (PARK.md:548):
 
-| Arm | Dam face (stage 1 numbers: plating 90, hp 650, `alpha_defs.gd:72`) | Flume, meltdown (plating 110, hp 800, `alpha_defs.gd:78`) |
+| Arm | Dam face (`alpha_defs.gd`: plating `105.0`, hp `650.0`, drafted at 90) | Flume, meltdown (`alpha_defs.gd`: plating `110.0`, hp `800.0`) |
 | --- | --- | --- |
 | grown median | 25 to 45 s | 25 to 45 s |
 | small median | at least 2 times grown | at least 2 times grown |
@@ -137,7 +139,7 @@ Each unit writes in its own worktree, gets a verifier and one fix round; red-the
 
 **KF5 Reactor body.** SCOPE: `tools/blender/warden_reactor.py`, `assets/models/warden_reactor.glb` with the section 5 clips, the `hero_assets.gd` row, a look subject. ACCEPTANCE: `npm run asset:inspect` passes the `warden_base` class (5,000 triangles, 32 draws) for the body and `warden_kit` (1,500, 18) for any kit part (`assets/asset_budgets.json`); below 2 m nothing passes the 2.8 m collider radius (`warden_look.gd:31-32`); every clip in section 5 exists with its length; blind pairs read "pile", not "hive" or "hand", at 20, 60 and 150 m. Order: after this sheet is approved.
 
-**KF8 Mountings and wiring.** SCOPE: `src/combat/warden_look.gd`, `warden_kit.gd` (read the kind body), and the `landmark.warden` object in `src/world/park/park_dam.json` and `park_flume.json` only. ACCEPTANCE: the dam relic sits on the face at [0, 22, 590] and the flume relic on the pour channel at [230, 41, 470]; three hardpoints per mounting where section 4 puts them; the bot (KF1's test) latches, rides 3 s, fires from the line, survives a shrug with its velocity, and finishes with a drop on both stages. Order: after KD1, KD2 and KF5.
+**KF8 Mountings and wiring.** SCOPE: `src/combat/warden_look.gd`, `warden_kit.gd` (read the kind body), and the `landmark.warden` object in `src/world/park/park_dam.json` and `park_flume.json` only. ACCEPTANCE: the dam relic sits on the face at `[0, 22, 590]` and the flume relic on the pour channel (`park_flume.json` live anchor `[230, -2, 470]`; drafted `[230, 41, 470]`); three hardpoints per mounting where section 4 puts them; the bot (KF1's test) latches, rides 3 s, fires from the line, survives a shrug with its velocity, and finishes with a drop on both stages. Order: after KD1, KD2 and KF5.
 
 ## 9. Storyboard
 

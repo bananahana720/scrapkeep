@@ -58,6 +58,7 @@ const MENU_ROWS := [
 	{"keys": "Tab (hold)", "does": "field notes and the codex; the game pauses while held; Q / E switch pages", "caps": ["key_tab"], "short": "notes"},
 	{"keys": ". , / ;", "does": "the radio, with . for the next station, , for back, / to skip the track and ; to keep the track on through a boss"},
 	{"keys": "F", "does": "fire the racked active, when actives are on (the D-pad down on a pad); nothing is racked otherwise"},
+	{"keys": "C", "does": "use a held consumable"},
 	{"keys": "- / =", "does": "music volume down / up (also in the pause menu)"},
 	{"keys": "[ / ]", "does": "effects volume down / up (also in the pause menu)"},
 	{"keys": "M", "does": "mute or unmute"},
@@ -461,6 +462,9 @@ func _input(event: InputEvent) -> void:
 		return
 	match event.physical_keycode:
 		KEY_TAB:
+			var menu = game.get_node_or_null("PauseMenu") if game != null else null
+			if menu != null and menu.is_open():
+				return
 			game.hold_notes(event.pressed)
 			if event.pressed:
 				show_page(_page)

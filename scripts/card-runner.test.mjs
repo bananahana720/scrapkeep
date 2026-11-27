@@ -1,7 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { BUDGETS, claudeJson, liveBoard, openStage, parseCards, plan, refusal, reviewPrompt, reviewVerdict, takenIds } from "./card-runner.mjs";
+import {
+  BUDGETS,
+  claudeJson,
+  liveBoard,
+  openStage,
+  parseCards,
+  plan,
+  refusal,
+  render,
+  reviewPrompt,
+  reviewVerdict,
+  takenIds,
+} from "./card-runner.mjs";
 
 const BACKLOG = `# Backlog
 
@@ -36,7 +48,27 @@ const STATE = `| Open stage | stage/alpha-w39 |\n| Live board | #848 |\n`;
 
 test("parses card rows under their section with header keys", () => {
   const cards = parseCards(BACKLOG);
-  assert.deepEqual(cards.map((card) => card.id), ["W1-01", "W1-07", "W1-14", "W1-19", "W1-30", "W1-65", "W1-13", "W1-62", "FX-05", "FX-09", "SC-01", "SC-04", "SC-05", "SC-06", "SC-02", "SC-03"]);
+  assert.deepEqual(
+    cards.map((card) => card.id),
+    [
+      "W1-01",
+      "W1-07",
+      "W1-14",
+      "W1-19",
+      "W1-30",
+      "W1-65",
+      "W1-13",
+      "W1-62",
+      "FX-05",
+      "FX-09",
+      "SC-01",
+      "SC-04",
+      "SC-05",
+      "SC-06",
+      "SC-02",
+      "SC-03",
+    ],
+  );
   assert.equal(cards[1].section, "World 1 now: ready to build");
   assert.equal(cards[1]["what the player gets"], "Pop-ups wait");
   assert.equal(cards[10].section, "Elsewhere");
@@ -82,7 +114,12 @@ test("plans a capped writer, the fast lane, and a push only when green", () => {
 });
 
 test("the limit counts runnable cards, after the skips", () => {
-  const result = plan({ backlog: BACKLOG, state: STATE, section: "World 1 now: ready to build", limit: 1 });
+  const result = plan({
+    backlog: BACKLOG,
+    state: STATE,
+    section: "World 1 now: ready to build",
+    limit: 1,
+  });
   const runnable = result.cards.filter((card) => !card.skip).map((card) => card.id);
   assert.deepEqual(runnable, ["W1-07"]);
 });
@@ -105,4 +142,17 @@ test("the review must end on a PASS line to land", () => {
   assert.equal(reviewVerdict("blocking: x.gd:3\nVERDICT: FAIL\n"), "FAIL");
   const card = parseCards(BACKLOG).find((row) => row.id === "W1-07");
   assert.match(reviewPrompt(card, "diff --git a b"), /Files: toast queue[\s\S]*diff --git a b$/);
+});
+
+test("flat main with no live board returns stage main, board null, and emits zero null references", () => {
+  const flatState = "| Open stage | main |\n| Live board | none |\n";
+  assert.equal(openStage(flatState), "main");
+  assert.equal(liveBoard(flatState), null);
+  const result = plan({ backlog: BACKLOG, state: flatState, ids: ["W1-07"] });
+  assert.equal(result.stage, "main");
+  assert.equal(result.board, null);
+  const serialized = JSON.stringify(result.cards[0]);
+  assert.doesNotMatch(serialized, /\bnull\b/);
+  assert.match(serialized, /origin\/main/);
+  assert.doesNotMatch(render(result), /#null|board null/);
 });

@@ -11,5 +11,7 @@
   {"id": "east_rim", "polygon": [[75, 230], [370, 230], [370, 310], [75, 310]], "purpose": "route", "verbs": ["roll"], "why": "The outside bank lets you keep the turn above the gorge."},
   {"id": "river_canyon", "polygon": [[-75, 230], [75, 230], [75, 500], [-75, 500]], "purpose": "fight", "verbs": ["jump"], "why": "The apron kicker puts you above the yard."},
   {"id": "east_bench_canal", "polygon": [[75, 310], [290, 310], [290, 500], [75, 500]], "purpose": "route", "verbs": ["jump"], "why": "The haul grade climbs out beside the canal lips."},
-  {"id": "dam_toe", "polygon": [[-75, 500], [250, 500], [250, 710], [-210, 710], [-210, 550], [-75, 550]], "purpose": "landmark", "verbs": ["roll", "hook"], "why": "The piers hold a cable all the way up the face."}
+  {"id": "dam_toe", "polygon": [[-75, 500], [250, 500], [250, 710], [-210, 710], [-210, 550], [-75, 550]], "purpose": "landmark", "verbs": ["roll", "hook"], "why": "The piers hold a cable all the way up the face."},
+  {"id": "west_tailwater_basin", "polygon": [[-460, 310], [-340, 310], [-340, 720], [-460, 720]], "purpose": "route", "verbs": ["jump", "dash"], "why": "The west drop ramp feeds the tailwater basin cannon back to the rim."},
+  {"id": "east_tailwater_basin", "polygon": [[290, 310], [460, 310], [460, 720], [290, 720]], "purpose": "route", "verbs": ["jump", "dash"], "why": "The east drop ramp feeds the tailwater basin cannon back to the rim."}
 ]

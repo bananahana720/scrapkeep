@@ -26,7 +26,7 @@ Preconditions: `$S/doctor.sh` passes; the assets are imported since the stage la
 | `meshes "ball_look"` | 1, `ball_look_cutaway_cockpit.glb` at the ball | 0 |
 | `read tuning.option("stocktake")` | `on` | `off` |
 | `read world.activities.site("stocktake_yard") != null` | `true` | `false` |
-| `meshes "_tripo"` (25 s into the stage) | 48 on the dam, the row names the first six files and where they stand | 0 |
+| `meshes "_tripo"` (25 s into the stage) | `>= 1` on the dam (exact count varies with dam dressing; row prints count and first six paths) | 0 |
 
 - **The picture:** `14-in-play.png` of each drive, side by side. The ball is in the middle of the frame: plated with a window on the pilot under `cutaway`, today's shell without.
 - **One switch alone, or another look:** pass only that switch; the rows for the others read as the control's.
@@ -37,4 +37,4 @@ Preconditions: `$S/doctor.sh` passes; the assets are imported since the stage la
 - The Tripo props and the yard are too far from the drop to be in the picture, and a step file cannot steer the ball to them. The rows say the files are drawn and the yard is built; nobody has looked at them or played a count through this skill. A film of the bot (`bot-run.sh`, [A whole run](./whole-run.md)) passes some of them; Andrew's eye is the judge of the look.
 - Enemies' models are cast into the game's own meshes and keep no file path, so `meshes "enemy_"` reads 0 either way. It cannot say whether the Tripo chaser is on.
 - The yard's site is drawn from the run's seed; a new profile's first run drew the same site each time here, but do not write its position into a step.
-- Software rendering: colour, light and the cutaway window's fringe are not the PC's. This proves the switch, never the look.
+- On Linux offscreen (`xvfb-run` / `opengl3`), software rendering skips PC lighting and shaders; macOS offscreen uses `--rendering-driver metal`. Either proves the switch state and loaded meshes, not PC RTX 4080 lighting.

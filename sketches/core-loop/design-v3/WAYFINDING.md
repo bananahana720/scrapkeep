@@ -1,6 +1,6 @@
 # Wayfinding: finding your way with no mini-map
 
-**Status: design spec for wave 46 unit E0-02, written 22 November 2026 against `stage/alpha-w46` at `c0a4bba6f`. Nothing here is built, run or played.** Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov) orders the work this page specifies.
+**Status: wave 46 unit E0-02 design spec (22 November 2026, originally targeted at `stage/alpha-w46` at `c0a4bba6f`; see `src/` and [STATE.md](../../../project-guide/handoff/STATE.md) for integrated state — ruling `ep` later moved to flat `main`).** Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov) orders the work this page specifies.
 
 **What this page is for.** World 1 has no mini-map and gets none. A player rolling at 14 m/s or more across a park 1,600 m square has to answer four questions from the picture alone: where does the ride end, which part of the park am I in, where does this side route go, and have I been here. This page gives each question one answer, says what a lock cable is and when it goes dark, says what every kind of site looks like once it is finished, and names the park data the answers need. The map, data and model units of wave 46 build from it.
 
@@ -123,7 +123,7 @@ The visited state needs no key (section 4). The fixture park `src/world/park/par
 
 ## 7. What worlds 2 and 3 inherit
 
-Worlds 2 and 3 stay parked. When they reopen they inherit the four distances, the cable-equals-pip rule, the visited state for each kind of site and the three keys of section 6, with no change to code: a park that carries the rows gets the behaviour. No world 2 or world 3 file is touched by this work, and no content is written for them.
+At the time of writing Worlds 2 and 3 were parked; under ruling `ep` ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)) they have since been unparked for full-alpha runs and inherit the four distances, the cable-equals-pip rule, the visited state for each kind of site and the three keys of section 6 when populated.
 
 ## 8. How it is checked
 

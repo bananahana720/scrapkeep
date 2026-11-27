@@ -310,3 +310,112 @@ test("flat main mode parses, renders, and validates direct promotions with no li
     rmSync(root, { recursive: true, force: true });
   }
 });
+
+test("--write supports --flat-main --direct --wave <N> --board none", async () => {
+  const { root, commit } = repo();
+  try {
+    writeFileSync(path.join(root, STATE_FILE), state());
+    const directSha = commit("Flat alpha wave 52 commit");
+    const wrote = spawnSync(
+      process.execPath,
+      [
+        script,
+        "--write",
+        "--root",
+        root,
+        "--flat-main",
+        "--direct",
+        "--wave",
+        "52",
+        "--board",
+        "none",
+        "--compare",
+        "gate/w52-flat/",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(wrote.status, 0, wrote.stderr);
+    const parsed = parseWaveFacts(readFileSync(path.join(root, STATE_FILE), "utf8"));
+    assert.equal(parsed.found, true);
+    assert.deepEqual(parsed.problems, []);
+    assert.deepEqual(parsed.facts, {
+      wave: 52,
+      mainSha: directSha.slice(0, 8),
+      direct: true,
+      flatMain: true,
+      redTeam: "greedy",
+      compare: "gate/w52-flat/",
+    });
+    commit("Record flat-main wave 52 facts");
+    const findings = await checkWaveState(root);
+    assert.deepEqual(
+      findings.filter((finding) => finding.level === "failure"),
+      [],
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("--write preserves flatMain, direct, and wave across --compare and --wave updates with historical promotions", () => {
+  const { root, commit } = repo();
+  try {
+    writeFileSync(path.join(root, STATE_FILE), state());
+    commit("Promote alpha wave 46 (stage/alpha-w46 8f12596a) to main (#1279)");
+    commit("Flat alpha wave 52 baseline");
+    const first = spawnSync(
+      process.execPath,
+      [
+        script,
+        "--write",
+        "--root",
+        root,
+        "--flat-main",
+        "--direct",
+        "--wave",
+        "52",
+        "--board",
+        "none",
+        "--compare",
+        "gate/w52-a/",
+      ],
+      { encoding: "utf8" },
+    );
+    assert.equal(first.status, 0, first.stderr);
+
+    const head2 = commit("Second flat-main commit");
+    const refreshCompare = spawnSync(
+      process.execPath,
+      [script, "--write", "--root", root, "--compare", "gate/w52-b/"],
+      { encoding: "utf8" },
+    );
+    assert.equal(refreshCompare.status, 0, refreshCompare.stderr);
+    let parsed = parseWaveFacts(readFileSync(path.join(root, STATE_FILE), "utf8"));
+    assert.deepEqual(parsed.facts, {
+      wave: 52,
+      mainSha: head2.slice(0, 8),
+      direct: true,
+      flatMain: true,
+      redTeam: "greedy",
+      compare: "gate/w52-b/",
+    });
+
+    const bumpWave = spawnSync(
+      process.execPath,
+      [script, "--write", "--root", root, "--wave", "53", "--compare", "gate/w53-a/"],
+      { encoding: "utf8" },
+    );
+    assert.equal(bumpWave.status, 0, bumpWave.stderr);
+    parsed = parseWaveFacts(readFileSync(path.join(root, STATE_FILE), "utf8"));
+    assert.deepEqual(parsed.facts, {
+      wave: 53,
+      mainSha: head2.slice(0, 8),
+      direct: true,
+      flatMain: true,
+      redTeam: "line-rider",
+      compare: "gate/w53-a/",
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});

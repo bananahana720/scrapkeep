@@ -1,5 +1,5 @@
 #!/bin/bash
-# Draw reference sheets with the Codex image engine (gpt-6-astra on Andrew's Plus login),
+# Draw reference sheets with the Codex image engine (gpt-6.2-astra on Andrew's Plus login),
 # one parallel run per unit folder. Each folder holds a PROMPT.md (from split.py); the run
 # writes its PNGs, a REVIEW.md and run.log there, and done.txt holds the exit code.
 #
@@ -32,7 +32,7 @@ for u in "${units[@]}"; do
     echo "$u: no PROMPT.md in $work/$u" >&2
     exit 2
   fi
-  ( cd "$work/$u" && nice -n 10 codex exec --skip-git-repo-check -m gpt-6-astra -s workspace-write \
+  ( cd "$work/$u" && nice -n 10 codex exec --skip-git-repo-check -m gpt-6.2-astra -s workspace-write \
       -c service_tier='"default"' "${refs[@]}" -- "$(cat PROMPT.md)" > run.log 2>&1
     echo "exit $?" > done.txt ) &
   pids+=($!)

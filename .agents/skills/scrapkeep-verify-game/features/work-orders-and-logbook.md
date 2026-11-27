@@ -1,6 +1,6 @@
 # Work orders and logbook
 
-From the title (or Achievements footer / Camp), `O` opens the three-tab Work Orders board (Orders, Licenses, Overrides) where the player pins crew and rotating shift orders, tracks maker license stamps, and arms unlocked Foreman override codes. `L` opens the five-tab Logbook (Entries, Crew arcs, Chemistry, Wire trail, Foreman) holding field entries, pilot story time cards, pilot pairings, Patch's unsigned wire trail, and the Foreman's habit audit.
+From the title (or Achievements footer / Camp), `O` opens the three-tab Work Orders board (`Orders`, `Licenses`, `Overrides`) to pin crew and rotating shift orders, track maker license stamps, and arm unlocked Foreman override codes. `L` opens the five-tab Logbook (`Entries`, `Crew arcs`, `Chemistry`, `Wire trail`, `Foreman`) holding field entries, pilot story cards, pilot pairings, Patch's unsigned wire trail, and the Foreman's habit audit.
 
 ## Sub-features
 
@@ -27,7 +27,7 @@ Preconditions: baseline; game flag `--no-intro`.
 
 ## Gotchas
 
-- **Known product layout bug (seen at `46576920`, 25 Nov 2026):** Opening `WorkOrdersPage` or `LogbookPage` stretches `Screens._content` to ~1685 px tall, pushing their `Back` footer buttons off the 900 px viewport (`y=1629`) and leaving `AchievementsPage`'s footer (`Work orders`, `Logbook`, `Back`) pushed off-screen if Achievements is opened afterward. Use `Esc` to close `WorkOrdersPage`/`LogbookPage` and drive Achievements before them until the layout bug is fixed.
+- `WorkOrdersPage.refresh()` keeps the last open tab, whereas `LogbookPage.refresh()` resets to `Entries` (`work_orders_page.gd` vs `logbook_page.gd`; steps 21–22 rely on `WorkOrdersPage` retaining `Overrides`).
 - On a fresh profile, all Foreman override codes are locked and the Foreman habit audit reads `AUDIT DORMANT` until three shifts are recorded. Pass `--profile=sitting` to inspect unlocked override codes and all crew arcs.
 - Patch's `Wire trail` tab labels the trail `Unsigned` until `wo_patch_2` is stamped or pilot `line_splicer` is unlocked.
 - Wait on `until clickable "Settings" 10` after `key ESCAPE` before sending the next title hotkey so the closing transition settles.

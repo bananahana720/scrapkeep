@@ -14,7 +14,7 @@ The game opens on a dark boot card with the name and a Play button while the gam
 ## How to get to it (user POV)
 
 - Launch the game: `scrapkeep core-loop` on the PC, the "Scrapkeep" menu entry for an installed build.
-- On the title: click a choice, or press its key (Space, K, S, H, A, O, L, Esc).
+- On the title: click a choice, or press its key (`Space` Play, `C` Continue when saved, `K` Camp, `M` Companion when pieces exist, `S` Settings, `H` Help, `A` Achievements, `O` Work orders, `L` Logbook, `B` ACE Breath, `Esc` focus Quit).
 
 ## Driving it with drive.sh
 

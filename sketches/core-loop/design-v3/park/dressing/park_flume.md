@@ -1,5 +1,7 @@
 # park_flume dressing, wave 18 re-proof
 
+> **Historical wave-18/20 dressing receipt:** Live prop placement and pins live in `sketches/core-loop/src/world/park/props/park_flume.json`, `sketches/core-loop/tests/fixtures/pins/park_flume.pin`, and [DRESSING-KITS.md](../DRESSING-KITS.md).
+
 Base: merge of the Dressing foundation aaeb5e10 (stage/alpha-w18 9cd6805e plus the `scatter_row` rule) into the flume branch, then on 2026-10-22 merges of stage/alpha-w18 (b0e64a40, which holds b22a2ca3 and #175) and the line_clear_m/telegraph foundation (07748516); the commit "Apply flume line_clear_m and telegraph rules" (8d109d1c27a262dc1ea58493a853088e44215ef8) follows them. Final merge (2026-10-22): stage/alpha-w18 f259e8cf421fc3c305b53ae104005dda40af9a41, then the accepted foundation e72fff7d96a88118e622f30658bcddb3105ae206 (gate round 7), then the foundation's stage merge be6189ec5f5c8eb33591c33ecc76d72e56828394 (merge befacd65; the tree is unchanged). The foundation commits after 07748516 change only the audit, static checks and `park_props_test`, so the pin is unchanged (plan check fingerprint 4063400762 equals the pin). The w18d audit below stands: it ran on the current placement, and the later recolour changes colours only. No `--open` windows were run.
 Brief: `sketches/core-loop/design-v3/park/dressing/KITS.md` (lands in #269), flume section.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (OpenGL compatibility proxy, not a frame-cost proof, not human feel).

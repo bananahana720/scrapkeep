@@ -12,6 +12,7 @@ const T := preload("res://tests/support/t.gd")
 const CombatEntries := preload("res://src/combat/codex_entries.gd")
 const CodexWorld := preload("res://src/world/codex_world.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Companion := preload("res://src/core/companion.gd")
 const EndingSequence := preload("res://src/ui/ending_sequence.gd")
@@ -115,11 +116,16 @@ func _notes() -> void:
 		count += 1
 		_check("key list %s" % row[0], String(row[1]))
 	# The menu rows are the key table itself: their keys column holds the letters, so only the shape rules apply.
+	var menu_keys := {}
 	for row in FieldNotes.MENU_ROWS + FieldNotes.SCREEN_KEYS:
 		count += 1
+		menu_keys[String(row["keys"])] = String(row["does"])
 		var found := hits(String(row["does"]))
 		found = found.filter(func(h): return not String(h).begins_with("typed key"))
 		t.check("menu row %s is plain" % row["keys"], found.is_empty(), str(found))
+	if Bindings.EXTRA_ACTIONS.has("cl_consumable"):
+		t.check("menu rows document C consumable", menu_keys.has("C") and String(menu_keys["C"]).to_lower().contains("consumable"),
+			str(menu_keys.get("C", "")))
 	t.check("read the field notes", count >= 30, str(count))
 	var lore := 0
 	for row in LoreRows.ROWS:

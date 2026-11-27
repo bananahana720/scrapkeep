@@ -4,7 +4,7 @@
 
 This is the accepted spec for the v2 round (TRACKING EV-0588). It answers playtest entry 7.
 
-- The approved plan is `/home/andrew/.claude/plans/synchronous-weaving-crystal.md`.
+- The historical approved plan was `synchronous-weaving-crystal.md` (local session plan archive).
 - The inputs are under `artifacts/local/v2-research/` (R1 to R4 research, I1 to I3 ideation). They are suggestions; this file decides.
 - The principles are in `DESIGN-NOTES.md` and the project memory. Momentum is sacred, readability comes first, and form mirrors function.
 
@@ -91,7 +91,7 @@ Every F special, the caster's LMB and the slingshot follow one spec.
 
 ## 7. Loot and growth
 
-[design-v2/I2-item-generator.md](design-v2/I2-item-generator.md) is accepted as the loot spec, with the changes below.
+`design-v2/I2-item-generator.md` (archived in git history) is accepted as the loot spec, with the changes below.
 
 **Items**
 
@@ -116,7 +116,7 @@ Every F special, the caster's LMB and the slingshot follow one spec.
 
 ## 8. The vertical stage
 
-[design-v2/I3-vertical-stage.md](design-v2/I3-vertical-stage.md) is accepted as the stage 2 replacement: one gorge with three shelf heights.
+`design-v2/I3-vertical-stage.md` (archived in git history) is accepted as the stage 2 replacement: one gorge with three shelf heights.
 
 **Layers**
 

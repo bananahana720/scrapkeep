@@ -123,7 +123,7 @@ export const ROWS = {
     real: [
       {
         cfg: "destructibles-today.cfg",
-        minStates: 27096,
+        minStates: 83322,
         label: "two pieces (tiers 1 and 3), every heft class, two retries, either tick order (W45)",
       },
     ],
@@ -224,7 +224,7 @@ export const ROWS = {
     real: [
       {
         cfg: "deferred-today.cfg",
-        minStates: 2196005,
+        minStates: 9955877,
         label:
           "combat's deferred queues, follow-up procs, shot bits and exposure marks across stage entries, arena clears, deaths, quits and new runs (W45 FV-3)",
       },
@@ -236,6 +236,8 @@ export const ROWS = {
       { cfg: "deferred-broken-keepguards.cfg", rule: "NoEchoAcrossAttempt" },
       { cfg: "deferred-broken-keeppike.cfg", rule: "NoEchoAcrossAttempt" },
       { cfg: "deferred-broken-keepbolts.cfg", rule: "NoEchoAcrossAttempt" },
+      { cfg: "deferred-broken-keepdefproc.cfg", rule: "NoEchoAcrossAttempt" },
+      { cfg: "deferred-broken-keepdetcord.cfg", rule: "NoEchoAcrossAttempt" },
       { cfg: "deferred-broken-rakeproc.cfg", rule: "ProcDepthOne" },
       { cfg: "deferred-broken-pikeproc.cfg", rule: "ProcDepthOne" },
       { cfg: "deferred-broken-procbits.cfg", rule: "ProcDepthOne" },
@@ -243,6 +245,8 @@ export const ROWS = {
       { cfg: "deferred-broken-tollagain.cfg", rule: "ProcDepthOne" },
       { cfg: "deferred-broken-shockagain.cfg", rule: "ProcDepthOne" },
       { cfg: "deferred-broken-reelagain.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-nestproc.cfg", rule: "ProcDepthOne" },
+      { cfg: "deferred-broken-detcordagain.cfg", rule: "ProcDepthOne" },
       { cfg: "deferred-broken-childsplit.cfg", rule: "ShotBitsCap" },
       { cfg: "deferred-broken-childpull.cfg", rule: "ShotBitsCap" },
       { cfg: "deferred-broken-childhoar.cfg", rule: "ShotBitsCap" },
@@ -312,7 +316,7 @@ export const ROWS = {
     real: [
       {
         cfg: "weaponcadence-today.cfg",
-        minStates: 10122,
+        minStates: 12415,
         label:
           "all six pilots (Rivet press, Sable tap_charge, Kest lob_snap, Tarn beats, Tally stamp, Cannon lock), boundaries, interrupts and proc isolation (W46 E1-17, E2-08, WC-1 closed by W46-FIX1)",
       },
@@ -473,10 +477,10 @@ function git(root, args) {
   return r.stdout.trim();
 }
 
-function findJar(arg) {
+export function findJar(arg) {
   const data = process.env.XDG_DATA_HOME || join(homedir(), ".local/share");
   return (
-    [arg, process.env.TLA2TOOLS, join(data, "astack/tlc", `tla2tools-${TLC_PIN}.jar`)].find(
+    [arg, process.env.TLA2TOOLS, join(data, "tlc", `tla2tools-${TLC_PIN}.jar`)].find(
       (p) => p && existsSync(p),
     ) ?? null
   );
@@ -569,7 +573,7 @@ function main(argv) {
       );
     if (!jar)
       console.error(
-        `model-receipts: no TLC jar; pass --jar, set TLA2TOOLS, or run the astack statechart skill's install-tlc (TLC ${TLC_PIN})`,
+        `model-receipts: no TLC jar; pass --jar, set TLA2TOOLS, or place tla2tools-${TLC_PIN}.jar in ~/.local/share/tlc/ (see .agents/skills/scrapkeep-verify-formal/SKILL.md)`,
       );
     return 2;
   }

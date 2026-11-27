@@ -13,7 +13,7 @@ import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BASELINE_FILE = path.join(root, "scripts", "sketch-lint.baseline.json");
 const BASELINED_RULES = ["L1", "L2", "L3", "L4"];
-const MAX_QUARANTINE = 3;
+const MAX_QUARANTINE = 0;
 const QUARANTINE_HEADER = "test\towner\treason\tadded\tdeadline";
 const TEST_FOLDERS = new Set(["unit", "support", "doubles", "fixtures", "trees", "workshop"]);
 const launchesGame = /SMOKE_FLAGS|--flags|tuning\.gd/;
@@ -182,7 +182,14 @@ export function lintL5(text, tests, file = "sketches/core-loop/tests/QUARANTINE.
   const entries = lines.slice(1);
   const findings = [];
   if (entries.length > MAX_QUARANTINE)
-    findings.push(finding("L5", file, 1, `${entries.length} entries; at most ${MAX_QUARANTINE}`));
+    findings.push(
+      finding(
+        "L5",
+        file,
+        1,
+        `${entries.length} entries; QUARANTINE.tsv is retired (max ${MAX_QUARANTINE}), use KNOWN-FAILING.tsv`,
+      ),
+    );
   const seen = new Set();
   entries.forEach((entry, index) => {
     const number = index + 2;

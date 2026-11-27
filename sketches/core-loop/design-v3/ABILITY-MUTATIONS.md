@@ -1,6 +1,6 @@
 # Ability mutations: kit swaps, live shot bits and items that rewrite a verb
 
-Status: design proposal for wave 45 unit W45-B2, written 21 Nov 2026 against `stage/alpha-w45` at `fc8507686`. Nothing here changes code. Numbers marked (start) are starting values until the lab ranks them. The follow-on code is split into units in section 10, each with its permitted files.
+Status: historical Wave 45 W45-B2 design spec (21 Nov 2026 against `stage/alpha-w45` at `fc8507686`). **Shipped status:** `ShotBits`, `Pattern.TRANSFORMERS`, relic kit swaps, and W2/W3 alt-loadout swaps have since landed in `src/`; treat unshipped speculative options below as proposal context only. Numbers marked (start) are starting values until the lab ranks them. The follow-on code was split into units in section 10, each with its permitted files.
 
 **Weapon cadence (ruling ek, 22 Nov 2026):** each pilot's baseline trigger, its timers and its first tree pick are in [PILOT-CADENCE.md](PILOT-CADENCE.md). A kit swap or shot bit on this page changes a weapon through the `Pattern` cadence fields that page defines in its section 7.
 

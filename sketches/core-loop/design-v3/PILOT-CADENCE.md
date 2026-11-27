@@ -1,6 +1,6 @@
 # Pilot cadence: how each pilot's weapon fires
 
-**Status: design spec for wave 46 unit E0-01, written 22 November 2026 against `stage/alpha-w46` at `c0a4bba6f`. Nothing here is built, run or played.** Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov) orders the work this page specifies. Every number is a start value. Each one sits inside the damage table in section 1, and Andrew can overturn any of them (section 9).
+**Status: Wave 46 design spec (written 22 November 2026 at `c0a4bba6f`). `src/combat/weapon_driver.gd`, per-pilot cadence rows in `weapons.gd`, `WeaponCadence.tla`, and `weapon_envelope_test.gd` have since landed (`AGENTS.md` / `src/` own current tuned values).** Ruling ek ([DECISIONS.md](../../../project-guide/handoff/DECISIONS.md), 22 Nov) orders the work this page specifies. Every number is a start value. Each one sits inside the damage table in section 1, and Andrew can overturn any of them (section 9).
 
 **What this page is for.** Today every bolt weapon fires while the button is held, at a fixed rate, with no reload. Ruling ek replaces that with six weapons that each ask for a small act of timing and never slow the ball. This page is the one home for each weapon's full cycle: every timer, the least time between shots, what interrupts it, what a proc may not do, the damage it can reach, what the player looks at to time it, and the first tree pick that changes its feel. A code unit builds a weapon from its section here and from nothing else.
 

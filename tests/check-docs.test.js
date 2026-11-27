@@ -125,3 +125,83 @@ test("artifacts/local is pruned before traversal", async () => {
     await rm(tmp, { recursive: true, force: true });
   }
 });
+
+async function runCustomRepo(files) {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), "check-docs-custom-"));
+  try {
+    await cp(path.join(fixtures, "base"), tmp, { recursive: true });
+    for (const [rel, body] of Object.entries(files)) {
+      const full = path.join(tmp, rel);
+      await mkdir(path.dirname(full), { recursive: true });
+      await writeFile(full, body);
+    }
+    const reportPath = path.join(tmp, "report.json");
+    const ran = spawnSync(
+      process.execPath,
+      [path.join(root, "scripts/check-docs.mjs"), "--root", tmp, "--report", reportPath],
+      { encoding: "utf8", timeout: 10000 },
+    );
+    assert.equal(ran.error, undefined);
+    assert.notEqual(ran.status, 2, ran.stderr);
+    return {
+      status: ran.status,
+      stdout: ran.stdout,
+      report: JSON.parse(await readFile(reportPath, "utf8")),
+    };
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+}
+
+test("broken relative links inside sketches/core-loop/design-v3/ fail check-docs", async () => {
+  const { status, stdout, report } = await runCustomRepo({
+    "sketches/core-loop/design-v3/sample.md": "# Sample\n\nSee [missing](./missing-note.md).\n",
+  });
+  assert.equal(status, 1, stdout);
+  const hit = report.findings.find(
+    (entry) =>
+      entry.level === "failure" &&
+      entry.file === "sketches/core-loop/design-v3/sample.md" &&
+      entry.line === 3 &&
+      /missing link target: \.\/missing-note\.md; update to an existing repo-relative path/.test(
+        entry.message,
+      ),
+  );
+  assert.ok(hit, stdout);
+});
+
+test("absolute /home/andrew links inside project-guide/handoff/ fail with repo-relative fix hint", async () => {
+  const { status, stdout, report } = await runCustomRepo({
+    "project-guide/handoff/sample.md":
+      "# Handoff\n\nSee [local](/home/andrew/projects/scrapkeep/README.md).\n",
+  });
+  assert.equal(status, 1, stdout);
+  const hit = report.findings.find(
+    (entry) =>
+      entry.level === "failure" &&
+      entry.file === "project-guide/handoff/sample.md" &&
+      entry.line === 3 &&
+      /non-portable absolute link: \/home\/andrew\/projects\/scrapkeep\/README\.md; replace with a repo-relative path from this file/.test(
+        entry.message,
+      ),
+  );
+  assert.ok(hit, stdout);
+});
+
+test("GitHub line-range anchors (#L10-L20) pass on existing markdown while #missing-heading still fails", async () => {
+  const passRun = await runCustomRepo({
+    "project-guide/handoff/sample.md": "# Handoff\n\nSee [lines](../../README.md#L10-L20).\n",
+  });
+  assert.equal(passRun.status, 0, passRun.stdout);
+  const failRun = await runCustomRepo({
+    "project-guide/handoff/sample.md": "# Handoff\n\nSee [bad](../../README.md#missing-heading).\n",
+  });
+  assert.equal(failRun.status, 1, failRun.stdout);
+  const hit = failRun.report.findings.find(
+    (entry) =>
+      entry.level === "failure" &&
+      entry.file === "project-guide/handoff/sample.md" &&
+      /broken anchor: \.\.\/\.\.\/README\.md#missing-heading/.test(entry.message),
+  );
+  assert.ok(hit, failRun.stdout);
+});

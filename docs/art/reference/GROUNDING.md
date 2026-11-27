@@ -1,5 +1,7 @@
 # Board grounding
 
+> **Historical snapshot (22 Oct 2026, wave 18 `b0e64a40`):** Preserves the Oct 22 board-to-code audit verbatim; check live files under `sketches/core-loop/src/` for subsequent changes.
+
 Every gameplay idea on the approved boards, traced to the game (22 Oct 2026, wave 18). Andrew's rule: what the boards suggest for UI, mechanics, mobs, areas, landforms, map flow, cycles and AI must be grounded in something that exists or is on the roadmap. Ten Sonnet auditors read each set's notes and images and checked the repo at stage `b0e64a40`, and a second agent per set re-checked every citation.
 
 **How to use it:** before building from a board, find its rows here. *In the game* and *Planned* rows say where the idea already lives. *Conflict* rows say what not to copy and why. *Not grounded* rows are either a roadmap card (see [ROADMAP](../../../project-guide/handoff/ROADMAP.md)) or a cut. *Look only* rows carry no gameplay claim.

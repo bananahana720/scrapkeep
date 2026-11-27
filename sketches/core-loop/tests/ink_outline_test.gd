@@ -43,6 +43,7 @@ func _run() -> void:
 	_filter()
 	_again()
 	_reset_roles()
+	_double_dress_and_null_surface()
 	await _mounted()
 	await _cutaway()
 	InkOutline.reset_for_tests()
@@ -290,6 +291,29 @@ func _again() -> void:
 	var lift := InkOutline.ink("pilot")
 	InkOutline.reset_for_tests()
 	_t.check("reset_for_tests() switches it back on and drops its passes", InkOutline.enabled and InkOutline.ink("pilot") != lift)
+
+
+func _double_dress_and_null_surface() -> void:
+	var scene := BossModel.load_scene("res://assets/models/bosses/mind_hand.glb")
+	_t.check("mind_hand boss scene loads dressed", scene != null)
+	if scene != null:
+		var skin := scene.find_child("MindHandSkin", true, false) as MeshInstance3D
+		var first_mesh: Mesh = skin.mesh if skin != null else null
+		var first_format: int = first_mesh.surface_get_format(0) if first_mesh != null else 0
+		var carries_ok: bool = first_mesh != null and bool(first_mesh.get_meta("bake_tangents_ok", false))
+		var redressed := BakeLook.dress(scene)
+		var kept_mesh: bool = skin != null and skin.mesh == first_mesh and (skin.mesh.surface_get_format(0) & Mesh.ARRAY_FORMAT_CUSTOM0) != 0 and skin.mesh.surface_get_format(0) == first_format
+		_t.check("welded hull carries bake_tangents_ok and double BakeLook.dress preserves skin mesh and CUSTOM0", carries_ok and redressed == 0 and kept_mesh)
+		scene.free()
+	var src := _cube()
+	src.surface_set_material(0, _body())
+	var cached_hull := InkOutline.hull(src) as ArrayMesh
+	cached_hull.surface_set_material(0, null)
+	var view := _view(src, null)
+	var lined := InkOutline.apply(view)
+	_t.check("null material on a cached welded hull skips outlining cleanly", lined == 0)
+	view.free()
+	InkOutline.reset_for_tests()
 
 
 class Look:

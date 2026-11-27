@@ -1,6 +1,6 @@
 # Cobalt rung, world 1 (wave 20 plan)
 
-Sources: the item ladder page (`/mnt/project-files/design/item-ladder.html`, wave 20 scope: one rung table replacing `RARITY`, today's items mapped onto the rungs, cobalt guaranteed from every Warden, boss and won event and one shop slot), DECISIONS rows 171, 190 and 191, and pilot call (d). Wave 20 reuses today's items, with no new models.
+Sources: the historical item ladder design page (shared folder outside this repo: `/mnt/project-files/design/item-ladder.html`, wave 20 scope: one rung table replacing `RARITY`, items mapped onto the rungs, cobalt guaranteed from every Warden, boss and won event and one shop slot), DECISIONS rows 171, 190 and 191, and pilot call (d). Wave 20 reused existing items, with no new models.
 
 ## What the code does today (stage 55a8cd96)
 
@@ -42,7 +42,7 @@ The table keeps the four ids, so no save, digest or row key changes meaning. Eac
 - **The pool (card A).** The guarantees below pay about 4 to 5 cobalt in a world 1 run, and a picked item leaves the pool. Four cobalt rows would run dry by Brindle.
 - **The guarantees:**
   - **Wardens (card B):** one of the two reward gates is always cobalt or better; cores still lift the other.
-  - **Brindle:** the Crest stays. The cobalt pick after the fight is **parked** (coordinator, 27 Oct 18:34Z): a world 1 sitting run ends at Brindle, so a pick there pays nothing. When world 2 joins the sitting it comes back as a flow beat after the Crest, not a gate pair, so the ending keeps its shape, and only for runs that continue (seed on #512).
+  - **Brindle:** the Crest stays. At wave 20 (World 1 sitting only), the post-Brindle cobalt pick was parked; under ruling `ep` (`FULL_ALPHA := true`, Worlds 2 and 3 unparked), continuing runs enter World 2 after Brindle (seed on #512).
   - **Shop:** shelf slot 1 has a cobalt floor; the Spare Frame top hook stays.
   - **Won events (card C):** the park has no timed events, so this row has nothing to guarantee in world 1 today.
 - **World cap.** Ordinary kills never drop cobalt in world 1, per row 190: world 1 is grey and green, and world 2 adds cobalt.

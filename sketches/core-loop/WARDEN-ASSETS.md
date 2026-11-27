@@ -1,5 +1,7 @@
 # Warden asset hookup — VD-04-A1
 
+> **Historical single-unit receipt:** VD-04-A1 / VD-04-A2 Warden hookup notes; live asset hook wiring lives in [src/presentation/hero_assets.gd](src/presentation/hero_assets.gd) and [CONTRACTS.md](CONTRACTS.md).
+
 The presentation hook replaces the clamp and family-kit placeholder meshes with the four existing GLBs. Combat source, assets, collider and weak-point calculations are unchanged. The GLBs’ imported wrapper nodes are removed before attachment. `HeroWarden` is under the real Warden; `HeroKit` is under that root. The Mind’s `WeakPoint` and six shutters sit under `HeroKit/HeroLens`.
 
 ## Spatial adapter

@@ -32,6 +32,8 @@ The recipe reads each rig's rest joint frames and skinned vertices straight from
 
 ## Port notes for the wave coordinator
 
+> **Shipped status:** Steps 1–3 below (`mount-port.patch` bone/animation matching in `hero_assets._mount_on_bones`, `registry.d/` outfit fragments, and `Cosmetics` un-hiding + `MOUNT_PATCHED := true`) have landed on `main`; kept below for outfit asset context.
+
 In order. Nothing here edits `src/`.
 
 1. **Loader patch (`mount-port.patch`).** `git apply sketches/core-loop/tools/blender/outfits/mount-port.patch` from the repo root. It fixes two gaps in `hero_assets._mount_on_bones` that no outfit had hit yet:

@@ -2291,8 +2291,8 @@
    "id": "low_slump_bags_60",
    "template": "low_slump_bags",
    "at": [
-    -54,
-    -357
+    -44,
+    -365
    ],
    "yaw_deg": 63,
    "near": "dome_23: Sandbags slumping against the bank"
@@ -2791,8 +2791,8 @@
    "id": "mid_laundry_147",
    "template": "mid_laundry",
    "at": [
-    -33,
-    -297
+    -11,
+    -317
    ],
    "yaw_deg": 135,
    "near": "dome_25: A washing line by a cold fire"
@@ -2801,8 +2801,8 @@
    "id": "low_brittle_rebar_148",
    "template": "low_brittle_rebar",
    "at": [
-    -31,
-    -271
+    -41,
+    -277
    ],
    "yaw_deg": 135,
    "near": "dome_23: Rebar stubs half taken by brittlebush"
@@ -3331,7 +3331,7 @@
    "id": "chalk_arrow_shelf",
    "template": "chalk_arrow",
    "at": [
-    -40,
+    -42,
     -280
    ],
    "yaw_deg": 203,
@@ -3341,8 +3341,8 @@
    "id": "keeper_bunting_eye",
    "template": "keeper_bunting",
    "at": [
-    50,
-    175
+    56,
+    131
    ],
    "yaw_deg": 118,
    "near": "the eye fork: keeper bunting over the east side route"

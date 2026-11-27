@@ -1,5 +1,7 @@
 # Loops you can't put down
 
+> **Superseded / Historical brainstorm proposal (11 Nov 2026):** Proposals below were not built unless separately adopted in [DESIGN-V3.md](../../sketches/core-loop/design-v3/DESIGN-V3.md) or [DECISIONS.md](../../project-guide/handoff/DECISIONS.md).
+
 **Status: design proposal, 11 Nov 2026. Nothing here is built or authorised.** Written for Andrew's design session "make Scrapkeep impossible to put down". Winning ideas go to the systems audit's Feature fit pass and the bible amendment process as proposals; this page changes no code, ruling or bible text. Every call I made where the bible is open is logged as an assumption in [Assumptions I made](#assumptions-i-made), and the calls that are Andrew's are at the end in [Decisions for Andrew](#decisions-for-andrew).
 
 **The short answer.** The game already has a great 10 seconds (roll, ram, line, dunk, smash). What it lacks is a reason to stay in the danger instead of kiting round it, and a payoff that carries one great moment into the next. The number-one proposal is **Heat**: one number on the shell that fills when you ride fast and skim attacks, detonates on your next hit, and makes every hit you take hurt more while it is high. The smallest prototype is the dam yard with a launch flag, and it answers one question in five minutes: does Heat make a player choose to stay hot?

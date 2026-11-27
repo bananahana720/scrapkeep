@@ -417,18 +417,6 @@ async function checkPaths(findings, root, file, gitignorePatterns) {
           );
           continue;
         }
-        if (
-          file.relative === ".agents/skills/scrapkeep-verify-formal/SKILL.md" &&
-          stripped === "docs/project/README.md"
-        ) {
-          findings.warn(
-            "paths",
-            file.relative,
-            index + 1,
-            "retired heavy-lane path pending Phase 2 cleanup: " + stripped,
-          );
-          continue;
-        }
         findings.fail("paths", file.relative, index + 1, "path does not exist: " + stripped);
       }
     }

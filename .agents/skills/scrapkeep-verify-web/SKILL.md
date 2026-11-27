@@ -59,7 +59,7 @@ Proof standards:
 
 ## Lessons and updates
 
-[references/lessons.md](references/lessons.md) holds VWB-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. Audit `features/` against source when web pages or controls change.
+[references/lessons.md](references/lessons.md) holds VWB-01 onward. Status is `established`, `provisional` or `retracted`. When a result overturns a lesson, retract it, fill `Overturned by`, change the rule line above in the same commit, and add a changelog row. Keep `features/` current with `/pstack:maintain-verification-skill`.
 
 ## Host adapter
 

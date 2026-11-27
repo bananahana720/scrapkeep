@@ -337,7 +337,7 @@ export async function checkWaveState(root) {
 }
 
 function parseArguments(argv) {
-  const options = { mode: null, root: process.cwd() };
+  const options = { mode: null, root: process.cwd(), flatMain: false, direct: false };
   const value = (index, flag) => {
     if (argv[index + 1] === undefined) throw new Error(flag + " needs a value");
     return argv[index + 1];
@@ -350,6 +350,9 @@ function parseArguments(argv) {
     else if (flag === "--board") options.board = value(index++, flag);
     else if (flag === "--red-team") options.redTeam = value(index++, flag);
     else if (flag === "--compare") options.compare = value(index++, flag);
+    else if (flag === "--wave") options.wave = value(index++, flag);
+    else if (flag === "--flat-main") options.flatMain = true;
+    else if (flag === "--direct") options.direct = true;
     else throw new Error("unknown argument " + flag);
   }
   if (!options.mode) throw new Error("say one of --check, --print or --write");
@@ -362,22 +365,49 @@ async function write(options) {
   const parsed = parseWaveFacts(text);
   if (!parsed.found) throw new Error(STATE_FILE + " has no Wave facts table");
   const repo = readGit(options.root);
-  if (!repo?.promotion)
-    throw new Error("no promotion commit is reachable from HEAD; fetch more history first");
   const old = parsed.facts;
-  const advanced = old.wave !== repo.promotion.wave;
-  const board = /^#?(\d+)$/.exec(options.board ?? "");
-  if (advanced && !board) throw new Error("a new wave needs --board <issue number>");
+  const boardNum = /^#?(\d+)$/.exec(options.board ?? "");
+  const boardNone = options.board === "none";
+  if (options.board !== undefined && !boardNum && !boardNone)
+    throw new Error("--board must be an issue number or 'none'");
+  const flatMain = Boolean(options.flatMain || (old.flatMain && !boardNum));
+  const direct = Boolean(options.direct || (old.direct && !boardNum));
+  if (!direct && !repo?.promotion)
+    throw new Error("no promotion commit is reachable from HEAD; fetch more history first");
+  if (direct && !repo?.head)
+    throw new Error(
+      "no git HEAD is reachable from " + options.root + "; run inside a git checkout",
+    );
+  if (options.wave !== undefined && !/^\d+$/.test(options.wave))
+    throw new Error("--wave must be a whole number");
+  const wave =
+    options.wave !== undefined
+      ? Number(options.wave)
+      : direct
+        ? old.direct
+          ? old.wave
+          : (repo.promotion?.wave ?? old.wave)
+        : repo.promotion.wave;
+  const advanced = old.wave !== wave;
+  if (advanced && !flatMain && !boardNum && !boardNone)
+    throw new Error("a new wave needs --board <issue number>");
   if (advanced && !options.compare)
     throw new Error("a new wave needs --compare <receipts folder of the promoted gate>");
   if (options.redTeam && !RED_TEAM_ROTATION.includes(options.redTeam))
     throw new Error("--red-team must be one of " + RED_TEAM_ROTATION.join(", "));
+  const board = boardNone
+    ? undefined
+    : boardNum
+      ? Number(boardNum[1])
+      : flatMain
+        ? undefined
+        : old.board;
   const facts = {
-    wave: repo.promotion.wave,
-    mainSha: repo.promotion.sha,
-    pr: repo.promotion.pr,
-    stage: repo.promotion.wave + 1,
-    board: board ? Number(board[1]) : old.board,
+    wave,
+    mainSha: direct ? repo.head : repo.promotion.sha,
+    ...(direct ? { direct: true } : { pr: repo.promotion.pr }),
+    ...(flatMain ? { flatMain: true } : { stage: wave + 1 }),
+    ...(board !== undefined ? { board } : {}),
     redTeam: options.redTeam ?? (advanced ? nextRedTeam(old.redTeam) : old.redTeam),
     compare: options.compare ?? old.compare,
   };

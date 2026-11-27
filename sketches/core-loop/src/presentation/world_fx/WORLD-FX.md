@@ -1,6 +1,6 @@
 # World and event effects
 
-The air, landmarks, events and ceremonies of Scrapkeep, as one data table and four small scripts. Player effects, and machine and boss effects, belong to their own kits.
+The air, landmarks, events and ceremonies of Scrapkeep, as one data table and the `world_fx` kit scripts below. Player effects, and machine and boss effects, belong to their own kits.
 
 | File | Owns |
 | --- | --- |

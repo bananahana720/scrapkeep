@@ -1,6 +1,6 @@
 # Pilot clips: the animation set for six pilots
 
-Wave 13, unit A5. This sheet settles every pilot clip: the set, the names, the idle rule, the route from pose table to GLB, who moves the mecha, the verifier, the evidence, and the wave P-E units that build it. It follows the plan's settled decisions and the creative-charge line "Clip set per pilot" (`~/.claude/plans/let-s-plan-this-session-glowing-beaver.md:44`), the six pilot sheets (`design-v3/pilots/*.md`, section 6 of each), the signal contract (`design-v3/SKILL-BAR.md` section 7) and the Hoberman mecha (`design-v3/ROSTER-LOOK.md` section 0).
+Wave 13, unit A5. This sheet settles every pilot clip: the set, the names, the idle rule, the route from pose table to GLB, who moves the mecha, the verifier, the evidence, and the wave P-E units that build it. It follows the wave-13 session decisions ("Clip set per pilot"), the six pilot sheets (`design-v3/pilots/*.md`, section 6 of each), the signal contract (`design-v3/SKILL-BAR.md` section 7) and the Hoberman mecha (`design-v3/ROSTER-LOOK.md` section 0).
 
 Every number is a starting value to tune in play unless it cites code or a measurement. Paths are under `sketches/core-loop/` unless they start with `docs/`, `adr/` or `BIBLE.md`.
 
@@ -51,7 +51,7 @@ The shells (`world_one/shell_<id>.glb`) carry no animations (parsed: 0 animation
 1. `_fit_pilot` calls `_seat_pilot` even when the GLB has no AnimationPlayer (`hero_assets.gd:507-509`), and `_seat_pilot` calls `rec.animator.stop()` (`:605`). A pilot GLB without animations errors there.
 2. `_connect_pilot_events` picks a handler by argument count from five handlers, for 0 to 4 arguments (`hero_assets.gd:539-540`). `ultimate_started` carries five (SKILL-BAR.md section 7). A row for it indexes past the array.
 3. `pilot_cannon.py` exports the Cannon's shell as well as its pilot (`tools/blender/pilot_cannon.py:474-476`, writing `assets/models/world_one/shell_cannon.glb` per `tools/blender/world_one/shell_cannon.py:18`). Rerunning it after P-D replaces the shell overwrites the new mecha shell.
-4. The Rivet, Sable and Kest reaction route reads its inspected references from `<worktree>/artifacts/anim-reactions/` (`anim_pilot_reactions.py:21`, `:213-215`). That folder is not in this worktree. The ledger and the editable scenes live in the main checkout's ignored workspace, `/home/andrew/Projects/scrapkeep/artifacts/local/visual-development/workspace/artifacts/anim-reactions/<pilot>/<pilot>-reactions.blend` (found for all three).
+4. The Rivet, Sable and Kest reaction route reads its inspected references from `<worktree>/artifacts/anim-reactions/` (`anim_pilot_reactions.py:21`, `:213-215`). That folder is not in every worktree; the ledger and editable `.blend` scenes were kept in the main checkout's ignored workspace (`artifacts/local/visual-development/workspace/artifacts/anim-reactions/<pilot>/<pilot>-reactions.blend`).
 5. `verify_pilot_drop.py` asserts the GLB holds only `drop_land` (`tools/blender/verify_pilot_drop.py:48`). It fails on every shipped seven-clip GLB, so it can only verify the intermediate drop export. No verifier checks the shipped clip set.
 
 ## 1. The clip set
@@ -313,7 +313,7 @@ Run from the repo root (`PILOT-RIG.md:45`). Blender 5.2.2, two threads, a 12 GiB
    `prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 --python sketches/core-loop/tools/blender/pilot_clips.py -- <pilot> --base <base.blend> --evidence artifacts/local/alpha/push/w13/clips/<pilot>`
 6. Verify: `prlimit --as=12884901888 -- blender --background --threads 2 --python-exit-code 1 --python sketches/core-loop/tools/blender/verify_pilot_clips.py -- <pilot> --baseline <scratch>/baseline/pilot_<pilot>_anim.glb`. Expect `PILOT_CLIPS: PASS <pilot> 18 clips` and exit 0.
 7. Render its strip on card 1 (section 7.1).
-8. Run the Godot checks: `"$GODOT" --headless --path sketches/core-loop --script res://tests/pilot_clips_<pilot>_test.gd`, then `pilot_reactions_test.gd` the same way. `GODOT` defaults to `/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64` (`tools/coordinator/compile_check.sh:11`).
+8. Run the Godot checks: `"$GODOT_BIN" --headless --path sketches/core-loop --script res://tests/pilot_clips_<pilot>_test.gd`, then `pilot_reactions_test.gd` the same way (`GODOT_BIN` or `GODOT` selects your Godot 4.7.2 binary; `tools/coordinator/compile_check.sh:6` defaults `GODOT` to `/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64`).
 9. Fence check: `git diff --name-status` shows only the unit's SCOPE files.
 
 ## 5. Mecha motion: code drives it

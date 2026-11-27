@@ -1,6 +1,6 @@
 # Rivet: pilot sheet
 
-Status: design sheet for wave 13, unit A2, pilot Rivet (ClassDef id `runner_gunner`). Written 2026-10-10 on `cand/alpha-w13` at `22b8bb6`. Nothing here is built or played. Paths without a prefix are under `sketches/core-loop/`. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 lists them as the veto list.
+Status: historical wave 13 design sheet (`unit A2`, 2026-10-10, `runner_gunner`); kit rows, line skill (`line_drive`), and ultimate (`foundry_cutter`) have since landed in `sketches/core-loop/src/` (`PILOT-CADENCE.md` owns current weapon timing). Paths without a prefix are under `sketches/core-loop/`. A number marked **start** was a starting tune value. A line marked **Call** is a decision made under the creative charge; section 11 lists them as the veto list.
 
 **Weapon fire (ruling ek, 22 Nov 2026):** how this pilot's weapon fires, with its timers, damage and first tree pick, is now [PILOT-CADENCE.md](../PILOT-CADENCE.md) section 3.1. Where this sheet's weapon text differs, that page wins.
 

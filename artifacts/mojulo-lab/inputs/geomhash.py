@@ -19,7 +19,8 @@ def strip(o):
 
 
 for path in sys.argv[1:]:
-    data = open(path, "rb").read()
+    with open(path, "rb") as f:
+        data = f.read()
     if path.endswith(".stl"):
         print(path, "stl_tris", hashlib.sha256(data[84:]).hexdigest(), struct.unpack("<I", data[80:84])[0])
         continue
@@ -32,6 +33,8 @@ for path in sys.argv[1:]:
         elif kind == 0x004E4942:
             bin_ = chunk
         off += 8 + n
+    if js is None:
+        raise SystemExit(f"geomhash.py: missing GLB JSON chunk in {path}")
     print(path, "bin", hashlib.sha256(bin_).hexdigest(), "json_geom",
           hashlib.sha256(json.dumps(strip(js), sort_keys=True).encode()).hexdigest(),
           "names", sorted({m.get("name", "") for m in js.get("nodes", [])})[:4])

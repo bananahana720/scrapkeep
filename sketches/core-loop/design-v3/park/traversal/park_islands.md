@@ -1,5 +1,7 @@
 # park_islands traversal
 
+> **Historical wave-13/18 traversal receipt:** Preserved measurement log; live park traversal qualification runs via `sketches/core-loop/tests/park_*_test.gd` and `sketches/core-loop/tests/w50_*_test.gd`.
+
 ## Decoration-only pass, head vs base, 2026-10-19 (revised after review)
 
 The pass draws six rows as decoration-only liners and sets three to `scatter` (see `stages/5-park_islands.md`); `slickrock_run`, `fan_band`, `net_carve` and `isle_apron` were reverted to their greybox recipes after review because a scatter row's sensor stands on the raw ground and scatter would have opened the `twin_fins`, `west_wing` and `lens_rocks` event footprints. Method: `tools/traversal_line.gd --table=park --stage=5 --seeds=1,2,3,4,5,6,7,8 --child-timeout=900`, headless, `--fixed-fps 90`, `nice`, for Rivet, Tally and Sable (Kest, Tarn, Cannon, the floor line and the skill line were not re-run for this revision). Head: the revision commit on `claude/eloquent-rubin-83eps3-islands`; base: `137db801`, the true parent (park_flume and park_pit liners, no islands change), in a detached worktree. One pilot at a time, head and base run side by side (two Godot children on a shared 4-vCPU box). Receipts (not committed): `artifacts/local/isles-trav-r2/` (`head/`, `base/` first batch; `re-head/`, `re-base/` the seeds 1, 2, 5, 7 rerun; `re6-head/`, `re6-base/` the seed 6 rerun; `sum.py` summarises them).
@@ -36,11 +38,11 @@ the capped batch matches its recovery. Only the wall bound changed.
 
 Sable seed 2 and Rivet seed 4 agree in all fields between their untraced batch,
 untraced solo and traced solo. No fields were removed or normalized.
-The [agreement receipt](/home/andrew/scratch/w13/sol/kd5-islands-r5/agreement.json) retains the raw comparisons
+The agreement receipt (`kd5-islands-r5/agreement.json`, historical scratch artifact outside the repo) retains the raw comparisons
 and source fingerprints. The shared traversal/runtime disagreement is resolved
 for these named seeds. The first complete batches remain the measurements.
 
-The table comes from raw seed rows in the [independent assessment](/home/andrew/scratch/w13/sol/kd5-islands-r5/bands-independent.json).
+The table comes from raw seed rows in the independent assessment (`kd5-islands-r5/bands-independent.json`, outside the repo).
 There are 56 completed rows currently. Median and worst seed
 or seed range appear together. Airborne and length are judged per seed, and
 anchor gap uses the maximum seed. Segment and tier-3 gates retain their median
@@ -69,7 +71,7 @@ One bounded bank repair per failing pilot was tried at `d55b1a5`.
 The full eight-seed remeasurement still failed Sable's median time, 59.07 s,
 and Tally's length, 1.26 on every seed. Both trial lines had zero stops.
 The banks were reverted at `e496b0f`; exact runtime-byte equivalence restores
-the complete baseline and fresh win receipts. The [failed trial](/home/andrew/scratch/w13/sol/kd5-islands-r5/repair-band-assessment.json)
+the complete baseline and fresh win receipts. The failed trial (`kd5-islands-r5/repair-band-assessment.json`, historical scratch artifact)
 is retained. No further geometry repair is authorized by this packet.
 
 Raw stops with no matching causal enemy receipt count as terrain. No pack
@@ -94,7 +96,7 @@ row, combat values or bot behavior.
 | 2 | stalled | 133.73 | null | null |
 | 3 | stalled | 127.96 | null | null |
 
-R23 verdict: PASS. Breaks observed: 0/3. The [fresh win receipt](/home/andrew/scratch/w13/sol/kd5-islands-r5/win-review.json) retains the complete rows.
+R23 verdict: PASS. Breaks observed: 0/3. The fresh win receipt (`kd5-islands-r5/win-review.json`, historical scratch artifact) retains the complete rows.
 
 These are automated headless receipts. Human feel, dressing, listening and
 physical hardware acceptance remain unqualified.
@@ -110,7 +112,7 @@ at fixed FPS 90, nice 10, through the two-core queue with at most two traversal
 processes together. Every run has fresh XDG state.
 
 R22 stops geometry work because complete seed rows still disagree on identical
-inputs. The [agreement receipt](/home/andrew/scratch/w13/sol/kd5-islands-r4/agreement.json)
+inputs. The agreement receipt (`kd5-islands-r4/agreement.json`, historical scratch artifact)
 retains the complete rows and every changed field. All six comparison runs have
 the same runtime digest `fa895d4e75cf2271d9d8be26d79ddbc93c59710bdabf7e1ecf4c4b13cd754c13`;
 individual source and asset hashes are in each run's runtime-input manifest.
@@ -136,7 +138,7 @@ The other four pilot batches and new distinct-line traces are held for the
 shared traversal/runtime repair. Earlier receipts do not qualify this program.
 
 The batch table below is the measured result, not a qualifying pass. Values
-are computed independently from raw seed rows in the [band assessment](/home/andrew/scratch/w13/sol/kd5-islands-r4/bands-independent.json).
+are computed independently from raw seed rows in the band assessment (`kd5-islands-r4/bands-independent.json`, outside the repo).
 Every cell shows median and worst seed or seed range. Sable's time median uses
 its seven reached seeds; its worst seed is stalled with null time. Its three
 segment medians likewise use seven completed rows, while seed 2 has all three
@@ -166,7 +168,7 @@ The floor reaches 8/8, with worst time 84.09 s against twice Rivet's 89.27 s med
 
 Stop classification remains unresolved for Sable's 110 untraced stops. The solo
 traces contain zero stops and cannot classify that different batch. No qualification with zero terrain stops or pack-contact exemption is claimed. Coordinates and
-times are retained in the [stop evidence](/home/andrew/scratch/w13/sol/kd5-islands-r4/stop-evidence.json);
+times are retained in the stop evidence (`kd5-islands-r4/stop-evidence.json`);
 matching causal collider/enemy identities are missing. Rivet and the floor,
 when their measured raw total is zero, require no stop classification receipt.
 The historical 83 unclassified stops and 13 ground-contact increments below
@@ -174,7 +176,7 @@ remain evidence for `db2f034`, not classifications of this program's 110 stops.
 
 The stage-local geometry assertion now reads all 18 step-lip markers from this
 stage's authored appendix, retaining their 1 cm plateau specification. The
-external [mutation receipt](/home/andrew/scratch/w13/sol/kd5-islands-r4/mutations.json)
+external mutation receipt (`kd5-islands-r4/mutations.json`)
 shows waymark, rebuilt 3 m step-lip and Warden-family plants all make the stage
 test red. Each was restored byte for byte with `git checkout --`. The restored
 stage test passes 18 checks. Eight named smoke files pass with zero failures,
@@ -189,7 +191,7 @@ The external wrapper extends `res://tools/bot_run.gd` and sets only
 park table, completionist, `--from-stage=5 --stages=5`, with fresh state per seed.
 R23 requires all three seeds to reach and engage with no pre-engage traversal
 stall. A Warden unbroken at the limit is reported for the Warden tuning owner.
-The [win receipt](/home/andrew/scratch/w13/sol/kd5-islands-r4/win-review.json)
+The win receipt (`kd5-islands-r4/win-review.json`)
 retains every complete outcome row and the exact engage and break times.
 
 | Seed | Outcome | Engage s | Break s | Engage to break s |
@@ -216,16 +218,16 @@ untraced Sable batch and the original Rivet miss. The round-3 table remains an
 | Dead stops | **FAIL: 83 raw stops**, unclassified | 0 in earlier writer batch |
 | Stop qualification | classification unresolved; zero terrain unqualified | batch/solo/trace agreement held |
 
-The [independent untraced batch](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-recovery/sable.json)
-and [mode comparison](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-mode-comparison.json)
+The independent untraced batch (`w13-cgate/kd5-islands-r3/sable-recovery/sable.json`, historical scratch artifact)
+and mode comparison (`w13-cgate/kd5-islands-r3/sable-mode-comparison.json`)
 show why the earlier Sable pass cannot qualify this head. The differing traced
 batch has 13 ground-contact increments, with Ground/Tiles contacts and no enemy
-contact in the preceding 90 ticks. Its [stop receipt](/tmp/claude-1000/w13-cgate/kd5-islands-r3/sable-batch-trace-stops.json)
+contact in the preceding 90 ticks. Its stop receipt (`w13-cgate/kd5-islands-r3/sable-batch-trace-stops.json`)
 cannot classify the 83 untraced stops or supply a matching solo trace.
 
 Rivet's batch/solo/traced-solo airborne values remain 0.2482/0.3070/0.3107.
 The favorable repeat at 0.2517 does not replace the original miss. The
-[round-3 writer report](/tmp/claude-1000/w13-sol/kd5-islands-r3/REPORT.md)
+round-3 writer report (`w13-sol/kd5-islands-r3/REPORT.md`)
 retains that disagreement. Coordinator ruling R22 authorizes measurement with
 the candidate's imported TRAV-DET repair. Qualification requires new complete
 seed-row agreement and the unchanged worst-seed bands; the two pages will use

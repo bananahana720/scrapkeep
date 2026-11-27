@@ -1,4 +1,6 @@
-# Attack ids (E-numbers) registry
+# Attack ids (E-numbers) registry (historical wave 17 snapshot)
+
+> **Superseded historical record (17 Oct `#241`):** Live E-numbers on `main` (`E01`–`E27`, `E30`–`E40`) are owned directly in `sketches/core-loop/src/core/event_kinds.gd`, `sketches/core-loop/src/combat/telegraph_record.gd`, and `sketches/core-loop/design-v3/LEGIBILITY.md`. Do not read the table below as current `main` free IDs.
 
 Owner: local coordinator. One E-number per attack kind, in
 `src/combat/telegraph_record.gd`, `src/core/event_kinds.gd` and the design-v3/LEGIBILITY.md

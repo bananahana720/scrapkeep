@@ -1,10 +1,10 @@
 # Tarn: pilot sheet
 
-Status: design spec for wave P-C, unit A2-tarn of wave 13. Written 2026-10-10 on `cand/alpha-w13` at 22b8bb6. Nothing here is built or played. Every `file:line` cites that working tree; paths without a prefix are under `sketches/core-loop/`, and `BIBLE.md`, `adr/` and `docs/` are under the repo root. A number marked **start** is a starting value to tune in play. A line marked **Call** is a decision made under the creative charge; section 11 lists them as the veto list.
+Status: historical wave P-C / wave-13 design spec (`cand/alpha-w13` at `22b8bb6`). Check [PILOT-CADENCE.md](../PILOT-CADENCE.md) and `src/` for current implementation and tuning. In this sheet, a number marked **start** was a starting value to tune in play, a line marked **Call** was a creative-charge decision (listed in section 11), paths without a prefix are under `sketches/core-loop/`, and `BIBLE.md`, `adr/` and `docs/` are under the repo root.
 
 **Weapon fire (ruling ek, 22 Nov 2026):** how this pilot's weapon fires, with its timers, damage and first tree pick, is now [PILOT-CADENCE.md](../PILOT-CADENCE.md) section 3.4. Where this sheet's weapon text differs, that page wins.
 
-Settled by Andrew today (the plan's "Decisions settled today" table, `~/.claude/plans/let-s-plan-this-session-glowing-beaver.md`): a 1-2-3 bar plus one ultimate per pilot; snap-back firing; slot 2 is today's F special; slot 3 is the line skill, and Tarn's flavour is **claw drag**; the ultimate is a directed set piece on the line, charged by performance, scaled by heft class; depths 3 and 4 hold ultimate variants; per-pilot machinery on the ball body that reads the kit; cosmetics come only from achievements and discoveries.
+Settled in the wave-13 session decisions: a 1-2-3 bar plus one ultimate per pilot; snap-back firing; slot 2 is today's F special; slot 3 is the line skill, and Tarn's flavour is **claw drag**; the ultimate is a directed set piece on the line, charged by performance, scaled by heft class; depths 3 and 4 hold ultimate variants; per-pilot machinery on the ball body that reads the kit; cosmetics come only from achievements and discoveries.
 
 **Body direction changed tonight.** The plan settled an open gyro cage. Andrew rejected all 38 open-cage boards on the evening of 2026-10-10; `ROSTER-LOOK.md` §0, the Hoberman mecha, is now the live body direction and supersedes its own cage sections. Section 5 here follows §0. `ROSTER-LOOK.md` is being revised as this sheet is written, so it is cited by section, not by line.
 

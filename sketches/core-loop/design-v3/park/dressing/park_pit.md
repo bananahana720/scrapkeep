@@ -1,5 +1,7 @@
 # park_pit dressing, wave 18 re-proof
 
+> **Historical wave-18/20 dressing receipt:** Live prop placement and pins live in `sketches/core-loop/src/world/park/props/park_pit.json`, `sketches/core-loop/tests/fixtures/pins/park_pit.pin`, and [DRESSING-KITS.md](../DRESSING-KITS.md).
+
 ## What and why
 
 The pit's props dress a working open-pit mine. The giant machines are the humans' utility fleet: construction, mining and manufacturing. Some are corrupted, some are loyal drones and some are looping workers. The crew sites read as plush crews living among working giants, and the scale contrast is the point.

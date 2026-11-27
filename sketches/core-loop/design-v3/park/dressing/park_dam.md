@@ -1,5 +1,7 @@
 # park_dam dressing, wave 18 re-proof
 
+> **Historical wave-18/20 dressing receipt:** Live prop placement and pins live in `sketches/core-loop/src/world/park/props/park_dam.json`, `sketches/core-loop/tests/fixtures/pins/park_dam.pin`, and [DRESSING-KITS.md](../DRESSING-KITS.md).
+
 ## What and why
 
 The dam's crew sites (camps, bunks, benches, laundry) read as plush crews living among working giants: the giant machines are the humans' utility fleet (construction, mining, manufacturing), some corrupted, some loyal drones, some looping workers. Scale contrast is the point, so the crew props stay small, human-sized and homely beside them. This unit brings the dam onto the two checked rules: a per-kind line clearance for the brief's 30 m kind, and the telegraph keepout.

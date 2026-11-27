@@ -1,6 +1,6 @@
 # First-hour progression: the shift board
 
-World 1 unit 16 (/mnt/project-files/world1/UNITS.md). What a new player unlocks and learns across
+World 1 unit 16 (historical unit card `/mnt/project-files/world1/UNITS.md`). What a new player unlocks and learns across
 their first world 1 runs, how camp shows it, and the hooks the later variation layer plugs into.
 Code: `src/core/shift_board.gd` (rows and reads), `src/core/achievements.gd` (the six
 `brindle_mark_*` grant rows), `src/core/progress.gd` (the time card), `src/build/parts.gd`
@@ -84,9 +84,9 @@ Achievement rows gain an optional `pilot` field (the fact counts only while the 
 pilot) and a reward kind `item` (the settle is the grant; the board reads the earn).
 
 `ShiftBoard.SEEDS`: the layered variation hooks (stage variants and run modifiers, Andrew's 23 Oct
-note: Isaac-style variant floors, never copied). Each names the rung that opens it. Nothing builds
-them yet; a variant or modifier system asks `open_seeds(profile)` and builds only those, so the
-player sees them coming on the board.
+note: Isaac-style variant floors, never copied). Each names the rung that opens it. `src/core/shift_variants.gd`
+(`BUILT`) implements `overtime`, `dam_night_shift`, `crew_short`, `malpais_monsoon`, and `highdraft_eclipse`;
+`flume_backwash` remains seeded in `ShiftBoard.SEEDS` without a variant handler yet.
 
 | Seed | Kind | Opened by |
 | --- | --- | --- |

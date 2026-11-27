@@ -1,8 +1,8 @@
 # Scrapkeep full alpha plan
 
-> **Historical plan (1 to 10 Oct). The live plan is [project-guide/coord/GRAPH.md](../../../project-guide/coord/GRAPH.md) and [ROADMAP.md](../../../project-guide/coord/ROADMAP.md); rulings are in [project-guide/handoff/DECISIONS.md](../../../project-guide/handoff/DECISIONS.md).**
+> **Historical plan (1 to 10 Oct). Live execution state lives in [STATE.md](../../../project-guide/handoff/STATE.md) and [ROADMAP.md](../../../project-guide/handoff/ROADMAP.md); rulings are in [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md).**
 
-Status as of 10 October 2026: waves 1 to 20 and dress waves 1 to 12 had landed. [DESIGN-V3](DESIGN-V3.md) owns the current gameplay design. [HANDOFF](HANDOFF.md) is a historical log; the live handoff is [GRAPH](../../../project-guide/coord/GRAPH.md). Historical unit lists below preserve planning provenance.
+Status as of 10 October 2026: waves 1 to 20 and dress waves 1 to 12 had landed. [DESIGN-V3](DESIGN-V3.md) owns the historical post-C1 design baseline, and `HANDOFF.md` (`design-v3/HANDOFF.md`, archived in git history) was the earlier handoff log; live status is in [STATE.md](../../../project-guide/handoff/STATE.md). Historical unit lists below preserve planning provenance.
 
 ## What approving this plan authorizes
 
@@ -358,4 +358,4 @@ T5 merges before the first content wave. T6 merges before the first pilot or bos
 
 ## Wave 13 (opened 10 October 2026)
 
-Historical. Wave 13 ran on branch `cand/alpha-w13` with three lanes: Pilots ([SKILL-BAR](SKILL-BAR.md), [PILOTS](PILOTS.md), [ROSTER-LOOK](ROSTER-LOOK.md)), Park and Wardens ([PARK](PARK.md)) and Polish. Later waves are on [GRAPH](../../../project-guide/coord/GRAPH.md).
+Historical. Wave 13 ran on branch `cand/alpha-w13` with three lanes: Pilots ([SKILL-BAR](SKILL-BAR.md), [PILOTS](PILOTS.md), [ROSTER-LOOK](ROSTER-LOOK.md)), Park and Wardens ([PARK](PARK.md)) and Polish. Later coordination state is tracked in [STATE.md](../../../project-guide/handoff/STATE.md).

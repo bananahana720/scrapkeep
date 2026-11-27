@@ -3,6 +3,8 @@ import { mkdirSync, readFileSync, realpathSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { FACTS_HEADING, parseWaveFacts } from "./wave-state.mjs";
+
 export const BACKLOG_FILE = "BACKLOG.md";
 export const STATE_FILE = "project-guide/handoff/STATE.md";
 
@@ -82,14 +84,21 @@ export function refusal(card) {
   return null;
 }
 
+function readWaveFacts(stateText) {
+  let parsed = parseWaveFacts(stateText);
+  if (!parsed.found) parsed = parseWaveFacts(`${FACTS_HEADING}\n\n${stateText}`);
+  return parsed.facts ?? {};
+}
+
 export function openStage(stateText) {
-  const match = stateText.match(/\|\s*Open stage\s*\|\s*(stage\/alpha-w\d+)\s*\|/);
-  return match ? match[1] : null;
+  const facts = readWaveFacts(stateText);
+  if (facts.flatMain) return "main";
+  return facts.stage !== undefined ? `stage/alpha-w${facts.stage}` : null;
 }
 
 export function liveBoard(stateText) {
-  const match = stateText.match(/\|\s*Live board\s*\|\s*#(\d+)\s*\|/);
-  return match ? Number(match[1]) : null;
+  const facts = readWaveFacts(stateText);
+  return facts.board ?? null;
 }
 
 export function takenIds(text) {
@@ -122,6 +131,7 @@ function shellQuote(text) {
 }
 
 export function planCard(card, { stage, board }) {
+  const targetStage = stage ?? "main";
   const budget = BUDGETS[card.size];
   const slug = card.id.toLowerCase();
   const branch = `card/${slug}`;
@@ -135,25 +145,32 @@ export function planCard(card, { stage, board }) {
     steps: [
       {
         step: "free",
-        run: `skip unless no open pull request, branch or board #${board} claim names ${card.id}`,
+        run:
+          board == null
+            ? `skip unless no open pull request or branch names ${card.id}`
+            : `skip unless no open pull request, branch or board #${board} claim names ${card.id}`,
       },
       {
         step: "base",
-        run: `git fetch origin ${stage} && git worktree add -b ${branch} ${worktree} origin/${stage}`,
+        run: `git fetch origin ${targetStage} && git worktree add -b ${branch} ${worktree} origin/${targetStage}`,
       },
-      {
-        step: "claim",
-        run: `post one CLAIM comment on board #${board}: ${card.id}, ${branch}, base origin/${stage}, files ${card.files}`,
-      },
+      ...(board == null
+        ? []
+        : [
+            {
+              step: "claim",
+              run: `post one CLAIM comment on board #${board}: ${card.id}, ${branch}, base origin/${targetStage}, files ${card.files}`,
+            },
+          ]),
       {
         step: "write",
         run:
-          `cd ${worktree} && timeout -k 60 ${budget.minutes}m claude -p ${shellQuote(writerPrompt(card, stage))} ` +
+          `cd ${worktree} && timeout -k 60 ${budget.minutes}m claude -p ${shellQuote(writerPrompt(card, targetStage))} ` +
           `--agent scrapkeep-writer --permission-mode auto --disallowedTools 'Bash(git push:*)' 'Bash(gh:*)' --max-budget-usd ${budget.usd} --output-format json`,
       },
       {
         step: "gate",
-        run: `cd ${worktree} && npm run sketch:fast -- --base origin/${stage} --budget 600`,
+        run: `cd ${worktree} && npm run sketch:fast -- --base origin/${targetStage} --budget 600`,
       },
       {
         step: "review",
@@ -161,7 +178,10 @@ export function planCard(card, { stage, board }) {
       },
       {
         step: "land if green",
-        run: `git -C ${worktree} push -u origin ${branch}; open a draft PR against ${stage}; post READY on board #${board} with the receipt`,
+        run:
+          board == null
+            ? `git -C ${worktree} push -u origin ${branch}; open a draft PR against ${targetStage}`
+            : `git -C ${worktree} push -u origin ${branch}; open a draft PR against ${targetStage}; post READY on board #${board} with the receipt`,
       },
       {
         step: "stop if red",
@@ -196,7 +216,9 @@ export function plan({ backlog, state, ids, section, limit, taken = new Set() })
 }
 
 export function render(result) {
-  const lines = [`Dry run on ${result.stage} (board #${result.board}). Nothing was run.`, ""];
+  const stageLabel = result.stage ?? "main";
+  const boardLabel = result.board == null ? "no live board" : `board #${result.board}`;
+  const lines = [`Dry run on ${stageLabel} (${boardLabel}). Nothing was run.`, ""];
   for (const card of result.cards) {
     if (card.skip) {
       lines.push(`${card.id}: skipped, ${card.skip}`, "");

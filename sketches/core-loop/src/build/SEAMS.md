@@ -37,6 +37,8 @@ Pattern levels stack. Each copy of the part adds a level, and milestones and syn
 | `storm_lattice` (transformer) | named synergy: Chain Arc plus a part with the split tag | every split bolt chains once |
 | `linked_spiral` (transformer) | unnamed rule: spiral + chain tags | the spiral's chain arcs link into a ring |
 
+Additional registered transformers in `Pattern.TRANSFORMERS` (`src/combat/pattern.gd`, 13 rows total): `fan_spread`, `helix_drill`, `halo`, `damage_tier`, `rate_tier`, `range_tier`, `capacitor`, `overclock`, `brass_drum`, and `heavy_breech`.
+
 Build runs every other synergy transformer itself: `thermal_shock`, `lightning_rod`, `tesla_pylon`, `wrecking_ball`, `shrapnel_bloom`, `glacier_hull` and `pinwheel`. Combat may ignore them. Their strikes go through `ctx.spawner.strike` with kind `arc` or `slam`.
 
 Read them with `build.pattern_level(id) -> int`, `build.patterns() -> Dictionary` and `build.has_transformer(id) -> bool`. Without the build reference, `ctx.run.parts.count("cross_split")` (and the same for `spiral_wave` and `chain_arc`) gives the base level. The part ids equal the pattern ids, but that fallback misses milestone and synergy levels.

@@ -11,7 +11,7 @@ def default_base_from_state():
     state_path = "project-guide/handoff/STATE.md"
     if os.path.exists(state_path):
         with open(state_path, encoding="utf8") as fh:
-            m = re.search(r"\|\s*Open stage\s*\|\s*(stage/alpha-w\d+)\s*\|", fh.read())
+            m = re.search(r"\|\s*Open stage\s*\|\s*(stage/alpha-w\d+|main)\s*\|", fh.read())
             if m:
                 return f"origin/{m.group(1)}"
     return "origin/main"

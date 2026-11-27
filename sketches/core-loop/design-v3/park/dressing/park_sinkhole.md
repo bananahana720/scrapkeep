@@ -1,5 +1,7 @@
 # park_sinkhole dressing, wave 18
 
+> **Historical wave-18/20 dressing receipt:** Live prop placement and pins live in `sketches/core-loop/src/world/park/props/park_sinkhole.json`, `sketches/core-loop/tests/fixtures/pins/park_sinkhole.pin`, and [DRESSING-KITS.md](../DRESSING-KITS.md).
+
 Base: sinkhole branch head 7afe0e43 (which already held the stage and foundation 07748516 merges) plus a final merge of `origin/stage/alpha-w18` f259e8cf (merge 27e6e028) and the accepted Dressing foundation `claude/zealous-franklin-ed0sxr-lineclear` e72fff7d (merge 4c23d363), then the foundation's stage merge be6189ec (merge b034a45f; its tree equals e72fff7d merged with f259e8cf). The foundation commits after 07748516 change only the audit, static checks and `park_props_test`, so the plan check is unchanged. The Dressing foundation (#220) and its `scatter_row` rule are on the stage.
 Method: automated headless Godot 4.7.2 on cloud llvmpipe (an OpenGL compatibility proxy). This is not a frame-cost proof and says nothing about human feel.
 

@@ -20,3 +20,4 @@
 | Date | Change |
 | --- | --- |
 | 2026-11-13 | VBD-01 to VBD-03 added with the skill. |
+| 2026-11-26 | Synced `features/cold-launch.md` step count (`26` lines), `features/first-run.md` (`30` steps, `StartPickCard` deferred until stage 1 yard lock), `SKILL.md` (`--profile=sitting-earned`, `pstack:maintain-verification-skill`), and `--audio-driver Dummy` in `scripts/build.sh` doctor. `build.sh latest`/`doctor` confirmed `verified-unreachable` on Darwin/arm64. |

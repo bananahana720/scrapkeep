@@ -1,5 +1,7 @@
 # Core-loop demo spec: gating, growth and engagement
 
+> **Historical / Superseded spec (26 Sep 2026):** Later integration in [CONTRACTS.md](CONTRACTS.md), [design-v3/](design-v3/README.md), and `src/core/alpha_defs.gd` / `park_defs.gd` owns the live three-world alpha rules. Kept as historical baseline.
+
 Status: accepted by Andrew on 2026-09-26 through the /tree keystone and three follow-up questions. The reconciled design panel (three lenses and a reconciler, workflow wf_3df50518-763) is the source. Where the panel and Andrew differed, Andrew's answer wins (cores). This file owns the demo's progression rules. CONTRACTS.md owns the seams.
 
 ## Thesis

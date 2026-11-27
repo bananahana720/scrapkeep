@@ -1,7 +1,7 @@
 # World 1 Demo Catalyst Spec: Appeal, Art Style, Maps, Living Universe & Souls-Like Mastery
 
-**Status:** Approved creative & technical direction (21 November 2026, ruling `ei` in [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)), written against `stage/alpha-w45` (`b4730b585`).  
-**Scope:** World 1 ("The Spillway" — Title, Camp, Dam, Flume, Slag Bowl) ahead of Andrew's 11-area World 1 Sitting. Worlds 2 & 3 stay parked (ruling `at`), Cobalt stays the ordinary item ceiling (ruling `bn`), Patch stays parked (ruling `dl`), unfinished promise rows stay `report` (ruling `ef`), and heightfield terrain deformation stays refused ([Q-P22](../../../BACKLOG.md#q-p22), ruling `eh`).
+**Status:** Approved World 1 catalyst direction (21 November 2026, ruling `ei` in [DECISIONS.md](../../../project-guide/handoff/DECISIONS.md)), written against `stage/alpha-w45` (`b4730b585`; note ruling `ep` subsequently unparked Worlds 2 & 3 for the full alpha and adopted flat `main`).  
+**Scope:** World 1 ("The Spillway" — Title, Camp, Dam, Flume, Slag Bowl) ahead of Andrew's 11-area World 1 Sitting (extended to Worlds 1–3 by ruling `ep`). At the time of ruling `ei`, Worlds 2 & 3 were parked (`at`), Cobalt was the ordinary item ceiling (`bn`), Patch stayed parked (`dl`, later partially wired visually while its playable kit remains unbuilt), unfinished promise rows stay `report` (`ef`), and heightfield terrain deformation stays refused ([Q-P22](../../../BACKLOG.md#q-p22), ruling `eh`).
 
 Read with: [STORY-MAP.md](STORY-MAP.md), [TONE-BIBLE.md](TONE-BIBLE.md), [SIGHT-PERSONA.md](SIGHT-PERSONA.md), [LEGIBILITY.md](LEGIBILITY.md) section 13, [ABILITY-MUTATIONS.md](ABILITY-MUTATIONS.md), [HEFT-DESTRUCTIBLES.md](HEFT-DESTRUCTIBLES.md), [FIRST-HOUR.md](FIRST-HOUR.md), [map-audit.md](../../../project-guide/handoff/shared/world1/map-audit.md), [visual-assets-audit.md](../../../project-guide/handoff/shared/world1/visual-assets-audit.md), [gameplay-critique.md](../../../project-guide/handoff/shared/world1/gameplay-critique.md), and [transitions-audit.md](../../../project-guide/handoff/shared/world1/transitions-audit.md).
 
@@ -76,7 +76,7 @@ Every single creative catalyst in this spec serves **two simultaneous goals**: m
   - Land **`MG-11`** (`PackPressure.lead_aim` on straight-rolling balls, zero penalty on turning/carving balls) + **ruling `ed`** (Brindle keeps attacking, slowed, while reeling instead of standing helpless).
   - Pair with **`W1-61`** (overflow shatter past phase floors triggers an ecstatic scrap/cog/ultimate shower so monster builds feel thunderously rewarded while still dodging slowed follow-ups).
   - Add crisp **visual tell twins** for Brindle's follow-up ring and hook turn (`W1-105`, `W1-106`, decision A11), **Slag Bowl stand crew bodies** (uniformed stuffed-animal spectators cheering, waving clipboards, reacting to combos and phase turns — never targets), a **1-second phase-turn comic clash beat** synced to the +10/+20 BPM anthem drops with 2-frame armor-break impact freeze, and polish on his **scooter defeat wink**.
-  - Wire the Warden form onto the synth band and Brindle (`ROADMAP.md` Item 7).
+  - Wire the Warden form onto the synth band and Brindle (historical [design-v3/ROADMAP.md](ROADMAP.md) Item 7; live roadmap is [project-guide/handoff/ROADMAP.md](../../../project-guide/handoff/ROADMAP.md)).
 - **Moss's Last Call at the Slag Bowl Mouth ([shop.gd](../src/build/shop.gd), `W1-73`):**
   - Dock Moss once right before Brindle so leftover cogs (1,300–2,000+ previously dying unspent) buy one final strategic spike: a shelf slot biased toward completing the player's nearest **Maker Set or Evolution**, plus one cog-fed boss tactical consumable.
 

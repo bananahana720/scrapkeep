@@ -8,12 +8,12 @@ From the title a new player reads the prologue, picks a pilot, takes the kit pic
 - `SR-2` Pilot select shows six cards; a new profile has Sable open and five locked. When an unlocked pilot owns alternate loadouts, the focused card shows an `AltLoadoutRow` (`L` / pad `Y` cycles between `Stock kit` and unlocked alt loadouts); owned paints cycle on `P` / pad `X`.
 - `SR-3` Picking a pilot (its number, or a click) runs the launch swipe (`FWOOSH!`) and opens the kit pick ("Rig your kit. Pick one."), with the game paused.
 - `SR-4` The start pick (`StartPickCard`, "Moss packed three. Take one.") has keys 1 to 3 and a Reroll (`V` or click). On a fresh profile (before the first win, `RunTier.top_unlocked(profile) < HARD`) in stage 1 with a yard lock ahead (`flow.start_pick_waits()`), the start pick waits until the player reaches the yard rather than pausing at the drop. Once `RunTier` unlocks (after a win), `StartPickCard` opens right after the kit pick with the `Tier` rung ladder, comparison meters, hover/focus contract lines, and any armed Foreman override code names along the bottom.
-- `SR-5` Play begins unpaused in stage 1; W A S D drives the ball. The bottom-right `ConsumableSlot` HUD widget appears once the ball holds a cartridge from the 9-consumable pool (or has `Duplicator Spool` / `Overload Fuse` armed), expands to two slots with `Pocket Belt`, and fires on `C` (`cl_consumable`).
+- `SR-5` Play begins unpaused in stage 1; W A S D drives the ball. The bottom-right `ConsumableSlot` HUD widget appears once the ball holds a cartridge from the 9-consumable pool (or has `Carbon Tape` / `Breaker Fuse` armed, constants `DUPLICATOR_SPOOL` / `OVERLOAD_FUSE`), expands to two slots with `Pocket Belt`, and fires on `C` (`cl_consumable`).
 
 ## How to get to it (user POV)
 
 - Title, then Space or a click on Play.
-- After a death or on the summary: N for the same pilot, Space for pilot select.
+- After a death: N for the same pilot, C for pilot select. On the summary: N for replay, C or Space/Enter for pilot select.
 - Launch with `-- --profile=sitting` to have all six pilots open (the "Scrapkeep sitting" menu entry).
 
 ## Driving it with drive.sh

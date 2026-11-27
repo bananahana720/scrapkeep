@@ -1,6 +1,6 @@
 # The park: six Arizona stages at four times the size
 
-Status: design for wave 13, lane 2 (park and Wardens). The direction is [TADR-011](../../../adr/TADR-011-park-terrain-and-warden-kinds.md), Proposed until Andrew approves the storyboards. The Bible text it needs is drafted in [BIBLE-AMENDMENT-park.md](BIBLE-AMENDMENT-park.md). Andrew's binding calls are the "Decisions settled today" table of the session plan (`~/.claude/plans/let-s-plan-this-session-glowing-beaver.md`); the calls made under the creative charge are listed in section 11 for his veto.
+Status: wave 13 lane-2 design spec (park and Wardens). The direction is [TADR-011](../../../adr/TADR-011-park-terrain-and-warden-kinds.md) (Proposed; implemented in `sketches/core-loop` with Worlds 1–3 unparked under ruling `ep`). The Bible amendment draft is in [BIBLE-AMENDMENT-park.md](BIBLE-AMENDMENT-park.md). Based on the wave-13 session decisions; the creative-charge calls are listed in section 11.
 
 Paths are under `sketches/core-loop/` unless they start with `adr/`, `artifacts/`, `docs/` or `BIBLE.md`. Every number marked "start" is a starting value to tune in play. A **park element** is a landform that works as a piece of skate-park furniture. A **waymark** is a named point a traversal line must pass. A **line** is one pilot's authored route from the drop-in to the Warden. A **mounting** is where and how a Warden sits in its landmark. An **enemy home** is a place in the park that spawns one enemy kind and gives it an advantage.
 

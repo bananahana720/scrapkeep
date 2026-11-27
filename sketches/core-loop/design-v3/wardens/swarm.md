@@ -1,5 +1,7 @@
 # Warden kind sheet: `swarm`, the swarm remnant
 
+> **Historical / Built spec (10 Oct 2026):** Live implementation owns tuned stats in `sketches/core-loop/src/combat/warden*.gd`, `src/core/park_defs.gd`, and `src/core/alpha_defs.gd` (ignore any retired `QUARANTINE.tsv` references; use `KNOWN-FAILING.tsv`).
+
 The Warden kind for world 2, The Dig. Unit K-W2, wave 13, 10 October 2026. Status: **draft for Andrew's click approval** of board `warden-swarm`. Every number is a starting value to tune in play unless it cites code. Paths are under `sketches/core-loop/` unless they start with `adr/`, `docs/` or `BIBLE.md`.
 
 Read with [PARK.md](../PARK.md) section 7 (the kinds and mountings), [TADR-011](../../../../adr/TADR-011-park-terrain-and-warden-kinds.md), the reactor sheet [reactor.md](reactor.md) for the shared layout, and the two stage pages, [3-park_pit.md](../park/stages/3-park_pit.md) and [4-park_sinkhole.md](../park/stages/4-park_sinkhole.md).
@@ -67,16 +69,16 @@ One mechanism per mounting (PARK.md:420-427). Both are vertical: the swarm carri
 
 ### 3.1 `headframe` (stage 3): it rides the hoist
 
-The hive hangs on the hoist rope inside the headframe over the main shaft at (0, 255). It runs a 12 s cycle (start), two pulse cycles long:
+The hive hangs on the hoist rope inside the headframe over the main shaft at `(0, 255)` (live `park_pit.json` anchor `[0, -108, 255]` rising to `[0, -78, 255]`; originally drafted at `y -96` to `y -66`). It runs a 12 s cycle (`DWELL 4.0`, `MOVE 2.0`, `RISE 30.0`, `BRAKE_DROP := 0.9 s` in `src/combat/warden_swarm.gd`):
 
-| Phase | Seconds | Hive centre | What it means for the ball |
+| Phase | Seconds | Hive centre (drafted / live `park_pit.json`) | What it means for the ball |
 | --- | --- | --- | --- |
-| Low dwell | 0 to 4 | y -96, at the collar on the pit floor | rams, stomps and slams reach it; the guard rack forms on the floor between it and the ball; the charge runs in the last 2 s and the pulse fires at 4 s |
+| Low dwell | 0 to 4 | `y -96` drafted (`y -108` in `park_pit.json`), at the collar on the pit floor | rams, stomps and slams reach it; the guard rack forms on the floor between it and the ball; the charge runs in the last 2 s and the pulse fires at 4 s |
 | Rise | 4 to 6 | 30 m up at 15 m/s | a latched ball is dragged up with it |
-| High dwell | 6 to 10 | y -66, just under the tipple deck (y -60) | out of ram reach; the latch window; the charge runs in the last 2 s and the pulse fires at 10 s |
+| High dwell | 6 to 10 | `y -66` drafted (`y -78` in `park_pit.json`), under the tipple deck | out of ram reach; the latch window; the charge runs in the last 2 s and the pulse fires at 10 s |
 | Fall | 10 to 12 | back to the collar | a latched ball's line goes slack; the hive lands for the next low dwell |
 
-- **Stagger.** The hoist brakes and the hive drops to the collar in 1.0 s with the queen open for the 4 s stagger. The queen is at floor level, so a slam on the floor finishes, and so does a drop from the tipple deck 40 m up (about 2.9 s of fall, inside the 4 s window if the ball leaves the deck within 1 s).
+- **Stagger.** The hoist brakes and the hive drops to the collar in `BRAKE_DROP := 0.9 s` (`warden_swarm.gd`; drafted `1.0 s`) with the queen open for the 4 s stagger. The queen is at floor level, so a slam on the floor finishes, and so does a drop from the tipple deck 40 m up (about 2.9 s of fall, inside the 4 s window if the ball leaves the deck within 1 s).
 - **Throw.** A ball latched through the rise keeps 15 m/s upward when the hive stops at the high dwell. That lifts it about 11 m, over the tipple deck's rail 6 m above (estimate at 9.8 m/s squared; the game's gravity may differ). The hoist throws you onto the finisher's platform.
 - **Engage ring.** The hive moves 30 m vertically and 0 m in plan, so the landmark's `reach_m` of 42 already exceeds its path (PARK.md:431). The pulse ring stays 30 m (`DEFAULT_REACH`, `warden.gd:39`) and follows the hive, drawn on the floor under it. At the low dwell the pulse pops floor balls; at the high dwell it pops a ball hanging on the line.
 - **Why.** PARK.md:426 asked for the cage rising and falling with a 4 s exposure. This makes the two dwells two different jobs: the ground fight and the line fight alternate every 6 s, which is the pulse cycle you already read.
@@ -117,7 +119,7 @@ Every Warden is a harpoon anchor (PARK.md:412-418). The framework is unit KF1; t
 
 **How it throws you.** On the headframe the throw is the hoist stop (section 3.1): ride the rise and the stop throws you onto the tipple deck. In the sinkhole the throw is the snip plus the pulse: a ball swinging from a ring post when the line is cut flies up the sinkhole wall, back onto the gallery ring.
 
-**During a stagger** every hardpoint holds and no snip runs. On the headframe, a ball latched at the high dwell rides the 1.0 s brake-drop down with the hive and arrives on the open queen, the hoist doing the drop for you. In the sinkhole, swing up over the nest from a ring post, release above the open queen and haul.
+**During a stagger** every hardpoint holds and no snip runs. On the headframe, a ball latched at the high dwell rides the `BRAKE_DROP := 0.9 s` brake-drop (`warden_swarm.gd`) down with the hive and arrives on the open queen, the hoist doing the drop for you. In the sinkhole, swing up over the nest from a ring post, release above the open queen and haul.
 
 ## 5. Clips
 
@@ -177,7 +179,7 @@ The evidence behind the world 2 row. PARK.md:548 has `tests/posture_bands_test.g
 | Predicted, `headframe` | 60 to 85 s (the hive is out of ram reach 8 s in every 12) | this sheet |
 | Predicted, `sinkhole` | 45 to 70 s (the first stagger is from 21 m below) | this sheet |
 
-**The band for the swarm kind:** grown median 25 to 45 s and small at least twice grown on each mounting, measured with the latch arm on (the table above); the 24.5 to 128 s world band applies to the pilots row only (coordinator ruling at the KF3 merge, 2026-10-11 w13-wardens: the earlier wording named the world band here and contradicted the table; until the bot has a latch arm, KF-BOT, the sweep measures the no-latch path and `posture_bands_swarm_test` sits in `tests/QUARANTINE.tsv`). Two mechanism checks ride with it, so a win that skips the mechanism fails the test instead of passing quietly:
+**The band for the swarm kind:** grown median 25 to 45 s and small at least twice grown on each mounting, measured with the latch arm on (the table above); the 24.5 to 128 s world band applies to the pilots row only (historical coordinator ruling at KF3 merge, 2026-10-11; `KNOWN-FAILING.tsv` is the sole live red ledger while `tests/QUARANTINE.tsv` is an empty header-only stub). Two mechanism checks ride with it, so a win that skips the mechanism fails the test instead of passing quietly:
 
 - `headframe`: at least half the seeds land a stagger during a low dwell and at least one finish from a latch.
 - `sinkhole`: the pool rises one step per chunk lost in every seed, and no step rises under a grounded ball.
@@ -194,8 +196,8 @@ Each unit writes in its own worktree, gets a verifier and one fix round, with re
 
 - In a stepped headless run the hive dwells 4 s low and 4 s high and moves 30 m in 2 s each way.
 - The pulse fires at the end of each dwell.
-- A stagger drops the hive to the collar within 1.0 s.
-- A ball latched through the rise leaves the high-dwell stop with at least 12 m/s upward.
+- A stagger drops the hive to the collar within `BRAKE_DROP := 0.9 s` (`warden_swarm.gd`; drafted `1.0 s`).
+- A ball latched through the rise leaves the high-dwell stop with upward carry (`THROW_SPEED` in `warden_swarm.gd`).
 - In the sinkhole each chunk lost raises the pool floor 5 m. No step rises while a ball is grounded on it, except the 6 s lift fallback, and that lift leaves planar speed within 1%.
 - A lamp guard's last kill pays 25 posture, as a rack scatter does.
 - The snip never changes the ball's velocity except the pulse lift.
@@ -217,7 +219,7 @@ Order: after this sheet is approved.
 
 **KF8 Mountings and wiring (shared).** The swarm part: `landmark.warden` in `src/world/park/park_pit.json` and `park_sinkhole.json` only. ACCEPTANCE:
 
-- The headframe hive anchors at [0, -96, 255] with path [[0, -96, 255], [0, -66, 255]].
+- Live `park_pit.json` anchors the headframe hive at `[0, -108, 255]` with path `[[0, -108, 255], [0, -78, 255]]` (originally drafted at `y -96` / `-66`).
 - The sinkhole nest sits at [0, -99, 388] with an empty path.
 - Three hardpoints per mounting where section 5 puts them.
 - KF1's bot latches, rides 3 s, fires from the line, survives a snip with its velocity, and finishes with a drop on both stages.

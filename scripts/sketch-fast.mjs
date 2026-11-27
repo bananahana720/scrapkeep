@@ -286,7 +286,7 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
   for (const rel of changed) {
     for (const rule of PATH_RULES)
       if (rule.match.test(rel))
-        for (const test of expand(index, rule.tests)) add(test, 1, `${rule.name}: ${rel}`);
+        for (const test of expand(index, rule.tests)) add(test, 0, `${rule.name}: ${rel}`);
     for (const rule of SHARD_RULES)
       if (rule.match.test(rel))
         for (const test of expand(index, rule.tests))

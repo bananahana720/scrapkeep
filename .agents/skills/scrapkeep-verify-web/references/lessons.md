@@ -16,3 +16,4 @@
 | Date | Change |
 | --- | --- |
 | 2026-11-13 | VWB-01 and VWB-02 added with the skill. |
+| 2026-11-26 | Hardened `scripts/web.sh` (`CHROMIUM_PATH` executable check), pointed maintain line at `/pstack:maintain-verification-skill`, and verified live headless Chromium runs (`sitting-kit` 9/9, `yard` 2/2, `orchard` 2/2, 0 errors). |

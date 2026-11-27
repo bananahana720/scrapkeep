@@ -1,5 +1,7 @@
 # Islands park dressing note (Dressing lane)
 
+> **Historical wave-18/20 dressing receipt:** Live prop placement and pins live in `sketches/core-loop/src/world/park/props/park_islands.json`, `sketches/core-loop/tests/fixtures/pins/park_islands.pin`, and [DRESSING-KITS.md](../DRESSING-KITS.md).
+
 Base line: branch head after merging `origin/stage/alpha-w18` (f259e8cf421fc3c305b53ae104005dda40af9a41, merge 9577225bbf5bb2ceeee1a76997a6b5a8cfc18407) and the foundation `claude/zealous-franklin-ed0sxr-lineclear` (e72fff7d96a88118e622f30658bcddb3105ae206, merge a4b4fc5b08b315b21531766569b64fc3ae33ce1c); then the foundation again at be6189ec5f5c8eb33591c33ecc76d72e56828394 (e72fff7d plus the stage f259e8cf merge; merge 628de2e1c3167fe83d2dbb843114b44f1f92a23b); then `origin/stage/alpha-w18` again at 3c83375501aa98543b8785e3129a0cd028e0b1e8 (merge 90cd90d031db3c604d8b1d1d118abc15ab7b52fc); previous head b117ddd0.
 Plan check: `park_props_plan.gd --map=park_islands --check` reports 364 instances (50 litter), 0 violations, fingerprint 4203578688 = pin (w18k re-pin from 251580569, two template trolleys moved and one re-yawed and scaled, see "w18k vignette look"; 251580569 was the w18i pin, re-pinned from 3526488863, two spots moved and one re-yawed; 3526488863 was the w18h pin, from 2348699063, when the recomposition of the rows removed 17 spots, moved 22 and re-yawed 8 in place, 430 to 364 instances; history: 2014119072, 3660265306, 3322127868, 2348699063 (w18g, after the w400 to w408 and w901 prune, 480 to 430 instances)).
 

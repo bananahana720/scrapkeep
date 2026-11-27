@@ -1,6 +1,6 @@
 # Pacing budgets
 
-`world1-pacing.json` is the Spillway's run-length and optional-content budget as data. The human ledger is `/mnt/project-files/world1/BUDGETS.md`; change a number in both.
+`world1-pacing.json` is the Spillway's run-length and optional-content budget as data. The companion human ledger sits outside the repo at `/mnt/project-files/world1/BUDGETS.md` (keep both in sync when editing numbers here).
 
 All times are bot game seconds at fixed 90 fps. A person's time is estimated with `human_per_bot` (1.75, inferred from the plan's 1.5 to 2, not measured). Replace it with the ratio from Andrew's world 1 sitting.
 

@@ -1,0 +1,155 @@
+TLC2 Version 2.19 of 08 August 2024 (rev: 5a47802)
+Running breadth-first search Model-Checking with fp 26 and seed -8304260479528610416 with 8 workers on 18 cores with 8192MB heap and 64MB offheap memory [pid: <pid>] (<host>).
+Parsing file /private<tmp>/DeferredEffects.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Naturals.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/FiniteSets.tla
+Parsing file /private/var/folders/y5/5nrsv2997s92gwq9rh_l0lp40000gn/T/Sequences.tla
+Semantic processing of module Naturals
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module DeferredEffects
+Starting... (2026-11-26 13:22:25)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-26 13:22:26.
+Error: Invariant NoEchoAcrossAttempt is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ heat = "none"
+/\ att = 0
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "title"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none",
+  defproc |-> "none",
+  detcord |-> "none" ]
+/\ expo = "none"
+/\ last = "Init"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 2: <NewRun line 151, col 3 to line 153, col 48 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 1
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "play"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none",
+  defproc |-> "none",
+  detcord |-> "none" ]
+/\ expo = "none"
+/\ last = "NewRun"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 3: <DetCordQueues line 238, col 3 to line 240, col 115 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 1
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "play"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none",
+  defproc |-> "none",
+  detcord |-> "fresh" ]
+/\ expo = "none"
+/\ last = "DetCordQueues"
+/\ stale = FALSE
+/\ guards = "none"
+
+State 4: <EnterStage line 138, col 3 to line 140, col 52 of module DeferredEffects>
+/\ heat = "none"
+/\ att = 2
+/\ pike = "none"
+/\ expoOld = FALSE
+/\ flow = "play"
+/\ foe = "gone"
+/\ deep = FALSE
+/\ b = [ live |-> FALSE,
+  proc |-> FALSE,
+  old |-> FALSE,
+  bits |-> {},
+  spent |-> {},
+  gen |-> 0,
+  fam |-> 0,
+  bounces |-> 0,
+  hoar |-> FALSE,
+  spared |-> "none",
+  pulledAsChild |-> FALSE ]
+/\ mark = FALSE
+/\ q = [ rake |-> "none",
+  echo |-> "none",
+  bell |-> "none",
+  shock |-> "none",
+  strip |-> "none",
+  cast |-> "none",
+  bite |-> "none",
+  defproc |-> "none",
+  detcord |-> "old" ]
+/\ expo = "none"
+/\ last = "EnterStage"
+/\ stale = FALSE
+/\ guards = "none"
+
+3090 states generated, 1368 distinct states found, 1261 states left on queue.
+The depth of the complete state graph search is 6.
+The average outdegree of the complete state graph is 13 (minimum is 0, the maximum 26 and the 95th percentile is 23).
+Finished in 00s at (2026-11-26 13:22:26)

@@ -1099,3 +1099,36 @@ test("resolveNamedTests strips prefixes/suffixes, matches globs, and plan allowB
     ["tests/bot_isle_stage5_test.gd"],
   );
 });
+
+test("PATH_RULES park matches run at tier 0 and are never deferred under tight tier-1 budget", () => {
+  const index = files({
+    "assets/park/park_dam/bake.json": "",
+    "tests/unit_suite_test.gd": "",
+    "tests/park_props_test.gd": "",
+    "tests/park_park_dam_test.gd": "",
+    "tests/unrelated_slow_test.gd": "",
+  });
+  const { picked } = selectTests(index, ["assets/park/park_dam/bake.json"]);
+  assert.equal(picked.get("tests/park_props_test.gd")?.tier, 0);
+  assert.equal(picked.get("tests/park_park_dam_test.gd")?.tier, 0);
+  picked.set("tests/unrelated_slow_test.gd", { tier: 1, why: "names" });
+  const out = plan({
+    picked,
+    timings: {
+      "tests/unit_suite_test.gd": 5000,
+      "tests/park_props_test.gd": 15000,
+      "tests/park_park_dam_test.gd": 5000,
+      "tests/unrelated_slow_test.gd": 100000,
+    },
+    budgetMs: 25000,
+    width: 1,
+    solo: () => false,
+    bots: () => false,
+  });
+  assert.deepEqual(
+    out.deferred.map((r) => r.test),
+    ["tests/unrelated_slow_test.gd"],
+  );
+  assert.ok(out.parallel.some((r) => r.test === "tests/park_props_test.gd"));
+  assert.ok(out.parallel.some((r) => r.test === "tests/park_park_dam_test.gd"));
+});

@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { test } from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   ROWS,
@@ -8,6 +19,7 @@ import {
   buildReceipt,
   cfgRules,
   coveredFiles,
+  findJar,
   parseTlc,
   syncCommit,
   timedOut,
@@ -494,9 +506,10 @@ test("the deferred effects row holds on the code and every plant breaks its rule
       "build/shot_bits.gd",
     ],
   });
-  assert.ok(row.plants.length >= 6);
-  assert.match(held.measured, /deferred-today: no break in 2,196,005 distinct states/);
+  assert.equal(row.plants.length, 24);
+  assert.match(held.measured, /deferred-today: no break in 9,955,877 distinct states/);
   assert.match(held.measured, /deferred-broken-ungated broke NoEchoAcrossAttempt/);
+  assert.match(held.measured, /deferred-broken-nestproc broke ProcDepthOne/);
 });
 
 test("the sound arbiter row's pin and plants match captured TLC output, and its page covers the code it models", () => {
@@ -533,11 +546,11 @@ test("the sound arbiter row's pin and plants match captured TLC output, and its 
     assert.ok(covered.includes(`sketches/core-loop/src/${f}`), f);
 });
 
-test("the weapon cadence row covers all six pilots, pins 10,122 states, and wires all 16 plants", () => {
+test("the weapon cadence row covers all six pilots, pins 12,415 states, and wires all 16 plants", () => {
   const wc = ROWS["weapon-cadence-safe"];
   assert.deepEqual(
     wc.real.map((r) => [r.cfg, r.minStates]),
-    [["weaponcadence-today.cfg", 10122]],
+    [["weaponcadence-today.cfg", 12415]],
   );
   assert.equal(wc.plants.length, 16);
   assert.deepEqual([...new Set(wc.plants.map((p) => p.rule))].sort(), [
@@ -566,4 +579,91 @@ test("the weapon cadence row covers all six pilots, pins 10,122 states, and wire
     "sketches/core-loop/src/combat/combat.gd",
     "sketches/core-loop/src/combat/weapon_driver.gd",
   ]);
+});
+
+test("findJar resolves XDG_DATA_HOME/tlc/tla2tools-1.7.4.jar instead of retired astack path", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-tlc-"));
+  const prevXdg = process.env.XDG_DATA_HOME;
+  const prevTla = process.env.TLA2TOOLS;
+  try {
+    delete process.env.TLA2TOOLS;
+    process.env.XDG_DATA_HOME = tmp;
+    const expected = path.join(tmp, "tlc/tla2tools-1.7.4.jar");
+    mkdirSync(path.dirname(expected), { recursive: true });
+    writeFileSync(expected, "");
+    assert.equal(findJar(), expected);
+    const retired = path.join(tmp, "astack/tlc/tla2tools-1.7.4.jar");
+    rmSync(expected);
+    mkdirSync(path.dirname(retired), { recursive: true });
+    writeFileSync(retired, "");
+    assert.equal(findJar(), null);
+  } finally {
+    if (prevXdg === undefined) delete process.env.XDG_DATA_HOME;
+    else process.env.XDG_DATA_HOME = prevXdg;
+    if (prevTla === undefined) delete process.env.TLA2TOOLS;
+    else process.env.TLA2TOOLS = prevTla;
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+function plantCompletenessGaps(modelsDir, rows) {
+  const disk = new Set(
+    readdirSync(modelsDir).filter((name) => name.includes("-broken-") && name.endsWith(".cfg")),
+  );
+  const registered = new Set(
+    Object.values(rows)
+      .flatMap((r) => r.plants.map((p) => p.cfg))
+      .filter((name) => name.includes("-broken-")),
+  );
+  return {
+    unregistered: [...disk].filter((name) => !registered.has(name)).sort(),
+    missingOnDisk: [...registered].filter((name) => !disk.has(name)).sort(),
+  };
+}
+
+test("every *-broken-*.cfg plant on disk matches ROWS.plants (zero unregistered, zero missing)", () => {
+  const modelsDir = fileURLToPath(new URL("models/", SKILL));
+  const live = plantCompletenessGaps(modelsDir, ROWS);
+  assert.deepEqual(
+    live.unregistered,
+    [],
+    `unregistered broken plant cfgs missing from scripts/gate/model-receipts.mjs: ${live.unregistered.join(", ")}`,
+  );
+  assert.deepEqual(
+    live.missingOnDisk,
+    [],
+    `scripts/gate/model-receipts.mjs references missing broken cfgs: ${live.missingOnDisk.join(", ")}`,
+  );
+
+  // Proof the completeness check fails on the real past omission (deferred-broken-nestproc.cfg).
+  const omitted = structuredClone(ROWS);
+  omitted["deferred-effects-safe"].plants = omitted["deferred-effects-safe"].plants.filter(
+    (p) => p.cfg !== "deferred-broken-nestproc.cfg",
+  );
+  assert.deepEqual(plantCompletenessGaps(modelsDir, omitted).unregistered, [
+    "deferred-broken-nestproc.cfg",
+  ]);
+});
+
+const SPEC_GENERATORS = {
+  "DeferredEffects.tla": "make-deferred-configs.sh",
+  "RunFlow.tla": "make-configs.sh",
+  "ParkFlood.tla": "make-flood-configs.sh",
+  "HazardCycle.tla": "make-hazard-configs.sh",
+  "SoundArbiter.tla": "make-sound-configs.sh",
+};
+
+test("every .tla spec has an executable make-*-configs.sh generator", () => {
+  const modelsDir = fileURLToPath(new URL("models/", SKILL));
+  const specs = readdirSync(modelsDir)
+    .filter((name) => name.endsWith(".tla"))
+    .sort();
+  assert.ok(specs.length >= 11, specs.join(", "));
+  for (const spec of specs) {
+    const stem = spec.slice(0, -4).toLowerCase();
+    const generator = SPEC_GENERATORS[spec] ?? `make-${stem}-configs.sh`;
+    const full = path.join(modelsDir, generator);
+    const mode = statSync(full).mode;
+    assert.ok((mode & 0o111) !== 0, `${generator} must exist and be executable for ${spec}`);
+  }
 });

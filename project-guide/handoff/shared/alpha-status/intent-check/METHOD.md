@@ -45,9 +45,9 @@ It needs python3 and node (it runs `scripts/placeholder-gate.mjs --json`). It re
 4. **Enemy rosters are in `sketches/core-loop/design-v3/WORLD-ROSTERS.md`.** Use its numbers; do not re-audit.
 5. **The qualitative read.** For each park, write one memorable moment and one filler stretch in a sentence each. Take them from the stage page and the journey board, and from the red team's own runs. Automated play does not judge feel.
 6. **Manual checks the script can't do.**
-   - Which table does the app-menu launch use? At w16 the default is the legacy maps (`game.gd _chosen_table`, no `--table` passed by AppRun).
-   - Do the per-world scenery and effects scripts run on park maps? At w16 they don't: `spillway_scenery`, `dig_scenery` and `highdraft_scenery` key on the legacy map ids.
-   - Does each world have a rescue? At w16, worlds 1 and 2 do, world 3 has none.
+   - Which table does the app-menu launch use? Under `ruling ep` / `eq` on `main`, `LAUNCH_TABLE := "park"` in `game.gd` (historically legacy maps at w16).
+   - Do per-world scenery and effects run on park maps? Verified on park maps since World 1–3 unparking (legacy w16 `dig_scenery`/`highdraft_scenery` note is historical).
+   - Does each world have a rescue? Historical w16 note (worlds 1 and 2 had rescues, world 3 had none).
 7. **Gut check at wave 21.** Before the sitting, the red team plays one run per world back to back. Each player writes one line per park: "would I screenshot this?" A park with no yes is a card for Andrew.
 
 ## 4. Report

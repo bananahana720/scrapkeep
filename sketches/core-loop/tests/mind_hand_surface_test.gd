@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const MindHand := preload("res://src/combat/mind_hand.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("mind_hand_surface_test")
@@ -71,17 +72,27 @@ func _run() -> void:
 			hand._pulse_rim(0.0625)
 			_t.check("live rim pulses on existing clock", rim.emission_energy_multiplier != before)
 			_t.check("rim does not recolour the other hand", other._skin_rim != rim and not other._skin_rim.emission_enabled)
-		for i in skin.mesh.get_surface_count():
-			var authored := skin.mesh.surface_get_material(i) as StandardMaterial3D
+	var original := ResourceLoader.load(MindHand.MODEL, "PackedScene") as PackedScene
+	var broken := original.instantiate()
+	var broken_skin := broken.find_child("MindHandSkin", true, false) as MeshInstance3D
+	if broken_skin != null and broken_skin.mesh != null:
+		broken_skin.mesh = broken_skin.mesh.duplicate()
+		for i in broken_skin.mesh.get_surface_count():
+			var authored := broken_skin.mesh.surface_get_material(i) as StandardMaterial3D
 			if authored == null or not authored.resource_name.begins_with("M1"):
 				continue
-			skin.mesh.surface_set_material(i, null)
-			var malformed = _game.combat.spawn_enemy("mind_hand", Vector3(120, 20, 100))
-			skin.mesh.surface_set_material(i, authored)
-			malformed.set_physics_process(false)
-			_t.check("null body material keeps primitive fallback", malformed._model == null and malformed._crew.layers != 0)
-			malformed.free()
+			broken_skin.mesh.surface_set_material(i, null)
 			break
+	var bad_scene := PackedScene.new()
+	bad_scene.pack(broken)
+	broken.free()
+	bad_scene.take_over_path(MindHand.MODEL)
+	var malformed = _game.combat.spawn_enemy("mind_hand", Vector3(120, 20, 100))
+	original.take_over_path(MindHand.MODEL)
+	MindHand._warned_models.erase(MindHand.MODEL)
+	malformed.set_physics_process(false)
+	_t.check("null body material keeps primitive fallback", malformed._model == null and malformed._crew.layers != 0)
+	malformed.free()
 	hand.free()
 	other.free()
 	_game.free()
