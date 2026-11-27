@@ -97,7 +97,6 @@ func _rams(heft: float, worn_units: int) -> Dictionary:
 	game.events.enemy_struck.connect(func(enemy, kind, _force):
 		if enemy == w and kind in ["ram", "stomp", "slam"] and sheet.sheet_live(): result.rams += 1)
 	game.events.beacon_unsealed.connect(func(_stage): result.broken = true)
-	var core_at: Vector3 = w.family_point_at()
 	var last_cycle := -1
 	for tick in roundi(Warden.PULSE_CYCLE * 20 * Engine.physics_ticks_per_second):
 		if result.broken: break

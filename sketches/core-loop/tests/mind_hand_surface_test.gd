@@ -2,6 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const BossModel := preload("res://src/boss/boss_model.gd")
 const MindHand := preload("res://src/combat/mind_hand.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -87,8 +88,10 @@ func _run() -> void:
 	bad_scene.pack(broken)
 	broken.free()
 	bad_scene.take_over_path(MindHand.MODEL)
+	BossModel.reset_for_tests()
 	var malformed = _game.combat.spawn_enemy("mind_hand", Vector3(120, 20, 100))
 	original.take_over_path(MindHand.MODEL)
+	BossModel.reset_for_tests()
 	MindHand._warned_models.erase(MindHand.MODEL)
 	malformed.set_physics_process(false)
 	_t.check("null body material keeps primitive fallback", malformed._model == null and malformed._crew.layers != 0)
