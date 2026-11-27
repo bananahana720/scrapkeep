@@ -6,6 +6,7 @@ const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 const Palette := preload("res://src/core/palette.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 
 const STONE_DIR := "res://assets/models/dig_stone/"
@@ -370,6 +371,7 @@ func _slot_material(slot: String) -> Material:
 		vc.vertex_color_use_as_albedo = true
 		vc.roughness = 0.84 if slot == "timber_strut" else 0.88
 		vc.metallic = 0.14 if slot == "timber_strut" else 0.0
+		Palette.surface_grain(vc)
 		_dir_cache[slot] = vc
 		return vc
 	if not SLOTS.has(slot):
@@ -881,26 +883,22 @@ void fragment() {
 	for i in specs.size():
 		var spec: Dictionary = specs[i]
 		var at: Vector2 = spec["at"]
+		var top_r: float = float(spec["top_r"])
+		var bot_r: float = float(spec["bot_r"])
 		var h: float = spec["h"]
 		var floor_y: float = sites.height(at)
-		var cyl := CylinderMesh.new()
-		cyl.top_radius = float(spec["top_r"])
-		cyl.bottom_radius = float(spec["bot_r"])
-		cyl.height = h
-		cyl.radial_segments = 20
-		cyl.rings = 1
-		cyl.cap_top = false
-		cyl.cap_bottom = false
 		var mat := ShaderMaterial.new()
 		mat.shader = shaft_shader
 		mat.set_shader_parameter("beam_color", Color(0.98, 0.91, 0.72, 1.0))
 		mat.set_shader_parameter("alpha_scale", float(spec["alpha"]))
 		var shaft := MeshInstance3D.new()
 		shaft.name = "SkylightShaft_%d" % i
-		shaft.mesh = cyl
+		shaft.mesh = EnemyBossCraft.dig_skylight_beam(top_r, bot_r, h, 20)
 		shaft.material_override = mat
 		shaft.position = Vector3(at.x, floor_y + h * 0.48, at.y)
 		shaft.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		shaft.visibility_range_end = 280.0
+		shaft.visibility_range_end_margin = 0.0
 		holder.add_child(shaft)
 		_fx.skylight_shafts.append({"node": shaft, "phase": float(spec["phase"]), "base_alpha": float(spec["alpha"])})
 
@@ -909,21 +907,13 @@ func _build_command_cables(scenery: Node3D, sites: ParkSites, paths: Array) -> v
 	var holder := Node3D.new()
 	holder.name = "OldWorksCommandCables"
 	scenery.add_child(holder)
-	var conduit_mat := StandardMaterial3D.new()
-	conduit_mat.albedo_color = Palette.VERDIGRIS
-	conduit_mat.roughness = 0.62
-	conduit_mat.metallic = 0.16
-	var pulse_mat := Palette.solid(Palette.ANCIENT, 2.8, false)
-	var bead_mesh := SphereMesh.new()
-	bead_mesh.radius = 0.48
-	bead_mesh.height = 0.96
-	bead_mesh.radial_segments = 8
-	bead_mesh.rings = 4
+	var conduit_mat := EnemyBossCraft.dig_conduit_material()
+	var pulse_mat := EnemyBossCraft.dig_cable_coupler_material()
+	var bead_mesh := EnemyBossCraft.dig_cable_coupler(0.48)
 
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var seg_mesh := BoxMesh.new()
-	seg_mesh.size = Vector3(0.42, 0.24, 1.0)
+	var seg_mesh := EnemyBossCraft.dig_cable_segment(0.42, 0.24, 1.0)
 	var bead_idx := 0
 	for route_i in paths.size():
 		var pts: Array = paths[route_i]
@@ -950,14 +940,20 @@ func _build_command_cables(scenery: Node3D, sites: ParkSites, paths: Array) -> v
 					bead.name = "CablePulse_%d_%d" % [route_i, bead_idx]
 					bead.mesh = bead_mesh
 					bead.material_override = pulse_mat
-					bead.position = mid + Vector3(0.0, 0.26, 0.0)
+					bead.position = mid + Vector3(0.0, 0.14, 0.0)
+					bead.basis = Basis.looking_at(seg.normalized(), Vector3.UP)
 					bead.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					bead.visibility_range_end = 220.0
+					bead.visibility_range_end_margin = 0.0
 					holder.add_child(bead)
 					_fx.cable_pulses.append({"node": bead, "phase": float(bead_idx) * 0.65, "base_scale": 1.0})
 					bead_idx += 1
+	st.generate_tangents()
 	var conduit := MeshInstance3D.new()
 	conduit.name = "CommandConduitMesh"
 	conduit.mesh = st.commit()
 	conduit.material_override = conduit_mat
 	conduit.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	conduit.visibility_range_end = 240.0
+	conduit.visibility_range_end_margin = 0.0
 	holder.add_child(conduit)

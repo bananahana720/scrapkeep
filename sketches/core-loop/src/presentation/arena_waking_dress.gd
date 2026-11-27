@@ -156,16 +156,19 @@ func _prepare() -> bool:
 		var material := StandardMaterial3D.new()
 		material.resource_name = slot
 		material.vertex_color_use_as_albedo = slot != "ancient_light"
-		material.roughness = 0.68 if slot == "steel" else (0.56 if slot == "ancient_enamel" else 0.87)
-		material.metallic = 0.34 if slot == "steel" else (0.24 if slot == "ancient_enamel" else 0.0)
+		material.roughness = 0.62 if slot == "steel" else (0.50 if slot == "ancient_enamel" else 0.78)
+		material.metallic = 0.36 if slot == "steel" else (0.24 if slot == "ancient_enamel" else 0.08)
+		Palette.surface_grain(material)
 		if slot == "glass":
-			material.roughness = 0.32
+			material.roughness = 0.28
+			material.metallic = 0.0
 			material.emission_enabled = true
 			material.emission = DigScenery.LAMP_LIGHT
-			material.emission_energy_multiplier = 0.95
+			material.emission_energy_multiplier = 1.45
 		elif slot == "ancient_light":
 			material.albedo_color = Palette.ANCIENT
-			material.roughness = 0.28
+			material.roughness = 0.26
+			material.metallic = 0.0
 			material.emission_enabled = true
 			material.emission = Palette.ANCIENT
 			material.emission_energy_multiplier = 3.0
@@ -370,6 +373,9 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 		light.light_energy = pool.energy
 		light.omni_range = pool.range
 		light.shadow_enabled = false
+		light.distance_fade_enabled = true
+		light.distance_fade_begin = 32.0
+		light.distance_fade_length = 12.0
 
 
 func _works() -> void:
@@ -396,6 +402,9 @@ func _works() -> void:
 			light.light_energy = LIGHTS.lamp_pool.energy
 			light.omni_range = LIGHTS.lamp_pool.range
 			light.shadow_enabled = false
+			light.distance_fade_enabled = true
+			light.distance_fade_begin = 24.0
+			light.distance_fade_length = 10.0
 			light.position = wall + basis * Vector3(0, -1.0, -1.0)
 			var foot := Vector3(sin(angle) * (WALL_RADIUS - 4.2), y - 5.0, cos(angle) * (WALL_RADIUS - 4.2))
 			_put(batches, "strut_bent.glb" if line % 3 == 0 else "strut_tall.glb", Transform3D(basis.scaled(Vector3.ONE * 1.4), foot))
@@ -433,6 +442,8 @@ func _flush(parent: Node3D, batches: Dictionary) -> void:
 			view.multimesh = multi
 			view.set_meta("placements", placements)
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			view.visibility_range_end = 155.0
+			view.visibility_range_end_margin = 0.0
 			parent.add_child(view)
 
 
