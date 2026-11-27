@@ -1,4 +1,4 @@
-# smoke: solo (its sixty simulated seconds run at wall pace, so a loaded batch pushes it toward the 120 s limit)
+# smoke: fixed-fps=90 (every wait is counted in physics frames; none reads the wall clock)
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
