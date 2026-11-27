@@ -44,6 +44,22 @@ test("sitting-kit and weekly.mjs trigger node and docs surfaces", () => {
   assert.equal(classifyAffected(["scripts/gate/weekly.mjs"]).docs, true);
 });
 
+test("agent configs, hooks, codex definitions, and check-agents.mjs trigger docs surface", () => {
+  for (const file of [
+    ".agents/hooks.json",
+    ".agents/hooks/safety-gate.mjs",
+    ".claude/settings.json",
+    ".codex/agents/scrapkeep-writer.toml",
+    "scripts/check-agents.mjs",
+  ]) {
+    const res = classifyAffected([file]);
+    assert.equal(res.docs, true, `Expected docs=true for ${file}`);
+    assert.equal(res.lint, true, `Expected lint=true for ${file}`);
+    assert.equal(res.godot, false, `Expected godot=false for ${file}`);
+    assert.equal(res.web, false, `Expected web=false for ${file}`);
+  }
+});
+
 test("browser proof change triggers web build and node tests without godot", () => {
   const res = classifyAffected(["src/orchard/simulation.js"]);
   assert.equal(res.web, true);
