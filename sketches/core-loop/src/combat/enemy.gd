@@ -502,6 +502,12 @@ func telegraph() -> Node3D:
 	return _telegraph if is_instance_valid(_telegraph) else null
 
 
+func _fill(value: float) -> void:
+	var shown := telegraph()
+	if shown != null:
+		shown.set_progress(value)
+
+
 func _die() -> void:
 	_dead = true
 	_rally_left = 0.0
