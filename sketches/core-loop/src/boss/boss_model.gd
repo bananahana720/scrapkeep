@@ -4,12 +4,18 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 
 
+static var _scenes := {}
+
+
 static func load_scene(path: String, dressed := true) -> Node3D:
 	if not ResourceLoader.exists(path):
 		return null
-	var packed := load(path) as PackedScene
+	var packed := _scenes.get(path) as PackedScene
 	if packed == null:
-		return null
+		packed = load(path) as PackedScene
+		if packed == null:
+			return null
+		_scenes[path] = packed
 	var scene := packed.instantiate() as Node3D
 	if scene != null and dressed:
 		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
@@ -17,6 +23,11 @@ static func load_scene(path: String, dressed := true) -> Node3D:
 		BakeLook.dress(scene)
 		InkOutline.apply(scene, "boss")
 	return scene
+
+
+static func reset_for_tests() -> void:
+	_scenes.clear()
+	_coloured.clear()
 
 
 static func colour_view(view: MeshInstance3D) -> void:
