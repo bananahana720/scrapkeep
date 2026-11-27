@@ -228,5 +228,32 @@ func _run() -> void:
 	_t.check("the row counted the approach", checked > 3, "%d" % checked)
 	_t.check("the site leaves the row once passed", left_row)
 	_t.check("a passed site is not offered behind the ball", _named() != site, str(row))
+
+	for s in _acts.sites:
+		s.started = false
+		s.done = false
+		s.failed = false
+	_hud._detour_done.clear()
+	_hud._detour_site = null
+	_hud._detour_ticked = null
+	var caches: Array = _acts.sites.filter(func(s): return String(s.id) == "cracked_cache")
+	if _t.check("the dam has two cracked_cache sites for W1-113", caches.size() >= 2, "%d" % caches.size()):
+		var named_cache = caches[0]
+		var other_cache = caches[1]
+		var to_warden: Vector3 = warden.global_position - named_cache.global_position
+		to_warden.y = 0.0
+		var behind_cache: Vector3 = named_cache.global_position - to_warden.normalized() * 15.0
+		_game.player.reset_to(Vector3(behind_cache.x, named_cache.global_position.y + 1.0, behind_cache.z))
+		await _frames(2)
+		_hud._detour_site = named_cache
+		other_cache.done = true
+		_game.events.activity_done.emit("cracked_cache", other_cache.global_position)
+		_t.check("cracking a non-named cache does not tick the named detour cache", not _hud._detour_done.showing(), _hud._detour_done.words)
+		named_cache.done = true
+		_game.events.activity_done.emit("cracked_cache", named_cache.global_position)
+		_t.check("cracking the named cache itself ticks the detour row once", _hud._detour_done.showing() and _hud._detour_done.words == Objectives.done_words("cracked_cache"), _hud._detour_done.words)
+		_hud._detour_done.clear()
+		_game.events.activity_done.emit("cracked_cache", other_cache.global_position)
+		_t.check("a second cache done event never re-ticks the already-ticked cache", not _hud._detour_done.showing(), _hud._detour_done.words)
 	_game.free()
 	quit(_t.verdict())

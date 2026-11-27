@@ -186,6 +186,13 @@ func _menu_rules() -> void:
 	fresh.step(false, false, false, false)
 	fresh.focus_moved()
 	_t.eq("menu rule: a fresh press taking focus from nothing is a move", fresh.step(true, false, false, true), ["menu_move"])
+	var wasd := MenuSounds.new()
+	wasd.step(false, false, false, true)
+	wasd.nav_noted()
+	wasd.focus_moved()
+	_t.eq("menu rule: noted WASD navigation moving focus plays menu_move", wasd.step(false, false, false, true), ["menu_move"])
+	wasd.focus_moved()
+	_t.eq("menu rule: noted flag clears on the next frame", wasd.step(false, false, false, true), [])
 
 
 func _menus() -> void:
@@ -276,3 +283,43 @@ func _menus() -> void:
 	from = audio.cue_log_total
 	await _press(JOY_BUTTON_A)
 	_t.eq("menu: A with nothing focused plays no confirm", _menu_cues(audio, from), [])
+	await _workshop_wasd(audio)
+
+
+func _workshop_wasd(audio) -> void:
+	var workshop = _game.get_node_or_null("Workshop")
+	if workshop == null:
+		return
+	workshop.armed = true
+	var tree = workshop.tree()
+	if tree != null:
+		tree.open_checkpoint()
+		workshop.open_pick()
+		await _frames(20)
+		var from: int = audio.cue_log_total
+		Push.key(root, KEY_D)
+		await _frames(20)
+		_t.eq("menu workshop pick: D moves focus with menu_move", _menu_cues(audio, from), ["menu_move"])
+		from = audio.cue_log_total
+		Push.key(root, KEY_A)
+		await _frames(20)
+		_t.eq("menu workshop pick: A moves focus back with menu_move", _menu_cues(audio, from), ["menu_move"])
+		workshop.close_pick()
+		await _frames(20)
+	var s = workshop.shop()
+	if s != null:
+		s.enter()
+		workshop.open_counter()
+		await _frames(20)
+		var from: int = audio.cue_log_total
+		Push.key(root, KEY_D)
+		await _frames(20)
+		_t.eq("menu workshop counter: D moves focus with menu_move", _menu_cues(audio, from), ["menu_move"])
+		from = audio.cue_log_total
+		Push.key(root, KEY_S)
+		await _frames(20)
+		_t.eq("menu workshop counter: S moves focus down with menu_move", _menu_cues(audio, from), ["menu_move"])
+		workshop.close_counter()
+		s.inside = false
+		await _frames(10)
+	workshop.armed = false

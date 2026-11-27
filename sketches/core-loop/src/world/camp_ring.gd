@@ -8,7 +8,7 @@ const SurvivalCount := preload("res://src/world/survival_count.gd")
 
 
 const STATION := "camp_ring"
-const KEY := "key_e"
+const KEY := "interact"
 const STATION_RADIUS := 3.5
 const POST_M := 14.0
 const EDGE_M := 20.0

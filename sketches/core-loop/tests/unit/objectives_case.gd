@@ -410,3 +410,13 @@ func _detour(t) -> void:
 	t.eq("a cage with no prompt is the caged pilot", Objectives.cage_words(""), Objectives.CAGE_WORDS)
 	t.eq("a prompt over the word cap falls back", Objectives.cage_words("free the one runner in the cage"), Objectives.CAGE_WORDS)
 	t.eq("the fallback fits the plate", Objectives.CAGE_WORDS.split(" ").size() <= Objectives.MAX_WORDS, true)
+	var site_a := Node3D.new()
+	site_a.set_script(preload("res://src/world/activities.gd").Site)
+	site_a.id = "cracked_cache"
+	site_a.done = false
+	t.eq("uncracked named cache rejects another cache's done event", Objectives.detour_site_matches(site_a, "cracked_cache", true), false)
+	site_a.done = true
+	t.eq("cracked named cache matches its own done event", Objectives.detour_site_matches(site_a, "cracked_cache", true), true)
+	t.eq("already-ticked named cache rejects a duplicate done event", Objectives.detour_site_matches(site_a, "cracked_cache", true, site_a), false)
+	t.eq("different id never matches", Objectives.detour_site_matches(site_a, "enemy_camp", true), false)
+	site_a.free()
