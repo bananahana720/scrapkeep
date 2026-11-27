@@ -539,7 +539,7 @@ func continue_refusal() -> String:
 
 func sitting_save_guard() -> void:
 	if tuning != null and tuning.sitting() and ctx.profile != null:
-		ctx.profile._refuse("sitting profile: this session does not save")
+		ctx.profile.disable_saving("sitting profile: this session does not save")
 		Secrets.open_for_sitting(ctx.profile)
 
 
