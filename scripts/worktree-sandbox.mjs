@@ -34,6 +34,7 @@ export const SANDBOX_ROOT_REL = path.join("artifacts", "local", "dev-ref");
 export const LOCK_SUFFIX = ".lock.json";
 export const OVERLAY_MARKER = ".sandbox-overlay.json";
 export const IMPORT_STAMP_FILENAME = "scrapkeep-sandbox-import.json";
+export const IMPORTED_ASSET = /\.(?:glb|gltf|png|jpe?g|webp|svg|hdr|exr|wav|ogg|mp3|ttf|otf)$/i;
 const SEAM_VERSION = "2";
 const MAX_AUTO_SLOTS = 32;
 
@@ -597,6 +598,57 @@ export function linkSandboxNodeModules(worktreeDir, repoRoot = REPO_ROOT) {
   return res;
 }
 
+function importedFilesOf(sidecarText) {
+  const listed = /^dest_files=\[(.*)\]\s*$/m.exec(sidecarText);
+  if (!listed) return null;
+  return [...listed[1].matchAll(/"res:\/\/([^"]+)"/g)].map((found) => found[1]);
+}
+
+export function unimportedAssets(worktreeDir, sketch = "sketches/core-loop") {
+  const sketchDir = path.join(worktreeDir, sketch);
+  const missing = [];
+  const visit = (directory) => {
+    let entries;
+    try {
+      entries = readdirSync(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    const names = new Set(entries.map((entry) => entry.name));
+    if (names.has(".gdignore") || (directory !== sketchDir && names.has("project.godot"))) return;
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      const full = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        if (!entry.name.startsWith(".") && entry.name !== "node_modules") visit(full);
+        continue;
+      }
+      if (!entry.isFile() || !IMPORTED_ASSET.test(entry.name)) continue;
+      const rel = path.relative(sketchDir, full).split(path.sep).join("/");
+      let sidecar;
+      try {
+        sidecar = readFileSync(`${full}.import`, "utf8");
+      } catch {
+        missing.push({ asset: rel, reason: "no .import sidecar" });
+        continue;
+      }
+      const lost = (importedFilesOf(sidecar) ?? []).find(
+        (file) => !existsSync(path.join(sketchDir, file)),
+      );
+      if (lost) missing.push({ asset: rel, reason: `imported file ${lost} is missing` });
+    }
+  };
+  visit(sketchDir);
+  return missing;
+}
+
+function describeUnimported(missing) {
+  const shown = missing
+    .slice(0, 3)
+    .map((item) => `${item.asset} (${item.reason})`)
+    .join(", ");
+  return `${missing.length} asset${missing.length === 1 ? "" : "s"} not imported: ${shown}${missing.length > 3 ? ", ..." : ""}`;
+}
+
 export function ensureSandboxImport({
   worktreeDir,
   godotBin,
@@ -604,20 +656,23 @@ export function ensureSandboxImport({
   overlayHash = "",
   homeDir,
   sketch = "sketches/core-loop",
+  runPass = null,
 } = {}) {
   const sketchDir = path.join(worktreeDir, sketch);
   const stampFile = path.join(sketchDir, ".godot", IMPORT_STAMP_FILENAME);
   const godotId = godotIdentity(godotBin);
   const existing = readJsonSafe(stampFile);
+  const unimportedBefore = unimportedAssets(worktreeDir, sketch).length;
 
   if (
     existing &&
     existing.sha === sha &&
     existing.overlay_hash === overlayHash &&
     (!godotId || existing.godot === godotId) &&
-    hasValidUidCache(worktreeDir, sketch)
+    hasValidUidCache(worktreeDir, sketch) &&
+    unimportedBefore === 0
   ) {
-    return { imported: false, cached: true, passes: 0 };
+    return { imported: false, cached: true, passes: 0, unimportedBefore };
   }
 
   if (!godotBin || !existsSync(godotBin)) {
@@ -644,22 +699,31 @@ export function ensureSandboxImport({
     env.SDL_AUDIODRIVER = "dummy";
   }
 
-  const result = importSketch(worktreeDir, sketch, {
-    runPass: (rootDir, sketchRel) =>
-      spawnSync(
-        godotBin,
-        [
-          "--headless",
-          "--audio-driver",
-          "Dummy",
-          "--path",
-          path.join(rootDir, sketchRel),
-          "--editor",
-          "--import",
-        ],
-        { encoding: "utf8", maxBuffer: 1 << 28, env },
-      ),
-  });
+  const godotPass = (rootDir, sketchRel) =>
+    spawnSync(
+      godotBin,
+      [
+        "--headless",
+        "--audio-driver",
+        "Dummy",
+        "--path",
+        path.join(rootDir, sketchRel),
+        "--editor",
+        "--import",
+      ],
+      { encoding: "utf8", maxBuffer: 1 << 28, env },
+    );
+  const result = importSketch(worktreeDir, sketch, { runPass: runPass ?? godotPass });
+  let unimported = unimportedAssets(worktreeDir, sketch);
+  if (unimported.length > 0) {
+    result.passes += importSketch(worktreeDir, sketch, { runPass: runPass ?? godotPass }).passes;
+    unimported = unimportedAssets(worktreeDir, sketch);
+  }
+  if (unimported.length > 0) {
+    throw new Error(
+      `sandbox import of ${sketch} left ${describeUnimported(unimported)}; no stamp written`,
+    );
+  }
 
   writeImportStamp(worktreeDir, sketch, { godot: godotId });
   writeFileAtomic(
@@ -676,7 +740,7 @@ export function ensureSandboxImport({
       2,
     ) + "\n",
   );
-  return { imported: true, cached: false, passes: result.passes };
+  return { imported: true, cached: false, passes: result.passes, unimportedBefore };
 }
 
 export function materializeSandbox({

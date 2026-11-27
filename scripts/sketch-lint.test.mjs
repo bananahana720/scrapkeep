@@ -4,6 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  ID_COMPARE_LEGACY,
   applyBaseline,
   baselineFrom,
   formatFinding,
@@ -259,6 +260,71 @@ test("L11 flags raw map/pilot ID comparisons outside owning tables and holds leg
     lintL11("x/foo.gd", "src/combat/foo.gd", "var ok := true\n", legacy)[0].message,
     /remove the entry/,
   );
+});
+
+test("L11 flags StringName compares, match arms and ID prefix tests, and leaves table rows alone", () => {
+  const planted = [
+    ['if pilot == &"tarn":\n\tpass\n', [1]],
+    ['if map_id != &"park_dam":\n\tpass\n', [1]],
+    ['if &"tally" == pilot:\n\tpass\n', [1]],
+    ['if pilot == StringName("tarn"):\n\tpass\n', [1]],
+    ['if pilot in [&"rivet", &"tarn"]:\n\tpass\n', [1]],
+    ['if pilot == "tarn":\n\tpass\n', [1]],
+    ['match pilot_id:\n\t"tarn":\n\t\treturn 1\n\t_:\n\t\treturn 0\n', [2]],
+    ['match pilot_id:\n\t&"tarn":\n\t\treturn 1\n', [2]],
+    ['match pilot_id:\n\t"rivet", "tarn":\n\t\treturn 1\n', [2]],
+    ['match pilot_id:\n\t"tarn": return 1\n\t"tally": return 2\n', [2, 3]],
+    [
+      'func f():\n\tmatch map_id:\n\t\t"park_dam":\n\t\t\tmatch pilot:\n\t\t\t\t"tally":\n\t\t\t\t\tpass\n',
+      [3, 5],
+    ],
+    ['if map_id.begins_with("park_"):\n\tpass\n', [1]],
+    ['if pilot.begins_with(&"tarn"):\n\tpass\n', [1]],
+  ];
+  for (const [text, lines] of planted) {
+    assert.deepEqual(
+      lintL11("x/foo.gd", "src/combat/foo.gd", text, {}).map((item) => item.line),
+      lines,
+      text,
+    );
+  }
+  const passes = [
+    'const ROWS := {\n\t"tarn": {"hull": 3},\n\t"tally": 2,\n}\n',
+    'match kind:\n\t"chaser":\n\t\tvar row := {\n\t\t\t"tarn": 1,\n\t\t}\n',
+    'match kind:\n\t"chaser":\n\t\treturn "tarn"\n',
+    'match kind:\n\t"chaser":\n\t\tpass\nvar rows := {\n\t"tarn": 1,\n}\n',
+    'var pilot := &"tarn"\n',
+    'if part.begins_with("part_"):\n\tpass\n',
+    '# match pilot:\n#\t"tarn":\n',
+  ];
+  for (const text of passes) {
+    assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", text, {}), [], text);
+  }
+  const arm = 'match pilot_id:\n\t"tarn":\n\t\treturn 1\n';
+  assert.deepEqual(lintL11("x/class_def.gd", "src/core/class_def.gd", arm, {}), []);
+  const legacy = { "src/combat/foo.gd": { sites: 1, why: "legacy" } };
+  assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", arm, legacy), []);
+  assert.deepEqual(
+    lintL11("x/foo.gd", "src/combat/foo.gd", arm + 'var b := pilot == &"tarn"\n', legacy).map(
+      (item) => item.line,
+    ),
+    [2, 4],
+  );
+});
+
+test("L11's frozen allow table matches the game source, and a planted branch in a listed file fails", () => {
+  for (const [rel, row] of Object.entries(ID_COMPARE_LEGACY)) {
+    const text = readFileSync(path.join(sketchDir, rel), "utf8");
+    assert.deepEqual(lintL11(rel, rel, text), [], rel);
+    assert.equal(lintL11(rel, rel, text, {}).length, row.sites, rel);
+    for (const plant of [
+      '\nfunc _planted(p):\n\tmatch p:\n\t\t"tarn":\n\t\t\tpass\n',
+      '\nfunc _planted(p):\n\treturn p == &"tarn"\n',
+      '\nfunc _planted(p):\n\treturn p == "tarn"\n',
+    ]) {
+      assert.equal(lintL11(rel, rel, text + plant).length, row.sites + 1, `${rel} ${plant}`);
+    }
+  }
 });
 
 test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {
