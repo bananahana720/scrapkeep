@@ -6,6 +6,7 @@ const Spillway := preload("res://src/world/map_spillway.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
 const PROP_SHADER_PATH := "res://assets/materials/wog_signal.gdshader"
 static var prop_shader_path := PROP_SHADER_PATH
@@ -211,8 +212,7 @@ static func build(stage_root: Node3D) -> Node3D:
 		_place(metal, Vector3(x, cable_y - 7.5, 267), Vector3(10, 0.7, 8))
 		_place(recess, Vector3(x, cable_y - 10, 263.9), Vector3(6, 2.7, 0.2))
 
-	var box := BoxMesh.new()
-	box.size = Vector3.ONE
+	var box := _unit_bevel_block()
 	var rock := _eroded_rock()
 	var cliff := SurfaceTool.new()
 	cliff.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -223,14 +223,10 @@ static func build(stage_root: Node3D) -> Node3D:
 	for hull in shoulder_plan():
 		cliff.append_from(shoulder_mesh(hull), 0, Transform3D.IDENTITY)
 	cliff.index()
-	var canopy := SphereMesh.new()
+	var canopy := _insignia_medallion()
 	var puff := QuadMesh.new()
 	puff.size = Vector2(2, 2)
 	puff.flip_faces = true
-	canopy.radius = 1.0
-	canopy.height = 2.0
-	canopy.radial_segments = 6
-	canopy.rings = 2
 	_batch(scenery, "Masonry", box, stone, Color("b79468"))
 	_batch(scenery, "LimestoneCaps", box, trim, Color("d5b785"))
 	_batch(scenery, "Recesses", box, recess, Color("454943"))
@@ -542,6 +538,12 @@ static func _dam_detail(parent: Node3D) -> void:
 			material.albedo_color = DAM_TINT.get(slot, Color.WHITE)
 			material.roughness = DAM_ROUGHNESS.get(slot, 1.0)
 			material.vertex_color_use_as_albedo = true
+			Palette.surface_grain(material)
+			var dam_plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+			if dam_plate != null:
+				material.albedo_texture = dam_plate
+				material.uv1_triplanar = true
+				material.uv1_scale = Vector3.ONE / 6.0
 			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 			mesh.surface_set_material(mesh.get_surface_count() - 1, material)
 	scene.free()
@@ -696,6 +698,22 @@ static func _placed_rock(rock: ArrayMesh, placement: Transform3D) -> ArrayMesh:
 	var baked := ArrayMesh.new()
 	baked.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	return baked
+
+
+static func _unit_bevel_block() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	PropMeshes._bevel_box(st, Vector3.ZERO, Vector3.ONE, 0.055, 0.5)
+	st.index()
+	return st.commit()
+
+
+static func _insignia_medallion() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	PropMeshes._bevel_cyl(st, Vector3.ZERO, 0.96, 0.96, 1.5, 8, 0.24, 0.6, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO))
+	st.index()
+	return st.commit()
 
 
 static func _eroded_rock() -> ArrayMesh:

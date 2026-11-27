@@ -6,6 +6,7 @@ const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculpto
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
 const SHOWCASE_SCENE_PATH := "res://src/presentation/craft/craft_showcase_arena.tscn"
 const SELECTIVE_GLOW_THRESHOLD_MIN := 2.4
@@ -13,6 +14,8 @@ const SELECTIVE_GLOW_THRESHOLD_MIN := 2.4
 static var _copper_coil_mat: ShaderMaterial
 static var _vista_masonry_mat: ShaderMaterial
 static var _vista_stack_mat: ShaderMaterial
+static var _gantry_column_mat: ShaderMaterial
+static var _gantry_truss_mat: ShaderMaterial
 
 const PERIMETER_PRESET_MAP := {
 	"IndustrialPerimeterFraming/RetainingWall_West": "scorched_concrete",
@@ -159,7 +162,7 @@ static func assemble_into(arena: Node3D) -> Dictionary:
 			perimeter_bound += 1
 	var gantry_root := arena.get_node_or_null("IndustrialPerimeterFraming/OverheadGantryTruss")
 	if gantry_root != null:
-		perimeter_bound += Lookdev.bind_tree(gantry_root, "oil_slicked_iron", "craft_preset", true)
+		perimeter_bound += _upgrade_gantry_and_catwalks(arena, gantry_root)
 	var vista_bound := _upgrade_vista_masonry(arena)
 	perimeter_bound += vista_bound
 	receipt["perimeter_surfaces_bound"] = perimeter_bound
@@ -313,7 +316,7 @@ static func apply_quality_tier(arena: Node3D, tier: String) -> Dictionary:
 
 static func sync_accessibility(arena: Node3D, reduced_motion_on: bool) -> void:
 	Lookdev.sync_flash_guard(FlashGuard.on)
-	for mat in [_copper_coil_mat, _vista_masonry_mat, _vista_stack_mat]:
+	for mat in [_copper_coil_mat, _vista_masonry_mat, _vista_stack_mat, _gantry_column_mat, _gantry_truss_mat]:
 		if mat != null:
 			mat.set_shader_parameter("reduce_flashes", FlashGuard.on)
 	if arena == null:
@@ -326,8 +329,93 @@ static func sync_accessibility(arena: Node3D, reduced_motion_on: bool) -> void:
 		vistas.apply_accessibility(reduced_motion_on)
 
 
+static func _upgrade_gantry_and_catwalks(arena: Node3D, gantry_root: Node) -> int:
+	var bound := 0
+	var col_mat := _get_gantry_column_material()
+	var truss_mat := _get_gantry_truss_material()
+	var col_mesh := PropMeshes.gantry_column_mesh(1.8, 27.0, 1.8)
+	for child in gantry_root.get_children():
+		if not (child is MeshInstance3D):
+			continue
+		var mi := child as MeshInstance3D
+		if String(mi.name).begins_with("Column_"):
+			mi.mesh = col_mesh
+			mi.position.y = 0.0
+			if col_mat != null:
+				mi.material_override = col_mat
+				bound += 1
+		else:
+			if truss_mat != null:
+				mi.material_override = truss_mat
+				bound += 1
+	var framing := arena.get_node_or_null("IndustrialPerimeterFraming") as Node3D
+	if framing != null and truss_mat != null:
+		for cw_name in ["Catwalk_West", "Catwalk_East"]:
+			var cw := framing.get_node_or_null(cw_name) as MeshInstance3D
+			if cw != null:
+				cw.material_override = truss_mat
+		var existing_br := framing.get_node_or_null("CatwalkGussetBrackets")
+		if existing_br != null:
+			framing.remove_child(existing_br)
+			existing_br.free()
+		var br_root := Node3D.new()
+		br_root.name = "CatwalkGussetBrackets"
+		var br_mesh := PropMeshes.cantilever_gusset_bracket()
+		for side in [-1.0, 1.0]:
+			for z_at in [-22.0, -14.0, -6.0, 2.0, 10.0, 18.0]:
+				var br := MeshInstance3D.new()
+				br.name = "Gusset_%s_%d" % ["W" if side < 0.0 else "E", int(z_at)]
+				br.mesh = br_mesh
+				br.position = Vector3(side * 28.4, 5.125, z_at)
+				if side > 0.0:
+					br.rotation_degrees = Vector3(0.0, 180.0, 0.0)
+				br.material_override = col_mat if col_mat != null else truss_mat
+				br.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+				br_root.add_child(br)
+				bound += 1
+		framing.add_child(br_root)
+	return bound
+
+
+static func _get_gantry_column_material() -> ShaderMaterial:
+	if _gantry_column_mat != null:
+		_gantry_column_mat.set_shader_parameter("reduce_flashes", FlashGuard.on)
+		return _gantry_column_mat
+	var base := Lookdev.preset_material("oil_slicked_iron")
+	if base == null:
+		return null
+	var mat := base.duplicate(false) as ShaderMaterial
+	mat.resource_name = "gantry_column_iron"
+	mat.set_shader_parameter("use_vertex_masks", true)
+	mat.set_shader_parameter("foot_grime_height", 5.2)
+	mat.set_shader_parameter("foot_grime_strength", 0.32)
+	mat.set_shader_parameter("grime_strength", 0.58)
+	mat.set_shader_parameter("reduce_flashes", FlashGuard.on)
+	_gantry_column_mat = mat
+	return _gantry_column_mat
+
+
+static func _get_gantry_truss_material() -> ShaderMaterial:
+	if _gantry_truss_mat != null:
+		_gantry_truss_mat.set_shader_parameter("reduce_flashes", FlashGuard.on)
+		return _gantry_truss_mat
+	var base := Lookdev.preset_material("oil_slicked_iron")
+	if base == null:
+		return null
+	var mat := base.duplicate(false) as ShaderMaterial
+	mat.resource_name = "gantry_truss_iron"
+	mat.set_shader_parameter("use_vertex_masks", false)
+	mat.set_shader_parameter("foot_grime_height", 0.0)
+	mat.set_shader_parameter("foot_grime_strength", 0.0)
+	mat.set_shader_parameter("reduce_flashes", FlashGuard.on)
+	_gantry_truss_mat = mat
+	return _gantry_truss_mat
+
+
 static func reset_for_tests() -> void:
 	_copper_coil_mat = null
 	_vista_masonry_mat = null
 	_vista_stack_mat = null
+	_gantry_column_mat = null
+	_gantry_truss_mat = null
 	Lookdev.reset_for_tests()

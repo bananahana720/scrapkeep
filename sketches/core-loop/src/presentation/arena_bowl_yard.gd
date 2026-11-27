@@ -1,6 +1,8 @@
 extends Node3D
 
 const FightPhases := preload("res://src/combat/fight_phases.gd")
+const Palette := preload("res://src/core/palette.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
 const FIGHT_ID := "brindle"
 const MELT := [
@@ -36,8 +38,13 @@ var _melt_t := 1.0
 var _clock := 0.0
 
 
+func _ready() -> void:
+	_weather_yard_surfaces()
+
+
 func bind(events) -> void:
 	set_process(false)
+	_weather_yard_surfaces()
 	_set_melt(MELT[1])
 	_melt_from = 1.0
 	_melt_to = 1.0
@@ -142,3 +149,22 @@ func _set_melt(row: Dictionary) -> void:
 		melt_material.emission = row.color
 		melt_material.albedo_color = row.color.darkened(0.35)
 		melt_material.emission_energy_multiplier = row.emission
+
+
+func _weather_yard_surfaces() -> void:
+	if melt_material != null:
+		Palette.surface_grain(melt_material)
+		if melt_material.albedo_texture == null:
+			var melt_tex := Palette.look_texture("rusted-salvaged-plate-worn", true)
+			if melt_tex != null:
+				melt_material.albedo_texture = melt_tex
+				melt_material.uv1_triplanar = true
+				melt_material.uv1_scale = Vector3.ONE / 5.5
+	PropMeshes.weather_node_materials(self, 4.5)
+	for crowd in crowds:
+		if crowd != null and crowd.multimesh != null and crowd.multimesh.mesh != null:
+			var m := crowd.multimesh.mesh
+			for s in m.get_surface_count():
+				var sm := m.surface_get_material(s) as StandardMaterial3D
+				if sm != null:
+					PropMeshes.weather_existing_material(sm, 3.0)

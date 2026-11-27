@@ -4,6 +4,7 @@ const Interact := preload("res://src/world/interact.gd")
 const PropKicks := preload("res://src/presentation/prop_kicks.gd")
 const Kit := preload("res://src/presentation/destructible_kit.gd")
 const Consumables := preload("res://src/build/consumables.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 
 signal piece_shattered(bounds: AABB)
@@ -799,6 +800,12 @@ func _slice(budget_usec: int) -> void:
 
 func _make_material() -> void:
 	_material = Kit.material()
+	Palette.surface_grain(_material)
+	var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+	if plate != null:
+		_material.albedo_texture = plate
+		_material.uv1_triplanar = true
+		_material.uv1_scale = Vector3.ONE / 2.8
 
 
 func _make_mesh(p: Piece) -> void:

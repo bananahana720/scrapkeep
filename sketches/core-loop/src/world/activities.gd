@@ -975,10 +975,11 @@ func _build_interior(s: Site) -> void:
 		var view := ModelKit.part(POCKET_KIT, POCKET_PARTS, "PocketBlock", holder)
 		if view != null:
 			view.scale = size / POCKET_BLOCK
+			PropMeshes.weather_node_materials(view, 3.6)
 			continue
 		holder.free()
 		if _interior_block == null:
-			_interior_block = Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
+			_interior_block = PropMeshes.weathered_material(Palette.VERDIGRIS, 0.82, 0.14, 0.0, "interior_block")
 		_mesh_box(root, size, at, _interior_block)
 	for entrance in s.interior.entrances:
 		for side in [-1.0, 1.0]:
@@ -1064,11 +1065,11 @@ func _model_cache(s: Site) -> bool:
 
 
 func _greybox_cache(s: Site) -> void:
-	var concrete := Palette.striped(Palette.VERDIGRIS, Palette.CHARCOAL)
+	var concrete := PropMeshes.weathered_material(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.35), 0.84, 0.14, 0.0, "cache_concrete")
 	var tall := WALL_HEIGHT + WALL_SINK
 	var mid := tall * 0.5 - WALL_SINK
 	s.wall = _mesh_box(s, Vector3(WALL_HALF_W * 2.0, tall, 1.0), Vector3(0.0, mid, 0.0),
-		Palette.striped(Palette.SANDSTONE, Palette.VERDIGRIS), true)
+		PropMeshes.weathered_material(Palette.SANDSTONE.lerp(Palette.VERDIGRIS, 0.3), 0.80, 0.12, 0.0, "cache_face"), true)
 	for k in 3:
 		var crack := _mesh_box(s.wall, Vector3(WALL_HALF_W * 1.3, 0.2, 1.1), Vector3(0.0, -1.2 + k * 1.6, 0.0),
 			_solid(Palette.CHARCOAL))
@@ -1274,7 +1275,7 @@ static var _parts := {}
 static func _solid(color: Color) -> StandardMaterial3D:
 	var key := "solid:" + color.to_html()
 	if not _parts.has(key):
-		_parts[key] = Palette.solid(color)
+		_parts[key] = PropMeshes.weathered_material(color, 0.76, 0.22, 0.0, "act_" + color.to_html(false))
 	return _parts[key]
 
 
@@ -1306,14 +1307,7 @@ func _wall_body(parent: Node3D, size: Vector3, at: Vector3) -> StaticBody3D:
 
 func _mesh_cylinder(parent: Node3D, radius: float, height: float, at: Vector3, mat: Material) -> void:
 	var mesh := MeshInstance3D.new()
-	var key := "cylinder:%s:%s" % [radius, height]
-	if not _parts.has(key):
-		var cm := CylinderMesh.new()
-		cm.top_radius = radius
-		cm.bottom_radius = radius
-		cm.height = height
-		_parts[key] = cm
-	mesh.mesh = _parts[key]
+	mesh.mesh = PropMeshes.fluted_plume_column(radius, radius, height)
 	mesh.material_override = mat
 	mesh.position = at
 	parent.add_child(mesh)
@@ -2494,12 +2488,15 @@ func _build_ward(spec: Dictionary) -> MendWard:
 	add_child(w)
 	var at: Vector2 = spec["at"]
 	w.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
-	if ModelKit.whole(WARD_MODEL, w) == null:
+	var ward_view := ModelKit.whole(WARD_MODEL, w)
+	if ward_view == null:
 		var post := MeshInstance3D.new()
-		post.mesh = PropMeshes.bevel_prop_post(WARD_POST)
-		post.material_override = PropMeshes.weathered_material(Palette.SLATE, 0.76, 0.22, 0.0, "ward_post")
+		post.mesh = PropMeshes.mend_ward_monolith(WARD_POST)
+		post.material_override = PropMeshes.weathered_material(Palette.VERDIGRIS.lerp(Palette.SLATE, 0.45), 0.72, 0.28, 0.0, "ward_post")
 		post.position = Vector3.UP * WARD_POST.y * 0.5
 		w.add_child(post)
+	else:
+		PropMeshes.weather_node_materials(ward_view, 2.8)
 	var ring := MeshInstance3D.new()
 	ring.mesh = PropMeshes.mend_ward_ring(MendWard.RING_M, WARD_RING_H)
 	ring.material_override = PropMeshes.weathered_material(Palette.CHARCOAL, 0.74, 0.28, 0.0, "ward_ring")
@@ -2507,7 +2504,7 @@ func _build_ward(spec: Dictionary) -> MendWard:
 	w.add_child(ring)
 	w.fill = MeshInstance3D.new()
 	w.fill.mesh = PropMeshes.mend_ward_fill(MendWard.RING_M, WARD_RING_H)
-	w.fill.material_override = _solid(Palette.OLD_VERDIGRIS)
+	w.fill.material_override = PropMeshes.weathered_material(Palette.OLD_VERDIGRIS, 0.56, 0.24, 0.75, "ward_fill")
 	w.fill.position = Vector3.UP * WARD_RING_H * 1.5
 	w.fill.scale = Vector3(0.001, 1.0, 0.001)
 	w.add_child(w.fill)
@@ -2556,11 +2553,11 @@ func _on_surface_changed() -> void:
 
 func _show_plate(p: LorePlate) -> void:
 	if p.read:
-		p.face.material_override = _solid(Palette.COPPER)
+		p.face.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.62, 0.48, 0.0, "plate_read")
 		p.face.position = Vector3.UP * (PLATE_H * 0.5 + 0.005)
 		return
 	if not _parts.has("plate_glow"):
-		_parts["plate_glow"] = Palette.solid(Palette.AMBER, PLATE_GLOW)
+		_parts["plate_glow"] = PropMeshes.weathered_material(Palette.AMBER, 0.56, 0.34, PLATE_GLOW, "plate_glow")
 	p.face.material_override = _parts["plate_glow"]
 	p.face.position = Vector3.UP * (PLATE_H * 0.5 + PLATE_FACE_RAISE)
 

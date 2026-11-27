@@ -597,6 +597,12 @@ static func slot_material(slot: String, accent_color: Color = Palette.ARC) -> St
 	var mat := StandardMaterial3D.new()
 	mat.roughness = 0.78
 	mat.metallic = 0.18
+	Palette.surface_grain(mat)
+	var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+	if plate != null:
+		mat.albedo_texture = plate
+		mat.uv1_triplanar = true
+		mat.uv1_scale = Vector3.ONE * 2.4
 	match slot:
 		"brass_trim":
 			mat.albedo_color = Palette.COPPER.lerp(Palette.BRASS, 0.35)
@@ -629,7 +635,7 @@ static func apply_materials(inst: MeshInstance3D, accent_color: Color = Palette.
 		inst.set_surface_override_material(s, slot_material(am.surface_get_name(s), accent_color))
 
 
-static func mount_pilot_wearables(pilot: Node, accent_color: Color = Palette.ARC) -> Dictionary:
+static func mount_pilot_wearables(pilot: Node, accent_color: Color = Palette.ARC, skip_existing_goggles := false) -> Dictionary:
 	var out := {}
 	if pilot == null:
 		return out
@@ -643,6 +649,8 @@ static func mount_pilot_wearables(pilot: Node, accent_color: Color = Palette.ARC
 		{"key": "belt", "bone": "pelvis", "fallback": "root", "gear": GEAR_BELT, "offset": Vector3(0.0, 0.055, 0.0), "rot_deg": Vector3.ZERO, "scale": 1.04},
 	]
 	for spec in specs:
+		if skip_existing_goggles and String(spec.key) == "goggles" and skel.find_bone("goggles") >= 0:
+			continue
 		var bn: String = spec.bone
 		var bi := skel.find_bone(bn)
 		if bi < 0:

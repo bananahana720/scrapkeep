@@ -2,6 +2,7 @@ extends Node3D
 
 const ModelKit := preload("res://src/world/model_kit.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
 
 const STAKE := "res://assets/models/world_one/poi_survey_stake.glb"
@@ -220,24 +221,20 @@ func _knock(row: Dictionary, index: int, velocity: Vector3) -> void:
 
 func _post() -> Node3D:
 	var post := Node3D.new()
-	if ModelKit.whole(STAKE, post) != null:
+	var loaded := ModelKit.whole(STAKE, post)
+	if loaded != null:
+		PropMeshes.weather_node_materials(post, 2.2)
 		return post
 	var pole := MeshInstance3D.new()
-	var shaft := CylinderMesh.new()
-	shaft.top_radius = 0.15
-	shaft.bottom_radius = 0.2
-	shaft.height = HEIGHT_M
-	shaft.radial_segments = 8
-	pole.mesh = shaft
-	pole.material_override = Palette.striped(Palette.AMBER, Palette.CHARCOAL)
+	pole.mesh = PropMeshes.survey_stake_pole(HEIGHT_M)
+	var pole_mat := PropMeshes.weathered_material(Color.WHITE, 0.74, 0.28, 0.0, "survey_stake_pole", true, 2.2).duplicate() as StandardMaterial3D
+	pole_mat.vertex_color_use_as_albedo = true
+	pole.material_override = pole_mat
 	pole.position = Vector3.UP * HEIGHT_M * 0.5
 	post.add_child(pole)
 	var pennant := MeshInstance3D.new()
-	var cloth := PrismMesh.new()
-	cloth.size = Vector3(0.9, 1.4, 0.05)
-	pennant.mesh = cloth
-	pennant.material_override = Palette.solid(Palette.AMBER, 1.2, false)
-	pennant.rotation = Vector3(0.0, 0.0, -PI * 0.5)
-	pennant.position = Vector3(0.85, HEIGHT_M - 0.55, 0.0)
+	pennant.mesh = PropMeshes.survey_pennant_plate()
+	pennant.material_override = PropMeshes.weathered_material(Palette.AMBER, 0.58, 0.28, 1.1, "survey_pennant", true, 1.8)
+	pennant.position = Vector3(0.76, HEIGHT_M - 0.52, 0.0)
 	post.add_child(pennant)
 	return post
