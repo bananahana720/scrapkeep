@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   FAULT_SWITCHES,
   ID_COMPARE_LEGACY,
+  L14_STATIC_VAR_BASELINE,
   applyBaseline,
   baselineFrom,
   formatFinding,
@@ -23,6 +24,9 @@ import {
   lintL11,
   lintL12,
   lintL13,
+  lintL14,
+  lintSketch,
+  parseBatchDriverRefs,
   parseTuning,
 } from "./sketch-lint.mjs";
 import {
@@ -917,4 +921,47 @@ test("words: the count baseline holds a file at its count, fails it above, and a
   const lower = applyBaseline([hit("a.gd")], { W6: { "a.gd": 2 } }, () => true);
   assert.match(lower[0].message, /W6 fell to 1 from 2: lower the baseline to 1/);
   assert.deepEqual(baselineFrom([hit("a.gd"), hit("a.gd")]).W6, { "a.gd": 2 });
+});
+
+test("L14 passes the checked-out core-loop src tree and parses test_batch_driver refs", () => {
+  const driverText = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
+  const refs = parseBatchDriverRefs(driverText);
+  assert.ok(refs.size >= 80, `expected >= 80 driver refs, got ${refs.size}`);
+  assert.ok(refs.has("src/build/parts.gd"));
+  assert.ok(refs.has("src/core/challenge_dials.gd"));
+  assert.ok(L14_STATIC_VAR_BASELINE.size > 0);
+  const findings = lintSketch("core-loop").filter((item) => item.rule === "L14");
+  assert.deepEqual(findings, []);
+});
+
+test("L14 blocks a new unwired static var in src/ and passes once wired into test_batch_driver.gd", () => {
+  const file = "sketches/core-loop/src/presentation/planted_craft_cache.gd";
+  const rel = "src/presentation/planted_craft_cache.gd";
+  const src =
+    "extends RefCounted\n\nstatic var _leaked_cache := {}\nconst SAFE := 1\nvar inst := 0\n";
+  const emptyRefs = parseBatchDriverRefs("extends RefCounted\n");
+  const bad = lintL14(file, rel, src, emptyRefs, new Set());
+  assert.equal(bad.length, 1);
+  assert.equal(bad[0].rule, "L14");
+  assert.equal(bad[0].line, 3);
+  assert.match(bad[0].message, /_leaked_cache/);
+  assert.match(bad[0].message, /sketches\/core-loop\/tools\/test_batch_driver\.gd _reset\(\)/);
+
+  const wiredRefs = parseBatchDriverRefs(
+    'const Planted := preload("res://src/presentation/planted_craft_cache.gd")\n',
+  );
+  assert.deepEqual(lintL14(file, rel, src, wiredRefs, new Set()), []);
+
+  const baselined = new Set([`${rel}:_leaked_cache`]);
+  assert.deepEqual(lintL14(file, rel, src, emptyRefs, baselined), []);
+  const extra = `${src}static var _second_leak := []\n`;
+  const extraBad = lintL14(file, rel, extra, emptyRefs, baselined);
+  assert.deepEqual(
+    extraBad.map((item) => item.line),
+    [6],
+  );
+  assert.deepEqual(
+    lintL14(file, rel, "# static var _commented := {}\nvar ok := 1\n", emptyRefs, new Set()),
+    [],
+  );
 });
