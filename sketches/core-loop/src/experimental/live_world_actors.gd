@@ -46,6 +46,7 @@ const RAM_DAMAGE := 22.0
 const RAM_SPEED_DAMAGE := 0.8
 const RAM_COOLDOWN_S := 0.35
 const RAM_RESTITUTION := 0.85
+const RAM_REACH_SLACK_M := 0.3
 const RUPTURE_RADIUS_M := 6.5
 const RUPTURE_DAMAGE := 20.0
 const CONDUIT_FIELD_RADIUS_M := 5.0
@@ -81,6 +82,19 @@ const KNOCKBACK_MPS := 7.0
 const KNOCKBACK_UP_MPS := 3.5
 
 const STREAK_COUNT := 10
+
+const SLAG_SOURCE := "slag_pour"
+const CRANE_SOURCE := "crane_magnet"
+const SOLID_NAME := "ExpSolid"
+const APEX_SOLID_SIZE := Vector3(4.6, 5.0, 5.6)
+const APEX_SOLID_CENTER_Y := 2.5
+
+const RIG_BONE := Palette.LEDGER_CREAM
+const RIG_BONE_SHADE := Palette.LEDGER
+const RIG_CHEVRON := Color("ffd27a")
+const RIG_BEACON := Color("ffcb94")
+const RIG_CORE := Palette.ARC
+const RIG_TRIM: Array[Color] = [RIG_BONE, RIG_BONE_SHADE, RIG_CHEVRON, RIG_BEACON, RIG_CORE]
 
 const PROP_LAYOUT: Array[Dictionary] = [
 	{"kind": &"coolant_tank", "at": Vector3(-6.0, 0.0, 14.0), "radius": 1.25, "center_y": 1.15},
@@ -136,6 +150,7 @@ var _rings_spawned := 0
 var _ruptures := 0
 var _reactions: Array[StringName] = []
 var _kills: Dictionary = {}
+var _prev_ball_vel := Vector3.ZERO
 
 
 func setup(bridge_ref: Node, ctx_ref, chunk_ref: Node3D, stage_num: int) -> void:
@@ -160,6 +175,12 @@ func teardown() -> void:
 		if obj != null and is_instance_valid(obj) and obj.is_connected(link["signal"], cb):
 			obj.disconnect(link["signal"], cb)
 	_links.clear()
+	for id in _targets:
+		var solid := (_targets[id] as Dictionary).get("solid") as StaticBody3D
+		if solid != null and is_instance_valid(solid):
+			if solid.get_parent() != null:
+				solid.get_parent().remove_child(solid)
+			solid.queue_free()
 	_targets.clear()
 	_rings.clear()
 	_beacon = null
@@ -184,6 +205,7 @@ func step(delta: float, result: Dictionary) -> void:
 	_sync_props()
 	_sync_haulers()
 	_step_rams(ball_pos, ball_vel)
+	_prev_ball_vel = ball_vel
 	_step_slag_zones(delta)
 	_apply_setpiece_facts(result.get("setpieces", []), ball_pos, ball_vel)
 	_step_squall(ball_pos)
@@ -239,6 +261,7 @@ func spawn_elite(inst: RefCounted) -> bool:
 		plate.rotation = Vector3(0.0, 0.0, 0.0) if i < 2 else Vector3(0.0, 0.0, PI * 0.5)
 		views.append(plate)
 		plates.append(plate)
+	var solid := _solid(root, _sphere(ELITE_RADIUS_M), 0.0)
 	var ball_pos: Vector3 = _ctx.player.ball_position()
 	var start: Vector3 = inst.origin
 	start.y = ball_pos.y + ELITE_HOVER_M
@@ -246,6 +269,7 @@ func spawn_elite(inst: RefCounted) -> bool:
 	inst.origin = start
 	_targets[id] = _target(id, KIND_ELITE, root, views, ELITE_RADIUS_M, 0.0, inst, {
 		"plates": plates,
+		"solid": solid,
 		"phase": float(_serial) * 1.7 + float(_count_kind(KIND_ELITE)) * 1.05,
 		"aggro_s": 0.0,
 	})
@@ -262,7 +286,7 @@ func snapshot() -> Dictionary:
 	for id in _targets:
 		var t: Dictionary = _targets[id]
 		counts[t["kind"]] = int(counts[t["kind"]]) + 1
-		rows.append({"id": id, "kind": t["kind"], "pos": _center(t), "radius": float(t["radius"])})
+		rows.append({"id": id, "kind": t["kind"], "pos": _center(t), "radius": float(t["radius"]), "solid": _is_solid(t)})
 	var streaks_visible := 0
 	if is_instance_valid(_streaks) and _streaks.visible:
 		streaks_visible = _streaks.get_child_count()
@@ -334,6 +358,31 @@ func _view(parent: Node3D, node_name: String, mesh: Mesh) -> MeshInstance3D:
 	mi.mesh = mesh
 	parent.add_child(mi)
 	return mi
+
+
+func _solid(root: Node3D, shape: Shape3D, center_y: float) -> StaticBody3D:
+	var body := StaticBody3D.new()
+	body.name = SOLID_NAME
+	body.collision_layer = 1
+	body.collision_mask = 0
+	var col := CollisionShape3D.new()
+	col.shape = shape
+	col.position = Vector3(0.0, center_y, 0.0)
+	body.add_child(col)
+	root.add_child(body)
+	return body
+
+
+static func _sphere(radius: float) -> SphereShape3D:
+	var shape := SphereShape3D.new()
+	shape.radius = radius
+	return shape
+
+
+func _is_solid(t: Dictionary) -> bool:
+	var body := t.get("solid") as StaticBody3D
+	return body != null and is_instance_valid(body) and body.is_inside_tree() \
+		and body.collision_layer == 1 and body.collision_mask == 0 and body.get_parent() == t["node"]
 
 
 func _floor_point(local: Vector3) -> Vector3:
@@ -453,7 +502,8 @@ func _spawn_wave(spawns: Array) -> void:
 		add_child(root)
 		root.global_position = at
 		var views: Array = [_view(root, "Body", defender_mesh(role == &"shielded_bulwark"))]
-		_targets["defender:" + eid] = _target("defender:" + eid, KIND_DEFENDER, root, views, DEFENDER_RADIUS_M, DEFENDER_CENTER_Y, eid)
+		var solid := _solid(root, _sphere(DEFENDER_RADIUS_M), DEFENDER_CENTER_Y)
+		_targets["defender:" + eid] = _target("defender:" + eid, KIND_DEFENDER, root, views, DEFENDER_RADIUS_M, DEFENDER_CENTER_Y, eid, {"solid": solid})
 
 
 func _spawn_apex() -> void:
@@ -478,9 +528,12 @@ func _spawn_apex() -> void:
 		plate.position = Vector3(0.0, 0.0, 3.1)
 		views.append(plate)
 		plates.append(plate)
+	var box := BoxShape3D.new()
+	box.size = APEX_SOLID_SIZE
+	var solid := _solid(root, box, APEX_SOLID_CENTER_Y)
 	_apex_id = "apex:" + LOCKDOWN_ID
 	_apex_plates_left = APEX_PLATE_NODES
-	_targets[_apex_id] = _target(_apex_id, KIND_APEX, root, views, APEX_RADIUS_M, APEX_CENTER_Y, null, {"pivot": pivot, "plates": plates})
+	_targets[_apex_id] = _target(_apex_id, KIND_APEX, root, views, APEX_RADIUS_M, APEX_CENTER_Y, null, {"pivot": pivot, "plates": plates, "solid": solid})
 
 
 func _spawn_props() -> void:
@@ -495,7 +548,8 @@ func _spawn_props() -> void:
 		add_child(root)
 		root.global_position = at
 		var views: Array = [_view(root, "Body", prop_mesh(kind))]
-		_targets["prop:" + pid] = _target("prop:" + pid, KIND_PROP, root, views, float(row["radius"]), float(row["center_y"]), pid, {"prop_kind": kind})
+		var solid := _solid(root, _sphere(float(row["radius"])), float(row["center_y"]))
+		_targets["prop:" + pid] = _target("prop:" + pid, KIND_PROP, root, views, float(row["radius"]), float(row["center_y"]), pid, {"prop_kind": kind, "solid": solid})
 
 
 func _spawn_haulers() -> void:
@@ -619,7 +673,7 @@ func _sync_haulers() -> void:
 
 
 func _step_rams(ball_pos: Vector3, ball_vel: Vector3) -> void:
-	var speed := Vector2(ball_vel.x, ball_vel.z).length()
+	var speed := maxf(Vector2(ball_vel.x, ball_vel.z).length(), Vector2(_prev_ball_vel.x, _prev_ball_vel.z).length())
 	for id in _targets.keys():
 		if not _targets.has(id):
 			continue
@@ -627,7 +681,7 @@ func _step_rams(ball_pos: Vector3, ball_vel: Vector3) -> void:
 		if float(t["ram_cd"]) > 0.0 or speed < RAM_MIN_SPEED_MPS:
 			continue
 		var c := _center(t)
-		if ball_pos.distance_to(c) > float(t["radius"]) + BALL_RADIUS_M:
+		if ball_pos.distance_to(c) > float(t["radius"]) + BALL_RADIUS_M + RAM_REACH_SLACK_M:
 			continue
 		t["ram_cd"] = RAM_COOLDOWN_S
 		if t["kind"] != KIND_PROP:
@@ -644,7 +698,8 @@ func _rebound(ball_pos: Vector3, ball_vel: Vector3, center: Vector3) -> void:
 	var vn := ball_vel.dot(n)
 	if vn >= 0.0:
 		return
-	_ctx.player.set_velocity_now(ball_vel - n * vn * (1.0 + RAM_RESTITUTION), "experimental_ram")
+	var body: RigidBody3D = _ctx.player.body()
+	body.apply_central_impulse(-n * vn * (1.0 + RAM_RESTITUTION) * body.mass)
 
 
 func _hit(t: Dictionary, damage: float, from: Vector3, verb: StringName) -> void:
@@ -841,7 +896,7 @@ func _apply_setpiece_facts(facts: Array, ball_pos: Vector3, ball_vel: Vector3) -
 		var row := fact as Dictionary
 		match String(row.get("kind", "")):
 			"slag_stall_burn":
-				_hull_hazard(_slag_origin(ball_pos), SLAG_HULL_DAMAGE, "experimental_slag")
+				_hull_hazard(_slag_origin(ball_pos), SLAG_HULL_DAMAGE, SLAG_SOURCE)
 			"crane_magnet_dropped", "cover_relocated":
 				_crane_impact(row.get("position", Vector3.INF), ball_pos, ball_vel)
 
@@ -860,7 +915,7 @@ func _crane_impact(at: Vector3, ball_pos: Vector3, ball_vel: Vector3) -> void:
 	_spawn_ring(Vector3(at.x, _floor_y + 0.3, at.z), &"electrified", CRANE_IMPACT_RADIUS_M)
 	var sits := Vector2(ball_vel.x, ball_vel.z).length() < _cruise() * float(SpeedTier.MULTIPLES[SpeedTier.CRUISE])
 	if sits and Vector2(ball_pos.x - at.x, ball_pos.z - at.z).length() <= CRANE_IMPACT_RADIUS_M:
-		_hull_hazard(at, CRANE_HULL_DAMAGE, "experimental_crane")
+		_hull_hazard(at, CRANE_HULL_DAMAGE, CRANE_SOURCE)
 
 
 func _hull_hazard(origin: Vector3, damage: float, source: String) -> void:
@@ -1017,8 +1072,6 @@ static func _mat(role: String) -> Material:
 			return EnemyBossCraft.craft_shader_material("exp_live_iron", "oil_slicked_iron", Palette.CHARCOAL, Palette.STEEL)
 		"hull":
 			return EnemyBossCraft.craft_shader_material("exp_live_hull", "oxidized_hull_plating", Palette.RUST, Palette.COPPER)
-		"armor":
-			return EnemyBossCraft.craft_shader_material("exp_live_armor", "oxidized_hull_plating", Palette.SLATE, Palette.STEEL)
 		"fleet":
 			return EnemyBossCraft.craft_shader_material("exp_live_fleet", "oxidized_hull_plating", Palette.VERDIGRIS, Palette.COPPER)
 		"frost":
@@ -1027,8 +1080,14 @@ static func _mat(role: String) -> Material:
 			return EnemyBossCraft.craft_shader_material("exp_live_fuel", "oxidized_hull_plating", Palette.HAZARD, Palette.RUST, 0.6, 0.3, Palette.AMBER, 0.6)
 		"amber_core":
 			return EnemyBossCraft.craft_shader_material("exp_live_amber", "plasma_conduit_core", Palette.CABLE, Palette.AMBER, 0.4, 0.2, Palette.AMBER, 2.2)
-		"hazard_core":
-			return EnemyBossCraft.craft_shader_material("exp_live_hazard", "plasma_conduit_core", Palette.CABLE, Palette.HAZARD, 0.4, 0.2, Palette.HAZARD, 2.6)
+		"bone":
+			return EnemyBossCraft.craft_shader_material("exp_live_bone", "oil_slicked_iron", RIG_BONE, RIG_BONE_SHADE, 0.5, 0.12)
+		"chevron":
+			return EnemyBossCraft.craft_shader_material("exp_live_chevron", "oxidized_hull_plating", RIG_CHEVRON, RIG_CHEVRON, 0.46, 0.1, RIG_CHEVRON, 0.35)
+		"rig_core":
+			return EnemyBossCraft.craft_shader_material("exp_live_rig_core", "plasma_conduit_core", RIG_CORE, RIG_CORE, 0.3, 0.1, RIG_CORE, 3.0)
+		"rig_beacon":
+			return EnemyBossCraft.craft_shader_material("exp_live_rig_beacon", "plasma_conduit_core", RIG_BEACON, RIG_BEACON, 0.3, 0.1, RIG_BEACON, 2.8)
 	return EnemyBossCraft.craft_shader_material("exp_live_arc", "plasma_conduit_core", Palette.CABLE, Palette.ARC, 0.4, 0.2, Palette.ARC, 2.0)
 
 
@@ -1057,6 +1116,10 @@ func _keep(key: String, mesh: ArrayMesh) -> ArrayMesh:
 static func _box(st: SurfaceTool, at: Vector3, size: Vector3, bevel: float, yaw := 0.0, emissive := 0.0) -> void:
 	CampCraftMeshes.add_bevel_box(st, Vector3.ZERO, size, bevel, 0.3, Transform3D(Basis(Vector3.UP, yaw), at),
 		_c(0.2, 0.32, emissive), _c(0.7, 0.14, emissive), _c(0.1, 0.72, emissive * 0.5))
+
+
+static func _plate(st: SurfaceTool, xf: Transform3D, size: Vector3, bevel: float, emissive := 0.0) -> void:
+	CampCraftMeshes.add_bevel_box(st, Vector3.ZERO, size, bevel, 0.3, xf, _c(0.12, 0.06, emissive), _c(0.4, 0.04, emissive), _c(0.1, 0.2, emissive * 0.5))
 
 
 static func _tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, col: Color) -> void:
@@ -1158,17 +1221,39 @@ func foreman_body_mesh() -> ArrayMesh:
 		_box(st, Vector3(side * 1.95, 0.56, 0.0), Vector3(1.1, 1.12, 5.4), 0.24)
 		_lathe(st, PackedVector2Array([Vector2(0.0, 0.0), Vector2(0.36, 0.0), Vector2(0.36, 2.6), Vector2(0.46, 2.7), Vector2(0.46, 3.0), Vector2(0.0, 3.0)]), 12,
 			Transform3D(Basis.IDENTITY, Vector3(side * 1.45, 2.1, 1.9)), _c(0.55, 0.3))
+	_box(st, Vector3(0.0, 3.36, -0.7), Vector3(2.6, 1.7, 2.4), 0.2)
 	_commit(mesh, st, _mat("iron"))
 	st = _begin()
-	_box(st, Vector3(0.0, 1.78, 0.0), Vector3(3.8, 1.5, 4.4), 0.22)
-	_box(st, Vector3(0.0, 3.36, -0.7), Vector3(2.6, 1.7, 2.4), 0.2)
-	_box(st, Vector3(0.0, 5.2, 1.9), Vector3(3.7, 0.56, 0.92), 0.14)
-	_box(st, Vector3(0.0, 2.7, 2.35), Vector3(3.2, 0.9, 0.3), 0.08)
-	_commit(mesh, st, _mat("hull"))
+	_plate(st, Transform3D(Basis.IDENTITY, Vector3(0.0, 1.78, 0.0)), Vector3(3.8, 1.5, 4.4), 0.22)
+	_plate(st, Transform3D(Basis.IDENTITY, Vector3(0.0, 5.2, 1.9)), Vector3(3.7, 0.56, 0.92), 0.14)
+	for side: float in [-1.0, 1.0]:
+		_plate(st, Transform3D(Basis.IDENTITY, Vector3(side * 2.02, 0.95, 0.0)), Vector3(0.14, 0.62, 4.9), 0.05)
+		_plate(st, Transform3D(Basis.IDENTITY, Vector3(side * 1.36, 3.36, -0.7)), Vector3(0.12, 1.2, 1.9), 0.04)
+		for end: float in [-1.0, 1.0]:
+			_plate(st, Transform3D(Basis.IDENTITY, Vector3(side * 1.42, 3.4, -0.7 + end * 1.26)), Vector3(0.24, 2.2, 0.24), 0.06)
+		_plate(st, Transform3D(Basis.IDENTITY, Vector3(side * 1.42, 4.56, -0.7)), Vector3(0.24, 0.24, 2.76), 0.06)
+	for end: float in [-1.0, 1.0]:
+		_plate(st, Transform3D(Basis.IDENTITY, Vector3(0.0, 4.56, -0.7 + end * 1.26)), Vector3(3.08, 0.24, 0.24), 0.06)
+	_commit(mesh, st, _mat("bone"))
+	st = _begin()
+	for end: float in [-1.0, 1.0]:
+		_plate(st, Transform3D(Basis.IDENTITY, Vector3(0.0, 1.0, end * 2.86)), Vector3(4.2, 0.72, 0.42), 0.1, 0.4)
+	_plate(st, Transform3D(Basis.IDENTITY, Vector3(0.0, 2.7, 2.35)), Vector3(3.2, 0.9, 0.3), 0.08, 0.4)
+	_commit(mesh, st, _mat("chevron"))
+	st = _begin()
+	for end: float in [-1.0, 1.0]:
+		for i in 4:
+			var x := -1.5 + float(i) * 1.0
+			_plate(st, Transform3D(Basis(Vector3.BACK, 0.62 * end), Vector3(x, 1.0, end * 3.09)), Vector3(0.22, 0.86, 0.06), 0.02)
+	_commit(mesh, st, _mat("iron"))
 	st = _begin()
 	_lathe(st, _orb(0.64, 8), 14, Transform3D(Basis.IDENTITY, Vector3(0.0, 3.5, 0.8)), _c(0.1, 0.1, 1.0))
 	_lathe(st, _loop(0.82, 0.08, 8), 18, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3(0.0, 3.5, 0.95)), _c(0.1, 0.1, 1.0), true)
-	_commit(mesh, st, _mat("hazard_core"))
+	_commit(mesh, st, _mat("rig_core"))
+	st = _begin()
+	_lathe(st, PackedVector2Array([Vector2(0.0, 0.0), Vector2(0.42, 0.0), Vector2(0.42, 0.18), Vector2(0.34, 0.5), Vector2(0.18, 0.7), Vector2(0.0, 0.74)]), 14,
+		Transform3D(Basis.IDENTITY, Vector3(0.0, 4.68, -0.7)), _c(0.1, 0.1, 1.0))
+	_commit(mesh, st, _mat("rig_beacon"))
 	return _keep("foreman_body", mesh)
 
 
@@ -1177,11 +1262,11 @@ func foreman_plate_mesh() -> ArrayMesh:
 		return _mesh_cache["foreman_plate"]
 	var mesh := ArrayMesh.new()
 	var st := _begin()
-	_box(st, Vector3.ZERO, Vector3(1.7, 2.2, 0.32), 0.1)
-	_commit(mesh, st, _mat("armor"))
+	_plate(st, Transform3D.IDENTITY, Vector3(1.7, 2.2, 0.32), 0.1)
+	_commit(mesh, st, _mat("bone"))
 	st = _begin()
-	_box(st, Vector3(0.0, 0.0, 0.2), Vector3(1.3, 0.24, 0.1), 0.03, 0.0, 1.0)
-	_commit(mesh, st, _mat("hazard_core"))
+	_plate(st, Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, 0.2)), Vector3(1.3, 0.24, 0.1), 0.03, 1.0)
+	_commit(mesh, st, _mat("chevron"))
 	return _keep("foreman_plate", mesh)
 
 
@@ -1195,9 +1280,12 @@ func defender_mesh(shielded: bool) -> ArrayMesh:
 	_commit(mesh, st, _mat("iron"))
 	st = _begin()
 	_box(st, Vector3(0.0, 0.95, 0.0), Vector3(1.3, 0.8, 1.5), 0.16)
-	if shielded:
-		_box(st, Vector3(0.0, 1.0, 0.92), Vector3(1.8, 1.3, 0.22), 0.06)
 	_commit(mesh, st, _mat("fleet"))
+	st = _begin()
+	_plate(st, Transform3D(Basis.IDENTITY, Vector3(0.0, 1.4, 0.0)), Vector3(1.38, 0.14, 1.58), 0.04)
+	if shielded:
+		_plate(st, Transform3D(Basis.IDENTITY, Vector3(0.0, 1.0, 0.92)), Vector3(1.8, 1.3, 0.22), 0.06)
+	_commit(mesh, st, _mat("bone"))
 	st = _begin()
 	_lathe(st, _orb(0.26, 6), 10, Transform3D(Basis.IDENTITY, Vector3(0.0, 1.05, 0.74)), _c(0.1, 0.1, 1.0))
 	_commit(mesh, st, _mat("arc_core"))
@@ -1220,7 +1308,11 @@ func elite_body_mesh() -> ArrayMesh:
 	_commit(mesh, st, _mat("hull"))
 	st = _begin()
 	_lathe(st, _orb(0.36, 6), 12, Transform3D(Basis.IDENTITY, Vector3(0.0, 0.22, 1.55)), _c(0.1, 0.1, 1.0))
-	_commit(mesh, st, _mat("hazard_core"))
+	_commit(mesh, st, _mat("rig_beacon"))
+	st = _begin()
+	for side: float in [-1.0, 1.0]:
+		_plate(st, Transform3D(Basis.IDENTITY, Vector3(side * 0.7, 0.72, 0.0)), Vector3(0.18, 0.14, 2.3), 0.04)
+	_commit(mesh, st, _mat("bone"))
 	return _keep("elite_body", mesh)
 
 
@@ -1229,8 +1321,8 @@ func elite_plate_mesh() -> ArrayMesh:
 		return _mesh_cache["elite_plate"]
 	var mesh := ArrayMesh.new()
 	var st := _begin()
-	_box(st, Vector3.ZERO, Vector3(0.26, 1.2, 1.7), 0.07)
-	_commit(mesh, st, _mat("armor"))
+	_plate(st, Transform3D.IDENTITY, Vector3(0.26, 1.2, 1.7), 0.07)
+	_commit(mesh, st, _mat("bone"))
 	return _keep("elite_plate", mesh)
 
 

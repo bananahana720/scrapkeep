@@ -45,10 +45,18 @@ const LIVE_LOADOUTS: Array[Array] = [
 ]
 const CHUNK_HOLDER_NAME := "ExperimentalArenaChunk"
 const CHUNK_FOOTPRINT_HALF_M := 34.0
-const CHUNK_SITE_RANGES_M: Array[float] = [84.0, 108.0, 132.0]
-const CHUNK_SITE_ANGLES_DEG: Array[float] = [90.0, -90.0, 120.0, -120.0, 150.0, -150.0, 180.0]
-const CHUNK_SITE_SAMPLES: Array[float] = [-1.0, -0.5, 0.0, 0.5, 1.0]
+const CHUNK_SITE_RANGES_M: Array[float] = [84.0, 112.0, 144.0, 180.0, 220.0, 265.0]
+const CHUNK_SITE_ANGLES_DEG: Array[float] = [90.0, -90.0, 112.5, -112.5, 135.0, -135.0, 157.5, -157.5, 180.0,
+	67.5, -67.5, 45.0, -45.0, 22.5, -22.5, 0.0]
+const CHUNK_SITE_SAMPLES: Array[float] = [-1.0, -0.75, -0.5, -0.25, 0.0, 0.25, 0.5, 0.75, 1.0]
+const CHUNK_LINE_SAMPLES: Array[float] = [-1.0, -0.5, 0.0, 0.5, 1.0]
 const CHUNK_SITE_GOOD_COST_M := 3.0
+const CHUNK_DECK_CLEARANCE_M := 0.35
+const CHUNK_DECK_SCAN_STEP_M := 2.0
+const CHUNK_RELIEF_COST := 2.5
+const CHUNK_OVERHANG_DROP_M := 12.0
+const CHUNK_OVERHANG_COST_M := 60.0
+const CHUNK_SITE_DENSE_PICKS := 8
 const CHUNK_CLEAR_RADIUS_M := CHUNK_FOOTPRINT_HALF_M + 8.0
 const CHUNK_BEACON_CLEAR_M := 52.0
 const CHUNK_SPAWN_CLEAR_M := 80.0
@@ -598,42 +606,99 @@ func _live_chunk_site(stage: int) -> Dictionary:
 	var beacon: Variant = terrain.beacon_point(stage) if terrain.has_method("beacon_point") else null
 	var map: Variant = terrain.map_for(stage) if terrain.has_method("map_for") else null
 	var ride_lines: bool = map != null and map.has_method("line_within")
-	var best := {}
-	var best_cost := INF
+	var coarse := _footprint_offsets(CHUNK_SITE_SAMPLES)
+	var dense := _dense_offsets()
+	var shortlist: Array[Dictionary] = []
 	for range_m in CHUNK_SITE_RANGES_M:
+		var ring_best := INF
 		for angle_deg in CHUNK_SITE_ANGLES_DEG:
 			var at: Vector3 = spawn + heading.rotated(Vector3.UP, deg_to_rad(angle_deg)) * range_m
 			var inside := true
-			var high := -INF
-			var low := INF
-			var line_hits := 0
-			for sx in CHUNK_SITE_SAMPLES:
-				for sz in CHUNK_SITE_SAMPLES:
-					var x: float = at.x + sx * CHUNK_FOOTPRINT_HALF_M
-					var z: float = at.z + sz * CHUNK_FOOTPRINT_HALF_M
-					inside = inside and terrain.contains(Vector3(x, 0.0, z))
-					var h: float = terrain.height(x, z)
-					high = maxf(high, h)
-					low = minf(low, h)
-					if ride_lines and map.line_within(Vector2(at.x + sx * CHUNK_CLEAR_RADIUS_M, at.z + sz * CHUNK_CLEAR_RADIUS_M), CHUNK_LINE_REACH_M):
-						line_hits += 1
+			for corner: Vector2 in [Vector2(-1.0, -1.0), Vector2(-1.0, 1.0), Vector2(1.0, -1.0), Vector2(1.0, 1.0)]:
+				inside = inside and terrain.contains(Vector3(at.x + corner.x * CHUNK_FOOTPRINT_HALF_M, 0.0, at.z + corner.y * CHUNK_FOOTPRINT_HALF_M))
 			if not inside:
 				continue
+			var line_hits := 0
+			if ride_lines:
+				for sx in CHUNK_LINE_SAMPLES:
+					for sz in CHUNK_LINE_SAMPLES:
+						if map.line_within(Vector2(at.x + sx * CHUNK_CLEAR_RADIUS_M, at.z + sz * CHUNK_CLEAR_RADIUS_M), CHUNK_LINE_REACH_M):
+							line_hits += 1
 			var flat := Vector2(at.x, at.z)
 			var beacon_m := flat.distance_to(Vector2(beacon.x, beacon.z)) if beacon != null else INF
 			var spawn_m := flat.distance_to(Vector2(spawn.x, spawn.z))
 			var blocked := beacon_m < CHUNK_BEACON_CLEAR_M or spawn_m < CHUNK_SPAWN_CLEAR_M
 			var approach: Vector3 = at + (spawn - at).normalized() * (CHUNK_FOOTPRINT_HALF_M + CHUNK_APPROACH_MARGIN_M)
-			var approach_floor: float = terrain.height(approach.x, approach.z)
-			var cost := absf(high - approach_floor) + absf(high - spawn_floor) \
-				+ float(line_hits) * CHUNK_LINE_COST_M + (CHUNK_BLOCKED_COST_M if blocked else 0.0)
-			if cost < best_cost - 0.01:
-				best_cost = cost
-				best = {"origin": Vector3(at.x, high, at.z), "low": low, "approach": approach, "approach_floor": approach_floor, "cost": cost,
-					"beacon_m": beacon_m, "spawn_m": spawn_m, "line_hits": line_hits, "clear": not blocked and line_hits == 0}
-		if best_cost <= CHUNK_SITE_GOOD_COST_M:
+			var site := {"origin": Vector3(at.x, 0.0, at.z), "approach": approach, "approach_floor": float(terrain.height(approach.x, approach.z)),
+				"beacon_m": beacon_m, "spawn_m": spawn_m, "line_hits": line_hits, "clear": not blocked and line_hits == 0,
+				"fixed_cost": float(line_hits) * CHUNK_LINE_COST_M + (CHUNK_BLOCKED_COST_M if blocked else 0.0),
+				"rank": shortlist.size()}
+			_score_site(terrain, site, coarse, spawn_floor)
+			ring_best = minf(ring_best, float(site["cost"]))
+			shortlist.append(site)
+		if ring_best <= CHUNK_SITE_GOOD_COST_M:
 			break
+	shortlist.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+		return float(a["cost"]) < float(b["cost"]) or (float(a["cost"]) == float(b["cost"]) and int(a["rank"]) < int(b["rank"])))
+	var best := {}
+	for site in shortlist.slice(0, CHUNK_SITE_DENSE_PICKS):
+		_score_site(terrain, site, dense, spawn_floor)
+		if best.is_empty() or float(site["cost"]) < float(best["cost"]) - 0.01:
+			best = site
+	if best.is_empty():
+		return {}
+	var top := float(best["terrain_top"])
+	var origin: Vector3 = best["origin"]
+	best["origin"] = Vector3(origin.x, top + CHUNK_DECK_CLEARANCE_M, origin.z)
+	best.erase("fixed_cost")
+	best.erase("rank")
 	return best
+
+
+static func _footprint_offsets(samples: Array[float]) -> PackedVector2Array:
+	var out := PackedVector2Array()
+	for sx in samples:
+		for sz in samples:
+			out.append(Vector2(sx, sz) * CHUNK_FOOTPRINT_HALF_M)
+	return out
+
+
+static func _dense_offsets() -> PackedVector2Array:
+	var out := PackedVector2Array()
+	var span := CHUNK_FOOTPRINT_HALF_M * 2.0
+	var steps := int(ceil(span / CHUNK_DECK_SCAN_STEP_M))
+	for ix in steps + 1:
+		for iz in steps + 1:
+			out.append(Vector2(minf(float(ix) * CHUNK_DECK_SCAN_STEP_M, span), minf(float(iz) * CHUNK_DECK_SCAN_STEP_M, span)) - Vector2.ONE * CHUNK_FOOTPRINT_HALF_M)
+	return out
+
+
+static func _score_site(terrain, site: Dictionary, offsets: PackedVector2Array, spawn_floor: float) -> void:
+	var origin: Vector3 = site["origin"]
+	var points := PackedVector2Array()
+	for off in offsets:
+		points.append(Vector2(origin.x, origin.z) + off)
+	var heights: Variant = terrain.heights(points) if terrain.has_method("heights") else null
+	if heights == null:
+		heights = PackedFloat64Array()
+		for p in points:
+			heights.append(terrain.height(p.x, p.y))
+	var high := -INF
+	var low := INF
+	for h in heights:
+		high = maxf(high, h)
+		low = minf(low, h)
+	var overhung := 0
+	for h in heights:
+		if high - h > CHUNK_OVERHANG_DROP_M:
+			overhung += 1
+	var overhang := float(overhung) / float(heights.size())
+	site["terrain_top"] = high
+	site["low"] = low
+	site["relief"] = high - low
+	site["overhang"] = overhang
+	site["cost"] = absf(high - float(site["approach_floor"])) + absf(high - spawn_floor) \
+		+ (high - low) * CHUNK_RELIEF_COST + overhang * CHUNK_OVERHANG_COST_M + float(site["fixed_cost"])
 
 
 func _free_live_chunk() -> void:

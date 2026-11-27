@@ -8,6 +8,8 @@ const LiveWorldActors := preload("res://src/experimental/live_world_actors.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 const AdversityDirector := preload("res://src/experimental/adversity_director.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const DeathCause := preload("res://src/core/death_cause.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 const BALL_RADIUS_M := 1.0
 const BALL_GRAVITY_SCALE := 26.0 / 9.8
@@ -42,6 +44,19 @@ const STAGE_CHUNKS := {
 }
 const STAGE_BIOMES := {1: &"spillway", 2: &"spillway", 3: &"dig", 4: &"dig", 5: &"highdraft", 6: &"highdraft"}
 const SHOT_LIMIT := 80
+const PARK_STAGES := 6
+const PARK_SCAN_STEP_M := 1.0
+const PARK_BUILD_FRAMES := 900
+const CONTRAST_FLOOR := 3.5
+const CHUNK_BACKDROPS := {
+	"rust hull wall": Palette.RUST,
+	"hull shade": Color(0.47, 0.27, 0.2),
+	"oil iron frame": Color(0.29, 0.34, 0.34),
+	"catwalk deck": Color(0.28, 0.34, 0.34),
+	"gantry deck": Color(0.39, 0.39, 0.36),
+	"combat floor": Color(0.41, 0.385, 0.345),
+	"charcoal": Palette.CHARCOAL,
+}
 
 var _t := T.new("experimental_live_game_test")
 
@@ -91,8 +106,11 @@ func _run() -> void:
 	await _test_piers_are_solid()
 	await _test_pads_launch_onto_decks()
 	_test_chunk_site_clearance()
+	_test_rig_contrast()
+	_test_death_lines()
 	await _test_default_game_stays_clean()
 	await _test_opt_in_game()
+	await _test_park_table_siting()
 	LiveRunBridge._reset()
 	quit(_t.verdict())
 
@@ -304,6 +322,7 @@ func _check_stage(game, stage: int) -> void:
 	_t.eq("stage %d keeps exactly one arena chunk" % stage, _count_named(game, LiveRunBridge.CHUNK_HOLDER_NAME), 1)
 	var spawn: Vector3 = game.ctx.terrain.spawn_point(stage)
 	var away := Vector2(chunk.global_position.x - spawn.x, chunk.global_position.z - spawn.z).length()
+	_t.check("stage %d chunk stands clear of the spawn" % stage, away >= 40.0, "%.1f m" % away)
 	_t.check("stage %d chunk stands 80 m clear of the spawn" % stage, away >= LiveRunBridge.CHUNK_SPAWN_CLEAR_M, "%.1f m" % away)
 	var beacon: Vector3 = game.ctx.terrain.beacon_point(stage)
 	var beacon_m := Vector2(chunk.global_position.x - beacon.x, chunk.global_position.z - beacon.z).length()
@@ -319,6 +338,7 @@ func _check_stage(game, stage: int) -> void:
 		_t.eq("stage %d spawns its hauler drones" % stage, snap["haulers"], 1 if stage <= 2 else 2)
 		_t.eq("stage %d arms the Salvage Press beacon" % stage, snap["lockdown"], "armed")
 		_t.eq("stage %d live actors draw no primitive mesh" % stage, _primitive_meshes(actors), 0)
+		_t.eq("stage %d every prop stands on a solid collider" % stage, _solid_rows(game, &"prop"), 4)
 	_t.check("stage %d starts the ambience loop on an ExpAudio player" % stage,
 		bridge.get_node_or_null("ExpAudio_smelter_ambience") != null and bridge.active_audio_loops().has("smelter_ambience"))
 	_t.eq("stage %d equips three parts from the world's pool" % stage, bridge.synergies.equipped_parts().size(), 3)
@@ -381,6 +401,7 @@ func _test_opt_in_game() -> void:
 
 	await _launch_player_from_pad(game)
 	await _check_live_props_and_haulers(game)
+	await _check_slow_roll_is_solid(game)
 	await _check_live_elites(game)
 	await _check_live_squall(game)
 	await _check_live_lockdown(game)
@@ -399,6 +420,7 @@ func _test_opt_in_game() -> void:
 	_t.eq("boss entry frees the ExpAudio players", _count_named(bridge, "ExpAudio_"), 0)
 	_t.check("boss entry frees the arena chunk", bridge.live_chunk() == null and _count_named(game, LiveRunBridge.CHUNK_HOLDER_NAME) == 0)
 	_t.check("boss entry frees the live actors", bridge.live_actors == null and _count_named(game, LiveWorldActors.NODE_NAME) == 0)
+	_t.eq("boss entry frees every actor collider", _count_named(game, LiveWorldActors.SOLID_NAME), 0)
 	_t.eq("a torn-down bridge steps to nothing", bridge.live_step(1.0 / 90.0), {})
 
 	root.remove_child(game)
@@ -526,13 +548,34 @@ func _check_live_elites(game) -> void:
 	var first = insts[0]
 	var row := _target(game, "elite:test_elite_0")
 	var at: Vector3 = row["pos"]
+	_t.eq("every live elite stands on a solid collider", _solid_rows(game, &"elite"), LiveWorldActors.ELITE_CAP)
 	var integrity := float(first.plates[0]["integrity"])
-	game.player.reset_to(at + Vector3(-2.0, -LiveWorldActors.ELITE_HOVER_M, 0.0), Vector3(16.0, 0.0, 0.0))
+	var start := at + Vector3(0.0, -LiveWorldActors.ELITE_HOVER_M, -3.4)
+	game.player.reset_to(start, Vector3(0.0, 0.0, 16.0))
+	await physics_frame
+	var kit = game.player.kit
+	kit.hooked = true
+	kit.on_body = false
+	kit.anchor = start + Vector3(0.0, 30.0, 0.0)
+	kit.rope = 120.0
+	kit.line_end = ""
+	var resets := [0]
+	var on_reset := func() -> void:
+		resets[0] += 1
+	game.player.body().velocity_setting.connect(on_reset)
+	var waited := 0
+	while waited < 30 and float(first.plates[0]["integrity"]) >= integrity:
+		await physics_frame
+		waited += 1
 	await _physics(2)
+	game.player.body().velocity_setting.disconnect(on_reset)
 	var rebound: Vector3 = game.player.body().linear_velocity
 	_t.check("a fast ram cracks the elite's plate", float(first.plates[0]["integrity"]) < integrity,
-		"%.1f -> %.1f" % [integrity, float(first.plates[0]["integrity"])])
-	_t.check("the ram rebounds the ball", rebound.x < 0.0, str(rebound))
+		"%.1f -> %.1f after %d ticks" % [integrity, float(first.plates[0]["integrity"]), waited])
+	_t.check("the ram rebounds the ball", rebound.z < 0.0, str(rebound))
+	_t.check("a fast ram keeps the hooked line", kit.hooked and String(kit.line_end) == "", "hooked=%s end='%s'" % [kit.hooked, kit.line_end])
+	_t.eq("a fast ram never calls set_velocity_now", resets[0], 0)
+	kit.drop_line("reset")
 
 	var scrap_before := int(actors.snapshot()["paid_scrap"])
 	var shots := 0
@@ -568,7 +611,7 @@ func _check_live_lockdown(game) -> void:
 	var run = game.ctx.run
 	var hits: Array[float] = []
 	var on_hit := func(amount: float, source: String) -> void:
-		if source == "experimental_slag":
+		if source == LiveWorldActors.SLAG_SOURCE:
 			hits.append(amount)
 	game.ctx.events.player_hit.connect(on_hit)
 	_park(game, actors.beacon_position())
@@ -612,10 +655,14 @@ func _check_live_lockdown(game) -> void:
 	var cogs_before: int = run.cogs
 	var saw_apex := false
 	var steps := 0
+	_t.eq("every wave defender stands on a solid collider", _solid_rows(game, &"defender"), int(actors.snapshot()["defenders"]))
 	while steps < _seconds(40.0) and String(actors.snapshot()["lockdown"]) == "locked":
 		var apex := _targets(game, &"apex")
 		var defenders := _targets(game, &"defender")
 		if not apex.is_empty():
+			if not saw_apex:
+				_t.check("the Foreman Rig stands on a solid collider", bool(apex[0]["solid"]))
+				_t.eq("the Foreman Rig draws no primitive mesh", _primitive_meshes(actors), 0)
 			saw_apex = true
 			_shoot(game, apex[0]["pos"])
 		elif not defenders.is_empty():
@@ -631,6 +678,7 @@ func _check_live_lockdown(game) -> void:
 	_t.check("the rig pays the press jackpot cogs", run.cogs - cogs_before >= 30, "%d" % (run.cogs - cogs_before))
 	_t.check("the rig kill toasts 'Foreman rig scrapped'", game.hud.toast_texts().has("Foreman rig scrapped"), str(game.hud.toast_texts()))
 	_t.eq("the rig node is gone", _count_named(game, "ForemanRig"), 0)
+	_t.eq("scrapped constructs leave no collider behind", _count_named(actors, LiveWorldActors.SOLID_NAME), _solid_rows(game, &""))
 
 
 func _check_live_retry(game) -> void:
@@ -678,3 +726,152 @@ func _test_chunk_site_clearance() -> void:
 	var crowded := _site_for(func(terrain) -> void: terrain.map.everywhere = true)
 	_t.check("a map with lines everywhere still places a chunk at the lowest-cost site",
 		not crowded.is_empty() and not bool(crowded.get("clear", true)), str(crowded))
+
+
+func _solid_rows(game, kind: StringName) -> int:
+	var n := 0
+	for row in game.experimental_bridge.live_actors.snapshot()["targets"]:
+		if (kind == &"" or row["kind"] == kind) and bool(row["solid"]):
+			n += 1
+	return n
+
+
+func _check_slow_roll_is_solid(game) -> void:
+	var bridge = game.experimental_bridge
+	var target := _target(game, "prop:live_prop_3")
+	_t.check("prop live_prop_3 stands for the slow roll", not target.is_empty())
+	if target.is_empty():
+		return
+	var at: Vector3 = target["pos"]
+	var reach := float(target["radius"]) + BALL_RADIUS_M
+	var floor_y: float = bridge.live_chunk().global_position.y
+	game.player.reset_to(Vector3(at.x + reach + 2.5, floor_y + BALL_RADIUS_M + 0.05, at.z), Vector3(-6.0, 0.0, 0.0))
+	var closest := INF
+	var passed := false
+	var top := 0.0
+	for _i in _seconds(1.2):
+		await physics_frame
+		var ball: Vector3 = game.player.ball_position()
+		closest = minf(closest, Vector2(ball.x - at.x, ball.z - at.z).length())
+		passed = passed or ball.x < at.x
+		top = maxf(top, Vector2(game.player.state.velocity.x, game.player.state.velocity.z).length())
+	_t.check("a slow roll stays under ram speed", top < LiveWorldActors.RAM_MIN_SPEED_MPS, "%.1f m/s" % top)
+	_t.check("a slow-rolling ball reaches the drum", closest <= reach + 0.3, "closest %.2f m, contact %.2f m" % [closest, reach])
+	_t.check("a slow-rolling ball stops against the drum instead of ghosting through", not passed and closest >= reach - 0.25,
+		"closest %.2f m, contact %.2f m" % [closest, reach])
+	_t.check("a slow roll leaves the drum standing", bridge.ecology.prop("live_prop_3").intact and not _target(game, "prop:live_prop_3").is_empty())
+
+
+static func _lin(c: float) -> float:
+	return c / 12.92 if c <= 0.04045 else pow((c + 0.055) / 1.055, 2.4)
+
+
+static func _luminance(c: Color, mode: String) -> float:
+	var r := _lin(c.r)
+	var g := _lin(c.g)
+	var b := _lin(c.b)
+	if mode == "rec709 grey":
+		return _lin(0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b)
+	if mode == "deuteranopia":
+		var dr := clampf(0.367322 * r + 0.860646 * g - 0.227968 * b, 0.0, 1.0)
+		var dg := clampf(0.280085 * r + 0.672501 * g + 0.047413 * b, 0.0, 1.0)
+		var db := clampf(-0.01182 * r + 0.04294 * g + 0.968881 * b, 0.0, 1.0)
+		return 0.2126 * dr + 0.7152 * dg + 0.0722 * db
+	return 0.2126 * r + 0.7152 * g + 0.0722 * b
+
+
+static func _contrast(a: Color, b: Color, mode: String) -> float:
+	var la := _luminance(a, mode)
+	var lb := _luminance(b, mode)
+	return (maxf(la, lb) + 0.05) / (minf(la, lb) + 0.05)
+
+
+func _test_rig_contrast() -> void:
+	for trim in LiveWorldActors.RIG_TRIM:
+		for mode in ["rgb", "rec709 grey", "deuteranopia"]:
+			var worst := INF
+			var against := ""
+			for name in CHUNK_BACKDROPS:
+				var ratio := _contrast(trim, CHUNK_BACKDROPS[name], mode)
+				if ratio < worst:
+					worst = ratio
+					against = name
+			_t.check("rig trim #%s holds %.1f:1 on every chunk floor and wall in %s" % [trim.to_html(false), CONTRAST_FLOOR, mode],
+				worst >= CONTRAST_FLOOR, "%.2f:1 against %s" % [worst, against])
+	var actors = LiveWorldActors.new()
+	var seen := {}
+	for mesh: ArrayMesh in [actors.foreman_body_mesh(), actors.foreman_plate_mesh()]:
+		for i in mesh.get_surface_count():
+			var mat := mesh.surface_get_material(i) as ShaderMaterial
+			if mat != null:
+				seen[(mat.get_shader_parameter("base_albedo") as Color).to_html(false)] = true
+				seen[(mat.get_shader_parameter("emissive_color") as Color).to_html(false)] = true
+	for trim in [LiveWorldActors.RIG_BONE, LiveWorldActors.RIG_CHEVRON, LiveWorldActors.RIG_CORE, LiveWorldActors.RIG_BEACON]:
+		_t.check("the Foreman Rig is dressed in #%s" % trim.to_html(false), seen.has(trim.to_html(false)), str(seen.keys()))
+	actors.free()
+
+
+func _test_death_lines() -> void:
+	_t.eq("a slag-pour death reads cleanly", DeathCause.line(LiveWorldActors.SLAG_SOURCE), "Scrapped by a slag pour.")
+	_t.eq("a crane-magnet death reads cleanly", DeathCause.line(LiveWorldActors.CRANE_SOURCE), "Scrapped by a crane magnet.")
+
+
+func _await_live_stage(game, stage: int) -> bool:
+	var bridge = game.experimental_bridge
+	for _i in PARK_BUILD_FRAMES:
+		if bridge.configured and bridge.stage_index == stage and bridge.live_chunk() != null:
+			return true
+		await physics_frame
+	return false
+
+
+func _test_park_table_siting() -> void:
+	var game = Game.new()
+	game.test_mode = true
+	game.table = "park"
+	game.experimental_override = true
+	root.add_child(game)
+	await _physics(2)
+	game.flow.launch_from_title(game.flow.classes[0])
+	for stage in range(1, PARK_STAGES + 1):
+		if stage > 1:
+			game.flow.enter_stage(stage, Vector3.ZERO, false)
+		var ready: bool = await _await_live_stage(game, stage)
+		var terrain = game.ctx.terrain
+		var map = terrain.map_for(stage)
+		_t.check("park stage %d builds its arena chunk" % stage, ready)
+		_t.check("park stage %d sits on a park map with riding lines" % stage, map != null and map.has_method("line_within"))
+		if not ready:
+			continue
+		var bridge = game.experimental_bridge
+		var site: Dictionary = bridge.snapshot()["live_site"]
+		_t.check("park stage %d chunk site is clear of riding lines" % stage, bool(site.get("clear", false)) and int(site.get("line_hits", -1)) == 0, str(site))
+		var deck: Vector3 = bridge.live_chunk().global_position
+		var half := LiveRunBridge.CHUNK_FOOTPRINT_HALF_M
+		var samples := 0
+		var above := 0
+		var deep := 0
+		var top := -INF
+		var low := INF
+		var x := -half
+		while x <= half + 0.001:
+			var z := -half
+			while z <= half + 0.001:
+				var h: float = terrain.height(deck.x + x, deck.z + z)
+				samples += 1
+				top = maxf(top, h)
+				low = minf(low, h)
+				if h > deck.y:
+					above += 1
+				if deck.y - h > LiveRunBridge.CHUNK_OVERHANG_DROP_M:
+					deep += 1
+				z += PARK_SCAN_STEP_M
+			x += PARK_SCAN_STEP_M
+		_t.eq("park stage %d: no terrain pokes above the deck (of %d samples on a 1 m grid)" % [stage, samples], above, 0)
+		_t.check("park stage %d deck clears the highest ground by %.2f m" % [stage, LiveRunBridge.CHUNK_DECK_CLEARANCE_M],
+			deck.y - top >= LiveRunBridge.CHUNK_DECK_CLEARANCE_M - 0.01, "deck %.2f, ground top %.2f" % [deck.y, top])
+		_t.eq("park stage %d: no footprint sample falls more than 12 m below the deck" % stage, deep, 0)
+		_t.check("park stage %d: the footprint relief stays under 10 m" % stage, top - low < 10.0, "%.2f m" % (top - low))
+	root.remove_child(game)
+	game.free()
+	await _physics(2)

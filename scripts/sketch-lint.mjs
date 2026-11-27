@@ -662,9 +662,11 @@ const collectionWrite =
 const faultReset = /^(?:static\s+)?func\s+reset_for_tests\s*\(/;
 const topLevel = /^(?:static\s+)?(?:func|var|const|class|signal|enum)\b|^@/;
 
+const faultSubscript = "(?:\\s*\\[(?:[^\\[\\]]|\\[[^\\[\\]]*\\])*\\])*";
+
 function faultWrite(name) {
   return new RegExp(
-    `(?<!\\w)${name}\\b\\s*(?:[-+*/%]?=(?!=)|\\.\\s*(?:${collectionWrite})\\s*\\()|\\bset(?:_deferred|_indexed)?\\(\\s*&?["']${name}["']`,
+    `(?<!\\w)${name}\\b${faultSubscript}\\s*(?:[-+*/%]?=(?!=)|\\.\\s*(?:${collectionWrite})\\s*\\()|\\bset(?:_deferred|_indexed)?\\(\\s*&?["']${name}["']`,
   );
 }
 
