@@ -3,7 +3,10 @@ extends SceneTree
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const WavIo := preload("res://src/presentation/wav_io.gd")
 const T := preload("res://tests/support/t.gd")
+
+const ALLOWED_RIFF_FILES := ["sfx_bank.gd"]
 
 var t := T.new("wav_io_test")
 
@@ -14,6 +17,7 @@ func _initialize() -> void:
 	_shipped_file_samples_digests()
 	_shipped_voice_digests()
 	_malformed_inputs()
+	_riff_guard()
 	quit(t.verdict())
 
 
@@ -55,9 +59,10 @@ func _shipped_raw_digests() -> void:
 	for p in expected:
 		var bytes := FileAccess.get_file_as_bytes(p)
 		t.eq("foley raw wav " + p, _stream_summary(FoleyAudio.wav(p, true)), expected[p])
-		t.eq("foley _from_riff " + p, _stream_summary(FoleyAudio._from_riff(bytes)), expected[p])
-		t.eq("jolt _from_riff " + p, _stream_summary(JoltAudio._from_riff(bytes)), expected[p])
+		t.eq("wav_io load_wav raw " + p, _stream_summary(WavIo.load_wav(p, true)), expected[p])
+		t.eq("wav_io from_riff " + p, _stream_summary(WavIo.from_riff(bytes)), expected[p])
 	t.eq("foley missing path returns null", FoleyAudio.wav("res://assets/audio/foley/__missing__.wav", true), null)
+	t.eq("wav_io missing path returns null", WavIo.load_wav("res://assets/audio/foley/__missing__.wav", true), null)
 
 
 func _shipped_stream_digests() -> void:
@@ -269,8 +274,7 @@ func _malformed_inputs() -> void:
 	DirAccess.make_dir_recursive_absolute(tmp_dir)
 	for name in cases:
 		var bytes: PackedByteArray = cases[name]
-		t.eq("foley malformed " + name, _stream_summary(FoleyAudio._from_riff(bytes)), expected_riff[name])
-		t.eq("jolt malformed " + name, _stream_summary(JoltAudio._from_riff(bytes)), expected_riff[name])
+		t.eq("wav_io malformed " + name, _stream_summary(WavIo.from_riff(bytes)), expected_riff[name])
 		var p := tmp_dir.path_join(name + ".wav")
 		var f := FileAccess.open(p, FileAccess.WRITE)
 		f.store_buffer(bytes)
@@ -279,6 +283,7 @@ func _malformed_inputs() -> void:
 		var voice := SfxBank.load_voice_wav(p)
 		t.eq("voice malformed " + name, [int(info.get("frames", 0)), voice.size()], expected_voice[name])
 		t.eq("foley wav disk malformed " + name, _stream_summary(FoleyAudio.wav(p, true)), expected_riff[name])
+		t.eq("wav_io disk malformed " + name, _stream_summary(WavIo.load_wav(p, true)), expected_riff[name])
 
 	var trunc_fmt_path := tmp_dir.path_join("trunc_fmt.wav")
 	var tf := FileAccess.open(trunc_fmt_path, FileAccess.WRITE)
@@ -289,3 +294,36 @@ func _malformed_inputs() -> void:
 	t.eq("voice malformed trunc_fmt", [int(tf_info.get("frames", 0)), tf_voice.size()], expected_voice["trunc_fmt"])
 
 	_remove_dir_recursive(tmp_dir)
+
+
+func _collect_gd(root_dir: String, prefix: String, out: Array) -> void:
+	var dir := DirAccess.open(root_dir)
+	if dir == null:
+		return
+	dir.list_dir_begin()
+	var entry := dir.get_next()
+	while entry != "":
+		if not entry.begins_with("."):
+			var rel := entry if prefix == "" else prefix + "/" + entry
+			var full := root_dir.path_join(entry)
+			if dir.current_is_dir():
+				_collect_gd(full, rel, out)
+			elif entry.ends_with(".gd"):
+				out.append(rel)
+		entry = dir.get_next()
+	dir.list_dir_end()
+
+
+func _riff_guard() -> void:
+	var files: Array = []
+	_collect_gd("res://src/presentation", "", files)
+	files.sort()
+	t.check("presentation scan found scripts", files.size() > 10, str(files.size()))
+	var found: Array = []
+	for rel in files:
+		if rel == "wav_io.gd":
+			continue
+		var text := FileAccess.get_file_as_string("res://src/presentation/" + rel)
+		if text.contains("RIFF"):
+			found.append(rel)
+	t.eq("only allowed presentation files contain RIFF", found, ALLOWED_RIFF_FILES)

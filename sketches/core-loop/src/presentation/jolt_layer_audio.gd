@@ -1,5 +1,7 @@
 extends RefCounted
 
+const WavIo := preload("res://src/presentation/wav_io.gd")
+
 const DIR := "res://assets/audio/specials/jolt_layer_"
 const TELL_LEAD := 1.0
 const TRIM_DB := {"presence": -14.0, "tell": -4.0, "jam": -4.0, "fizzle": -4.0, "break": -3.0}
@@ -13,16 +15,10 @@ static func path(part: String) -> String:
 	return DIR + part + ".wav"
 
 
-# Headless Godot runs without an import cache, falling back to raw 16-bit RIFF.
 static func stream(part: String) -> AudioStreamWAV:
 	if _streams.has(part):
 		return _streams[part]
-	var p := path(part)
-	var out: AudioStreamWAV = null
-	if ResourceLoader.exists(p):
-		out = load(p) as AudioStreamWAV
-	elif FileAccess.file_exists(p):
-		out = _from_riff(FileAccess.get_file_as_bytes(p))
+	var out := WavIo.load_wav(path(part))
 	if out != null and part == "presence":
 		out = out.duplicate()
 		out.loop_mode = AudioStreamWAV.LOOP_FORWARD
@@ -30,23 +26,6 @@ static func stream(part: String) -> AudioStreamWAV:
 		out.loop_end = out.data.size() / (2 * (2 if out.stereo else 1))
 	_streams[part] = out
 	return out
-
-
-static func _from_riff(bytes: PackedByteArray) -> AudioStreamWAV:
-	var wav := AudioStreamWAV.new()
-	wav.format = AudioStreamWAV.FORMAT_16_BITS
-	var at := 12
-	while at + 8 <= bytes.size():
-		var tag := bytes.slice(at, at + 4).get_string_from_ascii()
-		var size := bytes.decode_u32(at + 4)
-		if tag == "fmt ":
-			wav.stereo = bytes.decode_u16(at + 10) == 2
-			wav.mix_rate = bytes.decode_u32(at + 12)
-		elif tag == "data":
-			wav.data = bytes.slice(at + 8, at + 8 + size)
-			return wav
-		at += 8 + size + (size & 1)
-	return null
 
 
 static func player(part: String, host: Node3D) -> AudioStreamPlayer3D:
