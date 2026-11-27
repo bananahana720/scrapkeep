@@ -30,6 +30,8 @@ import {
   resolveNamedTests,
   runBootTask,
   seedBaseGodot,
+  shardLanePlan,
+  shouldRunBoot,
   splitBatch,
   takeBatch,
   takeBatchPacked,
@@ -467,6 +469,8 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
     batch: true,
     shuffle: false,
     seed: null,
+    ciGodotOnly: false,
+    shard: null,
     pre: [],
     tests: [],
   });
@@ -476,6 +480,28 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
   assert.throws(() => parseArgs(["--pre", "abc"]));
   assert.equal(parseArgs(["--base", "stage/alpha-w17", "--budget", "600"]).budgetS, 600);
   assert.throws(() => parseArgs(["--budget", "0"]));
+  assert.equal(parseArgs(["--ci-godot-only"]).ciGodotOnly, true);
+  assert.deepEqual(parseArgs(["--shard", "1/2"]).shard, { index: 1, total: 2 });
+  assert.deepEqual(parseArgs(["--shard", "2/2", "--ci-godot-only", "--width", "4"]), {
+    base: "origin/main",
+    budgetS: 900,
+    dryRun: false,
+    receipt: "fast",
+    width: 4,
+    baseCheck: true,
+    batch: true,
+    shuffle: false,
+    seed: null,
+    ciGodotOnly: true,
+    shard: { index: 2, total: 2 },
+    pre: [],
+    tests: [],
+  });
+  assert.throws(() => parseArgs(["--shard"]), /--shard requires/);
+  assert.throws(() => parseArgs(["--shard", "abc"]), /INDEX\/TOTAL/);
+  assert.throws(() => parseArgs(["--shard", "0/2"]), /out of range/);
+  assert.throws(() => parseArgs(["--shard", "3/2"]), /out of range/);
+  assert.throws(() => parseArgs(["--width", "0"]), /positive integer/);
   assert.deepEqual(parseArgs(["--test", "a_test", "--test", "b_*"]), {
     base: "origin/main",
     budgetS: 900,
@@ -486,6 +512,8 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
     batch: true,
     shuffle: false,
     seed: null,
+    ciGodotOnly: false,
+    shard: null,
     pre: [],
     tests: ["a_test", "b_*"],
   });
@@ -1281,4 +1309,117 @@ test("PATH_RULES park matches run at tier 0 and are never deferred under tight t
   );
   assert.ok(out.parallel.some((r) => r.test === "tests/park_props_test.gd"));
   assert.ok(out.parallel.some((r) => r.test === "tests/park_park_dam_test.gd"));
+});
+
+test("shardLanePlan partitions parallel and solo tests disjointly, balances estimated duration, and preserves LPT tier order", () => {
+  const picked = new Map([
+    ["tests/p_tier0_big_test.gd", { tier: 0, why: "changed" }],
+    ["tests/p_tier0_small_test.gd", { tier: 0, why: "always" }],
+    ["tests/p_59s_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_40s_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_25s_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_20s_a_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_20s_b_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_10s_test.gd", { tier: 2, why: "through" }],
+    ["tests/p_5s_test.gd", { tier: 2, why: "through" }],
+    ["tests/solo_90s_test.gd", { tier: 1, why: "names" }],
+    ["tests/solo_60s_test.gd", { tier: 1, why: "names" }],
+    ["tests/solo_40s_test.gd", { tier: 1, why: "names" }],
+    ["tests/solo_20s_test.gd", { tier: 1, why: "names" }],
+  ]);
+  const timings = {
+    "tests/p_tier0_big_test.gd": 30_000,
+    "tests/p_tier0_small_test.gd": 3_000,
+    "tests/p_59s_test.gd": 59_000,
+    "tests/p_40s_test.gd": 40_000,
+    "tests/p_25s_test.gd": 25_000,
+    "tests/p_20s_a_test.gd": 20_000,
+    "tests/p_20s_b_test.gd": 20_000,
+    "tests/p_10s_test.gd": 10_000,
+    "tests/p_5s_test.gd": 5_000,
+    "tests/solo_90s_test.gd": 90_000,
+    "tests/solo_60s_test.gd": 60_000,
+    "tests/solo_40s_test.gd": 40_000,
+    "tests/solo_20s_test.gd": 20_000,
+  };
+  const base = plan({
+    picked,
+    timings,
+    budgetMs: 600_000,
+    width: 4,
+    solo: (t) => t.includes("solo_"),
+  });
+
+  // 1/1 is identical to unsharded
+  const single = shardLanePlan(base, { index: 1, total: 1 }, 4);
+  assert.deepEqual(
+    single.parallel.map((r) => r.test),
+    base.parallel.map((r) => r.test),
+  );
+  assert.deepEqual(
+    single.solo.map((r) => r.test),
+    base.solo.map((r) => r.test),
+  );
+
+  // Check union == exact original set, disjointness, balance, and deterministic order across N=2,3,4
+  for (const total of [2, 3, 4]) {
+    const shards = Array.from({ length: total }, (_, i) =>
+      shardLanePlan(base, { index: i + 1, total }, 4),
+    );
+    const seenParallel = new Set();
+    const seenSolo = new Set();
+    for (const s of shards) {
+      for (const row of s.parallel) {
+        assert.equal(seenParallel.has(row.test), false, `duplicate parallel ${row.test}`);
+        seenParallel.add(row.test);
+      }
+      for (const row of s.solo) {
+        assert.equal(seenSolo.has(row.test), false, `duplicate solo ${row.test}`);
+        seenSolo.add(row.test);
+      }
+      // Tier 0 tests stay ahead of tier > 0 tests inside each shard's parallel slice
+      let seenNonZero = false;
+      for (const row of s.parallel) {
+        if (row.tier === 0) assert.equal(seenNonZero, false);
+        else seenNonZero = true;
+      }
+    }
+    assert.deepEqual(
+      [...seenParallel].sort(),
+      base.parallel.map((r) => r.test).sort(),
+      `union of ${total} parallel shards must equal original`,
+    );
+    assert.deepEqual(
+      [...seenSolo].sort(),
+      base.solo.map((r) => r.test).sort(),
+      `union of ${total} solo shards must equal original`,
+    );
+  }
+
+  // Balance check on 2 shards: both parallel and solo ms should be closely balanced
+  const s1 = shardLanePlan(base, { index: 1, total: 2 }, 4);
+  const s2 = shardLanePlan(base, { index: 2, total: 2 }, 4);
+  const pSum = (s) => s.parallel.reduce((a, r) => a + r.ms, 0);
+  const soloSum = (s) => s.solo.reduce((a, r) => a + r.ms, 0);
+  assert.ok(Math.abs(pSum(s1) - pSum(s2)) <= 10_000, `parallel sums ${pSum(s1)} vs ${pSum(s2)}`);
+  assert.ok(
+    Math.abs(soloSum(s1) - soloSum(s2)) <= 15_000,
+    `solo sums ${soloSum(s1)} vs ${soloSum(s2)}`,
+  );
+  // Shard 1/2 determinism
+  assert.deepEqual(
+    shardLanePlan(base, { index: 1, total: 2 }, 4).parallel.map((r) => r.test),
+    s1.parallel.map((r) => r.test),
+  );
+});
+
+test("shouldRunBoot runs on unsharded and shard 1 only, never on shard > 1 or --test mode", () => {
+  assert.equal(shouldRunBoot(parseArgs([])), true);
+  assert.equal(shouldRunBoot(parseArgs(["--ci-godot-only"])), true);
+  assert.equal(shouldRunBoot(parseArgs(["--shard", "1/2"])), true);
+  assert.equal(shouldRunBoot(parseArgs(["--shard", "1/4", "--ci-godot-only"])), true);
+  assert.equal(shouldRunBoot(parseArgs(["--shard", "2/2"])), false);
+  assert.equal(shouldRunBoot(parseArgs(["--shard", "3/4"])), false);
+  assert.equal(shouldRunBoot(parseArgs(["--test", "unit_suite_test"])), false);
+  assert.equal(shouldRunBoot(parseArgs(["--test", "unit_suite_test", "--shard", "1/2"])), false);
 });

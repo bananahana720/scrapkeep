@@ -46,6 +46,7 @@ import { readLedger } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
 import { shuffleFiles } from "./ci/node-tests.mjs";
+import { packDurationShards } from "./ci/shard-plan.mjs";
 
 export {
   BATCH_MAX_MS,
@@ -178,6 +179,8 @@ export function parseArgs(argv) {
     batch: true,
     shuffle: false,
     seed: null,
+    ciGodotOnly: false,
+    shard: null,
     pre: [],
     tests: [],
   };
@@ -193,7 +196,25 @@ export function parseArgs(argv) {
     else if (arg === "--no-base-check") explicitBaseCheck = false;
     else if (arg === "--no-batch") options.batch = false;
     else if (arg === "--shuffle") options.shuffle = true;
-    else if (arg === "--test") {
+    else if (arg === "--ci-godot-only") options.ciGodotOnly = true;
+    else if (arg === "--shard") {
+      if (i + 1 >= argv.length) throw new Error("--shard requires INDEX/TOTAL");
+      const raw = argv[++i];
+      if (!/^\d+\/\d+$/.test(raw)) {
+        throw new Error(`--shard must be INDEX/TOTAL (for example 1/2); got "${raw}"`);
+      }
+      const [index, total] = raw.split("/").map(Number);
+      if (
+        !Number.isSafeInteger(index) ||
+        !Number.isSafeInteger(total) ||
+        index < 1 ||
+        total < 1 ||
+        index > total
+      ) {
+        throw new Error(`--shard ${raw} out of range`);
+      }
+      options.shard = { index, total };
+    } else if (arg === "--test") {
       if (i + 1 >= argv.length || !argv[i + 1] || argv[i + 1].startsWith("-")) {
         throw new Error("--test requires a test name or glob");
       }
@@ -210,6 +231,8 @@ export function parseArgs(argv) {
   options.baseCheck = explicitBaseCheck ?? options.tests.length === 0;
   if (!Number.isFinite(options.budgetS) || options.budgetS <= 0)
     throw new Error("--budget needs seconds above zero");
+  if (options.width !== null && (!Number.isSafeInteger(options.width) || options.width < 1))
+    throw new Error("--width must be a positive integer");
   if (options.pre.some((pr) => !/^\d+$/.test(pr))) throw new Error("--pre takes PR numbers");
   return options;
 }
@@ -406,6 +429,46 @@ export function plan({
     bots: botRows.map((row) => row.test).sort(),
     estimateMs: Math.round(spent),
   };
+}
+
+function sliceShardRows(rows, index, total) {
+  if (total === 1) return [...rows];
+  const packed = packDurationShards(
+    rows.map((row) => ({ name: row.test, ms: row.ms })),
+    total,
+  );
+  const keep = new Set(packed[index - 1].tests);
+  return rows.filter((row) => keep.has(row.test));
+}
+
+export function shardLanePlan(lanePlan, shard, width = 1) {
+  if (!shard) return lanePlan;
+  const { index, total } = shard;
+  if (
+    !Number.isInteger(total) ||
+    total < 1 ||
+    !Number.isInteger(index) ||
+    index < 1 ||
+    index > total
+  ) {
+    throw new Error(`--shard ${index}/${total} out of range`);
+  }
+  const parallel = sliceShardRows(lanePlan.parallel, index, total);
+  const solo = sliceShardRows(lanePlan.solo, index, total);
+  const parallelMs = parallel.reduce((sum, row) => sum + row.ms, 0);
+  const soloMs = solo.reduce((sum, row) => sum + row.ms, 0);
+  return {
+    ...lanePlan,
+    parallel,
+    solo,
+    estimateMs: Math.round(parallelMs / Math.max(1, width) + soloMs),
+  };
+}
+
+export function shouldRunBoot(options) {
+  if (options.tests.length > 0) return false;
+  if (options.shard && options.shard.index !== 1) return false;
+  return true;
 }
 
 export function classifyFailure({
@@ -1039,6 +1102,8 @@ async function main() {
   receipt.diff_base = diffBase;
   receipt.pre = options.pre;
   receipt.changed = changedPaths.length;
+  if (options.ciGodotOnly) receipt.ci_godot_only = true;
+  if (options.shard) receipt.shard = options.shard;
   if (namedMode) receipt.named_tests = options.tests;
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
@@ -1101,11 +1166,13 @@ async function main() {
       );
     if (receipt.checks_removed.length > 0)
       log("  name each removed check in the pull request and say what now covers it");
-    const deepSweepPromise = spawnText(
-      process.execPath,
-      [path.join(root, "scripts", "deep-sweep.mjs"), "--base", mergeBase, "--head", "HEAD"],
-      { timeoutMs: 60_000 },
-    );
+    const deepSweepPromise = options.ciGodotOnly
+      ? null
+      : spawnText(
+          process.execPath,
+          [path.join(root, "scripts", "deep-sweep.mjs"), "--base", mergeBase, "--head", "HEAD"],
+          { timeoutMs: 60_000 },
+        );
     const merges = git([
       "rev-list",
       "--first-parent",
@@ -1128,6 +1195,7 @@ async function main() {
         subject: git(["log", "-1", "--format=%s", merge]),
       }));
     const recordDeepSweep = async () => {
+      if (!deepSweepPromise) return;
       const swept = await deepSweepPromise;
       receipt.deep_sweep =
         swept.status === 0
@@ -1234,6 +1302,14 @@ async function main() {
       bots: (test) => isBot(sourceOf(sketchDir, test)),
     });
   }
+  if (options.shard) {
+    lanePlan = shardLanePlan(lanePlan, options.shard, width);
+    receipt.shard = {
+      ...options.shard,
+      parallel: lanePlan.parallel.length,
+      solo: lanePlan.solo.length,
+    };
+  }
   receipt.selection = {
     hubs: selection.hubs,
     unmapped: selection.unmapped,
@@ -1244,7 +1320,7 @@ async function main() {
     estimate_ms: lanePlan.estimateMs,
   };
   log(
-    `selected ${lanePlan.parallel.length + lanePlan.solo.length} tests (${lanePlan.solo.length} solo), about ${Math.round(lanePlan.estimateMs / 1000)}s at width ${width}; ${lanePlan.deferred.length} past the budget go to the staging full gate; ${receipt.selection.bot_shards.length} for the bot shards`,
+    `selected ${lanePlan.parallel.length + lanePlan.solo.length} tests (${lanePlan.solo.length} solo)${options.shard ? ` [shard ${options.shard.index}/${options.shard.total}]` : ""}, about ${Math.round(lanePlan.estimateMs / 1000)}s at width ${width}; ${lanePlan.deferred.length} past the budget go to the staging full gate; ${receipt.selection.bot_shards.length} for the bot shards`,
   );
   if (selection.hubs.length > 0)
     log(
@@ -1271,36 +1347,42 @@ async function main() {
   let node = null;
   let nodeTests = [];
   if (!namedMode) {
-    const pathNodeTests = nodeTestsForPaths(changed.godot);
-    if (changed.node.length > 0 || pathNodeTests.length > 0) {
-      const all = git(["ls-files", "*.test.mjs", "*.test.js"])
-        .split("\n")
-        .filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
-      nodeTests = [
-        ...new Set([
-          ...nodeTestsFor(changed.node, all, (file) => readFileSync(path.join(root, file), "utf8")),
-          ...pathNodeTests,
-        ]),
-      ].sort();
+    if (!options.ciGodotOnly) {
+      const pathNodeTests = nodeTestsForPaths(changed.godot);
+      if (changed.node.length > 0 || pathNodeTests.length > 0) {
+        const all = git(["ls-files", "*.test.mjs", "*.test.js"])
+          .split("\n")
+          .filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
+        nodeTests = [
+          ...new Set([
+            ...nodeTestsFor(changed.node, all, (file) =>
+              readFileSync(path.join(root, file), "utf8"),
+            ),
+            ...pathNodeTests,
+          ]),
+        ].sort();
+      }
     }
     const baseSketchForPlaceholders =
       changed.godot.length > 0 ? path.join(baseDir(), SKETCH) : null;
     [lint, placeholderPair, docs, node] = await Promise.all([
-      spawnText(process.execPath, [
-        path.join(root, "scripts", "sketch-lint.mjs"),
-        "--sketch",
-        "core-loop",
-      ]),
+      options.ciGodotOnly
+        ? Promise.resolve(null)
+        : spawnText(process.execPath, [
+            path.join(root, "scripts", "sketch-lint.mjs"),
+            "--sketch",
+            "core-loop",
+          ]),
       baseSketchForPlaceholders
         ? Promise.all([
             placeholderRowsAsync(baseSketchForPlaceholders),
             placeholderRowsAsync(sketchDir),
           ])
         : Promise.resolve(null),
-      changed.docs.length > 0
+      !options.ciGodotOnly && changed.docs.length > 0
         ? spawnText(process.execPath, [path.join(root, "scripts", "check-docs.mjs")])
         : Promise.resolve(null),
-      nodeTests.length > 0
+      !options.ciGodotOnly && nodeTests.length > 0
         ? spawnText(process.execPath, ["--test", ...nodeTests], { cwd: root, timeoutMs: 300_000 })
         : Promise.resolve(null),
     ]);
@@ -1363,6 +1445,15 @@ async function main() {
     })
   )
     finish();
+  const runBootHere = shouldRunBoot(options);
+  if (!runBootHere && lanePlan.parallel.length + lanePlan.solo.length === 0) {
+    stage("tests", true, {
+      note: options.shard
+        ? `0 run (shard ${options.shard.index}/${options.shard.total} empty)`
+        : "0 run",
+    });
+    finish();
+  }
   if (!existsSync(binary)) {
     console.error(`Godot binary not found at ${binary}; set GODOT_BIN`);
     stage("godot", false, { note: "no Godot binary, so no test ran" });
@@ -1709,7 +1800,7 @@ async function main() {
       await handle(result);
     }
   }
-  const bootPromise = !namedMode
+  const bootPromise = runBootHere
     ? runBootTask({
         inLane,
         shouldStop,
