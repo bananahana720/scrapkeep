@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   addedLines,
+  defaultBase,
   parseFuncs,
   passThroughs,
   reachIns,
@@ -177,4 +178,53 @@ test("reachIns follows a chain that starts at the file's own private field", () 
       [4, "reaches into _game.flow._set_state"],
     ],
   );
+});
+
+test("defaultBase returns the first parent for a merge commit", () => {
+  const calls = [];
+  const run = (...args) => {
+    calls.push(args);
+    if (args[0] === "rev-list") return "head111 parent1 parent2\n";
+    throw new Error(`unexpected git call: ${args.join(" ")}`);
+  };
+  assert.equal(defaultBase("head111", run), "parent1");
+  assert.deepEqual(calls, [["rev-list", "--parents", "-n", "1", "head111"]]);
+});
+
+test("defaultBase returns the merge base with origin/main for a branch commit", () => {
+  const calls = [];
+  const run = (...args) => {
+    calls.push(args);
+    if (args[0] === "rev-list") return "head222 parent1\n";
+    if (args[0] === "merge-base") return "base999\n";
+    throw new Error(`unexpected git call: ${args.join(" ")}`);
+  };
+  assert.equal(defaultBase("head222", run), "base999");
+  assert.deepEqual(calls, [
+    ["rev-list", "--parents", "-n", "1", "head222"],
+    ["merge-base", "head222", "origin/main"],
+  ]);
+});
+
+test("defaultBase returns HEAD's parent when the merge base is HEAD itself", () => {
+  const run = (...args) => {
+    if (args[0] === "rev-list") return "head333 parent1\n";
+    if (args[0] === "merge-base") return "head333\n";
+    throw new Error(`unexpected git call: ${args.join(" ")}`);
+  };
+  assert.equal(defaultBase("head333", run), "parent1");
+});
+
+test("defaultBase falls back to HEAD's parent when origin/main is absent and throws on a root commit", () => {
+  const missingOrigin = (...args) => {
+    if (args[0] === "rev-list") return "head444 parent1\n";
+    throw new Error("fatal: Not a valid object name origin/main");
+  };
+  assert.equal(defaultBase("head444", missingOrigin), "parent1");
+
+  const rootCommit = (...args) => {
+    if (args[0] === "rev-list") return "root000\n";
+    return "root000\n";
+  };
+  assert.throws(() => defaultBase("root000", rootCommit), /has no parent/);
 });

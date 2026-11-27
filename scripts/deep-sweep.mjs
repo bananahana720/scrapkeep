@@ -153,11 +153,18 @@ export function addedLines(diff) {
   return files;
 }
 
-function defaultBase(head) {
-  const parents = git("rev-list", "--parents", "-n", "1", head).trim().split(" ");
-  if (parents.length < 3)
-    throw new Error(`${head} is not a merge; pass --base <last promoted main>`);
-  return parents[1];
+export function defaultBase(head, run = git) {
+  const parents = run("rev-list", "--parents", "-n", "1", head).trim().split(/\s+/);
+  if (parents.length >= 3) return parents[1];
+  let base = "";
+  try {
+    base = run("merge-base", head, "origin/main").trim();
+  } catch {
+    base = "";
+  }
+  if (base && base !== head) return base;
+  if (parents.length >= 2) return parents[1];
+  throw new Error(`${head} has no parent; pass --base <commit>`);
 }
 
 export function sweep({ base, head, read, diff, listSrc, linesAt }) {
