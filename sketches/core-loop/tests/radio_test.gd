@@ -319,7 +319,7 @@ func _run() -> void:
 
 	deck.tune(station)
 	deck.radio.mixtapes[0]["ids"] = [a]
-	deck._save()
+	deck.save()
 	var reread := Profile.new(profile.path)
 	reread.load_profile()
 	_t.eq("the dial and mixtapes save", [reread.radio().get("station", ""), reread.radio().get("mixtapes", [{}])[0].get("ids", [])], [station, [a]])

@@ -1124,7 +1124,7 @@ func _radio_track(id: String, on_tape: bool) -> void:
 
 func _save_radio() -> void:
 	if game.get("radio_deck") != null:
-		game.radio_deck._save()
+		game.radio_deck.save()
 
 
 func camp_page():
