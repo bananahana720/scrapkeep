@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource type="Script" uid="uid://ucvvi1c6qi38" path="res://src/presentation/world23_chunk_craft.gd" id="1_craft"]
 
@@ -33,6 +33,15 @@ size = Vector3(3.2, 4.4, 7.6)
 [sub_resource type="CylinderShape3D" id="Shape_CryoPod"]
 height = 3.2
 radius = 1.1
+
+[sub_resource type="BoxShape3D" id="Shape_DeckPier"]
+size = Vector3(1.98, 7.6, 2.22)
+
+[sub_resource type="BoxShape3D" id="Shape_BridgeStanchion"]
+size = Vector3(2.18, 16.3, 2.44)
+
+[sub_resource type="BoxShape3D" id="Shape_CranePortal"]
+size = Vector3(2.34, 20.6, 2.63)
 
 [sub_resource type="NavigationMesh" id="NavMesh_OrbitalGraveyard"]
 vertices = PackedVector3Array(-28, 0.1, -28, 28, 0.1, -28, 28, 0.1, 28, -28, 0.1, 28, -22, 8.1, -22, 22, 8.1, -22, 22, 8.1, 22, -22, 8.1, 22, -18.75, 8.1, -18.75, 18.75, 8.1, -18.75, 18.75, 8.1, 18.75, -18.75, 8.1, 18.75, -24, 17.1, 15.2, 24, 17.1, 15.2, 24, 17.1, 20.8, -24, 17.1, 20.8)
@@ -242,14 +251,46 @@ shape = SubResource("Shape_ShieldFin")
 [node name="DeckPierNW" type="MeshInstance3D" parent="Tier1_SalvageDecks"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 3.8, -22)
 
+[node name="DeckPierNWBody" type="StaticBody3D" parent="Tier1_SalvageDecks/DeckPierNW"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/DeckPierNW/DeckPierNWBody"]
+shape = SubResource("Shape_DeckPier")
+
 [node name="DeckPierNE" type="MeshInstance3D" parent="Tier1_SalvageDecks"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 3.8, -22)
+
+[node name="DeckPierNEBody" type="StaticBody3D" parent="Tier1_SalvageDecks/DeckPierNE"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/DeckPierNE/DeckPierNEBody"]
+shape = SubResource("Shape_DeckPier")
 
 [node name="DeckPierSW" type="MeshInstance3D" parent="Tier1_SalvageDecks"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -22, 3.8, 22)
 
+[node name="DeckPierSWBody" type="StaticBody3D" parent="Tier1_SalvageDecks/DeckPierSW"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/DeckPierSW/DeckPierSWBody"]
+shape = SubResource("Shape_DeckPier")
+
 [node name="DeckPierSE" type="MeshInstance3D" parent="Tier1_SalvageDecks"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 22, 3.8, 22)
+
+[node name="DeckPierSEBody" type="StaticBody3D" parent="Tier1_SalvageDecks/DeckPierSE"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_SalvageDecks/DeckPierSE/DeckPierSEBody"]
+shape = SubResource("Shape_DeckPier")
 
 [node name="Tier2_ChoirCrane" type="Node3D" parent="."]
 
@@ -270,14 +311,46 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20.6, 0)
 [node name="BridgeStanchionWest" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.4, 8.15, 18)
 
+[node name="BridgeStanchionWestBody" type="StaticBody3D" parent="Tier2_ChoirCrane/BridgeStanchionWest"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_ChoirCrane/BridgeStanchionWest/BridgeStanchionWestBody"]
+shape = SubResource("Shape_BridgeStanchion")
+
 [node name="BridgeStanchionEast" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.4, 8.15, 18)
+
+[node name="BridgeStanchionEastBody" type="StaticBody3D" parent="Tier2_ChoirCrane/BridgeStanchionEast"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_ChoirCrane/BridgeStanchionEast/BridgeStanchionEastBody"]
+shape = SubResource("Shape_BridgeStanchion")
 
 [node name="CranePortalWest" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -20.8, 10.3, 0)
 
+[node name="CranePortalWestBody" type="StaticBody3D" parent="Tier2_ChoirCrane/CranePortalWest"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_ChoirCrane/CranePortalWest/CranePortalWestBody"]
+shape = SubResource("Shape_CranePortal")
+
 [node name="CranePortalEast" type="MeshInstance3D" parent="Tier2_ChoirCrane"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20.8, 10.3, 0)
+
+[node name="CranePortalEastBody" type="StaticBody3D" parent="Tier2_ChoirCrane/CranePortalEast"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_ChoirCrane/CranePortalEast/CranePortalEastBody"]
+shape = SubResource("Shape_CranePortal")
 
 [node name="SightlineLandmark" type="Node3D" parent="."]
 

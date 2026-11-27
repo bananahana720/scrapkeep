@@ -119,6 +119,10 @@ static func _reset() -> void:
 	_last_trigger_s.clear()
 
 
+static func reset_cooldowns() -> void:
+	_last_trigger_s.clear()
+
+
 static func event_ids() -> PackedStringArray:
 	var ids := PackedStringArray()
 	for key in EVENT_SPECS.keys():

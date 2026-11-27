@@ -30,6 +30,35 @@ const WORLD_PROFILES: Array[Dictionary] = [
 	},
 ]
 
+const CHUNK_SCENES: Array[String] = [
+	"res://src/experimental/smelter_crane_chunk.tscn",
+	"res://src/experimental/compactor_canyon_chunk.tscn",
+	"res://src/experimental/orbital_graveyard_chunk.tscn",
+]
+const LIVE_LOADOUTS: Array[Array] = [
+	[&"magnetized_sawblades", &"arc_welder_dash", &"brine_tap_vent"],
+	[&"caustic_bore_auger", &"tremor_pile_driver", &"cryo_slurry_manifold"],
+	[&"choir_arc_lance", &"gale_shear_slipstream", &"overclock_capacitor_shunt"],
+]
+const CHUNK_HOLDER_NAME := "ExperimentalArenaChunk"
+const CHUNK_FOOTPRINT_HALF_M := 34.0
+const CHUNK_SITE_RANGES_M: Array[float] = [48.0, 72.0, 96.0]
+const CHUNK_SITE_ANGLES_DEG: Array[float] = [90.0, -90.0, 120.0, -120.0, 150.0, -150.0, 180.0]
+const CHUNK_SITE_SAMPLES: Array[float] = [-1.0, -0.5, 0.0, 0.5, 1.0]
+const CHUNK_SITE_GOOD_COST_M := 3.0
+const CHUNK_APPROACH_MARGIN_M := 3.0
+const LIVE_SEED_STRIDE := 97
+const FACT_CALLOUTS := {
+	"hazard_announced": "Squall incoming",
+	"encounter_lockdown_started": "Press lockdown",
+	"apex_construct_spawned": "Foreman rig deployed",
+}
+const ENCOUNTER_CALLOUTS := {
+	&"airdrop_salvage_pod": "Salvage pod inbound",
+	&"rogue_compactor_chase": "Rogue compactor loose",
+	&"greed_ambush_swarm": "Scrap ambush",
+}
+
 signal bridge_configured(summary: Dictionary)
 signal bridge_fact_emitted(fact: Dictionary)
 signal audio_cue_triggered(cue: Dictionary)
@@ -54,6 +83,11 @@ var _audio_log: Array[Dictionary] = []
 var _fact_log: Array[Dictionary] = []
 var _connections: Array[Dictionary] = []
 var _exiting := false
+var _live_ctx = null
+var _live_chunk: Node3D = null
+var _live_stage := 0
+var _live_stale := false
+var _live_links: Array[Dictionary] = []
 
 
 static func _reset() -> void:
@@ -105,6 +139,23 @@ static func profile_for_stage(stage_num: int) -> Dictionary:
 		"director_config": dir_cfg,
 		"encounter_catalog": enc_cat,
 	}
+
+
+static func chunk_scene_for_stage(stage_num: int) -> String:
+	var bucket := clampi(int((maxi(1, stage_num) - 1) / 2), 0, CHUNK_SCENES.size() - 1)
+	return CHUNK_SCENES[bucket]
+
+
+static func loadout_for_stage(stage_num: int) -> Array:
+	var bucket := clampi(int((maxi(1, stage_num) - 1) / 2), 0, LIVE_LOADOUTS.size() - 1)
+	return LIVE_LOADOUTS[bucket]
+
+
+static func callout_for(fact: Dictionary) -> String:
+	var kind := String(fact.get("kind", ""))
+	if kind == "random_encounter_announced":
+		return String(ENCOUNTER_CALLOUTS.get(StringName(fact.get("encounter_kind", &"")), ""))
+	return String(FACT_CALLOUTS.get(kind, ""))
 
 
 static func _is_headless_audio() -> bool:
@@ -223,6 +274,9 @@ func step(dt: float, run_ctx: Dictionary = {}) -> Dictionary:
 
 	var total_accel: Vector3 = (dir_res.get("ball_accel", Vector3.ZERO) as Vector3) \
 		+ (enc_res.get("ball_accel", Vector3.ZERO) as Vector3)
+	for sp_fact in sp_facts:
+		if String(sp_fact.get("kind", "")) == "ball_momentum_boost":
+			total_accel += sp_fact.get("accel", Vector3.ZERO) as Vector3
 	var facts: Array = []
 	facts.append_array(dir_res.get("facts", []))
 	facts.append_array(enc_res.get("facts", []))
@@ -325,8 +379,201 @@ func snapshot() -> Dictionary:
 	}
 
 
+func attach_live(ctx) -> void:
+	detach_live()
+	if ctx == null:
+		return
+	_live_ctx = ctx
+	_link_live(ctx.events, &"flow_changed", _on_live_flow_changed)
+	_link_live(ctx.events, &"run_started", _on_live_run_started)
+	_link_live(ctx.events, &"stage_entered", _on_live_stage_entered)
+	_link_live(ctx.events, &"shot_fired", _on_live_shot_fired)
+	_link_live(ctx.events, &"boosted", _on_live_dashed)
+	_link_live(ctx.events, &"dashed", _on_live_dashed)
+	_link_live(ctx.terrain, &"stage_built", _on_live_stage_built)
+	_link_live(ctx.terrain, &"stage_freed", _on_live_stage_freed)
+	_link_live(ctx.player, &"shockwave", _on_live_shockwave)
+	sync_live()
+
+
+func detach_live() -> void:
+	for link in _live_links:
+		var obj: Variant = (link["obj"] as WeakRef).get_ref()
+		var sig_name: StringName = link["signal"]
+		var cb: Callable = link["cb"]
+		if obj != null and is_instance_valid(obj) and obj.is_connected(sig_name, cb):
+			obj.disconnect(sig_name, cb)
+	_live_links.clear()
+	_live_ctx = null
+	_live_stage = 0
+	_live_stale = false
+	if not _exiting:
+		_free_live_chunk()
+	_live_chunk = null
+
+
+func sync_live() -> void:
+	if _live_ctx == null:
+		return
+	var stage: int = _live_ctx.run.stage
+	var terrain = _live_ctx.terrain
+	if not (_live_ctx.flow.in_stage() and terrain != null and terrain.is_ready(stage)):
+		if configured:
+			teardown()
+		if _live_ctx.flow.state_name() != "dead":
+			_free_live_chunk()
+			_live_stage = 0
+		return
+	if configured and not _live_stale and _live_stage == stage:
+		return
+	if _live_stage != stage or not is_instance_valid(_live_chunk):
+		_free_live_chunk()
+		_live_chunk = _spawn_live_chunk(stage)
+	_live_stage = stage
+	_live_stale = false
+	configure_stage(stage, int(_live_ctx.run.run_seed) + stage * LIVE_SEED_STRIDE, 1.0, _live_chunk)
+	for part_id in loadout_for_stage(stage):
+		equip_part(part_id)
+
+
+func live_chunk() -> Node3D:
+	return _live_chunk if is_instance_valid(_live_chunk) else null
+
+
+func live_step(delta: float) -> Dictionary:
+	if _live_ctx == null or not configured or not _live_ctx.flow.in_stage():
+		return {}
+	var player = _live_ctx.player
+	var result := step(delta, {
+		"ball_pos": player.ball_position(),
+		"ball_vel": player.state.velocity,
+		"grounded": player.state.grounded,
+		"heft_tier": _live_ctx.run.heft_class(),
+		"cruise_mps": _live_ctx.tuning.f("cruise"),
+	})
+	player.add_external_accel(result["ball_accel"] as Vector3)
+	return result
+
+
+func _link_live(obj: Object, sig_name: StringName, cb: Callable) -> void:
+	if obj == null or not obj.has_signal(sig_name):
+		return
+	obj.connect(sig_name, cb)
+	_live_links.append({"obj": weakref(obj), "signal": sig_name, "cb": cb})
+
+
+func _spawn_live_chunk(stage: int) -> Node3D:
+	var site := _live_chunk_site(stage)
+	var packed := load(chunk_scene_for_stage(stage)) as PackedScene
+	if site.is_empty() or packed == null:
+		return null
+	var holder := Node3D.new()
+	holder.name = CHUNK_HOLDER_NAME
+	(_live_ctx.terrain.geometry_root(stage) as Node3D).add_child(holder)
+	holder.global_transform = Transform3D(Basis.IDENTITY, site["origin"] as Vector3)
+	var chunk := packed.instantiate() as Node3D
+	holder.add_child(chunk)
+	return chunk
+
+
+func _live_chunk_site(stage: int) -> Dictionary:
+	var terrain = _live_ctx.terrain
+	if int(terrain.stage) != stage:
+		return {}
+	var spawn: Vector3 = terrain.spawn_point(stage)
+	var heading: Vector3 = terrain.entry_heading(stage)
+	heading = Vector3(heading.x, 0.0, heading.z)
+	heading = heading.normalized() if heading.length() > 0.01 else Vector3.FORWARD
+	var spawn_floor: float = terrain.height(spawn.x, spawn.z)
+	var best := {}
+	var best_cost := INF
+	for range_m in CHUNK_SITE_RANGES_M:
+		for angle_deg in CHUNK_SITE_ANGLES_DEG:
+			var at: Vector3 = spawn + heading.rotated(Vector3.UP, deg_to_rad(angle_deg)) * range_m
+			var inside := true
+			var high := -INF
+			for sx in CHUNK_SITE_SAMPLES:
+				for sz in CHUNK_SITE_SAMPLES:
+					var x: float = at.x + sx * CHUNK_FOOTPRINT_HALF_M
+					var z: float = at.z + sz * CHUNK_FOOTPRINT_HALF_M
+					inside = inside and terrain.contains(Vector3(x, 0.0, z))
+					high = maxf(high, terrain.height(x, z))
+			if not inside:
+				continue
+			var approach: Vector3 = at + (spawn - at).normalized() * (CHUNK_FOOTPRINT_HALF_M + CHUNK_APPROACH_MARGIN_M)
+			var approach_floor: float = terrain.height(approach.x, approach.z)
+			var cost := absf(high - approach_floor) + absf(high - spawn_floor)
+			if cost < best_cost - 0.01:
+				best_cost = cost
+				best = {"origin": Vector3(at.x, high, at.z), "cost": cost}
+		if best_cost <= CHUNK_SITE_GOOD_COST_M:
+			break
+	return best
+
+
+func _free_live_chunk() -> void:
+	if is_instance_valid(_live_chunk):
+		var holder := _live_chunk.get_parent()
+		var doomed: Node = holder if holder != null and holder.name == CHUNK_HOLDER_NAME else _live_chunk
+		if doomed.get_parent() != null:
+			doomed.get_parent().remove_child(doomed)
+		doomed.queue_free()
+	_live_chunk = null
+
+
+func _on_live_flow_changed(_state: String) -> void:
+	sync_live()
+
+
+func _on_live_run_started(_class_id: String) -> void:
+	_live_stale = true
+	sync_live()
+
+
+func _on_live_stage_entered(_stage: int, _retry: bool) -> void:
+	_live_stale = true
+	sync_live()
+
+
+func _on_live_stage_built(_stage: int) -> void:
+	sync_live()
+
+
+func _on_live_stage_freed(stage: int) -> void:
+	if stage != _live_stage:
+		return
+	_live_chunk = null
+	_live_stage = 0
+	if configured:
+		teardown()
+
+
+func _on_live_shockwave(at: Vector3, _strength: float) -> void:
+	_dispatch_live(PartResource.TRIG_ON_SLAM, at)
+
+
+func _on_live_shot_fired(_weapon_id: String, from: Vector3, to: Vector3) -> void:
+	_dispatch_live(PartResource.TRIG_ON_WEAPON_FIRE, from, to - from)
+
+
+func _on_live_dashed(direction: Vector3) -> void:
+	_dispatch_live(PartResource.TRIG_ON_DASH, _live_ctx.player.ball_position(), direction)
+
+
+func _dispatch_live(trigger: StringName, origin: Vector3, dir: Vector3 = Vector3.ZERO) -> void:
+	if not configured or _live_ctx == null:
+		return
+	var velocity: Vector3 = _live_ctx.player.state.velocity
+	dispatch_player_event(trigger, {
+		"origin": origin,
+		"dir": dir if dir.length_squared() > 1e-6 else velocity,
+		"ball_speed_mps": Vector2(velocity.x, velocity.z).length(),
+	})
+
+
 func teardown() -> void:
 	_disconnect_signals()
+	ExperimentalAudioBank.reset_cooldowns()
 	for event_id in _active_loops.keys():
 		if _audio_players.has(event_id):
 			var p := _audio_players[event_id] as AudioStreamPlayer
@@ -374,6 +621,7 @@ func teardown() -> void:
 
 func _exit_tree() -> void:
 	_exiting = true
+	detach_live()
 	teardown()
 
 

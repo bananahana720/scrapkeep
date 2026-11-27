@@ -424,6 +424,8 @@ func _test_live_run_bridge_and_audio_bank() -> void:
 		cfg_s1["biome_id"] == &"spillway" and bool(cfg_s1["setpieces_attached"]), true)
 	t.check("configure_stage starts smelter_ambience loop",
 		cues_seen.has("smelter_ambience") and bridge.active_audio_loops().has("smelter_ambience"))
+	t.eq("configure_stage wires both chunk jump pads as launch triggers",
+		int((cfg_s1["setpiece_info"] as Dictionary).get("jump_pad_count", 0)), 2)
 
 	bridge.director.start_hazard(&"corrosive_steam_squall", Vector3.ZERO, 0.0)
 	t.check("hazard WARNING routes pa_hazard_squall_incoming", cues_seen.has("pa_hazard_squall_incoming"))
@@ -469,6 +471,23 @@ func _test_live_run_bridge_and_audio_bank() -> void:
 		if not cues_seen.has(ev_id):
 			missing_cues.append(ev_id)
 	t.eq("all 7 ExperimentalAudioBank cues routed cleanly via LiveRunBridge signals", missing_cues, [])
+
+	var attempt_cues: Array = []
+	for _attempt in 2:
+		bridge.configure_stage(1, 5150, 1.0, chunk)
+		bridge.director.start_hazard(&"corrosive_steam_squall", Vector3.ZERO, 0.0)
+		for _i in 60:
+			bridge.step(0.1, {"ball_pos": Vector3(12.0, 0.0, 0.0), "ball_vel": Vector3(15.0, 0.0, 0.0)})
+		var names: Array[String] = []
+		for cue in bridge.audio_cue_log():
+			names.append(String(cue["event_id"]))
+		attempt_cues.append(names)
+	t.check("a stage retry still fires pa_hazard_squall_incoming and hazard_squall_alarm",
+		(attempt_cues[1] as Array).has("pa_hazard_squall_incoming") and (attempt_cues[1] as Array).has("hazard_squall_alarm"),
+		str(attempt_cues[1]))
+	t.eq("a stage retry fires the same audio cues as the first attempt", attempt_cues[1], attempt_cues[0])
+	bridge.teardown()
+	t.eq("teardown clears the audio cooldowns", ExperimentalAudioBank.can_trigger("pa_hazard_squall_incoming", 0.0), true)
 
 	bridge.teardown()
 	root.remove_child(bridge)
