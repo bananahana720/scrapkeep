@@ -34,7 +34,6 @@ const HAND_STALL_SUMMON_PERIOD := 2.4
 const HAND_REST_DEFAULT := 3.0
 const HAND_REST_STALL := 1.8
 
-var attacks: Array = []
 var landings: Array = []
 var hands: Array = []
 var phase := 1
@@ -433,9 +432,7 @@ func _hand_struck(hand: Node3D, kind: String, force: float) -> void:
 	if state != FIGHT or not hand.braced() or not kind in Rules.CONTACT_KINDS:
 		return
 	var frame := Engine.get_physics_frames()
-	var smash: bool = ctx.player.smash_landing == hand
-	var reel: bool = ctx.spawner.is_reel_impact(kind, smash) if ctx.spawner != null and ctx.spawner.has_method("is_reel_impact") \
-			else smash or (ctx.player.kit.hooked and ctx.player.kit.winching)
+	var reel := _is_reel_impact(hand, kind)
 	if reel and int(_reel_frame.get(id, -1)) == frame:
 		reel = false
 	var punch: float = ctx.spawner.punch_of(kind, force) if ctx.spawner != null and ctx.spawner.has_method("punch_of") else force
@@ -532,18 +529,6 @@ func _free_hands() -> void:
 		if is_instance_valid(hand):
 			hand.queue_free()
 	hands.clear()
-
-
-func _clear_attacks() -> void:
-	for attack in attacks:
-		_free_hazards(attack)
-	attacks.clear()
-
-
-func _free_hazards(attack: Dictionary) -> void:
-	for h in attack["hazards"]:
-		if is_instance_valid(h):
-			h.queue_free()
 
 
 func _send_hand() -> void:

@@ -76,7 +76,6 @@ var _dropped_at := -INF
 var _breach_floors := {}
 var _dress
 var _arena_dress
-var attacks: Array = []
 var landings: Array = []
 var attack_count := 0
 var phase := 1
@@ -491,16 +490,8 @@ func _set_plating() -> void:
 
 
 func _clear_attacks() -> void:
-	for attack in attacks:
-		_free_hazards(attack)
-	attacks.clear()
+	super()
 	_pending.clear()
-
-
-func _free_hazards(attack: Dictionary) -> void:
-	for h in attack["hazards"]:
-		if is_instance_valid(h):
-			h.queue_free()
 
 
 func _on_enemy_struck(enemy: Node3D, kind: String, _force: float) -> void:
@@ -825,10 +816,7 @@ func _crew_struck(f: Node3D, kind: String) -> void:
 			continue
 		if state != FIGHT or f.fit_state != f.State.FITTING or not kind in Rules.CONTACT_KINDS:
 			return
-		var smash: bool = ctx.player.smash_landing == f
-		var reel: bool = ctx.spawner.is_reel_impact(kind, smash) if ctx.spawner != null and ctx.spawner.has_method("is_reel_impact") \
-				else smash or (ctx.player.kit.hooked and ctx.player.kit.winching)
-		if not reel:
+		if not _is_reel_impact(f, kind):
 			return
 		_uncount(c)
 		f.dislodge(f.global_position - ctx.player.ball_position())
