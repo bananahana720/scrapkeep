@@ -996,6 +996,103 @@ export function lintL14(file, rel, text, driverRefs, baseline = L14_STATIC_VAR_B
   return out;
 }
 
+export const L15_HZ_BASELINE = {
+  "tests/active_torch_test.gd": 2,
+  "tests/activities_camp_test.gd": 1,
+  "tests/audio_momentum_test.gd": 1,
+  "tests/body_run_warning_test.gd": 5,
+  "tests/bot_hands_flag_test.gd": 1,
+  "tests/bot_relay_stake_test.gd": 4,
+  "tests/camera_aim_rest_test.gd": 1,
+  "tests/camera_glance_test.gd": 1,
+  "tests/camera_tight_test.gd": 1,
+  "tests/camp_ring_test.gd": 1,
+  "tests/cannon_ultimate_test.gd": 1,
+  "tests/cast_motion_test.gd": 1,
+  "tests/combat_codex_test.gd": 1,
+  "tests/companion_drivers_test.gd": 1,
+  "tests/dam_gates_test.gd": 1,
+  "tests/damage_numbers_test.gd": 1,
+  "tests/destructibles_hooks_test.gd": 2,
+  "tests/destructibles_test.gd": 1,
+  "tests/device_caps_test.gd": 1,
+  "tests/dig_combat_test.gd": 1,
+  "tests/dig_fx_test.gd": 1,
+  "tests/discovery_skill_bar_test.gd": 1,
+  "tests/dress_arb_yard_test.gd": 3,
+  "tests/durability_test.gd": 6,
+  "tests/elite_affix_test.gd": 1,
+  "tests/enemies_bughunt_test.gd": 2,
+  "tests/enemy_axis_errors_test.gd": 1,
+  "tests/enemy_clips_test.gd": 7,
+  "tests/enemy_counters_test.gd": 1,
+  "tests/enemy_gait_test.gd": 2,
+  "tests/enemy_linker_test.gd": 1,
+  "tests/enemy_pit_jaw_test.gd": 1,
+  "tests/enemy_tenacity_test.gd": 1,
+  "tests/entrance_closeup_test.gd": 1,
+  "tests/field_tips_test.gd": 3,
+  "tests/find_in_fight_test.gd": 5,
+  "tests/grapple_muts_test.gd": 1,
+  "tests/highdraft_fx_test.gd": 5,
+  "tests/int_arena_standdown_test.gd": 2,
+  "tests/jolt_layer_test.gd": 1,
+  "tests/kest_kit_test.gd": 2,
+  "tests/kest_set_piece_test.gd": 1,
+  "tests/line_skill_hook_test.gd": 1,
+  "tests/look_frames_test.gd": 2,
+  "tests/music_params_trace_game_test.gd": 2,
+  "tests/park_recipes_tunnels_test.gd": 1,
+  "tests/pilot_antics_test.gd": 1,
+  "tests/pocket_kinds_test.gd": 1,
+  "tests/reach_secret_test.gd": 1,
+  "tests/regen_rolling_test.gd": 1,
+  "tests/rivet_kit_test.gd": 1,
+  "tests/sable_kit_test.gd": 1,
+  "tests/shot_bits_live_test.gd": 1,
+  "tests/sim_elements_chains_test.gd": 1,
+  "tests/skill_bar_select_test.gd": 1,
+  "tests/spillway_roster_test.gd": 1,
+  "tests/stand_crew_test.gd": 4,
+  "tests/step5_enemy_boss_craft_test.gd": 6,
+  "tests/tally_set_piece_test.gd": 1,
+  "tests/tarn_claw_drag_test.gd": 1,
+  "tests/telegraph_timing_swarm_test.gd": 1,
+  "tests/ui_objective_board_test.gd": 1,
+  "tests/ultimate_set_piece_test.gd": 1,
+  "tests/w45_exploration_test.gd": 3,
+  "tests/w45_neon_hardening_test.gd": 1,
+  "tests/w45_plate_seat_test.gd": 1,
+  "tests/w45_tarn_relics_test.gd": 1,
+  "tests/w47_h1_heroes_test.gd": 1,
+  "tests/w47_h2_heroes_test.gd": 1,
+  "tests/w50_isaac_relics_test.gd": 1,
+  "tests/wall_grip_test.gd": 4,
+  "tests/weapon_cadence_test.gd": 1,
+  "tests/weapon_driver_test.gd": 1,
+  "tests/works_surge_test.gd": 1,
+  "tests/world_one_mass_s_test.gd": 2,
+  "tests/world_one_stree_test.gd": 1,
+};
+
+const physicsTestSignal = /\b(?:physics_frame|_physics_process)\b/;
+const hardcoded60Hz = /\b1\.0\s*\/\s*60(?:\.0)?\b|\*\s*60\.0\b/g;
+
+export function lintL15(file, rel, text, baseline = L15_HZ_BASELINE) {
+  const lines = codeLines(text);
+  if (!lines.some((line) => physicsTestSignal.test(line.raw))) return [];
+  const sites = lines.flatMap((line) =>
+    (line.raw.replace(/#.*$/, "").match(hardcoded60Hz) ?? []).map(() => line),
+  );
+  const listed = baseline[rel] ?? 0;
+  if (sites.length <= listed) return [];
+  const message =
+    listed === 0
+      ? "hardcoded 60 Hz physics frame literal in a 90 Hz physics test; derive ticks from Engine.physics_ticks_per_second instead"
+      : `${sites.length} hardcoded 60 Hz physics frame literals, L15_HZ_BASELINE allows ${listed}; derive ticks from Engine.physics_ticks_per_second instead`;
+  return sites.map((line) => finding("L15", file, line.number, message));
+}
+
 function walk(directory, base = directory) {
   const entries = [];
   if (!existsSync(directory)) return entries;
@@ -1028,7 +1125,11 @@ export function lintSketch(sketch) {
   );
   const findings = [];
   const testFiles = sources(path.join(directory, "tests"), new Set([".gd"]));
-  for (const file of testFiles) findings.push(...lintL1(file.path, file.text));
+  for (const file of testFiles) {
+    findings.push(...lintL1(file.path, file.text));
+    if (sketch === "core-loop")
+      findings.push(...lintL15(file.path, file.path.slice(relative.length + 1), file.text));
+  }
   const lit = new Set();
   const batchDriverPath = path.join(directory, "tools", "test_batch_driver.gd");
   const driverRefs =

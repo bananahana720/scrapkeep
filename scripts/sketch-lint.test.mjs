@@ -7,6 +7,7 @@ import {
   FAULT_SWITCHES,
   ID_COMPARE_LEGACY,
   L14_STATIC_VAR_BASELINE,
+  L15_HZ_BASELINE,
   applyBaseline,
   baselineFrom,
   formatFinding,
@@ -25,6 +26,7 @@ import {
   lintL12,
   lintL13,
   lintL14,
+  lintL15,
   lintSketch,
   parseBatchDriverRefs,
   parseTuning,
@@ -964,4 +966,51 @@ test("L14 blocks a new unwired static var in src/ and passes once wired into tes
     lintL14(file, rel, "# static var _commented := {}\nvar ok := 1\n", emptyRefs, new Set()),
     [],
   );
+});
+
+test("L15 passes the checked-out core-loop tests tree", () => {
+  assert.ok(Object.keys(L15_HZ_BASELINE).length > 0);
+  const findings = lintSketch("core-loop").filter((item) => item.rule === "L15");
+  assert.deepEqual(findings, []);
+});
+
+test("L15 blocks hardcoded 60 Hz physics frame math and passes Engine.physics_ticks_per_second", () => {
+  const file = "sketches/core-loop/tests/planted_find_in_fight_test.gd";
+  const rel = "tests/planted_find_in_fight_test.gd";
+  const badSrc = [
+    "extends SceneTree",
+    "const FIND_FRAMES := int(ScreenBusy.FIND_HOLD * 60.0)",
+    "const DT := 1.0 / 60.0",
+    "const STEP := 1.0 / 60",
+    "func _wait() -> void:",
+    "\tawait physics_frame",
+    "",
+  ].join("\n");
+  const bad = lintL15(file, rel, badSrc, {});
+  assert.deepEqual(
+    bad.map((item) => `${item.rule} ${item.line}`),
+    ["L15 2", "L15 3", "L15 4"],
+  );
+  assert.match(bad[0].message, /Engine\.physics_ticks_per_second/);
+
+  const goodSrc = [
+    "extends SceneTree",
+    "func _frames_for(seconds: float) -> int:",
+    "\treturn int(ceil(seconds * Engine.physics_ticks_per_second))",
+    "func _wait() -> void:",
+    "\tvar dt := 1.0 / float(Engine.physics_ticks_per_second)",
+    "\tawait physics_frame",
+    "",
+  ].join("\n");
+  assert.deepEqual(lintL15(file, rel, goodSrc, {}), []);
+
+  const nonPhysics = "extends SceneTree\nconst DT := 1.0 / 60.0\nfunc _run():\n\tpass\n";
+  assert.deepEqual(lintL15(file, rel, nonPhysics, {}), []);
+
+  assert.deepEqual(lintL15(file, rel, badSrc, { [rel]: 3 }), []);
+  assert.deepEqual(lintL15(file, rel, badSrc, { [rel]: 4 }), []);
+  const ratcheted = lintL15(file, rel, badSrc, { [rel]: 2 });
+  assert.equal(ratcheted.length, 3);
+  assert.match(ratcheted[0].message, /Engine\.physics_ticks_per_second/);
+  assert.match(ratcheted[0].message, /L15_HZ_BASELINE allows 2/);
 });
