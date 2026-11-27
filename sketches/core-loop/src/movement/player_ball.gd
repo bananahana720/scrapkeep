@@ -7,6 +7,7 @@ const BallState := preload("res://src/movement/ball_state.gd")
 const RigidBall := preload("res://src/movement/rigid_ball.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
+const MathUtil := preload("res://src/core/math_util.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const Harpoon := preload("res://src/movement/harpoon.gd")
@@ -1234,16 +1235,9 @@ func _squash_basis() -> Basis:
 	var amount := clampf(state.impact / 26.0, 0.0, 0.42)
 	if amount <= 0.001:
 		return Basis.IDENTITY
-	var align := _align_up(state.contact_normal)
+	var align := MathUtil.basis_up(state.contact_normal)
 	var scale := Basis.from_scale(Vector3(1.0 + amount * 0.55, 1.0 - amount, 1.0 + amount * 0.55))
 	return align * scale * align.inverse()
-
-
-static func _align_up(normal: Vector3) -> Basis:
-	var up := normal.normalized()
-	var right := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
-	right = (right - up * right.dot(up)).normalized()
-	return Basis(right, up, right.cross(up))
 
 
 func _build_bow() -> void:
@@ -1361,7 +1355,7 @@ func pylon_node() -> Node3D:
 func _update_augment_visuals(at: Vector3) -> void:
 	_pylon.visible = kit.mounted
 	if kit.mounted:
-		_pylon.global_transform = Transform3D(_align_up(kit.mount_normal), kit.mount_face)
+		_pylon.global_transform = Transform3D(MathUtil.basis_up(kit.mount_normal), kit.mount_face)
 
 	_wings.visible = kit.gliding or air_draw_active
 	if _wings.visible:
@@ -1733,7 +1727,7 @@ func _step_kest_wall_kick(delta: float) -> void:
 	if class_def == null or class_def.id != "demolitions_caster" or _frozen or state.grounded \
 			or kit.hooked or Augments.holding(kit) or in_set_piece() or not is_inside_tree():
 		return
-	var face := _kest_steep_face()
+	var face := Augments.steepest_face_at(_rigid.get_world_3d().direct_space_state, ball_position())
 	if face.is_empty():
 		return
 	var key := Augments.face_key(face["point"], face["normal"])
@@ -1760,23 +1754,3 @@ func _step_kest_wall_kick(delta: float) -> void:
 	last_kest_wall_kick = {"point": face["point"], "normal": n, "velocity": launch}
 	_on_kit_fact("vault_kicked", [face["point"], launch.length()])
 	events.jumped.emit(true)
-
-
-func _kest_steep_face() -> Dictionary:
-	var space: PhysicsDirectSpaceState3D = _rigid.get_world_3d().direct_space_state
-	var origin := ball_position()
-	var reach := Tuning.RADIUS + Augments.FACE_REACH
-	var best := {}
-	var best_tilt := Augments.FACE_MAX_TILT
-	for i in Augments.FACE_RAYS:
-		var ang := TAU * float(i) / float(Augments.FACE_RAYS)
-		var dir := Vector3(cos(ang), 0.0, sin(ang))
-		var hit: Dictionary = space.intersect_ray(PhysicsRayQueryParameters3D.create(origin, origin + dir * reach, Augments.WORLD_MASK))
-		if hit.is_empty():
-			continue
-		var n: Vector3 = (hit["normal"] as Vector3).normalized()
-		var tilt := absf(n.y)
-		if tilt < best_tilt:
-			best_tilt = tilt
-			best = {"point": hit["position"], "normal": n}
-	return best

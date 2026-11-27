@@ -659,7 +659,7 @@ static func _mount_spot(kit, body_state) -> Dictionary:
 
 static func mount_face(kit, space: PhysicsDirectSpaceState3D, origin: Vector3) -> Dictionary:
 	var reach_scale: float = kit.knob("mount_reach")
-	var face := _steepest_face_at(space, origin, WORLD_MASK, reach_scale)
+	var face := steepest_face_at(space, origin, WORLD_MASK, reach_scale)
 	if not face.is_empty():
 		return face
 	if kit.hooked and kit.on(GRAPPLE) and not kit.on_body and absf(kit.anchor_normal.y) < FACE_MAX_TILT \
@@ -844,10 +844,10 @@ static func _haul(kit, tuning, intent, body_state, step: float) -> void:
 
 
 static func _steepest_face(body_state, mask := WORLD_MASK, reach_scale := 1.0) -> Dictionary:
-	return _steepest_face_at(body_state.get_space_state(), body_state.transform.origin, mask, reach_scale)
+	return steepest_face_at(body_state.get_space_state(), body_state.transform.origin, mask, reach_scale)
 
 
-static func _steepest_face_at(space: PhysicsDirectSpaceState3D, origin: Vector3, mask := WORLD_MASK, reach_scale := 1.0) -> Dictionary:
+static func steepest_face_at(space: PhysicsDirectSpaceState3D, origin: Vector3, mask := WORLD_MASK, reach_scale := 1.0) -> Dictionary:
 	var reach: float = Tuning.RADIUS + FACE_REACH * reach_scale
 	var best := {}
 	var flattest := 2.0

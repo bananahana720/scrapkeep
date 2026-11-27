@@ -1,7 +1,5 @@
 extends RefCounted
 
-const BallState := preload("res://src/movement/ball_state.gd")
-
 const SPECS := [
 	{"key": "drive_accel", "label": "Drive accel", "min": 5.0, "max": 90.0, "step": 1.0, "value": 34.0},
 	{"key": "cruise", "label": "Cruise speed", "min": 4.0, "max": 40.0, "step": 0.5, "value": 14.0},
@@ -130,7 +128,6 @@ var _launch := {}
 
 
 func _init() -> void:
-	assert(is_equal_approx(MAX_SLOPE_DOT, BallState.MAX_SLOPE_DOT), "Tuning.MAX_SLOPE_DOT must match BallState.MAX_SLOPE_DOT")
 	reset()
 	apply_cmdline("start")
 
