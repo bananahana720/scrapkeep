@@ -3,6 +3,7 @@ extends Node
 const Tuning := preload("res://src/movement/tuning.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const NUMBER_LIFT := 1.6
 const SimClock := preload("res://src/core/sim_clock.gd")
@@ -19,7 +20,7 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const REDUCED_FLASH: float = SettingsStore.REDUCED_FLASH
-const SPINE_CAP_MS := 60.0
+const SPINE_CAP_MS := EventJuice.SPINE_CAP_MS
 const SHAKE_CAP := 0.5
 const IMPACT_ZOOM_FRAMES := 2
 const IMPACT_ZOOM_S := 2.0 / 60.0
@@ -213,7 +214,7 @@ static func _span(pair: Array, share: float) -> float:
 
 
 func _on_bumped(at: Vector3, normal: Vector3, speed: float) -> void:
-	var row := EventKinds.juice("bumped")
+	var row := EventJuice.juice("bumped")
 	var share := collision_share(row, speed)
 	squash(lerpf(0.12, float(row["squash"]), share), normal)
 	_camera("kick", "bumped", -normal, float(row["kick"]) * share)
@@ -227,7 +228,7 @@ func _on_bumped(at: Vector3, normal: Vector3, speed: float) -> void:
 
 
 func _on_walled(_enemy: Node3D, at: Vector3, normal: Vector3, speed: float) -> void:
-	var row := EventKinds.juice("enemy_walled")
+	var row := EventJuice.juice("enemy_walled")
 	var share := collision_share(row, speed)
 	if audio != null:
 		audio.play("enemy_walled", _span(row["db"], share), _span(row["pitch"], share))
@@ -238,7 +239,7 @@ func _on_walled(_enemy: Node3D, at: Vector3, normal: Vector3, speed: float) -> v
 
 
 func on_prop_kicked(at: Vector3, mode: String, speed: float, tags: Array) -> void:
-	var row: Dictionary = EventKinds.juice("prop_kicked")[mode]
+	var row: Dictionary = EventJuice.juice("prop_kicked")[mode]
 	var share := clampf((speed - 4.0) / 26.0, 0.0, 1.0)
 	var metal := "machine" in tags or "sign" in tags
 	var sound := String(row["metal"] if metal else row["sound"])
@@ -452,18 +453,12 @@ static func throw_share(throw: float) -> float:
 static func throw_stop_ms(throw: float, crit := false) -> float:
 	var ms := lerpf(THROW_STOP_MS[0], THROW_STOP_MS[1], throw_share(throw))
 	if crit:
-		ms *= float(EventKinds.juice("enemy_struck")["crit"]["stop_mult"])
+		ms *= float(EventJuice.juice("enemy_struck")["crit"]["stop_mult"])
 	return minf(ms, SPINE_CAP_MS)
 
 
 static func stop_ms_for(damage: float, crit := false, heavy := false) -> float:
-	var row := EventKinds.juice("enemy_struck")
-	var ms := clampf(float(row["stop_ms"]) + float(row["stop_per_damage"]) * maxf(damage, 0.0), float(row["stop_min_ms"]), float(row["stop_cap_ms"]))
-	if crit:
-		ms *= float(row["crit"]["stop_mult"])
-	if heavy:
-		ms += float(row["heavy"]["stop_add_ms"])
-	return minf(ms, SPINE_CAP_MS)
+	return EventJuice.stop_ms_for(damage, crit, heavy)
 
 
 func _queue_flush() -> void:
@@ -475,7 +470,7 @@ func _queue_flush() -> void:
 func flush() -> void:
 	_flush_queued = false
 	var caught := _hits.filter(func(h: Dictionary): return h["kind"] == "sticky").size()
-	var b_row := EventKinds.juice("sticky_detonated")
+	var b_row := EventJuice.juice("sticky_detonated")
 	if _blasts.any(func(b: Array): return b[1]):
 		for hit in _hits:
 			if hit["kind"] == "sticky":
@@ -536,7 +531,7 @@ func _flush_weighed() -> Dictionary:
 func _flush_hits() -> Dictionary:
 	if _hits.is_empty():
 		return {"stop": 0.0, "shake": 0.0}
-	var row := EventKinds.juice("enemy_struck")
+	var row := EventJuice.juice("enemy_struck")
 	var stop := 0.0
 	var shake := 0.0
 	var heavy := false
@@ -559,7 +554,7 @@ func _flush_hits() -> Dictionary:
 		if not hit.get("absorbed", false):
 			_raise_number(hit["key"], hit["damage"], hit["world"], hit["kind"], hit["crit"])
 	if stop > 0.0:
-		stop += EventKinds.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
+		stop += EventJuice.STOP_PER_EXTRA_HIT_MS * mini(_hits.size() - 1, 5)
 	if crit and audio != null:
 		audio.play("enemy_struck", 0.0, 1.0, "SFX", String(row["crit"]["sound"]))
 	if crit and not heavy and stop > 0.0:
@@ -585,7 +580,7 @@ func _thump(at: Vector3, kick: float, dust: int, fact: String) -> void:
 
 
 func _on_rebounded(enemy: Node3D, _speed: float) -> void:
-	var row := EventKinds.juice("enemy_rebounded")
+	var row := EventJuice.juice("enemy_rebounded")
 	var at: Vector3 = enemy.global_position if is_instance_valid(enemy) and enemy.is_inside_tree() else player.shown_position()
 	_thump(at, float(row["kick"]), int(row["dust"]), "enemy_rebounded")
 	if camera != null:
@@ -633,14 +628,14 @@ static func shatter_weight(tier: int) -> Dictionary:
 	if not SHATTER_WEIGHT.has(tier):
 		return {}
 	var key := String(SHATTER_WEIGHT[tier][0])
-	var profile: Dictionary = EventKinds.WEIGHT[key]
+	var profile: Dictionary = EventJuice.WEIGHT[key]
 	var stop := float(profile["stop_ms"]) if not profile["stop_ms"] is String else stop_ms_for(float(SHATTER_WEIGHT[tier][1]), false, profile["stop_ms"] == "heavy")
 	return {"fact": "piece_shattered", "weight": key, "strength": 1.0, "stop_ms": stop, "shake": float(profile["shake"]),
 		"kick": float(profile["kick"]), "punch_fov": float(profile["punch_fov"])}
 
 
 func weigh(fact: String, args: Dictionary, at: Vector3) -> Dictionary:
-	var record := EventKinds.weigh(fact, args)
+	var record := EventJuice.weigh(fact, args)
 	record["at"] = at
 	_weighed.append(record)
 	_queue_flush()
@@ -648,7 +643,7 @@ func weigh(fact: String, args: Dictionary, at: Vector3) -> Dictionary:
 
 
 func _on_unsealed(_stage: int) -> void:
-	var row := EventKinds.juice("beacon_unsealed")
+	var row := EventJuice.juice("beacon_unsealed")
 	_camera("punch_fov", "beacon_unsealed", Vector3.ZERO, float(row["punch_fov"]), 0.6)
 	rumble("beacon_unsealed")
 	request_hit_stop(0.0, "beacon_unsealed")
@@ -662,7 +657,7 @@ func _on_killed(_kind: String, at: Vector3, _value: int) -> void:
 func _flush_kills() -> void:
 	if _kills.is_empty():
 		return
-	var row := EventKinds.juice("enemy_killed")
+	var row := EventJuice.juice("enemy_killed")
 	if vfx != null:
 		for at in _kills:
 			vfx.kill_pop(at)
@@ -684,20 +679,20 @@ func _flush_kills() -> void:
 
 
 func _on_scrap(_amount: int, _at: Vector3, _total: int) -> void:
-	var row := EventKinds.juice("scrap_collected")
+	var row := EventJuice.juice("scrap_collected")
 	var rung: int = audio.scrap_streak.rung if audio != null else 0
 	pulse(minf(float(row["pulse"]) * (1.0 + 0.2 * rung), float(row["pulse_cap"])))
 
 
 func _on_scrap_lost(_amount: int, _at: Vector3, _total: int, _cause: String) -> void:
-	pulse(float(EventKinds.juice("scrap_lost")["pulse"]))
+	pulse(float(EventJuice.juice("scrap_lost")["pulse"]))
 	squash(0.3, Vector3.UP)
 
 
 func _on_part(part_id: String, _source: String) -> void:
 	if vfx == null:
 		return
-	var row := EventKinds.juice("part_gained")
+	var row := EventJuice.juice("part_gained")
 	vfx.burst("fountain", player.shown_position() + Vector3.UP * 0.8, part_tint(part_id), int(row["fountain"]))
 	pulse(0.12)
 
@@ -708,23 +703,23 @@ static func part_tint(part_id: String) -> Color:
 		return EventKinds.color("part_gained")
 	var rung := ItemGen.resolve_rarity(String(def.rarity))
 	var tint: Color = Palette.SANDSTONE if rung in ["", "common"] else RewardGates.rarity_color(rung)
-	return EventKinds.juice("part_gained")["element"].get(String(def.element), tint)
+	return EventJuice.juice("part_gained")["element"].get(String(def.element), tint)
 
 
 func _on_core(_source: String, at: Vector3, _count: int) -> void:
 	if vfx != null:
-		vfx.burst("fountain", at + Vector3.UP * 0.6, EventKinds.color("core_gained"), int(EventKinds.juice("core_gained")["fountain"]))
+		vfx.burst("fountain", at + Vector3.UP * 0.6, EventKinds.color("core_gained"), int(EventJuice.juice("core_gained")["fountain"]))
 
 
 func _on_quick_break(_stage: int, _seconds: float, at: Vector3) -> void:
 	pulse(0.12)
 	if vfx != null:
-		var row := EventKinds.juice("quick_break")
+		var row := EventJuice.juice("quick_break")
 		vfx.burst("fountain", at + Vector3.UP * float(row["rise"]), EventKinds.color("quick_break"), int(row["fountain"]))
 
 
 func _on_near_miss(_kind: String, at: Vector3) -> void:
-	var row := EventKinds.juice("near_miss")
+	var row := EventJuice.juice("near_miss")
 	request_hit_stop(0.0, "near_miss")
 	_camera("punch_fov", "near_miss", Vector3.ZERO, float(row["punch_fov"]), 0.25)
 	rumble("near_miss")
@@ -735,7 +730,7 @@ func _on_near_miss(_kind: String, at: Vector3) -> void:
 
 
 func _on_player_hit(amount: float, source: String) -> void:
-	var row := EventKinds.juice("player_hit")
+	var row := EventJuice.juice("player_hit")
 	_log_push(hook_log, ["edge_flash", "player_hit"])
 	squash(float(row["squash"]), Vector3.ZERO)
 	rumble("player_hit", clampf(0.5 + amount / 30.0, 0.5, 1.0))
@@ -760,7 +755,7 @@ func _screen_direction(from) -> Vector2:
 
 
 func _on_shot(weapon_id: String, from: Vector3, to: Vector3) -> void:
-	var row := EventKinds.juice("shot_fired")
+	var row := EventJuice.juice("shot_fired")
 	var feel: Dictionary = row["weapons"].get(weapon_id, {})
 	var aim := (to - from)
 	if aim.length() < 0.01:
@@ -776,7 +771,7 @@ func _on_shot(weapon_id: String, from: Vector3, to: Vector3) -> void:
 
 
 func _on_stuck(at: Vector3) -> void:
-	var stick: Dictionary = EventKinds.juice("shot_fired")["stick"]
+	var stick: Dictionary = EventJuice.juice("shot_fired")["stick"]
 	if audio != null:
 		audio.play("shot_fired", -2.0, float(stick["pitch"]), "SFX", String(stick["sound"]))
 	if vfx != null:
@@ -784,7 +779,7 @@ func _on_stuck(at: Vector3) -> void:
 
 
 func _on_detonated(at: Vector3, crit: bool) -> void:
-	var row := EventKinds.juice("sticky_detonated")
+	var row := EventJuice.juice("sticky_detonated")
 	var color := EventKinds.color("sticky_detonated")
 	_blasts.append([at, crit])
 	_queue_flush()
@@ -803,7 +798,7 @@ func _on_detonated(at: Vector3, crit: bool) -> void:
 
 
 func _on_rocket_jumped(_at: Vector3, _speed: float) -> void:
-	var row := EventKinds.juice("rocket_jumped")
+	var row := EventJuice.juice("rocket_jumped")
 	_camera("kick", "rocket_jumped", Vector3.DOWN, float(row["kick"]))
 	_camera("punch_fov", "rocket_jumped", Vector3.UP, float(row["punch_fov"]), 0.5)
 	squash(-float(row["squash"]), Vector3.UP)
@@ -929,10 +924,10 @@ func request_hit_stop(seconds: float, fact: String) -> void:
 	var recent := 0.0
 	for stop in _stops:
 		spent += float(stop[1])
-		if now - int(stop[0]) < EventKinds.STOP_WINDOW_MS:
+		if now - int(stop[0]) < EventJuice.STOP_WINDOW_MS:
 			recent += float(stop[1])
-	var sent := minf(wanted, minf(EventKinds.STOP_BUDGET_MS - spent, EventKinds.STOP_WINDOW_BUDGET_MS - recent))
-	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) - float(_stops.back()[1]) >= EventKinds.STOP_GAP_MS
+	var sent := minf(wanted, minf(EventJuice.STOP_BUDGET_MS - spent, EventJuice.STOP_WINDOW_BUDGET_MS - recent))
+	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) - float(_stops.back()[1]) >= EventJuice.STOP_GAP_MS
 	var in_play: bool = ctx == null or ctx.flow == null or ctx.flow.in_play()
 	if not in_play or not spaced or wanted < STOP_FLOOR_MS or sent < minf(wanted, STOP_TRIM_FLOOR_MS):
 		_log_push(hit_stop_log, [seconds, 0.0, fact, now])

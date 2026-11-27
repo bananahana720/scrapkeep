@@ -1,6 +1,7 @@
 extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
@@ -45,7 +46,7 @@ class AudioCtx:
 	var spawner = null
 	var calm := false
 
-var event_script: Script = EventKinds
+var event_script: Script = EventJuice
 const PRESENTATION := ["juice", "vfx", "audio"]
 const RULES := ["strike", "death_parts", "amount", "gauge", "posture"]
 
@@ -107,7 +108,7 @@ func run(t) -> void:
 	var listeners := connected_signals()
 	var uncovered := uncovered_listeners(listeners, facts, exemptions)
 	t.eq("presentation listener coverage", uncovered, [])
-	t.eq("grammar has no presentation listener", constants.GRAMMAR_SIGNALS.filter(func(fact): return fact in listeners), [])
+	t.eq("grammar has no presentation listener", EventKinds.GRAMMAR_SIGNALS.filter(func(fact): return fact in listeners), [])
 	var planted := facts.duplicate(true)
 	planted["planted_impact"] = {"class": "none", "allegiance": "player", "visual": ""}
 	t.eq("coverage positive control", coverage(planted, weights), ["planted_impact"])

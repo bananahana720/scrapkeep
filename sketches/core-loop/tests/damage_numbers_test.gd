@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 
 # SR6 damage numbers (W13-INTEGRATION-3). A number and a hit effect take one colour per
@@ -80,7 +81,7 @@ func _pure_checks() -> void:
 	var taken_mismatches := 0
 	for type in DamageNumbers.TYPES:
 		for team in ["monster", "neutral"]:
-			if DamageNumbers.effect_colour(type, team) != EventKinds.juice("player_hit")["color"]:
+			if DamageNumbers.effect_colour(type, team) != EventJuice.juice("player_hit")["color"]:
 				taken_mismatches += 1
 	_report("hit-taken row", taken_mismatches == 0,
 		"6 hit-taken type/team pairs: %d mismatches against the player_hit juice colour" % taken_mismatches)
@@ -212,7 +213,7 @@ func _live_colour_checks(layer) -> void:
 		if shown_taken.size() != 1 or rec.flash_tint.size() != 1 or shown_taken[0]["color"] != rec.flash_tint[0]:
 			mismatches += 1
 			detail += " taken/%s" % source
-		if shown_taken.size() != 1 or rec.flash_tint.size() != 1 or shown_taken[0]["color"] != EventKinds.juice("player_hit")["color"] or rec.flash_tint[0] != EventKinds.juice("player_hit")["color"]:
+		if shown_taken.size() != 1 or rec.flash_tint.size() != 1 or shown_taken[0]["color"] != EventJuice.juice("player_hit")["color"] or rec.flash_tint[0] != EventJuice.juice("player_hit")["color"]:
 			taken_row_mismatches += 1
 	juice.vfx = real_vfx
 	juice.resolve_of = real_resolve

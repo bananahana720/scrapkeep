@@ -2,6 +2,7 @@ extends SceneTree
 
 const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
@@ -227,7 +228,7 @@ func _check_motif() -> void:
 func _check_feel() -> void:
 	_t.check("claw pitch", Audio.WEAPON_PITCH["claw_sweep"] < Audio.WEAPON_PITCH["arc_caster"],
 		"claw_sweep %.1f below arc_caster %.1f" % [Audio.WEAPON_PITCH["claw_sweep"], Audio.WEAPON_PITCH["arc_caster"]])
-	var weapons: Dictionary = EventKinds.JUICE["shot_fired"]["weapons"]
+	var weapons: Dictionary = EventJuice.JUICE["shot_fired"]["weapons"]
 	var claw: Dictionary = weapons["claw_sweep"]
 	_t.check("claw juice", claw["recoil"] > weapons["rapid_laser"]["recoil"] and claw["kick"] < weapons["sticky_charge"]["kick"],
 		"claw %s, laser %s, sticky %s" % [claw, weapons["rapid_laser"], weapons["sticky_charge"]])

@@ -1,6 +1,7 @@
 extends Node
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
@@ -996,7 +997,7 @@ func stop_embers() -> void:
 func _roll_dust() -> void:
 	if _roll == null:
 		return
-	var row := EventKinds.juice("rolling")
+	var row := EventJuice.juice("rolling")
 	var speed: float = player.planar_velocity().length()
 	var floor_speed: float = row["min_speed"]
 	var on: bool = player.state.grounded and speed >= floor_speed
@@ -1024,7 +1025,7 @@ func _emit_pops() -> void:
 
 
 func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
-	var row := EventKinds.juice("enemy_killed")
+	var row := EventJuice.juice("enemy_killed")
 	scale *= 1.0 + MIGHT_GLYPH * might
 	if root == null or not root.is_inside_tree():
 		return
@@ -1042,7 +1043,7 @@ func kill_look(at: Vector3, scale: float, pilot := Color.TRANSPARENT) -> void:
 
 
 func shift_over_kill(at: Vector3, scale := 1.0, pilot := Color.TRANSPARENT) -> void:
-	var row := EventKinds.juice("enemy_killed")
+	var row := EventJuice.juice("enemy_killed")
 	scale *= 1.0 + MIGHT_GLYPH * might
 	if root == null or not root.is_inside_tree():
 		return
@@ -1132,7 +1133,7 @@ func chain_pips() -> int:
 
 func _draw_pips(delta: float) -> void:
 	_pip_pop = maxf(0.0, _pip_pop - delta * 5.0)
-	var top := float(EventKinds.juice("enemy_killed").get("chain_cap", 7))
+	var top := float(EventJuice.juice("enemy_killed").get("chain_cap", 7))
 	var charge := clampf(_chain_rung / top, 0.0, 1.0)
 	var pip_tint := EventKinds.color("enemy_killed").lerp(EventKinds.color("part_gained"), minf(charge * 1.6, 1.0)).lerp(Palette.LEDGER_CREAM, maxf(0.0, charge - 0.7) * 2.0)
 	if _pip_mat is ShaderMaterial:

@@ -1,6 +1,7 @@
 extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
@@ -222,7 +223,7 @@ static func spec(id: String) -> Dictionary:
 
 
 static func effects(kind: String, variant := "") -> Dictionary:
-	var row := EventKinds.juice(kind)
+	var row := EventJuice.juice(kind)
 	if variant != "" and row.has(variant) and row[variant].has("fx"):
 		return row[variant]["fx"]
 	if variant != "" and row.has(variant) and not row[variant].is_empty():

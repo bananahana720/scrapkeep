@@ -1,6 +1,7 @@
 extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Juice := preload("res://src/presentation/juice.gd")
@@ -61,7 +62,7 @@ func run(t) -> void:
 	for kind in impact:
 		var row: Dictionary = impact[kind]
 		var weight: String = row["stop"]
-		var center := float(EventKinds.WEIGHT[weight]["shake"])
+		var center := float(EventJuice.WEIGHT[weight]["shake"])
 		var low := 0.0 if weight == "none" else center * 0.5
 		var high := center * 1.5
 		if float(row["shake"]) < low or float(row["shake"]) > high:

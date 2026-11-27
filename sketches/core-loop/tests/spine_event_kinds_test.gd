@@ -2,6 +2,7 @@ extends SceneTree
 
 const GameEvents := preload("res://src/core/game_events.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 
 # Every GameEvents signal has exactly one well-formed event_kinds row, and every row
 # names a real signal, so nothing a module publishes can reach the HUD, VFX or audio
@@ -56,8 +57,13 @@ func _initialize() -> void:
 	var toasts_without_words: Array[String] = []
 	for kind in names:
 		if EventKinds.priority(kind) >= 3 and EventKinds.row(kind).get("hud", "") == "" and EventKinds.row(kind).get("objective", "") == "" \
-				and not EventKinds.WEIGHTED.has(kind):
+				and not EventJuice.WEIGHTED.has(kind):
 			toasts_without_words.append(kind)
+	var event_kinds_source := FileAccess.get_file_as_string("res://src/core/event_kinds.gd")
+	var upward_refs: Array[String] = []
+	for forbidden in ["res://src/presentation/", "res://src/combat/"]:
+		if event_kinds_source.contains(forbidden):
+			upward_refs.append(forbidden)
 
 	var checks := [
 		["coverage", missing.is_empty(), "%d signals on the bus, %d without a row %s" % [names.size(), missing.size(), missing]],
@@ -67,6 +73,7 @@ func _initialize() -> void:
 		["contract rules", missing_rules.is_empty(), "%d of %d required rules missing from CONTRACTS.md %s" % [missing_rules.size(), rules.size(), missing_rules]],
 		["no optional", optional.is_empty(), "%d objectives use the word optional %s" % [optional.size(), optional]],
 		["codex categories", categories_ok and EventKinds.CODEX_CATEGORIES.size() == 5, "%d codex categories, each with a colour, label and shape" % EventKinds.CODEX_CATEGORIES.size()],
+		["no upward layer refs", upward_refs.is_empty(), "event_kinds.gd contains forbidden layer paths %s" % [upward_refs]],
 	]
 	for check in checks:
 		if not check[1]:

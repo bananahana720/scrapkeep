@@ -2,7 +2,7 @@ extends Control
 
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 
 
 const TYPES := ["kinetic", "frost", "arc"]
@@ -51,16 +51,16 @@ static func type_of_kind(kind: String) -> String:
 
 
 static func team_colours() -> Dictionary:
-	var colour: Color = EventKinds.juice("player_hit")["color"]
+	var colour: Color = EventJuice.juice("player_hit")["color"]
 	return {"monster": colour, "neutral": colour}
 
 
 static func effect_colour(type: String, team: String, crit := false) -> Color:
 	if team == "player":
 		if crit:
-			return EventKinds.juice("enemy_struck")["crit"]["color"]
+			return EventJuice.juice("enemy_struck")["crit"]["color"]
 		return PLAYER_COLOURS.get(type, Palette.COPPER)
-	return team_colours().get(team, EventKinds.juice("player_hit")["color"])
+	return team_colours().get(team, EventJuice.juice("player_hit")["color"])
 
 
 static func team_of_source(source: String) -> String:

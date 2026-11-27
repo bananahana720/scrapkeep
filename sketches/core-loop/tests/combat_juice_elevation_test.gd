@@ -3,7 +3,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Palette := preload("res://src/core/palette.gd")
 const DefenceBars := preload("res://src/core/defence_bars.gd")
-const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const KillMark := preload("res://src/presentation/kill_mark.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
@@ -53,7 +53,7 @@ func _check_damage_numbers() -> void:
 		and "heat" in DamageNumbers.all_types()
 		and DamageNumbers.effect_colour("heat", "player") == Color("ff7a29")
 		and DamageNumbers.effect_colour("heat", "player", true) == Palette.BRASS
-		and DamageNumbers.effect_colour("heat", "monster") == EventKinds.juice("player_hit")["color"])
+		and DamageNumbers.effect_colour("heat", "monster") == EventJuice.juice("player_hit")["color"])
 	_t.check("heat kind aliases resolve to heat element",
 		DamageNumbers.type_of_kind("heat") == "heat"
 		and DamageNumbers.type_of_kind("burn") == "heat"

@@ -3,6 +3,7 @@ extends Node
 const AppShell := preload("res://src/core/app_shell.gd")
 const Activities := preload("res://src/world/activities.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
@@ -415,7 +416,7 @@ static func _sound_ids() -> Array:
 
 static func _home_landing_ids() -> Array:
 	var ids: Array = []
-	var cap := int(EventKinds.juice("enemy_killed").get("chain_cap", 9))
+	var cap := int(EventJuice.juice("enemy_killed").get("chain_cap", 9))
 	for rung in range(STREAK_LAND_RUNG, cap + 1):
 		for id in _landing_ids(rung, HOME_TRIAD):
 			if not id in ids:

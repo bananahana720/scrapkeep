@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Music := preload("res://src/presentation/music_engine.gd")
 const Rows := preload("res://src/presentation/music_rows.gd")
-const EventKinds := preload("res://src/core/event_kinds.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const T := preload("res://tests/support/t.gd")
 const AceStub := preload("res://tests/support/ace_stub.gd")
@@ -110,7 +110,7 @@ func _multi_kill(game: Node, audio) -> void:
 func _streaks(game: Node, audio) -> void:
 	var engine: Music = audio.engine
 	var streak := ClockedStreak.new()
-	var row := EventKinds.juice("enemy_killed")
+	var row := EventJuice.juice("enemy_killed")
 	streak.window_ms = int(row["chain_ms"])
 	streak.cap = int(row["chain_cap"])
 	streak.now = func() -> int: return _clock_ms
