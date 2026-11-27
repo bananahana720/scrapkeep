@@ -91,7 +91,7 @@ static func prepare(game, class_index := 1) -> void:
 	game.process_mode = Node.PROCESS_MODE_DISABLED
 	game.player.reset_to(BALL)
 	game.player.body().global_position = BALL
-	game.player.active_body().freeze = true
+	game.player.body().freeze = true
 	game.camera.cam.get_parent().global_position = BALL
 	game.camera.cam.global_basis = Basis.IDENTITY
 	for group in ["enemy", "enemy_shot"]:

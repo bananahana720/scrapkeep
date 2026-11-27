@@ -243,10 +243,6 @@ func body() -> RigidBody3D:
 	return _rigid
 
 
-func active_body() -> RigidBody3D:
-	return _rigid
-
-
 func ball_position() -> Vector3:
 	return _rigid.global_position
 

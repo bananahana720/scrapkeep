@@ -209,7 +209,7 @@ func _grow(row: Dictionary, depth: int) -> String:
 func _park() -> void:
 	_game.player.reset_to(BALL)
 	_game.player.body().global_position = BALL
-	_game.player.active_body().freeze = true
+	_game.player.body().freeze = true
 
 
 func _spawn_target() -> Node3D:
