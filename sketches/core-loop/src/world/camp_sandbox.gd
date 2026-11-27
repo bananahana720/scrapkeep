@@ -11,7 +11,6 @@ const Chaser := preload("res://src/combat/chaser.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
 const Worlds := preload("res://src/core/worlds.gd")
-const PICKER := "res://src/ui/camp_enemy_picker.gd"
 
 
 const CAP := 4
@@ -85,7 +84,7 @@ func bind(camp_hub) -> void:
 
 
 func _picker():
-	return load(PICKER)
+	return load(hub.ENEMY_PICKER)
 
 
 static func kinds() -> Array:
