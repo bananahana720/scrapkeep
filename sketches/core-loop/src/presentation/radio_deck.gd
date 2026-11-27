@@ -192,8 +192,13 @@ func live() -> bool:
 	return game != null and game.flow != null and game.flow.in_play()
 
 
-func music_engine():
-	return _audio.engine if _audio != null else null
+func meter_level(layer: int) -> float:
+	var engine = _audio.engine if _audio != null else null
+	if engine == null:
+		return 0.0
+	var want := clampf(float(engine.layer_gain(layer)), 0.0, 1.0)
+	var beat: int = maxi(1, engine.beat_len())
+	return want * (0.75 + 0.25 * (1.0 - float(engine.clock % beat) / beat))
 
 
 func _stage() -> int:
