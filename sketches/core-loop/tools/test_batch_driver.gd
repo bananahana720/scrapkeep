@@ -78,6 +78,7 @@ const ExperimentalSetpieceCraft := preload("res://src/presentation/craft/experim
 const ExperimentalAudioBank := preload("res://src/presentation/experimental_audio_bank.gd")
 const LiveRunBridge := preload("res://src/experimental/live_run_bridge.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
+const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -239,6 +240,7 @@ func _reset() -> void:
 	ExperimentalAudioBank._reset()
 	LiveRunBridge._reset()
 	BossModel.reset_for_tests()
+	CampCraftMeshes.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

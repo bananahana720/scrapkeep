@@ -33,6 +33,8 @@ const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd"
 const DigFx := preload("res://src/presentation/dig_fx.gd")
 const ArenaBowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const BossModel := preload("res://src/boss/boss_model.gd")
+const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const WakingDress := preload("res://src/boss/waking_dress.gd")
 const MindDress := preload("res://src/boss/mind_dress.gd")
 const MindHand := preload("res://src/combat/mind_hand.gd")
@@ -463,6 +465,14 @@ func _run() -> void:
 	t.check("WorldLook holds a cached park fog before reset", not WorldLook._park_fog.is_empty())
 	driver._reset()
 	t.check("WorldLook.reset_for_tests clears cached park fog", WorldLook._park_fog.is_empty())
+
+	BossModel._scenes["__probe__"] = PackedScene.new()
+	BossModel._coloured[1] = StandardMaterial3D.new()
+	var _camp_probe := CampCraftMeshes.guide_pip()
+	t.check("BossModel holds cached scenes before reset", not BossModel._scenes.is_empty() and not BossModel._coloured.is_empty())
+	driver._reset()
+	t.check("BossModel.reset_for_tests clears _scenes and _coloured", BossModel._scenes.is_empty() and BossModel._coloured.is_empty())
+	t.check("CampCraftMeshes.reset_for_tests clears cached meshes", CampCraftMeshes._mesh_cache.is_empty())
 
 	quit(t.verdict())
 
