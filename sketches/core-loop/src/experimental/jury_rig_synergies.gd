@@ -42,6 +42,15 @@ const PART_RESOURCE_PATHS: Array[String] = [
 	"res://src/experimental/resources/parts/thermite_flail_spool.tres",
 ]
 
+const BATCH2_PART_RESOURCE_PATHS: Array[String] = [
+	"res://src/experimental/resources/parts/caustic_bore_auger.tres",
+	"res://src/experimental/resources/parts/choir_arc_lance.tres",
+	"res://src/experimental/resources/parts/tremor_pile_driver.tres",
+	"res://src/experimental/resources/parts/gale_shear_slipstream.tres",
+	"res://src/experimental/resources/parts/cryo_slurry_manifold.tres",
+	"res://src/experimental/resources/parts/overclock_capacitor_shunt.tres",
+]
+
 var env_tags: RefCounted = null
 var heat := 0.0
 var hull_cooked_total := 0.0
@@ -63,8 +72,23 @@ static func reset() -> void:
 
 
 static func catalogue() -> Array[Resource]:
+	return _load_paths(PART_RESOURCE_PATHS)
+
+
+static func catalogue_batch2() -> Array[Resource]:
+	return _load_paths(BATCH2_PART_RESOURCE_PATHS)
+
+
+static func all_catalogue() -> Array[Resource]:
+	var combined: Array[String] = []
+	combined.append_array(PART_RESOURCE_PATHS)
+	combined.append_array(BATCH2_PART_RESOURCE_PATHS)
+	return _load_paths(combined)
+
+
+static func _load_paths(paths: Array[String]) -> Array[Resource]:
 	var out: Array[Resource] = []
-	for path in PART_RESOURCE_PATHS:
+	for path in paths:
 		var res := ResourceLoader.load(path)
 		if res != null:
 			out.append(res)
@@ -79,9 +103,20 @@ static func load_part(part_id: StringName) -> Resource:
 
 
 static func validate_catalogue() -> Array[String]:
+	return _validate_paths(PART_RESOURCE_PATHS)
+
+
+static func validate_all_catalogues() -> Array[String]:
+	var combined: Array[String] = []
+	combined.append_array(PART_RESOURCE_PATHS)
+	combined.append_array(BATCH2_PART_RESOURCE_PATHS)
+	return _validate_paths(combined)
+
+
+static func _validate_paths(paths: Array[String]) -> Array[String]:
 	var problems: Array[String] = []
 	var seen_ids := {}
-	for path in PART_RESOURCE_PATHS:
+	for path in paths:
 		if not ResourceLoader.exists(path):
 			problems.append("missing part resource: %s" % path)
 			continue
@@ -382,6 +417,7 @@ func dispatch(trigger: StringName, context: Dictionary = {}) -> Dictionary:
 						"context": {
 							"origin": cur_ctx.get("origin", Vector3.ZERO),
 							"ball_speed_mps": float(cur_ctx.get("ball_speed_mps", CRUISE_MPS)),
+							"targets": cur_ctx.get("targets", []),
 							"source_reactions": outcome_reactions if not outcome_reactions.is_empty() else ctx_reactions,
 						},
 						"parent_part_id": part.id,
@@ -664,6 +700,170 @@ func _execute_part(part: Resource, ctx: Dictionary) -> Dictionary:
 			)
 			reactions.append_array(r_burn["reactions"])
 			meta["heft_bonus_tiers"] = heft_bonus_tiers
+
+		&"caustic_auger_spray":
+			var target_pos: Vector3 = ctx.get("target_pos", origin + dir * 5.0)
+			var spray_r: float = float(part.params.get("corrosive_radius_m", 6.8)) * scale
+			var auger_dmg: float = float(part.params.get("auger_damage", 22.0)) * scale
+			var ttl_s: float = float(part.params.get("ttl_s", 4.8))
+			if speed < STALL_SPEED_MPS:
+				heat_delta += float(part.params.get("stall_overpressure_heat", 8.0))
+			var bridged_sources: Array[String] = []
+			var primed := false
+			for z in env_tags.zones_at(target_pos, spray_r):
+				if part.consumes_tag(z["tag"]):
+					bridged_sources.append(String(z.get("source_id", "")))
+					primed = true
+			var r_wet: Dictionary = env_tags.apply_tag(
+				EnvTags.make_payload(EnvTags.TAG_SOAKED_CONDUCTIVE, target_pos, spray_r, src_base, scale, ttl_s)
+			)
+			reactions.append_array(r_wet["reactions"])
+			var r_slag: Dictionary = env_tags.apply_tag(
+				EnvTags.make_payload(EnvTags.TAG_SLAG_COATED, target_pos, spray_r * 0.85, _source_tag_for(part.id, "slag"), scale, ttl_s)
+			)
+			reactions.append_array(r_slag["reactions"])
+			var sorted_targets := _sort_targets_near(ctx.get("targets", []), target_pos, spray_r)
+			var hits_max := mini(2 + heat_chain_bonus(), sorted_targets.size())
+			var dmg_mult := 1.35 if primed else 1.0
+			for h in hits_max:
+				var t_entry: Dictionary = sorted_targets[h]
+				chain_hits.append({
+					"target_id": String(t_entry["id"]),
+					"pos": t_entry["pos"],
+					"damage": auger_dmg * dmg_mult * pow(0.88, float(h)),
+					"hop": h + 1,
+					"source": &"caustic_auger_spray",
+				})
+			meta["primed"] = primed
+			meta["bridged_sources"] = bridged_sources
+
+		&"harmonic_lance_beam":
+			var target_pos: Vector3 = ctx.get("target_pos", origin + dir * 6.5)
+			var min_speed: float = float(part.params.get("min_speed_mps", 10.0))
+			var fast_enough := speed >= min_speed
+			if not fast_enough:
+				heat_delta += float(part.params.get("slow_bleed_heat", 6.0))
+			var lance_r: float = float(part.params.get("lance_radius_m", 9.0)) * scale * (1.0 if fast_enough else 0.5)
+			var base_hops: int = int(part.params.get("base_hops", 3)) + heat_chain_bonus()
+			var lance_dmg: float = float(part.params.get("lance_damage", 20.0)) * scale
+			var ttl_s: float = float(part.params.get("ttl_s", 3.5))
+			var bridged_sources: Array[String] = []
+			var bridged := false
+			for z in env_tags.zones_at(target_pos, lance_r):
+				if part.consumes_tag(z["tag"]):
+					bridged_sources.append(String(z.get("source_id", "")))
+					bridged = true
+			var r_elec: Dictionary = env_tags.apply_tag(
+				EnvTags.make_payload(EnvTags.TAG_ELECTRIFIED, target_pos, lance_r * 0.8, src_base, scale, ttl_s)
+			)
+			reactions.append_array(r_elec["reactions"])
+			var sorted_targets := _sort_targets_near(ctx.get("targets", []), target_pos, lance_r)
+			var hops := mini(base_hops if bridged else 1, sorted_targets.size())
+			for h in hops:
+				var t_entry: Dictionary = sorted_targets[h]
+				chain_hits.append({
+					"target_id": String(t_entry["id"]),
+					"pos": t_entry["pos"],
+					"damage": lance_dmg * (1.3 if bridged else 1.0) * pow(0.86, float(h)),
+					"hop": h + 1,
+					"source": &"harmonic_lance_beam",
+				})
+			meta["bridged"] = bridged
+			meta["fast_enough"] = fast_enough
+			meta["hops_allowed"] = base_hops
+			meta["bridged_sources"] = bridged_sources
+
+		&"tremor_shock_slam":
+			var min_speed: float = float(part.params.get("min_speed_mps", 10.0))
+			var shock_r: float = float(part.params.get("shock_radius_m", 6.8)) * scale
+			var ttl_s: float = float(part.params.get("ttl_s", 4.5))
+			var bridged_sources: Array[String] = []
+			for z in env_tags.zones_at(origin, shock_r):
+				if part.consumes_tag(z["tag"]):
+					bridged_sources.append(String(z.get("source_id", "")))
+			var r_burn: Dictionary = env_tags.apply_tag(
+				EnvTags.make_payload(EnvTags.TAG_BURNING, origin, shock_r, src_base, scale, ttl_s)
+			)
+			reactions.append_array(r_burn["reactions"])
+			if speed >= min_speed:
+				heft_bonus_tiers = maxi(heft_bonus_tiers, int(part.params.get("heft_bonus_tiers", 1)))
+				heft_bonus_left_s = maxf(heft_bonus_left_s, 3.0)
+				var r_mag: Dictionary = env_tags.apply_tag(
+					EnvTags.make_payload(EnvTags.TAG_MAGNETIC, origin, shock_r * 0.9, _source_tag_for(part.id, "mag"), scale, ttl_s * 0.85)
+				)
+				reactions.append_array(r_mag["reactions"])
+				meta["tremor_full"] = true
+			else:
+				meta["tremor_full"] = false
+				meta["reason"] = "below_fast_roll"
+			meta["heft_bonus_tiers"] = heft_bonus_tiers
+			meta["bridged_sources"] = bridged_sources
+
+		&"gale_cryo_slipstream":
+			var segs: int = int(part.params.get("wake_segments", 3))
+			var shear_r: float = float(part.params.get("shear_radius_m", 5.8)) * scale
+			var ttl_s: float = float(part.params.get("ttl_s", 4.2))
+			var dash_len: float = float(ctx.get("dash_length_m", 8.0))
+			var bridged_sources: Array[String] = []
+			for i in segs:
+				var pt := origin + dir * (dash_len * float(i) / maxf(float(segs - 1), 1.0))
+				for z in env_tags.zones_at(pt, shear_r):
+					if part.consumes_tag(z["tag"]):
+						bridged_sources.append(String(z.get("source_id", "")))
+				var r_cryo: Dictionary = env_tags.apply_tag(
+					EnvTags.make_payload(EnvTags.TAG_COOLANT_BRITTLE, pt, shear_r, src_base, scale, ttl_s)
+				)
+				reactions.append_array(r_cryo["reactions"])
+				if i == segs - 1:
+					var r_mag: Dictionary = env_tags.apply_tag(
+						EnvTags.make_payload(EnvTags.TAG_MAGNETIC, pt, shear_r * 0.95, _source_tag_for(part.id, "shear"), scale, ttl_s * 0.9)
+					)
+					reactions.append_array(r_mag["reactions"])
+			meta["wake_segments"] = segs
+			meta["speed_bonus_mps"] = float(part.params.get("speed_bonus_mps", 2.2)) * scale
+			meta["bridged_sources"] = bridged_sources
+
+		&"slurry_quench_manifold":
+			var slurry_r: float = float(part.params.get("slurry_radius_m", 7.0)) * scale
+			var ttl_s: float = float(part.params.get("ttl_s", 5.0))
+			var bridged_sources: Array[String] = []
+			for z in env_tags.zones_at(origin, slurry_r):
+				if part.consumes_tag(z["tag"]):
+					bridged_sources.append(String(z.get("source_id", "")))
+			var r_cool: Dictionary = env_tags.apply_tag(
+				EnvTags.make_payload(EnvTags.TAG_COOLANT_BRITTLE, origin, slurry_r, src_base, scale, ttl_s)
+			)
+			reactions.append_array(r_cool["reactions"])
+			meta["quench_damage"] = float(part.params.get("quench_damage", 22.0)) * scale
+			meta["slurry_radius_m"] = slurry_r
+			meta["bridged_sources"] = bridged_sources
+
+		&"capacitor_shunt_discharge":
+			var shunt_r: float = float(part.params.get("shunt_radius_m", 6.5)) * scale
+			var ttl_s: float = float(part.params.get("ttl_s", 3.2))
+			var shunt_dmg: float = float(part.params.get("shunt_damage", 18.0)) * scale
+			var base_hops: int = int(part.params.get("base_hops", 2)) + heat_chain_bonus()
+			var bridged_sources: Array[String] = []
+			for z in env_tags.zones_at(origin, shunt_r):
+				if part.consumes_tag(z["tag"]):
+					bridged_sources.append(String(z.get("source_id", "")))
+			var r_elec: Dictionary = env_tags.apply_tag(
+				EnvTags.make_payload(EnvTags.TAG_ELECTRIFIED, origin, shunt_r, src_base, scale, ttl_s)
+			)
+			reactions.append_array(r_elec["reactions"])
+			var sorted_targets := _sort_targets_near(ctx.get("targets", []), origin, shunt_r * 1.35)
+			var hops := mini(base_hops, sorted_targets.size())
+			for h in hops:
+				var t_entry: Dictionary = sorted_targets[h]
+				chain_hits.append({
+					"target_id": String(t_entry["id"]),
+					"pos": t_entry["pos"],
+					"damage": shunt_dmg * pow(0.85, float(h)),
+					"hop": h + 1,
+					"source": &"capacitor_shunt_discharge",
+				})
+			meta["hops_allowed"] = base_hops
+			meta["bridged_sources"] = bridged_sources
 
 		_:
 			var radius_m: float = float(part.params.get("radius_m", 5.0)) * scale

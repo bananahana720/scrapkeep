@@ -1,0 +1,27 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"gale_shear_slipstream"
+display_name = "Gale-Shear Slipstream"
+maker = &"highdraft_roosts"
+slot = 1
+rarity = &"jury_rigged"
+trigger = &"on_dash"
+emits_tags = Array[StringName]([&"magnetic", &"coolant_brittle"])
+consumes_tags = Array[StringName]([&"burning", &"electrified"])
+heat_cost = 14.0
+effect_id = &"gale_cryo_slipstream"
+params = {
+"cool_scale_below_redline": 0.8,
+"shear_radius_m": 5.8,
+"speed_bonus_mps": 2.2,
+"ttl_s": 4.2,
+"wake_segments": 3
+}
+summary = "Dashing carves a chilled magnetic slipstream that pulls loose targets and shatters flame."
+trade_off = "Builds turbine heat on dash and slows passive cooling below redline."
+visual_tell = "Pale ice ribbon flanked by inward cobalt brackets trailing behind the gyrosphere."
+audio_tell = "Crosswind rush whistling into crisp frost tick."

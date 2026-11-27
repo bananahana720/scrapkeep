@@ -1,0 +1,53 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/resources/director/refurbished_elite_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"choir_resonator_pylon"
+display_name = "Choir Resonator Pylon"
+maker = &"old_works"
+requisition_code = "MIND-04R"
+chassis = &"foreman"
+credit_cost = 29.0
+min_tier = 2
+base_hull_hp = 120.0
+plate_count = 4
+plate_integrity = 35.0
+plate_weak_tags = [&"slag_coated", &"burning"]
+silhouette_cue = "Tall seamless petrol tuning pylon with glowing green resonance seams and suspended purple coil rings."
+movement_cadence = "Hovering glide to dead-still lock, 0.80 s harmonic chime before pulsing an electric ring."
+counterplay_cue = "Crack its four tuning plates with hot slag or high-speed rams to trigger an overload backfire and break pack unison."
+third_person_read_distance_m = 58.0
+telegraph_kind = &"instant"
+tell_s = 0.8
+execute_s = 0.7
+cooldown_s = 3.2
+stagger_on_brace_break_s = 2.5
+card_line = "Harmonic alignment is mandatory for all deck hands."
+ability_tag = &"electrified"
+secondary_tag = &"magnetic"
+ability_radius_m = 13.0
+ability_intensity = 1.1
+ability_ttl_s = 3.5
+shatter_tag = &"electrified"
+shatter_radius_m = 8.5
+shatter_ttl_s = 3.0
+backfires_on_strip = true
+pull_accel = 0.0
+slingshot_bonus = 1.0
+aura_pack_rest_scale = 0.8
+biome_weights = {
+&"compactor_canyon": 0.9,
+&"dig": 0.9,
+&"highdraft": 2.0,
+&"orbital_graveyard": 1.9,
+&"spillway": 0.8
+}
+bounty = {
+"cogs": 25,
+"cores": 1,
+"guaranteed_rarity": &"relic",
+"part_rolls": 2,
+"scrap": 145
+}

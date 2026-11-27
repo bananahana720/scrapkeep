@@ -1,0 +1,185 @@
+[gd_resource type="Resource" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/resources/director/adversity_director_config.gd" id="1"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_corrosive_bore_warden.tres" id="2"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_cryo_slurry_tanker.tres" id="3"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_over_plated_juggernaut.tres" id="4"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_slag_spill_exhaust.tres" id="5"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_magnetic_tow_winch.tres" id="6"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_overclocked_foreman_spec.tres" id="7"]
+
+[resource]
+script = ExtResource("1")
+profile_id = &"dig_default"
+default_biome_id = &"dig"
+default_cruise_mps = 14.0
+tier_interval_s = 42.0
+max_clock_tier = 5
+base_income_per_s = 2.65
+tier_income_step = 0.6
+stall_income_max_bonus = 1.05
+setpiece_spike_credits = 13.0
+stall_speed_ratio = 0.55
+fast_speed_ratio = 0.85
+camp_radius_m = 8.5
+stall_rise_per_s = 0.3
+stall_decay_per_s = 0.45
+flow_rise_per_s = 0.32
+flow_decay_per_s = 0.25
+alive_cap = 20
+credit_pool_cap = 50.0
+max_active_elites = 2
+elite_min_cooldown_s = 17.0
+hazard_cooldown_s = 15.0
+slag_hold_cap_s = 2.0
+enemy_roles = {
+&"boom_tender": {
+"cadence": "Pivots heavy excavation boom on fixed pit axle, 0.85 s lane sweep.",
+"silhouette": "Tall crane jib with brass counterweight over squat iron-oxide base.",
+"telegraph_kind": &"lane",
+"tell_s": 0.85
+},
+&"chaser": {
+"cadence": "9.0 m/s pursuit jog (under 14 m/s cruise), 0.65 s lunge cue along held line.",
+"silhouette": "Low forward-raked wedge with welded ram bumper and single red lamp.",
+"telegraph_kind": &"lane",
+"tell_s": 0.65
+},
+&"dispatcher": {
+"cadence": "Stationary shaft hopper; drops fresh chaser every 8.0 s behind striped ring.",
+"silhouette": "Tall vertical chimney chute with blinking brass requisition lantern.",
+"telegraph_kind": &"instant",
+"tell_s": 1.0
+},
+&"hooker": {
+"cadence": "Plants pit anchor, 0.75 s tether whine; high speed or boost snaps the hook.",
+"silhouette": "Wide-jaw grapple claw hoisted over tracked carriage.",
+"telegraph_kind": &"lane",
+"tell_s": 0.75
+},
+&"jolt_layer": {
+"cadence": "Drops grounded bore-pylon stakes on 0.80 s ring charge.",
+"silhouette": "Three-legged insulator frame with exposed copper spark crown.",
+"telegraph_kind": &"instant",
+"tell_s": 0.8
+},
+&"lobber": {
+"cadence": "Anchored pit mortar tripod; lobs bracketed arc 0.90 s ahead of straight roll.",
+"silhouette": "High-angle foundry mortar barrel with chunky recoil legs.",
+"telegraph_kind": &"projectile",
+"tell_s": 0.9
+},
+&"plated_brute": {
+"cadence": "Heavy pit march, 0.85 s overhead slam telegraph; opens hull after slam recovery.",
+"silhouette": "Broad slab-shouldered bulkhead frame with riveted brass apron.",
+"telegraph_kind": &"instant",
+"tell_s": 0.85
+},
+&"winch_drone": {
+"cadence": "Hovering cable spool orbit, 0.80 s wave pull on stalled targets.",
+"silhouette": "Suspended cable drum under twin rotor ducts.",
+"telegraph_kind": &"wave",
+"tell_s": 0.8
+}
+}
+fleet_packs = [{
+"cost": 8.0,
+"id": &"bore_scouts",
+"kinds": [&"chaser", &"chaser", &"lobber"],
+"min_tier": 1,
+"stall_bias": 1.1,
+"weight": 2.3
+}, {
+"cost": 10.5,
+"id": &"slurry_flank",
+"kinds": [&"chaser", &"hooker", &"boom_tender"],
+"min_tier": 1,
+"stall_bias": 1.85,
+"weight": 1.9
+}, {
+"cost": 12.5,
+"id": &"pit_cordon",
+"kinds": [&"lobber", &"jolt_layer", &"plated_brute"],
+"min_tier": 2,
+"stall_bias": 1.65,
+"weight": 1.7
+}, {
+"cost": 15.0,
+"id": &"crusher_audit",
+"kinds": [&"plated_brute", &"boom_tender", &"hooker"],
+"min_tier": 2,
+"stall_bias": 1.45,
+"weight": 1.4
+}, {
+"cost": 17.0,
+"id": &"excavator_sync",
+"kinds": [&"winch_drone", &"dispatcher", &"plated_brute"],
+"min_tier": 3,
+"stall_bias": 1.95,
+"weight": 1.2
+}]
+elite_pool = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
+hazard_configs = {
+&"corrosive_acid_squall": {
+"base_sightline_m": 340.0,
+"biome_weights": {
+&"compactor_canyon": 1.6,
+&"dig": 1.9,
+&"smelter_pit": 1.0
+},
+"credit_cost": 12.0,
+"display_name": "Corrosive Acid Squall",
+"id": &"corrosive_acid_squall",
+"min_sightline_m": 80.0,
+"min_tier": 1,
+"peak_s": 12.0,
+"primary_tag": &"soaked_conductive",
+"radius_m": 54.0,
+"ramp_s": 3.0,
+"recede_s": 4.0,
+"secondary_tag": &"coolant_brittle",
+"silhouette_boost_max": 1.65,
+"telegraph_contrast_max": 1.45,
+"warning_s": 4.5
+},
+&"rising_slag_tide": {
+"biome_weights": {
+&"compactor_canyon": 1.2,
+&"dig": 1.2,
+&"smelter_pit": 1.6
+},
+"credit_cost": 15.0,
+"display_name": "Rising Slag Tide",
+"hidden_below_m": 1.5,
+"id": &"rising_slag_tide",
+"min_tier": 2,
+"peak_depth_m": 2.4,
+"peak_s": 10.0,
+"primary_tag": &"slag_coated",
+"radius_m": 46.0,
+"ramp_s": 4.0,
+"recede_s": 5.0,
+"secondary_tag": &"burning",
+"warning_s": 4.5
+},
+&"subterranean_tremor": {
+"biome_weights": {
+&"compactor_canyon": 1.7,
+&"dig": 2.0,
+&"smelter_pit": 1.1
+},
+"credit_cost": 14.0,
+"display_name": "Subterranean Tremor",
+"id": &"subterranean_tremor",
+"min_tier": 1,
+"peak_s": 10.0,
+"primary_tag": &"slag_coated",
+"radius_m": 48.0,
+"ramp_s": 3.0,
+"recede_s": 4.0,
+"secondary_tag": &"burning",
+"tremor_lateral_accel": 11.5,
+"warning_s": 4.0
+}
+}
+foreman_tier_memos = ["Sub-level excavation variance logged. Re-routing haulage.", "Seismic knocking is within quarterly tolerance. Proceed.", "Acid drainage redirected across Pit Sectors 2 through 5.", "Deep bore rigs cleared for continuous shift pressure.", "Bedrock alignment complete. Please keep rolling off the floor."]

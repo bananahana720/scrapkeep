@@ -4,6 +4,8 @@ extends RefCounted
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 
 const DEFAULT_CATALOG_PATH := "res://src/experimental/resources/director/spillway_encounter_catalog.tres"
+const DIG_CATALOG_PATH := "res://src/experimental/resources/director/dig_encounter_catalog.tres"
+const HIGHDRAFT_CATALOG_PATH := "res://src/experimental/resources/director/highdraft_encounter_catalog.tres"
 const MIN_TELL_S := 0.6
 const BEACON_WAVE_GAP_S := 1.8
 const WALL_SPRING := 60.0
@@ -458,7 +460,7 @@ func _spawn_apex_construct(vol: Dictionary, spec: Dictionary, result: Dictionary
 	)
 	if apex != null:
 		apex.display_name = String(spec["apex_name"])
-		apex.card_line = "Salvage press override engaged. Clearing floor."
+		apex.card_line = String(spec.get("apex_card_line", "Salvage press override engaged. Clearing floor."))
 		if spec.has("apex_silhouette"):
 			apex.silhouette_cue = String(spec["apex_silhouette"])
 		if spec.has("apex_cadence"):

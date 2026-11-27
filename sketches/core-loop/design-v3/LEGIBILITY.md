@@ -367,7 +367,7 @@ This section binds every screen, card, tip, toast, caption, prompt and menu in e
 | W1 | Puffery used as filler: epic, ultimate, powerful, unleash, master, legendary |
 | W2 | Generic game filler where nothing needs saying: Welcome, Get ready, Good luck, Are you sure? |
 | W3 | A line that says how something feels and not what it does. The fix names the mechanism or the number |
-| W4 | A term a first-time player does not know and the game has not taught by that point; an internal system name shown to the player ("pilot", never "class") |
+| W4 | A term a first-time player does not know and the game has not taught by that point; an internal system name shown to the player ("pilot", never "class"), including any `counterplay_cue` or data-resource string (plain player language such as "freezing brittle brine", never raw tag tokens like `soaked_conductive` or `coolant_brittle`) |
 | W5 | Lists forced into three, "not just X but Y", "from X to Y", stacked adjectives, an adverb propping a weak verb |
 | W6 | Em dashes, mid-sentence colons, Title Case On Every Word, capitals for more than a short mark, decorative symbols, curly quotes, an ellipsis or exclamation mark used as energy |
 | W7 | One thing called two names across screens. Pick one name and use it everywhere |

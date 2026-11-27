@@ -869,17 +869,25 @@ func _percentiles(values: Array[float]) -> Dictionary:
 
 
 
-func _sync_nav_map(nav_map: RID, prev_iter: int, probe_point: Vector3) -> void:
-	for _i in 30:
+func _sync_nav_map(nav_map: RID, prev_iter: int, probe_point: Vector3, probe_end: Vector3 = Vector3.INF) -> void:
+	for _i in 45:
 		await process_frame
 		await physics_frame
 		NavigationServer3D.map_force_update(nav_map)
-		if NavigationServer3D.map_get_iteration_id(nav_map) > prev_iter \
+		var cur_iter := NavigationServer3D.map_get_iteration_id(nav_map)
+		if cur_iter > prev_iter \
+				and cur_iter > 0 \
 				and NavigationServer3D.map_get_regions(nav_map).size() >= 1 \
 				and NavigationServer3D.map_get_links(nav_map).size() >= 3:
 			var closest := NavigationServer3D.map_get_closest_point(nav_map, probe_point)
 			if closest.distance_to(probe_point) < 2.0:
-				return
+				if probe_end == Vector3.INF:
+					return
+				var probe_path: PackedVector3Array = NavigationServer3D.map_get_path(nav_map, probe_point, probe_end, true)
+				if probe_path.size() >= 2 \
+						and probe_path[0].distance_to(probe_point) < 2.0 \
+						and probe_path[probe_path.size() - 1].distance_to(probe_end) < 2.0:
+					return
 
 
 func _run_navigation_server_3d_proof() -> void:
@@ -887,21 +895,24 @@ func _run_navigation_server_3d_proof() -> void:
 	t.check("nav_chunk_loaded", packed != null, CHUNK_PATH)
 	if packed == null:
 		return
-	var chunk := packed.instantiate() as Node3D
 	var nav_root_map := root.get_world_3d().navigation_map
-	NavigationServer3D.map_force_update(nav_root_map)
+	for _flush in 2:
+		await process_frame
+		await physics_frame
+		NavigationServer3D.map_force_update(nav_root_map)
 	var prev_iter_0 := NavigationServer3D.map_get_iteration_id(nav_root_map)
+	var chunk := packed.instantiate() as Node3D
 	root.add_child(chunk)
 	var nav_map: RID = chunk.get_world_3d().navigation_map
-	await _sync_nav_map(nav_map, prev_iter_0, Vector3(0.0, 0.2, 0.0))
+	var p_t0_t1_start := Vector3(0.0, 0.2, 0.0)
+	var p_t0_t1_end := Vector3(-22.0, 7.6, 0.0)
+	await _sync_nav_map(nav_map, prev_iter_0, p_t0_t1_start, p_t0_t1_end)
 
 	var regions: Array[RID] = NavigationServer3D.map_get_regions(nav_map)
 	var links: Array[RID] = NavigationServer3D.map_get_links(nav_map)
 	t.check("nav3d_map_has_region_and_links", regions.size() >= 1 and links.size() >= 3,
 		"regions=%d links=%d" % [regions.size(), links.size()])
 
-	var p_t0_t1_start := Vector3(0.0, 0.2, 0.0)
-	var p_t0_t1_end := Vector3(-22.0, 7.6, 0.0)
 	var path_t0_t1: PackedVector3Array = NavigationServer3D.map_get_path(nav_map, p_t0_t1_start, p_t0_t1_end, true)
 	t.check("nav3d_tier0_to_tier1_west_path_valid",
 		path_t0_t1.size() >= 2
@@ -977,7 +988,7 @@ func _run_navigation_server_3d_proof() -> void:
 	var xf := chunk_moved.global_transform
 	var w_start := xf * p_t0_t2_start
 	var w_end := xf * p_t0_t2_end
-	await _sync_nav_map(nav_map_moved, prev_iter_1, w_start)
+	await _sync_nav_map(nav_map_moved, prev_iter_1, w_start, w_end)
 	var path_moved: PackedVector3Array = NavigationServer3D.map_get_path(nav_map_moved, w_start, w_end, true)
 	t.check("nav3d_translated_rotated_chunk_tier0_to_tier2",
 		path_moved.size() >= 4

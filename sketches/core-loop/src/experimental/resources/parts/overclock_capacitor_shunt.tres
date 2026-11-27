@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"overclock_capacitor_shunt"
+display_name = "Overclock Capacitor Shunt"
+maker = &"moss"
+slot = 2
+rarity = &"jury_rigged"
+trigger = &"on_tag_reaction"
+emits_tags = Array[StringName]([&"electrified"])
+consumes_tags = Array[StringName]([&"soaked_conductive", &"magnetic"])
+heat_cost = 12.0
+effect_id = &"capacitor_shunt_discharge"
+params = {
+"base_hops": 2,
+"shunt_damage": 18.0,
+"shunt_radius_m": 6.5,
+"ttl_s": 3.2
+}
+summary = "Nearby tag reactions fire a reactive live arc that leaps across wet or magnetic zones."
+trade_off = "Spikes shunt heat on every cascade, racing straight toward redline if you stall."
+visual_tell = "Jagged mint capacitor arc snapping off the shell whenever a combo pops."
+audio_tell = "Relay clack into twin high-voltage snap."
