@@ -2,6 +2,7 @@ class_name EnemyBossCraft
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
@@ -41,46 +42,6 @@ static func _slot_st(surfaces: Dictionary, order: Array[String], slot: String) -
 	return surfaces[slot]
 
 
-static func _uv_for(p: Vector3, n: Vector3, uv_scale: float) -> Vector2:
-	var an := Vector3(absf(n.x), absf(n.y), absf(n.z))
-	if an.y >= an.x and an.y >= an.z:
-		return Vector2(p.x, p.z) * uv_scale
-	if an.x >= an.z:
-		return Vector2(p.z, p.y) * uv_scale
-	return Vector2(p.x, p.y) * uv_scale
-
-
-static func _add_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, c0: Color, c1: Color, c2: Color, uv_scale := 0.5) -> void:
-	var nn := n.normalized()
-	if nn.length_squared() < 0.0001:
-		return
-	var p1 := b
-	var p2 := c
-	var col1 := c1
-	var col2 := c2
-	if (p1 - a).cross(p2 - a).length_squared() < 1e-12:
-		return
-	if (p1 - a).cross(p2 - a).dot(nn) > 0.0:
-		var tp := p1
-		p1 = p2
-		p2 = tp
-		var tc := col1
-		col1 = col2
-		col2 = tc
-	st.set_normal(nn)
-	st.set_uv(_uv_for(a, nn, uv_scale))
-	st.set_color(c0)
-	st.add_vertex(a)
-	st.set_normal(nn)
-	st.set_uv(_uv_for(p1, nn, uv_scale))
-	st.set_color(col1)
-	st.add_vertex(p1)
-	st.set_normal(nn)
-	st.set_uv(_uv_for(p2, nn, uv_scale))
-	st.set_color(col2)
-	st.add_vertex(p2)
-
-
 static func _add_tri_uv(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, uv0: Vector2, uv1: Vector2, uv2: Vector2, c0: Color, c1: Color, c2: Color) -> void:
 	var nn := n.normalized()
 	if nn.length_squared() < 0.0001:
@@ -118,8 +79,8 @@ static func _add_tri_uv(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: 
 
 
 static func _add_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: Vector3, col: Color, uv_scale := 0.5) -> void:
-	_add_tri(st, a, b, c, n, col, col, col, uv_scale)
-	_add_tri(st, a, c, d, n, col, col, col, uv_scale)
+	HeroSculptor.add_planar_tri(st, a, b, c, n, col, col, col, uv_scale)
+	HeroSculptor.add_planar_tri(st, a, c, d, n, col, col, col, uv_scale)
 
 
 static func _add_quad_uv(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: Vector3, uv0: Vector2, uv1: Vector2, uv2: Vector2, uv3: Vector2, c0: Color, c1: Color, c2: Color, c3: Color) -> void:
@@ -182,7 +143,7 @@ static func _bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel :=
 			for sz in [-1.0, 1.0]:
 				var n: Vector3 = (xf.basis * Vector3(sx, sy, sz)).normalized()
 				var col := c_edge if sy > 0.0 else c_bot
-				_add_tri(st,
+				HeroSculptor.add_planar_tri(st,
 					xf * (center + Vector3(sx * h.x, sy * yi, sz * zi)),
 					xf * (center + Vector3(sx * xi, sy * h.y, sz * zi)),
 					xf * (center + Vector3(sx * xi, sy * yi, sz * h.z)),
@@ -225,7 +186,7 @@ static func _bevel_cyl(st: SurfaceTool, center: Vector3, r_bot: float, r_top: fl
 			_add_quad(st, p00, p10, p11, p01, fn, col, uv_scale)
 		var top_r: float = rings[-1][1]
 		var top_y: float = rings[-1][0]
-		_add_tri(st,
+		HeroSculptor.add_planar_tri(st,
 			xf * (center + Vector3(0.0, top_y, 0.0)),
 			xf * (center + Vector3(c0 * top_r, top_y, s0 * top_r)),
 			xf * (center + Vector3(c1 * top_r, top_y, s1 * top_r)),
@@ -233,7 +194,7 @@ static func _bevel_cyl(st: SurfaceTool, center: Vector3, r_bot: float, r_top: fl
 		var bot_r: float = rings[0][1]
 		var bot_y: float = rings[0][0]
 		var bot_col := Color(c_cap.r, maxf(c_cap.g, 0.72), c_cap.b, 1.0)
-		_add_tri(st,
+		HeroSculptor.add_planar_tri(st,
 			xf * (center + Vector3(0.0, bot_y, 0.0)),
 			xf * (center + Vector3(c1 * bot_r, bot_y, s1 * bot_r)),
 			xf * (center + Vector3(c0 * bot_r, bot_y, s0 * bot_r)),
@@ -890,13 +851,13 @@ static func swarm_pool_disc(radius: float, thickness: float) -> ArrayMesh:
 			var bi0 := Vector3(c0 * r_inner, -hh, s0 * r_inner)
 			var bi1 := Vector3(c1 * r_inner, -hh, s1 * r_inner)
 			var radial := Vector3(cos((a0 + a1) * 0.5), 0.0, sin((a0 + a1) * 0.5))
-			_add_tri(st, top_c, ti0, ti1, Vector3.UP, CraftLookdev.encode_mask(0.08, 0.12, 0.35), CraftLookdev.encode_mask(0.14, 0.18, 0.65), CraftLookdev.encode_mask(0.14, 0.18, 0.65), 0.08)
+			HeroSculptor.add_planar_tri(st, top_c, ti0, ti1, Vector3.UP, CraftLookdev.encode_mask(0.08, 0.12, 0.35), CraftLookdev.encode_mask(0.14, 0.18, 0.65), CraftLookdev.encode_mask(0.14, 0.18, 0.65), 0.08)
 			var n_top_chamfer := (radial * 0.12 + Vector3.UP * lip).normalized()
 			_add_quad(st, ti0, ti1, to1, to0, n_top_chamfer, CraftLookdev.encode_mask(0.86, 0.14, 0.88), 0.16)
 			_add_quad(st, to0, to1, bo1, bo0, radial, CraftLookdev.encode_mask(0.24, 0.64, 0.25), 0.16)
 			var n_bot_chamfer := (radial * 0.10 + Vector3.DOWN * lip).normalized()
 			_add_quad(st, bo0, bo1, bi1, bi0, n_bot_chamfer, CraftLookdev.encode_mask(0.14, 0.86, 0.0), 0.16)
-			_add_tri(st, bot_c, bi1, bi0, Vector3.DOWN, CraftLookdev.encode_mask(0.10, 0.90, 0.0), CraftLookdev.encode_mask(0.10, 0.90, 0.0), CraftLookdev.encode_mask(0.10, 0.90, 0.0), 0.08)
+			HeroSculptor.add_planar_tri(st, bot_c, bi1, bi0, Vector3.DOWN, CraftLookdev.encode_mask(0.10, 0.90, 0.0), CraftLookdev.encode_mask(0.10, 0.90, 0.0), CraftLookdev.encode_mask(0.10, 0.90, 0.0), 0.08)
 	)
 
 
@@ -966,7 +927,7 @@ static func waking_arena_pad(radius: float, thickness: float) -> ArrayMesh:
 			var m1 := Vector3(c1 * radius, y_mid, s1 * radius)
 			var b0 := Vector3(c0 * r_skirt, -hh, s0 * r_skirt)
 			var b1 := Vector3(c1 * r_skirt, -hh, s1 * r_skirt)
-			_add_tri(st, top_c, t0, t1, Vector3.UP, CraftLookdev.encode_mask(0.06, 0.10, 0.0), CraftLookdev.encode_mask(0.08, 0.14, 0.0), CraftLookdev.encode_mask(0.08, 0.14, 0.0), 0.12)
+			HeroSculptor.add_planar_tri(st, top_c, t0, t1, Vector3.UP, CraftLookdev.encode_mask(0.06, 0.10, 0.0), CraftLookdev.encode_mask(0.08, 0.14, 0.0), CraftLookdev.encode_mask(0.08, 0.14, 0.0), 0.12)
 			var n_chamfer := (radial + Vector3.UP).normalized()
 			_add_quad(st, t0, t1, e1, e0, n_chamfer, CraftLookdev.encode_mask(0.86, 0.14, 0.0), 0.25)
 			_add_quad(st, e0, e1, m1, m0, radial, CraftLookdev.encode_mask(0.16, 0.42, 0.0), 0.25)
@@ -974,7 +935,7 @@ static func waking_arena_pad(radius: float, thickness: float) -> ArrayMesh:
 			var dr := radius - r_skirt
 			var n_skirt := (radial * dy + Vector3.DOWN * dr).normalized()
 			_add_quad(st, m0, m1, b1, b0, n_skirt, CraftLookdev.encode_mask(0.20, 0.72, 0.0), 0.25)
-			_add_tri(st, bot_c, b1, b0, Vector3.DOWN, CraftLookdev.encode_mask(0.10, 0.90, 0.0), CraftLookdev.encode_mask(0.10, 0.90, 0.0), CraftLookdev.encode_mask(0.10, 0.90, 0.0), 0.12)
+			HeroSculptor.add_planar_tri(st, bot_c, b1, b0, Vector3.DOWN, CraftLookdev.encode_mask(0.10, 0.90, 0.0), CraftLookdev.encode_mask(0.10, 0.90, 0.0), CraftLookdev.encode_mask(0.10, 0.90, 0.0), 0.12)
 	)
 
 

@@ -171,6 +171,46 @@ static func create_canvas() -> KitbashCanvas:
 	return KitbashCanvas.new()
 
 
+static func planar_uv(p: Vector3, n: Vector3, uv_scale: float) -> Vector2:
+	var an := Vector3(absf(n.x), absf(n.y), absf(n.z))
+	if an.y >= an.x and an.y >= an.z:
+		return Vector2(p.x, p.z) * uv_scale
+	if an.x >= an.z:
+		return Vector2(p.z, p.y) * uv_scale
+	return Vector2(p.x, p.y) * uv_scale
+
+
+static func add_planar_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, c0: Color, c1: Color, c2: Color, uv_scale: float) -> void:
+	var nn := n.normalized()
+	if nn.length_squared() < 0.0001:
+		return
+	var p1 := b
+	var p2 := c
+	var col1 := c1
+	var col2 := c2
+	if (p1 - a).cross(p2 - a).length_squared() < 1e-12:
+		return
+	if (p1 - a).cross(p2 - a).dot(nn) > 0.0:
+		var tp := p1
+		p1 = p2
+		p2 = tp
+		var tc := col1
+		col1 = col2
+		col2 = tc
+	st.set_normal(nn)
+	st.set_uv(planar_uv(a, nn, uv_scale))
+	st.set_color(c0)
+	st.add_vertex(a)
+	st.set_normal(nn)
+	st.set_uv(planar_uv(p1, nn, uv_scale))
+	st.set_color(col1)
+	st.add_vertex(p1)
+	st.set_normal(nn)
+	st.set_uv(planar_uv(p2, nn, uv_scale))
+	st.set_color(col2)
+	st.add_vertex(p2)
+
+
 
 static func _frame_from_dir(dir: Vector3) -> Basis:
 	var y_axis := dir.normalized()

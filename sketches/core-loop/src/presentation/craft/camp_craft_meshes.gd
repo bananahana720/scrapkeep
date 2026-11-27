@@ -2,6 +2,7 @@ class_name CampCraftMeshes
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
@@ -18,49 +19,9 @@ static func _add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, beve
 	add_bevel_box(st, center, size, bevel, uv_scale, xf, c_flat, c_edge, c_bot)
 
 
-static func _uv_for(p: Vector3, n: Vector3, uv_scale: float) -> Vector2:
-	var an := Vector3(absf(n.x), absf(n.y), absf(n.z))
-	if an.y >= an.x and an.y >= an.z:
-		return Vector2(p.x, p.z) * uv_scale
-	if an.x >= an.z:
-		return Vector2(p.z, p.y) * uv_scale
-	return Vector2(p.x, p.y) * uv_scale
-
-
-static func _add_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, c0: Color, c1: Color, c2: Color, uv_scale := 0.25) -> void:
-	var nn := n.normalized()
-	if nn.length_squared() < 0.0001:
-		return
-	var p1 := b
-	var p2 := c
-	var col1 := c1
-	var col2 := c2
-	if (p1 - a).cross(p2 - a).length_squared() < 1e-12:
-		return
-	if (p1 - a).cross(p2 - a).dot(nn) > 0.0:
-		var tp := p1
-		p1 = p2
-		p2 = tp
-		var tc := col1
-		col1 = col2
-		col2 = tc
-	st.set_normal(nn)
-	st.set_uv(_uv_for(a, nn, uv_scale))
-	st.set_color(c0)
-	st.add_vertex(a)
-	st.set_normal(nn)
-	st.set_uv(_uv_for(p1, nn, uv_scale))
-	st.set_color(col1)
-	st.add_vertex(p1)
-	st.set_normal(nn)
-	st.set_uv(_uv_for(p2, nn, uv_scale))
-	st.set_color(col2)
-	st.add_vertex(p2)
-
-
 static func _add_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: Vector3, c0: Color, c1: Color, c2: Color, c3: Color, uv_scale := 0.25) -> void:
-	_add_tri(st, a, b, c, n, c0, c1, c2, uv_scale)
-	_add_tri(st, a, c, d, n, c0, c2, c3, uv_scale)
+	HeroSculptor.add_planar_tri(st, a, b, c, n, c0, c1, c2, uv_scale)
+	HeroSculptor.add_planar_tri(st, a, c, d, n, c0, c2, c3, uv_scale)
 
 
 static func add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel: float, uv_scale: float, xf: Transform3D, c_flat: Color, c_edge: Color, c_bot: Color) -> void:
@@ -101,7 +62,7 @@ static func add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel
 			for sz: float in [-1.0, 1.0]:
 				var cn: Vector3 = nrm.call(Vector3(sx, sy, sz))
 				var col := c_edge if sy > 0.0 else c_bot
-				_add_tri(
+				HeroSculptor.add_planar_tri(
 					st,
 					pt.call(sx * h.x, sy * yi, sz * zi),
 					pt.call(sx * xi, sy * h.y, sz * zi),
@@ -145,9 +106,9 @@ static func _add_lathe(st: SurfaceTool, profile: Array, segments: int, uv_scale:
 				out_n = Vector3.UP if y1 >= y0 else Vector3.DOWN
 			out_n = (xf.basis * out_n).normalized()
 			if rad0 < 1e-5 and rad1 >= 1e-5:
-				_add_tri(st, v00, v01, v11, out_n, col0, col1, col1, uv_scale)
+				HeroSculptor.add_planar_tri(st, v00, v01, v11, out_n, col0, col1, col1, uv_scale)
 			elif rad1 < 1e-5 and rad0 >= 1e-5:
-				_add_tri(st, v00, v01, v10, out_n, col0, col1, col0, uv_scale)
+				HeroSculptor.add_planar_tri(st, v00, v01, v10, out_n, col0, col1, col0, uv_scale)
 			elif rad0 >= 1e-5 and rad1 >= 1e-5:
 				_add_quad(st, v00, v10, v11, v01, out_n, col0, col0, col1, col1, uv_scale)
 

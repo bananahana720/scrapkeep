@@ -3,6 +3,7 @@ extends RefCounted
 
 
 const Palette := preload("res://src/core/palette.gd")
+const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 
 static var _mesh_cache: Dictionary = {}
 static var _mat_cache: Dictionary = {}
@@ -55,15 +56,6 @@ static func _cached(key: String, builder: Callable) -> ArrayMesh:
 	return mesh
 
 
-static func _uv_for(p: Vector3, n: Vector3, uv_scale: float) -> Vector2:
-	var an := Vector3(absf(n.x), absf(n.y), absf(n.z))
-	if an.y >= an.x and an.y >= an.z:
-		return Vector2(p.x, p.z) * uv_scale
-	if an.x >= an.z:
-		return Vector2(p.z, p.y) * uv_scale
-	return Vector2(p.x, p.y) * uv_scale
-
-
 static func _add_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, uv_scale := 0.5) -> void:
 	var nn := n.normalized()
 	if nn.length_squared() < 0.0001:
@@ -76,7 +68,7 @@ static func _add_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vec
 		p2 = tmp
 	for v in [a, p1, p2]:
 		st.set_normal(nn)
-		st.set_uv(_uv_for(v, nn, uv_scale))
+		st.set_uv(HeroSculptor.planar_uv(v, nn, uv_scale))
 		st.add_vertex(v)
 
 
@@ -777,7 +769,7 @@ static func _add_tri_col(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n:
 	for v in [a, p1, p2]:
 		st.set_color(col)
 		st.set_normal(nn)
-		st.set_uv(_uv_for(v, nn, uv_scale))
+		st.set_uv(HeroSculptor.planar_uv(v, nn, uv_scale))
 		st.add_vertex(v)
 
 
