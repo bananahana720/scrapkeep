@@ -133,12 +133,29 @@ func refresh(met: Array, live: int, cap := Sandbox.CAP) -> void:
 	_count.text = "Met %d of %d" % [known, _rows.size()]
 	_live.set_yard(live, cap)
 	clear_button.disabled = live <= 0
+	_link_focus()
 	var focused := focused_kind()
 	if focused != "":
 		_show_note(focused)
 	else:
 		_note.text = NOTE_OPEN
 		_note.add_theme_color_override("font_color", Palette.SAND)
+
+
+func _link_focus() -> void:
+	clear_button.focus_mode = Control.FOCUS_NONE if clear_button.disabled else Control.FOCUS_ALL
+	var below: Control = back_button if clear_button.disabled else clear_button
+	var rows: Array = _rows.values()
+	if rows.is_empty():
+		return
+	for i in rows.size():
+		var row: Control = rows[i]
+		row.focus_neighbor_bottom = row.get_path_to(below) if i + COLUMNS >= rows.size() else NodePath()
+	var above: Control = rows[(rows.size() - 1) / COLUMNS * COLUMNS]
+	for button in [clear_button, back_button]:
+		button.focus_neighbor_top = button.get_path_to(above)
+	clear_button.focus_neighbor_right = clear_button.get_path_to(back_button)
+	back_button.focus_neighbor_left = NodePath() if clear_button.disabled else back_button.get_path_to(clear_button)
 
 
 func focus_first() -> void:

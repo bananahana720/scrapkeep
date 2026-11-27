@@ -38,7 +38,6 @@ contraptions.gd	TorusMesh	Contraptions/forecourt_geyser/MeshInstance3D	code	-	la
 contraptions.gd	TorusMesh	Contraptions/pool_geyser/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
 contraptions.gd	TorusMesh	Stage/Contraptions/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
 contraptions.gd	TorusMesh	Contraptions/*/*_pay_ring	code	-	sluice valve pay ring (contraptions.gd _build_sluice_valve): a mark round the wheel that fills with the pay gauge
-customize_page.gd	CylinderMesh	LivePreview/SubViewport/MeshInstance3D	code	-	preview turntable in a menu
 element_field.gd	TorusMesh	Node3D/ElementField/MeshInstance3D	code	-	element field ring
 enemy_motion.gd	BoxMesh	Node3D/DeathScatter/MeshInstance3D	code	-	death scatter, an effect
 enemy_motion.gd	BoxMesh	Node3D/Node3D/MeshInstance3D	code	-	death debris piece

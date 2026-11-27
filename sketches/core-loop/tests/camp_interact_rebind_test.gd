@@ -45,6 +45,29 @@ func _set_interact_events(events: Array) -> void:
 		InputMap.action_add_event("cl_interact", ev)
 
 
+func _send(event: InputEvent) -> void:
+	for down in [true, false]:
+		var sent: InputEvent = event.duplicate()
+		sent.pressed = down
+		Input.parse_input_event(sent)
+		Input.flush_buffered_events()
+
+
+func _pad(button: JoyButton) -> InputEventJoypadButton:
+	var event := InputEventJoypadButton.new()
+	event.device = 0
+	event.button_index = button
+	return event
+
+
+func _mouse(button: MouseButton) -> InputEventMouseButton:
+	var event := InputEventMouseButton.new()
+	event.button_index = button
+	event.position = Vector2(800, 450)
+	event.global_position = event.position
+	return event
+
+
 func _run() -> void:
 	while _game.flow == null:
 		await process_frame
@@ -80,6 +103,25 @@ func _run() -> void:
 	_t.check("old E no longer triggers camp_trial after rebinding to G", not _hub.press_key(KEY_E) and trial.run.state == trial.State.IDLE)
 	_t.check("rebound G triggers camp_trial", _hub.press_key(KEY_G) and trial.run.state == trial.State.ARMED)
 	trial.abort()
+	await _frames(2)
+
+	Glyphs.device = "pad"
+	_send(_pad(JOY_BUTTON_X))
+	await _frames(1)
+	_t.eq("a pad button Interact is not bound to leaves camp_trial idle", trial.run.state, trial.State.IDLE)
+	_send(_pad(JOY_BUTTON_Y))
+	await _frames(1)
+	_t.eq("pad Y sent through the engine arms camp_trial on the drawn pad_y prompt", trial.run.state, trial.State.ARMED)
+	trial.abort()
+	await _frames(2)
+	Glyphs.device = "kbm"
+	var key_g_press := InputEventKey.new()
+	key_g_press.physical_keycode = KEY_G
+	_send(key_g_press)
+	await _frames(1)
+	_t.eq("rebound G sent through the engine arms camp_trial", trial.run.state, trial.State.ARMED)
+	trial.abort()
+	await _frames(2)
 
 	Glyphs.device = "pad"
 	await _frames(2)
@@ -96,6 +138,11 @@ func _run() -> void:
 	_set_interact_events([mmb, pad_y])
 	await _frames(2)
 	_t.eq("middle mouse Interact binding draws key_mmb instead of key_e", Glyphs.of("interact"), "key_mmb")
+	_send(_mouse(MOUSE_BUTTON_MIDDLE))
+	await _frames(1)
+	_t.eq("middle mouse sent through the engine arms camp_trial when Interact is bound to it", trial.run.state, trial.State.ARMED)
+	trial.abort()
+	await _frames(2)
 	var mb4 := InputEventMouseButton.new()
 	mb4.button_index = MOUSE_BUTTON_XBUTTON1
 	_set_interact_events([mb4, pad_y])

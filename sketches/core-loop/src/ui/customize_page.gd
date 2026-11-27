@@ -14,6 +14,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const WorldGrade := preload("res://src/presentation/world_grade.gd")
+const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 
 
 signal back_requested
@@ -351,15 +352,9 @@ func _build_preview() -> void:
 	_viewport.add_child(world)
 	ClassPreview.preview_lights(_viewport, Palette.SAND, false)
 	var bench := MeshInstance3D.new()
-	var drum := CylinderMesh.new()
-	drum.top_radius = 1.5
-	drum.bottom_radius = 1.6
-	drum.height = 0.3
-	bench.mesh = drum
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Palette.RUST.darkened(0.35)
-	wood.roughness = 0.9
-	drum.material = wood
+	bench.name = "TurntablePedestal"
+	bench.mesh = CampCraftMeshes.turntable_pedestal_mesh(1.5, 1.6, 0.3)
+	bench.material_override = CampCraftMeshes.turntable_material()
 	bench.position = Vector3(0.0, -1.15, 0.0)
 	_viewport.add_child(bench)
 	_pivot = Node3D.new()

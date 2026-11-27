@@ -673,7 +673,7 @@ func _pose() -> void:
 		var ref := Vector3.RIGHT if absf(y_axis.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
 		var x_axis := y_axis.cross(ref).normalized()
 		var z_axis := x_axis.cross(y_axis).normalized()
-		_pod.global_basis = Basis(x_axis, y_axis, z_axis)
+		_pod.global_basis = Basis(x_axis, y_axis, z_axis).scaled(_pod.scale)
 
 
 func _exit_tree() -> void:

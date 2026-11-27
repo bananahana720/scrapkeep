@@ -7,7 +7,7 @@ import { cleanHead, root } from "./clean-head.mjs";
 import { runAlone } from "./solo-run.mjs";
 
 export const TEST = "prim_census_test";
-export const PINNED_SURFACES = 69;
+export const PINNED_SURFACES = 68;
 export const PLANT_ENV = { PRIM_PLANT: "dam_box" };
 export const PLANT_NAME = "PlantedStandIn";
 export const PIN = "sketches/core-loop/tools/prim_census_pin.tsv";
