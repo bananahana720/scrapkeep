@@ -76,6 +76,7 @@ const CraftPropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const ExperimentalSetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const ExperimentalAudioBank := preload("res://src/presentation/experimental_audio_bank.gd")
+const LiveRunBridge := preload("res://src/experimental/live_run_bridge.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -235,6 +236,7 @@ func _reset() -> void:
 	EnemyBossCraft.reset_for_tests()
 	ExperimentalSetpieceCraft.reset_for_tests()
 	ExperimentalAudioBank._reset()
+	LiveRunBridge._reset()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"
