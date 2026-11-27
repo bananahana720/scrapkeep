@@ -43,7 +43,7 @@ import {
 } from "./sketch-smoke.mjs";
 import { readLedger } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
-import { resolveGodotBinary, scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
+import { resolveGodotBinary, userDataEnv, withScratchGodotEnv } from "./godot-home.mjs";
 import { shuffleFiles } from "./ci/node-tests.mjs";
 
 const binary = resolveGodotBinary();
@@ -886,20 +886,21 @@ export function usableBaseRun(rerun, baseRun) {
 }
 
 function importAsync(args) {
-  return new Promise((resolve) => {
-    const child = spawn(binary, [...args, "--import"], {
-      stdio: "ignore",
-      env: {
-        ...process.env,
-        ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))),
-      },
-    });
-    const timer = setTimeout(() => child.kill("SIGKILL"), 180_000);
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve(code);
-    });
-  });
+  return withScratchGodotEnv(
+    (env) =>
+      new Promise((resolve) => {
+        const child = spawn(binary, [...args, "--import"], {
+          stdio: "ignore",
+          env,
+        });
+        const timer = setTimeout(() => child.kill("SIGKILL"), 180_000);
+        child.on("close", (code) => {
+          clearTimeout(timer);
+          resolve(code);
+        });
+      }),
+    { prefix: "sketch-fast-", homeOnly: true },
+  );
 }
 
 function sourceOf(sketchDir, test) {
@@ -1318,13 +1319,10 @@ async function main() {
       base,
       async (job) => {
         const t = Date.now();
-        const result = await spawnCollect(binary, job.args, {
-          timeoutMs: 180_000,
-          env: {
-            ...process.env,
-            ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))),
-          },
-        });
+        const result = await withScratchGodotEnv(
+          (env) => spawnCollect(binary, job.args, { timeoutMs: 180_000, env }),
+          { prefix: "sketch-fast-", homeOnly: true },
+        );
         return {
           label: job.label,
           exit: result.status,
@@ -1347,10 +1345,10 @@ async function main() {
     writeImportStamp(root, SKETCH, { godot: godotIdentity(binary) });
   }
   if (!namedMode) {
-    const boot = await spawnCollect(binary, [...base, "--quit-after", "300"], {
-      timeoutMs: 180_000,
-      env: { ...process.env, ...userDataEnv(mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"))) },
-    });
+    const boot = await withScratchGodotEnv(
+      (env) => spawnCollect(binary, [...base, "--quit-after", "300"], { timeoutMs: 180_000, env }),
+      { prefix: "sketch-fast-", dirs: null },
+    );
     const bootVerdict = judge({ status: boot.status, output: boot.output });
     if (!stage("boot", bootVerdict.ok, { note: bootVerdict.reason ?? "300 frames" })) finish();
   }

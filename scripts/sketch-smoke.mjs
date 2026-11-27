@@ -18,7 +18,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
-import { resolveGodotBinary, scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
+import { resolveGodotBinary, userDataEnv, withScratchGodotEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const TIMINGS_FILE = path.join(root, "scripts", "sketch-fast.timings.json");
@@ -966,11 +966,9 @@ export function spawnCollect(command, args, { env = process.env, timeoutMs = TIM
 
 async function runImport(job) {
   const started = Date.now();
-  const result = await spawnCollect(binary, job.args, {
-    env: {
-      ...process.env,
-      ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "sketch-smoke-"))),
-    },
+  const result = await withScratchGodotEnv((env) => spawnCollect(binary, job.args, { env }), {
+    prefix: "sketch-smoke-",
+    homeOnly: true,
   });
   return {
     ...report(job, result.status, result.output, Date.now() - started, result.signal),

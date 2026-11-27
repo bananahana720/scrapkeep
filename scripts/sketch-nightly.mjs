@@ -12,7 +12,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveGodotBinary } from "./godot-home.mjs";
+import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import * as smoke from "./sketch-smoke.mjs";
 import {
   BANDS,
@@ -284,7 +284,6 @@ export function runProcess(step, timeoutMs) {
   return new Promise((resolve) => {
     const launch = commandFor(step);
     const state = path.join(step.state_dir, "state");
-    const env = { ...process.env };
     if (step.kind === "export") {
       const realData = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
       const godotData = path.join(state, "data", "godot");
@@ -293,8 +292,7 @@ export function runProcess(step, timeoutMs) {
       if (!existsSync(templates))
         symlinkSync(path.join(realData, "godot/export_templates"), templates);
     }
-    for (const kind of ["DATA", "CONFIG", "CACHE"])
-      env[`XDG_${kind}_HOME`] = path.join(state, kind.toLowerCase());
+    const env = scratchGodotEnv(state, { baseEnv: process.env });
     const child = spawn(launch.command, launch.args, {
       cwd: root,
       env,

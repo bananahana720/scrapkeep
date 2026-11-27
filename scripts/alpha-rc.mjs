@@ -14,6 +14,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { scratchGodotEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;
@@ -294,16 +295,16 @@ export function judgeRedteam(findings, head, previous) {
 
 export function freshProfile() {
   const home = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-rc-home-"));
-  const env = { HOME: home };
-  for (const [key, dir] of [
-    ["XDG_CONFIG_HOME", ".config"],
-    ["XDG_DATA_HOME", ".local/share"],
-    ["XDG_CACHE_HOME", ".cache"],
-    ["XDG_STATE_HOME", ".local/state"],
-  ]) {
-    env[key] = path.join(home, dir);
-    mkdirSync(env[key], { recursive: true });
-  }
+  const env = scratchGodotEnv(home, {
+    dirs: {
+      config: ".config",
+      data: ".local/share",
+      cache: ".cache",
+      state: ".local/state",
+    },
+    forceHome: true,
+    create: true,
+  });
   return { home, env };
 }
 

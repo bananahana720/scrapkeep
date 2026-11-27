@@ -3,7 +3,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
 import {
   HITCH_MS,
   PILOTS,
@@ -140,15 +140,9 @@ function botTask(job) {
     const dir = path.join(jobsDir, job.id);
     const out = path.join(dir, "out");
     const state = path.join(dir, "state");
-    for (const d of ["data", "config", "cache"])
-      mkdirSync(path.join(state, d), { recursive: true });
     log(`start ${job.id}${job.stages ? " (stages " + job.stages + ")" : ""}`);
     const p = await runProcess(botArgs(job, out), {
-      env: {
-        XDG_DATA_HOME: path.join(state, "data"),
-        XDG_CONFIG_HOME: path.join(state, "config"),
-        XDG_CACHE_HOME: path.join(state, "cache"),
-      },
+      env: scratchGodotEnv(state, { create: true }),
       logFile: path.join(dir, "log.txt"),
     });
     const result = readBotJob(job, {
@@ -314,15 +308,9 @@ async function hitchTriage(results) {
       args: [...r.job.args.filter((a) => !a.startsWith("--ticks=")), "--ticks=" + ticks, ...extra],
     };
     const state = path.join(dir, "state");
-    for (const d of ["data", "config", "cache"])
-      mkdirSync(path.join(state, d), { recursive: true });
     log(`hitch triage ${name}: ${r.job.id} to tick ${ticks}`);
     await runProcess(botArgs(job, path.join(dir, "out")), {
-      env: {
-        XDG_DATA_HOME: path.join(state, "data"),
-        XDG_CONFIG_HOME: path.join(state, "config"),
-        XDG_CACHE_HOME: path.join(state, "cache"),
-      },
+      env: scratchGodotEnv(state, { create: true }),
       logFile: path.join(dir, "log.txt"),
       timeout: 15 * 60_000,
     });

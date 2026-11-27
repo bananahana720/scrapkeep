@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -7,9 +8,18 @@ import {
   GODOT_VERSION,
   requireGodotBinary,
   resolveGodotBinary,
+  scratchGodotEnv,
   scratchHomeEnv,
   userDataEnv,
+  withScratchGodotEnv,
 } from "./godot-home.mjs";
+import { freshProfile } from "./alpha-rc.mjs";
+import { stateEnv } from "./challenge/proc.mjs";
+import { REPO_ROOT as DEV_REPO_ROOT, scratchEnv as devScratchEnv } from "./dev-console.mjs";
+import { selfPlayXdg } from "./frametime-check.mjs";
+import { scratchEnv as displayScratchEnv } from "./gate/display-run.mjs";
+import { stepEnv as pcStepEnv } from "./gate/pc.mjs";
+import { isolatedXdgEnv, winProofEnv } from "./sketch-export.mjs";
 
 const CLOUD_BIN = `/opt/scrapkeep-toolchain/Godot_v${GODOT_VERSION}-stable_linux.x86_64`;
 const PC_HOME = "/home/andrew";
@@ -46,6 +56,13 @@ const GODOT_BIN_ALLOWLIST = {
 };
 const DIRECT_GODOT_BIN_READ =
   /\.GODOT_BIN\b|\[\s*["'`]GODOT_BIN["'`]\s*\]|\{[^{}]*\bGODOT_BIN\b[^{}]*\}\s*=(?![=>])/;
+
+const XDG_WRITE_ALLOWLIST = {
+  "scripts/sketch-appimage.mjs": "passes real Linux desktop install target to install.sh",
+  "scripts/sketch-export.mjs": "overrides XDG_DATA_HOME to templateDataHome for --export-release",
+};
+const DIRECT_XDG_WRITE =
+  /\bXDG_(?:DATA|CONFIG|CACHE)_HOME\s*:|(?:\.XDG_(?:DATA|CONFIG|CACHE)_HOME|\[\s*["'`]XDG_(?:DATA|CONFIG|CACHE)_HOME["'`]\s*\]|\[\s*`XDG_\$\{[^}]+\}_HOME`\s*\])\s*=(?!=)/;
 
 function nonTestScriptFiles(dir) {
   const files = [];
@@ -255,6 +272,206 @@ test("userDataEnv and scratchHomeEnv isolate HOME only on darwin", () => {
   );
 });
 
+test("scratchGodotEnv matches every migrated script key-for-key on Linux and isolates HOME on macOS", () => {
+  const base = { PATH: "/bin", HOME: "/real/home", XDG_DATA_HOME: "/real/data" };
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "godot-home-eq-"));
+  const devBase = path.join(DEV_REPO_ROOT, "artifacts", "local", "godot-home-test");
+  mkdirSync(devBase, { recursive: true });
+  const devTmp = mkdtempSync(path.join(devBase, "run-"));
+  try {
+    assert.deepEqual(isolatedXdgEnv(base, "/tmp/iso", "linux"), {
+      ...base,
+      XDG_DATA_HOME: "/tmp/iso/data",
+      XDG_CONFIG_HOME: "/tmp/iso/config",
+      XDG_CACHE_HOME: "/tmp/iso/cache",
+    });
+    assert.deepEqual(isolatedXdgEnv(base, "/tmp/iso", "darwin"), {
+      ...base,
+      HOME: "/tmp/iso/data",
+      XDG_DATA_HOME: "/tmp/iso/data",
+      XDG_CONFIG_HOME: "/tmp/iso/config",
+      XDG_CACHE_HOME: "/tmp/iso/cache",
+    });
+
+    assert.deepEqual(winProofEnv("/tmp/proof", "/repo", base, "linux"), {
+      ...base,
+      XDG_DATA_HOME: "/tmp/proof/data",
+      XDG_CONFIG_HOME: "/tmp/proof/config",
+      XDG_CACHE_HOME: "/tmp/proof/cache",
+      SCRAPKEEP_REPO_ROOT: "/repo",
+    });
+    assert.deepEqual(winProofEnv("/tmp/proof", "/repo", base, "darwin"), {
+      ...base,
+      HOME: "/tmp/proof/data",
+      XDG_DATA_HOME: "/tmp/proof/data",
+      XDG_CONFIG_HOME: "/tmp/proof/config",
+      XDG_CACHE_HOME: "/tmp/proof/cache",
+      SCRAPKEEP_REPO_ROOT: "/repo",
+    });
+
+    const ftDir = path.join(tmp, "ft");
+    assert.deepEqual(selfPlayXdg(ftDir, "linux"), {
+      XDG_DATA_HOME: path.join(ftDir, "xdg-data"),
+      XDG_CONFIG_HOME: path.join(ftDir, "xdg-config"),
+    });
+    assert.deepEqual(selfPlayXdg(ftDir, "darwin"), {
+      HOME: path.join(ftDir, "xdg-data"),
+      XDG_DATA_HOME: path.join(ftDir, "xdg-data"),
+      XDG_CONFIG_HOME: path.join(ftDir, "xdg-config"),
+    });
+    assert.ok(existsSync(path.join(ftDir, "xdg-data")));
+    assert.ok(existsSync(path.join(ftDir, "xdg-config")));
+
+    const devHome = path.join(devTmp, "home");
+    assert.deepEqual(
+      devScratchEnv(devHome, { repoRoot: DEV_REPO_ROOT, baseEnv: base, platform: "linux" }).env,
+      {
+        ...base,
+        HOME: devHome,
+        XDG_DATA_HOME: path.join(devHome, "data"),
+        XDG_CONFIG_HOME: path.join(devHome, "config"),
+        XDG_CACHE_HOME: path.join(devHome, "cache"),
+        SDL_AUDIODRIVER: "dummy",
+      },
+    );
+    assert.deepEqual(
+      devScratchEnv(devHome, { repoRoot: DEV_REPO_ROOT, baseEnv: base, platform: "darwin" }).env,
+      {
+        ...base,
+        HOME: devHome,
+        XDG_DATA_HOME: path.join(devHome, "data"),
+        XDG_CONFIG_HOME: path.join(devHome, "config"),
+        XDG_CACHE_HOME: path.join(devHome, "cache"),
+      },
+    );
+
+    const displayScratch = displayScratchEnv(tmp);
+    assert.deepEqual(displayScratch.env, {
+      HOME: displayScratch.home,
+      XDG_DATA_HOME: path.join(displayScratch.home, "data"),
+      XDG_CONFIG_HOME: path.join(displayScratch.home, "config"),
+      XDG_CACHE_HOME: path.join(displayScratch.home, "cache"),
+    });
+
+    const rcProfile = freshProfile();
+    try {
+      assert.deepEqual(rcProfile.env, {
+        HOME: rcProfile.home,
+        XDG_CONFIG_HOME: path.join(rcProfile.home, ".config"),
+        XDG_DATA_HOME: path.join(rcProfile.home, ".local/share"),
+        XDG_CACHE_HOME: path.join(rcProfile.home, ".cache"),
+        XDG_STATE_HOME: path.join(rcProfile.home, ".local/state"),
+      });
+    } finally {
+      rmSync(rcProfile.home, { recursive: true, force: true });
+    }
+
+    assert.deepEqual(
+      pcStepEnv({ root: "/g", id: "s1", godot: "/bin/godot", base, platform: "linux" }),
+      {
+        ...base,
+        GODOT_BIN: "/bin/godot",
+        XDG_DATA_HOME: "/g/xdg/s1/data",
+        XDG_CONFIG_HOME: "/g/xdg/s1/config",
+        XDG_CACHE_HOME: "/g/xdg/s1/cache",
+        SCRAPKEEP_LOCK_DIR: "/g/locks/s1",
+        SMOKE_SLOTS: "4",
+        SMOKE_FULL: "1",
+      },
+    );
+    assert.deepEqual(
+      pcStepEnv({ root: "/g", id: "s1", godot: "/bin/godot", base, platform: "darwin" }),
+      {
+        ...base,
+        GODOT_BIN: "/bin/godot",
+        HOME: "/g/xdg/s1/data",
+        XDG_DATA_HOME: "/g/xdg/s1/data",
+        XDG_CONFIG_HOME: "/g/xdg/s1/config",
+        XDG_CACHE_HOME: "/g/xdg/s1/cache",
+        SCRAPKEEP_LOCK_DIR: "/g/locks/s1",
+        SMOKE_SLOTS: "4",
+        SMOKE_FULL: "1",
+      },
+    );
+
+    const chDir = path.join(tmp, "challenge");
+    assert.deepEqual(stateEnv(chDir, "linux"), {
+      XDG_DATA_HOME: path.join(chDir, "data"),
+      XDG_CONFIG_HOME: path.join(chDir, "config"),
+      XDG_CACHE_HOME: path.join(chDir, "cache"),
+    });
+    assert.deepEqual(stateEnv(chDir, "darwin"), {
+      HOME: path.join(chDir, "data"),
+      XDG_DATA_HOME: path.join(chDir, "data"),
+      XDG_CONFIG_HOME: path.join(chDir, "config"),
+      XDG_CACHE_HOME: path.join(chDir, "cache"),
+    });
+
+    assert.deepEqual(
+      scratchGodotEnv("/mac/h", { baseEnv: base, dirs: null, forceHome: true, platform: "darwin" }),
+      { ...base, HOME: "/mac/h", XDG_DATA_HOME: "/mac/h" },
+    );
+    assert.throws(() => scratchGodotEnv("/x", { dirs: { nope: "nope" } }), /unknown XDG slot/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+    rmSync(devTmp, { recursive: true, force: true });
+  }
+});
+
+test("withScratchGodotEnv cleans up temp folders and skips temp creation for homeOnly on Linux", async () => {
+  const tmpRoot = mkdtempSync(path.join(os.tmpdir(), "godot-home-with-"));
+  try {
+    const linuxHomeOnly = await withScratchGodotEnv((env, dir) => ({ env, dir }), {
+      prefix: "ho-",
+      tmpRoot,
+      baseEnv: { PATH: "/bin", HOME: "/real" },
+      homeOnly: true,
+      platform: "linux",
+    });
+    assert.equal(linuxHomeOnly.dir, null);
+    assert.deepEqual(linuxHomeOnly.env, { PATH: "/bin", HOME: "/real" });
+    assert.deepEqual(readdirSync(tmpRoot), []);
+
+    let macDir = null;
+    await withScratchGodotEnv(
+      (env, dir) => {
+        macDir = dir;
+        assert.ok(dir && existsSync(dir));
+        assert.equal(env.HOME, dir);
+      },
+      { prefix: "ho-", tmpRoot, baseEnv: { PATH: "/bin" }, homeOnly: true, platform: "darwin" },
+    );
+    assert.ok(macDir && !existsSync(macDir));
+
+    let failedDir = null;
+    await assert.rejects(
+      withScratchGodotEnv(
+        (_env, dir) => {
+          failedDir = dir;
+          assert.ok(existsSync(path.join(dir, "data")));
+          throw new Error("boom");
+        },
+        { prefix: "full-", tmpRoot, baseEnv: {}, platform: "linux" },
+      ),
+      /boom/,
+    );
+    assert.ok(failedDir && !existsSync(failedDir));
+
+    let dataOnlyDir = null;
+    await withScratchGodotEnv(
+      (env, dir) => {
+        dataOnlyDir = dir;
+        assert.equal(env.XDG_DATA_HOME, dir);
+        assert.equal(env.HOME, dir);
+      },
+      { prefix: "data-", tmpRoot, baseEnv: {}, dirs: null, platform: "darwin" },
+    );
+    assert.ok(dataOnlyDir && !existsSync(dataOnlyDir));
+  } finally {
+    rmSync(tmpRoot, { recursive: true, force: true });
+  }
+});
+
 test("requireGodotBinary returns an existing binary or throws with set GODOT_BIN", () => {
   assert.equal(
     requireGodotBinary({
@@ -307,13 +524,15 @@ test("DIRECT_GODOT_BIN_READ catches env reads and ignores writes and messages", 
   }
 });
 
-test("non-test scripts contain no unapproved /home/andrew/ literals or direct GODOT_BIN env reads", () => {
+test("non-test scripts contain no unapproved /home/andrew/ literals, direct GODOT_BIN env reads, or manual XDG writes", () => {
   const files = nonTestScriptFiles(SCRIPTS_DIR);
   assert.ok(files.length > 0);
   const badHome = [];
   const badEnv = [];
+  const badXdg = [];
   const seenHomeAllow = new Set();
   const seenEnvAllow = new Set();
+  const seenXdgAllow = new Set();
 
   for (const file of files) {
     const rel = path.relative(REPO_ROOT, file).split(path.sep).join("/");
@@ -326,6 +545,19 @@ test("non-test scripts contain no unapproved /home/andrew/ literals or direct GO
       if (rel in GODOT_BIN_ALLOWLIST) seenEnvAllow.add(rel);
       else badEnv.push(rel);
     }
+    if (rel !== GODOT_BIN_OWNER && DIRECT_XDG_WRITE.test(source)) {
+      if (rel in XDG_WRITE_ALLOWLIST) {
+        seenXdgAllow.add(rel);
+        if (rel === "scripts/sketch-export.mjs") {
+          const matches = [...source.matchAll(new RegExp(DIRECT_XDG_WRITE.source, "g"))].map(
+            (m) => m[0],
+          );
+          assert.deepEqual(matches, ["XDG_DATA_HOME:"]);
+        }
+      } else {
+        badXdg.push(rel);
+      }
+    }
   }
 
   assert.deepEqual(badHome, [], `unexpected /home/andrew/ literal in: ${badHome.join(", ")}`);
@@ -333,6 +565,11 @@ test("non-test scripts contain no unapproved /home/andrew/ literals or direct GO
     badEnv,
     [],
     `unexpected GODOT_BIN environment read outside ${GODOT_BIN_OWNER} in: ${badEnv.join(", ")}`,
+  );
+  assert.deepEqual(
+    badXdg,
+    [],
+    `unexpected manual XDG_*_HOME write outside ${GODOT_BIN_OWNER} in: ${badXdg.join(", ")}`,
   );
   assert.deepEqual(
     Object.keys(HOME_ANDREW_ALLOWLIST).filter((rel) => !seenHomeAllow.has(rel)),
@@ -343,5 +580,10 @@ test("non-test scripts contain no unapproved /home/andrew/ literals or direct GO
     Object.keys(GODOT_BIN_ALLOWLIST).filter((rel) => !seenEnvAllow.has(rel)),
     [],
     "stale GODOT_BIN_ALLOWLIST entries must be removed",
+  );
+  assert.deepEqual(
+    Object.keys(XDG_WRITE_ALLOWLIST).filter((rel) => !seenXdgAllow.has(rel)),
+    [],
+    "stale XDG_WRITE_ALLOWLIST entries must be removed",
   );
 });
