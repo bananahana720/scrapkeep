@@ -175,14 +175,6 @@ static func family_of_kind(kind: String) -> String:
 	return family_of(String(Roster.row(kind).get("faction", Roster.FLEET)))
 
 
-static func special_of(enemy: Node) -> String:
-	return SpecialCues.special_of(enemy)
-
-
-static func special_sound(special: String, moment: String) -> String:
-	return SpecialCues.sound(special, moment)
-
-
 func clear() -> void:
 	_fx.stop()
 	_busy.clear()
@@ -414,7 +406,7 @@ func _on_spawned(enemy: Node3D, kind: String) -> void:
 		return
 	var family := family_of(String(enemy.get("faction"))) if enemy.get("faction") != null else family_of_kind(kind)
 	var at := enemy.global_position
-	var special := special_of(enemy)
+	var special := SpecialCues.special_of(enemy)
 	if special != "":
 		SpecialCues.attach(enemy)
 		special_moment(special, "spawn", enemy)
@@ -495,7 +487,7 @@ func _on_struck(enemy: Node3D, kind: String, force: float) -> void:
 
 
 func _on_died(at: Vector3, _scrap: int, enemy: Node3D, kind: String, family: String) -> void:
-	var special := special_of(enemy)
+	var special := SpecialCues.special_of(enemy)
 	if special != "":
 		special_moment(special, SpecialCues.break_moment(enemy), enemy, at)
 		return
@@ -611,7 +603,7 @@ static func _kind_name(kind) -> String:
 
 
 func _on_special_tell(moment: String, enemy: Node3D) -> void:
-	var special := special_of(enemy)
+	var special := SpecialCues.special_of(enemy)
 	if special != "":
 		special_moment(special, moment, enemy)
 
@@ -635,7 +627,7 @@ func special_moment(special: String, moment: String, enemy: Node3D, at := Vector
 	if text != "":
 		word(text, top + Vector3.UP * WORD_HEIGHT, tint if moment == "tell" else WORD_TINT[row["family"]], true)
 	_note(special + "_" + moment, special, at)
-	return special_sound(special, moment)
+	return SpecialCues.sound(special, moment)
 
 
 func _draw_cables(delta: float) -> void:
