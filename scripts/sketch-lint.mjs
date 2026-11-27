@@ -12,7 +12,7 @@ import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const BASELINE_FILE = path.join(root, "scripts", "sketch-lint.baseline.json");
-const BASELINED_RULES = ["L1", "L2", "L3", "L4"];
+const BASELINED_RULES = ["L1", "L2", "L3", "L4", "L16"];
 const MAX_QUARANTINE = 0;
 const QUARANTINE_HEADER = "test\towner\treason\tadded\tdeadline";
 const TEST_FOLDERS = new Set(["unit", "support", "doubles", "fixtures", "trees", "workshop"]);
@@ -1265,6 +1265,192 @@ export function lintL15(file, rel, text, baseline = L15_HZ_BASELINE) {
   return sites.map((line) => finding("L15", file, line.number, message));
 }
 
+const srcRelPattern = /(?:^|\/)(src\/.+\.gd)$/;
+const classNameDecl = /^class_name\s+([A-Za-z_]\w*)\b/;
+
+function scriptRel(filePath) {
+  const match = srcRelPattern.exec(filePath);
+  return match ? match[1] : filePath;
+}
+
+function scanGdLine(raw, tripleQuote) {
+  const strings = [];
+  let code = "";
+  let i = 0;
+  while (i < raw.length) {
+    if (tripleQuote) {
+      const end = raw.indexOf(tripleQuote, i);
+      if (end === -1) return { strings, code, tripleQuote };
+      i = end + 3;
+      tripleQuote = null;
+      continue;
+    }
+    const ch = raw[i];
+    if (ch === "#") break;
+    if ((ch === '"' || ch === "'") && raw[i + 1] === ch && raw[i + 2] === ch) {
+      tripleQuote = ch + ch + ch;
+      i += 3;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      let j = i + 1;
+      while (j < raw.length) {
+        if (raw[j] === "\\") {
+          j += 2;
+          continue;
+        }
+        if (raw[j] === ch) break;
+        j++;
+      }
+      strings.push(raw.slice(i + 1, j));
+      i = j + 1;
+      code += " ";
+      continue;
+    }
+    code += ch;
+    i++;
+  }
+  return { strings, code, tripleQuote };
+}
+
+export function buildScriptGraph(files) {
+  const relToPath = new Map();
+  const classOwners = new Map();
+  for (const file of files) {
+    relToPath.set(scriptRel(file.path), file.path);
+    if (!file.text.includes("class_name")) continue;
+    for (const line of codeLines(file.text)) {
+      const match = classNameDecl.exec(line.raw);
+      if (match) {
+        classOwners.set(match[1], file.path);
+        break;
+      }
+    }
+  }
+  const classNames = [...classOwners.keys()];
+  const classTestRe =
+    classNames.length > 0 ? new RegExp(`\\b(?:${classNames.join("|")})\\b`) : null;
+  const classMatchRe =
+    classNames.length > 0 ? new RegExp(`\\b(?:${classNames.join("|")})\\b`, "g") : null;
+  const graph = new Map();
+  for (const file of files) {
+    const deps = new Set();
+    const hasRes = file.text.includes("res://src/");
+    const hasClass = classTestRe !== null && classTestRe.test(file.text);
+    if (hasRes || hasClass) {
+      const hasTriple = file.text.includes('"""') || file.text.includes("'''");
+      let tripleQuote = null;
+      for (const line of codeLines(file.text)) {
+        if (!hasTriple) {
+          const lineHasRes = hasRes && line.raw.includes("res://src/");
+          const lineHasClass = hasClass && classTestRe.test(line.raw);
+          if (!lineHasRes && !lineHasClass) continue;
+        }
+        const scanned = scanGdLine(line.raw, tripleQuote);
+        tripleQuote = scanned.tripleQuote;
+        if (hasRes) {
+          for (const literal of scanned.strings) {
+            if (!literal.startsWith("res://src/") || !literal.endsWith(".gd")) continue;
+            const target = relToPath.get(literal.slice(6));
+            if (target && target !== file.path) deps.add(target);
+          }
+        }
+        if (hasClass && scanned.code) {
+          for (const match of scanned.code.matchAll(classMatchRe)) {
+            const target = classOwners.get(match[0]);
+            if (target && target !== file.path) deps.add(target);
+          }
+        }
+      }
+    }
+    graph.set(file.path, [...deps].sort());
+  }
+  return graph;
+}
+
+export function stronglyConnectedComponents(graph) {
+  const adj = graph instanceof Map ? graph : new Map(Object.entries(graph));
+  const nodes = [...adj.keys()].sort();
+  const index = new Map();
+  const lowlink = new Map();
+  const onStack = new Set();
+  const stack = [];
+  const components = [];
+  let nextIndex = 0;
+  for (const start of nodes) {
+    if (index.has(start)) continue;
+    index.set(start, nextIndex);
+    lowlink.set(start, nextIndex);
+    nextIndex++;
+    stack.push(start);
+    onStack.add(start);
+    const frames = [{ node: start, edges: [...(adj.get(start) ?? [])], next: 0 }];
+    while (frames.length > 0) {
+      const top = frames[frames.length - 1];
+      const v = top.node;
+      if (top.next < top.edges.length) {
+        const w = top.edges[top.next++];
+        if (!index.has(w)) {
+          index.set(w, nextIndex);
+          lowlink.set(w, nextIndex);
+          nextIndex++;
+          stack.push(w);
+          onStack.add(w);
+          frames.push({ node: w, edges: [...(adj.get(w) ?? [])], next: 0 });
+        } else if (onStack.has(w)) {
+          const wIndex = index.get(w);
+          if (wIndex < lowlink.get(v)) lowlink.set(v, wIndex);
+        }
+      } else {
+        frames.pop();
+        if (lowlink.get(v) === index.get(v)) {
+          const component = [];
+          while (true) {
+            const w = stack.pop();
+            onStack.delete(w);
+            component.push(w);
+            if (w === v) break;
+          }
+          component.sort();
+          components.push(component);
+        }
+        if (frames.length > 0) {
+          const parent = frames[frames.length - 1].node;
+          const vLow = lowlink.get(v);
+          if (vLow < lowlink.get(parent)) lowlink.set(parent, vLow);
+        }
+      }
+    }
+  }
+  components.sort((a, b) => b.length - a.length || a[0].localeCompare(b[0]));
+  return components;
+}
+
+export function lintL16(files) {
+  const graph = buildScriptGraph(files);
+  const components = stronglyConnectedComponents(graph).filter(
+    (component) => component.length >= 2,
+  );
+  const findings = [];
+  for (const component of components) {
+    const members = new Set(component);
+    for (const file of component) {
+      const inLoop = (graph.get(file) ?? []).filter((dep) => members.has(dep));
+      const shown = inLoop.slice(0, 3).map(scriptRel);
+      const extra = inLoop.length > 3 ? ` (+${inLoop.length - 3} more)` : "";
+      findings.push(
+        finding(
+          "L16",
+          file,
+          1,
+          `in a ${component.length}-file script dependency cycle (depends on ${shown.join(", ")}${extra}); break an edge to leave the cycle`,
+        ),
+      );
+    }
+  }
+  return findings.sort((a, b) => a.path.localeCompare(b.path));
+}
+
 function walk(directory, base = directory) {
   const entries = [];
   if (!existsSync(directory)) return entries;
@@ -1310,7 +1496,8 @@ export function lintSketch(sketch) {
       : "";
   const driverRefs = driverText ? parseBatchDriverRefs(driverText) : new Set();
   const driverVars = driverText ? parseBatchDriverVars(driverText) : new Set();
-  for (const file of sources(path.join(directory, "src"), new Set([".gd"]))) {
+  const srcFiles = sources(path.join(directory, "src"), new Set([".gd"]));
+  for (const file of srcFiles) {
     if (file.path !== `${relative}/src/core/safe_store.gd`)
       findings.push(...lintL2(file.path, file.text));
     findings.push(...lintL7(file.path, file.text));
@@ -1328,6 +1515,7 @@ export function lintSketch(sketch) {
       ...lintL14(file.path, rel, file.text, driverRefs, L14_STATIC_VAR_BASELINE, driverVars),
     );
   }
+  findings.push(...lintL16(srcFiles));
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   if (sketch === "core-loop") {
     const words = lintWords({
