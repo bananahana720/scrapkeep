@@ -324,6 +324,6 @@ func _riff_guard() -> void:
 		if rel == "wav_io.gd":
 			continue
 		var text := FileAccess.get_file_as_string("res://src/presentation/" + rel)
-		if text.contains("RIFF"):
+		if text.contains("RIFF") or text.contains("fmt "):
 			found.append(rel)
-	t.eq("only allowed presentation files contain RIFF", found, ALLOWED_RIFF_FILES)
+	t.eq("only allowed presentation files read WAV chunks", found, ALLOWED_RIFF_FILES)

@@ -242,7 +242,7 @@ func _check_gameplay_sources() -> void:
 	for stem in SOURCE_PINS:
 		var source := FileAccess.get_file_as_string("res://src/world/%s.gd" % stem)
 		var tail := "func " + source.get_slice("func " + SOURCE_PINS[stem][0], 1)
-		tail = tail.get_slice("\n\nstatic func _slot_material", 0).get_slice("\n\nfunc _collision_box", 0)
+		tail = tail.get_slice("\n\nfunc _collision_box", 0)
 		tail = tail.strip_edges()
 		_check(tail.sha256_text() == SOURCE_PINS[stem][1], stem + " interaction, timing, reward and state logic unchanged")
 	for path in INHERITED_PINS:
