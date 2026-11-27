@@ -63,9 +63,11 @@ var title_stage: Node
 var ui_hidden := false
 var auto_banner := true
 var _dismiss_wired := {}
+var _impulse_wired := {}
 var _windup_states := {}
 const BANNER_SCREENS := ["title", "class_select", "summary", "dead", "victory"]
 const SET_KEY := "set:"
+const PILOT_IMPULSE_EVENTS := ["player_hit", "shot_fired", "boss_defeated"]
 
 
 func setup(ctx_ref) -> void:
@@ -288,6 +290,12 @@ func wire_optional() -> void:
 			events.connect(signal_name, _dismiss_banner.unbind(argc) if argc > 0 else _dismiss_banner)
 	if not events.is_connected("flow_changed", _on_flow_changed):
 		events.connect("flow_changed", _on_flow_changed)
+	for signal_name in PILOT_IMPULSE_EVENTS:
+		if events.has_signal(signal_name) and not _impulse_wired.has(signal_name):
+			_impulse_wired[signal_name] = true
+			var argc := SignalWire.arg_count(events, signal_name)
+			var impulse: Callable = hero_assets.pilot_impulse.bind(signal_name)
+			events.connect(signal_name, impulse.unbind(argc) if argc > 0 else impulse)
 
 
 func _on_enemy_windups(enemy: Node3D, _kind: String) -> void:

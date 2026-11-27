@@ -14,7 +14,7 @@ var screens
 var tree: SceneTree
 var uncovered: Array = [
 	"camp menu strip (camp_menu.gd) and customize_page.gd: opened by walking the 3D camp",
-	"camp stations: shop_counter.gd, camp_enemy_picker.gd, tree_card.gd, tree_pick.gd, camp_scrapbook.gd, logbook_page.gd (each opens only from its walk zone)",
+	"camp stations: shop_counter.gd, tree_card.gd, tree_pick.gd, camp_scrapbook.gd, logbook_page.gd (each opens only from its walk zone)",
 	"start card (workshop.gd, start_pick_card.gd) and companion_panel.gd: open only inside a run or from a held companion piece",
 	"victory (left out on purpose)",
 ]
@@ -148,6 +148,29 @@ func visit(check: Callable) -> int:
 	menu.close()
 	await _frames(1)
 	return count
+
+
+func open_enemy_picker() -> Control:
+	game.flow.show_title()
+	await _frames(2)
+	if not screens.walking():
+		screens.toggle_camp()
+		await _frames(3)
+	var sandbox = game.camp_hub.root.get_node_or_null("CampSandbox")
+	if sandbox == null:
+		return null
+	sandbox.open_picker()
+	await _frames(3)
+	return sandbox.get("_page")
+
+
+func close_enemy_picker(page: Control) -> void:
+	if is_instance_valid(page):
+		page.closed.emit()
+	await _frames(2)
+	if screens.walking():
+		screens.toggle_camp()
+	await _frames(2)
 
 
 func _emit(check: Callable, name: String, scope: Node, showing: bool) -> int:

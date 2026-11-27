@@ -272,6 +272,38 @@ func press_station(id: String) -> bool:
 	return false
 
 
+func _input(event: InputEvent) -> void:
+	if not _takes_station_input():
+		return
+	var id := _station_for(event)
+	if id != "" and press_station(id):
+		get_viewport().set_input_as_handled()
+
+
+func _takes_station_input() -> bool:
+	if not walking or game == null or game.screens == null or not game.screens.walk_live():
+		return false
+	var take = game.get("launch_take")
+	return take == null or not take.busy()
+
+
+func _station_for(event: InputEvent) -> String:
+	var interact := event.is_action_pressed("cl_interact")
+	var pad := event as InputEventJoypadButton
+	var pad_launch := pad != null and pad.pressed and (pad.button_index == JOY_BUTTON_A or pad.is_action_pressed("cl_jump"))
+	if not interact and not pad_launch:
+		return ""
+	for id in _inside:
+		var zone: Dictionary = _zones[id]
+		if _zone_glyph(zone) == "":
+			continue
+		if interact and String(zone.get("verb", "")) == "interact":
+			return id
+		if pad_launch and id == "gate":
+			return id
+	return ""
+
+
 func prompt_words() -> Array:
 	var out := []
 	for id in _inside:
@@ -471,7 +503,7 @@ func _build_ground() -> void:
 	disc.name = "SandstoneDisc"
 	disc.mesh = CampCraftMeshes.sandstone_plaza_mesh(GROUND_R, GROUND_THICK, 96)
 	disc.material_override = CampCraftMeshes.sandstone_material()
-	disc.position.y = -GROUND_THICK * 0.5
+	disc.position.y = -GROUND_THICK * 0.5 - Recipes.SURFACE_LAYER_M * 3.0
 	ground.add_child(disc)
 	var chord := TAU * GROUND_R / BERM_SEGMENTS * 1.08
 	for i in BERM_SEGMENTS:

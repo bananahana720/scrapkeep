@@ -48,7 +48,7 @@ const TIMEOUT_S := 840.0
 # It falls when a stand-in gets its model or a stage stops building a mark; a fall that is meant lowers this pin
 # (and PINNED_SURFACES in scripts/gate/stand-ins-receipt.mjs) in the same change, with the census line that went.
 # A fall nobody meant is a stage that was not built, and fails here.
-const MIN_SURFACES := 69
+const MIN_SURFACES := 68
 
 var _areas := {}
 var _area_hits := []

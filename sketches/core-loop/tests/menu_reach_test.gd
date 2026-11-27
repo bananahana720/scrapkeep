@@ -103,6 +103,11 @@ func _visit_extended() -> int:
 	count += 1
 	card.hide_card()
 	await process_frame
+
+	var picker: Control = await _kit.open_enemy_picker()
+	await _check("camp enemy picker", picker if picker != null else screens, picker != null and picker.is_visible_in_tree())
+	count += 1
+	await _kit.close_enemy_picker(picker)
 	return count
 
 

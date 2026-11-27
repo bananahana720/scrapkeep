@@ -57,6 +57,9 @@ const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const WeaponRigFx := preload("res://src/presentation/weapon_rig_fx.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const PilotGearKit := preload("res://src/presentation/pilot_gear_kit.gd")
+const COCKPIT_CONTROLS := {"yoke": "YokeRig", "gauges": "GaugeCluster", "throttle": "ThrottleLever", "pedal_l": "PedalL", "pedal_r": "PedalR"}
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const REST_LIBRARY := "runtime"
@@ -1476,10 +1479,7 @@ func _step_weapon_rig(rec: Dictionary, delta: float) -> void:
 		return
 	var driver = _live_weapon_driver()
 	var snap: Dictionary = driver.state_snapshot() if driver != null else {}
-	var reduced := false
-	if profile != null and profile.has_method("get_setting"):
-		reduced = bool(profile.get_setting("reduced_motion", false))
-	rig.step(delta, snap, reduced)
+	rig.step(delta, snap, UiTokens.reduced_motion)
 
 
 func _addon_path(id: String, slot: String) -> String:
@@ -1631,6 +1631,7 @@ func _fit_pilot(rec: Dictionary) -> void:
 	rec["animator"] = animator
 	rec["pilot"] = pilot
 	rec["glance"] = PilotGlance.seat(pilot, rec["class"]) if BallLooks.PLATED.has(ball_look()) else null
+	rec["liveliness"] = _dress_live_pilot(rec) if rec["glance"] != null else null
 	rec["reaction"] = ""
 	rec["priority"] = -1
 	rec["cooldowns"] = {}
@@ -1640,6 +1641,29 @@ func _fit_pilot(rec: Dictionary) -> void:
 	if animator is AnimationPlayer:
 		animator.animation_finished.connect(_pilot_finished.bind(rec.player.get_instance_id(), animator))
 		_to_base(rec)
+
+
+func _dress_live_pilot(rec: Dictionary) -> SkeletonModifier3D:
+	PilotGearKit.mount_pilot_wearables(rec.pilot, rec.player.class_color(), true)
+	var live: SkeletonModifier3D = rec.glance.liveliness()
+	var rig := (rec.pod as Node3D).get_node_or_null("CraftCockpitRig")
+	if live != null and rig != null:
+		var controls := {}
+		for key in COCKPIT_CONTROLS:
+			var node := rig.get_node_or_null(COCKPIT_CONTROLS[key])
+			if node != null:
+				controls[key] = node
+		live.bind_cockpit_controls(controls)
+	return live
+
+
+func pilot_impulse(event: String) -> int:
+	var moved := 0
+	for rec in _players.values():
+		var live = rec.get("liveliness")
+		if live != null and is_instance_valid(live) and live.trigger_reaction(event):
+			moved += 1
+	return moved
 
 
 func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:

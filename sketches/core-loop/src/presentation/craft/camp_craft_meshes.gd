@@ -185,6 +185,41 @@ static func sandstone_plaza_mesh(radius: float, thickness: float, segments := 96
 	return mesh
 
 
+static func turntable_pedestal_mesh(top_r: float, bottom_r: float, height: float, segments := 48) -> ArrayMesh:
+	var key := "turntable_%.2f_%.2f_%.2f_%d" % [top_r, bottom_r, height, segments]
+	if _mesh_cache.has(key):
+		return _mesh_cache[key]
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half_h := height * 0.5
+	var bevel := minf(0.06, height * 0.25)
+	var lip := half_h - bevel * 1.6
+	var profile := [
+		[-half_h, 0.0, _vc(0.06, 0.78)],
+		[-half_h, bottom_r - bevel, _vc(0.10, 0.74)],
+		[-half_h + bevel, bottom_r, _vc(0.62, 0.30)],
+		[lip - bevel, top_r + bevel * 0.5, _vc(0.22, 0.46)],
+		[lip, top_r + bevel, _vc(0.70, 0.18)],
+		[half_h - bevel, top_r, _vc(0.58, 0.16)],
+		[half_h, top_r - bevel, _vc(0.66, 0.12)],
+		[half_h, 0.0, _vc(0.18, 0.20)],
+	]
+	_add_lathe(st, profile, segments, 0.6, Transform3D.IDENTITY)
+	var mesh := _commit_surfaces({"turntable_pedestal": st}, ["turntable_pedestal"])
+	_mesh_cache[key] = mesh
+	return mesh
+
+
+static func turntable_material() -> ShaderMaterial:
+	return _sandstone_shader_mat(
+		"customize_turntable",
+		Palette.RUST.darkened(0.35),
+		Palette.CHARCOAL.lerp(Palette.RUST, 0.3),
+		1.4,
+		0.08,
+	)
+
+
 static func perimeter_berm_mesh(ground_r: float, segments: int, height: float, depth: float, stagger_m: float) -> ArrayMesh:
 	var key := "berm_%.1f_%d_%.2f_%.2f_%.2f" % [ground_r, segments, height, depth, stagger_m]
 	if _mesh_cache.has(key):
@@ -345,7 +380,7 @@ static func sandstone_material() -> ShaderMaterial:
 	return _sandstone_shader_mat(
 		"camp_sandstone_plaza",
 		Palette.SANDSTONE,
-		Palette.SANDSTONE.darkened(0.10),
+		Palette.SANDSTONE.darkened(0.05),
 		5.2,
 		0.4,
 	)
