@@ -716,7 +716,9 @@ func _spawn_pickup(at: Vector3, value: int, source: String) -> void:
 		if scene != null:
 			scene.free()
 	if _pickup_mesh == null:
-		_pickup_mesh = EnemyBossCraft.reward_scrap_fallback(0.7)
+		var fallback := BoxMesh.new()
+		fallback.size = Vector3.ONE * 0.7
+		_pickup_mesh = fallback
 	if not _pickup_materials.has("reward"):
 		var made: ShaderMaterial = Field._pickup_material(Palette.AMBER)
 		made.resource_name = "field"

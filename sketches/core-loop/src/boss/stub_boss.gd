@@ -8,7 +8,6 @@ const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const WeakPoints := preload("res://src/boss/weak_points.gd")
 const WeakPart := preload("res://src/boss/weak_part.gd")
 const Augments := preload("res://src/movement/augments.gd")
-const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 enum { IDLE, FIGHT, DEFEATED }
@@ -386,16 +385,11 @@ func _build_pad(center: Vector3) -> void:
 	pad.add_child(shape)
 	var mesh := MeshInstance3D.new()
 	mesh.name = "PadDeckMesh"
-	var pad_mesh := EnemyBossCraft.waking_arena_pad(PAD_RADIUS, PAD_THICK)
-	if pad_mesh.get_surface_count() > 0 and pad_mesh.surface_get_material(0) == null:
-		var fallback_mat := StandardMaterial3D.new()
-		fallback_mat.resource_name = "waking_pad_fallback"
-		fallback_mat.albedo_color = Color("cfd4d6")
-		fallback_mat.roughness = 0.72
-		fallback_mat.metallic = 0.16
-		Palette.surface_grain(fallback_mat)
-		pad_mesh.surface_set_material(0, fallback_mat)
-	mesh.mesh = pad_mesh
+	var disc := CylinderMesh.new()
+	disc.top_radius = PAD_RADIUS
+	disc.bottom_radius = PAD_RADIUS
+	disc.height = PAD_THICK
+	mesh.mesh = disc
 	pad.add_child(mesh)
 	ctx.root.add_child(pad)
 	pad.global_position = center - Vector3.UP * PAD_THICK * 0.5

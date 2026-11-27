@@ -251,6 +251,13 @@ static func build_takeover_panel() -> Node3D:
 	plate.name = "Plate"
 	plate.mesh = craft.get_takeover_plate_mesh()
 	plate.position = Vector3(0.0, 0.0, 0.06)
+	var plate_mat := StandardMaterial3D.new()
+	plate_mat.albedo_color = Palette.KINDNESS
+	plate_mat.roughness = 0.88
+	plate_mat.metallic = 0.0
+	plate_mat.emission_enabled = false
+	Palette.surface_grain(plate_mat)
+	plate.material_override = plate_mat
 	plate.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	holder.add_child(plate)
 	return holder

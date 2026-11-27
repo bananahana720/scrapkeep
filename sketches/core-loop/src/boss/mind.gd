@@ -134,15 +134,15 @@ func _hide_stage_behind_arena() -> void:
 	if _arena_dress == null or ctx == null or ctx.terrain == null:
 		return
 	var stage_root: Node3D = ctx.terrain.geometry_root(ctx.terrain.stage)
-	if stage_root != null and is_instance_valid(stage_root) and stage_root != pad:
-		_hidden_stage_nodes.append({"node": stage_root, "visible": stage_root.visible})
+	if stage_root != null and is_instance_valid(stage_root) and stage_root != pad and stage_root.visible:
+		_hidden_stage_nodes.append(stage_root)
 		stage_root.visible = false
 	if ctx.root != null and is_instance_valid(ctx.root):
 		for child in ctx.root.get_children():
 			var cname := String(child.name)
 			if cname.begins_with("ParkRender"):
-				if child is Node3D:
-					_hidden_stage_nodes.append({"node": child, "visible": (child as Node3D).visible})
+				if child is Node3D and (child as Node3D).visible:
+					_hidden_stage_nodes.append(child)
 					(child as Node3D).visible = false
 				for sv: SubViewport in child.find_children("*", "SubViewport", true, false):
 					_paused_viewports.append({"vp": sv, "mode": sv.render_target_update_mode})
@@ -157,10 +157,9 @@ func _hide_stage_behind_arena() -> void:
 
 
 func _restore_stage_behind_arena() -> void:
-	for entry in _hidden_stage_nodes:
-		var node: Node3D = entry["node"]
+	for node in _hidden_stage_nodes:
 		if is_instance_valid(node):
-			node.visible = bool(entry["visible"])
+			(node as Node3D).visible = true
 	_hidden_stage_nodes.clear()
 	for entry in _paused_viewports:
 		var vp: SubViewport = entry["vp"]

@@ -954,6 +954,6 @@ func _build_command_cables(scenery: Node3D, sites: ParkSites, paths: Array) -> v
 	conduit.mesh = st.commit()
 	conduit.material_override = conduit_mat
 	conduit.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	conduit.visibility_range_end = 240.0
+	conduit.visibility_range_end = 0.0
 	conduit.visibility_range_end_margin = 0.0
 	holder.add_child(conduit)

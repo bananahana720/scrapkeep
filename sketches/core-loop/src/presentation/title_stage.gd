@@ -224,7 +224,7 @@ func play_intro(id := "") -> bool:
 		TitleIntros.mark_shown(profile, id)
 		if profile.can_save:
 			profile.save()
-	viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if active and _layer.visible else SubViewport.UPDATE_DISABLED
+	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if active and _layer.visible else SubViewport.UPDATE_DISABLED
 	var audio = get_parent().get("audio") if get_parent() != null else null
 	if audio != null and audio.has_method("title_theme"):
 		audio.title_theme(intro.theme)
@@ -266,7 +266,7 @@ func _sync_dressing() -> void:
 	_environment.background_color = row.sky
 	_resize()
 	if intro_playing():
-		viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if active and _layer.visible else SubViewport.UPDATE_DISABLED
+		viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if active and _layer.visible else SubViewport.UPDATE_DISABLED
 		return
 	if not active or low:
 		_seat_deck()
@@ -274,7 +274,7 @@ func _sync_dressing() -> void:
 	if not active or not _layer.visible:
 		viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	else:
-		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE if low else SubViewport.UPDATE_WHEN_VISIBLE
+		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE if low else SubViewport.UPDATE_ALWAYS
 
 
 func _resize() -> void:
