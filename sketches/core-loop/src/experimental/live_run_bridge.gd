@@ -10,6 +10,7 @@ const EncounterEngine := preload("res://src/experimental/encounter_engine.gd")
 const DynamicSetpieces := preload("res://src/experimental/dynamic_setpieces.gd")
 const ExperimentalAudioBank := preload("res://src/presentation/experimental_audio_bank.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
+const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 
 const FLAG_ARG_ON := "--experimental-depth=on"
 const FLAG_ARG_OFF := "--experimental-depth=off"
@@ -43,7 +44,7 @@ const LIVE_LOADOUTS: Array[Array] = [
 ]
 const CHUNK_HOLDER_NAME := "ExperimentalArenaChunk"
 const CHUNK_FOOTPRINT_HALF_M := 34.0
-const CHUNK_SITE_RANGES_M: Array[float] = [48.0, 72.0, 96.0]
+const CHUNK_SITE_RANGES_M: Array[float] = [84.0, 108.0, 132.0]
 const CHUNK_SITE_ANGLES_DEG: Array[float] = [90.0, -90.0, 120.0, -120.0, 150.0, -150.0, 180.0]
 const CHUNK_SITE_SAMPLES: Array[float] = [-1.0, -0.5, 0.0, 0.5, 1.0]
 const CHUNK_SITE_GOOD_COST_M := 3.0
@@ -485,7 +486,7 @@ func _build_chunk_foundation_and_ramp(holder: Node3D, site: Dictionary) -> void:
 	var approach_y: float = float(site.get("approach_floor", origin.y))
 	var skirt_h := maxf(4.0, (origin.y - low) + 4.0)
 	var skirt_size := Vector3(CHUNK_FOOTPRINT_HALF_M * 1.96, skirt_h, CHUNK_FOOTPRINT_HALF_M * 1.96)
-	var mat := CampCraftMeshes.berm_material()
+	var mat := CraftLookdev.preset_material("scorched_concrete")
 	var body := StaticBody3D.new()
 	body.name = "ChunkFoundationBody"
 	body.collision_layer = 1

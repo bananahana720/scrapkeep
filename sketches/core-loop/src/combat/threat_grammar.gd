@@ -1126,6 +1126,8 @@ class Painter:
 		if soft_on():
 			keys.append(["", false, PRIORITY, false])
 			keys.append(["fence", false, LINE_PRIORITY, false])
+			if striped_on():
+				keys.append(["", true, PRIORITY, false])
 		return keys
 
 	static func warm_up(parent: Node) -> Node3D:
