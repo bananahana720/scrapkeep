@@ -1,7 +1,7 @@
 extends Node3D
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const BallState := preload("res://src/movement/ball_state.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 const SENSITIVITY := 0.0022
 const STICK_YAW := 2.6
 const STICK_PITCH := 1.6
@@ -287,7 +287,7 @@ func _free_arm(arm_pitch: float, reach := TIGHT_ARM, ignore_floor := true) -> fl
 	_query.transform = Transform3D(Basis.IDENTITY, global_position + dir * reach * fractions[1])
 	_query.motion = Vector3.ZERO
 	var rest := space.get_rest_info(_query)
-	if not rest.is_empty() and (rest["normal"] as Vector3).y > BallState.MAX_SLOPE_DOT:
+	if not rest.is_empty() and (rest["normal"] as Vector3).y > Tuning.MAX_SLOPE_DOT:
 		return reach
 	return fractions[0] * reach
 

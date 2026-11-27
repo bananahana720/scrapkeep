@@ -666,7 +666,7 @@ func restart_hold_fraction() -> float:
 func aim_along(from: Vector3, forward: Vector3) -> Dictionary:
 	player.kit.aim = Harpoon.target(player.kit, tuning, get_world_3d().direct_space_state,
 		get_tree().get_nodes_in_group("enemy"), from, forward, player.ball_position())
-	Grip.mark(player.kit.aim, player.heft(), tuning.pole_flail())
+	Grip.mark(player.kit.aim, player.heft(), player.enemy_heft(player.kit.aim.get("body")), tuning.pole_flail())
 	return player.kit.aim
 
 

@@ -32,7 +32,6 @@ const WayOutPaint := preload("res://src/presentation/way_out_paint.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const Flail := preload("res://src/combat/flail.gd")
 const Augments := preload("res://src/movement/augments.gd")
-const Grip := preload("res://src/movement/grip.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const KestKit := preload("res://src/combat/kest_kit.gd")
 const Sight := preload("res://src/combat/sight.gd")
@@ -456,6 +455,8 @@ func setup(ctx_ref) -> void:
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
 	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
 	ctx.player.heft_of = heft
+	ctx.player.enemy_heft_of = Roster.heft_of
+	ctx.player.strike_damage = STRIKE_DAMAGE
 	ctx.player.pressure_grant = _grant_pressure
 	ctx.player.hulk_launch = bowl_hulk
 	ctx.player.mass_of = func() -> float: return ctx.run.mass
@@ -2335,7 +2336,7 @@ func _pull_plan(enemy: Node3D, bolt: Dictionary) -> Dictionary:
 	bolt["pulled"] = nth + 1
 	if not is_instance_valid(enemy) or enemy.is_dead():
 		return {}
-	var force := pull_force(heft(), Grip.heft_of(enemy), nth)
+	var force := pull_force(heft(), Roster.heft_of(enemy), nth)
 	var toward: Vector3 = ctx.player.ball_position() - enemy.global_position
 	toward.y = 0.0
 	if force <= 0.0 or toward.length() < 0.01:
@@ -7122,7 +7123,7 @@ func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3,
 	var pull_dir := Vector3.ZERO
 	var pull_mag := 0.0
 	if ShotBits.has(shot_bits, ShotBits.bit("pull")):
-		pull_mag = pull_force(heft(), Grip.heft_of(enemy), 0)
+		pull_mag = pull_force(heft(), Roster.heft_of(enemy), 0)
 		var toward: Vector3 = origin - enemy.global_position
 		toward.y = 0.0
 		if pull_mag > 0.0 and toward.length() > 0.01:

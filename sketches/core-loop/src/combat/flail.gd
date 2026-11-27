@@ -3,6 +3,7 @@ extends Node
 const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
+const Roster := preload("res://src/combat/roster.gd")
 
 const HANG := 5.0
 const YANK_SPEED := 16.0
@@ -144,7 +145,7 @@ func _swing(player) -> void:
 
 
 func _strike(other: Node3D, scale: float) -> void:
-	var heft := Grip.heft_of(body)
+	var heft := Roster.heft_of(body)
 	var damage := BASE_DAMAGE * (heft if heft != INF else 1.0) * scale
 	strikes += 1
 	combat.flail_hit(other, damage, body.global_position, KNOCK * scale)
@@ -197,7 +198,7 @@ func _fly(delta: float) -> void:
 				continue
 			if _touching(node, other):
 				f["hit"][other.get_instance_id()] = true
-				var heft := Grip.heft_of(node)
+				var heft := Roster.heft_of(node)
 				strikes += 1
 				combat.flail_hit(other, BASE_DAMAGE * (heft if heft != INF else 1.0) * float(f["scale"]), node.global_position, KNOCK)
 		keep.append(f)

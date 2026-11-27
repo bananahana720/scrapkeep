@@ -3,6 +3,7 @@ extends Node3D
 const Parts := preload("res://src/build/parts.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
+const MathUtil := preload("res://src/core/math_util.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
@@ -76,7 +77,7 @@ func set_lattice(on: bool) -> void:
 	for i in _chunks.size():
 		var pt := chunk_point(i)
 		_chunks[i].position = pt
-		_chunks[i].basis = _facing(pt.normalized()) * Basis(Vector3.UP, float(i) * 1.3)
+		_chunks[i].basis = MathUtil.basis_up(pt.normalized()) * Basis(Vector3.UP, float(i) * 1.3)
 
 
 func chunk_point(index: int) -> Vector3:
@@ -211,7 +212,7 @@ func _add_chunk(index: int) -> void:
 	chunk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	var pt := chunk_point(index)
 	chunk.position = pt
-	chunk.basis = _facing(pt.normalized()) * Basis(Vector3.UP, float(index) * 1.3)
+	chunk.basis = MathUtil.basis_up(pt.normalized()) * Basis(Vector3.UP, float(index) * 1.3)
 	chunk.scale = Vector3.ONE * POP_SCALE
 	InkOutline.apply(chunk, "pilot")
 	add_child(chunk)
@@ -237,7 +238,7 @@ func _rebuild_pieces(parts: Array) -> void:
 		var dir := _clear_piece_dir(i, chunk_dirs, piece_dirs)
 		piece_dirs.append(dir)
 		piece.position = dir * (LATTICE_SEAT if lattice else 0.99)
-		piece.basis = _facing(dir)
+		piece.basis = MathUtil.basis_up(dir)
 		if i == shown - 1:
 			piece.scale = Vector3.ONE * POP_SCALE
 		add_child(piece)
@@ -269,11 +270,6 @@ static func _clear_piece_dir(index: int, chunk_dirs: Array[Vector3], piece_dirs:
 			best_score = score
 			best = cand
 	return best
-static func _facing(dir: Vector3) -> Basis:
-	var up := dir.normalized()
-	var side := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
-	side = (side - up * side.dot(up)).normalized()
-	return Basis(side, up, side.cross(up))
 
 
 func _piece(part_id: String) -> Node3D:
