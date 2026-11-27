@@ -205,3 +205,42 @@ test("GitHub line-range anchors (#L10-L20) pass on existing markdown while #miss
   );
   assert.ok(hit, failRun.stdout);
 });
+
+test("ARCHITECTURE.md sync guard passes when all src subdirs and context.gd vars are listed", async () => {
+  const { status, stdout, report } = await runCustomRepo({
+    "sketches/core-loop/ARCHITECTURE.md":
+      "# Architecture\n\n- `src/core/`\n- `src/world/`\n\nFields: `events`, `run`, `_hit_stop`.\n",
+    "sketches/core-loop/src/core/context.gd":
+      "extends RefCounted\nvar events: Node\nvar run: RefCounted\nvar _hit_stop: Callable\nfunc helper():\n\tvar local_only := 1\n",
+    "sketches/core-loop/src/world/world.gd": "extends Node\n",
+  });
+  assert.equal(status, 0, stdout);
+  assert.equal(report.checked.architectureFindings, 0);
+});
+
+test("ARCHITECTURE.md sync guard fails on undocumented src subdir or context.gd var", async () => {
+  const { status, stdout, report } = await runCustomRepo({
+    "sketches/core-loop/ARCHITECTURE.md":
+      "# Architecture\n\nOnly `src/core/` and `events` are listed. A run can happen in prose.\n",
+    "sketches/core-loop/src/core/context.gd":
+      "extends RefCounted\nvar events: Node\nvar run: RefCounted\nvar dev := false\n",
+    "sketches/core-loop/src/dev/dev_console.gd": "extends Node\n",
+  });
+  assert.equal(status, 1, stdout);
+  assert.equal(report.checked.architectureFindings, 3, stdout);
+  const messages = report.findings
+    .filter((entry) => entry.level === "failure" && entry.check === "architecture")
+    .map((entry) => entry.message);
+  assert.ok(
+    messages.some((msg) => /missing src\/dev\/ directory/.test(msg)),
+    stdout,
+  );
+  assert.ok(
+    messages.some((msg) => /missing Context field `run`/.test(msg)),
+    stdout,
+  );
+  assert.ok(
+    messages.some((msg) => /missing Context field `dev`/.test(msg)),
+    stdout,
+  );
+});

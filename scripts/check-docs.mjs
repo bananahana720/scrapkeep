@@ -358,6 +358,48 @@ async function checkLedgerStage(docs) {
   return findings.filter((finding) => finding.level === "failure").length;
 }
 
+const ARCHITECTURE_FILE = "sketches/core-loop/ARCHITECTURE.md";
+const CORE_LOOP_SRC_DIR = "sketches/core-loop/src";
+const CONTEXT_FILE = "sketches/core-loop/src/core/context.gd";
+
+async function checkArchitectureSync(docs) {
+  if (!(await docs.hasFile(ARCHITECTURE_FILE)) || !(await docs.hasFile(CONTEXT_FILE))) return 0;
+  const { content } = await docs.load(ARCHITECTURE_FILE);
+  let failures = 0;
+  const entries = await readdir(path.join(docs.root, CORE_LOOP_SRC_DIR), { withFileTypes: true });
+  const subdirs = entries
+    .filter((item) => item.isDirectory() && !item.name.startsWith("."))
+    .map((item) => item.name)
+    .sort();
+  for (const dir of subdirs) {
+    if (!content.includes(`src/${dir}/`)) {
+      docs.fail(
+        "architecture",
+        ARCHITECTURE_FILE,
+        1,
+        `missing src/${dir}/ directory in ${ARCHITECTURE_FILE}; document ${CORE_LOOP_SRC_DIR}/${dir}/`,
+      );
+      failures++;
+    }
+  }
+  const contextText = await readFile(path.join(docs.root, CONTEXT_FILE), "utf8");
+  for (const [index, line] of contextText.split("\n").entries()) {
+    const match = /^var\s+([A-Za-z_][A-Za-z0-9_]*)\b/.exec(line);
+    if (!match) continue;
+    const field = match[1];
+    if (!content.includes(`\`${field}\``)) {
+      docs.fail(
+        "architecture",
+        ARCHITECTURE_FILE,
+        1,
+        `missing Context field \`${field}\` from ${CONTEXT_FILE}:${index + 1} in ${ARCHITECTURE_FILE}`,
+      );
+      failures++;
+    }
+  }
+  return failures;
+}
+
 async function main() {
   const options = parseArguments(process.argv.slice(2));
   const docs = new Documents(options.root);
@@ -369,6 +411,7 @@ async function main() {
   const waveFindings = await checkWaveStateStage(docs);
   const ledgerFindings = await checkLedgerStage(docs);
   await checkRulingLetters(docs);
+  const architectureFindings = await checkArchitectureSync(docs);
   const manifest = {};
   for (const file of [...docs.cache.keys()].sort()) manifest[file] = docs.cache.get(file).sha256;
   const failures = docs.findings.filter((finding) => finding.level === "failure");
@@ -382,6 +425,7 @@ async function main() {
       agentFindings,
       waveFindings,
       ledgerFindings,
+      architectureFindings,
     },
     failures: failures.length,
     findings: docs.findings,
@@ -418,6 +462,8 @@ async function main() {
       " wave-state findings, " +
       ledgerFindings +
       " known-failing findings, " +
+      architectureFindings +
+      " architecture findings, " +
       failures.length +
       " failures. Report: " +
       options.report,

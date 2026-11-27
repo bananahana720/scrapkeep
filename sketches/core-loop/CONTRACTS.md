@@ -1,8 +1,12 @@
 # Core-loop contracts
 
-This file is the seam between the spine and the five modules: the four from wave 2 (combat, build, presentation, world) and the wave-4 boss. [DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other only through that context and the `GameEvents` bus. A module never loads, calls or edits a file in another module's folder.
+> **Live architecture map:** For the current `src/` directory map (all 11 subdirectories plus `src/game.gd`), runtime state owners, complete `Context` field inventory, `GameEvents` signal group index, and script dependency-cycle status (`L16`), read [ARCHITECTURE.md](ARCHITECTURE.md). This file keeps the behavioral seam contracts below; the Wave 2–4 five-module writer split (`Writer A`–`Writer E`) in the first section is historical context.
+
+[DEMO-SPEC.md](DEMO-SPEC.md) owns the demo's progression rules: heft, plating, the Warden, cores, the codex and the run log. This file owns the behavioral seams that carry them. The spine builds the run, owns movement, flow and the shared records, and hands one context object to each module. Modules talk to the spine and to each other through that context and the `GameEvents` bus; new cross-module `preload`s and script cycles are checked by `npm run sketch:lint` (`L6`–`L10`, `L16`).
 
 ## Ownership
+
+Historical Wave 2–4 module seam split (live directory ownership and module mount order live in [ARCHITECTURE.md](ARCHITECTURE.md)):
 
 | Owner | May edit | Tests |
 | --- | --- | --- |
@@ -52,6 +56,8 @@ Each module folder holds one entry script with `setup(ctx)`: `combat/combat.gd`,
 - Build owns all tuning mods. It calls `tuning.clear_mods()` on every recompute and reapplies every part. Keys that are not F1 sliders (`weapon_damage`, `weapon_rate`, `weapon_range`, `turret_damage` and any similar key) are read with `tuning.mod(key)`, never `tuning.f(key)`.
 
 ## The context (`src/core/context.gd`)
+
+For the complete, lint-checked inventory of all `Context` fields (including `buffs`, `run_log`, `profile`, `progress`, `destructibles`, `screen_busy`, `dev`, and `_hit_stop`), see [ARCHITECTURE.md](ARCHITECTURE.md). The core seam summary below covers the original module contract fields:
 
 | Field | Type | Meaning |
 | --- | --- | --- |
@@ -120,7 +126,7 @@ The stage-start snapshot holds `max_hp`, `hp`, `scrap`, `cogs`, `mass`, `bonus_c
 
 ## GameEvents signals (`src/core/game_events.gd`)
 
-Every signal has a row in `event_kinds.gd` keyed by its name. `spine_event_kinds_test.gd` fails if one is missing, if a row has no sound, or if an objective uses the word "optional".
+`src/core/game_events.gd` is the canonical signal list and [ARCHITECTURE.md](ARCHITECTURE.md) indexes all current signal groups. Every signal has a row in `event_kinds.gd` keyed by its name; `spine_event_kinds_test.gd` fails if one is missing, if a row has no sound, or if an objective uses the word "optional". The table below documents the core seam semantics for the primary handshake signals:
 
 | Signal | Arguments | Emitted by | Meaning |
 | --- | --- | --- | --- |

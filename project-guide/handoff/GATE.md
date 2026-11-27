@@ -1,23 +1,18 @@
 # The promotion gate: recipe
 
-How the full gate runs, step by step, with the tools checked in. [ORCHESTRATOR.md](../../ORCHESTRATOR.md) owns the gate rule (what must pass, and when); this page is only the method. Written 2026-11-09 by the workflows pass from the wave 19 to 32 shard notes, so a fresh thread does not need another thread's memory or a hand-copied script.
+How the full gate runs, step by step, with the tools checked in. [ORCHESTRATOR.md](../../ORCHESTRATOR.md) owns the tiered gate policy (what must pass, and when) and [CONTRIBUTING.md](../../CONTRIBUTING.md) owns the CLI command matrix; this page owns shard execution mechanics. Written 2026-11-09 from wave 19 to 32 shard notes and updated for flat `main` and the Mac Studio Gate.
 
-The stage, the board and the receipts folder to compare against are in the Wave facts table of [STATE.md](STATE.md).
+The open branch (`main`) and carried state live in the Wave facts table of [STATE.md](STATE.md).
 
 ## The wave gate and the release gate
 
-Since ruling `ep` (25 Nov) and ruling `eq` (26 Nov), development runs flat on `main` (`Open stage: main` in [STATE.md](STATE.md)); per-wave `stage/alpha-w<N>` stacking and legacy wave boards are retired, while fast dev verification follows `ruling eo` and the full release gate runs once before a human sitting (`ruling cy`). Where steps below name a wave stage or `/mnt/project-files/gate/`, substitute `origin/main` and a `scratch/gate-receipts-*` branch / `artifacts/local/` on the Mac Studio (`ruling eb`, Gate host since 16 Nov) or Linux `ahana`. [ORCHESTRATOR.md](../../ORCHESTRATOR.md) owns the gate rule. The wave gate's method:
+Development runs flat on `main` (`ruling ep`, `ruling eq`); [ORCHESTRATOR.md](../../ORCHESTRATOR.md) owns which checks run per PR, per promotion (wave gate), and per sitting (release gate). Receipts live under `artifacts/local/` locally and on `scratch/gate-receipts-*` branches when shared.
 
-1. The node suite and the three test windows, as below.
-2. The scoped set, one shard run by name: the bot-tier tests and posture-band proofs the fast lane's receipt names for the diff, `world1_run_test`, and any fight, stage or bot run the diff plainly touches. Write the list and the reason for each name in the gate plan.
-3. The plan's tally has the test-window rows and one `scoped` row. A release shard may have a row that opens with DEFERRED and names the receipt of its last full read.
-4. `node scripts/gate/tally.mjs --wave --plan <plan>` must exit 0. Without `--wave` the tally is the release gate's and defers nothing.
-
-On the Gate host (`Mac Studio` under ruling `eb`, or `ahana`), one command runs steps 1 to 4: `node scripts/gate/pc.mjs run --wave N --head <sha> --scoped-from <the diff's sketch:fast receipt.json> [--scoped a_test,b_test] --tally`. `--scoped-from` takes the bot shards that receipt names, `--scoped` adds more by name, and `world1_run_test` is always in. A non-bot name is left out, because the windows run the whole non-bot list. `plan` with the same flags prints the scoped names. The reason for each name still goes in the gate plan.
+On the Gate host (Mac Studio under `ruling eb`, or Linux `ahana` per [DEVICES.md](DEVICES.md)), one command runs the wave gate (`node scripts/gate/pc.mjs run --wave N --head <sha> --scoped-from <the diff's sketch:fast receipt.json> [--scoped a_test,b_test] --tally`), which executes the Node suite, the three non-bot test windows, and the scoped bot/posture shard (`world1_run_test` always included) and runs `node scripts/gate/tally.mjs --wave --plan <plan>` (omit `--wave` for a release gate, which defers nothing). `plan` with the same flags prints the scoped names; record each scoped reason in the gate plan.
 
 ## What a full gate is
 
-The full gate is the release gate (`ruling cy`). Since 10 Nov it runs via `scripts/gate/pc.mjs` (Mac Studio under `ruling eb`, Linux `ahana` as free hardware). Shard threads follow `AGENTS.md` rule 11 (Gemini 4 Neon at high effort, fallback `.agents/agents/scrapkeep-verifier.md` / `.claude/agents/scrapkeep-verifier.md`). For an overflow cloud run:
+The release gate runs via `scripts/gate/pc.mjs` on the Mac Studio (`ruling eb`) or Linux `ahana`. Worker routing and shard models follow [AGENTS.md](../../AGENTS.md) rule 11 (Gemini 4 Neon at high effort; fallback `scrapkeep-verifier`). For an overflow multi-shard run:
 
 | Shard | What it runs | Usual wall time on a 4 vCPU cloud box |
 | --- | --- | --- |
@@ -28,13 +23,13 @@ The full gate is the release gate (`ruling cy`). Since 10 Nov it runs via `scrip
 | bands C | swarm bands, `run_tier`, the HARD rungs | 3 h, one resume |
 | red team | one persona, rotating: greedy, line-rider, speedrunner, first-timer, cautious | 60 min |
 
-Shard threads run and compare; they write no fixes, commit nothing and push nothing. They run on the mid model tier (ruling bp). Each posts "started, import ok" on the board within 20 minutes, writes its receipt under `/mnt/project-files/gate/w<N>-<head>/`, posts the verdict on the board and replies to the Gate thread. Before relaunching a shard that looks missing, check the thread list and the board.
+Shard workers run and compare; they write no fixes, commit nothing, and push nothing. Each follows [AGENTS.md](../../AGENTS.md) rule 11, writes its receipt under `artifacts/local/gate/w<N>-<head>/` (published on `scratch/gate-receipts-*` when shared), and reports the verdict back to the Mac Studio Gate session.
 
 ## Every shard, first
 
-1. `bash tools/cloud/setup.sh` (installs the pinned Godot; exit 0).
+1. `bash tools/cloud/setup.sh` (installs the pinned Godot on cloud/Linux hosts; exit 0).
 2. Check out the frozen head, detached, and confirm it with `git rev-parse HEAD`. The checkout must be clean.
-3. `/mnt/project-files` does not run scripts directly: use `bash script.sh`, and keep working files on local disk. Copy results to the shared folder at the end.
+3. Keep working files and receipts on local disk under `artifacts/local/` (never on shared network mounts); publish gate receipts to a `scratch/gate-receipts-*` branch or PR report at the end.
 4. A background command is stopped after 2 hours. Every tool below resumes when the same command is run again.
 
 ## Test and bot shards
@@ -135,21 +130,21 @@ A missing input is "no data" and blocks, so the read starts NOT READY and each w
 
 ## The node tests, once per promotion
 
-The fast lane runs only the node tests a diff selects, and the shards run Godot tests. So once per promotion the whole node suite runs on the PC, where no test is skipped for the box: a full clone, an ordinary user, installed packages. The board thread queues it on the PC lane when the Gate calls the promotion.
+The fast lane runs only the node tests a diff selects, and the shards run Godot tests. So once per promotion the Mac Studio Gate (or Linux `ahana` per [DEVICES.md](DEVICES.md)) runs the whole node suite on a full clone with an ordinary user and installed packages (`scripts/gate/pc.mjs` runs this step automatically).
 
 ```
-git fetch origin && git checkout --detach <stage head>
+git fetch origin && git checkout --detach <head>
 npm ci
 SCRAPKEEP_WHOLE_TESTS=1 npm test
 ```
 
-Pass means the last command exits 0 and its summary reads `# fail 0`. `SCRAPKEEP_WHOLE_TESTS=1` turns the box skips in `tests/preconditions.mjs` (as root, two tests; in a shallow clone, seven) into errors, so a pass cannot come from a box that skipped them. Skips that remain are tests with their own stated need (a Godot binary, for one) and do not fail the run. The PC lane posts the summary lines (`# tests`, `# pass`, `# fail`, `# skipped`) on the board. A failure is a new red and blocks like any other (ruling ai); there is no ledger for node tests.
+Pass means the last command exits 0 and its summary reads `# fail 0`. `SCRAPKEEP_WHOLE_TESTS=1` turns the box skips in `tests/preconditions.mjs` (as root, two tests; in a shallow clone, seven) into errors, so a pass cannot come from a box that skipped them. Skips that remain are tests with their own stated need (a Godot binary, for one) and do not fail the run. Record the summary lines (`# tests`, `# pass`, `# fail`, `# skipped`) in the gate plan receipt. A failure is a new red and blocks like any other (ruling ai); there is no ledger for node tests.
 
-In a cloud thread, plain `npm test` should also read `# fail 0`, with up to 9 more skipped than on the PC. It is a useful check before a pull request that touches `scripts/` or `tests/`, and it does not replace the PC run.
+In a cloud worker, plain `npm test` should also read `# fail 0`, with up to 9 more skipped than on the Gate host. It is a useful check before a pull request that touches `scripts/` or `tests/`, and it does not replace the full-clone Gate run.
 
 ## When the head moves after the shards ran
 
-A small fix can land on a frozen stage (a re-pin, a text fix). Rows carry only for tests the change cannot reach:
+A small fix can land on a frozen head (a re-pin, a text fix). Rows carry only for tests the change cannot reach:
 
 ```
 node scripts/gate/carry.mjs <head the rows were read on>
@@ -160,7 +155,7 @@ Run it in a checkout of the new head. If any game file changed, nothing carries.
 ## Before CLEAN
 
 ```
-node scripts/gate/tally.mjs --plan /mnt/project-files/gate/w<N>-<head>-gate-plan.md
+node scripts/gate/tally.mjs --plan artifacts/local/gate/w<N>-<head>-gate-plan.md
 ```
 
 The plan's tally is a table headed `| Shard | Verdict |`, one row per shard: `tests FIRST-LAST`, `bots 1` to the last block of five, `bands A`, `bands B`, `bands C`, `red team <persona>`, and `weekly sweep` while the weekly list names any test. A verdict opens with `PASS` (`CLEAR` for the red team) or with `RED`; the shard receipt's verdict line is written that way, so copy it. The checker refuses CLEAN while a row is missing or empty, a verdict names no receipt, the test windows leave a gap in the list, the newest row for a shard does not open with PASS or CLEAR, the plan's file name gates a head other than the one checked out (the lists are counted in the checkout), a ledger row is past its review date, or the weekly sweep is missing or more than 7 days old. It also refuses unless a `| Check | Verdict |` table has a `node tests` row whose newest verdict opens with `PASS`, reads `N tests, 0 fail` with N above zero and names its receipt, for example `| node tests | PASS. 1506 tests, 0 fail. Receipt node/summary.txt |`; a hand-written plan adds that table too. When a shard is read again on a moved head, add a new row under a new table; the newest row for a name wins.

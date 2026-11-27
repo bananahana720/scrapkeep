@@ -1,5 +1,7 @@
 # TADR-011. The scrap-bot crew
 
+> **Alpha scope note:** [DECISIONS.md](../project-guide/handoff/DECISIONS.md) (17 Oct 2026) deferred the multi-bot crew until after alpha in favour of one growing `SPIL-9` companion.
+
 Status: **Accepted direction.** Andrew decided this on 10 October 2026 after reading the CS-01 comps pack: "Crew. Go with the scrap-bot crew, amend BIBLE.md section 6 and write the ADR the pack proposes" ([TRACKING](../TRACKING.md) CS-01-A1, EV-0626). This is not authorization to build.
 
 Date: 10 October 2026. Depends on [TADR-002](TADR-002-runtime-model.md), [TADR-003](TADR-003-content-pipeline.md), [TADR-004](TADR-004-persistence.md) and [TADR-010](TADR-010-open-stages-and-event-director.md).
