@@ -162,7 +162,7 @@ export function defaultBase(head, run = git) {
   } catch {
     base = "";
   }
-  if (base && base !== head) return base;
+  if (base && base !== parents[0]) return base;
   if (parents.length >= 2) return parents[1];
   throw new Error(`${head} has no parent; pass --base <commit>`);
 }

@@ -213,6 +213,7 @@ test("defaultBase returns HEAD's parent when the merge base is HEAD itself", () 
     throw new Error(`unexpected git call: ${args.join(" ")}`);
   };
   assert.equal(defaultBase("head333", run), "parent1");
+  assert.equal(defaultBase("HEAD", run), "parent1");
 });
 
 test("defaultBase falls back to HEAD's parent when origin/main is absent and throws on a root commit", () => {
