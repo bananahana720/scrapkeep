@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://src/combat/actives/active_base.gd"
 
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -24,17 +24,10 @@ const SOURCE := "special"
 const ELEMENT := "kinetic"
 const IMPACT := "slam"
 
-var ctx
-var combat
 var pending: Array = []
 var spent: Array = []
 var knocks := 0
 var _crack_clock := 0.0
-
-
-func setup(context, owner_combat) -> void:
-	ctx = context
-	combat = owner_combat
 
 
 func clear() -> void:
@@ -65,10 +58,7 @@ func radius_for(bonus: int) -> float:
 
 
 func damage(bonus := 0) -> float:
-	var punch := 0.0
-	if ctx.build != null and ctx.build.has_method("punch_bonus"):
-		punch = float(ctx.build.punch_bonus())
-	return (BASE_DAMAGE + punch) * (1.0 + BONUS_DAMAGE * bonus) * ctx.tuning.mod("weapon_damage")
+	return (BASE_DAMAGE + punch_bonus()) * (1.0 + BONUS_DAMAGE * bonus) * weapon_damage_mult()
 
 
 func begin(rack, row: Dictionary) -> void:
@@ -94,7 +84,7 @@ func fire(rack, row: Dictionary, bonus: int) -> int:
 	var dmg := maxf(float(first["damage"]), damage(bonus))
 	var hit := dmg
 	var radius: float = ring.radius
-	for level in _pattern("cross_split"):
+	for level in pattern_level("cross_split"):
 		radius += AFTERSHOCK_GROW
 		dmg *= AFTERSHOCK_SCALE
 		var warn := AFTERSHOCK_WARN * (level + 1)
@@ -160,7 +150,7 @@ func _strike(ring: Node3D, dmg: float) -> void:
 
 
 func _chain(struck: Array, dmg: float) -> void:
-	var jumps := _pattern("chain_arc")
+	var jumps := pattern_level("chain_arc")
 	if jumps < 1 or struck.size() < 2:
 		return
 	for from in struck:
@@ -218,9 +208,3 @@ func _cracks(ring: Node3D, progress: float) -> void:
 func _free(ring) -> void:
 	if is_instance_valid(ring):
 		ring.queue_free()
-
-
-func _pattern(id: String) -> int:
-	if ctx.build != null and ctx.build.has_method("pattern_level"):
-		return int(ctx.build.pattern_level(id))
-	return ctx.run.parts.count(id) if ctx.run != null else 0

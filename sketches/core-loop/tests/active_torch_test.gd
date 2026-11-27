@@ -107,7 +107,7 @@ func _run() -> void:
 	# --- Guide line, then the beam on the same lane -----------------------------------------
 	_player.reset_to(_ground(0.0) + Vector3.UP)
 	await _sim(0.2)
-	var aim: Vector3 = _torch._aim()
+	var aim: Vector3 = _torch.flat_aim()
 	var side := aim.cross(Vector3.UP).normalized()
 	var front := _enemy(aim * 6.0)
 	var behind := _enemy(-aim * 6.0)
