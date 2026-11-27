@@ -232,8 +232,9 @@ jobs:
         run: |
           set -euo pipefail
           if ! command -v ffprobe >/dev/null 2>&1; then
+            sudo rm -f /var/lib/man-db/auto-update
             if [[ "$CACHE_HIT" == "true" && -d "$DEB_DIR" ]] && ls "$DEB_DIR"/*.deb >/dev/null 2>&1; then
-              if ! sudo dpkg -i "$DEB_DIR"/*.deb; then
+              if ! (sudo dpkg --force-unsafe-io --no-triggers -i "$DEB_DIR"/*.deb && sudo ldconfig); then
                 sudo apt-get update -qq
                 sudo apt-get install -y --no-install-recommends -f
               fi

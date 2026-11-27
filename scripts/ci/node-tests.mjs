@@ -57,16 +57,83 @@ export function parseShardSpec(shard) {
   return { index, total };
 }
 
-export function selectShardFiles(files, { shard = null, shuffle = false, seed = null } = {}) {
+export const DEFAULT_FILE_MS = 500;
+export const DURATION_HINTS_MS = {
+  "scripts/gate/sound-receipts.test.mjs": 15_000,
+  "sound-receipts.test.mjs": 15_000,
+  "tests/sprint-close.test.js": 10_400,
+  "sprint-close.test.js": 10_400,
+  "scripts/alpha-rc.test.mjs": 8_300,
+  "alpha-rc.test.mjs": 8_300,
+  "scripts/sketch-smoke.test.mjs": 5_700,
+  "sketch-smoke.test.mjs": 5_700,
+  "tests/check-skills.test.js": 4_300,
+  "check-skills.test.js": 4_300,
+  "scripts/audio-gate.test.mjs": 3_500,
+  "audio-gate.test.mjs": 3_500,
+  "tests/check-scope.test.js": 3_100,
+  "check-scope.test.js": 3_100,
+  "tests/asset-inspect.test.js": 3_000,
+  "asset-inspect.test.js": 3_000,
+  "scripts/ci/selection-mutation.test.mjs": 2_100,
+  "selection-mutation.test.mjs": 2_100,
+  "scripts/sketch-lint.test.mjs": 2_000,
+  "sketch-lint.test.mjs": 2_000,
+  "tests/antigravity-hooks.test.js": 1_900,
+  "antigravity-hooks.test.js": 1_900,
+  "scripts/play.resolve.test.mjs": 1_700,
+  "play.resolve.test.mjs": 1_700,
+  "tests/check-docs.test.js": 1_700,
+  "check-docs.test.js": 1_700,
+  "scripts/gate/look-receipts.test.mjs": 1_500,
+  "look-receipts.test.mjs": 1_500,
+  "scripts/brief-check.test.mjs": 1_400,
+  "brief-check.test.mjs": 1_400,
+  "scripts/gate/pc.test.mjs": 1_400,
+  "pc.test.mjs": 1_400,
+  "scripts/wave-state.test.mjs": 1_300,
+  "wave-state.test.mjs": 1_300,
+  "tests/check-agents.test.js": 1_300,
+  "check-agents.test.js": 1_300,
+};
+
+export function estimateFileMs(file, hints = DURATION_HINTS_MS) {
+  return hints[file] ?? hints[path.posix.basename(file)] ?? DEFAULT_FILE_MS;
+}
+
+export function partitionDurationShards(files, total, hints = DURATION_HINTS_MS) {
+  const shards = Array.from({ length: total }, () => ({ totalMs: 0, files: [] }));
+  const ranked = files
+    .map((file, order) => ({ file, order, ms: estimateFileMs(file, hints) }))
+    .sort((a, b) => b.ms - a.ms || a.order - b.order);
+  for (const item of ranked) {
+    let lightest = shards[0];
+    for (let i = 1; i < shards.length; i++) {
+      if (shards[i].totalMs < lightest.totalMs) lightest = shards[i];
+    }
+    lightest.files.push(item.file);
+    lightest.totalMs += item.ms;
+  }
+  return shards;
+}
+
+export function selectShardFiles(
+  files,
+  { shard = null, shuffle = false, seed = null, hints = DURATION_HINTS_MS } = {},
+) {
   if (shard && shuffle && seed === null) {
     throw new Error(
       "--shard with --shuffle requires an explicit --seed so all shards partition identically",
     );
   }
-  const ordered = shuffle ? shuffleFiles(files, seed ?? 1) : [...files];
-  if (!shard) return ordered;
+  if (!shard) {
+    return shuffle ? shuffleFiles(files, seed ?? 1) : [...files];
+  }
   const { index, total } = parseShardSpec(shard);
-  return ordered.filter((_, idx) => idx % total === index - 1);
+  const shardFiles = partitionDurationShards(files, total, hints)[index - 1].files;
+  if (!shuffle) return shardFiles;
+  const shardSeed = ((seed ?? 1) ^ Math.imul(index, 0x9e3779b1)) >>> 0;
+  return shuffleFiles(shardFiles, shardSeed);
 }
 
 export function buildNodeTestArgs(files, { shard = null, shuffle = false, seed = null } = {}) {
