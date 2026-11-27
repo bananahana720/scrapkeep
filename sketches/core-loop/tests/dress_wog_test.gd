@@ -123,8 +123,12 @@ func _signals(stage_root: Node3D, stage: int) -> void:
 	var wheels := 0
 	for view: MeshInstance3D in devices.find_children("*", "MeshInstance3D", true, false):
 		var role: String = view.get_meta("spillway_finish", "")
+		var std_mat := view.material_override as StandardMaterial3D
 		if role == "grate":
 			_finish(view, "thermal grate", Palette.COPPER, Palette.CHARCOAL)
+			grates += 1
+		elif view.mesh is ArrayMesh and std_mat != null and std_mat.resource_name == "craft_thermal_grate":
+			_require(std_mat.albedo_color == Palette.COPPER and not view.has_meta("spillway_finish"), "thermal grate keeps copper finish")
 			grates += 1
 		elif role == "safety":
 			_finish(view, "valve stem", Palette.AMBER, Palette.CHARCOAL)
@@ -132,15 +136,23 @@ func _signals(stage_root: Node3D, stage: int) -> void:
 		elif role == "recess" and view.mesh is BoxMesh:
 			_finish(view, "wall crack or valve spoke", Palette.CHARCOAL, Palette.CHARCOAL)
 			dark_cracks += 1
-		if view.mesh is CylinderMesh and is_equal_approx(view.mesh.height, 40.0):
+		var is_plume := (view.mesh is CylinderMesh and is_equal_approx(view.mesh.height, 40.0)) \
+			or (view.mesh is ArrayMesh and is_equal_approx(view.mesh.get_aabb().size.y, 40.0) and std_mat != null and std_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA)
+		if is_plume:
 			_require(view.material_override.albedo_color == Color(Palette.SAND, 0.12), "thermal plume remains translucent bone, harmless")
 			_require(view.material_override.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA, "thermal plume stays transparent")
 			plumes += 1
 		if view.mesh is TorusMesh and role == "lens":
 			_finish(view, "cable hook", Palette.AMBER, Palette.CHARCOAL, 1.2)
 			hooks += 1
+		elif view.mesh is ArrayMesh and view.get_node_or_null("GrappleShackle") != null and std_mat != null:
+			_require(std_mat.albedo_color == Palette.AMBER and std_mat.emission_enabled and is_equal_approx(std_mat.emission_energy_multiplier, 1.2), "cable hook keeps amber emit=1.2")
+			hooks += 1
 		if view.mesh is CylinderMesh and is_equal_approx(view.mesh.top_radius, 0.18):
 			_finish(view, "cable span", Palette.CHARCOAL, Palette.CHARCOAL)
+			cable_spans += 1
+		elif view.mesh is ArrayMesh and std_mat != null and std_mat.albedo_color == Palette.CHARCOAL and not std_mat.emission_enabled and view.mesh.get_aabb().size.y > 5.0:
+			_require(std_mat.albedo_color == Palette.CHARCOAL and not view.has_meta("spillway_finish"), "cable span keeps charcoal finish")
 			cable_spans += 1
 		if view.mesh is TorusMesh and is_equal_approx(view.mesh.outer_radius, 1.9):
 			_finish(view, "valve wheel", Palette.RUST, Palette.CHARCOAL)

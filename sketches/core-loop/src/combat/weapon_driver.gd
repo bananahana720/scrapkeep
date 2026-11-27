@@ -101,6 +101,8 @@ var _beat_breaks_props := false
 var _hit_seq := 0
 var _pending_pulses: Array = []
 var _instant_charge_left := 0.0
+var _fire_seq := 0
+var _last_shot_kind := ""
 
 
 func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: float, context: Dictionary = {}) -> Array:
@@ -144,6 +146,9 @@ func step(delta: float, intent, weapon: String, pattern: Resource, rate_hz: floa
 		if _buffer_s <= EPS:
 			_buffered = false
 			_buffer_s = 0.0
+	if not shots.is_empty():
+		_fire_seq += 1
+		_last_shot_kind = String(shots[0].get("kind", SHOT_PLAIN))
 	return shots
 
 
@@ -274,6 +279,8 @@ func reset(pattern: Resource = null) -> void:
 	_stamp_streak = 0
 	_hit_seq = 0
 	_pending_pulses.clear()
+	_fire_seq = 0
+	_last_shot_kind = ""
 	if pattern != null:
 		_sync_pattern(pattern, true)
 	else:
@@ -355,6 +362,8 @@ func state_snapshot() -> Dictionary:
 		"refund": clampf(_refund, 0.0, safe_cost),
 		"pending_pulses": _pending_pulses.size(),
 		"hit_seq": _hit_seq,
+		"fire_seq": _fire_seq,
+		"last_shot_kind": _last_shot_kind,
 	}
 
 

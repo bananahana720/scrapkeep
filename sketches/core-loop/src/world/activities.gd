@@ -11,6 +11,7 @@ const Interact := preload("res://src/world/interact.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ParkGraph := preload("res://src/world/park/park_graph.gd")
@@ -1133,16 +1134,31 @@ func _dress_door(s: Site) -> void:
 	clock.name = "DoorClock"
 	clock.position = Vector3(0.0, 1.3, 0.52)
 	s.wall.add_child(clock)
-	_mesh_box(clock, Vector3(DOOR_CLOCK_M, DOOR_CLOCK_M, 0.1), Vector3.ZERO, _solid(Palette.BRASS))
-	_mesh_box(clock, Vector3(DOOR_CLOCK_M - 0.3, DOOR_CLOCK_M - 0.3, 0.06), Vector3(0.0, 0.0, 0.06), _solid(Palette.LEDGER))
+	var casing := MeshInstance3D.new()
+	casing.mesh = PropMeshes.door_clock_casing(DOOR_CLOCK_M)
+	casing.material_override = PropMeshes.weathered_material(Palette.BRASS, 0.52, 0.52, 0.0, "clock_brass")
+	clock.add_child(casing)
+	var dial := MeshInstance3D.new()
+	dial.mesh = PropMeshes.door_clock_face(DOOR_CLOCK_M)
+	dial.position = Vector3(0.0, 0.0, 0.05)
+	dial.material_override = PropMeshes.weathered_material(Palette.LEDGER.darkened(0.12), 0.78, 0.06, 0.0, "clock_face")
+	clock.add_child(dial)
 	var ink := _solid(Palette.CHARCOAL)
-	var hour := _mesh_box(clock, Vector3(0.1, DOOR_CLOCK_M * 0.3, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.15, 0.1), ink)
+	var hour := MeshInstance3D.new()
+	hour.mesh = PropMeshes.door_clock_hand(0.1, DOOR_CLOCK_M * 0.3)
+	hour.position = Vector3(0.0, DOOR_CLOCK_M * 0.15, 0.1)
+	hour.material_override = ink
 	hour.name = "HourHand"
+	clock.add_child(hour)
 	var minute := Node3D.new()
 	minute.position = Vector3(0.0, 0.0, 0.12)
 	minute.rotation.z = deg_to_rad(30.0)
 	clock.add_child(minute)
-	_mesh_box(minute, Vector3(0.07, DOOR_CLOCK_M * 0.42, 0.04), Vector3(0.0, DOOR_CLOCK_M * 0.21, 0.0), ink)
+	var min_hand := MeshInstance3D.new()
+	min_hand.mesh = PropMeshes.door_clock_hand(0.07, DOOR_CLOCK_M * 0.42)
+	min_hand.position = Vector3(0.0, DOOR_CLOCK_M * 0.21, 0.0)
+	min_hand.material_override = ink
+	minute.add_child(min_hand)
 	_range_tree(s, SITE_VIEW_END_M, s.view)
 
 
@@ -1216,12 +1232,20 @@ func _chalk_tally(wall: Node3D) -> void:
 	tally.name = "RoomTally"
 	tally.position = ROOM_TALLY_AT
 	wall.add_child(tally)
+	var stroke_mesh := PropMeshes.chalk_stroke(ROOM_TALLY_STROKE.x, ROOM_TALLY_STROKE.y)
 	for k in 4:
-		var stroke := _mesh_box(tally, Vector3(ROOM_TALLY_STROKE.x, ROOM_TALLY_STROKE.y, 0.02),
-			Vector3(-0.39 + k * 0.26, 0.0, 0.0), chalk)
+		var stroke := MeshInstance3D.new()
+		stroke.mesh = stroke_mesh
+		stroke.material_override = chalk
+		stroke.position = Vector3(-0.39 + k * 0.26, 0.0, 0.0)
 		stroke.rotation.z = 0.06 * (k % 2 * 2 - 1)
-	var bar := _mesh_box(tally, Vector3(ROOM_TALLY_STROKE.x, ROOM_TALLY_STROKE.y * 1.25, 0.02), Vector3(0.0, 0.0, 0.01), chalk)
+		tally.add_child(stroke)
+	var bar := MeshInstance3D.new()
+	bar.mesh = PropMeshes.chalk_stroke(ROOM_TALLY_STROKE.x, ROOM_TALLY_STROKE.y * 1.25)
+	bar.material_override = chalk
+	bar.position = Vector3(0.0, 0.0, 0.01)
 	bar.rotation.z = -1.05
+	tally.add_child(bar)
 
 
 func _hang_glove(s: Site) -> void:
@@ -1230,29 +1254,18 @@ func _hang_glove(s: Site) -> void:
 	glove.position = ROOM_GLOVE_AT + Vector3(0.0, 0.0, 0.1 * ROOM_GLOVE_SCALE + 0.02)
 	glove.basis = (Basis(Vector3.BACK, 0.22) * Basis(Vector3.RIGHT, -PI * 0.5)).scaled(Vector3.ONE * ROOM_GLOVE_SCALE)
 	s.wall.add_child(glove)
-	var leather := _solid(Palette.COPPER)
-	_mesh_box(glove, Vector3(0.62, 0.2, 0.66), Vector3.ZERO, leather)
-	for k in 4:
-		var finger := MeshInstance3D.new()
-		var cap := CapsuleMesh.new()
-		cap.radius = 0.08
-		cap.height = 0.5 - absf(k - 1.5) * 0.08
-		finger.mesh = cap
-		finger.material_override = leather
-		finger.rotation = Vector3(PI * 0.5, (k - 1.5) * 0.12, 0.0)
-		finger.position = Vector3(-0.23 + k * 0.155, -0.02, -0.33 - cap.height * 0.4)
-		glove.add_child(finger)
-	var thumb := MeshInstance3D.new()
-	var thumb_cap := CapsuleMesh.new()
-	thumb_cap.radius = 0.09
-	thumb_cap.height = 0.4
-	thumb.mesh = thumb_cap
-	thumb.material_override = leather
-	thumb.rotation = Vector3(PI * 0.5, 1.0, 0.0)
-	thumb.position = Vector3(-0.42, -0.02, -0.02)
-	glove.add_child(thumb)
-	_mesh_box(glove, Vector3(0.7, 0.24, 0.26), Vector3(0.0, 0.01, 0.42), _solid(Palette.LEDGER))
-	_mesh_box(glove, Vector3(0.05, 0.45, 0.05), Vector3(0.0, 0.0, 0.5), _solid(Palette.CHARCOAL))
+	var hand := MeshInstance3D.new()
+	hand.mesh = PropMeshes.work_glove_leather()
+	hand.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.78, 0.12, 0.0, "glove_leather")
+	glove.add_child(hand)
+	var cuff := MeshInstance3D.new()
+	cuff.mesh = PropMeshes.work_glove_cuff()
+	cuff.material_override = PropMeshes.weathered_material(Palette.LEDGER.darkened(0.16), 0.88, 0.02, 0.0, "glove_cuff")
+	glove.add_child(cuff)
+	var peg := MeshInstance3D.new()
+	peg.mesh = PropMeshes.work_glove_peg()
+	peg.material_override = PropMeshes.weathered_material(Palette.CHARCOAL, 0.65, 0.45, 0.0, "glove_peg")
+	glove.add_child(peg)
 
 
 static var _parts := {}
@@ -1267,12 +1280,7 @@ static func _solid(color: Color) -> StandardMaterial3D:
 
 func _mesh_box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, solid := false) -> Node3D:
 	var mesh := MeshInstance3D.new()
-	var key := "box:%s" % size
-	if not _parts.has(key):
-		var bm := BoxMesh.new()
-		bm.size = size
-		_parts[key] = bm
-	mesh.mesh = _parts[key]
+	mesh.mesh = PropMeshes.bevel_prop_box(size)
 	mesh.material_override = mat
 	if not solid:
 		mesh.position = at
@@ -2487,14 +2495,18 @@ func _build_ward(spec: Dictionary) -> MendWard:
 	var at: Vector2 = spec["at"]
 	w.global_position = ctx.terrain.drop_point(at.x, at.y, 0.0)
 	if ModelKit.whole(WARD_MODEL, w) == null:
-		_mesh_box(w, WARD_POST, Vector3.UP * WARD_POST.y * 0.5, _solid(Palette.SLATE))
-	_mesh_cylinder(w, MendWard.RING_M, WARD_RING_H, Vector3.UP * WARD_RING_H * 0.5, _solid(Palette.CHARCOAL))
+		var post := MeshInstance3D.new()
+		post.mesh = PropMeshes.bevel_prop_post(WARD_POST)
+		post.material_override = PropMeshes.weathered_material(Palette.SLATE, 0.76, 0.22, 0.0, "ward_post")
+		post.position = Vector3.UP * WARD_POST.y * 0.5
+		w.add_child(post)
+	var ring := MeshInstance3D.new()
+	ring.mesh = PropMeshes.mend_ward_ring(MendWard.RING_M, WARD_RING_H)
+	ring.material_override = PropMeshes.weathered_material(Palette.CHARCOAL, 0.74, 0.28, 0.0, "ward_ring")
+	ring.position = Vector3.UP * WARD_RING_H * 0.5
+	w.add_child(ring)
 	w.fill = MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = MendWard.RING_M
-	disc.bottom_radius = MendWard.RING_M
-	disc.height = WARD_RING_H
-	w.fill.mesh = disc
+	w.fill.mesh = PropMeshes.mend_ward_fill(MendWard.RING_M, WARD_RING_H)
 	w.fill.material_override = _solid(Palette.OLD_VERDIGRIS)
 	w.fill.position = Vector3.UP * WARD_RING_H * 1.5
 	w.fill.scale = Vector3(0.001, 1.0, 0.001)
@@ -2512,20 +2524,12 @@ func _build_plate(spec: Dictionary) -> LorePlate:
 	p.global_position = Vector3(p.at.x, ctx.terrain.height(p.at.x, p.at.y), p.at.y)
 	p.visible = false
 	var rim := MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = PLATE_RADIUS
-	disc.bottom_radius = PLATE_RADIUS * 1.08
-	disc.height = PLATE_H
-	rim.mesh = disc
-	rim.material_override = _solid(Palette.CHARCOAL)
+	rim.mesh = PropMeshes.lore_plate_rim(PLATE_RADIUS, PLATE_H)
+	rim.material_override = PropMeshes.weathered_material(Palette.CHARCOAL, 0.72, 0.35, 0.0, "plate_rim")
 	rim.position = Vector3.UP * PLATE_H * 0.5
 	p.add_child(rim)
 	p.face = MeshInstance3D.new()
-	var face := CylinderMesh.new()
-	face.top_radius = PLATE_FACE_RADIUS
-	face.bottom_radius = PLATE_FACE_RADIUS
-	face.height = PLATE_H
-	p.face.mesh = face
+	p.face.mesh = PropMeshes.lore_plate_face(PLATE_FACE_RADIUS, PLATE_H)
 	p.add_child(p.face)
 	p.read = ctx.get("codex") != null and ctx.codex.known(p.note)
 	_show_plate(p)

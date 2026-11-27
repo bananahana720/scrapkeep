@@ -1,0 +1,54 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/craft_master_weathering.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" path="res://assets/textures/craft/oxidized_iron_detail.png" id="2_detail"]
+
+[resource]
+resource_name = "plasma_conduit_core"
+shader = ExtResource("1_shader")
+shader_parameter/use_world_space = true
+shader_parameter/use_vertex_masks = true
+shader_parameter/triplanar_sharpness = 5.5
+shader_parameter/detail_tile_metres = 1.9
+shader_parameter/macro_scale = 0.28
+shader_parameter/uv_warp_strength = 0.22
+shader_parameter/stochastic_rotation_mode = 1
+shader_parameter/has_detail_tex = true
+shader_parameter/detail_tex = ExtResource("2_detail")
+shader_parameter/detail_tex_strength = 0.58
+shader_parameter/detail_chroma_keep = 0.2
+shader_parameter/base_albedo = Color(0.211765, 0.341176, 0.329412, 1)
+shader_parameter/secondary_albedo = Color(0.309804, 0.498039, 0.478431, 1)
+shader_parameter/macro_color_mix = 0.24
+shader_parameter/base_roughness = 0.62
+shader_parameter/base_metallic = 0.38
+shader_parameter/base_specular = 0.56
+shader_parameter/oil_sheen_strength = 0.24
+shader_parameter/oil_sheen_roughness = 0.26
+shader_parameter/edge_wear_albedo = Color(0.603922, 0.627451, 0.627451, 1)
+shader_parameter/edge_wear_strength = 0.92
+shader_parameter/edge_wear_metallic = 0.9
+shader_parameter/edge_wear_roughness = 0.25
+shader_parameter/auto_curvature_weight = 0.24
+shader_parameter/grime_albedo = Color(0.141176, 0.164706, 0.156863, 1)
+shader_parameter/rust_albedo = Color(0.607843, 0.317647, 0.227451, 1)
+shader_parameter/grime_strength = 0.98
+shader_parameter/grime_roughness = 0.91
+shader_parameter/grime_metallic = 0.05
+shader_parameter/rust_mix = 0.26
+shader_parameter/foot_grime_height = 0.85
+shader_parameter/foot_grime_strength = 0.48
+shader_parameter/cavity_ao_strength = 0.82
+shader_parameter/dust_albedo = Color(0.776471, 0.635294, 0.454902, 1)
+shader_parameter/dust_strength = 0.2
+shader_parameter/dust_slope_min = 0.62
+shader_parameter/dust_roughness = 0.92
+shader_parameter/normal_relief = 0.76
+shader_parameter/roughness_variation = 0.18
+shader_parameter/emissive_color = Color(0.545098, 0.941176, 0.827451, 1)
+shader_parameter/emissive_secondary_color = Color(0.898039, 0.627451, 0.266667, 1)
+shader_parameter/emissive_gradient_mix = 0.28
+shader_parameter/emissive_energy = 5.2
+shader_parameter/emissive_pulse_speed = 1.8
+shader_parameter/emissive_pulse_amount = 0.2
+shader_parameter/reduce_flashes = false

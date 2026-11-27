@@ -1046,7 +1046,7 @@ class Painter:
 			code += "#define DEPTH_AWARE\n"
 		if FILL_STENCIL.has(fill_class):
 			code += "stencil_mode read, write, compare_not_equal, %d;\n" % FILL_STENCIL[fill_class]
-		code += "#include \"res://src/combat/threat_mark.gdshaderinc\"\n"
+		code += "#include \"res://assets/shaders/telegraph_mark.gdshaderinc\"\n"
 		var shader := Shader.new()
 		shader.code = code
 		var mat := ShaderMaterial.new()
@@ -1054,11 +1054,20 @@ class Painter:
 		mat.render_priority = priority
 		mat.set_shader_parameter("governed", 1.0 if governed else 0.0)
 		mat.set_shader_parameter("lens", Vector2(FENCE_CLEAR, FENCE_FULL) if fill_class == "fence" else Vector2(LENS_CLEAR, LENS_FULL))
+		mat.set_shader_parameter("ink_col", Palette.CHARCOAL)
+		mat.set_shader_parameter("is_fill", 1.0 if fill_class in ["fill", "run", "swept"] else 0.0)
+		mat.set_shader_parameter("is_fence", 1.0 if fill_class == "fence" else 0.0)
+		mat.set_shader_parameter("flash_scale", FlashGuard.info(1.0))
 		if depth:
 			mat.set_shader_parameter("depth_pull", DEPTH_PULL)
 		if stripes:
 			mat.set_shader_parameter("texture_albedo", stripe_texture())
 			mat.set_shader_parameter("uv1_scale", Vector3.ONE / (STRIPE_PITCH * sqrt(2.0)))
+			mat.set_shader_parameter("stripe_pitch", STRIPE_PITCH)
+			mat.set_shader_parameter("stripe_tape", 1.0 if soft_on() else 0.0)
+			mat.set_shader_parameter("tape_dark", Color(TAPE_SHADE, TAPE_SHADE, TAPE_SHADE))
+			mat.set_shader_parameter("tape_share", TAPE_SHARE)
+			mat.set_shader_parameter("hazard_col", Palette.HAZARD)
 		_materials[key] = mat
 		materials_built += 1
 		return mat
@@ -1129,11 +1138,11 @@ class Painter:
 	static func stripe_texture() -> ImageTexture:
 		var tape := soft_on()
 		if not _stripes.has(tape):
-			var size := 32
+			var size := 128
 			var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
 			var light := Color.WHITE if tape else Palette.HAZARD
 			var dark := Color(TAPE_SHADE, TAPE_SHADE, TAPE_SHADE) if tape else Palette.CHARCOAL
-			var band := int(size * (1.0 - TAPE_SHARE)) if tape else size / 2
+			var band := int(round(size * (1.0 - TAPE_SHARE))) if tape else size / 2
 			for y in size:
 				for x in size:
 					image.set_pixel(x, y, light if (x + y) % size < band else dark)

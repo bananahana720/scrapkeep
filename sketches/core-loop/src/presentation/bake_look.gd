@@ -8,37 +8,14 @@ const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
 const LIFT_SLOTS := ["fleet_paint"]
-const LIFT := 0.55
-const LIFT_FROM := 0.2
-const RIM := 0.45
+const LIFT := 0.64
+const LIFT_FROM := 0.68
+const RIM := 0.70
 const RIM_POWER := 3.0
-const SKY_TINT := Color("c4d2e8")
-const SKY_GLOW := 0.18
+const SKY_TINT := Color("b4cff0")
+const SKY_GLOW := 1.18
 const BRASS_SLOTS := ["brass", "requisition_tag"]
-const LIFT_SHADER := """shader_type spatial;
-render_mode blend_mix, depth_draw_never, cull_back, diffuse_burley, specular_schlick_ggx;
-uniform vec4 bone : source_color;
-uniform vec4 sky : source_color;
-uniform float lift = 0.55;
-uniform float from = 0.2;
-uniform float rim = 0.45;
-uniform float rim_power = 3.0;
-uniform float glow = 0.18;
-void fragment() {
-	// UV2.y is the bake's wear with glTF's flipped V: 0.5 neutral, 0 the most worn convex edge, 1 the deepest crease.
-	float worn = clamp((0.5 - UV2.y) * 2.0, 0.0, 1.0);
-	float edge = lift * smoothstep(from, 1.0, worn);
-	float side = rim * pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), rim_power);
-	float a = max(edge, side);
-	if (a < 0.004) {
-		discard;
-	}
-	ALBEDO = bone.rgb;
-	ROUGHNESS = 0.9;
-	EMISSION = sky.rgb * glow;
-	ALPHA = a;
-}
-"""
+const EDGE_LIFT_SHADER := preload("res://assets/shaders/edge_lift.gdshader")
 
 static var _ramp: ImageTexture
 static var _twins := {}
@@ -47,10 +24,8 @@ static var _lift: ShaderMaterial
 
 static func edge_lift() -> ShaderMaterial:
 	if _lift == null:
-		var shader := Shader.new()
-		shader.code = LIFT_SHADER
 		_lift = ShaderMaterial.new()
-		_lift.shader = shader
+		_lift.shader = EDGE_LIFT_SHADER
 		_lift.resource_name = "edge_lift"
 		_lift.set_shader_parameter("bone", Palette.SAND)
 		_lift.set_shader_parameter("lift", LIFT)

@@ -6,6 +6,8 @@ const Palette := preload("res://src/core/palette.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
+const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
+const InkOutline := preload("res://src/presentation/ink_outline.gd")
 
 
 const MAX_CHUNKS := 36
@@ -38,7 +40,7 @@ var _chunks: Array[MeshInstance3D] = []
 var _pieces: Array[Node3D] = []
 var _shown_parts: Array = []
 var _halos := {}
-var _chunk_mesh: BoxMesh
+var _chunk_mesh: Mesh
 var _chunk_material: StandardMaterial3D
 var _flung: Array[Dictionary] = []
 var _shell_class := 1
@@ -49,9 +51,14 @@ static var _part_meshes := {}
 
 func setup() -> void:
 	name = "Accretion"
-	_chunk_mesh = BoxMesh.new()
-	_chunk_mesh.size = Vector3(0.42, 0.3, 0.5)
-	_chunk_material = Palette.solid(Palette.ARC.lerp(Palette.RUST, 0.45), 0.5)
+	_chunk_mesh = CraftedGear.chunk_mesh(0)
+	_chunk_material = Palette.solid(Palette.ARC.lerp(Palette.RUST, 0.45), 0.16)
+	_chunk_material.metallic = 0.34
+	_chunk_material.roughness = 0.62
+	_chunk_material.albedo_texture = Palette.painted_texture(128)
+	_chunk_material.uv1_triplanar = true
+	_chunk_material.uv1_scale = Vector3.ONE * 3.0
+	_chunk_material.vertex_color_use_as_albedo = true
 
 
 static func chunks_for(mass: float) -> int:
@@ -67,12 +74,22 @@ func set_lattice(on: bool) -> void:
 	lattice = on
 	scale = Vector3.ONE * shell_scale(_shell_class, lattice)
 	for i in _chunks.size():
-		_chunks[i].position = chunk_point(i)
+		var pt := chunk_point(i)
+		_chunks[i].position = pt
+		_chunks[i].basis = _facing(pt.normalized()) * Basis(Vector3.UP, float(i) * 1.3)
 
 
 func chunk_point(index: int) -> Vector3:
 	var dir := _slot(index, MAX_CHUNKS)
-	return lattice_snap(dir) * LATTICE_SEAT if lattice else dir * 1.02
+	if lattice:
+		if absf(dir.y) < 0.46:
+			var sy := 1.0 if dir.y >= 0.0 else -1.0
+			dir = Vector3(dir.x, sy * 0.62, dir.z).normalized()
+		if dir.y > 0.0 and absf(dir.z) < 0.58 and absf(dir.x) > 0.36:
+			var sz := 1.0 if dir.z >= 0.0 else -1.0
+			dir = Vector3(dir.x * 0.42, maxf(dir.y, 0.62), sz * 0.74).normalized()
+		return lattice_snap(dir) * LATTICE_SEAT
+	return dir * 1.02
 
 
 static func lattice_layout() -> Dictionary:
@@ -189,13 +206,14 @@ static func _slot(index: int, count: int, phase := 0.0) -> Vector3:
 
 func _add_chunk(index: int) -> void:
 	var chunk := MeshInstance3D.new()
-	chunk.mesh = _chunk_mesh
+	chunk.mesh = CraftedGear.chunk_mesh(index)
 	chunk.material_override = _chunk_material
 	chunk.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var dir := _slot(index, MAX_CHUNKS)
-	chunk.position = chunk_point(index)
-	chunk.basis = _facing(dir) * Basis(Vector3.UP, float(index) * 1.3)
+	var pt := chunk_point(index)
+	chunk.position = pt
+	chunk.basis = _facing(pt.normalized()) * Basis(Vector3.UP, float(index) * 1.3)
 	chunk.scale = Vector3.ONE * POP_SCALE
+	InkOutline.apply(chunk, "pilot")
 	add_child(chunk)
 	_chunks.append(chunk)
 
@@ -205,14 +223,20 @@ func _rebuild_pieces(parts: Array) -> void:
 		piece.queue_free()
 	_pieces.clear()
 	_shown_parts = parts.duplicate()
+	var chunk_dirs: Array[Vector3] = []
+	for chunk in _chunks:
+		if is_instance_valid(chunk) and chunk.position.length_squared() > 0.0001:
+			chunk_dirs.append(chunk.position.normalized())
+	var piece_dirs: Array[Vector3] = []
 	var shown := mini(parts.size(), MAX_PIECES)
 	for i in shown:
 		var part_id: String = parts[i]
 		var piece := _piece(part_id)
 		for mesh: MeshInstance3D in piece.find_children("*", "MeshInstance3D", true, false):
 			mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-		var dir := _slot(i, MAX_PIECES, 1.1)
-		piece.position = dir * 1.0
+		var dir := _clear_piece_dir(i, chunk_dirs, piece_dirs)
+		piece_dirs.append(dir)
+		piece.position = dir * (LATTICE_SEAT if lattice else 0.99)
 		piece.basis = _facing(dir)
 		if i == shown - 1:
 			piece.scale = Vector3.ONE * POP_SCALE
@@ -220,6 +244,31 @@ func _rebuild_pieces(parts: Array) -> void:
 		_pieces.append(piece)
 
 
+static func _clear_piece_dir(index: int, chunk_dirs: Array[Vector3], piece_dirs: Array[Vector3]) -> Vector3:
+	const CANDIDATES := 144
+	var best := Vector3(0.0, 0.80, 0.60).normalized()
+	var best_score := 99.0
+	for step in CANDIDATES:
+		var t := (float(step) + 0.5) / float(CANDIDATES)
+		var y := lerpf(0.92, 0.64, t / 0.65) if t < 0.65 else lerpf(-0.64, -0.90, (t - 0.65) / 0.35)
+		var r := sqrt(maxf(0.0, 1.0 - y * y))
+		var ang := float(step) * 2.39996 + 1.1 + float(index) * 0.37
+		var cand := Vector3(cos(ang) * r, y, sin(ang) * r).normalized()
+		if cand.y > 0.0 and absf(cand.x) > 0.36:
+			continue
+		if cand.y < 0.0 and cand.z < -0.28 and cand.y > -0.78:
+			continue
+		var chunk_dot := -1.0
+		for occ in chunk_dirs:
+			chunk_dot = maxf(chunk_dot, cand.dot(occ))
+		var piece_dot := -1.0
+		for p in piece_dirs:
+			piece_dot = maxf(piece_dot, cand.dot(p))
+		var score := maxf(chunk_dot, piece_dot * 1.18)
+		if score < best_score:
+			best_score = score
+			best = cand
+	return best
 static func _facing(dir: Vector3) -> Basis:
 	var up := dir.normalized()
 	var side := Vector3.RIGHT if absf(up.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
@@ -235,6 +284,12 @@ func _piece(part_id: String) -> Node3D:
 		rarity = "common"
 	var color: Color = RARITY_COLORS.get(rarity, Palette.COPPER)
 	var mat := Palette.solid(color, 1.4 if rarity != "common" else 0.4)
+	mat.metallic = 0.36
+	mat.roughness = 0.60
+	mat.albedo_texture = Palette.painted_texture(128)
+	mat.uv1_triplanar = true
+	mat.uv1_scale = Vector3.ONE * 3.0
+	mat.vertex_color_use_as_albedo = true
 	var root := Node3D.new()
 	root.name = "Part_" + part_id
 	var own := _own_shape(part_id, mat)
@@ -244,47 +299,21 @@ func _piece(part_id: String) -> Node3D:
 		if own_foot != null:
 			root.add_child(own_foot)
 		return root
-	match part_id:
-		"cross_split":
-			for yaw in [0.0, PI * 0.5]:
-				_box(root, Vector3(0.9, 0.12, 0.16), Vector3(0.0, 0.2, 0.0), mat, yaw)
-		"spiral_wave":
-			var coil := MeshInstance3D.new()
-			var torus := TorusMesh.new()
-			torus.inner_radius = 0.18
-			torus.outer_radius = 0.34
-			torus.rings = 20
-			torus.ring_segments = 10
-			coil.mesh = torus
-			coil.material_override = mat
-			coil.position = Vector3(0.0, 0.25, 0.0)
-			coil.rotation = Vector3(0.4, 0.0, 0.0)
-			root.add_child(coil)
-		"chain_arc":
-			_rod(root, 0.55, mat)
-			_ball(root, 0.16, Vector3(0.0, 0.62, 0.0), mat)
-		_:
-			match family:
-				"weapon":
-					_rod(root, 0.5, mat)
-				"mobility":
-					_box(root, Vector3(0.1, 0.55, 0.6), Vector3(0.0, 0.25, 0.0), mat, 0.0)
-				"class":
-					_rod(root, 0.35, mat, 0.16)
-					_ball(root, 0.12, Vector3(0.0, 0.42, 0.0), Palette.solid(color, 3.0))
-				"milestone":
-					var star := MeshInstance3D.new()
-					var gem := SphereMesh.new()
-					gem.radius = 0.32
-					gem.height = 0.8
-					gem.radial_segments = 4
-					gem.rings = 2
-					star.mesh = gem
-					star.material_override = Palette.solid(color, 3.0)
-					star.position = Vector3(0.0, 0.35, 0.0)
-					root.add_child(star)
-				_:
-					_disc(root, 0.3, 0.12, Vector3(0.0, 0.05, 0.0), mat)
+	var crafted := MeshInstance3D.new()
+	crafted.name = "CraftedHardware"
+	crafted.mesh = CraftedGear.part_mesh(part_id, family)
+	var piece_mat := mat
+	if part_id not in ["cross_split", "spiral_wave", "chain_arc"] and family in ["class", "milestone"]:
+		piece_mat = Palette.solid(color, 3.0)
+		piece_mat.metallic = 0.38
+		piece_mat.roughness = 0.54
+		piece_mat.albedo_texture = Palette.painted_texture(128)
+		piece_mat.uv1_triplanar = true
+		piece_mat.uv1_scale = Vector3.ONE * 3.0
+		piece_mat.vertex_color_use_as_albedo = true
+	crafted.material_override = piece_mat
+	root.add_child(crafted)
+	InkOutline.apply(crafted, "pilot")
 	var foot := TierMark.foot(rarity, mat)
 	if foot != null:
 		root.add_child(foot)
@@ -315,57 +344,6 @@ static func _own_shape(part_id: String, mat: Material) -> MeshInstance3D:
 	return shape
 
 
-func _box(parent: Node3D, size: Vector3, at: Vector3, mat: Material, yaw: float) -> void:
-	var node := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	node.mesh = box
-	node.material_override = mat
-	node.position = at
-	node.rotation = Vector3(0.0, yaw, 0.0)
-	parent.add_child(node)
-
-
-func _disc(parent: Node3D, radius: float, thick: float, at: Vector3, mat: Material) -> void:
-	var node := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = radius
-	cyl.bottom_radius = radius
-	cyl.height = thick
-	cyl.radial_segments = 16
-	node.mesh = cyl
-	node.material_override = mat
-	node.position = at
-	parent.add_child(node)
-
-
-func _rod(parent: Node3D, length: float, mat: Material, radius := 0.08) -> void:
-	var node := MeshInstance3D.new()
-	var cyl := CylinderMesh.new()
-	cyl.top_radius = radius
-	cyl.bottom_radius = radius * 1.3
-	cyl.height = length
-	cyl.radial_segments = 12
-	cyl.rings = 1
-	node.mesh = cyl
-	node.material_override = mat
-	node.position = Vector3(0.0, length * 0.5, 0.0)
-	parent.add_child(node)
-
-
-func _ball(parent: Node3D, radius: float, at: Vector3, mat: Material) -> void:
-	var node := MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = radius
-	sphere.height = radius * 2.0
-	sphere.radial_segments = 16
-	sphere.rings = 8
-	node.mesh = sphere
-	node.material_override = mat
-	node.position = at
-	parent.add_child(node)
-
-
 func _build_halo(synergy_id: String) -> Node3D:
 	var halo := Node3D.new()
 	halo.name = "Halo_" + synergy_id
@@ -381,14 +359,10 @@ func _build_halo(synergy_id: String) -> Node3D:
 		mat = Palette.solid(ICE, 2.0)
 		inner = 1.1
 		outer = 1.28
+	var ring_mesh := CraftedGear.synergy_ring_mesh(inner, outer)
 	for rot in rings:
 		var ring := MeshInstance3D.new()
-		var torus := TorusMesh.new()
-		torus.inner_radius = inner
-		torus.outer_radius = outer
-		torus.rings = 32
-		torus.ring_segments = 12
-		ring.mesh = torus
+		ring.mesh = ring_mesh
 		ring.material_override = mat
 		ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		ring.rotation = rot

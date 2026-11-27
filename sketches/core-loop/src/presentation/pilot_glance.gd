@@ -1,5 +1,6 @@
 extends SkeletonModifier3D
 
+const PilotLiveliness := preload("res://src/presentation/pilot_liveliness.gd")
 const SHARES := {"spine_02": 0.2, "neck": 0.3, "head": 0.5}
 const REACH := deg_to_rad(120.0)
 const FIRST_AFTER := 3.0
@@ -14,18 +15,30 @@ var _still := false
 var _side := 0.0
 var _wait := FIRST_AFTER
 var _held := 0.0
+var _liveliness: SkeletonModifier3D
 
 
-static func seat(pilot: Node) -> SkeletonModifier3D:
+static func seat(pilot: Node, class_id := "") -> SkeletonModifier3D:
 	var found := pilot.find_children("*", "Skeleton3D", true, false)
 	if found.is_empty():
 		return null
+	var skel := found[0] as Skeleton3D
+	var live_rig := PilotLiveliness.attach(pilot, class_id)
 	var glance: SkeletonModifier3D = (load("res://src/presentation/pilot_glance.gd") as GDScript).new()
 	glance.name = "PilotGlance"
-	found[0].add_child(glance)
+	glance._liveliness = live_rig
+	skel.add_child(glance)
 	return glance
 
 
+func liveliness() -> SkeletonModifier3D:
+	if _liveliness != null and is_instance_valid(_liveliness):
+		return _liveliness
+	var skeleton := get_skeleton()
+	if skeleton == null:
+		return null
+	_liveliness = skeleton.get_node_or_null(PilotLiveliness.NODE_NAME) as SkeletonModifier3D
+	return _liveliness
 func observe(still: bool, eye: Vector3, delta: float) -> void:
 	var skeleton := get_skeleton()
 	if skeleton == null:
@@ -49,6 +62,9 @@ func observe(still: bool, eye: Vector3, delta: float) -> void:
 	turn = lerpf(turn, _side, 1.0 - exp(-rate * delta))
 	if absf(turn) < 0.001 and _side == 0.0:
 		turn = 0.0
+	var live := liveliness()
+	if live != null and live.has_method("observe_frame"):
+		live.call("observe_frame", still, eye, delta, turn)
 
 
 func _process_modification() -> void:

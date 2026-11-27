@@ -2,6 +2,9 @@ extends "res://src/combat/enemy.gd"
 
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 const HP := 600.0
 const DEFAULT_PLATING := 38.0
@@ -59,6 +62,16 @@ var _pose_rig: Skeleton3D
 var _pose_bones := {}
 var _model_plate_material: StandardMaterial3D
 var _armour: MeshInstance3D
+var _motion_rig: PropMotionRig
+var _rig_pivots := {}
+var _prev_pose_state := -1
+var _prev_flash_active := false
+var _core_smoothed := false
+var _core_pos_cur := Vector3.ZERO
+var _core_scale_cur := 0.8
+var _core_lean_cur := 0.0
+var _core_color_cur := Palette.VERDIGRIS
+var _core_energy_cur := 0.0
 static var _shared: Dictionary = {}
 static var _asset_warned := false
 static var _hazard_stripe: StandardMaterial3D
@@ -303,6 +316,7 @@ func _build_model() -> bool:
 	_material.albedo_color = Color.WHITE
 	_material.vertex_color_use_as_albedo = true
 	_model_plate_material = _plate_material()
+	_model_plate_material.next_pass = BakeLook.edge_lift()
 	_core_material = Palette.solid(Palette.VERDIGRIS)
 	for part in parts.meshes:
 		var mi := MeshInstance3D.new()
@@ -321,8 +335,27 @@ func _build_model() -> bool:
 			"MinibossCore":
 				_core = mi
 				mi.material_override = _core_material
+	_init_motion_rig()
 	_model_pose(0.0)
 	return true
+
+
+func _init_motion_rig() -> void:
+	_motion_rig = PropMotionRig.new()
+	_rig_pivots.clear()
+	var specs := {
+		"body": {"cycle": PropMotionRig.CYCLE_BREATHE, "axis": Vector3.UP, "amplitude": 0.18, "hz": 0.85, "jolt_stiffness": 135.0, "jolt_damping": 11.5, "jolt_max_offset": 0.24, "jolt_rot_gain": 0.28},
+		"fist_l": {"sway": true, "sway_stiffness": 24.0, "sway_damping": 4.8, "sway_gain": 0.022, "sway_max_rad": 0.24, "sway_ambient_amp": 0.045, "sway_ambient_hz": 0.72, "sway_phase": 0.0, "cycle": PropMotionRig.CYCLE_PISTON, "axis": Vector3.UP, "amplitude": 0.12, "hz": 0.85, "phase": 0.0, "jolt_stiffness": 130.0, "jolt_damping": 11.0, "jolt_max_offset": 0.22},
+		"fist_r": {"sway": true, "sway_stiffness": 24.0, "sway_damping": 4.8, "sway_gain": 0.022, "sway_max_rad": 0.24, "sway_ambient_amp": 0.045, "sway_ambient_hz": 0.72, "sway_phase": PI, "cycle": PropMotionRig.CYCLE_PISTON, "axis": Vector3.UP, "amplitude": 0.12, "hz": 0.85, "phase": 0.5, "jolt_stiffness": 130.0, "jolt_damping": 11.0, "jolt_max_offset": 0.22},
+		"shutter_l": {"jolt_stiffness": 150.0, "jolt_damping": 12.0, "jolt_max_offset": 0.14, "jolt_rot_gain": 0.36},
+		"shutter_r": {"jolt_stiffness": 150.0, "jolt_damping": 12.0, "jolt_max_offset": 0.14, "jolt_rot_gain": 0.36},
+	}
+	for label in specs:
+		var pivot := Node3D.new()
+		pivot.name = "RigDriver_" + label
+		_visual_parent().add_child(pivot)
+		_rig_pivots[label] = pivot
+		_motion_rig.add_part(label, pivot, specs[label])
 
 
 static func _asset_fallback() -> Dictionary:
@@ -446,7 +479,50 @@ func _model_pose(delta: float) -> void:
 			fists = Vector3(0.0, 0.2, -0.5) * t
 	var drop: float = lift if state == State.SLAM_LEAP else float(row.body) * HALF_HEIGHT * t + (lift if state == State.TURN else 0.0)
 	var body_basis := Basis(Vector3.RIGHT, float(row.lean) * t)
-	var socket := body_basis * CORE_SOCKET + Vector3.UP * drop
+	var calm := UiTokens.reduced_motion or EnemyMotion.motion_scale <= 0.0
+	var body_sec_pos := Vector3.ZERO
+	var body_sec_basis := Basis.IDENTITY
+	var fist_l_pos := Vector3.ZERO
+	var fist_r_pos := Vector3.ZERO
+	var fist_l_basis := Basis.IDENTITY
+	var fist_r_basis := Basis.IDENTITY
+	var shutter_l_basis := Basis.IDENTITY
+	var shutter_r_basis := Basis.IDENTITY
+	if _motion_rig != null:
+		_motion_rig.reduced_motion = calm
+		if delta > 0.0:
+			if not calm and _prev_pose_state != -1 and _prev_pose_state != state:
+				if _prev_pose_state == State.SLAM_LEAP and (state == State.WEAK or state == State.CUE):
+					_motion_rig.apply_impulse(Vector3.DOWN, 1.3)
+				elif state == State.TURN:
+					_motion_rig.apply_impulse(Vector3.UP, 1.0)
+			if not calm and _flash > 0.0 and not _prev_flash_active:
+				_motion_rig.apply_impulse(Vector3.BACK, 0.85)
+			_motion_rig.step(delta, velocity)
+			if not calm:
+				var bp: Node3D = _rig_pivots.get("body")
+				if bp != null and state != State.SLAM_LEAP:
+					body_sec_pos = bp.position
+					body_sec_basis = bp.basis
+				var fl: Node3D = _rig_pivots.get("fist_l")
+				var fr: Node3D = _rig_pivots.get("fist_r")
+				if fl != null and state != State.CHARGE_BRACE and state != State.CHARGE:
+					fist_l_pos = fl.position
+					fist_l_basis = fl.basis
+				if fr != null and state != State.CHARGE_BRACE and state != State.CHARGE:
+					fist_r_pos = fr.position
+					fist_r_basis = fr.basis
+				var sl: Node3D = _rig_pivots.get("shutter_l")
+				var sr: Node3D = _rig_pivots.get("shutter_r")
+				if sl != null and state != State.STALK:
+					shutter_l_basis = sl.basis
+				if sr != null and state != State.STALK:
+					shutter_r_basis = sr.basis
+		elif calm:
+			_motion_rig.reset()
+	_prev_pose_state = state
+	_prev_flash_active = _flash > 0.0
+	var socket := body_basis * CORE_SOCKET + Vector3.UP * drop + body_sec_pos
 	for bone_name in MODEL_BONES:
 		var index: int = _pose_bones[bone_name]
 		var rest := _pose_rig.get_bone_rest(index)
@@ -454,16 +530,23 @@ func _model_pose(delta: float) -> void:
 		var basis := body_basis * rest.basis
 		var size := Vector3.ONE
 		var side := -1.0 if bone_name.ends_with("Left") else 1.0
-		if "Foot" in bone_name:
+		if bone_name == "MinibossBody":
+			pos += body_sec_pos
+			basis = body_basis * body_sec_basis * rest.basis
+		elif "Foot" in bone_name:
 			pos = rest.origin + Vector3(side * float(row.splay) * t, foot_up, 0.0)
 			basis = Basis(Vector3.BACK, -side * float(row.splay) * 0.5 * t) * Basis(Vector3.RIGHT, foot_angle) * rest.basis
 		elif "Fist" in bone_name:
-			pos += fists
+			var f_pos := fist_l_pos if side < 0.0 else fist_r_pos
+			var f_bas := fist_l_basis if side < 0.0 else fist_r_basis
+			pos += fists + f_pos
+			basis = body_basis * f_bas * rest.basis
 		elif "Plate" in bone_name:
 			var open := 1.15 if weak else -float(row.shield_in) * t
 			pos += body_basis * Vector3(-side * float(row.shield_in) * t, -float(row.shield_drop) * t, 0.0)
 			var current := _pose_rig.get_bone_pose_rotation(index)
-			basis = body_basis * Basis(Vector3.UP, side * open) * rest.basis
+			var s_bas := shutter_l_basis if side < 0.0 else shutter_r_basis
+			basis = body_basis * Basis(Vector3.UP, side * open) * s_bas * rest.basis
 			var desired := basis.get_rotation_quaternion()
 			basis = Basis(current.slerp(desired, 1.0 - exp(-14.0 * delta))) if delta > 0.0 else Basis(desired)
 		elif bone_name == "MinibossHalo":
@@ -474,15 +557,38 @@ func _model_pose(delta: float) -> void:
 		_pose_rig.set_bone_pose_rotation(index, basis.get_rotation_quaternion())
 		_pose_rig.set_bone_pose_scale(index, size)
 	_armour.material_override = hazard_stripe() if row.hazard else _model_plate_material
-	_core.position = socket
-	_core.rotation.x = float(row.lean) * t
-	var pulse := 1.0 + 0.12 * sin(Time.get_ticks_msec() * 0.018) if weak else 1.0
-	_core.scale = Vector3.ONE * (1.5 * pulse if weak else 0.8)
-	_core_material.albedo_color = Palette.live() if weak else Palette.VERDIGRIS
-	_core_material.emission_enabled = weak
+	var blend := 1.0 if (delta <= 0.0 or not _core_smoothed) else (1.0 - exp(-16.0 * delta))
+	if blend >= 0.9999:
+		blend = 1.0
+	var pulse := 1.0 + (0.0 if calm else 0.12 * sin(Time.get_ticks_msec() * 0.018)) if weak else 1.0
+	var target_scale := 1.5 * pulse if weak else 0.8
+	var target_lean := float(row.lean) * t
+	var target_color := Palette.live() if weak else Palette.VERDIGRIS
+	var target_energy := FlashGuard.spike(1.2, 4.0) if weak else 0.0
+	if blend >= 1.0:
+		_core_pos_cur = socket
+		_core_scale_cur = target_scale
+		_core_lean_cur = target_lean
+		_core_color_cur = target_color
+		_core_energy_cur = target_energy
+	else:
+		_core_pos_cur = _core_pos_cur.lerp(socket, blend)
+		_core_scale_cur = lerpf(_core_scale_cur, target_scale, blend)
+		_core_lean_cur = lerpf(_core_lean_cur, target_lean, blend)
+		_core_color_cur = _core_color_cur.lerp(target_color, blend)
+		_core_energy_cur = lerpf(_core_energy_cur, target_energy, blend)
+	_core_smoothed = true
+	_core.position = _core_pos_cur
+	_core.rotation.x = _core_lean_cur
+	_core.scale = Vector3.ONE * _core_scale_cur
+	_core_material.albedo_color = _core_color_cur
+	_core_material.emission_enabled = weak or _core_energy_cur > 0.02
 	_core_material.emission = Palette.live()
-	_core_material.emission_energy_multiplier = FlashGuard.spike(1.2, 4.0) if weak else 0.0
-	_model_plate_material.albedo_color = Palette.SLATE
+	_core_material.emission_energy_multiplier = _core_energy_cur
+	if tint_state == "":
+		_model_plate_material.albedo_color = Palette.SLATE
+	if _model_plate_material.next_pass == null:
+		_model_plate_material.next_pass = BakeLook.edge_lift()
 
 
 func _leap_clearance() -> float:
@@ -504,39 +610,28 @@ static func hazard_stripe() -> StandardMaterial3D:
 func _build_armour() -> void:
 	_core_material = Palette.solid(Palette.SAND, 0.4)
 	_core = MeshInstance3D.new()
-	var sphere := SphereMesh.new()
-	sphere.radius = 1.0
-	sphere.height = 2.0
-	_core.mesh = sphere
+	_core.mesh = EnemyBossCraft.brindle_vent_cap(1.0, 2.0)
 	_core.material_override = _core_material
 	_core.position = CORE_SOCKET
 	_visual_parent().add_child(_core)
 	var plate_material := _plate_material()
+	plate_material.next_pass = BakeLook.edge_lift()
 	for side in [-1.0, 1.0]:
 		var plate := MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(RADIUS * 1.1, HALF_HEIGHT * 1.3, 0.5)
-		plate.mesh = box
+		plate.mesh = EnemyBossCraft.brindle_armour_plate(Vector3(RADIUS * 1.1, HALF_HEIGHT * 1.3, 0.5))
 		plate.material_override = plate_material
 		plate.position = Vector3(side * RADIUS * 0.5, 0.6, -RADIUS - 0.1)
 		_visual_parent().add_child(plate)
 		_plates.append({"node": plate, "side": side})
 	_halo = MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 1.4
-	torus.outer_radius = 1.8
-	_halo.mesh = torus
+	_halo.mesh = EnemyBossCraft.reward_canister_band(1.8, 0.4)
 	_halo.material_override = Palette.unshaded(Palette.SAND)
 	_halo.position = Vector3.UP * (HALF_HEIGHT + 1.4)
 	_halo.visible = false
 	_visual_parent().add_child(_halo)
 	for i in 5:
 		var angle := TAU * i / 5.0
-		var spike := CylinderMesh.new()
-		spike.top_radius = 0.0
-		spike.bottom_radius = 0.4
-		spike.height = 1.6
-		_accent(spike, Palette.COPPER, 1.8, Vector3(cos(angle) * 1.3, HALF_HEIGHT + 0.5, sin(angle) * 1.3))
+		_accent(EnemyBossCraft.dispatch_pod(0.4, 1.6), Palette.COPPER, 1.8, Vector3(cos(angle) * 1.3, HALF_HEIGHT + 0.5, sin(angle) * 1.3))
 
 
 func _pose(delta: float) -> void:

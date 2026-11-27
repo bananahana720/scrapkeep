@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
 
 const LIFT := 24.0
@@ -57,11 +58,7 @@ func setup() -> void:
 	for i in LANDING_RINGS:
 		_landing.append(_ring(land_mat, RING_RADIUS + 0.6))
 	_pad = MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = 7.0
-	disc.bottom_radius = 7.0
-	disc.height = 0.2
-	_pad.mesh = disc
+	_pad.mesh = PropMeshes.launch_landing_pad(7.0)
 	_pad.material_override = Palette.unshaded(Color(Palette.AMBER.r, Palette.AMBER.g, Palette.AMBER.b, 0.5))
 	_pad.visible = false
 	add_child(_pad)
@@ -69,11 +66,9 @@ func setup() -> void:
 
 func _ring(mat: Material, radius: float) -> MeshInstance3D:
 	var ring := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = radius - 0.45
-	torus.outer_radius = radius
-	ring.mesh = torus
+	ring.mesh = PropMeshes.launch_flight_ring(radius)
 	ring.material_override = mat
+	ring.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	ring.visible = false
 	add_child(ring)
 	return ring

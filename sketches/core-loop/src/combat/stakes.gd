@@ -4,6 +4,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Devices := preload("res://src/core/devices.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const LIFE := Devices.ROWS[Devices.SABLE_STAKE]["lifetime"]
 const CAP := Devices.SABLE_STAKE_CAP
 const SENTRY_SECONDS := Devices.ROWS[Devices.SABLE_STAKE]["sentry_seconds"]
@@ -51,7 +52,7 @@ func setup(ctx_ref, combat_ref, ultimate_ref) -> void:
 	combat = combat_ref
 	ultimate = ultimate_ref
 	name = "SableStakes"
-	_pin_material = Palette.solid(Palette.COPPER)
+	_pin_material = PropMeshes.salvage_wear_material(Palette.COPPER, Palette.BRASS.lightened(0.18), Palette.ARC, 0.56, 0.48, 1.35, "sable_stake", 1.2)
 	_ring_material = Palette.unshaded(Palette.ARC)
 	ctx.events.grapple_fired.connect(_on_hooked)
 	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): fold())
@@ -99,23 +100,15 @@ func plant(at: Vector3) -> Stake:
 	shape.shape = cylinder
 	stake.add_child(shape)
 	var mesh := MeshInstance3D.new()
-	var spike := CylinderMesh.new()
-	spike.top_radius = 0.06
-	spike.bottom_radius = 0.22
-	spike.height = 0.9
-	spike.radial_segments = 8
-	mesh.mesh = spike
-	mesh.set_surface_override_material(0, _pin_material)
+	mesh.name = "PylonBody"
+	mesh.mesh = PropMeshes.sable_stake_body()
+	mesh.material_override = _pin_material
 	stake.add_child(mesh)
 	var ring := MeshInstance3D.new()
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.25
-	torus.outer_radius = 0.30
-	torus.rings = 12
-	torus.ring_segments = 6
-	ring.mesh = torus
-	ring.position.y = -0.4
-	ring.set_surface_override_material(0, _ring_material)
+	ring.name = "EmitterCollar"
+	ring.mesh = PropMeshes.sable_stake_ring()
+	ring.position.y = -0.38
+	ring.material_override = _ring_material
 	stake.add_child(ring)
 	add_child(stake)
 	stake.global_position = at

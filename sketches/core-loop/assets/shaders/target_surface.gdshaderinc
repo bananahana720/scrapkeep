@@ -38,5 +38,5 @@ float surface_macro(vec2 p) {
 	return 0.5 + 0.25 * sin(p.x + sin(p.y * 0.73)) + 0.25 * sin(p.y * 0.81 + sin(p.x * 0.61));
 }
 float surface_value(float tone) {
-	return mix(1.0, clamp(tone, 0.75, 1.2), detail_enabled ? clamp(detail_strength, 0.0, 1.0) : 0.0);
+	return mix(1.0, clamp(tone, 0.38, 1.24), detail_enabled ? clamp(detail_strength, 0.0, 1.0) : 0.0);
 }

@@ -1,0 +1,52 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/resources/director/refurbished_elite_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"arc_capacitor_relay"
+display_name = "Arc-Capacitor Relay"
+maker = &"fleet"
+requisition_code = "REFURB-14C"
+chassis = &"jolt_layer"
+credit_cost = 20.0
+min_tier = 1
+base_hull_hp = 95.0
+plate_count = 2
+plate_integrity = 30.0
+plate_weak_tags = [&"magnetic", &"soaked_conductive"]
+silhouette_cue = "Twin copper Tesla coils caged in iron-oxide ribs, glowing copper-arc coil under ceramic shrouds."
+movement_cadence = "Skitter-plant hop, anchors tripod legs, 0.85 s rising concentric capacitor charge."
+counterplay_cue = "Shatter both ceramic shrouds to trigger an overload backfire across nearby Fleet packs."
+third_person_read_distance_m = 48.0
+telegraph_kind = &"instant"
+tell_s = 0.85
+execute_s = 0.5
+cooldown_s = 3.8
+stagger_on_brace_break_s = 2.0
+card_line = "Rated for dry shifts. Never checked the river."
+ability_tag = &"electrified"
+secondary_tag = &""
+ability_radius_m = 11.0
+ability_intensity = 1.0
+ability_ttl_s = 3.5
+shatter_tag = &"electrified"
+shatter_radius_m = 9.0
+shatter_ttl_s = 2.5
+backfires_on_strip = true
+pull_accel = 0.0
+slingshot_bonus = 1.0
+aura_pack_rest_scale = 1.0
+biome_weights = {
+&"compactor_canyon": 1.0,
+&"orbital_graveyard": 1.4,
+&"smelter_pit": 1.0,
+&"spillway": 1.5
+}
+bounty = {
+"cogs": 14,
+"cores": 0,
+"guaranteed_rarity": &"rare",
+"part_rolls": 1,
+"scrap": 90
+}

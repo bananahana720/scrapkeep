@@ -1,0 +1,717 @@
+class_name EnemyBossCraft
+extends RefCounted
+
+const Palette := preload("res://src/core/palette.gd")
+const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const BakeLook := preload("res://src/presentation/bake_look.gd")
+
+static var _mesh_cache: Dictionary = {}
+static var _mat_cache: Dictionary = {}
+
+
+static func reset_for_tests() -> void:
+	_mesh_cache.clear()
+	_mat_cache.clear()
+
+
+static func _vc(wear: float, grime: float, emissive := 0.0) -> Color:
+	return Color(clampf(wear, 0.0, 1.0), clampf(grime, 0.0, 1.0), clampf(emissive, 0.0, 1.0), 1.0)
+
+
+static func _cached(key: String, builder: Callable) -> ArrayMesh:
+	if _mesh_cache.has(key):
+		return _mesh_cache[key]
+	var mesh := ArrayMesh.new()
+	var surfaces: Dictionary = {}
+	var order: Array[String] = []
+	builder.call(surfaces, order)
+	for slot in order:
+		var st: SurfaceTool = surfaces[slot]
+		st.generate_tangents()
+		var idx := mesh.get_surface_count()
+		st.commit(mesh)
+		mesh.surface_set_name(idx, slot)
+	_mesh_cache[key] = mesh
+	return mesh
+
+
+static func _slot_st(surfaces: Dictionary, order: Array[String], slot: String) -> SurfaceTool:
+	if not surfaces.has(slot):
+		var st := SurfaceTool.new()
+		st.begin(Mesh.PRIMITIVE_TRIANGLES)
+		surfaces[slot] = st
+		order.append(slot)
+	return surfaces[slot]
+
+
+static func _uv_for(p: Vector3, n: Vector3, uv_scale: float) -> Vector2:
+	var an := Vector3(absf(n.x), absf(n.y), absf(n.z))
+	if an.y >= an.x and an.y >= an.z:
+		return Vector2(p.x, p.z) * uv_scale
+	if an.x >= an.z:
+		return Vector2(p.z, p.y) * uv_scale
+	return Vector2(p.x, p.y) * uv_scale
+
+
+static func _add_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, c0: Color, c1: Color, c2: Color, uv_scale := 0.5) -> void:
+	var nn := n.normalized()
+	if nn.length_squared() < 0.0001:
+		return
+	var p1 := b
+	var p2 := c
+	var col1 := c1
+	var col2 := c2
+	if (p1 - a).cross(p2 - a).length_squared() < 1e-12:
+		return
+	if (p1 - a).cross(p2 - a).dot(nn) > 0.0:
+		var tp := p1
+		p1 = p2
+		p2 = tp
+		var tc := col1
+		col1 = col2
+		col2 = tc
+	st.set_normal(nn)
+	st.set_uv(_uv_for(a, nn, uv_scale))
+	st.set_color(c0)
+	st.add_vertex(a)
+	st.set_normal(nn)
+	st.set_uv(_uv_for(p1, nn, uv_scale))
+	st.set_color(col1)
+	st.add_vertex(p1)
+	st.set_normal(nn)
+	st.set_uv(_uv_for(p2, nn, uv_scale))
+	st.set_color(col2)
+	st.add_vertex(p2)
+
+
+static func _add_tri_uv(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, n: Vector3, uv0: Vector2, uv1: Vector2, uv2: Vector2, c0: Color, c1: Color, c2: Color) -> void:
+	var nn := n.normalized()
+	if nn.length_squared() < 0.0001:
+		return
+	var p1 := b
+	var p2 := c
+	var u1 := uv1
+	var u2 := uv2
+	var col1 := c1
+	var col2 := c2
+	if (p1 - a).cross(p2 - a).length_squared() < 1e-12:
+		return
+	if (p1 - a).cross(p2 - a).dot(nn) > 0.0:
+		var tp := p1
+		p1 = p2
+		p2 = tp
+		var tu := u1
+		u1 = u2
+		u2 = tu
+		var tc := col1
+		col1 = col2
+		col2 = tc
+	st.set_normal(nn)
+	st.set_uv(uv0)
+	st.set_color(c0)
+	st.add_vertex(a)
+	st.set_normal(nn)
+	st.set_uv(u1)
+	st.set_color(col1)
+	st.add_vertex(p1)
+	st.set_normal(nn)
+	st.set_uv(u2)
+	st.set_color(col2)
+	st.add_vertex(p2)
+
+
+static func _add_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: Vector3, col: Color, uv_scale := 0.5) -> void:
+	_add_tri(st, a, b, c, n, col, col, col, uv_scale)
+	_add_tri(st, a, c, d, n, col, col, col, uv_scale)
+
+
+static func _add_quad_uv(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: Vector3, uv0: Vector2, uv1: Vector2, uv2: Vector2, uv3: Vector2, c0: Color, c1: Color, c2: Color, c3: Color) -> void:
+	_add_tri_uv(st, a, b, c, n, uv0, uv1, uv2, c0, c1, c2)
+	_add_tri_uv(st, a, c, d, n, uv0, uv2, uv3, c0, c2, c3)
+
+
+static func _bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel := 0.04, uv_scale := 0.5, xf := Transform3D.IDENTITY, c_flat := Color(0.10, 0.14, 0.0, 1.0), c_edge := Color(0.88, 0.12, 0.0, 1.0), c_bot := Color(0.10, 0.78, 0.0, 1.0)) -> void:
+	var h := size * 0.5
+	var b := minf(bevel, minf(h.x, minf(h.y, h.z)) * 0.42)
+	var xi := h.x - b
+	var yi := h.y - b
+	var zi := h.z - b
+	var pt := func(x: float, y: float, z: float) -> Vector3:
+		return xf * (center + Vector3(x, y, z))
+	var nrm := func(v: Vector3) -> Vector3:
+		return (xf.basis * v).normalized()
+
+	_add_quad(st, pt.call(-xi, -yi, h.z), pt.call(xi, -yi, h.z), pt.call(xi, yi, h.z), pt.call(-xi, yi, h.z), nrm.call(Vector3.BACK), c_flat, uv_scale)
+	_add_quad(st, pt.call(xi, -yi, -h.z), pt.call(-xi, -yi, -h.z), pt.call(-xi, yi, -h.z), pt.call(xi, yi, -h.z), nrm.call(Vector3.FORWARD), c_flat, uv_scale)
+	_add_quad(st, pt.call(h.x, -yi, zi), pt.call(h.x, -yi, -zi), pt.call(h.x, yi, -zi), pt.call(h.x, yi, zi), nrm.call(Vector3.RIGHT), c_flat, uv_scale)
+	_add_quad(st, pt.call(-h.x, -yi, -zi), pt.call(-h.x, -yi, zi), pt.call(-h.x, yi, zi), pt.call(-h.x, yi, -zi), nrm.call(Vector3.LEFT), c_flat, uv_scale)
+	_add_quad(st, pt.call(-xi, h.y, zi), pt.call(xi, h.y, zi), pt.call(xi, h.y, -zi), pt.call(-xi, h.y, -zi), nrm.call(Vector3.UP), c_flat, uv_scale)
+	_add_quad(st, pt.call(-xi, -h.y, -zi), pt.call(xi, -h.y, -zi), pt.call(xi, -h.y, zi), pt.call(-xi, -h.y, zi), nrm.call(Vector3.DOWN), c_bot, uv_scale)
+
+	if b <= 0.0001:
+		return
+
+	for sy in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			var n: Vector3 = (xf.basis * Vector3(0.0, sy, sz)).normalized()
+			var col := c_edge if sy > 0.0 else c_bot
+			_add_quad(st,
+				xf * (center + Vector3(-xi, sy * h.y, sz * zi)),
+				xf * (center + Vector3(xi, sy * h.y, sz * zi)),
+				xf * (center + Vector3(xi, sy * yi, sz * h.z)),
+				xf * (center + Vector3(-xi, sy * yi, sz * h.z)),
+				n, col, uv_scale)
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			var n: Vector3 = (xf.basis * Vector3(sx, sy, 0.0)).normalized()
+			var col := c_edge if sy > 0.0 else c_bot
+			_add_quad(st,
+				xf * (center + Vector3(sx * xi, sy * h.y, -zi)),
+				xf * (center + Vector3(sx * xi, sy * h.y, zi)),
+				xf * (center + Vector3(sx * h.x, sy * yi, zi)),
+				xf * (center + Vector3(sx * h.x, sy * yi, -zi)),
+				n, col, uv_scale)
+	for sx in [-1.0, 1.0]:
+		for sz in [-1.0, 1.0]:
+			var n: Vector3 = (xf.basis * Vector3(sx, 0.0, sz)).normalized()
+			_add_quad(st,
+				xf * (center + Vector3(sx * h.x, -yi, sz * zi)),
+				xf * (center + Vector3(sx * h.x, yi, sz * zi)),
+				xf * (center + Vector3(sx * xi, yi, sz * h.z)),
+				xf * (center + Vector3(sx * xi, -yi, sz * h.z)),
+				n, c_edge, uv_scale)
+	for sx in [-1.0, 1.0]:
+		for sy in [-1.0, 1.0]:
+			for sz in [-1.0, 1.0]:
+				var n: Vector3 = (xf.basis * Vector3(sx, sy, sz)).normalized()
+				var col := c_edge if sy > 0.0 else c_bot
+				_add_tri(st,
+					xf * (center + Vector3(sx * h.x, sy * yi, sz * zi)),
+					xf * (center + Vector3(sx * xi, sy * h.y, sz * zi)),
+					xf * (center + Vector3(sx * xi, sy * yi, sz * h.z)),
+					n, col, col, col, uv_scale)
+
+
+static func _bevel_cyl(st: SurfaceTool, center: Vector3, r_bot: float, r_top: float, height: float, segs := 12, bevel := 0.03, uv_scale := 0.5, xf := Transform3D.IDENTITY, c_body := Color(0.10, 0.14, 0.0, 1.0), c_edge := Color(0.88, 0.12, 0.0, 1.0), c_cap := Color(0.14, 0.22, 0.0, 1.0)) -> void:
+	var hh := height * 0.5
+	var b := minf(bevel, minf(hh * 0.4, minf(r_bot, r_top) * 0.35))
+	var rings := [
+		[-hh, maxf(0.002, r_bot - b)],
+		[-hh + b, r_bot],
+		[hh - b, r_top],
+		[hh, maxf(0.002, r_top - b)],
+	]
+	if b <= 0.0001:
+		rings = [[-hh, r_bot], [hh, r_top]]
+
+	for i in segs:
+		var a0 := TAU * float(i) / float(segs)
+		var a1 := TAU * float(i + 1) / float(segs)
+		var c0 := cos(a0)
+		var s0 := sin(a0)
+		var c1 := cos(a1)
+		var s1 := sin(a1)
+		var mid := Vector3(cos((a0 + a1) * 0.5), 0.0, sin((a0 + a1) * 0.5))
+		for r in rings.size() - 1:
+			var y0: float = rings[r][0]
+			var rad0: float = rings[r][1]
+			var y1: float = rings[r + 1][0]
+			var rad1: float = rings[r + 1][1]
+			var p00: Vector3 = xf * (center + Vector3(c0 * rad0, y0, s0 * rad0))
+			var p10: Vector3 = xf * (center + Vector3(c1 * rad0, y0, s1 * rad0))
+			var p11: Vector3 = xf * (center + Vector3(c1 * rad1, y1, s1 * rad1))
+			var p01: Vector3 = xf * (center + Vector3(c0 * rad1, y1, s0 * rad1))
+			var dy := y1 - y0
+			var dr := rad0 - rad1
+			var fn: Vector3 = (xf.basis * (mid * dy + Vector3.UP * dr)).normalized()
+			var col := c_edge if (rings.size() == 4 and (r == 0 or r == 2)) else c_body
+			_add_quad(st, p00, p10, p11, p01, fn, col, uv_scale)
+		var top_r: float = rings[-1][1]
+		var top_y: float = rings[-1][0]
+		_add_tri(st,
+			xf * (center + Vector3(0.0, top_y, 0.0)),
+			xf * (center + Vector3(c0 * top_r, top_y, s0 * top_r)),
+			xf * (center + Vector3(c1 * top_r, top_y, s1 * top_r)),
+			(xf.basis * Vector3.UP).normalized(), c_cap, c_cap, c_cap, uv_scale)
+		var bot_r: float = rings[0][1]
+		var bot_y: float = rings[0][0]
+		var bot_col := Color(c_cap.r, maxf(c_cap.g, 0.72), c_cap.b, 1.0)
+		_add_tri(st,
+			xf * (center + Vector3(0.0, bot_y, 0.0)),
+			xf * (center + Vector3(c1 * bot_r, bot_y, s1 * bot_r)),
+			xf * (center + Vector3(c0 * bot_r, bot_y, s0 * bot_r)),
+			(xf.basis * Vector3.DOWN).normalized(), bot_col, bot_col, bot_col, uv_scale)
+
+
+static func _bevel_ring(st: SurfaceTool, center: Vector3, r_in: float, r_out: float, height: float, segs := 16, bevel := 0.02, uv_scale := 0.5, xf := Transform3D.IDENTITY, c_body := Color(0.12, 0.22, 0.0, 1.0), c_edge := Color(0.88, 0.14, 0.0, 1.0)) -> void:
+	var hh := height * 0.5
+	var b := minf(bevel, minf(hh * 0.42, (r_out - r_in) * 0.25))
+	var prof := [
+		Vector2(r_in + b, hh),
+		Vector2(r_out - b, hh),
+		Vector2(r_out, hh - b),
+		Vector2(r_out, -hh + b),
+		Vector2(r_out - b, -hh),
+		Vector2(r_in + b, -hh),
+		Vector2(r_in, -hh + b),
+		Vector2(r_in, hh - b),
+	]
+	if b <= 0.0001:
+		prof = [
+			Vector2(r_in, hh),
+			Vector2(r_out, hh),
+			Vector2(r_out, -hh),
+			Vector2(r_in, -hh),
+		]
+
+	for i in segs:
+		var a0 := TAU * float(i) / float(segs)
+		var a1 := TAU * float(i + 1) / float(segs)
+		var c0 := cos(a0)
+		var s0 := sin(a0)
+		var c1 := cos(a1)
+		var s1 := sin(a1)
+		var radial := Vector3(cos((a0 + a1) * 0.5), 0.0, sin((a0 + a1) * 0.5))
+		for k in prof.size():
+			var p0: Vector2 = prof[k]
+			var p1: Vector2 = prof[(k + 1) % prof.size()]
+			var dr := p1.x - p0.x
+			var dy := p1.y - p0.y
+			var out_r := -dy
+			var out_y := dr
+			var fn: Vector3 = (xf.basis * (radial * out_r + Vector3.UP * out_y)).normalized()
+			var q0: Vector3 = xf * (center + Vector3(c0 * p0.x, p0.y, s0 * p0.x))
+			var q1: Vector3 = xf * (center + Vector3(c1 * p0.x, p0.y, s1 * p0.x))
+			var q2: Vector3 = xf * (center + Vector3(c1 * p1.x, p1.y, s1 * p1.x))
+			var q3: Vector3 = xf * (center + Vector3(c0 * p1.x, p1.y, s0 * p1.x))
+			var is_bevel := prof.size() == 8 and (k == 1 or k == 3 or k == 5 or k == 7)
+			_add_quad(st, q0, q1, q2, q3, fn, c_edge if is_bevel else c_body, uv_scale)
+
+
+static func _bolt_ring(st: SurfaceTool, center: Vector3, ring_r: float, count: int, bolt_r: float, bolt_h: float, xf := Transform3D.IDENTITY) -> void:
+	for i in count:
+		var a := TAU * float(i) / float(count)
+		var pos := center + Vector3(cos(a) * ring_r, 0.0, sin(a) * ring_r)
+		_bevel_cyl(st, pos, bolt_r, bolt_r * 0.86, bolt_h, 6, bolt_r * 0.2, 1.2, xf, _vc(0.24, 0.64), _vc(0.92, 0.14), _vc(0.74, 0.18))
+
+
+static func _strut_xf(p0: Vector3, p1: Vector3) -> Transform3D:
+	var d := p1 - p0
+	var y := d.normalized()
+	var ref := Vector3.RIGHT if absf(y.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
+	var x := y.cross(ref).normalized()
+	var z := x.cross(y).normalized()
+	return Transform3D(Basis(x, y, z), (p0 + p1) * 0.5)
+
+
+static func _add_strut(st: SurfaceTool, p0: Vector3, p1: Vector3, thickness: float, bevel := 0.014, c_flat := Color(0.12, 0.24, 0.0, 1.0), c_edge := Color(0.84, 0.16, 0.0, 1.0)) -> void:
+	var length := p0.distance_to(p1)
+	if length < 0.01:
+		return
+	_bevel_box(st, Vector3.ZERO, Vector3(thickness, length, thickness), bevel, 0.9, _strut_xf(p0, p1), c_flat, c_edge, _vc(0.14, 0.62))
+
+
+static func craft_shader_material(key: String, preset_id: String, base_col: Color, secondary_col: Color, roughness := 0.68, metallic := 0.28, emissive_col := Palette.ARC, emissive_energy := 0.0) -> ShaderMaterial:
+	var cache_key := "%s:%s:%s:%.2f" % [key, preset_id, base_col.to_html(false), emissive_energy]
+	if _mat_cache.has(cache_key):
+		var cached := _mat_cache[cache_key] as ShaderMaterial
+		cached.set_shader_parameter("reduce_flashes", FlashGuard.on)
+		return cached
+	var base := CraftLookdev.preset_material(preset_id)
+	var mat: ShaderMaterial = base.duplicate(false) as ShaderMaterial if base != null else ShaderMaterial.new()
+	mat.resource_name = "enemy_boss_" + key
+	mat.set_shader_parameter("use_world_space", false)
+	mat.set_shader_parameter("use_vertex_masks", true)
+	mat.set_shader_parameter("base_albedo", base_col)
+	mat.set_shader_parameter("secondary_albedo", secondary_col)
+	mat.set_shader_parameter("base_roughness", roughness)
+	mat.set_shader_parameter("base_metallic", metallic)
+	mat.set_shader_parameter("emissive_color", emissive_col)
+	mat.set_shader_parameter("emissive_secondary_color", emissive_col.lightened(0.15))
+	mat.set_shader_parameter("emissive_energy", emissive_energy)
+	mat.set_shader_parameter("reduce_flashes", FlashGuard.on)
+	_mat_cache[cache_key] = mat
+	return mat
+
+
+static func brindle_armour_material(base_color: Color) -> StandardMaterial3D:
+	var mat := StandardMaterial3D.new()
+	mat.resource_name = "brindle_armour_plate"
+	mat.albedo_color = base_color
+	mat.roughness = 0.62
+	mat.metallic = 0.34
+	Palette.surface_grain(mat)
+	var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+	if plate != null:
+		mat.albedo_texture = plate
+		mat.uv1_triplanar = true
+		mat.uv1_scale = Vector3.ONE / 2.8
+	mat.detail_enabled = true
+	mat.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
+	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+	mat.detail_albedo = BakeLook.ramp()
+	mat.uv2_scale = Vector3(BakeLook.RAMP - 1.0, BakeLook.RAMP - 1.0, BakeLook.RAMP) / BakeLook.RAMP
+	mat.uv2_offset = Vector3(0.5, 0.5, 0.0) / BakeLook.RAMP
+	mat.next_pass = BakeLook.edge_lift()
+	return mat
+
+
+static func quench_vent_material() -> ShaderMaterial:
+	var mat := craft_shader_material("quench_vent", "plasma_conduit_core", Palette.CHARCOAL, Palette.VERDIGRIS, 0.78, 0.32, Palette.ARC, 1.45)
+	mat.set_shader_parameter("base_specular", 0.12)
+	mat.set_shader_parameter("emissive_pulse_speed", 1.1)
+	mat.set_shader_parameter("emissive_pulse_amount", 0.12)
+	return mat
+
+
+static func brindle_hull_mesh(size: Vector3) -> ArrayMesh:
+	var key := "brindle_hull:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "hull_plating")
+		_bevel_box(st, Vector3.ZERO, size, 0.28, 0.25, Transform3D.IDENTITY, _vc(0.08, 0.16), _vc(0.88, 0.14), _vc(0.10, 0.86))
+		_bevel_box(st, Vector3(0.0, -size.y * 0.42, 0.0), Vector3(size.x + 0.46, size.y * 0.20, size.z + 0.42), 0.14, 0.30, Transform3D.IDENTITY, _vc(0.16, 0.72), _vc(0.92, 0.22), _vc(0.14, 0.92))
+		_bevel_box(st, Vector3(0.0, size.y * 0.46, 0.0), Vector3(size.x + 0.28, 0.36, size.z + 0.28), 0.10, 0.32, Transform3D.IDENTITY, _vc(0.14, 0.20), _vc(0.90, 0.14), _vc(0.12, 0.68))
+		for z_frac in [-0.36, -0.12, 0.12, 0.36]:
+			_bevel_box(st, Vector3(0.0, 0.0, size.z * z_frac), Vector3(size.x + 0.34, size.y * 0.84, 0.42), 0.08, 0.45, Transform3D.IDENTITY, _vc(0.18, 0.28), _vc(0.90, 0.14), _vc(0.14, 0.78))
+		_bevel_box(st, Vector3(0.0, -size.y * 0.18, -size.z * 0.50 - 0.32), Vector3(size.x * 0.76, size.y * 0.44, 0.64), 0.16, 0.40, Transform3D.IDENTITY, _vc(0.24, 0.30), _vc(0.94, 0.12), _vc(0.18, 0.82))
+		for sx in [-1.0, 1.0]:
+			for rz in [-4.5, -1.5, 1.5, 4.5]:
+				_bevel_cyl(st, Vector3.ZERO, 0.14, 0.12, 0.14, 6, 0.025, 1.2, Transform3D(Basis(Vector3.BACK, PI * 0.5 * sx), Vector3(sx * (size.x * 0.5 + 0.18), size.y * 0.32, rz)), _vc(0.22, 0.62), _vc(0.92, 0.14), _vc(0.76, 0.16))
+	)
+
+
+static func brindle_armour_plate(size: Vector3) -> ArrayMesh:
+	var key := "brindle_armour_plate:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "hull_plating")
+		_bevel_box(st, Vector3.ZERO, size, minf(0.10, size.x * 0.35), 0.45, Transform3D.IDENTITY, _vc(0.08, 0.16), _vc(0.90, 0.14), _vc(0.12, 0.74))
+		for sy in [-0.36, 0.36]:
+			_bevel_box(st, Vector3(0.0, size.y * sy, 0.0), Vector3(size.x + 0.16, maxf(0.22, size.y * 0.10), size.z * 0.94), 0.04, 0.6, Transform3D.IDENTITY, _vc(0.16, 0.32), _vc(0.92, 0.14), _vc(0.14, 0.72))
+		for sz in [-0.38, 0.0, 0.38]:
+			_bevel_box(st, Vector3(0.0, 0.0, size.z * sz), Vector3(size.x + 0.14, size.y * 0.84, 0.28), 0.04, 0.6, Transform3D.IDENTITY, _vc(0.16, 0.34), _vc(0.90, 0.14), _vc(0.14, 0.70))
+		for sy in [-0.36, 0.36]:
+			for sz in [-0.38, 0.38]:
+				_bevel_cyl(st, Vector3.ZERO, 0.10, 0.085, size.x + 0.24, 6, 0.02, 1.2, Transform3D(Basis(Vector3.BACK, PI * 0.5), Vector3(0.0, size.y * sy, size.z * sz)), _vc(0.24, 0.62), _vc(0.92, 0.14), _vc(0.78, 0.18))
+	)
+
+
+static func brindle_cockpit_canopy(size: Vector3) -> ArrayMesh:
+	var key := "brindle_cockpit_canopy:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "emissive_core")
+		_bevel_box(st, Vector3(0.0, -size.y * 0.40, 0.0), Vector3(size.x + 0.24, size.y * 0.22, size.z + 0.24), 0.08, 0.5, Transform3D.IDENTITY, _vc(0.14, 0.58), _vc(0.88, 0.18), _vc(0.14, 0.82))
+		_bevel_box(st, Vector3(0.0, 0.06, 0.0), Vector3(size.x * 0.92, size.y * 0.82, size.z * 0.92), 0.26, 0.5, Transform3D.IDENTITY, _vc(0.18, 0.12, 0.25), _vc(0.82, 0.12, 0.35), _vc(0.12, 0.60))
+		for sx in [-1.0, 1.0]:
+			_bevel_box(st, Vector3(sx * size.x * 0.45, 0.06, 0.0), Vector3(0.18, size.y * 0.86, size.z * 0.82), 0.04, 0.8, Transform3D.IDENTITY, _vc(0.20, 0.36), _vc(0.90, 0.14), _vc(0.14, 0.72))
+		_bevel_box(st, Vector3(0.0, size.y * 0.44, 0.0), Vector3(size.x * 0.78, 0.20, size.z * 0.78), 0.06, 0.7, Transform3D.IDENTITY, _vc(0.18, 0.22), _vc(0.90, 0.14), _vc(0.14, 0.68))
+	)
+
+
+static func brindle_cockpit_console(size: Vector3) -> ArrayMesh:
+	var key := "brindle_cockpit_console:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "emissive_core")
+		_bevel_box(st, Vector3.ZERO, size, 0.08, 0.8, Transform3D.IDENTITY, _vc(0.14, 0.26), _vc(0.88, 0.14), _vc(0.12, 0.78))
+		_bevel_box(st, Vector3(0.0, size.y * 0.18, -size.z * 0.46), Vector3(size.x * 0.68, size.y * 0.42, 0.14), 0.03, 1.2, Transform3D.IDENTITY, _vc(0.22, 0.12, 0.92), _vc(0.86, 0.12, 0.75), _vc(0.16, 0.50, 0.40))
+	)
+
+
+static func brindle_vent_cap(radius: float, height: float) -> ArrayMesh:
+	var key := "brindle_vent_cap:%.2f:%.2f" % [radius, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "iron_frame")
+		_bevel_cyl(st, Vector3(0.0, -height * 0.28, 0.0), radius * 1.06, radius * 0.98, height * 0.44, 12, 0.06, 0.5, Transform3D.IDENTITY, _vc(0.12, 0.52), _vc(0.88, 0.16), _vc(0.18, 0.42))
+		_bevel_cyl(st, Vector3(0.0, height * 0.10, 0.0), radius * 0.86, radius * 0.74, height * 0.58, 12, 0.07, 0.55, Transform3D.IDENTITY, _vc(0.10, 0.22), _vc(0.90, 0.14), _vc(0.16, 0.30))
+		_bevel_ring(st, Vector3(0.0, height * 0.36, 0.0), radius * 0.42, radius * 0.72, height * 0.24, 12, 0.04, 0.7, Transform3D.IDENTITY, _vc(0.14, 0.36), _vc(0.92, 0.12))
+		_bolt_ring(st, Vector3(0.0, -height * 0.04, 0.0), radius * 0.94, 6, minf(0.11, radius * 0.10), 0.12)
+		for i in 3:
+			var a := PI * float(i) / 3.0
+			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(0.0, height * 0.36, 0.0))
+			_bevel_box(st, Vector3.ZERO, Vector3(radius * 1.18, 0.12, 0.16), 0.03, 0.8, xf, _vc(0.16, 0.34), _vc(0.92, 0.14), _vc(0.14, 0.70))
+	)
+
+
+static func brindle_crane_post(size: Vector3) -> ArrayMesh:
+	var key := "brindle_crane_post:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "copper_coil")
+		_bevel_box(st, Vector3(0.0, -size.y * 0.45, 0.0), Vector3(size.x * 1.55, size.y * 0.12, size.z * 1.55), 0.06, 0.5, Transform3D.IDENTITY, _vc(0.16, 0.74), _vc(0.90, 0.18), _vc(0.12, 0.92))
+		_bevel_box(st, Vector3.ZERO, size, 0.08, 0.45, Transform3D.IDENTITY, _vc(0.10, 0.20), _vc(0.88, 0.14), _vc(0.12, 0.78))
+		for yf in [-0.15, 0.22]:
+			_bevel_box(st, Vector3(0.0, size.y * yf, 0.0), Vector3(size.x * 1.24, 0.22, size.z * 1.24), 0.04, 0.7, Transform3D.IDENTITY, _vc(0.18, 0.38), _vc(0.92, 0.14), _vc(0.14, 0.74))
+		_bevel_cyl(st, Vector3(0.0, size.y * 0.48, 0.0), size.x * 0.72, size.x * 0.56, 0.34, 8, 0.04, 0.8, Transform3D.IDENTITY, _vc(0.18, 0.28), _vc(0.92, 0.14), _vc(0.22, 0.24))
+		_bolt_ring(st, Vector3(0.0, -size.y * 0.38, 0.0), size.x * 0.64, 4, 0.075, 0.08)
+	)
+
+
+static func brindle_magnet_housing(radius: float, height: float) -> ArrayMesh:
+	var key := "brindle_magnet_housing:%.2f:%.2f" % [radius, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "iron_frame")
+		_bevel_cyl(st, Vector3(0.0, -height * 0.06, 0.0), radius, radius * 0.90, height * 0.74, 14, 0.08, 0.45, Transform3D.IDENTITY, _vc(0.12, 0.24), _vc(0.90, 0.14), _vc(0.18, 0.32))
+		_bevel_ring(st, Vector3(0.0, height * 0.06, 0.0), radius * 0.76, radius * 1.07, height * 0.26, 14, 0.05, 0.55, Transform3D.IDENTITY, _vc(0.16, 0.36), _vc(0.92, 0.14))
+		_bevel_cyl(st, Vector3(0.0, -height * 0.40, 0.0), radius * 0.74, radius * 0.78, height * 0.16, 14, 0.03, 0.6, Transform3D.IDENTITY, _vc(0.18, 0.22, 0.92), _vc(0.70, 0.14, 0.92), _vc(0.22, 0.18, 1.0))
+		_bevel_cyl(st, Vector3(0.0, height * 0.38, 0.0), radius * 0.42, radius * 0.30, height * 0.32, 8, 0.04, 0.7, Transform3D.IDENTITY, _vc(0.18, 0.34), _vc(0.90, 0.14), _vc(0.22, 0.24))
+		_bevel_ring(st, Vector3(0.0, height * 0.62, 0.0), 0.18, 0.36, 0.14, 10, 0.03, 0.9, Transform3D(Basis(Vector3.RIGHT, PI * 0.5), Vector3.ZERO), _vc(0.20, 0.30), _vc(0.92, 0.12))
+		for i in 6:
+			var a := TAU * float(i) / 6.0
+			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * radius * 0.88, 0.02, sin(a) * radius * 0.88))
+			_bevel_box(st, Vector3.ZERO, Vector3(0.28, height * 0.62, 0.14), 0.03, 0.8, xf, _vc(0.16, 0.46), _vc(0.90, 0.14), _vc(0.16, 0.76))
+		_bolt_ring(st, Vector3(0.0, height * 0.32, 0.0), radius * 0.66, 8, 0.08, 0.07)
+	)
+
+
+static func quench_vent_basin(radius: float) -> ArrayMesh:
+	var key := "quench_vent_basin:%.2f" % radius
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "emissive_core")
+		_bevel_ring(st, Vector3(0.0, 0.0, 0.0), radius * 0.82, radius, 0.10, 20, 0.024, 0.4, Transform3D.IDENTITY, _vc(0.14, 0.46), _vc(0.90, 0.14))
+		_bevel_ring(st, Vector3(0.0, -0.02, 0.0), radius * 0.72, radius * 0.86, 0.06, 20, 0.015, 0.45, Transform3D.IDENTITY, _vc(0.10, 0.84), _vc(0.65, 0.42))
+		_bevel_cyl(st, Vector3(0.0, -0.018, 0.0), radius * 0.78, radius * 0.75, 0.055, 20, 0.014, 0.38, Transform3D.IDENTITY, _vc(0.12, 0.18, 0.96), _vc(0.45, 0.12, 1.0), _vc(0.16, 0.12, 1.0))
+		_bolt_ring(st, Vector3(0.0, 0.05, 0.0), radius * 0.91, 8, minf(0.14, radius * 0.048), 0.032)
+		for i in 8:
+			var a := TAU * float(i) / 8.0 + PI / 8.0
+			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * radius * 0.80, 0.01, sin(a) * radius * 0.80))
+			_bevel_box(st, Vector3.ZERO, Vector3(radius * 0.18, 0.07, 0.14), 0.016, 0.7, xf, _vc(0.16, 0.54), _vc(0.88, 0.14), _vc(0.14, 0.78))
+	)
+
+
+static func dispatch_mast_assembly(height: float, width: float, deck_size: Vector3) -> ArrayMesh:
+	var key := "dispatch_mast:%.2f:%.2f:%.2f:%.2f:%.2f" % [height, width, deck_size.x, deck_size.y, deck_size.z]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st_iron := _slot_st(surfaces, order, "iron_frame")
+		var st_oxide := _slot_st(surfaces, order, "patch_oxide")
+		var leg_at := width * 0.5 - 0.12
+		var leg_h := maxf(0.4, height - deck_size.y * 0.5)
+		var leg_center_y := -deck_size.y * 0.5 - leg_h * 0.5
+
+		for sx_v in [-1.0, 1.0]:
+			var sx := float(sx_v)
+			for sz_v in [-1.0, 1.0]:
+				var sz := float(sz_v)
+				var lx := sx * leg_at
+				var lz := sz * leg_at
+				_bevel_box(st_iron, Vector3(lx, -height + 0.10, lz), Vector3(0.44, 0.20, 0.44), 0.04, 0.8, Transform3D.IDENTITY, _vc(0.14, 0.84), _vc(0.88, 0.22), _vc(0.12, 0.94))
+				_bevel_box(st_iron, Vector3(lx, leg_center_y, lz), Vector3(0.20, leg_h, 0.20), 0.032, 0.6, Transform3D.IDENTITY, _vc(0.12, 0.22), _vc(0.88, 0.14), _vc(0.12, 0.80))
+				_bevel_box(st_iron, Vector3(lx + sx * 0.06, leg_center_y, lz), Vector3(0.08, leg_h * 0.96, 0.10), 0.016, 0.8, Transform3D.IDENTITY, _vc(0.18, 0.34), _vc(0.90, 0.14), _vc(0.14, 0.76))
+				_bevel_box(st_iron, Vector3(lx, leg_center_y, lz + sz * 0.06), Vector3(0.10, leg_h * 0.96, 0.08), 0.016, 0.8, Transform3D.IDENTITY, _vc(0.18, 0.34), _vc(0.90, 0.14), _vc(0.14, 0.76))
+				_bolt_ring(st_iron, Vector3(lx, -height + 0.21, lz), 0.15, 4, 0.032, 0.035)
+
+		var bays := maxi(2, int(height / 1.6))
+		var bay_h := (height - deck_size.y - 0.35) / float(bays)
+		for b in bays:
+			var y0 := -height + 0.28 + float(b) * bay_h
+			var y1 := y0 + bay_h
+			var ym := (y0 + y1) * 0.5
+			for sz_v in [-1.0, 1.0]:
+				var sz := float(sz_v)
+				_bevel_box(st_oxide, Vector3(0.0, y1, sz * leg_at), Vector3(width * 0.96, 0.12, 0.12), 0.022, 0.8, Transform3D.IDENTITY, _vc(0.14, 0.30), _vc(0.88, 0.14), _vc(0.14, 0.68))
+				var pa := Vector3(-leg_at, y0, sz * leg_at) if b % 2 == 0 else Vector3(leg_at, y0, sz * leg_at)
+				var pb := Vector3(leg_at, y1, sz * leg_at) if b % 2 == 0 else Vector3(-leg_at, y1, sz * leg_at)
+				_add_strut(st_oxide, pa, pb, 0.095, 0.016, _vc(0.14, 0.32), _vc(0.86, 0.16))
+			for sx_v in [-1.0, 1.0]:
+				var sx := float(sx_v)
+				_bevel_box(st_oxide, Vector3(sx * leg_at, y1, 0.0), Vector3(0.12, 0.12, width * 0.96), 0.022, 0.8, Transform3D.IDENTITY, _vc(0.14, 0.30), _vc(0.88, 0.14), _vc(0.14, 0.68))
+				var pc := Vector3(sx * leg_at, y0, -leg_at) if b % 2 == 0 else Vector3(sx * leg_at, y0, leg_at)
+				var pd := Vector3(sx * leg_at, y1, leg_at) if b % 2 == 0 else Vector3(sx * leg_at, y1, -leg_at)
+				_add_strut(st_oxide, pc, pd, 0.095, 0.016, _vc(0.14, 0.32), _vc(0.86, 0.16))
+			for sx_v in [-1.0, 1.0]:
+				var sx := float(sx_v)
+				for sz_v in [-1.0, 1.0]:
+					var sz := float(sz_v)
+					_bevel_box(st_oxide, Vector3(sx * leg_at, y1, sz * leg_at), Vector3(0.28, 0.24, 0.28), 0.03, 1.0, Transform3D.IDENTITY, _vc(0.20, 0.44), _vc(0.92, 0.14), _vc(0.16, 0.72))
+			if b == 0:
+				for sx_v in [-1.0, 1.0]:
+					var sx := float(sx_v)
+					_bevel_box(st_iron, Vector3(sx * leg_at, ym, 0.0), Vector3(0.14, 0.14, width * 0.82), 0.02, 0.9, Transform3D.IDENTITY, _vc(0.16, 0.56), _vc(0.86, 0.18), _vc(0.14, 0.80))
+
+		var deck_y := -deck_size.y * 0.5
+		_bevel_box(st_iron, Vector3(0.0, deck_y, 0.0), deck_size, 0.055, 0.45, Transform3D.IDENTITY, _vc(0.10, 0.24), _vc(0.90, 0.14), _vc(0.14, 0.76))
+		_bevel_box(st_oxide, Vector3(0.0, -deck_size.y - 0.09, 0.0), Vector3(deck_size.x * 0.82, 0.18, deck_size.z * 0.82), 0.04, 0.55, Transform3D.IDENTITY, _vc(0.14, 0.48), _vc(0.88, 0.16), _vc(0.14, 0.82))
+		for sx_v in [-1.0, 1.0]:
+			var sx := float(sx_v)
+			_bevel_box(st_oxide, Vector3(sx * (deck_size.x * 0.5 - 0.08), 0.05, 0.0), Vector3(0.14, 0.16, deck_size.z * 0.92), 0.028, 0.8, Transform3D.IDENTITY, _vc(0.18, 0.26), _vc(0.92, 0.14), _vc(0.14, 0.68))
+		for sz_v in [-1.0, 1.0]:
+			var sz := float(sz_v)
+			_bevel_box(st_oxide, Vector3(0.0, 0.05, sz * (deck_size.z * 0.5 - 0.08)), Vector3(deck_size.x * 0.92, 0.16, 0.14), 0.028, 0.8, Transform3D.IDENTITY, _vc(0.18, 0.26), _vc(0.92, 0.14), _vc(0.14, 0.68))
+		for sx_v in [-1.0, 1.0]:
+			var sx := float(sx_v)
+			for sz_v in [-1.0, 1.0]:
+				var sz := float(sz_v)
+				var knee_bot := Vector3(sx * leg_at, -deck_size.y - 0.95, sz * leg_at)
+				var knee_top := Vector3(sx * (deck_size.x * 0.42), -deck_size.y - 0.04, sz * (deck_size.z * 0.42))
+				_add_strut(st_iron, knee_bot, knee_top, 0.12, 0.02, _vc(0.16, 0.44), _vc(0.90, 0.14))
+				_bevel_cyl(st_iron, Vector3(sx * (deck_size.x * 0.44), 0.02, sz * (deck_size.z * 0.44)), 0.09, 0.075, 0.08, 6, 0.015, 1.2, Transform3D.IDENTITY, _vc(0.24, 0.56), _vc(0.92, 0.14), _vc(0.76, 0.16))
+	)
+
+
+static func apply_dispatch_mast_materials(mesh_instance: MeshInstance3D) -> void:
+	if mesh_instance == null:
+		return
+	var iron := craft_shader_material("dispatch_mast_iron", "oil_slicked_iron", Palette.CHARCOAL.lightened(0.06), Palette.SLATE, 0.62, 0.48, Palette.AMBER, 0.0)
+	var oxide := craft_shader_material("dispatch_mast_oxide", "oxidized_hull_plating", Palette.RUST, Palette.COPPER, 0.72, 0.26, Palette.AMBER, 0.0)
+	mesh_instance.material_override = null
+	mesh_instance.set_surface_override_material(0, iron)
+	if mesh_instance.mesh != null and mesh_instance.mesh.get_surface_count() > 1:
+		mesh_instance.set_surface_override_material(1, oxide)
+
+
+static func dispatch_pod(radius: float, height: float) -> ArrayMesh:
+	var key := "dispatch_pod:%.2f:%.2f" % [radius, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st_hull := _slot_st(surfaces, order, "patch_oxide")
+		var st_brass := _slot_st(surfaces, order, "copper_coil")
+		var body_h := height * 0.54
+		_bevel_cyl(st_hull, Vector3(0.0, 0.0, 0.0), radius * 0.94, radius * 0.96, body_h, 12, 0.04, 0.7, Transform3D.IDENTITY, _vc(0.10, 0.22), _vc(0.90, 0.14), _vc(0.16, 0.30))
+		_bevel_cyl(st_hull, Vector3(0.0, body_h * 0.5 + height * 0.16, 0.0), radius * 0.90, radius * 0.28, height * 0.34, 12, 0.04, 0.75, Transform3D.IDENTITY, _vc(0.14, 0.18), _vc(0.92, 0.12), _vc(0.72, 0.16))
+		_bevel_cyl(st_hull, Vector3(0.0, -body_h * 0.5 - height * 0.10, 0.0), radius * 0.64, radius * 0.88, height * 0.22, 12, 0.035, 0.75, Transform3D.IDENTITY, _vc(0.16, 0.58), _vc(0.86, 0.20), _vc(0.20, 0.72))
+		_bevel_ring(st_hull, Vector3(0.0, -body_h * 0.5 - height * 0.18, 0.0), radius * 0.32, radius * 0.58, 0.10, 12, 0.02, 0.9, Transform3D.IDENTITY, _vc(0.22, 0.14, 0.92), _vc(0.75, 0.12, 1.0))
+
+		_bevel_ring(st_brass, Vector3(0.0, height * 0.04, 0.0), radius * 0.86, radius * 1.07, height * 0.16, 12, 0.03, 0.85, Transform3D.IDENTITY, _vc(0.18, 0.24), _vc(0.94, 0.10))
+		_bevel_ring(st_brass, Vector3(0.0, -body_h * 0.42, 0.0), radius * 0.82, radius * 1.02, 0.09, 12, 0.02, 0.9, Transform3D.IDENTITY, _vc(0.18, 0.36), _vc(0.92, 0.12))
+		_bolt_ring(st_brass, Vector3(0.0, height * 0.12, 0.0), radius * 0.98, 6, 0.042, 0.04)
+
+		for i in 4:
+			var a := PI * 0.25 + PI * 0.5 * float(i)
+			var fin_xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * radius * 0.98, -height * 0.22, sin(a) * radius * 0.98))
+			_bevel_box(st_hull, Vector3.ZERO, Vector3(radius * 0.56, height * 0.36, 0.09), 0.024, 0.9, fin_xf, _vc(0.16, 0.32), _vc(0.92, 0.12), _vc(0.14, 0.72))
+	)
+
+
+static func apply_dispatch_pod_materials(mesh_instance: MeshInstance3D) -> void:
+	if mesh_instance == null:
+		return
+	var oxide := craft_shader_material("dispatch_pod_oxide", "oxidized_hull_plating", Palette.RUST, Palette.CHARCOAL, 0.64, 0.32, Palette.AMBER, 1.8)
+	var brass := craft_shader_material("dispatch_pod_brass", "oxidized_hull_plating", Palette.BRASS, Palette.AMBER, 0.42, 0.72, Palette.AMBER, 0.6)
+	mesh_instance.material_override = null
+	mesh_instance.set_surface_override_material(0, oxide)
+	if mesh_instance.mesh != null and mesh_instance.mesh.get_surface_count() > 1:
+		mesh_instance.set_surface_override_material(1, brass)
+
+
+static func reactor_spillway_chute(width: float, length: float) -> ArrayMesh:
+	var key := "reactor_spillway_chute:%.2f:%.2f" % [width, length]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "spillway_chute")
+		var hw := width * 0.5
+		var hl := length * 0.5
+		var lip_w := minf(1.35, width * 0.11)
+		var inner_w := hw - lip_w
+		var step_w := lip_w * 0.52
+
+		var profile: Array[Vector2] = [
+			Vector2(-hw, -0.14),
+			Vector2(hw, -0.14),
+			Vector2(hw, 0.22),
+			Vector2(hw - 0.10, 0.36),
+			Vector2(hw - step_w, 0.36),
+			Vector2(hw - step_w - 0.08, 0.22),
+			Vector2(inner_w, 0.20),
+			Vector2(inner_w - 0.18, 0.09),
+			Vector2(inner_w * 0.45, 0.15),
+			Vector2(-inner_w * 0.45, 0.15),
+			Vector2(-inner_w + 0.18, 0.09),
+			Vector2(-inner_w, 0.20),
+			Vector2(-hw + step_w + 0.08, 0.22),
+			Vector2(-hw + step_w, 0.36),
+			Vector2(-hw + 0.10, 0.36),
+			Vector2(-hw, 0.22),
+		]
+		var prof_colors: Array[Color] = [
+			_vc(0.06, 0.90, 0.0),
+			_vc(0.06, 0.90, 0.0),
+			_vc(0.45, 0.62, 0.15),
+			_vc(0.92, 0.16, 0.85),
+			_vc(0.88, 0.18, 0.80),
+			_vc(0.62, 0.52, 0.65),
+			_vc(0.82, 0.26, 0.90),
+			_vc(0.32, 0.78, 0.58),
+			_vc(0.14, 0.12, 0.28),
+			_vc(0.14, 0.12, 0.28),
+			_vc(0.32, 0.78, 0.58),
+			_vc(0.82, 0.26, 0.90),
+			_vc(0.62, 0.52, 0.65),
+			_vc(0.88, 0.18, 0.80),
+			_vc(0.92, 0.16, 0.85),
+			_vc(0.45, 0.62, 0.15),
+		]
+
+		var segs := 8
+		var rings: Array = []
+		var ring_cols: Array = []
+		for s in segs + 1:
+			var f := float(s) / float(segs)
+			var z := lerpf(-hl, hl, f)
+			var end_lip := 1.0 if (s == 0 or s == segs) else 0.0
+			var y_mul := 0.78 if end_lip > 0.5 else 1.0
+			var crown := 0.06 * sin(f * PI)
+			var pts: Array[Vector3] = []
+			var cols: Array[Color] = []
+			for k in profile.size():
+				var p2 := profile[k]
+				var py := p2.y * y_mul + (crown if p2.y > 0.05 and absf(p2.x) < inner_w - 0.1 else 0.0)
+				pts.append(Vector3(p2.x, py, z))
+				var bc := prof_colors[k]
+				var em := maxf(bc.b, 0.88) if end_lip > 0.5 and p2.y > 0.0 else bc.b
+				cols.append(_vc(maxf(bc.r, 0.72 * end_lip), bc.g, em))
+			rings.append(pts)
+			ring_cols.append(cols)
+
+		var n_prof := profile.size()
+		for s in segs:
+			var f0 := float(s) / float(segs)
+			var f1 := float(s + 1) / float(segs)
+			var r0: Array[Vector3] = rings[s]
+			var r1: Array[Vector3] = rings[s + 1]
+			var c0_arr: Array[Color] = ring_cols[s]
+			var c1_arr: Array[Color] = ring_cols[s + 1]
+			for k in n_prof:
+				var kn := (k + 1) % n_prof
+				var a := r0[k]
+				var b := r0[kn]
+				var c := r1[kn]
+				var d := r1[k]
+				var edge := b - a
+				var outward := Vector3(edge.y, -edge.x, 0.0).normalized()
+				var uv0 := Vector2((a.x + hw) / width, f0)
+				var uv1 := Vector2((b.x + hw) / width, f0)
+				var uv2 := Vector2((c.x + hw) / width, f1)
+				var uv3 := Vector2((d.x + hw) / width, f1)
+				_add_quad_uv(st, a, b, c, d, outward, uv0, uv1, uv2, uv3, c0_arr[k], c0_arr[kn], c1_arr[kn], c1_arr[k])
+
+		var front_c := Vector3(0.0, 0.04, -hl)
+		var front_r: Array[Vector3] = rings[0]
+		var front_cols: Array[Color] = ring_cols[0]
+		for k in n_prof:
+			var kn := (k + 1) % n_prof
+			var pa := front_r[k]
+			var pb := front_r[kn]
+			_add_tri_uv(st, front_c, pb, pa, Vector3.FORWARD,
+				Vector2(0.5, 0.0), Vector2((pb.x + hw) / width, 0.0), Vector2((pa.x + hw) / width, 0.0),
+				_vc(0.60, 0.35, 0.80), front_cols[kn], front_cols[k])
+
+		var back_c := Vector3(0.0, 0.04, hl)
+		var back_r: Array[Vector3] = rings[segs]
+		var back_cols: Array[Color] = ring_cols[segs]
+		for k in n_prof:
+			var kn := (k + 1) % n_prof
+			var pa := back_r[k]
+			var pb := back_r[kn]
+			_add_tri_uv(st, back_c, pa, pb, Vector3.BACK,
+				Vector2(0.5, 1.0), Vector2((pa.x + hw) / width, 1.0), Vector2((pb.x + hw) / width, 1.0),
+				_vc(0.60, 0.35, 0.80), back_cols[k], back_cols[kn])
+
+		for sx in [-1.0, 1.0]:
+			for rf in [-0.36, -0.12, 0.12, 0.36]:
+				_bevel_box(st, Vector3(sx * (hw - step_w * 0.5), 0.34, length * rf), Vector3(step_w * 0.88, 0.16, 0.42), 0.03, 0.6, Transform3D.IDENTITY, _vc(0.28, 0.46, 0.25), _vc(0.92, 0.14, 0.72), _vc(0.18, 0.78, 0.0))
+	)
+
+
+static func reward_canister_band(radius: float, height: float) -> ArrayMesh:
+	var key := "reward_canister_band:%.3f:%.3f" % [radius, height]
+	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
+		var st := _slot_st(surfaces, order, "hull_plating")
+		_bevel_ring(st, Vector3.ZERO, radius * 0.90, radius, height, 14, 0.018, 1.2, Transform3D.IDENTITY, _vc(0.18, 0.22), _vc(0.90, 0.12))
+		_bolt_ring(st, Vector3(0.0, 0.0, 0.0), radius * 0.99, 6, 0.022, 0.025)
+	)

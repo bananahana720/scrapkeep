@@ -56,6 +56,7 @@ const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
+const WeaponRigFx := preload("res://src/presentation/weapon_rig_fx.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const REST_LIBRARY := "runtime"
 const REST_CLIP := "runtime/rest_pose"
@@ -549,6 +550,7 @@ func _process(delta: float) -> void:
 		_fit(rec)
 		_steer_pod(rec, player, delta)
 		_step_mecha(rec, player, delta)
+		_step_weapon_rig(rec, delta)
 	_tuck_chunks()
 	for key in _wardens.keys():
 		var rec: Dictionary = _wardens[key]
@@ -614,6 +616,10 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	sync_lattice(core, player.roll_node())
 	BallLooks.ride(ball_look(), player.roll_node())
+	if BallLooks.PLATED.has(ball_look()):
+		var acc_node: Node = player.roll_node().get_node_or_null("Accretion")
+		if acc_node != null:
+			_ensure_cutaway_rider_ink(acc_node)
 	var glance = rec.get("glance")
 	if glance != null and is_instance_valid(glance) and ctx != null and ctx.get("camera") != null:
 		glance.observe(_at_rest(rec, v.length()), ctx.camera.global_position, delta)
@@ -1394,6 +1400,87 @@ func _connect_shell_events() -> void:
 	_connect_optional(bus, "ultimate_ready", set_ready_glow.bind(true))
 	_connect_optional(bus, "ultimate_started", set_ready_glow.bind(false))
 	_connect_optional(bus, "ultimate_cancelled", set_ready_glow.bind(false))
+	_connect_optional(bus, "shot_fired", _on_weapon_shot_fired)
+	_connect_optional(bus, "part_gained", _on_weapon_part_gained)
+
+
+func sync_weapon_rig(pod: Node3D, shot_bits_mask: int, part_ids: Array) -> Node3D:
+	if pod == null or not is_instance_valid(pod):
+		return null
+	var ring := pod.get_node_or_null("WeaponRing") as Node3D
+	if ring == null:
+		return null
+	var mods := WeaponRigFx.mods_for(shot_bits_mask, WeaponRigFx.tags_from_parts(part_ids))
+	var existing := ring.get_node_or_null(WeaponRigFx.NODE_NAME) as Node3D
+	if mods.is_empty():
+		if existing != null:
+			existing.sync_build(0, [])
+		return existing
+	var rig := WeaponRigFx.ensure_on(ring)
+	if rig != null:
+		rig.sync_build(shot_bits_mask, part_ids)
+		if BallLooks.PLATED.has(ball_look()) and not bool(rig.get("_cutaway_dressed")):
+			var ring_mount := rig.get_node_or_null("RingMount")
+			if ring_mount != null:
+				BallLooks._cut_kit(ring_mount, "")
+				InkOutline.apply(ring_mount, "pilot")
+			rig.set("_cutaway_dressed", true)
+	return rig
+
+
+func _live_weapon_driver():
+	var spawner = ctx.get("spawner") if ctx != null else null
+	var driver = spawner.get("weapon_driver") if spawner != null else null
+	return driver if driver != null and driver.has_method("state_snapshot") else null
+
+
+func _on_weapon_shot_fired() -> void:
+	if _live_weapon_driver() != null:
+		return
+	for rec in _players.values():
+		var pod: Node3D = rec.get("pod")
+		if pod == null or not is_instance_valid(pod):
+			continue
+		var ring := pod.get_node_or_null("WeaponRing") as Node3D
+		if ring == null:
+			continue
+		var rig := ring.get_node_or_null(WeaponRigFx.NODE_NAME)
+		if rig != null:
+			rig.on_shot_fired("plain", 1.0)
+
+
+func _on_weapon_part_gained() -> void:
+	var bits := _live_shot_bits()
+	var parts := _live_parts()
+	for rec in _players.values():
+		var pod: Node3D = rec.get("pod")
+		if pod != null and is_instance_valid(pod):
+			sync_weapon_rig(pod, bits, parts)
+
+
+func _live_shot_bits() -> int:
+	var build = ctx.get("build") if ctx != null else null
+	return int(build.shot_bits()) if build != null and build.has_method("shot_bits") else 0
+
+
+func _live_parts() -> Array:
+	var run = ctx.get("run") if ctx != null else null
+	return run.parts if run != null and run.get("parts") != null else []
+
+
+func _step_weapon_rig(rec: Dictionary, delta: float) -> void:
+	var pod: Node3D = rec.get("pod")
+	if pod == null or not is_instance_valid(pod):
+		return
+	var rig := sync_weapon_rig(pod, _live_shot_bits(), _live_parts())
+	if rig == null:
+		return
+	var driver = _live_weapon_driver()
+	var snap: Dictionary = driver.state_snapshot() if driver != null else {}
+	var reduced := false
+	if profile != null and profile.has_method("get_setting"):
+		reduced = bool(profile.get_setting("reduced_motion", false))
+	rig.step(delta, snap, reduced)
 
 
 func _addon_path(id: String, slot: String) -> String:
@@ -3231,3 +3318,14 @@ void fragment() {
 	upper.shadow_enabled = false
 	upper.position = Vector3(-12.5, 5.2, 0.0)
 	barge.add_child(upper)
+
+
+func _ensure_cutaway_rider_ink(acc_node: Node) -> void:
+	for mi: MeshInstance3D in acc_node.find_children("*", "MeshInstance3D", true, false):
+		var sm := mi.material_override as ShaderMaterial
+		if sm != null and sm.next_pass == null:
+			InkOutline.apply(mi, "pilot")
+		if sm != null and sm.next_pass is ShaderMaterial:
+			var np := sm.next_pass as ShaderMaterial
+			if np.has_meta("ink_role"):
+				np.set_shader_parameter("centre_at", sm.get_shader_parameter("centre_at"))

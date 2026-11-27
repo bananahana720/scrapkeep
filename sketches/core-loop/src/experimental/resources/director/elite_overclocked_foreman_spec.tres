@@ -1,0 +1,52 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/resources/director/refurbished_elite_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"overclocked_foreman_spec"
+display_name = "Overclocked Foreman-Spec"
+maker = &"old_works"
+requisition_code = "MIND-01F"
+chassis = &"foreman"
+credit_cost = 30.0
+min_tier = 3
+base_hull_hp = 125.0
+plate_count = 4
+plate_integrity = 36.0
+plate_weak_tags = [&"electrified", &"slag_coated"]
+silhouette_cue = "Seamless cast petrol dome, dashed ANCIENT green seams, flat-purple override collar."
+movement_cadence = "Perfectly smooth glide then dead-still lock, 0.75 s gridded alignment whistle."
+counterplay_cue = "Crack its dorsal plates to break the unison aura and stagger the whole Fleet pack."
+third_person_read_distance_m = 56.0
+telegraph_kind = &"instant"
+tell_s = 0.75
+execute_s = 0.65
+cooldown_s = 3.2
+stagger_on_brace_break_s = 2.6
+card_line = "Scheduled a quick sync. Attendance mandatory."
+ability_tag = &"electrified"
+secondary_tag = &"magnetic"
+ability_radius_m = 12.0
+ability_intensity = 1.1
+ability_ttl_s = 3.0
+shatter_tag = &"electrified"
+shatter_radius_m = 8.5
+shatter_ttl_s = 2.5
+backfires_on_strip = false
+pull_accel = 0.0
+slingshot_bonus = 1.0
+aura_pack_rest_scale = 0.82
+biome_weights = {
+&"compactor_canyon": 1.2,
+&"orbital_graveyard": 1.6,
+&"smelter_pit": 1.2,
+&"spillway": 1.0
+}
+bounty = {
+"cogs": 24,
+"cores": 1,
+"guaranteed_rarity": &"relic",
+"part_rolls": 2,
+"scrap": 140
+}

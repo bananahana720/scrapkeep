@@ -72,6 +72,9 @@ const Bindings := preload("res://src/core/bindings.gd")
 const PocketLibrary := preload("res://src/world/pockets/pocket_library.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const W50_ASSET_HOOKS_PATH := "res://src/presentation/w50_asset_hooks.gd"
+const CraftPropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
+const ExperimentalSetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -227,6 +230,9 @@ func _reset() -> void:
 				hooks.reset_for_tests()
 			elif hooks.has_method("_reset"):
 				hooks._reset()
+	CraftPropMeshes.reset_for_tests()
+	EnemyBossCraft.reset_for_tests()
+	ExperimentalSetpieceCraft.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

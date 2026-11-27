@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"harpoon_grounding_spike"
+display_name = "Harpoon Grounding Spike"
+maker = &"mind_glass"
+slot = 1
+rarity = &"relic"
+trigger = &"on_harpoon_snap"
+emits_tags = Array[StringName]([&"electrified"])
+consumes_tags = Array[StringName]([&"magnetic", &"slag_coated", &"soaked_conductive"])
+heat_cost = -15.0
+effect_id = &"grounding_spike_surge"
+params = {
+"miss_heat_penalty": 12.0,
+"spike_radius_m": 6.5,
+"surge_damage": 24.0,
+"ttl_s": 4.0
+}
+summary = "Snapping a harpoon line grounds live current at the anchor and dumps rig heat."
+trade_off = "Slow or failed tether reels build heat instead of venting it."
+visual_tell = "Mint anchor spike flashing concentric rings where the rope snaps."
+audio_tell = "Taut cable snap into bright arpeggio discharge."

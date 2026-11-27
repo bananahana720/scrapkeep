@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"hoard_coil_ballast"
+display_name = "Hoard-Coil Ballast"
+maker = &"moss"
+slot = 2
+rarity = &"field_kit"
+trigger = &"on_scrap_pickup"
+emits_tags = Array[StringName]([&"magnetic"])
+consumes_tags = Array[StringName]([])
+heat_cost = 8.0
+effect_id = &"magnetic_flywheel_pulse"
+params = {
+"pull_force": 14.0,
+"pulse_radius_m": 5.5,
+"speed_bonus_mps": 1.8,
+"ttl_s": 3.5
+}
+summary = "Scrap intake spins a magnetic flywheel that yanks props and metal foes."
+trade_off = "Stacks coil heat on pickups and draws metal shells closer when stalled."
+visual_tell = "Cobalt bracket ring pulsing inward around the scrap intake."
+audio_tell = "Rising flywheel hum synced to scrap pickup ticks."

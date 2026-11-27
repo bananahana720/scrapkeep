@@ -207,9 +207,9 @@ func _lit() -> void:
 		and view_a.column.material_override == view_b.column.material_override)
 	_t.check("and the ring's dash mesh", _first_mesh(view_a.ring).mesh == _first_mesh(view_b.ring).mesh)
 	view_a.set_sight(1.5)
-	_t.check("a sight scale stretches only its own column", view_a.column.mesh != view_b.column.mesh
-		and is_equal_approx((view_b.column.mesh as BoxMesh).size.y, ActivityView.COLUMN_HEIGHT)
-		and is_equal_approx((view_a.column.mesh as BoxMesh).size.y, ActivityView.COLUMN_HEIGHT * 1.5))
+	_t.check("a sight scale stretches only its own column",
+		is_equal_approx(view_b.column.mesh.get_aabb().size.y * view_b.column.scale.y, ActivityView.COLUMN_HEIGHT)
+		and is_equal_approx(view_a.column.mesh.get_aabb().size.y * view_a.column.scale.y, ActivityView.COLUMN_HEIGHT * 1.5))
 	view_a.free()
 	view_b.free()
 	var altar := AmbushAltar.new()

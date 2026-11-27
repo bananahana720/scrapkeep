@@ -7,6 +7,8 @@ const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
 static var _sheet_shader: Shader
 
 const SHEET_SECONDS := 3.0
@@ -358,9 +360,7 @@ func _show_sheet(warden, alpha := SHEET_ALPHA) -> void:
 		return
 	var view := MeshInstance3D.new()
 	view.name = "ReactorSheet"
-	var box := BoxMesh.new()
-	box.size = Vector3(lane_width(), 0.3, SHEET_RUN - SHEET_TOP)
-	view.mesh = box
+	view.mesh = EnemyBossCraft.reactor_spillway_chute(lane_width(), SHEET_RUN - SHEET_TOP)
 	var is_live := alpha >= SHEET_ALPHA * 0.9
 	view.material_override = _make_sheet_material(alpha, is_live)
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -369,7 +369,7 @@ func _show_sheet(warden, alpha := SHEET_ALPHA) -> void:
 			+ sheet_dir.cross(Vector3.UP) * lane_offset()
 	var ground: float = warden.terrain.height(mid.x, mid.z) if warden.terrain != null else warden.home.y
 	view.global_transform = Transform3D(Basis.looking_at(-sheet_dir, Vector3.UP), Vector3(mid.x, ground + 0.2, mid.z))
-	if is_live and EnemyMotion.motion_scale > 0.0 and view.is_inside_tree():
+	if is_live and EnemyMotion.motion_scale > 0.0 and not UiTokens.reduced_motion and view.is_inside_tree():
 		view.scale = Vector3(1.0, 1.0, 0.15)
 		var tw := view.create_tween()
 		tw.tween_property(view, "scale:z", 1.0, 0.22).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -389,34 +389,43 @@ render_mode unshaded, cull_disabled, depth_draw_opaque;
 uniform vec3 deep_col : source_color = vec3(0.08, 0.28, 0.30);
 uniform vec3 mid_col : source_color = vec3(0.16, 0.44, 0.45);
 uniform vec3 crest_col : source_color = vec3(0.88, 0.92, 0.88);
+uniform vec3 lip_col : source_color = vec3(0.24, 0.28, 0.27);
 uniform vec3 tell_col : source_color = vec3(0.76, 0.68, 0.56);
 uniform vec3 ink_col : source_color = vec3(0.11, 0.10, 0.10);
 uniform float opacity = 0.72;
 uniform float live = 1.0;
 uniform float motion = 1.0;
 varying vec3 loc;
+varying vec4 vcol;
 void vertex() {
 	loc = VERTEX;
+	vcol = COLOR;
 }
 void fragment() {
 	float t = TIME * 5.2 * motion;
 	float streak = 0.5 + 0.5 * sin(loc.x * 2.1 + sin(loc.z * 0.45 - t * 0.6) * 1.6);
 	float wave = 0.5 + 0.5 * sin(loc.z * 1.15 - t + streak * 1.4);
-	float foam = step(0.72, pow(streak, 1.8) * 0.55 + wave * 0.55);
-	float mid_band = step(0.45, streak * 0.6 + wave * 0.4);
-	float lip = smoothstep(5.5, 7.9, loc.z) + smoothstep(5.8, 7.9, -loc.z);
-	float edge = step(0.92, abs(UV.x - 0.5) * 2.0);
-	vec3 water = mix(deep_col, mid_col, mid_band);
-	water = mix(water, crest_col, clamp(foam * 0.85 + lip * 0.65, 0.0, 1.0));
+	float ripple = 0.5 + 0.5 * sin(loc.z * 2.6 - t * 1.45 - loc.x * 0.85);
+	float foam = step(0.68, pow(streak, 1.7) * 0.46 + wave * 0.42 + ripple * 0.22 + vcol.b * 0.18);
+	float mid_band = step(0.45, streak * 0.55 + wave * 0.45);
+	float end_lip = smoothstep(5.5, 7.9, loc.z) + smoothstep(5.8, 7.9, -loc.z);
+	float training_lip = smoothstep(0.60, 0.86, vcol.r);
+	float trough_shade = clamp(vcol.g * 0.42, 0.0, 0.5);
+	float edge = step(0.94, abs(UV.x - 0.5) * 2.0);
+	vec3 water = mix(deep_col, mid_col, mid_band) * (1.0 - trough_shade * 0.45);
+	float lip_foam = clamp(vcol.b * (0.45 + 0.55 * ripple) * training_lip, 0.0, 1.0);
+	water = mix(water, crest_col, clamp(foam * 0.82 + end_lip * 0.65 + lip_foam * 0.55, 0.0, 1.0));
+	vec3 curb = mix(lip_col, crest_col, clamp(lip_foam * 0.75 + vcol.r * 0.18, 0.0, 1.0));
+	water = mix(water, curb, training_lip * 0.58);
 	vec3 base = mix(tell_col, water, live);
 	ALBEDO = mix(base, ink_col, edge * 0.78);
-	ALPHA = clamp(opacity + (foam * 0.2 + edge * 0.22) * live, 0.0, 0.95);
+	ALPHA = clamp(opacity + (foam * 0.20 + edge * 0.22 + training_lip * 0.16) * live, 0.0, 0.96);
 }"""
 	var mat := ShaderMaterial.new()
 	mat.shader = _sheet_shader
 	mat.set_shader_parameter("opacity", clampf(alpha + (0.22 if is_live else 0.08), 0.0, 0.92))
 	mat.set_shader_parameter("live", 1.0 if is_live else 0.0)
-	mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or EnemyMotion.motion_scale <= 0.0 else 1.0)
+	mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or EnemyMotion.motion_scale <= 0.0 or UiTokens.reduced_motion else 1.0)
 	return mat
 
 

@@ -31,6 +31,8 @@ func _initialize() -> void:
 func _run_all() -> void:
 	var tuning := Tuning.new()
 	t.eq("the cutaway is the default look", tuning.option(Tuning.BALL_LOOK_KEY), "cutaway")
+	t.eq("cutaway shader is decoupled under assets/shaders", BallLooks.CUTAWAY_SHADER_RES.resource_path, "res://assets/shaders/actor_ball_cutaway.gdshader")
+	t.eq("canopy shader is decoupled under assets/shaders", BallLooks.CANOPY_SHADER_RES.resource_path, "res://assets/shaders/actor_ball_canopy.gdshader")
 	t.eq("every look is an option of the switch", tuning.options_of(Tuning.BALL_LOOK_KEY), BallLooks.ids())
 	t.eq("today swaps no shell", BallLooks.asset_paths(BallLooks.TODAY, PILOTS), {})
 	t.eq("an unknown look swaps no shell", BallLooks.asset_paths("bogus", PILOTS), {})

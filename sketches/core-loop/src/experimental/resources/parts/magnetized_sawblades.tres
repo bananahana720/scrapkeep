@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"magnetized_sawblades"
+display_name = "Magnetized Sawblades"
+maker = &"redjaw"
+slot = 0
+rarity = &"fleet_grade"
+trigger = &"on_weapon_fire"
+emits_tags = Array[StringName]([&"magnetic"])
+consumes_tags = Array[StringName]([&"slag_coated", &"electrified", &"soaked_conductive", &"coolant_brittle"])
+heat_cost = 14.0
+effect_id = &"mag_sawblade_chain"
+params = {
+"base_hops": 3,
+"blade_damage": 18.0,
+"chain_radius_m": 8.5,
+"mag_radius_m": 4.2
+}
+summary = "Fires magnetized sawblades that jump lightning across slag and wet lanes."
+trade_off = "Blades pull toward live magnetic zones and add steady heat per volley."
+visual_tell = "Cobalt-rimmed toothed disc leaving a mint bridge line across conductive pools."
+audio_tell = "Sawtooth whirr snapping into metallic chime hops."

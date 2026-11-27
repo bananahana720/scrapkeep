@@ -7,6 +7,7 @@ const Palette := preload("res://src/core/palette.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const MODEL := "res://assets/models/world_one/rescue_cage.glb"
 const SCARF := "res://assets/models/world_one/rescue_keeper_scarf.glb"
 const SCARF_AT := Vector3(1.4, 2.55, 1.4)
@@ -55,7 +56,11 @@ class Cage extends "res://src/world/device.gd":
 
 	func build() -> void:
 		quest = String(spec.get("quest", ""))
-		ground_ring(RING_RADIUS, Interactables.color(family))
+		var ring_node := ground_ring(RING_RADIUS, Interactables.color(family))
+		var dash_mesh := PropMeshes.rescue_ring_dash(RING_RADIUS * TAU / 40.0)
+		for child in ring_node.get_children():
+			if child is MeshInstance3D:
+				child.mesh = dash_mesh
 		var parts := RescueSite._parts()
 		if parts.is_empty():
 			_build_greybox()
@@ -70,9 +75,18 @@ class Cage extends "res://src/world/device.gd":
 			spent = true
 		_visual_state()
 
+	static func _add_part(parent: Node3D, mesh: Mesh, at: Vector3, mat: Material, yaw := 0.0) -> MeshInstance3D:
+		var view := MeshInstance3D.new()
+		view.mesh = mesh
+		view.position = at
+		view.rotation.y = yaw
+		view.material_override = mat
+		parent.add_child(view)
+		return view
+
 	func _build_greybox() -> void:
-		var steel := Palette.solid(Palette.CHARCOAL)
-		var accent := Palette.solid(Interactables.color(family), 1.2)
+		var steel := PropMeshes.salvage_wear_material(Palette.CHARCOAL.lightened(0.06), Palette.STEEL, Palette.CHARCOAL, 0.66, 0.44, 0.0, "cage_iron")
+		var accent := PropMeshes.weathered_material(Interactables.color(family), 0.58, 0.28, 1.2, "cage_accent")
 		_bars = Node3D.new()
 		add_child(_bars)
 		_freed_wall = Node3D.new()
@@ -81,15 +95,15 @@ class Cage extends "res://src/world/device.gd":
 		add_child(_freed_wall)
 		for sx in [-1.0, 1.0]:
 			for sz in [-1.0, 1.0]:
-				box(Vector3(0.3, 3.2, 0.3), Vector3(sx * 1.4, 1.6, sz * 1.4), steel, false, _bars)
+				_add_part(_bars, PropMeshes.rescue_cage_post(0.3, 3.2), Vector3(sx * 1.4, 1.6, sz * 1.4), steel)
 		for s in [-1.0, 1.0]:
-			box(Vector3(3.1, 0.25, 0.25), Vector3(0.0, 3.2, s * 1.4), steel, false, _bars)
-			box(Vector3(0.25, 0.25, 3.1), Vector3(s * 1.4, 3.2, 0.0), steel, false, _bars)
-			box(Vector3(0.12, 3.0, 0.12), Vector3(s * 0.5, 1.6, 1.4), steel, false, _bars)
-			box(Vector3(0.12, 3.0, 0.12), Vector3(s * 0.5, 1.6, 0.0), steel, false, _freed_wall)
-		box(Vector3(0.7, 0.5, 0.2), Vector3(0.0, 1.4, 1.5), accent, false, _bars)
-		box(Vector3(0.7, 0.5, 0.2), Vector3(0.0, 1.4, 0.1), accent, false, _freed_wall)
-		box(Vector3(0.8, 1.2, 0.8), Vector3(0.0, 0.6, 0.0), accent)
+			_add_part(_bars, PropMeshes.rescue_cage_rail(3.1, 0.20), Vector3(0.0, 3.2, s * 1.4), steel)
+			_add_part(_bars, PropMeshes.rescue_cage_rail(3.1, 0.20), Vector3(s * 1.4, 3.2, 0.0), steel, PI * 0.5)
+			_add_part(_bars, PropMeshes.rescue_cage_bar(0.12, 3.0), Vector3(s * 0.5, 1.6, 1.4), steel)
+			_add_part(_freed_wall, PropMeshes.rescue_cage_bar(0.12, 3.0), Vector3(s * 0.5, 1.6, 0.0), steel)
+		_add_part(_bars, PropMeshes.rescue_cage_lockbox(Vector3(0.7, 0.5, 0.2)), Vector3(0.0, 1.4, 1.5), accent)
+		_add_part(_freed_wall, PropMeshes.rescue_cage_lockbox(Vector3(0.7, 0.5, 0.2)), Vector3(0.0, 1.4, 0.1), accent)
+		_add_part(self, PropMeshes.bevel_prop_box(Vector3(0.8, 1.2, 0.8)), Vector3(0.0, 0.6, 0.0), accent)
 
 	func _build_model(parts: Array) -> void:
 		_bars = Node3D.new()
@@ -137,7 +151,10 @@ class Cage extends "res://src/world/device.gd":
 			_animator.play(IDLE_CLIP, 0.1)
 
 	func _build_freed_walls() -> void:
-		var steel := Palette.solid(Palette.CHARCOAL)
+		var steel := PropMeshes.salvage_wear_material(Palette.CHARCOAL.lightened(0.06), Palette.STEEL, Palette.CHARCOAL, 0.66, 0.44, 0.0, "cage_freed_iron")
+		var edge := 0.08
+		var bar_mesh := PropMeshes.rescue_cage_bar(edge, 3.0)
+		var rail_mesh := PropMeshes.rescue_cage_rail(2.8, edge)
 		_freed_wall = Node3D.new()
 		_freed_wall.name = "FreedWallHinge"
 		_freed_wall.position = Vector3(0.0, 0.0, 1.4)
@@ -150,7 +167,6 @@ class Cage extends "res://src/world/device.gd":
 			else:
 				_open_walls.add_child(wall)
 			var turn: float = [0.0, PI, PI * 0.5, -PI * 0.5][side]
-			var edge := 0.08
 			wall.rotation.y = turn
 			if side == 1:
 				wall.position = Vector3(0.0, 0.0, -1.4)
@@ -159,9 +175,9 @@ class Cage extends "res://src/world/device.gd":
 			elif side == 3:
 				wall.position = Vector3(-1.4, 0.0, 0.0)
 			for x in [-1.4, -0.5, 0.5, 1.4]:
-				box(Vector3(edge, 3.0, edge), Vector3(x, 1.5, 0.0), steel, false, wall)
+				_add_part(wall, bar_mesh, Vector3(x, 1.5, 0.0), steel)
 			for y in [0.06, 2.94]:
-				box(Vector3(2.8, edge, edge), Vector3(0.0, y, 0.0), steel, false, wall)
+				_add_part(wall, rail_mesh, Vector3(0.0, y, 0.0), steel)
 
 	func _visual_state() -> void:
 		_bars.visible = not spent

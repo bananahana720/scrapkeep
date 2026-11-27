@@ -170,24 +170,19 @@ func _tell_on_entry(entry: Dictionary, s) -> void:
 	t.eq(entry.id + " entry cue sounds once", audio.cue_log_total, after)
 
 func _glyph_matches(glyph: Node3D, shape: String) -> bool:
-	if not glyph.visible:
+	if not glyph.visible or glyph.get_child_count() != 1 or not glyph.get_child(0) is MeshInstance3D:
 		return false
-	if shape == "cross":
-		if glyph.get_child_count() != 3:
-			return false
-		for axis in 3:
-			var part = glyph.get_child(axis)
-			var size := Vector3.ONE * ActivityView.GLYPH_SIZE * 0.3
-			size[axis] = ActivityView.GLYPH_SIZE
-			if not part is MeshInstance3D or not part.mesh is BoxMesh or not part.mesh.size.is_equal_approx(size):
-				return false
-		return true
-	if glyph.get_child_count() != 1 or not glyph.get_child(0) is MeshInstance3D:
+	var mesh: Mesh = (glyph.get_child(0) as MeshInstance3D).mesh
+	if not mesh is ArrayMesh:
 		return false
-	var mesh = glyph.get_child(0).mesh
-	if shape == "diamond":
-		return mesh is SphereMesh and mesh.radial_segments == 4 and mesh.rings == 2 and is_equal_approx(mesh.radius, ActivityView.GLYPH_SIZE * 0.55) and is_equal_approx(mesh.height, ActivityView.GLYPH_SIZE * 1.1)
-	return shape == "square" and mesh is BoxMesh and mesh.size.is_equal_approx(Vector3.ONE * ActivityView.GLYPH_SIZE * 0.8)
+	var prop_meshes := preload("res://src/presentation/craft_prop_meshes.gd")
+	match shape:
+		"cross":
+			return mesh == prop_meshes.activity_glyph_cross(ActivityView.GLYPH_SIZE)
+		"diamond":
+			return mesh == prop_meshes.activity_glyph_diamond(ActivityView.GLYPH_SIZE)
+		_:
+			return shape == "square" and mesh == prop_meshes.activity_glyph_cube(ActivityView.GLYPH_SIZE)
 
 func _wiring(entries: Array) -> void:
 	var index: int = game.ctx.terrain.stage - 1

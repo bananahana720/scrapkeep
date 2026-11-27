@@ -325,7 +325,13 @@ func _room_reads(label: String, id: String, room) -> void:
 	var tally: Node3D = room.wall.get_node_or_null("RoomTally")
 	_t.check("%s: %s has a chalk tally on its face" % [label, id], tally != null and tally.get_child_count() == 5 and tally.position.z > 0.5)
 	var glove: Node3D = room.wall.get_node_or_null("RoomGlove")
-	_t.check("%s: %s hangs a glove on its face" % [label, id], glove != null and glove.position.z > 0.5 and glove.get_child_count() == 8)
+	var glove_crafted := glove != null and glove.get_child_count() == 3
+	if glove_crafted:
+		for child in glove.get_children():
+			if not (child is MeshInstance3D and (child as MeshInstance3D).mesh is ArrayMesh):
+				glove_crafted = false
+				break
+	_t.check("%s: %s hangs a glove on its face" % [label, id], glove != null and glove.position.z > 0.5 and glove_crafted)
 
 
 # WCAG relative-luminance contrast between two colours.

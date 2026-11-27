@@ -5,6 +5,8 @@ const Rules := preload("res://src/boss/boss_rules.gd")
 const BowlDress := preload("res://src/presentation/arena_bowl_dress.gd")
 const StandCrew := preload("res://src/presentation/stand_crew.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const KIT := "res://assets/models/world_one/slag_bowl_kit.glb"
 const KIT_PARTS := ["CraneMast", "CraneBoom", "VentNozzle"]
@@ -386,11 +388,12 @@ func _solid_part(body: StaticBody3D, st: SurfaceTool, checker: int, label: Strin
 
 
 func _bowl_channels() -> void:
+	var chan_mat := PropMeshes.weathered_material(Color("171a19"), 0.84, 0.22, 0.0, "slag_channel", true, 3.0)
 	for band in [RING_A, RING_B]:
 		var groove := SurfaceTool.new()
 		groove.begin(Mesh.PRIMITIVE_TRIANGLES)
 		_add_band(groove, band, 0.0, TAU, SEGMENTS, 0.03)
-		_mesh_node(groove, Palette.solid(Color("171a19")), "Channel")
+		_mesh_node(groove, chan_mat, "Channel")
 
 
 func _mast(body: StaticBody3D, angle: float) -> void:
@@ -412,24 +415,18 @@ func _mast(body: StaticBody3D, angle: float) -> void:
 	var pole_mesh := ModelKit.part(KIT, KIT_PARTS, "CraneMast", self)
 	if pole_mesh == null:
 		pole_mesh = MeshInstance3D.new()
-		var cm := CylinderMesh.new()
-		cm.top_radius = 1.0
-		cm.bottom_radius = 1.2
-		cm.height = MAST_HEIGHT
-		pole_mesh.mesh = cm
+		pole_mesh.mesh = PropMeshes.crane_mast(MAST_HEIGHT)
 		add_child(pole_mesh)
 	pole_mesh.set_meta("bowl_surface", "Mast")
-	pole_mesh.material_override = Palette.solid(Palette.COPPER)
+	pole_mesh.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.66, 0.38, 0.0, "crane_mast_copper", true, 3.0)
 	pole_mesh.position = pole.position
 	var bar_mesh := ModelKit.part(KIT, KIT_PARTS, "CraneBoom", self)
 	if bar_mesh == null:
 		bar_mesh = MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = box.size
-		bar_mesh.mesh = bm
+		bar_mesh.mesh = PropMeshes.crane_boom(box.size)
 		add_child(bar_mesh)
 	bar_mesh.set_meta("bowl_surface", "Crossbar")
-	bar_mesh.material_override = Palette.solid(Palette.COPPER, 0.3)
+	bar_mesh.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.62, 0.42, 0.3, "crane_boom_copper", true, 2.8)
 	bar_mesh.position = bar.position
 	bar_mesh.rotation = bar.rotation
 
@@ -458,24 +455,22 @@ func _wedge(body: StaticBody3D, foot: Vector3, forward: Vector3, length: float, 
 
 func _vent(angle: float) -> void:
 	var pad := MeshInstance3D.new()
-	var disc := CylinderMesh.new()
-	disc.top_radius = Rules.VENT_REACH
-	disc.bottom_radius = Rules.VENT_REACH
-	disc.height = 0.1
-	pad.mesh = disc
-	pad.material_override = Palette.solid(Palette.ARC, 0.6)
+	pad.mesh = EnemyBossCraft.quench_vent_basin(Rules.VENT_REACH)
+	pad.material_override = EnemyBossCraft.quench_vent_material()
 	pad.position = _local(angle, VENT_R, 0.06)
 	pad.name = "WaterVent%d" % roundi(rad_to_deg(angle))
 	add_child(pad)
+	var grate := MeshInstance3D.new()
+	grate.name = "QuenchGrate"
+	grate.mesh = PropMeshes.quench_vent_grate(Rules.VENT_REACH)
+	grate.material_override = PropMeshes.weathered_material(Palette.CHARCOAL, 0.56, 0.52, 0.0, "quench_grate", true, 2.4)
+	grate.position = Vector3.UP * 0.015
+	pad.add_child(grate)
 	var nozzle := ModelKit.part(KIT, KIT_PARTS, "VentNozzle", self)
 	if nozzle == null:
 		nozzle = MeshInstance3D.new()
-		var pipe := CylinderMesh.new()
-		pipe.top_radius = 0.7
-		pipe.bottom_radius = 0.9
-		pipe.height = 3.0
-		nozzle.mesh = pipe
-		nozzle.material_override = Palette.solid(Palette.VERDIGRIS)
+		nozzle.mesh = PropMeshes.vent_nozzle()
+		nozzle.material_override = PropMeshes.weathered_material(Palette.VERDIGRIS, 0.72, 0.28, 0.0, "vent_nozzle")
 		add_child(nozzle)
 	nozzle.name = "VentNozzle_%d" % roundi(rad_to_deg(angle))
 	nozzle.position = _local(angle, VENT_R + 3.5, 1.5)

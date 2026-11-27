@@ -1,0 +1,510 @@
+[gd_scene load_steps=30 format=3]
+
+[ext_resource type="Script" path="res://src/presentation/craft/vista_megastructures.gd" id="1_vista"]
+[ext_resource type="Script" path="res://src/presentation/craft/vista_atmosphere_rig.gd" id="2_atmo"]
+
+[sub_resource type="Environment" id="Environment_craft"]
+background_mode = 2
+ambient_light_source = 2
+ambient_light_color = Color(0.603922, 0.611765, 0.784314, 1)
+ambient_light_energy = 0.3
+tonemap_mode = 4
+tonemap_exposure = 1.08
+tonemap_agx_white = 16.29
+tonemap_agx_contrast = 1.24
+ssao_enabled = true
+ssao_radius = 0.65
+ssao_intensity = 1.35
+ssil_enabled = true
+ssil_radius = 4.5
+ssil_intensity = 0.85
+glow_enabled = true
+glow_intensity = 0.34
+glow_strength = 0.88
+glow_bloom = 0.14
+glow_blend_mode = 1
+glow_hdr_threshold = 1.35
+fog_enabled = true
+fog_mode = 1
+fog_light_color = Color(0.811765, 0.698039, 0.588235, 1)
+fog_light_energy = 0.85
+fog_sun_scatter = 0.42
+fog_aerial_perspective = 0.38
+fog_sky_affect = 0.28
+fog_depth_curve = 1.35
+fog_depth_begin = 68.0
+fog_depth_end = 660.0
+volumetric_fog_enabled = true
+volumetric_fog_density = 0.0046
+volumetric_fog_albedo = Color(0.956863, 0.831373, 0.65098, 1)
+volumetric_fog_anisotropy = 0.78
+volumetric_fog_length = 220.0
+volumetric_fog_ambient_inject = 0.18
+volumetric_fog_gi_inject = 0.35
+volumetric_fog_sky_affect = 0.14
+adjustment_enabled = true
+adjustment_contrast = 1.05
+adjustment_saturation = 1.12
+
+[sub_resource type="StandardMaterial3D" id="Mat_CombatFloor"]
+albedo_color = Color(0.490196, 0.45098, 0.396078, 1)
+metallic = 0.04
+roughness = 0.88
+
+[sub_resource type="StandardMaterial3D" id="Mat_ApronTrim"]
+albedo_color = Color(0.321569, 0.333333, 0.317647, 1)
+metallic = 0.28
+roughness = 0.78
+
+[sub_resource type="StandardMaterial3D" id="Mat_FloorSeam"]
+albedo_color = Color(0.415686, 0.388235, 0.34902, 1)
+metallic = 0.08
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_ConcreteWall"]
+albedo_color = Color(0.423529, 0.384314, 0.341176, 1)
+metallic = 0.05
+roughness = 0.92
+
+[sub_resource type="StandardMaterial3D" id="Mat_TrussSteel"]
+albedo_color = Color(0.117647, 0.129412, 0.129412, 1)
+metallic = 0.18
+roughness = 0.86
+
+[sub_resource type="StandardMaterial3D" id="Mat_OxideBay"]
+albedo_color = Color(0.368627, 0.223529, 0.180392, 1)
+metallic = 0.16
+roughness = 0.86
+
+[sub_resource type="StandardMaterial3D" id="Mat_FurnaceCore"]
+albedo_color = Color(1, 0.752941, 0.439216, 1)
+roughness = 0.35
+emission_enabled = true
+emission = Color(1, 0.72549, 0.384314, 1)
+emission_energy_multiplier = 4.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_ArcConduit"]
+albedo_color = Color(0.545098, 0.941176, 0.827451, 1)
+roughness = 0.3
+emission_enabled = true
+emission = Color(0.545098, 0.941176, 0.827451, 1)
+emission_energy_multiplier = 3.4
+
+[sub_resource type="BoxMesh" id="BoxMesh_Floor"]
+material = SubResource("Mat_CombatFloor")
+size = Vector3(60, 1, 64)
+
+[sub_resource type="BoxMesh" id="BoxMesh_TrimX"]
+material = SubResource("Mat_ApronTrim")
+size = Vector3(48, 0.06, 0.65)
+
+[sub_resource type="BoxMesh" id="BoxMesh_TrimZ"]
+material = SubResource("Mat_ApronTrim")
+size = Vector3(0.65, 0.06, 48)
+
+[sub_resource type="BoxMesh" id="BoxMesh_SeamX"]
+material = SubResource("Mat_FloorSeam")
+size = Vector3(47, 0.015, 0.16)
+
+[sub_resource type="BoxMesh" id="BoxMesh_SeamZ"]
+material = SubResource("Mat_FloorSeam")
+size = Vector3(0.16, 0.015, 47)
+
+[sub_resource type="BoxShape3D" id="BoxShape_Floor"]
+size = Vector3(60, 1, 64)
+
+[sub_resource type="BoxMesh" id="BoxMesh_SideWall"]
+material = SubResource("Mat_ConcreteWall")
+size = Vector3(4.5, 7.5, 66)
+
+[sub_resource type="BoxMesh" id="BoxMesh_NorthParapet"]
+material = SubResource("Mat_ConcreteWall")
+size = Vector3(64, 1.6, 3.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_FurnaceBay"]
+material = SubResource("Mat_OxideBay")
+size = Vector3(11.0, 8.2, 5.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_FurnaceHood"]
+material = SubResource("Mat_TrussSteel")
+size = Vector3(11.8, 1.4, 6.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_FurnaceVent"]
+material = SubResource("Mat_FurnaceCore")
+size = Vector3(6.8, 3.2, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_FurnaceLouver"]
+material = SubResource("Mat_TrussSteel")
+size = Vector3(7.4, 0.22, 1.35)
+
+[sub_resource type="BoxMesh" id="BoxMesh_FurnaceStanchion"]
+material = SubResource("Mat_TrussSteel")
+size = Vector3(0.45, 3.6, 0.82)
+
+[sub_resource type="BoxMesh" id="BoxMesh_GantryColumn"]
+material = SubResource("Mat_TrussSteel")
+size = Vector3(1.8, 27, 1.8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_GantryChord"]
+material = SubResource("Mat_TrussSteel")
+size = Vector3(64, 0.95, 1.35)
+
+[sub_resource type="BoxMesh" id="BoxMesh_GantrySlat"]
+material = SubResource("Mat_TrussSteel")
+size = Vector3(0.78, 3.2, 2.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_CatwalkDeck"]
+material = SubResource("Mat_TrussSteel")
+size = Vector3(4.2, 0.55, 52)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ConduitBody"]
+material = SubResource("Mat_TrussSteel")
+size = Vector3(2.8, 6.4, 2.8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_ConduitStrip"]
+material = SubResource("Mat_ArcConduit")
+size = Vector3(0.45, 4.4, 0.9)
+
+[node name="CraftShowcaseArena" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_craft")
+
+[node name="SunKey" type="DirectionalLight3D" parent="."]
+transform = Transform3D(-0.48481, -0.43731, 0.757536, 0, 0.866025, 0.5, -0.87462, 0.242405, -0.419858, 0, 48, 0)
+light_color = Color(1, 0.784314, 0.54902, 1)
+light_energy = 1.75
+light_volumetric_fog_energy = 1.65
+shadow_enabled = true
+shadow_normal_bias = 0.65
+shadow_blur = 1.0
+directional_shadow_mode = 2
+directional_shadow_split_1 = 0.14
+directional_shadow_blend_splits = true
+directional_shadow_max_distance = 160.0
+
+[node name="SkyFill" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.48481, -0.618449, -0.618449, 0, 0.707107, -0.707107, 0.87462, 0.342812, 0.342812, 0, 42, 0)
+light_color = Color(0.65098, 0.733333, 0.941176, 1)
+light_energy = 0.78
+light_specular = 0.0
+shadow_enabled = false
+
+[node name="CombatLaneFloor" type="StaticBody3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+metadata/flat_combat_floor = true
+metadata/floor_y = 0.0
+
+[node name="FloorMesh" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+mesh = SubResource("BoxMesh_Floor")
+
+[node name="FloorCollider" type="CollisionShape3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+shape = SubResource("BoxShape_Floor")
+
+[node name="ApronSeam_North" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.005, -24)
+mesh = SubResource("BoxMesh_TrimX")
+
+[node name="ApronSeam_South" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.005, 24)
+mesh = SubResource("BoxMesh_TrimX")
+
+[node name="ApronSeam_West" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 0.005, 0)
+mesh = SubResource("BoxMesh_TrimZ")
+
+[node name="ApronSeam_East" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 0.005, 0)
+mesh = SubResource("BoxMesh_TrimZ")
+
+[node name="ExpansionJoint_N" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.003, -8)
+mesh = SubResource("BoxMesh_SeamX")
+
+[node name="ExpansionJoint_S" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.003, 8)
+mesh = SubResource("BoxMesh_SeamX")
+
+[node name="ExpansionJoint_W" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0.003, 0)
+mesh = SubResource("BoxMesh_SeamZ")
+
+[node name="ExpansionJoint_E" type="MeshInstance3D" parent="CombatLaneFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.003, 0)
+mesh = SubResource("BoxMesh_SeamZ")
+
+[node name="IndustrialPerimeterFraming" type="Node3D" parent="."]
+
+[node name="RetainingWall_West" type="MeshInstance3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -32.2, 3.25, 0)
+mesh = SubResource("BoxMesh_SideWall")
+
+[node name="RetainingWall_East" type="MeshInstance3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 32.2, 3.25, 0)
+mesh = SubResource("BoxMesh_SideWall")
+
+[node name="OverlookParapet_North" type="MeshInstance3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, -31.8)
+mesh = SubResource("BoxMesh_NorthParapet")
+
+[node name="Catwalk_West" type="MeshInstance3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -28.4, 5.4, -2)
+mesh = SubResource("BoxMesh_CatwalkDeck")
+
+[node name="Catwalk_East" type="MeshInstance3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 28.4, 5.4, -2)
+mesh = SubResource("BoxMesh_CatwalkDeck")
+
+[node name="FurnaceBay_NW" type="Node3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.5, 0, -32.5)
+
+[node name="Housing" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.1, 0)
+mesh = SubResource("BoxMesh_FurnaceBay")
+
+[node name="ExhaustHood" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8.6, 0.3)
+mesh = SubResource("BoxMesh_FurnaceHood")
+
+[node name="GlowingVent" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.3, 2.55)
+mesh = SubResource("BoxMesh_FurnaceVent")
+
+[node name="Louver_1" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NW"]
+transform = Transform3D(1, 0, 0, 0, 0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 2.2, 2.8)
+mesh = SubResource("BoxMesh_FurnaceLouver")
+
+[node name="Louver_2" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NW"]
+transform = Transform3D(1, 0, 0, 0, 0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 3.3, 2.8)
+mesh = SubResource("BoxMesh_FurnaceLouver")
+
+[node name="Louver_3" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NW"]
+transform = Transform3D(1, 0, 0, 0, 0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 4.4, 2.8)
+mesh = SubResource("BoxMesh_FurnaceLouver")
+
+[node name="Stanchion_L" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0, 3.3, 2.78)
+mesh = SubResource("BoxMesh_FurnaceStanchion")
+
+[node name="Stanchion_R" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NW"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 3.3, 2.78)
+mesh = SubResource("BoxMesh_FurnaceStanchion")
+
+[node name="FurnaceBay_NE" type="Node3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.5, 0, -32.5)
+
+[node name="Housing" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.1, 0)
+mesh = SubResource("BoxMesh_FurnaceBay")
+
+[node name="ExhaustHood" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 8.6, 0.3)
+mesh = SubResource("BoxMesh_FurnaceHood")
+
+[node name="GlowingVent" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.3, 2.55)
+mesh = SubResource("BoxMesh_FurnaceVent")
+
+[node name="Louver_1" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NE"]
+transform = Transform3D(1, 0, 0, 0, 0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 2.2, 2.8)
+mesh = SubResource("BoxMesh_FurnaceLouver")
+
+[node name="Louver_2" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NE"]
+transform = Transform3D(1, 0, 0, 0, 0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 3.3, 2.8)
+mesh = SubResource("BoxMesh_FurnaceLouver")
+
+[node name="Louver_3" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NE"]
+transform = Transform3D(1, 0, 0, 0, 0.819152, -0.573576, 0, 0.573576, 0.819152, 0, 4.4, 2.8)
+mesh = SubResource("BoxMesh_FurnaceLouver")
+
+[node name="Stanchion_L" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.0, 3.3, 2.78)
+mesh = SubResource("BoxMesh_FurnaceStanchion")
+
+[node name="Stanchion_R" type="MeshInstance3D" parent="IndustrialPerimeterFraming/FurnaceBay_NE"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.0, 3.3, 2.78)
+mesh = SubResource("BoxMesh_FurnaceStanchion")
+
+[node name="ArcConduitAnchor_W" type="Node3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -26.2, 0, -10)
+
+[node name="PylonBody" type="MeshInstance3D" parent="IndustrialPerimeterFraming/ArcConduitAnchor_W"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+mesh = SubResource("BoxMesh_ConduitBody")
+
+[node name="ArcStrip" type="MeshInstance3D" parent="IndustrialPerimeterFraming/ArcConduitAnchor_W"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.35, 3.2, 0)
+mesh = SubResource("BoxMesh_ConduitStrip")
+
+[node name="ArcConduitAnchor_E" type="Node3D" parent="IndustrialPerimeterFraming"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 26.2, 0, -10)
+
+[node name="PylonBody" type="MeshInstance3D" parent="IndustrialPerimeterFraming/ArcConduitAnchor_E"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.2, 0)
+mesh = SubResource("BoxMesh_ConduitBody")
+
+[node name="ArcStrip" type="MeshInstance3D" parent="IndustrialPerimeterFraming/ArcConduitAnchor_E"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.35, 3.2, 0)
+mesh = SubResource("BoxMesh_ConduitStrip")
+
+[node name="OverheadGantryTruss" type="Node3D" parent="IndustrialPerimeterFraming"]
+
+[node name="Column_NW" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -29.8, 13.5, -22)
+mesh = SubResource("BoxMesh_GantryColumn")
+
+[node name="Column_NE" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.8, 13.5, -22)
+mesh = SubResource("BoxMesh_GantryColumn")
+
+[node name="Column_MidW" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -29.8, 13.5, -6)
+mesh = SubResource("BoxMesh_GantryColumn")
+
+[node name="Column_MidE" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 29.8, 13.5, -6)
+mesh = SubResource("BoxMesh_GantryColumn")
+
+[node name="Chord_NorthLow" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 22.8, -22)
+mesh = SubResource("BoxMesh_GantryChord")
+
+[node name="Chord_NorthHigh" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 26.2, -22)
+mesh = SubResource("BoxMesh_GantryChord")
+
+[node name="Chord_MidHigh" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 25.4, -6)
+mesh = SubResource("BoxMesh_GantryChord")
+
+[node name="TrussSlat_1" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24, 24.5, -22)
+mesh = SubResource("BoxMesh_GantrySlat")
+
+[node name="TrussSlat_2" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -16, 24.5, -22)
+mesh = SubResource("BoxMesh_GantrySlat")
+
+[node name="TrussSlat_3" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 24.5, -22)
+mesh = SubResource("BoxMesh_GantrySlat")
+
+[node name="TrussSlat_4" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 24.5, -22)
+mesh = SubResource("BoxMesh_GantrySlat")
+
+[node name="TrussSlat_5" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 24.5, -22)
+mesh = SubResource("BoxMesh_GantrySlat")
+
+[node name="TrussSlat_6" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 16, 24.5, -22)
+mesh = SubResource("BoxMesh_GantrySlat")
+
+[node name="TrussSlat_7" type="MeshInstance3D" parent="IndustrialPerimeterFraming/OverheadGantryTruss"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24, 24.5, -22)
+mesh = SubResource("BoxMesh_GantrySlat")
+
+[node name="HeroSockets" type="Node3D" parent="."]
+
+[node name="HeroSocket_CenterBeacon" type="Marker3D" parent="HeroSockets" groups=["craft_hero_socket"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -14)
+metadata/socket_role = "hero_beacon"
+
+[node name="HeroSocket_EMCranGantry" type="Marker3D" parent="HeroSockets" groups=["craft_hero_socket"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 21.5, -22)
+metadata/socket_role = "hero_em_crane"
+
+[node name="HeroSocket_ConduitPylon_W" type="Marker3D" parent="HeroSockets" groups=["craft_hero_socket"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.5, 0, -10)
+metadata/socket_role = "hero_conduit_pylon"
+
+[node name="HeroSocket_ConduitPylon_E" type="Marker3D" parent="HeroSockets" groups=["craft_hero_socket"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.5, 0, -10)
+metadata/socket_role = "hero_conduit_pylon"
+
+[node name="HeroSocket_ActorStage" type="Marker3D" parent="HeroSockets" groups=["craft_hero_socket"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+metadata/socket_role = "actor_stage"
+
+[node name="BounceLightPool" type="Node3D" parent="."]
+
+[node name="FurnaceBounce_NW" type="OmniLight3D" parent="BounceLightPool"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -19.5, 4.2, -27.5)
+light_color = Color(1, 0.752941, 0.439216, 1)
+light_energy = 3.2
+light_specular = 0.25
+shadow_enabled = false
+omni_range = 22.0
+omni_attenuation = 1.15
+
+[node name="FurnaceBounce_NE" type="OmniLight3D" parent="BounceLightPool"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 19.5, 4.2, -27.5)
+light_color = Color(1, 0.752941, 0.439216, 1)
+light_energy = 3.2
+light_specular = 0.25
+shadow_enabled = false
+omni_range = 22.0
+omni_attenuation = 1.15
+
+[node name="FurnaceBounce_SW" type="OmniLight3D" parent="BounceLightPool"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -27.5, 3.8, 12)
+light_color = Color(0.898039, 0.627451, 0.266667, 1)
+light_energy = 2.4
+light_specular = 0.25
+shadow_enabled = false
+omni_range = 18.0
+omni_attenuation = 1.25
+
+[node name="FurnaceBounce_SE" type="OmniLight3D" parent="BounceLightPool"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 27.5, 3.8, 12)
+light_color = Color(0.898039, 0.627451, 0.266667, 1)
+light_energy = 2.4
+light_specular = 0.25
+shadow_enabled = false
+omni_range = 18.0
+omni_attenuation = 1.25
+
+[node name="ArcConduitBounce_W" type="OmniLight3D" parent="BounceLightPool"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23.0, 3.5, -10)
+light_color = Color(0.545098, 0.941176, 0.827451, 1)
+light_energy = 2.1
+light_specular = 0.25
+shadow_enabled = false
+omni_range = 16.0
+omni_attenuation = 1.3
+
+[node name="ArcConduitBounce_E" type="OmniLight3D" parent="BounceLightPool"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23.0, 3.5, -10)
+light_color = Color(0.545098, 0.941176, 0.827451, 1)
+light_energy = 2.1
+light_specular = 0.25
+shadow_enabled = false
+omni_range = 16.0
+omni_attenuation = 1.3
+
+[node name="VistaMegastructures" type="Node3D" parent="."]
+script = ExtResource("1_vista")
+
+[node name="VistaAtmosphereRig" type="Node3D" parent="."]
+script = ExtResource("2_atmo")
+
+[node name="Cameras" type="Node3D" parent="."]
+
+[node name="WideVistaCamera" type="Camera3D" parent="Cameras"]
+transform = Transform3D(1, 0, 0, 0, 0.996195, -0.0871557, 0, 0.0871557, 0.996195, 0, 7.6, 25.5)
+fov = 60.0
+far = 1400.0
+
+[node name="CombatLaneCamera" type="Camera3D" parent="Cameras"]
+transform = Transform3D(1, 0, 0, 0, 0.922538, 0.385906, 0, -0.385906, 0.922538, 0, 15.5, 22.5)
+fov = 52.0
+far = 1400.0
+
+[node name="GantryGodRayCamera" type="Camera3D" parent="Cameras"]
+transform = Transform3D(0.92388, -0.0434085, -0.380205, 0, 0.993572, -0.113203, 0.382683, 0.104586, 0.917941, -18.5, 5.2, 12.0)
+fov = 56.0
+far = 1400.0

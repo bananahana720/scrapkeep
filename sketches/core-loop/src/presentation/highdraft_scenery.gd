@@ -526,7 +526,7 @@ static func _thermals(parent: Node3D, state: Node, map, contraptions: Node) -> v
 
 static func _hide_thermal_greybox(contraptions: Node, base: Vector3, height: float) -> void:
 	for child in contraptions.get_children():
-		if child is MeshInstance3D and child.mesh is CylinderMesh:
+		if child is MeshInstance3D and (child.mesh is CylinderMesh or child.mesh is ArrayMesh):
 			var near_column: bool = (child.position - (base + Vector3.UP * height * 0.5)).length() < 0.05
 			var near_grate: bool = (child.position - (base + Vector3.UP * 0.1)).length() < 0.05
 			if near_column or near_grate:

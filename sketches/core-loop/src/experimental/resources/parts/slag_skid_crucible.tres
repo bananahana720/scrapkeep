@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"slag_skid_crucible"
+display_name = "Slag-Skid Crucible"
+maker = &"fleet_surplus"
+slot = 1
+rarity = &"fleet_grade"
+trigger = &"on_slam"
+emits_tags = Array[StringName]([&"slag_coated", &"burning"])
+consumes_tags = Array[StringName]([])
+heat_cost = 24.0
+effect_id = &"crucible_slag_pour"
+params = {
+"min_speed_mps": 10.0,
+"pour_damage": 20.0,
+"pour_radius_m": 6.0,
+"ttl_s": 6.0
+}
+summary = "Fast slams crack a foundry crucible that floods the landing zone with burning slag."
+trade_off = "Slamming below fast roll spills heat back into the rig without laying slag."
+visual_tell = "Amber hexagonal slag spill ringed by copper ember bursts."
+audio_tell = "Cast-iron clang followed by molten hiss."

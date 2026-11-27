@@ -7,6 +7,8 @@ const SLATE := Color("5d6b78")
 const HIT_GLOW := 0.7
 const HIT_POP := 1.5
 
+signal struck_impulse(direction: Vector3, strength: float)
+
 var boss
 var role := "hull"
 var point_id := ""
@@ -83,12 +85,14 @@ func tint_verb() -> String:
 	return "ram" if boss != null and role == "hull" and boss.charging() else ""
 
 
-func knock(_direction: Vector3, _force: float) -> void:
-	pass
+func knock(direction: Vector3, force: float) -> void:
+	if direction.length_squared() > 0.0001 and force > 0.0:
+		struck_impulse.emit(direction.normalized(), clampf(force * 0.04, 0.25, 1.4))
 
 
 func flash() -> void:
 	_flash = 0.12
+	struck_impulse.emit(Vector3.BACK, 0.55)
 
 
 func plating_now() -> float:

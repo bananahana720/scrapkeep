@@ -202,7 +202,7 @@ func _zone(label: String, map_script: GDScript) -> void:
 func _visible_cylinders(contraptions: Node) -> int:
 	var n := 0
 	for child in contraptions.get_children():
-		if child is MeshInstance3D and child.mesh is CylinderMesh and child.visible:
+		if child is MeshInstance3D and (child.mesh is CylinderMesh or child.mesh is ArrayMesh) and child.visible:
 			n += 1
 	return n
 
