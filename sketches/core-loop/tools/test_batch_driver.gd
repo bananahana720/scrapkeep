@@ -81,6 +81,7 @@ const BossModel := preload("res://src/boss/boss_model.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const World23ChunkCraft := preload("res://src/presentation/world23_chunk_craft.gd")
+const CraftShowcaseAssembly := preload("res://src/presentation/craft/craft_showcase_assembly.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -245,6 +246,7 @@ func _reset() -> void:
 	CampCraftMeshes.reset_for_tests()
 	ParkRecipes._reset()
 	World23ChunkCraft._reset()
+	CraftShowcaseAssembly.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"
