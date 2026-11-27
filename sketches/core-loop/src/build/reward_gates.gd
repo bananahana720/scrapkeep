@@ -108,13 +108,12 @@ func step(ball: Vector3, heading: Vector3) -> bool:
 		var offer: Dictionary = offers[i]
 		var rel: Vector3 = ball - offer["at"]
 		var along: float = rel.dot(offer["facing"])
-		var side: float = absf(rel.dot((offer["facing"] as Vector3).cross(Vector3.UP).normalized()))
 		var was: float = _last_side.get(i, along)
 		_last_side[i] = along
 		var through := was < 0.0 and along >= 0.0
 		if _fixed and was > 0.0 and along <= 0.0:
 			through = true
-		if through and side <= WIDTH * 0.5 + 1.0 and rel.y < HEIGHT and rel.y > -SLOPE_BELOW:
+		if through and inside_arch(rel, offer["facing"]):
 			var id: String = offer["part_id"]
 			close()
 			chosen.emit(id)
@@ -125,6 +124,14 @@ func step(ball: Vector3, heading: Vector3) -> bool:
 		_place(ball, heading)
 		return true
 	return false
+
+
+static func sideways(rel: Vector3, facing: Vector3) -> float:
+	return absf(rel.dot(facing.cross(Vector3.UP).normalized()))
+
+
+static func inside_arch(rel: Vector3, facing: Vector3) -> bool:
+	return sideways(rel, facing) <= WIDTH * 0.5 + 1.0 and rel.y < HEIGHT and rel.y > -SLOPE_BELOW
 
 
 func _build_offer_record(part_id: String, at: Vector3, facing: Vector3) -> Dictionary:

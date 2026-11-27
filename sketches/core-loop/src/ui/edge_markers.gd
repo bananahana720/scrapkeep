@@ -11,6 +11,7 @@ const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Interactables := preload("res://src/world/interactables.gd")
+const EventDirector := preload("res://src/world/event_director.gd")
 
 
 const SIDE_INSET := 0.035
@@ -106,13 +107,23 @@ func setup(game_ref) -> void:
 
 func note_incoming(event_id: String, seconds: float, at: Vector3) -> void:
 	if seconds > 0.0 and at.is_finite():
-		_incoming[event_id] = {"at": at}
+		_incoming[event_id] = {"at": at, "offer_left": seconds} if event_id in EventDirector.PARTICIPATORY else {"at": at}
 	else:
 		_incoming.erase(event_id)
 
 
-func step_incoming(_delta: float) -> void:
-	pass
+func step_incoming(delta: float) -> void:
+	for id in _incoming.keys():
+		var entry: Dictionary = _incoming[id]
+		if not entry.has("offer_left"):
+			continue
+		entry["offer_left"] -= delta
+		if entry["offer_left"] <= 0.0:
+			_incoming.erase(id)
+
+
+func held_ids() -> Array:
+	return _incoming.keys().filter(func(id): return not _incoming[id].has("offer_left"))
 
 
 func incoming_targets() -> Array[Dictionary]:
@@ -638,6 +649,7 @@ static func _on_edge(view: Rect2, centre: Vector2, dir: Vector2) -> Vector2:
 func _process(delta: float) -> void:
 	if game == null:
 		return
+	step_incoming(delta)
 	note_pockets(get_viewport_rect().size)
 	var now := markers(get_viewport_rect().size)
 	var breathing := false

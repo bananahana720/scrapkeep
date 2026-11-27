@@ -930,12 +930,26 @@ func _on_posture(enemy: Node3D, posture: float, staggered: bool) -> void:
 
 func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -> void:
 	if seconds_until > 0.0:
-		var called: String = game.world.activities.called(event_id)
-		var life := minf(seconds_until, EVENT_LINE_CAP)
-		_on_field_fact(called if called != "" else event_id, "event_announced", maxf(life - TOAST_IN - TOAST_OUT, 0.0), Palette.SLATE_INK)
-		var line := _held_toast if launch_card.showing() else _toast
-		if not line.is_empty():
-			line["event"] = event_id
+		_post_event_line(event_id, maxf(minf(seconds_until, EVENT_LINE_CAP) - TOAST_IN - TOAST_OUT, 0.0))
+
+
+func _post_event_line(event_id: String, hold: float) -> void:
+	var called: String = game.world.activities.called(event_id)
+	_on_field_fact(called if called != "" else event_id, "event_announced", hold, Palette.SLATE_INK)
+	var line := _held_toast if launch_card.showing() else _toast
+	if not line.is_empty():
+		line["event"] = event_id
+
+
+func _keep_event_line(delta: float) -> void:
+	var held: Array = edge_markers.held_ids()
+	if held.is_empty():
+		return
+	if _toast.is_empty():
+		if _held_toast.is_empty():
+			_post_event_line(String(held[0]), 0.0)
+	elif String(_toast.get("event", "")) in held:
+		_toast["left"] = maxf(_toast["left"], TOAST_OUT + delta)
 
 
 func _end_event_line(event_id: String) -> void:
@@ -1741,6 +1755,7 @@ func _step_toast(delta: float) -> void:
 	if not launch_card.showing() and not _held_toast.is_empty():
 		_show_toast(_held_toast)
 		_held_toast = {}
+	_keep_event_line(delta)
 	_toast_row.visible = not _toast.is_empty() and not launch_card.showing() and not _quiet
 	if _toast.is_empty():
 		return

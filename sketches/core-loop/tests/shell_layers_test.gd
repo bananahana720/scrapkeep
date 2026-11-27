@@ -8,6 +8,7 @@ extends SceneTree
 # scenes this test packs and saves under user://, fed to shell_path through its paths map.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const T := preload("res://tests/support/t.gd")
@@ -382,7 +383,7 @@ func _paint_material(node: Node, mesh_name: String) -> Material:
 		return null
 	for s in mi.mesh.get_surface_count():
 		if HeroAssets.slot_of(mi.mesh, s) == "paint":
-			return mi.get_surface_override_material(s)
+			return BallLooks.unwindowed(mi.get_surface_override_material(s))
 	return null
 
 
