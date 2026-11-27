@@ -130,7 +130,7 @@ func _run() -> void:
 	pad_l3.button_index = JOY_BUTTON_LEFT_STICK
 	_set_interact_events([key_g, pad_l3])
 	await _frames(2)
-	_t.eq("pad L3 rebind shows pad_ls instead of falling back to E", _hub.card_for("camp_trial").key, "pad_ls")
+	_t.eq("pad L3 rebind shows key_l3 instead of falling back to E", _hub.card_for("camp_trial").key, "key_l3")
 
 	Glyphs.device = "kbm"
 	var mmb := InputEventMouseButton.new()

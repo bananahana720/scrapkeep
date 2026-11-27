@@ -41,8 +41,8 @@ var _sentry_left := 0.0
 var _sentry_clock := 0.0
 var _sentry_beat := 0.35
 var _heft := 1.0
-var _pin_material: Material
-var _ring_material: Material
+var _body_mesh: ArrayMesh
+var _ring_mesh: ArrayMesh
 var _counter := 0
 var note := Callable()
 
@@ -52,8 +52,8 @@ func setup(ctx_ref, combat_ref, ultimate_ref) -> void:
 	combat = combat_ref
 	ultimate = ultimate_ref
 	name = "SableStakes"
-	_pin_material = PropMeshes.salvage_wear_material(Palette.COPPER, Palette.BRASS.lightened(0.18), Palette.ARC, 0.56, 0.48, 1.35, "sable_stake", 1.2)
-	_ring_material = Palette.unshaded(Palette.ARC)
+	_body_mesh = _dressed(PropMeshes.sable_stake_body(), PropMeshes.salvage_wear_material(Palette.COPPER, Palette.BRASS.lightened(0.18), Palette.ARC, 0.56, 0.48, 1.35, "sable_stake", 1.2))
+	_ring_mesh = _dressed(PropMeshes.sable_stake_ring(), Palette.unshaded(Palette.ARC))
 	ctx.events.grapple_fired.connect(_on_hooked)
 	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): fold())
 	ctx.events.stage_content_cleared.connect(func(_reason: String): fold())
@@ -75,6 +75,12 @@ func begin() -> void:
 	hooked = 0
 	beat_log.clear()
 	sentry_log.clear()
+
+
+func _dressed(base: ArrayMesh, material: Material) -> ArrayMesh:
+	var mesh: ArrayMesh = base.duplicate()
+	mesh.surface_set_material(0, material)
+	return mesh
 
 
 func plant(at: Vector3) -> Stake:
@@ -101,14 +107,12 @@ func plant(at: Vector3) -> Stake:
 	stake.add_child(shape)
 	var mesh := MeshInstance3D.new()
 	mesh.name = "PylonBody"
-	mesh.mesh = PropMeshes.sable_stake_body()
-	mesh.material_override = _pin_material
+	mesh.mesh = _body_mesh
 	stake.add_child(mesh)
 	var ring := MeshInstance3D.new()
 	ring.name = "EmitterCollar"
-	ring.mesh = PropMeshes.sable_stake_ring()
+	ring.mesh = _ring_mesh
 	ring.position.y = -0.38
-	ring.material_override = _ring_material
 	stake.add_child(ring)
 	add_child(stake)
 	stake.global_position = at

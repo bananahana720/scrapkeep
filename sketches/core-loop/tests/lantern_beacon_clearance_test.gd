@@ -82,13 +82,12 @@ func _run_mast() -> void:
 	var minimum := INF
 	for visual in support.get_children():
 		var centre: Vector3 = visual.to_local(warden.family_point_at())
-		if visual.mesh is BoxMesh:
+		var box: AABB = visual.mesh.get_aabb()
+		if box.size.x < 0.3:
 			rails += 1
-			var half: Vector3 = visual.mesh.size * 0.5
-			minimum = minf(minimum, centre.distance_to(centre.clamp(-half, half)))
 		else:
 			segments += 1
-			minimum = minf(minimum, absf(centre.y) - (visual.mesh as CylinderMesh).height * 0.5)
+		minimum = minf(minimum, centre.distance_to(centre.clamp(box.position, box.end)))
 	_t.eq("mast split into two segments", segments, 2)
 	_t.eq("mast braced by six rails", rails, 6)
 	_t.check("the split mast keeps the weak point clear", minimum >= Warden.FAMILY_POINT_RADIUS, "%.3f m, sphere %.1f m" % [minimum, Warden.FAMILY_POINT_RADIUS])

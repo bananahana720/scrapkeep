@@ -14,6 +14,14 @@ static func reset_for_tests() -> void:
 	_mat_cache.clear()
 
 
+static func vc(wear: float, grime: float, emissive := 0.0) -> Color:
+	return _vc(wear, grime, emissive)
+
+
+static func add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel: float, uv_scale: float, xf: Transform3D, c_flat: Color, c_edge: Color, c_bot: Color) -> void:
+	_add_bevel_box(st, center, size, bevel, uv_scale, xf, c_flat, c_edge, c_bot)
+
+
 static func _vc(wear: float, grime: float, emissive := 0.0) -> Color:
 	return Color(clampf(wear, 0.0, 1.0), clampf(grime, 0.0, 1.0), clampf(emissive, 0.0, 1.0), 1.0)
 

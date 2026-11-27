@@ -8,7 +8,7 @@ static var device := "kbm"
 const PAD_BUTTONS := {
 	JOY_BUTTON_A: "pad_a", JOY_BUTTON_B: "pad_b", JOY_BUTTON_X: "pad_x", JOY_BUTTON_Y: "pad_y",
 	JOY_BUTTON_LEFT_SHOULDER: "pad_lb", JOY_BUTTON_RIGHT_SHOULDER: "pad_rb", JOY_BUTTON_START: "pad_start",
-	JOY_BUTTON_BACK: "pad_back", JOY_BUTTON_LEFT_STICK: "pad_ls", JOY_BUTTON_RIGHT_STICK: "pad_rs",
+	JOY_BUTTON_BACK: "pad_back", JOY_BUTTON_LEFT_STICK: "key_l3", JOY_BUTTON_RIGHT_STICK: "key_r3",
 	JOY_BUTTON_DPAD_LEFT: "pad_dl", JOY_BUTTON_DPAD_UP: "pad_du", JOY_BUTTON_DPAD_RIGHT: "pad_dr",
 	JOY_BUTTON_DPAD_DOWN: "pad_dd",
 }
