@@ -313,7 +313,9 @@ func _on_flow_changed(state: String) -> void:
 
 
 func codex_style() -> Dictionary:
-	return CodexStyle.style()
+	var out := CodexStyle.style()
+	out["banner_script"] = CodexBanner
+	return out
 
 
 func _on_synergy(id: String, category: String, first_time: bool) -> void:

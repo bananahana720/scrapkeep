@@ -115,8 +115,6 @@
     "sketches/core-loop/src/presentation/arena_waking_dress.gd",
     "sketches/core-loop/src/presentation/audio.gd",
     "sketches/core-loop/src/presentation/bake_look.gd",
-    "sketches/core-loop/src/presentation/codex_banner.gd",
-    "sketches/core-loop/src/presentation/codex_style.gd",
     "sketches/core-loop/src/presentation/craft/enemy_boss_craft.gd",
     "sketches/core-loop/src/presentation/damage_numbers.gd",
     "sketches/core-loop/src/presentation/dig_fx.gd",
