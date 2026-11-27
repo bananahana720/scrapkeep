@@ -9,13 +9,13 @@ import {
   applyDevOverlay,
   assertNotPrimaryCheckout,
   assertUnderSandboxRoot,
-  LOCK_FILENAME,
   patchGameGd,
   patchIntentGd,
   patchWorkshopGd,
   releaseSlotLock,
   REPO_ROOT,
   resolveGitRef,
+  slotLockPath,
   validateSlotName,
 } from "./worktree-sandbox.mjs";
 
@@ -65,14 +65,19 @@ describe("worktree-sandbox structural safety", () => {
 });
 
 describe("worktree-sandbox idempotent locking and crash reconciliation", () => {
-  it("acquires a slot exclusively, blocks concurrent live owners, and reconciles stale dead-PID locks", () => {
+  it("acquires a sibling lock outside slotDir, blocks concurrent live owners, and reconciles stale dead-PID locks", () => {
     const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-slot-lock-"));
     try {
       const slotDir = path.join(tmp, "abc123456789-s0");
+      const lockFile = slotLockPath(slotDir);
+      assert.equal(lockFile, `${slotDir}.lock.json`);
+
       const first = acquireSlotLock(slotDir, { sha: "abc" }, { pid: 1001, isAlive: () => true });
       assert.equal(first.acquired, true);
       assert.equal(first.staleCleaned, false);
-      assert.ok(existsSync(path.join(slotDir, LOCK_FILENAME)));
+      assert.equal(first.lockPath, lockFile);
+      assert.ok(existsSync(lockFile));
+      assert.ok(!existsSync(slotDir), "cold slot lock must not pre-create slotDir");
 
       const blocked = acquireSlotLock(slotDir, { sha: "abc" }, { pid: 2002, isAlive: () => true });
       assert.equal(blocked.acquired, false);
@@ -87,12 +92,57 @@ describe("worktree-sandbox idempotent locking and crash reconciliation", () => {
       assert.equal(recovered.staleCleaned, true);
 
       recovered.transferTo(3003, { session: "qa" });
-      const lockDoc = JSON.parse(readFileSync(path.join(slotDir, LOCK_FILENAME), "utf8"));
+      const lockDoc = JSON.parse(readFileSync(lockFile, "utf8"));
       assert.equal(lockDoc.pid, 3003);
       assert.equal(lockDoc.session, "qa");
 
       assert.equal(releaseSlotLock(slotDir, { expectedPid: 3003 }), true);
-      assert.ok(!existsSync(path.join(slotDir, LOCK_FILENAME)));
+      assert.ok(!existsSync(lockFile));
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps sibling lock intact across cold slot creation and destructive reconciliation without TOCTOU window", () => {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-cold-slot-race-"));
+    try {
+      const slotDir = path.join(tmp, "deadbeef0123-s0");
+      const lockFile = slotLockPath(slotDir);
+      const ownerA = acquireSlotLock(
+        slotDir,
+        { sha: "deadbeef0123" },
+        { pid: 4100, isAlive: () => true },
+      );
+      assert.equal(ownerA.acquired, true);
+
+      mkdirSync(slotDir, { recursive: true });
+      writeFileSync(path.join(slotDir, "partial.tmp"), "corrupt", "utf8");
+      rmSync(slotDir, { recursive: true, force: true });
+
+      assert.ok(
+        existsSync(lockFile),
+        "sibling lock must survive slotDir removal during reconciliation",
+      );
+      const rivalB = acquireSlotLock(
+        slotDir,
+        { sha: "deadbeef0123" },
+        { pid: 4200, isAlive: () => true },
+      );
+      assert.equal(rivalB.acquired, false);
+      assert.equal(rivalB.busyPid, 4100);
+
+      const fallbackSlotDir = path.join(tmp, "deadbeef0123-s1");
+      const rivalFallback = acquireSlotLock(
+        fallbackSlotDir,
+        { sha: "deadbeef0123" },
+        { pid: 4200, isAlive: () => true },
+      );
+      assert.equal(rivalFallback.acquired, true);
+
+      ownerA.release();
+      rivalFallback.release();
+      assert.ok(!existsSync(lockFile));
+      assert.ok(!existsSync(slotLockPath(fallbackSlotDir)));
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
@@ -203,6 +253,25 @@ describe("worktree-sandbox idempotent console seam overlay", () => {
       const second = applyDevOverlay(fakeSandbox, { sourceRoot: REPO_ROOT, sha: "deadbeef" });
       assert.equal(second.applied, false);
       assert.equal(second.cached, true);
+
+      const altSource = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-alt-source-"));
+      try {
+        const altDev = path.join(altSource, "sketches", "core-loop", "src", "dev");
+        mkdirSync(altDev, { recursive: true });
+        writeFileSync(path.join(altDev, "dev_console.gd"), "extends CanvasLayer\n", "utf8");
+        writeFileSync(
+          path.join(altDev, "dev_inspect.gd"),
+          "extends Node\nfunc greybox(): pass\nfunc sample_perf(): pass\n",
+          "utf8",
+        );
+        const third = applyDevOverlay(fakeSandbox, { sourceRoot: altSource, sha: "deadbeef" });
+        assert.equal(third.applied, true);
+        const fourth = applyDevOverlay(fakeSandbox, { sourceRoot: altSource, sha: "deadbeef" });
+        assert.equal(fourth.applied, false);
+        assert.equal(fourth.cached, true);
+      } finally {
+        rmSync(altSource, { recursive: true, force: true });
+      }
     } finally {
       rmSync(fakeSandbox, { recursive: true, force: true });
     }

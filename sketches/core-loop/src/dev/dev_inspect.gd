@@ -684,9 +684,10 @@ func _snap_prims(mode := "default") -> Dictionary:
 		var is_prim := mi.mesh is PrimitiveMesh
 		var owner := _owner_meta(mi) if (uncapped or is_prim) else {}
 		var aabb := _world_aabb_metrics(mi) if uncapped else {}
+		var flat_hits: Array[Dictionary] = []
 
 		if uncapped:
-			var flat_hits := _flat_material_entries(mi, rel_path, owner, aabb)
+			flat_hits = _flat_material_entries(mi, rel_path, owner, aabb)
 			for hit in flat_hits:
 				flat_items.append(hit)
 				var fkey := "%s|%s|%s" % [hit.owner_scene, hit.owner_script, hit.albedo_hex]
@@ -713,7 +714,7 @@ func _snap_prims(mode := "default") -> Dictionary:
 		by_class[mesh_class] = int(by_class.get(mesh_class, 0)) + 1
 
 		if uncapped:
-			var has_flat := not _flat_material_entries(mi, rel_path, owner, aabb).is_empty()
+			var has_flat := not flat_hits.is_empty()
 			items.append({
 				"name": String(mi.name),
 				"path": rel_path,

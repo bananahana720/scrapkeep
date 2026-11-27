@@ -31,7 +31,7 @@ import {
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SANDBOX_ROOT_REL = path.join("artifacts", "local", "dev-ref");
-export const LOCK_FILENAME = ".sandbox-lock.json";
+export const LOCK_SUFFIX = ".lock.json";
 export const OVERLAY_MARKER = ".sandbox-overlay.json";
 export const IMPORT_STAMP_FILENAME = "scrapkeep-sandbox-import.json";
 const SEAM_VERSION = "2";
@@ -150,13 +150,17 @@ export function resolveGitRef(ref, repoRoot = REPO_ROOT, { spawn = spawnSync } =
   return { ref: cleanRef, sha, sha12: sha.slice(0, 12) };
 }
 
+export function slotLockPath(slotDir) {
+  return `${path.resolve(slotDir)}${LOCK_SUFFIX}`;
+}
+
 export function acquireSlotLock(
   slotDir,
   metadata = {},
   { isAlive = isPidAlive, pid = process.pid } = {},
 ) {
-  mkdirSync(slotDir, { recursive: true });
-  const lockPath = path.join(slotDir, LOCK_FILENAME);
+  const lockPath = slotLockPath(slotDir);
+  mkdirSync(path.dirname(lockPath), { recursive: true });
   const payload =
     JSON.stringify(
       {
@@ -220,7 +224,7 @@ export function acquireSlotLock(
 }
 
 export function releaseSlotLock(slotDir, { expectedPid = null } = {}) {
-  const lockPath = path.join(slotDir, LOCK_FILENAME);
+  const lockPath = slotLockPath(slotDir);
   if (!existsSync(lockPath)) return false;
   if (expectedPid !== null) {
     const existing = readJsonSafe(lockPath);
@@ -437,7 +441,7 @@ export function applyDevOverlay(worktreeDir, { sourceRoot = REPO_ROOT, sha = "" 
     existing &&
     existing.sha === sha &&
     existing.overlay_hash === overlayHash &&
-    !needsDevOverlay(worktreeDir)
+    !needsDevOverlay(worktreeDir, sourceRoot)
   ) {
     return { applied: false, cached: true, overlayHash, filesCopied: 0, seamsPatched: [] };
   }
@@ -528,7 +532,6 @@ export function reconcileDetachedWorktree({
   }
 
   if (existsSync(worktreeDir)) {
-    const lockBackup = readJsonSafe(path.join(worktreeDir, LOCK_FILENAME));
     spawn("git", ["-C", repoRoot, "worktree", "remove", "--force", worktreeDir], {
       encoding: "utf8",
     });
@@ -546,12 +549,6 @@ export function reconcileDetachedWorktree({
     if (add.error || add.status !== 0) {
       throw new Error(
         `Failed to recreate sandbox worktree at ${sha}: ${(add.stderr || add.error?.message || "git error").trim()}`,
-      );
-    }
-    if (lockBackup) {
-      writeFileAtomic(
-        path.join(worktreeDir, LOCK_FILENAME),
-        JSON.stringify(lockBackup, null, 2) + "\n",
       );
     }
     return { created: true, reconciled: true, worktreeDir, sha };
@@ -816,7 +813,7 @@ export function listSandboxes(repoRoot = REPO_ROOT, { isAlive = isPidAlive } = {
   )) {
     if (!entry.isDirectory()) continue;
     const dir = path.join(baseDir, entry.name);
-    const lock = readJsonSafe(path.join(dir, LOCK_FILENAME));
+    const lock = readJsonSafe(slotLockPath(dir));
     const overlay = readJsonSafe(path.join(dir, OVERLAY_MARKER));
     const pid = Number(lock?.pid);
     const busy = Boolean(lock && isAlive(pid));
