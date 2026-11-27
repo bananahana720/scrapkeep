@@ -3,7 +3,13 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
-import { GODOT_VERSION, resolveGodotBinary, scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
+import {
+  GODOT_VERSION,
+  requireGodotBinary,
+  resolveGodotBinary,
+  scratchHomeEnv,
+  userDataEnv,
+} from "./godot-home.mjs";
 
 const CLOUD_BIN = `/opt/scrapkeep-toolchain/Godot_v${GODOT_VERSION}-stable_linux.x86_64`;
 const PC_HOME = "/home/andrew";
@@ -34,7 +40,12 @@ const HOME_ANDREW_ALLOWLIST = {
 };
 
 const GODOT_BIN_OWNER = "scripts/godot-home.mjs";
-const GODOT_BIN_ALLOWLIST = {};
+const GODOT_BIN_ALLOWLIST = {
+  "scripts/alpha-rc.mjs": "strips GODOT_BIN from a child environment",
+  "scripts/gate/pc.mjs": "reads GODOT_BIN from the step environment it built",
+};
+const DIRECT_GODOT_BIN_READ =
+  /\.GODOT_BIN\b|\[\s*["'`]GODOT_BIN["'`]\s*\]|\{[^{}]*\bGODOT_BIN\b[^{}]*\}\s*=(?![=>])/;
 
 function nonTestScriptFiles(dir) {
   const files = [];
@@ -244,7 +255,59 @@ test("userDataEnv and scratchHomeEnv isolate HOME only on darwin", () => {
   );
 });
 
-test("non-test scripts contain no unapproved /home/andrew/ literals or direct process.env.GODOT_BIN reads", () => {
+test("requireGodotBinary returns an existing binary or throws with set GODOT_BIN", () => {
+  assert.equal(
+    requireGodotBinary({
+      env: { GODOT_BIN: "/custom/godot" },
+      exists: (p) => p === "/custom/godot",
+    }),
+    "/custom/godot",
+  );
+  assert.throws(
+    () =>
+      requireGodotBinary({
+        env: {},
+        platform: "linux",
+        homeDir: PC_HOME,
+        exists: () => false,
+      }),
+    /^Error: Godot binary not found; set GODOT_BIN$/,
+  );
+  assert.throws(
+    () =>
+      requireGodotBinary({
+        env: { GODOT_BIN: "/missing/godot" },
+        exists: () => false,
+      }),
+    /^Error: Godot binary not found at \/missing\/godot; set GODOT_BIN$/,
+  );
+});
+
+test("DIRECT_GODOT_BIN_READ catches env reads and ignores writes and messages", () => {
+  for (const hit of [
+    "process.env.GODOT_BIN",
+    "env.GODOT_BIN",
+    "env?.GODOT_BIN",
+    'process.env["GODOT_BIN"]',
+    "env['GODOT_BIN']",
+    "env[`GODOT_BIN`]",
+    "const { GODOT_BIN } = process.env",
+    "const { GODOT_BIN: bin, ...rest } = env",
+    "const { PATH, GODOT_BIN = '' } = env",
+  ]) {
+    assert.equal(DIRECT_GODOT_BIN_READ.test(hit), true, `expected match for: ${hit}`);
+  }
+  for (const miss of [
+    "const env = { ...process.env, GODOT_BIN: godot };",
+    "GODOT_BIN: godotBin,",
+    'fail("set GODOT_BIN to the Godot editor");',
+    '"$GODOT_BIN --headless"',
+  ]) {
+    assert.equal(DIRECT_GODOT_BIN_READ.test(miss), false, `unexpected match for: ${miss}`);
+  }
+});
+
+test("non-test scripts contain no unapproved /home/andrew/ literals or direct GODOT_BIN env reads", () => {
   const files = nonTestScriptFiles(SCRIPTS_DIR);
   assert.ok(files.length > 0);
   const badHome = [];
@@ -259,7 +322,7 @@ test("non-test scripts contain no unapproved /home/andrew/ literals or direct pr
       if (rel in HOME_ANDREW_ALLOWLIST) seenHomeAllow.add(rel);
       else badHome.push(rel);
     }
-    if (rel !== GODOT_BIN_OWNER && /\bprocess\.env\.GODOT_BIN\b/.test(source)) {
+    if (rel !== GODOT_BIN_OWNER && DIRECT_GODOT_BIN_READ.test(source)) {
       if (rel in GODOT_BIN_ALLOWLIST) seenEnvAllow.add(rel);
       else badEnv.push(rel);
     }
@@ -269,7 +332,7 @@ test("non-test scripts contain no unapproved /home/andrew/ literals or direct pr
   assert.deepEqual(
     badEnv,
     [],
-    `unexpected process.env.GODOT_BIN read outside ${GODOT_BIN_OWNER} in: ${badEnv.join(", ")}`,
+    `unexpected GODOT_BIN environment read outside ${GODOT_BIN_OWNER} in: ${badEnv.join(", ")}`,
   );
   assert.deepEqual(
     Object.keys(HOME_ANDREW_ALLOWLIST).filter((rel) => !seenHomeAllow.has(rel)),

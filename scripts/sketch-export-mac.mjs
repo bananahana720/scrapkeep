@@ -205,7 +205,9 @@ async function main() {
   if (process.platform !== "darwin")
     fail("the Mac export runs on macOS; on Linux use npm run sketch:export");
   const binary = resolveGodotBinary({ requireExplicit: true });
-  if (!binary || !existsSync(binary))
+  if (!binary)
+    fail(`GODOT_BIN is not set; set GODOT_BIN to the Godot ${GODOT_VERSION} editor binary`);
+  if (!existsSync(binary))
     fail(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor binary: ${binary}`);
   const realTemplates = path.join(templatesDir(os.homedir()), TEMPLATE_VERSION);
   if (!existsSync(path.join(realTemplates, "macos.zip")))

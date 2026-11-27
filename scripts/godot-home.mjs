@@ -55,3 +55,12 @@ export function resolveGodotBinary({
   ];
   return candidates.find((candidate) => exists(candidate)) ?? null;
 }
+
+export function requireGodotBinary(options = {}) {
+  const exists = options.exists ?? existsSync;
+  const binary = resolveGodotBinary(options);
+  if (!binary || !exists(binary)) {
+    throw new Error(`Godot binary not found${binary ? ` at ${binary}` : ""}; set GODOT_BIN`);
+  }
+  return binary;
+}

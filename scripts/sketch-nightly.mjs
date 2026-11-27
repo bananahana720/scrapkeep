@@ -93,12 +93,13 @@ export function buildPlan(
   } = {},
 ) {
   const solo = soloScripts(scripts, baseline, directory);
+  const command = resolveGodotBinary() ?? "godot";
   const plan = [];
   const add = (id, kind, args, extra = {}) => {
     plan.push({
       id,
       kind,
-      command: resolveGodotBinary() ?? "",
+      command,
       args,
       render: false,
       timeout_ms: TOOL_TIMEOUT_MS,
