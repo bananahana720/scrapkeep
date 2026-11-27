@@ -21,6 +21,7 @@ const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 enum { IDLE, FIGHT, EJECT, DEFEATED }
 const STATE_NAMES := ["idle", "fight", "eject", "defeated"]
@@ -1334,10 +1335,16 @@ func _begin_eject() -> void:
 	arena.add_child(scooter)
 	scooter.set_solid(false)
 	var body := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = Vector3(2.0, 1.0, 2.8)
-	body.mesh = box
-	body.material_override = Palette.solid(Palette.BRASS, 0.8)
+	var legacy_scooter_seam := Requisition.scooter_path != Requisition.SCOOTER_MODEL and not ResourceLoader.exists(Requisition.scooter_path)
+	if legacy_scooter_seam:
+		var box := BoxMesh.new()
+		box.size = Vector3(2.0, 1.0, 2.8)
+		body.mesh = box
+		body.material_override = Palette.solid(Palette.BRASS, 0.8)
+	else:
+		body.name = "ScooterHullCraft"
+		body.mesh = EnemyBossCraft.brindle_scooter_hull(Vector3(2.0, 1.0, 2.8))
+		body.material_override = EnemyBossCraft.craft_shader_material("brindle_scooter_brass", "oxidized_hull_plating", Palette.BRASS, Palette.AMBER, 0.44, 0.68, Palette.AMBER, 0.8)
 	scooter.add_child(body)
 	_scooter_anim = Requisition.dress_scooter(scooter)
 	if _scooter_anim != null:
@@ -1524,13 +1531,9 @@ func _sync_crest() -> void:
 		_crest = Node3D.new()
 		_crest.name = "AdmiralsCrest"
 		var badge := MeshInstance3D.new()
-		var disc := CylinderMesh.new()
-		disc.top_radius = 0.5
-		disc.bottom_radius = 0.5
-		disc.height = 0.14
-		disc.radial_segments = 5
-		badge.mesh = disc
-		badge.material_override = Palette.solid(Palette.BRASS, 1.2)
+		badge.name = "AdmiralsCrestBadge"
+		badge.mesh = EnemyBossCraft.admirals_crest_badge(0.5, 0.14)
+		badge.material_override = EnemyBossCraft.craft_shader_material("admirals_crest_brass", "oxidized_hull_plating", Palette.BRASS, Palette.AMBER, 0.38, 0.76, Palette.AMBER, 1.1)
 		badge.rotation.x = PI * 0.5
 		_crest.add_child(badge)
 		_crest.position = Vector3(0.0, 0.0, Tuning.RADIUS + 0.02)
@@ -1595,6 +1598,10 @@ func _step_hazards(delta: float, ball: Vector3) -> void:
 		if not is_instance_valid(h):
 			continue
 		h.step(delta)
+		if h.is_live() and h.is_hostile() and h.type != Hazard.Threat.Type.WAVE and not h.has_meta("fx27_flashed"):
+			h.set_meta("fx27_flashed", true)
+			if is_instance_valid(ship) and ship.has_method("trigger_strike_flash"):
+				ship.trigger_strike_flash()
 		if h.shape == Hazard.Shape.ANNULUS and h.is_live() \
 				and (not h.cued or h.age >= h.warn_seconds + 0.025):
 			if h.contains(ball) and clock >= _grace.get(h.get_instance_id(), -1.0):

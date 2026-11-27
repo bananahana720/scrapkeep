@@ -1,0 +1,12 @@
+# Full-Alpha Orthographic Reference Sheets
+
+Orthographic three-view turnarounds (front, three-quarter, side) generated via `gemini-api image` (`gemini-nano-banana-2.1`) and visually inspected against [STORY-MAP.md](../../STORY-MAP.md), [TONE-BIBLE.md](../../TONE-BIBLE.md), [SIGHT-PERSONA.md](../../SIGHT-PERSONA.md), and [patch.md](../../pilots/patch.md). Every sheet uses clean dark workshop slate (`#1E2228`), a 2010 satin hand-painted vinyl/metal finish with brushed bone wear on hand-worked parts, zero embedded text or watermarks, and a neutral 1.84 m scale reference sphere.
+
+## Boards
+
+| File | Subject | Maker & Canon Anchors | Visual Inspection Notes |
+| --- | --- | --- | --- |
+| [pilot_patch_orthographic.png](pilot_patch_orthographic.png) | Patch (hidden 7th pilot & improvised salvage gyrosphere) | **Keeper**: stuffed felt possum hanging upside down by the tail inside a bolted copper/iron-oxide gimbal cage, 2010 sticker-covered netbook, salvaged wok radar dish, spliced cyan-mint command cables | Crisp front / 3/4 / side parity, clear silhouette with dish and trailing cables, zero text artifacts, 1.84 m scale ball at right |
+| [foreman_rig_apex_orthographic.png](foreman_rig_apex_orthographic.png) | Foreman Rig Apex Construct (mini-boss) | **Old works + Fleet**: seamless cast petrol-charcoal body with recessed cyan/amber seams, riveted brass Fleet tag, bolted iron-oxide hydraulic salvage press jaws, overhead crane jib, hand-sized rear crew service wheel weak point | Distinct overhead crane silhouette and rear wheel weak point readable across all three views, zero text artifacts, 1.84 m scale ball at left |
+| [dig_bore_rig_orthographic.png](dig_bore_rig_orthographic.png) | World 2 Dig Bore-Rig / Compactor Construct | **The Dig (Plate)**: ribbed tungsten rotary auger drum, cast petrol-slate hull with amber furnace vents and uranium-green conduits, bolted iron-oxide compactor rams on piston struts, heavy mining treads | Strong conical bore silhouette and asymmetric hydraulic stance consistent in front / 3/4 / side, zero text artifacts, 1.84 m scale ball at left |
+| [highdraft_sky_dredge_orthographic.png](highdraft_sky_dredge_orthographic.png) | World 3 Highdraft Sky-Dredge / Choir Relay Construct | **The Highdraft (Wind)**: overhead cableway gantry pulley trolley, twin cast turbine nacelles, satin copper/brass acoustic choir relay horns, cyan/amber plasma rings, hanging dredge grab claws | Immediately readable suspended T-gantry + flared acoustic horns across all three angles, zero text artifacts, 1.84 m scale ball at left |

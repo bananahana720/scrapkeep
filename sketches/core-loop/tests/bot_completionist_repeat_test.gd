@@ -12,20 +12,10 @@ func _initialize() -> void:
 	var traces: Array[String] = []
 	for i in 2:
 		var folder := base.path_join(str(i))
-		var previous := {}
-		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, folder.path_join(kind.to_lower()))
-		var child: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": [
+		var child: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "home": folder, "args": [
 			"--out=" + folder, "--policy=completionist", "--seeds=2", "--table=park",
 			"--from-stage=1", "--stages=1", "--trace-ticks=1", "--ticks=%d" % TICKS,
 			"--allocation-noise=%d" % i]}], 300.0)[0]
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
 		t.check("child %d completed without errors" % i, child.code == 0 and not child.timed_out
 			and ChildRuns.summary(child).errors.is_empty(), "exit %s, timeout %s, errors %s" % [
 				child.code, child.timed_out, ChildRuns.summary(child).errors])

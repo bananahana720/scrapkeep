@@ -66,6 +66,28 @@ static func rows_for(event: String) -> Array:
 	return ids
 
 
+const REACTION_IMPULSES := {
+	"shot_fired": {"recoil": 2.2, "bounce": -0.25, "lean": -0.35, "secondary": -1.5},
+	"player_hit": {"recoil": 3.4, "bounce": -1.4, "lean": -1.2, "secondary": -2.4},
+	"wince": {"recoil": 3.0, "bounce": -1.2, "lean": -1.0, "secondary": -2.0},
+	"harpoon_bit": {"recoil": 1.8, "bounce": -0.6, "lean": 1.4, "secondary": 1.6},
+	"brace": {"recoil": 1.5, "bounce": -0.5, "lean": 1.2, "secondary": 1.4},
+	"harpoon_smashed": {"recoil": 2.8, "bounce": -1.6, "lean": 1.8, "secondary": 2.2},
+	"heave": {"recoil": 2.5, "bounce": -1.2, "lean": 1.6, "secondary": 1.9},
+	"drop_landed": {"recoil": 0.8, "bounce": -2.6, "lean": 1.5, "secondary": 2.1},
+	"drop_land": {"recoil": 0.8, "bounce": -2.4, "lean": 1.4, "secondary": 2.0},
+	"slammed": {"recoil": 2.0, "bounce": -2.8, "lean": 1.8, "secondary": 2.5},
+	"smash": {"recoil": 1.8, "bounce": -2.5, "lean": 1.6, "secondary": 2.2},
+	"slot_cast": {"recoil": 2.4, "bounce": 0.4, "lean": -0.8, "secondary": -1.6},
+	"line_skill_fired": {"recoil": 2.0, "bounce": 0.2, "lean": 0.9, "secondary": -1.2},
+	"boss_defeated": {"recoil": -0.8, "bounce": 2.2, "lean": -0.6, "secondary": 2.4},
+	"big_cheer": {"recoil": -0.8, "bounce": 2.0, "lean": -0.6, "secondary": 2.2},
+	"player_died": {"recoil": 1.0, "bounce": -1.8, "lean": 2.2, "secondary": 1.2},
+}
+
+
+static func impulse_for(event_or_clip: String) -> Dictionary:
+	return REACTION_IMPULSES.get(event_or_clip, {})
 static func arg_matches(row: Dictionary, args: Array) -> bool:
 	if not row.has("arg"):
 		return true

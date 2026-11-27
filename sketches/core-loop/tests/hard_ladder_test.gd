@@ -17,9 +17,10 @@ const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # Each lever and the way a harder rung moves it: up (hits, waits before regen) or down (cadence, regen rate).
-const HARDER_UP := ["mobs.damage_mult", "warden.pulse_damage_mult", "brindle.damage_mult", "mobs.elite_rate_mult",
-	"pilot.regen_delay_mult"]
-const HARDER_DOWN := ["brindle.period_mult", "warden.pulse_cycle_mult", "mobs.interval_scale_mult", "pilot.regen_rate_mult"]
+const HARDER_UP := ["mobs.damage_mult", "warden.pulse_damage_mult", "brindle.damage_mult", "waking.damage_mult",
+	"mind.damage_mult", "mobs.elite_rate_mult", "pilot.regen_delay_mult"]
+const HARDER_DOWN := ["brindle.period_mult", "waking.period_mult", "mind.period_mult", "waking.punish_mult",
+	"mind.punish_mult", "warden.pulse_cycle_mult", "mobs.interval_scale_mult", "pilot.regen_rate_mult"]
 
 var t := T.new("hard_ladder_test")
 
@@ -318,6 +319,13 @@ func _late_choice(game) -> void:
 	game.flow.choose_run_tier(0)
 
 
+func _hits(d: Dictionary, prefix: String) -> float:
+	var mobs := float(d.get("mobs.damage_mult", 1.0)) * float(d.get("mobs.elite_rate_mult", 1.0))
+	var pulse := float(d.get("warden.pulse_damage_mult", 1.0)) / float(d.get("warden.pulse_cycle_mult", 1.0))
+	var boss := float(d.get(prefix + "damage_mult", 1.0)) / float(d.get(prefix + "period_mult", 1.0))
+	return (mobs + pulse + boss) / 3.0
+
+
 func _sorted(values: Array) -> Array:
 	var out := values.duplicate()
 	out.sort()
@@ -352,12 +360,27 @@ func _gauges() -> void:
 	# Every dial a rung turns is read by a gauge (run_tier.gd _readings), so a new dial needs a gauge
 	# or a line in the contract before this list takes it.
 	var read := ["mobs.damage_mult", "mobs.elite_rate_mult", "mobs.interval_scale_mult", "warden.pulse_damage_mult", "warden.pulse_cycle_mult",
-		"brindle.damage_mult", "brindle.period_mult", "pilot.regen_delay_mult", "pilot.regen_rate_mult"]
+		"brindle.damage_mult", "brindle.period_mult", "waking.damage_mult", "waking.period_mult",
+		"mind.damage_mult", "mind.period_mult", "pilot.regen_delay_mult", "pilot.regen_rate_mult"]
+	var contracted := ["waking.punish_mult", "mind.punish_mult"]
 	var turned := {}
 	for rung in RunTier.LADDER:
 		for key in RunTier.LADDER[rung]:
 			turned[key] = true
-	t.eq("every dial the ladder turns is read by a gauge", turned.keys().filter(func(key): return not key in read), [])
+	t.eq("every dial the ladder turns is read by a gauge", turned.keys().filter(func(key): return not key in read and not key in contracted), [])
+	for world in RunTier.BOSS_PREFIX_BY_WORLD:
+		var prefix: String = RunTier.BOSS_PREFIX_BY_WORLD[world]
+		var top_dials: Dictionary = RunTier.dials(RunTier.TOP)
+		var top_hits := _hits(top_dials, prefix)
+		for rung in range(1, RunTier.TOP + 1):
+			var d: Dictionary = RunTier.dials(rung)
+			t.near("world %d rung %d: the hits gauge reads %sdamage_mult over %speriod_mult" % [world, rung, prefix, prefix],
+				RunTier.meters(rung, world)[1]["fill"], _hits(d, prefix) / top_hits)
+			t.eq("world %d rung %d: the contract names a tighter opening when %spunish_mult turns" % [world, rung, prefix],
+				"tighter boss openings" in RunTier.threat_text(rung, world), world > 1 and d.has(prefix + "punish_mult"))
+			for key in RunTier.dials_for_world(rung, world):
+				t.check("world %d rung %d turns no other world's boss: %s" % [world, rung, key],
+					not RunTier.ALL_BOSS_PREFIXES.any(func(other): return other != prefix and String(key).begins_with(other)))
 	# Each of them moves its gauge: every rung that turns a works dial reads above the rung below.
 	var strict := true
 	for tier in range(2, RunTier.TOP + 1):

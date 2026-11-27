@@ -526,7 +526,7 @@ static func _thermals(parent: Node3D, state: Node, map, contraptions: Node) -> v
 
 static func _hide_thermal_greybox(contraptions: Node, base: Vector3, height: float) -> void:
 	for child in contraptions.get_children():
-		if child is MeshInstance3D and child.mesh is CylinderMesh:
+		if child is MeshInstance3D and (child.mesh is CylinderMesh or child.mesh is ArrayMesh):
 			var near_column: bool = (child.position - (base + Vector3.UP * height * 0.5)).length() < 0.05
 			var near_grate: bool = (child.position - (base + Vector3.UP * 0.1)).length() < 0.05
 			if near_column or near_grate:
@@ -1058,6 +1058,7 @@ static func _line_view(label: String, lines: Array, width: float, colour: Color,
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	material.roughness = 0.7
 	material.metallic = metal
+	preload("res://src/presentation/world23_chunk_craft.gd").enrich_standard_pbr(material, 0.35, 0.40)
 	mesh.surface_set_material(0, material)
 	var view := MeshInstance3D.new()
 	view.name = label
@@ -1135,13 +1136,12 @@ static func _sky_pieces(parent: Node3D, drop := 0.0) -> void:
 		var basis := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(wide, 1.0, wide))
 		clouds.append(Transform3D(basis, Vector3(cos(angle) * reach, -26.0, sin(angle) * reach)))
 	_multi(sky, "CloudDeck", _mesh("sky_cloud.glb", "CloudHull"), clouds)
-	var plane := PlaneMesh.new()
-	plane.size = Vector2.ONE * CLOUD_DECK_SIZE
+	var craft := preload("res://src/presentation/world23_chunk_craft.gd")
 	var deck := MeshInstance3D.new()
 	deck.name = "CloudPlane"
-	deck.mesh = plane
+	deck.mesh = craft.get_cloud_sea_mesh(CLOUD_DECK_SIZE)
 	deck.position = Vector3(0.0, CLOUD_DECK_Y, 0.0)
-	deck.material_override = _cloud_material()
+	deck.material_override = craft.build_cloud_sea_material(_cloud_material().albedo_texture, LOOK["cloud"], LOOK["fill"])
 	deck.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	sky.add_child(deck)
 	var mesas: Array[Transform3D] = []

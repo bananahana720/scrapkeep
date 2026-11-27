@@ -11,7 +11,7 @@ class Warnings extends Logger:
 			lines.append(message)
 
 
-const REACH_GREYBOX := 42
+const REACH_GREYBOX := 40
 
 
 func _run() -> void:

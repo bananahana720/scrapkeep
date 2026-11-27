@@ -215,6 +215,7 @@ var _engaged := false
 var _struggle := Objectives.Struggle.new()
 var _done := Objectives.Done.new()
 var _detour_site = null
+var _detour_ticked = null
 var _detour_done := Objectives.Done.new()
 var _site = null
 const ARMOR_BAR := 120.0
@@ -937,6 +938,17 @@ func _on_event_announced(event_id: String, seconds_until: float, _at: Vector3) -
 			line["event"] = event_id
 
 
+func _keep_event_line(delta: float) -> void:
+	var held: Array = edge_markers.held_ids()
+	if held.is_empty():
+		return
+	if _toast.is_empty():
+		if _held_toast.is_empty():
+			_on_event_announced(String(held[0]), TOAST_IN + TOAST_OUT, Vector3.ZERO)
+	elif String(_toast.get("event", "")) in held:
+		_toast["left"] = maxf(_toast["left"], TOAST_OUT + delta)
+
+
 func _end_event_line(event_id: String) -> void:
 	if event_id == "":
 		return
@@ -1039,6 +1051,7 @@ func _on_stage_entered(stage: int, retry: bool) -> void:
 	_done.clear()
 	_detour_done.clear()
 	_detour_site = null
+	_detour_ticked = null
 	_site = null
 	if retry:
 		return
@@ -1417,8 +1430,10 @@ func _held_detour(running: bool) -> Dictionary:
 
 
 func _note_detour(id: String, good: bool) -> void:
-	if not is_instance_valid(_detour_site) or String(_detour_site.id) != id:
+	if not Objectives.detour_site_matches(_detour_site, id, good, _detour_ticked):
 		return
+	if good:
+		_detour_ticked = _detour_site
 	var text := Objectives.done_words(id, game.world.activities.called(id)) if good else Objectives.lost_words(id)
 	_detour_done.note(text, good)
 
@@ -1737,6 +1752,7 @@ func _step_toast(delta: float) -> void:
 	if not launch_card.showing() and not _held_toast.is_empty():
 		_show_toast(_held_toast)
 		_held_toast = {}
+	_keep_event_line(delta)
 	_toast_row.visible = not _toast.is_empty() and not launch_card.showing() and not _quiet
 	if _toast.is_empty():
 		return

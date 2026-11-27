@@ -5,12 +5,12 @@ const Palette := preload("res://src/core/palette.gd")
 const ROWS := {
 	1: {"name": "spillway", "sky": "hdri", "background": Color("243b43"),
 		"ambient": Color("9db5cf"), "energy": 0.28, "exposure": 1.1, "saturation": 1.2,
-		"fog": {"color": Color("a3bdd0"), "density": 0.0006},
+		"fog": {"color": Color("9cb6c8"), "density": 0.0006, "aerial_perspective": 0.58},
 		"sun_color": Color("ffd49a"), "sun_energy": 2.35, "sun_rotation": Vector3(-36.0, -55.0, 0.0),
 		"sun_visible": true, "fill": 0.5, "fill_pitch": -50.0, "fill_color": Color("a3c4e6"),
-		"air": {"volumetric_fog_density": 0.0012, "volumetric_fog_albedo": Color("e9d2a6"),
+		"air": {"volumetric_fog_density": 0.0016, "volumetric_fog_albedo": Color("dcd4c6"),
 			"volumetric_fog_emission": Color("000000"), "volumetric_fog_anisotropy": 0.55,
-			"volumetric_fog_length": 160.0, "volumetric_fog_ambient_inject": 0.2, "volumetric_fog_sky_affect": 0.0}},
+			"volumetric_fog_length": 220.0, "volumetric_fog_ambient_inject": 0.18, "volumetric_fog_sky_affect": 0.0}},
 	2: {"name": "dig", "sky": "dome", "background": Color("0a1018"),
 		"ambient": Color("587496"), "energy": 0.12, "exposure": 1.12, "saturation": 1.22,
 		"fog": {"color": Color("3f546b"), "density": 0.018},
@@ -56,9 +56,10 @@ const ARENAS := {
 const BOWL_SCRIPT := "res://src/boss/arena.gd"
 const DAYLIT_ARENAS := {"brindle": {"world": 1, "time": "noon", "over": {
 	"sun_color": Color("ffe5b6"), "ambient": Color("e6dac2"), "fog_tint": Color("e8d2a8"),
+	"exposure": 1.03, "saturation": 1.15,
 	"grade": {"top": Color("f0e6d2"), "horizon": Color("ffe2af"), "recolor": 0.2, "highlight": 8.0,
 		"glow": Color("4a2c10"), "energy": 1.05},
-	"fog": {"color": Color("c8a46e"), "density": 0.0016}, "fill_color": Color("c9b898")}}}
+	"fog": {"color": Color("b89c74"), "density": 0.0018, "aerial_perspective": 0.30}, "fill_color": Color("c9b898")}}}
 const CAMP := {"name": "camp", "sky": "hdri", "background": Color("243b43"),
 	"ambient": Color("c9c0a8"), "energy": 0.3, "exposure": 1.08, "saturation": 1.15,
 	"fog": {"color": Color("d9c5a0"), "density": 0.0005},
@@ -126,22 +127,22 @@ const LOOK_ROWS := {
 const DISTRICT_GRADES := {
 	"dam_intake": {"time": "dawn", "ambient": Color("a8a6e6"), "fog_tint": Color("d8c8dc"),
 		"grade": {"top": Color("7088d8"), "horizon": Color("ffcaa8"), "glow": Color("a8704a")},
-		"exposure_add": 0.03, "saturation_add": 0.0},
+		"exposure_add": -0.04, "saturation_add": -0.05},
 	"dam_apron": {"time": "dawn", "ambient": Color("b2a6d6"), "fog_tint": Color("f2c2b4"),
 		"grade": {"top": Color("908ac0"), "horizon": Color("ffb284"), "glow": Color("c87238")},
-		"exposure_add": 0.05, "saturation_add": 0.05},
+		"exposure_add": -0.03, "saturation_add": -0.03},
 	"dam_pump": {"time": "dawn", "ambient": Color("9292c8"), "fog_tint": Color("c6b8ca"),
 		"grade": {"top": Color("6872aa"), "horizon": Color("f2ae92"), "glow": Color("925a3a")},
-		"exposure_add": -0.05, "saturation_add": -0.05},
+		"exposure_add": -0.08, "saturation_add": -0.08},
 	"flume_weir": {"time": "morning", "ambient": Color("92c6da"), "fog_tint": Color("bedcea"),
 		"grade": {"top": Color("c6eef6"), "horizon": Color("e6d0cc"), "glow": Color("261c18")},
-		"exposure_add": 0.0, "saturation_add": 0.05},
+		"exposure_add": -0.07, "saturation_add": -0.04},
 	"flume_trestle": {"time": "morning", "ambient": Color("b4d4cc"), "fog_tint": Color("e2ecdc"),
 		"grade": {"top": Color("dcf2ea"), "horizon": Color("f8ccb4"), "glow": Color("48280e")},
-		"exposure_add": 0.02, "saturation_add": 0.0},
+		"exposure_add": -0.05, "saturation_add": -0.05},
 	"flume_headhouse": {"time": "morning", "ambient": Color("aad6e2"), "fog_tint": Color("e4f2ee"),
 		"grade": {"top": Color("a8d8f0"), "horizon": Color("fae0c0"), "glow": Color("3c2a10")},
-		"exposure_add": 0.05, "saturation_add": 0.08},
+		"exposure_add": -0.04, "saturation_add": -0.02},
 }
 const DISTRICT_EVERY_S := 0.25
 const DISTRICT_BLEND_S := 1.5
@@ -279,6 +280,7 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		"ambient_light_color": look.ambient, "ambient_light_energy": look.energy,
 		"tonemap_exposure": look.exposure, "adjustment_saturation": look.saturation,
 		"fog_enabled": true, "fog_light_energy": fog.get("light_energy", 0.75), "fog_sun_scatter": fog.get("sun_scatter", 0.25),
+		"fog_aerial_perspective": float(fog.get("aerial_perspective", 0.0)),
 	}
 	values.merge(air_values(look, air))
 	if fog.has("density"):

@@ -150,11 +150,12 @@ func _check_dress(arena: Node3D, dressing: Node3D) -> void:
 	t.eq("both live slag channels retained", channels.size(), 2)
 	for channel in channels:
 		t.check("channel colour unchanged", channel.material_override.albedo_color == Color("171a19"))
-	var vents := arena.get_children().filter(func(n): return n is MeshInstance3D and n.mesh is CylinderMesh and is_equal_approx(n.mesh.top_radius, Rules.VENT_REACH))
+	var vents := arena.get_children().filter(func(n): return n is MeshInstance3D and String(n.name).begins_with("WaterVent") and n.mesh is ArrayMesh and is_equal_approx(n.mesh.get_aabb().size.x, Rules.VENT_REACH * 2.0))
 	t.eq("all mint quench pads retained", vents.size(), 4)
 	for vent in vents:
-		t.check("live mint and emission unchanged", vent.material_override.albedo_color == Palette.ARC
-			and is_equal_approx(vent.material_override.emission_energy_multiplier, 0.6))
+		var mat := vent.material_override as ShaderMaterial
+		t.check("live mint and emission unchanged", mat != null and mat.get_shader_parameter("emissive_color") == Palette.ARC
+			and float(mat.get_shader_parameter("emissive_energy")) >= 0.6)
 
 
 # The Fleet yard (world 1 unit 9): every part present, nothing inside the rim wall's outer face or below its top

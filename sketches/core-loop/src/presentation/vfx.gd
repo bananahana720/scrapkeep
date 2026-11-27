@@ -18,6 +18,10 @@ const HeroFx := preload("res://src/presentation/hero_fx.gd")
 
 
 const POOL := 48
+const GLYPH_PRIORITY := -2
+const TRAIL_PRIORITY := -4
+const GLYPH_SHADER := preload("res://assets/shaders/fx_glyph.gdshader")
+const INK_SHAPES := ["burst", "star", "cross", "arc"]
 const POP_SHAPES := ["flash", "star", "burst"]
 const SPARKLE_POOL := 6
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
@@ -78,7 +82,7 @@ var _fx := {}
 var _fx_next := {}
 var _roll: GPUParticles3D
 var _pips: Array = []
-var _pip_mat: StandardMaterial3D
+var _pip_mat: Material
 var _chain := 0
 var _chain_rung := 0
 var _pip_pop := 0.0
@@ -479,12 +483,14 @@ func _build_glyphs() -> void:
 	_build_meshes()
 	for i in POOL:
 		var glyph := MeshInstance3D.new()
-		var mat := StandardMaterial3D.new()
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-		mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
-		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-		mat.no_depth_test = false
+		var mat := ShaderMaterial.new()
+		mat.shader = GLYPH_SHADER
+		mat.render_priority = GLYPH_PRIORITY
+		mat.set_shader_parameter("ink_colour", Palette.CHARCOAL)
+		mat.set_shader_parameter("tint", Color.WHITE)
+		mat.set_shader_parameter("alpha", 0.0)
+		mat.set_shader_parameter("heat", 0.0)
+		mat.set_shader_parameter("mode", 0)
 		glyph.material_override = mat
 		glyph.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		glyph.visible = false
@@ -537,7 +543,7 @@ func _build_meshes() -> void:
 
 
 static func _arc_mesh() -> ArrayMesh:
-	const WIDTH := 0.06
+	const WIDTH := 0.08
 	var points := [Vector3.ZERO, Vector3(0.12, 0.05, -0.33), Vector3(-0.1, -0.04, -0.66), Vector3(0.0, 0.0, -1.0)]
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -545,8 +551,13 @@ static func _arc_mesh() -> ArrayMesh:
 		for i in 3:
 			var a: Vector3 = points[i]
 			var b: Vector3 = points[i + 1]
-			for v in [a - across, b - across, b + across, a - across, b + across, a + across]:
-				st.add_vertex(v)
+			var v0 := float(i) / 3.0
+			var v1 := float(i + 1) / 3.0
+			var verts := [a - across, b - across, b + across, a - across, b + across, a + across]
+			var uvs := [Vector2(0.0, v0), Vector2(0.0, v1), Vector2(1.0, v1), Vector2(0.0, v0), Vector2(1.0, v1), Vector2(1.0, v0)]
+			for k in 6:
+				st.set_uv(uvs[k])
+				st.add_vertex(verts[k])
 	return st.commit()
 
 
@@ -556,13 +567,16 @@ static func _star_mesh(spokes: int, thickness: float, length: float) -> ArrayMes
 	for i in spokes:
 		var angle := PI * i / spokes
 		var along := Vector3(cos(angle), sin(angle), 0.0) * length
-		var across := Vector3(-sin(angle), cos(angle), 0.0) * thickness
+		var across := Vector3(-sin(angle), cos(angle), 0.0) * (thickness * 1.35)
 		var a := -along - across
 		var b := along - across
 		var c := along + across
 		var d := -along + across
-		for v in [a, b, c, a, c, d]:
-			st.add_vertex(v)
+		var verts := [a, b, c, a, c, d]
+		var uvs := [Vector2(0.0, 0.0), Vector2(0.0, 1.0), Vector2(1.0, 1.0), Vector2(0.0, 0.0), Vector2(1.0, 1.0), Vector2(1.0, 0.0)]
+		for k in 6:
+			st.set_uv(uvs[k])
+			st.add_vertex(verts[k])
 	return st.commit()
 
 
@@ -594,6 +608,8 @@ func glyph(kind: String, at: Vector3, size_from: float, size_to: float, life: fl
 	slot["spin"] = 3.0 if silhouette in ["star", "burst", "diamond", "square", "core"] else 0.0
 	var pop: bool = silhouette in POP_SHAPES or not _meshes.has(silhouette)
 	slot["alpha"] = FlashGuard.alpha(governed.x) if pop else FlashGuard.info(governed.x)
+	slot["ink_mode"] = 0 if silhouette in INK_SHAPES else 1
+	slot["pop"] = pop
 	node.visible = true
 	spawned[kind] = spawned.get(kind, 0) + 1
 	_draw_glyph(slot)
@@ -633,8 +649,16 @@ func _draw_glyph(slot: Dictionary) -> void:
 		base = base * Basis(Vector3.BACK, slot["spin"] * t)
 	node.basis = base.scaled(Vector3.ONE * size)
 	var color: Color = slot["color"]
-	var mat: StandardMaterial3D = slot["mat"]
-	mat.albedo_color = Color(color.r, color.g, color.b, (1.0 - t) * slot.get("alpha", 0.9))
+	var alpha: float = (1.0 - t) * float(slot.get("alpha", 0.9))
+	var mat = slot["mat"]
+	if mat is ShaderMaterial:
+		var hot: float = FlashGuard.whiten(0.88) * maxf(0.0, 1.0 - t / 0.65) if slot.get("pop", false) else 0.0
+		mat.set_shader_parameter("tint", Color(color.r, color.g, color.b, 1.0))
+		mat.set_shader_parameter("alpha", alpha)
+		mat.set_shader_parameter("heat", hot)
+		mat.set_shader_parameter("mode", int(slot.get("ink_mode", 0)))
+	elif mat is StandardMaterial3D:
+		mat.albedo_color = Color(color.r, color.g, color.b, alpha)
 
 
 func _on_landed(impact: float) -> void:
@@ -734,6 +758,7 @@ func _build_trail() -> void:
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.blend_mode = BaseMaterial3D.BLEND_MODE_ADD
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mat.render_priority = TRAIL_PRIORITY
 	var juice: Node3D = player.juice_node()
 	_trail = MeshInstance3D.new()
 	_trail.name = "Trail"
@@ -1072,9 +1097,15 @@ static func burst_ceiling() -> int:
 func _build_pips() -> void:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(0.22, 0.22, 0.22)
-	_pip_mat = StandardMaterial3D.new()
-	_pip_mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	_pip_mat.albedo_color = EventKinds.color("enemy_killed")
+	var mat := ShaderMaterial.new()
+	mat.shader = GLYPH_SHADER
+	mat.render_priority = GLYPH_PRIORITY
+	mat.set_shader_parameter("ink_colour", Palette.CHARCOAL)
+	mat.set_shader_parameter("tint", EventKinds.color("enemy_killed"))
+	mat.set_shader_parameter("alpha", 0.96)
+	mat.set_shader_parameter("heat", 0.0)
+	mat.set_shader_parameter("mode", 1)
+	_pip_mat = mat
 	mesh.material = _pip_mat
 	for i in PIPS:
 		var pip := MeshInstance3D.new()
@@ -1103,7 +1134,11 @@ func _draw_pips(delta: float) -> void:
 	_pip_pop = maxf(0.0, _pip_pop - delta * 5.0)
 	var top := float(EventKinds.juice("enemy_killed").get("chain_cap", 7))
 	var charge := clampf(_chain_rung / top, 0.0, 1.0)
-	_pip_mat.albedo_color = EventKinds.color("enemy_killed").lerp(EventKinds.color("part_gained"), minf(charge * 1.6, 1.0)).lerp(Palette.LEDGER_CREAM, maxf(0.0, charge - 0.7) * 2.0)
+	var pip_tint := EventKinds.color("enemy_killed").lerp(EventKinds.color("part_gained"), minf(charge * 1.6, 1.0)).lerp(Palette.LEDGER_CREAM, maxf(0.0, charge - 0.7) * 2.0)
+	if _pip_mat is ShaderMaterial:
+		(_pip_mat as ShaderMaterial).set_shader_parameter("tint", pip_tint)
+	elif _pip_mat is StandardMaterial3D:
+		(_pip_mat as StandardMaterial3D).albedo_color = pip_tint
 	var centre: Vector3 = player.shown_position() + Vector3.UP * PIP_HEIGHT
 	var spin_rate := 2.2 + 1.4 * charge
 	var orbit_r := PIP_RADIUS + 0.14 * _pip_pop + 0.08 * charge

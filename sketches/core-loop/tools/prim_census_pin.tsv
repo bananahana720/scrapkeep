@@ -6,7 +6,6 @@
 # A glob covers only one owner's own subtree: game.gd owns every unscripted node under the game root, so its rows are exact.
 # Seeded 12 Nov 2026 from the census of cand/w40 243794e0 (seed 40317, pylon_engineer, park table, through Brindle).
 # Stand-in rows come first: the first row that covers a surface judges it, so a code glob cannot hide a stand-in.
-arena.gd	CylinderMesh	Node3D/SlagBowl/WaterVent	code	-	the rim vent's glowing quench pad (arena.gd _vent), the mark the ball rolls onto; the nozzle beside it is slag_bowl_kit.glb
 bay.gd	BoxMesh	MossBay/Barge/MeshInstance3D	code	-	Moss's bay marks: the three glowing rarity tokens on the shelf, the painted floor mats, the pad chevrons and the deck line; the props are bay_kit.glb
 bay.gd	CylinderMesh	MossBay/Barge/MeshInstance3D	code	-	Moss's bay effects and marks: the four thruster steam jets and the launch pad disc; the props are bay_kit.glb
 bay.gd	QuadMesh	MossBay/Barge/BakedLamplight	code	-	Moss's bay baked lamplight, a lighting card
@@ -14,7 +13,6 @@ bay.gd	SphereMesh	MossBay/Barge/MeshInstance3D	code	-	the marble toy's marble, a
 bay.gd	TorusMesh	MossBay/Cradle/MeshInstance3D	code	-	the dock cradle's glowing amber ring, the mark that says roll here
 contraptions.gd	CylinderMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser steam column (contraptions.gd _build_launcher): a translucent column that swells with the charge over the geyser_vent model
 rescue_site.gd	BoxMesh	*_cage/Node3D/MeshInstance3D	code	-	the cage's dashed ground ring (device.gd ground_ring), the interact mark every device draws; the cage itself is rescue_cage.glb
-game.gd	BoxMesh	Node3D/ReactorSheet	code	-	the reactor warden's water sheet (warden_reactor.gd _show_sheet): a translucent 24 by 16 m footprint live for 3 s, an attack effect hung on the world root
 accretion.gd	BoxMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	CylinderMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
 accretion.gd	SphereMesh	Accretion/*/MeshInstance3D	code	-	part pieces on the ball (tier read is W1-26)
@@ -24,8 +22,6 @@ activity_view.gd	BoxMesh	*/View_*/Column	code	-	activity column, glyph and ring:
 activity_view.gd	BoxMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
 activity_view.gd	BoxMesh	View_*/Ring/MeshInstance3D	code	-	activity column, glyph and ring: marks
 activity_view.gd	SphereMesh	View_*/Glyph/MeshInstance3D	code	-	activity column, glyph and ring: marks
-arena.gd	CylinderMesh	BrindleReward/RewardCanister/BoneBand	code	-	bone band on the reward canister model
-arena.gd	CylinderMesh	Node3D/RewardCanister/BoneBand	code	-	bone band on the reward canister model
 beacon.gd	SphereMesh	Node3D/Beacon/MeshInstance3D	code	-	beacon light and ring
 beacon.gd	TorusMesh	Node3D/Beacon/MeshInstance3D	code	-	beacon light and ring
 bolts.gd	BoxMesh	Node3D/Bolts/MultiMeshInstance3D	code	-	shot bolts, an effect
@@ -42,7 +38,6 @@ contraptions.gd	TorusMesh	Contraptions/forecourt_geyser/MeshInstance3D	code	-	la
 contraptions.gd	TorusMesh	Contraptions/pool_geyser/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
 contraptions.gd	TorusMesh	Stage/Contraptions/MeshInstance3D	code	-	launcher ring, grapple cable and hook, steam plume: marks and lines
 contraptions.gd	TorusMesh	Contraptions/*/*_pay_ring	code	-	sluice valve pay ring (contraptions.gd _build_sluice_valve): a mark round the wheel that fills with the pay gauge
-customize_page.gd	CylinderMesh	LivePreview/SubViewport/MeshInstance3D	code	-	preview turntable in a menu
 element_field.gd	TorusMesh	Node3D/ElementField/MeshInstance3D	code	-	element field ring
 enemy_motion.gd	BoxMesh	Node3D/DeathScatter/MeshInstance3D	code	-	death scatter, an effect
 enemy_motion.gd	BoxMesh	Node3D/Node3D/MeshInstance3D	code	-	death debris piece
@@ -68,7 +63,6 @@ line_view.gd	BoxMesh	Presentation/LineView/Barb	code	-	grapple barb
 mag_trapper.gd	CylinderMesh	MagTrapperBody/MagStack/MagTopLink	code	-	small link on the modelled body
 plated_brute.gd	BoxMesh	BrutePlates/PlateCrack/MeshInstance3D	code	-	plate crack mark
 player_ball.gd	CylinderMesh	Player/Pylon/MeshInstance3D	code	-	ball fittings and juice rings
-player_ball.gd	CylinderMesh	RollMount/AdmiralsCrest/MeshInstance3D	code	-	ball fittings and juice rings
 player_ball.gd	TorusMesh	Visual/Juice/MeshInstance3D	code	-	ball fittings and juice rings
 player_ball.gd	TorusMesh	Visual/Juice/SynergyRing	code	-	ball fittings and juice rings
 projectile.gd	QuadMesh	Node3D/Node3D/BatRim	code	-	projectile, an effect
@@ -90,12 +84,8 @@ scrap_field.gd	CylinderMesh	Scrap/MeshInstance3D/MeshInstance3D	code	-	a scrap c
 contraptions.gd	TorusMesh	Contraptions/*_geyser/MeshInstance3D	code	-	geyser mouth ring (contraptions.gd _build_launcher), the launch mark every geyser draws; the vent is geyser_vent.glb
 contraptions.gd	TorusMesh	Contraptions/*_cannon/MeshInstance3D	code	-	cannon launch ring (contraptions.gd _build_launcher), the amber launch mark every cannon draws; the barrel is cannon.glb
 element_field.gd	CylinderMesh	ElementField/Ice/MeshInstance3D	code	-	an ice element's frozen floor disc (element_field.gd _create_surface), a timed surface effect
-dispatcher.gd	BoxMesh	CharacterBody3D/DispatchMast/MeshInstance3D	code	-	the dispatcher's perch mast legs and rungs (dispatcher.gd _build_mast), a ladder frame matching its box collision; visual audit may reclassify
 warden_look.gd	*	CharacterBody3D/WardenLook/MeshInstance3D	code	-	the Warden's procedural clamp (warden_look.gd header): collar, deck and integrity band; visual audit may reclassify
 warden_look.gd	BoxMesh	Jaws/*/MeshInstance3D	code	-	the Warden's jaw plates and lips, tinted by plating state (warden_look.gd _build_jaws); visual audit may reclassify
 warden_kit.gd	*	CharacterBody3D/WardenKit/MeshInstance3D	code	-	the Warden family kit on the clamp (warden_kit.gd header: reactor stacks, hive cells, mind arm); visual audit may reclassify
 crew_lamp_field.gd	SphereMesh	Node3D/CrewLamps	code	-	crew lamp eyes (W1-83): one multimesh of glowing spheres that brighten through the wind-up, a mark meant to be a shape
-game.gd	CapsuleMesh	Node3D/DispatchPod	code	-	the Dispatcher's pod in flight (combat/dispatcher.gd), a lobbed projectile hung on the world root for its flight time
-activities.gd	CylinderMesh	Activities/Ward_*/MeshInstance3D	code	-	mend ward ground ring and charge-fill disc (activities.gd _build_ward): a 5 m charcoal pad and expanding verdigris charge mark
-activities.gd	CylinderMesh	Activities/Plate_*/MeshInstance3D	code	-	lore survey plate (activities.gd _build_plate, W45 P8): a flush charcoal rim and glowing amber disc that sinks to copper when read, a ground mark meant to be a shape
 game.gd	QuadMesh	WorldLook/NightDress/Glow	code	-	Dam Night Shift lamp glows (world_look.gd NightShift.Dress._card): a soft sodium lighting card at each floodlight mast's lamp, only on a Night Shift dam; the mast is camp_lamp_post.glb

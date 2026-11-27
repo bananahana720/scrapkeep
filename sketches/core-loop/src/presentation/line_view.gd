@@ -3,6 +3,7 @@ extends Node3D
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const HarpoonPhysicsRig := preload("res://src/presentation/harpoon_physics_rig.gd")
 
 
 const MIN_PX := 5.0
@@ -80,6 +81,9 @@ var collar_scale := 1.0
 var collar_rings := 0
 var post_ring: MeshInstance3D
 var pop: MeshInstance3D
+var cable_solver: HarpoonPhysicsRig.CableSolver
+var fairlead_spool: HarpoonPhysicsRig.FairleadSpool
+var flight_head: HarpoonPhysicsRig.HarpoonHead
 
 var _clock := 0.0
 var _state := "searching"
@@ -97,7 +101,6 @@ var _cable_material: StandardMaterial3D
 var _bracket_material: StandardMaterial3D
 var _collar_material: StandardMaterial3D
 var _ring_material: StandardMaterial3D
-var _barb_material: StandardMaterial3D
 var _pop_material: StandardMaterial3D
 
 
@@ -106,17 +109,31 @@ func setup(player_ref, camera_ref: Camera3D, events_ref) -> void:
 	camera = camera_ref
 	events = events_ref
 	name = "LineView"
+	cable_solver = HarpoonPhysicsRig.CableSolver.new(SEGMENTS)
 	_cable_material = _material()
+	_cable_material.render_priority = 1
 	cable = _node("Cable", _cable_material)
+	cable.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	_add_ink_underlay(cable, "CableInk", false)
 	_bracket_material = _material(true)
 	brackets = _node("LockBrackets", _bracket_material)
 	_ring_material = _material(true)
 	post_ring = _node("PostRing", _ring_material)
+	_add_ink_underlay(post_ring, "PostRingInk", true)
 	_pop_material = _material(true)
 	pop = _node("SmashPop", _pop_material)
 	_hanger_material = _material()
 	hanger = _node("Hanger", _hanger_material)
+	fairlead_spool = HarpoonPhysicsRig.make_spool()
+	fairlead_spool.visible = false
+	add_child(fairlead_spool)
+	flight_head = HarpoonPhysicsRig.make_head()
+	flight_head.name = "FlightHarpoonHead"
+	flight_head.visible = false
+	add_child(flight_head)
 	events.line_state_changed.connect(_on_line_state)
+	if events.has_signal("harpoon_bit"):
+		events.harpoon_bit.connect(_on_harpoon_bit)
 
 
 func _node(label: String, material: StandardMaterial3D) -> MeshInstance3D:
@@ -170,7 +187,7 @@ func step(delta: float) -> void:
 	_smash_age = _smash_age + delta if smash else 0.0
 	_draw_cable(kit, ball, smash, delta)
 	_draw_lock(kit)
-	_draw_latch(kit, ball)
+	_draw_latch(kit, ball, delta)
 	_draw_pop()
 	_draw_hanger(ball, delta)
 
@@ -212,17 +229,32 @@ func _on_line_state(state: String, target: Node3D, at: Vector3, _cause: String) 
 		"dry_fire":
 			_dry_age = 0.0
 			_dry_dir = _aim_direction(at)
+			if cable_solver != null:
+				cable_solver.trigger_launch()
+			if flight_head != null:
+				flight_head.set_mode("launch")
 		"let_go":
 			_let_go_age = 0.0
 			_gone_anchor = at
+			if cable_solver != null:
+				cable_solver.trigger_retract()
+			if flight_head != null:
+				flight_head.set_mode("retract")
 		"broke":
 			_broke_age = 0.0
 			_gone_anchor = at
+			if cable_solver != null:
+				cable_solver.trigger_broke()
 		"smash_lands":
 			_pop_age = 0.0
 			_pop_at = at
 
 
+func _on_harpoon_bit(_enemy: Node3D, _at: Vector3) -> void:
+	if cable_solver != null:
+		cable_solver.trigger_bite(1.0)
+	if barb is HarpoonPhysicsRig.HarpoonHead:
+		(barb as HarpoonPhysicsRig.HarpoonHead).set_mode("bite", true)
 func _set_rings(links: int) -> void:
 	collar_rings = mini(links, RING_CAP) if links >= 2 else 0
 
@@ -265,7 +297,15 @@ func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
 	cable_origin = ball
 	var mesh: ImmediateMesh = cable.mesh
 	mesh.clear_surfaces()
+	var cable_ink_node := cable.get_node_or_null("CableInk") as MeshInstance3D
+	var ink_mesh: ImmediateMesh = cable_ink_node.mesh as ImmediateMesh if cable_ink_node != null else null
+	if ink_mesh != null:
+		ink_mesh.clear_surfaces()
 	var live := EventKinds.line_color("latched_world")
+	var show_flight_head := false
+	var flight_tip := Vector3.ZERO
+	var flight_dir := _dry_dir
+	var flight_live := false
 	if kit.hooked:
 		_dry_age = -1.0
 		_let_go_age = -1.0
@@ -278,8 +318,22 @@ func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
 		if smash:
 			color = EventKinds.line_color("smash_committed").lightened(FlashGuard.whiten(1.0 - clampf(_smash_age / SMASH_FLASH, 0.0, 1.0)))
 		var sag: float = 0.0 if taut else minf(maxf(kit.rope - gap, 0.0) * SAG_PER_SLACK, MAX_SAG)
+		if fresh and cable_solver != null:
+			cable_solver.trigger_bite(1.0 if kit.on_body else 0.7)
+		if cable_solver != null:
+			cable_solver.step(delta, ball, kit.anchor, taut)
 		_cable_material.albedo_color = color
-		_ribbon(mesh, ball, kit.anchor, sag, cable_radius)
+		var pts := _solve_points(ball, kit.anchor, sag, taut)
+		_ribbon_points(mesh, pts, cable_radius)
+		if ink_mesh != null:
+			_ribbon_points(ink_mesh, pts, cable_radius * 1.48, 0.014)
+		if not kit.on_body and flight_head != null:
+			if fresh or not flight_head.visible:
+				flight_head.set_mode("world", fresh)
+			show_flight_head = true
+			flight_tip = kit.anchor
+			flight_dir = kit.anchor - ball
+			flight_live = true
 	elif _broke_age >= 0.0:
 		var t := _broke_age / BROKE_TIME
 		cable_radius = TAUT_RADIUS
@@ -287,38 +341,89 @@ func _draw_cable(kit, centre: Vector3, smash: bool, delta: float) -> void:
 		var mid := ball.lerp(_gone_anchor, 0.5)
 		var near := ball.lerp(mid, 1.0 - t * 0.35)
 		var far := _gone_anchor.lerp(mid, 1.0 - t * 0.35)
-		_ribbon(mesh, ball, near, t * DRY_SAG, cable_radius)
+		if cable_solver != null:
+			cable_solver.step(delta, ball, near, false)
+		var near_pts := _solve_points(ball, near, t * DRY_SAG, false)
+		_ribbon_points(mesh, near_pts, cable_radius)
 		_ribbon(mesh, _gone_anchor, far, t * DRY_SAG, cable_radius)
+		if ink_mesh != null:
+			_ribbon_points(ink_mesh, near_pts, cable_radius * 1.48, 0.014)
+			_ribbon(ink_mesh, _gone_anchor, far, t * DRY_SAG, cable_radius * 1.48)
 	elif _let_go_age >= 0.0:
 		var t := _let_go_age / LET_GO_TIME
 		cable_radius = SLACK_RADIUS
 		cable_taut = false
 		_cable_material.albedo_color = live
-		_ribbon(mesh, ball, _gone_anchor.lerp(ball, t), 0.0, cable_radius)
+		var tip := _gone_anchor.lerp(ball, t)
+		if cable_solver != null:
+			cable_solver.step(delta, ball, tip, false)
+		var pts := _solve_points(ball, tip, 0.0, false)
+		_ribbon_points(mesh, pts, cable_radius)
+		if ink_mesh != null:
+			_ribbon_points(ink_mesh, pts, cable_radius * 1.48, 0.014)
+		show_flight_head = true
+		flight_tip = tip
+		flight_dir = _gone_anchor - ball
 	elif _dry_age >= 0.0:
 		var reach := DRY_DART * clampf(_dry_age / DRY_REACH_AT, 0.0, 1.0)
 		var slack := clampf((_dry_age - DRY_REACH_AT) / (DRY_TIME - DRY_REACH_AT), 0.0, 1.0)
 		cable_radius = SLACK_RADIUS
 		cable_taut = false
 		_cable_material.albedo_color = Color(EventKinds.line_color("dry_fire"), 1.0 - slack * 0.6)
-		_ribbon(mesh, ball, ball + _dry_dir * reach, slack * DRY_SAG, cable_radius)
+		var tip := ball + _dry_dir * reach
+		if cable_solver != null:
+			cable_solver.step(delta, ball, tip, false)
+		var pts := _solve_points(ball, tip, slack * DRY_SAG, false)
+		_ribbon_points(mesh, pts, cable_radius)
+		if ink_mesh != null:
+			_ribbon_points(ink_mesh, pts, cable_radius * 1.48, 0.014)
+		show_flight_head = true
+		flight_tip = tip
+		flight_dir = _dry_dir
 	cable.visible = mesh.get_surface_count() > 0
+	if fairlead_spool != null:
+		fairlead_spool.visible = cable.visible
+		if cable.visible:
+			var angle := cable_solver.spool_angle if cable_solver != null else 0.0
+			fairlead_spool.sync(ball, toward, angle)
+	if flight_head != null:
+		flight_head.visible = show_flight_head and cable.visible
+		if flight_head.visible:
+			flight_head.aim_along(flight_tip, flight_dir)
+			flight_head.step_head(delta, flight_live, false, live)
 
 
-func _ribbon(mesh: ImmediateMesh, from: Vector3, to: Vector3, sag: float, radius: float) -> void:
-	var eye := camera.global_position
+func _solve_points(from: Vector3, to: Vector3, sag: float, taut: bool) -> Array[Vector3]:
+	if cable_solver != null:
+		return cable_solver.sample_points(from, to, sag, taut)
 	var points: Array[Vector3] = []
 	for i in SEGMENTS + 1:
 		var f := float(i) / float(SEGMENTS)
 		points.append(from.lerp(to, f) + Vector3.DOWN * sag * 4.0 * f * (1.0 - f))
+	return points
+
+
+func _ribbon(mesh: ImmediateMesh, from: Vector3, to: Vector3, sag: float, radius: float) -> void:
+	var points: Array[Vector3] = []
+	for i in SEGMENTS + 1:
+		var f := float(i) / float(SEGMENTS)
+		points.append(from.lerp(to, f) + Vector3.DOWN * sag * 4.0 * f * (1.0 - f))
+	_ribbon_points(mesh, points, radius)
+
+
+func _ribbon_points(mesh: ImmediateMesh, points: Array[Vector3], radius: float, depth_push := 0.0) -> void:
+	var eye := camera.global_position
 	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
 	for i in points.size():
 		var tangent := points[mini(i + 1, points.size() - 1)] - points[maxi(i - 1, 0)]
-		var side := tangent.cross(eye - points[i])
+		var to_eye := eye - points[i]
+		var side := tangent.cross(to_eye)
 		side = side.normalized() if side.length_squared() > 0.000001 else camera.global_basis.x
-		var half := half_width(radius, maxf(eye.distance_to(points[i]), 0.5))
-		mesh.surface_add_vertex(points[i] + side * half)
-		mesh.surface_add_vertex(points[i] - side * half)
+		var dist := maxf(to_eye.length(), 0.5)
+		var half := half_width(radius, dist)
+		var base := points[i] - (to_eye / dist) * depth_push if depth_push > 0.0 else points[i]
+		mesh.surface_add_vertex(base + side * half)
+		mesh.surface_add_vertex(base - side * half)
 	mesh.surface_end()
 
 
@@ -392,45 +497,76 @@ func _hook_mark(mesh: ImmediateMesh, top: Vector3, right: Vector3, up: Vector3, 
 	_bar(mesh, bottom - right * size * 0.6, bottom - right * size * 0.6 + up * size * 0.4, right, width)
 
 
-func _draw_latch(kit, ball: Vector3) -> void:
+func _add_ink_underlay(parent_node: MeshInstance3D, label: String, over := true) -> MeshInstance3D:
+	var underlay := MeshInstance3D.new()
+	underlay.name = label
+	underlay.mesh = ImmediateMesh.new()
+	underlay.material_override = HarpoonPhysicsRig.ink_material(over)
+	underlay.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	underlay.extra_cull_margin = 4096.0
+	parent_node.add_child(underlay)
+	return underlay
+
+
+func _draw_latch(kit, ball: Vector3, delta: float) -> void:
 	var on_body: bool = kit.hooked and kit.on_body
 	var on_world: bool = kit.hooked and not kit.on_body
 	if on_body:
-		_seat_barb(kit, ball)
+		_seat_barb(kit, ball, delta)
 	else:
 		_free_barb()
 	post_ring.visible = on_world
 	var ring: ImmediateMesh = post_ring.mesh
 	ring.clear_surfaces()
+	var ring_ink := post_ring.get_node_or_null("PostRingInk") as MeshInstance3D
+	if ring_ink != null:
+		(ring_ink.mesh as ImmediateMesh).clear_surfaces()
 	if on_world:
 		_ring_material.albedo_color = EventKinds.line_color("latched_world")
-		_circle(ring, kit.anchor, POST_RING * motion_factor("latched_world"), ball)
+		var r := POST_RING * motion_factor("latched_world")
+		_circle(ring, kit.anchor, r, ball)
+		if ring_ink != null:
+			_circle(ring_ink.mesh as ImmediateMesh, kit.anchor, r, ball, 2.2)
 
 
-func _seat_barb(kit, ball: Vector3) -> void:
+func _seat_barb(kit, ball: Vector3, delta: float) -> void:
 	if barb == null:
-		_barb_material = _material(true)
-		barb = _node("Barb", _barb_material)
-		var box := BoxMesh.new()
-		box.size = Vector3.ONE * BARB_SIZE
-		barb.mesh = box
-		barb.rotation = Vector3(PI * 0.25, 0.0, PI * 0.25)
+		var head := HarpoonPhysicsRig.make_head()
+		head.name = "Barb"
+		head.scale = Vector3.ONE * (BARB_SIZE / 0.34)
+		head.set_mode("bite", true)
+		add_child(head)
+		barb = head
 		_collar_material = _material(true)
 		collar = _node("Collar", _collar_material)
+		_add_ink_underlay(collar, "CollarInk")
 	var color := EventKinds.line_color("latched_body")
-	_barb_material.albedo_color = color
 	_collar_material.albedo_color = color
 	barb.visible = true
-	barb.global_position = kit.anchor
+	if barb is HarpoonPhysicsRig.HarpoonHead:
+		var head := barb as HarpoonPhysicsRig.HarpoonHead
+		head.aim_along(kit.anchor, kit.anchor - ball)
+		head.step_head(delta, true, false, color)
+	else:
+		barb.global_position = kit.anchor
 	var gap: float = ball.distance_to(kit.anchor)
 	collar_radius = clampf(COLLAR_MIN + gap * COLLAR_PER_METRE, COLLAR_MIN, COLLAR_MAX)
 	collar_scale = motion_factor("latched_body")
 	collar.visible = true
 	var mesh: ImmediateMesh = collar.mesh
 	mesh.clear_surfaces()
+	var collar_ink := collar.get_node_or_null("CollarInk") as MeshInstance3D
+	var ink_mesh: ImmediateMesh = collar_ink.mesh as ImmediateMesh if collar_ink != null else null
+	if ink_mesh != null:
+		ink_mesh.clear_surfaces()
 	_circle(mesh, kit.anchor, collar_radius * collar_scale, ball)
+	if ink_mesh != null:
+		_circle(ink_mesh, kit.anchor, collar_radius * collar_scale, ball, 2.2)
 	for i in collar_rings:
-		_circle(mesh, kit.anchor, collar_radius * collar_scale * (1.0 + RING_STEP * float(i + 1)), ball)
+		var rr := collar_radius * collar_scale * (1.0 + RING_STEP * float(i + 1))
+		_circle(mesh, kit.anchor, rr, ball)
+		if ink_mesh != null:
+			_circle(ink_mesh, kit.anchor, rr, ball, 2.2)
 
 
 func _free_barb() -> void:
@@ -455,13 +591,13 @@ func _draw_pop() -> void:
 	_circle(mesh, _pop_at, COLLAR_MIN * (1.0 + t * 2.0), camera.global_position)
 
 
-func _circle(mesh: ImmediateMesh, centre: Vector3, radius: float, toward: Vector3) -> void:
+func _circle(mesh: ImmediateMesh, centre: Vector3, radius: float, toward: Vector3, width_scale := 1.0) -> void:
 	var axis := (toward - centre).normalized()
 	if axis.length_squared() < 0.5:
 		axis = Vector3.UP
 	var basis := Basis.looking_at(axis, Vector3.UP if absf(axis.y) < 0.99 else Vector3.RIGHT)
 	var depth := maxf(camera.global_position.distance_to(centre), 0.5)
-	var half := MARK_PX * depth * 0.5 / focal_px()
+	var half := MARK_PX * width_scale * depth * 0.5 / focal_px()
 	mesh.surface_begin(Mesh.PRIMITIVE_TRIANGLE_STRIP)
 	for i in 33:
 		var angle := TAU * float(i) / 32.0

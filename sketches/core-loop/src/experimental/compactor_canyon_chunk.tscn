@@ -1,0 +1,503 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" uid="uid://ucvvi1c6qi38" path="res://src/presentation/world23_chunk_craft.gd" id="1_craft"]
+
+[sub_resource type="BoxShape3D" id="Shape_CanyonDeck"]
+size = Vector3(68, 1, 60)
+
+[sub_resource type="BoxShape3D" id="Shape_WallNS"]
+size = Vector3(68, 4.0, 5)
+
+[sub_resource type="BoxShape3D" id="Shape_WallEW"]
+size = Vector3(5, 4.0, 60)
+
+[sub_resource type="BoxShape3D" id="Shape_CatwalkNS"]
+size = Vector3(46, 0.8, 6.4)
+
+[sub_resource type="BoxShape3D" id="Shape_CatwalkEW"]
+size = Vector3(6.4, 0.8, 42)
+
+[sub_resource type="BoxShape3D" id="Shape_BlastShield"]
+size = Vector3(5.4, 2.8, 1.5)
+
+[sub_resource type="BoxShape3D" id="Shape_PressBridge"]
+size = Vector3(48, 1.0, 5.6)
+
+[sub_resource type="CylinderShape3D" id="Shape_BoreDerrick"]
+height = 44.0
+radius = 5.2
+
+[sub_resource type="BoxShape3D" id="Shape_PressHousing"]
+size = Vector3(3.4, 4.8, 8.2)
+
+[sub_resource type="CylinderShape3D" id="Shape_CoolantTank"]
+height = 3.3
+radius = 1.15
+
+[sub_resource type="BoxShape3D" id="Shape_CatwalkPier"]
+size = Vector3(2.06, 7.1, 2.31)
+
+[sub_resource type="BoxShape3D" id="Shape_BridgeStanchion"]
+size = Vector3(2.23, 15.8, 2.5)
+
+[sub_resource type="BoxShape3D" id="Shape_CranePortal"]
+size = Vector3(2.39, 20.4, 2.68)
+
+[sub_resource type="NavigationMesh" id="NavMesh_CompactorCanyon"]
+vertices = PackedVector3Array(-30, 0.1, -26, 30, 0.1, -26, 30, 0.1, 26, -30, 0.1, 26, -23, 7.6, -21, 23, 7.6, -21, 23, 7.6, 21, -23, 7.6, 21, -19.8, 7.6, -17.8, 19.8, 7.6, -17.8, 19.8, 7.6, 17.8, -19.8, 7.6, 17.8, -24, 16.6, 14.2, 24, 16.6, 14.2, 24, 16.6, 19.8, -24, 16.6, 19.8)
+polygons = [PackedInt32Array(0, 1, 2, 3), PackedInt32Array(4, 5, 9, 8), PackedInt32Array(5, 6, 10, 9), PackedInt32Array(11, 10, 6, 7), PackedInt32Array(7, 4, 8, 11), PackedInt32Array(12, 13, 14, 15)]
+geometry_parsed_geometry_type = 1
+agent_height = 2.0
+agent_radius = 1.0
+agent_max_climb = 0.6
+agent_max_slope = 45.0
+
+[node name="CompactorCanyonChunk" type="Node3D"]
+script = ExtResource("1_craft")
+metadata/chunk_id = "compactor_canyon_v1"
+metadata/biome = "dig_compactor_canyon"
+metadata/footprint_m = Vector2(84, 76)
+metadata/collision_layer_doc = "layer_1=world_hard_cover_grapple;mask_0=static_env"
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavMesh_CompactorCanyon")
+
+[node name="NavLink_FloorToWestCatwalk" type="NavigationLink3D" parent="NavigationRegion3D"]
+start_position = Vector3(-21, 0.5, 16)
+end_position = Vector3(-23, 7.6, 4)
+
+[node name="NavLink_FloorToEastCatwalk" type="NavigationLink3D" parent="NavigationRegion3D"]
+start_position = Vector3(21, 0.5, -12)
+end_position = Vector3(23, 7.6, -4)
+
+[node name="NavLink_CatwalkToPressBridge" type="NavigationLink3D" parent="NavigationRegion3D"]
+start_position = Vector3(-23, 7.6, 17)
+end_position = Vector3(-18, 16.6, 17)
+
+[node name="Tier0_CanyonFloor" type="Node3D" parent="."]
+
+[node name="CanyonDeck" type="StaticBody3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "basin_floor"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_CanyonFloor/CanyonDeck"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_CanyonFloor/CanyonDeck"]
+shape = SubResource("Shape_CanyonDeck")
+
+[node name="CrusherChannelLip" type="MeshInstance3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.21, 0)
+
+[node name="CanyonWallNorth" type="StaticBody3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, -30)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "rim"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_CanyonFloor/CanyonWallNorth"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_CanyonFloor/CanyonWallNorth"]
+shape = SubResource("Shape_WallNS")
+
+[node name="CanyonWallSouth" type="StaticBody3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.0, 30)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "rim"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_CanyonFloor/CanyonWallSouth"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_CanyonFloor/CanyonWallSouth"]
+shape = SubResource("Shape_WallNS")
+
+[node name="CanyonWallWest" type="StaticBody3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -34, 2.0, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "rim"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_CanyonFloor/CanyonWallWest"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_CanyonFloor/CanyonWallWest"]
+shape = SubResource("Shape_WallEW")
+
+[node name="CanyonWallEast" type="StaticBody3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 34, 2.0, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "rim"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_CanyonFloor/CanyonWallEast"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_CanyonFloor/CanyonWallEast"]
+shape = SubResource("Shape_WallEW")
+
+[node name="VentPadSW" type="MeshInstance3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0.25, 16)
+
+[node name="VentPadNE" type="MeshInstance3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0.25, -12)
+
+[node name="PressHousingWest" type="StaticBody3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5.0, 2.4, 21)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_CanyonFloor/PressHousingWest"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_CanyonFloor/PressHousingWest"]
+shape = SubResource("Shape_PressHousing")
+
+[node name="PressHousingEast" type="StaticBody3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.0, 2.4, 21)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_CanyonFloor/PressHousingEast"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_CanyonFloor/PressHousingEast"]
+shape = SubResource("Shape_PressHousing")
+
+[node name="CoolantManifold" type="StaticBody3D" parent="Tier0_CanyonFloor"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.65, -2)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "prop"
+metadata/prop_pairing = "cryo_pipe_quenches_slag"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier0_CanyonFloor/CoolantManifold"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier0_CanyonFloor/CoolantManifold"]
+shape = SubResource("Shape_CoolantTank")
+
+[node name="Tier1_QuarryCatwalks" type="Node3D" parent="."]
+
+[node name="CatwalkNorth" type="StaticBody3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.1, -21)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_QuarryCatwalks/CatwalkNorth"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkNorth"]
+shape = SubResource("Shape_CatwalkNS")
+
+[node name="CatwalkSouth" type="StaticBody3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.1, 21)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_QuarryCatwalks/CatwalkSouth"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkSouth"]
+shape = SubResource("Shape_CatwalkNS")
+
+[node name="CatwalkWest" type="StaticBody3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 7.1, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_QuarryCatwalks/CatwalkWest"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkWest"]
+shape = SubResource("Shape_CatwalkEW")
+
+[node name="CatwalkEast" type="StaticBody3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 7.1, 0)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_QuarryCatwalks/CatwalkEast"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkEast"]
+shape = SubResource("Shape_CatwalkEW")
+
+[node name="BlastShieldWest" type="StaticBody3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -25.8, 8.9, -10)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_QuarryCatwalks/BlastShieldWest"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/BlastShieldWest"]
+shape = SubResource("Shape_BlastShield")
+
+[node name="BlastShieldEast" type="StaticBody3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 25.8, 8.9, 10)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier1_QuarryCatwalks/BlastShieldEast"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/BlastShieldEast"]
+shape = SubResource("Shape_BlastShield")
+
+[node name="CatwalkPierNW" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 3.55, -21)
+
+[node name="CatwalkPierNWBody" type="StaticBody3D" parent="Tier1_QuarryCatwalks/CatwalkPierNW"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkPierNW/CatwalkPierNWBody"]
+shape = SubResource("Shape_CatwalkPier")
+
+[node name="CatwalkPierNE" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 3.55, -21)
+
+[node name="CatwalkPierNEBody" type="StaticBody3D" parent="Tier1_QuarryCatwalks/CatwalkPierNE"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkPierNE/CatwalkPierNEBody"]
+shape = SubResource("Shape_CatwalkPier")
+
+[node name="CatwalkPierSW" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 3.55, 21)
+
+[node name="CatwalkPierSWBody" type="StaticBody3D" parent="Tier1_QuarryCatwalks/CatwalkPierSW"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkPierSW/CatwalkPierSWBody"]
+shape = SubResource("Shape_CatwalkPier")
+
+[node name="CatwalkPierSE" type="MeshInstance3D" parent="Tier1_QuarryCatwalks"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 3.55, 21)
+
+[node name="CatwalkPierSEBody" type="StaticBody3D" parent="Tier1_QuarryCatwalks/CatwalkPierSE"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier1_QuarryCatwalks/CatwalkPierSE/CatwalkPierSEBody"]
+shape = SubResource("Shape_CatwalkPier")
+
+[node name="Tier2_HydraulicGantry" type="Node3D" parent="."]
+
+[node name="PressBridge" type="StaticBody3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 16.0, 17)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "deck"
+
+[node name="Mesh" type="MeshInstance3D" parent="Tier2_HydraulicGantry/PressBridge"]
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/PressBridge"]
+shape = SubResource("Shape_PressBridge")
+
+[node name="OverheadHoistRail" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20.4, 0)
+
+[node name="BridgeStanchionWest" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -24.25, 7.9, 17)
+
+[node name="BridgeStanchionWestBody" type="StaticBody3D" parent="Tier2_HydraulicGantry/BridgeStanchionWest"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/BridgeStanchionWest/BridgeStanchionWestBody"]
+shape = SubResource("Shape_BridgeStanchion")
+
+[node name="BridgeStanchionEast" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 24.25, 7.9, 17)
+
+[node name="BridgeStanchionEastBody" type="StaticBody3D" parent="Tier2_HydraulicGantry/BridgeStanchionEast"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/BridgeStanchionEast/BridgeStanchionEastBody"]
+shape = SubResource("Shape_BridgeStanchion")
+
+[node name="CranePortalWest" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21.8, 10.2, 0)
+
+[node name="CranePortalWestBody" type="StaticBody3D" parent="Tier2_HydraulicGantry/CranePortalWest"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/CranePortalWest/CranePortalWestBody"]
+shape = SubResource("Shape_CranePortal")
+
+[node name="CranePortalEast" type="MeshInstance3D" parent="Tier2_HydraulicGantry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21.8, 10.2, 0)
+
+[node name="CranePortalEastBody" type="StaticBody3D" parent="Tier2_HydraulicGantry/CranePortalEast"]
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "hard"
+
+[node name="Collider" type="CollisionShape3D" parent="Tier2_HydraulicGantry/CranePortalEast/CranePortalEastBody"]
+shape = SubResource("Shape_CranePortal")
+
+[node name="SightlineLandmark" type="Node3D" parent="."]
+
+[node name="BoreDerrickBody" type="StaticBody3D" parent="SightlineLandmark"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 22.0, -33)
+collision_layer = 1
+collision_mask = 0
+metadata/cover_kind = "landmark"
+
+[node name="DerrickMesh" type="MeshInstance3D" parent="SightlineLandmark/BoreDerrickBody"]
+
+[node name="DerrickCollider" type="CollisionShape3D" parent="SightlineLandmark/BoreDerrickBody"]
+shape = SubResource("Shape_BoreDerrick")
+
+[node name="DerrickBeacon" type="MeshInstance3D" parent="SightlineLandmark"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 45.5, -33)
+
+[node name="Sockets" type="Node3D" parent="."]
+
+[node name="CanyonFloorLoop" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 16)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "canyon_floor_loop"
+metadata/tier = 0
+metadata/clearance_m = 6.0
+metadata/route_links = PackedStringArray("vent_pad_sw", "vent_pad_ne")
+
+[node name="VentPadSW" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_jump_pad"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -21, 0.5, 16)
+metadata/socket_kind = "JUMP_PAD"
+metadata/socket_id = "vent_pad_sw"
+metadata/tier = 0
+metadata/clearance_m = 6.0
+metadata/route_links = PackedStringArray("quarry_rail_west")
+
+[node name="VentPadNE" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_jump_pad"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 21, 0.5, -12)
+metadata/socket_kind = "JUMP_PAD"
+metadata/socket_id = "vent_pad_ne"
+metadata/tier = 0
+metadata/clearance_m = 6.0
+metadata/route_links = PackedStringArray("quarry_rail_east")
+
+[node name="QuarryRailWest" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -23, 7.6, 4)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "quarry_rail_west"
+metadata/tier = 1
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("quarry_rail_north", "harpoon_press_west", "canyon_floor_loop")
+
+[node name="QuarryRailNorth" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.6, -21)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "quarry_rail_north"
+metadata/tier = 1
+metadata/clearance_m = 5.5
+metadata/vantage_point = true
+metadata/route_links = PackedStringArray("quarry_rail_east", "harpoon_press_east")
+
+[node name="QuarryRailEast" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 23, 7.6, -4)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "quarry_rail_east"
+metadata/tier = 1
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("quarry_rail_south", "harpoon_press_east", "canyon_floor_loop")
+
+[node name="QuarryRailSouth" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 7.6, 21)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "quarry_rail_south"
+metadata/tier = 1
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("quarry_rail_west", "canyon_floor_loop")
+
+[node name="HarpoonPressWest" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_harpoon_anchor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -18, 17.0, 17)
+metadata/socket_kind = "HARPOON_ANCHOR"
+metadata/socket_id = "harpoon_press_west"
+metadata/tier = 2
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("rail_press_bridge")
+
+[node name="RailPressBridge" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_traversal_rail"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 16.6, 17)
+metadata/socket_kind = "TRAVERSAL_RAIL"
+metadata/socket_id = "rail_press_bridge"
+metadata/tier = 2
+metadata/clearance_m = 5.5
+metadata/vantage_point = true
+metadata/route_links = PackedStringArray("harpoon_press_east", "quarry_rail_east", "canyon_floor_loop")
+
+[node name="HarpoonPressEast" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_harpoon_anchor"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 18, 17.0, 17)
+metadata/socket_kind = "HARPOON_ANCHOR"
+metadata/socket_id = "harpoon_press_east"
+metadata/tier = 2
+metadata/clearance_m = 5.5
+metadata/route_links = PackedStringArray("quarry_rail_east", "canyon_floor_loop")
+
+[node name="SetpieceEMCrane" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_setpiece_trigger"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 20.0, 0)
+metadata/socket_kind = "SETPIECE_TRIGGER"
+metadata/socket_id = "setpiece_em_crane"
+metadata/setpiece_kind = "em_crane"
+metadata/tier = 2
+
+[node name="SetpieceSlagFurnace" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_setpiece_trigger"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+metadata/socket_kind = "SETPIECE_TRIGGER"
+metadata/socket_id = "setpiece_slag_furnace"
+metadata/setpiece_kind = "slag_furnace"
+metadata/tier = 0
+
+[node name="SetpieceCompactorVent" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_setpiece_trigger"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 21)
+metadata/socket_kind = "SETPIECE_TRIGGER"
+metadata/socket_id = "setpiece_compactor_vent"
+metadata/setpiece_kind = "compactor_vent"
+metadata/tier = 0
+
+[node name="PropCoolantPipe" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_setpiece_trigger"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 1.65, -2)
+metadata/socket_kind = "SETPIECE_TRIGGER"
+metadata/socket_id = "prop_cryo_pipe"
+metadata/setpiece_kind = "cryo_pipe"
+metadata/tier = 0
+
+[node name="CoverSlotWest" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_cover_slot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -15, 0.0, 6)
+metadata/socket_kind = "COVER_SLOT"
+metadata/socket_id = "cover_slot_west"
+metadata/cover_slot_index = 0
+metadata/tier = 0
+
+[node name="CoverSlotEast" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_cover_slot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 15, 0.0, -6)
+metadata/socket_kind = "COVER_SLOT"
+metadata/socket_id = "cover_slot_east"
+metadata/cover_slot_index = 1
+metadata/tier = 0
+
+[node name="CoverSlotNorthWest" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_cover_slot"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -12, 0.0, -10)
+metadata/socket_kind = "COVER_SLOT"
+metadata/socket_id = "cover_slot_nw"
+metadata/cover_slot_index = 2
+metadata/tier = 0
+
+[node name="LandmarkBoreDerrick" type="Marker3D" parent="Sockets" groups=["arena_socket", "socket_sightline_landmark"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0, -33)
+metadata/socket_kind = "SIGHTLINE_LANDMARK"
+metadata/socket_id = "landmark_bore_derrick"
+metadata/landmark_height_m = 47.0
+metadata/tier = 2

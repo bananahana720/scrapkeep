@@ -4,6 +4,8 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  FAULT_SWITCHES,
+  ID_COMPARE_LEGACY,
   applyBaseline,
   baselineFrom,
   formatFinding,
@@ -18,6 +20,8 @@ import {
   lintL8,
   lintL9,
   lintL10,
+  lintL11,
+  lintL12,
   parseTuning,
 } from "./sketch-lint.mjs";
 import {
@@ -221,6 +225,205 @@ test("L10 flags a write to the ball's body, passes reads and other bodies, and h
     lintL10("x/kit.gd", "src/combat/kit.gd", "var at = 1\n", listed)[0].message,
     /remove the entry/,
   );
+});
+
+test("L11 flags raw map/pilot ID comparisons outside owning tables and holds legacy counts", () => {
+  const planted = [
+    'if map_id == "park_dam":\n\tpass\n',
+    'if "park_pit" != cur_map:\n\tpass\n',
+    'if pilot == "tarn":\n\tpass\n',
+    'if class_id in ["pylon_engineer", "tally"]:\n\tpass\n',
+  ];
+  for (const text of planted) {
+    assert.deepEqual(
+      lintL11("x/foo.gd", "src/combat/foo.gd", text, {}).map((item) => `${item.rule} ${item.line}`),
+      ["L11 1"],
+      text,
+    );
+  }
+  const allowedPasses = [
+    'if map_id == "park_dam":\n\tpass\n',
+    'var row := {"map": "park_dam", "pilot": "tarn"}\n',
+    '# if pilot == "tarn":\n',
+  ];
+  assert.deepEqual(lintL11("x/park_defs.gd", "src/core/park_defs.gd", allowedPasses[0], {}), []);
+  assert.deepEqual(lintL11("x/dev_stage.gd", "src/dev/dev_stage.gd", allowedPasses[0], {}), []);
+  assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", allowedPasses[1], {}), []);
+  assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", allowedPasses[2], {}), []);
+
+  const legacy = { "src/combat/foo.gd": { sites: 1, why: "legacy" } };
+  const one = 'if pilot == "tarn":\n\tpass\n';
+  assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", one, legacy), []);
+  assert.deepEqual(
+    lintL11("x/foo.gd", "src/combat/foo.gd", one + one, legacy).map((item) => item.line),
+    [1, 3],
+  );
+  assert.match(
+    lintL11("x/foo.gd", "src/combat/foo.gd", "var ok := true\n", legacy)[0].message,
+    /remove the entry/,
+  );
+});
+
+test("L11 flags StringName compares, match arms and ID prefix tests, and leaves table rows alone", () => {
+  const planted = [
+    ['if pilot == &"tarn":\n\tpass\n', [1]],
+    ['if map_id != &"park_dam":\n\tpass\n', [1]],
+    ['if &"tally" == pilot:\n\tpass\n', [1]],
+    ['if pilot == StringName("tarn"):\n\tpass\n', [1]],
+    ['if pilot in [&"rivet", &"tarn"]:\n\tpass\n', [1]],
+    ['if pilot == "tarn":\n\tpass\n', [1]],
+    ['match pilot_id:\n\t"tarn":\n\t\treturn 1\n\t_:\n\t\treturn 0\n', [2]],
+    ['match pilot_id:\n\t&"tarn":\n\t\treturn 1\n', [2]],
+    ['match pilot_id:\n\t"rivet", "tarn":\n\t\treturn 1\n', [2]],
+    ['match pilot_id:\n\t"tarn": return 1\n\t"tally": return 2\n', [2, 3]],
+    [
+      'func f():\n\tmatch map_id:\n\t\t"park_dam":\n\t\t\tmatch pilot:\n\t\t\t\t"tally":\n\t\t\t\t\tpass\n',
+      [3, 5],
+    ],
+    ['if map_id.begins_with("park_"):\n\tpass\n', [1]],
+    ['if pilot.begins_with(&"tarn"):\n\tpass\n', [1]],
+  ];
+  for (const [text, lines] of planted) {
+    assert.deepEqual(
+      lintL11("x/foo.gd", "src/combat/foo.gd", text, {}).map((item) => item.line),
+      lines,
+      text,
+    );
+  }
+  const passes = [
+    'const ROWS := {\n\t"tarn": {"hull": 3},\n\t"tally": 2,\n}\n',
+    'match kind:\n\t"chaser":\n\t\tvar row := {\n\t\t\t"tarn": 1,\n\t\t}\n',
+    'match kind:\n\t"chaser":\n\t\treturn "tarn"\n',
+    'match kind:\n\t"chaser":\n\t\tpass\nvar rows := {\n\t"tarn": 1,\n}\n',
+    'var pilot := &"tarn"\n',
+    'if part.begins_with("part_"):\n\tpass\n',
+    '# match pilot:\n#\t"tarn":\n',
+  ];
+  for (const text of passes) {
+    assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", text, {}), [], text);
+  }
+  const arm = 'match pilot_id:\n\t"tarn":\n\t\treturn 1\n';
+  assert.deepEqual(lintL11("x/class_def.gd", "src/core/class_def.gd", arm, {}), []);
+  const legacy = { "src/combat/foo.gd": { sites: 1, why: "legacy" } };
+  assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", arm, legacy), []);
+  assert.deepEqual(
+    lintL11("x/foo.gd", "src/combat/foo.gd", arm + 'var b := pilot == &"tarn"\n', legacy).map(
+      (item) => item.line,
+    ),
+    [2, 4],
+  );
+});
+
+test("L11's frozen allow table matches the game source, and a planted branch in a listed file fails", () => {
+  for (const [rel, row] of Object.entries(ID_COMPARE_LEGACY)) {
+    const text = readFileSync(path.join(sketchDir, rel), "utf8");
+    assert.deepEqual(lintL11(rel, rel, text), [], rel);
+    assert.equal(lintL11(rel, rel, text, {}).length, row.sites, rel);
+    for (const plant of [
+      '\nfunc _planted(p):\n\tmatch p:\n\t\t"tarn":\n\t\t\tpass\n',
+      '\nfunc _planted(p):\n\treturn p == &"tarn"\n',
+      '\nfunc _planted(p):\n\treturn p == "tarn"\n',
+    ]) {
+      assert.equal(lintL11(rel, rel, text + plant).length, row.sites + 1, `${rel} ${plant}`);
+    }
+  }
+});
+
+test("L12 flags a write to a fault switch from game code, and passes reads, the declaration and the home's reset", () => {
+  const switches = {
+    lead_plant: { home: "src/combat/pack_pressure.gd", why: "a planted lead" },
+    _test_pending: { home: "src/core/cosmetics.gd", why: "planted pending art" },
+  };
+  const fails = [
+    'PackPressure.lead_plant = "full"\n',
+    'lead_plant = "none"\n',
+    'lead_plant += "x"\n',
+    'PackPressure.set("lead_plant", "full")\n',
+    "pressure.set_deferred(&'lead_plant', \"full\")\n",
+    'Cosmetics._test_pending = ["outfit_rivet_hood"]\n',
+    'Cosmetics._test_pending.append("outfit_rivet_hood")\n',
+    "_test_pending . clear()\n",
+    'Cosmetics._test_pending[0] = "outfit_rivet_hood"\n',
+    "_test_pending [i] += 1\n",
+    'Cosmetics._test_pending[ids[0]] = "x"\n',
+    '_test_pending[0].push_back("outfit_rivet_hood")\n',
+    'lead_plant["mode"] = "full"\n',
+  ];
+  for (const text of fails) {
+    assert.deepEqual(
+      lintL12("x/world.gd", "src/world/world.gd", `func _go():\n\t${text}`, switches).map(
+        (item) => `${item.rule} ${item.line}`,
+      ),
+      ["L12 2"],
+      text,
+    );
+  }
+  const passes = [
+    'if PackPressure.lead_plant == "full":\n',
+    'if lead_plant != "none" and lead_plant <= "z":\n',
+    "var held := Cosmetics._test_pending.has(id)\n",
+    "for id in PENDING_ART + _test_pending:\n",
+    'if Cosmetics._test_pending[0] == "outfit_rivet_hood":\n',
+    "var first = _test_pending[0]\n",
+    'if lead_plant["mode"] != "none" and _test_pending[i] <= "z":\n',
+    'var row := {"lead_plant": "full"}\n',
+    'var unlead_plant = "full"\n',
+    '# PackPressure.lead_plant = "full"\n',
+  ];
+  for (const text of passes) {
+    assert.deepEqual(
+      lintL12("x/world.gd", "src/world/world.gd", `func _go():\n\t${text}`, switches),
+      [],
+      text,
+    );
+  }
+  const home =
+    'static var lead_plant := ""\n\n\nstatic func reset_for_tests() -> void:\n\tlead_plant = ""\n\n\nstatic func lead() -> String:\n\treturn lead_plant\n';
+  assert.deepEqual(
+    lintL12("x/pack_pressure.gd", "src/combat/pack_pressure.gd", home, switches),
+    [],
+  );
+  const armed = `${home}\n\nstatic func arm() -> void:\n\tlead_plant = "full"\n`;
+  assert.deepEqual(
+    lintL12("x/pack_pressure.gd", "src/combat/pack_pressure.gd", armed, switches).map(
+      (item) => item.line,
+    ),
+    [13],
+  );
+  const borrowed = 'func reset_for_tests() -> void:\n\tPackPressure.lead_plant = ""\n';
+  assert.equal(lintL12("x/world.gd", "src/world/world.gd", borrowed, switches).length, 1);
+  assert.match(
+    lintL12("x/pack_pressure.gd", "src/combat/pack_pressure.gd", "var other := 1\n", switches)[0]
+      .message,
+    /no longer declares: remove the entry/,
+  );
+});
+
+test("L12's switch table matches the game source, and a planted write from src/ fails", () => {
+  const homes = new Set(Object.values(FAULT_SWITCHES).map((row) => row.home));
+  for (const rel of homes) {
+    const text = readFileSync(path.join(sketchDir, rel), "utf8");
+    assert.deepEqual(lintL12(rel, rel, text), [], rel);
+  }
+  const other = "src/world/world.gd";
+  const world = readFileSync(path.join(sketchDir, other), "utf8");
+  assert.deepEqual(lintL12(other, other, world), []);
+  for (const [name, row] of Object.entries(FAULT_SWITCHES)) {
+    const home = readFileSync(path.join(sketchDir, row.home), "utf8");
+    assert.match(home, new RegExp(`^(?:static\\s+)?var\\s+${name}\\b`, "m"), name);
+    const plant = `\nfunc _planted(holder) -> void:\n\tholder.${name} = null\n`;
+    assert.equal(lintL12(row.home, row.home, home + plant).length, 1, `${row.home} ${name}`);
+    assert.equal(lintL12(other, other, world + plant).length, 1, `${other} ${name}`);
+    assert.match(lintL12(other, other, world + plant)[0].message, new RegExp(name));
+    for (const write of [
+      `holder.${name}[0] = null`,
+      `holder.${name}.append(null)`,
+      `holder.${name}.push_back(null)`,
+    ]) {
+      const indexed = `\nfunc _planted(holder) -> void:\n\t${write}\n`;
+      assert.equal(lintL12(other, other, world + indexed).length, 1, `${other} ${write}`);
+    }
+  }
 });
 
 test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {

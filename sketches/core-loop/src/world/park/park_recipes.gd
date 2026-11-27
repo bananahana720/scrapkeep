@@ -123,6 +123,10 @@ const WEDGES := {"kicker": 1.0, "drop": -1.0}
 
 const ANCHOR_PITCH_M := 20.0
 const ANCHOR_POST_M := 8.0
+const ANCHOR_NEAR_END_M := 190.0
+const ANCHOR_LOD_MARGIN_M := 16.0
+const ANCHOR_CELL_M := 64.0
+const ANCHOR_BATCH_RADIUS_M := 96.0
 const SURFACE_LAYER_M := 0.015
 const SURFACE_MARGIN_M := 2.0
 const ANCHOR_SINK_M := 1.0
@@ -1377,34 +1381,153 @@ static func place_anchor_field(row: Dictionary, parent: Node3D, ground := Callab
 			continue
 		_add_shape(body, box, Transform3D(Basis.IDENTITY, inv * Vector3(p.x, base - ANCHOR_SINK_M + tall * 0.5, p.y)))
 	var xfs := anchor_draws(row, posts, ground, node.transform, kit)
-	var multi := MultiMesh.new()
-	multi.transform_format = MultiMesh.TRANSFORM_3D
-	var view := MultiMeshInstance3D.new()
-	view.name = "Posts"
+	var post_mesh: Mesh = null
+	var post_material: Material = null
 	if kit:
 		var post := _anchor_mesh(anchor_paths(recipe)[anchor_variant(row)])
-		multi.mesh = post[0]
-		if post[1] != null:
-			view.material_override = post[1]
+		post_mesh = post[0]
+		post_material = post[1]
 	else:
 		var mesh := BoxMesh.new()
 		mesh.size = extent
-		multi.mesh = mesh
+		post_mesh = mesh
 		var material := StandardMaterial3D.new()
 		material.albedo_color = GREYBOX_TINT
-		view.material_override = material
-	multi.instance_count = xfs.size()
-	for k in xfs.size():
-		multi.set_instance_transform(k, xfs[k])
-	view.multimesh = multi
-	view.set_meta(RecipeProps.META_FADE, true)
-	node.add_child(view)
+		post_material = material
+	var dense_field := kit and xfs.size() > 24
+	var cells := anchor_post_cells(xfs) if dense_field else {Vector2i.ZERO: xfs}
+	for cell: Vector2i in cells:
+		var suffix := "" if cell == cells.keys()[0] else "_%d_%d" % [cell.x, cell.y]
+		var near_view := _post_view("Posts" + suffix, post_mesh, post_material, cells[cell])
+		near_view.visibility_range_end = ANCHOR_NEAR_END_M if dense_field else 260.0
+		near_view.visibility_range_end_margin = ANCHOR_LOD_MARGIN_M if dense_field else 20.0
+		node.add_child(near_view)
+		if dense_field:
+			var lod_view := _post_view("PostsLod" + suffix, _anchor_lod_mesh(post_mesh), post_material, cells[cell])
+			lod_view.visibility_range_begin = ANCHOR_NEAR_END_M
+			lod_view.visibility_range_begin_margin = ANCHOR_LOD_MARGIN_M
+			lod_view.visibility_range_end = 0.0
+			lod_view.visibility_range_end_margin = 0.0
+			node.add_child(lod_view)
 	if body.get_shape_owners().is_empty():
 		body.collision_layer = 0
 	node.set_meta("anchor_posts", posts.size())
 	node.set_meta("anchor_kit", kit)
 	tag_cover(node, row)
 	return node
+
+
+static var _anchor_lod_cache: Dictionary = {}
+
+
+static func anchor_post_cells(xfs: Array) -> Dictionary:
+	var cells := {}
+	if xfs.is_empty():
+		return cells
+	var low := Vector2(INF, INF)
+	var high := Vector2(-INF, -INF)
+	for xf: Transform3D in xfs:
+		low = Vector2(minf(low.x, xf.origin.x), minf(low.y, xf.origin.z))
+		high = Vector2(maxf(high.x, xf.origin.x), maxf(high.y, xf.origin.z))
+	if (high - low).length() * 0.5 <= ANCHOR_BATCH_RADIUS_M:
+		cells[Vector2i.ZERO] = xfs
+		return cells
+	for xf: Transform3D in xfs:
+		var key := Vector2i(floori(xf.origin.x / ANCHOR_CELL_M), floori(xf.origin.z / ANCHOR_CELL_M))
+		if not cells.has(key):
+			cells[key] = []
+		cells[key].append(xf)
+	return cells
+
+
+static func _post_view(view_name: String, mesh: Mesh, material: Material, xfs: Array) -> MultiMeshInstance3D:
+	var multi := MultiMesh.new()
+	multi.transform_format = MultiMesh.TRANSFORM_3D
+	multi.mesh = mesh
+	multi.instance_count = xfs.size()
+	for k in xfs.size():
+		multi.set_instance_transform(k, xfs[k])
+	var view := MultiMeshInstance3D.new()
+	view.name = view_name
+	view.multimesh = multi
+	if material != null:
+		view.material_override = material
+	view.visibility_range_begin = 0.0
+	view.visibility_range_begin_margin = 0.0
+	view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	view.set_meta(RecipeProps.META_FADE, true)
+	return view
+
+
+static func _reset() -> void:
+	_anchor_lod_cache.clear()
+
+
+static func _anchor_lod_mesh(source: Mesh) -> ArrayMesh:
+	var key := source.get_instance_id() if source != null else 0
+	if _anchor_lod_cache.has(key):
+		return _anchor_lod_cache[key] as ArrayMesh
+	var box := source.get_aabb() if source != null else AABB(Vector3(-0.6, 0.0, -0.6), Vector3(1.2, 10.0, 1.2))
+	var r := maxf(0.35, minf(box.size.x, box.size.z) * 0.45)
+	var y0 := box.position.y
+	var y1 := box.end.y
+	var cx := box.position.x + box.size.x * 0.5
+	var cz := box.position.z + box.size.z * 0.5
+	var axis := Vector3(cx, y0, cz)
+	var tint := anchor_source_color(source)
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var sides := 4
+	var bot: Array[Vector3] = []
+	var top: Array[Vector3] = []
+	for i in sides:
+		var ang := TAU * float(i) / float(sides) + PI * 0.25
+		bot.append(Vector3(cx + cos(ang) * r, y0, cz + sin(ang) * r))
+		top.append(Vector3(cx + cos(ang) * r * 0.78, y1, cz + sin(ang) * r * 0.78))
+	for i in sides:
+		var ni := (i + 1) % sides
+		var n := (bot[ni] - bot[i]).cross(top[i] - bot[i]).normalized()
+		if n.dot((bot[i] + bot[ni]) * 0.5 - axis) < 0.0:
+			n = -n
+		var u0 := float(i) / float(sides)
+		var u1 := float(i + 1) / float(sides)
+		_lod_tri(st, n, tint, [bot[i], bot[ni], top[ni]], [Vector2(u0, 1.0), Vector2(u1, 1.0), Vector2(u1, 0.0)])
+		_lod_tri(st, n, tint, [bot[i], top[ni], top[i]], [Vector2(u0, 1.0), Vector2(u1, 0.0), Vector2(u0, 0.0)])
+	for cap in [[top, Vector3.UP], [bot, Vector3.DOWN]]:
+		var ring: Array[Vector3] = cap[0]
+		var uv := ring.map(func(p: Vector3) -> Vector2: return Vector2((p.x - cx) / (2.0 * r) + 0.5, (p.z - cz) / (2.0 * r) + 0.5))
+		_lod_tri(st, cap[1], tint, [ring[0], ring[1], ring[2]], [uv[0], uv[1], uv[2]])
+		_lod_tri(st, cap[1], tint, [ring[0], ring[2], ring[3]], [uv[0], uv[2], uv[3]])
+	var mesh := st.commit()
+	if source != null and source.get_surface_count() > 0 and source.surface_get_material(0) != null:
+		mesh.surface_set_material(0, source.surface_get_material(0))
+	_anchor_lod_cache[key] = mesh
+	return mesh
+
+
+static func _lod_tri(st: SurfaceTool, normal: Vector3, tint: Color, points: Array, uvs: Array) -> void:
+	var order := [0, 1, 2]
+	if (points[1] - points[0]).cross(points[2] - points[0]).dot(normal) > 0.0:
+		order = [0, 2, 1]
+	for k: int in order:
+		st.set_normal(normal)
+		st.set_color(tint)
+		st.set_uv(uvs[k])
+		st.add_vertex(points[k])
+
+
+static func anchor_source_color(source: Mesh) -> Color:
+	if source == null or source.get_surface_count() == 0:
+		return GREYBOX_TINT
+	var colors = source.surface_get_arrays(0)[Mesh.ARRAY_COLOR]
+	if colors is PackedColorArray and not colors.is_empty():
+		var sum := Color(0.0, 0.0, 0.0, 0.0)
+		for c: Color in colors:
+			sum += c
+		return sum / float(colors.size())
+	var material := source.surface_get_material(0) as BaseMaterial3D
+	return material.albedo_color if material != null else GREYBOX_TINT
 
 
 static func anchor_variant(row: Dictionary) -> int:

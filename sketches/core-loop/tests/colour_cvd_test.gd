@@ -5,25 +5,12 @@ const Meanings := preload("res://src/core/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
+const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
+const CallerTile := preload("res://src/ui/caller_tile.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
-
-# Colour never works alone (UI principle P2, design-v3/ui-audit/principles.json; WCAG 1.4.1).
-# Every colour that carries a meaning (colour_meanings.gd: MEANINGS and REWARD_RUNGS) is compared
-# with every other under full protanopia, deuteranopia and tritanopia (Machado, Oliveira and
-# Fernandes 2009, severity 1.0, in linear RGB) and with normal sight. A pair whose CIE76
-# difference falls under FLOOR for any eye reads as one colour to that eye, so the two facts
-# need a second carrier (a shape, an icon, a pattern, a place). Such a pair must have a CLOSE
-# row naming that carrier, or the open finding that asks for one.
-#   - a close pair with no row fails: a new colour, or a moved one, cannot land silently;
-#   - one colour named for two facts needs a SHARED row the same way;
-#   - a row whose pair is no longer close fails, so a fixed pair deletes its row;
-#   - planted: a made-up palette with each of those faults is failed by the same judge.
-#
-# FLOOR is ours, not a standard (inferred): 20 is about where two flat swatches a few pixels
-# wide stop being told apart at a glance. palette.gd's 9 Oct cobalt measure used 31 for a rung
-# that must read alone; 20 is the floor for "needs a second carrier".
 
 const FLOOR := 20.0
 const SIGHTS := {
@@ -32,19 +19,14 @@ const SIGHTS := {
 	"deutan": [Vector3(0.367322, 0.860646, -0.227968), Vector3(0.280085, 0.672501, 0.047413), Vector3(-0.011820, 0.042940, 0.968881)],
 	"tritan": [Vector3(1.255528, -0.076749, -0.178779), Vector3(-0.078411, 0.930809, 0.147602), Vector3(0.004733, 0.691367, 0.303900)],
 }
-# Pairs under FLOOR today (measured 13 Nov 2026 on stage/alpha-w40), keyed "A|B" in palette
-# name order. `carrier` is what tells the two facts apart without colour; a row with no carrier
-# yet names its finding in project-guide/handoff/UI-FINDINGS.tsv.
 const CLOSE := {
-	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd:37 RARITY, drawn at :160 to :165) and its gate topper is a prism where a boss fact never is (reward_gates.gd:428); Brindle's ground warnings carry brass rim ticks (boss.gd _new_hazard colours them brass, hazard.gd:298 sets the owner, threat_grammar.gd:459 draws it); the Mind's and the Waking's warnings (mind_attacks.gd build) are plain danger with no boss mark; all checked below. An event toast in either colour (event_kinds.gd, a star for both stage_cleared and boss_defeated) relies on its words", "finding": ""},
-	"AMBER|HAZARD": {"carrier": "a relic reward is a doubled bolt-headed frame or a prism topper (as above), the cost strike on a shop tile is one diagonal line (shop_tile.gd:130), and the pilot's danger mark is a diamond with a bang (danger_mark.gd:102); relic is never drawn as a ground fill; on the ground the player's own ring (projectile.gd:134, silo_battery.gd) has a dashed edge every OWN_DASH metres in every look where a hostile ring's edge is solid and a bone ring's dashes are over twice as sparse (threat_grammar.gd _own_edge_tris, checked below and in telegraph_own_dash_test)", "finding": ""},
-	"BRASS|HAZARD": {"carrier": "Brindle's ground warning is a danger-toned warning plus brass rim ticks, and the ticks draw in every look (threat_grammar.gd:459, checked below); the Mind's and the Waking's warnings carry no boss mark, so on the ground they read as danger only; a boss's body and badge are brass solids (boss.gd:1185, :1287), where danger is a ground fill", "finding": "UF-03: boss_attack_telegraphed and attack_cued (brass) draw the wave glyph, as do event_announced and event_started (danger red) in event_kinds.gd; their sounds differ, but no shape does"},
+	"AMBER|BRASS": {"carrier": "a relic reward's frame is doubled with bolt heads (shop_tile.gd RARITY) and its gate topper is a prism where a boss fact never is (reward_gates.gd); Brindle's ground warnings carry brass rim ticks (hazard.gd, threat_grammar.gd); Brindle's caller plate uses fleet hand frame and fac_fleet icon in brass (caller_tile.gd); all checked below. An event toast in either colour relies on its words", "finding": ""},
+	"AMBER|HAZARD": {"carrier": "a relic reward is a doubled bolt-headed frame or a prism topper, the cost strike on a shop tile is one diagonal line, and the pilot's danger mark is a diamond with a bang; relic is never drawn as a ground fill; on the ground the player's own ring has a dashed edge every OWN_DASH metres in every look where a hostile ring's edge is solid, and in the default tape look a hostile fill carries faint stripes of its own red where the player's own fill carries none (threat_grammar.gd, checked below)", "finding": ""},
+	"BRASS|HAZARD": {"carrier": "Brindle's ground warning is a danger-toned warning plus brass rim ticks in every look (threat_grammar.gd, checked below); Brindle's caller plate is brass on a fleet hand frame with fac_fleet icon and no caller uses HAZARD (caller_tile.gd, checked below); boss_attack_telegraphed and attack_cued use chevron where danger events event_announced and event_started use wave (event_kinds.gd, checked below); a boss's body and badge are brass solids where danger is a ground fill, and in the default tape look that fill carries faint stripes of its own red (threat_grammar.gd, checked below)", "finding": ""},
 	"ANCIENT|ARC": {"carrier": "ancient seams carry a pattern cue (material_slots.gd, the pattern field)", "finding": ""},
 }
-
-# One palette colour named for two facts: the same question with a difference of zero.
 const SHARED := {
-	"ARC": {"carrier": "the common reward is a flat slab gate topper (reward_gates.gd:432, checked below), and on a screen its frame is the one single-line frame on a tile and steel, not mint (shop_tile.gd RARITY, checked below); live is drawn on an enemy part, the rogue's weak point and the miniboss's core (rogue.gd:670, miniboss.gd:500), or a key, never in a frame or on a gate", "finding": ""},
+	"ARC": {"carrier": "the common reward is a flat slab gate topper (reward_gates.gd, checked below), and on a screen its frame is the one single-line frame on a tile and steel, not mint (shop_tile.gd RARITY, checked below); live is drawn on an enemy part, the rogue's weak point and the miniboss's core, or a key, never in a frame or on a gate", "finding": ""},
 }
 
 var _t := T.new("colour_cvd_test")
@@ -61,16 +43,12 @@ func _initialize() -> void:
 		colours[facts[fact]] = true
 	_t.check("the meanings name seven or more colours", colours.size() >= 7, str(colours.size()))
 	_t.eq("every close pair and shared colour has a row, and every row is still needed", faults(facts, palette, CLOSE, SHARED), [])
-	# Planted, through the same judge: a close pair with no row, a shared colour with no row, a
-	# row whose pair is far apart, and a row with neither a carrier nor a finding.
 	var fake := {"A": Color("9dff3c"), "B": Color("a5f548"), "C": Color("0000ff")}
 	var planted := faults({"one": "A", "two": "B", "three": "A", "four": "C"}, fake, {"A|C": {"carrier": "", "finding": ""}}, {})
 	_t.eq("planted: the judge names four faults", planted.size(), 4)
 	for want in ["A|B is close", "A carries one and three", "the CLOSE row A|C no longer", "the row A|C names neither"]:
 		_t.check("planted: one fault reads \"%s\"" % want, planted.any(func(line: String) -> bool: return line.begins_with(want)))
 	_t.check("planted: red and blue are not close", closest(Color("ff0000"), Color("0000ff"))["de"] >= FLOOR)
-	# The carriers the rows above name, held here: every reward rung's frame differs from every
-	# other by shape, the common rung is the only single line, and the relic rung has bolt heads.
 	_t.eq("every reward rung has a frame", frame_faults(Meanings.REWARD_RUNGS.keys(), ShopTile.RARITY), [])
 	_t.check("the common reward is the one single-line frame", _single_lines(ShopTile.RARITY) == ["common"], str(_single_lines(ShopTile.RARITY)))
 	var common_de: float = closest(ShopTile.RARITY["common"]["color"], Palette.ARC)["de"]
@@ -86,21 +64,40 @@ func _initialize() -> void:
 	_t.check("Sable's screen accent is told from every meaning colour by every eye", sable_worst >= FLOOR,
 		"%.1f vs %s" % [sable_worst, sable_nearest])
 	_t.eq("the relic reward's frame carries bolt heads", ShopTile.RARITY["relic"]["notches"], "bolt")
-	# The boss's rim ticks: a brass-owned hazard carries an owner mark and a danger-owned one does not.
 	var boss_hazard := _hazard(Palette.BRASS)
 	var plain_hazard := _hazard(Palette.HAZARD)
 	_t.check("a brass-owned hazard draws brass rim ticks on a danger-toned warning", _owner_mark(boss_hazard.descriptor()).get("tone") == Color(Palette.BRASS, 1.0) and boss_hazard.descriptor()["tone"] == Palette.HAZARD)
 	_t.check("a plain danger hazard draws no rim ticks", _owner_mark(plain_hazard.descriptor()).is_empty())
 	boss_hazard.free()
 	plain_hazard.free()
-	# The player's own ring's dashed edge: it covers well under what a hostile ring's solid edge does.
+	var brindle_caller: Dictionary = CallerTile.CALLERS.get("brindle", {})
+	_t.check("Brindle's caller plate is brass on a fleet frame with fac_fleet icon",
+		brindle_caller.get("color") == Palette.BRASS and String(brindle_caller.get("hands", "")) == "fleet" and String(brindle_caller.get("icon", "")) == "fac_fleet",
+		str(brindle_caller))
+	var hazard_callers := CallerTile.CALLERS.keys().filter(func(id): return CallerTile.CALLERS[id].get("color") == Palette.HAZARD)
+	_t.eq("no caller tile uses danger HAZARD colour", hazard_callers, [])
+	_t.check("boss cue rows differ in shape from hazard event rows",
+		String(EventKinds.ROWS["boss_attack_telegraphed"]["shape"]) != String(EventKinds.ROWS["event_announced"]["shape"])
+		and String(EventKinds.ROWS["attack_cued"]["shape"]) != String(EventKinds.ROWS["event_started"]["shape"]),
+		"boss=%s/%s event=%s/%s" % [EventKinds.ROWS["boss_attack_telegraphed"]["shape"], EventKinds.ROWS["attack_cued"]["shape"],
+			EventKinds.ROWS["event_announced"]["shape"], EventKinds.ROWS["event_started"]["shape"]])
 	var ring := {"type": Threat.Type.INSTANT, "centre": Vector3.ZERO, "reach": 3.5, "progress": 0.0, "live": false,
 		"form": "radial", "r_in": 0.0, "r_out": 6.0, "a0": 0.0, "a1": TAU}
 	var own_area := _edge_area(ring.merged({"tone": Palette.AMBER}))
 	var hostile_area := _edge_area(ring.merged({"tone": Palette.HAZARD}))
 	_t.check("the player's own ring edge is dashed where a hostile ring's is solid (%.2f against %.2f m2)" % [own_area, hostile_area],
 		hostile_area > 0.0 and own_area > 0.0 and own_area < hostile_area * 0.8)
-	# The gate topper: a flat slab for common, a prism for rare and relic.
+	Threat.reset_for_tests()
+	var world := Node3D.new()
+	root.add_child(world)
+	var hostile_stripes := _striped_layers(world, Palette.HAZARD)
+	_t.check("the default look is tape, and a hostile fill carries stripes there", Threat.look() == "tape" and "stripe" in hostile_stripes and "stripe_motion" in hostile_stripes,
+		"look %s, striped layers %s" % [Threat.look(), hostile_stripes])
+	_t.eq("the player's own amber fill carries no stripes in the default look", _striped_layers(world, Palette.AMBER), [])
+	Threat.set_look("clear")
+	_t.eq("planted: the clear look, the default before 27 Nov, stripes no hostile fill", _striped_layers(world, Palette.HAZARD), [])
+	Threat.reset_for_tests()
+	world.free()
 	var shapes := {}
 	for rung in ["common", "rare", "relic"]:
 		var topper: MeshInstance3D = RewardGates._topper(rung, null)
@@ -111,6 +108,26 @@ func _initialize() -> void:
 		"b": {"color": Color.BLUE, "width": 2.0, "double": false, "notches": "", "dashed": false}}
 	_t.eq("planted: two frames that differ only by colour are named", frame_faults(["a", "b", "c"], twins), ["a and b differ by colour alone", "c has no frame"])
 	quit(_t.verdict())
+
+
+class Flat:
+	func height(_x: float, _z: float) -> float:
+		return 0.0
+
+
+func _striped_layers(world: Node3D, tone: Color) -> Array:
+	var ring: Node3D = Telegraph.ring(world, Flat.new(), Threat.Type.INSTANT, Vector3.ZERO, 3.0, 3.5, tone)
+	var out := []
+	for layer in ring.painter()._layers:
+		var view: MeshInstance3D = ring.painter()._layers[layer]
+		if view.mesh == null or view.mesh.get_surface_count() == 0:
+			continue
+		var mat = view.material_override
+		if (mat is ShaderMaterial and mat.shader.code.contains("#define STRIPES")) or (mat is StandardMaterial3D and mat.albedo_texture != null):
+			out.append(layer)
+	ring.free()
+	out.sort()
+	return out
 
 
 func _hazard(colour: Color) -> Node3D:
@@ -128,8 +145,6 @@ func _owner_mark(d: Dictionary) -> Dictionary:
 	return {}
 
 
-# facts is fact -> palette name. Every pair of names under FLOOR needs a close row, every name
-# carrying two facts needs a shared row, and every row must still be needed and say what to do.
 static func faults(facts: Dictionary, palette: Dictionary, close_rows: Dictionary, shared_rows: Dictionary) -> Array:
 	var out := []
 	var uses := {}
@@ -162,7 +177,6 @@ static func faults(facts: Dictionary, palette: Dictionary, close_rows: Dictionar
 	return out
 
 
-# Reward frames (shop_tile.gd RARITY rows): each rung needs one, and no two may differ by colour alone.
 static func frame_faults(rungs: Array, frames: Dictionary) -> Array:
 	var out := []
 	var have := []
@@ -191,7 +205,6 @@ static func _single_lines(frames: Dictionary) -> Array:
 	return out
 
 
-# The eye that separates two colours least, and by how much.
 static func closest(a: Color, b: Color) -> Dictionary:
 	var out := {"sight": "", "de": INF}
 	for sight in SIGHTS:
@@ -207,7 +220,6 @@ static func _see(c: Color, m: Array) -> Vector3:
 	return Vector3(clampf(m[0].dot(v), 0.0, 1.0), clampf(m[1].dot(v), 0.0, 1.0), clampf(m[2].dot(v), 0.0, 1.0))
 
 
-# Linear RGB to CIE L*a*b* (D65).
 static func _lab(v: Vector3) -> Vector3:
 	var x := _f((0.4124 * v.x + 0.3576 * v.y + 0.1805 * v.z) / 0.95047)
 	var y := _f(0.2126 * v.x + 0.7152 * v.y + 0.0722 * v.z)
@@ -219,7 +231,6 @@ static func _f(t: float) -> float:
 	return pow(t, 1.0 / 3.0) if t > 0.008856 else 7.787 * t + 16.0 / 116.0
 
 
-# The ground area, m2, of a descriptor's edge mark.
 func _edge_area(d: Dictionary) -> float:
 	var area := 0.0
 	for m in Threat.marks(d, false):

@@ -3,6 +3,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const MODEL := "res://assets/models/world_one/radio_cache.glb"
 const REQUIRED := ["RadioMast", "RadioLamp", "RadioPulse"]
@@ -103,30 +104,20 @@ func _build_plain() -> void:
 static var _parts := {}
 
 static func _make_parts() -> Dictionary:
-	var pole := CylinderMesh.new()
-	pole.top_radius = 0.06
-	pole.bottom_radius = 0.1
-	pole.height = 2.4
-	var bowl := SphereMesh.new()
-	bowl.radius = 0.55
-	bowl.height = 0.35
-	bowl.is_hemisphere = true
-	var bulb := SphereMesh.new()
-	bulb.radius = 0.12
-	bulb.height = 0.24
-	var torus := TorusMesh.new()
-	torus.inner_radius = 0.9
-	torus.outer_radius = 1.0
-	return {"pole": pole, "bowl": bowl, "bulb": bulb, "torus": torus, "copper": _metal(Palette.COPPER),
-		"brass": _metal(Palette.BRASS), "lamp": _glow(Palette.ARC), "ring": _glow(Color(Palette.ARC, 0.5))}
+	return {
+		"pole": PropMeshes.radio_mast(),
+		"bowl": PropMeshes.radio_dish(),
+		"bulb": PropMeshes.radio_lamp_housing(),
+		"torus": PropMeshes.radio_pulse_ring(),
+		"copper": _metal(Palette.COPPER),
+		"brass": _metal(Palette.BRASS),
+		"lamp": _glow(Palette.ARC),
+		"ring": _glow(Color(Palette.ARC, 0.5)),
+	}
 
 
 static func _metal(color: Color) -> StandardMaterial3D:
-	var m := StandardMaterial3D.new()
-	m.albedo_color = color
-	m.metallic = 0.7
-	m.roughness = 0.45
-	return m
+	return PropMeshes.weathered_material(color, 0.48, 0.65, 0.0, "radio_metal")
 
 
 static func _glow(color: Color) -> StandardMaterial3D:

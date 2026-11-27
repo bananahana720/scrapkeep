@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"cryo_slurry_manifold"
+display_name = "Cryo-Slurry Manifold"
+maker = &"spillway_works"
+slot = 2
+rarity = &"fleet_grade"
+trigger = &"on_prop_rupture"
+emits_tags = Array[StringName]([&"coolant_brittle"])
+consumes_tags = Array[StringName]([&"burning", &"slag_coated"])
+heat_cost = -18.0
+effect_id = &"slurry_quench_manifold"
+params = {
+"cool_scale_below_redline": 0.75,
+"quench_damage": 22.0,
+"slurry_radius_m": 7.0,
+"ttl_s": 5.0
+}
+summary = "Prop ruptures vent rig heat and coat the lane in freezing slurry that makes slag brittle."
+trade_off = "Passive airflow cooling drops below redline, rewarding steady prop ruptures."
+visual_tell = "White-blue shard crust fanning outward from ruptured tanks and drums."
+audio_tell = "Manifold dump hiss into brittle ice crack."

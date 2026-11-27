@@ -2,6 +2,7 @@ extends "res://src/combat/counter.gd"
 
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 const HP := 45.0
 const BURST_RADIUS := 2.6
@@ -73,16 +74,15 @@ func _build_marker() -> void:
 			add_child(_marker)
 			_marker_lip = _marker.find_blend_shape_by_name("MarkerWorkingLip")
 			return
-	var disc := CylinderMesh.new()
-	disc.top_radius = MARKER_RADIUS
-	disc.bottom_radius = MARKER_RADIUS
-	disc.height = 0.05
-	disc.radial_segments = 24
-	disc.rings = 1
 	_marker = MeshInstance3D.new()
 	_marker.name = "BurrowMarker"
-	_marker.mesh = disc
-	_marker.material_override = Palette.solid(Palette.CHARCOAL)
+	_marker.mesh = EnemyBossCraft.burrow_marker_mesh(MARKER_RADIUS, 0.05)
+	var marker_mat := StandardMaterial3D.new()
+	marker_mat.albedo_color = Palette.CHARCOAL
+	marker_mat.roughness = 0.72
+	marker_mat.metallic = 0.24
+	Palette.surface_grain(marker_mat)
+	_marker.material_override = marker_mat
 	_marker.position.y = -half_height
 	_marker.top_level = false
 	add_child(_marker)
@@ -99,6 +99,7 @@ func _build_tool() -> void:
 			_base_color = Color.WHITE
 			_material.albedo_color = _base_color
 			_material.vertex_color_use_as_albedo = true
+			Palette.surface_grain(_material)
 			_crew.set_surface_override_material(part.flash, _material)
 			_visual_parent().add_child(_crew)
 			return

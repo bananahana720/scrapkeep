@@ -21,10 +21,7 @@ func _initialize() -> void:
 	var jobs := []
 	for i in 2:
 		var folder := base.path_join(str(i))
-		var env := {}
-		for kind in ["DATA", "CONFIG", "CACHE"]:
-			env["XDG_%s_HOME" % kind] = folder.path_join(kind.to_lower())
-		jobs.append({"script": "res://tools/bot_run.gd", "env": env, "args": [
+		jobs.append({"script": "res://tools/bot_run.gd", "home": folder, "args": [
 			"--out=" + folder, "--policy=brawler", "--seeds=3", "--table=slice",
 			"--trace-ticks=1", "--ticks=%d" % TICKS, "--allocation-noise=%d" % i]})
 	var results := ChildRuns.run_shared(jobs, BUDGET_S)

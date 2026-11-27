@@ -7,6 +7,7 @@ const ParkGraph := preload("res://src/world/park/park_graph.gd")
 const LockRows := preload("res://src/world/lock_rows.gd")
 const BreatherRows := preload("res://src/world/breather_rows.gd")
 const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
+const ThreadGuard := preload("res://src/core/thread_guard.gd")
 
 const LANE_REACH_M := 8.0
 const LANE_LINEAR_ASPECT := 2.0
@@ -234,6 +235,8 @@ func _scrap_trail() -> Dictionary:
 
 
 func line_within(at: Vector2, reach_m: float) -> bool:
+	if not ThreadGuard.main_only("park_map line_within"):
+		return false
 	if _ride_lines == null:
 		_ride_lines = _read_ride_lines()
 	for points: PackedVector2Array in _ride_lines:

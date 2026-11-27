@@ -3,6 +3,9 @@ extends Node3D
 const Density := preload("res://src/presentation/density.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const Palette := preload("res://src/core/palette.gd")
+const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const BOLT_SHADER := preload("res://assets/shaders/bolt_projectile.gdshader")
 
 const MAX_LIVE := 64
 const PRIORITY := 0
@@ -44,26 +47,86 @@ var _multimesh: MultiMesh
 var _rivet_muzzle_shot := 0
 
 
-func setup() -> void:
-	name = "Bolts"
-	_multimesh = MultiMesh.new()
-	_multimesh.transform_format = MultiMesh.TRANSFORM_3D
-	_multimesh.use_colors = true
-	_multimesh.instance_count = MAX_LIVE
-	_multimesh.visible_instance_count = 0
-	var box := BoxMesh.new()
-	box.size = Vector3.ONE
-	_multimesh.mesh = box
-	var view := MultiMeshInstance3D.new()
-	view.multimesh = _multimesh
-	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+static func bolt_mesh() -> ArrayMesh:
+	return CraftedGear.bolt_dart_mesh()
+
+
+static var _outline_shader: Shader
+
+
+static func _outline_pass() -> ShaderMaterial:
+	if _outline_shader == null:
+		_outline_shader = Shader.new()
+		_outline_shader.code = """shader_type spatial;
+render_mode unshaded, cull_front, blend_mix, depth_draw_never, shadows_disabled, skip_vertex_transform;
+uniform vec4 ink : source_color = vec4(0.022, 0.026, 0.032, 1.0);
+uniform float width_px = 8.5;
+uniform float width_cap = 0.16;
+void vertex() {
+	vec3 at = (MODELVIEW_MATRIX * vec4(VERTEX, 1.0)).xyz;
+	vec3 out_dir = normalize(MODELVIEW_NORMAL_MATRIX * NORMAL);
+	float depth = max(-at.z, 0.05);
+	float per_px = 2.0 * depth / (VIEWPORT_SIZE.y * abs(PROJECTION_MATRIX[1][1]));
+	float w = min(width_px * per_px, width_cap);
+	// Project cleanly outward in screen plane so both flanks, collar, and tips keep a bold uniform border.
+	vec3 screen_out = out_dir - normalize(at) * dot(out_dir, normalize(at));
+	vec3 push_dir = length(screen_out) > 0.001 ? normalize(screen_out) : out_dir;
+	at += push_dir * w + normalize(at) * (w * 0.06);
+	VERTEX = at;
+	NORMAL = out_dir;
+	POSITION = PROJECTION_MATRIX * vec4(at, 1.0);
+	if (IN_SHADOW_PASS) {
+		POSITION = vec4(2.0, 2.0, 2.0, 1.0);
+	}
+}
+void fragment() {
+	float alpha = clamp(COLOR.a * 1.15, 0.0, 1.0);
+	if (alpha < 0.01) {
+		discard;
+	}
+	ALBEDO = ink.rgb;
+	ALPHA = alpha;
+}
+"""
+	var out := ShaderMaterial.new()
+	out.shader = _outline_shader
+	out.resource_name = "bolt_projectile_outline"
+	out.render_priority = PRIORITY - 1
+	return out
+
+
+static func fallback_material() -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.vertex_color_use_as_albedo = true
 	mat.vertex_color_is_srgb = true
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mat.render_priority = PRIORITY
-	view.material_override = mat
+	return mat
+
+
+func setup() -> void:
+	name = "Bolts"
+	_multimesh = MultiMesh.new()
+	_multimesh.transform_format = MultiMesh.TRANSFORM_3D
+	_multimesh.use_colors = true
+	_multimesh.use_custom_data = true
+	_multimesh.instance_count = MAX_LIVE
+	_multimesh.visible_instance_count = 0
+	_multimesh.mesh = bolt_mesh()
+	var view := MultiMeshInstance3D.new()
+	view.multimesh = _multimesh
+	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	if BOLT_SHADER != null:
+		var mat := ShaderMaterial.new()
+		mat.shader = BOLT_SHADER
+		mat.resource_name = "bolt_projectile"
+		mat.render_priority = PRIORITY
+		mat.next_pass = _outline_pass()
+		view.material_override = mat
+	else:
+		view.material_override = fallback_material()
 	view.top_level = true
 	add_child(view)
 
@@ -497,6 +560,20 @@ func _first_shell(from: Vector3, to: Vector3, bolt_radius: float, shells: Array)
 	return best
 
 
+static func custom_data(bolt: Dictionary) -> Color:
+	var bits := int(bolt.get("bits", 0))
+	var flow := fmod(float(bolt.get("age", 0.0)) * maxf(float(bolt.get("speed", 60.0)) / 42.0, 0.5)
+		+ float(bolt.get("phase", 0.0)), 64.0)
+	var boost := clampf(float(ShotBits.count(bits)) / 2.0, 0.0, 1.0)
+	var flair := 0.25
+	if ShotBits.has(bits, ShotBits.bit("pierce")) or ShotBits.has(bits, ShotBits.bit("heat")):
+		flair = 0.90
+	elif ShotBits.has(bits, ShotBits.bit("bounce")) or ShotBits.has(bits, ShotBits.bit("split")):
+		flair = 0.60
+	var flash_scale := 0.45 if FlashGuard.on else 1.0
+	return Color(flow, boost, flair, flash_scale)
+
+
 func _process(_delta: float) -> void:
 	var count := _bolts.size()
 	_multimesh.visible_instance_count = count
@@ -508,6 +585,7 @@ func _process(_delta: float) -> void:
 		var drawn := instance(_bolts[i], alpha, tail)
 		_multimesh.set_instance_transform(i, drawn[0])
 		_multimesh.set_instance_color(i, drawn[1])
+		_multimesh.set_instance_custom_data(i, custom_data(_bolts[i]))
 
 
 static func _draw_offset(bolt: Dictionary) -> Vector3:

@@ -6,6 +6,7 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
 
 
 const RING := 5.0
@@ -327,7 +328,7 @@ func step(ball: Vector3, delta: float, cogs: int, held: Array) -> Array[Dictiona
 				_refresh_glyph(fab)
 		var rel: Vector3 = ball - fab["at"]
 		var along: float = rel.dot(fab["facing"])
-		var side: float = (rel - (fab["facing"] as Vector3) * along).length()
+		var side: float = RewardGates.sideways(rel, fab["facing"])
 		var was: float = along if fab["fresh"] else fab["last"]
 		fab["fresh"] = false
 		fab["last"] = along

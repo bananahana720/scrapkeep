@@ -807,10 +807,16 @@ func _on_focus_changed(_control: Control) -> void:
 	_menu_sounds.focus_moved()
 
 
+func note_menu_nav() -> void:
+	_menu_sounds.nav_noted()
+
+
 func _step_menu_sounds() -> void:
 	var nav := false
 	for action in MenuSounds.NAV:
 		nav = nav or Input.is_action_pressed(action)
+	for code in MenuSounds.WASD:
+		nav = nav or Input.is_physical_key_pressed(code)
 	var held := get_viewport().gui_get_focus_owner() != null
 	for kind in _menu_sounds.step(nav, Input.is_action_pressed("ui_accept"), Input.is_action_pressed("ui_cancel"), held):
 		match kind:

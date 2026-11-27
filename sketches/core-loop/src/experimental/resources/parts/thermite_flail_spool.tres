@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"thermite_flail_spool"
+display_name = "Thermite Flail Spool"
+maker = &"waking"
+slot = 2
+rarity = &"relic"
+trigger = &"on_tag_reaction"
+emits_tags = Array[StringName]([&"burning"])
+consumes_tags = Array[StringName]([])
+heat_cost = 14.0
+effect_id = &"thermite_reaction_whip"
+params = {
+"heft_bonus_tiers": 1,
+"ttl_s": 3.5,
+"whip_damage": 14.0,
+"whip_radius_m": 5.2
+}
+summary = "Nearby tag reactions whip a burning slag flail and raise break heft."
+trade_off = "Chains heat rapidly toward redline when multiple reactions pop."
+visual_tell = "Copper-amber glowing whip arc orbiting the ball equator."
+audio_tell = "Low anvil thump into spinning chain roar."

@@ -558,9 +558,16 @@ func _add_bank(body: StaticBody3D) -> void:
 			var lo1 := Vector3(cos(a1) * p.x, p.y, sin(a1) * p.x)
 			var hi0 := Vector3(cos(a0) * q.x, q.y, sin(a0) * q.x)
 			var hi1 := Vector3(cos(a1) * q.x, q.y, sin(a1) * q.x)
-			for v in [lo0, hi1, hi0, lo0, lo1, hi1]:
-				faces.append(v)
-				surface.add_vertex(v)
+			var u0 := float(i) / float(BANK_SEGMENTS) * 16.0
+			var u1 := float(i + 1) / float(BANK_SEGMENTS) * 16.0
+			var v0 := float(j) / float(BANK_PROFILE_STEPS) * 2.0
+			var v1 := float(j + 1) / float(BANK_PROFILE_STEPS) * 2.0
+			var tri_verts := [lo0, hi1, hi0, lo0, lo1, hi1]
+			var tri_uvs := [Vector2(u0, v0), Vector2(u1, v1), Vector2(u0, v1), Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1)]
+			for idx in 6:
+				faces.append(tri_verts[idx])
+				surface.set_uv(tri_uvs[idx])
+				surface.add_vertex(tri_verts[idx])
 	var shape := CollisionShape3D.new()
 	shape.name = "RimBank"
 	var trimesh := ConcavePolygonShape3D.new()
@@ -569,8 +576,12 @@ func _add_bank(body: StaticBody3D) -> void:
 	shape.shape = trimesh
 	body.add_child(shape)
 	surface.generate_normals()
+	surface.generate_tangents()
 	var material := StandardMaterial3D.new()
 	material.albedo_color = BANK_COLOR
+	material.roughness = 0.64
+	material.metallic = 0.22
+	Palette.surface_grain(material)
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	surface.set_material(material)
 	var mesh := MeshInstance3D.new()

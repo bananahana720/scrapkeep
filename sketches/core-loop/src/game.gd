@@ -131,6 +131,8 @@ var _menu_requested := -1
 var notes
 var panel
 var keyboard
+var _dev_held := false
+var _dev_frozen := false
 var codex
 var run_log
 var run_moments
@@ -155,6 +157,11 @@ var frame_smoothing := true
 var wide_picture := true
 const SELF_PLAY := "res://tools/self_play.gd"
 const HELD_UNNAMED := "held"
+const EXPERIMENTAL_BRIDGE := "res://src/experimental/live_run_bridge.gd"
+const EXPERIMENTAL_FLAG := "--experimental-depth"
+const EXPERIMENTAL_ENV := "SCRAPKEEP_EXPERIMENTAL"
+var experimental_bridge: Node = null
+var experimental_override := false
 
 
 func _ready() -> void:
@@ -322,6 +329,8 @@ func _ready() -> void:
 	var auto_pause: Node = load("res://src/ui/auto_pause.gd").new()
 	add_child(auto_pause)
 	auto_pause.setup(self)
+	if dev and not test_mode:
+		load("res://src/dev/dev_console.gd").hook(self)
 	if test_mode:
 		menu_modules()
 	else:
@@ -341,6 +350,7 @@ func _ready() -> void:
 		camera.snap(ctx.terrain.entry_heading(1))
 		ctx.terrain.stage_built.connect(_park_on_title_ground)
 	_boot("ui")
+	_attach_experimental()
 	flow.show_title()
 	_boot("title")
 	if not test_mode:
@@ -440,6 +450,29 @@ func _park_on_title_ground(stage: int) -> void:
 		return
 	player.reset_to(ctx.terrain.spawn_point(1))
 	camera.snap(ctx.terrain.entry_heading(1))
+
+
+func _attach_experimental() -> void:
+	if not experimental_override and (test_mode or not _experimental_asked() or not load(EXPERIMENTAL_BRIDGE).is_enabled()):
+		return
+	experimental_bridge = load(EXPERIMENTAL_BRIDGE).new()
+	experimental_bridge.name = "ExperimentalLiveRunBridge"
+	add_child(experimental_bridge)
+	experimental_bridge.bridge_fact_emitted.connect(_on_experimental_fact)
+	experimental_bridge.attach_live(ctx)
+
+
+static func _experimental_asked() -> bool:
+	if OS.get_environment(EXPERIMENTAL_ENV) != "":
+		return true
+	for arg in OS.get_cmdline_args() + OS.get_cmdline_user_args():
+		if arg.begins_with(EXPERIMENTAL_FLAG):
+			return true
+	return false
+
+
+func _on_experimental_fact(fact: Dictionary) -> void:
+	hud.toast(experimental_bridge.callout_for(fact))
 
 
 func _start_self_play() -> void:
@@ -576,6 +609,8 @@ func _physics_process(delta: float) -> void:
 	flow.physics_step(delta)
 	if flow.in_play():
 		aim_along(camera.aim_origin(), camera.aim_forward())
+	if experimental_bridge != null and not get_tree().paused:
+		experimental_bridge.live_step(delta)
 
 
 func _process(delta: float) -> void:
@@ -739,7 +774,27 @@ func notes_held() -> bool:
 
 
 func _apply_pause() -> void:
-	get_tree().paused = _pause_toggled or _notes_held
+	get_tree().paused = _pause_toggled or _notes_held or _dev_frozen
+
+
+func pause_wanted() -> bool:
+	var shop := get_node_or_null("Workshop")
+	return _pause_toggled or _notes_held or (shop != null and shop.pausing())
+
+
+func freeze_for_dev(on: bool) -> void:
+	_dev_frozen = on
+	get_tree().paused = on or pause_wanted()
+
+
+func hold_for_dev(on: bool) -> void:
+	_dev_held = on
+	if keyboard != null:
+		keyboard.held = on
+	if on:
+		capture_mouse(false)
+	else:
+		recapture_mouse()
 
 
 func _on_flow_changed(_state: String) -> void:
@@ -1105,6 +1160,8 @@ func pad_screen_key(event: InputEvent) -> int:
 	if not (event is InputEventJoypadButton) or not event.pressed:
 		return KEY_NONE
 	var state: String = flow.state_name()
+	if state == "title" and screens != null and screens.walk_live() and event.is_action("cl_interact"):
+		return camp_hub.confirm_key()
 	if event.button_index == JOY_BUTTON_A:
 		if state == "title":
 			if screens != null and screens.walk_live():
@@ -1155,7 +1212,7 @@ func _windowed() -> bool:
 func capture_mouse(capture: bool) -> void:
 	if test_mode or not _windowed():
 		return
-	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if capture else Input.MOUSE_MODE_VISIBLE
+	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED if capture and not _dev_held else Input.MOUSE_MODE_VISIBLE
 
 
 func mouse_captured() -> bool:
@@ -1163,7 +1220,7 @@ func mouse_captured() -> bool:
 
 
 func menu_held() -> bool:
-	return get_meta("menu_held", false)
+	return _dev_held or get_meta("menu_held", false)
 
 
 func set_menu_held(held: bool) -> void:

@@ -18,6 +18,7 @@ const POSES := {
 	"e15_cup_splay": {"wind": [0.0, 0.0, 0.0, 0.84], "release": [0.0, 0.0, 0.0, 1.12]},
 	"e16_vents_open": {"wind": [0.0, 0.0, 0.0, 1.10], "release": [0.0, 0.0, 0.0, 0.88]},
 	"e18_elbow_telescope": {"wind": [8.0, 0.0, 0.0, 1.12], "release": [-10.0, 0.0, 0.0, 0.94]},
+	"e31_prop_kicked": {"wind": [10.0, 0.0, 0.0, 0.90], "release": [-12.0, 0.0, 0.0, 1.08]},
 }
 const SHIVER_FROM := 0.75
 const SHIVER_DEGREES := 2.5

@@ -36,12 +36,11 @@ func _build_tool() -> void:
 			if part.name == "GyroAerial":
 				_aerial = mi
 		return
-	_aerial = _cylinder(0.07, 3.4, Palette.CHARCOAL, Vector3(0.0, CREW_HALF + 1.5, -0.2))
-	for i in 3:
-		var hoop := TorusMesh.new()
-		hoop.inner_radius = 0.45 - i * 0.1
-		hoop.outer_radius = 0.55 - i * 0.1
-		_accent(hoop, Palette.HAZARD, 0.8, Vector3(0.0, 0.6 + i * 0.5, 0.0), _aerial)
+	_aerial = MeshInstance3D.new()
+	_aerial.name = "GyroAerialFallback"
+	_aerial.mesh = preload("res://src/presentation/world23_chunk_craft.gd").get_gyro_jammer_chassis_mesh()
+	_aerial.position = Vector3(0.0, CREW_HALF + 1.25, -0.2)
+	_visual_parent().add_child(_aerial)
 
 
 static func _parts() -> Array:

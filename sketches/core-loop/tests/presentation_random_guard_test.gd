@@ -24,21 +24,10 @@ func _initialize() -> void:
 	t.eq("truncated final JSON record is skipped", _trace_rows(JSON.stringify(sample) + "\n{\"position\":", "parser probe").size(), 1)
 	for arm in 2:
 		var folder := base.path_join(str(arm))
-		var previous := {}
-		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, folder.path_join(kind.to_lower()))
-		# 2026-10-17: arms measured 53 s and 65 s wall under load, so the old 65 s cap timed out; 180 s leaves headroom.
-		var results := ChildRuns.run([{"script": "res://tests/trees/presentation_random_child.gd", "args": [
+		var results := ChildRuns.run([{"script": "res://tests/trees/presentation_random_child.gd", "home": folder, "args": [
 			"--out=" + folder, "--policy=completionist", "--seeds=11", "--pilot=remembered_cannon",
 			"--from-stage=4", "--trace-ticks=1", "--ticks=%d" % TICKS,
 			"--presentation-draws=%d" % (17 if arm == 1 else 0)]}], 180.0)
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
 		var result: Dictionary = results[0]
 		var errors: Array = ChildRuns.summary(result)["errors"]
 		t.check("arm %d completed" % arm, result["code"] == 0 and not result["timed_out"] and errors.is_empty(),

@@ -207,6 +207,9 @@ func _build_body() -> void:
 		_base_color = Color.WHITE
 		_material = Palette.solid(Color.WHITE)
 		_material.vertex_color_use_as_albedo = true
+		_material.roughness = 0.42
+		_material.metallic = 0.14
+		Palette.surface_grain(_material)
 		for part in parts:
 			var mi := MeshInstance3D.new()
 			mi.name = part.name
@@ -222,24 +225,20 @@ func _build_body() -> void:
 				_seam_material = (mi.mesh.surface_get_material(0) as StandardMaterial3D).duplicate()
 				mi.set_surface_override_material(0, _seam_material)
 		return
+	var craft = load("res://src/presentation/craft/enemy_boss_craft.gd")
 	_base_color = Roster.ANCIENT_ENAMEL
 	_material = Palette.solid(Roster.ANCIENT_ENAMEL)
-	var prism := CylinderMesh.new()
-	prism.radial_segments = 3
-	prism.top_radius = SIZE
-	prism.bottom_radius = SIZE
-	prism.height = 0.22
+	_material.roughness = 0.42
+	_material.metallic = 0.14
+	Palette.surface_grain(_material)
 	_body = MeshInstance3D.new()
-	_body.mesh = prism
+	_body.name = "RemnantBody"
+	_body.mesh = craft.swarm_remnant_body(SIZE, 0.22)
 	_body.material_override = _material
 	_slab.add_child(_body)
-	var edge := CylinderMesh.new()
-	edge.radial_segments = 3
-	edge.top_radius = SIZE * 0.55
-	edge.bottom_radius = SIZE * 0.55
-	edge.height = 0.24
 	_seam = MeshInstance3D.new()
-	_seam.mesh = edge
+	_seam.name = "RemnantSeam"
+	_seam.mesh = craft.swarm_remnant_seam(SIZE * 0.55, 0.24)
 	_seam_material = Palette.solid(Roster.ANCIENT_LIGHT, SEAM_LIT)
 	_seam.material_override = _seam_material
 	_seam.position = Vector3.UP * 0.02
@@ -342,6 +341,9 @@ static func _leading_split(mesh: Mesh, slots: Array) -> ArrayMesh:
 				tool.add_vertex(vs[v])
 	var painted := Palette.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
+	painted.roughness = 0.42
+	painted.metallic = 0.14
+	Palette.surface_grain(painted)
 	hull.set_material(painted)
 	edge.set_material(hazard_stripe())
 	var out := hull.commit()

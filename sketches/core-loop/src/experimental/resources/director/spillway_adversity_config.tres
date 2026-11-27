@@ -1,0 +1,191 @@
+[gd_resource type="Resource" load_steps=8 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/resources/director/adversity_director_config.gd" id="1"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_over_plated_juggernaut.tres" id="2"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_arc_capacitor_relay.tres" id="3"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_magnetic_tow_winch.tres" id="4"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_slag_spill_exhaust.tres" id="5"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_coolant_cryo_hauler.tres" id="6"]
+[ext_resource type="Resource" path="res://src/experimental/resources/director/elite_overclocked_foreman_spec.tres" id="7"]
+
+[resource]
+script = ExtResource("1")
+profile_id = &"spillway_default"
+default_biome_id = &"spillway"
+default_cruise_mps = 14.0
+tier_interval_s = 45.0
+max_clock_tier = 5
+base_income_per_s = 2.4
+tier_income_step = 0.55
+stall_income_max_bonus = 1.0
+setpiece_spike_credits = 12.0
+stall_speed_ratio = 0.55
+fast_speed_ratio = 0.85
+camp_radius_m = 8.5
+stall_rise_per_s = 0.28
+stall_decay_per_s = 0.45
+flow_rise_per_s = 0.3
+flow_decay_per_s = 0.25
+alive_cap = 18
+credit_pool_cap = 48.0
+max_active_elites = 2
+elite_min_cooldown_s = 18.0
+hazard_cooldown_s = 16.0
+slag_hold_cap_s = 2.0
+enemy_roles = {
+&"boom_tender": {
+"cadence": "Pivots heavy boom arm on fixed axle, 0.85 s lane sweep.",
+"silhouette": "Tall crane jib with brass counterweight over squat iron-oxide base.",
+"telegraph_kind": &"lane",
+"tell_s": 0.85
+},
+&"chaser": {
+"cadence": "9.0 m/s pursuit jog (under 14 m/s cruise), 0.65 s lunge cue along held line.",
+"silhouette": "Low forward-raked wedge with welded ram bumper and single red lamp.",
+"telegraph_kind": &"lane",
+"tell_s": 0.65
+},
+&"dispatcher": {
+"cadence": "Stationary beacon hopper; drops fresh chaser every 8.0 s behind striped ring.",
+"silhouette": "Tall vertical chimney chute with blinking brass requisition lantern.",
+"telegraph_kind": &"instant",
+"tell_s": 1.0
+},
+&"hooker": {
+"cadence": "Plants rear anchor, 0.75 s tether whine; high speed or boost snaps the hook.",
+"silhouette": "Wide-jaw grapple claw hoisted over tracked carriage.",
+"telegraph_kind": &"lane",
+"tell_s": 0.75
+},
+&"jolt_layer": {
+"cadence": "Drops grounded pylon stakes on 0.80 s ring charge.",
+"silhouette": "Three-legged insulator frame with exposed copper spark crown.",
+"telegraph_kind": &"instant",
+"tell_s": 0.8
+},
+&"lobber": {
+"cadence": "Anchored mortar tripod; lobs bracketed arc 0.90 s ahead of straight roll.",
+"silhouette": "High-angle foundry mortar barrel with chunky recoil legs.",
+"telegraph_kind": &"projectile",
+"tell_s": 0.9
+},
+&"plated_brute": {
+"cadence": "Slow march, 0.85 s overhead slam telegraph; opens hull after slam recovery.",
+"silhouette": "Broad slab-shouldered bulkhead frame with riveted brass apron.",
+"telegraph_kind": &"instant",
+"tell_s": 0.85
+},
+&"winch_drone": {
+"cadence": "Hovering spool orbit, 0.80 s wave pull on stalled targets.",
+"silhouette": "Suspended cable drum under twin rotor ducts.",
+"telegraph_kind": &"wave",
+"tell_s": 0.8
+}
+}
+fleet_packs = [{
+"cost": 8.0,
+"id": &"skirmish_pair",
+"kinds": [&"chaser", &"chaser", &"lobber"],
+"min_tier": 1,
+"stall_bias": 1.0,
+"weight": 2.4
+}, {
+"cost": 10.0,
+"id": &"flank_pursuit",
+"kinds": [&"chaser", &"chaser", &"hooker"],
+"min_tier": 1,
+"stall_bias": 1.8,
+"weight": 1.8
+}, {
+"cost": 12.0,
+"id": &"lane_denial",
+"kinds": [&"lobber", &"jolt_layer", &"chaser"],
+"min_tier": 2,
+"stall_bias": 1.6,
+"weight": 1.6
+}, {
+"cost": 15.0,
+"id": &"heavy_audit",
+"kinds": [&"plated_brute", &"boom_tender", &"lobber"],
+"min_tier": 2,
+"stall_bias": 1.3,
+"weight": 1.3
+}, {
+"cost": 16.0,
+"id": &"winch_cordon",
+"kinds": [&"winch_drone", &"chaser", &"dispatcher"],
+"min_tier": 3,
+"stall_bias": 1.9,
+"weight": 1.1
+}]
+elite_pool = [ExtResource("2"), ExtResource("3"), ExtResource("4"), ExtResource("5"), ExtResource("6"), ExtResource("7")]
+hazard_configs = {
+&"corrosive_steam_squall": {
+"base_sightline_m": 360.0,
+"biome_weights": {
+&"compactor_canyon": 1.5,
+&"orbital_graveyard": 0.9,
+&"smelter_pit": 1.1,
+&"spillway": 1.6
+},
+"credit_cost": 12.0,
+"display_name": "Corrosive Steam Squall",
+"id": &"corrosive_steam_squall",
+"min_sightline_m": 85.0,
+"min_tier": 1,
+"peak_s": 12.0,
+"primary_tag": &"soaked_conductive",
+"radius_m": 55.0,
+"ramp_s": 3.0,
+"recede_s": 4.0,
+"secondary_tag": &"coolant_brittle",
+"silhouette_boost_max": 1.65,
+"telegraph_contrast_max": 1.4,
+"warning_s": 5.0
+},
+&"magnetic_storm": {
+"biome_weights": {
+&"compactor_canyon": 1.1,
+&"orbital_graveyard": 1.9,
+&"smelter_pit": 1.3,
+&"spillway": 1.1
+},
+"credit_cost": 16.0,
+"display_name": "Magnetic Storm",
+"id": &"magnetic_storm",
+"min_tier": 2,
+"peak_s": 11.0,
+"primary_tag": &"magnetic",
+"projectile_deflect": 15.0,
+"pull_strength": 18.0,
+"radius_m": 42.0,
+"ramp_s": 2.5,
+"recede_s": 3.5,
+"secondary_tag": &"electrified",
+"slingshot_boost": 10.5,
+"swirl_strength": 12.0,
+"warning_s": 4.0
+},
+&"rising_slag_tide": {
+"biome_weights": {
+&"compactor_canyon": 1.3,
+&"orbital_graveyard": 0.6,
+&"smelter_pit": 1.8,
+&"spillway": 1.2
+},
+"credit_cost": 14.0,
+"display_name": "Rising Slag Tide",
+"hidden_below_m": 1.5,
+"id": &"rising_slag_tide",
+"min_tier": 1,
+"peak_depth_m": 2.4,
+"peak_s": 10.0,
+"primary_tag": &"slag_coated",
+"radius_m": 46.0,
+"ramp_s": 4.0,
+"recede_s": 5.0,
+"secondary_tag": &"burning",
+"warning_s": 4.5
+}
+}
+foreman_tier_memos = ["Throughput adjustment approved. Carry on.", "Variance exceeded quarterly target. Deploying extra hands.", "Shift intensity re-indexed for optimal alignment.", "Overtime authorised across all Spillway sectors.", "Peak efficiency reached. Gratitude is appreciated in advance."]

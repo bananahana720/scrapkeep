@@ -1,0 +1,25 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"requisition_leech"
+display_name = "Requisition Leech"
+maker = &"fleet_surplus"
+slot = 0
+rarity = &"fleet_grade"
+trigger = &"on_prop_rupture"
+emits_tags = Array[StringName]([])
+consumes_tags = Array[StringName]([&"coolant_brittle", &"burning", &"electrified"])
+heat_cost = 16.0
+effect_id = &"ledger_siphon_bolt"
+params = {
+"aggro_ping_radius_m": 22.0,
+"bonus_scrap": 2,
+"siphon_damage": 28.0
+}
+summary = "Rupturing props fires a homing siphon bolt and doubles salvage yield."
+trade_off = "Broadcasts a Fleet audit ping that draws nearby machines toward you."
+visual_tell = "Brass-tagged ledger tracer streaking from the broken prop to the nearest foe."
+audio_tell = "Till bell chime into riveted bolt crack."

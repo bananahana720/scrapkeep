@@ -35,7 +35,6 @@ const TOGGLE_WORDS := {"fullscreen": "Fullscreen", "quality": "Quality", "reduce
 	"reduce_flashes": "Fewer flashes", "frame_smoothing": "Frame smoothing", "wide_picture": "Wide picture"}
 const TRIGGER_VERBS := ["fire", "harpoon"]
 const TRIGGER_PULL := 0.6
-const PAD_EXTRA := {JOY_BUTTON_LEFT_STICK: "key_l3", JOY_BUTTON_RIGHT_STICK: "key_r3"}
 const LOOK := [
 	{"id": SettingsStore.STICK_SENSITIVITY, "words": "Stick speed", "steps": [1.3, 1.95, 2.6, 3.25, 3.9], "per": 2.6},
 	{"id": SettingsStore.INVERT_Y, "words": "Invert Y", "steps": [0.0, 1.0], "per": 0.0},
@@ -399,7 +398,7 @@ static func _select_number(row: String) -> int:
 
 
 static func pad_cap(button: int) -> String:
-	return String(Glyphs.PAD_BUTTONS.get(button, PAD_EXTRA.get(button, "")))
+	return String(Glyphs.PAD_BUTTONS.get(button, ""))
 
 
 func glyph_of(verb: String) -> String:

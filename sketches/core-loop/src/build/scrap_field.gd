@@ -4,6 +4,8 @@ const Palette := preload("res://src/core/palette.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Panels := preload("res://src/build/panels.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const PICKUP_GLB := "res://assets/models/world_one/scrap_pickups.glb"
 const PICKUP_VARIANTS := ["BentPlate", "GearSegment", "PipeStub", "BoltCluster"]
 const COG_PART := "Cog"
@@ -61,15 +63,16 @@ const COG_RING := 1.8
 var cog_values: Array[int] = []
 var _panels := {}
 var panel_takes: Array[Dictionary] = []
-var _panel_mesh: BoxMesh
+var _panel_mesh: Mesh
 var _panel_material: Material
-var _panel_column: CylinderMesh
+var _panel_column: Mesh
 var _panel_column_material: Material
 const GROUND_PLATE := 2.0
+const PANEL_COLUMN := 2.4
 static var _ground_plates := {}
 var _caches := {}
 var _trail := {}
-var _cache_column: CylinderMesh
+var _cache_column: Mesh
 const CACHE_COLUMN := 14.0
 const CACHE_HEAR := 45.0
 const SPIN_RANGE := 120.0
@@ -81,7 +84,7 @@ var _units := {}
 var _cog_material: Material
 var _cog_mesh: Mesh
 var _cluster_material: Material
-var _cluster_mesh: BoxMesh
+var _cluster_mesh: Mesh
 var _items: Array[MeshInstance3D] = []
 var _caught := {}
 var _catch_serial := 0
@@ -95,28 +98,14 @@ func setup() -> void:
 	_mesh = BoxMesh.new()
 	_mesh.size = Vector3(0.8, 0.8, 0.8)
 	_cluster_material = Palette.solid(Palette.AMBER, 2.2)
-	_cluster_mesh = BoxMesh.new()
-	_cluster_mesh.size = Vector3(1.4, 1.4, 1.4)
+	_cluster_mesh = PropMeshes.bevel_prop_box(Vector3(1.4, 1.4, 1.4))
 	_cog_material = Palette.solid(Palette.STEEL, 1.8)
-	_cog_mesh = CylinderMesh.new()
-	_cog_mesh.top_radius = 0.45
-	_cog_mesh.bottom_radius = 0.45
-	_cog_mesh.height = 0.18
-	_cog_mesh.radial_segments = 8
-	_panel_mesh = BoxMesh.new()
-	_panel_mesh.size = Vector3(0.9, 0.16, 0.7)
+	_cog_mesh = PropMeshes.lore_plate_face(0.45, 0.18)
+	_panel_mesh = PropMeshes.bevel_prop_box(Vector3(0.9, 0.16, 0.7))
 	_panel_material = Palette.solid(Palette.SLATE, 0.9)
-	_panel_column = CylinderMesh.new()
-	_panel_column.top_radius = 0.06
-	_panel_column.bottom_radius = 0.16
-	_panel_column.height = 2.4
-	_panel_column.radial_segments = 6
-	_panel_column_material = Palette.unshaded(Palette.SAND)
-	_cache_column = CylinderMesh.new()
-	_cache_column.top_radius = 0.03
-	_cache_column.bottom_radius = 0.2
-	_cache_column.height = CACHE_COLUMN
-	_cache_column.radial_segments = 6
+	_panel_column = PropMeshes.scrap_beacon_column(0.16, 0.06, PANEL_COLUMN)
+	_panel_column_material = _beacon_material()
+	_cache_column = PropMeshes.scrap_beacon_column(0.20, 0.03, CACHE_COLUMN)
 	if not _pickup_meshes().is_empty():
 		_material = _pickup_material(Palette.ARC)
 		_cluster_material = _pickup_material(Palette.AMBER)
@@ -134,13 +123,32 @@ static func _pickup_material(color: Color) -> ShaderMaterial:
 	material.set_shader_parameter("face_energy", 0.06)
 	material.set_shader_parameter("rim_energy", 1.25)
 	material.set_shader_parameter("emission_ceiling", 1.35)
+	material.set_shader_parameter("body_tone", 0.72)
+	material.set_shader_parameter("ink_strength", 0.94)
+	material.set_shader_parameter("glint_strength", 0.42)
+	material.set_shader_parameter("flash_scale", FlashGuard.info(1.0))
 	return material
 
 
 static func _cog_glow() -> ShaderMaterial:
 	var material := _pickup_material(Palette.SAND)
-	material.set_shader_parameter("rim_energy", 0.9)
-	material.set_shader_parameter("emission_ceiling", 1.0)
+	material.set_shader_parameter("face_energy", 0.08)
+	material.set_shader_parameter("rim_energy", 1.35)
+	material.set_shader_parameter("emission_ceiling", 1.35)
+	material.set_shader_parameter("body_tone", 0.40)
+	material.set_shader_parameter("metal_boost", 0.62)
+	material.set_shader_parameter("ink_strength", 1.0)
+	material.set_shader_parameter("glint_strength", 0.58)
+	return material
+
+
+static func _beacon_material() -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://assets/shaders/pickup_beacon.gdshader")
+	material.render_priority = -4
+	material.set_shader_parameter("beam_color", Palette.SAND)
+	material.set_shader_parameter("ink_colour", Palette.CHARCOAL)
+	material.set_shader_parameter("flash_scale", FlashGuard.info(1.0))
 	return material
 
 
@@ -364,7 +372,7 @@ func drop_panel(at: Vector3, panel_id: String, jackpot := false, cache := false)
 	var column := MeshInstance3D.new()
 	column.mesh = _cache_column if cache else _panel_column
 	column.material_override = _panel_column_material
-	column.position = Vector3.UP * ((CACHE_COLUMN if cache else _panel_column.height) * 0.5 + 0.1)
+	column.position = Vector3.UP * ((CACHE_COLUMN if cache else PANEL_COLUMN) * 0.5 + 0.1)
 	column.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	item.add_child(column)
 	_panels[item] = {"id": panel_id, "jackpot": jackpot}

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"arc_welder_dash"
+display_name = "Arc Welder Dash"
+maker = &"highdraft_roosts"
+slot = 1
+rarity = &"jury_rigged"
+trigger = &"on_dash"
+emits_tags = Array[StringName]([&"slag_coated", &"electrified"])
+consumes_tags = Array[StringName]([])
+heat_cost = 22.0
+effect_id = &"weld_seam_trail"
+params = {
+"arc_radius_m": 3.0,
+"seam_segments": 3,
+"slag_radius_m": 3.4,
+"ttl_s": 5.5
+}
+summary = "Dashing drags a live slag weld seam that conducts bolts and sawblades."
+trade_off = "Builds heavy line heat per dash and punishes stalling on redline."
+visual_tell = "Copper-amber slag strip with jagged mint arc ticks along the dash path."
+audio_tell = "Hi-hat weld sizzle rising with heat band."

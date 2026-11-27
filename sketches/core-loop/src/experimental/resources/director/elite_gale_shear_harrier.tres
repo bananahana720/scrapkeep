@@ -1,0 +1,53 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/resources/director/refurbished_elite_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = &"gale_shear_harrier"
+display_name = "Gale-Shear Harrier"
+maker = &"fleet"
+requisition_code = "REFURB-63G"
+chassis = &"winch_drone"
+credit_cost = 25.0
+min_tier = 1
+base_hull_hp = 96.0
+plate_count = 2
+plate_integrity = 32.0
+plate_weak_tags = [&"electrified", &"coolant_brittle"]
+silhouette_cue = "Twin ducted crosswind turbines straddling a cobalt tow-coil housing with trailing brass vanes."
+movement_cadence = "High banking orbit, 0.80 s turbine spool whine, sweeping magnetic crosswind tether."
+counterplay_cue = "Hold cruise speed across its wind tether to slingshot past its flank and shear its turbine guards."
+third_person_read_distance_m = 52.0
+telegraph_kind = &"wave"
+tell_s = 0.8
+execute_s = 0.85
+cooldown_s = 3.3
+stagger_on_brace_break_s = 2.0
+card_line = "Wind shear verified. Stay inside the guide rails."
+ability_tag = &"magnetic"
+secondary_tag = &"electrified"
+ability_radius_m = 14.5
+ability_intensity = 0.95
+ability_ttl_s = 4.0
+shatter_tag = &"magnetic"
+shatter_radius_m = 7.0
+shatter_ttl_s = 3.5
+backfires_on_strip = false
+pull_accel = 15.0
+slingshot_bonus = 1.45
+aura_pack_rest_scale = 1.0
+biome_weights = {
+&"compactor_canyon": 0.9,
+&"dig": 0.8,
+&"highdraft": 1.9,
+&"orbital_graveyard": 1.8,
+&"spillway": 0.9
+}
+bounty = {
+"cogs": 20,
+"cores": 0,
+"guaranteed_rarity": &"rare",
+"part_rolls": 1,
+"scrap": 115
+}

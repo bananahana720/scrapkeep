@@ -1,0 +1,123 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/resources/director/encounter_catalog_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+catalog_id = &"dig_encounters"
+default_biome_id = &"dig"
+random_cooldown_s = 22.0
+initial_random_cooldown_s = 13.0
+min_random_gap_m = 28.0
+greed_scrap_threshold = 120
+triggered_specs = {
+&"over_audit_blitz_gate": {
+"base_payout": {
+"cogs": 20,
+"cores": 1,
+"guaranteed_rarity": &"rare",
+"part_rolls": 1,
+"scrap": 155,
+"source": "pit_audit_blitz_gate"
+},
+"display_name": "Pit Audit Blitz Gate",
+"duration_s": 28.0,
+"kind": &"over_audit_blitz_gate",
+"lock_radius_m": 0.0,
+"maker": &"keepers",
+"opt_in_line": "Pit Audit Gate. Fast chains multiply the cores.",
+"target_kills": 8,
+"trigger_radius_m": 7.5
+},
+&"scrap_beacon_lockdown": {
+"apex_cadence": "Rotary bore stomp, 0.90 s corrosive trench carve, pressurized slurry vent.",
+"apex_card_line": "Excavation perimeter sealed. Clearing pit floor.",
+"apex_extra_plates": 2,
+"apex_name": "Bore-Rig Apex Construct",
+"apex_silhouette": "Towering triple-auger mining press on articulated treads with five bolted bore shields.",
+"apex_variant": &"corrosive_bore_warden",
+"display_name": "Bore-Rig Beacon Press",
+"kind": &"scrap_beacon_lockdown",
+"lock_radius_m": 28.0,
+"maker": &"keepers",
+"max_duration_s": 75.0,
+"opt_in_line": "Bore Beacon. Press locks the pit. Nobody makes you.",
+"payout": {
+"cogs": 34,
+"cores": 1,
+"guaranteed_rarity": &"relic",
+"part_rolls": 2,
+"scrap": 260,
+"source": "bore_rig_lockdown_jackpot"
+},
+"trigger_radius_m": 8.0,
+"waves": [[&"chaser", &"chaser", &"boom_tender"], [&"hooker", &"jolt_layer", &"plated_brute"]]
+}
+}
+random_specs = {
+&"airdrop_salvage_pod": {
+"base_weight": 0.9,
+"biome_weights": {
+&"compactor_canyon": 1.0,
+&"dig": 0.9,
+&"orbital_graveyard": 1.8,
+&"spillway": 1.2
+},
+"contest_s": 18.0,
+"cover_destructible_tier": 2,
+"cover_half_extents": Vector3(3.2, 2.6, 3.2),
+"display_name": "Air-Drop Salvage Pod",
+"impact_radius_m": 9.0,
+"kind": &"airdrop_salvage_pod",
+"maker": &"fleet",
+"payout": {
+"cogs": 22,
+"cores": 1,
+"guaranteed_rarity": &"rare",
+"part_rolls": 1,
+"scrap": 155,
+"source": "airdrop_salvage_pod"
+},
+"scavenger_pack": [&"chaser", &"hooker", &"winch_drone"],
+"tell_s": 3.5
+},
+&"greed_ambush_swarm": {
+"base_weight": 0.0,
+"call_line": "Unrefined pit ore exceeds allowance. Dispatching recovery crew.",
+"display_name": "Pit Recovery Ambush Swarm",
+"dividend_scrap_cap": 175,
+"dividend_scrap_share": 0.25,
+"elite_variant": &"corrosive_bore_warden",
+"interceptor_pack": [&"chaser", &"chaser", &"hooker", &"boom_tender"],
+"kind": &"greed_ambush_swarm",
+"maker": &"fleet",
+"payout": {
+"cogs": 24,
+"cores": 1,
+"guaranteed_rarity": &"rare",
+"part_rolls": 1,
+"scrap": 135,
+"source": "dig_greed_recovery_dividend"
+},
+"tell_s": 2.2
+},
+&"rogue_compactor_chase": {
+"base_weight": 1.5,
+"biome_weights": {
+&"compactor_canyon": 1.9,
+&"dig": 1.9,
+&"orbital_graveyard": 0.7,
+&"spillway": 1.0
+},
+"crew_number": 38,
+"crushed_enemy_scrap": 35,
+"crusher_damage": 220.0,
+"display_name": "Rogue Compactor No. 38",
+"duration_s": 9.5,
+"kind": &"rogue_compactor_chase",
+"lane_half_width_m": 5.5,
+"maker": &"rogue",
+"speed_mps": 18.5,
+"tell_s": 2.5
+}
+}

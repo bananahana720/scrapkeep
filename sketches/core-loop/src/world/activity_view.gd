@@ -3,6 +3,7 @@ extends Node3D
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PresentationRows := preload("res://src/presentation/rows.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
 
 const COLUMN_HEIGHT := 70.0
@@ -47,7 +48,7 @@ func build(activity_id: String, ring_radius: float, tell := {}, tell_audio = nul
 	var color := EventKinds.role_color(String(row.color))
 	column = MeshInstance3D.new()
 	column.name = "Column"
-	column.mesh = _box_mesh(Vector3(COLUMN_WIDTH, COLUMN_HEIGHT, COLUMN_WIDTH))
+	column.mesh = PropMeshes.activity_column_spire(COLUMN_WIDTH, COLUMN_HEIGHT)
 	column.material_override = _column_material(color)
 	column.position = Vector3.UP * COLUMN_HEIGHT * 0.5
 	add_child(column)
@@ -78,12 +79,10 @@ func build(activity_id: String, ring_radius: float, tell := {}, tell_audio = nul
 
 
 func set_sight(scale: float) -> void:
-	if column == null or is_equal_approx(scale, 1.0):
+	if column == null or (is_equal_approx(scale, 1.0) and is_equal_approx(column.scale.y, 1.0)):
 		return
 	var height := COLUMN_HEIGHT * scale
-	var own := column.mesh.duplicate() as BoxMesh
-	own.size.y = height
-	column.mesh = own
+	column.scale = Vector3(1.0, scale, 1.0)
 	column.position = Vector3.UP * height * 0.5
 	glyph.position = Vector3.UP * (height + GLYPH_SIZE)
 	word_reach = WORD_REACH * scale
@@ -123,26 +122,16 @@ func lit() -> bool:
 static func _glyph(shape: String, color: Color) -> Node3D:
 	var root := Node3D.new()
 	var mat := _solid(color, GLYPH_ENERGY)
+	var view := MeshInstance3D.new()
 	match shape:
 		"cross":
-			for axis in 3:
-				var size := Vector3.ONE * GLYPH_SIZE * 0.3
-				size[axis] = GLYPH_SIZE
-				root.add_child(_box(size, mat))
+			view.mesh = PropMeshes.activity_glyph_cross(GLYPH_SIZE)
 		"diamond":
-			var mesh := MeshInstance3D.new()
-			if not _shared.has("diamond"):
-				var sm := SphereMesh.new()
-				sm.radius = GLYPH_SIZE * 0.55
-				sm.height = GLYPH_SIZE * 1.1
-				sm.radial_segments = 4
-				sm.rings = 2
-				_shared["diamond"] = sm
-			mesh.mesh = _shared["diamond"]
-			mesh.material_override = mat
-			root.add_child(mesh)
+			view.mesh = PropMeshes.activity_glyph_diamond(GLYPH_SIZE)
 		_:
-			root.add_child(_box(Vector3.ONE * GLYPH_SIZE * 0.8, mat))
+			view.mesh = PropMeshes.activity_glyph_cube(GLYPH_SIZE)
+	view.material_override = mat
+	root.add_child(view)
 	return root
 
 
@@ -150,22 +139,6 @@ static func _veil(color: Color, alpha: float) -> Color:
 	var out := color
 	out.a = alpha
 	return out
-
-
-static func _box(size: Vector3, mat: Material) -> MeshInstance3D:
-	var mesh := MeshInstance3D.new()
-	mesh.mesh = _box_mesh(size)
-	mesh.material_override = mat
-	return mesh
-
-
-static func _box_mesh(size: Vector3) -> BoxMesh:
-	var key := "box:%s" % size
-	if not _shared.has(key):
-		var bm := BoxMesh.new()
-		bm.size = size
-		_shared[key] = bm
-	return _shared[key]
 
 
 static func _solid(color: Color, emit: float) -> StandardMaterial3D:
@@ -196,7 +169,7 @@ static func _column_material(color: Color) -> StandardMaterial3D:
 static func _ring(radius: float, color: Color) -> Node3D:
 	var out := Node3D.new()
 	var mat := _solid(color, COLUMN_ENERGY)
-	var dash_mesh := _box_mesh(Vector3(0.45, 0.1, radius * TAU / float(RING_DASHES * 2)))
+	var dash_mesh := PropMeshes.activity_ring_dash(radius * TAU / float(RING_DASHES * 2))
 	for k in RING_DASHES:
 		var a := TAU * k / float(RING_DASHES)
 		var dash := MeshInstance3D.new()
@@ -220,7 +193,7 @@ static func gem(id_ref: String) -> Node3D:
 	stone.position = Vector3.UP * 1.4
 	root.add_child(stone)
 	var beam := MeshInstance3D.new()
-	beam.mesh = _box_mesh(Vector3(0.35, 14.0, 0.35))
+	beam.mesh = PropMeshes.activity_pay_beam(0.35, 14.0)
 	beam.material_override = _unshaded(_veil(color, BEAM_ALPHA))
 	beam.position = Vector3.UP * 7.0
 	root.add_child(beam)

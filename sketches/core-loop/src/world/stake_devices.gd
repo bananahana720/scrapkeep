@@ -6,6 +6,7 @@ const HullMark := preload("res://src/world/hull_mark.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
@@ -153,7 +154,7 @@ static func can_take(o: Dictionary, run) -> bool:
 		return false
 	if String(o["win_kind"]) == "part" and String(o["win"]) == "":
 		return false
-	if String(o["win_kind"]) == "heal" and run.hp >= run.max_hp and HullMark.held(run) <= 0.0:
+	if nothing_to_mend(o, run):
 		return false
 	var cost: int = o["cost"]
 	match String(o["cost_kind"]):
@@ -164,6 +165,24 @@ static func can_take(o: Dictionary, run) -> bool:
 		"cores":
 			return run.bonus_cores >= cost
 	return false
+
+
+static func nothing_to_mend(o: Dictionary, run) -> bool:
+	return String(o.get("win_kind", "")) == "heal" and run.hp >= run.max_hp and HullMark.held(run) <= 0.0
+
+
+static func paid_share(o: Dictionary, run) -> float:
+	if o.is_empty() or nothing_to_mend(o, run):
+		return 0.0
+	var cost := maxf(float(o["cost"]), 1.0)
+	match String(o["cost_kind"]):
+		"hp":
+			return clampf(run.hp / (cost + float(o["floor"])), 0.0, 1.0)
+		"cogs":
+			return clampf(float(run.cogs) / cost, 0.0, 1.0)
+		"cores":
+			return clampf(float(run.bonus_cores) / cost, 0.0, 1.0)
+	return 0.0
 
 
 static func take(o: Dictionary, run, at: Vector3) -> Dictionary:
@@ -243,20 +262,40 @@ func build() -> void:
 		return
 	match kind:
 		"blood_shrine":
-			box(Vector3(1.6, 2.4, 1.6), Vector3.UP * 1.2, Altar.finish(Palette.RUST), true)
-			cylinder(0.5, 0.3, Vector3.UP * 2.55, Palette.solid(Palette.HAZARD, 0.9))
+			_dress(PropMeshes.stake_shrine_body(), PropMeshes.weathered_material(Palette.RUST, 0.78, 0.24, 0.0, "shrine_body", true, 2.6), "ShrineBody")
+			_solid_box(Vector3(1.6, 2.4, 1.6), Vector3.UP * 1.2)
+			var basin := _dress(PropMeshes.stake_shrine_basin(), PropMeshes.weathered_material(Palette.HAZARD.darkened(0.24), 0.72, 0.22, 0.16, "shrine_basin", true, 1.8), "ShrineBasin")
+			basin.position = Vector3.UP * 2.55
 		"healing_ward":
-			cylinder(0.35, 2.8, Vector3.UP * 1.4, Altar.finish(Palette.BRASS))
-			cylinder(0.6, 0.25, Vector3.UP * 2.9, Palette.solid(Palette.ARC, 0.9))
+			_dress(PropMeshes.stake_ward_pillar(), PropMeshes.weathered_material(Palette.BRASS.darkened(0.18), 0.50, 0.50, 0.0, "ward_pillar", true, 2.2), "WardPillar")
+			var lantern := _dress(PropMeshes.stake_ward_lantern(), PropMeshes.weathered_material(Palette.ARC.darkened(0.36), 0.94, 0.0, 0.28, "ward_lantern", true, 2.0), "WardLantern")
+			lantern.position = Vector3.UP * 2.9
 			ground_ring(float(offer.get("radius", WARD_RADIUS_BASE)), Palette.ARC)
 		_:
-			box(Vector3(2.2, 1.3, 1.5), Vector3.UP * 0.65, Altar.finish(Palette.VERDIGRIS), true)
-			box(Vector3(2.3, 0.3, 1.6), Vector3.UP * 1.45, Palette.solid(Palette.COPPER))
+			_dress(PropMeshes.stake_chest_body(), PropMeshes.weathered_material(Palette.VERDIGRIS, 0.72, 0.30, 0.0, "chest_body", true, 2.4), "ChestBody")
+			_solid_box(Vector3(2.2, 1.3, 1.5), Vector3.UP * 0.65)
+			var lid := _dress(PropMeshes.stake_chest_lid(), PropMeshes.weathered_material(Palette.COPPER, 0.52, 0.48, 0.0, "chest_lid", true, 2.0), "ChestLid")
+			lid.position = Vector3.UP * 1.45
+	var stud_mat := bolt_material()
+	var stud_mesh := PropMeshes.stake_tier_rivet()
+	var stud_y := 1.62 if kind == "blood_shrine" else 1.0
 	for i in tier:
-		box(Vector3(0.22, 0.22, 0.1), Vector3(-0.35 * (tier - 1) * 0.5 + 0.35 * i, 1.0, 0.85), Palette.solid(Palette.BRASS))
+		var stud := _dress(stud_mesh, stud_mat, "TierStud_%d" % i)
+		stud.position = Vector3(-0.35 * (tier - 1) * 0.5 + 0.35 * i, stud_y, 0.85)
 	if spot_owner == "gamble":
 		_dress(gamble_marks_mesh(kind, "bolts"), bolt_material(), "GambleBolts")
 		_dress(gamble_marks_mesh(kind, "chalk"), chalk_material(), "GambleChalk")
+
+
+func _solid_box(size: Vector3, at: Vector3) -> void:
+	var body := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box_shape := BoxShape3D.new()
+	box_shape.size = size
+	shape.shape = box_shape
+	body.add_child(shape)
+	body.position = at
+	add_child(body)
 
 
 func reach_point() -> Vector3:
@@ -270,10 +309,9 @@ func ready_now() -> bool:
 
 
 func gauge() -> float:
-	if spent or String(offer.get("cost_kind", "")) != "hp":
+	if spent or kind == CHALLENGE_DEVICE:
 		return 0.0
-	var need: float = float(offer["cost"]) + float(offer["floor"])
-	return clampf(ctx.run.hp / need, 0.0, 1.0)
+	return paid_share(offer, ctx.run)
 
 
 func words() -> String:
@@ -282,14 +320,18 @@ func words() -> String:
 	return offer_words(offer)
 
 
+func sign_words() -> String:
+	return "" if nothing_to_mend(offer, ctx.run) else words()
+
+
 func fire() -> bool:
 	if kind == CHALLENGE_DEVICE:
 		last = stack_challenge(ctx.run, reach_point())
-		spent = bool(last.get("ok", false)) or spent
-		return true
-	last = take(offer, ctx.run, reach_point())
-	spent = bool(last.get("ok", false)) or spent
-	return true
+	else:
+		last = take(offer, ctx.run, reach_point())
+	var took := bool(last.get("ok", false))
+	spent = took or spent
+	return took
 
 
 func show_prompt(targeted: bool) -> void:
@@ -495,5 +537,5 @@ static func chalk_material() -> StandardMaterial3D:
 		_chalk.roughness = 1.0
 		_chalk.emission_enabled = true
 		_chalk.emission = Palette.LEDGER_CREAM
-		_chalk.emission_energy_multiplier = 0.25
+		_chalk.emission_energy_multiplier = 0.08
 	return _chalk

@@ -1,0 +1,54 @@
+[gd_resource type="ShaderMaterial" load_steps=3 format=3]
+
+[ext_resource type="Shader" path="res://assets/shaders/craft_master_weathering.gdshader" id="1_shader"]
+[ext_resource type="Texture2D" path="res://assets/textures/craft/oxidized_iron_detail.png" id="2_detail"]
+
+[resource]
+resource_name = "oxidized_hull_plating"
+shader = ExtResource("1_shader")
+shader_parameter/use_world_space = true
+shader_parameter/use_vertex_masks = true
+shader_parameter/triplanar_sharpness = 5.0
+shader_parameter/detail_tile_metres = 3.4
+shader_parameter/macro_scale = 0.24
+shader_parameter/uv_warp_strength = 0.24
+shader_parameter/stochastic_rotation_mode = 1
+shader_parameter/has_detail_tex = true
+shader_parameter/detail_tex = ExtResource("2_detail")
+shader_parameter/detail_tex_strength = 0.44
+shader_parameter/detail_chroma_keep = 0.28
+shader_parameter/base_albedo = Color(0.607843, 0.317647, 0.227451, 1)
+shader_parameter/secondary_albedo = Color(0.470588, 0.270588, 0.203922, 1)
+shader_parameter/macro_color_mix = 0.24
+shader_parameter/base_roughness = 0.88
+shader_parameter/base_metallic = 0.06
+shader_parameter/base_specular = 0.44
+shader_parameter/oil_sheen_strength = 0.0
+shader_parameter/oil_sheen_roughness = 0.34
+shader_parameter/edge_wear_albedo = Color(0.717647, 0.713725, 0.639216, 1)
+shader_parameter/edge_wear_strength = 0.90
+shader_parameter/edge_wear_metallic = 0.9
+shader_parameter/edge_wear_roughness = 0.25
+shader_parameter/auto_curvature_weight = 0.18
+shader_parameter/grime_albedo = Color(0.141176, 0.164706, 0.156863, 1)
+shader_parameter/rust_albedo = Color(0.607843, 0.317647, 0.227451, 1)
+shader_parameter/grime_strength = 0.92
+shader_parameter/grime_roughness = 0.93
+shader_parameter/grime_metallic = 0.04
+shader_parameter/rust_mix = 0.48
+shader_parameter/foot_grime_height = 0.95
+shader_parameter/foot_grime_strength = 0.55
+shader_parameter/cavity_ao_strength = 0.78
+shader_parameter/dust_albedo = Color(0.776471, 0.635294, 0.454902, 1)
+shader_parameter/dust_strength = 0.30
+shader_parameter/dust_slope_min = 0.58
+shader_parameter/dust_roughness = 0.95
+shader_parameter/normal_relief = 0.52
+shader_parameter/roughness_variation = 0.18
+shader_parameter/emissive_color = Color(0.898039, 0.627451, 0.266667, 1)
+shader_parameter/emissive_secondary_color = Color(0.717647, 0.470588, 0.262745, 1)
+shader_parameter/emissive_gradient_mix = 0.38
+shader_parameter/emissive_energy = 4.6
+shader_parameter/emissive_pulse_speed = 1.4
+shader_parameter/emissive_pulse_amount = 0.16
+shader_parameter/reduce_flashes = false

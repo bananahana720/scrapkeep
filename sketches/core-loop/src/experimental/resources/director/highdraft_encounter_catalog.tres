@@ -1,0 +1,123 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/resources/director/encounter_catalog_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+catalog_id = &"highdraft_encounters"
+default_biome_id = &"highdraft"
+random_cooldown_s = 21.0
+initial_random_cooldown_s = 12.0
+min_random_gap_m = 28.0
+greed_scrap_threshold = 120
+triggered_specs = {
+&"over_audit_blitz_gate": {
+"base_payout": {
+"cogs": 22,
+"cores": 1,
+"guaranteed_rarity": &"rare",
+"part_rolls": 1,
+"scrap": 165,
+"source": "highdraft_audit_blitz_gate"
+},
+"display_name": "Launch-Rail Blitz Gate",
+"duration_s": 28.0,
+"kind": &"over_audit_blitz_gate",
+"lock_radius_m": 0.0,
+"maker": &"keepers",
+"opt_in_line": "Launch Rail Audit Gate. Fast chains multiply the cores.",
+"target_kills": 8,
+"trigger_radius_m": 7.5
+},
+&"scrap_beacon_lockdown": {
+"apex_cadence": "Hovering choir resonance glide, 0.80 s harmonic ring chime, magnetic pulse sweep.",
+"apex_card_line": "Sky-Dredge choir relay active. Deck lockdown confirmed.",
+"apex_extra_plates": 2,
+"apex_name": "Sky-Dredge Choir Relay",
+"apex_silhouette": "Suspended launch-gantry dredge pylon ringed by six harmonic tuning shields.",
+"apex_variant": &"choir_resonator_pylon",
+"display_name": "Choir Relay Beacon",
+"kind": &"scrap_beacon_lockdown",
+"lock_radius_m": 30.0,
+"maker": &"keepers",
+"max_duration_s": 75.0,
+"opt_in_line": "Choir Relay Beacon. Press locks the deck. Nobody makes you.",
+"payout": {
+"cogs": 38,
+"cores": 1,
+"guaranteed_rarity": &"relic",
+"part_rolls": 2,
+"scrap": 280,
+"source": "sky_dredge_lockdown_jackpot"
+},
+"trigger_radius_m": 8.0,
+"waves": [[&"chaser", &"winch_drone", &"jolt_layer"], [&"hooker", &"winch_drone", &"plated_brute"]]
+}
+}
+random_specs = {
+&"airdrop_salvage_pod": {
+"base_weight": 1.6,
+"biome_weights": {
+&"dig": 0.9,
+&"highdraft": 2.0,
+&"orbital_graveyard": 2.0,
+&"spillway": 1.2
+},
+"contest_s": 18.0,
+"cover_destructible_tier": 2,
+"cover_half_extents": Vector3(3.4, 2.8, 3.4),
+"display_name": "Air-Drop Salvage Pod",
+"impact_radius_m": 9.5,
+"kind": &"airdrop_salvage_pod",
+"maker": &"fleet",
+"payout": {
+"cogs": 24,
+"cores": 1,
+"guaranteed_rarity": &"rare",
+"part_rolls": 1,
+"scrap": 170,
+"source": "highdraft_airdrop_pod"
+},
+"scavenger_pack": [&"chaser", &"winch_drone", &"jolt_layer"],
+"tell_s": 3.5
+},
+&"greed_ambush_swarm": {
+"base_weight": 0.0,
+"call_line": "Unclaimed orbital freight on board. Intercept squad en route.",
+"display_name": "Highdraft Recovery Swarm",
+"dividend_scrap_cap": 185,
+"dividend_scrap_share": 0.25,
+"elite_variant": &"gale_shear_harrier",
+"interceptor_pack": [&"chaser", &"winch_drone", &"hooker", &"jolt_layer"],
+"kind": &"greed_ambush_swarm",
+"maker": &"fleet",
+"payout": {
+"cogs": 26,
+"cores": 1,
+"guaranteed_rarity": &"rare",
+"part_rolls": 1,
+"scrap": 145,
+"source": "highdraft_greed_dividend"
+},
+"tell_s": 2.2
+},
+&"rogue_compactor_chase": {
+"base_weight": 0.85,
+"biome_weights": {
+&"dig": 1.8,
+&"highdraft": 0.8,
+&"orbital_graveyard": 0.7,
+&"spillway": 1.0
+},
+"crew_number": 38,
+"crushed_enemy_scrap": 35,
+"crusher_damage": 220.0,
+"display_name": "Rogue Compactor No. 38",
+"duration_s": 9.0,
+"kind": &"rogue_compactor_chase",
+"lane_half_width_m": 5.5,
+"maker": &"rogue",
+"speed_mps": 18.0,
+"tell_s": 2.5
+}
+}

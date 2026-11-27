@@ -7,9 +7,10 @@ const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 
 const ICON_HEIGHT := 3.1
-const ICON_SIZE := 0.32
+const ICON_SIZE := 0.36
 const READ_STATES := {"resisted": "dented", "weak": "zzapped"}
 const CODEX_OF := {"plated": "armour_plated", "wet": "armour_wet"}
+const BADGE_SHADER := preload("res://assets/shaders/actor_armour_badge.gdshader")
 
 var ctx
 var fx
@@ -17,7 +18,7 @@ var stamped: Array[String] = []
 
 var _shown := {}
 var _icon_mesh: Mesh
-var _icon_material: StandardMaterial3D
+var _icon_material: Material
 
 
 func setup(ctx_ref, fx_ref = null) -> void:
@@ -81,9 +82,13 @@ static func icon_mesh() -> Mesh:
 	return box
 
 
-static func icon_material() -> StandardMaterial3D:
-	var material := Palette.solid(EventKinds.state_color("plated"), 0.6)
-	material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+static func icon_material() -> Material:
+	var material := ShaderMaterial.new()
+	material.shader = BADGE_SHADER
+	material.resource_name = "armour_badge"
+	material.set_shader_parameter("badge_color", EventKinds.state_color("plated"))
+	material.set_shader_parameter("keyline_color", Palette.CHARCOAL)
+	material.set_shader_parameter("rivet_color", Palette.SAND)
 	return material
 
 

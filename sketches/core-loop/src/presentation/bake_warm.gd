@@ -13,6 +13,9 @@ const Combat := preload("res://src/combat/combat.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const MachineFx := preload("res://src/presentation/machine_fx.gd")
+const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
+const MindDress := preload("res://src/boss/mind_dress.gd")
+const World23ChunkCraft := preload("res://src/presentation/world23_chunk_craft.gd")
 
 const WORLD_KITS := {
 	1: [
@@ -28,12 +31,23 @@ const WORLD_KITS := {
 		preload("res://src/combat/catch_trap.gd"), preload("res://src/combat/pit_jaw.gd"),
 		preload("res://src/combat/miniboss.gd"), preload("res://src/combat/vault.gd"),
 	],
+	3: [
+		preload("res://src/combat/kite_drone.gd"), preload("res://src/combat/gap_net.gd"),
+		preload("res://src/combat/gyro_jammer.gd"), preload("res://src/combat/deflector.gd"),
+	],
 }
 const WORLD_RIGS := {
 	1: [
 		"res://assets/models/world_one/enemy_foreman.glb", "res://assets/models/world_one/enemy_dispatcher.glb",
 		"res://assets/models/world_one/enemy_splitter.glb", "res://assets/models/world_one/enemy_splitter_piece.glb",
 	],
+	3: [
+		"res://assets/models/highdraft/boss_mind_base.glb",
+		"res://assets/models/highdraft/boss_mind_kit.glb",
+	],
+}
+const WORLD_FIRST_SHADERS := {
+	3: "mind_shaders",
 }
 
 const FIRSTS := ["scrap_pickup", "armour_read", "synergy_ring", "arc_mark", "machine_words", "hero_chunks"]
@@ -79,7 +93,23 @@ func _on_stage_entered(stage: int, _retry: bool) -> void:
 					_queue.append(item)
 			if not _firsts_done and _first_queue.is_empty():
 				_first_queue = firsts()
+			var world_shader: String = String(WORLD_FIRST_SHADERS.get(world, ""))
+			if not world_shader.is_empty():
+				warm_mind_shaders()
+				if not _first_queue.has(world_shader) and not _warm.has(world_shader):
+					_first_queue.push_front(world_shader)
 			return
+
+
+static func warm_mind_shaders() -> void:
+	if _warm.has("mind_shaders_cpu"):
+		return
+	_warm["mind_shaders_cpu"] = true
+	if not AppShell.headless():
+		ArenaMindDress.prepare()
+		MindDress.prepare()
+	ArenaMindDress.warm_kit()
+	World23ChunkCraft.warm_shaders()
 
 
 func _exit_tree() -> void:
@@ -91,6 +121,8 @@ static func settle() -> void:
 		if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 			_held[path] = ResourceLoader.load_threaded_get(path)
 	_loading.clear()
+	ArenaMindDress.settle()
+	MindDress.settle()
 
 
 func _process(_delta: float) -> void:
@@ -156,6 +188,11 @@ static func first_view(first: String, parent: Node) -> Node3D:
 			views = [Combat.arc_mark_view()]
 		"scrap_pickup":
 			views = ScrapField.warm_views()
+		"mind_shaders":
+			_warm["mind_shaders"] = true
+			warm_mind_shaders()
+			var panel := MindDress.build_takeover_panel()
+			views = [panel]
 		"hero_chunks":
 			# Godot headless Dummy rasterizer mesh RIDs are not thread-safe; load on main thread when headless.
 			var path := HeroAssets.CHUNKS_PATH

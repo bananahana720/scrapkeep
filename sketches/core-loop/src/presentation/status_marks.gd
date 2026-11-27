@@ -4,11 +4,11 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 
-const SHOWN_SECONDS := 0.5
+const SHOWN_SECONDS := 0.55
 const COOLDOWN_SECONDS := 1.0
 const MARK_HEIGHT := 2.4
-const SIZE_FROM := 0.5
-const SIZE_TO := 1.0
+const SIZE_FROM := 0.68
+const SIZE_TO := 1.35
 
 var ctx
 var vfx

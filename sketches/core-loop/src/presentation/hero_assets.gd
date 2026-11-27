@@ -56,6 +56,11 @@ const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
+const WeaponRigFx := preload("res://src/presentation/weapon_rig_fx.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const PilotGearKit := preload("res://src/presentation/pilot_gear_kit.gd")
+const COCKPIT_CONTROLS := {"yoke": "YokeRig", "gauges": "GaugeCluster", "throttle": "ThrottleLever", "pedal_l": "PedalL", "pedal_r": "PedalR"}
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const REST_LIBRARY := "runtime"
 const REST_CLIP := "runtime/rest_pose"
@@ -549,6 +554,7 @@ func _process(delta: float) -> void:
 		_fit(rec)
 		_steer_pod(rec, player, delta)
 		_step_mecha(rec, player, delta)
+		_step_weapon_rig(rec, delta)
 	_tuck_chunks()
 	for key in _wardens.keys():
 		var rec: Dictionary = _wardens[key]
@@ -572,10 +578,7 @@ func air_cue(_factor: float, rose: bool) -> Node3D:
 				old.queue_free()
 		var ring := MeshInstance3D.new()
 		ring.name = AIR_CUE_NAME
-		var torus := TorusMesh.new()
-		torus.inner_radius = AIR_CUE_RADIUS * 0.86
-		torus.outer_radius = AIR_CUE_RADIUS
-		ring.mesh = torus
+		ring.mesh = PropMeshes.air_cue_ring(AIR_CUE_RADIUS)
 		var mat := StandardMaterial3D.new()
 		var color: Color = row.get("color", Palette.AMBER)
 		mat.albedo_color = color
@@ -614,6 +617,10 @@ func _steer_pod(rec: Dictionary, player, delta: float) -> void:
 		gyro.rotate_object_local(Vector3.RIGHT, v.length() * delta / 0.98)
 	sync_lattice(core, player.roll_node())
 	BallLooks.ride(ball_look(), player.roll_node())
+	if BallLooks.PLATED.has(ball_look()):
+		var acc_node: Node = player.roll_node().get_node_or_null("Accretion")
+		if acc_node != null:
+			_ensure_cutaway_rider_ink(acc_node)
 	var glance = rec.get("glance")
 	if glance != null and is_instance_valid(glance) and ctx != null and ctx.get("camera") != null:
 		glance.observe(_at_rest(rec, v.length()), ctx.camera.global_position, delta)
@@ -968,7 +975,7 @@ var _ready_glow := false
 func _assets() -> Dictionary:
 	if not _shell_assets_read and shell_assets.is_empty():
 		shell_assets = Cosmetics.asset_paths()
-		shell_assets.merge(BallLooks.asset_paths(ball_look(), SHELLS.keys()), true)
+		shell_assets.merge(BallLooks.asset_paths(ball_look(), SHELLS.keys() + HIDDEN_SHELLS.keys()), true)
 	_shell_assets_read = true
 	return shell_assets
 
@@ -1038,7 +1045,8 @@ func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[St
 			_warn_logged("shell_layer:%s:%d" % [use, n], "hero_assets: shell variant '%s' lacks its class %d layer; borrowing the default" % [use, n])
 			path = shell_path(pilot, "", n, paths)
 		if not _loadable(path):
-			_warn_logged("shell_default_layer:%s:%d" % [pilot, n], "hero_assets: %s has no class %d layer; nothing shows for it" % [pilot, n])
+			if not HIDDEN_SHELLS.has(pilot):
+				_warn_logged("shell_default_layer:%s:%d" % [pilot, n], "hero_assets: %s has no class %d layer; nothing shows for it" % [pilot, n])
 			path = ""
 		out.append(path)
 	return out
@@ -1394,6 +1402,84 @@ func _connect_shell_events() -> void:
 	_connect_optional(bus, "ultimate_ready", set_ready_glow.bind(true))
 	_connect_optional(bus, "ultimate_started", set_ready_glow.bind(false))
 	_connect_optional(bus, "ultimate_cancelled", set_ready_glow.bind(false))
+	_connect_optional(bus, "shot_fired", _on_weapon_shot_fired)
+	_connect_optional(bus, "part_gained", _on_weapon_part_gained)
+
+
+func sync_weapon_rig(pod: Node3D, shot_bits_mask: int, part_ids: Array) -> Node3D:
+	if pod == null or not is_instance_valid(pod):
+		return null
+	var ring := pod.get_node_or_null("WeaponRing") as Node3D
+	if ring == null:
+		return null
+	var mods := WeaponRigFx.mods_for(shot_bits_mask, WeaponRigFx.tags_from_parts(part_ids))
+	var existing := ring.get_node_or_null(WeaponRigFx.NODE_NAME) as Node3D
+	if mods.is_empty():
+		if existing != null:
+			existing.sync_build(0, [])
+		return existing
+	var rig := WeaponRigFx.ensure_on(ring)
+	if rig != null:
+		rig.sync_build(shot_bits_mask, part_ids)
+		if BallLooks.PLATED.has(ball_look()) and not bool(rig.get("_cutaway_dressed")):
+			var ring_mount := rig.get_node_or_null("RingMount")
+			if ring_mount != null:
+				BallLooks._cut_kit(ring_mount, "")
+				InkOutline.apply(ring_mount, "pilot")
+			rig.set("_cutaway_dressed", true)
+	return rig
+
+
+func _live_weapon_driver():
+	var spawner = ctx.get("spawner") if ctx != null else null
+	var driver = spawner.get("weapon_driver") if spawner != null else null
+	return driver if driver != null and driver.has_method("state_snapshot") else null
+
+
+func _on_weapon_shot_fired() -> void:
+	if _live_weapon_driver() != null:
+		return
+	for rec in _players.values():
+		var pod: Node3D = rec.get("pod")
+		if pod == null or not is_instance_valid(pod):
+			continue
+		var ring := pod.get_node_or_null("WeaponRing") as Node3D
+		if ring == null:
+			continue
+		var rig := ring.get_node_or_null(WeaponRigFx.NODE_NAME)
+		if rig != null:
+			rig.on_shot_fired("plain", 1.0)
+
+
+func _on_weapon_part_gained() -> void:
+	var bits := _live_shot_bits()
+	var parts := _live_parts()
+	for rec in _players.values():
+		var pod: Node3D = rec.get("pod")
+		if pod != null and is_instance_valid(pod):
+			sync_weapon_rig(pod, bits, parts)
+
+
+func _live_shot_bits() -> int:
+	var build = ctx.get("build") if ctx != null else null
+	return int(build.shot_bits()) if build != null and build.has_method("shot_bits") else 0
+
+
+func _live_parts() -> Array:
+	var run = ctx.get("run") if ctx != null else null
+	return run.parts if run != null and run.get("parts") != null else []
+
+
+func _step_weapon_rig(rec: Dictionary, delta: float) -> void:
+	var pod: Node3D = rec.get("pod")
+	if pod == null or not is_instance_valid(pod):
+		return
+	var rig := sync_weapon_rig(pod, _live_shot_bits(), _live_parts())
+	if rig == null:
+		return
+	var driver = _live_weapon_driver()
+	var snap: Dictionary = driver.state_snapshot() if driver != null else {}
+	rig.step(delta, snap, UiTokens.reduced_motion)
 
 
 func _addon_path(id: String, slot: String) -> String:
@@ -1544,7 +1630,8 @@ func _fit_pilot(rec: Dictionary) -> void:
 	var animator = fitted.get("animator")
 	rec["animator"] = animator
 	rec["pilot"] = pilot
-	rec["glance"] = PilotGlance.seat(pilot) if BallLooks.PLATED.has(ball_look()) else null
+	rec["glance"] = PilotGlance.seat(pilot, rec["class"]) if BallLooks.PLATED.has(ball_look()) else null
+	rec["liveliness"] = _dress_live_pilot(rec) if rec["glance"] != null else null
 	rec["reaction"] = ""
 	rec["priority"] = -1
 	rec["cooldowns"] = {}
@@ -1554,6 +1641,29 @@ func _fit_pilot(rec: Dictionary) -> void:
 	if animator is AnimationPlayer:
 		animator.animation_finished.connect(_pilot_finished.bind(rec.player.get_instance_id(), animator))
 		_to_base(rec)
+
+
+func _dress_live_pilot(rec: Dictionary) -> SkeletonModifier3D:
+	PilotGearKit.mount_pilot_wearables(rec.pilot, rec.player.class_color(), true)
+	var live: SkeletonModifier3D = rec.glance.liveliness()
+	var rig := (rec.pod as Node3D).get_node_or_null("CraftCockpitRig")
+	if live != null and rig != null:
+		var controls := {}
+		for key in COCKPIT_CONTROLS:
+			var node := rig.get_node_or_null(COCKPIT_CONTROLS[key])
+			if node != null:
+				controls[key] = node
+		live.bind_cockpit_controls(controls)
+	return live
+
+
+func pilot_impulse(event: String) -> int:
+	var moved := 0
+	for rec in _players.values():
+		var live = rec.get("liveliness")
+		if live != null and is_instance_valid(live) and live.trigger_reaction(event):
+			moved += 1
+	return moved
 
 
 func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictionary:
@@ -1572,6 +1682,10 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 	BallLooks.light_pilot(ball_look(), pilot)
 	InkOutline.apply(pilot, "pilot")
 	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if animator != null and animator.has_animation("idle_loop"):
+		var idle_anim := animator.get_animation("idle_loop")
+		if idle_anim != null and idle_anim.loop_mode == Animation.LOOP_NONE:
+			idle_anim.loop_mode = Animation.LOOP_LINEAR
 	return {"pilot": pilot, "animator": animator}
 
 
@@ -1731,7 +1845,7 @@ func _contact_of(rec: Dictionary, clip: String) -> Dictionary:
 	var control := MechaMotion.cast_control(rec["class"], clip)
 	if control == "":
 		return {}
-	var pilot := String(PILOTS.get(rec["class"], "")).get_file().trim_prefix("pilot_").trim_suffix("_anim.glb")
+	var pilot := String(PILOTS.get(rec["class"], HIDDEN_PILOTS.get(rec["class"], ""))).get_file().trim_prefix("pilot_").trim_suffix("_anim.glb")
 	var seconds: float = 0.4 * rec.animator.get_animation(clip).length
 	_warn_once("contact:%s:%s" % [rec["class"], clip], "hero_assets: pilot %s class %s has no pose-table contact for %s in %s; control %s falls back to %.3fs at 40 percent" % [pilot, rec["class"], clip, PILOT_TABLES % pilot, control, seconds])
 	return {"control": control, "seconds": seconds}
@@ -2686,7 +2800,7 @@ func _add_warden_strokes(base: Node3D, look: Node3D, cue_owner: Node3D, rec: Dic
 
 
 func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: PackedVector3Array) -> void:
-	var box := stroke.mesh as BoxMesh
+	var span: Vector3 = (stroke.mesh as BoxMesh).size if stroke.mesh is BoxMesh else stroke.mesh.get_aabb().size
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var indices := PackedInt32Array()
@@ -2695,7 +2809,7 @@ func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: Pack
 	while ancestor != jaw:
 		to_jaw = ancestor.transform * to_jaw
 		ancestor = ancestor.get_parent() as Node3D
-	var key := "warden_stroke:%s:%s:%s" % [jaw.name, box.size, to_jaw]
+	var key := "warden_stroke:%s:%s:%s" % [jaw.name, span, to_jaw]
 	stroke.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
 	if _meshes.has(key):
 		stroke.mesh = _meshes[key]
@@ -2705,7 +2819,7 @@ func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: Pack
 	var high := -INF
 	for x in [-0.5, 0.5]:
 		for y in [-0.5, 0.5]:
-			var height: float = (to_jaw * Vector3(box.size.x * x, box.size.y * y, 0)).y
+			var height: float = (to_jaw * Vector3(span.x * x, span.y * y, 0)).y
 			low = minf(low, height)
 			high = maxf(high, height)
 	var candidates := PackedVector3Array()
@@ -2714,7 +2828,7 @@ func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: Pack
 			candidates.append_array(PackedVector3Array([faces[i], faces[i + 1], faces[i + 2]]))
 	for row in 17:
 		for side in [-0.5, 0.5]:
-			var point := to_jaw * Vector3(box.size.x * side, box.size.y * (float(row) / 16.0 - 0.5), 0)
+			var point := to_jaw * Vector3(span.x * side, span.y * (float(row) / 16.0 - 0.5), 0)
 			var radial := Vector3(point.x + jaw.position.x, 0, point.z + jaw.position.z).normalized()
 			var start := radial * 8.0 + Vector3.UP * point.y - Vector3(jaw.position.x, 0, jaw.position.z)
 			var nearest := INF
@@ -2881,9 +2995,8 @@ func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 
 func _paint_warden_inner(inner: MeshInstance3D) -> void:
 	for surface in inner.mesh.get_surface_count():
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Palette.CHARCOAL if slot_of(inner.mesh, surface) == "rubber" else EventKinds.role_color("rust").lerp(Palette.CHARCOAL, 0.55)
-		mat.roughness = 0.95
+		var col := Palette.CHARCOAL if slot_of(inner.mesh, surface) == "rubber" else EventKinds.role_color("rust").lerp(Palette.CHARCOAL, 0.55)
+		var mat := PropMeshes.weathered_material(col, 0.92, 0.14, 0.0, "warden_inner_" + slot_of(inner.mesh, surface))
 		_surface_material(inner, surface, mat)
 
 
@@ -2896,17 +3009,12 @@ func _warden_chunk_mark(segment: MeshInstance3D) -> Node3D:
 	mark.position = centre
 	mark.basis = Basis.looking_at(-normal)
 	segment.add_child(mark)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = EventKinds.role_color("neutral")
-	mat.emission_enabled = true
-	mat.emission = mat.albedo_color
-	mat.emission_energy_multiplier = 1.2
+	var base_col := EventKinds.role_color("neutral")
+	var mat := PropMeshes.weathered_material(base_col, 0.62, 0.18, 1.2, "warden_crack").duplicate() as StandardMaterial3D
 	var points := [Vector2(-0.22, 0.5), Vector2(0.1, 0.17), Vector2(-0.1, -0.12), Vector2(0.2, -0.5)]
 	for i in 3:
 		var stroke := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.09, points[i].distance_to(points[i + 1]), 0.03)
-		stroke.mesh = mesh
+		stroke.mesh = PropMeshes.chalk_stroke(0.09, points[i].distance_to(points[i + 1]))
 		stroke.material_override = mat
 		var mid: Vector2 = (points[i] + points[i + 1]) * 0.5
 		stroke.position = Vector3(mid.x, mid.y, 0)
@@ -3065,10 +3173,7 @@ func _dress_mast(warden) -> void:
 		child.add_child(support)
 		_mast = {"owner": warden.get_instance_id(), "mesh": child, "root": support, "layers": child.layers, "shadow": child.cast_shadow}
 		for span in [Vector2(-half, low), Vector2(high, half)]:
-			var segment := cylinder.duplicate() as CylinderMesh
-			segment.height = span.y - span.x
-			segment.bottom_radius = _mast_radius(cylinder, span.x)
-			segment.top_radius = _mast_radius(cylinder, span.y)
+			var segment := PropMeshes.fluted_plume_column(_mast_radius(cylinder, span.x), _mast_radius(cylinder, span.y), span.y - span.x)
 			var visual := _mast_visual(segment, support, child)
 			visual.position.y = (span.x + span.y) * 0.5
 		for side in [-1.0, 1.0]:
@@ -3076,8 +3181,7 @@ func _dress_mast(warden) -> void:
 			for i in 3:
 				var start: Vector3 = points[i]
 				var end: Vector3 = points[i + 1]
-				var beam := BoxMesh.new()
-				beam.size = Vector3(0.12, start.distance_to(end), 0.12)
+				var beam := PropMeshes.bevel_prop_box(Vector3(0.12, start.distance_to(end), 0.12))
 				var visual := _mast_visual(beam, support, child)
 				visual.position = (start + end) * 0.5
 				visual.rotation.z = -atan2(end.x - start.x, end.y - start.y)
@@ -3231,3 +3335,14 @@ void fragment() {
 	upper.shadow_enabled = false
 	upper.position = Vector3(-12.5, 5.2, 0.0)
 	barge.add_child(upper)
+
+
+func _ensure_cutaway_rider_ink(acc_node: Node) -> void:
+	for mi: MeshInstance3D in acc_node.find_children("*", "MeshInstance3D", true, false):
+		var sm := mi.material_override as ShaderMaterial
+		if sm != null and sm.next_pass == null:
+			InkOutline.apply(mi, "pilot")
+		if sm != null and sm.next_pass is ShaderMaterial:
+			var np := sm.next_pass as ShaderMaterial
+			if np.has_meta("ink_role"):
+				np.set_shader_parameter("centre_at", sm.get_shader_parameter("centre_at"))

@@ -5,6 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const WeakPoints := preload("res://src/boss/weak_points.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const STONE_DIR := "res://assets/models/dig_stone/"
 const MECH_DIR := "res://assets/models/dig_mechanical/"
 const BOSS_DIR := "res://assets/models/bosses/"
@@ -156,16 +157,19 @@ func _prepare() -> bool:
 		var material := StandardMaterial3D.new()
 		material.resource_name = slot
 		material.vertex_color_use_as_albedo = slot != "ancient_light"
-		material.roughness = 0.68 if slot == "steel" else (0.56 if slot == "ancient_enamel" else 0.87)
-		material.metallic = 0.34 if slot == "steel" else (0.24 if slot == "ancient_enamel" else 0.0)
+		material.roughness = 0.62 if slot == "steel" else (0.50 if slot == "ancient_enamel" else 0.78)
+		material.metallic = 0.36 if slot == "steel" else (0.24 if slot == "ancient_enamel" else 0.08)
+		Palette.surface_grain(material)
 		if slot == "glass":
-			material.roughness = 0.32
+			material.roughness = 0.28
+			material.metallic = 0.0
 			material.emission_enabled = true
 			material.emission = DigScenery.LAMP_LIGHT
-			material.emission_energy_multiplier = 0.95
+			material.emission_energy_multiplier = 1.45
 		elif slot == "ancient_light":
 			material.albedo_color = Palette.ANCIENT
-			material.roughness = 0.28
+			material.roughness = 0.26
+			material.metallic = 0.0
 			material.emission_enabled = true
 			material.emission = Palette.ANCIENT
 			material.emission_energy_multiplier = 3.0
@@ -335,6 +339,8 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 	body.add_child(skin)
 	for child in body.get_children():
 		if child is MeshInstance3D:
+			if child.name == "PadDeckMesh" and child.mesh is CylinderMesh:
+				child.mesh = EnemyBossCraft.waking_arena_pad(module.PAD_RADIUS, module.PAD_THICK)
 			child.material_override = _materials["rim_bank"] if child.name == "RimBankMesh" else _materials["floor"]
 	if _coping_ring_mesh != null:
 		var coping := MeshInstance3D.new()
@@ -347,6 +353,8 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 	if node_name == "PitDressing":
 		_add_pit_abyss_glow(skin)
 	var pools := _light_pool.get_node_or_null(String(body.name)) as Node3D
+	if pools == null:
+		pools = _retired_floor_pool()
 	if pools == null:
 		pools = Node3D.new()
 		pools.name = body.name
@@ -370,6 +378,16 @@ func _floor(body: StaticBody3D, node_name: String) -> void:
 		light.light_energy = pool.energy
 		light.omni_range = pool.range
 		light.shadow_enabled = false
+		light.distance_fade_enabled = true
+		light.distance_fade_begin = 48.0
+		light.distance_fade_length = 16.0
+
+
+func _retired_floor_pool() -> Node3D:
+	for child in _light_pool.get_children():
+		if child.has_meta("pool_name") and not child.name.begins_with("LampPool"):
+			return child as Node3D
+	return null
 
 
 func _works() -> void:
@@ -396,6 +414,9 @@ func _works() -> void:
 			light.light_energy = LIGHTS.lamp_pool.energy
 			light.omni_range = LIGHTS.lamp_pool.range
 			light.shadow_enabled = false
+			light.distance_fade_enabled = true
+			light.distance_fade_begin = 62.0
+			light.distance_fade_length = 18.0
 			light.position = wall + basis * Vector3(0, -1.0, -1.0)
 			var foot := Vector3(sin(angle) * (WALL_RADIUS - 4.2), y - 5.0, cos(angle) * (WALL_RADIUS - 4.2))
 			_put(batches, "strut_bent.glb" if line % 3 == 0 else "strut_tall.glb", Transform3D(basis.scaled(Vector3.ONE * 1.4), foot))
@@ -433,6 +454,8 @@ func _flush(parent: Node3D, batches: Dictionary) -> void:
 			view.multimesh = multi
 			view.set_meta("placements", placements)
 			view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			view.visibility_range_end = 155.0
+			view.visibility_range_end_margin = 0.0
 			parent.add_child(view)
 
 

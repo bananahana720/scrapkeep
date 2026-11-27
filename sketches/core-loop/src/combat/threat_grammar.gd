@@ -62,6 +62,7 @@ const UNDERLAY_ALPHA := 1.0
 const WAVE_EDGE := 1.0
 const DASH := 2.2
 const OWN_DASH := 1.0
+const HOSTILE_WAVE_DASH := 3.8
 const CHEVRON_HALF := 1.6
 const CHEVRON_DEPTH := 1.3
 const CHEVRON_LINE := 0.2
@@ -161,12 +162,54 @@ const FILL_STENCIL := {"fill": 1, "area": 2, "swept": 4, "run": 8, "live": 16, "
 const FILL_SORT := {"area": -6000.0, "reach": -5000.0, "fill": -4000.0, "run": -3000.0, "swept": -2000.0, "live": -1000.0}
 
 
+const STANCE_HOSTILE := "hostile"
+const STANCE_NEUTRAL := "neutral"
+const STANCE_OWNED := "owned"
+const STANCE_UNKNOWN := "unknown"
+const HOSTILE_TONES := [Palette.HAZARD]
+const NEUTRAL_TONES := [Palette.SAND]
+const OWNED_TONES := [
+	Palette.AMBER,
+	Palette.ARC,
+	Palette.COPPER,
+	Palette.RUST,
+	Palette.LEDGER,
+	Palette.ANCIENT,
+	Palette.COBALT,
+	Color("ff7a29"),
+	Color(0.78, 1.0, 0.62),
+]
+
+
+static func _tone_in(tone: Color, tones: Array) -> bool:
+	var rgb := Color(tone.r, tone.g, tone.b, 1.0)
+	for entry in tones:
+		var candidate: Color = entry
+		if rgb.is_equal_approx(Color(candidate.r, candidate.g, candidate.b, 1.0)):
+			return true
+	return false
+
+
+static func known_tone(tone: Color) -> bool:
+	return _tone_in(tone, HOSTILE_TONES) or _tone_in(tone, NEUTRAL_TONES) or _tone_in(tone, OWNED_TONES)
+
+
 static func stance(tone: Color) -> String:
-	if tone == Palette.HAZARD:
-		return "hostile"
-	if tone == Palette.SAND:
-		return "neutral"
-	return "owned"
+	if _tone_in(tone, HOSTILE_TONES):
+		return STANCE_HOSTILE
+	if _tone_in(tone, NEUTRAL_TONES):
+		return STANCE_NEUTRAL
+	if _tone_in(tone, OWNED_TONES):
+		return STANCE_OWNED
+	return STANCE_UNKNOWN
+
+
+static func wave_outline_period(tone: Color) -> float:
+	if stance(tone) == STANCE_HOSTILE:
+		return HOSTILE_WAVE_DASH
+	if stance(tone) == STANCE_OWNED:
+		return OWN_DASH
+	return DASH
 
 
 static func valid(type: int) -> bool:
@@ -508,7 +551,8 @@ static func _wave(d: Dictionary, motion: bool, out: Array) -> void:
 		push_error("threat_grammar: a WAVE needs a radial form")
 		return
 	if not motion:
-		_lined(out, "outline", false, Color(tone, OUTLINE_ALPHA), func(grow: float): return _dashed_outline(d, grow), {})
+		var period := wave_outline_period(tone)
+		_lined(out, "outline", false, Color(tone, OUTLINE_ALPHA), func(grow: float): return _dashed_outline(d, grow, period), {"period": period})
 		return
 	var arming := float(d["front"]) < 0.0
 	if not arming:
@@ -869,21 +913,21 @@ static func _own_edge_tris(d: Dictionary, grow: float) -> PackedVector3Array:
 	return tris
 
 
-static func _dashed_outline(d: Dictionary, grow: float) -> PackedVector3Array:
+static func _dashed_outline(d: Dictionary, grow: float, period := DASH) -> PackedVector3Array:
 	var w := edge_width(d) * 0.5
 	if d["form"] == "lane":
-		return _dashed_lane(d, w + grow)
+		return _dashed_lane(d, w + grow, period)
 	var r_in: float = d["r_in"]
 	var r_out: float = d["r_out"]
 	var a0: float = d["a0"]
 	var a1: float = d["a1"]
-	var tris := _dashes(d, r_out - w, w + grow, a0, a1)
+	var tris := _dashes(d, r_out - w, w + grow, a0, a1, period)
 	if r_in > 0.05:
-		tris.append_array(_dashes(d, r_in + w, w + grow, a0, a1))
+		tris.append_array(_dashes(d, r_in + w, w + grow, a0, a1, period))
 	if not is_full(d):
 		var c: Vector3 = d["centre"]
 		for a in [a0, a1]:
-			var count := maxi(2, int(round((r_out - r_in) / DASH)))
+			var count := maxi(2, int(round((r_out - r_in) / period)))
 			for i in count:
 				var s0 := lerpf(r_in, r_out, (i + 0.225) / count)
 				var s1 := lerpf(r_in, r_out, (i + 0.775) / count)
@@ -891,17 +935,17 @@ static func _dashed_outline(d: Dictionary, grow: float) -> PackedVector3Array:
 	return tris
 
 
-static func _dashed_lane(d: Dictionary, half: float) -> PackedVector3Array:
+static func _dashed_lane(d: Dictionary, half: float, period := DASH) -> PackedVector3Array:
 	var tris := PackedVector3Array()
 	var back: float = d["back"]
 	var length: float = d["length"]
 	var width: float = d["half_width"]
-	var count := maxi(2, int(round((length + back) / DASH)))
+	var count := maxi(2, int(round((length + back) / period)))
 	for side in [-1.0, 1.0]:
 		for i in count:
 			_seg(tris, _lane_at(d, lerpf(-back, length, (i + 0.225) / count), side * width),
 				_lane_at(d, lerpf(-back, length, (i + 0.775) / count), side * width), half)
-	var across := maxi(1, int(round(2.0 * width / DASH)))
+	var across := maxi(1, int(round(2.0 * width / period)))
 	for i in across:
 		_seg(tris, _lane_at(d, length, lerpf(-width, width, (i + 0.225) / across)),
 			_lane_at(d, length, lerpf(-width, width, (i + 0.775) / across)), half)
@@ -1046,7 +1090,7 @@ class Painter:
 			code += "#define DEPTH_AWARE\n"
 		if FILL_STENCIL.has(fill_class):
 			code += "stencil_mode read, write, compare_not_equal, %d;\n" % FILL_STENCIL[fill_class]
-		code += "#include \"res://src/combat/threat_mark.gdshaderinc\"\n"
+		code += "#include \"res://assets/shaders/telegraph_mark.gdshaderinc\"\n"
 		var shader := Shader.new()
 		shader.code = code
 		var mat := ShaderMaterial.new()
@@ -1054,11 +1098,20 @@ class Painter:
 		mat.render_priority = priority
 		mat.set_shader_parameter("governed", 1.0 if governed else 0.0)
 		mat.set_shader_parameter("lens", Vector2(FENCE_CLEAR, FENCE_FULL) if fill_class == "fence" else Vector2(LENS_CLEAR, LENS_FULL))
+		mat.set_shader_parameter("ink_col", Palette.CHARCOAL)
+		mat.set_shader_parameter("is_fill", 1.0 if fill_class in ["fill", "run", "swept"] else 0.0)
+		mat.set_shader_parameter("is_fence", 1.0 if fill_class == "fence" else 0.0)
+		mat.set_shader_parameter("flash_scale", FlashGuard.info(1.0))
 		if depth:
 			mat.set_shader_parameter("depth_pull", DEPTH_PULL)
 		if stripes:
 			mat.set_shader_parameter("texture_albedo", stripe_texture())
 			mat.set_shader_parameter("uv1_scale", Vector3.ONE / (STRIPE_PITCH * sqrt(2.0)))
+			mat.set_shader_parameter("stripe_pitch", STRIPE_PITCH)
+			mat.set_shader_parameter("stripe_tape", 1.0 if soft_on() else 0.0)
+			mat.set_shader_parameter("tape_dark", Color(TAPE_SHADE, TAPE_SHADE, TAPE_SHADE))
+			mat.set_shader_parameter("tape_share", TAPE_SHARE)
+			mat.set_shader_parameter("hazard_col", Palette.HAZARD)
 		_materials[key] = mat
 		materials_built += 1
 		return mat
@@ -1073,6 +1126,8 @@ class Painter:
 		if soft_on():
 			keys.append(["", false, PRIORITY, false])
 			keys.append(["fence", false, LINE_PRIORITY, false])
+			if striped_on():
+				keys.append(["", true, PRIORITY, false])
 		return keys
 
 	static func warm_up(parent: Node) -> Node3D:
@@ -1129,11 +1184,11 @@ class Painter:
 	static func stripe_texture() -> ImageTexture:
 		var tape := soft_on()
 		if not _stripes.has(tape):
-			var size := 32
+			var size := 128
 			var image := Image.create_empty(size, size, false, Image.FORMAT_RGBA8)
 			var light := Color.WHITE if tape else Palette.HAZARD
 			var dark := Color(TAPE_SHADE, TAPE_SHADE, TAPE_SHADE) if tape else Palette.CHARCOAL
-			var band := int(size * (1.0 - TAPE_SHARE)) if tape else size / 2
+			var band := int(round(size * (1.0 - TAPE_SHARE))) if tape else size / 2
 			for y in size:
 				for x in size:
 					image.set_pixel(x, y, light if (x + y) % size < band else dark)

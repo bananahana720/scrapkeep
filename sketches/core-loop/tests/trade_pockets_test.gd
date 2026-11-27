@@ -224,7 +224,16 @@ func _runtime(model) -> void:
 			door_heads[label.text.get_slice("\n", 0) + " / " + label.text.get_slice("\n", 1)] = true
 			beam_words[s.view.word.text] = true
 			for device in s.trade_devices:
-				price_ok = price_ok and label.text.contains(device.words()) and device.offer.cost_kind != "scrap" and device in game.world.interact.devices
+				price_ok = price_ok and (device.sign_words() == "" or label.text.contains(device.sign_words())) and device.offer.cost_kind != "scrap" and device in game.world.interact.devices
+			if trial == 0 and s.trade_devices[0].offer.win_kind == "heal":
+				var ward = s.trade_devices[0]
+				t.check(entry.id + " the door offers no mend to a full hull", not label.text.contains(ward.words()) and label.text.contains(s.trade_devices[1].words()), label.text)
+				game.run.hp = game.run.max_hp - 30.0
+				acts._watch_trade(s, s.global_position + Vector3(900.0, 0.0, 900.0))
+				t.check(entry.id + " the door offers the mend to a hurt hull", label.text.contains(ward.words()), label.text)
+				game.run.hp = game.run.max_hp
+				acts._watch_trade(s, s.global_position + Vector3(900.0, 0.0, 900.0))
+				t.check(entry.id + " the door takes the mend back off a mended hull", not label.text.contains(ward.words()), label.text)
 			var at: Vector3 = s.to_global(Vector3(entry.entry_spot[0], 0, entry.entry_spot[1]))
 			at.y = game.ctx.terrain.height(at.x, at.z) + 1.1
 			game.player.reset_to(at)

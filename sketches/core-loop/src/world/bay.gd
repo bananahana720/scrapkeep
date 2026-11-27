@@ -9,6 +9,7 @@ const StageMap := preload("res://src/world/stage_map.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const KIT := "res://assets/models/world_one/bay_kit.glb"
 const KIT_PARTS := ["BayCabin", "BayBellFrame", "BayBell", "BayMarbleToy", "BayYardWall", "BayPost", "BayPin", "CradleCup", "CradleMast"]
 
@@ -372,19 +373,14 @@ func _build_deck() -> void:
 	for corner in [Vector2(1, 1), Vector2(-1, 1), Vector2(1, -1), Vector2(-1, -1)]:
 		var jet := Vector3(corner.x * (DECK_U - 6.0), -4.5, corner.y * (DECK_V - 5.0))
 		var steam := MeshInstance3D.new()
-		var sm := CylinderMesh.new()
-		sm.top_radius = 2.4
-		sm.bottom_radius = 4.0
-		sm.height = 6.0
-		steam.mesh = sm
+		steam.mesh = PropMeshes.fluted_plume_column(4.0, 2.4, 6.0)
 		steam.material_override = Palette.unshaded(Color(Palette.SAND, 0.25))
 		steam.position = jet + Vector3.DOWN * 4.5
 		_barge.add_child(steam)
 	var line := MeshInstance3D.new()
-	var lm := BoxMesh.new()
-	lm.size = Vector3(1.2, 0.08, 8.5)
-	line.mesh = lm
-	line.material_override = _paint(Palette.SAND, 3, lm.size)
+	var line_size := Vector3(1.2, 0.08, 8.5)
+	line.mesh = PropMeshes.bevel_prop_box(line_size)
+	line.material_override = _paint(Palette.SAND, 3, line_size)
 	line.position = Vector3(0.0, 0.02 + deck_height(0.0, -(TRACK_R - 1.0)), -(TRACK_R - 1.0))
 	_barge.add_child(line)
 
@@ -404,63 +400,43 @@ func _build_cabin() -> void:
 		_shelf_parts(front)
 		return
 	var body := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = box.size
-	body.mesh = bm
+	body.mesh = PropMeshes.bevel_prop_box(box.size)
 	body.material_override = _paint(Palette.VERDIGRIS)
 	cabin.add_child(body)
 	_visual(Vector3(0.1, 4.6, 7.0), Vector3(front, 3.4, 0.0), _paint(Palette.RUST, 2))
-	_visual(Vector3(0.14, 1.3, 1.8), Vector3(front + 0.02, 1.2, 0.0), Palette.solid(Palette.CHARCOAL))
-	_visual(Vector3(1.0, 1.0, 6.0), Vector3(front + 0.8, 0.5, 0.0), Palette.solid(Palette.RUST.lerp(Palette.SANDSTONE, 0.3)))
-	_visual(Vector3(0.6, 0.12, 5.0), Vector3(front + 0.35, 5.2, 0.0), Palette.solid(Palette.COPPER))
+	_visual(Vector3(0.14, 1.3, 1.8), Vector3(front + 0.02, 1.2, 0.0), _bay_mat(Palette.CHARCOAL))
+	_visual(Vector3(1.0, 1.0, 6.0), Vector3(front + 0.8, 0.5, 0.0), _bay_mat(Palette.RUST.lerp(Palette.SANDSTONE, 0.3)))
+	_visual(Vector3(0.6, 0.12, 5.0), Vector3(front + 0.35, 5.2, 0.0), _bay_mat(Palette.COPPER))
 	_shelf_parts(front)
 	var hook := MeshInstance3D.new()
-	var hm := TorusMesh.new()
-	hm.inner_radius = 0.25
-	hm.outer_radius = 0.42
-	hook.mesh = hm
+	hook.mesh = PropMeshes.launcher_mouth_ring(0.42)
 	hook.material_override = _paint(Palette.COPPER)
 	hook.position = Vector3(front + 0.3, 4.0, 3.0)
 	hook.rotation.z = PI * 0.5
 	_barge.add_child(hook)
-	_visual(Vector3(0.3, 0.45, 0.35), Vector3(front + 0.3, 3.55, 3.0), Palette.solid(Palette.CHARCOAL))
+	_visual(Vector3(0.3, 0.45, 0.35), Vector3(front + 0.3, 3.55, 3.0), _bay_mat(Palette.CHARCOAL))
 	var dial := MeshInstance3D.new()
-	var dm := CylinderMesh.new()
-	dm.top_radius = 0.55
-	dm.bottom_radius = 0.55
-	dm.height = 0.08
-	dial.mesh = dm
+	dial.mesh = PropMeshes.fluted_plume_column(0.55, 0.55, 0.08)
 	dial.material_override = _paint(Palette.SAND)
 	dial.position = Vector3(front + 0.12, 4.9, 3.0)
 	dial.rotation.z = PI * 0.5
 	_barge.add_child(dial)
-	_visual(Vector3(0.05, 0.2, 0.08), Vector3(front + 0.18, 5.3, 3.25), Palette.solid(Palette.RUST))
-	_visual(Vector3(0.05, 0.45, 0.06), Vector3(front + 0.18, 4.95, 3.0), Palette.solid(Palette.CHARCOAL))
+	_visual(Vector3(0.05, 0.2, 0.08), Vector3(front + 0.18, 5.3, 3.25), _bay_mat(Palette.RUST))
+	_visual(Vector3(0.05, 0.45, 0.06), Vector3(front + 0.18, 4.95, 3.0), _bay_mat(Palette.CHARCOAL))
 	var mug := MeshInstance3D.new()
-	var mm := CylinderMesh.new()
-	mm.top_radius = 0.22
-	mm.bottom_radius = 0.2
-	mm.height = 0.4
-	mug.mesh = mm
+	mug.mesh = PropMeshes.bay_mug_mesh(0.20, 0.22, 0.40)
 	mug.material_override = _paint(Palette.SAND)
 	mug.position = Vector3(front + 0.8, 1.2, -1.8)
 	_barge.add_child(mug)
-	_visual(Vector3(0.08, 0.1, 0.1), Vector3(front + 1.02, 1.36, -1.8), Palette.solid(Palette.CHARCOAL))
+	_visual(Vector3(0.08, 0.1, 0.1), Vector3(front + 1.02, 1.36, -1.8), _bay_mat(Palette.CHARCOAL))
 	var tin := MeshInstance3D.new()
-	var tm := CylinderMesh.new()
-	tm.top_radius = 0.3
-	tm.bottom_radius = 0.3
-	tm.height = 0.45
-	tin.mesh = tm
+	tin.mesh = PropMeshes.bay_mug_mesh(0.30, 0.30, 0.45)
 	tin.material_override = _paint(Palette.COPPER)
 	tin.position = Vector3(front + 0.8, 1.22, 2.0)
 	_barge.add_child(tin)
 	for k in 3:
 		var leaf := MeshInstance3D.new()
-		var lm := SphereMesh.new()
-		lm.radius = 0.22
-		lm.height = 0.44
-		leaf.mesh = lm
+		leaf.mesh = PropMeshes.bay_marble_orb(0.22)
 		leaf.material_override = _paint(Palette.VERDIGRIS.lerp(Palette.ARC, 0.25))
 		leaf.position = Vector3(front + 0.8 + (k - 1) * 0.15, 1.6 + k * 0.08, 2.0 + (k - 1) * 0.12)
 		_barge.add_child(leaf)
@@ -470,10 +446,8 @@ func _shelf_parts(front: float) -> void:
 	var rarities := [Palette.ARC, Palette.COBALT, Palette.AMBER]
 	for k in 3:
 		var part := MeshInstance3D.new()
-		var pm := BoxMesh.new()
-		pm.size = Vector3(0.5, 0.5, 0.5)
-		part.mesh = pm
-		part.material_override = Palette.solid(rarities[k], 0.6)
+		part.mesh = PropMeshes.bay_part_trophy()
+		part.material_override = _bay_mat(rarities[k], 0.6)
 		part.position = Vector3(front + 0.4, 5.65, -1.6 + k * 1.6)
 		part.rotation = Vector3(PI * 0.25, 0.0, PI * 0.25)
 		_barge.add_child(part)
@@ -485,14 +459,10 @@ func _build_toys() -> void:
 		_bell = _model("BayBell", _barge, bell_at)
 	else:
 		for side in [-1.0, 1.0]:
-			_visual(Vector3(0.3, 5.0, 0.3), Vector3(BELL.x + side * 1.6, 2.5, BELL.y), Palette.solid(Palette.RUST))
-		_visual(Vector3(3.6, 0.3, 0.3), Vector3(BELL.x, 5.0, BELL.y), Palette.solid(Palette.RUST))
+			_visual(Vector3(0.3, 5.0, 0.3), Vector3(BELL.x + side * 1.6, 2.5, BELL.y), _bay_mat(Palette.RUST))
+		_visual(Vector3(3.6, 0.3, 0.3), Vector3(BELL.x, 5.0, BELL.y), _bay_mat(Palette.RUST))
 		_bell = MeshInstance3D.new()
-		var bm := CylinderMesh.new()
-		bm.top_radius = 0.5
-		bm.bottom_radius = 1.0
-		bm.height = 1.4
-		_bell.mesh = bm
+		_bell.mesh = PropMeshes.bay_bell_mesh()
 		_bell.material_override = _paint(Palette.BRASS.lerp(Palette.COPPER, 0.5))
 		_bell.position = bell_at
 		_barge.add_child(_bell)
@@ -501,17 +471,14 @@ func _build_toys() -> void:
 	RecipeProps.shells("moss_jukebox", _barge, juke_at)
 	_visual(Vector3(2.4, 0.1, 2.4), Vector3(JUKEBOX.x, 0.05, JUKEBOX.y), _paint(Palette.AMBER, 3, Vector3(2.4, 0.1, 2.4)))
 	if _model("BayMarbleToy", _barge, Vector3(MARBLE_TOY.x, 0.0, MARBLE_TOY.y)) == null:
-		_visual(Vector3(2.4, 1.6, 1.6), Vector3(MARBLE_TOY.x, 0.8, MARBLE_TOY.y - 1.4), Palette.solid(Palette.RUST.lerp(Palette.SANDSTONE, 0.4)))
+		_visual(Vector3(2.4, 1.6, 1.6), Vector3(MARBLE_TOY.x, 0.8, MARBLE_TOY.y - 1.4), _bay_mat(Palette.RUST.lerp(Palette.SANDSTONE, 0.4)))
 		for k in MARBLE_STEPS:
 			var step_bar := _visual(Vector3(0.5, 0.08, 1.3), Vector3(MARBLE_TOY.x - 0.9 + k * 0.4, 2.05 - k * 0.18, MARBLE_TOY.y - 0.8),
-				Palette.solid(Palette.COPPER))
+				_bay_mat(Palette.COPPER))
 			step_bar.rotation.x = 0.3 if k % 2 == 0 else -0.3
 	_marble = MeshInstance3D.new()
-	var mm := SphereMesh.new()
-	mm.radius = 0.22
-	mm.height = 0.44
-	_marble.mesh = mm
-	_marble.material_override = Palette.solid(Palette.SAND, 0.4)
+	_marble.mesh = PropMeshes.bay_marble_orb(0.22)
+	_marble.material_override = _bay_mat(Palette.SAND, 0.4)
 	_barge.add_child(_marble)
 	_visual(Vector3(2.4, 0.1, 2.4), Vector3(MARBLE_TOY.x, 0.05, MARBLE_TOY.y), _paint(Palette.SAND, 3, Vector3(2.4, 0.1, 2.4)))
 
@@ -526,9 +493,7 @@ func _build_yard() -> void:
 	wall.add_child(shape)
 	if _model("BayYardWall", wall, Vector3.ZERO) == null:
 		var mesh := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = box.size
-		mesh.mesh = bm
+		mesh.mesh = PropMeshes.bevel_prop_box(box.size)
 		mesh.material_override = _paint(Palette.VERDIGRIS, 0, box.size)
 		wall.add_child(mesh)
 	wall.position = Vector3(YARD.position.x + YARD.size.x * 0.5, 2.5, YARD.end.y + 0.8)
@@ -542,16 +507,12 @@ func _build_yard() -> void:
 	post.add_child(ps)
 	if _model("BayPost", post, Vector3.ZERO) == null:
 		var pv := MeshInstance3D.new()
-		var pm := CylinderMesh.new()
-		pm.top_radius = 0.6
-		pm.bottom_radius = 0.6
-		pm.height = 9.0
-		pv.mesh = pm
+		pv.mesh = PropMeshes.fluted_plume_column(0.6, 0.6, 9.0)
 		pv.material_override = _paint(Palette.COPPER)
 		post.add_child(pv)
 	post.position = Vector3(YARD.position.x + 1.0, 4.5, YARD.position.y - 0.8)
 	_barge.add_child(post)
-	_visual(Vector3(1.6, 1.6, 1.6), post.position + Vector3.UP * 5.0, Palette.solid(Palette.AMBER, 1.2))
+	_visual(Vector3(1.6, 1.6, 1.6), post.position + Vector3.UP * 5.0, _bay_mat(Palette.AMBER, 1.2))
 	for k in PINS.size():
 		var pin := RigidBody3D.new()
 		pin.name = "Pin%d" % k
@@ -564,11 +525,7 @@ func _build_yard() -> void:
 		pin.add_child(s)
 		if _model("BayPin", pin, Vector3.ZERO) == null:
 			var v := MeshInstance3D.new()
-			var vm := CylinderMesh.new()
-			vm.top_radius = 0.18
-			vm.bottom_radius = 0.3
-			vm.height = 1.5
-			v.mesh = vm
+			v.mesh = PropMeshes.bay_pin_mesh()
 			v.material_override = _paint(Palette.SAND)
 			pin.add_child(v)
 		_barge.add_child(pin)
@@ -578,56 +535,37 @@ func _build_yard() -> void:
 
 func _build_pad() -> void:
 	var pad := MeshInstance3D.new()
-	var pm := CylinderMesh.new()
-	pm.top_radius = PAD_RADIUS
-	pm.bottom_radius = PAD_RADIUS
-	pm.height = 0.12
-	pad.mesh = pm
-	pad.material_override = _paint(Palette.AMBER, 3, Vector3(PAD_RADIUS * 2.0, pm.height, PAD_RADIUS * 2.0))
+	pad.mesh = PropMeshes.launch_landing_pad(PAD_RADIUS)
+	pad.material_override = _paint(Palette.AMBER, 3, Vector3(PAD_RADIUS * 2.0, 0.12, PAD_RADIUS * 2.0))
 	pad.position = Vector3(PAD.x, 0.06, PAD.y)
 	_barge.add_child(pad)
 	for k in 3:
-		var chevron := _visual(Vector3(0.4, 0.1, 1.8), Vector3(PAD.x + 0.9 + k * 0.9, 0.14, PAD.y), Palette.solid(Palette.AMBER, 0.8))
+		var chevron := _visual(Vector3(0.4, 0.1, 1.8), Vector3(PAD.x + 0.9 + k * 0.9, 0.14, PAD.y), _bay_mat(Palette.AMBER, 0.8))
 		chevron.rotation.y = 0.0
 
 
 func _build_cradle() -> void:
 	var ring := MeshInstance3D.new()
-	var tm := TorusMesh.new()
-	tm.inner_radius = CRADLE_RADIUS - 0.6
-	tm.outer_radius = CRADLE_RADIUS
-	ring.mesh = tm
-	ring.material_override = Palette.solid(Palette.AMBER, 0.8)
+	ring.mesh = PropMeshes.launcher_mouth_ring(CRADLE_RADIUS)
+	ring.material_override = _bay_mat(Palette.AMBER, 0.8)
 	ring.position = Vector3.UP * 0.2
 	_cradle.add_child(ring)
 	if _model("CradleCup", _cradle, Vector3.UP * 0.05) != null and _model("CradleMast", _cradle, Vector3(CRADLE_RADIUS + 1.2, 6.0, 0.0)) != null:
 		_cradle_prompt()
 		return
 	var cup := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = CRADLE_RADIUS - 0.8
-	cm.bottom_radius = 1.2
-	cm.height = 0.6
-	cup.mesh = cm
+	cup.mesh = PropMeshes.fluted_plume_column(1.2, CRADLE_RADIUS - 0.8, 0.6)
 	cup.material_override = _paint(Palette.COPPER)
 	cup.position = Vector3.UP * 0.05
 	_cradle.add_child(cup)
 	var mast := MeshInstance3D.new()
-	var mm := CylinderMesh.new()
-	mm.top_radius = 0.35
-	mm.bottom_radius = 0.35
-	mm.height = 12.0
-	mast.mesh = mm
+	mast.mesh = PropMeshes.fluted_plume_column(0.35, 0.35, 12.0)
 	mast.material_override = _paint(Palette.RUST)
 	mast.position = Vector3(CRADLE_RADIUS + 1.2, 6.0, 0.0)
 	_cradle.add_child(mast)
 	var sign_mug := MeshInstance3D.new()
-	var sm := CylinderMesh.new()
-	sm.top_radius = 0.9
-	sm.bottom_radius = 0.8
-	sm.height = 1.4
-	sign_mug.mesh = sm
-	sign_mug.material_override = Palette.solid(Palette.SAND, 0.5)
+	sign_mug.mesh = PropMeshes.bay_mug_mesh(0.8, 0.9, 1.4)
+	sign_mug.material_override = _bay_mat(Palette.SAND, 0.5)
 	sign_mug.position = Vector3(CRADLE_RADIUS + 1.2, 12.6, 0.0)
 	_cradle.add_child(sign_mug)
 	_cradle_prompt()
@@ -647,18 +585,21 @@ func _model(part: String, parent: Node3D, at: Vector3) -> MeshInstance3D:
 	var view := ModelKit.part(KIT, KIT_PARTS, part, parent)
 	if view != null:
 		view.position = at
+		PropMeshes.weather_node_materials(view, 3.0)
 	return view
 
 
 func _visual(size: Vector3, at: Vector3, mat: Material) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
-	var b := BoxMesh.new()
-	b.size = size
-	mesh.mesh = b
+	mesh.mesh = PropMeshes.bevel_prop_box(size)
 	mesh.material_override = _paint(mat.albedo_color, 1, size) if mat is StandardMaterial3D and not mat.emission_enabled and mat.albedo_texture == null else mat
 	mesh.position = at
 	_barge.add_child(mesh)
 	return mesh
+
+
+func _bay_mat(color: Color, emit := 0.0) -> StandardMaterial3D:
+	return PropMeshes.weathered_material(color, 0.74, 0.24, emit, "bay_" + color.to_html(false))
 
 
 func _paint(color: Color, kind := 1, size := Vector3.ZERO, original: Material = null) -> Material:

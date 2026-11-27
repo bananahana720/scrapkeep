@@ -133,6 +133,7 @@ func _run() -> void:
 	var enemy := Enemy.new()
 	var plate: StandardMaterial3D = enemy._plate_material()
 	t.check("plate rim mask maps on the mesh's UV1, not world grain (it striped the plates)", not plate.uv1_triplanar and plate.emission_texture != null)
+	t.eq("edge lift shader is loaded from a decoupled .gdshader file", BakeLook.edge_lift().shader.resource_path, "res://assets/shaders/edge_lift.gdshader")
 	enemy.free()
 	root.free()
 	quit(t.verdict())

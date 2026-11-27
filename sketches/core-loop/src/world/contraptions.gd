@@ -13,6 +13,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Interactables := preload("res://src/world/interactables.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 
@@ -757,10 +758,8 @@ func _build_barge(spec: Dictionary) -> Dictionary:
 	if _recipe_of(spec) == "barge" and not _skin_views(spec, "barge", deck, skin_at).is_empty():
 		pass
 	elif RecipeProps.base("barge", deck, floor_at).is_empty():
-		var dm := BoxMesh.new()
-		dm.size = size
-		deck.mesh = dm
-		deck.material_override = Palette.striped(Palette.SANDSTONE, Palette.CHARCOAL)
+		deck.mesh = PropMeshes.barge_hull(size)
+		deck.material_override = PropMeshes.weathered_material(Palette.SANDSTONE, 0.78, 0.18, 0.0, "barge_hull")
 	else:
 		RecipeProps.shells("barge", deck, floor_at)
 	add_child(body)
@@ -934,10 +933,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 	root.name = spec["id"]
 	add_child(root)
 	var ring := MeshInstance3D.new()
-	var tm := TorusMesh.new()
-	tm.inner_radius = float(spec["radius"]) - 0.6
-	tm.outer_radius = spec["radius"]
-	ring.mesh = tm
+	ring.mesh = PropMeshes.launcher_mouth_ring(float(spec["radius"]))
 	ring.material_override = _ring_mat
 	ring.position = mouth + Vector3.DOWN * 0.8
 	root.add_child(ring)
@@ -960,11 +956,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			_skin_views(spec, "trebuchet", arm, Transform3D.IDENTITY, "arm", false)
 		"geyser" when skinned:
 			var steam := MeshInstance3D.new()
-			var steam_mesh := CylinderMesh.new()
-			steam_mesh.top_radius = 2.4
-			steam_mesh.bottom_radius = 1.6
-			steam_mesh.height = 10.0
-			steam.mesh = steam_mesh
+			steam.mesh = PropMeshes.fluted_plume_column(1.6, 2.4, 10.0)
 			steam.material_override = _steam_mat
 			steam.position = mouth + Vector3.UP * 4.0
 			root.add_child(steam)
@@ -982,30 +974,20 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			root.add_child(barrel)
 			arm = barrel
 			var band := MeshInstance3D.new()
-			var km := TorusMesh.new()
-			km.inner_radius = 2.2
-			km.outer_radius = 2.9
-			band.mesh = km
+			band.mesh = PropMeshes.cannon_band_collar()
 			band.material_override = _copper_mat
 			band.position = barrel.position
 			band.basis = barrel.basis
 			root.add_child(band)
 		"steam_lift":
 			var plate := MeshInstance3D.new()
-			var pm := CylinderMesh.new()
-			pm.top_radius = float(spec["radius"]) - 0.8
-			pm.bottom_radius = float(spec["radius"]) - 0.8
-			pm.height = 0.3
-			plate.mesh = pm
-			plate.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
+			plate.mesh = PropMeshes.thermal_grate(float(spec["radius"]) - 0.8)
+			plate.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.64, 0.42, 0.0, "steam_lift_plate")
 			plate.position = mouth + Vector3.DOWN * 0.85
 			root.add_child(plate)
 			arm = MeshInstance3D.new()
-			var sm := CylinderMesh.new()
-			sm.top_radius = 1.2
-			sm.bottom_radius = 1.2
-			sm.height = 6.0
-			arm.mesh = sm
+			arm.mesh = PropMeshes.lift_piston()
+			arm.scale = Vector3(1.2, 0.5, 1.2)
 			arm.material_override = _copper_mat
 			arm.position = mouth - aim * (float(spec["radius"]) + 1.5) + Vector3.UP * 2.0
 			root.add_child(arm)
@@ -1027,11 +1009,7 @@ func _build_launcher(spec: Dictionary) -> Dictionary:
 			root.add_child(arm)
 		"geyser":
 			var column := MeshInstance3D.new()
-			var cm := CylinderMesh.new()
-			cm.top_radius = 2.4
-			cm.bottom_radius = 1.6
-			cm.height = 10.0
-			column.mesh = cm
+			column.mesh = PropMeshes.fluted_plume_column(1.6, 2.4, 10.0)
 			column.material_override = _steam_mat
 			column.position = mouth + Vector3.UP * 4.0
 			root.add_child(column)
@@ -1060,25 +1038,26 @@ func _build_cable(spec: Dictionary) -> Dictionary:
 	var from: Vector3 = spec["from"]
 	var to: Vector3 = spec["to"]
 	var cable := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = 0.18
-	cm.bottom_radius = 0.18
-	cm.height = from.distance_to(to)
-	cable.mesh = cm
+	cable.mesh = PropMeshes.grapple_cable_span(from.distance_to(to))
 	cable.material_override = _needle_mat
 	cable.position = (from + to) * 0.5
 	cable.basis = Basis.looking_at((to - from).normalized(), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 	add_child(cable)
 	var hook := MeshInstance3D.new()
-	var hm := TorusMesh.new()
-	hm.inner_radius = float(spec["radius"]) - 0.5
-	hm.outer_radius = spec["radius"]
-	hook.mesh = hm
+	hook.mesh = PropMeshes.grapple_target_ring(float(spec["radius"]))
 	hook.material_override = _hook_mat
 	hook.position = from
 	hook.basis = Basis.looking_at(Vector3(to.x - from.x, 0.0, to.z - from.z).normalized(), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 	_range_part(hook)
 	add_child(hook)
+	var shackle := MeshInstance3D.new()
+	shackle.name = "GrappleShackle"
+	shackle.mesh = PropMeshes.grapple_hook_anchor()
+	shackle.material_override = PropMeshes.weathered_material(Palette.CHARCOAL.lightened(0.08), 0.56, 0.52, 0.0, "grapple_shackle")
+	shackle.basis = Basis(Vector3.RIGHT, -PI * 0.5)
+	shackle.position = shackle.basis * (Vector3.UP * (float(spec["radius"]) + 0.35))
+	_range_part(shackle)
+	hook.add_child(shackle)
 	return {"spec": spec, "from": from, "to": to, "rest": 0.0}
 
 
@@ -1112,10 +1091,8 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 		view.scale = size / DOOR_MODEL_SIZE
 	else:
 		var mesh := MeshInstance3D.new()
-		var bm := BoxMesh.new()
-		bm.size = size
-		mesh.mesh = bm
-		mesh.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
+		mesh.mesh = PropMeshes.valve_door_slab(size)
+		mesh.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.68, 0.35, 0.0, "valve_door")
 		door.add_child(mesh)
 	door.position = door_foot + Vector3.UP * (size.y * 0.5 - 0.5)
 	door.rotation.y = d["turn"]
@@ -1127,11 +1104,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 		var vat: Vector2 = vent["at"]
 		var vfoot: Vector3 = ground.call(vat.x, vat.y, 0.0)
 		plume = MeshInstance3D.new()
-		var pm := CylinderMesh.new()
-		pm.top_radius = 3.0
-		pm.bottom_radius = 1.4
-		pm.height = 18.0
-		plume.mesh = pm
+		plume.mesh = PropMeshes.fluted_plume_column(1.4, 3.0, 18.0)
 		plume.material_override = Palette.unshaded(Color(Palette.ANCIENT, 0.35))
 		plume.position = vfoot + Vector3.UP * 9.0
 		plume.visible = false
@@ -1190,22 +1163,16 @@ func _build_sluice_valve(spec: Dictionary) -> Dictionary:
 	holder.add_child(wheel)
 	if RecipeProps.base("valve_wheel", wheel, Transform3D.IDENTITY).is_empty():
 		var rim := MeshInstance3D.new()
-		var tm := TorusMesh.new()
-		tm.inner_radius = 0.75
-		tm.outer_radius = 1.0
-		rim.mesh = tm
-		rim.material_override = _rust_mat
+		rim.mesh = PropMeshes.sluice_wheel()
+		rim.position = Vector3(0.0, 0.38, 0.0)
+		rim.material_override = PropMeshes.weathered_material(Palette.RUST, 0.68, 0.38, 0.0, "sluice_wheel", true, 2.2)
 		wheel.add_child(rim)
 	else:
 		RecipeProps.shells("valve_wheel", wheel, Transform3D.IDENTITY)
 	if RecipeProps.base("valve_wheel_mount", holder, Transform3D(Basis.IDENTITY, foot)).is_empty():
 		var post := MeshInstance3D.new()
-		var pm := CylinderMesh.new()
-		pm.top_radius = 0.25
-		pm.bottom_radius = 0.35
-		pm.height = 1.6
-		post.mesh = pm
-		post.material_override = _copper_mat
+		post.mesh = PropMeshes.sluice_post()
+		post.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.62, 0.44, 0.0, "sluice_post", true, 2.2)
 		post.position = foot + Vector3.UP * 0.8
 		holder.add_child(post)
 	else:
@@ -1238,10 +1205,7 @@ func _build_sluice_valve(spec: Dictionary) -> Dictionary:
 	if price > 0:
 		pay_ring = MeshInstance3D.new()
 		pay_ring.name = id + "_pay_ring"
-		var pr := TorusMesh.new()
-		pr.inner_radius = 0.65
-		pr.outer_radius = 0.85
-		pay_ring.mesh = pr
+		pay_ring.mesh = PropMeshes.sluice_pay_ring()
 		pay_ring.material_override = _ring_mat
 		pay_ring.position = foot + Vector3.UP * 0.45
 		holder.add_child(pay_ring)
@@ -1641,16 +1605,12 @@ func _build_wall(spec: Dictionary) -> Dictionary:
 		add_child(body)
 		return {"spec": spec, "body": body, "home": body.position, "broken": false}
 	var mesh := MeshInstance3D.new()
-	var bm := BoxMesh.new()
-	bm.size = size
-	mesh.mesh = bm
-	mesh.material_override = Palette.striped(Palette.SANDSTONE, Palette.VERDIGRIS)
+	mesh.mesh = PropMeshes.cracked_wall_slab(size)
+	mesh.material_override = PropMeshes.weathered_material(Palette.SANDSTONE, 0.84, 0.08, 0.0, "cracked_wall")
 	body.add_child(mesh)
 	for k in 3:
 		var crack := MeshInstance3D.new()
-		var cm := BoxMesh.new()
-		cm.size = Vector3(size.x * 0.7, 0.18, size.z + 0.1)
-		crack.mesh = cm
+		crack.mesh = PropMeshes.bevel_prop_box(Vector3(size.x * 0.7, 0.18, size.z + 0.1))
 		crack.material_override = _needle_mat
 		crack.position = Vector3(0.0, -1.5 + k * 1.4, 0.0)
 		crack.rotation.z = 0.5 - k * 0.45
@@ -1697,21 +1657,13 @@ func _build_thermal(spec: Dictionary) -> Dictionary:
 	var at: Vector2 = spec["at"]
 	var base: Vector3 = ground.call(at.x, at.y, 0.0)
 	var column := MeshInstance3D.new()
-	var cm := CylinderMesh.new()
-	cm.top_radius = float(spec["radius"]) * 1.3
-	cm.bottom_radius = float(spec["radius"]) * 0.5
-	cm.height = spec["height"]
-	column.mesh = cm
+	column.mesh = PropMeshes.fluted_plume_column(float(spec["radius"]) * 0.5, float(spec["radius"]) * 1.3, float(spec["height"]))
 	column.material_override = Palette.unshaded(Color(Palette.SAND, 0.12))
 	column.position = base + Vector3.UP * float(spec["height"]) * 0.5
 	add_child(column)
 	var grate := MeshInstance3D.new()
-	var gm := CylinderMesh.new()
-	gm.top_radius = float(spec["radius"]) * 0.6
-	gm.bottom_radius = float(spec["radius"]) * 0.6
-	gm.height = 0.3
-	grate.mesh = gm
-	grate.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
+	grate.mesh = PropMeshes.thermal_grate(float(spec["radius"]) * 0.6)
+	grate.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.64, 0.42, 0.0, "thermal_grate")
 	grate.position = base + Vector3.UP * 0.1
 	add_child(grate)
 	return {"spec": spec, "base": base}
@@ -1720,48 +1672,34 @@ func _build_thermal(spec: Dictionary) -> Dictionary:
 func _dial(at: Vector3, spec := {}) -> MeshInstance3D:
 	if SKINS.has(_recipe_of(spec)) and not _skin_views(spec, "gauge", self, Transform3D(Basis.IDENTITY, at)).is_empty():
 		var needle := MeshInstance3D.new()
-		var nm := BoxMesh.new()
-		nm.size = Vector3(0.12, 0.95, 0.05)
-		needle.mesh = nm
+		needle.mesh = PropMeshes.dial_needle()
 		needle.material_override = _needle_mat
 		needle.position = at + Vector3.UP * 3.4 + Vector3(0.0, 0.0, 0.12)
 		_range_part(needle, DIAL_VIEW_END_M)
 		add_child(needle)
 		return needle
 	var post := MeshInstance3D.new()
-	var pm := CylinderMesh.new()
-	pm.top_radius = 0.2
-	pm.bottom_radius = 0.2
-	pm.height = 3.0
-	post.mesh = pm
-	post.material_override = _copper_mat
+	post.mesh = PropMeshes.dial_post()
+	post.material_override = PropMeshes.weathered_material(Palette.COPPER, 0.62, 0.44, 0.0, "dial_post")
 	post.position = at + Vector3.UP * 1.5
 	_range_part(post, DIAL_VIEW_END_M)
 	add_child(post)
 	var face := MeshInstance3D.new()
-	var fm := CylinderMesh.new()
-	fm.top_radius = 1.1
-	fm.bottom_radius = 1.1
-	fm.height = 0.15
-	face.mesh = fm
-	face.material_override = _gauge_mat
+	face.mesh = PropMeshes.dial_bezel()
+	face.material_override = PropMeshes.weathered_material(Palette.SAND.darkened(0.08), 0.78, 0.10, 0.0, "dial_face")
 	face.position = at + Vector3.UP * 3.4
 	face.rotation.x = PI * 0.5
 	_range_part(face, DIAL_VIEW_END_M)
 	add_child(face)
 	var redline := MeshInstance3D.new()
-	var rm := BoxMesh.new()
-	rm.size = Vector3(0.2, 0.5, 0.05)
-	redline.mesh = rm
+	redline.mesh = PropMeshes.dial_redline()
 	redline.material_override = _rust_mat
-	redline.position = face.position + Vector3(0.75, 0.55, 0.1)
+	redline.position = face.position + Vector3(0.58, 0.44, 0.1)
 	redline.rotation.z = -0.8
 	_range_part(redline, DIAL_VIEW_END_M)
 	add_child(redline)
 	var needle := MeshInstance3D.new()
-	var nm := BoxMesh.new()
-	nm.size = Vector3(0.12, 0.95, 0.05)
-	needle.mesh = nm
+	needle.mesh = PropMeshes.dial_needle()
 	needle.material_override = _needle_mat
 	needle.position = face.position + Vector3(0.0, 0.0, 0.12)
 	_range_part(needle, DIAL_VIEW_END_M)
@@ -1775,10 +1713,7 @@ static func _needle(needle: MeshInstance3D, g: float) -> void:
 
 func _puff(at: Vector3, size: float) -> void:
 	var node := MeshInstance3D.new()
-	var s := SphereMesh.new()
-	s.radius = 1.0
-	s.height = 2.0
-	node.mesh = s
+	node.mesh = PropMeshes.steam_puff_cloud()
 	node.material_override = _steam_mat
 	node.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	node.position = to_local(at) if is_inside_tree() else at
@@ -1789,12 +1724,11 @@ func _puff(at: Vector3, size: float) -> void:
 
 
 func _dashed_ring(at: Vector3, radius: float) -> void:
+	var dash_mesh := PropMeshes.vent_dash_segment(radius * TAU / 32.0)
 	for k in 16:
 		var a := TAU * k / 16.0
 		var dash := MeshInstance3D.new()
-		var dm := BoxMesh.new()
-		dm.size = Vector3(0.3, 0.06, radius * TAU / 32.0)
-		dash.mesh = dm
+		dash.mesh = dash_mesh
 		dash.material_override = _gauge_mat
 		dash.position = at + Vector3(cos(a), 0.0, sin(a)) * radius
 		dash.rotation.y = -a

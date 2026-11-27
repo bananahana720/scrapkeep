@@ -14,196 +14,11 @@ const WINDOW := 0.76
 const WINDOW_INK := 0.035
 const WINDOW_FRINGE := 0.11
 
-const CUTAWAY_SHADER := """shader_type spatial;
-render_mode cull_disabled, diffuse_burley, specular_schlick_ggx;
-uniform vec4 tint : source_color = vec4(1.0);
-uniform bool vertex_tint = false;
-uniform float metal = 0.0;
-uniform float rough = 0.8;
-// Linear light, already multiplied by its energy.
-uniform vec3 glow = vec3(0.0);
-uniform vec3 lining : source_color = vec3(0.82, 0.77, 0.65);
-// The inside of the plating is built, not bare: six longerons, two ring frames and a hub plate at
-// each axle, in big shapes that still read at play size and show the roll.
-uniform vec3 lining_frame : source_color = vec3(0.40, 0.43, 0.40);
-uniform vec3 lining_hub : source_color = vec3(0.52, 0.33, 0.19);
-uniform vec3 ink : source_color = vec3(0.14, 0.16, 0.16);
-uniform float window = 0.76;
-uniform float ink_width = 0.035;
-uniform float fringe = 0.11;
-// The plated ball has an inside, drawn as lining; anything else shows no back face.
-uniform bool inside = false;
-// A part that rides the ball away from its centre is told where the centre is each frame.
-uniform bool held = false;
-uniform vec3 centre_at = vec3(0.0);
-// A part of the shell whose own origin is off the ball's centre: the centre in its own space.
-uniform vec3 centre_local = vec3(0.0);
-// hero_assets' equipped paint: the tint takes where the vertex alpha says paint.
-uniform vec4 paint_tint : source_color = vec4(1.0);
-uniform vec4 lift : source_color = vec4(1.0);
-uniform float paint_take = 0.0;
-// The pilot's own enamel on the plating's paint-taking gores, in the vertex colours' own space.
-uniform vec3 enamel = vec3(1.0);
-uniform float enamel_take = 0.0;
-// The level part keeps what sits inside the ball (seat, controls): only what stands farther
-// from the centre than this, in the model's own units, is cut.
-uniform float keep_within = 0.0;
-// ...except behind the pilot's back above the seat (the level part's own +Z and +Y past these),
-// where only brackets and backrests stand: those count as outer kit at any distance.
-// Kit is judged by the tube of sight the window opens (the plating's radius, in the model's
-// units), not by its angle from the centre: a rod near the centre never reaches that angle, and
-// a barrel that stands out past the ball reaches it while still beside the opening.
-uniform float tube = 0.0;
-const float STANDS_OUT = 1.15;
-uniform bool back_is_kit = false;
-// A small pilot's seat back is lowered to this height (the level part's own Y): every vertex of
-// the seat back's slab above it is pressed down to it, so the back stays a closed box.
-uniform float seat_back_top = 9.0;
-uniform float back_above = -0.08;
-uniform float back_behind = 0.05;
-// hero_assets' plate map, laid on by the three axes as its own materials lay it.
-uniform bool plated = false;
-uniform sampler2D plate : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
-uniform float plate_scale = 0.667;
-#ifdef BANDS
-// Kest's satchel bands (hero_assets.kest_band_material): the band in UV2.x lights up to lit_count, and a
-// satchel's heft class in UV2.y shows it from that class.
-uniform vec4 class_color : source_color = vec4(1.0);
-instance uniform int lit_count = 0;
-instance uniform int heft_class = 1;
-#endif
-#ifdef FUSE
-// Kest's mortar fuse (hero_assets.kest_fuse_material): its glow, dark at the tip once loaded.
-uniform vec4 class_color : source_color = vec4(1.0);
-uniform float strength = 0.5;
-instance uniform float fuse_glow = 0.2;
-instance uniform bool fuse_loaded = false;
-#endif
-varying vec3 local_pos;
-varying vec3 local_normal;
-varying float model_scale;
-varying vec3 from_centre;
-varying vec3 to_camera;
-varying vec3 to_eye;
-void vertex() {
-	if (VERTEX.y > seat_back_top && VERTEX.y < -0.05 && abs(VERTEX.x) < 0.26 && VERTEX.z > 0.13 && VERTEX.z < 0.27) {
-		VERTEX.y = seat_back_top;
-	}
-	local_pos = VERTEX;
-	local_normal = NORMAL;
-	model_scale = length(MODEL_MATRIX[0].xyz);
-	vec3 centre = held ? centre_at : (MODEL_MATRIX * vec4(centre_local, 1.0)).xyz;
-	from_centre = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz - centre;
-	to_camera = CAMERA_POSITION_WORLD - centre;
-	to_eye = INV_VIEW_MATRIX[2].xyz;
-}
-void fragment() {
-#ifdef BANDS
-	if (UV2.y > float(heft_class) + 0.1) {
-		discard;
-	}
-#endif
-	float facing = dot(normalize(from_centre), normalize(to_camera));
-	if (tube > 0.0) {
-		vec3 axis = normalize(to_camera);
-		float along = dot(from_centre, axis) / model_scale;
-		float across = length(from_centre / model_scale - axis * along);
-		facing = along > 0.0 ? sqrt(max(0.0, 1.0 - (across / tube) * (across / tube))) : -1.0;
-	}
-	vec3 seat_pos = local_pos - centre_local;
-	bool cockpit = length(from_centre) < keep_within * model_scale;
-	if (cockpit && back_is_kit && seat_pos.y > back_above && seat_pos.z > back_behind) {
-		cockpit = false;
-	}
-	if (cockpit) {
-		facing = -1.0;
-	} else if (IN_SHADOW_PASS) {
-		// In a light's pass the eye is the light. The half toward it is left out, so the sun
-		// reaches the pilot; the far half still throws the whole round shadow on the ground.
-		// Kit that stands out past the ball (a barrel) blocks no sun from the pilot and keeps
-		// its whole shadow.
-		bool stands_out = tube > 0.0 && length(from_centre) > STANDS_OUT * model_scale;
-		if (!stands_out && dot(normalize(from_centre), normalize(to_eye)) > 0.0) {
-			discard;
-		}
-	} else if (facing > window) {
-		discard;
-	}
-	vec3 base = tint.rgb;
-	if (vertex_tint) {
-		float takes = step(0.05, COLOR.a);
-		vec3 own = mix(COLOR.rgb, enamel, enamel_take * takes);
-		base *= mix(own * lift.rgb, paint_tint.rgb, paint_take * takes);
-	}
-	if (plated) {
-		vec3 weights = abs(normalize(local_normal));
-		weights /= max(weights.x + weights.y + weights.z, 0.001);
-		vec3 p = local_pos * plate_scale;
-		base *= texture(plate, p.yz).rgb * weights.x + texture(plate, p.xz).rgb * weights.y + texture(plate, p.xy).rgb * weights.z;
-	}
-	vec3 emit = glow;
-#ifdef BANDS
-	if (UV2.x > 0.5) {
-		bool lit = UV2.x <= float(lit_count) + 0.1;
-		base *= lit ? 1.0 : 0.35;
-		emit = lit ? class_color.rgb * 0.5 : vec3(0.0);
-	}
-#endif
-#ifdef FUSE
-	emit = class_color.rgb * strength * (fuse_loaded && local_pos.x < 0.0 ? 0.0 : fuse_glow);
-#endif
-	float edge = window - ink_width;
-	if (facing > edge) {
-		base = ink;
-		emit = vec3(0.0);
-	} else if (facing > edge - fringe) {
-		// Halftone dots that grow toward the ink line, fixed to the screen like print.
-		vec2 cell = fract(FRAGCOORD.xy / 7.0) - 0.5;
-		float grow = (facing - (edge - fringe)) / fringe;
-		if (length(cell) < grow * 0.55) {
-			base = ink;
-			emit = vec3(0.0);
-		}
-	}
-	if (FRONT_FACING) {
-		ALBEDO = base;
-		METALLIC = metal;
-		ROUGHNESS = rough;
-		EMISSION = emit;
-	} else {
-		if (!inside) {
-			discard;
-		}
-		vec3 n = normalize(local_pos - centre_local);
-		float around = atan(n.y, n.z) / 6.2831853;
-		float longeron = abs(fract(around * 6.0) - 0.5);
-		float frame = min(abs(abs(n.x) - 0.42), abs(n.x));
-		vec3 wall = mix(lining, lining * 0.86, step(0.5, fract(around * 6.0 + step(0.42, abs(n.x)) * 0.5)));
-		wall = mix(lining_frame, wall, step(0.055, longeron) * step(0.035, frame));
-		wall = abs(n.x) > 0.93 ? (abs(n.x) > 0.96 ? lining_hub : lining_frame) : wall;
-		ALBEDO = facing > edge ? ink : wall;
-		ROUGHNESS = 1.0;
-	}
-}
-"""
-
-const CANOPY_SHADER := """shader_type spatial;
-render_mode cull_back, diffuse_burley, specular_schlick_ggx, depth_draw_never;
-varying vec3 local_pos;
-void vertex() {
-	local_pos = VERTEX;
-}
-void fragment() {
-	float rim = pow(1.0 - abs(dot(normalize(NORMAL), normalize(VIEW))), 2.5);
-	float slant = local_pos.x * 0.8 + local_pos.y * 0.6;
-	float glint = step(abs(slant - 0.30), 0.045) + step(abs(slant - 0.16), 0.018);
-	glint *= step(0.05, local_pos.y) * step(local_pos.y, 0.62);
-	ALBEDO = mix(vec3(0.78, 0.94, 1.0), vec3(1.0), glint);
-	ALPHA = clamp(0.07 + rim * 0.5 + glint * 0.38, 0.0, 1.0);
-	ROUGHNESS = 0.25;
-	SPECULAR = 0.1 + rim * 0.5;
-}
-"""
+const CUTAWAY_SHADER_RES := preload("res://assets/shaders/actor_ball_cutaway.gdshader")
+const CUTAWAY_BANDS_SHADER_RES := preload("res://assets/shaders/actor_ball_cutaway_bands.gdshader")
+const CUTAWAY_FUSE_SHADER_RES := preload("res://assets/shaders/actor_ball_cutaway_fuse.gdshader")
+const CANOPY_SHADER_RES := preload("res://assets/shaders/actor_ball_canopy.gdshader")
+static var CUTAWAY_SHADER: String = CUTAWAY_SHADER_RES.code
 
 static var _shaders := {}
 static var _platings := {}
@@ -350,6 +165,9 @@ static func light_pilot(look: String, pilot: Node) -> void:
 				var mat: BaseMaterial3D = was.duplicate()
 				mat.backlight_enabled = true
 				mat.backlight = Color(PILOT_BACKLIGHT, PILOT_BACKLIGHT, PILOT_BACKLIGHT)
+				mat.rim_enabled = true
+				mat.rim = PILOT_RIM
+				mat.rim_tint = PILOT_RIM_TINT
 				lit[was] = mat
 			_wear(view, i, lit[was])
 
@@ -473,7 +291,9 @@ static func _variant(was: Material) -> String:
 	return ""
 
 
-const PILOT_BACKLIGHT := 0.6
+const PILOT_BACKLIGHT := 0.82
+const PILOT_RIM := 0.55
+const PILOT_RIM_TINT := 0.35
 const KIT_KEEP_WITHIN := 0.93
 const PLATING_RADIUS := 0.965
 const LOW_SEAT_BACK := {"runner_gunner": -0.24}
@@ -505,8 +325,12 @@ static func _cut_kit(pod: Node, pilot: String) -> void:
 static func _windowed(was: Material) -> ShaderMaterial:
 	var cut := ShaderMaterial.new()
 	var kind := _variant(was)
-	cut.shader = _shader("cutaway", CUTAWAY_SHADER) if kind == "" else \
-		_shader("cutaway:" + kind, CUTAWAY_SHADER.replace("shader_type spatial;\n", "shader_type spatial;\n#define %s\n" % kind.to_upper()))
+	if kind == "bands":
+		cut.shader = CUTAWAY_BANDS_SHADER_RES
+	elif kind == "fuse":
+		cut.shader = CUTAWAY_FUSE_SHADER_RES
+	else:
+		cut.shader = CUTAWAY_SHADER_RES
 	if was != null:
 		cut.set_meta(SOURCE_META, was)
 	cut.resource_name = was.resource_name if was != null else ""
@@ -611,7 +435,7 @@ static func _rider(cuts: Dictionary, was: Material) -> Material:
 static func _canopy() -> ShaderMaterial:
 	if _canopy_material == null:
 		_canopy_material = ShaderMaterial.new()
-		_canopy_material.shader = _shader("canopy", CANOPY_SHADER)
+		_canopy_material.shader = CANOPY_SHADER_RES
 	return _canopy_material
 
 

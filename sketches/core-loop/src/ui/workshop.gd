@@ -313,6 +313,10 @@ func card_holds_only() -> bool:
 	return _start_pointer_held and not _held and not get_tree().paused
 
 
+func pausing() -> bool:
+	return _paused
+
+
 func _apply_hold() -> void:
 	var briefed := briefing()
 	_hold_quiet(armed and _start_card_showing())
@@ -544,6 +548,12 @@ func _companion_wanted(event: InputEvent) -> bool:
 	return event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_LEFT_SHOULDER
 
 
+func _note_menu_nav() -> void:
+	var audio = _audio()
+	if audio != null and audio.has_method("note_menu_nav"):
+		audio.note_menu_nav()
+
+
 func _pick_key(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
@@ -554,9 +564,11 @@ func _pick_key(event: InputEvent) -> bool:
 				pick.chosen.emit(1)
 				return true
 			KEY_A:
+				_note_menu_nav()
 				pick.step_focus(-1)
 				return true
 			KEY_D:
+				_note_menu_nav()
 				pick.step_focus(1)
 				return true
 			KEY_P:
@@ -594,15 +606,19 @@ func _counter_key(event: InputEvent) -> bool:
 				say_next()
 				return true
 			KEY_W:
+				_note_menu_nav()
 				counter.step_focus(0, -1)
 				return true
 			KEY_S:
+				_note_menu_nav()
 				counter.step_focus(0, 1)
 				return true
 			KEY_A:
+				_note_menu_nav()
 				counter.step_focus(-1, 0)
 				return true
 			KEY_D:
+				_note_menu_nav()
 				counter.step_focus(1, 0)
 				return true
 	if event is InputEventJoypadButton and event.pressed and event.button_index == JOY_BUTTON_Y:

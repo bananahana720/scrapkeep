@@ -14,6 +14,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const WorldGrade := preload("res://src/presentation/world_grade.gd")
+const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 
 
 signal back_requested
@@ -262,11 +263,20 @@ func _init() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_ENTER_TREE and not get_viewport().size_changed.is_connected(_on_resize):
 		get_viewport().size_changed.connect(_on_resize)
+	elif what == NOTIFICATION_VISIBILITY_CHANGED and _viewport != null:
+		_sync_viewport_update_mode()
+		_sync_viewport_update_mode.call_deferred()
 	elif what == NOTIFICATION_PREDELETE:
 		if _painter != null:
 			_painter.free()
 		if _decal_view != null:
 			_decal_view.free()
+
+
+func _sync_viewport_update_mode() -> void:
+	if _viewport == null:
+		return
+	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if visible else SubViewport.UPDATE_DISABLED
 
 
 static func attach(camp) -> void:
@@ -327,7 +337,7 @@ func _build_preview() -> void:
 	add_child(_container)
 	_viewport = SubViewport.new()
 	_viewport.own_world_3d = true
-	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
+	_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE if is_visible_in_tree() else SubViewport.UPDATE_DISABLED
 	_viewport.msaa_3d = Viewport.MSAA_4X
 	_container.add_child(_viewport)
 	var world := WorldEnvironment.new()
@@ -342,15 +352,9 @@ func _build_preview() -> void:
 	_viewport.add_child(world)
 	ClassPreview.preview_lights(_viewport, Palette.SAND, false)
 	var bench := MeshInstance3D.new()
-	var drum := CylinderMesh.new()
-	drum.top_radius = 1.5
-	drum.bottom_radius = 1.6
-	drum.height = 0.3
-	bench.mesh = drum
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Palette.RUST.darkened(0.35)
-	wood.roughness = 0.9
-	drum.material = wood
+	bench.name = "TurntablePedestal"
+	bench.mesh = CampCraftMeshes.turntable_pedestal_mesh(1.5, 1.6, 0.3)
+	bench.material_override = CampCraftMeshes.turntable_material()
 	bench.position = Vector3(0.0, -1.15, 0.0)
 	_viewport.add_child(bench)
 	_pivot = Node3D.new()
@@ -505,6 +509,8 @@ func open(profile, progress = null) -> void:
 	_seen_dirty = false
 	_seen_clock.clear()
 	show()
+	if _viewport != null:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_WHEN_VISIBLE
 	layout(_screen())
 	refresh()
 	focus("pilot")
@@ -825,6 +831,8 @@ func close() -> void:
 	trying = {}
 	_intro_left = -1.0
 	hide()
+	if _viewport != null:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	position = Vector2.ZERO
 	modulate.a = 1.0
 	if _camp != null:

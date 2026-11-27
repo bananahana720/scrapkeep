@@ -6,25 +6,10 @@ const BotFairness := preload("res://tools/bot_fairness.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The bot record's fairness numbers (tools/bot_fairness.gd) and their planted controls (tools/bot_plants.gd). The pass lines and
-# the tell time are scripts/challenge/fairness.json's, read here and nowhere else.
-#
-# Part 1, fixtures: the classifier on hand-made telegraph reads, so the cases a live seed does not make still run (an unlisted
-# source reads unknown, a listed contact source in another enemy's old ring, a young charge lane under an older slag ring, a
-# young shell ring inside an old ring of another source). Each round 3 fixture also runs the frozen round 2 rule, which must
-# misread it.
-# Part 2, live: one seed on stage 1 (novice, which loses hull both moving and stopped), played unplanted and once per plant.
-# Unplanted, every number is measured and on the passing side. Each plant moves its own number under the line and leaves the
-# other two readings inside a stated tolerance of the unplanted run, so a plant proves its own reading and not the plumbing.
-# The scrap plant is the exception: a theft changes the ball's heft and so the whole run's hull path, which moves the one-seed
-# hull F2 past its tolerance, so F2 is not held for it; its split of slow and fast loss is checked by sums instead.
-# A null is "not measured" and never a passing control.
-#
-# Run it by hand after any change under tools/bot_* or to the classifier (it is on the weekly list).
-const SEED := 40301
+const TRACKED_SEED := 40301
+const SEEDS := [40301, 40302, 40303, 40304]
 const TICKS := 30000
-# Tolerances against the unplanted run: F1 within 0.15 of the share (a plant's own hull is untelegraphed by construction, so it
-# moves F1 by its share of the hull; the plants here add 2 to 4 hull to about 34), F2 within 50% of the ratio, F3 within 0.5 s.
+const PARALLEL := 4
 const TOL_SHARE := 0.15
 const TOL_TAX := 0.5
 const TOL_FIRST_HIT_S := 0.5
@@ -37,12 +22,10 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
-func _row(owner: String, age: float, covers: bool, attack := "") -> Dictionary:
-	return {"id": 1, "owner": owner, "attack": attack, "age_s": age, "covers": covers}
+func _row(owner: String, age: float, covers: bool, attack := "", id := 1) -> Dictionary:
+	return {"id": id, "owner": owner, "attack": attack, "age_s": age, "covers": covers}
 
 
-# The round 2 rule (tools/bot_fairness.gd at 09364d29), frozen with that commit's lists: the planted control. Every fixture
-# that the round 3 rule added must read differently here, so its pass cannot be true by construction.
 const R2_ENVIRONMENT := ["cinder_floor", "pocket_veil", "start_pick", "special"]
 const R2_BOSS_PREFIXES := ["brindle_", "waking_", "mind_"]
 
@@ -67,7 +50,6 @@ func _round2_classify(source: String, now: Array, before: Array, published: Dict
 	return "untelegraphed"
 
 
-# A round 3 fixture: the current rule must give `want`, and the frozen round 2 rule must not.
 func _new_case(name: String, source: String, now: Array, published: Dictionary, want: String, cfg := {}) -> void:
 	_t.eq(name, BotFairness.classify(source, now, [], published, cfg), want)
 	var old := _round2_classify(source, now, [], published)
@@ -77,38 +59,202 @@ func _new_case(name: String, source: String, now: Array, published: Dictionary, 
 func _fixtures() -> void:
 	var tell := float(_line["tellS"])
 	_t.check("the shared lines loaded", not _line.is_empty() and _line.has("telegraphShare") and _line.has("contactSources"), "%s" % [_line])
-	# Round 3: unknown is what is left; contact needs a listing; a boss hit is matched to its own attack's hazards.
 	var with_bump := _line.duplicate(true)
 	with_bump["contactSources"] = ["bump"]
 	_new_case("an unlisted source that matches nothing published is unknown, even in another enemy's old ring", "new_thing", [_row("chaser", 5.0, true)], {"chaser": true}, "unknown")
 	_new_case("a source on contactSources is contact inside another enemy's old ring", "bump", [_row("chaser", 5.0, true)], {"chaser": true, "bump": true}, "contact", with_bump)
 	_new_case("a charge whose own lane is younger than the tell is untelegraphed under an older slag ring", "brindle_charge", [_row("boss", tell - 0.2, true, "charge"), _row("boss", 3.0, true, "slag_ring_a")], {"boss": true}, "untelegraphed")
 	_new_case("a boss source with no attack on bossAttacks is unknown, not judged by another attack's hazard", "waking_bore", [_row("boss", 3.0, true, "slag_ring_b")], {"boss": true}, "unknown")
-	# Kept from round 2 under the round 3 rule.
 	_t.eq("a shell younger than the tell inside another source's older ring is untelegraphed", BotFairness.classify("lobber", [_row("lobber", tell - 0.2, true), _row("mag_trapper", 3.0, true)], [], {"lobber": true, "mag_trapper": true}), "untelegraphed")
 	_t.eq("the shell's own ring, old enough, is telegraphed", BotFairness.classify("lobber", [_row("lobber", tell + 0.4, true)], [], {"lobber": true}), "telegraphed")
 	_t.eq("a ring that freed itself as it landed still counts from the tick before", BotFairness.classify("lobber", [], [_row("lobber", tell + 0.4, true)], {"lobber": true}), "telegraphed")
 	_t.eq("a ring that does not cover the ball is not a tell", BotFairness.classify("chaser", [_row("chaser", 3.0, false)], [], {"chaser": true}), "untelegraphed")
-	# Replaces round 2's "a boss hit with an old hazard over the ball is telegraphed" (any boss row counted): only the
-	# landing attack's own hazard counts now.
 	_t.eq("a charge with its own old lane over the ball is telegraphed", BotFairness.classify("brindle_charge", [_row("boss", 2.0, true, "charge")], [], {"boss": true}), "telegraphed")
 	_t.eq("a slag hit with its own old ring over the ball is telegraphed", BotFairness.classify("brindle_slag", [_row("boss", 2.0, true, "slag_ring_b")], [], {"boss": true}), "telegraphed")
 	_t.eq("a charge with its own young lane is untelegraphed", BotFairness.classify("brindle_charge", [_row("boss", 0.1, true, "charge")], [], {"boss": true}), "untelegraphed")
 	_t.eq("an unowned ring is the Warden's own", BotFairness.classify("warden", [_row("", 2.0, true)], [], {}), "telegraphed")
 	_t.eq("an unowned ring is not a pack unit's", BotFairness.classify("chaser", [_row("", 2.0, true)], [], {"chaser": true}), "untelegraphed")
 	_t.eq("a planted drain is untelegraphed", BotFairness.classify("drain_plant", [_row("chaser", 5.0, true)], [], {}), "untelegraphed")
-	# Scrap causes (lose_scrap's own cause, read through the same rule): a world cause matches only a world telegraph of its own cause.
 	_t.eq("a lightning theft under its own old ring is telegraphed", BotFairness.classify("lightning", [_row("world", 2.0, true, "lightning")], [], {}), "telegraphed")
 	_t.eq("a lightning theft under another cause's old mark is untelegraphed", BotFairness.classify("lightning", [_row("world", 2.0, true, "impact")], [], {}), "untelegraphed")
 	_t.eq("a boiler theft under a young hazard is untelegraphed", BotFairness.classify("boiler_burst", [_row("world", tell - 0.2, true, "boiler_burst")], [], {}), "untelegraphed")
 	_t.eq("a crane theft under the crane's own old sweep is telegraphed", BotFairness.classify("crane", [_row("boss", 2.0, true, "crane_0")], [], {"boss": true}), "telegraphed")
 	_t.eq("the scrap plant is untelegraphed", BotFairness.classify("scrap_plant", [_row("world", 5.0, true, "lightning")], [], {}), "untelegraphed")
 	_t.eq("an environment source has no owner to match", BotFairness.classify("cinder_floor", [], [], {}), "unknown")
-	_t.eq("a chaser hit under another chaser's old lane reads telegraphed (sources carry only the kind)", BotFairness.classify("chaser", [_row("chaser", 2.0, true)], [], {"chaser": true}), "telegraphed")
+	var pair_both_old := [_row("chaser", 2.0, true, "", 101), _row("chaser", 2.0, true, "", 102)]
+	var consumed := {}
+	var m1 := BotFairness.classify_with_id("chaser", pair_both_old, [], {"chaser": true}, {}, 0, consumed)
+	consumed[int(m1["matched_id"])] = true
+	var m2 := BotFairness.classify_with_id("chaser", pair_both_old, [], {"chaser": true}, {}, 0, consumed)
+	_t.check("two simultaneous old tells with one cause match distinct warning ids",
+		m1["bucket"] == "telegraphed" and m2["bucket"] == "telegraphed" and int(m1["matched_id"]) != int(m2["matched_id"]),
+		"m1 %s m2 %s" % [m1, m2])
+	var pair_mixed := [_row("chaser", 2.0, true, "", 201), _row("chaser", tell - 0.2, true, "", 202)]
+	_t.eq("explicit warning id matches its own old tell", BotFairness.classify("chaser", pair_mixed, [], {"chaser": true}, {}, 201), "telegraphed")
+	_t.eq("explicit warning id refuses a sibling's older tell for a young warning", BotFairness.classify("chaser", pair_mixed, [], {"chaser": true}, {}, 202), "untelegraphed")
+	var mixed_consumed := {}
+	var first_hit := BotFairness.classify_with_id("chaser", pair_mixed, [], {"chaser": true}, {}, 0, mixed_consumed)
+	mixed_consumed[int(first_hit["matched_id"])] = true
+	var second_hit := BotFairness.classify_with_id("chaser", pair_mixed, [], {"chaser": true}, {}, 0, mixed_consumed)
+	_t.check("same-tick pair with one old and one young tell credits the old tell once and flags the second",
+		first_hit["bucket"] == "telegraphed" and int(first_hit["matched_id"]) == 201 and second_hit["bucket"] == "untelegraphed",
+		"first %s second %s" % [first_hit, second_hit])
+	_t.check("planted: the round 2 rule misreads a young sibling tell under an older same-cause tell",
+		_round2_classify("chaser", pair_mixed, [], {"chaser": true}) == "telegraphed",
+		"round 2 reads %s" % _round2_classify("chaser", pair_mixed, [], {"chaser": true}))
+	var pooled_fixture := BotFairness.pool([
+		{"hull": {"telegraphed": 80.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}, "scrap": {"telegraphed": 0.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}, "hit_sources": {"chaser": 80.0}, "scrap_sources": {}, "slow_s": 20.0, "fast_s": 10.0, "slow_hull": 80.0, "fast_hull": 0.0, "slow_scrap": 0.0, "fast_scrap": 0.0, "hull_lost": 80.0, "first_hit": {"s1": {"contact": true, "first_hit_s": 6.0, "opened_by_hit": false, "hit": true}}},
+		{"hull": {"telegraphed": 100.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}, "scrap": {"telegraphed": 0.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}, "hit_sources": {"warden": 100.0}, "scrap_sources": {}, "slow_s": 30.0, "fast_s": 20.0, "slow_hull": 70.0, "fast_hull": 30.0, "slow_scrap": 0.0, "fast_scrap": 0.0, "hull_lost": 100.0, "first_hit": {"s1": {"contact": true, "first_hit_s": 10.0, "opened_by_hit": false, "hit": true}}},
+	])
+	_t.check("pooling combines a zero-fast-hull seed with nonzero seeds into a measured stop tax",
+		pooled_fixture["stop_tax"] == 3.0 and pooled_fixture["telegraph_share"] == 1.0 and BotFairness.first_hit_of(pooled_fixture) == 8.0,
+		"%s" % [pooled_fixture])
 
 
-func _args(out: String, plant: String) -> Array:
-	var args := ["--out=" + out, "--policy=skipper", "--seeds=%d" % SEED, "--until=1", "--band=novice", "--attempt=1", "--ticks=%d" % TICKS]
+class FakeFlow:
+	extends RefCounted
+
+	func state_name() -> String:
+		return "stage"
+
+	func in_stage() -> bool:
+		return true
+
+
+class FakeRun:
+	extends RefCounted
+	var stage := 1
+
+	func alive() -> bool:
+		return true
+
+
+class FakeTuning:
+	extends RefCounted
+
+	func f(_key: String) -> float:
+		return 10.0
+
+
+class FakePlayer:
+	extends RefCounted
+	var tuning := FakeTuning.new()
+
+	func planar_velocity() -> Vector3:
+		return Vector3.ZERO
+
+	func ball_position() -> Vector3:
+		return Vector3.ZERO
+
+
+class FakeGame:
+	extends Node
+	var flow := FakeFlow.new()
+	var run := FakeRun.new()
+	var player := FakePlayer.new()
+
+
+class FakeTell:
+	extends Node3D
+	var attack_id := ""
+
+	func contains(_point: Vector3) -> bool:
+		return true
+
+
+class FakeEnemy:
+	extends Node3D
+	var kind := "chaser"
+	var tell: Node3D
+
+	func telegraph() -> Node3D:
+		return tell if is_instance_valid(tell) else null
+
+
+func _live_game() -> FakeGame:
+	var game := FakeGame.new()
+	root.add_child(game)
+	return game
+
+
+func _live_warn(game: FakeGame, kind: String) -> FakeEnemy:
+	var enemy := FakeEnemy.new()
+	enemy.kind = kind
+	enemy.add_to_group("enemy")
+	game.add_child(enemy)
+	enemy.tell = FakeTell.new()
+	enemy.add_child(enemy.tell)
+	return enemy
+
+
+func _live_pair(gap_ticks: int) -> Dictionary:
+	var game := _live_game()
+	var fair := BotFairness.new()
+	fair.setup(game, Callable())
+	_live_warn(game, "chaser")
+	fair.tick(0.0)
+	fair.tick(1.9)
+	_live_warn(game, "chaser")
+	fair.tick(0.0)
+	fair.tick(0.1)
+	fair.hit("chaser", 40.0)
+	for _i in gap_ticks:
+		fair.tick(1.0 / 90.0)
+	fair.hit("chaser", 40.0)
+	var hull: Dictionary = fair.record(false)["hull"]
+	game.free()
+	return hull
+
+
+func _live_recorder() -> void:
+	var tell := float(_line["tellS"])
+	var same_tick := _live_pair(0)
+	_t.check("live recorder: an old tell (2.0 s) and a sibling's young tell (0.10 s) hitting in one tick read one shown and one hidden",
+		same_tick["telegraphed"] == 40.0 and same_tick["untelegraphed"] == 40.0, "%s" % [same_tick])
+	var later := _live_pair(3)
+	_t.check("live recorder: the sibling's hit three ticks later cannot reuse the old tell already credited",
+		later["telegraphed"] == 40.0 and later["untelegraphed"] == 40.0, "%s" % [later])
+
+	var game := _live_game()
+	var fair := BotFairness.new()
+	fair.setup(game, Callable())
+	_live_warn(game, "chaser")
+	fair.tick(0.0)
+	fair.tick(tell + 0.4)
+	fair.hit("chaser", 40.0)
+	fair.tick(0.5)
+	fair.hit("chaser", 40.0)
+	var held: Dictionary = fair.record(false)["hull"]
+	_t.check("live recorder: a standing old tell that hits again with no young sibling stays shown",
+		held["telegraphed"] == 80.0 and held["untelegraphed"] == 0.0, "%s" % [held])
+	fair.tick(0.5)
+	fair.hit("chaser", 40.0)
+	fair.hit("chaser", 40.0)
+	var doubled: Dictionary = fair.record(false)["hull"]
+	_t.check("live recorder: one tell answers for one hit in a tick, so a second same-tick hit is hidden",
+		doubled["telegraphed"] == 120.0 and doubled["untelegraphed"] == 40.0, "%s" % [doubled])
+	game.free()
+
+	game = _live_game()
+	var ring := FakeTell.new()
+	ring.attack_id = "slag_ring_a"
+	game.add_child(ring)
+	fair = BotFairness.new()
+	fair.setup(game, func() -> Array: return [ring])
+	fair.tick(0.0)
+	fair.tick(tell + 0.4)
+	fair.loss("brindle_slag", 6.0)
+	fair.hit("brindle_slag", 40.0)
+	var strike: Dictionary = fair.record(false)
+	_t.check("live recorder: one strike that takes scrap and hull in one tick under its own old ring reads shown on both",
+		strike["hull"]["telegraphed"] == 40.0 and strike["hull"]["untelegraphed"] == 0.0
+			and strike["scrap"]["telegraphed"] == 6.0 and strike["scrap"]["untelegraphed"] == 0.0,
+		"hull %s scrap %s" % [strike["hull"], strike["scrap"]])
+	game.free()
+
+
+func _args(out: String, seed_val: int, plant: String) -> Array:
+	var args := ["--out=" + out, "--policy=skipper", "--seeds=%d" % seed_val, "--until=1", "--band=novice", "--attempt=1", "--ticks=%d" % TICKS]
 	if plant != "":
 		args.append("--plant=" + plant)
 	return args
@@ -117,25 +263,47 @@ func _args(out: String, plant: String) -> Array:
 func _run() -> void:
 	_line = BotFairness.config()
 	_fixtures()
+	_live_recorder()
+	_t.check("the pool starts at the seed the ledger tracked and skips none after it",
+		SEEDS[0] == TRACKED_SEED and range(SEEDS.size()).all(func(i: int) -> bool: return SEEDS[i] == TRACKED_SEED + i),
+		"seeds %s" % [SEEDS])
 	var base := OS.get_user_data_dir().path_join("bot-fairness-%d" % OS.get_process_id())
-	var arms := {"plain": "", "drain": "drain=0.02", "fast_tax": "fast_tax=0.03", "ringless": "ringless=0.3", "scrap": "scrap=0.1"}
+	var arms := {"plain": "", "drain": "drain=0.2", "fast_tax": "fast_tax=0.6", "ringless": "ringless=0.3", "scrap": "scrap=0.5"}
 	var jobs := []
+	var job_meta := []
 	for name in arms:
-		jobs.append({"script": "res://tools/bot_run.gd", "args": _args(base.path_join(name), arms[name])})
-	var results := ChildRuns.run(jobs, 1500.0, 2)
-	var fair := {}
-	var i := 0
+		for seed_val in SEEDS:
+			var run_dir: String = base.path_join("%s-%d" % [name, seed_val])
+			jobs.append({
+				"script": "res://tools/bot_run.gd",
+				"home": run_dir,
+				"args": _args(run_dir, seed_val, arms[name]),
+			})
+			job_meta.append({"arm": name, "seed": seed_val, "dir": run_dir})
+	var results := ChildRuns.run(jobs, 1500.0, PARALLEL)
+	var by_arm := {}
 	for name in arms:
-		var result: Dictionary = results[i]
-		i += 1
-		_t.check("%s child ran" % name, result["code"] == 0 and not result["timed_out"], "exit %s, timeout %s" % [result["code"], result["timed_out"]])
-		var path: String = base.path_join(name).path_join("bots.ndjson")
+		by_arm[name] = []
+	for idx in results.size():
+		var meta: Dictionary = job_meta[idx]
+		var name: String = meta["arm"]
+		var seed_val: int = meta["seed"]
+		var run_dir: String = meta["dir"]
+		var result: Dictionary = results[idx]
+		_t.check("%s seed %d child ran" % [name, seed_val], result["code"] == 0 and not result["timed_out"], "exit %s, timeout %s" % [result["code"], result["timed_out"]])
+		var path: String = run_dir.path_join("bots.ndjson")
 		var rows := FileAccess.get_file_as_string(path).split("\n", false) if FileAccess.file_exists(path) else PackedStringArray()
 		var row = JSON.parse_string(rows[-1]) if rows.size() > 0 else null
 		var f = row.get("fairness") if row is Dictionary else null
-		_t.check("%s record carries fairness" % name, f is Dictionary, "%d rows in %s" % [rows.size(), path])
-		fair[name] = f if f is Dictionary else {}
-		print("%s: %s" % [name, JSON.stringify(fair[name])])
+		_t.check("%s seed %d record carries fairness" % [name, seed_val], f is Dictionary, "%d rows in %s" % [rows.size(), path])
+		if f is Dictionary:
+			(by_arm[name] as Array).append(f)
+			if name == "plain":
+				print("plain seed %d alone: stop_tax %s (slow %s hull / %s s, fast %s hull / %s s)" % [seed_val, f.get("stop_tax"), f.get("slow_hull"), f.get("slow_s"), f.get("fast_hull"), f.get("fast_s")])
+	var fair := {}
+	for name in arms:
+		fair[name] = BotFairness.pool(by_arm[name])
+		print("%s (pooled %d seeds): %s" % [name, (by_arm[name] as Array).size(), JSON.stringify(fair[name])])
 	_plain(fair["plain"])
 	var plain := BotFairness.baseline(fair["plain"])
 	var f1: float = plain["share"]
@@ -146,7 +314,19 @@ func _run() -> void:
 	_fast_tax(fair["fast_tax"], f1, f2, f3)
 	_ringless(fair["ringless"], f1, f2, f3)
 	_scrap(fair["scrap"], f1, f2, f3)
+	if _t.failures == 0:
+		_remove(base)
 	quit(_t.verdict())
+
+
+func _remove(path: String) -> void:
+	if not DirAccess.dir_exists_absolute(path):
+		return
+	for file in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(file))
+	for folder in DirAccess.get_directories_at(path):
+		_remove(path.path_join(folder))
+	DirAccess.remove_absolute(path)
 
 
 func _share(f: Dictionary) -> float:
@@ -162,7 +342,6 @@ func _plain(f: Dictionary) -> void:
 	var total := 0.0
 	for k in hull:
 		total += float(hull[k])
-	# Hull buckets sum to hull_lost; scrap has its own, and the unknown share reads over both.
 	var scrap: Dictionary = f.get("scrap", {})
 	for k in scrap:
 		total += float(scrap[k])
@@ -180,7 +359,6 @@ func _plain(f: Dictionary) -> void:
 	_t.check("unplanted F3 is measured and on the passing side", _first_hit(f) >= float(_line["firstHitS"]), "first_hit %s" % [f.get("first_hit")])
 
 
-# A plant must leave the readings it does not own where the unplanted run had them.
 func _others(name: String, f: Dictionary, f1: float, f2: float, f3: float, skip: String) -> void:
 	if skip != "F1":
 		_t.check("%s leaves F1 within %.2f" % [name, TOL_SHARE], f.get("telegraph_share") != null and absf(_share(f) - f1) <= TOL_SHARE, "planted %s, unplanted %s" % [f.get("telegraph_share"), f1])
@@ -215,17 +393,11 @@ func _ringless(f: Dictionary, f1: float, f2: float, f3: float) -> void:
 	_others("ringless", f, f1, f2, f3, "F3")
 
 
-# Scrap taken through run.lose_scrap with no telegraph (the plant's cause) is a loss the three lines must see: F1 drops below the line.
-# The plant is small, so the hull F1, F2 and F3 stay where they were (_others).
 func _scrap(f: Dictionary, f1: float, f2: float, f3: float) -> void:
-	# telegraph_share stays hull only; the theft moves pooled_share (hull and scrap together), and F1 fails on either.
 	var pooled = f.get("pooled_share")
 	_t.check("F1's pooled share drops below the line with the scrap theft planted", pooled != null and float(pooled) < float(_line["telegraphShare"]), "pooled %s" % [pooled])
 	_t.check("F1's pooled share reads below unplanted", pooled != null and float(pooled) < f1, "planted %s, unplanted %s" % [pooled, f1])
 	_t.check("the planted theft is in the scrap record", float(f.get("scrap_sources", {}).get("scrap_plant", 0.0)) > 0.0, "scrap_sources %s" % [f.get("scrap_sources")])
-	# Seed-independent sums in place of an F2 hold: every point stolen is in the slow or the fast total once, and every hull
-	# point lost is too. (F2 itself is not held: the theft changes the ball's heft, so the one-seed hull F2 swings, 0.594
-	# unplanted against 1.50 with 20 scrap taken, the instability the ledger row for this test names.) F1's hull share and F3 are held.
 	var planted := float(f.get("scrap_sources", {}).get("scrap_plant", 0.0))
 	var split := float(f.get("slow_scrap", -1.0)) + float(f.get("fast_scrap", -1.0))
 	_t.check("slow and fast scrap sum to the scrap stolen", absf(split - planted) <= 0.15, "slow %s + fast %s, stolen %s" % [f.get("slow_scrap"), f.get("fast_scrap"), planted])

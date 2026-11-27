@@ -4,6 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const ChunkCraft := preload("res://src/presentation/world23_chunk_craft.gd")
 
 const HOUSING := "res://assets/models/world_one/shell_cannon.glb"
 static var housing_path := HOUSING
@@ -17,32 +18,6 @@ var fallen := false
 var notes: Array = []
 var _fall_time := 0.0
 var _rest_basis := Basis.IDENTITY
-static var _meshes := {}
-static var _materials := {}
-
-
-static func _material(key: String, tint: Color, glow := false) -> StandardMaterial3D:
-	if not _materials.has(key):
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = tint
-		mat.roughness = 0.65
-		mat.emission_enabled = glow
-		mat.emission = tint if glow else Color.BLACK
-		mat.emission_energy_multiplier = 0.8 if glow else 0.0
-		_materials[key] = mat
-	return _materials[key]
-
-
-static func _cylinder(key: String, radius: float, length: float, tint: Color, glow := false) -> CylinderMesh:
-	if not _meshes.has(key):
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = radius
-		mesh.bottom_radius = radius
-		mesh.height = length
-		mesh.radial_segments = 16
-		mesh.material = _material(key, tint, glow)
-		_meshes[key] = mesh
-	return _meshes[key]
 
 
 static func make(pilot: String):
@@ -50,7 +25,8 @@ static func make(pilot: String):
 	gun.name = "QuietGun"
 	var cradle := MeshInstance3D.new()
 	cradle.name = "EmptyCradle"
-	cradle.mesh = _cylinder("cradle", 0.75, 0.18, Palette.VERDIGRIS)
+	cradle.mesh = ChunkCraft.get_quiet_gun_cradle_mesh()
+	cradle.scale = Vector3(0.52, 0.64, 0.52)
 	gun.add_child(cradle)
 	if pilot == "remembered_cannon":
 		return gun
@@ -66,23 +42,26 @@ static func make(pilot: String):
 			housing = source.duplicate()
 		scene.free()
 	if housing == null:
-		var greybox := MeshInstance3D.new()
-		greybox.mesh = _cylinder("housing", 0.32, 1.6, Palette.VERDIGRIS)
-		greybox.rotation.x = PI * 0.5
-		housing = greybox
+		var sculpted := MeshInstance3D.new()
+		sculpted.mesh = ChunkCraft.get_quiet_gun_barrel_mesh()
+		sculpted.scale = Vector3(0.28, 0.53, 0.28)
+		sculpted.rotation.x = PI * 0.5
+		housing = sculpted
 	housing.name = "BarrelHousing"
 	gun.barrel.add_child(housing)
 	for i in 4:
 		var band := MeshInstance3D.new()
 		band.name = "FamilyBand%d" % (i + 1)
-		band.mesh = _cylinder("dark_band", 0.34, 0.055, Palette.CHARCOAL)
+		band.mesh = ChunkCraft.get_quiet_gun_band_mesh(false, 0.34)
+		band.scale = Vector3(1.0, 0.28, 1.0)
 		band.rotation.x = PI * 0.5
 		band.position.z = 0.5 - i * 0.32
 		gun.barrel.add_child(band)
 		gun.bands.append(band)
 	gun.plug = MeshInstance3D.new()
 	gun.plug.name = "BorePlug"
-	gun.plug.mesh = _cylinder("plug", 0.25, 0.1, Palette.CHARCOAL)
+	gun.plug.mesh = ChunkCraft.get_quiet_gun_plug_mesh()
+	gun.plug.scale = Vector3(0.30, 0.26, 0.30)
 	gun.plug.rotation.x = PI * 0.5
 	gun.plug.position.z = -0.85
 	gun.barrel.add_child(gun.plug)
@@ -163,17 +142,4 @@ func ending_ready() -> void:
 
 
 static func _live_band() -> ArrayMesh:
-	if not _meshes.has("dashed_band"):
-		var surface := SurfaceTool.new()
-		surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-		for i in 12:
-			var a := TAU * i / 12.0
-			var b := TAU * (i + 0.55) / 12.0
-			var p := Vector3(cos(a) * 0.34, -0.028, sin(a) * 0.34)
-			var q := Vector3(cos(b) * 0.34, -0.028, sin(b) * 0.34)
-			for v in [p, q, p + Vector3.UP * 0.056, q, q + Vector3.UP * 0.056, p + Vector3.UP * 0.056]:
-				surface.add_vertex(v)
-		var mesh := surface.commit()
-		mesh.surface_set_material(0, _material("dashed_band", Palette.ANCIENT, true))
-		_meshes["dashed_band"] = mesh
-	return _meshes["dashed_band"]
+	return ChunkCraft.get_quiet_gun_band_mesh(true, 0.34)

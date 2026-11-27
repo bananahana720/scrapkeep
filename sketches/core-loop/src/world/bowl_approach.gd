@@ -2,6 +2,7 @@ extends Node3D
 
 const ModelKit := preload("res://src/world/model_kit.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const SurveyPosts := preload("res://src/world/survey_posts.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
@@ -323,12 +324,10 @@ func _process(delta: float) -> void:
 		puff.scale = Vector3.ONE * (24.0 + 70.0 * t)
 
 
-func _box(size: Vector3, at: Vector3, color: Color, parent: Node3D, glow := 0.0, grain := false) -> MeshInstance3D:
+func _box(size: Vector3, at: Vector3, color: Color, parent: Node3D, glow := 0.0, _grain := false) -> MeshInstance3D:
 	var mesh := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	mesh.mesh = box
-	mesh.material_override = Palette.solid(color, glow, grain)
+	mesh.mesh = PropMeshes.bevel_prop_box(size)
+	mesh.material_override = PropMeshes.weathered_material(color, 0.74, 0.26, glow, "bowl_app_" + color.to_html(false))
 	mesh.position = at
 	parent.add_child(mesh)
 	return mesh
@@ -337,6 +336,7 @@ func _box(size: Vector3, at: Vector3, color: Color, parent: Node3D, glow := 0.0,
 func _crate() -> Node3D:
 	var crate := Node3D.new()
 	if ModelKit.whole(CRATE, crate) != null:
+		PropMeshes.weather_node_materials(crate, 2.2)
 		return crate
 	_box(Vector3.ONE * CRATE_M, Vector3.UP * CRATE_M * 0.5, Palette.RUST, crate)
 	_box(Vector3(0.35, 0.5, 0.06), Vector3(0.0, CRATE_M * 0.6, CRATE_M * 0.5 + 0.04), Palette.AMBER, crate, 1.2)
@@ -346,6 +346,7 @@ func _crate() -> Node3D:
 func _rack() -> Node3D:
 	var rack := Node3D.new()
 	if ModelKit.whole(RACK, rack) != null:
+		PropMeshes.weather_node_materials(rack, 2.8)
 		return rack
 	for x in [-1.4, 1.4]:
 		_box(Vector3(0.2, 3.0, 2.0), Vector3(x, 1.5, 0.0), Palette.CHARCOAL, rack)
@@ -363,12 +364,18 @@ func _gantry() -> Node3D:
 		for x in [-GANTRY_WIDE_M * 0.5, GANTRY_WIDE_M * 0.5]:
 			_box(Vector3(1.0, GANTRY_TALL_M, 1.6), Vector3(x, GANTRY_TALL_M * 0.5, 0.0), Palette.RUST, gantry)
 		_box(Vector3(GANTRY_WIDE_M + 1.0, 1.6, 1.6), Vector3(0.0, GANTRY_TALL_M - 0.8, 0.0), Palette.RUST, gantry)
+	else:
+		PropMeshes.weather_node_materials(gantry, 3.6)
 	for view in gantry.find_children("*", "MeshInstance3D", true, false):
 		if view.visibility_range_begin <= 0.0:
 			view.visibility_range_begin = GANTRY_NEAR_M
 			view.visibility_range_begin_margin = 2.0
 			view.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF
-	_box(Vector3(PLATE_HALF_M * 2.0, 0.1, PLATE_DEEP_M * 2.0), Vector3(0.0, PLATE_TOP_M, 0.0), Palette.AMBER, gantry).material_override = Palette.striped(Palette.AMBER, Palette.CHARCOAL)
+	var plate_node := MeshInstance3D.new()
+	plate_node.mesh = PropMeshes.weighbridge_plate(Vector3(PLATE_HALF_M * 2.0, 0.12, PLATE_DEEP_M * 2.0))
+	plate_node.material_override = PropMeshes.weathered_material(Palette.AMBER.lerp(Palette.COPPER, 0.25), 0.66, 0.38, 0.0, "weigh_plate")
+	plate_node.position = Vector3(0.0, PLATE_TOP_M, 0.0)
+	gantry.add_child(plate_node)
 	var board := Label3D.new()
 	board.name = "Board"
 	board.text = "0"
@@ -391,22 +398,19 @@ func _furnace() -> Node3D:
 			var tall: float = STACK_M * [1.0, 0.8, 0.65][i]
 			_box(Vector3(9.0, tall, 9.0), Vector3(0.0, tall * 0.5, (i - 1) * 22.0), Palette.CHARCOAL, works)
 			_box(Vector3(9.6, 3.0, 9.6), Vector3(0.0, tall - 4.0, (i - 1) * 22.0), Palette.AMBER, works, 1.6)
+	else:
+		PropMeshes.weather_node_materials(works, 6.0)
 	var glow := _box(Vector3(30.0, 14.0, 70.0), Vector3(0.0, 7.0, 0.0), Palette.AMBER, works, 2.4)
-	(glow.material_override as StandardMaterial3D).disable_fog = true
-	var cloud := SphereMesh.new()
-	cloud.radius = 0.5
-	cloud.height = 1.0
-	cloud.radial_segments = 8
-	cloud.rings = 4
-	var soot := StandardMaterial3D.new()
-	soot.albedo_color = Color(0.1, 0.085, 0.08, 0.85)
-	soot.disable_fog = true
-	soot.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	soot.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	var glow_mat := (glow.material_override as StandardMaterial3D).duplicate() as StandardMaterial3D
+	glow_mat.disable_fog = true
+	glow.material_override = glow_mat
+	var cloud := PropMeshes.furnace_smoke_wisp()
+	var soot := PropMeshes.furnace_smoke_material()
 	for i in SMOKE_PUFFS:
 		var puff := MeshInstance3D.new()
 		puff.mesh = cloud
 		puff.material_override = soot
+		puff.rotation.y = float(i) * 1.17
 		works.add_child(puff)
 		_puffs.append(puff)
 	return works

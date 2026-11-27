@@ -129,7 +129,7 @@ func _lanes() -> void:
 		var drawn := _drawn(root)
 		_t.eq("%d lost: the charge draws the lane faint" % lost, drawn.size(), 1)
 		var shown: MeshInstance3D = drawn[0]
-		_t.near("%d lost: the faint lane is half the sheet and a margin past the core" % lost, (shown.mesh as BoxMesh).size.x, Reactor.SHEET_WIDTH * 0.5 + Reactor.LANE_PAST_CORE)
+		_t.near("%d lost: the faint lane is half the sheet and a margin past the core" % lost, shown.mesh.get_aabb().size.x, Reactor.SHEET_WIDTH * 0.5 + Reactor.LANE_PAST_CORE)
 		_t.check("%d lost: the faint lane sits on its side" % lost, signf(shown.global_position.dot(right)) == float(d.lane))
 		d.on_pulse(m, false)
 		await process_frame

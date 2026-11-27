@@ -8,6 +8,7 @@ const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const WeakPoints := preload("res://src/boss/weak_points.gd")
 const WeakPart := preload("res://src/boss/weak_part.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const Palette := preload("res://src/core/palette.gd")
 
 enum { IDLE, FIGHT, DEFEATED }
 const PAD_RADIUS := 36.0
@@ -383,6 +384,7 @@ func _build_pad(center: Vector3) -> void:
 	shape.shape = cylinder
 	pad.add_child(shape)
 	var mesh := MeshInstance3D.new()
+	mesh.name = "PadDeckMesh"
 	var disc := CylinderMesh.new()
 	disc.top_radius = PAD_RADIUS
 	disc.bottom_radius = PAD_RADIUS

@@ -1,15 +1,8 @@
 extends SceneTree
 
 const Screens := preload("res://tests/support/menu_screens.gd")
+const RunTier := preload("res://src/core/run_tier.gd")
 const T := preload("res://tests/support/t.gd")
-
-# UA-05 (principle P6): on every menu screen, every focusable control can be reached with the stick
-# from the control the game focuses when the screen opens. The walk pushes the left stick up, down, left
-# and right through the viewport (so the game's own row handlers and the engine's focus search both
-# answer, as for a player), reads the focus owner after each push, and explores from every control it
-# reaches until no new one turns up. A control it never meets is named. Two plants must be found missing:
-# a button with no neighbours (the engine path) and a focusable control put in a settings page but left
-# out of the page's row list (the custom path). Tab is not followed: a stick has no Tab.
 
 var _t := T.new("menu_reach_test")
 var _kit := Screens.new()
@@ -41,10 +34,86 @@ func _check(name: String, scope: Node, showing: bool) -> void:
 	_t.check("%s: all %d focusable controls reached by the stick from %s" % [name, all.size(), Screens.label(start)], missed.is_empty(), "not reached: %s" % str(missed))
 
 
+func _visit_extended() -> int:
+	var count := 0
+	var screens = _kit.screens
+	var game = _kit.game
+
+	screens._on_flow_changed("title")
+	await process_frame
+	await process_frame
+	screens._actions.visible = false
+	screens._camp.set_walk(false)
+	screens._camp.visible = true
+	screens._camp.refresh(game)
+	await process_frame
+	await process_frame
+	var camp_buttons := Screens.focusables(screens._camp)
+	if not camp_buttons.is_empty():
+		camp_buttons[0].grab_focus()
+	await process_frame
+	await _check("camp menu strip", screens._camp, screens._camp.visible and not screens._camp.walk)
+	count += 1
+
+	var customize = screens._camp.customize
+	customize.reduced_motion = true
+	customize._open_from_camp()
+	await process_frame
+	await process_frame
+	var stray_custom := Button.new()
+	stray_custom.text = "StrayCustom"
+	customize._column.add_child(stray_custom)
+	await process_frame
+	await process_frame
+	var custom_all := Screens.focusables(customize)
+	var custom_start: Control = _kit.first_focus()["start"]
+	var custom_missed: Array = _kit.unreached(custom_start, custom_all)
+	_t.check("planted: customize page walk catches stray focusable outside ORDER", custom_missed == [stray_custom], str(custom_missed))
+	stray_custom.free()
+	await process_frame
+	customize.focus("pilot")
+	await process_frame
+	await _check("customize page", customize, customize.visible)
+	count += 1
+	customize.close()
+	screens._camp.visible = false
+	screens._actions.visible = true
+	await process_frame
+
+	game.flow.show_title()
+	game.flow.press_start()
+	await process_frame
+	game.pick_pilot(0)
+	await process_frame
+	await process_frame
+	await process_frame
+	var profile = game.ctx.profile
+	profile.earn(RunTier.UNLOCK, 1.0)
+	profile.set_stat(RunTier.BEST_STAT, float(RunTier.TOP))
+	var card = game.flow.start_card
+	card.set_interactive(true)
+	card.set_briefing(true)
+	card.show_picks(game.run, profile)
+	await process_frame
+	await process_frame
+	if root.gui_get_focus_owner() != null:
+		root.gui_get_focus_owner().release_focus()
+	await process_frame
+	await _check("start card", card, card.showing())
+	count += 1
+	card.hide_card()
+	await process_frame
+
+	var picker: Control = await _kit.open_enemy_picker()
+	await _check("camp enemy picker", picker if picker != null else screens, picker != null and picker.is_visible_in_tree())
+	count += 1
+	await _kit.close_enemy_picker(picker)
+	return count
+
+
 func _run() -> void:
 	await _kit.start(self)
 
-	# Plant 1: a button with no neighbours, off to one side of two linked buttons.
 	var holder := Control.new()
 	holder.size = Vector2(400, 300)
 	root.add_child(holder)
@@ -74,8 +143,6 @@ func _run() -> void:
 	_t.check("planted: the walk reports the button with no neighbours", planted == [lost], str(planted))
 	holder.free()
 
-	# Plant 2: a focusable control in the title settings page's box that its row list does not hold.
-	# The page's own handler steps through that list, so the engine's nearest-control search is not used.
 	var pages = _kit.screens.settings_page()
 	_kit.screens._on_flow_changed("title")
 	_kit.screens.toggle_settings()
@@ -96,8 +163,8 @@ func _run() -> void:
 	await process_frame
 
 	var count: int = await _kit.visit(_check)
-	_t.check("covered %d screens and %d focusable controls" % [_screens_seen, _controls_seen], _screens_seen > 0 and _controls_seen > 0 and count == _screens_seen)
+	count += await _visit_extended()
+	_t.check("covered %d screens and %d focusable controls" % [_screens_seen, _controls_seen], _screens_seen >= 20 and _controls_seen > 0 and count == _screens_seen)
 	print("menu_reach_test: covered %d screens, %d focusable controls" % [_screens_seen, _controls_seen])
-	print("menu_reach_test: not covered: %s" % str(_kit.uncovered))
 	await _kit.finish()
 	quit(_t.verdict())

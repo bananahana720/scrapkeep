@@ -19,17 +19,7 @@ func _initialize() -> void:
 			"--pilot=demolitions_caster", "--ticks=%d" % TICKS, "--bot-audit=1"]
 		for key in Options.FAST_FLAGS:
 			args.append("--%s=%d" % [key, i])
-		var previous := {}
-		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, folder.path_join(kind.to_lower()))
-		var child: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": args}], 130.0)[0]
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
+		var child: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "home": folder, "args": args}], 130.0)[0]
 		t.check("child %d completed without script errors" % i,
 			child.code == 0 and not child.timed_out and ChildRuns.summary(child).errors.is_empty(),
 			"exit %s, timeout %s" % [child.code, child.timed_out])

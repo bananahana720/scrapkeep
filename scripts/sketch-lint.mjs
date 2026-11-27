@@ -394,6 +394,137 @@ export function lintL10(file, rel, text, allowed = HAND_MOVED) {
   return writes.map((line) => finding("L10", file, line.number, message));
 }
 
+export const ID_COMPARE_OWNERS = new Set([
+  "src/core/class_def.gd",
+  "src/core/park_defs.gd",
+  "src/core/alpha_defs.gd",
+  "src/core/stage_defs.gd",
+  "src/core/slice_defs.gd",
+]);
+
+export const CANONICAL_IDS = [
+  "park_dam",
+  "park_flume",
+  "park_pit",
+  "park_sinkhole",
+  "park_islands",
+  "park_crown",
+  "spillway",
+  "reach",
+  "dig",
+  "dig_deep",
+  "highdraft",
+  "highdraft_crown",
+  "pylon_engineer",
+  "runner_gunner",
+  "demolitions_caster",
+  "tarn",
+  "tally",
+  "remembered_cannon",
+  "line_splicer",
+];
+
+export const ID_COMPARE_LEGACY = {
+  "src/boss/mind.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
+  "src/combat/combat.gd": { sites: 8, why: "pre-MG-16 pilot branches" },
+  "src/combat/kest_kit.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
+  "src/combat/rivet_kit.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
+  "src/combat/tarn_claw.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
+  "src/core/pilot_story.gd": { sites: 7, why: "pre-MG-16 pilot story branches" },
+  "src/game.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/movement/player_ball.gd": { sites: 4, why: "pre-MG-16 pilot/map branches" },
+  "src/presentation/audio.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
+  "src/presentation/dig_scenery.gd": { sites: 3, why: "pre-MG-16 dig map checks" },
+  "src/presentation/grapple_rig.gd": { sites: 2, why: "pre-MG-16 pilot match arms" },
+  "src/presentation/hero_assets.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/presentation/park_props.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
+  "src/presentation/pilot_antics.gd": { sites: 6, why: "pre-MG-16 pilot match arms" },
+  "src/presentation/player_fx.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/presentation/quiet_gun.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/presentation/sfx_bank.gd": { sites: 3, why: "pre-MG-16 map check and pilot match arms" },
+  "src/presentation/world_look.gd": { sites: 1, why: "pre-MG-16 park prefix check" },
+  "src/ui/class_preview.gd": { sites: 10, why: "pre-MG-16 pilot match arms" },
+  "src/ui/ending_sequence.gd": {
+    sites: 7,
+    why: "pre-MG-16 pilot ending branches and park prefix checks",
+  },
+  "src/world/director.gd": { sites: 2, why: "pre-MG-16 park prefix checks" },
+  "src/world/terrain.gd": { sites: 2, why: "pre-MG-16 park prefix checks" },
+};
+
+export const ID_FAMILY_PREFIXES = ["park_"];
+
+const idAlternation = CANONICAL_IDS.join("|");
+const idLiteral = `(?:&|StringName\\(\\s*)?["'](?:${idAlternation})["']`;
+const rawIdCompare = new RegExp(
+  `(?:==|!=)\\s*${idLiteral}|${idLiteral}\\s*\\)?\\s*(?:==|!=)|\\bin\\s*\\[[^\\]]*${idLiteral}`,
+);
+const rawIdPrefix = new RegExp(
+  `\\.begins_with\\(\\s*&?["'](?:${[...CANONICAL_IDS, ...ID_FAMILY_PREFIXES].join("|")})["']\\s*\\)`,
+);
+const rawIdPattern = new RegExp(idLiteral);
+const matchOpen = /^match\s.+:\s*(?:#.*)?$/;
+
+function armPatterns(code) {
+  let quote = null;
+  let depth = 0;
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i];
+    if (quote) {
+      if (ch === "\\") i++;
+      else if (ch === quote) quote = null;
+    } else if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === "#") return null;
+    else if ("([{".includes(ch)) depth++;
+    else if (")]}".includes(ch)) depth--;
+    else if (ch === ":" && depth === 0) return code.slice(0, i);
+  }
+  return null;
+}
+
+export function idMatchArms(text) {
+  const arms = new Set();
+  const open = [];
+  for (const line of codeLines(text)) {
+    if (line.code === "") continue;
+    const indent = line.raw.length - line.raw.trimStart().length;
+    while (open.length > 0 && indent <= open.at(-1).indent) open.pop();
+    const block = open.at(-1);
+    if (block) {
+      block.arm ??= indent;
+      const patterns = indent === block.arm ? armPatterns(line.code) : null;
+      if (patterns !== null && rawIdPattern.test(patterns)) arms.add(line.number);
+    }
+    if (matchOpen.test(line.code)) open.push({ indent, arm: null });
+  }
+  return arms;
+}
+
+export function lintL11(file, rel, text, allowed = ID_COMPARE_LEGACY, owners = ID_COMPARE_OWNERS) {
+  if (owners.has(rel) || rel.startsWith("src/dev/")) return [];
+  const arms = idMatchArms(text);
+  const sites = codeLines(text).filter(
+    (line) => rawIdCompare.test(line.raw) || rawIdPrefix.test(line.raw) || arms.has(line.number),
+  );
+  const listed = allowed[rel]?.sites ?? 0;
+  if (sites.length === listed) return [];
+  if (sites.length === 0) {
+    return [
+      finding(
+        "L11",
+        file,
+        1,
+        "ID_COMPARE_LEGACY lists a file with no raw map/pilot ID comparison left: remove the entry",
+      ),
+    ];
+  }
+  const message =
+    listed === 0
+      ? "raw map or pilot ID branch (string or StringName compare, match arm, or begins_with) outside owning table (MG-16); query the owning def/capability instead of branching on ID strings"
+      : `${sites.length} raw map/pilot ID branches, ID_COMPARE_LEGACY lists ${listed}; move branching to owning table fields (MG-16)`;
+  return sites.map((line) => finding("L11", file, line.number, message));
+}
+
 export function applyBaseline(findings, baseline, exists) {
   const kept = [];
   const offending = new Map();
@@ -491,6 +622,90 @@ export function parseLintArgs(argv) {
   return options;
 }
 
+export const FAULT_SWITCHES = {
+  _reel_plant: {
+    home: "src/boss/boss.gd",
+    why: "brindle_reel_test stops or unbraces the reel to prove each guard holds the fight",
+  },
+  lead_plant: {
+    home: "src/combat/pack_pressure.gd",
+    why: "boss_lead_line_test leads every ball or none to prove the lead rule is what spares a turning ball",
+  },
+  test_pad_scale: {
+    home: "src/combat/warning_bound.gd",
+    why: "warning_bound_containment_test shrinks a ground pad to watch the containment check fail",
+  },
+  test_skip_hazard_merge: {
+    home: "src/combat/warning_bound.gd",
+    why: "warning_bound_park_ground_test skips the merge to prove it is what holds hazards on real ground",
+  },
+  _test_pending: {
+    home: "src/core/cosmetics.gd",
+    why: "the customize tests name extra pending art to reach the pending paths while the list is empty",
+  },
+  test_no_warn: {
+    home: "src/world/contraptions.gd",
+    why: "works_surge_test fires a surge with no warning to fail the warning predicate",
+  },
+  plant_ignore_lines: {
+    home: "src/world/park/footings.gd",
+    why: "park_flume_piers_test casts a sole on a ridden line to prove the footing check sees it",
+  },
+  keep_one_placement: {
+    home: "src/combat/terrain_faces.gd",
+    why: "rivet_warm_hitch_test restores the old one-build keying to prove the warm-up hitch fix",
+  },
+};
+
+const collectionWrite =
+  "append|append_array|push_back|push_front|insert|erase|clear|assign|resize|merge|fill|pop_back|pop_front|pop_at|remove_at|sort|reverse|shuffle";
+const faultReset = /^(?:static\s+)?func\s+reset_for_tests\s*\(/;
+const topLevel = /^(?:static\s+)?(?:func|var|const|class|signal|enum)\b|^@/;
+
+const faultSubscript = "(?:\\s*\\[(?:[^\\[\\]]|\\[[^\\[\\]]*\\])*\\])*";
+
+function faultWrite(name) {
+  return new RegExp(
+    `(?<!\\w)${name}\\b${faultSubscript}\\s*(?:[-+*/%]?=(?!=)|\\.\\s*(?:${collectionWrite})\\s*\\()|\\bset(?:_deferred|_indexed)?\\(\\s*&?["']${name}["']`,
+  );
+}
+
+export function lintL12(file, rel, text, switches = FAULT_SWITCHES) {
+  const out = [];
+  let resetting = false;
+  const names = Object.keys(switches);
+  for (const line of codeLines(text)) {
+    if (line.raw.length > 0 && !/^\s/.test(line.raw) && topLevel.test(line.raw))
+      resetting = faultReset.test(line.raw);
+    for (const name of names) {
+      if (!faultWrite(name).test(line.raw)) continue;
+      if (resetting && switches[name].home === rel) continue;
+      out.push(
+        finding(
+          "L12",
+          file,
+          line.number,
+          `game code writes the fault switch ${name}; only a test or a tool may set it, and ${switches[name].home} clears it in reset_for_tests()`,
+        ),
+      );
+    }
+  }
+  for (const name of names) {
+    if (switches[name].home !== rel) continue;
+    const declared = new RegExp(`^(?:static\\s+)?var\\s+${name}\\b`, "m");
+    if (!declared.test(text))
+      out.push(
+        finding(
+          "L12",
+          file,
+          1,
+          `FAULT_SWITCHES lists ${name}, which this file no longer declares: remove the entry`,
+        ),
+      );
+  }
+  return out;
+}
+
 function walk(directory, base = directory) {
   const entries = [];
   if (!existsSync(directory)) return entries;
@@ -536,6 +751,8 @@ export function lintSketch(sketch) {
     findings.push(...lintL8(file.path, rel, file.text));
     findings.push(...lintL9(file.path, file.text));
     findings.push(...lintL10(file.path, rel, file.text));
+    findings.push(...lintL11(file.path, rel, file.text));
+    findings.push(...lintL12(file.path, rel, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   if (sketch === "core-loop") {

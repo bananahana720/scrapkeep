@@ -9,6 +9,10 @@ const BossModel := preload("res://src/boss/boss_model.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
+const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
+const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
 const HULL := Vector3(9.0, 5.0, 14.0)
 const DECK := 5.0
@@ -61,31 +65,52 @@ var _model_armour: Array = []
 var _model_magnets: Array = []
 var _model_magnet_meshes: Array = []
 var _model_bow_ram: MeshInstance3D
+var _model_hull: MeshInstance3D
 var _model_shield: Node3D
 var _bracing := false
+var _strike_flash_left := 0.0
+var _strike_flash_duration := 0.22
+var _strike_flash_color := Palette.HAZARD
 var _pending_hides := {}
 var _drawn_parts: Array = []
 var _camera_bodies: Array = []
 var _shoved_rider: Node3D
+var _magnet_visuals: Array = []
+var _magnet_rigs: Array[PropMotionRig] = []
+var _magnet_prev_pos: Array[Vector3] = []
+var _magnet_pos_ready: Array[bool] = []
 
 
 func build(boss) -> void:
 	name = "Requisition"
+	var legacy_box_seam := model_path != MODEL and not ResourceLoader.exists(model_path)
 	hull = Target.new()
 	hull.setup(boss, "hull", "hull", HULL, Vector2(6.0, 3.0))
 	hull.position = Vector3.UP * HULL.y * 0.5
 	add_child(hull)
 	hull.body_boxes = drawn_boxes
 	_hull_prim_mat = Palette.solid(Palette.RUST)
-	_box(hull, HULL, _hull_prim_mat, Vector3.ZERO)
+	if legacy_box_seam:
+		_box(hull, HULL, _hull_prim_mat, Vector3.ZERO)
+	else:
+		_craft_part(hull, EnemyBossCraft.brindle_hull_mesh(HULL), _hull_prim_mat, Vector3.ZERO, "BrindleHullCraft")
 	for side in [-1.0, 1.0]:
 		for z in [-3.5, 3.5]:
-			var plate_mat := Palette.solid(Color("5d6b78"))
+			var plate_mat := EnemyBossCraft.brindle_armour_material(Target.SLATE)
 			hull.tint_with(plate_mat)
 			_plate_mats.append(plate_mat)
-			_plates.append(_box(hull, Vector3(0.4, 3.2, 6.0), plate_mat, Vector3(side * (HULL.x * 0.5 + 0.2), 0.3, z)))
-	_cockpit = _box(self, Vector3(3.0, 2.2, 3.0), Palette.water(Palette.ARC), Vector3(0.0, DECK + 1.1, 4.8))
-	_box(self, Vector3(1.2, 1.0, 1.0), Palette.solid(Palette.AMBER, 0.4), Vector3(0.0, DECK + 1.0, 4.8))
+			var plate_size := Vector3(0.4, 3.2, 6.0)
+			var plate_at := Vector3(side * (HULL.x * 0.5 + 0.2), 0.3, z)
+			if legacy_box_seam:
+				_plates.append(_box(hull, plate_size, plate_mat, plate_at))
+			else:
+				_plates.append(_craft_part(hull, EnemyBossCraft.brindle_armour_plate(plate_size), plate_mat, plate_at, "BrindleArmourCraft"))
+	if legacy_box_seam:
+		_cockpit = _box(self, Vector3(3.0, 2.2, 3.0), Palette.water(Palette.ARC), Vector3(0.0, DECK + 1.1, 4.8))
+		_box(self, Vector3(1.2, 1.0, 1.0), Palette.solid(Palette.AMBER, 0.4), Vector3(0.0, DECK + 1.0, 4.8))
+	else:
+		_cockpit = _craft_part(self, EnemyBossCraft.brindle_cockpit_canopy(Vector3(3.0, 2.2, 3.0)), Palette.water(Palette.ARC), Vector3(0.0, DECK + 1.1, 4.8), "BrindleCockpitCraft")
+		_craft_part(self, EnemyBossCraft.brindle_cockpit_console(Vector3(1.2, 1.0, 1.0)), EnemyBossCraft.craft_shader_material("brindle_console", "plasma_conduit_core", Palette.CHARCOAL, Palette.COPPER, 0.62, 0.35, Palette.AMBER, 0.9), Vector3(0.0, DECK + 1.0, 4.8), "BrindleConsoleCraft")
 	for i in CAP_SPOTS.size():
 		var cap = Target.new()
 		cap.setup(boss, "cap", "cap_%d" % (i + 1), CAP_SIZE, Vector2(1.2, 1.2))
@@ -94,25 +119,39 @@ func build(boss) -> void:
 		var mat := Palette.solid(Palette.CHARCOAL)
 		cap.tint_with(mat)
 		_cap_mats.append(mat)
-		_cap_meshes.append(_cylinder(cap, 1.1, CAP_SIZE.y, mat))
+		if legacy_box_seam:
+			_cap_meshes.append(_cylinder(cap, 1.1, CAP_SIZE.y, mat))
+		else:
+			_cap_meshes.append(_craft_part(cap, EnemyBossCraft.brindle_vent_cap(1.1, CAP_SIZE.y), mat, Vector3.ZERO, "BrindleCapCraft%d" % i))
 		caps.append(cap)
 	for i in CRANE_PIVOTS.size():
-		_box(self, Vector3(0.8, 3.0, 0.8), Palette.solid(Palette.COPPER), CRANE_PIVOTS[i] - Vector3.UP * 1.5)
+		if legacy_box_seam:
+			_box(self, Vector3(0.8, 3.0, 0.8), Palette.solid(Palette.COPPER), CRANE_PIVOTS[i] - Vector3.UP * 1.5)
+		else:
+			_craft_part(self, EnemyBossCraft.brindle_crane_post(Vector3(0.8, 3.0, 0.8)), EnemyBossCraft.craft_shader_material("brindle_crane_post", "oxidized_hull_plating", Palette.COPPER, Palette.RUST, 0.64, 0.40), CRANE_PIVOTS[i] - Vector3.UP * 1.5, "BrindleCranePost%d" % i)
 		var magnet = Target.new()
 		magnet.setup(boss, "magnet", "magnet_%s" % ["port", "starboard"][i], Vector3.ZERO, Vector2(1.5, 1.5))
 		add_child(magnet)
 		var mat := Palette.solid(Palette.VERDIGRIS)
 		_magnet_mats.append(mat)
-		_cylinder(magnet, 1.4, 0.9, mat)
+		var mag_visual: MeshInstance3D
+		if legacy_box_seam:
+			mag_visual = _cylinder(magnet, 1.4, 0.9, mat)
+		else:
+			mag_visual = _craft_part(magnet, EnemyBossCraft.brindle_magnet_housing(1.4, 0.9), mat, Vector3.ZERO, "BrindleMagnetCraft%d" % i)
+		_magnet_visuals.append(mag_visual)
 		magnets.append(magnet)
 		var cable := MeshInstance3D.new()
 		cable.name = "CableSpan%d" % i
 		cable.mesh = _cable_mesh()
-		cable.material_override = Palette.solid(Palette.CHARCOAL)
-		cable.material_override.vertex_color_use_as_albedo = true
+		var cable_mat := Palette.solid(Palette.CHARCOAL)
+		cable_mat.vertex_color_use_as_albedo = true
+		Palette.surface_grain(cable_mat)
+		cable.material_override = cable_mat
 		add_child(cable)
 		_cables.append(cable)
 	_dress()
+	_bind_magnet_rigs()
 	plate = WorldPrompt.new()
 	plate.name = "BrindlePlate"
 	plate.owner_placed = true
@@ -142,8 +181,64 @@ func follow_shoved_rider(rider: Node3D) -> void:
 	_follow_drawn_parts()
 
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	_follow_drawn_parts()
+	step_magnet_motion(delta)
+	_step_strike_flash(delta)
+
+
+func _bind_magnet_rigs() -> void:
+	_magnet_rigs.clear()
+	_magnet_prev_pos.clear()
+	_magnet_pos_ready.clear()
+	for i in magnets.size():
+		var visual: Node3D = null
+		if model != null and i < _model_magnet_meshes.size() and is_instance_valid(_model_magnet_meshes[i]):
+			visual = _model_magnet_meshes[i] as Node3D
+		elif i < _magnet_visuals.size() and is_instance_valid(_magnet_visuals[i]):
+			visual = _magnet_visuals[i] as Node3D
+		var rig := PropMotionRig.new()
+		if visual != null and PropMotionRig.is_visual_pivot(visual):
+			rig.add_part("magnet_%d" % i, visual, {
+				"sway": true,
+				"sway_stiffness": 22.0,
+				"sway_damping": 4.4,
+				"sway_gain": 0.036,
+				"sway_max_rad": 0.38,
+				"sway_ambient_amp": 0.028,
+				"sway_ambient_hz": 0.42,
+				"sway_phase": float(i) * PI * 0.5,
+				"jolt_stiffness": 135.0,
+				"jolt_damping": 11.5,
+				"jolt_max_offset": 0.28,
+				"jolt_rot_gain": 0.48,
+			})
+			var target_node = magnets[i]
+			if target_node != null and target_node.has_signal("struck_impulse"):
+				target_node.struck_impulse.connect(func(dir: Vector3, strength: float):
+					rig.apply_impulse(dir, strength))
+		_magnet_rigs.append(rig)
+		_magnet_prev_pos.append(Vector3.ZERO)
+		_magnet_pos_ready.append(false)
+
+
+func step_magnet_motion(delta: float) -> void:
+	var dt := maxf(delta, 0.0001)
+	var calm := UiTokens.reduced_motion or EnemyMotion.motion_scale <= 0.0
+	for i in mini(magnets.size(), _magnet_rigs.size()):
+		var rig: PropMotionRig = _magnet_rigs[i]
+		rig.reduced_motion = calm
+		var cur_pos: Vector3 = (magnets[i] as Node3D).global_position
+		var vel := Vector3.ZERO
+		if _magnet_pos_ready[i]:
+			vel = (cur_pos - _magnet_prev_pos[i]) / dt
+		_magnet_prev_pos[i] = cur_pos
+		_magnet_pos_ready[i] = true
+		rig.step(delta, vel)
+
+
+func magnet_motion_rig(i: int) -> PropMotionRig:
+	return _magnet_rigs[i] if i >= 0 and i < _magnet_rigs.size() else null
 
 
 func _follow_drawn_parts() -> void:
@@ -178,20 +273,51 @@ func _follow_drawn_parts() -> void:
 static func _cable_mesh() -> ArrayMesh:
 	var surface := SurfaceTool.new()
 	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var sides := 8
 	for band in 6:
 		var z0 := -0.5 + band / 6.0
 		var z1 := -0.5 + (band + 1) / 6.0
 		var r0 := 0.10 if band % 2 == 0 else 0.125
 		var r1 := 0.125 if band % 2 == 0 else 0.10
-		for side in 8:
-			var a := TAU * side / 8.0
-			var b := TAU * (side + 1) / 8.0
-			var points := [Vector3(cos(a) * r0, sin(a) * r0, z0), Vector3(cos(b) * r0, sin(b) * r0, z0),
-				Vector3(cos(b) * r1, sin(b) * r1, z1), Vector3(cos(a) * r1, sin(a) * r1, z1)]
+		var v0 := float(band) * 0.75
+		var v1 := float(band + 1) * 0.75
+		var col := Color.WHITE if band % 2 == 0 else Color(1.4, 1.4, 1.4)
+		for side in sides:
+			var a := TAU * side / float(sides)
+			var b := TAU * (side + 1) / float(sides)
+			var u0 := float(side) / float(sides)
+			var u1 := float(side + 1) / float(sides)
+			var points := [
+				Vector3(cos(a) * r0, sin(a) * r0, z0),
+				Vector3(cos(b) * r0, sin(b) * r0, z0),
+				Vector3(cos(b) * r1, sin(b) * r1, z1),
+				Vector3(cos(a) * r1, sin(a) * r1, z1),
+			]
+			var uvs := [Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1), Vector2(u0, v1)]
 			for index in [0, 2, 1, 0, 3, 2]:
-				surface.set_color(Color.WHITE if band % 2 == 0 else Color(1.4, 1.4, 1.4))
+				surface.set_uv(uvs[index])
+				surface.set_color(col)
 				surface.add_vertex(points[index])
+	var r_cap := 0.10
+	var c_front := Vector3(0.0, 0.0, -0.5)
+	var c_back := Vector3(0.0, 0.0, 0.5)
+	for side in sides:
+		var a := TAU * side / float(sides)
+		var b := TAU * (side + 1) / float(sides)
+		var pa0 := Vector3(cos(a) * r_cap, sin(a) * r_cap, -0.5)
+		var pb0 := Vector3(cos(b) * r_cap, sin(b) * r_cap, -0.5)
+		for row in [[c_front, Vector2(0.5, 0.5)], [pa0, Vector2(0.5 + cos(a) * 0.5, 0.5 + sin(a) * 0.5)], [pb0, Vector2(0.5 + cos(b) * 0.5, 0.5 + sin(b) * 0.5)]]:
+			surface.set_uv(row[1])
+			surface.set_color(Color.WHITE)
+			surface.add_vertex(row[0])
+		var pa1 := Vector3(cos(a) * r_cap, sin(a) * r_cap, 0.5)
+		var pb1 := Vector3(cos(b) * r_cap, sin(b) * r_cap, 0.5)
+		for row in [[c_back, Vector2(0.5, 0.5)], [pb1, Vector2(0.5 + cos(b) * 0.5, 0.5 + sin(b) * 0.5)], [pa1, Vector2(0.5 + cos(a) * 0.5, 0.5 + sin(a) * 0.5)]]:
+			surface.set_uv(row[1])
+			surface.set_color(Color.WHITE)
+			surface.add_vertex(row[0])
 	surface.generate_normals()
+	surface.generate_tangents()
 	return surface.commit()
 
 
@@ -370,6 +496,7 @@ func _dress() -> void:
 		BossModel.strip_tracks(_anim, "Cap1", ["drone_deploy"])
 		BossModel.strip_tracks(_anim, "Cap2", ["drone_deploy"])
 	_model_shield = model.find_child("CockpitShield", true, false)
+	_model_hull = model.find_child("Hull", true, false) as MeshInstance3D
 	_model_bow_ram = model.find_child("BowRam", true, false) as MeshInstance3D
 	_model_cranes = [model.find_child("CraneMasts", true, false), model.find_child("CranePort", true, false),
 		model.find_child("CraneStarboard", true, false), model.find_child("MagnetSocketPort", true, false),
@@ -412,6 +539,41 @@ func set_hook_brace(on: bool, token := 0) -> void:
 
 func bracing() -> bool:
 	return _bracing
+
+
+func trigger_strike_flash(color := Palette.HAZARD, duration := 0.22) -> void:
+	_strike_flash_color = color
+	_strike_flash_duration = maxf(0.05, duration * (0.75 if FlashGuard.on else 1.0))
+	_strike_flash_left = _strike_flash_duration
+	_apply_strike_flash(1.0)
+
+
+func strike_flashing() -> bool:
+	return _strike_flash_left > 0.0
+
+
+func _step_strike_flash(delta: float) -> void:
+	if _strike_flash_left <= 0.0:
+		return
+	_strike_flash_left = maxf(0.0, _strike_flash_left - delta)
+	var frac := _strike_flash_left / maxf(_strike_flash_duration, 0.001)
+	_apply_strike_flash(frac)
+
+
+func _apply_strike_flash(frac: float) -> void:
+	var scale := 0.45 if FlashGuard.on else 1.0
+	var hull_energy := 1.45 * frac * scale
+	var ram_energy := maxf(BRACE_GLOW if _bracing else 0.0, 2.2 * frac * scale)
+	if model != null:
+		if _model_hull != null:
+			BossModel.signal_glow(_model_hull, _strike_flash_color, hull_energy)
+		if _model_bow_ram != null:
+			BossModel.signal_glow(_model_bow_ram, _strike_flash_color if frac > 0.0 else Palette.HAZARD, ram_energy)
+	if _hull_prim_mat != null:
+		var prim_energy := maxf(1.6 if _bracing else 0.0, 1.5 * frac * scale)
+		_hull_prim_mat.emission_enabled = prim_energy > 0.001
+		_hull_prim_mat.emission = _strike_flash_color if frac > 0.0 else Palette.HAZARD
+		_hull_prim_mat.emission_energy_multiplier = prim_energy
 
 
 func _cue(clip: String, token: int, tag := "") -> void:
@@ -525,6 +687,17 @@ static func _finish(scene: Node3D) -> Node3D:
 		if player != null:
 			BossModel.own_clips(player)
 	return scene
+
+
+func _craft_part(parent: Node3D, array_mesh: ArrayMesh, mat: Material, at: Vector3, node_name: String) -> MeshInstance3D:
+	var mesh := MeshInstance3D.new()
+	mesh.name = node_name
+	mesh.mesh = array_mesh
+	mesh.material_override = mat
+	mesh.position = at
+	parent.add_child(mesh)
+	_prims.append(mesh)
+	return mesh
 
 
 func _box(parent: Node3D, size: Vector3, mat: Material, at: Vector3) -> MeshInstance3D:

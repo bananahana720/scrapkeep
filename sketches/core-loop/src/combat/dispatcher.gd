@@ -11,6 +11,7 @@ signal cargo_flushed(pod: Node3D)
 signal cargo_returned(dispatcher: Node3D)
 
 const SpecialRig := preload("res://src/presentation/special_rig.gd")
+const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const MODEL := "res://assets/models/world_one/enemy_dispatcher.glb"
 const HP := 60.0
 const SCRAP := 8
@@ -272,10 +273,25 @@ func _build_tool() -> void:
 
 func _fallback_body() -> void:
 	var pivot := _visual_parent()
-	_box(BODY_SIZE * 0.95, Palette.VERDIGRIS, Vector3.ZERO, 0.0, pivot)
-	_cylinder(0.4, 3.0, Palette.CHARCOAL, Vector3(0.0, -0.2, -2.0), 0.0, pivot).rotation.x = PI * 0.5
-	var lamp := _box(Vector3(0.5, 0.5, 0.5), Palette.BRASS, Vector3(0.0, 1.6, 0.0), 0.0, pivot)
-	_signal_material = lamp.material_override as StandardMaterial3D
+	var body := MeshInstance3D.new()
+	body.name = "DispatcherFallbackBody"
+	body.mesh = EnemyBossCraft.brindle_armour_plate(BODY_SIZE * 0.95)
+	body.material_override = EnemyBossCraft.craft_shader_material("dispatcher_fallback_body", "oxidized_hull_plating", Palette.VERDIGRIS, Palette.CHARCOAL, 0.68, 0.30)
+	pivot.add_child(body)
+	var tube := MeshInstance3D.new()
+	tube.name = "DispatcherFallbackTube"
+	tube.mesh = EnemyBossCraft.brindle_vent_cap(0.4, 3.0)
+	tube.material_override = EnemyBossCraft.craft_shader_material("dispatcher_fallback_tube", "oil_slicked_iron", Palette.CHARCOAL, Palette.SLATE, 0.62, 0.45)
+	tube.position = Vector3(0.0, -0.2, -2.0)
+	tube.rotation.x = PI * 0.5
+	pivot.add_child(tube)
+	var lamp := MeshInstance3D.new()
+	lamp.name = "DispatcherFallbackLamp"
+	lamp.mesh = EnemyBossCraft.brindle_cockpit_console(Vector3(0.5, 0.5, 0.5))
+	_signal_material = Palette.solid(Palette.BRASS, 0.0)
+	lamp.material_override = _signal_material
+	lamp.position = Vector3(0.0, 1.6, 0.0)
+	pivot.add_child(lamp)
 
 
 static func _parts() -> Array:
@@ -346,18 +362,11 @@ func _build_mast(height: float) -> void:
 	deck.shape = _get_deck_shape()
 	deck.position = Vector3(0.0, -DECK_SIZE.y * 0.5, 0.0)
 	mast.add_child(deck)
-	var meshes := _get_mast_meshes(height)
-	var frame := MeshInstance3D.new()
-	frame.name = "MastFrame"
-	frame.mesh = meshes["frame"]
-	frame.material_override = _mast_charcoal
-	mast.add_child(frame)
-	if meshes["rungs"] != null:
-		var rungs_view := MeshInstance3D.new()
-		rungs_view.name = "MastRungs"
-		rungs_view.mesh = meshes["rungs"]
-		rungs_view.material_override = _mast_rust
-		mast.add_child(rungs_view)
+	var mast_mesh := MeshInstance3D.new()
+	mast_mesh.name = "DispatchMastMesh"
+	mast_mesh.mesh = EnemyBossCraft.dispatch_mast_assembly(height, MAST_WIDTH, DECK_SIZE)
+	EnemyBossCraft.apply_dispatch_mast_materials(mast_mesh)
+	mast.add_child(mast_mesh)
 
 
 func perch_height() -> float:
@@ -646,18 +655,25 @@ func _pose() -> void:
 	if _pod == null:
 		_pod = MeshInstance3D.new()
 		_pod.name = "DispatchPod"
-		_pod.mesh = _get_pod_mesh()
+		_pod.mesh = EnemyBossCraft.dispatch_pod(POD_RADIUS, POD_RADIUS * 3.0)
 		if _flush_active:
 			_pod.scale = Vector3.ONE * 1.4
 			_pod.material_override = Palette.solid(Palette.HAZARD, 1.0)
 		else:
-			_pod.material_override = _get_pod_mat()
+			EnemyBossCraft.apply_dispatch_pod_materials(_pod)
 		world_root.add_child(_pod)
 		_pod_launch = Projectile.lob_velocity(_pod_from, ring.center, flight_s)
 		if _flush_active:
 			cargo_flushed.emit(_pod)
 	var s := clampf(_t - suck_s, 0.0, flight_s)
 	_pod.global_position = _pod_from + _pod_launch * s + Vector3.DOWN * 0.5 * GRAVITY * s * s
+	var pod_vel := _pod_launch + Vector3.DOWN * GRAVITY * s
+	if pod_vel.length_squared() > 0.04:
+		var y_axis := pod_vel.normalized()
+		var ref := Vector3.RIGHT if absf(y_axis.dot(Vector3.RIGHT)) < 0.9 else Vector3.FORWARD
+		var x_axis := y_axis.cross(ref).normalized()
+		var z_axis := x_axis.cross(y_axis).normalized()
+		_pod.global_basis = Basis(x_axis, y_axis, z_axis).scaled(_pod.scale)
 
 
 func _exit_tree() -> void:

@@ -1,0 +1,26 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/experimental/part_resource.gd" id="1_part"]
+
+[resource]
+script = ExtResource("1_part")
+id = &"brine_tap_vent"
+display_name = "Brine-Tap Coolant Vent"
+maker = &"spillway_works"
+slot = 2
+rarity = &"field_kit"
+trigger = &"on_overheat"
+emits_tags = Array[StringName]([&"coolant_brittle", &"soaked_conductive"])
+consumes_tags = Array[StringName]([&"burning"])
+heat_cost = -65.0
+effect_id = &"brine_quench_vent"
+params = {
+"cool_scale_below_redline": 0.7,
+"quench_damage": 26.0,
+"ttl_s": 5.0,
+"vent_radius_m": 7.5
+}
+summary = "Fast slams at redline vent heat into a freezing brine ring that shatters flame."
+trade_off = "Passive cooling runs slower below redline, asking you to ride hot."
+visual_tell = "Ice ring bursting from husk valves with white steam pips."
+audio_tell = "Pressure valve hiss into crisp frost crack."
