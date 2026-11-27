@@ -13,6 +13,7 @@ const T := preload("res://tests/support/t.gd")
 const ThreadGuard := preload("res://src/core/thread_guard.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
+const ParkMap := preload("res://src/world/park/park_map.gd")
 
 const GLB := "res://assets/models/highdraft/prop_bench.glb"
 const PARK := "park_test"
@@ -75,6 +76,9 @@ func _main_thread() -> void:
 		and got.keys() == want.keys(), "; ".join(differ))
 	_t.check("the set_data region keeps the worker's maps as given", region != null and region.get_height_map() == maps[1]
 		and region.get_control_map() == maps[2])
+	var map := ParkMap.new()
+	map.line_within(Vector2.ZERO, 8.0)
+	_t.check("park_map line_within fills its ride-line cache on the main thread", map._ride_lines != null)
 	_t.eq("no violation on the main thread", ThreadGuard.violations, 0)
 	ParkProps.release_shared()
 
@@ -159,27 +163,29 @@ func _child() -> void:
 	var text := "\n".join(output)
 	var mesh_assert := text.contains("Assertion failed: thread_guard: park_props mesh " + GLB)
 	var region_assert := text.contains("Assertion failed: thread_guard: park_terrain region")
-	var nothing_made := text.contains("planted violations=2 mesh=null region=null cached=false")
-	# The child's output only on a failure, quoted, so its SCRIPT ERROR lines never start a line of this test's own.
-	var detail := "" if mesh_assert and region_assert and nothing_made else \
+	var map_assert := text.contains("Assertion failed: thread_guard: park_map line_within")
+	var nothing_made := text.contains("planted violations=3 mesh=null region=null cached=false map_cached=false")
+	var detail := "" if mesh_assert and region_assert and map_assert and nothing_made else \
 		"\n".join(Array(text.split("\n")).map(func(line: String): return "  > " + line))
 	_t.eq("the planted child exits cleanly", code, 0)
 	_t.check("a worker's park props mesh read (it instantiates the GLB) fails the assert", mesh_assert, detail)
 	_t.check("a worker's region maker fails the assert", region_assert, detail)
-	_t.check("both count, and neither makes or caches anything", nothing_made, detail)
+	_t.check("a worker's park_map line_within read fails the assert", map_assert, detail)
+	_t.check("all three count, and none makes or caches anything", nothing_made, detail)
 
 
-# Child only: the planted worker calls.
 func _planted() -> void:
 	ParkProps.release_shared()
 	var out := {}
 	var maps := _maps()
+	var map := ParkMap.new()
 	var task := WorkerThreadPool.add_task(func():
 		out["mesh"] = ParkProps._mesh(GLB)
-		out["region"] = ParkTerrain._make_region(maps), false, "thread_guard_test planted")
+		out["region"] = ParkTerrain._make_region(maps)
+		out["line"] = map.line_within(Vector2.ZERO, 8.0), false, "thread_guard_test planted")
 	WorkerThreadPool.wait_for_task_completion(task)
-	print("planted violations=%d mesh=%s region=%s cached=%s" % [ThreadGuard.violations, "null" if out.get("mesh") == null else "made",
-		"null" if out.get("region") == null else "made", str(ParkProps._meshes.has(GLB))])
+	print("planted violations=%d mesh=%s region=%s cached=%s map_cached=%s" % [ThreadGuard.violations, "null" if out.get("mesh") == null else "made",
+		"null" if out.get("region") == null else "made", str(ParkProps._meshes.has(GLB)), str(map._ride_lines != null)])
 	quit(0)
 
 

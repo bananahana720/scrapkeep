@@ -6,6 +6,8 @@ const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const Layout := preload("res://src/world/camp_layout.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
+const Glyphs := preload("res://src/ui/glyphs.gd")
+const Bindings := preload("res://src/core/bindings.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
@@ -123,6 +125,8 @@ var _quip_tween: Tween
 var _bins: MultiMeshInstance3D
 var _sleeves: MultiMeshInstance3D
 var _shelved: Array = []
+var _prompt_device := ""
+var _prompt_interact := ""
 
 
 func setup(game_ref) -> void:
@@ -157,7 +161,57 @@ func has_socket(id: String, socket_name: String) -> bool:
 
 
 func add_station(id: String, at: Vector3, label: String, key: String, radius: float, on_press: Callable) -> void:
-	_zones[id] = {"label": label, "key": key, "on_press": on_press, "area": _make_zone(id, at, radius), "enter": Callable()}
+	var verb := key if Bindings.VERBS.has(key) else ""
+	var glyph := _verb_glyph(verb) if verb != "" else key
+	_zones[id] = {"label": label, "key": glyph, "verb": verb, "on_press": on_press, "area": _make_zone(id, at, radius), "enter": Callable()}
+
+
+func _verb_glyph(verb: String) -> String:
+	return Glyphs.of(verb)
+
+
+func _zone_glyph(zone: Dictionary) -> String:
+	var verb := String(zone.get("verb", ""))
+	if verb != "":
+		var glyph := _verb_glyph(verb)
+		zone["key"] = glyph
+		return glyph
+	return String(zone.get("key", ""))
+
+
+func _zone_keycode(zone: Dictionary) -> int:
+	var verb := String(zone.get("verb", ""))
+	if verb != "" and Bindings.VERBS.has(verb):
+		var actions: Dictionary = Bindings.VERBS[verb]["actions"]
+		var action := String(actions.keys()[0])
+		if InputMap.has_action(action):
+			for event in InputMap.action_get_events(action):
+				if event is InputEventKey:
+					var code: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
+					if code != KEY_NONE:
+						return code
+	var glyph := _zone_glyph(zone)
+	return OS.find_keycode_from_string(Keycap.label(glyph)) if glyph != "" else KEY_NONE
+
+
+func _zone_matches_key(zone: Dictionary, keycode: int) -> bool:
+	if keycode == KEY_NONE:
+		return false
+	var verb := String(zone.get("verb", ""))
+	if verb != "" and Bindings.VERBS.has(verb):
+		var actions: Dictionary = Bindings.VERBS[verb]["actions"]
+		var action := String(actions.keys()[0])
+		if InputMap.has_action(action):
+			var saw_key := false
+			for event in InputMap.action_get_events(action):
+				if event is InputEventKey:
+					saw_key = true
+					var code: int = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
+					if code == keycode:
+						return true
+			if saw_key:
+				return false
+	return _zone_keycode(zone) == keycode
 
 
 func set_label(id: String, label: String) -> void:
@@ -168,7 +222,7 @@ func set_label(id: String, label: String) -> void:
 
 
 func add_zone(id: String, at: Vector3, radius: float, on_enter := Callable(), on_exit := Callable()) -> void:
-	_zones[id] = {"label": "", "key": "", "on_press": Callable(), "area": _make_zone(id, at, radius), "enter": on_enter, "exit": on_exit}
+	_zones[id] = {"label": "", "key": "", "verb": "", "on_press": Callable(), "area": _make_zone(id, at, radius), "enter": on_enter, "exit": on_exit}
 
 
 func zone_ids() -> Array:
@@ -190,27 +244,37 @@ func inside(id: String) -> bool:
 
 func confirm_key() -> int:
 	for id in _inside:
-		var key: String = _zones[id]["key"]
-		if key != "":
-			return OS.find_keycode_from_string(Keycap.label(key))
+		var zone: Dictionary = _zones[id]
+		if _zone_glyph(zone) != "":
+			return _zone_keycode(zone)
 	return KEY_NONE
 
 
 func press_key(keycode: int) -> bool:
 	for id in _inside:
-		var key: String = _zones[id]["key"]
-		if key != "" and OS.find_keycode_from_string(Keycap.label(key)) == keycode:
-			var press: Callable = _zones[id]["on_press"]
+		var zone: Dictionary = _zones[id]
+		if _zone_glyph(zone) != "" and _zone_matches_key(zone, keycode):
+			var press: Callable = zone["on_press"]
 			if press.is_valid():
 				press.call()
 			return true
 	return false
 
 
+func press_station(id: String) -> bool:
+	if not walking or not (id in _inside) or not _zones.has(id):
+		return false
+	var press: Callable = _zones[id]["on_press"]
+	if press.is_valid():
+		press.call()
+		return true
+	return false
+
+
 func prompt_words() -> Array:
 	var out := []
 	for id in _inside:
-		if _zones[id]["key"] != "":
+		if _zone_glyph(_zones[id]) != "":
 			out.append(_zones[id]["label"])
 	return out
 
@@ -300,6 +364,10 @@ func _process(delta: float) -> void:
 		_quip_hold -= delta
 		if _quip_hold <= 0.0:
 			_end_quip(false)
+	if walking and not _inside.is_empty():
+		var now_interact := Glyphs.of("interact")
+		if Glyphs.device != _prompt_device or now_interact != _prompt_interact:
+			_refresh_prompts()
 	if walking and is_instance_valid(_pet) and (_pet_tween == null or not _pet_tween.is_valid()):
 		if EnemyMotion.motion_scale > 0.0:
 			_pet_idle += delta
@@ -693,19 +761,25 @@ func clock_text() -> String:
 func _refresh_prompts() -> void:
 	if _prompt_box == null:
 		return
+	_prompt_device = Glyphs.device
+	_prompt_interact = Glyphs.of("interact")
 	for child in _prompt_box.get_children():
 		_prompt_box.remove_child(child)
 		child.queue_free()
 	_prompt_buttons.clear()
 	for id in _inside:
 		var zone: Dictionary = _zones[id]
-		if zone["key"] == "":
+		var glyph := _zone_glyph(zone)
+		if glyph == "":
 			continue
-		var card := ChoiceButton.new("station_" + id, zone["key"], zone["label"])
+		var card := ChoiceButton.new("station_" + id, glyph, zone["label"])
 		card.name = "Card_" + id
 		card.focus_mode = Control.FOCUS_NONE
 		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		card.pressed.connect(game.screens._press.bind(zone["key"]))
+		if String(zone.get("verb", "")) != "":
+			card.pressed.connect(press_station.bind(id))
+		else:
+			card.pressed.connect(game.screens._press.bind(glyph))
 		_prompt_box.add_child(card)
 		_prompt_buttons[id] = card
 

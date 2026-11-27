@@ -133,6 +133,15 @@ func _strings() -> Array:
 	var clocked := Profile.new("user://tips-words-clock-%d.json" % OS.get_process_id())
 	clocked.earn("ach_d7_salt_skip", 1.0)
 	out.append(["board run line clocked in", ShiftBoard.run_line([], clocked, false)])
+	out.append(["board run line short shift next rung", ShiftBoard.run_line(["clock_in"], clocked, false)])
+	var all_done := Profile.new("user://tips-words-done-%d.json" % OS.get_process_id())
+	for id in ShiftBoard.RUNGS:
+		var when: Dictionary = ShiftBoard.RUNGS[id]["when"]
+		if when.has("earned"):
+			all_done.earn(String(when["earned"]), 1.0)
+		else:
+			all_done.hear_tune(String(when["tune"]))
+	out.append(["board run line short shift all stamped", ShiftBoard.run_line(ShiftBoard.stamped_ids(all_done), all_done, false)])
 	for id in ["item", "pilot", "cosmetic", "tune", "option"]:
 		out.append(["board pays " + id, ShiftBoard.pays_words({id: "spring_hull"})])
 	for id in Synergies.ROWS:

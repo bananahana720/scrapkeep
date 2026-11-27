@@ -178,7 +178,7 @@ func setup(hub_ref, records_ref = null) -> void:
 	_build_ghost()
 	_build_guide()
 	_refresh_idle()
-	hub.add_station("camp_trial", hub.socket(TRACK, "start").origin, "Time trial: arm the clock", "key_e", 5.0, Callable(self, "arm"))
+	hub.add_station("camp_trial", hub.socket(TRACK, "start").origin, "Time trial: arm the clock", "interact", 5.0, Callable(self, "arm"))
 	if hub.has_signal("walk_left"):
 		hub.walk_left.connect(_on_walk_left)
 
