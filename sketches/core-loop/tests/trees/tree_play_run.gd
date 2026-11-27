@@ -5,14 +5,8 @@ const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
-# One class's 16 end builds played in the real game (calm, stage 1), each for PLAY_TICKS
-# against a fresh ring of chasers and a lobber, with every key worked on a fixed rota:
-# LMB bursts, F held and released, RMB taps and holds, jumps held into glides, Ctrl in
-# the air, E and the winch, Shift. The run's health is topped up so a build is never cut
-# short. Each build must leave the ball and every enemy at finite positions; the parent
-# (tree_play_test) also fails on any script error in this child's log. "--class=N".
-
 const PLAY_TICKS := 360
+const MAX_TOTAL_TICKS := 6400
 const ENEMIES := 4
 
 var _game
@@ -24,6 +18,7 @@ var _booted := false
 var _def
 var _leaf := 14
 var _tick := 0
+var _total_ticks := 0
 var _facts := 0
 var _proc_runs := 0
 var _bad := []
@@ -49,6 +44,15 @@ func _class_index() -> int:
 
 
 func _physics_process(_delta: float) -> bool:
+	_total_ticks += 1
+	if _total_ticks > MAX_TOTAL_TICKS:
+		var label := String(_def.display_name) if _def != null else "class %d" % _class_index()
+		_report("%s tick cap" % label, false,
+			"exceeded %d physics ticks at leaf %d (tick %d)" % [MAX_TOTAL_TICKS, _leaf, _tick])
+		print("tree_play_run (%s): FAIL (%d)" % [label, _failures])
+		_game.free()
+		quit(1)
+		return true
 	if _game.flow == null:
 		return false
 	if not _booted:
@@ -76,7 +80,8 @@ func _physics_process(_delta: float) -> bool:
 		_start_build()
 		return false
 	_report("%s builds played" % _def.display_name, _bad.is_empty(),
-		"16 builds x %.1f s, %d ability facts, %d proc actions; bad %s" % [PLAY_TICKS / 90.0, _facts, _proc_runs, _bad])
+		"16 builds x %.1f s (%d ticks), %d ability facts, %d proc actions; bad %s" % [
+			PLAY_TICKS / 90.0, _total_ticks, _facts, _proc_runs, _bad])
 	print("tree_play_run (%s): %s" % [_def.display_name, "PASS" if _failures == 0 else "FAIL (%d)" % _failures])
 	_game.free()
 	quit(0 if _failures == 0 else 1)
@@ -108,7 +113,6 @@ func _start_build() -> void:
 	_tick = 0
 
 
-# The rota: every key, overlapping, on co-prime periods so the combinations vary.
 func _drive() -> void:
 	var t := _tick
 	var dirs := [Vector2(0, 1), Vector2(1, 0.4), Vector2(0, -1), Vector2(-1, 0.4)]

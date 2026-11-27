@@ -18,13 +18,8 @@ const SEED := 1
 func _initialize() -> void:
 	var t := T.new("bot_park_stage3_break_test")
 	var folder := OS.get_user_data_dir().path_join("bot-park-stage3-%d" % OS.get_process_id())
-	var previous := {}
-	for kind in ["DATA", "CONFIG", "CACHE"]:
-		var key: String = "XDG_%s_HOME" % kind
-		previous[key] = OS.get_environment(key)
-		OS.set_environment(key, folder.path_join(kind.to_lower()))
 	var base := ["--out=" + folder, "--policy=skipper", "--seeds=%d" % SEED, "--pilot=pylon_engineer", "--table=park"]
-	var first: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": base + ["--stages=%d" % (STAGE - 1)]}], 360.0)[0]
+	var first: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "home": folder, "args": base + ["--stages=%d" % (STAGE - 1)]}], 360.0)[0]
 	t.check("stages 1-2 ran", first["code"] == 0 and not first["timed_out"], "exit %s, timed out %s" % [first["code"], first["timed_out"]])
 	var entrance = JSON.parse_string(FileAccess.get_file_as_string(folder.path_join("entrance.json")))
 	var run = entrance.get("run") if entrance is Dictionary else null
@@ -34,7 +29,7 @@ func _initialize() -> void:
 	var row = null
 	if saved:
 		DirAccess.remove_absolute(folder.path_join("bots.ndjson"))
-		var second: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd",
+		var second: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "home": folder,
 			"args": base + ["--from-stage=%d" % STAGE, "--until=%d" % STAGE]}], 360.0)[0]
 		t.check("stage %d ran" % STAGE, second["code"] == 0 and not second["timed_out"],
 			"exit %s, timed out %s" % [second["code"], second["timed_out"]])
@@ -44,11 +39,6 @@ func _initialize() -> void:
 			for stage_note in row.get("stages", []):
 				if int(stage_note.get("stage", 0)) == STAGE:
 					note = stage_note
-	for key in previous:
-		if previous[key].is_empty():
-			OS.unset_environment(key)
-		else:
-			OS.set_environment(key, previous[key])
 	var broken = note.get("warden_broken_s")
 	var cap := float(BotDriver.STAGE_LIMIT)
 	print("park stage %d: outcome %s, broken at %s, hauls %s, chunks from a haul %s, exit at %s" % [STAGE,

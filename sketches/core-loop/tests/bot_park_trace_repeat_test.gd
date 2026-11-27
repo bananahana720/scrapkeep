@@ -18,22 +18,11 @@ func _initialize() -> void:
 	var base := OS.get_user_data_dir().path_join("bot-park-trace-%d" % OS.get_process_id())
 	for i in 2:
 		var folder := base.path_join(str(i))
-		var previous := {}
-		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, folder.path_join(kind.to_lower()))
 		var args := ["--out=" + folder, "--policy=skipper", "--seeds=%d" % SEED, "--pilot=pylon_engineer",
 			"--table=park", "--trace-ticks=1", "--ticks=%d" % TICKS]
-		# The second child also prints the --trace lines; that must not move the game.
 		if i == 1:
 			args.append("--trace=1")
-		var results := ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": args}], 420.0)
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
+		var results := ChildRuns.run([{"script": "res://tools/bot_run.gd", "home": folder, "args": args}], 420.0)
 		var result: Dictionary = results[0]
 		var errors: Array = ChildRuns.summary(result)["errors"]
 		t.check("child %d (%s)" % [i, "traced" if i == 1 else "untraced"], result["code"] == 0 and not result["timed_out"] and errors.is_empty(),

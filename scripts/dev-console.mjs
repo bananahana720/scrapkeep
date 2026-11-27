@@ -21,6 +21,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 
+import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
 import { buildVisualQaPack } from "./visual-qa-pack.mjs";
 import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
 
@@ -107,6 +108,14 @@ export const RECIPES = {
       "Uncapped greybox PrimitiveMesh, flat StandardMaterial3D, and Skeleton3D census across park_dam, park_flume, and park_slag_bowl",
     script:
       "calm on; run 1; wait 60; pick 1; tick 15; inspect prims greybox; stage flume; wait 60; tick 15; inspect prims greybox; boss; wait 60; tick 15; inspect prims greybox; assert finite; quit",
+  },
+  "full-alpha-prim-census": {
+    name: "full-alpha-prim-census",
+    mode: "headless",
+    description:
+      "Sweep Worlds 1-3 stages and bosses (park_dam, park_flume, park_slag_bowl, park_pit, park_sinkhole, waking_arena, park_islands, park_crown, mind_arena) for PrimitiveMesh and flat StandardMaterial3D hotspots by owner",
+    script:
+      "calm on; run 1; wait 60; pick 1; tick 15; inspect prims greybox; stage flume; wait 60; tick 15; inspect prims greybox; boss; wait 60; tick 15; inspect prims greybox; stage pit; wait 60; tick 15; inspect prims greybox; stage sinkhole; wait 60; tick 15; inspect prims greybox; boss; wait 60; tick 15; inspect prims greybox; stage islands; wait 60; tick 15; inspect prims greybox; stage crown; wait 60; tick 15; inspect prims greybox; boss; wait 60; tick 15; inspect prims greybox; assert finite; quit",
   },
   "visual-qa-pack": {
     name: "visual-qa-pack",
@@ -935,6 +944,7 @@ export function parseArgs(argv) {
     "diff",
     "bench",
     "visual-qa-pack",
+    "ledger-audit",
     "help",
   ]);
 
@@ -947,6 +957,7 @@ export function parseArgs(argv) {
     sizeExplicit: false,
     timeout: null,
     json: false,
+    strict: false,
     session: "default",
     idle: 180,
     turns: 10,
@@ -972,6 +983,7 @@ export function parseArgs(argv) {
     else if (arg === "--drawn") setMode("drawn");
     else if (arg === "--windowed") setMode("windowed");
     else if (arg === "--json") flags.json = true;
+    else if (arg === "--strict") flags.strict = true;
     else if (arg === "--capture") flags.capture = true;
     else if (arg === "--out") {
       if (i + 1 >= argv.length) throw new Error("--out requires a directory");
@@ -1051,6 +1063,42 @@ export function formatPerfSummaryLine(perf) {
   const driver = perf.rendering_driver ?? perf.rendering_method ?? "unknown";
   const limiter = perf.limiter?.note ?? "none";
   return `perf(n=${n}, preset=${preset}, driver=${driver}): fps min=${fps.min ?? perf.fps} med=${fps.median ?? perf.fps} p95=${fps.p95 ?? perf.fps} | frame_ms med=${frame.median ?? perf.frame_ms ?? 0} p95=${frame.p95 ?? perf.frame_ms ?? 0} | limiter=${limiter}`;
+}
+
+export function summarizeOwnerHotspots(rankedRows, limit = 3) {
+  if (!Array.isArray(rankedRows) || rankedRows.length === 0) return [];
+  const byOwner = new Map();
+  for (const row of rankedRows) {
+    if (!row || typeof row !== "object") continue;
+    const owner =
+      String(row.owner_script || row.owner_scene || "<unowned>").replace(/^res:\/\//, "") ||
+      "<unowned>";
+    const prev = byOwner.get(owner) ?? { owner, count: 0, footprint_m2: 0 };
+    prev.count += Number(row.count ?? 0);
+    prev.footprint_m2 += Number(row.total_footprint_m2 ?? 0);
+    byOwner.set(owner, prev);
+  }
+  return [...byOwner.values()]
+    .sort((a, b) => b.count - a.count || b.footprint_m2 - a.footprint_m2)
+    .slice(0, limit);
+}
+
+export function formatCensusSummaryLine(census) {
+  if (!census || typeof census !== "object") return null;
+  const tag = census.map || census.flow || "unknown";
+  const prims = Number(census.count ?? 0);
+  const flats = Number(census.flat_materials?.count ?? 0);
+  const skels = Number(census.skeletons?.count ?? 0);
+  const primTop = summarizeOwnerHotspots(census.ranked, 3)
+    .map((h) => `${h.owner}(${h.count})`)
+    .join(", ");
+  const flatTop = summarizeOwnerHotspots(census.flat_materials?.ranked, 3)
+    .map((h) => `${h.owner}(${h.count})`)
+    .join(", ");
+  const parts = [`census[${tag}]: prims=${prims} flat_mats=${flats} skeletons=${skels}`];
+  if (primTop) parts.push(`top_prim=[${primTop}]`);
+  if (flatTop) parts.push(`top_flat=[${flatTop}]`);
+  return parts.join(" | ");
 }
 
 function resolveOutDir(outFlag, prefix) {
@@ -1169,9 +1217,7 @@ async function cmdRun({ scriptInput, flags, prefix = "run" }) {
             if (step.data.spread && step.data.limiter) {
               console.log(`  ${formatPerfSummaryLine(step.data)}`);
             } else if (step.data.flat_materials && step.data.skeletons) {
-              console.log(
-                `  census[${step.data.map || step.data.flow}]: prims=${step.data.count} flat_mats=${step.data.flat_materials.count} skeletons=${step.data.skeletons.count}`,
-              );
+              console.log(`  ${formatCensusSummaryLine(step.data)}`);
             }
           }
         }
@@ -1469,6 +1515,17 @@ async function cmdVisualQaPack({ inputPath, flags }) {
   return 0;
 }
 
+function cmdLedgerAudit({ flags }) {
+  const report = runLedgerAudit({ repoRoot: REPO_ROOT });
+  if (flags.json) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    console.log(formatLedgerAudit(report));
+  }
+  if (flags.strict && !report.ok) return 1;
+  return 0;
+}
+
 function cmdDiff({ pathA, pathB, flags }) {
   if (!pathA || !pathB) {
     throw new Error("diff requires <pngA> <pngB>");
@@ -1658,6 +1715,7 @@ Commands:
   stop               Gracefully quit a session (SIGTERM fallback + clean stale ready.json)
   recipe <name>      Run a built-in zero-boilerplate recipe (or pass recipe name directly)
   visual-qa-pack     Convert <png> (or --capture) into 4-oracle QA pack (1080p, 720p, Rec.709, Machado CVD)
+  ledger-audit       Fast (<2s) check of KNOWN-FAILING.tsv red/overdue rows, placeholder-gate, and TLA+ sync drift
   diff <a.png> <b.png> Pure-Node pixel diff of two 8-bit PNG images
   bench              Benchmark N cold batch runs vs 1 warm File-Mailbox session
 
@@ -1668,6 +1726,7 @@ Options:
   --drawn            Silent offscreen rendering (macOS Metal --embedded; Linux gamescope/xvfb-run)
   --windowed         Explicitly allow a visible desktop window (never default)
   --capture          Capture live 1080p frame for visual-qa-pack
+  --strict           Exit non-zero from ledger-audit when red/overdue/drift/placeholder findings exist
   --out <dir>        Output directory for receipts and shots
   --table <name>     Stage table: park | alpha | slice | default
   --seed <n>         Deterministic route seed
@@ -1708,6 +1767,9 @@ export async function main(argv = process.argv.slice(2)) {
   }
   if (parsed.command === "visual-qa-pack") {
     return cmdVisualQaPack({ inputPath: parsed.positionals[0], flags: parsed.flags });
+  }
+  if (parsed.command === "ledger-audit") {
+    return cmdLedgerAudit({ flags: parsed.flags });
   }
   if (parsed.command === "diff") {
     return cmdDiff({

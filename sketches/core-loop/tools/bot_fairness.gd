@@ -28,6 +28,7 @@ var _fast_hull := 0.0
 var _fast := false
 var _segment := ""
 var _segments := {}
+var _tick_consumed_ids := {}
 
 
 static func _walk_up_config(start_dir: String) -> String:
@@ -93,6 +94,7 @@ func setup(game_ref, boss_hazards_call: Callable) -> void:
 
 func tick(delta: float) -> void:
 	_clock += delta
+	_tick_consumed_ids.clear()
 	var flow = game.flow
 	var in_boss: bool = flow.state_name() == "boss"
 	if not (flow.in_stage() or in_boss) or not game.run.alive():
@@ -181,9 +183,13 @@ func _add_row(out: Array, ids: Dictionary, id: int, owner: String, attack: Strin
 	out.append({"id": id, "owner": owner, "attack": attack, "age_s": _clock - float(_seen[id]), "covers": covers})
 
 
-func hit(source: String, hull: float) -> void:
+func hit(source: String, hull: float, warning_id := 0) -> void:
 	var now: Array = _scan(false)
-	var bucket := classify(source, now, _prev, _published)
+	var matched := classify_with_id(source, now, _prev, _published, {}, warning_id, _tick_consumed_ids)
+	var bucket := String(matched["bucket"])
+	var matched_id := int(matched["matched_id"])
+	if matched_id != 0:
+		_tick_consumed_ids[matched_id] = true
 	_hull[bucket] = float(_hull[bucket]) + hull
 	_sources[source] = float(_sources.get(source, 0.0)) + hull
 	_killing = {"source": source, "bucket": bucket}
@@ -204,10 +210,14 @@ func _note_first_hit() -> void:
 			seg["first_hit_s"] = _clock
 
 
-func loss(cause: String, amount: float) -> void:
+func loss(cause: String, amount: float, warning_id := 0) -> void:
 	if amount <= 0.0:
 		return
-	var bucket := classify(cause, _scan(false), _prev, _published)
+	var matched := classify_with_id(cause, _scan(false), _prev, _published, {}, warning_id, _tick_consumed_ids)
+	var bucket := String(matched["bucket"])
+	var matched_id := int(matched["matched_id"])
+	if matched_id != 0:
+		_tick_consumed_ids[matched_id] = true
 	_scrap[bucket] = float(_scrap[bucket]) + amount
 	_scrap_sources[cause] = float(_scrap_sources.get(cause, 0.0)) + amount
 	if _fast:
@@ -218,21 +228,46 @@ func loss(cause: String, amount: float) -> void:
 		_note_first_hit()
 
 
-static func classify(source: String, now: Array, before: Array, published: Dictionary, cfg := {}) -> String:
+static func classify_with_id(
+	source: String,
+	now: Array,
+	before: Array,
+	published: Dictionary,
+	cfg := {},
+	warning_id := 0,
+	consumed_ids := {}
+) -> Dictionary:
 	if cfg.is_empty():
 		cfg = config()
 	if source in cfg.get("plantSources", []):
-		return "untelegraphed"
+		return {"bucket": "untelegraphed", "matched_id": 0}
 	if source in cfg.get("contactSources", []):
-		return "contact"
+		return {"bucket": "contact", "matched_id": 0}
 	var mine := _owner_match(source, published, cfg)
 	if not mine.is_valid():
-		return "unknown"
+		return {"bucket": "unknown", "matched_id": 0}
 	var tell: float = float(cfg["tellS"])
 	for row in now + before:
+		var row_id := int(row.get("id", 0))
+		if warning_id != 0 and row_id != warning_id:
+			continue
+		if warning_id == 0 and row_id != 0 and consumed_ids.has(row_id):
+			continue
 		if mine.call(row) and bool(row["covers"]) and float(row["age_s"]) >= tell:
-			return "telegraphed"
-	return "untelegraphed"
+			return {"bucket": "telegraphed", "matched_id": row_id}
+	return {"bucket": "untelegraphed", "matched_id": 0}
+
+
+static func classify(
+	source: String,
+	now: Array,
+	before: Array,
+	published: Dictionary,
+	cfg := {},
+	warning_id := 0,
+	consumed_ids := {}
+) -> String:
+	return String(classify_with_id(source, now, before, published, cfg, warning_id, consumed_ids)["bucket"])
 
 
 static func _owner_match(source: String, published: Dictionary, cfg: Dictionary) -> Callable:
@@ -309,6 +344,92 @@ static func first_hit_of(f: Dictionary) -> float:
 	if not seg is Dictionary or seg.get("first_hit_s") == null:
 		return -1.0
 	return float(seg["first_hit_s"])
+
+
+static func pool(records: Array) -> Dictionary:
+	var hull := {"telegraphed": 0.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}
+	var scrap := {"telegraphed": 0.0, "untelegraphed": 0.0, "contact": 0.0, "unknown": 0.0}
+	var hit_sources := {}
+	var scrap_sources := {}
+	var slow_s := 0.0
+	var fast_s := 0.0
+	var slow_hull := 0.0
+	var fast_hull := 0.0
+	var slow_scrap := 0.0
+	var fast_scrap := 0.0
+	var hull_lost := 0.0
+	var seg_hits := {}
+	for rec in records:
+		if not rec is Dictionary:
+			continue
+		var rh: Dictionary = rec.get("hull", {})
+		for k in hull:
+			hull[k] = float(hull[k]) + float(rh.get(k, 0.0))
+		var rs: Dictionary = rec.get("scrap", {})
+		for k in scrap:
+			scrap[k] = float(scrap[k]) + float(rs.get(k, 0.0))
+		var hs: Dictionary = rec.get("hit_sources", {})
+		for k in hs:
+			hit_sources[k] = float(hit_sources.get(k, 0.0)) + float(hs[k])
+		var ss: Dictionary = rec.get("scrap_sources", {})
+		for k in ss:
+			scrap_sources[k] = float(scrap_sources.get(k, 0.0)) + float(ss[k])
+		slow_s += float(rec.get("slow_s", 0.0))
+		fast_s += float(rec.get("fast_s", 0.0))
+		slow_hull += float(rec.get("slow_hull", 0.0))
+		fast_hull += float(rec.get("fast_hull", 0.0))
+		slow_scrap += float(rec.get("slow_scrap", 0.0))
+		fast_scrap += float(rec.get("fast_scrap", 0.0))
+		hull_lost += float(rec.get("hull_lost", 0.0))
+		var fh = rec.get("first_hit", {})
+		if fh is Dictionary:
+			for seg_key in fh:
+				var seg = fh[seg_key]
+				if not seg is Dictionary:
+					continue
+				if not seg_hits.has(seg_key):
+					seg_hits[seg_key] = {"contact": false, "hit": false, "opened_by_hit": false, "values": []}
+				var acc: Dictionary = seg_hits[seg_key]
+				acc["contact"] = bool(acc["contact"]) or bool(seg.get("contact", false))
+				acc["hit"] = bool(acc["hit"]) or bool(seg.get("hit", false))
+				acc["opened_by_hit"] = bool(acc["opened_by_hit"]) or bool(seg.get("opened_by_hit", false))
+				if seg.get("first_hit_s") != null:
+					(acc["values"] as Array).append(float(seg["first_hit_s"]))
+	var first := {}
+	for seg_key in seg_hits:
+		var acc: Dictionary = seg_hits[seg_key]
+		var vals: Array = acc["values"]
+		var med = null
+		if not vals.is_empty():
+			vals.sort()
+			var n := vals.size()
+			med = snappedf(float(vals[n / 2]) if n % 2 == 1 else (float(vals[n / 2 - 1]) + float(vals[n / 2])) * 0.5, 0.01)
+		first[seg_key] = {
+			"contact": acc["contact"],
+			"first_hit_s": med,
+			"opened_by_hit": acc["opened_by_hit"],
+			"hit": acc["hit"],
+		}
+	var shown := float(hull["telegraphed"])
+	var hidden := float(hull["untelegraphed"])
+	var pooled_shown := shown + float(scrap["telegraphed"])
+	var pooled_hidden := hidden + float(scrap["untelegraphed"])
+	return {
+		"seeds": records.size(),
+		"hull": {"telegraphed": snappedf(shown, 0.1), "untelegraphed": snappedf(hidden, 0.1), "contact": snappedf(float(hull["contact"]), 0.1), "unknown": snappedf(float(hull["unknown"]), 0.1)},
+		"telegraph_share": snappedf(shown / (shown + hidden), 0.001) if shown + hidden > 0.0 else null,
+		"pooled_share": snappedf(pooled_shown / (pooled_shown + pooled_hidden), 0.001) if pooled_shown + pooled_hidden > 0.0 else null,
+		"hit_sources": _round_all(hit_sources),
+		"scrap": {"telegraphed": snappedf(float(scrap["telegraphed"]), 0.1), "untelegraphed": snappedf(float(scrap["untelegraphed"]), 0.1), "contact": snappedf(float(scrap["contact"]), 0.1), "unknown": snappedf(float(scrap["unknown"]), 0.1)},
+		"scrap_sources": _round_all(scrap_sources),
+		"slow_s": snappedf(slow_s, 0.01), "fast_s": snappedf(fast_s, 0.01),
+		"slow_hull": snappedf(slow_hull, 0.1), "fast_hull": snappedf(fast_hull, 0.1),
+		"stop_tax": snappedf((slow_hull / slow_s) / (fast_hull / fast_s), 0.001) if slow_s > 0.0 and fast_s > 0.0 and fast_hull > 0.0 else null,
+		"slow_scrap": snappedf(slow_scrap, 0.1), "fast_scrap": snappedf(fast_scrap, 0.1),
+		"pooled_stop_tax": snappedf(((slow_hull + slow_scrap) / slow_s) / ((fast_hull + fast_scrap) / fast_s), 0.001) if slow_s > 0.0 and fast_s > 0.0 and fast_hull + fast_scrap > 0.0 else null,
+		"first_hit": first,
+		"hull_lost": snappedf(hull_lost, 0.1),
+	}
 
 
 static func _round_all(by: Dictionary) -> Dictionary:

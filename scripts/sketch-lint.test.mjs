@@ -18,6 +18,7 @@ import {
   lintL8,
   lintL9,
   lintL10,
+  lintL11,
   parseTuning,
 } from "./sketch-lint.mjs";
 import {
@@ -219,6 +220,43 @@ test("L10 flags a write to the ball's body, passes reads and other bodies, and h
   );
   assert.match(
     lintL10("x/kit.gd", "src/combat/kit.gd", "var at = 1\n", listed)[0].message,
+    /remove the entry/,
+  );
+});
+
+test("L11 flags raw map/pilot ID comparisons outside owning tables and holds legacy counts", () => {
+  const planted = [
+    'if map_id == "park_dam":\n\tpass\n',
+    'if "park_pit" != cur_map:\n\tpass\n',
+    'if pilot == "tarn":\n\tpass\n',
+    'if class_id in ["pylon_engineer", "tally"]:\n\tpass\n',
+  ];
+  for (const text of planted) {
+    assert.deepEqual(
+      lintL11("x/foo.gd", "src/combat/foo.gd", text, {}).map((item) => `${item.rule} ${item.line}`),
+      ["L11 1"],
+      text,
+    );
+  }
+  const allowedPasses = [
+    'if map_id == "park_dam":\n\tpass\n',
+    'var row := {"map": "park_dam", "pilot": "tarn"}\n',
+    '# if pilot == "tarn":\n',
+  ];
+  assert.deepEqual(lintL11("x/park_defs.gd", "src/core/park_defs.gd", allowedPasses[0], {}), []);
+  assert.deepEqual(lintL11("x/dev_stage.gd", "src/dev/dev_stage.gd", allowedPasses[0], {}), []);
+  assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", allowedPasses[1], {}), []);
+  assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", allowedPasses[2], {}), []);
+
+  const legacy = { "src/combat/foo.gd": { sites: 1, why: "legacy" } };
+  const one = 'if pilot == "tarn":\n\tpass\n';
+  assert.deepEqual(lintL11("x/foo.gd", "src/combat/foo.gd", one, legacy), []);
+  assert.deepEqual(
+    lintL11("x/foo.gd", "src/combat/foo.gd", one + one, legacy).map((item) => item.line),
+    [1, 3],
+  );
+  assert.match(
+    lintL11("x/foo.gd", "src/combat/foo.gd", "var ok := true\n", legacy)[0].message,
     /remove the entry/,
   );
 });

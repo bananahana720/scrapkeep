@@ -45,14 +45,27 @@ static func run(jobs: Array, timeout_s: float, parallel := 0) -> Array:
 	return out
 
 
-# The env words that give a launched child its own data, config and cache under `home`. Godot on macOS
-# ignores XDG_DATA_HOME and keeps user:// under $HOME/Library/Application Support, so there HOME moves
-# to the data folder too; without it every child shares the test's own save folder.
+static func ensure_home_dirs(home: String) -> void:
+	for dir in ["data", "config", "cache"]:
+		DirAccess.make_dir_recursive_absolute(home.path_join(dir))
+
+
 static func home_env(home: String) -> Array:
 	var env := ["XDG_DATA_HOME=" + home.path_join("data"), "XDG_CONFIG_HOME=" + home.path_join("config"),
 		"XDG_CACHE_HOME=" + home.path_join("cache")]
 	if OS.get_name() == "macOS":
 		env.append("HOME=" + home.path_join("data"))
+	return env
+
+
+static func home_env_dict(home: String) -> Dictionary:
+	var env := {
+		"XDG_DATA_HOME": home.path_join("data"),
+		"XDG_CONFIG_HOME": home.path_join("config"),
+		"XDG_CACHE_HOME": home.path_join("cache"),
+	}
+	if OS.get_name() == "macOS":
+		env["HOME"] = home.path_join("data")
 	return env
 
 
@@ -144,28 +157,16 @@ static func _spent(began: int, budget_s: float) -> bool:
 	return budget_s > 0.0 and (Time.get_ticks_msec() - began) / 1000.0 >= budget_s
 
 
-# Runs jobs one at a time inside a shared wall budget. Each child's hang guard is an equal share
-# of what is left, so a slow box spends more of the budget and a hung child is still killed inside
-# it. A job's optional "env" is set for its child only. Each result also carries "seconds" and "wall".
 static func run_shared(jobs: Array, budget_s: float) -> Array:
 	var started := Time.get_ticks_msec()
 	var out := []
 	for i in jobs.size():
 		var job: Dictionary = jobs[i]
 		var wall := (budget_s - (Time.get_ticks_msec() - started) / 1000.0) / (jobs.size() - i)
-		var previous := {}
-		for key in job.get("env", {}):
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, job["env"][key])
 		var child_start := Time.get_ticks_msec()
 		var result: Dictionary = run([job], wall)[0]
 		result["seconds"] = (Time.get_ticks_msec() - child_start) / 1000.0
 		result["wall"] = wall
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
 		out.append(result)
 	return out
 
@@ -177,8 +178,23 @@ static func _start(job: Dictionary, log_path: String, project: String) -> Dictio
 		"res://tests/posture_bands_mind_test.gd", "res://tests/posture_bands_reactor_test.gd",
 		"res://tests/posture_bands_swarm_test.gd"]:
 		args.append("--gate=1")
-	return {"pid": OS.create_process(OS.get_executable_path(), PackedStringArray(args)), "log": log_path,
-		"start": Time.get_ticks_msec(), "live": true, "timed_out": false}
+	var env_words: Array = []
+	var home := String(job.get("home", ""))
+	if home != "":
+		ensure_home_dirs(home)
+		env_words.append_array(home_env(home))
+	var extra_env = job.get("env", {})
+	if extra_env is Dictionary:
+		for key in extra_env:
+			env_words.append("%s=%s" % [String(key), String(extra_env[key])])
+	var pid := -1
+	if env_words.is_empty():
+		pid = OS.create_process(OS.get_executable_path(), PackedStringArray(args))
+	else:
+		var cmd_args: Array = env_words + [OS.get_executable_path()] + args
+		pid = OS.create_process("env", PackedStringArray(cmd_args))
+	return {"pid": pid, "log": log_path,
+		"start": Time.get_ticks_msec(), "live": pid > 0, "timed_out": false}
 
 
 # The child's check lines and verdict, and any script error it logged.

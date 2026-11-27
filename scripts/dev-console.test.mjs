@@ -23,6 +23,7 @@ import {
   decodePngBuffer,
   DEV_FLAGS,
   diffPngBuffers,
+  formatCensusSummaryLine,
   formatPerfSummaryLine,
   parseArgs,
   RECIPES,
@@ -30,6 +31,7 @@ import {
   resolveGodotBinary,
   scratchEnv,
   sendMailboxRequest,
+  summarizeOwnerHotspots,
 } from "./dev-console.mjs";
 import {
   buildVisualQaPack,
@@ -493,7 +495,7 @@ describe("mailbox round-trip and stale ready cleanup", () => {
 });
 
 describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
-  it("defines all 10 built-in recipes with proper headless/drawn defaults and pick 1", () => {
+  it("defines all 11 built-in recipes with proper headless/drawn defaults and pick 1", () => {
     const expected = {
       smoke: "headless",
       "combat-probe": "headless",
@@ -504,6 +506,7 @@ describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
       "overlay-check": "drawn",
       "perf-budget": "drawn",
       "world1-prim-census": "headless",
+      "full-alpha-prim-census": "headless",
       "visual-qa-pack": "drawn",
     };
     assert.deepEqual(Object.keys(RECIPES).sort(), Object.keys(expected).sort());
@@ -517,6 +520,22 @@ describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
     assert.match(RECIPES["world1-prim-census"].script, /inspect prims greybox/);
     assert.match(RECIPES["world1-prim-census"].script, /stage flume/);
     assert.match(RECIPES["world1-prim-census"].script, /\bboss\b/);
+    for (const token of [
+      "stage flume",
+      "stage pit",
+      "stage sinkhole",
+      "stage islands",
+      "stage crown",
+    ]) {
+      assert.ok(
+        RECIPES["full-alpha-prim-census"].script.includes(token),
+        `full-alpha-prim-census missing ${token}`,
+      );
+    }
+    assert.equal(
+      (RECIPES["full-alpha-prim-census"].script.match(/inspect prims greybox/g) ?? []).length,
+      9,
+    );
     assert.match(RECIPES["perf-budget"].script, /inspect perf 30/);
     assert.match(RECIPES["visual-qa-pack"].script, /qa_pack/);
   });
@@ -585,6 +604,11 @@ describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
     assert.equal(qaPack.command, "visual-qa-pack");
     assert.deepEqual(qaPack.positionals, ["/tmp/a.png"]);
     assert.equal(qaPack.flags.out, "/tmp/out");
+
+    const audit = parseArgs(["ledger-audit", "--strict", "--json"]);
+    assert.equal(audit.command, "ledger-audit");
+    assert.equal(audit.flags.strict, true);
+    assert.equal(audit.flags.json, true);
 
     assert.throws(() => parseArgs(["run", "quit", "--headless", "--drawn"]), /Conflicting mode/);
     assert.throws(() => parseArgs(["bogus"]), /Unknown command/);
@@ -672,5 +696,35 @@ describe("formatPerfSummaryLine", () => {
     assert.match(line, /med=60/);
     assert.match(line, /p95=17\.4/);
     assert.match(line, /limiter=draw_calls/);
+  });
+});
+
+describe("formatCensusSummaryLine and summarizeOwnerHotspots", () => {
+  it("ranks PrimitiveMesh and flat StandardMaterial3D hotspots by owner", () => {
+    const hotspots = summarizeOwnerHotspots([
+      { owner_script: "res://src/world/a.gd", count: 3, total_footprint_m2: 10 },
+      { owner_script: "res://src/world/a.gd", count: 4, total_footprint_m2: 20 },
+      { owner_scene: "res://assets/b.glb", owner_script: "", count: 5, total_footprint_m2: 12 },
+    ]);
+    assert.equal(hotspots[0].owner, "src/world/a.gd");
+    assert.equal(hotspots[0].count, 7);
+    assert.equal(hotspots[1].owner, "assets/b.glb");
+
+    const line = formatCensusSummaryLine({
+      map: "park_pit",
+      count: 12,
+      ranked: [
+        { owner_script: "res://src/world/a.gd", count: 7, total_footprint_m2: 30 },
+        { owner_script: "res://src/world/b.gd", count: 5, total_footprint_m2: 15 },
+      ],
+      flat_materials: {
+        count: 9,
+        ranked: [{ owner_script: "res://src/world/a.gd", count: 9, total_footprint_m2: 40 }],
+      },
+      skeletons: { count: 1 },
+    });
+    assert.match(line, /census\[park_pit\]: prims=12 flat_mats=9 skeletons=1/);
+    assert.match(line, /top_prim=\[src\/world\/a\.gd\(7\), src\/world\/b\.gd\(5\)\]/);
+    assert.match(line, /top_flat=\[src\/world\/a\.gd\(9\)\]/);
   });
 });
