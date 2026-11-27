@@ -5,7 +5,6 @@ const Parts := preload("res://src/build/parts.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Palette := preload("res://src/core/palette.gd")
-const ElementField := preload("res://src/build/element_field.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 
@@ -735,7 +734,7 @@ func _soften(c) -> void:
 func _burst(at: Vector3, radius: float, damage: float, element: String, min_impact: float, c) -> bool:
 	if c.kind == Triggers.Kind.ON_LAND and c.amount < min_impact:
 		return false
-	var color: Color = Palette.ARC if element == "arc" else (ElementField.ICE if element == "frost" else Palette.AMBER)
+	var color: Color = Palette.ARC if element == "arc" else (Palette.ICE if element == "frost" else Palette.AMBER)
 	build.field.flash_ring(at, radius, color)
 	for enemy in build.enemies_near(at, radius, 6):
 		build.item_hit(enemy, damage, "")

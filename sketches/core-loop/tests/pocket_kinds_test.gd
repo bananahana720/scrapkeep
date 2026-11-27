@@ -667,7 +667,7 @@ func _exit() -> void:
 	var index: int = game.ctx.terrain.stage - 1
 	var previous = game.ctx.terrain.maps[index]
 	game.player.set_physics_process(false)
-	game.player.active_body().freeze = true
+	game.player.body().freeze = true
 	for stage in STAGES:
 		game.ctx.terrain.maps[index] = ParkMap.new("res://src/world/park/%s.json" % stage)
 		var reusable = game.flow._spawn_warden()
@@ -675,7 +675,7 @@ func _exit() -> void:
 		for seed_value in 1000:
 			game.ctx.rng.seed = seed_value
 			var s = _site("scattered_marks", Vector2(100, 100), {"graph": graphs[stage]})
-			game.player.active_body().global_position = Vector3(-700, 0, -700)
+			game.player.body().global_position = Vector3(-700, 0, -700)
 			var was_sealed := _seal_stage(reusable)
 			_break_stage(true)
 			var this_open: bool = was_sealed and game.flow.state == game.flow.GATES and not game.flow.sealed and not game.beacon.sealed and s.marks_taken == 0

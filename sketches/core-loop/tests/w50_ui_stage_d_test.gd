@@ -79,7 +79,7 @@ func _run() -> void:
 	await _check_hud_consumable_carousel_and_shop_faces()
 	_check_settings_and_callers_and_slop_guards()
 
-	Consumables._reset()
+	Consumables.reset_for_tests()
 	_game.queue_free()
 	quit(_t.verdict())
 

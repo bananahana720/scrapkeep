@@ -155,7 +155,7 @@ func _check_pocket_builds() -> void:
 	game.world.set_physics_process(false)
 	game.flow.set_physics_process(false)
 	game.player.set_physics_process(false)
-	game.player.active_body().freeze = true
+	game.player.body().freeze = true
 	var acts = game.world.activities
 	acts.set_physics_process(false)
 	acts.clear()

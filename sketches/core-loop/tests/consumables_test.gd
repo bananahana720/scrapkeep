@@ -117,7 +117,7 @@ func _run() -> void:
 	await _check_catalyst_cartridge_hook()
 	await _check_cleanup_and_reset()
 
-	Consumables._reset()
+	Consumables.reset_for_tests()
 	ModelKit.reset_for_tests()
 	_game.free()
 	quit(_t.verdict())
