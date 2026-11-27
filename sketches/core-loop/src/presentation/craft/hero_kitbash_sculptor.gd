@@ -211,6 +211,13 @@ static func add_planar_tri(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, 
 	st.add_vertex(p2)
 
 
+static func bolt_ring(st: SurfaceTool, center: Vector3, ring_r: float, count: int, bolt_r: float, bolt_h: float, shoulder: float, uv_scale: float, cyl: Callable) -> void:
+	for i in count:
+		var a := TAU * float(i) / float(count)
+		var pos := center + Vector3(cos(a) * ring_r, 0.0, sin(a) * ring_r)
+		cyl.call(st, pos, bolt_r, bolt_r * shoulder, bolt_h, 6, bolt_r * 0.2, uv_scale, Transform3D.IDENTITY)
+
+
 
 static func _frame_from_dir(dir: Vector3) -> Basis:
 	var y_axis := dir.normalized()
