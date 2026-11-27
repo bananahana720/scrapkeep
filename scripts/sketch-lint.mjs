@@ -730,12 +730,22 @@ export function lintL13(file, rel, text) {
 }
 
 export const L14_STATIC_VAR_BASELINE = new Set([
+  "src/boss/arena.gd:_ahead_bowl",
+  "src/boss/arena.gd:_looks_warm",
   "src/boss/boss.gd:_pickup_materials",
   "src/boss/boss.gd:_pickup_mesh",
+  "src/boss/requisition.gd:_ahead",
+  "src/boss/requisition.gd:_ahead_reads",
+  "src/boss/requisition.gd:_dressing",
   "src/build/accretion.gd:_layout",
   "src/build/accretion.gd:_part_meshes",
   "src/build/panel_shell.gd:_meshes",
   "src/build/panel_shell.gd:_sockets",
+  "src/build/parts.gd:_all_rows",
+  "src/build/parts.gd:_answering_by_class",
+  "src/build/parts.gd:_defs",
+  "src/build/parts.gd:_maker_of",
+  "src/build/parts.gd:_rows",
   "src/combat/anchor_crew.gd:_shared",
   "src/combat/anchor_crew.gd:_warned_asset",
   "src/combat/ballast_heavy.gd:_shared",
@@ -771,6 +781,11 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/combat/dispatcher.gd:_warmed",
   "src/combat/drill_crew.gd:_shared",
   "src/combat/drill_crew.gd:_warned_asset",
+  "src/combat/enemy.gd:_attack_serial",
+  "src/combat/enemy.gd:_frame_mask",
+  "src/combat/enemy.gd:_plate_shaders",
+  "src/combat/enemy.gd:_ring_out_kept",
+  "src/combat/enemy.gd:_variables_by_script",
   "src/combat/enemy_casting.gd:_warned",
   "src/combat/foreman.gd:_asset_warned",
   "src/combat/foreman.gd:_shared",
@@ -792,6 +807,8 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/combat/lobber.gd:_warned_asset",
   "src/combat/mag_trapper.gd:_shared",
   "src/combat/mag_trapper.gd:_warned_asset",
+  "src/combat/mind_hand.gd:_rim_masks",
+  "src/combat/mind_hand.gd:_warned_models",
   "src/combat/miniboss.gd:_asset_warned",
   "src/combat/miniboss.gd:_hazard_stripe",
   "src/combat/miniboss.gd:_shared",
@@ -803,6 +820,9 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/combat/plated_brute.gd:_mask",
   "src/combat/plated_brute.gd:_shared",
   "src/combat/plated_brute.gd:_warned_asset",
+  "src/combat/projectile.gd:_rim_quad",
+  "src/combat/projectile.gd:_shell_material",
+  "src/combat/projectile.gd:_shell_mesh",
   "src/combat/prop_crew.gd:_shared",
   "src/combat/ramp_flipper.gd:_shared",
   "src/combat/ramp_flipper.gd:_warned_asset",
@@ -818,12 +838,14 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/combat/rogue.gd:_model_warned",
   "src/combat/roster.gd:ROWS",
   "src/combat/roster.gd:SPECIALS",
+  "src/combat/roster_dig.gd:_shared_capsule",
   "src/combat/splitter.gd:_parts",
   "src/combat/swarm_remnant.gd:_asset_warned",
   "src/combat/swarm_remnant.gd:_hazard_stripe",
   "src/combat/swarm_remnant.gd:_shared",
   "src/combat/swatter.gd:_shared",
   "src/combat/swatter.gd:_warned_asset",
+  "src/combat/threat_grammar.gd:_stripes",
   "src/combat/vault.gd:_asset_warned",
   "src/combat/vault.gd:_shared",
   "src/combat/warden.gd:_drivers_requested",
@@ -845,7 +867,18 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/core/build_stamp.gd:_stamp",
   "src/core/content_registry.gd:_pass",
   "src/core/content_registry.gd:_pass_depth",
+  "src/core/palette.gd:_checkers",
+  "src/core/palette.gd:_grain_normal",
+  "src/core/palette.gd:_grain_rough",
+  "src/core/palette.gd:_grime",
+  "src/core/palette.gd:_look_textures",
+  "src/core/palette.gd:_oxide",
+  "src/core/palette.gd:_painted_textures",
+  "src/core/palette.gd:_slot_materials",
+  "src/core/palette.gd:_wear",
   "src/core/radio_takes.gd:_doc",
+  "src/core/shift_variants.gd:_forced",
+  "src/core/thread_guard.gd:_lock",
   "src/core/trees/cannon.gd:NODES_WORLD_ONE",
   "src/core/trees/kest.gd:NODES_WORLD_ONE",
   "src/core/trees/rivet.gd:NODES_WORLD_ONE",
@@ -856,6 +889,13 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/presentation/ace_sequencer.gd:_kept_lock",
   "src/presentation/ace_sequencer.gd:_kept_order",
   "src/presentation/ambient_life.gd:_painted",
+  "src/presentation/arena_bowl_dress.gd:_ahead",
+  "src/presentation/arena_bowl_dress.gd:_reading",
+  "src/presentation/arena_bowl_dress.gd:_requested",
+  "src/presentation/arena_mind_dress.gd:_kit_ahead",
+  "src/presentation/arena_mind_dress.gd:_panorama_out",
+  "src/presentation/arena_mind_dress.gd:_panorama_task",
+  "src/presentation/audio.gd:_cannon_streams",
   "src/presentation/bake_look.gd:_lift",
   "src/presentation/bake_look.gd:_ramp",
   "src/presentation/bake_look.gd:_twins",
@@ -883,10 +923,19 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/presentation/deck_fx.gd:_notch_sos",
   "src/presentation/deck_fx.gd:_snare_bp_sos",
   "src/presentation/deck_fx.gd:_viking_click_hp_sos",
+  "src/presentation/density.gd:_live",
+  "src/presentation/density.gd:last_published",
+  "src/presentation/enemy_clips.gd:_libraries",
+  "src/presentation/enemy_motion.gd:_enemy_script",
+  "src/presentation/enemy_motion.gd:_live_tags",
+  "src/presentation/enemy_motion.gd:_tag_material",
+  "src/presentation/enemy_motion.gd:_tag_mesh",
+  "src/presentation/enemy_motion.gd:motion_scale",
   "src/presentation/flourish_player.gd:reduced_motion",
   "src/presentation/foley_audio.gd:_streams",
   "src/presentation/fx_library.gd:_meshes",
   "src/presentation/fx_library.gd:_shaders",
+  "src/presentation/graphics_preset.gd:_target_server_active",
   "src/presentation/harpoon_physics_rig.gd:_body_mesh",
   "src/presentation/harpoon_physics_rig.gd:_cable_ink_mat",
   "src/presentation/harpoon_physics_rig.gd:_core_mesh",
@@ -897,6 +946,10 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/presentation/harpoon_physics_rig.gd:_spool_mesh",
   "src/presentation/highdraft_finishes.gd:_pieces",
   "src/presentation/highdraft_finishes.gd:_warned_aerial",
+  "src/presentation/highdraft_fx.gd:MOTE_COUNTS",
+  "src/presentation/highdraft_fx.gd:STREAK_COUNTS",
+  "src/presentation/highdraft_fx.gd:preferred",
+  "src/presentation/ink_outline.gd:_shaders",
   "src/presentation/jolt_layer_audio.gd:_streams",
   "src/presentation/landmark_proxy.gd:_materials",
   "src/presentation/music_engine.gd:_park_tasks",
@@ -904,6 +957,12 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/presentation/music_engine.gd:_park_warm_lock",
   "src/presentation/music_engine.gd:_rest_lock",
   "src/presentation/music_engine.gd:_stinger_tasks",
+  "src/presentation/park_props.gd:_cache_owner",
+  "src/presentation/park_props.gd:_far_sources",
+  "src/presentation/park_props.gd:_material",
+  "src/presentation/park_props.gd:_meshes",
+  "src/presentation/park_props.gd:_requested",
+  "src/presentation/park_props.gd:_stand_ins_lock",
   "src/presentation/phase_music.gd:_on_disk",
   "src/presentation/pilot_antics.gd:reduced_motion",
   "src/presentation/recipe_props.gd:_pieces",
@@ -923,20 +982,32 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/presentation/sfx_bank.gd:unknown_callers",
   "src/presentation/site_markers.gd:_materials",
   "src/presentation/site_markers.gd:_meshes",
+  "src/presentation/spillway_scenery.gd:_prop_materials",
+  "src/presentation/spillway_scenery.gd:_prop_shaders",
+  "src/presentation/spillway_scenery.gd:_prop_warnings",
+  "src/presentation/spillway_scenery.gd:flow_scale",
+  "src/presentation/synth.gd:_lock",
+  "src/presentation/synth.gd:_notes",
+  "src/presentation/synth.gd:score_step",
   "src/presentation/title_intro_player.gd:_finishes",
   "src/presentation/tune_moments.gd:_available",
   "src/presentation/weapon_rig_fx.gd:_mesh_cache",
   "src/presentation/work_machines.gd:_painted",
   "src/presentation/work_machines.gd:_rows",
   "src/presentation/work_machines.gd:_scenes",
+  "src/presentation/world_fx/world_fx.gd:preferred",
   "src/presentation/world_fx/world_fx_cable.gd:_shader",
   "src/presentation/world_fx/world_fx_kit.gd:_materials",
   "src/presentation/world_fx/world_fx_kit.gd:reduced_motion",
+  "src/presentation/world_fx/world_fx_sound.gd:_streams",
+  "src/presentation/world_fx/world_fx_word.gd:_hushed",
+  "src/presentation/world_fx/world_fx_word.gd:_live",
   "src/ui/ability_bar.gd:reduced_motion",
   "src/ui/aim_reticle.gd:reduced_motion",
   "src/ui/boss_plate.gd:reduced_motion",
   "src/ui/caller_tile.gd:reduced_motion",
   "src/ui/class_card.gd:reduced_motion",
+  "src/ui/class_preview.gd:reduced_motion",
   "src/ui/ending_sequence.gd:_highdraft_skies",
   "src/ui/field_notes.gd:CONTROLS",
   "src/ui/icons.gd:_cache",
@@ -963,33 +1034,97 @@ export const L14_STATIC_VAR_BASELINE = new Set([
   "src/world/events/natural.gd:_plans",
   "src/world/model_kit.gd:_flat",
   "src/world/model_kit.gd:_kits",
+  "src/world/park/park_recipes.gd:_anchor_fit",
+  "src/world/park/park_recipes.gd:_anchor_fit_lock",
+  "src/world/park/park_recipes.gd:_anchor_fit_read",
+  "src/world/park/park_recipes.gd:_anchor_hull_lock",
+  "src/world/park/park_recipes.gd:_anchor_hulls",
+  "src/world/park/park_recipes.gd:_anchor_meshes",
+  "src/world/park/park_recipes.gd:_beam_roots",
+  "src/world/park/park_recipes.gd:_budgets",
+  "src/world/park/park_recipes.gd:_ends",
+  "src/world/park/park_recipes.gd:_origins",
+  "src/world/park/park_recipes.gd:_origins_lock",
+  "src/world/park/park_recipes.gd:_origins_read",
+  "src/world/park/park_recipes.gd:_tiles",
   "src/world/park/park_schema.gd:_registry_ids",
   "src/world/park/park_schema.gd:_registry_lock",
   "src/world/park/park_schema.gd:_registry_read",
+  "src/world/park/park_terrain.gd:_patch_noise",
   "src/world/park/regions.gd:_maps",
   "src/world/radio_cache.gd:_parts",
+  "src/world/rescue_site.gd:_shared",
+  "src/world/rescue_site.gd:_warned",
 ]);
 
 const staticVarDecl = /^static\s+var\s+([A-Za-z_]\w*)\b/;
+const gdFuncDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(/;
+const resetFuncName = /^_?reset/i;
 
 export function parseBatchDriverRefs(text) {
   return new Set([...text.matchAll(/res:\/\/(src\/[^"']+\.gd)/g)].map((match) => match[1]));
 }
 
-export function lintL14(file, rel, text, driverRefs, baseline = L14_STATIC_VAR_BASELINE) {
-  if (driverRefs.has(rel)) return [];
+export function parseBatchDriverVars(text) {
+  const aliases = new Map();
+  for (const match of text.matchAll(
+    /\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/(src\/[^"']+\.gd)"\s*\)/g,
+  )) {
+    aliases.set(match[1], match[2]);
+  }
+  const direct = new Set();
+  for (const [alias, rel] of aliases) {
+    for (const match of text.matchAll(new RegExp(`\\b${alias}\\.([A-Za-z_]\\w*)\\b`, "g"))) {
+      direct.add(`${rel}:${match[1]}`);
+    }
+  }
+  return direct;
+}
+
+function resetMethodText(text) {
+  let inReset = false;
+  const kept = [];
+  for (const raw of text.split("\n")) {
+    const code = raw.replace(/#.*$/, "");
+    const fn = code.match(gdFuncDecl);
+    if (fn) {
+      inReset = resetFuncName.test(fn[1]);
+      continue;
+    }
+    if (/^\S/.test(code) && code.trim()) inReset = false;
+    if (inReset) kept.push(code);
+  }
+  return kept.join("\n");
+}
+
+export function lintL14(
+  file,
+  rel,
+  text,
+  driverRefs,
+  baseline = L14_STATIC_VAR_BASELINE,
+  driverVars = new Set(),
+) {
+  const registered = driverRefs.has(rel);
+  const resetBody = registered ? resetMethodText(text) : "";
   const out = [];
   for (const line of codeLines(text)) {
     const match = line.code.match(staticVarDecl);
     if (!match) continue;
     const varName = match[1];
-    if (baseline.has(`${rel}:${varName}`)) continue;
+    const key = `${rel}:${varName}`;
+    if (baseline.has(key)) continue;
+    const clearedInReset =
+      registered &&
+      (driverVars.has(key) ||
+        new RegExp(`\\b${varName}\\b\\s*(?:=|\\.clear\\(|\\.erase\\()`).test(resetBody));
+    if (clearedInReset) continue;
     out.push(
       finding(
         "L14",
         file,
         line.number,
-        `mutable static var ${varName} is not registered in sketches/core-loop/tools/test_batch_driver.gd _reset(); wire a reset into test_batch_driver.gd to prevent shared-process test pollution`,
+        `mutable static var ${varName} is not reset per-variable: register ${rel} in sketches/core-loop/tools/test_batch_driver.gd _reset() and clear ${varName} in the script's reset method`,
       ),
     );
   }
@@ -1032,7 +1167,7 @@ export const L15_HZ_BASELINE = {
   "tests/enemy_tenacity_test.gd": 1,
   "tests/entrance_closeup_test.gd": 1,
   "tests/field_tips_test.gd": 3,
-  "tests/find_in_fight_test.gd": 5,
+  "tests/find_in_fight_test.gd": 1,
   "tests/grapple_muts_test.gd": 1,
   "tests/highdraft_fx_test.gd": 5,
   "tests/int_arena_standdown_test.gd": 2,
@@ -1132,10 +1267,12 @@ export function lintSketch(sketch) {
   }
   const lit = new Set();
   const batchDriverPath = path.join(directory, "tools", "test_batch_driver.gd");
-  const driverRefs =
+  const driverText =
     sketch === "core-loop" && existsSync(batchDriverPath)
-      ? parseBatchDriverRefs(readFileSync(batchDriverPath, "utf8"))
-      : new Set();
+      ? readFileSync(batchDriverPath, "utf8")
+      : "";
+  const driverRefs = driverText ? parseBatchDriverRefs(driverText) : new Set();
+  const driverVars = driverText ? parseBatchDriverVars(driverText) : new Set();
   for (const file of sources(path.join(directory, "src"), new Set([".gd"]))) {
     if (file.path !== `${relative}/src/core/safe_store.gd`)
       findings.push(...lintL2(file.path, file.text));
@@ -1150,7 +1287,9 @@ export function lintSketch(sketch) {
     findings.push(...lintL11(file.path, rel, file.text));
     findings.push(...lintL12(file.path, rel, file.text));
     findings.push(...lintL13(file.path, rel, file.text));
-    findings.push(...lintL14(file.path, rel, file.text, driverRefs));
+    findings.push(
+      ...lintL14(file.path, rel, file.text, driverRefs, L14_STATIC_VAR_BASELINE, driverVars),
+    );
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   if (sketch === "core-loop") {

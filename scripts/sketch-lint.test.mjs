@@ -29,6 +29,7 @@ import {
   lintL15,
   lintSketch,
   parseBatchDriverRefs,
+  parseBatchDriverVars,
   parseTuning,
 } from "./sketch-lint.mjs";
 import {
@@ -936,42 +937,87 @@ test("L14 passes the checked-out core-loop src tree and parses test_batch_driver
   assert.deepEqual(findings, []);
 });
 
-test("L14 blocks a new unwired static var in src/ and passes once wired into test_batch_driver.gd", () => {
+test("L14 blocks a new unwired static var and fails when a registered file adds a second unreset static var", () => {
   const file = "sketches/core-loop/src/presentation/planted_craft_cache.gd";
   const rel = "src/presentation/planted_craft_cache.gd";
-  const src =
-    "extends RefCounted\n\nstatic var _leaked_cache := {}\nconst SAFE := 1\nvar inst := 0\n";
+  const srcWithReset = [
+    "extends RefCounted",
+    "",
+    "static var _leaked_cache := {}",
+    "const SAFE := 1",
+    "var inst := 0",
+    "static func reset_for_tests() -> void:",
+    "\t_leaked_cache.clear()",
+    "",
+  ].join("\n");
   const emptyRefs = parseBatchDriverRefs("extends RefCounted\n");
-  const bad = lintL14(file, rel, src, emptyRefs, new Set());
+  const bad = lintL14(file, rel, srcWithReset, emptyRefs, new Set());
   assert.equal(bad.length, 1);
   assert.equal(bad[0].rule, "L14");
   assert.equal(bad[0].line, 3);
   assert.match(bad[0].message, /_leaked_cache/);
   assert.match(bad[0].message, /sketches\/core-loop\/tools\/test_batch_driver\.gd _reset\(\)/);
+  assert.match(bad[0].message, /clear _leaked_cache in the script's reset method/);
 
-  const wiredRefs = parseBatchDriverRefs(
-    'const Planted := preload("res://src/presentation/planted_craft_cache.gd")\n',
+  const driverWithPath =
+    'const Planted := preload("res://src/presentation/planted_craft_cache.gd")\n';
+  const wiredRefs = parseBatchDriverRefs(driverWithPath);
+  const wiredVars = parseBatchDriverVars(driverWithPath);
+  assert.deepEqual(lintL14(file, rel, srcWithReset, wiredRefs, new Set(), wiredVars), []);
+
+  const srcSecondLeak = [
+    "extends RefCounted",
+    "",
+    "static var _leaked_cache := {}",
+    "static var _second_leak := {}",
+    "static func reset_for_tests() -> void:",
+    "\t_leaked_cache.clear()",
+    "",
+  ].join("\n");
+  const secondBad = lintL14(file, rel, srcSecondLeak, wiredRefs, new Set(), wiredVars);
+  assert.equal(secondBad.length, 1);
+  assert.equal(secondBad[0].rule, "L14");
+  assert.equal(secondBad[0].line, 4);
+  assert.match(secondBad[0].message, /_second_leak/);
+  assert.match(
+    secondBad[0].message,
+    /sketches\/core-loop\/tools\/test_batch_driver\.gd _reset\(\)/,
   );
-  assert.deepEqual(lintL14(file, rel, src, wiredRefs, new Set()), []);
+  assert.match(secondBad[0].message, /clear _second_leak in the script's reset method/);
+
+  const driverDirect = `${driverWithPath}func _reset() -> void:\n\tPlanted._second_leak = {}\n`;
+  assert.deepEqual(
+    lintL14(
+      file,
+      rel,
+      srcSecondLeak,
+      parseBatchDriverRefs(driverDirect),
+      new Set(),
+      parseBatchDriverVars(driverDirect),
+    ),
+    [],
+  );
 
   const baselined = new Set([`${rel}:_leaked_cache`]);
-  assert.deepEqual(lintL14(file, rel, src, emptyRefs, baselined), []);
-  const extra = `${src}static var _second_leak := []\n`;
-  const extraBad = lintL14(file, rel, extra, emptyRefs, baselined);
-  assert.deepEqual(
-    extraBad.map((item) => item.line),
-    [6],
-  );
+  assert.deepEqual(lintL14(file, rel, srcWithReset, emptyRefs, baselined), []);
   assert.deepEqual(
     lintL14(file, rel, "# static var _commented := {}\nvar ok := 1\n", emptyRefs, new Set()),
     [],
   );
 });
 
-test("L15 passes the checked-out core-loop tests tree", () => {
+test("L15 passes the checked-out core-loop tests tree and blocks a second 60 Hz literal in find_in_fight_test.gd", () => {
   assert.ok(Object.keys(L15_HZ_BASELINE).length > 0);
+  assert.equal(L15_HZ_BASELINE["tests/find_in_fight_test.gd"], 1);
   const findings = lintSketch("core-loop").filter((item) => item.rule === "L15");
   assert.deepEqual(findings, []);
+  const findRel = "tests/find_in_fight_test.gd";
+  const findText = readFileSync(path.join(sketchDir, findRel), "utf8");
+  const regressed = `${findText}\nconst REGRESSED_FRAMES := int(ScreenBusy.FIND_HOLD * 60.0)\n`;
+  const bad = lintL15(`sketches/core-loop/${findRel}`, findRel, regressed);
+  assert.equal(bad.length, 2);
+  assert.match(bad[0].message, /Engine\.physics_ticks_per_second/);
+  assert.match(bad[0].message, /L15_HZ_BASELINE allows 1/);
 });
 
 test("L15 blocks hardcoded 60 Hz physics frame math and passes Engine.physics_ticks_per_second", () => {
