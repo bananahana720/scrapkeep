@@ -1198,3 +1198,252 @@ static func scrap_beacon_column(r_bot: float, r_top: float, height: float) -> Ar
 		_bevel_cyl(st, Vector3.ZERO, r_bot, r_top, height, 12, minf(0.035, r_top * 0.4), 0.5)
 		_bevel_ring(st, Vector3(0.0, -height * 0.5 + 0.06, 0.0), r_bot * 0.65, r_bot * 1.32, 0.09, 8, 0.018, 1.2)
 	)
+
+
+static func weather_existing_material(mat: Material, tile_m := 3.4) -> Material:
+	if not (mat is StandardMaterial3D):
+		return mat
+	var sm := mat as StandardMaterial3D
+	if sm.shading_mode == BaseMaterial3D.SHADING_MODE_UNSHADED:
+		return sm
+	Palette.surface_grain(sm)
+	if sm.albedo_texture == null:
+		var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+		if plate != null:
+			sm.albedo_texture = plate
+			sm.uv1_triplanar = true
+			sm.uv1_scale = Vector3.ONE / maxf(0.4, tile_m)
+	return sm
+
+
+static func weather_node_materials(root: Node, tile_m := 3.4) -> void:
+	if root == null:
+		return
+	var stack: Array[Node] = [root]
+	while not stack.is_empty():
+		var cur: Node = stack.pop_back()
+		if cur is MeshInstance3D:
+			var mi := cur as MeshInstance3D
+			if mi.material_override is StandardMaterial3D:
+				weather_existing_material(mi.material_override, tile_m)
+			elif mi.mesh != null:
+				for s in mi.mesh.get_surface_count():
+					var active := mi.get_active_material(s)
+					if active is StandardMaterial3D and (active as StandardMaterial3D).albedo_texture == null:
+						var dup := (active as StandardMaterial3D).duplicate() as StandardMaterial3D
+						weather_existing_material(dup, tile_m)
+						mi.set_surface_override_material(s, dup)
+		for ch in cur.get_children():
+			stack.append(ch)
+
+
+static func air_cue_ring(outer_radius: float) -> ArrayMesh:
+	var key := "air_cue_ring:%.3f" % outer_radius
+	return _cached(key, func(st: SurfaceTool):
+		var r_in := maxf(0.1, outer_radius * 0.84)
+		_bevel_ring(st, Vector3.ZERO, r_in, outer_radius, 0.055, 24, 0.014, 1.2)
+	)
+
+
+static func mend_ward_monolith(size: Vector3) -> ArrayMesh:
+	var key := "mend_ward_monolith:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(st: SurfaceTool):
+		var hh := size.y * 0.5
+		var r_base := minf(size.x, size.z) * 0.54
+		_bevel_cyl(st, Vector3(0.0, -hh + 0.16, 0.0), r_base * 1.24, r_base * 1.12, 0.32, 8, 0.04, 0.6)
+		_bevel_ring(st, Vector3(0.0, -hh + 0.36, 0.0), r_base * 0.72, r_base * 1.16, 0.12, 8, 0.025, 0.8)
+		_bevel_cyl(st, Vector3(0.0, 0.02, 0.0), r_base * 0.92, r_base * 0.74, size.y * 0.68, 8, 0.045, 0.5)
+		_bevel_ring(st, Vector3(0.0, hh * 0.36, 0.0), r_base * 0.62, r_base * 0.98, 0.14, 8, 0.028, 0.8)
+		_bevel_cyl(st, Vector3(0.0, hh - 0.18, 0.0), r_base * 0.86, r_base * 0.62, 0.32, 8, 0.04, 0.7)
+		for i in 4:
+			var a := PI * 0.5 * float(i)
+			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * r_base * 0.84, -0.04, sin(a) * r_base * 0.84))
+			_bevel_box(st, Vector3.ZERO, Vector3(0.14, size.y * 0.54, 0.12), 0.024, 0.9, xf)
+	)
+
+
+static func survey_stake_pole(height: float) -> ArrayMesh:
+	var key := "survey_stake_pole:%.2f" % height
+	return _cached(key, func(st: SurfaceTool):
+		var body_col := Palette.RUST.lerp(Palette.CHARCOAL, 0.35)
+		var band_col := Palette.AMBER
+		var tip_col := Palette.STEEL
+		var hh := height * 0.5
+		_bevel_cyl_masked(st, Vector3(0.0, -hh + 0.22, 0.0), 0.10, 0.21, 0.44, 8, 0.022, body_col, tip_col, 0.8)
+		_bevel_cyl_masked(st, Vector3(0.0, 0.04, 0.0), 0.18, 0.145, height - 0.56, 8, 0.022, body_col, band_col, 0.6)
+		_bevel_ring_masked(st, Vector3(0.0, hh - 0.95, 0.0), 0.12, 0.20, 0.14, 8, 0.02, band_col, tip_col, 1.0)
+		_bevel_cyl_masked(st, Vector3(0.0, hh - 0.12, 0.0), 0.17, 0.12, 0.24, 8, 0.024, band_col, tip_col, 1.0)
+	)
+
+
+static func survey_pennant_plate() -> ArrayMesh:
+	return _cached("survey_pennant_plate", func(st: SurfaceTool):
+		_bevel_box(st, Vector3(-0.36, 0.0, 0.0), Vector3(0.56, 0.68, 0.055), 0.014, 1.0)
+		_bevel_box(st, Vector3(0.14, 0.0, 0.0), Vector3(0.52, 0.44, 0.045), 0.012, 1.0)
+		_bevel_box(st, Vector3(0.48, 0.0, 0.0), Vector3(0.28, 0.22, 0.036), 0.010, 1.2)
+		_bevel_box(st, Vector3(-0.62, 0.0, 0.0), Vector3(0.08, 0.78, 0.085), 0.016, 1.2)
+	)
+
+
+static func weighbridge_plate(size: Vector3) -> ArrayMesh:
+	var key := "weighbridge_plate:%.2f:%.2f:%.2f" % [size.x, size.y, size.z]
+	return _cached(key, func(st: SurfaceTool):
+		_bevel_box(st, Vector3.ZERO, size, minf(0.03, size.y * 0.32), 0.35)
+		for sz in [-1.0, 1.0]:
+			_bevel_box(st, Vector3(0.0, size.y * 0.45, sz * (size.z * 0.5 - 0.14)), Vector3(size.x * 0.96, size.y * 0.75, 0.22), 0.025, 0.5)
+		for i in 5:
+			var x := lerpf(-size.x * 0.38, size.x * 0.38, float(i) / 4.0)
+			_bevel_box(st, Vector3(x, size.y * 0.52, 0.0), Vector3(0.22, 0.035, size.z * 0.82), 0.008, 0.6)
+	)
+
+
+static func furnace_smoke_wisp() -> ArrayMesh:
+	return _cached("furnace_smoke_wisp", func(st: SurfaceTool):
+		var segs := 14
+		var rings := [
+			[-0.48, 0.14],
+			[-0.24, 0.38],
+			[0.02, 0.48],
+			[0.26, 0.42],
+			[0.48, 0.16],
+		]
+		for i in segs:
+			var a0 := TAU * float(i) / float(segs)
+			var a1 := TAU * float(i + 1) / float(segs)
+			var m0 := 1.0 + 0.14 * sin(a0 * 3.0 + 0.4) + 0.08 * cos(a0 * 2.0)
+			var m1 := 1.0 + 0.14 * sin(a1 * 3.0 + 0.4) + 0.08 * cos(a1 * 2.0)
+			var c0 := cos(a0) * m0
+			var s0 := sin(a0) * m0
+			var c1 := cos(a1) * m1
+			var s1 := sin(a1) * m1
+			var mid := Vector3(cos((a0 + a1) * 0.5), 0.0, sin((a0 + a1) * 0.5))
+			for k in rings.size() - 1:
+				var y0: float = rings[k][0]
+				var r0: float = rings[k][1]
+				var y1: float = rings[k + 1][0]
+				var r1: float = rings[k + 1][1]
+				var fn := (mid * (y1 - y0) + Vector3.UP * (r0 - r1)).normalized()
+				_add_quad(st,
+					Vector3(c0 * r0, y0, s0 * r0),
+					Vector3(c1 * r0, y0, s1 * r0),
+					Vector3(c1 * r1, y1, s1 * r1),
+					Vector3(c0 * r1, y1, s0 * r1),
+					fn, 0.6)
+			var top_r: float = rings[-1][1]
+			var top_y: float = rings[-1][0]
+			_add_tri(st, Vector3(0.0, top_y, 0.0), Vector3(c0 * top_r, top_y, s0 * top_r), Vector3(c1 * top_r, top_y, s1 * top_r), Vector3.UP, 0.6)
+			var bot_r: float = rings[0][1]
+			var bot_y: float = rings[0][0]
+			_add_tri(st, Vector3(0.0, bot_y, 0.0), Vector3(c1 * bot_r, bot_y, s1 * bot_r), Vector3(c0 * bot_r, bot_y, s0 * bot_r), Vector3.DOWN, 0.6)
+	)
+
+
+const _SMOKE_SHADER_CODE := """
+shader_type spatial;
+render_mode unshaded, fog_disabled, cull_back, depth_draw_never;
+
+uniform vec4 soot_base : source_color = vec4(0.24, 0.21, 0.19, 0.24);
+uniform vec4 soot_warm : source_color = vec4(0.38, 0.29, 0.22, 0.24);
+
+varying float v_local_y;
+varying vec3 v_world_p;
+
+void vertex() {
+	v_local_y = VERTEX.y;
+	v_world_p = (MODEL_MATRIX * vec4(VERTEX, 1.0)).xyz;
+}
+
+void fragment() {
+	float ndv = clamp(abs(dot(normalize(NORMAL), normalize(VIEW))), 0.0, 1.0);
+	float rim_fade = pow(smoothstep(0.12, 0.92, ndv), 1.65);
+	float y_fade = smoothstep(-0.48, -0.05, v_local_y) * (1.0 - smoothstep(0.05, 0.48, v_local_y));
+	float wisp = 0.72 + 0.28 * sin(v_world_p.x * 0.09 + v_world_p.y * 0.06 - TIME * 0.8) * cos(v_world_p.z * 0.08 + v_world_p.y * 0.05);
+	float lift = clamp(v_local_y + 0.5, 0.0, 1.0);
+	ALBEDO = mix(soot_warm.rgb, soot_base.rgb, smoothstep(0.0, 0.8, lift));
+	ALPHA = clamp(soot_base.a * rim_fade * y_fade * wisp * 2.1, 0.0, 0.42);
+}
+"""
+
+
+static func furnace_smoke_material() -> ShaderMaterial:
+	var key := "mat:furnace_smoke_plume"
+	if _mat_cache.has(key):
+		return _mat_cache[key]
+	var sh := Shader.new()
+	sh.code = _SMOKE_SHADER_CODE
+	var mat := ShaderMaterial.new()
+	mat.resource_name = "craft_furnace_smoke"
+	mat.shader = sh
+	_mat_cache[key] = mat
+	return mat
+
+
+static func bay_bell_mesh() -> ArrayMesh:
+	return _cached("bay_bell_mesh", func(st: SurfaceTool):
+		_bevel_cyl(st, Vector3(0.0, 0.12, 0.0), 0.88, 0.48, 1.12, 14, 0.08, 0.5)
+		_bevel_ring(st, Vector3(0.0, -0.46, 0.0), 0.72, 1.02, 0.22, 14, 0.045, 0.6)
+		_bevel_cyl(st, Vector3(0.0, 0.72, 0.0), 0.26, 0.20, 0.22, 8, 0.035, 0.8)
+	)
+
+
+static func bay_mug_mesh(r_bot: float, r_top: float, height: float) -> ArrayMesh:
+	var key := "bay_mug_mesh:%.2f:%.2f:%.2f" % [r_bot, r_top, height]
+	return _cached(key, func(st: SurfaceTool):
+		_bevel_cyl(st, Vector3.ZERO, r_bot, r_top, height, 12, minf(0.04, r_top * 0.2), 0.8)
+		_bevel_ring(st, Vector3(0.0, height * 0.44, 0.0), r_top * 0.76, r_top * 1.08, height * 0.14, 12, 0.018, 1.0)
+	)
+
+
+static func bay_marble_orb(radius: float) -> ArrayMesh:
+	var key := "bay_marble_orb:%.3f" % radius
+	return _cached(key, func(st: SurfaceTool):
+		_bevel_cyl(st, Vector3.ZERO, radius * 0.92, radius * 0.92, radius * 1.75, 12, radius * 0.34, 1.2)
+		_bevel_ring(st, Vector3.ZERO, radius * 0.68, radius * 1.02, radius * 0.32, 12, radius * 0.08, 1.4)
+	)
+
+
+static func bay_pin_mesh() -> ArrayMesh:
+	return _cached("bay_pin_mesh", func(st: SurfaceTool):
+		_bevel_cyl(st, Vector3(0.0, -0.26, 0.0), 0.28, 0.30, 0.92, 10, 0.045, 0.7)
+		_bevel_ring(st, Vector3(0.0, 0.18, 0.0), 0.16, 0.27, 0.12, 10, 0.025, 0.9)
+		_bevel_cyl(st, Vector3(0.0, 0.48, 0.0), 0.19, 0.16, 0.50, 10, 0.04, 0.8)
+	)
+
+
+static func bay_part_trophy() -> ArrayMesh:
+	return _cached("bay_part_trophy", func(st: SurfaceTool):
+		_bevel_box(st, Vector3.ZERO, Vector3(0.46, 0.46, 0.46), 0.065, 1.0)
+		_bevel_ring(st, Vector3.ZERO, 0.18, 0.32, 0.14, 8, 0.025, 1.2)
+	)
+
+
+static func gantry_column_mesh(width: float, height: float, depth: float) -> ArrayMesh:
+	var key := "gantry_column_mesh:%.2f:%.2f:%.2f" % [width, height, depth]
+	return _cached(key, func(st: SurfaceTool):
+		var wear := Color(0.86, 0.08, 0.0, 1.0)
+		var base_grime := Color(0.16, 0.84, 0.0, 1.0)
+		var mid_hull := Color(0.18, 0.24, 0.0, 1.0)
+		var top_hull := Color(0.20, 0.12, 0.0, 1.0)
+		_bevel_box_masked(st, Vector3(0.0, 0.55, 0.0), Vector3(width * 1.24, 1.1, depth * 1.24), 0.08, base_grime, wear, 0.35)
+		var tiers := 4
+		var span := (height - 1.0) / float(tiers)
+		for i in tiers:
+			var y_c := 1.0 + (float(i) + 0.5) * span
+			var t := float(i) / float(tiers - 1)
+			var col := base_grime.lerp(mid_hull, clampf(t * 1.6, 0.0, 1.0)).lerp(top_hull, clampf((t - 0.4) * 1.5, 0.0, 1.0))
+			_bevel_box_masked(st, Vector3(0.0, y_c, 0.0), Vector3(width, span + 0.04, depth), 0.075, col, wear, 0.3)
+			if i < tiers - 1:
+				_bevel_box_masked(st, Vector3(0.0, 1.0 + float(i + 1) * span, 0.0), Vector3(width * 1.10, 0.24, depth * 1.10), 0.04, col, wear, 0.4)
+	)
+
+
+static func cantilever_gusset_bracket() -> ArrayMesh:
+	return _cached("cantilever_gusset_bracket", func(st: SurfaceTool):
+		var hull := Color(0.20, 0.36, 0.0, 1.0)
+		var wear := Color(0.88, 0.08, 0.0, 1.0)
+		_bevel_box_masked(st, Vector3(0.0, -0.12, 0.0), Vector3(3.4, 0.28, 0.42), 0.04, hull, wear, 0.5)
+		_bevel_box_masked(st, Vector3(-1.45, -1.15, 0.0), Vector3(0.36, 2.2, 0.46), 0.04, hull, wear, 0.5)
+		var brace_xf := Transform3D(Basis(Vector3.BACK, deg_to_rad(34.0)), Vector3(-0.15, -1.05, 0.0))
+		_bevel_box_masked(st, Vector3.ZERO, Vector3(3.1, 0.30, 0.34), 0.04, hull, wear, 0.5, brace_xf)
+	)
+

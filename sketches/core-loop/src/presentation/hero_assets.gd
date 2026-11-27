@@ -57,6 +57,7 @@ const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const WeaponRigFx := preload("res://src/presentation/weapon_rig_fx.gd")
+const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const REST_LIBRARY := "runtime"
 const REST_CLIP := "runtime/rest_pose"
@@ -574,10 +575,7 @@ func air_cue(_factor: float, rose: bool) -> Node3D:
 				old.queue_free()
 		var ring := MeshInstance3D.new()
 		ring.name = AIR_CUE_NAME
-		var torus := TorusMesh.new()
-		torus.inner_radius = AIR_CUE_RADIUS * 0.86
-		torus.outer_radius = AIR_CUE_RADIUS
-		ring.mesh = torus
+		ring.mesh = PropMeshes.air_cue_ring(AIR_CUE_RADIUS)
 		var mat := StandardMaterial3D.new()
 		var color: Color = row.get("color", Palette.AMBER)
 		mat.albedo_color = color
@@ -974,7 +972,7 @@ var _ready_glow := false
 func _assets() -> Dictionary:
 	if not _shell_assets_read and shell_assets.is_empty():
 		shell_assets = Cosmetics.asset_paths()
-		shell_assets.merge(BallLooks.asset_paths(ball_look(), SHELLS.keys()), true)
+		shell_assets.merge(BallLooks.asset_paths(ball_look(), SHELLS.keys() + HIDDEN_SHELLS.keys()), true)
 	_shell_assets_read = true
 	return shell_assets
 
@@ -1044,7 +1042,8 @@ func shell_layers(pilot: String, variant: String, paths: Dictionary) -> Array[St
 			_warn_logged("shell_layer:%s:%d" % [use, n], "hero_assets: shell variant '%s' lacks its class %d layer; borrowing the default" % [use, n])
 			path = shell_path(pilot, "", n, paths)
 		if not _loadable(path):
-			_warn_logged("shell_default_layer:%s:%d" % [pilot, n], "hero_assets: %s has no class %d layer; nothing shows for it" % [pilot, n])
+			if not HIDDEN_SHELLS.has(pilot):
+				_warn_logged("shell_default_layer:%s:%d" % [pilot, n], "hero_assets: %s has no class %d layer; nothing shows for it" % [pilot, n])
 			path = ""
 		out.append(path)
 	return out
@@ -1631,7 +1630,7 @@ func _fit_pilot(rec: Dictionary) -> void:
 	var animator = fitted.get("animator")
 	rec["animator"] = animator
 	rec["pilot"] = pilot
-	rec["glance"] = PilotGlance.seat(pilot) if BallLooks.PLATED.has(ball_look()) else null
+	rec["glance"] = PilotGlance.seat(pilot, rec["class"]) if BallLooks.PLATED.has(ball_look()) else null
 	rec["reaction"] = ""
 	rec["priority"] = -1
 	rec["cooldowns"] = {}
@@ -1659,6 +1658,10 @@ func fit_pilot_into(pod: Node3D, class_id: String, class_color: Color) -> Dictio
 	BallLooks.light_pilot(ball_look(), pilot)
 	InkOutline.apply(pilot, "pilot")
 	var animator := pilot.find_child("AnimationPlayer", true, false) as AnimationPlayer
+	if animator != null and animator.has_animation("idle_loop"):
+		var idle_anim := animator.get_animation("idle_loop")
+		if idle_anim != null and idle_anim.loop_mode == Animation.LOOP_NONE:
+			idle_anim.loop_mode = Animation.LOOP_LINEAR
 	return {"pilot": pilot, "animator": animator}
 
 
@@ -1818,7 +1821,7 @@ func _contact_of(rec: Dictionary, clip: String) -> Dictionary:
 	var control := MechaMotion.cast_control(rec["class"], clip)
 	if control == "":
 		return {}
-	var pilot := String(PILOTS.get(rec["class"], "")).get_file().trim_prefix("pilot_").trim_suffix("_anim.glb")
+	var pilot := String(PILOTS.get(rec["class"], HIDDEN_PILOTS.get(rec["class"], ""))).get_file().trim_prefix("pilot_").trim_suffix("_anim.glb")
 	var seconds: float = 0.4 * rec.animator.get_animation(clip).length
 	_warn_once("contact:%s:%s" % [rec["class"], clip], "hero_assets: pilot %s class %s has no pose-table contact for %s in %s; control %s falls back to %.3fs at 40 percent" % [pilot, rec["class"], clip, PILOT_TABLES % pilot, control, seconds])
 	return {"control": control, "seconds": seconds}
@@ -2773,7 +2776,7 @@ func _add_warden_strokes(base: Node3D, look: Node3D, cue_owner: Node3D, rec: Dic
 
 
 func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: PackedVector3Array) -> void:
-	var box := stroke.mesh as BoxMesh
+	var span: Vector3 = (stroke.mesh as BoxMesh).size if stroke.mesh is BoxMesh else stroke.mesh.get_aabb().size
 	var vertices := PackedVector3Array()
 	var normals := PackedVector3Array()
 	var indices := PackedInt32Array()
@@ -2782,7 +2785,7 @@ func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: Pack
 	while ancestor != jaw:
 		to_jaw = ancestor.transform * to_jaw
 		ancestor = ancestor.get_parent() as Node3D
-	var key := "warden_stroke:%s:%s:%s" % [jaw.name, box.size, to_jaw]
+	var key := "warden_stroke:%s:%s:%s" % [jaw.name, span, to_jaw]
 	stroke.material_override.cull_mode = BaseMaterial3D.CULL_DISABLED
 	if _meshes.has(key):
 		stroke.mesh = _meshes[key]
@@ -2792,7 +2795,7 @@ func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: Pack
 	var high := -INF
 	for x in [-0.5, 0.5]:
 		for y in [-0.5, 0.5]:
-			var height: float = (to_jaw * Vector3(box.size.x * x, box.size.y * y, 0)).y
+			var height: float = (to_jaw * Vector3(span.x * x, span.y * y, 0)).y
 			low = minf(low, height)
 			high = maxf(high, height)
 	var candidates := PackedVector3Array()
@@ -2801,7 +2804,7 @@ func _fit_warden_stroke(stroke: MeshInstance3D, jaw: MeshInstance3D, faces: Pack
 			candidates.append_array(PackedVector3Array([faces[i], faces[i + 1], faces[i + 2]]))
 	for row in 17:
 		for side in [-0.5, 0.5]:
-			var point := to_jaw * Vector3(box.size.x * side, box.size.y * (float(row) / 16.0 - 0.5), 0)
+			var point := to_jaw * Vector3(span.x * side, span.y * (float(row) / 16.0 - 0.5), 0)
 			var radial := Vector3(point.x + jaw.position.x, 0, point.z + jaw.position.z).normalized()
 			var start := radial * 8.0 + Vector3.UP * point.y - Vector3(jaw.position.x, 0, jaw.position.z)
 			var nearest := INF
@@ -2968,9 +2971,8 @@ func _rig_warden_chunks(base: Node3D, rec: Dictionary) -> void:
 
 func _paint_warden_inner(inner: MeshInstance3D) -> void:
 	for surface in inner.mesh.get_surface_count():
-		var mat := StandardMaterial3D.new()
-		mat.albedo_color = Palette.CHARCOAL if slot_of(inner.mesh, surface) == "rubber" else EventKinds.role_color("rust").lerp(Palette.CHARCOAL, 0.55)
-		mat.roughness = 0.95
+		var col := Palette.CHARCOAL if slot_of(inner.mesh, surface) == "rubber" else EventKinds.role_color("rust").lerp(Palette.CHARCOAL, 0.55)
+		var mat := PropMeshes.weathered_material(col, 0.92, 0.14, 0.0, "warden_inner_" + slot_of(inner.mesh, surface))
 		_surface_material(inner, surface, mat)
 
 
@@ -2983,17 +2985,12 @@ func _warden_chunk_mark(segment: MeshInstance3D) -> Node3D:
 	mark.position = centre
 	mark.basis = Basis.looking_at(-normal)
 	segment.add_child(mark)
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = EventKinds.role_color("neutral")
-	mat.emission_enabled = true
-	mat.emission = mat.albedo_color
-	mat.emission_energy_multiplier = 1.2
+	var base_col := EventKinds.role_color("neutral")
+	var mat := PropMeshes.weathered_material(base_col, 0.62, 0.18, 1.2, "warden_crack").duplicate() as StandardMaterial3D
 	var points := [Vector2(-0.22, 0.5), Vector2(0.1, 0.17), Vector2(-0.1, -0.12), Vector2(0.2, -0.5)]
 	for i in 3:
 		var stroke := MeshInstance3D.new()
-		var mesh := BoxMesh.new()
-		mesh.size = Vector3(0.09, points[i].distance_to(points[i + 1]), 0.03)
-		stroke.mesh = mesh
+		stroke.mesh = PropMeshes.chalk_stroke(0.09, points[i].distance_to(points[i + 1]))
 		stroke.material_override = mat
 		var mid: Vector2 = (points[i] + points[i + 1]) * 0.5
 		stroke.position = Vector3(mid.x, mid.y, 0)
@@ -3152,10 +3149,7 @@ func _dress_mast(warden) -> void:
 		child.add_child(support)
 		_mast = {"owner": warden.get_instance_id(), "mesh": child, "root": support, "layers": child.layers, "shadow": child.cast_shadow}
 		for span in [Vector2(-half, low), Vector2(high, half)]:
-			var segment := cylinder.duplicate() as CylinderMesh
-			segment.height = span.y - span.x
-			segment.bottom_radius = _mast_radius(cylinder, span.x)
-			segment.top_radius = _mast_radius(cylinder, span.y)
+			var segment := PropMeshes.fluted_plume_column(_mast_radius(cylinder, span.x), _mast_radius(cylinder, span.y), span.y - span.x)
 			var visual := _mast_visual(segment, support, child)
 			visual.position.y = (span.x + span.y) * 0.5
 		for side in [-1.0, 1.0]:
@@ -3163,8 +3157,7 @@ func _dress_mast(warden) -> void:
 			for i in 3:
 				var start: Vector3 = points[i]
 				var end: Vector3 = points[i + 1]
-				var beam := BoxMesh.new()
-				beam.size = Vector3(0.12, start.distance_to(end), 0.12)
+				var beam := PropMeshes.bevel_prop_box(Vector3(0.12, start.distance_to(end), 0.12))
 				var visual := _mast_visual(beam, support, child)
 				visual.position = (start + end) * 0.5
 				visual.rotation.z = -atan2(end.x - start.x, end.y - start.y)

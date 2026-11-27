@@ -14,6 +14,7 @@ const SPECIES_PROFILES := {
 	"tarn": {"breath_hz": 0.32, "ear_gain": 0.85, "crest_gain": 0.40, "goggles_gain": 0.65, "tail_gain": 0.80, "head_snap": 0.85},
 	"tally": {"breath_hz": 0.40, "ear_gain": 1.10, "crest_gain": 0.50, "goggles_gain": 0.85, "tail_gain": 0.95, "head_snap": 1.15},
 	"remembered_cannon": {"breath_hz": 0.34, "ear_gain": 0.95, "crest_gain": 0.45, "goggles_gain": 0.70, "tail_gain": 0.75, "head_snap": 0.95},
+	"line_splicer": {"breath_hz": 0.45, "ear_gain": 1.40, "crest_gain": 0.55, "goggles_gain": 0.90, "tail_gain": 1.45, "head_snap": 1.25},
 }
 
 const DEFAULT_PROFILE := {"breath_hz": 0.40, "ear_gain": 1.0, "crest_gain": 0.8, "goggles_gain": 0.8, "tail_gain": 0.9, "head_snap": 1.0}

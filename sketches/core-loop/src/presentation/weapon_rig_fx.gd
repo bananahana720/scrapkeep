@@ -71,7 +71,7 @@ static func mods_for(shot_bits_mask: int, tags: Array) -> Array[String]:
 	var out: Array[String] = []
 	if ShotBits.has(shot_bits_mask, ShotBits.bit("pierce")) or tag_set.has("kinetic") or tag_set.has("mass"):
 		out.append("pierce")
-	if ShotBits.has(shot_bits_mask, ShotBits.bit("heat")) or tag_set.has("arc") or tag_set.has("chain"):
+	if ShotBits.has(shot_bits_mask, ShotBits.bit("heat")) or tag_set.has("arc") or tag_set.has("chain") or tag_set.has("splice") or tag_set.has("line"):
 		out.append("chain_arc")
 	if tag_set.has("frost"):
 		out.append("frost")

@@ -37,7 +37,7 @@ static func chunk_mesh(index: int) -> ArrayMesh:
 
 static func part_mesh(part_id: String, family: String) -> ArrayMesh:
 	var kind := family
-	if part_id in ["cross_split", "spiral_wave", "chain_arc"]:
+	if part_id in ["cross_split", "spiral_wave", "chain_arc", "splice_tap"]:
 		kind = part_id
 	elif kind not in ["weapon", "mobility", "class", "milestone"]:
 		kind = "stat"
@@ -50,7 +50,7 @@ static func part_mesh(part_id: String, family: String) -> ArrayMesh:
 			mesh = _build_cross_split()
 		"spiral_wave":
 			mesh = _build_spiral_wave()
-		"chain_arc":
+		"chain_arc", "splice_tap":
 			mesh = _build_chain_arc()
 		"weapon":
 			mesh = _build_weapon_fitting()
