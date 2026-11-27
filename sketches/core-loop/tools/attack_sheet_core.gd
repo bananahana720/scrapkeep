@@ -269,8 +269,8 @@ func header() -> Dictionary:
 			problems.append("missing constant run_state.gd:%s" % n)
 	var audio := FileAccess.get_file_as_string(_path("audio"))
 	var checks := {
-		"declare_frame": audio.contains("_warn_threat.call_deferred(node)") and audio.contains("warns on the game frame it is declared"),
-		"telegraph_unquantized": audio.contains("Danger is never quantized: the telegraph sounds the frame the boss winds up"),
+		"declare_frame": audio.contains("_warn_threat.call_deferred(node)") and audio.contains("func _warn_threat(node: Node)"),
+		"telegraph_unquantized": audio.contains("_listen_optional(events, \"boss_attack_telegraphed\", _on_boss_telegraph)") and audio.contains("play(\"boss_attack_telegraphed\""),
 		"atk_cues_played": audio.contains("attack_warn_cue"),
 	}
 	if not checks["declare_frame"]:

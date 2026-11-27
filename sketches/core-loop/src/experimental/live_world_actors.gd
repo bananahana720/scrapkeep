@@ -503,7 +503,7 @@ func _spawn_wave(spawns: Array) -> void:
 		root.global_position = at
 		var views: Array = [_view(root, "Body", defender_mesh(role == &"shielded_bulwark"))]
 		var solid := _solid(root, _sphere(DEFENDER_RADIUS_M), DEFENDER_CENTER_Y)
-		_targets["defender:" + eid] = _target("defender:" + eid, KIND_DEFENDER, root, views, DEFENDER_RADIUS_M, DEFENDER_CENTER_Y, eid, {"solid": solid})
+		_targets["defender:" + eid] = _target("defender:" + eid, KIND_DEFENDER, root, views, DEFENDER_RADIUS_M, DEFENDER_CENTER_Y, eid, {"solid": solid, "phase": float(_serial % 7)})
 
 
 func _spawn_apex() -> void:
@@ -600,7 +600,7 @@ func _sync_defenders() -> void:
 		node.global_position = clamped
 		if e.facing.length_squared() > 0.01:
 			node.rotation.y = atan2(e.facing.x, e.facing.z)
-		(t["views"][0] as Node3D).position.y = 0.12 + sin(_clock * 4.0 + float(node.get_instance_id() % 7)) * 0.08
+		(t["views"][0] as Node3D).position.y = 0.12 + sin(_clock * 4.0 + float(t["phase"])) * 0.08
 
 
 func _sync_elites(delta: float, ball_pos: Vector3) -> void:

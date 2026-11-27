@@ -1,0 +1,53 @@
+{
+ "assets": [
+  {
+   "id": "salvage_heroes_sheet.jpg",
+   "path": "res://assets/concepts/salvage_heroes_sheet.jpg",
+   "class": "texture",
+   "ships": false,
+   "loader": "concept reference sheet for salvage hero craft"
+  },
+  {
+   "id": "combat_floor_apron_detail.png",
+   "path": "res://assets/textures/craft/combat_floor_apron_detail.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://assets/materials/craft/combat_floor_apron.tres"
+  },
+  {
+   "id": "oxidized_iron_detail.png",
+   "path": "res://assets/textures/craft/oxidized_iron_detail.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://src/presentation/world23_chunk_craft.gd"
+  },
+  {
+   "id": "scorched_concrete_detail.png",
+   "path": "res://assets/textures/craft/scorched_concrete_detail.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://assets/materials/craft/scorched_concrete.tres"
+  },
+  {
+   "id": "salvage_corrosive_brine_mask.png",
+   "path": "res://assets/textures/pbr/salvage_corrosive_brine_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://src/presentation/experimental_audio_bank.gd"
+  },
+  {
+   "id": "salvage_pitted_iron_mask.png",
+   "path": "res://assets/textures/pbr/salvage_pitted_iron_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://src/presentation/experimental_audio_bank.gd"
+  },
+  {
+   "id": "salvage_slag_crust_mask.png",
+   "path": "res://assets/textures/pbr/salvage_slag_crust_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://src/presentation/experimental_audio_bank.gd"
+  }
+ ]
+}

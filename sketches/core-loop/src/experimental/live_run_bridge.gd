@@ -1,6 +1,7 @@
 extends Node
 
 
+const AppShell := preload("res://src/core/app_shell.gd")
 const EnvTags := preload("res://src/experimental/env_tags.gd")
 const PartResource := preload("res://src/experimental/part_resource.gd")
 const JuryRig := preload("res://src/experimental/jury_rig_synergies.gd")
@@ -181,9 +182,8 @@ static func callout_for(fact: Dictionary) -> String:
 
 
 static func _is_headless_audio() -> bool:
-	var disp := DisplayServer.get_name().to_lower()
 	var drv := AudioServer.get_driver_name().to_lower()
-	return disp == "headless" or drv == "dummy" or drv == ""
+	return AppShell.headless() or drv == "dummy" or drv == ""
 
 
 func configure_stage(

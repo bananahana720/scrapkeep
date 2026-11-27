@@ -22,6 +22,7 @@ import {
   lintL10,
   lintL11,
   lintL12,
+  lintL13,
   parseTuning,
 } from "./sketch-lint.mjs";
 import {
@@ -424,6 +425,35 @@ test("L12's switch table matches the game source, and a planted write from src/ 
       assert.equal(lintL12(other, other, world + indexed).length, 1, `${other} ${write}`);
     }
   }
+});
+
+test("L13 flags raw DisplayServer.get_name() in src/ outside app_shell.gd and names AppShell.headless()", () => {
+  const pastMistake = [
+    "static func _is_headless_audio() -> bool:",
+    "\tvar disp := DisplayServer.get_name().to_lower()",
+    '\treturn disp == "headless"',
+  ].join("\n");
+  const bad = lintL13(
+    "sketches/core-loop/src/experimental/live_run_bridge.gd",
+    "src/experimental/live_run_bridge.gd",
+    pastMistake,
+  );
+  assert.equal(bad.length, 1);
+  assert.equal(bad[0].rule, "L13");
+  assert.equal(bad[0].line, 2);
+  assert.match(bad[0].message, /AppShell\.headless\(\)/);
+  assert.deepEqual(
+    lintL13("sketches/core-loop/src/core/app_shell.gd", "src/core/app_shell.gd", pastMistake),
+    [],
+  );
+  assert.deepEqual(
+    lintL13(
+      "sketches/core-loop/src/experimental/live_run_bridge.gd",
+      "src/experimental/live_run_bridge.gd",
+      "static func _is_headless_audio() -> bool:\n\treturn AppShell.headless()\n",
+    ),
+    [],
+  );
 });
 
 test("L8 passes a listed sim read, and flags a drifted count and a stale entry", () => {

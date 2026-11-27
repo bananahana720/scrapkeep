@@ -12,6 +12,13 @@
    }
   },
   {
+   "id": "salvage_heroes_sheet.jpg",
+   "path": "res://assets/concepts/salvage_heroes_sheet.jpg",
+   "class": "texture",
+   "ships": false,
+   "loader": "concept reference sheet for salvage hero craft"
+  },
+  {
    "id": "companion_skin_till_bell",
    "path": "res://assets/cosmetics/companion_skins/companion_skin_till_bell.glb",
    "class": "detail",
@@ -42013,10 +42020,52 @@
    "ships": false
   },
   {
+   "id": "combat_floor_apron_detail.png",
+   "path": "res://assets/textures/craft/combat_floor_apron_detail.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://assets/materials/craft/combat_floor_apron.tres"
+  },
+  {
+   "id": "oxidized_iron_detail.png",
+   "path": "res://assets/textures/craft/oxidized_iron_detail.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://src/presentation/world23_chunk_craft.gd"
+  },
+  {
+   "id": "scorched_concrete_detail.png",
+   "path": "res://assets/textures/craft/scorched_concrete_detail.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://assets/materials/craft/scorched_concrete.tres"
+  },
+  {
    "path": "res://assets/textures/packed-sand-floor.webp",
    "class": "texture",
    "ships": true,
    "loader": "src/core/palette.gd:78 (format string textures/%s.webp)"
+  },
+  {
+   "id": "salvage_corrosive_brine_mask.png",
+   "path": "res://assets/textures/pbr/salvage_corrosive_brine_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://src/presentation/experimental_audio_bank.gd"
+  },
+  {
+   "id": "salvage_pitted_iron_mask.png",
+   "path": "res://assets/textures/pbr/salvage_pitted_iron_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://src/presentation/experimental_audio_bank.gd"
+  },
+  {
+   "id": "salvage_slag_crust_mask.png",
+   "path": "res://assets/textures/pbr/salvage_slag_crust_mask.png",
+   "class": "texture",
+   "ships": true,
+   "loader": "res://src/presentation/experimental_audio_bank.gd"
   },
   {
    "path": "res://assets/textures/riveted-gyro-metal.webp",
@@ -42269,6 +42318,7 @@
   "cliff_dwelling_row",
   "cliff_dwelling_row_detail1",
   "cliff_dwelling_row_detail2",
+  "combat_floor_apron_detail.png",
   "companion_skin_till_bell",
   "compressor_cart_a_lod1_tripo",
   "compressor_cart_a_lod2_tripo",
@@ -43764,6 +43814,7 @@
   "outfit_rivet_hood",
   "outfit_tally_eyeshade",
   "outfit_tarn_steady_cap",
+  "oxidized_iron_detail.png",
   "panel_bracket",
   "panel_bumper",
   "panel_collar",
@@ -43984,11 +44035,16 @@
   "rogue_haul_skip",
   "rubble_cluster",
   "sable_stake",
+  "salvage_corrosive_brine_mask.png",
+  "salvage_heroes_sheet.jpg",
+  "salvage_pitted_iron_mask.png",
+  "salvage_slag_crust_mask.png",
   "sand_ground_albedo",
   "sand_ground_ao",
   "sand_ground_height",
   "sand_ground_normal",
   "sand_ground_roughness",
+  "scorched_concrete_detail.png",
   "scrap_coin",
   "scrap_crate",
   "scrap_pickups",

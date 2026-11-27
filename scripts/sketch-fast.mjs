@@ -69,6 +69,9 @@ export const ALWAYS = [
   "tests/unit_suite_test.gd",
   "tests/new_world_cost_test.gd",
   "tests/colour_meanings_test.gd",
+  "tests/app_shell_test.gd",
+  "tests/identity_value_lint_test.gd",
+  "tests/asset_registry_test.gd",
 ];
 export const PATH_RULES = [
   {
@@ -77,9 +80,23 @@ export const PATH_RULES = [
     tests: [
       "tests/park_park_*",
       "tests/park_bake_fresh_test.gd",
+      "tests/park_bake_spike_test.gd",
       "tests/park_graph_test.gd",
+      "tests/park_regions_test.gd",
+      "tests/park_anchor_span_test.gd",
+      "tests/park_field_posts_test.gd",
       "tests/park_dressing_pin_test.gd",
       "tests/park_props_test.gd",
+      "tests/spillway_finds_test.gd",
+    ],
+  },
+  {
+    name: "asset registry and model kits",
+    match: /^assets\/.*\.(?:glb|png|jpg|jpeg|webp|hdr|json)$|^assets\/registry\.d\//,
+    tests: [
+      "tests/asset_registry_test.gd",
+      "tests/dress_mds_assets_test.gd",
+      "tests/dress_mdm_assets_test.gd",
     ],
   },
   {

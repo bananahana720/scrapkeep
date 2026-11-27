@@ -126,6 +126,11 @@ test("unit_suite always runs, park data pulls every park test, and movement chan
     "src/movement/ball.gd": "",
     "assets/park/park_dam/bake.json": "",
     "tests/unit_suite_test.gd": "",
+    "tests/app_shell_test.gd": "",
+    "tests/identity_value_lint_test.gd": "",
+    "tests/asset_registry_test.gd": "",
+    "tests/dress_mds_assets_test.gd": "",
+    "tests/dress_mdm_assets_test.gd": "",
     "tests/park_park_dam_test.gd": "",
     "tests/park_park_pit_test.gd": "",
     "tests/park_bake_fresh_test.gd": "",
@@ -138,6 +143,14 @@ test("unit_suite always runs, park data pulls every park test, and movement chan
     "src/movement/ball.gd",
   ]);
   assert.equal(picked.get("tests/unit_suite_test.gd").tier, 0);
+  assert.equal(picked.get("tests/app_shell_test.gd").tier, 0);
+  assert.equal(picked.get("tests/identity_value_lint_test.gd").tier, 0);
+  assert.equal(picked.get("tests/asset_registry_test.gd").tier, 0);
+  assert.ok(
+    selectTests(index, ["assets/models/dig_stone/moab_arch.glb"]).picked.has(
+      "tests/dress_mds_assets_test.gd",
+    ),
+  );
   assert.ok(picked.has("tests/park_park_pit_test.gd"));
   assert.ok(picked.has("tests/park_bake_fresh_test.gd"));
   assert.ok(picked.has("tests/park_props_test.gd"));

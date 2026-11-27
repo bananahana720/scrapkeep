@@ -713,6 +713,22 @@ export function lintL12(file, rel, text, switches = FAULT_SWITCHES) {
   return out;
 }
 
+const displayNameRead = /\bDisplayServer\s*\.\s*get_name\s*\(/;
+
+export function lintL13(file, rel, text) {
+  if (rel === "src/core/app_shell.gd") return [];
+  return codeLines(text)
+    .filter((line) => displayNameRead.test(line.raw))
+    .map((line) =>
+      finding(
+        "L13",
+        file,
+        line.number,
+        "raw DisplayServer.get_name() read; call AppShell.headless() (src/core/app_shell.gd) instead",
+      ),
+    );
+}
+
 function walk(directory, base = directory) {
   const entries = [];
   if (!existsSync(directory)) return entries;
@@ -760,6 +776,7 @@ export function lintSketch(sketch) {
     findings.push(...lintL10(file.path, rel, file.text));
     findings.push(...lintL11(file.path, rel, file.text));
     findings.push(...lintL12(file.path, rel, file.text));
+    findings.push(...lintL13(file.path, rel, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   if (sketch === "core-loop") {
