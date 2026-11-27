@@ -81,6 +81,7 @@ func _run() -> void:
 	_test_batch2_parts_and_cross_world_synergies()
 	await _test_live_run_bridge_and_audio_bank()
 	_test_graph_and_code_hygiene()
+	_test_env_tag_bounds_table()
 	_run_three_world_monte_carlo_proof()
 	LiveRunBridge._reset()
 	quit(t.verdict())
@@ -131,7 +132,7 @@ func _test_worlds23_configs_elites_and_w4_clarity() -> void:
 		if cue == "" or String(spec.get("silhouette_cue", "")) == "" \
 				or String(spec.get("movement_cadence", "")) == "" \
 				or float(spec.get("tell_s", 0.0)) < RefurbishedElites.MIN_TELL_S \
-				or not RefurbishedElites.ENV_TAGS.has(StringName(spec.get("ability_tag", &""))):
+				or not EnvTags.CANONICAL_TAGS.has(StringName(spec.get("ability_tag", &""))):
 			clarity_ok = false
 		for tok in raw_tokens:
 			if cue.contains(tok):
@@ -517,10 +518,17 @@ func _test_graph_and_code_hygiene() -> void:
 	preload_re.compile('preload\\("([^"]+)"\\)')
 	var static_var_re := RegEx.new()
 	static_var_re.compile("(?m)^\\s*static\\s+var\\b")
+	var tag_const_re := RegEx.new()
+	tag_const_re.compile("(?m)^\\s*const\\s+(ENV_TAGS|CANONICAL_TAGS|TAG_(ELECTRIFIED|BURNING|SLAG_COATED|MAGNETIC|COOLANT_BRITTLE|SOAKED_CONDUCTIVE))\\b")
+	var never_brake_re := RegEx.new()
+	never_brake_re.compile("(?m)^\\s*(static\\s+)?func\\s+_?never_brake\\w*\\b")
 
 	var graph := {}
 	var static_vars: Array[String] = []
 	var comment_hits: Array[String] = []
+	var tag_decl_dups: Array[String] = []
+	var tag_vocab_dups: Array[String] = []
+	var never_brake_dups: Array[String] = []
 
 	for path in gd_files:
 		var text := FileAccess.get_file_as_string(path)
@@ -532,6 +540,18 @@ func _test_graph_and_code_hygiene() -> void:
 		graph[path] = deps
 		if static_var_re.search(text) != null:
 			static_vars.append(path)
+		if path != "res://src/experimental/env_tags.gd":
+			if tag_const_re.search(text) != null:
+				tag_decl_dups.append(path)
+			var all_tags_present := true
+			for tag_name in EnvTags.CANONICAL_TAGS:
+				if not text.contains('&"' + String(tag_name) + '"'):
+					all_tags_present = false
+					break
+			if all_tags_present:
+				tag_vocab_dups.append(path)
+		if never_brake_re.search(text) != null:
+			never_brake_dups.append(path)
 		var lines := text.split("\n")
 		for idx in lines.size():
 			var stripped := lines[idx].strip_edges()
@@ -542,6 +562,74 @@ func _test_graph_and_code_hygiene() -> void:
 	t.eq("zero circular preload dependencies in src/experimental", has_cycle, false)
 	t.eq("zero mutable static var in src/experimental", static_vars, [])
 	t.eq("zero # comment lines in src/experimental", comment_hits, [])
+	t.eq("env tag name constants declared only in env_tags.gd", tag_decl_dups, [])
+	t.eq("canonical env tag vocabulary declared only in env_tags.gd", tag_vocab_dups, [])
+	t.eq("zero duplicate never_brake helpers in src/experimental", never_brake_dups, [])
+
+
+func _test_env_tag_bounds_table() -> void:
+	var origin := Vector3(1.0, 2.0, 3.0)
+	var rows: Array[Dictionary] = [
+		{
+			"name": "default",
+			"bounds": EnvTags.BOUNDS_DEFAULT,
+			"in_i": 1.2, "in_t": 2.5,
+			"over_i": 10.0, "over_t": 3.0,
+			"zero_i": 0.0, "zero_valid": true,
+			"short_t": 0.01, "zero_ttl_valid": true,
+			"str_tag_valid": true, "ws_source_valid": false,
+		},
+		{
+			"name": "elite",
+			"bounds": EnvTags.BOUNDS_ELITE,
+			"in_i": 1.2, "in_t": 2.5,
+			"over_i": 15.0, "over_t": 3.0,
+			"zero_i": 0.0, "zero_valid": true,
+			"short_t": 0.1, "zero_ttl_valid": false,
+			"str_tag_valid": true, "ws_source_valid": true,
+		},
+		{
+			"name": "setpiece",
+			"bounds": EnvTags.BOUNDS_SETPIECE,
+			"in_i": 1.2, "in_t": 2.5,
+			"over_i": 2.0, "over_t": 3.0,
+			"zero_i": 0.05, "zero_valid": false,
+			"short_t": 0.05, "zero_ttl_valid": false,
+			"str_tag_valid": false, "ws_source_valid": false,
+		},
+	]
+	for row in rows:
+		var label: String = row["name"]
+		var bounds: Dictionary = row["bounds"]
+		var p_in := EnvTags.make_payload(EnvTags.TAG_BURNING, origin, 4.0, "src", 1.2, 2.5, bounds)
+		t.near("%s bounds in-range intensity" % label, float(p_in["intensity"]), float(row["in_i"]), 0.0001)
+		t.near("%s bounds in-range ttl" % label, float(p_in["ttl_s"]), float(row["in_t"]), 0.0001)
+		t.eq("%s bounds in-range valid" % label, EnvTags.is_valid_payload(p_in, bounds), true)
+
+		var p_over := EnvTags.make_payload(EnvTags.TAG_BURNING, origin, 4.0, "src", 15.0, 3.0, bounds)
+		t.near("%s bounds over-range intensity" % label, float(p_over["intensity"]), float(row["over_i"]), 0.0001)
+		t.near("%s bounds over-range ttl" % label, float(p_over["ttl_s"]), float(row["over_t"]), 0.0001)
+		t.eq("%s bounds over-range valid" % label, EnvTags.is_valid_payload(p_over, bounds), true)
+
+		var p_zero := EnvTags.make_payload(EnvTags.TAG_BURNING, origin, 4.0, "src", 0.0, 1.0, bounds)
+		t.near("%s bounds zero intensity clamp" % label, float(p_zero["intensity"]), float(row["zero_i"]), 0.0001)
+		t.eq("%s bounds zero intensity built payload valid" % label, EnvTags.is_valid_payload(p_zero, bounds), true)
+
+		var raw_zero_i := {"tag": EnvTags.TAG_BURNING, "origin": origin, "radius_m": 4.0, "source_id": "src", "intensity": 0.0, "ttl_s": 1.0}
+		t.eq("%s bounds raw zero intensity validation" % label, EnvTags.is_valid_payload(raw_zero_i, bounds), bool(row["zero_valid"]))
+
+		var p_short := EnvTags.make_payload(EnvTags.TAG_BURNING, origin, 4.0, "src", 1.0, 0.01, bounds)
+		t.near("%s bounds short ttl clamp" % label, float(p_short["ttl_s"]), float(row["short_t"]), 0.0001)
+		t.eq("%s bounds short ttl built payload valid" % label, EnvTags.is_valid_payload(p_short, bounds), true)
+
+		var raw_zero_ttl := {"tag": EnvTags.TAG_BURNING, "origin": origin, "radius_m": 4.0, "source_id": "src", "intensity": 1.0, "ttl_s": 0.0}
+		t.eq("%s bounds raw zero ttl validation" % label, EnvTags.is_valid_payload(raw_zero_ttl, bounds), bool(row["zero_ttl_valid"]))
+
+		var raw_str_tag := {"tag": "burning", "origin": origin, "radius_m": 4.0, "source_id": "src", "intensity": 1.0, "ttl_s": 1.0}
+		t.eq("%s bounds string tag validation" % label, EnvTags.is_valid_payload(raw_str_tag, bounds), bool(row["str_tag_valid"]))
+
+		var raw_ws_src := {"tag": EnvTags.TAG_BURNING, "origin": origin, "radius_m": 4.0, "source_id": "   ", "intensity": 1.0, "ttl_s": 1.0}
+		t.eq("%s bounds whitespace source_id validation" % label, EnvTags.is_valid_payload(raw_ws_src, bounds), bool(row["ws_source_valid"]))
 
 
 func _has_directed_cycle(graph: Dictionary) -> bool:

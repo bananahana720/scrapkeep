@@ -2,6 +2,7 @@ extends RefCounted
 
 
 const EventDirector := preload("res://src/world/event_director.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 
 const DEFAULT_CONFIG_PATH := "res://src/experimental/resources/director/spillway_adversity_config.tres"
@@ -818,22 +819,24 @@ func _emit_hazard_tags(def: Dictionary, out_tags: Array) -> void:
 	var intensity := maxf(0.4, hazard_intensity())
 	var radius := float(def["radius_m"])
 	var id_str := String(def["id"])
-	out_tags.append(RefurbishedElites.make_env_tag_payload(
+	out_tags.append(EnvTags.make_payload(
 		StringName(def["primary_tag"]),
 		hazard_origin,
 		radius,
 		"hazard:%s" % id_str,
 		intensity,
-		2.5
+		2.5,
+		EnvTags.BOUNDS_ELITE
 	))
 	if def.has("secondary_tag") and StringName(def["secondary_tag"]) != &"":
-		out_tags.append(RefurbishedElites.make_env_tag_payload(
+		out_tags.append(EnvTags.make_payload(
 			StringName(def["secondary_tag"]),
 			hazard_origin,
 			radius * 0.85,
 			"hazard:%s#secondary" % id_str,
 			intensity * 0.85,
-			2.5
+			2.5,
+			EnvTags.BOUNDS_ELITE
 		))
 
 
