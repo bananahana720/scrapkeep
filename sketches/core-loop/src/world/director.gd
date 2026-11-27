@@ -20,9 +20,8 @@ const KIND_NAMES := ["chaser", "lobber", "mag_trapper", "bola_thrower", "hooker"
 	"swarm_remnant", "mind_hand", "burrower", "drill_crew", "lamp_swarm", "line_cutter", "anchor_crew",
 	"kite_drone", "linker", "foreman", "prop_crew", "pit_jaw", "splitter", "ballast_heavy", "gap_net",
 	"dispatcher", "jolt_layer", "boom_tender"]
-const COUNTERS := ["mag_trapper", "bola_thrower", "hooker", "plated_brute", "netcaster", "deflector", "winch_drone",
-	"gyro_jammer", "swatter", "ramp_flipper", "catch_trap"]
-const FAMILY_ANCIENT := ["reactor_relic", "swarm_remnant", "mind_hand"]
+const COUNTERS := Roster.COUNTERS
+const FAMILY_ANCIENT := Roster.ANCIENTS
 const PACKS := {
 	"grounded": {"controller": "mag_trapper", "punisher": "bola_thrower", "tests": "heft"},
 	"strung": {"controller": "hooker", "punisher": "plated_brute", "tests": "speed"},
