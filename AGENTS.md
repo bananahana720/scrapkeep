@@ -33,16 +33,17 @@ Read the rest only when the task needs it: [ROADMAP.md](project-guide/handoff/RO
 | 1. Finish every to-do | None (task list tracking) | Session & coordinator sign-off against ask |
 | 2. One thread, one writer | Isolated worktrees (`scripts/card-runner.mjs` / delegation) | Coordinator & review verify single-unit ownership |
 | 3. Only the Gate lands changes | Branch / PR workflow onto open branch (`main`) | Gate session alone stacks & pushes |
-| 4. Focused tests, `sketch:fast`, independent review | `npm run sketch:fast`, `npm run sketch:lint`, `scripts/hooks/pre-push` | Fresh Gemini 4 Neon (`high`) read-only PR review |
+| 4. Focused tests, `sketch:fast`, independent review | `npm run sketch:fast` (`ALWAYS` repo-scan & `PATH_RULES` asset/park tier-0 guards), `npm run sketch:lint`, `scripts/sketch-smoke.mjs` (`--receipt` bare-label check), `scripts/alpha-rc.mjs` (POSIX process-group reap), `.github/workflows/ci.yml` (`480s` affected budget), `scripts/hooks/pre-push` | Fresh Gemini 4 Neon (`high`) read-only PR review |
 | 5. Context-free writing | `npm run check:docs` (all repo `.md` links, `/home/andrew/` ban) | Reviewer clarity check on briefs & receipts |
 | 6. One home for every fact | `npm run check:docs`, `npm run check:skills`, `npm run check:project`, `scripts/gate/model-receipts.mjs` | Reviewer catches duplicated specs or drift |
-| 7. Deep modules, simple interfaces | `npm run sketch:lint` (L6–L10 isolation rules), GDScript unit tests | Reviewer checks module ownership & thin APIs |
+| 7. Deep modules, simple interfaces | `npm run sketch:lint` (L6–L10 isolation rules, L13 `AppShell.headless()`), `Launch.ring_nodes()`, `SiltBoil._exempt` (`ctx.calm`), GDScript unit tests | Reviewer checks module ownership & thin APIs |
 | 8. No slop in player UI/text | `npm run sketch:lint` (W1–W7/S8 UI word lint), `tests/codex_notes_words_test.gd`, `tests/ui_contract_test.gd` | Visual & tone check on real screens |
-| 9. World 1 & map standard | Tier-0 `PATH_RULES` in `scripts/sketch-fast.mjs`, `tests/park_props_test.gd`, `tests/site_markers_test.gd`, `tests/w50_*_test.gd` | Hardware render & feel verification |
+| 9. World 1 & map standard | Tier-0 `PATH_RULES` in `scripts/sketch-fast.mjs`, `npm run sketch:lint` (L15 `Engine.physics_ticks_per_second` test frame math), `tests/park_props_test.gd`, `tests/site_markers_test.gd`, `tests/w50_*_test.gd` | Hardware render & feel verification |
 | 10. Read story & tone first | Creative brief pre-flight reading (`STORY-MAP.md`, `TONE-BIBLE.md`) | Coordinator & creative review |
 | 11. Workers by kind of work & model pins | `npm run check:agents` (banned IDs, `.claude/settings.json`, workflow pins), `scripts/gate/model-receipts.mjs` | Coordinator dispatch & mandatory review receipt |
-| 12. Evidence & artifact hygiene | `tests/fixtures/pins/`, `artifacts/local/` separation, `model-receipts.mjs` | Human judgement on shipped PC feel & audio/visuals |
+| 12. Evidence & artifact hygiene | `tests/asset_registry_test.gd` (`sketch:fast` `ALWAYS` + asset `PATH_RULES`), `tests/fixtures/pins/`, `artifacts/local/` separation, `model-receipts.mjs` | Human judgement on shipped PC feel & audio/visuals |
 | 13. Locked dependencies & free local tools | `npm run check:project` (package/lock metadata checks) | Explicit Andrew approval before `package.json` or external changes |
+| Shared-process test cleanup | `npm run sketch:lint` (`L14` `test_batch_driver.gd` `_reset()` static-var guard), `tests/test_batch_reset_test.gd` | Reviewer checks new mutable state resets cleanly under `--shuffle` |
 
 ## Steps that need no approval
 
