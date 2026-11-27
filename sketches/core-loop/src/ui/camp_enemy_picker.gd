@@ -8,7 +8,6 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const Sandbox := preload("res://src/world/camp_sandbox.gd")
 
 
-const MET_PREFIX := "met."
 const ROW_SIZE := Vector2(250.0, 40.0)
 const COLUMNS := 3
 const LIST_H := 330.0
@@ -81,36 +80,24 @@ func _init() -> void:
 	refresh([], 0)
 
 
+static func attach(camp_hub) -> void:
+	camp_hub.root.get_node("CampSandbox").picker_builder = func(): return new()
+
+
 static func met_kinds(saved) -> Array:
-	var out: Array = []
-	if saved == null:
-		return out
-	for kind in Sandbox.kinds():
-		if saved.stat(MET_PREFIX + kind) > 0.0:
-			out.append(kind)
-	return out
+	return Sandbox.met_kinds(saved)
 
 
 static func met_of(game) -> Array:
-	return met_kinds(game.ctx.profile) if game != null and game.ctx != null else []
+	return Sandbox.met_of(game)
 
 
 static func mark_met(saved, kind: String) -> bool:
-	if saved == null or kind == "" or saved.stat(MET_PREFIX + kind) > 0.0:
-		return false
-	saved.set_stat(MET_PREFIX + kind, 1.0)
-	if saved.can_save:
-		saved.save()
-	return true
+	return Sandbox.mark_met(saved, kind)
 
 
 static func watch(game) -> void:
-	if game == null or game.events == null or game.has_meta("met_watch"):
-		return
-	game.set_meta("met_watch", true)
-	game.events.enemy_spawned.connect(func(enemy: Node3D, kind: String):
-		if not enemy.has_meta("sandbox_slot"):
-			mark_met(game.ctx.profile, kind))
+	Sandbox.watch(game)
 
 
 static func reading(met: Array) -> Array:
