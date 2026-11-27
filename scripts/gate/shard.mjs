@@ -2,7 +2,6 @@ import { spawn, spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
-  mkdtempSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -41,7 +40,7 @@ import {
   isCleanImportPass,
   writeImportStamp,
 } from "../import-stamp.mjs";
-import { resolveGodotBinary, scratchHomeEnv } from "../godot-home.mjs";
+import { resolveGodotBinary, withScratchGodotEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -872,28 +871,29 @@ async function run(options) {
     let imported = "failed";
     for (let pass = 1; pass <= IMPORT_TRIES; pass++) {
       const file = path.join(options.out, `import-${pass}.log`);
-      await step(`import-${pass}`, async () => {
-        const importEnv = {
-          ...env,
-          ...scratchHomeEnv(() => mkdtempSync(path.join(os.tmpdir(), "gate-import-"))),
-        };
-        const ran = await runToFile(
-          godot,
-          ["--headless", "--path", sketchDir, "--import"],
-          file,
-          importEnv,
-          IMPORT_TIMEOUT_MS,
-        );
-        const output = readFileSync(file, "utf8");
-        const outcome = importOutcome(ran.exit, output);
-        const cleanPass = isCleanImportPass({
-          status: typeof ran.exit === "number" ? ran.exit : null,
-          signal: typeof ran.exit === "string" ? ran.exit : null,
-          output,
-          uidCacheValid: hasValidUidCache(root, SKETCH),
-        });
-        return { ...ran, outcome, cleanPass };
-      });
+      await step(`import-${pass}`, () =>
+        withScratchGodotEnv(
+          async (importEnv) => {
+            const ran = await runToFile(
+              godot,
+              ["--headless", "--path", sketchDir, "--import"],
+              file,
+              importEnv,
+              IMPORT_TIMEOUT_MS,
+            );
+            const output = readFileSync(file, "utf8");
+            const outcome = importOutcome(ran.exit, output);
+            const cleanPass = isCleanImportPass({
+              status: typeof ran.exit === "number" ? ran.exit : null,
+              signal: typeof ran.exit === "string" ? ran.exit : null,
+              output,
+              uidCacheValid: hasValidUidCache(root, SKETCH),
+            });
+            return { ...ran, outcome, cleanPass };
+          },
+          { prefix: "gate-import-", baseEnv: env, homeOnly: true },
+        ),
+      );
       const stepInfo = state.steps[`import-${pass}`];
       imported = stepInfo.outcome ?? "ok";
       if (imported !== "ok") console.log(`import ${pass} of ${IMPORT_TRIES}: ${imported}`);

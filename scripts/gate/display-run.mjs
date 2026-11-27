@@ -5,7 +5,7 @@ import { watchDrawnRun } from "./window-watch.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 
-import { resolveGodotBinary } from "../godot-home.mjs";
+import { resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
 import { acquireSlot } from "../sketch-smoke.mjs";
 import { root } from "./clean-head.mjs";
 
@@ -38,12 +38,7 @@ export function scratchEnv(cwd) {
   }
   return {
     home,
-    env: {
-      HOME: home,
-      XDG_DATA_HOME: path.join(home, "data"),
-      XDG_CONFIG_HOME: path.join(home, "config"),
-      XDG_CACHE_HOME: path.join(home, "cache"),
-    },
+    env: scratchGodotEnv(home, { forceHome: true }),
   };
 }
 

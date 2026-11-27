@@ -3,7 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { GODOT_VERSION, resolveGodotBinary } from "../godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
 import {
   WIN_PROOFS,
   playProofTries,
@@ -105,8 +105,6 @@ if (winProof) {
 
   async function playOnce(base, proof) {
     const state = path.join(base, "state");
-    for (const dir of ["data", "config", "cache"])
-      await mkdir(path.join(state, dir), { recursive: true });
     const out = path.join(base, "run");
     const bot = run(
       binary,
@@ -124,12 +122,7 @@ if (winProof) {
       {
         cwd: proofDir,
         timeout: winProofTimeoutMs(proof),
-        env: {
-          ...process.env,
-          XDG_DATA_HOME: path.join(state, "data"),
-          XDG_CONFIG_HOME: path.join(state, "config"),
-          XDG_CACHE_HOME: path.join(state, "cache"),
-        },
+        env: scratchGodotEnv(state, { baseEnv: process.env, create: true }),
       },
     );
     const rowsPath = path.join(out, "bots.ndjson");

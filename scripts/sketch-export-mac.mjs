@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
-import { GODOT_VERSION, resolveGodotBinary } from "./godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import {
   bootFailures,
   defaultStemsFrom,
@@ -236,7 +236,7 @@ async function main() {
   const home = path.join(outDir, "home");
   await mkdir(templatesDir(home), { recursive: true });
   await symlink(realTemplates, path.join(templatesDir(home), TEMPLATE_VERSION));
-  const env = { ...process.env, HOME: home, XDG_DATA_HOME: home };
+  const env = scratchGodotEnv(home, { baseEnv: process.env, dirs: null, forceHome: true });
 
   const projectPath = path.join(project, "project.godot");
   const projectText = await readFile(projectPath, "utf8");
@@ -299,7 +299,7 @@ async function main() {
   ];
   const boot = run(exe, bootArgs, {
     cwd: outDir,
-    env: { ...process.env, HOME: bootHome, XDG_DATA_HOME: bootHome },
+    env: scratchGodotEnv(bootHome, { baseEnv: process.env, dirs: null, forceHome: true }),
   });
   const bootText = boot.stdout + boot.stderr;
   await writeFile(path.join(outDir, "boot.log"), bootText);

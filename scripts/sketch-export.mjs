@@ -1,12 +1,12 @@
 import { spawnSync } from "node:child_process";
-import { copyFile, cp, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import { existsSync, readdirSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
-import { resolveGodotBinary } from "./godot-home.mjs";
+import { resolveGodotBinary, scratchGodotEnv, withScratchGodotEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const binary = resolveGodotBinary();
@@ -395,9 +395,14 @@ export function selfPlayPresetText(presetText, name = preset) {
   throw new Error(`preset "${name}" has no exclude_filter`);
 }
 
-export function winProofEnv(state, repoRoot = root, baseEnv = process.env) {
+export function winProofEnv(
+  state,
+  repoRoot = root,
+  baseEnv = process.env,
+  platform = process.platform,
+) {
   return {
-    ...isolatedXdgEnv(baseEnv, state),
+    ...isolatedXdgEnv(baseEnv, state, platform),
     SCRAPKEEP_REPO_ROOT: repoRoot,
   };
 }
@@ -469,24 +474,20 @@ export function resolveExportTemplate({
   return candidates.find((candidate) => exists(candidate)) ?? null;
 }
 
-export function isolatedXdgEnv(baseEnv, stateDir) {
-  return {
-    ...baseEnv,
-    XDG_DATA_HOME: path.join(stateDir, "data"),
-    XDG_CONFIG_HOME: path.join(stateDir, "config"),
-    XDG_CACHE_HOME: path.join(stateDir, "cache"),
-  };
+export function isolatedXdgEnv(baseEnv, stateDir, platform = process.platform) {
+  return scratchGodotEnv(stateDir, { baseEnv, platform });
 }
 
-export async function withIsolatedXdg(fn, { baseEnv = process.env, tmpRoot = os.tmpdir() } = {}) {
-  const stateDir = await mkdtemp(path.join(tmpRoot, "scrapkeep-export-xdg-"));
-  try {
-    for (const dir of ["data", "config", "cache"])
-      await mkdir(path.join(stateDir, dir), { recursive: true });
-    return await fn(isolatedXdgEnv(baseEnv, stateDir), stateDir);
-  } finally {
-    await rm(stateDir, { recursive: true, force: true });
-  }
+export function withIsolatedXdg(
+  fn,
+  { baseEnv = process.env, tmpRoot = os.tmpdir(), platform = process.platform } = {},
+) {
+  return withScratchGodotEnv(fn, {
+    prefix: "scrapkeep-export-xdg-",
+    tmpRoot,
+    baseEnv,
+    platform,
+  });
 }
 
 function fail(message) {

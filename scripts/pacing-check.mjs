@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSy
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { resolveGodotBinary } from "./godot-home.mjs";
+import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
@@ -340,9 +340,7 @@ export function buildJobs(budget, args, outDir) {
 
 function runJob(binary, job) {
   mkdirSync(job.out, { recursive: true });
-  const env = { ...process.env };
-  for (const kind of ["DATA", "CONFIG", "CACHE"])
-    env[`XDG_${kind}_HOME`] = path.join(job.out, "state", kind.toLowerCase());
+  const env = scratchGodotEnv(path.join(job.out, "state"), { baseEnv: process.env });
   return new Promise((resolve) => {
     const started = Date.now();
     const child = spawn(binary, job.args, { env, stdio: ["ignore", "ignore", "pipe"] });

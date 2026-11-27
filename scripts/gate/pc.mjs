@@ -21,7 +21,7 @@ import { fileURLToPath } from "node:url";
 import { chunks, gateLists, namedPool, testName } from "./shard.mjs";
 import { checkImportStamp, sketchState, stampPath, writeImportStamp } from "../import-stamp.mjs";
 import { defaultChallengeJobs } from "../challenge/lib.mjs";
-import { GODOT_VERSION, resolveGodotBinary, userDataEnv } from "../godot-home.mjs";
+import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "../godot-home.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const SKETCH = "sketches/core-loop";
@@ -614,9 +614,7 @@ export function stepEnv({
   return {
     ...base,
     GODOT_BIN: godot,
-    ...userDataEnv(path.join(home, "data"), platform),
-    XDG_CONFIG_HOME: path.join(home, "config"),
-    XDG_CACHE_HOME: path.join(home, "cache"),
+    ...scratchGodotEnv(home, { platform }),
     SCRAPKEEP_LOCK_DIR: lockDir,
     SMOKE_SLOTS: String(SLOT_POOL),
     SMOKE_FULL: "1",

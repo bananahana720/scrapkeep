@@ -21,7 +21,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 
-import { GODOT_VERSION, resolveGodotBinary as resolveSharedGodotBinary } from "./godot-home.mjs";
+import {
+  GODOT_VERSION,
+  resolveGodotBinary as resolveSharedGodotBinary,
+  scratchGodotEnv,
+} from "./godot-home.mjs";
 import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
 import { buildVisualQaPack } from "./visual-qa-pack.mjs";
 import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
@@ -216,21 +220,7 @@ export function scratchEnv(
   const requested =
     targetPath ?? path.join(repoRoot, "artifacts", "local", "dev-console", makeRunId(), "home");
   const { resolved: home } = assertUnderArtifactsLocal(requested, repoRoot);
-  const data = path.join(home, "data");
-  const config = path.join(home, "config");
-  const cache = path.join(home, "cache");
-  if (create) {
-    mkdirSync(data, { recursive: true });
-    mkdirSync(config, { recursive: true });
-    mkdirSync(cache, { recursive: true });
-  }
-  const env = {
-    ...baseEnv,
-    HOME: home,
-    XDG_DATA_HOME: data,
-    XDG_CONFIG_HOME: config,
-    XDG_CACHE_HOME: cache,
-  };
+  const env = scratchGodotEnv(home, { baseEnv, forceHome: true, create, platform });
   if (platform === "linux") {
     env.SDL_AUDIODRIVER = "dummy";
   }

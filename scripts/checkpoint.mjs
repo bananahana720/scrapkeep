@@ -13,7 +13,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { requireGodotBinary } from "./godot-home.mjs";
+import { requireGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");
@@ -509,9 +509,7 @@ async function runBots(outDir, seedCount, godot) {
     for (let seed = 1; seed <= seedCount; seed++) {
       const dir = path.join(outDir, "bots", `${policy}-${seed}`);
       mkdirSync(dir, { recursive: true });
-      const env = { ...process.env };
-      for (const kind of ["DATA", "CONFIG", "CACHE"])
-        env[`XDG_${kind}_HOME`] = path.join(dir, "state", kind.toLowerCase());
+      const env = scratchGodotEnv(path.join(dir, "state"), { baseEnv: process.env });
       jobs.push(async () => {
         const args = [
           "--headless",
