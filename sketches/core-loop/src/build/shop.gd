@@ -6,7 +6,6 @@ const Relics := preload("res://src/build/relics.gd")
 const Items := preload("res://src/build/items.gd")
 const Fabricators := preload("res://src/build/fabricators.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
-const OddsReadout := preload("res://src/ui/odds_readout.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
@@ -277,7 +276,7 @@ func shelf_offers() -> Array:
 	for i in shelf.size():
 		var offer := _offer(shelf[i]["part_id"], shelf[i]["sold"], i)
 		offer["odds"] = shelf[i].get("odds", [])
-		offer["odds_text"] = OddsReadout.text(offer["odds"])
+		offer["odds_text"] = ItemGen.odds_text(offer["odds"])
 		if shelf[i].has("set"):
 			var maker := String(shelf[i]["set"])
 			offer["set"] = maker
@@ -533,7 +532,7 @@ func top_shelf() -> Dictionary:
 		return {}
 	var locked: bool = ctx.run.heft_class() < top["lock_class"]
 	return {"part_id": top["part_id"], "name": Parts.display_name(top["part_id"]), "price": price(top["part_id"]),
-		"odds": OddsReadout.odds_for(top.get("table", TOP_RARITIES), ctx.run.class_id()), "locked": locked, "needs_class": top["lock_class"], "heft_class": ctx.run.heft_class(),
+		"odds": Parts.odds_for(top.get("table", TOP_RARITIES), ctx.run.class_id()), "locked": locked, "needs_class": top["lock_class"], "heft_class": ctx.run.heft_class(),
 		"lock_icon": "res_heft", "sold": top["sold"], "relented": talks["relented"]}
 
 
@@ -638,7 +637,7 @@ func _stock() -> Array:
 			var focused_pool := _set_pool(maker, [])
 			if not focused_pool.is_empty():
 				var focused_out: Array = []
-				var focused_odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
+				var focused_odds: Array = Parts.odds_for(SHELF_RARITIES, ctx.run.class_id())
 				var pool_copy := focused_pool.duplicate()
 				for _k in mini(SHELF_SIZE, pool_copy.size()):
 					var idx := _rng.randi_range(0, pool_copy.size() - 1)
@@ -661,11 +660,11 @@ func _stock() -> Array:
 		else Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE - floor_pick.size(), floor_pick)
 	var out: Array = []
 	for part_id in floor_pick:
-		var entry := {"part_id": part_id, "sold": false, "odds": [] if set_pick != "" else OddsReadout.odds_for(FLOOR_RARITIES, ctx.run.class_id())}
+		var entry := {"part_id": part_id, "sold": false, "odds": [] if set_pick != "" else Parts.odds_for(FLOOR_RARITIES, ctx.run.class_id())}
 		if set_pick != "":
 			entry["set"] = MakerSets.maker_of(part_id)
 		out.append(entry)
-	var odds: Array = OddsReadout.odds_for(SHELF_RARITIES, ctx.run.class_id())
+	var odds: Array = Parts.odds_for(SHELF_RARITIES, ctx.run.class_id())
 	for part_id in picks:
 		out.append({"part_id": part_id, "sold": false, "odds": odds})
 	var rack = _rack()

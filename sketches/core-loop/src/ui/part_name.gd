@@ -3,6 +3,7 @@ extends Control
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 
 
@@ -62,7 +63,7 @@ func rect() -> Rect2:
 
 
 func _box(at: Vector2) -> Rect2:
-	var extent := Vector2(UiDraw.width(text, FONT), float(FONT))
+	var extent := Vector2(UiFonts.width(text, FONT), float(FONT))
 	return Rect2(at - extent * 0.5, extent)
 
 
@@ -75,5 +76,5 @@ func _draw() -> void:
 		return
 	var color := EventKinds.role_color("amber")
 	color.a = clampf(left / FADE, 0.0, 1.0)
-	var width := UiDraw.width(text, FONT)
+	var width := UiFonts.width(text, FONT)
 	UiDraw.text(self, _at.x - width * 0.5, _at.y, text, FONT, color)

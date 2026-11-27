@@ -104,7 +104,7 @@ const TRIM := Palette.COPPER
 const BOLT := BONE
 const NEEDLE := BONE
 const GLOW := Palette.AMBER
-const GLASS_WARM := Color("2a2420")
+const GLASS_WARM := UiTokens.GLASS_WARM
 
 var _tubes: Array[Dictionary] = []
 var _anchor := Vector2.ZERO

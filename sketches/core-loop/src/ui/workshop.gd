@@ -2,7 +2,7 @@ extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
@@ -110,14 +110,7 @@ func setup(game_ref) -> void:
 	brief.visible = false
 	add_child(brief)
 	for row in BRIEF_ROWS:
-		var words := Label.new()
-		words.text = row[0]
-		words.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		words.add_theme_font_override("font", UiFonts.bold())
-		words.add_theme_font_size_override("font_size", row[1])
-		words.add_theme_color_override("font_color", Palette.AMBER if row[0] == BRIEF_LINE else Palette.SAND)
-		words.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		brief.add_child(words)
+		brief.add_child(UiDraw.label(row[1], Palette.AMBER if row[0] == BRIEF_LINE else Palette.SAND, row[0]))
 	pick = TreePick.new()
 	add_child(pick)
 	pick.chosen.connect(choose)
