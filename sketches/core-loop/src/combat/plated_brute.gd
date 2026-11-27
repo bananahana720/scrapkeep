@@ -61,7 +61,6 @@ var bounty_return_speed := 9.0
 var bounty_woken := false
 var bounty_met := false
 var _crate: MeshInstance3D
-var _absorb := false
 var _plate: MeshInstance3D
 var windup_pose_enabled := true
 var _windup_rig: Skeleton3D
@@ -549,14 +548,6 @@ func on_struck(_kind: String, _part: String, result: Dictionary) -> void:
 
 func absorbs_hit(result: Dictionary) -> bool:
 	return bool(result.get("full", false)) and plates > 0
-
-
-func take_damage(amount: float) -> float:
-	if _absorb:
-		_absorb = false
-		flash()
-		return 0.0
-	return super.take_damage(amount)
 
 
 func _pose() -> void:

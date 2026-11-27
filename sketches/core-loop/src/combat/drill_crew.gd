@@ -31,7 +31,6 @@ var next_attack := ""
 var last_bore := {}
 var last_jet := {}
 var bore_fact := {}
-var _absorb := false
 var _core_jet := false
 var _jet_origin := Vector3.ZERO
 var _jet_dir := Vector3.FORWARD
@@ -265,15 +264,6 @@ func on_struck(kind_hit: String, _part: String, result: Dictionary) -> void:
 		if fleet != null:
 			fleet.discover("bore_breach", _real_ball())
 		_end()
-
-
-# The popped plate took that hit whole: the body is untouched this once.
-func take_damage(amount: float) -> float:
-	if _absorb:
-		_absorb = false
-		flash()
-		return 0.0
-	return super.take_damage(amount)
 
 
 func _die() -> void:
