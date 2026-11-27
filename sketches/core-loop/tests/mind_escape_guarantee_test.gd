@@ -1,5 +1,6 @@
 extends SceneTree
 
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const StubBoss := preload("res://src/boss/stub_boss.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -49,13 +50,13 @@ func _initialize() -> void:
 				if descs.is_empty():
 					if got["path"] != "none" or _flat(ball - CENTER).length() <= radius:
 						empty_on_pad += 1
-				elif MindAttacks.escape_point(descs, ball, cruise, CENTER, radius) == null:
+				elif BossAttacks.escape_point(descs, ball, cruise, CENTER, radius) == null:
 					nulls += 1
-				if got["path"] == "single" and MindAttacks.covers(descs[0], ball):
+				if got["path"] == "single" and BossAttacks.covers(descs[0], ball):
 					hit += 1
 			var band := MindAttacks.commit_safe("", seed, band_ball, CENTER, phase, cruise, radius)
 			band_paths[band["path"]] = int(band_paths.get(band["path"], 0)) + 1
-			if not band["descriptors"].is_empty() and MindAttacks.escape_point(band["descriptors"], band_ball, cruise, CENTER, radius) == null:
+			if not band["descriptors"].is_empty() and BossAttacks.escape_point(band["descriptors"], band_ball, cruise, CENTER, radius) == null:
 				nulls += 1
 	var rate := _fallbacks(paths) / maxf(1.0, float(commits))
 	var band_rate := _fallbacks(band_paths) / float(SEEDS * MindAttacks.phase_cap())
@@ -66,7 +67,7 @@ func _initialize() -> void:
 	_report("off-pad band: the phase's choice falls back under 5%", band_rate < FALLBACK_CAP and int(band_paths.get("recommit", 0)) > 0,
 			"%.2f%%, %d recommits" % [band_rate * 100.0, int(band_paths.get("recommit", 0))])
 	_report("the single fallback never covers the ball", hit == 0, "%d covered" % hit)
-	_report("the away lane clears a ball at the centre", not MindAttacks.covers(MindAttacks.away_lane(CENTER, CENTER, 1, radius), CENTER), "")
+	_report("the away lane clears a ball at the centre", not BossAttacks.covers(MindAttacks.away_lane(CENTER, CENTER, 1, radius), CENTER), "")
 	print("mind_escape_guarantee_test: paths %s band %s" % [paths, band_paths])
 	print("mind_escape_guarantee_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

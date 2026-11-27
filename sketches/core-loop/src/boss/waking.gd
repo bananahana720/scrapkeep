@@ -7,7 +7,7 @@ const WakingFloors := preload("res://src/boss/waking_floors.gd")
 const WakingDress := preload("res://src/boss/waking_dress.gd")
 const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
-const MindAttacks := preload("res://src/boss/mind_attacks.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
@@ -334,7 +334,7 @@ func _lay_pending() -> void:
 		return
 	var item: Dictionary = _pending.pop_front()
 	var d: Dictionary = item["desc"]
-	var h = MindAttacks.build(d)
+	var h = Hazard.from_def(d)
 	h.ground = Callable(self, "ground_height_at")
 	ctx.root.add_child(h)
 	(item["attack"]["hazards"] as Array).append(h)

@@ -3,6 +3,8 @@ extends "res://src/boss/stub_boss.gd"
 const MonsterHeft := preload("res://src/combat/monster_heft.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const MindDress := preload("res://src/boss/mind_dress.gd")
 const ArenaMindDress := preload("res://src/presentation/arena_mind_dress.gd")
@@ -470,8 +472,8 @@ func _commit_attack(family := "") -> void:
 	var laid: Array = []
 	var aimed := false
 	for d in descriptors:
-		aimed = aimed or MindAttacks.covers(d, ball)
-		var h = MindAttacks.build(d)
+		aimed = aimed or BossAttacks.covers(d, ball)
+		var h = Hazard.from_def(d)
 		h.ground = Callable(self, "ground_height_at")
 		ctx.root.add_child(h)
 		laid.append(h)
