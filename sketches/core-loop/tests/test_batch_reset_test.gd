@@ -468,7 +468,7 @@ func _run() -> void:
 
 	BossModel._scenes["__probe__"] = PackedScene.new()
 	BossModel._coloured[1] = StandardMaterial3D.new()
-	var _camp_probe := CampCraftMeshes.guide_pip()
+	var _camp_probe := CampCraftMeshes.guide_pip_mesh()
 	t.check("BossModel holds cached scenes before reset", not BossModel._scenes.is_empty() and not BossModel._coloured.is_empty())
 	driver._reset()
 	t.check("BossModel.reset_for_tests clears _scenes and _coloured", BossModel._scenes.is_empty() and BossModel._coloured.is_empty())
