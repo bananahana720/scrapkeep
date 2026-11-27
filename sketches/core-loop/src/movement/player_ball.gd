@@ -10,7 +10,6 @@ const Palette := preload("res://src/core/palette.gd")
 const MathUtil := preload("res://src/core/math_util.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
-const Harpoon := preload("res://src/movement/harpoon.gd")
 const Grip := preload("res://src/movement/grip.gd")
 const Bindings := preload("res://src/core/bindings.gd")
 const Contact := preload("res://src/movement/contact.gd")
@@ -906,21 +905,16 @@ func _burst_key() -> String:
 	return Bindings.label("boost")
 
 
-func _burst_pilot() -> bool:
-	return kit.on(Augments.SPRINT) or kit.on(Augments.BLINK) or kit.on(Augments.CLAW_PULL) or kit.on(Augments.SURGE) \
-		or kit.on(Augments.RECOIL)
-
-
 func _read_shift(delta := 0.0) -> void:
 	if delta > 0.0 and kit.movement_buffer > 0.0:
 		kit.movement_buffer = maxf(0.0, kit.movement_buffer - delta)
 	if intent.cancel_pressed or (kit.on(Augments.SPRINT) and intent.shift_released):
 		kit.movement_buffer = 0.0
-	if _burst_pilot():
+	if Augments.has_burst(kit):
 		intent.movement_held = intent.movement_held or intent.shift_held
 		intent.movement_released = intent.movement_released or intent.shift_released
 		if intent.shift_pressed:
-			var wait: float = Harpoon.burst_wait(kit)
+			var wait: float = Augments.burst_wait(kit)
 			if wait <= 0.0:
 				kit.movement_buffer = 0.0
 				intent.movement_pressed = true
@@ -962,8 +956,8 @@ func verb_ready(verb: String) -> bool:
 			return not _frozen and not Augments.holding(kit) and kit.hooked \
 					and (not kit.on_body or (kit.line_state == Augments.LINE_LATCHED and Augments.haul_open(kit)))
 		"boost":
-			if _burst_pilot():
-				return Harpoon.burst_ready(kit)
+			if Augments.has_burst(kit):
+				return Augments.burst_ready(kit)
 			return state.boost_cooldown <= 0.0 and not kit.mounted
 	return false
 
