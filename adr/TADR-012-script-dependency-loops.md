@@ -12,16 +12,16 @@ Paths below are under `sketches/core-loop/` unless they start with `adr/`, `scri
 
 **A loop costs every change inside it.** No file in a loop can be loaded alone, so a test of one loads all of them, a change to one can break any other, and two writers working in the loop cannot be given files that are independent. The sweep's aim of many writers working at once depends on the loops getting smaller.
 
-**The directories are not layers.** `src/core` names files in every other directory (116 file pairs), so no rule of the form "this directory may not load that one" can be switched on today without hundreds of exceptions, and choosing the order of the layers is a design decision Andrew has not made.
+**The directories are not layers.** `src/core` names files in each of the seven other main directories, `movement`, `build`, `combat`, `boss`, `world`, `presentation` and `ui` (116 file pairs), so no rule of the form "this directory may not load that one" can be switched on today without hundreds of exceptions, and choosing the order of the layers is a design decision Andrew has not made.
 
-**Nothing stopped a loop from growing.** The lint rules L6 to L10 keep a few named modules apart. No check looked at the dependency graph as a whole.
+**Nothing stopped a loop from growing.** The lint rules L7 and L8 keep a few named modules apart. No check looked at the dependency graph as a whole.
 
 ## Options
 
 | Option | Disposition | Reason |
 | --- | --- | --- |
 | Forbid a file from joining a loop, with a list of the files already in one that may only shrink | **Chosen** | Needs no layer order. Fails the change that makes things worse and passes everything else. The list is the work left to do, in a form a machine reads |
-| Forbid upward dependencies between directories in a chosen layer order | Rejected for now | The best order of the nine directories still leaves 329 file pairs pointing up, and picking the order waits on Andrew. Can be added on top of L16 once he picks one |
+| Forbid upward dependencies between directories in a chosen layer order | Rejected for now | The best order of the eight main directories (`core`, `movement`, `build`, `combat`, `boss`, `world`, `presentation`, `ui`) still leaves 329 file pairs pointing up, and picking the order waits on Andrew. Can be added on top of L16 once he picks one |
 | Record the size of each loop and fail when a loop grows | Rejected | A loop has no stable name: cutting one dependency can split it in two, and adding one can join two. A per-file list stays meaningful through both |
 | Leave it to the reviewer | Rejected | Review alone did not stop a 169-file loop forming, and the sweep asks for a check behind each rule |
 | Build the graph from Godot's own script loader | Rejected | It needs an engine start for a lint that runs before every push in under a second. Reading the text finds the same loops for the forms the code uses |
@@ -36,7 +36,7 @@ Paths below are under `sketches/core-loop/` unless they start with `adr/`, `scri
 ## Consequences
 
 - A new script that would join a loop fails `npm run sketch:lint`, which `npm run sketch:fast` also runs. The writer breaks the dependency, usually by passing the value in or by moving the shared piece to the module that owns it.
-- **Accepted limit: a new dependency between two files already on the list passes.** So does a change that joins two existing loops into one. The rule stops the loops taking in new files; it does not stop them tightening.
+- **Accepted limit: a new dependency between two files already on the list passes.** So does a change that joins two existing loops into one, as long as every file on the new path between them is already on the list; a file that is not on the list fails. The rule stops the loops taking in new files; it does not stop them tightening.
 - **Accepted limit: a path built at run time is not seen.** One exists: `src/combat/warden.gd` formats `"res://src/combat/warden_%s.gd"`. Counting it would put four more files in the large loop.
 - The rule reads text, so a `class_name` that matched a common word would create false dependencies. The 23 declared today are all distinct names; a reviewer of a new `class_name` should keep that true.
 - The lint's run time rose from about 760 ms to about 810 ms on the Mac Studio.
