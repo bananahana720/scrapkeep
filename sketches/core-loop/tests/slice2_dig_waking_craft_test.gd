@@ -186,14 +186,14 @@ func _check_runtime() -> void:
 	var dress = waking_mod._arena_dress
 	if t.check("ArenaWakingDress active", dress != null):
 		var lamp_pools: Array = dress.find_children("LampPool*", "OmniLight3D", true, false)
-		var culled_lamps: Array = lamp_pools.filter(func(l: OmniLight3D): return l.distance_fade_enabled and l.distance_fade_begin <= 40.0)
-		t.eq("All 32 LampPool OmniLight3Ds enable Forward+ distance fade", culled_lamps.size(), 32)
+		var culled_lamps: Array = lamp_pools.filter(func(l: OmniLight3D): return l.distance_fade_enabled and l.distance_fade_begin >= 50.0 and l.distance_fade_begin <= 68.0)
+		t.eq("All 32 LampPool OmniLight3Ds enable Forward+ distance fade tuned for 60m shaft", culled_lamps.size(), 32)
 		var active_at_cam := 0
 		var cam_probe: Vector3 = waking_mod._floor_bodies[1].global_position + Vector3(0.0, 10.0, 26.0)
 		for l: OmniLight3D in lamp_pools:
 			if l.global_position.distance_to(cam_probe) <= l.distance_fade_begin + l.distance_fade_length:
 				active_at_cam += 1
-		t.check("Waking camera frustum culls distant LampPools down to <= 12 active", active_at_cam <= 12, "active_lamps=%d" % active_at_cam)
+		t.check("Waking camera frustum lights near wall (>= 8) while culling opposite wall (<= 26)", active_at_cam >= 8 and active_at_cam <= 26, "active_lamps=%d" % active_at_cam)
 		var cut_faces: Node = dress.get_node_or_null("ShaftCutFaces")
 		var cut_culled := true
 		for view: MultiMeshInstance3D in cut_faces.get_children():

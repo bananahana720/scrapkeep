@@ -432,9 +432,12 @@ func _collect() -> void:
 		for row in rows.get_children():
 			if not row is Node3D:
 				continue
-			var posts := row.find_child("Posts", false, false)
-			if posts is MultiMeshInstance3D:
-				_add_multi(posts, C_ANCHORS, "anchor:" + str(row.get_meta("anchor_kit", "field")))
+			var found_posts := false
+			for child in row.get_children():
+				if child is MultiMeshInstance3D and (child.name == "Posts" or String(child.name).begins_with("Posts_")):
+					_add_multi(child, C_ANCHORS, "anchor:" + str(row.get_meta("anchor_kit", "field")))
+					found_posts = true
+			if found_posts:
 				continue
 			var id := String(row.name).trim_prefix("Park_").trim_prefix("Landmark_")
 			var recipe := str(row.get_meta("park_recipe", ""))

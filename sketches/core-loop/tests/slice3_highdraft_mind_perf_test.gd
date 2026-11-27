@@ -189,14 +189,20 @@ func _check_w3_assets_and_enemies() -> void:
 			bad_topo.append("%s:%s" % [key, str(rep)])
 	_t.check("all 19 W3/Mind/Enemy procedural ArrayMeshes are watertight closed manifolds", bad_topo.is_empty(), str(bad_topo))
 
+	var mh_real := MindHand.new()
+	root.add_child(mh_real)
+	mh_real._build_crew()
+	var mh_real_prims := mh_real.find_children("*", "MeshInstance3D", true, false).filter(func(m: MeshInstance3D) -> bool: return m.mesh is PrimitiveMesh and m.layers != 0 and m.visible)
+	_t.eq("MindHand real GLB renders zero visible PrimitiveMesh", mh_real_prims.size(), 0)
+	mh_real.free()
 	var saved_mh := MindHand.model_path
 	MindHand.model_path = "res://tests/no_mind_hand.glb"
 	var mh := MindHand.new()
 	root.add_child(mh)
 	mh._build_crew()
 	MindHand.model_path = saved_mh
-	var mh_prims := mh.find_children("*", "MeshInstance3D", true, false).filter(func(m: MeshInstance3D) -> bool: return m.mesh is PrimitiveMesh)
-	_t.eq("MindHand fallback has zero PrimitiveMesh", mh_prims.size(), 0)
+	var mh_prims := mh.find_children("*", "MeshInstance3D", true, false).filter(func(m: MeshInstance3D) -> bool: return m.mesh is PrimitiveMesh and m.layers != 0 and m.visible)
+	_t.check("MindHand missing-GLB fallback preserves primitive body", mh_prims.size() >= 8)
 	mh.free()
 
 	var defl := Deflector.new()

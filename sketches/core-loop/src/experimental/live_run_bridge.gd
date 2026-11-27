@@ -9,6 +9,7 @@ const AdversityDirector := preload("res://src/experimental/adversity_director.gd
 const EncounterEngine := preload("res://src/experimental/encounter_engine.gd")
 const DynamicSetpieces := preload("res://src/experimental/dynamic_setpieces.gd")
 const ExperimentalAudioBank := preload("res://src/presentation/experimental_audio_bank.gd")
+const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 
 const FLAG_ARG_ON := "--experimental-depth=on"
 const FLAG_ARG_OFF := "--experimental-depth=off"
@@ -471,9 +472,73 @@ func _spawn_live_chunk(stage: int) -> Node3D:
 	holder.name = CHUNK_HOLDER_NAME
 	(_live_ctx.terrain.geometry_root(stage) as Node3D).add_child(holder)
 	holder.global_transform = Transform3D(Basis.IDENTITY, site["origin"] as Vector3)
+	_build_chunk_foundation_and_ramp(holder, site)
 	var chunk := packed.instantiate() as Node3D
 	holder.add_child(chunk)
 	return chunk
+
+
+func _build_chunk_foundation_and_ramp(holder: Node3D, site: Dictionary) -> void:
+	var origin: Vector3 = site["origin"]
+	var low: float = float(site.get("low", origin.y))
+	var approach_pt: Vector3 = site.get("approach", origin + Vector3.FORWARD * (CHUNK_FOOTPRINT_HALF_M + CHUNK_APPROACH_MARGIN_M))
+	var approach_y: float = float(site.get("approach_floor", origin.y))
+	var skirt_h := maxf(4.0, (origin.y - low) + 4.0)
+	var skirt_size := Vector3(CHUNK_FOOTPRINT_HALF_M * 1.96, skirt_h, CHUNK_FOOTPRINT_HALF_M * 1.96)
+	var mat := CampCraftMeshes.berm_material()
+	var body := StaticBody3D.new()
+	body.name = "ChunkFoundationBody"
+	body.collision_layer = 1
+	body.collision_mask = 0
+	holder.add_child(body)
+	var st_skirt := SurfaceTool.new()
+	st_skirt.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var c_flat := CampCraftMeshes._vc(0.18, 0.34)
+	var c_edge := CampCraftMeshes._vc(0.62, 0.16)
+	var c_bot := CampCraftMeshes._vc(0.08, 0.78)
+	var skirt_center := Vector3(0.0, -0.35 - skirt_h * 0.5, 0.0)
+	CampCraftMeshes._add_bevel_box(st_skirt, skirt_center, skirt_size, 0.45, 0.12, Transform3D.IDENTITY, c_flat, c_edge, c_bot)
+	st_skirt.generate_tangents()
+	var skirt_view := MeshInstance3D.new()
+	skirt_view.name = "ChunkFoundationSkirt"
+	skirt_view.mesh = st_skirt.commit()
+	skirt_view.material_override = mat
+	holder.add_child(skirt_view)
+	var skirt_col := CollisionShape3D.new()
+	var skirt_shape := BoxShape3D.new()
+	skirt_shape.size = skirt_size
+	skirt_col.shape = skirt_shape
+	skirt_col.position = skirt_center
+	body.add_child(skirt_col)
+	var drop := origin.y - approach_y
+	if drop > 0.35:
+		var to_spawn := Vector3(approach_pt.x - origin.x, 0.0, approach_pt.z - origin.z)
+		var out_dir := to_spawn.normalized() if to_spawn.length() > 0.01 else Vector3.FORWARD
+		var horiz := maxf(drop * 2.6, 8.0)
+		var ramp_len := sqrt(horiz * horiz + (drop + 0.6) * (drop + 0.6))
+		var pitch := atan2(drop + 0.6, horiz)
+		var rim_edge := out_dir * (CHUNK_FOOTPRINT_HALF_M * 0.94)
+		var mid := rim_edge + out_dir * (horiz * 0.5) + Vector3(0.0, -(drop + 0.6) * 0.5 - 0.35, 0.0)
+		var yaw := atan2(out_dir.x, out_dir.z)
+		var ramp_basis := Basis(Vector3.UP, yaw) * Basis(Vector3.RIGHT, pitch)
+		var ramp_xf := Transform3D(ramp_basis, mid)
+		var ramp_size := Vector3(9.5, 0.9, ramp_len)
+		var st_ramp := SurfaceTool.new()
+		st_ramp.begin(Mesh.PRIMITIVE_TRIANGLES)
+		CampCraftMeshes._add_bevel_box(st_ramp, Vector3.ZERO, ramp_size, 0.18, 0.16, Transform3D.IDENTITY, c_flat, c_edge, c_bot)
+		st_ramp.generate_tangents()
+		var ramp_view := MeshInstance3D.new()
+		ramp_view.name = "ChunkApproachRamp"
+		ramp_view.mesh = st_ramp.commit()
+		ramp_view.material_override = mat
+		ramp_view.transform = ramp_xf
+		holder.add_child(ramp_view)
+		var ramp_col := CollisionShape3D.new()
+		var ramp_shape := BoxShape3D.new()
+		ramp_shape.size = ramp_size
+		ramp_col.shape = ramp_shape
+		ramp_col.transform = ramp_xf
+		body.add_child(ramp_col)
 
 
 func _live_chunk_site(stage: int) -> Dictionary:
@@ -492,12 +557,15 @@ func _live_chunk_site(stage: int) -> Dictionary:
 			var at: Vector3 = spawn + heading.rotated(Vector3.UP, deg_to_rad(angle_deg)) * range_m
 			var inside := true
 			var high := -INF
+			var low := INF
 			for sx in CHUNK_SITE_SAMPLES:
 				for sz in CHUNK_SITE_SAMPLES:
 					var x: float = at.x + sx * CHUNK_FOOTPRINT_HALF_M
 					var z: float = at.z + sz * CHUNK_FOOTPRINT_HALF_M
 					inside = inside and terrain.contains(Vector3(x, 0.0, z))
-					high = maxf(high, terrain.height(x, z))
+					var h: float = terrain.height(x, z)
+					high = maxf(high, h)
+					low = minf(low, h)
 			if not inside:
 				continue
 			var approach: Vector3 = at + (spawn - at).normalized() * (CHUNK_FOOTPRINT_HALF_M + CHUNK_APPROACH_MARGIN_M)
@@ -505,7 +573,7 @@ func _live_chunk_site(stage: int) -> Dictionary:
 			var cost := absf(high - approach_floor) + absf(high - spawn_floor)
 			if cost < best_cost - 0.01:
 				best_cost = cost
-				best = {"origin": Vector3(at.x, high, at.z), "cost": cost}
+				best = {"origin": Vector3(at.x, high, at.z), "low": low, "approach": approach, "approach_floor": approach_floor, "cost": cost}
 		if best_cost <= CHUNK_SITE_GOOD_COST_M:
 			break
 	return best
