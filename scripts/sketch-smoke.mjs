@@ -337,6 +337,8 @@ export function parseArgs(argv, env = {}) {
 export function validateRun(options, available) {
   if (options.named && options.sketches.length !== 1)
     return "sketch:smoke --test requires exactly one --sketch";
+  if (options.receipt !== null && !/^[A-Za-z0-9._-]+$/.test(options.receipt))
+    return `sketch:smoke --receipt takes a bare label for artifacts/local/receipts/<label>-<tree>-<stamp>.json, not a path (${options.receipt})`;
   const missing = options.sketches.filter((name) => !available.includes(name));
   if (missing.length > 0) return `sketch:smoke has no sketch named ${missing.join(", ")}`;
   return null;

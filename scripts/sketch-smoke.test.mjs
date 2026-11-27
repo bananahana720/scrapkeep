@@ -89,6 +89,11 @@ test("parseArgs selects the bot tier with its own receipt label", () => {
   assert.equal(parseArgs(["--bots"]).receipt, "bots");
   assert.equal(parseArgs([]).bots, false);
   assert.equal(parseArgs(["--bots", "--receipt", "gate-bots"]).receipt, "gate-bots");
+  assert.equal(validateRun(parseArgs(["--receipt", "gate-bots"]), ["core-loop"]), null);
+  assert.match(
+    validateRun(parseArgs(["--receipt", "/tmp/full-smoke-receipt.json"]), ["core-loop"]),
+    /bare label/,
+  );
   assert.match(
     gateFlagsError(parseArgs(["--bots", "--receipt", "gate-bots", "--flags", "--scrap=armor"])),
     /refuses launch flags/,

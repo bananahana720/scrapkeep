@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { once } from "node:events";
 import {
   chmodSync,
   existsSync,
@@ -29,6 +30,7 @@ import {
   launchEnv,
   placeholderKinds,
   parseArgs,
+  processAlive,
   runAlphaRc,
   runProcess,
   verdict,
@@ -349,13 +351,18 @@ function fake(dir, name, body) {
   return file;
 }
 
-const alive = (pid) => {
+const alive = processAlive;
+
+test("processAlive detects a live child on both Linux and macOS and clears once killed", async () => {
+  const sleeper = spawn("sleep", ["30"], { stdio: "ignore" });
   try {
-    return !/^\d+ \(.*\) Z/.test(readFileSync(`/proc/${pid}/stat`, "utf8"));
-  } catch {
-    return false;
+    assert.equal(alive(sleeper.pid), true);
+  } finally {
+    sleeper.kill("SIGKILL");
+    await once(sleeper, "exit");
   }
-};
+  assert.equal(alive(sleeper.pid), false);
+});
 
 test("cold launch: menu-ready line passes on a fresh XDG profile, and the profile and the game's process group go away", async () => {
   const dir = tmp();

@@ -331,22 +331,71 @@ export function launchEnv(env, profileEnv) {
   return { ...rest, PATH: [shims, ...pathDirs].join(":"), ...profileEnv };
 }
 
+export function processAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+  } catch (error) {
+    if (error.code === "ESRCH") return false;
+  }
+  if (existsSync(`/proc/${pid}/stat`)) {
+    try {
+      return !/^\d+ \(.*\) Z/.test(readFileSync(`/proc/${pid}/stat`, "utf8"));
+    } catch {
+      return false;
+    }
+  }
+  const ps = spawnSync("ps", ["-o", "state=", "-p", String(pid)], { encoding: "utf8" });
+  if (ps.status !== 0) return false;
+  const state = (ps.stdout || "").trim();
+  return state !== "" && !state.startsWith("Z");
+}
+
+function groupLive(pgid) {
+  if (!Number.isInteger(pgid) || pgid <= 0) return false;
+  try {
+    process.kill(-pgid, 0);
+  } catch (error) {
+    if (error.code === "ESRCH") return false;
+  }
+  const ps = spawnSync("ps", ["-e", "-o", "pgid=,state="], { encoding: "utf8" });
+  if (ps.status !== 0) return true;
+  return (ps.stdout || "").split("\n").some((line) => {
+    const parts = line.trim().split(/\s+/);
+    return Number(parts[0]) === pgid && Boolean(parts[1]) && !parts[1].startsWith("Z");
+  });
+}
+
+function waitGroupDead(pgid, budgetMs = 1500) {
+  return new Promise((resolve) => {
+    const deadline = Date.now() + budgetMs;
+    const poll = () => {
+      if (!groupLive(pgid) || Date.now() >= deadline) return resolve();
+      setTimeout(poll, 15);
+    };
+    poll();
+  });
+}
+
 function stopGroup(child) {
+  const pgid = child.pid;
   return new Promise((resolve) => {
     const signal = (sig) => {
       try {
-        process.kill(-child.pid, sig);
+        process.kill(-pgid, sig);
       } catch {}
     };
-    if (child.exitCode !== null || child.signalCode !== null) {
+    const finishKill = () => {
       signal("SIGKILL");
-      return resolve();
+      waitGroupDead(pgid).then(resolve);
+    };
+    if (child.exitCode !== null || child.signalCode !== null) {
+      return finishKill();
     }
     const force = setTimeout(() => signal("SIGKILL"), KILL_GRACE_MS);
     child.once("exit", () => {
       clearTimeout(force);
-      signal("SIGKILL");
-      resolve();
+      finishKill();
     });
     signal("SIGTERM");
   });
@@ -452,6 +501,7 @@ export function runProcess(step, timeoutMs = STEP_TIMEOUT_MS) {
   return new Promise((resolve) => {
     let output = "";
     let timedOut = false;
+    let stopping = null;
     const child = spawn(step.command, step.args, {
       cwd: root,
       stdio: ["ignore", "pipe", "pipe"],
@@ -459,7 +509,7 @@ export function runProcess(step, timeoutMs = STEP_TIMEOUT_MS) {
     });
     const timer = setTimeout(() => {
       timedOut = true;
-      stopGroup(child);
+      stopping = stopGroup(child);
     }, timeoutMs);
     child.stdout.on("data", (c) => (output += c));
     child.stderr.on("data", (c) => (output += c));
@@ -468,10 +518,12 @@ export function runProcess(step, timeoutMs = STEP_TIMEOUT_MS) {
       resolve({ exit: null, output, error: error.message });
     });
     let done = false;
-    const settle = (code) => {
+    const settle = async (code) => {
       if (done) return;
       done = true;
       clearTimeout(timer);
+      if (stopping) await stopping;
+      else if (child.pid) await stopGroup(child);
       child.stdout.destroy();
       child.stderr.destroy();
       resolve({ exit: timedOut ? null : code, output });

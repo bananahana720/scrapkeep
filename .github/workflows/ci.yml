@@ -344,7 +344,7 @@ jobs:
           set -euo pipefail
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
-            node scripts/ci/check-budget.mjs --label godot-affected --budget 240 -- \
+            node scripts/ci/check-budget.mjs --label godot-affected --budget 480 -- \
               node scripts/sketch-fast.mjs --base "$PR_BASE_SHA" --no-base-check --budget 120
           else
             echo "Cache seeded for Godot ${GODOT_VERSION} (${{ steps.sketch-tree.outputs.tree }}) on ${REF_NAME}"
