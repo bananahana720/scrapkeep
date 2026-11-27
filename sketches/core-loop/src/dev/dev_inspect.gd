@@ -169,8 +169,16 @@ func _current_map_name() -> String:
 	if not is_instance_valid(game) or game.flow == null:
 		return ""
 	var state: String = game.flow.state_name()
-	if state == "boss" and game.run != null and int(game.run.world) == 1:
-		return "park_slag_bowl"
+	if state == "camp":
+		return "camp"
+	if state == "boss" and game.run != null:
+		match int(game.run.world):
+			1:
+				return "park_slag_bowl"
+			2:
+				return "waking_arena"
+			3:
+				return "mind_arena"
 	if game.ctx != null and game.run != null and game.ctx.stages != null:
 		var def: Dictionary = game.flow.stage_def()
 		return String(def.get("map", ""))

@@ -112,23 +112,23 @@ func _run_children() -> void:
 		if not arg.begins_with("--seeds=") and not arg.begins_with("--out="):
 			forwarded.append(arg)
 	for i in _seeds.size():
-		var previous := {}
 		var state_dir := _out.path_join("state-%d" % i)
-		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, state_dir.path_join(kind.to_lower()))
-		var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path",
-			ProjectSettings.globalize_path("res://"), "--script", "res://tools/bot_run.gd", "--"])
+		for dir_name in ["data", "config", "cache"]:
+			DirAccess.make_dir_recursive_absolute(state_dir.path_join(dir_name))
+		var env_args := PackedStringArray([
+			"XDG_DATA_HOME=" + state_dir.path_join("data"),
+			"XDG_CONFIG_HOME=" + state_dir.path_join("config"),
+			"XDG_CACHE_HOME=" + state_dir.path_join("cache"),
+		])
+		if OS.get_name() == "macOS":
+			env_args.append("HOME=" + state_dir.path_join("data"))
+		var args := PackedStringArray(env_args)
+		args.append_array(PackedStringArray([OS.get_executable_path(), "--headless", "--fixed-fps", "90", "--path",
+			ProjectSettings.globalize_path("res://"), "--script", "res://tools/bot_run.gd", "--"]))
 		args.append_array(forwarded)
 		args.append("--seeds=%d" % _seeds[i])
 		var output := []
-		var code := OS.execute(OS.get_executable_path(), args, output, true)
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
+		var code := OS.execute("env", args, output, true)
 		for chunk in output:
 			print(String(chunk).strip_edges())
 		if code != 0:

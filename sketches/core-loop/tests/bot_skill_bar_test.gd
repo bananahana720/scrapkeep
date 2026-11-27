@@ -5,6 +5,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UltimateMeter := preload("res://src/core/ultimate_meter.gd")
@@ -389,22 +390,12 @@ func _launch() -> void:
 	while _active.size() < PARALLEL and not _pending.is_empty():
 		var trial: Dictionary = _pending.pop_front()
 		var folder: String = _folder.path_join(trial["id"])
-		DirAccess.make_dir_recursive_absolute(folder)
-		var previous := {}
-		for kind in ["DATA", "CONFIG", "CACHE"]:
-			var key: String = "XDG_%s_HOME" % kind
-			previous[key] = OS.get_environment(key)
-			OS.set_environment(key, folder.path_join(kind.to_lower()))
-		var args := PackedStringArray(["--headless", "--quiet", "--fixed-fps", "90", "--path",
+		ChildRuns.ensure_home_dirs(folder)
+		var args: Array = ChildRuns.home_env(folder) + [OS.get_executable_path(), "--headless", "--quiet", "--fixed-fps", "90", "--path",
 			ProjectSettings.globalize_path("res://"), "--log-file", folder.path_join("engine.log"),
 			"--script", "res://tools/bot_run.gd", "--",
-			"--out=" + folder, "--policy=" + trial["policy"], "--seeds=%d" % trial["seed"], "--ticks=%d" % trial["ticks"]])
-		trial["pid"] = OS.create_process(OS.get_executable_path(), args)
-		for key in previous:
-			if previous[key].is_empty():
-				OS.unset_environment(key)
-			else:
-				OS.set_environment(key, previous[key])
+			"--out=" + folder, "--policy=" + trial["policy"], "--seeds=%d" % trial["seed"], "--ticks=%d" % trial["ticks"]]
+		trial["pid"] = OS.create_process("env", PackedStringArray(args))
 		trial["folder"] = folder
 		_active.append(trial)
 

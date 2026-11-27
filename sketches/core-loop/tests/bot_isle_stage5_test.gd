@@ -18,13 +18,8 @@ const SEED := 36003
 func _initialize() -> void:
 	var t := T.new("bot_isle_stage5_test")
 	var folder := OS.get_user_data_dir().path_join("bot-isle-stage5-%d" % OS.get_process_id())
-	var previous := {}
-	for kind in ["DATA", "CONFIG", "CACHE"]:
-		var key: String = "XDG_%s_HOME" % kind
-		previous[key] = OS.get_environment(key)
-		OS.set_environment(key, folder.path_join(kind.to_lower()))
 	var args := ["--out=" + folder, "--policy=completionist", "--seeds=%d" % SEED, "--pilot=tarn", "--late-offer=take", "--stages=%d" % STAGE]
-	var result: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "args": args}], 1080.0)[0]
+	var result: Dictionary = ChildRuns.run([{"script": "res://tools/bot_run.gd", "home": folder, "args": args}], 1080.0)[0]
 	t.check("the run ran", result["code"] == 0 and not result["timed_out"], "exit %s, timed out %s" % [result["code"], result["timed_out"]])
 	var lines := FileAccess.get_file_as_string(folder.path_join("bots.ndjson")).split("\n", false)
 	var row = JSON.parse_string(lines[0]) if lines.size() == 1 else null
@@ -33,11 +28,6 @@ func _initialize() -> void:
 		for stage_note in row.get("stages", []):
 			if int(stage_note.get("stage", 0)) == STAGE:
 				note = stage_note
-	for key in previous:
-		if previous[key].is_empty():
-			OS.unset_environment(key)
-		else:
-			OS.set_environment(key, previous[key])
 	var broken = note.get("warden_broken_s")
 	print("stage %d: outcome %s, engaged at %s, broken at %s, stuck detours %s, stall state %s" % [STAGE,
 		row.get("outcome") if row is Dictionary else null, note.get("warden_engaged_s"), broken, note.get("stuck_detours"), note.get("stall_state")])

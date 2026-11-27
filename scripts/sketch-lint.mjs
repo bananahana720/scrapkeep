@@ -394,6 +394,79 @@ export function lintL10(file, rel, text, allowed = HAND_MOVED) {
   return writes.map((line) => finding("L10", file, line.number, message));
 }
 
+export const ID_COMPARE_OWNERS = new Set([
+  "src/core/class_def.gd",
+  "src/core/park_defs.gd",
+  "src/core/alpha_defs.gd",
+  "src/core/stage_defs.gd",
+  "src/core/slice_defs.gd",
+]);
+
+export const CANONICAL_IDS = [
+  "park_dam",
+  "park_flume",
+  "park_pit",
+  "park_sinkhole",
+  "park_islands",
+  "park_crown",
+  "spillway",
+  "reach",
+  "dig",
+  "dig_deep",
+  "highdraft",
+  "highdraft_crown",
+  "pylon_engineer",
+  "runner_gunner",
+  "demolitions_caster",
+  "tarn",
+  "tally",
+  "remembered_cannon",
+];
+
+export const ID_COMPARE_LEGACY = {
+  "src/boss/mind.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
+  "src/combat/combat.gd": { sites: 8, why: "pre-MG-16 pilot branches" },
+  "src/combat/kest_kit.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
+  "src/combat/rivet_kit.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
+  "src/combat/tarn_claw.gd": { sites: 1, why: "pre-MG-16 pilot branch" },
+  "src/core/pilot_story.gd": { sites: 7, why: "pre-MG-16 pilot story branches" },
+  "src/game.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/movement/player_ball.gd": { sites: 4, why: "pre-MG-16 pilot/map branches" },
+  "src/presentation/dig_scenery.gd": { sites: 3, why: "pre-MG-16 dig map checks" },
+  "src/presentation/hero_assets.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/presentation/player_fx.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/presentation/quiet_gun.gd": { sites: 1, why: "pre-MG-16 pilot check" },
+  "src/presentation/sfx_bank.gd": { sites: 1, why: "pre-MG-16 map check" },
+  "src/ui/ending_sequence.gd": { sites: 3, why: "pre-MG-16 pilot ending branches" },
+};
+
+const idAlternation = CANONICAL_IDS.join("|");
+const rawIdCompare = new RegExp(
+  `(?:==|!=)\\s*["'](?:${idAlternation})["']|["'](?:${idAlternation})["']\\s*(?:==|!=)|\\bin\\s*\\[[^\\]]*["'](?:${idAlternation})["']`,
+);
+
+export function lintL11(file, rel, text, allowed = ID_COMPARE_LEGACY, owners = ID_COMPARE_OWNERS) {
+  if (owners.has(rel) || rel.startsWith("src/dev/")) return [];
+  const sites = codeLines(text).filter((line) => rawIdCompare.test(line.raw));
+  const listed = allowed[rel]?.sites ?? 0;
+  if (sites.length === listed) return [];
+  if (sites.length === 0) {
+    return [
+      finding(
+        "L11",
+        file,
+        1,
+        "ID_COMPARE_LEGACY lists a file with no raw map/pilot ID comparison left: remove the entry",
+      ),
+    ];
+  }
+  const message =
+    listed === 0
+      ? "raw map or pilot ID string comparison outside owning table (MG-16); query the owning def/capability instead of branching on ID strings"
+      : `${sites.length} raw map/pilot ID comparisons, ID_COMPARE_LEGACY lists ${listed}; move branching to owning table fields (MG-16)`;
+  return sites.map((line) => finding("L11", file, line.number, message));
+}
+
 export function applyBaseline(findings, baseline, exists) {
   const kept = [];
   const offending = new Map();
@@ -536,6 +609,7 @@ export function lintSketch(sketch) {
     findings.push(...lintL8(file.path, rel, file.text));
     findings.push(...lintL9(file.path, file.text));
     findings.push(...lintL10(file.path, rel, file.text));
+    findings.push(...lintL11(file.path, rel, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   if (sketch === "core-loop") {

@@ -1,31 +1,29 @@
 extends RefCounted
 
-# Geometry pins that hold on every platform. Godot's float32 sin and cos call the platform's sinf and cosf, and glibc's
-# differ from Apple's in the last bit on a few percent of angles, so a hash of raw transforms differs between the Linux
-# build and the Mac (artifacts/local/determinism, 16 Nov 2026: largest move 7.6e-6 m in a position, 6e-8 in a basis
-# element).
-#
-# A pin stores the value's shape and every float rounded to STEP, and a check compares each float with a tolerance of
-# half a step plus MARGIN_MIN platform differences: far above that difference, far below a change a person could see. A
-# plain hash of the rounded floats is not enough: with thousands of floats some sit within a platform difference of a
-# rounding boundary and can round the other way on Linux, and margin() measures that (it was under 1 for all five
-# geometry pins on 16 Nov 2026).
-#
-# Record a pin with PIN_RECORD=1 in the environment; the check then writes the file instead of comparing.
-
 const STEP := 0.001
 const POS_DRIFT := 7.6e-6
 const UNIT_DRIFT := 6e-8
 const MARGIN_MIN := 10.0
 const TOLERANCE := 0.5 + MARGIN_MIN * POS_DRIFT / STEP
+const ALLOW_RECORD_FLAG := "--allow-pin-record"
+const ALLOW_RECORD_ENV := "SCRAPKEEP_ALLOW_PIN_RECORD"
 
 
-# Empty when value matches the pin at path: the same ints, strings and nesting, and every float within TOLERANCE steps
-# of its stored count. Otherwise the first difference.
-static func check(path: String, value: Variant) -> String:
+static func can_record(cmdline_args: PackedStringArray = OS.get_cmdline_user_args(), env_allow := OS.get_environment(ALLOW_RECORD_ENV)) -> bool:
+	if env_allow == "1":
+		return true
+	for arg in cmdline_args:
+		if arg == ALLOW_RECORD_FLAG:
+			return true
+	return false
+
+
+static func check(path: String, value: Variant, allow_record := false) -> String:
 	var floats := _floats(value, [])
 	var shape := hash(var_to_bytes(_shape(value)))
 	if OS.get_environment("PIN_RECORD") == "1":
+		if not allow_record and not can_record():
+			return "PIN_RECORD=1 is set without %s or %s=1; refusing to overwrite %s in an ordinary test run" % [ALLOW_RECORD_FLAG, ALLOW_RECORD_ENV, path]
 		var out := FileAccess.open_compressed(path, FileAccess.WRITE, FileAccess.COMPRESSION_ZSTD)
 		out.store_var([shape, PackedInt32Array(floats.map(func(x: float) -> int: return int(roundf(x / STEP))))])
 		out.close()
@@ -33,7 +31,7 @@ static func check(path: String, value: Variant) -> String:
 		return ""
 	var file := FileAccess.open_compressed(path, FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
 	if file == null:
-		return "no pin at %s: record it with PIN_RECORD=1" % path
+		return "no pin at %s: record it with PIN_RECORD=1 %s=1" % [path, ALLOW_RECORD_ENV]
 	var stored: Array = file.get_var()
 	if stored[0] != shape:
 		return "the ints, strings or nesting changed"
@@ -46,9 +44,6 @@ static func check(path: String, value: Variant) -> String:
 	return ""
 
 
-# The smallest distance of any float from a STEP rounding boundary, over the platform difference for its kind (a basis
-# or quaternion element against UNIT_DRIFT, anything else against POS_DRIFT). A hash of rounded floats is safe across
-# platforms only at MARGIN_MIN or more. INF when there is no float.
 static func margin(value: Variant) -> float:
 	var kinds := []
 	var xs := _floats(value, kinds)
@@ -60,7 +55,6 @@ static func margin(value: Variant) -> float:
 	return best
 
 
-# Every float in value, in a fixed order; kinds gets true for a basis or quaternion element.
 static func _floats(value: Variant, kinds: Array) -> Array:
 	var out := []
 	_collect(value, out, kinds, false)
@@ -99,7 +93,6 @@ static func _collect(value: Variant, out: Array, kinds: Array, unit: bool) -> vo
 				_collect(value[key], out, kinds, unit)
 
 
-# value with every float-bearing leaf replaced by its float count, so the pin also covers the ints, strings and nesting.
 static func _shape(value: Variant) -> Variant:
 	match typeof(value):
 		TYPE_ARRAY:

@@ -17,7 +17,7 @@ func _initialize() -> void:
 		return
 	var jobs := []
 	for mode in ["batch", "isolated"]:
-		jobs.append({"script": "res://tools/traversal_line.gd", "args": [
+		jobs.append({"script": "res://tools/traversal_line.gd", "home": base.path_join(mode + "-home"), "args": [
 			"--table=park", "--stage=0", "--pilot=sable",
 			"--seeds=1,2,3,4,5,6,7,8" if mode == "batch" else "--seeds=8",
 			"--ticks=%d" % TRAVERSAL_TICKS, "--trace", "--out=" + base.path_join(mode)]})
@@ -26,7 +26,7 @@ func _initialize() -> void:
 		var file := FileAccess.open(launcher, FileAccess.WRITE)
 		file.store_string(_bot_launcher(base.path_join(mode + "-state")))
 		file.close()
-		jobs.append({"script": launcher, "args": [
+		jobs.append({"script": launcher, "home": base.path_join(mode + "-state"), "args": [
 			"--pilot=pylon_engineer", "--policy=brawler", "--table=slice",
 			"--seeds=1,2" if mode == "bot-batch" else "--seeds=2", "--trace-ticks=1",
 			"--ticks=%d" % BOT_TICKS, "--out=" + base.path_join(mode)]})
@@ -79,17 +79,17 @@ func _initialize() -> void:
 	quit(code)
 
 
-# A small launcher gives each bot job clean saved state while ChildRuns owns the deadline.
 func _bot_launcher(state_dir: String) -> String:
 	return """extends SceneTree
+const ChildRuns := preload("res://tests/trees/child_runs.gd")
 func _initialize() -> void:
-	for kind in ["DATA", "CONFIG", "CACHE"]:
-		OS.set_environment("XDG_%%s_HOME" %% kind, %s.path_join(kind.to_lower()))
-	var args := PackedStringArray(["--headless", "--fixed-fps", "90", "--path", %s,
-		"--script", "res://tools/bot_run.gd", "--"])
-	args.append_array(OS.get_cmdline_user_args())
+	var state_dir := %s
+	ChildRuns.ensure_home_dirs(state_dir)
+	var args: Array = ChildRuns.home_env(state_dir) + [OS.get_executable_path(), "--headless", "--fixed-fps", "90", "--path", %s,
+		"--script", "res://tools/bot_run.gd", "--"]
+	args.append_array(Array(OS.get_cmdline_user_args()))
 	var output := []
-	var code := OS.execute(OS.get_executable_path(), args, output, true)
+	var code := OS.execute("env", PackedStringArray(args), output, true)
 	for chunk in output:
 		print(String(chunk).strip_edges())
 	quit(code)
