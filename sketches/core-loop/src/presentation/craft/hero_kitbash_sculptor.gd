@@ -3,6 +3,8 @@ class_name HeroKitbashSculptor
 extends RefCounted
 
 
+const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
+
 const HERO_EM_CRANE := &"em_crane_gantry"
 const HERO_SALVAGE_PRESS := &"salvage_press_beacon"
 const HERO_CONDUIT_PYLON := &"conduit_pylon"
@@ -170,10 +172,6 @@ static func create_canvas() -> KitbashCanvas:
 
 
 
-static func _vc(wear: float, grime: float, emissive: float = 0.0) -> Color:
-	return Color(clampf(wear, 0.0, 1.0), clampf(grime, 0.0, 1.0), clampf(emissive, 0.0, 1.0), 1.0)
-
-
 static func _frame_from_dir(dir: Vector3) -> Basis:
 	var y_axis := dir.normalized()
 	var ref := Vector3.FORWARD if absf(y_axis.dot(Vector3.FORWARD)) < 0.92 else Vector3.RIGHT
@@ -200,10 +198,10 @@ static func add_chamfered_plate(
 	var ix := hx - b
 	var iy := hy - b
 	var iz := hz - b
-	var c_flat := _vc(base_wear, base_grime, emissive)
+	var c_flat := CraftLookdev.encode_mask(base_wear, base_grime, emissive)
 	var edge_g := base_grime * 0.88 if base_grime > 0.5 else minf(base_grime * 0.65, 0.12)
-	var c_edge := _vc(edge_wear if emissive < 0.5 else 0.35, edge_g, emissive)
-	var c_bot := _vc(base_wear, maxf(base_grime, 0.62), emissive)
+	var c_edge := CraftLookdev.encode_mask(edge_wear if emissive < 0.5 else 0.35, edge_g, emissive)
+	var c_bot := CraftLookdev.encode_mask(base_wear, maxf(base_grime, 0.62), emissive)
 
 	var px0 := xform * Vector3(hx, iy, iz)
 	var px1 := xform * Vector3(hx, iy, -iz)
@@ -261,7 +259,7 @@ static func add_chamfered_plate(
 	canvas.add_quad(slot, px1, nz0, nz3, px2, (rx - rz).normalized(), c_edge, c_edge, c_edge, c_edge)
 	canvas.add_quad(slot, nz1, nx0, nx3, nz2, (-rx - rz).normalized(), c_edge, c_edge, c_edge, c_edge)
 
-	var c_cnr := _vc(minf(edge_wear + 0.07, 1.0) if emissive < 0.5 else 0.35, edge_g, emissive)
+	var c_cnr := CraftLookdev.encode_mask(minf(edge_wear + 0.07, 1.0) if emissive < 0.5 else 0.35, edge_g, emissive)
 	var corners := [
 		[py2, px0, pz1, rx + ry + rz],
 		[py3, pz0, nx1, -rx + ry + rz],
@@ -305,10 +303,10 @@ static func add_chamfered_prism(
 	var br_top := clampf(bevel_r, 0.002, rt * 0.42)
 
 	var rings := [
-		{"y": -hy, "r": rb - br_bot, "c": _vc(base_wear, maxf(base_grime, 0.72), emissive)},
-		{"y": -hy + bh, "r": rb, "c": _vc(edge_wear if emissive < 0.5 else 0.35, maxf(base_grime, 0.45), emissive)},
-		{"y": hy - bh, "r": rt, "c": _vc(edge_wear if emissive < 0.5 else 0.35, minf(base_grime, 0.14), emissive)},
-		{"y": hy, "r": rt - br_top, "c": _vc(base_wear, minf(base_grime, 0.12), emissive)},
+		{"y": -hy, "r": rb - br_bot, "c": CraftLookdev.encode_mask(base_wear, maxf(base_grime, 0.72), emissive)},
+		{"y": -hy + bh, "r": rb, "c": CraftLookdev.encode_mask(edge_wear if emissive < 0.5 else 0.35, maxf(base_grime, 0.45), emissive)},
+		{"y": hy - bh, "r": rt, "c": CraftLookdev.encode_mask(edge_wear if emissive < 0.5 else 0.35, minf(base_grime, 0.14), emissive)},
+		{"y": hy, "r": rt - br_top, "c": CraftLookdev.encode_mask(base_wear, minf(base_grime, 0.12), emissive)},
 	]
 
 	var pts: Array = []
@@ -323,9 +321,9 @@ static func add_chamfered_prism(
 	var up := (xform.basis * Vector3.UP).normalized()
 	var top_center := xform * Vector3(0.0, hy, 0.0)
 	var bot_center := xform * Vector3(0.0, -hy, 0.0)
-	var c_flat_top := _vc(base_wear, minf(base_grime, 0.12), emissive)
-	var c_flat_bot := _vc(base_wear, maxf(base_grime, 0.76), emissive)
-	var c_side_mid := _vc(base_wear, base_grime, emissive)
+	var c_flat_top := CraftLookdev.encode_mask(base_wear, minf(base_grime, 0.12), emissive)
+	var c_flat_bot := CraftLookdev.encode_mask(base_wear, maxf(base_grime, 0.76), emissive)
+	var c_side_mid := CraftLookdev.encode_mask(base_wear, base_grime, emissive)
 
 	for i in n_sides:
 		var ni := (i + 1) % n_sides
@@ -345,7 +343,7 @@ static func add_chamfered_prism(
 			c_side_mid, c_side_mid, c_side_mid, c_side_mid
 		)
 		var n_top_bev := (world_radial + up * 0.65).normalized()
-		var c_bev := _vc(edge_wear if emissive < 0.5 else 0.35, minf(base_grime * 0.6, 0.12), emissive)
+		var c_bev := CraftLookdev.encode_mask(edge_wear if emissive < 0.5 else 0.35, minf(base_grime * 0.6, 0.12), emissive)
 		canvas.add_quad(
 			slot, pts[2][i], pts[2][ni], pts[3][ni], pts[3][i], n_top_bev,
 			c_bev, c_bev, c_bev, c_bev
@@ -610,7 +608,7 @@ static func add_cable_catenary(
 		var t := float(i) / float(segs)
 		var end_grime := smoothstep(0.22, 0.0, minf(t, 1.0 - t)) * 0.78
 		var belly_wear := 4.0 * t * (1.0 - t) * 0.58
-		ring_cols.append(_vc(0.12 + belly_wear, 0.14 + end_grime, 0.0))
+		ring_cols.append(CraftLookdev.encode_mask(0.12 + belly_wear, 0.14 + end_grime, 0.0))
 		var row: Array[Vector3] = []
 		for j in sides:
 			var ang := TAU * float(j) / float(sides)
@@ -711,8 +709,8 @@ static func add_valve_wheel(
 			row.append(xform * (radial * radius + local_off))
 		rings.append(row)
 
-	var c_grip := _vc(0.92, 0.12, 0.0)
-	var c_inner := _vc(0.32, 0.45, 0.0)
+	var c_grip := CraftLookdev.encode_mask(0.92, 0.12, 0.0)
+	var c_inner := CraftLookdev.encode_mask(0.32, 0.45, 0.0)
 	for i in segs:
 		var ni := (i + 1) % segs
 		for j in sides:

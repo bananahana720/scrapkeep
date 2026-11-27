@@ -14,14 +14,6 @@ static func reset_for_tests() -> void:
 	_mat_cache.clear()
 
 
-static func vc(wear: float, grime: float, emissive := 0.0) -> Color:
-	return Color(clampf(wear, 0.0, 1.0), clampf(grime, 0.0, 1.0), clampf(emissive, 0.0, 1.0), 1.0)
-
-
-static func _vc(wear: float, grime: float, emissive := 0.0) -> Color:
-	return vc(wear, grime, emissive)
-
-
 static func _add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel: float, uv_scale: float, xf: Transform3D, c_flat: Color, c_edge: Color, c_bot: Color) -> void:
 	add_bevel_box(st, center, size, bevel, uv_scale, xf, c_flat, c_edge, c_bot)
 
@@ -181,11 +173,11 @@ static func sandstone_plaza_mesh(radius: float, thickness: float, segments := 96
 	var bevel_r := maxf(radius - 0.55, radius * 0.96)
 	var bevel_y := half_t - 0.35
 	var profile := [
-		[-half_t, 0.0, _vc(0.06, 0.72)],
-		[-half_t, radius, _vc(0.08, 0.76)],
-		[bevel_y, radius, _vc(0.18, 0.42)],
-		[half_t, bevel_r, _vc(0.54, 0.14)],
-		[half_t, 0.0, _vc(0.12, 0.16)],
+		[-half_t, 0.0, CraftLookdev.encode_mask(0.06, 0.72)],
+		[-half_t, radius, CraftLookdev.encode_mask(0.08, 0.76)],
+		[bevel_y, radius, CraftLookdev.encode_mask(0.18, 0.42)],
+		[half_t, bevel_r, CraftLookdev.encode_mask(0.54, 0.14)],
+		[half_t, 0.0, CraftLookdev.encode_mask(0.12, 0.16)],
 	]
 	_add_lathe(st, profile, segments, 0.04, Transform3D.IDENTITY)
 	var mesh := _commit_surfaces({"sandstone_plaza": st}, ["sandstone_plaza"])
@@ -203,14 +195,14 @@ static func turntable_pedestal_mesh(top_r: float, bottom_r: float, height: float
 	var bevel := minf(0.06, height * 0.25)
 	var lip := half_h - bevel * 1.6
 	var profile := [
-		[-half_h, 0.0, _vc(0.06, 0.78)],
-		[-half_h, bottom_r - bevel, _vc(0.10, 0.74)],
-		[-half_h + bevel, bottom_r, _vc(0.62, 0.30)],
-		[lip - bevel, top_r + bevel * 0.5, _vc(0.22, 0.46)],
-		[lip, top_r + bevel, _vc(0.70, 0.18)],
-		[half_h - bevel, top_r, _vc(0.58, 0.16)],
-		[half_h, top_r - bevel, _vc(0.66, 0.12)],
-		[half_h, 0.0, _vc(0.18, 0.20)],
+		[-half_h, 0.0, CraftLookdev.encode_mask(0.06, 0.78)],
+		[-half_h, bottom_r - bevel, CraftLookdev.encode_mask(0.10, 0.74)],
+		[-half_h + bevel, bottom_r, CraftLookdev.encode_mask(0.62, 0.30)],
+		[lip - bevel, top_r + bevel * 0.5, CraftLookdev.encode_mask(0.22, 0.46)],
+		[lip, top_r + bevel, CraftLookdev.encode_mask(0.70, 0.18)],
+		[half_h - bevel, top_r, CraftLookdev.encode_mask(0.58, 0.16)],
+		[half_h, top_r - bevel, CraftLookdev.encode_mask(0.66, 0.12)],
+		[half_h, 0.0, CraftLookdev.encode_mask(0.18, 0.20)],
 	]
 	_add_lathe(st, profile, segments, 0.6, Transform3D.IDENTITY)
 	var mesh := _commit_surfaces({"turntable_pedestal": st}, ["turntable_pedestal"])
@@ -235,9 +227,9 @@ static func perimeter_berm_mesh(ground_r: float, segments: int, height: float, d
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var chord := TAU * ground_r / float(segments) * 1.08
-	var c_flat := _vc(0.14, 0.22)
-	var c_edge := _vc(0.66, 0.12)
-	var c_bot := _vc(0.08, 0.76)
+	var c_flat := CraftLookdev.encode_mask(0.14, 0.22)
+	var c_edge := CraftLookdev.encode_mask(0.66, 0.12)
+	var c_bot := CraftLookdev.encode_mask(0.08, 0.76)
 	for i in segments:
 		var angle := TAU * float(i) / float(segments)
 		var tall := height + stagger_m * float(i % 2)
@@ -256,14 +248,14 @@ static func ring_post_mesh(height := 2.2) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var profile := [
-		[0.0, 0.0, _vc(0.08, 0.80)],
-		[0.0, 0.30, _vc(0.10, 0.76)],
-		[0.14, 0.30, _vc(0.55, 0.35)],
-		[0.24, 0.20, _vc(0.24, 0.44)],
-		[height - 0.18, 0.14, _vc(0.20, 0.22)],
-		[height - 0.12, 0.21, _vc(0.76, 0.16)],
-		[height, 0.18, _vc(0.72, 0.14)],
-		[height, 0.0, _vc(0.30, 0.20)],
+		[0.0, 0.0, CraftLookdev.encode_mask(0.08, 0.80)],
+		[0.0, 0.30, CraftLookdev.encode_mask(0.10, 0.76)],
+		[0.14, 0.30, CraftLookdev.encode_mask(0.55, 0.35)],
+		[0.24, 0.20, CraftLookdev.encode_mask(0.24, 0.44)],
+		[height - 0.18, 0.14, CraftLookdev.encode_mask(0.20, 0.22)],
+		[height - 0.12, 0.21, CraftLookdev.encode_mask(0.76, 0.16)],
+		[height, 0.18, CraftLookdev.encode_mask(0.72, 0.14)],
+		[height, 0.0, CraftLookdev.encode_mask(0.30, 0.20)],
 	]
 	_add_lathe(st, profile, 8, 0.8, Transform3D.IDENTITY)
 	var mesh := _commit_surfaces({"iron_frame": st}, ["iron_frame"])
@@ -281,36 +273,36 @@ static func signal_lantern_mesh(radius := 0.34) -> ArrayMesh:
 	st_bulb.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var r := radius
 	var base_profile := [
-		[-r * 1.15, 0.0, _vc(0.10, 0.75)],
-		[-r * 1.15, r * 0.78, _vc(0.16, 0.70)],
-		[-r * 0.85, r * 0.86, _vc(0.78, 0.22)],
-		[-r * 0.70, r * 0.66, _vc(0.50, 0.32)],
-		[-r * 0.70, 0.0, _vc(0.20, 0.50)],
+		[-r * 1.15, 0.0, CraftLookdev.encode_mask(0.10, 0.75)],
+		[-r * 1.15, r * 0.78, CraftLookdev.encode_mask(0.16, 0.70)],
+		[-r * 0.85, r * 0.86, CraftLookdev.encode_mask(0.78, 0.22)],
+		[-r * 0.70, r * 0.66, CraftLookdev.encode_mask(0.50, 0.32)],
+		[-r * 0.70, 0.0, CraftLookdev.encode_mask(0.20, 0.50)],
 	]
 	_add_lathe(st_cage, base_profile, 8, 1.4, Transform3D.IDENTITY)
 	var cap_profile := [
-		[r * 0.72, 0.0, _vc(0.18, 0.52)],
-		[r * 0.72, r * 1.05, _vc(0.76, 0.24)],
-		[r * 0.88, r * 1.02, _vc(0.84, 0.16)],
-		[r * 1.16, r * 0.44, _vc(0.72, 0.18)],
-		[r * 1.24, 0.0, _vc(0.42, 0.22)],
+		[r * 0.72, 0.0, CraftLookdev.encode_mask(0.18, 0.52)],
+		[r * 0.72, r * 1.05, CraftLookdev.encode_mask(0.76, 0.24)],
+		[r * 0.88, r * 1.02, CraftLookdev.encode_mask(0.84, 0.16)],
+		[r * 1.16, r * 0.44, CraftLookdev.encode_mask(0.72, 0.18)],
+		[r * 1.24, 0.0, CraftLookdev.encode_mask(0.42, 0.22)],
 	]
 	_add_lathe(st_cage, cap_profile, 8, 1.4, Transform3D.IDENTITY)
-	var c_flat := _vc(0.22, 0.36)
-	var c_edge := _vc(0.82, 0.14)
-	var c_bot := _vc(0.12, 0.66)
+	var c_flat := CraftLookdev.encode_mask(0.22, 0.36)
+	var c_edge := CraftLookdev.encode_mask(0.82, 0.14)
+	var c_bot := CraftLookdev.encode_mask(0.12, 0.66)
 	for i in 4:
 		var a := TAU * float(i) / 4.0 + PI * 0.25
 		var xf := Transform3D(Basis(Vector3.UP, -a), Vector3(cos(a) * r * 0.86, 0.0, sin(a) * r * 0.86))
 		_add_bevel_box(st_cage, Vector3.ZERO, Vector3(r * 0.16, r * 1.62, r * 0.16), r * 0.03, 1.8, xf, c_flat, c_edge, c_bot)
 	var bulb_r := r * 0.82
 	var bulb_profile := [
-		[-bulb_r * 0.92, 0.0, _vc(0.10, 0.10, 1.0)],
-		[-bulb_r * 0.78, bulb_r * 0.58, _vc(0.15, 0.08, 1.0)],
-		[-bulb_r * 0.34, bulb_r * 0.94, _vc(0.25, 0.04, 1.0)],
-		[bulb_r * 0.34, bulb_r * 0.94, _vc(0.25, 0.04, 1.0)],
-		[bulb_r * 0.78, bulb_r * 0.58, _vc(0.15, 0.08, 1.0)],
-		[bulb_r * 0.92, 0.0, _vc(0.10, 0.10, 1.0)],
+		[-bulb_r * 0.92, 0.0, CraftLookdev.encode_mask(0.10, 0.10, 1.0)],
+		[-bulb_r * 0.78, bulb_r * 0.58, CraftLookdev.encode_mask(0.15, 0.08, 1.0)],
+		[-bulb_r * 0.34, bulb_r * 0.94, CraftLookdev.encode_mask(0.25, 0.04, 1.0)],
+		[bulb_r * 0.34, bulb_r * 0.94, CraftLookdev.encode_mask(0.25, 0.04, 1.0)],
+		[bulb_r * 0.78, bulb_r * 0.58, CraftLookdev.encode_mask(0.15, 0.08, 1.0)],
+		[bulb_r * 0.92, 0.0, CraftLookdev.encode_mask(0.10, 0.10, 1.0)],
 	]
 	_add_lathe(st_bulb, bulb_profile, 10, 1.2, Transform3D.IDENTITY)
 	var mesh := _commit_surfaces({"iron_frame": st_cage, "bulb_glass": st_bulb}, ["iron_frame", "bulb_glass"])
@@ -331,7 +323,7 @@ static func ghost_sphere_mesh(radius := 1.0) -> ArrayMesh:
 		var r := maxf(0.0, cos(phi) * radius)
 		if i == 0 or i == lat_steps:
 			r = 0.0
-		profile.append([sin(phi) * radius, r, _vc(0.2, 0.1, 1.0)])
+		profile.append([sin(phi) * radius, r, CraftLookdev.encode_mask(0.2, 0.1, 1.0)])
 	_add_lathe(st, profile, 16, 0.5, Transform3D.IDENTITY)
 	var mesh := _commit_surfaces({"ghost_shell": st}, ["ghost_shell"])
 	_mesh_cache[key] = mesh
@@ -345,9 +337,9 @@ static func guide_pip_mesh(radius := 0.16) -> ArrayMesh:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var profile := [
-		[-radius, 0.0, _vc(0.2, 0.1, 1.0)],
-		[0.0, radius, _vc(0.5, 0.05, 1.0)],
-		[radius, 0.0, _vc(0.2, 0.1, 1.0)],
+		[-radius, 0.0, CraftLookdev.encode_mask(0.2, 0.1, 1.0)],
+		[0.0, radius, CraftLookdev.encode_mask(0.5, 0.05, 1.0)],
+		[radius, 0.0, CraftLookdev.encode_mask(0.2, 0.1, 1.0)],
 	]
 	_add_lathe(st, profile, 6, 1.5, Transform3D.IDENTITY)
 	var mesh := _commit_surfaces({"guide_pip": st}, ["guide_pip"])

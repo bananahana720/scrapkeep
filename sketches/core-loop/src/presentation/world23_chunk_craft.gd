@@ -682,10 +682,6 @@ static func _new_canvas() -> HeroSculptor.KitbashCanvas:
 	return canvas
 
 
-static func _vc(wear: float, grime: float, emissive: float = 0.0) -> Color:
-	return Color(clampf(wear, 0.0, 1.0), clampf(grime, 0.0, 1.0), clampf(emissive, 0.0, 1.0), 1.0)
-
-
 static func _add_flat_deck_slab(
 	canvas: HeroSculptor.KitbashCanvas,
 	slot: String,
@@ -713,7 +709,7 @@ static func _add_flat_deck_slab(
 		for gx in 4:
 			row_p.append(Vector3(offset.x + xs[gx], top_y, offset.z + zs[gz]))
 			var is_outer := (gx == 0 or gx == 3 or gz == 0 or gz == 3)
-			row_c.append(_vc(edge_wear if is_outer else 0.04, edge_grime if is_outer else center_grime, 0.0))
+			row_c.append(Lookdev.encode_mask(edge_wear if is_outer else 0.04, edge_grime if is_outer else center_grime, 0.0))
 		top_pts.append(row_p)
 		top_cols.append(row_c)
 
@@ -728,7 +724,7 @@ static func _add_flat_deck_slab(
 			)
 
 	var bot_pts: Array = []
-	var c_bot := _vc(0.08, maxf(edge_grime, 0.56), 0.0)
+	var c_bot := Lookdev.encode_mask(0.08, maxf(edge_grime, 0.56), 0.0)
 	for gz in 4:
 		var brow: Array[Vector3] = []
 		for gx in 4:
@@ -744,7 +740,7 @@ static func _add_flat_deck_slab(
 				Vector3.DOWN, Vector3.DOWN, Vector3.DOWN, Vector3.DOWN
 			)
 
-	var c_side_top := _vc(maxf(edge_wear, 0.36), edge_grime, 0.0)
+	var c_side_top := Lookdev.encode_mask(maxf(edge_wear, 0.36), edge_grime, 0.0)
 	for gx in 3:
 		canvas.add_quad(
 			slot,
@@ -796,12 +792,12 @@ static func _add_beveled_annulus(
 	var r_out_flat := r_out_top - flat_inset
 	var profile: Array[Vector2] = []
 	var pcols: Array[Color] = []
-	var c_crest := _vc(edge_wear if emissive < 0.5 else 0.3, minf(base_grime, 0.22), emissive)
-	var c_flat := _vc(base_wear, base_grime, emissive)
+	var c_crest := Lookdev.encode_mask(edge_wear if emissive < 0.5 else 0.3, minf(base_grime, 0.22), emissive)
+	var c_flat := Lookdev.encode_mask(base_wear, base_grime, emissive)
 	profile.append(Vector2(r_in, -hy))
-	pcols.append(_vc(base_wear, maxf(base_grime, 0.72), emissive))
+	pcols.append(Lookdev.encode_mask(base_wear, maxf(base_grime, 0.72), emissive))
 	profile.append(Vector2(r_in, hy - bev_y))
-	pcols.append(_vc(base_wear, base_grime, emissive))
+	pcols.append(Lookdev.encode_mask(base_wear, base_grime, emissive))
 	profile.append(Vector2(r_in_top, hy))
 	pcols.append(c_crest)
 	if r_out_flat > r_in_flat + 0.02:
@@ -812,9 +808,9 @@ static func _add_beveled_annulus(
 	profile.append(Vector2(r_out_top, hy))
 	pcols.append(c_crest)
 	profile.append(Vector2(r_out_bot, -hy + bev_y))
-	pcols.append(_vc(base_wear, maxf(base_grime, 0.52), emissive))
+	pcols.append(Lookdev.encode_mask(base_wear, maxf(base_grime, 0.52), emissive))
 	profile.append(Vector2(r_out_bot, -hy))
-	pcols.append(_vc(base_wear, maxf(base_grime, 0.76), emissive))
+	pcols.append(Lookdev.encode_mask(base_wear, maxf(base_grime, 0.76), emissive))
 	var pcount := profile.size()
 	var rings: Array = []
 	for pi in pcount:
@@ -868,7 +864,7 @@ static func _add_closed_torus(
 			var local_off := radial * (cos(phi) * minor_r) + Vector3(0.0, sin(phi) * minor_r, 0.0)
 			row.append(xform * (radial * major_r + local_off))
 		rings.append(row)
-	var c_out := _vc(wear, grime, emissive)
+	var c_out := Lookdev.encode_mask(wear, grime, emissive)
 	for i in n_seg:
 		var ni := (i + 1) % n_seg
 		for j in n_side:
@@ -1160,7 +1156,7 @@ static func get_cloud_sea_mesh(span: float = 1600.0) -> ArrayMesh:
 	var thickness := 6.0
 	var top_grid: Array = []
 	var bot_grid: Array = []
-	var col := _vc(0.05, 0.05, 0.0)
+	var col := Lookdev.encode_mask(0.05, 0.05, 0.0)
 	for gz in n + 1:
 		var row_t: Array[Vector3] = []
 		var row_b: Array[Vector3] = []
