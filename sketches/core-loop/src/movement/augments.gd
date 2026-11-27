@@ -97,6 +97,14 @@ const RECOIL_SCALE := 1.3
 const RECOIL_LIFT := 1.5
 const SKID_KEEP := 0.6
 
+const KEST_AIR_DRAW_GRAVITY := 0.45
+const KEST_AIR_DRAW_MAX_S := 1.2
+const KEST_SPIRE_VAULT_UP := 13.5
+const KEST_WALL_KICK_MULT := 1.45
+const KEST_WALL_KICK_UP_MULT := 1.35
+const KEST_WALL_KICK_CAP := 36.0
+const KEST_WALL_KICK_LOCK_S := 1.2
+
 
 static func apply(kit, state, tuning, intent, aim: Basis, body_state) -> void:
 	if kit == null:

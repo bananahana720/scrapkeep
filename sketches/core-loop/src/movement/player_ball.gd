@@ -21,8 +21,6 @@ const SimClock := preload("res://src/core/sim_clock.gd")
 const ChainState := preload("res://src/combat/chain.gd")
 const Dunk := preload("res://src/combat/dunk.gd")
 const Redline := preload("res://src/combat/redline.gd")
-const CombatRules := preload("res://src/combat/combat.gd")
-const Weapons := preload("res://src/combat/weapons.gd")
 const ExceptionHold := preload("res://src/movement/exception_hold.gd")
 
 
@@ -70,6 +68,8 @@ var spawn_point := Vector3.ZERO
 var builtin_squash := true
 var crush_check := Callable()
 var heft_of := Callable()
+var enemy_heft_of := Callable()
+var strike_damage := {}
 var mass_of := Callable()
 var pressure_grant := Callable()
 var hulk_launch := Callable()
@@ -135,7 +135,7 @@ var exceptions
 var _destructibles: Node = null
 var _destructibles_class := Callable()
 var air_draw_active := false
-var air_draw_left := Weapons.KEST_AIR_DRAW_MAX_S
+var air_draw_left := Augments.KEST_AIR_DRAW_MAX_S
 var _kest_wall_kick_faces := {}
 var _kest_wall_aim := {}
 var last_kest_wall_kick := {}
@@ -324,7 +324,7 @@ func reset_to(point: Vector3, velocity := Vector3.ZERO) -> void:
 	_line_hold = 0.0
 	_line_standing = false
 	air_draw_active = false
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 	_kest_wall_kick_faces.clear()
 	_kest_wall_aim = {}
 	last_kest_wall_kick = {}
@@ -444,7 +444,7 @@ func in_set_piece() -> bool:
 func fit_class(def: Resource) -> void:
 	class_def = def
 	air_draw_active = false
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 	_kest_wall_kick_faces.clear()
 	_kest_wall_aim = {}
 	tree.reset(def.id if def != null else "")
@@ -453,16 +453,16 @@ func fit_class(def: Resource) -> void:
 
 
 func refresh_air_draw() -> void:
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 
 
 func apply_spire_vault(anchor: Vector3) -> bool:
 	if class_def == null or class_def.id != "demolitions_caster" or _frozen:
 		return false
 	var v: Vector3 = state.velocity
-	v.y = maxf(v.y, Weapons.KEST_SPIRE_VAULT_UP)
+	v.y = maxf(v.y, Augments.KEST_SPIRE_VAULT_UP)
 	_rigid.set_velocity_now(v)
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 	state.air_actions = maxi(state.air_actions, 1)
 	last_spire_vault = {"anchor": anchor, "vy": v.y}
 	return true
@@ -500,6 +500,10 @@ func yours(shape: Dictionary) -> Dictionary:
 
 func heft() -> float:
 	return float(heft_of.call()) if heft_of.is_valid() else 1.0
+
+
+func enemy_heft(target) -> float:
+	return float(enemy_heft_of.call(target)) if enemy_heft_of.is_valid() else INF
 
 
 func bind_destructibles(pieces: Node, class_of := Callable()) -> void:
@@ -573,7 +577,7 @@ func grapple_to(point: Vector3, normal := Vector3.ZERO, body: Node3D = null) -> 
 		return
 	_clear_speed_bank()
 	Augments.attach(kit, ball_position(), point, normal, body)
-	kit.grip = Grip.of(body, heft(), tuning.pole_flail())
+	kit.grip = Grip.of(body, heft(), enemy_heft(body), tuning.pole_flail())
 	events.grapple_fired.emit(point)
 	if body != null:
 		if body.has_method("flash"):
@@ -1384,8 +1388,10 @@ func _on_rigid_slammed(at: Vector3, speed: float, flatness: float) -> void:
 	var strength := slam_strength(speed, flatness)
 	if strength < 0.05:
 		return
-	dunk.store(Dunk.slam_damage(Augments.SLAM_KNOCK * strength, CombatRules.STRIKE_DAMAGE["slam"], heft()) * tuning.mod("dunk_store"),
-		kit.smash_flavour, String(class_def.id) if class_def != null else "", class_color())
+	var row: Array = strike_damage.get("slam", [])
+	if row.size() >= 2:
+		dunk.store(Dunk.slam_damage(Augments.SLAM_KNOCK * strength, row, heft()) * tuning.mod("dunk_store"),
+			kit.smash_flavour, String(class_def.id) if class_def != null else "", class_color())
 
 
 func _on_slammed(at: Vector3, speed: float, flatness: float) -> void:
@@ -1438,7 +1444,7 @@ func _drag_in(at: Vector3) -> void:
 		if enemy.has_method("is_dead") and enemy.is_dead():
 			continue
 		var offset: Vector3 = at - enemy.global_position
-		if offset.length() > slam_radius() or Grip.heft_of(enemy) > heft():
+		if offset.length() > slam_radius() or enemy_heft(enemy) > heft():
 			continue
 		_drags[enemy.get_instance_id()] = {"enemy": weakref(enemy), "to": at, "t": 0.0}
 		enemy.flash()
@@ -1655,9 +1661,9 @@ func _begin_landing(enemy: Node3D) -> bool:
 
 
 func _landing_force(kind: String, force: float) -> float:
-	if _landing_mult == 1.0 or not CombatRules.STRIKE_DAMAGE.has(kind):
+	if _landing_mult == 1.0 or not strike_damage.has(kind):
 		return force
-	var row: Array = CombatRules.STRIKE_DAMAGE[kind]
+	var row: Array = strike_damage[kind]
 	return (_landing_mult * (row[0] + force * row[1]) - row[0]) / row[1]
 
 
@@ -1703,7 +1709,7 @@ func _step_kest_air_draw(delta: float) -> void:
 		return
 	if state.grounded:
 		air_draw_active = false
-		air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+		air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 		return
 	if kit.slamming or Augments.holding(kit) or in_set_piece():
 		air_draw_active = false
@@ -1713,7 +1719,7 @@ func _step_kest_air_draw(delta: float) -> void:
 	if drawing and air_draw_left > 0.0:
 		air_draw_active = true
 		air_draw_left = maxf(0.0, air_draw_left - delta)
-		add_external_accel(Vector3.UP * tuning.f("gravity") * (1.0 - Weapons.KEST_AIR_DRAW_GRAVITY))
+		add_external_accel(Vector3.UP * tuning.f("gravity") * (1.0 - Augments.KEST_AIR_DRAW_GRAVITY))
 	else:
 		air_draw_active = false
 
@@ -1739,17 +1745,17 @@ func _step_kest_wall_kick(delta: float) -> void:
 	var dir := (Vector3.UP * 0.78 + n * 0.48 + (along.normalized() * 0.35 if along.length_squared() > 0.01 else Vector3.ZERO)).normalized()
 	var jump_spd: float = tuning.f("jump_speed")
 	var incoming: float = state.velocity.length()
-	var speed := minf(Weapons.KEST_WALL_KICK_CAP, maxf(jump_spd * Weapons.KEST_WALL_KICK_MULT, incoming * 1.15))
+	var speed := minf(Augments.KEST_WALL_KICK_CAP, maxf(jump_spd * Augments.KEST_WALL_KICK_MULT, incoming * 1.15))
 	var launch := dir * speed
-	launch.y = maxf(launch.y, jump_spd * Weapons.KEST_WALL_KICK_UP_MULT)
+	launch.y = maxf(launch.y, jump_spd * Augments.KEST_WALL_KICK_UP_MULT)
 	_kest_wall_aim = {"point": face["point"], "normal": n, "dir": launch.normalized(), "speed": launch.length()}
 	if state.jump_buffer <= 0.0 and not intent.jump_pressed:
 		return
 	state.jump_buffer = 0.0
 	state.coyote = 0.0
 	intent.jump_pressed = false
-	_kest_wall_kick_faces[key] = Weapons.KEST_WALL_KICK_LOCK_S
-	air_draw_left = Weapons.KEST_AIR_DRAW_MAX_S
+	_kest_wall_kick_faces[key] = Augments.KEST_WALL_KICK_LOCK_S
+	air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 	_rigid.set_velocity_now(launch)
 	last_kest_wall_kick = {"point": face["point"], "normal": n, "velocity": launch}
 	_on_kit_fact("vault_kicked", [face["point"], launch.length()])

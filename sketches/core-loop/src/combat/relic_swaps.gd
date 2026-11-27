@@ -5,7 +5,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const Grip := preload("res://src/movement/grip.gd")
+const Roster := preload("res://src/combat/roster.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -613,7 +613,7 @@ func _claw_whirl_world(anchor: Vector3, fraction: float, mult: float) -> void:
 func _claw_whirl_body(target: Node3D, _fraction: float, mult: float) -> void:
 	if not _alive(target):
 		return
-	var movable: bool = not _protected(target) and Grip.heft_of(target) <= ctx.player.heft()
+	var movable: bool = not _protected(target) and Roster.heft_of(target) <= ctx.player.heft()
 	if not movable:
 		var tc = _tarn_claw()
 		if tc != null and tc.has_method("on_body"):
@@ -892,7 +892,7 @@ func _fire_snare_detonate(f: float, shape: Dictionary) -> void:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not _alive(enemy) or _protected(enemy):
 			continue
-		if Grip.heft_of(enemy) > ball_heft:
+		if Roster.heft_of(enemy) > ball_heft:
 			continue
 		if not combat.in_line(from_pt, to_pt, width, enemy.global_position, combat._hull(enemy)):
 			continue
