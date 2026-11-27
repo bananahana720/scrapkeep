@@ -108,7 +108,7 @@ func setup(hub_ref, records_ref = null) -> void:
 	score_label = _board_label()
 	_show_idle()
 	var at: Vector3 = hub.socket(PIECE, "interact").origin
-	hub.add_station("camp_skee", at, "Skee-ball: nine balls", "key_e", 3.0, Callable(self, "start_game"))
+	hub.add_station("camp_skee", at, "Skee-ball: nine balls", "interact", 3.0, Callable(self, "start_game"))
 	if hub.has_signal("walk_left"):
 		hub.walk_left.connect(_on_walk_left)
 

@@ -130,6 +130,19 @@ static func detour_shown(id: String) -> bool:
 	return id in DETOUR_UNDER
 
 
+static func detour_site_matches(site, id: String, good: bool, already_ticked = null) -> bool:
+	if site == null or not is_instance_valid(site) or String(site.id) != id:
+		return false
+	if good:
+		if already_ticked != null and site == already_ticked:
+			return false
+		if "done" in site and not bool(site.done):
+			return false
+	elif "done" in site and bool(site.done):
+		return false
+	return true
+
+
 static func cage_words(prompt: String) -> String:
 	if prompt == "" or prompt.split(" ", false).size() > MAX_WORDS:
 		return CAGE_WORDS

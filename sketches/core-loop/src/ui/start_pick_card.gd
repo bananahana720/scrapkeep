@@ -399,16 +399,16 @@ func confirm(pad := false) -> void:
 func _focus_key(event: InputEvent) -> bool:
 	if event is InputEventKey and event.pressed and not event.echo:
 		match event.physical_keycode:
-			KEY_A:
+			KEY_A, KEY_W:
 				step_focus(-1)
 				return true
-			KEY_D:
+			KEY_D, KEY_S:
 				step_focus(1)
 				return true
-	if event.is_action_pressed("ui_left"):
+	if event.is_action_pressed("ui_left") or event.is_action_pressed("ui_up"):
 		step_focus(-1)
 		return true
-	if event.is_action_pressed("ui_right"):
+	if event.is_action_pressed("ui_right") or event.is_action_pressed("ui_down"):
 		step_focus(1)
 		return true
 	if event.is_action_pressed("ui_accept"):

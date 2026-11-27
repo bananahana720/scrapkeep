@@ -8,7 +8,8 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const MOUSE := ["key_lmb", "key_rmb"]
 const LABELS := {"key_ctrl": "Ctrl", "key_space": "Space", "key_shift": "Shift", "key_tab": "Tab",
 	"pad_a": "A", "pad_b": "B", "pad_x": "X", "pad_y": "Y", "pad_lb": "LB", "pad_rb": "RB",
-	"pad_lt": "LT", "pad_rt": "RT", "pad_ls": "L", "pad_rs": "R", "pad_start": "Start",
+	"pad_lt": "LT", "pad_rt": "RT", "pad_ls": "L", "pad_rs": "R", "pad_start": "Start", "pad_back": "Back",
+	"pad_btn": "Pad", "key_mmb": "MMB", "key_mb4": "MB4", "key_mb5": "MB5", "key_bind": "Bind",
 	"key_comma": ",", "key_period": ".", "key_slash": "/", "key_semicolon": ";",
 	"pad_dl": "D-pad left", "pad_du": "D-pad up", "pad_dr": "D-pad right", "pad_dd": "D-pad down"}
 const PAD_ROUND := ["pad_a", "pad_b", "pad_x", "pad_y", "pad_ls", "pad_rs"]

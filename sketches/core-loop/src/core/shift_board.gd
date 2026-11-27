@@ -289,6 +289,11 @@ static func run_line(before: Array, profile, punched: bool) -> String:
 			var card: Dictionary = CARDS[cards_paid(profile) - 1]
 			return "Time card full. %s pays %s next shift." % [String(card["name"]), item_name(String(card["pays"]["item"]))]
 		return "Time card punched, %d of %d." % [on_card, holes]
+	if profile != null:
+		var next := next_rung(profile)
+		if next != "":
+			return "Next on the shift board, %s. %s" % [String(RUNGS[next]["name"]), String(RUNGS[next]["text"])]
+		return "Short shift. Clear %d machines to punch the time card." % int(TIME_CARD["min_kills"])
 	return ""
 
 
