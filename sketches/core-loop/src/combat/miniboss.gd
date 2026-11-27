@@ -74,7 +74,6 @@ var _core_color_cur := Palette.VERDIGRIS
 var _core_energy_cur := 0.0
 static var _shared: Dictionary = {}
 static var _asset_warned := false
-static var _hazard_stripe: StandardMaterial3D
 const POSES := {
 	"stalk": {"body": 0.0, "lean": 0.0, "splay": 0.0, "tuck": 0.0, "shield_in": 0.0, "shield_drop": 0.0, "hazard": false},
 	"slam_crouch": {"body": -0.3, "lean": 0.0, "splay": 0.6, "tuck": 0.0, "shield_in": 0.45, "shield_drop": 0.0, "hazard": false},
@@ -556,7 +555,7 @@ func _model_pose(delta: float) -> void:
 		_pose_rig.set_bone_pose_position(index, pos)
 		_pose_rig.set_bone_pose_rotation(index, basis.get_rotation_quaternion())
 		_pose_rig.set_bone_pose_scale(index, size)
-	_armour.material_override = hazard_stripe() if row.hazard else _model_plate_material
+	_armour.material_override = Threat.Painter.hazard_stripe() if row.hazard else _model_plate_material
 	var blend := 1.0 if (delta <= 0.0 or not _core_smoothed) else (1.0 - exp(-16.0 * delta))
 	if blend >= 0.9999:
 		blend = 1.0
@@ -595,16 +594,6 @@ func _leap_clearance() -> float:
 	if terrain == null or not is_inside_tree():
 		return 0.0
 	return maxf(0.0, global_position.y - HALF_HEIGHT - terrain.height(global_position.x, global_position.z))
-
-
-static func hazard_stripe() -> StandardMaterial3D:
-	if _hazard_stripe == null:
-		_hazard_stripe = StandardMaterial3D.new()
-		_hazard_stripe.albedo_texture = Threat.Painter.stripe_texture()
-		_hazard_stripe.uv1_triplanar = true
-		_hazard_stripe.uv1_scale = Vector3.ONE / (Threat.STRIPE_PITCH * sqrt(2.0))
-		_hazard_stripe.roughness = 0.6
-	return _hazard_stripe
 
 
 func _build_armour() -> void:

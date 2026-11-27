@@ -48,7 +48,6 @@ var _seam_material: StandardMaterial3D
 var _seamless := false
 static var _shared: Array = []
 static var _asset_warned := false
-static var _hazard_stripe: StandardMaterial3D
 
 
 func setup(target_ref, terrain_ref, root_ref, live_ref: Callable, threat: float, spec_ref := {}) -> void:
@@ -245,16 +244,6 @@ func _build_body() -> void:
 	_slab.add_child(_seam)
 
 
-static func hazard_stripe() -> StandardMaterial3D:
-	if _hazard_stripe == null:
-		_hazard_stripe = StandardMaterial3D.new()
-		_hazard_stripe.albedo_texture = Threat.Painter.stripe_texture()
-		_hazard_stripe.uv1_triplanar = true
-		_hazard_stripe.uv1_scale = Vector3.ONE / (Threat.STRIPE_PITCH * sqrt(2.0))
-		_hazard_stripe.roughness = 0.6
-	return _hazard_stripe
-
-
 static func _parts() -> Array:
 	if not _shared.is_empty():
 		return _shared
@@ -345,7 +334,7 @@ static func _leading_split(mesh: Mesh, slots: Array) -> ArrayMesh:
 	painted.metallic = 0.14
 	Palette.surface_grain(painted)
 	hull.set_material(painted)
-	edge.set_material(hazard_stripe())
+	edge.set_material(Threat.Painter.hazard_stripe())
 	var out := hull.commit()
 	return edge.commit(out)
 
