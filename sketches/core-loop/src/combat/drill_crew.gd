@@ -266,6 +266,7 @@ func on_struck(kind_hit: String, _part: String, result: Dictionary) -> void:
 		_end()
 
 
+# The popped plate took that hit whole: the body is untouched this once.
 func _die() -> void:
 	bore_fact = {"breached": true, "kind": "drill_crew", "id": "drill_%d" % get_instance_id(),
 		"at": global_position, "radius": BORE_RADIUS, "last_bore": last_bore}
