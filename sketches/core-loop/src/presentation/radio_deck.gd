@@ -106,7 +106,7 @@ func find(id: String) -> bool:
 	if radio.premiere(id, context()) and radio.station != before and dial != null:
 		dial.swell()
 	game.events.radio_take_found.emit(id, String(t["tier"]), String(t["found"].get("on", "")))
-	_save()
+	save()
 	_plan_now()
 	return true
 
@@ -256,12 +256,12 @@ func _on_flow_changed(state: String) -> void:
 	if not game.flow.in_play():
 		applied = {}
 		if _dirty:
-			_save()
+			save()
 	else:
 		_plan_now()
 
 
-func _save() -> void:
+func save() -> void:
 	_dirty = false
 	var profile = game.ctx.profile
 	profile.set_radio(radio.to_dict())
