@@ -100,9 +100,8 @@ func _physics_process(delta: float) -> bool:
 	var ball: Vector3 = _game.player.ball_position()
 	var rel := ball - _gate_at
 	var along := rel.dot(_gate_facing)
-	var side := (rel - _gate_facing * along).length()
-	if _through_at < 0.0 and _last_along < 0.0 and along >= 0.0 and side <= RewardGates.WIDTH * 0.5 + 1.0 \
-			and absf(rel.y) < RewardGates.HEIGHT + 4.0:
+	var side := RewardGates.sideways(rel, _gate_facing)
+	if _through_at < 0.0 and _last_along < 0.0 and along >= 0.0 and RewardGates.inside_arch(rel, _gate_facing):
 		_through_at = _seconds
 	_last_along = along
 	_driver.ticks += 1

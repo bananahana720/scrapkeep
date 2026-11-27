@@ -41,10 +41,41 @@ func _step(hud, seconds: float) -> void:
 		spent += 1.0 / 60.0
 
 
-func _announce(hud, id: String, lead: float) -> void:
+func _announce(hud, id: String, lead: float, at := Vector3(40.0, 3.0, -12.0)) -> void:
 	hud.clear_toasts()
 	hud.edge_markers._incoming.clear()
-	_game.events.event_announced.emit(id, lead, Vector3(40.0, 3.0, -12.0))
+	_game.events.event_announced.emit(id, lead, at)
+
+
+func _held_line(hud) -> void:
+	_announce(hud, "dome_lightning", 4.0)
+	var name: String = hud.toast_on_screen()
+	_step(hud, 30.0)
+	_t.check("a placed event still waiting 26 s past its lead keeps its name on the line",
+		name != "" and hud.toast_on_screen() == name and is_equal_approx(hud._toast_row.modulate.a, 1.0), hud.toast_on_screen())
+	_t.eq("and its marker with it", hud.edge_markers.incoming_targets().size(), 1)
+	hud.toast("Core banked", Palette.SAND, "diamond", 2)
+	_t.check("another line may take the row during the wait", hud.toast_on_screen() == "Core banked", hud.toast_on_screen())
+	_step(hud, 3.0)
+	_t.check("and the waiting event's name comes back after it", hud.toast_on_screen() == name, hud.toast_on_screen())
+	_game.events.event_started.emit("dome_lightning")
+	var after := _life(hud, 20.0)
+	_t.check("the held line ends when the event lands", after >= 0.0 and after < 0.5, "%.3f" % after)
+	_step(hud, 2.0)
+	_t.check("and does not come back", hud.toast_on_screen() == "", hud.toast_on_screen())
+	_announce(hud, "dome_lightning", 4.0)
+	_step(hud, 8.0)
+	_game.events.stage_content_cleared.emit("arena")
+	var cleared := _life(hud, 20.0)
+	_t.check("a cleared stage lets the held line go", cleared >= 0.0 and cleared < 0.5, "%.3f" % cleared)
+	_announce(hud, "surge_run", 4.0)
+	var offer := 0.0
+	while offer < 20.0 and hud.toast_on_screen() != "":
+		hud._step_toast(1.0 / 60.0)
+		hud.edge_markers.step_incoming(1.0 / 60.0)
+		offer += 1.0 / 60.0
+	_t.check("a ring offer the player starts keeps its line for its lead only", absf(offer - 4.0) < 0.1, "%.3f" % offer)
+	_t.eq("and its mark goes with the lead", hud.edge_markers.incoming_targets().size(), 0)
 
 
 func _run() -> void:
@@ -59,12 +90,13 @@ func _run() -> void:
 		var marker: Color = EdgeMarkers.marker_color(shown[0])
 		_t.check("the line is slate ink, the colour law's not yet in a word's lightness", hud._toast["color"] == Palette.SLATE_INK, str(hud._toast["color"]))
 		_t.check("the edge marker stays hazard red and differs from the line", marker == Palette.HAZARD and marker != hud._toast["color"], str(marker))
+	_announce(hud, "dome_lightning", 4.0, Vector3.INF)
 	var short := _life(hud, 20.0)
-	_announce(hud, "powerhouse_boiler", 9.0)
+	_announce(hud, "powerhouse_boiler", 9.0, Vector3.INF)
 	var long := _life(hud, 20.0)
 	_t.check("a 4 s lead keeps the line up for about 4 s", absf(short - 4.0) < 0.1, "%.3f" % short)
 	_t.check("a 9 s lead keeps the line up for about 9 s", absf(long - 9.0) < 0.1, "%.3f" % long)
-	_announce(hud, "dome_lightning", 40.0)
+	_announce(hud, "dome_lightning", 40.0, Vector3.INF)
 	var capped := _life(hud, 60.0)
 	_t.check("a lead past the cap holds at the cap", absf(capped - EVENT_LINE_CAP) < 0.1, "%.3f" % capped)
 	_announce(hud, "dome_lightning", 6.0)
@@ -86,6 +118,7 @@ func _run() -> void:
 	_game.events.event_ended.emit("dome_lightning", "won")
 	var ended := _life(hud, 20.0)
 	_t.check("its own event's end ends the line too", ended >= 0.0 and ended < 0.5, "%.3f" % ended)
+	_held_line(hud)
 	_t.eq("the announcement row stays hazard red for the arena cue and the marker", EventKinds.color("event_announced"), Palette.HAZARD)
 	_game.queue_free()
 	quit(_t.verdict())

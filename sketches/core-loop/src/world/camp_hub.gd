@@ -929,7 +929,7 @@ func _quip_from(class_id: String) -> void:
 	var flying_def = game.gate_pilot() if game != null and game.has_method("gate_pilot") else null
 	var flying_id := String(flying_def.id) if flying_def != null else ""
 	var codex = game.get("codex") if game != null else null
-	var pair_blocked := _pair_played_this_walk or (game != null and bool(game.get("bot_driven")))
+	var pair_blocked: bool = _pair_played_this_walk or (game != null and game.get("bot_driven") == true)
 	var pages := _journal_pages()
 	var beat := PilotStory.pick_camp_beat(flying_id, class_id, crew_standing(), camp_store, codex, pages, walks, pair_blocked)
 	if beat.is_empty():

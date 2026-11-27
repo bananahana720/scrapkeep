@@ -154,7 +154,7 @@ static func can_take(o: Dictionary, run) -> bool:
 		return false
 	if String(o["win_kind"]) == "part" and String(o["win"]) == "":
 		return false
-	if String(o["win_kind"]) == "heal" and run.hp >= run.max_hp and HullMark.held(run) <= 0.0:
+	if nothing_to_mend(o, run):
 		return false
 	var cost: int = o["cost"]
 	match String(o["cost_kind"]):
@@ -165,6 +165,24 @@ static func can_take(o: Dictionary, run) -> bool:
 		"cores":
 			return run.bonus_cores >= cost
 	return false
+
+
+static func nothing_to_mend(o: Dictionary, run) -> bool:
+	return String(o.get("win_kind", "")) == "heal" and run.hp >= run.max_hp and HullMark.held(run) <= 0.0
+
+
+static func paid_share(o: Dictionary, run) -> float:
+	if o.is_empty() or nothing_to_mend(o, run):
+		return 0.0
+	var cost := maxf(float(o["cost"]), 1.0)
+	match String(o["cost_kind"]):
+		"hp":
+			return clampf(run.hp / (cost + float(o["floor"])), 0.0, 1.0)
+		"cogs":
+			return clampf(float(run.cogs) / cost, 0.0, 1.0)
+		"cores":
+			return clampf(float(run.bonus_cores) / cost, 0.0, 1.0)
+	return 0.0
 
 
 static func take(o: Dictionary, run, at: Vector3) -> Dictionary:
@@ -291,10 +309,9 @@ func ready_now() -> bool:
 
 
 func gauge() -> float:
-	if spent or String(offer.get("cost_kind", "")) != "hp":
+	if spent or kind == CHALLENGE_DEVICE:
 		return 0.0
-	var need: float = float(offer["cost"]) + float(offer["floor"])
-	return clampf(ctx.run.hp / need, 0.0, 1.0)
+	return paid_share(offer, ctx.run)
 
 
 func words() -> String:
@@ -303,14 +320,18 @@ func words() -> String:
 	return offer_words(offer)
 
 
+func sign_words() -> String:
+	return "" if nothing_to_mend(offer, ctx.run) else words()
+
+
 func fire() -> bool:
 	if kind == CHALLENGE_DEVICE:
 		last = stack_challenge(ctx.run, reach_point())
-		spent = bool(last.get("ok", false)) or spent
-		return true
-	last = take(offer, ctx.run, reach_point())
-	spent = bool(last.get("ok", false)) or spent
-	return true
+	else:
+		last = take(offer, ctx.run, reach_point())
+	var took := bool(last.get("ok", false))
+	spent = took or spent
+	return took
 
 
 func show_prompt(targeted: bool) -> void:

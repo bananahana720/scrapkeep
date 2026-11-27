@@ -622,6 +622,88 @@ export function parseLintArgs(argv) {
   return options;
 }
 
+export const FAULT_SWITCHES = {
+  _reel_plant: {
+    home: "src/boss/boss.gd",
+    why: "brindle_reel_test stops or unbraces the reel to prove each guard holds the fight",
+  },
+  lead_plant: {
+    home: "src/combat/pack_pressure.gd",
+    why: "boss_lead_line_test leads every ball or none to prove the lead rule is what spares a turning ball",
+  },
+  test_pad_scale: {
+    home: "src/combat/warning_bound.gd",
+    why: "warning_bound_containment_test shrinks a ground pad to watch the containment check fail",
+  },
+  test_skip_hazard_merge: {
+    home: "src/combat/warning_bound.gd",
+    why: "warning_bound_park_ground_test skips the merge to prove it is what holds hazards on real ground",
+  },
+  _test_pending: {
+    home: "src/core/cosmetics.gd",
+    why: "the customize tests name extra pending art to reach the pending paths while the list is empty",
+  },
+  test_no_warn: {
+    home: "src/world/contraptions.gd",
+    why: "works_surge_test fires a surge with no warning to fail the warning predicate",
+  },
+  plant_ignore_lines: {
+    home: "src/world/park/footings.gd",
+    why: "park_flume_piers_test casts a sole on a ridden line to prove the footing check sees it",
+  },
+  keep_one_placement: {
+    home: "src/combat/terrain_faces.gd",
+    why: "rivet_warm_hitch_test restores the old one-build keying to prove the warm-up hitch fix",
+  },
+};
+
+const collectionWrite =
+  "append|append_array|push_back|push_front|insert|erase|clear|assign|resize|merge|fill|pop_back|pop_front|pop_at|remove_at|sort|reverse|shuffle";
+const faultReset = /^(?:static\s+)?func\s+reset_for_tests\s*\(/;
+const topLevel = /^(?:static\s+)?(?:func|var|const|class|signal|enum)\b|^@/;
+
+function faultWrite(name) {
+  return new RegExp(
+    `(?<!\\w)${name}\\b\\s*(?:[-+*/%]?=(?!=)|\\.\\s*(?:${collectionWrite})\\s*\\()|\\bset(?:_deferred|_indexed)?\\(\\s*&?["']${name}["']`,
+  );
+}
+
+export function lintL12(file, rel, text, switches = FAULT_SWITCHES) {
+  const out = [];
+  let resetting = false;
+  const names = Object.keys(switches);
+  for (const line of codeLines(text)) {
+    if (line.raw.length > 0 && !/^\s/.test(line.raw) && topLevel.test(line.raw))
+      resetting = faultReset.test(line.raw);
+    for (const name of names) {
+      if (!faultWrite(name).test(line.raw)) continue;
+      if (resetting && switches[name].home === rel) continue;
+      out.push(
+        finding(
+          "L12",
+          file,
+          line.number,
+          `game code writes the fault switch ${name}; only a test or a tool may set it, and ${switches[name].home} clears it in reset_for_tests()`,
+        ),
+      );
+    }
+  }
+  for (const name of names) {
+    if (switches[name].home !== rel) continue;
+    const declared = new RegExp(`^(?:static\\s+)?var\\s+${name}\\b`, "m");
+    if (!declared.test(text))
+      out.push(
+        finding(
+          "L12",
+          file,
+          1,
+          `FAULT_SWITCHES lists ${name}, which this file no longer declares: remove the entry`,
+        ),
+      );
+  }
+  return out;
+}
+
 function walk(directory, base = directory) {
   const entries = [];
   if (!existsSync(directory)) return entries;
@@ -668,6 +750,7 @@ export function lintSketch(sketch) {
     findings.push(...lintL9(file.path, file.text));
     findings.push(...lintL10(file.path, rel, file.text));
     findings.push(...lintL11(file.path, rel, file.text));
+    findings.push(...lintL12(file.path, rel, file.text));
   }
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   if (sketch === "core-loop") {

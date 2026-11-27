@@ -49,7 +49,31 @@ func _initialize() -> void:
 	_incoming_has_no_clock()
 	_arrow_slide_stays_on_the_edge()
 	_through_a_hold()
+	_ring_offer_goes_with_its_lead()
 	quit(_t.verdict())
+
+
+func _ring_offer_goes_with_its_lead() -> void:
+	var m = EdgeMarkers.new()
+	var ring := Vector3(12.0, 0.0, -4.0)
+	for id in EventDirector.PARTICIPATORY:
+		m.note_incoming(id, EventDirector.OFFER_LEAD, ring)
+	m.note_incoming("plunge_pool_flood", 3.0, Vector3(5.0, 0.0, 5.0))
+	_t.eq("each ring offer is marked beside a held danger", m.incoming_targets().size(), EventDirector.PARTICIPATORY.size() + 1)
+	_t.eq("only the danger counts as held", m.held_ids(), ["plunge_pool_flood"])
+	m.step_incoming(EventDirector.OFFER_LEAD - 0.1)
+	_t.eq("the offers stay marked inside their lead", m.incoming_targets().size(), EventDirector.PARTICIPATORY.size() + 1)
+	m.step_incoming(0.2)
+	_t.eq("an offer the player has not started loses its mark when its lead ends", m._incoming.keys(), ["plunge_pool_flood"])
+	m.step_incoming(600.0)
+	_t.eq("the held danger keeps its mark through the same wait", m.incoming_targets().size(), 1)
+	_t.eq("and is still the one held", m.held_ids(), ["plunge_pool_flood"])
+	m.note_incoming("surge_run", EventDirector.OFFER_LEAD, ring)
+	m.step_incoming(1.0)
+	m.note_incoming("surge_run", EventDirector.OFFER_LEAD, ring)
+	m.step_incoming(EventDirector.OFFER_LEAD - 0.5)
+	_t.check("a fresh offer starts a fresh lead", m._incoming.has("surge_run"), str(m._incoming.keys()))
+	m.free()
 
 
 func _bus_clears() -> void:

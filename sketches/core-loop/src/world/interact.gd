@@ -148,7 +148,7 @@ func find_target():
 	var ball: Vector3 = ctx.player.ball_position()
 	if not _hold.is_empty():
 		var held = _hold["device"]
-		return held if live(held) and held.holds_lock(ball) else null
+		return held if live(held) and held.ready_now() and held.holds_lock(ball) else null
 	var forward := _forward()
 	var best = null
 	var best_d := INF

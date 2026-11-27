@@ -4,6 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  FAULT_SWITCHES,
   ID_COMPARE_LEGACY,
   applyBaseline,
   baselineFrom,
@@ -20,6 +21,7 @@ import {
   lintL9,
   lintL10,
   lintL11,
+  lintL12,
   parseTuning,
 } from "./sketch-lint.mjs";
 import {
@@ -324,6 +326,87 @@ test("L11's frozen allow table matches the game source, and a planted branch in 
     ]) {
       assert.equal(lintL11(rel, rel, text + plant).length, row.sites + 1, `${rel} ${plant}`);
     }
+  }
+});
+
+test("L12 flags a write to a fault switch from game code, and passes reads, the declaration and the home's reset", () => {
+  const switches = {
+    lead_plant: { home: "src/combat/pack_pressure.gd", why: "a planted lead" },
+    _test_pending: { home: "src/core/cosmetics.gd", why: "planted pending art" },
+  };
+  const fails = [
+    'PackPressure.lead_plant = "full"\n',
+    'lead_plant = "none"\n',
+    'lead_plant += "x"\n',
+    'PackPressure.set("lead_plant", "full")\n',
+    "pressure.set_deferred(&'lead_plant', \"full\")\n",
+    'Cosmetics._test_pending = ["outfit_rivet_hood"]\n',
+    'Cosmetics._test_pending.append("outfit_rivet_hood")\n',
+    "_test_pending . clear()\n",
+  ];
+  for (const text of fails) {
+    assert.deepEqual(
+      lintL12("x/world.gd", "src/world/world.gd", `func _go():\n\t${text}`, switches).map(
+        (item) => `${item.rule} ${item.line}`,
+      ),
+      ["L12 2"],
+      text,
+    );
+  }
+  const passes = [
+    'if PackPressure.lead_plant == "full":\n',
+    'if lead_plant != "none" and lead_plant <= "z":\n',
+    "var held := Cosmetics._test_pending.has(id)\n",
+    "for id in PENDING_ART + _test_pending:\n",
+    'var row := {"lead_plant": "full"}\n',
+    'var unlead_plant = "full"\n',
+    '# PackPressure.lead_plant = "full"\n',
+  ];
+  for (const text of passes) {
+    assert.deepEqual(
+      lintL12("x/world.gd", "src/world/world.gd", `func _go():\n\t${text}`, switches),
+      [],
+      text,
+    );
+  }
+  const home =
+    'static var lead_plant := ""\n\n\nstatic func reset_for_tests() -> void:\n\tlead_plant = ""\n\n\nstatic func lead() -> String:\n\treturn lead_plant\n';
+  assert.deepEqual(
+    lintL12("x/pack_pressure.gd", "src/combat/pack_pressure.gd", home, switches),
+    [],
+  );
+  const armed = `${home}\n\nstatic func arm() -> void:\n\tlead_plant = "full"\n`;
+  assert.deepEqual(
+    lintL12("x/pack_pressure.gd", "src/combat/pack_pressure.gd", armed, switches).map(
+      (item) => item.line,
+    ),
+    [13],
+  );
+  const borrowed = 'func reset_for_tests() -> void:\n\tPackPressure.lead_plant = ""\n';
+  assert.equal(lintL12("x/world.gd", "src/world/world.gd", borrowed, switches).length, 1);
+  assert.match(
+    lintL12("x/pack_pressure.gd", "src/combat/pack_pressure.gd", "var other := 1\n", switches)[0]
+      .message,
+    /no longer declares: remove the entry/,
+  );
+});
+
+test("L12's switch table matches the game source, and a planted write from src/ fails", () => {
+  const homes = new Set(Object.values(FAULT_SWITCHES).map((row) => row.home));
+  for (const rel of homes) {
+    const text = readFileSync(path.join(sketchDir, rel), "utf8");
+    assert.deepEqual(lintL12(rel, rel, text), [], rel);
+  }
+  const other = "src/world/world.gd";
+  const world = readFileSync(path.join(sketchDir, other), "utf8");
+  assert.deepEqual(lintL12(other, other, world), []);
+  for (const [name, row] of Object.entries(FAULT_SWITCHES)) {
+    const home = readFileSync(path.join(sketchDir, row.home), "utf8");
+    assert.match(home, new RegExp(`^(?:static\\s+)?var\\s+${name}\\b`, "m"), name);
+    const plant = `\nfunc _planted(holder) -> void:\n\tholder.${name} = null\n`;
+    assert.equal(lintL12(row.home, row.home, home + plant).length, 1, `${row.home} ${name}`);
+    assert.equal(lintL12(other, other, world + plant).length, 1, `${other} ${name}`);
+    assert.match(lintL12(other, other, world + plant)[0].message, new RegExp(name));
   }
 });
 

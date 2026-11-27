@@ -263,6 +263,7 @@ class Site extends Node3D:
 	var interior_collision_ready := false
 	var trade := {}
 	var trade_devices: Array = []
+	var trade_sign: Label3D
 	var footprint := POCKET_FOG_SIZE
 	var relay
 	var stake_post: Node3D
@@ -927,7 +928,6 @@ static func _range_tree(root: Node, end_m: float, skip: Node = null) -> void:
 
 
 func _build_trade(s: Site) -> void:
-	var words := []
 	for i in TradePockets.devices(s.trade).size():
 		var spec: Dictionary = TradePockets.devices(s.trade)[i].duplicate()
 		spec["id"] = "trade_%d_%s_%d" % [ctx.run.stage, s.trade.interior_id, i]
@@ -938,20 +938,32 @@ func _build_trade(s: Site) -> void:
 		if _site_parent == null:
 			ctx.root.get_node("Interact").register(device)
 		s.trade_devices.append(device)
-		words.append(device.words())
 	var door: Array = s.interior.entrances[0].at
 	var label := Label3D.new()
 	label.name = "TradePrices"
 	label.position = Vector3(door[0], 3.4, door[1] + 1.0)
-	label.text = "%s\n%s\nHold at a device" % [TradePockets.door_words(s.trade, s.interior.tell.word), "\n".join(words)]
+	label.text = _trade_sign(s)
 	label.font_size = 36
 	label.outline_size = 8
 	label.billboard = BaseMaterial3D.BILLBOARD_ENABLED
 	label.no_depth_test = true
 	s.add_child(label)
+	s.trade_sign = label
+
+
+func _trade_sign(s: Site) -> String:
+	var lines := [TradePockets.door_words(s.trade, s.interior.tell.word)]
+	for device in s.trade_devices:
+		if device.sign_words() != "":
+			lines.append(device.sign_words())
+	lines.append("Hold at a device")
+	return "\n".join(lines)
 
 
 func _watch_trade(s: Site, ball: Vector3) -> void:
+	var sign := _trade_sign(s)
+	if s.trade_sign != null and s.trade_sign.text != sign:
+		s.trade_sign.text = sign
 	if not s.started and _planar(ball, s.global_position) <= s.footprint.z * 0.5 + 16.0:
 		s.started = true
 		TradePockets.see(ctx.run.trade_memory, s.trade)
