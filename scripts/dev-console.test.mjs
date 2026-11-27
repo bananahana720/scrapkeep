@@ -23,6 +23,7 @@ import {
   decodePngBuffer,
   DEV_FLAGS,
   diffPngBuffers,
+  formatPerfSummaryLine,
   parseArgs,
   RECIPES,
   REPO_ROOT,
@@ -30,6 +31,13 @@ import {
   scratchEnv,
   sendMailboxRequest,
 } from "./dev-console.mjs";
+import {
+  buildVisualQaPack,
+  decodePng,
+  encodeRgbPng,
+  toMachadoDeuteranopiaRgb,
+  toRec709GreyscaleRgb,
+} from "./visual-qa-pack.mjs";
 
 const CRC_TABLE = (() => {
   const table = new Uint32Array(256);
@@ -485,7 +493,7 @@ describe("mailbox round-trip and stale ready cleanup", () => {
 });
 
 describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
-  it("defines all 8 required recipes with proper headless/drawn defaults and pick 1", () => {
+  it("defines all 10 built-in recipes with proper headless/drawn defaults and pick 1", () => {
     const expected = {
       smoke: "headless",
       "combat-probe": "headless",
@@ -495,6 +503,8 @@ describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
       "quality-pair": "drawn",
       "overlay-check": "drawn",
       "perf-budget": "drawn",
+      "world1-prim-census": "headless",
+      "visual-qa-pack": "drawn",
     };
     assert.deepEqual(Object.keys(RECIPES).sort(), Object.keys(expected).sort());
     for (const [name, expectedMode] of Object.entries(expected)) {
@@ -504,6 +514,11 @@ describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
       assert.match(recipe.script, /\bpick 1\b/, `recipe ${name} picks start card`);
       assert.match(recipe.script, /\bquit\b/, `recipe ${name} quits cleanly`);
     }
+    assert.match(RECIPES["world1-prim-census"].script, /inspect prims greybox/);
+    assert.match(RECIPES["world1-prim-census"].script, /stage flume/);
+    assert.match(RECIPES["world1-prim-census"].script, /\bboss\b/);
+    assert.match(RECIPES["perf-budget"].script, /inspect perf 30/);
+    assert.match(RECIPES["visual-qa-pack"].script, /qa_pack/);
   });
 
   it("exports DEV_FLAGS for sketch-lint L3 and builds valid user args", () => {
@@ -536,7 +551,7 @@ describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
     assert.throws(() => buildUserArgs({ table: "bogus" }), /Invalid --table/);
   });
 
-  it("parses subcommands, flags, and rejects conflicting mode flags", () => {
+  it("parses subcommands, leading --ref flags, recipe shorthand, and rejects conflicting mode flags", () => {
     const parsed = parseArgs([
       "run",
       "calm on; quit",
@@ -559,9 +574,103 @@ describe("RECIPES, DEV_FLAGS, buildUserArgs, and parseArgs", () => {
     assert.equal(parsed.flags.timeout, 15000);
     assert.equal(parsed.flags.json, true);
 
+    const shorthand = parseArgs(["--ref", "60f1c1474", "--slot", "qa1", "smoke", "--json"]);
+    assert.equal(shorthand.command, "recipe");
+    assert.deepEqual(shorthand.positionals, ["smoke"]);
+    assert.equal(shorthand.flags.ref, "60f1c1474");
+    assert.equal(shorthand.flags.slot, "qa1");
+    assert.equal(shorthand.flags.json, true);
+
+    const qaPack = parseArgs(["visual-qa-pack", "/tmp/a.png", "--out", "/tmp/out", "--json"]);
+    assert.equal(qaPack.command, "visual-qa-pack");
+    assert.deepEqual(qaPack.positionals, ["/tmp/a.png"]);
+    assert.equal(qaPack.flags.out, "/tmp/out");
+
     assert.throws(() => parseArgs(["run", "quit", "--headless", "--drawn"]), /Conflicting mode/);
     assert.throws(() => parseArgs(["bogus"]), /Unknown command/);
     assert.throws(() => parseArgs(["serve", "--session", "../escape"]), /Invalid session name/);
     assert.throws(() => parseArgs(["run", "quit", "--size", "wide"]), /Invalid --size/);
+    assert.throws(() => parseArgs(["--ref"]), /--ref requires/);
+  });
+});
+
+describe("visual-qa-pack 4-oracle deterministic transforms", () => {
+  it("computes Rec.709 luminance greyscale and Machado deuteranopia preserving neutral greys", () => {
+    const rgb = new Uint8Array([255, 0, 0, 0, 255, 0, 0, 0, 255, 128, 128, 128]);
+    const grey = toRec709GreyscaleRgb(rgb);
+    assert.equal(grey[0], grey[1]);
+    assert.equal(grey[1], grey[2]);
+    assert.ok(grey[3] > grey[0], "green must have higher Rec.709 luminance than red");
+    assert.ok(grey[0] > grey[6], "red must have higher Rec.709 luminance than blue");
+    assert.ok(Math.abs(grey[9] - 128) <= 1, "neutral grey must stay neutral");
+
+    const cvd = toMachadoDeuteranopiaRgb(rgb);
+    assert.ok(
+      Math.abs(cvd[9] - 128) <= 1 && Math.abs(cvd[10] - 128) <= 1 && Math.abs(cvd[11] - 128) <= 1,
+    );
+    assert.ok(
+      cvd[3] > 200 && cvd[4] > 180,
+      "pure green shifts toward warm ochre under deuteranopia",
+    );
+  });
+
+  it("emits all 4 oracle PNGs and manifest from a PNG file without Python/PIL", () => {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-qa-pack-test-"));
+    try {
+      const srcW = 16;
+      const srcH = 9;
+      const pixels = new Uint8Array(srcW * srcH * 3);
+      for (let i = 0; i < srcW * srcH; i++) {
+        pixels[i * 3] = (i * 19) & 0xff;
+        pixels[i * 3 + 1] = (i * 37 + 40) & 0xff;
+        pixels[i * 3 + 2] = (i * 53 + 80) & 0xff;
+      }
+      const inPath = path.join(tmp, "sample.png");
+      writeFileSync(inPath, encodeRgbPng(srcW, srcH, pixels));
+      const outDir = path.join(tmp, "pack");
+      const res = buildVisualQaPack(inPath, { outDir });
+
+      assert.equal(res.source_width, 16);
+      assert.equal(res.source_height, 9);
+      assert.ok(existsSync(res.manifest_path));
+      for (const [key, expectedSize] of [
+        ["rgb_1080p", [1920, 1080]],
+        ["downscale_720p", [1280, 720]],
+        ["greyscale_rec709", [1280, 720]],
+        ["cvd_deuteranopia_machado", [1280, 720]],
+      ]) {
+        const oracle = res.oracles[key];
+        assert.ok(oracle && existsSync(oracle.path), `missing oracle ${key}`);
+        const decoded = decodePng(readFileSync(oracle.path));
+        assert.equal(decoded.width, expectedSize[0], `${key} width`);
+        assert.equal(decoded.height, expectedSize[1], `${key} height`);
+      }
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("formatPerfSummaryLine", () => {
+  it("formats n, min, median, p95, quality preset, rendering driver, and top limiter", () => {
+    const line = formatPerfSummaryLine({
+      n: 30,
+      quality_preset: "high",
+      rendering_driver: "metal",
+      fps: 60.0,
+      frame_ms: 16.6,
+      spread: {
+        fps: { min: 57.5, median: 60.0, p95: 60.0 },
+        frame_ms: { min: 16.4, median: 16.6, p95: 17.4 },
+      },
+      limiter: { note: "draw_calls (p95=420 / budget=500, 84.0%)" },
+    });
+    assert.match(line, /n=30/);
+    assert.match(line, /preset=high/);
+    assert.match(line, /driver=metal/);
+    assert.match(line, /min=57\.5/);
+    assert.match(line, /med=60/);
+    assert.match(line, /p95=17\.4/);
+    assert.match(line, /limiter=draw_calls/);
   });
 });

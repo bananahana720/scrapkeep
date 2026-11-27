@@ -21,6 +21,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { inflateSync } from "node:zlib";
 
+import { buildVisualQaPack } from "./visual-qa-pack.mjs";
+import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
+
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 export const SKETCH_DIR = path.join(REPO_ROOT, "sketches", "core-loop");
 
@@ -92,9 +95,27 @@ export const RECIPES = {
   "perf-budget": {
     name: "perf-budget",
     mode: "drawn",
-    description: "Warp to landmark offscreen and inspect render perf and primitive counts",
+    description:
+      "Warp to landmark offscreen and sample multi-tick render perf spread, limiters, and greybox census",
     script:
-      "calm on; hud off; run 1; wait 90; pick 1; wait 60; warp landmark; wait 30; inspect perf; inspect prims; assert finite; quit",
+      "calm on; hud off; run 1; wait 90; pick 1; wait 60; warp landmark; wait 30; inspect perf 30; inspect prims greybox; assert finite; quit",
+  },
+  "world1-prim-census": {
+    name: "world1-prim-census",
+    mode: "headless",
+    description:
+      "Uncapped greybox PrimitiveMesh, flat StandardMaterial3D, and Skeleton3D census across park_dam, park_flume, and park_slag_bowl",
+    script:
+      "calm on; run 1; wait 60; pick 1; tick 15; inspect prims greybox; stage flume; wait 60; tick 15; inspect prims greybox; boss; wait 60; tick 15; inspect prims greybox; assert finite; quit",
+  },
+  "visual-qa-pack": {
+    name: "visual-qa-pack",
+    mode: "drawn",
+    defaultSize: "1920x1080",
+    description:
+      "Capture an offscreen 1080p frame and emit the 4-oracle QA pack (1080p RGB, 720p, Rec.709 greyscale, Machado deuteranopia)",
+    script:
+      "calm on; hud off; run 1; wait 90; pick 1; wait 60; freeze; qa_pack visual_qa_pack; assert finite; quit",
   },
 };
 
@@ -900,17 +921,10 @@ function runProcess(command, args, { env, cwd, timeoutMs }) {
 }
 
 export function parseArgs(argv) {
-  if (
-    !Array.isArray(argv) ||
-    argv.length === 0 ||
-    argv[0] === "-h" ||
-    argv[0] === "--help" ||
-    argv[0] === "help"
-  ) {
+  if (!Array.isArray(argv) || argv.length === 0) {
     return { command: "help", positionals: [], flags: {} };
   }
 
-  const command = argv[0];
   const validCommands = new Set([
     "run",
     "serve",
@@ -920,12 +934,9 @@ export function parseArgs(argv) {
     "recipe",
     "diff",
     "bench",
+    "visual-qa-pack",
+    "help",
   ]);
-  if (!validCommands.has(command)) {
-    throw new Error(
-      `Unknown command "${command}". Expected one of: ${[...validCommands].join(", ")}`,
-    );
-  }
 
   const flags = {
     mode: null,
@@ -933,13 +944,17 @@ export function parseArgs(argv) {
     table: null,
     seed: null,
     size: "1280x720",
+    sizeExplicit: false,
     timeout: null,
     json: false,
     session: "default",
     idle: 180,
     turns: 10,
+    ref: null,
+    slot: null,
+    capture: false,
   };
-  const positionals = [];
+  const tokens = [];
 
   const setMode = (next) => {
     if (flags.mode !== null && flags.mode !== next) {
@@ -948,12 +963,16 @@ export function parseArgs(argv) {
     flags.mode = next;
   };
 
-  for (let i = 1; i < argv.length; i++) {
+  for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
+    if (arg === "-h" || arg === "--help") {
+      return { command: "help", positionals: [], flags };
+    }
     if (arg === "--headless") setMode("headless");
     else if (arg === "--drawn") setMode("drawn");
     else if (arg === "--windowed") setMode("windowed");
     else if (arg === "--json") flags.json = true;
+    else if (arg === "--capture") flags.capture = true;
     else if (arg === "--out") {
       if (i + 1 >= argv.length) throw new Error("--out requires a directory");
       flags.out = argv[++i];
@@ -968,6 +987,7 @@ export function parseArgs(argv) {
     } else if (arg === "--size") {
       if (i + 1 >= argv.length) throw new Error("--size requires <width>x<height>");
       flags.size = parseSize(argv[++i]).text;
+      flags.sizeExplicit = true;
     } else if (arg === "--timeout") {
       if (i + 1 >= argv.length) throw new Error("--timeout requires milliseconds");
       const n = Number(argv[++i]);
@@ -988,14 +1008,49 @@ export function parseArgs(argv) {
       const n = Number(argv[++i]);
       if (!Number.isInteger(n) || n < 1) throw new Error(`--turns must be >= 1; got "${argv[i]}"`);
       flags.turns = n;
+    } else if (arg === "--ref") {
+      if (i + 1 >= argv.length || !argv[i + 1].trim()) {
+        throw new Error("--ref requires a git ref or commit SHA");
+      }
+      flags.ref = argv[++i].trim();
+    } else if (arg === "--slot") {
+      if (i + 1 >= argv.length) throw new Error("--slot requires a slot name");
+      flags.slot = validateSlotName(argv[++i]);
     } else if (arg.startsWith("--")) {
       throw new Error(`Unknown flag "${arg}"`);
     } else {
-      positionals.push(arg);
+      tokens.push(arg);
     }
   }
 
-  return { command, positionals, flags };
+  if (tokens.length === 0) {
+    return { command: "help", positionals: [], flags };
+  }
+
+  const head = tokens[0];
+  if (head === "help") {
+    return { command: "help", positionals: tokens.slice(1), flags };
+  }
+  if (validCommands.has(head)) {
+    return { command: head, positionals: tokens.slice(1), flags };
+  }
+  if (Object.hasOwn(RECIPES, head)) {
+    return { command: "recipe", positionals: tokens, flags };
+  }
+  throw new Error(
+    `Unknown command "${head}". Expected one of: ${[...validCommands].join(", ")} (or a recipe: ${Object.keys(RECIPES).join(", ")})`,
+  );
+}
+
+export function formatPerfSummaryLine(perf) {
+  if (!perf || typeof perf !== "object") return null;
+  const n = Number(perf.n ?? 1);
+  const fps = perf.spread?.fps ?? {};
+  const frame = perf.spread?.frame_ms ?? {};
+  const preset = perf.quality_preset ?? "unknown";
+  const driver = perf.rendering_driver ?? perf.rendering_method ?? "unknown";
+  const limiter = perf.limiter?.note ?? "none";
+  return `perf(n=${n}, preset=${preset}, driver=${driver}): fps min=${fps.min ?? perf.fps} med=${fps.median ?? perf.fps} p95=${fps.p95 ?? perf.fps} | frame_ms med=${frame.median ?? perf.frame_ms ?? 0} p95=${frame.p95 ?? perf.frame_ms ?? 0} | limiter=${limiter}`;
 }
 
 function resolveOutDir(outFlag, prefix) {
@@ -1026,7 +1081,6 @@ async function cmdRun({ scriptInput, flags, prefix = "run" }) {
     writeFileSync(scriptFile, scriptInput.trim() + "\n", "utf8");
   }
 
-  // Resolve Godot binary BEFORE overriding HOME with scratch env
   const godotBin = resolveGodotBinary();
   const scratchPath = path.join(
     REPO_ROOT,
@@ -1038,57 +1092,96 @@ async function cmdRun({ scriptInput, flags, prefix = "run" }) {
   );
   const { home, env } = scratchEnv(scratchPath);
 
-  const userArgs = buildUserArgs({
-    table: flags.table,
-    seed: flags.seed,
-    devOut: outDir,
-    devFile: scriptFile,
-  });
-  const spec = buildGodotLaunchSpec({
-    godotBin,
-    mode,
-    size: flags.size,
-    userArgs,
-  });
-
-  const ran = await runProcess(spec.command, spec.args, {
-    env,
-    cwd: REPO_ROOT,
-    timeoutMs,
-  });
-  const receiptPath = path.join(outDir, "receipt.json");
-  const receipt = readJsonSafe(receiptPath);
-  const analysis = analyzeOutput({
-    exitCode: ran.exitCode,
-    stdout: ran.stdout,
-    stderr: ran.stderr,
-    receipt,
-  });
-
-  const payload = {
-    ok: analysis.ok,
-    mode,
-    out: outDir,
-    home,
-    receipt_path: existsSync(receiptPath) ? receiptPath : null,
-    exit_code: ran.exitCode,
-    timed_out: ran.timedOut,
-    ms: ran.ms,
-    issues: analysis.issues,
-    receipt,
-  };
-
-  if (flags.json) {
-    console.log(JSON.stringify(payload, null, 2));
-  } else {
-    console.log(`dev-console ${payload.ok ? "PASS" : "FAIL"} (${mode}, ${ran.ms}ms) -> ${outDir}`);
-    if (receipt?.steps) {
-      const passed = receipt.steps.filter((s) => s.ok !== false).length;
-      console.log(`  steps: ${passed}/${receipt.steps.length}`);
+  let sandbox = null;
+  try {
+    if (flags.ref) {
+      sandbox = materializeSandbox({
+        ref: flags.ref,
+        repoRoot: REPO_ROOT,
+        slot: flags.slot,
+        godotBin,
+        importHomeDir: path.join(scratchPath, "import-home"),
+      });
     }
-    for (const issue of analysis.issues) console.error(`  ! ${issue}`);
+
+    const userArgs = buildUserArgs({
+      table: flags.table,
+      seed: flags.seed,
+      devOut: outDir,
+      devFile: scriptFile,
+    });
+    const spec = buildGodotLaunchSpec({
+      godotBin,
+      sketchDir: sandbox ? sandbox.sketchDir : SKETCH_DIR,
+      mode,
+      size: flags.size,
+      userArgs,
+    });
+
+    const ran = await runProcess(spec.command, spec.args, {
+      env,
+      cwd: sandbox ? sandbox.worktreeDir : REPO_ROOT,
+      timeoutMs,
+    });
+    const receiptPath = path.join(outDir, "receipt.json");
+    const receipt = readJsonSafe(receiptPath);
+    const analysis = analyzeOutput({
+      exitCode: ran.exitCode,
+      stdout: ran.stdout,
+      stderr: ran.stderr,
+      receipt,
+    });
+
+    const payload = {
+      ok: analysis.ok,
+      mode,
+      out: outDir,
+      home,
+      ...(sandbox
+        ? {
+            ref: sandbox.ref,
+            sha: sandbox.sha,
+            slot: sandbox.slot,
+            sandbox_dir: sandbox.worktreeDir,
+            overlay_applied: sandbox.overlay.applied || sandbox.overlay.cached,
+          }
+        : {}),
+      receipt_path: existsSync(receiptPath) ? receiptPath : null,
+      exit_code: ran.exitCode,
+      timed_out: ran.timedOut,
+      ms: ran.ms,
+      issues: analysis.issues,
+      receipt,
+    };
+
+    if (flags.json) {
+      console.log(JSON.stringify(payload, null, 2));
+    } else {
+      const refTag = sandbox ? ` @ ${sandbox.sha12}[${sandbox.slot}]` : "";
+      console.log(
+        `dev-console ${payload.ok ? "PASS" : "FAIL"} (${mode}, ${ran.ms}ms${refTag}) -> ${outDir}`,
+      );
+      if (receipt?.steps) {
+        const passed = receipt.steps.filter((s) => s.ok !== false).length;
+        console.log(`  steps: ${passed}/${receipt.steps.length}`);
+        for (const step of receipt.steps) {
+          if (step?.data && typeof step.data === "object") {
+            if (step.data.spread && step.data.limiter) {
+              console.log(`  ${formatPerfSummaryLine(step.data)}`);
+            } else if (step.data.flat_materials && step.data.skeletons) {
+              console.log(
+                `  census[${step.data.map || step.data.flow}]: prims=${step.data.count} flat_mats=${step.data.flat_materials.count} skeletons=${step.data.skeletons.count}`,
+              );
+            }
+          }
+        }
+      }
+      for (const issue of analysis.issues) console.error(`  ! ${issue}`);
+    }
+    return payload.ok ? 0 : 1;
+  } finally {
+    if (sandbox) sandbox.release();
   }
-  return payload.ok ? 0 : 1;
 }
 
 async function cmdServe({ flags, silent = false }) {
@@ -1124,6 +1217,17 @@ async function cmdServe({ flags, silent = false }) {
 
   const godotBin = resolveGodotBinary();
   const { env } = scratchEnv(paths.home);
+  let sandbox = null;
+  if (flags.ref) {
+    sandbox = materializeSandbox({
+      ref: flags.ref,
+      repoRoot: REPO_ROOT,
+      slot: flags.slot,
+      godotBin,
+      importHomeDir: path.join(paths.home, "import-home"),
+    });
+  }
+
   const userArgs = buildUserArgs({
     table: flags.table ?? "park",
     seed: flags.seed,
@@ -1133,6 +1237,7 @@ async function cmdServe({ flags, silent = false }) {
   });
   const spec = buildGodotLaunchSpec({
     godotBin,
+    sketchDir: sandbox ? sandbox.sketchDir : SKETCH_DIR,
     mode,
     size: flags.size,
     userArgs,
@@ -1144,11 +1249,14 @@ async function cmdServe({ flags, silent = false }) {
   try {
     child = spawn(spec.command, spec.args, {
       env,
-      cwd: REPO_ROOT,
+      cwd: sandbox ? sandbox.worktreeDir : REPO_ROOT,
       detached: true,
       stdio: ["ignore", logFd, logFd],
     });
     child.unref();
+  } catch (error) {
+    if (sandbox) sandbox.release();
+    throw error;
   } finally {
     closeSync(logFd);
   }
@@ -1157,15 +1265,21 @@ async function cmdServe({ flags, silent = false }) {
   try {
     ready = await waitForReady(paths.inbox, { timeoutMs, pid: child.pid });
   } catch (error) {
+    if (sandbox) sandbox.release();
     const logTail = existsSync(paths.logFile)
       ? readFileSync(paths.logFile, "utf8").split(/\r?\n/).slice(-15).join("\n")
       : "";
     throw new Error(`${error.message}${logTail ? `\n--- godot.log ---\n${logTail}` : ""}`);
   }
 
+  const resolvedPid = Number(ready.pid ?? child.pid);
+  if (sandbox) {
+    sandbox.transferLockTo(resolvedPid, { session: paths.name });
+  }
+
   const meta = {
     session: paths.name,
-    pid: Number(ready.pid ?? child.pid),
+    pid: resolvedPid,
     launcher_pid: child.pid,
     mode,
     table: flags.table ?? "park",
@@ -1175,6 +1289,14 @@ async function cmdServe({ flags, silent = false }) {
     inbox: paths.inbox,
     out: paths.artifactsDir,
     log: paths.logFile,
+    ...(sandbox
+      ? {
+          ref: sandbox.ref,
+          sha: sandbox.sha,
+          slot: sandbox.slot,
+          sandbox_dir: sandbox.worktreeDir,
+        }
+      : {}),
     boot_ms: Date.now() - started,
     started_at: new Date().toISOString(),
   };
@@ -1239,6 +1361,7 @@ async function cmdStop({ flags, silent = false }) {
 
   if (!wasAlive) {
     cleanStaleReady(paths.inbox);
+    if (meta?.sandbox_dir) releaseSlotLock(meta.sandbox_dir, { expectedPid: pid });
     const payload = { ok: true, session: paths.name, already_stopped: true, pid: null };
     if (!silent) {
       if (flags.json) console.log(JSON.stringify(payload, null, 2));
@@ -1278,6 +1401,7 @@ async function cmdStop({ flags, silent = false }) {
   }
 
   cleanStaleReady(paths.inbox);
+  if (meta?.sandbox_dir) releaseSlotLock(meta.sandbox_dir, { expectedPid: pid });
   const stillAlive = isPidAlive(pid);
   const payload = {
     ok: !stillAlive,
@@ -1309,12 +1433,40 @@ async function cmdRecipe({ name, flags }) {
     ...flags,
     mode: flags.mode ?? recipe.mode,
     table: flags.table ?? "park",
+    size: !flags.sizeExplicit && recipe.defaultSize ? recipe.defaultSize : flags.size,
   };
   return cmdRun({
     scriptInput: recipe.script,
     flags: mergedFlags,
     prefix: `recipe-${name}`,
   });
+}
+
+async function cmdVisualQaPack({ inputPath, flags }) {
+  if (flags.capture || !inputPath) {
+    if (!flags.capture && !inputPath) {
+      throw new Error(
+        "visual-qa-pack requires <input.png> (to convert an existing PNG) or --capture (to shoot a live 1080p frame)",
+      );
+    }
+    return cmdRecipe({ name: "visual-qa-pack", flags });
+  }
+  if (!existsSync(inputPath)) {
+    throw new Error(`Input PNG not found: ${inputPath}`);
+  }
+  const outDir = flags.out ? path.resolve(flags.out) : resolveOutDir(null, "visual-qa-pack");
+  const result = buildVisualQaPack(inputPath, { outDir });
+  if (flags.json) {
+    console.log(JSON.stringify({ ok: true, ...result }, null, 2));
+  } else {
+    console.log(
+      `visual-qa-pack PASS (${result.source_width}x${result.source_height}) -> ${result.out}`,
+    );
+    for (const [k, v] of Object.entries(result.oracles)) {
+      console.log(`  ${k}: ${v.width}x${v.height} mean_luma=${v.mean_luma} -> ${v.path}`);
+    }
+  }
+  return 0;
 }
 
 function cmdDiff({ pathA, pathB, flags }) {
@@ -1346,122 +1498,150 @@ async function cmdBench({ flags }) {
   const mode = flags.mode ?? "headless";
   const godotBin = resolveGodotBinary();
 
-  const boot = "calm on; run 1; wait 60; pick 1; tick 5";
-  const benchSteps = [
-    { warm: `${boot}; assert state stage`, cold: `${boot}; assert state stage` },
-    { warm: "inspect player", cold: `${boot}; inspect player` },
-    { warm: "spawn chaser 2; tick 5", cold: `${boot}; spawn chaser 2; tick 5` },
-    { warm: "inspect enemies", cold: `${boot}; spawn chaser 2; tick 5; inspect enemies` },
-    { warm: "assert enemies 2", cold: `${boot}; spawn chaser 2; tick 5; assert enemies 2` },
-    { warm: "inspect perf", cold: `${boot}; inspect perf` },
-    { warm: "clear hard; tick 5", cold: `${boot}; spawn chaser 2; tick 5; clear hard; tick 5` },
-    { warm: "assert enemies 0", cold: `${boot}; assert enemies 0` },
-    { warm: "inspect anomalies", cold: `${boot}; inspect anomalies` },
-    { warm: "assert finite", cold: `${boot}; assert finite` },
-  ];
-  const stepFor = (index) => {
-    const entry = benchSteps[index % benchSteps.length];
-    if (index > 0 && index % benchSteps.length === 0) {
-      return { ...entry, warm: "inspect state; assert state stage" };
-    }
-    return entry;
-  };
+  let sandbox = null;
+  if (flags.ref) {
+    sandbox = materializeSandbox({
+      ref: flags.ref,
+      repoRoot: REPO_ROOT,
+      slot: flags.slot,
+      godotBin,
+      importHomeDir: path.join(outDir, "import-home"),
+    });
+  }
 
-  // 1. Cold batch runs
-  const coldMs = [];
-  const coldStart = Date.now();
-  for (let i = 0; i < turns; i++) {
-    const turnDir = path.join(outDir, `cold-${i + 1}`);
-    mkdirSync(turnDir, { recursive: true });
-    const scriptFile = path.join(turnDir, "script.dev");
-    const cmd = `${stepFor(i).cold}; quit`;
-    writeFileSync(scriptFile, cmd + "\n", "utf8");
-    const { env } = scratchEnv(path.join(turnDir, "home"));
-    const userArgs = buildUserArgs({
+  try {
+    const targetSketchDir = sandbox ? sandbox.sketchDir : SKETCH_DIR;
+    const targetCwd = sandbox ? sandbox.worktreeDir : REPO_ROOT;
+
+    const boot = "calm on; run 1; wait 60; pick 1; tick 5";
+    const benchSteps = [
+      { warm: `${boot}; assert state stage`, cold: `${boot}; assert state stage` },
+      { warm: "inspect player", cold: `${boot}; inspect player` },
+      { warm: "spawn chaser 2; tick 5", cold: `${boot}; spawn chaser 2; tick 5` },
+      { warm: "inspect enemies", cold: `${boot}; spawn chaser 2; tick 5; inspect enemies` },
+      { warm: "assert enemies 2", cold: `${boot}; spawn chaser 2; tick 5; assert enemies 2` },
+      { warm: "inspect perf", cold: `${boot}; inspect perf` },
+      { warm: "clear hard; tick 5", cold: `${boot}; spawn chaser 2; tick 5; clear hard; tick 5` },
+      { warm: "assert enemies 0", cold: `${boot}; assert enemies 0` },
+      { warm: "inspect anomalies", cold: `${boot}; inspect anomalies` },
+      { warm: "assert finite", cold: `${boot}; assert finite` },
+    ];
+    const stepFor = (index) => {
+      const entry = benchSteps[index % benchSteps.length];
+      if (index > 0 && index % benchSteps.length === 0) {
+        return { ...entry, warm: "inspect state; assert state stage" };
+      }
+      return entry;
+    };
+
+    const coldMs = [];
+    const coldStart = Date.now();
+    for (let i = 0; i < turns; i++) {
+      const turnDir = path.join(outDir, `cold-${i + 1}`);
+      mkdirSync(turnDir, { recursive: true });
+      const scriptFile = path.join(turnDir, "script.dev");
+      const cmd = `${stepFor(i).cold}; quit`;
+      writeFileSync(scriptFile, cmd + "\n", "utf8");
+      const { env } = scratchEnv(path.join(turnDir, "home"));
+      const userArgs = buildUserArgs({
+        table: flags.table ?? "park",
+        seed: flags.seed ?? 7,
+        devOut: turnDir,
+        devFile: scriptFile,
+      });
+      const spec = buildGodotLaunchSpec({
+        godotBin,
+        sketchDir: targetSketchDir,
+        mode,
+        size: flags.size,
+        userArgs,
+      });
+      const ran = await runProcess(spec.command, spec.args, {
+        env,
+        cwd: targetCwd,
+        timeoutMs: flags.timeout ?? 120_000,
+      });
+      if (ran.exitCode !== 0) {
+        throw new Error(`Cold bench turn ${i + 1} failed with exit ${ran.exitCode}`);
+      }
+      coldMs.push(ran.ms);
+    }
+    const coldTotalMs = Date.now() - coldStart;
+
+    const sessionName = `bench-${randomBytes(3).toString("hex")}`;
+    const serveFlags = {
+      ...flags,
+      mode,
+      session: sessionName,
       table: flags.table ?? "park",
       seed: flags.seed ?? 7,
-      devOut: turnDir,
-      devFile: scriptFile,
-    });
-    const spec = buildGodotLaunchSpec({ godotBin, mode, size: flags.size, userArgs });
-    const ran = await runProcess(spec.command, spec.args, {
-      env,
-      cwd: REPO_ROOT,
-      timeoutMs: flags.timeout ?? 120_000,
-    });
-    if (ran.exitCode !== 0) {
-      throw new Error(`Cold bench turn ${i + 1} failed with exit ${ran.exitCode}`);
+      json: false,
+      ref: null,
+    };
+    if (sandbox) {
+      sandbox.release();
+      sandbox = null;
+      serveFlags.ref = flags.ref;
     }
-    coldMs.push(ran.ms);
-  }
-  const coldTotalMs = Date.now() - coldStart;
-
-  // 2. Warm File-Mailbox session
-  const sessionName = `bench-${randomBytes(3).toString("hex")}`;
-  const serveFlags = {
-    ...flags,
-    mode,
-    session: sessionName,
-    table: flags.table ?? "park",
-    seed: flags.seed ?? 7,
-    json: false,
-  };
-  const warmStart = Date.now();
-  const paths = sessionPaths(sessionName);
-  let warmBootMs = 0;
-  const warmTurnMs = [];
-  try {
-    const bootStart = Date.now();
-    await cmdServe({ flags: serveFlags, silent: true });
-    warmBootMs = Date.now() - bootStart;
-    for (let i = 0; i < turns; i++) {
-      const res = await sendMailboxRequest(paths.inbox, stepFor(i).warm, {
-        timeoutMs: flags.timeout ?? 30_000,
-      });
-      if (!res.ok) {
-        throw new Error(`Warm bench turn ${i + 1} failed: ${res.text ?? "unknown"}`);
+    const warmStart = Date.now();
+    const paths = sessionPaths(sessionName);
+    let warmBootMs = 0;
+    const warmTurnMs = [];
+    try {
+      const bootStart = Date.now();
+      await cmdServe({ flags: serveFlags, silent: true });
+      warmBootMs = Date.now() - bootStart;
+      for (let i = 0; i < turns; i++) {
+        const res = await sendMailboxRequest(paths.inbox, stepFor(i).warm, {
+          timeoutMs: flags.timeout ?? 30_000,
+        });
+        if (!res.ok) {
+          throw new Error(`Warm bench turn ${i + 1} failed: ${res.text ?? "unknown"}`);
+        }
+        warmTurnMs.push(res.rtt_ms);
       }
-      warmTurnMs.push(res.rtt_ms);
+    } finally {
+      await cmdStop({ flags: serveFlags, silent: true });
     }
+    const warmTotalMs = Date.now() - warmStart;
+
+    const summary = {
+      turns,
+      mode,
+      platform: process.platform,
+      cold: {
+        total_ms: coldTotalMs,
+        median_ms: Number(median(coldMs).toFixed(1)),
+        per_turn_ms: coldMs,
+      },
+      warm: {
+        boot_ms: warmBootMs,
+        total_ms: warmTotalMs,
+        median_turn_ms: Number(median(warmTurnMs).toFixed(1)),
+        per_turn_ms: warmTurnMs,
+      },
+      speedup: Number((coldTotalMs / Math.max(warmTotalMs, 1)).toFixed(2)),
+      out: outDir,
+    };
+    writeFileSync(path.join(outDir, "bench.json"), JSON.stringify(summary, null, 2) + "\n", "utf8");
+
+    if (flags.json) {
+      console.log(JSON.stringify(summary, null, 2));
+    } else {
+      console.log(`| Mode | Turns | Boot (ms) | Median Turn (ms) | Total (ms) |`);
+      console.log(`| --- | ---: | ---: | ---: | ---: |`);
+      console.log(
+        `| Cold batch | ${turns} | — | ${summary.cold.median_ms} | ${summary.cold.total_ms} |`,
+      );
+      console.log(
+        `| Warm File-Mailbox | ${turns} | ${summary.warm.boot_ms} | ${summary.warm.median_turn_ms} | ${summary.warm.total_ms} |`,
+      );
+      console.log(`\nSpeedup: ${summary.speedup}x (saved to ${path.join(outDir, "bench.json")})`);
+    }
+    return 0;
   } finally {
-    await cmdStop({ flags: serveFlags, silent: true });
+    if (sandbox) sandbox.release();
   }
-  const warmTotalMs = Date.now() - warmStart;
-
-  const summary = {
-    turns,
-    mode,
-    platform: process.platform,
-    cold: {
-      total_ms: coldTotalMs,
-      median_ms: Number(median(coldMs).toFixed(1)),
-      per_turn_ms: coldMs,
-    },
-    warm: {
-      boot_ms: warmBootMs,
-      total_ms: warmTotalMs,
-      median_turn_ms: Number(median(warmTurnMs).toFixed(1)),
-      per_turn_ms: warmTurnMs,
-    },
-    speedup: Number((coldTotalMs / Math.max(warmTotalMs, 1)).toFixed(2)),
-    out: outDir,
-  };
-  writeFileSync(path.join(outDir, "bench.json"), JSON.stringify(summary, null, 2) + "\n", "utf8");
-
-  if (flags.json) {
-    console.log(JSON.stringify(summary, null, 2));
-  } else {
-    console.log(`| Mode | Turns | Boot (ms) | Median Turn (ms) | Total (ms) |`);
-    console.log(`| --- | ---: | ---: | ---: | ---: |`);
-    console.log(
-      `| Cold batch | ${turns} | — | ${summary.cold.median_ms} | ${summary.cold.total_ms} |`,
-    );
-    console.log(
-      `| Warm File-Mailbox | ${turns} | ${summary.warm.boot_ms} | ${summary.warm.median_turn_ms} | ${summary.warm.total_ms} |`,
-    );
-    console.log(`\nSpeedup: ${summary.speedup}x (saved to ${path.join(outDir, "bench.json")})`);
-  }
-  return 0;
 }
 
 function printHelp() {
@@ -1476,14 +1656,18 @@ Commands:
   send <cmds>        Send one turn to a live session
   status             Check session PID liveness and ready.json
   stop               Gracefully quit a session (SIGTERM fallback + clean stale ready.json)
-  recipe <name>      Run a built-in zero-boilerplate recipe
+  recipe <name>      Run a built-in zero-boilerplate recipe (or pass recipe name directly)
+  visual-qa-pack     Convert <png> (or --capture) into 4-oracle QA pack (1080p, 720p, Rec.709, Machado CVD)
   diff <a.png> <b.png> Pure-Node pixel diff of two 8-bit PNG images
   bench              Benchmark N cold batch runs vs 1 warm File-Mailbox session
 
 Options:
+  --ref <git-ref>    Run against any git ref in an isolated detached worktree under artifacts/local/dev-ref/
+  --slot <name>      Pin a sandbox worktree slot (default: auto-allocated zero-collision slot)
   --headless         Headless + Dummy audio (default for run/serve/bench/logic recipes)
   --drawn            Silent offscreen rendering (macOS Metal --embedded; Linux gamescope/xvfb-run)
   --windowed         Explicitly allow a visible desktop window (never default)
+  --capture          Capture live 1080p frame for visual-qa-pack
   --out <dir>        Output directory for receipts and shots
   --table <name>     Stage table: park | alpha | slice | default
   --seed <n>         Deterministic route seed
@@ -1521,6 +1705,9 @@ export async function main(argv = process.argv.slice(2)) {
   }
   if (parsed.command === "recipe") {
     return cmdRecipe({ name: parsed.positionals[0], flags: parsed.flags });
+  }
+  if (parsed.command === "visual-qa-pack") {
+    return cmdVisualQaPack({ inputPath: parsed.positionals[0], flags: parsed.flags });
   }
   if (parsed.command === "diff") {
     return cmdDiff({

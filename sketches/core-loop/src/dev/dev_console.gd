@@ -44,7 +44,7 @@ const LIGHT_KEYS := ["exposure", "saturation", "contrast", "brightness", "ambien
 	"sun_size", "fog", "fog_sky", "air", "glow", "bloom", "ssao", "white", "ink_width"]
 const TONEMAPS := ["Linear", "Reinhard", "Filmic", "ACES", "AgX"]
 const LENS_KNOBS := DevLens.LENS_KNOBS
-const SCRIPT_STEPS := ["wait", "tick", "until", "shot", "sheet", "quit"]
+const SCRIPT_STEPS := ["wait", "tick", "until", "shot", "qa_pack", "sheet", "quit"]
 const LENS_RANGES := {"fov": [10.0, 120.0, 0.5], "distance": [2.0, 200.0, 0.5], "pitch": [-89.5, 60.0, 0.5],
 	"yaw": [-180.0, 180.0, 1.0], "size": [2.0, 300.0, 0.5], "lift": [-5.0, 30.0, 0.1], "spin": [-90.0, 90.0, 1.0], "tilt": [0.0, 1.0, 0.01], "cut": [0.0, 200.0, 0.5]}
 const WORLDS := ["all", "1", "2", "3"]
@@ -416,6 +416,9 @@ func _register() -> void:
 	commands.add("shot", "[name]", "save a still without the console", func(args: Array[String]):
 		shot(DevCommands.word(args, 0))
 		return "")
+	commands.add("qa_pack", "[name]", "capture the 4-oracle visual QA pack (1080p RGB, 720p, Rec.709 greyscale, Machado deuteranopia)", func(args: Array[String]):
+		qa_pack_detailed(DevCommands.word(args, 0))
+		return "")
 	commands.add("sheet", "[presets|cams|quality] [name]", "capture this frame once per look, camera or quality level into one labelled sheet", func(args: Array[String]):
 		var axis := DevCommands.word(args, 0, "presets").to_lower()
 		if not axis in SHEET_AXES:
@@ -492,6 +495,67 @@ func shot_detailed(id := "", close_menu := false) -> Dictionary:
 	SafeStore.write_atomic(shot_dir.path_join(stem + ".json"), JSON.stringify(data, "\t"))
 	var dead := FrameRead.note(read)
 	return _answer(true, "still -> %s%s" % [data.path, ("  dead frame: " + dead) if dead != "" else ""], data)
+
+
+func qa_pack_detailed(id := "", close_menu := false) -> Dictionary:
+	if _busy:
+		return _answer(false, "!a still or sheet is already running")
+	_busy = true
+	if close_menu:
+		unpause()
+	DirAccess.make_dir_recursive_absolute(shot_dir)
+	_shots += 1
+	var stem := id if id.is_valid_filename() and id != "" else "qa-pack-%03d-%d" % [_shots, Engine.get_frames_drawn()]
+	var was := _drawer.visible
+	_drawer.visible = false
+	overlay.set_capture_hide(false, overlay.active_layers().perf != "on")
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	if not is_inside_tree():
+		return {"ok": false, "text": "!the console closed before qa_pack", "data": {}}
+	var image := _grab()
+	_drawer.visible = was and open
+	overlay.set_capture_hide(false, false)
+	_busy = false
+	if image == null:
+		return _answer(false, "!no viewport image in headless mode")
+	var read := FrameRead.metrics(image)
+	var pack := DevLook.build_qa_pack_images(image)
+	var suffixes := {
+		"rgb_1080p": "_1080p_rgb.png",
+		"downscale_720p": "_720p.png",
+		"greyscale_rec709": "_greyscale.png",
+		"cvd_deuteranopia_machado": "_deuteranopia.png",
+	}
+	var oracles := {}
+	for key in suffixes:
+		var out_img: Image = pack[key]
+		var out_path := shot_dir.path_join(stem + String(suffixes[key]))
+		var err := out_img.save_png(out_path)
+		if err != OK:
+			return _answer(false, "!could not save %s (%d)" % [out_path, err])
+		oracles[key] = {
+			"path": ProjectSettings.globalize_path(out_path),
+			"width": out_img.get_width(),
+			"height": out_img.get_height(),
+			"metrics": FrameRead.metrics(out_img),
+		}
+	var data := {
+		"path": oracles.rgb_1080p.path,
+		"stem": stem,
+		"source_width": image.get_width(),
+		"source_height": image.get_height(),
+		"metrics": read,
+		"dead_frame": FrameRead.is_dead(read),
+		"oracles": oracles,
+		"cam": lens.mode,
+		"look": look.preset_name,
+		"quality": GraphicsPreset.current,
+		"stage": _stage_name(),
+	}
+	SafeStore.write_atomic(shot_dir.path_join(stem + "_qa_pack.json"), JSON.stringify(data, "\t"))
+	var dead := FrameRead.note(read)
+	return _answer(true, "qa_pack -> %s%s" % [data.path, ("  dead frame: " + dead) if dead != "" else ""], data)
 
 
 func contact_sheet(close_menu := false) -> String:

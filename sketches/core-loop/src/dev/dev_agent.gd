@@ -309,8 +309,15 @@ func _exec_step(step: String, scripted: bool, shots: Array) -> Dictionary:
 			return await _exec_until(step, words)
 		"shot":
 			return await _exec_shot(step, DevCommands.word(words, 1, ""), scripted, shots)
+		"qa_pack":
+			return await _exec_qa_pack(step, DevCommands.word(words, 1, ""), scripted, shots)
 		"sheet":
 			return await _exec_sheet(step, words, scripted, shots)
+		"inspect":
+			if words.size() >= 2 and words[1].to_lower() == "perf":
+				return await _exec_perf_sample(step, DevCommands.word(words, 2, ""))
+		"perf":
+			return await _exec_perf_sample(step, DevCommands.word(words, 1, ""))
 		"quit":
 			return {"cmd": step, "ok": true, "text": "quitting", "tone": "ok", "data": {"quitting": true}, "quit": true}
 	var out: Dictionary = console.commands.run_one_detailed(step)
@@ -390,6 +397,28 @@ func _exec_shot(step: String, shot_name: String, scripted: bool, shots: Array) -
 	elif console.has_method("shot"):
 		reply = await console.shot(shot_name, scripted)
 	return _normalize_capture(step, "shot", shot_name, reply, shots)
+
+
+func _exec_qa_pack(step: String, pack_name: String, scripted: bool, shots: Array) -> Dictionary:
+	if not is_instance_valid(console) or not console.has_method("qa_pack_detailed"):
+		return {"cmd": step, "ok": false, "text": "!console cannot capture qa_pack", "tone": "warn", "data": null}
+	var reply: Dictionary = await console.qa_pack_detailed(pack_name, scripted)
+	return _normalize_capture(step, "qa_pack", pack_name, reply, shots)
+
+
+func _exec_perf_sample(step: String, raw_n: String) -> Dictionary:
+	var insp := _inspect()
+	if insp == null:
+		return {"cmd": step, "ok": false, "text": "!DevInspect not mounted", "tone": "warn", "data": null}
+	var want_n := raw_n.to_int() if raw_n.is_valid_int() else 0
+	var data: Dictionary
+	if want_n > 0:
+		data = await insp.sample_perf(want_n)
+	elif insp.has_method("sample_perf") and int(insp.snapshot("perf").get("n", 0)) < 5:
+		data = await insp.sample_perf(15)
+	else:
+		data = insp.snapshot("perf")
+	return {"cmd": step, "ok": true, "text": DevInspect._summarize("perf", data), "tone": "ok", "data": data}
 
 
 func _exec_sheet(step: String, words: Array[String], scripted: bool, shots: Array) -> Dictionary:

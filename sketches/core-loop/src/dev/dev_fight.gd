@@ -482,7 +482,7 @@ func _cmd_give(args: Array[String]):
 		return "!no run state yet"
 	if args.is_empty():
 		return "!give <part_id> [count]"
-	var all_rows: Dictionary = Parts.all_rows()
+	var all_rows: Dictionary = _parts_rows()
 	var id := _resolve_id(args[0], all_rows.keys())
 	if id == "":
 		var near := all_rows.keys().filter(func(k: String): return String(k).begins_with(args[0]))
@@ -544,7 +544,7 @@ func _cmd_relic(args: Array[String]):
 		return "!relic <relic_id>"
 	var id := args[0]
 	if not Relics.has(id):
-		id = _resolve_id(args[0], Relics.all_ids())
+		id = _resolve_id(args[0], _relic_ids())
 	if id == "" or not Relics.has(id):
 		return "!unknown relic '%s'" % args[0]
 	if not game.run.add_relic(id, "dev"):
@@ -724,3 +724,19 @@ static func _resolve_id(raw: String, pool: Array) -> String:
 		return raw
 	var near := pool.filter(func(k): return String(k).begins_with(raw))
 	return String(near[0]) if near.size() == 1 else ""
+
+
+static func _parts_rows() -> Dictionary:
+	var script_ref: Script = Parts
+	if script_ref.has_method("all_rows"):
+		return script_ref.call("all_rows") as Dictionary
+	var cat = script_ref.get("CATALOGUE")
+	return cat as Dictionary if cat is Dictionary else {}
+
+
+static func _relic_ids() -> Array:
+	var script_ref: Script = Relics
+	if script_ref.has_method("all_ids"):
+		return script_ref.call("all_ids") as Array
+	var rows = script_ref.get("ROWS")
+	return (rows as Dictionary).keys() if rows is Dictionary else []

@@ -578,3 +578,59 @@ static func _show(amount: float) -> String:
 	if is_equal_approx(amount, roundf(amount)):
 		return str(int(amount))
 	return ("%.4f" % amount).rstrip("0")
+
+
+static func _srgb_to_linear(c: float) -> float:
+	if c <= 0.04045:
+		return c / 12.92
+	return pow((c + 0.055) / 1.055, 2.4)
+
+
+static func _linear_to_srgb_byte(v: float) -> int:
+	var clamped := clampf(v, 0.0, 1.0)
+	var srgb := clamped * 12.92 if clamped <= 0.0031308 else 1.055 * pow(clamped, 1.0 / 2.4) - 0.055
+	return clampi(int(roundf(srgb * 255.0)), 0, 255)
+
+
+static func build_qa_pack_images(source: Image) -> Dictionary:
+	var base := source.duplicate() as Image
+	if base.is_compressed():
+		base.decompress()
+	if base.get_format() != Image.FORMAT_RGB8:
+		base.convert(Image.FORMAT_RGB8)
+	var rgb_1080 := base.duplicate() as Image
+	if rgb_1080.get_width() != 1920 or rgb_1080.get_height() != 1080:
+		rgb_1080.resize(1920, 1080, Image.INTERPOLATE_LANCZOS)
+	var rgb_720 := base.duplicate() as Image
+	if rgb_720.get_width() != 1280 or rgb_720.get_height() != 720:
+		rgb_720.resize(1280, 720, Image.INTERPOLATE_LANCZOS)
+	var src_bytes := rgb_720.get_data()
+	var pixel_count := rgb_720.get_width() * rgb_720.get_height()
+	var grey_bytes := PackedByteArray()
+	grey_bytes.resize(pixel_count * 3)
+	var cvd_bytes := PackedByteArray()
+	cvd_bytes.resize(pixel_count * 3)
+	var lut: Array[float] = []
+	lut.resize(256)
+	for i in 256:
+		lut[i] = _srgb_to_linear(float(i) / 255.0)
+	for i in pixel_count:
+		var p := i * 3
+		var rl := lut[src_bytes[p]]
+		var gl := lut[src_bytes[p + 1]]
+		var bl := lut[src_bytes[p + 2]]
+		var y_byte := _linear_to_srgb_byte(0.2126 * rl + 0.7152 * gl + 0.0722 * bl)
+		grey_bytes[p] = y_byte
+		grey_bytes[p + 1] = y_byte
+		grey_bytes[p + 2] = y_byte
+		cvd_bytes[p] = _linear_to_srgb_byte(0.367322 * rl + 0.860646 * gl - 0.227968 * bl)
+		cvd_bytes[p + 1] = _linear_to_srgb_byte(0.280085 * rl + 0.672501 * gl + 0.047413 * bl)
+		cvd_bytes[p + 2] = _linear_to_srgb_byte(-0.011820 * rl + 0.042940 * gl + 0.968881 * bl)
+	var grey := Image.create_from_data(rgb_720.get_width(), rgb_720.get_height(), false, Image.FORMAT_RGB8, grey_bytes)
+	var cvd := Image.create_from_data(rgb_720.get_width(), rgb_720.get_height(), false, Image.FORMAT_RGB8, cvd_bytes)
+	return {
+		"rgb_1080p": rgb_1080,
+		"downscale_720p": rgb_720,
+		"greyscale_rec709": grey,
+		"cvd_deuteranopia_machado": cvd,
+	}
