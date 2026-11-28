@@ -102,6 +102,7 @@ export const ALWAYS = [
   "tests/app_shell_test.gd",
   "tests/identity_value_lint_test.gd",
   "tests/asset_registry_test.gd",
+  "tests/test_tool_owners_test.gd",
 ];
 export const PATH_RULES = [
   {

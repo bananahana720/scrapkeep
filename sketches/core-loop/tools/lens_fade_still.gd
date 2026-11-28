@@ -99,7 +99,7 @@ func _run() -> void:
 	var dust := FxLibrary.build("roll_dust")
 	root.add_child(dust)
 	dust.amount_ratio = 1.0
-	dust.set_instance_shader_parameter("tint", FxLibrary.colour("roll_dust", "rolling"))
+	dust.set_instance_shader_parameter(FxLibrary.TINT, FxLibrary.colour("roll_dust", "rolling"))
 	var tone := FxLibrary.colour("roll_dust", "rolling")
 	dust.global_position = cam.global_position + fwd * LENS_M
 	dust.emitting = true

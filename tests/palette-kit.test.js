@@ -60,6 +60,6 @@ for key, const in (("sandstone", "SANDSTONE"), ("cable", "CABLE"), ("charcoal", 
     assert ns["C"][key] == palette_gd.HEX[const], (key, ns["C"][key], palette_gd.HEX[const])
 print("kit.py palette: PASS")
 `;
-  const result = spawnSync("python3", ["-c", script], { cwd: sketch, encoding: "utf8" });
-  assert.equal(result.status, 0, result.stdout + result.stderr);
+  const result = spawnSync("python3", ["-B", "-c", script], { cwd: sketch, encoding: "utf8" });
+  assert.equal(result.status, 0, result.error?.message || result.stdout + result.stderr);
 });

@@ -228,8 +228,6 @@
     "sketches/core-loop/src/presentation/codex_style.gd:_icons",
     "sketches/core-loop/src/presentation/companion_body.gd:_painted_materials",
     "sketches/core-loop/src/presentation/companion_body.gd:_warned_empty_mesh",
-    "sketches/core-loop/src/presentation/craft/craft_lookdev.gd:_cache",
-    "sketches/core-loop/src/presentation/craft/craft_lookdev.gd:_unmasked_cache",
     "sketches/core-loop/src/presentation/crafted_ball_gear.gd:_mesh_cache",
     "sketches/core-loop/src/presentation/crew_lamp_field.gd:_lens",
     "sketches/core-loop/src/presentation/deck_fx.gd:_cache",
