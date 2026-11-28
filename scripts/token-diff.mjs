@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./lib/cli.mjs";
+import { git, gitOptional } from "./lib/git.mjs";
 
 const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -557,67 +557,45 @@ function splitNull(stdout) {
 }
 
 function resolveDefaultBase(root) {
-  const originMain = spawnSync(
-    "git",
-    ["-C", root, "rev-parse", "--verify", "--quiet", "origin/main"],
-    {
-      encoding: "utf8",
-    },
-  );
-  if (originMain.status === 0) return "origin/main";
-  const head = spawnSync("git", ["-C", root, "rev-parse", "--verify", "--quiet", "HEAD"], {
-    encoding: "utf8",
-  });
-  if (head.status === 0) return "HEAD";
+  if (gitOptional(["rev-parse", "--verify", "--quiet", "origin/main"], { cwd: root }) !== null)
+    return "origin/main";
+  if (gitOptional(["rev-parse", "--verify", "--quiet", "HEAD"], { cwd: root }) !== null)
+    return "HEAD";
   throw new Error("cannot resolve default base (neither origin/main nor HEAD exists)");
 }
 
 function gitShowOptional(root, spec) {
-  const ran = spawnSync("git", ["-C", root, "show", spec], {
-    encoding: "utf8",
-    maxBuffer: 64 * 1024 * 1024,
-  });
-  if (ran.error) throw ran.error;
-  return ran.status === 0 ? ran.stdout : null;
+  try {
+    return git(["show", spec], { cwd: root, trim: false });
+  } catch (error) {
+    if (error.status === undefined) throw error;
+    return null;
+  }
 }
 
 export function runTokenDiff({ root = defaultRoot, base = null, staged = false } = {}) {
   const targetBase = base ?? resolveDefaultBase(root);
-  const verify = spawnSync(
-    "git",
-    ["-C", root, "rev-parse", "--verify", "--quiet", `${targetBase}^{commit}`],
-    {
-      encoding: "utf8",
-    },
-  );
-  if (verify.error || verify.status !== 0) {
+  if (
+    gitOptional(["rev-parse", "--verify", "--quiet", `${targetBase}^{commit}`], { cwd: root }) ===
+    null
+  ) {
     throw new Error(`invalid base revision: ${targetBase}`);
   }
 
   const changedSet = new Set();
   const diffArgs = staged
-    ? ["-C", root, "diff", "--cached", "--name-only", "-z", targetBase]
-    : ["-C", root, "diff", "--name-only", "-z", targetBase];
-  const diffRun = spawnSync("git", diffArgs, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-  if (diffRun.error || diffRun.status !== 0) {
-    throw new Error(`git diff failed: ${diffRun.error?.message || diffRun.stderr.trim()}`);
-  }
-  for (const file of splitNull(diffRun.stdout)) {
+    ? ["diff", "--cached", "--name-only", "-z", targetBase]
+    : ["diff", "--name-only", "-z", targetBase];
+  for (const file of splitNull(git(diffArgs, { cwd: root, trim: false }))) {
     if (SUPPORTED_EXTENSIONS.has(path.extname(file).toLowerCase())) changedSet.add(file);
   }
 
   if (!staged) {
-    const untracked = spawnSync(
-      "git",
-      ["-C", root, "ls-files", "--others", "--exclude-standard", "-z"],
-      { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 },
-    );
-    if (untracked.error || untracked.status !== 0) {
-      throw new Error(
-        `git ls-files failed: ${untracked.error?.message || untracked.stderr.trim()}`,
-      );
-    }
-    for (const file of splitNull(untracked.stdout)) {
+    const untracked = git(["ls-files", "--others", "--exclude-standard", "-z"], {
+      cwd: root,
+      trim: false,
+    });
+    for (const file of splitNull(untracked)) {
       if (SUPPORTED_EXTENSIONS.has(path.extname(file).toLowerCase())) changedSet.add(file);
     }
   }

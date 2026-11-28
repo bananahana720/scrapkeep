@@ -186,12 +186,9 @@ test("the runner refuses --test-name-pattern and names the form that works", () 
 });
 
 test("every tracked *.test.mjs and tests/*.test.js is either discovered or listed in EXCLUDED_TESTS with a reason", () => {
-  const tracked = spawnSync("git", ["ls-files", "--", "*.test.mjs", "tests/*.test.js"], {
+  const trackedScriptTests = git(["ls-files", "--", "*.test.mjs", "tests/*.test.js"], {
     cwd: repoRoot,
-    encoding: "utf8",
-  });
-  assert.equal(tracked.status, 0, tracked.stderr);
-  const trackedScriptTests = tracked.stdout
+  })
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter((file) => file.endsWith(".test.mjs") || /^tests\/[^/]+\.test\.js$/.test(file))

@@ -15,6 +15,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { requireGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import { pool, runProcess as runChild } from "./lib/proc.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");
@@ -445,11 +446,6 @@ export function formatSitting(runs, verdicts) {
   return out.join("\n");
 }
 
-function git(args) {
-  const r = spawnSync("git", ["-C", root, ...args], { encoding: "utf8" });
-  return r.status === 0 ? r.stdout.trim() : null;
-}
-
 async function runProcess(command, args, options = {}) {
   const res = await runChild(command, args, options);
   if (res.error) return { code: -1, output: String(res.error) };
@@ -630,7 +626,7 @@ async function before(options) {
   rows.push(
     evaluateSweep(existsSync(sweepFile) ? readFileSync(sweepFile, "utf8") : "", sliceCell(defs)),
   );
-  const head = git(["rev-parse", "HEAD"]);
+  const head = gitOptional(["rev-parse", "HEAD"], { cwd: root });
   rows.push(evaluateReceipt(readReceipts(), head));
   rows.push(...BY_HAND);
 
@@ -679,7 +675,7 @@ function recorded(options) {
       {
         mode: "recorded",
         file: options.file,
-        head: git(["rev-parse", "HEAD"]),
+        head: gitOptional(["rev-parse", "HEAD"], { cwd: root }),
         ok,
         rows,
         bots: grouped,

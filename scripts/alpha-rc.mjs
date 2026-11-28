@@ -16,6 +16,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scratchGodotEnv } from "./godot-home.mjs";
 import { runProcess as runChild, stopGroup as stopChildGroup } from "./lib/proc.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const node = process.execPath;
@@ -214,12 +215,6 @@ export function judgeCommand(step, { exit, output, error }) {
     return { status: "not run", note: "sketch:smoke could not run (exit 2)" };
   if (exit === null) return { status: "fail", note: "timed out or killed" };
   if (exit !== 0) return { status: "fail", note: `exit ${exit}` };
-  const quarantined = output.match(/^quarantined \(red\) (\d+)/m);
-  if (quarantined)
-    return {
-      status: "fail",
-      note: `${quarantined[1]} quarantined red test(s); a release candidate carries none`,
-    };
   return { status: "pass", note: "exit 0" };
 }
 
@@ -600,20 +595,19 @@ export async function runAlphaRc(
 }
 
 export function gitState(cwd = root) {
-  const git = (...a) => spawnSync("git", ["-C", cwd, ...a], { encoding: "utf8" });
-  const head = git("rev-parse", "HEAD");
-  if (head.status !== 0) return { head: null, clean: false, dirty: [], commitTime: null };
-  const status = git("status", "--porcelain");
+  const head = gitOptional(["rev-parse", "HEAD"], { cwd });
+  if (head === null) return { head: null, clean: false, dirty: [], commitTime: null };
+  const status = gitOptional(["status", "--porcelain"], { cwd, trim: false });
   const dirty =
-    status.status === 0
-      ? status.stdout
+    status !== null
+      ? status
           .split("\n")
           .filter(Boolean)
           .map((l) => l.slice(3))
       : ["(git status failed)"];
-  const time = Number(git("log", "-1", "--format=%ct").stdout.trim());
+  const time = Number(gitOptional(["log", "-1", "--format=%ct"], { cwd }));
   return {
-    head: head.stdout.trim(),
+    head,
     clean: dirty.length === 0,
     dirty,
     commitTime: Number.isFinite(time) && time > 0 ? time : null,

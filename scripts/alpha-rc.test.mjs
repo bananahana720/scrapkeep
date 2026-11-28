@@ -35,6 +35,7 @@ import {
   runProcess,
   verdict,
 } from "./alpha-rc.mjs";
+import { git as runGit } from "./lib/git.mjs";
 
 const createdTempDirs = [];
 const tmp = () => {
@@ -260,12 +261,6 @@ test("sub-command exits are read in each tool's terms", () => {
     judgeCommand({ id: "smoke" }, { exit: null, output: "", error: "ENOENT" }).status,
     "fail",
   );
-  const quarantined =
-    "skipped 0\nquarantined (red) 2 (known red; see tests/QUARANTINE.tsv):\n  a\nsketch:smoke pass";
-  assert.match(
-    judgeCommand({ id: "smoke" }, { exit: 0, output: quarantined }).note,
-    /2 quarantined red/,
-  );
   assert.equal(
     judgeCommand({ id: "smoke" }, { exit: 0, output: "sketch:smoke pass" }).status,
     "pass",
@@ -315,10 +310,10 @@ test(
 
 test("gitState reads HEAD and dirtiness through git, including in a linked worktree", () => {
   const repo = tmp();
-  const g = (...a) => spawnSync("git", ["-C", repo, ...a], { encoding: "utf8" });
+  const g = (...a) => runGit(a, { cwd: repo });
   g("init", "-q");
   g("-c", "user.email=t@t", "-c", "user.name=t", "commit", "-q", "--allow-empty", "-m", "x");
-  const sha = g("rev-parse", "HEAD").stdout.trim();
+  const sha = g("rev-parse", "HEAD");
   assert.deepEqual(gitState(repo).head, sha);
   assert.equal(gitState(repo).clean, true);
   const wt = path.join(repo, "..", path.basename(repo) + "-wt");

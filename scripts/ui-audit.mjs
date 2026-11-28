@@ -131,8 +131,7 @@ export function readResults(receipt) {
   const results = new Map();
   for (const result of receipt.results ?? []) {
     const name = /res:\/\/tests\/([\w.]+\.gd)/.exec(result.label ?? "")?.[1];
-    if (name)
-      results.set(name, result.ok ? "pass" : result.quarantined ? "quarantined red" : "fail");
+    if (name) results.set(name, result.ok ? "pass" : "fail");
   }
   return results;
 }
@@ -172,10 +171,7 @@ export function report(principles, rows, results = new Map()) {
   return principles.map((p) => {
     const tests = p.checks.filter((c) => c.kind === "test").map((c) => c.ref);
     const ran = tests.filter((ref) => results.has(ref));
-    const red = ran.filter(
-      (ref) => results.get(ref) !== "pass" && results.get(ref) !== "quarantined red",
-    );
-    const quarantined = ran.filter((ref) => results.get(ref) === "quarantined red");
+    const red = ran.filter((ref) => results.get(ref) !== "pass");
     const open = rows
       .filter((row) => row.principle === p.id && row.state === "open")
       .map((row) => row.id);
@@ -188,7 +184,6 @@ export function report(principles, rows, results = new Map()) {
       tests: tests.length,
       ran: ran.length,
       red,
-      quarantined,
       open,
       gap: p.gap ?? "",
     };
@@ -217,10 +212,10 @@ function main(argv) {
   else {
     for (const l of lines) {
       const ran = results.size
-        ? `${l.ran - l.red.length - l.quarantined.length}/${l.tests} tests pass`
+        ? `${l.ran - l.red.length}/${l.tests} tests pass`
         : `${l.tests} tests`;
       console.log(
-        `${l.id.padEnd(4)}${l.held.padEnd(7)}${ran.padEnd(18)}${l.name}${l.open.length ? `  open: ${l.open.join(", ")}` : ""}${l.red.length ? `  RED: ${l.red.join(", ")}` : ""}${l.quarantined.length ? `  quarantined red: ${l.quarantined.join(", ")}` : ""}`,
+        `${l.id.padEnd(4)}${l.held.padEnd(7)}${ran.padEnd(18)}${l.name}${l.open.length ? `  open: ${l.open.join(", ")}` : ""}${l.red.length ? `  RED: ${l.red.join(", ")}` : ""}`,
       );
     }
     for (const e of errors) console.error(`ui-audit: ${e}`);

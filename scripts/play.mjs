@@ -17,6 +17,7 @@ import { fileURLToPath } from "node:url";
 import { resolveGodotBinary } from "./godot-home.mjs";
 import { judge, sketchDirectories, testScripts } from "./lib/godot-test-runner.mjs";
 import { pool, runProcess } from "./lib/proc.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 const binary = resolveGodotBinary();
 
@@ -38,15 +39,13 @@ const red = (text) => paint("31", text);
 const cyan = (text) => paint("36", text);
 
 export function worktrees(repoRoot) {
-  const git = spawnSync("git", ["-C", repoRoot, "worktree", "list", "--porcelain"], {
-    encoding: "utf8",
-  });
-  if (git.status !== 0) {
+  const listed = gitOptional(["worktree", "list", "--porcelain"], { cwd: repoRoot });
+  if (listed === null) {
     return [{ path: repoRoot, branch: null, head: null }];
   } else {
     const list = [];
     let current = null;
-    for (const line of git.stdout.split("\n")) {
+    for (const line of listed.split("\n")) {
       if (line.startsWith("worktree ")) {
         current = { path: line.slice(9).trim(), branch: null, head: null };
         list.push(current);

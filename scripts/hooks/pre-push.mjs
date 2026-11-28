@@ -62,15 +62,9 @@ export function changedFilesForRange(
         "--not",
         "--remotes",
       ];
-  const ran = spawn("git", args, { cwd, encoding: "utf8" });
-  if (ran.error || ran.status !== 0) {
-    throw new Error(
-      `git ${args[0]} failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
-    );
-  }
   return [
     ...new Set(
-      ran.stdout
+      git(args, { cwd, spawn })
         .split("\n")
         .map((line) => line.trim())
         .filter(Boolean),
@@ -80,16 +74,13 @@ export function changedFilesForRange(
 
 export function rangeBase({ localSha, remoteSha }, { cwd = root, spawn = spawnSync } = {}) {
   if (remoteSha) return remoteSha;
-  const ran = spawn("git", ["rev-list", "--first-parent", localSha, "--not", "--remotes"], {
+  const oldest = git(["rev-list", "--first-parent", localSha, "--not", "--remotes"], {
     cwd,
-    encoding: "utf8",
-  });
-  if (ran.error || ran.status !== 0) {
-    throw new Error(
-      `git rev-list failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
-    );
-  }
-  const oldest = ran.stdout.trim().split("\n").filter(Boolean).pop();
+    spawn,
+  })
+    .split("\n")
+    .filter(Boolean)
+    .pop();
   return oldest ? `${oldest}^` : localSha;
 }
 
@@ -312,14 +303,7 @@ if (isMain(import.meta.url)) {
     let ranges = [];
     if (opts.base) {
       ranges = [{ base: git(["merge-base", opts.base, "HEAD"]), head: "HEAD" }];
-      const ran = spawnSync("git", ["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`], {
-        cwd: root,
-        encoding: "utf8",
-      });
-      if (ran.error || ran.status !== 0) {
-        throw new Error(`git diff failed: ${ran.error?.message || (ran.stderr || "").trim()}`);
-      }
-      files = ran.stdout
+      files = git(["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`])
         .split("\n")
         .map((l) => l.trim())
         .filter(Boolean);

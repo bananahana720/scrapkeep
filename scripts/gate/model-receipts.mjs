@@ -6,6 +6,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parseReceiptArgs, writeJsonReceipt } from "./receipt-cli.mjs";
+import { git } from "../lib/git.mjs";
 
 const SKILL = ".agents/skills/scrapkeep-verify-formal";
 const SRC = "sketches/core-loop/src";
@@ -464,12 +465,6 @@ export function buildReceipt({ head, real, plants, drift, gaps = [] }) {
   return { head, pass: clean && caught && synced, measured, plant_caught: caught };
 }
 
-function git(root, args) {
-  const r = spawnSync("git", args, { cwd: root, encoding: "utf8" });
-  if (r.status !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr.trim()}`);
-  return r.stdout.trim();
-}
-
 export function findJar(arg) {
   const data = process.env.XDG_DATA_HOME || join(homedir(), ".local/share");
   return (
@@ -522,7 +517,7 @@ export function produce(id, { root, head, java, jar, workers, minutes, log = () 
   const files =
     sync === null
       ? []
-      : git(root, ["diff", "--name-only", sync, "--", ...coveredFiles(page)])
+      : git(["diff", "--name-only", sync, "--", ...coveredFiles(page)], { cwd: root })
           .split("\n")
           .filter(Boolean);
   const check = (cfg) => {
@@ -559,15 +554,17 @@ function main(argv) {
     console.error(usage);
     return 2;
   }
-  const root = git(process.cwd(), ["rev-parse", "--show-toplevel"]);
-  const dirty = git(root, ["status", "--porcelain", "--untracked-files=all", "--", SKILL, SRC]);
+  const root = git(["rev-parse", "--show-toplevel"], { cwd: process.cwd() });
+  const dirty = git(["status", "--porcelain", "--untracked-files=all", "--", SKILL, SRC], {
+    cwd: root,
+  });
   if (dirty) {
     console.error(
       `model-receipts: uncommitted changes under ${SKILL} or ${SRC}; commit them first, the receipt names a commit:\n${dirty}`,
     );
     return 2;
   }
-  const head = git(root, ["rev-parse", "HEAD"]);
+  const head = git(["rev-parse", "HEAD"], { cwd: root });
   const java = process.env.JAVA || "java";
   const jar = findJar(args.jar);
   const javaOk = spawnSync(java, ["-version"], { encoding: "utf8" }).status === 0;

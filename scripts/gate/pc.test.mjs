@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
 import { test } from "node:test";
 import os from "node:os";
 import path from "node:path";
@@ -29,6 +28,7 @@ import {
   stepEnv,
   worktreePool,
 } from "./pc.mjs";
+import { git as runGit } from "../lib/git.mjs";
 
 const names = (count, prefix) =>
   Array.from({ length: count }, (_, index) => `${prefix}${String(index).padStart(4, "0")}_test`);
@@ -831,9 +831,7 @@ test("the scoped names can come from a sketch:fast receipt's bot shards", () => 
 test("seedGodotCache copies verified exact-tree stamps and strips stamps on nearby-tree seeds", () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), "pc-seed-"));
   const git = (cwd, ...args) =>
-    execFileSync("git", ["-C", cwd, "-c", "user.name=t", "-c", "user.email=t@t", ...args], {
-      stdio: "ignore",
-    });
+    runGit(["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd });
   try {
     const repo = path.join(tmp, "repo");
     const wtSame = path.join(tmp, "wt-same");
@@ -844,16 +842,12 @@ test("seedGodotCache copies verified exact-tree stamps and strips stamps on near
     git(repo, "init", "-q");
     git(repo, "add", ".");
     git(repo, "commit", "-qm", "v1");
-    const v1Head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], {
-      encoding: "utf8",
-    }).trim();
+    const v1Head = git(repo, "rev-parse", "HEAD");
     const v1Tree = sketchState(repo, "sketches/core-loop").tree;
     writeFileSync(path.join(repo, "sketches/core-loop/a.gd"), "2\n");
     git(repo, "add", ".");
     git(repo, "commit", "-qm", "v2");
-    const v2Head = execFileSync("git", ["-C", repo, "rev-parse", "HEAD"], {
-      encoding: "utf8",
-    }).trim();
+    const v2Head = git(repo, "rev-parse", "HEAD");
     const v2Tree = sketchState(repo, "sketches/core-loop").tree;
     git(repo, "worktree", "add", "--detach", wtSame, v2Head);
     git(repo, "worktree", "add", "--detach", wtSeed, v1Head);
