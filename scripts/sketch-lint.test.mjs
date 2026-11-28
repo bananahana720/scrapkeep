@@ -1996,6 +1996,31 @@ test("parseLintArgs refuses a --base with no ref and a flag it does not know", (
   );
 });
 
+test("parseLintArgs refuses a bare argument and a --sketch with no name, and the command exits 2 on each", () => {
+  assert.throws(
+    () => parseLintArgs(["core-loop"]),
+    /^Error: unknown argument core-loop; use --sketch NAME/,
+  );
+  assert.throws(() => parseLintArgs(["--sketch", "core-loop", "extra"]), /unknown argument extra/);
+  assert.throws(() => parseLintArgs(["--sketch"]), /^Error: --sketch requires a name/);
+  assert.throws(
+    () => parseLintArgs(["--sketch", "--write-baseline"]),
+    /--sketch requires a name, as in --sketch core-loop/,
+  );
+  const lint = fileURLToPath(new URL("./sketch-lint.mjs", import.meta.url));
+  for (const [args, said] of [
+    [["core-loop"], "sketch-lint: unknown argument core-loop;"],
+    [["--sketch"], "sketch-lint: --sketch requires a name, as in --sketch core-loop"],
+    [["--sketch", "--base", "HEAD"], "sketch-lint: --sketch requires a name"],
+    [["--sketch", "core-loop", "--base"], "sketch-lint: --base requires a ref"],
+  ]) {
+    const ran = spawnSync(process.execPath, [lint, ...args], { encoding: "utf8" });
+    assert.equal(ran.status, 2, `${args.join(" ")}: ${ran.stderr}`);
+    assert.ok(ran.stderr.startsWith(said), `${args.join(" ")}: ${ran.stderr}`);
+    assert.equal(ran.stdout, "");
+  }
+});
+
 const l19Root = "sketches/core-loop";
 const l19Reader = {
   path: `${l19Root}/tests/support/source_scan.gd`,

@@ -734,18 +734,18 @@ export function baselineText(baseline) {
 
 export function parseLintArgs(argv) {
   const options = { sketch: null, writeBaseline: false, base: null, layers: null };
+  const value = (at, needs) => {
+    if (!argv[at] || argv[at].startsWith("-")) throw new Error(`${argv[at - 1]} requires ${needs}`);
+    return argv[at];
+  };
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--sketch" && argv[i + 1]) options.sketch = argv[++i];
+    if (argv[i] === "--sketch") options.sketch = value(++i, "a name, as in --sketch core-loop");
     else if (argv[i] === "--layers") {
       const order = argv[i + 1];
       options.layers = order && !order.startsWith("-") ? parseLayerOrder(argv[++i]) : LAYERS;
-    } else if (argv[i] === "--base") {
-      const ref = argv[++i];
-      if (!ref || ref.startsWith("-"))
-        throw new Error("--base requires a ref, as in --base origin/main");
-      options.base = ref;
-    } else if (argv[i] === "--write-baseline") options.writeBaseline = true;
-    else if (argv[i].startsWith("-"))
+    } else if (argv[i] === "--base") options.base = value(++i, "a ref, as in --base origin/main");
+    else if (argv[i] === "--write-baseline") options.writeBaseline = true;
+    else
       throw new Error(
         `unknown argument ${argv[i]}; use --sketch NAME, --base REF, --layers [ORDER] or --write-baseline`,
       );
