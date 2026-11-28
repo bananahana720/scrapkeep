@@ -604,6 +604,7 @@ test("the summary line says whether a failing run's only reds are known reds on 
     "`npm run sketch:fast -- --test <name>` without `--base-check`",
     "when every run of the test in the invocation (its first run, in a warm batch or alone, the run alone after a batch, and the rerun) qualifies on its own",
     "an error line anywhere in the batch counts against every red test of it",
+    "cannot speak for the test: it still goes with the test's later runs, so a listed test with such a run is this change's red",
     "the ledger check refuses a star, `ERROR-LINE` or `TIME-OUT` in it",
     "`budget[godot-affected]: <seconds>s / 900s (<status>)`",
     "`FAIL+OVER_BUDGET` for a run that failed and also ran past its budget",
