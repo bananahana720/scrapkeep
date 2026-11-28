@@ -15,7 +15,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Capture := preload("res://tools/press_latency_capture.gd")
 
 # W45 P2 combat weight. Four feel facts, each with a planted control that must not land:
-#   A. juice.gd lands the Warden's posture edges and a boss's fall through EventKinds.weigh: a chunk heavy, a
+#   A. juice.gd lands the Warden's posture edges and a boss's fall through EventJuice.weigh: a chunk heavy, a
 #      stagger and the breaking chunk massive (55 ms, shake 0.4), a boss climax (60 ms, shake 0.5), each inside
 #      the one stop budget, MAX_STOP and SHAKE_CAP; a reading with no edge, and a fact with no weight, land nothing.
 #   B. world.gd publishes the stage Warden's chunk phases on fight_phase_changed once each, and audio.gd answers

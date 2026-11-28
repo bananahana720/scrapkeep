@@ -462,9 +462,9 @@ Row numbers use coordinator `ROADMAP.md` at `494cd44`. Rows 5 and 6 are owned he
 
 ## Weight classes (owner direction, 2026-10-11)
 
-`EventKinds.WEIGHT` owns impact weight. `EventKinds.WEIGHTED` gives each fact a class or an argument rule, an allegiance and a visual. `EventKinds.weigh(fact, args)` returns the shared record for hit-stop, shake, camera, VFX and sound. Presentation must consume that record together. Impact must never hide a telegraph or change a ring's measured reach.
+`EventJuice.WEIGHT` (`src/presentation/event_juice.gd`) owns impact weight. `EventJuice.WEIGHTED` gives each fact a class or an argument rule, an allegiance and a visual. `EventJuice.weigh(fact, args)` returns the shared record for hit-stop, shake, camera, VFX and sound. Presentation must consume that record together. Impact must never hide a telegraph or change a ring's measured reach.
 
-Start values; `EventKinds.WEIGHT` is authoritative.
+Start values; `EventJuice.WEIGHT` is authoritative.
 
 | Class | Stop, ms | Shake | Kick, m | FOV punch, degrees | FX scale | Body and pitch |
 | --- | --- | --- | --- | --- | --- | --- |
