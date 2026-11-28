@@ -9,7 +9,6 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
-const WhyCallout := preload("res://src/ui/why_callout.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
 
@@ -406,7 +405,7 @@ func _process(delta: float) -> void:
 		_step_queue(now)
 	if view.card.is_empty() and not _cards.is_empty() and _active.is_empty():
 		_next_card()
-	if not view.card.is_empty() and not view.card.get("ceremony", false) and WhyCallout.warden_fight_live(ctx.flow):
+	if not view.card.is_empty() and not view.card.get("ceremony", false) and ctx.flow != null and ctx.flow.warden_fight_live():
 		_release_slot()
 		view.card = {}
 	if not view.card.is_empty() and not view.card.get("ceremony", false):
