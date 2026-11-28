@@ -1009,6 +1009,16 @@ async function main() {
     return ok;
   };
   let baseTree = null;
+  const removeBaseTree = () => {
+    if (baseTree) gitOptional(["worktree", "remove", "--force", baseTree]);
+    baseTree = null;
+  };
+  process.once("exit", removeBaseTree);
+  for (const signal of ["SIGINT", "SIGTERM"])
+    process.once(signal, () => {
+      removeBaseTree();
+      process.kill(process.pid, signal);
+    });
   const baseDir = () => {
     if (baseTree) return baseTree;
     baseTree = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-base-"));
@@ -1044,7 +1054,6 @@ async function main() {
   if (namedMode) receipt.named_tests = options.tests;
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
-    if (baseTree) gitOptional(["worktree", "remove", "--force", baseTree]);
     const file = writeJsonReceipt(
       runnerReceiptPath(root, options.receipt, receipt.head, startedAt),
       receipt,

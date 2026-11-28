@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -58,6 +67,7 @@ import {
   checksRemoved,
 } from "./sketch-fast.mjs";
 import { IMPORT_TRIES, importTry, importWithRetry, scriptErrorCount } from "./sketch-smoke.mjs";
+import { cwdDecidesRepository, git } from "./lib/git.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
 
@@ -1255,6 +1265,89 @@ test("sketch:fast prints one line and exits 2 on an argument it does not know", 
   assert.equal(ran.status, 2);
   assert.equal(ran.stdout, "");
   assert.match(ran.stderr, /^sketch:fast: unknown argument "--tests"[^\n]*\n$/);
+});
+
+test("the scratch checkout of --pre is gone after an unmatched --test, a plan-only run and a stop signal", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-fast-pre-"));
+  const work = path.join(dir, "work");
+  const remote = path.join(dir, "remote.git");
+  const tmp = path.join(dir, "tmp");
+  const marker = path.join(dir, "checkouts");
+  try {
+    mkdirSync(tmp);
+    git(["init", "-q", "--bare", remote], { cwd: dir });
+    git(["init", "-q", "-b", "main", work], { cwd: dir });
+    for (const [key, value] of [
+      ["user.email", "test@example.invalid"],
+      ["user.name", "Test"],
+      ["commit.gpgsign", "false"],
+    ])
+      git(["config", key, value], { cwd: work });
+    mkdirSync(path.join(work, "sketches/core-loop/tests"), { recursive: true });
+    writeFileSync(
+      path.join(work, "sketches/core-loop/tests/fx_library_test.gd"),
+      "extends SceneTree\n",
+    );
+    git(["add", "sketches"], { cwd: work });
+    git(["commit", "-q", "-m", "initial"], { cwd: work });
+    git(["remote", "add", "origin", remote], { cwd: work });
+    git(["push", "-q", "origin", "HEAD:refs/pull/7/head"], { cwd: work });
+    writeFileSync(
+      path.join(work, ".git/hooks/post-checkout"),
+      [
+        "#!/bin/sh",
+        `pwd >> "${marker}"`,
+        '[ "$SKETCH_FAST_TEST_STOP" = 1 ] || exit 0',
+        "pid=$PPID",
+        'while [ "${pid:-1}" -gt 1 ]; do',
+        '  case "$(ps -o command= -p "$pid")" in *sketch-fast.mjs*) kill -TERM "$pid"; exit 0;; esac',
+        "  pid=$(ps -o ppid= -p \"$pid\" | tr -d ' ')",
+        "done",
+        "",
+      ].join("\n"),
+      { mode: 0o755 },
+    );
+    cpSync(import.meta.dirname, path.join(work, "scripts"), { recursive: true });
+    const script = path.join(work, "scripts", "sketch-fast.mjs");
+    const ways = [
+      {
+        args: ["--test", "no_such_test"],
+        status: 2,
+        stderr: /no tests\/\*\.gd matched no_such_test/,
+      },
+      { args: ["--test", "fx_library_test", "--dry-run"], status: 0, stderr: /^$/ },
+      { args: ["--base", "main"], stop: true, signal: "SIGTERM" },
+    ];
+    for (const way of ways) {
+      rmSync(marker, { force: true });
+      const ran = spawnSync(process.execPath, [script, "--pre", "7", ...way.args], {
+        cwd: work,
+        encoding: "utf8",
+        env: {
+          ...cwdDecidesRepository(),
+          TMPDIR: tmp,
+          ...(way.stop ? { SKETCH_FAST_TEST_STOP: "1" } : {}),
+        },
+      });
+      const label = way.args.join(" ") + (way.stop ? " (stopped)" : "");
+      assert.equal(ran.signal, way.signal ?? null, `${label}: ${ran.stderr}`);
+      assert.equal(ran.status, way.status ?? null, `${label}: ${ran.stderr}`);
+      if (way.stderr) assert.match(ran.stderr, way.stderr, label);
+      const made = readFileSync(marker, "utf8").trim().split("\n");
+      assert.equal(made.length, 1, `${label}: one scratch checkout was made`);
+      assert.equal(existsSync(made[0]), false, `${label}: ${made[0]} is still on disk`);
+      assert.deepEqual(readdirSync(tmp), [], label);
+      assert.deepEqual(
+        git(["worktree", "list", "--porcelain"], { cwd: work })
+          .split("\n")
+          .filter((line) => line.startsWith("worktree ")).length,
+        1,
+        `${label}: git worktree list still names the scratch checkout`,
+      );
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 test("unmatchedTestPatterns names each pattern that matches no test, even beside one that does", () => {
