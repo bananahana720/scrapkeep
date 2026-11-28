@@ -105,7 +105,7 @@ Every number there is a starting value; tuning edits `park_defs.gd` / `alpha_def
 | `set_max_hp(value)` | new ceiling; a raise heals by the gain | nothing |
 | `heal(amount)` | heals up to the ceiling | nothing |
 | `damage(amount, source)` | lowers HP | `player_hit(amount, source)`, then `player_died` at 0 |
-| `record_kill(kind, at, scrap_value)` | counts a kill | `enemy_killed(kind, at, scrap_value)` |
+| `record_kill(kind, at, scrap_value)` | counts a kill; asserts that `run.specials` was handed in (`combat.setup` sets it from `Roster.SPECIALS`) | `enemy_killed(kind, at, scrap_value)`, then `special_broken(kind)` for a kind in `run.specials` |
 | `record_milestone(event_id)` | counts an event won | `milestone_won(event_id)` |
 
 These fields and methods are readable:
