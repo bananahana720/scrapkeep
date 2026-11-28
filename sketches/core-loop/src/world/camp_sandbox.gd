@@ -103,8 +103,8 @@ static func mark_met(saved, kind: String) -> bool:
 	if saved == null or kind == "" or saved.stat(MET_PREFIX + kind) > 0.0:
 		return false
 	saved.set_stat(MET_PREFIX + kind, 1.0)
-	if saved.can_save:
-		saved.save()
+	if saved.has_method("save_if_allowed"):
+		saved.save_if_allowed()
 	return true
 
 

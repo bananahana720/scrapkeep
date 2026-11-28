@@ -20,7 +20,7 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("w45_weapon_items_test")

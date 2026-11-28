@@ -12,7 +12,7 @@ const Game := preload("res://src/game.gd")
 const Profile := preload("res://src/core/profile.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Push := preload("res://tests/workshop/push.gd")
 

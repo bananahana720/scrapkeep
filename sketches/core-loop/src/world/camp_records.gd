@@ -22,7 +22,7 @@ func _doc() -> Dictionary:
 func _store(doc: Dictionary) -> void:
 	if profile != null and profile.has_method("set_camp"):
 		profile.set_camp(doc)
-		if profile.can_save and not profile.save():
+		if profile.has_method("save_if_allowed") and not profile.save_if_allowed():
 			push_warning("camp: record not saved: %s" % profile.last_error)
 	else:
 		_mem = doc.duplicate(true)
@@ -42,7 +42,7 @@ func submit_skee(score: int) -> bool:
 	doc["skee_best"] = score
 	if profile != null and not profile.has_method("set_camp") and profile.has_method("set_stat"):
 		profile.set_stat(SKEE_STAT, float(score))
-		if profile.can_save and not profile.save():
+		if profile.has_method("save_if_allowed") and not profile.save_if_allowed():
 			push_warning("camp: record not saved: %s" % profile.last_error)
 	else:
 		_store(doc)

@@ -58,11 +58,11 @@ export const SOURCES = [
     voice: true,
   },
   {
-    path: "src/core/pilot_story.gd",
+    path: "src/core/pilot_story_rows.gd",
     read: "rows",
     fields: ["title", "note", "name", "hint", "clue", "codex_text", "margin_note"],
   },
-  { path: "src/core/pilot_story.gd", read: "rows", fields: ["text", "log"], voice: true },
+  { path: "src/core/pilot_story_rows.gd", read: "rows", fields: ["text", "log"], voice: true },
   { path: "src/core/work_orders.gd", read: "rows", fields: ["name", "text"] },
   { path: "src/core/prologue_rows.gd", read: "rows", fields: ["text"], voice: true },
   { path: "src/core/tune_rows.gd", read: "rows", fields: ["name", "where"] },

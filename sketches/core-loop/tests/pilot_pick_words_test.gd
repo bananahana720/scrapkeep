@@ -16,7 +16,7 @@ const StartPicks := preload("res://src/core/start_picks.gd")
 const StartPickCard := preload("res://src/ui/start_pick_card.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 const LINE_WORDS := 8
 # Lower case; matched as substrings of each drawn text.

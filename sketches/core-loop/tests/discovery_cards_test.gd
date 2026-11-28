@@ -3,7 +3,7 @@ extends SceneTree
 const Banner := preload("res://src/presentation/codex_banner.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 

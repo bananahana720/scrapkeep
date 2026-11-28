@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # The ACE music in the game (--music=ace), driven by real keys and clicks:

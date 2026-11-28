@@ -2,7 +2,7 @@ extends RefCounted
 # F6 2026-10-04: the lesson rows are gone; every Warden fights on posture.
 
 const Objectives := preload("res://src/core/objectives.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Hud := preload("res://src/ui/hud.gd")

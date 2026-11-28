@@ -222,8 +222,8 @@ func play_intro(id := "") -> bool:
 		return false
 	if profile != null:
 		TitleIntros.mark_shown(profile, id)
-		if profile.can_save:
-			profile.save()
+		if profile.has_method("save_if_allowed"):
+			profile.save_if_allowed()
 	viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if active and _layer.visible else SubViewport.UPDATE_DISABLED
 	var audio = get_parent().get("audio") if get_parent() != null else null
 	if audio != null and audio.has_method("title_theme"):

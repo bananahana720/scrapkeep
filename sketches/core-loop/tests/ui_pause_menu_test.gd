@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")
 const Tuning := preload("res://src/movement/tuning.gd")

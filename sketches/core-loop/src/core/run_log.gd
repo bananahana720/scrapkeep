@@ -522,9 +522,31 @@ func _write(outcome: String) -> void:
 		durability["wear"] = "on" if run.wear_on else "off"
 		durability["mass_end"] = run.mass
 		line["durability"] = durability
+	if run != null:
+		var totals: Dictionary = run.tallies()
+		line["tallies"] = totals
+		var profile = _profile()
+		if profile != null:
+			var changed: bool = profile.record_run_tallies(run.run_id, totals)
+			var settled := false
+			if outcome in ["won", "died", "lost"] and (outcome != "died" or run.over):
+				settled = profile.settle_run_tallies(run.run_id)
+			if (changed or settled or not profile.last_error.is_empty()) and profile.has_method("save_if_allowed") and not profile.save_if_allowed():
+				if codex != null:
+					codex.last_error = "run tallies not saved: %s" % profile.last_error
 	_dirty = false
 	if codex.append_line(storage_dir.path_join(LOG_FILE), JSON.stringify(line)):
 		records_written += 1
+
+
+func _profile():
+	var game = get_parent()
+	if game != null and game.get("ctx") != null:
+		return game.ctx.profile
+	var flow = codex.get("flow") if codex != null else null
+	if flow != null and flow.get("ctx") != null:
+		return flow.ctx.profile
+	return null
 
 
 func _bank_gain() -> void:

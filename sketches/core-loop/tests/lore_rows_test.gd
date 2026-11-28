@@ -1,7 +1,7 @@
 extends SceneTree
 
 const LoreRows := preload("res://src/core/lore_rows.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 
 # Every declared zone has unique ids, capped words, three skippable exchange

@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Worlds := preload("res://src/core/worlds.gd")
+const StageTable := preload("res://src/core/stage_table.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 
 
@@ -16,33 +16,17 @@ const EARNED_PARTS := ["spare_frame"]
 
 const PICK_ON_CLASS_UP := true
 
-const PACKS := [
-	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
-	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
-]
-const ELITE := {"id": "elite", "kinds": ["plated_brute", "winch_drone"]}
-const PACKS_DAM := [
-	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
-	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
-	{"id": "live_wire", "kinds": ["jolt_layer", "chaser", "chaser"]},
-	{"id": "sluice_line", "kinds": ["hooker", "chaser", "lobber"]},
-	{"id": "flap_run", "kinds": ["ramp_flipper", "boom_tender", "chaser"]},
-]
-const PACKS_FLUME := [
-	{"id": "run_down", "kinds": ["chaser", "chaser", "chaser", "lobber"]},
-	{"id": "grounded", "kinds": ["mag_trapper", "lobber", "lobber"]},
-	{"id": "shift_crew", "kinds": ["foreman", "plated_brute", "chaser", "chaser"]},
-	{"id": "crossed_wires", "kinds": ["jolt_layer", "jolt_layer", "boom_tender"]},
-	{"id": "weir_strung", "kinds": ["dispatcher", "hooker", "chaser"]},
-	{"id": "flap_line", "kinds": ["ramp_flipper", "ramp_flipper", "lobber"]},
-]
-const ELITE_SPILLWAY := {"id": "elite", "kinds": ["hooker", "jolt_layer", "plated_brute"]}
-const DIG_ELITE := {"id": "dig_elite", "kinds": ["drill_crew", "drill_crew", "pit_jaw"]}
-const ELITE_HIGHDRAFT := {"id": "elite_highdraft", "kinds": ["ballast_heavy", "kite_drone", "kite_drone"]}
-const ELITE_ARRIVAL := 3
+const PACKS := AlphaDefs.PACKS
+const ELITE := AlphaDefs.ELITE
+const PACKS_DAM := AlphaDefs.PACKS_DAM
+const PACKS_FLUME := AlphaDefs.PACKS_FLUME
+const ELITE_SPILLWAY := AlphaDefs.ELITE_SPILLWAY
+const DIG_ELITE := AlphaDefs.DIG_ELITE
+const ELITE_HIGHDRAFT := AlphaDefs.ELITE_HIGHDRAFT
+const ELITE_ARRIVAL := AlphaDefs.ELITE_ARRIVAL
 
-const POSTURE_CURVE := 2.0
-const HIVE_HEAVY_RATIO := 0.7
+const POSTURE_CURVE := AlphaDefs.POSTURE_CURVE
+const HIVE_HEAVY_RATIO := AlphaDefs.HIVE_HEAVY_RATIO
 const PRESSURE := [
 	{"pack_scale": 1.03, "interval_scale": 0.95, "elite_rate": 0.60, "posture_curve": 1.00, "boss_phase_scale": 1.00},
 	{"pack_scale": 1.04, "interval_scale": 0.92, "elite_rate": 0.80, "posture_curve": 1.00, "boss_phase_scale": 1.10},
@@ -123,39 +107,39 @@ const DEFS := [
 
 
 static func of(stage: int) -> Dictionary:
-	return DEFS[clampi(stage, 1, COUNT) - 1]
+	return StageTable.of(DEFS, stage)
 
 
 static func is_last(stage: int) -> bool:
-	return stage >= COUNT
+	return StageTable.is_last(DEFS, stage)
 
 
 static func world_of(stage: int) -> int:
-	return Worlds.world_of(DEFS, stage)
+	return StageTable.world_of(DEFS, stage)
 
 
 static func local(stage: int) -> int:
-	return Worlds.local(DEFS, stage)
+	return StageTable.local(DEFS, stage)
 
 
 static func first_of(world: int) -> int:
-	return Worlds.first_of(DEFS, world)
+	return StageTable.first_of(DEFS, world)
 
 
 static func last_of(world: int) -> int:
-	return Worlds.last_of(DEFS, world)
+	return StageTable.last_of(DEFS, world)
 
 
 static func worlds() -> Array:
-	return Worlds.worlds(DEFS)
+	return StageTable.worlds(DEFS)
 
 
 static func is_world_last(stage: int) -> bool:
-	return Worlds.is_world_last(DEFS, stage)
+	return StageTable.is_world_last(DEFS, stage)
 
 
 static func is_run_last(stage: int) -> bool:
-	return Worlds.is_run_last(DEFS, stage)
+	return StageTable.is_run_last(DEFS, stage)
 
 
 static func synergy_in_play(synergy_id: String) -> bool:
@@ -163,7 +147,7 @@ static func synergy_in_play(synergy_id: String) -> bool:
 
 
 static func part_in_play(part_id: String) -> bool:
-	return part_id in PARTS or part_id in BURDEN_PARTS or part_id in EARNED_PARTS
+	return StageTable.part_in_play(part_id, [PARTS, BURDEN_PARTS, EARNED_PARTS])
 
 
 static func parts_listed() -> bool:
