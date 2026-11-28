@@ -1,4 +1,4 @@
-# smoke: solo timeout=360s (the content registry case validates every fixture against all 27 tables, and _objective_ids walks 2,560 objective states per objective row: 154 s of the run beside one other Godot lane on a 4-core cloud box on 2026-10-19, so the 180 s batch cap killed it on the stage and on its merge base)
+# smoke: timeout=360s (pure unit cases; no wall-clock checks)
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")

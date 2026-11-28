@@ -152,7 +152,7 @@ export function smokeWidth({
 }
 
 const BATCH_SOLO =
-  /get_ticks_|OS\.set_environment|ProjectSettings\.set|OS\.(execute|create_process|kill)|\b(warm|hitch|cold)\b|change_scene/;
+  /get_ticks_|OS\.set_environment|ProjectSettings\.set|OS\.(execute|create_process|kill)|\b(warm|hitch|cold)\b|change_scene|take_over_path/;
 export const BATCH_MAX_TESTS = 8;
 export const BATCH_MAX_MS = 60_000;
 export const BATCH_TEST_MAX_MS = 15_000;

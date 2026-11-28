@@ -24,11 +24,15 @@ import {
   indexFromFiles,
   lanePool,
   nodeTestsFor,
+  selectStage1NodeTests,
   normalizeTestPattern,
   parseArgs,
   batchable,
   resolveNamedTests,
+  runBootTask,
   seedBaseGodot,
+  shardLanePlan,
+  shouldRunBoot,
   splitBatch,
   takeBatch,
   takeBatchPacked,
@@ -187,7 +191,7 @@ test("canaries are the cheapest timed tests that load the whole game", () => {
   assert.deepEqual(canaries(index, timings, 2), ["tests/b_test.gd", "tests/c_test.gd"]);
 });
 
-test("plan keeps tiers within the budget, keeps changed tests, runs cheapest first and lists bots", () => {
+test("plan selects cheapest-first within the budget, keeps changed tests, schedules parallel longest-first (LPT) and lists bots", () => {
   const picked = new Map([
     ["tests/changed_test.gd", { tier: 0, why: "changed" }],
     ["tests/slow_direct_test.gd", { tier: 1, why: "names" }],
@@ -213,7 +217,7 @@ test("plan keeps tiers within the budget, keeps changed tests, runs cheapest fir
   });
   assert.deepEqual(
     out.parallel.map((row) => row.test),
-    ["tests/changed_test.gd", "tests/fast_direct_test.gd", "tests/slow_direct_test.gd"],
+    ["tests/changed_test.gd", "tests/slow_direct_test.gd", "tests/fast_direct_test.gd"],
   );
   assert.deepEqual(
     out.solo.map((row) => row.test),
@@ -443,7 +447,7 @@ test("a bot-named test with no timings row goes to the bot shards; a test with a
   ]);
   assert.deepEqual(
     out.parallel.map((row) => row.test),
-    ["tests/known_fast_test.gd", "tests/bot_known_test.gd"],
+    ["tests/bot_known_test.gd", "tests/known_fast_test.gd"],
   );
 });
 
@@ -466,6 +470,8 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
     batch: true,
     shuffle: false,
     seed: null,
+    ciGodotOnly: false,
+    shard: null,
     pre: [],
     tests: [],
   });
@@ -475,6 +481,28 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
   assert.throws(() => parseArgs(["--pre", "abc"]));
   assert.equal(parseArgs(["--base", "stage/alpha-w17", "--budget", "600"]).budgetS, 600);
   assert.throws(() => parseArgs(["--budget", "0"]));
+  assert.equal(parseArgs(["--ci-godot-only"]).ciGodotOnly, true);
+  assert.deepEqual(parseArgs(["--shard", "1/2"]).shard, { index: 1, total: 2 });
+  assert.deepEqual(parseArgs(["--shard", "2/2", "--ci-godot-only", "--width", "4"]), {
+    base: "origin/main",
+    budgetS: 900,
+    dryRun: false,
+    receipt: "fast",
+    width: 4,
+    baseCheck: true,
+    batch: true,
+    shuffle: false,
+    seed: null,
+    ciGodotOnly: true,
+    shard: { index: 2, total: 2 },
+    pre: [],
+    tests: [],
+  });
+  assert.throws(() => parseArgs(["--shard"]), /--shard requires/);
+  assert.throws(() => parseArgs(["--shard", "abc"]), /INDEX\/TOTAL/);
+  assert.throws(() => parseArgs(["--shard", "0/2"]), /out of range/);
+  assert.throws(() => parseArgs(["--shard", "3/2"]), /out of range/);
+  assert.throws(() => parseArgs(["--width", "0"]), /positive integer/);
   assert.deepEqual(parseArgs(["--test", "a_test", "--test", "b_*"]), {
     base: "origin/main",
     budgetS: 900,
@@ -485,6 +513,8 @@ test("parseArgs defaults to origin/main and a 15 minute budget", () => {
     batch: true,
     shuffle: false,
     seed: null,
+    ciGodotOnly: false,
+    shard: null,
     pre: [],
     tests: ["a_test", "b_*"],
   });
@@ -882,14 +912,150 @@ test("a crash signal is named as a crash, and only a plain kill points at the me
   assert.match(signalReason(null), /memory limit/);
 });
 
-test("the default width is one lane per idle core, between 2 and 16", () => {
-  assert.equal(defaultWidth(4, 0.1), 4);
-  assert.equal(defaultWidth(4, 1.6), 2);
-  assert.equal(defaultWidth(4, 0), 4);
-  assert.equal(defaultWidth(18, 2), 16);
-  assert.equal(defaultWidth(32, 30), 2);
-  assert.equal(defaultWidth(32, 4), 16);
-  assert.equal(defaultWidth(2, 0), 2);
+test("the default width is one lane per idle core locally and full cpu count in CI, between 2 and 16", () => {
+  assert.equal(defaultWidth(4, 0.1, {}), 4);
+  assert.equal(defaultWidth(4, 1.6, {}), 2);
+  assert.equal(defaultWidth(4, 0, {}), 4);
+  assert.equal(defaultWidth(18, 2, {}), 16);
+  assert.equal(defaultWidth(32, 30, {}), 2);
+  assert.equal(defaultWidth(32, 4, {}), 16);
+  assert.equal(defaultWidth(2, 0, {}), 2);
+  assert.equal(defaultWidth(4, 3.8, { CI: "true" }), 4);
+  assert.equal(defaultWidth(4, 3.8, { GITHUB_ACTIONS: "true" }), 4);
+  assert.equal(defaultWidth(8, 6.0, { CI: "true" }), 8);
+  assert.equal(defaultWidth(32, 30, { CI: "true" }), 16);
+  assert.equal(defaultWidth(1, 0, { GITHUB_ACTIONS: "true" }), 2);
+});
+
+test("plan orders parallel tier 0 and tier > 0 longest-first (LPT) with deterministic tie-break while keeping cheapest-first budget selection", () => {
+  const picked = new Map([
+    ["tests/t0_short_test.gd", { tier: 0, why: "always" }],
+    ["tests/t0_long_test.gd", { tier: 0, why: "changed" }],
+    ["tests/t0_tie_b_test.gd", { tier: 0, why: "always" }],
+    ["tests/t0_tie_a_test.gd", { tier: 0, why: "always" }],
+    ["tests/t1_short_test.gd", { tier: 1, why: "names" }],
+    ["tests/t1_long_test.gd", { tier: 1, why: "names" }],
+    ["tests/t1_over_budget_test.gd", { tier: 1, why: "names" }],
+  ]);
+  const timings = {
+    "tests/t0_short_test.gd": 1_000,
+    "tests/t0_long_test.gd": 20_000,
+    "tests/t0_tie_b_test.gd": 5_000,
+    "tests/t0_tie_a_test.gd": 5_000,
+    "tests/t1_short_test.gd": 3_000,
+    "tests/t1_long_test.gd": 15_000,
+    "tests/t1_over_budget_test.gd": 50_000,
+  };
+  const out = plan({ picked, timings, budgetMs: 50_000, width: 1 });
+  assert.deepEqual(
+    out.parallel.map((r) => r.test),
+    [
+      "tests/t0_long_test.gd",
+      "tests/t0_tie_a_test.gd",
+      "tests/t0_tie_b_test.gd",
+      "tests/t0_short_test.gd",
+      "tests/t1_long_test.gd",
+      "tests/t1_short_test.gd",
+    ],
+  );
+  assert.deepEqual(
+    out.deferred.map((r) => r.test),
+    ["tests/t1_over_budget_test.gd"],
+  );
+});
+
+test("runBootTask overlaps with parallel tests in lanePool and stops queued work cleanly on boot failure", async () => {
+  const inLane = lanePool(2);
+  let live = 0;
+  let peak = 0;
+  let stopped = false;
+  const stages = [];
+  const stage = (name, ok, detail) => {
+    stages.push({ name, ok, detail });
+    return ok;
+  };
+  const bootPass = runBootTask({
+    inLane,
+    shouldStop: () => stopped,
+    run: async () => {
+      live++;
+      peak = Math.max(peak, live);
+      await new Promise((r) => setTimeout(r, 25));
+      live--;
+      return { ok: true, killed: false, reason: null };
+    },
+    onStop: () => {
+      stopped = true;
+    },
+    stage,
+  });
+  const parallelTest = inLane(async () => {
+    live++;
+    peak = Math.max(peak, live);
+    await new Promise((r) => setTimeout(r, 25));
+    live--;
+    return "ran";
+  });
+  const [bootRes, testRes] = await Promise.all([bootPass, parallelTest]);
+  assert.equal(bootRes.ok, true);
+  assert.equal(testRes, "ran");
+  assert.equal(peak, 2, "boot and parallel test must overlap in the lane pool");
+  assert.deepEqual(stages, [{ name: "boot", ok: true, detail: { note: "300 frames" } }]);
+
+  // Boot failure stops queued lanes before they start
+  const failPool = lanePool(2);
+  let failStopped = false;
+  let stopCalls = 0;
+  let queuedRan = false;
+  const failStages = [];
+  const failBoot = runBootTask({
+    inLane: failPool,
+    shouldStop: () => failStopped,
+    run: async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      return { ok: false, killed: false, reason: "the test exited with code 1" };
+    },
+    onStop: () => {
+      failStopped = true;
+      stopCalls++;
+    },
+    stage: (name, ok, detail) => {
+      failStages.push({ name, ok, detail });
+      return ok;
+    },
+  });
+  const inFlight = failPool(async () => {
+    await new Promise((r) => setTimeout(r, 30));
+    return "in-flight";
+  });
+  const queued = failPool(async () => {
+    if (failStopped) return "skipped";
+    queuedRan = true;
+    return "ran";
+  });
+  const [fb, , q] = await Promise.all([failBoot, inFlight, queued]);
+  assert.equal(fb.ok, false);
+  assert.equal(stopCalls, 1);
+  assert.equal(q, "skipped");
+  assert.equal(queuedRan, false);
+  assert.deepEqual(failStages, [
+    { name: "boot", ok: false, detail: { note: "the test exited with code 1" } },
+  ]);
+
+  // Killed boot (due to another test's prRed) does not record a false boot failure
+  const killStages = [];
+  const killedBoot = await runBootTask({
+    inLane: lanePool(2),
+    shouldStop: () => false,
+    run: async () => ({ ok: false, killed: true, reason: "killed" }),
+    onStop: () => assert.fail("killed boot should not trigger onStop"),
+    stage: (name, ok, detail) => {
+      killStages.push({ name, ok, detail });
+      return ok;
+    },
+  });
+  assert.deepEqual(killedBoot, { ok: true, killed: true });
+  assert.deepEqual(killStages, []);
 });
 
 test("a plain SceneTree test batches; a timed, solo or extended one does not", () => {
@@ -1144,4 +1310,155 @@ test("PATH_RULES park matches run at tier 0 and are never deferred under tight t
   );
   assert.ok(out.parallel.some((r) => r.test === "tests/park_props_test.gd"));
   assert.ok(out.parallel.some((r) => r.test === "tests/park_park_dam_test.gd"));
+});
+
+test("shardLanePlan partitions parallel and solo tests disjointly, balances estimated duration, and preserves LPT tier order", () => {
+  const picked = new Map([
+    ["tests/p_tier0_big_test.gd", { tier: 0, why: "changed" }],
+    ["tests/p_tier0_small_test.gd", { tier: 0, why: "always" }],
+    ["tests/p_59s_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_40s_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_25s_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_20s_a_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_20s_b_test.gd", { tier: 1, why: "names" }],
+    ["tests/p_10s_test.gd", { tier: 2, why: "through" }],
+    ["tests/p_5s_test.gd", { tier: 2, why: "through" }],
+    ["tests/solo_90s_test.gd", { tier: 1, why: "names" }],
+    ["tests/solo_60s_test.gd", { tier: 1, why: "names" }],
+    ["tests/solo_40s_test.gd", { tier: 1, why: "names" }],
+    ["tests/solo_20s_test.gd", { tier: 1, why: "names" }],
+  ]);
+  const timings = {
+    "tests/p_tier0_big_test.gd": 30_000,
+    "tests/p_tier0_small_test.gd": 3_000,
+    "tests/p_59s_test.gd": 59_000,
+    "tests/p_40s_test.gd": 40_000,
+    "tests/p_25s_test.gd": 25_000,
+    "tests/p_20s_a_test.gd": 20_000,
+    "tests/p_20s_b_test.gd": 20_000,
+    "tests/p_10s_test.gd": 10_000,
+    "tests/p_5s_test.gd": 5_000,
+    "tests/solo_90s_test.gd": 90_000,
+    "tests/solo_60s_test.gd": 60_000,
+    "tests/solo_40s_test.gd": 40_000,
+    "tests/solo_20s_test.gd": 20_000,
+  };
+  const base = plan({
+    picked,
+    timings,
+    budgetMs: 600_000,
+    width: 4,
+    solo: (t) => t.includes("solo_"),
+  });
+
+  // 1/1 is identical to unsharded
+  const single = shardLanePlan(base, { index: 1, total: 1 }, 4);
+  assert.deepEqual(
+    single.parallel.map((r) => r.test),
+    base.parallel.map((r) => r.test),
+  );
+  assert.deepEqual(
+    single.solo.map((r) => r.test),
+    base.solo.map((r) => r.test),
+  );
+
+  // Check union == exact original set, disjointness, balance, and deterministic order across N=2,3,4
+  for (const total of [2, 3, 4]) {
+    const shards = Array.from({ length: total }, (_, i) =>
+      shardLanePlan(base, { index: i + 1, total }, 4),
+    );
+    const seenParallel = new Set();
+    const seenSolo = new Set();
+    for (const s of shards) {
+      for (const row of s.parallel) {
+        assert.equal(seenParallel.has(row.test), false, `duplicate parallel ${row.test}`);
+        seenParallel.add(row.test);
+      }
+      for (const row of s.solo) {
+        assert.equal(seenSolo.has(row.test), false, `duplicate solo ${row.test}`);
+        seenSolo.add(row.test);
+      }
+      // Tier 0 tests stay ahead of tier > 0 tests inside each shard's parallel slice
+      let seenNonZero = false;
+      for (const row of s.parallel) {
+        if (row.tier === 0) assert.equal(seenNonZero, false);
+        else seenNonZero = true;
+      }
+    }
+    assert.deepEqual(
+      [...seenParallel].sort(),
+      base.parallel.map((r) => r.test).sort(),
+      `union of ${total} parallel shards must equal original`,
+    );
+    assert.deepEqual(
+      [...seenSolo].sort(),
+      base.solo.map((r) => r.test).sort(),
+      `union of ${total} solo shards must equal original`,
+    );
+  }
+
+  // Balance check on 2 shards: both parallel and solo ms should be closely balanced
+  const s1 = shardLanePlan(base, { index: 1, total: 2 }, 4);
+  const s2 = shardLanePlan(base, { index: 2, total: 2 }, 4);
+  const pSum = (s) => s.parallel.reduce((a, r) => a + r.ms, 0);
+  const soloSum = (s) => s.solo.reduce((a, r) => a + r.ms, 0);
+  assert.ok(Math.abs(pSum(s1) - pSum(s2)) <= 10_000, `parallel sums ${pSum(s1)} vs ${pSum(s2)}`);
+  assert.ok(
+    Math.abs(soloSum(s1) - soloSum(s2)) <= 15_000,
+    `solo sums ${soloSum(s1)} vs ${soloSum(s2)}`,
+  );
+  // Shard 1/2 determinism
+  assert.deepEqual(
+    shardLanePlan(base, { index: 1, total: 2 }, 4).parallel.map((r) => r.test),
+    s1.parallel.map((r) => r.test),
+  );
+});
+
+test("shouldRunBoot runs on unsharded and shard 1 only, never on shard > 1 or --test mode", () => {
+  assert.equal(shouldRunBoot(parseArgs([])), true);
+  assert.equal(shouldRunBoot(parseArgs(["--ci-godot-only"])), true);
+  assert.equal(shouldRunBoot(parseArgs(["--shard", "1/2"])), true);
+  assert.equal(shouldRunBoot(parseArgs(["--shard", "1/4", "--ci-godot-only"])), true);
+  assert.equal(shouldRunBoot(parseArgs(["--shard", "2/2"])), false);
+  assert.equal(shouldRunBoot(parseArgs(["--shard", "3/4"])), false);
+  assert.equal(shouldRunBoot(parseArgs(["--test", "unit_suite_test"])), false);
+  assert.equal(shouldRunBoot(parseArgs(["--test", "unit_suite_test", "--shard", "1/2"])), false);
+});
+
+test("selectStage1NodeTests keeps unbundled NODE_PATH_RULES and script tests under --ci-godot-only on shard 1", () => {
+  const allNodeTests = [
+    "scripts/sketch-lint.test.mjs",
+    "scripts/audio-gate.test.mjs",
+    "scripts/palette-gd.test.mjs",
+    "scripts/far-faults.test.mjs",
+  ];
+  const texts = {
+    "scripts/sketch-lint.test.mjs": 'import "./sketch-lint.mjs";',
+    "scripts/audio-gate.test.mjs": 'import "./audio-gate.mjs";',
+    "scripts/palette-gd.test.mjs": "",
+    "scripts/far-faults.test.mjs": "",
+  };
+  const coveredByCi = ["scripts/sketch-lint.test.mjs"];
+  const args = {
+    changedNode: ["scripts/sketch-lint.mjs", "scripts/audio-gate.mjs"],
+    changedGodot: ["src/core/palette.gd", "assets/models/park/props/dam/barrel.glb"],
+    allNodeTests,
+    readText: (f) => texts[f] ?? "",
+    coveredByCi,
+  };
+  assert.deepEqual(selectStage1NodeTests({ ...args, ciGodotOnly: false }), [
+    "scripts/audio-gate.test.mjs",
+    "scripts/far-faults.test.mjs",
+    "scripts/palette-gd.test.mjs",
+    "scripts/sketch-lint.test.mjs",
+  ]);
+  assert.deepEqual(selectStage1NodeTests({ ...args, ciGodotOnly: true, isPrimaryShard: true }), [
+    "scripts/audio-gate.test.mjs",
+    "scripts/far-faults.test.mjs",
+    "scripts/palette-gd.test.mjs",
+  ]);
+  assert.deepEqual(
+    selectStage1NodeTests({ ...args, ciGodotOnly: true, isPrimaryShard: false }),
+    [],
+  );
 });
