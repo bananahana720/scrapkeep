@@ -78,6 +78,7 @@ const HIT_STOP_SCALE := 0.05
 const SLOW_MOTION_FLOOR := 0.1
 const SEED := 20260926
 const SimClock := preload("res://src/core/sim_clock.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const BOSS_PATH := "res://src/boss/boss.gd"
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -1052,6 +1053,7 @@ func set_quality(level: int) -> void:
 
 
 static func set_motion_statics(on: bool) -> void:
+	Comfort.reduced_motion = on
 	EnemyMotion.motion_scale = 0.0 if on else 1.0
 	HighdraftFx.preferred = on
 	AbilityBar.reduced_motion = on
