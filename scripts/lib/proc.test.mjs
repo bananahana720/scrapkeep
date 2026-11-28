@@ -143,6 +143,27 @@ process.exit(res.interrupted ?? 1);
   }
 });
 
+test("proc: an onChild that throws on a child that failed to start rejects with the callback's error only", async () => {
+  const uncaught = [];
+  const onUncaught = (error) => uncaught.push(error);
+  process.on("uncaughtException", onUncaught);
+  try {
+    await assert.rejects(
+      runProcess(path.join(os.tmpdir(), "no-such-binary-proc-test"), [], {
+        timeoutMs: 20000,
+        onChild: () => {
+          throw new Error("onChild failed");
+        },
+      }),
+      /onChild failed/,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    assert.deepEqual(uncaught, []);
+  } finally {
+    process.off("uncaughtException", onUncaught);
+  }
+});
+
 test("proc: an onChild that throws stops the child and leaves no signal listener", async () => {
   const before = { int: process.listenerCount("SIGINT"), term: process.listenerCount("SIGTERM") };
   let pgid = 0;

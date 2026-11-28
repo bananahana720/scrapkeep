@@ -27,6 +27,7 @@ test("git and gitOptional read the repository cwd is in, even when a git hook ex
     assert.equal(git(["ls-files", "--", "src"], { cwd }), "src/a.gd");
     assert.equal(gitOptional(["ls-files", "--", "src"], { cwd }), "src/a.gd");
     assert.equal(realpathSync(git(["rev-parse", "--show-toplevel"], { cwd })), realpathSync(dir));
+    assert.equal(cleanHead(dir), git(["rev-parse", "HEAD"], { cwd: dir }));
   } finally {
     if (before === undefined) delete process.env.GIT_DIR;
     else process.env.GIT_DIR = before;

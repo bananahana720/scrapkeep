@@ -158,6 +158,7 @@ export function runProcess(
     try {
       onChild?.(child);
     } catch (error) {
+      child.on("error", () => {});
       forward(false);
       terminate(true);
       throw error;
