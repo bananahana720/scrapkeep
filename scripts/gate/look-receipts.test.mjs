@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, watch, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  rmSync,
+  watch,
+  writeFileSync,
+} from "node:fs";
 import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -10,7 +20,6 @@ import { fileURLToPath } from "node:url";
 import * as render from "./model-render-receipt.mjs";
 import * as census from "./stand-ins-receipt.mjs";
 import * as display from "./display-run.mjs";
-import { groupLive } from "../lib/proc.mjs";
 import { git as runGit } from "../lib/git.mjs";
 
 const HEAD = "abc1234";
@@ -361,10 +370,12 @@ describe("display-run timeouts and signals", GUARDED, () => {
     await Promise.all(
       [`sleep ${LATE_S} &\nwait\n`, `exec sleep ${LATE_S}\n`].map(async (body) => {
         const fake = path.join(dir, `fake-${body.length}.sh`);
-        const group = path.join(dir, `group-${body.length}`);
-        writeFileSync(fake, `#!/bin/sh\necho started "$@"\necho $$ > "${group}"\n${body}`, {
+        const held = path.join(dir, `held-${body.length}`);
+        assert.equal(spawnSync("mkfifo", [held]).status, 0, "mkfifo");
+        writeFileSync(fake, `#!/bin/sh\nexec 3<> "${held}"\necho started "$@"\n${body}`, {
           mode: 0o755,
         });
+        const gone = readFile(held, "utf8");
         const events = [];
         const r = await display.runWindowed({
           platform: "linux",
@@ -376,9 +387,14 @@ describe("display-run timeouts and signals", GUARDED, () => {
           acquire: noSlot(events),
         });
         assert.equal(r.timedOut, true);
-        assert.equal(groupLive(Number(readFileSync(group, "utf8"))), false, body.trim());
+        try {
+          closeSync(openSync(held, constants.O_WRONLY | constants.O_NONBLOCK));
+        } catch (error) {
+          if (error.code !== "ENXIO") throw error;
+        }
         assert.equal(r.exit, null);
         assert.match(r.output, /^started --path .* --script res:\/\/x\.gd --/);
+        assert.equal(await gone, "", `${body.trim()}: the shell and its child are gone`);
         assert.deepEqual(events, ["acquire", "release"]);
       }),
     );
