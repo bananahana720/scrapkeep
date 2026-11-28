@@ -650,6 +650,35 @@ export function renamesSince(base, head = null, { cwd = root } = {}) {
   return renamed;
 }
 
+function movedBySplit(fresh, gone) {
+  const now = fresh.split(" -> ");
+  const was = gone.split(" -> ");
+  const at = now.findIndex((file, index) => file !== was[index]);
+  return (
+    at !== -1 &&
+    now.length === was.length &&
+    now.every((file, index) => index === at || file === was[index]) &&
+    path.posix.dirname(now[at]) === path.posix.dirname(was[at])
+  );
+}
+
+function splitExcused(fresh, gone) {
+  const owner = new Map();
+  const fit = (one, seen) => {
+    for (const [at, entry] of gone.entries()) {
+      if (seen.has(at) || !movedBySplit(fresh[one], entry)) continue;
+      seen.add(at);
+      if (!owner.has(at) || fit(owner.get(at), seen)) {
+        owner.set(at, one);
+        return true;
+      }
+    }
+    return false;
+  };
+  for (const one of fresh.keys()) fit(one, new Set());
+  return new Set([...owner.values()].map((one) => fresh[one]));
+}
+
 export function baselineGrowth(before, after, renamed = new Map()) {
   const size = (list) =>
     Array.isArray(list) ? list.length : Object.values(list ?? {}).reduce((a, b) => a + b, 0);
@@ -670,11 +699,16 @@ export function baselineGrowth(before, after, renamed = new Map()) {
         .split(" -> ")
         .map((file) => renamed.get(file) ?? file)
         .join(" -> ");
-    const added = Array.isArray(now)
+    let added = Array.isArray(now)
       ? now.filter((key) => !(exact && take(named(key))) && !take(key))
       : Object.entries(now)
           .filter(([file, count]) => count > (was?.[file] ?? 0))
           .map(([file, count]) => `${file} (${was?.[file] ?? 0} to ${count})`);
+    if (exact) {
+      const fresh = [...new Set(added.map(named))].sort();
+      const excused = splitExcused(fresh, [...unmatched].sort());
+      added = added.filter((key) => !excused.has(named(key)));
+    }
     if (added.length === 0) continue;
     const fix =
       rule === "L14"
@@ -689,7 +723,7 @@ export function baselineGrowth(before, after, renamed = new Map()) {
         "BASELINE",
         BASELINE_PATH,
         1,
-        `${rule} list ${change} (new: ${added.join(", ")}): ${fix} instead of listing it`,
+        `${rule} list ${change} (new: ${added.join(", ")}): ${fix} instead of listing it${exact ? "\n    An offence that moved with a split file passes only when it stays inside one directory" : ""}`,
       ),
     );
   }

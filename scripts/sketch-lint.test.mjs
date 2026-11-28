@@ -1734,6 +1734,9 @@ test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based pa
   assert.deepEqual(realL17, []);
 });
 
+const splitLine =
+  "\n    An offence that moved with a split file passes only when it stays inside one directory";
+
 test("baselineGrowth fails a rule whose list gained an entry and names the rule, both counts, the new entry and the fix", () => {
   const base = { L1: ["a.gd", "b.gd"], L14: ["s.gd:_x"], L15: { "c.gd": 2 } };
   const [grew, ...rest] = baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "d.gd"] });
@@ -1742,7 +1745,7 @@ test("baselineGrowth fails a rule whose list gained an entry and names the rule,
   assert.equal(grew.path, "scripts/sketch-lint.baseline.json");
   assert.equal(
     grew.message,
-    "L1 list grew from 2 to 3 entries (new: d.gd): fix the offence instead of listing it",
+    `L1 list grew from 2 to 3 entries (new: d.gd): fix the offence instead of listing it${splitLine}`,
   );
   assert.match(
     formatFinding(baselineGrowth(base, { ...base, L14: ["s.gd:_x", "t.gd:_y"] })[0]),
@@ -1750,7 +1753,7 @@ test("baselineGrowth fails a rule whose list gained an entry and names the rule,
   );
   assert.equal(
     baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "b.gd"] })[0].message,
-    "L1 list grew from 2 to 3 entries (new: b.gd): fix the offence instead of listing it",
+    `L1 list grew from 2 to 3 entries (new: b.gd): fix the offence instead of listing it${splitLine}`,
   );
   assert.equal(
     baselineGrowth(base, { ...base, L15: { "c.gd": 3 } })[0].message,
@@ -1770,7 +1773,7 @@ test("baselineGrowth passes a moved or removed entry, fails a rule with an empty
   );
   assert.equal(
     baselineGrowth(base, { ...base, L1: ["a.gd", "moved/b.gd"] })[0].message,
-    "L1 list has 1 entry the base list lacks, and no file it names was renamed (new: moved/b.gd): fix the offence instead of listing it",
+    `L1 list has 1 entry the base list lacks, and no file it names was renamed (new: moved/b.gd): fix the offence instead of listing it${splitLine}`,
   );
   assert.deepEqual(baselineGrowth(base, { ...base, L15: { "moved/c.gd": 2 } }), []);
   assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd"], L15: {} }), []);
@@ -1778,7 +1781,7 @@ test("baselineGrowth passes a moved or removed entry, fails a rule with an empty
   assert.deepEqual(
     baselineGrowth(base, { ...base, L2: ["x.gd"], W1: { "y.gd": 1 } }).map((item) => item.message),
     [
-      "L2 list grew from 0 to 1 entries (new: x.gd): fix the offence instead of listing it",
+      `L2 list grew from 0 to 1 entries (new: x.gd): fix the offence instead of listing it${splitLine}`,
       "W1 list grew from 0 to 1 entries (new: y.gd (0 to 1)): fix the offence instead of listing it",
     ],
   );
@@ -1793,33 +1796,84 @@ test("baselineGrowth fails a keyed list that swaps one entry for another, and pa
     L14: ["src/s.gd:_x"],
   };
   const swapped = {
-    L16: ["src/a.gd", "src/c.gd"],
-    L19: ["tests/b_test.gd"],
-    L20: [up("core/a", "ui/x"), up("core/c", "ui/y")],
+    L16: ["src/a.gd", "src/other/c.gd"],
+    L19: ["tests/unit/b_case.gd"],
+    L20: [up("core/a", "ui/x"), up("world/c", "ui/y")],
     L14: ["src/s.gd:_renamed"],
   };
   assert.deepEqual(
     baselineGrowth(base, swapped).map((item) => item.message),
     [
-      "L16 list has 1 entry the base list lacks, and no file it names was renamed (new: src/c.gd): fix the offence instead of listing it",
-      "L19 list has 1 entry the base list lacks, and no file it names was renamed (new: tests/b_test.gd): fix the offence instead of listing it",
-      `L20 list has 1 entry the base list lacks, and no file it names was renamed (new: ${up("core/c", "ui/y")}): fix the offence instead of listing it`,
+      `L16 list has 1 entry the base list lacks, and no file it names was renamed (new: src/other/c.gd): fix the offence instead of listing it${splitLine}`,
+      `L19 list has 1 entry the base list lacks, and no file it names was renamed (new: tests/unit/b_case.gd): fix the offence instead of listing it${splitLine}`,
+      `L20 list has 1 entry the base list lacks, and no file it names was renamed (new: ${up("world/c", "ui/y")}): fix the offence instead of listing it${splitLine}`,
     ],
   );
   const renamed = new Map([
-    ["src/c.gd", "src/b.gd"],
-    ["tests/b_test.gd", "tests/a_test.gd"],
-    ["src/core/c.gd", "src/core/b.gd"],
+    ["src/other/c.gd", "src/b.gd"],
+    ["tests/unit/b_case.gd", "tests/a_test.gd"],
+    ["src/world/c.gd", "src/core/b.gd"],
   ]);
   assert.deepEqual(baselineGrowth(base, swapped, renamed), []);
-  const highMoved = { ...base, L20: [up("core/a", "ui/x"), up("core/b", "ui/z")] };
+  const highMoved = { ...base, L20: [up("core/a", "ui/x"), up("core/b", "presentation/z")] };
   assert.equal(baselineGrowth(base, highMoved).length, 1);
-  assert.deepEqual(baselineGrowth(base, highMoved, new Map([["src/ui/z.gd", "src/ui/y.gd"]])), []);
+  assert.deepEqual(
+    baselineGrowth(base, highMoved, new Map([["src/presentation/z.gd", "src/ui/y.gd"]])),
+    [],
+  );
   assert.equal(
     baselineGrowth(base, { ...base, L20: [...base.L20, up("core/c", "ui/y")] }, renamed).length,
     1,
   );
   assert.deepEqual(baselineGrowth(base, { ...base, L20: [up("core/a", "ui/x")] }), []);
+});
+
+test("baselineGrowth lets an offence move with a file split inside one directory, one for one, and fails every other new entry", () => {
+  const up = (from, to) => `src/${from}.gd -> src/${to}.gd`;
+  const base = { L20: [up("combat/combat", "presentation/x"), up("core/a", "ui/y")] };
+  const grow = (L20, renamed) =>
+    baselineGrowth(base, { L20 }, renamed).map((item) => item.message.split(" (new: ")[1]);
+  assert.deepEqual(grow([up("combat/grapple", "presentation/x"), up("core/a", "ui/y")]), []);
+  assert.deepEqual(grow([up("combat/combat", "presentation/x"), up("core/a", "ui/y_part")]), []);
+  assert.deepEqual(grow([up("combat/grapple", "presentation/x_part"), up("core/a", "ui/y")]), [
+    `${up("combat/grapple", "presentation/x_part")}): fix the offence instead of listing it${splitLine}`,
+  ]);
+  assert.deepEqual(grow([up("world/grapple", "presentation/x"), up("core/a", "ui/y")]), [
+    `${up("world/grapple", "presentation/x")}): fix the offence instead of listing it${splitLine}`,
+  ]);
+  assert.deepEqual(
+    grow(
+      [up("world/grapple", "presentation/x"), up("core/a", "ui/y")],
+      new Map([["src/world/grapple.gd", "src/combat/combat.gd"]]),
+    ),
+    [],
+  );
+  assert.deepEqual(
+    grow([
+      up("combat/grapple", "presentation/x"),
+      up("combat/hooks", "presentation/x"),
+      up("core/a", "ui/y"),
+    ]),
+    [`${up("combat/hooks", "presentation/x")}): fix the offence instead of listing it${splitLine}`],
+  );
+
+  const paths = { L19: ["tests/a_test.gd", "tests/b_test.gd"] };
+  assert.deepEqual(baselineGrowth(paths, { L19: ["tests/a_test.gd", "tests/b_part_test.gd"] }), []);
+  assert.equal(
+    baselineGrowth(paths, { L19: ["tests/a_test.gd", "tests/unit/b_case.gd"] }).length,
+    1,
+  );
+  assert.deepEqual(baselineGrowth({ L16: ["src/a.gd"] }, { L16: ["src/b.gd"] }), []);
+  assert.equal(baselineGrowth({ L16: ["src/a.gd"] }, { L16: ["src/b.gd", "src/c.gd"] }).length, 1);
+});
+
+test("baselineGrowth matches split entries one for one in an order that does not change the answer", () => {
+  const either = "src/c/a.gd -> src/p/z.gd";
+  const only = "src/c/b.gd -> src/p/x.gd";
+  const base = { L20: ["src/c/a.gd -> src/p/x.gd", "src/c/a.gd -> src/p/y.gd"] };
+  assert.deepEqual(baselineGrowth(base, { L20: [either, only] }), []);
+  assert.deepEqual(baselineGrowth(base, { L20: [only, either] }), []);
+  assert.deepEqual(baselineGrowth({ L20: [...base.L20].reverse() }, { L20: [only, either] }), []);
 });
 
 test("renamesSince maps each renamed file to its old name between two commits and in the working tree, and fails on a ref git cannot read", () => {
@@ -2184,7 +2238,7 @@ test("L19 passes the checked-out core-loop tests against its list, and its list 
       (item) => item.message,
     ),
     [
-      `L19 list grew from ${baseline.L19.length} to ${baseline.L19.length + 1} entries (new: ${planted.path}): fix the offence instead of listing it`,
+      `L19 list grew from ${baseline.L19.length} to ${baseline.L19.length + 1} entries (new: ${planted.path}): fix the offence instead of listing it${splitLine}`,
     ],
   );
   const [fixed, ...kept] = baseline.L19;

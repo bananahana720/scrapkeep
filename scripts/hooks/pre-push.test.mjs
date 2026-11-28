@@ -295,9 +295,10 @@ test("executeHookPlan fails a push whose lint baseline list grew and passes one 
     base: { L1: ["a.gd", "b.gd"], L15: { "c.gd": 2 } },
     grown: { L1: ["a.gd", "b.gd", "d.gd"], L15: { "c.gd": 2 } },
     shrunk: { L1: ["a.gd"], L15: { "c.gd": 2 } },
-    swapped: { L1: ["a.gd", "e.gd"], L15: { "c.gd": 2 } },
+    swapped: { L1: ["a.gd", "other/e.gd"], L15: { "c.gd": 2 } },
+    split: { L1: ["a.gd", "b_part.gd"], L15: { "c.gd": 2 } },
   };
-  const renames = { swapped: new Map([["e.gd", "b.gd"]]) };
+  const renames = { swapped: new Map([["other/e.gd", "b.gd"]]) };
   const asked = [];
   const readRenames = (base, head) => {
     asked.push(`${base}..${head}`);
@@ -332,8 +333,17 @@ test("executeHookPlan fails a push whose lint baseline list grew and passes one 
     errLog: (line) => swapErrors.push(line),
   });
   assert.equal(swapped.ok, false);
-  assert.match(swapErrors.join("\n"), /L1 list has 1 entry the base list lacks.*\(new: e\.gd\)/);
-  assert.deepEqual(asked, ["base..grown", "base..shrunk", "base..swapped"]);
+  assert.match(
+    swapErrors.join("\n"),
+    /L1 list has 1 entry the base list lacks.*\(new: other\/e\.gd\).*\n {4}An offence that moved with a split file passes only when it stays inside one directory/,
+  );
+  const split = executeHookPlan([{ ...plan, base: "base", head: "split" }], {
+    readBaseline: (ref) => lists[ref],
+    readRenames,
+    errLog: () => assert.fail("an offence that moved with a split file inside its directory"),
+  });
+  assert.equal(split.ok, true);
+  assert.deepEqual(asked, ["base..grown", "base..shrunk", "base..swapped", "base..split"]);
   const moved = executeHookPlan([{ ...plan, base: "base", head: "swapped" }], {
     readBaseline: (ref) => lists[ref],
     readRenames: (base, head) => renames[head],
