@@ -3,7 +3,6 @@ import { spawn } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { setTimeout as sleep } from "node:timers/promises";
 import test, { after } from "node:test";
 
 import { acquireDrawnSlot, launch, measureFrame, runCapture, runWindowed } from "./display-run.mjs";
@@ -139,40 +138,60 @@ test("the Gate reference needs a visible sample for its own process and the pinn
 test("two drawn runs wait for one lock across worktrees and have disjoint start/end times", async () => {
   const directory = scratch();
   const notices = [];
+  const events = [];
+  let contend;
+  const contended = new Promise((resolve) => (contend = resolve));
   const acquire = () =>
-    acquireDrawnSlot({ directory, machine: lease, pollMs: 8, log: (msg) => notices.push(msg) });
-  const intervals = [];
+    acquireDrawnSlot({
+      directory,
+      machine: lease,
+      pollMs: 8,
+      log: (msg) => {
+        notices.push(msg);
+        if (msg.includes("waiting for a machine slot")) contend();
+      },
+    });
   async function draw() {
     const opts = capture(scratch());
     const result = await runCapture({
       ...opts,
       acquire,
       start: async () => {
-        const from = performance.now();
-        await sleep(40);
-        intervals.push([from, performance.now()]);
+        events.push("start");
+        if (events.length === 1) await contended;
+        else contend();
+        events.push("end");
         return opts.start();
       },
     });
     assert.equal(result.exit, 0);
   }
   await Promise.all([draw(), draw()]);
-  assert.ok(notices.some((msg) => msg.includes("waiting")));
-  assert.ok(intervals[0][1] <= intervals[1][0]);
+  assert.deepEqual(events, ["start", "end", "start", "end"]);
+  assert.ok(notices.some((msg) => msg.includes("waiting for a machine slot")));
 });
 
 test("losing the sampler aborts a still-running group before releasing the drawn slot", async () => {
   const row = JSON.stringify(sample(Date.now()));
-  const sampler = () =>
-    spawn(
+  let samplerPid;
+  const sampler = () => {
+    const child = spawn(
       process.execPath,
-      ["-e", "console.log(process.argv[1]);setTimeout(()=>process.exit(1),180)", row],
+      [
+        "-e",
+        "const row=process.argv[1];console.log(row);setInterval(()=>console.log(row),50)",
+        row,
+      ],
       { stdio: ["ignore", "pipe", "pipe"] },
     );
+    samplerPid = child.pid;
+    return child;
+  };
   let result;
   await assert.rejects(
     watchDrawnRun(async (signal) => {
-      result = await launch(process.execPath, ["-e", "setInterval(()=>{},1000)"], {
+      const running = "process.kill(Number(process.argv[1]));setInterval(()=>{},1000)";
+      result = await launch(process.execPath, ["-e", running, String(samplerPid)], {
         cwd: scratch(),
         env: {},
         timeoutMs: 8000,

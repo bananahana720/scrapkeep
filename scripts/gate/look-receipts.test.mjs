@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, watch, writeFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { after, describe, test } from "node:test";
@@ -16,6 +17,8 @@ const HEAD = "abc1234";
 const KINDS = render.KINDS;
 const here = path.dirname(fileURLToPath(import.meta.url));
 const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
+const GUARDED = { concurrency: CONCURRENCY, timeout: 30_000 };
+const LATE_S = GUARDED.timeout / 1000 + 15;
 const tempDirs = [];
 after(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
@@ -352,11 +355,11 @@ test("display-run: releases the slot when the launch throws", async () => {
   assert.deepEqual(events, ["acquire", "release"]);
 });
 
-describe("display-run timeouts and signals", { concurrency: CONCURRENCY }, () => {
+describe("display-run timeouts and signals", GUARDED, () => {
   test("display-run: the timeout kills the whole run's group, a forked child or an exec", async () => {
     const { dir } = repo();
     await Promise.all(
-      ["sleep 30 &\nwait\n", "exec sleep 30\n"].map(async (body) => {
+      [`sleep ${LATE_S} &\nwait\n`, `exec sleep ${LATE_S}\n`].map(async (body) => {
         const fake = path.join(dir, `fake-${body.length}.sh`);
         const group = path.join(dir, `group-${body.length}`);
         writeFileSync(fake, `#!/bin/sh\necho started "$@"\necho $$ > "${group}"\n${body}`, {
@@ -384,45 +387,35 @@ describe("display-run timeouts and signals", { concurrency: CONCURRENCY }, () =>
   test("display-run: SIGTERM to the node process kills the run's group", async () => {
     const { dir } = repo();
     const pids = path.join(dir, "pids");
+    const held = path.join(dir, "held");
+    assert.equal(spawnSync("mkfifo", [held]).status, 0, "mkfifo");
     const fake = path.join(dir, "fake-group.sh");
-    writeFileSync(fake, `#!/bin/sh\nsleep 30 &\necho $$ $! > "${pids}"\nwait\n`, { mode: 0o755 });
+    writeFileSync(
+      fake,
+      `#!/bin/sh\nexec 3<> "${held}"\nsleep ${LATE_S} &\necho $$ $! > "${pids}.tmp"\nmv "${pids}.tmp" "${pids}"\nwait\n`,
+      { mode: 0o755 },
+    );
     const runner = path.join(dir, "runner.mjs");
     writeFileSync(
       runner,
       `import { runWindowed } from ${JSON.stringify(path.join(here, "display-run.mjs"))};
-await runWindowed({ platform: "linux", env: { DISPLAY: ":0" }, cwd: ${JSON.stringify(dir)}, script: "res://x.gd", binary: ${JSON.stringify(fake)}, timeoutMs: 20000, acquire: async () => ({ release() { console.error("released"); } }) });
+await runWindowed({ platform: "linux", env: { DISPLAY: ":0" }, cwd: ${JSON.stringify(dir)}, script: "res://x.gd", binary: ${JSON.stringify(fake)}, timeoutMs: ${LATE_S * 1000}, acquire: async () => ({ release() { console.error("released"); } }) });
 process.exit(1); // An interrupted receipt producer must never reach its next step.
 `,
     );
+    const started = new Promise((resolve) => {
+      const watcher = watch(dir, () => existsSync(pids) && (watcher.close(), resolve()));
+      watcher.unref();
+    });
     const node = spawn(process.execPath, [runner], { stdio: "ignore" });
-    const until = async (ok, ms) => {
-      const end = Date.now() + ms;
-      while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50));
-      return ok();
-    };
-    assert.ok(
-      await until(
-        () => existsSync(pids) && readFileSync(pids, "utf8").trim().split(" ").length === 2,
-        5000,
-      ),
-      "the fake started",
-    );
-    const [shell, sleeper] = readFileSync(pids, "utf8").trim().split(" ").map(Number);
     const exited = new Promise((r) => node.on("exit", (code) => r(code)));
+    await started;
+    const [shell, sleeper] = readFileSync(pids, "utf8").trim().split(" ").map(Number);
+    assert.ok(shell > 0 && sleeper > 0, "the fake started its shell and its child");
+    const gone = readFile(held, "utf8");
     node.kill("SIGTERM");
     assert.equal(await exited, 143);
-    const alive = (pid) => {
-      try {
-        process.kill(pid, 0);
-        return true;
-      } catch {
-        return false;
-      }
-    };
-    assert.ok(
-      await until(() => !alive(shell) && !alive(sleeper), 2000),
-      "the shell and its child are gone",
-    );
+    assert.equal(await gone, "", "the shell and its child are gone");
   });
 });
 
