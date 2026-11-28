@@ -109,10 +109,6 @@ static func is_calm(left: float, tree: SceneTree) -> bool:
 	return left <= 0.0 and not threat_live(tree) and not (tree != null and tree.paused)
 
 
-static func find_may_speak(left: float, tree: SceneTree, flow) -> bool:
-	return is_calm(left, tree) and not (flow != null and flow.warden_fight_live())
-
-
 func fight() -> bool:
 	return not is_calm(_calm_left, get_tree() if is_inside_tree() else null)
 
