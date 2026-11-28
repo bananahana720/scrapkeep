@@ -7,7 +7,9 @@
 #
 # It refuses when: the checkout has uncommitted changes; the branch's pushed head is not the SHA the
 # review passed (the writer pushed after the review); any check of the pull request failed or is still
-# running; or the merge conflicts. Otherwise it leaves the merge staged and uncommitted, so review notes
+# running; or the merge conflicts. One kind of failed check is carried: a Linux Godot job whose only
+# red tests are listed as red on main, as known-reds-ci.py beside this file reads it from the job's
+# log (the run still failed; the tool only shows the red is an old one). Otherwise it leaves the merge staged and uncommitted, so review notes
 # can be applied before the commit. It commits nothing and pushes nothing, and is safe to run again
 # after `git merge --abort`.
 #
@@ -28,7 +30,7 @@ bad="$(printf '%s\n' "$state" | awk -F'\t' '$2 != "pass" && $2 != "skipping"')"
 if [ -n "$bad" ]; then
   echo "merge-unit: pull request $pr has checks that did not pass:" >&2
   printf '%s\n' "$bad" >&2
-  exit 1
+  python3 -I "$(dirname "$0")/known-reds-ci.py" "$pr" "$head" || exit 1
 fi
 passed="$(printf '%s\n' "$state" | awk -F'\t' '$2 == "pass"' | wc -l | tr -d ' ')"
 [ "$passed" -gt 0 ] || { echo "merge-unit: pull request $pr shows no passed check" >&2; exit 1; }
