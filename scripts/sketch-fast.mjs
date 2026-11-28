@@ -88,7 +88,7 @@ export const DEFAULT_ESTIMATE_MS = 180_000;
 export const UNKNOWN_BOT_NAME = /^(bot_.*|.*_sweep_.*)\.gd$/;
 export const HUB_TESTS = 25;
 const SOURCE_READER = "res://tests/support/source_scan.gd";
-const FOLDER_SCAN = /\.(?:sources|matching|captures)\s*\(/;
+const FOLDER_SCAN = /\.(?:sources|matching|captures)\s*\(|&?["'](?:sources|matching|captures)["']/;
 const SCANNED_SCRIPT = /^(?:src|tools)\/.+\.gd$/;
 export const CANARY_COUNT = 4;
 export const ALWAYS = [
@@ -348,15 +348,43 @@ function expand(index, globs) {
   return index.tests.filter((test) => patterns.some((pattern) => pattern.test(test)));
 }
 
+function loaders(index, rel) {
+  const dir = `res://${path.posix.dirname(rel)}`;
+  const base = path.posix.basename(rel);
+  const top = `res://${rel.split("/")[0]}/`;
+  const quotes = ['"', "'"];
+  const scripts = (keep) =>
+    [...index.files]
+      .filter(([file, text]) => file.endsWith(".gd") && keep(text))
+      .map(([file]) => file);
+  const listing = `lists ${dir}`;
+  if (!index.cache.has(listing))
+    index.cache.set(
+      listing,
+      scripts((text) =>
+        quotes.some((q) => text.includes(q + dir + q) || text.includes(q + dir + "/" + q)),
+      ),
+    );
+  const named = scripts(
+    (text) =>
+      text.includes(base) &&
+      text.includes(top) &&
+      quotes.some((q) => text.includes(q + base + q) || text.includes("/" + base + q)),
+  );
+  const found = new Set([...referrers(index, rel), ...index.cache.get(listing), ...named]);
+  found.delete(rel);
+  return found;
+}
+
 export function folderGuards(index) {
   const queue = [...index.files.keys()].filter((rel) => {
-    if (!/^tests\/.+\.gd$/.test(rel)) return false;
+    if (!/^tests\/.+\.gd$/.test(rel) || `res://${rel}` === SOURCE_READER) return false;
     const text = index.files.get(rel);
-    return text.includes(SOURCE_READER) && FOLDER_SCAN.test(text);
+    return text.includes(path.posix.basename(SOURCE_READER)) && FOLDER_SCAN.test(text);
   });
   const reached = new Set(queue);
   while (queue.length > 0)
-    for (const file of referrers(index, queue.shift()))
+    for (const file of loaders(index, queue.shift()))
       if (!reached.has(file)) {
         reached.add(file);
         queue.push(file);

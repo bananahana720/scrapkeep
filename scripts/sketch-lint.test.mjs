@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 import "./lib/cli.test.mjs";
-import { cwdDecidesRepository } from "./lib/git.mjs";
+import { git } from "./lib/git.mjs";
 import "./lib/game-defs.test.mjs";
 import "./lib/git.test.mjs";
 import "./lib/walk.test.mjs";
@@ -46,8 +46,7 @@ import {
   lintPreloadedTestSupport,
   lintSketch,
   lintTrackedUids,
-  parseBatchDriverRefs,
-  parseBatchDriverVars,
+  parseBatchDriver,
   parseLayerOrder,
   parseLintArgs,
   parseTuning,
@@ -738,6 +737,8 @@ test("the baseline silences listed offenders and shrinks only", () => {
     L18: [],
     L19: [],
     L20: [],
+    L21: [],
+    L22: [],
   });
 });
 
@@ -1068,19 +1069,116 @@ test("words: the count baseline holds a file at its count, fails it above, and a
 
 test("L14 passes the checked-out core-loop src tree against baseline and parses test_batch_driver refs", () => {
   const driverText = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
-  const refs = parseBatchDriverRefs(driverText);
+  const { refs, resets } = parseBatchDriver(driverText);
   assert.ok(refs.size >= 80, `expected >= 80 driver refs, got ${refs.size}`);
   assert.ok(refs.has("src/build/parts.gd"));
   assert.ok(refs.has("src/core/challenge_dials.gd"));
+  assert.ok(resets.size >= 80, `expected >= 80 scripts reset in _reset(), got ${resets.size}`);
+  assert.ok(resets.get("src/build/parts.gd").calls.has("reset_for_tests"));
+  assert.deepEqual(resets.get("src/core/sim_clock.gd").values.get("ticks"), ["false"]);
+  assert.ok(resets.get("src/presentation/w50_asset_hooks.gd").calls.has("reset_for_tests"));
+  assert.deepEqual(resets.get("src/world/rescue_site.gd").values.get("model_path"), ["MODEL"]);
   const baseline = JSON.parse(
     readFileSync(new URL("./sketch-lint.baseline.json", import.meta.url), "utf8"),
   );
   assert.ok(baseline.L14.length > 0);
-  const raw = lintSketch("core-loop").filter((item) => item.rule === "L14");
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L14" || item.rule === "L21");
   assert.deepEqual(
-    applyBaseline(raw, { L14: baseline.L14 }, () => true),
+    applyBaseline(raw, { L14: baseline.L14, L21: baseline.L21 }, () => true),
     [],
   );
+});
+
+test("L21 fails a static var that only looks reset, for each of the five forms L14 let pass", () => {
+  const file = "sketches/core-loop/src/core/planted.gd";
+  const rel = "src/core/planted.gd";
+  const preload = 'const Planted := preload("res://src/core/planted.gd")\n';
+  const driverOf = (body) => parseBatchDriver(`${preload}\nfunc _reset() -> void:\n${body}\n`);
+  const calls = driverOf("\tPlanted.reset_for_tests()");
+  const found = (text, driver = calls) =>
+    lintL14(file, rel, text, driver).map((item) => `${item.rule} ${item.key} ${item.line}`);
+  const key = (name) => `${file}:${name}`;
+
+  const annotated =
+    '@warning_ignore("unused") static var _hidden := {}\nstatic func reset_for_tests() -> void:\n\tpass\n';
+  assert.deepEqual(found(annotated), [`L21 ${key("_hidden")} 1`]);
+  assert.deepEqual(found(annotated.replace("\tpass", "\t_hidden = {}")), []);
+
+  const unCalled =
+    "static var _cache := {}\nstatic func reset_for_tests() -> void:\n\tpass\nstatic func reset_cache() -> void:\n\t_cache = {}\n";
+  assert.deepEqual(found(unCalled), [`L21 ${key("_cache")} 1`]);
+  assert.deepEqual(found(unCalled, driverOf("\tPlanted.reset_cache()")), []);
+  const throughHelper =
+    "static var _cache := {}\nstatic func reset_for_tests() -> void:\n\t_drop()\nstatic func _drop() -> void:\n\t_cache = {}\n";
+  assert.deepEqual(found(throughHelper), []);
+
+  const compared =
+    "static var _mode := 0\nstatic func reset_for_tests() -> void:\n\tif _mode == 2:\n\t\tprint(_mode)\n";
+  assert.deepEqual(found(compared), [`L21 ${key("_mode")} 1`]);
+
+  const wrongValue =
+    "static var on := true\nstatic func reset_for_tests() -> void:\n\ton = false\n";
+  const wrong = lintL14(file, rel, wrongValue, calls);
+  assert.deepEqual(
+    wrong.map((item) => `${item.rule} ${item.key}`),
+    [`L21 ${key("on")}`],
+  );
+  assert.match(wrong[0].message, /on is reset to false, not to its declared true/);
+  assert.deepEqual(found(wrongValue.replace("on = false", "on = true")), []);
+  const typed =
+    "static var _rows: Dictionary[String, int] = {}\nstatic var _node: Node3D\nstatic var _list := [\n\t1,\n\t2,\n]\nstatic func reset_for_tests() -> void:\n\t_rows.clear()\n\t_node = null\n\t_list = [1, 2]\n";
+  assert.deepEqual(found(typed), []);
+  assert.deepEqual(found(typed.replace("_list = [1, 2]", "_list = []")), [`L21 ${key("_list")} 3`]);
+
+  const strayMention = parseBatchDriver(
+    `# res://src/core/planted.gd is reset elsewhere\nconst NOTE := "res://src/core/planted.gd"\nfunc _reset() -> void:\n\tpass\n`,
+  );
+  const resetNamed =
+    "static var _cache := {}\nstatic func reset_for_tests() -> void:\n\t_cache.clear()\n";
+  assert.deepEqual(found(resetNamed, strayMention), [`L21 ${key("_cache")} 1`]);
+  assert.deepEqual(found(resetNamed), []);
+  const preloadedOnly = parseBatchDriver(`${preload}func _reset() -> void:\n\tpass\n`);
+  assert.deepEqual(found(resetNamed, preloadedOnly), [`L21 ${key("_cache")} 1`]);
+
+  const direct = parseBatchDriver(
+    `${preload}const OTHER_PATH := "res://src/core/other.gd"\nfunc _reset() -> void:\n\tPlanted.flag = Planted.DEFAULT\n\tvar hooks := load(OTHER_PATH)\n\thooks.reset_for_tests()\n`,
+  );
+  assert.deepEqual(direct.resets.get(rel).values.get("flag"), ["DEFAULT"]);
+  assert.ok(direct.resets.get("src/core/other.gd").calls.has("reset_for_tests"));
+  assert.deepEqual(found("static var flag := DEFAULT\n", direct), []);
+  assert.deepEqual(found("static var flag := 3\n", direct), [`L21 ${key("flag")} 1`]);
+});
+
+test("L21 fails when the batch driver holds no _reset() it can read", () => {
+  const support = [
+    {
+      path: "sketches/core-loop/tests/a_test.gd",
+      text: 'const H := preload("res://tests/support/h.gd")\nconst T := preload("res://tools/t.gd")\n',
+    },
+    { path: "sketches/core-loop/tests/support/h.gd", text: "extends RefCounted\n" },
+  ];
+  const tools = [{ path: "sketches/core-loop/tools/t.gd", text: "extends RefCounted\n" }];
+  for (const text of [
+    "",
+    'const A := preload("res://src/core/a.gd")\n',
+    "func _reset() -> void:\n\tpass\n",
+  ]) {
+    const out = lintPreloadedTestSupport(
+      support,
+      tools,
+      "sketches/core-loop",
+      parseBatchDriver(text),
+    );
+    assert.deepEqual(
+      out.map((item) => `${item.rule} ${item.path}`),
+      ["L21 sketches/core-loop/tools/test_batch_driver.gd"],
+    );
+    assert.match(out[0].message, /read no script reset in the batch driver's _reset\(\)/);
+  }
+  const live = parseBatchDriver(
+    'const A := preload("res://src/core/a.gd")\nfunc _reset() -> void:\n\tA.reset_for_tests()\n',
+  );
+  assert.deepEqual(lintPreloadedTestSupport(support, tools, "sketches/core-loop", live), []);
 });
 
 test("L14 blocks a new unwired static var and fails when a registered file adds a second unreset static var", () => {
@@ -1096,8 +1194,8 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
     "\t_leaked_cache.clear()",
     "",
   ].join("\n");
-  const emptyRefs = parseBatchDriverRefs("extends RefCounted\n");
-  const bad = lintL14(file, rel, srcWithReset, emptyRefs, new Set());
+  const empty = parseBatchDriver("extends RefCounted\n");
+  const bad = lintL14(file, rel, srcWithReset, empty, new Set());
   assert.equal(bad.length, 1);
   assert.equal(bad[0].rule, "L14");
   assert.equal(bad[0].line, 3);
@@ -1106,10 +1204,9 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
   assert.match(bad[0].message, /clear _leaked_cache in the script's reset method/);
 
   const driverWithPath =
-    'const Planted := preload("res://src/presentation/planted_craft_cache.gd")\n';
-  const wiredRefs = parseBatchDriverRefs(driverWithPath);
-  const wiredVars = parseBatchDriverVars(driverWithPath);
-  assert.deepEqual(lintL14(file, rel, srcWithReset, wiredRefs, new Set(), wiredVars), []);
+    'const Planted := preload("res://src/presentation/planted_craft_cache.gd")\nfunc _reset() -> void:\n\tPlanted.reset_for_tests()\n';
+  const wired = parseBatchDriver(driverWithPath);
+  assert.deepEqual(lintL14(file, rel, srcWithReset, wired, new Set()), []);
 
   const srcSecondLeak = [
     "extends RefCounted",
@@ -1120,7 +1217,7 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
     "\t_leaked_cache.clear()",
     "",
   ].join("\n");
-  const secondBad = lintL14(file, rel, srcSecondLeak, wiredRefs, new Set(), wiredVars);
+  const secondBad = lintL14(file, rel, srcSecondLeak, wired, new Set());
   assert.equal(secondBad.length, 1);
   assert.equal(secondBad[0].rule, "L14");
   assert.equal(secondBad[0].line, 4);
@@ -1131,23 +1228,16 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
   );
   assert.match(secondBad[0].message, /clear _second_leak in the script's reset method/);
 
-  const driverDirect = `${driverWithPath}func _reset() -> void:\n\tPlanted._second_leak = {}\n`;
+  const driverDirect = `${driverWithPath}\tPlanted._second_leak = {}\n`;
   assert.deepEqual(
-    lintL14(
-      file,
-      rel,
-      srcSecondLeak,
-      parseBatchDriverRefs(driverDirect),
-      new Set(),
-      parseBatchDriverVars(driverDirect),
-    ),
+    lintL14(file, rel, srcSecondLeak, parseBatchDriver(driverDirect), new Set()),
     [],
   );
 
   const baselined = new Set([`${rel}:_leaked_cache`]);
-  assert.deepEqual(lintL14(file, rel, srcWithReset, emptyRefs, baselined), []);
+  assert.deepEqual(lintL14(file, rel, srcWithReset, empty, baselined), []);
   assert.deepEqual(
-    lintL14(file, rel, "# static var _commented := {}\nvar ok := 1\n", emptyRefs, new Set()),
+    lintL14(file, rel, "# static var _commented := {}\nvar ok := 1\n", empty, new Set()),
     [],
   );
 });
@@ -1204,14 +1294,10 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     ["tests/support/helper.gd", "tools/runner.gd", "tools/shared_state.gd"],
   );
 
-  const emptyRefs = parseBatchDriverRefs("extends RefCounted\n");
-  const failing = lintPreloadedTestSupport(
-    testFiles,
-    toolFiles,
-    "sketches/core-loop",
-    emptyRefs,
-    new Set(),
+  const unwired = parseBatchDriver(
+    'const Other := preload("res://src/core/other.gd")\nfunc _reset() -> void:\n\tOther.reset_for_tests()\n',
   );
+  const failing = lintPreloadedTestSupport(testFiles, toolFiles, "sketches/core-loop", unwired);
   assert.deepEqual(
     failing.map((item) => item.key),
     [
@@ -1220,25 +1306,19 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     ],
   );
 
-  const driver = [
-    'const Helper := preload("res://tests/support/helper.gd")',
-    'const Shared := preload("res://tools/shared_state.gd")',
-    "",
-  ].join("\n");
-  const wiredRefs = parseBatchDriverRefs(driver);
-  const wiredVars = parseBatchDriverVars(driver);
-  assert.deepEqual(
-    lintPreloadedTestSupport(testFiles, toolFiles, "sketches/core-loop", wiredRefs, wiredVars),
-    [],
+  const wired = parseBatchDriver(
+    [
+      'const Helper := preload("res://tests/support/helper.gd")',
+      'const Shared := preload("res://tools/shared_state.gd")',
+      "func _reset() -> void:",
+      "\tHelper.reset_for_tests()",
+      "\tShared.reset_for_tests()",
+      "",
+    ].join("\n"),
   );
+  assert.deepEqual(lintPreloadedTestSupport(testFiles, toolFiles, "sketches/core-loop", wired), []);
 
-  const noTools = lintPreloadedTestSupport(
-    testFiles,
-    [],
-    "sketches/core-loop",
-    wiredRefs,
-    wiredVars,
-  );
+  const noTools = lintPreloadedTestSupport(testFiles, [], "sketches/core-loop", wired);
   assert.deepEqual(
     noTools.map((item) => `${item.rule} ${item.path}`),
     ["L14 sketches/core-loop/tools"],
@@ -1249,8 +1329,7 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     [testFiles[0]],
     toolFiles,
     "sketches/core-loop",
-    wiredRefs,
-    wiredVars,
+    wired,
   );
   assert.deepEqual(
     noSupport.map((item) => `${item.rule} ${item.path}`),
@@ -1262,8 +1341,7 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     [{ path: "sketches/core-loop/tests/plain_test.gd", text: "extends SceneTree\n" }],
     toolFiles,
     "sketches/core-loop",
-    wiredRefs,
-    wiredVars,
+    wired,
   );
   assert.deepEqual(
     neither.map((item) => `${item.rule} ${item.path}`),
@@ -1271,7 +1349,7 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
   );
 
   const liveDriver = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
-  const liveRefs = parseBatchDriverRefs(liveDriver);
+  const live = parseBatchDriver(liveDriver);
   for (const rel of [
     "tools/bot_profile.gd",
     "tools/skill_band.gd",
@@ -1281,7 +1359,11 @@ test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, 
     "tests/support/cosmetic_art.gd",
     "tests/support/teardown_noise.gd",
   ]) {
-    assert.ok(liveRefs.has(rel), `expected ${rel} in driver refs`);
+    assert.ok(live.refs.has(rel), `expected ${rel} in driver refs`);
+    assert.ok(
+      live.resets.get(rel).calls.has("reset_for_tests"),
+      `expected _reset() to reset ${rel}`,
+    );
   }
   const raw = lintSketch("core-loop").filter((item) => item.rule === "L14");
   const toolOrSupport = raw
@@ -1585,10 +1667,20 @@ test("the layer report fails on an empty read, a directory the order leaves out 
 
 const l20Src = "sketches/core-loop/src";
 const l20Up = `${l20Src}/core/low.gd -> ${l20Src}/ui/high.gd`;
+const l20Tree = (texts) =>
+  layerTree({
+    ...Object.fromEntries(
+      LAYERS.flat().map((dir) => [
+        dir.endsWith(".gd") ? dir : `${dir}/stub.gd`,
+        "extends RefCounted\n",
+      ]),
+    ),
+    ...texts,
+  });
 
 test("L20 fails an upward load that is not listed, naming both files, both layers, the record and the ways out", () => {
-  const files = layerTree({
-    "core/low.gd": 'const HIGH := preload("res://src/ui/high.gd")\n',
+  const files = l20Tree({
+    "core/low.gd": 'extends RefCounted\n\nconst HIGH := preload("res://src/ui/high.gd")\n',
     "ui/high.gd": "extends RefCounted\n",
   });
   const findings = lintL20(files);
@@ -1598,17 +1690,21 @@ test("L20 fails an upward load that is not listed, naming both files, both layer
   );
   assert.equal(
     formatFinding(applyBaseline(findings, { L20: [] }, () => true)[0]),
-    `L20 ${l20Src}/core/low.gd:1 loads src/ui/high.gd, a script in a higher layer: core is layer 1 and ui is layer 8 (adr/TADR-014-source-layer-order.md).\n    Hand the value or a callable in from the script above, move a pure data file down to core, or move the fact to its owner in core; never list the pair`,
+    `L20 ${l20Src}/core/low.gd:3 loads src/ui/high.gd, a script in a higher layer: core is layer 1 and ui is layer 8 (adr/TADR-014-source-layer-order.md).\n    Hand the value or a callable in from the script above, move a pure data file down to core, or move the fact to its owner in core; never list the pair`,
   );
   assert.deepEqual(
     applyBaseline(findings, { L20: [l20Up] }, () => true),
     [],
   );
   assert.deepEqual(baselineFrom(findings).L20, [l20Up]);
+  assert.throws(
+    () => lintL20(files, new Map(buildScriptGraph(files))),
+    /L20 has no line for the load/,
+  );
 });
 
 test("L20 fails a listed pair that no longer points up and asks for its entry to be removed", () => {
-  const files = layerTree({
+  const files = l20Tree({
     "core/low.gd": "extends RefCounted\n",
     "ui/high.gd": 'const LOW := preload("res://src/core/low.gd")\n',
   });
@@ -1620,7 +1716,7 @@ test("L20 fails a listed pair that no longer points up and asks for its entry to
 });
 
 test("L20 fails a script in a directory with no layer, and the list cannot excuse it", () => {
-  const files = layerTree({
+  const files = l20Tree({
     "camp/hub.gd": 'const LOW := preload("res://src/core/low.gd")\n',
     "core/low.gd": "extends RefCounted\n",
   });
@@ -1639,13 +1735,13 @@ test("L20 fails a script in a directory with no layer, and the list cannot excus
     1,
   );
   assert.equal(
-    lintL20(layerTree({ "loose.gd": "extends Node\n" }))[0].message.split(";")[0],
+    lintL20(l20Tree({ "loose.gd": "extends Node\n" }))[0].message.split(";")[0],
     "src/loose.gd is in no layer",
   );
 });
 
 test("L20 passes loads inside one layer, between the peers of a shared layer, and downward", () => {
-  const files = layerTree({
+  const files = l20Tree({
     "combat/a.gd":
       'const B := preload("res://src/combat/b.gd")\nconst LOW := preload("res://src/core/low.gd")\n',
     "combat/b.gd": 'const A := preload("res://src/combat/a.gd")\n',
@@ -1658,6 +1754,62 @@ test("L20 passes loads inside one layer, between the peers of a shared layer, an
   });
   assert.equal(buildScriptGraph(files).get(`${l20Src}/dev/console.gd`).length, 2);
   assert.deepEqual(lintL20(files), []);
+});
+
+test("L20 fails a layer name that holds no script, and the list cannot excuse it", () => {
+  const files = layerTree({
+    "core/low.gd": "extends RefCounted\n",
+    "ui/high.gd": "extends Node\n",
+  });
+  const findings = lintL20(files, buildScriptGraph(files), [["core"], ["gone"], ["ui"]]);
+  assert.deepEqual(
+    findings.map((item) => formatFinding(item)),
+    [
+      `L20 ${l20Src}/gone:1 LAYERS names gone, which holds no script; take it out of LAYERS in scripts/sketch-lint.mjs and adr/TADR-014-source-layer-order.md, or restore its scripts`,
+    ],
+  );
+  assert.deepEqual(baselineFrom(findings).L20, []);
+  assert.equal(applyBaseline(findings, { L20: [] }, () => true).length, 1);
+  assert.deepEqual(
+    lintL20(files)
+      .map((item) => item.path)
+      .sort(),
+    LAYERS.flat()
+      .filter((dir) => dir !== "core" && dir !== "ui")
+      .map((dir) => `${l20Src}/${dir}`)
+      .sort(),
+  );
+});
+
+const recordLayers = (text) => {
+  const section = text.split("\n## The order\n")[1]?.split("\n## ")[0] ?? "";
+  return section
+    .split("\n")
+    .filter((line) => /^\| \d+ \|/.test(line))
+    .map((line) => [...line.split("|")[2].matchAll(/`([^`]+)`/g)].map((match) => match[1]).sort());
+};
+
+test("the layer order written in TADR-014 is the order L20 holds in LAYERS", () => {
+  const record = readFileSync(
+    new URL("../adr/TADR-014-source-layer-order.md", import.meta.url),
+    "utf8",
+  );
+  const written = recordLayers(record);
+  assert.ok(
+    written.length > 0,
+    "read no rows of the order table in adr/TADR-014-source-layer-order.md",
+  );
+  assert.deepEqual(
+    written,
+    LAYERS.map((layer) => [...layer].sort()),
+    "the order table in adr/TADR-014-source-layer-order.md and LAYERS in scripts/sketch-lint.mjs disagree",
+  );
+  const swapped = record
+    .replace("| 4 | `combat` |", "| 4 | `boss` |")
+    .replace("| 5 | `boss` |", "| 5 | `combat` |");
+  assert.notEqual(swapped, record);
+  assert.notDeepEqual(recordLayers(swapped), written);
+  assert.deepEqual(recordLayers(record.replace("\n## The order\n", "\n## Order\n")), []);
 });
 
 test("L20 fails when it reads no scripts", () => {
@@ -1751,9 +1903,12 @@ test("baselineGrowth fails a rule whose list gained an entry and names the rule,
     formatFinding(baselineGrowth(base, { ...base, L14: ["s.gd:_x", "t.gd:_y"] })[0]),
     /L14 list grew from 1 to 2 entries \(new: t\.gd:_y\): register a reset in sketches\/core-loop\/tools\/test_batch_driver\.gd/,
   );
-  assert.equal(
-    baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "b.gd"] })[0].message,
-    `L1 list grew from 2 to 3 entries (new: b.gd): fix the offence instead of listing it${splitLine}`,
+  assert.deepEqual(
+    baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "b.gd"] }).map((item) => item.message),
+    [
+      "L1 list holds b.gd more than once: write the lists again with node scripts/sketch-lint.mjs --sketch core-loop --write-baseline",
+      `L1 list grew from 2 to 3 entries (new: b.gd): fix the offence instead of listing it${splitLine}`,
+    ],
   );
   assert.equal(
     baselineGrowth(base, { ...base, L15: { "c.gd": 3 } })[0].message,
@@ -1867,6 +2022,57 @@ test("baselineGrowth lets an offence move with a file split inside one directory
   assert.equal(baselineGrowth({ L16: ["src/a.gd"] }, { L16: ["src/b.gd", "src/c.gd"] }).length, 1);
 });
 
+test("baselineGrowth fails a list that holds one entry twice, even when a split excuses it, and a new rule's list too", () => {
+  const base = { L20: ["src/c/a.gd -> src/p/x.gd"], L1: ["a.gd"] };
+  const split = "src/c/b.gd -> src/p/x.gd";
+  assert.deepEqual(baselineGrowth(base, { L20: [split] }), []);
+  const twice = (rule, key) =>
+    `${rule} list holds ${key} more than once: write the lists again with node scripts/sketch-lint.mjs --sketch core-loop --write-baseline`;
+  assert.deepEqual(
+    baselineGrowth(base, { L20: [split, split] }).map((item) => item.message),
+    [twice("L20", split)],
+  );
+  assert.deepEqual(
+    baselineGrowth(base, { L1: ["a.gd", "a.gd"], L22: ["t.gd", "t.gd"], L11: { "x.gd": 2 } }).map(
+      (item) => item.message,
+    ),
+    [
+      twice("L1", "a.gd"),
+      `L1 list grew from 1 to 2 entries (new: a.gd): fix the offence instead of listing it${splitLine}`,
+      twice("L22", "t.gd"),
+    ],
+  );
+});
+
+test("baselineGrowth says a renamed file did not excuse an entry when it names one", () => {
+  const base = { L19: ["tests/unit/a_case.gd"] };
+  const renamed = new Map([["tests/b_test.gd", "tests/old_test.gd"]]);
+  assert.deepEqual(
+    baselineGrowth(base, { L19: ["tests/b_test.gd"] }, renamed).map(
+      (item) => item.message.split(" (new: ")[0],
+    ),
+    [
+      "L19 list has 1 entry the base list lacks; 1 of them names a renamed file, and the base list lacks it under the old name too",
+    ],
+  );
+  assert.deepEqual(
+    baselineGrowth(base, { L19: ["tests/b_test.gd", "tests/c_test.gd"] }, renamed).map(
+      (item) => item.message.split(" (new: ")[0],
+    ),
+    ["L19 list grew from 1 to 2 entries"],
+  );
+  assert.deepEqual(
+    baselineGrowth(
+      { L19: ["tests/unit/a_case.gd", "tests/unit/z_case.gd"] },
+      { L19: ["tests/b_test.gd", "tests/c_test.gd"] },
+      renamed,
+    ).map((item) => item.message.split(" (new: ")[0]),
+    [
+      "L19 list has 2 entries the base list lacks; 1 of them names a renamed file, and the base list lacks it under the old name too",
+    ],
+  );
+});
+
 test("baselineGrowth matches split entries one for one in an order that does not change the answer", () => {
   const either = "src/c/a.gd -> src/p/z.gd";
   const only = "src/c/b.gd -> src/p/x.gd";
@@ -1879,15 +2085,7 @@ test("baselineGrowth matches split entries one for one in an order that does not
 test("renamesSince maps each renamed file to its old name between two commits and in the working tree, and fails on a ref git cannot read", () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-renames-"));
   try {
-    const run = (...args) => {
-      const ran = spawnSync("git", args, {
-        cwd: tmp,
-        encoding: "utf8",
-        env: cwdDecidesRepository(),
-      });
-      assert.equal(ran.status, 0, ran.stderr);
-      return ran.stdout.trim();
-    };
+    const run = (...args) => git(args, { cwd: tmp });
     const commit = (message) => {
       run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", message);
       return run("rev-parse", "HEAD");
@@ -1960,21 +2158,13 @@ test("L18 flags a script with no uid file and a uid file with no script, naming 
   }
 
   const repoRoot = path.resolve(sketchDir, "..", "..");
-  const gitDirRun = spawnSync("git", ["rev-parse", "--git-dir"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  });
-  assert.equal(gitDirRun.status, 0, gitDirRun.stderr);
-  const gitDir = gitDirRun.stdout.trim();
+  const gitDir = git(["rev-parse", "--git-dir"], { cwd: repoRoot });
   assert.ok(gitDir.length > 0);
 
   const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-l18-"));
   const prevGitDir = process.env.GIT_DIR;
   try {
-    const run = (cwd, ...args) => {
-      const ran = spawnSync("git", args, { cwd, encoding: "utf8", env: cwdDecidesRepository() });
-      assert.equal(ran.status, 0, ran.stderr);
-    };
+    const run = (cwd, ...args) => git(args, { cwd });
     const scratchSrc = path.join(tmp, "sketches", "core-loop", "src");
     mkdirSync(scratchSrc, { recursive: true });
     writeFileSync(path.join(scratchSrc, "missing_uid.gd"), "extends RefCounted\n");
@@ -1998,11 +2188,7 @@ test("L18 flags a script with no uid file and a uid file with no script, naming 
 test("readBaselineAt throws when a blob-less clone cannot fetch the base copy, and returns {} when the commit has no baseline file", () => {
   const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-partial-"));
   try {
-    const run = (cwd, ...args) => {
-      const ran = spawnSync("git", args, { cwd, encoding: "utf8" });
-      assert.equal(ran.status, 0, ran.stderr);
-      return ran.stdout.trim();
-    };
+    const run = (cwd, ...args) => git(args, { cwd });
     const source = path.join(tmp, "source");
     mkdirSync(path.join(source, "scripts"), { recursive: true });
     run(source, "init", "-q");
@@ -2177,6 +2363,99 @@ test("L19 flags a helper that opens its parameter for reading", () => {
   );
 });
 
+test("L22 flags each by-hand read L19 cannot see, and a file L19 flags stays under L19", () => {
+  const consts = 'const A := "res://src/a.gd"\nconst B := "res://src/b.gd"\n';
+  const read = "FileAccess.get_file_as_string";
+  for (const [form, text, line] of [
+    [
+      "a constant list of constants",
+      `${consts}const SOURCES := [A, B]\n\nfunc _initialize() -> void:\n\tfor path in SOURCES:\n\t\tvar text := ${read}(path)\n`,
+      7,
+    ],
+    [
+      "a dictionary constant",
+      `const SOURCES := {\n\t"res://src/a.gd": ["_x"],\n}\n\nfunc _initialize() -> void:\n\tfor path in SOURCES:\n\t\tvar text := ${read}(path)\n`,
+      7,
+    ],
+    [
+      "a typed loop over a wrapped list",
+      `const SOURCES := PackedStringArray(["res://src/a.gd"])\n\nfunc _initialize() -> void:\n\tfor path: String in SOURCES:\n\t\tvar text := ${read}(path)\n`,
+      5,
+    ],
+    [
+      "a lambda bound to a variable",
+      `func _initialize() -> void:\n\tvar take := func(p: String) -> String: return ${read}(p)\n\ttake.call("res://src/a.gd")\n`,
+      2,
+    ],
+    [
+      "a lambda over a list",
+      `const SOURCES := ["res://src/a.gd"]\n\nfunc _initialize() -> void:\n\tvar texts = SOURCES.map(func(p):\n\t\treturn ${read}(p))\n`,
+      5,
+    ],
+    [
+      "a helper called through self",
+      `func _initialize() -> void:\n\tself._take("res://src/a.gd")\n\n\nfunc _take(path: String) -> String:\n\treturn ${read}(path)\n`,
+      6,
+    ],
+    [
+      "a converted parameter",
+      `func _initialize() -> void:\n\t_take("res://src/a.gd")\n\n\nfunc _take(path) -> String:\n\treturn ${read}(ProjectSettings.globalize_path(str(path)))\n`,
+      6,
+    ],
+    [
+      "a parameter copied to a local",
+      `func _initialize() -> void:\n\t_take("res://src/a.gd")\n\n\nfunc _take(path: String) -> String:\n\tvar p := path\n\treturn ${read}(p)\n`,
+      7,
+    ],
+  ])
+    assert.deepEqual(
+      l19("tests/x_test.gd", text),
+      [`L22 ${l19Root}/tests/x_test.gd:${line} ${l19Message}`],
+      form,
+    );
+
+  const both = `const SOURCES := {"res://src/a.gd": 1}\n\nfunc _initialize() -> void:\n\tvar t := ${read}("res://src/b.gd")\n\tfor path in SOURCES:\n\t\tvar u := ${read}(path)\n`;
+  assert.deepEqual(l19("tests/y_test.gd", both), [
+    `L19 ${l19Root}/tests/y_test.gd:4 ${l19Message}`,
+  ]);
+});
+
+test("L22 flags a helper in another test file that reads what its caller passes, through a preload or extends", () => {
+  const helper = {
+    path: `${l19Root}/tests/support/take.gd`,
+    text: "extends RefCounted\n\nstatic func take(path: String) -> String:\n\treturn FileAccess.get_file_as_string(path)\n",
+  };
+  const run = (text) =>
+    lintL19([l19Reader, helper, { path: `${l19Root}/tests/z_test.gd`, text }], l19Root).map(
+      (item) => formatFinding(item),
+    );
+  const flagged = [`L22 ${l19Root}/tests/support/take.gd:4 ${l19Message}`];
+  assert.deepEqual(
+    run(
+      'const Take := preload("res://tests/support/take.gd")\n\nfunc _initialize() -> void:\n\tTake.take("res://src/core/flow.gd")\n',
+    ),
+    flagged,
+  );
+  assert.deepEqual(
+    run(
+      'extends "res://tests/support/take.gd"\n\nfunc _initialize() -> void:\n\ttake("res://src/core/flow.gd")\n',
+    ),
+    flagged,
+  );
+  assert.deepEqual(
+    run(
+      'const Take := preload("res://tests/support/take.gd")\n\nfunc _initialize() -> void:\n\tTake.take("res://tests/fixtures/rows.json")\n',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    run(
+      'const Other := preload("res://tests/support/other.gd")\n\nfunc _initialize() -> void:\n\tOther.take("res://src/core/flow.gd")\n',
+    ),
+    [],
+  );
+});
+
 test("L19 passes data reads, writes, other roots, comments, the reader itself and files outside tests/", () => {
   for (const text of [
     'const README := "res://README.md"\nconst NOTES := "res://DESIGN-NOTES.md"\n\nfunc _initialize() -> void:\n\tfor path in [README, NOTES]:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
@@ -2189,6 +2468,10 @@ test("L19 passes data reads, writes, other roots, comments, the reader itself an
     'const CASE_DIR := "res://tests/unit/"\n\nfunc _initialize() -> void:\n\tfor file in DirAccess.get_files_at(CASE_DIR):\n\t\tvar script = load(CASE_DIR + file)\n',
     'func _initialize() -> void:\n\tfor file in DirAccess.get_files_at("res://src/combat"):\n\t\tif file.ends_with(".gd"):\n\t\t\tvar table = load("res://src/combat/" + file)\n',
     'const DOCS := ["res://README.md"]\n\nfunc _initialize() -> void:\n\tfor path in DOCS:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
+    'const ROWS := {"res://tests/fixtures/a.json": 1}\n\nfunc _initialize() -> void:\n\tfor path: String in ROWS:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
+    'func _initialize() -> void:\n\tvar take := func(p): return FileAccess.get_file_as_string(p)\n\ttake.call("res://tests/fixtures/a.json")\n',
+    'func _initialize() -> void:\n\tself._take("res://README.md")\n\n\nfunc _take(path) -> String:\n\treturn FileAccess.get_file_as_string(str(path))\n',
+    'const ROWS := ["res://tests/fixtures/a.json"]\n\nfunc _initialize() -> void:\n\tvar texts = ROWS.map(func(p): return FileAccess.get_file_as_string(p))\n',
   ])
     assert.deepEqual(l19("tests/ok_test.gd", text), [], text);
   const direct =
@@ -2217,8 +2500,9 @@ test("L19 passes the checked-out core-loop tests against its list, and its list 
   );
   const raw = lintSketch("core-loop").filter((item) => item.rule === "L19");
   assert.ok(raw.length > 0);
+  const strict = lintSketch("core-loop").filter((item) => item.rule === "L22");
   assert.deepEqual(
-    applyBaseline(raw, { L19: baseline.L19 }, () => true),
+    applyBaseline([...raw, ...strict], { L19: baseline.L19, L22: baseline.L22 }, () => true),
     [],
   );
   const planted = {
