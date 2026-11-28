@@ -39554,7 +39554,7 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd (HIDDEN_PILOTS['line_splicer'], Ruling dl hidden 7th pilot Patch)",
    "provenance": {
-    "recipe": "tools/blender/pilot_patch.py",
+    "recipe": "tools/build_patch_glbs.py",
     "spec": "design-v3/pilots/patch.md & Ruling dl",
     "note": "Patch, the Line Splicer (hidden 7th pilot): Virginia opossum in verdigris harness holding glowing test-card pink #ea7fa0 telemetry pad with curled pink tail. Closed watertight procedural bmesh."
    }
@@ -41442,7 +41442,7 @@
    "ships": true,
    "loader": "src/presentation/hero_assets.gd (HIDDEN_SHELLS['line_splicer'], Ruling dl + Ruling en cutaway-first heroic ball)",
    "provenance": {
-    "recipe": "tools/blender/pilot_patch.py",
+    "recipe": "tools/build_patch_glbs.py",
     "spec": "design-v3/pilots/patch.md, Ruling dl & Ruling en",
     "note": "Patch cutaway-first heroic Hoberman ball shell (3916T 7D reach=1.70m pod_minZ=-0.37m): rear wok-cut satellite dish, right Patch-Cable splice reel cannon, left Pointer emitter + twin antennae. Closed watertight procedural bmesh."
    }
