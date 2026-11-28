@@ -16,6 +16,7 @@ const CRATE_H := 360.0
 
 signal sleeve_chosen(id: String)
 
+var game
 var back: Button
 var play_button: Button
 var deck: Turntable
@@ -85,6 +86,7 @@ func _init() -> void:
 		_detents.append(detent)
 	back = ChoiceButton.new("back", "key_esc", "Back")
 	buttons.add_child(back)
+	sleeve_chosen.connect(_spin_toggle)
 
 
 static func reading(profile, playing := "", detent := 2, sitting := false) -> Dictionary:
@@ -153,6 +155,39 @@ func is_found(id: String) -> bool:
 
 func _on_sleeve(id: String) -> void:
 	sleeve_chosen.emit(id)
+
+
+func press(key: int) -> bool:
+	match key:
+		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+			var id: String = focused_id()
+			var audio = game.audio()
+			if audio != null and audio.spinning != "" and not is_found(id):
+				id = audio.spinning
+			_spin_toggle(id)
+		KEY_1, KEY_2, KEY_3:
+			var audio = game.audio()
+			if audio != null:
+				audio.set_spin_detent(key - KEY_1)
+			redraw()
+	return true
+
+
+func _spin_toggle(id: String) -> void:
+	var audio = game.audio()
+	if audio == null or id == "":
+		return
+	if audio.spinning == id:
+		audio.stop_spin()
+	elif is_found(id) and audio.spin(id):
+		audio.play("bay_jukebox", 0.0, 1.0, "UI")
+	redraw()
+
+
+func redraw() -> void:
+	var audio = game.audio()
+	var sitting: bool = game.tuning != null and game.tuning.sitting()
+	refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2, sitting)
 
 
 func _show_note(id: String) -> void:

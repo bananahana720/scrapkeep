@@ -243,7 +243,7 @@ func setup(game_ref) -> void:
 	_camp.customize.back_requested.connect(_sync_walk)
 	_jukebox = JukeboxPage.new()
 	_jukebox.visible = false
-	_jukebox.sleeve_chosen.connect(_spin_toggle)
+	_jukebox.game = game
 	_jukebox.play_button.pressed.connect(press_key.bind("key_space"))
 	for i in 3:
 		_jukebox.detent_button(i).pressed.connect(press_key.bind("key_%d" % (i + 1)))
@@ -252,7 +252,7 @@ func setup(game_ref) -> void:
 	_camp.button_for("radio").pressed.connect(press_key.bind("key_r"))
 	_radio = RadioPage.new()
 	_radio.visible = false
-	_radio.track_chosen.connect(_radio_track)
+	_radio.track_chosen.connect(_radio_press)
 	_radio.tape_chosen.connect(func(i: int): radio_key(KEY_1 + i))
 	_radio.new_button.pressed.connect(press_key.bind("key_n"))
 	_radio.shuffle_button.pressed.connect(press_key.bind("key_x"))
@@ -938,7 +938,7 @@ func toggle_jukebox() -> void:
 		return
 	_camp.visible = false
 	_jukebox.visible = true
-	_refresh_jukebox()
+	_jukebox.redraw()
 	_show("MOSS'S JUKEBOX", Palette.AMBER, "")
 	_jukebox.focus_first()
 	_sync_walk()
@@ -961,38 +961,10 @@ func jukebox_page():
 
 
 func jukebox_key(key: int) -> bool:
-	match key:
-		KEY_J, KEY_ESCAPE:
-			toggle_jukebox()
-		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
-			var id: String = _jukebox.focused_id()
-			var audio = _audio()
-			if audio != null and audio.spinning != "" and not _jukebox.is_found(id):
-				id = audio.spinning
-			_spin_toggle(id)
-		KEY_1, KEY_2, KEY_3:
-			var audio = _audio()
-			if audio != null:
-				audio.set_spin_detent(key - KEY_1)
-			_refresh_jukebox()
-	return true
-
-
-func _spin_toggle(id: String) -> void:
-	var audio = _audio()
-	if audio == null or id == "":
-		return
-	if audio.spinning == id:
-		audio.stop_spin()
-	elif _jukebox.is_found(id) and audio.spin(id):
-		audio.play("bay_jukebox", 0.0, 1.0, "UI")
-	_refresh_jukebox()
-
-
-func _refresh_jukebox() -> void:
-	var audio = _audio()
-	var sitting: bool = game.tuning != null and game.tuning.sitting()
-	_jukebox.refresh(game.ctx.profile, audio.spinning if audio != null else "", audio.spin_detent if audio != null else 2, sitting)
+	if key == KEY_J or key == KEY_ESCAPE:
+		toggle_jukebox()
+		return true
+	return _jukebox.press(key)
 
 
 func _audio():
@@ -1033,51 +1005,19 @@ func radio_page():
 
 
 func radio_key(key: int) -> bool:
-	var radio = game.radio_deck.radio
 	var focused: String = _radio.focused_id()
-	match key:
-		KEY_R, KEY_ESCAPE:
-			toggle_radio()
-			return true
-		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
-			if focused != "":
-				_radio_track(focused.substr(2), focused[0] == "t")
-			return true
-		KEY_COMMA, KEY_PERIOD:
-			if focused.begins_with("t:"):
-				radio.nudge(radio.mixtape, focused.substr(2), -1 if key == KEY_COMMA else 1)
-		KEY_N:
-			var made: int = radio.new_mixtape()
-			if made >= 0:
-				radio.pick_mixtape(made)
-		KEY_X:
-			var rng := RandomNumberGenerator.new()
-			rng.randomize()
-			radio.shuffle_mixtape(radio.mixtape, rng)
-		KEY_T:
-			radio.tune(radio.MIXTAPE)
-		_:
-			if key >= KEY_1 and key < KEY_1 + radio.mixtapes.size():
-				radio.pick_mixtape(key - KEY_1)
-			else:
-				return true
-	_radio.refresh(game.ctx.profile, radio)
-	if focused != "":
-		_radio.focus(focused[0] == "t", focused.substr(2))
+	if key == KEY_R or key == KEY_ESCAPE:
+		toggle_radio()
+	else:
+		_radio_press(focused.substr(2), focused.begins_with("t:"), key)
 	return true
 
 
-func _radio_track(id: String, on_tape: bool) -> void:
-	var radio = game.radio_deck.radio
-	if on_tape:
-		radio.remove_from(radio.mixtape, id)
-	elif not radio.add_to(radio.mixtape, id):
-		radio.remove_from(radio.mixtape, id)
-	var audio = _audio()
-	if audio != null:
-		audio.play("flow_changed", 0.0, 1.0, "UI")
-	_radio.refresh(game.ctx.profile, radio)
-	_radio.focus(on_tape, id)
+func _radio_press(id: String, on_tape: bool, key := KEY_SPACE) -> void:
+	if game.radio_deck.press(key, id, on_tape):
+		_radio.refresh(game.ctx.profile, game.radio_deck.radio)
+		if id != "":
+			_radio.focus(on_tape, id)
 
 
 func _save_radio() -> void:
