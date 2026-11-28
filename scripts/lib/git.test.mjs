@@ -12,7 +12,15 @@ import {
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { DEFAULT_MAX_BUFFER, REPO_ROOT, cleanHead, git, gitOptional, gitState } from "./git.mjs";
+import {
+  DEFAULT_MAX_BUFFER,
+  REPO_ROOT,
+  cleanHead,
+  git,
+  gitOptional,
+  gitState,
+  nulSeparated,
+} from "./git.mjs";
 
 function makeTempRepo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-git-lib-"));
@@ -136,6 +144,17 @@ test("a git call that passes its time limit stops a child that ignores the first
     );
     assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
   }
+});
+
+test("nulSeparated reads a -z answer as its paths, keeping spaces and line breaks, and refuses what is not text", () => {
+  assert.deepEqual(nulSeparated(' a b\0café "q"\0\0line\nbreak\0'), [
+    " a b",
+    'café "q"',
+    "line\nbreak",
+  ]);
+  assert.deepEqual(nulSeparated(""), []);
+  for (const value of [undefined, null, Buffer.from("a\0")])
+    assert.throws(() => nulSeparated(value), TypeError);
 });
 
 test("git and gitOptional refuse a second argument that is not an options object, before starting git", () => {

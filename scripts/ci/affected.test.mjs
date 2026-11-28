@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { planHookChecks } from "../hooks/pre-push.mjs";
 import { cwdDecidesRepository, git } from "../lib/git.mjs";
-import { classifyAffected, treeFiles } from "./affected.mjs";
+import { classifyAffected, diffFiles, treeFiles } from "./affected.mjs";
 
 const affectedScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "affected.mjs");
 
@@ -165,6 +165,25 @@ test("CLI --stdin selects the docs check when a change deletes a script a page l
     const edited = selector(tmp, "scripts/kept.mjs\n");
     assert.equal(edited.status, 0, edited.stderr);
     assert.equal(JSON.parse(edited.stdout).docs, false);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("diffFiles reads a changed path git would quote as the path itself, and fails when git does", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "affected-quoted-"));
+  try {
+    const names = ['scripts/a b".mjs', "scripts/café.mjs"];
+    const commit = ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-qm"];
+    git(["init", "-q"], { cwd: tmp });
+    git([...commit, "base", "--allow-empty"], { cwd: tmp });
+    git(["branch", "base"], { cwd: tmp });
+    mkdirSync(path.join(tmp, "scripts"));
+    for (const name of names) writeFileSync(path.join(tmp, name), "\n");
+    git(["add", "."], { cwd: tmp });
+    git([...commit, "names git quotes"], { cwd: tmp });
+    assert.deepEqual(diffFiles("base", { cwd: tmp }), names);
+    assert.throws(() => diffFiles("no-such-ref", { cwd: tmp }), /git diff .* failed/);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

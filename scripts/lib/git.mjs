@@ -56,6 +56,10 @@ function start(args, { cwd = REPO_ROOT, maxBuffer = DEFAULT_MAX_BUFFER, spawn, s
   });
 }
 
+export function nulSeparated(text) {
+  return text.split("\0").filter(Boolean);
+}
+
 export function git(args, options) {
   const { trim = true, spawn = spawnSync, ...rest } = checked("git", options);
   const ran = start(args, { spawn, ...rest });

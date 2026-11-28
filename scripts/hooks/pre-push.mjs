@@ -15,7 +15,7 @@ import {
 import { filterFormatTargets } from "../ci/format-changed.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
-import { REPO_ROOT, cwdDecidesRepository, git } from "../lib/git.mjs";
+import { REPO_ROOT, cwdDecidesRepository, git, nulSeparated } from "../lib/git.mjs";
 import { BASELINE_PATH, baselineGrowth, formatFinding, readBaselineAt } from "../sketch-lint.mjs";
 
 const root = REPO_ROOT;
@@ -57,11 +57,12 @@ export function changedFilesForRange(
   { cwd = root, spawn = spawnSync } = {},
 ) {
   const args = remoteSha
-    ? ["diff", "--no-renames", "--name-only", `${remoteSha}..${localSha}`]
+    ? ["diff", "--no-renames", "--name-only", "-z", `${remoteSha}..${localSha}`]
     : [
         "log",
         "--no-renames",
         "--name-only",
+        "-z",
         "--pretty=format:",
         "-m",
         "--first-parent",
@@ -69,14 +70,7 @@ export function changedFilesForRange(
         "--not",
         "--remotes",
       ];
-  return [
-    ...new Set(
-      git(args, { cwd, spawn })
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean),
-    ),
-  ];
+  return [...new Set(nulSeparated(git(args, { cwd, spawn, trim: false })))];
 }
 
 export function rangeBase({ localSha, remoteSha }, { cwd = root, spawn = spawnSync } = {}) {
@@ -110,9 +104,11 @@ export function pushedChanges(ranges, { cwd = root, spawn = spawnSync } = {}) {
 export function workingTreeDrift(pushed, { cwd = root, spawn = spawnSync } = {}) {
   const differs = new Set();
   for (const { head, files, exists } of pushed) {
-    const tracked = git(["diff", "--no-renames", "--name-only", head], { cwd, spawn }).split("\n");
+    const tracked = nulSeparated(
+      git(["diff", "--no-renames", "--name-only", "-z", head], { cwd, spawn, trim: false }),
+    );
     const restored = files.filter((file) => !exists(file) && existsSync(path.join(cwd, file)));
-    for (const file of [...tracked, ...restored]) if (file) differs.add(file);
+    for (const file of [...tracked, ...restored]) differs.add(file);
   }
   return [...differs].sort();
 }

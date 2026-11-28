@@ -55,7 +55,7 @@ test("changedFilesForRange walks all unpushed commits on new branches and preser
     {
       spawn: (_cmd, args) => {
         newBranchArgs = args;
-        return { status: 0, stdout: "README.md\nscripts/ci/affected.mjs\nREADME.md\n" };
+        return { status: 0, stdout: "README.md\0scripts/ci/affected.mjs\0\0README.md\0\0" };
       },
     },
   );
@@ -71,11 +71,11 @@ test("changedFilesForRange walks all unpushed commits on new branches and preser
     {
       spawn: (_cmd, args) => {
         updateArgs = args;
-        return { status: 0, stdout: "docs/deleted.md\n" };
+        return { status: 0, stdout: "docs/deleted.md\0" };
       },
     },
   );
-  assert.deepEqual(updateArgs, ["diff", "--no-renames", "--name-only", "abc123..def456"]);
+  assert.deepEqual(updateArgs, ["diff", "--no-renames", "--name-only", "-z", "abc123..def456"]);
 });
 
 test("planHookChecks selects only matching checks and keeps doc/sketch deletions active", () => {
@@ -585,4 +585,33 @@ test("a pushed link at a script path stops the hook, naming the path and its mod
       `^Error: ${head}:scripts/alias\\.mjs has mode 120000 \\(a symbolic link\\); the hook checks only regular files`,
     ),
   );
+});
+
+test("a pushed script whose name git would quote is checked like any other, on a new branch and an update", () => {
+  const { work, g, write, base } = pushRepo();
+  const names = ['scripts/a b".mjs', "scripts/café.mjs"];
+  const pushAs = (contents, message) => {
+    names.forEach((name, i) => write(name, contents[i]));
+    g("add", ...names);
+    g("commit", "-qm", message);
+    return g("rev-parse", "HEAD");
+  };
+  const good = "export const kept = 1;\n";
+  const heads = [
+    [pushAs([good, good], "both formatted"), true],
+    [pushAs([BADLY_FORMATTED, good], "the quoted name is not formatted"), false],
+    [pushAs([good, BADLY_FORMATTED], "the accented name is not formatted"), false],
+  ];
+  for (const [head, ok] of heads)
+    for (const remoteSha of [base, null]) {
+      const pushed = pushedChanges([{ localSha: head, remoteSha }], { cwd: work });
+      assert.deepEqual(pushed[0].jsFiles, names);
+      assert.equal(pushed[0].hasDocsOrPkg, false);
+      const ran = runPushed(work, pushed);
+      assert.equal(ran.ok, ok, `${head} from ${remoteSha}`);
+      assert.deepEqual(ran.ranLabels, ["oxfmt(2)", "oxlint(2)"]);
+    }
+  write(names[1], "export const kept = 2;\n");
+  const [pushed] = pushedChanges([{ localSha: heads[2][0], remoteSha: base }], { cwd: work });
+  assert.deepEqual(workingTreeDrift([pushed], { cwd: work }), [names[1]]);
 });
