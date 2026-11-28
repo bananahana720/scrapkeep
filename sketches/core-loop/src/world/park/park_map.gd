@@ -72,14 +72,14 @@ func fight_sites() -> Array:
 				if row.get("kind", "") in NOT_FIGHTS:
 					continue
 				if row.get("kind", "") == "lightning":
-					out.append({"id": row["id"], "kind": "event", "at": _v2(site["at"]), "ring": Vector2(0.0, float(row.get("effect", {}).get("strike_m", 0.0)))})
+					out.append({"id": row["id"], "kind": "event", "at": v2(site["at"]), "ring": Vector2(0.0, float(row.get("effect", {}).get("strike_m", 0.0)))})
 					continue
 				site = NaturalFootprint.resolve(row, site)
 			var half := footprint_half_extents(site)
 			var own = row.get("effect", {}).get("footprint_m")
 			if own is Array:
-				half = _v2(own).abs() * 0.5
-			out.append({"id": row["id"], "kind": table[1], "at": _v2(site["at"]), "half": half, "yaw_deg": float(site["yaw_deg"])})
+				half = v2(own).abs() * 0.5
+			out.append({"id": row["id"], "kind": table[1], "at": v2(site["at"]), "half": half, "yaw_deg": float(site["yaw_deg"])})
 	var rules: Dictionary = load("res://src/world/activities.gd").RULES
 	for row in park.get("activity_rows", []):
 		var ring := -1.0
@@ -88,7 +88,7 @@ func fight_sites() -> Array:
 			if rule.has("pack"):
 				ring = maxf(ring, float(rule.get("ring", 0.0)))
 		if ring >= 0.0 and row.has("at"):
-			out.append({"id": row["id"], "kind": "activity", "at": _v2(row["at"]), "ring": Vector2(0.0, ring)})
+			out.append({"id": row["id"], "kind": "activity", "at": v2(row["at"]), "ring": Vector2(0.0, ring)})
 	out.append({"id": "warden", "kind": "warden", "at": beacon, "ring": Vector2(0.0, reach_m)})
 	var lock: Dictionary = LockRows.row(title).get("lock", {})
 	if not lock.is_empty():
@@ -108,31 +108,31 @@ func handover() -> Dictionary:
 	var gate: Dictionary = slots[slots.size() / 2]
 	var spawn: Dictionary = park["spawn"]
 	var out: Dictionary = park["exit"].duplicate()
-	out["at"] = _v2(gate["at"])
+	out["at"] = v2(gate["at"])
 	out["heading_deg"] = float(gate["facing_deg"])
 	var into: Dictionary = park["arrives"].duplicate()
-	into["at"] = _v2(spawn["at"])
+	into["at"] = v2(spawn["at"])
 	into["heading_deg"] = float(spawn["heading_deg"])
 	var atlas: Dictionary = park["atlas"]
-	return {"stage": park["map"], "atlas": {"origin": _v2(atlas["origin"]), "heading_deg": float(atlas["heading_deg"])}, "exit": out, "arrives": into}
+	return {"stage": park["map"], "atlas": {"origin": v2(atlas["origin"]), "heading_deg": float(atlas["heading_deg"])}, "exit": out, "arrives": into}
 
 
 func _fill() -> void:
 	title = String(park["map"])
 	time_of_day = String(park["time_of_day"])
-	spawn = _v2(park["spawn"]["at"])
+	spawn = v2(park["spawn"]["at"])
 	heading = facing(float(park["spawn"]["heading_deg"]))
 	var r: Array = park["play_rect"]
 	play_rect = Rect2(float(r[0]), float(r[1]), float(r[2]), float(r[3]))
 
 	var mark: Dictionary = park["landmark"]
-	beacon = _v2(mark["beacon"])
+	beacon = v2(mark["beacon"])
 	reach_m = float(mark["reach_m"])
 	landmark = _v3(mark["sight_top"])
-	bay_dock = {"at": _v2(mark["bay_dock"]["at"]), "facing": facing(float(mark["bay_dock"]["facing_deg"]))}
+	bay_dock = {"at": v2(mark["bay_dock"]["at"]), "facing": facing(float(mark["bay_dock"]["facing_deg"]))}
 	gate_slots = []
 	for slot in mark["gate_slots"]:
-		gate_slots.append({"at": _v2(slot["at"]), "facing": facing(float(slot["facing_deg"]))})
+		gate_slots.append({"at": v2(slot["at"]), "facing": facing(float(slot["facing_deg"]))})
 
 	kickers = []
 	for row in park["park_rows"]:
@@ -147,11 +147,11 @@ func _fill() -> void:
 	activity_sites = []
 	for row in park["activity_rows"]:
 		var site := _variant(row)
-		site.merge({"row": row["id"], "site": row["site"], "at": _v2(row["at"])})
+		site.merge({"row": row["id"], "site": row["site"], "at": v2(row["at"])})
 		if row.has("route"):
 			site["route"] = String(row["route"])
 		if row.has("face"):
-			site["face"] = _v2(row["face"]).normalized()
+			site["face"] = v2(row["face"]).normalized()
 		if row.has("bar"):
 			site["bar"] = String(row["bar"])
 		if row.get("extra", "") == "card_2":
@@ -163,13 +163,13 @@ func _fill() -> void:
 	rescue_sites = []
 	for row in park.get("rescue_rows", []):
 		rescue_sites.append({"id": row["id"], "quest": row["quest"], "prompt": row["prompt"], "pilot": row["pilot"],
-			"at": _v2(row["at"]), "face": _v2(row["face"]).normalized()})
+			"at": v2(row["at"]), "face": v2(row["face"]).normalized()})
 
 	survival_sites = []
 	for row in park.get("survival_rows", []):
-		survival_sites.append({"row": row["id"], "form": row["form"], "at": _v2(row["at"])})
+		survival_sites.append({"row": row["id"], "form": row["form"], "at": v2(row["at"])})
 
-	approach = {"to": park["approach"]["to"], "smoke": _v2(park["approach"]["smoke"])} if park.has("approach") else {}
+	approach = {"to": park["approach"]["to"], "smoke": v2(park["approach"]["smoke"])} if park.has("approach") else {}
 
 	scrap_trail = _scrap_trail()
 
@@ -202,7 +202,7 @@ func _scrap_trail() -> Dictionary:
 		return {}
 	var points := PackedVector2Array()
 	for point in line.get("waypoints", []):
-		var at := place_of(park, point) if point is String else _v2(point)
+		var at := place_of(park, point) if point is String else v2(point)
 		if at == Vector2.INF:
 			push_warning("park_map: %s floor waypoint %s resolves to no place, so no scrap trail" % [lines_path, point])
 			return {}
@@ -260,7 +260,7 @@ func _read_ride_lines() -> Array:
 	for route: Array in routes:
 		var points := PackedVector2Array()
 		for point in route:
-			var at := place_of(park, point) if point is String else _v2(point)
+			var at := place_of(park, point) if point is String else v2(point)
 			if at != Vector2.INF:
 				points.append(at)
 		out.append(points)
@@ -269,13 +269,13 @@ func _read_ride_lines() -> Array:
 
 static func place_of(park_data: Dictionary, id: String) -> Vector2:
 	if id == ParkSchema.DROP_IN:
-		return _v2(park_data["spawn"]["at"])
+		return v2(park_data["spawn"]["at"])
 	if id == ParkSchema.LANDMARK:
-		return _v2(park_data["landmark"]["beacon"])
+		return v2(park_data["landmark"]["beacon"])
 	for table in ["park_rows", "activity_rows"]:
 		for row: Dictionary in park_data.get(table, []):
 			if row.get("id") == id:
-				return _v2(row["at"])
+				return v2(row["at"])
 	return Vector2.INF
 
 
@@ -376,23 +376,23 @@ static func mesa_edge(row: Dictionary, rect: Rect2) -> bool:
 	if not String(row.get("recipe", "")).begins_with(ParkRecipes.GREYBOX) \
 			or String(row.get("stamp", "")) == "" or row.get("y") != null:
 		return false
-	var dir := _dir(float(row["yaw_deg"]))
+	var dir := yaw_dir(float(row["yaw_deg"]))
 	return float(row["size"][2]) >= absf(dir.y) * rect.size.x + absf(dir.x) * rect.size.y
 
 
 static func kicker_lip(row: Dictionary) -> Dictionary:
-	var dir := _dir(float(row["yaw_deg"]))
+	var dir := yaw_dir(float(row["yaw_deg"]))
 	var exit: Vector3 = ParkRecipes.ride_frame(row)["exit"]
-	return {"id": row["id"], "at": _v2(row["at"]) + dir * exit.z, "dir": dir, "width": float(row["size"][2])}
+	return {"id": row["id"], "at": v2(row["at"]) + dir * exit.z, "dir": dir, "width": float(row["size"][2])}
 
 
-static func _dir(yaw_deg: float) -> Vector2:
+static func yaw_dir(yaw_deg: float) -> Vector2:
 	var a := deg_to_rad(yaw_deg)
 	return Vector2(sin(a), cos(a))
 
 
 static func facing(yaw_deg: float) -> Vector3:
-	var d := _dir(yaw_deg)
+	var d := yaw_dir(yaw_deg)
 	return Vector3(d.x, 0.0, d.y)
 
 
@@ -404,7 +404,7 @@ static func footprint_contains(row: Dictionary, world_xz: Vector2, margin := 0.0
 		end_xz := Vector2.INF, half_extents := Vector2.INF) -> bool:
 	var half := footprint_half_extents(row) if half_extents == Vector2.INF else half_extents
 	half += Vector2.ONE * maxf(0.0, margin)
-	var centre := _v2(row["at"])
+	var centre := v2(row["at"])
 	var yaw := deg_to_rad(float(row["yaw_deg"]))
 	var point := (world_xz - centre).rotated(yaw)
 	if end_xz == Vector2.INF:
@@ -428,7 +428,7 @@ static func footprint_contains(row: Dictionary, world_xz: Vector2, margin := 0.0
 
 
 static func _footprint(row: Dictionary) -> Dictionary:
-	return {"id": row["id"], "at": _v2(row["at"]), "size": Vector2(float(row["size"][0]), float(row["size"][2])),
+	return {"id": row["id"], "at": v2(row["at"]), "size": Vector2(float(row["size"][0]), float(row["size"][2])),
 		"yaw": deg_to_rad(float(row["yaw_deg"]))}
 
 
@@ -439,15 +439,15 @@ static func vectors(value):
 			out[key] = vectors(value[key])
 		return out
 	if value is Array:
-		if ParkSchema._is_vec(value, 2):
-			return _v2(value)
-		if ParkSchema._is_vec(value, 3):
+		if ParkSchema.is_vec(value, 2):
+			return v2(value)
+		if ParkSchema.is_vec(value, 3):
 			return _v3(value)
 		return value.map(func(v): return vectors(v))
 	return value
 
 
-static func _v2(a: Array) -> Vector2:
+static func v2(a: Array) -> Vector2:
 	return Vector2(float(a[0]), float(a[1]))
 
 

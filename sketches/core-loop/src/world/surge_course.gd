@@ -39,7 +39,7 @@ static func path(park: Dictionary, route_id: String, start: Vector2) -> Dictiona
 			continue
 		var row: Dictionary = rows[id]
 		var at := Vector2(float(row.at[0]), float(row.at[1]))
-		var half := ParkMap._dir(float(row.yaw_deg)) * float(row.size[0]) * 0.5
+		var half := ParkMap.yaw_dir(float(row.yaw_deg)) * float(row.size[0]) * 0.5
 		var a := at - half
 		var b := at + half
 		if b.distance_to(last) < a.distance_to(last):
