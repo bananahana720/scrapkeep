@@ -5,7 +5,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const RING := 13.0

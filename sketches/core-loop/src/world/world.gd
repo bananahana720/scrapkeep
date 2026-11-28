@@ -22,7 +22,6 @@ const StageLocks := preload("res://src/world/stage_locks.gd")
 const RescueSites := preload("res://src/world/rescue_site.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
-const WhyCallout := preload("res://src/ui/why_callout.gd")
 const Breach := preload("res://src/world/breach.gd")
 const EventFamilies := preload("res://src/world/events/families.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
@@ -955,7 +954,7 @@ func _on_class_rise(heft_class: int, _heft: float) -> void:
 
 
 func _deliver_class_picks() -> void:
-	if _class_picks_owed <= 0 or not _pick_calm() or WhyCallout.warden_fight_live(ctx.flow):
+	if _class_picks_owed <= 0 or not _pick_calm() or (ctx.flow != null and ctx.flow.warden_fight_live()):
 		return
 	var tree = ctx.player.tree if "tree" in ctx.player else null
 	if tree == null:

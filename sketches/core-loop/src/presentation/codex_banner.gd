@@ -4,7 +4,6 @@ const CodexStyle := preload("res://src/presentation/codex_style.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
-const WhyCallout := preload("res://src/ui/why_callout.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 
 
@@ -301,7 +300,7 @@ func _process(delta: float) -> void:
 	if _started_ms < 0:
 		_next()
 		return
-	if WhyCallout.warden_fight_live(_flow):
+	if _flow != null and _flow.warden_fight_live():
 		dismiss(false)
 		return
 	var t := (int(now_ms.call()) - _started_ms) / 1000.0

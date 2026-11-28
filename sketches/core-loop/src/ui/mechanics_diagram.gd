@@ -5,7 +5,7 @@ const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Bindings := preload("res://src/core/bindings.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 
 const CAPTIONS := {
 	"breach": "Slam the Dig's cracked plates.",
