@@ -7,6 +7,7 @@ const FIXTURE := "res://tests/fixtures/park_events_industrial_rows.json"
 const RunState := preload("res://src/core/run_state.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const Industrial := preload("res://src/world/events/industrial.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const BAR := 240.0 / 172.0
 const H := 0.05
 const FAR := Vector3(1000.0, 1.0, 1000.0)
@@ -22,6 +23,8 @@ class Context extends RefCounted:
 	var run := RunState.new(events, 823)
 	var losses: Array = []
 	var root: Node3D
+	func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> GPUParticles3D:
+		return FxLibrary.burst(parent, id, at, count, tint, toward, isolate)
 
 class Terrain extends RefCounted:
 	var maps: Array = []

@@ -21,7 +21,6 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
@@ -841,8 +840,8 @@ func _pet_react() -> void:
 	if motion_on:
 		_pet_tween.tween_property(_pet, "scale", Vector3.ONE, 0.1).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if is_instance_valid(root):
-		FxLibrary.burst(root, "brass_spark", _pet.global_position + Vector3.UP * 0.8, 8, Palette.BRASS)
-		FxLibrary.burst(root, "steam_puff", _pet.global_position + Vector3.UP * 0.2, 4)
+		game.ctx.burst(root, "brass_spark", _pet.global_position + Vector3.UP * 0.8, 8, Palette.BRASS)
+		game.ctx.burst(root, "steam_puff", _pet.global_position + Vector3.UP * 0.2, 4)
 	var audio = game.audio()
 	if audio != null:
 		audio.chirp("primer_set")
