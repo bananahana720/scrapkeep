@@ -69,7 +69,7 @@ static func is_world_last(stage: int) -> bool:
 
 
 static func is_run_last(stage: int) -> bool:
-	return StageTable.is_run_last(DEFS, stage)
+	return StageTable.is_last(DEFS, stage)
 
 
 static func synergy_in_play(synergy_id: String) -> bool:

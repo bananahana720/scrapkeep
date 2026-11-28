@@ -45,10 +45,6 @@ static func is_world_last(defs: Array, stage: int) -> bool:
 	return stage >= last_of(defs, world_of(defs, stage))
 
 
-static func is_run_last(defs: Array, stage: int) -> bool:
-	return stage >= defs.size()
-
-
 static func part_in_play(part_id: String, pools: Array) -> bool:
 	for pool in pools:
 		if part_id in pool:

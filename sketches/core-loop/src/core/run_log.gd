@@ -531,7 +531,7 @@ func _write(outcome: String) -> void:
 			var settled := false
 			if outcome in ["won", "died", "lost"] and (outcome != "died" or run.over):
 				settled = profile.settle_run_tallies(run.run_id)
-			if (changed or settled or not profile.last_error.is_empty()) and profile.has_method("save_if_allowed") and not profile.save_if_allowed():
+			if (changed or settled or not profile.last_error.is_empty()) and not profile.save_if_allowed():
 				if codex != null:
 					codex.last_error = "run tallies not saved: %s" % profile.last_error
 	_dirty = false

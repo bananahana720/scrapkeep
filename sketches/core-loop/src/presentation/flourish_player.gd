@@ -309,7 +309,7 @@ func _mark_seen(key: String) -> void:
 	var profile = _profile()
 	if profile == null or not profile.mark_seen(key):
 		return
-	if profile.has_method("save_if_allowed") and not profile.save_if_allowed():
+	if not profile.save_if_allowed():
 		push_warning("flourish: profile not saved: %s" % profile.last_error)
 
 

@@ -13,7 +13,6 @@ func run(t) -> void:
 	t.eq("value_of uses last matching flag with trailing equals", CliFlags.value_of("--table=", "", false, sample), "park")
 	t.eq("value_of falls back to default when absent", CliFlags.value_of("--missing", "fallback", false, sample), "fallback")
 	t.eq("values_of preserves all occurrences in order", Array(CliFlags.values_of("--tune", false, sample)), ["a=1", "b=2"])
-	t.eq("kv_pairs parses key-value arguments with last-wins", CliFlags.kv_pairs(false, sample), {"--table": "park", "--tune": "b=2"})
 	var empty_val := PackedStringArray(["--frame-log="])
 	t.check("has_prefix detects empty value", CliFlags.has_prefix("--frame-log=", false, empty_val))
 	t.eq("value_of returns empty string when explicitly empty", CliFlags.value_of("--frame-log=", "fallback", false, empty_val), "")

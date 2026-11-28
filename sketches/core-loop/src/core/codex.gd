@@ -163,7 +163,7 @@ func open_entry(id: String, profile = null) -> bool:
 	var reader = profile if profile != null else _profile()
 	if reader == null or not reader.mark_seen(id):
 		return false
-	if reader.has_method("save_if_allowed") and not reader.save_if_allowed():
+	if not reader.save_if_allowed():
 		last_error = "logbook marker not saved: %s" % reader.last_error
 	return true
 

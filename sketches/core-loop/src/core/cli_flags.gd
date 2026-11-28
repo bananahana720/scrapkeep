@@ -43,15 +43,5 @@ static func values_of(flag: String, include_engine_args := false, argv = null) -
 	return out
 
 
-static func kv_pairs(include_engine_args := false, argv = null) -> Dictionary:
-	var out := {}
-	var list: PackedStringArray = args(include_engine_args) if argv == null else PackedStringArray(argv)
-	for arg in list:
-		var eq := arg.find("=")
-		if eq > 0:
-			out[arg.substr(0, eq)] = arg.substr(eq + 1)
-	return out
-
-
 static func _prefix(flag: String) -> String:
 	return flag if flag.ends_with("=") else flag + "="

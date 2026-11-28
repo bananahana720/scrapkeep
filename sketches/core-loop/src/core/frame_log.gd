@@ -26,7 +26,7 @@ static func wanted() -> bool:
 
 func _ready() -> void:
 	name = "FrameLog"
-	path = CliFlags.value_of(FLAG)
+	path = CliFlags.value_of(FLAG, path)
 	if CliFlags.has_prefix(WARMUP_FLAG):
 		warmup_s = maxf(float(CliFlags.value_of(WARMUP_FLAG)), 0.0)
 	if CliFlags.has_prefix(SECONDS_FLAG):
