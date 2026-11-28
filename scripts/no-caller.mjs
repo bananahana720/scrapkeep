@@ -26,9 +26,13 @@ function needles(top, rel) {
   return out;
 }
 
+function outside(rel) {
+  return rel === ".." || rel.startsWith("../") || path.isAbsolute(rel);
+}
+
 function why(top, rel, tracked) {
   const abs = path.join(top, rel);
-  if (rel.startsWith("..") || path.isAbsolute(rel)) return "lies outside the repository";
+  if (outside(rel)) return "lies outside the repository";
   if (!existsSync(abs)) return "does not exist";
   if (statSync(abs).isDirectory()) return "is a directory";
   return tracked.has(rel) ? null : "is not tracked by git";
@@ -36,7 +40,7 @@ function why(top, rel, tracked) {
 
 export function badPaths(files, cwd = process.cwd()) {
   const { top, rels } = resolve(files, cwd);
-  const inside = rels.filter((r) => !r.startsWith("..") && !path.isAbsolute(r));
+  const inside = rels.filter((r) => !outside(r));
   const tracked = new Set(
     inside.length
       ? git(top, ["--literal-pathspecs", "ls-files", "-z", "--", ...inside]).split("\0")
@@ -85,13 +89,20 @@ if (isMain(import.meta.url)) {
     console.error("usage: node scripts/no-caller.mjs <file>...");
     process.exit(2);
   }
-  const bad = badPaths(files);
-  if (bad.length) {
-    for (const line of bad) console.error(line);
+  let found;
+  try {
+    const bad = badPaths(files);
+    if (bad.length) {
+      for (const line of bad) console.error(line);
+      process.exit(2);
+    }
+    found = findMentions(files);
+  } catch (err) {
+    console.error(`the search could not run, so nothing is known about callers: ${err.message}`);
     process.exit(2);
   }
   let mentioned = false;
-  for (const [rel, hits] of findMentions(files)) {
+  for (const [rel, hits] of found) {
     console.log(`${rel}: ${hits.length} mention${hits.length === 1 ? "" : "s"}`);
     for (const h of hits) console.log(`  ${h}`);
     if (hits.length) mentioned = true;

@@ -143,3 +143,33 @@ test("a missing, wrong-prefix, untracked or directory path exits 2, names the pa
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("a search that cannot run exits 2 and prints no result", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "no-caller-bare-"));
+  try {
+    writeFileSync(path.join(dir, "dead.gd"), "extends Node\n");
+    const r = spawnSync(process.execPath, [cli, "dead.gd"], {
+      cwd: dir,
+      encoding: "utf8",
+      env: { ...process.env, GIT_CEILING_DIRECTORIES: path.dirname(dir) },
+    });
+    assert.equal(r.status, 2);
+    assert.equal(r.stdout, "");
+    assert.match(r.stderr, /the search could not run, so nothing is known about callers/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("a tracked file whose name starts with two dots is inside the repository", () => {
+  const dir = scratchRepo();
+  try {
+    writeFileSync(path.join(dir, "..dots.gd"), "extends Node\n");
+    spawnSync("git", ["add", "..dots.gd"], { cwd: dir });
+    const r = run(dir, "..dots.gd");
+    assert.equal(r.status, 0, r.stderr);
+    assert.equal(r.stdout, "..dots.gd: 0 mentions\n");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
