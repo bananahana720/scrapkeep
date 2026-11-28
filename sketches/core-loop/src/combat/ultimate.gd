@@ -188,8 +188,6 @@ func leg_state() -> Dictionary:
 		total_remaining += float(legs[i]["seconds"])
 	return {
 		"has_leg": has_leg,
-		"index": _leg,
-		"count": legs.size(),
 		"is_last": has_leg and _leg == legs.size() - 1,
 		"elapsed": _leg_time,
 		"remaining": (float(leg["seconds"]) - float(_leg_time)) if has_leg else 0.0,
@@ -1021,17 +1019,17 @@ func _cannon_call(family: String, at: Vector3, target: Vector3, due: float, heft
 	var cap := Weapons.CALL_CAP if _cannon_peak_done else Weapons.CALL_CAP - 4
 	if _cannon_calls >= cap:
 		return false
-	var floor = combat.cannon_floor(at)
+	var floor = combat.cannon.cannon_floor(at)
 	if floor == null:
 		return false
 	var overrides := {"warn": maxf(0.0, due - combat.clock_now()), "live_at": due,
 		"budget": _cannon_budget, "record": _cannon_record}
 	overrides.merge(options, true)
-	combat.commit_cannon(family, target, floor, Weapons.ZONE_REACH, Weapons.ZONE_DAMAGE * heft,
+	combat.cannon.commit_cannon(family, target, floor, Weapons.ZONE_REACH, Weapons.ZONE_DAMAGE * heft,
 		"special", family == "plate", overrides)
 	_cannon_calls += 1
 	_cannon_record["zones"] = int(_cannon_record.get("zones", 0)) + 1
-	var audio = combat.cannon_audio()
+	var audio = combat.cannon.cannon_audio()
 	if audio != null:
 		audio.cannon_family(family, false, "cannon_call")
 	return true
@@ -1087,7 +1085,7 @@ func _cannon_peak(_at: Vector3) -> void:
 
 
 func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
-	combat.step_cannon(0.0)
+	combat.cannon.step_cannon(0.0)
 	var mortar := _cannon_id == "cannon_plate_mortar"
 	var hits := 0
 	var damage := 0.0

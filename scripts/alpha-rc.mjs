@@ -360,11 +360,16 @@ export function bootFailure(output) {
 
 export function launchAppImage(
   appimage,
-  { seconds = LAUNCH_BUDGET_S, menuWaitSeconds = MENU_WAIT_S, env = process.env } = {},
+  {
+    seconds = LAUNCH_BUDGET_S,
+    menuWaitSeconds = MENU_WAIT_S,
+    env = process.env,
+    clock = Date.now,
+  } = {},
 ) {
   const profile = freshProfile();
   return new Promise((resolve) => {
-    const started = Date.now();
+    const started = clock();
     let output = "";
     let settled = false;
     let titleMs = null;
@@ -382,7 +387,7 @@ export function launchAppImage(
       clearTimeout(titleTimer);
       clearTimeout(menuTimer);
       clearTimeout(drainTimer);
-      const ms = Date.now() - started;
+      const ms = clock() - started;
       if (child.pid) await stopGroup(child);
       child.stdout?.destroy();
       child.stderr?.destroy();
@@ -391,7 +396,7 @@ export function launchAppImage(
       } catch {}
       resolve({ ...result, output, ms, titleMs, menuMs });
     };
-    const seen = (line) => (output.includes(line) ? Date.now() - started : null);
+    const seen = (line) => (output.includes(line) ? clock() - started : null);
     const onData = (chunk) => {
       output += chunk;
       if (exited !== null) return;

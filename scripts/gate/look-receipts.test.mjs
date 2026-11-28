@@ -1,6 +1,16 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  closeSync,
+  constants,
+  existsSync,
+  mkdtempSync,
+  openSync,
+  read,
+  rmSync,
+  writeFileSync,
+  writeSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { after, describe, test } from "node:test";
@@ -9,14 +19,62 @@ import { fileURLToPath } from "node:url";
 import * as render from "./model-render-receipt.mjs";
 import * as census from "./stand-ins-receipt.mjs";
 import * as display from "./display-run.mjs";
-import { groupLive } from "../lib/proc.mjs";
 import { git as runGit } from "../lib/git.mjs";
+import { testGroups } from "../lib/test-groups.mjs";
 
 const HEAD = "abc1234";
 const KINDS = render.KINDS;
 const here = path.dirname(fileURLToPath(import.meta.url));
 const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
+const GUARDED = { concurrency: CONCURRENCY, timeout: 30_000 };
+const LATE_S = GUARDED.timeout / 1000 + 15;
 const tempDirs = [];
+
+function heldPipe(file) {
+  assert.equal(spawnSync("mkfifo", [file]).status, 0, "mkfifo");
+  const probe = openSync(file, constants.O_RDONLY | constants.O_NONBLOCK);
+  let keep = openSync(file, constants.O_WRONLY | constants.O_NONBLOCK);
+  const reader = openSync(file, constants.O_RDONLY);
+  closeSync(probe);
+  let reading = Promise.resolve("");
+  let closed = false;
+  const chunk = () =>
+    closed
+      ? ""
+      : new Promise((resolve, reject) =>
+          read(reader, Buffer.alloc(4096), 0, 4096, null, (error, n, buffer) =>
+            error ? reject(error) : resolve(buffer.toString("utf8", 0, n)),
+          ),
+        );
+  const next = () => (reading = reading.then(chunk, chunk));
+  const drained = async () => {
+    if (keep !== null) closeSync(keep);
+    keep = null;
+    let text = "";
+    for (let part = await next(); part; part = await next()) text += part;
+    return text;
+  };
+  const close = async () => {
+    if (closed) return;
+    closed = true;
+    let poke = keep;
+    try {
+      poke ??= openSync(file, constants.O_WRONLY | constants.O_NONBLOCK);
+      writeSync(poke, "\n");
+    } catch {}
+    for (let last = null; last !== reading;) {
+      last = reading;
+      await last.catch(() => {});
+    }
+    for (const fd of new Set([poke, keep, reader]))
+      try {
+        if (fd !== null) closeSync(fd);
+      } catch {}
+    keep = null;
+  };
+  return { file, next, drained, close };
+}
+
 after(() => {
   for (const dir of tempDirs) rmSync(dir, { recursive: true, force: true });
 });
@@ -352,14 +410,20 @@ test("display-run: releases the slot when the launch throws", async () => {
   assert.deepEqual(events, ["acquire", "release"]);
 });
 
-describe("display-run timeouts and signals", { concurrency: CONCURRENCY }, () => {
-  test("display-run: the timeout kills the whole run's group, a forked child or an exec", async () => {
+describe("display-run timeouts and signals", GUARDED, () => {
+  test("display-run: the timeout kills the whole run's group, a forked child or an exec", async (t) => {
     const { dir } = repo();
+    const groups = testGroups(t);
     await Promise.all(
-      ["sleep 30 &\nwait\n", "exec sleep 30\n"].map(async (body) => {
+      [
+        `sleep ${LATE_S} &\necho started "$@"\nwait\n`,
+        `echo started "$@"\nexec sleep ${LATE_S}\n`,
+      ].map(async (body) => {
         const fake = path.join(dir, `fake-${body.length}.sh`);
-        const group = path.join(dir, `group-${body.length}`);
-        writeFileSync(fake, `#!/bin/sh\necho started "$@"\necho $$ > "${group}"\n${body}`, {
+        const pipe = heldPipe(path.join(dir, `held-${body.length}`));
+        t.after(() => pipe.close());
+        const shell = pipe.next().then((line) => groups.add(line.trim()));
+        writeFileSync(fake, `#!/bin/sh\nexec 3<> "${pipe.file}"\necho $$ >&3\n${body}`, {
           mode: 0o755,
         });
         const events = [];
@@ -373,56 +437,60 @@ describe("display-run timeouts and signals", { concurrency: CONCURRENCY }, () =>
           acquire: noSlot(events),
         });
         assert.equal(r.timedOut, true);
-        assert.equal(groupLive(Number(readFileSync(group, "utf8"))), false, body.trim());
         assert.equal(r.exit, null);
         assert.match(r.output, /^started --path .* --script res:\/\/x\.gd --/);
+        assert.ok((await shell) !== null, "the fake reported its shell");
+        assert.equal(await pipe.drained(), "", `${body.trim()}: the shell and its child are gone`);
+        groups.gone(await shell);
         assert.deepEqual(events, ["acquire", "release"]);
       }),
     );
   });
 
-  test("display-run: SIGTERM to the node process kills the run's group", async () => {
+  test("display-run: SIGTERM to the node process kills the run's group", async (t) => {
     const { dir } = repo();
-    const pids = path.join(dir, "pids");
+    const groups = testGroups(t);
+    const pipe = heldPipe(path.join(dir, "held"));
+    t.after(() => pipe.close());
     const fake = path.join(dir, "fake-group.sh");
-    writeFileSync(fake, `#!/bin/sh\nsleep 30 &\necho $$ $! > "${pids}"\nwait\n`, { mode: 0o755 });
+    writeFileSync(
+      fake,
+      `#!/bin/sh\nexec 3<> "${pipe.file}"\necho $$ >&3\nsleep ${LATE_S} &\necho $! >&3\nwait\n`,
+      { mode: 0o755 },
+    );
     const runner = path.join(dir, "runner.mjs");
     writeFileSync(
       runner,
       `import { runWindowed } from ${JSON.stringify(path.join(here, "display-run.mjs"))};
-await runWindowed({ platform: "linux", env: { DISPLAY: ":0" }, cwd: ${JSON.stringify(dir)}, script: "res://x.gd", binary: ${JSON.stringify(fake)}, timeoutMs: 20000, acquire: async () => ({ release() { console.error("released"); } }) });
+await runWindowed({ platform: "linux", env: { DISPLAY: ":0" }, cwd: ${JSON.stringify(dir)}, script: "res://x.gd", binary: ${JSON.stringify(fake)}, timeoutMs: ${LATE_S * 1000}, acquire: async () => ({ release() { console.error("released"); } }) });
 process.exit(1); // An interrupted receipt producer must never reach its next step.
 `,
     );
     const node = spawn(process.execPath, [runner], { stdio: "ignore" });
-    const until = async (ok, ms) => {
-      const end = Date.now() + ms;
-      while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 50));
-      return ok();
-    };
-    assert.ok(
-      await until(
-        () => existsSync(pids) && readFileSync(pids, "utf8").trim().split(" ").length === 2,
-        5000,
-      ),
-      "the fake started",
+    const exited = new Promise((resolve, reject) => {
+      node.once("exit", (code) => resolve(code));
+      node.once("error", reject);
+    });
+    t.after(() => {
+      if (node.exitCode === null && node.signalCode === null) node.kill("SIGKILL");
+    });
+    const early = exited.then((code) =>
+      assert.fail(`the runner exited (${code}) before the fake forked its child`),
     );
-    const [shell, sleeper] = readFileSync(pids, "utf8").trim().split(" ").map(Number);
-    const exited = new Promise((r) => node.on("exit", (code) => r(code)));
+    let said = "";
+    while (said.split("\n").length < 3) {
+      const part = await Promise.race([pipe.next(), early]);
+      assert.ok(part, "the fake closed the pipe before it forked its child");
+      said += part;
+      if (said.includes("\n")) groups.add(said.split("\n")[0]);
+    }
+    const [shell, sleeper] = said.split("\n");
+    assert.equal(groups.add(shell), Number(shell), "the fake reported its shell");
+    assert.ok(Number(sleeper) > 1, "the fake reported its child");
     node.kill("SIGTERM");
     assert.equal(await exited, 143);
-    const alive = (pid) => {
-      try {
-        process.kill(pid, 0);
-        return true;
-      } catch {
-        return false;
-      }
-    };
-    assert.ok(
-      await until(() => !alive(shell) && !alive(sleeper), 2000),
-      "the shell and its child are gone",
-    );
+    assert.equal(await pipe.drained(), "", "the shell and its child are gone");
+    groups.gone(shell);
   });
 });
 

@@ -32,6 +32,7 @@ const Grip := preload("res://src/movement/grip.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Screens := preload("res://src/ui/screens.gd")
+const UiProfile := preload("res://src/ui/ui_profile.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const TuningPanel := preload("res://src/ui/tuning_panel.gd")
 const World := preload("res://src/world/world.gd")
@@ -45,6 +46,7 @@ const SettingsStore := preload("res://src/ui/settings_store.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
+const MetRecord := preload("res://src/core/met_record.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const RadioDeck := preload("res://src/presentation/radio_deck.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
@@ -273,6 +275,7 @@ func _ready() -> void:
 	ctx.screen_busy = ScreenBusy.new()
 	add_child(ctx.screen_busy)
 	ctx.screen_busy.setup(ctx)
+	ctx.ui_profile = UiProfile.new(storage_dir)
 	presentation = _module(Presentation)
 	_boot("presentation")
 	apply_saved_display()
@@ -384,7 +387,7 @@ func _menu_step_once() -> void:
 			hub.setup(self)
 			hub.camp_store = ctx.profile
 		1:
-			script.watch(self)
+			MetRecord.watch(self)
 		2:
 			add_child(script.new())
 		3:

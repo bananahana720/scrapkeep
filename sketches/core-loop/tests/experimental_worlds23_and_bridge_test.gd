@@ -131,7 +131,7 @@ func _test_worlds23_configs_elites_and_w4_clarity() -> void:
 		var cue := String(spec.get("counterplay_cue", ""))
 		if cue == "" or String(spec.get("silhouette_cue", "")) == "" \
 				or String(spec.get("movement_cadence", "")) == "" \
-				or float(spec.get("tell_s", 0.0)) < RefurbishedElites.MIN_TELL_S \
+				or float(spec.get("tell_s", 0.0)) < EnvTags.MIN_TELL_S \
 				or not EnvTags.CANONICAL_TAGS.has(StringName(spec.get("ability_tag", &""))):
 			clarity_ok = false
 		for tok in raw_tokens:

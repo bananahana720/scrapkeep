@@ -314,21 +314,6 @@ static func apply_quality_tier(arena: Node3D, tier: String) -> Dictionary:
 	return result
 
 
-static func sync_accessibility(arena: Node3D, reduced_motion_on: bool) -> void:
-	Lookdev.sync_flash_guard(FlashGuard.on)
-	for mat in [_copper_coil_mat, _vista_masonry_mat, _vista_stack_mat, _gantry_column_mat, _gantry_truss_mat]:
-		if mat != null:
-			mat.set_shader_parameter("reduce_flashes", FlashGuard.on)
-	if arena == null:
-		return
-	var rig := arena.get_node_or_null("VistaAtmosphereRig")
-	if rig != null and rig.has_method("apply_accessibility"):
-		rig.apply_accessibility(reduced_motion_on)
-	var vistas := arena.get_node_or_null("VistaMegastructures")
-	if vistas != null and vistas.has_method("apply_accessibility"):
-		vistas.apply_accessibility(reduced_motion_on)
-
-
 static func _upgrade_gantry_and_catwalks(arena: Node3D, gantry_root: Node) -> int:
 	var bound := 0
 	var col_mat := _get_gantry_column_material()

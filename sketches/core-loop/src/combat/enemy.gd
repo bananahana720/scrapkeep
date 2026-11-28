@@ -45,7 +45,6 @@ const GLANCE_BEATS := 2.0
 const GLANCE_PEAK := 4.0
 const RIM_CELL := 8
 const RIM_EDGE := 2
-static var rim_color := Palette.ARC
 
 signal hit_player(amount: float, shove: Vector3)
 signal died(at: Vector3, scrap_value: int)

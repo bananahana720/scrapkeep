@@ -752,7 +752,7 @@ func _fire_cannon_mortar(f: float, shape: Dictionary) -> void:
 
 
 func _commit_mortar_shell(at: Vector3, damage: float, source: String) -> void:
-	combat.commit_cannon("rush", at, at, MORTAR_RADIUS, damage, source, false,
+	combat.cannon.commit_cannon("rush", at, at, MORTAR_RADIUS, damage, source, false,
 		{"warn": maxf(Hazard.MIN_WARN, MindAttacks.LANE_WARN), "color": ClassDef.CANNON_COLOR})
 	ctx.break_props(at, MORTAR_RADIUS, "cannon_mortar")
 	combat.effects.ring(at, MORTAR_RADIUS, ClassDef.CANNON_COLOR)

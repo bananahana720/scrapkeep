@@ -84,22 +84,6 @@ static func attach(camp_hub) -> void:
 	camp_hub.root.get_node("CampSandbox").picker_builder = func(): return new()
 
 
-static func met_kinds(saved) -> Array:
-	return Sandbox.met_kinds(saved)
-
-
-static func met_of(game) -> Array:
-	return Sandbox.met_of(game)
-
-
-static func mark_met(saved, kind: String) -> bool:
-	return Sandbox.mark_met(saved, kind)
-
-
-static func watch(game) -> void:
-	Sandbox.watch(game)
-
-
 static func reading(met: Array) -> Array:
 	var out: Array = []
 	for kind in Sandbox.kinds():

@@ -29,7 +29,7 @@ const HeroFx := preload("res://src/presentation/hero_fx.gd")
 const T := preload("res://tests/support/t.gd")
 
 const DT := 1.0 / 60.0
-const EXPECTED_CHECKS := 41
+const EXPECTED_CHECKS := 43
 
 var _t := T.new("w47_h1_heroes_test")
 var _game
@@ -90,7 +90,7 @@ func _spawn_dummy(at: Vector3, kind := "chaser", hp := 1000.0) -> Node3D:
 
 func _switch_pilot(class_id: String, at: Vector3) -> void:
 	_clear_temp()
-	_combat._reset_w47_h1_state()
+	_combat.hero_hooks.reset()
 	_combat.bolts.clear()
 	_combat.sticky.clear()
 	var def: Resource = ClassDef.by_id(class_id)
@@ -160,13 +160,13 @@ func _test_sable() -> void:
 	# 1b. Kinetic Orbit Pylon: zero camping (mounted or stationary fires ZERO kinetic arcs).
 	var enemy := _spawn_dummy(base_pt + Vector3(8.0, 0.0, 0.0), "chaser", 1000.0)
 	_combat._on_mounted(base_pt, 20.0)
-	var pstate: Dictionary = _combat.kinetic_pylon_state()
+	var pstate: Dictionary = _combat.hero_hooks.kinetic_pylon_state()
 	_t.check("Planting pylon registers beachhead pylon", not pstate.is_empty() and (pstate["at"] as Vector3).is_equal_approx(base_pt))
 	_player.kit.mounted = true
 	_player.state.velocity = Vector3.ZERO
 	var hp_before: float = enemy.hp
 	for i in 45:
-		_combat._step_kinetic_pylon(DT, [enemy])
+		_combat.hero_hooks._step_kinetic_pylon(DT, [enemy])
 	_t.near("Zero camping: mounted stationary Sable fires zero kinetic-orbit arcs", hp_before - enemy.hp, 0.0, 0.001)
 
 	# 1c. Dismount / vault-kick off pylon + orbiting at speed overcharges mint Palette.ARC arcs!
@@ -174,33 +174,33 @@ func _test_sable() -> void:
 	_player.state.velocity = Vector3(24.0, 0.0, 0.0)
 	_player.state.refresh_tier(_player.tuning.f("cruise"))
 	_game.events.vault_kicked.emit(base_pt + Vector3(2.0, 0.0, 0.0), 28.0)
-	_t.check("Vault-kicking near beachhead pylon overcharges it", float(_combat.kinetic_pylon_state().get("overcharge_left", 0.0)) >= Weapons.KINETIC_PYLON_OVERCHARGE_S - 0.1)
-	_combat._step_kinetic_pylon(DT, [enemy])
+	_t.check("Vault-kicking near beachhead pylon overcharges it", float(_combat.hero_hooks.kinetic_pylon_state().get("overcharge_left", 0.0)) >= Weapons.KINETIC_PYLON_OVERCHARGE_S - 0.1)
+	_combat.hero_hooks._step_kinetic_pylon(DT, [enemy])
 	_t.check("Overcharged pylon fires automatic mint Palette.ARC arcs while moving at speed",
-		enemy.hp < hp_before and not _combat.last_kinetic_arc.is_empty() and _combat.last_kinetic_arc["color"] == Palette.ARC,
-		str(_combat.last_kinetic_arc))
+		enemy.hp < hp_before and not _combat.hero_hooks.last_kinetic_arc.is_empty() and _combat.hero_hooks.last_kinetic_arc["color"] == Palette.ARC,
+		str(_combat.hero_hooks.last_kinetic_arc))
 
 	# 1d. Orbiting around beachhead pylon at speed overcharges even without vault-kick.
-	_combat._plant_beachhead_pylon(base_pt)
-	_t.near("Fresh beachhead starts un-overcharged", float(_combat.kinetic_pylon_state().get("overcharge_left", -1.0)), 0.0, 0.001)
+	_combat.hero_hooks.plant_beachhead_pylon(base_pt)
+	_t.near("Fresh beachhead starts un-overcharged", float(_combat.hero_hooks.kinetic_pylon_state().get("overcharge_left", -1.0)), 0.0, 0.001)
 	for step_i in 12:
 		var ang := float(step_i) * 0.14
 		var pos := base_pt + Vector3(cos(ang) * 8.0, 0.0, sin(ang) * 8.0)
 		_player.reset_to(pos, Vector3(-sin(ang), 0.0, cos(ang)) * 22.0)
 		_player.state.refresh_tier(_player.tuning.f("cruise"))
-		_combat._step_kinetic_pylon(DT, [enemy])
+		_combat.hero_hooks._step_kinetic_pylon(DT, [enemy])
 	_t.check("Orbiting beachhead pylon at speed triggers kinetic overcharge",
-		float(_combat.kinetic_pylon_state().get("overcharge_left", 0.0)) > 0.0
-		and String(_combat.kinetic_pylon_state().get("reason", "")) == "orbit",
-		str(_combat.kinetic_pylon_state()))
+		float(_combat.hero_hooks.kinetic_pylon_state().get("overcharge_left", 0.0)) > 0.0
+		and String(_combat.hero_hooks.kinetic_pylon_state().get("reason", "")) == "orbit",
+		str(_combat.hero_hooks.kinetic_pylon_state()))
 
 	# 1e. Stopping mid-overcharge pauses automatic kinetic-orbit arcs (zero camping!).
-	var arcs_before := int(_combat.kinetic_pylon_state().get("arcs_fired", 0))
+	var arcs_before := int(_combat.hero_hooks.kinetic_pylon_state().get("arcs_fired", 0))
 	_player.state.velocity = Vector3.ZERO
 	_player.state.refresh_tier(_player.tuning.f("cruise"))
 	for i in 45:
-		_combat._step_kinetic_pylon(DT, [enemy])
-	_t.eq("Stopping mid-overcharge pauses kinetic-orbit arcs (zero camping)", int(_combat.kinetic_pylon_state().get("arcs_fired", 0)), arcs_before)
+		_combat.hero_hooks._step_kinetic_pylon(DT, [enemy])
+	_t.eq("Stopping mid-overcharge pauses kinetic-orbit arcs (zero camping)", int(_combat.hero_hooks.kinetic_pylon_state().get("arcs_fired", 0)), arcs_before)
 
 
 # --- 2. RIVET (he/his) ----------------------------------------------------------------
@@ -245,7 +245,7 @@ func _test_rivet() -> void:
 	var audio = _game.presentation.audio
 	audio.bake_now()
 	var cue_start: int = audio.cue_log_total
-	_combat.last_ricochet = {}
+	_combat.hero_hooks.last_ricochet = {}
 	var hp_rock_before: float = rock_target.hp
 	var bolt_rock := {
 		"origin": base_pt, "fired_from": base_pt, "dir": Vector3.RIGHT, "speed": 190.0, "max_dist": 60.0,
@@ -254,17 +254,17 @@ func _test_rivet() -> void:
 		"lattice_chain_falloff": 0.0, "color": Palette.COPPER, "wave_amp": 0.0, "wave_hz": 0.0,
 		"phase": 0.0, "pierce": 0, "source": "weapon", "bits": 0,
 	}
-	_combat._stamp_rivet_sixth_hot(bolt_rock)
+	_combat.hero_hooks.stamp_rivet_sixth_hot(bolt_rock)
 	_combat.bolts.fire(bolt_rock)
 	var space: PhysicsDirectSpaceState3D = _game.get_world_3d().direct_space_state
 	for step_i in 20:
 		_combat.bolts.step(DT, space, [rock_target], [])
 	var rock_cues: Array = audio.cues_since(cue_start)
-	_t.check("6th hot round ricochets off canyon rock into target", rock_target.hp < hp_rock_before and String(_combat.last_ricochet.get("surface", "")) == "rock",
-		"hp %.1f->%.1f ric=%s" % [hp_rock_before, rock_target.hp, str(_combat.last_ricochet)])
+	_t.check("6th hot round ricochets off canyon rock into target", rock_target.hp < hp_rock_before and String(_combat.hero_hooks.last_ricochet.get("surface", "")) == "rock",
+		"hp %.1f->%.1f ric=%s" % [hp_rock_before, rock_target.hp, str(_combat.hero_hooks.last_ricochet)])
 	_t.check("Rock ricochet uses copper/amber tracer (NEVER Palette.HAZARD)",
-		_combat.last_ricochet.get("color") == Palette.COPPER and _combat.last_ricochet.get("accent") == Palette.AMBER
-		and _combat.last_ricochet.get("color") != Palette.HAZARD and _combat.last_ricochet.get("accent") != Palette.HAZARD)
+		_combat.hero_hooks.last_ricochet.get("color") == Palette.COPPER and _combat.hero_hooks.last_ricochet.get("accent") == Palette.AMBER
+		and _combat.hero_hooks.last_ricochet.get("color") != Palette.HAZARD and _combat.hero_hooks.last_ricochet.get("accent") != Palette.HAZARD)
 	_t.check("Rock ricochet plays metallic KLANG-PING cues",
 		rock_cues.any(func(c): return c[1] == "clank") and rock_cues.any(func(c): return c[1] == "crit_ping"), str(rock_cues))
 	rock_wall.free()
@@ -273,7 +273,7 @@ func _test_rivet() -> void:
 	var armor_a := _spawn_dummy(base_pt + Vector3(0.0, 0.0, -10.0), "plated_brute", 1000.0)
 	var armor_b := _spawn_dummy(base_pt + Vector3(8.0, 0.0, -12.0), "chaser", 500.0)
 	await physics_frame
-	_combat.last_ricochet = {}
+	_combat.hero_hooks.last_ricochet = {}
 	var hp_b_before: float = armor_b.hp
 	var bolt_armor := {
 		"origin": base_pt, "fired_from": base_pt, "dir": Vector3.FORWARD, "speed": 190.0, "max_dist": 50.0,
@@ -282,13 +282,13 @@ func _test_rivet() -> void:
 		"lattice_chain_falloff": 0.0, "color": Palette.COPPER, "wave_amp": 0.0, "wave_hz": 0.0,
 		"phase": 0.0, "pierce": 0, "source": "weapon", "bits": 0,
 	}
-	_combat._stamp_rivet_sixth_hot(bolt_armor)
+	_combat.hero_hooks.stamp_rivet_sixth_hot(bolt_armor)
 	_combat.bolts.fire(bolt_armor)
 	for step_i in 25:
 		_combat.bolts.step(DT, space, [armor_a, armor_b], [])
 	_t.check("6th hot round ricochets once off armor into nearest other enemy",
-		armor_b.hp < hp_b_before and String(_combat.last_ricochet.get("surface", "")) == "armor",
-		"hp_b %.1f->%.1f ric=%s" % [hp_b_before, armor_b.hp, str(_combat.last_ricochet)])
+		armor_b.hp < hp_b_before and String(_combat.hero_hooks.last_ricochet.get("surface", "")) == "armor",
+		"hp_b %.1f->%.1f ric=%s" % [hp_b_before, armor_b.hp, str(_combat.hero_hooks.last_ricochet)])
 
 	# 2d. Existing map rail/zip extraction from real park_dam & park_flume (pipes, canal lips, zip cables, trestle rails).
 	var dam_map := ParkMap.new("res://src/world/park/park_dam.json")
@@ -440,6 +440,8 @@ func _test_kest() -> void:
 # --- 4. HYGIENE & RESETS --------------------------------------------------------------
 
 func _test_hygiene_and_resets() -> void:
+	_t.eq("ClassDef.SABLE_ID names Sable's row", ClassDef.by_id(ClassDef.SABLE_ID).display_name, "Sable")
+	_t.eq("ClassDef.KEST_ID names Kest's row", ClassDef.by_id(ClassDef.KEST_ID).display_name, "Kest")
 	# Zero Overwatch hero names across ClassDef player-facing strings.
 	var banned := ["Cassidy", "Soldier:76", "Soldier 76", "Hanzo", "Pharah", "Tracer", "Wrecking Ball"]
 	var found_ow: Array = []
@@ -470,6 +472,6 @@ func _test_hygiene_and_resets() -> void:
 	_t.eq("HeroFx never uses Palette.HAZARD in code", hazard_code_hit, false)
 
 	# Clean reset clears all W47-H1 runtime state.
-	_combat._reset_w47_h1_state()
+	_combat.hero_hooks.reset()
 	_t.check("Combat W47-H1 state resets cleanly",
-		_combat.kinetic_pylon_state().is_empty() and _combat.last_ricochet.is_empty() and _combat.last_kest_trace.is_empty())
+		_combat.hero_hooks.kinetic_pylon_state().is_empty() and _combat.hero_hooks.last_ricochet.is_empty() and _combat.hero_hooks.last_kest_trace.is_empty())

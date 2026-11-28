@@ -12,6 +12,7 @@ const Chaser := preload("res://src/combat/chaser.gd")
 const Lobber := preload("res://src/combat/lobber.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
 const Worlds := preload("res://src/core/worlds.gd")
+const MetRecord := preload("res://src/core/met_record.gd")
 
 
 const CAP := 4
@@ -24,7 +25,6 @@ const KEY := "interact"
 const STATION_RADIUS := 3.5
 const EXCLUDED := ["warden", "vault"]
 const BASE_KINDS := ["chaser", "lobber", "miniboss"]
-const MET_PREFIX := "met."
 
 const WHERE := {
 	"chaser": "Spillway Works, stage one. It will find you first.",
@@ -83,38 +83,7 @@ func bind(camp_hub) -> void:
 	walking = hub.get("walking") == true
 	var box: Transform3D = hub.socket("camp_call_box", "interact")
 	hub.add_station("sandbox_call_box", box.origin, "Call box", KEY, STATION_RADIUS, open_picker)
-	watch(game)
-
-
-static func met_kinds(saved) -> Array:
-	var out: Array = []
-	if saved == null:
-		return out
-	for kind in kinds():
-		if saved.stat(MET_PREFIX + kind) > 0.0:
-			out.append(kind)
-	return out
-
-
-static func met_of(game) -> Array:
-	return met_kinds(game.ctx.profile) if game != null and game.ctx != null else []
-
-
-static func mark_met(saved, kind: String) -> bool:
-	if saved == null or kind == "" or saved.stat(MET_PREFIX + kind) > 0.0:
-		return false
-	saved.set_stat(MET_PREFIX + kind, 1.0)
-	saved.save_if_allowed()
-	return true
-
-
-static func watch(game) -> void:
-	if game == null or game.events == null or game.has_meta("met_watch"):
-		return
-	game.set_meta("met_watch", true)
-	game.events.enemy_spawned.connect(func(enemy: Node3D, kind: String):
-		if not enemy.has_meta("sandbox_slot"):
-			mark_met(game.ctx.profile, kind))
+	MetRecord.watch(game)
 
 
 static func kinds() -> Array:
@@ -355,7 +324,7 @@ func _on_walk_left() -> void:
 
 
 func _met() -> Array:
-	return met_override if met_override != null else met_of(game)
+	return met_override if met_override != null else MetRecord.met_of(game, kinds())
 
 
 func open_picker() -> void:

@@ -52,7 +52,7 @@ function start(args, { cwd = REPO_ROOT, maxBuffer = DEFAULT_MAX_BUFFER, spawn, s
     encoding: "utf8",
     maxBuffer,
     ...(stdio ? { stdio } : {}),
-    ...(timeout ? { timeout } : {}),
+    ...(timeout ? { timeout, killSignal: "SIGKILL" } : {}),
   });
 }
 
