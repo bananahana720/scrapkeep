@@ -327,7 +327,7 @@ func _check_backwash() -> void:
 	_t.eq("it is the record the indicator draws", is_same(_player.indicator.last_shape.get(strip["layer"], {}), shape), true)
 	_t.eq("drawn in the pilot's colour", shape.get("color"), _player.class_color())
 	_t.eq("it strikes as item_proc with no shot bits", [strip["source"], strip["bits"], strip["item"]], ["item_proc", 0, "dash_wake"])
-	var weapon_hit: float = _combat._weapon_hit()
+	var weapon_hit: float = _combat.weapon_hit()
 	_t.check("precondition: a weapon hit is worth something", weapon_hit > 0.0, str(weapon_hit))
 	_t.near("the strip's damage is 0.4 of a weapon hit", float(strip["damage"]), 0.4 * weapon_hit, 0.0001)
 	_t.eq("the chaser behind is struck once at that damage", (wake["behind_hits"] as Array).size(), 1)
