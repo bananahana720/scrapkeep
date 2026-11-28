@@ -55,6 +55,24 @@ func run(t) -> void:
 	t.eq("a clean scratch scan records no failure", got["failed"], [])
 	t.eq("a clean scratch scan finds its file", got["found"], [good.path_join("deep.gd")])
 
+	_write(good.path_join("deep.gd"), "func marker_here() -> void:\n\tpass\n\nfunc marker_there() -> void:\n\tpass\n")
+	var rec := Recorder.new()
+	var rows: Dictionary = SourceScan.captures(rec, [good], "(?m)^func (marker_\\w+)\\(")
+	t.eq("captures records no failure on a clean scan", rec.failed, [])
+	t.eq("captures names each file that matches", rows.keys(), [good.path_join("deep.gd")])
+	var names: Array[String] = []
+	for row in rows.get(good.path_join("deep.gd"), []):
+		names.append(row[1])
+	t.eq("captures returns every match with its groups", names, ["marker_here", "marker_there"])
+	rec = Recorder.new()
+	rows = SourceScan.captures(rec, [good], "(?m)^func no_such_marker\\(")
+	t.eq("captures records no failure when nothing matches", rec.failed, [])
+	t.eq("captures leaves out a file with no match", rows, {})
+	rec = Recorder.new()
+	rows = SourceScan.captures(rec, [blank], "marker_here")
+	t.eq("captures fails on an empty read", rec.failed, ["source scan reads " + blank.path_join("blank.gd")])
+	t.eq("captures returns nothing from an empty read", rows, {})
+
 	got = _scan(["res://src/core"], "(?m)^func warden_fight_live\\b")
 	t.eq("a clean scan of src/core records no failure", got["failed"], [])
 	t.eq("a clean scan of src/core finds flow.gd", got["found"], ["res://src/core/flow.gd"])
