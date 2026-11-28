@@ -690,6 +690,18 @@ export function baselineGrowth(before, after, renamed = new Map()) {
     Array.isArray(list) ? list.length : Object.values(list ?? {}).reduce((a, b) => a + b, 0);
   const grew = [];
   for (const [rule, now] of Object.entries(after)) {
+    const twice = Array.isArray(now)
+      ? [...new Set(now.filter((key, at) => now.indexOf(key) !== at))]
+      : [];
+    if (twice.length > 0)
+      grew.push(
+        finding(
+          "BASELINE",
+          BASELINE_PATH,
+          1,
+          `${rule} list holds ${twice.join(", ")} more than once: write the lists again with node scripts/sketch-lint.mjs --sketch core-loop --write-baseline`,
+        ),
+      );
     if (!Object.hasOwn(before, rule)) continue;
     const was = before[rule];
     const exact = Array.isArray(now) && BASELINE_RULES[rule]?.growth !== "count";
@@ -720,10 +732,15 @@ export function baselineGrowth(before, after, renamed = new Map()) {
       rule === "L14"
         ? "register a reset in sketches/core-loop/tools/test_batch_driver.gd"
         : "fix the offence";
+    const moved = added.filter((key) => key.split(" -> ").some((file) => renamed.has(file)));
+    const renames =
+      moved.length === 0
+        ? ", and no file it names was renamed"
+        : `; ${moved.length} of them ${moved.length === 1 ? "names a renamed file, and the base list lacks it" : "name a renamed file, and the base list lacks them"} under the old name too`;
     const change =
       size(now) > size(was)
         ? `grew from ${size(was)} to ${size(now)} entries`
-        : `has ${added.length} ${added.length === 1 ? "entry" : "entries"} the base list lacks, and no file it names was renamed`;
+        : `has ${added.length} ${added.length === 1 ? "entry" : "entries"} the base list lacks${renames}`;
     grew.push(
       finding(
         "BASELINE",
@@ -1303,6 +1320,8 @@ function scanGdLine(raw, tripleQuote) {
   return { strings, code, tripleQuote };
 }
 
+const loadLines = new WeakMap();
+
 export function buildScriptGraph(files) {
   const relToPath = new Map();
   const classOwners = new Map();
@@ -1323,8 +1342,10 @@ export function buildScriptGraph(files) {
   const classMatchRe =
     classNames.length > 0 ? new RegExp(`\\b(?:${classNames.join("|")})\\b`, "g") : null;
   const graph = new Map();
+  const lines = new Map();
+  loadLines.set(graph, lines);
   for (const file of files) {
-    const deps = new Set();
+    const deps = new Map();
     const hasRes = file.text.includes("res://src/");
     const hasClass = classTestRe !== null && classTestRe.test(file.text);
     if (hasRes || hasClass) {
@@ -1342,18 +1363,19 @@ export function buildScriptGraph(files) {
           for (const literal of scanned.strings) {
             if (!literal.startsWith("res://src/") || !literal.endsWith(".gd")) continue;
             const target = relToPath.get(literal.slice(6));
-            if (target && target !== file.path) deps.add(target);
+            if (target && target !== file.path && !deps.has(target)) deps.set(target, line.number);
           }
         }
         if (hasClass && scanned.code) {
           for (const match of scanned.code.matchAll(classMatchRe)) {
             const target = classOwners.get(match[0]);
-            if (target && target !== file.path) deps.add(target);
+            if (target && target !== file.path && !deps.has(target)) deps.set(target, line.number);
           }
         }
       }
     }
-    graph.set(file.path, [...deps].sort());
+    graph.set(file.path, [...deps.keys()].sort());
+    for (const [target, number] of deps) lines.set(`${file.path} -> ${target}`, number);
   }
   return graph;
 }
@@ -1582,6 +1604,18 @@ export function lintL20(files, graph = buildScriptGraph(files), layers = LAYERS)
     ];
   const layerOf = layerIndex(layers);
   const findings = [];
+  const dirs = new Set([...graph.keys()].map(srcDir));
+  const srcRoot = files[0].path.slice(0, -scriptRel(files[0].path).length) + "src";
+  for (const dir of layers.flat())
+    if (!dirs.has(dir))
+      findings.push(
+        finding(
+          "L20",
+          `${srcRoot}/${dir}`,
+          1,
+          `LAYERS names ${dir}, which holds no script; take it out of LAYERS in scripts/sketch-lint.mjs and ${LAYER_RECORD}, or restore its scripts`,
+        ),
+      );
   for (const file of graph.keys()) {
     const dir = srcDir(file);
     if (!layerOf.has(dir))
@@ -1595,16 +1629,20 @@ export function lintL20(files, graph = buildScriptGraph(files), layers = LAYERS)
       );
   }
   const place = (dir) => `${dir} is layer ${layerOf.get(dir) + 1}`;
+  const lines = loadLines.get(graph);
   for (const { from, to } of upwardPairs(graph, layerOf)) {
     const low = srcDir(from);
+    const key = `${from} -> ${to}`;
+    if (!lines?.has(key))
+      throw new Error(`L20 has no line for the load ${key}; build the graph with buildScriptGraph`);
     findings.push({
       ...finding(
         "L20",
         from,
-        1,
+        lines.get(key),
         `loads ${scriptRel(to)}, a script in a higher layer: ${place(low)} and ${place(srcDir(to))} (${LAYER_RECORD}).\n    Hand the value or a callable in from the script above, move a pure data file down to ${low}, or move the fact to its owner in ${low}; never list the pair`,
       ),
-      key: `${from} -> ${to}`,
+      key,
     });
   }
   return findings.sort((a, b) => (a.key ?? a.path).localeCompare(b.key ?? b.path));
