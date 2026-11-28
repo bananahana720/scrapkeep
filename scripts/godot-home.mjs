@@ -107,7 +107,7 @@ export function resolveGodotBinary({
   platform = process.platform,
   homeDir = os.homedir(),
   exists = existsSync,
-  which = null,
+  which = (name) => whichTool(name, env),
   requireExplicit = false,
 } = {}) {
   const explicit = typeof env.GODOT_BIN === "string" ? env.GODOT_BIN.trim() : "";
@@ -124,11 +124,7 @@ export function resolveGodotBinary({
     );
     if (exists(macApp)) return macApp;
   }
-  if (which) {
-    const onPath = which("godot");
-    if (onPath && exists(onPath)) return onPath;
-  }
-  const candidates = [
+  const pinned = [
     `/opt/scrapkeep-toolchain/Godot_v${GODOT_VERSION}-stable_linux.x86_64`,
     path.join(
       homeDir,
@@ -138,9 +134,11 @@ export function resolveGodotBinary({
       GODOT_VERSION,
       `Godot_v${GODOT_VERSION}-stable_linux.x86_64`,
     ),
-    "/usr/bin/godot",
-  ];
-  return candidates.find((candidate) => exists(candidate)) ?? null;
+  ].find((candidate) => exists(candidate));
+  if (pinned) return pinned;
+  const onPath = which("godot");
+  if (onPath && exists(onPath)) return onPath;
+  return exists("/usr/bin/godot") ? "/usr/bin/godot" : null;
 }
 
 export function requireGodotBinary(options = {}) {
@@ -156,7 +154,7 @@ if (isMain(import.meta.url)) {
   try {
     const { bin } = parseCliArgs(process.argv.slice(2), { flags: { "--bin": "bin" } });
     if (!bin) throw new Error("usage: node scripts/godot-home.mjs --bin");
-    console.log(requireGodotBinary({ which: whichTool }));
+    console.log(requireGodotBinary());
   } catch (error) {
     console.error(`godot-home: ${error.message}`);
     process.exitCode = 1;

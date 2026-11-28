@@ -2,6 +2,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const ChunkSockets := preload("res://src/experimental/arena_chunk_socket.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const DynamicSetpieces := preload("res://src/experimental/dynamic_setpieces.gd")
 const SetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
@@ -191,7 +192,7 @@ func _check_cargo_pendulum_sway_and_reduced_motion() -> void:
 
 	t.check("cargo_hoist_rigging_visible_during_sweep", saw_hoist_visible, "hoist cables + trolley active")
 	t.check("cargo_sway_active_under_normal_motion", max_sway_rad > 0.015 and max_sway_rad < 0.65, "max_sway=%.4f rad" % max_sway_rad)
-	t.check("cargo_warn_floor_preserved", warn_elapsed >= DynamicSetpieces.MIN_WARN_FLOOR_S, "warn=%.2f s" % warn_elapsed)
+	t.check("cargo_warn_floor_preserved", warn_elapsed >= EnvTags.MIN_TELL_S, "warn=%.2f s" % warn_elapsed)
 
 	Comfort.reduced_motion = true
 	for _j in 4:
