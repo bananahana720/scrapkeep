@@ -7,12 +7,7 @@ const MixRows := preload("res://src/presentation/mix_rows.gd")
 const DIR := "res://assets/audio/world/"
 const SILENT_DB := -60.0
 
-static var audio = null
 static var _streams := {}
-
-
-static func reset_for_tests() -> void:
-	audio = null
 
 
 static func row(key: String) -> Dictionary:
@@ -68,7 +63,7 @@ static func tend(p: AudioStreamPlayer3D, base_db: float) -> float:
 	return p.volume_db
 
 
-static func one_shot(key: String, parent: Node, at: Vector3, extra_db := 0.0) -> AudioStreamPlayer3D:
+static func one_shot(key: String, parent: Node, at: Vector3, audio, extra_db := 0.0) -> AudioStreamPlayer3D:
 	if parent == null or not parent.is_inside_tree() or stream(key) == null:
 		return null
 	var anchor := Node3D.new()
@@ -79,11 +74,11 @@ static func one_shot(key: String, parent: Node, at: Vector3, extra_db := 0.0) ->
 	tend(p, float(row(key)["db"]) + extra_db)
 	p.finished.connect(anchor.queue_free)
 	p.play()
-	heard(key, p)
+	heard(key, p, audio)
 	return p
 
 
-static func heard(key: String, p: AudioStreamPlayer3D) -> void:
+static func heard(key: String, p: AudioStreamPlayer3D, audio) -> void:
 	if audio == null or not is_instance_valid(audio) or p == null or p.volume_db <= SILENT_DB:
 		return
 	audio.note_cue("world_fx", String(row(key).get("file", key)), p.volume_db, p.bus)

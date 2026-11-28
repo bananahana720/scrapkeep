@@ -166,7 +166,7 @@ func _states() -> void:
 	events.line_state_changed.emit("latched_body", null, Vector3.ZERO, "")
 	_t.check("HLs-2 bite once, not twice", _count("line_bite") == 1 and _count("grapple_clink") == 0, "grapple_fired, harpoon_bit and latched_body request the bite %d times, the old id %d" % [_count("line_bite"), _count("grapple_clink")])
 	_t.check("the bite has its own id", EventKinds.line_sound("latched_body") == "line_bite", "latched_body plays %s" % EventKinds.line_sound("latched_body"))
-	_t.check("grapple_clink is the old recipe", SfxBank._bake("grapple_clink") == SfxBank._fm(0.24, SfxBank._hz(81), 3.5, 5.0, 16.0), "grapple_clink changed")
+	_t.check("grapple_clink is the old recipe", SfxBank.new()._bake("grapple_clink") == SfxBank._fm(0.24, SfxBank.new()._hz(81), 3.5, 5.0, 16.0), "grapple_clink changed")
 	_t.check("the crack and the bite stay in the live key", "smash_crack" in Audio.KEYED_SOUNDS and "line_bite" in Audio.KEYED_SOUNDS, "keyed: crack %s, bite %s" % ["smash_crack" in Audio.KEYED_SOUNDS, "line_bite" in Audio.KEYED_SOUNDS])
 	_fresh()
 	_step(0.3)
