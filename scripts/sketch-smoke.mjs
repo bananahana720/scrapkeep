@@ -59,7 +59,7 @@ import {
 import { runProcess } from "./lib/proc.mjs";
 import { runnerReceiptFileName, runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
 import { gitOptional } from "./lib/git.mjs";
-import { isMain } from "./lib/cli.mjs";
+import { flagValue, isMain } from "./lib/cli.mjs";
 
 export {
   BATCH_MAX_MS,
@@ -131,13 +131,21 @@ export function parseArgs(argv, env = {}) {
   };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
-    if (arg === "--sketch" && argv[i + 1]) options.sketches.push(argv[++i]);
-    else if (arg === "--test" && argv[i + 1]) options.tests.push(argv[++i]);
-    else if (arg === "--flags" && argv[i + 1] !== undefined) options.flags = argv[++i];
-    else if (arg === "--receipt" && argv[i + 1]) options.receipt = argv[++i];
-    else if (arg === "--strict-verdict") options.strict = true;
+    if (arg === "--sketch")
+      options.sketches.push(flagValue(argv, ++i, "a name, as in --sketch core-loop"));
+    else if (arg === "--test") options.tests.push(flagValue(argv, ++i, "a test name or glob"));
+    else if (arg === "--receipt") options.receipt = flagValue(argv, ++i, "a label");
+    else if (arg === "--flags") {
+      if (argv[i + 1] === undefined)
+        throw new Error('--flags requires text, as in --flags "--scrap=armor"');
+      options.flags = argv[++i];
+    } else if (arg === "--strict-verdict") options.strict = true;
     else if (arg === "--bots") options.bots = true;
     else if (arg === "--no-batch") options.batch = false;
+    else
+      throw new Error(
+        `unknown argument ${arg}; use --sketch NAME, --test NAME, --receipt LABEL, --flags TEXT, --bots, --no-batch or --strict-verdict`,
+      );
   }
   options.flags = splitFlags(options.flags ?? env.SMOKE_FLAGS);
   options.named = options.tests.length > 0;
@@ -439,7 +447,13 @@ export function writeReceipt(receipt) {
 
 async function main() {
   const argv = process.argv.slice(2);
-  const options = parseArgs(argv, process.env);
+  let options;
+  try {
+    options = parseArgs(argv, process.env);
+  } catch (problem) {
+    console.error(`sketch:smoke: ${problem.message}`);
+    process.exit(2);
+  }
   const refusal = gateFlagsError(options);
   if (refusal) {
     console.error(refusal);

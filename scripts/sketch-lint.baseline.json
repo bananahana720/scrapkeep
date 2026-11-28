@@ -47,13 +47,8 @@
     "sketches/core-loop/src/world/terrain.gd": 2
   },
   "L14": [
-    "sketches/core-loop/src/boss/arena.gd:_ahead_bowl",
-    "sketches/core-loop/src/boss/arena.gd:_looks_warm",
     "sketches/core-loop/src/boss/boss.gd:_pickup_materials",
     "sketches/core-loop/src/boss/boss.gd:_pickup_mesh",
-    "sketches/core-loop/src/boss/requisition.gd:_ahead",
-    "sketches/core-loop/src/boss/requisition.gd:_ahead_reads",
-    "sketches/core-loop/src/boss/requisition.gd:_dressing",
     "sketches/core-loop/src/build/accretion.gd:_layout",
     "sketches/core-loop/src/build/accretion.gd:_part_meshes",
     "sketches/core-loop/src/build/panel_shell.gd:_meshes",
@@ -177,7 +172,6 @@
     "sketches/core-loop/src/core/beacon.gd:_slot_materials",
     "sketches/core-loop/src/core/build_stamp.gd:_stamp",
     "sketches/core-loop/src/core/radio_takes.gd:_doc",
-    "sketches/core-loop/src/core/shift_variants.gd:_forced",
     "sketches/core-loop/src/core/thread_guard.gd:_lock",
     "sketches/core-loop/src/core/trees/cannon.gd:NODES_WORLD_ONE",
     "sketches/core-loop/src/core/trees/kest.gd:NODES_WORLD_ONE",
@@ -189,12 +183,6 @@
     "sketches/core-loop/src/presentation/ace_sequencer.gd:_kept_lock",
     "sketches/core-loop/src/presentation/ace_sequencer.gd:_kept_order",
     "sketches/core-loop/src/presentation/ambient_life.gd:_painted",
-    "sketches/core-loop/src/presentation/arena_bowl_dress.gd:_ahead",
-    "sketches/core-loop/src/presentation/arena_bowl_dress.gd:_reading",
-    "sketches/core-loop/src/presentation/arena_bowl_dress.gd:_requested",
-    "sketches/core-loop/src/presentation/arena_mind_dress.gd:_kit_ahead",
-    "sketches/core-loop/src/presentation/arena_mind_dress.gd:_panorama_out",
-    "sketches/core-loop/src/presentation/arena_mind_dress.gd:_panorama_task",
     "sketches/core-loop/src/presentation/audio.gd:_cannon_streams",
     "sketches/core-loop/src/presentation/bake_look.gd:_lift",
     "sketches/core-loop/src/presentation/bake_look.gd:_ramp",
@@ -230,7 +218,6 @@
     "sketches/core-loop/src/presentation/enemy_motion.gd:_tag_mesh",
     "sketches/core-loop/src/presentation/fx_library.gd:_meshes",
     "sketches/core-loop/src/presentation/fx_library.gd:_shaders",
-    "sketches/core-loop/src/presentation/graphics_preset.gd:_target_server_active",
     "sketches/core-loop/src/presentation/harpoon_physics_rig.gd:_body_mesh",
     "sketches/core-loop/src/presentation/harpoon_physics_rig.gd:_cable_ink_mat",
     "sketches/core-loop/src/presentation/harpoon_physics_rig.gd:_core_mesh",
@@ -255,11 +242,6 @@
     "sketches/core-loop/src/presentation/palette_materials.gd:_painted_textures",
     "sketches/core-loop/src/presentation/palette_materials.gd:_slot_materials",
     "sketches/core-loop/src/presentation/palette_materials.gd:_wear",
-    "sketches/core-loop/src/presentation/park_props.gd:_cache_owner",
-    "sketches/core-loop/src/presentation/park_props.gd:_far_sources",
-    "sketches/core-loop/src/presentation/park_props.gd:_material",
-    "sketches/core-loop/src/presentation/park_props.gd:_meshes",
-    "sketches/core-loop/src/presentation/park_props.gd:_requested",
     "sketches/core-loop/src/presentation/park_props.gd:_stand_ins_lock",
     "sketches/core-loop/src/presentation/phase_music.gd:_on_disk",
     "sketches/core-loop/src/presentation/recipe_props.gd:_pieces",
@@ -913,5 +895,7 @@
     "sketches/core-loop/src/world/victory_lap.gd -> sketches/core-loop/src/ui/ending_sequence.gd",
     "sketches/core-loop/src/world/victory_lap.gd -> sketches/core-loop/src/ui/ui_fonts.gd",
     "sketches/core-loop/src/world/wave_cross.gd -> sketches/core-loop/src/presentation/palette_materials.gd"
-  ]
+  ],
+  "L21": ["sketches/core-loop/tests/support/teardown_noise.gd:_line"],
+  "L22": ["sketches/core-loop/tests/part_levels_test.gd"]
 }

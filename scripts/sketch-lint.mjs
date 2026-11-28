@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ALPHA_MAPS, PARK_MAPS, PILOT_IDS } from "./lib/game-defs.mjs";
 import { REPO_ROOT, git, nulSeparated } from "./lib/git.mjs";
-import { isMain } from "./lib/cli.mjs";
+import { flagValue, isMain } from "./lib/cli.mjs";
 import { walkSync } from "./lib/walk.mjs";
 import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
 
@@ -31,6 +31,12 @@ export const BASELINE_RULES = {
     keyOf: (item) => item.key,
     fileOf: (key) => key.split(" -> ")[0],
   },
+  L21: {
+    shape: "keys",
+    keyOf: (item) => item.key ?? item.path,
+    fileOf: (key) => key.split(":")[0],
+  },
+  L22: { shape: "keys" },
 };
 const UID_FOLDERS = ["addons", "src", "tests", "tools"];
 const MAX_QUARANTINE = 0;
@@ -684,6 +690,18 @@ export function baselineGrowth(before, after, renamed = new Map()) {
     Array.isArray(list) ? list.length : Object.values(list ?? {}).reduce((a, b) => a + b, 0);
   const grew = [];
   for (const [rule, now] of Object.entries(after)) {
+    const twice = Array.isArray(now)
+      ? [...new Set(now.filter((key, at) => now.indexOf(key) !== at))]
+      : [];
+    if (twice.length > 0)
+      grew.push(
+        finding(
+          "BASELINE",
+          BASELINE_PATH,
+          1,
+          `${rule} list holds ${twice.join(", ")} more than once: write the lists again with node scripts/sketch-lint.mjs --sketch core-loop --write-baseline`,
+        ),
+      );
     if (!Object.hasOwn(before, rule)) continue;
     const was = before[rule];
     const exact = Array.isArray(now) && BASELINE_RULES[rule]?.growth !== "count";
@@ -714,10 +732,15 @@ export function baselineGrowth(before, after, renamed = new Map()) {
       rule === "L14"
         ? "register a reset in sketches/core-loop/tools/test_batch_driver.gd"
         : "fix the offence";
+    const moved = added.filter((key) => key.split(" -> ").some((file) => renamed.has(file)));
+    const renames =
+      moved.length === 0
+        ? ", and no file it names was renamed"
+        : `; ${moved.length} of them ${moved.length === 1 ? "names a renamed file, and the base list lacks it" : "name a renamed file, and the base list lacks them"} under the old name too`;
     const change =
       size(now) > size(was)
         ? `grew from ${size(was)} to ${size(now)} entries`
-        : `has ${added.length} ${added.length === 1 ? "entry" : "entries"} the base list lacks, and no file it names was renamed`;
+        : `has ${added.length} ${added.length === 1 ? "entry" : "entries"} the base list lacks${renames}`;
     grew.push(
       finding(
         "BASELINE",
@@ -768,16 +791,14 @@ export function baselineText(baseline) {
 
 export function parseLintArgs(argv) {
   const options = { sketch: null, writeBaseline: false, base: null, layers: null };
-  const value = (at, needs) => {
-    if (!argv[at] || argv[at].startsWith("-")) throw new Error(`${argv[at - 1]} requires ${needs}`);
-    return argv[at];
-  };
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--sketch") options.sketch = value(++i, "a name, as in --sketch core-loop");
+    if (argv[i] === "--sketch")
+      options.sketch = flagValue(argv, ++i, "a name, as in --sketch core-loop");
     else if (argv[i] === "--layers") {
       const order = argv[i + 1];
       options.layers = order && !order.startsWith("-") ? parseLayerOrder(argv[++i]) : LAYERS;
-    } else if (argv[i] === "--base") options.base = value(++i, "a ref, as in --base origin/main");
+    } else if (argv[i] === "--base")
+      options.base = flagValue(argv, ++i, "a ref, as in --base origin/main");
     else if (argv[i] === "--write-baseline") options.writeBaseline = true;
     else
       throw new Error(
@@ -933,21 +954,24 @@ export function lintL13(file, rel, text, allowed = L13_ALLOWED) {
 }
 
 const staticVarDecl = /^static\s+var\s+([A-Za-z_]\w*)\b/;
+const declPrefix = "^\\s*((?:static\\s+|@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*)";
+const anyVarDecl = new RegExp(`${declPrefix}var\\s+([A-Za-z_]\\w*)\\b(.*)$`);
+const anyFuncDecl = new RegExp(`${declPrefix}func\\s+([A-Za-z_]\\w*)\\s*\\(`);
 const gdFuncDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(/;
 const resetFuncName = /^_?reset/i;
+const driverScript = "((?:src|tools|tests\\/support)\\/[^\"']+\\.gd)";
 
-export function parseBatchDriverRefs(text) {
-  return new Set(
-    [...text.matchAll(/res:\/\/((?:src|tools|tests\/support)\/[^"']+\.gd)/g)].map(
-      (match) => match[1],
-    ),
-  );
+function parseBatchDriverRefs(text) {
+  return new Set([...text.matchAll(new RegExp(`res:\\/\\/${driverScript}`, "g"))].map((m) => m[1]));
 }
 
-export function parseBatchDriverVars(text) {
+function parseBatchDriverVars(text) {
   const aliases = new Map();
   for (const match of text.matchAll(
-    /\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/((?:src|tools|tests\/support)\/[^"']+\.gd)"\s*\)/g,
+    new RegExp(
+      `\\bconst\\s+([A-Za-z_]\\w*)\\s*:?=\\s*preload\\(\\s*"res:\\/\\/${driverScript}"\\s*\\)`,
+      "g",
+    ),
   )) {
     aliases.set(match[1], match[2]);
   }
@@ -958,6 +982,139 @@ export function parseBatchDriverVars(text) {
     }
   }
   return direct;
+}
+
+function stripComment(raw) {
+  return raw.match(/^((?:[^"'#]|"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')*)/)[1];
+}
+
+function logicalLines(text) {
+  const out = [];
+  let open = null;
+  let tripleQuote = null;
+  text.split("\n").forEach((raw, index) => {
+    const inString = tripleQuote !== null;
+    const scanned = scanGdLine(raw, tripleQuote);
+    tripleQuote = scanned.tripleQuote;
+    if (inString && !open) return;
+    const code = inString ? scanned.code : stripComment(raw);
+    const depth =
+      (scanned.code.match(/[[({]/g) ?? []).length - (scanned.code.match(/[\])}]/g) ?? []).length;
+    if (open) {
+      open.code += ` ${code.trim()}`;
+      open.depth += depth;
+    } else if (code.trim()) open = { number: index + 1, code: code.trimEnd(), depth };
+    else return;
+    if (open.depth <= 0) {
+      out.push(open);
+      open = null;
+    }
+  });
+  if (open) out.push(open);
+  return out;
+}
+
+function gdFunctions(text) {
+  const bodies = new Map();
+  let body = null;
+  for (const { code } of logicalLines(text)) {
+    const fn = /^\S/.test(code) ? code.match(anyFuncDecl) : null;
+    if (fn) {
+      body = [];
+      bodies.set(fn[2], body);
+      continue;
+    }
+    if (/^\S/.test(code)) body = null;
+    else if (body && code.trim()) body.push(code.trim());
+  }
+  return bodies;
+}
+
+function parseBatchDriverResets(text) {
+  const paths = new Map();
+  for (const match of text.matchAll(
+    new RegExp(
+      `\\bconst\\s+([A-Za-z_]\\w*)\\s*:?=\\s*(?:preload\\(\\s*)?"res:\\/\\/${driverScript}"`,
+      "g",
+    ),
+  ))
+    paths.set(match[1], match[2]);
+  const aliases = new Map(
+    [...text.matchAll(/\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(/g)]
+      .filter((match) => paths.has(match[1]))
+      .map((match) => [match[1], paths.get(match[1])]),
+  );
+  const resets = new Map();
+  const reset = gdFunctions(text).get("_reset");
+  if (!reset) return resets;
+  const entry = (rel) => {
+    if (!resets.has(rel)) resets.set(rel, { calls: new Set(), values: new Map() });
+    return resets.get(rel);
+  };
+  for (const code of reset) {
+    const loaded = code.match(/^var\s+([A-Za-z_]\w*)\s*:?=\s*load\(\s*([A-Za-z_]\w*)\s*\)/);
+    if (loaded && paths.has(loaded[2])) aliases.set(loaded[1], paths.get(loaded[2]));
+    for (const [alias, rel] of aliases) {
+      const named = new RegExp(
+        `(?<![\\w.])${alias}\\.([A-Za-z_]\\w*)\\s*(\\(|\\.clear\\(\\)|=(?!=))(.*)`,
+      );
+      const hit = code.match(named);
+      if (!hit) continue;
+      if (hit[2] === "(") entry(rel).calls.add(hit[1]);
+      else
+        resetValue(
+          entry(rel).values,
+          hit[1],
+          hit[2] === "=" ? hit[3].replaceAll(`${alias}.`, "") : ".clear()",
+        );
+    }
+  }
+  return resets;
+}
+
+function gdValue(value) {
+  return value.replace(/\s+/g, "").replace(/,([\])}])/g, "$1");
+}
+
+function resetValue(values, name, value) {
+  values.set(name, [...(values.get(name) ?? []), gdValue(value)]);
+}
+
+export function parseBatchDriver(text) {
+  return {
+    refs: parseBatchDriverRefs(text),
+    vars: parseBatchDriverVars(text),
+    resets: parseBatchDriverResets(text),
+  };
+}
+
+const zeroValues = new Set(["null", "0", "0.0", "false", '""', '&""', "[]", "{}", ".clear()"]);
+
+function resetMatchesDeclared(declared, values) {
+  if (declared === null)
+    return values.some((value) => zeroValues.has(value) || /^\w+(?:\.ZERO|\(\))$/.test(value));
+  return values.some(
+    (value) =>
+      value === declared ||
+      (value === ".clear()" && /^(?:\[\]|\{\}|[A-Za-z_]\w*\.new\(\))$/.test(declared)),
+  );
+}
+
+function strictResets(text, rel, driver) {
+  const fromDriver = driver.resets.get(rel);
+  const values = new Map(fromDriver?.values ?? []);
+  if (!fromDriver) return values;
+  const bodies = gdFunctions(text);
+  const reached = new Set([...fromDriver.calls].filter((name) => bodies.has(name)));
+  for (const name of reached)
+    for (const code of bodies.get(name))
+      for (const call of code.matchAll(/(?<![\w.])([A-Za-z_]\w*)\s*\(/g))
+        if (bodies.has(call[1])) reached.add(call[1]);
+  for (const name of reached)
+    for (const code of bodies.get(name))
+      for (const hit of code.matchAll(/(?<!\w)([A-Za-z_]\w*)\s*(?:(\.clear\(\))|=(?!=)\s*(.*))/g))
+        resetValue(values, hit[1], hit[2] ?? hit[3]);
+  return values;
 }
 
 const testSupportLoad =
@@ -998,15 +1155,18 @@ export function preloadedTestSupportFiles(testFiles, toolFiles, relative) {
   return [...seen].sort().map((rel) => byRel.get(rel));
 }
 
-export function lintPreloadedTestSupport(
-  testFiles,
-  toolFiles,
-  relative,
-  driverRefs,
-  driverVars = new Set(),
-) {
+export function lintPreloadedTestSupport(testFiles, toolFiles, relative, driver) {
   const reached = preloadedTestSupportFiles(testFiles, toolFiles, relative);
   const findings = [];
+  if (driver.resets.size === 0)
+    findings.push(
+      finding(
+        "L21",
+        `${relative}/tools/test_batch_driver.gd`,
+        1,
+        "read no script reset in the batch driver's _reset(), so L21 checked nothing; restore its _reset() and the preloads it calls",
+      ),
+    );
   for (const folder of ["tools", "tests/support"]) {
     const prefix = `${folder}/`;
     if (!reached.some((file) => file.rel.startsWith(prefix))) {
@@ -1021,7 +1181,7 @@ export function lintPreloadedTestSupport(
     }
   }
   for (const file of reached) {
-    findings.push(...lintL14(file.path, file.rel, file.text, driverRefs, null, driverVars));
+    findings.push(...lintL14(file.path, file.rel, file.text, driver));
   }
   return findings;
 }
@@ -1042,29 +1202,45 @@ function resetMethodText(text) {
   return kept.join("\n");
 }
 
-export function lintL14(file, rel, text, driverRefs, baseline = null, driverVars = new Set()) {
-  if (!text.includes("static") || !/\bstatic\s+var\b/.test(text)) return [];
-  const registered = driverRefs.has(rel);
+function declaredValue(code) {
+  const value = code.match(anyVarDecl)[3].match(/^\s*(?::(?!=)[^=]*)?:?=\s*(.*)$/)?.[1];
+  return value === undefined ? null : gdValue(value).replace(/:$/, "");
+}
+
+export function lintL14(file, rel, text, driver, baseline = null) {
+  if (!/\bstatic\b.*\bvar\b/.test(text)) return [];
+  const registered = driver.refs.has(rel);
   const resetBody = registered ? resetMethodText(text) : "";
+  const strict = strictResets(text, rel, driver);
   const out = [];
-  for (const line of codeLines(text)) {
-    const match = line.code.match(staticVarDecl);
-    if (!match) continue;
-    const varName = match[1];
+  const logical = new Map(logicalLines(text).map((line) => [line.number, line.code.trim()]));
+  for (const { number, code } of codeLines(text)) {
+    const match = code.match(anyVarDecl);
+    if (!match || !/\bstatic\b/.test(match[1])) continue;
+    const varName = match[2];
     const relKey = `${rel}:${varName}`;
     const key = `${file}:${varName}`;
     if (baseline && (baseline.has(key) || baseline.has(relKey))) continue;
-    const clearedInReset =
-      registered &&
-      (driverVars.has(relKey) ||
-        new RegExp(`\\b${varName}\\b\\s*(?:=|\\.clear\\(|\\.erase\\()`).test(resetBody));
-    if (clearedInReset) continue;
+    const declared = declaredValue(logical.get(number) ?? stripComment(code));
+    const values = strict.get(varName) ?? [];
+    if (values.length > 0 && resetMatchesDeclared(declared, values)) continue;
+    const lenient =
+      !staticVarDecl.test(code) ||
+      (registered &&
+        (driver.vars.has(relKey) ||
+          new RegExp(`\\b${varName}\\b\\s*(?:=|\\.clear\\(|\\.erase\\()`).test(resetBody)));
+    const why =
+      values.length === 0
+        ? `nothing sketches/core-loop/tools/test_batch_driver.gd _reset() runs resets ${varName}`
+        : `${varName} is reset to ${values.join(" or ")}, not to its declared ${declared ?? "default"}`;
     out.push({
       ...finding(
-        "L14",
+        lenient ? "L21" : "L14",
         file,
-        line.number,
-        `mutable static var ${varName} is not reset per-variable: register ${rel} in sketches/core-loop/tools/test_batch_driver.gd _reset() and clear ${varName} in the script's reset method`,
+        number,
+        lenient
+          ? `mutable static var ${varName} only looks reset: ${why}; call the reset from _reset() and give ${varName} its declared value there`
+          : `mutable static var ${varName} is not reset per-variable: register ${rel} in sketches/core-loop/tools/test_batch_driver.gd _reset() and clear ${varName} in the script's reset method`,
       ),
       key,
     });
@@ -1142,6 +1318,8 @@ function scanGdLine(raw, tripleQuote) {
   return { strings, code, tripleQuote };
 }
 
+const loadLines = new WeakMap();
+
 export function buildScriptGraph(files) {
   const relToPath = new Map();
   const classOwners = new Map();
@@ -1162,8 +1340,10 @@ export function buildScriptGraph(files) {
   const classMatchRe =
     classNames.length > 0 ? new RegExp(`\\b(?:${classNames.join("|")})\\b`, "g") : null;
   const graph = new Map();
+  const lines = new Map();
+  loadLines.set(graph, lines);
   for (const file of files) {
-    const deps = new Set();
+    const deps = new Map();
     const hasRes = file.text.includes("res://src/");
     const hasClass = classTestRe !== null && classTestRe.test(file.text);
     if (hasRes || hasClass) {
@@ -1181,18 +1361,19 @@ export function buildScriptGraph(files) {
           for (const literal of scanned.strings) {
             if (!literal.startsWith("res://src/") || !literal.endsWith(".gd")) continue;
             const target = relToPath.get(literal.slice(6));
-            if (target && target !== file.path) deps.add(target);
+            if (target && target !== file.path && !deps.has(target)) deps.set(target, line.number);
           }
         }
         if (hasClass && scanned.code) {
           for (const match of scanned.code.matchAll(classMatchRe)) {
             const target = classOwners.get(match[0]);
-            if (target && target !== file.path) deps.add(target);
+            if (target && target !== file.path && !deps.has(target)) deps.set(target, line.number);
           }
         }
       }
     }
-    graph.set(file.path, [...deps].sort());
+    graph.set(file.path, [...deps.keys()].sort());
+    for (const [target, number] of deps) lines.set(`${file.path} -> ${target}`, number);
   }
   return graph;
 }
@@ -1421,6 +1602,18 @@ export function lintL20(files, graph = buildScriptGraph(files), layers = LAYERS)
     ];
   const layerOf = layerIndex(layers);
   const findings = [];
+  const dirs = new Set([...graph.keys()].map(srcDir));
+  const srcRoot = files[0].path.slice(0, -scriptRel(files[0].path).length) + "src";
+  for (const dir of layers.flat())
+    if (!dirs.has(dir))
+      findings.push(
+        finding(
+          "L20",
+          `${srcRoot}/${dir}`,
+          1,
+          `LAYERS names ${dir}, which holds no script; take it out of LAYERS in scripts/sketch-lint.mjs and ${LAYER_RECORD}, or restore its scripts`,
+        ),
+      );
   for (const file of graph.keys()) {
     const dir = srcDir(file);
     if (!layerOf.has(dir))
@@ -1434,16 +1627,20 @@ export function lintL20(files, graph = buildScriptGraph(files), layers = LAYERS)
       );
   }
   const place = (dir) => `${dir} is layer ${layerOf.get(dir) + 1}`;
+  const lines = loadLines.get(graph);
   for (const { from, to } of upwardPairs(graph, layerOf)) {
     const low = srcDir(from);
+    const key = `${from} -> ${to}`;
+    if (!lines?.has(key))
+      throw new Error(`L20 has no line for the load ${key}; build the graph with buildScriptGraph`);
     findings.push({
       ...finding(
         "L20",
         from,
-        1,
+        lines.get(key),
         `loads ${scriptRel(to)}, a script in a higher layer: ${place(low)} and ${place(srcDir(to))} (${LAYER_RECORD}).\n    Hand the value or a callable in from the script above, move a pure data file down to ${low}, or move the fact to its owner in ${low}; never list the pair`,
       ),
-      key: `${from} -> ${to}`,
+      key,
     });
   }
   return findings.sort((a, b) => (a.key ?? a.path).localeCompare(b.key ?? b.path));
@@ -1506,112 +1703,161 @@ const anyLiteral = /"[^"]*"/g;
 const textRead = /\bFileAccess\s*\.\s*(?:get_file_as_string|open)\s*\(([^)]*)/g;
 const folderList = /\bDirAccess\s*\.\s*(?:open|get_files_at|get_directories_at)\s*\(([^)]*)/g;
 const scriptNameFilter = /\.ends_with\(\s*"\.gd"\s*\)|\.get_extension\(\)\s*==\s*"gd"/;
-const literalBinding =
+const oldBinding =
   /^(?:static\s+)?(?:const|var)\s+([A-Za-z_]\w*)\s*(?::\s*[\w[\]]+\s*)?:?=\s*(\[[^\]]*\]?|"[^"]*")/;
-const literalLoop = /^for\s+([A-Za-z_]\w*)\s+in\s+([A-Za-z_]\w*|\[[^\]]*\]?)/;
+const oldLoop = /^for\s+([A-Za-z_]\w*)\s+in\s+([A-Za-z_]\w*|\[[^\]]*\]?)/;
+const literalBinding =
+  /^(?:static\s+)?(?:const|var)\s+([A-Za-z_]\w*)\s*(?::\s*[\w[\], ]+?\s*)?:?=\s*(?:[A-Z]\w*\(\s*)?(\[[^\]]*\]?|\{[^}]*\}?|"[^"]*")/;
+const literalLoop = /^for\s+([A-Za-z_]\w*)(?:\s*:\s*[\w[\]]+)?\s+in\s+([A-Za-z_]\w*|\[[^\]]*\]?)/;
+const lambdaOverList =
+  /([A-Za-z_]\w*|\[[^\]]*\])\s*\.\s*(?:map|filter|any|all)\(\s*func\s*\(\s*([A-Za-z_]\w*)/;
+const lambdaBinding = /^var\s+([A-Za-z_]\w*)\s*(?::[^=]*)?:?=\s*func\s*\(([^)]*)\)/;
+const localBinding = /^var\s+([A-Za-z_]\w*)\s*(?::[^=]*)?:?=\s*(.+)$/;
 const funcDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(([^)]*)\)/;
+const preloadAlias =
+  /^const\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/(tests\/[^"]+\.gd)"\s*\)/;
+const extendsTest = /^extends\s+"res:\/\/(tests\/[^"]+\.gd)"/;
 
 function joinList(raw, index, value) {
-  for (
-    let next = index + 1;
-    value.startsWith("[") && !value.includes("]") && next < raw.length;
-    next++
-  )
+  const close = { "[": "]", "{": "}" }[value[0]];
+  for (let next = index + 1; close && !value.includes(close) && next < raw.length; next++)
     value += raw[next];
   return value;
 }
 
-function readScopes(text) {
+function paramNames(list) {
+  return list
+    .split(",")
+    .map((param) => param.trim().match(/^[A-Za-z_]\w*/)?.[0])
+    .filter(Boolean);
+}
+
+function words(code) {
+  return code.match(/\b[A-Za-z_]\w*\b/g) ?? [];
+}
+
+function substitute(value, names) {
+  return /^[[{]/.test(value)
+    ? value.replace(/"[^"]*"|\b[A-Za-z_]\w*\b/g, (token) => names.get(token) ?? token)
+    : value;
+}
+
+function readScopes(text, strict) {
   const raw = text.split("\n");
   const global = new Map();
   let local = new Map();
   let fn = null;
+  let lambda = null;
   const scopes = new Map();
+  const indent = (line) => line.match(/^\s*/)[0].length;
   for (let index = 0; index < raw.length; index++) {
     const topLevel = /^\S/.test(raw[index]);
     const code = raw[index].trim();
+    if (lambda && code && indent(raw[index]) <= lambda.indent) lambda = null;
     if (topLevel) {
       local = new Map();
       const decl = code.match(funcDecl);
-      fn = decl
-        ? {
-            name: decl[1],
-            params: decl[2]
-              .split(",")
-              .map((param) => param.trim().match(/^[A-Za-z_]\w*/)?.[0])
-              .filter(Boolean),
-          }
-        : null;
+      fn = decl ? { name: decl[1], params: paramNames(decl[2]) } : null;
     }
-    const bound = code.match(literalBinding);
-    if (bound) (topLevel ? global : local).set(bound[1], joinList(raw, index, bound[2]));
-    const loop = code.match(literalLoop);
-    if (loop) {
-      const names = new Map([...global, ...local]);
-      const value = loop[2].startsWith("[")
-        ? joinList(raw, index, loop[2]).replace(
-            /"[^"]*"|\b[A-Za-z_]\w*\b/g,
-            (token) => names.get(token) ?? token,
-          )
-        : names.get(loop[2]);
-      if (value) local.set(loop[1], value);
+    const names = () => new Map([...global, ...local]);
+    const bound = code.match(strict ? literalBinding : oldBinding);
+    if (bound) {
+      const value = joinList(raw, index, bound[2]);
+      (topLevel ? global : local).set(bound[1], strict ? substitute(value, names()) : value);
     }
-    scopes.set(index + 1, { names: new Map([...global, ...local]), fn });
+    const loop = code.match(strict ? literalLoop : oldLoop);
+    const mapped = loop || !strict || !code.includes("func") ? null : code.match(lambdaOverList);
+    const [name, over] = loop ? [loop[1], loop[2]] : mapped ? [mapped[2], mapped[1]] : [];
+    if (name) {
+      const value = over.startsWith("[")
+        ? substitute(joinList(raw, index, over), names())
+        : names().get(over);
+      if (value) local.set(name, value);
+    }
+    const lambdaDecl = strict ? code.match(lambdaBinding) : null;
+    if (lambdaDecl)
+      lambda = {
+        name: lambdaDecl[1],
+        params: paramNames(lambdaDecl[2]),
+        indent: indent(raw[index]),
+      };
+    const derived = strict && !topLevel && fn && !lambdaDecl ? code.match(localBinding) : null;
+    if (derived && words(derived[2]).some((word) => fn.params.includes(word)))
+      fn.params.push(derived[1]);
+    scopes.set(index + 1, { names: names(), fn, lambda });
   }
   return scopes;
 }
 
-function handReads(file, rel, text) {
-  if (rel === SOURCE_READER || !rel.startsWith("tests/")) return [];
-  if (!text.includes("FileAccess") && !text.includes("DirAccess")) return [];
+const helperCall = (prefix, name, strict) =>
+  new RegExp(
+    String.raw`(?:^|[^\w.])${prefix}${name}${strict ? String.raw`(?:\.call)?` : ""}\s*\(([^)]*)`,
+    "g",
+  );
+
+function scanReads(file, rel, text, strict) {
+  const scan = { file, rel, text, strict, reads: new Set(), throughParam: new Map(), lists: [] };
+  const reads = text.includes("FileAccess") || text.includes("DirAccess");
+  if (!reads && !(strict && text.includes("res://tests/"))) return { ...scan, lines: [] };
   const lines = codeLines(text);
-  const scopes = readScopes(text);
+  let scopes = null;
+  const scope = (line) => (scopes ??= readScopes(text, strict)).get(line.number);
   const resolve = (line, arg) =>
-    arg.replace(/\b[A-Za-z_]\w*\b/g, (word) => scopes.get(line.number).names.get(word) ?? word);
-  const picksScripts = lines.some((line) => scriptNameFilter.test(line.code));
-  const builtFromListing = (arg) =>
-    (arg.match(anyLiteral) ?? []).every(
-      (literal) => scriptRootLiteral.test(literal) && !/\.\w+"$/.test(literal),
-    );
+    arg.replace(/\b[A-Za-z_]\w*\b/g, (word) => scope(line).names.get(word) ?? word);
   const args = (line, pattern) =>
     [...line.code.matchAll(pattern)].map((match) => ({
       bare: match[1].trim(),
       arg: resolve(line, match[1]),
     }));
-  const throughParam = new Map();
+  Object.assign(scan, { lines, args });
+  if (!reads) return scan;
+  const picksScripts = lines.some((line) => scriptNameFilter.test(line.code));
+  const builtFromListing = (arg) =>
+    (arg.match(anyLiteral) ?? []).every(
+      (literal) => scriptRootLiteral.test(literal) && !/\.\w+"$/.test(literal),
+    );
+  const first = (bare) => bare.split(",")[0];
+  const mentions = (bare, params) =>
+    strict
+      ? words(first(bare)).some((word) => params.includes(word))
+      : params.includes(first(bare).trim());
   for (const line of lines) {
-    const fn = scopes.get(line.number).fn;
-    for (const { bare } of args(line, textRead))
-      if (fn && fn.params.includes(bare.split(",")[0].trim()) && !/\bWRITE\b/.test(bare))
-        throughParam.set(fn.name, [...(throughParam.get(fn.name) ?? []), line]);
+    const { fn, lambda } = scope(line);
+    for (const { bare } of args(line, textRead)) {
+      if (/\bWRITE\b/.test(bare)) continue;
+      for (const owner of strict ? [fn, lambda] : [fn])
+        if (owner && mentions(bare, owner.params))
+          scan.throughParam.set(owner.name, [...(scan.throughParam.get(owner.name) ?? []), line]);
+    }
   }
-  const reads = new Set();
   for (const line of lines) {
     for (const { arg } of args(line, textRead))
       if (
         !/\bWRITE\b/.test(arg) &&
         (scriptPathLiteral.test(arg) || (picksScripts && builtFromListing(arg)))
       )
-        reads.add(line);
-    for (const [name, sites] of throughParam) {
-      const call = new RegExp(String.raw`(?:^|[^\w.])${name}\s*\(([^)]*)`, "g");
-      if (args(line, call).some(({ arg }) => scriptPathLiteral.test(arg)))
-        for (const site of sites) reads.add(site);
-    }
+        scan.reads.add(line);
   }
-  if (reads.size === 0) return [];
-  const lists = picksScripts
+  scan.lists = picksScripts
     ? lines.filter((line) =>
         args(line, folderList).some(
           ({ arg }) => scriptRootLiteral.test(arg) && builtFromListing(arg),
         ),
       )
     : [];
-  const message =
-    "reads script source by hand; read script source through tests/support/source_scan.gd";
-  return [...new Set([...lists, ...reads])]
-    .sort((a, b) => a.number - b.number)
-    .map((line) => finding("L19", file, line.number, message));
+  return scan;
+}
+
+function markHelperReads(caller, helper, prefix) {
+  for (const [name, sites] of helper.throughParam) {
+    const call = helperCall(prefix, name, helper.strict);
+    for (const line of caller.lines)
+      if (
+        line.code.includes(name) &&
+        caller.args(line, call).some(({ arg }) => scriptPathLiteral.test(arg))
+      )
+        for (const site of sites) helper.reads.add(site);
+  }
 }
 
 export function lintL19(files, relative) {
@@ -1625,9 +1871,41 @@ export function lintL19(files, relative) {
         "the shared source reader is not among the test scripts read, so L19 checked nothing; restore tests/support/source_scan.gd",
       ),
     ];
-  return files.flatMap((file) =>
-    handReads(file.path, file.path.slice(relative.length + 1), file.text),
-  );
+  const scansOf = (strict) => {
+    const scans = new Map();
+    for (const file of files) {
+      const rel = file.path.slice(relative.length + 1);
+      if (rel !== SOURCE_READER && rel.startsWith("tests/"))
+        scans.set(rel, scanReads(file.path, rel, file.text, strict));
+    }
+    for (const scan of scans.values()) markHelperReads(scan, scan, strict ? "(?:self\\.)?" : "");
+    if (strict) markCrossFileReads(scans);
+    return scans;
+  };
+  const old = scansOf(false);
+  const message =
+    "reads script source by hand; read script source through tests/support/source_scan.gd";
+  return [...scansOf(true).values()].flatMap((scan) => {
+    const listed = old.get(scan.rel);
+    const shown = listed.reads.size > 0 ? listed : scan;
+    if (shown.reads.size === 0) return [];
+    return [...new Set([...shown.lists, ...shown.reads])]
+      .sort((a, b) => a.number - b.number)
+      .map((line) => finding(shown === listed ? "L19" : "L22", scan.file, line.number, message));
+  });
+}
+
+function markCrossFileReads(scans) {
+  for (const scan of scans.values()) {
+    if (!scan.text.includes("res://tests/")) continue;
+    for (const line of scan.lines) {
+      const alias = line.code.match(preloadAlias);
+      const base = line.code.match(extendsTest);
+      const helper = scans.get(alias?.[2] ?? base?.[1]);
+      if (helper && helper !== scan && helper.throughParam.size > 0)
+        markHelperReads(scan, helper, alias ? `${alias[1]}\\.` : "(?:self\\.)?");
+    }
+  }
 }
 
 export function lintTrackedUids(relative, repoRoot = root) {
@@ -1678,8 +1956,7 @@ export function lintSketch(sketch) {
     sketch === "core-loop" && existsSync(batchDriverPath)
       ? readFileSync(batchDriverPath, "utf8")
       : "";
-  const driverRefs = driverText ? parseBatchDriverRefs(driverText) : new Set();
-  const driverVars = driverText ? parseBatchDriverVars(driverText) : new Set();
+  const driver = parseBatchDriver(driverText);
   const srcFiles = sources(path.join(directory, "src"), new Set([".gd"]));
   for (const file of srcFiles) {
     if (file.path !== `${relative}/src/core/safe_store.gd`)
@@ -1695,7 +1972,7 @@ export function lintSketch(sketch) {
     findings.push(...lintL11(file.path, rel, file.text));
     findings.push(...lintL12(file.path, rel, file.text));
     findings.push(...lintL13(file.path, rel, file.text));
-    findings.push(...lintL14(file.path, rel, file.text, driverRefs, null, driverVars));
+    findings.push(...lintL14(file.path, rel, file.text, driver));
   }
   const graph = buildScriptGraph(srcFiles);
   findings.push(...lintL16(srcFiles, graph));
@@ -1722,9 +1999,7 @@ export function lintSketch(sketch) {
     }
   }
   if (sketch === "core-loop") {
-    findings.push(
-      ...lintPreloadedTestSupport(testFiles, toolFiles, relative, driverRefs, driverVars),
-    );
+    findings.push(...lintPreloadedTestSupport(testFiles, toolFiles, relative, driver));
   }
   const flagFiles = [
     ...testFiles,
