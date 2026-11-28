@@ -313,7 +313,7 @@ func _step_arc_chords(delta: float, enemies: Array) -> void:
 				if not _alive(enemy):
 					continue
 				if combat.in_line(from_pt, to_pt, float(c["width"]), enemy.global_position, combat._hull(enemy)):
-					combat._hit(enemy, "arc", float(c["damage"]), to_pt - from_pt, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "bank_arc")
+					combat.deal_hit(enemy, "arc", float(c["damage"]), to_pt - from_pt, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "bank_arc")
 					c["hits"] = int(c["hits"]) + 1
 		if float(c["left"]) > 0.0:
 			kept.append(c)
@@ -372,7 +372,7 @@ func _step_halos(delta: float, enemies: Array) -> void:
 				continue
 			if combat.in_ring(pos, radius, enemy):
 				struck[eid] = true
-				combat._hit(enemy, "arc", float(h["damage"]), enemy.global_position - pos, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "arc_ring")
+				combat.deal_hit(enemy, "arc", float(h["damage"]), enemy.global_position - pos, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "arc_ring")
 		if float(h["age"]) < float(h["life"]):
 			kept.append(h)
 	_halos = kept
@@ -481,7 +481,7 @@ func _step_augers(delta: float, enemies: Array) -> void:
 				if not _alive(enemy):
 					continue
 				if combat.in_ring(at, radius, enemy):
-					combat._hit(enemy, "runner", float(a["damage"]), enemy.global_position - at, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "auger_slam")
+					combat.deal_hit(enemy, "runner", float(a["damage"]), enemy.global_position - at, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "auger_slam")
 		if float(a["left"]) > 0.0:
 			kept.append(a)
 	_augers = kept
@@ -557,7 +557,7 @@ func _step_seams(delta: float, enemies: Array) -> void:
 				if not _alive(enemy):
 					continue
 				if combat.in_line(from_pt, to_pt, float(s["width"]), enemy.global_position, combat._hull(enemy)):
-					combat._hit(enemy, "sticky", float(s["damage"]), to_pt - from_pt, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "thermite_slam")
+					combat.deal_hit(enemy, "sticky", float(s["damage"]), to_pt - from_pt, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "thermite_slam")
 		if float(s["left"]) > 0.0:
 			kept.append(s)
 	_seams = kept
@@ -675,10 +675,10 @@ func _step_whirls(delta: float, enemies: Array) -> void:
 				struck[eid] = true
 				w["bowled"] = int(w["bowled"]) + 1
 				var tangent := Vector3(-sin(angle), 0.0, cos(angle))
-				combat._hit(enemy, "claw", float(w["damage"]), tangent, WHIRL_BOWL_KNOCK, "", "item_proc", "claw_whirl")
+				combat.deal_hit(enemy, "claw", float(w["damage"]), tangent, WHIRL_BOWL_KNOCK, "", "item_proc", "claw_whirl")
 		if frac >= 1.0:
 			var release_tan := Vector3(-sin(angle), 0.0, cos(angle))
-			combat._hit(target, "claw", float(w["damage"]) * 0.75, release_tan, WHIRL_BOWL_KNOCK, "", "item_proc", "claw_whirl")
+			combat.deal_hit(target, "claw", float(w["damage"]) * 0.75, release_tan, WHIRL_BOWL_KNOCK, "", "item_proc", "claw_whirl")
 		else:
 			kept.append(w)
 	_whirls = kept
@@ -715,7 +715,7 @@ func _step_tape_echoes(delta: float) -> void:
 		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not _alive(enemy) or not combat.in_ring(pt, Weapons.BALANCE_RADIUS, enemy):
 				continue
-			combat._ledger_hit(enemy, dmg, pt, Weapons.LEDGER_KNOCK * 0.6, "item_proc")
+			combat.ledger_hit(enemy, dmg, pt, Weapons.LEDGER_KNOCK * 0.6, "item_proc")
 			hits += 1
 		combat.effects.ring(pt, Weapons.BALANCE_RADIUS, ClassDef.TALLY_COLOR)
 		combat.effects.ring(pt, Weapons.BALANCE_RADIUS * 0.68, Palette.LEDGER_CREAM)
@@ -813,7 +813,7 @@ func _step_orbit_halo(delta: float, enemies: Array) -> void:
 				continue
 			if combat.in_ring(orb, ORBIT_HIT_RADIUS, enemy):
 				cd_map[eid] = _clock + ORBIT_HIT_CD
-				combat._hit(enemy, "arc", float(_orbit_halo["damage"]), enemy.global_position - ball, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "halo_discharge")
+				combat.deal_hit(enemy, "arc", float(_orbit_halo["damage"]), enemy.global_position - ball, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "halo_discharge")
 				_orbit_halo["hits"] = int(_orbit_halo["hits"]) + 1
 
 
@@ -905,7 +905,7 @@ func _fire_snare_detonate(f: float, shape: Dictionary) -> void:
 			"left": SNARE_DURATION,
 			"color": ClassDef.KEST_COLOR,
 		})
-		combat._hit(enemy, "line", dmg, Vector3.UP, 0.0, "", "item_proc", "snare_detonate")
+		combat.deal_hit(enemy, "line", dmg, Vector3.UP, 0.0, "", "item_proc", "snare_detonate")
 		combat.effects.ring(apex, 2.0, ClassDef.KEST_COLOR)
 		snared += 1
 	if snared > 0:

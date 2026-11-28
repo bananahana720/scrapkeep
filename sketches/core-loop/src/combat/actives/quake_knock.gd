@@ -143,7 +143,7 @@ func _strike(ring: Node3D, dmg: float) -> void:
 			struck.append(enemy)
 	for enemy in struck:
 		if is_instance_valid(enemy) and not enemy.is_dead():
-			combat._hit(enemy, KIND, dmg, enemy.global_position - ring.center, KNOCK, "", SOURCE, IMPACT)
+			combat.deal_hit(enemy, KIND, dmg, enemy.global_position - ring.center, KNOCK, "", SOURCE, IMPACT)
 	_chain(struck, dmg)
 	_shatter(ring)
 	spent.append([ring, LINGER])
@@ -172,7 +172,7 @@ func _chain(struck: Array, dmg: float) -> void:
 				break
 			visited.append(next)
 			combat.effects.arc(at, next.global_position, ActiveFx.peak(COLOR))
-			combat._hit(next, KIND, hit, next.global_position - at, KNOCK * 0.5, "", SOURCE, IMPACT)
+			combat.deal_hit(next, KIND, hit, next.global_position - at, KNOCK * 0.5, "", SOURCE, IMPACT)
 			at = next.global_position
 
 

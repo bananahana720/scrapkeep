@@ -300,7 +300,7 @@ func _interruptions() -> void:
 	var enemy = await _half_windup()
 	# Real combat ram knocks above Counter.INTERRUPT and drives the existing reaction.
 	var row: Dictionary = EventKinds.impact("ram")
-	_game.combat._hit(enemy, "ram", 1.0, Vector3.RIGHT, row["knock"], "", "", "ram")
+	_game.combat.deal_hit(enemy, "ram", 1.0, Vector3.RIGHT, row["knock"], "", "", "ram")
 	var pivot_during_warn: Transform3D = enemy.reaction_pivot.transform
 	enemy._pose()
 	var preserves_warn: bool = enemy.phase == 1 and enemy.reaction_pivot.transform == pivot_during_warn

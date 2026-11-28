@@ -124,7 +124,7 @@ func _run() -> void:
 	await physics_frame
 	var tier_ok: bool = game.player.speed_tier() >= 1
 	var live_landed: bool = drone._landed
-	game.combat._hit(drone, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
+	game.combat.deal_hit(drone, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
 	var batted_now: int = drone.batted
 	await physics_frame
 	t.check("KD-4 bat", live and tier_ok and not live_landed and batted_now == 1 and drone.phase == drone.Phase.ROAM and game.combat.last_player_hit.is_empty(),
@@ -139,7 +139,7 @@ func _run() -> void:
 	_fast_ball(0.5)
 	await physics_frame
 	var slow_tier: int = game.player.speed_tier()
-	game.combat._hit(drone, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
+	game.combat.deal_hit(drone, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
 	var still_live: bool = drone.phase == drone.Phase.LIVE
 	await _until(drone, drone.Phase.ROAM)
 	t.check("KD-5 slow ball", live and slow_tier == 0 and drone.batted == 0 and still_live and drone.dives == 1 and drone._landed,

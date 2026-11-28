@@ -486,7 +486,7 @@ func landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 		if not is_instance_valid(enemy) or enemy.is_dead() or enemy.global_position.distance_to(at) > radius:
 			continue
 		_note_target(enemy, _cast)
-		dealt += combat._ult_hit(enemy, "ultimate", damage, at, true)
+		dealt += combat.ult_hit(enemy, "ultimate", damage, at, true)
 		hits += 1
 	if _id == "minelayer":
 		for c in _mines:
@@ -524,7 +524,7 @@ func blast_hit(charge: Dictionary, enemy: Node3D, damage: float, at: Vector3) ->
 	_note_target(enemy, cast)
 	var held := _posture_spent
 	_posture_spent = cast["posture"]
-	var dealt: float = combat._ult_hit(enemy, "sticky", damage, at, false)
+	var dealt: float = combat.ult_hit(enemy, "sticky", damage, at, false)
 	_posture_spent = held
 	if cast == _cast:
 		_record["volley_hits"] = int(_record.get("volley_hits", 0)) + 1

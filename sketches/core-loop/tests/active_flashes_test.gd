@@ -9,7 +9,7 @@ const T := preload("res://tests/support/t.gd")
 
 # Every active obeys Reduce flashes (#94; the sitting watch list's line on actives). A source
 # scan of src/combat/actives (subfolders too) fails on any combat.effects arc, ring, spark or beam
-# call, or chain colour handed to combat._chain, whose colour skips ActiveFx.peak, and on any other
+# call, or chain colour handed to combat.chain_hit, whose colour skips ActiveFx.peak, and on any other
 # use of effects (an alias, a call by name), so a new active that ignores the setting fails here.
 # combat.effects draws every mark at its colour's alpha. Then a real Game fires all six actives
 # with the setting off and on and reads the alpha effects draws each mark at (effects.brightest,

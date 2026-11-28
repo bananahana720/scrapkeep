@@ -463,7 +463,7 @@ func _punch(target: Node3D, force: float, mult: float, dir: Vector3) -> void:
 	elif _boss(target):
 		combat.strike(target, "ram", ram_force(punch * Ultimate.BOSS_MULT), "", "special")
 	else:
-		combat._hit(target, "ram", ram_force(punch), dir, Weapons.LINE_PUNCH_KNOCK, "", "special", "overdrive")
+		combat.deal_hit(target, "ram", ram_force(punch), dir, Weapons.LINE_PUNCH_KNOCK, "", "special", "overdrive")
 	last_punch = {"id": target.get_instance_id(), "clock": _clock, "punch": punch, "dir": dir}
 	_punches += 1
 	if _punches == LINE_TRUE_PUNCHES:
@@ -1266,11 +1266,11 @@ func _clear_beams() -> void:
 func _beam_hit(enemy: Node3D, damage: float, from: Vector3) -> void:
 	_cut[enemy.get_instance_id()] = true
 	if _warden(enemy):
-		combat._ult_hit(enemy, "runner", damage, from, false)
+		combat.ult_hit(enemy, "runner", damage, from, false)
 	elif _boss(enemy):
 		combat.strike(enemy, "runner", damage * Ultimate.BOSS_MULT, "", "special")
 	else:
-		combat._hit(enemy, "runner", damage, enemy.global_position - from, 0.0, "", "special")
+		combat.deal_hit(enemy, "runner", damage, enemy.global_position - from, 0.0, "", "special")
 
 
 func _peak_beat(beat: int) -> bool:
@@ -1456,12 +1456,12 @@ func _breach(shape: Dictionary, at: Vector3, heading: Vector3, reach: float, pin
 	shape["strict_angle"] = true
 	for enemy in select(shape):
 		if _warden(enemy) or _boss(enemy):
-			dealt += combat._ult_hit(enemy, "slam", damage, at, true)
+			dealt += combat.ult_hit(enemy, "slam", damage, at, true)
 		else:
 			if enemy.has_method("_on_slammed"):
 				enemy._on_slammed(at, 1.0, 1.0)
 			var falloff := clampf(1.0 - _flat(enemy.global_position - at).length() / reach, 0.0, 1.0)
-			combat._hit(enemy, "slam", slam_force(damage), heading, Ultimate.LANDING_KNOCK * falloff * pins, "", "special", "slam")
+			combat.deal_hit(enemy, "slam", slam_force(damage), heading, Ultimate.LANDING_KNOCK * falloff * pins, "", "special", "slam")
 			dealt += damage
 		hits += 1
 	_draw_shape("rivet_breach", shape)
@@ -1619,7 +1619,7 @@ func drive_step(ball: Vector3) -> int:
 		elif _boss(enemy):
 			combat.strike(enemy, "ram", ram_force(damage * Ultimate.BOSS_MULT), "", "special")
 		else:
-			combat._hit(enemy, "ram", ram_force(damage), (outward + heading).normalized(), Weapons.DRIVE_KNOCK * float(_knob("ult_pins", 1.0)), "", "special", "overdrive")
+			combat.deal_hit(enemy, "ram", ram_force(damage), (outward + heading).normalized(), Weapons.DRIVE_KNOCK * float(_knob("ult_pins", 1.0)), "", "special", "overdrive")
 		rams += 1
 	return rams
 

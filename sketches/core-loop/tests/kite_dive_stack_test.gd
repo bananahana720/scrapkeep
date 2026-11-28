@@ -161,7 +161,7 @@ func _run() -> void:
 	game.player.set_velocity_now(Vector3(1.2 * game.player.tuning.f("cruise"), 0.0, 0.0))
 	await physics_frame
 	var near: bool = drone.global_position.distance_to(game.player.ball_position()) >= 1.6
-	game.combat._hit(drone, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
+	game.combat.deal_hit(drone, "ram", 1.0, Vector3.RIGHT, EventKinds.IMPACT["ram"]["knock"], "", "", "ram")
 	t.check("KS-bat", live and near and drone.batted == 1,
 		"live %s, drone not inside the ball %s, batted %d" % [live, near, drone.batted])
 	drone.free()

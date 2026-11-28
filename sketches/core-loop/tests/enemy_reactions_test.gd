@@ -59,7 +59,7 @@ func _spawn(kind: String, index: int, enabled := true):
 
 func _hit(enemy, kind: String, impact := "") -> void:
 	var row: Dictionary = EventKinds.impact(impact if impact != "" else kind)
-	_game.combat._hit(enemy, kind, 1.0, Vector3.RIGHT, row["knock"], "", "", impact)
+	_game.combat.deal_hit(enemy, kind, 1.0, Vector3.RIGHT, row["knock"], "", "", impact)
 
 
 func _tilt(enemy) -> float:

@@ -352,7 +352,7 @@ func setup(ctx_ref) -> void:
 	sticky.ledger = devices
 	wear_trail = WearTrail.new()
 	wear_trail.setup(ctx, effects, floor_at)
-	wear_trail.deal = _trail_deal
+	wear_trail.deal = trail_deal
 	churn = ChurnGround.new()
 	churn.setup(ctx)
 	boils = SiltBoil.new()
@@ -879,7 +879,7 @@ func _call_assist(at: Vector3, dealt: float) -> void:
 	assists += 1
 	var struck := _assist_targets(row["shape"], at, ball, dir, radius)
 	for enemy in struck:
-		_trail_deal(enemy, damage, "companion_assist", "item_proc")
+		trail_deal(enemy, damage, "companion_assist", "item_proc")
 		if DamageDoor.dead(enemy):
 			continue
 		if row["prime"]:
@@ -996,7 +996,7 @@ func _primer_mesh(at: Vector3, struck_id: int, dealt: float) -> void:
 		effects.arc(at + Vector3.UP * 0.5, n.global_position + Vector3.UP * 0.5, Palette.VERDIGRIS)
 		if n.has_method("flash"):
 			n.flash()
-		_trail_deal(n, dealt * Companion.PRIMER_MESH_SHARE, "primer_mesh", "item_proc")
+		trail_deal(n, dealt * Companion.PRIMER_MESH_SHARE, "primer_mesh", "item_proc")
 
 
 func _fights_posture(enemy: Node3D) -> bool:
@@ -1133,7 +1133,7 @@ func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float
 	_bump(_ledger["by_range"], _range_bucket(enemy), removed)
 
 
-func _trail_deal(enemy: Node3D, amount: float, action := "spark", source := "persistent_actor") -> float:
+func trail_deal(enemy: Node3D, amount: float, action := "spark", source := "persistent_actor") -> float:
 	var target_class := _target_class(enemy)
 	var removed := DamageDoor.health(enemy, amount, _hp_of(enemy))
 	_record_delivered(enemy, action, removed, amount, source, target_class)
@@ -1875,7 +1875,7 @@ func _strike_strip(strip: Dictionary, enemies = null) -> void:
 			continue
 		strip["struck"][id] = true
 		strip["hits"] = int(strip["hits"]) + 1
-		_hit(enemy, SYNERGY, float(strip["damage"]), enemy.global_position - Vector3(shape["from"]), float(strip["knock"]),
+		deal_hit(enemy, SYNERGY, float(strip["damage"]), enemy.global_position - Vector3(shape["from"]), float(strip["knock"]),
 			"", "item_proc", "proc")
 
 
@@ -1938,7 +1938,7 @@ func _on_reel_chain(enemy: Node3D, at: Vector3, _speed: float) -> void:
 		return
 	var from: Vector3 = first.global_position if first != null else at
 	var mult := float(row.get("mult", 0.7))
-	var next := _chain(first, from, {"damage": damage, "chain_jumps": 1, "chain_falloff": mult,
+	var next := chain_hit(first, from, {"damage": damage, "chain_jumps": 1, "chain_falloff": mult,
 		"chain_range": float(row.get("reach", 6.0)), "color": ctx.player.class_color(), "kind": SYNERGY,
 		"knock": float(row.get("knock", 6.0)), "source": "item_proc", "bits": 0}, 1.0)
 	last_reel_arc = {"from": from, "damage": damage * mult, "source": "item_proc", "bits": 0, "target": next}
@@ -2015,7 +2015,7 @@ func _toll(bell: Dictionary, enemies = null) -> void:
 			var enemy: Node3D = pair[1]
 			if not is_instance_valid(enemy) or enemy.is_dead():
 				continue
-			_hit(enemy, SYNERGY, float(bell["damage"]), enemy.global_position - origin, float(bell["knock"]), "", "item_proc", "proc")
+			deal_hit(enemy, SYNERGY, float(bell["damage"]), enemy.global_position - origin, float(bell["knock"]), "", "item_proc", "proc")
 			hits += 1
 		_draw_shape(shape, color)
 		if bell["breaks"]:
@@ -2278,7 +2278,7 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 			long_barrel_stagger = true
 			_note_micro("long_barrel", {"dist": hit_dist, "knock": hit_knock})
 	var chip := Weapons.PIERCE_CHIP if bool(bolt.get("pierce_chip", false)) else CHIP
-	_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"), "", chip)
+	deal_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"), "", chip)
 	if long_barrel_stagger and is_instance_valid(enemy) and not enemy.is_dead() and enemy.has_method("react"):
 		enemy.react("stagger", bolt["dir"], true)
 	if bool(bolt.get("breaks_props", false)) and String(bolt.get("source", "")) == "weapon":
@@ -2293,7 +2293,7 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 	if bool(bolt.get("sixth_hot", false)) and not bool(bolt.get("sixth_hot_ricocheted", false)):
 		_resolve_rivet_armor_ricochet(bolt, enemy, point, part)
 	if bolt["chain_jumps"] > 0:
-		_chain(enemy, from, bolt)
+		chain_hit(enemy, from, bolt)
 	if orbitals != null:
 		orbitals.on_bolt_hit(bolt, enemy, point, part)
 
@@ -2388,7 +2388,7 @@ func deal_proc_hit(enemy: Node3D, kind: String, damage: float, direction: Vector
 		_deferred_procs.append({"enemy": enemy, "kind": kind, "damage": damage, "direction": direction,
 			"knock": knock, "part": part, "source": source, "impact": impact, "chip": chip})
 		return
-	_hit(enemy, kind, damage, direction, knock, part, source, impact, chip)
+	deal_hit(enemy, kind, damage, direction, knock, part, source, impact, chip)
 
 
 func _step_deferred_procs() -> void:
@@ -2404,13 +2404,13 @@ func _step_deferred_procs() -> void:
 		var enemy = entry["enemy"]
 		if DamageDoor.dead(enemy):
 			continue
-		_hit(enemy, entry["kind"], float(entry["damage"]), entry["direction"], float(entry["knock"]),
+		deal_hit(enemy, entry["kind"], float(entry["damage"]), entry["direction"], float(entry["knock"]),
 			entry["part"], entry["source"], entry["impact"], float(entry["chip"]))
 	_draining_procs = false
 
 
 
-func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "", chip := CHIP) -> void:
+func deal_hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "", chip := CHIP) -> void:
 	var push := Vector3(direction.x, 0.0, direction.z)
 	push = push.normalized() if push.length() > 0.01 else Vector3.FORWARD
 	enemy.knock(push + Vector3.UP * float(EventKinds.impact(impact if impact != "" else kind)["lift"]), knock)
@@ -2428,7 +2428,7 @@ func _hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock:
 				"_source": "item_proc"})
 
 
-func _chain(first: Node3D, from: Vector3, bolt: Dictionary, knock_scale := 0.5) -> Node3D:
+func chain_hit(first: Node3D, from: Vector3, bolt: Dictionary, knock_scale := 0.5) -> Node3D:
 	var visited := [first]
 	var damage: float = bolt["damage"]
 	var at := from
@@ -2446,7 +2446,7 @@ func _chain(first: Node3D, from: Vector3, bolt: Dictionary, knock_scale := 0.5) 
 		visited.append(next)
 		var to: Vector3 = next.global_position
 		effects.arc(at, to, bolt["color"])
-		_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * knock_scale, "", bolt.get("source", "weapon"))
+		deal_hit(next, bolt["kind"], damage, to - at, bolt["knock"] * knock_scale, "", bolt.get("source", "weapon"))
 		at = to
 	return first_jump
 
@@ -2827,7 +2827,7 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 		if enemy.is_dead() or not in_ring(centre, radius, enemy):
 			continue
 		_clamped[enemy.get_instance_id()] = _clock + seconds
-		_hit(enemy, "claw", damage, ball - enemy.global_position, Weapons.CLAMP_KNOCK, "", "special", "clamp")
+		deal_hit(enemy, "claw", damage, ball - enemy.global_position, Weapons.CLAMP_KNOCK, "", "special", "clamp")
 		if is_instance_valid(enemy) and not enemy.is_dead():
 			pulled.append(enemy)
 		hit += 1
@@ -2932,7 +2932,7 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 		var push: Vector3 = h.heading if h.shape == Hazard.Shape.LANE else enemy.global_position - h.centre
 		var options: Dictionary = entry["options"]
 		if options.has("budget"):
-			var dealt := _cannon_set_piece_hit(enemy, float(entry["damage"]), h.centre, false, false, options["budget"])
+			var dealt := cannon_set_piece_hit(enemy, float(entry["damage"]), h.centre, false, false, options["budget"])
 			var record: Dictionary = options["record"]
 			if entry["struck"].size() == 1:
 				record["zone_hits"] = int(record.get("zone_hits", 0)) + 1
@@ -2941,7 +2941,7 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 		else:
 			var chip := Weapons.CANNON_AIR_RAIL_CHIP if bool(options.get("overpenetrate", false)) \
 				else (Weapons.PIERCE_CHIP if bool(options.get("pierce_chip", false)) else CHIP)
-			_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "", entry["source"], "", chip)
+			deal_hit(enemy, "cannon", float(entry["damage"]) * _damage_mod(Weapons.CANNON_LANE), push, Weapons.CANNON_KNOCK, "", entry["source"], "", chip)
 		if not entry.get("recital_checked", false):
 			entry["recital_checked"] = true
 			if entry["source"] != "item_proc":
@@ -3311,10 +3311,10 @@ func _cannon_recital(family: String, at: Vector3) -> void:
 			audio.cannon_motif("cannon_recital", true)
 
 
-func _cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: bool, mortar: bool, budget: Dictionary) -> float:
+func cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: bool, mortar: bool, budget: Dictionary) -> float:
 	if enemy.has_method("_apply_posture") and enemy.has_method("staggered"):
 		if landing and enemy.staggered():
-			return _ult_hit(enemy, "ultimate", damage, at, true)
+			return ult_hit(enemy, "ultimate", damage, at, true)
 		var judged: Dictionary = enemy.judge_hit("slam" if landing else "cannon",
 			damage if landing else damage * Ultimate.WARDEN_VOLLEY, landing, 0)
 		var id := enemy.get_instance_id()
@@ -3326,7 +3326,7 @@ func _cannon_set_piece_hit(enemy: Node3D, damage: float, at: Vector3, landing: b
 		enemy._apply_posture(judged)
 		effects.spark(enemy.global_position + Vector3.UP, Palette.SLATE)
 		return 0.0
-	return _ult_hit(enemy, "slam" if mortar and landing else "ultimate", damage, at, landing)
+	return ult_hit(enemy, "slam" if mortar and landing else "ultimate", damage, at, landing)
 
 
 func _cannon_expose(enemy: Node3D, window: float, verb: String) -> void:
@@ -3587,7 +3587,7 @@ func _fire_line_skill(id: String, fraction: float) -> void:
 func _line_reel_body(target: Node3D, _fraction: float, mult: float) -> void:
 	if target.has_method("is_dead") and target.is_dead():
 		return
-	_hit(target, "line", LINE_REEL_DAMAGE * mult, ctx.player.ball_position() - target.global_position, LINE_REEL_KNOCK, "", "special")
+	deal_hit(target, "line", LINE_REEL_DAMAGE * mult, ctx.player.ball_position() - target.global_position, LINE_REEL_KNOCK, "", "special")
 
 
 func _ult_volley(_beat: int, ball: Vector3, aim: Vector3, _heft_mult: float) -> int:
@@ -3609,7 +3609,7 @@ func _ult_volley(_beat: int, ball: Vector3, aim: Vector3, _heft_mult: float) -> 
 	for entry in picks.slice(0, ultimate.volley_targets()):
 		var enemy: Node3D = entry[1]
 		effects.arc(ball + Vector3.UP * 0.5, enemy.global_position + Vector3.UP * 0.5, ctx.player.class_color())
-		_ult_hit(enemy, kind, Ultimate.VOLLEY_DAMAGE * _heft_mult, ball, false)
+		ult_hit(enemy, kind, Ultimate.VOLLEY_DAMAGE * _heft_mult, ball, false)
 		hits += 1
 	return hits
 
@@ -3629,18 +3629,18 @@ func _ult_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 			continue
 		if enemy.global_position.distance_to(at) > radius:
 			continue
-		dealt += _ult_hit(enemy, "ultimate", Ultimate.LANDING_DAMAGE * heft_mult * chain_mult, at, true)
+		dealt += ult_hit(enemy, "ultimate", Ultimate.LANDING_DAMAGE * heft_mult * chain_mult, at, true)
 		hits += 1
 	return [hits, dealt]
 
 
-func _ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing: bool) -> float:
+func ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing: bool) -> float:
 	if enemy.has_method("_apply_posture") and enemy.has_method("staggered"):
 		if landing and enemy.staggered():
 			discover("set_piece_core", enemy.global_position)
 			var held: Node3D = ctx.player.smash_landing
 			ctx.player.smash_landing = enemy
-			_hit(enemy, "slam", damage, enemy.global_position - from, 0.0, "", "special", "slam")
+			deal_hit(enemy, "slam", damage, enemy.global_position - from, 0.0, "", "special", "slam")
 			ctx.player.smash_landing = held
 			return damage
 		var punch := damage if landing else damage * Ultimate.WARDEN_VOLLEY
@@ -3652,7 +3652,7 @@ func _ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing
 	if not (enemy.has_method("knock") and enemy.has_method("flash")):
 		strike(enemy, kind, damage, "", "special")
 		return damage
-	_hit(enemy, kind, damage, enemy.global_position - from, Ultimate.LANDING_KNOCK if landing else 3.0, "", "special",
+	deal_hit(enemy, kind, damage, enemy.global_position - from, Ultimate.LANDING_KNOCK if landing else 3.0, "", "special",
 		"slam" if landing else "")
 	return damage
 
@@ -3902,7 +3902,7 @@ func _run_balance(point: Vector3, valid: bool, shot_desc := {}, source := "weapo
 	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not in_ring(point, Weapons.BALANCE_RADIUS, enemy):
 			continue
-		_ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, source)
+		ledger_hit(enemy, damage, point, Weapons.LEDGER_KNOCK, source)
 		hits += 1
 		if paid:
 			effects.ring(enemy.global_position, 1.35, Palette.AMBER)
@@ -4041,7 +4041,7 @@ func _on_card_struck(enemy: Node3D, kind: String, force: float) -> void:
 			continue
 		var to: Vector3 = other.global_position
 		effects.arc(from, to, Palette.AMBER)
-		_ledger_hit(other, damage, from, Weapons.LEDGER_KNOCK, "weapon")
+		ledger_hit(other, damage, from, Weapons.LEDGER_KNOCK, "weapon")
 	if bool(link_group.get("double", false)) and not bool(link_group.get("jumped", false)):
 		link_group["jumped"] = true
 		_clip_jump(from, damage)
@@ -4063,7 +4063,7 @@ func _clip_jump(from: Vector3, damage: float) -> void:
 		return
 	link_group["jump_to"] = best.get_instance_id()
 	effects.arc(from, best.global_position, Palette.AMBER)
-	_ledger_hit(best, damage, from, Weapons.LEDGER_KNOCK, "item_proc")
+	ledger_hit(best, damage, from, Weapons.LEDGER_KNOCK, "item_proc")
 
 
 func _book_ink(at: Vector3) -> void:
@@ -4148,14 +4148,14 @@ static func _ink_tick() -> ArrayMesh:
 	return _ink_mesh
 
 
-func _ledger_hit(enemy: Node3D, damage: float, from: Vector3, knock: float, source: String) -> float:
+func ledger_hit(enemy: Node3D, damage: float, from: Vector3, knock: float, source: String) -> float:
 	if _target_class(enemy) == "boss":
 		damage *= Ultimate.BOSS_MULT
 		knock = 0.0
 	if not (enemy.has_method("knock") and enemy.has_method("flash")):
 		strike(enemy, "ledger", damage, "", source)
 		return damage
-	_hit(enemy, "ledger", damage, enemy.global_position - from, knock, "", source)
+	deal_hit(enemy, "ledger", damage, enemy.global_position - from, knock, "", source)
 	return damage
 
 
@@ -4250,23 +4250,23 @@ func _ride_clip(enemy: Node3D, cap: int) -> int:
 
 func _piece_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> float:
 	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
-		return _ult_hit(enemy, "ledger", damage, from, false)
+		return ult_hit(enemy, "ledger", damage, from, false)
 	if not (enemy.has_method("knock") and enemy.has_method("flash")):
 		strike(enemy, "ledger", damage, "", "special")
 		return damage
-	_hit(enemy, "ledger", damage, enemy.global_position - from, knock, "", "special")
+	deal_hit(enemy, "ledger", damage, enemy.global_position - from, knock, "", "special")
 	return damage
 
 
 func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> void:
 	flung.emit(enemy)
 	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
-		_ult_hit(enemy, "flail", damage, from, false)
+		ult_hit(enemy, "flail", damage, from, false)
 		return
 	if not (enemy.has_method("knock") and enemy.has_method("flash")):
 		strike(enemy, "flail", damage, "", "flail")
 		return
-	_hit(enemy, "flail", damage, enemy.global_position - from, knock, "", "flail")
+	deal_hit(enemy, "flail", damage, enemy.global_position - from, knock, "", "flail")
 
 
 func _audit_ground(ball: Vector3):
@@ -4320,7 +4320,7 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		if enemy.global_position.distance_to(at) > radius:
 			continue
 		struck[enemy.get_instance_id()] = true
-		dealt += _ult_hit(enemy, "ultimate", amount, at, true)
+		dealt += ult_hit(enemy, "ultimate", amount, at, true)
 		hits += 1
 	var share: float = float(ultimate.knob("ult_settle", Weapons.SETTLE_SHARE))
 	var debts: Array = ride_clips.keys()
@@ -4446,7 +4446,7 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 			continue
 		if _knob("line_marks") > 0.0:
 			_marks[enemy.get_instance_id()] = _clock + _knob("line_marks")
-		_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, "", "special")
+		deal_hit(enemy, "line", damage, to - from, Weapons.LINE_KNOCK, "", "special")
 		hit += 1
 	var along: int = _knob("line_charges")
 	for i in along:
@@ -4489,7 +4489,7 @@ func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, li
 	for enemy in targets:
 		var to: Vector3 = enemy.global_position
 		effects.arc(at, to, color)
-		_hit(enemy, kind, burst["damage"], to - at, Weapons.BURST_KNOCK, "", "", "burst")
+		deal_hit(enemy, kind, burst["damage"], to - at, Weapons.BURST_KNOCK, "", "", "burst")
 	if _knob("discharge_chain"):
 		for enemy in targets:
 			if not is_instance_valid(enemy):
@@ -4497,7 +4497,7 @@ func _discharge(at: Vector3, speed: float, kind: String, drawn_centre = null, li
 			var next := _nearest(enemy.global_position, Weapons.BASE[Weapons.ARC_CASTER]["chain_range"], targets)
 			if next != null:
 				effects.arc(enemy.global_position, next.global_position, color)
-				_hit(next, kind, burst["damage"] * 0.5, next.global_position - enemy.global_position, Weapons.BURST_KNOCK * 0.5, "", "", "spill")
+				deal_hit(next, kind, burst["damage"] * 0.5, next.global_position - enemy.global_position, Weapons.BURST_KNOCK * 0.5, "", "", "spill")
 	effects.ring(at, burst["radius"], color)
 	last_burst = burst.duplicate()
 	last_burst["at"] = at
@@ -4527,7 +4527,7 @@ func _overdrive_blast(at: Vector3, scale := 1.0, shape := {}, radius_scale := 1.
 		if enemy.is_dead() or not in_ring(centre, radius, enemy):
 			continue
 		var away: Vector3 = enemy.global_position - at
-		_hit(enemy, "runner", damage, -away if pull else away, Weapons.OVERDRIVE_KNOCK * scale, "", "", "overdrive")
+		deal_hit(enemy, "runner", damage, -away if pull else away, Weapons.OVERDRIVE_KNOCK * scale, "", "", "overdrive")
 		hit += 1
 	if boost:
 		_boost(Weapons.OVERDRIVE_SECONDS * p.special_scale)
@@ -4728,7 +4728,7 @@ func _detonate(charge: Dictionary, snapped := false) -> void:
 		if charge.has("_kest_cast"):
 			ultimate.blast_hit(charge, enemy, dealt, at)
 		else:
-			_hit(enemy, "sticky", dealt, enemy.global_position - at, knock, "", charge.get("_source", "weapon"))
+			deal_hit(enemy, "sticky", dealt, enemy.global_position - at, knock, "", charge.get("_source", "weapon"))
 	if snapped:
 		effects.ring(at, radius * 0.88, Palette.SAND)
 		effects.ring(at, radius, Palette.AMBER)
@@ -4802,7 +4802,7 @@ func _on_blink(from: Vector3, to: Vector3) -> void:
 	if _knob("blink_cut"):
 		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not enemy.is_dead() and in_line(from, to, Weapons.BLINK_CUT_WIDTH, enemy.global_position, _hull(enemy)):
-				_hit(enemy, "sticky", _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), to - from, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "proc")
+				deal_hit(enemy, "sticky", _patterns[Weapons.STICKY_CHARGE].damage * _damage_mod(Weapons.STICKY_CHARGE), to - from, EventKinds.IMPACT["proc"]["knock"], "", "item_proc", "proc")
 	if _knob("smoke_cloud") > 0.0:
 		_cloud = {"at": from, "left": _knob("smoke_cloud")}
 
@@ -5211,7 +5211,7 @@ func _on_lobber_fired(origin: Vector3, landing: Vector3, flight: float, lobber: 
 	shell.setup(ctx.player, ground, ctx.root, Callable(ctx.flow, "in_play"), origin, landing, flight, lobber, cover)
 	shell.hit_player.connect(_on_player_hit.bind("lobber"))
 	shell.returned_landed.connect(_on_shell_returned)
-	shell.exploded.connect(func(at: Vector3, blast: float, _hit: bool): effects.ring(at, blast, Palette.HAZARD))
+	shell.exploded.connect(func(at: Vector3, blast: float, deal_hit: bool): effects.ring(at, blast, Palette.HAZARD))
 
 
 func _on_shell_returned(shell: Node3D) -> void:
@@ -5795,7 +5795,7 @@ func _on_world_fact_w47(kind: String, at: Vector3) -> void:
 			if reach > radius:
 				continue
 			var scale := clampf(1.0 - reach / (radius * 1.25), 0.35, 1.0)
-			_hit(enemy, SYNERGY, dmg * scale, enemy.global_position - at, knock, "", "item_proc", "proc")
+			deal_hit(enemy, SYNERGY, dmg * scale, enemy.global_position - at, knock, "", "item_proc", "proc")
 			hits += 1
 		ctx.player.state.boost_cooldown = 0.0
 		if ctx.player.abilities != null:
@@ -5840,7 +5840,7 @@ func _step_pendulum_tesla(enemies: Array) -> void:
 			continue
 		_pendulum_zapped[id] = true
 		effects.arc(closest, enemy.global_position + Vector3.UP * 0.5, color)
-		_hit(enemy, SYNERGY, dmg, enemy.global_position - closest, 3.0, "", "item_proc", "proc")
+		deal_hit(enemy, SYNERGY, dmg, enemy.global_position - closest, 3.0, "", "item_proc", "proc")
 		zapped_now += 1
 	var swept_far: bool = a.distance_to(_pendulum_swing_origin) >= 3.0
 	if not _pendulum_swing_charged and (zapped_now > 0 or swept_far):
@@ -5944,7 +5944,7 @@ func _step_thermobaric_pins(enemies: Array) -> void:
 				continue
 			if other.global_position.distance_to(pos) > det_r:
 				continue
-			_hit(other, SYNERGY, det_dmg, other.global_position - pos, 8.0, "", "item_proc", "proc")
+			deal_hit(other, SYNERGY, det_dmg, other.global_position - pos, 8.0, "", "item_proc", "proc")
 			hits += 1
 		_note_cross("thermobaric_dunk", {"stage": "detonate", "at": pos, "hits": hits})
 
@@ -5982,7 +5982,7 @@ func _check_gravity_ledger(centre: Vector3, pulled_enemies: Array) -> void:
 	effects.ring(mid, cluster_r * 0.6, color)
 	for e in cluster:
 		if is_instance_valid(e) and not e.is_dead():
-			_hit(e, SYNERGY, dmg, mid - e.global_position, 6.0, "", "item_proc", "proc")
+			deal_hit(e, SYNERGY, dmg, mid - e.global_position, 6.0, "", "item_proc", "proc")
 	var cogs := int(row.get("cog_count", 3))
 	if ctx.build != null and ctx.build.get("scrap") != null and ctx.build.scrap.has_method("drop_cogs") \
 			and (ctx.flow == null or ctx.flow.in_stage()):
@@ -6267,7 +6267,7 @@ func _step_det_cord(enemies: Array) -> void:
 				continue
 			if enemy.global_position.distance_to(at) > radius + _hull(enemy):
 				continue
-			_hit(enemy, SYNERGY, dmg, enemy.global_position - at, knock, "", "item_proc", "proc")
+			deal_hit(enemy, SYNERGY, dmg, enemy.global_position - at, knock, "", "item_proc", "proc")
 			hits += 1
 		if ctx.destructibles != null and ctx.destructibles.has_method("on_blast"):
 			var hc: int = ctx.run.heft_class() if ctx.run != null and ctx.run.has_method("heft_class") else 1
@@ -6388,7 +6388,7 @@ func _step_hot_wire(ball: Vector3, anchor: Vector3, enemies: Array) -> void:
 		_hot_wire_cd[eid] = _clock + cd
 		effects.arc(closest, enemy.global_position + Vector3.UP * 0.5, Palette.AMBER)
 		effects.spark(closest, Palette.AMBER)
-		_hit(enemy, SYNERGY, dmg, enemy.global_position - closest, 6.0, "", "item_proc", "proc")
+		deal_hit(enemy, SYNERGY, dmg, enemy.global_position - closest, 6.0, "", "item_proc", "proc")
 		if is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead()):
 			_heated[eid] = {"glow": _clock + HEAT_GLOW, "ready": float(_heated.get(eid, {}).get("ready", -INF))}
 		sliced_enemies += 1
@@ -6500,7 +6500,7 @@ func _detonate_tether_slam_midpoint(at: Vector3, enemies: Array) -> void:
 			continue
 		if enemy.global_position.distance_to(at) > radius + _hull(enemy):
 			continue
-		_hit(enemy, SYNERGY, dmg, enemy.global_position - at, knock, "", "item_proc", "proc")
+		deal_hit(enemy, SYNERGY, dmg, enemy.global_position - at, knock, "", "item_proc", "proc")
 		hits += 1
 	if ctx.destructibles != null and ctx.destructibles.has_method("on_blast"):
 		var hc: int = ctx.run.heft_class() if ctx.run != null and ctx.run.has_method("heft_class") else 1
@@ -6583,7 +6583,7 @@ func _consume_grapple_mut_strike(hit: Dictionary) -> void:
 				break
 		if arced_to != null:
 			effects.arc(at + Vector3.UP * 0.5, arced_to.global_position + Vector3.UP * 0.5, Palette.AMBER)
-			_trail_deal(arced_to, bonus_flat, "live_bus", "item_proc")
+			trail_deal(arced_to, bonus_flat, "live_bus", "item_proc")
 		_note_grapple_mut("live_bus", {"stage": "discharge", "at": at, "dealt": dealt, "arced": arced_to != null, "color": Palette.AMBER})
 	if _tether_slam_matches(enemy, kind) and dealt > 0.0:
 		var mult := float(_tether_slam_armed.get("mult", 2.0))
@@ -6761,7 +6761,7 @@ func _fire_cap_charge(at: Vector3) -> Dictionary:
 		if enemy.has_method("plating_now") and float(enemy.plating_now()) > 0.0 and kind != "warden":
 			_add_shred(enemy, float(enemy.plating_now()) / maxf(SHRED_PER_PUNCH, 0.01))
 		if kind != "warden":
-			_hit(enemy, "blast", dmg, enemy.global_position - at, 12.0, "", "consumable")
+			deal_hit(enemy, "blast", dmg, enemy.global_position - at, 12.0, "", "consumable")
 		hits += 1
 	effects.shockwave(at, radius, row.get("color", Palette.AMBER))
 	return {"radius": radius, "stripped": stripped, "hits": hits}
@@ -7090,12 +7090,12 @@ func ally_husk_hit(_husk: Node3D, enemy: Node3D, damage: float, origin: Vector3,
 			knock = 0.0
 	var dealt := 0.0
 	if (enemy.has_method("_apply_posture") and enemy.has_method("staggered")) or _target_class(enemy) == "boss":
-		dealt = _ult_hit(enemy, "ledger", final_damage, origin, false)
+		dealt = ult_hit(enemy, "ledger", final_damage, origin, false)
 	elif not (enemy.has_method("knock") and enemy.has_method("flash")):
 		strike(enemy, "ledger", final_damage, "", "persistent_actor", "", chip)
 		dealt = final_damage
 	else:
-		_hit(enemy, "ledger", final_damage, enemy.global_position - origin, knock, "", "persistent_actor", "", chip)
+		deal_hit(enemy, "ledger", final_damage, enemy.global_position - origin, knock, "", "persistent_actor", "", chip)
 		dealt = final_damage
 	if pull_mag > 0.0 and pull_dir != Vector3.ZERO and is_instance_valid(enemy) and not enemy.is_dead():
 		enemy.knock(pull_dir, pull_mag)
@@ -7277,13 +7277,13 @@ func _step_kinetic_pylon(delta: float, enemies: Array) -> void:
 	for pair in picks.slice(0, Weapons.KINETIC_PYLON_ARC_TARGETS):
 		var target: Node3D = pair[1]
 		effects.arc(at + Vector3.UP * 0.6, target.global_position + Vector3.UP * 0.6, Palette.ARC)
-		_hit(target, "arc", dmg, target.global_position - at, 4.0, "", "persistent_actor")
+		deal_hit(target, "arc", dmg, target.global_position - at, 4.0, "", "persistent_actor")
 		hit_enemies.append(target)
 		dealt_total += dmg
 		var chain_next := _nearest(target.global_position, Weapons.BASE[Weapons.ARC_CASTER]["chain_range"], hit_enemies)
 		if chain_next != null:
 			effects.arc(target.global_position + Vector3.UP * 0.6, chain_next.global_position + Vector3.UP * 0.6, Palette.ARC)
-			_hit(chain_next, "arc", dmg * 0.6, chain_next.global_position - target.global_position, 2.0, "", "persistent_actor")
+			deal_hit(chain_next, "arc", dmg * 0.6, chain_next.global_position - target.global_position, 2.0, "", "persistent_actor")
 			hit_enemies.append(chain_next)
 			dealt_total += dmg * 0.6
 	_beachhead_pylon["arcs_fired"] = int(_beachhead_pylon.get("arcs_fired", 0)) + hit_enemies.size()
@@ -7553,7 +7553,7 @@ func _detonate_cannon_piton() -> Dictionary:
 		if DamageDoor.dead(enemy) or not in_ring(anchor, radius, enemy):
 			continue
 		var push: Vector3 = enemy.global_position - anchor
-		_hit(enemy, "cannon", dmg, push, Weapons.CANNON_PITON_BREACH_KNOCK, "", "special")
+		deal_hit(enemy, "cannon", dmg, push, Weapons.CANNON_PITON_BREACH_KNOCK, "", "special")
 		hits += 1
 	effects.ring(anchor, radius, Palette.ANCIENT)
 	effects.spark(anchor + Vector3.UP * 0.4, Palette.SAND)

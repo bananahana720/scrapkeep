@@ -171,7 +171,7 @@ func on_body(target: Node3D, _fraction: float, mult: float) -> void:
 		if _protected(target):
 			combat.strike(target, "claw", DRAG_DAMAGE * mult, "", "special")
 		else:
-			combat._hit(target, "claw", DRAG_DAMAGE * mult, Vector3.ZERO, 0.0, "", "special")
+			combat.deal_hit(target, "claw", DRAG_DAMAGE * mult, Vector3.ZERO, 0.0, "", "special")
 			_mark(target, DRAG_MARK)
 		combat._reel_burst(target.global_position, 1.0, mult)
 		_start_pendulum_guard(target, target.global_position, false)
@@ -254,7 +254,7 @@ func _step_drag(delta: float) -> void:
 				if _protected(enemy):
 					combat.strike(enemy, "claw", SLAB_DAMAGE * mult, "", "special")
 				else:
-					combat._hit(enemy, "claw", SLAB_DAMAGE * mult, ctx.player.ball_position() - enemy.global_position, 14.0, "", "special")
+					combat.deal_hit(enemy, "claw", SLAB_DAMAGE * mult, ctx.player.ball_position() - enemy.global_position, 14.0, "", "special")
 		drag["at"] = next
 		ctx.player.indicator.set_shape("tarn_drag", _corridor(next, shape["to"], SLAB_HALF_WIDTH))
 		if next.distance_to(shape["to"]) < 0.05:
@@ -268,7 +268,7 @@ func _step_drag(delta: float) -> void:
 	if flat.length() <= DRAG_SPEED * delta + 0.1:
 		var push: Vector3 = target._knock
 		target._knock = Vector3(0.0, push.y, 0.0)
-		combat._hit(target, "claw", DRAG_DAMAGE * mult, flat, 0.0, "", "special")
+		combat.deal_hit(target, "claw", DRAG_DAMAGE * mult, flat, 0.0, "", "special")
 		_mark(target, DRAG_MARK)
 		_discover("tarn_claw_drag", "loaded_line", target.global_position)
 		_dragged[target.get_instance_id()] = true
@@ -392,11 +392,11 @@ func peak(id: String, at: Vector3) -> void:
 
 func _hit_piece(enemy: Node3D, damage: float, at: Vector3, landing_hit: bool) -> float:
 	if enemy.has_method("_apply_posture"):
-		return combat._ult_hit(enemy, "claw", damage, at, landing_hit)
+		return combat.ult_hit(enemy, "claw", damage, at, landing_hit)
 	if combat._target_class(enemy) == "boss":
 		combat.strike(enemy, "claw", damage * Ultimate.BOSS_MULT, "", "special")
 		return damage * Ultimate.BOSS_MULT
-	combat._hit(enemy, "claw", damage, at - enemy.global_position, LANDING_PULL if landing_hit else 0.0, "", "special", "slam" if landing_hit else "")
+	combat.deal_hit(enemy, "claw", damage, at - enemy.global_position, LANDING_PULL if landing_hit else 0.0, "", "special", "slam" if landing_hit else "")
 	return damage
 
 
@@ -633,7 +633,7 @@ func _step_clamp_hurl(delta: float) -> void:
 				if _protected(other):
 					combat.strike(other, "claw", dmg, "", "special")
 				else:
-					combat._hit(other, "claw", dmg, dir + Vector3.UP * 0.25, Weapons.CLAMP_HURL_BOWL_KNOCK, "", "special", "clamp")
+					combat.deal_hit(other, "claw", dmg, dir + Vector3.UP * 0.25, Weapons.CLAMP_HURL_BOWL_KNOCK, "", "special", "clamp")
 				combat.flung.emit(other)
 		if float(h["left"]) <= 0.0:
 			clamp_hurls.erase(h)

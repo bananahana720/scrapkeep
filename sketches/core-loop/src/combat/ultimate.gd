@@ -843,7 +843,7 @@ func _sable_damage(at: Vector3, radius: float, damage: float, limit := 64, landi
 	var hits := 0
 	var dealt := 0.0
 	for enemy in combat.nearest_enemies(at, radius, limit):
-		dealt += combat._ult_hit(enemy, "arc", damage, at, landing)
+		dealt += combat.ult_hit(enemy, "arc", damage, at, landing)
 		hits += 1
 	return [hits, dealt]
 
@@ -1097,7 +1097,7 @@ func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
 	for enemy in get_tree().get_nodes_in_group("enemy"):
 		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()) or enemy.global_position.distance_to(at) > landing_radius():
 			continue
-		damage += combat._cannon_set_piece_hit(enemy, LANDING_DAMAGE * heft * chain * scale, at, true, mortar, _cannon_budget)
+		damage += combat.cannon_set_piece_hit(enemy, LANDING_DAMAGE * heft * chain * scale, at, true, mortar, _cannon_budget)
 		hits += 1
 	var discovery := _cannon_id
 	if ctx.codex != null and ctx.codex.known("set_piece"):

@@ -163,7 +163,7 @@ func arc(at: Vector3, targets: int, damage: float, radius := 10.0) -> int:
 	var picks: Array = combat.nearest_enemies(at, radius, targets)
 	for enemy in picks:
 		combat.effects.arc(at, enemy.global_position, Palette.ARC)
-		combat._ult_hit(enemy, "arc", damage, at, false)
+		combat.ult_hit(enemy, "arc", damage, at, false)
 	return picks.size()
 
 
