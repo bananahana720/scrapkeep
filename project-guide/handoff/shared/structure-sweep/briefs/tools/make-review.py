@@ -7,7 +7,9 @@ The three SHAs are full 40-character SHAs. <base SHA> is the commit the unit's
 diff is read against (the integration tip the unit last merged, or its base
 commit). <gate tip SHA> is the current pushed tip of origin/entropy/gate.
 "What the unit was asked to do" is copied from the writer brief, so the reviewer
-judges against the same words the writer was given and nothing is retyped.
+judges against the same words the writer was given and nothing is retyped. For a
+unit whose writer brief predates this folder, pass an earlier review brief of
+the unit instead; its "What the unit was asked to do" section is copied.
 Safe to rerun: it overwrites the one file it writes, review-<unit>-<head7>.md,
 beside the writer briefs.
 """
@@ -22,8 +24,10 @@ for sha in (head, base, gate):
     assert re.fullmatch(r"[0-9a-f]{40}", sha), f"not a full SHA: {sha}"
 
 text = pathlib.Path(brief).read_text()
-asked = re.search(r"^## The unit\n(.*?)(?=^## (Checks|Hand in|Report)\b)", text, re.S | re.M)
-assert asked, f"{brief} has no '## The unit' section followed by '## Checks'"
+asked = re.search(r"^## The unit\n(.*?)(?=^## (Checks|Hand in|Report)\b)", text, re.S | re.M) or re.search(
+    r"^## What the unit was asked to do\n(.*?)(?=^Rules that bind every unit|^## )", text, re.S | re.M
+)
+assert asked, f"{brief} has neither a '## The unit' section followed by '## Checks' nor a review brief's '## What the unit was asked to do'"
 asked = re.sub(r"^## ", "### ", asked.group(1).strip(), flags=re.M)
 
 TEMPLATE = """You are the independent reviewer of one pull request in the Scrapkeep repository (GitHub `bananahana720/scrapkeep`). Scrapkeep is a Godot 4.7.2 GDScript game under `sketches/core-loop` with a Node toolchain under `scripts/`. You did not write this change and you have not seen the writer's reasoning. Judge the diff against what the unit was asked to do, below.
