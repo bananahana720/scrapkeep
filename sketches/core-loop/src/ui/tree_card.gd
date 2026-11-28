@@ -2,9 +2,9 @@ extends Button
 
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
@@ -138,14 +138,8 @@ func drawn_words() -> PackedStringArray:
 
 
 func _text(value: String, font_size: int, tint: Color) -> Label:
-	var label := Label.new()
-	label.text = value
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var label := UiDraw.label(font_size, tint, value)
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	label.add_theme_font_override("font", UiFonts.bold())
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", tint)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return label
 
 

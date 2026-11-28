@@ -5,6 +5,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 
 
@@ -103,7 +104,7 @@ func _draw() -> void:
 		"weigh":
 			draw_texture_rect(Icons.texture("res_mass"), icon_rect.grow(-10.0), false, Icons.tint("res_mass", Color(rec.get("color", Palette.SAND), dim)))
 			var mass := str(int(rec.get("mass", 0)))
-			UiDraw.text(self, centre.x - UiDraw.width(mass, PRICE_FONT, true) * 0.5, icon_rect.end.y + 6.0, mass, PRICE_FONT, Color(Palette.SAND, dim), true)
+			UiDraw.text(self, centre.x - UiFonts.width(mass, PRICE_FONT, true) * 0.5, icon_rect.end.y + 6.0, mass, PRICE_FONT, Color(Palette.SAND, dim), true)
 		"stow":
 			draw_arc(centre, ICON * 0.42, 0.0, TAU, 32, Color(Palette.SAND, dim), 3.0)
 			draw_texture_rect(Icons.texture("res_core"), icon_rect.grow(-14.0), false, Icons.tint("res_core", Color(rec.get("color", Palette.SAND), dim)))
@@ -128,7 +129,7 @@ func _draw() -> void:
 			else:
 				var frame: Dictionary = RARITY.get(String(rec.get("rarity", "common")), RARITY["common"])
 				draw_rect(icon_rect.grow(4.0), Color(frame["color"], dim), false, 2.0)
-				UiDraw.text(self, centre.x - UiDraw.width("?", UiTokens.HEADING) * 0.5, centre.y, "?", UiTokens.HEADING, Color(Palette.SAND, dim))
+				UiDraw.text(self, centre.x - UiFonts.width("?", UiTokens.HEADING) * 0.5, centre.y, "?", UiTokens.HEADING, Color(Palette.SAND, dim))
 		"ingot_readout":
 			var frame: Dictionary = RARITY.get(String(rec.get("rarity", "common")), RARITY["common"])
 			var box_r := Rect2(Vector2(10.0, 12.0), Vector2(30.0, 30.0))
@@ -189,7 +190,7 @@ func _framed(icon_rect: Rect2, dim: float) -> void:
 
 func _price(at: Vector2, amount: int, poor: bool) -> void:
 	var digits := str(amount)
-	var w := COG + 5.0 + UiDraw.width(digits, PRICE_FONT, true)
+	var w := COG + 5.0 + UiFonts.width(digits, PRICE_FONT, true)
 	var x := at.x - w * 0.5
 	var tint := Color(Palette.SAND, 0.45) if poor else Palette.SAND
 	draw_texture_rect(Icons.texture("res_scrap"), Rect2(Vector2(x, at.y - COG * 0.5), Vector2(COG, COG)), false, Icons.tint("res_scrap", Color(Palette.STEEL, 0.45 if poor else 1.0)))

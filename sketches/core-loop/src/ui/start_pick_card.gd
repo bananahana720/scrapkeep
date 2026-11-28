@@ -159,7 +159,7 @@ func rerolls_left() -> int:
 
 func _tile_width(tile: Dictionary) -> float:
 	var k := _k()
-	var words := maxf(UiDraw.width(String(tile["name"]), int(FONT * k)), UiDraw.width(String(tile.get("effect", "")), int(EFFECT_FONT * k)))
+	var words := maxf(UiFonts.width(String(tile["name"]), int(FONT * k)), UiFonts.width(String(tile.get("effect", "")), int(EFFECT_FONT * k)))
 	return (PAD + KEY + GAP + ICON + GAP + PAD) * k + words
 
 
@@ -275,7 +275,7 @@ func ladder_shown() -> bool:
 
 
 func _ladder_width() -> float:
-	return UiDraw.width(TIER_WORD, UiTokens.BODY) + GAP + _pips_width() + 40.0 + KEY + GAP + REROLL_SIZE.x
+	return UiFonts.width(TIER_WORD, UiTokens.BODY) + GAP + _pips_width() + 40.0 + KEY + GAP + REROLL_SIZE.x
 
 
 func _pips_width() -> float:
@@ -283,7 +283,7 @@ func _pips_width() -> float:
 
 
 func _pip_centre(tier: int) -> Vector2:
-	var left := (size.x - _ladder_width()) * 0.5 + UiDraw.width(TIER_WORD, UiTokens.BODY) + GAP
+	var left := (size.x - _ladder_width()) * 0.5 + UiFonts.width(TIER_WORD, UiTokens.BODY) + GAP
 	return Vector2(left + RUNG * 0.5 + tier * (RUNG + RUNG_GAP), _controls_top() + LADDER_ROW)
 
 
@@ -471,7 +471,7 @@ func _draw() -> void:
 	if _interactive and not overrides.is_empty():
 		var ov_line := "   ".join(overrides)
 		var ov_y := size.y - 14.0
-		UiDraw.text(self, (size.x - UiDraw.width(ov_line, CONTRACT_FONT)) * 0.5, ov_y, ov_line, CONTRACT_FONT, Palette.AMBER)
+		UiDraw.text(self, (size.x - UiFonts.width(ov_line, CONTRACT_FONT)) * 0.5, ov_y, ov_line, CONTRACT_FONT, Palette.AMBER)
 	for i in StartPicks.REROLLS:
 		var at := Vector2(size.x * 0.5 + (i - (StartPicks.REROLLS - 1) * 0.5) * PIP * k * 3.0, h + PIP * k * 1.5)
 		if i < _rerolls:
@@ -490,7 +490,7 @@ func _draw_ladder() -> void:
 	var selected: int = _run.selected_run_tier()
 	var looked := _looked_tier()
 	var top := RunTier.top_unlocked(_profile)
-	UiDraw.text(self, _pip_centre(0).x - RUNG * 0.5 - GAP - UiDraw.width(TIER_WORD, UiTokens.BODY), row_y, TIER_WORD, UiTokens.BODY, Palette.SAND)
+	UiDraw.text(self, _pip_centre(0).x - RUNG * 0.5 - GAP - UiFonts.width(TIER_WORD, UiTokens.BODY), row_y, TIER_WORD, UiTokens.BODY, Palette.SAND)
 	for tier in RunTier.TOP + 1:
 		var at := _pip_centre(tier)
 		var numeral := str(tier) if tier == selected or tier == looked else ""
@@ -508,12 +508,12 @@ func _draw_ladder() -> void:
 			draw_arc(at, RUNG * 0.5, 0.0, TAU, 32, Color(Palette.SAND, 0.3), 1.5)
 			ink = Color(Palette.SAND, 0.3)
 		var font := UiFonts.bold()
-		var base := Vector2(at.x - UiDraw.width(numeral, RUNG_FONT) * 0.5, at.y + (font.get_ascent(RUNG_FONT) - font.get_descent(RUNG_FONT)) * 0.5)
+		var base := Vector2(at.x - UiFonts.width(numeral, RUNG_FONT) * 0.5, at.y + (font.get_ascent(RUNG_FONT) - font.get_descent(RUNG_FONT)) * 0.5)
 		draw_string(font, base, numeral, HORIZONTAL_ALIGNMENT_LEFT, -1, RUNG_FONT, ink)
 	var meters := RunTier.meters(_shown_tier(), _run_world())
 	var total := METER_GAP * (meters.size() - 1)
 	for meter in meters:
-		total += UiDraw.width(String(meter["name"]), METER_FONT) + GAP + METER_BAR.x
+		total += UiFonts.width(String(meter["name"]), METER_FONT) + GAP + METER_BAR.x
 	var x := (size.x - total) * 0.5
 	var y := _controls_top() + METER_ROW
 	for meter in meters:
@@ -534,4 +534,4 @@ func _draw_ladder() -> void:
 		var lines := RunTier.contract_lines(looked)
 		for i in lines.size():
 			var line_y := _controls_top() + CONTRACT_ROW + i * CONTRACT_STEP
-			UiDraw.text(self, (size.x - UiDraw.width(lines[i], CONTRACT_FONT)) * 0.5, line_y, lines[i], CONTRACT_FONT, Palette.SAND)
+			UiDraw.text(self, (size.x - UiFonts.width(lines[i], CONTRACT_FONT)) * 0.5, line_y, lines[i], CONTRACT_FONT, Palette.SAND)

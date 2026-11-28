@@ -3,6 +3,7 @@ extends Control
 const Icons := preload("res://src/ui/icons.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 
 const ICON := 34.0
@@ -72,9 +73,9 @@ static func _metres_text(m: int) -> String:
 
 
 func _row_width() -> float:
-	var w := ICON + GAP + UiDraw.width(words, FONT)
+	var w := ICON + GAP + UiFonts.width(words, FONT)
 	if metres >= 0:
-		w += GAP + UiDraw.width(distance_text(), FONT, true)
+		w += GAP + UiFonts.width(distance_text(), FONT, true)
 	return w
 
 
@@ -83,9 +84,9 @@ func _detour_shown() -> bool:
 
 
 func _detour_width() -> float:
-	var w := DETOUR_ICON + GAP + UiDraw.width(detour_words, FONT)
+	var w := DETOUR_ICON + GAP + UiFonts.width(detour_words, FONT)
 	if detour_metres >= 0:
-		w += GAP + UiDraw.width(_metres_text(detour_metres), FONT, true)
+		w += GAP + UiFonts.width(_metres_text(detour_metres), FONT, true)
 	return w
 
 
