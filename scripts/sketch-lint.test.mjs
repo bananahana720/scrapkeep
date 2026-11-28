@@ -19,6 +19,7 @@ import {
   baselineGrowth,
   buildScriptGraph,
   formatFinding,
+  layerReport,
   lintL1,
   lintL2,
   lintL3,
@@ -44,6 +45,7 @@ import {
   lintTrackedUids,
   parseBatchDriverRefs,
   parseBatchDriverVars,
+  parseLayerOrder,
   parseLintArgs,
   parseTuning,
   preloadedTestSupportFiles,
@@ -1506,6 +1508,71 @@ test("L16 reports one finding per file in a cycle with size and in-loop neighbou
   assert.match(after[1].message, /L16 no longer offends: remove from baseline/);
 });
 
+const layerTree = (texts) =>
+  Object.entries(texts).map(([rel, text]) => ({ path: `sketches/core-loop/src/${rel}`, text }));
+
+test("the layer report counts pairs between directories, the upward pairs of an order, the files that carry them and the fewest over every order", () => {
+  const files = layerTree({
+    "low/a.gd":
+      'const T := preload("res://src/top/t.gd")\nconst U := preload("res://src/top/u.gd")\n',
+    "low/b.gd":
+      'const T := preload("res://src/top/t.gd")\nconst A := preload("res://src/low/a.gd")\n',
+    "top/t.gd": "class_name TopThing\nextends RefCounted\n",
+    "top/u.gd": 'const B := preload("res://src/low/b.gd")\n',
+    "game.gd": "var t := TopThing.new()\n",
+  });
+  const report = layerReport(files, parseLayerOrder("low,top,game.gd"));
+  assert.equal(report.ok, true);
+  assert.deepEqual(report.lines, [
+    "layer order, bottom first: low < top < game.gd",
+    "5 scripts, 6 dependencies; each cell counts the pairs of files where a file in the row's directory depends on a file in the column's",
+    "from \\ to low       top       game.gd",
+    "low                 3",
+    "top       1",
+    "game.gd             1",
+    "upward pairs: 3 in 2 files; the files with the most:",
+    "    2 src/low/a.gd",
+    "    1 src/low/b.gd",
+    "fewest upward pairs over every order of these 3 layers: 1, top < low < game.gd",
+  ]);
+  assert.match(
+    layerReport(files, parseLayerOrder("low+top,game.gd")).lines.at(-2),
+    /^upward pairs: 0 in 0 files/,
+  );
+  const ten = Array.from({ length: 10 }, (_, index) => `d${index}`);
+  assert.equal(
+    layerReport(
+      layerTree(Object.fromEntries(ten.map((dir) => [`${dir}/x.gd`, "extends RefCounted\n"]))),
+      ten.map((dir) => [dir]),
+    ).lines.at(-1),
+    "10 layers are too many to try every order; name 9 or fewer",
+  );
+});
+
+test("the layer report fails on an empty read, a directory the order leaves out and a name the tree lacks, and refuses a malformed order", () => {
+  assert.deepEqual(layerReport([], [["core"]]), {
+    ok: false,
+    lines: [
+      "read no scripts under src/, so there is nothing to measure",
+      "the order names core, which holds no script",
+    ],
+  });
+  const files = layerTree({
+    "low/a.gd": "extends RefCounted\n",
+    "top/t.gd": "extends RefCounted\n",
+  });
+  assert.deepEqual(layerReport(files, [["low"], ["gone"]]), {
+    ok: false,
+    lines: ["src/top is in no layer of the order", "the order names gone, which holds no script"],
+  });
+  assert.throws(() => parseLayerOrder("low,,top"), /name each layer's directories/);
+  assert.throws(() => parseLayerOrder("low,top+"), /name each layer's directories/);
+  assert.throws(() => parseLayerOrder("low,top,low"), /low is named twice/);
+  assert.throws(() => parseLintArgs(["--layers"]), /--layers requires an order/);
+  assert.throws(() => parseLintArgs(["--layers", "--sketch"]), /--layers requires an order/);
+  assert.deepEqual(parseLintArgs(["--layers", "a,b+c"]).layers, [["a"], ["b", "c"]]);
+});
+
 test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based paths", () => {
   const clean = [
     "from pathlib import Path",
@@ -1691,6 +1758,7 @@ test("parseLintArgs refuses a --base with no ref and a flag it does not know", (
     sketch: "core-loop",
     writeBaseline: false,
     base: "origin/main",
+    layers: null,
   });
   assert.throws(() => parseLintArgs(["--sketch", "core-loop", "--base"]), /--base requires a ref/);
   assert.throws(() => parseLintArgs(["--base", ""]), /--base requires a ref/);

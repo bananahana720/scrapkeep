@@ -678,10 +678,17 @@ export function baselineFrom(findings) {
 }
 
 export function parseLintArgs(argv) {
-  const options = { sketch: null, writeBaseline: false, base: null };
+  const options = { sketch: null, writeBaseline: false, base: null, layers: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--sketch" && argv[i + 1]) options.sketch = argv[++i];
-    else if (argv[i] === "--base") {
+    else if (argv[i] === "--layers") {
+      const order = argv[++i];
+      if (!order || order.startsWith("-"))
+        throw new Error(
+          "--layers requires an order, bottom first, as in --layers core,movement,ui",
+        );
+      options.layers = parseLayerOrder(order);
+    } else if (argv[i] === "--base") {
       const ref = argv[++i];
       if (!ref || ref.startsWith("-"))
         throw new Error("--base requires a ref, as in --base origin/main");
@@ -689,7 +696,7 @@ export function parseLintArgs(argv) {
     } else if (argv[i] === "--write-baseline") options.writeBaseline = true;
     else if (argv[i].startsWith("-"))
       throw new Error(
-        `unknown argument ${argv[i]}; use --sketch NAME, --base REF or --write-baseline`,
+        `unknown argument ${argv[i]}; use --sketch NAME, --base REF, --layers ORDER or --write-baseline`,
       );
   }
   return options;
@@ -1188,6 +1195,131 @@ export function lintL16(files) {
   return findings.sort((a, b) => a.path.localeCompare(b.path));
 }
 
+function srcDir(filePath) {
+  const rel = scriptRel(filePath).slice("src/".length);
+  const slash = rel.indexOf("/");
+  return slash === -1 ? rel : rel.slice(0, slash);
+}
+
+export function parseLayerOrder(text) {
+  const layers = text.split(",").map((layer) => layer.split("+"));
+  const named = layers.flat();
+  if (named.some((dir) => dir === ""))
+    throw new Error(
+      `--layers ${text}: name each layer's directories, bottom first, as in core,movement,boot+dev`,
+    );
+  const twice = named.filter((dir, index) => named.indexOf(dir) !== index);
+  if (twice.length > 0) throw new Error(`--layers ${text}: ${twice[0]} is named twice`);
+  return layers;
+}
+
+function layerIndex(layers) {
+  return new Map(layers.flatMap((layer, index) => layer.map((dir) => [dir, index])));
+}
+
+function upwardPairs(graph, layerOf) {
+  const pairs = [];
+  for (const [from, deps] of graph) {
+    const low = layerOf.get(srcDir(from));
+    if (low === undefined) continue;
+    for (const to of deps) if (layerOf.get(srcDir(to)) > low) pairs.push({ from, to });
+  }
+  return pairs;
+}
+
+function fewestUpward(matrix) {
+  const order = matrix.map((_, index) => index);
+  const cost = () => {
+    let sum = 0;
+    for (let low = 0; low < order.length; low++)
+      for (let high = low + 1; high < order.length; high++) sum += matrix[order[low]][order[high]];
+    return sum;
+  };
+  let best = { cost: cost(), order: [...order] };
+  const swaps = order.map(() => 0);
+  for (let at = 1; at < order.length;) {
+    if (swaps[at] < at) {
+      const other = at % 2 === 0 ? 0 : swaps[at];
+      [order[other], order[at]] = [order[at], order[other]];
+      const now = cost();
+      if (now < best.cost) best = { cost: now, order: [...order] };
+      swaps[at]++;
+      at = 1;
+    } else {
+      swaps[at] = 0;
+      at++;
+    }
+  }
+  return best;
+}
+
+export function layerReport(files, layers) {
+  const graph = buildScriptGraph(files);
+  const dirs = [...new Set([...graph.keys()].map(srcDir))].sort();
+  const named = layers.flat();
+  const problems = [];
+  if (graph.size === 0) problems.push("read no scripts under src/, so there is nothing to measure");
+  for (const dir of dirs)
+    if (!named.includes(dir)) problems.push(`src/${dir} is in no layer of the order`);
+  for (const dir of named)
+    if (!dirs.includes(dir)) problems.push(`the order names ${dir}, which holds no script`);
+  if (problems.length > 0) return { ok: false, lines: problems };
+  const layerOf = layerIndex(layers);
+  const cell = new Map();
+  let dependencies = 0;
+  for (const [from, deps] of graph)
+    for (const to of deps) {
+      dependencies++;
+      const key = `${srcDir(from)}\0${srcDir(to)}`;
+      if (srcDir(from) !== srcDir(to)) cell.set(key, (cell.get(key) ?? 0) + 1);
+    }
+  const width = Math.max("from \\ to".length, ...named.map((dir) => dir.length)) + 1;
+  const row = (head, cells) =>
+    [head, ...cells]
+      .map((text) => String(text).padEnd(width))
+      .join("")
+      .trimEnd();
+  const name = (layer) => layer.join("+");
+  const lines = [
+    `layer order, bottom first: ${layers.map(name).join(" < ")}`,
+    `${graph.size} scripts, ${dependencies} dependencies; each cell counts the pairs of files where a file in the row's directory depends on a file in the column's`,
+    row("from \\ to", named),
+    ...named.map((from) =>
+      row(
+        from,
+        named.map((to) => cell.get(`${from}\0${to}`) ?? ""),
+      ),
+    ),
+  ];
+  const upward = upwardPairs(graph, layerOf);
+  const byFile = new Map();
+  for (const pair of upward) byFile.set(pair.from, (byFile.get(pair.from) ?? 0) + 1);
+  lines.push(`upward pairs: ${upward.length} in ${byFile.size} files; the files with the most:`);
+  for (const [file, count] of [...byFile]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 10))
+    lines.push(`${String(count).padStart(5)} ${scriptRel(file)}`);
+  if (layers.length > 9) {
+    lines.push(`${layers.length} layers are too many to try every order; name 9 or fewer`);
+  } else {
+    const matrix = layers.map((low) =>
+      layers.map((high) =>
+        low === high
+          ? 0
+          : low.reduce(
+              (sum, a) => sum + high.reduce((inner, b) => inner + (cell.get(`${a}\0${b}`) ?? 0), 0),
+              0,
+            ),
+      ),
+    );
+    const best = fewestUpward(matrix);
+    lines.push(
+      `fewest upward pairs over every order of these ${layers.length} layers: ${best.cost}, ${best.order.map((index) => name(layers[index])).join(" < ")}`,
+    );
+  }
+  return { ok: true, lines };
+}
+
 export function lintL17(file, text) {
   const findings = [];
   const lines = text.split("\n");
@@ -1502,6 +1634,14 @@ function main() {
   ) {
     console.error("sketch-lint: pass --sketch NAME for a folder under sketches/");
     process.exit(2);
+  }
+  if (options.layers) {
+    const report = layerReport(
+      sources(path.join(root, "sketches", options.sketch, "src"), new Set([".gd"])),
+      options.layers,
+    );
+    for (const line of report.lines) console.log(line);
+    process.exit(report.ok ? 0 : 1);
   }
   const started = Date.now();
   const raw = lintSketch(options.sketch);
