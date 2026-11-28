@@ -41,6 +41,7 @@ import {
   parseBatchDriverRefs,
   parseBatchDriverVars,
   parseTuning,
+  parseLintArgs,
   readBaselineAt,
   stronglyConnectedComponents,
 } from "./sketch-lint.mjs";
@@ -1484,4 +1485,19 @@ test("readBaselineAt throws when a blob-less clone cannot fetch the base copy, a
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+test("parseLintArgs refuses a --base with no ref and a flag it does not know", () => {
+  assert.deepEqual(parseLintArgs(["--sketch", "core-loop", "--base", "origin/main"]), {
+    sketch: "core-loop",
+    writeBaseline: false,
+    base: "origin/main",
+  });
+  assert.throws(() => parseLintArgs(["--sketch", "core-loop", "--base"]), /--base requires a ref/);
+  assert.throws(() => parseLintArgs(["--base", ""]), /--base requires a ref/);
+  assert.throws(() => parseLintArgs(["--base", "--sketch", "core-loop"]), /--base requires a ref/);
+  assert.throws(
+    () => parseLintArgs(["--base=origin/main"]),
+    /unknown argument --base=origin\/main/,
+  );
 });

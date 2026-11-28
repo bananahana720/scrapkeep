@@ -680,8 +680,16 @@ export function parseLintArgs(argv) {
   const options = { sketch: null, writeBaseline: false, base: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--sketch" && argv[i + 1]) options.sketch = argv[++i];
-    else if (argv[i] === "--base" && argv[i + 1]) options.base = argv[++i];
-    else if (argv[i] === "--write-baseline") options.writeBaseline = true;
+    else if (argv[i] === "--base") {
+      const ref = argv[++i];
+      if (!ref || ref.startsWith("-"))
+        throw new Error("--base requires a ref, as in --base origin/main");
+      options.base = ref;
+    } else if (argv[i] === "--write-baseline") options.writeBaseline = true;
+    else if (argv[i].startsWith("-"))
+      throw new Error(
+        `unknown argument ${argv[i]}; use --sketch NAME, --base REF or --write-baseline`,
+      );
   }
   return options;
 }
@@ -1261,7 +1269,13 @@ export function lintSketch(sketch) {
 }
 
 function main() {
-  const options = parseLintArgs(process.argv.slice(2));
+  let options;
+  try {
+    options = parseLintArgs(process.argv.slice(2));
+  } catch (error) {
+    console.error(`sketch-lint: ${error.message}`);
+    process.exit(2);
+  }
   if (
     !options.sketch ||
     !existsSync(path.join(root, "sketches", options.sketch, "project.godot"))
