@@ -13,15 +13,9 @@ Verification is scoped to the artifact; a passing unrelated suite cannot qualify
 
 1. Read the task's acceptance criteria, [STATE.md](../../../project-guide/handoff/STATE.md), and [CONTRIBUTING.md](../../../CONTRIBUTING.md) (`TRACKING.md` only for heavy-lane cards). Record the candidate identity (worktree, branch, head SHA, base SHA) before running anything.
 2. Run `npm run check:scope -- <base> <candidate> [--no-build]`. It classifies the changed paths and prints the required commands for that scope. Do not add a build under a no-build scope.
-3. Select the method row below for the artifact class `check:scope` reports. A mixed change takes every applicable row.
+3. Follow the required checks for the scope class `check:scope` reports: [ORCHESTRATOR.md](../../../ORCHESTRATOR.md#light-play-lane) owns the tiered gate rule for Godot game changes (`sketches/core-loop`), and [CONTRIBUTING.md](../../../CONTRIBUTING.md#verification) owns the CLI command definitions and scope-to-command map (documentation, agent config, browser-proof, and mixed scopes). A mixed change takes the union.
 4. Run the named commands from the candidate worktree. Save each command, exit code and output under `artifacts/local/tasks/<task-id>/`, with the identity from step 1.
 5. Report each check as pass, fail or skipped, with its method, version and limits. Send the report to the coordinator; only the coordinator integrates changes onto `main`.
-
-| Artifact | Required method |
-| --- | --- |
-| Documentation or agent configuration | `npm run check:docs`, `npm run check:agents`, `npm run check:project`, `npm run check:skills`, and scenario review of the changed contract. No game build for a documentation-only scope. |
-| Browser-proof code | `npm run verify`; add CONTRIBUTING's browser checks for UI, input, camera or render changes. Preserve checks for both entries. |
-| Godot game (`sketches/core-loop`) | Focused Godot tests, `npm run sketch:lint`, `npm run sketch:fast -- --base <base>`, and one independent Gemini 4 Neon High review per `AGENTS.md` rule 4. |
 
 In Antigravity use `run_command`, the `browser` subagent or Playwright for browser proofs, `godot_godot` MCP (with `stop_project` before commit), and `scrapkeep-visual-review` for multimodal inspection. In Claude Code use supported shell and browser tools. The same checks and evidence meanings apply across hosts. A missing browser yields a browser-verification gap; successful HTTP serving is not browser behavior.
 
