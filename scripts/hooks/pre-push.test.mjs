@@ -18,6 +18,7 @@ import {
   planHookChecks,
   pushedChanges,
   rangeBase,
+  readPushedFiles,
   workingTreeDrift,
 } from "./pre-push.mjs";
 
@@ -210,7 +211,7 @@ test("executeHookPlan runs all planned checks strictly with zero skipped checks 
       cwd: "/repo",
       exists: () => true,
       ensureModules: () => ({ ok: true }),
-      readPushed: () => "",
+      readPushed: (_head, files) => files.map(() => ""),
       spawn: (cmd, args) => {
         ran.push([cmd, ...args]);
         return { status: ran.length === 1 ? 1 : 0 };
@@ -484,11 +485,50 @@ test("the push reader fails when it cannot read the push", () => {
   );
   assert.throws(
     () => runPushed(work, [{ jsFiles: ["scripts/absent.mjs"], head: base }]),
-    /git show [0-9a-f]+:scripts\/absent\.mjs failed/,
+    /git cat-file cannot show [0-9a-f]+:scripts\/absent\.mjs: [0-9a-f]+:scripts\/absent\.mjs missing/,
   );
   assert.throws(
     () =>
       workingTreeDrift([{ head: "f".repeat(40), files: [], exists: () => true }], { cwd: work }),
     /git diff/,
   );
+});
+
+test("readPushedFiles reads every pushed file with one git process and stops on a reply it cannot read", () => {
+  const { work, g, write } = pushRepo();
+  write("scripts/a.mjs", "export const a = 1;\n");
+  write("scripts/b.mjs", "no newline at the end");
+  g("add", "scripts");
+  g("commit", "-qm", "two scripts");
+  const head = g("rev-parse", "HEAD");
+  assert.match(head, /^[0-9a-f]{40}$/);
+  let gits = 0;
+  const counted = (cmd, args, options) => {
+    gits += 1;
+    return spawnSync(cmd, args, options);
+  };
+  const files = ["scripts/a.mjs", "scripts/b.mjs", "scripts/kept.mjs"];
+  assert.deepEqual(readPushedFiles(head, files, { cwd: work, spawn: counted }).map(String), [
+    "export const a = 1;\n",
+    "no newline at the end",
+    "export const kept = 1;\n",
+  ]);
+  assert.equal(gits, 1);
+  assert.throws(
+    () => readPushedFiles(head, ["scripts"], { cwd: work }),
+    /git cat-file cannot show [0-9a-f]+:scripts: [0-9a-f]+ tree \d+/,
+  );
+  const reply = (stdout) => () => ({
+    status: 0,
+    stdout: stdout === null ? null : Buffer.from(stdout),
+    stderr: null,
+  });
+  const cases = [
+    [null, /gave no output/],
+    ["", /cannot show h:x: no reply/],
+    ["abc blob 10\nshort\n", /cut h:x short/],
+    ["abc blob 2\nhi\nextra", /gave more than was asked/],
+  ];
+  for (const [stdout, error] of cases)
+    assert.throws(() => readPushedFiles("h", ["x"], { spawn: reply(stdout) }), error);
 });

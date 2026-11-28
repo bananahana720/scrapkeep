@@ -116,14 +116,40 @@ export function workingTreeDrift(pushed, { cwd = root, spawn = spawnSync } = {})
   return [...differs].sort();
 }
 
+export function readPushedFiles(head, files, { cwd = root, spawn = spawnSync } = {}) {
+  const input = Buffer.from(files.map((file) => `${head}:${file}\n`).join(""));
+  const out = git(["cat-file", "--batch"], {
+    cwd,
+    trim: false,
+    spawn: (cmd, args, options) => {
+      const ran = spawn(cmd, args, { ...options, input, encoding: "buffer" });
+      return { ...ran, stderr: ran.stderr ? String(ran.stderr) : "" };
+    },
+  });
+  if (!Buffer.isBuffer(out)) throw new Error(`git cat-file --batch for ${head} gave no output`);
+  let at = 0;
+  const contents = files.map((file) => {
+    const end = out.indexOf(10, at);
+    const header = end < 0 ? "" : out.toString("utf8", at, end);
+    const [, type, size] = header.match(/^[0-9a-f]+ (\S+) (\d+)$/) ?? [];
+    if (type !== "blob")
+      throw new Error(`git cat-file cannot show ${head}:${file}: ${header || "no reply"}`);
+    const from = end + 1;
+    at = from + Number(size) + 1;
+    if (out[at - 1] !== 10) throw new Error(`git cat-file cut ${head}:${file} short`);
+    return out.subarray(from, at - 1);
+  });
+  if (at !== out.length)
+    throw new Error(`git cat-file --batch for ${head} gave more than was asked`);
+  return contents;
+}
+
 export function planHookChecks(changedFiles, exists) {
   if (typeof exists !== "function")
     throw new Error("planHookChecks needs the pushed tree's file test");
   const jsFiles = filterFormatTargets(changedFiles, exists);
   const hasSketch = changedFiles.some(isGodotPath);
-  const hasDocsOrPkg = changedFiles.some(
-    (f) => isDocsPath(f, exists) || isPackagePath(f) || isSkillPath(f),
-  );
+  const hasDocsOrPkg = changedFiles.some((f) => isDocsPath(f, exists) || isPackagePath(f));
   const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
   const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
   const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
@@ -159,7 +185,7 @@ export function executeHookPlan(
     spawn = spawnSync,
     ensureModules = ensureNodeModules,
     errLog = console.error,
-    readPushed = (head, file) => git(["show", `${head}:${file}`], { cwd, spawn, trim: false }),
+    readPushed = (head, files) => readPushedFiles(head, files, { cwd, spawn }),
     readBaseline = (ref) => readBaselineAt(ref, { cwd }),
     drift = () => [],
   } = {},
@@ -183,10 +209,11 @@ export function executeHookPlan(
       for (const plan of scripted) {
         const copy = mkdtempSync(path.join(os.tmpdir(), "pre-push-"));
         try {
-          for (const file of plan.jsFiles) {
+          const contents = readPushed(plan.head, plan.jsFiles);
+          plan.jsFiles.forEach((file, i) => {
             mkdirSync(path.dirname(path.join(copy, file)), { recursive: true });
-            writeFileSync(path.join(copy, file), readPushed(plan.head, file));
-          }
+            writeFileSync(path.join(copy, file), contents[i]);
+          });
           const steps = [
             ["oxfmt", oxfmt, ["-c", path.join(cwd, "scripts/ci/oxfmt.json"), "--check"]],
             ["oxlint", oxlint, ["-c", path.join(cwd, "scripts/ci/oxlint.json")]],
