@@ -1,6 +1,6 @@
 extends SceneTree
 
-const HullMark := preload("res://src/world/hull_mark.gd")
+const HullMark := preload("res://src/core/hull_mark.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Ward := preload("res://src/world/stake_devices.gd")
 const Interact := preload("res://src/world/interact.gd")

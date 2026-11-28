@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
-const HullMark := preload("res://src/world/hull_mark.gd")
+const HullMark := preload("res://src/core/hull_mark.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 

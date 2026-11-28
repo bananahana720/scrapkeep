@@ -42,7 +42,7 @@ const PlayerFx := preload("res://src/presentation/player_fx.gd")
 const PickupLines := preload("res://src/ui/pickup_lines.gd")
 const PanelFx := preload("res://src/presentation/panel_fx.gd")
 const Companion := preload("res://src/core/companion.gd")
-const HullMark := preload("res://src/world/hull_mark.gd")
+const HullMark := preload("res://src/core/hull_mark.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 
