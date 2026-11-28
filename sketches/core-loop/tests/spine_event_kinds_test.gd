@@ -2,7 +2,7 @@ extends SceneTree
 
 const GameEvents := preload("res://src/core/game_events.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const EventJuice := preload("res://src/presentation/event_juice.gd")
+const Rows := preload("res://src/presentation/rows.gd")
 
 # Every GameEvents signal has exactly one well-formed event_kinds row, and every row
 # names a real signal, so nothing a module publishes can reach the HUD, VFX or audio
@@ -57,7 +57,7 @@ func _initialize() -> void:
 	var toasts_without_words: Array[String] = []
 	for kind in names:
 		if EventKinds.priority(kind) >= 3 and EventKinds.row(kind).get("hud", "") == "" and EventKinds.row(kind).get("objective", "") == "" \
-				and not EventJuice.WEIGHTED.has(kind):
+				and not Rows.WEIGHTED.has(kind):
 			toasts_without_words.append(kind)
 	var event_kinds_source := FileAccess.get_file_as_string("res://src/core/event_kinds.gd")
 	var upward_refs: Array[String] = []

@@ -3,6 +3,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
+const Rows := preload("res://src/presentation/rows.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const Kit := preload("res://src/presentation/destructible_kit.gd")
@@ -15,7 +16,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Capture := preload("res://tools/press_latency_capture.gd")
 
 # W45 P2 combat weight. Four feel facts, each with a planted control that must not land:
-#   A. juice.gd lands the Warden's posture edges and a boss's fall through EventJuice.weigh: a chunk heavy, a
+#   A. juice.gd lands the Warden's posture edges and a boss's fall through Rows.weigh: a chunk heavy, a
 #      stagger and the breaking chunk massive (55 ms, shake 0.4), a boss climax (60 ms, shake 0.5), each inside
 #      the one stop budget, MAX_STOP and SHAKE_CAP; a reading with no edge, and a fact with no weight, land nothing.
 #   B. world.gd publishes the stage Warden's chunk phases on fight_phase_changed once each, and audio.gd answers
@@ -120,7 +121,7 @@ func _posture_and_boss() -> void:
 	var shake_before: float = game.camera.shake_amplitude()
 	events.posture_changed.emit(warden, 1.0, true)
 	var stagger := _flush_since(from)
-	var massive := EventJuice.weigh("posture_changed", {"staggered": true})
+	var massive := Rows.weigh("posture_changed", {"staggered": true})
 	t.check("A: a stagger lands the massive weight through weigh (55 ms)", stagger.size() == 1 and is_equal_approx(stagger[0] * 1000.0, 55.0) and massive.weight == "massive", "%s %s" % [stagger, massive.weight])
 	t.check("A: the stagger's stop is within MAX_STOP and logged as posture_changed", juice.hit_stop_log.back()[2] == "posture_changed" and float(juice.hit_stop_log.back()[1]) <= Juice.SPINE_CAP_MS / 1000.0, str(juice.hit_stop_log.back()))
 	t.check("A: the stagger kicks and shakes the camera inside SHAKE_CAP", juice.hook_log.has(["kick", "posture_changed"]) and game.camera.shake_amplitude() > shake_before and is_equal_approx(massive.shake, 0.4) and massive.shake <= Juice.SHAKE_CAP,
@@ -157,14 +158,14 @@ func _posture_and_boss() -> void:
 	from = _fresh()
 	events.boss_defeated.emit()
 	var felled := _flush_since(from)
-	var climax := EventJuice.weigh("boss_defeated")
+	var climax := Rows.weigh("boss_defeated")
 	t.check("A: a boss's fall lands the climax stop (60 ms, the spine's cap)", felled.size() == 1 and is_equal_approx(felled[0] * 1000.0, 60.0) and felled[0] * 1000.0 <= Juice.SPINE_CAP_MS, str(felled))
 	t.check("A: the climax shake is 0.5, at SHAKE_CAP, with its zoom", is_equal_approx(climax.shake, 0.5) and climax.shake <= Juice.SHAKE_CAP and juice.hook_log.has(["punch_fov", "boss_defeated"]), str(climax.shake))
 
 	from = _fresh()
 	juice.weigh("jumped", {}, Vector3.ZERO)
 	t.eq("A control: a fact with no weight row sends no stop", _flush_since(from), [])
-	var faint := EventJuice.weigh("boss_defeated", {"strength": 0.0})
+	var faint := Rows.weigh("boss_defeated", {"strength": 0.0})
 	t.check("A control: a zero-strength climax shakes and kicks nothing", faint.shake == 0.0 and faint.kick == 0.0, str([faint.shake, faint.kick]))
 
 	# Within one second the budget never passes STOP_BUDGET_MS, however many breaks ask.

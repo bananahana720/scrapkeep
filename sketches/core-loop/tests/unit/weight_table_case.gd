@@ -1,7 +1,6 @@
 extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
@@ -46,7 +45,7 @@ class AudioCtx:
 	var spawner = null
 	var calm := false
 
-var event_script: Script = EventJuice
+var event_script: Script = Rows
 var _measure_cache := {}
 const PRESENTATION := ["juice", "vfx", "audio"]
 const RULES := ["strike", "death_parts", "amount", "gauge", "posture"]

@@ -517,7 +517,6 @@
     "sketches/core-loop/src/presentation/enemy_clips.gd",
     "sketches/core-loop/src/presentation/enemy_gait.gd",
     "sketches/core-loop/src/presentation/enemy_motion.gd",
-    "sketches/core-loop/src/presentation/fx_library.gd",
     "sketches/core-loop/src/presentation/graphics_preset.gd",
     "sketches/core-loop/src/presentation/harmony.gd",
     "sketches/core-loop/src/presentation/harpoon_physics_rig.gd",

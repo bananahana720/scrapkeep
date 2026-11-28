@@ -4,6 +4,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
+const Rows := preload("res://src/presentation/rows.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const NUMBER_LIFT := 1.6
 const SimClock := preload("res://src/core/sim_clock.gd")
@@ -628,14 +629,14 @@ static func shatter_weight(tier: int) -> Dictionary:
 	if not SHATTER_WEIGHT.has(tier):
 		return {}
 	var key := String(SHATTER_WEIGHT[tier][0])
-	var profile: Dictionary = EventJuice.WEIGHT[key]
+	var profile: Dictionary = Rows.WEIGHT[key]
 	var stop := float(profile["stop_ms"]) if not profile["stop_ms"] is String else stop_ms_for(float(SHATTER_WEIGHT[tier][1]), false, profile["stop_ms"] == "heavy")
 	return {"fact": "piece_shattered", "weight": key, "strength": 1.0, "stop_ms": stop, "shake": float(profile["shake"]),
 		"kick": float(profile["kick"]), "punch_fov": float(profile["punch_fov"])}
 
 
 func weigh(fact: String, args: Dictionary, at: Vector3) -> Dictionary:
-	var record := EventJuice.weigh(fact, args)
+	var record := Rows.weigh(fact, args)
 	record["at"] = at
 	_weighed.append(record)
 	_queue_flush()
