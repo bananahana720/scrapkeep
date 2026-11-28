@@ -1,5 +1,5 @@
 ---
-name: scrapkeep-lab
+name: project-skill
 description: "Run the demo lab. Use for lab, harness or gate work."
 ---
 
@@ -9,8 +9,9 @@ Resolve this skill directory through symlinks, then run `git -C <resolved-skill-
 
 ## Procedure
 
-1. Run `npm run check:skills` before committing a change. (SKL-01, SKL-99)
+1. Run `npm run check:skills` before committing a change. (DEV-01)
 2. See `scripts/play.mjs` for the launcher. Card JL-01 and event EV-0001 cover the setup.
+3. CLI: `scrapkeep frobnicate` and `scrapkeep lab bogus` are not real verbs (B2).
 
 ## Host adapter
 
