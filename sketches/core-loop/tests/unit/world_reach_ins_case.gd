@@ -90,3 +90,6 @@ func run(t) -> void:
 		_offenders("res://src", "_polyline_channel", "res://src/world/map_gorge.gd", ALLOWED_POLYLINE_CHANNEL_REACH_INS), [])
 	t.eq("no director._park_families reach-ins in src/",
 		_offenders("res://src", "director\\._park_families", "", ALLOWED_DIRECTOR_FAMILIES_REACH_INS), [])
+	var bot_flag := "(?m)^\\s*(?:static\\s+)?var\\s+threaded_in_bot_runs\\b"
+	t.eq("only sim_clock.gd declares threaded_in_bot_runs",
+		_offenders("res://src", bot_flag, "res://src/core/sim_clock.gd", []) + _offenders("res://tools", bot_flag, "", []), [])
