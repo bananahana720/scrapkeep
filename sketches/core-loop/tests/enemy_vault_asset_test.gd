@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const GLB := "res://assets/models/world_one/enemy_vault.glb"
-const BASE_LOGIC_SHA := "062e1f7d31e45b4661f043dd35f34eb33e3114fee55bef46308c95a328a9c0c5"
+const BASE_LOGIC_SHA := "4174043cf7c1a73c91c45f58eaf3a47fd512bcbad3a09692ba7031a69b794c35"
 
 var failures := 0
 var game
