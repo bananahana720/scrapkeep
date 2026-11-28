@@ -21,7 +21,6 @@ const BossPosture := preload("res://src/combat/boss_posture.gd")
 
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const REDUCED_FLASH: float = SettingsStore.REDUCED_FLASH
-const SPINE_CAP_MS := EventJuice.SPINE_CAP_MS
 const SHAKE_CAP := 0.5
 const IMPACT_ZOOM_FRAMES := 2
 const IMPACT_ZOOM_S := 2.0 / 60.0
@@ -455,11 +454,7 @@ static func throw_stop_ms(throw: float, crit := false) -> float:
 	var ms := lerpf(THROW_STOP_MS[0], THROW_STOP_MS[1], throw_share(throw))
 	if crit:
 		ms *= float(EventJuice.juice("enemy_struck")["crit"]["stop_mult"])
-	return minf(ms, SPINE_CAP_MS)
-
-
-static func stop_ms_for(damage: float, crit := false, heavy := false) -> float:
-	return EventJuice.stop_ms_for(damage, crit, heavy)
+	return minf(ms, EventJuice.SPINE_CAP_MS)
 
 
 func _queue_flush() -> void:
@@ -542,7 +537,7 @@ func _flush_hits() -> Dictionary:
 		var hit: Dictionary = _hits[i]
 		var throw := float(hit.get("throw", -1.0))
 		if hit["stop"]:
-			stop = maxf(stop, maxf(stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]), throw_stop_ms(throw, hit["crit"]) if throw >= 0.0 else 0.0))
+			stop = maxf(stop, maxf(EventJuice.stop_ms_for(hit["damage"], hit["crit"], hit["heavy"]), throw_stop_ms(throw, hit["crit"]) if throw >= 0.0 else 0.0))
 			if hit["crit"]:
 				shake = maxf(shake, float(row["crit"]["shake"]))
 		shake = maxf(shake, maxf(hit["shake"], lerpf(THROW_SHAKE[0], THROW_SHAKE[1], throw_share(throw)) if throw >= 0.0 else 0.0))
@@ -592,7 +587,7 @@ func _on_weak_point(_point_id: String) -> void:
 	_camera("kick", "boss_weak_point_hit", Vector3.DOWN, 0.25)
 	impact_zoom("boss_weak_point_hit")
 	rumble("boss_weak_point_hit")
-	request_hit_stop(stop_ms_for(30.0, true) / 1000.0, "boss_weak_point_hit")
+	request_hit_stop(EventJuice.stop_ms_for(30.0, true) / 1000.0, "boss_weak_point_hit")
 
 
 func _on_posture(enemy: Node3D, _posture: float, staggered: bool) -> void:
@@ -630,7 +625,7 @@ static func shatter_weight(tier: int) -> Dictionary:
 		return {}
 	var key := String(SHATTER_WEIGHT[tier][0])
 	var profile: Dictionary = Rows.WEIGHT[key]
-	var stop := float(profile["stop_ms"]) if not profile["stop_ms"] is String else stop_ms_for(float(SHATTER_WEIGHT[tier][1]), false, profile["stop_ms"] == "heavy")
+	var stop := float(profile["stop_ms"]) if not profile["stop_ms"] is String else EventJuice.stop_ms_for(float(SHATTER_WEIGHT[tier][1]), false, profile["stop_ms"] == "heavy")
 	return {"fact": "piece_shattered", "weight": key, "strength": 1.0, "stop_ms": stop, "shake": float(profile["shake"]),
 		"kick": float(profile["kick"]), "punch_fov": float(profile["punch_fov"])}
 
@@ -919,7 +914,7 @@ func request_hit_stop(seconds: float, fact: String) -> void:
 	if not STRIKE_STOP_FACTS.has(fact):
 		_log_push(hit_stop_log, [seconds, 0.0, fact, now])
 		return
-	var wanted := minf(seconds * 1000.0, SPINE_CAP_MS) * stop_scale
+	var wanted := minf(seconds * 1000.0, EventJuice.SPINE_CAP_MS) * stop_scale
 	_stops = _stops.filter(func(stop: Array): return now - int(stop[0]) < 1000)
 	var spent := 0.0
 	var recent := 0.0

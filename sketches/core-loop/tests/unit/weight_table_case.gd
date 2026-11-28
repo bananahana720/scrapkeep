@@ -2,6 +2,7 @@ extends RefCounted
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Juice := preload("res://src/presentation/juice.gd")
+const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Fx := preload("res://src/presentation/fx_library.gd")
@@ -70,8 +71,8 @@ func run(t) -> void:
 	t.eq("weight fields", bad_fields, [])
 	var band_ok: bool = weights.hit.stop_ms == "hit" and weights.heavy.stop_ms == "heavy"
 	for damage in [0.0, 10.0, 30.0, 60.0]:
-		band_ok = band_ok and is_equal_approx(_record("hit", damage).stop_ms, Juice.stop_ms_for(damage))
-		band_ok = band_ok and is_equal_approx(_record("heavy", damage).stop_ms, Juice.stop_ms_for(damage, false, true))
+		band_ok = band_ok and is_equal_approx(_record("hit", damage).stop_ms, EventJuice.stop_ms_for(damage))
+		band_ok = band_ok and is_equal_approx(_record("heavy", damage).stop_ms, EventJuice.stop_ms_for(damage, false, true))
 	t.check("stops resolve through Juice", band_ok, "hit and heavy delegate at damage 0, 10, 30, 60")
 	t.check("strict stop order", _stop_order(weights), "none < hit < heavy < massive < climax <= 60")
 	t.check("strict shake order", _scalar_order(weights, "shake", Juice.SHAKE_CAP), "none through climax within SHAKE_CAP")
@@ -219,7 +220,7 @@ func _record(key: String, damage := 0.0) -> Dictionary:
 
 func _stop(row: Dictionary, damage: float) -> float:
 	if row.get("stop_ms") is String:
-		return Juice.stop_ms_for(damage, false, row.stop_ms == "heavy")
+		return EventJuice.stop_ms_for(damage, false, row.stop_ms == "heavy")
 	return float(row.get("stop_ms", -1.0))
 
 
@@ -228,7 +229,7 @@ func _stop_order(weights: Dictionary) -> bool:
 		var previous := -1.0
 		for key in CLASSES:
 			var stop := _stop(weights.get(key, {}), damage)
-			if stop <= previous or stop > Juice.SPINE_CAP_MS or (key == "none" and stop != 0.0):
+			if stop <= previous or stop > EventJuice.SPINE_CAP_MS or (key == "none" and stop != 0.0):
 				return false
 			previous = stop
 	return true

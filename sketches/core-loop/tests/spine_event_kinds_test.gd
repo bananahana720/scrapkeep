@@ -3,6 +3,10 @@ extends SceneTree
 const GameEvents := preload("res://src/core/game_events.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Rows := preload("res://src/presentation/rows.gd")
+const T := preload("res://tests/support/t.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
+const EVENT_KINDS_PATH := "res://src/core/event_kinds.gd"
+const HIGHER_LAYER := "res://src/(presentation|combat|build|boss|world|movement|ui|dev|experimental)/"
 
 # Every GameEvents signal has exactly one well-formed event_kinds row, and every row
 # names a real signal, so nothing a module publishes can reach the HUD, VFX or audio
@@ -59,11 +63,9 @@ func _initialize() -> void:
 		if EventKinds.priority(kind) >= 3 and EventKinds.row(kind).get("hud", "") == "" and EventKinds.row(kind).get("objective", "") == "" \
 				and not Rows.WEIGHTED.has(kind):
 			toasts_without_words.append(kind)
-	var event_kinds_source := FileAccess.get_file_as_string("res://src/core/event_kinds.gd")
-	var upward_refs: Array[String] = []
-	for forbidden in ["res://src/presentation/", "res://src/combat/"]:
-		if event_kinds_source.contains(forbidden):
-			upward_refs.append(forbidden)
+	var scan := T.new("spine_event_kinds_test source scan")
+	var upward := SourceScan.matching(scan, ["res://src/core"], HIGHER_LAYER)
+	var names_higher_layer := EVENT_KINDS_PATH in upward
 
 	var checks := [
 		["coverage", missing.is_empty(), "%d signals on the bus, %d without a row %s" % [names.size(), missing.size(), missing]],
@@ -73,7 +75,7 @@ func _initialize() -> void:
 		["contract rules", missing_rules.is_empty(), "%d of %d required rules missing from CONTRACTS.md %s" % [missing_rules.size(), rules.size(), missing_rules]],
 		["no optional", optional.is_empty(), "%d objectives use the word optional %s" % [optional.size(), optional]],
 		["codex categories", categories_ok and EventKinds.CODEX_CATEGORIES.size() == 5, "%d codex categories, each with a colour, label and shape" % EventKinds.CODEX_CATEGORIES.size()],
-		["no upward layer refs", upward_refs.is_empty(), "event_kinds.gd contains forbidden layer paths %s" % [upward_refs]],
+		["no upward layer refs", scan.failures == 0 and not names_higher_layer, "%d scan failures; event_kinds.gd names a higher layer: %s" % [scan.failures, names_higher_layer]],
 	]
 	for check in checks:
 		if not check[1]:

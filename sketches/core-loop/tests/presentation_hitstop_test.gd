@@ -159,7 +159,7 @@ func _process(_delta: float) -> bool:
 		"a 10-damage hit stops %.0f ms, an 80-damage hit %.0f ms, an 80-damage ram %.0f ms" % [_marks["low"] * 1000.0, _marks["high"] * 1000.0, _marks["ram"] * 1000.0])
 	_check("deflects free", _marks["deflect"] == 0, "a deflected ram sends %d stops" % _marks["deflect"])
 	var one: Array = _marks["frame"]
-	var expected := (Juice.stop_ms_for(20.0) + 4.0 * EventJuice.STOP_PER_EXTRA_HIT_MS) / 1000.0
+	var expected := (EventJuice.stop_ms_for(20.0) + 4.0 * EventJuice.STOP_PER_EXTRA_HIT_MS) / 1000.0
 	_check("one frame, one stop", one[0] == 1 and absf(one[1] - expected) < 0.0005,
 		"five hits in one frame send %d stop of %.0f ms (the band plus %.0f ms per extra hit)" % [one[0], one[1] * 1000.0, EventJuice.STOP_PER_EXTRA_HIT_MS])
 	var stack: Array = _marks["stack"]
@@ -209,14 +209,14 @@ func _check_bands() -> void:
 	var ok := true
 	var previous := 0.0
 	for damage in [0.0, 5.0, 10.0, 20.0, 40.0, 60.0, 80.0, 150.0]:
-		var ms := Juice.stop_ms_for(damage)
+		var ms := EventJuice.stop_ms_for(damage)
 		ok = ok and ms >= previous and ms <= 60.0
 		previous = ms
 		bands.append("%d:%.0f" % [damage, ms])
-	var crit := Juice.stop_ms_for(20.0, true)
-	var heavy := Juice.stop_ms_for(20.0, false, true)
-	var both := Juice.stop_ms_for(150.0, true, true)
-	_check("bands", ok and crit > Juice.stop_ms_for(20.0) and heavy > Juice.stop_ms_for(20.0) and both <= 60.0,
+	var crit := EventJuice.stop_ms_for(20.0, true)
+	var heavy := EventJuice.stop_ms_for(20.0, false, true)
+	var both := EventJuice.stop_ms_for(150.0, true, true)
+	_check("bands", ok and crit > EventJuice.stop_ms_for(20.0) and heavy > EventJuice.stop_ms_for(20.0) and both <= 60.0,
 		"damage:ms %s; at 20 damage a crit %.0f ms, a ram %.0f ms; a 150-damage crit ram %.0f ms" % [" ".join(bands), crit, heavy, both])
 
 
