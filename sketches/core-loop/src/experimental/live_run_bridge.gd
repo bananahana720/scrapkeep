@@ -13,6 +13,7 @@ const ExperimentalAudioBank := preload("res://src/presentation/experimental_audi
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const LiveWorldActors := preload("res://src/experimental/live_world_actors.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
 const FLAG_ARG_ON := "--experimental-depth=on"
 const FLAG_ARG_OFF := "--experimental-depth=off"
@@ -213,7 +214,7 @@ func configure_stage(
 		add_child(setpieces)
 		var sp_opts := {
 			"seed": seed_value,
-			"cruise_speed": float(opts.get("cruise_speed", 14.0)),
+			"cruise_speed": float(opts.get("cruise_speed", Tuning.CRUISE_MPS)),
 		}
 		setpiece_info = setpieces.setup_from_chunk(chunk_root, sp_opts)
 
@@ -268,7 +269,7 @@ func step(dt: float, run_ctx: Dictionary = {}) -> Dictionary:
 	var ball_pos: Vector3 = run_ctx.get("ball_pos", Vector3.ZERO)
 	var ball_vel: Vector3 = run_ctx.get("ball_vel", Vector3.ZERO)
 	var speed := Vector2(ball_vel.x, ball_vel.z).length()
-	var cruise_mps := float(run_ctx.get("cruise_mps", 14.0))
+	var cruise_mps := float(run_ctx.get("cruise_mps", Tuning.CRUISE_MPS))
 	var alive_count := int(run_ctx.get("alive_count", 0))
 	var grounded := bool(run_ctx.get("grounded", true))
 	var heft_tier := int(run_ctx.get("heft_tier", 1))
@@ -885,7 +886,7 @@ func _wire_signals() -> void:
 			inst.synergies.dispatch(PartResource.TRIG_ON_PROP_RUPTURE, {
 				"origin": receipt.get("origin", Vector3.ZERO),
 				"prop_id": String(receipt.get("prop_id", "")),
-				"ball_speed_mps": 14.0,
+				"ball_speed_mps": Tuning.CRUISE_MPS,
 			})
 	)
 

@@ -17,7 +17,6 @@ const DEFAULT_ELITE_PATHS: Array[String] = [
 	"res://src/experimental/resources/director/elite_choir_resonator_pylon.tres",
 ]
 
-const MIN_TELL_S := 0.6
 const RAM_BREAK_SPEED_RATIO := 0.85
 const RAM_PLATE_MULT := 1.5
 const WEAK_TAG_PLATE_MULT := 2.0
@@ -322,7 +321,7 @@ class RefurbishedInstance extends RefCounted:
 				var flat_dist := Vector2(ball_pos.x - origin.x, ball_pos.z - origin.z).length()
 				var reach := float(def["ability_radius_m"]) * 1.45
 				if cooldown_left <= 0.0 and flat_dist <= reach:
-					var tell := maxf(MIN_TELL_S, float(def["tell_s"]))
+					var tell := maxf(EnvTags.MIN_TELL_S, float(def["tell_s"]))
 					phase = &"telegraph"
 					phase_timer = tell
 					var speed := Vector2(ball_vel.x, ball_vel.z).length()

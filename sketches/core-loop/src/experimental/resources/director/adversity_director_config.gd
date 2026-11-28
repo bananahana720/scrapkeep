@@ -1,9 +1,10 @@
 extends Resource
 
+const Tuning := preload("res://src/movement/tuning.gd")
 
 @export var profile_id: StringName = &"spillway_default"
 @export var default_biome_id: StringName = &""
-@export var default_cruise_mps: float = 14.0
+@export var default_cruise_mps: float = Tuning.CRUISE_MPS
 @export var tier_interval_s: float = 45.0
 @export var max_clock_tier: int = 5
 @export var base_income_per_s: float = 2.4
