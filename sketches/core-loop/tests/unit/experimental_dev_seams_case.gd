@@ -1,46 +1,31 @@
 extends RefCounted
 
-
-func _gd_files(root: String) -> Array[String]:
-	var out: Array[String] = []
-	var dir := DirAccess.open(root)
-	if dir == null:
-		return out
-	dir.list_dir_begin()
-	var name := dir.get_next()
-	while name != "":
-		if name.begins_with("."):
-			name = dir.get_next()
-			continue
-		var full := root.path_join(name)
-		if dir.current_is_dir():
-			out.append_array(_gd_files(full))
-		elif name.ends_with(".gd"):
-			out.append(full)
-		name = dir.get_next()
-	dir.list_dir_end()
-	out.sort()
-	return out
-
-
-func _declares(path: String, pattern: String) -> bool:
-	var re := RegEx.new()
-	re.compile(pattern)
-	return re.search(FileAccess.get_file_as_string(path)) != null
+const SourceScan := preload("res://tests/support/source_scan.gd")
+const DEV_DIR := "res://src/dev"
+const EXPERIMENTAL_DIR := "res://src/experimental"
+const CAPTURE := "res://src/dev/dev_capture.gd"
+const ACTOR_CRAFT := "res://src/experimental/live_world_actor_craft.gd"
+const BRIDGE := "res://src/experimental/live_run_bridge.gd"
 
 
 func run(t) -> void:
-	var capture_state := "(?m)^(static\\s+)?(var|const)\\s+(_busy|_shots|shot_dir|SHOT_DIR|SHEET_[A-Z_]+|SAME_LUMA)\\b"
-	var capture_calls := "(?m)^(static\\s+)?func\\s+(shot|shot_detailed|qa_pack_detailed|contact_sheet|sheet_detailed|sheet_ids|sheet_grid)\\("
-	t.check("dev_console.gd declares no still, QA-pack or sheet state", not _declares("res://src/dev/dev_console.gd", capture_state))
-	t.check("dev_console.gd declares no capture call", not _declares("res://src/dev/dev_console.gd", capture_calls))
-	t.check("dev_capture.gd owns the capture state", _declares("res://src/dev/dev_capture.gd", capture_state))
+	for name in ["_busy", "_shots", "shot_dir"]:
+		t.eq("only dev_capture.gd declares %s in src/dev" % name,
+			SourceScan.matching(t, [DEV_DIR], "(?m)^\\s*(static\\s+)?var\\s+%s\\b" % name), [CAPTURE])
+	t.eq("only dev_capture.gd declares the SHOT_DIR, SHEET_* and SAME_LUMA constants in src/dev",
+		SourceScan.matching(t, [DEV_DIR], "(?m)^\\s*const\\s+(SHOT_DIR|SHEET_[A-Z_]+|SAME_LUMA)\\b"), [CAPTURE])
+	t.eq("only dev_capture.gd declares the still, QA-pack and sheet calls in src/dev",
+		SourceScan.matching(t, [DEV_DIR],
+			"(?m)^\\s*(static\\s+)?func\\s+(shot|shot_detailed|qa_pack_detailed|contact_sheet|sheet_detailed|sheet_ids|sheet_grid)\\("),
+		[CAPTURE])
 
-	var craft_caches := "(?m)^(static\\s+)?var\\s+(_mesh_cache|_fx_mats)\\b"
-	t.check("live_world_actors.gd declares no mesh or material cache", not _declares("res://src/experimental/live_world_actors.gd", craft_caches))
-	t.check("live_world_actors.gd declares no mesh builder", not _declares("res://src/experimental/live_world_actors.gd", "(?m)^(static\\s+)?func\\s+\\w+_mesh\\("))
-	t.check("live_world_actor_craft.gd owns the mesh and material caches", _declares("res://src/experimental/live_world_actor_craft.gd", craft_caches))
+	for name in ["_mesh_cache", "_fx_mats"]:
+		t.eq("only live_world_actor_craft.gd declares %s in src/experimental" % name,
+			SourceScan.matching(t, [EXPERIMENTAL_DIR], "(?m)^\\s*(static\\s+)?var\\s+%s\\b" % name), [ACTOR_CRAFT])
+	t.eq("only live_world_actor_craft.gd declares mesh builders in src/experimental",
+		SourceScan.matching(t, [EXPERIMENTAL_DIR], "(?m)^\\s*(static\\s+)?func\\s+\\w+_mesh\\("), [ACTOR_CRAFT])
 
-	var cooldowns := "(?m)^static\\s+var\\s+_last_trigger_s\\b"
-	t.eq("no script under src/ keeps audio cooldowns in a static var",
-		_gd_files("res://src").filter(func(path: String) -> bool: return _declares(path, cooldowns)), [])
+	t.eq("only live_run_bridge.gd holds the experimental audio cooldowns",
+		SourceScan.matching(t, [EXPERIMENTAL_DIR], "(?m)^\\s*var\\s+audio_cooldowns\\b"), [BRIDGE])
+	t.eq("no script under src/ keeps _last_trigger_s in a static var",
+		SourceScan.matching(t, ["res://src"], "(?m)^\\s*static\\s+var\\s+_last_trigger_s\\b"), [])
