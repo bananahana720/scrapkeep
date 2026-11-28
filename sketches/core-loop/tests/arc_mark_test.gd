@@ -171,7 +171,7 @@ func _run_instant_checks() -> void:
 
 	# 7: the plate exposure keeps its numbers and its reach.
 	var plated := _dummy(Vector3(0.0, 0.0, 9.0))
-	_combat._cannon_expose(plated, 99.0, "ram")
+	_combat.cannon_expose(plated, 99.0, "ram")
 	var ram_base := _dealt(plain, "ram", 20.0, "")
 	var ram_plate := _dealt(plated, "ram", 20.0, "")
 	var shot_base := _dealt(plain, "runner", 10.0, "weapon")

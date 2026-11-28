@@ -85,7 +85,7 @@ func _switch_pilot(class_id: String, at: Vector3) -> void:
 	_clear_temp()
 	_game.ctx.destructibles = null
 	_combat._reset_w47_h2_state()
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	_combat.bolts.clear()
 	_combat.sticky.clear()
 	_combat._clamped.clear()
@@ -298,18 +298,18 @@ func _test_cannon() -> void:
 	# 2b. Air-Lock Overpenetration: airborne from cannon_recoil widens rail 1.8x, pierces every
 	# enemy in widened corridor, and blasts Tier 1-3 Heft Destructibles (leaves Tier 4 intact).
 	_player.state.grounded = false
-	_combat._on_cannon_dashed(Vector3.FORWARD)
-	_t.eq("cannon_recoil arms recoil_airborne while airborne", _combat.cannon_recoil_airborne(), true)
+	_combat.cannon.on_cannon_dashed(Vector3.FORWARD)
+	_t.eq("cannon_recoil arms recoil_airborne while airborne", _combat.cannon.cannon_recoil_airborne(), true)
 
 	# Paint preview while airborne & locked reflects 1.8x widened beam (TADR-008).
 	_combat.weapon_driver.reset(pat)
 	_combat.weapon_driver.step(DT, p_in, Weapons.CANNON_LANE, pat, 1.0, {"rate_mult": 1.0, "recoil_airborne": true})
 	_combat.weapon_driver.step(0.36, h_in, Weapons.CANNON_LANE, pat, 1.0, {"rate_mult": 1.0, "recoil_airborne": true})
-	_combat._step_cannon_paint()
+	_combat.cannon._step_cannon_paint()
 	_t.check("Air-Lock paint preview widens rail 1.8x before release",
-		bool(_combat.last_cannon_paint.get("air_lock_overpen", false))
-		and is_equal_approx(float(_combat.last_cannon_paint.get("half", 0.0)), MindAttacks.LANE_HALF * Weapons.CANNON_AIR_RAIL_WIDTH_MULT),
-		str(_combat.last_cannon_paint))
+		bool(_combat.cannon.last_cannon_paint.get("air_lock_overpen", false))
+		and is_equal_approx(float(_combat.cannon.last_cannon_paint.get("half", 0.0)), MindAttacks.LANE_HALF * Weapons.CANNON_AIR_RAIL_WIDTH_MULT),
+		str(_combat.cannon.last_cannon_paint))
 
 	# Place 3 enemies on the canyon floor along the widened corridor (including off-center inside
 	# 1.8x width and a plated brute) plus Tier 1, 2, 3, and 4 Heft Destructibles.
@@ -337,8 +337,8 @@ func _test_cannon() -> void:
 	var hp1 := float(e1.hp)
 	var hp2 := float(e2.hp)
 	var hp3 := float(e3.hp)
-	_combat._fire_cannon_lane(Weapons.CANNON_LANE, air_shots[0], "weapon")
-	var rail_entry: Dictionary = _combat._cannon.back()
+	_combat.cannon.fire_cannon_lane(Weapons.CANNON_LANE, air_shots[0], "weapon")
+	var rail_entry: Dictionary = _combat.cannon._cannon.back()
 	var rail_h = rail_entry["hazards"][0]
 	_t.near("Committed Air-Lock rail hazard half_width is 1.8x MindAttacks.LANE_HALF",
 		float(rail_h.half_width), MindAttacks.LANE_HALF * Weapons.CANNON_AIR_RAIL_WIDTH_MULT, 0.01)
@@ -354,7 +354,7 @@ func _test_cannon() -> void:
 	# Step hazard to live so every enemy in the 1.8x corridor is pierced.
 	for i in 120:
 		_combat._clock += DT
-		_combat.step_cannon(DT)
+		_combat.cannon.step_cannon(DT)
 	_t.check("Air-Lock rail pierces every enemy across its 1.8x widened corridor",
 		e1.hp < hp1 and e2.hp < hp2 and e3.hp < hp3,
 		"e1 %.1f->%.1f e2 %.1f->%.1f e3 %.1f->%.1f" % [hp1, e1.hp, hp2, e2.hp, hp3, e3.hp])
@@ -362,11 +362,11 @@ func _test_cannon() -> void:
 	# 2c. Recoil-Surf Slam Reset: cannon_rush landing immediately resets cannon_recoil.
 	_player.abilities.spend(AbilityState.MOVEMENT)
 	_t.eq("cannon_recoil cooling after spend", _player.abilities.ready(AbilityState.MOVEMENT), false)
-	_combat._on_cannon_slammed(base_pt, 1.0, 1.0)
+	_combat.cannon.on_cannon_slammed(base_pt, 1.0, 1.0)
 	_t.check("cannon_rush slam landing immediately resets cannon_recoil",
-		_player.abilities.ready(AbilityState.MOVEMENT) and not _combat.last_cannon_recoil_reset.is_empty(),
-		str(_combat.last_cannon_recoil_reset))
-	_t.eq("cannon_rush slam landing clears recoil_airborne flag", _combat.cannon_recoil_airborne(), false)
+		_player.abilities.ready(AbilityState.MOVEMENT) and not _combat.cannon.last_cannon_recoil_reset.is_empty(),
+		str(_combat.cannon.last_cannon_recoil_reset))
+	_t.eq("cannon_rush slam landing clears recoil_airborne flag", _combat.cannon.cannon_recoil_airborne(), false)
 
 	# 2d. Explosive Piton Stake (recoil cancel) / Breach (shaped-charge detonation on release).
 	_switch_pilot("remembered_cannon", base_pt)
@@ -382,30 +382,30 @@ func _test_cannon() -> void:
 
 	# Latch piton to world anchor -> Stake mode.
 	_player.grapple_to(piton_pt, Vector3.BACK, null)
-	_t.eq("World grapple arms Cannon Explosive Piton Stake", _combat.cannon_piton_staked(), true)
+	_t.eq("World grapple arms Cannon Explosive Piton Stake", _combat.cannon.cannon_piton_staked(), true)
 	# Firing cannon_recoil while staked cancels recoil velocity kick!
 	_player.state.velocity = Vector3(0.0, 4.0, -25.0)
-	_combat._on_cannon_dashed(Vector3.FORWARD)
+	_combat.cannon.on_cannon_dashed(Vector3.FORWARD)
 	_t.check("Explosive Piton Stake cancels recoil velocity kick while holding position",
 		_player.state.velocity.is_equal_approx(Vector3.ZERO)
-		and bool(_combat.last_cannon_piton.get("recoil_cancelled", false))
-		and not _combat.cannon_recoil_airborne(),
-		"vel=%s piton=%s" % [str(_player.state.velocity), str(_combat.last_cannon_piton)])
+		and bool(_combat.cannon.last_cannon_piton.get("recoil_cancelled", false))
+		and not _combat.cannon.cannon_recoil_airborne(),
+		"vel=%s piton=%s" % [str(_player.state.velocity), str(_combat.cannon.last_cannon_piton)])
 
 	# Release piton -> Breach shaped-charge detonation breaks Tier 1-3, leaves Tier 4, damages enemy!
 	var foe_hp_before: float = piton_foe.hp
 	_player.release_grapple()
 	_combat._on_grapple_released_w47()
 	_t.check("Explosive Piton Breach detonates on release and strikes nearby enemy",
-		String(_combat.last_cannon_piton.get("mode", "")) == "breach"
-		and int(_combat.last_cannon_piton.get("hits", 0)) >= 1
+		String(_combat.cannon.last_cannon_piton.get("mode", "")) == "breach"
+		and int(_combat.cannon.last_cannon_piton.get("hits", 0)) >= 1
 		and piton_foe.hp < foe_hp_before,
-		"hp %.1f->%.1f piton=%s" % [foe_hp_before, piton_foe.hp, str(_combat.last_cannon_piton)])
+		"hp %.1f->%.1f piton=%s" % [foe_hp_before, piton_foe.hp, str(_combat.cannon.last_cannon_piton)])
 	_t.eq("Explosive Piton Breach shatters Tier 1 Heft Destructible", piton_dest.state_of("piton_t1"), "shattered")
 	_t.eq("Explosive Piton Breach shatters Tier 3 Heft Destructible", piton_dest.state_of("piton_t3"), "shattered")
 	_t.eq("Explosive Piton Breach leaves Tier 4 Heft Destructible intact", piton_dest.state_of("piton_t4"), "intact")
 	var piton_loot_once: Dictionary = piton_dest.loot()
-	var second_det: Dictionary = _combat._detonate_cannon_piton()
+	var second_det: Dictionary = _combat.cannon.detonate_cannon_piton()
 	_t.check("Destructibles.tla safe: piton detonates strictly once and never repays",
 		second_det.is_empty() and piton_dest.loot() == piton_loot_once,
 		"second=%s loot=%s" % [str(second_det), str(piton_dest.loot())])
@@ -457,6 +457,7 @@ func _test_hygiene_and_resets() -> void:
 		"res://src/world/destructibles.gd",
 		"res://src/combat/hero_hooks.gd",
 		"res://src/combat/consumable_runtime.gd",
+		"res://src/combat/cannon_kit.gd",
 	]
 	var orb_hits: Array = []
 	for path in orb_files:
@@ -486,10 +487,10 @@ func _test_hygiene_and_resets() -> void:
 	# Clean reset clears all W47-H2 runtime state (TarnClaw + Combat).
 	_combat._reset_w47_h2_state()
 	_t.check("W47-H2 state resets cleanly with zero residue",
-		not _combat.cannon_recoil_airborne()
-		and _combat.cannon_piton_state().is_empty()
-		and _combat.last_cannon_piton.is_empty()
-		and _combat.last_cannon_recoil_reset.is_empty()
+		not _combat.cannon.cannon_recoil_airborne()
+		and _combat.cannon.cannon_piton_state().is_empty()
+		and _combat.cannon.last_cannon_piton.is_empty()
+		and _combat.cannon.last_cannon_recoil_reset.is_empty()
 		and _claw.seized.is_empty()
 		and _claw.clamp_hurls.is_empty()
 		and _claw.beat3_lunge.is_empty()

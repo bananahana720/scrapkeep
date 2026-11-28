@@ -121,7 +121,7 @@ func _as_class(id: String) -> void:
 	_player.body().global_position = at
 	_player.abilities.refill()
 	_combat._cooldown = 0.0
-	_combat._free_cannon()
+	_combat.cannon.free_cannon()
 	_game.camera.snap(Vector3(0.0, 0.0, -1.0))
 	_game.camera.pitch = 0.0
 	_game.camera._process(0.0)
@@ -165,7 +165,7 @@ func _struck_by(id: int, kind: String, from := 0) -> Array:
 
 func _hazards(family: String) -> Array:
 	var out := []
-	for entry in _combat._cannon:
+	for entry in _combat.cannon._cannon:
 		if entry["family"] == family:
 			for h in entry["hazards"]:
 				if is_instance_valid(h):
@@ -174,7 +174,7 @@ func _hazards(family: String) -> Array:
 
 
 func _entry(family: String) -> Dictionary:
-	for entry in _combat._cannon:
+	for entry in _combat.cannon._cannon:
 		if entry["family"] == family:
 			return entry
 	return {}
@@ -320,12 +320,12 @@ func _check_recoil() -> void:
 		var angle: float = lanes[0].heading.angle_to(lanes[1].heading)
 		_t.check("the split is the Mind's offset", angle >= MindAttacks.SPLIT_OFF.x - 0.001 and angle <= MindAttacks.SPLIT_OFF.y + 0.001,
 			"angle %.3f" % angle)
-	_record["count"] = _combat._cannon_count
+	_record["count"] = _combat.cannon.cannon_count
 	_source.press = {"movement_pressed": true}
 
 
 func _check_recoil_cooling() -> void:
-	_t.eq("a press while cooling commits nothing", _combat._cannon_count, _record["count"])
+	_t.eq("a press while cooling commits nothing", _combat.cannon.cannon_count, _record["count"])
 
 
 # --- f, g. the plate and its exposure -----------------------------------------------------
@@ -455,12 +455,12 @@ func _reset_start() -> void:
 
 
 func _check_reset() -> void:
-	_t.check("a lane stands before the reset", not _combat._cannon.is_empty() and not _cannon_nodes().is_empty(), "nothing committed")
+	_t.check("a lane stands before the reset", not _combat.cannon._cannon.is_empty() and not _cannon_nodes().is_empty(), "nothing committed")
 	_combat._exposed[123] = {"until": _combat._clock + 5.0, "verb": "ram"}
 	_game.events.run_started.emit("remembered_cannon")
 	_t.check("no cannon hazard remains in the tree", _cannon_nodes().is_empty(), str(_cannon_nodes()))
-	_t.check("_cannon and _exposed are empty", _combat._cannon.is_empty() and _combat._exposed.is_empty(),
-		"%d %d" % [_combat._cannon.size(), _combat._exposed.size()])
+	_t.check("_cannon and _exposed are empty", _combat.cannon._cannon.is_empty() and _combat._exposed.is_empty(),
+		"%d %d" % [_combat.cannon._cannon.size(), _combat._exposed.size()])
 
 
 # --- j. phase ----------------------------------------------------------------------------
@@ -525,13 +525,13 @@ func _line_world_checks() -> void:
 	kit.anchor = _player.ball_position() + _aim_flat() * 5.0 + Vector3.UP * 2.0
 	kit.anchor_normal = Vector3.RIGHT
 	var before: Vector3 = _player.body().linear_velocity
-	_combat._cannon_line_world(kit.anchor, 1.0, 1.0)
-	var h = _combat._cannon.back()["hazards"][0]
+	_combat.cannon.cannon_line_world(kit.anchor, 1.0, 1.0)
+	var h = _combat.cannon._cannon.back()["hazards"][0]
 	_t.near("wall Lane Charge follows the normal", h.heading.dot(Vector3.RIGHT), 1.0)
 	_t.eq("wall Lane Charge never applies reel burst", _player.body().linear_velocity, before)
 	kit.anchor_normal = Vector3.UP
-	_combat._cannon_line_world(kit.anchor, 1.0, 1.0)
-	h = _combat._cannon.back()["hazards"][0]
+	_combat.cannon.cannon_line_world(kit.anchor, 1.0, 1.0)
+	h = _combat.cannon._cannon.back()["hazards"][0]
 	_t.near("post Lane Charge follows flat aim", h.heading.dot(_aim_flat()), 1.0)
 	_t.eq("post Lane Charge never applies reel burst", _player.body().linear_velocity, before)
 	kit.drop_line()
@@ -544,5 +544,5 @@ func _line_world_checks() -> void:
 	var target := _target(_ball_flat() + _aim_flat() * 8.0)
 	_player.grapple_to(target.global_position, Vector3.UP, target)
 	_combat._step_line(_player.intent, 0.0)
-	_t.check("a loaded bite fires Lane Charge", _combat.line_load().is_empty() and not _combat._cannon.is_empty())
+	_t.check("a loaded bite fires Lane Charge", _combat.line_load().is_empty() and not _combat.cannon._cannon.is_empty())
 	_t.eq("loaded Lane Charge has exactly one line cue after the bite", audio.cannon_log.filter(func(row): return row["kind"] == "cannon_line").size(), 1)
