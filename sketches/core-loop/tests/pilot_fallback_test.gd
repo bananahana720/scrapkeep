@@ -108,8 +108,8 @@ func _run() -> void:
 	# Sound and music: the motif has no row in harmony.gd, so every reader falls back.
 	_t.check("harmony has no probe row", Harmony.motif(PROBE_MOTIF).is_empty(), "motif row %s" % [Harmony.motif(PROBE_MOTIF)])
 	var rendered := {
-		"ready": SfxBank._ready_pulse(PROBE_MOTIF), "free": SfxBank._break_free(PROBE_MOTIF),
-		"whip": SfxBank._near_miss_whip(PROBE_MOTIF)}
+		"ready": SfxBank.new()._ready_pulse(PROBE_MOTIF), "free": SfxBank.new()._break_free(PROBE_MOTIF),
+		"whip": SfxBank.new()._near_miss_whip(PROBE_MOTIF)}
 	_t.check("class cues render for an unknown motif", rendered.values().all(func(w): return w.size() > 0),
 		"samples %s" % [rendered.keys().map(func(k): return "%s %d" % [k, rendered[k].size()])])
 	# audio.gd resolves a run's motif through ClassDef.by_id, which cannot see the probe

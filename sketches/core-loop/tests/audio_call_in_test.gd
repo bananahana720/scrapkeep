@@ -122,7 +122,7 @@ func _said_by_mouth(speaker: String) -> bool:
 
 # How much of a buffer sits on one partial of A4, the note the mouth checks are said on.
 func _partial(buf: PackedFloat32Array, partial: int) -> float:
-	var turn := TAU * Bank._hz(69) * partial / Harmony.RATE
+	var turn := TAU * Bank.new()._hz(69) * partial / Harmony.RATE
 	var across := 0.0
 	var along := 0.0
 	var level := 0.0
@@ -136,7 +136,7 @@ func _partial(buf: PackedFloat32Array, partial: int) -> float:
 # How far a buffer's opening fifth repeats at the period of E5, clear of the shut mouth's own
 # ring: near 1 for a note, low for breath.
 func _pitched(buf: PackedFloat32Array) -> float:
-	var period := int(round(Harmony.RATE / Bank._hz(76)))
+	var period := int(round(Harmony.RATE / Bank.new()._hz(76)))
 	var same := 0.0
 	var level := 0.0
 	for i in range(period, buf.size() / 5):
