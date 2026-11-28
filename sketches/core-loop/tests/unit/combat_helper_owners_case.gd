@@ -6,6 +6,7 @@ const Enemy := preload("res://src/combat/enemy.gd")
 const OrbitalSatellites := preload("res://src/combat/orbital_satellites.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Warden := preload("res://src/combat/warden.gd")
+const COMBAT_REACH_LEFT := []
 
 
 class RadiusDummy:
@@ -101,16 +102,20 @@ func run(t) -> void:
 	var ult_reach_ins := []
 	var old_combat_privates := []
 	var pres_atk_reach := []
+	var combat_reach_ins := []
 	for path in all_src:
 		var rel: String = path.trim_prefix("res://src/")
 		if rel != "combat/ultimate.gd" and _has_decl(path, "(?<![A-Za-z0-9_])(ultimate|ult)\\._[A-Za-z]"):
 			ult_reach_ins.append(rel)
 		if _has_decl(path, "combat\\._(nearest_list|heat|post_consumable_buff|clear_buff|synergy_context|shot_bits|floor_at|discover)\\("):
 			old_combat_privates.append(rel)
+		if rel != "combat/combat.gd" and _has_decl(path, "(combat|spawner)\\._[a-z]"):
+			combat_reach_ins.append(rel)
 		if rel.begins_with("presentation/") and _has_decl(path, "\"_atk\""):
 			pres_atk_reach.append(rel)
 	t.eq("no src file outside ultimate.gd reaches into ultimate._*", ult_reach_ins, [])
 	t.eq("no src file calls retired combat._* pass-through names", old_combat_privates, [])
+	t.eq("only the listed src files reach into combat._* or spawner._*", combat_reach_ins, COMBAT_REACH_LEFT)
 	t.eq("no presentation file reads enemy _atk directly", pres_atk_reach, [])
 
 	t.eq("only ActiveBase and swarm_remnant read get(\"radius\") in src/combat",
