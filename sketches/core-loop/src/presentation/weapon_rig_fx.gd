@@ -1,6 +1,7 @@
 extends Node3D
 
 
+const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
@@ -121,6 +122,16 @@ func spin_rate() -> float:
 func sync_build(shot_bits_mask: int, part_ids: Array) -> void:
 	var tags := tags_from_parts(part_ids)
 	set_build_mods(shot_bits_mask, tags)
+
+
+func dress_cutaway() -> void:
+	if _cutaway_dressed:
+		return
+	var ring_mount := get_node_or_null("RingMount")
+	if ring_mount != null:
+		BallLooks.cut_kit(ring_mount, "")
+		InkOutline.apply(ring_mount, "pilot")
+	_cutaway_dressed = true
 
 
 func set_build_mods(shot_bits_mask: int, tags: Array) -> void:

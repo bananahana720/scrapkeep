@@ -140,7 +140,7 @@ static func _parts() -> Dictionary:
 	var meshes := []
 	var painted := Palette.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
-	preload("res://src/presentation/world23_chunk_craft.gd").enrich_standard_pbr(painted, 0.34, 0.35)
+	preload("res://src/presentation/craft/craft_lookdev.gd").enrich_standard_pbr(painted, 0.34, 0.35)
 	for node in scene.find_children("*", "MeshInstance3D", true, false):
 		var source := node as MeshInstance3D
 		var mesh: Mesh = source.mesh.duplicate()

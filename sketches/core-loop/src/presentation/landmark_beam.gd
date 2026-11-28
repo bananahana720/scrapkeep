@@ -10,6 +10,7 @@ const TOP_ABOVE_M := 300.0
 const CLEAR_ABOVE_M := 30.0
 const FAR_SHARE := 0.8
 const SIDES := 16
+const BEAM_LAYERS := 2
 const FAR_FULL_M := 220.0
 const NEAR_M := 60.0
 const NEAR_SHARE := 0.3

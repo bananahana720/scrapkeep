@@ -2,6 +2,7 @@ extends SceneTree
 # KF0 2026-10-10: the striped mantles (meltdown, brood) now sit on stages 2 and 4.
 
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
+const WardenDress := preload("res://src/presentation/warden_dress.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
@@ -16,13 +17,13 @@ func _initialize() -> void:
 func _run() -> void:
 	var hook := HeroAssets.new()
 	root.add_child(hook)
-	for stage in HeroAssets.WARDEN_MANTLES:
-		var row: Dictionary = HeroAssets.WARDEN_MANTLES[stage]
+	for stage in WardenDress.MANTLES:
+		var row: Dictionary = WardenDress.MANTLES[stage]
 		var warden := Warden.new()
 		warden.stage = stage
 		warden.family = row.family
 		warden._posture = BossPosture.new()
-		var kit := hook._warden_scene("res://assets/models/warden_kit_%s.glb" % HeroAssets.WARDEN_KITS[row.family])
+		var kit := hook._warden_scene("res://assets/models/warden_kit_%s.glb" % WardenDress.KITS[row.family])
 		root.add_child(kit)
 		var rec := {"warden": warden, "materials": {}, "mantle": null, "mantle_tool": null}
 		hook._mount_mantle(warden, kit, rec)
@@ -49,13 +50,13 @@ func _run() -> void:
 			for fraction in [0.0, 0.25, 0.5, 1.0]:
 				warden._charging = fraction > 0.0
 				warden._charge_time = warden._charge_len * fraction
-				hook._update_mantle(rec)
+				WardenDress.update_mantle(rec)
 				_t.near("stage %d emission follows charge %.2f" % [stage, fraction], tool.emission_energy_multiplier, warden.charge_fraction() * 2.0)
 				if stage in [2, 4]:
 					_t.eq("texture hue is not multiplied by hazard", tool.emission, Color.WHITE)
 					_t.near("stripe brightness follows charge", tool.albedo_color.r, lerpf(0.03, 1.0, fraction))
 			warden._posture.staggered = true
-			hook._update_mantle(rec)
+			WardenDress.update_mantle(rec)
 			_t.near("stagger turns tools dark", tool.emission_energy_multiplier, 0.0)
 		kit.free()
 		warden.free()

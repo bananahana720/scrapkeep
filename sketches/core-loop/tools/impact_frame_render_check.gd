@@ -1,12 +1,13 @@
 extends SceneTree
 
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const ImpactFrame := preload("res://src/presentation/impact_frame.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
 
 const WARNING := Rect2(40.0, 300.0, 200.0, 200.0)
 const BACKGROUND := Color(0.6, 0.6, 0.6)
 
-var _frame: PlayerFx.ImpactFrame
+var _frame: ImpactFrame
 var _rects: Array[Rect2] = []
 
 
@@ -24,7 +25,7 @@ func _initialize() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 3
 	root.add_child(layer)
-	_frame = PlayerFx.ImpactFrame.new()
+	_frame = ImpactFrame.new()
 	_frame.rect_source = func() -> Array[Rect2]: return _rects
 	layer.add_child(_frame)
 	_run.call_deferred()
@@ -53,7 +54,7 @@ func _run() -> void:
 	await _grab()
 	var img0 := await _grab()
 	var scale: float = float(img0.get_width()) / get_root().get_visible_rect().size.x
-	var margin := PlayerFx.ImpactFrame.YIELD_MARGIN_PX
+	var margin := ImpactFrame.YIELD_MARGIN_PX
 	var grown := WARNING.grow(margin)
 	var inside := Rect2i(Vector2i(ceili(grown.position.x * scale) + 1, ceili(grown.position.y * scale) + 1), Vector2i(floori(grown.size.x * scale) - 3, floori(grown.size.y * scale) - 3))
 	var beside := Rect2i(Vector2i(0, 0), Vector2i(floori(WARNING.end.x * scale), floori((grown.position.y - 1.0) * scale)))

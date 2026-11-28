@@ -1,5 +1,7 @@
 extends RefCounted
 
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const Palette := preload("res://src/core/palette.gd")
 const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 
 const SEED := 917
@@ -14,7 +16,7 @@ uniform int shape = 0;
 // 0 camera billboard, 1 axis billboard along the particle's Y (its velocity), 2 none, 3 flat
 uniform int facing = 0;
 uniform float ink = 0.0;
-uniform vec3 ink_colour : source_color = vec3(0.07, 0.07, 0.08);
+uniform vec3 ink_colour : source_color = vec3(%.2f, %.2f, %.2f);
 uniform bool clear_zone = false;
 uniform vec3 clear_center = vec3(0.0, -10000.0, 0.0);
 uniform float clear_radius = 7.0;
@@ -104,7 +106,10 @@ static func material(shape: String, blend: String, ambient := false, ink := 0.0,
 	if _materials.has(key):
 		return _materials[key]
 	var shader := Shader.new()
-	shader.code = _SHADER % ("blend_add, depth_draw_never" if blend == "add" else "blend_mix, depth_draw_never")
+	shader.code = _SHADER % [
+		"blend_add, depth_draw_never" if blend == "add" else "blend_mix, depth_draw_never",
+		Palette.INK_DEEP.r, Palette.INK_DEEP.g, Palette.INK_DEEP.b,
+	]
 	var mat := ShaderMaterial.new()
 	mat.shader = shader
 	mat.set_shader_parameter("shape", SHAPES.find(shape))
@@ -266,7 +271,7 @@ static func build(id: String) -> GPUParticles3D:
 	p.interpolate = true
 	p.visibility_aabb = s.get("aabb", AABB(Vector3(-30, -20, -30), Vector3(60, 40, 60)))
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	p.set_instance_shader_parameter("tint", Color.WHITE)
+	p.set_instance_shader_parameter(FxLibrary.TINT, Color.WHITE)
 	p.set_meta("world_fx", id)
 	return p
 
@@ -278,7 +283,7 @@ static func quad(shape: String, size: Vector2, colour: Color, blend := "mix", al
 	var view := MeshInstance3D.new()
 	view.mesh = mesh
 	view.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	view.set_instance_shader_parameter("tint", Color(colour.r, colour.g, colour.b, alpha))
+	view.set_instance_shader_parameter(FxLibrary.TINT, Color(colour.r, colour.g, colour.b, alpha))
 	return view
 
 

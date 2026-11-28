@@ -9,6 +9,7 @@ const Budget := preload("res://src/presentation/fx_budget.gd")
 const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const LandmarkBeam := preload("res://src/presentation/landmark_beam.gd")
+const Vfx := preload("res://src/presentation/vfx.gd")
 const ChargeHalo := preload("res://src/presentation/charge_halo.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -70,7 +71,7 @@ func _beam() -> void:
 	root.add_child(parent)
 	var beam: Node3D = LandmarkBeam.make(parent, Vector3.ZERO, 100.0, 0.0)
 	var meshes := beam.find_children("*", "MeshInstance3D", true, false).size()
-	_t.eq("the landmark beam draws BEAM_LAYERS meshes", meshes, Budget.BEAM_LAYERS)
+	_t.eq("the landmark beam draws BEAM_LAYERS meshes", meshes, LandmarkBeam.BEAM_LAYERS)
 	parent.free()
 
 
@@ -101,10 +102,9 @@ func _weapons() -> void:
 # sparkle, a thermal builds THERMAL_VIEWS multimeshes, and each scenery build batches one WaterMist.
 func _counted_in_source() -> void:
 	var vfx := FileAccess.get_file_as_string("res://src/presentation/vfx.gd")
-	var re := RegEx.new()
-	re.compile("p\\.amount = clampi\\(6 \\+ amount \\* 2, 6, (\\d+)\\)")
-	var m := re.search(vfx)
-	_t.check("vfx.gd caps a sparkle at SPARKLE_MAX", m != null and int(m.get_string(1)) == Budget.SPARKLE_MAX, m.get_string(1) if m != null else "not found")
+	_t.check("vfx.gd caps a sparkle at SPARKLE_MAX", vfx.contains("p.amount = clampi(6 + amount * 2, 6, SPARKLE_MAX)") and Vfx.SPARKLE_MAX == 20, str(Vfx.SPARKLE_MAX))
+	_t.eq("the sparkle ceiling is SPARKLE_POOL emitters of SPARKLE_MAX", Budget.ceiling("sparkles"), Vfx.SPARKLE_POOL * Vfx.SPARKLE_MAX)
+	_t.eq("the kill burst ceiling is Vfx.burst_ceiling()", Budget.ceiling("kill_bursts"), Vfx.burst_ceiling())
 	var hd := FileAccess.get_file_as_string("res://src/presentation/highdraft_fx.gd")
 	_t.check("a thermal builds THERMAL_VIEWS multimeshes", hd.contains("for kind in %d:" % Budget.THERMAL_VIEWS) and hd.contains("MultiMeshInstance3D.new()"), "highdraft_fx.gd _thermal")
 	var scenery := FileAccess.get_file_as_string("res://src/presentation/spillway_scenery.gd")
