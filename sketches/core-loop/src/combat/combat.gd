@@ -218,24 +218,9 @@ var _has_fault := false
 var orbitals
 var hero_hooks
 var consumables
+var micro_mutations
 var tally_kit
 var cannon
-var _air_steer_surge_left := 0.0
-var _air_dash_bat_left := 0.0
-var _boost_active_left := 0.0
-var _cadence_window_extended := false
-var _cadence_extended_weapon := ""
-var _prev_window_state := WeaponDriver.WINDOW_IDLE
-var _pendulum_zapped := {}
-var _pendulum_swing_charged := false
-var _pendulum_swing_origin := Vector3.INF
-var _thermobaric_pins := {}
-var _pulled_recent := {}
-var _gravity_ledger_ready_at := -INF
-var last_micro_mutation := {}
-var last_cross_synergy := {}
-var _micro_counts := {}
-var _cross_counts := {}
 var _hot_wire_cd := {}
 var _det_cord_queue: Array = []
 var _tether_live := {}
@@ -379,6 +364,9 @@ func setup(ctx_ref) -> void:
 	consumables = preload("res://src/combat/consumable_runtime.gd").new()
 	add_child(consumables)
 	consumables.setup(ctx, self)
+	micro_mutations = preload("res://src/combat/micro_mutations.gd").new()
+	add_child(micro_mutations)
+	micro_mutations.setup(ctx, self)
 	relic_swaps = preload("res://src/combat/relic_swaps.gd").new()
 	add_child(relic_swaps)
 	relic_swaps.setup(ctx, self)
@@ -402,23 +390,23 @@ func setup(ctx_ref) -> void:
 	ctx.events.slammed.connect(_on_slammed_upgrade)
 	ctx.events.slammed.connect(cannon.on_cannon_slammed)
 	ctx.events.slammed.connect(_on_fault_slammed)
-	ctx.events.slammed.connect(_on_thermobaric_slammed)
+	ctx.events.slammed.connect(micro_mutations.on_thermobaric_slammed)
 	ctx.events.dashed.connect(cannon.on_cannon_dashed)
 	ctx.events.dashed.connect(_on_wake_dash)
-	ctx.events.dashed.connect(_on_dashed_micro)
+	ctx.events.dashed.connect(micro_mutations.on_dashed_micro)
 	ctx.events.boosted.connect(_on_wake_dash)
-	ctx.events.boosted.connect(_on_boosted_micro)
+	ctx.events.boosted.connect(micro_mutations.on_boosted_micro)
 	ctx.events.vault_kicked.connect(hero_hooks.on_vault_kicked)
 	ctx.events.grapple_released.connect(_on_grapple_released_w47)
-	ctx.events.world_fact.connect(_on_world_fact_w47)
+	ctx.events.world_fact.connect(micro_mutations.on_world_fact_w47)
 	if ctx.events.has_signal("consumable_used"):
 		var c_argc: int = _signal_argc(ctx.events, "consumable_used")
 		if c_argc >= 2:
-			ctx.events.connect("consumable_used", func(cid: String, at: Vector3): on_consumable_used(cid, at))
+			ctx.events.connect("consumable_used", func(cid: String, at: Vector3): micro_mutations.on_consumable_used(cid, at))
 		elif c_argc == 1:
-			ctx.events.connect("consumable_used", func(cid: String): on_consumable_used(cid))
+			ctx.events.connect("consumable_used", func(cid: String): micro_mutations.on_consumable_used(cid))
 		else:
-			ctx.events.connect("consumable_used", func(): on_consumable_used("consumable"))
+			ctx.events.connect("consumable_used", func(): micro_mutations.on_consumable_used("consumable"))
 	ctx.events.harpoon_smashed.connect(_on_reel_chain)
 	ctx.events.slammed.connect(_on_slam_crack)
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
@@ -486,7 +474,7 @@ func setup(ctx_ref) -> void:
 		_pike_count = 0
 		_pike_last = -INF
 		_clear_verb_items()
-		_reset_w47_c2_state(true)
+		micro_mutations.reset(true)
 		_reset_grapple_muts_state(true)
 		hero_hooks.reset()
 		_reset_w47_h2_state()
@@ -609,8 +597,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 		_drop_exposed(id)
 		_drop_exposed(_arc_key(id))
 		_boss_add_ids.erase(id)
-		_pendulum_zapped.erase(id)
-		_pulled_recent.erase(id)
+		micro_mutations.on_enemy_died(id)
 		_hot_wire_cd.erase(id)
 		if ally_husks != null and ghost_shift_unlocked():
 			ally_husks.record_wreck(enemy))
@@ -796,7 +783,7 @@ func _hook_companion_ram(hit: Dictionary) -> void:
 func _hook_companion_assist(hit: Dictionary) -> void:
 	if ctx.run.companion.is_empty() or float(hit["result"].get("dealt", 0.0)) <= 0.0:
 		return
-	if is_instance_valid(hit["enemy"]) and _fights_posture(hit["enemy"]):
+	if is_instance_valid(hit["enemy"]) and fights_posture(hit["enemy"]):
 		return
 	var kind: String = hit["kind"]
 	if kind == Companion.ASSIST_TRIGGER and assist_ready():
@@ -869,7 +856,7 @@ func _assist_targets(shape: String, at: Vector3, ball: Vector3, dir: Vector3, ra
 	var nearest: Node3D = null
 	var best := INF
 	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if DamageDoor.dead(enemy) or _fights_posture(enemy):
+		if DamageDoor.dead(enemy) or fights_posture(enemy):
 			continue
 		var flat: Vector3 = enemy.global_position - at
 		flat.y = 0.0
@@ -910,7 +897,7 @@ func _primer_hit(enemy: Node3D, kind: String, cls: String, _result := {}) -> Str
 
 func _primer_driver(enemy: Node3D, kind: String, cls: String) -> Dictionary:
 	var piece := Companion.seated(ctx.run.companion, Companion.CONDUCTIVE_PRIMER)
-	if piece == "" or _fights_posture(enemy):
+	if piece == "" or fights_posture(enemy):
 		return {}
 	var on := "weapon" if cls == "weapon" else ("contact" if kind in CONTACT_KINDS else ("special" if cls == "special" else "other"))
 	return Companion.pick({"piece": piece, "on": on,
@@ -945,7 +932,7 @@ func _strike_mult(enemy: Node3D, kind: String, cls: String) -> float:
 func _primer_mesh(at: Vector3, struck_id: int, dealt: float) -> void:
 	var found := []
 	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if enemy.get_instance_id() == struck_id or enemy.is_dead() or _fights_posture(enemy):
+		if enemy.get_instance_id() == struck_id or enemy.is_dead() or fights_posture(enemy):
 			continue
 		var distance: float = enemy.global_position.distance_to(at)
 		if distance <= Companion.PRIMER_MESH_RANGE:
@@ -959,7 +946,7 @@ func _primer_mesh(at: Vector3, struck_id: int, dealt: float) -> void:
 		trail_deal(n, dealt * Companion.PRIMER_MESH_SHARE, "primer_mesh", "item_proc")
 
 
-func _fights_posture(enemy: Node3D) -> bool:
+func fights_posture(enemy: Node3D) -> bool:
 	return enemy.has_method("fight") and enemy.call("fight") == "posture"
 
 
@@ -1447,7 +1434,7 @@ func _physics_process(delta: float) -> void:
 	_rocket_left = maxf(0.0, _rocket_left - delta)
 	_tick_cloak(delta)
 	_tick_upgrades(delta)
-	_step_micro_mutations(delta)
+	micro_mutations.step_micro_mutations(delta)
 	_step_escape_lane()
 	var enemies_pre := get_tree().get_nodes_in_group(Groups.ENEMY)
 	consumables.step(delta, enemies_pre)
@@ -1477,7 +1464,7 @@ func _physics_process(delta: float) -> void:
 		var snap_tok: int = int(wsnap.get("snap_token", 0))
 		if snap_tok > 0:
 			sticky.sync_snap_state(snap_tok, String(wsnap.get("window", "")))
-	_step_cadence_micro(weapon, p, shots)
+	micro_mutations.step_cadence_micro(weapon, p, shots)
 	_step_cast()
 	_step_special(intent, delta)
 	_step_line(intent, delta)
@@ -1485,7 +1472,7 @@ func _physics_process(delta: float) -> void:
 	cannon.step_cannon(delta)
 	var enemies := get_tree().get_nodes_in_group(Groups.ENEMY)
 	_step_verb_items(enemies)
-	_step_cross_synergies(delta, enemies)
+	micro_mutations.step_cross_synergies(delta, enemies)
 	_step_grapple_mutations(delta, enemies)
 	hero_hooks.step(delta, enemies)
 	if relic_swaps != null: relic_swaps.step(delta, enemies)
@@ -1562,15 +1549,15 @@ func _show_shred(enemy: Node3D, amount: float) -> void:
 
 
 func _bat_by_ball(shells: Array) -> void:
-	var dash_bat: bool = _air_dash_bat_left > 0.0 and _has_micro_mutation("dash_vane")
+	var dash_bat: bool = micro_mutations.air_dash_bat_left > 0.0 and micro_mutations.has_micro_mutation("dash_vane")
 	if ctx.player.speed_tier() < SpeedTier.CRUISE and not dash_bat:
 		return
-	var reach := BAT_REACH + (float(_micro_row("dash_vane").get("reach_bonus", 0.6)) if dash_bat else 0.0)
+	var reach := BAT_REACH + (float(micro_mutations.micro_row("dash_vane").get("reach_bonus", 0.6)) if dash_bat else 0.0)
 	var ball: Vector3 = ctx.player.ball_position()
 	for shell in shells:
 		if is_instance_valid(shell) and not shell.returned and shell.global_position.distance_to(ball) <= reach:
 			if _bat(shell) and dash_bat:
-				_note_micro("dash_vane", {"at": shell.global_position})
+				micro_mutations.note_micro("dash_vane", {"at": shell.global_position})
 
 
 func _bat(shell: Node3D) -> bool:
@@ -1675,7 +1662,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		layout_pat.spread_deg = maxf(float(layout_pat.spread_deg), 6.0)
 	var layout: Array = layout_pat.layout(forward, volleys)
 	var shot: int = shot_bits() if source == "weapon" else 0
-	var ricochet_carve: bool = source == "weapon" and ctx.player.state.carving and _has_cross_synergy("ricochet_canyon")
+	var ricochet_carve: bool = source == "weapon" and ctx.player.state.carving and micro_mutations.has_cross_synergy("ricochet_canyon")
 	var rc_row: Dictionary = Synergies.cross_system_row("ricochet_canyon") if ricochet_carve else {}
 	var sixth_hot: bool = source == "weapon" and weapon == Weapons.RAPID_LASER and bool(shot_desc.get("sixth_hot", false))
 	var pike := _pike_press(source)
@@ -1701,7 +1688,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 			fused["breaks_props"] = true
 			fused["prop_break_radius"] = 2.2
 		if ricochet_carve:
-			_stamp_ricochet_canyon(fused, rc_row)
+			micro_mutations.stamp_ricochet_canyon(fused, rc_row)
 		if sixth_hot:
 			hero_hooks.stamp_rivet_sixth_hot(fused)
 		_evolve_record(fused, p)
@@ -1722,7 +1709,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 				rec["breaks_props"] = true
 				rec["prop_break_radius"] = 2.2
 			if ricochet_carve:
-				_stamp_ricochet_canyon(rec, rc_row)
+				micro_mutations.stamp_ricochet_canyon(rec, rc_row)
 			if sixth_hot:
 				hero_hooks.stamp_rivet_sixth_hot(rec)
 			bolts.fire(rec)
@@ -1732,7 +1719,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 			hfx.add_rivet_hot_tracer(muzzle, aim["to"])
 		effects.beam(muzzle, aim["to"], Palette.COPPER, 0.16)
 	if ricochet_carve:
-		_note_cross("ricochet_canyon", {"extra_bounces": int(rc_row.get("extra_bounces", 2)), "bolts": fired})
+		micro_mutations.note_cross("ricochet_canyon", {"extra_bounces": int(rc_row.get("extra_bounces", 2)), "bolts": fired})
 	if source == "weapon" and breaks_props and weapon == Weapons.CLAW_SWEEP:
 		ctx.break_props(muzzle + forward * (reach * 0.5), reach * 0.5, weapon)
 	var beat3_lunge := false
@@ -1831,7 +1818,7 @@ func leash_scale() -> float:
 	return maxf(1.0, float(row.get("load_mult", 1.0))) if not row.is_empty() else 1.0
 
 
-func _weapon_hit() -> float:
+func weapon_hit() -> float:
 	var weapon := active_weapon()
 	var p: Resource = _patterns.get(weapon)
 	return p.damage * damage_mod(weapon) if p != null else 0.0
@@ -1901,7 +1888,7 @@ func _on_wake_dash(dir: Vector3) -> void:
 	flat = flat.normalized() if flat.length() > 0.01 else aim_heading()
 	var from := ground_under(ctx.player.ball_position())
 	_lay_strip("dash_wake", from, from - flat * float(row.get("length", 4.0)), float(row.get("width", 2.0)),
-		float(row.get("mult", 0.4)) * _weapon_hit(), float(row.get("life", 1.5)), float(row.get("knock", 4.0)))
+		float(row.get("mult", 0.4)) * weapon_hit(), float(row.get("life", 1.5)), float(row.get("knock", 4.0)))
 
 
 func _note_reel(enemy: Node3D, dealt: float) -> void:
@@ -2255,14 +2242,14 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 	var pull_plan := _pull_plan(enemy, bolt) if Bolts.bit_ready(bolt, "pull") else {}
 	var hit_knock := 0.0 if not pull_plan.is_empty() else float(bolt["knock"])
 	var long_barrel_stagger := false
-	if String(bolt.get("source", "")) == "weapon" and _has_micro_mutation("long_barrel"):
-		var lb_row := _micro_row("long_barrel")
+	if String(bolt.get("source", "")) == "weapon" and micro_mutations.has_micro_mutation("long_barrel"):
+		var lb_row: Dictionary = micro_mutations.micro_row("long_barrel")
 		var origin_pt: Vector3 = Vector3(bolt.get("fired_from", bolt["origin"]))
 		var hit_dist := maxf(point.distance_to(origin_pt), float(bolt.get("travelled", 0.0)))
 		if hit_dist > float(lb_row.get("min_range_m", 20.0)):
 			hit_knock *= 1.0 + float(lb_row.get("knock_bonus", 0.15))
 			long_barrel_stagger = true
-			_note_micro("long_barrel", {"dist": hit_dist, "knock": hit_knock})
+			micro_mutations.note_micro("long_barrel", {"dist": hit_dist, "knock": hit_knock})
 	var chip := Weapons.PIERCE_CHIP if bool(bolt.get("pierce_chip", false)) else CHIP
 	deal_hit(enemy, bolt["kind"], damage, bolt["dir"], hit_knock, part, bolt.get("source", "weapon"), "", chip)
 	if long_barrel_stagger and is_instance_valid(enemy) and not enemy.is_dead() and enemy.has_method("react"):
@@ -2274,7 +2261,7 @@ func _on_bolt_hit(bolt: Dictionary, enemy: Node3D, point: Vector3, part := "") -
 	if not pull_plan.is_empty() and is_instance_valid(enemy) and not enemy.is_dead():
 		enemy.knock(pull_plan["dir"], float(pull_plan["force"]))
 		acts = ShotBits.union(acts, ShotBits.bit("pull"))
-		_check_gravity_ledger(enemy.global_position, [enemy])
+		micro_mutations.check_gravity_ledger(enemy.global_position, [enemy])
 	_bit_tell(acts, bolt, point)
 	if bool(bolt.get("sixth_hot", false)) and not bool(bolt.get("sixth_hot_ricocheted", false)):
 		hero_hooks.resolve_rivet_armor_ricochet(bolt, enemy, point, part)
@@ -2393,7 +2380,6 @@ func _step_deferred_procs() -> void:
 		deal_hit(enemy, entry["kind"], float(entry["damage"]), entry["direction"], float(entry["knock"]),
 			entry["part"], entry["source"], entry["impact"], float(entry["chip"]))
 	_draining_procs = false
-
 
 
 func deal_hit(enemy: Node3D, kind: String, damage: float, direction: Vector3, knock: float, part := "", source := "", impact := "", chip := CHIP) -> void:
@@ -2818,7 +2804,7 @@ func _fire_clamp(f: float, shape: Dictionary) -> void:
 			pulled.append(enemy)
 		hit += 1
 	if not pulled.is_empty():
-		_check_gravity_ledger(centre, pulled)
+		micro_mutations.check_gravity_ledger(centre, pulled)
 	var seized_enemy: Node3D = null
 	if not _echoing and not pulled.is_empty() and ctx.run != null and ctx.run.class_def != null and ctx.run.class_def.id == "tarn":
 		var tarn_claw = get_node_or_null("TarnClaw")
@@ -3215,7 +3201,7 @@ func gather_pull(at: Vector3, radius: float, enemies = null) -> void:
 		enemy.knock(inward / distance, Weapons.GATHER_KNOCK * clampf(distance / radius, 0.25, 1.0))
 		pulled.append(enemy)
 	if not pulled.is_empty():
-		_check_gravity_ledger(at, pulled)
+		micro_mutations.check_gravity_ledger(at, pulled)
 
 
 func flail_hit(enemy: Node3D, damage: float, from: Vector3, knock: float) -> void:
@@ -3710,20 +3696,20 @@ func _proc_actions() -> Dictionary:
 		"volley": _proc_volley,
 		"charge": _proc_charges,
 		"detonate": _proc_detonate,
-		"grant_special": func(_scale: float): _grant_special(abilities.call()),
+		"grant_special": func(_scale: float): grant_special(abilities.call()),
 		"grant_move": func(_scale: float): abilities.call().grant(AbilityState.MOVEMENT),
-		"refund_special": func(scale: float): _refund_special(abilities.call(), scale),
+		"refund_special": func(scale: float): refund_special(abilities.call(), scale),
 		"refund_move": func(scale: float): abilities.call().refund(AbilityState.MOVEMENT, scale),
 		"overdrive": func(scale: float): add_overdrive(scale),
 		"air": func(_scale: float): ctx.player.state.air_actions = 1,
 	}
 
 
-func _grant_special(abilities) -> void:
+func grant_special(abilities) -> void:
 	abilities.grant(abilities.pool_of(AbilityState.SPECIAL))
 
 
-func _refund_special(abilities, scale: float) -> void:
+func refund_special(abilities, scale: float) -> void:
 	if scale <= 0.0:
 		return
 	var pool: String = abilities.pool_of(AbilityState.SPECIAL)
@@ -4188,7 +4174,7 @@ func _on_player_died() -> void:
 	_clear_input_buffers()
 	_bite_pending = false
 	_clear_verb_items()
-	_reset_w47_c2_state()
+	micro_mutations.reset()
 	_reset_grapple_muts_state()
 	hero_hooks.reset()
 	_reset_w47_h2_state()
@@ -4241,7 +4227,7 @@ func _start_attempt() -> void:
 	_pike_count = 0
 	_pike_last = -INF
 	_clear_verb_items()
-	_reset_w47_c2_state(true)
+	micro_mutations.reset(true)
 	_reset_grapple_muts_state(true)
 	hero_hooks.reset()
 	_reset_w47_h2_state()
@@ -4322,8 +4308,7 @@ func rebuild_patterns() -> void:
 	if ctx != null and ctx.run != null and ctx.run.class_def != null:
 		var active := active_weapon()
 		if _patterns.has(active):
-			_cadence_window_extended = false
-			_cadence_extended_weapon = ""
+			micro_mutations.drop_cadence_extension()
 			weapon_driver.sync_pattern(active, _patterns[active])
 
 
@@ -4378,45 +4363,11 @@ func bank_geometry(_fraction: float) -> Dictionary:
 	return ctx.player.bank_geometry()
 
 
-func _reset_w47_c2_state(clear_counts := false) -> void:
-	_air_steer_surge_left = 0.0
-	_air_dash_bat_left = 0.0
-	_boost_active_left = 0.0
-	_cadence_window_extended = false
-	_cadence_extended_weapon = ""
-	_prev_window_state = WeaponDriver.WINDOW_IDLE
-	_pendulum_zapped.clear()
-	_pendulum_swing_charged = false
-	_pendulum_swing_origin = Vector3.INF
-	_thermobaric_pins.clear()
-	_pulled_recent.clear()
-	_gravity_ledger_ready_at = -INF
-	if clear_counts:
-		last_micro_mutation = {}
-		last_cross_synergy = {}
-		_micro_counts.clear()
-		_cross_counts.clear()
-	assert(_pendulum_zapped.is_empty() and _thermobaric_pins.is_empty() and _pulled_recent.is_empty())
-
-
-func _has_micro_mutation(part_id: String) -> bool:
-	if ctx == null:
-		return false
-	var build = ctx.build
-	var fx = build.get("effects") if build != null else null
-	if fx != null and fx.has_method("has_micro_mutation") and fx.has_micro_mutation(part_id):
-		return true
-	return ctx.run != null and Parts.has_micro_mutation(ctx.run.parts, part_id)
-
-
-func _micro_row(part_id: String) -> Dictionary:
-	var build = ctx.build if ctx != null else null
-	var fx = build.get("effects") if build != null else null
-	if fx != null and fx.has_method("micro_mutation"):
-		var row: Dictionary = fx.micro_mutation(part_id)
-		if not row.is_empty():
-			return row
-	return Parts.micro_mutation(part_id)
+func _on_grapple_released_w47() -> void:
+	micro_mutations.clear_pendulum()
+	_on_grapple_released_muts()
+	cannon.detonate_cannon_piton()
+	micro_mutations.on_grapple_released()
 
 
 func synergy_context(extra := {}) -> Dictionary:
@@ -4436,404 +4387,8 @@ func synergy_context(extra := {}) -> Dictionary:
 	return c
 
 
-func _has_cross_synergy(id: String, extra := {}) -> bool:
-	if ctx == null:
-		return false
-	var context := synergy_context(extra)
-	var build = ctx.build
-	var fx = build.get("effects") if build != null else null
-	if fx != null and fx.has_method("has_cross_synergy") and fx.has_cross_synergy(id, context):
-		return true
-	if ctx.run == null:
-		return false
-	return Synergies.cross_system_awake(id, ctx.run.parts, OrbitalSatellites.part_synergy_info, context)
-
-
-func micro_mutation_count(part_id: String) -> int:
-	return int(_micro_counts.get(part_id, 0))
-
-
-func cross_synergy_count(id: String) -> int:
-	return int(_cross_counts.get(id, 0))
-
-
-func air_steer_surge_left() -> float:
-	return _air_steer_surge_left
-
-
-func cadence_window_extended() -> bool:
-	return _cadence_window_extended
-
-
 func active_window_range() -> Vector2:
 	return weapon_driver.state_snapshot().get("window_range", Vector2.ZERO)
-
-
-static func extended_window(base: Vector2, extend_frac: float) -> Vector2:
-	if base.y <= base.x or extend_frac <= 0.0:
-		return base
-	return Vector2(base.x, base.y + (base.y - base.x) * extend_frac)
-
-
-func _note_micro(part_id: String, details := {}) -> void:
-	_micro_counts[part_id] = int(_micro_counts.get(part_id, 0)) + 1
-	var entry := details.duplicate()
-	entry["part_id"] = part_id
-	entry["at_clock"] = _clock
-	last_micro_mutation = entry
-
-
-func _note_cross(id: String, details := {}) -> void:
-	_cross_counts[id] = int(_cross_counts.get(id, 0)) + 1
-	var entry := details.duplicate()
-	entry["id"] = id
-	entry["at_clock"] = _clock
-	last_cross_synergy = entry
-
-
-func _stamp_ricochet_canyon(rec: Dictionary, rc_row: Dictionary) -> void:
-	rec["extra_bounces"] = clampi(int(rc_row.get("extra_bounces", 2)), 0, Bolts.MAX_EXTRA_BOUNCES)
-	rec["ricochet_home"] = true
-	rec["ricochet_home_reach"] = float(rc_row.get("home_reach_m", Bolts.RICOCHET_HOME_REACH))
-	rec["ricochet_home_turn"] = float(rc_row.get("home_turn", Bolts.RICOCHET_HOME_TURN))
-
-
-func _step_micro_mutations(delta: float) -> void:
-	if _has_micro_mutation("tread_plating") and ctx.player.state.carving:
-		var bonus := float(_micro_row("tread_plating").get("rate_bonus", 0.25))
-		var refund_s := delta * bonus
-		if ctx.player.abilities != null:
-			ctx.player.abilities.refund(AbilityState.MOVEMENT, refund_s)
-		if ctx.player.state.boost_cooldown > 0.0:
-			ctx.player.state.boost_cooldown = maxf(0.0, ctx.player.state.boost_cooldown - refund_s)
-		_note_micro("tread_plating", {"refund_s": refund_s})
-	if _air_steer_surge_left > 0.0:
-		_air_steer_surge_left = maxf(0.0, _air_steer_surge_left - delta)
-		if not ctx.player.state.grounded and _has_micro_mutation("long_spool"):
-			var wish := _air_steer_wish()
-			if wish.length_squared() > 0.0001:
-				var mult := float(_micro_row("long_spool").get("steer_mult", 1.65))
-				var extra_accel: float = ctx.player.tuning.f("drive_accel") * ctx.player.tuning.f("air_control") * maxf(0.0, mult - 1.0)
-				ctx.player.add_external_accel(wish * extra_accel)
-	if _air_dash_bat_left > 0.0:
-		_air_dash_bat_left = maxf(0.0, _air_dash_bat_left - delta)
-	if _boost_active_left > 0.0:
-		_boost_active_left = maxf(0.0, _boost_active_left - delta)
-
-
-func _air_steer_wish() -> Vector3:
-	var intent = ctx.player.intent
-	if intent == null or intent.move.length_squared() < 0.02:
-		return Vector3.ZERO
-	var drive_basis: Basis = ctx.camera.drive_basis() if ctx.camera != null and ctx.camera.has_method("drive_basis") else Basis.IDENTITY
-	return BallRules.wish_direction(intent, drive_basis, ctx.player.state)
-
-
-func _on_grapple_released_w47() -> void:
-	_pendulum_zapped.clear()
-	_pendulum_swing_charged = false
-	_pendulum_swing_origin = Vector3.INF
-	_on_grapple_released_muts()
-	cannon.detonate_cannon_piton()
-	if not ctx.flow.in_play() or not _has_micro_mutation("long_spool"):
-		return
-	var dur := float(_micro_row("long_spool").get("duration_s", 0.4))
-	_air_steer_surge_left = maxf(_air_steer_surge_left, dur)
-	_note_micro("long_spool", {"duration_s": dur})
-
-
-func _on_dashed_micro(_dir: Vector3) -> void:
-	if not ctx.flow.in_play():
-		return
-	if _has_micro_mutation("dash_vane") and not ctx.player.state.grounded:
-		_air_dash_bat_left = maxf(_air_dash_bat_left, float(_micro_row("dash_vane").get("window_s", 0.28)))
-	if _has_micro_mutation("boost_coil"):
-		_boost_active_left = maxf(_boost_active_left, float(_micro_row("boost_coil").get("window_s", 0.5)))
-
-
-func _on_boosted_micro(_dir: Vector3) -> void:
-	if not ctx.flow.in_play():
-		return
-	if _has_micro_mutation("boost_coil"):
-		_boost_active_left = maxf(_boost_active_left, float(_micro_row("boost_coil").get("window_s", 0.5)))
-
-
-func _step_cadence_micro(weapon: String, p: Resource, shots: Array) -> void:
-	var wsnap: Dictionary = weapon_driver.state_snapshot()
-	var cur_state := String(wsnap.get("window", WeaponDriver.WINDOW_IDLE))
-	var skilled_hit: bool = cur_state == WeaponDriver.WINDOW_HIT and _prev_window_state != WeaponDriver.WINDOW_HIT
-	if not skilled_hit:
-		for shot in shots:
-			var kind := String(shot.get("kind", ""))
-			if bool(shot.get("overclock_skilled", false)) or kind in [WeaponDriver.SHOT_SNAP, WeaponDriver.SHOT_BEAT_3, WeaponDriver.SHOT_STAMP, WeaponDriver.SHOT_RAIL]:
-				skilled_hit = true
-				break
-	if skilled_hit and _has_micro_mutation("loose_trigger") and p != null and p.window_s.y > p.window_s.x:
-		var extend_frac := float(_micro_row("loose_trigger").get("window_extend", 0.25))
-		var widened: Resource = p.copy()
-		widened.window_s = extended_window(p.window_s, extend_frac)
-		weapon_driver.sync_pattern(weapon, widened)
-		_cadence_window_extended = true
-		_cadence_extended_weapon = weapon
-		_note_micro("loose_trigger", {"weapon": weapon, "base": p.window_s, "extended": widened.window_s})
-	elif _cadence_window_extended:
-		var missed: bool = cur_state == WeaponDriver.WINDOW_SPENT and _prev_window_state != WeaponDriver.WINDOW_SPENT
-		var swapped: bool = weapon != _cadence_extended_weapon
-		if (missed or swapped or not _has_micro_mutation("loose_trigger")) and p != null:
-			_cadence_window_extended = false
-			_cadence_extended_weapon = ""
-			weapon_driver.sync_pattern(weapon, p)
-	_prev_window_state = cur_state
-
-
-func _on_world_fact_w47(kind: String, at: Vector3) -> void:
-	if kind != "piece_shattered" or not ctx.flow.in_play():
-		return
-	if _has_micro_mutation("boost_coil") and (_boost_active_left > 0.0 or ctx.player.kit.sprinting):
-		var share := float(_micro_row("boost_coil").get("cd_refresh", 0.5))
-		var full_boost: float = ctx.player.tuning.boost_cooldown()
-		if ctx.player.state.boost_cooldown > 0.0:
-			ctx.player.state.boost_cooldown = maxf(0.0, ctx.player.state.boost_cooldown - full_boost * share)
-		if ctx.player.abilities != null:
-			var mv_cd: float = ctx.player.abilities.cooldown_of(AbilityState.MOVEMENT)
-			if mv_cd > 0.0:
-				ctx.player.abilities.refund(AbilityState.MOVEMENT, mv_cd * share)
-		_boost_active_left = 0.0
-		_note_micro("boost_coil", {"at": at, "refresh_share": share})
-	if _has_cross_synergy("demolition_derby"):
-		var row := Synergies.cross_system_row("demolition_derby")
-		var radius := float(row.get("radius_m", 12.0))
-		var dmg := maxf(float(row.get("damage_base", 24.0)), _weapon_hit()) * heft()
-		var knock := float(row.get("knock", 10.0))
-		effects.shockwave(at, radius, row.get("color", Palette.AMBER))
-		var hits := 0
-		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
-				continue
-			var reach: float = enemy.global_position.distance_to(at)
-			if reach > radius:
-				continue
-			var scale := clampf(1.0 - reach / (radius * 1.25), 0.35, 1.0)
-			deal_hit(enemy, SYNERGY, dmg * scale, enemy.global_position - at, knock, "", "item_proc", "proc")
-			hits += 1
-		ctx.player.state.boost_cooldown = 0.0
-		if ctx.player.abilities != null:
-			ctx.player.abilities.grant(AbilityState.MOVEMENT)
-		_note_cross("demolition_derby", {"at": at, "radius": radius, "hits": hits})
-
-
-func _step_cross_synergies(_delta: float, enemies: Array) -> void:
-	_step_pendulum_tesla(enemies)
-	_step_thermobaric_pins(enemies)
-
-
-func _step_pendulum_tesla(enemies: Array) -> void:
-	var kit = ctx.player.kit
-	if not kit.hooked:
-		if not _pendulum_zapped.is_empty():
-			_pendulum_zapped.clear()
-		_pendulum_swing_charged = false
-		_pendulum_swing_origin = Vector3.INF
-		return
-	if not _has_cross_synergy("pendulum_tesla"):
-		return
-	var row := Synergies.cross_system_row("pendulum_tesla")
-	var a: Vector3 = ctx.player.ball_position()
-	var b: Vector3 = kit.anchor
-	if not _pendulum_swing_origin.is_finite():
-		_pendulum_swing_origin = a
-	if a.distance_squared_to(b) < 0.25:
-		return
-	var width := float(row.get("cable_width_m", 1.8))
-	var dmg := maxf(float(row.get("damage_base", 18.0)), _weapon_hit() * 0.85)
-	var color: Color = row.get("color", Palette.ARC)
-	var zapped_now := 0
-	for enemy in enemies:
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
-			continue
-		var id: int = enemy.get_instance_id()
-		if _pendulum_zapped.has(id):
-			continue
-		var closest := Geometry3D.get_closest_point_to_segment(enemy.global_position, a, b)
-		if closest.distance_to(enemy.global_position) > width + hull_radius(enemy):
-			continue
-		_pendulum_zapped[id] = true
-		effects.arc(closest, enemy.global_position + Vector3.UP * 0.5, color)
-		deal_hit(enemy, SYNERGY, dmg, enemy.global_position - closest, 3.0, "", "item_proc", "proc")
-		zapped_now += 1
-	var swept_far: bool = a.distance_to(_pendulum_swing_origin) >= 3.0
-	if not _pendulum_swing_charged and (zapped_now > 0 or swept_far):
-		_pendulum_swing_charged = true
-		var share := float(row.get("special_charge_share", 0.15))
-		var abilities = ctx.player.abilities
-		if abilities != null:
-			var sp_cd: float = abilities.cooldown_of(AbilityState.SPECIAL)
-			if sp_cd > 0.0:
-				_refund_special(abilities, sp_cd * share)
-			else:
-				_grant_special(abilities)
-		_note_cross("pendulum_tesla", {"zapped": zapped_now, "special_share": share})
-	elif zapped_now > 0:
-		_note_cross("pendulum_tesla", {"zapped": zapped_now})
-
-
-func _on_thermobaric_slammed(at: Vector3, strength: float, _flatness: float) -> void:
-	if strength < 0.05 or not ctx.flow.in_play() or not _has_cross_synergy("thermobaric_dunk"):
-		return
-	var row := Synergies.cross_system_row("thermobaric_dunk")
-	var launch_r := float(row.get("launch_radius_m", 10.0))
-	var nearby: Array = []
-	var has_heated := false
-	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
-		if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):
-			continue
-		if enemy.global_position.distance_to(at) > launch_r:
-			continue
-		nearby.append(enemy)
-		if heated(enemy):
-			has_heated = true
-	if not has_heated:
-		return
-	var launch_speed := float(row.get("launch_speed", 14.0))
-	var det_r := float(row.get("detonate_radius_m", 6.5))
-	var det_dmg := float(row.get("detonate_damage", 28.0)) * heft()
-	var timeout_s := float(row.get("pin_timeout_s", 1.6))
-	var color: Color = row.get("color", Palette.RUST)
-	var launched := 0
-	for enemy in nearby:
-		if _fights_posture(enemy) or target_class_of(enemy) == "boss":
-			continue
-		var id: int = enemy.get_instance_id()
-		if _thermobaric_pins.has(id):
-			continue
-		var away: Vector3 = enemy.global_position - at
-		away.y = 0.0
-		var dir := (away.normalized() * 0.55 + Vector3.UP * 1.4).normalized()
-		if enemy.has_method("knock"):
-			var weight = enemy.get("weight")
-			enemy.knock(dir, launch_speed * (float(weight) if weight != null else 1.0))
-		_thermobaric_pins[id] = {
-			"enemy": enemy,
-			"start_y": enemy.global_position.y,
-			"peak_y": enemy.global_position.y,
-			"airborne": false,
-			"launched_at": _clock,
-			"until": _clock + timeout_s,
-			"radius": det_r,
-			"damage": det_dmg,
-			"color": color,
-			"last_pos": enemy.global_position,
-		}
-		launched += 1
-	if launched > 0:
-		effects.ring(at, launch_r, color)
-		_note_cross("thermobaric_dunk", {"stage": "launch", "launched": launched, "at": at})
-
-
-func _step_thermobaric_pins(enemies: Array) -> void:
-	if _thermobaric_pins.is_empty():
-		return
-	for id in _thermobaric_pins.keys():
-		var pin: Dictionary = _thermobaric_pins[id]
-		var enemy = pin["enemy"]
-		var valid: bool = is_instance_valid(enemy) and not (enemy.has_method("is_dead") and enemy.is_dead())
-		var pos: Vector3 = enemy.global_position if valid else Vector3(pin["last_pos"])
-		pin["last_pos"] = pos
-		var elapsed := _clock - float(pin["launched_at"])
-		if valid:
-			pin["peak_y"] = maxf(float(pin["peak_y"]), pos.y)
-			if pos.y > float(pin["start_y"]) + 0.35 or elapsed >= 0.12:
-				pin["airborne"] = true
-		var impacted := not valid or _clock >= float(pin["until"])
-		if not impacted and bool(pin["airborne"]) and elapsed >= 0.12:
-			if enemy is CharacterBody3D and enemy.is_on_floor():
-				impacted = true
-			elif pos.y <= float(pin["start_y"]) + 0.15 and float(pin["peak_y"]) > float(pin["start_y"]) + 0.35:
-				impacted = true
-		if not impacted:
-			continue
-		_thermobaric_pins.erase(id)
-		var det_r := float(pin["radius"])
-		var det_dmg := float(pin["damage"])
-		var color: Color = pin["color"]
-		effects.shockwave(pos, det_r, color)
-		var hits := 0
-		for other in enemies:
-			if not is_instance_valid(other) or (other.has_method("is_dead") and other.is_dead()):
-				continue
-			if other.global_position.distance_to(pos) > det_r:
-				continue
-			deal_hit(other, SYNERGY, det_dmg, other.global_position - pos, 8.0, "", "item_proc", "proc")
-			hits += 1
-		_note_cross("thermobaric_dunk", {"stage": "detonate", "at": pos, "hits": hits})
-
-
-func _check_gravity_ledger(centre: Vector3, pulled_enemies: Array) -> void:
-	if not ctx.flow.in_play() or not _has_cross_synergy("gravity_ledger"):
-		return
-	for e in pulled_enemies:
-		if is_instance_valid(e) and not (e.has_method("is_dead") and e.is_dead()):
-			_pulled_recent[e.get_instance_id()] = _clock
-	for id in _pulled_recent.keys():
-		if _clock - float(_pulled_recent[id]) > 0.6:
-			_pulled_recent.erase(id)
-	if _clock < _gravity_ledger_ready_at:
-		return
-	var row := Synergies.cross_system_row("gravity_ledger")
-	var cluster_r := float(row.get("cluster_radius_m", 5.5))
-	var cluster: Array = []
-	for id in _pulled_recent.keys():
-		var e = instance_from_id(int(id))
-		if not is_instance_valid(e) or (e.has_method("is_dead") and e.is_dead()):
-			_pulled_recent.erase(id)
-			continue
-		if e.global_position.distance_to(centre) <= cluster_r:
-			cluster.append(e)
-	if cluster.size() < 2:
-		return
-	_gravity_ledger_ready_at = _clock + float(row.get("cooldown_s", 0.35))
-	var mid := Vector3.ZERO
-	for e in cluster:
-		mid += e.global_position
-	mid /= float(cluster.size())
-	var dmg := float(row.get("crush_damage", 22.0)) * heft()
-	var color: Color = row.get("color", Palette.VERDIGRIS)
-	effects.ring(mid, cluster_r * 0.6, color)
-	for e in cluster:
-		if is_instance_valid(e) and not e.is_dead():
-			deal_hit(e, SYNERGY, dmg, mid - e.global_position, 6.0, "", "item_proc", "proc")
-	var cogs := int(row.get("cog_count", 3))
-	if ctx.build != null and ctx.build.get("scrap") != null and ctx.build.scrap.has_method("drop_cogs") \
-			and (ctx.flow == null or ctx.flow.in_stage()):
-		ctx.build.scrap.drop_cogs(mid, cogs)
-	_note_cross("gravity_ledger", {"at": mid, "crushed": cluster.size(), "cogs": cogs})
-
-
-func on_consumable_used(consumable_id: String, at := Vector3.INF) -> Dictionary:
-	if ctx == null or ctx.flow == null or not ctx.flow.in_play():
-		return {}
-	if actives == null or actives.active_id == "":
-		return {}
-	if not _has_cross_synergy("catalyst_cartridge", {"has_consumable": true, "has_active": true}):
-		return {}
-	var row := Synergies.cross_system_row("catalyst_cartridge")
-	var gain := float(row.get("active_charge_gain", 0.40))
-	var radius := float(row.get("burst_radius_m", 8.0))
-	var pos: Vector3 = at if at.is_finite() else ctx.player.ball_position()
-	actives.recharge(gain)
-	var active_row: Dictionary = actives.row_of(actives.active_id)
-	var ring_color: Color = active_row.get("color", row.get("color", Palette.SAND))
-	effects.ring(pos, radius, ring_color)
-	var result := {
-		"fired": true,
-		"consumable_id": consumable_id,
-		"active_id": actives.active_id,
-		"charge_gain": gain,
-		"radius": radius,
-		"at": pos,
-	}
-	_note_cross("catalyst_cartridge", result)
-	return result
 
 
 func _reset_grapple_muts_state(clear_counts := false) -> void:
@@ -5048,7 +4603,7 @@ func _enqueue_det_cord(from: Vector3, to: Vector3) -> void:
 	var count := clampi(int(ceil(span / spacing)), 2, max_nodes)
 	var step_delay := float(row.get("step_delay_s", 0.06))
 	var radius := float(row.get("blast_radius_m", 4.2))
-	var dmg := maxf(float(row.get("damage_base", 22.0)), _weapon_hit() * 0.9) * heft()
+	var dmg := maxf(float(row.get("damage_base", 22.0)), weapon_hit() * 0.9) * heft()
 	var knock := float(row.get("knock", 9.0))
 	for i in count:
 		var frac := float(i + 1) / float(count + 1)
@@ -5178,7 +4733,7 @@ func _step_hot_wire(ball: Vector3, anchor: Vector3, enemies: Array) -> void:
 	var width := float(row.get("line_width_m", 1.6))
 	var float_reach := float(row.get("float_reach_m", 2.2))
 	var cd := float(row.get("hit_cooldown_s", 0.35))
-	var dmg := maxf(float(row.get("damage_base", 24.0)), _weapon_hit() * 1.15) * heft()
+	var dmg := maxf(float(row.get("damage_base", 24.0)), weapon_hit() * 1.15) * heft()
 	var sliced_enemies := 0
 	var popped_floats := 0
 	for enemy in enemies:
@@ -5196,7 +4751,7 @@ func _step_hot_wire(ball: Vector3, anchor: Vector3, enemies: Array) -> void:
 					if c_pt.distance_to(fpos) <= float_reach and enemy.pop_float_at(fi, true):
 						effects.spark(fpos + Vector3.UP * 0.5, Palette.AMBER)
 						popped_floats += 1
-		if _fights_posture(enemy) or target_class_of(enemy) in ["Warden", "boss"]:
+		if fights_posture(enemy) or target_class_of(enemy) in ["Warden", "boss"]:
 			continue
 		var eid: int = enemy.get_instance_id()
 		if _clock < float(_hot_wire_cd.get(eid, -INF)):
@@ -5282,7 +4837,7 @@ func trigger_tether_slam() -> Dictionary:
 		var dv: Vector3 = to_mid.normalized() * spd - ctx.player.state.velocity
 		ctx.player.add_external_accel(dv * 60.0)
 	var yanked_target := false
-	if target != null and target.is_in_group(Groups.ENEMY) and not _fights_posture(target) and target_class_of(target) != "boss":
+	if target != null and target.is_in_group(Groups.ENEMY) and not fights_posture(target) and target_class_of(target) != "boss":
 		var pull_dir := mid - target.global_position
 		if pull_dir.length_squared() > 0.01:
 			var weight = target.get("weight")
@@ -5290,7 +4845,7 @@ func trigger_tether_slam() -> Dictionary:
 				target.knock(pull_dir.normalized() + Vector3.UP * 0.2, yank_speed * (float(weight) if weight != null else 1.0))
 			target.global_position = target.global_position.lerp(mid, 0.5)
 			yanked_target = true
-			_check_gravity_ledger(mid, [target])
+			micro_mutations.check_gravity_ledger(mid, [target])
 	var armed_window := float(row.get("armed_window_s", 1.2))
 	_tether_slam_armed = {
 		"target": target,
@@ -5395,7 +4950,7 @@ func _consume_grapple_mut_strike(hit: Dictionary) -> void:
 		for other in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if other == enemy or not is_instance_valid(other) or (other.has_method("is_dead") and other.is_dead()):
 				continue
-			if _fights_posture(other):
+			if fights_posture(other):
 				continue
 			if other.global_position.distance_to(at) <= arc_r:
 				arced_to = other
