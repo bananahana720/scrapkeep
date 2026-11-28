@@ -257,8 +257,8 @@ func _moss() -> void:
 	t.check("a caller with no row gets Moss's voice and one warning", Bank._say_plan("nobody", LINE) == Bank._say_plan("moss", LINE)
 		and Bank.unknown_callers.keys() == ["nobody"] and Bank.trim_db(stranger) == Bank.trim_db(Bank.say_id("moss", LINE)) and not Bank.caller_on_grid("nobody"),
 		"warned about %s" % [Bank.unknown_callers.keys()])
-	t.check("an id with no line is a chirp and no crash", Bank._said("say|sable") == ["sable", ""] and Bank._said("say|sable|a|b") == ["sable", "a|b"]
-		and Bank.samples("say|sable").size() > 0, "%s" % [Bank._said("say|sable")])
+	t.check("an id with no line is a chirp and no crash", Bank.parse_said("say|sable") == ["sable", ""] and Bank.parse_said("say|sable|a|b") == ["sable", "a|b"]
+		and Bank.samples("say|sable").size() > 0, "%s" % [Bank.parse_said("say|sable")])
 
 
 func _call(audio) -> void:
