@@ -165,14 +165,6 @@ static func drive_accel(state, tuning, wish: Vector3, intent) -> Vector3:
 	return wish * tuning.f("drive_accel") * drive_head(state, tuning, wish) * drive_scale(state, tuning, intent)
 
 
-static func slope_gravity(state, tuning) -> Vector3:
-	var g: Vector3 = Vector3.DOWN * tuning.f("gravity")
-	if not state.grounded:
-		return g
-	var n: Vector3 = state.contact_normal
-	return g - n * g.dot(n)
-
-
 static func resistance(state, tuning, intent, delta: float) -> Vector3:
 	var speed: float = state.velocity.length()
 	if speed <= 0.001:

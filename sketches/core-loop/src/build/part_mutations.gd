@@ -305,14 +305,6 @@ static func micro_mutation(part_id: String) -> Dictionary:
 	return {}
 
 
-static func micro_mutation_ids() -> Array:
-	return MICRO_MUTATIONS.keys()
-
-
-static func all_micro_mutation_ids() -> Array:
-	return MICRO_MUTATIONS.keys() + FLAT_MICRO_MUTATIONS.keys()
-
-
 static func has_micro_mutation(held: Array, part_id: String) -> bool:
 	return (MICRO_MUTATIONS.has(part_id) or FLAT_MICRO_MUTATIONS.has(part_id)) and part_id in held
 
