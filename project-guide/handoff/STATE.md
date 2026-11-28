@@ -1,6 +1,6 @@
 # Wave state: the live board, the open wave and carried reds
 
-Heads and open pull requests change by the hour, so read them live (`git ls-remote origin`, the open pull requests, the board's latest comments). This page keeps what a head listing cannot show. The table below is the one place in the repo that names the live board; every other page points here. `npm run check:docs` compares the table with git history and fails when a promotion has landed that the table does not record. The order of what is left is [ROADMAP.md](ROADMAP.md).
+Heads and open pull requests change by the hour, so read them live (`git ls-remote origin`, the open pull requests). This page keeps what a head listing cannot show. The table below is the one place in the repo that names the open stage and live board (`main` and `none` under ruling `ep`); every other page points here. `npm run check:docs` compares the table with git history and fails when a promotion has landed that the table does not record. The order of what is left is [ROADMAP.md](ROADMAP.md).
 
 ## Wave facts
 

@@ -1,6 +1,6 @@
 # Developing Scrapkeep
 
-Start with [START-HERE.md](project-guide/handoff/START-HERE.md) and [AGENTS.md](AGENTS.md). Current alpha work lives in `sketches/core-loop` (flat on `main` under ruling ep); its gate rule is in [AGENTS.md](AGENTS.md) and [ORCHESTRATOR.md](ORCHESTRATOR.md)'s tiered gate. The [first-proof contract](docs/FIRST-BUILD-CONTRACT.md) is historical.
+Start with [AGENTS.md](AGENTS.md) (whose reading order begins with [START-HERE.md](project-guide/handoff/START-HERE.md)). Current alpha work lives in `sketches/core-loop` (flat on `main` under ruling ep); its gate rule is in [AGENTS.md](AGENTS.md) and [ORCHESTRATOR.md](ORCHESTRATOR.md)'s tiered gate. The [first-proof contract](docs/FIRST-BUILD-CONTRACT.md) is historical.
 
 For heavy-lane rules, read [ORCHESTRATOR.md](ORCHESTRATOR.md), [BACKLOG.md](BACKLOG.md), and [TRACKING.md](TRACKING.md). [Engineering ADRs](adr/README.md) are accepted production architecture. Existing browser conventions below govern only the two preserved proofs.
 

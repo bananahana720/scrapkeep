@@ -1,6 +1,6 @@
 # Scrapkeep roadmap
 
-The one roadmap. Written 8 Nov 2026; status lines trimmed 14 Nov so STATE.md is the one home for live state. Phone copy: https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna (source /mnt/project-files/roadmap/roadmap.html). Live wave state is in [STATE.md](STATE.md); rulings are in [DECISIONS.md](DECISIONS.md) (newest wins).
+The one roadmap. Written 8 Nov 2026; status lines trimmed 14 Nov so STATE.md is the one home for live state. This repository file is the sole live copy (earlier phone reading copy: https://claude.ai/artifact/55bppMdvsEXW52ZVFyhNna, originally built from retired `/mnt/project-files/roadmap/roadmap.html`, no longer synced). Live wave state is in [STATE.md](STATE.md); rulings are in [DECISIONS.md](DECISIONS.md) (newest wins).
 
 The roadmap is ordered by what has to be true, not by dates. Wave numbers keep counting (STATE.md names the open one); "wave 21" in older records means the full-alpha sitting, not a wave number still ahead.
 
