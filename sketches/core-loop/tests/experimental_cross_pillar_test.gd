@@ -21,10 +21,6 @@ func _initialize() -> void:
 	_test_schema_parity_and_emitter_subtag_rules()
 	_test_setpieces_builds_ecology_live_composition()
 	_test_director_elites_encounters_builds_ecology_composition()
-	EnvTags.reset()
-	PartResource.reset()
-	JuryRig.reset()
-	Ecology.reset()
 	quit(_t.verdict())
 
 

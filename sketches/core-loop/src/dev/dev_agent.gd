@@ -27,7 +27,7 @@ func setup(game_ref, console_ref) -> void:
 	name = "DevAgent"
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	_parse_args(OS.get_cmdline_user_args())
-	if out_dir != "" and is_instance_valid(console) and "capture" in console:
+	if out_dir != "" and is_instance_valid(console):
 		console.capture.shot_dir = out_dir
 	if inbox_dir != "" or not _batch_steps.is_empty():
 		var insp := _inspect()
@@ -38,7 +38,7 @@ func setup(game_ref, console_ref) -> void:
 	elif not _batch_steps.is_empty():
 		if out_dir == "":
 			out_dir = "user://dev_out"
-			if is_instance_valid(console) and "capture" in console:
+			if is_instance_valid(console):
 				console.capture.shot_dir = out_dir
 		_run_batch.call_deferred()
 
@@ -391,18 +391,13 @@ func _exec_until(step: String, words: Array[String]) -> Dictionary:
 func _exec_shot(step: String, shot_name: String, scripted: bool, shots: Array) -> Dictionary:
 	if not is_instance_valid(console):
 		return {"cmd": step, "ok": false, "text": "!no console", "tone": "warn", "data": null}
-	var capture = console.capture
-	var reply: Variant = "!console cannot capture shots"
-	if capture.has_method("shot_detailed"):
-		reply = await capture.shot_detailed(shot_name, scripted)
-	elif capture.has_method("shot"):
-		reply = await capture.shot(shot_name, scripted)
+	var reply: Dictionary = await console.capture.shot_detailed(shot_name, scripted)
 	return _normalize_capture(step, "shot", shot_name, reply, shots)
 
 
 func _exec_qa_pack(step: String, pack_name: String, scripted: bool, shots: Array) -> Dictionary:
-	if not is_instance_valid(console) or not console.capture.has_method("qa_pack_detailed"):
-		return {"cmd": step, "ok": false, "text": "!console cannot capture qa_pack", "tone": "warn", "data": null}
+	if not is_instance_valid(console):
+		return {"cmd": step, "ok": false, "text": "!no console", "tone": "warn", "data": null}
 	var reply: Dictionary = await console.capture.qa_pack_detailed(pack_name, scripted)
 	return _normalize_capture(step, "qa_pack", pack_name, reply, shots)
 
@@ -432,50 +427,27 @@ func _exec_sheet(step: String, words: Array[String], scripted: bool, shots: Arra
 		sheet_name = DevCommands.word(words, 2, "")
 	else:
 		sheet_name = DevCommands.word(words, 1, "")
-	var capture = console.capture
-	var reply: Variant = "!console cannot capture contact sheets"
-	if capture.has_method("sheet_detailed"):
-		reply = await capture.sheet_detailed(mode, sheet_name, scripted)
-	elif capture.has_method("contact_sheet_mode"):
-		reply = await capture.contact_sheet_mode(mode, sheet_name, scripted)
-	elif capture.has_method("contact_sheet"):
-		var argc := _method_argc(capture, "contact_sheet")
-		if argc >= 3:
-			reply = await capture.contact_sheet(mode, sheet_name, scripted)
-		elif argc == 2:
-			reply = await capture.contact_sheet(mode, scripted)
-		else:
-			reply = await capture.contact_sheet(scripted)
+	var reply: Dictionary = await console.capture.sheet_detailed(mode, sheet_name, scripted)
 	return _normalize_capture(step, "sheet:%s" % mode, sheet_name, reply, shots)
 
 
-func _normalize_capture(step: String, kind: String, cap_name: String, reply: Variant, shots: Array) -> Dictionary:
-	if reply is Dictionary:
-		var ok := bool(reply.get("ok", false))
-		var text := String(reply.get("text", ""))
-		var data = reply.get("data", reply)
-		var dead_tile := false
-		if data is Dictionary and data.get("tiles") is Array:
-			for tile in data.tiles:
-				if tile is Dictionary and bool(tile.get("dead", false)):
-					dead_tile = true
-					break
-		var dead_frame := bool(reply.get("dead_frame", false))
-		if data is Dictionary:
-			dead_frame = dead_frame or bool(data.get("dead_frame", false)) or (int(data.get("dead_count", 0)) > 0) or dead_tile
-		var entry := {"kind": kind, "name": cap_name, "ok": ok, "path": String(reply.get("path", data.get("path", "") if data is Dictionary else "")),
-			"dead_frame": dead_frame}
-		shots.append(entry)
-		return {"cmd": step, "ok": ok and not entry.dead_frame, "text": text, "tone": "ok" if (ok and not entry.dead_frame) else "warn", "data": data}
-	var text := String(reply)
-	var ok := not text.begins_with("!")
-	var path := ""
-	var arrow := text.find("-> ")
-	if arrow >= 0:
-		path = text.substr(arrow + 3).strip_edges()
-	var entry := {"kind": kind, "name": cap_name, "ok": ok, "path": path, "dead_frame": false}
+func _normalize_capture(step: String, kind: String, cap_name: String, reply: Dictionary, shots: Array) -> Dictionary:
+	var ok := bool(reply.get("ok", false))
+	var text := String(reply.get("text", ""))
+	var data = reply.get("data", reply)
+	var dead_tile := false
+	if data is Dictionary and data.get("tiles") is Array:
+		for tile in data.tiles:
+			if tile is Dictionary and bool(tile.get("dead", false)):
+				dead_tile = true
+				break
+	var dead_frame := bool(reply.get("dead_frame", false))
+	if data is Dictionary:
+		dead_frame = dead_frame or bool(data.get("dead_frame", false)) or (int(data.get("dead_count", 0)) > 0) or dead_tile
+	var entry := {"kind": kind, "name": cap_name, "ok": ok, "path": String(reply.get("path", data.get("path", "") if data is Dictionary else "")),
+		"dead_frame": dead_frame}
 	shots.append(entry)
-	return {"cmd": step, "ok": ok, "text": text, "tone": "ok" if ok else "warn", "data": entry}
+	return {"cmd": step, "ok": ok and not entry.dead_frame, "text": text, "tone": "ok" if (ok and not entry.dead_frame) else "warn", "data": data}
 
 
 func _write_artifacts(target_dir: String, step_rows: Array, receipt: Dictionary) -> Dictionary:
@@ -505,12 +477,3 @@ static func _split_words(step: String) -> Array[String]:
 	for w in step.strip_edges().split(" ", false):
 		words.append(w)
 	return words
-
-
-static func _method_argc(obj: Object, method_name: String) -> int:
-	var script_res = obj.get_script()
-	if script_res is Script:
-		for info in script_res.get_script_method_list():
-			if String(info["name"]) == method_name:
-				return (info["args"] as Array).size()
-	return 1

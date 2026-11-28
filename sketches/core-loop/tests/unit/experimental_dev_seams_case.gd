@@ -17,7 +17,7 @@ func run(t) -> void:
 		SourceScan.matching(t, [DEV_DIR], "(?m)^\\s*const\\s+(SHOT_DIR|SHEET_[A-Z0-9_]+|SAME_LUMA)\\b"), [CAPTURE])
 	t.eq("only dev_capture.gd declares the still, QA-pack and sheet calls in src/dev",
 		SourceScan.matching(t, [DEV_DIR],
-			"(?m)^\\s*(static\\s+)?func\\s+(shot|shot_detailed|qa_pack_detailed|contact_sheet|sheet_detailed|sheet_ids|sheet_grid)\\("),
+			"(?m)^\\s*(static\\s+)?func\\s+(shot|shot_detailed|qa_pack_detailed|sheet_detailed|sheet_ids|sheet_grid)\\("),
 		[CAPTURE])
 
 	for name in ["_mesh_cache", "_fx_mats"]:
