@@ -25,6 +25,11 @@ export const BASELINE_RULES = {
   ...Object.fromEntries(WORD_RULES.map((rule) => [rule, { shape: "count" }])),
   L18: { shape: "keys" },
   L19: { shape: "keys" },
+  L20: {
+    shape: "keys",
+    keyOf: (item) => item.key,
+    fileOf: (key) => key.split(" -> ")[0],
+  },
 };
 const UID_FOLDERS = ["addons", "src", "tests", "tools"];
 const MAX_QUARANTINE = 0;
@@ -665,7 +670,7 @@ export function baselineFrom(findings) {
     const mine = findings.filter((item) => item.rule === rule);
     if (spec.shape === "keys") {
       const keyOf = spec.keyOf ?? ((item) => item.path);
-      baseline[rule] = [...new Set(mine.map(keyOf))].sort();
+      baseline[rule] = [...new Set(mine.map(keyOf))].filter((key) => key !== undefined).sort();
     } else {
       const counts = {};
       for (const item of mine) counts[item.path] = (counts[item.path] ?? 0) + 1;
@@ -677,17 +682,31 @@ export function baselineFrom(findings) {
   return baseline;
 }
 
+export function baselineText(baseline) {
+  const rules = Object.entries(baseline);
+  const lines = rules.map(([rule, list], index) => {
+    const end = index === rules.length - 1 ? "" : ",";
+    const head = `  ${JSON.stringify(rule)}: `;
+    if (!Array.isArray(list)) {
+      const rows = Object.entries(list).map(
+        ([file, count]) => `    ${JSON.stringify(file)}: ${count}`,
+      );
+      return rows.length === 0 ? `${head}{}${end}` : `${head}{\n${rows.join(",\n")}\n  }${end}`;
+    }
+    const inline = `${head}[${list.map((key) => JSON.stringify(key)).join(", ")}]${end}`;
+    if (inline.length <= 100) return inline;
+    return `${head}[\n${list.map((key) => `    ${JSON.stringify(key)}`).join(",\n")}\n  ]${end}`;
+  });
+  return `{\n${lines.join("\n")}\n}\n`;
+}
+
 export function parseLintArgs(argv) {
   const options = { sketch: null, writeBaseline: false, base: null, layers: null };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--sketch" && argv[i + 1]) options.sketch = argv[++i];
     else if (argv[i] === "--layers") {
-      const order = argv[++i];
-      if (!order || order.startsWith("-"))
-        throw new Error(
-          "--layers requires an order, bottom first, as in --layers core,movement,ui",
-        );
-      options.layers = parseLayerOrder(order);
+      const order = argv[i + 1];
+      options.layers = order && !order.startsWith("-") ? parseLayerOrder(argv[++i]) : LAYERS;
     } else if (argv[i] === "--base") {
       const ref = argv[++i];
       if (!ref || ref.startsWith("-"))
@@ -696,7 +715,7 @@ export function parseLintArgs(argv) {
     } else if (argv[i] === "--write-baseline") options.writeBaseline = true;
     else if (argv[i].startsWith("-"))
       throw new Error(
-        `unknown argument ${argv[i]}; use --sketch NAME, --base REF, --layers ORDER or --write-baseline`,
+        `unknown argument ${argv[i]}; use --sketch NAME, --base REF, --layers [ORDER] or --write-baseline`,
       );
   }
   return options;
@@ -1170,8 +1189,7 @@ export function stronglyConnectedComponents(graph) {
   return components;
 }
 
-export function lintL16(files) {
-  const graph = buildScriptGraph(files);
+export function lintL16(files, graph = buildScriptGraph(files)) {
   const components = stronglyConnectedComponents(graph).filter(
     (component) => component.length >= 2,
   );
@@ -1318,6 +1336,51 @@ export function layerReport(files, layers) {
     );
   }
   return { ok: true, lines };
+}
+
+export const LAYERS = parseLayerOrder(
+  "core,movement,build,combat,boss,world,presentation,ui,boot+dev+experimental+game.gd",
+);
+const LAYER_RECORD = "adr/TADR-014-source-layer-order.md";
+
+export function lintL20(files, graph = buildScriptGraph(files), layers = LAYERS) {
+  if (files.length === 0)
+    return [
+      finding(
+        "L20",
+        "sketches/core-loop/src",
+        1,
+        "read no scripts under src/, so L20 checked nothing; run the lint from a full checkout",
+      ),
+    ];
+  const layerOf = layerIndex(layers);
+  const findings = [];
+  for (const file of graph.keys()) {
+    const dir = srcDir(file);
+    if (!layerOf.has(dir))
+      findings.push(
+        finding(
+          "L20",
+          file,
+          1,
+          `src/${dir} is in no layer; place it in LAYERS in scripts/sketch-lint.mjs and in ${LAYER_RECORD} before it can land`,
+        ),
+      );
+  }
+  const place = (dir) => `${dir} is layer ${layerOf.get(dir) + 1}`;
+  for (const { from, to } of upwardPairs(graph, layerOf)) {
+    const low = srcDir(from);
+    findings.push({
+      ...finding(
+        "L20",
+        from,
+        1,
+        `loads ${scriptRel(to)}, a script in a higher layer: ${place(low)} and ${place(srcDir(to))} (${LAYER_RECORD}).\n    Hand the value or a callable in from the script above, move a pure data file down to ${low}, or move the fact to its owner in ${low}; never list the pair`,
+      ),
+      key: `${from} -> ${to}`,
+    });
+  }
+  return findings.sort((a, b) => (a.key ?? a.path).localeCompare(b.key ?? b.path));
 }
 
 export function lintL17(file, text) {
@@ -1568,7 +1631,9 @@ export function lintSketch(sketch) {
     findings.push(...lintL13(file.path, rel, file.text));
     findings.push(...lintL14(file.path, rel, file.text, driverRefs, null, driverVars));
   }
-  findings.push(...lintL16(srcFiles));
+  const graph = buildScriptGraph(srcFiles);
+  findings.push(...lintL16(srcFiles, graph));
+  if (sketch === "core-loop") findings.push(...lintL20(srcFiles, graph));
   if (sketch === "core-loop") findings.push(...lintL6Owners(lit, relative));
   if (sketch === "core-loop") {
     const words = lintWords({
@@ -1647,7 +1712,7 @@ function main() {
   const raw = lintSketch(options.sketch);
   if (options.writeBaseline) {
     const baseline = baselineFrom(raw);
-    writeFileSync(BASELINE_FILE, JSON.stringify(baseline, null, 2) + "\n");
+    writeFileSync(BASELINE_FILE, baselineText(baseline));
     for (const [rule, spec] of Object.entries(BASELINE_RULES)) {
       if (spec.shape === "keys") console.log(`${rule} ${baseline[rule].length} baseline entries`);
       else

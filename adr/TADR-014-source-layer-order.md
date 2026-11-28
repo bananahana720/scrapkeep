@@ -82,7 +82,7 @@ A unit that cuts an upward load deletes its entry by running the write command a
 - A new load of a higher layer's script fails `npm run sketch:lint`, which `npm run sketch:fast` and the pre-push hook also run. The message names both files, both layers, this record and the three ways out.
 - Moving a game-wide fact such as `core/flash_guard.gd` back into `presentation` fails: each of the scripts in `build`, `combat`, `boss` and `world` that loads it becomes a new upward pair. A lower layer that starts loading any presentation script for one fact fails the same way.
 - A new directory under `src/` cannot land until it is placed in a layer.
-- The lint's run time rose by about 30 ms on the Mac Studio; the rule reuses L16's graph.
+- The rule adds about 2 ms to the lint on the Mac Studio, since it reads the graph L16 has already built.
 
 **What the rule does not see.**
 

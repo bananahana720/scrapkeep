@@ -14,9 +14,11 @@ import {
   BASELINE_RULES,
   FAULT_SWITCHES,
   L13_ALLOWED,
+  LAYERS,
   applyBaseline,
   baselineFrom,
   baselineGrowth,
+  baselineText,
   buildScriptGraph,
   formatFinding,
   layerReport,
@@ -40,6 +42,7 @@ import {
   lintL17,
   lintL18,
   lintL19,
+  lintL20,
   lintPreloadedTestSupport,
   lintSketch,
   lintTrackedUids,
@@ -733,6 +736,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
     S8: {},
     L18: [],
     L19: [],
+    L20: [],
   });
 });
 
@@ -1568,9 +1572,136 @@ test("the layer report fails on an empty read, a directory the order leaves out 
   assert.throws(() => parseLayerOrder("low,,top"), /name each layer's directories/);
   assert.throws(() => parseLayerOrder("low,top+"), /name each layer's directories/);
   assert.throws(() => parseLayerOrder("low,top,low"), /low is named twice/);
-  assert.throws(() => parseLintArgs(["--layers"]), /--layers requires an order/);
-  assert.throws(() => parseLintArgs(["--layers", "--sketch"]), /--layers requires an order/);
+  assert.equal(parseLintArgs(["--layers"]).layers, LAYERS);
+  assert.deepEqual(parseLintArgs(["--layers", "--sketch", "core-loop"]), {
+    sketch: "core-loop",
+    writeBaseline: false,
+    base: null,
+    layers: LAYERS,
+  });
   assert.deepEqual(parseLintArgs(["--layers", "a,b+c"]).layers, [["a"], ["b", "c"]]);
+});
+
+const l20Src = "sketches/core-loop/src";
+const l20Up = `${l20Src}/core/low.gd -> ${l20Src}/ui/high.gd`;
+
+test("L20 fails an upward load that is not listed, naming both files, both layers, the record and the ways out", () => {
+  const files = layerTree({
+    "core/low.gd": 'const HIGH := preload("res://src/ui/high.gd")\n',
+    "ui/high.gd": "extends RefCounted\n",
+  });
+  const findings = lintL20(files);
+  assert.deepEqual(
+    findings.map((item) => `${item.rule} ${item.path} ${item.key}`),
+    [`L20 ${l20Src}/core/low.gd ${l20Up}`],
+  );
+  assert.equal(
+    formatFinding(applyBaseline(findings, { L20: [] }, () => true)[0]),
+    `L20 ${l20Src}/core/low.gd:1 loads src/ui/high.gd, a script in a higher layer: core is layer 1 and ui is layer 8 (adr/TADR-014-source-layer-order.md).\n    Hand the value or a callable in from the script above, move a pure data file down to core, or move the fact to its owner in core; never list the pair`,
+  );
+  assert.deepEqual(
+    applyBaseline(findings, { L20: [l20Up] }, () => true),
+    [],
+  );
+  assert.deepEqual(baselineFrom(findings).L20, [l20Up]);
+});
+
+test("L20 fails a listed pair that no longer points up and asks for its entry to be removed", () => {
+  const files = layerTree({
+    "core/low.gd": "extends RefCounted\n",
+    "ui/high.gd": 'const LOW := preload("res://src/core/low.gd")\n',
+  });
+  assert.deepEqual(lintL20(files), []);
+  assert.deepEqual(
+    applyBaseline(lintL20(files), { L20: [l20Up] }, () => true).map((item) => formatFinding(item)),
+    [`BASELINE ${l20Src}/core/low.gd:1 L20 (${l20Up}) no longer offends: remove from baseline`],
+  );
+});
+
+test("L20 fails a script in a directory with no layer, and the list cannot excuse it", () => {
+  const files = layerTree({
+    "camp/hub.gd": 'const LOW := preload("res://src/core/low.gd")\n',
+    "core/low.gd": "extends RefCounted\n",
+  });
+  const findings = lintL20(files);
+  assert.deepEqual(
+    findings.map((item) => formatFinding(item)),
+    [
+      `L20 ${l20Src}/camp/hub.gd:1 src/camp is in no layer; place it in LAYERS in scripts/sketch-lint.mjs and in adr/TADR-014-source-layer-order.md before it can land`,
+    ],
+  );
+  assert.deepEqual(baselineFrom(findings).L20, []);
+  assert.equal(
+    applyBaseline(findings, { L20: [`${l20Src}/camp/hub.gd`] }, () => true).filter(
+      (item) => item.rule === "L20",
+    ).length,
+    1,
+  );
+  assert.equal(
+    lintL20(layerTree({ "loose.gd": "extends Node\n" }))[0].message.split(";")[0],
+    "src/loose.gd is in no layer",
+  );
+});
+
+test("L20 passes loads inside one layer, between the peers of a shared layer, and downward", () => {
+  const files = layerTree({
+    "combat/a.gd":
+      'const B := preload("res://src/combat/b.gd")\nconst LOW := preload("res://src/core/low.gd")\n',
+    "combat/b.gd": 'const A := preload("res://src/combat/a.gd")\n',
+    "core/low.gd": "class_name LowThing\nextends RefCounted\n",
+    "ui/high.gd": "var low := LowThing.new()\n",
+    "game.gd": 'const DEV := preload("res://src/dev/console.gd")\n',
+    "dev/console.gd":
+      'const GAME := preload("res://src/game.gd")\nconst UI := preload("res://src/ui/high.gd")\n',
+    "boot/boot.gd": 'const DEV := preload("res://src/dev/console.gd")\n',
+  });
+  assert.equal(buildScriptGraph(files).get(`${l20Src}/dev/console.gd`).length, 2);
+  assert.deepEqual(lintL20(files), []);
+});
+
+test("L20 fails when it reads no scripts", () => {
+  assert.deepEqual(
+    lintL20([]).map((item) => formatFinding(item)),
+    [
+      "L20 sketches/core-loop/src:1 read no scripts under src/, so L20 checked nothing; run the lint from a full checkout",
+    ],
+  );
+});
+
+test("L20 passes the checked-out tree against its list, which the write command writes in a stable order, and fails when one entry is removed", () => {
+  const baselineFile = new URL("./sketch-lint.baseline.json", import.meta.url);
+  const committed = readFileSync(baselineFile, "utf8");
+  const baseline = JSON.parse(committed);
+  assert.equal(baselineText(baseline), committed);
+  assert.deepEqual(LAYERS.flat().sort(), [
+    "boot",
+    "boss",
+    "build",
+    "combat",
+    "core",
+    "dev",
+    "experimental",
+    "game.gd",
+    "movement",
+    "presentation",
+    "ui",
+    "world",
+  ]);
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L20");
+  assert.ok(raw.length > 0);
+  assert.deepEqual(baselineFrom(raw).L20, baseline.L20);
+  assert.deepEqual(
+    applyBaseline(raw, { L20: baseline.L20 }, () => true),
+    [],
+  );
+  const dropped = baseline.L20.find((key) => key.startsWith(`${l20Src}/core/run_state.gd -> `));
+  assert.ok(dropped);
+  assert.deepEqual(
+    applyBaseline(raw, { L20: baseline.L20.filter((key) => key !== dropped) }, () => true).map(
+      (item) => `${item.rule} ${item.key}`,
+    ),
+    [`L20 ${dropped}`],
+  );
 });
 
 test("L17 flags hardcoded /home/andrew paths in scripts and passes HOME-based paths", () => {
