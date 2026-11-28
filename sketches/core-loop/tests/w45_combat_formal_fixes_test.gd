@@ -397,15 +397,15 @@ func _test_combat_cleanup_p0_3() -> void:
 	var combat = game.combat
 
 	# (a) stage_content_cleared resets cards, escape state, and line_load.
-	combat.plate = {"at": Vector3.ZERO, "until": combat._clock + 5.0}
-	combat.link_group = {"ids": [1], "until": combat._clock + 5.0, "spent": false}
-	combat.clip_post = {"at": Vector3.ZERO, "until": combat._clock + 5.0, "shape": {}}
+	combat.tally_kit.plate = {"at": Vector3.ZERO, "until": combat._clock + 5.0}
+	combat.tally_kit.link_group = {"ids": [1], "until": combat._clock + 5.0, "spent": false}
+	combat.tally_kit.clip_post = {"at": Vector3.ZERO, "until": combat._clock + 5.0, "shape": {}}
 	combat._escape = {"piece": "test", "style": "lane", "until": combat._clock + 5.0}
 	combat.escape_lane = {"from": Vector3.ZERO, "dir": Vector3.FORWARD, "length": 10.0, "half_width": 2.0, "friction": 0.1, "hold": 10.0, "until": combat._clock + 5.0}
 	combat._line_load = {"id": "line_reel", "fraction": 1.0, "left": 4.0}
 	game.events.stage_content_cleared.emit("arena")
 	_t.check("P0 #3a: stage_content_cleared clears cards, escape, escape_lane, line_load",
-		combat.plate.is_empty() and combat.link_group.is_empty() and combat.clip_post.is_empty()
+		combat.tally_kit.plate.is_empty() and combat.tally_kit.link_group.is_empty() and combat.tally_kit.clip_post.is_empty()
 		and combat._escape.is_empty() and combat.escape_lane.is_empty() and combat._line_load.is_empty())
 
 	# (b) player_died clears _strips, _bells, _aftershocks, _rakes, _line_load, _cast_pending, _bite_pending.

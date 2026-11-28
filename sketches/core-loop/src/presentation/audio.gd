@@ -4762,7 +4762,7 @@ func _wire_tally(events) -> void:
 		if not id in ["link_clips", "link_double"]:
 			return
 		var combat = ctx.get("spawner") if ctx != null else null
-		var clips: int = int(combat.last_card.get("hits", 1)) if combat != null else 1
+		var clips: int = int(combat.tally_kit.last_card.get("hits", 1)) if combat != null else 1
 		var lift := clampi(int(ctx.player.chain.combo) - 1, 0, CHAIN_STEPS)
 		for i in clampi(clips, 1, TALLY_CUES["tally_clip"]["steps"].size()):
 			_tally_cue("tally_clip", i, lift, i))
@@ -4775,7 +4775,7 @@ func _wire_tally(events) -> void:
 			return
 		_tally_cue("tally_total", 0)
 		var combat = ctx.get("spawner") if ctx != null else null
-		var settles: int = int(combat.tally_last_settle.get("settles", 0)) if combat != null else 0
+		var settles: int = int(combat.tally_kit.tally_last_settle.get("settles", 0)) if combat != null else 0
 		for i in mini(settles, TALLY_CUES["tally_settle"]["steps"].size()):
 			_tally_cue("tally_settle", i, 0, i + 1))
 
@@ -4800,9 +4800,9 @@ func _tally_cue(cue: String, step: int, lift := 0, slot := 0) -> void:
 
 func _tend_tally() -> void:
 	var combat = ctx.get("spawner") if ctx != null else null
-	if combat != null and combat.get("ultimate") != null and combat.get("tally_piece") != null:
+	if combat != null and combat.get("ultimate") != null and combat.get("tally_kit") != null:
 		var ult = combat.ultimate
-		if ult.phase() == "flight" and String(combat.tally_piece) != "":
+		if ult.phase() == "flight" and String(combat.tally_kit.tally_piece) != "":
 			var beat: int = ult.current_beat()
 			if beat != _tally_beat and beat > 0:
 				_tally_cue("tally_stroke", beat - 1)

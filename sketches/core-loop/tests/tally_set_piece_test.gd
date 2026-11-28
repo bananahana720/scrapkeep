@@ -104,9 +104,9 @@ func _fresh() -> void:
 	_player.tree._knobs.clear()
 	_combat._line_load = {}
 	_combat._bite_pending = false
-	_combat._reset_cards()
-	_combat.plate = {}
-	_combat.link_group = {}
+	_combat.tally_kit.reset()
+	_combat.tally_kit.plate = {}
+	_combat.tally_kit.link_group = {}
 	_struck.clear()
 	_landed.clear()
 	_game.run.mass = 0.0
@@ -181,7 +181,7 @@ func _aim(forward: Vector3) -> Dictionary:
 
 func _plate_at(dx: float, dz := 0.0) -> Vector3:
 	var at: Vector3 = _combat.floor_at(_player.ball_position() + Vector3(dx, 2.0, dz))
-	_combat.plate = {"at": at, "until": _combat._clock + 4.0}
+	_combat.tally_kit.plate = {"at": at, "until": _combat._clock + 4.0}
 	return at
 
 
@@ -217,11 +217,11 @@ func _plan_cases() -> void:
 	_t.eq("a plate 20 m out on the aim is B, on a line", [plan["path"], _flat(plan["to"]).distance_to(_flat(plate)) < 0.01], ["line", true])
 	plan = _ult.plan(_player.ball_position(), _aim(Vector3(1.0, -0.2, 0.9)))
 	_t.check("a plate 42 degrees off the aim is not B", _flat(plan["to"]).distance_to(_flat(plate)) > 0.5, str(plan["to"]))
-	_combat.plate = {}
+	_combat.tally_kit.plate = {}
 	_plate_at(_player.grapple_range() + 5.0)
 	plan = _ult.plan(_player.ball_position(), _aim(Vector3(1.0, -0.2, 0.0)))
-	_t.check("a plate past rope range is not B", _flat(plan["to"]).distance_to(_flat(_combat.plate["at"])) > 0.5, str(plan["to"]))
-	_combat.plate = {}
+	_t.check("a plate past rope range is not B", _flat(plan["to"]).distance_to(_flat(_combat.tally_kit.plate["at"])) > 0.5, str(plan["to"]))
+	_combat.tally_kit.plate = {}
 	var ball: Vector3 = _player.ball_position()
 	_player.grapple_to(ball + Vector3(15.0, 0.0, 0.0), Vector3.LEFT, null)
 	plan = _ult.plan(ball, _aim(Vector3(1.0, -0.2, 0.0)))
@@ -250,13 +250,13 @@ func _volley_cases() -> void:
 	for z in [-2.0, -3.0, -4.0]:
 		near.append(_enemy("chaser", -2.0, z))
 	_t.eq("a beat punches three", _tech("plate_return", ball, Vector3.RIGHT), 3)
-	_t.check("the target on the reticle goes first", _combat.ride_clips.has(far.get_instance_id()))
+	_t.check("the target on the reticle goes first", _combat.tally_kit.ride_clips.has(far.get_instance_id()))
 	_t.eq("a volley deals 12 x heft", _forces(far, "ledger"), [12.0])
 	for x in [3.0, 4.0, 5.0, 6.0]:
 		_enemy("chaser", x, 3.0)
 	_tech("plate_return", ball)
 	_tech("plate_return", ball)
-	_t.eq("class I caps the ride at 6 clips", _combat.ride_clips.size(), 6)
+	_t.eq("class I caps the ride at 6 clips", _combat.tally_kit.ride_clips.size(), 6)
 	await _fresh()
 	_game.run.mass = 1000000.0
 	ball = _player.ball_position()
@@ -265,7 +265,7 @@ func _volley_cases() -> void:
 		_enemy("chaser", 2.0 + 0.6 * i, -2.0 + 0.3 * i)
 	for beat in 4:
 		_tech("plate_return", ball)
-	_t.eq("class V caps the ride at 10 clips", [_ult.heft_index(), _combat.ride_clips.size()], [4, 10])
+	_t.eq("class V caps the ride at 10 clips", [_ult.heft_index(), _combat.tally_kit.ride_clips.size()], [4, 10])
 
 
 # --- the peak and the landing --------------------------------------------------------------
@@ -276,17 +276,17 @@ func _peak_and_landing_cases() -> void:
 	var b := ball + Vector3.RIGHT * 20.0
 	_piece("plate_return", ball, b)
 	_ult._ult_rows["plate_return"]["peak"].call(ball + Vector3.RIGHT * 10.0)
-	_t.check("the peak plants a plate at B", not _combat.plate.is_empty() and _flat(_combat.plate["at"]).distance_to(_flat(b)) < 0.5,
-		str(_combat.plate))
-	_t.near("the peak plate pulls at the landing radius", float(_combat.plate.get("radius", 0.0)), _ult.landing_radius())
+	_t.check("the peak plants a plate at B", not _combat.tally_kit.plate.is_empty() and _flat(_combat.tally_kit.plate["at"]).distance_to(_flat(b)) < 0.5,
+		str(_combat.tally_kit.plate))
+	_t.near("the peak plate pulls at the landing radius", float(_combat.tally_kit.plate.get("radius", 0.0)), _ult.landing_radius())
 	await _fresh()
 	ball = _player.ball_position()
 	var mine := _plate_at(15.0)
 	_piece("plate_return", ball, mine)
-	var until: float = _combat.plate["until"]
+	var until: float = _combat.tally_kit.plate["until"]
 	_ult._ult_rows["plate_return"]["peak"].call(ball)
-	_t.check("her own plate at B grows and lasts to the landing", _flat(_combat.plate["at"]).distance_to(_flat(mine)) < 0.01
-		and is_equal_approx(float(_combat.plate["radius"]), _ult.landing_radius()) and float(_combat.plate["until"]) != until)
+	_t.check("her own plate at B grows and lasts to the landing", _flat(_combat.tally_kit.plate["at"]).distance_to(_flat(mine)) < 0.01
+		and is_equal_approx(float(_combat.tally_kit.plate["radius"]), _ult.landing_radius()) and float(_combat.tally_kit.plate["until"]) != until)
 
 	await _fresh()
 	ball = _player.ball_position()
@@ -297,7 +297,7 @@ func _peak_and_landing_cases() -> void:
 	for z in [10.0, 12.0, 14.0]:
 		outs.append(_enemy("chaser", 0.0, z))
 	for enemy in outs + [inside_clip]:
-		_combat.ride_clips[enemy.get_instance_id()] = true
+		_combat.tally_kit.ride_clips[enemy.get_instance_id()] = true
 	_player.abilities.slot(AbilityState.WEAPON).charges = 0
 	var result := _land("plate_return", ball)
 	_t.eq("the landing reports strike hits plus settles", int(result[0]), 2 + 3)
@@ -305,13 +305,13 @@ func _peak_and_landing_cases() -> void:
 	_t.eq("a clip inside takes the strike, never a settle too", [_forces(inside_clip, "ledger"), _hits(inside_clip, "ultimate").size()], [[], 1])
 	_t.eq("an unclipped enemy inside takes the strike only", [_hits(inside, "ultimate").size(), _hits(inside, "ledger").size()], [1, 0])
 	_t.eq("the landing refills pressure to full", _player.abilities.slot(AbilityState.WEAPON).charges, 3)
-	_t.eq("the settle record", [_combat.tally_last_settle.get("hits"), _combat.tally_last_settle.get("settles")], [2, 3])
+	_t.eq("the settle record", [_combat.tally_kit.tally_last_settle.get("hits"), _combat.tally_kit.tally_last_settle.get("settles")], [2, 3])
 	# Through the framework strike: ultimate_landed carries the settles and the chain ends.
 	await _fresh()
 	ball = _player.ball_position()
 	_piece("plate_return", ball, ball)
 	for z in [10.0, 12.0]:
-		_combat.ride_clips[_enemy("chaser", 0.0, z).get_instance_id()] = true
+		_combat.tally_kit.ride_clips[_enemy("chaser", 0.0, z).get_instance_id()] = true
 	for i in 3:
 		_player.chain.link(true, false)
 	_ult._strike(ball)
@@ -322,8 +322,8 @@ func _peak_and_landing_cases() -> void:
 	ball = _player.ball_position()
 	_piece("plate_return", ball, ball)
 	var lined := _enemy("chaser", 0.0, 11.0)
-	_combat.link_group = {"ids": [lined.get_instance_id()], "until": _combat._clock + 4.0, "spent": false, "mult": 1.0}
-	_combat.ride_clips[lined.get_instance_id()] = true
+	_combat.tally_kit.link_group = {"ids": [lined.get_instance_id()], "until": _combat._clock + 4.0, "spent": false, "mult": 1.0}
+	_combat.tally_kit.ride_clips[lined.get_instance_id()] = true
 	_land("plate_return", ball)
 	_t.eq("a line clip and a ride clip on one enemy settle once", _forces(lined, "ledger"), [24.0])
 
@@ -334,7 +334,7 @@ func _peak_and_landing_cases() -> void:
 	var linked: Array = []
 	for z in [11.0, 13.0, 15.0]:
 		linked.append(_enemy("chaser", 0.0, z))
-	_combat.link_group = {"ids": linked.map(func(e): return e.get_instance_id()), "until": _combat._clock + 4.0, "spent": false, "mult": 1.0}
+	_combat.tally_kit.link_group = {"ids": linked.map(func(e): return e.get_instance_id()), "until": _combat._clock + 4.0, "spent": false, "mult": 1.0}
 	_land("plate_return", ball)
 	_t.eq("a live unspent three-clip group takes one settle each and no arc", linked.map(func(e): return _forces(e, "ledger")), [[24.0], [24.0], [24.0]])
 
@@ -350,12 +350,12 @@ func _warden_and_boss_cases() -> void:
 	var before: float = warden.posture()
 	_tech("plate_return", ball)
 	_t.check("a volley fills a closed Warden's posture and clips it", warden.posture() > before
-		and _combat.ride_clips.has(warden.get_instance_id()), "posture %.2f -> %.2f" % [before, warden.posture()])
+		and _combat.tally_kit.ride_clips.has(warden.get_instance_id()), "posture %.2f -> %.2f" % [before, warden.posture()])
 	posture.staggered = true
 	posture.stagger_left = 5.0
 	posture.ram_shatters = true
 	var chunks: int = warden.chunks_left()
-	_combat.ride_clips.clear()
+	_combat.tally_kit.ride_clips.clear()
 	_tech("plate_return", ball)
 	_t.eq("a volley never takes a chunk from an open core", warden.chunks_left(), chunks)
 	# Settle: the Warden is a clip outside the radius.
@@ -384,13 +384,13 @@ func _warden_and_boss_cases() -> void:
 	var hp: float = boss.hp
 	_tech("plate_return", ball)
 	_t.near("a volley on a boss deals half", hp - float(boss.hp), 6.0, 0.01)
-	_t.check("a boss is clipped once like anyone", _combat.ride_clips.has(boss.get_instance_id()) and _combat.ride_clips.size() == 1)
+	_t.check("a boss is clipped once like anyone", _combat.tally_kit.ride_clips.has(boss.get_instance_id()) and _combat.tally_kit.ride_clips.size() == 1)
 	boss.global_position = ball + Vector3(0.0, 0.0, 14.0)
 	hp = boss.hp
 	_land("plate_return", ball)
 	_t.near("a settle on a boss deals half", hp - float(boss.hp), 12.0, 0.01)
 	boss.global_position = ball + Vector3(2.0, 0.0, 0.0)
-	_combat.ride_clips.clear()
+	_combat.tally_kit.ride_clips.clear()
 	hp = boss.hp
 	_land("plate_return", ball)
 	_t.near("the landing on a boss deals half", hp - float(boss.hp), Ultimate.LANDING_DAMAGE * 0.5, 0.01)
@@ -408,10 +408,10 @@ func _variant_cases() -> void:
 	_t.eq("Audit Trail stamps all four under the ball, no 3-target limit", made, 4)
 	_t.eq("the stamp leaves the reticle target alone", _hits(reticle).size(), 0)
 	_t.eq("a stamp deals 12 x heft", _forces(under[0], "ledger"), [12.0])
-	_combat.ride_clips.clear()
+	_combat.tally_kit.ride_clips.clear()
 	_struck.clear()
 	_t.eq("Audit Trail ignores the aim", _tech("plate_audit", ball, Vector3.BACK), 4)
-	_combat.ride_clips.clear()
+	_combat.tally_kit.ride_clips.clear()
 	_t.eq("no ground within 12 m below, no stamp", _tech("plate_audit", ball + Vector3.UP * 20.0), 0)
 
 	await _fresh()
@@ -420,11 +420,11 @@ func _variant_cases() -> void:
 	_enemy("chaser", -6.0)
 	var knot: Array = [_enemy("chaser", 10.0, 0.0), _enemy("chaser", 11.0, 1.0), _enemy("chaser", 10.5, -1.0), _enemy("chaser", 11.5, 0.0)]
 	made = _tech("plate_flywheel", ball)
-	_t.check("Flywheel Throw throws its plate at the densest knot", _combat._fly_plates.size() == 1
-		and _flat(_combat._fly_plates[0]["at"]).distance_to(_flat(knot[0].global_position)) < 2.0, str(_combat._fly_plates))
+	_t.check("Flywheel Throw throws its plate at the densest knot", _combat.tally_kit._fly_plates.size() == 1
+		and _flat(_combat.tally_kit._fly_plates[0]["at"]).distance_to(_flat(knot[0].global_position)) < 2.0, str(_combat.tally_kit._fly_plates))
 	_t.eq("a knot plate clips three", made, Weapons.FLY_KNOT_CLIPS)
 	_ult._ult_rows["plate_flywheel"]["peak"].call(ball)
-	_t.near("Flywheel peak plate pull ring equals its landing radius including bonus", float(_combat.plate["radius"]), _ult.landing_radius() + Weapons.FLY_LANDING_BONUS)
+	_t.near("Flywheel peak plate pull ring equals its landing radius including bonus", float(_combat.tally_kit.plate["radius"]), _ult.landing_radius() + Weapons.FLY_LANDING_BONUS)
 	var edge := _enemy("chaser", _ult.landing_radius() + 1.0)
 	var base_hit := _land("plate_return", ball)
 	_struck.clear()
@@ -440,7 +440,7 @@ func _knob_cases() -> void:
 	var ball: Vector3 = _player.ball_position()
 	_piece("plate_return", ball, ball)
 	var out := _enemy("chaser", 0.0, 12.0)
-	_combat.ride_clips[out.get_instance_id()] = true
+	_combat.tally_kit.ride_clips[out.get_instance_id()] = true
 	_player.tree._knobs["ult_settle"] = 0.7
 	_land("plate_return", ball)
 	_t.eq("ult_settle 0.7 settles at 70%", _forces(out, "ledger"), [42.0])
@@ -453,7 +453,7 @@ func _knob_cases() -> void:
 		_enemy("chaser", x)
 	_player.tree._knobs["ult_volley"] = 1
 	_t.eq("ult_volley 1 punches four a beat", _tech("plate_return", ball), 4)
-	_combat.ride_clips.clear()
+	_combat.tally_kit.ride_clips.clear()
 	_piece("plate_audit", ball, ball)
 	_enemy("chaser", 0.0, 4.6)
 	_t.eq("ult_volley 1 widens the stamp to 5 m", _tech("plate_audit", ball), 6)
@@ -599,11 +599,11 @@ func _grants() -> void:
 		_combat._cast_line("link_clips", 1.0)
 		if i == 8:
 			await physics_frame
-			_combat._step_tally_cards()
+			_combat.tally_kit._step_tally_cards()
 			_t.check("nine clip casts do not grant the tape", not store.earned("ach_tally_punch_tape"))
 	_player.kit.drop_line("reset")
 	await physics_frame
-	_combat._step_tally_cards()
+	_combat.tally_kit._step_tally_cards()
 	_t.eq("ten ledger clips in a stage fire the tape discovery", found.count("tally_punch_tape"), 1)
 	# One landing settling five clips does not balance the books; six does.
 	for settles in [5, 6, 6, 6]:
@@ -611,30 +611,30 @@ func _grants() -> void:
 		var clips: Array = []
 		for i in settles:
 			var enemy := _enemy("chaser", -10.0 + 4.0 * i, 14.0)
-			_combat.ride_clips[enemy.get_instance_id()] = true
+			_combat.tally_kit.ride_clips[enemy.get_instance_id()] = true
 			clips.append(enemy)
 		_land("plate_return", ball)
 		if settles == 5:
 			await physics_frame
-			_combat._step_tally_cards()
+			_combat.tally_kit._step_tally_cards()
 			_t.check("five settles do not balance the books", not found.has("tally_books_balanced"))
 		for enemy in clips:
 			enemy.remove_from_group("enemy")
 			enemy.queue_free()
 		await physics_frame
-		_combat._step_tally_cards()
+		_combat.tally_kit._step_tally_cards()
 	for i in 3:
 		await physics_frame
-		_combat._step_tally_cards()
+		_combat.tally_kit._step_tally_cards()
 	_t.eq("six settles in one landing balance the books, once", found.count("tally_books_balanced"), 1)
 	_t.eq("twenty settles in a run fire the eyeshade, once", found.count("tally_eyeshade"), 1)
 	# A real three-clip ledger clip opens the skim card.
 	var row: Array = [_enemy("chaser", 4.0), _enemy("chaser", 5.0, 1.0), _enemy("chaser", 6.0)]
-	_combat._link_from(row[0])
+	_combat.tally_kit._link_from(row[0])
 	await physics_frame
-	_combat._step_tally_cards()
+	_combat.tally_kit._step_tally_cards()
 	await physics_frame
-	_combat._step_tally_cards()
+	_combat.tally_kit._step_tally_cards()
 	_t.eq("Skim opens once on a three-clip cast", found.count("tally_skim"), 1)
 	var pilot_frames: Array = frames.filter(func(r): return String(r[0]).begins_with("tally_")).map(func(r): return r[1])
 	var unique := {}

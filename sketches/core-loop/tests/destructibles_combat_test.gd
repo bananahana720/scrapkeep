@@ -359,7 +359,7 @@ func _landings() -> void:
 	_landing_case("default", at, ring, func(p: Vector3): _combat._ult_landing(p, 1.0, 1.0))
 	for id in ["plate_return", "plate_audit", "plate_flywheel"]:
 		var radius: float = ring + (Weapons.FLY_LANDING_BONUS if id == "plate_flywheel" else 0.0)
-		_landing_case("Tally %s" % id, at, radius, func(p: Vector3): _combat.tally_landing(id, p, 1.0, 1.0))
+		_landing_case("Tally %s" % id, at, radius, func(p: Vector3): _combat.tally_kit.tally_landing(id, p, 1.0, 1.0))
 	ult._id = "air_raid"
 	ult._cast = {"id": "air_raid", "targets": {}, "landed": false, "posture": {}}
 	_landing_case("Kest", at, ring, func(p: Vector3): ult.landing(p, 1.0, 1.0))

@@ -246,7 +246,7 @@ func _as_pilot(pilot_id: String) -> void:
 	_player.abilities.refill()
 	_combat.bolts.clear()
 	_combat.sticky.clear()
-	_combat._reset_cards()
+	_combat.tally_kit.reset()
 	_combat.cannon.free_cannon()
 	_swaps.reset(true)
 	_game.camera.snap(Vector3(0.0, 0.0, -1.0))
@@ -488,7 +488,7 @@ func _check_tape_loop() -> void:
 	_equip(AbilityState.WEAPON, "ledger_echo")
 	var target := _spawn("chaser", _ball_flat() + _aim_flat() * 5.0)
 	_player.abilities.slot(AbilityState.WEAPON).charges = 3
-	var cast_ok: bool = _combat._run_balance(target.global_position, true, {}, "weapon")
+	var cast_ok: bool = _combat.tally_kit.run_balance(target.global_position, true, {}, "weapon")
 	_t.check("ledger_echo casts Balance Due", cast_ok, "")
 	_t.eq("queues exactly 1 splice echo at 0.3 s", _swaps._tape_echoes.size(), 1)
 	_t.near("echo delay is 0.3 s", float(_swaps._tape_echoes[0]["left"]), 0.3, 0.001)
@@ -504,7 +504,7 @@ func _check_tape_loop() -> void:
 	_t.eq("echo spends zero extra pressure", _player.abilities.slot(AbilityState.WEAPON).charges, charges_after_cast)
 	# Planted control: plain ledger_reader queues zero echoes.
 	_equip(AbilityState.WEAPON, "ledger_reader")
-	_combat._run_balance(target.global_position, true, {}, "weapon")
+	_combat.tally_kit.run_balance(target.global_position, true, {}, "weapon")
 	_t.eq("planted: plain ledger_reader queues no echo", _swaps._tape_echoes.size(), 0)
 
 

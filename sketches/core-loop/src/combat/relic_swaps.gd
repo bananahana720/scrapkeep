@@ -715,7 +715,7 @@ func _step_tape_echoes(delta: float) -> void:
 		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not _alive(enemy) or not combat.in_ring(pt, Weapons.BALANCE_RADIUS, enemy):
 				continue
-			combat.ledger_hit(enemy, dmg, pt, Weapons.LEDGER_KNOCK * 0.6, "item_proc")
+			combat.tally_kit.ledger_hit(enemy, dmg, pt, Weapons.LEDGER_KNOCK * 0.6, "item_proc")
 			hits += 1
 		combat.effects.ring(pt, Weapons.BALANCE_RADIUS, ClassDef.TALLY_COLOR)
 		combat.effects.ring(pt, Weapons.BALANCE_RADIUS * 0.68, Palette.LEDGER_CREAM)

@@ -76,7 +76,6 @@
     "sketches/core-loop/src/combat/combat.gd:_arc_mark_mesh",
     "sketches/core-loop/src/combat/combat.gd:_exposure_material",
     "sketches/core-loop/src/combat/combat.gd:_exposure_mesh",
-    "sketches/core-loop/src/combat/combat.gd:_ink_mesh",
     "sketches/core-loop/src/combat/deflector.gd:_shared",
     "sketches/core-loop/src/combat/deflector.gd:_warned_asset",
     "sketches/core-loop/src/combat/dispatcher.gd:_asset_warned",
