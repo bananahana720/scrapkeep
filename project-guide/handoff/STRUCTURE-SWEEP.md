@@ -93,7 +93,7 @@ The pre-push hook runs the lint, the format and JavaScript lint checks on change
 
 If a check is red, rerun it once alone before you call it red. A red check that is also red on `main` is not yours: say so with the evidence and carry on. A check that is red on the integration branch and green on `main` was broken by this sweep, and is reported as a fault, not as an old red.
 
-Nobody is there to answer a permission prompt, so never wait on one. Keep each shell call to one plain command with literal paths and values: no `$(...)`, no variable set and then used in the same command, no `jq` text that holds `\(...)`, no heredoc. Edit files with the file edit tool, and put anything longer in a small script file under `artifacts/local/` that you run by name. If a command is refused or asks for approval anyway, reshape it and go on.
+Nobody is there to answer a permission prompt, so never wait on one. Two causes are known exactly. Never run `gh api` or `gh repo`: the project's safety hook asks for confirmation on every one; read CI with `gh pr checks <number>` and `gh run view <run> --log-failed > artifacts/local/<name>.log`. And run every `git push` and every `gh` command alone as its own call, with no `export`, no shell variable (not even `$PATH`), no `&&` and no pipe on the line. For every other call, keep to one plain command with literal paths and values: no `$(...)`, no variable set and then used in the same command, no heredoc. Edit files with the file edit tool, and put anything longer in a small script file under `artifacts/local/` that you run by name. If a command is refused or asks for approval anyway, reshape it and go on.
 
 ### Hand in
 
