@@ -738,7 +738,6 @@ export const L13_ALLOWED = {
   "tools/look_harness.gd": { sites: 1, why: "forwards --display-driver to child process" },
   "tools/offscreen_window.gd": { sites: 1, why: "checks Mac embedded display driver" },
   "tools/perf_bench.gd": { sites: 1, why: "records display driver metadata" },
-  "tools/pilot_liveliness_capture.gd": { sites: 1, why: "checks embedded display driver" },
   "tools/qa/snag_sweep.gd": { sites: 1, why: "records display driver metadata" },
   "tools/stress_capture.gd": { sites: 1, why: "records display driver metadata" },
   "tools/visual_capture.gd": { sites: 1, why: "records display driver metadata" },
