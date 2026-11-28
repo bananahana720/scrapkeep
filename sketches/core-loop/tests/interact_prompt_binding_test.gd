@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Device := preload("res://src/world/device.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const T := preload("res://tests/support/t.gd")
 
 # A device's key prompt draws the cap Interact is bound to on the device in use: E on the

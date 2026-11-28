@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 
