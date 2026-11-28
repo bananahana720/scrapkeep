@@ -51,7 +51,6 @@ static func is_reduced_motion(override_flag := false) -> bool:
 
 class CableSolver extends RefCounted:
 	var segments: int = DEFAULT_SEGMENTS
-	var reduced_motion := false
 
 	var phase: int = PHASE_IDLE
 	var phase_age := 0.0
@@ -131,7 +130,7 @@ class CableSolver extends RefCounted:
 		_was_taut = false
 
 	func _calm() -> bool:
-		return Comfort.reduced_motion or reduced_motion
+		return Comfort.reduced_motion
 
 	func step(delta: float, from: Vector3, to: Vector3, taut: bool) -> void:
 		var dt := clampf(delta, 0.0, 0.05)
