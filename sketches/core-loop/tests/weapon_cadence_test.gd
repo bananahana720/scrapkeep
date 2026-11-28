@@ -1294,7 +1294,7 @@ func _run_live() -> void:
 			combat._physics_process(DT)
 		var hp_before_line: float = line_dummy.hp
 		var line_shape := {"from": line_from, "to": line_from + line_dir * 12.0, "width": Weapons.LINE_WIDTH}
-		combat._fire_line(0.5, line_shape)
+		combat.fire_line(0.5, line_shape)
 		_t.eq("Detonation Line consumes open-window charge and marks window HIT",
 			[combat.sticky.live().size(), String(combat.weapon_driver.state_snapshot()["window"])],
 			[0, WeaponDriver.WINDOW_HIT])

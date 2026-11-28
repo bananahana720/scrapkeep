@@ -173,7 +173,7 @@ func on_body(target: Node3D, _fraction: float, mult: float) -> void:
 		else:
 			combat.deal_hit(target, "claw", DRAG_DAMAGE * mult, Vector3.ZERO, 0.0, "", "special")
 			_mark(target, DRAG_MARK)
-		combat._reel_burst(target.global_position, 1.0, mult)
+		combat.reel_burst(target.global_position, 1.0, mult)
 		_start_pendulum_guard(target, target.global_position, false)
 		return
 	drag = {"target": target, "from": target.global_position, "mult": mult, "bite": BITE_SECONDS, "time": 0.0, "world": false}

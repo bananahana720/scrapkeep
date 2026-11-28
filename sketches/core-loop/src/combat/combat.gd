@@ -370,17 +370,17 @@ func setup(ctx_ref) -> void:
 	way_out.setup(near_miss, Callable(ctx.player, "ball_position"), Callable(ground, "height"))
 	_wire_redline()
 	_specials = {
-		"detonation_gauge": {"geometry": _discharge_geometry, "fire": _fire_discharge},
+		"detonation_gauge": {"geometry": discharge_geometry, "fire": fire_discharge},
 		"overdrive_blast": {"geometry": _overdrive_geometry, "fire": _fire_overdrive},
-		"detonation_line": {"geometry": _line_geometry, "fire": _fire_line},
+		"detonation_line": {"geometry": line_geometry, "fire": fire_line},
 		"point_blank": {"geometry": _point_blank_geometry, "fire": _fire_point_blank},
 		"clamp": {"geometry": _clamp_geometry, "fire": _fire_clamp},
 		"cannon_plate": {"geometry": _plate_geometry, "fire": _fire_plate},
 		"gather_plate": {"tap": _tap_gather, "commit": card_aim},
 	}
 	_line_skills = {
-		"line_reel": {"on_body": _line_reel_body, "on_world": _reel_burst, "geometry": _line_reel_geometry},
-		"bank_shot": {"on_body": _bank_body, "on_world": _bank_world, "geometry": _bank_geometry},
+		"line_reel": {"on_body": _line_reel_body, "on_world": reel_burst, "geometry": line_reel_geometry},
+		"bank_shot": {"on_body": bank_body, "on_world": bank_world, "geometry": bank_geometry},
 		"line_drive": preload("res://src/combat/rivet_kit.gd").line_row(self),
 		"cable_charge": KestKit.line_row(self),
 		"claw_drag": preload("res://src/combat/tarn_claw.gd").line_row(self),
@@ -1408,6 +1408,18 @@ func active_transformers() -> Array:
 
 func pattern(weapon_id: String) -> Resource:
 	return (_patterns[weapon_id] as Resource).copy()
+
+
+func line_skill(id: String) -> Dictionary:
+	return _line_skills.get(id, {})
+
+
+func register_line_skill(id: String, row: Dictionary) -> void:
+	_line_skills[id] = row
+
+
+func register_special(id: String, row: Dictionary) -> void:
+	_specials[id] = row
 
 
 func live_projectiles() -> int:
@@ -2765,13 +2777,13 @@ func _discharge_speed(f: float) -> float:
 	return speed
 
 
-func _discharge_geometry(f: float) -> Dictionary:
+func discharge_geometry(f: float) -> Dictionary:
 	var burst := discharge_preview(_discharge_speed(f))
 	return ctx.player.yours({"kind": "ring", "centre": _ground_under(ctx.player.ball_position()), "radius": burst["radius"],
 		"full_radius": discharge_preview(_discharge_speed(1.0))["radius"], "fill": f})
 
 
-func _fire_discharge(f: float, shape: Dictionary) -> void:
+func fire_discharge(f: float, shape: Dictionary) -> void:
 	var kit = ctx.player.kit
 	var prev_source := _forced_source
 	_forced_source = "special"
@@ -3657,14 +3669,14 @@ func ult_hit(enemy: Node3D, kind: String, damage: float, from: Vector3, landing:
 	return damage
 
 
-func _reel_burst(anchor: Vector3, _fraction: float, _mult: float) -> void:
+func reel_burst(anchor: Vector3, _fraction: float, _mult: float) -> void:
 	var body: RigidBody3D = ctx.player.body()
 	var toward: Vector3 = anchor - body.global_position
 	if toward.length() > 0.01:
 		body.linear_velocity += toward.normalized() * REEL_BURST
 
 
-func _line_reel_geometry(f: float) -> Dictionary:
+func line_reel_geometry(f: float) -> Dictionary:
 	var ball: Vector3 = ctx.player.ball_position()
 	var kit = ctx.player.kit
 	var to: Vector3 = kit.anchor if kit.hooked else ball + aim_heading() * ctx.player.grapple_range()
@@ -3951,7 +3963,7 @@ func _link_clips_body(target: Node3D, _fraction: float, mult: float) -> void:
 
 
 func _link_clips_world(anchor: Vector3, fraction: float, mult: float) -> void:
-	_reel_burst(anchor, fraction, mult)
+	reel_burst(anchor, fraction, mult)
 	link_group = _new_link_group(Weapons.CLIP_POST_SECONDS, mult)
 	clip_post = {"at": anchor, "until": _clock + Weapons.CLIP_POST_SECONDS, "shape": _clip_ring(anchor, Weapons.CLIP_POST_RADIUS)}
 	ctx.player.indicator.set_shape("tally_post", clip_post["shape"])
@@ -4402,7 +4414,7 @@ func _step_tally_cards() -> void:
 			return
 
 
-func _line_geometry(f: float) -> Dictionary:
+func line_geometry(f: float) -> Dictionary:
 	var from := _ground_under(ctx.player.ball_position())
 	var length := AbilityState.Gauge.scaled(f, Weapons.LINE_MIN, Weapons.LINE_MAX)
 	var shape: Dictionary = ctx.player.yours({"kind": "line", "from": from, "to": from + aim_heading() * length, "width": Weapons.LINE_WIDTH,
@@ -4423,7 +4435,7 @@ func _caught_line(shape: Dictionary) -> Array:
 	return live.filter(func(c): return not c.get("_inert", false) and in_line(shape["from"], shape["to"], shape["width"], c["pos"]))
 
 
-func _fire_line(f: float, shape: Dictionary) -> void:
+func fire_line(f: float, shape: Dictionary) -> void:
 	var caught := []
 	for charge in _caught_line(shape):
 		caught.append(sticky.take(charge) if sticky.charges.has(charge) else ultimate.take_charge(charge))
@@ -5525,7 +5537,7 @@ static func _signal_argc(obj: Object, kind: String) -> int:
 	return 0
 
 
-func _bank_body(target: Node3D, _fraction: float, mult: float) -> void:
+func bank_body(target: Node3D, _fraction: float, mult: float) -> void:
 	var launch: Dictionary = ctx.player.bank_geometry()
 	var damage := 10.0 * mult * (0.5 if target_class_of(target) == "boss" else 1.0)
 	if target_class_of(target) != "boss" and target.has_method("knock"):
@@ -5533,10 +5545,10 @@ func _bank_body(target: Node3D, _fraction: float, mult: float) -> void:
 	if target.has_method("flash"):
 		target.flash()
 	strike(target, "arc", damage, "", "special")
-	_bank_world(ctx.player.kit.anchor, _fraction, mult)
+	bank_world(ctx.player.kit.anchor, _fraction, mult)
 
 
-func _bank_world(_anchor: Vector3, _fraction: float, _mult: float) -> void:
+func bank_world(_anchor: Vector3, _fraction: float, _mult: float) -> void:
 	var kit = ctx.player.kit
 	var stake = kit.anchor_body
 	var switched: bool = is_instance_valid(stake) and stake.is_in_group(Augments.STAKE_GROUP)
@@ -5548,7 +5560,7 @@ func _bank_world(_anchor: Vector3, _fraction: float, _mult: float) -> void:
 			discover("switchback", _anchor)
 
 
-func _bank_geometry(_fraction: float) -> Dictionary:
+func bank_geometry(_fraction: float) -> Dictionary:
 	return ctx.player.bank_geometry()
 
 

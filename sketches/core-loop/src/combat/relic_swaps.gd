@@ -149,38 +149,38 @@ func setup(ctx_ref, combat_ref) -> void:
 
 
 func _register_dispatches() -> void:
-	combat._line_skills["bank_arc"] = {
+	combat.register_line_skill("bank_arc", {
 		"on_body": _bank_arc_body,
 		"on_world": _bank_arc_world,
-		"geometry": func(f: float): return combat._bank_geometry(f),
-	}
-	combat._line_skills["cable_cluster"] = {
+		"geometry": func(f: float): return combat.bank_geometry(f),
+	})
+	combat.register_line_skill("cable_cluster", {
 		"on_body": _cable_cluster_body,
 		"on_world": _cable_cluster_world,
 		"geometry": func(f: float): return combat.ultimate.cable_geometry(f),
-	}
-	combat._line_skills["claw_whirl"] = {
+	})
+	combat.register_line_skill("claw_whirl", {
 		"on_body": _claw_whirl_body,
 		"on_world": _claw_whirl_world,
 		"geometry": _claw_whirl_geometry,
-	}
-	combat._line_skills["rail_vault"] = {
+	})
+	combat.register_line_skill("rail_vault", {
 		"on_body": _rail_vault_body,
 		"on_world": _rail_vault_world,
 		"geometry": _rail_vault_geometry,
-	}
-	combat._specials["halo_discharge"] = {
-		"geometry": func(f: float): return combat._discharge_geometry(f),
+	})
+	combat.register_special("halo_discharge", {
+		"geometry": func(f: float): return combat.discharge_geometry(f),
 		"fire": _fire_halo_discharge,
-	}
-	combat._specials["cannon_mortar"] = {
+	})
+	combat.register_special("cannon_mortar", {
 		"geometry": _mortar_geometry,
 		"fire": _fire_cannon_mortar,
-	}
-	combat._specials["snare_detonate"] = {
-		"geometry": func(f: float): return combat._line_geometry(f),
+	})
+	combat.register_special("snare_detonate", {
+		"geometry": func(f: float): return combat.line_geometry(f),
 		"fire": _fire_snare_detonate,
-	}
+	})
 
 
 func reset(clear_counts := false) -> void:
@@ -264,13 +264,13 @@ func _bank_arc_body(target: Node3D, fraction: float, mult: float) -> void:
 		return
 	var exit_from: Vector3 = ctx.player.ball_position()
 	var anchor: Vector3 = ctx.player.kit.anchor
-	combat._bank_body(target, fraction, mult)
+	combat.bank_body(target, fraction, mult)
 	_spawn_arc_chord(anchor, exit_from, mult)
 
 
 func _bank_arc_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	var exit_from: Vector3 = ctx.player.ball_position()
-	combat._bank_world(anchor, fraction, mult)
+	combat.bank_world(anchor, fraction, mult)
 	_spawn_arc_chord(anchor, exit_from, mult)
 
 
@@ -600,7 +600,7 @@ func _claw_whirl_geometry(fraction: float) -> Dictionary:
 	var tc = _tarn_claw()
 	if tc != null and tc.has_method("geometry"):
 		return tc.geometry(fraction)
-	return combat._line_reel_geometry(fraction)
+	return combat.line_reel_geometry(fraction)
 
 
 func _claw_whirl_world(anchor: Vector3, fraction: float, mult: float) -> void:
@@ -608,7 +608,7 @@ func _claw_whirl_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	if tc != null and tc.has_method("on_world"):
 		tc.on_world(anchor, fraction, mult)
 	else:
-		combat._reel_burst(anchor, fraction, mult)
+		combat.reel_burst(anchor, fraction, mult)
 
 
 func _claw_whirl_body(target: Node3D, _fraction: float, mult: float) -> void:
@@ -772,7 +772,7 @@ func _step_mortars(delta: float) -> void:
 
 
 func _fire_halo_discharge(f: float, shape: Dictionary) -> void:
-	combat._fire_discharge(f, shape)
+	combat.fire_discharge(f, shape)
 	var dmg: float = ORBIT_DAMAGE * combat.damage_mod(Weapons.PYLON_TURRET)
 	_orbit_halo = {
 		"left": ORBIT_DURATION,
@@ -818,15 +818,15 @@ func _step_orbit_halo(delta: float, enemies: Array) -> void:
 
 
 func _rail_vault_geometry(fraction: float) -> Dictionary:
-	var row: Dictionary = combat._line_skills.get("line_drive", {})
+	var row: Dictionary = combat.line_skill("line_drive")
 	if row.has("geometry"):
 		return row["geometry"].call(fraction)
-	return combat._line_reel_geometry(fraction)
+	return combat.line_reel_geometry(fraction)
 
 
 func _rail_vault_body(target: Node3D, fraction: float, mult: float) -> void:
 	var dir: Vector3 = (target.global_position - ctx.player.ball_position()).normalized() if _alive(target) else combat.aim_heading()
-	var row: Dictionary = combat._line_skills.get("line_drive", {})
+	var row: Dictionary = combat.line_skill("line_drive")
 	if row.has("on_body"):
 		row["on_body"].call(target, fraction, mult)
 	_activate_rail_vault(dir, mult)
@@ -834,7 +834,7 @@ func _rail_vault_body(target: Node3D, fraction: float, mult: float) -> void:
 
 func _rail_vault_world(anchor: Vector3, fraction: float, mult: float) -> void:
 	var dir: Vector3 = (anchor - ctx.player.ball_position()).normalized()
-	var row: Dictionary = combat._line_skills.get("line_drive", {})
+	var row: Dictionary = combat.line_skill("line_drive")
 	if row.has("on_world"):
 		row["on_world"].call(anchor, fraction, mult)
 	_activate_rail_vault(dir, mult)
@@ -883,7 +883,7 @@ func _step_rail_sparks(delta: float) -> void:
 
 
 func _fire_snare_detonate(f: float, shape: Dictionary) -> void:
-	combat._fire_line(f, shape)
+	combat.fire_line(f, shape)
 	var from_pt: Vector3 = shape["from"]
 	var to_pt: Vector3 = shape["to"]
 	var width: float = float(shape["width"])
