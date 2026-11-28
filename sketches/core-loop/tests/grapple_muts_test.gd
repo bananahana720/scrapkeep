@@ -413,7 +413,7 @@ func _check_hot_wire_gameplay() -> void:
 	var loot_twice := dest.loot()
 	_t.check("1. Hot-Wire Arc Cutter slices enemy, pops boom float, cuts Tier 1-2 props (leaves Tier 3 intact, pays once)",
 		chaser_sliced and float_popped and t1_cut and t2_cut and t3_intact and loot_once == loot_twice
-		and _combat.last_grapple_mut.get("color", Color.BLACK).is_equal_approx(Palette.AMBER),
+		and _combat.grapple_muts.last_grapple_mut.get("color", Color.BLACK).is_equal_approx(Palette.AMBER),
 		"sliced=%s float=%s t1=%s t2=%s t3=%s" % [chaser_sliced, float_popped, t1_cut, t2_cut, t3_intact])
 
 	_player.kit.drop_line("reset")
@@ -449,12 +449,12 @@ func _check_det_cord_gameplay() -> void:
 	# Release tether -> enqueues sequenced shaped charges down tether path.
 	_player.kit.drop_line("let_go")
 	_game.ctx.events.grapple_released.emit()
-	var queued: int = _combat.det_cord_pending()
+	var queued: int = _combat.grapple_muts.det_cord_pending()
 	await _sim(30) # ~0.5 s for all sequenced nodes to detonate
 	var damaged: bool = (not is_instance_valid(chaser)) or chaser.is_dead() or chaser.hp < hp_before
 	var broke: bool = dest.state_of("dc_t2") == "shattered"
 	var loot_once := dest.loot()
-	var drained: bool = _combat.det_cord_pending() == 0
+	var drained: bool = _combat.grapple_muts.det_cord_pending() == 0
 	# Second tick pass must never re-pay.
 	await _sim(3)
 	_t.check("2. Det-Cord Line detonates sequenced depth-1 charges on release and cracks destructibles once",
@@ -496,7 +496,7 @@ func _check_dragnet_siphon_gameplay() -> void:
 	var got_cons: bool = _game.ctx.run.peek_consumable() == Consumables.MOSS_PATCH \
 		or (is_instance_valid(cradle) and cradle.global_position.distance_to(ball_at) < cradle_start.distance_to(ball_at) - 2.0)
 	_t.check("3. Dragnet Siphon vacuums scrap, cogs, and W47-C1 pocket consumable cradle within 5 m of tether",
-		got_scrap and got_cogs and got_cons and _combat.grapple_mut_count("dragnet_siphon") > 0,
+		got_scrap and got_cogs and got_cons and _combat.grapple_muts.grapple_mut_count("dragnet_siphon") > 0,
 		"scrap=%d->%d cogs=%d->%d belt=%s" % [scrap_before, _game.ctx.run.scrap, cogs_before, _game.ctx.run.cogs, _game.ctx.run.consumables])
 
 	_player.kit.drop_line("reset")
@@ -510,9 +510,9 @@ func _check_sonic_snap_sling_gameplay() -> void:
 	await _sim(2)
 	# Pure apex predicate check: diving steeply is NOT apex; bottom of arc IS apex.
 	_t.check("Sonic Snap-Sling rejects non-apex dive",
-		not _combat.is_pendulum_apex(Vector3(0, 6, 0), Vector3(0, 14, -8), Vector3(0, -14, -8), 6.0, 0.25, false))
+		not _combat.grapple_muts.is_pendulum_apex(Vector3(0, 6, 0), Vector3(0, 14, -8), Vector3(0, -14, -8), 6.0, 0.25, false))
 	_t.check("Sonic Snap-Sling accepts pendulum bottom apex",
-		_combat.is_pendulum_apex(Vector3(0, 6, -8), Vector3(0, 14, -8), Vector3(0, 0.4, -12), 5.8, 0.25, true))
+		_combat.grapple_muts.is_pendulum_apex(Vector3(0, 6, -8), Vector3(0, 14, -8), Vector3(0, 0.4, -12), 5.8, 0.25, true))
 
 	var ball_at: Vector3 = _player.ball_position()
 	var anchor := ball_at + Vector3(0.0, 10.0, -8.0)
@@ -545,7 +545,7 @@ func _check_live_bus_gameplay() -> void:
 	Augments.attach(_player.kit, ball_at, plain_anchor, Vector3.BACK, null)
 	_game.ctx.events.grapple_fired.emit(plain_anchor)
 	await _sim(2)
-	var plain_charged: bool = _combat.live_bus_charged()
+	var plain_charged: bool = _combat.grapple_muts.live_bus_charged()
 	_player.kit.drop_line("let_go")
 	_game.ctx.events.grapple_released.emit()
 	await _sim(1)
@@ -560,8 +560,8 @@ func _check_live_bus_gameplay() -> void:
 	Augments.attach(_player.kit, ball_at, valve.global_position, Vector3.BACK, valve)
 	_game.ctx.events.grapple_fired.emit(valve.global_position)
 	await _sim(2)
-	var powered_charged: bool = _combat.live_bus_charged()
-	var charge_color: Color = _combat.last_grapple_mut.get("color", Color.BLACK)
+	var powered_charged: bool = _combat.grapple_muts.live_bus_charged()
+	var charge_color: Color = _combat.grapple_muts.last_grapple_mut.get("color", Color.BLACK)
 
 	# Next strike on an enemy deals boosted 1.65x damage, discharges amber arc to neighbor, and consumes charge.
 	var e1 = _combat.spawn_enemy("chaser", ball_at + Vector3(6.0, 0.0, 0.0))
@@ -571,7 +571,7 @@ func _check_live_bus_gameplay() -> void:
 	var e2_hp_before: float = e2.hp
 	_combat.strike(e1, "arc_caster", 10.0, "", "weapon")
 	await _sim(1)
-	var consumed: bool = not _combat.live_bus_charged()
+	var consumed: bool = not _combat.grapple_muts.live_bus_charged()
 	var e2_zapped: bool = (not is_instance_valid(e2)) or e2.is_dead() or e2.hp < e2_hp_before
 	_t.check("5. Live-Bus Conductor charges on powered prop only (AMBER #E5A044), boosts next strike 1.65x, arcs amber, consumes once",
 		not plain_charged and powered_charged and charge_color.is_equal_approx(Palette.AMBER)
@@ -667,14 +667,14 @@ func _check_attempt_reset_hygiene() -> void:
 	# Queue pending det_cord charges and live_bus charge, then cross attempt boundary -> all must clear!
 	_equip_only(["grapple_mut:det_cord", "grapple_mut:live_bus"])
 	var ball_at: Vector3 = _player.ball_position()
-	_combat._enqueue_det_cord(ball_at, ball_at + Vector3(0.0, 0.0, -15.0))
-	_combat._live_bus_charges = 1
-	_combat._live_bus_charged_until = _combat._clock + 8.0
-	var had_pending: bool = _combat.det_cord_pending() > 0 and _combat.live_bus_charged()
+	_combat.grapple_muts._enqueue_det_cord(ball_at, ball_at + Vector3(0.0, 0.0, -15.0))
+	_combat.grapple_muts._live_bus_charges = 1
+	_combat.grapple_muts._live_bus_charged_until = _combat._clock + 8.0
+	var had_pending: bool = _combat.grapple_muts.det_cord_pending() > 0 and _combat.grapple_muts.live_bus_charged()
 	_combat._start_attempt()
 	await _sim(2)
 	_t.check("attempt boundary clears pending det_cord queue and live_bus charge (DeferredEffects.tla)",
-		had_pending and _combat.det_cord_pending() == 0 and not _combat.live_bus_charged())
+		had_pending and _combat.grapple_muts.det_cord_pending() == 0 and not _combat.grapple_muts.live_bus_charged())
 
 
 static func _class_by_id(id: String) -> Resource:

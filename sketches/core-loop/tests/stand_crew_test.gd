@@ -193,8 +193,8 @@ func _no_tell(crew) -> void:
 	game.boss.jump_to_phase(1)
 	var warned := await _until_tell()
 	t.check("setup: a phase 1 telegraph is warning when the turn lands", warned and _live_tells() > 0, "live %d" % _live_tells())
-	juice.reset_stops()
-	var logged: int = juice.hit_stop_log.size()
+	juice.hit_stops.reset()
+	var logged: int = juice.hit_stops.entries.size()
 	game.boss.jump_to_phase(2)
 	var at_turn := _live_tells()
 	var window := await _freeze_window()
@@ -207,7 +207,7 @@ func _no_tell(crew) -> void:
 
 	# Planted: the same freeze asked while a Furnace telegraph warns must fail the check.
 	var furnace := await _until_tell()
-	juice.reset_stops()
+	juice.hit_stops.reset()
 	var planted_at := _live_tells()
 	juice.request_hit_stop(StandCrew.CLASH_FREEZE, StandCrew.FREEZE_FACT)
 	var planted := await _freeze_window()
@@ -215,16 +215,16 @@ func _no_tell(crew) -> void:
 		and not _hides_none(planted, planted_at), "frozen %d, live %d" % [planted.frames, planted.live])
 
 	# The guard on its own: a turn whose frame also cues a tell asks for nothing.
-	juice.reset_stops()
-	logged = juice.hit_stop_log.size()
+	juice.hit_stops.reset()
+	logged = juice.hit_stops.entries.size()
 	game.events.boss_phase_changed.emit(3, "scuttle")
 	game.events.attack_cued.emit("brindle", "charge", 1.0)
 	await process_frame
 	t.check("a tell cued with a turn calls its freeze off", _asks(juice, logged).is_empty(), str(_asks(juice, logged)))
 
 	# The chase: the eject's catch mark is cued on the turn's frame, so the clash plays and the freeze is called off.
-	juice.reset_stops()
-	logged = juice.hit_stop_log.size()
+	juice.hit_stops.reset()
+	logged = juice.hit_stops.entries.size()
 	_tells = 0
 	game.boss.jump_to_phase(4)
 	var chase := await _freeze_window()
@@ -287,7 +287,7 @@ func _live_tells() -> int:
 
 
 func _asks(juice, from: int) -> Array:
-	return juice.hit_stop_log.slice(from).filter(func(row): return String(row[2]) == StandCrew.FREEZE_FACT and float(row[1]) > 0.0)
+	return juice.hit_stops.entries.slice(from).filter(func(row): return String(row[2]) == StandCrew.FREEZE_FACT and float(row[1]) > 0.0)
 
 
 func _step(crew, seconds: float) -> void:

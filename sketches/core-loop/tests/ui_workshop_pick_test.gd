@@ -70,10 +70,10 @@ func _process(_delta: float) -> bool:
 				var tree = _game.player.tree
 				_offered = tree.offered(tree.class_id, 1).map(func(n): return n["id"])
 				var cards: Array = _ws.pick.cards()
-				_report("kit pick opens", _ws.pick.is_open() and cards.size() == 2 and paused and _game.get_meta("menu_held", false)
+				_report("kit pick opens", _ws.pick.is_open() and cards.size() == 2 and paused and _game.menu_held()
 						and cards.map(func(c): return c.node_id()) == _offered,
 					"open %s, cards %s for offered %s, tree paused %s, menu held %s"
-						% [_ws.pick.is_open(), cards.map(func(c): return c.node_id()), _offered, paused, _game.get_meta("menu_held", false)])
+						% [_ws.pick.is_open(), cards.map(func(c): return c.node_id()), _offered, paused, _game.menu_held()])
 				_report("start card waits behind the kit pick", not _card().showing() and not _ws.briefing() and not _ws.brief.visible and _taken() == "",
 					"card showing %s, briefing %s, veil %s" % [_card().showing(), _ws.briefing(), _ws.brief.visible])
 				var seen: Dictionary = WordBudget.count(_ws)
@@ -87,7 +87,7 @@ func _process(_delta: float) -> bool:
 					"hover focused the second card %s; after the click the path is %s, open %s" % [lit, path, _ws.pick.is_open()])
 				_report("briefing turns to the start pick", _briefed(),
 					"briefing %s, card showing %s, veil %s, paused %s, held %s, mouse captured %s"
-						% [_ws.briefing(), _card().showing(), _ws.brief.visible, paused, _game.get_meta("menu_held", false), _game.mouse_captured()])
+						% [_ws.briefing(), _card().showing(), _ws.brief.visible, paused, _game.menu_held(), _game.mouse_captured()])
 				_next("brief")
 		"brief":
 			if _wait == SETTLE:
@@ -158,8 +158,8 @@ func _process(_delta: float) -> bool:
 				Push.key(root, KEY_D)
 				Push.key(root, KEY_ENTER)
 				_report("Enter takes the focused tile", _taken() == String(options[1]), "took '%s' of %s" % [_taken(), options])
-				_report("briefing lets go", not card.showing() and not _ws.briefing() and not _ws.brief.visible and not paused and not _game.get_meta("menu_held", false),
-					"card showing %s, briefing %s, veil %s, paused %s, held %s" % [card.showing(), _ws.briefing(), _ws.brief.visible, paused, _game.get_meta("menu_held", false)])
+				_report("briefing lets go", not card.showing() and not _ws.briefing() and not _ws.brief.visible and not paused and not _game.menu_held(),
+					"card showing %s, briefing %s, veil %s, paused %s, held %s" % [card.showing(), _ws.briefing(), _ws.brief.visible, paused, _game.menu_held()])
 				_game.player.tree.open_checkpoint()
 				_next("keys")
 		"keys":
@@ -190,10 +190,10 @@ func _process(_delta: float) -> bool:
 			if _wait == 2:
 				var opened: bool = _ws.pick.is_open()
 				Push.key(root, KEY_ESCAPE)
-				_report("esc mid drop-in", opened and not _ws.pick.is_open() and not paused and not _game.get_meta("menu_held", false)
+				_report("esc mid drop-in", opened and not _ws.pick.is_open() and not paused and not _game.menu_held()
 						and _game.player.tree.pending(),
 					"open before %s; after Esc open %s, paused %s, held %s, pick still pending %s"
-						% [opened, _ws.pick.is_open(), paused, _game.get_meta("menu_held", false), _game.player.tree.pending()])
+						% [opened, _ws.pick.is_open(), paused, _game.menu_held(), _game.player.tree.pending()])
 				_next("settled_closed")
 		"settled_closed":
 			if _wait == 60:
@@ -258,7 +258,7 @@ func _process(_delta: float) -> bool:
 				Push.key(root, KEY_1)
 				_report("1 takes the first kit card, not a tile", tree.path() == [_offered[0]] and _taken() == "" and _briefed(),
 					"path %s of %s, start pick '%s', briefed %s (kit pick open %s, card showing %s, paused %s, held %s, captured %s)"
-						% [tree.path(), _offered, _taken(), _briefed(), _ws.pick.is_open(), _card().showing(), paused, _game.get_meta("menu_held", false), _game.mouse_captured()])
+						% [tree.path(), _offered, _taken(), _briefed(), _ws.pick.is_open(), _card().showing(), paused, _game.menu_held(), _game.mouse_captured()])
 				_next("third_mouse")
 		"third_mouse":
 			if _wait == 2:
@@ -268,8 +268,8 @@ func _process(_delta: float) -> bool:
 				var rerolled: bool = _card().rerolls_left() == rerolls - 1 and _briefed()
 				var options: Array = _game.run.start_pick_options()
 				_click_at(card.global_position + card.tile_rects()[2].get_center())
-				_report("mouse rerolls and takes the third tile", rerolled and _taken() == String(options[2]) and not paused and not _game.get_meta("menu_held", false),
-					"rerolled %s; click took '%s' of %s; paused %s, held %s" % [rerolled, _taken(), options, paused, _game.get_meta("menu_held", false)])
+				_report("mouse rerolls and takes the third tile", rerolled and _taken() == String(options[2]) and not paused and not _game.menu_held(),
+					"rerolled %s; click took '%s' of %s; paused %s, held %s" % [rerolled, _taken(), options, paused, _game.menu_held()])
 				print("ui_workshop_pick_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 				quit(0 if _failures == 0 else 1)
 				return true
@@ -293,7 +293,7 @@ func _taken() -> String:
 # The briefing's start pick page is up and holds the game: paused, the mouse free, the veil drawn.
 func _briefed() -> bool:
 	return _ws.briefing() and _card().showing() and _ws.brief.visible and paused \
-		and _game.get_meta("menu_held", false) and not _game.mouse_captured()
+		and _game.menu_held() and not _game.mouse_captured()
 
 
 func _click_at(at: Vector2) -> void:

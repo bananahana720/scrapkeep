@@ -3,6 +3,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
+const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Juice := preload("res://src/presentation/juice.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
@@ -94,7 +95,7 @@ func _flush_since(from: int) -> Array:
 
 
 func _fresh() -> int:
-	juice.reset_stops()
+	juice.hit_stops.reset()
 	return sent.size()
 
 
@@ -123,7 +124,7 @@ func _posture_and_boss() -> void:
 	var stagger := _flush_since(from)
 	var massive := Rows.weigh("posture_changed", {"staggered": true})
 	t.check("A: a stagger lands the massive weight through weigh (55 ms)", stagger.size() == 1 and is_equal_approx(stagger[0] * 1000.0, 55.0) and massive.weight == "massive", "%s %s" % [stagger, massive.weight])
-	t.check("A: the stagger's stop is within MAX_STOP and logged as posture_changed", juice.hit_stop_log.back()[2] == "posture_changed" and float(juice.hit_stop_log.back()[1]) <= EventJuice.SPINE_CAP_MS / 1000.0, str(juice.hit_stop_log.back()))
+	t.check("A: the stagger's stop is within MAX_STOP and logged as posture_changed", juice.hit_stops.entries.back()[2] == "posture_changed" and float(juice.hit_stops.entries.back()[1]) <= HitStopBudget.SPINE_CAP_MS / 1000.0, str(juice.hit_stops.entries.back()))
 	t.check("A: the stagger kicks and shakes the camera inside SHAKE_CAP", juice.hook_log.has(["kick", "posture_changed"]) and game.camera.shake_amplitude() > shake_before and is_equal_approx(massive.shake, 0.4) and massive.shake <= Juice.SHAKE_CAP,
 		"shake %.2f -> %.2f, weighed %.2f" % [shake_before, game.camera.shake_amplitude(), massive.shake])
 
@@ -147,19 +148,19 @@ func _posture_and_boss() -> void:
 	events.enemy_struck.emit(warden, "ram", 30.0)
 	events.posture_changed.emit(warden, 1.0, true)
 	var merged := _flush_since(from)
-	t.check("A: a ram and its stagger in one frame send one stop, at least the stagger's 55 ms and within MAX_STOP", merged.size() == 1 and merged[0] * 1000.0 >= 55.0 - 0.001 and merged[0] * 1000.0 <= EventJuice.SPINE_CAP_MS + 0.001, str(merged))
+	t.check("A: a ram and its stagger in one frame send one stop, at least the stagger's 55 ms and within MAX_STOP", merged.size() == 1 and merged[0] * 1000.0 >= 55.0 - 0.001 and merged[0] * 1000.0 <= HitStopBudget.SPINE_CAP_MS + 0.001, str(merged))
 
 	from = _fresh()
 	warden.chunks = 0
 	events.posture_changed.emit(warden, 0.0, false)
 	var broke := _flush_since(from)
-	t.check("A: the breaking chunk lands posture_break's massive stop", broke.size() == 1 and is_equal_approx(broke[0] * 1000.0, 55.0) and juice.hit_stop_log.back()[2] == "posture_break", "%s %s" % [broke, juice.hit_stop_log.back()])
+	t.check("A: the breaking chunk lands posture_break's massive stop", broke.size() == 1 and is_equal_approx(broke[0] * 1000.0, 55.0) and juice.hit_stops.entries.back()[2] == "posture_break", "%s %s" % [broke, juice.hit_stops.entries.back()])
 
 	from = _fresh()
 	events.boss_defeated.emit()
 	var felled := _flush_since(from)
 	var climax := Rows.weigh("boss_defeated")
-	t.check("A: a boss's fall lands the climax stop (60 ms, the spine's cap)", felled.size() == 1 and is_equal_approx(felled[0] * 1000.0, 60.0) and felled[0] * 1000.0 <= EventJuice.SPINE_CAP_MS, str(felled))
+	t.check("A: a boss's fall lands the climax stop (60 ms, the spine's cap)", felled.size() == 1 and is_equal_approx(felled[0] * 1000.0, 60.0) and felled[0] * 1000.0 <= HitStopBudget.SPINE_CAP_MS, str(felled))
 	t.check("A: the climax shake is 0.5, at SHAKE_CAP, with its zoom", is_equal_approx(climax.shake, 0.5) and climax.shake <= Juice.SHAKE_CAP and juice.hook_log.has(["punch_fov", "boss_defeated"]), str(climax.shake))
 
 	from = _fresh()
@@ -169,8 +170,8 @@ func _posture_and_boss() -> void:
 	t.check("A control: a zero-strength climax shakes and kicks nothing", faint.shake == 0.0 and faint.kick == 0.0, str([faint.shake, faint.kick]))
 
 	# Within one second the budget never passes STOP_BUDGET_MS, however many breaks ask.
-	juice.reset_stops()
-	var spent_from: int = juice.hit_stop_log.size()
+	juice.hit_stops.reset()
+	var spent_from: int = juice.hit_stops.entries.size()
 	for i in 6:
 		warden.chunks = BossPosture.CHUNKS
 		events.posture_changed.emit(warden, 0.0, false)
@@ -178,9 +179,9 @@ func _posture_and_boss() -> void:
 		events.posture_changed.emit(warden, 0.0, false)
 		juice.flush()
 	var spent := 0.0
-	for row in juice.hit_stop_log.slice(spent_from):
+	for row in juice.hit_stops.entries.slice(spent_from):
 		spent += float(row[1]) * 1000.0
-	t.check("A: six breaks back to back stay inside the window budget", spent <= EventJuice.STOP_WINDOW_BUDGET_MS + 0.001, "%.1f ms sent" % spent)
+	t.check("A: six breaks back to back stay inside the window budget", spent <= HitStopBudget.STOP_WINDOW_BUDGET_MS + 0.001, "%.1f ms sent" % spent)
 	warden.queue_free()
 	await _frames(2)
 
@@ -296,7 +297,7 @@ func _shatter_module() -> void:
 	var t3 := Juice.shatter_weight(3)
 	var t4 := Juice.shatter_weight(4)
 	var t5 := Juice.shatter_weight(5)
-	t.check("C: tier 3 under tier 4 under or at tier 5, all within the spine's cap", t3.stop_ms > 0.0 and t3.stop_ms < t4.stop_ms and t4.stop_ms <= t5.stop_ms and t5.stop_ms <= EventJuice.SPINE_CAP_MS,
+	t.check("C: tier 3 under tier 4 under or at tier 5, all within the spine's cap", t3.stop_ms > 0.0 and t3.stop_ms < t4.stop_ms and t4.stop_ms <= t5.stop_ms and t5.stop_ms <= HitStopBudget.SPINE_CAP_MS,
 		"%.1f, %.1f, %.1f ms" % [t3.stop_ms, t4.stop_ms, t5.stop_ms])
 	t.check("C: tier shakes climb inside SHAKE_CAP", t3.shake > 0.0 and t3.shake < t4.shake and t5.shake <= Juice.SHAKE_CAP, "%.2f, %.2f, %.2f" % [t3.shake, t4.shake, t5.shake])
 
@@ -309,7 +310,7 @@ func _shatter_juice() -> void:
 	from = _fresh()
 	juice.on_piece_shattered(4, at)
 	var crunch := _flush_since(from)
-	t.check("C: a tier 4 break sends its heavy stop as piece_shattered", crunch.size() == 1 and is_equal_approx(crunch[0] * 1000.0, Juice.shatter_weight(4).stop_ms) and juice.hit_stop_log.back()[2] == "piece_shattered", str(crunch))
+	t.check("C: a tier 4 break sends its heavy stop as piece_shattered", crunch.size() == 1 and is_equal_approx(crunch[0] * 1000.0, Juice.shatter_weight(4).stop_ms) and juice.hit_stops.entries.back()[2] == "piece_shattered", str(crunch))
 
 	# The game's wiring: a module built with the game's ctx finds the game's juice and audio itself.
 	var heard_from: int = game.presentation.audio.cue_log_total
@@ -321,7 +322,7 @@ func _shatter_juice() -> void:
 	from = _fresh()
 	mod.on_blast(base, 10.0, "test", 1, 5)
 	var live := _flush_since(from)
-	t.check("C: the live module lands the game's juice", live.size() == 1 and juice.hit_stop_log.back()[2] == "piece_shattered", str(live))
+	t.check("C: the live module lands the game's juice", live.size() == 1 and juice.hit_stops.entries.back()[2] == "piece_shattered", str(live))
 	var rows: Array = game.presentation.audio.cues_since(heard_from)
 	var shatter_rows := rows.filter(func(r): return r is Array and r[0] == "destructible_shatter")
 	var ticks := rows.filter(func(r): return r is Array and r[0] == "world_fact")

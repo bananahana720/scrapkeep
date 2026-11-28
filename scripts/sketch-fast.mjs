@@ -726,6 +726,44 @@ export function failedRunLogName(test, where, attempt) {
     .replaceAll("/", "__")}.${where}-${attempt}.log`;
 }
 
+export function redRunKeeper({ records, directory, root, head, base, log }) {
+  const attempts = new Map();
+  return (where) =>
+    ({ output, ...run }) => {
+      if (run.ok || run.killed) return run;
+      const key = `${run.test} ${where}`;
+      const attempt = (attempts.get(key) ?? 0) + 1;
+      attempts.set(key, attempt);
+      const file = path.join(directory, failedRunLogName(run.test, where, attempt));
+      const kept = {
+        test: run.test,
+        where,
+        attempt,
+        exit: run.exit,
+        signal: run.signal,
+        timed_out: run.timedOut,
+        ms: run.ms,
+        reason: run.reason,
+        log: null,
+      };
+      try {
+        mkdirSync(path.dirname(file), { recursive: true });
+        writeFileSync(
+          file,
+          failedRunLog({ ...run, where, attempt, head: where === "base" ? base : head, output }),
+        );
+        kept.log = path.relative(root, file);
+        log(`  log of this red run of ${run.test}: ${kept.log}`);
+      } catch (error) {
+        log(
+          `  log of this red run of ${run.test} not written (${error.message}); the verdict still stands`,
+        );
+      }
+      records.push(kept);
+      return run;
+    };
+}
+
 const TESTS_STAGE_PARTS = new Set(["parallel lanes", "solo tests"]);
 
 export function longestStages(stages, count = 3) {
@@ -841,15 +879,10 @@ export function interpretBatchOutput(
   { code = 0, signal = null, killed = false, platform = process.platform } = {},
 ) {
   const parsed = evaluateBatchOutput(output, tests, { code, signal, platform });
-  if (parsed.tainted) {
-    return {
-      runs: [],
-      unfinished: [...tests],
-      killed,
-      outsideError: parsed.outsideError,
-      unexpectedExit: parsed.unexpectedExit,
-    };
-  }
+  const errorInBatch = [
+    ...parsed.done,
+    ...(parsed.cut === null ? [] : [{ test: parsed.cut, output: parsed.cutOutput }]),
+  ].some((row) => runFailure(row.test, row.output, platform).errorLine);
   const runs = parsed.done.map((row) => {
     const verdict = judge({
       test: "res://" + row.test,
@@ -871,16 +904,74 @@ export function interpretBatchOutput(
       timedOut: false,
       output: row.output,
       batched: true,
+      failure: verdict.ok
+        ? null
+        : { ...runFailure(row.test, row.output, platform), errorLine: errorInBatch },
     };
   });
+  const earlier = {};
+  if (parsed.cut !== null)
+    earlier[parsed.cut] = [
+      {
+        test: parsed.cut,
+        ok: false,
+        exit: null,
+        signal,
+        reason: "the warm batch ended while it ran",
+        batched: true,
+        failure: null,
+        discarded:
+          "the warm batch ended while it ran, before its BATCH END line, so this run cannot speak for the test",
+      },
+    ];
+  if (parsed.tainted) {
+    const why = parsed.outsideError
+      ? "an error line outside every test's part"
+      : "an unexpected exit";
+    for (const { output: _output, ...run } of runs)
+      earlier[run.test] = [
+        {
+          ...run,
+          failure: run.failure && { ...run.failure, errorLine: true },
+          discarded: `its warm batch was discarded (${why}), so this run cannot speak for the test`,
+        },
+      ];
+    return {
+      runs: [],
+      unfinished: [...tests],
+      earlier,
+      killed,
+      outsideError: parsed.outsideError,
+      unexpectedExit: parsed.unexpectedExit,
+    };
+  }
   return {
     runs,
     unfinished: parsed.cut ? [parsed.cut, ...parsed.rest] : parsed.rest,
+    earlier,
     killed,
     outsideError: false,
     unexpectedExit: false,
     linuxLeak: parsed.linuxLeak,
   };
+}
+
+export function requeuedRows(rows, batch) {
+  return batch.unfinished.map((test) => {
+    const row = rows.find((candidate) => candidate.test === test);
+    if (!row) throw new Error(`requeuedRows: ${test} came back from a batch it was not in`);
+    return {
+      ...row,
+      alone: true,
+      earlier: [...(row.earlier ?? []), ...(batch.earlier[test] ?? [])],
+    };
+  });
+}
+
+export function runsToSettle(earlier, first, confirmed) {
+  if (!Array.isArray(earlier) || !Array.isArray(confirmed?.reruns))
+    throw new TypeError("runsToSettle needs the earlier runs and confirm's reruns as arrays");
+  return [...earlier, first, ...confirmed.reruns];
 }
 
 async function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}, fixedFps = null) {
@@ -1578,52 +1669,14 @@ async function main() {
     timedOut: false,
   });
   receipt.failed_runs = [];
-  const redRuns = new Map();
-  const keepRed =
-    (where) =>
-    ({ output, ...run }) => {
-      if (run.ok || run.killed) return run;
-      const key = `${run.test} ${where}`;
-      const attempt = (redRuns.get(key) ?? 0) + 1;
-      redRuns.set(key, attempt);
-      const file = path.join(
-        receiptDirectory,
-        `${receiptName}-logs`,
-        failedRunLogName(run.test, where, attempt),
-      );
-      const kept = {
-        test: run.test,
-        where,
-        attempt,
-        exit: run.exit,
-        signal: run.signal,
-        timed_out: run.timedOut,
-        ms: run.ms,
-        reason: run.reason,
-        log: null,
-      };
-      try {
-        mkdirSync(path.dirname(file), { recursive: true });
-        writeFileSync(
-          file,
-          failedRunLog({
-            ...run,
-            where,
-            attempt,
-            head: where === "base" ? diffBase : receipt.head,
-            output,
-          }),
-        );
-        kept.log = path.relative(root, file);
-        log(`  log of this red run of ${run.test}: ${kept.log}`);
-      } catch (error) {
-        log(
-          `  log of this red run of ${run.test} not written (${error.message}); the verdict still stands`,
-        );
-      }
-      receipt.failed_runs.push(kept);
-      return run;
-    };
+  const keepRed = redRunKeeper({
+    records: receipt.failed_runs,
+    directory: path.join(receiptDirectory, `${receiptName}-logs`),
+    root,
+    head: receipt.head,
+    base: diffBase,
+    log,
+  });
   const godot = (dir, test, timeoutMs, onChild, skip = () => false) =>
     inLane(() =>
       shouldStop() || skip()
@@ -1738,7 +1791,7 @@ async function main() {
       }
       baseRun = await basePending;
     }
-    if (rerun.killed) return { kind: "stopped", newChecks: [], rerun };
+    if (rerun.killed) return { kind: "stopped", newChecks: [], reruns: [rerun] };
     baseRun = usableBaseRun(rerun, baseRun);
     const baseOk = rerun.ok || !baseRun ? null : baseRun.ok;
     const baseChecks = rerun.ok || !baseRun ? [] : baseRun.checks;
@@ -1750,7 +1803,7 @@ async function main() {
       baseCached: Boolean(baseRun?.cached),
     });
     if (verdict.kind !== "pr-red" || !flakeRows.has(path.posix.basename(first.test, ".gd")))
-      return { ...verdict, rerun };
+      return { ...verdict, reruns: [rerun] };
     const more = [];
     while (more.length < LEDGER_FLAKE_RUNS && !more.some((run) => run.ok || run.killed)) {
       log(
@@ -1758,10 +1811,10 @@ async function main() {
       );
       more.push(await godot(sketchDir, first.test, timeoutMs));
     }
-    return { ...settleLedgerFlake(verdict, more), rerun };
+    return { ...settleLedgerFlake(verdict, more), reruns: [rerun, ...more] };
   }
 
-  async function handle(result) {
+  async function handle(result, earlier = []) {
     results.push({
       test: result.test,
       ok: result.ok,
@@ -1777,9 +1830,11 @@ async function main() {
     if (result.linuxLeak) linuxLeaks.push([result.test]);
     if (result.ok) mainRed.passed(result.test);
     if (result.ok || result.killed) return;
+    const confirmed = await confirm(result);
     const { kind, newChecks, ledger, ledgerRuns } = mainRed.settle(
       result.test,
-      await confirm(result),
+      confirmed,
+      runsToSettle(earlier, result, confirmed),
     );
     log(
       `  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`,
@@ -1844,15 +1899,13 @@ async function main() {
         await handle(run);
         continue;
       }
-      keepRed("batch")(run);
+      const batched = keepRed("batch")(run);
       log(`  ${run.test} red in a warm batch (${run.reason}); rerunning it alone`);
       const alone = await godot(sketchDir, run.test, testTimeoutMs(sourceOf(sketchDir, run.test)));
       receipt.batch.reruns.push({ test: run.test, batch_reason: run.reason, alone_ok: alone.ok });
-      await handle(alone);
+      await handle(alone, [...(rows.find((row) => row.test === run.test)?.earlier ?? []), batched]);
     }
-    if (!batch.killed && !shouldStop())
-      for (const test of batch.unfinished.reverse())
-        queue.unshift({ ...rows.find((row) => row.test === test), alone: true });
+    if (!batch.killed && !shouldStop()) queue.unshift(...requeuedRows(rows, batch));
   }
   async function worker() {
     while (queue.length > 0 && !shouldStop()) {
@@ -1867,7 +1920,7 @@ async function main() {
       }
       const row = rows[0] ?? queue.shift();
       const result = await godot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test)));
-      await handle(result);
+      await handle(result, row.earlier ?? []);
     }
   }
   const bootPromise = runBootHere

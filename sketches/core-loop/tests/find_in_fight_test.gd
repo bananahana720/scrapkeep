@@ -138,7 +138,7 @@ func _unseen_both(part: String) -> bool:
 
 
 func _rare_stops() -> int:
-	return _game.presentation.juice.hit_stop_log.filter(func(s: Array): return s[2] == "reward_rare").size()
+	return _game.presentation.juice.hit_stops.entries.filter(func(s: Array): return s[2] == "reward_rare").size()
 
 
 func _engage() -> void:

@@ -216,6 +216,7 @@ export function splitBatch(output, tests) {
   return {
     done,
     cut: open,
+    cutOutput: open === null ? null : lines.join("\n"),
     rest: tests.filter((test) => !ended.has(test) && test !== open),
     outside: outsideLines.join("\n"),
   };
@@ -231,13 +232,14 @@ export function evaluateBatchOutput(
   tests,
   { code = 0, signal = null, platform = process.platform } = {},
 ) {
-  const { done, cut, rest, outside } = splitBatch(output, tests);
+  const { done, cut, cutOutput, rest, outside } = splitBatch(output, tests);
   const outsideError = batchHasOutsideError(outside, platform);
   const unexpectedExit =
     signal !== null || code === null || (code !== 0 && done.every((row) => row.exit === 0));
   return {
     done,
     cut,
+    cutOutput,
     rest,
     outside,
     outsideError,

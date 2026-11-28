@@ -3,6 +3,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
+const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 
 # The v3 W11 hit-stop policy, through the real game. Every landed hit stops for its
 # damage band (base + per damage point, clamped), a crit or weak point stops longer and
@@ -56,25 +57,25 @@ func _process(_delta: float) -> bool:
 		# _phase_t0 without drifting across a timed burst; "clear" also waits until any prior
 		# hit-stop has ended. Only one step runs per _process frame.
 		_plan.append(["phase", 100, func():
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_dealt = 10.0
 			events.enemy_struck.emit(_target, "sticky", 1.0)
 			_juice.flush()
 			_marks["low"] = _last_sent()])
 		_plan.append(["phase", 200, func():
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_dealt = 80.0
 			events.enemy_struck.emit(_target, "sticky", 1.0)
 			_juice.flush()
 			_marks["high"] = _last_sent()])
 		_plan.append(["phase", 200, func():
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_dealt = 80.0
 			events.enemy_struck.emit(_target, "ram", 1.0)
 			_juice.flush()
 			_marks["ram"] = _last_sent()])
 		_plan.append(["phase", 200, func():
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_full = false
 			var before: int = _sent().size()
 			events.enemy_struck.emit(_target, "ram", 1.0)
@@ -82,7 +83,7 @@ func _process(_delta: float) -> bool:
 			_marks["deflect"] = _sent().size() - before
 			_full = true])
 		_plan.append(["phase", 200, func():
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_dealt = 20.0
 			var before: int = _sent().size()
 			for i in 5:
@@ -91,25 +92,25 @@ func _process(_delta: float) -> bool:
 			_marks["frame"] = [_sent().size() - before, _last_sent()]])
 		# Stacking: a crit ram, a dodge and a multi-kill beat 100 ms apart share one budget.
 		_plan.append(["phase", 50, func():
-			_juice.reset_stops()
-			_marks["stack_from"] = _juice.hit_stop_log.size()
+			_juice.hit_stops.reset()
+			_marks["stack_from"] = _juice.hit_stops.entries.size()
 			_juice.request_hit_stop(0.06, "enemy_struck")])
 		_plan.append(["at", 50, func(): _juice.request_hit_stop(0.045, "near_miss")])
 		_plan.append(["at", 100, func(): _juice.request_hit_stop(0.03, "multi_kill")])
-		_plan.append(["phase", 140, func(): _marks["stack"] = _juice.hit_stop_log.slice(_marks["stack_from"]).filter(func(e: Array): return e[1] > 0.0)])
+		_plan.append(["phase", 140, func(): _marks["stack"] = _juice.hit_stops.entries.slice(_marks["stack_from"]).filter(func(e: Array): return e[1] > 0.0)])
 		# Rapid fire: a hit every 33 ms for a second.
 		_plan.append(["phase", 10, func():
-			_juice.reset_stops()
-			_marks["rapid_from"] = _juice.hit_stop_log.size()])
+			_juice.hit_stops.reset()
+			_marks["rapid_from"] = _juice.hit_stops.entries.size()])
 		for i in 30:
 			_plan.append(["at", 10 + i * 33, func():
 				_dealt = 30.0
 				events.enemy_struck.emit(_target, "sticky", 1.0)
 				_juice.flush()])
-		_plan.append(["phase", 1050, func(): _marks["rapid"] = _juice.hit_stop_log.slice(_marks["rapid_from"]).filter(func(e: Array): return e[1] > 0.0)])
+		_plan.append(["phase", 1050, func(): _marks["rapid"] = _juice.hit_stops.entries.slice(_marks["rapid_from"]).filter(func(e: Array): return e[1] > 0.0)])
 		# Guns never stop time: a burst of gun-kind hits sends nothing.
 		_plan.append(["phase", 50, func():
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_dealt = 80.0
 			var before: int = _sent().size()
 			for gun in ["runner", "arc", "turret"]:
@@ -119,7 +120,7 @@ func _process(_delta: float) -> bool:
 			_marks["guns"] = _sent().size() - before])
 		# The harpoon's bite to a body is one stop of 40 ms; a world latch sends none.
 		_plan.append(["phase", 50, func():
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			var before: int = _sent().size()
 			events.harpoon_bit.emit(_target, Vector3.ZERO)
 			_marks["bite"] = _sent().slice(before)
@@ -128,7 +129,7 @@ func _process(_delta: float) -> bool:
 			_marks["world_latch"] = _sent().size() - before])
 		# A real stop on the rolling ball.
 		_plan.append(["clear", 150, func():
-			_juice.reset_stops()
+			_juice.hit_stops.reset()
 			_game.player.reset_to(_game.ctx.terrain.spawn_point(1) + Vector3.UP * 10.0, Vector3(0.0, 0.0, -18.0))])
 		_plan.append(["clear", 50, func():
 			_velocity_before = _game.player._rigid.linear_velocity
@@ -165,9 +166,9 @@ func _process(_delta: float) -> bool:
 	var stacked := 0.0
 	for entry in stack:
 		stacked += entry[1] * 1000.0
-	_check("stops never stack", stack.size() == 1 and stacked <= EventJuice.STOP_WINDOW_BUDGET_MS + 0.5,
+	_check("stops never stack", stack.size() == 1 and stacked <= HitStopBudget.STOP_WINDOW_BUDGET_MS + 0.5,
 		"a 60 ms stop, a dodge tick 50 ms later and a multi-kill beat 100 ms later send %d stop totalling %.0f ms (at most %.0f in any %d ms)"
-			% [stack.size(), stacked, EventJuice.STOP_WINDOW_BUDGET_MS, EventJuice.STOP_WINDOW_MS])
+			% [stack.size(), stacked, HitStopBudget.STOP_WINDOW_BUDGET_MS, HitStopBudget.STOP_WINDOW_MS])
 	var rapid: Array = _marks["rapid"]
 	var total := 0.0
 	var gaps_ok := true
@@ -175,18 +176,18 @@ func _process(_delta: float) -> bool:
 	for i in rapid.size():
 		total += rapid[i][1] * 1000.0
 		if i > 0:
-			gaps_ok = gaps_ok and rapid[i][3] - rapid[i - 1][3] - rapid[i - 1][1] * 1000.0 >= EventJuice.STOP_GAP_MS
+			gaps_ok = gaps_ok and rapid[i][3] - rapid[i - 1][3] - rapid[i - 1][1] * 1000.0 >= HitStopBudget.STOP_GAP_MS
 		var span := 0.0
 		for other in rapid:
-			if other[3] <= rapid[i][3] and rapid[i][3] - other[3] < EventJuice.STOP_WINDOW_MS:
+			if other[3] <= rapid[i][3] and rapid[i][3] - other[3] < HitStopBudget.STOP_WINDOW_MS:
 				span += other[1] * 1000.0
-		window_ok = window_ok and span <= EventJuice.STOP_WINDOW_BUDGET_MS + 0.5
-	_check("rapid fire capped", rapid.size() >= 2 and total <= EventJuice.STOP_BUDGET_MS + 0.5 and gaps_ok and window_ok,
+		window_ok = window_ok and span <= HitStopBudget.STOP_WINDOW_BUDGET_MS + 0.5
+	_check("rapid fire capped", rapid.size() >= 2 and total <= HitStopBudget.STOP_BUDGET_MS + 0.5 and gaps_ok and window_ok,
 		"30 hits in a second send %d stops totalling %.0f ms (budget %.0f), %d ms clear after each %s, %.0f ms per %d ms window %s"
-			% [rapid.size(), total, EventJuice.STOP_BUDGET_MS, EventJuice.STOP_GAP_MS, gaps_ok, EventJuice.STOP_WINDOW_BUDGET_MS, EventJuice.STOP_WINDOW_MS, window_ok])
+			% [rapid.size(), total, HitStopBudget.STOP_BUDGET_MS, HitStopBudget.STOP_GAP_MS, gaps_ok, HitStopBudget.STOP_WINDOW_BUDGET_MS, HitStopBudget.STOP_WINDOW_MS, window_ok])
 	var bite: Array = _marks["bite"]
-	_check("bite stops 40 ms", bite.size() == 1 and absf(bite[0][1] - 0.04) < 0.0005 and bite[0][1] * 1000.0 <= EventJuice.STOP_WINDOW_BUDGET_MS and _marks["world_latch"] == 0,
-		"a bite to a body sends %d stop of %.0f ms (window budget %.0f); a world latch sends %d" % [bite.size(), bite[0][1] * 1000.0 if not bite.is_empty() else 0.0, EventJuice.STOP_WINDOW_BUDGET_MS, _marks["world_latch"]])
+	_check("bite stops 40 ms", bite.size() == 1 and absf(bite[0][1] - 0.04) < 0.0005 and bite[0][1] * 1000.0 <= HitStopBudget.STOP_WINDOW_BUDGET_MS and _marks["world_latch"] == 0,
+		"a bite to a body sends %d stop of %.0f ms (window budget %.0f); a world latch sends %d" % [bite.size(), bite[0][1] * 1000.0 if not bite.is_empty() else 0.0, HitStopBudget.STOP_WINDOW_BUDGET_MS, _marks["world_latch"]])
 	_check("guns never stop", _marks["guns"] == 0, "twelve laser, arc and turret hits send %d stops" % _marks["guns"])
 	var flat_before := Vector2(_velocity_before.x, _velocity_before.z)
 	var drift := (Vector2(_velocity_after.x, _velocity_after.z) - flat_before).length()
@@ -220,7 +221,7 @@ func _check_bands() -> void:
 
 
 func _sent() -> Array:
-	return _juice.hit_stop_log.filter(func(entry: Array): return entry[1] > 0.0)
+	return _juice.hit_stops.entries.filter(func(entry: Array): return entry[1] > 0.0)
 
 
 func _last_sent() -> float:

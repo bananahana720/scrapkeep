@@ -494,14 +494,14 @@ func _check_catalyst_cartridge_hook() -> void:
 	_build.effects.refresh(_game.ctx.run.parts)
 	_game.ctx.run.add_consumable(Consumables.MOSS_PATCH)
 	var events_before: int = _used_events.size()
-	var cross_before: int = _combat.cross_synergy_count("catalyst_cartridge")
+	var cross_before: int = _combat.micro_mutations.cross_synergy_count("catalyst_cartridge")
 	_combat.consumables.use_consumable()
 	await _sim(2)
 	_t.check("events.consumable_used wires W47-C2 catalyst_cartridge (+40% Active charge)",
 		_used_events.size() == events_before + 1
-		and _combat.cross_synergy_count("catalyst_cartridge") == cross_before + 1
+		and _combat.micro_mutations.cross_synergy_count("catalyst_cartridge") == cross_before + 1
 		and absf(rack.progress - 0.60) < 0.02,
-		"events=%d->%d cross=%d->%d progress=%.3f" % [events_before, _used_events.size(), cross_before, _combat.cross_synergy_count("catalyst_cartridge"), rack.progress])
+		"events=%d->%d cross=%d->%d progress=%.3f" % [events_before, _used_events.size(), cross_before, _combat.micro_mutations.cross_synergy_count("catalyst_cartridge"), rack.progress])
 
 
 func _check_cleanup_and_reset() -> void:

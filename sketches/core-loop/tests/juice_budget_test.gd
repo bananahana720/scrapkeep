@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Juice := preload("res://src/presentation/juice.gd")
-const EventJuice := preload("res://src/presentation/event_juice.gd")
+const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 
 # SR5 juice budget (W13-INTEGRATION-3). Stacked hits cannot shake the camera past
 # Juice.SHAKE_CAP on any frame, and hit-stop belongs to the attacker's own strike: the
@@ -114,14 +114,14 @@ func _finish(camera) -> void:
 	var freezes := 0
 	var rolled := 0
 	for fact in BALL_FACTS:
-		_juice.reset_stops()
-		var logged: int = _juice.hit_stop_log.size()
+		_juice.hit_stops.reset()
+		var logged: int = _juice.hit_stops.entries.size()
 		_juice.request_hit_stop(0.04, fact)
 		rolled += 1
-		for entry in _juice.hit_stop_log.slice(logged):
+		for entry in _juice.hit_stops.entries.slice(logged):
 			if entry[1] > 0.0:
 				freezes += 1
-	_juice.reset_stops()
+	_juice.hit_stops.reset()
 	_game.events.near_miss.emit("threat_lane", _game.player.ball_position())
 	_check("no stop on a roll", freezes == 0 and _sink_calls.size() == calls_before,
 		"%d ball-motion facts (%s) at 18 m/s send %d stops; the sink saw %d calls" % [rolled, ", ".join(BALL_FACTS), freezes, _sink_calls.size() - calls_before])
@@ -129,30 +129,30 @@ func _finish(camera) -> void:
 	# send no stop either, and each is still logged at zero.
 	var closed := {}
 	for fact in ["reward_rare", "beacon_unsealed", "unlisted_ball_motion"]:
-		_juice.reset_stops()
-		var seen: int = _juice.hit_stop_log.size()
+		_juice.hit_stops.reset()
+		var seen: int = _juice.hit_stops.entries.size()
 		var sink_seen := _sink_calls.size()
 		_juice.request_hit_stop(0.04, fact)
-		var rows: Array = _juice.hit_stop_log.slice(seen)
+		var rows: Array = _juice.hit_stops.entries.slice(seen)
 		closed[fact] = rows.size() == 1 and rows[0][1] == 0.0 and _sink_calls.size() == sink_seen
 	_check("closed list", closed.values().all(func(v): return v),
 		"reward_rare, beacon_unsealed and an unlisted fact each log one zero stop and the sink saw none: %s" % [closed])
-	_juice.reset_stops()
-	var rare_seen: int = _juice.hit_stop_log.size()
+	_juice.hit_stops.reset()
+	var rare_seen: int = _juice.hit_stops.entries.size()
 	_juice.request_hit_stop(0.04, "enemy_struck")
-	_check("listed fact stops", _juice.hit_stop_log.slice(rare_seen).filter(func(e: Array): return e[1] > 0.0).size() == 1,
+	_check("listed fact stops", _juice.hit_stops.entries.slice(rare_seen).filter(func(e: Array): return e[1] > 0.0).size() == 1,
 		"a listed strike fact sent straight to the budget sends one stop (the control for the closed list)")
 	var velocity_after: Vector3 = _game.player._rigid.linear_velocity
 	_check("movement not frozen", Vector2(velocity_after.x - velocity_before.x, velocity_after.z - velocity_before.z).length() < 0.5 and Engine.time_scale == 1.0,
 		"planar velocity %s before, %s after; Engine.time_scale %.2f" % [velocity_before, velocity_after, Engine.time_scale])
 	# Positive control: the attacker's own strike, rolling, still stops.
-	_juice.reset_stops()
-	var logged: int = _juice.hit_stop_log.size()
+	_juice.hit_stops.reset()
+	var logged: int = _juice.hit_stops.entries.size()
 	_game.events.enemy_struck.emit(_enemy, "ram", 40.0)
 	_juice.flush()
-	var melee_sent: Array = _juice.hit_stop_log.slice(logged).filter(func(e: Array): return e[1] > 0.0)
-	_check("strike still stops", melee_sent.size() == 1 and melee_sent[0][2] == "enemy_struck" and melee_sent[0][1] <= EventJuice.SPINE_CAP_MS / 1000.0 + 0.0001,
-		"a ram at speed sends %d stop of %.0f ms under the spine's %.0f ms" % [melee_sent.size(), melee_sent[0][1] * 1000.0 if not melee_sent.is_empty() else 0.0, EventJuice.SPINE_CAP_MS])
+	var melee_sent: Array = _juice.hit_stops.entries.slice(logged).filter(func(e: Array): return e[1] > 0.0)
+	_check("strike still stops", melee_sent.size() == 1 and melee_sent[0][2] == "enemy_struck" and melee_sent[0][1] <= HitStopBudget.SPINE_CAP_MS / 1000.0 + 0.0001,
+		"a ram at speed sends %d stop of %.0f ms under the spine's %.0f ms" % [melee_sent.size(), melee_sent[0][1] * 1000.0 if not melee_sent.is_empty() else 0.0, HitStopBudget.SPINE_CAP_MS])
 
 	# The comfort rows scale both.
 	var shake_full := _shake_for(camera, 1.0)
@@ -186,11 +186,11 @@ func _shake_for(camera, level: float) -> float:
 
 func _stop_for(level: float) -> float:
 	_juice.set_comfort("hitstop", level)
-	_juice.reset_stops()
-	var logged: int = _juice.hit_stop_log.size()
+	_juice.hit_stops.reset()
+	var logged: int = _juice.hit_stops.entries.size()
 	_game.events.enemy_struck.emit(_enemy, "ram", 40.0)
 	_juice.flush()
-	var sent: Array = _juice.hit_stop_log.slice(logged).filter(func(e: Array): return e[1] > 0.0)
+	var sent: Array = _juice.hit_stops.entries.slice(logged).filter(func(e: Array): return e[1] > 0.0)
 	return float(sent[0][1]) if not sent.is_empty() else 0.0
 
 

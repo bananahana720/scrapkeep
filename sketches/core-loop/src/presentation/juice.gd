@@ -8,6 +8,7 @@ const Rows := preload("res://src/presentation/rows.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const NUMBER_LIFT := 1.6
 const SimClock := preload("res://src/core/sim_clock.gd")
+const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -32,10 +33,6 @@ const IMPACT_ZOOM := {
 	"boss_weak_point_hit": -3.8,
 	"enemy_rebounded": -2.8,
 }
-const STRIKE_STOP_FACTS := ["enemy_struck", "boss_weak_point_hit", "multi_kill", "harpoon_bit", "posture_changed",
-	"posture_break", "boss_defeated", "piece_shattered", "test", "comfort"]
-const STOP_FLOOR_MS := 4.0
-const STOP_TRIM_FLOOR_MS := 8.0
 const BITE_STOP_MS := 40.0
 const CONTACT_KINDS := ["ram", "stomp", "slam"]
 const THROW_LO := 11.0
@@ -87,7 +84,7 @@ var camera
 var audio
 var vfx
 var hook_log: Array = []
-var hit_stop_log: Array = []
+var hit_stops := HitStopBudget.new()
 var hit_stop_sink: Callable
 var resolve_of: Callable
 var plating_of: Callable
@@ -109,7 +106,6 @@ var _pylon_transform := Transform3D.IDENTITY
 var _ghosts: Array = []
 var _shell_velocity := 0.0
 var _heft_class := 1
-var _stops: Array = []
 var _hits: Array = []
 var _kills: Array = []
 var _blasts: Array = []
@@ -452,7 +448,7 @@ static func throw_stop_ms(throw: float, crit := false) -> float:
 	var ms := lerpf(THROW_STOP_MS[0], THROW_STOP_MS[1], throw_share(throw))
 	if crit:
 		ms *= float(EventJuice.juice("enemy_struck")["crit"]["stop_mult"])
-	return minf(ms, EventJuice.SPINE_CAP_MS)
+	return minf(ms, HitStopBudget.SPINE_CAP_MS)
 
 
 func _queue_flush() -> void:
@@ -908,33 +904,12 @@ func request_shake(amount: float, time: float, _fact: String) -> void:
 
 
 func request_hit_stop(seconds: float, fact: String) -> void:
-	var now := SimClock.msec()
-	if not STRIKE_STOP_FACTS.has(fact):
-		_log_push(hit_stop_log, [seconds, 0.0, fact, now])
+	var sent := hit_stops.ask(seconds, fact, stop_scale, ctx == null or ctx.flow == null or ctx.flow.in_play())
+	if sent <= 0.0:
 		return
-	var wanted := minf(seconds * 1000.0, EventJuice.SPINE_CAP_MS) * stop_scale
-	_stops = _stops.filter(func(stop: Array): return now - int(stop[0]) < 1000)
-	var spent := 0.0
-	var recent := 0.0
-	for stop in _stops:
-		spent += float(stop[1])
-		if now - int(stop[0]) < EventJuice.STOP_WINDOW_MS:
-			recent += float(stop[1])
-	var sent := minf(wanted, minf(EventJuice.STOP_BUDGET_MS - spent, EventJuice.STOP_WINDOW_BUDGET_MS - recent))
-	var spaced := _stops.is_empty() or now - int(_stops.back()[0]) - float(_stops.back()[1]) >= EventJuice.STOP_GAP_MS
-	var in_play: bool = ctx == null or ctx.flow == null or ctx.flow.in_play()
-	if not in_play or not spaced or wanted < STOP_FLOOR_MS or sent < minf(wanted, STOP_TRIM_FLOOR_MS):
-		_log_push(hit_stop_log, [seconds, 0.0, fact, now])
-		return
-	_stops.append([now, sent])
-	_log_push(hit_stop_log, [seconds, sent / 1000.0, fact, now])
 	_log_push(hook_log, ["hit_stop", fact])
 	if hit_stop_sink.is_valid():
-		hit_stop_sink.call(sent / 1000.0)
-
-
-func reset_stops() -> void:
-	_stops.clear()
+		hit_stop_sink.call(sent)
 
 
 func _on_mounted(_at: Vector3, banked_speed: float) -> void:

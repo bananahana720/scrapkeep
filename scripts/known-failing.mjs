@@ -75,6 +75,20 @@ export function parseLedger(text) {
       });
     if (onMain && kind !== "red")
       problems.push({ line: number, message: `only a red row can be red on main, not a ${kind}` });
+    for (const part of onMain && kind === "red" ? (named ?? []) : []) {
+      const why = part.includes("*")
+        ? "a star matches other checks of the test that nobody saw fail"
+        : part.toUpperCase() === ERROR_LINE
+          ? `${ERROR_LINE} lets any error line of the test through`
+          : part.toUpperCase() === TIME_OUT
+            ? `${TIME_OUT} can never apply, since a run killed at its limit is never marked`
+            : null;
+      if (why)
+        problems.push({
+          line: number,
+          message: `a row red on main may not name "${part}": ${why}; write the exact check as the test prints it between the square brackets of its -> FAIL line`,
+        });
+    }
     if (onMain && ISO_DATE.test(added) && onMain[2] > added)
       problems.push({
         line: number,
@@ -255,8 +269,19 @@ export const NEW_AND_KNOWN_REDS = "sketch:fast fail: new reds";
 
 const NORMAL_EXITS = new Set([0, 1]);
 
-function whyNotKnown(row, run, today) {
+function whyNotKnown(row, runs, today) {
   if (row.review < today) return `its row is past its review date (${row.review})`;
+  if (!Array.isArray(runs) || runs.length === 0) return "no run of it reached the rule";
+  for (const [index, run] of runs.entries()) {
+    const why = whyRunNotKnown(row, run);
+    if (why !== null)
+      return `run ${index + 1} of ${runs.length}${run?.batched === true ? " (in a warm batch)" : ""}: ${why}`;
+  }
+  return null;
+}
+
+function whyRunNotKnown(row, run) {
+  if (typeof run?.discarded === "string") return run.discarded;
   const failure = run?.failure;
   if (!failure) return "the run left no failure record";
   if (run.killed === true || run.timedOut === true || (run.signal ?? null) !== null)
@@ -293,10 +318,10 @@ export function mainRedLedger(
         `  ${row.test} passed, but ${LEDGER_FILE} lists it as red on main at ${row.main.commit}: remove its row once main is green`,
       );
     },
-    settle(test, verdict) {
+    settle(test, verdict, runs) {
       const row = listed.get(testName(test));
       if (!row || verdict.kind !== "pr-red") return verdict;
-      const why = whyNotKnown(row, verdict.rerun, today);
+      const why = whyNotKnown(row, runs, today);
       if (why !== null) {
         log(`  ${row.test} is listed as red on main, but counts as this change's red: ${why}`);
         return verdict;

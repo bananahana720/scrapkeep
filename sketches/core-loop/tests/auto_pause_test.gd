@@ -103,10 +103,10 @@ func _process(delta: float) -> bool:
 			_next("owed")
 		"owed":
 			# The game's menu_held is what a reward ceremony, the upgrade pick and Moss's counter set.
-			_game.set_menu_held(true)
+			_game.hold_play("menu", true)
 			_focus(false)
 			var shut: bool = not _menu.is_open() and _auto.owed()
-			_game.set_menu_held(false)
+			_game.hold_play("menu", false)
 			_t.check("a held screen leaves the pause owed", shut, "menu open %s, owed %s" % [_menu.is_open(), _auto.owed()])
 			_next("owed_paid")
 		"owed_paid":

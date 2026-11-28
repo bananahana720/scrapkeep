@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
+import { inspect } from "node:util";
 
 import { git, nulSeparated } from "./git.mjs";
 import {
@@ -50,9 +51,22 @@ test("processLive asks only about a canonical process id from 2 to 2147483647, a
     undefined,
     [42],
     { pid: 42 },
+    -0,
+    42n,
+    Object(42),
+    Object("42"),
+    { toString: () => "42" },
+    { valueOf: () => 42 },
+    "٤٢",
+    "４２",
+    "0x10",
+    0x10 + 0.5,
+    Infinity,
+    -Infinity,
+    "Infinity",
   ]) {
-    assert.equal(processId(bad), null, JSON.stringify(bad));
-    assert.equal(processLive(bad, { kill }), null, JSON.stringify(bad));
+    assert.equal(processId(bad), null, inspect(bad));
+    assert.equal(processLive(bad, { kill }), null, inspect(bad));
   }
   assert.deepEqual(calls, [], "kill was called for a value that is not a process id");
   assert.equal(processLive(2, { kill }), true);

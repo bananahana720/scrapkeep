@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
+const HitStopBudget := preload("res://src/core/hit_stop_budget.gd")
 
 const JUICE := {
 	"enemy_struck": {"stop_ms": 10.0, "stop_per_damage": 0.4, "stop_min_ms": 12.0, "stop_cap_ms": 40.0,
@@ -46,12 +47,7 @@ const JUICE := {
 	"thermal_ride": {"motes": [9, 27], "streaks": [6, 18]},
 }
 
-const STOP_GAP_MS := 90
-const STOP_WINDOW_MS := 300
-const STOP_WINDOW_BUDGET_MS := 60.0
-const STOP_BUDGET_MS := 100.0
 const STOP_PER_EXTRA_HIT_MS := 2.0
-const SPINE_CAP_MS := 60.0
 
 static func juice(kind: String) -> Dictionary:
 	return JUICE.get(kind, {})
@@ -64,4 +60,4 @@ static func stop_ms_for(damage: float, crit := false, heavy := false) -> float:
 		ms *= float(row["crit"]["stop_mult"])
 	if heavy:
 		ms += float(row["heavy"]["stop_add_ms"])
-	return minf(ms, SPINE_CAP_MS)
+	return minf(ms, HitStopBudget.SPINE_CAP_MS)

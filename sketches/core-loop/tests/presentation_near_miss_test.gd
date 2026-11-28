@@ -212,11 +212,11 @@ func _process(_delta: float) -> bool:
 		"visible %s, run %.2f" % [hud.danger_mark.visible, hud.danger_mark.run])
 
 	var juice = _game.presentation.juice
-	juice.reset_stops()
+	juice.hit_stops.reset()
 	_game.events.near_miss.emit("threat_lane", _game.player.ball_position())
-	# A dodge never freezes time (juice.gd STRIKE_STOP_FACTS; BIBLE: momentum is sacred): the near
+	# A dodge never freezes time (hit_stop_budget.gd STRIKE_STOP_FACTS; BIBLE: momentum is sacred): the near
 	# miss asks for its stop, and the budget logs it at zero and sends nothing.
-	var refused: bool = juice.hit_stop_log.any(func(s: Array): return s[2] == "near_miss" and float(s[1]) == 0.0)
+	var refused: bool = juice.hit_stops.entries.any(func(s: Array): return s[2] == "near_miss" and float(s[1]) == 0.0)
 	var froze: bool = juice.hook_log.has(["hit_stop", "near_miss"])
 	var answered: bool = refused and not froze and juice.hook_log.has(["punch_fov", "near_miss"])
 	_check("juice answers", answered and watch_on_bus and _game.presentation.vfx.spawned.get("near_miss", 0) >= 2,
