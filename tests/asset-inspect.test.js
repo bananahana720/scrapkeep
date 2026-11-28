@@ -1,15 +1,17 @@
-import test from "node:test";
+import test, { describe } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import { inspectGlb } from "../scripts/asset-inspect.mjs";
 
-const cli = fileURLToPath(
-  new URL("../scripts/asset-inspect.mjs", import.meta.url),
-);
+const execFileAsync = promisify(execFile);
+const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
+
+const cli = fileURLToPath(new URL("../scripts/asset-inspect.mjs", import.meta.url));
 function fixture({
   triangles = 1,
   indexed = true,
@@ -44,14 +46,10 @@ function fixture({
         ...(stride === 12 ? {} : { byteStride: stride }),
       },
     ],
-    accessors: [
-      { bufferView: 0, componentType: 5126, count: vertices, type: "VEC3" },
-    ],
+    accessors: [{ bufferView: 0, componentType: 5126, count: vertices, type: "VEC3" }],
     meshes: [
       {
-        primitives: [
-          { attributes: { POSITION: 0 }, ...(indexed ? { indices: 1 } : {}) },
-        ],
+        primitives: [{ attributes: { POSITION: 0 }, ...(indexed ? { indices: 1 } : {}) }],
       },
     ],
     nodes: [{ mesh: 0 }],
@@ -96,16 +94,25 @@ function workspace(t) {
   t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
   return dir;
 }
-function execute(args) {
-  const child = spawnSync(process.execPath, [cli, "--json", ...args], {
-    encoding: "utf8",
-  });
-  assert.equal(child.signal, null);
-  return {
-    code: child.status,
-    report: JSON.parse(child.stdout),
-    stderr: child.stderr,
-  };
+async function execute(args, options = {}) {
+  try {
+    const { stdout, stderr } = await execFileAsync(process.execPath, [cli, "--json", ...args], {
+      encoding: "utf8",
+      ...options,
+    });
+    return {
+      code: 0,
+      report: JSON.parse(stdout),
+      stderr,
+    };
+  } catch (error) {
+    assert.equal(error.signal, null);
+    return {
+      code: error.code,
+      report: JSON.parse(error.stdout),
+      stderr: error.stderr,
+    };
+  }
 }
 function save(dir, name, bytes) {
   const file = path.join(dir, name);
@@ -159,19 +166,16 @@ test("subtree world bounds retain ancestor TRS and matrix transforms", () => {
       ];
     },
   });
-  assert.deepEqual(
-    inspectGlb(bytes, { nodes: [1] }).selection.static_world_bounds,
-    { min: [10, 0, 0], max: [12, 3, 0] },
-  );
+  assert.deepEqual(inspectGlb(bytes, { nodes: [1] }).selection.static_world_bounds, {
+    min: [10, 0, 0],
+    max: [12, 3, 0],
+  });
   const matrix = fixture({
     edit: (d) => {
       d.nodes[0].matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 4, 5, 6, 1];
     },
   });
-  assert.deepEqual(
-    inspectGlb(matrix).selection.static_world_bounds.min,
-    [4, 5, 6],
-  );
+  assert.deepEqual(inspectGlb(matrix).selection.static_world_bounds.min, [4, 5, 6]);
 });
 test("animation, skin or morph keeps deformed bounds explicitly unknown", () => {
   for (const edit of [
@@ -368,16 +372,14 @@ const malformed = [
   ],
 ];
 for (const [name, edit, message] of malformed)
-  test(`rejects ${name}`, () =>
-    assert.throws(() => inspectGlb(fixture({ edit })), message));
+  test(`rejects ${name}`, () => assert.throws(() => inspectGlb(fixture({ edit })), message));
 test("overlapping subtrees and invalid explicit roots fail", () => {
   const bytes = fixture({
     edit: (d) => {
       d.nodes = [{ children: [1] }, { mesh: 0 }];
     },
   });
-  for (const nodes of [[0, 1], [1, 1], [9], []])
-    assert.throws(() => inspectGlb(bytes, { nodes }));
+  for (const nodes of [[0, 1], [1, 1], [9], []]) assert.throws(() => inspectGlb(bytes, { nodes }));
 });
 test("invalid GLB lengths, alignment, chunk order and header fail", () => {
   const valid = fixture();
@@ -400,154 +402,187 @@ test("optional material metadata does not block core geometry", () => {
       fixture({
         edit: (d) => {
           d.extensionsUsed = ["KHR_materials_specular"];
-          d.materials = [
-            { extensions: { KHR_materials_specular: { specularFactor: 0.5 } } },
-          ];
+          d.materials = [{ extensions: { KHR_materials_specular: { specularFactor: 0.5 } } }];
         },
       }),
     ).inventory.triangles,
     1,
   );
 });
-test("CLI inventory is not approval; exact ceiling passes and above fails", (t) => {
-  const dir = workspace(t);
-  for (const [count, status, code] of [
-    [30000, "pass", 0],
-    [30001, "over_budget", 2],
-  ]) {
-    const file = save(dir, `${count}.glb`, fixture({ triangles: count }));
-    const r = execute([file, "--profile", "generic-30k"]);
-    assert.equal(r.code, code);
-    assert.equal(r.report.status, status);
-    assert.equal(r.report.assembly.triangles, count);
-  }
-  const file = path.join(dir, "30000.glb"),
-    r = execute([file]);
-  assert.equal(r.report.status, "inventory");
-  assert.equal(r.report.budget, null);
-  assert.equal(r.report.engine_import, "not_run");
-  assert.equal(r.report.gpu_memory_bytes, null);
-});
-test("three million triangles have real binary index storage and fail 30k", (t) => {
-  const dir = workspace(t),
-    bytes = fixture({ triangles: 3000000 });
-  assert.ok(bytes.length > 36000000);
-  const file = save(dir, "large.glb", bytes),
-    r = execute([file, "--max-tris", "30000"]);
-  assert.equal(r.code, 2);
-  assert.equal(r.report.files[0].inventory.triangles, 3000000);
-});
-test("manifest totals intentional instances; combined placement remains unknown", (t) => {
-  const dir = workspace(t);
-  save(dir, "part.glb", fixture());
-  const manifest = save(
-    dir,
-    "assembly.json",
-    JSON.stringify({
-      version: 1,
-      name: "pair",
-      parts: [
-        { file: "part.glb", nodes: [0], lod: "high" },
-        { file: "part.glb", nodes: [0], lod: "high" },
-      ],
-    }),
-  );
-  const r = execute(["--manifest", manifest, "--max-tris", "2"]);
-  assert.equal(r.code, 0);
-  assert.equal(r.report.assembly.triangles, 2);
-  assert.equal(r.report.assembly.static_world_bounds, null);
-  assert.equal(r.report.assembly.bounds_status, "unknown_no_shared_placement");
-  assert.equal(r.report.files[0].lod, "high");
-});
-test("manifest fields and unsafe paths are rejected", (t) => {
-  const dir = workspace(t);
-  for (const part of [
-    { file: "https://example.com/a.glb", nodes: [0] },
-    { file: "/absolute.glb", nodes: [0] },
-    { file: "part.glb", nodes: ["0"] },
-    { file: "part.glb", nodes: [0], unexpected: true },
-  ]) {
+describe("asset-inspect CLI", { concurrency: CONCURRENCY }, () => {
+  test("CLI inventory is not approval; exact ceiling passes and above fails", async (t) => {
+    const dir = workspace(t);
+    const f30000 = save(dir, "30000.glb", fixture({ triangles: 30000 }));
+    const f30001 = save(dir, "30001.glb", fixture({ triangles: 30001 }));
+    const [pass30k, over30k, inv] = await Promise.all([
+      execute([f30000, "--profile", "generic-30k"]),
+      execute([f30001, "--profile", "generic-30k"]),
+      execute([f30000]),
+    ]);
+    for (const [r, count, status, code] of [
+      [pass30k, 30000, "pass", 0],
+      [over30k, 30001, "over_budget", 2],
+    ]) {
+      assert.equal(r.code, code);
+      assert.equal(r.report.status, status);
+      assert.equal(r.report.assembly.triangles, count);
+    }
+    assert.equal(inv.report.status, "inventory");
+    assert.equal(inv.report.budget, null);
+    assert.equal(inv.report.engine_import, "not_run");
+    assert.equal(inv.report.gpu_memory_bytes, null);
+  });
+  test("three million triangles have real binary index storage and fail 30k", async (t) => {
+    const dir = workspace(t),
+      bytes = fixture({ triangles: 3000000 });
+    assert.ok(bytes.length > 36000000);
+    const file = save(dir, "large.glb", bytes),
+      r = await execute([file, "--max-tris", "30000"]);
+    assert.equal(r.code, 2);
+    assert.equal(r.report.files[0].inventory.triangles, 3000000);
+  });
+  test("manifest totals intentional instances; combined placement remains unknown", async (t) => {
+    const dir = workspace(t);
+    save(dir, "part.glb", fixture());
     const manifest = save(
-      dir,
-      "bad.json",
-      JSON.stringify({ version: 1, name: "bad", parts: [part] }),
-    );
-    assert.equal(execute(["--manifest", manifest]).code, 1);
-  }
-});
-test("output cannot overwrite direct, symlink, hardlink or manifest inputs", (t) => {
-  const dir = workspace(t),
-    bytes = fixture(),
-    file = save(dir, "part.glb", bytes),
-    sym = path.join(dir, "symlink.json"),
-    hard = path.join(dir, "hardlink.json");
-  fs.symlinkSync(file, sym);
-  fs.linkSync(file, hard);
-  for (const output of [file, sym, hard]) {
-    const r = execute([file, "--output", output]);
-    assert.equal(r.code, 1);
-    assert.match(r.report.errors.join(" "), /aliases/);
-    assert.deepEqual(fs.readFileSync(file), bytes);
-  }
-  const manifest = save(
       dir,
       "assembly.json",
       JSON.stringify({
         version: 1,
-        name: "part",
-        parts: [{ file: "part.glb", nodes: [0] }],
+        name: "pair",
+        parts: [
+          { file: "part.glb", nodes: [0], lod: "high" },
+          { file: "part.glb", nodes: [0], lod: "high" },
+        ],
       }),
-    ),
-    original = fs.readFileSync(manifest);
-  assert.equal(execute(["--manifest", manifest, "--output", manifest]).code, 1);
-  assert.deepEqual(fs.readFileSync(manifest), original);
-  const output = path.join(dir, "receipt.json"),
-    r = execute([file, "--output", output]);
-  assert.equal(r.code, 0);
-  assert.equal(JSON.parse(fs.readFileSync(output)).status, "inventory");
-  assert.deepEqual(fs.readFileSync(file), bytes);
-});
-test("failed inspection writes explicitly invalid receipt safely", (t) => {
-  const dir = workspace(t),
-    file = save(
-      dir,
-      "bad.glb",
-      fixture({
-        edit: (d) => {
-          d.meshes[0].primitives[0].mode = 1;
-        },
+    );
+    const r = await execute(["--manifest", manifest, "--max-tris", "2"]);
+    assert.equal(r.code, 0);
+    assert.equal(r.report.assembly.triangles, 2);
+    assert.equal(r.report.assembly.static_world_bounds, null);
+    assert.equal(r.report.assembly.bounds_status, "unknown_no_shared_placement");
+    assert.equal(r.report.files[0].lod, "high");
+  });
+  test("manifest fields and unsafe paths are rejected", async (t) => {
+    const dir = workspace(t);
+    const parts = [
+      { file: "https://example.com/a.glb", nodes: [0] },
+      { file: "/absolute.glb", nodes: [0] },
+      { file: "part.glb", nodes: ["0"] },
+      { file: "part.glb", nodes: [0], unexpected: true },
+    ];
+    const results = await Promise.all(
+      parts.map((part, i) => {
+        const manifest = save(
+          dir,
+          `bad-${i}.json`,
+          JSON.stringify({ version: 1, name: "bad", parts: [part] }),
+        );
+        return execute(["--manifest", manifest]);
       }),
-    ),
-    output = path.join(dir, "failed.json");
-  assert.equal(
-    execute([file, "--output", output, "--profile", "generic-30k"]).code,
-    1,
-  );
-  assert.equal(JSON.parse(fs.readFileSync(output)).status, "invalid");
-});
-test("batch totals selected instances and does not claim shared bounds", (t) => {
-  const dir = workspace(t),
-    a = save(dir, "a.glb", fixture()),
-    b = save(dir, "b.glb", fixture({ triangles: 2 }));
-  const r = execute([a, b, "--max-tris", "2"]);
-  assert.equal(r.code, 2);
-  assert.equal(r.report.assembly.triangles, 3);
-  assert.equal(r.report.assembly.static_world_bounds, null);
-});
-test("CLI usage rejects conflicting or malformed options with bounded diagnostics", () => {
-  for (const args of [
-    [],
-    ["--max-tris", "-1"],
-    ["--profile", "missing"],
-    ["--nodes", "a"],
-    ["--nodes", "0", "--scene", "0"],
-    ["--wat"],
-  ]) {
-    const r = execute(args);
-    assert.equal(r.code, 1);
-    assert.ok(r.report.errors.length);
-    assert.doesNotMatch(r.stderr, /at file:/);
-  }
+    );
+    for (const r of results) assert.equal(r.code, 1);
+  });
+  test("output cannot overwrite direct, symlink, hardlink or manifest inputs", async (t) => {
+    const dir = workspace(t),
+      bytes = fixture(),
+      file = save(dir, "part.glb", bytes),
+      sym = path.join(dir, "symlink.json"),
+      hard = path.join(dir, "hardlink.json");
+    fs.symlinkSync(file, sym);
+    fs.linkSync(file, hard);
+    const manifest = save(
+        dir,
+        "assembly.json",
+        JSON.stringify({
+          version: 1,
+          name: "part",
+          parts: [{ file: "part.glb", nodes: [0] }],
+        }),
+      ),
+      original = fs.readFileSync(manifest);
+    const output = path.join(dir, "receipt.json");
+    const [directRes, symRes, hardRes, manifestRes, okRes] = await Promise.all([
+      execute([file, "--output", file]),
+      execute([file, "--output", sym]),
+      execute([file, "--output", hard]),
+      execute(["--manifest", manifest, "--output", manifest]),
+      execute([file, "--output", output]),
+    ]);
+    for (const r of [directRes, symRes, hardRes]) {
+      assert.equal(r.code, 1);
+      assert.match(r.report.errors.join(" "), /aliases/);
+    }
+    assert.equal(manifestRes.code, 1);
+    assert.deepEqual(fs.readFileSync(manifest), original);
+    assert.equal(okRes.code, 0);
+    assert.equal(JSON.parse(fs.readFileSync(output)).status, "inventory");
+    assert.deepEqual(fs.readFileSync(file), bytes);
+  });
+  test("failed inspection writes explicitly invalid receipt safely", async (t) => {
+    const dir = workspace(t),
+      file = save(
+        dir,
+        "bad.glb",
+        fixture({
+          edit: (d) => {
+            d.meshes[0].primitives[0].mode = 1;
+          },
+        }),
+      ),
+      output = path.join(dir, "failed.json");
+    assert.equal((await execute([file, "--output", output, "--profile", "generic-30k"])).code, 1);
+    assert.equal(JSON.parse(fs.readFileSync(output)).status, "invalid");
+  });
+  test("batch totals selected instances and does not claim shared bounds", async (t) => {
+    const dir = workspace(t),
+      a = save(dir, "a.glb", fixture()),
+      b = save(dir, "b.glb", fixture({ triangles: 2 }));
+    const r = await execute([a, b, "--max-tris", "2"]);
+    assert.equal(r.code, 2);
+    assert.equal(r.report.assembly.triangles, 3);
+    assert.equal(r.report.assembly.static_world_bounds, null);
+  });
+  test("CLI usage rejects conflicting or malformed options with bounded diagnostics", async () => {
+    const results = await Promise.all(
+      [
+        [],
+        ["--max-tris", "-1"],
+        ["--profile", "missing"],
+        ["--nodes", "a"],
+        ["--nodes", "0", "--scene", "0"],
+        ["--wat"],
+      ].map((args) => execute(args)),
+    );
+    for (const r of results) {
+      assert.equal(r.code, 1);
+      assert.ok(r.report.errors.length);
+      assert.doesNotMatch(r.stderr, /at file:/);
+    }
+  });
+
+  test("an option cannot consume the next option as its missing value", async (t) => {
+    const dir = workspace(t);
+    const file = save(dir, "valid.glb", fixture());
+    const results = await Promise.all(
+      ["--output", "--manifest", "--nodes", "--scene", "--profile", "--max-tris"].map((option) =>
+        execFileAsync(process.execPath, [cli, file, option, "--json"], {
+          cwd: dir,
+          encoding: "utf8",
+        }).then(
+          (res) => ({ status: 0, stdout: res.stdout }),
+          (err) => ({ status: err.code, stdout: err.stdout }),
+        ),
+      ),
+    );
+    for (const result of results) {
+      assert.equal(result.status, 1);
+      const report = JSON.parse(result.stdout);
+      assert.equal(report.status, "invalid");
+      assert.match(report.errors.join(" "), /Missing value/);
+      assert.equal(fs.existsSync(path.join(dir, "--json")), false);
+    }
+  });
 });
 
 for (const [indexComponent, sentinel] of [
@@ -560,9 +595,7 @@ for (const [indexComponent, sentinel] of [
       () => inspectGlb(fixture({ ...options, indexValues: [0, 1, sentinel] })),
       /Reserved primitive-restart index value/,
     );
-    const valid = inspectGlb(
-      fixture({ ...options, indexValues: [0, 1, sentinel - 1] }),
-    );
+    const valid = inspectGlb(fixture({ ...options, indexValues: [0, 1, sentinel - 1] }));
     assert.equal(valid.selection.triangles, 1);
     assert.equal(valid.inventory.vertices, sentinel + 1);
   });
@@ -572,33 +605,7 @@ test("rejects reserved U32 index explicitly before POSITION range validation", (
     () => inspectGlb(fixture({ indexValues: [0, 1, 4294967295] })),
     /Reserved primitive-restart index value/,
   );
-  assert.equal(
-    inspectGlb(fixture({ indexValues: [0, 1, 2] })).selection.triangles,
-    1,
-  );
-});
-
-test("an option cannot consume the next option as its missing value", (t) => {
-  const dir = workspace(t);
-  const file = save(dir, "valid.glb", fixture());
-  for (const option of [
-    "--output",
-    "--manifest",
-    "--nodes",
-    "--scene",
-    "--profile",
-    "--max-tris",
-  ]) {
-    const result = spawnSync(process.execPath, [cli, file, option, "--json"], {
-      cwd: dir,
-      encoding: "utf8",
-    });
-    assert.equal(result.status, 1);
-    const report = JSON.parse(result.stdout);
-    assert.equal(report.status, "invalid");
-    assert.match(report.errors.join(" "), /Missing value/);
-    assert.equal(fs.existsSync(path.join(dir, "--json")), false);
-  }
+  assert.equal(inspectGlb(fixture({ indexValues: [0, 1, 2] })).selection.triangles, 1);
 });
 test("a -col node counts under collision_nodes, not draws", () => {
   const r = inspectGlb(
@@ -622,10 +629,7 @@ test("a -col node counts under collision_nodes, not draws", () => {
 });
 test("a park recipe base GLB draws once and carries one -col node", () => {
   const glb = fileURLToPath(
-    new URL(
-      "../sketches/core-loop/assets/models/park/half_pipe_concrete.glb",
-      import.meta.url,
-    ),
+    new URL("../sketches/core-loop/assets/models/park/half_pipe_concrete.glb", import.meta.url),
   );
   const r = inspectGlb(fs.readFileSync(glb));
   assert.equal(r.selection.primitives, 2);

@@ -16,7 +16,7 @@ on:
         type: boolean
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.pull_request.number) || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
@@ -43,6 +43,8 @@ jobs:
       node: ${{ steps.select.outputs.node }}
       web: ${{ steps.select.outputs.web }}
       godot: ${{ steps.select.outputs.godot }}
+      godot_shards: ${{ steps.select.outputs.godot_shards }}
+      godot_matrix: ${{ steps.select.outputs.godot_matrix }}
     steps:
       - name: Checkout selector script only
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -78,11 +80,22 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 3
     steps:
-      - name: Checkout (blobless)
+      - name: Checkout (blobless, sparse)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
           fetch-depth: 0
+          sparse-checkout: |
+            /*
+            !/sketches/core-loop/assets/models/
+            !/sketches/core-loop/assets/audio/
+            !/sketches/core-loop/assets/park/**/*.bin
+            !/sketches/core-loop/assets/sky/
+            !/sketches/core-loop/assets/textures/
+            !/sketches/core-loop/assets/fonts/
+            !/sketches/core-loop/assets/concepts/
+            !/sketches/core-loop/addons/
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Setup Node
@@ -126,11 +139,22 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 3
     steps:
-      - name: Checkout (blobless)
+      - name: Checkout (blobless, sparse)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
           fetch-depth: 0
+          sparse-checkout: |
+            /*
+            !/sketches/core-loop/assets/models/
+            !/sketches/core-loop/assets/audio/
+            !/sketches/core-loop/assets/park/**/*.bin
+            !/sketches/core-loop/assets/sky/
+            !/sketches/core-loop/assets/textures/
+            !/sketches/core-loop/assets/fonts/
+            !/sketches/core-loop/assets/concepts/
+            !/sketches/core-loop/addons/
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Setup Node
@@ -154,11 +178,24 @@ jobs:
       matrix:
         shard: [1, 2]
     steps:
-      - name: Checkout (blobless, read-only token for lazy blob fetch)
+      - name: Checkout (shallow, blobless, sparse)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
-          fetch-depth: 0
+          fetch-depth: 1
+          sparse-checkout: |
+            /*
+            !/sketches/core-loop/assets/models/*
+            /sketches/core-loop/assets/models/park/
+            !/sketches/core-loop/assets/models/park/*
+            /sketches/core-loop/assets/models/park/half_pipe_concrete.glb
+            !/sketches/core-loop/assets/audio/
+            !/sketches/core-loop/assets/sky/
+            !/sketches/core-loop/assets/textures/
+            !/sketches/core-loop/assets/fonts/
+            !/sketches/core-loop/assets/concepts/
+            !/sketches/core-loop/addons/
+          sparse-checkout-cone-mode: false
           persist-credentials: true
 
       - name: Setup Node
@@ -200,8 +237,9 @@ jobs:
         run: |
           set -euo pipefail
           if ! command -v ffprobe >/dev/null 2>&1; then
+            sudo rm -f /var/lib/man-db/auto-update
             if [[ "$CACHE_HIT" == "true" && -d "$DEB_DIR" ]] && ls "$DEB_DIR"/*.deb >/dev/null 2>&1; then
-              if ! sudo dpkg -i "$DEB_DIR"/*.deb; then
+              if ! (sudo dpkg --force-unsafe-io --no-triggers -i "$DEB_DIR"/*.deb && sudo ldconfig); then
                 sudo apt-get update -qq
                 sudo apt-get install -y --no-install-recommends -f
               fi
@@ -231,11 +269,24 @@ jobs:
     runs-on: ${{ vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 3
     steps:
-      - name: Checkout (shallow, blobless)
+      - name: Checkout (shallow, blobless, sparse)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           filter: blob:none
           fetch-depth: 1
+          sparse-checkout: |
+            /index.html
+            /orchard.html
+            /vite.config.js
+            /package.json
+            /package-lock.json
+            /src/
+            /public/
+            /tests/
+            /scripts/check-build.mjs
+            /scripts/ci/
+            /scripts/lib/cli.mjs
+          sparse-checkout-cone-mode: false
           persist-credentials: false
 
       - name: Setup Node
@@ -261,7 +312,7 @@ jobs:
           node scripts/ci/check-budget.mjs --label check:build --budget 10 -- npm run check:build
 
   godot-affected:
-    name: Godot affected tests
+    name: Godot affected tests (${{ matrix.shard }}/${{ needs.changes.outputs.godot_shards }})
     needs: changes
     # A stage promotion (stage/* into main) diffs the whole wave against main: every wave-changed test is
     # tier 0 and skips the budget, so the 10-minute cap trips. The local Wave Gate (and godot-full on
@@ -272,6 +323,10 @@ jobs:
       && !(github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' && startsWith(github.event.pull_request.head.ref, 'stage/'))
     runs-on: ${{ vars.CI_RUNNER_LARGE || vars.CI_RUNNER || 'ubuntu-latest' }}
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJson(github.event_name == 'push' && '[1]' || needs.changes.outputs.godot_matrix) }}
     steps:
       - name: Checkout (blobless, read-only token for base worktree/promisor)
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -285,13 +340,31 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup pinned Godot and import cache
+      - name: Restore Godot import cache
+        id: import-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: sketches/core-loop/.godot
+          key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-${{ hashFiles('sketches/core-loop/project.godot', 'sketches/core-loop/assets/**', 'sketches/core-loop/**/*.import') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-
+
+      - name: Setup pinned Godot and validate import cache
         id: setup-godot
         uses: ./.github/actions/setup-godot
         with:
           godot-version: ${{ env.GODOT_VERSION }}
           godot-zip-sha512: ${{ env.GODOT_ZIP_SHA512 }}
           godot-bin-sha256: ${{ env.GODOT_BIN_SHA256 }}
+          import-cache-hit: ${{ steps.import-cache.outputs.cache-hit }}
+          clean-on-push-miss: ${{ github.event_name == 'push' }}
+
+      - name: Save Godot import cache
+        if: github.event_name == 'push' && steps.import-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: sketches/core-loop/.godot
+          key: ${{ steps.import-cache.outputs.cache-primary-key }}
 
       - name: Run affected Godot tests (or seed cache on push)
         shell: bash
@@ -300,14 +373,21 @@ jobs:
           EVENT_NAME: ${{ github.event_name }}
           REF_NAME: ${{ github.ref_name }}
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CACHE_KEY: ${{ steps.import-cache.outputs.cache-primary-key }}
+          GODOT_SHARDS: ${{ needs.changes.outputs.godot_shards }}
+          MATRIX_SHARD: ${{ matrix.shard }}
         run: |
           set -euo pipefail
           if [[ "$EVENT_NAME" == "pull_request" ]]; then
             printf '| Check | Elapsed | Budget | Status |\n| --- | ---: | ---: | --- |\n' >> "$GITHUB_STEP_SUMMARY"
+            shard_args=()
+            if [[ "${GODOT_SHARDS:-1}" -gt 1 ]]; then
+              shard_args=(--shard "${MATRIX_SHARD}/${GODOT_SHARDS}")
+            fi
             node scripts/ci/check-budget.mjs --label godot-affected --budget 900 -- \
-              node scripts/sketch-fast.mjs --base "$PR_BASE_SHA" --no-base-check --budget 120
+              node scripts/sketch-fast.mjs --base "$PR_BASE_SHA" --no-base-check --budget 120 --width "$(nproc)" --ci-godot-only "${shard_args[@]}"
           else
-            echo "Cache seeded for Godot ${GODOT_VERSION} (${{ steps.setup-godot.outputs.sketch-tree }}) on ${REF_NAME}"
+            echo "Cache seeded for Godot ${GODOT_VERSION} (${CACHE_KEY}) on ${REF_NAME}"
           fi
 
   godot-full:
@@ -333,13 +413,23 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
-      - name: Setup pinned Godot and import cache
+      - name: Restore Godot import cache
+        id: import-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: sketches/core-loop/.godot
+          key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-${{ hashFiles('sketches/core-loop/project.godot', 'sketches/core-loop/assets/**', 'sketches/core-loop/**/*.import') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ env.GODOT_VERSION }}-${{ env.GODOT_BIN_SHA256 }}-
+
+      - name: Setup pinned Godot and validate import cache
         id: setup-godot
         uses: ./.github/actions/setup-godot
         with:
           godot-version: ${{ env.GODOT_VERSION }}
           godot-zip-sha512: ${{ env.GODOT_ZIP_SHA512 }}
           godot-bin-sha256: ${{ env.GODOT_BIN_SHA256 }}
+          import-cache-hit: ${{ steps.import-cache.outputs.cache-hit }}
 
       - name: Run duration-balanced Godot shard ${{ matrix.shard }}/8
         shell: bash

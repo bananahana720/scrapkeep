@@ -8,6 +8,10 @@ export const KNOWN_FAILING_LEDGER = "project-guide/handoff/KNOWN-FAILING.tsv";
 const WEB_PATTERN =
   /^(index\.html|orchard\.html|vite\.config\.js|package\.json|package-lock\.json|public\/|src\/|server\/|scripts\/check-build\.mjs|scripts\/verify\.mjs)/;
 const GODOT_PATTERN = /^sketches\/core-loop\//;
+const GODOT_SHARD_THRESHOLD = 8;
+const GODOT_PARK_PATTERN = /^sketches\/core-loop\/(?:.*\/)?(?:parks?\/|park_[^/]*$)/;
+const GODOT_HUB_PATTERN =
+  /^sketches\/core-loop\/(?:src\/game\.gd|src\/movement\/(?:intent|tuning|augments)\.gd|src\/core\/(?:palette|class_def|event_kinds|game_events|run_state|ability_state|profile|park_defs|stage_defs|sim_clock)\.gd|src\/build\/parts\.gd|src\/combat\/(?:threat_grammar|warden|roster|weapons)\.gd|src\/world\/(?:terrain|director|world)\.gd|src\/presentation\/(?:sfx_bank|harmony|audio|hero_assets)\.gd|tests\/support\/t\.gd|tools\/bot_driver\.gd)$/;
 const PACKAGE_PATTERN = /^package(?:-lock)?\.json$/;
 const HANDOFF_DOC_PATTERN =
   /(?:\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv))/;
@@ -31,7 +35,7 @@ export const isNodePath = (file) => NODE_PATTERN.test(file);
 export const isWorkflowPath = (file) => WORKFLOW_PATTERN.test(file);
 
 export function classifyAffected(changedFiles, { full = false } = {}) {
-  const files = changedFiles.filter(Boolean);
+  const files = [...new Set(changedFiles.filter(Boolean))];
   if (full || files.length === 0) {
     return {
       full: true,
@@ -40,12 +44,21 @@ export function classifyAffected(changedFiles, { full = false } = {}) {
       node: true,
       web: true,
       godot: true,
+      godot_shards: 1,
+      godot_matrix: "[1]",
       changedCount: files.length,
     };
   }
   const workflowTouched = files.some(isWorkflowPath);
   const web = workflowTouched || files.some(isWebPath);
-  const godot = files.some(isGodotPath);
+  const godotFiles = files.filter(isGodotPath);
+  const godot = godotFiles.length > 0;
+  const godotWide =
+    godot &&
+    (godotFiles.length >= GODOT_SHARD_THRESHOLD ||
+      godotFiles.some((f) => GODOT_PARK_PATTERN.test(f) || GODOT_HUB_PATTERN.test(f)));
+  const godot_shards = godotWide ? 2 : 1;
+  const godot_matrix = godot_shards > 1 ? "[1, 2]" : "[1]";
   const node = workflowTouched || godot || web || files.some(isNodePath);
   const docs = workflowTouched || files.some(isDocsPath);
   return {
@@ -55,6 +68,8 @@ export function classifyAffected(changedFiles, { full = false } = {}) {
     node,
     web,
     godot,
+    godot_shards,
+    godot_matrix,
     changedCount: files.length,
   };
 }

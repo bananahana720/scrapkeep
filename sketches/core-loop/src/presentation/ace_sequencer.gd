@@ -452,6 +452,16 @@ func set_fight_floor(value: float) -> void:
 		_retarget(STOP_RAMP)
 
 
+func prime_parameters(enabled: bool, values: Dictionary, released: bool, danger_floor: float, lift: bool) -> void:
+	parameter_enabled = enabled
+	if parameter_enabled:
+		parameters = values.duplicate()
+		parameter_released = released
+		_parameter_danger_floor = danger_floor
+		pressure = float(parameters.get("threat", 0.0))
+		ultimate_lift = lift
+
+
 func clear_release() -> void:
 	for action in actions:
 		if action["type"] == "parameters":

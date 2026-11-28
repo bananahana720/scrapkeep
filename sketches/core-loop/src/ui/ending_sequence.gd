@@ -109,8 +109,7 @@ func start(game_ref, lap_stats := {}, prelude_only := false) -> void:
 	advance(0.0)
 	var audio = game.audio()
 	if audio != null:
-		audio._flush_flow()
-		audio.engine.menu_theme("summary", true)
+		audio.play_ending_summary()
 
 
 func _build_view() -> void:

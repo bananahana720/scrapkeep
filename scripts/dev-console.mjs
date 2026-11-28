@@ -27,6 +27,7 @@ import {
   scratchGodotEnv,
 } from "./godot-home.mjs";
 import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
+import { runProcess as runChild } from "./lib/proc.mjs";
 import { buildVisualQaPack } from "./visual-qa-pack.mjs";
 import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
 
@@ -838,71 +839,26 @@ export async function sendMailboxRequest(
   });
 }
 
-function runProcess(command, args, { env, cwd, timeoutMs }) {
-  return new Promise((resolve) => {
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-    let child;
-    const started = Date.now();
-    try {
-      child = spawn(command, args, { env, cwd, stdio: ["ignore", "pipe", "pipe"] });
-    } catch (error) {
-      resolve({
-        exitCode: 1,
-        signal: null,
-        stdout: "",
-        stderr: String(error?.message ?? error),
-        timedOut: false,
-        ms: Date.now() - started,
-      });
-      return;
-    }
-
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try {
-        child.kill("SIGTERM");
-      } catch {}
-      setTimeout(() => {
-        try {
-          child.kill("SIGKILL");
-        } catch {}
-      }, 2000).unref();
-    }, timeoutMs);
-
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      stderr += String(error?.message ?? error);
-      resolve({
-        exitCode: 1,
-        signal: null,
-        stdout,
-        stderr,
-        timedOut,
-        ms: Date.now() - started,
-      });
-    });
-
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      resolve({
-        exitCode: timedOut ? 124 : (code ?? 1),
-        signal,
-        stdout,
-        stderr,
-        timedOut,
-        ms: Date.now() - started,
-      });
-    });
-  });
+async function runProcess(command, args, { env, cwd, timeoutMs }) {
+  const res = await runChild(command, args, { env, cwd, timeoutMs, killGraceMs: 2000 });
+  if (res.error) {
+    return {
+      exitCode: 1,
+      signal: null,
+      stdout: res.stdout,
+      stderr: res.stderr + String(res.error?.message ?? res.error),
+      timedOut: res.timedOut,
+      ms: res.ms,
+    };
+  }
+  return {
+    exitCode: res.timedOut ? 124 : (res.exit ?? 1),
+    signal: res.signal,
+    stdout: res.stdout,
+    stderr: res.stderr,
+    timedOut: res.timedOut,
+    ms: res.ms,
+  };
 }
 
 export function parseArgs(argv) {

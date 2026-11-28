@@ -12,10 +12,6 @@ const ParkMap := preload("res://src/world/park/park_map.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
-const Audio := preload("res://src/presentation/audio.gd")
-const Bank := preload("res://src/presentation/sfx_bank.gd")
-const Rows := preload("res://src/presentation/rows.gd")
-const Harmony := preload("res://src/presentation/harmony.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const StormSeek := preload("res://src/world/events/storm_seek.gd")
@@ -51,8 +47,6 @@ var _original_map
 var _overlay_map
 var _water_field := WaterField.new()
 var _original_flood
-var _audio
-var _world_sound := Callable()
 var _next_checked := false
 var hits_enemies := false
 var seek := StormSeek.new()
@@ -127,15 +121,6 @@ func setup(world_ref) -> void:
 	_plan_marks(planned)
 	hits_enemies = HazardHits.applies_to(world.ctx.get("run"))
 	world.terrain.flood = _water_field
-	var presentation = world.ctx.root.get("presentation")
-	if presentation != null:
-		_audio = presentation.audio
-		for connection in world.ctx.events.get_signal_connection_list("world_fact"):
-			if connection.callable.get_object() == _audio:
-				_world_sound = connection.callable
-				world.ctx.events.world_fact.disconnect(_world_sound)
-				world.ctx.events.world_fact.connect(_on_world_sound)
-				break
 
 
 static func plan(world, park: Dictionary) -> Dictionary:
@@ -810,19 +795,6 @@ func _show_landing(row: Dictionary, state: Dictionary) -> void:
 		state.mark.position.y -= float(row.effect.depth_m) * float(_overlay_map.swaps[_prepared[row.id].swap].progress)
 
 
-func _on_world_sound(kind: String, at: Vector3) -> void:
-	var cues: Dictionary = world.events.PARK_LAND_FACTS
-	if not cues.has(kind) and not cues.values().has(kind):
-		_world_sound.call(kind, at)
-		return
-	var entry: Dictionary = Kinds.world_row(kind)
-	var sound := Rows.heard(entry, _audio.cue_context())
-	var pitch := Harmony.ratio(_audio.live_key())
-	if _audio._admit("world_fact", sound, pitch):
-		_audio._start("world_fact", sound, Bank.stream(sound),
-			Bank.trim_db(sound) + Audio.PRIORITY_DB[Rows.priority("world_fact")], pitch, "SFX")
-
-
 func _end(row: Dictionary) -> void:
 	if not active.has(row.id):
 		return
@@ -844,9 +816,6 @@ func release() -> void:
 	for id in active.keys():
 		_end({"id": id})
 	if world != null:
-		if _world_sound.is_valid():
-			world.ctx.events.world_fact.disconnect(_on_world_sound)
-			world.ctx.events.world_fact.connect(_world_sound)
 		world.terrain.flood = _original_flood
 		if _overlay_map != null:
 			world.terrain.maps[world.terrain.stage - 1] = _original_map
@@ -854,6 +823,4 @@ func release() -> void:
 	_prepared.clear()
 	_overlay_map = null
 	_original_map = null
-	_audio = null
-	_world_sound = Callable()
 	world = null

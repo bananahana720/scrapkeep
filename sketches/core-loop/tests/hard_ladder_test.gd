@@ -13,7 +13,7 @@ const Profile := preload("res://src/core/profile.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const WordBudget := preload("res://src/ui/word_budget.gd")
-const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Push := preload("res://tests/workshop/push.gd")
 
 # Each lever and the way a harder rung moves it: up (hits, waits before regen) or down (cadence, regen rate).
@@ -260,7 +260,7 @@ func _unlock(game) -> void:
 	var widest := 0.0
 	for tier in RunTier.TOP + 1:
 		for line in RunTier.contract_lines(tier):
-			widest = maxf(widest, UiDraw.width(line, card.CONTRACT_FONT))
+			widest = maxf(widest, UiFonts.width(line, card.CONTRACT_FONT))
 	t.check("the longest contract line fits the narrowest ladder card", widest <= card.LADDER_W and card.size.x >= card.LADDER_W,
 		"%.0f px in a card at least %.0f px wide (now %.0f)" % [widest, card.LADDER_W, card.size.x])
 	# Every win records through flow._record_end, the victory lap's (_begin_ending) included.

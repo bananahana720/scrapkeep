@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -10,6 +10,7 @@ import {
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveGodotBinary } from "./godot-home.mjs";
+import { pool, runProcess } from "./lib/proc.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches/core-loop");
@@ -280,40 +281,17 @@ function gitVersion() {
   return r.status === 0 ? r.stdout.trim() : "unknown";
 }
 
-function runOne(spec) {
-  return new Promise((resolve) => {
-    const child = spawn(spec.cmd, spec.argv, { cwd: root });
-    let out = "";
-    child.stdout.on("data", (d) => (out += d));
-    child.stderr.on("data", (d) => (out += d));
-    const timer = setTimeout(() => child.kill("SIGKILL"), 15 * 60 * 1000);
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve(
-        parseRow(out) ?? {
-          error: `no row (exit ${code}): ${out
-            .split("\n")
-            .filter((l) => /ERROR/.test(l))
-            .slice(0, 3)
-            .join(" | ")}`,
-        },
-      );
-    });
-  });
-}
-
-async function pool(tasks, jobs) {
-  const results = [];
-  let next = 0;
-  await Promise.all(
-    Array.from({ length: jobs }, async () => {
-      while (next < tasks.length) {
-        const i = next++;
-        results[i] = await tasks[i]();
-      }
-    }),
+async function runOne(spec) {
+  const res = await runProcess(spec.cmd, spec.argv, { cwd: root, timeoutMs: 15 * 60 * 1000 });
+  return (
+    parseRow(res.output) ?? {
+      error: `no row (exit ${res.exit}): ${res.output
+        .split("\n")
+        .filter((l) => /ERROR/.test(l))
+        .slice(0, 3)
+        .join(" | ")}`,
+    }
   );
-  return results;
 }
 
 function readRows(dir) {

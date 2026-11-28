@@ -12,17 +12,22 @@ inputs:
     description: Expected SHA-256 digest of the extracted Linux editor binary
     required: true
   sketch-dir:
-    description: Sketch directory to import and cache
+    description: Sketch directory to import and validate
     required: false
     default: sketches/core-loop
+  import-cache-hit:
+    description: Whether the caller's .godot import cache was an exact hit
+    required: false
+    default: 'false'
+  clean-on-push-miss:
+    description: Run a clean import with normalized asset mtimes when the import cache misses
+    required: false
+    default: 'false'
 
 outputs:
   godot-bin:
     description: Path to the pinned Godot Linux binary
     value: ${{ runner.temp }}/scrapkeep-godot-${{ inputs.godot-version }}/Godot_v${{ inputs.godot-version }}_linux.x86_64
-  sketch-tree:
-    description: Git tree SHA of the sketch directory at HEAD
-    value: ${{ steps.sketch-tree.outputs.tree }}
 
 runs:
   using: composite
@@ -55,31 +60,47 @@ runs:
         rm -f "$GODOT_DIR/editor.zip"
         printf '%s  %s\n' "$GODOT_BIN_SHA256" "$godot_bin" | sha256sum --check --quiet
 
-    - name: Compute sketch tree hash
-      id: sketch-tree
-      shell: bash
-      env:
-        SKETCH_DIR: ${{ inputs.sketch-dir }}
-      run: |
-        set -euo pipefail
-        printf 'tree=%s\n' "$(git rev-parse "HEAD:${SKETCH_DIR}")" >> "$GITHUB_OUTPUT"
-
-    - name: Restore Godot import cache
-      id: import-cache
-      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: ${{ inputs.sketch-dir }}/.godot
-        key: ${{ runner.os }}-${{ runner.arch }}-godot-import-${{ inputs.godot-version }}-${{ inputs.godot-bin-sha256 }}-${{ steps.sketch-tree.outputs.tree }}
-
     - name: Validate Godot import cache or run clean import
       shell: bash
       env:
         SKETCH_DIR: ${{ inputs.sketch-dir }}
         GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ inputs.godot-version }}/Godot_v${{ inputs.godot-version }}_linux.x86_64
+        CACHE_HIT: ${{ inputs.import-cache-hit }}
+        CLEAN_ON_PUSH_MISS: ${{ inputs.clean-on-push-miss }}
       run: |
         set -euo pipefail
         if ! node scripts/import-stamp.mjs check --sketch "$SKETCH_DIR"; then
-          echo "Import cache miss or stamp mismatch; running clean import"
-          rm -rf "${SKETCH_DIR}/.godot"
-          node scripts/import-stamp.mjs import --sketch "$SKETCH_DIR"
+          if [[ "$CLEAN_ON_PUSH_MISS" == "true" && "$CACHE_HIT" != "true" ]]; then
+            echo "Asset hash changed on push; running clean import to seed immutable cache"
+            rm -rf "${SKETCH_DIR}/.godot"
+            if [[ -d "${SKETCH_DIR}/assets" ]]; then
+              find "${SKETCH_DIR}/assets" -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
+            fi
+            node scripts/import-stamp.mjs import --sketch "$SKETCH_DIR"
+          else
+            if [[ -d "${SKETCH_DIR}/assets" ]]; then
+              if [[ "$CACHE_HIT" == "true" ]]; then
+                find "${SKETCH_DIR}/assets" -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
+              elif [[ -f "${SKETCH_DIR}/.godot/scrapkeep-import.json" ]]; then
+                stamp_head="$(node -e 'try { const s = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8")); if (typeof s.head === "string" && /^[0-9a-f]{7,40}$/.test(s.head)) process.stdout.write(s.head); } catch {}' "${SKETCH_DIR}/.godot/scrapkeep-import.json")"
+                if [[ -n "$stamp_head" ]] && git cat-file -e "${stamp_head}^{commit}" 2>/dev/null; then
+                  find "${SKETCH_DIR}/assets" -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
+                  while IFS= read -r changed_file; do
+                    [[ -f "$changed_file" ]] && touch "$changed_file"
+                  done < <(git diff --no-renames --name-only "${stamp_head}..HEAD" -- "${SKETCH_DIR}/assets")
+                fi
+              fi
+            fi
+            if [[ -d "${SKETCH_DIR}/.godot" ]]; then
+              echo "Import cache miss or stamp mismatch; trying incremental import"
+              if ! node scripts/import-stamp.mjs import --sketch "$SKETCH_DIR"; then
+                echo "Incremental import failed; running clean import"
+                rm -rf "${SKETCH_DIR}/.godot"
+                node scripts/import-stamp.mjs import --sketch "$SKETCH_DIR"
+              fi
+            else
+              echo "Import cache miss; running clean import"
+              node scripts/import-stamp.mjs import --sketch "$SKETCH_DIR"
+            fi
+          fi
         fi

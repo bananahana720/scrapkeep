@@ -30,6 +30,8 @@ export function isHighLoad({ loadStart, loadEnd, cpus }) {
   return peak >= cpus * HIGH_LOAD_RATIO;
 }
 
+const BRIEFS_TRIGGER = /(?:^|\/)sound\/briefs\/|^scripts\/brief-check\.mjs$/;
+
 export function parsePushStdin(text) {
   const ranges = [];
   for (const raw of (text || "").split("\n")) {
@@ -81,8 +83,10 @@ export function planHookChecks(changedFiles, exists = (f) => existsSync(path.joi
   const hasDocsOrPkg = changedFiles.some(
     (f) => isHandoffDocPath(f) || isPackagePath(f) || isSkillPath(f),
   );
+  const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
+  const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
   const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
-  return { jsFiles, hasSketch, hasDocsOrPkg, hasKnownFailing };
+  return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing };
 }
 
 function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
@@ -175,6 +179,26 @@ export function executeHookPlan(
       spawn,
     });
     if (!r2.ok) ok = false;
+  }
+  if (plan.hasSkills) {
+    ranLabels.push("check:skills");
+    const r = runStep(
+      "check:skills",
+      process.execPath,
+      [path.join(cwd, "scripts/check-skills.mjs")],
+      { cwd, spawn },
+    );
+    if (!r.ok) ok = false;
+  }
+  if (plan.hasBriefs) {
+    ranLabels.push("check:briefs");
+    const r = runStep(
+      "check:briefs",
+      process.execPath,
+      [path.join(cwd, "scripts/brief-check.mjs")],
+      { cwd, spawn },
+    );
+    if (!r.ok) ok = false;
   }
   if (plan.hasKnownFailing) {
     ranLabels.push("known-failing");

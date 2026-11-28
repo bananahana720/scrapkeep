@@ -16,7 +16,7 @@ const GAP := 14.0
 const FADE_IN := 0.25
 const HOLD := 1.4
 const FADE_OUT := 0.4
-const BONE := Color("f3ecdc")
+const BONE := UiTokens.BONE
 const LIGHTEN := 0.5
 const TEXT_OUTLINE := 10
 const MIN_CONTRAST := 7.0
@@ -89,13 +89,13 @@ static func _luminance(c: Color) -> float:
 
 
 func extent() -> Vector2:
-	var w := ICON + GAP + UiDraw.width(title, FONT)
+	var w := ICON + GAP + UiFonts.width(title, FONT)
 	if line.is_empty():
 		return Vector2(w, ICON + 8.0)
 	var crew := String(voices(line)["crew"])
 	var h := ICON + 8.0
 	if not crew.is_empty():
-		w = maxf(w, UiDraw.width(crew, LINE_FONT))
+		w = maxf(w, UiFonts.width(crew, LINE_FONT))
 		h += LINE_GAP + LINE_FONT
 	var memo := memo_size()
 	if memo != Vector2.ZERO:
@@ -137,7 +137,7 @@ func drawn_words() -> PackedStringArray:
 
 
 func _draw() -> void:
-	var w := ICON + GAP + UiDraw.width(title, FONT)
+	var w := ICON + GAP + UiFonts.width(title, FONT)
 	var x := (size.x - w) * 0.5
 	var mid := (ICON + 8.0) * 0.5 if not line.is_empty() else size.y * 0.5
 	draw_texture_rect(Icons.texture(icon_id), Rect2(Vector2(x, mid - ICON * 0.5), Vector2(ICON, ICON)), false, Icons.tint(icon_id, color))
@@ -149,7 +149,7 @@ func _draw() -> void:
 	var y := ICON + 8.0 + LINE_GAP
 	var crew := String(voices(line)["crew"])
 	if not crew.is_empty():
-		_words((size.x - UiDraw.width(crew, LINE_FONT)) * 0.5, y + LINE_FONT * 0.5, crew, LINE_FONT)
+		_words((size.x - UiFonts.width(crew, LINE_FONT)) * 0.5, y + LINE_FONT * 0.5, crew, LINE_FONT)
 		y += LINE_FONT + LINE_GAP
 	var memo := memo_size()
 	if memo == Vector2.ZERO:

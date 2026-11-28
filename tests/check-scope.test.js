@@ -1,10 +1,14 @@
-import test from "node:test";
+import test, { describe } from "node:test";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
+const CONCURRENCY = Math.max(2, Math.min(os.availableParallelism(), 8));
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const cases = JSON.parse(
@@ -105,8 +109,8 @@ const contentCases = [
   },
 ];
 
-function git(cwd, ...args) {
-  const child = spawnSync("git", args, {
+async function git(cwd, ...args) {
+  const { stdout } = await execFileAsync("git", args, {
     cwd,
     encoding: "utf8",
     env: {
@@ -117,13 +121,12 @@ function git(cwd, ...args) {
       GIT_COMMITTER_EMAIL: "fixture@example.invalid",
     },
   });
-  assert.equal(child.status, 0, child.stderr);
-  return child.stdout.trim();
+  return stdout.trim();
 }
 
-function commit(cwd, message) {
-  git(cwd, "add", "-A");
-  git(cwd, "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", message);
+async function commit(cwd, message) {
+  await git(cwd, "add", "-A");
+  await git(cwd, "-c", "commit.gpgsign=false", "commit", "-q", "--allow-empty", "-m", message);
   return git(cwd, "rev-parse", "HEAD");
 }
 
@@ -132,51 +135,57 @@ async function write(cwd, file, content) {
   await writeFile(path.join(cwd, file), content);
 }
 
-for (const scenario of [...cases, ...contentCases])
-  test("check:scope classifies " + scenario.name, async () => {
-    const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-scope-"));
-    try {
-      git(temporary, "init", "-q");
-      for (const [file, content] of Object.entries(scenario.baseFiles ?? {}))
-        await write(temporary, file, content);
-      const base = commit(temporary, "base");
-      for (const file of scenario.paths)
-        await write(temporary, file, scenario.contents?.[file] ?? "x\n");
-      const candidate = commit(temporary, "candidate");
-      const child = spawnSync(
-        process.execPath,
-        [
-          path.join(root, "scripts/check-scope.mjs"),
+async function runScope(args) {
+  try {
+    const { stdout, stderr } = await execFileAsync(
+      process.execPath,
+      [path.join(root, "scripts/check-scope.mjs"), ...args],
+      { encoding: "utf8", timeout: 10000 },
+    );
+    return { status: 0, stdout, stderr };
+  } catch (error) {
+    assert.equal(error.signal, null, error.message);
+    return { status: error.code, stdout: error.stdout ?? "", stderr: error.stderr ?? "" };
+  }
+}
+
+describe("check-scope", { concurrency: CONCURRENCY }, () => {
+  for (const scenario of [...cases, ...contentCases])
+    test("check:scope classifies " + scenario.name, async () => {
+      const temporary = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-scope-"));
+      try {
+        await git(temporary, "init", "-q");
+        for (const [file, content] of Object.entries(scenario.baseFiles ?? {}))
+          await write(temporary, file, content);
+        const base = await commit(temporary, "base");
+        for (const file of scenario.paths)
+          await write(temporary, file, scenario.contents?.[file] ?? "x\n");
+        const candidate = await commit(temporary, "candidate");
+        const child = await runScope([
           "--root",
           temporary,
           base,
           candidate,
           ...(scenario.noBuild ? ["--no-build"] : []),
-        ],
-        { encoding: "utf8", timeout: 10000 },
-      );
-      assert.equal(child.error, undefined);
-      assert.equal(child.status, scenario.status, child.stdout + child.stderr);
-      assert.match(child.stdout, new RegExp("^scope: " + scenario.scope + " ", "m"));
-      for (const command of scenario.commands)
-        assert.ok(
-          child.stdout.includes(command),
-          "expected command " + command + "\n" + child.stdout,
-        );
-      for (const file of scenario.paths) assert.ok(child.stdout.includes(file));
-      if (scenario.status === 1) assert.match(child.stdout, /refused: --no-build was given/);
-      if (scenario.paths.length === 0) assert.match(child.stdout, /none \(no changed paths\)/);
-    } finally {
-      await rm(temporary, { recursive: true, force: true });
-    }
-  });
+        ]);
+        assert.equal(child.status, scenario.status, child.stdout + child.stderr);
+        assert.match(child.stdout, new RegExp("^scope: " + scenario.scope + " ", "m"));
+        for (const command of scenario.commands)
+          assert.ok(
+            child.stdout.includes(command),
+            "expected command " + command + "\n" + child.stdout,
+          );
+        for (const file of scenario.paths) assert.ok(child.stdout.includes(file));
+        if (scenario.status === 1) assert.match(child.stdout, /refused: --no-build was given/);
+        if (scenario.paths.length === 0) assert.match(child.stdout, /none \(no changed paths\)/);
+      } finally {
+        await rm(temporary, { recursive: true, force: true });
+      }
+    });
 
-test("check:scope rejects a malformed invocation with exit 2", () => {
-  const child = spawnSync(
-    process.execPath,
-    [path.join(root, "scripts/check-scope.mjs"), "only-one"],
-    { encoding: "utf8", timeout: 10000 },
-  );
-  assert.equal(child.status, 2);
-  assert.match(child.stderr, /Usage/);
+  test("check:scope rejects a malformed invocation with exit 2", async () => {
+    const child = await runScope(["only-one"]);
+    assert.equal(child.status, 2);
+    assert.match(child.stderr, /Usage/);
+  });
 });

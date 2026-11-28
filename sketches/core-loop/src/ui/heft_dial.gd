@@ -3,6 +3,7 @@ extends Control
 const Icons := preload("res://src/ui/icons.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
@@ -26,7 +27,7 @@ var _flash_color := Color.WHITE
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	custom_minimum_size = Vector2(ICON + GAP + RADIUS * 2.0 + GAP + UiDraw.width("VV", FONT), RADIUS * 2.0)
+	custom_minimum_size = Vector2(ICON + GAP + RADIUS * 2.0 + GAP + UiFonts.width("VV", FONT), RADIUS * 2.0)
 	size = custom_minimum_size
 
 

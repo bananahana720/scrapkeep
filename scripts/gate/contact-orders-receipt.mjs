@@ -1,8 +1,8 @@
 #!/usr/bin/env node
-import { realpathSync, writeFileSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { cleanHead, root } from "./clean-head.mjs";
+import { cleanHead, parseReceiptArgs, root, runReceiptCliSync } from "./receipt-cli.mjs";
 import { runAlone } from "./solo-run.mjs";
 
 export const TEST = "contact_orders_all_test";
@@ -92,19 +92,10 @@ export function produce({ cwd = root, run = runAlone } = {}) {
 }
 
 function main(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i += 2) args[argv[i].replace(/^--/, "")] = argv[i + 1];
-  let receipt;
-  try {
-    receipt = produce();
-  } catch (e) {
-    console.error(String(e.message ?? e));
-    return 2;
-  }
-  const text = JSON.stringify(receipt, null, 2) + "\n";
-  if (args.out) writeFileSync(args.out, text);
-  else process.stdout.write(text);
-  return receipt.pass ? 0 : 1;
+  return runReceiptCliSync(() => {
+    const args = parseReceiptArgs(argv);
+    return { receipt: produce(), out: args.out };
+  });
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))

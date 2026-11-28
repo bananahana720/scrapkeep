@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { weeklyNames } from "./gate/weekly.mjs";
+import { globToRegExp } from "./lib/godot-test-runner.mjs";
 
 export const LEDGER_FILE = "project-guide/handoff/KNOWN-FAILING.tsv";
 export const LEDGER_HEADER = ["test", "kind", "cause", "owner", "added", "review"];
@@ -113,15 +114,7 @@ export function parseLedger(text) {
 }
 
 const RESERVED = [TIME_OUT, ERROR_LINE];
-const checkPattern = (named) =>
-  new RegExp(
-    "^" +
-      named
-        .split("*")
-        .map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-        .join(".*") +
-      "$",
-  );
+const checkPattern = (named) => globToRegExp(named);
 
 export function uncoveredChecks(row, { labels = [], timedOut = false, errorLine = false } = {}) {
   if (!row?.checks) return [];
