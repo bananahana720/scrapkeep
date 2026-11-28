@@ -204,13 +204,13 @@ DOC-02	docs.md	G	low	landed	D1	CI silently skips `npm run check:agents` on `.age
 DOC-03	docs.md	G	low	waits on Andrew		Coordinator & Gate model contradicts ruling `el` across `AGENTS.md`, `GEMINI.md`, `ORCHESTRATOR.md`, and `THREADS.md`
 DOC-04	docs.md	S	low	landed	D1	`.codex/agents/*.toml` (7 files) holds retired model pins, asks Codex for `CLAUDE_EFFORT`, includes an orphan agent, and escapes `check:agents`
 DOC-05	docs.md	S	low	landed	D2, D3	`AGENTS.md` and `CONTRIBUTING.md` misstate what `check:docs` checks, and `check:project` duplicates `check:docs`'s link scan
-DOC-06	docs.md	G	low	in flight	D4	Two ADR files share number `TADR-011`, making 32 repo citations ambiguous
+DOC-06	docs.md	G	low	landed	D4	Two ADR files share number `TADR-011`, making 32 repo citations ambiguous
 DOC-07	docs.md	S	low	landed	D2, D3	Live process docs, rules, and skills still prescribe retired `stage/alpha-w<N>`, board-thread, PC-as-Gate, and `/mnt/project-files/` steps
 DOC-08	docs.md	S	low	landed	D1	Skill counts say 11 while 12 skills exist; `scrapkeep-dev-console` is missing from `AI-WORKFLOW.md`, and `.agents/skills/README.md` gives an obsolete registration step
 DOC-09	docs.md	G	low	landed	D2, D3	Four files give conflicting pre-edit read orders, and the cited chain pulls 32 KB to 214+ KB before the first edit
 DOC-10	docs.md	A	low	landed	D2, D3	Worker routing and fallback tier rules are duplicated across 6 pages, driving drift
 DOC-11	docs.md	A	low	landed	D2	Gate policy and verification matrices are duplicated across 5 pages, with `BOT-SHARDS.md` stuck at wave 18–21
-DOC-12	docs.md	B	low	in flight	D4	Orphan config/doc files and retired 3-line pointer stubs linger in live directories and agent rules
+DOC-12	docs.md	B	low	landed	D4	Orphan config/doc files and retired 3-line pointer stubs linger in live directories and agent rules
 DOC-13	docs.md	E	medium	landed	S5	Godot version `4.7.2` is scattered across 112 repo files (32 in this slice), including 6 independent executable scripts/configs
 DOC-14	docs.md	G	low	landed	D1	Antigravity (`safety-gate.mjs`) and Claude Code (`.claude/settings.json`) enforce asymmetric safety boundaries, and `safety-gate.mjs` misses macOS Godot saves
 DOC-15	docs.md	G	low	waits on Andrew	D1 fixed the two writer prompts; the model line in `.claude/settings.json` is left for Andrew	`.claude/settings.json` pins `"model": "opus[1m]"` and `.claude/agents/scrapkeep-writer*.md` contradict `AGENTS.md` push authority
@@ -234,8 +234,8 @@ LEAD-14	leads	A	low	open		The basis-from-a-direction lines that `MathUtil.basis_
 LEAD-15	leads	C	low	open		`combat/warden_mind.gd` reaches `parse_point` through `warden.get_script()`
 LEAD-16	leads	S	low	open		`combat/drill_crew.gd` has a comment above `_die()` that describes nothing in that function. Unit M1 kept it because a content hash in `tests/enemy_drill_crew_asset_test.gd` covers the file
 LEAD-17	leads	A	low	open		`presentation/craft/craft_audio_cues.gd` keeps its own `resolve_bus` beside the one in `presentation/mix_rows.gd` (the file is also delete candidate SOUND-11)
-LEAD-18	leads	S	low	in flight	D4	`design-v3/ABILITY-MUTATIONS.md` and `tools/coordinator/lane-ledger.tsv` still name `Grip.heft_of` and `Harpoon.burst_ready`, which moved in pull request 1296
-LEAD-19	leads	S	low	in flight	D4	Markdown pages still name the `src/core` paths of the four modules unit C1 moved to `tests/support` (`colour_meanings.gd`, `content_registry.gd`, `defence_bars.gd`, `pending_content.gd`); `git grep -n -E "src/core/(colour_meanings|content_registry|defence_bars|pending_content)\.gd" -- "*.md"` finds them
+LEAD-18	leads	S	low	landed	D4	`design-v3/ABILITY-MUTATIONS.md` and `tools/coordinator/lane-ledger.tsv` still name `Grip.heft_of` and `Harpoon.burst_ready`, which moved in pull request 1296
+LEAD-19	leads	S	low	landed	D4	Markdown pages still name the `src/core` paths of the four modules unit C1 moved to `tests/support` (`colour_meanings.gd`, `content_registry.gd`, `defence_bars.gd`, `pending_content.gd`); `git grep -n -E "src/core/(colour_meanings|content_registry|defence_bars|pending_content)\.gd" -- "*.md"` finds them
 LEAD-20	leads	G	low	open		From the review of D3, not confirmed since: on a checkout with no `artifacts/local/` folder, `npm run check:docs` prints eight harmless INFO lines about skills
 LEAD-21	leads	G	low	open		From the first review of S2 (pull request 1293): `scripts/ci/node-tests.mjs` walks the disk, so an untracked `*.test.mjs` under `scripts/` runs locally; `npm test -- --test-name-pattern=...` exits 2; none of the 21 newly listed files has an entry in `DURATION_HINTS_MS`, so the second CI shard may run long
 LEAD-22	leads	F	low	in flight	G1 has the temporary folders	From the reviews of S2: four Node suites leave temporary folders behind (`scripts/worktree-sandbox.test.mjs`, `scripts/crash-harvest.test.mjs`, `scripts/first-timer.test.mjs`, `scripts/gate/display-run.test.mjs`), and `scripts/ledger-audit.test.mjs` asserts a wall-clock time under two seconds
