@@ -180,7 +180,7 @@ func _aim(forward: Vector3) -> Dictionary:
 
 
 func _plate_at(dx: float, dz := 0.0) -> Vector3:
-	var at: Vector3 = _combat._floor_at(_player.ball_position() + Vector3(dx, 2.0, dz))
+	var at: Vector3 = _combat.floor_at(_player.ball_position() + Vector3(dx, 2.0, dz))
 	_combat.plate = {"at": at, "until": _combat._clock + 4.0}
 	return at
 

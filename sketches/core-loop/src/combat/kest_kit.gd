@@ -122,7 +122,7 @@ func flush_discoveries() -> void:
 		if frame <= int(row["frame"]) or (row["framework"] != "" and not ctx.codex.known(row["framework"])):
 			continue
 		_cards_pending.erase(id)
-		combat._discover(id, row["at"])
+		combat.discover(id, row["at"])
 		break
 
 
@@ -408,13 +408,13 @@ func _shell(ball: Vector3, at: Vector3, mult: float) -> void:
 
 
 func _throw_point(ball: Vector3) -> Vector3:
-	var track: Vector3 = combat._floor_at(ball)
+	var track: Vector3 = combat.floor_at(ball)
 	var aim = _ground_hit(_live_aim(), ARC_REACH[_heft_index()])
 	if aim == null:
 		return track
 	var flat: Vector3 = aim - track
 	flat.y = 0.0
-	return combat._floor_at(track + flat.limit_length(12.0))
+	return combat.floor_at(track + flat.limit_length(12.0))
 
 
 func _tag(charge: Dictionary) -> void:
@@ -450,7 +450,7 @@ func _drop(at: Vector3, damage: float, radius: float) -> Dictionary:
 func _drop_mines(ball: Vector3, mult: float) -> void:
 	var count := 2 if int(_knob("ult_volley", 0)) > 0 else 1
 	for i in count:
-		var at: Vector3 = combat._floor_at(ball) + Vector3(1.5 * (i - 0.5) if count == 2 else 0.0, 0.0, 0.0)
+		var at: Vector3 = combat.floor_at(ball) + Vector3(1.5 * (i - 0.5) if count == 2 else 0.0, 0.0, 0.0)
 		_mines.append(_drop(at, 10.0 * mult, 2.5))
 		_bound_mines()
 	_sound("raid_kest_tick")
@@ -468,7 +468,7 @@ func peak(at: Vector3) -> void:
 	_hold_cloak()
 	combat.effects.ring(at, 3.0, ClassDef.KEST_COLOR)
 	if _id != "windhover":
-		_heavy = _drop(_throw_point(at) if _id == "air_raid" else combat._floor_at(at), 30.0 * HEFT_MULT[_heft_index()], 5.0)
+		_heavy = _drop(_throw_point(at) if _id == "air_raid" else combat.floor_at(at), 30.0 * HEFT_MULT[_heft_index()], 5.0)
 		if _id == "minelayer":
 			_mines.append(_heavy)
 			_bound_mines()

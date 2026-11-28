@@ -425,7 +425,7 @@ func start(p: Dictionary) -> void:
 	if ctx.player.kit.hooked:
 		ctx.player.cut_line("ultimate")
 	if ctx.spawner != null and ctx.spawner.fleet.holds.holding():
-		combat._discover("set_piece_breakout", ctx.player.ball_position())
+		combat.discover("set_piece_breakout", ctx.player.ball_position())
 	_record = {"id": _id, "path": p["path"], "seconds": snappedf(float(p["seconds"]), 0.001), "heft_class": _heft_index() + 1,
 		"volley_hits": 0, "landing_hits": 0, "damage": 0.0, "bailed": false, "recalled": false,
 		"fill_seconds": snappedf(_record_fill, 0.01)}
@@ -711,12 +711,12 @@ func _strike(at: Vector3) -> void:
 	if _id == "cable_run" and _leg >= (_plan.get("legs", []) as Array).size():
 		_sable_runs += 1
 		if ctx.codex != null and ctx.codex.known("set_piece"):
-			combat._discover("cable_run", at)
+			combat.discover("cable_run", at)
 		if _sable_runs >= 3:
-			combat._discover("sable_cable_runs", at)
-	combat._discover("set_piece", at)
+			combat.discover("sable_cable_runs", at)
+	combat.discover("set_piece", at)
 	if chain_links >= 3:
-		combat._discover("set_piece_cash_in", at)
+		combat.discover("set_piece_cash_in", at)
 
 
 func report_landing(record: Dictionary, id: String, at: Vector3, result: Array) -> void:
@@ -798,7 +798,7 @@ func _sable_damage(at: Vector3, radius: float, damage: float, limit := 64, landi
 	combat.effects.ring(at, radius, Palette.ARC)
 	var hits := 0
 	var dealt := 0.0
-	for enemy in combat._nearest_list(at, radius, limit):
+	for enemy in combat.nearest_enemies(at, radius, limit):
 		dealt += combat._ult_hit(enemy, "arc", damage, at, landing)
 		hits += 1
 	return [hits, dealt]
@@ -1059,13 +1059,13 @@ func _cannon_landing(at: Vector3, heft: float, chain: float) -> Array:
 	if ctx.codex != null and ctx.codex.known("set_piece"):
 		match discovery:
 			"cannon_fire_mission":
-				combat._discover("cannon_fire_mission", at)
+				combat.discover("cannon_fire_mission", at)
 			"cannon_creeping_barrage":
-				combat._discover("cannon_creeping_barrage", at)
+				combat.discover("cannon_creeping_barrage", at)
 			"cannon_plate_mortar":
-				combat._discover("cannon_plate_mortar", at)
+				combat.discover("cannon_plate_mortar", at)
 	if _cannon_id == "cannon_fire_mission" and hits >= 8:
-		combat._discover("cannon_time_on_target", at)
+		combat.discover("cannon_time_on_target", at)
 	if _cannon_id == "cannon_creeping_barrage":
 		var heading: Vector3 = _ride.heading if _ride != null else Vector3.FORWARD
 		_cannon_call("lane", at, at + heading * 24.4, combat._clock + _beat_len, heft)

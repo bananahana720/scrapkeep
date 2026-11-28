@@ -583,7 +583,7 @@ func _drop_wire_cluster(from_pt: Vector3, to_pt: Vector3, mult: float) -> void:
 	var dmg: float = Weapons.MINI_DAMAGE * CLUSTER_DAMAGE_MULT * mult * od * combat._damage_mod(Weapons.STICKY_CHARGE)
 	for i in count:
 		var t: float = float(i + 1) / float(count + 1)
-		var spot: Vector3 = combat._floor_at(from_pt.lerp(to_pt, t) + Vector3.UP)
+		var spot: Vector3 = combat.floor_at(from_pt.lerp(to_pt, t) + Vector3.UP)
 		var charge: Dictionary = combat.sticky.drop(spot, dmg, Weapons.MINI_RADIUS, Weapons.MINI_FUSE, Weapons.MINI_ARM, 0.0, combat._clock)
 		charge["_source"] = "item_proc"
 		charge["_cluster"] = true
@@ -725,7 +725,7 @@ func _step_tape_echoes(delta: float) -> void:
 
 func _mortar_geometry(f: float) -> Dictionary:
 	var reach := AbilityState.Gauge.scaled(f, MORTAR_REACH_MIN, MORTAR_REACH_MAX)
-	var centre: Vector3 = combat._floor_at(ctx.player.ball_position() + combat._flat_aim() * reach + Vector3.UP)
+	var centre: Vector3 = combat.floor_at(ctx.player.ball_position() + combat._flat_aim() * reach + Vector3.UP)
 	return ctx.player.yours({"kind": "ring", "centre": centre, "radius": MORTAR_RADIUS, "full_radius": MORTAR_RADIUS, "fill": f})
 
 

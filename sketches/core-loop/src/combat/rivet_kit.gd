@@ -1645,7 +1645,7 @@ func _step_cards() -> void:
 		var frame := Engine.get_physics_frames()
 		var known: bool = String(entry["after"]) == "" or (codex != null and codex.known(entry["after"]))
 		if frame > _card_frame and frame > int(entry["queued"]) and known:
-			combat._discover(id, entry["at"])
+			combat.discover(id, entry["at"])
 			_cards.erase(id)
 			_card_frame = frame
 			break

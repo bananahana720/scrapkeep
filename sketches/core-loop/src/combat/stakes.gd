@@ -159,7 +159,7 @@ func _on_hooked(_at: Vector3) -> void:
 
 
 func arc(at: Vector3, targets: int, damage: float, radius := 10.0) -> int:
-	var picks: Array = combat._nearest_list(at, radius, targets)
+	var picks: Array = combat.nearest_enemies(at, radius, targets)
 	for enemy in picks:
 		combat.effects.arc(at, enemy.global_position, Palette.ARC)
 		combat._ult_hit(enemy, "arc", damage, at, false)
