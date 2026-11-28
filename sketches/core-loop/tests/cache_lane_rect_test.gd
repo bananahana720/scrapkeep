@@ -8,7 +8,6 @@ const GameEvents := preload("res://src/core/game_events.gd")
 class RunStub:
 	extends RefCounted
 	func add_part(_id: String, _from: String) -> void: pass
-	func add_relic(_id: String, _from: String) -> void: pass
 
 
 class CtxStub:

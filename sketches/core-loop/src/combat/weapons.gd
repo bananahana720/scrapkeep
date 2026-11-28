@@ -188,7 +188,6 @@ const CLIP_POST_RADIUS := 4.0
 const CLIP_POST_SECONDS := 4.0
 const CLIP_POST_MAX := 3
 const SURGE_PRESSURE := 1
-const SETTLE_SHARE := 0.4
 const CLIP_CAP := [6, 7, 8, 9, 10]
 const ULT_PLATE_AIM_DEG := 30.0
 const AUDIT_STAMP_RADIUS := 4.0
@@ -337,9 +336,7 @@ const LINE_PER_CHARGE := 0.25
 const LINE_MAX_CAUGHT := 3
 
 const STICKY_THROW_MIN := 10.0
-const STICKY_FUSE := 1.2
 const STICKY_MAX_LIVE := preload("res://src/core/devices.gd").STICKY_CAP
-const MINI_COUNT := 3
 const MINI_DAMAGE := 5.3
 const MINI_RADIUS := 1.5
 const MINI_ARM := 0.3
@@ -352,7 +349,6 @@ const ROCKET_MAX := 30.0
 const ROCKET_COOLDOWN := 1.0
 
 const CLOAK_SECONDS := 1.5
-const CLOAK_SIGHT := 0.6
 const CLOAK_CRIT := 2.0
 
 const PIN_MIN_SPEED := 6.0
@@ -363,7 +359,6 @@ const PIN_CAP := 40.0
 const PIN_CARRY := 0.6
 const HULK_SECONDS := 0.6
 
-const SPRINT_PUNCH := 1.25
 
 const POINT_BLANK_RADIUS := 0.5
 const POINT_BLANK_DAMAGE := 2.0

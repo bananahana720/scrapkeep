@@ -10,6 +10,10 @@ const SittingNotes := preload("res://src/core/sitting_notes.gd")
 const FrameLog := preload("res://src/core/frame_log.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const RecipeProps := preload("res://src/presentation/recipe_props.gd")
+const Dispatcher := preload("res://src/combat/dispatcher.gd")
+const RosterDig := preload("res://src/combat/roster_dig.gd")
 const Secrets := preload("res://src/core/secrets.gd")
 const Codex := preload("res://src/core/codex.gd")
 const RunLog := preload("res://src/core/run_log.gd")
@@ -200,7 +204,7 @@ func _ready() -> void:
 	beacon = Beacon.new()
 	beacon.name = "Beacon"
 	add_child(beacon)
-	beacon.setup(PaletteMaterials)
+	beacon.setup(PaletteMaterials, MaterialSlots, RecipeProps, Dispatcher, RosterDig)
 
 	ctx = Context.new(hit_stop)
 	ctx.dev = dev

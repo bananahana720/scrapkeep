@@ -4,6 +4,7 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const Augments := preload("res://src/movement/augments.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
@@ -150,7 +151,7 @@ func _vault_at(speed: float, face_x: float, side: float) -> void:
 func _check_vault(label: String, incoming: float) -> void:
 	var kicks: Array = _facts["vault_kicked"]
 	var fired: float = kicks[-1][1] if kicks.size() > _record["kicks"] else -1.0
-	var want := minf(Augments.VAULT_CAP, incoming * Augments.VAULT_GAIN)
+	var want := minf(Augments.VAULT_CAP, incoming * UpgradeTree.VAULT_GAIN)
 	var speed: float = _player.state.velocity.length()
 	var planar: float = _player.planar_velocity().length()
 	_report(label, kicks.size() == _record["kicks"] + 1 and absf(fired - want) <= want * TOLERANCE and absf(speed - want) <= want * TOLERANCE \
@@ -182,7 +183,7 @@ func _check_locked() -> void:
 	var speed: float = _player.state.velocity.length()
 	_report("face lock", kicks == 2 and speed < 35.0,
 		"A then B kick (%d kicks); back at A inside %.1f s nothing kicks and the ball stays at %.1f m/s, no 54 m/s ping-pong"
-			% [kicks, Augments.VAULT_FACE_COOLDOWN, speed])
+			% [kicks, UpgradeTree.VAULT_FACE_COOLDOWN, speed])
 
 
 func _ping_a_again() -> void:
@@ -192,7 +193,7 @@ func _ping_a_again() -> void:
 
 func _check_unlocked() -> void:
 	var kicks: int = _facts["vault_kicked"].size() - _record["start"]
-	_report("face unlocks", kicks == 3, "after %.1f s face A kicks again (%d kicks in all)" % [Augments.VAULT_FACE_COOLDOWN, kicks])
+	_report("face unlocks", kicks == 3, "after %.1f s face A kicks again (%d kicks in all)" % [UpgradeTree.VAULT_FACE_COOLDOWN, kicks])
 
 
 # Kest rolls into the heavy post with her blink spent and no air jump left: the rebound

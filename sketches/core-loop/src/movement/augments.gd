@@ -5,6 +5,7 @@ const Rules := preload("res://src/movement/ball_rules.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 const GRAPPLE := "grapple"
 const PYLON := "pylon"
@@ -78,7 +79,6 @@ const MOUNT_REPEL_KNOCK := 20.0
 
 const SLINGSHOT_CHARGE := 0.8
 const SLINGSHOT_FULL := 1.3
-const VAULT_GAIN := 1.8
 const ENEMY_MASK := PhysicsLayers.ENEMY_MASK
 const VAULT_CAP := 45.0
 const MASS_FULL := 990.0
@@ -86,7 +86,6 @@ const MASS_BONUS := 8.0
 const MASS_HEFT_DIVISOR := 450.0
 const MASS_GAP := 1.0
 const LAUNCH_CEILING := 45.0
-const VAULT_FACE_COOLDOWN := 1.5
 const SPRINT_CRUISE := 1.25
 const BLINK_DISTANCE := 8.0
 const BLINK_BACKOFF := 0.5
@@ -97,7 +96,6 @@ const SURGE_MIN_SPEED := 2.0
 const SURGE_SCALE := 1.3
 const RECOIL_SCALE := 1.3
 const RECOIL_LIFT := 1.5
-const SKID_KEEP := 0.6
 
 const KEST_AIR_DRAW_GRAVITY := 0.45
 const KEST_AIR_DRAW_MAX_S := 1.2
@@ -156,7 +154,7 @@ static func mass_spend(kit, speed: float) -> float:
 	return add
 
 
-static func vault_exit(incoming: float, jump_speed: float, gain := VAULT_GAIN) -> float:
+static func vault_exit(incoming: float, jump_speed: float, gain := UpgradeTree.VAULT_GAIN) -> float:
 	return minf(VAULT_CAP, maxf(jump_speed, incoming * gain))
 
 

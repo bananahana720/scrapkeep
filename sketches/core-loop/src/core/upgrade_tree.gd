@@ -3,15 +3,12 @@ extends RefCounted
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Devices := preload("res://src/core/devices.gd")
-const GameEvents := preload("res://src/core/game_events.gd")
 const Sable := preload("res://src/core/trees/sable.gd")
 const Rivet := preload("res://src/core/trees/rivet.gd")
 const Kest := preload("res://src/core/trees/kest.gd")
 const Tarn := preload("res://src/core/trees/tarn.gd")
 const Tally := preload("res://src/core/trees/tally.gd")
 const Cannon := preload("res://src/core/trees/cannon.gd")
-const Augments := preload("res://src/movement/augments.gd")
-const Weapons := preload("res://src/combat/weapons.gd")
 
 
 const DEPTHS := 4
@@ -32,23 +29,31 @@ const OFFER_TAKE_OR_SKIP := "take_or_skip"
 const OFFER_FORCED := "forced"
 const NAME_WORDS := 3
 const EFFECT_WORDS := 8
+const VAULT_FACE_COOLDOWN := 1.5
+const VAULT_GAIN := 1.8
+const SKID_KEEP := 0.6
+const SPRINT_PUNCH := 1.25
+const STICKY_FUSE := 1.2
+const CLOAK_SIGHT := 0.6
+const MINI_COUNT := 3
+const SETTLE_SHARE := 0.4
 
 const KNOBS := {
 	"mount_reach": {"default": 1.0}, "grapple_fling": {"default": 0.0}, "air_charge": {"default": 1.0},
-	"mount_cc_immune": {"default": false}, "vault_air": {"default": false}, "vault_lock": {"default": Augments.VAULT_FACE_COOLDOWN, "time": true},
+	"mount_cc_immune": {"default": false}, "vault_air": {"default": false}, "vault_lock": {"default": VAULT_FACE_COOLDOWN, "time": true},
 	"mounted_recharge": {"default": 1.0}, "winch_mount": {"default": false}, "plant_all": {"default": false},
 	"anchor_pulse": {"default": 0.0, "time": true}, "winch_punch": {"default": 1.0}, "discharge_chain": {"default": false},
-	"special_echo": {"default": 0.0, "time": true}, "vault_gain": {"default": Augments.VAULT_GAIN}, "vault_tags": {"default": false},
+	"special_echo": {"default": 0.0, "time": true}, "vault_gain": {"default": VAULT_GAIN}, "vault_tags": {"default": false},
 	"vault_enemies": {"default": false}, "air_turret": {"default": false}, "mounted_autogauge": {"default": false},
 	"winch_bank": {"default": 1.0}, "sentry": {"default": 0.0}, "mount_pulse": {"default": 0.0, "time": true},
 	"plant_repel": {"default": 1.0}, "mass_launch": {"default": false},
-	"sprint_fire_drain": {"default": 1.0}, "sprint_no_rebound": {"default": false}, "sprint_punch": {"default": Weapons.SPRINT_PUNCH},
-	"blast_pull": {"default": false}, "sprint_full_blast": {"default": false}, "skid_keep": {"default": Augments.SKID_KEEP},
+	"sprint_fire_drain": {"default": 1.0}, "sprint_no_rebound": {"default": false}, "sprint_punch": {"default": SPRINT_PUNCH},
+	"blast_pull": {"default": false}, "sprint_full_blast": {"default": false}, "skid_keep": {"default": SKID_KEEP},
 	"overdrive_immune": {"default": false}, "skid_pins": {"default": 1.0}, "crush_refund": {"default": 0.0},
 	"sprint_perpetual": {"default": false}, "sprint_kick": {"default": 0.0}, "sprint_float": {"default": 1.0},
-	"sticky_fuse": {"default": Weapons.STICKY_FUSE}, "sticky_max_live": {"default": Devices.STICKY_CAP},
-	"cloak_sight": {"default": Weapons.CLOAK_SIGHT},
-	"sticky_reach": {"default": Devices.STICKY_CONTACT_REACH}, "mini_count": {"default": Weapons.MINI_COUNT}, "glide_cloak": {"default": false},
+	"sticky_fuse": {"default": STICKY_FUSE}, "sticky_max_live": {"default": Devices.STICKY_CAP},
+	"cloak_sight": {"default": CLOAK_SIGHT},
+	"sticky_reach": {"default": Devices.STICKY_CONTACT_REACH}, "mini_count": {"default": MINI_COUNT}, "glide_cloak": {"default": false},
 	"cloak_keep": {"default": false}, "glide_bombs": {"default": 0.0, "time": true}, "rocket_auto": {"default": false},
 	"line_marks": {"default": 0.0}, "sticky_chain": {"default": 0.0}, "sticky_breach": {"default": 1.0},
 	"sticky_grow": {"default": false}, "slam_fall_scale": {"default": false}, "mini_linger": {"default": 0.0},
@@ -60,7 +65,7 @@ const KNOBS := {
 	"ult_radius": {"default": 0.0},
 	"ult_volley": {"default": 0},
 	"ult_pins": {"default": 1.0},
-	"ult_settle": {"default": Weapons.SETTLE_SHARE},
+	"ult_settle": {"default": SETTLE_SHARE},
 }
 
 const DAMAGE_FACTS := ["enemy_struck", "enemy_killed", "strike_deflected", "enemy_pinned"]
@@ -225,90 +230,6 @@ static func safe_growth_problems(for_class: String, world_one := false) -> Array
 			parent = (parent - 2) / 2 if parent >= 2 else -1
 		out.append_array(safe_pick_problems(for_class, list[i], earlier))
 	return out
-
-
-static func problems(for_class: String, world_one := false) -> Array[String]:
-	var out: Array[String] = []
-	var list := nodes(for_class, world_one)
-	if list.size() != SIZE:
-		out.append("%s has %d nodes, not %d" % [for_class, list.size(), SIZE])
-	var seen := {}
-	var bus: Script = GameEvents
-	var first_leaf := list.size() - 16
-	if world_one:
-		list = list.slice(0, WORLD_ONE_SIZE)
-		first_leaf = WORLD_ONE_SIZE - 4
-	for leaf in range(first_leaf, list.size()):
-		var loop := _proc_loop(for_class, path_to(for_class, list[leaf].get("id", ""), world_one), world_one)
-		if loop != "":
-			out.append("%s: the build ending in %s can loop on %s" % [for_class, list[leaf].get("id", ""), loop])
-	for n in list:
-		var id: String = n.get("id", "")
-		if id == "" or seen.has(id):
-			out.append("%s: missing or repeated id '%s'" % [for_class, id])
-		seen[id] = true
-		var words: int = String(n.get("name", "")).split(" ", false).size()
-		if words < 1 or words > NAME_WORDS:
-			out.append("%s: name has %d words" % [id, words])
-		words = String(n.get("effect", "")).split(" ", false).size()
-		if words < 1 or words > EFFECT_WORDS:
-			out.append("%s: effect has %d words" % [id, words])
-		if not n.get("key", "") in KEYS:
-			out.append("%s: key '%s' is not one of %s" % [id, n.get("key", ""), KEYS])
-		if not String(n.get("icon", "")).begins_with("ab_"):
-			out.append("%s: icon '%s' is not an ab_ id" % [id, n.get("icon", "")])
-		var tags: Array = n.get("tags", [])
-		if tags.is_empty() or tags.any(func(t): return not t in TAGS):
-			out.append("%s: tags %s outside %s" % [id, tags, TAGS])
-		if not OPS.any(func(op): return n.has(op)):
-			out.append("%s: no op" % id)
-		for k in n.get("knob", {}):
-			if not KNOBS.has(k):
-				out.append("%s: unknown knob '%s'" % [id, k])
-		for slot in n.get("swap", {}):
-			var variant: String = n["swap"][slot]
-			if not slot in AbilityState.SWAPPABLE or not AbilityState.ABILITIES.has(variant):
-				out.append("%s: swap %s -> %s is not a slot and ability row" % [id, slot, variant])
-		for slot in n.get("charges", {}):
-			if not slot in AbilityState.SLOTS or int(n["charges"][slot]) < 1:
-				out.append("%s: charges %s" % [id, n["charges"]])
-		for slot in n.get("cooldown", {}):
-			if not slot in AbilityState.SLOTS:
-				out.append("%s: cooldown slot %s" % [id, slot])
-		for weapon in n.get("pattern", {}):
-			if not weapon in Weapons.ALL:
-				out.append("%s: pattern for unknown weapon %s" % [id, weapon])
-				continue
-			var base: Resource = Weapons.base(weapon)
-			for part in n["pattern"][weapon]:
-				for key in n["pattern"][weapon][part]:
-					if not part in ["set", "add", "mul", "min"] or base.get(key) == null:
-						out.append("%s: pattern %s.%s" % [id, part, key])
-		for p in n.get("proc", []):
-			if not ACTIONS.has(p.get("do", "")) or not bus.has_script_signal(p.get("on", "")):
-				out.append("%s: proc %s" % [id, p])
-	return out
-
-
-static func _proc_loop(for_class: String, build: Array[String], world_one := false) -> String:
-	var links := {}
-	for id in build:
-		for p in node(for_class, id, world_one).get("proc", []):
-			if not links.has(p["on"]):
-				links[p["on"]] = []
-			links[p["on"]].append_array(ACTIONS.get(p["do"], []))
-	for start in links:
-		var frontier: Array = links[start].duplicate()
-		var visited := {}
-		while not frontier.is_empty():
-			var fact = frontier.pop_back()
-			if fact == start:
-				return start
-			if visited.has(fact):
-				continue
-			visited[fact] = true
-			frontier.append_array(links.get(fact, []))
-	return ""
 
 
 func reset(for_class: String) -> void:

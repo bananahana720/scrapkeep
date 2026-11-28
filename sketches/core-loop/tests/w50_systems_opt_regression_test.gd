@@ -120,11 +120,11 @@ func _test_run_state_ingots_and_overrides() -> void:
 	_check(is_equal_approx(run.base_max_hp(), normal_hp * 0.5),
 		"hull_half halves base_max_hp")
 
-	Fabricators.ingots_from_doc(run, {"1": 2, "2": 1, "3": 0})
+	run.ingots_from_doc({"1": 2, "2": 1, "3": 0})
 	run.snapshot(Vector3.ZERO, Vector3.ZERO, 0.0)
-	Fabricators.ingots_from_doc(run, {"1": 5, "2": 3, "3": 1})
+	run.ingots_from_doc({"1": 5, "2": 3, "3": 1})
 	run.restore()
-	var restored_ingots := Fabricators.scrap_ingots(run)
+	var restored_ingots := run.scrap_ingots()
 	_check(int(restored_ingots.get(1, 0)) == 2 and int(restored_ingots.get(2, 0)) == 1,
 		"RunState.restore rewinds scrap_ingots to checkpoint")
 

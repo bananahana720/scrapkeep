@@ -2,10 +2,6 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const MaterialSlots := preload("res://src/presentation/material_slots.gd")
-const RecipeProps := preload("res://src/presentation/recipe_props.gd")
-const Dispatcher := preload("res://src/combat/dispatcher.gd")
-const ROSTER_DIG_PATH := "res://src/combat/roster_dig.gd"
 
 
 enum { IDLE, CHARGING, READY }
@@ -23,13 +19,6 @@ static var _shared_mast_mat: StandardMaterial3D
 static var _shared_lantern_bulb: SphereMesh
 static var _shared_mast_bulb: SphereMesh
 static var _shared_torus: TorusMesh
-static var _roster_dig = null
-
-
-static func _dig_roster():
-	if _roster_dig == null and ResourceLoader.exists(ROSTER_DIG_PATH):
-		_roster_dig = load(ROSTER_DIG_PATH)
-	return _roster_dig
 
 var phase := IDLE
 var progress := 0.0
@@ -49,9 +38,18 @@ var _last_tint := Color(-1.0, -1.0, -1.0, -1.0)
 var _last_f := -1.0
 var _dig_drain_pending := false
 var _dispatcher_warmed := false
+var _slots: GDScript
+var _props: GDScript
+var _dispatcher: GDScript
+var _dig: GDScript
 
 
-func setup(materials: GDScript) -> void:
+func setup(materials: GDScript, slots: GDScript, props: GDScript, dispatcher: GDScript, dig: GDScript) -> void:
+	assert(materials != null and slots != null and props != null and dispatcher != null and dig != null, "beacon.setup needs the palette materials, material slots, recipe props, dispatcher and dig roster scripts")
+	_slots = slots
+	_props = props
+	_dispatcher = dispatcher
+	_dig = dig
 	_last_tint = Color(-1.0, -1.0, -1.0, -1.0)
 	_last_f = -1.0
 	var tint := tint_color()
@@ -124,23 +122,21 @@ func _process(_delta: float) -> void:
 
 
 func begin_dig_drain() -> void:
-	var dig = _dig_roster()
-	_dig_drain_pending = not (_dispatcher_warmed and (dig == null or dig.drain_complete()))
+	assert(_dig != null, "beacon.begin_dig_drain before beacon.setup handed in the dig roster")
+	_dig_drain_pending = not (_dispatcher_warmed and _dig.drain_complete())
 
 
 func drain_dig_burst(budget_usec: int = DIG_DRAIN_BUDGET_USEC) -> bool:
+	assert(_dig != null and _dispatcher != null, "beacon.drain_dig_burst before beacon.setup handed in the dispatcher and dig roster")
 	var start := Time.get_ticks_usec()
-	var dig = _dig_roster()
 	if not _dispatcher_warmed:
-		Dispatcher.warm_shared()
+		_dispatcher.warm_shared()
 		_dispatcher_warmed = true
 		if Time.get_ticks_usec() - start >= budget_usec:
-			return dig == null or dig.drain_complete()
-	if dig == null:
-		return true
+			return _dig.drain_complete()
 	var remaining := maxi(budget_usec - (Time.get_ticks_usec() - start), 500)
-	var step: Dictionary = dig.tile_drain_step(remaining)
-	return bool(step.get("done", dig.drain_complete()))
+	var step: Dictionary = _dig.tile_drain_step(remaining)
+	return bool(step.get("done", _dig.drain_complete()))
 
 
 func _lantern() -> bool:
@@ -166,7 +162,7 @@ func _lantern() -> bool:
 				continue
 			var source := view.mesh.surface_get_material(0)
 			var slot := String(source.resource_name) if source != null else ""
-			var path := String(MaterialSlots.row(slot).get("path", ""))
+			var path := String(_slots.row(slot).get("path", ""))
 			if not path.is_empty():
 				if not _slot_materials.has(path):
 					_slot_materials[path] = load(path) if ResourceLoader.exists(path) else null
@@ -176,9 +172,9 @@ func _lantern() -> bool:
 				_state_views.append(view)
 			if root == lens:
 				_lens_centre = lens.transform * _relative(view, lens) * view.mesh.get_aabb().get_center()
-	for shell in RecipeProps.shells("lantern_beacon", self, Transform3D.IDENTITY):
+	for shell in _props.shells("lantern_beacon", self, Transform3D.IDENTITY):
 		var view := shell as MeshInstance3D
-		if view.get_surface_override_material(0) == RecipeProps.slot_material("steel"):
+		if view.get_surface_override_material(0) == _props.slot_material("steel"):
 			_state_views.append(view)
 	return true
 

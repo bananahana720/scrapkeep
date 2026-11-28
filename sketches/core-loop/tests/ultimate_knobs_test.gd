@@ -1,6 +1,7 @@
 extends SceneTree
 
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -73,7 +74,7 @@ func _run() -> void:
 		fixture["key"] = "ultimate"
 		fixture["knob"] = {knob: values[knob]}
 		list[0] = fixture
-		var issues: Array = fixture_tree.problems("pylon_engineer")
+		var issues: Array = TreeProblems.problems("pylon_engineer", false, fixture_tree)
 		_t.check("%s validates" % knob, issues.is_empty(), str(issues))
 		if not UpgradeTree.KNOBS.has(knob):
 			list[0] = original

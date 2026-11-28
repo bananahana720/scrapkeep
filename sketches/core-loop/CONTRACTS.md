@@ -105,7 +105,7 @@ Every number there is a starting value; tuning edits `park_defs.gd` / `alpha_def
 | `set_max_hp(value)` | new ceiling; a raise heals by the gain | nothing |
 | `heal(amount)` | heals up to the ceiling | nothing |
 | `damage(amount, source)` | lowers HP | `player_hit(amount, source)`, then `player_died` at 0 |
-| `record_kill(kind, at, scrap_value)` | counts a kill | `enemy_killed(kind, at, scrap_value)` |
+| `record_kill(kind, at, scrap_value)` | counts a kill; asserts that `run.specials` was handed in (`combat.setup` sets it from `Roster.SPECIALS`) | `enemy_killed(kind, at, scrap_value)`, then `special_broken(kind)` for a kind in `run.specials` |
 | `record_milestone(event_id)` | counts an event won | `milestone_won(event_id)` |
 
 These fields and methods are readable:
@@ -626,7 +626,7 @@ One binary tree per pilot (DESIGN-V2 §15). There are four picks: the start pick
   - `icon`: an `ab_` id.
   - `tags`: an Array from `UpgradeTree.TAGS`.
   - One or more ops: `swap`, `knob`, `proc`, `pattern`, `charges` or `cooldown`. The header of `upgrade_tree.gd` says what each op does.
-  - `UpgradeTree.problems(class_id)` is the validator. `tree_data_test` fails on any sentence it returns.
+  - `TreeProblems.problems(class_id)` in `tests/support/tree_problems.gd` is the validator. `tree_data_test` fails on any sentence it returns.
 - **Picking.**
   - `offered(class_id, depth) -> Array` returns the two node records a pick chooses between. At depth 1 that is the root pair; after that it is the children of the pick one depth up. It returns `[]` for a depth not reached yet or for another class.
   - `pick(node_id) -> bool` takes an offered node. It refuses anything that was not offered and anything past the picks opened so far.

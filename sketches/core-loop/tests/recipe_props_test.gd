@@ -6,6 +6,9 @@ extends SceneTree
 
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
+const MaterialSlots := preload("res://src/presentation/material_slots.gd")
+const Dispatcher := preload("res://src/combat/dispatcher.gd")
+const RosterDig := preload("res://src/combat/roster_dig.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const T := preload("res://tests/support/t.gd")
 const LIVE := ["ore_cart", "lantern_beacon", "valve_wheel", "valve_wheel_mount", "barge", "kicker_wedge", "moss_jukebox",
@@ -97,7 +100,7 @@ func _check_base(key: String, xform: Transform3D) -> void:
 func _check_beacon() -> void:
 	var beacon := Beacon.new()
 	root.add_child(beacon)
-	beacon.setup(PaletteMaterials)
+	beacon.setup(PaletteMaterials, MaterialSlots, RecipeProps, Dispatcher, RosterDig)
 	_t.check("beacon carries the frame GLB", beacon.get_node_or_null("LanternFrame") != null)
 	_t.check("beacon carries the lens GLB", beacon.get_node_or_null("LanternLens") != null)
 	var wanted: Dictionary = {}

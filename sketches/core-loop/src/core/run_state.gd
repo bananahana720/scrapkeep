@@ -2,11 +2,9 @@ extends RefCounted
 
 
 const Companion := preload("res://src/core/companion.gd")
-const Relics := preload("res://src/build/relics.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
 const Profile := preload("res://src/core/profile.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
-const Roster := preload("res://src/combat/roster.gd")
 const Panels := preload("res://src/build/panels.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const MetaOptions := preload("res://src/core/meta_options.gd")
@@ -28,6 +26,7 @@ const SPILL_SHARE := 0.75
 const SPILL_CLUSTERS := 6
 const WEAR_PER_MINUTE := 30.0
 const CLASS_HYSTERESIS := 0.05
+const INGOT_TIERS := [1, 2, 3]
 
 signal armor_hit(removed: float, spill: int, source: String)
 signal wear_taken(removed: float)
@@ -52,6 +51,8 @@ var consumables: Array[String] = []
 var consumable_slots := CONSUMABLE_SLOTS_DEFAULT
 var consumable_grace_left := 0.0
 var relics := {}
+var _scrap_ingots := {1: 0, 2: 0, 3: 0}
+var specials = null
 var kills := 0
 var events_won: Array[String] = []
 var run_time := 0.0
@@ -199,7 +200,8 @@ func begin(chosen_class: Resource) -> void:
 	retries_spent = {}
 	death_save_spent = false
 	extra = {}
-	for meta_key in ["w50_scrap_ingots", "w50_consumable_state", "w50_trade_contracts", "w50_companion_salvage"]:
+	reset_ingots()
+	for meta_key in ["w50_consumable_state", "w50_trade_contracts", "w50_companion_salvage"]:
 		if has_meta(meta_key):
 			remove_meta(meta_key)
 	_loaded_class_id = ""
@@ -588,11 +590,45 @@ func consumable_grace_active() -> bool:
 	return consumable_grace_left > 0.0 and alive()
 
 
-func add_relic(relic_id: String, source: String) -> bool:
-	if not Relics.can_hold(relic_id, class_id(), relics):
+func hold_relic(relic_id: String, slot: String, part_id: String, source: String) -> void:
+	relics[slot] = relic_id
+	events.part_gained.emit(part_id, source)
+
+
+func scrap_ingots() -> Dictionary:
+	return {1: int(_scrap_ingots.get(1, 0)), 2: int(_scrap_ingots.get(2, 0)), 3: int(_scrap_ingots.get(3, 0))}
+
+
+func ingot_count(tier: int) -> int:
+	if not tier in INGOT_TIERS:
+		return 0
+	return int(_scrap_ingots.get(tier, 0))
+
+
+func add_ingots(tier: int, count: int) -> void:
+	_scrap_ingots[tier] = int(_scrap_ingots.get(tier, 0)) + count
+
+
+func reset_ingots() -> void:
+	_scrap_ingots = {1: 0, 2: 0, 3: 0}
+
+
+func ingots_to_doc() -> Dictionary:
+	var counts := scrap_ingots()
+	return {"1": int(counts[1]), "2": int(counts[2]), "3": int(counts[3])}
+
+
+func ingots_from_doc(doc) -> bool:
+	if not (doc is Dictionary):
 		return false
-	relics[Relics.slot_of(relic_id)] = relic_id
-	events.part_gained.emit(Relics.part_of(relic_id), source)
+	var next := {}
+	for t in INGOT_TIERS:
+		var raw = doc.get(str(t), doc.get(t, 0))
+		if not (typeof(raw) == TYPE_INT or typeof(raw) == TYPE_FLOAT) or not is_finite(float(raw)) \
+				or float(raw) < 0.0 or float(raw) != floorf(float(raw)):
+			return false
+		next[t] = int(raw)
+	_scrap_ingots = next
 	return true
 
 
@@ -808,7 +844,8 @@ func record_kill(kind: String, at: Vector3, scrap_value: int, source := "") -> v
 	kills += 1
 	last_kill_triggerless = source in TRIGGERLESS_SOURCES
 	events.enemy_killed.emit(kind, at, scrap_value)
-	if kind in Roster.SPECIALS: events.special_broken.emit(kind)
+	assert(specials is Array, "RunState.record_kill before combat.setup handed in the specials list (run.specials)")
+	if kind in specials: events.special_broken.emit(kind)
 	last_kill_triggerless = false
 	kill_tags = {}
 
@@ -871,7 +908,7 @@ func snapshot(entry_position: Vector3, entry_velocity: Vector3, camera_yaw: floa
 		"panels": panels.duplicate(),
 		"consumables": consumables.duplicate(),
 		"consumable_slots": consumable_slots,
-		"scrap_ingots": preload("res://src/build/fabricators.gd").ingots_to_doc(self),
+		"scrap_ingots": ingots_to_doc(),
 		"relics": relics.duplicate(),
 		"kills": kills,
 		"events_won": events_won.duplicate(),
@@ -945,9 +982,9 @@ func restore() -> void:
 	consumables.assign(_snapshot.get("consumables", []))
 	consumable_slots = clampi(int(_snapshot.get("consumable_slots", CONSUMABLE_SLOTS_DEFAULT)), CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
 	if _snapshot.has("scrap_ingots"):
-		preload("res://src/build/fabricators.gd").ingots_from_doc(self, _snapshot["scrap_ingots"])
+		ingots_from_doc(_snapshot["scrap_ingots"])
 	else:
-		preload("res://src/build/fabricators.gd").reset_ingots(self)
+		reset_ingots()
 	relics = (_snapshot.get("relics", {}) as Dictionary).duplicate()
 	kills = _snapshot["kills"]
 	events_won.assign(_snapshot["events_won"])
@@ -1080,7 +1117,7 @@ func to_entrance_doc(tree = null) -> Dictionary:
 		doc["consumables"] = Array(consumables)
 	if consumable_slots > CONSUMABLE_SLOTS_DEFAULT:
 		doc["consumable_slots"] = consumable_slots
-	var ingot_doc: Dictionary = preload("res://src/build/fabricators.gd").ingots_to_doc(self)
+	var ingot_doc := ingots_to_doc()
 	if int(ingot_doc.get("1", 0)) > 0 or int(ingot_doc.get("2", 0)) > 0 or int(ingot_doc.get("3", 0)) > 0:
 		doc["scrap_ingots"] = ingot_doc
 	if arrived_core > 0:
@@ -1273,9 +1310,9 @@ func from_entrance_doc(doc) -> bool:
 	consumables.assign(doc.get("consumables", []))
 	consumable_slots = clampi(int(doc.get("consumable_slots", CONSUMABLE_SLOTS_DEFAULT)), CONSUMABLE_SLOTS_DEFAULT, CONSUMABLE_SLOTS_MAX)
 	if doc.has("scrap_ingots"):
-		preload("res://src/build/fabricators.gd").ingots_from_doc(self, doc["scrap_ingots"])
+		ingots_from_doc(doc["scrap_ingots"])
 	else:
-		preload("res://src/build/fabricators.gd").reset_ingots(self)
+		reset_ingots()
 	relics = (doc["relics"] as Dictionary).duplicate() if doc.has("relics") else {}
 	kills = int(doc["kills"])
 	events_won.assign(doc["events_won"])

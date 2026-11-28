@@ -1,6 +1,7 @@
 extends SceneTree
 
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
@@ -41,7 +42,7 @@ func _initialize() -> void:
 
 func _structure(def) -> void:
 	var list := UpgradeTree.nodes(def.id)
-	var problems := UpgradeTree.problems(def.id)
+	var problems := TreeProblems.problems(def.id)
 	_report("%s nodes" % def.display_name, list.size() == 30 and problems.is_empty(),
 		"%d nodes; problems %s" % [list.size(), problems])
 	var by_depth := [0, 0, 0, 0, 0]

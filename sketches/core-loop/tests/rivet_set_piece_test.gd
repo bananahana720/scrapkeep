@@ -5,6 +5,7 @@ const RunState := preload("res://src/core/run_state.gd")
 
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const RivetTree := preload("res://src/core/trees/rivet.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
@@ -1117,7 +1118,7 @@ func _run() -> void:
 	_t.check("every depth-4 node turns one ultimate knob", nodes.slice(14).all(func(n): return n.get("knob", {}).keys().filter(func(k): return String(k).begins_with("ult_")).size() == 1))
 	_t.eq("depths 1 and 2 carry no ultimate op", nodes.slice(0, 6).filter(func(n): return n.has("swap") and n["swap"].has("ultimate") or n.get("knob", {}).keys().any(func(k): return String(k).begins_with("ult_"))), [])
 	_t.check("every changed node stays with Rivet (class_id, capped)", nodes.slice(6).all(func(n): return n.get("class_id", "") == "runner_gunner" and n.get("stack_rule", "") == "capped"))
-	_t.eq("the tree is sound", UpgradeTree.problems("runner_gunner"), [])
+	_t.eq("the tree is sound", TreeProblems.problems("runner_gunner"), [])
 	var tree := UpgradeTree.new()
 	tree.reset("runner_gunner")
 	var sweep_ok := true

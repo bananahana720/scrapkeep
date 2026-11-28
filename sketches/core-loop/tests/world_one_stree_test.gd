@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Sable := preload("res://src/core/trees/sable.gd")
@@ -192,7 +193,7 @@ func _seam() -> void:
 		"Rivet and Kest read NODES_WORLD_ONE with the flag on and NODES with the flag off")
 	_check("flag off reads NODES", UpgradeTree.nodes(CLASS_ID, false) == Sable.NODES and UpgradeTree.TREES[CLASS_ID] == Sable.NODES and Sable.NODES[9]["id"] == "s_face_runner"
 		and Sable.NODES[9]["knob"]["vault_lock"] == 1.0, "TREES and NODES untouched, base Face Runner at index 9 with lock %.1f" % Sable.NODES[9]["knob"]["vault_lock"])
-	var problems := UpgradeTree.problems(CLASS_ID, true)
+	var problems := TreeProblems.problems(CLASS_ID, true)
 	_check("world-one Sable tree passes the node rules", problems.is_empty(), "%s" % [problems])
 
 

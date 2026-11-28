@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const TallyTree := preload("res://src/core/trees/tally.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 const AllyHusk := preload("res://src/combat/ally_husk.gd")
@@ -19,7 +20,7 @@ const T := preload("res://tests/support/t.gd")
 
 # W47-TALLY-B-CODE Ghost Shift end-to-end verification:
 # - Tree placement zero-churn invariants (all 30 tl_* IDs & binary heap unchanged,
-#   effects <= 8 words, UpgradeTree.problems empty, tl_corner_plate / tl_plate_rack / tl_return_slip ops).
+#   effects <= 8 words, TreeProblems.problems empty, tl_corner_plate / tl_plate_rack / tl_return_slip ops).
 # - Eligibility & zero "Spare Shift" boss fallback husks (6 s ordinary Fleet wrecks only;
 #   never Wardens, bosses, Rogues, ancients, or Fleet spectators).
 # - Raising via gather_plate & link_clips drive-by; 12 s shift; 60% base damage;
@@ -155,8 +156,8 @@ func _check_tree_invariants() -> void:
 	var nodes := UpgradeTree.nodes("tally")
 	var ids: Array = nodes.map(func(n): return String(n["id"]))
 	_t.eq("all 30 tl_* IDs and heap indices unchanged", ids, EXPECTED_TL_IDS)
-	_t.eq("UpgradeTree.problems(tally) is empty", UpgradeTree.problems("tally"), [])
-	_t.eq("UpgradeTree.problems(tally, world_one) is empty", UpgradeTree.problems("tally", true), [])
+	_t.eq("TreeProblems.problems(tally) is empty", TreeProblems.problems("tally"), [])
+	_t.eq("TreeProblems.problems(tally, world_one) is empty", TreeProblems.problems("tally", true), [])
 	_t.eq("UpgradeTree.safe_growth_problems(tally) is empty", UpgradeTree.safe_growth_problems("tally"), [])
 	var max_words := 0
 	for n in nodes:

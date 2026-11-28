@@ -426,7 +426,7 @@ func _check_hud_consumable_carousel_and_shop_faces() -> void:
 	ws.counter.press(scrap0)
 	await _frames(1)
 	var t_scrapped := Fabricators.tier_of(scrapped_id)
-	_t.check("Scrapper tile converts part to rarity-matched Scrap Ingot", Fabricators.ingot_count(run, t_scrapped) >= 1)
+	_t.check("Scrapper tile converts part to rarity-matched Scrap Ingot", run.ingot_count(t_scrapped) >= 1)
 	var press_target = ws.counter.tile_for("press", 0)
 	if press_target != null:
 		var target_id := String(press_target.rec["part_id"])

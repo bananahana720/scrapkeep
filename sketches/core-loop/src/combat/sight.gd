@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Weapons := preload("res://src/combat/weapons.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 const REACH := {"chaser": 40.0, "lobber": 75.0, "miniboss": 40.0}
 const DEFAULT_REACH := 40.0
@@ -24,7 +24,7 @@ func sees() -> bool:
 	var enemy = _enemy.get_ref()
 	if enemy == null:
 		return true
-	var share: float = combat.cloak_sight() if combat.has_method("cloak_sight") else Weapons.CLOAK_SIGHT
+	var share: float = combat.cloak_sight() if combat.has_method("cloak_sight") else UpgradeTree.CLOAK_SIGHT
 	return enemy.global_position.distance_to(player.ball_position()) <= reach * share
 
 

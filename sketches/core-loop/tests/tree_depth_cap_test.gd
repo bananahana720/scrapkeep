@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 
 # Rule: the default tree profile caps worlds 1, 2 and 3+ at depths 2, 3 and 4.
 # Both world pick openers read the world index, not the global stage. Walk every
@@ -74,8 +75,8 @@ func _structure(def) -> void:
 	for i in list.size():
 		if UpgradeTree.depth_of(i) == 4:
 			endpoints += 1
-	var problems := UpgradeTree.problems(def.id)
-	var world_one_problems := UpgradeTree.problems(def.id, true)
+	var problems := TreeProblems.problems(def.id)
+	var world_one_problems := TreeProblems.problems(def.id, true)
 	_report("%s structure" % def.display_name,
 		list.size() == 30 and endpoints == 16 and problems.is_empty() and world_one_problems.is_empty(),
 		"%d nodes, %d endpoints; full problems %s; world-one problems %s"

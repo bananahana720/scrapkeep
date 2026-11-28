@@ -147,7 +147,7 @@ func reset_run() -> void:
 	_left_empty = false
 	talks = {"beat": -1, "used": {}, "loops": 0, "relented": false}
 	if ctx != null and ctx.run != null:
-		Fabricators.reset_ingots(ctx.run)
+		ctx.run.reset_ingots()
 
 
 static func line(line_id: String) -> Dictionary:
@@ -201,7 +201,7 @@ func _stock_stage(here: Array) -> void:
 		"consumables": consumable_stock.duplicate(true),
 		"tri_terminal": tri_terminal.duplicate(true),
 		"tri_terminal_closed": tri_terminal_closed,
-		"ingots": Fabricators.ingots_to_doc(ctx.run),
+		"ingots": ctx.run.ingots_to_doc(),
 		"top": top.duplicate(true),
 		"rng": _rng.state,
 	}
@@ -237,7 +237,7 @@ func rewind_stage() -> void:
 	tri_terminal = (kept.get("tri_terminal", []) as Array).duplicate(true)
 	tri_terminal_closed = bool(kept.get("tri_terminal_closed", false))
 	if kept.has("ingots"):
-		Fabricators.ingots_from_doc(ctx.run, kept["ingots"])
+		ctx.run.ingots_from_doc(kept["ingots"])
 	top = kept["top"].duplicate(true)
 	_rng.state = kept["rng"]
 
@@ -835,7 +835,7 @@ func _refund(amount: int) -> void:
 
 
 func ingot_counts() -> Dictionary:
-	return Fabricators.scrap_ingots(ctx.run if ctx != null else null)
+	return ctx.run.scrap_ingots() if ctx != null and ctx.run != null else {1: 0, 2: 0, 3: 0}
 
 
 func scrap_to_ingot(part_id: String) -> Dictionary:
