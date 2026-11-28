@@ -1,10 +1,10 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const SHADER := preload("res://src/presentation/launch_take.gdshader")
 const RewardGates := preload("res://src/build/reward_gates.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
 enum { IDLE, WIND, COVER, HOLD, REVEAL }

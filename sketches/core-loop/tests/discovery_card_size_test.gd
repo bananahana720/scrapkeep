@@ -2,7 +2,7 @@ extends SceneTree
 
 const Banner := preload("res://src/presentation/codex_banner.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const CombatCodex := preload("res://src/combat/codex_entries.gd")
 const BossCodex := preload("res://src/boss/codex_entries.gd")

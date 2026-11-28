@@ -13,7 +13,7 @@ const DangerMark := preload("res://src/ui/danger_mark.gd")
 const Chaser := preload("res://src/combat/chaser.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Projectile := preload("res://src/combat/projectile.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("danger_mark_source_test")

@@ -1,11 +1,11 @@
 extends PanelContainer
 
 const Panels := preload("res://src/build/panels.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 
 
 const VIEW := Vector2i(300, 240)

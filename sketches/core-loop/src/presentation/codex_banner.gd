@@ -1,7 +1,7 @@
 extends Control
 
 const CodexStyle := preload("res://src/presentation/codex_style.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const ScreenBusy := preload("res://src/ui/screen_busy.gd")
 

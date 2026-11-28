@@ -1,6 +1,6 @@
 # The UI audit loop
 
-Andrew, 13 Nov 2026: he asked what UI and UX best practice carries over to the game, and for "a formal verification loop so we can audit and improve the game ... from a learning sort of format". This page is the loop. It is the home for how the game's UI is audited; the rules for words and screen structure stay in [LEGIBILITY.md](../LEGIBILITY.md) section 13, and the sizes and colours in `src/ui/ui_tokens.gd`.
+Andrew, 13 Nov 2026: he asked what UI and UX best practice carries over to the game, and for "a formal verification loop so we can audit and improve the game ... from a learning sort of format". This page is the loop. It is the home for how the game's UI is audited; the rules for words and screen structure stay in [LEGIBILITY.md](../LEGIBILITY.md) section 13, and the sizes and colours in `src/core/ui_tokens.gd`.
 
 ```
 1 Principles ──▶ 2 Check ──▶ 3 Findings ledger ──▶ 4 Fix ──▶ 5 Lesson

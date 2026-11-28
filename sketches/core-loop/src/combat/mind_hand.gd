@@ -1,7 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const Habits := preload("res://src/combat/habits.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const AllyHusk := preload("res://src/combat/ally_husk.gd")
 

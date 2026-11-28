@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Objectives := preload("res://src/core/objectives.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
 
 # The objective board on the slice table (design-v3/LEGIBILITY.md, "A goal exists" and the

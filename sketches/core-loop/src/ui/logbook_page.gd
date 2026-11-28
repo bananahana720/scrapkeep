@@ -1,11 +1,11 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const CreditsHint := preload("res://src/ui/credits_hint.gd")
 const PilotStory := preload("res://src/core/pilot_story.gd")
 const WorkOrders := preload("res://src/core/work_orders.gd")

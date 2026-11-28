@@ -1,15 +1,15 @@
 extends Button
 
 const Parts := preload("res://src/build/parts.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const Attachments := preload("res://src/build/attachments.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 
 const PIP := 6.0

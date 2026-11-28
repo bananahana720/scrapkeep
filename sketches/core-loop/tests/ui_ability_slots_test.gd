@@ -11,7 +11,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 
 # The ability bar reads W3's published slots (player.abilities.slots()) through the UI's

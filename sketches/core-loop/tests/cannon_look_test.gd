@@ -9,7 +9,7 @@ extends SceneTree
 const ClassDef := preload("res://src/core/class_def.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")

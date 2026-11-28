@@ -1,6 +1,6 @@
 extends Control
 
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 

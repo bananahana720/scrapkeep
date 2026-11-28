@@ -92,8 +92,8 @@ func _reading() -> void:
 	var plate := ChasePlate.new(ChasePlate.reading(profile, 1, two))
 	var pips: Array = plate.find_child("Pips", true, false).get_children()
 	_t.check("one pip per secret, the found ones first as stars", pips.size() == Secrets.WORLD_CODEX[1].size()
-		and pips.slice(0, 2).all(func(p): return p.texture == preload("res://src/ui/icons.gd").shape("star"))
-		and pips.slice(2).all(func(p): return p.texture == preload("res://src/ui/icons.gd").shape("ring")), str(pips.size()))
+		and pips.slice(0, 2).all(func(p): return p.texture == preload("res://src/core/icons.gd").shape("star"))
+		and pips.slice(2).all(func(p): return p.texture == preload("res://src/core/icons.gd").shape("ring")), str(pips.size()))
 	plate.free()
 
 

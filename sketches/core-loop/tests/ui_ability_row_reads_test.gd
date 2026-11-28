@@ -4,8 +4,8 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const ControlsDiagram := preload("res://src/ui/controls_diagram.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W1-06 (PF-21, w37 film 014, 022, 059, 071): the ability row explains itself.

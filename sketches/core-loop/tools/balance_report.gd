@@ -2,7 +2,7 @@ extends SceneTree
 
 const RunState := preload("res://src/core/run_state.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
-const StageBeats := preload("res://src/core/stage_beats.gd")
+const StageBeats := preload("res://src/world/stage_beats.gd")
 
 
 const BREAK_BAND := Vector2(10.0, 90.0)

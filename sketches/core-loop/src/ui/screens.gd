@@ -1,17 +1,17 @@
 extends CanvasLayer
 
 const OddsReadout := preload("res://src/ui/odds_readout.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
 
 const Palette := preload("res://src/core/palette.gd")
 const SummaryRows := preload("res://src/ui/summary_rows.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Wordmark := preload("res://src/ui/wordmark.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
 const HelpPage := preload("res://src/ui/help_page.gd")

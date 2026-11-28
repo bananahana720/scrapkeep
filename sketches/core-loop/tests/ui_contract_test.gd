@@ -3,16 +3,16 @@ extends SceneTree
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const Objectives := preload("res://src/core/objectives.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 # Every kind the HUD toasts (ruling cx: a Warden break, a rout and a core toast no longer all fire).
 const EXPECTED_TOASTS: Array[String] = ["run_ended", "player_died", "milestone_won", "scrap_lost", "core_gained", "event_announced", "event_ended", "boss_phase_changed"]

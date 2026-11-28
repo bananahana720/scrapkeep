@@ -331,7 +331,7 @@ export function scan(project) {
     rel: "src/" + rel,
     text: read("src/" + rel),
   }));
-  const icons = has("src/ui/icons.gd") ? read("src/ui/icons.gd") : "";
+  const icons = has("src/core/icons.gd") ? read("src/core/icons.gd") : "";
   const abilities = has("src/core/ability_state.gd") ? read("src/core/ability_state.gd") : "";
   const ids = iconIds(
     icons,

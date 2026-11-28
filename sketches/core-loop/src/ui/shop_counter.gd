@@ -1,14 +1,14 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const HeftDial := preload("res://src/ui/heft_dial.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")

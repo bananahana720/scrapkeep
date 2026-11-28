@@ -1,7 +1,7 @@
 extends VBoxContainer
 
 const Secrets := preload("res://src/core/secrets.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Achievements := preload("res://src/core/achievements.gd")

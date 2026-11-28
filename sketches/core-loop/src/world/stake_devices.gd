@@ -1,7 +1,7 @@
 extends "res://src/world/device.gd"
 
 const Fabricators := preload("res://src/build/fabricators.gd")
-const HullMark := preload("res://src/world/hull_mark.gd")
+const HullMark := preload("res://src/core/hull_mark.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Parts := preload("res://src/build/parts.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")

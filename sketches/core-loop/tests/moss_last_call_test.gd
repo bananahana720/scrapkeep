@@ -172,6 +172,6 @@ func _counter_has(kind: String) -> bool:
 	counter.open(_shop(), 0.0)
 	var tile = counter.tile_for(kind)
 	var found: bool = tile != null and (kind != "brew" or String(tile.rec.get("icon", "")).ends_with("_ult") \
-		and preload("res://src/ui/icons.gd").EXTRA.has(String(tile.rec["icon"])))
+		and preload("res://src/core/icons.gd").EXTRA.has(String(tile.rec["icon"])))
 	counter.queue_free()
 	return found

@@ -1,11 +1,11 @@
 extends Button
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const KeycapView := preload("res://src/ui/keycap_view.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ClassKit := preload("res://src/ui/class_kit.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")

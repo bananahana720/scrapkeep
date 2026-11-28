@@ -1,6 +1,6 @@
 extends SceneTree
 
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const T := preload("res://tests/support/t.gd")
 

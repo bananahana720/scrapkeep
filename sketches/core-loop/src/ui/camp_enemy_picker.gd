@@ -1,9 +1,9 @@
 extends VBoxContainer
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const Sandbox := preload("res://src/world/camp_sandbox.gd")
 

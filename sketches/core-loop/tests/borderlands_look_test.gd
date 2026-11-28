@@ -10,7 +10,7 @@ const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const DefenceBars := preload("res://tests/support/defence_bars.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 
 const MIN_COLOR_LAW_DE := 35.0
 const HAZARD_CLEAR_DE := 25.0

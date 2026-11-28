@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const FieldNotes := preload("res://src/ui/field_notes.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")

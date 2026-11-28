@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 
 # The cog means money and nothing else: in the three UI files that once drew it for mass
 # too, res_scrap stands only where cogs are meant, res_mass stands where mass is meant,

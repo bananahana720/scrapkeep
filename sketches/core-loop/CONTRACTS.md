@@ -344,7 +344,7 @@ At every death and at the end of a run, the spine appends one cumulative record 
 
 The record comes from bus signals and run state only. Records are cumulative and a run with retries writes several, so a reader takes the last line per `run_id`. Within a stage record, `deaths` accumulate across retries, and `ticks_to_warden_break` is the latest attempt's. A run that moved on since its last line and is then left, because a new run starts or the game closes, gets one last line with outcome `abandoned` and `abandoned_in` (`stage` or `arena`); that line and the `arena` block are how a reader sees a run that stopped in the arena or mid-stage.
 
-## UI regions (`src/ui/screen_regions.gd`)
+## UI regions (`src/core/screen_regions.gd`)
 
 During play the screen is four horizontal bands, as shares of the visible height, and nothing drawn in one band reaches another:
 
@@ -410,7 +410,7 @@ The HUD's ability bar (`src/ui/ability_bar.gd`) draws one input, an ordered arra
 
 ## Icons
 
-`Icons.texture(id) -> Texture2D` (`src/ui/icons.gd`) loads `res://assets/icons/<id>.svg` when it exists, imported or not. All 70 registry ids pinned below have their SVG (`ui_contract_test.gd` checks exact parity with the 70-id core registry; `assets/icons/` now holds 165 SVGs total including the six-pilot, relic, consumable, license, keycap, and radio assets indexed in [assets/icons/README.md](assets/icons/README.md)). Otherwise it returns a 64 px procedural placeholder, white on clear, drawn from a signed-distance glyph. `Icons.tint(id, color)` gives the modulate to draw with: the fact's colour on a placeholder, and only its alpha on an SVG, which carries its own colours (a bone glyph on a charcoal backplate with one accent). An id outside the list still draws a placeholder picked by its prefix, so a new ability shows before its SVG and its contract line land.
+`Icons.texture(id) -> Texture2D` (`src/core/icons.gd`) loads `res://assets/icons/<id>.svg` when it exists, imported or not. All 70 registry ids pinned below have their SVG (`ui_contract_test.gd` checks exact parity with the 70-id core registry; `assets/icons/` now holds 165 SVGs total including the six-pilot, relic, consumable, license, keycap, and radio assets indexed in [assets/icons/README.md](assets/icons/README.md)). Otherwise it returns a 64 px procedural placeholder, white on clear, drawn from a signed-distance glyph. `Icons.tint(id, color)` gives the modulate to draw with: the fact's colour on a placeholder, and only its alpha on an SVG, which carries its own colours (a bone glyph on a charcoal backplate with one accent). An id outside the list still draws a placeholder picked by its prefix, so a new ability shows before its SVG and its contract line land.
 
 The ids are the 70 of `VISUAL-LANGUAGE.md` section 5, which owns each one's meaning and drawing. `ui_contract_test.gd` fails if this list and the registry disagree.
 
@@ -441,7 +441,7 @@ The event_kinds shapes (`ring`, `diamond`, `chevron` and the rest) are glyphs, n
   - Contextual key glyphs sit beside the ball or the grapple target: `key_e` with `ab_sable_mount`, `key_rmb` with `ab_sable_move` and `key_space` with `ab_sable_vault`.
   - Edge markers use `obj_warden`, `obj_beacon` or `obj_gate`.
 - **Menus.** Class cards use `cls_<pilot>`, and every button draws its key's cap.
-- **Type.** Noto Sans Bold for words and Noto Sans Mono Bold for numbers, vendored in `assets/fonts/` with `OFL.txt` and `PROVENANCE.txt` (`src/ui/ui_fonts.gd`).
+- **Type.** Noto Sans Bold for words and Noto Sans Mono Bold for numbers, vendored in `assets/fonts/` with `OFL.txt` and `PROVENANCE.txt` (`src/core/ui_fonts.gd`).
 
 ### World prompt parts
 

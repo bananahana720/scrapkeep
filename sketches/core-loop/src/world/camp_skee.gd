@@ -3,7 +3,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 
 const PIECE := "camp_skee_lane"
 const BALLS := 9

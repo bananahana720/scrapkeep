@@ -4,7 +4,7 @@ extends SceneTree
 # gate's name is no band prompt: its gate places it (reward_gate_nameplate_test).
 
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const Hud := preload("res://src/ui/hud.gd")
 const T := preload("res://tests/support/t.gd")
 

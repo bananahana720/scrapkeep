@@ -5,7 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Triggers := preload("res://src/build/triggers.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 
 # v2 W4 loot, the trigger vocabulary and the stockpile (DESIGN-V2 sections 5 and 7):
 #   - the vocabulary is twelve kinds, each with its trg_ icon;

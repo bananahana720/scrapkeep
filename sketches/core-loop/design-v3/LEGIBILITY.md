@@ -345,7 +345,7 @@ Andrew, 10 Nov 2026: "be sure to un-slop any ui/ux facing gameplay or menu desig
 
 This section binds every screen, card, tip, toast, caption, prompt and menu in every world. It covers structure as much as wording. The voice in [TONE-BIBLE.md](TONE-BIBLE.md) stays: a joke or an in-world line the tone bible supports is not slop, and neither is a term the game has taught or a number a build choice needs.
 
-**Carrier order.** Before writing a word, ask what should carry the fact. Use the first that works: position, shape, colour (the colour law in section 1), an icon from `src/ui/icons.gd` or a keycap from `src/ui/key_glyphs.gd`, motion, sound, and only then a word. A word never restates what a mark on the same screen already says.
+**Carrier order.** Before writing a word, ask what should carry the fact. Use the first that works: position, shape, colour (the colour law in section 1), an icon from `src/core/icons.gd` or a keycap from `src/ui/key_glyphs.gd`, motion, sound, and only then a word. A word never restates what a mark on the same screen already says.
 
 **Structure patterns to remove.**
 

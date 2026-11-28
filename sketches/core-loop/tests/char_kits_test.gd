@@ -10,7 +10,7 @@ const Contact := preload("res://src/movement/contact.gd")
 const Combat := preload("res://src/combat/combat.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 
 # The v2 W3 rules as data and pure functions (DESIGN-V2 sections 1 to 6): three class
 # rows that every layer reads, class-gated movement kits with no shared air dash, the

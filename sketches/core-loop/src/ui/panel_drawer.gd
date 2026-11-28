@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 const Panels := preload("res://src/build/panels.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 
 
 const SCALES := [0.0, 0.5, 1.0, 2.0, 5.0, 14.0]

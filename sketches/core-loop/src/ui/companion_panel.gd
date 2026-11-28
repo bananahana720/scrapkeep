@@ -1,12 +1,12 @@
 extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Companion := preload("res://src/core/companion.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Glyphs := preload("res://src/core/glyphs.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 
 

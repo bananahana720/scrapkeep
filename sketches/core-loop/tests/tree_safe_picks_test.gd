@@ -7,7 +7,7 @@ extends SceneTree
 
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const WorldOneCards := preload("res://src/core/trees/world_one_cards.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Relics := preload("res://src/build/relics.gd")

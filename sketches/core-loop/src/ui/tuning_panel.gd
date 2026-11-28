@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 const Tuning := preload("res://src/movement/tuning.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 
 var tuning
 

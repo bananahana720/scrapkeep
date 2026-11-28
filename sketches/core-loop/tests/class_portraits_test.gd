@@ -3,7 +3,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const PORTRAITS := {"pylon_engineer": "cls_sable", "runner_gunner": "cls_rivet", "demolitions_caster": "cls_kest",
 	"tarn": "cls_tarn", "tally": "cls_tally", "remembered_cannon": "cls_cannon"}
 const NEW_GLYPHS := {"cls_tarn": "cross", "cls_tally": "square", "cls_cannon": "lane"}

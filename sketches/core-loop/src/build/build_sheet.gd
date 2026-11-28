@@ -6,7 +6,7 @@ const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
-const HullMark := preload("res://src/world/hull_mark.gd")
+const HullMark := preload("res://src/core/hull_mark.gd")
 
 
 const POWER_CONTRACT := {

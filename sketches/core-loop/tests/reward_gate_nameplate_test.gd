@@ -23,9 +23,9 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const LaunchTake := preload("res://src/presentation/launch_take.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Parts := preload("res://src/build/parts.gd")
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const Workshop := preload("res://src/ui/workshop.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 
 const FRAMES := 120
 # The project's canvas is 1600x900; a 1280x720 window draws it at 0.8.
@@ -417,7 +417,7 @@ func _approach(gates: Node3D, ids: Array, count: int) -> Dictionary:
 
 # The font's own cap height in canvas px at a size: the height of the glyph H's outline.
 func _font_cap_px(size: int) -> float:
-	var font: Font = preload("res://src/ui/ui_fonts.gd").bold()
+	var font: Font = preload("res://src/core/ui_fonts.gd").bold()
 	var ts := TextServerManager.get_primary_interface()
 	var rid: RID = font.get_rids()[0]
 	var contours := ts.font_get_glyph_contours(rid, size, ts.font_get_glyph_index(rid, size, ord("H"), 0))

@@ -1,6 +1,6 @@
 extends SceneTree
 
-const Icons := preload("res://src/ui/icons.gd")
+const Icons := preload("res://src/core/icons.gd")
 const PanelScript := preload("res://src/ui/companion_panel.gd")
 const Companion := preload("res://src/core/companion.gd")
 

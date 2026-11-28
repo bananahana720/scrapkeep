@@ -2,8 +2,8 @@ extends Control
 
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ComicPage := preload("res://src/ui/comic_page.gd")
 const CampLines := preload("res://src/core/camp_lines.gd")
 const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
