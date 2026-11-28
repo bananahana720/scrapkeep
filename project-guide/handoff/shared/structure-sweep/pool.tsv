@@ -41,7 +41,7 @@ COMBAT-01	combat.md	C	low	in flight	C5	Move zero-dependency comfort flags (`Flas
 COMBAT-02	combat.md	C	low	open		Invert 75 `FxLibrary.burst(...)` calls across 13 combat files through an injected FX callback
 COMBAT-03	combat.md	H	low	landed	M4	Split `combat.gd`'s cleanest bolt-on seams: W47-H1 hero hooks (342 lines) and Consumables runtime (435 lines) Unit M4 moved both blocks. `scripts/deep-sweep.mjs` has no line ceiling for `combat.gd`, and none was built.
 COMBAT-04	combat.md	H	medium	open		Split `combat.gd`'s Grapple mutations (578 lines) and W47-C2 micro-mutations / cross-synergies (472 lines) seams
-COMBAT-05	combat.md	H	high	open		Extract Tally kit (834 lines) and Remembered Cannon kit (721 lines) out of `combat.gd` to match existing pilot kits
+COMBAT-05	combat.md	H	high	in flight	M5, M6	Extract Tally kit (834 lines) and Remembered Cannon kit (721 lines) out of `combat.gd` to match existing pilot kits
 COMBAT-06	combat.md	C	low	landed	M3	Replace 167 underscore reach-ins into `combat.gd` across 18 files with an explicit public collaborator API
 COMBAT-07	combat.md	A	low	open		Consolidate 25 hand-rolled enemy GLB mesh loaders onto `EnemyCasting.parts()` and move `ModelVariants` to `src/core/`
 COMBAT-08	combat.md	A	low	landed	M1	Factor out 4 duplicated helper patterns across all 8 active scripts (`src/combat/actives/`)
