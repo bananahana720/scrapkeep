@@ -146,7 +146,7 @@ func _as_tally() -> void:
 	_player.kit.drop_line("reset")
 	_player.chain.reset()
 	_player.abilities.refill()
-	_combat._reset_cards()
+	_combat.tally_kit.reset()
 	_combat._line_load = {}
 	_combat._cooldown = 0.0
 	_game.camera.snap(Vector3(0.0, 0.0, -1.0))
@@ -226,22 +226,22 @@ func _check_ink_books() -> void:
 	_set_charges(0)
 	_stamp()
 	_t.eq("base stamp pressure pay stays: one point per stamped machine", _charges(), 2)
-	_t.eq("both machines in the disc are booked, the far one is not", [_combat._ink.has(a.get_instance_id()), _combat._ink.has(b.get_instance_id()), _combat._ink.has(far.get_instance_id())],
+	_t.eq("both machines in the disc are booked, the far one is not", [_combat.tally_kit._ink.has(a.get_instance_id()), _combat.tally_kit._ink.has(b.get_instance_id()), _combat.tally_kit._ink.has(far.get_instance_id())],
 		[true, true, false])
-	_t.near("a book lasts 3.0 s", float(_combat._ink[a.get_instance_id()]["until"]) - _combat._clock, 3.0, 0.0001)
+	_t.near("a book lasts 3.0 s", float(_combat.tally_kit._ink[a.get_instance_id()]["until"]) - _combat._clock, 3.0, 0.0001)
 	_t.eq("each booked machine wears one ledger tick", [_ticks_on(a), _ticks_on(b), _ticks_on(far)], [1, 1, 0])
 	_t.check("the ball's velocity is untouched", _player.state.velocity == velocity, "%s vs %s" % [_player.state.velocity, velocity])
 	# Stamping again refreshes the book without a second tick.
 	_combat._clock += 1.0
 	_stamp()
-	_t.near("a second stamp renews the book to 3.0 s", float(_combat._ink[a.get_instance_id()]["until"]) - _combat._clock, 3.0, 0.0001)
+	_t.near("a second stamp renews the book to 3.0 s", float(_combat.tally_kit._ink[a.get_instance_id()]["until"]) - _combat._clock, 3.0, 0.0001)
 	_t.eq("a second stamp draws no second tick", _ticks_on(a), 1)
 	# Planted control: the plain stamp_slam books nothing and draws nothing.
-	_combat._clear_ink()
+	_combat.tally_kit._clear_ink()
 	_equip(AbilityState.SMASH, "stamp_slam")
 	_set_charges(0)
 	_stamp()
-	_t.check("the plain stamp books nothing", _combat._ink.is_empty() and _ticks_on(a) == 0, str(_combat._ink.keys()))
+	_t.check("the plain stamp books nothing", _combat.tally_kit._ink.is_empty() and _ticks_on(a) == 0, str(_combat.tally_kit._ink.keys()))
 	_t.eq("the plain stamp still pays its base pressure", _charges(), 2)
 
 
@@ -253,34 +253,34 @@ func _check_ink_refill() -> void:
 	var b: Node3D = row[1]
 	_equip(AbilityState.SMASH, "stamp_ink")
 	_stamp()
-	_t.eq("two machines are booked", _combat._ink.size(), 2)
+	_t.eq("two machines are booked", _combat.tally_kit._ink.size(), 2)
 	_set_charges(1)
-	var cast: bool = _combat._run_balance(a.global_position, true)
+	var cast: bool = _combat.tally_kit.run_balance(a.global_position, true)
 	_t.check("balance due casts", cast, "")
 	_t.eq("it spent one and the two booked machines refilled two", _charges(), 2)
-	_t.eq("each book was taken", _combat._ink.size(), 0)
+	_t.eq("each book was taken", _combat.tally_kit._ink.size(), 0)
 	_t.eq("each tick is gone", [_ticks_on(a), _ticks_on(b)], [0, 0])
-	_t.eq("the card records the refills", int(_combat.last_card.get("ink", 0)), 2)
+	_t.eq("the card records the refills", int(_combat.tally_kit.last_card.get("ink", 0)), 2)
 	# Once per machine per stamp: a second strike on the same machines refills nothing.
 	_set_charges(2)
-	_combat._run_balance(a.global_position, true)
+	_combat.tally_kit.run_balance(a.global_position, true)
 	_t.eq("a second balance due on the consumed books only spends", _charges(), 1)
 	# The bank's own cap holds: two refills into a bank of 3 stop at 3.
 	_stamp()
 	_set_charges(3)
-	_combat._run_balance(a.global_position, true)
+	_combat.tally_kit.run_balance(a.global_position, true)
 	_t.eq("two refills never pass the bank of three", _charges(), 3)
 	# A booked machine outside the ring is untouched.
 	_stamp()
 	_set_charges(2)
-	_combat._run_balance(_ball_flat() + Vector3(0.0, 0.0, 0.0) - _aim_flat() * 20.0, true)
-	_t.eq("a ring that strikes nothing refills nothing", _combat._ink.size(), 2)
+	_combat.tally_kit.run_balance(_ball_flat() + Vector3(0.0, 0.0, 0.0) - _aim_flat() * 20.0, true)
+	_t.eq("a ring that strikes nothing refills nothing", _combat.tally_kit._ink.size(), 2)
 	# Planted control: without the stamp's book (plain stamp_slam) balance due only spends.
-	_combat._clear_ink()
+	_combat.tally_kit._clear_ink()
 	_equip(AbilityState.SMASH, "stamp_slam")
 	_stamp()
 	_set_charges(2)
-	_combat._run_balance(a.global_position, true)
+	_combat.tally_kit.run_balance(a.global_position, true)
 	_t.eq("the plain stamp's balance due refills nothing", _charges(), 1)
 
 
@@ -292,25 +292,25 @@ func _check_ink_expiry() -> void:
 	_equip(AbilityState.SMASH, "stamp_ink")
 	_stamp()
 	_combat._clock += 2.9
-	_combat._step_ink()
-	_t.check("at 2.9 s the book still stands", _combat._ink.has(a.get_instance_id()) and _ticks_on(a) == 1, str(_combat._ink.keys()))
+	_combat.tally_kit._step_ink()
+	_t.check("at 2.9 s the book still stands", _combat.tally_kit._ink.has(a.get_instance_id()) and _ticks_on(a) == 1, str(_combat.tally_kit._ink.keys()))
 	_combat._clock += 0.2
-	_combat._step_ink()
-	_t.check("past 3.0 s the book and its tick are gone", _combat._ink.is_empty() and _ticks_on(a) == 0, str(_combat._ink.keys()))
+	_combat.tally_kit._step_ink()
+	_t.check("past 3.0 s the book and its tick are gone", _combat.tally_kit._ink.is_empty() and _ticks_on(a) == 0, str(_combat.tally_kit._ink.keys()))
 	_set_charges(2)
-	_combat._run_balance(a.global_position, true)
+	_combat.tally_kit.run_balance(a.global_position, true)
 	_t.eq("an expired book refills nothing", _charges(), 1)
 	# An expired book that a step had not yet swept still refills nothing.
 	_stamp()
 	_combat._clock += 3.5
 	_set_charges(2)
-	_combat._run_balance(a.global_position, true)
-	_t.eq("a lapsed, unswept book refills nothing and is consumed", [_charges(), _combat._ink.size()], [1, 0])
+	_combat.tally_kit.run_balance(a.global_position, true)
+	_t.eq("a lapsed, unswept book refills nothing and is consumed", [_charges(), _combat.tally_kit._ink.size()], [1, 0])
 	# A dead machine drops its book.
 	_stamp()
 	_combat.strike(a, "ram", 1000000.0)
-	_combat._step_ink()
-	_t.check("a killed machine drops its book", not _combat._ink.has(a.get_instance_id()), str(_combat._ink.keys()))
+	_combat.tally_kit._step_ink()
+	_t.check("a killed machine drops its book", not _combat.tally_kit._ink.has(a.get_instance_id()), str(_combat.tally_kit._ink.keys()))
 
 
 func _check_ink_clears() -> void:
@@ -318,15 +318,15 @@ func _check_ink_clears() -> void:
 	var a: Node3D = row[0]
 	_equip(AbilityState.SMASH, "stamp_ink")
 	_stamp()
-	_t.eq("booked", _combat._ink.size(), 2)
-	_combat._reset_cards()
-	_t.check("a stage or run reset clears every book and tick", _combat._ink.is_empty() and _ticks_on(a) == 0, str(_combat._ink.keys()))
+	_t.eq("booked", _combat.tally_kit._ink.size(), 2)
+	_combat.tally_kit.reset()
+	_t.check("a stage or run reset clears every book and tick", _combat.tally_kit._ink.is_empty() and _ticks_on(a) == 0, str(_combat.tally_kit._ink.keys()))
 	_stamp()
 	_game.events.stage_content_cleared.emit("retry")
-	_t.check("a cleared stage clears them too", _combat._ink.is_empty() and _ticks_on(a) == 0, str(_combat._ink.keys()))
+	_t.check("a cleared stage clears them too", _combat.tally_kit._ink.is_empty() and _ticks_on(a) == 0, str(_combat.tally_kit._ink.keys()))
 	_stamp()
 	_game.events.player_died.emit()
-	_t.check("a death clears them too", _combat._ink.is_empty() and _ticks_on(a) == 0, str(_combat._ink.keys()))
+	_t.check("a death clears them too", _combat.tally_kit._ink.is_empty() and _ticks_on(a) == 0, str(_combat.tally_kit._ink.keys()))
 
 
 # --- Double Entry -----------------------------------------------------------------------
@@ -366,20 +366,20 @@ func _check_double_clips() -> void:
 	_t.eq("the swapped row keeps the line flag", _player.abilities.cap(AbilityState.LINE, "line", false), true)
 	_cast_on("link_double", s["c0"])
 	_t.eq("it fires as link_double on the body", _fired, [["link_double", "body"]])
-	var ids: Array = _combat.link_group.get("ids", [])
+	var ids: Array = _combat.tally_kit.link_group.get("ids", [])
 	var want := _ids(s, ["c0", "c1", "c2"])
 	ids = ids.duplicate()
 	ids.sort()
 	want.sort()
 	_t.eq("it clips the latched machine and its two nearest neighbours", ids, want)
-	_t.eq("the group is a double entry that has not jumped", [_combat.link_group["double"], _combat.link_group["jumped"]], [true, false])
+	_t.eq("the group is a double entry that has not jumped", [_combat.tally_kit.link_group["double"], _combat.tally_kit.link_group["jumped"]], [true, false])
 	# The plain clip clips the same three.
 	_equip(AbilityState.LINE, "link_clips")
 	_cast_on("link_clips", s["c0"])
-	var plain: Array = (_combat.link_group.get("ids", []) as Array).duplicate()
+	var plain: Array = (_combat.tally_kit.link_group.get("ids", []) as Array).duplicate()
 	plain.sort()
 	_t.eq("the plain clip clips the same three", plain, want)
-	_t.eq("and is not a double entry", _combat.link_group["double"], false)
+	_t.eq("and is not a double entry", _combat.tally_kit.link_group["double"], false)
 
 
 func _check_double_jump() -> void:
@@ -391,10 +391,10 @@ func _check_double_jump() -> void:
 	var arcs := [_struck_by(s["c1"].get_instance_id(), "ledger"), _struck_by(s["c2"].get_instance_id(), "ledger")]
 	_t.eq("the settle still arcs once to each other clip", arcs, [1, 1])
 	_t.eq("the clip jumped once to the nearest unclipped machine within 9 m", _struck_by(s["f1"].get_instance_id(), "ledger"), 1)
-	_t.eq("the jump target is recorded", int(_combat.link_group.get("jump_to", 0)), s["f1"].get_instance_id())
+	_t.eq("the jump target is recorded", int(_combat.tally_kit.link_group.get("jump_to", 0)), s["f1"].get_instance_id())
 	_t.eq("the next machine is not touched", _struck_by(s["f2"].get_instance_id(), "ledger"), 0)
 	_t.eq("a machine past 9 m is not touched", _struck_by(s["g"].get_instance_id(), "ledger"), 0)
-	_t.check("the group has jumped and is spent", bool(_combat.link_group["jumped"]) and bool(_combat.link_group["spent"]), str(_combat.link_group))
+	_t.check("the group has jumped and is spent", bool(_combat.tally_kit.link_group["jumped"]) and bool(_combat.tally_kit.link_group["spent"]), str(_combat.tally_kit.link_group))
 	# Never recursive: the jumped machine, struck on its own, settles nothing and jumps nowhere.
 	var before := _struck.size()
 	_combat.strike(s["f1"], "ram", 30.0)
@@ -408,15 +408,15 @@ func _check_double_jump() -> void:
 	# Planted control: were the jumped machine a clip and the flag clear, a second jump would
 	# reach the next machine (g, 7 m from f1). The flag is what holds it; set, the same strike
 	# jumps nowhere.
-	_combat.link_group["ids"].append(s["f1"].get_instance_id())
-	_combat.link_group["spent"] = false
-	_combat.link_group["jumped"] = false
+	_combat.tally_kit.link_group["ids"].append(s["f1"].get_instance_id())
+	_combat.tally_kit.link_group["spent"] = false
+	_combat.tally_kit.link_group["jumped"] = false
 	var planted := _struck.size()
 	_combat.strike(s["f1"], "ram", 30.0)
 	_t.check("planted: a clear flag lets the clip jump again (the control fires)", _struck.slice(planted).any(func(e): return e[0] in _ids(s, ["f2", "g"]) and e[1] == "ledger"),
 		str(_struck.slice(planted)))
-	_combat.link_group["spent"] = false
-	_combat.link_group["jumped"] = true
+	_combat.tally_kit.link_group["spent"] = false
+	_combat.tally_kit.link_group["jumped"] = true
 	var held := _struck.size()
 	_combat.strike(s["f1"], "ram", 30.0)
 	_t.eq("with the flag set the same strike jumps nowhere", _struck.slice(held).filter(func(e): return e[0] == s["g"].get_instance_id()).size(), 0)
@@ -427,7 +427,7 @@ func _check_double_jump() -> void:
 	_struck.clear()
 	_combat.strike(c["c0"], "ram", 30.0)
 	_t.eq("the plain clip settles its clips", [_struck_by(c["c1"].get_instance_id(), "ledger"), _struck_by(c["c2"].get_instance_id(), "ledger")], [1, 1])
-	_t.eq("the plain clip never jumps", [_struck_by(c["f1"].get_instance_id(), "ledger"), _struck_by(c["f2"].get_instance_id(), "ledger"), int(_combat.link_group.get("jump_to", 0))], [0, 0, 0])
+	_t.eq("the plain clip never jumps", [_struck_by(c["f1"].get_instance_id(), "ledger"), _struck_by(c["f2"].get_instance_id(), "ledger"), int(_combat.tally_kit.link_group.get("jump_to", 0))], [0, 0, 0])
 
 
 func _check_double_far() -> void:
@@ -439,15 +439,15 @@ func _check_double_far() -> void:
 	_cast_on("link_double", s["c0"])
 	_struck.clear()
 	_combat.strike(s["c0"], "ram", 30.0)
-	_t.eq("with only a machine 12 m off, nothing jumps", [_struck_by(s["g"].get_instance_id(), "ledger"), int(_combat.link_group.get("jump_to", 0))], [0, 0])
-	_t.check("the group is still spent and flagged", bool(_combat.link_group["spent"]) and bool(_combat.link_group["jumped"]), str(_combat.link_group))
+	_t.eq("with only a machine 12 m off, nothing jumps", [_struck_by(s["g"].get_instance_id(), "ledger"), int(_combat.tally_kit.link_group.get("jump_to", 0))], [0, 0])
+	_t.check("the group is still spent and flagged", bool(_combat.tally_kit.link_group["spent"]) and bool(_combat.tally_kit.link_group["jumped"]), str(_combat.tally_kit.link_group))
 	# A clipped machine is never a jump target: with the three clips and no one else, nothing jumps.
 	for key in ["g"]:
 		s[key].remove_from_group("enemy")
 	_cast_on("link_double", s["c0"])
 	_struck.clear()
 	_combat.strike(s["c1"], "ram", 30.0)
-	_t.eq("a clipped machine is never a fresh target", int(_combat.link_group.get("jump_to", 0)), 0)
+	_t.eq("a clipped machine is never a fresh target", int(_combat.tally_kit.link_group.get("jump_to", 0)), 0)
 
 
 func _clip_cues(audio, from: int) -> int:

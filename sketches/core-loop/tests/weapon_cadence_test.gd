@@ -1469,10 +1469,10 @@ func _run_live() -> void:
 	tally_ab.slot(tally_ab.WEAPON).charges = 0
 	_game.player.state.grounded = true
 	_game.player.state.velocity = tally_aim_dir * 14.0
-	combat._step_roll_restore(1.0)
+	combat.tally_kit._step_roll_restore(1.0)
 	_t.near("live Tally continuous cruise refill restores 0.5 pressure in 1.0 s", tally_ab.pressure_of(tally_ab.WEAPON), 0.5, 0.01)
 	_game.player.state.velocity = Vector3.ZERO
-	combat._step_roll_restore(1.0)
+	combat.tally_kit._step_roll_restore(1.0)
 	_t.near("live Tally slow ball refills 0.0 pressure", tally_ab.pressure_of(tally_ab.WEAPON), 0.5, 0.01)
 
 	# Opener (plain 22.0 at cruise, spends 1.0 -> 2.0), then PAID stamp at 0.40 s (26.4, refunds 0.5 -> 1.5),
@@ -1487,7 +1487,7 @@ func _run_live() -> void:
 	combat._physics_process(DT)
 	_t.near("live Tally opener at cruise deals 22.0", hp_a0 - t_dummy_a.hp, 22.0, 0.2)
 	_t.near("live Tally opener spends 1.0 pressure (3.0 -> 2.0)", tally_ab.pressure_of(tally_ab.WEAPON), 2.0, 0.005)
-	combat.link_group = {"ids": [t_dummy_a.get_instance_id(), t_dummy_b.get_instance_id()],
+	combat.tally_kit.link_group = {"ids": [t_dummy_a.get_instance_id(), t_dummy_b.get_instance_id()],
 		"until": combat._clock + 4.0, "spent": false, "mult": 1.0, "jumped": false, "double": false}
 	_game.player.intent.clear()
 	for _i in 24: # 0.40 s -> window opens
@@ -1499,8 +1499,8 @@ func _run_live() -> void:
 	_t.near("live Tally PAID stamp at cruise deals 26.4", hp_a1 - t_dummy_a.hp, 26.4, 0.2)
 	_t.near("live Tally PAID stamp spends 1.0 and refunds 0.5 (2.0 -> 1.5)", tally_ab.pressure_of(tally_ab.WEAPON), 1.5, 0.005)
 	_t.check("live Tally PAID stamp copies to Link Clips as a direct hit",
-		bool(combat.link_group["spent"]) and t_dummy_b.hp < hp_b1, "b hp %.1f -> %.1f" % [hp_b1, t_dummy_b.hp])
-	var stamp_col: Color = combat.last_card.get("stamp_color", Color.BLACK)
+		bool(combat.tally_kit.link_group["spent"]) and t_dummy_b.hp < hp_b1, "b hp %.1f -> %.1f" % [hp_b1, t_dummy_b.hp])
+	var stamp_col: Color = combat.tally_kit.last_card.get("stamp_color", Color.BLACK)
 	_t.check("live Tally PAID stamp cue is ledger cream and never mint",
 		stamp_col.is_equal_approx(Palette.LEDGER_CREAM) and not stamp_col.is_equal_approx(Palette.ARC), str(stamp_col))
 	# Tally proc isolation: _proc_volley fires plain Balance Due without touching pressure or weapon_driver.

@@ -189,7 +189,7 @@ func _as(pilot: String) -> void:
 	_player.chain.reset()
 	_player.abilities.refill()
 	_combat._start_attempt()
-	_combat._reset_cards()
+	_combat.tally_kit.reset()
 	_combat._line_load = {}
 	_combat.last_bell = {}
 	_combat.last_strip = {}
@@ -586,14 +586,14 @@ func _check_bell_gather() -> void:
 	var outside := _spawn(p + _side() * 3.2)
 	await physics_frame
 	var charges_before: int = _special_charges()
-	_combat._tap(AbilityState.SPECIAL, "gather_plate", _combat._tap_gather, func(): return {"point": p, "valid": true})
+	_combat._tap(AbilityState.SPECIAL, "gather_plate", _combat.tally_kit.tap_gather, func(): return {"point": p, "valid": true})
 	await _sim(0.4)
-	_t.check("the gather plate landed", not _combat.plate.is_empty() and _special_used.has("gather_plate"), str(_combat.plate))
+	_t.check("the gather plate landed", not _combat.tally_kit.plate.is_empty() and _special_used.has("gather_plate"), str(_combat.tally_kit.plate))
 	_t.eq("one bell waits", _combat._bells.size(), 1)
-	if _combat._bells.is_empty() or _combat.plate.is_empty():
+	if _combat._bells.is_empty() or _combat.tally_kit.plate.is_empty():
 		return
 	var bell: Dictionary = _combat._bells[0]
-	var plate: Dictionary = _combat.plate.duplicate()
+	var plate: Dictionary = _combat.tally_kit.plate.duplicate()
 	_t.eq("a gather bell at half the radius, on the plate", [bell["mode"], float(bell["shape"]["radius"]), bell["shape"]["centre"]],
 		["gather", Weapons.GATHER_RADIUS * 0.5, plate["at"]])
 	_t.eq("its ring is lit as the committed record", is_same(_player.indicator.shapes.get(bell["layer"], {}), bell["shape"]), true)
@@ -610,13 +610,13 @@ func _check_bell_gather() -> void:
 	var rings: Array = _combat.effects._rings
 	var drawn := rings.slice(rings_before).filter(func(r): return is_equal_approx(float(r["radius"]), Weapons.GATHER_RADIUS * 0.5))
 	_t.eq("its half ring is drawn in Tally's colour", drawn.size() == 1 and drawn[0]["color"] == ClassDef.TALLY_COLOR, true)
-	_t.eq("the live plate is never moved, reset or shortened", [_combat.plate.get("at"), _combat.plate.get("until")], [plate["at"], plate["until"]])
+	_t.eq("the live plate is never moved, reset or shortened", [_combat.tally_kit.plate.get("at"), _combat.tally_kit.plate.get("until")], [plate["at"], plate["until"]])
 	_t.eq("the repeat spends and refills nothing", _special_charges(), charges)
 	_t.eq("the repeat publishes no second special", _special_used.size(), 1)
 	# Planted control: replaying the gather tap itself would reset the plate's clock.
-	var until: float = float(_combat.plate["until"])
-	_combat._run_gather(p, true)
-	_t.check("planted control: a naive repeat through _run_gather resets the plate", float(_combat.plate["until"]) > until, "")
+	var until: float = float(_combat.tally_kit.plate["until"])
+	_combat.tally_kit._run_gather(p, true)
+	_t.check("planted control: a naive repeat through _run_gather resets the plate", float(_combat.tally_kit.plate["until"]) > until, "")
 
 
 func _check_bell_echo() -> void:

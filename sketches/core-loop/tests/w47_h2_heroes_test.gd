@@ -419,7 +419,7 @@ func _test_tally_canon_preserved() -> void:
 	await physics_frame
 	var a := _spawn_dummy(base_pt + Vector3(0.0, 0.0, -8.0), "chaser", 800.0)
 	var b := _spawn_dummy(base_pt + Vector3(3.0, 0.0, -8.0), "chaser", 800.0)
-	_combat._link_from(a, 1.0)
+	_combat.tally_kit._link_from(a, 1.0)
 	var hp_b_before: float = b.hp
 	_combat.strike(a, "ram", 30.0)
 	var hp_b_after_first: float = b.hp
@@ -427,8 +427,8 @@ func _test_tally_canon_preserved() -> void:
 	var hp_b_after_second: float = b.hp
 	_t.check("Tally keeps live canon one-shot circuit arc (max(8, 0.6*force)*chain, spent after first hit)",
 		hp_b_after_first < hp_b_before and is_equal_approx(hp_b_after_second, hp_b_after_first)
-		and bool(_combat.link_group.get("spent", false)),
-		"b %.1f -> %.1f -> %.1f spent=%s" % [hp_b_before, hp_b_after_first, hp_b_after_second, str(_combat.link_group.get("spent"))])
+		and bool(_combat.tally_kit.link_group.get("spent", false)),
+		"b %.1f -> %.1f -> %.1f spent=%s" % [hp_b_before, hp_b_after_first, hp_b_after_second, str(_combat.tally_kit.link_group.get("spent"))])
 
 
 # --- 4. HYGIENE, TERMINOLOGY & CLEAN RESETS -------------------------------------------
@@ -457,6 +457,7 @@ func _test_hygiene_and_resets() -> void:
 		"res://src/world/destructibles.gd",
 		"res://src/combat/hero_hooks.gd",
 		"res://src/combat/consumable_runtime.gd",
+		"res://src/combat/tally_kit.gd",
 	]
 	var orb_hits: Array = []
 	for path in orb_files:
