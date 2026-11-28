@@ -203,7 +203,6 @@ const HOTWIRED := {
 		"downside": {"icon": "cat_utility", "words": "−{magnet}% magnet reach"},
 		"part": {"verb": "Costs magnet reach", "family": "stat", "magnet": 1.0 - BURDEN_MAGNET_LOSS}},
 }
-const RECYCLE_COMMON := 10
 
 const EVOLVED := {
 	"breaker_drive": {"name": "Breaker Drive", "verb": "Hit 35% harder, +8 punch", "text": "+8 punch, +35% weapon damage. From Wrecking Ball.",
@@ -354,21 +353,6 @@ static func all_rows() -> Dictionary:
 		for key in EXPANSION_PARTS:
 			_all_rows[key] = _settled(ItemGen.finish(key, EXPANSION_PARTS[key]))
 	return _all_rows
-
-
-static func expansion_ids() -> Array:
-	return EXPANSION_PARTS.keys()
-
-
-static func all_evolved() -> Dictionary:
-	var out := EVOLVED.duplicate(true)
-	for key in EVOLVED_W50:
-		out[key] = EVOLVED_W50[key]
-	return out
-
-
-static func all_verb_evolved() -> Array:
-	return VERB_EVOLVED + VERB_EVOLVED_W50
 
 
 static func _settled(spec: Dictionary) -> Dictionary:
@@ -577,10 +561,6 @@ static func _hotwired_spec(part_id: String) -> Dictionary:
 	return {"name": hot["name"], "verb": line, "text": line, "tags": hot["tags"], "maker": hot["maker"],
 		"rarity": "rare", "tier": 2, "family": "stat", "icon": String(hot["upside"]["icon"]).trim_prefix("cat_"),
 		"cap": 1, "stack": "capped"}
-
-
-static func hotwire_recycle(part_id: String) -> int:
-	return int(hotwired(part_id).get("recycle_commons", 0)) * RECYCLE_COMMON
 
 
 static func seam_met(need: String) -> bool:

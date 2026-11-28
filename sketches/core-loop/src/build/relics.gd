@@ -157,12 +157,6 @@ static func alt_ids(world := 0) -> Array:
 	return ALT_ROWS.keys().filter(func(id): return int(ALT_ROWS[id]["world"]) == world)
 
 
-static func world_swap_ids(world := 0) -> Array:
-	if world == 0:
-		return WORLD_SWAPS.keys()
-	return WORLD_SWAPS.keys().filter(func(id): return int(WORLD_SWAPS[id]["world"]) == world)
-
-
 static func all_rows() -> Dictionary:
 	var out := ROWS.duplicate(false)
 	for id in ALT_ROWS:
