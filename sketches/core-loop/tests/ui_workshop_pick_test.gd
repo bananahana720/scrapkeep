@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const StartPicks := preload("res://src/core/start_picks.gd")
+const Parts := preload("res://src/build/parts.gd")
 const Push := preload("res://tests/support/push.gd")
 
 # The upgrade pick screen (v2 W8) and the run's briefing. A real run, the workshop armed as in play:
@@ -103,8 +104,9 @@ func _process(_delta: float) -> bool:
 				var worst := 0
 				var worst_pilot := ""
 				for def in ClassDef.all():
+					var part_info := func(pid: String) -> Dictionary: return {"name": Parts.display_name(pid), "icon": Parts.icon_of(pid), "effect": String(Parts.row(pid).get("verb", ""))}
 					var counts: Array = StartPicks.ids_for(def.id).map(func(id):
-						var row: Dictionary = StartPicks.row(def.id, String(id))
+						var row: Dictionary = StartPicks.row(def.id, String(id), part_info)
 						return WordBudget.words_in(String(row["name"])) + WordBudget.words_in(String(row.get("effect", ""))))
 					counts.sort()
 					counts.reverse()

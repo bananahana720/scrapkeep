@@ -1081,7 +1081,7 @@
     "tests/shot_bits_live_test.gd": 5400,
     "tests/shot_bits_test.gd": 60500,
     "tests/side_content_roster_test.gd": 4500,
-    "tests/signal_lifetime_test.gd": 7500,
+    "tests/signal_wire_test.gd": 7500,
     "tests/site_markers_test.gd": 10900,
     "tests/site_variants_test.gd": 9300,
     "tests/sitting_notes_test.gd": 14000,

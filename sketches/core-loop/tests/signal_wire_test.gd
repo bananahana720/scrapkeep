@@ -6,7 +6,6 @@ const Swarm := preload("res://src/combat/warden_swarm.gd")
 const Game := preload("res://src/game.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
-const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const ChildRuns := preload("res://tests/trees/child_runs.gd")
 
 class Fleet extends RefCounted:
@@ -39,18 +38,18 @@ var _second := 0
 var _named := 0
 
 func _initialize() -> void:
-	if "--signal-lifetime-child" in OS.get_cmdline_user_args():
+	if "--signal-wire-child" in OS.get_cmdline_user_args():
 		_run.call_deferred()
 	else:
 		_run_parent.call_deferred()
 
 func _run_parent() -> void:
 	var audio_only := "--audio-only" in OS.get_cmdline_user_args()
-	var args := ["--signal-lifetime-child"]
+	var args := ["--signal-wire-child"]
 	if audio_only:
 		args.append("--audio-only")
 	var result: Dictionary = ChildRuns.run([
-		{"script": "res://tests/signal_lifetime_test.gd", "args": args}
+		{"script": "res://tests/signal_wire_test.gd", "args": args}
 	], 120.0)[0]
 	var summary := ChildRuns.summary(result)
 	for line in summary.checks:
@@ -58,7 +57,7 @@ func _run_parent() -> void:
 	for error in summary.errors:
 		print("child engine error: %s" % error)
 	var ok: bool = result.code == 0 and not result.timed_out \
-		and summary.verdict == "signal_lifetime_test: PASS" and summary.errors.is_empty()
+		and summary.verdict == "signal_wire_test: PASS" and summary.errors.is_empty()
 	_report("bounded child audio-only=%s" % audio_only, ok,
 		"exit=%s timed_out=%s verdict=%s errors=%d" % [result.code, result.timed_out, summary.verdict, summary.errors.size()])
 	if not audio_only:
@@ -150,10 +149,10 @@ func _owner_exit() -> void:
 	var other_callback := func(_reason: String):
 		calls[2] += 1
 		other_owner.set_meta("heard", true)
-	SignalLifetime.listen(owner, events.stage_content_cleared, callback)
-	SignalLifetime.listen(owner, events.stage_content_cleared, callback)
-	SignalLifetime.listen(owner, events.stage_content_cleared, second_callback)
-	SignalLifetime.listen(other_owner, events.stage_content_cleared, other_callback)
+	SignalWire.listen_until_exit(owner, events.stage_content_cleared, callback)
+	SignalWire.listen_until_exit(owner, events.stage_content_cleared, callback)
+	SignalWire.listen_until_exit(owner, events.stage_content_cleared, second_callback)
+	SignalWire.listen_until_exit(other_owner, events.stage_content_cleared, other_callback)
 	events.stage_content_cleared.emit("alive")
 	_report("helper keeps three distinct listeners", calls == [1, 1, 1] and events.stage_content_cleared.get_connections().size() == 3,
 		"calls=%s want=[1, 1, 1] connections=%d want=3" % [calls, events.stage_content_cleared.get_connections().size()])
@@ -175,7 +174,7 @@ func _owner_exit() -> void:
 	events = Events.new()
 	owner = Node.new()
 	root.add_child(owner)
-	SignalLifetime.listen(owner, events.stage_content_cleared, func(_reason: String): pass)
+	SignalWire.listen_until_exit(owner, events.stage_content_cleared, func(_reason: String): pass)
 	events.free()
 	owner.free()
 	print("[bus-first cleanup completed] owner cleanup emitted after bus free")
@@ -303,5 +302,5 @@ func _run() -> void:
 	_finish()
 
 func _finish() -> void:
-	print("signal_lifetime_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
+	print("signal_wire_test: %s" % ("PASS" if _failures == 0 else "FAIL (%d)" % _failures))
 	quit(0 if _failures == 0 else 1)

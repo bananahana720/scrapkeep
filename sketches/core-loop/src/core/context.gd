@@ -4,9 +4,6 @@ const GameEvents := preload("res://src/core/game_events.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const RunState := preload("res://src/core/run_state.gd")
-const Tuning := preload("res://src/movement/tuning.gd")
-const PlayerBall := preload("res://src/movement/player_ball.gd")
-const ChaseCamera := preload("res://src/movement/chase_camera.gd")
 
 
 var buffs: BuffLedger = BuffLedger.new():
@@ -16,23 +13,26 @@ var buffs: BuffLedger = BuffLedger.new():
 		buffs = value
 		if buffs != null and is_instance_valid(events):
 			buffs.bind_events(events)
-		if is_instance_valid(player) and player.get("abilities") != null and player.abilities.has_method("bind_buffs"):
-			player.abilities.bind_buffs(buffs)
+		var abilities = player.get("abilities") if is_instance_valid(player) else null
+		if abilities != null and abilities.has_method("bind_buffs"):
+			abilities.bind_buffs(buffs)
 var events: GameEvents:
 	set(value):
 		events = value
 		if buffs != null:
 			buffs.bind_events(value if is_instance_valid(value) else null)
 var run: RunState
-var tuning: Tuning
-var player: PlayerBall:
+var tuning: RefCounted
+var player: Node3D:
 	set(value):
-		if is_instance_valid(player) and player != value and player.get("abilities") != null and player.abilities.has_method("bind_buffs"):
-			player.abilities.bind_buffs(null)
+		var prev = player.get("abilities") if is_instance_valid(player) and player != value else null
+		if prev != null and prev.has_method("bind_buffs"):
+			prev.bind_buffs(null)
 		player = value
-		if is_instance_valid(value) and value.get("abilities") != null and value.abilities.has_method("bind_buffs"):
-			value.abilities.bind_buffs(buffs)
-var camera: ChaseCamera
+		var next = value.get("abilities") if is_instance_valid(value) else null
+		if next != null and next.has_method("bind_buffs"):
+			next.bind_buffs(buffs)
+var camera: Node3D
 var flow: Node
 var terrain: RefCounted
 var spawner: Node
