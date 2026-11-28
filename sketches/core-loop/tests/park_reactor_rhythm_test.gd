@@ -41,21 +41,21 @@ func _run() -> void:
 	p.posture = Posture.FULL * 0.5
 	p.idle = Posture.DRAIN_DELAY + Warden.PULSE_CYCLE
 	sheet.on_pulse(w, false)
-	var before: float = p.posture
+	var before: float = w.posture()
 	for i in roundi(Reactor.SHEET_SECONDS * Engine.physics_ticks_per_second) - 2: await physics_frame
-	t.near("posture never regenerates during live sheet", p.posture, before)
+	t.near("posture never regenerates during live sheet", w.posture(), before)
 	sheet.sheet_left = 0.0
 	w._charging = false
 	for i in roundi((Posture.DRAIN_DELAY + 0.5) * Engine.physics_ticks_per_second):
 		w._pulse_clock = 0.0
 		await physics_frame
-	t.near("engaged posture holds across dry seconds", p.posture, before)
+	t.near("engaged posture holds across dry seconds", w.posture(), before)
 	w.live = func(): return false
 	sheet.step(w, 1.0 / Engine.physics_ticks_per_second)
-	before = p.posture
+	before = w.posture()
 	p.idle = 0.0
 	p.step(Posture.DRAIN_DELAY + 0.5)
-	t.near("disengaged posture retains ordinary regeneration", p.posture, before - Posture.DRAIN_RATE * 0.5)
+	t.near("disengaged posture retains ordinary regeneration", w.posture(), before - Posture.DRAIN_RATE * 0.5)
 	game.free()
 	await physics_frame
 	var grown: Dictionary = await _cycles(Run.HEFT_CLASS_AT[2], "grown")
