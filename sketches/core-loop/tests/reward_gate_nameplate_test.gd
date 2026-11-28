@@ -417,7 +417,7 @@ func _approach(gates: Node3D, ids: Array, count: int) -> Dictionary:
 
 # The font's own cap height in canvas px at a size: the height of the glyph H's outline.
 func _font_cap_px(size: int) -> float:
-	var font: Font = preload("res://src/ui/ui_fonts.gd").bold()
+	var font: Font = preload("res://src/core/ui_fonts.gd").bold()
 	var ts := TextServerManager.get_primary_interface()
 	var rid: RID = font.get_rids()[0]
 	var contours := ts.font_get_glyph_contours(rid, size, ts.font_get_glyph_index(rid, size, ord("H"), 0))

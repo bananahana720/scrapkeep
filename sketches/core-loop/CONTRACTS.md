@@ -441,7 +441,7 @@ The event_kinds shapes (`ring`, `diamond`, `chevron` and the rest) are glyphs, n
   - Contextual key glyphs sit beside the ball or the grapple target: `key_e` with `ab_sable_mount`, `key_rmb` with `ab_sable_move` and `key_space` with `ab_sable_vault`.
   - Edge markers use `obj_warden`, `obj_beacon` or `obj_gate`.
 - **Menus.** Class cards use `cls_<pilot>`, and every button draws its key's cap.
-- **Type.** Noto Sans Bold for words and Noto Sans Mono Bold for numbers, vendored in `assets/fonts/` with `OFL.txt` and `PROVENANCE.txt` (`src/ui/ui_fonts.gd`).
+- **Type.** Noto Sans Bold for words and Noto Sans Mono Bold for numbers, vendored in `assets/fonts/` with `OFL.txt` and `PROVENANCE.txt` (`src/core/ui_fonts.gd`).
 
 ### World prompt parts
 

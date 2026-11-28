@@ -1,9 +1,9 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 
 

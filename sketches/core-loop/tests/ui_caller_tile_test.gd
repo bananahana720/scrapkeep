@@ -5,7 +5,7 @@ const Tile := preload("res://src/ui/caller_tile.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 
 # The caller's plate beside the speech bubble (caller_tile.gd): one glance says who is on the
 # line.

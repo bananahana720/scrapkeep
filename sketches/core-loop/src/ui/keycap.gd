@@ -1,8 +1,8 @@
 extends RefCounted
 
 const Icons := preload("res://src/ui/icons.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 
 
 const MOUSE := ["key_lmb", "key_rmb"]

@@ -4,7 +4,7 @@ const EndingSequence := preload("res://src/ui/ending_sequence.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 
 
 signal finished

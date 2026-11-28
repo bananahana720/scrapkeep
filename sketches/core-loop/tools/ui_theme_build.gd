@@ -1,6 +1,6 @@
 extends SceneTree
 
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 
 
 func _initialize() -> void:

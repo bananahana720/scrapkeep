@@ -1,7 +1,7 @@
 extends SceneTree
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")

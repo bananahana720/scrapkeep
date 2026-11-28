@@ -7,8 +7,8 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The boss plate reads one Warden (LEGIBILITY section 4), on the slice table with the

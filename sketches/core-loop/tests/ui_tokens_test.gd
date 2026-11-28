@@ -1,10 +1,10 @@
 extends SceneTree
 
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
-# The UI's tokens (src/ui/ui_tokens.gd): one spacing scale, five type sizes and five colours.
+# The UI's tokens (src/core/ui_tokens.gd): one spacing scale, five type sizes and five colours.
 #   - the project theme file matches the tokens it is written from (tools/ui_theme_build.gd);
 #   - every literal font size and container gap a UI script writes in src/ui is a step of the scale
 #     (a size computed at run time is not read here);

@@ -5,7 +5,7 @@ signal started(id: String)
 
 const Rows := preload("res://src/presentation/flourish_rows.gd")
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const Inset := preload("res://src/presentation/flourish_inset.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")

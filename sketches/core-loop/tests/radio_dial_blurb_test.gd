@@ -3,8 +3,8 @@ extends SceneTree
 const RadioDial := preload("res://src/ui/radio_dial.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 
 # PF-34 (w37 film 012): the swollen radio plate cut its station's blurb mid-word ("Moss's stock
 # of the house band, played however th"). Every station's blurb wraps at a word onto at most

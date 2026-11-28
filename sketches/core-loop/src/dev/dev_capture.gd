@@ -1,8 +1,8 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const DevLook := preload("res://src/dev/dev_look.gd")
 const DevLens := preload("res://src/dev/dev_lens.gd")
 const DevFight := preload("res://src/dev/dev_fight.gd")

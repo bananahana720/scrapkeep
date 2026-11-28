@@ -1,7 +1,7 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const SHADER := preload("res://src/presentation/launch_take.gdshader")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const Icons := preload("res://src/ui/icons.gd")

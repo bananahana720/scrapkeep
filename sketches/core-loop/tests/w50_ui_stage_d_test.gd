@@ -25,7 +25,7 @@ const ClassKit := preload("res://src/ui/class_kit.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const SettingsPages := preload("res://src/ui/settings_pages.gd")
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 

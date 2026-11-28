@@ -1,7 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -9,7 +9,7 @@ const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 

@@ -2,7 +2,7 @@ extends Control
 
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Glyphs := preload("res://src/core/glyphs.gd")
 
 

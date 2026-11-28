@@ -1,7 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 

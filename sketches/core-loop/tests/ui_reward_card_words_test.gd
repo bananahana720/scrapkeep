@@ -9,8 +9,8 @@ const RewardView := preload("res://src/ui/reward_view.gd")
 const RewardCeremony := preload("res://src/presentation/reward_ceremony.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const T := preload("res://tests/support/t.gd")
 
 # reward_view.gd _draw_card: the text column is the card less the socket (92) and the link (52) or a margin (16).

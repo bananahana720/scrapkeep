@@ -2,7 +2,7 @@ extends SceneTree
 
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 
 # The scrap look's colour rule ("HUD look: scrapped together, clean to read"): wear is
 # a value shift of a part's own colour, never a new hue, so the class colour stays the

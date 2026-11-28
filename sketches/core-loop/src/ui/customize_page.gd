@@ -1,14 +1,14 @@
 extends Control
 
 const Secrets := preload("res://src/core/secrets.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")

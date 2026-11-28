@@ -1,6 +1,6 @@
 extends StyleBox
 
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 

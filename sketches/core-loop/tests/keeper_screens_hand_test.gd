@@ -1,7 +1,7 @@
 extends SceneTree
 
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ClassCard := preload("res://src/ui/class_card.gd")

@@ -1,12 +1,12 @@
 extends Control
 
 const BossPosture := preload("res://src/core/boss_posture.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 

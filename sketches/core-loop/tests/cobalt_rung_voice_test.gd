@@ -7,7 +7,7 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const RewardView := preload("res://src/ui/reward_view.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 
 # The cobalt rung finish (design-v3/cobalt-rung-w1.md): the find card wears its rung's stamp,
 # so a first cobalt find reads NEW FLEET GRADE rather than a bare NEW, and every cobalt find

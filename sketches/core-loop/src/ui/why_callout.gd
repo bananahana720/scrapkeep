@@ -1,7 +1,7 @@
 extends Control
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")

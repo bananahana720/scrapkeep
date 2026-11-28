@@ -2,8 +2,8 @@ extends SceneTree
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")

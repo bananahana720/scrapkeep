@@ -1,7 +1,7 @@
 extends CanvasLayer
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Objectives := preload("res://src/core/objectives.gd")
@@ -11,7 +11,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const AbilitySlots := preload("res://src/ui/ability_slots.gd")
 const AbilityBar := preload("res://src/ui/ability_bar.gd")
 const Gauge := preload("res://src/ui/gauge.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const SpeedGlyph := preload("res://src/ui/speed_glyph.gd")

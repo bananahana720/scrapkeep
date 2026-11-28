@@ -5,8 +5,8 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Augments := preload("res://src/movement/augments.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
 const DevInspect := preload("res://src/dev/dev_inspect.gd")
 
 const LAYERS := ["bounds", "telegraphs", "vel"]

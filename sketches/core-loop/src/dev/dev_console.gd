@@ -1,8 +1,8 @@
 extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiTokens := preload("res://src/core/ui_tokens.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const DevCommands := preload("res://src/dev/dev_commands.gd")
 const DevLook := preload("res://src/dev/dev_look.gd")

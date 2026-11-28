@@ -14,7 +14,7 @@ const Telegraph := preload("res://src/combat/telegraph.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiFonts := preload("res://src/core/ui_fonts.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
