@@ -7,6 +7,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Profile := preload("res://src/core/profile.gd")
@@ -513,7 +514,7 @@ func _tree_cases() -> void:
 			pairs_ok = pairs_ok and swaps == ["plate_audit", "plate_flywheel"]
 			seen += 1
 	_t.check("every world-2 offer is one Audit Trail and one Flywheel Throw", pairs_ok and seen == 4, "routes %d" % seen)
-	_t.eq("the tree has no problems", UpgradeTree.problems("tally"), [])
+	_t.eq("the tree has no problems", TreeProblems.problems("tally"), [])
 
 
 # --- stacking and movement (P-UNITS wave P-C common rules, comps rows 7, 8 and 24) ----------------

@@ -2,6 +2,7 @@
 extends SceneTree
 
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const Tarn := preload("res://src/core/trees/tarn.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
@@ -20,7 +21,7 @@ func _initialize() -> void:
 	var t := T.new("tarn_tree_depths_test")
 	var nodes: Array = Tarn.NODES
 	t.eq("30 nodes retain heap order", nodes.size(), 30)
-	t.eq("Tarn tree has no structural or proc-loop problems", UpgradeTree.problems("tarn"), [])
+	t.eq("Tarn tree has no structural or proc-loop problems", TreeProblems.problems("tarn"), [])
 	t.eq("Tarn has no unsafe route", UpgradeTree.safe_growth_problems("tarn"), [])
 	t.eq("proc chain cap remains one", Triggers.MAX_CHAIN_DEPTH, 1)
 	for n in nodes:

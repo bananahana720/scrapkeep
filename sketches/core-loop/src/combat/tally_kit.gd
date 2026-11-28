@@ -10,6 +10,7 @@ const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 
 var ctx
 var combat
@@ -677,7 +678,7 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		struck[enemy.get_instance_id()] = true
 		dealt += combat.ult_hit(enemy, "ultimate", amount, at, true)
 		hits += 1
-	var share: float = float(combat.ultimate.knob("ult_settle", Weapons.SETTLE_SHARE))
+	var share: float = float(combat.ultimate.knob("ult_settle", UpgradeTree.SETTLE_SHARE))
 	var debts: Array = ride_clips.keys()
 	if not link_group.is_empty() and float(link_group["until"]) > combat.clock_now():
 		for cid in link_group["ids"]:

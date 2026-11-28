@@ -5,6 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
+const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
 # How far over the stage the blocked throw is made from: past the landing ray's 60 m reach down.
 const VOID_HEIGHT := 200.0
 
@@ -372,7 +373,7 @@ func _check_sticky_fuse() -> void:
 	_player.abilities.set_max_charges(AbilityState.WEAPON, 1)
 	_report("three live, fuse", _record["max_live"] <= Weapons.STICKY_MAX_LIVE and _record["early"] >= 1 and _combat.sticky.live().is_empty(),
 		"tapping LMB on consecutive ticks with charges to spare: %d live at most, %d set off early to make room; all gone %.1f s later"
-			% [_record["max_live"], _record["early"], Weapons.STICKY_FUSE])
+			% [_record["max_live"], _record["early"], UpgradeTree.STICKY_FUSE])
 
 
 func _tap_fire() -> void:
@@ -463,7 +464,7 @@ func _check_cloak() -> void:
 	_report("cloak sight", _record["aiming"] and _combat.cloak_left > 0.0 and _facts["cloak_started"].size() == _record["started"] + 1 \
 			and near_sees and not far_sees,
 		"a blink with the throw charging raised the cloak: a chaser 18 m off still sees the ball (%s), one past %.0f m sees the smoke (%s)"
-			% [near_sees, 40.0 * Weapons.CLOAK_SIGHT, not far_sees])
+			% [near_sees, 40.0 * UpgradeTree.CLOAK_SIGHT, not far_sees])
 	_source.hold = {}
 
 

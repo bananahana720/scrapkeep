@@ -9,6 +9,7 @@ const DamageFamilies := preload("res://src/combat/damage_families.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const Sable := preload("res://src/core/trees/sable.gd")
 const Cards := preload("res://src/core/trees/world_one_cards.gd")
 const Relics := preload("res://src/build/relics.gd")
@@ -272,7 +273,7 @@ func _tree() -> void:
 	_t.check("all changed movement rows are pilot-local", movement_local)
 	_t.check("each changed node declares its stack rule", stack_rules)
 	_t.check("1 to 20 stack sweep stays capped at one", repeat_safe)
-	_t.check("existing proc graph never re-enters and depth is one", UpgradeTree._proc_loop("pylon_engineer", UpgradeTree.path_to("pylon_engineer", "s_bounce_battery")) == "" and Triggers.MAX_CHAIN_DEPTH == 1)
+	_t.check("existing proc graph never re-enters and depth is one", TreeProblems.proc_loop("pylon_engineer", UpgradeTree.path_to("pylon_engineer", "s_bounce_battery")) == "" and Triggers.MAX_CHAIN_DEPTH == 1)
 
 
 func _grants(enemy: Node3D) -> void:

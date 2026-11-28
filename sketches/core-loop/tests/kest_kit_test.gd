@@ -7,6 +7,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticArt := preload("res://tests/support/cosmetic_art.gd")
@@ -304,7 +305,7 @@ func _cases() -> void:
 
 
 func _tree_cases() -> void:
-	_t.eq("Kest tree is structurally sound", UpgradeTree.problems("demolitions_caster"), [])
+	_t.eq("Kest tree is structurally sound", TreeProblems.problems("demolitions_caster"), [])
 	var nodes: Array = UpgradeTree.nodes("demolitions_caster")
 	var variants := ["minelayer", "air_raid", "minelayer", "air_raid", "air_raid", "minelayer", "minelayer", "air_raid"]
 	for i in 8:

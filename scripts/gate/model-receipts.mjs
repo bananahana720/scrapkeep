@@ -252,7 +252,7 @@ export const ROWS = {
     coverage: "references/deferred-coverage.md",
     gaps: [
       "each queue holds one waiting item, one bolt lineage is followed through a split and one enemy carries the exposure marks; MAX_LIVE eviction, seconds and geometry are left to tests/w45_combat_formal_fixes_test.gd",
-      "the upgrade tree's own procs are kept from leading back to their trigger by UpgradeTree.problems at build time, which the model does not check; it checks only that the verb items and shot bits named here stay at depth 1",
+      "the upgrade tree's own procs are kept from leading back to their trigger by TreeProblems.problems in the tree tests, which the model does not check; it checks only that the verb items and shot bits named here stay at depth 1",
       "Backwash's strip is laid on a dash or boost fact without an in_play check; the model lets the ball dash only in play (its input is frozen otherwise)",
     ],
   },

@@ -626,7 +626,7 @@ One binary tree per pilot (DESIGN-V2 §15). There are four picks: the start pick
   - `icon`: an `ab_` id.
   - `tags`: an Array from `UpgradeTree.TAGS`.
   - One or more ops: `swap`, `knob`, `proc`, `pattern`, `charges` or `cooldown`. The header of `upgrade_tree.gd` says what each op does.
-  - `UpgradeTree.problems(class_id)` is the validator. `tree_data_test` fails on any sentence it returns.
+  - `TreeProblems.problems(class_id)` in `tests/support/tree_problems.gd` is the validator. `tree_data_test` fails on any sentence it returns.
 - **Picking.**
   - `offered(class_id, depth) -> Array` returns the two node records a pick chooses between. At depth 1 that is the root pair; after that it is the children of the pick one depth up. It returns `[]` for a depth not reached yet or for another class.
   - `pick(node_id) -> bool` takes an offered node. It refuses anything that was not offered and anything past the picks opened so far.

@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const UpgradeTree := preload("res://src/core/upgrade_tree.gd")
+const TreeProblems := preload("res://tests/support/tree_problems.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 # Unit G of the world-one build systems (BUILD-SYSTEMS.md): --world-one-builds=on gives every
@@ -196,7 +197,7 @@ func _validator() -> void:
 	var bad := []
 	var off_ok := true
 	for def in ClassDef.all():
-		if not UpgradeTree.problems(def.id, true).is_empty():
+		if not TreeProblems.problems(def.id, true).is_empty():
 			bad.append(def.id)
-		off_ok = off_ok and UpgradeTree.problems(def.id) == UpgradeTree.problems(def.id, false)
+		off_ok = off_ok and TreeProblems.problems(def.id) == TreeProblems.problems(def.id, false)
 	_check("world-one validator", bad.is_empty() and off_ok, "the six offered nodes of each pilot pass; failures %s; default call unchanged" % [bad])
