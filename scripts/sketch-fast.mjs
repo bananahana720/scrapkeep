@@ -726,6 +726,44 @@ export function failedRunLogName(test, where, attempt) {
     .replaceAll("/", "__")}.${where}-${attempt}.log`;
 }
 
+export function redRunKeeper({ records, directory, root, head, base, log }) {
+  const attempts = new Map();
+  return (where) =>
+    ({ output, ...run }) => {
+      if (run.ok || run.killed) return run;
+      const key = `${run.test} ${where}`;
+      const attempt = (attempts.get(key) ?? 0) + 1;
+      attempts.set(key, attempt);
+      const file = path.join(directory, failedRunLogName(run.test, where, attempt));
+      const kept = {
+        test: run.test,
+        where,
+        attempt,
+        exit: run.exit,
+        signal: run.signal,
+        timed_out: run.timedOut,
+        ms: run.ms,
+        reason: run.reason,
+        log: null,
+      };
+      try {
+        mkdirSync(path.dirname(file), { recursive: true });
+        writeFileSync(
+          file,
+          failedRunLog({ ...run, where, attempt, head: where === "base" ? base : head, output }),
+        );
+        kept.log = path.relative(root, file);
+        log(`  log of this red run of ${run.test}: ${kept.log}`);
+      } catch (error) {
+        log(
+          `  log of this red run of ${run.test} not written (${error.message}); the verdict still stands`,
+        );
+      }
+      records.push(kept);
+      return run;
+    };
+}
+
 const TESTS_STAGE_PARTS = new Set(["parallel lanes", "solo tests"]);
 
 export function longestStages(stages, count = 3) {
@@ -1584,52 +1622,14 @@ async function main() {
     timedOut: false,
   });
   receipt.failed_runs = [];
-  const redRuns = new Map();
-  const keepRed =
-    (where) =>
-    ({ output, ...run }) => {
-      if (run.ok || run.killed) return run;
-      const key = `${run.test} ${where}`;
-      const attempt = (redRuns.get(key) ?? 0) + 1;
-      redRuns.set(key, attempt);
-      const file = path.join(
-        receiptDirectory,
-        `${receiptName}-logs`,
-        failedRunLogName(run.test, where, attempt),
-      );
-      const kept = {
-        test: run.test,
-        where,
-        attempt,
-        exit: run.exit,
-        signal: run.signal,
-        timed_out: run.timedOut,
-        ms: run.ms,
-        reason: run.reason,
-        log: null,
-      };
-      try {
-        mkdirSync(path.dirname(file), { recursive: true });
-        writeFileSync(
-          file,
-          failedRunLog({
-            ...run,
-            where,
-            attempt,
-            head: where === "base" ? diffBase : receipt.head,
-            output,
-          }),
-        );
-        kept.log = path.relative(root, file);
-        log(`  log of this red run of ${run.test}: ${kept.log}`);
-      } catch (error) {
-        log(
-          `  log of this red run of ${run.test} not written (${error.message}); the verdict still stands`,
-        );
-      }
-      receipt.failed_runs.push(kept);
-      return run;
-    };
+  const keepRed = redRunKeeper({
+    records: receipt.failed_runs,
+    directory: path.join(receiptDirectory, `${receiptName}-logs`),
+    root,
+    head: receipt.head,
+    base: diffBase,
+    log,
+  });
   const godot = (dir, test, timeoutMs, onChild, skip = () => false) =>
     inLane(() =>
       shouldStop() || skip()

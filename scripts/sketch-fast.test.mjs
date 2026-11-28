@@ -62,6 +62,7 @@ import {
   cappedLog,
   failedRunLog,
   failedRunLogName,
+  redRunKeeper,
   receiptBaseName,
   signalReason,
   checkLabels,
@@ -1917,14 +1918,43 @@ test("a red run keeps what the known-red rule needs after its log is dropped, as
     "test\tkind\tcause\towner\tadded\treview\tcheck",
     "a_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
   ].join("\n");
-  const settle = (res) => {
-    const { output, ...kept } = godotRun("tests/a_test.gd", res, {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-keep-red-"));
+  try {
+    keptRedShapes(tmp, ledger);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+function keptRedShapes(tmp, ledger) {
+  writeFileSync(path.join(tmp, "not-a-folder"), "");
+  const settle = (res, folder = "logs") => {
+    const records = [];
+    const said = [];
+    const keepRed = redRunKeeper({
+      records,
+      directory: path.join(tmp, folder),
+      root: tmp,
+      head: "a".repeat(40),
+      base: "b".repeat(40),
+      log: (line) => said.push(line),
+    });
+    const run = godotRun("tests/a_test.gd", res, {
       started: Date.now(),
       killed: false,
       platform: "linux",
     });
-    assert.equal(typeof output, "string");
-    assert.equal("output" in kept, false);
+    assert.equal(typeof run.output, "string");
+    const kept = keepRed("head")(run);
+    assert.equal("output" in kept, false, "keepRed drops the log from the run it hands on");
+    assert.equal(records.length, 1);
+    if (folder === "logs") {
+      assert.equal(records[0].log, `logs/a_test.head-1.log`);
+      assert.match(readFileSync(path.join(tmp, records[0].log), "utf8"), /-> FAIL/);
+    } else {
+      assert.equal(records[0].log, null);
+      assert.match(said[0], /not written .*; the verdict still stands$/);
+    }
     return mainRedLedger(parseLedger(ledger).rows, { today: "2026-11-30" }).settle(
       "tests/a_test.gd",
       { kind: "pr-red", newChecks: [] },
@@ -1933,6 +1963,11 @@ test("a red run keeps what the known-red rule needs after its log is dropped, as
   };
   const red = "[stage 1: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)\n";
   assert.equal(settle({ exit: 1, signal: null, timedOut: false, output: red }), "main-red");
+  assert.equal(
+    settle({ exit: 1, signal: null, timedOut: false, output: red }, "not-a-folder/logs"),
+    "main-red",
+    "a log that cannot be written leaves the failure record",
+  );
   assert.equal(
     settle({ exit: null, signal: "SIGSEGV", timedOut: false, output: red }),
     "pr-red",
@@ -1954,7 +1989,7 @@ test("a red run keeps what the known-red rule needs after its log is dropped, as
     { started: Date.now(), killed: false, platform: "linux" },
   );
   assert.deepEqual([green.ok, green.failure], [true, null]);
-});
+}
 
 test("a listed test is a known red only when every run of it qualifies, its first run in a warm batch included", () => {
   const ledger = [
