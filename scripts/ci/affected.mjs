@@ -108,11 +108,11 @@ export function treeFiles(ref, { cwd = process.cwd(), spawn = spawnSync, env = p
   }
   const files = new Map();
   for (const entry of ran.stdout.split("\0").filter(Boolean)) {
-    const tab = entry.indexOf("\t");
-    const mode = entry.slice(0, tab).split(" ")[0];
-    if (tab < 0 || !/^\d{6}$/.test(mode))
+    const [, mode, file] =
+      entry.match(/^(\d{6}) [a-z]+ (?:[0-9a-f]{40}|[0-9a-f]{64})\t([^]+)$/) ?? [];
+    if (mode === undefined)
       throw new Error(`git ls-tree ${ref} gave an entry it cannot read: ${JSON.stringify(entry)}`);
-    files.set(entry.slice(tab + 1), mode);
+    files.set(file, mode);
   }
   if (files.size === 0) throw new Error(`git ls-tree ${ref} lists no files`);
   return files;

@@ -27,7 +27,9 @@ function recording(error = null) {
   return { calls, kill };
 }
 
-test("groupId takes only an integer above 1", () => {
+const TOO_LARGE = [2147483648, 4294967296, 4294967297, Number.MAX_SAFE_INTEGER];
+
+test("groupId takes only an integer from 2 to 2147483647", () => {
   for (const bad of [
     "",
     "0",
@@ -43,17 +45,26 @@ test("groupId takes only an integer above 1", () => {
     NaN,
     null,
     undefined,
+    -0,
+    Infinity,
+    "1e5",
+    "0x10",
+    ...TOO_LARGE,
+    ...TOO_LARGE.map(String),
   ])
     assert.equal(groupId(bad), null, JSON.stringify(bad));
   assert.equal(groupId("4321"), 4321);
   assert.equal(groupId(4321), 4321);
+  assert.equal(groupId(2147483647), 2147483647);
+  assert.equal(groupId("2147483647"), 2147483647);
 });
 
 test("cleanup signals no group for an empty, 0, 1, negative or text id, nor one marked gone", () => {
   const t = fakeTest();
   const { calls, kill } = recording();
   const groups = testGroups(t, { kill });
-  for (const bad of ["", "0", "1", "-7", -7, "seven"]) assert.equal(groups.add(bad), null);
+  for (const bad of ["", "0", "1", "-7", -7, "seven", ...TOO_LARGE, ...TOO_LARGE.map(String)])
+    assert.equal(groups.add(bad), null);
   groups.add(4001);
   groups.add("4002");
   groups.gone(4002);

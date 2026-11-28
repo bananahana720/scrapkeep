@@ -1,10 +1,12 @@
 import { readFileSync } from "node:fs";
 
+const MAX_GROUP_ID = 2 ** 31 - 1;
+
 export function groupId(value) {
   const text = typeof value === "number" ? String(value) : value;
   if (typeof text !== "string" || !/^\d+$/.test(text)) return null;
   const id = Number(text);
-  return Number.isSafeInteger(id) && id > 1 ? id : null;
+  return Number.isSafeInteger(id) && id > 1 && id <= MAX_GROUP_ID ? id : null;
 }
 
 function linesIn(file) {

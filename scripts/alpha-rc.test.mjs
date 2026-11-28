@@ -350,7 +350,7 @@ test("launch env drops GODOT_BIN and shadows each godot on PATH with a failing s
 
 function fake(dir, name, body) {
   const file = path.join(dir, name);
-  writeFileSync(file, `#!/bin/sh\necho $$ >> "${path.join(dir, "groups")}"\n${body}\n`);
+  writeFileSync(file, `#!/bin/sh\nprintf '%s\\n' $$ >> "${path.join(dir, "groups")}"\n${body}\n`);
   chmodSync(file, 0o755);
   return file;
 }
@@ -395,7 +395,7 @@ test(
     assert.equal(result.status, "pass");
     assert.match(
       result.note,
-      /interactive title in \d\.\d s \(budget 30 s\), 3D title in \d\.\d s/,
+      /interactive title in \d+\.\d s \(budget 30 s\), 3D title in \d+\.\d s/,
     );
     assert.ok(result.titleMs !== null && result.menuMs >= result.titleMs);
     const home = result.output.match(/home=(\S+)/)[1];
@@ -444,7 +444,7 @@ describe("cold launch and process timeouts", { concurrency: true, timeout: GUARD
     assert.equal(noMenu.status, "fail");
     assert.match(
       noMenu.note,
-      /no SCRAPKEEP_MENU_READY line within 0.6 s \(title card at \d\.\d s\)/,
+      /no SCRAPKEEP_MENU_READY line within 0.6 s \(title card at \d+\.\d s\)/,
     );
     assert.equal(late.status, "fail");
     assert.match(late.note, /no SCRAPKEEP_TITLE_INTERACTIVE line within 0.4 s/);
