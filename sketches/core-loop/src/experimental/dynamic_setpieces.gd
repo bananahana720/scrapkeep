@@ -4,6 +4,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const ChunkSockets := preload("res://src/experimental/arena_chunk_socket.gd")
 const SetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
@@ -13,23 +14,6 @@ signal env_tag_emitted(payload: Dictionary)
 signal cover_relocated(from_slot: String, to_slot: String, world_pos: Vector3)
 signal slag_berms_changed(active_count: int)
 signal prop_interaction_triggered(prop_id: String, interaction: String, world_origin: Vector3)
-
-
-const TAG_ELECTRIFIED := &"electrified"
-const TAG_BURNING := &"burning"
-const TAG_SLAG_COATED := &"slag_coated"
-const TAG_MAGNETIC := &"magnetic"
-const TAG_COOLANT_BRITTLE := &"coolant_brittle"
-const TAG_SOAKED_CONDUCTIVE := &"soaked_conductive"
-
-const ENV_TAGS := [
-	TAG_ELECTRIFIED,
-	TAG_BURNING,
-	TAG_SLAG_COATED,
-	TAG_MAGNETIC,
-	TAG_COOLANT_BRITTLE,
-	TAG_SOAKED_CONDUCTIVE,
-]
 
 
 const WORLD_LAYER := 1
@@ -100,46 +84,6 @@ var _pads: Array[Dictionary] = []
 var _pad_decks: Array[StaticBody3D] = []
 var _pad_flights: Array[Dictionary] = []
 var _pad_facts: Array[Dictionary] = []
-
-
-
-static func make_env_tag(
-		tag: StringName,
-		origin: Vector3,
-		radius_m: float,
-		source_id: String,
-		intensity: float = 1.0,
-		ttl_s: float = 1.0
-) -> Dictionary:
-	return {
-		"tag": tag,
-		"origin": origin,
-		"radius_m": maxf(0.1, radius_m),
-		"source_id": source_id,
-		"intensity": clampf(intensity, 0.05, 2.0),
-		"ttl_s": maxf(0.05, ttl_s),
-	}
-
-
-static func validate_env_tag(payload: Dictionary) -> String:
-	for req in ["tag", "origin", "radius_m", "source_id", "intensity", "ttl_s"]:
-		if not payload.has(req):
-			return "missing key: " + req
-	var tag_val: Variant = payload["tag"]
-	if not (tag_val is StringName) or not (tag_val in ENV_TAGS):
-		return "unknown env tag: " + str(tag_val)
-	if not (payload["origin"] is Vector3):
-		return "origin must be Vector3"
-	if float(payload["radius_m"]) <= 0.0:
-		return "radius_m must be positive"
-	if String(payload["source_id"]).strip_edges() == "":
-		return "source_id must be non-empty"
-	if float(payload["intensity"]) <= 0.0:
-		return "intensity must be positive"
-	if float(payload["ttl_s"]) <= 0.0:
-		return "ttl_s must be positive"
-	return ""
-
 
 
 func _to_local_point(world_pos: Vector3) -> Vector3:
@@ -347,7 +291,7 @@ func strike_crane_magnet(actors: Array = [], ball_pos: Vector3 = Vector3(9999.0,
 					"position": drop_world,
 				})
 
-	_publish_tag(TAG_ELECTRIFIED, drop_local + Vector3.UP * 1.0, CRANE_DROP_CRUSH_RADIUS_M, "crane_magnet_drop:" + String(_crane["id"]), 1.2, 0.6, facts)
+	_publish_tag(EnvTags.TAG_ELECTRIFIED, drop_local + Vector3.UP * 1.0, CRANE_DROP_CRUSH_RADIUS_M, "crane_magnet_drop:" + String(_crane["id"]), 1.2, 0.6, facts)
 	prop_interaction_triggered.emit(String(_crane["id"]), "magnet_drop", drop_world)
 	facts.append({
 		"kind": "harpoon_bridge_closed",
@@ -376,8 +320,8 @@ func rupture_cryo_pipe(pipe_id := "") -> Array[Dictionary]:
 		var origin_local: Vector3 = pipe["origin"]
 		var origin_world := _to_world_point(origin_local)
 		var pid := String(pipe["id"])
-		_publish_tag(TAG_COOLANT_BRITTLE, origin_local, CRYO_PIPE_RADIUS_M, "cryo_pipe:" + pid, 1.2, CRYO_PIPE_TAG_TTL_S, facts)
-		var world_payload := make_env_tag(TAG_COOLANT_BRITTLE, origin_world, CRYO_PIPE_RADIUS_M, "cryo_pipe:" + pid, 1.2, CRYO_PIPE_TAG_TTL_S)
+		_publish_tag(EnvTags.TAG_COOLANT_BRITTLE, origin_local, CRYO_PIPE_RADIUS_M, "cryo_pipe:" + pid, 1.2, CRYO_PIPE_TAG_TTL_S, facts)
+		var world_payload := EnvTags.make_payload(EnvTags.TAG_COOLANT_BRITTLE, origin_world, CRYO_PIPE_RADIUS_M, "cryo_pipe:" + pid, 1.2, CRYO_PIPE_TAG_TTL_S, EnvTags.BOUNDS_SETPIECE)
 		var reactions := apply_external_tag(world_payload)
 		facts.append_array(reactions)
 		prop_interaction_triggered.emit(pid, "cryo_rupture", origin_world)
@@ -392,7 +336,7 @@ func rupture_cryo_pipe(pipe_id := "") -> Array[Dictionary]:
 
 func apply_external_tag(payload: Dictionary) -> Array[Dictionary]:
 	var facts: Array[Dictionary] = []
-	if validate_env_tag(payload) != "":
+	if not EnvTags.is_valid_payload(payload, EnvTags.BOUNDS_SETPIECE):
 		return facts
 	var tag: StringName = payload["tag"]
 	var world_origin: Vector3 = payload["origin"]
@@ -401,7 +345,7 @@ func apply_external_tag(payload: Dictionary) -> Array[Dictionary]:
 	_upsert_active_tag(payload)
 
 	if not _furnace.is_empty() and String(_furnace["state"]) == "molten_pour" and not bool(_furnace["quenched_this_cycle"]):
-		if tag == TAG_COOLANT_BRITTLE or tag == TAG_SOAKED_CONDUCTIVE:
+		if tag == EnvTags.TAG_COOLANT_BRITTLE or tag == EnvTags.TAG_SOAKED_CONDUCTIVE:
 			var f_local: Vector3 = _furnace["origin"]
 			var dist := Vector2(local_origin.x - f_local.x, local_origin.z - f_local.z).length()
 			if dist <= SLAG_BASIN_RADIUS_M + radius:
@@ -416,7 +360,7 @@ func apply_external_tag(payload: Dictionary) -> Array[Dictionary]:
 				})
 
 	if not _crane.is_empty() and String(_crane["state"]) == "sweep_active" and not bool(_crane["supercharged_this_cycle"]):
-		if tag == TAG_ELECTRIFIED:
+		if tag == EnvTags.TAG_ELECTRIFIED:
 			var trolley_local: Vector3 = _crane["trolley_pos"]
 			var dist := Vector2(local_origin.x - trolley_local.x, local_origin.z - trolley_local.z).length()
 			if dist <= CRANE_MAGNET_RADIUS_M + radius:
@@ -1032,7 +976,7 @@ func _step_crane(delta: float, ball_local: Vector3, actors: Array, facts: Array[
 			if float(_crane["tag_cooldown"]) <= 0.0:
 				_crane["tag_cooldown"] = 0.4
 				var intensity := 1.5 if bool(_crane["supercharged_this_cycle"]) else 1.0
-				_publish_tag(TAG_MAGNETIC, Vector3(sweep_xz.x, 1.0, sweep_xz.z), CRANE_MAGNET_RADIUS_M, "em_crane:" + String(_crane["id"]), intensity, 0.55, facts)
+				_publish_tag(EnvTags.TAG_MAGNETIC, Vector3(sweep_xz.x, 1.0, sweep_xz.z), CRANE_MAGNET_RADIUS_M, "em_crane:" + String(_crane["id"]), intensity, 0.55, facts)
 
 			var pull_mult := 1.4 if bool(_crane["supercharged_this_cycle"]) else 1.0
 			for actor in actors:
@@ -1276,8 +1220,8 @@ func _step_furnace(
 			_furnace["tag_cooldown"] = float(_furnace["tag_cooldown"]) - delta
 			if float(_furnace["tag_cooldown"]) <= 0.0:
 				_furnace["tag_cooldown"] = 0.5
-				_publish_tag(TAG_SLAG_COATED, origin, SLAG_BASIN_RADIUS_M, "slag_furnace:" + String(_furnace["id"]), 1.0, 0.7, facts)
-				_publish_tag(TAG_BURNING, origin, SLAG_BASIN_RADIUS_M, "slag_furnace:" + String(_furnace["id"]), 1.0, 0.7, facts)
+				_publish_tag(EnvTags.TAG_SLAG_COATED, origin, SLAG_BASIN_RADIUS_M, "slag_furnace:" + String(_furnace["id"]), 1.0, 0.7, facts)
+				_publish_tag(EnvTags.TAG_BURNING, origin, SLAG_BASIN_RADIUS_M, "slag_furnace:" + String(_furnace["id"]), 1.0, 0.7, facts)
 			var horiz := Vector2(ball_local.x - origin.x, ball_local.z - origin.z).length()
 			if horiz <= SLAG_BASIN_RADIUS_M and ball_local.y <= origin.y + 1.8 and not fast_enough:
 				facts.append({
@@ -1496,7 +1440,7 @@ func _publish_tag(
 		facts: Array[Dictionary]
 ) -> void:
 	var world_origin := _to_world_point(origin_local)
-	var payload := make_env_tag(tag, world_origin, radius_m, source_id, intensity, ttl_s)
+	var payload := EnvTags.make_payload(tag, world_origin, radius_m, source_id, intensity, ttl_s, EnvTags.BOUNDS_SETPIECE)
 	_upsert_active_tag(payload)
 	env_tag_emitted.emit(payload)
 	facts.append({

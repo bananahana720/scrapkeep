@@ -1,6 +1,8 @@
 extends RefCounted
 
 
+const EventDirector := preload("res://src/world/event_director.gd")
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 const RefurbishedElites := preload("res://src/experimental/refurbished_elites.gd")
 
 const DEFAULT_CONFIG_PATH := "res://src/experimental/resources/director/spillway_adversity_config.tres"
@@ -299,7 +301,7 @@ func compute_magnetic_force(
 				var boost_scale := 0.0 if speed >= cruise * 1.65 else 1.0
 				var raw := lateral * float(def["pull_strength"]) * 0.55 * falloff \
 					+ forward * float(def["slingshot_boost"]) * falloff * boost_scale
-				return RefurbishedElites.never_brake(raw, entity_vel)
+				return EventDirector.never_brake(raw, entity_vel)
 			return (inward * float(def["pull_strength"]) * 0.45 + swirl * float(def["swirl_strength"]) * 0.25) * falloff
 		_:
 			return Vector3.ZERO
@@ -340,7 +342,7 @@ func compute_crosswind_force(
 				var lateral := wind_dir - forward * wind_dir.dot(forward)
 				var boost_scale := 0.0 if speed >= cruise * 1.65 else 1.0
 				var raw := lateral * strength * 0.45 + forward * float(def.get("slingshot_boost", 11.5)) * intensity * boost_scale
-				return RefurbishedElites.never_brake(raw, entity_vel)
+				return EventDirector.never_brake(raw, entity_vel)
 			return wind_dir * strength * 0.55
 		_:
 			return Vector3.ZERO
@@ -370,7 +372,7 @@ func compute_tremor_force(
 	var raw := lateral_dir * float(def.get("tremor_lateral_accel", 11.5)) * intensity
 	var flat_v := Vector3(entity_vel.x, 0.0, entity_vel.z)
 	if flat_v.length() >= cruise * fast_ratio:
-		return RefurbishedElites.never_brake(raw * 0.35, entity_vel)
+		return EventDirector.never_brake(raw * 0.35, entity_vel)
 	return raw
 
 
@@ -817,22 +819,24 @@ func _emit_hazard_tags(def: Dictionary, out_tags: Array) -> void:
 	var intensity := maxf(0.4, hazard_intensity())
 	var radius := float(def["radius_m"])
 	var id_str := String(def["id"])
-	out_tags.append(RefurbishedElites.make_env_tag_payload(
+	out_tags.append(EnvTags.make_payload(
 		StringName(def["primary_tag"]),
 		hazard_origin,
 		radius,
 		"hazard:%s" % id_str,
 		intensity,
-		2.5
+		2.5,
+		EnvTags.BOUNDS_ELITE
 	))
 	if def.has("secondary_tag") and StringName(def["secondary_tag"]) != &"":
-		out_tags.append(RefurbishedElites.make_env_tag_payload(
+		out_tags.append(EnvTags.make_payload(
 			StringName(def["secondary_tag"]),
 			hazard_origin,
 			radius * 0.85,
 			"hazard:%s#secondary" % id_str,
 			intensity * 0.85,
-			2.5
+			2.5,
+			EnvTags.BOUNDS_ELITE
 		))
 
 
