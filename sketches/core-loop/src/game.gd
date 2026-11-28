@@ -270,6 +270,8 @@ func _ready() -> void:
 	combat = _module(Combat)
 	_boot("combat")
 	build = _module(Build)
+	build.shop.return_leaves = progress.return_leaves
+	build.shop.leaves_returned = progress.leaves_returned
 	events.run_started.connect(_apply_player_run_options)
 	if ResourceLoader.exists(BOSS_PATH):
 		boss = _module(load(BOSS_PATH))

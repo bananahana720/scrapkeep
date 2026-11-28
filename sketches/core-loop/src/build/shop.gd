@@ -113,6 +113,8 @@ var history := {}
 var neglected := false
 var talks := {"beat": -1, "used": {}, "loops": 0, "relented": false}
 var leaves_this_visit: Array = []
+var return_leaves := Callable()
+var leaves_returned := Callable()
 var stocked_for: Array = []
 var stocks := 0
 var _stage_stocks := {}
@@ -163,7 +165,7 @@ func enter() -> Dictionary:
 	var greeting: Dictionary = greeting_line()
 	leaves_this_visit = _return_leaves()
 	if not leaves_this_visit.is_empty():
-		greeting = line("moss.ledger.%d" % clampi(ctx.progress.leaves_returned(), 1, 3))
+		greeting = line("moss.ledger.%d" % clampi(int(leaves_returned.call()), 1, 3))
 	neglected = false
 	return greeting
 
@@ -247,9 +249,9 @@ func leave() -> Dictionary:
 
 
 func _return_leaves() -> Array:
-	if ctx.progress == null or not ctx.progress.has_method("return_leaves"):
+	if not return_leaves.is_valid():
 		return []
-	return ctx.progress.return_leaves(ctx.player.ball_position() if ctx.player != null else Vector3.ZERO)
+	return return_leaves.call(ctx.player.ball_position() if ctx.player != null else Vector3.ZERO)
 
 
 func clock_paused() -> bool:
