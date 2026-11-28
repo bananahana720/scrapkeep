@@ -1558,6 +1558,11 @@ test("a dead or stale quiet hold blocks nobody and is replaced", () => {
     writeFileSync(file, String(process.pid));
     hold.release();
     assert.equal(existsSync(file), true);
+    for (const text of [` ${process.ppid}`, `0${process.ppid}`, `${process.ppid}\n`]) {
+      writeFileSync(file, text);
+      hold.release();
+      assert.equal(readFileSync(file, "utf8"), text, `a release leaves ${JSON.stringify(text)}`);
+    }
   } finally {
     rmSync(at.directory, { recursive: true, force: true });
   }

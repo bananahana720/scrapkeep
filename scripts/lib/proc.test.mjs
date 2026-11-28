@@ -96,7 +96,7 @@ test("only scripts/lib/proc.mjs asks the system whether a process lives; every o
   const allowed = {
     "scripts/lib/proc.mjs": "owns processLive and groupLive",
     "scripts/sketch-smoke.test.mjs":
-      "pins the system's own answer (EPERM) for process 1, which processLive refuses to ask about",
+      "checks its fixtures before the lock reads them: an exited child's id answers ESRCH, and its stub of process.kill answers EPERM for another user's claim",
   };
   assert.deepEqual(
     filesAskingKill(path.resolve(fileURLToPath(import.meta.url), "../../..")),

@@ -116,7 +116,7 @@ export function holdQuietSync({
   const late = () => Date.now() - started > timeoutMs;
   const release = () => {
     try {
-      if (Number(readFileSync(file, "utf8")) === pid) unlinkSync(file);
+      if (processId(readFileSync(file, "utf8")) === pid) unlinkSync(file);
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }

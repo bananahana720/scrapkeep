@@ -202,7 +202,82 @@ export function readMainReds(ref, { cwd, log = () => {} } = {}) {
   return rows.filter((row) => row.main);
 }
 
-export function mainRedLedger(rows, { log = () => {}, platform = process.platform } = {}) {
+export function failedChecks(text) {
+  const labels = [];
+  for (const raw of text.split("\n")) {
+    const line = raw.replace(/^\s*(?:>> )?/, "").trimEnd();
+    if (
+      (!/-> FAIL\b/.test(line) && !/^FAIL\b/.test(line)) ||
+      line.lastIndexOf("-> PASS") > line.lastIndexOf("-> FAIL")
+    )
+      continue;
+    const label = line.match(/^\[(.+?)\] .*-> FAIL\b/)?.[1] ?? `unlabelled failing line: ${line}`;
+    if (!labels.includes(label)) labels.push(label);
+  }
+  return labels;
+}
+
+export function whatFailed(runs, platform = process.platform) {
+  const failed = runs.filter((run) => !run.ok);
+  const labels = [];
+  for (const run of failed) {
+    for (const label of run.text === null ? ["a failed run left no log"] : failedChecks(run.text))
+      if (!labels.includes(label)) labels.push(label);
+  }
+  return {
+    labels,
+    timedOut: failed.some((run) => run.timedOut),
+    errorLine: failed.some(
+      (run) =>
+        run.text !== null &&
+        /^(?:SCRIPT ERROR|ERROR)\b/m.test(withoutTeardownNoise(run.text, platform)),
+    ),
+  };
+}
+
+export function runFailure(test, output, platform = process.platform) {
+  if (typeof output !== "string")
+    throw new TypeError(`runFailure(test, output): output must be text, got ${typeof output}`);
+  const name = testName(test).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const { labels, errorLine } = whatFailed(
+    [{ ok: false, text: output, timedOut: false }],
+    platform,
+  );
+  return {
+    labels,
+    errorLine,
+    failVerdict: new RegExp(`^${name}: FAIL\\b`, "m").test(output.replace(/\r/g, "")),
+  };
+}
+
+export const ONLY_KNOWN_REDS = "sketch:fast fail: only known reds on main";
+export const NEW_AND_KNOWN_REDS = "sketch:fast fail: new reds";
+
+const NORMAL_EXITS = new Set([0, 1]);
+
+function whyNotKnown(row, run, today) {
+  if (row.review < today) return `its row is past its review date (${row.review})`;
+  const failure = run?.failure;
+  if (!failure) return "the run left no failure record";
+  if (run.killed === true || run.timedOut === true || (run.signal ?? null) !== null)
+    return `the run was stopped (${run.timedOut ? "time-out" : (run.signal ?? "killed")})`;
+  if (!NORMAL_EXITS.has(run.exit)) return `the run ended with exit code ${run.exit}`;
+  if (!failure.failVerdict) return "the run ended without its FAIL verdict line";
+  if (failure.labels.length === 0) return "no failing check was printed";
+  const unnamed = uncoveredChecks(row, {
+    labels: failure.labels,
+    timedOut: false,
+    errorLine: failure.errorLine,
+  });
+  if (unnamed.length > 0)
+    return `it fails what its row does not name: ${unnamed.join("; ")}; the row covers ${row.checks.join(` ${CHECK_SEPARATOR} `)}`;
+  return null;
+}
+
+export function mainRedLedger(
+  rows,
+  { log = () => {}, today = new Date().toISOString().slice(0, 10) } = {},
+) {
   if (!Array.isArray(rows)) throw new TypeError("mainRedLedger(rows): rows must be an array");
   const listed = new Map(
     rows.filter((row) => row.main && row.checks?.length > 0).map((row) => [row.test, row]),
@@ -212,8 +287,8 @@ export function mainRedLedger(rows, { log = () => {}, platform = process.platfor
   return {
     passed(test) {
       const row = listed.get(testName(test));
-      if (!row || passed.includes(row.test)) return;
-      passed.push(row.test);
+      if (!row || passed.includes(test)) return;
+      passed.push(test);
       log(
         `  ${row.test} passed, but ${LEDGER_FILE} lists it as red on main at ${row.main.commit}: remove its row once main is green`,
       );
@@ -221,33 +296,37 @@ export function mainRedLedger(rows, { log = () => {}, platform = process.platfor
     settle(test, verdict) {
       const row = listed.get(testName(test));
       if (!row || verdict.kind !== "pr-red") return verdict;
-      const run = verdict.rerun;
-      if (typeof run?.output !== "string") return verdict;
-      const unnamed = uncoveredChecks(row, {
-        labels: run.checks ?? [],
-        timedOut: run.timedOut === true,
-        errorLine: /^(?:SCRIPT ERROR|ERROR)\b/m.test(withoutTeardownNoise(run.output, platform)),
-      });
-      if (unnamed.length > 0) {
-        log(
-          `  ${row.test} is red on main, but fails what its row does not name: ${unnamed.join("; ")}; the row covers ${row.checks.join(` ${CHECK_SEPARATOR} `)}`,
-        );
+      const why = whyNotKnown(row, verdict.rerun, today);
+      if (why !== null) {
+        log(`  ${row.test} is listed as red on main, but counts as this change's red: ${why}`);
         return verdict;
       }
-      known.push(row.test);
+      known.push(test);
       log(
         `  known red on main: ${row.test} (${LEDGER_FILE} line ${row.line}; owner ${row.owner}; check ${row.checks.join(` ${CHECK_SEPARATOR} `)}): ${row.cause}`,
       );
       return { ...verdict, kind: "main-red" };
     },
-    report() {
-      if (known.length > 0)
-        log(`known red on main (listed in ${LEDGER_FILE}; not this change): ${known.join(", ")}`);
+    report(newReds = []) {
+      if (!Array.isArray(newReds))
+        throw new TypeError("report(newReds): newReds must be an array of tests");
       if (passed.length > 0)
         log(
           `listed as red on main but passed here (remove the row once main is green): ${passed.join(", ")}`,
         );
-      return { known: [...known], passed: [...passed] };
+      const line =
+        known.length === 0
+          ? null
+          : newReds.length === 0
+            ? `${ONLY_KNOWN_REDS} (${known.length}): ${known.join(" ")}`
+            : `${NEW_AND_KNOWN_REDS} (${newReds.length}): ${newReds.join(" ")}; known reds on main (${known.length}): ${known.join(" ")}`;
+      return {
+        known: [...known],
+        new_reds: [...newReds],
+        passed: [...passed],
+        only_known_reds: known.length > 0 && newReds.length === 0,
+        line,
+      };
     },
   };
 }

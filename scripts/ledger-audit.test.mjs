@@ -119,6 +119,27 @@ describe("auditFormalSync", () => {
       rmSync(tmp, { recursive: true, force: true });
     }
   });
+
+  it("keeps git's failure message when git fails with only blank error output", () => {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-formal-blank-"));
+    try {
+      const refs = path.join(tmp, ".agents", "skills", "scrapkeep-verify-formal", "references");
+      mkdirSync(refs, { recursive: true });
+      writeFileSync(
+        path.join(refs, "drifted.md"),
+        "Covers `sketches/core-loop/src/combat/bolts.gd`.\nSynced at `1111111111`.\n",
+        "utf8",
+      );
+      const res = auditFormalSync(tmp, {
+        rows: { m_drifted: { spec: "B.tla", coverage: "references/drifted.md" } },
+        spawn: () => ({ status: 128, stdout: "", stderr: " \n" }),
+      });
+      assert.equal(res.drifted[0].status, "git_error");
+      assert.match(res.drifted[0].error, /^git -C .* diff -z --name-only 1111111111 .* failed:/);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("runLedgerAudit", () => {

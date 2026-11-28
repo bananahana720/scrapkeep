@@ -15,7 +15,9 @@ import path from "node:path";
 import test from "node:test";
 import "./lib/receipt.test.mjs";
 import { shuffleFiles } from "./ci/node-tests.mjs";
+import { mainRedLedger, parseLedger } from "./known-failing.mjs";
 import {
+  godotRun,
   interpretBatchOutput,
   nodeTestsForPaths,
   defaultWidth,
@@ -1812,4 +1814,47 @@ test("interpretBatchOutput keeps a macOS batch whose exit lines hold the resourc
     platform: "darwin",
   });
   assert.equal(quiet.linuxLeak, false);
+});
+
+test("a red run keeps what the known-red rule needs after its log is dropped, as keepRed drops it before confirm", () => {
+  const ledger = [
+    "test\tkind\tcause\towner\tadded\treview\tcheck",
+    "a_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
+  ].join("\n");
+  const settle = (res) => {
+    const { output, ...kept } = godotRun("tests/a_test.gd", res, {
+      started: Date.now(),
+      killed: false,
+      platform: "linux",
+    });
+    assert.equal(typeof output, "string");
+    assert.equal("output" in kept, false);
+    return mainRedLedger(parseLedger(ledger).rows, { today: "2026-11-30" }).settle(
+      "tests/a_test.gd",
+      { kind: "pr-red", newChecks: [], rerun: kept },
+    ).kind;
+  };
+  const red = "[stage 1: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)\n";
+  assert.equal(settle({ exit: 1, signal: null, timedOut: false, output: red }), "main-red");
+  assert.equal(
+    settle({ exit: null, signal: "SIGSEGV", timedOut: false, output: red }),
+    "pr-red",
+    "a crash after the covered check",
+  );
+  assert.equal(
+    settle({ exit: 1, signal: null, timedOut: false, output: `FAIL: abandoned\n${red}` }),
+    "pr-red",
+    "a FAIL line the row does not name",
+  );
+  assert.equal(
+    settle({ exit: 1, signal: null, timedOut: false, output: red.replace(/a_test: FAIL.*\n/, "") }),
+    "pr-red",
+    "no verdict line",
+  );
+  const green = godotRun(
+    "tests/a_test.gd",
+    { exit: 0, signal: null, timedOut: false, output: "a_test: PASS (9 checks)\n" },
+    { started: Date.now(), killed: false, platform: "linux" },
+  );
+  assert.deepEqual([green.ok, green.failure], [true, null]);
 });

@@ -51,7 +51,7 @@ import {
 import { acquireMachine } from "./lib/machine-lock.mjs";
 import { killGroup, runProcess } from "./lib/proc.mjs";
 import { runnerReceiptBaseName, runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
-import { mainRedLedger, readLedger, readMainReds } from "./known-failing.mjs";
+import { mainRedLedger, readLedger, readMainReds, runFailure } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
 import { discoverTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
@@ -783,8 +783,11 @@ async function runGodot(sketchDir, test, timeoutMs, onChild = () => {}, fixedFps
   } finally {
     if (spawned) running.delete(spawned);
   }
-  const killed = spawned?.killedByLane === true;
-  const verdict = judge({ test: "res://" + test, status: res.exit, output: res.output });
+  return godotRun(test, res, { started, killed: spawned?.killedByLane === true });
+}
+
+export function godotRun(test, res, { started, killed, platform = process.platform }) {
+  const verdict = judge({ test: "res://" + test, status: res.exit, output: res.output, platform });
   const reason =
     res.exit === null && !res.timedOut && !killed ? signalReason(res.signal) : verdict.reason;
   return {
@@ -801,6 +804,7 @@ async function runGodot(sketchDir, test, timeoutMs, onChild = () => {}, fixedFps
     timedOut: res.timedOut,
     output: res.output,
     linuxLeak: verdict.linuxLeak,
+    failure: verdict.ok ? null : runFailure(test, res.output, platform),
   };
 }
 
@@ -1130,6 +1134,7 @@ async function main() {
       `sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.${receipt.nothing_compared ? ` ${receipt.nothing_compared}` : ""}`,
     );
     log(longestStages(receipt.stages));
+    if (receipt.main_red?.line) log(receipt.main_red.line);
     process.exit(code ?? (receipt.ok ? 0 : 1));
   };
 
@@ -1881,6 +1886,7 @@ async function main() {
   receipt.flaky = flaky;
   receipt.ledger_flaky = ledgerFlaky;
   receipt.base_red = baseRed;
+  receipt.main_red = mainRed.report(prRed ? [prRed.test] : []);
   if (prRed) {
     log(prRed.tail);
     stage(
@@ -1892,8 +1898,10 @@ async function main() {
   } else {
     stage(
       "tests",
-      true,
-      { note: `${results.length} run, ${flaky.length} flaky, ${baseRed.length} base-red` },
+      !receipt.main_red.only_known_reds,
+      {
+        note: `${results.length} run, ${flaky.length} flaky, ${baseRed.length} base-red, ${receipt.main_red.known.length} known red on main`,
+      },
       Date.now() - testsStarted,
     );
   }
@@ -1901,7 +1909,6 @@ async function main() {
     log(`flaky (red then green on rerun; make deterministic, never skip): ${flaky.join(", ")}`);
   if (baseRed.length)
     log(`base-red (red on the merge base too; not this PR): ${baseRed.join(", ")}`);
-  receipt.main_red = mainRed.report();
   receipt.linux_leaks = linuxLeaks;
   for (const line of linuxLeakLines(linuxLeaks)) log(line);
   if (receipt.selection.bot_shards.length)

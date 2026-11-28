@@ -97,7 +97,7 @@ export function auditFormalSync(
           covered_count: files.length,
           changed_files: [],
           status: "git_error",
-          error: (error.stderr || error.message).trim(),
+          error: String(error?.stderr ?? "").trim() || String(error?.message ?? error),
         };
         models.push(entry);
         drifted.push(entry);

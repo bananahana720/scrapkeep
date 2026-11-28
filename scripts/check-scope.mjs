@@ -5,9 +5,9 @@ import { git, gitOptional, nulSeparated } from "./lib/git.mjs";
 const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const uiPaths = [/^index\.html$/, /^orchard\.html$/, /^src\//, /^public\//];
 const noBuildToolingPaths = [
-  /^scripts\/.*\.mjs$/,
-  /^tests\/.*\.test\.js$/,
-  /^tests\/fixtures\/check-scope\/.*\.json$/,
+  /^scripts\/.*\.mjs$/s,
+  /^tests\/.*\.test\.js$/s,
+  /^tests\/fixtures\/check-scope\/.*\.json$/s,
 ];
 const classes = [
   {
@@ -56,7 +56,7 @@ const classes = [
   {
     name: "documentation-only",
     build: false,
-    patterns: [/^(?!scripts\/|tests\/).*\.(md|tsv)$/, /^docs\//, /^adr\//, /^artifacts\//],
+    patterns: [/^(?!scripts\/|tests\/).*\.(md|tsv)$/s, /^docs\//, /^adr\//, /^artifacts\//],
     commands: ["npm run check:docs", "npm run check:project"],
     evidence: "structural documentation checks; no build or runtime evidence",
   },
@@ -85,7 +85,7 @@ const classes = [
   {
     name: "other",
     build: true,
-    patterns: [/./],
+    patterns: [/./s],
     commands: ["npm run verify"],
     evidence: "unclassified path; treated as build-requiring until a class claims it",
   },
