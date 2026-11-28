@@ -1,6 +1,7 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { runProcess } from "./proc.mjs";
 
 export const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 export const DEFAULT_MAX_BUFFER = 64 * 1024 * 1024;
@@ -48,12 +49,34 @@ function checkedCwd(name, cwd) {
 function start(args, { cwd = REPO_ROOT, maxBuffer = DEFAULT_MAX_BUFFER, spawn, stdio, timeout }) {
   return spawn("git", args, {
     cwd,
-    env: cwdDecidesRepository(),
+    env: { ...cwdDecidesRepository(), ...(timeout ? { GIT_OPTIONAL_LOCKS: "0" } : {}) },
     encoding: "utf8",
     maxBuffer,
     ...(stdio ? { stdio } : {}),
     ...(timeout ? { timeout, killSignal: "SIGKILL" } : {}),
   });
+}
+
+export const GIT_STOP_GRACE_MS = 5000;
+
+export async function gitAsync(args, options) {
+  const { cwd = REPO_ROOT, timeout, graceMs = GIT_STOP_GRACE_MS } = checked("gitAsync", options);
+  const ran = await runProcess("git", args, {
+    cwd,
+    env: cwdDecidesRepository(),
+    timeoutMs: timeout,
+    killGraceMs: graceMs,
+    reapGroup: false,
+  });
+  if (ran.error) throw ran.error;
+  if (ran.timedOut || ran.exit !== 0)
+    throw Object.assign(
+      new Error(
+        `git ${args.join(" ")} ${ran.timedOut ? `passed its ${timeout} ms limit` : "failed"}: ${(ran.stderr || ran.stdout).trim()}`,
+      ),
+      { status: ran.exit, signal: ran.signal, stdout: ran.stdout, stderr: ran.stderr },
+    );
+  return ran.stdout.trim();
 }
 
 export function nulSeparated(text) {

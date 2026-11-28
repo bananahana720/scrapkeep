@@ -7,6 +7,8 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
@@ -14,9 +16,11 @@ import path from "node:path";
 import test from "node:test";
 import {
   DEFAULT_MAX_BUFFER,
+  GIT_STOP_GRACE_MS,
   REPO_ROOT,
   cleanHead,
   git,
+  gitAsync,
   gitOptional,
   gitState,
   nulSeparated,
@@ -113,6 +117,10 @@ test("git hands a failed call's exit status and output on the error, and both he
     seen.map((opts) => opts.timeout),
     [3000, 3000, undefined],
   );
+  assert.deepEqual(
+    seen.map((opts) => opts.env.GIT_OPTIONAL_LOCKS),
+    ["0", "0", undefined],
+  );
   const spawnError = Object.assign(new Error("spawnSync git ETIMEDOUT"), { code: "ETIMEDOUT" });
   assert.throws(
     () => git(["status"], { spawn: () => ({ status: null, error: spawnError }) }),
@@ -143,6 +151,105 @@ test("a git call that passes its time limit stops a child that ignores the first
       `the stand-in printed no process id: ${result.stdout}`,
     );
     assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+  }
+});
+
+test("a git status with a time limit leaves the index as it was, so a kill cannot leave its lock", () => {
+  const dir = makeTempRepo();
+  try {
+    const index = path.join(dir, ".git/index");
+    const stale = () => {
+      const later = new Date(Date.now() + 60_000);
+      utimesSync(path.join(dir, "sketches/core-loop/src/a.gd"), later, later);
+      const before = new Date(Date.now() - 120_000);
+      utimesSync(index, before, before);
+      return statSync(index).mtimeMs;
+    };
+    let was = stale();
+    assert.equal(gitOptional(["status", "--porcelain"], { cwd: dir, timeout: 10_000 }), "");
+    assert.equal(statSync(index).mtimeMs, was, "a timed status wrote the index");
+    was = stale();
+    assert.equal(gitOptional(["status", "--porcelain"], { cwd: dir }), "");
+    assert.notEqual(statSync(index).mtimeMs, was, "an untimed status refreshes the index");
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+function fakeGit(body) {
+  const bin = realpathSync(mkdtempSync(path.join(os.tmpdir(), "scrapkeep-fake-git-")));
+  writeFileSync(path.join(bin, "git"), `#!/bin/sh\necho $$ > "${bin}/pid"\n${body}\n`, {
+    mode: 0o755,
+  });
+  return bin;
+}
+
+async function withPath(bin, run) {
+  const before = { PATH: process.env.PATH, GIT_DIR: process.env.GIT_DIR };
+  process.env.PATH = bin;
+  process.env.GIT_DIR = "/elsewhere";
+  try {
+    return await run();
+  } finally {
+    for (const [name, value] of Object.entries(before))
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    rmSync(bin, { recursive: true, force: true });
+  }
+}
+
+test("gitAsync returns what git printed in the repository cwd is in, and fails on a failed, missing or wrongly called git", async () => {
+  const bin = fakeGit(
+    'if [ "$1" = fail ]; then echo "no such ref" >&2; exit 1; fi\necho "$* in $PWD with ${GIT_DIR-no GIT_DIR}"',
+  );
+  await withPath(bin, async () => {
+    assert.equal(
+      await gitAsync(["fetch", "-q"], { cwd: bin }),
+      `fetch -q in ${bin} with no GIT_DIR`,
+    );
+    await assert.rejects(
+      gitAsync(["fail"], { cwd: bin }),
+      (error) =>
+        error.status === 1 &&
+        error.stderr === "no such ref\n" &&
+        error.message === "git fail failed: no such ref",
+    );
+    rmSync(path.join(bin, "pid"));
+    await assert.rejects(
+      gitAsync(["status"], "/some/dir"),
+      (error) =>
+        error instanceof TypeError &&
+        error.message ===
+          "gitAsync(args, options): options must be an object such as { cwd }, got a string",
+    );
+    assert.equal(existsSync(path.join(bin, "pid")), false, "git was started");
+    rmSync(path.join(bin, "git"));
+    await assert.rejects(gitAsync(["status"], { cwd: bin }), { code: "ENOENT" });
+  });
+});
+
+test("gitAsync stops a call that passes its limit with SIGTERM, and kills it after the grace only when it stays", async () => {
+  assert.equal(GIT_STOP_GRACE_MS, 5000);
+  for (const [body, signal] of [
+    ["exec /bin/sleep 30", "SIGTERM"],
+    ['trap "" TERM\nexec /bin/sleep 30', "SIGKILL"],
+  ]) {
+    const bin = fakeGit(body);
+    await withPath(bin, async () => {
+      const started = Date.now();
+      const error = await gitAsync(["fetch"], { cwd: bin, timeout: 300, graceMs: 1500 }).then(
+        () => assert.fail("a call past its limit returned"),
+        (error) => error,
+      );
+      const ms = Date.now() - started;
+      assert.equal(error.signal, signal);
+      assert.match(error.message, /^git fetch passed its 300 ms limit/);
+      if (signal === "SIGTERM") assert.ok(ms < 1500, `the stop took ${ms} ms`);
+      else assert.ok(ms >= 1800, `the kill came after ${ms} ms, before the grace ended`);
+      const pid = Number(readFileSync(path.join(bin, "pid"), "utf8"));
+      assert.ok(Number.isInteger(pid) && pid > 0, "the stand-in wrote no process id");
+      assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+    });
   }
 });
 
