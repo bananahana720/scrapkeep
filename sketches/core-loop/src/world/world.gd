@@ -875,7 +875,7 @@ func _watch_layer(delta: float, ball: Vector3) -> void:
 	_chute_clock = maxf(0.0, _chute_clock - delta)
 	_skylight_clock = maxf(0.0, _skylight_clock - delta)
 	_glide_clock = maxf(0.0, _glide_clock - delta)
-	if "marble_path" in m and m._polyline_channel(ball.x, ball.z, m.marble_path, m.MARBLE_HALF, m.MARBLE_WALL)[1] > 0.5:
+	if "marble_path" in m and m.in_marble_chute(ball.x, ball.z):
 		_chute_clock = 3.0
 	if absf(ball.x - m.SKYLIGHT_X) < m.SKYLIGHT_DEPTH and ball.z > m.SKYLIGHT_Z.x and ball.z < m.SKYLIGHT_Z.y:
 		_skylight_clock = 3.0

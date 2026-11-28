@@ -43,7 +43,7 @@ func _run() -> void:
 	_kit._step_cuts(peak + Kit.CUT_TICKS)
 	_t.check("the cut lands on its due tick", _kit._cuts_due.is_empty() and not _hits(target).is_empty())
 	_t.check("the scar is drawn as the cut lands", _kit.volume_indicator.shapes.has("rivet_scar"))
-	_t.eq("the strike's record counts the late hit", int(ult._record.get("volley_hits", 0)), 1)
+	_t.eq("the strike's record counts the late hit", int(ult.record().get("volley_hits", 0)), 1)
 	# One fixed aim for both carves: the strike's own aim carries state between stands.
 	var at: Vector3 = _player.ball_position()
 	_kit.cut_ticks = Kit.CUT_TICKS

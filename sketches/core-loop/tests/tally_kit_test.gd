@@ -624,7 +624,7 @@ func _post_start() -> void:
 func _check_post() -> void:
 	var aim := _aim_flat()
 	var side := aim.cross(Vector3.UP).normalized()
-	var anchor: Vector3 = _combat._floor_at(_player.ball_position() + aim * 12.0 + Vector3.UP * 4.0)
+	var anchor: Vector3 = _combat.floor_at(_player.ball_position() + aim * 12.0 + Vector3.UP * 4.0)
 	_player.grapple_to(anchor, Vector3.UP, null)
 	var body: RigidBody3D = _player.body()
 	body.linear_velocity = Vector3.ZERO

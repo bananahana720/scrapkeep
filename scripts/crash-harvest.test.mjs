@@ -109,14 +109,18 @@ test("runOf names red team jobs and plain logs", () => {
 
 test("--ignore drops matching signatures and --fail-on sets the exit", () => {
   const out = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-"));
-  const quiet = () => {};
-  assert.equal(main([`--out=${out}`, fixtures], quiet), 0);
-  const written = JSON.parse(readFileSync(path.join(out, "findings.json"), "utf8"));
-  assert.equal(written.findings.filter((f) => f.severity === "blocker").length, 2);
-  assert.deepEqual(written.runs, []);
-  assert.equal(main(["--fail-on=blocker", fixtures], quiet), 1);
-  assert.equal(main(["--fail-on=blocker", "--ignore=^crash:", fixtures], quiet), 0);
-  assert.equal(main([path.join(out, "missing")], quiet), 2);
+  try {
+    const quiet = () => {};
+    assert.equal(main([`--out=${out}`, fixtures], quiet), 0);
+    const written = JSON.parse(readFileSync(path.join(out, "findings.json"), "utf8"));
+    assert.equal(written.findings.filter((f) => f.severity === "blocker").length, 2);
+    assert.deepEqual(written.runs, []);
+    assert.equal(main(["--fail-on=blocker", fixtures], quiet), 1);
+    assert.equal(main(["--fail-on=blocker", "--ignore=^crash:", fixtures], quiet), 0);
+    assert.equal(main([path.join(out, "missing")], quiet), 2);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
 });
 
 test("a stdout line between a header and its at: line does not split the signature", () => {
@@ -167,20 +171,24 @@ test("digits in res:// paths stay, so different assets stay different findings",
 
 test("findings.json carries what scripts/redteam/merge.mjs reads, and runs keep the red team's fields", () => {
   const out = mkdtempSync(path.join(os.tmpdir(), "crash-harvest-"));
-  assert.equal(
-    main([`--out=${out}`, "--wave=16", "--commit=cf63e622b0", fixtures], () => {}),
-    0,
-  );
-  const written = JSON.parse(readFileSync(path.join(out, "findings.json"), "utf8"));
-  assert.equal(written.wave, 16);
-  assert.equal(typeof written.commit, "string");
-  assert.equal(typeof written.started, "string");
-  assert.equal(written.minutes, 0);
-  assert.deepEqual(written.extras, {});
-  for (const f of written.findings)
-    for (const r of f.runs)
-      for (const key of ["id", "persona", "pilot", "seed", "note", "replay", "carry"])
-        assert.ok(key in r, key);
+  try {
+    assert.equal(
+      main([`--out=${out}`, "--wave=16", "--commit=cf63e622b0", fixtures], () => {}),
+      0,
+    );
+    const written = JSON.parse(readFileSync(path.join(out, "findings.json"), "utf8"));
+    assert.equal(written.wave, 16);
+    assert.equal(typeof written.commit, "string");
+    assert.equal(typeof written.started, "string");
+    assert.equal(written.minutes, 0);
+    assert.deepEqual(written.extras, {});
+    for (const f of written.findings)
+      for (const r of f.runs)
+        for (const key of ["id", "persona", "pilot", "seed", "note", "replay", "carry"])
+          assert.ok(key in r, key);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
 });
 
 test("collect sorts by code unit (B < _ < a) and follows symlinked directories without EISDIR", () => {

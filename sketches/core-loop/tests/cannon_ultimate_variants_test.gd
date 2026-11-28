@@ -40,9 +40,9 @@ func _cases() -> void:
 	_ult._cannon_tech(1, HOME, Vector3.RIGHT, 1.0)
 	var entry: Dictionary = _combat._cannon.back()
 	var h = entry["hazards"][0]
-	_t.near("creeping warn is one beat", h.warn_seconds, _ult._beat_len)
-	_t.near("lane is two beats ahead", h.centre.x, HOME.x + _ult._ride.velocity.x * 2.0 * _ult._beat_len, 0.01)
-	_t.near("lane lies across the path", absf(h.heading.dot(_ult._ride.heading)), 0.0)
+	_t.near("creeping warn is one beat", h.warn_seconds, float(_ult.leg_state()["beat_length"]))
+	_t.near("lane is two beats ahead", h.centre.x, HOME.x + _ult._ride.velocity.x * 2.0 * float(_ult.leg_state()["beat_length"]), 0.01)
+	_t.near("lane lies across the path", absf(h.heading.dot(_ult.ride_heading())), 0.0)
 	var before: int = _ult._cannon_calls
 	_player.tree._knobs["ult_volley"] = 1
 	_ult._cannon_tech(2, HOME, Vector3.RIGHT, 1.0)
@@ -66,8 +66,8 @@ func _cases() -> void:
 	_ult._cannon_tech(1, HOME, Vector3.RIGHT, 1.0)
 	entry = _combat._cannon.back()
 	_t.eq("Mortar calls a plate", entry["family"], "plate")
-	_t.near("Mortar's plate warns for one beat", entry["hazards"][0].warn_seconds, _ult._beat_len)
-	for i in ceili(_ult._beat_len / DT):
+	_t.near("Mortar's plate warns for one beat", entry["hazards"][0].warn_seconds, float(_ult.leg_state()["beat_length"]))
+	for i in ceili(float(_ult.leg_state()["beat_length"]) / DT):
 		_combat._clock += DT
 		_combat._step_cannon(DT)
 	_t.check("Mortar plate exposes its target", _combat._exposed.has(foe.get_instance_id()))
@@ -80,7 +80,7 @@ func _cases() -> void:
 	_ult._cannon_landing(HOME, 1.0, 1.0)
 	_t.near("Mortar slam cashes exposure at 1.4x", exposed / maxf(0.001, hp - foe.hp), 1.4, 0.001)
 	_player.tree._knobs["ult_radius"] = 2.0
-	_t.near("radius knob grows the landing", _ult.landing_radius(), _ult.LANDING_RADIUS[_ult._heft_index()] + 2.0)
+	_t.near("radius knob grows the landing", _ult.landing_radius(), _ult.LANDING_RADIUS[_ult.heft_index()] + 2.0)
 	_player.tree._knobs["ult_volley"] = 1
 	before = _ult._cannon_calls
 	_ult._cannon_tech(2, HOME, Vector3.RIGHT, 1.0)

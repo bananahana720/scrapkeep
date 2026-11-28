@@ -124,7 +124,7 @@ func _land() -> void:
 func _centres(count: int) -> Array:
 	var ball: Vector3 = ctx.player.ball_position()
 	var out: Array = []
-	for target in combat._nearest_list(ball, LOCK_REACH, count):
+	for target in combat.nearest_enemies(ball, LOCK_REACH, count):
 		out.append(target.global_position)
 	var forward := flat_aim()
 	var side := forward.cross(Vector3.UP).normalized()

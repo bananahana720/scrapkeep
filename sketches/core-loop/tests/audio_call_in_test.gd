@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Rows := preload("res://src/presentation/music_rows.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -59,47 +60,47 @@ func _run() -> void:
 func _voices() -> void:
 	var heard := {}
 	var quiet: Array = []
-	for speaker in Bank.CALLERS:
-		var id: String = Bank.say_id(speaker, LINE)
-		var buf: PackedFloat32Array = Bank.samples(id)
-		if Synth.peak(buf) < 0.5 or absf(float(buf.size()) / Harmony.RATE - Bank.say_seconds(speaker, LINE)) > 0.01:
+	for speaker in VoiceSynth.CALLERS:
+		var id: String = VoiceSynth.say_id(speaker, LINE)
+		var buf: PackedFloat32Array = VoiceSynth.samples(id)
+		if Synth.peak(buf) < 0.5 or absf(float(buf.size()) / Harmony.RATE - VoiceSynth.say_seconds(speaker, LINE)) > 0.01:
 			quiet.append(speaker)
 		heard[buf] = speaker
-	t.check("every caller says a line in a voice of their own, as long as the bank says it is", quiet.is_empty() and heard.size() == Bank.CALLERS.size()
-		and Bank.has_recipe(Bank.say_id("sable", LINE)), "%d callers, %d different renders, quiet or mistimed %s" % [Bank.CALLERS.size(), heard.size(), quiet])
-	t.check("a line is said the same way twice", Bank._say_plan("sable", LINE) == Bank._say_plan("sable", LINE)
-		and Bank._say_plan("sable", LINE) != Bank._say_plan("sable", LINE + " Go."), "sable, twice")
-	var levels: Array = Bank.CALLERS.keys().map(func(speaker: String): return Bank.trim_db(Bank.say_id(speaker, LINE)))
-	t.check("each voice is levelled against Moss's bench voice", Bank.trim_db(Bank.say_id("cannon", LINE)) == Bank.TRIM_DB["babble"]
-		and levels.min() >= Bank.TRIM_DB["babble"] - 3.0 and levels.max() <= Bank.TRIM_DB["babble"] + 7.0, "trims %s" % [levels])
+	t.check("every caller says a line in a voice of their own, as long as the bank says it is", quiet.is_empty() and heard.size() == VoiceSynth.CALLERS.size()
+		and VoiceSynth.has_recipe(VoiceSynth.say_id("sable", LINE)), "%d callers, %d different renders, quiet or mistimed %s" % [VoiceSynth.CALLERS.size(), heard.size(), quiet])
+	t.check("a line is said the same way twice", VoiceSynth._say_plan("sable", LINE) == VoiceSynth._say_plan("sable", LINE)
+		and VoiceSynth._say_plan("sable", LINE) != VoiceSynth._say_plan("sable", LINE + " Go."), "sable, twice")
+	var levels: Array = VoiceSynth.CALLERS.keys().map(func(speaker: String): return VoiceSynth.trim_db(VoiceSynth.say_id(speaker, LINE)))
+	t.check("each voice is levelled against Moss's bench voice", VoiceSynth.trim_db(VoiceSynth.say_id("cannon", LINE)) == VoiceSynth.BABBLE_TRIM_DB
+		and levels.min() >= VoiceSynth.BABBLE_TRIM_DB - 3.0 and levels.max() <= VoiceSynth.BABBLE_TRIM_DB + 7.0, "trims %s" % [levels])
 
 
 # Everyone alive has a mouth (Andrew, 10 November 2026); the Foreman has none, and the Cannon,
 # a machine on the crew's side, keeps its bent chime. Moss and Brindle, the low voices, are
 # said high so they do not turn into the talking growls he ruled out.
 func _mouths() -> void:
-	var mouthed: Array = Bank.CALLERS.keys().filter(func(speaker: String): return Bank.CALLERS[speaker].has("mouth"))
+	var mouthed: Array = VoiceSynth.CALLERS.keys().filter(func(speaker: String): return VoiceSynth.CALLERS[speaker].has("mouth"))
 	t.eq("everyone alive talks through a mouth; the Cannon and the Foreman do not",
-		Bank.CALLERS.keys().filter(func(speaker: String): return not speaker in mouthed), ["cannon", "mind"])
+		VoiceSynth.CALLERS.keys().filter(func(speaker: String): return not speaker in mouthed), ["cannon", "mind"])
 	var unsaid: Array = mouthed.filter(func(speaker: String): return not _said_by_mouth(speaker))
 	t.check("a mouthed caller's line is its letters said by its own mouth, and the Cannon's is not", unsaid.is_empty() and mouthed.size() == 10
 		and not _said_by_mouth("cannon"), "not said by the mouth: %s" % [unsaid])
-	var plan: Array = Bank._say_plan("sable", "Go on")[0]
+	var plan: Array = VoiceSynth._say_plan("sable", "Go on")[0]
 	t.check("the chirp stays on the instrument and each letter after it is said", plan.slice(0, 2).all(func(blip: Array): return blip[6] == "" and blip[5] == "bell")
 		and plan.slice(2).map(func(blip: Array): return blip[6]) == ["g", "o", "o", "n"], "letters %s" % [plan.map(func(blip: Array): return blip[6])])
-	var ee: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "i", 1.0)
-	var oh: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "o", 1.0)
+	var ee: PackedFloat32Array = VoiceSynth._mouth(69, 0.08, 0.0, "i", 1.0)
+	var oh: PackedFloat32Array = VoiceSynth._mouth(69, 0.08, 0.0, "o", 1.0)
 	var high := [_partial(ee, 6), _partial(oh, 6)]
 	var low := [_partial(ee, 2), _partial(oh, 2)]
 	t.check("a mouth shapes its vowels: ee rings high where oh rings low", high[0] > high[1] * 2.0 and low[1] > low[0] * 2.0,
 		"sixth partial %.3f against %.3f, second %.3f against %.3f" % [high[0], high[1], low[0], low[1]])
-	var pitched := [_pitched(Bank._mouth(76, 0.08, 0.0, "s", 1.0)), _pitched(Bank._mouth(76, 0.08, 0.0, "m", 1.0))]
+	var pitched := [_pitched(VoiceSynth._mouth(76, 0.08, 0.0, "s", 1.0)), _pitched(VoiceSynth._mouth(76, 0.08, 0.0, "m", 1.0))]
 	t.check("a breathed letter opens on breath and a hummed one on its note", pitched[0] < pitched[1] * 0.75 and pitched[1] > 0.8, "pitched %.2f against %.2f" % pitched)
-	var small: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "a", 1.4)
-	var grown: PackedFloat32Array = Bank._mouth(69, 0.08, 0.0, "a", 1.0)
+	var small: PackedFloat32Array = VoiceSynth._mouth(69, 0.08, 0.0, "a", 1.4)
+	var grown: PackedFloat32Array = VoiceSynth._mouth(69, 0.08, 0.0, "a", 1.0)
 	t.check("a smaller mouth is brighter, a letter is said the same way twice, and a vowel is level with the chirp", _edge(small) > _edge(grown)
-		and Bank._mouth(69, 0.04, 0.0, "s", 1.4) == Bank._mouth(69, 0.04, 0.0, "s", 1.4) and absf(Synth.peak(small) - Bank.MOUTH_PEAK) < 0.05
-		and Synth.peak(Bank._mouth(69, 0.04, 0.0, "t", 1.4)) < Synth.peak(small), "edge %.3f over %.3f, peak %.2f" % [_edge(small), _edge(grown), Synth.peak(small)])
+		and VoiceSynth._mouth(69, 0.04, 0.0, "s", 1.4) == VoiceSynth._mouth(69, 0.04, 0.0, "s", 1.4) and absf(Synth.peak(small) - VoiceSynth.MOUTH_PEAK) < 0.05
+		and Synth.peak(VoiceSynth._mouth(69, 0.04, 0.0, "t", 1.4)) < Synth.peak(small), "edge %.3f over %.3f, peak %.2f" % [_edge(small), _edge(grown), Synth.peak(small)])
 
 
 # Whether a caller's line as the bank says it (before the bake levels it) holds, where its
@@ -107,11 +108,11 @@ func _mouths() -> void:
 # The chirp before it has rung out and the next letter has not started, so the line there is
 # the one piece.
 func _said_by_mouth(speaker: String) -> bool:
-	var row: Dictionary = Bank.CALLERS[speaker]
-	var letters: Array = Bank._say_plan(speaker, LINE)[0].filter(func(blip: Array): return blip[6] != "")
+	var row: Dictionary = VoiceSynth.CALLERS[speaker]
+	var letters: Array = VoiceSynth._say_plan(speaker, LINE)[0].filter(func(blip: Array): return blip[6] != "")
 	var blip: Array = letters[0]
-	var piece: PackedFloat32Array = Bank._mouth(int(blip[1]) + int(row.get("drop", 0)), float(blip[2]), float(blip[4]), blip[6], float(row.get("mouth", 1.0)))
-	var baked: PackedFloat32Array = Bank._say(speaker, LINE)
+	var piece: PackedFloat32Array = VoiceSynth._mouth(int(blip[1]) + int(row.get("drop", 0)), float(blip[2]), float(blip[4]), blip[6], float(row.get("mouth", 1.0)))
+	var baked: PackedFloat32Array = VoiceSynth._say(speaker, LINE)
 	var from := roundi(float(blip[0]) * Harmony.RATE)
 	for i in Synth.seconds(float(blip[2])):
 		if absf(baked[from + i] - piece[i] * float(blip[3])) > 0.001:
@@ -158,46 +159,46 @@ func _pilots() -> void:
 	var off: Array = []
 	for speaker in Harmony.CLASS_MOTIFS:
 		var own: Array = Harmony.motif_notes(speaker).map(func(midi: int): return midi + 12)
-		var plan: Array = Bank._say_plan(speaker, LINE)[0]
+		var plan: Array = VoiceSynth._say_plan(speaker, LINE)[0]
 		var body: Array = plan.slice(2).filter(func(blip: Array): return not (int(blip[1]) in own))
 		var chirp := [int(plan[0][1]), int(plan[1][1])]
-		if not Bank.CALLERS.has(speaker) or not body.is_empty() or chirp != [own[0], own[own.size() - 1]]:
+		if not VoiceSynth.CALLERS.has(speaker) or not body.is_empty() or chirp != [own[0], own[own.size() - 1]]:
 			off.append(speaker)
 	t.check("a pilot talks in the notes of their own motif, and chirps its first and last", off.is_empty(), "off their motif: %s" % [off])
-	var voices: Array = Harmony.CLASS_MOTIFS.map(func(speaker: String): return Bank._caller_voice(speaker))
+	var voices: Array = Harmony.CLASS_MOTIFS.map(func(speaker: String): return VoiceSynth._caller_voice(speaker))
 	t.eq("each pilot on an instrument of their own", voices, ["bell", "clav", "tom", "fbass", "keys", "chime"])
-	var bends: Array = Harmony.CLASS_MOTIFS.map(func(speaker: String): return Bank._say_plan(speaker, LINE)[0].filter(func(blip: Array): return float(blip[4]) != 0.0).size())
+	var bends: Array = Harmony.CLASS_MOTIFS.map(func(speaker: String): return VoiceSynth._say_plan(speaker, LINE)[0].filter(func(blip: Array): return float(blip[4]) != 0.0).size())
 	t.check("the crew bend their notes", bends.min() > 5, "bent letters per pilot %s" % [bends])
 	var gaps: Array = ["rivet", "kest"].map(func(speaker: String):
-		var plan: Array = Bank._say_plan(speaker, "Go now go")[0]
+		var plan: Array = VoiceSynth._say_plan(speaker, "Go now go")[0]
 		return float(plan[4][0]) - float(plan[3][0]) - float(plan[3][2]))
 	t.check("Rivet never stops between words, and Kest does", absf(gaps[0]) < 0.0001 and gaps[1] > 0.02, "gap after the first word: Rivet %.4f s, Kest %.4f s" % gaps)
 	var lengths := {}
-	for blip in Bank._say_plan("tally", "aaaa aaaa aaaa")[0].slice(2):
+	for blip in VoiceSynth._say_plan("tally", "aaaa aaaa aaaa")[0].slice(2):
 		lengths[snappedf(float(blip[2]), 0.0001)] = true
 	var strays := {}
-	for blip in Bank._say_plan("sable", "aaaa aaaa aaaa")[0].slice(2):
+	for blip in VoiceSynth._say_plan("sable", "aaaa aaaa aaaa")[0].slice(2):
 		strays[snappedf(float(blip[2]), 0.0001)] = true
 	t.check("Tally counts evenly while the others stray", lengths.size() == 1 and strays.size() > 4, "letter lengths: Tally %d, Sable %d" % [lengths.size(), strays.size()])
 
 
 func _crew() -> void:
-	var plan: Array = Bank._say_plan("pump_crew", "Pump two is up")[0].slice(2)
+	var plan: Array = VoiceSynth._say_plan("pump_crew", "Pump two is up")[0].slice(2)
 	var first := [62, 65, 69]
 	var second := first.map(func(midi: int): return Harmony.scale_shift(midi, -3, Harmony.DORIAN))
 	var words := [plan.slice(0, 4), plan.slice(4, 7), plan.slice(7, 9), plan.slice(9, 11)]
 	var sides: Array = words.map(func(word: Array): return _talker(word, first, second))
 	var overlap := float(plan[3][0]) + float(plan[3][2]) - float(plan[4][0])
 	t.check("a site crew is two talkers trading words, the second in before the first is done",
-		sides == ["first", "second", "first", "second"] and is_equal_approx(overlap, Bank.CALL_OVERLAP_S),
+		sides == ["first", "second", "first", "second"] and is_equal_approx(overlap, VoiceSynth.CALL_OVERLAP_S),
 		"words by %s, overlap %.3f s" % [sides, overlap])
-	var dashes: Array = Bank._say_plan("pump_crew", "Pump - - two is up")[0].slice(2)
+	var dashes: Array = VoiceSynth._say_plan("pump_crew", "Pump - - two is up")[0].slice(2)
 	var turns: Array = [dashes.slice(0, 4), dashes.slice(4, 7), dashes.slice(7, 9), dashes.slice(9, 11)].map(func(word: Array): return _talker(word, first, second))
 	t.check("a word with no letters is not a turn at the radio", dashes.size() == plan.size() and turns == sides, "%d letters with the dashes, %d without, turns %s" % [dashes.size(), plan.size(), turns])
-	var rested: Array = Bank._say_plan("pump_crew", "Pump, two")[0].slice(2)
+	var rested: Array = VoiceSynth._say_plan("pump_crew", "Pump, two")[0].slice(2)
 	t.check("the second talker waits out a comma", is_equal_approx(float(rested[4][0]) - float(rested[3][0]) - float(rested[3][2]), 0.12),
 		"gap %.3f s" % (float(rested[4][0]) - float(rested[3][0]) - float(rested[3][2])))
-	var roots: Array = ["pump_crew", "flume_crew", "signal_crew"].map(func(speaker: String): return Bank._caller_notes(speaker)[0])
+	var roots: Array = ["pump_crew", "flume_crew", "signal_crew"].map(func(speaker: String): return VoiceSynth._caller_notes(speaker)[0])
 	t.eq("each post sits on its own note", roots, [62, 64, 67])
 
 
@@ -208,57 +209,57 @@ func _talker(word: Array, first: Array, second: Array) -> String:
 
 
 func _brindle() -> void:
-	var plan: Array = Bank._say_plan("brindle", "Nine parts taken. I make that ten.")[0].slice(2)
+	var plan: Array = VoiceSynth._say_plan("brindle", "Nine parts taken. I make that ten.")[0].slice(2)
 	var ends: Array = [plan[13], plan[plan.size() - 1]].map(func(blip: Array): return [int(blip[1]), snappedf(float(blip[2]), 0.01)])
-	t.check("Brindle ends each sentence held on the flat second, on brass", ends == [[63, 0.28], [63, 0.28]] and Bank._caller_voice("brindle") == "brass"
+	t.check("Brindle ends each sentence held on the flat second, on brass", ends == [[63, 0.28], [63, 0.28]] and VoiceSynth._caller_voice("brindle") == "brass"
 		and plan.all(func(blip: Array): return int(blip[1]) in [62, 63]), "sentence ends %s" % [ends])
 
 
 func _foreman() -> void:
 	var step := Harmony.STEP * 4 / 3
-	var plan: Array = Bank._say_plan("mind", "Quick sync? No action is required.", step)[0]
+	var plan: Array = VoiceSynth._say_plan("mind", "Quick sync? No action is required.", step)[0]
 	var half := float(step) / Harmony.RATE / 2.0
 	var off: Array = plan.filter(func(blip: Array): return absf(float(blip[0]) / half - roundf(float(blip[0]) / half)) > 0.0001)
 	var body: Array = plan.slice(2)
-	var uneven: Array = body.filter(func(blip: Array): return blip.slice(1, 6) != [74, half * 0.7, 1.0, 0.0, Bank.PURE])
+	var uneven: Array = body.filter(func(blip: Array): return blip.slice(1, 6) != [74, half * 0.7, 1.0, 0.0, VoiceSynth.PURE])
 	t.check("the Foreman is one pure note, every letter on the thirty-second grid, nothing bent, no rise on a question",
 		off.is_empty() and uneven.is_empty()
-		and [int(plan[0][1]), int(plan[1][1])] == [74, 81] and Bank.caller_on_grid("mind") and not Bank.caller_on_grid("sable"),
+		and [int(plan[0][1]), int(plan[1][1])] == [74, 81] and VoiceSynth.caller_on_grid("mind") and not VoiceSynth.caller_on_grid("sable"),
 		"%d letters, %d off the grid, chirp %s" % [body.size(), off.size(), [plan[0][1], plan[1][1]]])
-	var id: String = Bank.say_id("mind", "Quick sync.")
-	var slow: int = Bank.samples_at(id, step).size()
-	var fast: int = Bank.samples_at(id, Harmony.STEP).size()
-	t.check("its line is made for the band's step", slow > fast and Bank.say_seconds("mind", "Quick sync.", step) > Bank.say_seconds("mind", "Quick sync."),
+	var id: String = VoiceSynth.say_id("mind", "Quick sync.")
+	var slow: int = VoiceSynth.samples_at(id, step).size()
+	var fast: int = VoiceSynth.samples_at(id, Harmony.STEP).size()
+	t.check("its line is made for the band's step", slow > fast and VoiceSynth.say_seconds("mind", "Quick sync.", step) > VoiceSynth.say_seconds("mind", "Quick sync."),
 		"%d samples at the roaming step, %d at a step a third longer" % [fast, slow])
-	var letter: PackedFloat32Array = Bank._letter(Bank.PURE, 74, 0.05, 0.0)
+	var letter: PackedFloat32Array = VoiceSynth._letter(VoiceSynth.PURE, 74, 0.05, 0.0)
 	t.check("the pure voice starts, holds and stops", absf(Synth.peak(letter) - 1.0) < 0.01 and absf(letter[0]) < 0.001 and absf(letter[letter.size() - 1]) < 0.001,
 		"peak %.3f" % Synth.peak(letter))
 
 
 func _moss() -> void:
-	var plan: Array = Bank._say_plan("moss", LINE)[0]
-	var bench: Array = Bank._babble_blips(LINE, Bank.BABBLE_LEVEL)[0]
+	var plan: Array = VoiceSynth._say_plan("moss", LINE)[0]
+	var bench: Array = VoiceSynth._babble_blips(LINE, VoiceSynth.BABBLE_LEVEL)[0]
 	var body: Array = plan.slice(2)
-	var same: Array = range(mini(body.size(), bench.size())).filter(func(i: int): return body[i][5] == "" and int(body[i][1]) == int(bench[i][1]) and is_equal_approx(float(body[i][0]), float(bench[i][0]) + Bank.CALL_TALK_S))
+	var same: Array = range(mini(body.size(), bench.size())).filter(func(i: int): return body[i][5] == "" and int(body[i][1]) == int(bench[i][1]) and is_equal_approx(float(body[i][0]), float(bench[i][0]) + VoiceSynth.CALL_TALK_S))
 	t.check("Moss rings his bell twice and talks as he does at his bench", body.size() == bench.size()
 		and [plan[0][1], plan[1][1], plan[0][5]] == [86, 86, "mallet"] and same.size() == body.size(),
 		"%d letters after the bell, %d at the bench" % [body.size(), bench.size()])
 	# One Moss everywhere: his bench line is his caller row's mouth too, an octave up.
 	var first: Array = bench[0]
-	var row: Dictionary = Bank.CALLERS[Bank.MOSS]
-	var said: PackedFloat32Array = Bank._mouth(int(first[1]) + int(row["drop"]), float(first[2]), float(first[4]), first[6], float(row["mouth"]))
-	var blipped: PackedFloat32Array = Bank._blip(int(first[1]), float(first[2]), false, float(first[4]))
-	var line: PackedFloat32Array = Bank.babble(LINE, Bank.BABBLE_LEVEL)
+	var row: Dictionary = VoiceSynth.CALLERS[VoiceSynth.MOSS]
+	var said: PackedFloat32Array = VoiceSynth._mouth(int(first[1]) + int(row["drop"]), float(first[2]), float(first[4]), first[6], float(row["mouth"]))
+	var blipped: PackedFloat32Array = VoiceSynth._blip(int(first[1]), float(first[2]), false, float(first[4]))
+	var line: PackedFloat32Array = VoiceSynth.babble(LINE, VoiceSynth.BABBLE_LEVEL)
 	t.check("at his bench Moss says his letters through the same mouth, levelled as on a call", _fit(line, said) < 0.02 and _fit(line, blipped) > 0.2
-		and Bank.trim_db("babble") == Bank.trim_db(Bank.say_id("moss", LINE)) and Synth.peak(Bank.babble(LINE, Bank.BABBLE_RELENT)) < Synth.peak(line),
+		and VoiceSynth.trim_db("babble") == VoiceSynth.trim_db(VoiceSynth.say_id("moss", LINE)) and Synth.peak(VoiceSynth.babble(LINE, VoiceSynth.BABBLE_RELENT)) < Synth.peak(line),
 		"first letter off his mouth by %.3f, off his old blip by %.3f" % [_fit(line, said), _fit(line, blipped)])
-	Bank.unknown_callers.clear()
-	var stranger: String = Bank.say_id("nobody", LINE)
-	t.check("a caller with no row gets Moss's voice and one warning", Bank._say_plan("nobody", LINE) == Bank._say_plan("moss", LINE)
-		and Bank.unknown_callers.keys() == ["nobody"] and Bank.trim_db(stranger) == Bank.trim_db(Bank.say_id("moss", LINE)) and not Bank.caller_on_grid("nobody"),
-		"warned about %s" % [Bank.unknown_callers.keys()])
-	t.check("an id with no line is a chirp and no crash", Bank.parse_said("say|sable") == ["sable", ""] and Bank.parse_said("say|sable|a|b") == ["sable", "a|b"]
-		and Bank.samples("say|sable").size() > 0, "%s" % [Bank.parse_said("say|sable")])
+	VoiceSynth.unknown_callers.clear()
+	var stranger: String = VoiceSynth.say_id("nobody", LINE)
+	t.check("a caller with no row gets Moss's voice and one warning", VoiceSynth._say_plan("nobody", LINE) == VoiceSynth._say_plan("moss", LINE)
+		and VoiceSynth.unknown_callers.keys() == ["nobody"] and VoiceSynth.trim_db(stranger) == VoiceSynth.trim_db(VoiceSynth.say_id("moss", LINE)) and not VoiceSynth.caller_on_grid("nobody"),
+		"warned about %s" % [VoiceSynth.unknown_callers.keys()])
+	t.check("an id with no line is a chirp and no crash", VoiceSynth.parse_said("say|sable") == ["sable", ""] and VoiceSynth.parse_said("say|sable|a|b") == ["sable", "a|b"]
+		and VoiceSynth.samples("say|sable").size() > 0, "%s" % [VoiceSynth.parse_said("say|sable")])
 
 
 func _call(audio) -> void:
@@ -269,17 +270,17 @@ func _call(audio) -> void:
 	audio._last_start.clear()
 	engine.warm_stingers = true
 	var booked: int = engine.clock
-	var id: String = Bank.say_id("pump_crew", FRESH)
-	var before := [Bank.cached_at(id, audio.grid_unit(4), engine.stinger_key(booked + lead)), Bank.cached_at(Bank.say_id("sable", LINE), audio.grid_unit(4), 0)]
+	var id: String = VoiceSynth.say_id("pump_crew", FRESH)
+	var before := [VoiceSynth.cached_at(id, audio.grid_unit(4), engine.stinger_key(booked + lead)), VoiceSynth.cached_at(VoiceSynth.say_id("sable", LINE), audio.grid_unit(4), 0)]
 	var seconds: float = audio.call_in("call_in", "pump_crew", FRESH)
 	engine.settle_stingers()
-	var made: bool = Bank.cached_at(id, audio.grid_unit(4), engine.stinger_key(booked + lead))
-	var dropped: bool = not Bank.cached_at(Bank.say_id("sable", LINE), audio.grid_unit(4), 0)
+	var made: bool = VoiceSynth.cached_at(id, audio.grid_unit(4), engine.stinger_key(booked + lead))
+	var dropped: bool = not VoiceSynth.cached_at(VoiceSynth.say_id("sable", LINE), audio.grid_unit(4), 0)
 	engine.warm_stingers = false
 	var calls: Array = audio.cue_log.filter(func(e: Array): return e[2] == "call")
 	var at: int = int(calls[0][3]) if not calls.is_empty() else -1
 	t.check("a call is booked a moment ahead and says how long the voice lasts", calls.size() == 1 and at == booked + lead
-		and is_equal_approx(seconds, audio.CALL_LEAD_S + Bank.say_seconds("pump_crew", FRESH)), "at %d (clock %d), %.2f s" % [at, booked, seconds])
+		and is_equal_approx(seconds, audio.CALL_LEAD_S + VoiceSynth.say_seconds("pump_crew", FRESH)), "at %d (clock %d), %.2f s" % [at, booked, seconds])
 	var over: float = audio.call_in("call_in", "sable", LINE)
 	t.check("a call while the last caller is still talking stays silent", over == 0.0
 		and audio.cue_log.filter(func(e: Array): return e[2] == "call").size() == 1, "returned %.2f" % over)
@@ -295,7 +296,7 @@ func _call(audio) -> void:
 	var grid_at: int = int(audio.cue_log.filter(func(e: Array): return e[2] == "call")[0][3])
 	var unit: int = audio.grid_unit(4)
 	t.check("the Foreman's call starts on the band's sixteenth", posmod(grid_at - audio.next_grid(4), unit) == 0 and grid_at >= from + lead
-		and grid_at < from + lead + unit and memo > Bank.say_seconds("mind", "Quick sync.", unit) and empty == 0.0, "at %d, %d past a sixteenth of %d" % [grid_at, posmod(grid_at - audio.next_grid(4), unit), unit])
+		and grid_at < from + lead + unit and memo > VoiceSynth.say_seconds("mind", "Quick sync.", unit) and empty == 0.0, "at %d, %d past a sixteenth of %d" % [grid_at, posmod(grid_at - audio.next_grid(4), unit), unit])
 
 
 # The card closing early stops its caller: a line still booked never sounds, one sounding is
@@ -307,7 +308,7 @@ func _call_end(audio) -> void:
 	engine.stinger_starts.clear()
 	audio.call_end()
 	t.check("ending a call when nobody is talking does nothing", audio.cue_log.is_empty(), "%d rows" % audio.cue_log.size())
-	var early: String = Bank.say_id("kest", LINE)
+	var early: String = VoiceSynth.say_id("kest", LINE)
 	audio.call_in("call_in", "kest", LINE)
 	var at: int = int(audio.cue_log.filter(func(e: Array): return e[2] == "call")[0][3])
 	audio.call_end()
@@ -316,7 +317,7 @@ func _call_end(audio) -> void:
 	_pump_to(audio, at + 4096)
 	t.check("a call ended before its voice starts never sounds, and the next caller talks at once", booked.is_empty() and next > 0.0
 		and engine.stinger_starts.filter(func(s: Array): return s[0] == early).is_empty(), "%d bookings left, next caller %.2f s" % [booked.size(), next])
-	var late: String = Bank.say_id("tarn", LINE)
+	var late: String = VoiceSynth.say_id("tarn", LINE)
 	var sounding: Array = engine._voices.filter(func(v): return v.stinger == late)
 	var left: int = sounding[0].end - sounding[0].pos if sounding.size() == 1 else -1
 	audio.call_end()

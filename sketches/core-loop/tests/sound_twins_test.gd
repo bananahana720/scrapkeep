@@ -1,6 +1,7 @@
 extends SceneTree
 
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const Twins := preload("res://src/presentation/sound_twins.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
@@ -54,6 +55,7 @@ static func bank_cues() -> Array:
 	for list in [SfxBank.DANGER_SOUNDS, SfxBank.KEYED_SOUNDS, SfxBank.KEST_SOUNDS]:
 		for id in list:
 			seen[id] = true
+	seen["babble"] = true
 	var out := seen.keys()
 	out.sort()
 	return out
@@ -106,7 +108,7 @@ static func universe(relay: Dictionary) -> Dictionary:
 		out["special:%s.tell" % special] = "%s_tell" % special
 	for id in Affixes.ROWS:
 		out["affix:%s" % id] = String(Affixes.ROWS[id]["mechanic_tag"])
-	for prefix in [SfxBank.CAUSE_NOTE, SfxBank.GRID_NOTE, SfxBank.PILOT_QUOTE, SfxBank.SET_ANSWER, SfxBank.ASSIST_STING, SfxBank.SAY]:
+	for prefix in [SfxBank.CAUSE_NOTE, SfxBank.GRID_NOTE, SfxBank.PILOT_QUOTE, SfxBank.SET_ANSWER, SfxBank.ASSIST_STING, VoiceSynth.SAY]:
 		out["family:%s" % prefix] = prefix
 	var bank_set := {}
 	for id in bank:

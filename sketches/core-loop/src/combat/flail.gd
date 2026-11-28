@@ -6,6 +6,7 @@ const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
 const Roster := preload("res://src/combat/roster.gd")
+const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 
 const HANG := 5.0
 const YANK_SPEED := 16.0
@@ -154,9 +155,7 @@ func _strike(other: Node3D, scale: float) -> void:
 
 
 static func _touching(a: Node3D, b: Node3D) -> bool:
-	var ra = a.get("radius")
-	var rb = b.get("radius")
-	var reach := (float(ra) if ra != null else 1.0) + (float(rb) if rb != null else 1.0) + TOUCH
+	var reach := ActiveBase.enemy_girth(a, 1.0) + ActiveBase.enemy_girth(b, 1.0) + TOUCH
 	return a.global_position.distance_to(b.global_position) <= reach
 
 

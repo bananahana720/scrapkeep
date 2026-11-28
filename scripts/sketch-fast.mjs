@@ -62,7 +62,7 @@ import { runnerReceiptBaseName, runnerReceiptPath, writeJsonReceipt } from "./li
 import { readLedger } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
-import { resolveTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
+import { discoverTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
 import { packDurationShards } from "./ci/shard-plan.mjs";
 
 const binary = resolveGodotBinary();
@@ -152,6 +152,12 @@ export const NODE_PATH_RULES = [
     name: "park prop far meshes",
     match: /(^|\/)park\/props\/|^tools\/model_audit\.py$/,
     tests: ["scripts/far-faults.test.mjs"],
+  },
+  {
+    name: "asset budget audit",
+    match:
+      /^(tools\/budget_audit\.mjs|assets\/asset_budgets\.json|assets\/registry\.json)$|^assets\/models\//,
+    tests: ["scripts/budget-audit.test.mjs"],
   },
   {
     name: "palette",
@@ -1285,8 +1291,7 @@ async function main() {
       let coveredByCi = [];
       if (options.ciGodotOnly) {
         try {
-          const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
-          coveredByCi = resolveTestFiles(pkg.scripts?.test ?? "", root);
+          coveredByCi = discoverTestFiles(root);
         } catch {
           coveredByCi = [];
         }
@@ -1312,6 +1317,8 @@ async function main() {
             path.join(root, "scripts", "sketch-lint.mjs"),
             "--sketch",
             "core-loop",
+            "--base",
+            mergeBase,
           ]),
       baseSketchForPlaceholders
         ? Promise.all([
