@@ -46,6 +46,7 @@ const PART_CALLS := [
 ]
 
 var _t := T.new("mesh_census_test")
+var _meshes := {}
 
 
 func _initialize() -> void:
@@ -68,6 +69,11 @@ func _initialize() -> void:
 			out.close()
 			print("mesh_census: recorded %d meshes to %s" % [got.size(), PIN])
 	var errors := compare(got, read_pin(PIN))
+	for e in errors:
+		if e.begins_with("changed ") and _meshes.has(e.trim_prefix("changed ")):
+			var m: ArrayMesh = _meshes[e.trim_prefix("changed ")]
+			for s in m.get_surface_count():
+				print("CENSUS_DUMP\t%s\t%d\t%s" % [e.trim_prefix("changed "), s, Marshalls.raw_to_base64(var_to_bytes(m.surface_get_arrays(s)))])
 	_t.check("every crafted mesh matches the census pin byte for byte", errors.is_empty(),
 		"%d differences: %s" % [errors.size(), ", ".join(errors.slice(0, 12))])
 	quit(_t.verdict())
@@ -142,6 +148,7 @@ func _census_script(path: String, got: Dictionary) -> void:
 			_t.check("census builds %s%s" % [name, str(args)], mesh is ArrayMesh, path)
 			if mesh is ArrayMesh:
 				got["%s:%s%s" % [path.get_file(), name, str(args)]] = surface_line(mesh)
+				_meshes["%s:%s%s" % [path.get_file(), name, str(args)]] = mesh
 
 
 func _arg_sets(path: String, method: Dictionary) -> Array:
