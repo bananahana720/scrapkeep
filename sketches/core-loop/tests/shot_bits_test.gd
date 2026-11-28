@@ -7,6 +7,7 @@ const PartDef := preload("res://src/build/part_def.gd")
 const Items := preload("res://src/build/items.gd")
 const Palette := preload("res://src/core/palette.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 
 # SI4 shot bits (W13-INTEGRATION-3.md, SI4; comps/isaac/items-and-synergies.md:89,
 # TADR-008 line 24: a closed table, no framework). Each part adds zero to two bits from
@@ -56,7 +57,7 @@ var S
 
 func _initialize() -> void:
 	if not ResourceLoader.exists(MODULE):
-		_report("shot bits module", false, "%s is missing" % MODULE)
+		check("shot bits module", false, "%s is missing" % MODULE)
 		_finish()
 		return
 	S = load(MODULE)
@@ -80,7 +81,7 @@ func _finish() -> void:
 	quit(0 if _failures == 0 else 1)
 
 
-func _report(label: String, ok: bool, detail: String) -> void:
+func check(label: String, ok: bool, detail: String) -> void:
 	_reports += 1
 	print("%s %s: %s" % ["PASS" if ok else "FAIL", label, detail])
 	if not ok:
@@ -98,7 +99,7 @@ func _check_closed_set() -> void:
 	var distinct := {}
 	for v in values:
 		distinct[v] = true
-	_report("closed set of five bits", S.NAMES == ["pierce", "bounce", "split", "pull", "heat"]
+	check("closed set of five bits", S.NAMES == ["pierce", "bounce", "split", "pull", "heat"]
 		and powers and distinct.size() == 5 and all == S.ALL and S.bit("not_a_bit") < 1,
 		"names %s, values %s, all %d, unknown -> %d" % [S.NAMES, values, all, S.bit("not_a_bit")])
 
@@ -123,7 +124,7 @@ func _check_table() -> void:
 			bad.append("%s has no rule" % name)
 		colors[color] = true
 		sounds[sound] = true
-	_report("one table: colour, sound and rule per bit", bad.is_empty() and S.TABLE.size() == 5
+	check("one table: colour, sound and rule per bit", bad.is_empty() and S.TABLE.size() == 5
 		and colors.size() == 5 and sounds.size() == 5 and S.table_problems(S.TABLE).is_empty(),
 		"%d rows, %d distinct colours, %d distinct sounds, problems %s" % [S.TABLE.size(), colors.size(), sounds.size(), bad])
 	# Sight and sound paired: each tell is read off the one row for its bit.
@@ -136,7 +137,7 @@ func _check_table() -> void:
 	var planted: Dictionary = S.TABLE.duplicate(true)
 	planted["heat"] = {"color": Palette.AMBER, "rule": "planted row with no sound"}
 	var caught: Array = S.table_problems(planted)
-	_report("tells read colour and sound off one row", tells.size() == 5 and unpaired.is_empty()
+	check("tells read colour and sound off one row", tells.size() == 5 and unpaired.is_empty()
 		and S.tells(0).is_empty() and caught.size() == 1,
 		"%d tells for the full set, unpaired %s, empty set -> %d tells; planted soundless row -> %s"
 			% [tells.size(), unpaired, S.tells(0).size(), caught])
@@ -157,7 +158,7 @@ func _check_pairs() -> void:
 	var removed: bool = reduced.erase(S.pair_key("pierce", "heat"))
 	var planted: int = S.unspecified_pairs(S.bit("pierce") | S.bit("heat"), reduced)
 	var clean: int = S.unspecified_pairs(S.ALL)
-	_report("every bit pair declared", checked == 10 and missing.is_empty() and S.PAIRS.size() == 10
+	check("every bit pair declared", checked == 10 and missing.is_empty() and S.PAIRS.size() == 10
 		and removed and planted == 1 and clean == 0,
 		"%d pairs checked, missing %s; full set -> %d unspecified; pierce+heat removed -> %d unspecified"
 			% [checked, missing, clean, planted])
@@ -182,7 +183,7 @@ func _check_parts() -> void:
 	var planted: Resource = PartDef.from_row("planted_three", {"bits": ["pierce", "bounce", "heat"]})
 	var from_tags: Resource = PartDef.from_row("planted_tags", {"tags": ["kinetic", "chain"]})
 	var none: Resource = PartDef.from_row("planted_none", {"tags": ["speed"]})
-	_report("parts carry zero to two bits", ids.size() > 0 and over.is_empty() and stray.is_empty() and with_bits > 0
+	check("parts carry zero to two bits", ids.size() > 0 and over.is_empty() and stray.is_empty() and with_bits > 0
 		and S.count(planted.bits) == S.MAX_PART_BITS and S.count(from_tags.bits) == 2 and S.count(none.bits) == 0,
 		"%d parts, %d carry bits, over two %s, outside the set %s; planted three-bit row -> %s; kinetic+chain -> %s; speed -> %s"
 			% [ids.size(), with_bits, over, stray, S.names(planted.bits), S.names(from_tags.bits), S.names(none.bits)])
@@ -201,7 +202,7 @@ func _check_or_and_cap() -> void:
 		and S.count(copies["bits"]) == 1 and S.without(swapped["bits"], two["bits"]) < 1 \
 		and S.without(two["bits"], swapped["bits"]) < 1 and S.count(four["bits"]) == S.MAX_SHOT_BITS \
 		and S.has(four["dropped"], h) and S.count(four["dropped"]) == 1 and S.count(S.shot([])["bits"]) == 0
-	_report("a shot is the OR of its parts, capped at three", ok and S.MAX_SHOT_BITS == 3,
+	check("a shot is the OR of its parts, capped at three", ok and S.MAX_SHOT_BITS == 3,
 		"pierce|bounce -> %s; three pierce copies -> %s; held order swapped -> %s; four bits -> %s, dropped %s"
 			% [S.names(two["bits"]), S.names(copies["bits"]), S.names(swapped["bits"]), S.names(four["bits"]), S.names(four["dropped"])])
 
@@ -216,7 +217,7 @@ func _check_children() -> void:
 	var bare := {"origin": Vector3.ZERO, "dir": Vector3.FORWARD, "speed": 40.0}
 	pool.fire(bare)
 	var fresh: bool = not child.has("travelled") and child["dir"] == Vector3.RIGHT
-	_report("children copy the set", S.without(child["bits"], set_bits) < 1 and S.without(set_bits, child["bits"]) < 1
+	check("children copy the set", S.without(child["bits"], set_bits) < 1 and S.without(set_bits, child["bits"]) < 1
 		and S.without(grandchild["bits"], set_bits) < 1 and S.without(set_bits, grandchild["bits"]) < 1
 		and fresh and bare.has("bits") and S.count(bare["bits"]) == 0,
 		"parent %s -> child %s (an override of 0 ignored) -> grandchild %s; child flight restarts %s; a bolt fired with no set carries %s"
@@ -273,14 +274,14 @@ func _check_compose() -> void:
 	print("shot_bits compose | seed %d | builds %d | bits per shot %s | 3 bits %.1f%% (target %d%%) | max %d | distinct sets %d | builds with a dropped bit %d | unspecified pairs %d | worst %s"
 		% [SEED, stats["builds"], stats["counts"], 100.0 * stats["share3"], int(SHARE3_TARGET * 100), stats["max_bits"],
 			stats["distinct"], stats["dropped"], stats["unspecified"], S.names(stats["worst"])])
-	_report("10,000 6-part builds", stats["builds"] == BUILDS and stats["unspecified"] == 0
+	check("10,000 6-part builds", stats["builds"] == BUILDS and stats["unspecified"] == 0
 		and stats["share3"] >= SHARE3_TARGET and stats["max_bits"] <= S.MAX_SHOT_BITS,
 		"%.1f%% reach 3 bits, max %d bits per shot, %d unspecified pairs, %d distinct sets"
 			% [100.0 * stats["share3"], stats["max_bits"], stats["unspecified"], stats["distinct"]])
 	var again := _compose(7, 300)
 	var twice := _compose(7, 300)
 	var other := _compose(8, 300)
-	_report("compose reproducible from the seed", again["picks_hash"] == twice["picks_hash"]
+	check("compose reproducible from the seed", again["picks_hash"] == twice["picks_hash"]
 		and again["share3"] == twice["share3"] and again["picks_hash"] != other["picks_hash"],
 		"seed 7 twice %s / %s, seed 8 %s" % [again["picks_hash"], twice["picks_hash"], other["picks_hash"]])
 	set_meta("worst", stats["worst"])
@@ -308,25 +309,23 @@ func _check_frame_budget() -> void:
 			n += held * (held - 1) / 2
 		reads[build[0]] = n
 	var cap: int = Bolts.MAX_LIVE * READS_PER_BOLT_CAP
-	_report("worst build inside the frame budget", reads["worst"] <= cap and reads["long"] <= cap
+	check("worst build inside the frame budget", reads["worst"] <= cap and reads["long"] <= cap
 		and reads["long"] <= reads["worst"] and reads["uncapped"] > cap,
 		"worst build %s, %d bolts a tick, %d table reads; a %d-part build of every bit %s, %d reads; cap %d; uncapped control %d reads"
 			% [S.names(worst), Bolts.MAX_LIVE, reads["worst"], LONG_BUILD, S.names(long_bits), reads["long"], cap, reads["uncapped"]])
 
 
 func _check_set_operations() -> void:
-	var re := RegEx.new()
-	re.compile(SET_EQUALITY)
 	var hits: Array = []
 	for path in [MODULE, BOLTS]:
-		var text := FileAccess.get_file_as_string(path)
 		var n := 0
-		for line in text.split("\n"):
+		for line in SourceScan.text(self, path).split("\n"):
 			n += 1
 			var code := line.get_slice("#", 0)
-			if re.search(code) != null:
+			if not SourceScan.search(self, code, SET_EQUALITY).is_empty():
 				hits.append("%s:%d" % [path.get_file(), n])
-	var planted := [re.search("\tif a_bits == b_bits:") != null, re.search("\treturn mask != 0") != null,
-		re.search("\treturn (mask & bit) > 0") == null]
-	_report("set operations only", hits.is_empty() and planted == [true, true, true],
+	var planted := [not SourceScan.search(self, "\tif a_bits == b_bits:", SET_EQUALITY).is_empty(),
+		not SourceScan.search(self, "\treturn mask != 0", SET_EQUALITY).is_empty(),
+		SourceScan.search(self, "\treturn (mask & bit) > 0", SET_EQUALITY).is_empty()]
+	check("set operations only", hits.is_empty() and planted == [true, true, true],
 		"equality on a set at %s; planted equality caught %s" % [hits, planted])

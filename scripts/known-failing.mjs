@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { weeklyNames } from "./gate/weekly.mjs";
-import { globToRegExp } from "./lib/godot-test-runner.mjs";
+import { globToRegExp, withoutTeardownNoise } from "./lib/godot-test-runner.mjs";
 import { isMain } from "./lib/cli.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 export const LEDGER_FILE = "project-guide/handoff/KNOWN-FAILING.tsv";
 export const LEDGER_HEADER = ["test", "kind", "cause", "owner", "added", "review"];
@@ -16,6 +17,8 @@ export const TIME_OUT = "TIME-OUT";
 export const ERROR_LINE = "ERROR-LINE";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const MAIN_RED = /^red on main at ([0-9a-f]{7,40}) on (\d{4}-\d{2}-\d{2}):\s/;
+const MAIN_RED_FORM = "red on main at <commit> on <YYYY-MM-DD>: ";
 
 export function testName(text) {
   return String(text).trim().replace(/^.*\//, "").replace(/\.gd$/, "");
@@ -53,6 +56,7 @@ export function parseLedger(text) {
             .map((part) => part.trim())
             .filter(Boolean)
         : null;
+    const onMain = MAIN_RED.exec(cause);
     const row = {
       test,
       kind,
@@ -61,8 +65,21 @@ export function parseLedger(text) {
       added,
       review,
       checks: kind === "red" ? named : null,
+      main: kind === "red" && onMain ? { commit: onMain[1], seen: onMain[2] } : null,
       line: number,
     };
+    if (/^red on main\b/i.test(cause) && !onMain)
+      problems.push({
+        line: number,
+        message: `a cause that says the test is red on main starts "${MAIN_RED_FORM}"`,
+      });
+    if (onMain && kind !== "red")
+      problems.push({ line: number, message: `only a red row can be red on main, not a ${kind}` });
+    if (onMain && ISO_DATE.test(added) && onMain[2] > added)
+      problems.push({
+        line: number,
+        message: `the row was added (${added}) before main was seen red (${onMain[2]})`,
+      });
     if (hasChecks && kind === "red" && !named?.length)
       problems.push({
         line: number,
@@ -165,6 +182,153 @@ export function judgeLines({ listed, unlisted }) {
     );
   }
   return lines;
+}
+
+export function readMainReds(ref, { cwd, log = () => {} } = {}) {
+  if (typeof ref !== "string" || ref === "")
+    throw new TypeError("readMainReds(ref): ref must name a commit");
+  const text = gitOptional(["show", `${ref}:${LEDGER_FILE}`], { cwd, trim: false });
+  const unread = (why) => {
+    log(
+      `known red on main: ${LEDGER_FILE} ${why} at ${ref}, so every red counts against this change`,
+    );
+    return [];
+  };
+  if (text === null) return unread("could not be read");
+  if (text.trim() === "") return unread("is empty");
+  const { rows, problems } = parseLedger(text);
+  if (problems.length > 0)
+    return unread(`does not parse (line ${problems[0].line}: ${problems[0].message})`);
+  return rows.filter((row) => row.main);
+}
+
+export function failedChecks(text) {
+  const labels = [];
+  for (const raw of text.split("\n")) {
+    const line = raw.replace(/^\s*(?:>> )?/, "").trimEnd();
+    if (
+      (!/-> FAIL\b/.test(line) && !/^FAIL\b/.test(line)) ||
+      line.lastIndexOf("-> PASS") > line.lastIndexOf("-> FAIL")
+    )
+      continue;
+    const label = line.match(/^\[(.+?)\] .*-> FAIL\b/)?.[1] ?? `unlabelled failing line: ${line}`;
+    if (!labels.includes(label)) labels.push(label);
+  }
+  return labels;
+}
+
+export function whatFailed(runs, platform = process.platform) {
+  const failed = runs.filter((run) => !run.ok);
+  const labels = [];
+  for (const run of failed) {
+    for (const label of run.text === null ? ["a failed run left no log"] : failedChecks(run.text))
+      if (!labels.includes(label)) labels.push(label);
+  }
+  return {
+    labels,
+    timedOut: failed.some((run) => run.timedOut),
+    errorLine: failed.some(
+      (run) =>
+        run.text !== null &&
+        /^(?:SCRIPT ERROR|ERROR)\b/m.test(withoutTeardownNoise(run.text, platform)),
+    ),
+  };
+}
+
+export function runFailure(test, output, platform = process.platform) {
+  if (typeof output !== "string")
+    throw new TypeError(`runFailure(test, output): output must be text, got ${typeof output}`);
+  const name = testName(test).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const { labels, errorLine } = whatFailed(
+    [{ ok: false, text: output, timedOut: false }],
+    platform,
+  );
+  return {
+    labels,
+    errorLine,
+    failVerdict: new RegExp(`^${name}: FAIL\\b`, "m").test(output.replace(/\r/g, "")),
+  };
+}
+
+export const ONLY_KNOWN_REDS = "sketch:fast fail: only known reds on main";
+export const NEW_AND_KNOWN_REDS = "sketch:fast fail: new reds";
+
+const NORMAL_EXITS = new Set([0, 1]);
+
+function whyNotKnown(row, run, today) {
+  if (row.review < today) return `its row is past its review date (${row.review})`;
+  const failure = run?.failure;
+  if (!failure) return "the run left no failure record";
+  if (run.killed === true || run.timedOut === true || (run.signal ?? null) !== null)
+    return `the run was stopped (${run.timedOut ? "time-out" : (run.signal ?? "killed")})`;
+  if (!NORMAL_EXITS.has(run.exit)) return `the run ended with exit code ${run.exit}`;
+  if (!failure.failVerdict) return "the run ended without its FAIL verdict line";
+  if (failure.labels.length === 0) return "no failing check was printed";
+  const unnamed = uncoveredChecks(row, {
+    labels: failure.labels,
+    timedOut: false,
+    errorLine: failure.errorLine,
+  });
+  if (unnamed.length > 0)
+    return `it fails what its row does not name: ${unnamed.join("; ")}; the row covers ${row.checks.join(` ${CHECK_SEPARATOR} `)}`;
+  return null;
+}
+
+export function mainRedLedger(
+  rows,
+  { log = () => {}, today = new Date().toISOString().slice(0, 10) } = {},
+) {
+  if (!Array.isArray(rows)) throw new TypeError("mainRedLedger(rows): rows must be an array");
+  const listed = new Map(
+    rows.filter((row) => row.main && row.checks?.length > 0).map((row) => [row.test, row]),
+  );
+  const known = [];
+  const passed = [];
+  return {
+    passed(test) {
+      const row = listed.get(testName(test));
+      if (!row || passed.includes(test)) return;
+      passed.push(test);
+      log(
+        `  ${row.test} passed, but ${LEDGER_FILE} lists it as red on main at ${row.main.commit}: remove its row once main is green`,
+      );
+    },
+    settle(test, verdict) {
+      const row = listed.get(testName(test));
+      if (!row || verdict.kind !== "pr-red") return verdict;
+      const why = whyNotKnown(row, verdict.rerun, today);
+      if (why !== null) {
+        log(`  ${row.test} is listed as red on main, but counts as this change's red: ${why}`);
+        return verdict;
+      }
+      known.push(test);
+      log(
+        `  known red on main: ${row.test} (${LEDGER_FILE} line ${row.line}; owner ${row.owner}; check ${row.checks.join(` ${CHECK_SEPARATOR} `)}): ${row.cause}`,
+      );
+      return { ...verdict, kind: "main-red" };
+    },
+    report(newReds = []) {
+      if (!Array.isArray(newReds))
+        throw new TypeError("report(newReds): newReds must be an array of tests");
+      if (passed.length > 0)
+        log(
+          `listed as red on main but passed here (remove the row once main is green): ${passed.join(", ")}`,
+        );
+      const line =
+        known.length === 0
+          ? null
+          : newReds.length === 0
+            ? `${ONLY_KNOWN_REDS} (${known.length}): ${known.join(" ")}`
+            : `${NEW_AND_KNOWN_REDS} (${newReds.length}): ${newReds.join(" ")}; known reds on main (${known.length}): ${known.join(" ")}`;
+      return {
+        known: [...known],
+        new_reds: [...newReds],
+        passed: [...passed],
+        only_known_reds: known.length > 0 && newReds.length === 0,
+        line,
+      };
+    },
+  };
 }
 
 export function renderLedger(rows) {

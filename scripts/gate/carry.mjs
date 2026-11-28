@@ -1,7 +1,7 @@
 import path from "node:path";
 
 import { isMain } from "../lib/cli.mjs";
-import { REPO_ROOT, git as runGit } from "../lib/git.mjs";
+import { REPO_ROOT, git as runGit, nulSeparated } from "../lib/git.mjs";
 import { buildIndex, isTopLevelTest, referrers } from "../sketch-fast.mjs";
 import { gateLists } from "./shard.mjs";
 
@@ -61,7 +61,9 @@ function main() {
     throw new Error("usage: node scripts/gate/carry.mjs <head the rows were read on> [<new head>]");
   if (git("rev-parse", to) !== git("rev-parse", "HEAD"))
     throw new Error(`check out ${to} first; the test files are read from the working tree`);
-  const changed = git("diff", "--name-only", from, to).split("\n").filter(Boolean);
+  const changed = nulSeparated(
+    runGit(["diff", "--name-only", "-z", from, to], { cwd: root, trim: false }),
+  );
   const { game, tests, other } = sortChanges(changed);
   console.log(
     `${git("rev-parse", "--short=8", from)} to ${git("rev-parse", "--short=8", to)}: ${changed.length} files changed.`,

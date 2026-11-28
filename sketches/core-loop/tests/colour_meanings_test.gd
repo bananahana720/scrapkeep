@@ -10,27 +10,27 @@ extends SceneTree
 const Meanings := preload("res://tests/support/colour_meanings.gd")
 const Palette := preload("res://src/core/palette.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 const ROOT := "res://src"
 const PALETTE_PATH := "res://src/core/palette.gd"
-const HOME := "res://tests/support/colour_meanings.gd"
+const ALIAS := "const\\s+(\\w+)\\s*:?=\\s*preload\\(\"" + PALETTE_PATH + "\"\\)"
+const EXTENDS := "(?m)^extends\\s+\"(res://[^\"]+)\""
 
 var _t := T.new("colour_meanings_test")
 var _palette: Dictionary = (Palette as GDScript).get_script_constant_map()
 var _extends := {}
-var _alias_re := RegEx.new()
-var _extends_re := RegEx.new()
+var _sources := {}
 
 
 func _initialize() -> void:
-	_alias_re.compile("const\\s+(\\w+)\\s*:?=\\s*preload\\(\"" + PALETTE_PATH + "\"\\)")
-	_extends_re.compile("(?m)^extends\\s+\"(res://[^\"]+)\"")
-	var scripts := _scripts(ROOT)
+	_sources = SourceScan.sources(_t, [ROOT])
+	var scripts := _sources.keys()
 	for path in scripts:
-		var m := _extends_re.search(FileAccess.get_file_as_string(path))
-		if m != null:
-			_extends[path] = m.get_string(1)
+		var found := SourceScan.search(_t, _sources[path], EXTENDS)
+		if not found.is_empty():
+			_extends[path] = found[0].get_string(1)
 	_rows()
 	_meanings()
 	var domains := _domains(scripts)
@@ -80,7 +80,7 @@ func _domains(scripts: Array) -> Dictionary:
 			if path in spec.files or _under(path, spec.dirs) or _reaches(path, spec.extends):
 				members[path] = true
 		for path in spec.files:
-			_t.check("%s domain file %s exists" % [domain, path], FileAccess.file_exists(path), path)
+			_t.check("%s domain file %s exists" % [domain, path], _sources.has(path), path)
 		_t.check("%s domain has members" % domain, members.size() >= spec.files.size() and members.size() > 0, "%d scripts" % members.size())
 		out[domain] = members
 	return out
@@ -93,7 +93,7 @@ func _scan(scripts: Array, domains: Dictionary) -> void:
 	var found := []
 	var stray := []
 	for path in scripts:
-		if path == HOME or path == PALETTE_PATH:
+		if path == PALETTE_PATH:
 			continue
 		var used := _colours_in(path, Meanings.RESERVED.keys())
 		for colour in used:
@@ -116,7 +116,7 @@ func _scan(scripts: Array, domains: Dictionary) -> void:
 # A row whose file no longer draws its colour is burned down: delete it.
 func _known() -> void:
 	for row in Meanings.KNOWN:
-		var exists := FileAccess.file_exists(row.path)
+		var exists := _sources.has(row.path)
 		_t.check("known row file %s exists" % row.path, exists, row.path)
 		if exists:
 			_t.check("known row %s still draws %s" % [row.path, row.colour], row.colour in _colours_in(row.path, [row.colour]),
@@ -124,7 +124,7 @@ func _known() -> void:
 
 
 func _colours_in(path: String, colours: Array) -> Array:
-	var code := _code(FileAccess.get_file_as_string(path))
+	var code := _code(_sources[path])
 	var aliases := _aliases(path)
 	var out := []
 	for colour in colours:
@@ -137,13 +137,10 @@ func _colours_in(path: String, colours: Array) -> Array:
 		for alias in aliases:
 			if hit:
 				break
-			var re := RegEx.new()
-			re.compile("\\b%s\\.%s\\b" % [alias, colour])
-			hit = re.search(code) != null
+			hit = not SourceScan.search(_t, code, "\\b%s\\.%s\\b" % [alias, colour]).is_empty()
 			# Palette.live() is mint today (palette.gd).
 			if not hit and colour == "ARC":
-				re.compile("\\b%s\\.live\\(" % alias)
-				hit = re.search(code) != null
+				hit = not SourceScan.search(_t, code, "\\b%s\\.live\\(" % alias).is_empty()
 		if hit:
 			out.append(colour)
 	return out
@@ -155,7 +152,8 @@ func _aliases(path: String) -> Array:
 	var cur := path
 	var guard := 0
 	while cur != "" and guard < 16:
-		for m in _alias_re.search_all(FileAccess.get_file_as_string(cur)):
+		var body: String = _sources[cur] if _sources.has(cur) else SourceScan.text(_t, cur)
+		for m in SourceScan.search(_t, body, ALIAS):
 			out.append(m.get_string(1))
 		cur = String(_extends.get(cur, ""))
 		guard += 1
@@ -194,17 +192,3 @@ func _code(text: String) -> String:
 				break
 		lines.append(line.substr(0, cut))
 	return "\n".join(lines)
-
-
-func _scripts(dir_path: String) -> Array:
-	var out: Array = []
-	var dir := DirAccess.open(dir_path)
-	if dir == null:
-		return out
-	for sub in dir.get_directories():
-		out.append_array(_scripts(dir_path.path_join(sub)))
-	for file in dir.get_files():
-		if file.ends_with(".gd"):
-			out.append(dir_path.path_join(file))
-	out.sort()
-	return out

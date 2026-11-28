@@ -9,6 +9,7 @@ import {
   judgeFailures,
   parseLedger,
   uncoveredChecks,
+  whatFailed,
 } from "../known-failing.mjs";
 import { WEEKLY_FILE, weeklyNames as readWeeklyNames } from "./weekly.mjs";
 
@@ -23,7 +24,6 @@ import {
   testScripts,
   testTimeoutMs,
   timeScale,
-  withoutTeardownNoise,
 } from "../lib/godot-test-runner.mjs";
 import { runProcess } from "../lib/proc.mjs";
 import {
@@ -257,39 +257,6 @@ function callFailure(test, soloResults, ledgerRows) {
     alone,
     row: null,
     note: "no ledger row and it fails alone: a new red, which blocks (ruling ai)",
-  };
-}
-
-export function failedChecks(text) {
-  const labels = [];
-  for (const raw of text.split("\n")) {
-    const line = raw.replace(/^\s*(?:>> )?/, "").trimEnd();
-    if (
-      (!/-> FAIL\b/.test(line) && !/^FAIL\b/.test(line)) ||
-      line.lastIndexOf("-> PASS") > line.lastIndexOf("-> FAIL")
-    )
-      continue;
-    const label = line.match(/^\[(.+?)\] .*-> FAIL\b/)?.[1] ?? `unlabelled failing line: ${line}`;
-    if (!labels.includes(label)) labels.push(label);
-  }
-  return labels;
-}
-
-export function whatFailed(runs, platform = process.platform) {
-  const failed = runs.filter((run) => !run.ok);
-  const labels = [];
-  for (const run of failed) {
-    for (const label of run.text === null ? ["a failed run left no log"] : failedChecks(run.text))
-      if (!labels.includes(label)) labels.push(label);
-  }
-  return {
-    labels,
-    timedOut: failed.some((run) => run.timedOut),
-    errorLine: failed.some(
-      (run) =>
-        run.text !== null &&
-        /^(?:SCRIPT ERROR|ERROR)\b/m.test(withoutTeardownNoise(run.text, platform)),
-    ),
   };
 }
 

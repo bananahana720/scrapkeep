@@ -94,11 +94,9 @@ test("only scripts/lib/proc.mjs asks the system whether a process lives; every o
   assert.ok(KILL_ZERO.test(sample) && KILL_ZERO.test(sample.replace("pid", "Number(text)")));
   assert.ok(!KILL_ZERO.test(sample.replace("0)", '"SIGTERM")')));
   const allowed = {
-    "scripts/lib/machine-lock.mjs":
-      "reads a slot claimed by process 1 as another user's live process, which its tests pin and processLive refuses to ask about",
     "scripts/lib/proc.mjs": "owns processLive and groupLive",
     "scripts/sketch-smoke.test.mjs":
-      "pins the system's own answer (EPERM) for process 1, which processLive refuses to ask about",
+      "checks its fixtures before the lock reads them: an exited child's id answers ESRCH, and its stub of process.kill answers EPERM for another user's claim",
   };
   assert.deepEqual(
     filesAskingKill(path.resolve(fileURLToPath(import.meta.url), "../../..")),

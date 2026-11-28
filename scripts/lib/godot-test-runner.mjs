@@ -11,6 +11,29 @@ const TEARDOWN_NOISE =
 export const withoutTeardownNoise = (output, platform = process.platform) =>
   platform === "darwin" ? output.replace(TEARDOWN_NOISE, "") : output;
 
+const RESOURCES_IN_USE = /^ERROR: \d+ resources still in use at exit\b/m;
+
+export function linuxOnlyLeak(output, platform = process.platform) {
+  if (typeof output !== "string")
+    throw new TypeError(`linuxOnlyLeak(output): output must be text, got ${typeof output}`);
+  return platform === "darwin" && RESOURCES_IN_USE.test(output);
+}
+
+export function linuxLeakLines(leaks) {
+  if (!Array.isArray(leaks)) throw new TypeError("linuxLeakLines(leaks): leaks must be an array");
+  const lines = leaks.map((tests) =>
+    tests.length === 1
+      ? `WARN linux leak: ${tests[0]} printed "resources still in use at exit"; macOS drops that line, the Linux CI fails the test on it`
+      : `WARN linux leak: a warm batch of ${tests.join(", ")} printed "resources still in use at exit"; macOS drops that line, the Linux CI fails the test that printed it (run each with --test to find it)`,
+  );
+  if (lines.length === 0) return [];
+  const count = leaks.reduce((sum, tests) => sum + (tests.length === 1 ? 1 : 0), 0);
+  return [
+    ...lines,
+    `linux leaks: ${count} test${count === 1 ? "" : "s"} and ${leaks.length - count} batch${leaks.length - count === 1 ? "" : "es"} printed the exit leak line the Linux CI fails on (some clean tests print it on macOS only)`,
+  ];
+}
+
 export const TIMEOUT_MS = 180_000;
 const NAMED_WIDTH = 2;
 
@@ -220,6 +243,7 @@ export function evaluateBatchOutput(
     outsideError,
     unexpectedExit,
     tainted: outsideError || unexpectedExit,
+    linuxLeak: linuxOnlyLeak(outside, platform),
   };
 }
 
@@ -340,7 +364,7 @@ export function judge({ test, status, output: raw, platform = process.platform }
   else if (missing) reason = MISSING_VERDICT;
   else if (failVerdict) reason = "the test printed a FAIL verdict";
   else if (errorLine.test(output)) reason = "the test printed an error line";
-  return { ok, verdict, skips, missing, reason };
+  return { ok, verdict, skips, missing, reason, linuxLeak: linuxOnlyLeak(raw, platform) };
 }
 
 const FAILING_LINE = /-> FAIL\b|^\s*(?:SCRIPT ERROR|ERROR|FAIL)\b|\btimed[ _]out\b/;
