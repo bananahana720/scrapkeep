@@ -37,7 +37,7 @@ To count tracked `.gd` scripts, run `git ls-tree -r --name-only HEAD sketches/co
 
 | Owner | Script | Persisted file | Owns |
 | --- | --- | --- | --- |
-| `RunState` | `src/core/run_state.gd` | none (snapshotted by `RunStore`) | Active run HP/max HP, `scrap` tally, `cogs` spend wallet, `mass`, heft/class, `parts`, `panels`, `consumables`, `bonus_cores`, kills, milestones, stage-start snapshots, and `death_save_hook`. |
+| `RunState` | `src/core/run_state.gd` | none (snapshotted by `RunStore`) | Active run HP/max HP, `scrap` tally, `cogs` spend wallet, `mass`, heft/class, `parts`, `panels`, `consumables`, `bonus_cores`, kills, `events_won` (emits `milestone_won`), stage-start snapshots, and `death_save_hook`. |
 | `Flow` | `src/core/flow.gd` | via `RunStore` | Run/stage state machine (`title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `lap`, `summary`, `dead`), Warden seal/unseal, arena transitions, and retry/replay checkpoints. |
 | `BuffLedger` | `src/core/buff_ledger.gd` | none | Active timed and counted gameplay buffs; subscribes to `GameEvents` run/stage/death resets and binds to `PlayerBall.abilities`. |
 | `Profile` | `src/core/profile.gd` | `user://profile.json` (schema 4, `SafeStore`) | Durable unlocks and meta state: pilots, worlds, cosmetics, achievements, equipped loadouts, stats, settled runs, companion, seen flags, meta options, heard tunes, radio, and camp state. |
@@ -46,7 +46,7 @@ To count tracked `.gd` scripts, run `git ls-tree -r --name-only HEAD sketches/co
 | `RunLog` / `RunMoments` | `src/core/run_log.gd`, `src/core/run_moments.gd` | `user://runs.ndjson`, scrapbook via `ScrapbookStore` | Cumulative per-run/per-stage telemetry (traversal flow share, dead stops, bites, smashes, anomalies, arena stats) and captured run moments. |
 | `RunStore` | `src/core/run_store.gd` | `user://run.json` (schema 1, `SafeStore`) | Atomic in-progress run persistence and refusal checks for Title `Continue`. |
 | `SettingsStore` | `src/ui/settings_store.gd` | `user://settings.json` (`SafeStore`) | Audio bus volumes, comfort/display toggles (fullscreen, quality, reduced motion/flashes, frame smoothing, wide picture), look sensitivity, and key bindings. |
-| `Tuning` | `src/movement/tuning.gd` | optional F4 dump (`user://tuning-<ts>.json`) | Base movement/launch profile knobs and build-applied modifiers (`clear_mods`, `set_mod`, `mod`). |
+| `Tuning` | `src/movement/tuning.gd` | none (optional F4 dump `user://tuning-<ts>.json` is written by `src/game.gd` under `--dev`) | Base movement/launch profile knobs and build-applied modifiers (`clear_mods`, `set_mod`, `mod`). |
 | `ScreenBusy` | `src/ui/screen_busy.gd` | none | Combat quiet-window arbiter coordinating non-urgent HUD/callout timing. |
 
 ## `Context` field inventory (`src/core/context.gd`)
