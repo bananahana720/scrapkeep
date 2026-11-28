@@ -3,10 +3,11 @@ extends SceneTree
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const JoltAudio := preload("res://src/presentation/jolt_layer_audio.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const WavIo := preload("res://src/presentation/wav_io.gd")
 const T := preload("res://tests/support/t.gd")
 
-const ALLOWED_RIFF_FILES := ["sfx_bank.gd"]
+const ALLOWED_RIFF_FILES := ["sfx_bank.gd", "voice_synth.gd"]
 
 var t := T.new("wav_io_test")
 
@@ -139,16 +140,16 @@ func _shipped_voice_digests() -> void:
 		"res://assets/audio/world/spill_splash.wav": [44, 70560, 35280, "bfa61334296412a5"],
 	}
 	for p in expected:
-		var info := SfxBank._read_wav_info(p)
-		var voice := SfxBank.load_voice_wav(p)
+		var info := VoiceSynth._read_wav_info(p)
+		var voice := VoiceSynth.load_voice_wav(p)
 		t.eq("voice wav " + p, [
 			int(info.get("offset", -1)),
 			int(info.get("size", -1)),
 			voice.size(),
 			_hash_floats(voice),
 		], expected[p])
-	t.eq("voice wav rejects 48 kHz shipped file", SfxBank._read_wav_info("res://assets/audio/event_set/land_thud.wav"), {})
-	t.eq("voice wav rejects 24 kHz shipped file", SfxBank._read_wav_info("res://assets/audio/experimental/callout_brindle_audit.wav"), {})
+	t.eq("voice wav rejects 48 kHz shipped file", VoiceSynth._read_wav_info("res://assets/audio/event_set/land_thud.wav"), {})
+	t.eq("voice wav rejects 24 kHz shipped file", VoiceSynth._read_wav_info("res://assets/audio/experimental/callout_brindle_audit.wav"), {})
 
 
 func _build_wav(channels: int, rate: int, bits: int, audio_fmt: int, pcm: PackedByteArray, extra_odd := false, fmt_after_data := false, magic := "RIFF", wave := "WAVE") -> PackedByteArray:
@@ -279,8 +280,8 @@ func _malformed_inputs() -> void:
 		var f := FileAccess.open(p, FileAccess.WRITE)
 		f.store_buffer(bytes)
 		f.close()
-		var info := SfxBank._read_wav_info(p)
-		var voice := SfxBank.load_voice_wav(p)
+		var info := VoiceSynth._read_wav_info(p)
+		var voice := VoiceSynth.load_voice_wav(p)
 		t.eq("voice malformed " + name, [int(info.get("frames", 0)), voice.size()], expected_voice[name])
 		t.eq("foley wav disk malformed " + name, _stream_summary(FoleyAudio.wav(p, true)), expected_riff[name])
 		t.eq("wav_io disk malformed " + name, _stream_summary(WavIo.load_wav(p, true)), expected_riff[name])
@@ -289,8 +290,8 @@ func _malformed_inputs() -> void:
 	var tf := FileAccess.open(trunc_fmt_path, FileAccess.WRITE)
 	tf.store_buffer(trunc_fmt)
 	tf.close()
-	var tf_info := SfxBank._read_wav_info(trunc_fmt_path)
-	var tf_voice := SfxBank.load_voice_wav(trunc_fmt_path)
+	var tf_info := VoiceSynth._read_wav_info(trunc_fmt_path)
+	var tf_voice := VoiceSynth.load_voice_wav(trunc_fmt_path)
 	t.eq("voice malformed trunc_fmt", [int(tf_info.get("frames", 0)), tf_voice.size()], expected_voice["trunc_fmt"])
 
 	_remove_dir_recursive(tmp_dir)

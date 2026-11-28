@@ -2,6 +2,7 @@ extends SceneTree
 
 const Audio := preload("res://src/presentation/audio.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const SfxBudget := preload("res://src/presentation/sfx_budget.gd")
 const MusicArbiter := preload("res://src/presentation/music_arbiter.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
@@ -745,7 +746,7 @@ func _test_voice_sidecar_loader() -> void:
 	var missing_dir := ProjectSettings.globalize_path("user://e304_missing_voice_%d" % OS.get_process_id())
 	audio.set_voice_mode("tts", missing_dir)
 	var line := "Eyes on the spillway."
-	var synth_buf := SfxBank._say("sable", line)
+	var synth_buf := VoiceSynth._say("sable", line)
 	_t.check("--voice=tts with missing dir falls back cleanly to synth",
 		not audio.voice_manifest_loaded() and audio.voice_clip_for("sable", line) == ""
 		and Synth.peak(synth_buf) > 0.1)
@@ -768,12 +769,12 @@ func _test_voice_sidecar_loader() -> void:
 	mf.store_string(JSON.stringify(manifest))
 	mf.close()
 
-	var cannon_synth_before := SfxBank._say("cannon", line)
+	var cannon_synth_before := VoiceSynth._say("cannon", line)
 	audio.set_voice_mode("tts", tmp_dir)
-	var sable_tts_buf := SfxBank._say("sable", line)
-	var sable_tts_dur := SfxBank.say_seconds("sable", line)
-	var rivet_fallback_buf := SfxBank._say("rivet", line)
-	var cannon_after := SfxBank._say("cannon", line)
+	var sable_tts_buf := VoiceSynth._say("sable", line)
+	var sable_tts_dur := VoiceSynth.say_seconds("sable", line)
+	var rivet_fallback_buf := VoiceSynth._say("rivet", line)
+	var cannon_after := VoiceSynth._say("cannon", line)
 
 	_t.check("--voice=tts loads matching non-Cannon WAV with exact duration",
 		audio.voice_manifest_loaded()
@@ -785,7 +786,7 @@ func _test_voice_sidecar_loader() -> void:
 		audio.voice_clip_for("rivet", line) == "" and Synth.peak(rivet_fallback_buf) > 0.1)
 	_t.check("Cannon ALWAYS stays procedural synth chime even when listed in manifest.json",
 		audio.voice_clip_for("cannon", line) == ""
-		and SfxBank.voice_clip_path("cannon", line) == ""
+		and VoiceSynth.voice_clip_path("cannon", line) == ""
 		and cannon_after == cannon_synth_before)
 
 	# Top-level JSON Array manifest (matching w46-audio/voice/manifest.json layout):
@@ -817,7 +818,7 @@ func _test_voice_sidecar_loader() -> void:
 	amf.close()
 
 	audio.set_voice_mode("tts", arr_voice)
-	var brindle_buf := SfxBank._say("brindle", brindle_line)
+	var brindle_buf := VoiceSynth._say("brindle", brindle_line)
 	_t.check("top-level JSON Array manifest resolves parent-relative voice/... canonical WAV",
 		audio.voice_manifest_loaded()
 		and audio.voice_clip_for("brindle", brindle_line) == canonical_wav
@@ -828,11 +829,11 @@ func _test_voice_sidecar_loader() -> void:
 		and audio.voice_clip_for("brindle", brindle_line) == canonical_wav)
 	_t.check("Cannon remains synth-only in top-level JSON Array manifest",
 		audio.voice_clip_for("cannon", line) == ""
-		and SfxBank.voice_clip_path("cannon", line) == "")
+		and VoiceSynth.voice_clip_path("cannon", line) == "")
 
 	# Pointing at the parent directory (arr_root, where manifest.json lives under voice/) also loads cleanly.
 	audio.set_voice_mode("tts", arr_root)
-	var parent_brindle_buf := SfxBank._say("brindle", brindle_line)
+	var parent_brindle_buf := VoiceSynth._say("brindle", brindle_line)
 	_t.check("parent dir containing voice/manifest.json resolves canonical WAV and skips audition_only",
 		audio.voice_manifest_loaded()
 		and audio.voice_clip_for("brindle", brindle_line) == canonical_wav
@@ -844,7 +845,7 @@ func _test_voice_sidecar_loader() -> void:
 	# Switching back to synth or calling Audio.reset_for_tests() restores synth cleanly.
 	audio.set_voice_mode("synth")
 	_t.check("set_voice_mode('synth') restores procedural synth for Sable",
-		audio.voice_clip_for("sable", line) == "" and SfxBank._say("sable", line) == synth_buf)
+		audio.voice_clip_for("sable", line) == "" and VoiceSynth._say("sable", line) == synth_buf)
 
 	_remove_dir_recursive(arr_root)
 	_remove_dir_recursive(tmp_dir)

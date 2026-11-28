@@ -3,6 +3,7 @@ extends SceneTree
 
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const PlatformPin := preload("res://tests/support/platform_pin.gd")
 
 # The level themes and boss tiers, driven directly. Every theme and boss track renders
@@ -15,7 +16,7 @@ var _failures := 0
 
 
 func _initialize() -> void:
-	MusicEngine.prepare_all()
+	MusicPrebake.prepare_all()
 	_tracks()
 	_pivot()
 	_theme_switch()

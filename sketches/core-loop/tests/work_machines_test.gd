@@ -165,7 +165,7 @@ var _scatter: Array = []
 # The park's scatter props as the game seats them (ParkProps.prepare over the baked ground), those at least
 # PROP_BLOCK_M tall: [{pos: Vector3, radius, height}]. Park props have no colliders, so a physics ray misses them.
 func _scatter_of(map_id: String, map, heights: PackedFloat32Array) -> Array:
-	var ground := func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, Terrain._grid_height(heights, x, z) + lift, z)
+	var ground := func(x: float, z: float, lift: float) -> Vector3: return Vector3(x, Terrain.grid_height(heights, x, z) + lift, z)
 	var ready := ParkProps.prepare(map_id, map, ground, ParkProps.stage_of(map_id), false)
 	var out := []
 	for inst in ready.get("list", []):
@@ -185,7 +185,7 @@ func _judge(row: Dictionary, park: Dictionary, lines: Array, heights: PackedFloa
 	var foot_gap := INF
 	for p in foot:
 		foot_gap = minf(foot_gap, _line_gap(p, lines))
-		var y := Terrain._grid_height(heights, p.x, p.y)
+		var y := Terrain.grid_height(heights, p.x, p.y)
 		lo = minf(lo, y)
 		hi = maxf(hi, y)
 	out.spread = hi - lo
@@ -233,7 +233,7 @@ func _judge(row: Dictionary, park: Dictionary, lines: Array, heights: PackedFloa
 # that sees it), every 4 m along each line, over the baked ground and the scatter props.
 func _seen_from_lines(row: Dictionary, lines: Array, heights: PackedFloat32Array) -> Vector3:
 	var at: Vector2 = row.at
-	var target := Vector3(at.x, Terrain._grid_height(heights, at.x, at.y) + MID_M, at.y)
+	var target := Vector3(at.x, Terrain.grid_height(heights, at.x, at.y) + MID_M, at.y)
 	var props := _scatter.filter(func(prop): return Vector2(prop.pos.x, prop.pos.z).distance_to(at) < SIGHT_M + 10.0)
 	var total := 0
 	var clear := 0
@@ -248,7 +248,7 @@ func _seen_from_lines(row: Dictionary, lines: Array, heights: PackedFloat32Array
 				if q.distance_to(at) > SIGHT_M:
 					continue
 				total += 1
-				var eye := Vector3(q.x, Terrain._grid_height(heights, q.x, q.y) + EYE_M, q.y)
+				var eye := Vector3(q.x, Terrain.grid_height(heights, q.x, q.y) + EYE_M, q.y)
 				if _sight_clear(eye, target, heights, props):
 					clear += 1
 					nearest = minf(nearest, q.distance_to(at))
@@ -259,7 +259,7 @@ func _sight_clear(eye: Vector3, target: Vector3, heights: PackedFloat32Array, pr
 	var steps := int(eye.distance_to(target) / 2.0)
 	for j in range(1, steps):
 		var p := eye.lerp(target, float(j) / steps)
-		if Terrain._grid_height(heights, p.x, p.z) > p.y:
+		if Terrain.grid_height(heights, p.x, p.z) > p.y:
 			return false
 	var e2 := Vector2(eye.x, eye.z)
 	var t2 := Vector2(target.x, target.z)

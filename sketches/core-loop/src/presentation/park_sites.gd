@@ -19,7 +19,7 @@ func _init(park_map, ground_at: Callable, stage: int) -> void:
 	ground = ground_at
 	_keepouts = SetDressing.keepouts(map, stage)
 	for cage in map.park.get("rescue_rows", []):
-		_keepouts.append({"what": "rescue cage", "points": PackedVector2Array([ParkMap._v2(cage["at"])]), "radius": CAGE_CLEAR, "ride": false})
+		_keepouts.append({"what": "rescue cage", "points": PackedVector2Array([ParkMap.v2(cage["at"])]), "radius": CAGE_CLEAR, "ride": false})
 	for row in map.park["park_rows"]:
 		if row["element"] != "ground" and (String(row["stamp"]).is_empty() or maxf(float(row["size"][0]), float(row["size"][2])) <= STAMP_KEEP_M):
 			_bucket(row)
@@ -59,7 +59,7 @@ static func _cell(at: Vector2) -> Vector2i:
 
 
 func _bucket(row: Dictionary) -> void:
-	var centre := ParkMap._v2(row["at"])
+	var centre := ParkMap.v2(row["at"])
 	var reach := ParkMap.footprint_half_extents(row).length() + MARGIN_MAX
 	var low := _cell(centre - Vector2.ONE * reach)
 	var high := _cell(centre + Vector2.ONE * reach)
@@ -72,8 +72,8 @@ func _bucket(row: Dictionary) -> void:
 
 
 static func frame(row: Dictionary) -> Dictionary:
-	var run := ParkMap._dir(float(row["yaw_deg"]))
-	return {"at": ParkMap._v2(row["at"]), "run": run, "cross": Vector2(-run.y, run.x),
+	var run := ParkMap.yaw_dir(float(row["yaw_deg"]))
+	return {"at": ParkMap.v2(row["at"]), "run": run, "cross": Vector2(-run.y, run.x),
 		"half_length": float(row["size"][0]) * 0.5, "half_width": float(row["size"][2]) * 0.5}
 
 

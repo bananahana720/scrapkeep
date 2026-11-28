@@ -604,11 +604,11 @@ func _place_glb(parent: Node3D, path: String, at: Vector3) -> Node3D:
 	var holder := Node3D.new()
 	holder.position = at
 	parent.add_child(holder)
-	var body := Recipes._body(holder)
-	var scenes := Recipes._load(path)
+	var body := Recipes.collider_body(holder)
+	var scenes := Recipes.load_glb(path)
 	if not scenes.is_empty():
 		var s: Node = scenes[0]
-		Recipes._views(s, holder, body, Transform3D.IDENTITY)
+		Recipes.attach_views(s, holder, body, Transform3D.IDENTITY)
 		s.free()
 	return holder
 

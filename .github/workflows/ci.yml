@@ -96,7 +96,7 @@ jobs:
             !/sketches/core-loop/assets/concepts/
             !/sketches/core-loop/addons/
           sparse-checkout-cone-mode: false
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -126,7 +126,7 @@ jobs:
           if [[ "$EVENT_NAME" == "pull_request" && -n "$PR_BASE_SHA" ]]; then
             node scripts/ci/check-budget.mjs --label format:changed --budget 5 -- node scripts/ci/format-changed.mjs --base "$PR_BASE_SHA"
           fi
-          node scripts/ci/check-budget.mjs --label sketch:lint --budget 5 -- npm run sketch:lint
+          node scripts/ci/check-budget.mjs --label sketch:lint --budget 5 -- npm run sketch:lint -- ${PR_BASE_SHA:+--base "$PR_BASE_SHA"}
           node scripts/ci/check-budget.mjs --label check:project --budget 5 -- npm run check:project
           node scripts/ci/check-budget.mjs --label check:skills --budget 5 -- npm run check:skills
           node scripts/ci/check-budget.mjs --label check:agents --budget 5 -- npm run check:agents
