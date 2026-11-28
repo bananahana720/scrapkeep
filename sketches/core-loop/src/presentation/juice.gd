@@ -281,8 +281,6 @@ func set_comfort(id: String, level: float) -> void:
 
 
 func set_reduced_motion(on: bool) -> void:
-	if camera != null:
-		camera.reduced_motion = on
 	if vfx != null and vfx.edge != null:
 		vfx.edge.flash_scale = REDUCED_FLASH if on else 1.0
 

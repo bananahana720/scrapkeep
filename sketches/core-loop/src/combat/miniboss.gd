@@ -480,7 +480,6 @@ func _model_pose(delta: float) -> void:
 	var shutter_l_basis := Basis.IDENTITY
 	var shutter_r_basis := Basis.IDENTITY
 	if _motion_rig != null:
-		_motion_rig.reduced_motion = calm
 		if delta > 0.0:
 			if not calm and _prev_pose_state != -1 and _prev_pose_state != state:
 				if _prev_pose_state == State.SLAM_LEAP and (state == State.WEAK or state == State.CUE):

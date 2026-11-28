@@ -246,7 +246,6 @@ func _pose() -> void:
 		return
 	if not _jaw.top_level:
 		if _jaw_rig != null:
-			_jaw_rig.reduced_motion = Comfort.reduced_motion
 			_jaw_rig.step(get_physics_process_delta_time(), Vector3.ZERO)
 		return
 	if _jaw_rig != null:

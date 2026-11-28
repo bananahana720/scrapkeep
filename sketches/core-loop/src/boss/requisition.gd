@@ -226,7 +226,6 @@ func step_magnet_motion(delta: float) -> void:
 	var calm := Comfort.reduced_motion
 	for i in mini(magnets.size(), _magnet_rigs.size()):
 		var rig: PropMotionRig = _magnet_rigs[i]
-		rig.reduced_motion = calm
 		var cur_pos: Vector3 = (magnets[i] as Node3D).global_position
 		var vel := Vector3.ZERO
 		if _magnet_pos_ready[i]:

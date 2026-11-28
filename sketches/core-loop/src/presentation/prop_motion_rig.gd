@@ -8,7 +8,6 @@ const CYCLE_PISTON := "piston"
 const CYCLE_TURBINE := "turbine"
 const CYCLE_BREATHE := "breathe"
 
-var reduced_motion := false
 var clock := 0.0
 var _parts: Array[PartState] = []
 
@@ -121,7 +120,7 @@ func part(label: String) -> PartState:
 
 
 func _calm() -> bool:
-	return reduced_motion or Comfort.reduced_motion
+	return Comfort.reduced_motion
 
 
 func apply_impulse(direction_world: Vector3, strength := 1.0, target_label := "") -> void:

@@ -42,7 +42,6 @@ const Bindings := preload("res://src/core/bindings.gd")
 const Glyphs := preload("res://src/core/glyphs.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const RunStore := preload("res://src/core/run_store.gd")
@@ -1053,12 +1052,6 @@ func set_reduced_motion(on: bool) -> void:
 		WorldFx.current.set_quality(WorldFx.current.low, on)
 	if presentation != null and presentation.get("juice") != null:
 		presentation.juice.set_reduced_motion(on)
-		presentation.player_fx.reduced_motion = on
-	elif camera != null:
-		camera.reduced_motion = on
-	for node in find_children("*", "Node3D", true, false):
-		if node.get_script() == HighdraftFx:
-			node.reduced_motion = on
 
 
 func set_reduce_flashes(on: bool) -> void:

@@ -34,6 +34,7 @@ const DeathTips := preload("res://src/core/death_tips.gd")
 const DeathCause := preload("res://src/core/death_cause.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
 const ChasePlate := preload("res://src/ui/chase_plate.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const FADE_IN := 0.3
@@ -1627,7 +1628,7 @@ func _stat_cell(chip: Array) -> VBoxContainer:
 func _stamp(target: Label = null) -> void:
 	if target == null:
 		target = _title
-	if game.camera != null and game.camera.reduced_motion:
+	if Comfort.reduced_motion:
 		return
 	_stamp_tween = create_tween()
 	_stamp_tween.tween_callback(func():

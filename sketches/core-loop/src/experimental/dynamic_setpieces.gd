@@ -725,7 +725,6 @@ func _build_crane(id: String, origin_local: Vector3, cover_slots: Array[Dictiona
 	root.add_child(hull_body)
 
 	var cargo_rig := PropMotionRig.new()
-	cargo_rig.reduced_motion = Comfort.reduced_motion
 	cargo_rig.add_part("cargo_hull", hull_pivot, {
 		"sway": true,
 		"sway_stiffness": 18.0,
@@ -869,7 +868,6 @@ func _on_cargo_touchdown(impulse_strength: float) -> void:
 	if not (rig is PropMotionRig):
 		return
 	var pr := rig as PropMotionRig
-	pr.reduced_motion = Comfort.reduced_motion
 	var part := pr.part("cargo_hull")
 	if part != null:
 		part.sway_ambient_amp = 0.0
@@ -911,8 +909,6 @@ func _step_crane(delta: float, ball_local: Vector3, actors: Array, facts: Array[
 	var to_p: Vector3 = slots[next_idx]["position"]
 
 	var rig: PropMotionRig = _crane.get("motion_rig") as PropMotionRig
-	if rig != null:
-		rig.reduced_motion = Comfort.reduced_motion
 
 	match String(_crane["state"]):
 		"idle":

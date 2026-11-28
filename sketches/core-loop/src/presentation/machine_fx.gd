@@ -96,7 +96,6 @@ var root: Node3D
 var spawned := {}
 var moments: Array = []
 const LOG_KEEP := 64
-var reduced_motion := false
 
 var _fx := FxLibrary.Pools.new()
 var _busy := {}
@@ -360,7 +359,7 @@ func _draw_word(slot: Dictionary) -> void:
 	var size: float = slot["scale"]
 	var at: Vector3 = slot["at"]
 	size = _fit(slot, at, size)
-	if not reduced_motion and t < WORD_SLAM:
+	if not Comfort.reduced_motion and t < WORD_SLAM:
 		size *= lerpf(1.6, 1.0, t / WORD_SLAM)
 	at = _below_top(slot, at, size)
 	var leave := clampf((t - (life - 0.25)) / 0.25, 0.0, 1.0)
@@ -369,7 +368,7 @@ func _draw_word(slot: Dictionary) -> void:
 		var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 		if cam != null:
 			side = cam.global_basis.x
-		if not reduced_motion:
+		if not Comfort.reduced_motion:
 			at += (side + Vector3.UP) * leave * 1.2
 	label.global_position = at
 	label.scale = Vector3.ONE * size
@@ -771,7 +770,6 @@ func _process(delta: float) -> void:
 	if root == null:
 		return
 	_clock += delta
-	reduced_motion = Comfort.reduced_motion
 	_sample -= delta
 	if _sample <= 0.0:
 		_sample = SAMPLE_SECONDS
@@ -785,7 +783,7 @@ func _process(delta: float) -> void:
 			p.emitting = false
 			_busy.erase(p)
 			continue
-		var spin := 0.0 if reduced_motion else float(f["spin"]) * _clock
+		var spin := 0.0 if Comfort.reduced_motion else float(f["spin"]) * _clock
 		p.global_transform = Transform3D(Basis(Vector3.UP, spin), node.global_position + Vector3.UP * float(f["lift"]))
 		kept.append(f)
 	_follows = kept
