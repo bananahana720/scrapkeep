@@ -154,6 +154,11 @@ export const NODE_PATH_RULES = [
     tests: ["scripts/far-faults.test.mjs"],
   },
   {
+    name: "asset budget audit",
+    match: /^(tools\/budget_audit\.mjs|assets\/asset_budgets\.json|assets\/registry\.json)$/,
+    tests: ["scripts/budget-audit.test.mjs"],
+  },
+  {
     name: "palette",
     match:
       /^(src\/core\/palette\.gd|tools\/blender\/common\.py|tools\/blender\/park\/props\/kit\.py|tools\/palette_gd\.py|tools\/icons\/)/,

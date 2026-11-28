@@ -21,7 +21,7 @@ export const TEST_SCOPES = Object.freeze([
 
 export const EXCLUDED_TESTS = Object.freeze({
   "scripts/budget-audit.test.mjs":
-    "fails on base: asserts pilot_patch_anim has 0 bones and 0 clips, while the committed GLB has 25 bones and 8 clips",
+    "audits every model in sketches/core-loop/assets/registry.json, which the node-tests partial checkout leaves out of sketches/core-loop/assets/models/; scripts/sketch-fast.mjs runs it on a full checkout through NODE_PATH_RULES",
   "scripts/far-faults.test.mjs":
     "scans the park prop models under sketches/core-loop/assets/models/park/props/, which the node-tests partial checkout leaves out; scripts/sketch-fast.mjs runs it on a full checkout through NODE_PATH_RULES",
 });

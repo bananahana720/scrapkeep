@@ -183,6 +183,23 @@ test("every tracked *.test.mjs and tests/*.test.js is either discovered or liste
   assert.equal(pkg.scripts?.test, "node scripts/ci/node-tests.mjs");
 });
 
+test("budget-audit stays out of node-tests and is what sketch-fast --ci-godot-only runs for a registry change", () => {
+  const discovered = discoverTestFiles(repoRoot);
+  assert.ok(!discovered.includes("scripts/budget-audit.test.mjs"));
+  assert.deepEqual(
+    selectStage1NodeTests({
+      changedNode: [],
+      changedGodot: ["assets/registry.json"],
+      allNodeTests: discovered,
+      readText: () => "",
+      ciGodotOnly: true,
+      coveredByCi: discovered,
+      isPrimaryShard: true,
+    }),
+    ["scripts/budget-audit.test.mjs"],
+  );
+});
+
 test("far-faults stays out of node-tests and is what sketch-fast --ci-godot-only runs for a park prop change", () => {
   const discovered = discoverTestFiles(repoRoot);
   assert.ok(!discovered.includes("scripts/far-faults.test.mjs"));

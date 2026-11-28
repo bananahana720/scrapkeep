@@ -1142,6 +1142,16 @@ test("nodeTestsForPaths: a park prop recipe or file faces the far-mesh fault che
   );
 });
 
+test("nodeTestsForPaths: the budget audit tool, the budgets and the registry face the budget audit test", () => {
+  for (const file of [
+    "tools/budget_audit.mjs",
+    "assets/asset_budgets.json",
+    "assets/registry.json",
+  ])
+    assert.deepEqual(nodeTestsForPaths([file]), ["scripts/budget-audit.test.mjs"]);
+  assert.deepEqual(nodeTestsForPaths(["assets/registry.json.bak", "tools/budget_audit.py"]), []);
+});
+
 test("removedChecks names the labels a changed test no longer checks", () => {
   const base = [
     '\t_check("the route climbs the kicker", climbs, str(points))',
