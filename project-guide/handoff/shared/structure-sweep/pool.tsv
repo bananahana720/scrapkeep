@@ -6,77 +6,77 @@ CORE-04	core.md	C	low	waits on Andrew (push)	C4		Move `weigh()` and presentation
 CORE-05	core.md	C	medium	open			Remove combat cache-drain loop and 3D presentation dressing from `core/beacon.gd`
 CORE-06	core.md	C	high	waits on Andrew (decision)			Invert `core/run_state.gd`'s 23 upward preloads/loads into `build/`, `world/`, and `combat/`
 CORE-07	core.md	C	high	waits on Andrew (decision)			Invert `core/flow.gd`'s 7 upward preloads into `ui/`, `world/`, `boss/`, and `movement/`
-CORE-08	core.md	C	low	open			Clear the remaining 13 `src/core/` upward preload files via pass-in, validation inversion, or untyping
-CORE-09	core.md	G	low	in flight	C2	1313	Declare `consumable_used` as a real signal in `game_events.gd` and close the 3-signal gap in `event_kinds.gd`
-CORE-10	core.md	C	medium	in flight	C2	1313	Strip `Profile` tally mutation and raw file I/O from `Codex.append_line()`
+CORE-08	core.md	C	low	in flight	C3; U3 has `ability_state.gd`		Clear the remaining 13 `src/core/` upward preload files via pass-in, validation inversion, or untyping
+CORE-09	core.md	G	low	landed	C2	1313	Declare `consumable_used` as a real signal in `game_events.gd` and close the 3-signal gap in `event_kinds.gd`
+CORE-10	core.md	C	medium	landed	C2	1313	Strip `Profile` tally mutation and raw file I/O from `Codex.append_line()`
 CORE-11	core.md	F	medium	open			Enforce `RunState` single-writer ownership by replacing 25+ external field writes with mutators
-CORE-12	core.md	C	low	in flight	C1, C2	1299, 1313	Remove `game.gd`'s private `profile._refuse()` reach-in and centralize `profile.save()` policy
+CORE-12	core.md	C	low	landed	C1, C2	1299, 1313	Remove `game.gd`'s private `profile._refuse()` reach-in and centralize `profile.save()` policy
 CORE-13	core.md	B	low	waits on Andrew (delete)			Delete dead compatibility paths (`camp_get`/`camp_set`, `ScrapbookStore` fallback, `BRINDLE_COBALT_PICK`)
-CORE-14	core.md	D	low	in flight	C2	1313	Collapse `core/stage_defs.gd` forwarding facade and deduplicate stage-table query helpers
-CORE-15	core.md	A	low	in flight	C2	1313	Deduplicate `validate()` pairs in `achievements.gd` and `shift_board.gd` plus 5 `_words()` copies in `core/`
-CORE-16	core.md	G	low	in flight	C2	1313	Fix raw `FileAccess.WRITE` in `game.gd:dump_tuning()` and duplicate `SettingsStore.new()` allocations
-CORE-17	core.md	G	low	in flight	C2	1313	Unify CLI flag parsing across `game.gd`, `boot.gd`, `frame_log.gd`, `sitting_notes.gd`, and `challenge_dials.gd`
-CORE-18	core.md	G	low	open			Consolidate `signal_lifetime.gd` into `SignalWire` and replace `run.set_meta` with one extension mechanism
+CORE-14	core.md	D	low	landed	C2	1313	Collapse `core/stage_defs.gd` forwarding facade and deduplicate stage-table query helpers
+CORE-15	core.md	A	low	landed	C2	1313	Deduplicate `validate()` pairs in `achievements.gd` and `shift_board.gd` plus 5 `_words()` copies in `core/`
+CORE-16	core.md	G	low	landed	C2	1313	Fix raw `FileAccess.WRITE` in `game.gd:dump_tuning()` and duplicate `SettingsStore.new()` allocations
+CORE-17	core.md	G	low	landed	C2	1313	Unify CLI flag parsing across `game.gd`, `boot.gd`, `frame_log.gd`, `sitting_notes.gd`, and `challenge_dials.gd`
+CORE-18	core.md	G	low	in flight	C3 has part 1		Consolidate `signal_lifetime.gd` into `SignalWire` and replace `run.set_meta` with one extension mechanism
 CORE-19	core.md	H	medium	open			Split input/gamepad routing and display-settings fan-out out of `src/game.gd` (1,375 lines)
-CORE-20	core.md	H	medium	in flight	C2 does part 1	1313	Split data tables & codecs along existing seams in `pilot_story.gd` (1,834L) and `run_state.gd` (1,327L)
+CORE-20	core.md	H	medium	open	C2 did part 1	1313	Split data tables & codecs along existing seams in `pilot_story.gd` (1,834L) and `run_state.gd` (1,327L)
 WORLD-01	world.md	B	low	waits on Andrew (delete)			Dead stubs, zero-`src`-caller park/world modules, and 4 unused preloads
 WORLD-02	world.md	A	medium	waits on Andrew (decision)			Dual sluice-valve implementations fighting over the same `kind == "sluice_valve"` rows
 WORLD-03	world.md	C	low	landed	N1	1310	`events/natural.gd` hijacks `ctx.events.world_fact` and calls private `presentation.audio._admit`/`_start`
 WORLD-04	world.md	A	low	landed	W1	1291	Triplicated 70-line GLB slot/mesh loader across `ambush_altar.gd`, `bet_crate.gd` and `cracked_cache.gd`
 WORLD-05	world.md	C	medium	open			`contraptions.gd` spawns a headless `Activities` node solely to call 3 private `Activities` methods
-WORLD-06	world.md	C	low	open			`world -> ui` wrong-direction dependencies (19 preloads + `game.screens._press` reach-in)
+WORLD-06	world.md	C	low	open	W2 did the `screens._press` line	1321	`world -> ui` wrong-direction dependencies (19 preloads + `game.screens._press` reach-in)
 WORLD-07	world.md	C	low	open			71 `world -> presentation` preloads/loads and `activities._exit_tree()` clearing presentation caches
-WORLD-08	world.md	C	low	open			25+ private reach-ins into `Terrain` and `EventDirector` from `events/` and `activities.gd`
-WORLD-09	world.md	C	low	open			Private reach-ins from `camp_hub.gd`, `camp_sandbox.gd`, and `world.gd`
-WORLD-10	world.md	H	low	open			`activities.gd` (2,636 lines) has 5 clean, already-isolated state seams ready to split
-WORLD-11	world.md	H	low	open			`park/park_recipes.gd` (1,989 lines) has a self-contained 625-line Anchor Field / LOD / Hull seam
+WORLD-08	world.md	C	low	landed	W2	1321	25+ private reach-ins into `Terrain` and `EventDirector` from `events/` and `activities.gd`
+WORLD-09	world.md	C	low	in flight	W2 did parts 1 and 3; M3 has part 2	1321	Private reach-ins from `camp_hub.gd`, `camp_sandbox.gd`, and `world.gd`
+WORLD-10	world.md	H	low	in flight	W3 has seam 1		`activities.gd` (2,636 lines) has 5 clean, already-isolated state seams ready to split
+WORLD-11	world.md	H	low	in flight	W3		`park/park_recipes.gd` (1,989 lines) has a self-contained 625-line Anchor Field / LOD / Hull seam
 WORLD-12	world.md	G	low	open			Four parallel map/stage/park builders — legacy `StageMap` & `EventDirector` paths are test-only, and `event_ground.gd` still depends on orphan `map_gorge.gd`
-WORLD-13	world.md	E	low	in flight	K1	1312	Physics layer numbers and masks repeated across 8+ world files with no single owner
-WORLD-14	world.md	E	low	in flight	K1	1312	Raw group names and park map IDs scattered across 9+ world files
+WORLD-13	world.md	E	low	landed	K1	1312	Physics layer numbers and masks repeated across 8+ world files with no single owner
+WORLD-14	world.md	E	low	landed	K1	1312	Raw group names and park map IDs scattered across 9+ world files
 WORLD-15	world.md	G	medium	open			Four mixed ways `src/world/` plays sound effects
 WORLD-16	world.md	A	low	landed	W1	1291	`director.gd` duplicates `Roster.COUNTERS` and `Roster.ANCIENTS` despite preloading `Roster`
-WORLD-17	world.md	D	low	in flight	K1	1312	Shallow 10-line wrapper `find_kit.gd` with one caller
-WORLD-18	world.md	F	low	open			Cross-module static-cache teardown and shared mutable static flags
+WORLD-17	world.md	D	low	landed	K1	1312	Shallow 10-line wrapper `find_kit.gd` with one caller
+WORLD-18	world.md	F	low	in flight	W3		Cross-module static-cache teardown and shared mutable static flags
 COMBAT-01	combat.md	C	low	open			Move zero-dependency comfort flags (`FlashGuard`, `reduced_motion`) into `src/core/` to remove 14 presentation/UI preloads
 COMBAT-02	combat.md	C	low	open			Invert 75 `FxLibrary.burst(...)` calls across 13 combat files through an injected FX callback
 COMBAT-03	combat.md	H	low	open			Split `combat.gd`'s cleanest bolt-on seams: W47-H1 hero hooks (342 lines) and Consumables runtime (435 lines)
 COMBAT-04	combat.md	H	medium	open			Split `combat.gd`'s Grapple mutations (578 lines) and W47-C2 micro-mutations / cross-synergies (472 lines) seams
 COMBAT-05	combat.md	H	high	open			Extract Tally kit (834 lines) and Remembered Cannon kit (721 lines) out of `combat.gd` to match existing pilot kits
-COMBAT-06	combat.md	C	low	open			Replace 167 underscore reach-ins into `combat.gd` across 18 files with an explicit public collaborator API
+COMBAT-06	combat.md	C	low	in flight	M3		Replace 167 underscore reach-ins into `combat.gd` across 18 files with an explicit public collaborator API
 COMBAT-07	combat.md	A	low	open			Consolidate 25 hand-rolled enemy GLB mesh loaders onto `EnemyCasting.parts()` and move `ModelVariants` to `src/core/`
 COMBAT-08	combat.md	A	low	landed	M1	1300	Factor out 4 duplicated helper patterns across all 8 active scripts (`src/combat/actives/`)
 COMBAT-09	combat.md	C	medium	open			Unify 13 posture-target checks and direct `_apply_posture()` calls (including `rivet_kit.gd` bypassing `DamageDoor`)
-COMBAT-10	combat.md	A	low	open			Unify enemy hull-radius lookups across 7 combat files (three conflicting fallback defaults)
+COMBAT-10	combat.md	A	low	landed	M2	1320	Unify enemy hull-radius lookups across 7 combat files (three conflicting fallback defaults)
 COMBAT-11	combat.md	E	medium	open			Consolidate duplicated plating/shred math and document/reconcile parallel element & armour effectiveness tables
 COMBAT-12	combat.md	B	low	waits on Andrew (delete)			Remove dead write-only shared mutable state `Enemy.rim_color`
 COMBAT-13	combat.md	B	low	waits on Andrew (delete)			Delete 14 verified zero-caller functions across `src/combat/`
 COMBAT-14	combat.md	C	medium	open			Invert remaining combat -> presentation & UI preloads (mesh craft, enemy visuals, audio, `Icons`, `WorldPrompt`, `Density`)
 COMBAT-15	combat.md	C	low	open			Break 10 `src/combat/` -> `src/boss/` preloads that violate optional-boss isolation
 COMBAT-16	combat.md	C	medium	open			Move pure data schemas out of `src/build/` & `src/world/` into `src/core/` to remove 27 cross-module preloads in combat
-COMBAT-17	combat.md	C	low	open			Eliminate private reach-ins across combat's external boundaries (`hero_assets` -> `warden`, `boss` -> `warden`, `combat` -> `run_log`/`player`, and `ultimate._*`)
-COMBAT-18	combat.md	A	low	open	M1 did items 3 to 6	1300	Deduplicate 6 exact copy-pasted helper functions inside `src/combat/`
-COMBAT-19	combat.md	D	low	open			Delete shallow pass-through wrappers where deletion removes indirection without spreading complexity
-COMBAT-20	combat.md	E	low	in flight	K1	1312	Centralize scattered combat constants: `GRAVITY`, `"enemy"` group string, and raw physics layer literals
+COMBAT-17	combat.md	C	low	open	M2 did part 3 and the `_atk` read of part 1; B4 has the boss reads of part 1	1320	Eliminate private reach-ins across combat's external boundaries (`hero_assets` -> `warden`, `boss` -> `warden`, `combat` -> `run_log`/`player`, and `ultimate._*`)
+COMBAT-18	combat.md	A	low	landed	M1 did items 3 to 6; M2 did items 1 and 2	1300, 1320	Deduplicate 6 exact copy-pasted helper functions inside `src/combat/`
+COMBAT-19	combat.md	D	low	open	M2 did items 2 and 3	1320	Delete shallow pass-through wrappers where deletion removes indirection without spreading complexity
+COMBAT-20	combat.md	E	low	landed	K1	1312	Centralize scattered combat constants: `GRAVITY`, `"enemy"` group string, and raw physics layer literals
 BMB-01	boss-movement-build.md	C	low	landed	B1	1296	`movement/` preloads `combat/` for movement constants, strike damage and enemy heft (6 upward edges; 3 trivial to cut)
 BMB-02	boss-movement-build.md	C	low	open			Pure `build/` economy and field modules depend upward on `ui/` and `presentation/` (`shop.gd`, `scrap_field.gd`, `element_field.gd`)
 BMB-03	boss-movement-build.md	B	low	waits on Andrew (delete)			Fifteen dead functions and a 27-line unreachable fallback branch with zero callers in `build/` and `movement/`
-BMB-04	boss-movement-build.md	E	low	in flight	B4		Maker-set thresholds, maker/pilot/rarity lists and grapple-mutation ownership are duplicated across `parts.gd`, `maker_sets.gd`, `relics.gd`, `item_gen.gd` and `part_def.gd`
+BMB-04	boss-movement-build.md	E	low	in flight	B4	1315	Maker-set thresholds, maker/pilot/rarity lists and grapple-mutation ownership are duplicated across `parts.gd`, `maker_sets.gd`, `relics.gd`, `item_gen.gd` and `part_def.gd`
 BMB-05	boss-movement-build.md	A	low	landed	B2	1303	`BuildSheet.from_parts()` and `StatCache` duplicate the full part-counting, capping, leveling and folding pipeline
-BMB-06	boss-movement-build.md	C	low	in flight	B4		Ten cross-module private (`_`) member reach-ins across `boss/`, `movement/` and `build/`
+BMB-06	boss-movement-build.md	C	low	in flight	B4	1315	Ten cross-module private (`_`) member reach-ins across `boss/`, `movement/` and `build/`
 BMB-07	boss-movement-build.md	A	low	landed	B1	1296	Duplicated physics and geometry helpers in `movement/` and `build/`: steep-face raycast, orthonormal-up basis and `MAX_SLOPE_DOT`
 BMB-08	boss-movement-build.md	A	low	landed	B1	1296	Burst-ability enumeration and readiness logic is triplicated across `augments.gd`, `harpoon.gd` and `player_ball.gd`
 BMB-09	boss-movement-build.md	A	low	landed	B2	1303	Duplicated `Palette.ICE`, rarity-color lookup and tier-preserving offer-reroll logic inside `build/`
 BMB-10	boss-movement-build.md	A	low	landed	B3	1304	`boss/waking_attacks.gd` preloads `mind_attacks.gd` yet copy-pastes 8 attack/geometry helpers, and `MindAttacks.build` forces `waking.gd` to depend on `mind_attacks.gd`
 BMB-11	boss-movement-build.md	A	low	landed	B3	1304	Duplicated boss dress, ceremony card and hazard-cleanup machinery across `mind_dress.gd`, `waking_dress.gd`, `mind.gd` and `waking.gd`
-BMB-12	boss-movement-build.md	A	medium	in flight	B4		Copy-pasted 70-line draw loop and `hits_harder()` safeguard in `Parts.roll()` and `Parts.roll_for_stage()`
+BMB-12	boss-movement-build.md	A	medium	in flight	B4	1315	Copy-pasted 70-line draw loop and `hits_harder()` safeguard in `Parts.roll()` and `Parts.roll_for_stage()`
 BMB-13	boss-movement-build.md	D	low	landed	B2	1303	Shallow and duplicate accessors: `PlayerBall.active_body()` vs `body()` and one-line pass-throughs in `build/`
-BMB-14	boss-movement-build.md	G	medium	in flight	B4		Mixed ball-shove physics, ball-speed reads across the 3 bosses, and `item_effects.gd` reading `1.0 / physics_ticks_per_second`
-BMB-15	boss-movement-build.md	C	low	in flight	B4		`boss/` reaches upward into `presentation/` (22 edges, incl. 2 hidden inline `preload()`s), `ui/` (4 edges), and `build/reward_gates.gd`
-BMB-16	boss-movement-build.md	F	medium	in flight	B4		Cross-module shared mutable `static var` globals (`Synergies.table`, `Parts.seams`, `Parts.opened_items`, `Parts._run_ref`)
-BMB-17	boss-movement-build.md	H	medium	in flight	B4		Oversized `build/parts.gd` (2,013 lines) splits cleanly into catalogue, mutations and offer/roll engine
-BMB-18	boss-movement-build.md	H	medium	in flight	B4		Oversized `boss/boss.gd` (1,972 lines) bundles 5 boss subsystems with isolated private state (mind the `_spawn_pickup` pin)
-BMB-19	boss-movement-build.md	H	medium	in flight	B4		Oversized `movement/player_ball.gd` (1,776 lines) contains three isolated private-state subsystems
-BMB-20	boss-movement-build.md	H	medium	in flight	B4		Oversized `build/build.gd` (1,638 lines) mixes build orchestration with four self-contained subsystems
+BMB-14	boss-movement-build.md	G	medium	in flight	B4	1315	Mixed ball-shove physics, ball-speed reads across the 3 bosses, and `item_effects.gd` reading `1.0 / physics_ticks_per_second`
+BMB-15	boss-movement-build.md	C	low	in flight	B4	1315	`boss/` reaches upward into `presentation/` (22 edges, incl. 2 hidden inline `preload()`s), `ui/` (4 edges), and `build/reward_gates.gd`
+BMB-16	boss-movement-build.md	F	medium	in flight	B4	1315	Cross-module shared mutable `static var` globals (`Synergies.table`, `Parts.seams`, `Parts.opened_items`, `Parts._run_ref`)
+BMB-17	boss-movement-build.md	H	medium	in flight	B4	1315	Oversized `build/parts.gd` (2,013 lines) splits cleanly into catalogue, mutations and offer/roll engine
+BMB-18	boss-movement-build.md	H	medium	in flight	B4	1315	Oversized `boss/boss.gd` (1,972 lines) bundles 5 boss subsystems with isolated private state (mind the `_spawn_pickup` pin)
+BMB-19	boss-movement-build.md	H	medium	in flight	B4	1315	Oversized `movement/player_ball.gd` (1,776 lines) contains three isolated private-state subsystems
+BMB-20	boss-movement-build.md	H	medium	in flight	B4	1315	Oversized `build/build.gd` (1,638 lines) mixes build orchestration with four self-contained subsystems
 UI-01	ui.md	B	low	waits on Andrew (delete)			callouts.gd and meta_page.gd are dead in the game; only tests load them
 UI-02	ui.md	C	low	landed	U1	1286	screens.gd reaches into radio_deck's private `_save()`
 UI-03	ui.md	C+H	medium	open			radio and jukebox rules live in screens.gd's key handler
@@ -88,9 +88,9 @@ UI-08	ui.md	E+F	medium	open			reduced motion is copied into thirteen static vars
 UI-09	ui.md	G	low	landed	U2	1308	three panel systems and 24 hand-built StyleBoxFlat
 UI-10	ui.md	G	low	landed	U2	1308	41 hand-built labels against an 11-site label helper
 UI-11	ui.md	C	high	waits on Andrew (decision)			core/flow.gd builds a UI node
-UI-12	ui.md	C	low	open			ui leaf files that lower layers preload, sorted by where they belong
+UI-12	ui.md	C	low	in flight	U3		ui leaf files that lower layers preload, sorted by where they belong
 UI-13	ui.md	C	medium	open			hud.gd chooses the detour site
-UI-14	ui.md	C	low	open			screens.gd opens the scrapbook store itself
+UI-14	ui.md	C	low	in flight	U3		screens.gd opens the scrapbook store itself
 UI-15	ui.md	D	low	landed	U2	1308	thin modules
 UI-16	ui.md	E	low	landed	U2	1308	raw colours outside the token file
 VF-01	visuals-fx.md	A+G	medium	open			Seven separate ways to spawn, pool, time and free a particle effect, with no single owner
@@ -102,30 +102,30 @@ VF-06	visuals-fx.md	C	low	open			player_fx and machine_fx reach into each other 
 VF-07	visuals-fx.md	G+C	medium	waits on Andrew (decision)			"Hold play" has no owner; reward_ceremony and workshop each pause the tree and turn input off in their own way
 VF-08	visuals-fx.md	C	medium	open			juice.gd decides how long game time stops (the hit-stop budget lives in presentation)
 VF-09	visuals-fx.md	C	medium	waits on Andrew (decision)			flourish_cues injects a callable that stretches the VICTORY state in core/flow
-VF-10	visuals-fx.md	E	low	in flight	V2		Two ink colours are written as literals in shaders and code instead of coming from Palette
-VF-11	visuals-fx.md	E+A	low	in flight	V2		fx_budget.gd copies owner facts instead of reading them
+VF-10	visuals-fx.md	E	low	landed	V2	1314	Two ink colours are written as literals in shaders and code instead of coming from Palette
+VF-11	visuals-fx.md	E+A	low	landed	V2	1314	fx_budget.gd copies owner facts instead of reading them
 VF-12	visuals-fx.md	B	low	waits on Andrew (delete)			Ten public functions in the slice have no caller anywhere in the repo
 VF-13	visuals-fx.md	D	low	waits on Andrew (push)	F1		machine_fx's special-cue functions are forwarders to SpecialCues
-VF-14	visuals-fx.md	H	medium	in flight	V2		player_fx.gd (2116 lines) holds five separate jobs
-VF-15	visuals-fx.md	H	low	in flight	V2		vfx.gd (1160 lines) mixes four pools, a governor and rule tables
-VF-16	visuals-fx.md	E	low	in flight	V2		Shader parameter names are bare strings in 10 files, across two separate particle shaders
+VF-14	visuals-fx.md	H	medium	landed	V2	1314	player_fx.gd (2116 lines) holds five separate jobs
+VF-15	visuals-fx.md	H	low	landed	V2	1314	vfx.gd (1160 lines) mixes four pools, a governor and rule tables
+VF-16	visuals-fx.md	E	low	landed	V2	1314	Shader parameter names are bare strings in 10 files, across two separate particle shaders
 VF-17	visuals-fx.md	C	medium	waits on Andrew (decision)			fx_library.gd (the spawn owner) is preloaded by 18 combat, boss and world files for `burst`
 VM-01	visuals-meshes.md	A+E	low	landed	V1	1289	Seven copies of the vertex-mask helper `_vc` re-implement `CraftLookdev.encode_mask`
 VM-02	visuals-meshes.md	A+G	medium	open	V1 did steps 1 and 2	1289	Ten separate bevel-box builders, and three byte-identical `_uv_for` / `_add_tri` copies
 VM-03	visuals-meshes.md	C	medium	open			Presentation reads combat's and world's private members by string name
 VM-04	visuals-meshes.md	G+A	low	waits on Andrew (decision)			22 hand-rolled glb loaders, each with its own cache and warning; only 13 calls go through `ModelVariants`
-VM-05	visuals-meshes.md	A	low	in flight	V2		experimental_setpiece_craft.gd is a fork of world23_chunk_craft.gd with drifted constants
+VM-05	visuals-meshes.md	A	low	landed	V2	1314	experimental_setpiece_craft.gd is a fork of world23_chunk_craft.gd with drifted constants
 VM-06	visuals-meshes.md	A	medium	waits on Andrew (decision)			enemy_boss_craft's multi-slot `_cached` / `_slot_st` re-implements `KitbashCanvas`
-VM-07	visuals-meshes.md	C	low	in flight	V2		The world23 material helper `enrich_standard_pbr` is the shared PBR owner by accident
+VM-07	visuals-meshes.md	C	low	landed	V2	1314	The world23 material helper `enrich_standard_pbr` is the shared PBR owner by accident
 VM-08	visuals-meshes.md	C	medium	waits on Andrew (decision)			Lower layers preload presentation mesh builders
-VM-09	visuals-meshes.md	C	low	in flight	V2		hero_assets flips a private flag on WeaponRigFx and calls a private BallLooks static
+VM-09	visuals-meshes.md	C	low	landed	V2	1314	hero_assets flips a private flag on WeaponRigFx and calls a private BallLooks static
 VM-10	visuals-meshes.md	A	low	closed, not as surveyed	P1	1301	Four copies of the glb-to-MeshInstance extraction loop
 VM-11	visuals-meshes.md	G	medium	waits on Andrew (decision)			Six material factories with overlapping jobs
 VM-12	visuals-meshes.md	D	low	landed	P1	1301	camp_craft_meshes has two private forwarders to its own public calls
 VM-13	visuals-meshes.md	A	low	landed	P1	1301	`_bolt_ring` exists twice with drifted constants
-VM-14	visuals-meshes.md	C	low	in flight	V2		spillway_scenery calls craft_prop_meshes' private primitives
+VM-14	visuals-meshes.md	C	low	landed	V2	1314	spillway_scenery calls craft_prop_meshes' private primitives
 VM-15	visuals-meshes.md	A	low	waits on Andrew (decision)			Two more torus and faceted-orb builders
-VM-16	visuals-meshes.md	H	medium	in flight	V2		hero_assets.gd is 3348 lines with clear seams
+VM-16	visuals-meshes.md	H	medium	landed	V2	1314	hero_assets.gd is 3348 lines with clear seams
 SOUND-01	sound.md	A	low	waits on Andrew (decision)			Conflicting duplicate `TRIM_DB`, file paths, WAV loaders, and 3D player factories across `foley_audio.gd`, `jolt_layer_audio.gd`, `sfx_bank.gd`, and `special_audio.gd`
 SOUND-02	sound.md	C	low	landed	N1	1310	`src/world/events/natural.gd` hijacks `audio.gd`'s `world_fact` signal connection and calls private `_audio._admit()` / `_audio._start()` directly
 SOUND-03	sound.md	C	medium	open			Wrong-direction dependencies: lower layers (`core`, `build`, `combat`, `world`) preload presentation sound modules and instantiate raw `AudioStreamPlayer3D`s
@@ -134,54 +134,54 @@ SOUND-05	sound.md	C	low	landed	N1	1310	Underscore reach-ins into `audio.gd`, `mu
 SOUND-06	sound.md	G	medium	open			Six competing ways callers play a sound (and 5 ways to locate `audio`), plus 3 ways to change music
 SOUND-07	sound.md	A	low	landed	A1	1292	Four duplicate 16-bit RIFF WAV parsers across `foley_audio.gd`, `jolt_layer_audio.gd`, and `sfx_bank.gd` (x2)
 SOUND-08	sound.md	H	low	open			`audio.gd` (5,263 lines) has 6 verified private-state seams outside `SoundArbiter.tla` ready to extract
-SOUND-09	sound.md	H	low	open			`sfx_bank.gd` (3,402 lines) bundles four separable subsystems along clean seams
-SOUND-10	sound.md	F	medium	open			Shared mutable static globals (`Synth.score_step`, `Synth.score_transpose`, `SfxBank._shift`, `SfxBank._theme`, `SfxBank.bake_cancel`, `WorldFxSound.audio`) leak across modules and batched tests
+SOUND-09	sound.md	H	low	in flight	N3 has the voice seam		`sfx_bank.gd` (3,402 lines) bundles four separable subsystems along clean seams
+SOUND-10	sound.md	F	medium	in flight	N3 has step 1		Shared mutable static globals (`Synth.score_step`, `Synth.score_transpose`, `SfxBank._shift`, `SfxBank._theme`, `SfxBank.bake_cancel`, `WorldFxSound.audio`) leak across modules and batched tests
 SOUND-11	sound.md	B	low	waits on Andrew (delete)			`CraftAudioCues` (`craft_audio_cues.gd`, 149L) is test-only and overlaps `ExperimentalAudioBank`, which also bundles test-only PBR texture specs
-SOUND-12	sound.md	E	low	open			Bus names (`"SFX"`, `"UI"`, `"Music"`, `"Ambient"`, `"Master"`) and bus-resolution fallbacks are scattered across 23+ `src/` files
-SOUND-13	sound.md	E	low	open			`"res://assets/music_ace/%s/manifest.json"` path template and pack lists are repeated across `music_rows.gd`, `phase_music.gd`, and `content_registry.gd`
-SOUND-14	sound.md	C	low	open			Peer-module preloads from presentation sound files into `src/combat/`, `src/world/`, and `src/movement/`
+SOUND-12	sound.md	E	low	landed	N2	1317	Bus names (`"SFX"`, `"UI"`, `"Music"`, `"Ambient"`, `"Master"`) and bus-resolution fallbacks are scattered across 23+ `src/` files
+SOUND-13	sound.md	E	low	landed	N2	1317	`"res://assets/music_ace/%s/manifest.json"` path template and pack lists are repeated across `music_rows.gd`, `phase_music.gd`, and `content_registry.gd`
+SOUND-14	sound.md	C	low	landed	N2	1317	Peer-module preloads from presentation sound files into `src/combat/`, `src/world/`, and `src/movement/`
 SOUND-15	sound.md	B	low	waits on Andrew (delete)			Dead functions and dead constants with zero callers anywhere, plus 11 test-only helpers left on production classes
-SOUND-16	sound.md	D	low	open			Shallow forwarding wrappers that fail the deletion test
-SOUND-17	sound.md	H	low	open			`music_engine.gd` (2,989 lines) mixes four separable seams: static pre-baker, park-cue async renderer, phrase generator, and real-time sequencer
+SOUND-16	sound.md	D	low	landed	N2	1317	Shallow forwarding wrappers that fail the deletion test
+SOUND-17	sound.md	H	low	in flight	N3 has seams 1 and 3		`music_engine.gd` (2,989 lines) mixes four separable seams: static pre-baker, park-cue async renderer, phrase generator, and real-time sequencer
 XD-01	experimental-dev.md	C	low	waits on Andrew (decision)			Shipped release exports bundle all of `src/dev/` and `src/experimental/`, and `game.gd` loads them with no existence or release guard
 XD-02	experimental-dev.md	A	low	waits on Andrew (push)	X1		Env-tag vocabulary, payload builder, and validator are duplicated 4 times across 3 experimental files with drifted clamps
 XD-03	experimental-dev.md	A	low	waits on Andrew (push)	X1		`never_brake()` is copy-pasted twice in `refurbished_elites.gd`, duplicating `EventDirector.never_brake()`
-XD-04	experimental-dev.md	C	low	in flight	X2		`DevFight` and `DevAgent` reach into private underscore methods on `Flow`, `DevConsole`, and `DevInspect`
-XD-05	experimental-dev.md	C	low	in flight	X2		`DevFight` and `DevLens` mutate internal sub-objects of `Flood`, `RunState`, `Build`, `Combat`, and `ChaseCamera` instead of calling small owner APIs
-XD-06	experimental-dev.md	F	low	in flight	X2		`DevFight.set_god()` overwrites `RunState.defend_hook`, colliding with `src/combat/ultimate.gd`
+XD-04	experimental-dev.md	C	low	landed	X2	1319	`DevFight` and `DevAgent` reach into private underscore methods on `Flow`, `DevConsole`, and `DevInspect`
+XD-05	experimental-dev.md	C	low	landed	X2	1319	`DevFight` and `DevLens` mutate internal sub-objects of `Flood`, `RunState`, `Build`, `Combat`, and `ChaseCamera` instead of calling small owner APIs
+XD-06	experimental-dev.md	F	low	landed	X2	1319	`DevFight.set_god()` overwrites `RunState.defend_hook`, colliding with `src/combat/ultimate.gd`
 XD-07	experimental-dev.md	B	low	waits on Andrew (delete)			Dead code in `src/dev/` and `src/experimental/`: unimplemented `complete_args`, dead `contact_sheet_mode` compat branch, unused preload/constants, and empty `reset()` stubs
-XD-08	experimental-dev.md	A	low	in flight	X2		`DevConsole.LENS_RANGES` duplicates `DevLens` knob bounds and already drifts on `distance` (`200` vs `400`)
-XD-09	experimental-dev.md	A	low	in flight	X2		`DevConsole` duplicates `DevAgent`'s `--dev-run=` parser and fallback script runner with divergent defaults
-XD-10	experimental-dev.md	D	low	in flight	X2		`LiveRunBridge._reset()` is a shallow forwarding stub that forces `test_batch_driver.gd` to `preload` `src/experimental/` and resets `ExperimentalAudioBank` twice
+XD-08	experimental-dev.md	A	low	landed	X2	1319	`DevConsole.LENS_RANGES` duplicates `DevLens` knob bounds and already drifts on `distance` (`200` vs `400`)
+XD-09	experimental-dev.md	A	low	landed	X2	1319	`DevConsole` duplicates `DevAgent`'s `--dev-run=` parser and fallback script runner with divergent defaults
+XD-10	experimental-dev.md	D	low	landed	X2	1319	`LiveRunBridge._reset()` is a shallow forwarding stub that forces `test_batch_driver.gd` to `preload` `src/experimental/` and resets `ExperimentalAudioBank` twice
 XD-11	experimental-dev.md	C	medium	open			`src/experimental/` gameplay modules invert layer boundaries by preloading `src/ui/ui_tokens.gd` and `src/presentation/*`
 XD-12	experimental-dev.md	A	low	open			`EncounterEngine` duplicates `StageLocks`'s perimeter spring constants and force formula
-XD-13	experimental-dev.md	A	low	in flight	X2		`PartResource.VALID_MAKERS` duplicates `MakerSets` / `Relics.VALID_MAKERS`
-XD-14	experimental-dev.md	A	low	in flight	X2		`DevConsole`'s `run` command duplicates `DevFight`'s `pilot` command
-XD-15	experimental-dev.md	A	low	in flight	X2		`DevOverlay` and `DevInspect` run parallel 60-frame performance sampling loops every `_process` frame
-XD-16	experimental-dev.md	E	low	in flight	X2		Stage aliases and boss arena map names are hardcoded in `dev_fight.gd` and `dev_inspect.gd` outside the owning stage/world tables
+XD-13	experimental-dev.md	A	low	landed	X2	1319	`PartResource.VALID_MAKERS` duplicates `MakerSets` / `Relics.VALID_MAKERS`
+XD-14	experimental-dev.md	A	low	landed	X2	1319	`DevConsole`'s `run` command duplicates `DevFight`'s `pilot` command
+XD-15	experimental-dev.md	A	low	landed	X2	1319	`DevOverlay` and `DevInspect` run parallel 60-frame performance sampling loops every `_process` frame
+XD-16	experimental-dev.md	E	low	landed	X2	1319	Stage aliases and boss arena map names are hardcoded in `dev_fight.gd` and `dev_inspect.gd` outside the owning stage/world tables
 XD-17	experimental-dev.md	E	low	open			Cruise speed fallback (`14.0`) and telegraph floor (`0.6 s`) are scattered across 7 `src/experimental/` files
-XD-18	experimental-dev.md	H	low	open			Three oversized files (~1,420–1,530 lines) have clean, state-disjoint seams ready to split
-XD-19	experimental-dev.md	F	low	open			`ExperimentalAudioBank` stores global mutable cooldown state shared across `LiveRunBridge` instances, and `LiveRunBridge` bypasses `src/presentation/audio.gd`
-XD-20	experimental-dev.md	G	low	open			`src/dev/` mixes two command-return protocols (`!`-prefixed `String` vs `{ok, text, data}` `Dictionary`) and duplicates CLI flag parsing across `game.gd`, `live_run_bridge.gd`, and `dev_agent.gd`
+XD-18	experimental-dev.md	H	low	in flight	X3 has two of the three seams		Three oversized files (~1,420–1,530 lines) have clean, state-disjoint seams ready to split
+XD-19	experimental-dev.md	F	low	in flight	X3 has the cooldown state		`ExperimentalAudioBank` stores global mutable cooldown state shared across `LiveRunBridge` instances, and `LiveRunBridge` bypasses `src/presentation/audio.gd`
+XD-20	experimental-dev.md	G	low	in flight	X3		`src/dev/` mixes two command-return protocols (`!`-prefixed `String` vs `{ok, text, data}` `Dictionary`) and duplicates CLI flag parsing across `game.gd`, `live_run_bridge.gd`, and `dev_agent.gd`
 TT-01	tools-tests.md	B	low	waits on Andrew (delete)			72 strictly dead tool scripts (~15.5k lines) plus 5 comment-only w12 side scripts have zero live callers
 TT-02	tools-tests.md	A	low	waits on Andrew (delete)			13 copy-pasted `w12_side_*.gd` / `w12_recipe_cart_side.gd` scripts duplicate ~309 identical lines each (5,070 lines total)
 TT-03	tools-tests.md	F	medium	open			Static-var reset registration in `test_batch_driver.gd` has four split owners, 7+ reset conventions, 21 inline mutations, and live uncalled `reset_for_tests()` methods
-TT-04	tools-tests.md	F	low	open			Mutable `static var`s in `tools/` libraries are invisible to `L14` and never reset between warm-batched tests
+TT-04	tools-tests.md	F	low	in flight	T3		Mutable `static var`s in `tools/` libraries are invisible to `L14` and never reset between warm-batched tests
 TT-05	tools-tests.md	C	low	open			131 test/tool files hand-move `player.body().global_position =` and 27 reach into `player._rigid`, bypassing `PlayerBall.reset_to()` and `body()`
 TT-06	tools-tests.md	G	low	landed	T1	1297	81 tool/test files read raw `DisplayServer.get_name()` instead of `AppShell.headless()`
 TT-07	tools-tests.md	A	low	open			423 top-level tests hand-roll failure counters and `_check`/`_report` helpers instead of using `tests/support/t.gd`
 TT-08	tools-tests.md	A	low	open			856 tests repeat `Game.new()` + run-boot boilerplate and 268+ repeat frame-stepping loops with no general `tests/support/` boot or step helper
 TT-09	tools-tests.md	A	low	open			93 capture/probe scripts under `tools/` repeat identical viewport, `Game.new()`, `Camera3D`, screenshot, and CLI-arg boilerplate (~25.5k lines)
-TT-10	tools-tests.md	C	low	open			Tests and tools bypass existing public accessors on `Screens`, `Warden`, and `Game` (`screens._body`, `warden._posture`, workshop scan)
+TT-10	tools-tests.md	C	low	in flight	T3		Tests and tools bypass existing public accessors on `Screens`, `Warden`, and `Game` (`screens._body`, `warden._posture`, workshop scan)
 TT-11	tools-tests.md	C	low	open			High-frequency reach-ins into `Game`, `Audio`, `Flow`, and `BotDriver` lack thin public seams (350+ hits across 100+ files)
 TT-12	tools-tests.md	A	low	landed	T1	1297	Five stage-table test doubles in `tests/doubles/` copy-paste the exact same 16 static methods (517 lines)
-TT-13	tools-tests.md	A	low	in flight	T2		`boss_spawner_double.gd` and `spine_spawner_double.gd` duplicate combat strike/plating math
+TT-13	tools-tests.md	A	low	landed	T2	1318	`boss_spawner_double.gd` and `spine_spawner_double.gd` duplicate combat strike/plating math
 TT-14	tools-tests.md	H	medium	open			`tools/bot_driver.gd` (4,710 lines) bundles self-contained inner classes and cohesive subsystems with natural extraction seams
-TT-15	tools-tests.md	E	low	in flight	T2		Hardcoded `/home/andrew/` Linux paths appear in 19 files across `tools/` and `tests/`, including active scripts, and `tests/hotwire_cue_parallel.sh` leaks past `L4` via baseline
-TT-16	tools-tests.md	E	low	in flight	T2		`tools/blender/park/props/kit.py` hardcodes duplicated palette/banned/warn hex constants instead of reading `tools/palette_gd.py`
+TT-15	tools-tests.md	E	low	landed	T2	1318	Hardcoded `/home/andrew/` Linux paths appear in 19 files across `tools/` and `tests/`, including active scripts, and `tests/hotwire_cue_parallel.sh` leaks past `L4` via baseline
+TT-16	tools-tests.md	E	low	landed	T2	1318	`tools/blender/park/props/kit.py` hardcodes duplicated palette/banned/warn hex constants instead of reading `tools/palette_gd.py`
 TT-17	tools-tests.md	G	low	open			Three inconsistent CLI argument parsing idioms repeated across 146 `tools/*.gd` scripts
-TT-18	tools-tests.md	A	low	in flight	T2		32 tests and 4 tools hand-roll `InputEventKey.new()` synthesis even though `tests/workshop/push.gd` already owns input pushing
-SCR-01	scripts.md	G	low	in flight	S5	1311	`sketch-lint.mjs` has five incompatible baseline/allowlist mechanisms and no single pattern for adding a baselined rule
+TT-18	tools-tests.md	A	low	landed	T2	1318	32 tests and 4 tools hand-roll `InputEventKey.new()` synthesis even though `tests/workshop/push.gd` already owns input pushing
+SCR-01	scripts.md	G	low	landed	S5	1311	`sketch-lint.mjs` has five incompatible baseline/allowlist mechanisms and no single pattern for adding a baselined rule
 SCR-02	scripts.md	E	low	waits on Andrew (decision)	S2	1293	Root `package.json` `test` script hand-lists 54 files and silently omits 15 tracked `scripts/**/*.test.mjs` suites
 SCR-03	scripts.md	A	low	landed	S1	1287	`scripts/challenge/run.mjs` duplicates `runProcess`, `pool`, and `stateEnv` verbatim from sibling `scripts/challenge/proc.mjs`
 SCR-04	scripts.md	G	low	landed	S3	1294	Finding the Godot binary is implemented 7 different ways across 22 scripts, with hardcoded `/home/andrew/` and `4.7.2` paths
@@ -190,12 +190,12 @@ SCR-06	scripts.md	G	medium	landed	S6	1309	Child-process timeout and reaping is i
 SCR-07	scripts.md	A	low	waits on Andrew (decision)			`scripts/sketch-nightly.mjs` locks the retired `scrapkeep-sketch-smoke.lock` instead of `sketch-smoke.mjs`'s slot/quiet-hold lock
 SCR-08	scripts.md	B	low	waits on Andrew (delete)			Six dead or test-only scripts with zero callers in npm scripts, CI workflows, hooks, skills, docs, or other scripts
 SCR-09	scripts.md	B	low	waits on Andrew (delete)			Retired `QUARANTINE.tsv` runtime machinery (~170 lines) and 4 dead/test-only exports in `sketch-smoke.mjs` and `sketch-fast.mjs`
-SCR-10	scripts.md	E	low	in flight	S5	1311	Godot version pin (`4.7.2-stable`) and 50 lines of CI Godot setup/cache are duplicated across 25 files and two `ci.yml` jobs
-SCR-11	scripts.md	E	low	in flight	S5	1311	Hand-maintained pilot/park ID tables, surface-classification regexes, and `sketch-fast.mjs` `PATH_RULES` drift across scripts
-SCR-12	scripts.md	G	low	in flight	S5	1311	Reading git state (`git()`, `gitState()`, `cleanHead()`) is re-implemented across 35 scripts
-SCR-13	scripts.md	G	low	in flight	D2, S5	1306, 1311	Recursive directory walking (`walk()`) is re-implemented 12 times with inconsistent prune lists, and `check-project.mjs` duplicates `check-docs.mjs`
+SCR-10	scripts.md	E	low	landed	S5	1311	Godot version pin (`4.7.2-stable`) and 50 lines of CI Godot setup/cache are duplicated across 25 files and two `ci.yml` jobs
+SCR-11	scripts.md	E	low	landed	S5	1311	Hand-maintained pilot/park ID tables, surface-classification regexes, and `sketch-fast.mjs` `PATH_RULES` drift across scripts
+SCR-12	scripts.md	G	low	landed	S5	1311	Reading git state (`git()`, `gitState()`, `cleanHead()`) is re-implemented across 35 scripts
+SCR-13	scripts.md	G	low	landed	D2, S5	1306, 1311	Recursive directory walking (`walk()`) is re-implemented 12 times with inconsistent prune lists, and `check-project.mjs` duplicates `check-docs.mjs`
 SCR-14	scripts.md	G	low	landed	S6	1309	Receipt writing, naming, and CLI scaffolding are duplicated across 3 runner scripts and 15 `scripts/gate/*receipt*.mjs` producers
-SCR-15	scripts.md	G	low	in flight	S5	1311	62 scripts hand-roll CLI argument loops (zero use `node:util` `parseArgs`) and 71 duplicate `isMain()` entrypoint guards with 3 variants
+SCR-15	scripts.md	G	low	landed	S5	1311	62 scripts hand-roll CLI argument loops (zero use `node:util` `parseArgs`) and 71 duplicate `isMain()` entrypoint guards with 3 variants
 SCR-16	scripts.md	H	medium	landed	S6	1309	`scripts/sketch-smoke.mjs` (1,371 L) and `scripts/sketch-fast.mjs` (1,722 L) bundle 4 unrelated subsystems each along clean private-state seams
 SCR-17	scripts.md	A	low	landed	S4	1302	`scripts/cloud/export-headless.mjs` duplicates the Linux export, addon copy, and win-proof loop of `scripts/sketch-export.mjs`
 SCR-18	scripts.md	A	low	landed	S6	1309	`scripts/sketch-fast.mjs` duplicates `globToRegExp`, `godotIdentity`, and `runBatch` (and misses outside-batch error detection)
@@ -203,17 +203,17 @@ DOC-01	docs.md	S	low	landed	D2	1306	No current architecture page maps `sketches/
 DOC-02	docs.md	G	low	landed	D1	1305	CI silently skips `npm run check:agents` on `.agents/hooks*`, `.claude/settings.json`, and `scripts/check-agents.mjs` changes
 DOC-03	docs.md	G	low	waits on Andrew (decision)			Coordinator & Gate model contradicts ruling `el` across `AGENTS.md`, `GEMINI.md`, `ORCHESTRATOR.md`, and `THREADS.md`
 DOC-04	docs.md	S	low	landed	D1	1305	`.codex/agents/*.toml` (7 files) holds retired model pins, asks Codex for `CLAUDE_EFFORT`, includes an orphan agent, and escapes `check:agents`
-DOC-05	docs.md	S	low	landed	D2	1306	`AGENTS.md` and `CONTRIBUTING.md` misstate what `check:docs` checks, and `check:project` duplicates `check:docs`'s link scan
+DOC-05	docs.md	S	low	landed	D2, D3	1306, 1316	`AGENTS.md` and `CONTRIBUTING.md` misstate what `check:docs` checks, and `check:project` duplicates `check:docs`'s link scan
 DOC-06	docs.md	G	low	waits on Andrew (decision)			Two ADR files share number `TADR-011`, making 32 repo citations ambiguous
-DOC-07	docs.md	S	low	landed	D2	1306	Live process docs, rules, and skills still prescribe retired `stage/alpha-w<N>`, board-thread, PC-as-Gate, and `/mnt/project-files/` steps
+DOC-07	docs.md	S	low	landed	D2, D3	1306, 1316	Live process docs, rules, and skills still prescribe retired `stage/alpha-w<N>`, board-thread, PC-as-Gate, and `/mnt/project-files/` steps
 DOC-08	docs.md	S	low	landed	D1	1305	Skill counts say 11 while 12 skills exist; `scrapkeep-dev-console` is missing from `AI-WORKFLOW.md`, and `.agents/skills/README.md` gives an obsolete registration step
-DOC-09	docs.md	G	low	landed	D2	1306	Four files give conflicting pre-edit read orders, and the cited chain pulls 32 KB to 214+ KB before the first edit
-DOC-10	docs.md	A	low	landed	D2	1306	Worker routing and fallback tier rules are duplicated across 6 pages, driving drift
+DOC-09	docs.md	G	low	landed	D2, D3	1306, 1316	Four files give conflicting pre-edit read orders, and the cited chain pulls 32 KB to 214+ KB before the first edit
+DOC-10	docs.md	A	low	landed	D2, D3	1306, 1316	Worker routing and fallback tier rules are duplicated across 6 pages, driving drift
 DOC-11	docs.md	A	low	landed	D2	1306	Gate policy and verification matrices are duplicated across 5 pages, with `BOT-SHARDS.md` stuck at wave 18–21
 DOC-12	docs.md	B	low	waits on Andrew (delete)			Orphan config/doc files and retired 3-line pointer stubs linger in live directories and agent rules
-DOC-13	docs.md	E	medium	in flight	S5	1311	Godot version `4.7.2` is scattered across 112 repo files (32 in this slice), including 6 independent executable scripts/configs
+DOC-13	docs.md	E	medium	landed	S5	1311	Godot version `4.7.2` is scattered across 112 repo files (32 in this slice), including 6 independent executable scripts/configs
 DOC-14	docs.md	G	low	landed	D1	1305	Antigravity (`safety-gate.mjs`) and Claude Code (`.claude/settings.json`) enforce asymmetric safety boundaries, and `safety-gate.mjs` misses macOS Godot saves
 DOC-15	docs.md	G	low	landed	D1	1305	`.claude/settings.json` pins `"model": "opus[1m]"` and `.claude/agents/scrapkeep-writer*.md` contradict `AGENTS.md` push authority
-DOC-16	docs.md	G	low	landed	D2	1306	Heavy-lane `adr/TADR-011-scrap-bot-crew.md` is still marked "Accepted direction" despite `DECISIONS.md` moving the crew to post-alpha
+DOC-16	docs.md	G	low	landed	D2, D3	1306, 1316	Heavy-lane `adr/TADR-011-scrap-bot-crew.md` is still marked "Accepted direction" despite `DECISIONS.md` moving the crew to post-alpha
 DOC-17	docs.md	B	low	waits on Andrew (delete)			`scripts/check-skills.mjs` carries dead `scrapkeep-lab` code and `scripts/check-agents.mjs` misses retired model tokens inside skill references
-DOC-18	docs.md	S	medium	in flight	S5	1311	`ORCHESTRATOR.md` and `BACKLOG.md` bury active alpha rules and rows beneath thousands of lines of closed Sept 2026 heavy-lane scaffolding
+DOC-18	docs.md	S	medium	landed	S5	1311	`ORCHESTRATOR.md` and `BACKLOG.md` bury active alpha rules and rows beneath thousands of lines of closed Sept 2026 heavy-lane scaffolding

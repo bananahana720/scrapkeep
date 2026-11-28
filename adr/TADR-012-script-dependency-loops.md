@@ -14,7 +14,7 @@ Paths below are under `sketches/core-loop/` unless they start with `adr/`, `scri
 
 **The directories are not layers.** `src/core` names files in each of the seven other main directories, `movement`, `build`, `combat`, `boss`, `world`, `presentation` and `ui` (116 file pairs), so no rule of the form "this directory may not load that one" can be switched on today without hundreds of exceptions, and choosing the order of the layers is a design decision Andrew has not made.
 
-**Nothing stopped a loop from growing.** The lint rules L7 and L8 keep a few named modules apart. No check looked at the dependency graph as a whole.
+**Nothing stopped a loop from growing.** Lint rule L7 stops a file under `src/` from naming a `res://tools/` path, and L8 stops presentation and UI code from reading the ball's position on the physics tick. Neither looks at which script depends on which, and no other check did.
 
 ## Options
 
@@ -28,9 +28,9 @@ Paths below are under `sketches/core-loop/` unless they start with `adr/`, `scri
 
 ## Decision
 
-1. **The graph.** `buildScriptGraph` in `scripts/sketch-lint.mjs` reads every `.gd` file under `src/`. File A depends on file B when A contains the exact string `"res://src/<path of B>"`, or when A uses, outside strings and comments, the name B declares with `class_name`. A file never depends on itself.
+1. **The graph.** `buildScriptGraph` in `scripts/sketch-lint.mjs` reads every `.gd` file under `src/`. File A depends on file B in two cases. The first: A holds a string, in single or double quotes on one line, whose whole text is `res://src/<path of B>` and ends in `.gd`. The second: A uses, outside strings and comments, the name B declares on an unindented `class_name` line. Text inside a triple-quoted string and text after a `#` are skipped in both cases, so a path built from pieces at run time is not seen. A file never depends on itself.
 2. **The loops.** `stronglyConnectedComponents` finds every group of two or more files that all reach each other. It does not recurse, so a long chain of files cannot overflow the stack.
-3. **The rule.** L16 reports every file that is in a loop. `scripts/sketch-lint.baseline.json` lists the 192 files that were in one on 27 November 2026. A file in a loop that is not on the list fails the lint. A file on the list that is no longer in a loop also fails the lint until its line is removed, so the list cannot go stale and can only shrink.
+3. **The rule.** L16 reports every file that is in a loop. `scripts/sketch-lint.baseline.json` listed the 192 files that were in one when the rule landed at `e91cb3bab`; units since then have taken files off it, and [STRUCTURE-SWEEP.md](../project-guide/handoff/STRUCTURE-SWEEP.md) gives the current count. A file in a loop that is not on the list fails the lint. A file on the list that is no longer in a loop also fails the lint until its line is removed, so the list cannot go stale and can only shrink.
 4. **Shrinking the list** is how a loop-cutting unit proves itself: its pull request removes lines from the `L16` list and adds none.
 
 ## Consequences
