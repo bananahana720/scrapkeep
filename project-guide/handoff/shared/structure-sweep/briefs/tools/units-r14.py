@@ -1,4 +1,4 @@
-"""Units of round 14, read by make-round.py. G6 changes Node scripts only."""
+"""Units of round 14, read by make-round.py. G6 and G9 change Node, shell and Python helper files only."""
 POOL = "the task pool, `git show " + BASE + ":project-guide/handoff/shared/structure-sweep/pool.tsv`"
 UNITS = {
     "G6": dict(
@@ -39,5 +39,38 @@ UNITS = {
         flight="Other units are in flight. One holds `scripts/sketch-lint.mjs`, `scripts/sketch-lint.test.mjs` and `scripts/sketch-lint.baseline.json`: change none of them. Four units change `.gd` files under `sketches/core-loop/`: change no `.gd` file. "
         "If the integration branch moves while you work and your pull request conflicts, merge `origin/entropy/gate` into your branch; never rebase or force-push.",
         checks=NODE_CHECKS.format(node_exception="", base=BASE) + " Also run `node scripts/sketch-fast.mjs --help` (or the nearest thing the script supports that starts no Godot) and one plan-only run if the script has one, and paste the new lines they print.",
+    ),
+    "G9": dict(
+        branch="entropy/g9-godot-path-and-helpers-outside-scripts",
+        findings="The rows `LEAD-08`, `LEAD-79` and `LEAD-81` of " + POOL + ". Then read `scripts/godot-home.mjs` (`resolveGodotBinary` and the toolchain file it reads), `scripts/lib/cli.mjs` (`isMain`) with the guard in `scripts/lib/cli.test.mjs`, and `.agents/hooks/safety-gate.mjs` with `tests/antigravity-hooks.test.js` on your base.",
+        body=(
+            "This unit has three parts. It changes Node, shell and Python helper files only: no file the game loads, and it runs no Godot.\n\n"
+            "**Part 1 (LEAD-08), one home for where Godot is.** `resolveGodotBinary` in `scripts/godot-home.mjs` owns the answer to \"which Godot binary\": `GODOT_BIN`, then the places it lists for each machine. "
+            "Five helpers outside `scripts/` spell their own list of paths, and they have already drifted (two know only the Linux PC's path and cannot find Godot on the Mac Studio): `.agents/skills/scrapkeep-verify-game/scripts/common.sh`, `tools/godot-mcp/run.sh`, "
+            "`sketches/core-loop/tools/blender/dig_stone/verify.py`, `sketches/core-loop/tools/coordinator/compile_check.sh` and `sketches/core-loop/tools/coordinator/lab_capture.sh`. "
+            "List every spelling with `git grep -n -E 'Godot_v?4\\.[0-9]' -- . ':!*.md'` and sort the hits into three kinds: the owner, a copy of the owner's list, and made-up data in a test. "
+            "Give the owner one way to be asked from a shell: a small command form that prints the resolved path on one line and exits non-zero with the owner's message when there is none (for example `node scripts/godot-home.mjs --bin`; use the main-script helper `isMain` so importing the module still runs nothing). "
+            "Move each of the five copies onto it, keeping what each helper does first (an explicit `GODOT_BIN` or `GODOT` variable still wins) and its own failure message and exit code. "
+            "Compare the owner's list with each copy before you delete the copy: where a copy knows a place the owner does not (`command -v godot` is one to check), decide once in the owner and say what you decided; no helper may find Godot today and fail to after your change. "
+            "Messages that only tell a reader where to install Godot may keep a path. "
+            "Then add the check that keeps it so, in the test file of the owner: list every tracked file that is not a `.md` page and spells a Godot binary path, compare the list with an exact allowed list in the test (the owner, its toolchain file and the tests that use a path as made-up data, each with its reason), fail on an empty listing, and name the command form in the failure message. "
+            "Show in the report that the check fails when a scratch copy of the tree gains a new spelling.\n\n"
+            "**Part 2 (LEAD-79), one test for \"this file is the script being run\".** `isMain` in `scripts/lib/cli.mjs` owns that test and resolves links on both sides. Three files outside `scripts/` keep their own: `.agents/hooks/safety-gate.mjs`, `project-guide/handoff/sitting-kit/serve.mjs` and `sketches/core-loop/tools/budget_audit.mjs`; the second and third compare paths without resolving links, so they run nothing when started through a link. "
+            "Move the three onto `isMain`. The guard in `scripts/lib/cli.test.mjs` walks only `scripts/`: widen it to every tracked `.mjs`, `.cjs` and `.js` file in the repository, with an exact allowed list that holds the files it holds today plus `server/index.js` and `tests/expedition-balance.mjs` (they belong to the preserved browser proofs and stay as they are; change neither). "
+            "Keep the guard's own scratch test and its floor on the number of files walked, and raise the floor to match the wider walk. "
+            "Before you add the import to the safety hook, check how the hook is started (`.agents/hooks.json` and any other caller) and that the import path resolves from there.\n\n"
+            "**Part 3 (LEAD-81), the safety hook decodes every percent code.** `.agents/hooks/safety-gate.mjs` stops a tool call that touches Andrew's live save folder and allows the same folder name under `artifacts/local/` (a scratch copy). "
+            "Two functions prepare a path for that match, `normalizeForLiveSaveMatch` and `unwrapScratchPart`, and both decode `%20` and no other percent code, so an address such as `file:///.../Application%20Support/godot/app_userdata/core%2Dloop/profile.json` or one with `%2F` for a slash is not seen as the live save folder. "
+            "Decode every percent code in both places through one small function. The rules, in this order of importance: (1) nothing the hook blocks today may be allowed after your change; (2) a malformed code (`%zz`, a lone `%`) must not throw and must not stop the rest of the text from being decoded; (3) a path the hook allows today because it lies under `artifacts/local/` stays allowed, unless decoding shows it leaves that folder (an encoded `..`), which must now be blocked. "
+            "Say in the report what you decided for a code that is encoded twice (`%2520`) and why. Read what the hook does when its own code throws and keep that as it is; say which way it fails. "
+            "Add cases to `tests/antigravity-hooks.test.js` for each rule, a blocked case for each new code first, and show that each new blocked case is allowed on your base.\n\n"
+            "Do not edit `package.json`. Add no code comment except a tool-read line or a note on an engine or operating-system quirk; the header comments the shell helpers already have may stay and must stay true."
+        ),
+        done="one owner answers where Godot is and the five helpers ask it, with a check that fails on a new spelling and on an empty listing; no helper that found Godot before fails to now; the three files use `isMain` and the guard walks the whole repository with an exact list; "
+        "the safety hook decodes every percent code, blocks every new encoded form of the live save folder, allows nothing it blocked before and does not throw on a malformed code; and `npm test` passes in order and shuffled.",
+        flight="Other units are in flight. One holds `scripts/sketch-lint.mjs`, `scripts/sketch-lint.test.mjs` and `scripts/sketch-lint.baseline.json`; another holds `scripts/sketch-fast.mjs`, `scripts/lib/git.mjs`, `scripts/lib/git.test.mjs`, `scripts/card-runner.mjs`, `scripts/sketch-export.mjs` and `scripts/sketch-export-mac.mjs`: change none of those files. Four units change `.gd` files under `sketches/core-loop/`: change no `.gd` file. "
+        "If the integration branch moves while you work and your pull request conflicts, merge `origin/entropy/gate` into your branch; never rebase or force-push.",
+        checks=NODE_CHECKS.format(node_exception="", base=BASE) + " Also: `bash -n` on every shell file you changed and `python3 -m py_compile` on every Python file you changed; run the owner's new command form with `GODOT_BIN` set and unset and paste both results; "
+        "and for each of the five helpers show, without starting Godot, the path it resolves on this machine before and after (source the helper's resolution lines or run its doctor form; say what you ran). Never run a helper that starts the game or writes outside `artifacts/local/`.",
     ),
 }
