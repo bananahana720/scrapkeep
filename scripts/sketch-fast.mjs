@@ -1026,7 +1026,7 @@ async function main() {
           "--no-edit",
           `refs/remotes/pr/${pr}`,
         ],
-        baseTree,
+        { cwd: baseTree },
       );
     return baseTree;
   };

@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  realpathSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -105,6 +113,54 @@ test("git hands a failed call's exit status and output on the error, and both he
     gitOptional(["status"], { spawn: () => ({ status: null, error: spawnError }) }),
     null,
   );
+});
+
+test("git and gitOptional refuse a second argument that is not an options object, before starting git", () => {
+  const bin = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-fake-git-"));
+  const marker = path.join(bin, "started");
+  writeFileSync(path.join(bin, "git"), `#!/bin/sh\necho "$@" >> "${marker}"\n`, { mode: 0o755 });
+  const before = process.env.PATH;
+  process.env.PATH = bin;
+  try {
+    for (const [bad, kind] of [
+      ["/some/dir", "a string"],
+      [3, "a number"],
+      [["/some/dir"], "an array"],
+      [null, "null"],
+      [new Map(), "a Map"],
+    ]) {
+      for (const [name, call] of [
+        ["git", git],
+        ["gitOptional", gitOptional],
+      ]) {
+        assert.throws(
+          () => call(["status"], bad),
+          (error) =>
+            error instanceof TypeError &&
+            error.message ===
+              `${name}(args, options): options must be an object such as { cwd }, got ${kind}`,
+        );
+      }
+    }
+    for (const [name, call] of [
+      ["gitState", gitState],
+      ["cleanHead", cleanHead],
+    ]) {
+      assert.throws(
+        () => call({ cwd: "/some/dir" }),
+        (error) =>
+          error instanceof TypeError &&
+          error.message ===
+            `${name}(cwd, options): cwd must be a folder path string, got an object`,
+      );
+    }
+    assert.equal(existsSync(marker), false, "git was started");
+    git(["status"], Object.assign(Object.create(null), { cwd: bin }));
+    assert.equal(readFileSync(marker, "utf8"), "status\n", "the fake git on PATH did not run");
+  } finally {
+    process.env.PATH = before;
+    rmSync(bin, { recursive: true, force: true });
+  }
 });
 
 test("gitState and cleanHead report repository state and refuse dirty trees", () => {

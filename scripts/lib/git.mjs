@@ -18,6 +18,33 @@ export function cwdDecidesRepository(env = process.env) {
   return out;
 }
 
+function kind(value) {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  if (typeof value === "object") {
+    const name = value.constructor?.name;
+    return !name || name === "Object" ? "an object" : `a ${name}`;
+  }
+  return `a ${typeof value}`;
+}
+
+function checked(name, options) {
+  if (options === undefined) return {};
+  const proto = typeof options === "object" && options !== null && Object.getPrototypeOf(options);
+  if (proto !== Object.prototype && proto !== null)
+    throw new TypeError(
+      `${name}(args, options): options must be an object such as { cwd }, got ${kind(options)}`,
+    );
+  return options;
+}
+
+function checkedCwd(name, cwd) {
+  if (typeof cwd !== "string")
+    throw new TypeError(
+      `${name}(cwd, options): cwd must be a folder path string, got ${kind(cwd)}`,
+    );
+}
+
 function start(args, { cwd = REPO_ROOT, maxBuffer = DEFAULT_MAX_BUFFER, spawn, stdio, timeout }) {
   return spawn("git", args, {
     cwd,
@@ -29,8 +56,9 @@ function start(args, { cwd = REPO_ROOT, maxBuffer = DEFAULT_MAX_BUFFER, spawn, s
   });
 }
 
-export function git(args, { trim = true, spawn = spawnSync, ...options } = {}) {
-  const ran = start(args, { spawn, ...options });
+export function git(args, options) {
+  const { trim = true, spawn = spawnSync, ...rest } = checked("git", options);
+  const ran = start(args, { spawn, ...rest });
   if (ran.error) throw ran.error;
   if (ran.status !== 0) {
     throw Object.assign(
@@ -42,14 +70,16 @@ export function git(args, { trim = true, spawn = spawnSync, ...options } = {}) {
   return trim ? stdout.trim() : stdout;
 }
 
-export function gitOptional(args, { trim = true, spawn = spawnSync, ...options } = {}) {
-  const ran = start(args, { spawn, ...options });
+export function gitOptional(args, options) {
+  const { trim = true, spawn = spawnSync, ...rest } = checked("gitOptional", options);
+  const ran = start(args, { spawn, ...rest });
   if (ran.error || ran.status !== 0) return null;
   const stdout = ran.stdout ?? "";
   return trim ? stdout.trim() : stdout.replace(/\r?\n$/, "");
 }
 
 export function gitState(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
+  checkedCwd("gitState", cwd);
   const top = gitOptional(["rev-parse", "--show-toplevel"], { cwd, spawn });
   if (top === null) return null;
   const head = gitOptional(["rev-parse", "HEAD"], { cwd, spawn });
@@ -68,6 +98,7 @@ export function gitState(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
 }
 
 export function cleanHead(cwd = REPO_ROOT, { spawn = spawnSync } = {}) {
+  checkedCwd("cleanHead", cwd);
   const tracked = git(["status", "--porcelain", "--untracked-files=no"], {
     cwd,
     trim: false,
