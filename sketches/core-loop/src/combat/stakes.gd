@@ -119,7 +119,7 @@ func plant(at: Vector3) -> Stake:
 	stake.global_position = at
 	nodes.append(stake)
 	planted += 1
-	ultimate._record["stakes"] = planted
+	ultimate.record()["stakes"] = planted
 	return stake
 
 
@@ -152,8 +152,9 @@ func _on_hooked(_at: Vector3) -> void:
 	if not is_instance_valid(stake) or not stake is Stake or not nodes.has(stake):
 		return
 	hooked += 1
-	ultimate._record["stakes_hooked"] = hooked
-	ctx.run.set_meta("ultimate_record", ultimate._record)
+	var rec := ultimate.record()
+	rec["stakes_hooked"] = hooked
+	ctx.run.set_meta("ultimate_record", rec)
 	if ctx.run_log != null:
 		ctx.run_log._close_ultimate()
 
@@ -169,7 +170,8 @@ func arc(at: Vector3, targets: int, damage: float, radius := 10.0) -> int:
 func beat(number: int, at: Vector3, heft_mult: float) -> int:
 	_heft = heft_mult
 	plant(at)
-	beat_log.append({"beat": number, "time": ultimate._leg_time, "expected": number * ultimate._beat_len})
+	var state := ultimate.leg_state()
+	beat_log.append({"beat": number, "time": state["elapsed"], "expected": number * float(state["beat_length"])})
 	_note("stake", number)
 	return arc(at, ultimate.volley_targets(), 12.0 * heft_mult)
 

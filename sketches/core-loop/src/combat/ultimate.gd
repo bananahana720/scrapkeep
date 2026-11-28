@@ -171,6 +171,50 @@ func current_beat() -> int:
 	return _beat
 
 
+func active_id() -> String:
+	return _id
+
+
+func record() -> Dictionary:
+	return _record
+
+
+func leg_state() -> Dictionary:
+	var legs: Array = _plan.get("legs", [])
+	var has_leg := _leg >= 0 and _leg < legs.size()
+	var leg: Dictionary = legs[_leg] if has_leg else {}
+	var total_remaining := -float(_leg_time)
+	for i in range(_leg, legs.size()):
+		total_remaining += float(legs[i]["seconds"])
+	return {
+		"has_leg": has_leg,
+		"index": _leg,
+		"count": legs.size(),
+		"is_last": has_leg and _leg == legs.size() - 1,
+		"elapsed": _leg_time,
+		"remaining": (float(leg["seconds"]) - float(_leg_time)) if has_leg else 0.0,
+		"total_remaining": total_remaining,
+		"to": leg["to"] if has_leg and leg.has("to") else null,
+		"final_to": legs.back()["to"] if not legs.is_empty() and legs.back().has("to") else null,
+		"beat_length": _beat_len,
+		"mode": String(leg.get("mode", "")),
+	}
+
+
+func is_peak_beat(beat: int) -> bool:
+	return not _peaked and beat >= ceili(_beats / 2.0)
+
+
+func ride_heading(fallback := Vector3.FORWARD) -> Vector3:
+	return _ride.heading if _ride != null else fallback
+
+
+func flatten_ride_release() -> void:
+	if _ride != null:
+		_ride.mode = RideRail.LINE
+		_ride.velocity = _ride.heading * _ride.release_speed
+
+
 func _on_stage_entered(_stage: int, retry: bool) -> void:
 	_outpost_encore = false
 	_abort("stage")
@@ -273,7 +317,7 @@ func _live_aim() -> Dictionary:
 	return {"origin": ctx.aim_origin(), "forward": ctx.aim_forward(), "harpoon": ctx.player.kit.aim}
 
 
-func _heft_index() -> int:
+func heft_index() -> int:
 	var c := 1
 	if ctx.run != null and ctx.run.has_method("heft_class"):
 		c = int(ctx.run.heft_class())
@@ -284,15 +328,15 @@ func _row() -> Dictionary:
 	return AbilityState.ABILITIES.get(_ult_id(), {})
 
 
-func _knob(knob: String, fallback):
-	if UpgradeTree.KNOBS.has(knob):
-		return ctx.player.tree.knob(knob)
+func knob(knob_name: String, fallback):
+	if UpgradeTree.KNOBS.has(knob_name):
+		return ctx.player.tree.knob(knob_name)
 	return fallback
 
 
 func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 	var row := _row()
-	var heft := _heft_index()
+	var heft := heft_index()
 	var reach: float = ARC_REACH[heft] + (10.0 if _ult_id() == "ball_lightning" else 0.0)
 	var kit = ctx.player.kit
 	var found := {}
@@ -329,7 +373,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 	if fixed > 0 and mode != "hop":
 		beats = fixed
 		flight = fixed * (beat if beat > 0.0 else FLIGHT_NO_MUSIC / NO_MUSIC_BEATS)
-	var extra := int(_knob("ult_beats", 0))
+	var extra := int(knob("ult_beats", 0))
 	if extra > 0:
 		var each := flight / maxi(beats, 1)
 		beats += extra
@@ -426,7 +470,7 @@ func start(p: Dictionary) -> void:
 		ctx.player.cut_line("ultimate")
 	if ctx.spawner != null and ctx.spawner.fleet.holds.holding():
 		combat.discover("set_piece_breakout", ctx.player.ball_position())
-	_record = {"id": _id, "path": p["path"], "seconds": snappedf(float(p["seconds"]), 0.001), "heft_class": _heft_index() + 1,
+	_record = {"id": _id, "path": p["path"], "seconds": snappedf(float(p["seconds"]), 0.001), "heft_class": heft_index() + 1,
 		"volley_hits": 0, "landing_hits": 0, "damage": 0.0, "bailed": false, "recalled": false,
 		"fill_seconds": snappedf(_record_fill, 0.01)}
 	if _sable():
@@ -639,7 +683,7 @@ func _fly(delta: float) -> void:
 		_beat_clock -= _beat_len
 		_beat += 1
 		_volley()
-		if not _peaked and _beat >= ceili(_beats / 2.0):
+		if is_peak_beat(_beat):
 			_peaked = true
 			_peak(player.ball_position())
 	var v = null
@@ -671,7 +715,7 @@ func _volley() -> void:
 	var row: Dictionary = _ult_rows.get(_id, {})
 	if not row.has("tech"):
 		return
-	var hits: int = int((row["tech"] as Callable).call(_beat, ctx.player.ball_position(), ctx.aim_forward(), HEFT_MULT[_heft_index()]))
+	var hits: int = int((row["tech"] as Callable).call(_beat, ctx.player.ball_position(), ctx.aim_forward(), HEFT_MULT[heft_index()]))
 	_record["volley_hits"] = int(_record.get("volley_hits", 0)) + hits
 
 
@@ -679,7 +723,7 @@ func _land(at: Vector3) -> void:
 	var legs: Array = _plan["legs"]
 	var leg: Dictionary = legs[_leg]
 	_leg += 1
-	if _leg == legs.size() and _knob("ult_encore", false) and (not _sable() or (_leg == 1 and _id != "outpost")) and not (_id.begins_with("cannon_") and _cannon_encore):
+	if _leg == legs.size() and knob("ult_encore", false) and (not _sable() or (_leg == 1 and _id != "outpost")) and not (_id.begins_with("cannon_") and _cannon_encore):
 		var next = _encore_target(at)
 		if next != null:
 			legs.append({"mode": "arc", "to": next, "beats": 2 if _sable() else _beats, "seconds": (2 if _sable() else _beats) * _beat_len, "strike": true})
@@ -705,7 +749,7 @@ func _strike(at: Vector3) -> void:
 	var row: Dictionary = _ult_rows.get(_id, {})
 	var result: Array = [0, 0.0]
 	if row.has("landing"):
-		result = (row["landing"] as Callable).call(at, HEFT_MULT[_heft_index()], mult)
+		result = (row["landing"] as Callable).call(at, HEFT_MULT[heft_index()], mult)
 	if result.size() < 3:
 		report_landing(_record, _id, at, result)
 	if _id == "cable_run" and _leg >= (_plan.get("legs", []) as Array).size():
@@ -741,11 +785,11 @@ func _encore_target(at: Vector3):
 
 
 func landing_radius() -> float:
-	return LANDING_RADIUS[_heft_index()] + float(_knob("ult_radius", 0.0))
+	return LANDING_RADIUS[heft_index()] + float(knob("ult_radius", 0.0))
 
 
 func volley_targets() -> int:
-	return VOLLEY_TARGETS + int(_knob("ult_volley", 0))
+	return VOLLEY_TARGETS + int(knob("ult_volley", 0))
 
 
 func defend(amount: float, hp: float) -> float:
@@ -829,8 +873,8 @@ func _lightning_tech(beat: int, ball: Vector3, _aim: Vector3, heft_mult: float) 
 func _lightning_peak(at: Vector3) -> void:
 	_lightning_peaks += 1
 	var burst := Weapons.burst(20.0)
-	var result := _sable_damage(at, float(burst["radius"]) + float(_knob("ult_radius", 0.0)),
-		float(burst["damage"]) * HEFT_MULT[_heft_index()], int(burst["targets"]) + int(_knob("ult_volley", 0)), false)
+	var result := _sable_damage(at, float(burst["radius"]) + float(knob("ult_radius", 0.0)),
+		float(burst["damage"]) * HEFT_MULT[heft_index()], int(burst["targets"]) + int(knob("ult_volley", 0)), false)
 	_record["volley_hits"] = int(_record.get("volley_hits", 0)) + int(result[0])
 
 
@@ -848,7 +892,7 @@ func _outpost_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array
 	stakes.start_sentries(_beat_len, heft_mult)
 	var speed := _sable_flight_speed()
 	var burst := Weapons.burst(speed)
-	var result := _sable_damage(at, float(burst["radius"]) + float(_knob("ult_radius", 0.0)),
+	var result := _sable_damage(at, float(burst["radius"]) + float(knob("ult_radius", 0.0)),
 		float(burst["damage"]) * heft_mult * chain_mult, int(burst["targets"]))
 	combat.last_burst = burst.duplicate()
 	combat.last_burst["at"] = at
@@ -857,7 +901,7 @@ func _outpost_landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array
 	ctx.events.special_used.emit("detonation_gauge", at)
 	_outpost_at = at
 	_outpost_until = _clock + Stakes.SENTRY_SECONDS
-	_outpost_encore = bool(_knob("ult_encore", false))
+	_outpost_encore = bool(knob("ult_encore", false))
 	return result
 
 
@@ -947,7 +991,7 @@ func _cannon_started(id: String, _path: String, _from: Vector3, _to: Vector3, _s
 
 
 func _cannon_mortar_target(_ball: Vector3, aim: Dictionary) -> Dictionary:
-	var ground = _ground_hit(aim, ARC_REACH[_heft_index()] * Weapons.MORTAR_REACH)
+	var ground = _ground_hit(aim, ARC_REACH[heft_index()] * Weapons.MORTAR_REACH)
 	return {"path": "arc", "to": ground} if ground != null else {"path": "hop", "to": ctx.player.ball_position()}
 
 
@@ -1013,11 +1057,11 @@ func _cannon_tech(beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 		var side := Vector3.UP.cross(velocity.normalized())
 		if side.length() < 0.01:
 			side = Vector3.RIGHT
-		for i in 1 + int(_knob("ult_volley", 0)):
+		for i in 1 + int(knob("ult_volley", 0)):
 			var at := ahead + velocity.normalized() * 6.0 * i
 			_cannon_call("lane", at - side * 12.2, at + side * 12.2, combat._clock + _beat_len, heft)
 	else:
-		for i in 1 + int(_knob("ult_volley", 0)):
+		for i in 1 + int(knob("ult_volley", 0)):
 			var target := _cannon_target(centre, aim, 16.0)
 			if i > 0:
 				target = centre * 2.0 - target
@@ -1027,7 +1071,7 @@ func _cannon_tech(beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
 
 func _cannon_peak(_at: Vector3) -> void:
 	_cannon_peak_done = true
-	var heft: float = HEFT_MULT[_heft_index()]
+	var heft: float = HEFT_MULT[heft_index()]
 	var at: Vector3 = _plan["legs"][_leg]["to"]
 	if _cannon_id == "cannon_fire_mission":
 		for family in preload("res://src/boss/mind_attacks.gd").FAMILIES:
@@ -1038,7 +1082,7 @@ func _cannon_peak(_at: Vector3) -> void:
 	else:
 		var target := _cannon_target(at, ctx.aim_forward(), 16.0)
 		var radius := Vector2(target.x - at.x, target.z - at.z).length()
-		var half := preload("res://src/boss/mind_attacks.gd").RUSH_HALF_BAND + float(_knob("ult_radius", 0.0))
+		var half := preload("res://src/boss/mind_attacks.gd").RUSH_HALF_BAND + float(knob("ult_radius", 0.0))
 		_cannon_call("rush", at, target, _cannon_due, heft, {"band": Vector2(maxf(0.0, radius - half), minf(Weapons.ZONE_REACH, radius + half))})
 
 

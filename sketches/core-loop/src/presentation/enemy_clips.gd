@@ -253,13 +253,12 @@ func _physics_process(delta: float) -> void:
 
 
 func _choose() -> Array:
-	var atk: Dictionary = enemy.get("_atk")
+	var atk: Dictionary = enemy.attack_state() if enemy.has_method("attack_state") else {}
 	var anims: Dictionary = lib.anims
-	if not atk.is_empty() and String(atk.phase) == "windup" and anims.has("windup"):
+	if not atk.is_empty() and String(atk["phase"]) == "windup" and anims.has("windup"):
 		_strike_age = -1.0
 		_hit_age = -1.0
-		var tele = atk.get("tele")
-		var progress := float(tele.progress) if tele != null and is_instance_valid(tele) else float(atk.progress)
+		var progress := float(atk["progress"])
 		var run: float = enemy.windup_run() if enemy.has_method("windup_run") else -1.0
 		if run >= 0.0:
 			progress = run

@@ -256,7 +256,7 @@ func _enemies() -> Array:
 
 
 func _knob(name: String, fallback):
-	return combat.ultimate._knob(name, fallback) if combat.ultimate != null else fallback
+	return combat.ultimate.knob(name, fallback) if combat.ultimate != null else fallback
 
 
 static func _flat(v: Vector3) -> Vector3:
@@ -524,9 +524,8 @@ func _on_cc_ignored(_kind: String) -> void:
 
 
 func _heading() -> Vector3:
-	var ult = combat.ultimate
-	if ult != null and ult._ride != null:
-		return ult._ride.heading
+	if combat.ultimate != null:
+		return combat.ultimate.ride_heading(combat._flat_aim())
 	return combat._flat_aim()
 
 
@@ -1275,8 +1274,7 @@ func _beam_hit(enemy: Node3D, damage: float, from: Vector3) -> void:
 
 
 func _peak_beat(beat: int) -> bool:
-	var ult = combat.ultimate
-	return not ult._peaked and beat >= ceili(ult._beats / 2.0)
+	return combat.ultimate.is_peak_beat(beat)
 
 
 func tech(id: String, beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
@@ -1337,8 +1335,8 @@ func peak(id: String, at: Vector3) -> void:
 	var heft: float = Ultimate.HEFT_MULT[_class() - 1]
 	var hits := 0
 	if id == "juggernaut_drive":
-		var ult = combat.ultimate
-		_shoulder = ult._beat_len if ult._beat_len > 0.0 else 0.35
+		var beat_len := float(combat.ultimate.leg_state()["beat_length"])
+		_shoulder = beat_len if beat_len > 0.0 else 0.35
 		return
 	if id == "prism_cutter":
 		var d := _beam_aim(at, _peak_aim(), Weapons.CUTTER_LENGTH)
@@ -1349,8 +1347,10 @@ func peak(id: String, at: Vector3) -> void:
 			hits += 1
 	else:
 		hits = full_cut(at, _beam_aim(at, _peak_aim(), Weapons.FULL_CUT_REACH), heft)
-	if combat.ultimate != null and not combat.ultimate._record.is_empty():
-		combat.ultimate._record["volley_hits"] = int(combat.ultimate._record.get("volley_hits", 0)) + hits
+	if combat.ultimate != null:
+		var rec := combat.ultimate.record()
+		if not rec.is_empty():
+			rec["volley_hits"] = int(rec.get("volley_hits", 0)) + hits
 
 
 func _peak_aim() -> Vector3:
@@ -1375,7 +1375,7 @@ func full_cut(at: Vector3, dir: Vector3, heft: float) -> int:
 		_carver = get_script().new()
 	var out := {}
 	var job := {"due": Engine.get_physics_frames() + cut_ticks, "sector": sector, "at": at, "heft": heft, "out": out,
-		"record": combat.ultimate._record if combat.ultimate != null else {}}
+		"record": combat.ultimate.record() if combat.ultimate != null else {}}
 	job["task"] = WorkerThreadPool.add_task(_carve_off.bind(_carver, at, sector["cells"], sector["hull"], found, out), true, "rivet full cut")
 	_cuts_due.append(job)
 	return 0
@@ -1432,16 +1432,14 @@ func landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		result = _breach(_late_shape(late), at, heading, reach, pins, damage)
 	else:
 		_late.append(late)
-	var ride = combat.ultimate._ride if combat.ultimate != null else null
-	if ride != null:
-		ride.mode = RideRail.LINE
-		ride.velocity = ride.heading * ride.release_speed
+	if combat.ultimate != null:
+		combat.ultimate.flatten_ride_release()
 	ctx.player.abilities.grant(AbilityState.MOVEMENT, Weapons.BREACH_SPRINT)
 	if id == "juggernaut_drive":
 		ctx.player.grant_immunity(Ultimate.RECOVER_SECONDS + Weapons.DRIVE_IMMUNE)
 	if id in BEAM_PIECES and _cut.size() >= CUTTER_CARD_CUTS:
 		_discover("rivet_foundry_cutter", "set_piece", at)
-	var more: bool = combat.ultimate != null and combat.ultimate._leg < (combat.ultimate._plan["legs"] as Array).size()
+	var more: bool = combat.ultimate != null and bool(combat.ultimate.leg_state()["has_leg"])
 	if more:
 		_rammed = {}
 		_cut = {}
@@ -1510,7 +1508,7 @@ func _carve_late(id: String, at: Vector3, heading: Vector3, reach: float, pins: 
 	var start := Engine.get_physics_frames()
 	var late := {"centre": _commit_beam(at, heading, reach, 0.0), "start": start, "due": start + LATE_TICKS, "sector": sector,
 		"cell_cuts": [], "next": 0, "shaded": -1, "lit": [], "shadows": shadows, "id": id, "at": at, "heading": heading,
-		"reach": reach, "pins": pins, "damage": damage, "level": level, "record": combat.ultimate._record if combat.ultimate != null else {}}
+		"reach": reach, "pins": pins, "damage": damage, "level": level, "record": combat.ultimate.record() if combat.ultimate != null else {}}
 	carve_stats["breach_started"] += 1
 	late["shares"] = 0
 	if found.has("unreadable"):

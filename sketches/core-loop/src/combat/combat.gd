@@ -4186,7 +4186,7 @@ func tally_target(id: String, ball: Vector3, aim: Dictionary) -> Dictionary:
 	if plate.is_empty():
 		return {}
 	var at: Vector3 = plate["at"]
-	var reach: float = Ultimate.ARC_REACH[ultimate._heft_index()] if id == "plate_flywheel" else ctx.player.grapple_range()
+	var reach: float = Ultimate.ARC_REACH[ultimate.heft_index()] if id == "plate_flywheel" else ctx.player.grapple_range()
 	var forward: Vector3 = aim.get("forward", Vector3.ZERO)
 	var flat_aim := Vector3(forward.x, 0.0, forward.z)
 	var to := Vector3(at.x - ball.x, 0.0, at.z - ball.z)
@@ -4198,13 +4198,13 @@ func tally_target(id: String, ball: Vector3, aim: Dictionary) -> Dictionary:
 
 
 func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float) -> int:
-	var cap: int = Weapons.CLIP_CAP[ultimate._heft_index()]
+	var cap: int = Weapons.CLIP_CAP[ultimate.heft_index()]
 	var made := 0
 	if id == "plate_audit":
 		var ground = _audit_ground(ball)
 		if ground == null:
 			return 0
-		var radius: float = Weapons.AUDIT_STAMP_RADIUS + float(ultimate._knob("ult_volley", 0))
+		var radius: float = Weapons.AUDIT_STAMP_RADIUS + float(ultimate.knob("ult_volley", 0))
 		effects.ring(ground, radius, Palette.COPPER)
 		for enemy in _tally_enemies():
 			if in_ring(ground, radius, enemy):
@@ -4222,7 +4222,7 @@ func tally_tech(id: String, _beat: int, ball: Vector3, aim: Vector3, heft: float
 			if gap <= Weapons.GATHER_RADIUS:
 				near.append([gap, enemy])
 		near.sort_custom(func(a, b): return a[0] < b[0])
-		for entry in near.slice(0, Weapons.FLY_KNOT_CLIPS + int(ultimate._knob("ult_volley", 0))):
+		for entry in near.slice(0, Weapons.FLY_KNOT_CLIPS + int(ultimate.knob("ult_volley", 0))):
 			made += _ride_clip(entry[1], cap)
 	else:
 		for enemy in _volley_picks(ball, aim, ultimate.volley_targets()):
@@ -4303,11 +4303,9 @@ func _densest_knot(ball: Vector3):
 
 
 func tally_peak(id: String, at: Vector3) -> void:
-	var legs: Array = ultimate._plan.get("legs", [])
-	var b: Vector3 = legs.back()["to"] if not legs.is_empty() else at
-	var left := -float(ultimate._leg_time)
-	for i in range(ultimate._leg, legs.size()):
-		left += float(legs[i]["seconds"])
+	var state := ultimate.leg_state()
+	var b: Vector3 = state["final_to"] if state["final_to"] != null else at
+	var left := float(state["total_remaining"])
 	if plate.is_empty() or _flat_gap(plate["at"], b) > 1.0:
 		plate = {"at": floor_at(b + Vector3.UP), "until": 0.0}
 		_gather_tick = 0.0
@@ -4332,7 +4330,7 @@ func tally_landing(id: String, at: Vector3, heft: float, chain: float) -> Array:
 		struck[enemy.get_instance_id()] = true
 		dealt += _ult_hit(enemy, "ultimate", amount, at, true)
 		hits += 1
-	var share: float = float(ultimate._knob("ult_settle", Weapons.SETTLE_SHARE))
+	var share: float = float(ultimate.knob("ult_settle", Weapons.SETTLE_SHARE))
 	var debts: Array = ride_clips.keys()
 	if not link_group.is_empty() and float(link_group["until"]) > _clock:
 		for cid in link_group["ids"]:
@@ -4373,13 +4371,13 @@ func _step_tally_piece(delta: float) -> void:
 			_gather_pull(p["at"], Weapons.GATHER_RADIUS)
 	if tally_piece != "plate_flywheel" or _fly_pulled or ultimate == null or ultimate.phase() != Ultimate.FLIGHT:
 		return
-	var legs: Array = ultimate._plan.get("legs", [])
-	if legs.is_empty() or ultimate._leg != legs.size() - 1:
+	var state := ultimate.leg_state()
+	if not bool(state["is_last"]):
 		return
-	if float(legs[ultimate._leg]["seconds"]) - float(ultimate._leg_time) > Weapons.FLY_PULL_LEAD:
+	if float(state["remaining"]) > Weapons.FLY_PULL_LEAD:
 		return
 	_fly_pulled = true
-	var b: Vector3 = legs[ultimate._leg]["to"]
+	var b: Vector3 = state["to"]
 	var reach: float = ultimate.landing_radius() + Weapons.FLY_LANDING_BONUS + Weapons.FLY_PULL
 	for enemy in _tally_enemies():
 		if not _ordinary(enemy):
@@ -4471,7 +4469,7 @@ func _fire_line(f: float, shape: Dictionary) -> void:
 
 
 func _on_mounted(at: Vector3, banked_speed: float) -> void:
-	if ultimate != null and ultimate.active() and ultimate._id == "outpost":
+	if ultimate != null and ultimate.active() and ultimate.active_id() == "outpost":
 		return
 	if ctx.run.class_def == null or not ctx.flow.in_play():
 		return

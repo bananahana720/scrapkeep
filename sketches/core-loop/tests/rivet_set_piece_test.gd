@@ -942,7 +942,7 @@ func _run() -> void:
 	var charges: int = _player.abilities.slot("movement").charges
 	var landed := []
 	var chain_mult: float = _player.chain.multiplier()
-	var heft_mult: float = Ultimate.HEFT_MULT[ult._heft_index()]
+	var heft_mult: float = Ultimate.HEFT_MULT[ult.heft_index()]
 	var expected_damage: float = Ultimate.LANDING_DAMAGE * chain_mult * heft_mult
 	var slam_rate: float = _combat.punch_of("slam", 1.0)
 	var on_landed := func(_id: String, _at: Vector3, count: int, dealt: float): landed.append([count, dealt])
