@@ -26,7 +26,7 @@ import {
   whichTool,
 } from "./godot-home.mjs";
 import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
-import { runProcess as runChild } from "./lib/proc.mjs";
+import { processLive, runProcess as runChild } from "./lib/proc.mjs";
 import { buildVisualQaPack } from "./visual-qa-pack.mjs";
 import { materializeSandbox, releaseSlotLock, validateSlotName } from "./worktree-sandbox.mjs";
 import { isMain } from "./lib/cli.mjs";
@@ -637,16 +637,6 @@ export function diffPngBuffers(bufA, bufB) {
   };
 }
 
-export function isPidAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error?.code === "EPERM";
-  }
-}
-
 export function sessionPaths(sessionName = "default", repoRoot = REPO_ROOT) {
   const safe = validateSessionName(sessionName);
   const dir = path.join(repoRoot, "artifacts", "local", "dev-console", "sessions", safe);
@@ -675,7 +665,7 @@ export function readJsonSafe(filePath) {
   }
 }
 
-export function cleanStaleReady(inboxDir, { isAlive = isPidAlive } = {}) {
+export function cleanStaleReady(inboxDir, { isAlive = processLive } = {}) {
   const readyFile = path.join(inboxDir, "ready.json");
   if (!existsSync(readyFile)) {
     return { cleaned: false, alive: false, ready: null, stalePid: null };
@@ -697,7 +687,7 @@ function sleep(ms) {
 
 export async function waitForReady(
   inboxDir,
-  { timeoutMs = 30_000, pid = null, isAlive = isPidAlive, pollMs = 25 } = {},
+  { timeoutMs = 30_000, pid = null, isAlive = processLive, pollMs = 25 } = {},
 ) {
   const readyFile = path.join(inboxDir, "ready.json");
   const deadline = Date.now() + timeoutMs;
@@ -719,7 +709,7 @@ let requestSeq = 0;
 export async function sendMailboxRequest(
   inboxDir,
   cmd,
-  { timeoutMs = 30_000, isAlive = isPidAlive, removeResponse = true, pollMs = 15 } = {},
+  { timeoutMs = 30_000, isAlive = processLive, removeResponse = true, pollMs = 15 } = {},
 ) {
   const ready = readJsonSafe(path.join(inboxDir, "ready.json"));
   if (!ready || ready.ready !== true) {
@@ -1287,7 +1277,7 @@ function cmdStatus({ flags }) {
   const ready = readJsonSafe(paths.readyFile);
   const meta = readJsonSafe(paths.metaFile);
   const pid = Number(ready?.pid ?? meta?.pid);
-  const alive = isPidAlive(pid);
+  const alive = processLive(pid);
   const stale = Boolean((ready || meta) && !alive);
   const payload = {
     session: paths.name,
@@ -1314,7 +1304,7 @@ async function cmdStop({ flags, silent = false }) {
   const ready = readJsonSafe(paths.readyFile);
   const meta = readJsonSafe(paths.metaFile);
   const pid = Number(ready?.pid ?? meta?.pid);
-  const wasAlive = isPidAlive(pid);
+  const wasAlive = processLive(pid);
 
   if (!wasAlive) {
     cleanStaleReady(paths.inbox);
@@ -1335,20 +1325,20 @@ async function cmdStop({ flags, silent = false }) {
   }
 
   const deadline = Date.now() + 5000;
-  while (Date.now() < deadline && isPidAlive(pid)) {
+  while (Date.now() < deadline && processLive(pid)) {
     await sleep(50);
   }
 
-  if (isPidAlive(pid)) {
+  if (processLive(pid)) {
     quitMethod = "sigterm";
     try {
       process.kill(pid, "SIGTERM");
     } catch {}
     const killDeadline = Date.now() + 1500;
-    while (Date.now() < killDeadline && isPidAlive(pid)) {
+    while (Date.now() < killDeadline && processLive(pid)) {
       await sleep(50);
     }
-    if (isPidAlive(pid)) {
+    if (processLive(pid)) {
       quitMethod = "sigkill";
       try {
         process.kill(pid, "SIGKILL");
@@ -1359,7 +1349,7 @@ async function cmdStop({ flags, silent = false }) {
 
   cleanStaleReady(paths.inbox);
   if (meta?.sandbox_dir) releaseSlotLock(meta.sandbox_dir, { expectedPid: pid });
-  const stillAlive = isPidAlive(pid);
+  const stillAlive = processLive(pid);
   const payload = {
     ok: !stillAlive,
     session: paths.name,

@@ -25,6 +25,7 @@ import {
   gitState,
   nulSeparated,
 } from "./git.mjs";
+import { processLive } from "./proc.mjs";
 
 function makeTempRepo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-git-lib-"));
@@ -150,7 +151,7 @@ test("a git call that passes its time limit stops a child that ignores the first
       Number.isInteger(pid) && pid > 0,
       `the stand-in printed no process id: ${result.stdout}`,
     );
-    assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+    assert.equal(processLive(pid), false);
   }
 });
 
@@ -255,7 +256,7 @@ test(
         else assert.ok(ms >= 1800, `the kill came after ${ms} ms, before the grace ended`);
         const pid = Number(readFileSync(path.join(bin, "pid"), "utf8"));
         assert.ok(Number.isInteger(pid) && pid > 0, "the stand-in wrote no process id");
-        assert.throws(() => process.kill(pid, 0), { code: "ESRCH" });
+        assert.equal(processLive(pid), false);
       });
     }
   },
