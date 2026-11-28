@@ -5,36 +5,82 @@ import os from "node:os";
 import path from "node:path";
 import { describe, it } from "node:test";
 
-import {
-  auditFormalSync,
-  formatLedgerAudit,
-  parseKnownFailingTsv,
-  REPO_ROOT,
-  runLedgerAudit,
-} from "./ledger-audit.mjs";
+import { LEDGER_FILE } from "./known-failing.mjs";
+import { auditFormalSync, formatLedgerAudit, REPO_ROOT, runLedgerAudit } from "./ledger-audit.mjs";
 
-describe("parseKnownFailingTsv", () => {
+const HEADER = "test\tkind\tcause\towner\tadded\treview\tcheck";
+const ALPHA = "alpha_test\tred\tbroken\ttesting\t2026-11-01\t2026-11-20\tc1";
+
+function auditLedger(text) {
+  const root = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-ledger-audit-"));
+  try {
+    if (text !== null) {
+      mkdirSync(path.join(root, path.dirname(LEDGER_FILE)), { recursive: true });
+      writeFileSync(path.join(root, LEDGER_FILE), text);
+    }
+    return runLedgerAudit({
+      repoRoot: root,
+      today: "2026-11-26",
+      spawn: () => assert.fail("no formal model is found, so no git runs"),
+    });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
+describe("the audit's read of KNOWN-FAILING.tsv", () => {
   it("classifies red, flake, and overdue rows against the supplied date", () => {
-    const tsv = [
-      "test\tkind\tcause\towner\tadded\treview\tcheck",
-      "alpha_test\tred\tbroken\ttesting\t2026-11-01\t2026-11-20\tc1",
-      "beta_test\tflake\tload\tcoord\t2026-11-05\t2026-12-01\t-",
-      "gamma_test\tflake\tload\tcoord\t2026-11-05\t2026-11-25\t-",
-    ].join("\n");
-    const parsed = parseKnownFailingTsv(tsv, { today: "2026-11-26" });
-    assert.equal(parsed.total, 3);
+    const { known_failing: ledger } = auditLedger(
+      [
+        HEADER,
+        ALPHA,
+        "beta_test\tflake\tload\tcoord\t2026-11-05\t2026-12-01\t-",
+        "gamma_test\tflake\tload\tcoord\t2026-11-05\t2026-11-25\t-",
+      ].join("\n"),
+    );
+    assert.equal(ledger.total, 3);
+    assert.deepEqual(ledger.problems, []);
     assert.deepEqual(
-      parsed.reds.map((r) => r.test),
+      ledger.reds.map((r) => r.test),
       ["alpha_test"],
     );
+    assert.equal(ledger.flake_count, 2);
     assert.deepEqual(
-      parsed.flakes.map((r) => r.test),
-      ["beta_test", "gamma_test"],
-    );
-    assert.deepEqual(
-      parsed.overdue.map((r) => r.test),
+      ledger.overdue.map((r) => r.test),
       ["alpha_test", "gamma_test"],
     );
+  });
+
+  it("reads the ledger through parseLedger, so a ledger the owner refuses is never clean", () => {
+    for (const [why, text, said] of [
+      ["no ledger", null, /^line 0: project-guide\/handoff\/KNOWN-FAILING\.tsv was not found$/],
+      ["an empty ledger", "", /^line 1: the header must be/],
+      ["a blank first line", `\n${HEADER}\n${ALPHA}\n`, /^line 1: the header must be/],
+      ["a wrong header", `test\towner\treason\n${ALPHA}\n`, /^line 1: the header must be/],
+      ["a short row", `${HEADER}\nalpha_test\tred\tbroken\n`, /^line 2: a row needs/],
+      ["a long row", `${HEADER}\n${ALPHA}\textra\n`, /^line 2: a row needs/],
+      [
+        "an empty cell",
+        `${HEADER}\nalpha_test\tred\t\ttesting\t2026-11-01\t2026-11-20\tc1\n`,
+        /^line 2: a row needs/,
+      ],
+      ["an unknown kind", `${HEADER}\n${ALPHA.replace("\tred\t", "\tcloud\t")}\n`, /kind "cloud"/],
+      ["a duplicate", `${HEADER}\n${ALPHA}\n${ALPHA}\n`, /already has a row on line 2/],
+    ]) {
+      const report = auditLedger(text);
+      assert.equal(report.ok, false, why);
+      assert.ok(report.known_failing.problem_count > 0, why);
+      const lines = formatLedgerAudit(report).split("\n");
+      assert.match(lines[1], /problems=[1-9]/, why);
+      assert.match(lines[2].replace(/^ {4}problem: /, ""), said, why);
+    }
+    const padded = auditLedger(
+      `${HEADER}\n alpha_test \tred \tbroken\ttesting\t2026-11-01\t 2026-11-20\tc1\n`,
+    );
+    assert.deepEqual(padded.known_failing.problems, []);
+    assert.deepEqual(padded.known_failing.reds, [
+      { test: "alpha_test", owner: "testing", review: "2026-11-20" },
+    ]);
   });
 });
 
@@ -157,6 +203,8 @@ describe("runLedgerAudit", () => {
     );
     assert.ok(report.formal.total >= 10);
     assert.equal(typeof report.known_failing.red_count, "number");
+    assert.deepEqual(report.known_failing.problems, [], "the checked-in ledger parses");
+    assert.ok(report.known_failing.total > 0, "the checked-in ledger has rows");
     assert.equal(typeof report.placeholders.finding_count, "number");
     const formatted = formatLedgerAudit(report);
     assert.match(formatted, /KNOWN-FAILING\.tsv:/);

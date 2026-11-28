@@ -62,6 +62,9 @@ import {
   cappedLog,
   failedRunLog,
   failedRunLogName,
+  redRunKeeper,
+  requeuedRows,
+  runsToSettle,
   receiptBaseName,
   signalReason,
   checkLabels,
@@ -1917,21 +1920,56 @@ test("a red run keeps what the known-red rule needs after its log is dropped, as
     "test\tkind\tcause\towner\tadded\treview\tcheck",
     "a_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
   ].join("\n");
-  const settle = (res) => {
-    const { output, ...kept } = godotRun("tests/a_test.gd", res, {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-keep-red-"));
+  try {
+    keptRedShapes(tmp, ledger);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+function keptRedShapes(tmp, ledger) {
+  writeFileSync(path.join(tmp, "not-a-folder"), "");
+  const settle = (res, folder = "logs") => {
+    const records = [];
+    const said = [];
+    const keepRed = redRunKeeper({
+      records,
+      directory: path.join(tmp, folder),
+      root: tmp,
+      head: "a".repeat(40),
+      base: "b".repeat(40),
+      log: (line) => said.push(line),
+    });
+    const run = godotRun("tests/a_test.gd", res, {
       started: Date.now(),
       killed: false,
       platform: "linux",
     });
-    assert.equal(typeof output, "string");
-    assert.equal("output" in kept, false);
+    assert.equal(typeof run.output, "string");
+    const kept = keepRed("head")(run);
+    assert.equal("output" in kept, false, "keepRed drops the log from the run it hands on");
+    assert.equal(records.length, 1);
+    if (folder === "logs") {
+      assert.equal(records[0].log, `logs/a_test.head-1.log`);
+      assert.match(readFileSync(path.join(tmp, records[0].log), "utf8"), /-> FAIL/);
+    } else {
+      assert.equal(records[0].log, null);
+      assert.match(said[0], /not written .*; the verdict still stands$/);
+    }
     return mainRedLedger(parseLedger(ledger).rows, { today: "2026-11-30" }).settle(
       "tests/a_test.gd",
-      { kind: "pr-red", newChecks: [], rerun: kept },
+      { kind: "pr-red", newChecks: [] },
+      [kept],
     ).kind;
   };
   const red = "[stage 1: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)\n";
   assert.equal(settle({ exit: 1, signal: null, timedOut: false, output: red }), "main-red");
+  assert.equal(
+    settle({ exit: 1, signal: null, timedOut: false, output: red }, "not-a-folder/logs"),
+    "main-red",
+    "a log that cannot be written leaves the failure record",
+  );
   assert.equal(
     settle({ exit: null, signal: "SIGSEGV", timedOut: false, output: red }),
     "pr-red",
@@ -1953,4 +1991,251 @@ test("a red run keeps what the known-red rule needs after its log is dropped, as
     { started: Date.now(), killed: false, platform: "linux" },
   );
   assert.deepEqual([green.ok, green.failure], [true, null]);
+}
+
+test("a listed test is a known red only when every run of it qualifies, its first run in a warm batch included", () => {
+  const ledger = [
+    "test\tkind\tcause\towner\tadded\treview\tcheck",
+    "a_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
+  ].join("\n");
+  const settle = (runs) => {
+    const lines = [];
+    const kind = mainRedLedger(parseLedger(ledger).rows, {
+      log: (line) => lines.push(line),
+      today: "2026-11-30",
+    }).settle("tests/a_test.gd", { kind: "pr-red", newChecks: [] }, runs).kind;
+    return { kind, said: lines.at(-1) };
+  };
+  const alone = (output, res = {}) =>
+    godotRun(
+      "tests/a_test.gd",
+      { exit: 1, signal: null, timedOut: false, output, ...res },
+      { started: Date.now(), killed: false, platform: "linux" },
+    );
+  const listed = "[stage 1: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)\n";
+  const other = "[stage 2: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)\n";
+  const green = "[b] ok -> PASS\nb_test: PASS (1 checks)\n";
+  const batch = (...sections) =>
+    interpretBatchOutput(
+      [
+        ...sections.flatMap(([test, body, exit]) => [
+          `BATCH START ${test}`,
+          ...body.trimEnd().split("\n"),
+          `BATCH END ${test} exit=${exit} ms=10`,
+        ]),
+        `BATCH DONE ${sections.length} tests`,
+      ].join("\n"),
+      sections.map(([test]) => test),
+      { code: Math.max(...sections.map(([, , exit]) => exit)), platform: "linux" },
+    ).runs.find((run) => run.test === "tests/a_test.gd");
+
+  const both = settle([alone(listed), alone(listed)]);
+  assert.equal(both.kind, "main-red");
+  assert.match(both.said, /^ {2}known red on main: a_test /);
+  for (const [why, bad, said] of [
+    ["a check its row does not name", alone(other), /does not name: stage 2: draw matches;/],
+    ["a crash", alone(listed, { exit: null, signal: "SIGSEGV" }), /stopped \(SIGSEGV\)/],
+    ["a kill at its limit", alone(listed, { exit: null, timedOut: true }), /stopped \(time-out\)/],
+    ["an error line", alone(`SCRIPT ERROR: x\n${listed}`), /does not name: ERROR-LINE;/],
+  ]) {
+    const firstBad = settle([bad, alone(listed)]);
+    assert.equal(firstBad.kind, "pr-red", `the first run bad: ${why}`);
+    assert.match(firstBad.said, /counts as this change's red: run 1 of 2: /, why);
+    assert.match(firstBad.said, said, why);
+    const rerunBad = settle([alone(listed), bad]);
+    assert.equal(rerunBad.kind, "pr-red", `the rerun bad: ${why}`);
+    assert.match(rerunBad.said, /counts as this change's red: run 2 of 2: /, why);
+    assert.match(rerunBad.said, said, why);
+  }
+
+  const inBatch = batch(["tests/a_test.gd", listed, 1], ["tests/b_test.gd", green, 0]);
+  assert.deepEqual(inBatch.failure, {
+    labels: ["stage 1: draw matches"],
+    errorLine: false,
+    failVerdict: true,
+  });
+  assert.equal(
+    batch(["tests/a_test.gd", green.replaceAll("b_test", "a_test"), 0]).failure,
+    null,
+    "a green batch run carries no failure",
+  );
+  assert.equal(settle([inBatch, alone(listed), alone(listed)]).kind, "main-red");
+  for (const [why, first, said] of [
+    [
+      "a check its row does not name",
+      batch(["tests/a_test.gd", other, 1], ["tests/b_test.gd", green, 0]),
+      /does not name: stage 2: draw matches;/,
+    ],
+    [
+      "an error line in its own part of the batch",
+      batch(["tests/a_test.gd", `ERROR: x\n${listed}`, 1]),
+      /does not name: ERROR-LINE;/,
+    ],
+    [
+      "an error line in another test's part, which may be this test's",
+      batch(["tests/a_test.gd", listed, 1], ["tests/b_test.gd", `SCRIPT ERROR: y\n${green}`, 0]),
+      /does not name: ERROR-LINE;/,
+    ],
+    [
+      "no FAIL verdict line",
+      batch(["tests/a_test.gd", listed.replace(/a_test: FAIL.*\n/, ""), 1]),
+      /ended without its FAIL verdict line/,
+    ],
+    ["an exit code the driver gave", batch(["tests/a_test.gd", listed, 70]), /exit code 70/],
+  ]) {
+    const result = settle([first, alone(listed), alone(listed)]);
+    assert.equal(result.kind, "pr-red", why);
+    assert.match(result.said, /counts as this change's red: run 1 of 3 \(in a warm batch\): /, why);
+    assert.match(result.said, said, why);
+  }
+});
+
+test("a warm-batch run that was cut short or thrown away reaches the known-red rule with the test's later runs, and never qualifies", () => {
+  const ledger = [
+    "test\tkind\tcause\towner\tadded\treview\tcheck",
+    "a_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
+    "b_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
+  ].join("\n");
+  const listed = "[stage 1: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)";
+  const green = (name) => `[ok] fine -> PASS\n${name}: PASS (1 checks)`;
+  const alone = (output = listed) =>
+    godotRun(
+      "tests/a_test.gd",
+      { exit: 1, signal: null, timedOut: false, output },
+      { started: Date.now(), killed: false, platform: "linux" },
+    );
+  const tests = ["tests/a_test.gd", "tests/b_test.gd", "tests/c_test.gd"];
+  const rows = tests.map((test) => ({ test, ms: 100 }));
+  const part = (test, body, exit) => [
+    `BATCH START ${test}`,
+    body,
+    ...(exit === undefined ? [] : [`BATCH END ${test} exit=${exit} ms=10`]),
+  ];
+  const interpret = (lines, options) =>
+    interpretBatchOutput(lines.join("\n"), tests, { platform: "linux", ...options });
+  const settleRequeued = (batch, test = "tests/a_test.gd") => {
+    const row = requeuedRows(rows, batch).find((entry) => entry.test === test);
+    assert.equal(row.alone, true);
+    const lines = [];
+    const first = alone();
+    const kind = mainRedLedger(parseLedger(ledger).rows, {
+      log: (line) => lines.push(line),
+      today: "2026-11-30",
+    }).settle(
+      test,
+      { kind: "pr-red", newChecks: [] },
+      runsToSettle(row.earlier, first, { reruns: [alone()] }),
+    ).kind;
+    return { kind, said: lines.at(-1), earlier: row.earlier };
+  };
+
+  const crashed = interpret(
+    [...part("tests/b_test.gd", green("b_test"), 0), ...part("tests/a_test.gd", listed)],
+    { code: null, signal: "SIGSEGV" },
+  );
+  assert.deepEqual(crashed.unfinished, tests, "a crash throws the whole batch away");
+  const cut = settleRequeued(crashed);
+  assert.equal(
+    cut.kind,
+    "pr-red",
+    "the listed test crashed the batch, then failed only its check twice",
+  );
+  assert.match(
+    cut.said,
+    /counts as this change's red: run 1 of 3 \(in a warm batch\): the warm batch ended while it ran, before its BATCH END line, so this run cannot speak for the test$/,
+  );
+  assert.equal(
+    requeuedRows(rows, crashed).find((row) => row.test === "tests/c_test.gd").earlier.length,
+    0,
+    "a test that had not started did not run, so it carries nothing",
+  );
+  const passedThenRed = settleRequeued(crashed, "tests/b_test.gd");
+  assert.equal(passedThenRed.kind, "pr-red", "green in a thrown-away batch, then red alone");
+  assert.match(
+    passedThenRed.said,
+    /run 1 of 3 \(in a warm batch\): its warm batch was discarded \(an unexpected exit\)/,
+  );
+
+  const outside = interpret(
+    [...part("tests/a_test.gd", listed, 1), "BATCH DONE 1 tests", "SCRIPT ERROR: leaked timer"],
+    { code: 1 },
+  );
+  assert.equal(outside.outsideError, true);
+  const tainted = settleRequeued(outside);
+  assert.equal(tainted.kind, "pr-red", "red in a batch tainted by an error outside every part");
+  assert.match(
+    tainted.said,
+    /run 1 of 3 \(in a warm batch\): its warm batch was discarded \(an error line outside every test's part\), so this run cannot speak for the test$/,
+  );
+  assert.equal(tainted.earlier[0].failure.errorLine, true);
+  assert.equal("output" in tainted.earlier[0], false);
+
+  const zeroes = interpret(
+    [...part("tests/a_test.gd", listed, 0), ...part("tests/b_test.gd", green("b_test"), 0)],
+    { code: 1 },
+  );
+  assert.equal(zeroes.unexpectedExit, true);
+  const unexpected = settleRequeued(zeroes);
+  assert.equal(unexpected.kind, "pr-red", "the batch exited 1 while every finished test exited 0");
+  assert.match(unexpected.said, /its warm batch was discarded \(an unexpected exit\)/);
+
+  const errorInCut = interpret(
+    [...part("tests/a_test.gd", listed, 1), ...part("tests/b_test.gd", "SCRIPT ERROR: y")],
+    { code: 1 },
+  );
+  assert.deepEqual([errorInCut.outsideError, errorInCut.unexpectedExit], [false, false]);
+  assert.equal(errorInCut.runs[0].failure.errorLine, true, "an error line in the cut part counts");
+  assert.deepEqual(errorInCut.unfinished, ["tests/b_test.gd", "tests/c_test.gd"]);
+  const inCut = mainRedLedger(parseLedger(ledger).rows, { today: "2026-11-30" }).settle(
+    "tests/a_test.gd",
+    { kind: "pr-red", newChecks: [] },
+    runsToSettle([errorInCut.runs[0]], alone(), { reruns: [alone()] }),
+  ).kind;
+  assert.equal(inCut, "pr-red");
+
+  const clean = interpret(
+    [
+      ...part("tests/a_test.gd", listed, 1),
+      ...part("tests/b_test.gd", green("b_test"), 0),
+      ...part("tests/c_test.gd", green("c_test"), 0),
+      "BATCH DONE 3 tests",
+    ],
+    { code: 1 },
+  );
+  assert.deepEqual([clean.unfinished, clean.earlier], [[], {}]);
+  assert.equal(
+    mainRedLedger(parseLedger(ledger).rows, { today: "2026-11-30" }).settle(
+      "tests/a_test.gd",
+      { kind: "pr-red", newChecks: [] },
+      runsToSettle([clean.runs[0]], alone(), { reruns: [alone()] }),
+    ).kind,
+    "main-red",
+    "a clean batch with the listed check only, then alone and rerun listed",
+  );
+
+  const twice = requeuedRows(
+    rows.map((row) => ({ ...row, earlier: [{ test: row.test, first: true }] })),
+    crashed,
+  ).find((row) => row.test === "tests/a_test.gd");
+  assert.deepEqual(
+    twice.earlier.map((run) => (run.first ? "first" : run.discarded ? "cut" : "?")),
+    ["first", "cut"],
+    "a test requeued again keeps every earlier run",
+  );
+  assert.throws(
+    () => requeuedRows([rows[0]], crashed),
+    /tests\/b_test\.gd came back from a batch it was not in/,
+  );
+  for (const bad of [
+    [undefined, { reruns: [] }],
+    [[], {}],
+    [[], undefined],
+  ])
+    assert.throws(() => runsToSettle(bad[0], alone(), bad[1]), TypeError);
+  assert.deepEqual(runsToSettle(["batch"], "first", { reruns: ["rerun", "more"] }), [
+    "batch",
+    "first",
+    "rerun",
+    "more",
+  ]);
 });
