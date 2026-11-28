@@ -26,7 +26,6 @@ const KeyGlyphs := preload("res://src/ui/key_glyphs.gd")
 const FirstSteps := preload("res://src/ui/first_steps.gd")
 const FieldTips := preload("res://src/ui/field_tips.gd")
 const EdgeMarkers := preload("res://src/ui/edge_markers.gd")
-const UiProfile := preload("res://src/ui/ui_profile.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const WhyCallout := preload("res://src/ui/why_callout.gd")
 const PartName := preload("res://src/ui/part_name.gd")
@@ -391,7 +390,7 @@ func setup(game_ref) -> void:
 	game = game_ref
 	layer = 1
 	add_to_group(PlayerFx.KEEP_GROUP)
-	profile = UiProfile.new(game.storage_dir)
+	profile = game.ctx.ui_profile
 
 	edge_markers = EdgeMarkers.new()
 	add_child(edge_markers)
