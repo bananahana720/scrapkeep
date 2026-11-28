@@ -2,8 +2,8 @@ extends Node
 
 const SafeStore := preload("res://src/core/safe_store.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const PRINT_SHADER := preload("res://src/dev/dev_print.gdshader")
 const PAINT_SHADER := preload("res://src/dev/dev_paint.gdshader")
 

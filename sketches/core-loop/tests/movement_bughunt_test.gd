@@ -6,7 +6,7 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Indicator := preload("res://src/movement/indicator.gd")
 
 # The hosted movement bug hunt (wave 12, bughunt/movement/bug-report.md), on the real rigid

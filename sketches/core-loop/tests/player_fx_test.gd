@@ -819,7 +819,7 @@ func _sable_halo(fx) -> void:
 	Comfort.reduced_motion = false
 	_hold_charge(0.0)
 	await _settle(0.2)
-	var FlashGuard := load("res://src/presentation/flash_guard.gd")
+	var FlashGuard := load("res://src/core/flash_guard.gd")
 	FlashGuard.on = true
 	_hold_charge(1.0)
 	var peak := [0.0]

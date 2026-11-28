@@ -3,7 +3,7 @@ extends RefCounted
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 
 const RIG_BONE := Palette.LEDGER_CREAM

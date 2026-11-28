@@ -3,7 +3,7 @@ extends Node3D
 
 
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
 const COMBAT_EXCLUSION_RADIUS_M := 160.0

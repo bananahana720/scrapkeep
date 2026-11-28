@@ -1,6 +1,6 @@
 extends Node3D
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 const SENSITIVITY := 0.0022

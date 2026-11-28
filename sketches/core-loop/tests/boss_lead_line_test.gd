@@ -12,7 +12,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 # Bosses lead a ball that holds a line; a turn escapes (PackPressure.lead_aim, card MG-11). Andrew after
 # his world 1 sitting: "bosses (mini or main lineup) are a pushover". Every boss attack aimed at where the

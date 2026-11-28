@@ -5,7 +5,7 @@
    "path": "res://assets/models/world_one/enemy_jolt_layer.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/jolt_layer.gd:66",
+   "loader": "src/combat/jolt_layer.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_jolt_layer.py",
     "note": "Procedural bmesh world-one recipe for the fields-and-casts first slice."

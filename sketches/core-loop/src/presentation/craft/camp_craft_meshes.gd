@@ -4,7 +4,7 @@ extends RefCounted
 const Palette := preload("res://src/core/palette.gd")
 const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 static var _mesh_cache: Dictionary = {}
 static var _mat_cache: Dictionary = {}

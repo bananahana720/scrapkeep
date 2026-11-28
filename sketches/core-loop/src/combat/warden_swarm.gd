@@ -2,8 +2,8 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 const HEADFRAME := "headframe"

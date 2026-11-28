@@ -1,7 +1,7 @@
 extends Node
 
 const Combat := preload("res://src/combat/combat.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const STRIKE_DAMAGE := Combat.STRIKE_DAMAGE
 const CHIP := Combat.CHIP

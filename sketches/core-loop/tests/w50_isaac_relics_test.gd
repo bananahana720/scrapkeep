@@ -15,7 +15,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
 const RelicSwaps := preload("res://src/combat/relic_swaps.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const T := preload("res://tests/support/t.gd")
 

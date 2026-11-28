@@ -1,11 +1,11 @@
 extends SceneTree
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")

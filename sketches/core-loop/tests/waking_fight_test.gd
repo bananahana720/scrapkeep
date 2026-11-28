@@ -9,7 +9,7 @@ const BossAttacks := preload("res://src/boss/boss_attacks.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const T := preload("res://tests/support/t.gd")
 

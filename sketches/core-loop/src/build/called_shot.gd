@@ -5,7 +5,7 @@ const Palette := preload("res://src/core/palette.gd")
 const LoopTally := preload("res://src/core/loop_tally.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartOffers := preload("res://src/build/part_offers.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 
 const VERBS := ["DUNK", "CHAIN", "BOWL"]

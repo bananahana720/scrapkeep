@@ -4,7 +4,7 @@ const T := preload("res://tests/support/t.gd")
 const Game := preload("res://src/game.gd")
 const Library := preload("res://src/world/pockets/pocket_library.gd")
 const RunLog := preload("res://src/core/run_log.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 var t := T.new("pipe_vault_wall_test")
 
 # PARK-PIPEVAULT. A stage-5 floor run (SQ9 round 5) crossed the pipe vault's corner at 20 m/s and
