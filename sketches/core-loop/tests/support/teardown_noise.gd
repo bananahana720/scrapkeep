@@ -4,11 +4,18 @@ extends RefCounted
 # and resources still in use at exit. Only macOS skips them; on Linux an exit-leak line has named real faults and counts. The same rule as TEARDOWN_NOISE in
 # scripts/sketch-smoke.mjs, for a test that reads a child Godot's output itself. Any other ERROR line still counts.
 
-static var _line := RegEx.create_from_string(
-	"^ERROR: \\d+ (?:RID allocations of type '\\w*RendererDummy\\w*' were leaked|resources still in use) at exit\\b")
+const PATTERN := "^ERROR: \\d+ (?:RID allocations of type '\\w*RendererDummy\\w*' were leaked|resources still in use) at exit\\b"
+
+static var _line: RegEx = RegEx.create_from_string(PATTERN)
+
+
+static func reset_for_tests() -> void:
+	_line = null
 
 
 static func is_noise(line: String) -> bool:
+	if _line == null:
+		_line = RegEx.create_from_string(PATTERN)
 	return OS.get_name() == "macOS" and _line.search(line.strip_edges(false, true)) != null
 
 

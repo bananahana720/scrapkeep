@@ -116,13 +116,13 @@ func _check_pf42_and_pf43_runtime() -> void:
 		driver.step(warden, 0.05)
 		var scale_in := float(warden._posture.drain_rate_scale)
 		warden._posture.step(0.5)
-		var held_posture := float(warden._posture.posture)
+		var held_posture := float(warden.posture())
 		# Move ball far outside reach: drain must run normally so a remote camper cannot stall-abuse.
 		game.player.reset_to(Vector3(0.0, terrain.height(0.0, 150.0) + 1.0, 150.0))
 		driver.step(warden, 0.05)
 		var scale_far := float(warden._posture.drain_rate_scale)
 		warden._posture.step(0.5)
-		var drained_posture := float(warden._posture.posture)
+		var drained_posture := float(warden.posture())
 		t.check("PF-42: posture drain pauses while high-dwell hive is out of floor reach without a line (engaged)",
 			scale_in == 0.0 and absf(held_posture - 50.0) < 0.01, "scale_in=%.2f held=%.2f" % [scale_in, held_posture])
 		t.check("PF-42: posture drains normally outside engage reach",

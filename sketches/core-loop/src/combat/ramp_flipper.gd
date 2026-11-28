@@ -85,6 +85,11 @@ func _build_tool() -> void:
 static var _warned_asset := false
 
 
+static func reset_for_tests() -> void:
+	_shared.clear()
+	_warned_asset = false
+
+
 static func _parts() -> Dictionary:
 	if not _shared.is_empty():
 		return _shared

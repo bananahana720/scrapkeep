@@ -160,10 +160,10 @@ func _gate() -> void:
 	_t.check("the clamp keeps quiet before the Warden wakes", not game.flow.objective_text().contains("clamp"), game.flow.objective_text())
 	var warden = game.flow.warden
 	_t.check("park Warden spec carries the gate", is_instance_valid(warden) and warden.spec.get("posture_gate") is Callable)
-	var before: float = warden._posture.posture
+	var before: float = warden.posture()
 	game.ctx.spawner.strike(warden, "ram", 400.0)
 	await physics_frame
-	_t.eq("shut clamp: a hit gains no posture", warden._posture.posture, before)
+	_t.eq("shut clamp: a hit gains no posture", warden.posture(), before)
 	_t.eq("shut clamp answers a hit", _count("warden_gate_refused"), 1)
 	_t.check("objective names the clamp once it is awake", game.flow.objective_text().contains("clamp"), game.flow.objective_text())
 	var plate: Dictionary = game.hud.objective_reading()
@@ -232,7 +232,7 @@ func _gate() -> void:
 	_t.check("the collar goes", locks._collar == null)
 	game.ctx.spawner.strike(warden, "ram", 400.0)
 	await physics_frame
-	_t.check("open clamp: a hit gains posture", warden._posture.posture > before or warden._posture.staggered, "%s" % warden._posture.posture)
+	_t.check("open clamp: a hit gains posture", warden.posture() > before or warden._posture.staggered, "%s" % warden.posture())
 	game.free()
 	await process_frame
 
