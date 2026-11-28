@@ -3,8 +3,8 @@ origin (the foot), authored from gap list A (units/rc-lift_platform/gaps_A.md) a
 dome strap bands, the filler cap, the riser collar and flange bolts, corner brackets, base bolts, the elbow valve's
 handwheel, the safety valve's bands, the gauge housing drum, the valve block's lever and the U pipe's bend flanges.
 Static parts only: the deck rides the lift body, so its rim and column detail stays in lift_platform_deck.glb.
-Colours from lift_platform.TONES only. Class "detail" (1500 tris, 3000 verts, 1 draw); the game drops it by distance
-(LAYER_RANGE in tools/w12_side_lift_platform.gd).
+Colours from lift_platform.TONES only. Class "detail" (1500 tris, 3000 verts, 1 draw). No game code loads it yet; its
+row in assets/registry.d/lift_platform.json records the draw distance it is meant to get.
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/lift_platform_detail1.py [-- --out-dir DIR]
 """
 import math
