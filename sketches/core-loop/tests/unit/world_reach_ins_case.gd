@@ -6,6 +6,8 @@ const ParkSchema := preload("res://src/world/park/park_schema.gd")
 const Placement := preload("res://src/world/park/park_placement.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
 const SourceScan := preload("res://tests/support/source_scan.gd")
+const GUARDED := ["events/event_ground.gd", "park/park_map.gd", "park/park_schema.gd", "park/park_recipes.gd", "park/park_placement.gd"]
+const PRELOAD_ALIAS := "const\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*:?=\\s*preload\\(\"res://src/world/([a-z0-9_/]+\\.gd)\"\\)"
 
 
 func run(t) -> void:
@@ -32,16 +34,20 @@ func run(t) -> void:
 	var src: Array[String] = ["res://src"]
 	t.eq("no terrain._ reach-ins in src/",
 		SourceScan.matching(t, src, "terrain\\._[a-z]"), [])
-	t.eq("no EventGround._ reach-ins in src/",
-		SourceScan.matching(t, src, "EventGround\\._[a-z]"), [])
-	t.eq("no ParkMap._ reach-ins in src/",
-		SourceScan.matching(t, src, "ParkMap\\._[a-z]"), [])
-	t.eq("no ParkSchema._ reach-ins in src/",
-		SourceScan.matching(t, src, "(?:ParkSchema|park_schema\\.gd\"\\))\\._[a-z]"), [])
-	t.eq("no ParkRecipes._ or Recipes._ reach-ins in src/",
-		SourceScan.matching(t, src, "(?<![A-Za-z0-9_])(?:ParkRecipes|Recipes)\\._[a-z]"), [])
-	t.eq("no Placement._ reach-ins in src/",
-		SourceScan.matching(t, src, "Placement\\._[a-z]"), [])
+	t.eq("fixture control: the alias pattern reads a function-local const",
+		SourceScan.search(t, "\tconst Foo = preload(\"res://src/world/park/park_map.gd\")\n", SourceScan.DECLARATION + PRELOAD_ALIAS).map(func(m: RegExMatch) -> String: return m.get_string(1)), ["Foo"])
+	var aliases := {}
+	var declared := SourceScan.captures(t, src, SourceScan.DECLARATION + PRELOAD_ALIAS)
+	for path in declared:
+		for row in declared[path]:
+			if path != "res://src/world/" + row[2]:
+				aliases.get_or_add(row[2], {})[row[1]] = true
+	for module in GUARDED:
+		var names: Array = aliases.get(module, {}).keys()
+		names.sort()
+		t.check("src/ preloads %s under an alias" % module, not names.is_empty(), "no alias found")
+		t.eq("no %s reach-ins in src/ through %s" % [module, names],
+			SourceScan.matching(t, src, "(?<![A-Za-z0-9_])(?:%s|(?:pre)?load\\(\"res://src/world/%s\"\\))\\._[a-z]" % ["|".join(names), module.replace(".", "\\.")]), [])
 	t.eq("no screens._press reach-ins in src/",
 		SourceScan.matching(t, src, "screens\\._press\\b"), [])
 	t.eq("only map_gorge.gd names _polyline_channel in src/",
