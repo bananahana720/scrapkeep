@@ -3,7 +3,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 const VistaMegas := preload("res://src/presentation/craft/vista_megastructures.gd")
 const AtmoRig := preload("res://src/presentation/craft/vista_atmosphere_rig.gd")

@@ -4,7 +4,7 @@ extends SceneTree
 const Palette := preload("res://src/core/palette.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const Recipes := preload("res://src/world/park/park_recipes.gd")

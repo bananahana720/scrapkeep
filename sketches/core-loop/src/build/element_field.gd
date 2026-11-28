@@ -4,7 +4,7 @@ const Elements := preload("res://src/build/elements.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const ICE_BLINK_HZ := 28.0 / TAU
 
 

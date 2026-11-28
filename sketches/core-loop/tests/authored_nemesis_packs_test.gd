@@ -3,7 +3,7 @@ extends SceneTree
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const Nemesis := preload("res://src/combat/nemesis.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const Director := preload("res://src/world/director.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const T := preload("res://tests/support/t.gd")

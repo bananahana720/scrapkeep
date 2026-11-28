@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const Intent := preload("res://src/movement/intent.gd")
 
 # The posture fight on the slice table, through combat.strike() and real contacts

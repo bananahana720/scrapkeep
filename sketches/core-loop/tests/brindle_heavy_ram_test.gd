@@ -2,7 +2,7 @@ extends SceneTree
 
 const Combat := preload("res://src/combat/combat.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 
 # A ram pilot can break Brindle's hull with its own verb (BRINDLE-SCUTTLE, 2026-10-15).
 # A heavy ram at the top roll meets the hull plating and fills the posture bar at a full

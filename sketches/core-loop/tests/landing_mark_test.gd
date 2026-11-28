@@ -4,7 +4,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const T := preload("res://tests/support/t.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 

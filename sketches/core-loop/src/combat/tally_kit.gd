@@ -7,7 +7,7 @@ const Hitscan := preload("res://src/combat/hitscan.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Ultimate := preload("res://src/combat/ultimate.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 

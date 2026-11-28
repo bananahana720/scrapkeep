@@ -1,7 +1,7 @@
 extends Node3D
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const WardenBody := preload("res://src/combat/warden.gd")
 
 

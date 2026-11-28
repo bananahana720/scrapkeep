@@ -5,7 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const BossContract := preload("res://src/boss/boss_contract.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 
 # Brindle's hull on the posture contract, struck through the game's own combat module:
 # real contacts fill the bar and stagger him, a stagger opens the cockpit, a contact in

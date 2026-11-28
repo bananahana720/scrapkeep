@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/module_harness.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Rules := preload("res://src/boss/boss_rules.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")

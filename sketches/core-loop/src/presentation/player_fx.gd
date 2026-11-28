@@ -2,10 +2,10 @@ extends Node
 
 const Palette := preload("res://src/core/palette.gd")
 const Parts := preload("res://src/build/parts.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Density := preload("res://src/presentation/density.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Redline := preload("res://src/combat/redline.gd")
