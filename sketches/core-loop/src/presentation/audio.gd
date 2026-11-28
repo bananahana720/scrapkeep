@@ -359,7 +359,7 @@ func setup(ctx_ref) -> void:
 		engine.set_parameter_source(sample_run_parameters)
 		engine.parameter_commit.connect(_commit_band_parameters)
 	_music_player = _generator_player("Music", "MusicStream")
-	_stinger_player = _generator_player(MusicDsp.STINGER_BUS, "StingerStream")
+	_stinger_player = _generator_player(MixRows.BUS_STINGER, "StingerStream")
 	_sfx_player = _poly_player("SFX", "SfxVoices")
 	_ui_player = _poly_player("UI", "UiVoices")
 	_make_overlay()

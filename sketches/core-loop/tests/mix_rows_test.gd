@@ -73,6 +73,10 @@ func _buses() -> void:
 	_check("master compresses first", count >= 2 and AudioServer.get_bus_effect(master, 0) is AudioEffectCompressor)
 	var sfx := AudioServer.get_bus_index("SFX")
 	_check("effects bus glues then limits", AudioServer.get_bus_effect_count(sfx) == 2 and AudioServer.get_bus_effect(sfx, 0) is AudioEffectCompressor)
+	_check("resolve_bus returns an existing bus", MixRows.resolve_bus(MixRows.BUS_SFX) == MixRows.BUS_SFX)
+	_check("resolve_bus falls back to Master when absent", MixRows.resolve_bus("NoSuchBus") == MixRows.BUS_MASTER)
+	_check("resolve_bus supports two-step fallback", MixRows.resolve_bus("NoSuchBus", MixRows.resolve_bus(MixRows.BUS_SFX)) == MixRows.BUS_SFX)
+	_check("resolve_bus two-step reaches Master when both absent", MixRows.resolve_bus("NoSuchBusA", MixRows.resolve_bus("NoSuchBusB")) == MixRows.BUS_MASTER)
 
 
 func _states() -> void:
