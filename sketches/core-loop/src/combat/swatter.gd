@@ -1,7 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
-
 const SWEEP_RADIUS := 7.5
 const SWEEP_HALF_DEG := 55.0
 const PADDLE_REACH := 1.6
@@ -191,15 +189,15 @@ func _go_live() -> void:
 		sky_spanks += 1
 		if world_root != null and is_inside_tree():
 			var tip := _paddle.to_global(Vector3(0.0, 2.4, 2.2)) if is_instance_valid(_paddle) else global_position + Vector3.UP * 2.8
-			FxLibrary.burst(world_root, "brass_spark", tip, 12)
-			FxLibrary.burst(world_root, "steam_puff", tip, 6)
+			burst(world_root, "brass_spark", tip, 12)
+			burst(world_root, "steam_puff", tip, 6)
 		_step_sky_spank()
 		return
 	swats += 1
 	if world_root != null and is_inside_tree():
 		var tip := _paddle.to_global(Vector3(0.0, 0.3, 3.2)) if is_instance_valid(_paddle) else global_position + _sweep_dir * 2.5 + Vector3.UP * 0.9
-		FxLibrary.burst(world_root, "brass_spark", tip, 10)
-		FxLibrary.burst(world_root, "steam_puff", tip, 5)
+		burst(world_root, "brass_spark", tip, 10)
+		burst(world_root, "steam_puff", tip, 5)
 	var wedge := telegraph()
 	if wedge == null or not wedge.contains(_real_ball()):
 		broken_by = "missed"
@@ -249,9 +247,9 @@ func _springboard_vault() -> void:
 		player.refresh_air()
 	if world_root != null and is_inside_tree():
 		var at := global_position + Vector3.UP * 1.6
-		FxLibrary.burst(world_root, "brass_spark", at, 14, Palette.BRASS)
-		FxLibrary.burst(world_root, "steam_puff", at, 8)
-		FxLibrary.burst(world_root, "slam_ring", at, 16)
+		burst(world_root, "brass_spark", at, 14, Palette.BRASS)
+		burst(world_root, "steam_puff", at, 8)
+		burst(world_root, "slam_ring", at, 16)
 	_stagger()
 	stun_left = maxf(stun_left, SKY_STUN_S)
 	_rest = maxf(_rest, SKY_STUN_S)

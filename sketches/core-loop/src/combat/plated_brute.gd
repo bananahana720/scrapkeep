@@ -3,7 +3,6 @@ extends "res://src/combat/counter.gd"
 const EliteAffixes := preload("res://src/combat/elite_affixes.gd")
 const SwingArc := preload("res://src/combat/swing_arc.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 const PLATING_SCALE := 0.6
 const SLAM_RADIUS := 6.0
@@ -338,7 +337,7 @@ func _go_live() -> void:
 		charges += 1
 		landed_attack = "shield_charge"
 		if world_root != null and is_inside_tree():
-			FxLibrary.burst(world_root, "steam_puff", global_position, 6)
+			burst(world_root, "steam_puff", global_position, 6)
 		return
 	if _affix_attack:
 		affix_attacks += 1
@@ -476,8 +475,8 @@ func _on_charge_crash(cause: String) -> void:
 	stun_left = maxf(stun_left, STAGGER_WINDOW)
 	staggers += 1
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "brass_spark", global_position + _charge_dir * 1.2, 16)
-		FxLibrary.burst(world_root, "steam_puff", global_position, 8)
+		burst(world_root, "brass_spark", global_position + _charge_dir * 1.2, 16)
+		burst(world_root, "steam_puff", global_position, 8)
 
 
 class FlungPlate extends Node3D:
@@ -509,8 +508,8 @@ func _fling_plate() -> void:
 	if _plate == null or world_root == null or not is_inside_tree():
 		return
 	var at := _plate.global_position
-	FxLibrary.burst(world_root, "brass_spark", at, 14)
-	FxLibrary.burst(world_root, "plate_chunks", at, 10)
+	burst(world_root, "brass_spark", at, 14)
+	burst(world_root, "plate_chunks", at, 10)
 	if _plate.mesh == null or _plate.mesh is PrimitiveMesh:
 		return
 	var flung := FlungPlate.new()

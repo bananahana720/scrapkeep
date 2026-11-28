@@ -78,6 +78,7 @@ For the complete, lint-checked inventory of all `Context` fields (including `buf
 | `aim_origin()`, `aim_forward()` | `Vector3` | the camera's centre ray |
 | `heading()` | `Vector3` | the level direction the player faces (the view's yaw, no pitch, unit length); the read side of `camera.snap(heading)`. Simulation code calls this, never the camera's basis |
 | `hit_stop(seconds)` | method | a short freeze for weight; capped at 60 ms, never stacks, only in play |
+| `burst(parent, id, at, count, tint, toward, isolate)` | method | one particle burst from the effect library, spawned at once under `parent`; returns the node, or `null` with no library handed in (a headless test). Combat, the boss and the world call this, or `Enemy.burst`, which combat hands `ctx.burst`, instead of loading `presentation/fx_library.gd` |
 
 Flow states, as `state_name()` returns them: `title`, `class_select`, `stage`, `beacon`, `gates`, `launch`, `boss`, `victory`, `summary` and `dead`. `in_play()` is true for `stage`, `beacon`, `gates`, `launch` and `boss`.
 

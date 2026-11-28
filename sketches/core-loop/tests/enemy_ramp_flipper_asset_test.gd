@@ -10,7 +10,7 @@ const GLB := "res://assets/models/world_one/enemy_ramp_flipper.glb"
 # and presentation VFX bursts in _commit/_go_live; gameplay mechanics unchanged; was 494ee927.
 # 2026-11-24 W47-E3: Catapult Double-Snap secondary (0.65 s double-ratchet steeper kicker when
 # approaching >= FAST; Jump on double-snap = +12 m/s forward boost + instant Blazing tier); was 7a672f2f.
-const BASE_MECHANIC_SHA := "1b41559928c4a8aae565f64d979ad1acdb6e6fa690473f8717854c40ce3a07e0"
+const BASE_MECHANIC_SHA := "6940664f8514936d98b1330839fcf283143385a43d4b817df1701328898a6156"
 const BASE_CONSTS := {"PLATE_RADIUS": 3.6, "LEAD": .9, "TILT": .35, "FLING_UP": 30.0,
 	"FLING_SIDE": 22.0, "RIDE_UP": 9.0, "HP": 45.0}
 const BASE_VALUES := {"radius": .8, "half_height": 1.1, "weight": 1.2, "scrap_value": 4,

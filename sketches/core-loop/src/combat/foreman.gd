@@ -2,7 +2,6 @@ extends "res://src/combat/enemy.gd"
 
 const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 signal special_tell(moment: String)
 signal wiped(crew: Array)
@@ -316,8 +315,8 @@ func _steam_blast_fx() -> void:
 		return
 	var valve: Vector3 = to_global(_sockets.get("SteamValve", Vector3(0.0, 3.6, 0.0)))
 	var mouth: Vector3 = to_global(_sockets.get("HornMouth", Vector3(0.0, 5.2, -0.4)))
-	FxLibrary.burst(world_root, "steam_puff", valve, 10)
-	FxLibrary.burst(world_root, "brass_spark", mouth, 8)
+	burst(world_root, "steam_puff", valve, 10)
+	burst(world_root, "brass_spark", mouth, 8)
 
 
 func _start_overtime(ally: Node3D) -> void:
@@ -369,7 +368,7 @@ func _complete_overtime() -> void:
 				ally.stun_left = 0.0
 		ally.set_meta("overtime_boosted", true)
 		if world_root != null and is_inside_tree():
-			FxLibrary.burst(world_root, "brass_spark", ally.global_position + Vector3.UP * 0.8, 12)
+			burst(world_root, "brass_spark", ally.global_position + Vector3.UP * 0.8, 12)
 		overtime_primed.emit(ally)
 
 
@@ -402,8 +401,8 @@ func _interrupt_overtime() -> void:
 		if member.has_method("flash"):
 			member.flash()
 		if world_root != null and is_inside_tree():
-			FxLibrary.burst(world_root, "plate_chunks", member.global_position + Vector3.UP * 0.8, 10)
-			FxLibrary.burst(world_root, "brass_spark", member.global_position + Vector3.UP * 0.8, 8)
+			burst(world_root, "plate_chunks", member.global_position + Vector3.UP * 0.8, 10)
+			burst(world_root, "brass_spark", member.global_position + Vector3.UP * 0.8, 8)
 		shattered.append(member)
 		if had_plate:
 			overtime_shattered += 1

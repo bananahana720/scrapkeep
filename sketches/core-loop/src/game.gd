@@ -206,7 +206,7 @@ func _ready() -> void:
 	add_child(beacon)
 	beacon.setup(PaletteMaterials, MaterialSlots, RecipeProps, Dispatcher, RosterDig)
 
-	ctx = Context.new(hit_stop)
+	ctx = Context.new(hit_stop, FxLibrary.burst)
 	ctx.dev = dev
 	ctx.stages = _chosen_table()
 	ctx.events = events

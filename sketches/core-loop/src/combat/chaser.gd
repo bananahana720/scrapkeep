@@ -3,7 +3,6 @@ extends "res://src/combat/enemy.gd"
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 const SPEED := 4.8
 const SPEED_CEILING := 12.0
@@ -206,7 +205,7 @@ func _physics_process(delta: float) -> void:
 				if _vaulting:
 					velocity = _vault_launch
 					if world_root != null and is_inside_tree():
-						FxLibrary.burst(world_root, "steam_puff", global_position, 5)
+						burst(world_root, "steam_puff", global_position, 5)
 		State.LUNGE:
 			var tele := telegraph()
 			if tele == null:
@@ -436,8 +435,8 @@ func _air_parry(kill_now: bool) -> void:
 		if player.has_method("refresh_air"):
 			player.refresh_air()
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "brass_spark", global_position, 14)
-		FxLibrary.burst(world_root, "spark_core", global_position, 10, Palette.SAND)
+		burst(world_root, "brass_spark", global_position, 14)
+		burst(world_root, "spark_core", global_position, 10, Palette.SAND)
 	if kill_now:
 		take_damage(hp + 1.0)
 

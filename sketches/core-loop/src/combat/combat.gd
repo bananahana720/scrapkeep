@@ -561,6 +561,7 @@ func spawn_enemy(kind: String, at: Vector3, affix_id := "", perch := Vector3.INF
 			enemy_spec["pressure"] = pressure
 		if kind == "chaser" and ctx.flow.in_stage():
 			enemy_spec["run_speed"] = Chaser.stage_speed(int(ctx.run.stage))
+	enemy.burst_fx = ctx.burst
 	enemy.setup(target, ground, ctx.root, Callable(ctx.flow, "in_play"), health * health_scale, enemy_spec)
 	if enemy is CollisionObject3D and not enemy.global_position.is_equal_approx(at):
 		_reenter_space(enemy)

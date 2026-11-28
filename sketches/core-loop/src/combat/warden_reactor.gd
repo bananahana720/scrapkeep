@@ -4,7 +4,6 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Run := preload("res://src/core/run_state.gd")
 const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/core/flash_guard.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 static var _sheet_shader: Shader
@@ -375,8 +374,8 @@ func _show_sheet(warden, alpha := SHEET_ALPHA) -> void:
 		var foot: Vector3 = warden.home + sheet_dir * SHEET_RUN + sheet_dir.cross(Vector3.UP) * lane_offset()
 		var foot_y: float = warden.terrain.height(foot.x, foot.z) if warden.terrain != null else ground
 		var at := Vector3(foot.x, foot_y + 0.4, foot.z)
-		FxLibrary.burst(view, "steam_puff", at, 10, Color("e8efe9"), Vector3.ZERO, true)
-		FxLibrary.burst(view, "slam_dust", at, 8, Color.TRANSPARENT, Vector3.ZERO, true)
+		warden.burst(view, "steam_puff", at, 10, Color("e8efe9"), Vector3.ZERO, true)
+		warden.burst(view, "slam_dust", at, 8, Color.TRANSPARENT, Vector3.ZERO, true)
 	_sheet_view = view
 
 

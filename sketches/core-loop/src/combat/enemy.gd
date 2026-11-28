@@ -71,6 +71,7 @@ var target
 var terrain
 var world_root: Node3D
 var live := Callable()
+var burst_fx := Callable()
 var spec := {}
 var hp := 40.0
 var max_hp := 40.0
@@ -385,6 +386,11 @@ func _death_direction() -> Vector3:
 		away = global_position - _reaction_ball()
 		away.y = 0.0
 	return away.normalized() if away.length_squared() > 0.0001 else Vector3.ZERO
+
+
+func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> void:
+	if burst_fx.is_valid():
+		burst_fx.call(parent, id, at, count, tint, toward, isolate)
 
 
 func _setup_common(target_ref, terrain_ref, root_ref, live_ref: Callable, spec_ref := {}) -> void:

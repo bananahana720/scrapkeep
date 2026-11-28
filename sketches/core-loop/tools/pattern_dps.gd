@@ -220,6 +220,7 @@ static func _dummy(game, at: Vector3) -> Node3D:
 	dummy.plating = 0.0
 	dummy.collision_layer = 0
 	dummy.collision_mask = 0
+	dummy.burst_fx = game.ctx.burst
 	game.add_child(dummy)
 	dummy.global_position = at
 	dummy.add_to_group("enemy")

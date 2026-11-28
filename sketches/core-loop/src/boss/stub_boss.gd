@@ -62,6 +62,7 @@ func enter_arena(entry_velocity: Vector3) -> void:
 	warden = Warden.new()
 	ctx.root.add_child(warden)
 	warden.global_position = center
+	warden.burst_fx = ctx.burst
 	warden.setup(ctx.player, self, ctx.root, Callable(ctx.flow, "in_play"), 1.0, _warden_spec())
 	warden.died.connect(_on_warden_died)
 	warden.set_meta("plate_name", String(_row().get("name", "Warden")))

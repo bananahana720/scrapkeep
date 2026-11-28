@@ -1,7 +1,5 @@
 extends "res://src/combat/counter.gd"
 
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
-
 const LANE_LENGTH := 24.0
 const LANE_WIDTH := 2.4
 const POST_HEIGHT := 4.2
@@ -314,14 +312,14 @@ func _arm_tether_whip() -> void:
 	AttackBudget.mark_warn(self)
 	live_seconds = maxf(live_seconds, _t + WHIP_WARN + 0.15)
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "steam_puff", anchor(), 6)
+		burst(world_root, "steam_puff", anchor(), 6)
 
 
 func _strike_whip(wedge: Node3D) -> void:
 	whips += 1
 	landed_attack = "reel_whip"
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "brass_spark", anchor(), 10)
+		burst(world_root, "brass_spark", anchor(), 10)
 	var ball := _real_ball()
 	if wedge == null or not is_instance_valid(wedge) or not wedge.contains(ball):
 		return
@@ -392,8 +390,8 @@ func _grant_catapult(method: String) -> void:
 	stun_left = maxf(stun_left, STAGGER_WINDOW)
 	staggers += 1
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "brass_spark", anchor(), 16)
-		FxLibrary.burst(world_root, "spark_core", _real_ball(), 12, Palette.SAND)
+		burst(world_root, "brass_spark", anchor(), 16)
+		burst(world_root, "spark_core", _real_ball(), 12, Palette.SAND)
 
 
 func _on_end() -> void:

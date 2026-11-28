@@ -2,7 +2,6 @@ extends "res://src/combat/counter.gd"
 
 const AreaField := preload("res://src/combat/area_field.gd")
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const FIELD := "static_jam"
@@ -228,8 +227,8 @@ func _live_whip(delta: float) -> bool:
 	_whip_spark_t += delta
 	if _whip_spark_t >= 0.08 and world_root != null and is_inside_tree():
 		_whip_spark_t = 0.0
-		FxLibrary.burst(world_root, "arc_fizz", _whip_pos, 4)
-		FxLibrary.burst(world_root, "brass_spark", _whip_pos, 3)
+		burst(world_root, "arc_fizz", _whip_pos, 4)
+		burst(world_root, "brass_spark", _whip_pos, 3)
 	var player = _player()
 	if player != null:
 		var ball := _real_ball()
@@ -265,7 +264,7 @@ func _reverse_surge(player) -> void:
 			player.abilities.jam_left = 0.0
 	_crackle(16, 14)
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "phase_ring", global_position + Vector3.UP * 1.2, 20, Palette.ARC)
+		burst(world_root, "phase_ring", global_position + Vector3.UP * 1.2, 20, Palette.ARC)
 	take_damage(hp)
 
 
@@ -307,8 +306,8 @@ func _crackle(arcs: int, sparks: int) -> void:
 	if world_root == null or not is_inside_tree():
 		return
 	var at := _coil.global_position if is_instance_valid(_coil) else global_position + Vector3(0.0, 2.2, -0.25)
-	FxLibrary.burst(world_root, "arc_fizz", at, arcs)
-	FxLibrary.burst(world_root, "brass_spark", at, sparks)
+	burst(world_root, "arc_fizz", at, arcs)
+	burst(world_root, "brass_spark", at, sparks)
 
 
 func _pose() -> void:

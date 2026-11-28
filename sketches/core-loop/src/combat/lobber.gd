@@ -2,7 +2,6 @@ extends "res://src/combat/enemy.gd"
 
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 const CYCLE := 3.6
 const TELEGRAPH := 1.3
@@ -237,7 +236,7 @@ func _begin_cluster(to_ball: Vector3) -> void:
 	_cluster_tele.owner_voice = "clank"
 	_cluster_tele.mechanic_tag = "vault_rise"
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "steam_puff", muzzle_point(), 6)
+		burst(world_root, "steam_puff", muzzle_point(), 6)
 
 
 func _step_cluster(delta: float) -> void:
@@ -288,7 +287,7 @@ func _fire_cluster() -> void:
 		var watcher := ClusterWatcher.new()
 		watcher.name = "BungClusterWatcher"
 		world_root.add_child(watcher)
-		watcher.bind(self, bungs, target, world_root)
+		watcher.bind(self, bungs, target, world_root, burst_fx)
 
 
 func _cancel_cluster() -> void:
@@ -312,12 +311,14 @@ class ClusterWatcher extends Node:
 	var _bungs: Array = []
 	var _target
 	var _root: Node
+	var _burst_fx: Callable
 	var _chained := false
 
-	func bind(owner_lobber: Node3D, bungs: Array, target_ref, root_ref: Node) -> void:
+	func bind(owner_lobber: Node3D, bungs: Array, target_ref, root_ref: Node, burst_ref: Callable) -> void:
 		_lobber = weakref(owner_lobber)
 		_target = target_ref
 		_root = root_ref
+		_burst_fx = burst_ref
 		for b in bungs:
 			_bungs.append(weakref(b))
 
@@ -363,9 +364,9 @@ class ClusterWatcher extends Node:
 		if not is_inside_tree():
 			return
 		var at: Vector3 = shell.landing if "landing" in shell else shell.global_position
-		if _root != null and is_instance_valid(_root):
-			FxLibrary.burst(_root, "brass_spark", at, 12)
-			FxLibrary.burst(_root, "spark_core", at, 12, Palette.AMBER)
+		if _root != null and is_instance_valid(_root) and _burst_fx.is_valid():
+			_burst_fx.call(_root, "brass_spark", at, 12)
+			_burst_fx.call(_root, "spark_core", at, 12, Palette.AMBER)
 		var combat = _target.get("combat") if _target != null and "combat" in _target else null
 		for enemy in get_tree().get_nodes_in_group(GROUP):
 			if not is_instance_valid(enemy) or (enemy.has_method("is_dead") and enemy.is_dead()):

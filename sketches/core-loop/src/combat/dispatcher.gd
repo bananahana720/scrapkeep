@@ -2,7 +2,6 @@ extends "res://src/combat/counter.gd"
 
 const Projectile := preload("res://src/combat/projectile.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const SPECIAL_CUES := "res://src/combat/special_cues.gd"
 
 signal special_tell(moment: String)
@@ -435,7 +434,7 @@ func _commit(to_ball: Vector3) -> Node3D:
 	_pod_from = to_global(_mouth)
 	ring.set_flight(_pod_from, Threat.lob_bump(GRAVITY, flight_s))
 	if _flush_active and world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "steam_puff", _pod_from, 10)
+		burst(world_root, "steam_puff", _pod_from, 10)
 	return ring
 
 
@@ -521,8 +520,8 @@ func _return_cargo_pod() -> void:
 	ret.pod_node = moved_pod
 	_return_pod = ret
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "brass_spark", pod_pos, 16)
-		FxLibrary.burst(world_root, "steam_puff", pod_pos, 8)
+		burst(world_root, "brass_spark", pod_pos, 16)
+		burst(world_root, "steam_puff", pod_pos, 8)
 	cargo_returned.emit(self)
 	_end()
 
@@ -534,9 +533,9 @@ func _on_cargo_pod_impact() -> void:
 	if fleet != null:
 		fleet.discover("stream_cut", global_position)
 	if world_root != null and is_inside_tree():
-		FxLibrary.burst(world_root, "plate_chunks", global_position, 14)
-		FxLibrary.burst(world_root, "brass_spark", global_position, 16)
-		FxLibrary.burst(world_root, "steam_puff", global_position, 10)
+		burst(world_root, "plate_chunks", global_position, 14)
+		burst(world_root, "brass_spark", global_position, 16)
+		burst(world_root, "steam_puff", global_position, 10)
 	take_damage(maxf(hp, max_hp) + 100.0)
 
 
@@ -559,8 +558,8 @@ func _go_live() -> void:
 			var dir := out.normalized() if out.length() > 0.1 else -global_basis.z
 			hit_player.emit(FLUSH_DAMAGE, dir * FLUSH_SHOVE + Vector3.UP * 4.0)
 		if world_root != null and is_inside_tree():
-			FxLibrary.burst(world_root, "slam_dust", landing, 14)
-			FxLibrary.burst(world_root, "brass_spark", landing + Vector3.UP * 0.4, 12)
+			burst(world_root, "slam_dust", landing, 14)
+			burst(world_root, "brass_spark", landing + Vector3.UP * 0.4, 12)
 		if standing_adds() < ADD_CAP:
 			var add: Node3D = fleet.combat.spawn_enemy("chaser", landing + Vector3.UP * 1.2)
 			if add != null:
@@ -646,7 +645,7 @@ func _pose() -> void:
 		_siren_fx_t += get_physics_process_delta_time()
 		if _siren_fx_t >= 0.35 and world_root != null and is_inside_tree():
 			_siren_fx_t = 0.0
-			FxLibrary.burst(world_root, "steam_puff", to_global(_mouth), 6)
+			burst(world_root, "steam_puff", to_global(_mouth), 6)
 	if not warn or _t < suck_s or _pod_returned:
 		return
 	var ring := telegraph()

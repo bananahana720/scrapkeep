@@ -6,7 +6,6 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const TierMark := preload("res://src/build/tier_mark.gd")
 const StageMap := preload("res://src/world/stage_map.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
@@ -232,8 +231,8 @@ func fire() -> bool:
 		_lid.rotation.x = -0.9
 	if is_inside_tree():
 		var lid_at := _lid.global_position + Vector3.UP * 0.5
-		FxLibrary.burst(self, "brass_spark", lid_at, 14, Palette.BRASS)
-		FxLibrary.burst(self, "steam_puff", lid_at, 6)
+		ctx.burst(self, "brass_spark", lid_at, 14, Palette.BRASS)
+		ctx.burst(self, "steam_puff", lid_at, 6)
 	offers = Parts.roll(system.luck(id), PICK_RARITIES, ctx.run.class_id(), ctx.run.parts, PICKS)
 	var relic := _relic_offer()
 	if relic != "":

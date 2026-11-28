@@ -955,6 +955,7 @@ func _warden_bodies() -> void:
 		warden.global_position = Vector3(b.x + 50.0 + 60.0 * i, 0.0, b.z + 40.0)
 		var spec: Dictionary = game.ctx.spawner.fleet.dress("warden", {"family": r[1], "stage": r[2], "plating": 90.0, "hp": 650.0, "reach": 30.0})
 		spec.merge({"harpoon_anchor": true, "family": r[1], "mounting": r[3], "variant": ""}, true)
+		warden.burst_fx = game.ctx.burst
 		warden.setup(game.player, game.ctx.terrain, game.ctx.root, Callable(game.flow, "in_play"), 1.0, spec)
 		warden.global_position.y += r[4]
 		warden.home = warden.global_position

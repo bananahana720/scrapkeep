@@ -16,7 +16,6 @@ const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
-const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 
 class SluicePayDevice extends "res://src/world/device.gd":
@@ -1358,8 +1357,8 @@ func _step_sluice_valve(s: Dictionary, delta: float, motion: Dictionary, facts: 
 			if is_inside_tree():
 				for frac in [0.1, 0.38, 0.68, 0.94]:
 					var spot := lane_from + lane_dir * (lane_len * float(frac)) + Vector3.UP * 0.9
-					FxLibrary.burst(self, "steam_puff", spot, 8, Color("e8efe9"))
-					FxLibrary.burst(self, "slam_dust", spot, 6)
+					_burst("steam_puff", spot, 8, Color("e8efe9"))
+					_burst("slam_dust", spot, 6)
 			_apply_surge(s, h, motion)
 			if h.is_done():
 				_enter_sluice_charge(s)
@@ -1443,6 +1442,12 @@ func _break_lane_props(h: Hazard) -> int:
 		if h.contains(centre) or h.contains(foot):
 			props.on_blast(centre, 0.25, SURGE_SOURCE, 1, heft)
 	return maxi(0, before - int(props.intact_count()))
+
+
+func _burst(id: String, at: Vector3, count: int, tint := Color.TRANSPARENT) -> void:
+	var c: Variant = _resolve_ctx()
+	if c is Object and (c as Object).has_method("burst"):
+		c.burst(self, id, at, count, tint)
 
 
 func _resolve_ctx() -> Variant:
@@ -1686,7 +1691,7 @@ func _puff(at: Vector3, size: float) -> void:
 	add_child(node)
 	_puffs.append({"node": node, "left": PUFF_SECONDS, "size": size})
 	if is_inside_tree():
-		FxLibrary.burst(self, "steam_puff", at, 8)
+		_burst("steam_puff", at, 8)
 
 
 func _dashed_ring(at: Vector3, radius: float) -> void:

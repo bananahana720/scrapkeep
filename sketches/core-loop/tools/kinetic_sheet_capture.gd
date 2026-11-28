@@ -85,6 +85,7 @@ class DummyTarget extends RefCounted:
 	var vel := Vector3(0.0, 0.0, -16.0)
 	var state := DummyBallState.new()
 	var tuning := DummyTuning.new()
+	var tree = null
 	func ball_position() -> Vector3:
 		return pos
 	func planar_velocity() -> Vector3:
@@ -122,6 +123,8 @@ class DummyCacheCtx extends RefCounted:
 	var player := DummyTarget.new()
 	var run := DummyRun.new()
 	var stages := DummyStages.new()
+	func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> GPUParticles3D:
+		return FxLibrary.burst(parent, id, at, count, tint, toward, isolate)
 
 
 class DummyWarden extends Node3D:
@@ -133,6 +136,8 @@ class DummyWarden extends Node3D:
 	var spec := {}
 	func family_point_at() -> Vector3:
 		return home + Vector3(0.0, 4.5, 0.0)
+	func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> void:
+		FxLibrary.burst(parent, id, at, count, tint, toward, isolate)
 
 
 var _opts := {}
@@ -537,12 +542,7 @@ func _setup_subject(cat: String, asset_id: String, holder: Node3D) -> Dictionary
 			var path: String = ENEMY_SCRIPTS.get(asset_id, "")
 			if path == "" or not ResourceLoader.exists(path):
 				return {"error": "unknown enemy " + asset_id}
-			var script := load(path) as GDScript
-			var enemy: Node3D = script.new()
-			enemy.kind = asset_id
-			holder.add_child(enemy)
-			enemy.global_position = Vector3(0.0, 1.1, 0.0)
-			enemy.setup(DummyTarget.new(), DummyTerrain.new(), holder, func() -> bool: return true, 1.0)
+			var enemy := enemy_subject(load(path) as GDScript, asset_id, holder)
 			await physics_frame
 			await process_frame
 			var raw_box := box_of(enemy)
@@ -552,11 +552,9 @@ func _setup_subject(cat: String, asset_id: String, holder: Node3D) -> Dictionary
 				raw_box = box_of(enemy)
 			return {"enemy": enemy, "box": raw_box, "margin": 1.38}
 		"warden":
-			var w := DummyWarden.new()
-			w.world_root = holder
-			holder.add_child(w)
-			var driver := WardenReactor.new()
-			driver.sheet_dir = Vector3(0.0, 0.0, 1.0)
+			var subject := warden_subject(holder)
+			var w: DummyWarden = subject[0]
+			var driver: WardenReactor = subject[1]
 			driver._show_sheet(w, WardenReactor.LANE_TELL_ALPHA)
 			await process_frame
 			var box := AABB(Vector3(-12.0, 0.0, 10.0), Vector3(24.0, 4.0, 22.0))
@@ -585,20 +583,44 @@ func _setup_subject(cat: String, asset_id: String, holder: Node3D) -> Dictionary
 				var box := AABB(Vector3(-3.0, 0.0, -2.2), Vector3(4.8, 2.4, 3.6))
 				return {"pet": pet, "pit": pit, "fx": fx, "box": box, "margin": 1.22}
 			elif asset_id == "cracked_cache":
-				var ctx := DummyCacheCtx.new()
-				ctx.events = GameEvents.new()
-				holder.add_child(ctx.events)
-				var cache := CrackedCache.new()
-				cache.ctx = ctx
-				cache.system = DummySystem.new()
-				cache.id = "capture_cache"
-				cache.relic_guaranteed = true
-				holder.add_child(cache)
-				cache.build()
+				var cache := cache_subject(holder)
 				await process_frame
 				var box := box_of(cache)
 				return {"cache": cache, "box": box, "margin": 1.32}
 	return {"box": AABB(Vector3(-1.5, 0.0, -1.5), Vector3(3.0, 3.0, 3.0))}
+
+
+static func enemy_subject(script: GDScript, asset_id: String, holder: Node3D) -> Node3D:
+	var enemy: Node3D = script.new()
+	enemy.kind = asset_id
+	holder.add_child(enemy)
+	enemy.global_position = Vector3(0.0, 1.1, 0.0)
+	enemy.burst_fx = FxLibrary.burst
+	enemy.setup(DummyTarget.new(), DummyTerrain.new(), holder, func() -> bool: return true, 1.0)
+	return enemy
+
+
+static func warden_subject(holder: Node3D) -> Array:
+	var w := DummyWarden.new()
+	w.world_root = holder
+	holder.add_child(w)
+	var driver := WardenReactor.new()
+	driver.sheet_dir = Vector3(0.0, 0.0, 1.0)
+	return [w, driver]
+
+
+static func cache_subject(holder: Node3D) -> CrackedCache:
+	var ctx := DummyCacheCtx.new()
+	ctx.events = GameEvents.new()
+	holder.add_child(ctx.events)
+	var cache := CrackedCache.new()
+	cache.ctx = ctx
+	cache.system = DummySystem.new()
+	cache.id = "capture_cache"
+	cache.relic_guaranteed = true
+	holder.add_child(cache)
+	cache.build()
+	return cache
 
 
 func _place_glb(parent: Node3D, path: String, at: Vector3) -> Node3D:
