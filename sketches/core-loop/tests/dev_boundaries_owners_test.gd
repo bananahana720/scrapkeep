@@ -142,6 +142,7 @@ func _check_owner_apis() -> void:
 	run.invulnerable = false
 
 	var flood := Flood.new()
+	flood.setup()
 	flood.cycle = FloodCycle.new()
 	flood.cycle.phase = FloodCycle.WARNING
 	flood.cycle.elapsed = 4.25
