@@ -2,28 +2,25 @@ extends RefCounted
 
 const WavIo := preload("res://src/presentation/wav_io.gd")
 const MixRows := preload("res://src/presentation/mix_rows.gd")
+const Cues := preload("res://src/presentation/positional_cue_rows.gd")
 
-const DIR := "res://assets/audio/foley/"
 const WHINE_LEAD := 2.0
 const COLLAPSE_LAND := 0.12
-const LOOPS := ["prop_crew_presence"]
-const TRIM_DB := {"lift_cage_arrive": -4.0, "zipline_whine": -6.0, "zipline_snap": -4.0, "cave_in_rumble": -5.0,
-	"cave_in_debris": -4.0, "prop_crew_presence": -14.0, "prop_crew_strain": -4.0, "prop_crew_collapse": -3.0}
-const UNIT_SIZE := 12.0
-const MAX_DISTANCE := 80.0
+const JOLT_TELL_LEAD := 1.0
 
 static var _streams := {}
 
 
-static func path(id: String) -> String:
-	return DIR + id + ".wav"
+static func reset_for_tests() -> void:
+	_streams.clear()
 
 
 static func stream(id: String) -> AudioStreamWAV:
 	if _streams.has(id):
 		return _streams[id]
-	var out := wav(path(id))
-	if out != null and id in LOOPS:
+	var row: Dictionary = Cues.ROWS[id]
+	var out := WavIo.load_wav(Cues.DIR + String(row["file"]))
+	if out != null and row.get("loop", false):
 		out = out.duplicate()
 		out.loop_mode = AudioStreamWAV.LOOP_FORWARD
 		out.loop_begin = 0
@@ -32,22 +29,20 @@ static func stream(id: String) -> AudioStreamWAV:
 	return out
 
 
-static func wav(p: String, raw := false) -> AudioStreamWAV:
-	return WavIo.load_wav(p, raw)
-
-
-static func player(id: String, host: Node3D) -> AudioStreamPlayer3D:
-	var s := stream(id)
-	if s == null or host == null:
+static func player(id: String, host: Node3D, source: AudioStream = null) -> AudioStreamPlayer3D:
+	var s: AudioStream = source if source != null else stream(id)
+	if s == null:
 		return null
+	var row: Dictionary = Cues.ROWS[id]
 	var p := AudioStreamPlayer3D.new()
 	p.name = "Foley_" + id
 	p.stream = s
 	p.bus = MixRows.resolve_bus(MixRows.BUS_SFX)
-	p.volume_db = float(TRIM_DB.get(id, 0.0))
-	p.unit_size = UNIT_SIZE
-	p.max_distance = MAX_DISTANCE
-	host.add_child(p)
+	p.volume_db = float(row["db"])
+	p.unit_size = Cues.UNIT_SIZE
+	p.max_distance = float(row["range"])
+	if host != null:
+		host.add_child(p)
 	return p
 
 
