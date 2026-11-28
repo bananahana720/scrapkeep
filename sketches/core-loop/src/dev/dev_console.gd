@@ -45,8 +45,6 @@ const LIGHT_KEYS := ["exposure", "saturation", "contrast", "brightness", "ambien
 const TONEMAPS := ["Linear", "Reinhard", "Filmic", "ACES", "AgX"]
 const LENS_KNOBS := DevLens.LENS_KNOBS
 const SCRIPT_STEPS := ["wait", "tick", "until", "shot", "qa_pack", "sheet", "quit"]
-const LENS_RANGES := {"fov": [10.0, 120.0, 0.5], "distance": [2.0, 200.0, 0.5], "pitch": [-89.5, 60.0, 0.5],
-	"yaw": [-180.0, 180.0, 1.0], "size": [2.0, 300.0, 0.5], "lift": [-5.0, 30.0, 0.1], "spin": [-90.0, 90.0, 1.0], "tilt": [0.0, 1.0, 0.01], "cut": [0.0, 200.0, 0.5]}
 const WORLDS := ["all", "1", "2", "3"]
 
 var game
@@ -997,7 +995,7 @@ func _page_lens() -> void:
 		_show_tab("Lens"))
 	_page.add_child(ortho)
 	for key in LENS_KNOBS:
-		_slider_row(key, LENS_RANGES[key], lens.knob(key), func(v: float): lens.set_knob(key, v), "cam %s %s" % [key, "%s"], false)
+		_slider_row(key, DevLens.LENS_RANGES[key], lens.knob(key), func(v: float): lens.set_knob(key, v), "cam %s %s" % [key, "%s"], false)
 	_sync_lens_rows()
 
 
