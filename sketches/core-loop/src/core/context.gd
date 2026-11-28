@@ -52,10 +52,12 @@ var screen_busy: Node
 var dev := false
 
 var _hit_stop: Callable
+var _burst: Callable
 
 
-func _init(hit_stop_impl := Callable()) -> void:
+func _init(hit_stop_impl := Callable(), burst_impl := Callable()) -> void:
 	_hit_stop = hit_stop_impl
+	_burst = burst_impl
 
 
 func build_module() -> Node:
@@ -88,3 +90,7 @@ func break_props(at: Vector3, radius: float, source: String) -> void:
 func hit_stop(seconds: float) -> void:
 	if _hit_stop.is_valid():
 		_hit_stop.call(seconds)
+
+
+func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> GPUParticles3D:
+	return _burst.call(parent, id, at, count, tint, toward, isolate) if _burst.is_valid() else null

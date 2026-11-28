@@ -163,6 +163,7 @@ func stand(kind: String, at: Vector3, health := 1.0) -> Node3D:
 	var spec := _spec_for(kind)
 	if health != 1.0:
 		spec["stage_threat"] = 1.0
+	enemy.burst_fx = ctx.burst
 	enemy.setup(target, ground, ctx.root, _is_live, health, spec)
 	enemy.hit_player.connect(_on_hit.bind(kind))
 	if enemy.has_signal("fired"):
