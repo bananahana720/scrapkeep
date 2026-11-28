@@ -631,8 +631,14 @@ export function baselineGrowth(before, after) {
     if (!Object.hasOwn(before, rule)) continue;
     const was = before[rule];
     if (size(now) <= size(was)) continue;
+    const unmatched = [...(Array.isArray(was) ? was : [])];
     const added = Array.isArray(now)
-      ? now.filter((key) => !(was ?? []).includes(key))
+      ? now.filter((key) => {
+          const at = unmatched.indexOf(key);
+          if (at === -1) return true;
+          unmatched.splice(at, 1);
+          return false;
+        })
       : Object.entries(now)
           .filter(([file, count]) => count > (was?.[file] ?? 0))
           .map(([file, count]) => `${file} (${was?.[file] ?? 0} to ${count})`);
@@ -1284,7 +1290,10 @@ function main() {
     baseline,
     (file) => existsSync(path.join(root, file)) && statSync(path.join(root, file)).isFile(),
   );
-  if (options.base) findings.push(...baselineGrowth(readBaselineAt(options.base), baseline));
+  if (options.base)
+    findings.push(
+      ...baselineGrowth(readBaselineAt(git(["merge-base", options.base, "HEAD"])), baseline),
+    );
   for (const item of findings) console.log(formatFinding(item));
   if (options.sketch === "core-loop") {
     for (const [rel, entry] of Object.entries(LIGHT_OWNERS).filter(([, entry]) => entry.open)) {

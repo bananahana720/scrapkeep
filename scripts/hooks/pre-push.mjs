@@ -14,7 +14,7 @@ import {
 import { filterFormatTargets } from "../ci/format-changed.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
-import { REPO_ROOT } from "../lib/git.mjs";
+import { REPO_ROOT, git } from "../lib/git.mjs";
 import { BASELINE_PATH, baselineGrowth, formatFinding, readBaselineAt } from "../sketch-lint.mjs";
 
 const root = REPO_ROOT;
@@ -311,7 +311,7 @@ if (isMain(import.meta.url)) {
     let files = [];
     let ranges = [];
     if (opts.base) {
-      ranges = [{ base: opts.base, head: "HEAD" }];
+      ranges = [{ base: git(["merge-base", opts.base, "HEAD"]), head: "HEAD" }];
       const ran = spawnSync("git", ["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`], {
         cwd: root,
         encoding: "utf8",

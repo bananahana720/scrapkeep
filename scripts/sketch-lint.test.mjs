@@ -1400,6 +1400,10 @@ test("baselineGrowth fails a rule whose list gained an entry and names the rule,
     /L14 list grew from 1 to 2 entries \(new: t\.gd:_y\): register a reset in sketches\/core-loop\/tools\/test_batch_driver\.gd/,
   );
   assert.equal(
+    baselineGrowth(base, { ...base, L1: ["a.gd", "b.gd", "b.gd"] })[0].message,
+    "L1 list grew from 2 to 3 entries (new: b.gd): fix the offence instead of listing it",
+  );
+  assert.equal(
     baselineGrowth(base, { ...base, L15: { "c.gd": 3 } })[0].message,
     "L15 list grew from 2 to 3 entries (new: c.gd (2 to 3)): fix the offence instead of listing it",
   );
