@@ -44,6 +44,15 @@ export function parseList(text, source) {
   return rules;
 }
 
+export function datedRecordPaths(cwd) {
+  try {
+    const listed = parseList(readFileSync(path.join(cwd, LIST_PATH), "utf8"), LIST_PATH);
+    return new Set([LIST_PATH, ...listed.keys()]);
+  } catch {
+    return null;
+  }
+}
+
 function treeEntries(commit, pages, cwd) {
   const ids = new Map();
   if (pages.length === 0) return ids;

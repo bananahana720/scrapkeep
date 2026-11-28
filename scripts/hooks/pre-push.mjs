@@ -12,6 +12,7 @@ import {
   isSkillPath,
 } from "../ci/affected.mjs";
 import { filterFormatTargets } from "../ci/format-changed.mjs";
+import { datedRecordPaths } from "../dated-records.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
 import { REPO_ROOT } from "../lib/git.mjs";
@@ -75,6 +76,21 @@ export function changedFilesForRange(
         .filter(Boolean),
     ),
   ];
+}
+
+export function rangeBase({ localSha, remoteSha }, { cwd = root, spawn = spawnSync } = {}) {
+  if (remoteSha) return remoteSha;
+  const ran = spawn("git", ["rev-list", "--first-parent", localSha, "--not", "--remotes"], {
+    cwd,
+    encoding: "utf8",
+  });
+  if (ran.error || ran.status !== 0) {
+    throw new Error(
+      `git rev-list failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
+    );
+  }
+  const oldest = ran.stdout.trim().split("\n").filter(Boolean).pop();
+  return oldest ? `${oldest}^` : localSha;
 }
 
 export function planHookChecks(changedFiles, exists = (f) => existsSync(path.join(root, f))) {
@@ -214,6 +230,25 @@ export function executeHookPlan(
   return { ok, ranLabels };
 }
 
+export function runDatedRecords(
+  files,
+  ranges,
+  { cwd = root, spawn = spawnSync, watched = datedRecordPaths(cwd) } = {},
+) {
+  if (watched && !files.some((f) => watched.has(f))) return { ok: true, ranLabels: [] };
+  let ok = true;
+  for (const { base, head } of ranges) {
+    const r = runStep(
+      "dated-records",
+      process.execPath,
+      [path.join(cwd, "scripts/dated-records.mjs"), "--base", base, "--head", head],
+      { cwd, spawn },
+    );
+    if (!r.ok) ok = false;
+  }
+  return { ok, ranLabels: [`dated-records(${ranges.length})`] };
+}
+
 export function evaluateHookOutcome({
   ok,
   elapsedS,
@@ -282,6 +317,7 @@ if (isMain(import.meta.url)) {
   try {
     const opts = parseHookArgs(process.argv.slice(2));
     let files = [];
+    let ranges = [];
     if (opts.base) {
       const ran = spawnSync("git", ["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`], {
         cwd: root,
@@ -296,22 +332,24 @@ if (isMain(import.meta.url)) {
         .filter(Boolean);
     } else {
       const stdin = process.stdin.isTTY ? "" : readFileSync(0, "utf8");
-      const ranges = parsePushStdin(stdin);
-      files = [...new Set(ranges.flatMap((range) => changedFilesForRange(range)))];
+      const pushed = parsePushStdin(stdin);
+      files = [...new Set(pushed.flatMap((range) => changedFilesForRange(range)))];
+      ranges = pushed.map((range) => ({ base: rangeBase(range), head: range.localSha }));
     }
 
+    const dated = runDatedRecords(files, opts.base ? [{ base: opts.base, head: "HEAD" }] : ranges);
     const plan = planHookChecks(files);
     const { ok, ranLabels } = executeHookPlan(plan);
     const loadEnd = os.loadavg()[0];
     const elapsedS = (performance.now() - started) / 1000;
     const outcome = evaluateHookOutcome({
-      ok,
+      ok: ok && dated.ok,
       elapsedS,
       budgetS: HOOK_BUDGET_S,
       loadStart,
       loadEnd,
       cpus,
-      ranLabels,
+      ranLabels: [...ranLabels, ...dated.ranLabels],
     });
     if (outcome.exitCode === 0) {
       console.log(outcome.message);

@@ -9,6 +9,7 @@ import {
   isHighLoad,
   parseHookArgs,
   parsePushStdin,
+  runDatedRecords,
   planHookChecks,
 } from "./pre-push.mjs";
 
@@ -58,6 +59,40 @@ test("changedFilesForRange walks all unpushed commits on new branches and preser
     },
   );
   assert.deepEqual(updateArgs, ["diff", "--no-renames", "--name-only", "abc123..def456"]);
+});
+
+test("runDatedRecords checks each pushed range only when a listed page or the list is pushed", () => {
+  const runs = [];
+  const spawn = (_cmd, args) => {
+    runs.push(args.slice(1));
+    return { status: runs.length === 2 ? 1 : 0 };
+  };
+  const watched = new Set(["scripts/ci/dated-records.json", "docs/record.md"]);
+  const ranges = [
+    { base: "aaa", head: "bbb" },
+    { base: "ccc^", head: "ddd" },
+  ];
+
+  assert.deepEqual(runDatedRecords(["docs/other.md"], ranges, { spawn, watched }), {
+    ok: true,
+    ranLabels: [],
+  });
+  assert.equal(runs.length, 0);
+
+  const ran = runDatedRecords(["docs/record.md"], ranges, { spawn, watched });
+  assert.deepEqual(ran, { ok: false, ranLabels: ["dated-records(2)"] });
+  assert.deepEqual(runs, [
+    ["--base", "aaa", "--head", "bbb"],
+    ["--base", "ccc^", "--head", "ddd"],
+  ]);
+
+  runs.length = 0;
+  const unreadable = runDatedRecords(["docs/other.md"], ranges.slice(0, 1), {
+    spawn,
+    watched: null,
+  });
+  assert.deepEqual(unreadable, { ok: true, ranLabels: ["dated-records(1)"] });
+  assert.equal(runs.length, 1);
 });
 
 test("planHookChecks selects only matching checks and keeps doc/sketch deletions active", () => {
