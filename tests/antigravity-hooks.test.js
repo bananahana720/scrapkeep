@@ -334,6 +334,7 @@ test("denies macOS live Godot save paths across shell quoting, escapes, %20, cas
     'cat "$HOME/artifacts/local/x/Library/Application Support/godot/app_userdata/core-loop/save.json"',
     'cp "artifacts/local/run/Library/Application Support/godot/app_userdata/core-loop/a" "~/Library/Application Support/godot/app_userdata/core-loop/b"',
     'rm -rf "/Users/andrew/Library/Application Support/godot/app_userdata/core-loop/artifacts/local/x"',
+    'rm -rf "/Users/andrew/Library/Application%20Support/godot/app_userdata/core-loop/artifacts/local/x"',
   ]) {
     const res = evaluateHook({
       toolCall: { name: "run_command", args: { CommandLine: cmd } },
@@ -353,6 +354,7 @@ test("denies macOS live Godot save paths across shell quoting, escapes, %20, cas
       "/Users/andrew/Library/Application Support/godot/app_userdata/core-loop/settings.cfg",
       "/Users/andrew/Library/Application Support/Godot/app_userdata/core-loop/profile.json",
       "/Users/andrew/Library/Application%20Support/godot/app_userdata/core-loop/save.json",
+      "/Users/andrew/Library/Application%20Support/godot/app_userdata/core-loop/artifacts/local/save.json",
     ]) {
       const res = evaluateHook({
         toolCall: { name: toolName, args: { [key]: targetPath } },

@@ -80,7 +80,7 @@ function unwrapScratchPart(part) {
   ) {
     cleaned = cleaned.slice(1, -1);
   }
-  return cleaned.replace(/\\ /g, " ");
+  return cleaned.replace(/\\ /g, " ").replace(/%20/gi, " ");
 }
 
 function isAllowedScratchSavePath(part) {
@@ -91,7 +91,7 @@ function isAllowedScratchSavePath(part) {
   const scratchMatch = SCRATCH_ARTIFACTS_PREFIX.exec(cleaned);
   if (!scratchMatch) return false;
   const liveMatch = LIVE_SAVE_SEGMENT.exec(cleaned);
-  if (!liveMatch) return true;
+  if (!liveMatch) return false;
   return scratchMatch.index < liveMatch.index;
 }
 
