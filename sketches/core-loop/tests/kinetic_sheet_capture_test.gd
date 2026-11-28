@@ -10,6 +10,8 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Capture := preload("res://tools/kinetic_sheet_capture.gd")
 const Palette := preload("res://src/core/palette.gd")
+const WardenReactor := preload("res://src/combat/warden_reactor.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var _t := T.new("kinetic_sheet_capture_test")
 
@@ -24,7 +26,45 @@ func _run() -> void:
 	_test_box_of()
 	_test_metrics_and_gates()
 	_test_stitch()
+	_test_subject_bursts()
 	quit(_t.verdict())
+
+
+func _bursts(node: Node) -> int:
+	var n := 0
+	for p: GPUParticles3D in node.find_children("*", "GPUParticles3D", true, false):
+		if p.one_shot and p.has_meta("fx_look"):
+			n += 1
+	return n
+
+
+func _test_subject_bursts() -> void:
+	var motion := Comfort.reduced_motion
+	Comfort.reduced_motion = false
+	var holder := Node3D.new()
+	root.add_child(holder)
+	var subject := Capture.warden_subject(holder)
+	subject[1]._show_sheet(subject[0], WardenReactor.SHEET_ALPHA)
+	_t.eq("the live warden sheet draws its two bursts through the tool's warden", _bursts(holder), 2)
+	subject[1]._close_sheet()
+	holder.free()
+	holder = Node3D.new()
+	root.add_child(holder)
+	var cache := Capture.cache_subject(holder)
+	Comfort.reduced_motion = true
+	var fired := cache.fire()
+	Comfort.reduced_motion = false
+	_t.check("the tool's cache fires and rolls its offers", fired and not cache.offers.is_empty(),
+		"fired=%s offers=%d" % [fired, cache.offers.size()])
+	_t.eq("the cache lid draws its two bursts through the tool's context", _bursts(holder), 2)
+	holder.free()
+	holder = Node3D.new()
+	root.add_child(holder)
+	var swatter := Capture.enemy_subject(load(Capture.ENEMY_SCRIPTS["swatter"]) as GDScript, "swatter", holder)
+	swatter._go_live()
+	_t.eq("the tool's swatter swing draws its two paddle bursts", _bursts(holder), 2)
+	holder.free()
+	Comfort.reduced_motion = motion
 
 
 func _test_stage() -> void:

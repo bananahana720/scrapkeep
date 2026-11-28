@@ -287,7 +287,7 @@ func _fire_cluster() -> void:
 		var watcher := ClusterWatcher.new()
 		watcher.name = "BungClusterWatcher"
 		world_root.add_child(watcher)
-		watcher.bind(self, bungs, target, world_root)
+		watcher.bind(self, bungs, target, world_root, burst_fx)
 
 
 func _cancel_cluster() -> void:
@@ -314,11 +314,11 @@ class ClusterWatcher extends Node:
 	var _burst_fx: Callable
 	var _chained := false
 
-	func bind(owner_lobber: Node3D, bungs: Array, target_ref, root_ref: Node) -> void:
+	func bind(owner_lobber: Node3D, bungs: Array, target_ref, root_ref: Node, burst_ref: Callable) -> void:
 		_lobber = weakref(owner_lobber)
 		_target = target_ref
 		_root = root_ref
-		_burst_fx = owner_lobber.burst_fx
+		_burst_fx = burst_ref
 		for b in bungs:
 			_bungs.append(weakref(b))
 
