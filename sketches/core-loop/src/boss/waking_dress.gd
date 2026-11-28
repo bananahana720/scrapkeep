@@ -50,7 +50,7 @@ var _defeated := false
 static func attach(owner_module):
 	var base_scene := BossModel.load_scene(base_path)
 	var kit_scene := BossModel.load_scene(kit_path)
-	if base_scene == null or kit_scene == null or not _has_parts(base_scene, BASE_PARTS) or not _has_parts(kit_scene, KIT_PARTS):
+	if base_scene == null or kit_scene == null or not BossModel.has_parts(base_scene, BASE_PARTS) or not BossModel.has_parts(kit_scene, KIT_PARTS):
 		if base_scene != null:
 			base_scene.free()
 		if kit_scene != null:
@@ -63,13 +63,6 @@ static func attach(owner_module):
 	dress.global_position = owner_module._center
 	dress.setup(base_scene, kit_scene)
 	return dress
-
-
-static func _has_parts(scene: Node, parts: Array) -> bool:
-	for part in parts:
-		if scene.find_child(part, true, false) == null:
-			return false
-	return true
 
 
 func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
@@ -163,62 +156,26 @@ func _show_intro_card() -> void:
 	if module != null and module.ctx != null and module.ctx.get("pilot_id") != null:
 		pilot_id = String(module.ctx.pilot_id)
 	var threat := LoreRows.waking_intro_line(pilot_id)
-	_intro_layer = CanvasLayer.new()
-	_intro_layer.name = "WakingIntroCard"
-	_intro_layer.layer = 40
-	add_child(_intro_layer)
-
-	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_intro_layer.add_child(root)
-	_intro_root = root
-
-	var panel := PanelContainer.new()
+	_intro_layer = BossModel.card_layer(self, "WakingIntroCard")
+	_intro_root = _intro_layer.get_child(0) as Control
+	var panel := BossModel.card_panel(Color(Palette.CHARCOAL, 0.88), Palette.ANCIENT, 20.0)
 	panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	panel.offset_left = 48.0
 	panel.offset_right = -48.0
 	panel.offset_top = -268.0
 	panel.offset_bottom = -172.0
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(Palette.CHARCOAL, 0.88)
-	style.border_color = Palette.ANCIENT
-	style.border_width_left = 6
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.content_margin_left = 20.0
-	style.content_margin_right = 20.0
-	style.content_margin_top = 12.0
-	style.content_margin_bottom = 12.0
-	panel.add_theme_stylebox_override("panel", style)
-	root.add_child(panel)
-
-	var box := VBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(box)
-
-	var title := Label.new()
-	title.text = "%s  —  %s" % [String(card["title"]), String(card["subtitle"])]
-	title.add_theme_font_size_override("font_size", 24)
-	title.add_theme_color_override("font_color", Palette.ANCIENT)
-	box.add_child(title)
-
-	var line := Label.new()
-	line.text = threat
-	line.add_theme_font_size_override("font_size", 17)
-	line.add_theme_color_override("font_color", Palette.SAND)
+	_intro_root.add_child(panel)
+	var box: VBoxContainer = panel.get_child(0)
+	box.add_child(BossModel.card_label("%s  —  %s" % [String(card["title"]), String(card["subtitle"])], 24, Palette.ANCIENT))
+	var line := BossModel.card_label(threat, 17, Palette.SAND)
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(line)
-
 	_intro_left = float(card["duration_s"])
 
 
 func dismiss_intro_card() -> void:
 	_intro_left = 0.0
-	if is_instance_valid(_intro_layer):
-		_intro_layer.queue_free()
+	BossModel.dismiss_card(_intro_layer)
 	_intro_layer = null
 	_intro_root = null
 
@@ -228,12 +185,7 @@ func _exit_tree() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _intro_left <= 0.0:
-		return
-	var accept := InputMap.has_action("ui_accept") and event.is_action_pressed("ui_accept")
-	var cancel := InputMap.has_action("ui_cancel") and event.is_action_pressed("ui_cancel")
-	var jump := InputMap.has_action("cl_jump") and event.is_action_pressed("cl_jump")
-	if accept or cancel or jump:
+	if _intro_left > 0.0 and BossModel.is_card_dismiss(event):
 		dismiss_intro_card()
 
 
@@ -242,11 +194,10 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 		return
 	if _intro_left > 0.0:
-		_intro_left -= delta
+		_intro_left = BossModel.step_card(_intro_layer, _intro_left, delta)
 		if _intro_left <= 0.0:
-			dismiss_intro_card()
-		elif is_instance_valid(_intro_root) and _intro_left < 0.45:
-			_intro_root.modulate.a = clampf(_intro_left / 0.45, 0.0, 1.0)
+			_intro_layer = null
+			_intro_root = null
 	var warden = module.warden
 	if is_instance_valid(warden):
 		BossModel.hide_warden_body(warden)

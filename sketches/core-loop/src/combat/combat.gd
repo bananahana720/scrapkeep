@@ -24,6 +24,7 @@ const Ground := preload("res://src/combat/ground.gd")
 const WearTrail := preload("res://src/combat/wear_trail.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Sticky := preload("res://src/combat/sticky.gd")
 const Devices := preload("res://src/core/devices.gd")
@@ -2890,7 +2891,7 @@ func _commit_cannon(family: String, target: Vector3, centre: Vector3, radius: fl
 		for key in ["warn", "live", "from", "dir", "ahead", "half", "band"]:
 			if overrides.has(key):
 				d[key] = overrides[key]
-		var h = MindAttacks.build(d)
+		var h = Hazard.from_def(d)
 		if overrides.has("warn"):
 			h.warn_seconds = maxf(0.0, float(overrides["warn"]))
 		h.color = overrides["color"] if overrides.has("color") else ClassDef.CANNON_COLOR
@@ -2954,7 +2955,7 @@ func _cannon_strike(entry: Dictionary, h: Node3D, enemies: Array) -> void:
 		if entry["struck"].has(id) or (enemy != entry["options"].get("forced") and not h.contains(enemy.global_position)):
 			continue
 		entry["struck"][id] = true
-		var push: Vector3 = h.heading if h.shape == MindAttacks.Hazard.Shape.LANE else enemy.global_position - h.centre
+		var push: Vector3 = h.heading if h.shape == Hazard.Shape.LANE else enemy.global_position - h.centre
 		var options: Dictionary = entry["options"]
 		if options.has("budget"):
 			var dealt := _cannon_set_piece_hit(enemy, float(entry["damage"]), h.centre, false, false, options["budget"])

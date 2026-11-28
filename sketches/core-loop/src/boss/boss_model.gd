@@ -3,6 +3,9 @@ extends RefCounted
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 
+const CARD_LAYER := 40
+const CARD_FADE_S := 0.45
+
 
 static var _scenes := {}
 
@@ -208,3 +211,76 @@ static func signal_glow(mesh: MeshInstance3D, color: Color, energy: float) -> vo
 	own.emission_enabled = energy > 0.0
 	own.emission = color
 	own.emission_energy_multiplier = energy
+
+
+static func has_parts(scene: Node, parts: Array) -> bool:
+	for part in parts:
+		if scene.find_child(part, true, false) == null:
+			return false
+	return true
+
+
+static func card_layer(host: Node, node_name: String) -> CanvasLayer:
+	var layer := CanvasLayer.new()
+	layer.name = node_name
+	layer.layer = CARD_LAYER
+	host.add_child(layer)
+	var root := Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(root)
+	return layer
+
+
+static func card_panel(bg_color: Color, border_color: Color, margin_x: float) -> PanelContainer:
+	var panel := PanelContainer.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.border_color = border_color
+	style.border_width_left = 6
+	style.border_width_top = 2
+	style.border_width_right = 2
+	style.border_width_bottom = 2
+	style.content_margin_left = margin_x
+	style.content_margin_right = margin_x
+	style.content_margin_top = 12.0
+	style.content_margin_bottom = 12.0
+	panel.add_theme_stylebox_override("panel", style)
+	var box := VBoxContainer.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(box)
+	return panel
+
+
+static func card_label(text: String, font_size: int, color: Color, font: Font = null) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if font != null:
+		label.add_theme_font_override("font", font)
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
+static func is_card_dismiss(event: InputEvent) -> bool:
+	var accept := InputMap.has_action("ui_accept") and event.is_action_pressed("ui_accept")
+	var cancel := InputMap.has_action("ui_cancel") and event.is_action_pressed("ui_cancel")
+	var jump := InputMap.has_action("cl_jump") and event.is_action_pressed("cl_jump")
+	return accept or cancel or jump
+
+
+static func dismiss_card(layer: CanvasLayer) -> void:
+	if is_instance_valid(layer):
+		layer.queue_free()
+
+
+static func step_card(layer: CanvasLayer, left: float, delta: float) -> float:
+	left -= delta
+	if left <= 0.0:
+		dismiss_card(layer)
+		return 0.0
+	if is_instance_valid(layer) and left < CARD_FADE_S:
+		(layer.get_child(0) as Control).modulate.a = clampf(left / CARD_FADE_S, 0.0, 1.0)
+	return left
