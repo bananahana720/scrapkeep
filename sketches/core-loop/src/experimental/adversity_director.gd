@@ -11,7 +11,6 @@ const DIG_CONFIG_PATH := "res://src/experimental/resources/director/dig_adversit
 const HIGHDRAFT_CONFIG_PATH := "res://src/experimental/resources/director/highdraft_adversity_config.tres"
 const MIN_SPAWN_GAP_M := 25.0
 const ARRIVAL_TELL_S := 1.0
-const HAZARD_TELL_FLOOR_S := 0.6
 
 enum HazardPhase { IDLE, WARNING, RAMP, PEAK, RECEDE, COOLDOWN }
 
@@ -709,7 +708,7 @@ func _step_hazard(
 							"kind": "hazard_announced",
 							"id": chosen,
 							"display_name": String(def["display_name"]),
-							"warning_s": maxf(HAZARD_TELL_FLOOR_S, float(def["warning_s"])),
+							"warning_s": maxf(EnvTags.MIN_TELL_S, float(def["warning_s"])),
 							"at": hazard_origin,
 						})
 		HazardPhase.COOLDOWN:
@@ -719,7 +718,7 @@ func _step_hazard(
 				hazard_phase_changed.emit(&"", hazard_phase)
 		HazardPhase.WARNING:
 			var def: Dictionary = hdefs[active_hazard_id]
-			var warn_s := maxf(HAZARD_TELL_FLOOR_S, float(def["warning_s"]))
+			var warn_s := maxf(EnvTags.MIN_TELL_S, float(def["warning_s"]))
 			hazard_elapsed_s += delta
 			if hazard_elapsed_s >= warn_s:
 				hazard_phase = HazardPhase.RAMP

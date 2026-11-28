@@ -1,5 +1,6 @@
 extends Resource
 
+const EnvTags := preload("res://src/experimental/env_tags.gd")
 
 @export var id: StringName = &""
 @export var display_name: String = ""
@@ -61,7 +62,7 @@ func to_spec_dict() -> Dictionary:
 		"counterplay_cue": counterplay_cue,
 		"third_person_read_distance_m": third_person_read_distance_m,
 		"telegraph_kind": telegraph_kind,
-		"tell_s": maxf(0.6, tell_s),
+		"tell_s": maxf(EnvTags.MIN_TELL_S, tell_s),
 		"execute_s": execute_s,
 		"cooldown_s": cooldown_s,
 		"stagger_on_brace_break_s": stagger_on_brace_break_s,

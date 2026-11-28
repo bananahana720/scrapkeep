@@ -17,7 +17,6 @@ signal prop_interaction_triggered(prop_id: String, interaction: String, world_or
 
 
 const WORLD_LAYER := 1
-const MIN_WARN_FLOOR_S := 0.6
 const BALL_CLEAR_HOLD_M := 4.6
 const MAX_ACTIVE_TAGS := 32
 
@@ -929,7 +928,7 @@ func _step_crane(delta: float, ball_local: Vector3, actors: Array, facts: Array[
 				rig.step(delta, Vector3.ZERO)
 			_crane["warn_elapsed"] = float(_crane["warn_elapsed"]) + delta
 			_crane["timer"] = float(_crane["timer"]) - delta
-			if float(_crane["timer"]) <= 0.0 and float(_crane["warn_elapsed"]) >= MIN_WARN_FLOOR_S:
+			if float(_crane["timer"]) <= 0.0 and float(_crane["warn_elapsed"]) >= EnvTags.MIN_TELL_S:
 				_crane["state"] = "sweep_active"
 				_crane["timer"] = CRANE_SWEEP_S
 				_crane["tag_cooldown"] = 0.0

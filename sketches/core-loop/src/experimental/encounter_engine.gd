@@ -9,7 +9,6 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const DEFAULT_CATALOG_PATH := "res://src/experimental/resources/director/spillway_encounter_catalog.tres"
 const DIG_CATALOG_PATH := "res://src/experimental/resources/director/dig_encounter_catalog.tres"
 const HIGHDRAFT_CATALOG_PATH := "res://src/experimental/resources/director/highdraft_encounter_catalog.tres"
-const MIN_TELL_S := 0.6
 const BEACON_WAVE_GAP_S := 1.8
 
 signal fact_emitted(fact: Dictionary)
@@ -675,7 +674,7 @@ func _start_random_encounter(kind: StringName, run_ctx: Dictionary, result: Dict
 		var vol_pos: Vector3 = triggered_volumes[id]["origin"]
 		if Vector2(spot.x - vol_pos.x, spot.z - vol_pos.z).length() < min_gap:
 			spot += Vector3(-forward.z, 0.0, forward.x) * min_gap
-	var tell_s := maxf(MIN_TELL_S, float(spec["tell_s"]))
+	var tell_s := maxf(EnvTags.MIN_TELL_S, float(spec["tell_s"]))
 	var enc_id := "%s_%d" % [String(kind), _serial]
 	active_random = {
 		"id": enc_id,
