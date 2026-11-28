@@ -9,8 +9,8 @@ const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.g
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const WardenSwarm := preload("res://src/combat/warden_swarm.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var t := T.new("slice2_dig_waking_craft_test")
 
@@ -166,12 +166,12 @@ func _check_runtime() -> void:
 
 	var dig_fx = sink_scenery.get_node_or_null("DigFx") if sink_scenery != null else null
 	if dig_fx != null and not dig_fx.cable_pulses.is_empty():
-		UiTokens.reduced_motion = true
+		Comfort.reduced_motion = true
 		dig_fx._clock = 1.25
 		dig_fx._tick_wayfinding_fx()
 		var calm_scale: Vector3 = (dig_fx.cable_pulses[0]["node"] as MeshInstance3D).scale
 		t.check("DigFx reduced_motion keeps CablePulse scale steady at 1.0", calm_scale.is_equal_approx(Vector3.ONE))
-		UiTokens.reduced_motion = false
+		Comfort.reduced_motion = false
 
 	ModuleHarness.enter_world(game, 2)
 	await _frames(6)

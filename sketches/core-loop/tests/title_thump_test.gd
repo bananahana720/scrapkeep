@@ -4,8 +4,8 @@ const TitleStage := preload("res://src/presentation/title_stage.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # W46-09: the title poster (its sun and wordmark) thumps on the bar line the player hears. The stage reads it from
 # audio's bar_since_s(): seconds since the last bar line of the sounding grid (the recorded title pack's, about 127 BPM,
@@ -45,7 +45,7 @@ var _t
 func _initialize() -> void:
 	_t = T.new("title_thump_test")
 	# Reduced motion is process-wide and a test earlier in the warm batch may leave it on.
-	HighdraftFx.preferred = false
+	Comfort.reduced_motion = false
 	var host := Host.new()
 	var stage = TitleStage.new()
 	host.add_child(stage)
@@ -90,9 +90,9 @@ func _on_the_bar(host: Host, stage) -> void:
 	stage._flow_state = "class_select"
 	_t.eq("pilot select holds the poster still", stage.thump(), 0.0)
 	stage._flow_state = "title"
-	HighdraftFx.preferred = true
+	Comfort.reduced_motion = true
 	_t.eq("reduced motion holds the poster still", stage.thump(), 0.0)
-	HighdraftFx.preferred = false
+	Comfort.reduced_motion = false
 	_t.check("on the bar line, a full thump", stage.thump() > 0.99)
 
 

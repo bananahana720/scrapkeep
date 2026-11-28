@@ -3,6 +3,7 @@ extends SceneTree
 const Fx := preload("res://src/presentation/highdraft_fx.gd")
 const Map := preload("res://src/world/map_highdraft.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 func _net(fx: Node3D) -> MultiMeshInstance3D:
@@ -63,7 +64,7 @@ func _initialize() -> void:
 	t.check("capture ring was seen", row.capture_front > 0.0)
 	t.eq("catch retired", fx.active_catches.size(), 0)
 	t.eq("rings cleared", material.get_shader_parameter("ring_a"), Vector4.ZERO)
-	fx.reduced_motion = true
+	Comfort.reduced_motion = true
 	fx.catch_at(Vector3(-40, 11, 60))
 	fx.step(0.05, Vector3.INF)
 	t.eq("reduced motion spawns no ring", material.get_shader_parameter("ring_a"), Vector4.ZERO)
@@ -71,5 +72,6 @@ func _initialize() -> void:
 	t.check("reduced motion pulses once", (material.get_shader_parameter("pulse") as Vector4).w > 0.0)
 	fx.step(0.5, Vector3.INF)
 	t.eq("pulse ends", material.get_shader_parameter("pulse"), Vector4.ZERO)
+	Comfort.reduced_motion = false
 	fx.free()
 	quit(t.verdict())

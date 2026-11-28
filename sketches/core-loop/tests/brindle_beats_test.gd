@@ -7,6 +7,7 @@ const Rows := preload("res://src/presentation/flourish_rows.gd")
 const Cues := preload("res://src/presentation/flourish_cues.gd")
 const Flow := preload("res://src/core/flow.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # Brindle's beats (world 1 plan, unit 3) through the real flow: the arrival plays inside the
 # no-attack intro and never on an arena retry, each later phase gets its panel inside the
@@ -171,9 +172,9 @@ func _repeat_run() -> void:
 	_to_arena()
 	_t.check("30 a second run's arrival is the short form", player.playing and player.id == "brindle_arrival" and player.short, "%s short %s" % [player.id, player.short])
 	player.advance(Rules.INTRO_SECONDS)
-	_game.camera.reduced_motion = true
+	Comfort.reduced_motion = true
 	Harness.defeat(_game)
-	_game.camera.reduced_motion = false
+	Comfort.reduced_motion = false
 	var flow = _game.flow
 	var prop = _game.boss.arena.find_child("RoutScooter", true, false) if _game.boss.arena != null else null
 	_t.check("33 reduced motion keeps the overlay and drops the world beat", player.id == "brindle_rout" and prop == null, "")

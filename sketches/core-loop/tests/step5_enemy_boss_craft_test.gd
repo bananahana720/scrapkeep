@@ -10,11 +10,10 @@ const Dispatcher := preload("res://src/combat/dispatcher.gd")
 const Miniboss := preload("res://src/combat/miniboss.gd")
 const Reactor := preload("res://src/combat/warden_reactor.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const BossHarness := preload("res://tests/doubles/boss_harness.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var t := T.new("step5_enemy_boss_craft_test")
 
@@ -25,13 +24,11 @@ func _initialize() -> void:
 
 func _run() -> void:
 	EnemyBossCraft.reset_for_tests()
-	UiTokens.reduced_motion = false
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	_check_craft_library()
 	_check_arena_and_vents()
 	await _check_live_boss_dispatcher_miniboss_reactor()
-	UiTokens.reduced_motion = false
-	EnemyMotion.motion_scale = 1.0
+	Comfort.reduced_motion = false
 	EnemyBossCraft.reset_for_tests()
 	quit(t.verdict())
 
@@ -228,12 +225,12 @@ func _check_live_boss_dispatcher_miniboss_reactor() -> void:
 		and is_equal_approx(mag_target.radius, mag_radius) and is_equal_approx(mag_target.half_height, mag_hh),
 		"tilt=%.4f rad pos_ok=%s" % [tilt_angle, mag_target.global_position.is_equal_approx(moved_pos)])
 
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	ship.step_magnet_motion(1.0 / 60.0)
 	var calm_basis: Basis = rig.part("magnet_0").node.basis
-	t.check("Brindle crane magnet pendulum resets cleanly under UiTokens.reduced_motion",
+	t.check("Brindle crane magnet pendulum resets cleanly under Comfort.reduced_motion",
 		rest_basis.get_rotation_quaternion().angle_to(calm_basis.get_rotation_quaternion()) < 0.001)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	game.boss.exit_arena()
 	await physics_frame
 
@@ -274,7 +271,7 @@ func _check_live_boss_dispatcher_miniboss_reactor() -> void:
 	var rig_skel: Skeleton3D = mb._pose_rig
 	var body_bone := rig_skel.find_bone("MinibossBody")
 	var fist_bone := rig_skel.find_bone("MinibossFistLeft")
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	mb.state = Miniboss.State.STALK
 	mb._clock = 0.0
 	mb._model_pose(0.0)
@@ -284,10 +281,10 @@ func _check_live_boss_dispatcher_miniboss_reactor() -> void:
 		mb._model_pose(1.0 / 60.0)
 	var calm_body_y := rig_skel.get_bone_pose_position(body_bone).y
 	var calm_fist_pos := rig_skel.get_bone_pose_position(fist_bone)
-	t.check("Miniboss secondary breathing stays frozen under UiTokens.reduced_motion",
+	t.check("Miniboss secondary breathing stays frozen under Comfort.reduced_motion",
 		is_equal_approx(calm_body_y, base_body_y) and calm_fist_pos.is_equal_approx(base_fist_pos))
 
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	var max_body_delta := 0.0
 	var max_fist_delta := 0.0
 	for _k in 45:
@@ -324,11 +321,11 @@ func _check_live_boss_dispatcher_miniboss_reactor() -> void:
 		and sheet_aabb.size.y > 0.45 and sheet_cols.is_empty() and sheet.material_override is ShaderMaterial,
 		"aabb=%s cols=%d" % [sheet_aabb, sheet_cols.size()])
 	_check_basis_det_positive("ReactorSheet", w_root)
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	var calm_sheet_mat := Reactor._make_sheet_material(Reactor.SHEET_ALPHA, true)
-	t.check("ReactorSheet shader respects UiTokens.reduced_motion",
+	t.check("ReactorSheet shader respects Comfort.reduced_motion",
 		is_equal_approx(float(calm_sheet_mat.get_shader_parameter("motion")), 0.0))
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	driver._close_sheet()
 	w_root.free()
 	fake_warden.free()

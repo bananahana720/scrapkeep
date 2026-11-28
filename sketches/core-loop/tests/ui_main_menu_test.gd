@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Screens := preload("res://src/ui/screens.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # The main menu (decisions.tsv 2026-10-16 alpha-scope): a fresh title reads SCRAPKEEP and offers
 # Play, Camp, Settings, Help, Achievements and Quit in that order; Play is the primary button and
@@ -61,10 +62,11 @@ func _run() -> void:
 	await _frames(3)
 	_t.eq("Play opens pilot select", game.flow.state_name(), "class_select")
 
-	game.camera.reduced_motion = true
+	Comfort.reduced_motion = true
 	game.flow.show_title()
 	await _frames(2)
 	_t.check("reduced motion shows the name at rest at once", screens._title.scale == Vector2.ONE and screens._title.rotation == 0.0,
 		"rotation %s scale %s" % [screens._title.rotation, screens._title.scale])
+	Comfort.reduced_motion = false
 	game.free()
 	quit(_t.verdict())

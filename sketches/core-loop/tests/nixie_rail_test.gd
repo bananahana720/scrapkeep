@@ -3,9 +3,9 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const NixieRail := preload("res://src/ui/nixie_rail.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Palette := preload("res://src/core/palette.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # E1-04, the tube rail (ruling ek; OPUS-3D-UI-BLUEPRINT section 4; Fable's calls D, E, H and L):
 #   - with no row, or only rows under 3 s with no count, the rail is hidden and has no rectangle;
@@ -38,8 +38,8 @@ var _was_reduced := false
 
 
 func _initialize() -> void:
-	_was_reduced = UiTokens.reduced_motion
-	UiTokens.reduced_motion = false
+	_was_reduced = Comfort.reduced_motion
+	Comfort.reduced_motion = false
 	_game = Game.new()
 	_game.test_mode = true
 	root.add_child(_game)
@@ -85,7 +85,7 @@ func _process(_delta: float) -> bool:
 				_draws_settled = _draws
 			if _wait == 8:
 				_rest_counted()
-				UiTokens.reduced_motion = _was_reduced
+				Comfort.reduced_motion = _was_reduced
 				_hud.nixie_rail.clear()
 				quit(_t.verdict())
 				return true
@@ -230,7 +230,7 @@ func _reduced_motion() -> void:
 	var rail := NixieRail.new()
 	root.add_child(rail)
 	rail.place(Vector2(1582.0, 888.0))
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	rail.set_rows(_rows(1))
 	rail.advance(1.0 / 120.0)
 	_t.check("with motion the rail slides in and the housing rises", rail._slide_x() > 0.0 and rail._rise(rail._tubes[0]) > 0.0,
@@ -243,7 +243,7 @@ func _reduced_motion() -> void:
 	_t.check("with motion the needle quivers within 1.5 degrees", moving.any(func(d): return not is_equal_approx(d, steady_want))
 		and moving.all(func(d): return absf(d - steady_want) <= NixieRail.QUIVER_DEG + 0.01), "%s around %.1f" % [moving, steady_want])
 	rail.clear()
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	rail.set_rows(_rows(2))
 	var still := []
 	for i in 6:
@@ -256,14 +256,14 @@ func _reduced_motion() -> void:
 	rail.advance(NixieRail.FADE_DIGIT + NixieRail.COOL + 0.01)
 	rail.advance(0.0)
 	_t.check("reduced motion: the numeral fades, then the rail closes up at once", not rail.showing(), "showing %s" % rail.showing())
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	rail.free()
 
 
 # Every bottom piece against every other, at the canvas the window draws and at the raw window size.
 func _hud_geometry() -> void:
 	var rail = _hud.nixie_rail
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	for window in WINDOWS:
 		for size: Vector2 in [CANVAS, window]:
 			for n in [1, 2, 4]:
@@ -291,7 +291,7 @@ func _hud_geometry() -> void:
 				rail.clear()
 	_t.check("the cog wallet and chain counter are listed for the layout test",
 		_hud.piece_rects()["bottom"].has(_rect_like(_hud._cogs)) and _hud.piece_rects()["bottom"].has(_rect_like(_hud.chain_counter)), "")
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	_hud.layout(_hud._screen_size())
 
 

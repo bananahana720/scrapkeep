@@ -2,21 +2,10 @@ extends SceneTree
 
 const Driver := preload("res://tools/test_batch_driver.gd")
 const Game := preload("res://src/game.gd")
-const AbilityBar := preload("res://src/ui/ability_bar.gd")
-const AimReticle := preload("res://src/ui/aim_reticle.gd")
-const BossPlate := preload("res://src/ui/boss_plate.gd")
-const CallerTile := preload("res://src/ui/caller_tile.gd")
-const ClassCard := preload("res://src/ui/class_card.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const ClassPreview := preload("res://src/ui/class_preview.gd")
-const MossBubble := preload("res://src/ui/moss_bubble.gd")
-const RewardView := preload("res://src/ui/reward_view.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
-const FlourishPlayer := preload("res://src/presentation/flourish_player.gd")
-const HighdraftFx := preload("res://src/presentation/highdraft_fx.gd")
-const PilotAntics := preload("res://src/presentation/pilot_antics.gd")
-const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
-const WorldFxKit := preload("res://src/presentation/world_fx/world_fx_kit.gd")
 const WorldFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const WorldFxGrain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldFxSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
@@ -115,15 +104,9 @@ func _run() -> void:
 	var t := T.new("test_batch_reset_test")
 	var driver := Driver.new(self, [])
 
-	# Game.set_motion_statics(true) flips every reduced-motion static, including CallerTile and EnemyMotion.
+	# Game.set_motion_statics(true) sets the one reduced-motion owner, and the scale derived from it.
 	Game.set_motion_statics(true)
-	t.check("Game.set_motion_statics(true) sets every reduced-motion static",
-		is_zero_approx(EnemyMotion.motion_scale)
-		and HighdraftFx.preferred and WorldFx.preferred and WorldFxKit.reduced_motion
-		and AbilityBar.reduced_motion and UiTokens.reduced_motion and AimReticle.reduced_motion
-		and RewardView.reduced_motion and MossBubble.reduced_motion and CallerTile.reduced_motion
-		and ClassCard.reduced_motion and PilotAntics.reduced_motion and ClassPreview.reduced_motion
-		and BossPlate.reduced_motion and FlourishPlayer.reduced_motion)
+	t.check("Game.set_motion_statics(true) sets Comfort", Comfort.reduced_motion and is_zero_approx(Comfort.motion_scale()))
 
 	# Dirty other single-field process-wide statics that tests in the repo flip.
 	FlashGuard.on = true
@@ -351,21 +334,9 @@ func _run() -> void:
 	t.check("processed tweens are killed on reset", get_processed_tweens().all(func(tw): return not tw.is_valid()))
 	t.check("user://test-<pid> is cleared on reset", not FileAccess.file_exists(marker_path))
 
-	t.near("EnemyMotion.motion_scale resets to 1.0", EnemyMotion.motion_scale, 1.0)
-	t.check("HighdraftFx.preferred resets to false", not HighdraftFx.preferred)
-	t.check("WorldFx.preferred resets to false", not WorldFx.preferred)
-	t.check("WorldFxKit.reduced_motion resets to false", not WorldFxKit.reduced_motion)
-	t.check("AbilityBar.reduced_motion resets to false", not AbilityBar.reduced_motion)
-	t.check("UiTokens.reduced_motion resets to false", not UiTokens.reduced_motion)
-	t.check("AimReticle.reduced_motion resets to false", not AimReticle.reduced_motion)
-	t.check("RewardView.reduced_motion resets to false", not RewardView.reduced_motion)
-	t.check("MossBubble.reduced_motion resets to false", not MossBubble.reduced_motion)
-	t.check("CallerTile.reduced_motion resets to false", not CallerTile.reduced_motion)
-	t.check("ClassCard.reduced_motion resets to false", not ClassCard.reduced_motion)
-	t.check("PilotAntics.reduced_motion resets to false", not PilotAntics.reduced_motion)
-	t.check("ClassPreview.reduced_motion resets to false", not ClassPreview.reduced_motion)
-	t.check("BossPlate.reduced_motion resets to false", not BossPlate.reduced_motion)
-	t.check("FlourishPlayer.reduced_motion resets to false", not FlourishPlayer.reduced_motion)
+	t.check("Comfort.reduced_motion resets to false", not Comfort.reduced_motion)
+	t.near("Comfort.motion_scale() resets to 1.0", Comfort.motion_scale(), 1.0)
+	t.near("SpillwayScenery.flow_scale resets to 1.0", SpillwayScenery.flow_scale, 1.0)
 
 	t.check("FlashGuard.on resets to false", not FlashGuard.on)
 	t.eq("GraphicsPreset.current resets to high", GraphicsPreset.current, "high")

@@ -21,7 +21,7 @@ const SiteMarkers := preload("res://src/presentation/site_markers.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
 const Palette := preload("res://src/core/palette.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const MAP := "park_dam"
 const FLOAT_MAX_M := 2.0
@@ -193,10 +193,10 @@ func _pips(cable, ctx, markers) -> void:
 func _motion(cable) -> void:
 	var live: ShaderMaterial = cable.cables()[0]["view"].material_override
 	t.near("the beads run", float(live.get_shader_parameter("speed")), ConduitCable.BEAD_SPEED)
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	await process_frame
 	t.near("reduced motion: the beads stand still", float(live.get_shader_parameter("speed")), 0.0)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	await process_frame
 	t.near("motion back on: the beads run again", float(live.get_shader_parameter("speed")), ConduitCable.BEAD_SPEED)
 
