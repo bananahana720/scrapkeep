@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ALPHA_MAPS, PARK_MAPS, PILOT_IDS } from "./lib/game-defs.mjs";
 import { REPO_ROOT, git, nulSeparated } from "./lib/git.mjs";
-import { isMain } from "./lib/cli.mjs";
+import { flagValue, isMain } from "./lib/cli.mjs";
 import { walkSync } from "./lib/walk.mjs";
 import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
 
@@ -791,16 +791,14 @@ export function baselineText(baseline) {
 
 export function parseLintArgs(argv) {
   const options = { sketch: null, writeBaseline: false, base: null, layers: null };
-  const value = (at, needs) => {
-    if (!argv[at] || argv[at].startsWith("-")) throw new Error(`${argv[at - 1]} requires ${needs}`);
-    return argv[at];
-  };
   for (let i = 0; i < argv.length; i++) {
-    if (argv[i] === "--sketch") options.sketch = value(++i, "a name, as in --sketch core-loop");
+    if (argv[i] === "--sketch")
+      options.sketch = flagValue(argv, ++i, "a name, as in --sketch core-loop");
     else if (argv[i] === "--layers") {
       const order = argv[i + 1];
       options.layers = order && !order.startsWith("-") ? parseLayerOrder(argv[++i]) : LAYERS;
-    } else if (argv[i] === "--base") options.base = value(++i, "a ref, as in --base origin/main");
+    } else if (argv[i] === "--base")
+      options.base = flagValue(argv, ++i, "a ref, as in --base origin/main");
     else if (argv[i] === "--write-baseline") options.writeBaseline = true;
     else
       throw new Error(
