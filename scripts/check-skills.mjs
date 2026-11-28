@@ -400,6 +400,7 @@ async function checkPaths(findings, root, file, gitignorePatterns) {
         if (await exists(path.join(root, stripped))) continue;
         if (skillDir !== null && (await exists(path.join(root, skillDir, stripped)))) continue;
         if (isGitignored(gitignorePatterns, stripped)) {
+          if (stripped.endsWith("/")) continue;
           findings.warn(
             "paths",
             file.relative,

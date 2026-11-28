@@ -1,10 +1,12 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { planHookChecks } from "../hooks/pre-push.mjs";
+import { cwdDecidesRepository, git } from "../lib/git.mjs";
 import { classifyAffected } from "./affected.mjs";
 
 const affectedScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "affected.mjs");
@@ -123,5 +125,81 @@ test("CLI --stdin writes github-output and rejects unknown arguments", () => {
     assert.equal(bad.status, 2);
   } finally {
     rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("a changed path gone from the tree selects the docs check, in CI and in the pre-push hook", () => {
+  for (const file of ["scripts/linked.mjs", "sketches/core-loop/tools/linked.gd"]) {
+    assert.equal(classifyAffected([file], { exists: () => false }).docs, true, file);
+    assert.equal(planHookChecks([file], () => false).hasDocsOrPkg, true, file);
+    assert.equal(classifyAffected([file], { exists: () => true }).docs, false, file);
+    assert.equal(planHookChecks([file], () => true).hasDocsOrPkg, false, file);
+  }
+});
+
+function selector(cwd, input) {
+  return spawnSync(process.execPath, [affectedScript, "--stdin"], {
+    cwd,
+    env: cwdDecidesRepository(),
+    input,
+    encoding: "utf8",
+  });
+}
+
+test("CLI --stdin selects the docs check when a change deletes a script a page links to", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "affected-deleted-"));
+  try {
+    git(["init", "-q"], { cwd: tmp });
+    mkdirSync(path.join(tmp, "scripts"));
+    writeFileSync(path.join(tmp, "README.md"), "[tool](scripts/linked.mjs)\n");
+    writeFileSync(path.join(tmp, "scripts/linked.mjs"), "\n");
+    writeFileSync(path.join(tmp, "scripts/kept.mjs"), "\n");
+    const commit = ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-qm"];
+    git(["add", "."], { cwd: tmp });
+    git([...commit, "one"], { cwd: tmp });
+    git(["rm", "-q", "scripts/linked.mjs"], { cwd: tmp });
+    git([...commit, "two"], { cwd: tmp });
+    const deleted = selector(tmp, "scripts/linked.mjs\n");
+    assert.equal(deleted.status, 0, deleted.stderr);
+    assert.equal(JSON.parse(deleted.stdout).docs, true);
+    const edited = selector(tmp, "scripts/kept.mjs\n");
+    assert.equal(edited.status, 0, edited.stderr);
+    assert.equal(JSON.parse(edited.stdout).docs, false);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+test("CLI --stdin fails when git cannot list the head tree or it lists nothing", () => {
+  const plain = mkdtempSync(path.join(os.tmpdir(), "affected-plain-"));
+  const empty = mkdtempSync(path.join(os.tmpdir(), "affected-empty-"));
+  try {
+    const notRepo = selector(plain, "scripts/kept.mjs\n");
+    assert.equal(notRepo.status, 2);
+    assert.match(notRepo.stderr, /git ls-tree HEAD failed/);
+    git(["init", "-q"], { cwd: empty });
+    const unborn = selector(empty, "scripts/kept.mjs\n");
+    assert.equal(unborn.status, 2);
+    assert.match(unborn.stderr, /git ls-tree HEAD failed/);
+    git(
+      [
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@example.invalid",
+        "commit",
+        "-q",
+        "--allow-empty",
+        "-m",
+        "none",
+      ],
+      { cwd: empty },
+    );
+    const bare = selector(empty, "scripts/kept.mjs\n");
+    assert.equal(bare.status, 2);
+    assert.match(bare.stderr, /git ls-tree HEAD lists no files/);
+  } finally {
+    rmSync(plain, { recursive: true, force: true });
+    rmSync(empty, { recursive: true, force: true });
   }
 });

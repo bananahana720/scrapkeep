@@ -29,12 +29,15 @@ export const isPackagePath = (file) => PACKAGE_PATTERN.test(file);
 export const isHandoffDocPath = (file) => HANDOFF_DOC_PATTERN.test(file);
 export const isSkillPath = (file) => SKILL_PATTERN.test(file);
 export const isAgentConfigPath = (file) => AGENT_CONFIG_PATTERN.test(file);
-export const isDocsPath = (file) =>
-  isHandoffDocPath(file) || isAgentConfigPath(file) || DOCS_SCRIPT_PATTERN.test(file);
+export const isDocsPath = (file, exists = () => true) =>
+  isHandoffDocPath(file) ||
+  isAgentConfigPath(file) ||
+  DOCS_SCRIPT_PATTERN.test(file) ||
+  !exists(file);
 export const isNodePath = (file) => NODE_PATTERN.test(file);
 export const isWorkflowPath = (file) => WORKFLOW_PATTERN.test(file);
 
-export function classifyAffected(changedFiles, { full = false } = {}) {
+export function classifyAffected(changedFiles, { full = false, exists } = {}) {
   const files = [...new Set(changedFiles.filter(Boolean))];
   if (full || files.length === 0) {
     return {
@@ -60,7 +63,7 @@ export function classifyAffected(changedFiles, { full = false } = {}) {
   const godot_shards = godotWide ? 2 : 1;
   const godot_matrix = godot_shards > 1 ? "[1, 2]" : "[1]";
   const node = workflowTouched || godot || web || files.some(isNodePath);
-  const docs = workflowTouched || files.some(isDocsPath);
+  const docs = workflowTouched || files.some((file) => isDocsPath(file, exists));
   return {
     full: false,
     lint: true,
@@ -75,7 +78,10 @@ export function classifyAffected(changedFiles, { full = false } = {}) {
 }
 
 export function diffFiles(baseRef, { cwd = process.cwd(), spawn = spawnSync } = {}) {
-  const ran = spawn("git", ["diff", "--name-only", `${baseRef}...HEAD`], { cwd, encoding: "utf8" });
+  const ran = spawn("git", ["diff", "--no-renames", "--name-only", `${baseRef}...HEAD`], {
+    cwd,
+    encoding: "utf8",
+  });
   if (ran.status !== 0) {
     throw new Error(
       `git diff against ${baseRef} failed: ${(ran.stderr || ran.stdout || "").trim()}`,
@@ -85,6 +91,22 @@ export function diffFiles(baseRef, { cwd = process.cwd(), spawn = spawnSync } = 
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
+}
+
+export function headFiles({ cwd = process.cwd(), spawn = spawnSync } = {}) {
+  const ran = spawn("git", ["ls-tree", "-r", "-z", "--name-only", "HEAD"], {
+    cwd,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+  });
+  if (ran.error || ran.status !== 0) {
+    throw new Error(
+      `git ls-tree HEAD failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
+    );
+  }
+  const files = new Set(ran.stdout.split("\0").filter(Boolean));
+  if (files.size === 0) throw new Error("git ls-tree HEAD lists no files");
+  return files;
 }
 
 function parseArgs(argv) {
@@ -130,7 +152,11 @@ if (isMain(import.meta.url)) {
         full = true;
       }
     }
-    const result = classifyAffected(files, { full });
+    const head = full ? null : headFiles();
+    const result = classifyAffected(files, {
+      full,
+      exists: head ? (file) => head.has(file) : undefined,
+    });
     console.log(JSON.stringify(result));
     if (opts.githubOutput) {
       const lines =

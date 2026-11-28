@@ -97,7 +97,7 @@ export function planHookChecks(changedFiles, exists = (f) => existsSync(path.joi
   const jsFiles = filterFormatTargets(changedFiles, exists);
   const hasSketch = changedFiles.some(isGodotPath);
   const hasDocsOrPkg = changedFiles.some(
-    (f) => isDocsPath(f) || isPackagePath(f) || isSkillPath(f),
+    (f) => isDocsPath(f, exists) || isPackagePath(f) || isSkillPath(f),
   );
   const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
   const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
