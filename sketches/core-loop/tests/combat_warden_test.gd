@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Warden := preload("res://src/combat/warden.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 # The Warden, spawned at the beacon through ctx.spawner.spawn_enemy("warden", at).
 # 1. A stage-1 Warden fights on posture: a blazing ram at heft 1 fills its bar and takes no health.

@@ -166,7 +166,7 @@ func _run() -> void:
 	_clear()
 
 	# The director card: cost 4, one per purchase, and the kind is placeable.
-	var Cards := preload("res://src/world/director_cards.gd")
+	var Cards := preload("res://src/core/director_cards.gd")
 	var Director := preload("res://src/world/director.gd")
 	t.eq("the dispatcher card costs 4", Cards.cost(["dispatcher"]), 4.0)
 	t.eq("its stage cap is 1", Cards.cost(["dispatcher", "dispatcher"]), INF)

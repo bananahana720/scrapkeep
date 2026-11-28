@@ -1,7 +1,7 @@
 extends "res://src/combat/counter.gd"
 
 const FloorRule := preload("res://src/combat/floor_rule.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const PLATING := 22.0
 const HP := 90.0

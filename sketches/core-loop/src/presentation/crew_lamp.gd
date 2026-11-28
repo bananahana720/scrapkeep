@@ -1,7 +1,7 @@
 extends Node3D
 
 const CrewLampField := preload("res://src/presentation/crew_lamp_field.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 
 const ROWS := {

@@ -16,7 +16,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
 const WardenSwarm := preload("res://src/combat/warden_swarm.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const ParkSchema := preload("res://src/world/park/park_schema.gd")
 
 const ROPE_RANGE := 45.0

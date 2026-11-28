@@ -8,7 +8,7 @@ const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 

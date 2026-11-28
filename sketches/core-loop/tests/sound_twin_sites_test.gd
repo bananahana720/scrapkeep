@@ -9,7 +9,7 @@ const Redline := preload("res://src/combat/redline.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 const WaveCross := preload("res://src/world/wave_cross.gd")
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const T := preload("res://tests/support/t.gd")
 

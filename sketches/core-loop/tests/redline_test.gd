@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Redline := preload("res://src/combat/redline.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 # A machine heavier than a fresh ball, so the ram rebounds.
 const HEAVY_KIND := "plated_brute"
 

@@ -41,7 +41,7 @@ const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const TraversalLine := preload("res://tools/traversal_line.gd")
 const RunLog := preload("res://src/core/run_log.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 const PARKS := ["dam", "pit", "sinkhole", "islands", "crown"]

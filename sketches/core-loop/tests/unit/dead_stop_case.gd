@@ -1,7 +1,7 @@
 extends RefCounted
 
 const RunLog := preload("res://src/core/run_log.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 # The traversal detector on synthetic traces (design-v3/TRAVERSAL.md). Cruise 14 m/s, so
 # tier 1 starts at 7.7 m/s and tier 2 at 16.1. One sample per tick at 90 ticks a second.

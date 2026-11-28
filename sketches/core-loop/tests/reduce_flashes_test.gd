@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const EdgeFlash := preload("res://src/presentation/edge_flash.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Reduce flashes (Andrew, design question 7, 17 Oct 2026): a saved toggle on the settings

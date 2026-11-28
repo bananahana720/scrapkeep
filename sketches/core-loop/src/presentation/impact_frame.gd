@@ -1,7 +1,7 @@
 extends Control
 
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 const FRAMES := 3
 const HEAT_COLOR := Color(1.0, 0.5, 0.12)

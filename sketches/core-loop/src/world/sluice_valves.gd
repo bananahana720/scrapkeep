@@ -7,7 +7,7 @@ const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
 

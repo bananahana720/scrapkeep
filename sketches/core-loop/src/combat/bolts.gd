@@ -5,7 +5,7 @@ const ShotBits := preload("res://src/build/shot_bits.gd")
 const Palette := preload("res://src/core/palette.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const BOLT_SHADER := preload("res://assets/shaders/bolt_projectile.gdshader")
 
 const MAX_LIVE := 64

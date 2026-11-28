@@ -4,7 +4,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const RunState := preload("res://src/core/run_state.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Ruling cu, call 1: health regenerates only while the ball rolls at cruise or above. World 1 ships

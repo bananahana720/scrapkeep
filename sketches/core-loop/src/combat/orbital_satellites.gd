@@ -5,7 +5,7 @@ const Groups := preload("res://src/core/groups.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const ActiveBase := preload("res://src/combat/actives/active_base.gd")
 

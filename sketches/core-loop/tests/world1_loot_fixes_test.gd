@@ -8,7 +8,7 @@ const Synergies := preload("res://src/build/synergies.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
 const T := preload("res://tests/support/t.gd")
 
