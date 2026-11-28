@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { isMain } from "./lib/cli.mjs";
-import { REPO_ROOT, git as runGit } from "./lib/git.mjs";
+import { REPO_ROOT, git as runGit, nulSeparated } from "./lib/git.mjs";
 
 const root = REPO_ROOT;
 const SRC = "sketches/core-loop/src/";
@@ -13,6 +13,18 @@ const LEAK_FILES = 3;
 const KEY_OWNERS = [`${SRC}core/event_kinds.gd`];
 
 const git = (...args) => runGit(args, { cwd: root, maxBuffer: 256 * 1024 * 1024, trim: false });
+
+export function sourceFiles(head, { cwd = root } = {}) {
+  const files = nulSeparated(
+    runGit(["ls-tree", "-r", "--name-only", "-z", head, SRC], {
+      cwd,
+      maxBuffer: 256 * 1024 * 1024,
+      trim: false,
+    }),
+  ).filter((file) => file.endsWith(".gd"));
+  if (files.length === 0) throw new Error(`git ls-tree lists no .gd file under ${SRC} at ${head}`);
+  return files;
+}
 
 const strip = (line) => line.replace(/#.*$/, "").trimEnd();
 
@@ -265,10 +277,7 @@ function main(argv) {
       return 0;
     }
   };
-  const listSrc = () =>
-    git("ls-tree", "-r", "--name-only", head, SRC)
-      .split("\n")
-      .filter((f) => f.endsWith(".gd"));
+  const listSrc = () => sourceFiles(head);
   const diff = git("diff", "--unified=0", "--no-color", base, head, "--", SRC, TOOLS);
   const text = report({
     base,

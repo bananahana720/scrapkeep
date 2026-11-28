@@ -69,9 +69,10 @@ describe("auditFormalSync", () => {
       const res = auditFormalSync(tmp, {
         rows: mockRows,
         spawn: (_cmd, args) => {
+          assert.ok(args.includes("-z"), args.join(" "));
           const sync = args[args.indexOf("--name-only") + 1];
           if (sync === "1111111111") {
-            return { status: 0, stdout: "sketches/core-loop/src/combat/bolts.gd\n", stderr: "" };
+            return { status: 0, stdout: "sketches/core-loop/src/combat/bolts.gd\0", stderr: "" };
           }
           return { status: 0, stdout: "", stderr: "" };
         },
@@ -87,6 +88,33 @@ describe("auditFormalSync", () => {
         res.missing_sync.map((m) => m.id),
         ["m_nosync"],
       );
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  });
+
+  it("reads a changed path whose name holds a newline, a leading space and a quote as itself", () => {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-formal-odd-"));
+    try {
+      const refs = path.join(tmp, ".agents", "skills", "scrapkeep-verify-formal", "references");
+      mkdirSync(refs, { recursive: true });
+      writeFileSync(
+        path.join(refs, "drifted.md"),
+        "Covers `sketches/core-loop/src/combat/bolts.gd`.\nSynced at `1111111111`.\n",
+        "utf8",
+      );
+      const odd = 'sketches/core-loop/src/combat/bolts.gd/ odd "name"\nline.gd';
+      const res = auditFormalSync(tmp, {
+        rows: { m_drifted: { spec: "B.tla", coverage: "references/drifted.md" } },
+        spawn: (_cmd, args) => ({
+          status: 0,
+          stdout: args.includes("-z")
+            ? `${odd}\0`
+            : `"${odd.replace("\n", "\\n").replaceAll('"', '\\"')}"\n`,
+          stderr: "",
+        }),
+      });
+      assert.deepEqual(res.drifted[0].changed_files, [odd]);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }
