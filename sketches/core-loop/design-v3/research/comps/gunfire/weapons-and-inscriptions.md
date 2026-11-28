@@ -75,7 +75,7 @@ Principles: **opt-in layers** and **class identities**. The relationships worth 
 Proposed relationships (design inference):
 
 - A scrap-built weapon gains attachment slots as a stage milestone is passed, with a visible table in the build screen, so players can plan around it.
-- A paired attachment pays off only when a second built part carries the matching tag, and the build screen shows the missing partner. This fits the scrap-bot crew of TADR-011, where the partner could be a bot.
+- A paired attachment pays off only when a second built part carries the matching tag, and the build screen shows the missing partner. This fits the scrap-bot crew of TADR-013, where the partner could be a bot.
 - A per-class trade-off line, shown in the build screen, instead of a single power number.
 - An upgrade that spends scrap at a fixed, visible price per step with a hard cap.
 

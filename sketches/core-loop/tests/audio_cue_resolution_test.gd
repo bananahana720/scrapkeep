@@ -7,6 +7,7 @@ const Audio := preload("res://src/presentation/audio.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
+const VoiceSynth := preload("res://src/presentation/voice_synth.gd")
 const Shop := preload("res://src/build/shop.gd")
 const Workshop := preload("res://src/ui/workshop.gd")
 const Callouts := preload("res://src/ui/callouts.gd")
@@ -191,7 +192,7 @@ func _arrivals() -> void:
 
 func _babble() -> void:
 	var line: String = Shop.LINES["moss.ask.1"]
-	var samples := SfxBank.babble(line, 1)
+	var samples := VoiceSynth.babble(line, 1)
 	var peak := 0.0
 	for s in samples:
 		peak = maxf(peak, absf(s))
@@ -211,7 +212,7 @@ func _babble() -> void:
 	var beats := [Workshop.babble_beat({"beat": 0}), Workshop.babble_beat({"beat": 5}), Workshop.babble_beat({"beat": 6, "restart": true}),
 		Workshop.babble_beat({"beat": -1, "relent": true})]
 	_check("Moss babbles", peak > 0.1 and seconds > 1.0 and spoken == ["babble", "now"] and again == cached and keyed == cached + 1
-		and beats == [1, 6, SfxBank.BABBLE_LEVEL, SfxBank.BABBLE_RELENT],
+		and beats == [1, 6, VoiceSynth.BABBLE_LEVEL, VoiceSynth.BABBLE_RELENT],
 		"'%s' babbles %.2f s at peak %.2f; the workshop speaks it as %s; baked lines %d, %d on a repeat, %d in Eb; beats ask, send-off, restart, relent -> %s"
 			% [line, seconds, peak, spoken, cached, again, keyed, beats])
 

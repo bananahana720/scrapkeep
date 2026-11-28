@@ -89,7 +89,7 @@ Principle: **jazzy EDM** adaptive score, plus **opt-in layers**. Bible sections 
 - **Parameters not cues.** Feed the score a few smooth values, read from the same state the HUD reads: pressure (enemies near and looking), player health, objective proximity, crew status. A jazzy EDM arrangement maps these to layers: bass movement and subdivision with pressure, a melodic answer in sustained combat, a stripped bar near death.
 - **Phrase boundaries.** The Bible says arrangement changes resolve at phrase boundaries when play allows; RoR2's 0.25 s tick supplies the data, and a phrase quantizer decides when to apply it. Attack cues stay immediate.
 - **A release after a clear.** RoR2 has no stage-clear music change in the code read, so Scrapkeep can improve here: drop the busiest layers and let ambience return before the next reward flourish (`BIBLE.md:755`).
-- **Crew voices as stems.** With the crew adopted (TADR-011), each crew bot's driver motif (see companions) can be a short loop that joins the mix only while the bot acts, so the music itself says what the crew is doing.
+- **Crew voices as stems.** With the crew adopted (TADR-013), each crew bot's driver motif (see companions) can be a short loop that joins the mix only while the bot acts, so the music itself says what the crew is doing.
 - **Unlocks as lessons.** Use stat and single-event conditions, never grind counts. A 3000-kill milestone teaches nothing; "clear a pocket without taking damage" does.
 - **Logbook.** A read-only pass over registered content with a status and a viewed list; no new storage beyond a viewed-set.
 

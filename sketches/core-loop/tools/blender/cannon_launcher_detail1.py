@@ -2,7 +2,8 @@
 body's origin, authored from gap list A (units/rc-cannon_launcher/gaps_A.md) against cannon_launcher_202.png. Bolt and stud
 rows on the plate, deck, flange, collar, lip and boiler; collar lugs; the gauge's ticks, needle and elbow; the flywheel's
 hub boss and inner rim lip; the side valve; the turntable ring. Colours from cannon_launcher.TONES only. Class "detail"
-(1500 tris, 3000 verts, 1 draw); the game drops it by distance (LAYER_RANGE in tools/w12_side_cannon_launcher.gd).
+(1500 tris, 3000 verts, 1 draw). No game code loads it yet; its row in assets/registry.d/cannon_launcher.json records
+the draw distance it is meant to get.
   blender -b --threads 2 --python-exit-code 1 -P sketches/core-loop/tools/blender/cannon_launcher_detail1.py [-- --out-dir DIR]
 """
 import math

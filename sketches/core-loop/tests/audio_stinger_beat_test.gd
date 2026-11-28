@@ -2,6 +2,7 @@ extends SceneTree
 
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -22,7 +23,7 @@ var _plant := OS.get_environment("SOUNDINT_PLANT") == "offbeat"
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	var stingers: Array = []
 	for id in SfxBank.STINGER_BEATS:
 		if id in SfxBank.EVENT_CUES:

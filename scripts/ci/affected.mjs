@@ -14,11 +14,11 @@ const GODOT_HUB_PATTERN =
   /^sketches\/core-loop\/(?:src\/game\.gd|src\/movement\/(?:intent|tuning|augments)\.gd|src\/core\/(?:palette|class_def|event_kinds|game_events|run_state|ability_state|profile|park_defs|stage_defs|sim_clock)\.gd|src\/build\/parts\.gd|src\/combat\/(?:threat_grammar|warden|roster|weapons)\.gd|src\/world\/(?:terrain|director|world)\.gd|src\/presentation\/(?:sfx_bank|harmony|audio|hero_assets)\.gd|tests\/support\/t\.gd|tools\/bot_driver\.gd)$/;
 const PACKAGE_PATTERN = /^package(?:-lock)?\.json$/;
 const HANDOFF_DOC_PATTERN =
-  /(?:\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv))/;
+  /(?:\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv|shared\/structure-sweep\/(?:pool|units)\.tsv))/;
 const SKILL_PATTERN = /^\.(?:agents|claude)\/skills\//;
 const AGENT_CONFIG_PATTERN = /^\.(?:agents|claude|codex)\//;
 const DOCS_SCRIPT_PATTERN =
-  /^scripts\/(?:check-docs|check-project|check-skills|check-agents\.mjs|brief-check|wave-state|known-failing|gate\/weekly)/;
+  /^scripts\/(?:check-docs|check-project|check-skills|check-agents\.mjs|brief-check|wave-state|known-failing|structure-sweep|gate\/weekly)/;
 const NODE_PATTERN =
   /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|project-guide\/handoff\/sitting-kit\/|\.github\/(?:workflows|actions)\/)/;
 const WORKFLOW_PATTERN = /^(\.github\/(?:workflows|actions)\/|scripts\/ci\/)/;

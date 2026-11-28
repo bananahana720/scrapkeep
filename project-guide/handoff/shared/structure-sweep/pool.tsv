@@ -1,0 +1,277 @@
+id	survey file	kind	risk	status	unit	finding
+CORE-01	core.md	C	low	landed	C1	Move four test-only audit modules out of `src/core/` to remove 15 upward preloads immediately
+CORE-02	core.md	C	low	open		Move four verified zero-dependency leaf scripts down into `src/core/`
+CORE-03	core.md	C	medium	open		Split `core/palette.gd` into pure color constants (`core/`) and 3D material/sky factory (`presentation/`)
+CORE-04	core.md	C	low	in flight	C4	Move `weigh()` and presentation juice/impact tables out of `core/event_kinds.gd`
+CORE-05	core.md	C	medium	open		Remove combat cache-drain loop and 3D presentation dressing from `core/beacon.gd`
+CORE-06	core.md	C	high	open		Invert `core/run_state.gd`'s 23 upward preloads/loads into `build/`, `world/`, and `combat/`
+CORE-07	core.md	C	high	open		Invert `core/flow.gd`'s 7 upward preloads into `ui/`, `world/`, `boss/`, and `movement/`
+CORE-08	core.md	C	low	in flight	C3; U3 has `ability_state.gd`	Clear the remaining 13 `src/core/` upward preload files via pass-in, validation inversion, or untyping
+CORE-09	core.md	G	low	landed	C2	Declare `consumable_used` as a real signal in `game_events.gd` and close the 3-signal gap in `event_kinds.gd`
+CORE-10	core.md	C	medium	landed	C2	Strip `Profile` tally mutation and raw file I/O from `Codex.append_line()`
+CORE-11	core.md	F	medium	open		Enforce `RunState` single-writer ownership by replacing 25+ external field writes with mutators
+CORE-12	core.md	C	low	landed	C1, C2	Remove `game.gd`'s private `profile._refuse()` reach-in and centralize `profile.save()` policy
+CORE-13	core.md	B	low	open		Delete dead compatibility paths (`camp_get`/`camp_set`, `ScrapbookStore` fallback, `BRINDLE_COBALT_PICK`)
+CORE-14	core.md	D	low	landed	C2	Collapse `core/stage_defs.gd` forwarding facade and deduplicate stage-table query helpers
+CORE-15	core.md	A	low	landed	C2	Deduplicate `validate()` pairs in `achievements.gd` and `shift_board.gd` plus 5 `_words()` copies in `core/`
+CORE-16	core.md	G	low	landed	C2	Fix raw `FileAccess.WRITE` in `game.gd:dump_tuning()` and duplicate `SettingsStore.new()` allocations
+CORE-17	core.md	G	low	landed	C2	Unify CLI flag parsing across `game.gd`, `boot.gd`, `frame_log.gd`, `sitting_notes.gd`, and `challenge_dials.gd`
+CORE-18	core.md	G	low	in flight	C3 has part 1	Consolidate `signal_lifetime.gd` into `SignalWire` and replace `run.set_meta` with one extension mechanism
+CORE-19	core.md	H	medium	open		Split input/gamepad routing and display-settings fan-out out of `src/game.gd` (1,375 lines)
+CORE-20	core.md	H	medium	open	C2 did part 1	Split data tables & codecs along existing seams in `pilot_story.gd` (1,834L) and `run_state.gd` (1,327L)
+WORLD-01	world.md	B	low	open		Dead stubs, zero-`src`-caller park/world modules, and 4 unused preloads
+WORLD-02	world.md	A	medium	open		Dual sluice-valve implementations fighting over the same `kind == "sluice_valve"` rows
+WORLD-03	world.md	C	low	landed	N1	`events/natural.gd` hijacks `ctx.events.world_fact` and calls private `presentation.audio._admit`/`_start`
+WORLD-04	world.md	A	low	landed	W1	Triplicated 70-line GLB slot/mesh loader across `ambush_altar.gd`, `bet_crate.gd` and `cracked_cache.gd`
+WORLD-05	world.md	C	medium	open		`contraptions.gd` spawns a headless `Activities` node solely to call 3 private `Activities` methods
+WORLD-06	world.md	C	low	open	W2 did the `screens._press` line	`world -> ui` wrong-direction dependencies (19 preloads + `game.screens._press` reach-in)
+WORLD-07	world.md	C	low	open		71 `world -> presentation` preloads/loads and `activities._exit_tree()` clearing presentation caches
+WORLD-08	world.md	C	low	landed	W2	25+ private reach-ins into `Terrain` and `EventDirector` from `events/` and `activities.gd`
+WORLD-09	world.md	C	low	in flight	W2 did parts 1 and 3; M3 has part 2	Private reach-ins from `camp_hub.gd`, `camp_sandbox.gd`, and `world.gd`
+WORLD-10	world.md	H	low	in flight	W3 has seam 1	`activities.gd` (2,636 lines) has 5 clean, already-isolated state seams ready to split
+WORLD-11	world.md	H	low	in flight	W3	`park/park_recipes.gd` (1,989 lines) has a self-contained 625-line Anchor Field / LOD / Hull seam
+WORLD-12	world.md	G	low	open		Four parallel map/stage/park builders — legacy `StageMap` & `EventDirector` paths are test-only, and `event_ground.gd` still depends on orphan `map_gorge.gd`
+WORLD-13	world.md	E	low	landed	K1	Physics layer numbers and masks repeated across 8+ world files with no single owner
+WORLD-14	world.md	E	low	landed	K1	Raw group names and park map IDs scattered across 9+ world files
+WORLD-15	world.md	G	medium	open		Four mixed ways `src/world/` plays sound effects
+WORLD-16	world.md	A	low	landed	W1	`director.gd` duplicates `Roster.COUNTERS` and `Roster.ANCIENTS` despite preloading `Roster`
+WORLD-17	world.md	D	low	landed	K1	Shallow 10-line wrapper `find_kit.gd` with one caller
+WORLD-18	world.md	F	low	in flight	W3	Cross-module static-cache teardown and shared mutable static flags
+COMBAT-01	combat.md	C	low	open		Move zero-dependency comfort flags (`FlashGuard`, `reduced_motion`) into `src/core/` to remove 14 presentation/UI preloads
+COMBAT-02	combat.md	C	low	open		Invert 75 `FxLibrary.burst(...)` calls across 13 combat files through an injected FX callback
+COMBAT-03	combat.md	H	low	open		Split `combat.gd`'s cleanest bolt-on seams: W47-H1 hero hooks (342 lines) and Consumables runtime (435 lines)
+COMBAT-04	combat.md	H	medium	open		Split `combat.gd`'s Grapple mutations (578 lines) and W47-C2 micro-mutations / cross-synergies (472 lines) seams
+COMBAT-05	combat.md	H	high	open		Extract Tally kit (834 lines) and Remembered Cannon kit (721 lines) out of `combat.gd` to match existing pilot kits
+COMBAT-06	combat.md	C	low	in flight	M3	Replace 167 underscore reach-ins into `combat.gd` across 18 files with an explicit public collaborator API
+COMBAT-07	combat.md	A	low	open		Consolidate 25 hand-rolled enemy GLB mesh loaders onto `EnemyCasting.parts()` and move `ModelVariants` to `src/core/`
+COMBAT-08	combat.md	A	low	landed	M1	Factor out 4 duplicated helper patterns across all 8 active scripts (`src/combat/actives/`)
+COMBAT-09	combat.md	C	medium	open		Unify 13 posture-target checks and direct `_apply_posture()` calls (including `rivet_kit.gd` bypassing `DamageDoor`)
+COMBAT-10	combat.md	A	low	landed	M2	Unify enemy hull-radius lookups across 7 combat files (three conflicting fallback defaults)
+COMBAT-11	combat.md	E	medium	open		Consolidate duplicated plating/shred math and document/reconcile parallel element & armour effectiveness tables
+COMBAT-12	combat.md	B	low	open		Remove dead write-only shared mutable state `Enemy.rim_color`
+COMBAT-13	combat.md	B	low	open		Delete 14 verified zero-caller functions across `src/combat/`
+COMBAT-14	combat.md	C	medium	open		Invert remaining combat -> presentation & UI preloads (mesh craft, enemy visuals, audio, `Icons`, `WorldPrompt`, `Density`)
+COMBAT-15	combat.md	C	low	open		Break 10 `src/combat/` -> `src/boss/` preloads that violate optional-boss isolation
+COMBAT-16	combat.md	C	medium	open		Move pure data schemas out of `src/build/` & `src/world/` into `src/core/` to remove 27 cross-module preloads in combat
+COMBAT-17	combat.md	C	low	in flight	M2 did part 3 and the `_atk` read of part 1; B4 has the boss reads of part 1	Eliminate private reach-ins across combat's external boundaries (`hero_assets` -> `warden`, `boss` -> `warden`, `combat` -> `run_log`/`player`, and `ultimate._*`)
+COMBAT-18	combat.md	A	low	landed	M1 did items 3 to 6; M2 did items 1 and 2	Deduplicate 6 exact copy-pasted helper functions inside `src/combat/`
+COMBAT-19	combat.md	D	low	open	M2 did items 2 and 3	Delete shallow pass-through wrappers where deletion removes indirection without spreading complexity
+COMBAT-20	combat.md	E	low	landed	K1	Centralize scattered combat constants: `GRAVITY`, `"enemy"` group string, and raw physics layer literals
+BMB-01	boss-movement-build.md	C	low	landed	B1	`movement/` preloads `combat/` for movement constants, strike damage and enemy heft (6 upward edges; 3 trivial to cut)
+BMB-02	boss-movement-build.md	C	low	open		Pure `build/` economy and field modules depend upward on `ui/` and `presentation/` (`shop.gd`, `scrap_field.gd`, `element_field.gd`)
+BMB-03	boss-movement-build.md	B	low	open		Fifteen dead functions and a 27-line unreachable fallback branch with zero callers in `build/` and `movement/`
+BMB-04	boss-movement-build.md	E	low	in flight	B4	Maker-set thresholds, maker/pilot/rarity lists and grapple-mutation ownership are duplicated across `parts.gd`, `maker_sets.gd`, `relics.gd`, `item_gen.gd` and `part_def.gd`
+BMB-05	boss-movement-build.md	A	low	landed	B2	`BuildSheet.from_parts()` and `StatCache` duplicate the full part-counting, capping, leveling and folding pipeline
+BMB-06	boss-movement-build.md	C	low	in flight	B4	Ten cross-module private (`_`) member reach-ins across `boss/`, `movement/` and `build/`
+BMB-07	boss-movement-build.md	A	low	landed	B1	Duplicated physics and geometry helpers in `movement/` and `build/`: steep-face raycast, orthonormal-up basis and `MAX_SLOPE_DOT`
+BMB-08	boss-movement-build.md	A	low	landed	B1	Burst-ability enumeration and readiness logic is triplicated across `augments.gd`, `harpoon.gd` and `player_ball.gd`
+BMB-09	boss-movement-build.md	A	low	landed	B2	Duplicated `Palette.ICE`, rarity-color lookup and tier-preserving offer-reroll logic inside `build/`
+BMB-10	boss-movement-build.md	A	low	landed	B3	`boss/waking_attacks.gd` preloads `mind_attacks.gd` yet copy-pastes 8 attack/geometry helpers, and `MindAttacks.build` forces `waking.gd` to depend on `mind_attacks.gd`
+BMB-11	boss-movement-build.md	A	low	landed	B3	Duplicated boss dress, ceremony card and hazard-cleanup machinery across `mind_dress.gd`, `waking_dress.gd`, `mind.gd` and `waking.gd`
+BMB-12	boss-movement-build.md	A	medium	in flight	B4	Copy-pasted 70-line draw loop and `hits_harder()` safeguard in `Parts.roll()` and `Parts.roll_for_stage()`
+BMB-13	boss-movement-build.md	D	low	landed	B2	Shallow and duplicate accessors: `PlayerBall.active_body()` vs `body()` and one-line pass-throughs in `build/`
+BMB-14	boss-movement-build.md	G	medium	in flight	B4	Mixed ball-shove physics, ball-speed reads across the 3 bosses, and `item_effects.gd` reading `1.0 / physics_ticks_per_second`
+BMB-15	boss-movement-build.md	C	low	in flight	B4	`boss/` reaches upward into `presentation/` (22 edges, incl. 2 hidden inline `preload()`s), `ui/` (4 edges), and `build/reward_gates.gd`
+BMB-16	boss-movement-build.md	F	medium	in flight	B4	Cross-module shared mutable `static var` globals (`Synergies.table`, `Parts.seams`, `Parts.opened_items`, `Parts._run_ref`)
+BMB-17	boss-movement-build.md	H	medium	in flight	B4	Oversized `build/parts.gd` (2,013 lines) splits cleanly into catalogue, mutations and offer/roll engine
+BMB-18	boss-movement-build.md	H	medium	in flight	B4	Oversized `boss/boss.gd` (1,972 lines) bundles 5 boss subsystems with isolated private state (mind the `_spawn_pickup` pin)
+BMB-19	boss-movement-build.md	H	medium	in flight	B4	Oversized `movement/player_ball.gd` (1,776 lines) contains three isolated private-state subsystems
+BMB-20	boss-movement-build.md	H	medium	in flight	B4	Oversized `build/build.gd` (1,638 lines) mixes build orchestration with four self-contained subsystems
+UI-01	ui.md	B	low	open		callouts.gd and meta_page.gd are dead in the game; only tests load them
+UI-02	ui.md	C	low	landed	U1	screens.gd reaches into radio_deck's private `_save()`
+UI-03	ui.md	C+H	medium	open		radio and jukebox rules live in screens.gd's key handler
+UI-04	ui.md	A+G	medium	open		twelve hand-listed page-visibility guards in screens.gd
+UI-05	ui.md	C	medium	closed		core calls the HUD for the objective; the objective rule is assembled in hud.gd
+UI-06	ui.md	C	low	landed	U2	OddsReadout.odds_for is a build rule living in ui
+UI-07	ui.md	F	medium	open		two UiProfile objects write one ui-profile.json
+UI-08	ui.md	E+F	medium	open		reduced motion is copied into thirteen static vars, and combat reads the ui one
+UI-09	ui.md	G	low	landed	U2	three panel systems and 24 hand-built StyleBoxFlat
+UI-10	ui.md	G	low	landed	U2	41 hand-built labels against an 11-site label helper
+UI-11	ui.md	C	high	open		core/flow.gd builds a UI node
+UI-12	ui.md	C	low	in flight	U3	ui leaf files that lower layers preload, sorted by where they belong
+UI-13	ui.md	C	medium	open		hud.gd chooses the detour site
+UI-14	ui.md	C	low	in flight	U3	screens.gd opens the scrapbook store itself
+UI-15	ui.md	D	low	landed	U2	thin modules
+UI-16	ui.md	E	low	landed	U2	raw colours outside the token file
+VF-01	visuals-fx.md	A+G	medium	open		Seven separate ways to spawn, pool, time and free a particle effect, with no single owner
+VF-02	visuals-fx.md	A	low	in flight	F1	vfx.gd and machine_fx.gd each carry a copy of the owner-pool code
+VF-03	visuals-fx.md	C	low	open		flash_guard.gd is a game-wide comfort fact that sits in presentation; 22 lower-layer files preload it
+VF-04	visuals-fx.md	F+E	low	open		The reduced-motion setting is copied into 14 static variables
+VF-05	visuals-fx.md	A+G	medium	open		Three Label3D "word" systems, each with its own recipe, lifetime and budget
+VF-06	visuals-fx.md	C	low	open		player_fx and machine_fx reach into each other through groups and duck typing
+VF-07	visuals-fx.md	G+C	medium	open		"Hold play" has no owner; reward_ceremony and workshop each pause the tree and turn input off in their own way
+VF-08	visuals-fx.md	C	medium	open		juice.gd decides how long game time stops (the hit-stop budget lives in presentation)
+VF-09	visuals-fx.md	C	medium	open		flourish_cues injects a callable that stretches the VICTORY state in core/flow
+VF-10	visuals-fx.md	E	low	landed	V2	Two ink colours are written as literals in shaders and code instead of coming from Palette
+VF-11	visuals-fx.md	E+A	low	landed	V2	fx_budget.gd copies owner facts instead of reading them
+VF-12	visuals-fx.md	B	low	open		Ten public functions in the slice have no caller anywhere in the repo
+VF-13	visuals-fx.md	D	low	in flight	F1	machine_fx's special-cue functions are forwarders to SpecialCues
+VF-14	visuals-fx.md	H	medium	landed	V2	player_fx.gd (2116 lines) holds five separate jobs
+VF-15	visuals-fx.md	H	low	landed	V2	vfx.gd (1160 lines) mixes four pools, a governor and rule tables
+VF-16	visuals-fx.md	E	low	landed	V2	Shader parameter names are bare strings in 10 files, across two separate particle shaders
+VF-17	visuals-fx.md	C	medium	open		fx_library.gd (the spawn owner) is preloaded by 18 combat, boss and world files for `burst`
+VM-01	visuals-meshes.md	A+E	low	landed	V1	Seven copies of the vertex-mask helper `_vc` re-implement `CraftLookdev.encode_mask`
+VM-02	visuals-meshes.md	A+G	medium	open	V1 did steps 1 and 2	Ten separate bevel-box builders, and three byte-identical `_uv_for` / `_add_tri` copies
+VM-03	visuals-meshes.md	C	medium	open		Presentation reads combat's and world's private members by string name
+VM-04	visuals-meshes.md	G+A	low	open		22 hand-rolled glb loaders, each with its own cache and warning; only 13 calls go through `ModelVariants`
+VM-05	visuals-meshes.md	A	low	landed	V2	experimental_setpiece_craft.gd is a fork of world23_chunk_craft.gd with drifted constants
+VM-06	visuals-meshes.md	A	medium	open		enemy_boss_craft's multi-slot `_cached` / `_slot_st` re-implements `KitbashCanvas`
+VM-07	visuals-meshes.md	C	low	landed	V2	The world23 material helper `enrich_standard_pbr` is the shared PBR owner by accident
+VM-08	visuals-meshes.md	C	medium	open		Lower layers preload presentation mesh builders
+VM-09	visuals-meshes.md	C	low	landed	V2	hero_assets flips a private flag on WeaponRigFx and calls a private BallLooks static
+VM-10	visuals-meshes.md	A	low	closed	P1	Four copies of the glb-to-MeshInstance extraction loop
+VM-11	visuals-meshes.md	G	medium	open		Six material factories with overlapping jobs
+VM-12	visuals-meshes.md	D	low	landed	P1	camp_craft_meshes has two private forwarders to its own public calls
+VM-13	visuals-meshes.md	A	low	landed	P1	`_bolt_ring` exists twice with drifted constants
+VM-14	visuals-meshes.md	C	low	landed	V2	spillway_scenery calls craft_prop_meshes' private primitives
+VM-15	visuals-meshes.md	A	low	open		Two more torus and faceted-orb builders
+VM-16	visuals-meshes.md	H	medium	landed	V2	hero_assets.gd is 3348 lines with clear seams
+SOUND-01	sound.md	A	low	open		Conflicting duplicate `TRIM_DB`, file paths, WAV loaders, and 3D player factories across `foley_audio.gd`, `jolt_layer_audio.gd`, `sfx_bank.gd`, and `special_audio.gd`
+SOUND-02	sound.md	C	low	landed	N1	`src/world/events/natural.gd` hijacks `audio.gd`'s `world_fact` signal connection and calls private `_audio._admit()` / `_audio._start()` directly
+SOUND-03	sound.md	C	medium	open		Wrong-direction dependencies: lower layers (`core`, `build`, `combat`, `world`) preload presentation sound modules and instantiate raw `AudioStreamPlayer3D`s
+SOUND-04	sound.md	C	low	landed	N1	`audio.gd` reaches into 6 private `director._park_*` members on `event_director.gd` and private `ult._beat` on `ultimate.gd`
+SOUND-05	sound.md	C	low	landed	N1	Underscore reach-ins into `audio.gd`, `music_engine.gd`, `ace_sequencer.gd`, and `sfx_bank.gd` from UI, intra-sound code, and tools
+SOUND-06	sound.md	G	medium	open		Six competing ways callers play a sound (and 5 ways to locate `audio`), plus 3 ways to change music
+SOUND-07	sound.md	A	low	landed	A1	Four duplicate 16-bit RIFF WAV parsers across `foley_audio.gd`, `jolt_layer_audio.gd`, and `sfx_bank.gd` (x2)
+SOUND-08	sound.md	H	low	open		`audio.gd` (5,263 lines) has 6 verified private-state seams outside `SoundArbiter.tla` ready to extract
+SOUND-09	sound.md	H	low	open	N3 landed the voice seam; the rest is open	`sfx_bank.gd` (3,402 lines) bundles four separable subsystems along clean seams
+SOUND-10	sound.md	F	medium	open	N3 landed step 1; the other steps are open	Shared mutable static globals (`Synth.score_step`, `Synth.score_transpose`, `SfxBank._shift`, `SfxBank._theme`, `SfxBank.bake_cancel`, `WorldFxSound.audio`) leak across modules and batched tests
+SOUND-11	sound.md	B	low	open		`CraftAudioCues` (`craft_audio_cues.gd`, 149L) is test-only and overlaps `ExperimentalAudioBank`, which also bundles test-only PBR texture specs
+SOUND-12	sound.md	E	low	landed	N2	Bus names (`"SFX"`, `"UI"`, `"Music"`, `"Ambient"`, `"Master"`) and bus-resolution fallbacks are scattered across 23+ `src/` files
+SOUND-13	sound.md	E	low	landed	N2	`"res://assets/music_ace/%s/manifest.json"` path template and pack lists are repeated across `music_rows.gd`, `phase_music.gd`, and `content_registry.gd`
+SOUND-14	sound.md	C	low	landed	N2	Peer-module preloads from presentation sound files into `src/combat/`, `src/world/`, and `src/movement/`
+SOUND-15	sound.md	B	low	open		Dead functions and dead constants with zero callers anywhere, plus 11 test-only helpers left on production classes
+SOUND-16	sound.md	D	low	landed	N2	Shallow forwarding wrappers that fail the deletion test
+SOUND-17	sound.md	H	low	open	N3 landed seams 1 and 3; the rest is open	`music_engine.gd` (2,989 lines) mixes four separable seams: static pre-baker, park-cue async renderer, phrase generator, and real-time sequencer
+XD-01	experimental-dev.md	C	low	closed		Shipped release exports bundle all of `src/dev/` and `src/experimental/`, and `game.gd` loads them with no existence or release guard
+XD-02	experimental-dev.md	A	low	in flight	X1	Env-tag vocabulary, payload builder, and validator are duplicated 4 times across 3 experimental files with drifted clamps
+XD-03	experimental-dev.md	A	low	in flight	X1	`never_brake()` is copy-pasted twice in `refurbished_elites.gd`, duplicating `EventDirector.never_brake()`
+XD-04	experimental-dev.md	C	low	landed	X2	`DevFight` and `DevAgent` reach into private underscore methods on `Flow`, `DevConsole`, and `DevInspect`
+XD-05	experimental-dev.md	C	low	landed	X2	`DevFight` and `DevLens` mutate internal sub-objects of `Flood`, `RunState`, `Build`, `Combat`, and `ChaseCamera` instead of calling small owner APIs
+XD-06	experimental-dev.md	F	low	landed	X2	`DevFight.set_god()` overwrites `RunState.defend_hook`, colliding with `src/combat/ultimate.gd`
+XD-07	experimental-dev.md	B	low	open		Dead code in `src/dev/` and `src/experimental/`: unimplemented `complete_args`, dead `contact_sheet_mode` compat branch, unused preload/constants, and empty `reset()` stubs
+XD-08	experimental-dev.md	A	low	landed	X2	`DevConsole.LENS_RANGES` duplicates `DevLens` knob bounds and already drifts on `distance` (`200` vs `400`)
+XD-09	experimental-dev.md	A	low	landed	X2	`DevConsole` duplicates `DevAgent`'s `--dev-run=` parser and fallback script runner with divergent defaults
+XD-10	experimental-dev.md	D	low	landed	X2	`LiveRunBridge._reset()` is a shallow forwarding stub that forces `test_batch_driver.gd` to `preload` `src/experimental/` and resets `ExperimentalAudioBank` twice
+XD-11	experimental-dev.md	C	medium	open		`src/experimental/` gameplay modules invert layer boundaries by preloading `src/ui/ui_tokens.gd` and `src/presentation/*`
+XD-12	experimental-dev.md	A	low	open		`EncounterEngine` duplicates `StageLocks`'s perimeter spring constants and force formula
+XD-13	experimental-dev.md	A	low	landed	X2	`PartResource.VALID_MAKERS` duplicates `MakerSets` / `Relics.VALID_MAKERS`
+XD-14	experimental-dev.md	A	low	landed	X2	`DevConsole`'s `run` command duplicates `DevFight`'s `pilot` command
+XD-15	experimental-dev.md	A	low	landed	X2	`DevOverlay` and `DevInspect` run parallel 60-frame performance sampling loops every `_process` frame
+XD-16	experimental-dev.md	E	low	landed	X2	Stage aliases and boss arena map names are hardcoded in `dev_fight.gd` and `dev_inspect.gd` outside the owning stage/world tables
+XD-17	experimental-dev.md	E	low	open		Cruise speed fallback (`14.0`) and telegraph floor (`0.6 s`) are scattered across 7 `src/experimental/` files
+XD-18	experimental-dev.md	H	low	in flight	X3 has two of the three seams	Three oversized files (~1,420–1,530 lines) have clean, state-disjoint seams ready to split
+XD-19	experimental-dev.md	F	low	in flight	X3 has the cooldown state	`ExperimentalAudioBank` stores global mutable cooldown state shared across `LiveRunBridge` instances, and `LiveRunBridge` bypasses `src/presentation/audio.gd`
+XD-20	experimental-dev.md	G	low	in flight	X3	`src/dev/` mixes two command-return protocols (`!`-prefixed `String` vs `{ok, text, data}` `Dictionary`) and duplicates CLI flag parsing across `game.gd`, `live_run_bridge.gd`, and `dev_agent.gd`
+TT-01	tools-tests.md	B	low	landed	Z1	72 strictly dead tool scripts (~15.5k lines) plus 5 comment-only w12 side scripts have zero live callers
+TT-02	tools-tests.md	A	low	landed	Z1	13 copy-pasted `w12_side_*.gd` / `w12_recipe_cart_side.gd` scripts duplicate ~309 identical lines each (5,070 lines total)
+TT-03	tools-tests.md	F	medium	open		Static-var reset registration in `test_batch_driver.gd` has four split owners, 7+ reset conventions, 21 inline mutations, and live uncalled `reset_for_tests()` methods
+TT-04	tools-tests.md	F	low	in flight	T3	Mutable `static var`s in `tools/` libraries are invisible to `L14` and never reset between warm-batched tests
+TT-05	tools-tests.md	C	low	open		131 test/tool files hand-move `player.body().global_position =` and 27 reach into `player._rigid`, bypassing `PlayerBall.reset_to()` and `body()`
+TT-06	tools-tests.md	G	low	landed	T1	81 tool/test files read raw `DisplayServer.get_name()` instead of `AppShell.headless()`
+TT-07	tools-tests.md	A	low	open		423 top-level tests hand-roll failure counters and `_check`/`_report` helpers instead of using `tests/support/t.gd`
+TT-08	tools-tests.md	A	low	open		856 tests repeat `Game.new()` + run-boot boilerplate and 268+ repeat frame-stepping loops with no general `tests/support/` boot or step helper
+TT-09	tools-tests.md	A	low	open		93 capture/probe scripts under `tools/` repeat identical viewport, `Game.new()`, `Camera3D`, screenshot, and CLI-arg boilerplate (~25.5k lines)
+TT-10	tools-tests.md	C	low	in flight	T3	Tests and tools bypass existing public accessors on `Screens`, `Warden`, and `Game` (`screens._body`, `warden._posture`, workshop scan)
+TT-11	tools-tests.md	C	low	open		High-frequency reach-ins into `Game`, `Audio`, `Flow`, and `BotDriver` lack thin public seams (350+ hits across 100+ files)
+TT-12	tools-tests.md	A	low	landed	T1	Five stage-table test doubles in `tests/doubles/` copy-paste the exact same 16 static methods (517 lines)
+TT-13	tools-tests.md	A	low	landed	T2	`boss_spawner_double.gd` and `spine_spawner_double.gd` duplicate combat strike/plating math
+TT-14	tools-tests.md	H	medium	open		`tools/bot_driver.gd` (4,710 lines) bundles self-contained inner classes and cohesive subsystems with natural extraction seams
+TT-15	tools-tests.md	E	low	landed	T2	Hardcoded `/home/andrew/` Linux paths appear in 19 files across `tools/` and `tests/`, including active scripts, and `tests/hotwire_cue_parallel.sh` leaks past `L4` via baseline
+TT-16	tools-tests.md	E	low	landed	T2	`tools/blender/park/props/kit.py` hardcodes duplicated palette/banned/warn hex constants instead of reading `tools/palette_gd.py`
+TT-17	tools-tests.md	G	low	open		Three inconsistent CLI argument parsing idioms repeated across 146 `tools/*.gd` scripts
+TT-18	tools-tests.md	A	low	landed	T2	32 tests and 4 tools hand-roll `InputEventKey.new()` synthesis even though `tests/workshop/push.gd` already owns input pushing
+SCR-01	scripts.md	G	low	landed	S5	`sketch-lint.mjs` has five incompatible baseline/allowlist mechanisms and no single pattern for adding a baselined rule
+SCR-02	scripts.md	E	low	landed	S2	Root `package.json` `test` script hand-lists 54 files and silently omits 15 tracked `scripts/**/*.test.mjs` suites
+SCR-03	scripts.md	A	low	landed	S1	`scripts/challenge/run.mjs` duplicates `runProcess`, `pool`, and `stateEnv` verbatim from sibling `scripts/challenge/proc.mjs`
+SCR-04	scripts.md	G	low	landed	S3	Finding the Godot binary is implemented 7 different ways across 22 scripts, with hardcoded `/home/andrew/` and `4.7.2` paths
+SCR-05	scripts.md	G	low	landed	S4	Scratch Godot data-folder isolation bypasses `scripts/godot-home.mjs` in 11 scripts, breaking macOS save isolation in 4 of them
+SCR-06	scripts.md	G	medium	landed	S6	Child-process timeout and reaping is implemented 13 ways across 14 scripts, and 10 fail to reap child process groups
+SCR-07	scripts.md	A	low	landed	G1	`scripts/sketch-nightly.mjs` locks the retired `scrapkeep-sketch-smoke.lock` instead of `sketch-smoke.mjs`'s slot/quiet-hold lock
+SCR-08	scripts.md	B	low	in flight	S7	Six dead or test-only scripts with zero callers in npm scripts, CI workflows, hooks, skills, docs, or other scripts
+SCR-09	scripts.md	B	low	in flight	S7	Retired `QUARANTINE.tsv` runtime machinery (~170 lines) and 4 dead/test-only exports in `sketch-smoke.mjs` and `sketch-fast.mjs`
+SCR-10	scripts.md	E	low	landed	S5	Godot version pin (`4.7.2-stable`) and 50 lines of CI Godot setup/cache are duplicated across 25 files and two `ci.yml` jobs
+SCR-11	scripts.md	E	low	landed	S5	Hand-maintained pilot/park ID tables, surface-classification regexes, and `sketch-fast.mjs` `PATH_RULES` drift across scripts
+SCR-12	scripts.md	G	low	landed	S5	Reading git state (`git()`, `gitState()`, `cleanHead()`) is re-implemented across 35 scripts
+SCR-13	scripts.md	G	low	landed	D2, S5	Recursive directory walking (`walk()`) is re-implemented 12 times with inconsistent prune lists, and `check-project.mjs` duplicates `check-docs.mjs`
+SCR-14	scripts.md	G	low	landed	S6	Receipt writing, naming, and CLI scaffolding are duplicated across 3 runner scripts and 15 `scripts/gate/*receipt*.mjs` producers
+SCR-15	scripts.md	G	low	landed	S5	62 scripts hand-roll CLI argument loops (zero use `node:util` `parseArgs`) and 71 duplicate `isMain()` entrypoint guards with 3 variants
+SCR-16	scripts.md	H	medium	landed	S6	`scripts/sketch-smoke.mjs` (1,371 L) and `scripts/sketch-fast.mjs` (1,722 L) bundle 4 unrelated subsystems each along clean private-state seams
+SCR-17	scripts.md	A	low	landed	S4	`scripts/cloud/export-headless.mjs` duplicates the Linux export, addon copy, and win-proof loop of `scripts/sketch-export.mjs`
+SCR-18	scripts.md	A	low	landed	S6	`scripts/sketch-fast.mjs` duplicates `globToRegExp`, `godotIdentity`, and `runBatch` (and misses outside-batch error detection)
+DOC-01	docs.md	S	low	landed	D2	No current architecture page maps `sketches/core-loop/src/`; `CONTRACTS.md` and `README.md` have drifted heavily from the 546-file codebase
+DOC-02	docs.md	G	low	landed	D1	CI silently skips `npm run check:agents` on `.agents/hooks*`, `.claude/settings.json`, and `scripts/check-agents.mjs` changes
+DOC-03	docs.md	G	low	waits on Andrew		Coordinator & Gate model contradicts ruling `el` across `AGENTS.md`, `GEMINI.md`, `ORCHESTRATOR.md`, and `THREADS.md`
+DOC-04	docs.md	S	low	landed	D1	`.codex/agents/*.toml` (7 files) holds retired model pins, asks Codex for `CLAUDE_EFFORT`, includes an orphan agent, and escapes `check:agents`
+DOC-05	docs.md	S	low	landed	D2, D3	`AGENTS.md` and `CONTRIBUTING.md` misstate what `check:docs` checks, and `check:project` duplicates `check:docs`'s link scan
+DOC-06	docs.md	G	low	landed	D4	Two ADR files share number `TADR-011`, making 32 repo citations ambiguous
+DOC-07	docs.md	S	low	landed	D2, D3	Live process docs, rules, and skills still prescribe retired `stage/alpha-w<N>`, board-thread, PC-as-Gate, and `/mnt/project-files/` steps
+DOC-08	docs.md	S	low	landed	D1	Skill counts say 11 while 12 skills exist; `scrapkeep-dev-console` is missing from `AI-WORKFLOW.md`, and `.agents/skills/README.md` gives an obsolete registration step
+DOC-09	docs.md	G	low	landed	D2, D3	Four files give conflicting pre-edit read orders, and the cited chain pulls 32 KB to 214+ KB before the first edit
+DOC-10	docs.md	A	low	landed	D2, D3	Worker routing and fallback tier rules are duplicated across 6 pages, driving drift
+DOC-11	docs.md	A	low	landed	D2	Gate policy and verification matrices are duplicated across 5 pages, with `BOT-SHARDS.md` stuck at wave 18–21
+DOC-12	docs.md	B	low	landed	D4	Orphan config/doc files and retired 3-line pointer stubs linger in live directories and agent rules
+DOC-13	docs.md	E	medium	landed	S5	Godot version `4.7.2` is scattered across 112 repo files (32 in this slice), including 6 independent executable scripts/configs
+DOC-14	docs.md	G	low	landed	D1	Antigravity (`safety-gate.mjs`) and Claude Code (`.claude/settings.json`) enforce asymmetric safety boundaries, and `safety-gate.mjs` misses macOS Godot saves
+DOC-15	docs.md	G	low	waits on Andrew	D1 fixed the two writer prompts; the model line in `.claude/settings.json` is left for Andrew	`.claude/settings.json` pins `"model": "opus[1m]"` and `.claude/agents/scrapkeep-writer*.md` contradict `AGENTS.md` push authority
+DOC-16	docs.md	G	low	landed	D2, D3	Heavy-lane `adr/TADR-011-scrap-bot-crew.md` is still marked "Accepted direction" despite `DECISIONS.md` moving the crew to post-alpha
+DOC-17	docs.md	B	low	in flight	S7	`scripts/check-skills.mjs` carries dead `scrapkeep-lab` code and `scripts/check-agents.mjs` misses retired model tokens inside skill references
+DOC-18	docs.md	S	medium	landed	S5	`ORCHESTRATOR.md` and `BACKLOG.md` bury active alpha rules and rows beneath thousands of lines of closed Sept 2026 heavy-lane scaffolding
+LEAD-01	leads	E	low	landed	G1	`scripts/budget-audit.test.mjs` fails: its case "the real registry audits clean with every counted category nonzero" expects the Patch pilot model `pilot_patch_anim` to have no bones and no clips, and the committed model has 25 bones and 8 clips. `npm test` does not run the file; `npm run sketch:fast` runs it when a script changes and goes red for that reason alone, which is one of the two reasons the CI of pull request 1322 was red at `7d7bc3d6c`
+LEAD-02	leads	G	low	closed		`npm run format:check` fails on files no unit touched (63 when counted at `6d496a940`; run it for the number now)
+LEAD-03	leads	E	low	in flight	G3	CI and the pre-push hook run `npm run check:docs` only when a Markdown file, an agent or skill file, or a docs script changes (the patterns `HANDOFF_DOC_PATTERN`, `SKILL_PATTERN`, `AGENT_CONFIG_PATTERN` and `DOCS_SCRIPT_PATTERN` in `scripts/ci/affected.mjs`), so a unit that moves a script a page links to can break the link without the check running
+LEAD-04	leads	G	low	open		`EXCLUDED_S6` in `scripts/lib/cli.test.mjs` lists the scripts that do not yet use the shared command-line helper (41 at `7d7bc3d6c`)
+LEAD-05	leads	B	low	landed	G1	`scripts/challenge/run.mjs` imports `readdirSync` and does not use it
+LEAD-06	leads	D	low	closed		`scripts/gate/pc.mjs` reads `env.GODOT_BIN` back from the child environment it built itself and could pass the binary directly
+LEAD-07	leads	E	low	closed		`scripts/gate/display-run.mjs` spells the Godot version `4.7.2.stable.official.ed1daf0bf` instead of reading `scripts/toolchain.json`
+LEAD-08	leads	E	low	open		Shell and Python helpers outside `scripts/` spell their own Godot path, found with `git grep -n "Godot_v4.7.2\|Godot_4.7.2" -- .agents tools sketches/core-loop/tools`: `.agents/skills/scrapkeep-verify-game/scripts/common.sh`, `tools/godot-mcp/run.sh`, and under `sketches/core-loop/tools/`: `blender/dig_stone/verify.py`, `coordinator/compile_check.sh` and `coordinator/lab_capture.sh`
+LEAD-09	leads	F	low	in flight	T3	`tests/fub_ramp_flash_test.gd` fails when it runs in the same Godot process after `tests/enemy_ramp_flipper_asset_test.gd` and passes alone: the static cache behind `Ramp._parts()` is already filled and `tools/test_batch_driver.gd` has no reset for it
+LEAD-10	leads	C	low	open		`tests/profile_purity_test.gd` is red on the base because `world/camp_sandbox.gd` reads `game.ctx.profile` directly (`git grep -n "ctx.profile" -- sketches/core-loop/src/world/camp_sandbox.gd`)
+LEAD-11	leads	B	low	open		`tests/w50_isaac_relics_test.gd` keeps an unused `Grip` preload
+LEAD-12	leads	B	low	open		`tests/colour_meanings_test.gd` compares each scanned path with its constant `HOME`, a check that can never be true since unit C1 moved the module the constant names out of the scanned folder
+LEAD-13	leads	E	low	open		`tests/support/content_registry.gd` spells `res://assets/music_ace/`, the music folder that `presentation/music_rows.gd` owns
+LEAD-14	leads	A	low	open		The basis-from-a-direction lines that `MathUtil.basis_up` in `core/math_util.gd` owns remain in `presentation/juice.gd` (`Basis(right, up, right.cross(up))`) and `presentation/vfx.gd` (`Basis(right, dir, right.cross(dir))`). Two near copies in `combat/dispatcher.gd` and `presentation/craft/enemy_boss_craft.gd` use another formula and must be compared before any merge
+LEAD-15	leads	C	low	open		`combat/warden_mind.gd` reaches `parse_point` through `warden.get_script()`
+LEAD-16	leads	S	low	open		`combat/drill_crew.gd` has a comment above `_die()` that describes nothing in that function. Unit M1 kept it because a content hash in `tests/enemy_drill_crew_asset_test.gd` covers the file
+LEAD-17	leads	A	low	open		`presentation/craft/craft_audio_cues.gd` keeps its own `resolve_bus` beside the one in `presentation/mix_rows.gd` (the file is also delete candidate SOUND-11)
+LEAD-18	leads	S	low	landed	D4	`design-v3/ABILITY-MUTATIONS.md` and `tools/coordinator/lane-ledger.tsv` still name `Grip.heft_of` and `Harpoon.burst_ready`, which moved in pull request 1296
+LEAD-19	leads	S	low	landed	D4	Markdown pages still name the `src/core` paths of the four modules unit C1 moved to `tests/support` (`colour_meanings.gd`, `content_registry.gd`, `defence_bars.gd`, `pending_content.gd`); `git grep -n -E "src/core/(colour_meanings|content_registry|defence_bars|pending_content)\.gd" -- "*.md"` finds them
+LEAD-20	leads	G	low	in flight	G3	From the review of D3, not confirmed since: on a checkout with no `artifacts/local/` folder, `npm run check:docs` prints eight harmless INFO lines about skills
+LEAD-21	leads	G	low	in flight	G3	From the first review of S2 (pull request 1293): `scripts/ci/node-tests.mjs` walks the disk, so an untracked `*.test.mjs` under `scripts/` runs locally; `npm test -- --test-name-pattern=...` exits 2; none of the 21 newly listed files has an entry in `DURATION_HINTS_MS`, so the second CI shard may run long
+LEAD-22	leads	F	low	landed	G1	From the reviews of S2: four Node suites leave temporary folders behind (`scripts/worktree-sandbox.test.mjs`, `scripts/crash-harvest.test.mjs`, `scripts/first-timer.test.mjs`, `scripts/gate/display-run.test.mjs`), and `scripts/ledger-audit.test.mjs` asserts a wall-clock time under two seconds
+LEAD-23	leads	G	low	in flight	G3	From the second review of S5: `scripts/crash-harvest.mjs` reports a broken symlink as `(missing)`; `checkPreset` in `scripts/export-include-check.mjs` returns an empty list when the `sketch` folder is missing
+LEAD-24	leads	E	low	open		From the writer of K1: raw group and layer strings remain in `movement/augments.gd`, `world/events/natural.gd`, `combat/ultimate.gd`, `ui/key_glyphs.gd` and fourteen files under `boss`, `build`, `movement` and `presentation`; `presentation/prop_kicks.gd` and `combat/ultimate.gd` each hold a gravity constant of their own; the guard `tests/unit/world_constants_case.gd` looks for three constant names only
+LEAD-25	leads	G	low	open		From the reviews of M1 and M2: the guard `tests/unit/combat_helper_owners_case.gd` does not see a copy written inline, a static variant, a subdirectory or `uv1_scale`; it matches retired `combat._*` names only when a `(` follows; its `ultimate._*` check does not see a reach through another variable name
+LEAD-26	leads	B	low	open		From the review of M2: `Ultimate.leg_state()` returns the keys `index` and `count`, which nothing reads
+LEAD-27	leads	G	low	open		From the second review of C2: `WordBudget.words_in()` differs from `split(" ", false).size()` on made-up strings only; `ClassCard.cycle_paint()` no longer sets `profile.last_error` on a read-only profile
+LEAD-28	leads	D	low	open		From the second review of C2: forwarders are kept in `stage_defs.gd`, in the statics of `alpha_defs.gd`, `park_defs.gd` and `slice_defs.gd` that are bound to a table, in `pilot_story.gd`, in `PrologueRows.words`, in `boot.gd` (`_flag`) and in `game.gd` (`_launch_flag`)
+LEAD-29	leads	C	low	open		From the writer and review of N2: `SpecialAudio.rammed` and `ExperimentalAudioBank.reset_cooldowns` and `has_event` are kept for callers in `src/experimental/live_run_bridge.gd`; 148 lines in 26 files under `src/` spelt a bus name as a raw string when N2 landed; `audio.gd`, `special_audio.gd` and `ambient_homes.gd` still load scripts from other modules
+LEAD-30	leads	E	low	open		From the writer and reviews of V2 (pull request 1314): the list `HERO_ALIASES` in the guard `tests/unit/mesh_fx_owners_case.gd` leaves out five constants that moved (`WARDEN_BODY_FINAL`, `WARDEN_REACTOR_PULSE_EXTRA`, `MIND_LENS_BONES`, `MIND_FLIGHT_CLIPS`, `MANTLE_MOUNTS`); the bare uniform name `"ink_colour"` in `vfx.gd`, `build/scrap_field.gd` and `tests/fx_library_test.gd`; `Color(0.07, 0.07, 0.08)` in `world/camp_hub.gd`; `THERMAL_VIEWS` in `fx_budget.gd`; literal `"enemy"` group names; `bind_surface_materials` on the experimental set-piece builder, kept for 12 callers in `src/experimental/dynamic_setpieces.gd`
+LEAD-31	leads	E	low	open		From the reviews of V2: `presentation/fx_library.gd` mixes the bead fill towards `vec3(0.141, 0.165, 0.157)` unconverted, so the outline shows as a mid grey near `#69716e` and not the charcoal `#242a28` that `Palette.CHARCOAL` names, while three shaders (`dev_paint.gdshader`, `dev_print.gdshader`, `launch_take.gdshader`) take the same numbers as a colour the engine converts. Decided: the grey on screen stays, and the code gets a name that says what the colour is
+LEAD-32	leads	C	low	open		From the first review of B4 (pull request 1315): `build/maker_bonuses.gd` calls the spawner private `_trail_deal`; private members are read in `src/combat/warden_reactor.gd`, `src/presentation/arena_waking_dress.gd`, `windup_rows.gd`, `tests/speed_bank_test.gd` and five tools (`bot_driver.gd`, `park_reactor_ideal.gd`, `warden_states_capture.gd`, `look_harness.gd`, `w12_light_capture.gd`)
+LEAD-33	leads	C	low	open		From the second review of B4: `Parts._offer_ops()` hands twelve calls to `part_offers.gd` only because `parts.gd` loads `part_offers.gd` and not the other way round; turning that load round would remove it, once the callers of `Parts.roll*` in `src/world/` and `src/ui/` can move. `speed_bank`, `air_draw_left` and `last_kest_wall_kick` on `PlayerBall` are read only by tests
+LEAD-34	leads	G	low	open		From the writer and second review of T2 (pull request 1318): `TEST_FOLDERS` in `scripts/sketch-lint.mjs` still lists the folder `workshop`, which is now empty; lint rule L17 does not read `.json`, `.md` or `.mjs` files or the folder `design-v3/`, where three old Python scripts still spell `/home/andrew`; `kit.py` keeps `GAG_INK = "242a28"`; `tests/hotwire_cue_parallel.sh` sits among the tests and has an entry on the L4 list; finding TT-13 cites `tests/spine_worlds_test.gd` wrongly
+LEAD-35	leads	G	low	open		From the review of W2 (pull request 1321): the guard `tests/unit/world_reach_ins_case.gd` does not list the aliases `Schema` (`src/world/events/pocket_fog.gd`) and `ParkMapScript` (`src/world/scatter.gd`)
+LEAD-36	leads	C	low	open		From the writer and review of X2 (pull request 1319): `RunState.invulnerable` skips the hit hooks and the `player_hit` event that the old dev-console swap still ran, and `RunState.begin()` does not clear it (dev console only); `Flow.force_unseal()` does not check that a beacon exists; three reaches remain in the dev console (`dropper.scale` in `dev_fight.gd`, `cam.current` in `dev_lens.gd`, `session._boot` in `dev_session.gd`); `dev_inspect.gd` spells the boss arena map names; two tests call `ExperimentalAudioBank._reset()` directly; the top value of the Lens `distance` slider becomes 400.0
+LEAD-37	leads	S	medium	open		Formal-model sync notes are owed. Units N1, K1, N2, C2, X2, M2 and W2 changed files that the models under `.agents/skills/scrapkeep-verify-formal` cover (`audio.gd`, `ace_sequencer.gd`, `profile.gd`, `progress.gd`, `flow.gd`, `combat.gd` and `event_director.gd` among them), and units still with their writers may too. The Mac Studio has no Java, so no model was run. Before a release receipt check, the Gate runs `scripts/gate/model-receipts.mjs` on a machine with Java, or advances the "Sync commit" notes in that skill after reading each changed line
+LEAD-38	leads	F	low	open		Tests seen red once and green when run again, each worth a look if it happens twice: `tests/visible_odds_test.gd` was stopped at the 300-second limit once in the CI of pull request 1322; `tests/park_reactor_boundary_test.gd` failed once; `tests/scenery_teardown_test.gd` crashed once; `tests/audio_bake_cancel_test.gd` failed once in a shared process on unit N3 (pull request 1326) and now runs in a process of its own. `tests/prim_census_test.gd` is red on the base in the bot shard
+LEAD-39	leads	B	low	landed	Z2	From the writer of Z1: five Python test scripts under `sketches/core-loop/tools/` are run by no command (`package_render_music_test.py`, `cue_reel_test.py`, `mixsim_test.py`, `park_reactor_ideal_check_test.py`, `tile_check_selftest.py`); wire them into a command or delete each with its subject
+LEAD-40	leads	S	low	landed	Z2	From the writer of Z1: five Blender script docstrings name `LAYER_RANGE` in a tool script that Z1 deleted; point them at the game's owner of that setting (`git grep -n LAYER_RANGE -- sketches/core-loop/tools`)
+LEAD-41	leads	B	low	landed	Z2	From the writer of Z1: `cliff_gate.py`, `cliff_gate_report.py` and `cliff_gate_form.py` under `sketches/core-loop/tools/` are named only by each other and by `DESIGN-NOTES.md`; a delete candidate that neither TT-01 nor TT-02 lists
+LEAD-42	leads	G	low	open		From the writer of G1: `npm run format:check` fails on 63 files on the integration branch, none of them changed by the sweep, while the pre-push hook and CI format-check only the files a change touches; format the 63 in one commit of their own so the two commands agree
+LEAD-43	leads	B	low	in flight	S7	From the writer of G1: eleven `.gd.uid` files under `sketches/core-loop/tests/` have no script beside them (lint rule L18 lists them once G1 lands); delete the eleven and empty that list
+LEAD-44	leads	A	medium	landed	Z2	From the review of Z1: `sketches/core-loop/tools/blender/pilot_patch.py` and `sketches/core-loop/tools/build_patch_glbs.py` both write `pilot_patch_anim.glb` and `world_one/shell_patch.glb`, and only the second makes the 25-bone skeleton and the 8 clips the game's tests expect, so running the first would replace the animated model with one that has no bones; keep one generator for the two files
+LEAD-45	leads	E	low	open		From the review of Z1: no file records which script made a generated asset, so `scripts/no-caller.mjs` cannot see that a generator is still needed; record the generator beside each generated asset (the asset registry is the likely home) and have the tool read it
+LEAD-46	leads	G	low	landed	G1	The case "runs quickly" in `scripts/ledger-audit.test.mjs` asserts the audit takes under 2,000 ms of wall clock. A GitHub runner takes 4,500 to 6,700 ms, so the second Node test job fails on the integration branch for a reason no change causes. The G1 fix round replaces the timing with a count of the work done and lists other tests of the same shape
+LEAD-47	leads	E	low	in flight	G2	Nothing but a reviewer stops a writer from rewriting a dated record of past work. Unit D4 edited `docs/art/reference/GROUNDING.md` (a snapshot kept verbatim) and unit U3 rewrote two dated entries of `sketches/core-loop/DESIGN-NOTES.md`; each lost a review round
+LEAD-48	leads	G	low	in flight	G3	From the writer of G1: six Node tests still assert on wall-clock time (three in `scripts/alpha-rc.test.mjs`, and one each in `scripts/gate/display-run.test.mjs`, `scripts/gate/look-receipts.test.mjs` and `scripts/lib/proc.test.mjs`). None fails in CI today; each can on a slow runner, as the ledger audit case did
+LEAD-49	leads	G	medium	open		From the review of X1: a test that reads source files to enforce a rule passes when it reads nothing. 317 test files call `FileAccess.get_file_as_string` and 29 walk folders with `DirAccess.open`, and none of the ones sampled checks that the folder opened, that the file list is not empty or that the text is not empty. One shared reader that fails the test on a bad read, a lint rule that test files use it, and a scripted change of the callers would close it; start after unit T3 lands, since both change many test files
+LEAD-50	leads	E	low	open		The shrink-only check on the lint lists (`baselineGrowth` in `scripts/sketch-lint.mjs`) compares the number of entries, so a branch that fixes one offence and adds a different one passes. A count was chosen so that a moved file, whose entry changes its path, still passes. Tighter: report every entry that is new unless its file was renamed in the same range
+LEAD-51	leads	G	low	open		Twenty-three scripts under `scripts/` start `git` themselves instead of through the helper in `scripts/lib/git.mjs`. The helper drops the repository variables git exports to a hook, so its `cwd` decides which repository is read; the direct calls do not, and one run from a subfolder inside a hook reads the wrong tree. Move the direct calls onto the helper and add a lint rule against a new one
+LEAD-52	leads	E	low	open		From the review of Z2: `sketches/core-loop/assets/registry.d/pilot_patch.json` and the folded `assets/registry.json` name `tools/blender/pilot_patch.py` as the recipe of `pilot_patch_anim` and `shell_patch`, which `tools/build_patch_glbs.py` writes. No check reads the field. Fix the two rows and fold the registry again with `tools/fold_registry.py`
+LEAD-53	leads	B	low	open		From the review of Z2: `sketches/core-loop/tools/cliff_gate_export.gd` has no caller left now that the `cliff_gate` Python scripts are deleted. A delete candidate, with its `.uid` file
+LEAD-54	leads	G	low	open		From Z2: three Python tool tests (`tools/ace/package_render_music_test.py`, `tools/mix/cue_reel_test.py`, `tools/mix/mixsim_test.py`) are run by no command because they need numpy, which the Mac Studio does not have. Decide where they run (the Linux PC has it or needs Andrew's go-ahead for an install) and wire them in
+LEAD-55	leads	B	low	open		From the review of Z2: `sketches/core-loop/tools/blender/pilot_patch.py` keeps an unused `bpy` import, five material slots and two colour constants its one remaining model never uses, and a docstring line about colours it no longer paints
+LEAD-56	leads	G	med	open		From the writers of C4 and W3: `npm run sketch:fast -- --test` given several test names in one argument runs the automatic selection instead, with no error, and each writer lost about 45 minutes before noticing. Make the command refuse a `--test` value it cannot match to a test file
+LEAD-57	leads	G	med	open		From the writers of F1, X3, W3, M3 and U3: an extra `sketch:fast --test` call waited one to two hours for a machine slot on the Mac Studio and several never ran, and the test search words in two briefs matched hundreds of files (`ward` matches `toward`). Briefs should list tests by the module names a unit changes, and wide extra runs belong on the Linux PC
+LEAD-58	leads	G	med	open		From the writers of C4 and W3: bot tests that are red on the base on the Mac Studio, each with the same numbers at the unit head: `prim_census_test` (67 surfaces against 68 pinned), `arrival_census_test`, `bot_chain_hand_test`, `bot_completionist_repeat_test`, `posture_bands_flume_test`, `skill_band_test`, and `park_reactor_fight_test` over its time allowance. Read them against the Linux full gate before calling any of them a real red
