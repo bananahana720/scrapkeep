@@ -10,6 +10,7 @@ This folder is `ctx.spawner`. Originally structured around two class kits in v2,
 | `weapon_driver.gd` | the weapon trigger, cadence, magazine/reload, charge/beat/window state machine and read-only reticle snapshot owned by `combat.gd` |
 | `hero_hooks.gd` | Sable's kinetic orbit pylon and vault-kick charge, Rivet's sixth hot round ricochet and Kest's fuse-spark trace, owned by `combat.gd` as `hero_hooks` |
 | `consumable_runtime.gd` | the consumables in play: dropped cartridges, the C-key use, Nitro Siphon, Overclock Card, Foreman Memo, Anchor Flare balloons and the counter-kill drop roll, owned by `combat.gd` as `consumables` |
+| `cannon_kit.gd` | the Remembered Cannon's kit: the committed lanes and set-piece calls, the walk, the wake, the recital, the lane paint, the Lane Charge line, the recoil surf and the piton stake, owned by `combat.gd` as `cannon` |
 | `pattern.gd` | the emission pattern Resource and the transformer catalogue |
 | `weapons.gd` | the base pattern per weapon, strike kinds, colours, overdrive and the pylon discharge |
 | `hitscan.gd` | the shared aim query every weapon reads |
