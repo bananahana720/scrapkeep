@@ -220,3 +220,184 @@ test("a page whose base content git cannot read exits 2, not a pass", () => {
     rmSync(top, { recursive: true, force: true });
   }
 });
+
+function judgeFiles(rule, baseFiles, headFiles, step = () => {}) {
+  return withRepo((dir) => {
+    const lists = rule === "frozen" ? list([PAGE]) : list([], [PAGE]);
+    const base = commit(dir, { [LIST_PATH]: lists, ...baseFiles });
+    commit(dir, headFiles);
+    step(dir);
+    return run(dir, "--base", base);
+  });
+}
+
+test("a frozen page whose final newline is added or removed is a finding", () => {
+  for (const [before, after] of [
+    ["a\nb\n", "a\nb"],
+    ["a\nb", "a\nb\n"],
+    ["", "\n"],
+  ]) {
+    const result = judgeFiles("frozen", { [PAGE]: before }, { [PAGE]: after });
+    assert.equal(result.code, 1, `${JSON.stringify([before, after])}: ${result.out}`);
+    assert.match(result.out, /newline at the end of the file added or removed/);
+    assert.match(result.out, /make the end of the file exactly as it is at the base/);
+  }
+});
+
+test("a frozen page whose file mode changes is a finding; a log page may change mode", () => {
+  const chmod = (dir) => {
+    git(dir, "update-index", "--chmod=+x", PAGE);
+    git(dir, "commit", "-q", "-m", "mode");
+  };
+  const frozen = judgeFiles("frozen", { [PAGE]: ENTRIES }, {}, chmod);
+  assert.equal(frozen.code, 1, frozen.out);
+  assert.match(frozen.out, /changed its file mode from 100644 to 100755; set it back to 100644/);
+
+  const log = judgeFiles("log", { [PAGE]: ENTRIES }, {}, chmod);
+  assert.equal(log.code, 0, log.out);
+});
+
+test("more frozen changes: a removed line, a line-ending change, a rename with an edit", () => {
+  const removed = judge("frozen", { [PAGE]: ENTRIES.replace("- two\n", "") });
+  assert.equal(removed.code, 1, removed.out);
+  assert.match(removed.out, /line 4 of the base copy changed or went missing:\n {4}- two/);
+
+  const crlf = judge("frozen", { [PAGE]: ENTRIES.replaceAll("\n", "\r\n") });
+  assert.equal(crlf.code, 1, crlf.out);
+  assert.match(crlf.out, /\(frozen\) line 1 of the base copy changed or went missing/);
+
+  const renamed = judge("frozen", { [PAGE]: null, "notes/moved.md": `${ENTRIES}- four\n` });
+  assert.equal(renamed.code, 1, renamed.out);
+  assert.match(renamed.out, /\(frozen\) is gone at the head \(deleted or renamed\)/);
+});
+
+test("a log page that is deleted or renamed is a finding", () => {
+  const deleted = judge("log", { [PAGE]: null });
+  assert.equal(deleted.code, 1, deleted.out);
+  assert.match(deleted.out, /\(log\) is gone at the head \(deleted or renamed\)/);
+
+  const renamed = judge("log", { [PAGE]: null, "notes/moved.md": ENTRIES });
+  assert.equal(renamed.code, 1, renamed.out);
+  assert.match(renamed.out, /\(log\) is gone at the head \(deleted or renamed\)/);
+});
+
+test("a log line edited while a copy of the old line is added elsewhere is a finding", () => {
+  const above = judge("log", { [PAGE]: "# Record\n\n- two\n- one\n- 2\n- three\n" });
+  assert.equal(above.code, 1, above.out);
+  assert.match(above.out, /\(log\) line 4 of the base copy changed or went missing:\n {4}- two/);
+
+  const below = judge("log", { [PAGE]: "# Record\n\n- one\n- 2\n- three\n- two\n" });
+  assert.equal(below.code, 1, below.out);
+  assert.match(below.out, /\(log\) line \d of the base copy changed or went missing/);
+});
+
+test("an empty list passes, says no page is listed, and still names dropped pages", () => {
+  withRepo((dir) => {
+    const base = commit(dir, { [LIST_PATH]: list([PAGE]), [PAGE]: ENTRIES });
+    commit(dir, { [LIST_PATH]: list() });
+    const result = run(dir, "--base", base);
+    assert.equal(result.code, 0, result.out);
+    assert.match(
+      result.out,
+      /notes\/record\.md was dropped from the list and is no longer checked/,
+    );
+    assert.match(result.out, /PASS, no page is listed in scripts\/ci\/dated-records\.json/);
+  });
+});
+
+test("--base with no value and every bad list shape exit 2", () => {
+  withRepo((dir) => {
+    const base = commit(dir, { [LIST_PATH]: list([PAGE]), [PAGE]: ENTRIES });
+
+    for (const args of [["--base"], ["--base="]]) {
+      const result = run(dir, ...args);
+      assert.equal(result.code, 2, `${args}: ${result.out}`);
+      assert.match(result.out, /could not run: bad arguments: --base requires a value/);
+    }
+
+    const shapes = [
+      [JSON.stringify({ log: [] }), /needs "frozen" as an array of repo-relative paths/],
+      [JSON.stringify({ frozen: [] }), /needs "log" as an array of repo-relative paths/],
+      [JSON.stringify({ frozen: PAGE, log: [] }), /needs "frozen" as an array/],
+      [JSON.stringify({ frozen: [3], log: [] }), /needs "frozen" as an array/],
+      [JSON.stringify({ frozen: [""], log: [] }), /needs "frozen" as an array/],
+      [list([PAGE], [PAGE]), /lists notes\/record\.md twice/],
+      [JSON.stringify([PAGE]), /needs a JSON object with "frozen" and "log" arrays/],
+      ["null", /needs a JSON object with "frozen" and "log" arrays/],
+    ];
+    for (const [text, message] of shapes) {
+      writeFileSync(path.join(dir, LIST_PATH), text);
+      const result = run(dir, "--base", base);
+      assert.equal(result.code, 2, `${text}: ${result.out}`);
+      assert.match(result.out, message);
+    }
+  });
+});
+
+test("the check exits 2, never 0, when git is not on the path", () => {
+  withRepo((dir) => {
+    const base = commit(dir, { [LIST_PATH]: list([PAGE]), [PAGE]: ENTRIES });
+    const empty = mkdtempSync(path.join(os.tmpdir(), "dated-records-nogit-"));
+    try {
+      const ran = spawnSync(process.execPath, [script, "--base", base], {
+        cwd: dir,
+        encoding: "utf8",
+        env: { ...process.env, PATH: empty },
+      });
+      assert.equal(ran.status, 2, ran.stdout + ran.stderr);
+      assert.match(ran.stderr, /could not run: not inside a git checkout/);
+    } finally {
+      rmSync(empty, { recursive: true, force: true });
+    }
+  });
+});
+
+test("content git gives that does not match its blob id exits 2", () => {
+  withRepo((dir) => {
+    const base = commit(dir, { [LIST_PATH]: list([], [PAGE]), [PAGE]: ENTRIES });
+    commit(dir, { [PAGE]: `${ENTRIES}- four\n` });
+    const realGit = spawnSync("sh", ["-c", "command -v git"], { encoding: "utf8" }).stdout.trim();
+    const bin = mkdtempSync(path.join(os.tmpdir(), "dated-records-fakegit-"));
+    try {
+      writeFileSync(
+        path.join(bin, "git"),
+        `#!/bin/sh\nif [ "$1" = "cat-file" ]; then exit 0; fi\nexec "${realGit}" "$@"\n`,
+        { mode: 0o755 },
+      );
+      const ran = spawnSync(process.execPath, [script, "--base", base], {
+        cwd: dir,
+        encoding: "utf8",
+        env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      });
+      assert.equal(ran.status, 2, ran.stdout + ran.stderr);
+      assert.match(ran.stderr, /does not match its blob id/);
+    } finally {
+      rmSync(bin, { recursive: true, force: true });
+    }
+  });
+});
+
+test("a page whose head content git cannot read exits 2", () => {
+  const top = mkdtempSync(path.join(os.tmpdir(), "dated-records-blobless-head-"));
+  try {
+    const source = path.join(top, "source");
+    mkdirSync(source);
+    git(source, "init", "-q", "-b", "main");
+    git(source, "config", "uploadpack.allowFilter", "true");
+    const base = commit(source, { [LIST_PATH]: list([PAGE]), [PAGE]: ENTRIES });
+    const head = commit(source, { [PAGE]: ENTRIES.replace("- two", "- 2") });
+    commit(source, { [PAGE]: ENTRIES });
+
+    const clone = path.join(top, "clone");
+    git(top, "clone", "-q", "--filter=blob:none", "--no-checkout", `file://${source}`, clone);
+    git(clone, "reset", "-q", "--hard", "HEAD");
+    renameSync(source, path.join(top, "moved"));
+
+    const result = run(clone, "--base", base, "--head", head);
+    assert.equal(result.code, 2, result.out);
+    assert.ok(result.out.includes(`could not read notes/record.md at ${head}`), result.out);
+    assert.match(result.out, /does not pass a page/);
+  } finally {
+    rmSync(top, { recursive: true, force: true });
+  }
+});

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { isMain, parseCliArgs } from "./lib/cli.mjs";
@@ -26,9 +27,14 @@ export function parseList(text, source) {
   const parsed = attempt(`${source} is not valid JSON`, "Fix the file so it parses.", () =>
     JSON.parse(text),
   );
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new CouldNotRun(
+      `${source} needs a JSON object with "frozen" and "log" arrays.\n  Fix the file.`,
+    );
+  }
   const rules = new Map();
   for (const rule of RULES) {
-    const pages = parsed?.[rule];
+    const pages = parsed[rule];
     if (!Array.isArray(pages) || pages.some((p) => typeof p !== "string" || !p)) {
       throw new CouldNotRun(
         `${source} needs "${rule}" as an array of repo-relative paths.\n  Fix the file.`,
@@ -67,17 +73,29 @@ function treeEntries(commit, pages, cwd) {
   );
   for (const entry of out.split("\0").filter(Boolean)) {
     const [meta, page] = entry.split("\t");
-    ids.set(page, meta.split(" ")[2]);
+    const [mode, , id] = meta.split(" ");
+    ids.set(page, { mode, id });
   }
   return ids;
 }
 
-function readBlob(commit, page, cwd) {
-  return attempt(
-    `could not read ${page} at ${commit}`,
-    "The page is in that commit's tree but git could not give its content (a blobless clone fetches it on demand). Fetch it (git fetch origin) and run the check again; the check does not pass a page it could not read.",
-    () => git(["cat-file", "blob", `${commit}:${page}`], { cwd, trim: false }),
+function readBlob(commit, page, { id }, cwd) {
+  const todo =
+    "The page is in that commit's tree but git could not give its content (a blobless clone fetches it on demand). Fetch it (git fetch origin) and run the check again; the check does not pass a page it could not read.";
+  const text = attempt(`could not read ${page} at ${commit}`, todo, () =>
+    git(["cat-file", "blob", id], { cwd, trim: false }),
   );
+  const algorithm = id.length === 64 ? "sha256" : "sha1";
+  const got = createHash(algorithm)
+    .update(`blob ${Buffer.byteLength(text)}\0`)
+    .update(text)
+    .digest("hex");
+  if (got !== id) {
+    throw new CouldNotRun(
+      `could not read ${page} at ${commit}: the content git gave does not match its blob id ${id}\n  ${todo}`,
+    );
+  }
+  return text;
 }
 
 function lines(text) {
@@ -88,11 +106,12 @@ export function firstBrokenLine(rule, baseText, headText) {
   const base = lines(baseText);
   const head = lines(headText);
   if (rule === "frozen") {
+    if (baseText === headText) return null;
     let i = 0;
     while (i < base.length && i < head.length && base[i] === head[i]) i++;
     if (i < base.length) return { line: i + 1, text: base[i], kind: MISSING };
     if (i < head.length) return { line: i + 1, text: head[i], kind: "was added at the head" };
-    return null;
+    return { endNewline: true };
   }
   let h = 0;
   for (let b = 0; b < base.length; b++) {
@@ -133,9 +152,11 @@ export function checkDatedRecords({ base, head = "HEAD", cwd }) {
   const atBase = treeEntries(mergeBase, pages, cwd);
   const atHead = treeEntries(headSha, pages, cwd);
   const tracked = new Set(
-    attempt("could not list the tracked files", "Run the check inside the repository.", () =>
-      git(["--literal-pathspecs", "ls-files", "-z", "--", ...pages], { cwd, trim: false }),
-    ).split("\0"),
+    pages.length === 0
+      ? []
+      : attempt("could not list the tracked files", "Run the check inside the repository.", () =>
+          git(["--literal-pathspecs", "ls-files", "-z", "--", ...pages], { cwd, trim: false }),
+        ).split("\0"),
   );
   const unknown = pages.filter((p) => !atBase.has(p) && !atHead.has(p) && !tracked.has(p));
   if (unknown.length) {
@@ -145,8 +166,12 @@ export function checkDatedRecords({ base, head = "HEAD", cwd }) {
   }
 
   let dropped = [];
-  if (treeEntries(mergeBase, [LIST_PATH], cwd).has(LIST_PATH)) {
-    const baseRules = parseList(readBlob(mergeBase, LIST_PATH, cwd), `${LIST_PATH} at ${base}`);
+  const listAtBase = treeEntries(mergeBase, [LIST_PATH], cwd).get(LIST_PATH);
+  if (listAtBase) {
+    const baseRules = parseList(
+      readBlob(mergeBase, LIST_PATH, listAtBase, cwd),
+      `${LIST_PATH} at ${base}`,
+    );
     const gone = [...baseRules.keys()].filter((p) => !rules.has(p));
     const present = treeEntries(mergeBase, gone, cwd);
     dropped = gone.filter((p) => present.has(p));
@@ -159,21 +184,37 @@ export function checkDatedRecords({ base, head = "HEAD", cwd }) {
       findings.push({ page, rule, gone: true });
       continue;
     }
-    if (atBase.get(page) === atHead.get(page)) continue;
+    const was = atBase.get(page);
+    const now = atHead.get(page);
+    if (rule === "frozen" && was.mode !== now.mode) {
+      findings.push({ page, rule, mode: [was.mode, now.mode] });
+    }
+    if (was.id === now.id) continue;
     const broken = firstBrokenLine(
       rule,
-      readBlob(mergeBase, page, cwd),
-      readBlob(headSha, page, cwd),
+      readBlob(mergeBase, page, was, cwd),
+      readBlob(headSha, page, now, cwd),
     );
     if (broken) findings.push({ page, rule, ...broken });
   }
   return { findings, dropped, checked: pages.length, mergeBase, headSha };
 }
 
+function describe(finding) {
+  if (finding.gone) return "is gone at the head (deleted or renamed)";
+  if (finding.mode) {
+    const [was, now] = finding.mode;
+    return `changed its file mode from ${was} to ${now}; set it back to ${was}`;
+  }
+  if (finding.endNewline) {
+    return "has the newline at the end of the file added or removed; make the end of the file exactly as it is at the base";
+  }
+  const text = finding.text === "" ? "(an empty line)" : finding.text;
+  return `line ${finding.line} ${finding.kind}:\n    ${text}`;
+}
+
 export function formatFinding(finding) {
-  const what = finding.gone
-    ? "is gone at the head (deleted or renamed)"
-    : `line ${finding.line} ${finding.kind}:\n    ${finding.text === "" ? "(an empty line)" : finding.text}`;
+  const what = describe(finding);
   return `dated-records: ${finding.page} (${finding.rule}) ${what}\n  ${ADVICE}`;
 }
 
@@ -199,9 +240,11 @@ if (isMain(import.meta.url)) {
     const range = `${result.mergeBase.slice(0, 9)}..${result.headSha.slice(0, 9)}`;
     if (result.findings.length) {
       console.error(
-        `dated-records: FAIL, ${result.findings.length} page(s) broke their rule (${range})`,
+        `dated-records: FAIL, ${result.findings.length} finding(s) on listed pages (${range})`,
       );
       process.exitCode = 1;
+    } else if (result.checked === 0) {
+      console.log(`dated-records: PASS, no page is listed in ${LIST_PATH} (${range})`);
     } else {
       console.log(
         `dated-records: PASS, ${result.checked} listed page(s) kept their rule (${range})`,

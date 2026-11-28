@@ -93,6 +93,10 @@ test("runDatedRecords checks each pushed range only when a listed page or the li
   });
   assert.deepEqual(unreadable, { ok: true, ranLabels: ["dated-records(1)"] });
   assert.equal(runs.length, 1);
+
+  runs.length = 0;
+  assert.deepEqual(runDatedRecords([], [], { spawn, watched: null }), { ok: true, ranLabels: [] });
+  assert.equal(runs.length, 0);
 });
 
 test("planHookChecks selects only matching checks and keeps doc/sketch deletions active", () => {

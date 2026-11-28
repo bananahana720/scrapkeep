@@ -235,7 +235,9 @@ export function runDatedRecords(
   ranges,
   { cwd = root, spawn = spawnSync, watched = datedRecordPaths(cwd) } = {},
 ) {
-  if (watched && !files.some((f) => watched.has(f))) return { ok: true, ranLabels: [] };
+  if (ranges.length === 0 || (watched && !files.some((f) => watched.has(f)))) {
+    return { ok: true, ranLabels: [] };
+  }
   let ok = true;
   for (const { base, head } of ranges) {
     const r = runStep(
