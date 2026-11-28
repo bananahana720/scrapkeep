@@ -12,6 +12,7 @@ import {
   isSkillPath,
 } from "../ci/affected.mjs";
 import { filterFormatTargets } from "../ci/format-changed.mjs";
+import { datedRecordPaths } from "../dated-records.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
 import { REPO_ROOT, git } from "../lib/git.mjs";
@@ -241,6 +242,27 @@ export function executeHookPlan(
   return { ok, ranLabels };
 }
 
+export function runDatedRecords(
+  files,
+  ranges,
+  { cwd = root, spawn = spawnSync, watched = datedRecordPaths(cwd) } = {},
+) {
+  if (ranges.length === 0 || (watched && !files.some((f) => watched.has(f)))) {
+    return { ok: true, ranLabels: [] };
+  }
+  let ok = true;
+  for (const { base, head } of ranges) {
+    const r = runStep(
+      "dated-records",
+      process.execPath,
+      [path.join(cwd, "scripts/dated-records.mjs"), "--base", base, "--head", head],
+      { cwd, spawn },
+    );
+    if (!r.ok) ok = false;
+  }
+  return { ok, ranLabels: [`dated-records(${ranges.length})`] };
+}
+
 export function evaluateHookOutcome({
   ok,
   elapsedS,
@@ -330,18 +352,19 @@ if (isMain(import.meta.url)) {
       ranges = pushed.map((range) => ({ base: rangeBase(range), head: range.localSha }));
     }
 
+    const dated = runDatedRecords(files, ranges);
     const plan = planHookChecks(files);
     const { ok, ranLabels } = executeHookPlan(plan, { ranges });
     const loadEnd = os.loadavg()[0];
     const elapsedS = (performance.now() - started) / 1000;
     const outcome = evaluateHookOutcome({
-      ok,
+      ok: ok && dated.ok,
       elapsedS,
       budgetS: HOOK_BUDGET_S,
       loadStart,
       loadEnd,
       cpus,
-      ranLabels,
+      ranLabels: [...ranLabels, ...dated.ranLabels],
     });
     if (outcome.exitCode === 0) {
       console.log(outcome.message);

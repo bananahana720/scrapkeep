@@ -131,6 +131,11 @@ jobs:
           node scripts/ci/check-budget.mjs --label check:skills --budget 5 -- npm run check:skills
           node scripts/ci/check-budget.mjs --label check:agents --budget 5 -- npm run check:agents
           node scripts/ci/check-budget.mjs --label check:briefs --budget 5 -- npm run check:briefs
+          if [[ "$EVENT_NAME" == "pull_request" && -n "$PR_BASE_SHA" ]]; then
+            node scripts/ci/check-budget.mjs --label dated-records --budget 10 -- node scripts/dated-records.mjs --base "$PR_BASE_SHA"
+          else
+            echo "dated-records: skipped, a $EVENT_NAME run has no pull request base to compare with; pull requests and the pre-push hook run it"
+          fi
 
   docs:
     name: Docs & wave-state checks

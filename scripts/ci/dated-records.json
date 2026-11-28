@@ -1,0 +1,31 @@
+{
+  "frozen": [
+    "docs/art/reference/GROUNDING.md",
+    "project-guide/handoff/shared/alpha-status/attack-ids.md",
+    "project-guide/handoff/shared/gate/BOT-SHARDS.md",
+    "project-guide/handoff/shared/structure-sweep/boss-movement-build.md",
+    "project-guide/handoff/shared/structure-sweep/combat.md",
+    "project-guide/handoff/shared/structure-sweep/core.md",
+    "project-guide/handoff/shared/structure-sweep/docs.md",
+    "project-guide/handoff/shared/structure-sweep/experimental-dev.md",
+    "project-guide/handoff/shared/structure-sweep/scripts.md",
+    "project-guide/handoff/shared/structure-sweep/sound.md",
+    "project-guide/handoff/shared/structure-sweep/tools-tests.md",
+    "project-guide/handoff/shared/structure-sweep/ui.md",
+    "project-guide/handoff/shared/structure-sweep/visuals-fx.md",
+    "project-guide/handoff/shared/structure-sweep/visuals-meshes.md",
+    "project-guide/handoff/shared/structure-sweep/world.md",
+    "project-guide/handoff/shared/world1/film-w42-88a75e7b/READ-control-001-045.md",
+    "project-guide/handoff/shared/world1/film-w42-88a75e7b/READ-part1-001-045.md",
+    "project-guide/handoff/shared/world1/film-w42-88a75e7b/READ-part2-046-098.md",
+    "project-guide/handoff/shared/world1/film-w42-88a75e7b/READ-part3-099-134.md",
+    "sketches/core-loop/HAPPY-ACCIDENTS.md",
+    "sketches/core-loop/design-v3/HEFT-DESTRUCTIBLES.md"
+  ],
+  "log": [
+    "artifacts/ai-first-audit-2026-11-25/decisions.tsv",
+    "project-guide/handoff/ART-MISTAKES.md",
+    "sketches/core-loop/DESIGN-NOTES.md",
+    "sketches/core-loop/perf-lab/ledger.md"
+  ]
+}
