@@ -4,6 +4,8 @@ extends RefCounted
 # meets its admission floor, and matches a typed golden hash. Each bad-row fixture
 # must fail its named rule; deleting any registered table must fail minimum_rows.
 const Registry := preload("res://tests/support/content_registry.gd")
+const MusicRows := preload("res://src/presentation/music_rows.gd")
+const PhaseMusic := preload("res://src/presentation/phase_music.gd")
 const FIXTURES := "res://tests/fixtures/content_registry/"
 const TABLE_COUNT := 27
 # These two content pins exclude the stage table; unrelated registry pins stay canonical.
@@ -53,6 +55,11 @@ func run(t) -> void:
 	_hash_rules(t)
 	_missing_tables(t, tables)
 	_cross_references(t, tables)
+	for id in PhaseMusic.TRACKS:
+		t.check(
+			"PhaseMusic.TRACKS entry exists in MusicRows.ROWS: " + id,
+			MusicRows.ROWS.has(id) and MusicRows.ROWS[id]["ace_manifest"] == MusicRows.manifest_path(PhaseMusic.theme_of(id)),
+		)
 
 
 func _sorted(values: Array) -> Array:

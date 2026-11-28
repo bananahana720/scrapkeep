@@ -31,7 +31,7 @@ static func theme_of(id: String) -> String:
 
 
 static func manifest_of(id: String) -> String:
-	return "res://assets/music_ace/%s/manifest.json" % theme_of(id)
+	return MusicRows.manifest_path(theme_of(id))
 
 
 static var _on_disk := {}
