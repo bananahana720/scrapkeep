@@ -24,7 +24,7 @@
   "L4": ["sketches/core-loop/tests/hotwire_cue_parallel.sh"],
   "L11": {
     "sketches/core-loop/src/boss/mind.gd": 1,
-    "sketches/core-loop/src/combat/combat.gd": 8,
+    "sketches/core-loop/src/combat/combat.gd": 3,
     "sketches/core-loop/src/combat/kest_kit.gd": 1,
     "sketches/core-loop/src/combat/rivet_kit.gd": 1,
     "sketches/core-loop/src/combat/tarn_claw.gd": 1,

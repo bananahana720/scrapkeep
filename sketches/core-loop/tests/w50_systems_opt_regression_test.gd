@@ -203,7 +203,7 @@ func _test_live_game_wiring() -> void:
 	var before_ids: Array = game.build.gates.offers.map(func(o): return String(o["part_id"]))
 	game.run.bonus_cores = 1
 	var cogs_before: int = int(game.run.cogs)
-	var dice_res: Dictionary = game.combat.use_consumable(Consumables.SCRAP_DICE)
+	var dice_res: Dictionary = game.combat.consumables.use_consumable(Consumables.SCRAP_DICE)
 	var after_ids: Array = game.build.gates.offers.map(func(o): return String(o["part_id"]))
 	_check(int(dice_res.get("rerolled_gates", 0)) > 0, "Audit Die rerolls standing reward gates")
 	_check(after_ids != before_ids, "Audit Die replaces gate part_ids")
@@ -214,7 +214,7 @@ func _test_live_game_wiring() -> void:
 	game.build.gates.close()
 
 	game.run.bonus_cores = 1
-	var empty_dice: Dictionary = game.combat.use_consumable(Consumables.SCRAP_DICE)
+	var empty_dice: Dictionary = game.combat.consumables.use_consumable(Consumables.SCRAP_DICE)
 	_check(int(empty_dice.get("rerolled_gates", 0)) == 0 and int(empty_dice.get("rerolled_shop", 0)) == 0
 		and String(empty_dice.get("cost", "")) == "none" and int(game.run.bonus_cores) == 1,
 		"Audit Die charges 0 fee when 0 offers reroll")
@@ -250,18 +250,18 @@ func _test_live_game_wiring() -> void:
 	_check(int(game.run.consumable_slots) == mini(RunState.CONSUMABLE_SLOTS_MAX, slots_before + 1),
 		"Choosing belt gate offer expands consumable slots")
 
-	game.combat.use_consumable(Consumables.DUPLICATOR_SPOOL)
+	game.combat.consumables.use_consumable(Consumables.DUPLICATOR_SPOOL)
 	var cores_before: int = int(game.run.bonus_cores)
 	game.run.add_core("test_vault", Vector3.ZERO)
 	_check(int(game.run.bonus_cores) == cores_before + 2, "Carbon Tape clones core_gained once")
 	_check(not Consumables.duplicator_armed(game.run), "Carbon Tape disarms after 1 clone")
 
-	game.combat.use_consumable(Consumables.DUPLICATOR_SPOOL)
+	game.combat.consumables.use_consumable(Consumables.DUPLICATOR_SPOOL)
 	var parts_before: int = (game.run.parts as Array).size()
 	game.run.add_part("rivet_plating", "test_cache")
 	_check((game.run.parts as Array).size() == parts_before + 2, "Carbon Tape clones part_gained once")
 
-	game.combat.use_consumable(Consumables.OVERLOAD_FUSE)
+	game.combat.consumables.use_consumable(Consumables.OVERLOAD_FUSE)
 	_check(Consumables.overload_armed(game.run), "Breaker Fuse arms overload_fuse")
 	var rec := {"landing_hits": 0, "damage": 0.0}
 	game.combat.ultimate.report_landing(rec, "cable_run", game.player.ball_position(), [1, 40.0])
@@ -271,7 +271,7 @@ func _test_live_game_wiring() -> void:
 	if warden != null:
 		warden.global_position = game.player.ball_position() + Vector3(2.0, 0.0, 0.0)
 	_check(warden != null and warden.has_method("apply_posture_hit"), "Warden exposes apply_posture_hit()")
-	var cap_res: Dictionary = game.combat.use_consumable(Consumables.CAP_CHARGE)
+	var cap_res: Dictionary = game.combat.consumables.use_consumable(Consumables.CAP_CHARGE)
 	_check(int(cap_res.get("hits", 0)) >= 1, "Blasting Cap hits Warden cleanly without type error")
 
 	var pre_status := TradePockets.contract_status(game.run)

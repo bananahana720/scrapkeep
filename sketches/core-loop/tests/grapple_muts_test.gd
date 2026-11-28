@@ -484,7 +484,7 @@ func _check_dragnet_siphon_gameplay() -> void:
 	rng.seed = 91
 	_build.scrap.drop(mid_spot, 3, rng)
 	_build.scrap.drop_cogs(mid_spot, 2)
-	var cradle = _combat.drop_consumable(Consumables.MOSS_PATCH, mid_spot + Vector3(0.0, 0.0, 1.0))
+	var cradle = _combat.consumables.drop_consumable(Consumables.MOSS_PATCH, mid_spot + Vector3(0.0, 0.0, 1.0))
 	var cradle_start: Vector3 = cradle.global_position
 	await _sim(1)
 

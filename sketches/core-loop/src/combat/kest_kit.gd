@@ -175,7 +175,7 @@ func _cable(at: Vector3, rider: Node3D) -> void:
 		ctx.player.refresh_air_draw()
 		if at.y > ctx.player.ball_position().y + 1.0:
 			ctx.player.apply_spire_vault(at)
-	combat.refresh_kest_fuse_trace()
+	combat.hero_hooks.refresh_kest_fuse_trace()
 	ctx.player.indicator.set_shape("kest_cable", cable_geometry(1.0))
 
 

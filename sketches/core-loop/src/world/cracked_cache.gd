@@ -422,9 +422,9 @@ func _drop_consumable() -> void:
 	if consumable_dropped != "" or system == null:
 		return
 	consumable_dropped = Consumables.roll_id(system.luck(id + ":consumable"))
-	if consumable_dropped != "" and ctx != null and ctx.spawner != null and ctx.spawner.has_method("drop_consumable"):
+	if consumable_dropped != "" and ctx != null and ctx.spawner != null and ctx.spawner.get("consumables") != null:
 		var drop_local := Vector3(0.0, ground_y(Vector3(0.0, 0.0, 0.5)), 0.5)
-		ctx.spawner.drop_consumable(consumable_dropped, to_global(drop_local))
+		ctx.spawner.consumables.drop_consumable(consumable_dropped, to_global(drop_local))
 
 
 func _exit_tree() -> void:

@@ -180,7 +180,7 @@ func _check_belt_and_hud() -> void:
 	var vel_after_flat := Vector2(_player.state.velocity.x, _player.state.velocity.z).length()
 	var vel_before_flat := Vector2(vel_before.x, vel_before.z).length()
 	_t.check("quick-tap C fires cartridge with zero movement speed tax",
-		run.consumables.size() == 1 and _combat.last_consumable.get("id", "") == Consumables.CAP_CHARGE and vel_after_flat >= vel_before_flat - 1.5)
+		run.consumables.size() == 1 and _combat.consumables.last_consumable.get("id", "") == Consumables.CAP_CHARGE and vel_after_flat >= vel_before_flat - 1.5)
 	run.clear_consumables()
 	await _sim(2)
 
@@ -205,13 +205,13 @@ func _check_cap_charge() -> void:
 	await _sim(2)
 	var plates_before: int = brute.plates
 	_game.ctx.run.add_consumable(Consumables.CAP_CHARGE)
-	var res: Dictionary = _combat.use_consumable()
+	var res: Dictionary = _combat.consumables.use_consumable()
 	await _sim(2)
 	var loot_once := dest.loot()
 	var paid_once: int = dest.consumables_paid()
 	# Firing a second cap_charge on the already shattered wall must NOT double-pay (Destructibles.tla).
 	_game.ctx.run.add_consumable(Consumables.CAP_CHARGE)
-	_combat.use_consumable()
+	_combat.consumables.use_consumable()
 	await _sim(1)
 	var loot_twice := dest.loot()
 	_t.check("cap_charge shatters Tier 5 destructible at Heft I and pays strictly once",
@@ -223,13 +223,13 @@ func _check_cap_charge() -> void:
 	dest.queue_free()
 	if is_instance_valid(brute):
 		brute.queue_free()
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	_game.ctx.run.clear_consumables()
 	await _sim(2)
 
 
 func _check_nitro_siphon() -> void:
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	_game.ctx.run.clear_consumables()
 	var ball_at: Vector3 = _player.ball_position()
 	_player.set_velocity_now(Vector3(1.0, 0.0, 0.0), "test")
@@ -241,7 +241,7 @@ func _check_nitro_siphon() -> void:
 		jolt._commit(Vector3.FORWARD)
 	var blazing_floor: float = _player.tuning.f("cruise") * float(SpeedTier.MULTIPLES[SpeedTier.BLAZING])
 	_game.ctx.run.add_consumable(Consumables.NITRO_SIPHON)
-	var res: Dictionary = _combat.use_consumable()
+	var res: Dictionary = _combat.consumables.use_consumable()
 	await _sim(4)
 	var flat_speed := Vector2(_player.state.velocity.x, _player.state.velocity.z).length()
 	var all_popped := true
@@ -251,8 +251,8 @@ func _check_nitro_siphon() -> void:
 				all_popped = false
 	var mat_cleared := (not is_instance_valid(jolt)) or jolt.get("field") == null
 	_t.check("nitro_siphon holds 6 s Blazing floor and auto-rips booms/mats",
-		_combat.nitro_siphon_left() > 5.0 and flat_speed >= blazing_floor - 0.5 and all_popped and mat_cleared and int(res.get("ripped", 0)) > 0,
-		"left=%.2f flat=%.2f floor=%.2f popped=%s mat=%s ripped=%s" % [_combat.nitro_siphon_left(), flat_speed, blazing_floor, all_popped, mat_cleared, res.get("ripped", 0)])
+		_combat.consumables.nitro_siphon_left() > 5.0 and flat_speed >= blazing_floor - 0.5 and all_popped and mat_cleared and int(res.get("ripped", 0)) > 0,
+		"left=%.2f flat=%.2f floor=%.2f popped=%s mat=%s ripped=%s" % [_combat.consumables.nitro_siphon_left(), flat_speed, blazing_floor, all_popped, mat_cleared, res.get("ripped", 0)])
 	if is_instance_valid(tender):
 		tender.queue_free()
 	if is_instance_valid(jolt):
@@ -261,11 +261,11 @@ func _check_nitro_siphon() -> void:
 
 
 func _check_anchor_flare() -> void:
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	_game.ctx.run.clear_consumables()
 	var ball_at: Vector3 = _player.ball_position()
 	_game.ctx.run.add_consumable(Consumables.ANCHOR_FLARE)
-	var res: Dictionary = _combat.use_consumable()
+	var res: Dictionary = _combat.consumables.use_consumable()
 	await _sim(2)
 	var balloon = res.get("balloon")
 	var valid_b: bool = is_instance_valid(balloon) and balloon.is_in_group(Augments.ANCHOR_GROUP) and balloon.is_in_group(Augments.STAKE_GROUP)
@@ -282,39 +282,39 @@ func _check_anchor_flare() -> void:
 			if aim.get("body") != balloon:
 				bites_360 = false
 	_t.check("anchor_flare spawns 18 m hovering balloon with 360-degree harpoon bite (single ChainState)",
-		valid_b and height_ok and bites_360 and _combat.active_balloons().size() >= 1,
-		"valid=%s height=%s bites=%s count=%d" % [valid_b, height_ok, bites_360, _combat.active_balloons().size()])
+		valid_b and height_ok and bites_360 and _combat.consumables.active_balloons().size() >= 1,
+		"valid=%s height=%s bites=%s count=%d" % [valid_b, height_ok, bites_360, _combat.consumables.active_balloons().size()])
 	# Expire balloon cleanly via time step.
 	if valid_b:
 		balloon.time_left = 0.01
 		await _sim(3)
-	_t.check("anchor_flare expires cleanly after lifetime", _combat.active_balloons().is_empty())
+	_t.check("anchor_flare expires cleanly after lifetime", _combat.consumables.active_balloons().is_empty())
 
 
 func _check_overclock_card() -> void:
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	_game.ctx.run.clear_consumables()
 	var abilities = _player.abilities
 	abilities.spend(AbilityState.MOVEMENT)
 	abilities.spend(AbilityState.SPECIAL)
 	_player.state.boost_cooldown = 3.0
 	_game.ctx.run.add_consumable(Consumables.OVERCLOCK_CARD)
-	_combat.use_consumable()
+	_combat.consumables.use_consumable()
 	await _sim(2)
 	var cd_zero: bool = abilities.ready(AbilityState.MOVEMENT) and abilities.ready(AbilityState.SPECIAL) and _player.state.boost_cooldown <= 0.001
-	var skilled_before: int = _combat.overclock_skilled_shots
+	var skilled_before: int = _combat.consumables.overclock_skilled_shots
 	_source.press = {"fire_pressed": true}
 	_source.hold = {"fire_held": true}
 	await _sim(4)
 	_source.hold = {}
 	await _sim(2)
 	_t.check("overclock_card gives 8 s zero Movement/Special CD + auto Skilled weapon cadence",
-		_combat.overclock_card_left() > 7.0 and cd_zero and _combat.overclock_skilled_shots > skilled_before,
-		"left=%.2f cd_zero=%s shots=%d->%d" % [_combat.overclock_card_left(), cd_zero, skilled_before, _combat.overclock_skilled_shots])
+		_combat.consumables.overclock_card_left() > 7.0 and cd_zero and _combat.consumables.overclock_skilled_shots > skilled_before,
+		"left=%.2f cd_zero=%s shots=%d->%d" % [_combat.consumables.overclock_card_left(), cd_zero, skilled_before, _combat.consumables.overclock_skilled_shots])
 
 
 func _check_foreman_memo() -> void:
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	_game.ctx.run.clear_consumables()
 	var ball_at: Vector3 = _player.ball_position()
 	var run = _game.ctx.run
@@ -327,14 +327,14 @@ func _check_foreman_memo() -> void:
 	var cores_before: int = run.bonus_cores
 	var hp_before: float = run.hp
 	_game.ctx.run.add_consumable(Consumables.FOREMAN_MEMO)
-	var res1: Dictionary = _combat.use_consumable()
+	var res1: Dictionary = _combat.consumables.use_consumable()
 	await _sim(2)
 	var ordinary_frozen: bool = c1.process_mode == Node.PROCESS_MODE_DISABLED and c2.process_mode == Node.PROCESS_MODE_DISABLED
 	var warden_unfrozen: bool = w.process_mode != Node.PROCESS_MODE_DISABLED
 	var exposed_mult: float = _combat._strike_mult(c1, "runner", "weapon")
 	_t.check("foreman_memo freezes ordinary enemies in aligned formation with exposed weak points (non-ordinary immune)",
-		_combat.foreman_memo_left() > 4.0 and ordinary_frozen and warden_unfrozen and int(res1.get("frozen", 0)) >= 2 and exposed_mult >= 1.49,
-		"left=%.2f ord=%s w=%s frozen=%s mult=%.2f res1=%s" % [_combat.foreman_memo_left(), ordinary_frozen, warden_unfrozen, res1.get("frozen", 0), exposed_mult, res1])
+		_combat.consumables.foreman_memo_left() > 4.0 and ordinary_frozen and warden_unfrozen and int(res1.get("frozen", 0)) >= 2 and exposed_mult >= 1.49,
+		"left=%.2f ord=%s w=%s frozen=%s mult=%.2f res1=%s" % [_combat.consumables.foreman_memo_left(), ordinary_frozen, warden_unfrozen, res1.get("frozen", 0), exposed_mult, res1])
 	_t.check("foreman_memo pays 1 core when held without taxing hull",
 		res1.get("cost", "") == "core" and run.bonus_cores == cores_before - 1 and is_equal_approx(run.hp, hp_before),
 		"cost=%s cores=%d->%d hp=%.2f->%.2f" % [res1.get("cost", ""), cores_before, run.bonus_cores, hp_before, run.hp])
@@ -343,14 +343,14 @@ func _check_foreman_memo() -> void:
 	run.bonus_cores = 0
 	run.hp = run.max_hp
 	_game.ctx.run.add_consumable(Consumables.FOREMAN_MEMO)
-	var res2: Dictionary = _combat.use_consumable()
+	var res2: Dictionary = _combat.consumables.use_consumable()
 	await _sim(1)
 	_t.check("foreman_memo pays 10% hull when no core is held",
 		res2.get("cost", "") == "hull" and absf((run.max_hp - run.hp) - run.max_hp * 0.10) < 0.05,
 		"cost=%s hp=%.2f max=%.2f" % [res2.get("cost", ""), run.hp, run.max_hp])
 
 	# Expire memo and verify ordinary enemies resume cleanly.
-	_combat._memo_left = 0.01
+	_combat.consumables._memo_left = 0.01
 	await _sim(3)
 	_t.check("foreman_memo unfreezes surviving ordinary enemies on expiry",
 		c1.process_mode != Node.PROCESS_MODE_DISABLED and c2.process_mode != Node.PROCESS_MODE_DISABLED)
@@ -361,7 +361,7 @@ func _check_foreman_memo() -> void:
 
 
 func _check_moss_patch() -> void:
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	_game.ctx.run.clear_consumables()
 	var run = _game.ctx.run
 	var ball_at: Vector3 = _player.ball_position()
@@ -371,7 +371,7 @@ func _check_moss_patch() -> void:
 	await _sim(2)
 	var knocks_before: int = chaser.knocks
 	_game.ctx.run.add_consumable(Consumables.MOSS_PATCH)
-	var res: Dictionary = _combat.use_consumable()
+	var res: Dictionary = _combat.consumables.use_consumable()
 	await _sim(1)
 	var healed_ok: bool = absf((run.hp - hp_before) - run.max_hp * 0.35) < 0.05
 	var knocked_ok: bool = chaser.knocks > knocks_before and int(res.get("knocked", 0)) >= 1
@@ -392,14 +392,14 @@ func _check_moss_patch() -> void:
 
 
 func _check_drop_sources_and_shop() -> void:
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	var run = _game.ctx.run
 	run.clear_consumables()
 	run.consumable_slots = 1
 	var ball_at: Vector3 = _player.ball_position()
 
 	# 1. World drop cradle spawns GLB + auto-collects on roll-through.
-	var cradle = _combat.drop_consumable(Consumables.ANCHOR_FLARE, ball_at)
+	var cradle = _combat.consumables.drop_consumable(Consumables.ANCHOR_FLARE, ball_at)
 	var cradle_ok: bool = is_instance_valid(cradle) and cradle.patched_surfaces > 0
 	await _sim(2)
 	_t.check("drop cradle instances GLB with vertex_color_use_as_albedo and auto-collects on roll-through",
@@ -421,14 +421,14 @@ func _check_drop_sources_and_shop() -> void:
 		low_never and high_drops > 0)
 
 	# 3. Secondary-Counter kill drop (kill-first special Linker always drops on death).
-	var drops_before: int = _combat.live_consumable_drops().size()
+	var drops_before: int = _combat.consumables.live_consumable_drops().size()
 	var linker = _combat.spawn_enemy("linker", ball_at + Vector3(14.0, 0.0, 0.0))
 	await _sim(2)
 	linker.take_damage(9999.0)
 	await _sim(2)
 	_t.check("secondary-counter kill drops a Pocket Consumable cradle",
-		_combat.live_consumable_drops().size() > drops_before,
-		"drops=%d->%d dead=%s" % [drops_before, _combat.live_consumable_drops().size(), linker.is_dead() if is_instance_valid(linker) else true])
+		_combat.consumables.live_consumable_drops().size() > drops_before,
+		"drops=%d->%d dead=%s" % [drops_before, _combat.consumables.live_consumable_drops().size(), linker.is_dead() if is_instance_valid(linker) else true])
 
 	# 4. Cracked Cache opens and drops a Pocket Consumable once.
 	var cache := CrackedCache.new()
@@ -440,15 +440,15 @@ func _check_drop_sources_and_shop() -> void:
 		cache.global_position = ball_at + Vector3(20.0, 0.0, 0.0)
 		cache.build()
 		cache.crumble()
-		var before_cache_drops: int = _combat.live_consumable_drops().size()
+		var before_cache_drops: int = _combat.consumables.live_consumable_drops().size()
 		cache.fire()
 		_game.ctx.events.interact_fired.emit(cache.family, cache.id, cache.global_position)
 		await _sim(2)
-		var after_open_drops: int = _combat.live_consumable_drops().size()
+		var after_open_drops: int = _combat.consumables.live_consumable_drops().size()
 		cache.take(0)
 		await _sim(1)
 		_t.check("cracked cache drops a Pocket Consumable strictly once on open/take",
-			Consumables.is_valid(cache.consumable_dropped) and after_open_drops == before_cache_drops + 1 and _combat.live_consumable_drops().size() == after_open_drops)
+			Consumables.is_valid(cache.consumable_dropped) and after_open_drops == before_cache_drops + 1 and _combat.consumables.live_consumable_drops().size() == after_open_drops)
 		cache.stand_down()
 		cache.queue_free()
 
@@ -478,7 +478,7 @@ func _check_drop_sources_and_shop() -> void:
 
 
 func _check_catalyst_cartridge_hook() -> void:
-	_combat._clear_consumables_runtime()
+	_combat.consumables.reset()
 	_game.ctx.run.clear_consumables()
 	# W47-C2 integration: popping a Pocket Consumable emits events.consumable_used,
 	# waking catalyst_cartridge for +40% Active charge and free burst ring.
@@ -495,7 +495,7 @@ func _check_catalyst_cartridge_hook() -> void:
 	_game.ctx.run.add_consumable(Consumables.MOSS_PATCH)
 	var events_before: int = _used_events.size()
 	var cross_before: int = _combat.cross_synergy_count("catalyst_cartridge")
-	_combat.use_consumable()
+	_combat.consumables.use_consumable()
 	await _sim(2)
 	_t.check("events.consumable_used wires W47-C2 catalyst_cartridge (+40% Active charge)",
 		_used_events.size() == events_before + 1
@@ -506,11 +506,11 @@ func _check_catalyst_cartridge_hook() -> void:
 
 func _check_cleanup_and_reset() -> void:
 	_game.ctx.run.add_consumable(Consumables.ANCHOR_FLARE)
-	_combat.use_consumable()
-	_combat.drop_consumable(Consumables.CAP_CHARGE, _player.ball_position() + Vector3(8.0, 0.0, 0.0))
+	_combat.consumables.use_consumable()
+	_combat.consumables.drop_consumable(Consumables.CAP_CHARGE, _player.ball_position() + Vector3(8.0, 0.0, 0.0))
 	await _sim(2)
 	_combat._start_attempt()
 	await _sim(2)
 	_t.check("attempt boundary clears active balloons, drops, and consumable timers",
-		_combat.active_balloons().is_empty() and _combat.live_consumable_drops().is_empty()
-		and _combat.nitro_siphon_left() == 0.0 and _combat.overclock_card_left() == 0.0 and _combat.foreman_memo_left() == 0.0)
+		_combat.consumables.active_balloons().is_empty() and _combat.consumables.live_consumable_drops().is_empty()
+		and _combat.consumables.nitro_siphon_left() == 0.0 and _combat.consumables.overclock_card_left() == 0.0 and _combat.consumables.foreman_memo_left() == 0.0)

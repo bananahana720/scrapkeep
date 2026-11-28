@@ -38,7 +38,7 @@ func _cases() -> void:
 	_ult.start(p)
 	_ult._begin_flight()
 	_ult._cannon_tech(1, HOME, Vector3.RIGHT, 1.0)
-	var entry: Dictionary = _combat._cannon.back()
+	var entry: Dictionary = _combat.cannon._cannon.back()
 	var h = entry["hazards"][0]
 	_t.near("creeping warn is one beat", h.warn_seconds, float(_ult.leg_state()["beat_length"]))
 	_t.near("lane is two beats ahead", h.centre.x, HOME.x + _ult._ride.velocity.x * 2.0 * float(_ult.leg_state()["beat_length"]), 0.01)
@@ -47,7 +47,7 @@ func _cases() -> void:
 	_player.tree._knobs["ult_volley"] = 1
 	_ult._cannon_tech(2, HOME, Vector3.RIGHT, 1.0)
 	_t.eq("volley knob adds a second lane", _ult._cannon_calls - before, 2)
-	_t.near("second lane is six metres beyond the first", _combat._cannon[-1]["hazards"][0].centre.x - _combat._cannon[-2]["hazards"][0].centre.x, 6.0, 0.01)
+	_t.near("second lane is six metres beyond the first", _combat.cannon._cannon[-1]["hazards"][0].centre.x - _combat.cannon._cannon[-2]["hazards"][0].centre.x, 6.0, 0.01)
 
 	await _reset("cannon_plate_mortar")
 	p = _ult.plan(HOME, _aim(Vector3(30.0, 100.5, 0.0)))
@@ -64,12 +64,12 @@ func _cases() -> void:
 	_ult._begin_flight()
 	var foe := _enemy(HOME + Vector3.RIGHT * 4.0)
 	_ult._cannon_tech(1, HOME, Vector3.RIGHT, 1.0)
-	entry = _combat._cannon.back()
+	entry = _combat.cannon._cannon.back()
 	_t.eq("Mortar calls a plate", entry["family"], "plate")
 	_t.near("Mortar's plate warns for one beat", entry["hazards"][0].warn_seconds, float(_ult.leg_state()["beat_length"]))
 	for i in ceili(float(_ult.leg_state()["beat_length"]) / DT):
 		_combat._clock += DT
-		_combat.step_cannon(DT)
+		_combat.cannon.step_cannon(DT)
 	_t.check("Mortar plate exposes its target", _combat._exposed.has(foe.get_instance_id()))
 	_ult._leg = 1
 	var hp: float = foe.hp
@@ -85,8 +85,8 @@ func _cases() -> void:
 	before = _ult._cannon_calls
 	_ult._cannon_tech(2, HOME, Vector3.RIGHT, 1.0)
 	_t.eq("volley knob adds a mirrored plate", _ult._cannon_calls - before, 2)
-	var a = _combat._cannon[-2]["hazards"][0]
-	var b = _combat._cannon[-1]["hazards"][0]
+	var a = _combat.cannon._cannon[-2]["hazards"][0]
+	var b = _combat.cannon._cannon[-1]["hazards"][0]
 	_t.near("second plate faces the opposite side", absf(wrapf((a.a_from + a.a_to - b.a_from - b.a_to) * 0.5, -PI, PI)), PI, 0.01)
 
 	await _reset("cannon_creeping_barrage")

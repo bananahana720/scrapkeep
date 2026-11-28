@@ -3,11 +3,11 @@ import { spawn } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { setTimeout as sleep } from "node:timers/promises";
 import test, { after } from "node:test";
 
 import { acquireDrawnSlot, launch, measureFrame, runCapture, runWindowed } from "./display-run.mjs";
 import { watchDrawnRun, windowCounts } from "./window-watch.mjs";
+import { testGroups } from "../lib/test-groups.mjs";
 
 const script = "res://tools/offscreen_probe.gd";
 const version = () => "4.7.2.stable.official.ed1daf0bf";
@@ -20,6 +20,7 @@ const sample = (at, front = 4, visible = [], godot = [], missed = 0) => ({
   missed,
 });
 const clean = [sample(0), sample(50), sample(100)];
+const GUARD = { timeout: 30_000 };
 function capture(cwd, samples = clean) {
   const tools = path.join(cwd, "sketches/core-loop/tools");
   mkdirSync(tools, { recursive: true });
@@ -136,55 +137,97 @@ test("the Gate reference needs a visible sample for its own process and the pinn
   );
 });
 
-test("two drawn runs wait for one lock across worktrees and have disjoint start/end times", async () => {
-  const directory = scratch();
-  const notices = [];
-  const acquire = () =>
-    acquireDrawnSlot({ directory, machine: lease, pollMs: 8, log: (msg) => notices.push(msg) });
-  const intervals = [];
-  async function draw() {
-    const opts = capture(scratch());
-    const result = await runCapture({
-      ...opts,
-      acquire,
-      start: async () => {
-        const from = performance.now();
-        await sleep(40);
-        intervals.push([from, performance.now()]);
-        return opts.start();
-      },
+test(
+  "two drawn runs wait for one lock across worktrees and have disjoint start/end times",
+  GUARD,
+  async (t) => {
+    const directory = scratch();
+    const notices = [];
+    const events = [];
+    let contend;
+    const contended = new Promise((resolve) => (contend = resolve));
+    t.after(() => {
+      contend();
+      rmSync(directory, { recursive: true, force: true });
     });
-    assert.equal(result.exit, 0);
-  }
-  await Promise.all([draw(), draw()]);
-  assert.ok(notices.some((msg) => msg.includes("waiting")));
-  assert.ok(intervals[0][1] <= intervals[1][0]);
-});
-
-test("losing the sampler aborts a still-running group before releasing the drawn slot", async () => {
-  const row = JSON.stringify(sample(Date.now()));
-  const sampler = () =>
-    spawn(
-      process.execPath,
-      ["-e", "console.log(process.argv[1]);setTimeout(()=>process.exit(1),180)", row],
-      { stdio: ["ignore", "pipe", "pipe"] },
-    );
-  let result;
-  await assert.rejects(
-    watchDrawnRun(async (signal) => {
-      result = await launch(process.execPath, ["-e", "setInterval(()=>{},1000)"], {
-        cwd: scratch(),
-        env: {},
-        timeoutMs: 8000,
-        signal,
+    const acquire = () =>
+      acquireDrawnSlot({
+        directory,
+        machine: lease,
+        pollMs: 8,
+        log: (msg) => {
+          notices.push(msg);
+          if (msg.includes("waiting for a machine slot")) contend();
+        },
       });
-      return result;
-    }, sampler),
-    /watcher stopped/,
-  );
-  assert.equal(result.timedOut, false);
-  assert.equal(result.signal, "SIGKILL");
-});
+    async function draw() {
+      const opts = capture(scratch());
+      const result = await runCapture({
+        ...opts,
+        acquire,
+        start: async () => {
+          events.push("start");
+          if (events.length === 1) await contended;
+          else contend();
+          events.push("end");
+          return opts.start();
+        },
+      });
+      assert.equal(result.exit, 0);
+    }
+    await Promise.all([draw(), draw()]);
+    assert.deepEqual(events, ["start", "end", "start", "end"]);
+    assert.ok(notices.some((msg) => msg.includes("waiting for a machine slot")));
+  },
+);
+
+test(
+  "losing the sampler aborts a still-running group before releasing the drawn slot",
+  GUARD,
+  async (t) => {
+    const row = JSON.stringify(sample(Date.now()));
+    const runPid = path.join(scratch(), "run.pid");
+    const groups = testGroups(t, { from: runPid });
+    let samplerChild;
+    let samplerPid;
+    t.after(() => {
+      if (samplerChild && samplerChild.exitCode === null && samplerChild.signalCode === null)
+        samplerChild.kill("SIGKILL");
+    });
+    const sampler = () => {
+      const child = spawn(
+        process.execPath,
+        [
+          "-e",
+          "const row=process.argv[1];console.log(row);setInterval(()=>console.log(row),50)",
+          row,
+        ],
+        { stdio: ["ignore", "pipe", "pipe"] },
+      );
+      samplerChild = child;
+      samplerPid = child.pid;
+      return child;
+    };
+    let result;
+    await assert.rejects(
+      watchDrawnRun(async (signal) => {
+        const running =
+          'require("fs").writeFileSync(process.argv[2],process.pid+"\\n");process.kill(Number(process.argv[1]));setInterval(()=>{},1000)';
+        result = await launch(process.execPath, ["-e", running, String(samplerPid), runPid], {
+          cwd: scratch(),
+          env: {},
+          timeoutMs: 45_000,
+          signal,
+        });
+        return result;
+      }, sampler),
+      /watcher stopped/,
+    );
+    groups.sweep();
+    assert.equal(result.timedOut, false);
+    assert.equal(result.signal, "SIGKILL");
+  },
+);
 
 test("Mac library captures keep the producer resolution and plant while forcing the embedded backend", async () => {
   const opts = capture(scratch());

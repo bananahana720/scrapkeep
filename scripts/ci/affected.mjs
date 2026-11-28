@@ -93,19 +93,28 @@ export function diffFiles(baseRef, { cwd = process.cwd(), spawn = spawnSync } = 
     .filter(Boolean);
 }
 
-export function headFiles({ cwd = process.cwd(), spawn = spawnSync } = {}) {
-  const ran = spawn("git", ["ls-tree", "-r", "-z", "--name-only", "HEAD"], {
+export function treeFiles(ref, { cwd = process.cwd(), spawn = spawnSync, env = process.env } = {}) {
+  if (typeof ref !== "string" || ref === "") throw new Error("treeFiles needs a commit");
+  const ran = spawn("git", ["ls-tree", "-r", "-z", ref], {
     cwd,
+    env,
     encoding: "utf8",
     maxBuffer: 64 * 1024 * 1024,
   });
   if (ran.error || ran.status !== 0) {
     throw new Error(
-      `git ls-tree HEAD failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
+      `git ls-tree ${ref} failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
     );
   }
-  const files = new Set(ran.stdout.split("\0").filter(Boolean));
-  if (files.size === 0) throw new Error("git ls-tree HEAD lists no files");
+  const files = new Map();
+  for (const entry of ran.stdout.split("\0").filter(Boolean)) {
+    const [, mode, file] =
+      entry.match(/^(\d{6}) [a-z]+ (?:[0-9a-f]{40}|[0-9a-f]{64})\t([^]+)$/) ?? [];
+    if (mode === undefined)
+      throw new Error(`git ls-tree ${ref} gave an entry it cannot read: ${JSON.stringify(entry)}`);
+    files.set(file, mode);
+  }
+  if (files.size === 0) throw new Error(`git ls-tree ${ref} lists no files`);
   return files;
 }
 
@@ -152,7 +161,7 @@ if (isMain(import.meta.url)) {
         full = true;
       }
     }
-    const head = full ? null : headFiles();
+    const head = full ? null : treeFiles("HEAD");
     const result = classifyAffected(files, {
       full,
       exists: head ? (file) => head.has(file) : undefined,

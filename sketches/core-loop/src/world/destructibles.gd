@@ -674,8 +674,8 @@ func _pay(p: Piece) -> void:
 		var cons_id := Consumables.roll_for_destructible(_seed, _run_id, _stage, p.id, p.tier)
 		if cons_id != "":
 			_consumables_paid += 1
-			if _combat != null and _combat.has_method("drop_consumable"):
-				_combat.drop_consumable(cons_id, spot)
+			if _combat != null and _combat.get("consumables") != null:
+				_combat.consumables.drop_consumable(cons_id, spot)
 
 
 func _closest(p: Piece, point: Vector3) -> Vector3:

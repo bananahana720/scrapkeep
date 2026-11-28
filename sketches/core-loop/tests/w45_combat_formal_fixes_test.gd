@@ -451,7 +451,7 @@ func _test_combat_door_caps_mark_free_p0_4() -> void:
 	var game = await _calm_game()
 	var combat = game.combat
 	var enemy := _spawn_chaser(game, game.player.ball_position() + Vector3(0.0, 0.0, -5.0))
-	combat._cannon_expose(enemy, 0.5, "plate")
+	combat.cannon_expose(enemy, 0.5, "plate")
 	var id := enemy.get_instance_id()
 	var mark: Node = enemy.get_node_or_null("CannonExposure")
 	_t.check("P0 #4 precondition: CannonExposure attached and tracked", mark != null and combat._exposed.has(id))
@@ -480,9 +480,9 @@ func _test_combat_second_bell_p0_5() -> void:
 	game.run.parts.assign(["second_bell"])
 	game.build.recompute()
 	game.tuning.set_mod("weapon_damage", 1.5)
-	var shape: Dictionary = combat._plate_geometry(1.0)
+	var shape: Dictionary = combat.cannon.plate_geometry(1.0)
 	var mark: Dictionary = combat._bell_mark()
-	combat._fire_plate(1.0, shape)
+	combat.cannon.fire_plate(1.0, shape)
 	var want_plate_dmg: float = Weapons.PLATE_DAMAGE_MAX * 1.5
 	_t.near("P0 #5a: _fire_plate last_burst damage includes _damage_mod(CANNON_LANE)",
 		float(combat.last_burst.get("damage", 0.0)), want_plate_dmg, 0.001)
@@ -553,12 +553,12 @@ func _test_combat_polish_p1_p2() -> void:
 	var cannon_def: Resource = ClassDef.by_id("remembered_cannon")
 	game.run.class_def = cannon_def
 	game.player.fit_class(cannon_def)
-	combat._free_cannon()
+	combat.cannon.free_cannon()
 	game.events.slammed.emit(game.player.ball_position(), 0.01, 1.0)
-	_t.eq("P1/P2: _on_cannon_slammed ignores strength < 0.05", combat._cannon.size(), 0)
+	_t.eq("P1/P2: _on_cannon_slammed ignores strength < 0.05", combat.cannon._cannon.size(), 0)
 	game.events.slammed.emit(game.player.ball_position(), 1.0, 1.0)
-	_t.eq("P1/P2 planted control: strength 1.0 commits cannon rush", combat._cannon.size(), 1)
-	combat._free_cannon()
+	_t.eq("P1/P2 planted control: strength 1.0 commits cannon rush", combat.cannon._cannon.size(), 1)
+	combat.cannon.free_cannon()
 
 	# (b) Cached evolution flags update across _rebuild_patterns().
 	var sable_def: Resource = ClassDef.by_id("pylon_engineer")
