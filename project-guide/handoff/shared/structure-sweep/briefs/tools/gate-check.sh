@@ -49,10 +49,10 @@ old_reds() {
   [ -s "$logs/sketch-fast.log" ] || { echo "no Godot run log at $logs/sketch-fast.log"; return 1; }
   bad=0
   for t in $(sed -n 's/.*base-red (red on the merge base too; not this PR): //p' "$logs/sketch-fast.log" | tr ',' ' '); do
-    name=$(basename "$t" .gd)
-    if ! awk -F'\t' '$2=="red" && $3 ~ /^red on main at /{print $1}' "$ledger" | grep -qx "$name"; then
+    red=$(basename "$t" .gd)
+    if ! awk -F'\t' '$2=="red" && $3 ~ /^red on main at /{print $1}' "$ledger" | grep -qx "$red"; then
       bad=1
-      echo "$name is red here and on the previous gate tip, and has no red-on-main row in $ledger: run it on main; red there, add its row through a unit; green there, this sweep broke it"
+      echo "$red is red here and on the previous gate tip, and has no red-on-main row in $ledger: run it on main; red there, add its row through a unit; green there, this sweep broke it"
     fi
   done
   return "$bad"
