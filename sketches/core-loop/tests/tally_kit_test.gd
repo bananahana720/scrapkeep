@@ -194,13 +194,12 @@ func _check_cues() -> void:
 		_t.check(cue + " admitted at trim plus priority in the live key", notes.size() == 1
 			and is_equal_approx(float(notes[0][5]), Bank.trim_db(sound) + Audio.PRIORITY_DB[Rows.priority(String(row["kind"]))])
 			and is_equal_approx(float(notes[0][4]), Harmony.ratio(audio.live_key())), str(notes))
-	var clean := Bank.tally_recipe("clip_tally", 62)
-	var old_transpose := Synth.score_transpose
-	Synth.score_transpose = 3
-	var shifted := Bank.tally_recipe("clip_tally", 62)
-	var restored := Synth.score_transpose
-	Synth.score_transpose = old_transpose
-	_t.check("direct Tally notes isolate and restore the background bank transpose", clean == shifted and restored == 3)
+	var clean := Bank.new().tally_recipe("clip_tally", 62)
+	var keyed := Bank.new(Harmony.STEP, 3)
+	var keyed_note := keyed.tally_recipe("clip_tally")
+	var shifted := Bank.new().tally_recipe("clip_tally", 62)
+	_t.check("direct Tally notes render at home whatever key another bake holds, and that bake keeps its key",
+		clean == shifted and keyed_note != Bank.new().tally_recipe("clip_tally") and keyed.tally_recipe("clip_tally") == keyed_note)
 	audio.free()
 
 

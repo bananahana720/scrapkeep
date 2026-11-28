@@ -1,6 +1,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
@@ -9,6 +10,11 @@ const SetDirector := preload("res://src/presentation/set_director.gd")
 
 # Godot's float output can differ in the last bit between macOS and Linux, so only RECORDED_ON compares bytes.
 const RECORDED_ON := "macOS arm64"
+const STATIC_VAR := "(?m)^\\s*(?:@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*static\\s+(?:@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*var\\s+([A-Za-z_]\\w*)"
+const SHARED_STATICS := {
+	"res://src/presentation/synth.gd": ["_notes", "_lock"],
+	"res://src/presentation/sfx_bank.gd": ["_samples", "_lock", "_streams", "_rendered", "_cache_lock", "bake_cancel", "_file_present"],
+}
 const REL_TOL := 1e-4
 const ABS_TOL := 1e-3
 const PINS := {
@@ -58,6 +64,7 @@ var _t := T.new("sound_render_pin_test")
 
 func _initialize() -> void:
 	_check_compare_fails_closed()
+	_check_render_inputs_are_not_shared()
 	var got := _renders()
 	_t.check("the render spread is not empty", got.size() >= 20, "%d renders" % got.size())
 	var labels: Array = got.keys()
@@ -77,6 +84,15 @@ func _initialize() -> void:
 		var fault := compare(row, PINS[label], exact)
 		_t.check(label + " renders as pinned", fault == "", fault)
 	quit(_t.verdict())
+
+
+func _check_render_inputs_are_not_shared() -> void:
+	var found := SourceScan.captures(_t, ["res://src/presentation"], STATIC_VAR)
+	for path in SHARED_STATICS:
+		var names: Array = []
+		for row in found.get(path, []):
+			names.append(row[1])
+		_t.eq(path.get_file() + " keeps only its caches, locks and cancel flag in statics", names, SHARED_STATICS[path])
 
 
 static func platform() -> String:
@@ -119,12 +135,12 @@ func _renders() -> Dictionary:
 		"at set answer boss": SfxBank.samples_at(answer, boss),
 		"synergy score theme 1": _synergy_score(1),
 		"synergy score theme 2": _synergy_score(2),
-		"tally clip 62": SfxBank.tally_recipe("clip_tally", 62),
-		"tally plate 50 total": SfxBank.tally_recipe("plate_tally", 50, true),
-		"tool hold crater": SfxBank.hold("crater", home * Harmony.STEPS_PER_BEAT * 2),
-		"tool bite 1": SfxBank.bite(1),
-		"tool crack 0": SfxBank.crack(0),
-		"tool twang": SfxBank.twang(),
+		"tally clip 62": SfxBank.new().tally_recipe("clip_tally", 62),
+		"tally plate 50 total": SfxBank.new().tally_recipe("plate_tally", 50, true),
+		"tool hold crater": SfxBank.new().hold("crater", home * Harmony.STEPS_PER_BEAT * 2),
+		"tool bite 1": SfxBank.new().bite(1),
+		"tool crack 0": SfxBank.new().crack(0),
+		"tool twang": SfxBank.new().twang(),
 		"bare score": Synth.render_score(BARE, 0.4),
 		"bare score boss +3": _bare_at(boss, 3),
 		"voice sable": VoiceSynth._say("sable", "Quick sync."),
@@ -135,19 +151,11 @@ const BARE := [[0, 62, 2, "keys", 0.6], [2, 0, 2, "kick", 1.0], [2, 69, 4, "bell
 
 
 func _synergy_score(theme: int) -> PackedFloat32Array:
-	SfxBank._theme = theme
-	var score := SfxBank._score_synergy()
-	SfxBank._theme = 0
-	return Synth.render_score(score, 1.4)
+	return Synth.render_score(SfxBank.new(Harmony.STEP, 0, theme)._score_synergy(), 1.4)
 
 
 func _bare_at(step: int, transpose: int) -> PackedFloat32Array:
-	Synth.score_step = step
-	Synth.score_transpose = transpose
-	var buf := Synth.render_score(BARE, 0.4)
-	Synth.score_step = Harmony.STEP
-	Synth.score_transpose = 0
-	return buf
+	return Synth.render_score(BARE, 0.4, step, transpose)
 
 
 static func stats(buf: PackedFloat32Array) -> Array:

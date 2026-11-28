@@ -45,7 +45,6 @@ const Synergies := preload("res://src/build/synergies.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const EnemyClips := preload("res://src/presentation/enemy_clips.gd")
 const Palette := preload("res://src/core/palette.gd")
-const Synth := preload("res://src/presentation/synth.gd")
 const Footings := preload("res://src/world/park/footings.gd")
 const RescueSite := preload("res://src/world/rescue_site.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
@@ -119,10 +118,6 @@ func _run() -> void:
 	WorldFxWord.quiet(true)
 	var hushed_word := WorldFxWord.stamp(root, "QUIET", Vector3.ZERO)
 	t.check("WorldFxWord.quiet(true) hides newly stamped words", not hushed_word.visible)
-	Synth.score_step = Harmony.BOSS_STEP
-	Synth.score_transpose = 3
-	SfxBank._shift = 4
-	SfxBank._theme = 2
 	SfxBank.bake_cancel = true
 	VoiceSynth.unknown_callers["probe_caller"] = true
 	VoiceSynth.set_voice_sidecar(true, {"sable|probe": "res://missing.wav"})
@@ -347,10 +342,7 @@ func _run() -> void:
 	var after_word := WorldFxWord.stamp(root, "LOUD", Vector3.ZERO)
 	t.check("WorldFxWord un-hushes after reset", after_word.visible)
 	after_word.free()
-	t.eq("Synth.score_step resets to Harmony.STEP", Synth.score_step, Harmony.STEP)
-	t.eq("Synth.score_transpose resets to 0", Synth.score_transpose, 0)
-	t.check("SfxBank.reset_for_tests clears mutable statics",
-		SfxBank._shift == 0 and SfxBank._theme == 0 and not SfxBank.bake_cancel)
+	t.check("SfxBank.reset_for_tests lowers bake_cancel", not SfxBank.bake_cancel)
 	t.check("VoiceSynth.reset_for_tests clears caller and sidecar statics",
 		VoiceSynth.unknown_callers.is_empty() and not VoiceSynth._voice_tts
 		and VoiceSynth._voice_clips.is_empty() and VoiceSynth._samples.is_empty())

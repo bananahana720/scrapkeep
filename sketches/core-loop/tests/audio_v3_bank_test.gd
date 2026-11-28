@@ -107,7 +107,7 @@ func _keyed_playback() -> void:
 
 func _crater_loop() -> void:
 	var n := int(Harmony.RATE * 2.0)
-	var buf := SfxBank.hold("crater", n)
+	var buf := SfxBank.new().hold("crater", n)
 	var head := 0.0
 	var tail := 0.0
 	for i in 32:

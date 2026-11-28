@@ -34,14 +34,14 @@ func _sketches() -> Array:
 	var list: Array = []
 	for variant in 3:
 		var letter := char(97 + variant)
-		list.append(["bite-%s" % letter, _at_level(SfxBank.bite(variant), "line_bite")])
-		list.append(["crack-%s" % letter, _at_level(SfxBank.crack(variant), "smash_crack")])
+		list.append(["bite-%s" % letter, _at_level(SfxBank.new().bite(variant), "line_bite")])
+		list.append(["crack-%s" % letter, _at_level(SfxBank.new().crack(variant), "smash_crack")])
 	for variant in SfxBank.BREAK_PHRASES.size():
 		list.append(["break-%s" % char(97 + variant), _break(variant)])
 	list.append(["clunk", _at_level(SfxBank.clunk(), "anchor_clunk")])
 	list.append(["dry-tick", _at_level(SfxBank.samples("dry_tick").duplicate(), "dry_tick")])
 	list.append(["zip", _at_level(SfxBank.zip(), "line_zip")])
-	list.append(["twang", _at_level(SfxBank.twang(), "line_twang")])
+	list.append(["twang", _at_level(SfxBank.new().twang(),"line_twang")])
 	list.append(["hum", _hum()])
 	for cause in EventKinds.CAUSE_ROWS:
 		list.append(["motif-%s" % cause, _motif(cause)])

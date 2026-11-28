@@ -45,7 +45,6 @@ const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const StakeDevices := preload("res://src/world/stake_devices.gd")
 const WorldFx := preload("res://src/presentation/world_fx/world_fx.gd")
 const WorldFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
-const Synth := preload("res://src/presentation/synth.gd")
 const Footings := preload("res://src/world/park/footings.gd")
 const RescueSite := preload("res://src/world/rescue_site.gd")
 const MusicRows := preload("res://src/presentation/music_rows.gd")
@@ -287,7 +286,6 @@ func _reset() -> void:
 	MusicRows.stem_dir = ""
 	HighdraftFx.shader_dir = HighdraftFx.SHADER_DIR
 	QuietGun.housing_path = QuietGun.HOUSING
-	Synth.reset_for_tests()
 	SfxBank.reset_for_tests()
 	MusicEngine.reset_for_tests()
 	MusicPrebake.reset_for_tests()
