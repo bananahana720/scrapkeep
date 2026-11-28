@@ -4,6 +4,7 @@ const Augments := preload("res://src/movement/augments.gd")
 const Palette := preload("res://src/core/palette.gd")
 const LoopTally := preload("res://src/core/loop_tally.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 
 
@@ -75,10 +76,10 @@ func gate_rarities() -> Array:
 	settle()
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
 	var bonus: int = ctx.run.gate_tier_bonus() if ctx != null and ctx.run != null else 0
-	var rarities: Array = Parts.gate_rarities(bonus, stage)
+	var rarities: Array = PartOffers.gate_rarities(bonus, stage)
 	if verdict != "met":
 		return rarities
-	if bonus >= 1 or stage >= Parts.WORLD_ESCALATION_STAGE_W2:
+	if bonus >= 1 or stage >= PartOffers.WORLD_ESCALATION_STAGE_W2:
 		return ["rare", "relic"]
 	var lifted: Array = rarities.filter(func(r): return r != "common")
 	return lifted if not lifted.is_empty() else ["rare"]

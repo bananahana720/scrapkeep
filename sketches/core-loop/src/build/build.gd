@@ -11,6 +11,7 @@ const ElementField := preload("res://src/build/element_field.gd")
 const Elements := preload("res://src/build/elements.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const HotwireRules := preload("res://src/build/hotwire_rules.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
@@ -32,6 +33,7 @@ const PanelShell := preload("res://src/build/panel_shell.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const TradePockets := preload("res://src/world/trade_pockets.gd")
+const RelicSync := preload("res://src/build/relic_sync.gd")
 
 
 const GATE_CHOICES := 2
@@ -158,7 +160,7 @@ var _declared := false
 func setup(ctx_ref) -> void:
 	ctx = ctx_ref
 	name = "Build"
-	Synergies.table = ctx.stages
+	Synergies.set_table(ctx.stages)
 	sheet = stat_cache.sync([])
 	scrap = ScrapField.new()
 	scrap.name = "Scrap"
@@ -420,13 +422,13 @@ func clock_paused() -> bool:
 func _refresh_seams() -> void:
 	var spawner = ctx.spawner
 	var patterns: PackedStringArray = spawner.transformer_ids() if spawner != null and spawner.has_method("transformer_ids") else PackedStringArray()
-	Parts.seams = {
+	Parts.set_seams({
 		"spawner.extend_cloak": spawner != null and spawner.has_method("extend_cloak"),
 		"spawner.fan_spread": "fan_spread" in patterns,
 		"spawner.helix_drill": "helix_drill" in patterns,
 		"player.set_vault_cooldown_scale": ctx.player.has_method("set_vault_cooldown_scale"),
 		"player.set_vault_charges": ctx.player.has_method("set_vault_charges"),
-	}
+	})
 
 
 func _post(kind: int, source: String, proc: float, at: Vector3, enemy: Node3D = null, amount := 0.0) -> void:
@@ -757,9 +759,23 @@ func _declare() -> void:
 			"hint": card["hint"], "clue": String(card.get("clue", "")), "text": card["text"]})
 
 
+func roll_cobalt_boss_picks(rng: RandomNumberGenerator, class_id: String, held: Array, count := 2) -> Array:
+	return RewardGates.roll_cobalt_boss_picks(rng, class_id, held, count)
+
+
+func open_cobalt_boss_gates(parent: Node, ground_query, picks: Array, at: Vector3, heading: Vector3, held: Array, on_chosen: Callable) -> Node3D:
+	var cobalt_gates := RewardGates.new()
+	cobalt_gates.name = "BrindleCobaltGates"
+	parent.add_child(cobalt_gates)
+	cobalt_gates.setup(ground_query)
+	cobalt_gates.chosen.connect(on_chosen)
+	cobalt_gates.open(picks, at, heading, held)
+	return cobalt_gates
+
+
 func _exit_tree() -> void:
 	if Synergies.table == ctx.stages:
-		Synergies.table = null
+		Synergies.set_table(null)
 
 
 func _on_synergy_live(synergy_id: String) -> void:
@@ -866,7 +882,7 @@ func _on_scrap_collected(_amount: int, _at: Vector3, _total: int) -> void:
 
 
 func _on_run_started(_class_id_value: String) -> void:
-	_relic_fx.clear()
+	_relic_sync.reset()
 	_live = []
 	_armed.clear()
 	_fired.clear()
@@ -982,14 +998,14 @@ func _on_enemy_killed(kind: String, at: Vector3, scrap_value: int) -> void:
 	if kind == "vault":
 		_vaults_paid += 1
 		var stage: int = ctx.flow.stage()
-		var vault_rarities := Parts.source_rarities("vault", stage)
+		var vault_rarities := PartOffers.source_rarities("vault", stage)
 		var vault_rng := _offer_rng("vault_%d" % _vaults_paid)
 		var tree = ctx.player.tree if ctx.player != null else null
-		var picks: Array = Parts.roll_high_impact(vault_rng, vault_rarities, _class_id(), ctx.run.parts, 1, [], _offered, stage, stage >= Parts.WORLD_ESCALATION_STAGE_W2, tree)
+		var picks: Array = Parts.roll_high_impact(vault_rng, vault_rarities, _class_id(), ctx.run.parts, 1, [], _offered, stage, stage >= PartOffers.WORLD_ESCALATION_STAGE_W2, tree)
 		if not picks.is_empty() and not scrapless():
 			ctx.run.add_part(picks[0], "vault")
 		ctx.run.add_core("vault", at)
-		var active := active_offer_for_channel("vault", vault_rarities, vault_rng, stage >= Parts.WORLD_ESCALATION_STAGE_W2)
+		var active := active_offer_for_channel("vault", vault_rarities, vault_rng, stage >= PartOffers.WORLD_ESCALATION_STAGE_W2)
 		if active != "" and not scrapless():
 			active_rack().take(active, ctx.player.ball_position())
 
@@ -1143,7 +1159,7 @@ func active_offer_for_channel(source: String, rarities: Array, rng: RandomNumber
 	if ids.is_empty():
 		return ""
 	var base_share := float(ActiveOffers.SHARE.get(source, 0.0))
-	var spell_lean := Parts.dominant_archetype(ctx.run.parts) == "spell_cast"
+	var spell_lean := PartOffers.dominant_archetype(ctx.run.parts, Parts.maker_of) == "spell_cast"
 	var counted := maker_counts()
 	var set_ids: Array = []
 	for aid in ids:
@@ -1177,20 +1193,20 @@ func _on_flow_changed(state: String) -> void:
 	var picks: Array
 	if call_met:
 		picks = Parts.roll_high_impact(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, [], _offered, stage, "relic" in rarities, tree)
-	elif stage >= Parts.WORLD_ESCALATION_STAGE_W2:
-		picks = Parts.roll_for_stage(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, [], _offered, false)
+	elif stage >= PartOffers.WORLD_ESCALATION_STAGE_W2:
+		picks = PartOffers.roll_for_stage(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, [], _offered, false, Parts.offer_ops())
 	else:
-		picks = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, _offered)
-	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
+		picks = PartOffers.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, _offered, Parts.offer_ops())
+	picks = PartOffers.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES, Parts.offer_ops())
 	var quick: Array = []
 	if clock.quick_break():
-		quick = Parts.roll_for_stage(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, stage, picks, _offered, stage >= Parts.WORLD_ESCALATION_STAGE_W2) \
-			if stage >= Parts.WORLD_ESCALATION_STAGE_W2 \
+		quick = PartOffers.roll_for_stage(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, stage, picks, _offered, stage >= PartOffers.WORLD_ESCALATION_STAGE_W2, Parts.offer_ops()) \
+			if stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 			else Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
 		picks += quick
 	var stake_rolls := StakeDevices.warden_gate_bonus_rolls(ctx.run)
 	if stake_rolls > 0:
-		var stake_rarities: Array = ["rare", "relic"] if stake_rolls >= 2 or stage >= Parts.WORLD_ESCALATION_STAGE_W2 else ["rare"]
+		var stake_rarities: Array = ["rare", "relic"] if stake_rolls >= 2 or stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 else ["rare"]
 		picks += Parts.roll_high_impact(_offer_rng("challenge_stake"), stake_rarities, _class_id(), ctx.run.parts, stake_rolls, picks, _offered, stage, stake_rolls >= 2, tree)
 	if ctx.run.override_on("warden_extra_cobalt"):
 		picks += Parts.roll_high_impact(_offer_rng("override_cobalt"), ["rare"], _class_id(), ctx.run.parts, 1, picks, _offered, stage, false, tree)
@@ -1234,7 +1250,7 @@ func _on_gate_chosen(part_id: String) -> void:
 
 func _on_milestone_won(event_id: String) -> void:
 	if not scrapless():
-		ctx.run.add_part(Parts.milestone_for(event_id, ctx.run.parts), "milestone")
+		ctx.run.add_part(PartOffers.milestone_for(event_id, ctx.run.parts), "milestone")
 
 
 func _on_scrap_lost(_amount: int, at: Vector3, _total: int, _cause: String) -> void:
@@ -1570,7 +1586,11 @@ func _synergy_hit(enemy: Node3D, force: float, synergy_id: String) -> void:
 	_fire(synergy_id, enemy, enemy.global_position)
 
 
-var _relic_fx := {}
+var _relic_sync := RelicSync.new()
+
+
+func relic_fx() -> Dictionary:
+	return _relic_sync.fx
 
 
 func _on_relic_gained(_part_id: String, _source: String) -> void:
@@ -1578,61 +1598,4 @@ func _on_relic_gained(_part_id: String, _source: String) -> void:
 
 
 func sync_relics() -> void:
-	var abilities = ctx.player.get("abilities") if ctx.player != null else null
-	if abilities == null:
-		return
-	_adopt_saved_relics()
-	var held := Relics.held(ctx.run.parts)
-	var touched := false
-	for slot in AbilityState.SLOTS:
-		var want: String = held.get(slot, "")
-		if not Relics.has(want):
-			want = ""
-		var fx: Dictionary = _relic_fx.get(slot, {})
-		if String(fx.get("relic", "")) == want:
-			continue
-		if not fx.is_empty():
-			_relic_undo(abilities, slot, fx)
-			_relic_fx.erase(slot)
-		if want != "":
-			_relic_fx[slot] = _relic_apply(abilities, slot, want)
-		touched = true
-	if touched and ctx.player.has_method("_refit"):
-		ctx.player._refit()
-
-
-func _adopt_saved_relics() -> void:
-	if ctx.run.relics.is_empty():
-		return
-	for slot in ctx.run.relics:
-		var part_id := Relics.part_of(String(ctx.run.relics[slot]))
-		if part_id != "" and not part_id in ctx.run.parts:
-			ctx.run.parts.append(part_id)
-	ctx.run.relics.clear()
-	recompute()
-
-
-func _relic_apply(abilities, slot: String, relic_id: String) -> Dictionary:
-	var row := Relics.row(relic_id)
-	var fx := {"relic": relic_id, "prev": abilities.id_of(slot), "swapped": false,
-		"cooldown": float(row.get("cooldown", 1.0)), "charges": int(row.get("charges", 0))}
-	if Relics.swap_of(relic_id) != "":
-		abilities.swap(slot, Relics.swap_of(relic_id))
-		fx["swapped"] = true
-	var s = abilities.slot(slot)
-	abilities.set_cooldown_scale(slot, s.cooldown_scale * fx["cooldown"])
-	if fx["charges"] > 0:
-		abilities.set_max_charges(slot, s.max_charges + fx["charges"])
-		abilities.grant(slot, fx["charges"])
-	return fx
-
-
-func _relic_undo(abilities, slot: String, fx: Dictionary) -> void:
-	var s = abilities.slot(slot)
-	if fx["charges"] > 0:
-		abilities.set_max_charges(slot, s.max_charges - fx["charges"])
-	abilities.set_cooldown_scale(slot, s.cooldown_scale / fx["cooldown"])
-	var tree = ctx.player.tree if ctx.player != null else null
-	var tree_owns: bool = tree != null and tree.gives_swap(slot, Relics.swap_of(fx["relic"]))
-	if fx["swapped"] and abilities.id_of(slot) == Relics.swap_of(fx["relic"]) and not tree_owns:
-		abilities.swap(slot, fx["prev"])
+	_relic_sync.sync(self)

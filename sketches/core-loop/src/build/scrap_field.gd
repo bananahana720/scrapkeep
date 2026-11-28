@@ -107,8 +107,8 @@ func setup() -> void:
 	_panel_column_material = _beacon_material()
 	_cache_column = PropMeshes.scrap_beacon_column(0.20, 0.03, CACHE_COLUMN)
 	if not _pickup_meshes().is_empty():
-		_material = _pickup_material(Palette.ARC)
-		_cluster_material = _pickup_material(Palette.AMBER)
+		_material = pickup_material(Palette.ARC)
+		_cluster_material = pickup_material(Palette.AMBER)
 		_material.resource_name = "field"
 		_cluster_material.resource_name = "field"
 	if _cog_model != null:
@@ -116,7 +116,7 @@ func setup() -> void:
 		_cog_material = _cog_glow()
 
 
-static func _pickup_material(color: Color) -> ShaderMaterial:
+static func pickup_material(color: Color) -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://assets/shaders/pickup.gdshader")
 	material.set_shader_parameter("glow_color", color)
@@ -131,7 +131,7 @@ static func _pickup_material(color: Color) -> ShaderMaterial:
 
 
 static func _cog_glow() -> ShaderMaterial:
-	var material := _pickup_material(Palette.SAND)
+	var material := pickup_material(Palette.SAND)
 	material.set_shader_parameter("face_energy", 0.08)
 	material.set_shader_parameter("rim_energy", 1.35)
 	material.set_shader_parameter("emission_ceiling", 1.35)
@@ -157,7 +157,7 @@ static func warm_views() -> Array[Node3D]:
 	var meshes: Array[Mesh] = _pickup_meshes()
 	if meshes.is_empty():
 		return views
-	var material := _pickup_material(Palette.ARC)
+	var material := pickup_material(Palette.ARC)
 	for mesh in meshes + _recovery_mesh_cache:
 		var view := MeshInstance3D.new()
 		view.mesh = mesh

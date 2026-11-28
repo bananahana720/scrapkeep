@@ -1,7 +1,9 @@
 extends RefCounted
 
+const MakerDefs := preload("res://src/build/maker_defs.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Items := preload("res://src/build/items.gd")
 const Relics := preload("res://src/build/relics.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
@@ -13,7 +15,7 @@ const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
 
 func run(t) -> void:
 	t.eq("maker fields are sound", MakerSets.validate(), [])
-	var items: Array = Items.TABLE.keys() + Parts.PATTERN_PARTS
+	var items: Array = Items.TABLE.keys() + PartOffers.PATTERN_PARTS
 	# 2026-11-21 (wave 45 U6): Slag Pike and Halo Rig; was 62.
 	# 2026-11-21 (wave 45 U7): Backwash, Barbed Reel, Faultline Cap, Second Bell and Long Leash; was 64.
 	# 2026-11-24 (wave 46 E2-09): Brass Drum and Heavy Breech; was 69.
@@ -28,39 +30,39 @@ func run(t) -> void:
 		t.check("%s has pieces past its set" % maker, int(per.get(maker, 0)) > int(MakerSets.SETS[maker]["pieces"]), str(per.get(maker, 0)))
 
 	# Counting: distinct pieces only, from every source.
-	t.eq("two of one maker", MakerSets.counts(["tracer_round", "magnet_coil"]), {MakerSets.FLEET: 2})
-	t.eq("a copy is not a second piece", MakerSets.counts(["tracer_round", "tracer_round", "tracer_round"]), {MakerSets.FLEET: 1})
-	t.eq("live at three", MakerSets.live_bonuses(MakerSets.counts(["tracer_round", "magnet_coil", "rivet_seam"])), ["rounded_up"])
-	t.eq("not live at two", MakerSets.live_bonuses(MakerSets.counts(["tracer_round", "magnet_coil"])), [])
-	t.eq("Moss at two", MakerSets.live_bonuses(MakerSets.counts(["fast_hands", "cell_weapon"])), ["packed_a_spare"])
-	t.eq("a relic counts", MakerSets.counts(["tracer_round", "magnet_coil", Relics.part_of("brace_pin")]), {MakerSets.FLEET: 3})
+	t.eq("two of one maker", MakerSets.counts(["tracer_round", "magnet_coil"]), {MakerDefs.FLEET: 2})
+	t.eq("a copy is not a second piece", MakerSets.counts(["tracer_round", "tracer_round", "tracer_round"]), {MakerDefs.FLEET: 1})
+	t.eq("live at three", MakerDefs.live_bonuses(MakerSets.counts(["tracer_round", "magnet_coil", "rivet_seam"])), ["rounded_up"])
+	t.eq("not live at two", MakerDefs.live_bonuses(MakerSets.counts(["tracer_round", "magnet_coil"])), [])
+	t.eq("Moss at two", MakerDefs.live_bonuses(MakerSets.counts(["fast_hands", "cell_weapon"])), ["packed_a_spare"])
+	t.eq("a relic counts", MakerSets.counts(["tracer_round", "magnet_coil", Relics.part_of("brace_pin")]), {MakerDefs.FLEET: 3})
 	t.eq("the racked active counts", MakerSets.counts(["quick_spool", "cap_relay"], [ActiveDefs.row(ActiveDefs.SCRAP_ROCKET)["maker"]]),
-		{MakerSets.SPILLWAY: 3})
+		{MakerDefs.SPILLWAY: 3})
 	t.eq("unknown ids are ignored", MakerSets.counts(["gen:weapon:rare:arc:on_hit", "no_such_part", "relic:no_relic"], ["nobody"]), {})
 	var all_sets := ["tracer_round", "magnet_coil", "rivet_seam", "quick_spool", "cap_relay", "reserve_tank",
 		"pin_setter", "ten_pin", "clean_break", "light_frame", "low_rider", "slipstream", "re_rack", "brace_frame",
 		"ring_wave", "chain_arc", "static_burr", "synergy_lens", "fast_hands", "momentum_thief"]
-	t.eq("every bonus live", MakerSets.live_bonuses(MakerSets.counts(all_sets)),
+	t.eq("every bonus live", MakerDefs.live_bonuses(MakerSets.counts(all_sets)),
 		["full_pressure", "rounded_up", "bench_teeth", "open_frame", "tremor", "noticed", "packed_a_spare"])
 
 	# The nudge: 1.1x (1.5x before the pass D fold) on a maker's unheld pieces from two held, nothing at one.
 	var pool := ["rivet_seam", "crush_guard", "quick_spool", "tracer_round"]
-	t.eq("no nudge at one piece", Parts.maker_nudge(["tracer_round"], pool), {})
-	t.eq("nudge at two pieces", Parts.maker_nudge(["tracer_round", "magnet_coil"], pool),
-		{"rivet_seam": Parts.MAKER_NUDGE, "crush_guard": Parts.MAKER_NUDGE})
-	t.near("nudge is 1.1x", Parts.MAKER_NUDGE, 1.1)
+	t.eq("no nudge at one piece", PartOffers.maker_nudge(["tracer_round"], pool, Parts.offer_ops()), {})
+	t.eq("nudge at two pieces", PartOffers.maker_nudge(["tracer_round", "magnet_coil"], pool, Parts.offer_ops()),
+		{"rivet_seam": PartOffers.MAKER_NUDGE, "crush_guard": PartOffers.MAKER_NUDGE})
+	t.near("nudge is 1.1x", PartOffers.MAKER_NUDGE, 1.1)
 	# Seeded draws: inside one offer bucket the nudged piece shows more often; across buckets
 	# each bucket keeps its weight, so the kit, shelf and pair shares hold.
-	var lean := Parts.maker_nudge(["tracer_round", "magnet_coil"], ["rivet_seam", "deflect_plate", "quick_spool"])
-	t.eq("rivet_seam and deflect_plate share the defence bucket", [Parts.bucket_of("rivet_seam"), Parts.bucket_of("deflect_plate")], ["defence", "defence"])
+	var lean := PartOffers.maker_nudge(["tracer_round", "magnet_coil"], ["rivet_seam", "deflect_plate", "quick_spool"], Parts.offer_ops())
+	t.eq("rivet_seam and deflect_plate share the defence bucket", [PartOffers.bucket_of("rivet_seam", Parts.row), PartOffers.bucket_of("deflect_plate", Parts.row)], ["defence", "defence"])
 	t.near("a nudged piece takes 52% of its bucket", _share(["rivet_seam", "deflect_plate"], lean, "rivet_seam"), 1.1 / 2.1, 0.03)
-	t.check("across buckets the nudge moves nothing", Parts.bucket_of("quick_spool") != "defence" \
+	t.check("across buckets the nudge moves nothing", PartOffers.bucket_of("quick_spool", Parts.row) != "defence" \
 		and absf(_share(["rivet_seam", "quick_spool"], lean, "rivet_seam") - 0.5) < 0.03)
 	var raw := {"rivet_seam": 1.0, "deflect_plate": 1.0, "quick_spool": 2.0}
-	var nudged := Parts._nudged(raw, lean)
+	var nudged := PartOffers.nudged(raw, lean, Parts.row)
 	t.near("the defence bucket keeps its total", float(nudged["rivet_seam"]) + float(nudged["deflect_plate"]), 2.0)
 	t.near("the nudged piece is 1.1x its neighbour", float(nudged["rivet_seam"]) / float(nudged["deflect_plate"]), 1.1)
-	t.check("no nudge returns the weights unchanged", Parts._nudged(raw, {}) == raw)
+	t.check("no nudge returns the weights unchanged", PartOffers.nudged(raw, {}, Parts.row) == raw)
 
 
 func _share(bucket: Array, lean: Dictionary, want: String) -> float:
@@ -68,6 +70,6 @@ func _share(bucket: Array, lean: Dictionary, want: String) -> float:
 	rng.seed = 41
 	var hits := 0
 	for i in 4000:
-		if Parts._weighted(rng, bucket, {}, {}, lean) == want:
+		if PartOffers.weighted(rng, bucket, {}, {}, lean, Parts.row) == want:
 			hits += 1
 	return hits / 4000.0

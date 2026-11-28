@@ -4,6 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const T := preload("res://tests/support/t.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
@@ -66,9 +67,9 @@ func _draw() -> Dictionary:
 		out["reroll"].append(shop._roll_one(["common", "rare"]))
 		out["reroll"].append(shop._roll_one(["relic"]))
 		for bonus in 3:
-			out["gate"].append_array(Parts.roll_gate(rng, Parts.gate_rarities(bonus), class_id, held, 2, 1))
-		out["vault"].append_array(Parts.roll(rng, Parts.SOURCE_RARITIES["vault"], class_id, held, 1))
-		out["fabricator"].append_array(Parts.roll(rng, Parts.SOURCE_RARITIES["fabricator"], class_id, held, 1))
+			out["gate"].append_array(PartOffers.roll_gate(rng, PartOffers.gate_rarities(bonus), class_id, held, 2, 1, {}, Parts.offer_ops()))
+		out["vault"].append_array(Parts.roll(rng, PartOffers.SOURCE_RARITIES["vault"], class_id, held, 1))
+		out["fabricator"].append_array(Parts.roll(rng, PartOffers.SOURCE_RARITIES["fabricator"], class_id, held, 1))
 		out["cache"].append_array(Parts.roll(rng, ["common", "rare"], class_id, held, 3))
 		out["activity"].append_array(Parts.roll(rng, ["common", "rare"], class_id, held, 1))
 	return out
@@ -108,13 +109,13 @@ func _sources() -> void:
 		"%d visits: %d repeats, %d empty ids" % [DRAWS, repeats, empty_ids])
 	# 2026-10-04: the default table takes the alpha ruleset, so it no longer reaches parts outside
 	# the twelve; the control is an unfiltered table (null), which still does.
-	Synergies.table = null
+	Synergies.set_table(null)
 	var base := _draw()
 	for source in SOURCES:
 		if source == "shelf" or source == "reroll" or source == "gate" or source == "cache":
 			_t.check("unfiltered %s reaches parts outside the twelve" % source, not _outside(base[source]).is_empty(),
 				"%d offers, %d outside" % [base[source].size(), _outside(base[source]).size()])
-	Synergies.table = SliceDefs
+	Synergies.set_table(SliceDefs)
 
 
 func _list() -> void:

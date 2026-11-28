@@ -164,7 +164,7 @@ func _as_tarn() -> void:
 func _equip_rake() -> void:
 	_as_tarn()
 	_player.abilities.swap(AbilityState.WEAPON, "claw_rake")
-	_player._refit()
+	_player.refit()
 	_combat.bolts.clear()
 	_combat._rakes.clear()
 
@@ -279,7 +279,7 @@ func _flat(v: Vector3) -> Vector3:
 func _check_drag() -> void:
 	_as_tarn()
 	_player.abilities.swap(AbilityState.SMASH, "rend_drag")
-	_player._refit()
+	_player.refit()
 	_t.eq("rend_drag keeps the rend flavour", _player.kit.smash_flavour, "rend")
 	var ball: Vector3 = _player.ball_position()
 	var at := _flat(ball)
@@ -313,7 +313,7 @@ func _check_drag() -> void:
 	_player._drags.clear()
 	# Planted control: the base rend_slam row never drags, so the lighter machine stays put.
 	_player.abilities.swap(AbilityState.SMASH, "rend_slam")
-	_player._refit()
+	_player.refit()
 	light.global_position = Vector3(light_from.x, light.global_position.y, light_from.z)
 	_player._smash_rend(ball, 30.0)
 	_t.check("the plain rend_slam drags nothing", _player._drags.is_empty(), str(_player._drags.keys()))

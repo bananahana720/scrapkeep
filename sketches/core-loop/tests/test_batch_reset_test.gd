@@ -27,6 +27,7 @@ const Density := preload("res://src/presentation/density.gd")
 const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd")
@@ -123,7 +124,7 @@ func _run() -> void:
 	Glyphs.device = "pad"
 	SettingsPages.last_page = 2
 	StageLocks.active = false
-	Synergies.table = AlphaDefs
+	Synergies.set_table(AlphaDefs)
 	EnemyMotion.headless_idle = true
 	EnemyClips.headless = true
 	Enemy.rim_color = Color.RED
@@ -159,10 +160,10 @@ func _run() -> void:
 	var fake_hud := _FakeHud.new()
 	PickQuiet.hush(_FakeHost.new(fake_hud))
 	t.check("PickQuiet.hush marks hud quiet and raises holds", fake_hud.is_quiet and PickQuiet._total == 1)
-	Parts.maker_nudge_on = false
-	Parts.answer_nudge_on = false
-	Parts.seams = {"spawner.extend_cloak": true}
-	Parts.opened_items = {"strike_pocket": true}
+	PartOffers.maker_nudge_on = false
+	PartOffers.answer_nudge_on = false
+	Parts.set_seams({"spawner.extend_cloak": true})
+	Parts.set_opened_items({"strike_pocket": true})
 	WarningBound.test_pad_scale = 0.0
 	WarningBound.test_skip_hazard_merge = true
 	DigScenery.stone_dir = "res://missing_stone/"
@@ -273,7 +274,7 @@ func _run() -> void:
 		and not GraphicsPreset._target_server_active and GraphicsPreset._lighting.is_empty()
 		and GraphicsPreset._dressing_hosts.is_empty() and GraphicsPreset._worlds.is_empty())
 	t.check("PickQuiet clears holds and restores hud", PickQuiet._holds.is_empty() and PickQuiet._total == 0 and not fake_hud.is_quiet)
-	t.check("Parts resets nudges, seams and opened_items", Parts.maker_nudge_on and Parts.answer_nudge_on
+	t.check("Parts resets nudges, seams and opened_items", PartOffers.maker_nudge_on and PartOffers.answer_nudge_on
 		and Parts.seams.is_empty() and Parts.opened_items.is_empty())
 	t.check("WarningBound resets test overrides", is_equal_approx(WarningBound.test_pad_scale, 1.0) and not WarningBound.test_skip_hazard_merge)
 	t.check("DigScenery resets all three dirs", DigScenery.stone_dir == DigScenery.STONE_DIR

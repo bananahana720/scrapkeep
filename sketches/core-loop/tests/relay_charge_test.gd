@@ -167,10 +167,10 @@ func _check_row_cap() -> void:
 
 func _check_seam_gate() -> void:
 	var saved: Dictionary = Parts.seams.duplicate()
-	Parts.seams = {}
+	Parts.set_seams({})
 	var hidden: bool = not ROW_ID in Parts.offer_pool(Items.KEST, ["common"])
-	Parts.seams = {SEAM: true}
+	Parts.set_seams({SEAM: true})
 	var shown: bool = ROW_ID in Parts.offer_pool(Items.KEST, ["common"])
-	Parts.seams = saved
+	Parts.set_seams(saved)
 	_report("convergence row waits on its seam", hidden and shown,
 		"not offered with no seam: %s; offered once %s is set: %s" % [hidden, SEAM, shown])

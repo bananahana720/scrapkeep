@@ -15,6 +15,7 @@ const Combat := preload("res://src/combat/combat.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const OrbitalSatellites := preload("res://src/combat/orbital_satellites.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartMutations := preload("res://src/build/part_mutations.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -140,14 +141,14 @@ func _set_speed_tier(tier: int) -> void:
 # --- 1. Pure Catalogue, Word Caps, Pool Purity, Non-HAZARD ------------------------------
 
 func _check_catalogue_and_words() -> void:
-	_t.eq("base MICRO_MUTATIONS remains 6", Parts.MICRO_MUTATIONS.size(), 6)
-	_t.eq("FLAT_MICRO_MUTATIONS has 10 parts", Parts.FLAT_MICRO_MUTATIONS.size(), 10)
-	_t.eq("all_micro_mutation_problems empty", Parts.all_micro_mutation_problems(), [])
+	_t.eq("base MICRO_MUTATIONS remains 6", PartMutations.MICRO_MUTATIONS.size(), 6)
+	_t.eq("FLAT_MICRO_MUTATIONS has 10 parts", PartMutations.FLAT_MICRO_MUTATIONS.size(), 10)
+	_t.eq("all_micro_mutation_problems empty", PartMutations.all_micro_mutation_problems(Parts.CATALOGUE), [])
 	var expected_flat := ["rivet_plating", "magnet_spool", "grip_tread", "live_line", "vent_baffle",
 		"winch_pawl", "spring_shims", "gatling_heart", "horizon_optic", "ram_plow"]
 	for fid in expected_flat:
-		_t.check("flat micro-mutation exists: %s" % fid, Parts.has_micro_mutation([fid], fid), fid)
-		var row := Parts.micro_mutation(fid)
+		_t.check("flat micro-mutation exists: %s" % fid, PartMutations.has_micro_mutation([fid], fid), fid)
+		var row := PartMutations.micro_mutation(fid)
 		_t.check("flat micro-mutation has id/text: %s" % fid,
 			not row.is_empty() and String(row.get("id", "")) != "" and String(row.get("text", "")) != "", str(row))
 
@@ -156,11 +157,11 @@ func _check_catalogue_and_words() -> void:
 	var expected_new := ["boomerang_spool", "orbital_flywheel", "prism_splitter", "debt_collector",
 		"slag_furnace", "patch_tether", "basalt_ram", "storm_capacitor"]
 	var prev_table = Synergies.table
-	Synergies.table = AlphaDefs
+	Synergies.set_table(AlphaDefs)
 	var alpha_pool := Parts.offer_pool("kest", ["common", "uncommon", "rare"])
-	Synergies.table = SliceDefs
+	Synergies.set_table(SliceDefs)
 	var slice_pool := Parts.offer_pool("kest", ["common", "uncommon", "rare"])
-	Synergies.table = prev_table
+	Synergies.set_table(prev_table)
 	var seen_verbs := {}
 	for existing_id in Parts.rows():
 		seen_verbs[String(Parts.def(existing_id).verb)] = existing_id
@@ -696,15 +697,15 @@ func _check_flat_micro_mutations_live() -> void:
 	_orbitals.reset_attempt()
 	_orbitals.clear_telemetry()
 	_trigger_all_10_flat_micros(centre, e1, e2, e_rear, e_far)
-	for fid in Parts.FLAT_MICRO_MUTATIONS:
+	for fid in PartMutations.FLAT_MICRO_MUTATIONS:
 		_t.eq("negative control: %s fires 0 without part" % fid, _orbitals.proc_count(fid), 0)
 
 	# Positive check: equip all 10 flat parts -> every single one fires >= 1 item_proc
-	_set_parts(Parts.FLAT_MICRO_MUTATIONS.keys())
+	_set_parts(PartMutations.FLAT_MICRO_MUTATIONS.keys())
 	_orbitals.reset_attempt()
 	_orbitals.clear_telemetry()
 	_trigger_all_10_flat_micros(centre, e1, e2, e_rear, e_far)
-	for fid in Parts.FLAT_MICRO_MUTATIONS:
+	for fid in PartMutations.FLAT_MICRO_MUTATIONS:
 		_t.check("flat micro-mutation fires live: %s" % fid, _orbitals.proc_count(fid) >= 1,
 			"count=%d" % _orbitals.proc_count(fid))
 	# Table-to-runtime parity: grip_tread uses authored 2.8 m radius (hits 2.2 m, misses 3.8 m)

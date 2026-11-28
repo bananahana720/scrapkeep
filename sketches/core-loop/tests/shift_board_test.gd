@@ -259,16 +259,16 @@ func _time_card() -> void:
 
 func _pool() -> void:
 	var before = Synergies.table
-	Synergies.table = ParkDefs
-	Parts.opened_items = {}
+	Synergies.set_table(ParkDefs)
+	Parts.set_opened_items({})
 	var pool := Parts.offer_pool(SABLE, ["common", "rare", "relic"])
 	_t.check("a fresh profile's pool holds no board item", not ShiftBoard.all_items().any(func(id): return pool.has(id)), str(pool))
-	Parts.opened_items = {"strike_pocket": true}
+	Parts.set_opened_items({"strike_pocket": true})
 	pool = Parts.offer_pool(SABLE, ["common", "rare", "relic"])
 	_t.check("an opened item joins the park pool", pool.has("strike_pocket"), str(pool))
 	_t.check("an unopened one does not", not pool.has("clean_break"), str(pool))
-	Parts.opened_items = {}
-	Synergies.table = before
+	Parts.set_opened_items({})
+	Synergies.set_table(before)
 
 
 func _seeds() -> void:

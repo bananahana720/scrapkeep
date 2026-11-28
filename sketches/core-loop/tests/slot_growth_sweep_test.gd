@@ -181,13 +181,13 @@ func _check_tricks_act() -> void:
 	var idle: Array = []
 	for trick_id in Synergies.ROWS:
 		var pieces := _pieces(trick_id)
-		Synergies.table = null
+		Synergies.set_table(null)
 		var awake = BuildSheet.from_parts(pieces)
-		Synergies.table = Without.new(trick_id)
+		Synergies.set_table(Without.new(trick_id))
 		var asleep = BuildSheet.from_parts(pieces)
 		if not trick_id in awake.synergies or trick_id in asleep.synergies or _build_of(awake) == _build_of(asleep):
 			idle.append("%s %s" % [trick_id, pieces])
-	Synergies.table = saved
+	Synergies.set_table(saved)
 	# Planted: a trick row with no effect, folded onto a real asleep build, changes nothing.
 	var planted = BuildSheet.from_parts(_pieces("wrecking_ball"))
 	var before := _build_of(planted)

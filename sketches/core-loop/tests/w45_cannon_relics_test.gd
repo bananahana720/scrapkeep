@@ -185,14 +185,14 @@ func _as_cannon() -> void:
 func _equip_walk() -> void:
 	_as_cannon()
 	_player.abilities.swap(AbilityState.WEAPON, "cannon_lane_walk")
-	_player._refit()
+	_player.refit()
 	_combat._free_cannon()
 
 
 func _equip_wake() -> void:
 	_as_cannon()
 	_player.abilities.swap(AbilityState.SMASH, "cannon_rush_wake")
-	_player._refit()
+	_player.refit()
 	_combat._free_cannon()
 
 
@@ -313,7 +313,7 @@ func _check_walk_march_overdrive() -> void:
 
 	run.parts.clear()
 	_player.abilities.swap(AbilityState.WEAPON, "cannon_lane_walk")
-	_player._refit()
+	_player.refit()
 	_combat._free_cannon()
 	var p_first := _fire_walk()
 	_combat._clock += 0.5

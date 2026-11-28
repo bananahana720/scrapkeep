@@ -75,6 +75,13 @@ func braced() -> bool:
 	return phase == Phase.LIVE and habit != ""
 
 
+func reset_rest(bonus: float) -> void:
+	if _rest > 0.0:
+		_rest = maxf(0.0, _rest - bonus)
+	if _takeover_cd > 0.0:
+		_takeover_cd = maxf(0.0, _takeover_cd - bonus)
+
+
 func lens_point() -> Vector3:
 	return _lens.global_position if _lens != null else global_position + Vector3.UP * ARM_HEIGHT
 

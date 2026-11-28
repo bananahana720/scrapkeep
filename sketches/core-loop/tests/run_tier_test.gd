@@ -11,6 +11,7 @@ const Director := preload("res://src/world/director.gd")
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const Park := preload("res://src/core/park_defs.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Progress := preload("res://src/core/progress.gd")
 const Sheet := preload("res://src/build/build_sheet.gd")
@@ -347,9 +348,9 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			# Ruling al: no tier raises enemy health.
 			t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
 			t.eq("interval mode retained", d.mode, "interval")
-		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": Parts.SOURCE_RARITIES,
-			"gate_rarities": [Parts.gate_rarities(0), Parts.gate_rarities(1), Parts.gate_rarities(2)],
-			"milestones": Parts.MILESTONE_FOR_EVENT}
+		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": PartOffers.SOURCE_RARITIES,
+			"gate_rarities": [PartOffers.gate_rarities(0), PartOffers.gate_rarities(1), PartOffers.gate_rarities(2)],
+			"milestones": PartOffers.MILESTONE_FOR_EVENT}
 		if d._park_map != null:
 			pay["park_rows"] = _director_rows(d._park_map.park.park_rows)
 		stages.append({"stage": row.stage, "mode": d.mode, "schedule": measured.schedule,

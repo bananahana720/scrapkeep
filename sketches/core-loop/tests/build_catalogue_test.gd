@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Items := preload("res://src/build/items.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
@@ -112,7 +113,7 @@ func _check_gate_pairs() -> void:
 	for seed_value in 50:
 		rng.seed = 1000 + seed_value
 		var cores := seed_value % 3
-		var pair: Array = Parts.roll(rng, Parts.gate_rarities(cores), "runner_gunner", [], 2)
+		var pair: Array = Parts.roll(rng, PartOffers.gate_rarities(cores), "runner_gunner", [], 2)
 		if pair.size() != 2 or not pair.any(func(key): return Parts.def(key).hits_harder()):
 			soft.append(pair)
 	_report("gate pairs hit harder", soft.is_empty(),
@@ -125,14 +126,14 @@ func _check_sources() -> void:
 	var wrong: Array = []
 	var expect := {0: ["common"], 1: ["common", "rare"], 2: ["rare", "relic"], 3: ["rare", "relic"]}
 	for cores in expect:
-		if Parts.gate_rarities(cores) != expect[cores]:
-			wrong.append("gate %d cores %s" % [cores, Parts.gate_rarities(cores)])
+		if PartOffers.gate_rarities(cores) != expect[cores]:
+			wrong.append("gate %d cores %s" % [cores, PartOffers.gate_rarities(cores)])
 	for source in ["fabricator", "vault", "milestone"]:
 		for i in 60:
-			var picks: Array = Parts.roll(rng, Parts.SOURCE_RARITIES.get(source, []), "pylon_engineer", [], 1)
+			var picks: Array = Parts.roll(rng, PartOffers.SOURCE_RARITIES.get(source, []), "pylon_engineer", [], 1)
 			if source == "milestone":
-				picks = [Parts.milestone_for("event_%d" % i, [])]
-			if picks.is_empty() or Parts.def(picks[0]).rarity != Parts.SOURCE_RARITIES[source][0]:
+				picks = [PartOffers.milestone_for("event_%d" % i, [])]
+			if picks.is_empty() or Parts.def(picks[0]).rarity != PartOffers.SOURCE_RARITIES[source][0]:
 				wrong.append("%s gave %s" % [source, picks])
 				break
 	_report("rarity by source", wrong.is_empty(),
@@ -245,10 +246,10 @@ func _check_table_present() -> void:
 	for part_id in Items.TABLE:
 		if not Parts.has(part_id):
 			missing.append(part_id)
-	for part_id in Parts.PATTERN_PARTS:
+	for part_id in PartOffers.PATTERN_PARTS:
 		if not Parts.has(part_id):
 			missing.append(part_id)
-	var table := Items.TABLE.size() + Parts.PATTERN_PARTS.size()
+	var table := Items.TABLE.size() + PartOffers.PATTERN_PARTS.size()
 	var bowling: int = Items.TABLE.values().filter(func(r): return r.get("bwl", false)).size()
 	var happy: int = Items.TABLE.values().filter(func(r): return r.get("happy", false)).size()
 	var charge: int = Items.TABLE.values().filter(func(r): return r.get("base", "") == "charge" and not r.get("happy", false)).size()
@@ -275,7 +276,7 @@ func _check_class_gating() -> void:
 
 func _check_needs_gate() -> void:
 	var saved: Dictionary = Parts.seams.duplicate()
-	Parts.seams = {}
+	Parts.set_seams({})
 	var waiting: Array = Parts.ids().filter(func(id): return Parts.def(id).needs != "")
 	var leaked: Array = []
 	for part_id in waiting:
@@ -283,9 +284,9 @@ func _check_needs_gate() -> void:
 		var class_id: String = d.class_id if d.class_id != "" else Items.SABLE
 		if part_id in Parts.offer_pool(class_id, [d.rarity]):
 			leaked.append(part_id)
-	Parts.seams = {"spawner.extend_cloak": true}
+	Parts.set_seams({"spawner.extend_cloak": true})
 	var opened: bool = "feedback_loop" in Parts.offer_pool(Items.KEST, ["rare"])
-	Parts.seams = saved
+	Parts.set_seams(saved)
 	# 2026-10-12 (alpha wave 13 SR9): relay_convergence waits on relay.convergence; was 5 waiting.
 	_report("parts waiting on a seam are never offered", leaked.is_empty() and waiting.size() == 6 and opened,
 		"%d parts wait on a seam %s; offered without it %s; feedback_loop offered once spawner.extend_cloak exists: %s"
@@ -334,7 +335,7 @@ func _check_rarity_weights() -> void:
 
 
 func _is_pattern(key: String) -> bool:
-	return key in Parts.PATTERN_PARTS
+	return key in PartOffers.PATTERN_PARTS
 
 
 # A held build of 0 to 4 parts drawn from draw_from, the same for a given seed.
@@ -357,7 +358,7 @@ func _check_pattern_guarantee() -> void:
 	var fired := 0
 	for seed_value in 50:
 		var cores := seed_value % 3
-		var rarities: Array = Parts.gate_rarities(cores)
+		var rarities: Array = PartOffers.gate_rarities(cores)
 		var class_id: String = ["runner_gunner", "pylon_engineer"][seed_value % 2]
 		# A pattern-less build on stage 2 always sees a pattern part, and the first slot
 		# (where the synergy bait sits) and the rarity rule outside the pattern slot hold.
@@ -365,7 +366,7 @@ func _check_pattern_guarantee() -> void:
 		rng.seed = 2000 + seed_value
 		var plain_pair: Array = Parts.roll(rng, rarities, class_id, held, 2)
 		rng.seed = 2000 + seed_value
-		var pair: Array = Parts.roll_gate(rng, rarities, class_id, held, 2, 2)
+		var pair: Array = PartOffers.roll_gate(rng, rarities, class_id, held, 2, 2, {}, Parts.offer_ops())
 		if pair.size() != 2 or not pair.any(_is_pattern):
 			missing.append([cores, held, pair])
 		if pair != plain_pair:
@@ -385,13 +386,13 @@ func _check_pattern_guarantee() -> void:
 		rng.seed = 3000 + seed_value
 		var expect_holding: Array = Parts.roll(rng, rarities, class_id, holding, 2)
 		rng.seed = 3000 + seed_value
-		if Parts.roll_gate(rng, rarities, class_id, holding, 2, 2) != expect_holding:
+		if PartOffers.roll_gate(rng, rarities, class_id, holding, 2, 2, {}, Parts.offer_ops()) != expect_holding:
 			changed.append("holding %s" % [holding])
 		for stage in [1, 3]:
 			rng.seed = 4000 + seed_value
 			var expect_stage: Array = Parts.roll(rng, rarities, class_id, held, 2)
 			rng.seed = 4000 + seed_value
-			if Parts.roll_gate(rng, rarities, class_id, held, 2, stage) != expect_stage:
+			if PartOffers.roll_gate(rng, rarities, class_id, held, 2, stage, {}, Parts.offer_ops()) != expect_stage:
 				changed.append("stage %d %s" % [stage, held])
 	_report("stage-2 pattern guarantee", missing.is_empty() and broken.is_empty(),
 		"50 seeded stage-2 pairs for pattern-less builds across 0 to 2 bonus cores; %d needed the guarantee; pairs with no pattern part %s; rule breaks %s"
@@ -407,7 +408,7 @@ func _check_pattern_gate_live() -> void:
 	var build = _game.ctx.build
 	var run = _game.run
 	var saved_stage: int = run.stage
-	var held_pattern: bool = Parts.holds_pattern(run.parts)
+	var held_pattern: bool = PartOffers.holds_pattern(run.parts, Parts.def)
 	run.stage = 2
 	var without: Array = []
 	for seed_value in 20:

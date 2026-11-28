@@ -2,6 +2,7 @@ extends RefCounted
 
 const Triggers := preload("res://src/build/triggers.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartMutations := preload("res://src/build/part_mutations.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -127,8 +128,8 @@ func refresh(held: Array) -> void:
 	_held_parts = held.duplicate()
 	var index := 0
 	for part_id in order:
-		if Parts.MICRO_MUTATIONS.has(part_id) or Parts.FLAT_MICRO_MUTATIONS.has(part_id):
-			micro_mutations[part_id] = Parts.micro_mutation(part_id)
+		if PartMutations.MICRO_MUTATIONS.has(part_id) or PartMutations.FLAT_MICRO_MUTATIONS.has(part_id):
+			micro_mutations[part_id] = PartMutations.micro_mutation(part_id)
 		var d: Resource = Parts.def(part_id)
 		if d == null:
 			continue
@@ -190,7 +191,7 @@ func micro_mutation(part_id: String) -> Dictionary:
 
 
 func active_micro_mutations() -> Array:
-	return Parts.active_micro_mutations(_held_parts)
+	return PartMutations.active_micro_mutations(_held_parts)
 
 
 func active_grapple_mutations() -> Dictionary:
@@ -198,11 +199,11 @@ func active_grapple_mutations() -> Dictionary:
 
 
 func has_grapple_mutation(mut_id: String) -> bool:
-	return grapple_mutation_ids.has(Parts.grapple_mutation_id_of(mut_id))
+	return grapple_mutation_ids.has(PartMutations.grapple_mutation_id_of(mut_id))
 
 
 func grapple_mutation(mut_id: String) -> Dictionary:
-	var mid := Parts.grapple_mutation_id_of(mut_id)
+	var mid := PartMutations.grapple_mutation_id_of(mut_id)
 	return (grapple_mutation_ids.get(mid, {}) as Dictionary).duplicate(true)
 
 

@@ -107,7 +107,7 @@ func _check_table_and_controls() -> void:
 	_t.eq("World 1 total kit swaps raised 9 -> 15", Relics.swap_ids(1).size(), 15)
 	_t.eq("World 2 & 3 transformational alt loadouts count", Relics.alt_loadouts().size(), 6)
 	# Symmetry check: every pilot has >= 2 W1 swaps and exactly 1 W2/W3 alt loadout.
-	for pilot in Relics.PILOTS:
+	for pilot in Relics.pilots():
 		var w1_swaps: Array = Relics.swap_ids(1).filter(func(id): return Relics.fits(id, pilot))
 		var alt_loadout: Array = Relics.alt_loadouts(pilot)
 		_t.check("%s has >= 2 W1 swaps and 1 W2/W3 alt loadout" % pilot,
@@ -125,7 +125,7 @@ func _check_table_and_controls() -> void:
 			and name_words >= 1 and name_words <= Relics.MAX_NAME_WORDS
 			and text_words >= 1 and text_words <= Relics.MAX_TEXT_WORDS
 			and int(r["world"]) in [1, 2, 3]
-			and String(r["maker"]) in Relics.VALID_MAKERS
+			and String(r["maker"]) in Relics.valid_makers()
 			and AbilityState.ABILITIES.has(swap)
 			and ClassKit.WORDS.has(swap)
 			and icon.ends_with(String(Relics.SUFFIX[slot]))
@@ -256,7 +256,7 @@ func _as_pilot(pilot_id: String) -> void:
 
 func _equip(slot: String, ability_id: String) -> void:
 	_player.abilities.swap(slot, ability_id)
-	_player._refit()
+	_player.refit()
 
 
 func _spawn(kind: String, flat: Vector3, hp := 100000.0) -> Node3D:
