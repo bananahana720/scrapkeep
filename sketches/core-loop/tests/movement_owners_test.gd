@@ -14,6 +14,7 @@ const RewardGates := preload("res://src/build/reward_gates.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 const KEST_MOVE_CONSTS := [
@@ -42,10 +43,7 @@ func _initialize() -> void:
 
 func _src_files(dir_path: String) -> Array[String]:
 	var out: Array[String] = []
-	for file in DirAccess.get_files_at(dir_path):
-		if file.ends_with(".gd"):
-			out.append(dir_path.path_join(file))
-	out.sort()
+	out.assign(SourceScan.sources(_t, [dir_path]).keys())
 	return out
 
 
@@ -57,7 +55,7 @@ func _check_movement_combat_boundary() -> void:
 	]
 	var hits: Array[String] = []
 	for path in _src_files("res://src/movement"):
-		var text := FileAccess.get_file_as_string(path)
+		var text := SourceScan.text(_t, path)
 		for target in forbidden:
 			if text.contains(target):
 				hits.append("%s -> %s" % [path, target])
@@ -65,7 +63,7 @@ func _check_movement_combat_boundary() -> void:
 
 
 func _check_kest_constants_owner() -> void:
-	var weapons_src := FileAccess.get_file_as_string("res://src/combat/weapons.gd")
+	var weapons_src := SourceScan.text(_t, "res://src/combat/weapons.gd")
 	var dupes: Array[String] = []
 	for name in KEST_MOVE_CONSTS:
 		if weapons_src.contains("const " + name):
@@ -83,7 +81,7 @@ func _check_kest_constants_owner() -> void:
 func _check_slope_dot_owner() -> void:
 	var owners: Array[String] = []
 	for path in _src_files("res://src/movement"):
-		var text := FileAccess.get_file_as_string(path)
+		var text := SourceScan.text(_t, path)
 		if text.contains("const MAX_SLOPE_DOT") or text.contains("const BUMP_FLOOR_DOT"):
 			owners.append(path)
 	_t.eq("MAX_SLOPE_DOT has one declaration in movement/", owners, ["res://src/movement/tuning.gd"])
@@ -105,7 +103,7 @@ func _check_basis_up_owner() -> void:
 		"res://src/build/accretion.gd",
 		"res://src/build/panel_shell.gd",
 	]:
-		var text := FileAccess.get_file_as_string(path)
+		var text := SourceScan.text(_t, path)
 		_t.check("%s delegates basis_up to MathUtil" % path,
 			not text.contains("func _align_up(") and not text.contains("func _facing(") and text.contains("MathUtil.basis_up("))
 	for dir in [
@@ -129,16 +127,16 @@ func _check_basis_up_owner() -> void:
 
 
 func _check_steep_face_owner() -> void:
-	var ball_src := FileAccess.get_file_as_string("res://src/movement/player_ball.gd")
-	var kest_src := FileAccess.get_file_as_string("res://src/movement/kest_air.gd")
+	var ball_src := SourceScan.text(_t, "res://src/movement/player_ball.gd")
+	var kest_src := SourceScan.text(_t, "res://src/movement/kest_air.gd")
 	_t.check("player_ball.gd uses Augments.steepest_face_at",
 		not ball_src.contains("func _kest_steep_face") and not kest_src.contains("func _kest_steep_face")
 		and kest_src.contains("Augments.steepest_face_at("))
 
 
 func _check_burst_owner() -> void:
-	var harpoon_src := FileAccess.get_file_as_string("res://src/movement/harpoon.gd")
-	var ball_src := FileAccess.get_file_as_string("res://src/movement/player_ball.gd")
+	var harpoon_src := SourceScan.text(_t, "res://src/movement/harpoon.gd")
+	var ball_src := SourceScan.text(_t, "res://src/movement/player_ball.gd")
 	_t.check("harpoon.gd no longer owns burst readiness",
 		not harpoon_src.contains("func burst_wait") and not harpoon_src.contains("func burst_ready"))
 	_t.check("player_ball.gd no longer duplicates burst list",
@@ -174,10 +172,10 @@ func _check_burst_owner() -> void:
 
 
 func _check_build_and_body_owners() -> void:
-	var ball_src := FileAccess.get_file_as_string("res://src/movement/player_ball.gd")
+	var ball_src := SourceScan.text(_t, "res://src/movement/player_ball.gd")
 	_t.check("player_ball.gd removes active_body alias",
 		not ball_src.contains("func active_body(") and ball_src.contains("func body()"))
-	var stat_cache_src := FileAccess.get_file_as_string("res://src/build/stat_cache.gd")
+	var stat_cache_src := SourceScan.text(_t, "res://src/build/stat_cache.gd")
 	_t.check("stat_cache.gd delegates counting and folding to BuildSheet",
 		not stat_cache_src.contains("func _counted(")
 		and not stat_cache_src.contains("func _refold(")
@@ -191,24 +189,24 @@ func _check_build_and_body_owners() -> void:
 		"res://src/build/accretion.gd",
 		"res://src/build/element_field.gd",
 	]:
-		var text := FileAccess.get_file_as_string(path)
+		var text := SourceScan.text(_t, path)
 		_t.check("%s uses Palette.ICE without redeclaring ICE" % path,
 			not text.contains("const ICE ") and not text.contains("const ICE:") and not text.contains('Color("c8f0ff")') and text.contains("Palette.ICE"))
 	for path in [
 		"res://src/build/build.gd",
 		"res://src/build/item_effects.gd",
 	]:
-		var text := FileAccess.get_file_as_string(path)
+		var text := SourceScan.text(_t, path)
 		_t.check("%s uses Palette.ICE instead of ElementField.ICE" % path,
 			not text.contains("ElementField.ICE"))
-	var fab_src := FileAccess.get_file_as_string("res://src/build/fabricators.gd")
+	var fab_src := SourceScan.text(_t, "res://src/build/fabricators.gd")
 	_t.check("fabricators.gd delegates rarity color to RewardGates.rarity_color",
 		not fab_src.contains("func _rarity_color(") and fab_src.contains("RewardGates.rarity_color("))
 	_t.eq("RewardGates.rarity_color common matches Palette.ARC", RewardGates.rarity_color("common"), Palette.ARC)
-	var panels_src := FileAccess.get_file_as_string("res://src/build/panels.gd")
+	var panels_src := SourceScan.text(_t, "res://src/build/panels.gd")
 	_t.eq("panels.gd defines drop_row once", panels_src.count("func drop_row("), 1)
 	_t.eq("Panels.drop_row(1) reads world 1 table", Panels.drop_row(1), Panels.DROP_BY_WORLD[1])
 	_t.eq("Panels.drop_row(99) falls back to DROP", Panels.drop_row(99), Panels.DROP)
-	var cons_src := FileAccess.get_file_as_string("res://src/build/consumables.gd")
+	var cons_src := SourceScan.text(_t, "res://src/build/consumables.gd")
 	_t.check("consumables.gd inlines cache clear in reset_for_tests",
 		not cons_src.contains("func _reset(") and cons_src.contains("func reset_for_tests("))
