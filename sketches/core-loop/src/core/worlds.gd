@@ -2,7 +2,6 @@ extends RefCounted
 
 
 const FULL_ALPHA := true
-const BRINDLE_COBALT_PICK := true
 
 const ROWS := [
 	{"id": 1, "name": "Spillway Works", "boss": "brindle"},
