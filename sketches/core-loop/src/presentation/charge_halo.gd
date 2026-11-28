@@ -245,10 +245,6 @@ func hoops_shown() -> int:
 	return n if _state != "idle" else 0
 
 
-func hoop_alpha(k: int) -> float:
-	return _hoop_alpha[k]
-
-
 func hoop_radius() -> float:
 	return lerpf(RADIUS_START, RADIUS_FULL, fill) * (1.0 - _collapse)
 

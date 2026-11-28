@@ -500,14 +500,6 @@ func _exit_tree() -> void:
 	_words.clear()
 
 
-func words_shown() -> Array:
-	var out := []
-	for entry in _words:
-		if is_instance_valid(entry[0]):
-			out.append(entry[0].text)
-	return out
-
-
 func _add_lamp(host: Node3D, key: String) -> void:
 	if not key.contains("escape_"):
 		return

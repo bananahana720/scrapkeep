@@ -8,14 +8,7 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Roster := preload("res://src/combat/roster.gd")
 
 
-const IDLE_STYLES := ["bob", "sway", "breathe", "hover", "tick"]
-const DEATH_STYLES := ["scatter", "collapse", "spin_down", "pop"]
-const AMPLITUDE_MIN := 0.02
-const AMPLITUDE_MAX := 0.08
 const PARTS_MIN := 3
-const PARTS_MAX := 8
-const SECONDS_MIN := 0.4
-const SECONDS_MAX := 0.7
 const REST_CLOCK := 1.0
 const LOW_PART_CAP := 4
 const GRAVITY := 18.0
@@ -258,22 +251,6 @@ static func pop_shift_tag(enemy: Node3D, kind: String, direction: Vector3, land 
 
 static func active() -> bool:
 	return headless_idle or not AppShell.headless()
-
-
-static func valid_idle(idle: Dictionary) -> bool:
-	return String(idle.get("style", "")) in IDLE_STYLES and _number(idle, "amplitude") \
-		and float(idle.amplitude) >= AMPLITUDE_MIN and float(idle.amplitude) <= AMPLITUDE_MAX \
-		and _number(idle, "beats") and float(idle.beats) > 0.0
-
-
-static func valid_death(death: Dictionary) -> bool:
-	return String(death.get("style", "")) in DEATH_STYLES and death.get("parts") is int \
-		and int(death.parts) >= PARTS_MIN and int(death.parts) <= PARTS_MAX \
-		and _number(death, "seconds") and float(death.seconds) >= SECONDS_MIN and float(death.seconds) <= SECONDS_MAX
-
-
-static func _number(row: Dictionary, field: String) -> bool:
-	return row.get(field) is float or row.get(field) is int
 
 
 static func attack_clock(kind: String, enemy: Object) -> float:

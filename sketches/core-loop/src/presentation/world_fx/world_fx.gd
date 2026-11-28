@@ -281,13 +281,6 @@ func play(hook: String, at: Vector3, tint := Color.TRANSPARENT, size := 1.0) -> 
 		WorldSound.one_shot(hook, self, at, linear_to_db(size))
 
 
-func live_ceiling() -> int:
-	var total := 0
-	for p in ambient + overlay + (wake if WAKE_WORLDS.has(world) else []):
-		total += Kit.cost(p.get_meta("world_fx"), low, reduced_motion)
-	return total
-
-
 func _add(id: String) -> GPUParticles3D:
 	var p := Kit.build(id)
 	Grain.apply(p, Grain.run_seed)
