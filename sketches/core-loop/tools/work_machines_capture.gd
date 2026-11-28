@@ -113,7 +113,7 @@ func _ride_lines() -> Array:
 
 func _vantage(m: Dictionary, lines: Array, near_m: float, far_m: float, want_m: float) -> Vector2:
 	var at: Vector2 = m.row.at
-	var target := Vector3(at.x, Terrain._grid_height(_heights, at.x, at.y) + MID_M, at.y)
+	var target := Vector3(at.x, Terrain.grid_height(_heights, at.x, at.y) + MID_M, at.y)
 	var props := _scatter.filter(func(prop): return Vector2(prop.pos.x, prop.pos.z).distance_to(at) < far_m + 10.0)
 	var best := Vector2.INF
 	var best_score := INF
@@ -127,7 +127,7 @@ func _vantage(m: Dictionary, lines: Array, near_m: float, far_m: float, want_m: 
 				var d := q.distance_to(at)
 				if d < near_m or d > far_m or absf(d - want_m) >= best_score:
 					continue
-				var eye := Vector3(q.x, Terrain._grid_height(_heights, q.x, q.y) + CAM_EYE_M, q.y)
+				var eye := Vector3(q.x, Terrain.grid_height(_heights, q.x, q.y) + CAM_EYE_M, q.y)
 				if _sight_clear(eye, target, _heights, props):
 					best_score = absf(d - want_m)
 					best = q

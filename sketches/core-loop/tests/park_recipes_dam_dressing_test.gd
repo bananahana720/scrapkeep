@@ -63,7 +63,7 @@ func _run() -> void:
 		quit(_t.verdict())
 		return
 	var heights := ParkTerrain._read_zstd(BAKE_DIR + "/ground.bin", ParkTerrain.SIDE * ParkTerrain.SIDE * 4).to_float32_array()
-	var ground := func(x: float, z: float) -> float: return Terrain._grid_height(heights, x, z)
+	var ground := func(x: float, z: float) -> float: return Terrain.grid_height(heights, x, z)
 	var rows := {}
 	var dressed: Array = []
 	var gated: Array = []
