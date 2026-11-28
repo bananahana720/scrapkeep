@@ -45,7 +45,6 @@ import {
   smokeWidth,
   soloWidth,
   splitBatch,
-  takeBatch,
   takeBatchPacked,
   testFixedFps,
   testScripts,
@@ -54,7 +53,6 @@ import {
   withoutTeardownNoise,
 } from "./lib/godot-test-runner.mjs";
 import {
-  FOREIGN_CLAIM_MAX_MS,
   HEARTBEAT_MS,
   QUIET_HOLD,
   QUIET_MAX_MS,
@@ -63,9 +61,7 @@ import {
   acquireSlot,
   holdQuietSync,
   machineSlotCount,
-  namedRunMustWait,
   quietHolder,
-  waitForMachine,
 } from "./lib/machine-lock.mjs";
 import { runProcess } from "./lib/proc.mjs";
 import { runnerReceiptFileName, runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
@@ -74,7 +70,6 @@ export {
   BATCH_MAX_MS,
   BATCH_MAX_TESTS,
   BATCH_TEST_MAX_MS,
-  FOREIGN_CLAIM_MAX_MS,
   HEARTBEAT_MS,
   IMPORT_TRIES,
   MISSING_VERDICT,
@@ -102,7 +97,6 @@ export {
   logFileName,
   machineSlotCount,
   matchesGlob,
-  namedRunMustWait,
   quietHolder,
   scriptErrorCount,
   selectTests,
@@ -112,13 +106,11 @@ export {
   smokeWidth,
   soloWidth,
   splitBatch,
-  takeBatch,
   takeBatchPacked,
   testFixedFps,
   testScripts,
   testTimeoutMs,
   timeScale,
-  waitForMachine,
   withoutTeardownNoise,
 };
 
@@ -204,104 +196,8 @@ export function receiptFileName(label, tree, startedAt) {
   return runnerReceiptFileName(label, tree, startedAt);
 }
 
-export function parseQuarantine(text) {
-  return (text || "")
-    .split("\n")
-    .map((line) => line.replace(/\r$/, ""))
-    .filter((line) => line.trim() !== "")
-    .slice(1)
-    .map((line) => {
-      const [test, owner, reason, added, deadline] = line.split("\t");
-      return { test, owner, reason, added, deadline };
-    });
-}
-
-export function quarantinedNames(text) {
-  return new Set(parseQuarantine(text).map((entry) => entry.test));
-}
-
-export function readQuarantine(directory) {
-  return new Set(readQuarantineEntries(directory).map((entry) => entry.test));
-}
-
-export function readQuarantineEntries(directory) {
-  const file = path.join(directory, "tests", "QUARANTINE.tsv");
-  if (!existsSync(file)) return [];
-  return parseQuarantine(readFileSync(file, "utf8"));
-}
-
-export function quarantineNote(entry) {
-  return `quarantined: ${entry.test} (${entry.owner}: ${entry.reason})`;
-}
-
-export function expiredQuarantine(entries, today = new Date().toISOString().slice(0, 10)) {
-  return entries.filter(
-    (entry) => /^\d{4}-\d{2}-\d{2}$/.test(entry.deadline ?? "") && entry.deadline < today,
-  );
-}
-
-export function expiredLine(entry) {
-  return `quarantine expired: ${entry.test} (${entry.owner}) deadline ${entry.deadline}; fix the test or have the coordinator extend the row in tests/QUARANTINE.tsv`;
-}
-
-export function quarantineRecord(entry, { ok, exit, signal = null, failing }) {
-  return {
-    test: entry.test,
-    owner: entry.owner,
-    reason: entry.reason,
-    deadline: entry.deadline,
-    result: ok ? "green" : "red",
-    exit: exit ?? null,
-    signal,
-    failing_checks: failing,
-  };
-}
-
-export function quarantineRecords(results) {
-  return results
-    .filter((result) => result.quarantined && result.quarantine)
-    .map((result) =>
-      quarantineRecord(result.quarantine, {
-        ok: result.ok,
-        exit: result.exit,
-        signal: result.signal,
-        failing: result.fails,
-      }),
-    );
-}
-
-export function quarantineLines(records) {
-  const how = (record) => (record.signal ? `signal ${record.signal}` : `exit ${record.exit}`);
-  const red = records.filter((record) => record.result === "red");
-  const green = records.filter((record) => record.result === "green");
-  const lines = [];
-  if (red.length > 0) {
-    lines.push(`quarantined (red) ${red.length} (known red; not a failure):`);
-    for (const record of red)
-      lines.push(
-        `  ${record.test}: ${record.failing_checks} failing checks, ${how(record)} (${record.owner}: ${record.reason}; deadline ${record.deadline})`,
-      );
-  }
-  if (green.length > 0) {
-    lines.push(`quarantined but green: remove from quarantine (${green.length}):`);
-    for (const record of green)
-      lines.push(`  ${record.test} (${record.owner}; deadline ${record.deadline})`);
-  }
-  return lines;
-}
-
-export function quarantineVerdict(results) {
-  const label = (result) => result.label.replace(/^.* res:\/\/tests\//, "").replace(/\.gd$/, "");
-  const quarantined = results.filter((result) => result.quarantined);
-  return {
-    failed: results.filter((result) => !result.ok && !result.quarantined),
-    quarantined_red: quarantined.filter((result) => !result.ok).map(label),
-    quarantine_stale: quarantined.filter((result) => result.ok).map(label),
-  };
-}
-
 export function runPasses(results) {
-  return quarantineVerdict(results).failed.length === 0;
+  return results.every((result) => result.ok);
 }
 
 export function gateFlagsError(options) {
@@ -337,7 +233,6 @@ export function buildReceipt({
   stems,
   results,
   botTierNotRun = [],
-  expired = [],
   timeScale: scale = 1,
 }) {
   const rows = results.map((result) => ({
@@ -350,18 +245,14 @@ export function buildReceipt({
     fails: result.fails,
     verdict_line: result.verdict_line,
     skips: result.skips,
-    ...(result.quarantined ? { quarantined: true } : {}),
   }));
-  const verdict = quarantineVerdict(results);
   const totals = {
     runs: rows.length,
-    failed: verdict.failed.length,
+    failed: rows.filter((row) => !row.ok).length,
     skipped: rows.filter((row) => row.skips.length > 0).length,
     missing_verdict: rows.filter(
       (row) => row.verdict_line === false && (row.skips.length === 0 || row.passes + row.fails > 0),
     ).length,
-    quarantined_red: verdict.quarantined_red,
-    quarantine_stale: verdict.quarantine_stale,
   };
   return {
     schema: RECEIPT_SCHEMA,
@@ -381,12 +272,6 @@ export function buildReceipt({
     started_at: startedAt,
     wall_ms: wallMs,
     stems,
-    quarantined: quarantineRecords(results),
-    quarantine_expired: expired.map((entry) => ({
-      test: entry.test,
-      owner: entry.owner,
-      deadline: entry.deadline,
-    })),
     results: rows,
     bot_tier_not_run: botTierNotRun,
     totals,
@@ -404,7 +289,6 @@ function keepOutput(job, output, env = process.env) {
 
 function report(job, status, output, ms, signal = null) {
   const { ok, verdict, skips, reason } = judge({ test: job.test, status, output });
-  const quarantined = Boolean(job.quarantined);
   const { passes, fails } = countChecks(output);
   console.log(`${ok ? "PASS" : "FAIL"} ${job.label} exit=${status} ${(ms / 1000).toFixed(1)}s`);
   if (!ok) {
@@ -429,9 +313,7 @@ function report(job, status, output, ms, signal = null) {
     verdict_line: verdict,
     skips,
     test: Boolean(job.test),
-    quarantined,
     signal: signal ?? null,
-    ...(quarantined && job.quarantine ? { quarantine: job.quarantine } : {}),
   };
 }
 
@@ -643,7 +525,6 @@ async function main() {
   const startedAt = new Date().toISOString();
   const started = Date.now();
   const results = [];
-  const expired = [];
   const jobs = [];
   const solo = [];
   const userArgs = options.flags.length > 0 ? ["--", ...options.flags] : [];
@@ -651,9 +532,6 @@ async function main() {
   for (const { directory, scripts } of plans) {
     const name = path.relative(root, directory);
     const base = ["--headless", "--path", directory];
-    const quarantineRows = readQuarantineEntries(directory);
-    const quarantine = new Set(quarantineRows.map((row) => row.test));
-    expired.push(...expiredQuarantine(quarantineRows));
     const stampOk =
       process.env.SMOKE_FORCE_IMPORT !== "1" &&
       checkImportStamp(root, name, { godot: godotIdentity(binary) }).ok;
@@ -669,7 +547,6 @@ async function main() {
         verdict_line: null,
         skips: [],
         test: false,
-        quarantined: false,
         signal: null,
       };
       console.log(`PASS ${cached.label} exit=0 0.0s (cached)`);
@@ -715,8 +592,6 @@ async function main() {
         canBatch,
         solo: isSoloJob,
         timeoutMs,
-        quarantined: quarantine.has(path.posix.basename(script, ".gd")),
-        quarantine: quarantineRows.find((row) => row.test === path.posix.basename(script, ".gd")),
       };
       (isSoloJob ? solo : jobs).push(job);
     }
@@ -731,7 +606,7 @@ async function main() {
   const soloStarted = Date.now();
   results.push(...(await pool(solo, soloWidth(), { batchSize: 1 })));
   const soloSeconds = (Date.now() - soloStarted) / 1000;
-  const ok = runPasses(results) && expired.length === 0;
+  const ok = runPasses(results);
   const slowest = [...results].sort((a, b) => b.ms - a.ms).slice(0, SLOWEST);
   console.log(`slowest ${slowest.length}:`);
   for (const result of slowest) console.log(`  ${(result.ms / 1000).toFixed(1)}s ${result.label}`);
@@ -745,8 +620,6 @@ async function main() {
     console.log(`  ${result.label}`);
     for (const line of result.skips.slice(0, 3)) console.log(`    ${line}`);
   }
-  for (const line of quarantineLines(quarantineRecords(results))) console.log(line);
-  for (const entry of expired) console.log(expiredLine(entry));
   const unverdicted = results.filter(
     (result) => result.verdict_line === false && result.skips.length === 0,
   );
@@ -776,7 +649,6 @@ async function main() {
     ),
     results,
     botTierNotRun,
-    expired,
     timeScale: scale,
   });
   const receiptFailure = emitReceipt(receipt);
