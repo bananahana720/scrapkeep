@@ -3,7 +3,7 @@ extends SceneTree
 const Parts := preload("res://src/build/parts.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const BossRules := preload("res://src/boss/boss_rules.gd")
 
 # Overpowered pays (Andrew, 17 Oct 2026): a strong build or a lucky run is never punished.

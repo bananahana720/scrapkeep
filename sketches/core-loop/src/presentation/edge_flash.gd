@@ -1,6 +1,6 @@
 extends Control
 
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 

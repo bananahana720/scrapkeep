@@ -9,7 +9,7 @@ const ArenaWakingDress := preload("res://src/presentation/arena_waking_dress.gd"
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const FloorRule := preload("res://src/combat/floor_rule.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const BOSS_ID := "waking"
 const FLOOR_NAMES := ["Spoil", "Seam", "Bedrock"]

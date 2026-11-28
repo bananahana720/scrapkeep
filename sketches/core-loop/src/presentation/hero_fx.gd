@@ -2,7 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const Density := preload("res://src/presentation/density.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
 

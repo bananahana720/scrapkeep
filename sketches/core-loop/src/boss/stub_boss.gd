@@ -3,7 +3,7 @@ extends Node
 const Warden := preload("res://src/combat/warden.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Arena := preload("res://src/boss/arena.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const WeakPoints := preload("res://src/boss/weak_points.gd")
 const WeakPart := preload("res://src/boss/weak_part.gd")

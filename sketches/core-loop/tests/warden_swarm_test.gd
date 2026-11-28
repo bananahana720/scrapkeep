@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const WardenScript := preload("res://src/combat/warden.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 # KF3 (wardens/swarm.md sections 3 and 4): the swarm's two mountings through its driver,
 # src/combat/warden_swarm.gd, in a stepped headless fight on the alpha table, counted in

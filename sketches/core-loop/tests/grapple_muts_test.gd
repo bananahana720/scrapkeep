@@ -29,7 +29,7 @@ const MakerDefs := preload("res://src/build/maker_defs.gd")
 const MakerSets := preload("res://src/build/maker_sets.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const DT := 1.0 / 60.0
 

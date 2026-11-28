@@ -4,7 +4,7 @@ const Palette := preload("res://src/core/palette.gd")
 const ModelKit := preload("res://src/world/model_kit.gd")
 const SIREN_MAST := preload("res://assets/models/world_one/poi_siren_mast.glb")
 const FloodCycle := preload("res://src/world/flood_cycle.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const SluiceValves := preload("res://src/world/sluice_valves.gd")
 
 

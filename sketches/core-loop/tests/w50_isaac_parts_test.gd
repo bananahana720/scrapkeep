@@ -23,7 +23,7 @@ const ShotBits := preload("res://src/build/shot_bits.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 

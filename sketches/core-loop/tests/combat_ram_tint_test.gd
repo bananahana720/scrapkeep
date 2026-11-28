@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 # A target that only a ram can beat says so through tint_verb() == "ram", and the tint
 # then compares its plating with ram_punch_now(), not with punch_now(). The double is

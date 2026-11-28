@@ -1,6 +1,6 @@
 extends RefCounted
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 
 var velocity := Vector3.ZERO

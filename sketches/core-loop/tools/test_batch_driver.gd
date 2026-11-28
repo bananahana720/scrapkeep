@@ -2,7 +2,7 @@ extends RefCounted
 
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const BuffLedger := preload("res://src/core/buff_ledger.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const Density := preload("res://src/presentation/density.gd")

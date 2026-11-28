@@ -4,7 +4,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Rules := preload("res://src/movement/ball_rules.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 const GRAPPLE := "grapple"
 const PYLON := "pylon"

@@ -11,7 +11,7 @@ const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Groups := preload("res://src/core/groups.gd")
 const Relics := preload("res://src/build/relics.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
 const ARC_CHORD_DURATION := 2.5

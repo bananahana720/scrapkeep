@@ -6,7 +6,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const BotOptions := preload("res://tools/bot_options.gd")
 const HoldRelay := preload("res://src/world/hold_relay.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The bot's SR10 arm (bot_run --relay-stake=0..4, bot_driver.gd _relay_arm).

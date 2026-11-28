@@ -5,7 +5,7 @@ const Groups := preload("res://src/core/groups.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
 enum Type { INSTANT, WAVE, PROJECTILE, LANE }

@@ -1,11 +1,11 @@
 extends SceneTree
 
 const BossPlate := preload("res://src/ui/boss_plate.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const Game := preload("res://src/game.gd")
 const WardenBody := preload("res://src/combat/warden.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The posture Warden's health ring on the ground (LEGIBILITY section 4), on the slice table

@@ -3,8 +3,8 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 # Reach's posture guard rack pays one fixed quarter-bar burst for the ram that
 # scatters it at cruise or above. Guns and later hits on following drones pay nothing;

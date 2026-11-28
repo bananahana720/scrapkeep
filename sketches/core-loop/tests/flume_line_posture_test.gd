@@ -7,7 +7,7 @@ const Weapons := preload("res://src/combat/weapons.gd")
 const Run := preload("res://src/core/run_state.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const WardenReactor := preload("res://src/combat/warden_reactor.gd")
 const T:= preload("res://tests/support/t.gd")
 
