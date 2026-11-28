@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 
 # The bass and the layers (Andrew, rounds 2 and 3): a rhythmic bass figure in every
 # theme at every pressure; no wubs in the level themes, a restrained grid-locked
@@ -25,7 +26,7 @@ var _wait_frames := 0
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	_bass_everywhere()
 	_lead_heard()
 	_wubs_reined_in()
