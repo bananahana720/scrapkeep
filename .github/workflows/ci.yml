@@ -52,6 +52,8 @@ jobs:
           sparse-checkout: |
             scripts/ci
             scripts/lib/cli.mjs
+            scripts/lib/git.mjs
+            scripts/lib/proc.mjs
           sparse-checkout-cone-mode: false
           persist-credentials: false
 

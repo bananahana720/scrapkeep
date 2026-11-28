@@ -32,11 +32,12 @@ test("changedFilesSince uses --no-renames and surfaces spawn errors", () => {
   const files = changedFilesSince("origin/main", {
     spawn: (_cmd, args) => {
       seenArgs = args;
-      return { status: 0, stdout: "scripts/a.mjs\nscripts/b.mjs\n" };
+      return { status: 0, stdout: 'scripts/a.mjs\0 scripts/café "b".mjs\0' };
     },
   });
   assert.ok(seenArgs.includes("--no-renames"));
-  assert.deepEqual(files, ["scripts/a.mjs", "scripts/b.mjs"]);
+  assert.ok(seenArgs.includes("-z"));
+  assert.deepEqual(files, ["scripts/a.mjs", ' scripts/café "b".mjs']);
 
   assert.throws(
     () =>

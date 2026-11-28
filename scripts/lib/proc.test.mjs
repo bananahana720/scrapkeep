@@ -1,22 +1,118 @@
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { execFileSync, spawn } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { groupLive, pool, runProcess, stopGroup, waitGroupDead } from "./proc.mjs";
+import { git, nulSeparated } from "./git.mjs";
+import {
+  groupLive,
+  pool,
+  processId,
+  processLive,
+  runProcess,
+  stopGroup,
+  waitGroupDead,
+} from "./proc.mjs";
 
-function pidAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error.code !== "ESRCH";
+test("processLive asks only about a canonical process id from 2 to 2147483647, and never sends kill anything else", () => {
+  const calls = [];
+  const kill = (id, signal) => {
+    calls.push([id, signal]);
+    const code = { 4242: "ESRCH", 4343: "EPERM", 4444: "EINVAL" }[id];
+    if (code) throw Object.assign(new Error(code), { code });
+  };
+  for (const bad of [
+    0,
+    1,
+    -1,
+    "0",
+    "1",
+    "-1",
+    "+5",
+    "012345",
+    "1e3",
+    1e3 + 0.5,
+    "2147483648",
+    "4294967294",
+    "4294967295",
+    "4294967296",
+    4294967296,
+    "12345678901234567890",
+    "",
+    " 42",
+    "42\n",
+    "abc",
+    NaN,
+    null,
+    undefined,
+    [42],
+    { pid: 42 },
+  ]) {
+    assert.equal(processId(bad), null, JSON.stringify(bad));
+    assert.equal(processLive(bad, { kill }), null, JSON.stringify(bad));
   }
+  assert.deepEqual(calls, [], "kill was called for a value that is not a process id");
+  assert.equal(processLive(2, { kill }), true);
+  assert.equal(processLive("2147483647", { kill }), true);
+  assert.equal(processLive(4242, { kill }), false, "no such process");
+  assert.equal(processLive("4343", { kill }), true, "not permitted is alive");
+  assert.throws(() => processLive(4444, { kill }), { code: "EINVAL" });
+  assert.deepEqual(calls, [
+    [2, 0],
+    [2147483647, 0],
+    [4242, 0],
+    [4343, 0],
+    [4444, 0],
+  ]);
+  assert.equal(processLive(process.pid), true);
+  const dead = spawnSyncPid();
+  assert.equal(processLive(String(dead)), false);
+});
+
+function spawnSyncPid() {
+  return Number(
+    execFileSync(process.execPath, ["-e", "process.stdout.write(String(process.pid))"]),
+  );
 }
+
+const KILL_ZERO = /\bprocess\.kill\([^;]*?,\s*0\s*\)/;
+
+function filesAskingKill(cwd) {
+  const files = nulSeparated(
+    git(["ls-files", "-z", "--", "scripts", ".agents"], { cwd, trim: false }),
+  ).filter((file) => /\.(?:mjs|cjs|js)$/.test(file));
+  if (files.length === 0)
+    throw new Error(`git ls-files lists no script under scripts or .agents in ${cwd}`);
+  return files.filter((file) => KILL_ZERO.test(readFileSync(path.join(cwd, file), "utf8"))).sort();
+}
+
+test("only scripts/lib/proc.mjs asks the system whether a process lives; every other script calls processLive", () => {
+  const sample = ["process", ".kill(pid, 0)"].join("");
+  assert.ok(KILL_ZERO.test(sample) && KILL_ZERO.test(sample.replace("pid", "Number(text)")));
+  assert.ok(!KILL_ZERO.test(sample.replace("0)", '"SIGTERM")')));
+  const allowed = {
+    "scripts/lib/machine-lock.mjs":
+      "reads a slot claimed by process 1 as another user's live process, which its tests pin and processLive refuses to ask about",
+    "scripts/lib/proc.mjs": "owns processLive and groupLive",
+    "scripts/sketch-smoke.test.mjs":
+      "pins the system's own answer (EPERM) for process 1, which processLive refuses to ask about",
+  };
+  assert.deepEqual(
+    filesAskingKill(path.resolve(fileURLToPath(import.meta.url), "../../..")),
+    Object.keys(allowed),
+  );
+  const empty = mkdtempSync(path.join(os.tmpdir(), "proc-kill-guard-"));
+  try {
+    git(["init", "-q"], { cwd: empty });
+    assert.throws(() => filesAskingKill(empty), /lists no script/);
+    assert.throws(() => filesAskingKill(path.join(empty, "absent")));
+  } finally {
+    rmSync(empty, { recursive: true, force: true });
+  }
+});
 
 test("proc: runProcess collects stdout, stderr, interleaved output, and writes logFile", async () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "proc-test-basic-"));
@@ -54,7 +150,7 @@ test("proc: runProcess reaps grandchild process group on timeout", async () => {
     const grandchild = Number(readFileSync(pidFile, "utf8").trim());
     assert.ok(Number.isInteger(grandchild) && grandchild > 0);
     await waitGroupDead(res.pid, 1500);
-    assert.equal(pidAlive(grandchild), false);
+    assert.equal(processLive(grandchild), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -72,7 +168,7 @@ test("proc: runProcess reaps stubborn grandchild group with SIGTERM grace and re
     assert.equal(res.timedOut, true);
     assert.equal(res.signal, "SIGKILL");
     const grandchild = Number(readFileSync(pidFile, "utf8").trim());
-    assert.equal(pidAlive(grandchild), false);
+    assert.equal(processLive(grandchild), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -98,7 +194,7 @@ test("proc: runProcess aborts and reaps grandchild process group via AbortSignal
     assert.equal(res.signal, "SIGKILL");
     const grandchild = Number(readFileSync(pidFile, "utf8").trim());
     await waitGroupDead(res.pid, 1500);
-    assert.equal(pidAlive(grandchild), false);
+    assert.equal(processLive(grandchild), false);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }

@@ -3,7 +3,7 @@
 import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
 import path from "node:path";
 import { isMain } from "./lib/cli.mjs";
-import { git } from "./lib/git.mjs";
+import { git, nulSeparated } from "./lib/git.mjs";
 
 const BUFFER = 256 * 1024 * 1024;
 
@@ -46,11 +46,13 @@ export function badPaths(files, cwd = process.cwd()) {
   const inside = rels.filter((r) => !outside(r));
   const tracked = new Set(
     inside.length
-      ? git(["--literal-pathspecs", "ls-files", "-z", "--", ...inside], {
-          cwd: top,
-          trim: false,
-          maxBuffer: BUFFER,
-        }).split("\0")
+      ? nulSeparated(
+          git(["--literal-pathspecs", "ls-files", "-z", "--", ...inside], {
+            cwd: top,
+            trim: false,
+            maxBuffer: BUFFER,
+          }),
+        )
       : [],
   );
   return files.flatMap((f, i) => {
