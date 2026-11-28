@@ -8,6 +8,7 @@ import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
 import { GODOT_VERSION, TOOLCHAIN, resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import { isMain } from "./lib/cli.mjs";
+import { git, gitOptional } from "./lib/git.mjs";
 import {
   bootFailures,
   defaultStemsFrom,
@@ -159,6 +160,14 @@ function fail(message) {
   process.exit(1);
 }
 
+function gitOrFail(args, problem, options) {
+  try {
+    return git(args, { cwd: root, ...options });
+  } catch (error) {
+    fail(problem + "\n" + (error.stderr ?? error.message));
+  }
+}
+
 async function stems(stemsFrom, app) {
   const tracks = trackedManifests(stemRoot);
   const manifests = {};
@@ -214,9 +223,11 @@ async function main() {
   if (!existsSync(path.join(realTemplates, "macos.zip")))
     fail("export template missing: " + path.join(realTemplates, "macos.zip"));
 
-  const swapStatus = run("git", ["-C", root, "status", "--porcelain", "--", ...SWAPPED_FILES]);
-  if (swapStatus.status !== 0) fail("git status failed\n" + swapStatus.stderr);
-  const swapProblem = swapFilesProblem(swapStatus.stdout);
+  const swapProblem = swapFilesProblem(
+    gitOrFail(["status", "--porcelain", "--", ...SWAPPED_FILES], "git status failed", {
+      trim: false,
+    }),
+  );
   if (swapProblem) fail(swapProblem);
 
   const presetPath = path.join(project, "export_presets.cfg");
@@ -261,21 +272,17 @@ async function main() {
     fail("export failed\n" + exportText.slice(-2000));
   const exe = appExecutable(app);
 
-  const common = run("git", [
-    "-C",
-    root,
-    "rev-parse",
-    "--path-format=absolute",
-    "--git-common-dir",
-  ]);
-  if (common.status !== 0) fail("git common dir not found\n" + common.stderr);
-  const stemsFrom = path.resolve(args.stemsFrom ?? defaultStemsFrom(common.stdout.trim()));
+  const common = gitOrFail(
+    ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+    "git common dir not found",
+  );
+  const stemsFrom = path.resolve(args.stemsFrom ?? defaultStemsFrom(common));
   const stemResult = await stems(stemsFrom, app);
 
   // Contents/MacOS/music_ace have not been tried; codesign may refuse them as it did BUILD.txt there.
-  const sha = run("git", ["-C", root, "rev-parse", "HEAD"]).stdout.trim();
+  const sha = gitOptional(["rev-parse", "HEAD"], { cwd: root }) ?? "";
   const dirty =
-    run("git", ["-C", root, "status", "--porcelain", "--untracked-files=no"]).stdout.trim() !== "";
+    (gitOptional(["status", "--porcelain", "--untracked-files=no"], { cwd: root }) ?? "") !== "";
   const godot = run(binary, ["--version"], { env }).stdout.trim();
   const stampFields = { sha, dirty, stamp, godot, stems: stemResult.line, selfPlay: args.selfPlay };
   await writeFile(path.join(app, "Contents/Resources/BUILD.txt"), macBuildStamp(stampFields));
