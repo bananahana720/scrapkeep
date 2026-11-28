@@ -1,5 +1,0 @@
-# Godot tests that are red on main on the Mac Studio, one name to a line (no folder, no .gd).
-# gate-check.sh fails on a base-red test that is not here. Add a name only after running the test
-# on main on this machine, and say which commit of main and when. A Linux result does not count here.
-slice1_patch_and_w1_craft_test  # red on main 0d422144b, 28 November 2026
-stage_modifier_test  # red on main 0d422144b on this Mac, 28 November 2026 (one byte pin; red on the Linux PC too)
