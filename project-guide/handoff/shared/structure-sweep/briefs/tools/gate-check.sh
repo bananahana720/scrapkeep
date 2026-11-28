@@ -7,6 +7,8 @@
 # "node" skips the Godot run, for a merge that changes no file the game loads.
 # Each step's full output goes to artifacts/local/gate-check/<step>.log.
 # Safe to rerun: it only overwrites those logs. Exit 1 if any step failed.
+# The last line printed is "GATE CHECK: PASS" or "GATE CHECK: FAIL ...": read that line, because a
+# caller that pipes the output through tail or cut sees the pipe's exit status, not this script's.
 set -u
 base="$1"
 only="${2:-all}"
@@ -45,4 +47,5 @@ step check-docs npm run check:docs
 step check-project npm run check:project
 step check-skills npm run check:skills
 grep -h 'baseline entries' "$logs/sketch-lint.log" | tail -1 | cut -c1-240
+if [ "$failed" = 0 ]; then echo "GATE CHECK: PASS"; else echo "GATE CHECK: FAIL (see the FAIL lines above and $logs/)"; fi
 exit "$failed"
