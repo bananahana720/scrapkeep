@@ -51,7 +51,7 @@ import {
 import { acquireMachine } from "./lib/machine-lock.mjs";
 import { killGroup, runProcess } from "./lib/proc.mjs";
 import { runnerReceiptBaseName, runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
-import { readLedger } from "./known-failing.mjs";
+import { mainRedLedger, readLedger, readMainReds } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
 import { discoverTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
@@ -1524,6 +1524,10 @@ async function main() {
   const flaky = [];
   const ledgerFlaky = [];
   const flakeRows = ledgerFlakes((await readLedger(root))?.rows ?? []);
+  const mainRed = mainRedLedger(
+    options.baseCheck ? [] : readMainReds(options.base, { cwd: root, log }),
+    { log },
+  );
   const baseRed = [];
   const linuxLeaks = [];
   let prRed = null;
@@ -1739,12 +1743,16 @@ async function main() {
       `${result.ok ? "PASS" : "FAIL"} ${result.test} exit=${result.exit} ${(result.ms / 1000).toFixed(1)}s`,
     );
     if (result.linuxLeak) linuxLeaks.push([result.test]);
+    if (result.ok) mainRed.passed(result.test);
     if (result.ok || result.killed) return;
-    const { kind, newChecks, ledger, ledgerRuns } = await confirm(result);
+    const { kind, newChecks, ledger, ledgerRuns } = mainRed.settle(
+      result.test,
+      await confirm(result),
+    );
     log(
       `  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`,
     );
-    if (kind === "stopped") return;
+    if (kind === "stopped" || kind === "main-red") return;
     if (kind === "flaky") {
       flaky.push(result.test);
       if (ledger) ledgerFlaky.push(result.test);
@@ -1893,6 +1901,7 @@ async function main() {
     log(`flaky (red then green on rerun; make deterministic, never skip): ${flaky.join(", ")}`);
   if (baseRed.length)
     log(`base-red (red on the merge base too; not this PR): ${baseRed.join(", ")}`);
+  receipt.main_red = mainRed.report();
   receipt.linux_leaks = linuxLeaks;
   for (const line of linuxLeakLines(linuxLeaks)) log(line);
   if (receipt.selection.bot_shards.length)

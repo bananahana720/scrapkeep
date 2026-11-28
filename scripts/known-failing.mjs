@@ -3,8 +3,9 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { weeklyNames } from "./gate/weekly.mjs";
-import { globToRegExp } from "./lib/godot-test-runner.mjs";
+import { globToRegExp, withoutTeardownNoise } from "./lib/godot-test-runner.mjs";
 import { isMain } from "./lib/cli.mjs";
+import { gitOptional } from "./lib/git.mjs";
 
 export const LEDGER_FILE = "project-guide/handoff/KNOWN-FAILING.tsv";
 export const LEDGER_HEADER = ["test", "kind", "cause", "owner", "added", "review"];
@@ -16,6 +17,8 @@ export const TIME_OUT = "TIME-OUT";
 export const ERROR_LINE = "ERROR-LINE";
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+export const MAIN_RED = /^red on main at ([0-9a-f]{7,40}) on (\d{4}-\d{2}-\d{2}):\s/;
+const MAIN_RED_FORM = "red on main at <commit> on <YYYY-MM-DD>: ";
 
 export function testName(text) {
   return String(text).trim().replace(/^.*\//, "").replace(/\.gd$/, "");
@@ -53,6 +56,7 @@ export function parseLedger(text) {
             .map((part) => part.trim())
             .filter(Boolean)
         : null;
+    const onMain = MAIN_RED.exec(cause);
     const row = {
       test,
       kind,
@@ -61,8 +65,21 @@ export function parseLedger(text) {
       added,
       review,
       checks: kind === "red" ? named : null,
+      main: kind === "red" && onMain ? { commit: onMain[1], seen: onMain[2] } : null,
       line: number,
     };
+    if (/^red on main\b/i.test(cause) && !onMain)
+      problems.push({
+        line: number,
+        message: `a cause that says the test is red on main starts "${MAIN_RED_FORM}"`,
+      });
+    if (onMain && kind !== "red")
+      problems.push({ line: number, message: `only a red row can be red on main, not a ${kind}` });
+    if (onMain && ISO_DATE.test(added) && onMain[2] > added)
+      problems.push({
+        line: number,
+        message: `the row was added (${added}) before main was seen red (${onMain[2]})`,
+      });
     if (hasChecks && kind === "red" && !named?.length)
       problems.push({
         line: number,
@@ -165,6 +182,74 @@ export function judgeLines({ listed, unlisted }) {
     );
   }
   return lines;
+}
+
+export function readMainReds(ref, { cwd, log = () => {} } = {}) {
+  if (typeof ref !== "string" || ref === "")
+    throw new TypeError("readMainReds(ref): ref must name a commit");
+  const text = gitOptional(["show", `${ref}:${LEDGER_FILE}`], { cwd, trim: false });
+  const unread = (why) => {
+    log(
+      `known red on main: ${LEDGER_FILE} ${why} at ${ref}, so every red counts against this change`,
+    );
+    return [];
+  };
+  if (text === null) return unread("could not be read");
+  if (text.trim() === "") return unread("is empty");
+  const { rows, problems } = parseLedger(text);
+  if (problems.length > 0)
+    return unread(`does not parse (line ${problems[0].line}: ${problems[0].message})`);
+  return rows.filter((row) => row.main);
+}
+
+export function mainRedLedger(rows, { log = () => {}, platform = process.platform } = {}) {
+  if (!Array.isArray(rows)) throw new TypeError("mainRedLedger(rows): rows must be an array");
+  const listed = new Map(
+    rows.filter((row) => row.main && row.checks?.length > 0).map((row) => [row.test, row]),
+  );
+  const known = [];
+  const passed = [];
+  return {
+    passed(test) {
+      const row = listed.get(testName(test));
+      if (!row || passed.includes(row.test)) return;
+      passed.push(row.test);
+      log(
+        `  ${row.test} passed, but ${LEDGER_FILE} lists it as red on main at ${row.main.commit}: remove its row once main is green`,
+      );
+    },
+    settle(test, verdict) {
+      const row = listed.get(testName(test));
+      if (!row || verdict.kind !== "pr-red") return verdict;
+      const run = verdict.rerun;
+      if (typeof run?.output !== "string") return verdict;
+      const unnamed = uncoveredChecks(row, {
+        labels: run.checks ?? [],
+        timedOut: run.timedOut === true,
+        errorLine: /^(?:SCRIPT ERROR|ERROR)\b/m.test(withoutTeardownNoise(run.output, platform)),
+      });
+      if (unnamed.length > 0) {
+        log(
+          `  ${row.test} is red on main, but fails what its row does not name: ${unnamed.join("; ")}; the row covers ${row.checks.join(` ${CHECK_SEPARATOR} `)}`,
+        );
+        return verdict;
+      }
+      known.push(row.test);
+      log(
+        `  known red on main: ${row.test} (${LEDGER_FILE} line ${row.line}; owner ${row.owner}; check ${row.checks.join(` ${CHECK_SEPARATOR} `)}): ${row.cause}`,
+      );
+      return { ...verdict, kind: "main-red" };
+    },
+    report() {
+      if (known.length > 0)
+        log(`known red on main (listed in ${LEDGER_FILE}; not this change): ${known.join(", ")}`);
+      if (passed.length > 0)
+        log(
+          `listed as red on main but passed here (remove the row once main is green): ${passed.join(", ")}`,
+        );
+      return { known: [...known], passed: [...passed] };
+    },
+  };
 }
 
 export function renderLedger(rows) {

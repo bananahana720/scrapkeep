@@ -13,12 +13,15 @@ import {
   checkLedger,
   judgeFailures,
   judgeLines,
+  mainRedLedger,
   parseLedger,
   pastReview,
+  readMainReds,
   renderLedger,
   testName,
   uncoveredChecks,
 } from "./known-failing.mjs";
+import { git } from "./lib/git.mjs";
 
 const script = fileURLToPath(new URL("./known-failing.mjs", import.meta.url));
 const repoRoot = fileURLToPath(new URL("..", import.meta.url));
@@ -330,4 +333,200 @@ test("the checked-in ledger has the check column, and every named check is text 
       tree.checks,
       [0, 1, 2, 3, 4, 5].map((index) => `class ${index} builds`),
     );
+});
+
+const checkedHeader = [...LEDGER_HEADER, "check"].join("\t");
+const mainRow = (
+  test,
+  cause,
+  check = "a check ;; ERROR-LINE",
+  kind = "red",
+  added = "2026-11-28",
+) => [test, kind, cause, "coordinator", added, "2026-12-05", check].join("\t");
+const mainLedger = (...rows) => [checkedHeader, ...rows].join("\n") + "\n";
+const ON_MAIN = "red on main at 0d422144b on 2026-11-28: why it fails";
+
+test("a red row whose cause starts with the commit and date it was seen red on main is a main red, and a near miss is refused", () => {
+  const good = parseLedger(
+    mainLedger(mainRow("a_test", ON_MAIN), mainRow("b_test", "red on a stage only")),
+  );
+  assert.deepEqual(good.problems, []);
+  assert.deepEqual(
+    good.rows.map((entry) => entry.main),
+    [{ commit: "0d422144b", seen: "2026-11-28" }, null],
+  );
+  for (const [cause, kind, added, message] of [
+    [
+      "red on main at 0d42 on 2026-11-28: short commit",
+      "red",
+      "2026-11-28",
+      /starts "red on main at/,
+    ],
+    ["red on main at 0d422144b: no date", "red", "2026-11-28", /starts "red on main at/],
+    ["Red on main since yesterday", "red", "2026-11-28", /starts "red on main at/],
+    [ON_MAIN, "flake", "2026-11-28", /only a red row can be red on main, not a flake/],
+    [ON_MAIN, "red", "2026-11-27", /added \(2026-11-27\) before main was seen red \(2026-11-28\)/],
+  ]) {
+    const check = kind === "flake" ? "-" : "a check";
+    const { problems } = parseLedger(mainLedger(mainRow("a_test", cause, check, kind, added)));
+    assert.equal(problems.length, 1, cause);
+    assert.match(problems[0].message, message);
+  }
+});
+
+const redRun = (checks, extra = {}) => ({
+  kind: "pr-red",
+  newChecks: [],
+  rerun: {
+    ok: false,
+    checks,
+    timedOut: false,
+    output: checks.map((label) => `[${label}] -> FAIL`).join("\n") + "\n",
+    ...extra,
+  },
+});
+
+test("a red the ledger lists as red on main does not fail, any other red still does, and a listed test that passes is reported", () => {
+  const lines = [];
+  const { rows } = parseLedger(
+    mainLedger(
+      mainRow("a_test", ON_MAIN, "stage *: draw matches"),
+      mainRow("c_test", "seen red on a stage", "a check"),
+    ),
+  );
+  const ledger = mainRedLedger(rows, { log: (line) => lines.push(line), platform: "linux" });
+
+  const listed = ledger.settle("tests/a_test.gd", redRun(["stage 2: draw matches"]));
+  assert.equal(listed.kind, "main-red");
+  assert.match(
+    lines.at(-1),
+    /^ {2}known red on main: a_test \(.*KNOWN-FAILING\.tsv line 2; owner coordinator; check stage \*: draw matches\): red on main at 0d422144b on 2026-11-28/,
+  );
+
+  assert.equal(ledger.settle("tests/b_test.gd", redRun(["anything"])).kind, "pr-red", "unlisted");
+  assert.equal(
+    ledger.settle("tests/c_test.gd", redRun(["a check"])).kind,
+    "pr-red",
+    "a red row not seen on main",
+  );
+  const other = ledger.settle("tests/a_test.gd", redRun(["stage 2: draw matches", "a new check"]));
+  assert.equal(other.kind, "pr-red");
+  assert.match(lines.at(-1), /fails what its row does not name: a new check/);
+  for (const [why, verdict] of [
+    [
+      "an error line the row does not name",
+      redRun(["stage 1: draw matches"], { output: "SCRIPT ERROR: boom\n" }),
+    ],
+    ["a time-out the row does not name", redRun([], { timedOut: true })],
+    ["a red with no failing check", redRun([])],
+    ["a rerun with no output", redRun(["stage 1: draw matches"], { output: undefined })],
+    ["no rerun at all", { kind: "pr-red", newChecks: [] }],
+  ])
+    assert.equal(ledger.settle("a_test", verdict).kind, "pr-red", why);
+  for (const kind of ["flaky", "base-red", "stopped"])
+    assert.equal(ledger.settle("a_test", { ...redRun([]), kind }).kind, kind);
+
+  ledger.passed("tests/a_test.gd");
+  ledger.passed("tests/a_test.gd");
+  ledger.passed("tests/b_test.gd");
+  assert.match(
+    lines.at(-1),
+    /^ {2}a_test passed, but .* lists it as red on main at 0d422144b: remove its row once main is green$/,
+  );
+  lines.length = 0;
+  assert.deepEqual(ledger.report(), { known: ["a_test"], passed: ["a_test"] });
+  assert.deepEqual(lines, [
+    "known red on main (listed in project-guide/handoff/KNOWN-FAILING.tsv; not this change): a_test",
+    "listed as red on main but passed here (remove the row once main is green): a_test",
+  ]);
+  lines.length = 0;
+  assert.deepEqual(mainRedLedger([], { log: (line) => lines.push(line) }).report(), {
+    known: [],
+    passed: [],
+  });
+  assert.deepEqual(lines, []);
+  assert.throws(() => mainRedLedger(undefined), TypeError);
+});
+
+test("a main row in a ledger with no check column covers nothing", () => {
+  const { rows } = parseLedger(
+    [header, ["a_test", "red", ON_MAIN, "coordinator", "2026-11-28", "2026-12-05"].join("\t")].join(
+      "\n",
+    ),
+  );
+  assert.equal(rows[0].main?.commit, "0d422144b");
+  assert.equal(mainRedLedger(rows).settle("a_test", redRun(["any"])).kind, "pr-red");
+});
+
+test("readMainReds reads the ledger at the base commit, and every red counts when it cannot", () => {
+  const root = mkdtempSync(path.join(os.tmpdir(), "known-failing-main-"));
+  const run = (...args) =>
+    git(
+      [
+        "-c",
+        "user.name=t",
+        "-c",
+        "user.email=t@example.invalid",
+        "-c",
+        "commit.gpgsign=false",
+        ...args,
+      ],
+      {
+        cwd: root,
+      },
+    );
+  const commitLedger = (text) => {
+    mkdirSync(path.join(root, path.dirname(LEDGER_FILE)), { recursive: true });
+    writeFileSync(path.join(root, LEDGER_FILE), text);
+    run("add", LEDGER_FILE);
+    run("commit", "-q", "-m", "ledger");
+    return run("rev-parse", "HEAD");
+  };
+  try {
+    run("init", "-q");
+    writeFileSync(path.join(root, "README"), "x\n");
+    run("add", "README");
+    run("commit", "-q", "-m", "no ledger");
+    const bare = run("rev-parse", "HEAD");
+    const good = commitLedger(
+      mainLedger(mainRow("a_test", ON_MAIN), mainRow("b_test", "plain red")),
+    );
+    const broken = commitLedger("test\towner\n");
+    const empty = commitLedger("");
+    const lines = [];
+    const log = (line) => lines.push(line);
+    assert.deepEqual(
+      readMainReds(good, { cwd: root, log }).map((entry) => entry.test),
+      ["a_test"],
+    );
+    assert.deepEqual(lines, []);
+    for (const [ref, why] of [
+      [bare, /could not be read at /],
+      ["no-such-ref", /could not be read at no-such-ref/],
+      [broken, /does not parse \(line 1: the header must be/],
+      [empty, /is empty at /],
+    ]) {
+      lines.length = 0;
+      assert.deepEqual(readMainReds(ref, { cwd: root, log }), [], String(ref));
+      assert.equal(lines.length, 1);
+      assert.match(lines[0], why);
+      assert.match(lines[0], /so every red counts against this change$/);
+    }
+    assert.deepEqual(readMainReds(good, { cwd: path.join(root, "absent"), log }), []);
+    for (const bad of [undefined, "", 7])
+      assert.throws(() => readMainReds(bad, { cwd: root }), TypeError);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("the checked-in ledger lists exactly the two tests the coordinator saw red on main at 0d422144b", () => {
+  const { rows } = parseLedger(readFileSync(path.join(repoRoot, LEDGER_FILE), "utf8"));
+  assert.deepEqual(
+    rows.filter((entry) => entry.main).map((entry) => [entry.test, entry.main.commit]),
+    [
+      ["slice1_patch_and_w1_craft_test", "0d422144b"],
+      ["stage_modifier_test", "0d422144b"],
+    ],
+  );
 });
