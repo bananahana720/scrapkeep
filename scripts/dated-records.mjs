@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { isMain, parseCliArgs } from "./lib/cli.mjs";
-import { git } from "./lib/git.mjs";
+import { DEFAULT_MAX_BUFFER, cwdDecidesRepository, git } from "./lib/git.mjs";
 
 export const LIST_PATH = "scripts/ci/dated-records.json";
 const RULES = ["frozen", "log"];
@@ -82,41 +83,54 @@ function treeEntries(commit, pages, cwd) {
 function readBlob(commit, page, { id }, cwd) {
   const todo =
     "The page is in that commit's tree but git could not give its content (a blobless clone fetches it on demand). Fetch it (git fetch origin) and run the check again; the check does not pass a page it could not read.";
-  const text = attempt(`could not read ${page} at ${commit}`, todo, () =>
-    git(["cat-file", "blob", id], { cwd, trim: false }),
-  );
+  const ran = spawnSync("git", ["cat-file", "blob", id], {
+    cwd,
+    env: cwdDecidesRepository(),
+    maxBuffer: DEFAULT_MAX_BUFFER,
+  });
+  if (ran.error || ran.status !== 0) {
+    const why = ran.error?.message || String(ran.stderr).trim();
+    throw new CouldNotRun(`could not read ${page} at ${commit}: ${why}\n  ${todo}`);
+  }
   const algorithm = id.length === 64 ? "sha256" : "sha1";
   const got = createHash(algorithm)
-    .update(`blob ${Buffer.byteLength(text)}\0`)
-    .update(text)
+    .update(`blob ${ran.stdout.length}\0`)
+    .update(ran.stdout)
     .digest("hex");
   if (got !== id) {
     throw new CouldNotRun(
       `could not read ${page} at ${commit}: the content git gave does not match its blob id ${id}\n  ${todo}`,
     );
   }
-  return text;
+  return ran.stdout;
 }
 
-function lines(text) {
-  return text.replace(/\n$/, "").split("\n");
+function lines(bytes) {
+  return bytes.toString("latin1").replace(/\n$/, "").split("\n");
 }
 
-export function firstBrokenLine(rule, baseText, headText) {
-  const base = lines(baseText);
-  const head = lines(headText);
+function quoted(line) {
+  return Buffer.from(line, "latin1").toString("utf8");
+}
+
+export function firstBrokenLine(rule, baseBytes, headBytes) {
+  if (baseBytes.equals(headBytes)) return null;
+  const base = lines(baseBytes);
+  const head = lines(headBytes);
   if (rule === "frozen") {
-    if (baseText === headText) return null;
     let i = 0;
     while (i < base.length && i < head.length && base[i] === head[i]) i++;
-    if (i < base.length) return { line: i + 1, text: base[i], kind: MISSING };
-    if (i < head.length) return { line: i + 1, text: head[i], kind: "was added at the head" };
+    if (i < base.length) return { line: i + 1, text: quoted(base[i]), kind: MISSING };
+    if (i < head.length) {
+      return { line: i + 1, text: quoted(head[i]), kind: "was added at the head" };
+    }
     return { endNewline: true };
   }
+  if (baseBytes.length === 0) return null;
   let h = 0;
   for (let b = 0; b < base.length; b++) {
     while (h < head.length && head[h] !== base[b]) h++;
-    if (h === head.length) return { line: b + 1, text: base[b], kind: MISSING };
+    if (h === head.length) return { line: b + 1, text: quoted(base[b]), kind: MISSING };
     h++;
   }
   return null;
@@ -169,7 +183,7 @@ export function checkDatedRecords({ base, head = "HEAD", cwd }) {
   const listAtBase = treeEntries(mergeBase, [LIST_PATH], cwd).get(LIST_PATH);
   if (listAtBase) {
     const baseRules = parseList(
-      readBlob(mergeBase, LIST_PATH, listAtBase, cwd),
+      readBlob(mergeBase, LIST_PATH, listAtBase, cwd).toString("utf8"),
       `${LIST_PATH} at ${base}`,
     );
     const gone = [...baseRules.keys()].filter((p) => !rules.has(p));

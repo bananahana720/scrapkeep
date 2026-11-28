@@ -401,3 +401,70 @@ test("a page whose head content git cannot read exits 2", () => {
     rmSync(top, { recursive: true, force: true });
   }
 });
+
+test("a page holding bytes that are not UTF-8 is compared byte for byte", () => {
+  const latin = Buffer.from("# Record\n\n- caf\xe9\n- two\n", "latin1");
+  const grown = Buffer.concat([latin, Buffer.from("- three\n")]);
+  const edited = Buffer.from("# Record\n\n- caf\xe8\n- two\n", "latin1");
+
+  const frozenKept = judgeFiles("frozen", { [PAGE]: latin }, { "notes/other.md": "x\n" });
+  assert.equal(frozenKept.code, 0, frozenKept.out);
+
+  const frozenChanged = judgeFiles("frozen", { [PAGE]: latin }, { [PAGE]: grown });
+  assert.equal(frozenChanged.code, 1, frozenChanged.out);
+  assert.match(frozenChanged.out, /line 5 was added at the head:\n {4}- three/);
+
+  const logGrown = judgeFiles("log", { [PAGE]: latin }, { [PAGE]: grown });
+  assert.equal(logGrown.code, 0, logGrown.out);
+
+  const logEdited = judgeFiles("log", { [PAGE]: latin }, { [PAGE]: edited });
+  assert.equal(logEdited.code, 1, logEdited.out);
+  assert.match(
+    logEdited.out,
+    /\(log\) line 3 of the base copy changed or went missing:\n {4}- caf�/,
+  );
+});
+
+test("two frozen blobs whose differing bytes both decode to U+FFFD are a finding", () => {
+  const result = judgeFiles(
+    "frozen",
+    { [PAGE]: Buffer.from([0x61, 0x80, 0x0a]) },
+    { [PAGE]: Buffer.from([0x61, 0x81, 0x0a]) },
+  );
+  assert.equal(result.code, 1, result.out);
+  assert.match(result.out, /\(frozen\) line 1 of the base copy changed or went missing:\n {4}a�/);
+});
+
+test("an empty log page takes any first text; an empty frozen page keeps no text", () => {
+  const log = judgeFiles("log", { [PAGE]: "" }, { [PAGE]: "- first\n- second\n" });
+  assert.equal(log.code, 0, log.out);
+
+  const frozen = judgeFiles("frozen", { [PAGE]: "" }, { [PAGE]: "- first\n" });
+  assert.equal(frozen.code, 1, frozen.out);
+  assert.match(frozen.out, /\(frozen\) line 1 of the base copy changed or went missing/);
+});
+
+test("a --head that does not resolve exits 2", () => {
+  withRepo((dir) => {
+    const base = commit(dir, { [LIST_PATH]: list([PAGE]), [PAGE]: ENTRIES });
+    const result = run(dir, "--base", base, "--head", "no-such-head");
+    assert.equal(result.code, 2, result.out);
+    assert.match(result.out, /--head no-such-head is not a commit git can resolve[\s\S]*Fetch it/);
+  });
+});
+
+test("a frozen page whose mode and bytes both change gives two findings", () => {
+  const result = judgeFiles(
+    "frozen",
+    { [PAGE]: ENTRIES },
+    { [PAGE]: ENTRIES.replace("- two", "- 2") },
+    (dir) => {
+      git(dir, "update-index", "--chmod=+x", PAGE);
+      git(dir, "commit", "-q", "-m", "mode");
+    },
+  );
+  assert.equal(result.code, 1, result.out);
+  assert.match(result.out, /changed its file mode from 100644 to 100755/);
+  assert.match(result.out, /line 4 of the base copy changed or went missing:\n {4}- two/);
+  assert.match(result.out, /FAIL, 2 finding\(s\) on listed pages/);
+});

@@ -352,7 +352,7 @@ if (isMain(import.meta.url)) {
       ranges = pushed.map((range) => ({ base: rangeBase(range), head: range.localSha }));
     }
 
-    const dated = runDatedRecords(files, opts.base ? [{ base: opts.base, head: "HEAD" }] : ranges);
+    const dated = runDatedRecords(files, ranges);
     const plan = planHookChecks(files);
     const { ok, ranLabels } = executeHookPlan(plan, { ranges });
     const loadEnd = os.loadavg()[0];
