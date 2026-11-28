@@ -37,7 +37,8 @@ export function evaluateBudget({ label, budgetS, elapsedMs, exitCode, signal }) 
   const exactS = elapsedMs / 1000;
   const childOk = exitCode === 0 && !signal;
   const overBudget = exactS > budgetS;
-  const status = !childOk ? "FAIL" : overBudget ? "OVER_BUDGET" : "PASS";
+  const status =
+    [!childOk && "FAIL", overBudget && "OVER_BUDGET"].filter(Boolean).join("+") || "PASS";
   const ok = childOk && !overBudget;
   const elapsedDisplay =
     overBudget && exactS.toFixed(2) === budgetS.toFixed(2) ? exactS.toFixed(3) : exactS.toFixed(2);
@@ -90,16 +91,11 @@ export function runWithBudget(
       appendFileSync(summaryPath, formatSummaryRow(result));
     } catch {}
   }
-  if (!result.ok) {
-    if (result.overBudget && result.exitCode === 0 && !result.signal) {
-      errLog(
-        `budget[${result.label}]: exceeded budget (${result.elapsedDisplay}s > ${result.budgetS}s)`,
-      );
-      return { exit: 1, result };
-    }
-    return { exit: result.exitCode || 1, result };
-  }
-  return { exit: 0, result };
+  if (result.overBudget)
+    errLog(
+      `budget[${result.label}]: exceeded budget (${result.elapsedDisplay}s > ${result.budgetS}s)`,
+    );
+  return { exit: result.ok ? 0 : result.exitCode || 1, result };
 }
 
 if (isMain(import.meta.url)) {

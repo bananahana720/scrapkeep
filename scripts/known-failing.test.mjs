@@ -603,6 +603,8 @@ test("the summary line says whether a failing run's only reds are known reds on 
     "when every run of the test in the invocation (its first run, in a warm batch or alone, the run alone after a batch, and the rerun) qualifies on its own",
     "an error line anywhere in the batch counts against every red test of it",
     "the ledger check refuses a star, `ERROR-LINE` or `TIME-OUT` in it",
+    "`budget[godot-affected]: <seconds>s / 900s (<status>)`",
+    "`FAIL+OVER_BUDGET` for a run that failed and also ran past its budget",
   ])
     assert.ok(gate.includes(stated), `GATE.md states ${stated}`);
   assert.doesNotMatch(gate, /does not fail the job/);
