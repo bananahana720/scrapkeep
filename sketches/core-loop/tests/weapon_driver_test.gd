@@ -268,7 +268,8 @@ func _check_structural_boundaries() -> void:
 	var driver_src := SourceScan.text(_t, "res://src/combat/weapon_driver.gd")
 	_t.check("weapon_driver.gd has zero static vars", not driver_src.contains("static var "), "")
 	for combat_path in ["res://src/combat/combat.gd", "res://src/combat/hero_hooks.gd", "res://src/combat/consumable_runtime.gd",
-			"res://src/combat/tally_kit.gd", "res://src/combat/cannon_kit.gd", "res://src/combat/micro_mutations.gd"]:
+			"res://src/combat/tally_kit.gd", "res://src/combat/cannon_kit.gd", "res://src/combat/micro_mutations.gd",
+			"res://src/combat/grapple_mutations.gd"]:
 		var combat_src := SourceScan.text(_t, combat_path)
 		_t.check("%s is read and never reaches into weapon_driver private members" % combat_path.get_file(), combat_src != "" and not combat_src.contains("weapon_driver._"), "")
 	var bot_src := SourceScan.text(_t, "res://tools/bot_driver.gd")

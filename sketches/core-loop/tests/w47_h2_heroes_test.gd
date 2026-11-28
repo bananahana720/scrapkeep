@@ -460,6 +460,7 @@ func _test_hygiene_and_resets() -> void:
 		"res://src/combat/consumable_runtime.gd",
 		"res://src/combat/tally_kit.gd",
 		"res://src/combat/cannon_kit.gd",
+		"res://src/combat/grapple_mutations.gd",
 	]
 	var orb_hits: Array = []
 	for path in orb_files:
