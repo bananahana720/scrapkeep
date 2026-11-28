@@ -697,6 +697,24 @@ export function failedRunLogName(test, where, attempt) {
     .replaceAll("/", "__")}.${where}-${attempt}.log`;
 }
 
+const SHA = /^[0-9a-f]{40}$/;
+
+export function nothingCompared({ head, comparedTo, base, pre = [], namedMode, baseCheck }) {
+  if (!SHA.test(head ?? "") || !SHA.test(comparedTo ?? ""))
+    throw new TypeError(
+      `nothingCompared needs the full SHA of the head and of the commit it compares against; got "${head}" and "${comparedTo}"`,
+    );
+  if (typeof base !== "string" || base === "")
+    throw new TypeError("nothingCompared needs the --base ref");
+  if (typeof namedMode !== "boolean" || typeof baseCheck !== "boolean")
+    throw new TypeError("nothingCompared needs namedMode and baseCheck as true or false");
+  if (namedMode && !baseCheck)
+    return `Nothing compared: --test without --base-check runs the named tests on the head ${head.slice(0, 8)} alone and checks out no base, so a test red on the head gets no base verdict.`;
+  if (comparedTo !== head) return null;
+  const plus = pre.length ? ` plus ${pre.map((pr) => "#" + pr).join(", ")}` : "";
+  return `Nothing compared: ${base}${plus} already contains the head ${head.slice(0, 8)}, so the commit it compares against is the head itself: no file counts as changed and a test red on the head is red on that base too.`;
+}
+
 export function receiptBaseName(label, head, startedAt) {
   return runnerReceiptBaseName(label, head, startedAt);
 }
@@ -1047,6 +1065,15 @@ async function main() {
     : git(["diff", "--name-only", diffBase, "HEAD"]).split("\n").filter(Boolean);
   const changed = classify(changedPaths);
   receipt.diff_base = diffBase;
+  receipt.nothing_compared = nothingCompared({
+    head: headSha,
+    comparedTo: diffBase,
+    base: options.base,
+    pre: options.pre,
+    namedMode,
+    baseCheck: options.baseCheck,
+  });
+  if (receipt.nothing_compared) log(`sketch:fast: ${receipt.nothing_compared}`);
   receipt.pre = options.pre;
   receipt.changed = changedPaths.length;
   if (options.ciGodotOnly) receipt.ci_godot_only = true;
@@ -1060,7 +1087,7 @@ async function main() {
     );
     log(`receipt ${file}`);
     log(
-      `sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.`,
+      `sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.${receipt.nothing_compared ? ` ${receipt.nothing_compared}` : ""}`,
     );
     process.exit(code ?? (receipt.ok ? 0 : 1));
   };

@@ -65,6 +65,7 @@ import {
   checkLabels,
   removedChecks,
   checksRemoved,
+  nothingCompared,
 } from "./sketch-fast.mjs";
 import { IMPORT_TRIES, importTry, importWithRetry, scriptErrorCount } from "./sketch-smoke.mjs";
 import { cwdDecidesRepository, git } from "./lib/git.mjs";
@@ -1345,6 +1346,67 @@ test("the scratch checkout of --pre is gone after an unmatched --test, a plan-on
         `${label}: git worktree list still names the scratch checkout`,
       );
     }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("nothingCompared names a base that already contains the head and the --test form with no base, and stays quiet once the head has merged the base", () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-fast-shapes-"));
+  try {
+    const run = (...args) => git(args, { cwd: dir });
+    run("init", "-q", "-b", "main");
+    run("config", "user.email", "test@example.invalid");
+    run("config", "user.name", "Test");
+    run("config", "commit.gpgsign", "false");
+    const commit = (file) => {
+      writeFileSync(path.join(dir, file), file);
+      run("add", file);
+      run("commit", "-q", "-m", file);
+    };
+    commit("a");
+    run("switch", "-q", "-c", "feat");
+    commit("f");
+    run("switch", "-q", "main");
+    commit("b");
+    run("switch", "-q", "feat");
+    run("merge", "-q", "--no-edit", "main");
+    const head = run("rev-parse", "HEAD");
+    const ask = (more) => ({ head, base: "main", namedMode: false, baseCheck: true, ...more });
+
+    const mergedBase = run("merge-base", "main", "HEAD");
+    assert.notEqual(mergedBase, head);
+    assert.equal(nothingCompared(ask({ comparedTo: mergedBase })), null);
+
+    run("switch", "-q", "main");
+    run("merge", "-q", "--no-edit", "feat");
+    run("switch", "-q", "feat");
+    const containing = run("merge-base", "main", "HEAD");
+    assert.equal(containing, head);
+    assert.equal(
+      nothingCompared(ask({ comparedTo: containing })),
+      `Nothing compared: main already contains the head ${head.slice(0, 8)}, so the commit it compares against is the head itself: no file counts as changed and a test red on the head is red on that base too.`,
+    );
+    assert.match(
+      nothingCompared(ask({ comparedTo: containing, namedMode: true, pre: ["12", "34"] })),
+      /^Nothing compared: main plus #12, #34 already contains the head /,
+    );
+    assert.equal(
+      nothingCompared(ask({ comparedTo: head, namedMode: true, baseCheck: false })),
+      `Nothing compared: --test without --base-check runs the named tests on the head ${head.slice(0, 8)} alone and checks out no base, so a test red on the head gets no base verdict.`,
+    );
+
+    for (const bad of [
+      { comparedTo: undefined },
+      { comparedTo: "" },
+      { comparedTo: head.slice(0, 8) },
+      { comparedTo: head, head: undefined },
+      { comparedTo: head, base: "" },
+      { comparedTo: head, base: undefined },
+      { comparedTo: head, namedMode: undefined },
+      { comparedTo: head, baseCheck: "yes" },
+    ])
+      assert.throws(() => nothingCompared(ask(bad)), TypeError, JSON.stringify(bad));
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
