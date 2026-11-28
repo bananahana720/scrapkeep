@@ -12,9 +12,16 @@ unit whose writer brief predates this folder, pass an earlier review brief of
 the unit instead; its "What the unit was asked to do" section is copied.
 Safe to rerun: it overwrites the one file it writes, review-<unit>-<head7>.md,
 beside the writer briefs.
+
+It refuses to write when a SHA is not real: <head SHA> must be the tip of
+origin/<branch>, <base SHA> and <gate tip SHA> must be commits, the gate tip
+must be on origin/entropy/gate, and every 40-character hex string in the extra
+checks file must name an object in this repository. Run `git fetch origin`
+first. Copy SHAs from `git rev-parse`; never type or complete one from memory.
 """
 import pathlib
 import re
+import subprocess
 import sys
 
 unit, pr, branch, head, base, gate, brief = sys.argv[1:8]
@@ -22,6 +29,20 @@ extra = pathlib.Path(sys.argv[8]).read_text().strip() if len(sys.argv) > 8 else 
 extra = extra.replace("HEAD_SHA", head).replace("BASE_SHA", base).replace("GATE_SHA", gate)
 for sha in (head, base, gate):
     assert re.fullmatch(r"[0-9a-f]{40}", sha), f"not a full SHA: {sha}"
+
+
+def git_ok(*args):
+    return subprocess.run(["git", *args], capture_output=True, text=True)
+
+
+tip = git_ok("rev-parse", "--verify", "--quiet", f"refs/remotes/origin/{branch}^{{commit}}")
+assert tip.returncode == 0, f"origin/{branch} does not exist here; run git fetch origin"
+assert tip.stdout.strip() == head, f"head {head} is not the tip of origin/{branch}, which is {tip.stdout.strip()}"
+for name, sha in (("base", base), ("gate tip", gate)):
+    assert git_ok("cat-file", "-e", f"{sha}^{{commit}}").returncode == 0, f"{name} {sha} is not a commit in this repository"
+assert git_ok("merge-base", "--is-ancestor", gate, "refs/remotes/origin/entropy/gate").returncode == 0, f"gate tip {gate} is not on origin/entropy/gate"
+unknown = sorted(sha for sha in set(re.findall(r"(?<![0-9a-f])[0-9a-f]{40}(?![0-9a-f])", extra)) if git_ok("cat-file", "-e", sha).returncode != 0)
+assert not unknown, "the extra checks file names SHAs that are not objects in this repository: " + ", ".join(unknown)
 
 text = pathlib.Path(brief).read_text()
 asked = re.search(r"^## The unit\n(.*?)(?=^## (Checks|Hand in|Report)\b)", text, re.S | re.M) or re.search(
