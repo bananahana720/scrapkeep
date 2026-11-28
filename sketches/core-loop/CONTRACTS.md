@@ -344,7 +344,7 @@ At every death and at the end of a run, the spine appends one cumulative record 
 
 The record comes from bus signals and run state only. Records are cumulative and a run with retries writes several, so a reader takes the last line per `run_id`. Within a stage record, `deaths` accumulate across retries, and `ticks_to_warden_break` is the latest attempt's. A run that moved on since its last line and is then left, because a new run starts or the game closes, gets one last line with outcome `abandoned` and `abandoned_in` (`stage` or `arena`); that line and the `arena` block are how a reader sees a run that stopped in the arena or mid-stage.
 
-## UI regions (`src/ui/screen_regions.gd`)
+## UI regions (`src/core/screen_regions.gd`)
 
 During play the screen is four horizontal bands, as shares of the visible height, and nothing drawn in one band reaches another:
 

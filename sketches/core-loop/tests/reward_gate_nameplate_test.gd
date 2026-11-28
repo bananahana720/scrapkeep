@@ -25,7 +25,7 @@ const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Icons := preload("res://src/core/icons.gd")
 const Workshop := preload("res://src/ui/workshop.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 
 const FRAMES := 120
 # The project's canvas is 1600x900; a 1280x720 window draws it at 0.8.

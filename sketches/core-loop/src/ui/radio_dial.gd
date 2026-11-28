@@ -3,7 +3,7 @@ extends Control
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/core/ui_tokens.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const Radio := preload("res://src/core/radio.gd")
 const Glyphs := preload("res://src/core/glyphs.gd")

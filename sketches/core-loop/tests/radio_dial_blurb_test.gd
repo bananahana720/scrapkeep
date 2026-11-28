@@ -2,7 +2,7 @@ extends SceneTree
 
 const RadioDial := preload("res://src/ui/radio_dial.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
 const UiTokens := preload("res://src/core/ui_tokens.gd")
 

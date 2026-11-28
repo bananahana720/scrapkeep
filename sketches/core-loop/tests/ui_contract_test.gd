@@ -12,7 +12,7 @@ const Objectives := preload("res://src/core/objectives.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
 const Parts := preload("res://src/build/parts.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 # Every kind the HUD toasts (ruling cx: a Warden break, a rout and a core toast no longer all fire).
 const EXPECTED_TOASTS: Array[String] = ["run_ended", "player_died", "milestone_won", "scrap_lost", "core_gained", "event_announced", "event_ended", "boss_phase_changed"]

@@ -12,7 +12,7 @@ const Icons := preload("res://src/core/icons.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
 const ActiveOffers := preload("res://src/combat/actives/active_offers.gd")
 const ActiveDefs := preload("res://src/combat/actives/active_defs.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 
 

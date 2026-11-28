@@ -8,7 +8,7 @@ const UiFonts := preload("res://src/core/ui_fonts.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
 const PilotStory := preload("res://src/core/pilot_story.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
 

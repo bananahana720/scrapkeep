@@ -76,7 +76,7 @@ func _process(_delta: float) -> bool:
 		4:
 			var rect: Rect2 = _banner._panel.get_global_rect()
 			var screen: Vector2 = _banner.get_viewport_rect().size
-			var ScreenRegions = load("res://src/ui/screen_regions.gd")
+			var ScreenRegions = load("res://src/core/screen_regions.gd")
 			var top: Rect2 = ScreenRegions.rect("top", screen)
 			var prompts: Rect2 = ScreenRegions.rect("prompts", screen)
 			var band: Rect2 = ScreenRegions.rect("toasts", screen)

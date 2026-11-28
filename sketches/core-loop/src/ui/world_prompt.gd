@@ -1,6 +1,6 @@
 extends Label
 
-const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const ScreenRegions := preload("res://src/core/screen_regions.gd")
 const UiTokens := preload("res://src/core/ui_tokens.gd")
 const Icons := preload("res://src/core/icons.gd")
 const UiFonts := preload("res://src/core/ui_fonts.gd")
