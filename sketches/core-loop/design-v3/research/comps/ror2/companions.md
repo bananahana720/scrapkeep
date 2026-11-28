@@ -95,11 +95,11 @@ Community evidence matches the table. A 2019 thread says equipment drones stoppe
 
 Principle: **opt-in layers** (a crew the player may ignore but is rewarded for building) with **readability first** (every crew action has its own sound and silhouette).
 
-**Bible decision, closed.** `BIBLE.md:566-575`, section "Devices and one main companion", said one main companion anchors the run's support build and that temporary helpers "do not establish a second companion management roster". Andrew chose the crew on 10 October 2026; the section is amended in place and `adr/TADR-011-scrap-bot-crew.md` records the decision. The crew proposal below is the direction that ADR carries; its numbers stay proposals.
+**Bible decision, closed.** `BIBLE.md:566-575`, section "Devices and one main companion", said one main companion anchors the run's support build and that temporary helpers "do not establish a second companion management roster". Andrew chose the crew on 10 October 2026; the section is amended in place and `adr/TADR-013-scrap-bot-crew.md` records the decision. The crew proposal below is the direction that ADR carries; its numbers stay proposals.
 
 **Two mappings of the RoR2 code onto that section.**
 - **Devices.** The Bible leaves Devices' capacity, lifetime, recall and persistence open. RoR2's deployable slots answer those: capacity is the per-kind slot limit (2, 2, 3 and 4 in the table above), lifetime and refill are the 30 s spawner, recall is the leash teleport, and persistence is the deployable removed from the owner's list on destruction. Devices can take these as quick, autonomous, capped deployables without becoming a roster.
-- **The companion.** Ownership, the leash, item inheritance, the skill-driver list and repair (the whole architecture above) map onto the main companion, and onto the crew, which TADR-011 adopted.
+- **The companion.** Ownership, the leash, item inheritance, the skill-driver list and repair (the whole architecture above) map onto the main companion, and onto the crew, which TADR-013 adopted.
 
 Everything below is a proposal. Evidence supports the architecture (ownership, leash, driver list, stacking curve). The crew itself, the repair cost, the bark system and the growth curve are design inference.
 

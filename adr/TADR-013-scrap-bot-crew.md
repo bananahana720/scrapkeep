@@ -1,4 +1,4 @@
-# TADR-011. The scrap-bot crew
+# TADR-013. The scrap-bot crew
 
 > **Alpha scope note:** [DECISIONS.md](../project-guide/handoff/DECISIONS.md) (17 Oct 2026) deferred the multi-bot crew until after alpha in favour of one growing `SPIL-9` companion.
 

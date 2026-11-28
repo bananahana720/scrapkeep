@@ -10,8 +10,6 @@ Reference copies that units read. The local Mac Studio coordinator owns them (`r
 | [alpha-status/intent-check/METHOD.md](alpha-status/intent-check/METHOD.md) | The every-park intentionality check. Its script is [scorecard.py](alpha-status/intent-check/scorecard.py) |
 | [gate/BOT-SHARDS.md](gate/BOT-SHARDS.md) | Historical wave 18–21 `#241` cloud bot-shard split (superseded by [GATE.md](../GATE.md)) |
 | [ways-of-working/rieseberg-ambition-article.md](ways-of-working/rieseberg-ambition-article.md) | The article behind the ambition brief |
-| [tone/TONE-BIBLE.md](tone/TONE-BIBLE.md) | Pointer to the tone bible in `design-v3/` |
-| [music/SOUND-BIBLE.md](music/SOUND-BIBLE.md) | Pointer to the sound bible in `design-v3/` |
 | [world1/map-audit.md](world1/map-audit.md) | World 1 against the ten map points (ruling ct), and the check for each point |
 | [world1/difficulty-plan.md](world1/difficulty-plan.md) | Where each skill band stands, the levers that raise difficulty through movement (ruling cu), and how each is measured |
 | [world1/transitions-audit.md](world1/transitions-audit.md) | Every hand-over in a world 1 run (ruling cv): what the player leaves, what they arrive in, and the fix for each |
