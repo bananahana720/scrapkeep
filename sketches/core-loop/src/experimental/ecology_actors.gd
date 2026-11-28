@@ -118,10 +118,6 @@ var _clock := 0.0
 var _reaction_callable: Callable = Callable()
 
 
-static func reset() -> void:
-	pass
-
-
 func _init(env_tags_ref: RefCounted = null) -> void:
 	env_tags = env_tags_ref if env_tags_ref != null else EnvTags.new()
 	var self_ref: WeakRef = weakref(self)

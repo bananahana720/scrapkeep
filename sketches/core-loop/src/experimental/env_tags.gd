@@ -261,10 +261,6 @@ var _stats := {
 }
 
 
-static func reset() -> void:
-	pass
-
-
 static func is_canonical_tag(tag: StringName) -> bool:
 	return CANONICAL_TAGS.has(tag)
 

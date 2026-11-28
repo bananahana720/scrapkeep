@@ -90,7 +90,6 @@ func run(t) -> void:
 		"res://src/presentation/mix_rows.gd",
 		"res://src/presentation/audio.gd",
 		"res://src/presentation/music_dsp.gd",
-		"res://src/presentation/craft/craft_audio_cues.gd",
 	]
 	var bus_const_allowed := ["res://src/presentation/mix_rows.gd"]
 	var ace_root_allowed := ["res://src/presentation/music_rows.gd"]
