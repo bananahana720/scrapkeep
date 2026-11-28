@@ -463,14 +463,13 @@ static func _moss_call(text: String) -> Array:
 	return [blips, CALL_TALK_S + float(laid[1])]
 
 
-static func _say(speaker: String, text: String, step := -1, shift := 0) -> PackedFloat32Array:
+static func _say(speaker: String, text: String, step := Harmony.STEP, shift := 0) -> PackedFloat32Array:
 	var clip := voice_clip_path(speaker, text)
 	if clip != "":
 		var loaded := load_voice_wav(clip)
 		if not loaded.is_empty():
 			return loaded
-	var use_step := Synth.score_step if step < 0 else step
-	var plan := _say_plan(speaker, text, use_step)
+	var plan := _say_plan(speaker, text, step)
 	var row := _caller(speaker)
 	var buf := Synth.buffer(roundi((float(plan[1]) + 0.3) * Harmony.RATE))
 	for blip in plan[0]:

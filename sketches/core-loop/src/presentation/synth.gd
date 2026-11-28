@@ -8,14 +8,7 @@ const INV_RATE := 1.0 / Harmony.RATE
 
 static var _notes := {}
 static var _lock := Mutex.new()
-static var score_step := Harmony.STEP
-static var score_transpose := 0
 const HOLD := 90000
-
-
-static func reset_for_tests() -> void:
-	score_step = Harmony.STEP
-	score_transpose = 0
 
 
 static func _cached(key: String) -> Variant:
@@ -925,8 +918,7 @@ static func choke() -> PackedFloat32Array:
 	return declick(normalize(buf, 0.7), 4, 64)
 
 
-static func render_score(score: Array, tail_seconds := 1.0) -> PackedFloat32Array:
-	var step := score_step
+static func render_score(score: Array, tail_seconds := 1.0, step := Harmony.STEP, transpose := 0) -> PackedFloat32Array:
 	var last := 0
 	for event in score:
 		last = maxi(last, (int(event[0]) + int(event[2])) * step)
@@ -938,7 +930,7 @@ static func render_score(score: Array, tail_seconds := 1.0) -> PackedFloat32Arra
 		if instrument in DRUMS:
 			add_into(buf, drum(instrument), start, gain)
 			continue
-		var source := note(instrument, int(event[1]) + score_transpose)
+		var source := note(instrument, int(event[1]) + transpose)
 		var length := mini(source.size(), int(event[2]) * step + seconds(0.25))
 		var count := mini(length, buf.size() - start)
 		var release := mini(1200, count)
