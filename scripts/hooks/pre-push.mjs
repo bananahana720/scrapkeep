@@ -102,6 +102,7 @@ export function pushedChanges(ranges, { cwd = root, spawn = spawnSync } = {}) {
       head: range.localSha,
       files,
       exists,
+      modes: tree,
     };
   });
 }
@@ -116,7 +117,22 @@ export function workingTreeDrift(pushed, { cwd = root, spawn = spawnSync } = {})
   return [...differs].sort();
 }
 
-export function readPushedFiles(head, files, { cwd = root, spawn = spawnSync } = {}) {
+const REGULAR_FILE = new Set(["100644", "100755"]);
+const MODE_NAMES = { 120000: "a symbolic link", 160000: "a submodule" };
+
+export function readPushedFiles(head, files, { modes, cwd = root, spawn = spawnSync } = {}) {
+  if (!(modes instanceof Map))
+    throw new Error("readPushedFiles needs the pushed tree's file modes");
+  for (const file of files) {
+    if (/[\n\r]/.test(file))
+      throw new Error(`cannot ask git for ${JSON.stringify(file)}: the path holds a line break`);
+    const mode = modes.get(file);
+    if (mode === undefined) throw new Error(`${head}:${file} is not in the pushed tree`);
+    if (!REGULAR_FILE.has(mode))
+      throw new Error(
+        `${head}:${file} has mode ${mode}${MODE_NAMES[mode] ? ` (${MODE_NAMES[mode]})` : ""}; the hook checks only regular files (100644, 100755)`,
+      );
+  }
   const input = Buffer.from(files.map((file) => `${head}:${file}\n`).join(""));
   const out = git(["cat-file", "--batch"], {
     cwd,
@@ -185,7 +201,7 @@ export function executeHookPlan(
     spawn = spawnSync,
     ensureModules = ensureNodeModules,
     errLog = console.error,
-    readPushed = (head, files) => readPushedFiles(head, files, { cwd, spawn }),
+    readPushed = (head, files, modes) => readPushedFiles(head, files, { modes, cwd, spawn }),
     readBaseline = (ref) => readBaselineAt(ref, { cwd }),
     drift = () => [],
   } = {},
@@ -209,7 +225,7 @@ export function executeHookPlan(
       for (const plan of scripted) {
         const copy = mkdtempSync(path.join(os.tmpdir(), "pre-push-"));
         try {
-          const contents = readPushed(plan.head, plan.jsFiles);
+          const contents = readPushed(plan.head, plan.jsFiles, plan.modes);
           plan.jsFiles.forEach((file, i) => {
             mkdirSync(path.dirname(path.join(copy, file)), { recursive: true });
             writeFileSync(path.join(copy, file), contents[i]);

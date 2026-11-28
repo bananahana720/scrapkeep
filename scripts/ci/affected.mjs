@@ -95,7 +95,7 @@ export function diffFiles(baseRef, { cwd = process.cwd(), spawn = spawnSync } = 
 
 export function treeFiles(ref, { cwd = process.cwd(), spawn = spawnSync, env = process.env } = {}) {
   if (typeof ref !== "string" || ref === "") throw new Error("treeFiles needs a commit");
-  const ran = spawn("git", ["ls-tree", "-r", "-z", "--name-only", ref], {
+  const ran = spawn("git", ["ls-tree", "-r", "-z", ref], {
     cwd,
     env,
     encoding: "utf8",
@@ -106,7 +106,14 @@ export function treeFiles(ref, { cwd = process.cwd(), spawn = spawnSync, env = p
       `git ls-tree ${ref} failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
     );
   }
-  const files = new Set(ran.stdout.split("\0").filter(Boolean));
+  const files = new Map();
+  for (const entry of ran.stdout.split("\0").filter(Boolean)) {
+    const tab = entry.indexOf("\t");
+    const mode = entry.slice(0, tab).split(" ")[0];
+    if (tab < 0 || !/^\d{6}$/.test(mode))
+      throw new Error(`git ls-tree ${ref} gave an entry it cannot read: ${JSON.stringify(entry)}`);
+    files.set(entry.slice(tab + 1), mode);
+  }
   if (files.size === 0) throw new Error(`git ls-tree ${ref} lists no files`);
   return files;
 }

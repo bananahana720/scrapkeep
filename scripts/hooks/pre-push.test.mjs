@@ -1,7 +1,15 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { treeFiles } from "../ci/affected.mjs";
@@ -484,8 +492,11 @@ test("the push reader fails when it cannot read the push", () => {
     /git ls-tree [0-9a-f]+ lists no files/,
   );
   assert.throws(
-    () => runPushed(work, [{ jsFiles: ["scripts/absent.mjs"], head: base }]),
-    /git cat-file cannot show [0-9a-f]+:scripts\/absent\.mjs: [0-9a-f]+:scripts\/absent\.mjs missing/,
+    () =>
+      runPushed(work, [
+        { jsFiles: ["scripts/absent.mjs"], head: base, modes: treeFiles(base, { cwd: work }) },
+      ]),
+    /[0-9a-f]+:scripts\/absent\.mjs is not in the pushed tree/,
   );
   assert.throws(
     () =>
@@ -498,6 +509,7 @@ test("readPushedFiles reads every pushed file with one git process and stops on 
   const { work, g, write } = pushRepo();
   write("scripts/a.mjs", "export const a = 1;\n");
   write("scripts/b.mjs", "no newline at the end");
+  chmodSync(path.join(work, "scripts/b.mjs"), 0o755);
   g("add", "scripts");
   g("commit", "-qm", "two scripts");
   const head = g("rev-parse", "HEAD");
@@ -508,15 +520,35 @@ test("readPushedFiles reads every pushed file with one git process and stops on 
     return spawnSync(cmd, args, options);
   };
   const files = ["scripts/a.mjs", "scripts/b.mjs", "scripts/kept.mjs"];
-  assert.deepEqual(readPushedFiles(head, files, { cwd: work, spawn: counted }).map(String), [
+  const modes = treeFiles(head, { cwd: work });
+  assert.equal(modes.get("scripts/b.mjs"), "100755");
+  assert.deepEqual(readPushedFiles(head, files, { modes, cwd: work, spawn: counted }).map(String), [
     "export const a = 1;\n",
     "no newline at the end",
     "export const kept = 1;\n",
   ]);
   assert.equal(gits, 1);
   assert.throws(
-    () => readPushedFiles(head, ["scripts"], { cwd: work }),
-    /git cat-file cannot show [0-9a-f]+:scripts: [0-9a-f]+ tree \d+/,
+    () => readPushedFiles(head, files, { cwd: work }),
+    /readPushedFiles needs the pushed tree's file modes/,
+  );
+  assert.throws(
+    () => readPushedFiles(head, ["scripts"], { modes, cwd: work }),
+    /[0-9a-f]+:scripts is not in the pushed tree/,
+  );
+  const unasked = () => assert.fail("git was asked");
+  for (const file of ["scripts/a\nb.mjs", "scripts/a\rb.mjs"])
+    assert.throws(
+      () => readPushedFiles(head, [file], { modes: new Map([[file, "100644"]]), spawn: unasked }),
+      /cannot ask git for "scripts\/a\\[nr]b\.mjs": the path holds a line break/,
+    );
+  assert.throws(
+    () =>
+      readPushedFiles(head, ["scripts/sub.mjs"], {
+        modes: new Map([["scripts/sub.mjs", "160000"]]),
+        spawn: unasked,
+      }),
+    /scripts\/sub\.mjs has mode 160000 \(a submodule\); the hook checks only regular files/,
   );
   const reply = (stdout) => () => ({
     status: 0,
@@ -526,9 +558,31 @@ test("readPushedFiles reads every pushed file with one git process and stops on 
   const cases = [
     [null, /gave no output/],
     ["", /cannot show h:x: no reply/],
+    ["h:x missing\n", /cannot show h:x: h:x missing/],
+    ["abc tree 3\nabc\n", /cannot show h:x: abc tree 3/],
     ["abc blob 10\nshort\n", /cut h:x short/],
     ["abc blob 2\nhi\nextra", /gave more than was asked/],
   ];
   for (const [stdout, error] of cases)
-    assert.throws(() => readPushedFiles("h", ["x"], { spawn: reply(stdout) }), error);
+    assert.throws(
+      () =>
+        readPushedFiles("h", ["x"], { modes: new Map([["x", "100644"]]), spawn: reply(stdout) }),
+      error,
+    );
+});
+
+test("a pushed link at a script path stops the hook, naming the path and its mode", () => {
+  const { work, g, base } = pushRepo();
+  symlinkSync("kept.mjs", path.join(work, "scripts/alias.mjs"));
+  g("add", "scripts/alias.mjs");
+  g("commit", "-qm", "a link where a script goes");
+  const head = g("rev-parse", "HEAD");
+  const pushed = pushedChanges([{ localSha: head, remoteSha: base }], { cwd: work });
+  assert.deepEqual(pushed[0].jsFiles, ["scripts/alias.mjs"]);
+  assert.throws(
+    () => runPushed(work, pushed),
+    new RegExp(
+      `^Error: ${head}:scripts/alias\\.mjs has mode 120000 \\(a symbolic link\\); the hook checks only regular files`,
+    ),
+  );
 });
