@@ -15,7 +15,7 @@ const NO_INDEX := "none"
 const TOLERANCE := {
 	Mesh.ARRAY_VERTEX: 0.0001,
 	Mesh.ARRAY_NORMAL: 0.0001,
-	Mesh.ARRAY_TANGENT: 0.01,
+	Mesh.ARRAY_TANGENT: 0.003,
 	Mesh.ARRAY_COLOR: 0.0001,
 	Mesh.ARRAY_TEX_UV: 0.0001,
 	Mesh.ARRAY_TEX_UV2: 0.0001,
@@ -97,7 +97,6 @@ func _initialize() -> void:
 	for a in SUMMED:
 		spread.append("array %d %.9f of %s" % [a, worst.get(a, 0.0), TOLERANCE[a]])
 	print("mesh_census: largest sum difference from the pin on %s: %s" % [platform(), ", ".join(spread)])
-	_t.check("temporary: off the recording platform this fails so the log shows the line above", mode == "exact", ", ".join(spread))
 	_check_real_changes_fail(got, meshes, pin_text, mode)
 	quit(_t.verdict())
 
