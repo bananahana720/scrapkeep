@@ -656,8 +656,8 @@ func _stock() -> Array:
 	var floor_pick: Array = [set_pick] if set_pick != "" else (
 		Parts.roll_high_impact(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1, [], {}, stage, false)
 		if deep_world else Parts.roll(_rng, FLOOR_RARITIES, ctx.run.class_id(), ctx.run.parts, 1))
-	var picks: Array = Parts.roll_for_stage(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
-		SHELF_SIZE - floor_pick.size(), stage, floor_pick) if deep_world \
+	var picks: Array = PartOffers.roll_for_stage(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts,
+		SHELF_SIZE - floor_pick.size(), stage, floor_pick, {}, false, Parts.offer_ops()) if deep_world \
 		else Parts.roll(_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, SHELF_SIZE - floor_pick.size(), floor_pick)
 	var out: Array = []
 	for part_id in floor_pick:
@@ -867,7 +867,7 @@ func press_duplicate(target_part_id: String) -> Dictionary:
 
 func _stock_tri_terminal() -> Array:
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
-	var picks: Array = Parts.roll_for_stage(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE, stage) \
+	var picks: Array = PartOffers.roll_for_stage(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE, stage, [], {}, false, Parts.offer_ops()) \
 		if stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 		else Parts.roll(_tri_rng, SHELF_RARITIES, ctx.run.class_id(), ctx.run.parts, TRI_TERMINAL_SIZE)
 	var out: Array = []

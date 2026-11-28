@@ -8,7 +8,6 @@ var air_draw_left := Augments.KEST_AIR_DRAW_MAX_S
 var _wall_kick_faces := {}
 var wall_aim := {}
 var last_wall_kick := {}
-var last_spire_vault := {}
 
 
 func reset() -> void:
@@ -17,7 +16,6 @@ func reset() -> void:
 	_wall_kick_faces.clear()
 	wall_aim = {}
 	last_wall_kick = {}
-	last_spire_vault = {}
 
 
 func on_fit_class() -> void:
@@ -37,7 +35,6 @@ func apply_spire_vault(player, anchor: Vector3) -> bool:
 	player.body().set_velocity_now(v)
 	air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 	player.state.air_actions = maxi(player.state.air_actions, 1)
-	last_spire_vault = {"anchor": anchor, "vy": v.y}
 	return true
 
 
@@ -93,4 +90,4 @@ func step_wall_kick(player) -> Dictionary:
 	air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 	player.body().set_velocity_now(launch)
 	last_wall_kick = {"point": face["point"], "normal": n, "velocity": launch}
-	return last_wall_kick
+	return last_wall_kick.duplicate()

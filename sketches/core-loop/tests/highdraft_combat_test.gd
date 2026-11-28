@@ -498,7 +498,7 @@ func _check_full_alpha_and_brindle_cobalt() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 42
 	var picks := RewardGates.roll_cobalt_boss_picks(rng, "pylon_engineer", [], 2)
-	var all_rare: bool = picks.size() == 2 and picks.all(func(id): return Parts.rung_of(id) >= PartOffers.RUNG_FLOOR)
+	var all_rare: bool = picks.size() == 2 and picks.all(func(id): return PartOffers.rung_of(id, Parts.def) >= PartOffers.RUNG_FLOOR)
 	_t.check("RewardGates.roll_cobalt_boss_picks returns 2 guaranteed rare/cobalt parts",
 		all_rare, "picks=%s" % [str(picks)])
 
@@ -513,7 +513,7 @@ func _check_full_alpha_and_brindle_cobalt() -> void:
 	var has_offers: bool = _game.boss.brindle_cobalt_offers.size() == 2
 	var pending_id: String = String(_game.ctx.run.extra.get("brindle_cobalt_pending", ""))
 	_t.check("Brindle defeat on full-alpha run keeps admirals_crest and opens cobalt pick",
-		has_crest and has_offers and pending_id != "" and Parts.rung_of(pending_id) >= PartOffers.RUNG_FLOOR,
+		has_crest and has_offers and pending_id != "" and PartOffers.rung_of(pending_id, Parts.def) >= PartOffers.RUNG_FLOOR,
 		"crest=%s offers=%s pending=%s" % [str(has_crest), str(_game.boss.brindle_cobalt_offers), pending_id])
 	# Fallback settle grants the cobalt pick exactly once (idempotent on second call / Continue).
 	var count_before: int = _game.ctx.run.parts.size()

@@ -693,7 +693,7 @@ static func started_by(part_id: String, held: Array) -> String:
 	return Synergies.started_by(maker_counts(held), maker_of(part_id))
 
 
-static func _offer_ops() -> Dictionary:
+static func offer_ops() -> Dictionary:
 	return {
 		"all_rows": all_rows,
 		"row": row,
@@ -710,97 +710,23 @@ static func _offer_ops() -> Dictionary:
 	}
 
 
-static func completing_part(held: Array, pool: Array) -> String:
-	return PartOffers.completing_part(held, pool, maker_counts)
-
-
-static func floor_gate(rng: RandomNumberGenerator, picks: Array, class_id: String, held: Array,
-		offered: Dictionary = {}, count := 2) -> Array:
-	return PartOffers.floor_gate(rng, picks, class_id, held, offered, count, _offer_ops())
-
-
-static func changes_behaviour(part_id: String) -> bool:
-	return PartOffers.changes_behaviour(part_id, def)
-
-
-static func is_high_impact(part_id: String) -> bool:
-	return PartOffers.is_high_impact(part_id, def)
-
-
-static func rung_of(part_id: String) -> int:
-	return PartOffers.rung_of(part_id, def)
-
-
 static func offer_pool(class_id: String, rarities: Array) -> Array:
-	return PartOffers.offer_pool(class_id, rarities, _offer_ops())
+	return PartOffers.offer_pool(class_id, rarities, offer_ops())
 
 
 static func odds_for(rarities: Array, class_id: String) -> Array:
-	return PartOffers.odds_for(rarities, class_id, _offer_ops())
-
-
-static func bucket_of(part_id: String) -> String:
-	return PartOffers.bucket_of(part_id, row)
+	return PartOffers.odds_for(rarities, class_id, offer_ops())
 
 
 static func in_kit(class_id: String, part_id: String) -> bool:
 	return PartOffers.in_kit(class_id, part_id, row)
 
 
-static func slot_weights(rarity: String, class_id: String, pool: Array, offered: Dictionary,
-		nudge: Dictionary = {}) -> Dictionary:
-	return PartOffers.slot_weights(rarity, class_id, pool, offered, nudge, _offer_ops())
-
-
 static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
 		exclude: Array = [], offered: Dictionary = {}) -> Array:
-	return PartOffers.roll(rng, rarities, class_id, held, count, exclude, offered, _offer_ops())
-
-
-static func maker_nudge(held: Array, pool: Array) -> Dictionary:
-	return PartOffers.maker_nudge(held, pool, _offer_ops())
-
-
-static func _nudged(raw: Dictionary, nudge: Dictionary) -> Dictionary:
-	return PartOffers.nudged(raw, nudge, row)
-
-
-static func _weighted(rng: RandomNumberGenerator, bucket: Array, offered: Dictionary, lean: Dictionary = {},
-		nudge: Dictionary = {}) -> String:
-	return PartOffers.weighted(rng, bucket, offered, lean, nudge, row)
-
-
-static func _keep_a_neutral(rng: RandomNumberGenerator, class_id: String, picks: Array, pool: Array,
-		offered: Dictionary, first: int) -> void:
-	PartOffers.keep_a_neutral(rng, class_id, picks, pool, offered, first, _offer_ops())
-
-
-static func holds_pattern(held: Array) -> bool:
-	return PartOffers.holds_pattern(held, def)
-
-
-static func dominant_archetype(held: Array) -> String:
-	return PartOffers.dominant_archetype(held, maker_of)
-
-
-static func archetype_nudge(held: Array, pool: Array) -> Dictionary:
-	return PartOffers.archetype_nudge(held, pool, _offer_ops())
-
-
-static func completing_archetype_part(held: Array, pool: Array) -> String:
-	return PartOffers.completing_archetype_part(held, pool, _offer_ops())
-
-
-static func roll_for_stage(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
-		stage := 1, exclude: Array = [], offered: Dictionary = {}, high_impact := false) -> Array:
-	return PartOffers.roll_for_stage(rng, rarities, class_id, held, count, stage, exclude, offered, high_impact, _offer_ops())
+	return PartOffers.roll(rng, rarities, class_id, held, count, exclude, offered, offer_ops())
 
 
 static func roll_high_impact(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
 		exclude: Array = [], offered: Dictionary = {}, stage := 1, allow_pilot_relic := false, tree = null) -> Array:
-	return PartOffers.roll_high_impact(rng, rarities, class_id, held, count, exclude, offered, stage, allow_pilot_relic, tree, _offer_ops())
-
-
-static func roll_gate(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,
-		stage: int, offered: Dictionary = {}) -> Array:
-	return PartOffers.roll_gate(rng, rarities, class_id, held, count, stage, offered, _offer_ops())
+	return PartOffers.roll_high_impact(rng, rarities, class_id, held, count, exclude, offered, stage, allow_pilot_relic, tree, offer_ops())

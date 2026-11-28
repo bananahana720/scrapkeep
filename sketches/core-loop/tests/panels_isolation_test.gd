@@ -57,7 +57,7 @@ func _snapshot() -> Dictionary:
 	rng.seed = 41
 	var offers := []
 	for i in 40:
-		offers.append(Parts.roll_gate(rng, PartOffers.gate_rarities(0), _game.run.class_id(), _game.run.parts, 2, 1, {}))
+		offers.append(PartOffers.roll_gate(rng, PartOffers.gate_rarities(0), _game.run.class_id(), _game.run.parts, 2, 1, {}, Parts.offer_ops()))
 	var world = _game.ctx.root.get_node("World")
 	var spawned: Node3D = _game.ctx.spawner.spawn_enemy("chaser", _game.player.ball_position() + Vector3(30.0, 0.0, 30.0))
 	var enemy := {"max_hp": spawned.get("max_hp"), "damage": spawned.get("damage"), "contact_damage": spawned.get("contact_damage")}

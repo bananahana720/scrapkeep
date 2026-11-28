@@ -1159,7 +1159,7 @@ func active_offer_for_channel(source: String, rarities: Array, rng: RandomNumber
 	if ids.is_empty():
 		return ""
 	var base_share := float(ActiveOffers.SHARE.get(source, 0.0))
-	var spell_lean := Parts.dominant_archetype(ctx.run.parts) == "spell_cast"
+	var spell_lean := PartOffers.dominant_archetype(ctx.run.parts, Parts.maker_of) == "spell_cast"
 	var counted := maker_counts()
 	var set_ids: Array = []
 	for aid in ids:
@@ -1194,13 +1194,13 @@ func _on_flow_changed(state: String) -> void:
 	if call_met:
 		picks = Parts.roll_high_impact(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, [], _offered, stage, "relic" in rarities, tree)
 	elif stage >= PartOffers.WORLD_ESCALATION_STAGE_W2:
-		picks = Parts.roll_for_stage(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, [], _offered, false)
+		picks = PartOffers.roll_for_stage(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, [], _offered, false, Parts.offer_ops())
 	else:
-		picks = Parts.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, _offered)
-	picks = Parts.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES)
+		picks = PartOffers.roll_gate(gate_rng, rarities, _class_id(), ctx.run.parts, GATE_CHOICES, stage, _offered, Parts.offer_ops())
+	picks = PartOffers.floor_gate(gate_rng, picks, _class_id(), ctx.run.parts, _offered, GATE_CHOICES, Parts.offer_ops())
 	var quick: Array = []
 	if clock.quick_break():
-		quick = Parts.roll_for_stage(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, stage, picks, _offered, stage >= PartOffers.WORLD_ESCALATION_STAGE_W2) \
+		quick = PartOffers.roll_for_stage(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, stage, picks, _offered, stage >= PartOffers.WORLD_ESCALATION_STAGE_W2, Parts.offer_ops()) \
 			if stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 			else Parts.roll(_offer_rng("quick_break"), rarities, _class_id(), ctx.run.parts, 1, picks, _offered)
 		picks += quick

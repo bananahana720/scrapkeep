@@ -117,8 +117,8 @@ func _check_f004_one_slot_bait() -> void:
 	for a in plain:
 		for b in plain:
 			var hand: Array = [a, b]
-			var candidate: String = Parts.completing_part(hand, pool)
-			if candidate != "" and not candidate in PartOffers.PATTERN_PARTS and not Parts.holds_pattern(hand):
+			var candidate: String = PartOffers.completing_part(hand, pool, Parts.maker_counts)
+			if candidate != "" and not candidate in PartOffers.PATTERN_PARTS and not PartOffers.holds_pattern(hand, Parts.def):
 				held = hand
 				bait = candidate
 				break
@@ -137,7 +137,7 @@ func _check_f004_one_slot_bait() -> void:
 	rng.seed = seeded
 	var plain_one: Array = Parts.roll(rng, rarities, class_id, held, 1)
 	rng.seed = seeded
-	var gate: Array = Parts.roll_gate(rng, rarities, class_id, held, 1, PartOffers.PATTERN_GUARANTEE_STAGE)
+	var gate: Array = PartOffers.roll_gate(rng, rarities, class_id, held, 1, PartOffers.PATTERN_GUARANTEE_STAGE, {}, Parts.offer_ops())
 	_report("F004 one-slot gate keeps the bait", plain_one == [bait] and gate == [bait],
 		"held %s, seed %d: roll() gave %s (bait %s); stage-%d roll_gate with one slot gave %s, expected the bait kept"
 			% [held, seeded, plain_one, bait, PartOffers.PATTERN_GUARANTEE_STAGE, gate])

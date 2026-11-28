@@ -96,7 +96,7 @@ func _check(deep: bool) -> void:
 		var id: String = hook.get("part_id", "")
 		hooks.append(id)
 		var on_shelf: bool = shop.shelf.any(func(entry): return entry["part_id"] == id)
-		if id == "" or Parts.rung_of(id) < PartOffers.RUNG_FLOOR or Parts.rarity_of(id) != "rare" or on_shelf or id in run.parts \
+		if id == "" or PartOffers.rung_of(id, Parts.def) < PartOffers.RUNG_FLOOR or Parts.rarity_of(id) != "rare" or on_shelf or id in run.parts \
 				or hook["odds"] != Parts.odds_for(Shop.TOP_FALLBACK, who) or not hook["locked"] \
 				or hook["needs_class"] != run.heft_class() + 1:
 			bad.append("stage %d: %s" % [stage, hook])

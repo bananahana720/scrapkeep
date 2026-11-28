@@ -218,7 +218,7 @@ func _shelf() -> void:
 	for i in shop.shelf.size():
 		var entry: Dictionary = shop.shelf[i]
 		_t.check("shelf record %s carries its odds" % entry["part_id"], entry.has("odds") and _matches_row(entry["odds"], tables.call(i)), var_to_str(entry.get("odds", "none")))
-	_t.check("shelf slot 0 is cobalt or better", Parts.rung_of(shop.shelf[0]["part_id"]) >= PartOffers.RUNG_FLOOR, shop.shelf[0]["part_id"])
+	_t.check("shelf slot 0 is cobalt or better", PartOffers.rung_of(shop.shelf[0]["part_id"], Parts.def) >= PartOffers.RUNG_FLOOR, shop.shelf[0]["part_id"])
 	for offer in shop.shelf_offers():
 		var want := ItemGen.odds(tables.call(int(offer["index"])))
 		_t.eq("offer %d odds equal its table's" % offer["index"], offer.get("odds", []), want)
@@ -230,7 +230,7 @@ func _shelf() -> void:
 		_t.check("the top shelf carries the odds of the table it drew from", _matches_row(top.get("odds", []), _avail(table)), var_to_str(top.get("odds", "none")))
 	shop.reroll()
 	var rerolled := range(shop.shelf.size()).all(func(i): return shop.shelf[i].has("odds") and _matches_row(shop.shelf[i]["odds"], tables.call(i)))
-	_t.check("a rerolled shelf carries odds too", rerolled and Parts.rung_of(shop.shelf[0]["part_id"]) >= PartOffers.RUNG_FLOOR, "reroll")
+	_t.check("a rerolled shelf carries odds too", rerolled and PartOffers.rung_of(shop.shelf[0]["part_id"], Parts.def) >= PartOffers.RUNG_FLOOR, "reroll")
 
 
 func _paid(kind: String, pay: Dictionary, seed_value: int) -> Dictionary:

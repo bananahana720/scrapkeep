@@ -67,7 +67,7 @@ func _draw() -> Dictionary:
 		out["reroll"].append(shop._roll_one(["common", "rare"]))
 		out["reroll"].append(shop._roll_one(["relic"]))
 		for bonus in 3:
-			out["gate"].append_array(Parts.roll_gate(rng, PartOffers.gate_rarities(bonus), class_id, held, 2, 1))
+			out["gate"].append_array(PartOffers.roll_gate(rng, PartOffers.gate_rarities(bonus), class_id, held, 2, 1, {}, Parts.offer_ops()))
 		out["vault"].append_array(Parts.roll(rng, PartOffers.SOURCE_RARITIES["vault"], class_id, held, 1))
 		out["fabricator"].append_array(Parts.roll(rng, PartOffers.SOURCE_RARITIES["fabricator"], class_id, held, 1))
 		out["cache"].append_array(Parts.roll(rng, ["common", "rare"], class_id, held, 3))

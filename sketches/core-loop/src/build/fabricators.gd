@@ -303,7 +303,7 @@ func _roll(held: Array) -> String:
 	if _rng == null:
 		_rng = RandomNumberGenerator.new()
 	var rarities := PartOffers.source_rarities("fabricator", _stage)
-	var picks: Array = Parts.roll_for_stage(_rng, rarities, _class_id, held, 1, _stage, [], {}, _stage >= PartOffers.WORLD_ESCALATION_STAGE_W3) \
+	var picks: Array = PartOffers.roll_for_stage(_rng, rarities, _class_id, held, 1, _stage, [], {}, _stage >= PartOffers.WORLD_ESCALATION_STAGE_W3, Parts.offer_ops()) \
 		if _stage >= PartOffers.WORLD_ESCALATION_STAGE_W2 \
 		else Parts.roll(_rng, rarities, _class_id, held, 1)
 	return picks[0] if not picks.is_empty() else "hot_rivets"

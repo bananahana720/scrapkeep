@@ -346,7 +346,7 @@ func _draft() -> void:
 		var roll := rng.randi_range(0, 9)
 		var picks: Array = []
 		if roll < 6:
-			picks = Parts.roll_gate(rng, PartOffers.gate_rarities(rng.randi_range(0, 2)), class_id, parts, 2, rng.randi_range(1, 3))
+			picks = PartOffers.roll_gate(rng, PartOffers.gate_rarities(rng.randi_range(0, 2)), class_id, parts, 2, rng.randi_range(1, 3), {}, Parts.offer_ops())
 			if not picks.is_empty():
 				picks = [picks[rng.randi_range(0, picks.size() - 1)]]
 		elif roll < 8:

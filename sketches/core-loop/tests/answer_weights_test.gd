@@ -89,15 +89,15 @@ func _table() -> void:
 
 func _group_of(pilot: String, id: String) -> String:
 	if Parts.in_kit(pilot, id):
-		return "moving" if Parts.bucket_of(id) == "movement" else "still"
+		return "moving" if PartOffers.bucket_of(id, Parts.row) == "movement" else "still"
 	return "shelf" if id in PartOffers.NEUTRAL_SHELF else "rest"
 
 
 # The slot's odds with the nudge off and on, read exactly.
 func _odds(pilot: String, rarity: String) -> void:
 	var pool: Array = Parts.offer_pool(pilot, [rarity])
-	var off := Parts.slot_weights(rarity, pilot, pool, {}, {})
-	var on := Parts.slot_weights(rarity, pilot, pool, {}, PartOffers.answer_nudge(pilot, pool, {}))
+	var off := PartOffers.slot_weights(rarity, pilot, pool, {}, {}, Parts.offer_ops())
+	var on := PartOffers.slot_weights(rarity, pilot, pool, {}, PartOffers.answer_nudge(pilot, pool, {}), Parts.offer_ops())
 	var label := "%s %s" % [pilot, rarity]
 	_t.eq("%s: the same candidates on and off" % label, on["candidates"], off["candidates"])
 	var mass := {}
@@ -107,7 +107,7 @@ func _odds(pilot: String, rarity: String) -> void:
 	var share_off := 0.0
 	var share_on := 0.0
 	for id in off["candidates"]:
-		var key := "%s/%s" % [_group_of(pilot, id), Parts.bucket_of(id)]
+		var key := "%s/%s" % [_group_of(pilot, id), PartOffers.bucket_of(id, Parts.row)]
 		if not mass.has(key):
 			mass[key] = [0.0, 0.0]
 			ratios[key] = {"answer": [], "other": []}

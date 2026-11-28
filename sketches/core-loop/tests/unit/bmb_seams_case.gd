@@ -1,5 +1,6 @@
 extends RefCounted
 
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const Parts := preload("res://src/build/parts.gd")
 const PartOffers := preload("res://src/build/part_offers.gd")
 const PartMutations := preload("res://src/build/part_mutations.gd")
@@ -18,43 +19,43 @@ const Boss := preload("res://src/boss/boss.gd")
 const RigidBall := preload("res://src/movement/rigid_ball.gd")
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 
+const DELETED_PARTS_OFFER_METHODS := [
+	"completing_part",
+	"floor_gate",
+	"changes_behaviour",
+	"is_high_impact",
+	"rung_of",
+	"bucket_of",
+	"slot_weights",
+	"maker_nudge",
+	"_nudged",
+	"_weighted",
+	"_keep_a_neutral",
+	"holds_pattern",
+	"dominant_archetype",
+	"archetype_nudge",
+	"completing_archetype_part",
+	"roll_for_stage",
+	"roll_gate",
+]
+
 
 func run(t) -> void:
-	var src_files := _walk_gd("res://src")
-	var all_files: Array[String] = []
-	all_files.append_array(src_files)
-	all_files.append_array(_walk_gd("res://tests"))
-	all_files.append_array(_walk_gd("res://tools"))
-	_check_single_sources(t, src_files)
+	_check_single_sources(t)
 	_check_grapple_head_precedence(t)
-	_check_closed_reach_ins(t, src_files)
+	_check_closed_reach_ins(t)
 	_check_seeded_roll_determinism(t)
 	_check_preload_and_seams_hygiene(t)
-	_check_explicit_setters(t, all_files)
+	_check_explicit_setters(t)
 
 
-func _read_src(path: String) -> String:
-	return FileAccess.get_file_as_string(path)
-
-
-func _walk_gd(dir_path: String) -> Array[String]:
-	var out: Array[String] = []
-	var dir := DirAccess.open(dir_path)
-	if dir == null:
-		return out
-	dir.list_dir_begin()
-	var entry := dir.get_next()
-	while entry != "":
-		if not entry.begins_with("."):
-			var full := dir_path.path_join(entry)
-			if dir.current_is_dir():
-				out.append_array(_walk_gd(full))
-			elif entry.ends_with(".gd"):
-				out.append(full)
-		entry = dir.get_next()
-	dir.list_dir_end()
-	out.sort()
-	return out
+func _read_src(t, path: String) -> String:
+	var text := FileAccess.get_file_as_string(path)
+	var err := FileAccess.get_open_error()
+	if err != OK or text.is_empty():
+		t.check("reads " + path, false, "error %d, %d characters" % [err, text.length()])
+		return ""
+	return text
 
 
 func _strip_comment(line: String) -> String:
@@ -62,7 +63,7 @@ func _strip_comment(line: String) -> String:
 	return line.substr(0, idx) if idx >= 0 else line
 
 
-func _check_single_sources(t, src_files: Array[String]) -> void:
+func _check_single_sources(t) -> void:
 	t.eq("ItemGen.RARITIES aliases PartDef.RARITIES", ItemGen.RARITIES, PartDef.RARITIES)
 	var expected_pilots: Array = []
 	for c in ClassDef.all():
@@ -73,22 +74,17 @@ func _check_single_sources(t, src_files: Array[String]) -> void:
 	t.check("MakerSets drops SPILLWAY alias", not ("SPILLWAY" in MakerSets))
 	t.check("MakerSets drops GRAPPLE_MUTATIONS alias", not ("GRAPPLE_MUTATIONS" in MakerSets))
 	t.eq("MakerSets.SETS matches MakerDefs.SETS", MakerSets.SETS, MakerDefs.SETS)
-	var rarity_owners: Array = []
-	var maker_set_owners: Array = []
-	var maker_piece_owners: Array = []
-	var relic_list_owners: Array = []
-	for path in src_files:
-		var text := _read_src(path)
-		for raw_line in text.split("\n"):
-			var code := _strip_comment(raw_line)
-			if code.contains("const RARITIES :=") and code.contains("[\"common\""):
-				rarity_owners.append(path)
-			if code.contains("const SETS := {") and text.contains("spillway_works"):
-				maker_set_owners.append(path)
-			if code.contains("MAKER_SET_PIECES"):
-				maker_piece_owners.append(path)
-			if path.begins_with("res://src/build/") and (code.contains("const PILOTS :=") or code.contains("const VALID_MAKERS :=")):
-				relic_list_owners.append(path)
+	var rarity_owners := SourceScan.matching(t, ["res://src"], "(?m)^[^#\\n]*const\\s+RARITIES\\s*:=.*\\[\"common\"")
+	var set_candidates := SourceScan.matching(t, ["res://src"], "(?m)^[^#\\n]*const\\s+SETS\\s*:=\\s*\\{")
+	var maker_set_owners: Array[String] = []
+	for path in set_candidates:
+		var text := _read_src(t, path)
+		if text.is_empty():
+			return
+		if text.contains("spillway_works"):
+			maker_set_owners.append(path)
+	var maker_piece_owners := SourceScan.matching(t, ["res://src"], "(?m)^[^#\\n]*MAKER_SET_PIECES")
+	var relic_list_owners := SourceScan.matching(t, ["res://src/build"], "(?m)^[^#\\n]*const\\s+(PILOTS|VALID_MAKERS)\\s*:=")
 	t.eq("RARITIES literal table has one owner", rarity_owners, ["res://src/build/part_def.gd"])
 	t.eq("Maker SETS literal table has one owner", maker_set_owners, ["res://src/build/maker_defs.gd"])
 	t.eq("MAKER_SET_PIECES has zero declarations in src", maker_piece_owners, [])
@@ -132,7 +128,7 @@ func _check_grapple_head_precedence(t) -> void:
 		String(explicit_pair.get("head", {}).get("id", "")), "live_bus")
 
 
-func _check_closed_reach_ins(t, src_files: Array[String]) -> void:
+func _check_closed_reach_ins(t) -> void:
 	var forbidden := [
 		"._pickup_material",
 		"._rest",
@@ -158,9 +154,13 @@ func _check_closed_reach_ins(t, src_files: Array[String]) -> void:
 		"._charging": ["res://src/combat/warden_reactor.gd"],
 		"._pulse_clock": ["res://src/combat/warden_reactor.gd"],
 	}
+	var scan_pattern := "(?m)^[^#\\n]*(\\.(_pickup_material|_rest|_takeover_cd|_probe|_center|_dropping|_charging|_pulse_clock)|\\._refit\\(|\"_look\"|\"_kit\")"
+	var candidates := SourceScan.matching(t, ["res://src"], scan_pattern)
 	var hits: Array = []
-	for path in src_files:
-		var text := _read_src(path)
+	for path in candidates:
+		var text := _read_src(t, path)
+		if text.is_empty():
+			return
 		var lines := text.split("\n")
 		for i in lines.size():
 			var code := _strip_comment(lines[i])
@@ -199,6 +199,8 @@ func _check_closed_reach_ins(t, src_files: Array[String]) -> void:
 		not ("SOURCE_RARITIES" in Parts) and not ("gate_rarities" in parts_methods)
 		and not ("milestone_for" in parts_methods) and not ("_pick_rarity" in parts_methods)
 		and not ("_pick_rarity_scaled" in parts_methods) and not ("_grapple_mut_spec" in parts_methods))
+	var remaining_offer_forwarders: Array = DELETED_PARTS_OFFER_METHODS.filter(func(m): return m in parts_methods)
+	t.eq("Parts deletes the 17 internal offer forwarders", remaining_offer_forwarders, [])
 	t.check("PartMutations deletes dead has_grapple_mutation", not ("has_grapple_mutation" in mut_methods))
 	player.free()
 
@@ -213,36 +215,53 @@ func _check_seeded_roll_determinism(t) -> void:
 		var b1: Array = Parts.roll(rng_b, ["common", "rare"], "pylon_engineer", [], 3)
 		t.eq("Parts.roll deterministic picks seed %d" % seed_val, a1, b1)
 		t.eq("Parts.roll deterministic rng state seed %d" % seed_val, rng_a.randi(), rng_b.randi())
-		var a2: Array = Parts.roll_for_stage(rng_a, ["common", "rare", "relic"], "runner_gunner", a1, 3, 2)
-		var b2: Array = Parts.roll_for_stage(rng_b, ["common", "rare", "relic"], "runner_gunner", b1, 3, 2)
-		t.eq("Parts.roll_for_stage deterministic picks seed %d" % seed_val, a2, b2)
-		t.eq("Parts.roll_for_stage deterministic rng state seed %d" % seed_val, rng_a.randi(), rng_b.randi())
+		var a2: Array = PartOffers.roll_for_stage(rng_a, ["common", "rare", "relic"], "runner_gunner", a1, 3, 2, [], {}, false, Parts.offer_ops())
+		var b2: Array = PartOffers.roll_for_stage(rng_b, ["common", "rare", "relic"], "runner_gunner", b1, 3, 2, [], {}, false, Parts.offer_ops())
+		t.eq("PartOffers.roll_for_stage deterministic picks seed %d" % seed_val, a2, b2)
+		t.eq("PartOffers.roll_for_stage deterministic rng state seed %d" % seed_val, rng_a.randi(), rng_b.randi())
 
 
 func _check_preload_and_seams_hygiene(t) -> void:
-	var boss_src := _read_src("res://src/boss/boss.gd")
+	var boss_src := _read_src(t, "res://src/boss/boss.gd")
+	if boss_src.is_empty():
+		return
 	t.check("boss omits reward_gates.gd preload", not boss_src.contains("reward_gates.gd"))
 	t.check("boss calls shove_planar unconditionally", boss_src.contains("\tctx.player.shove_planar("))
-	var mind_dress_src := _read_src("res://src/boss/mind_dress.gd")
+	var mind_dress_src := _read_src(t, "res://src/boss/mind_dress.gd")
+	if mind_dress_src.is_empty():
+		return
 	var inline_preload := false
 	for line in mind_dress_src.split("\n"):
 		if line.begins_with("\t") and line.contains("preload("):
 			inline_preload = true
 	t.check("mind_dress hoists inline preloads", not inline_preload)
-	var waking_src := _read_src("res://src/boss/waking.gd")
+	var waking_src := _read_src(t, "res://src/boss/waking.gd")
+	if waking_src.is_empty():
+		return
 	t.check("waking routes planar speed through body_planar_speed", waking_src.contains("body_planar_speed()"))
-	var offers_src := _read_src("res://src/build/part_offers.gd")
+	var offers_src := _read_src(t, "res://src/build/part_offers.gd")
+	if offers_src.is_empty():
+		return
 	t.check("part_offers reads PartDef.RARITIES directly", offers_src.contains("PartDef.RARITIES"))
 
 
-func _check_explicit_setters(t, all_files: Array[String]) -> void:
-	var direct_writes: Array = []
+func _check_explicit_setters(t) -> void:
+	var assign_pattern := "(Parts\\.(seams|opened_items)|Synergies\\.table)(\\[[^\\]]+\\])?\\s*=(?!=)"
+	var line_pattern := "(?m)^[^#\\n]*" + assign_pattern
+	var candidates := SourceScan.matching(t, ["res://src", "res://tests", "res://tools"], line_pattern)
 	var assign_re := RegEx.new()
-	assign_re.compile("(Parts\\.(seams|opened_items)|Synergies\\.table)(\\[[^\\]]+\\])?\\s*=(?!=)")
-	for path in all_files:
+	var compile_ok := assign_re.compile(assign_pattern, false) == OK and assign_re.is_valid()
+	t.check("explicit setter pattern compiles", compile_ok, assign_pattern)
+	if not compile_ok:
+		return
+	var direct_writes: Array = []
+	for path in candidates:
 		if path in ["res://src/build/parts.gd", "res://src/build/synergies.gd"]:
 			continue
-		var lines := _read_src(path).split("\n")
+		var text := _read_src(t, path)
+		if text.is_empty():
+			return
+		var lines := text.split("\n")
 		for i in lines.size():
 			var code := _strip_comment(lines[i])
 			if assign_re.search(code) != null:

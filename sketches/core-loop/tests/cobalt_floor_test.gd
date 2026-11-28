@@ -42,13 +42,13 @@ func _pairs() -> void:
 				for s in SEEDS:
 					var rng := RandomNumberGenerator.new()
 					rng.seed = hash([pilot, cores, stage, s])
-					var picks: Array = Parts.roll_gate(rng, PartOffers.gate_rarities(cores), pilot, [], 2, stage)
+					var picks: Array = PartOffers.roll_gate(rng, PartOffers.gate_rarities(cores), pilot, [], 2, stage, {}, Parts.offer_ops())
 					var had_pattern: bool = picks.any(func(key): return key in PartOffers.PATTERN_PARTS)
-					var floored: Array = Parts.floor_gate(rng, picks, pilot, [])
+					var floored: Array = PartOffers.floor_gate(rng, picks, pilot, [], {}, 2, Parts.offer_ops())
 					rows += 1
-					if not floored.any(func(key): return Parts.rung_of(key) >= PartOffers.RUNG_FLOOR):
+					if not floored.any(func(key): return PartOffers.rung_of(key, Parts.def) >= PartOffers.RUNG_FLOOR):
 						dry.append("%s %d cores stage %d seed %d %s" % [pilot, cores, stage, s, floored])
-					if not floored.any(func(key): return Parts.rung_of(key) > PartOffers.RUNG_FLOOR or Parts.rung_of(key) == PartOffers.RUNG_FLOOR and Parts.changes_behaviour(key)):
+					if not floored.any(func(key): return PartOffers.rung_of(key, Parts.def) > PartOffers.RUNG_FLOOR or PartOffers.rung_of(key, Parts.def) == PartOffers.RUNG_FLOOR and PartOffers.changes_behaviour(key, Parts.def)):
 						flat.append("%s %d cores stage %d seed %d %s" % [pilot, cores, stage, s, floored])
 					if picks.any(func(key): return Parts.def(key).hits_harder()) and not floored.any(func(key): return Parts.def(key).hits_harder()):
 						no_hitter.append("%s stage %d seed %d %s to %s" % [pilot, stage, s, picks, floored])
@@ -64,28 +64,28 @@ func _planted() -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
 	var commons := ["focus_lens", "hot_rivets"]
-	var lifted: Array = Parts.floor_gate(rng, commons, "tarn", [])
-	_t.check("an all-common pair is lifted", Parts.rung_of(lifted[0]) >= PartOffers.RUNG_FLOOR and lifted[1] == "hot_rivets", str(lifted))
+	var lifted: Array = PartOffers.floor_gate(rng, commons, "tarn", [], {}, 2, Parts.offer_ops())
+	_t.check("an all-common pair is lifted", PartOffers.rung_of(lifted[0], Parts.def) >= PartOffers.RUNG_FLOOR and lifted[1] == "hot_rivets", str(lifted))
 	_t.check("the lifted pick is new to the pair", not lifted[0] in commons, str(lifted))
-	var with_pattern: Array = Parts.floor_gate(rng, ["cross_split", "hot_rivets"], "tarn", [])
+	var with_pattern: Array = PartOffers.floor_gate(rng, ["cross_split", "hot_rivets"], "tarn", [], {}, 2, Parts.offer_ops())
 	_t.eq("a pattern in the first slot keeps its place", with_pattern[0], "cross_split")
 	var kept := ["focus_lens", "sunforged_core"]
-	_t.eq("a pair holding a behaviour cobalt stays as rolled", Parts.floor_gate(rng, kept, "tarn", []), kept)
-	var stat: Array = Parts.floor_gate(rng, ["focus_lens", "gatling_heart"], "tarn", [])
+	_t.eq("a pair holding a behaviour cobalt stays as rolled", PartOffers.floor_gate(rng, kept, "tarn", [], {}, 2, Parts.offer_ops()), kept)
+	var stat: Array = PartOffers.floor_gate(rng, ["focus_lens", "gatling_heart"], "tarn", [], {}, 2, Parts.offer_ops())
 	_t.check("a stat-line cobalt is replaced by a behaviour one", stat[0] == "focus_lens" and stat[1] != "gatling_heart"
-		and Parts.rung_of(stat[1]) >= PartOffers.RUNG_FLOOR and Parts.changes_behaviour(stat[1]), str(stat))
-	var lone_hitter: Array = Parts.floor_gate(rng, ["grip_tread", "ram_plow"], "tarn", [])
+		and PartOffers.rung_of(stat[1], Parts.def) >= PartOffers.RUNG_FLOOR and PartOffers.changes_behaviour(stat[1], Parts.def), str(stat))
+	var lone_hitter: Array = PartOffers.floor_gate(rng, ["grip_tread", "ram_plow"], "tarn", [], {}, 2, Parts.offer_ops())
 	_t.check("the stat cobalt's replacement hits harder when it was the pair's only hitter",
-		Parts.def(lone_hitter[1]).hits_harder() and Parts.changes_behaviour(lone_hitter[1]), str(lone_hitter))
-	var relic: Array = Parts.floor_gate(rng, ["spare_frame", "gatling_heart"], "tarn", [])
-	_t.check("a relic in the pair is never traded down", relic[0] == "spare_frame" and Parts.changes_behaviour(relic[1]), str(relic))
-	var relic_pattern: Array = Parts.floor_gate(rng, ["spare_frame", "cross_split"], "tarn", [])
+		Parts.def(lone_hitter[1]).hits_harder() and PartOffers.changes_behaviour(lone_hitter[1], Parts.def), str(lone_hitter))
+	var relic: Array = PartOffers.floor_gate(rng, ["spare_frame", "gatling_heart"], "tarn", [], {}, 2, Parts.offer_ops())
+	_t.check("a relic in the pair is never traded down", relic[0] == "spare_frame" and PartOffers.changes_behaviour(relic[1], Parts.def), str(relic))
+	var relic_pattern: Array = PartOffers.floor_gate(rng, ["spare_frame", "cross_split"], "tarn", [], {}, 2, Parts.offer_ops())
 	_t.eq("a relic beside a pattern pair stays as rolled", relic_pattern, ["spare_frame", "cross_split"])
 	for row in ["sunforged_core", "spare_cell"]:
-		_t.check("%s changes behaviour" % row, Parts.changes_behaviour(row), row)
-	_t.eq("an empty pair stays empty", Parts.floor_gate(rng, [], "tarn", []), [])
-	var short: Array = Parts.floor_gate(rng, ["spiral_wave"], "tarn", [])
+		_t.check("%s changes behaviour" % row, PartOffers.changes_behaviour(row, Parts.def), row)
+	_t.eq("an empty pair stays empty", PartOffers.floor_gate(rng, [], "tarn", [], {}, 2, Parts.offer_ops()), [])
+	var short: Array = PartOffers.floor_gate(rng, ["spiral_wave"], "tarn", [], {}, 2, Parts.offer_ops())
 	_t.check("a lone pattern keeps its gate and gains a cobalt", short.size() == 2 and short[0] == "spiral_wave"
-		and Parts.rung_of(short[1]) >= PartOffers.RUNG_FLOOR, str(short))
-	var patterns: Array = Parts.floor_gate(rng, ["spiral_wave", "chain_arc"], "tarn", [])
-	_t.check("a pair of patterns keeps its first", patterns[0] == "spiral_wave" and Parts.rung_of(patterns[1]) >= PartOffers.RUNG_FLOOR, str(patterns))
+		and PartOffers.rung_of(short[1], Parts.def) >= PartOffers.RUNG_FLOOR, str(short))
+	var patterns: Array = PartOffers.floor_gate(rng, ["spiral_wave", "chain_arc"], "tarn", [], {}, 2, Parts.offer_ops())
+	_t.check("a pair of patterns keeps its first", patterns[0] == "spiral_wave" and PartOffers.rung_of(patterns[1], Parts.def) >= PartOffers.RUNG_FLOOR, str(patterns))

@@ -49,7 +49,7 @@ func _group_mass(pilot: String, weights: Dictionary) -> Dictionary:
 		var w := float(weights[id])
 		if Parts.in_kit(pilot, id):
 			mass["kit"] += w
-			mass["moving" if Parts.bucket_of(id) == "movement" else "still"] += w
+			mass["moving" if PartOffers.bucket_of(id, Parts.row) == "movement" else "still"] += w
 		elif id in PartOffers.NEUTRAL_SHELF:
 			mass["shelf"] += w
 		else:
@@ -62,7 +62,7 @@ func _check_rest_weights() -> void:
 	for pilot in PILOTS:
 		for rarity in ["common", "rare"]:
 			var pool: Array = Parts.offer_pool(pilot, [rarity])
-			var slot: Dictionary = Parts.slot_weights(rarity, pilot, pool, {}, {})
+			var slot: Dictionary = PartOffers.slot_weights(rarity, pilot, pool, {}, {}, Parts.offer_ops())
 			var weights: Dictionary = slot["weights"]
 			var total := 0.0
 			var zero_items: Array = []
@@ -74,7 +74,7 @@ func _check_rest_weights() -> void:
 			_t.near("%s %s slot weights sum to 1.0" % [pilot, rarity], total, 1.0, 0.0001)
 			_t.eq("%s %s every admitted pool item has strictly positive weight" % [pilot, rarity], zero_items, [])
 		var common_pool: Array = Parts.offer_pool(pilot, ["common"])
-		var common_slot: Dictionary = Parts.slot_weights("common", pilot, common_pool, {}, {})
+		var common_slot: Dictionary = PartOffers.slot_weights("common", pilot, common_pool, {}, {}, Parts.offer_ops())
 		var weights: Dictionary = common_slot["weights"]
 		var mass := _group_mass(pilot, weights)
 		var expected_rest: float = (1.0 - PartOffers.KIT_SHARE) * PartOffers.REST_OF_NEUTRAL
@@ -113,8 +113,8 @@ func _check_rest_weights() -> void:
 	_t.eq("1-slot listed roll spends exactly 2 rng draws (no extra _keep_a_neutral draw)", rng_mismatches, 0)
 	var full_pool: Array = Parts.offer_pool("runner_gunner", ["common"])
 	var no_rest_pool: Array = full_pool.filter(func(id): return Parts.in_kit("runner_gunner", id) or id in PartOffers.NEUTRAL_SHELF)
-	var with_rest := _group_mass("runner_gunner", Parts.slot_weights("common", "runner_gunner", full_pool, {}, {})["weights"])
-	var without_rest := _group_mass("runner_gunner", Parts.slot_weights("common", "runner_gunner", no_rest_pool, {}, {})["weights"])
+	var with_rest := _group_mass("runner_gunner", PartOffers.slot_weights("common", "runner_gunner", full_pool, {}, {}, Parts.offer_ops())["weights"])
+	var without_rest := _group_mass("runner_gunner", PartOffers.slot_weights("common", "runner_gunner", no_rest_pool, {}, {}, Parts.offer_ops())["weights"])
 	_t.near("planted control: removing rest shifts rest mass to shelf and keeps kit at 0.70",
 		without_rest["shelf"] - with_rest["shelf"], with_rest["rest"], 0.0001)
 	_t.near("planted control: without rest group, rest mass is exactly 0.0", without_rest["rest"], 0.0, 0.000001)
@@ -126,50 +126,50 @@ func _check_slot_weight_invariants() -> void:
 	Synergies.set_table(AlphaDefs)
 	var pilot := "runner_gunner"
 	var pool: Array = Parts.offer_pool(pilot, ["common"])
-	var moving_ids: Array = pool.filter(func(id): return Parts.in_kit(pilot, id) and Parts.bucket_of(id) == "movement")
-	var still_ids: Array = pool.filter(func(id): return Parts.in_kit(pilot, id) and Parts.bucket_of(id) != "movement")
+	var moving_ids: Array = pool.filter(func(id): return Parts.in_kit(pilot, id) and PartOffers.bucket_of(id, Parts.row) == "movement")
+	var still_ids: Array = pool.filter(func(id): return Parts.in_kit(pilot, id) and PartOffers.bucket_of(id, Parts.row) != "movement")
 	var shelf_ids: Array = pool.filter(func(id): return not Parts.in_kit(pilot, id) and id in PartOffers.NEUTRAL_SHELF)
 	var rest_ids: Array = pool.filter(func(id): return not Parts.in_kit(pilot, id) and not id in PartOffers.NEUTRAL_SHELF)
 	_t.check("precondition: runner_gunner common pool populates all four groups",
 		not moving_ids.is_empty() and still_ids.size() >= 3 and not shelf_ids.is_empty() and not rest_ids.is_empty())
 
 	# 1. Empty moving: still absorbs moving, kit stays 0.70, rest keeps its slice.
-	var no_moving: Dictionary = Parts.slot_weights("common", pilot, still_ids + shelf_ids + rest_ids, {}, {})["weights"]
+	var no_moving: Dictionary = PartOffers.slot_weights("common", pilot, still_ids + shelf_ids + rest_ids, {}, {}, Parts.offer_ops())["weights"]
 	var m_no_moving := _group_mass(pilot, no_moving)
 	_t.near("empty moving: still absorbs moving to KIT_SHARE", m_no_moving["still"], PartOffers.KIT_SHARE, 0.0001)
 	_t.near("empty moving: rest keeps its slice", m_no_moving["rest"], (1.0 - PartOffers.KIT_SHARE) * PartOffers.REST_OF_NEUTRAL, 0.0001)
 
 	# 2. Empty still with shelf + rest: shelf absorbs still (and moving stays at MOVEMENT_SHARE).
-	var no_still: Dictionary = Parts.slot_weights("common", pilot, moving_ids + shelf_ids + rest_ids, {}, {})["weights"]
+	var no_still: Dictionary = PartOffers.slot_weights("common", pilot, moving_ids + shelf_ids + rest_ids, {}, {}, Parts.offer_ops())["weights"]
 	var m_no_still := _group_mass(pilot, no_still)
 	_t.near("empty still (with shelf): moving stays capped at MOVEMENT_SHARE", m_no_still["moving"], PartOffers.MOVEMENT_SHARE, 0.0001)
 	_t.near("empty still (with shelf): rest keeps its slice", m_no_still["rest"], (1.0 - PartOffers.KIT_SHARE) * PartOffers.REST_OF_NEUTRAL, 0.0001)
 	_t.near("empty still (with shelf): total sums to 1.0", m_no_still["kit"] + m_no_still["shelf"] + m_no_still["rest"], 1.0, 0.0001)
 
 	# 3. Empty still AND empty shelf, non-empty rest: rest absorbs everything except moving.
-	var only_moving_rest: Dictionary = Parts.slot_weights("common", pilot, moving_ids + rest_ids, {}, {})["weights"]
+	var only_moving_rest: Dictionary = PartOffers.slot_weights("common", pilot, moving_ids + rest_ids, {}, {}, Parts.offer_ops())["weights"]
 	var m_mr := _group_mass(pilot, only_moving_rest)
 	_t.near("empty still+shelf: moving keeps MOVEMENT_SHARE", m_mr["moving"], PartOffers.MOVEMENT_SHARE, 0.0001)
 	_t.near("empty still+shelf: rest absorbs remaining 1 - MOVEMENT_SHARE", m_mr["rest"], 1.0 - PartOffers.MOVEMENT_SHARE, 0.0001)
 
 	# 4. Empty shelf with non-empty still + rest (rare-like shape): still absorbs shelf, rest keeps rest_share.
-	var no_shelf: Dictionary = Parts.slot_weights("common", pilot, moving_ids + still_ids + rest_ids, {}, {})["weights"]
+	var no_shelf: Dictionary = PartOffers.slot_weights("common", pilot, moving_ids + still_ids + rest_ids, {}, {}, Parts.offer_ops())["weights"]
 	var m_ns := _group_mass(pilot, no_shelf)
 	var rest_slice: float = (1.0 - PartOffers.KIT_SHARE) * PartOffers.REST_OF_NEUTRAL
 	_t.near("empty shelf (uncapped still): kit absorbs shelf to 1 - rest_slice", m_ns["kit"], 1.0 - rest_slice, 0.0001)
 	_t.near("empty shelf (uncapped still): rest keeps rest_slice", m_ns["rest"], rest_slice, 0.0001)
 
 	# 5. Only moving non-empty: moving absorbs all share and each item caps at KIT_PART_CAP.
-	var only_moving: Dictionary = Parts.slot_weights("common", pilot, moving_ids, {}, {})["weights"]
+	var only_moving: Dictionary = PartOffers.slot_weights("common", pilot, moving_ids, {}, {}, Parts.offer_ops())["weights"]
 	var want_moving_mass := minf(1.0, moving_ids.size() * PartOffers.KIT_PART_CAP)
 	_t.near("only moving non-empty: moving absorbs share up to KIT_PART_CAP per item",
 		_group_mass(pilot, only_moving)["moving"], want_moving_mass, 0.0001)
 
 	# 6. Empty pool: returns empty candidates and weights.
-	_t.eq("empty pool returns empty slot", Parts.slot_weights("common", pilot, [], {}, {}), {"candidates": [], "weights": {}})
+	_t.eq("empty pool returns empty slot", PartOffers.slot_weights("common", pilot, [], {}, {}, Parts.offer_ops()), {"candidates": [], "weights": {}})
 
 	# 7. KIT_PART_CAP overflow: a 1-item still kit caps at KIT_PART_CAP and spills excess to shelf.
-	var capped_still: Dictionary = Parts.slot_weights("common", pilot, [still_ids[0]] + shelf_ids + rest_ids, {}, {})["weights"]
+	var capped_still: Dictionary = PartOffers.slot_weights("common", pilot, [still_ids[0]] + shelf_ids + rest_ids, {}, {}, Parts.offer_ops())["weights"]
 	_t.near("1-item still kit is clamped to KIT_PART_CAP", float(capped_still[still_ids[0]]), PartOffers.KIT_PART_CAP, 0.0001)
 	_t.near("cap overflow flows to shelf before rest", _group_mass(pilot, capped_still)["rest"], rest_slice, 0.0001)
 
@@ -177,7 +177,7 @@ func _check_slot_weight_invariants() -> void:
 	var offered := {}
 	offered[shelf_ids[0]] = PartOffers.NEUTRAL_REPEAT_CAP
 	offered[rest_ids[0]] = PartOffers.NEUTRAL_REPEAT_CAP
-	var capped_slot: Dictionary = Parts.slot_weights("common", pilot, pool, offered, {})["weights"]
+	var capped_slot: Dictionary = PartOffers.slot_weights("common", pilot, pool, offered, {}, Parts.offer_ops())["weights"]
 	_t.check("shelf item at NEUTRAL_REPEAT_CAP is excluded from candidates", not capped_slot.has(shelf_ids[0]))
 	_t.check("rest item at NEUTRAL_REPEAT_CAP remains drawable with dampened weight",
 		capped_slot.has(rest_ids[0]) and float(capped_slot[rest_ids[0]]) > 0.0
@@ -186,7 +186,7 @@ func _check_slot_weight_invariants() -> void:
 	var all_shelf_capped := {}
 	for id in shelf_ids:
 		all_shelf_capped[id] = PartOffers.NEUTRAL_REPEAT_CAP
-	var shelf_gone: Dictionary = Parts.slot_weights("common", pilot, pool, all_shelf_capped, {})["weights"]
+	var shelf_gone: Dictionary = PartOffers.slot_weights("common", pilot, pool, all_shelf_capped, {}, Parts.offer_ops())["weights"]
 	var m_sg := _group_mass(pilot, shelf_gone)
 	_t.near("all shelf items at repeat cap: shelf mass is 0.0", m_sg["shelf"], 0.0, 0.000001)
 	_t.near("all shelf items at repeat cap: total mass stays 1.0", m_sg["kit"] + m_sg["rest"], 1.0, 0.0001)
@@ -199,7 +199,7 @@ func _check_rivet_weapon_ease_scoping() -> void:
 	# On Rivet's common slot (shelf present): NEUTRAL_WEAPON_EASE eases off-kit weapon items so
 	# Rivet's declared movement + skill pair stays ahead of weapon.
 	var c_pool: Array = Parts.offer_pool("runner_gunner", ["common"])
-	var c_weights: Dictionary = Parts.slot_weights("common", "runner_gunner", c_pool, {}, {})["weights"]
+	var c_weights: Dictionary = PartOffers.slot_weights("common", "runner_gunner", c_pool, {}, {}, Parts.offer_ops())["weights"]
 	var shelf_weapon := float(c_weights["hot_rivets"])
 	var shelf_defence := float(c_weights["rivet_plating"])
 	_t.near("Rivet common shelf weapon is eased by NEUTRAL_WEAPON_EASE vs shelf defence",
@@ -213,14 +213,14 @@ func _check_rivet_weapon_ease_scoping() -> void:
 	# does NOT apply to rest, so rare weapon parts keep equal per-item weight with non-weapon rare
 	# rest parts and Rivet's rare weapon share is never crushed down to ~7%.
 	var r_pool: Array = Parts.offer_pool("runner_gunner", ["rare"])
-	var r_weights: Dictionary = Parts.slot_weights("rare", "runner_gunner", r_pool, {}, {})["weights"]
+	var r_weights: Dictionary = PartOffers.slot_weights("rare", "runner_gunner", r_pool, {}, {}, Parts.offer_ops())["weights"]
 	var rare_weapon_rest := float(r_weights["sunforged_core"])
 	var rare_skill_rest := float(r_weights["spare_cell"])
 	_t.near("Rivet rare rest weapon equals rare rest non-weapon weight (no ease on cap overflow)",
 		rare_weapon_rest, rare_skill_rest, 0.000001)
 	var rare_weapon_total := 0.0
 	for id in r_weights:
-		if Parts.bucket_of(id) == "weapon":
+		if PartOffers.bucket_of(id, Parts.row) == "weapon":
 			rare_weapon_total += float(r_weights[id])
 	_t.check("Rivet rare weapon share stays above 25% (not crushed to ~7% by ease)",
 		rare_weapon_total > 0.25, "%.3f" % rare_weapon_total)

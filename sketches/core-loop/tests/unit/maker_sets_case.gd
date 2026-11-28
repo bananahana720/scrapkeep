@@ -47,22 +47,22 @@ func run(t) -> void:
 
 	# The nudge: 1.1x (1.5x before the pass D fold) on a maker's unheld pieces from two held, nothing at one.
 	var pool := ["rivet_seam", "crush_guard", "quick_spool", "tracer_round"]
-	t.eq("no nudge at one piece", Parts.maker_nudge(["tracer_round"], pool), {})
-	t.eq("nudge at two pieces", Parts.maker_nudge(["tracer_round", "magnet_coil"], pool),
+	t.eq("no nudge at one piece", PartOffers.maker_nudge(["tracer_round"], pool, Parts.offer_ops()), {})
+	t.eq("nudge at two pieces", PartOffers.maker_nudge(["tracer_round", "magnet_coil"], pool, Parts.offer_ops()),
 		{"rivet_seam": PartOffers.MAKER_NUDGE, "crush_guard": PartOffers.MAKER_NUDGE})
 	t.near("nudge is 1.1x", PartOffers.MAKER_NUDGE, 1.1)
 	# Seeded draws: inside one offer bucket the nudged piece shows more often; across buckets
 	# each bucket keeps its weight, so the kit, shelf and pair shares hold.
-	var lean := Parts.maker_nudge(["tracer_round", "magnet_coil"], ["rivet_seam", "deflect_plate", "quick_spool"])
-	t.eq("rivet_seam and deflect_plate share the defence bucket", [Parts.bucket_of("rivet_seam"), Parts.bucket_of("deflect_plate")], ["defence", "defence"])
+	var lean := PartOffers.maker_nudge(["tracer_round", "magnet_coil"], ["rivet_seam", "deflect_plate", "quick_spool"], Parts.offer_ops())
+	t.eq("rivet_seam and deflect_plate share the defence bucket", [PartOffers.bucket_of("rivet_seam", Parts.row), PartOffers.bucket_of("deflect_plate", Parts.row)], ["defence", "defence"])
 	t.near("a nudged piece takes 52% of its bucket", _share(["rivet_seam", "deflect_plate"], lean, "rivet_seam"), 1.1 / 2.1, 0.03)
-	t.check("across buckets the nudge moves nothing", Parts.bucket_of("quick_spool") != "defence" \
+	t.check("across buckets the nudge moves nothing", PartOffers.bucket_of("quick_spool", Parts.row) != "defence" \
 		and absf(_share(["rivet_seam", "quick_spool"], lean, "rivet_seam") - 0.5) < 0.03)
 	var raw := {"rivet_seam": 1.0, "deflect_plate": 1.0, "quick_spool": 2.0}
-	var nudged := Parts._nudged(raw, lean)
+	var nudged := PartOffers.nudged(raw, lean, Parts.row)
 	t.near("the defence bucket keeps its total", float(nudged["rivet_seam"]) + float(nudged["deflect_plate"]), 2.0)
 	t.near("the nudged piece is 1.1x its neighbour", float(nudged["rivet_seam"]) / float(nudged["deflect_plate"]), 1.1)
-	t.check("no nudge returns the weights unchanged", Parts._nudged(raw, {}) == raw)
+	t.check("no nudge returns the weights unchanged", PartOffers.nudged(raw, {}, Parts.row) == raw)
 
 
 func _share(bucket: Array, lean: Dictionary, want: String) -> float:
@@ -70,6 +70,6 @@ func _share(bucket: Array, lean: Dictionary, want: String) -> float:
 	rng.seed = 41
 	var hits := 0
 	for i in 4000:
-		if Parts._weighted(rng, bucket, {}, {}, lean) == want:
+		if PartOffers.weighted(rng, bucket, {}, {}, lean, Parts.row) == want:
 			hits += 1
 	return hits / 4000.0

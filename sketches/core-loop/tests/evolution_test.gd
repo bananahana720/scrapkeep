@@ -195,7 +195,7 @@ func _check_never_rolls() -> void:
 						if id in evolved_ids:
 							leaked.append("roll %s" % id)
 					for stage in [1, 2, 3]:
-						for id in Parts.roll_gate(rng, rarities, cls, held, 2, stage):
+						for id in PartOffers.roll_gate(rng, rarities, cls, held, 2, stage, {}, Parts.offer_ops()):
 							draws += 1
 							if id in evolved_ids:
 								leaked.append("gate %s" % id)

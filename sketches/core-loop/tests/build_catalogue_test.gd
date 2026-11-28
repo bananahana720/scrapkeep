@@ -366,7 +366,7 @@ func _check_pattern_guarantee() -> void:
 		rng.seed = 2000 + seed_value
 		var plain_pair: Array = Parts.roll(rng, rarities, class_id, held, 2)
 		rng.seed = 2000 + seed_value
-		var pair: Array = Parts.roll_gate(rng, rarities, class_id, held, 2, 2)
+		var pair: Array = PartOffers.roll_gate(rng, rarities, class_id, held, 2, 2, {}, Parts.offer_ops())
 		if pair.size() != 2 or not pair.any(_is_pattern):
 			missing.append([cores, held, pair])
 		if pair != plain_pair:
@@ -386,13 +386,13 @@ func _check_pattern_guarantee() -> void:
 		rng.seed = 3000 + seed_value
 		var expect_holding: Array = Parts.roll(rng, rarities, class_id, holding, 2)
 		rng.seed = 3000 + seed_value
-		if Parts.roll_gate(rng, rarities, class_id, holding, 2, 2) != expect_holding:
+		if PartOffers.roll_gate(rng, rarities, class_id, holding, 2, 2, {}, Parts.offer_ops()) != expect_holding:
 			changed.append("holding %s" % [holding])
 		for stage in [1, 3]:
 			rng.seed = 4000 + seed_value
 			var expect_stage: Array = Parts.roll(rng, rarities, class_id, held, 2)
 			rng.seed = 4000 + seed_value
-			if Parts.roll_gate(rng, rarities, class_id, held, 2, stage) != expect_stage:
+			if PartOffers.roll_gate(rng, rarities, class_id, held, 2, stage, {}, Parts.offer_ops()) != expect_stage:
 				changed.append("stage %d %s" % [stage, held])
 	_report("stage-2 pattern guarantee", missing.is_empty() and broken.is_empty(),
 		"50 seeded stage-2 pairs for pattern-less builds across 0 to 2 bonus cores; %d needed the guarantee; pairs with no pattern part %s; rule breaks %s"
@@ -408,7 +408,7 @@ func _check_pattern_gate_live() -> void:
 	var build = _game.ctx.build
 	var run = _game.run
 	var saved_stage: int = run.stage
-	var held_pattern: bool = Parts.holds_pattern(run.parts)
+	var held_pattern: bool = PartOffers.holds_pattern(run.parts, Parts.def)
 	run.stage = 2
 	var without: Array = []
 	for seed_value in 20:

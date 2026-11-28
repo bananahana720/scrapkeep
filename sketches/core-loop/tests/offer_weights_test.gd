@@ -109,7 +109,7 @@ func _initialize() -> void:
 	var defence_hitters := {}
 	for pilot in PILOTS:
 		for id in Parts.offer_pool(pilot, ["common"]):
-			if Parts.def(id).hits_harder() and Parts.bucket_of(id) == "defence":
+			if Parts.def(id).hits_harder() and PartOffers.bucket_of(id, Parts.row) == "defence":
 				defence_hitters[id] = true
 	# The premise of the PAIRS note: if this goes red, re-measure the pair line before trusting it.
 	_t.eq("no common part that hits harder is in the defence bucket (PAIRS premise)", defence_hitters.keys(), [])
@@ -152,13 +152,13 @@ func _measure(label: String) -> Dictionary:
 				for stage in range(1, STAGES + 1):
 					var offered := {}
 					for _gate in GATES_PER_STAGE:
-						var picks: Array = Parts.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered)
+						var picks: Array = PartOffers.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered, Parts.offer_ops())
 						s["draws"] += 1
 						for id in picks:
 							offered[id] = offered.get(id, 0) + 1
 							s["slots"] += 1
 							s["counts"][id] = s["counts"].get(id, 0) + 1
-							s["buckets"][Parts.bucket_of(id)] += 1
+							s["buckets"][PartOffers.bucket_of(id, Parts.row)] += 1
 							if Parts.in_kit(pilot, id):
 								s["kit"] += 1
 							var only := String(Parts.row(id).get("class_id", ""))
@@ -202,7 +202,7 @@ func _seed_shares(pilot: String, bot: String) -> Array:
 			for stage in range(1, STAGES + 1):
 				var offered := {}
 				for _gate in GATES_PER_STAGE:
-					var picks: Array = Parts.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered)
+					var picks: Array = PartOffers.roll_gate(rng, ["common"], pilot, held, CHOICES, stage, offered, Parts.offer_ops())
 					for id in picks:
 						offered[id] = offered.get(id, 0) + 1
 						slots += 1
@@ -345,7 +345,7 @@ func _pair_spread(label: String, pairs: Dictionary, strict: bool) -> void:
 # alpha offers and in no other pilot's. Tally's movement share is printed against the 12% target.
 func _tally_part(stats: Dictionary) -> void:
 	_t.eq("%s is a Tally class part on the alpha list" % TALLY_PART,
-		[TALLY_PART in AlphaDefs.PARTS, String(Parts.row(TALLY_PART).get("class_id", "")), Parts.bucket_of(TALLY_PART)], [true, "tally", "movement"])
+		[TALLY_PART in AlphaDefs.PARTS, String(Parts.row(TALLY_PART).get("class_id", "")), PartOffers.bucket_of(TALLY_PART, Parts.row)], [true, "tally", "movement"])
 	for pilot in PILOTS:
 		var seen := 0
 		for bot in stats[pilot]:
@@ -359,7 +359,7 @@ func _tally_part(stats: Dictionary) -> void:
 	# most MOVEMENT_SHARE in all). Tally holds two on this list, so its movement share sits at or
 	# above 1.5 of one row's share; a flat CLASS_MOVEMENT_SHARE measured 0.072 here.
 	var rows: Array = Parts.offer_pool("tally", ["common"]).filter(func(id): return String(Parts.row(id).get("class_id", "")) == "tally" \
-		and Parts.bucket_of(id) == "movement")
+		and PartOffers.bucket_of(id, Parts.row) == "movement")
 	_t.eq("alpha tally holds two class movement rows", rows.size(), 2)
 	var moved := _bucket_share(m, "movement")
 	_t.check("alpha tally movement share is at least 1.5 x CLASS_MOVEMENT_SHARE and at most MOVEMENT_SHARE",
@@ -409,14 +409,14 @@ func _keep_neutral() -> void:
 		var rest: Array = shelf.duplicate()
 		var rng := RandomNumberGenerator.new()
 		rng.seed = 7900
-		Parts._keep_a_neutral(rng, pilot, picks, rest, {}, 0)
+		PartOffers.keep_a_neutral(rng, pilot, picks, rest, {}, 0, Parts.offer_ops())
 		_t.check("%s _keep_a_neutral turns the plain slot of an off-kit draw into a shelf part" % pilot,
 			picks[0] == hitter[0] and picks[1] in PartOffers.NEUTRAL_SHELF, "%s from %s" % [picks, [hitter[0], plain[0]]])
 		var capped := {}
 		for id in shelf:
 			capped[id] = PartOffers.NEUTRAL_REPEAT_CAP
 		var held: Array = [hitter[0], plain[0]]
-		Parts._keep_a_neutral(rng, pilot, held, rest, capped, 0)
+		PartOffers.keep_a_neutral(rng, pilot, held, rest, capped, 0, Parts.offer_ops())
 		_t.eq("%s _keep_a_neutral leaves the draw alone when every shelf part is at its cap" % pilot, held, [hitter[0], plain[0]])
 
 
