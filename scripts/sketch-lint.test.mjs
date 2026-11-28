@@ -53,6 +53,7 @@ import {
   parseTuning,
   preloadedTestSupportFiles,
   readBaselineAt,
+  renamesSince,
   stronglyConnectedComponents,
 } from "./sketch-lint.mjs";
 import {
@@ -1759,7 +1760,18 @@ test("baselineGrowth fails a rule whose list gained an entry and names the rule,
 
 test("baselineGrowth passes a moved or removed entry, fails a rule with an empty list that gains one, and allows a new rule's first list", () => {
   const base = { L1: ["a.gd", "b.gd"], L2: [], L15: { "c.gd": 2 }, W1: {} };
-  assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd", "moved/b.gd"] }), []);
+  assert.deepEqual(
+    baselineGrowth(
+      base,
+      { ...base, L1: ["a.gd", "moved/b.gd"] },
+      new Map([["moved/b.gd", "b.gd"]]),
+    ),
+    [],
+  );
+  assert.equal(
+    baselineGrowth(base, { ...base, L1: ["a.gd", "moved/b.gd"] })[0].message,
+    "L1 list has 1 entry the base list lacks, and no file it names was renamed (new: moved/b.gd): fix the offence instead of listing it",
+  );
   assert.deepEqual(baselineGrowth(base, { ...base, L15: { "moved/c.gd": 2 } }), []);
   assert.deepEqual(baselineGrowth(base, { ...base, L1: ["a.gd"], L15: {} }), []);
   assert.deepEqual(baselineGrowth(base, { ...base, L99: ["new.gd"] }), []);
@@ -1770,6 +1782,90 @@ test("baselineGrowth passes a moved or removed entry, fails a rule with an empty
       "W1 list grew from 0 to 1 entries (new: y.gd (0 to 1)): fix the offence instead of listing it",
     ],
   );
+});
+
+test("baselineGrowth fails a keyed list that swaps one entry for another, and passes the swap when git renamed a file the entry names", () => {
+  const up = (from, to) => `src/${from}.gd -> src/${to}.gd`;
+  const base = {
+    L16: ["src/a.gd", "src/b.gd"],
+    L19: ["tests/a_test.gd"],
+    L20: [up("core/a", "ui/x"), up("core/b", "ui/y")],
+    L14: ["src/s.gd:_x"],
+  };
+  const swapped = {
+    L16: ["src/a.gd", "src/c.gd"],
+    L19: ["tests/b_test.gd"],
+    L20: [up("core/a", "ui/x"), up("core/c", "ui/y")],
+    L14: ["src/s.gd:_renamed"],
+  };
+  assert.deepEqual(
+    baselineGrowth(base, swapped).map((item) => item.message),
+    [
+      "L16 list has 1 entry the base list lacks, and no file it names was renamed (new: src/c.gd): fix the offence instead of listing it",
+      "L19 list has 1 entry the base list lacks, and no file it names was renamed (new: tests/b_test.gd): fix the offence instead of listing it",
+      `L20 list has 1 entry the base list lacks, and no file it names was renamed (new: ${up("core/c", "ui/y")}): fix the offence instead of listing it`,
+    ],
+  );
+  const renamed = new Map([
+    ["src/c.gd", "src/b.gd"],
+    ["tests/b_test.gd", "tests/a_test.gd"],
+    ["src/core/c.gd", "src/core/b.gd"],
+  ]);
+  assert.deepEqual(baselineGrowth(base, swapped, renamed), []);
+  const highMoved = { ...base, L20: [up("core/a", "ui/x"), up("core/b", "ui/z")] };
+  assert.equal(baselineGrowth(base, highMoved).length, 1);
+  assert.deepEqual(baselineGrowth(base, highMoved, new Map([["src/ui/z.gd", "src/ui/y.gd"]])), []);
+  assert.equal(
+    baselineGrowth(base, { ...base, L20: [...base.L20, up("core/c", "ui/y")] }, renamed).length,
+    1,
+  );
+  assert.deepEqual(baselineGrowth(base, { ...base, L20: [up("core/a", "ui/x")] }), []);
+});
+
+test("renamesSince maps each renamed file to its old name between two commits and in the working tree, and fails on a ref git cannot read", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-renames-"));
+  try {
+    const run = (...args) => {
+      const ran = spawnSync("git", args, {
+        cwd: tmp,
+        encoding: "utf8",
+        env: cwdDecidesRepository(),
+      });
+      assert.equal(ran.status, 0, ran.stderr);
+      return ran.stdout.trim();
+    };
+    const commit = (message) => {
+      run("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", message);
+      return run("rev-parse", "HEAD");
+    };
+    run("init", "-q");
+    mkdirSync(path.join(tmp, "src"));
+    const body = Array.from({ length: 20 }, (_, index) => `var line_${index} := ${index}`).join(
+      "\n",
+    );
+    writeFileSync(path.join(tmp, "src", "old.gd"), `${body}\n`);
+    writeFileSync(path.join(tmp, "src", "kept.gd"), `${body}\nvar kept := true\n`);
+    run("add", "src");
+    const base = commit("base");
+    run("mv", "src/old.gd", "src/new.gd");
+    const head = commit("rename");
+    assert.deepEqual(
+      renamesSince(base, head, { cwd: tmp }),
+      new Map([["src/new.gd", "src/old.gd"]]),
+    );
+    assert.deepEqual(renamesSince(head, head, { cwd: tmp }), new Map());
+    run("mv", "src/kept.gd", "src/moved.gd");
+    assert.deepEqual(
+      renamesSince(base, null, { cwd: tmp }),
+      new Map([
+        ["src/moved.gd", "src/kept.gd"],
+        ["src/new.gd", "src/old.gd"],
+      ]),
+    );
+    assert.throws(() => renamesSince("no-such-ref-q2", null, { cwd: tmp }), /git diff .* failed/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });
 
 test("readBaselineAt reads the committed baseline at a commit and refuses a ref that is not one", () => {

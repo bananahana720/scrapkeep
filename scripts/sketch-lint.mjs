@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ALPHA_MAPS, PARK_MAPS, PILOT_IDS } from "./lib/game-defs.mjs";
-import { REPO_ROOT, git } from "./lib/git.mjs";
+import { REPO_ROOT, git, nulSeparated } from "./lib/git.mjs";
 import { isMain } from "./lib/cli.mjs";
 import { walkSync } from "./lib/walk.mjs";
 import { WORD_RULES, lintWords } from "./sketch-lint-words.mjs";
@@ -17,6 +17,7 @@ export const BASELINE_RULES = {
   L11: { shape: "count" },
   L14: {
     shape: "keys",
+    growth: "count",
     keyOf: (item) => item.key ?? item.path,
     fileOf: (key) => key.split(":")[0],
   },
@@ -629,35 +630,66 @@ export function readBaselineAt(ref, { cwd = root } = {}) {
   }
 }
 
-export function baselineGrowth(before, after) {
+export function renamesSince(base, head = null, { cwd = root } = {}) {
+  const fields = nulSeparated(
+    git(
+      [
+        "diff",
+        "--find-renames",
+        "--name-status",
+        "-z",
+        "--diff-filter=R",
+        base,
+        ...(head ? [head] : []),
+      ],
+      { cwd, trim: false },
+    ),
+  );
+  const renamed = new Map();
+  for (let at = 0; at < fields.length; at += 3) renamed.set(fields[at + 2], fields[at + 1]);
+  return renamed;
+}
+
+export function baselineGrowth(before, after, renamed = new Map()) {
   const size = (list) =>
     Array.isArray(list) ? list.length : Object.values(list ?? {}).reduce((a, b) => a + b, 0);
   const grew = [];
   for (const [rule, now] of Object.entries(after)) {
     if (!Object.hasOwn(before, rule)) continue;
     const was = before[rule];
-    if (size(now) <= size(was)) continue;
+    const exact = Array.isArray(now) && BASELINE_RULES[rule]?.growth !== "count";
+    if (!exact && size(now) <= size(was)) continue;
     const unmatched = [...(Array.isArray(was) ? was : [])];
+    const take = (key) => {
+      const at = unmatched.indexOf(key);
+      if (at !== -1) unmatched.splice(at, 1);
+      return at !== -1;
+    };
+    const named = (key) =>
+      key
+        .split(" -> ")
+        .map((file) => renamed.get(file) ?? file)
+        .join(" -> ");
     const added = Array.isArray(now)
-      ? now.filter((key) => {
-          const at = unmatched.indexOf(key);
-          if (at === -1) return true;
-          unmatched.splice(at, 1);
-          return false;
-        })
+      ? now.filter((key) => !(exact && take(named(key))) && !take(key))
       : Object.entries(now)
           .filter(([file, count]) => count > (was?.[file] ?? 0))
           .map(([file, count]) => `${file} (${was?.[file] ?? 0} to ${count})`);
+    if (added.length === 0) continue;
     const fix =
       rule === "L14"
         ? "register a reset in sketches/core-loop/tools/test_batch_driver.gd"
         : "fix the offence";
+    const change =
+      size(now) > size(was)
+        ? `grew from ${size(was)} to ${size(now)} entries`
+        : `has ${added.length} ${added.length === 1 ? "entry" : "entries"} the base list lacks, and no file it names was renamed`;
     grew.push(
       finding(
         "BASELINE",
         BASELINE_PATH,
         1,
-        `${rule} list grew from ${size(was)} to ${size(now)} entries (new: ${added.join(", ")}): ${fix} instead of listing it`,
+        `${rule} list ${change} (new: ${added.join(", ")}): ${fix} instead of listing it`,
       ),
     );
   }
@@ -1728,10 +1760,10 @@ function main() {
     baseline,
     (file) => existsSync(path.join(root, file)) && statSync(path.join(root, file)).isFile(),
   );
-  if (options.base)
-    findings.push(
-      ...baselineGrowth(readBaselineAt(git(["merge-base", options.base, "HEAD"])), baseline),
-    );
+  if (options.base) {
+    const base = git(["merge-base", options.base, "HEAD"]);
+    findings.push(...baselineGrowth(readBaselineAt(base), baseline, renamesSince(base)));
+  }
   for (const item of findings) console.log(formatFinding(item));
   if (options.sketch === "core-loop") {
     for (const [rel, entry] of Object.entries(LIGHT_OWNERS).filter(([, entry]) => entry.open)) {

@@ -26,7 +26,13 @@ import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
 import { REPO_ROOT, cwdDecidesRepository, git, nulSeparated } from "../lib/git.mjs";
 import { processLive } from "../lib/proc.mjs";
-import { BASELINE_PATH, baselineGrowth, formatFinding, readBaselineAt } from "../sketch-lint.mjs";
+import {
+  BASELINE_PATH,
+  baselineGrowth,
+  formatFinding,
+  readBaselineAt,
+  renamesSince,
+} from "../sketch-lint.mjs";
 
 const root = REPO_ROOT;
 const SHA = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/;
@@ -254,6 +260,7 @@ export function executeHookPlan(
     errLog = console.error,
     readPushed = (head, files, modes) => readPushedFiles(head, files, { modes, cwd, spawn }),
     readBaseline = (ref) => readBaselineAt(ref, { cwd }),
+    readRenames = (base, head) => renamesSince(base, head, { cwd }),
     drift = () => [],
   } = {},
 ) {
@@ -311,7 +318,7 @@ export function executeHookPlan(
   if (any("hasBaseline")) {
     ranLabels.push("baseline");
     for (const { base, head } of plans.filter((plan) => plan.hasBaseline)) {
-      const grew = baselineGrowth(readBaseline(base), readBaseline(head));
+      const grew = baselineGrowth(readBaseline(base), readBaseline(head), readRenames(base, head));
       for (const item of grew) errLog(formatFinding(item));
       if (grew.length > 0) ok = false;
     }
