@@ -45,7 +45,7 @@ STANDING = (
     "4. **A test weakened in passing.** When a signature changes or gains an optional argument, read every test that calls it and confirm each still exercises what its label says.\n"
     "5. **An edited record.** Never edit a dated record of past work, not even a path that moved: ledgers, receipts, wave memos, the survey files, entries in `sketches/core-loop/DESIGN-NOTES.md`, and dated specs such as `design-v3/SKILL-BAR.md`, `design-v3/FEEL-READABILITY.md`, `design-v3/pilots/*.md` and `research/comps/*.md`. Live pages you do keep current: `ARCHITECTURE.md`, `CONTRACTS.md`, `VISUAL-LANGUAGE.md` and every `SEAMS.md`.\n"
     "6. **A stray file committed.** Stage files by name. Never `git add -A` or `git add .`: your checkout may hold an untracked `node_modules` link.\n"
-    "7. **A test filter that matched nothing or everything.** `npm run sketch:fast` refuses an argument it does not know. Each `--test` takes one pattern matched against the test file's name, and each is its own argument: `--test unit_suite_test --test boss_owners_test`.\n"
+    "7. **A test filter that matched nothing or everything.** `npm run sketch:fast` refuses an argument it does not know. Each `--test` takes one pattern matched against the test file's name, and each is its own argument: `--test unit_suite_test --test boss_owners_test`. A `--test` replaces the tests the call would have picked from your changed files; it never adds to them, so the call that qualifies your unit carries no `--test`.\n"
     "8. **A grown list.** `scripts/sketch-lint.baseline.json` only shrinks. If it conflicts when you merge, keep the integration branch's blocks and remove only what `npm run sketch:lint` says no longer offends.\n"
     "9. **Git started by hand in a script.** A Node script starts git through `scripts/lib/git.mjs`, which reads the repository of its `cwd` even inside a git hook."
 )
@@ -94,7 +94,7 @@ NODE_CHECKS = (
 GODOT_CHECKS = (
     "Start every shell line with `export PATH=/opt/homebrew/bin:$PATH GODOT_BIN=\"$HOME/Applications/Godot_4.7.2.app/Contents/MacOS/Godot\"`, and run Godot only with `HOME` set to a scratch folder under `artifacts/local/` as the rules page says. "
     "After your last commit make one call of `npm run sketch:fast -- --base {base}`; it picks tests from the changed files and may wait several minutes for a machine slot before it starts: wait for it, and make one call rather than several. "
-    "Then `npm run sketch:lint`, `npm test`, `npm run lint:js` and `npm run check:docs`. Known failures that are not yours: `tests/profile_purity_test.gd` and `tests/slice1_patch_and_w1_craft_test.gd` are red on the base, and `tests/fub_ramp_flash_test.gd` can fail when it runs after `tests/enemy_ramp_flipper_asset_test.gd` in one process; rerun any other red alone before you call it red."
+    "Then `npm run sketch:lint`, `npm test`, `npm run lint:js` and `npm run check:docs`. Known failures that are not yours: `tests/profile_purity_test.gd` and `tests/slice1_patch_and_w1_craft_test.gd` are red on the base; rerun any other red alone before you call it red."
 )
 
 UNITS = runpy.run_path(str(pathlib.Path(__file__).with_name(f"units-r{ROUND}.py")), init_globals=dict(BASE=BASE, DELETE=DELETE, NODE_CHECKS=NODE_CHECKS, GODOT_CHECKS=GODOT_CHECKS))["UNITS"]
