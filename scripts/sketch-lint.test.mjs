@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
@@ -1439,4 +1441,43 @@ test("L18 flags a script with no uid file and a uid file with no script, naming 
     ],
   );
   assert.equal(BASELINE_RULES.L18.shape, "keys");
+});
+
+test("readBaselineAt throws when a blob-less clone cannot fetch the base copy, and returns {} when the commit has no baseline file", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "sketch-lint-partial-"));
+  try {
+    const run = (cwd, ...args) => {
+      const ran = spawnSync("git", args, { cwd, encoding: "utf8" });
+      assert.equal(ran.status, 0, ran.stderr);
+      return ran.stdout.trim();
+    };
+    const source = path.join(tmp, "source");
+    mkdirSync(path.join(source, "scripts"), { recursive: true });
+    run(source, "init", "-q");
+    run(source, "config", "uploadpack.allowFilter", "true");
+    const commit = (message) => {
+      run(source, "add", "-A");
+      run(source, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", message);
+      return run(source, "rev-parse", "HEAD");
+    };
+    writeFileSync(path.join(source, "README"), "x\n");
+    const bare = commit("no baseline");
+    const file = path.join(source, "scripts", "sketch-lint.baseline.json");
+    writeFileSync(file, JSON.stringify({ L1: ["a.gd"] }));
+    const base = commit("one entry");
+    writeFileSync(file, JSON.stringify({ L1: ["a.gd", "b.gd"] }));
+    const head = commit("two entries");
+    const clone = path.join(tmp, "clone");
+    run(tmp, "clone", "-q", "--filter=blob:none", "--no-checkout", `file://${source}`, clone);
+    run(clone, "checkout", "-q", head);
+    renameSync(source, path.join(tmp, "gone"));
+    assert.deepEqual(readBaselineAt(head, { cwd: clone }), { L1: ["a.gd", "b.gd"] });
+    assert.deepEqual(readBaselineAt(bare, { cwd: clone }), {});
+    assert.throws(
+      () => readBaselineAt(base, { cwd: clone }),
+      new RegExp(`base copy of scripts/sketch-lint\\.baseline\\.json at ${base} could not be read`),
+    );
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
 });
