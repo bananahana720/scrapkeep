@@ -5,8 +5,6 @@ const WordBudget := preload("res://src/core/word_budget.gd")
 
 
 const ClassDef := preload("res://src/core/class_def.gd")
-const Items := preload("res://src/build/items.gd")
-const MakerSets := preload("res://src/build/maker_sets.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const RunTier := preload("res://src/core/run_tier.gd")
 
@@ -820,7 +818,8 @@ static func _has_banned_copy(text: String) -> bool:
 
 static func validate(
 	signal_names: Variant,
-	item_ids: Array,
+	items_table: Dictionary,
+	maker_ids: Array,
 	tune_ids: Array,
 	override_ids: Array,
 	alt_ids: Array,
@@ -840,8 +839,8 @@ static func validate(
 		problems.append("crew_orders: expected 24 rows, has %d" % crew_to_check.size())
 	if shift_to_check.size() != 12:
 		problems.append("shift_orders: expected 12 rows, has %d" % shift_to_check.size())
-	if licenses_to_check.size() != MakerSets.SETS.size():
-		problems.append("licenses: expected %d makers, has %d" % [MakerSets.SETS.size(), licenses_to_check.size()])
+	if licenses_to_check.size() != maker_ids.size():
+		problems.append("licenses: expected %d makers, has %d" % [maker_ids.size(), licenses_to_check.size()])
 	var all_ids := {}
 	for id in crew_to_check:
 		all_ids[id] = true
@@ -873,7 +872,7 @@ static func validate(
 				problems.append("%s: invalid text %s" % [id, text])
 			if str(r.get("track", "")) != expected_track:
 				problems.append("%s: track must be %s" % [id, expected_track])
-			if not MakerSets.SETS.has(str(r.get("maker", ""))):
+			if not maker_ids.has(str(r.get("maker", ""))):
 				problems.append("%s: unknown maker %s" % [id, r.get("maker", "")])
 			var w := int(r.get("world", 0))
 			if w < 1 or w > 3:
@@ -882,8 +881,8 @@ static func validate(
 				if String(req) == String(id) or not all_ids.has(String(req)):
 					problems.append("%s: invalid requires %s" % [id, req])
 			_validate_objective(String(id), r.get("objective"), sig_map, problems)
-			_validate_pays(String(id), r.get("pays"), item_ids, tune_ids, override_ids, alt_ids, option_ids, items_seen, problems)
-	for maker in MakerSets.SETS:
+			_validate_pays(String(id), r.get("pays"), items_table, maker_ids, tune_ids, override_ids, alt_ids, option_ids, items_seen, problems)
+	for maker in maker_ids:
 		if not licenses_to_check.has(maker) or not (licenses_to_check[maker] is Dictionary):
 			problems.append("license %s: missing maker entry" % maker)
 			continue
@@ -904,7 +903,7 @@ static func validate(
 			var kind := String(pays.keys()[0])
 			var target := String(pays[kind])
 			if kind == "item":
-				_validate_item_target("license %s:%d" % [maker, t], target, item_ids, items_seen, problems)
+				_validate_item_target("license %s:%d" % [maker, t], target, items_table, items_seen, problems)
 			elif target == "":
 				problems.append("license %s:%d: empty plaque target" % [maker, t])
 	return problems
@@ -961,7 +960,8 @@ static func _validate_leaf(id: String, leaf: Variant, sig_map: Dictionary, probl
 static func _validate_pays(
 	id: String,
 	pays: Variant,
-	item_ids: Array,
+	items_table: Dictionary,
+	maker_ids: Array,
 	tune_ids: Array,
 	override_ids: Array,
 	alt_ids: Array,
@@ -976,7 +976,7 @@ static func _validate_pays(
 	var target := String(pays[kind])
 	match kind:
 		"item":
-			_validate_item_target(id, target, item_ids, items_seen, problems)
+			_validate_item_target(id, target, items_table, items_seen, problems)
 		"tune":
 			if not tune_ids.has(target):
 				problems.append("%s: unknown tune %s" % [id, target])
@@ -990,15 +990,15 @@ static func _validate_pays(
 			if not alt_ids.has(target):
 				problems.append("%s: unknown alt_loadout %s" % [id, target])
 		"license_stamp":
-			if not MakerSets.SETS.has(target):
+			if not maker_ids.has(target):
 				problems.append("%s: unknown license_stamp maker %s" % [id, target])
 
 
-static func _validate_item_target(owner: String, target: String, item_ids: Array, items_seen: Dictionary, problems: Array[String]) -> void:
-	if not item_ids.has(target) or not Items.TABLE.has(target):
+static func _validate_item_target(owner: String, target: String, items_table: Dictionary, items_seen: Dictionary, problems: Array[String]) -> void:
+	if not items_table.has(target):
 		problems.append("%s: unknown item %s" % [owner, target])
 		return
-	var row: Dictionary = Items.TABLE[target]
+	var row: Dictionary = items_table[target]
 	if row.has("class") or row.has("needs"):
 		problems.append("%s: item %s must be universal (no class or needs)" % [owner, target])
 	if ParkDefs.part_in_play(target):

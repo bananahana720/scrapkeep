@@ -20,6 +20,7 @@ const ClassDef := preload("res://src/core/class_def.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const TuneRows := preload("res://src/core/tune_rows.gd")
 const Items := preload("res://src/build/items.gd")
+const MakerSets := preload("res://src/build/maker_sets.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Relics := preload("res://src/build/relics.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
@@ -103,7 +104,7 @@ func _p1_static_integrity() -> void:
 	var order_ids := WorkOrders.order_ids()
 
 	_t.eq("P1 WorkOrders.validate passes clean",
-		WorkOrders.validate(bus, Items.TABLE.keys(), TuneRows.ids(), MetaOptions.override_ids(), MetaOptions.alt_loadout_ids(), MetaOptions.ids()), [])
+		WorkOrders.validate(bus, Items.TABLE, MakerSets.SETS.keys(), TuneRows.ids(), MetaOptions.override_ids(), MetaOptions.alt_loadout_ids(), MetaOptions.ids()), [])
 	_t.eq("P1 24 Crew Orders", WorkOrders.CREW_ORDERS.size(), 24)
 	_t.eq("P1 12 Shift Orders", WorkOrders.SHIFT_ORDERS.size(), 12)
 	_t.eq("P1 7 Maker Licenses", WorkOrders.LICENSES.size(), 7)
@@ -116,9 +117,9 @@ func _p1_static_integrity() -> void:
 		PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 67)
 
 	_t.eq("P1 ShiftBoard W1 validate clean",
-		ShiftBoard.validate(ShiftBoard.RUNGS, Achievements.ROWS, TuneRows.ids()), [])
+		ShiftBoard.validate(ShiftBoard.RUNGS, Achievements.ROWS, TuneRows.ids(), Items.TABLE), [])
 	_t.eq("P1 ShiftBoard W2/W3 validate_world_rungs clean",
-		ShiftBoard.validate_world_rungs(Achievements.all_rows(), TuneRows.ids()), [])
+		ShiftBoard.validate_world_rungs(Achievements.all_rows(), TuneRows.ids(), Items.TABLE), [])
 
 	# Verify every item opened across WorkOrders, LICENSES, and WORLD_CARDS is live & outside ParkDefs.
 	var w50_items: Array = []
@@ -185,12 +186,12 @@ func _p2_planted_negative_controls() -> void:
 	var bad_crew_count := WorkOrders.CREW_ORDERS.duplicate(true)
 	bad_crew_count["wo_moss_1"]["objective"] = {"on": "beacon_unsealed", "count": 15}
 	_t.check("P2 WorkOrders.validate rejects count 15",
-		not WorkOrders.validate(bus, Items.TABLE.keys(), TuneRows.ids(), MetaOptions.override_ids(), MetaOptions.alt_loadout_ids(), MetaOptions.ids(), bad_crew_count).is_empty(), "")
+		not WorkOrders.validate(bus, Items.TABLE, MakerSets.SETS.keys(), TuneRows.ids(), MetaOptions.override_ids(), MetaOptions.alt_loadout_ids(), MetaOptions.ids(), bad_crew_count).is_empty(), "")
 
 	var bad_crew_sig := WorkOrders.CREW_ORDERS.duplicate(true)
 	bad_crew_sig["wo_moss_1"]["objective"] = {"on": "not_a_real_signal", "count": 1}
 	_t.check("P2 WorkOrders.validate rejects unknown signal",
-		not WorkOrders.validate(bus, Items.TABLE.keys(), TuneRows.ids(), MetaOptions.override_ids(), MetaOptions.alt_loadout_ids(), MetaOptions.ids(), bad_crew_sig).is_empty(), "")
+		not WorkOrders.validate(bus, Items.TABLE, MakerSets.SETS.keys(), TuneRows.ids(), MetaOptions.override_ids(), MetaOptions.alt_loadout_ids(), MetaOptions.ids(), bad_crew_sig).is_empty(), "")
 
 
 # Predicate 3: End-to-End Work Order & Maker License Lifecycle.

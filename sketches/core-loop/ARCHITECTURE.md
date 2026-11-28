@@ -31,7 +31,7 @@ To count tracked `.gd` scripts, run `git ls-tree -r --name-only HEAD sketches/co
 4. `build` (`src/build/build.gd`) -> sets `ctx.build`.
 5. `boss` (`src/boss/boss.gd`, loaded if present) -> sets `ctx.boss`.
 6. `ctx.screen_busy` (`ScreenBusy`), then `presentation` (`src/presentation/presentation.gd`).
-7. `flow.setup(ctx, beacon)`, optional `RunStore`, HUD/screens/radio/notes/tuning UI, optional `--dev` console, optional `--experimental-depth` bridge, and deferred `MENU_PATHS` (`camp_hub`, `camp_enemy_picker`, `workshop`, `pause_menu`).
+7. `flow.setup(ctx, beacon, Build.Panels.draw)`, optional `RunStore`, HUD/screens/radio/notes/tuning UI, optional `--dev` console, optional `--experimental-depth` bridge, and deferred `MENU_PATHS` (`camp_hub`, `camp_enemy_picker`, `workshop`, `pause_menu`).
 
 ## Primary runtime state owners
 
@@ -58,9 +58,9 @@ Every `var` declared on `src/core/context.gd` (checked by `npm run check:docs`):
 | `buffs` | `BuffLedger` (`BuffLedger.new()`) | `Context` default | Active timed/stacked buff ledger; setter rebinds `events` and `player.abilities`. |
 | `events` | `GameEvents` | `game.gd` | Central signal bus; setter rebinds `buffs`. |
 | `run` | `RunState` | `game.gd` | Active run state and mutators. |
-| `tuning` | `Tuning` | `game.gd` | Movement/gameplay tuning values and part modifiers. |
-| `player` | `PlayerBall` | `game.gd` | Player rigid-body ball; setter rebinds `player.abilities` to `buffs`. |
-| `camera` | `ChaseCamera` | `game.gd` | Chase camera rig backing `aim_origin()`, `aim_forward()`, and `heading()`. |
+| `tuning` | `RefCounted` (`Tuning`) | `game.gd` | Movement/gameplay tuning values and part modifiers. |
+| `player` | `Node3D` (`PlayerBall`) | `game.gd` | Player rigid-body ball; setter rebinds `player.abilities` to `buffs`. |
+| `camera` | `Node3D` (`ChaseCamera`) | `game.gd` | Chase camera rig backing `aim_origin()`, `aim_forward()`, and `heading()`. |
 | `flow` | `Node` (`Flow`) | `game.gd` | Run/stage flow state machine. |
 | `terrain` | `RefCounted` | `world.setup(ctx)` | Stage geometry, height/surface queries, spawn/beacon points, scrap trails, and materials. |
 | `spawner` | `Node` | `combat.setup(ctx)` | Enemy spawner, `strike()`, `punch_now()`, `plating_of()`, `integrity_of()`, and `would_crush()`. |
