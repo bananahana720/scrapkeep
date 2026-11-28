@@ -3,6 +3,8 @@ extends RefCounted
 const Achievements := preload("res://src/core/achievements.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
+const FORBIDDEN := "\\bNode\\b|[Pp]rofile|res://src/(movement|combat|build|world|boss)"
 
 # The achievement table reads the real bus, pilots and cosmetics, and each rule is shown
 # able to fail on a row built here.
@@ -90,7 +92,7 @@ func run(t) -> void:
 			short_named = true
 	t.check("bad: a short table is refused", short_named, "problems %s" % [short])
 
-	var source := FileAccess.get_file_as_string("res://src/core/achievements.gd")
-	var forbidden := RegEx.create_from_string("\bNode\b|[Pp]rofile|res://src/(movement|combat|build|world|boss)")
-	var hit := forbidden.search(source)
-	t.check("achievements.gd references no node, profile or stat module", hit == null and source != "", "found %s" % [hit.get_string() if hit != null else "empty file"])
+	t.eq("fixture control: the purity pattern finds a planted Node", SourceScan.search(t, "var n: Node\n", FORBIDDEN).size(), 1)
+	var source := SourceScan.text(t, "res://src/core/achievements.gd")
+	var hits := SourceScan.search(t, source, FORBIDDEN)
+	t.check("achievements.gd references no node, profile or stat module", hits.is_empty() and source != "", "found %s" % [hits.map(func(m: RegExMatch) -> String: return m.get_string())])
