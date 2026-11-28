@@ -45,7 +45,7 @@ import {
 import { readLedger } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { scratchHomeEnv, userDataEnv } from "./godot-home.mjs";
-import { shuffleFiles } from "./ci/node-tests.mjs";
+import { resolveTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
 import { packDurationShards } from "./ci/shard-plan.mjs";
 
 export {
@@ -613,6 +613,26 @@ export function nodeTestsFor(changedNode, allNodeTests, readText) {
       picked.add(test);
   }
   return [...picked].sort();
+}
+
+export function selectStage1NodeTests({
+  changedNode,
+  changedGodot,
+  allNodeTests,
+  readText,
+  ciGodotOnly = false,
+  coveredByCi = [],
+  isPrimaryShard = true,
+}) {
+  if (ciGodotOnly && !isPrimaryShard) return [];
+  const pathNodeTests = nodeTestsForPaths(changedGodot);
+  if (changedNode.length === 0 && pathNodeTests.length === 0) return [];
+  const combined = [
+    ...new Set([...nodeTestsFor(changedNode, allNodeTests, readText), ...pathNodeTests]),
+  ].sort();
+  if (!ciGodotOnly) return combined;
+  const covered = new Set(coveredByCi);
+  return combined.filter((file) => !covered.has(file));
 }
 
 export function placeholderIncrease(baseRows, headRows) {
@@ -1347,24 +1367,35 @@ async function main() {
   let node = null;
   let nodeTests = [];
   if (!namedMode) {
-    if (!options.ciGodotOnly) {
-      const pathNodeTests = nodeTestsForPaths(changed.godot);
-      if (changed.node.length > 0 || pathNodeTests.length > 0) {
-        const all = git(["ls-files", "*.test.mjs", "*.test.js"])
-          .split("\n")
-          .filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
-        nodeTests = [
-          ...new Set([
-            ...nodeTestsFor(changed.node, all, (file) =>
-              readFileSync(path.join(root, file), "utf8"),
-            ),
-            ...pathNodeTests,
-          ]),
-        ].sort();
+    const isPrimaryShard = !options.shard || options.shard.index === 1;
+    const pathNodeTests = nodeTestsForPaths(changed.godot);
+    if (changed.node.length > 0 || pathNodeTests.length > 0) {
+      const all = git(["ls-files", "*.test.mjs", "*.test.js"])
+        .split("\n")
+        .filter((file) => file && !file.startsWith(SKETCH) && !file.includes("node_modules"));
+      let coveredByCi = [];
+      if (options.ciGodotOnly) {
+        try {
+          const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
+          coveredByCi = resolveTestFiles(pkg.scripts?.test ?? "", root);
+        } catch {
+          coveredByCi = [];
+        }
       }
+      nodeTests = selectStage1NodeTests({
+        changedNode: changed.node,
+        changedGodot: changed.godot,
+        allNodeTests: all,
+        readText: (file) => readFileSync(path.join(root, file), "utf8"),
+        ciGodotOnly: options.ciGodotOnly,
+        coveredByCi,
+        isPrimaryShard,
+      });
     }
     const baseSketchForPlaceholders =
-      changed.godot.length > 0 ? path.join(baseDir(), SKETCH) : null;
+      changed.godot.length > 0 && (!options.ciGodotOnly || isPrimaryShard)
+        ? path.join(baseDir(), SKETCH)
+        : null;
     [lint, placeholderPair, docs, node] = await Promise.all([
       options.ciGodotOnly
         ? Promise.resolve(null)
@@ -1382,7 +1413,7 @@ async function main() {
       !options.ciGodotOnly && changed.docs.length > 0
         ? spawnText(process.execPath, [path.join(root, "scripts", "check-docs.mjs")])
         : Promise.resolve(null),
-      !options.ciGodotOnly && nodeTests.length > 0
+      nodeTests.length > 0
         ? spawnText(process.execPath, ["--test", ...nodeTests], { cwd: root, timeoutMs: 300_000 })
         : Promise.resolve(null),
     ]);

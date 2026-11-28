@@ -24,6 +24,7 @@ import {
   indexFromFiles,
   lanePool,
   nodeTestsFor,
+  selectStage1NodeTests,
   normalizeTestPattern,
   parseArgs,
   batchable,
@@ -1422,4 +1423,42 @@ test("shouldRunBoot runs on unsharded and shard 1 only, never on shard > 1 or --
   assert.equal(shouldRunBoot(parseArgs(["--shard", "3/4"])), false);
   assert.equal(shouldRunBoot(parseArgs(["--test", "unit_suite_test"])), false);
   assert.equal(shouldRunBoot(parseArgs(["--test", "unit_suite_test", "--shard", "1/2"])), false);
+});
+
+test("selectStage1NodeTests keeps unbundled NODE_PATH_RULES and script tests under --ci-godot-only on shard 1", () => {
+  const allNodeTests = [
+    "scripts/sketch-lint.test.mjs",
+    "scripts/audio-gate.test.mjs",
+    "scripts/palette-gd.test.mjs",
+    "scripts/far-faults.test.mjs",
+  ];
+  const texts = {
+    "scripts/sketch-lint.test.mjs": 'import "./sketch-lint.mjs";',
+    "scripts/audio-gate.test.mjs": 'import "./audio-gate.mjs";',
+    "scripts/palette-gd.test.mjs": "",
+    "scripts/far-faults.test.mjs": "",
+  };
+  const coveredByCi = ["scripts/sketch-lint.test.mjs"];
+  const args = {
+    changedNode: ["scripts/sketch-lint.mjs", "scripts/audio-gate.mjs"],
+    changedGodot: ["src/core/palette.gd", "assets/models/park/props/dam/barrel.glb"],
+    allNodeTests,
+    readText: (f) => texts[f] ?? "",
+    coveredByCi,
+  };
+  assert.deepEqual(selectStage1NodeTests({ ...args, ciGodotOnly: false }), [
+    "scripts/audio-gate.test.mjs",
+    "scripts/far-faults.test.mjs",
+    "scripts/palette-gd.test.mjs",
+    "scripts/sketch-lint.test.mjs",
+  ]);
+  assert.deepEqual(selectStage1NodeTests({ ...args, ciGodotOnly: true, isPrimaryShard: true }), [
+    "scripts/audio-gate.test.mjs",
+    "scripts/far-faults.test.mjs",
+    "scripts/palette-gd.test.mjs",
+  ]);
+  assert.deepEqual(
+    selectStage1NodeTests({ ...args, ciGodotOnly: true, isPrimaryShard: false }),
+    [],
+  );
 });

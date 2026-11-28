@@ -374,9 +374,23 @@ jobs:
         shell: bash
         env:
           GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           if ! node scripts/import-stamp.mjs check; then
+            if [[ -d sketches/core-loop/assets ]]; then
+              if [[ "$EVENT_NAME" == "push" ]]; then
+                find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
+              elif [[ -f sketches/core-loop/.godot/scrapkeep-import.json ]]; then
+                stamp_head="$(node -e 'try { const s = JSON.parse(require("node:fs").readFileSync("sketches/core-loop/.godot/scrapkeep-import.json", "utf8")); if (typeof s.head === "string" && /^[0-9a-f]{7,40}$/.test(s.head)) process.stdout.write(s.head); } catch {}')"
+                if [[ -n "$stamp_head" ]] && git cat-file -e "${stamp_head}^{commit}" 2>/dev/null; then
+                  find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
+                  while IFS= read -r changed_file; do
+                    [[ -f "$changed_file" ]] && touch "$changed_file"
+                  done < <(git diff --no-renames --name-only "${stamp_head}..HEAD" -- sketches/core-loop/assets)
+                fi
+              fi
+            fi
             if [[ -d sketches/core-loop/.godot ]]; then
               echo "Import cache miss or stamp mismatch; trying incremental import"
               if ! node scripts/import-stamp.mjs import; then
@@ -482,9 +496,23 @@ jobs:
         shell: bash
         env:
           GODOT_BIN: ${{ runner.temp }}/scrapkeep-godot-${{ env.GODOT_VERSION }}/Godot_v${{ env.GODOT_VERSION }}_linux.x86_64
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -euo pipefail
           if ! node scripts/import-stamp.mjs check; then
+            if [[ -d sketches/core-loop/assets ]]; then
+              if [[ "$EVENT_NAME" == "push" ]]; then
+                find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
+              elif [[ -f sketches/core-loop/.godot/scrapkeep-import.json ]]; then
+                stamp_head="$(node -e 'try { const s = JSON.parse(require("node:fs").readFileSync("sketches/core-loop/.godot/scrapkeep-import.json", "utf8")); if (typeof s.head === "string" && /^[0-9a-f]{7,40}$/.test(s.head)) process.stdout.write(s.head); } catch {}')"
+                if [[ -n "$stamp_head" ]] && git cat-file -e "${stamp_head}^{commit}" 2>/dev/null; then
+                  find sketches/core-loop/assets -type f -exec touch -d '2025-01-01T00:00:00Z' {} +
+                  while IFS= read -r changed_file; do
+                    [[ -f "$changed_file" ]] && touch "$changed_file"
+                  done < <(git diff --no-renames --name-only "${stamp_head}..HEAD" -- sketches/core-loop/assets)
+                fi
+              fi
+            fi
             if [[ -d sketches/core-loop/.godot ]]; then
               echo "Import cache miss or stamp mismatch; trying incremental import"
               if ! node scripts/import-stamp.mjs import; then
@@ -497,13 +525,6 @@ jobs:
               node scripts/import-stamp.mjs import
             fi
           fi
-
-      - name: Save Godot import cache
-        if: github.event_name == 'push' && steps.import-cache.outputs.cache-hit != 'true'
-        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: sketches/core-loop/.godot
-          key: ${{ steps.import-cache.outputs.cache-primary-key }}
 
       - name: Run duration-balanced Godot shard ${{ matrix.shard }}/8
         shell: bash
