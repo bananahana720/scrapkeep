@@ -62,7 +62,7 @@ import { runnerReceiptBaseName, runnerReceiptPath, writeJsonReceipt } from "./li
 import { readLedger } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
 import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
-import { resolveTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
+import { discoverTestFiles, shuffleFiles } from "./ci/node-tests.mjs";
 import { packDurationShards } from "./ci/shard-plan.mjs";
 
 const binary = resolveGodotBinary();
@@ -1285,8 +1285,7 @@ async function main() {
       let coveredByCi = [];
       if (options.ciGodotOnly) {
         try {
-          const pkg = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
-          coveredByCi = resolveTestFiles(pkg.scripts?.test ?? "", root);
+          coveredByCi = discoverTestFiles(root);
         } catch {
           coveredByCi = [];
         }

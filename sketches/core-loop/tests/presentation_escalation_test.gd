@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const MusicEngine := preload("res://src/presentation/music_engine.gd")
+const MusicPrebake := preload("res://src/presentation/music_prebake.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 
 # B's grammar everywhere (C4, MUSIC-GEMS G11). For each track family, game state
@@ -18,7 +19,7 @@ var _wait_until := 0
 
 
 func _initialize() -> void:
-	MusicEngine.prepare()
+	MusicPrebake.prepare()
 	for theme in 3:
 		_warden(theme)
 		_miniboss(theme)
