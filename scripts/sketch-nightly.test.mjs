@@ -4,7 +4,9 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
+import { acquireSlot } from "./lib/machine-lock.mjs";
 import {
+  acquireNightlySlot,
   artifacts,
   BOT_SEEDS,
   buildPlan,
@@ -684,3 +686,25 @@ test("export step links real templates into the isolated data home", async () =>
       rmSync(realData, { recursive: true, force: true });
     }
   }));
+
+test("the nightly waits on the smoke runs' machine slot and gives up at its wall budget", async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "nightly-slot-"));
+  try {
+    const options = { directory: dir, slots: 1, quietDirectory: dir, pollMs: 10, log: () => {} };
+    const smoke = await acquireSlot(options);
+    await assert.rejects(
+      acquireNightlySlot(Date.now() + 60, options),
+      /nightly wall budget exhausted waiting for the smoke machine lock/,
+    );
+    smoke.release();
+    const release = await acquireNightlySlot(Date.now() + 5_000, options);
+    await assert.rejects(
+      acquireSlot({ ...options, sleep: () => Promise.reject(new Error("slot held")) }),
+      /slot held/,
+    );
+    release();
+    (await acquireSlot(options)).release();
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

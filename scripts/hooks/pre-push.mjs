@@ -7,14 +7,15 @@ import path from "node:path";
 import {
   KNOWN_FAILING_LEDGER,
   isGodotPath,
-  isHandoffDocPath,
+  isDocsPath,
   isPackagePath,
   isSkillPath,
 } from "../ci/affected.mjs";
 import { filterFormatTargets } from "../ci/format-changed.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
-import { REPO_ROOT } from "../lib/git.mjs";
+import { REPO_ROOT, git } from "../lib/git.mjs";
+import { BASELINE_PATH, baselineGrowth, formatFinding, readBaselineAt } from "../sketch-lint.mjs";
 
 const root = REPO_ROOT;
 const ZERO_SHA = "0000000000000000000000000000000000000000";
@@ -77,16 +78,32 @@ export function changedFilesForRange(
   ];
 }
 
+export function rangeBase({ localSha, remoteSha }, { cwd = root, spawn = spawnSync } = {}) {
+  if (remoteSha) return remoteSha;
+  const ran = spawn("git", ["rev-list", "--first-parent", localSha, "--not", "--remotes"], {
+    cwd,
+    encoding: "utf8",
+  });
+  if (ran.error || ran.status !== 0) {
+    throw new Error(
+      `git rev-list failed: ${ran.error?.message || (ran.stderr || ran.stdout || "").trim()}`,
+    );
+  }
+  const oldest = ran.stdout.trim().split("\n").filter(Boolean).pop();
+  return oldest ? `${oldest}^` : localSha;
+}
+
 export function planHookChecks(changedFiles, exists = (f) => existsSync(path.join(root, f))) {
   const jsFiles = filterFormatTargets(changedFiles, exists);
   const hasSketch = changedFiles.some(isGodotPath);
   const hasDocsOrPkg = changedFiles.some(
-    (f) => isHandoffDocPath(f) || isPackagePath(f) || isSkillPath(f),
+    (f) => isDocsPath(f) || isPackagePath(f) || isSkillPath(f),
   );
   const hasSkills = changedFiles.some((f) => isSkillPath(f) || f === "scripts/check-skills.mjs");
   const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
   const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
-  return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing };
+  const hasBaseline = changedFiles.includes(BASELINE_PATH);
+  return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing, hasBaseline };
 }
 
 function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
@@ -117,6 +134,8 @@ export function executeHookPlan(
     spawn = spawnSync,
     ensureModules = ensureNodeModules,
     errLog = console.error,
+    ranges = [],
+    readBaseline = (ref) => readBaselineAt(ref, { cwd }),
   } = {},
 ) {
   let ok = true;
@@ -200,6 +219,14 @@ export function executeHookPlan(
     );
     if (!r.ok) ok = false;
   }
+  if (plan.hasBaseline) {
+    ranLabels.push("baseline");
+    for (const { base, head } of ranges) {
+      const grew = baselineGrowth(readBaseline(base), readBaseline(head));
+      for (const item of grew) errLog(formatFinding(item));
+      if (grew.length > 0) ok = false;
+    }
+  }
   if (plan.hasKnownFailing) {
     ranLabels.push("known-failing");
     const r = runStep(
@@ -282,7 +309,9 @@ if (isMain(import.meta.url)) {
   try {
     const opts = parseHookArgs(process.argv.slice(2));
     let files = [];
+    let ranges = [];
     if (opts.base) {
+      ranges = [{ base: git(["merge-base", opts.base, "HEAD"]), head: "HEAD" }];
       const ran = spawnSync("git", ["diff", "--no-renames", "--name-only", `${opts.base}...HEAD`], {
         cwd: root,
         encoding: "utf8",
@@ -296,12 +325,13 @@ if (isMain(import.meta.url)) {
         .filter(Boolean);
     } else {
       const stdin = process.stdin.isTTY ? "" : readFileSync(0, "utf8");
-      const ranges = parsePushStdin(stdin);
-      files = [...new Set(ranges.flatMap((range) => changedFilesForRange(range)))];
+      const pushed = parsePushStdin(stdin);
+      files = [...new Set(pushed.flatMap((range) => changedFilesForRange(range)))];
+      ranges = pushed.map((range) => ({ base: rangeBase(range), head: range.localSha }));
     }
 
     const plan = planHookChecks(files);
-    const { ok, ranLabels } = executeHookPlan(plan);
+    const { ok, ranLabels } = executeHookPlan(plan, { ranges });
     const loadEnd = os.loadavg()[0];
     const elapsedS = (performance.now() - started) / 1000;
     const outcome = evaluateHookOutcome({
