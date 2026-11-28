@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import {
   closeSync,
@@ -24,6 +24,7 @@ import {
   GODOT_VERSION,
   resolveGodotBinary as resolveSharedGodotBinary,
   scratchGodotEnv,
+  whichTool,
 } from "./godot-home.mjs";
 import { formatLedgerAudit, runLedgerAudit } from "./ledger-audit.mjs";
 import { runProcess as runChild } from "./lib/proc.mjs";
@@ -167,15 +168,6 @@ export function parseSize(sizeText = "1280x720") {
     throw new Error(`--size ${width}x${height} is out of allowed range (64x64..7680x4320)`);
   }
   return { width, height, text: `${width}x${height}` };
-}
-
-export function whichTool(toolName, env = process.env) {
-  const found = spawnSync("which", [toolName], { env, encoding: "utf8" });
-  if (found.status === 0) {
-    const resolved = found.stdout.trim().split(/\r?\n/)[0];
-    if (resolved) return resolved;
-  }
-  return null;
 }
 
 export function resolveGodotBinary({

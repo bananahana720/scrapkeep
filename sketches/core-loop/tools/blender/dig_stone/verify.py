@@ -15,7 +15,6 @@ SKETCH = HERE.parents[2]
 ROOT = SKETCH.parents[1]
 MODELS = SKETCH / "assets/models/dig_stone"
 EVIDENCE = ROOT / "artifacts/local/dress-preview/MDS"
-GODOT = Path.home() / ".local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64"
 TEST = "dress_mds_assets_test"
 
 
@@ -67,7 +66,8 @@ def main():
         env = dict(os.environ, XDG_CONFIG_HOME=str(temp / "config"), XDG_CACHE_HOME=str(temp / "cache"), XDG_DATA_HOME=str(temp / "data"))
         smoke = ["node", "scripts/sketch-smoke.mjs", "--sketch", "core-loop", "--test", TEST + ".gd"]
         run(smoke, "named-pass", env)
-        raw = [str(GODOT), "--headless", "--path", str(SKETCH), "--script", "res://tests/" + TEST + ".gd"]
+        godot = subprocess.check_output(["node", "scripts/godot-home.mjs", "--bin"], cwd=ROOT, text=True).strip()
+        raw = [godot, "--headless", "--path", str(SKETCH), "--script", "res://tests/" + TEST + ".gd"]
         output = run(raw, "asset-test", env)
         assert TEST + ": PASS" in output and " -> FAIL" not in output
         assert len(re.findall(r"^MDS_BUDGET ", output, re.M)) == 8
