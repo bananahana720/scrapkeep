@@ -23,7 +23,9 @@ export const BASELINE_RULES = {
   L15: { shape: "count" },
   L16: { shape: "keys" },
   ...Object.fromEntries(WORD_RULES.map((rule) => [rule, { shape: "count" }])),
+  L18: { shape: "keys" },
 };
+const UID_FOLDERS = ["addons", "src", "tests", "tools"];
 const MAX_QUARANTINE = 0;
 const QUARANTINE_HEADER = "test\towner\treason\tadded\tdeadline";
 const TEST_FOLDERS = new Set(["unit", "support", "doubles", "fixtures", "trees", "workshop"]);
@@ -1114,6 +1116,27 @@ export function lintL17(file, text) {
   return findings;
 }
 
+export function lintL18(paths) {
+  const tracked = new Set(paths);
+  const findings = [];
+  for (const file of paths) {
+    if (file.endsWith(".gd") && !tracked.has(`${file}.uid`))
+      findings.push(
+        finding(
+          "L18",
+          file,
+          1,
+          "script has no tracked NAME.gd.uid beside it; run a Godot import and commit the .uid file",
+        ),
+      );
+    else if (file.endsWith(".gd.uid") && !tracked.has(file.slice(0, -".uid".length)))
+      findings.push(
+        finding("L18", file, 1, "uid file has no NAME.gd beside it; delete the orphan"),
+      );
+  }
+  return findings;
+}
+
 function walk(directory) {
   return walkSync(directory, { includeDirs: true });
 }
@@ -1204,6 +1227,14 @@ export function lintSketch(sketch) {
   findings.push(...lintL3(flagFiles, tuning));
   const tests = walk(path.join(directory, "tests"));
   findings.push(...lintL4(tests, `${relative}/tests`));
+  findings.push(
+    ...lintL18(
+      git(["ls-files", "--", ...UID_FOLDERS], { cwd: directory })
+        .split("\n")
+        .filter(Boolean)
+        .map((file) => `${relative}/${file}`),
+    ),
+  );
   const quarantine = path.join(directory, "tests", "QUARANTINE.tsv");
   if (existsSync(quarantine)) {
     const names = new Set(

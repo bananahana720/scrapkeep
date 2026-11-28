@@ -34,6 +34,7 @@ import {
   lintL15,
   lintL16,
   lintL17,
+  lintL18,
   lintSketch,
   parseBatchDriverRefs,
   parseBatchDriverVars,
@@ -720,6 +721,7 @@ test("the baseline silences listed offenders and shrinks only", () => {
     W6: {},
     W7: {},
     S8: {},
+    L18: [],
   });
 });
 
@@ -1419,4 +1421,22 @@ test("baselineGrowth passes a moved or removed entry, fails a rule with an empty
 test("readBaselineAt reads the committed baseline at a commit and refuses a ref that is not one", () => {
   assert.ok(Array.isArray(readBaselineAt("HEAD").L1));
   assert.throws(() => readBaselineAt("no-such-ref-g1"), /rev-parse/);
+});
+
+test("L18 flags a script with no uid file and a uid file with no script, naming the file and the fix", () => {
+  const out = lintL18([
+    "sketches/core-loop/src/a.gd",
+    "sketches/core-loop/src/a.gd.uid",
+    "sketches/core-loop/src/b.gd",
+    "sketches/core-loop/tests/gone_test.gd.uid",
+    "sketches/core-loop/src/notes.md",
+  ]);
+  assert.deepEqual(
+    out.map((item) => formatFinding(item)),
+    [
+      "L18 sketches/core-loop/src/b.gd:1 script has no tracked NAME.gd.uid beside it; run a Godot import and commit the .uid file",
+      "L18 sketches/core-loop/tests/gone_test.gd.uid:1 uid file has no NAME.gd beside it; delete the orphan",
+    ],
+  );
+  assert.equal(BASELINE_RULES.L18.shape, "keys");
 });
