@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Profile := preload("res://src/core/profile.gd")
-const Records := preload("res://src/world/camp_records.gd")
+const Records := preload("res://src/core/camp_records.gd")
 const SurvivalCount := preload("res://src/world/survival_count.gd")
 const CampRing := preload("res://src/world/camp_ring.gd")
 const Sandbox := preload("res://src/world/camp_sandbox.gd")

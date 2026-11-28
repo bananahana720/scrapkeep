@@ -9,7 +9,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const FakeHub := preload("res://tests/support/camp_fake_hub.gd")
 const Skee := preload("res://src/world/camp_skee.gd")
-const Records := preload("res://src/world/camp_records.gd")
+const Records := preload("res://src/core/camp_records.gd")
 const Profile := preload("res://src/core/profile.gd")
 
 var _t := T.new("camp_skee_test")
