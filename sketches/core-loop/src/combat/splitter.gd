@@ -4,7 +4,6 @@ const CUES := "res://src/combat/special_cues.gd"
 const POD := "splitter_pod"
 const SpecialRig := preload("res://src/presentation/special_rig.gd")
 const BODY_GLB := "res://assets/models/world_one/enemy_splitter.glb"
-const PIECE_GLB := "res://assets/models/world_one/enemy_splitter_piece.glb"
 
 signal special_tell(moment: String)
 
@@ -159,10 +158,6 @@ static func _read(path: String) -> Dictionary:
 
 static func body_parts() -> Dictionary:
 	return parts(BODY_GLB)
-
-
-static func piece_parts() -> Dictionary:
-	return parts(PIECE_GLB)
 
 
 func pod_offsets() -> Array[Vector3]:
