@@ -1,24 +1,7 @@
-extends Node
+extends "res://tests/doubles/spawner_double_base.gd"
 
-# A stand-in for combat's spawner, so the spine tests can check the Warden gate, the
-# objective and the crush pass-through without depending on writer A's module. It
-# follows A's plating rule from DEMO-SPEC: ball contacts punch for heft times their
-# force, weapons punch for their damage, a hit below plating chips 20%. It lives in a
-# subfolder so the smoke runner does not run it as a test.
-
-const STRIKE_DAMAGE := {
-	"stomp": [30.0, 1.1],
-	"ram": [14.0, 1.3],
-	"slam": [0.0, 1.2],
-}
-const CRUISE_TIER := 1
 const CHASER_HP := 80.0
 
-var ctx
-var strikes: Array[Dictionary] = []
-# A test can hold deaths back to model a spawner that records the kill late; the
-# contract says the kill is recorded on the tick HP reaches 0, and flow must not open
-# the gates early if one does not.
 var delay_deaths := false
 var _pending: Array[Node3D] = []
 
@@ -32,6 +15,9 @@ class DoubleEnemy:
 	var plating := 0.0
 	var dead := false
 	var knocks := 0
+
+	func is_dead() -> bool:
+		return dead
 
 	func knock(_direction: Vector3, _force: float) -> void:
 		knocks += 1
@@ -72,25 +58,13 @@ func spawn_enemy(kind: String, at: Vector3, _affix_id := "") -> Node3D:
 	return enemy
 
 
-func punch_of(kind: String, force: float) -> float:
-	if STRIKE_DAMAGE.has(kind):
-		var row: Array = STRIKE_DAMAGE[kind]
-		return (row[0] + force * row[1]) * ctx.run.heft()
-	return force
-
-
 func strike(enemy: Node3D, kind: String, force: float) -> void:
 	if not is_instance_valid(enemy) or enemy.dead:
 		return
-	var punch := punch_of(kind, force)
-	var plating := plating_of(enemy)
-	strikes.append({"kind": kind, "force": force, "punch": punch, "plating": plating})
-	ctx.events.enemy_struck.emit(enemy, kind, force)
-	var amount := punch
-	if punch < plating:
-		amount = 0.2 * punch
-		ctx.events.strike_deflected.emit(enemy, kind, punch, plating)
-	enemy.hp -= amount
+	var result := resolve(enemy, kind, force)
+	strikes.append({"kind": kind, "force": force, "punch": result["punch"], "plating": result["plating"]})
+	_emit_strike(enemy, kind, force, result)
+	enemy.hp -= result["dealt"]
 	if enemy.hp <= 0.0:
 		enemy.dead = true
 		if delay_deaths:
@@ -111,22 +85,9 @@ func _die(enemy: Node3D) -> void:
 	enemy.queue_free()
 
 
-func punch_now() -> float:
-	var speed: float = ctx.player.planar_velocity().length()
-	return punch_of("ram", speed) if ctx.player.speed_tier() >= CRUISE_TIER else 0.0
-
-
 func plating_of(enemy: Node3D) -> float:
 	return enemy.plating if is_instance_valid(enemy) else 0.0
 
 
-func integrity_of(enemy: Node3D) -> float:
-	if not is_instance_valid(enemy):
-		return 1.0
-	return clampf(enemy.hp / enemy.max_hp, 0.0, 1.0)
-
-
-func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
-	if not is_instance_valid(enemy) or enemy.dead:
-		return false
-	return plating_of(enemy) == 0.0 and punch_of(kind, force) >= enemy.hp
+func _fallback_plating(enemy: Node3D) -> float:
+	return plating_of(enemy)
