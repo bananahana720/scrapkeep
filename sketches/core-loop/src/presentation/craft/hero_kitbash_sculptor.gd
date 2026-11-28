@@ -171,6 +171,12 @@ static func create_canvas() -> KitbashCanvas:
 	return KitbashCanvas.new()
 
 
+static func create_canvas_without_foot_grime() -> KitbashCanvas:
+	var canvas := KitbashCanvas.new()
+	canvas.ground_foot_grime = false
+	return canvas
+
+
 static func planar_uv(p: Vector3, n: Vector3, uv_scale: float) -> Vector2:
 	var an := Vector3(absf(n.x), absf(n.y), absf(n.z))
 	if an.y >= an.x and an.y >= an.z:
@@ -1421,3 +1427,221 @@ static func inspect_mesh_stats(mesh: ArrayMesh) -> Dictionary:
 		"b_zero_ratio": float(b_zero) / vf,
 		"b_high_ratio": float(b_high) / vf,
 	}
+
+
+static func add_flat_deck_slab(
+	canvas: KitbashCanvas,
+	slot: String,
+	size: Vector3,
+	edge_grime: float,
+	center_grime: float,
+	edge_wear: float,
+	offset: Vector3,
+	look: Dictionary
+) -> void:
+	var hx := maxf(size.x * 0.5, 0.05)
+	var hy := maxf(size.y * 0.5, 0.01)
+	var hz := maxf(size.z * 0.5, 0.05)
+	var ix := maxf(hx - minf(hx * 0.18, 2.8), hx * 0.55)
+	var iz := maxf(hz - minf(hz * 0.18, 2.8), hz * 0.55)
+	var xs := [-hx, -ix, ix, hx]
+	var zs := [-hz, -iz, iz, hz]
+	var top_y := offset.y + hy
+	var bot_y := offset.y - hy
+
+	var top_pts: Array = []
+	var top_cols: Array = []
+	for gz in 4:
+		var row_p: Array[Vector3] = []
+		var row_c: Array[Color] = []
+		for gx in 4:
+			row_p.append(Vector3(offset.x + xs[gx], top_y, offset.z + zs[gz]))
+			var is_outer := (gx == 0 or gx == 3 or gz == 0 or gz == 3)
+			row_c.append(CraftLookdev.encode_mask(edge_wear if is_outer else 0.04, edge_grime if is_outer else center_grime, 0.0))
+		top_pts.append(row_p)
+		top_cols.append(row_c)
+
+	for gz in 3:
+		for gx in 3:
+			canvas.add_quad(
+				slot,
+				top_pts[gz][gx], top_pts[gz][gx + 1], top_pts[gz + 1][gx + 1], top_pts[gz + 1][gx],
+				Vector3.UP,
+				top_cols[gz][gx], top_cols[gz][gx + 1], top_cols[gz + 1][gx + 1], top_cols[gz + 1][gx],
+				Vector3.UP, Vector3.UP, Vector3.UP, Vector3.UP
+			)
+
+	var bot_pts: Array = []
+	var c_bot := CraftLookdev.encode_mask(0.08, maxf(edge_grime, float(look.bottom_grime)), 0.0)
+	for gz in 4:
+		var brow: Array[Vector3] = []
+		for gx in 4:
+			brow.append(Vector3(offset.x + xs[gx], bot_y, offset.z + zs[gz]))
+		bot_pts.append(brow)
+
+	for gz in 3:
+		for gx in 3:
+			canvas.add_quad(
+				slot,
+				bot_pts[gz][gx + 1], bot_pts[gz][gx], bot_pts[gz + 1][gx], bot_pts[gz + 1][gx + 1],
+				Vector3.DOWN, c_bot, c_bot, c_bot, c_bot,
+				Vector3.DOWN, Vector3.DOWN, Vector3.DOWN, Vector3.DOWN
+			)
+
+	var c_side_top := CraftLookdev.encode_mask(maxf(edge_wear, float(look.side_wear)), edge_grime, 0.0)
+	for gx in 3:
+		canvas.add_quad(
+			slot,
+			top_pts[0][gx + 1], top_pts[0][gx], bot_pts[0][gx], bot_pts[0][gx + 1],
+			Vector3.FORWARD, c_side_top, c_side_top, c_bot, c_bot,
+			Vector3.FORWARD, Vector3.FORWARD, Vector3.FORWARD, Vector3.FORWARD
+		)
+		canvas.add_quad(
+			slot,
+			top_pts[3][gx], top_pts[3][gx + 1], bot_pts[3][gx + 1], bot_pts[3][gx],
+			Vector3.BACK, c_side_top, c_side_top, c_bot, c_bot,
+			Vector3.BACK, Vector3.BACK, Vector3.BACK, Vector3.BACK
+		)
+	for gz in 3:
+		canvas.add_quad(
+			slot,
+			top_pts[gz][0], top_pts[gz + 1][0], bot_pts[gz + 1][0], bot_pts[gz][0],
+			Vector3.LEFT, c_side_top, c_side_top, c_bot, c_bot,
+			Vector3.LEFT, Vector3.LEFT, Vector3.LEFT, Vector3.LEFT
+		)
+		canvas.add_quad(
+			slot,
+			top_pts[gz + 1][3], top_pts[gz][3], bot_pts[gz][3], bot_pts[gz + 1][3],
+			Vector3.RIGHT, c_side_top, c_side_top, c_bot, c_bot,
+			Vector3.RIGHT, Vector3.RIGHT, Vector3.RIGHT, Vector3.RIGHT
+		)
+
+
+static func add_beveled_annulus(
+	canvas: KitbashCanvas,
+	slot: String,
+	xform: Transform3D,
+	sides: int,
+	r_in: float,
+	r_out_top: float,
+	r_out_bot: float,
+	height: float,
+	base_wear: float,
+	base_grime: float,
+	emissive: float,
+	edge_wear: float,
+	look: Dictionary
+) -> void:
+	var n := maxi(sides, 6)
+	var hy := height * 0.5
+	var bev_y := minf(height * 0.24, 0.08)
+	var r_in_top := r_in + minf((r_out_top - r_in) * float(look.lip_ratio), float(look.lip_max))
+	var r_ramp_top := r_out_top + minf((r_out_bot - r_out_top) * 0.18, 0.14)
+	var flat_inset := minf((r_out_top - r_in_top) * 0.14, 0.12)
+	var r_in_flat := r_in_top + flat_inset
+	var r_out_flat := r_out_top - flat_inset
+	var profile: Array[Vector2] = []
+	var pcols: Array[Color] = []
+	var c_crest := CraftLookdev.encode_mask(edge_wear if emissive < 0.5 else 0.3, minf(base_grime, 0.22), emissive)
+	var c_flat := CraftLookdev.encode_mask(base_wear, base_grime, emissive)
+	profile.append(Vector2(r_in, -hy))
+	pcols.append(CraftLookdev.encode_mask(base_wear, maxf(base_grime, float(look.inner_foot_grime)), emissive))
+	profile.append(Vector2(r_in, hy - bev_y))
+	pcols.append(CraftLookdev.encode_mask(base_wear, base_grime, emissive))
+	profile.append(Vector2(r_in_top, hy))
+	pcols.append(c_crest)
+	if r_out_flat > r_in_flat + 0.02:
+		profile.append(Vector2(r_in_flat, hy))
+		pcols.append(c_flat)
+		profile.append(Vector2(r_out_flat, hy))
+		pcols.append(c_flat)
+	profile.append(Vector2(r_out_top, hy))
+	pcols.append(c_crest)
+	if look.ramp:
+		profile.append(Vector2(r_ramp_top, hy - bev_y * 0.85))
+		pcols.append(CraftLookdev.encode_mask(base_wear, maxf(base_grime, 0.36), emissive))
+	profile.append(Vector2(r_out_bot, -hy + bev_y))
+	pcols.append(CraftLookdev.encode_mask(base_wear, maxf(base_grime, float(look.bevel_grime)), emissive))
+	profile.append(Vector2(r_out_bot, -hy))
+	pcols.append(CraftLookdev.encode_mask(base_wear, maxf(base_grime, float(look.outer_foot_grime)), emissive))
+	var pcount := profile.size()
+	var rings: Array = []
+	for pi in pcount:
+		var row: Array[Vector3] = []
+		var rp: Vector2 = profile[pi]
+		for si in n:
+			var ang := TAU * float(si) / float(n)
+			row.append(xform * Vector3(cos(ang) * rp.x, rp.y, sin(ang) * rp.x))
+		rings.append(row)
+
+	for si in n:
+		var nsi := (si + 1) % n
+		var mid_ang := TAU * (float(si) + 0.5) / float(n)
+		var rad := Vector3(cos(mid_ang), 0.0, sin(mid_ang))
+		for pi in pcount:
+			var npi := (pi + 1) % pcount
+			var d2: Vector2 = profile[npi] - profile[pi]
+			var out2 := Vector2(-d2.y, d2.x).normalized()
+			var local_n := Vector3(rad.x * out2.x, out2.y, rad.z * out2.x)
+			var world_n := (xform.basis * local_n).normalized()
+			canvas.add_quad(
+				slot,
+				rings[pi][si], rings[pi][nsi], rings[npi][nsi], rings[npi][si],
+				world_n, pcols[pi], pcols[pi], pcols[npi], pcols[npi]
+			)
+
+
+static func add_clean_louver(
+	canvas: KitbashCanvas,
+	frame_slot: String,
+	xform: Transform3D,
+	width: float,
+	height: float,
+	depth: float,
+	slat_count: int,
+	emissive_slot: String,
+	look: Dictionary
+) -> void:
+	var fw := clampf(minf(width, height) * 0.12, 0.04, 0.14)
+	var bev := minf(fw * 0.28, depth * 0.28)
+	add_chamfered_plate(
+		canvas, frame_slot,
+		xform * Transform3D(Basis.IDENTITY, Vector3(0.0, (height - fw) * 0.5, 0.0)),
+		Vector3(width, fw, depth), bev, 0.14, 0.22
+	)
+	add_chamfered_plate(
+		canvas, frame_slot,
+		xform * Transform3D(Basis.IDENTITY, Vector3(0.0, -(height - fw) * 0.5, 0.0)),
+		Vector3(width, fw, depth), bev, 0.14, 0.34
+	)
+	var side_h := maxf(height - fw * 2.0 - 0.016, 0.04)
+	add_chamfered_plate(
+		canvas, frame_slot,
+		xform * Transform3D(Basis.IDENTITY, Vector3(-(width - fw) * 0.5, 0.0, 0.006)),
+		Vector3(fw, side_h, depth * 0.94), bev * 0.85, 0.14, 0.24
+	)
+	add_chamfered_plate(
+		canvas, frame_slot,
+		xform * Transform3D(Basis.IDENTITY, Vector3((width - fw) * 0.5, 0.0, 0.006)),
+		Vector3(fw, side_h, depth * 0.94), bev * 0.85, 0.14, 0.24
+	)
+	var inner_w := maxf(width - fw * 2.15, 0.06)
+	var back_slot := emissive_slot if emissive_slot != "" else frame_slot
+	var emit := 1.0 if emissive_slot != "" else 0.0
+	add_chamfered_plate(
+		canvas, back_slot,
+		xform * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -depth * 0.26)),
+		Vector3(inner_w, side_h * 0.92, depth * 0.38), minf(bev * 0.5, 0.02),
+		0.10, float(look.back_grime) if emit < 0.5 else 0.08, emit, float(look.back_edge_wear)
+	)
+	var count := maxi(slat_count, 2)
+	var step := side_h / float(count)
+	var slat_t := clampf(step * 0.30, 0.02, 0.07)
+	for i in count:
+		var y := -side_h * 0.5 + (float(i) + 0.5) * step
+		var sxf := xform * Transform3D(Basis(Vector3.RIGHT, deg_to_rad(28.0)), Vector3(0.0, y, depth * 0.10))
+		add_chamfered_plate(
+			canvas, frame_slot, sxf,
+			Vector3(inner_w * 0.94, slat_t, depth * 0.72), minf(slat_t * 0.26, 0.016),
+			0.16, float(look.slat_grime), 0.0, float(look.slat_edge_wear)
+		)

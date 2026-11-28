@@ -6,6 +6,16 @@ const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculpto
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const DECK_LOOK := {"bottom_grime": 0.56, "side_wear": 0.36}
+const ANNULUS_LOOK := {
+	"lip_ratio": 0.12,
+	"lip_max": 0.10,
+	"ramp": false,
+	"inner_foot_grime": 0.72,
+	"bevel_grime": 0.52,
+	"outer_foot_grime": 0.76,
+}
+const LOUVER_LOOK := {"back_grime": 0.86, "back_edge_wear": 0.30, "slat_grime": 0.68, "slat_edge_wear": 0.86}
 const DETAIL_TEX_PATH := "res://assets/textures/craft/oxidized_iron_detail.png"
 
 
@@ -103,7 +113,6 @@ static var _cloud_shader: Shader = null
 static var _bolt_shader: Shader = null
 static var _wake_shader: Shader = null
 static var _aura_shader: Shader = null
-static var _micro_normal_tex: ImageTexture = null
 static var _detail_tex: Texture2D = null
 
 var _dressed := false
@@ -132,7 +141,6 @@ static func reset_for_tests() -> void:
 	_bolt_shader = null
 	_wake_shader = null
 	_aura_shader = null
-	_micro_normal_tex = null
 	_detail_tex = null
 
 
@@ -177,19 +185,7 @@ static func dress_chunk(chunk_root: Node) -> int:
 
 
 static func bind_surface_materials(mi: MeshInstance3D) -> int:
-	if mi == null or mi.mesh == null or not (mi.mesh is ArrayMesh):
-		return 0
-	var am := mi.mesh as ArrayMesh
-	var count := am.get_surface_count()
-	var bound := 0
-	mi.material_override = null
-	for i in count:
-		var slot := am.surface_get_name(i)
-		var mat := get_material(slot)
-		if mat != null:
-			mi.set_surface_override_material(i, mat)
-			bound += 1
-	return bound
+	return Lookdev.bind_surface_materials(mi, get_material)
 
 
 static func apply_surface_materials_to_mesh(am: ArrayMesh) -> void:
@@ -212,74 +208,6 @@ static func detail_texture() -> Texture2D:
 	return _detail_tex
 
 
-static func micro_normal_texture() -> ImageTexture:
-	if _micro_normal_tex != null:
-		return _micro_normal_tex
-	var sz := 128
-	var noise := FastNoiseLite.new()
-	noise.seed = 40731
-	noise.frequency = 0.09
-	noise.fractal_octaves = 3
-	var h := noise.get_seamless_image(sz, sz)
-	var img := Image.create_empty(sz, sz, false, Image.FORMAT_RGB8)
-	for y in sz:
-		var ym := (y - 1 + sz) % sz
-		var yp := (y + 1) % sz
-		for x in sz:
-			var xm := (x - 1 + sz) % sz
-			var xp := (x + 1) % sz
-			var dx := (h.get_pixel(xp, y).r - h.get_pixel(xm, y).r) * 2.2
-			var dy := (h.get_pixel(x, yp).r - h.get_pixel(x, ym).r) * 2.2
-			var n := Vector3(-dx, -dy, 1.0).normalized()
-			img.set_pixel(x, y, Color(n.x * 0.5 + 0.5, n.y * 0.5 + 0.5, n.z * 0.5 + 0.5))
-	img.generate_mipmaps()
-	_micro_normal_tex = ImageTexture.create_from_image(img)
-	return _micro_normal_tex
-
-
-static func make_weathered_pbr(
-	albedo: Color,
-	roughness: float = 0.72,
-	metallic: float = 0.24,
-	emit_color: Color = Color(0.0, 0.0, 0.0, 0.0),
-	emit_energy: float = 0.0,
-	triplanar_scale: float = 0.35,
-	normal_scale: float = 0.42
-) -> StandardMaterial3D:
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = albedo
-	mat.albedo_texture = Palette.painted_texture(256)
-	mat.roughness = roughness
-	mat.roughness_texture = Palette.painted_texture(256)
-	mat.metallic = metallic
-	mat.normal_enabled = true
-	mat.normal_texture = micro_normal_texture()
-	mat.normal_scale = normal_scale
-	mat.uv1_triplanar = true
-	mat.uv1_scale = Vector3.ONE * triplanar_scale
-	if emit_energy > 0.0:
-		mat.emission_enabled = true
-		mat.emission = emit_color
-		mat.emission_energy_multiplier = emit_energy
-	return mat
-
-
-static func enrich_standard_pbr(mat: StandardMaterial3D, normal_scale: float = 0.38, triplanar_scale: float = 0.22) -> StandardMaterial3D:
-	if mat == null:
-		return null
-	if mat.albedo_texture == null:
-		mat.albedo_texture = Palette.painted_texture(256)
-	if mat.roughness_texture == null:
-		mat.roughness_texture = Palette.painted_texture(256)
-	mat.normal_enabled = true
-	if mat.normal_texture == null:
-		mat.normal_texture = micro_normal_texture()
-	mat.normal_scale = normal_scale
-	mat.uv1_triplanar = true
-	mat.uv1_scale = Vector3.ONE * triplanar_scale
-	return mat
-
-
 static func get_material(slot: String) -> Material:
 	if slot == "hazard_stripe" or slot == "dig_hazard_stripe":
 		return Palette.hazard_stripe()
@@ -292,7 +220,7 @@ static func get_material(slot: String) -> Material:
 	var mat: ShaderMaterial = null
 	match slot:
 		"dig_canyon_floor":
-			mat = _dup_preset("combat_floor_apron", "dig_canyon_floor")
+			mat = Lookdev.duplicate_preset("combat_floor_apron", "dig_canyon_floor")
 			if mat != null:
 				mat.set_shader_parameter("floor_albedo", Color(0.36, 0.28, 0.22, 1.0))
 				mat.set_shader_parameter("floor_secondary_albedo", Color(0.30, 0.23, 0.18, 1.0))
@@ -304,7 +232,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("value_clamp_max", 0.44)
 				mat.set_shader_parameter("saturation_cap", 0.22)
 		"dig_catwalk_deck":
-			mat = _dup_preset("combat_floor_apron", "dig_catwalk_deck")
+			mat = Lookdev.duplicate_preset("combat_floor_apron", "dig_catwalk_deck")
 			if mat != null:
 				mat.set_shader_parameter("floor_albedo", Color(0.28, 0.26, 0.24, 1.0))
 				mat.set_shader_parameter("floor_secondary_albedo", Color(0.23, 0.22, 0.21, 1.0))
@@ -316,7 +244,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("value_clamp_max", 0.40)
 				mat.set_shader_parameter("saturation_cap", 0.12)
 		"dig_gantry_deck":
-			mat = _dup_preset("combat_floor_apron", "dig_gantry_deck")
+			mat = Lookdev.duplicate_preset("combat_floor_apron", "dig_gantry_deck")
 			if mat != null:
 				mat.set_shader_parameter("floor_albedo", Color(0.38, 0.34, 0.29, 1.0))
 				mat.set_shader_parameter("floor_secondary_albedo", Color(0.32, 0.28, 0.24, 1.0))
@@ -327,7 +255,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("value_clamp_max", 0.44)
 				mat.set_shader_parameter("saturation_cap", 0.16)
 		"dig_redrock_wall":
-			mat = _dup_preset("scorched_concrete", "dig_redrock_wall")
+			mat = Lookdev.duplicate_preset("scorched_concrete", "dig_redrock_wall")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Color(0.49, 0.29, 0.19, 1.0))
 				mat.set_shader_parameter("secondary_albedo", Color(0.37, 0.21, 0.15, 1.0))
@@ -336,7 +264,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("base_roughness", 0.90)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"dig_hydraulic_hull":
-			mat = _dup_preset("oxidized_hull_plating", "dig_hydraulic_hull")
+			mat = Lookdev.duplicate_preset("oxidized_hull_plating", "dig_hydraulic_hull")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Color(0.56, 0.35, 0.20, 1.0))
 				mat.set_shader_parameter("secondary_albedo", Color(0.42, 0.26, 0.16, 1.0))
@@ -344,11 +272,11 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("base_roughness", 0.72)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"dig_bore_steel":
-			mat = _dup_preset("oil_slicked_iron", "dig_bore_steel")
+			mat = Lookdev.duplicate_preset("oil_slicked_iron", "dig_bore_steel")
 			if mat != null:
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"dig_copper_ram":
-			mat = _dup_preset("oxidized_hull_plating", "dig_copper_ram")
+			mat = Lookdev.duplicate_preset("oxidized_hull_plating", "dig_copper_ram")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Palette.COPPER)
 				mat.set_shader_parameter("secondary_albedo", Palette.COPPER.darkened(0.26))
@@ -357,14 +285,14 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("edge_wear_albedo", Color("e4be8b"))
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"dig_amber_beacon":
-			mat = _dup_preset("plasma_conduit_core", "dig_amber_beacon")
+			mat = Lookdev.duplicate_preset("plasma_conduit_core", "dig_amber_beacon")
 			if mat != null:
 				mat.set_shader_parameter("emissive_color", Palette.SODIUM)
 				mat.set_shader_parameter("emissive_secondary_color", Palette.AMBER)
 				mat.set_shader_parameter("emissive_energy", 4.4)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_hull_deck":
-			mat = _dup_preset("combat_floor_apron", "orbital_hull_deck")
+			mat = Lookdev.duplicate_preset("combat_floor_apron", "orbital_hull_deck")
 			if mat != null:
 				mat.set_shader_parameter("floor_albedo", Color(0.32, 0.35, 0.36, 1.0))
 				mat.set_shader_parameter("floor_secondary_albedo", Color(0.26, 0.30, 0.31, 1.0))
@@ -376,7 +304,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("value_clamp_max", 0.44)
 				mat.set_shader_parameter("saturation_cap", 0.14)
 		"orbital_catwalk_deck":
-			mat = _dup_preset("combat_floor_apron", "orbital_catwalk_deck")
+			mat = Lookdev.duplicate_preset("combat_floor_apron", "orbital_catwalk_deck")
 			if mat != null:
 				mat.set_shader_parameter("floor_albedo", Color(0.27, 0.34, 0.34, 1.0))
 				mat.set_shader_parameter("floor_secondary_albedo", Color(0.22, 0.29, 0.29, 1.0))
@@ -387,7 +315,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("value_clamp_max", 0.42)
 				mat.set_shader_parameter("saturation_cap", 0.14)
 		"orbital_gantry_deck":
-			mat = _dup_preset("combat_floor_apron", "orbital_gantry_deck")
+			mat = Lookdev.duplicate_preset("combat_floor_apron", "orbital_gantry_deck")
 			if mat != null:
 				mat.set_shader_parameter("floor_albedo", Color(0.41, 0.41, 0.37, 1.0))
 				mat.set_shader_parameter("floor_secondary_albedo", Color(0.35, 0.35, 0.32, 1.0))
@@ -398,7 +326,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("value_clamp_max", 0.46)
 				mat.set_shader_parameter("saturation_cap", 0.12)
 		"orbital_rib_hull":
-			mat = _dup_preset("oxidized_hull_plating", "orbital_rib_hull")
+			mat = Lookdev.duplicate_preset("oxidized_hull_plating", "orbital_rib_hull")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Color(0.56, 0.54, 0.47, 1.0))
 				mat.set_shader_parameter("secondary_albedo", Color(0.44, 0.43, 0.38, 1.0))
@@ -408,7 +336,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("edge_wear_strength", 0.68)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_verdigris":
-			mat = _dup_preset("oxidized_hull_plating", "orbital_verdigris")
+			mat = Lookdev.duplicate_preset("oxidized_hull_plating", "orbital_verdigris")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Palette.OLD_VERDIGRIS)
 				mat.set_shader_parameter("secondary_albedo", Palette.VERDIGRIS)
@@ -418,7 +346,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("edge_wear_strength", 0.65)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_mast_steel":
-			mat = _dup_preset("oil_slicked_iron", "orbital_mast_steel")
+			mat = Lookdev.duplicate_preset("oil_slicked_iron", "orbital_mast_steel")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Color(0.54, 0.54, 0.48, 1.0))
 				mat.set_shader_parameter("secondary_albedo", Color(0.42, 0.43, 0.39, 1.0))
@@ -426,7 +354,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("base_roughness", 0.50)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_charcoal":
-			mat = _dup_preset("oil_slicked_iron", "orbital_charcoal")
+			mat = Lookdev.duplicate_preset("oil_slicked_iron", "orbital_charcoal")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Palette.CHARCOAL.lightened(0.06))
 				mat.set_shader_parameter("secondary_albedo", Palette.CHARCOAL)
@@ -434,7 +362,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("base_roughness", 0.56)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_copper":
-			mat = _dup_preset("oxidized_hull_plating", "orbital_copper")
+			mat = Lookdev.duplicate_preset("oxidized_hull_plating", "orbital_copper")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Palette.COPPER)
 				mat.set_shader_parameter("secondary_albedo", Palette.COPPER.darkened(0.24))
@@ -443,7 +371,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("edge_wear_albedo", Color("e4bc8a"))
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_brass":
-			mat = _dup_preset("oxidized_hull_plating", "orbital_brass")
+			mat = Lookdev.duplicate_preset("oxidized_hull_plating", "orbital_brass")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Palette.BRASS)
 				mat.set_shader_parameter("secondary_albedo", Palette.BRASS.darkened(0.24))
@@ -452,14 +380,14 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("edge_wear_albedo", Color("f2dc9a"))
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_sand":
-			mat = _dup_preset("scorched_concrete", "orbital_sand")
+			mat = Lookdev.duplicate_preset("scorched_concrete", "orbital_sand")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Palette.SAND)
 				mat.set_shader_parameter("secondary_albedo", Palette.SANDSTONE)
 				mat.set_shader_parameter("base_roughness", 0.86)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_ancient_glow":
-			mat = _dup_preset("plasma_conduit_core", "orbital_ancient_glow")
+			mat = Lookdev.duplicate_preset("plasma_conduit_core", "orbital_ancient_glow")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Color(0.11, 0.18, 0.14, 1.0))
 				mat.set_shader_parameter("secondary_albedo", Color(0.16, 0.25, 0.19, 1.0))
@@ -468,7 +396,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("emissive_energy", 4.2)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_ice_arc":
-			mat = _dup_preset("plasma_conduit_core", "orbital_ice_arc")
+			mat = Lookdev.duplicate_preset("plasma_conduit_core", "orbital_ice_arc")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Color(0.24, 0.44, 0.48, 1.0))
 				mat.set_shader_parameter("secondary_albedo", Color(0.18, 0.34, 0.39, 1.0))
@@ -477,7 +405,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("emissive_energy", 2.8)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_kindness_plate":
-			mat = _dup_preset("plasma_conduit_core", "orbital_kindness_plate")
+			mat = Lookdev.duplicate_preset("plasma_conduit_core", "orbital_kindness_plate")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Palette.KINDNESS.darkened(0.22))
 				mat.set_shader_parameter("secondary_albedo", Palette.KINDNESS.darkened(0.38))
@@ -489,7 +417,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("emissive_energy", 2.1)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		"orbital_hazard_glow":
-			mat = _dup_preset("plasma_conduit_core", "orbital_hazard_glow")
+			mat = Lookdev.duplicate_preset("plasma_conduit_core", "orbital_hazard_glow")
 			if mat != null:
 				mat.set_shader_parameter("base_albedo", Color(0.24, 0.12, 0.10, 1.0))
 				mat.set_shader_parameter("secondary_albedo", Color(0.18, 0.09, 0.08, 1.0))
@@ -498,7 +426,7 @@ static func get_material(slot: String) -> Material:
 				mat.set_shader_parameter("emissive_energy", 3.2)
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 		_:
-			mat = _dup_preset("oil_slicked_iron", "world23_default_iron")
+			mat = Lookdev.duplicate_preset("oil_slicked_iron", "world23_default_iron")
 			if mat != null:
 				mat.set_shader_parameter("foot_grime_height", 0.0)
 
@@ -667,177 +595,6 @@ void fragment() {
 	return mat
 
 
-static func _dup_preset(preset_id: String, res_name: String) -> ShaderMaterial:
-	var base := Lookdev.preset_material(preset_id)
-	if base == null:
-		return null
-	var copy := base.duplicate(false) as ShaderMaterial
-	copy.resource_name = res_name
-	return copy
-
-
-static func _new_canvas() -> HeroSculptor.KitbashCanvas:
-	var canvas := HeroSculptor.create_canvas()
-	canvas.ground_foot_grime = false
-	return canvas
-
-
-static func _add_flat_deck_slab(
-	canvas: HeroSculptor.KitbashCanvas,
-	slot: String,
-	size: Vector3,
-	edge_grime: float = 0.40,
-	center_grime: float = 0.04,
-	edge_wear: float = 0.10,
-	offset: Vector3 = Vector3.ZERO
-) -> void:
-	var hx := maxf(size.x * 0.5, 0.05)
-	var hy := maxf(size.y * 0.5, 0.01)
-	var hz := maxf(size.z * 0.5, 0.05)
-	var ix := maxf(hx - minf(hx * 0.18, 2.8), hx * 0.55)
-	var iz := maxf(hz - minf(hz * 0.18, 2.8), hz * 0.55)
-	var xs := [-hx, -ix, ix, hx]
-	var zs := [-hz, -iz, iz, hz]
-	var top_y := offset.y + hy
-	var bot_y := offset.y - hy
-
-	var top_pts: Array = []
-	var top_cols: Array = []
-	for gz in 4:
-		var row_p: Array[Vector3] = []
-		var row_c: Array[Color] = []
-		for gx in 4:
-			row_p.append(Vector3(offset.x + xs[gx], top_y, offset.z + zs[gz]))
-			var is_outer := (gx == 0 or gx == 3 or gz == 0 or gz == 3)
-			row_c.append(Lookdev.encode_mask(edge_wear if is_outer else 0.04, edge_grime if is_outer else center_grime, 0.0))
-		top_pts.append(row_p)
-		top_cols.append(row_c)
-
-	for gz in 3:
-		for gx in 3:
-			canvas.add_quad(
-				slot,
-				top_pts[gz][gx], top_pts[gz][gx + 1], top_pts[gz + 1][gx + 1], top_pts[gz + 1][gx],
-				Vector3.UP,
-				top_cols[gz][gx], top_cols[gz][gx + 1], top_cols[gz + 1][gx + 1], top_cols[gz + 1][gx],
-				Vector3.UP, Vector3.UP, Vector3.UP, Vector3.UP
-			)
-
-	var bot_pts: Array = []
-	var c_bot := Lookdev.encode_mask(0.08, maxf(edge_grime, 0.56), 0.0)
-	for gz in 4:
-		var brow: Array[Vector3] = []
-		for gx in 4:
-			brow.append(Vector3(offset.x + xs[gx], bot_y, offset.z + zs[gz]))
-		bot_pts.append(brow)
-
-	for gz in 3:
-		for gx in 3:
-			canvas.add_quad(
-				slot,
-				bot_pts[gz][gx + 1], bot_pts[gz][gx], bot_pts[gz + 1][gx], bot_pts[gz + 1][gx + 1],
-				Vector3.DOWN, c_bot, c_bot, c_bot, c_bot,
-				Vector3.DOWN, Vector3.DOWN, Vector3.DOWN, Vector3.DOWN
-			)
-
-	var c_side_top := Lookdev.encode_mask(maxf(edge_wear, 0.36), edge_grime, 0.0)
-	for gx in 3:
-		canvas.add_quad(
-			slot,
-			top_pts[0][gx + 1], top_pts[0][gx], bot_pts[0][gx], bot_pts[0][gx + 1],
-			Vector3.FORWARD, c_side_top, c_side_top, c_bot, c_bot,
-			Vector3.FORWARD, Vector3.FORWARD, Vector3.FORWARD, Vector3.FORWARD
-		)
-		canvas.add_quad(
-			slot,
-			top_pts[3][gx], top_pts[3][gx + 1], bot_pts[3][gx + 1], bot_pts[3][gx],
-			Vector3.BACK, c_side_top, c_side_top, c_bot, c_bot,
-			Vector3.BACK, Vector3.BACK, Vector3.BACK, Vector3.BACK
-		)
-	for gz in 3:
-		canvas.add_quad(
-			slot,
-			top_pts[gz][0], top_pts[gz + 1][0], bot_pts[gz + 1][0], bot_pts[gz][0],
-			Vector3.LEFT, c_side_top, c_side_top, c_bot, c_bot,
-			Vector3.LEFT, Vector3.LEFT, Vector3.LEFT, Vector3.LEFT
-		)
-		canvas.add_quad(
-			slot,
-			top_pts[gz + 1][3], top_pts[gz][3], bot_pts[gz][3], bot_pts[gz + 1][3],
-			Vector3.RIGHT, c_side_top, c_side_top, c_bot, c_bot,
-			Vector3.RIGHT, Vector3.RIGHT, Vector3.RIGHT, Vector3.RIGHT
-		)
-
-
-static func _add_beveled_annulus(
-	canvas: HeroSculptor.KitbashCanvas,
-	slot: String,
-	xform: Transform3D,
-	sides: int,
-	r_in: float,
-	r_out_top: float,
-	r_out_bot: float,
-	height: float,
-	base_wear: float = 0.14,
-	base_grime: float = 0.34,
-	emissive: float = 0.0,
-	edge_wear: float = 0.82
-) -> void:
-	var n := maxi(sides, 6)
-	var hy := height * 0.5
-	var bev_y := minf(height * 0.24, 0.08)
-	var r_in_top := r_in + minf((r_out_top - r_in) * 0.12, 0.10)
-	var flat_inset := minf((r_out_top - r_in_top) * 0.14, 0.12)
-	var r_in_flat := r_in_top + flat_inset
-	var r_out_flat := r_out_top - flat_inset
-	var profile: Array[Vector2] = []
-	var pcols: Array[Color] = []
-	var c_crest := Lookdev.encode_mask(edge_wear if emissive < 0.5 else 0.3, minf(base_grime, 0.22), emissive)
-	var c_flat := Lookdev.encode_mask(base_wear, base_grime, emissive)
-	profile.append(Vector2(r_in, -hy))
-	pcols.append(Lookdev.encode_mask(base_wear, maxf(base_grime, 0.72), emissive))
-	profile.append(Vector2(r_in, hy - bev_y))
-	pcols.append(Lookdev.encode_mask(base_wear, base_grime, emissive))
-	profile.append(Vector2(r_in_top, hy))
-	pcols.append(c_crest)
-	if r_out_flat > r_in_flat + 0.02:
-		profile.append(Vector2(r_in_flat, hy))
-		pcols.append(c_flat)
-		profile.append(Vector2(r_out_flat, hy))
-		pcols.append(c_flat)
-	profile.append(Vector2(r_out_top, hy))
-	pcols.append(c_crest)
-	profile.append(Vector2(r_out_bot, -hy + bev_y))
-	pcols.append(Lookdev.encode_mask(base_wear, maxf(base_grime, 0.52), emissive))
-	profile.append(Vector2(r_out_bot, -hy))
-	pcols.append(Lookdev.encode_mask(base_wear, maxf(base_grime, 0.76), emissive))
-	var pcount := profile.size()
-	var rings: Array = []
-	for pi in pcount:
-		var row: Array[Vector3] = []
-		var rp: Vector2 = profile[pi]
-		for si in n:
-			var ang := TAU * float(si) / float(n)
-			row.append(xform * Vector3(cos(ang) * rp.x, rp.y, sin(ang) * rp.x))
-		rings.append(row)
-
-	for si in n:
-		var nsi := (si + 1) % n
-		var mid_ang := TAU * (float(si) + 0.5) / float(n)
-		var rad := Vector3(cos(mid_ang), 0.0, sin(mid_ang))
-		for pi in pcount:
-			var npi := (pi + 1) % pcount
-			var d2: Vector2 = profile[npi] - profile[pi]
-			var out2 := Vector2(-d2.y, d2.x).normalized()
-			var local_n := Vector3(rad.x * out2.x, out2.y, rad.z * out2.x)
-			var world_n := (xform.basis * local_n).normalized()
-			canvas.add_quad(
-				slot,
-				rings[pi][si], rings[pi][nsi], rings[npi][nsi], rings[npi][si],
-				world_n, pcols[pi], pcols[pi], pcols[npi], pcols[npi]
-			)
-
-
 static func _add_closed_torus(
 	canvas: HeroSculptor.KitbashCanvas,
 	slot: String,
@@ -903,7 +660,7 @@ static func get_mind_hand_seam_mesh() -> ArrayMesh:
 	var key := "w3:mind_hand_seam"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_plate(
 		canvas, "orbital_charcoal", Transform3D.IDENTITY,
 		Vector3(0.42, 0.08, 0.42), 0.018, 0.20, 0.46, 0.0, 0.86
@@ -918,7 +675,7 @@ static func get_mind_hand_crack_mesh() -> ArrayMesh:
 	var key := "w3:mind_hand_crack"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_plate(
 		canvas, "orbital_ancient_glow", Transform3D.IDENTITY,
 		Vector3(0.08, 0.72, 0.06), 0.012, 0.20, 0.14, 1.0, 0.50
@@ -929,73 +686,18 @@ static func get_mind_hand_crack_mesh() -> ArrayMesh:
 	return mesh
 
 
-static func _add_clean_louver(
-	canvas: HeroSculptor.KitbashCanvas,
-	frame_slot: String,
-	xform: Transform3D,
-	width: float,
-	height: float,
-	depth: float,
-	slat_count: int = 4,
-	emissive_slot: String = ""
-) -> void:
-	var fw := clampf(minf(width, height) * 0.12, 0.04, 0.14)
-	var bev := minf(fw * 0.28, depth * 0.28)
-	HeroSculptor.add_chamfered_plate(
-		canvas, frame_slot,
-		xform * Transform3D(Basis.IDENTITY, Vector3(0.0, (height - fw) * 0.5, 0.0)),
-		Vector3(width, fw, depth), bev, 0.14, 0.22
-	)
-	HeroSculptor.add_chamfered_plate(
-		canvas, frame_slot,
-		xform * Transform3D(Basis.IDENTITY, Vector3(0.0, -(height - fw) * 0.5, 0.0)),
-		Vector3(width, fw, depth), bev, 0.14, 0.34
-	)
-	var side_h := maxf(height - fw * 2.0 - 0.016, 0.04)
-	HeroSculptor.add_chamfered_plate(
-		canvas, frame_slot,
-		xform * Transform3D(Basis.IDENTITY, Vector3(-(width - fw) * 0.5, 0.0, 0.006)),
-		Vector3(fw, side_h, depth * 0.94), bev * 0.85, 0.14, 0.24
-	)
-	HeroSculptor.add_chamfered_plate(
-		canvas, frame_slot,
-		xform * Transform3D(Basis.IDENTITY, Vector3((width - fw) * 0.5, 0.0, 0.006)),
-		Vector3(fw, side_h, depth * 0.94), bev * 0.85, 0.14, 0.24
-	)
-	var inner_w := maxf(width - fw * 2.15, 0.06)
-	var back_slot := emissive_slot if emissive_slot != "" else frame_slot
-	var emit := 1.0 if emissive_slot != "" else 0.0
-	HeroSculptor.add_chamfered_plate(
-		canvas, back_slot,
-		xform * Transform3D(Basis.IDENTITY, Vector3(0.0, 0.0, -depth * 0.26)),
-		Vector3(inner_w, side_h * 0.92, depth * 0.38), minf(bev * 0.5, 0.02),
-		0.10, 0.86 if emit < 0.5 else 0.08, emit, 0.30
-	)
-	var count := maxi(slat_count, 2)
-	var step := side_h / float(count)
-	var slat_t := clampf(step * 0.30, 0.02, 0.07)
-	for i in count:
-		var y := -side_h * 0.5 + (float(i) + 0.5) * step
-		var sxf := xform * Transform3D(Basis(Vector3.RIGHT, deg_to_rad(28.0)), Vector3(0.0, y, depth * 0.10))
-		HeroSculptor.add_chamfered_plate(
-			canvas, frame_slot, sxf,
-			Vector3(inner_w * 0.94, slat_t, depth * 0.72), minf(slat_t * 0.26, 0.016),
-			0.16, 0.68, 0.0, 0.86
-		)
-
-
 static func get_quiet_gun_cradle_mesh() -> ArrayMesh:
 	var key := "w3:quiet_gun_cradle"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, "orbital_charcoal", Transform3D.IDENTITY,
 		16, 1.48, 1.38, 0.28, 0.05, 0.05, 0.14, 0.54, 0.0, 0.0, 0.82
 	)
-	_add_beveled_annulus(
+	HeroSculptor.add_beveled_annulus(
 		canvas, "orbital_verdigris", Transform3D(Basis.IDENTITY, Vector3(0.0, 0.18, 0.0)),
-		16, 0.98, 1.24, 1.32, 0.16, 0.18, 0.42, 0.0, 0.86
+		16, 0.98, 1.24, 1.32, 0.16, 0.18, 0.42, 0.0, 0.86, ANNULUS_LOOK
 	)
 	for side in [-1.0, 1.0]:
 		HeroSculptor.add_chamfered_plate(
@@ -1013,7 +715,7 @@ static func get_quiet_gun_barrel_mesh() -> LegacyMaterialArrayMesh:
 	var key := "w3:quiet_gun_barrel"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as LegacyMaterialArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, "barrel_body", Transform3D.IDENTITY,
 		16, 1.14, 1.04, 3.0, 0.08, 0.08, 0.16, 0.44, 0.0, 0.0, 0.84
@@ -1036,7 +738,7 @@ static func get_quiet_gun_barrel_mesh() -> LegacyMaterialArrayMesh:
 		)
 	var built := canvas.commit({"asset_kind": "quiet_gun_barrel"})
 	var wrapped := LegacyMaterialArrayMesh.new()
-	var mat := make_weathered_pbr(Palette.VERDIGRIS, 0.62, 0.34, Color.BLACK, 0.0, 0.42, 0.44)
+	var mat := Lookdev.make_weathered_pbr(Palette.VERDIGRIS, 0.62, 0.34, Color.BLACK, 0.0, 0.42, 0.44)
 	wrapped.material = mat
 	for s in built.get_surface_count():
 		wrapped.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, built.surface_get_arrays(s))
@@ -1050,14 +752,14 @@ static func get_quiet_gun_band_mesh(lit: bool, radius: float = 1.16) -> ArrayMes
 	var key := "w3:quiet_gun_band:%s:%.2f" % [str(lit), radius]
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	if not lit:
-		_add_beveled_annulus(
+		HeroSculptor.add_beveled_annulus(
 			canvas, "band_cold", Transform3D.IDENTITY,
-			20, radius - 0.10, radius + 0.02, radius + 0.03, 0.22, 0.16, 0.52, 0.0, 0.80
+			20, radius - 0.10, radius + 0.02, radius + 0.03, 0.22, 0.16, 0.52, 0.0, 0.80, ANNULUS_LOOK
 		)
 		var cold_mesh := canvas.commit({"asset_kind": "quiet_gun_band_cold"})
-		var cold_mat := make_weathered_pbr(Palette.CHARCOAL.lightened(0.08), 0.62, 0.40, Color.BLACK, 0.0, 0.5, 0.40)
+		var cold_mat := Lookdev.make_weathered_pbr(Palette.CHARCOAL.lightened(0.08), 0.62, 0.40, Color.BLACK, 0.0, 0.5, 0.40)
 		cold_mesh.surface_set_material(0, cold_mat)
 		_mesh_cache[key] = cold_mesh
 		return cold_mesh
@@ -1073,7 +775,7 @@ static func get_quiet_gun_band_mesh(lit: bool, radius: float = 1.16) -> ArrayMes
 			Vector3(0.14, 0.22, arc_w), 0.025, 0.26, 0.10, 1.0, 0.60
 		)
 	var lit_mesh := canvas.commit({"asset_kind": "quiet_gun_band_lit"})
-	var lit_mat := make_weathered_pbr(Palette.ANCIENT, 0.36, 0.22, Palette.ANCIENT, 2.2, 0.65, 0.24)
+	var lit_mat := Lookdev.make_weathered_pbr(Palette.ANCIENT, 0.36, 0.22, Palette.ANCIENT, 2.2, 0.65, 0.24)
 	lit_mesh.surface_set_material(0, lit_mat)
 	_mesh_cache[key] = lit_mesh
 	return lit_mesh
@@ -1083,7 +785,7 @@ static func get_quiet_gun_plug_mesh() -> ArrayMesh:
 	var key := "w3:quiet_gun_plug"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, "orbital_brass", Transform3D.IDENTITY,
 		16, 0.82, 0.72, 0.38, 0.05, 0.05, 0.20, 0.32, 0.0, 0.0, 0.88
@@ -1102,7 +804,7 @@ static func get_takeover_bezel_mesh() -> ArrayMesh:
 	var key := "w3:takeover_bezel"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_plate(
 		canvas, "orbital_charcoal", Transform3D.IDENTITY,
 		Vector3(4.36, 1.92, 0.20), 0.06, 0.14, 0.44, 0.0, 0.86
@@ -1135,7 +837,7 @@ static func get_takeover_plate_mesh() -> ArrayMesh:
 	var key := "w3:takeover_plate"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_plate(
 		canvas, "orbital_kindness_plate", Transform3D.IDENTITY,
 		Vector3(3.86, 1.42, 0.14), 0.04, 0.14, 0.10, 1.0, 0.42
@@ -1150,7 +852,7 @@ static func get_cloud_sea_mesh(span: float = 1600.0) -> ArrayMesh:
 	var key := "w3:cloud_sea:%.0f" % span
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var n := 16
 	var half := span * 0.5
 	var thickness := 6.0
@@ -1194,7 +896,7 @@ static func get_thermal_mote_mesh() -> ArrayMesh:
 	var key := "w3:thermal_mote"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, "mote", Transform3D.IDENTITY,
 		6, 0.08, 0.04, 0.24, 0.04, 0.04, 0.16, 0.10, 0.6, 0.0, 0.50
@@ -1208,14 +910,14 @@ static func get_mind_hand_foot_mesh() -> ArrayMesh:
 	var key := "w3:mind_hand_foot"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, "orbital_charcoal", Transform3D.IDENTITY,
 		12, 0.40, 0.34, 0.24, 0.04, 0.04, 0.18, 0.52, 0.0, 0.0, 0.84
 	)
-	_add_beveled_annulus(
+	HeroSculptor.add_beveled_annulus(
 		canvas, "orbital_copper", Transform3D(Basis.IDENTITY, Vector3(0.0, 0.08, 0.0)),
-		12, 0.22, 0.32, 0.36, 0.10, 0.20, 0.36, 0.0, 0.88
+		12, 0.22, 0.32, 0.36, 0.10, 0.20, 0.36, 0.0, 0.88, ANNULUS_LOOK
 	)
 	var mesh := canvas.commit({"asset_kind": "mind_hand_foot"})
 	apply_surface_materials_to_mesh(mesh)
@@ -1227,7 +929,7 @@ static func get_mind_hand_rod_mesh(top_r: float, bot_r: float, height: float) ->
 	var key := "w3:mind_hand_rod:%.2f:%.2f:%.2f" % [top_r, bot_r, height]
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, "orbital_verdigris", Transform3D.IDENTITY,
 		10, bot_r, top_r, height, 0.03, 0.03, 0.18, 0.42, 0.0, 0.0, 0.84
@@ -1246,7 +948,7 @@ static func get_mind_hand_lens_mesh(radius: float = 0.22) -> ArrayMesh:
 	var key := "w3:mind_hand_lens:%.2f" % radius
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	_add_faceted_orb(canvas, "lens_core", Transform3D.IDENTITY, radius, 12, 0.18, 0.08, 1.0)
 	var mesh := canvas.commit({"asset_kind": "mind_hand_lens"})
 	_mesh_cache[key] = mesh
@@ -1257,7 +959,7 @@ static func get_kite_chassis_mesh() -> ArrayMesh:
 	var key := "w3:kite_chassis"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_plate(
 		canvas, "orbital_rib_hull", Transform3D.IDENTITY,
 		Vector3(2.8, 0.18, 1.2), 0.04, 0.16, 0.34, 0.0, 0.86
@@ -1281,7 +983,7 @@ static func get_kite_wake_mesh(length: float = 1.0) -> ArrayMesh:
 	var key := "w3:kite_wake:%.2f" % length
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_plate(
 		canvas, "wake_fin", Transform3D.IDENTITY,
 		Vector3(0.46, 0.06, maxf(length, 0.2)), 0.02, 0.18, 0.08, 0.6, 0.40
@@ -1299,7 +1001,7 @@ static func get_gap_net_aura_mesh(radius: float = 0.88) -> ArrayMesh:
 	var key := "w3:gap_net_aura:%.2f" % radius
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	_add_closed_torus(canvas, "aura_coil", Transform3D.IDENTITY, radius, 0.065, 24, 8, 0.24, 0.12, 1.0)
 	for i in 4:
 		var ang := TAU * float(i) / 4.0
@@ -1319,7 +1021,7 @@ static func get_gap_net_post_mesh(height: float = 3.2) -> ArrayMesh:
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
 	var h := maxf(height, 0.8)
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, "orbital_charcoal", Transform3D.IDENTITY,
 		10, 0.28, 0.22, h, 0.04, 0.04, 0.16, 0.48, 0.0, 0.0, 0.84
@@ -1342,7 +1044,7 @@ static func get_gap_net_panel_mesh(width: float, height: float) -> ArrayMesh:
 	var key := "w3:gap_net_panel:%.2f:%.2f" % [width, height]
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_plate(
 		canvas, "orbital_ice_arc", Transform3D.IDENTITY,
 		Vector3(maxf(width, 0.4), maxf(height, 0.4), 0.10), 0.02, 0.14, 0.16, 0.85, 0.50
@@ -1357,7 +1059,7 @@ static func get_gyro_jammer_chassis_mesh() -> ArrayMesh:
 	var key := "w3:gyro_jammer_chassis"
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, "orbital_charcoal", Transform3D.IDENTITY,
 		10, 0.24, 0.14, 2.5, 0.04, 0.04, 0.18, 0.52, 0.0, 0.0, 0.84
@@ -1384,7 +1086,7 @@ static func get_deflector_vault_rim_mesh(radius: float = 1.60, tube: float = 0.0
 	var key := "w3:deflector_vault_rim:%.2f:%.3f" % [radius, tube]
 	if _mesh_cache.has(key):
 		return _mesh_cache[key] as ArrayMesh
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	_add_closed_torus(canvas, "vault_rim", Transform3D.IDENTITY, radius, tube, 24, 8, 0.26, 0.16, 1.0)
 	for i in 6:
 		var ang := TAU * float(i) / 6.0
@@ -1481,15 +1183,15 @@ static func get_chunk_mesh(kind: String) -> ArrayMesh:
 
 
 static func _build_flat_floor(slot: String, size: Vector3) -> ArrayMesh:
-	var canvas := _new_canvas()
-	_add_flat_deck_slab(canvas, slot, size, 0.42, 0.04, 0.10)
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
+	HeroSculptor.add_flat_deck_slab(canvas, slot, size, 0.42, 0.04, 0.10, Vector3.ZERO, DECK_LOOK)
 	return canvas.commit({"asset_kind": slot, "walkable_flat": true})
 
 
 static func _build_crusher_channel_lip(r_in: float, r_out_top: float, r_out_bot: float, height: float) -> ArrayMesh:
-	var canvas := _new_canvas()
-	_add_beveled_annulus(canvas, "dig_bore_steel", Transform3D.IDENTITY, 24, r_in, r_out_top, r_out_bot, height, 0.14, 0.42, 0.0, 0.84)
-	_add_beveled_annulus(canvas, "dig_copper_ram", Transform3D(Basis.IDENTITY, Vector3(0.0, -0.02, 0.0)), 24, r_in - 0.12, r_in + 0.14, r_in + 0.18, height * 0.78, 0.20, 0.44, 0.0, 0.88)
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
+	HeroSculptor.add_beveled_annulus(canvas, "dig_bore_steel", Transform3D.IDENTITY, 24, r_in, r_out_top, r_out_bot, height, 0.14, 0.42, 0.0, 0.84, ANNULUS_LOOK)
+	HeroSculptor.add_beveled_annulus(canvas, "dig_copper_ram", Transform3D(Basis.IDENTITY, Vector3(0.0, -0.02, 0.0)), 24, r_in - 0.12, r_in + 0.14, r_in + 0.18, height * 0.78, 0.20, 0.44, 0.0, 0.88, ANNULUS_LOOK)
 	for i in 8:
 		var ang := TAU * float(i) / 8.0
 		var rad := Vector3(cos(ang), 0.0, sin(ang))
@@ -1501,9 +1203,9 @@ static func _build_crusher_channel_lip(r_in: float, r_out_top: float, r_out_bot:
 
 
 static func _build_orbital_relay_collar(r_in: float, r_out_top: float, r_out_bot: float, height: float) -> ArrayMesh:
-	var canvas := _new_canvas()
-	_add_beveled_annulus(canvas, "orbital_verdigris", Transform3D.IDENTITY, 24, r_in, r_out_top, r_out_bot, height, 0.14, 0.36, 0.0, 0.84)
-	_add_beveled_annulus(canvas, "orbital_ice_arc", Transform3D(Basis.IDENTITY, Vector3(0.0, 0.08, 0.0)), 24, r_in - 0.12, r_in + 0.18, r_in + 0.22, height * 0.72, 0.18, 0.16, 0.92, 0.50)
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
+	HeroSculptor.add_beveled_annulus(canvas, "orbital_verdigris", Transform3D.IDENTITY, 24, r_in, r_out_top, r_out_bot, height, 0.14, 0.36, 0.0, 0.84, ANNULUS_LOOK)
+	HeroSculptor.add_beveled_annulus(canvas, "orbital_ice_arc", Transform3D(Basis.IDENTITY, Vector3(0.0, 0.08, 0.0)), 24, r_in - 0.12, r_in + 0.18, r_in + 0.22, height * 0.72, 0.18, 0.16, 0.92, 0.50, ANNULUS_LOOK)
 	for i in 6:
 		var ang := TAU * float(i) / 6.0
 		var rad := Vector3(cos(ang), 0.0, sin(ang))
@@ -1522,7 +1224,7 @@ static func _build_stanchion_column(
 	width: float,
 	flange_span: float
 ) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var hy := height * 0.5
 	HeroSculptor.add_chamfered_plate(
 		canvas, frame_slot, Transform3D.IDENTITY,
@@ -1556,7 +1258,7 @@ static func _build_stanchion_column(
 
 
 static func _build_canyon_wall(size: Vector3, span_x: bool) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var length := size.x if span_x else size.z
 	var depth := size.z if span_x else size.x
 	var h := size.y
@@ -1585,7 +1287,7 @@ static func _build_canyon_wall(size: Vector3, span_x: bool) -> ArrayMesh:
 
 
 static func _build_orbital_coaming(size: Vector3, span_x: bool) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var length := size.x if span_x else size.z
 	var depth := size.z if span_x else size.x
 	var h := size.y
@@ -1614,7 +1316,7 @@ static func _build_orbital_coaming(size: Vector3, span_x: bool) -> ArrayMesh:
 
 
 static func _build_hull_rib_arch(span_z: float, height: float) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var steps := 7
 	var half_z := span_z * 0.5
 	for i in steps:
@@ -1635,7 +1337,7 @@ static func _build_hull_rib_arch(span_z: float, height: float) -> ArrayMesh:
 
 
 static func _build_jump_pad(frame_slot: String, trim_slot: String, glow_slot: String, size: Vector3) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var w := size.x
 	var h := size.y
 	var d := size.z
@@ -1643,9 +1345,9 @@ static func _build_jump_pad(frame_slot: String, trim_slot: String, glow_slot: St
 		canvas, frame_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, -h * 0.12, 0.0)),
 		Vector3(w, h * 0.76, d), 0.10, 0.16, 0.48, 0.0, 0.86
 	)
-	_add_beveled_annulus(
+	HeroSculptor.add_beveled_annulus(
 		canvas, trim_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, h * 0.24, 0.0)),
-		16, w * 0.26, w * 0.38, w * 0.42, h * 0.42, 0.18, 0.34, 0.0, 0.86
+		16, w * 0.26, w * 0.38, w * 0.42, h * 0.42, 0.18, 0.34, 0.0, 0.86, ANNULUS_LOOK
 	)
 	HeroSculptor.add_chamfered_prism(
 		canvas, glow_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, h * 0.20, 0.0)),
@@ -1655,7 +1357,7 @@ static func _build_jump_pad(frame_slot: String, trim_slot: String, glow_slot: St
 
 
 static func _build_press_housing(size: Vector3) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var w := size.x
 	var h := size.y
 	var d := size.z
@@ -1672,21 +1374,21 @@ static func _build_press_housing(size: Vector3) -> ArrayMesh:
 			canvas, "dig_copper_ram", Transform3D(Basis.IDENTITY, Vector3(0.0, h * 0.44, sz)),
 			12, 0.62, 0.56, 1.15, 0.06, 0.06, 0.22, 0.32, 0.0, 0.0, 0.90
 		)
-	_add_clean_louver(
+	HeroSculptor.add_clean_louver(
 		canvas, "dig_bore_steel",
 		Transform3D(Basis(Vector3.UP, PI * 0.5), Vector3(w * 0.52, 0.1, 0.0)),
-		d * 0.48, h * 0.38, 0.22, 4, "dig_amber_beacon"
+		d * 0.48, h * 0.38, 0.22, 4, "dig_amber_beacon", LOUVER_LOOK
 	)
-	_add_clean_louver(
+	HeroSculptor.add_clean_louver(
 		canvas, "dig_bore_steel",
 		Transform3D(Basis(Vector3.UP, -PI * 0.5), Vector3(-w * 0.52, 0.1, 0.0)),
-		d * 0.48, h * 0.38, 0.22, 4, "dig_amber_beacon"
+		d * 0.48, h * 0.38, 0.22, 4, "dig_amber_beacon", LOUVER_LOOK
 	)
 	return canvas.commit({"asset_kind": "dig_press_housing"})
 
 
 static func _build_cryo_tank(frame_slot: String, band_slot: String, core_slot: String, radius: float, height: float) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_prism(
 		canvas, core_slot, Transform3D.IDENTITY,
 		16, radius * 0.94, radius * 0.94, height * 0.82, 0.08, 0.08, 0.18, 0.16, 0.92, 0.0, 0.55
@@ -1696,9 +1398,9 @@ static func _build_cryo_tank(frame_slot: String, band_slot: String, core_slot: S
 			canvas, frame_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, sy * height * 0.42, 0.0)),
 			16, radius * 1.12, radius * 1.04, height * 0.20, 0.06, 0.06, 0.18, 0.48, 0.0, 0.0, 0.88
 		)
-	_add_beveled_annulus(
+	HeroSculptor.add_beveled_annulus(
 		canvas, band_slot, Transform3D.IDENTITY,
-		16, radius * 0.92, radius * 1.12, radius * 1.14, 0.28, 0.20, 0.36, 0.0, 0.90
+		16, radius * 0.92, radius * 1.12, radius * 1.14, 0.28, 0.20, 0.36, 0.0, 0.90, ANNULUS_LOOK
 	)
 	for i in 4:
 		var ang := TAU * float(i) / 4.0 + PI * 0.25
@@ -1712,8 +1414,8 @@ static func _build_cryo_tank(frame_slot: String, band_slot: String, core_slot: S
 
 
 static func _build_walkway_deck(deck_slot: String, girder_slot: String, trim_slot: String, size: Vector3, span_x: bool) -> ArrayMesh:
-	var canvas := _new_canvas()
-	_add_flat_deck_slab(canvas, deck_slot, Vector3(size.x, size.y * 0.56, size.z), 0.38, 0.04, 0.08, Vector3(0.0, size.y * 0.22, 0.0))
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
+	HeroSculptor.add_flat_deck_slab(canvas, deck_slot, Vector3(size.x, size.y * 0.56, size.z), 0.38, 0.04, 0.08, Vector3(0.0, size.y * 0.22, 0.0), DECK_LOOK)
 	var length := size.x if span_x else size.z
 	var width := size.z if span_x else size.x
 	var rot := Basis.IDENTITY if span_x else Basis(Vector3.UP, PI * 0.5)
@@ -1736,7 +1438,7 @@ static func _build_walkway_deck(deck_slot: String, girder_slot: String, trim_slo
 
 
 static func _build_bulkhead(hull_slot: String, frame_slot: String, accent_slot: String, glow_slot: String, size: Vector3) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var w := size.x
 	var h := size.y
 	var d := size.z
@@ -1758,16 +1460,16 @@ static func _build_bulkhead(hull_slot: String, frame_slot: String, accent_slot: 
 			Vector3(0.36, h * 0.94, d + 0.22), 0.05, 0.18, 0.46, 0.0, 0.88
 		)
 	if w >= 4.0:
-		_add_clean_louver(
+		HeroSculptor.add_clean_louver(
 			canvas, frame_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, 0.08, d * 0.50)),
-			w * 0.42, h * 0.38, 0.18, 3, glow_slot
+			w * 0.42, h * 0.38, 0.18, 3, glow_slot, LOUVER_LOOK
 		)
 	return canvas.commit({"asset_kind": "hard_bulkhead"})
 
 
 static func _build_gantry_bridge(deck_slot: String, frame_slot: String, truss_slot: String, trim_slot: String, size: Vector3) -> ArrayMesh:
-	var canvas := _new_canvas()
-	_add_flat_deck_slab(canvas, deck_slot, Vector3(size.x, size.y * 0.54, size.z), 0.36, 0.04, 0.08, Vector3(0.0, size.y * 0.23, 0.0))
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
+	HeroSculptor.add_flat_deck_slab(canvas, deck_slot, Vector3(size.x, size.y * 0.54, size.z), 0.36, 0.04, 0.08, Vector3(0.0, size.y * 0.23, 0.0), DECK_LOOK)
 	for sz in [-1.0, 1.0]:
 		HeroSculptor.add_chamfered_plate(
 			canvas, frame_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, -size.y * 0.28, sz * (size.z * 0.42))),
@@ -1788,7 +1490,7 @@ static func _build_gantry_bridge(deck_slot: String, frame_slot: String, truss_sl
 
 
 static func _build_overhead_rail(frame_slot: String, hull_slot: String, accent_slot: String, glow_slot: String, size: Vector3) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	HeroSculptor.add_chamfered_plate(
 		canvas, frame_slot, Transform3D.IDENTITY,
 		Vector3(size.x, size.y * 0.58, size.z * 0.68), 0.08, 0.16, 0.44, 0.0, 0.84
@@ -1812,7 +1514,7 @@ static func _build_overhead_rail(frame_slot: String, hull_slot: String, accent_s
 
 
 static func _build_bore_derrick(height: float) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var hy := height * 0.5
 	HeroSculptor.add_chamfered_prism(
 		canvas, "dig_redrock_wall", Transform3D(Basis.IDENTITY, Vector3(0.0, -hy + 3.2, 0.0)),
@@ -1832,15 +1534,15 @@ static func _build_bore_derrick(height: float) -> ArrayMesh:
 	for band: float in [0.22, 0.48, 0.74, 0.94]:
 		var by := lerpf(-hy + 5.0, hy - 2.0, band)
 		var br := lerpf(4.8, 2.9, band)
-		_add_beveled_annulus(
+		HeroSculptor.add_beveled_annulus(
 			canvas, "dig_copper_ram", Transform3D(Basis.IDENTITY, Vector3(0.0, by, 0.0)),
-			12, br - 0.55, br + 0.35, br + 0.45, 1.05, 0.20, 0.36, 0.0, 0.88
+			12, br - 0.55, br + 0.35, br + 0.45, 1.05, 0.20, 0.36, 0.0, 0.88, ANNULUS_LOOK
 		)
 	return canvas.commit({"asset_kind": "dig_bore_derrick"})
 
 
 static func _build_choir_mast(height: float) -> ArrayMesh:
-	var canvas := _new_canvas()
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
 	var hy := height * 0.5
 	HeroSculptor.add_chamfered_prism(
 		canvas, "orbital_verdigris", Transform3D(Basis.IDENTITY, Vector3(0.0, -hy + 3.5, 0.0)),
@@ -1865,12 +1567,12 @@ static func _build_choir_mast(height: float) -> ArrayMesh:
 
 
 static func _build_beacon_crown(frame_slot: String, glow_slot: String, radius: float, height: float) -> ArrayMesh:
-	var canvas := _new_canvas()
-	_add_beveled_annulus(canvas, glow_slot, Transform3D.IDENTITY, 20, radius * 0.58, radius * 0.96, radius, height * 0.72, 0.20, 0.12, 1.0, 0.55)
+	var canvas := HeroSculptor.create_canvas_without_foot_grime()
+	HeroSculptor.add_beveled_annulus(canvas, glow_slot, Transform3D.IDENTITY, 20, radius * 0.58, radius * 0.96, radius, height * 0.72, 0.20, 0.12, 1.0, 0.55, ANNULUS_LOOK)
 	for sy in [-1.0, 1.0]:
-		_add_beveled_annulus(
+		HeroSculptor.add_beveled_annulus(
 			canvas, frame_slot, Transform3D(Basis.IDENTITY, Vector3(0.0, sy * height * 0.44, 0.0)),
-			20, radius * 0.50, radius * 1.06, radius * 1.08, height * 0.24, 0.18, 0.36, 0.0, 0.88
+			20, radius * 0.50, radius * 1.06, radius * 1.08, height * 0.24, 0.18, 0.36, 0.0, 0.88, ANNULUS_LOOK
 		)
 	for i in 6:
 		var ang := TAU * float(i) / 6.0

@@ -15,6 +15,8 @@ const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const KillMark := preload("res://src/presentation/kill_mark.gd")
 const HeroFx := preload("res://src/presentation/hero_fx.gd")
+const PopGate := preload("res://src/presentation/pop_gate.gd")
+const DensityGovernor := preload("res://src/presentation/density_governor.gd")
 
 
 const POOL := 48
@@ -24,6 +26,8 @@ const GLYPH_SHADER := preload("res://assets/shaders/fx_glyph.gdshader")
 const INK_SHAPES := ["burst", "star", "cross", "arc"]
 const POP_SHAPES := ["flash", "star", "burst"]
 const SPARKLE_POOL := 6
+const SPARKLE_MAX := 20
+const SPARKLE_CEILING := SPARKLE_POOL * SPARKLE_MAX
 const TRAIL_SECONDS := [0.0, 0.12, 0.22, 0.36]
 const TRAIL_WIDTH := [0.0, 0.28, 0.48, 0.72]
 const TRAIL_NEAR := Vector2(0.4, 0.8)
@@ -95,54 +99,7 @@ var trails := true
 var pops := PopGate.new()
 var kill_mark: KillMark
 var hero_fx: HeroFx
-var _fill_scale := 1.0
-var _density_target := 0.0
-var _density_wait := 0.0
-
-
-class PopGate:
-	extends RefCounted
-
-	var ring := PackedFloat64Array([-1.0e9, -1.0e9, -1.0e9])
-	var oldest := 0
-	var pending: Array = []
-	const EMITTED_KEEP := 64
-	var emitted: Array = []
-
-	func add(clock: float, at: Vector3, reach: float) -> void:
-		var nearest: Dictionary = {}
-		var best := INF
-		for cluster in pending:
-			var d: float = (cluster["sum"] / cluster["n"]).distance_to(at)
-			if d < best:
-				best = d
-				nearest = cluster
-		if not nearest.is_empty() and (best <= reach or pending.size() >= Density.KILL_POPS_PER_WINDOW):
-			nearest["sum"] += at
-			nearest["n"] += 1
-			return
-		pending.append({"sum": at, "n": 1, "since": clock})
-
-	func ready(clock: float, wait: float) -> Array:
-		var out: Array = []
-		while not pending.is_empty() and clock - ring[oldest] >= Density.KILL_POP_WINDOW \
-				and clock - float(pending[0]["since"]) >= wait:
-			var cluster: Dictionary = pending.pop_front()
-			ring[oldest] = clock
-			oldest = (oldest + 1) % ring.size()
-			cluster["at"] = cluster["sum"] / cluster["n"]
-			cluster["scale"] = Density.pop_scale(cluster["n"])
-			emitted.append([clock, cluster["n"], cluster["scale"]])
-			if emitted.size() > EMITTED_KEEP:
-				emitted.pop_front()
-			out.append(cluster)
-		return out
-
-	func clear() -> void:
-		pending.clear()
-		emitted.clear()
-		ring = PackedFloat64Array([-1.0e9, -1.0e9, -1.0e9])
-		oldest = 0
+var _density := DensityGovernor.new()
 
 
 func setup(ctx_ref) -> void:
@@ -472,9 +429,7 @@ func clear() -> void:
 	_streaks.clear()
 	pops.clear()
 	Density.live().reset()
-	_density_target = 0.0
-	_density_wait = 0.0
-	_publish_fill_scale(1.0)
+	_density.reset()
 	if ctx != null and ctx.run != null and ctx.run.has_method("heft_class"):
 		_heft_class = int(ctx.run.heft_class())
 
@@ -744,7 +699,7 @@ func _on_scrap(amount: int, at: Vector3, _total: int) -> void:
 	var p: CPUParticles3D = _sparkles[_sparkle_next]
 	_sparkle_next = (_sparkle_next + 1) % _sparkles.size()
 	p.global_position = at
-	p.amount = clampi(6 + amount * 2, 6, 20)
+	p.amount = clampi(6 + amount * 2, 6, SPARKLE_MAX)
 	p.restart()
 	p.emitting = true
 	spawned["scrap_collected"] = spawned.get("scrap_collected", 0) + 1
@@ -959,7 +914,7 @@ func _build_fx() -> void:
 		_fx[id] = pool
 		_fx_next[id] = 0
 	_roll = _fx["roll_dust"][0]
-	_roll.set_instance_shader_parameter("tint", FxLibrary.colour("roll_dust", "rolling"))
+	_roll.set_instance_shader_parameter(FxLibrary.TINT, FxLibrary.colour("roll_dust", "rolling"))
 
 
 func play_fx(kind: String, at: Vector3, tint := Color.TRANSPARENT, variant := "", toward := Vector3.ZERO) -> void:
@@ -1063,11 +1018,7 @@ func kill_tint() -> Color:
 
 
 func _govern(delta: float) -> void:
-	_density_wait -= delta
-	if _density_wait <= 0.0:
-		_density_wait = 1.0 / Density.SAMPLE_HZ
-		_density_target = _count_density()
-	_publish_fill_scale(Density.fill_scale(Density.live().update(delta, _density_target)))
+	_density.step(delta, _count_density)
 
 
 func _count_density() -> float:
@@ -1079,12 +1030,6 @@ func _count_density() -> float:
 	var tree := get_tree()
 	return Density.raw(Density.count_in_view(cam, tree.get_nodes_in_group(Threat.GROUP)), alive,
 		Density.count_in_view(cam, tree.get_nodes_in_group("enemy")))
-
-
-func _publish_fill_scale(value: float) -> void:
-	if value != _fill_scale:
-		_fill_scale = value
-		Density.publish_fill_scale(value)
 
 
 static func burst_ceiling() -> int:

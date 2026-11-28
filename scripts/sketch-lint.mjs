@@ -337,13 +337,13 @@ export const SIM_READS = {
     sites: 1,
     why: "the landing-sound guard repeats the director's own clearance check, so it asks about the same ball the director does",
   },
-  "src/presentation/hero_assets.gd": {
-    sites: 1,
-    why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place",
-  },
   "src/presentation/reward_ceremony.gd": {
     sites: 1,
     why: "calm() decides whether a ceremony may stop the world: a rule read against threats and enemies at the tick",
+  },
+  "src/presentation/warden_dress.gd": {
+    sites: 1,
+    why: "the Warden's lens asks its Sight, which answers with the last seen place while the ball is cloaked and has no drawn place",
   },
   "src/ui/workshop.gd": {
     sites: 1,

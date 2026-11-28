@@ -256,7 +256,7 @@ func follow(id: String, node: Node3D, count: int, lift: float, seconds := INF, t
 		_busy[p] = true
 		p.amount_ratio = clampf(float(count) / float(p.amount), 0.0, 1.0)
 		p.global_transform = Transform3D(Basis.IDENTITY, node.global_position + Vector3.UP * lift)
-		p.set_instance_shader_parameter("tint", tint if tint.a > 0.0 else FxLibrary.colour(id, "enemy_struck"))
+		p.set_instance_shader_parameter(FxLibrary.TINT, tint if tint.a > 0.0 else FxLibrary.colour(id, "enemy_struck"))
 		FxLibrary.set_heat(p, FxLibrary.look(id))
 		p.emitting = true
 		_follows.append({"emitter": p, "node": node, "lift": lift, "until": _clock + seconds, "spin": spin})
