@@ -25,6 +25,8 @@ export function isHighLoad({ loadStart, loadEnd, cpus }) {
 const KNOWN_FAILING_LEDGER = "project-guide/handoff/KNOWN-FAILING.tsv";
 const DOCS_OR_PKG =
   /(?:\.md$|^package(?:-lock)?\.json$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/)/;
+const SKILLS_TRIGGER = /^(?:\.agents\/skills\/|\.claude\/skills\/|scripts\/check-skills\.mjs$)/;
+const BRIEFS_TRIGGER = /(?:^|\/)sound\/briefs\/|^scripts\/brief-check\.mjs$/;
 
 export function parsePushStdin(text) {
   const ranges = [];
@@ -75,8 +77,10 @@ export function planHookChecks(changedFiles, exists = (f) => existsSync(path.joi
   const jsFiles = filterFormatTargets(changedFiles, exists);
   const hasSketch = changedFiles.some((f) => f.startsWith("sketches/core-loop/"));
   const hasDocsOrPkg = changedFiles.some((f) => DOCS_OR_PKG.test(f));
+  const hasSkills = changedFiles.some((f) => SKILLS_TRIGGER.test(f));
+  const hasBriefs = changedFiles.some((f) => BRIEFS_TRIGGER.test(f));
   const hasKnownFailing = changedFiles.includes(KNOWN_FAILING_LEDGER);
-  return { jsFiles, hasSketch, hasDocsOrPkg, hasKnownFailing };
+  return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing };
 }
 
 function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
@@ -169,6 +173,26 @@ export function executeHookPlan(
       spawn,
     });
     if (!r2.ok) ok = false;
+  }
+  if (plan.hasSkills) {
+    ranLabels.push("check:skills");
+    const r = runStep(
+      "check:skills",
+      process.execPath,
+      [path.join(cwd, "scripts/check-skills.mjs")],
+      { cwd, spawn },
+    );
+    if (!r.ok) ok = false;
+  }
+  if (plan.hasBriefs) {
+    ranLabels.push("check:briefs");
+    const r = runStep(
+      "check:briefs",
+      process.execPath,
+      [path.join(cwd, "scripts/brief-check.mjs")],
+      { cwd, spawn },
+    );
+    if (!r.ok) ok = false;
   }
   if (plan.hasKnownFailing) {
     ranLabels.push("known-failing");

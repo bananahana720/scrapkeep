@@ -1,5 +1,6 @@
 extends Node3D
 
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const WarningBound := preload("res://src/combat/warning_bound.gd")
@@ -45,6 +46,18 @@ var _open: Array[bool] = []
 var _bound := AABB()
 var _bound_stale := false
 var bound_merges := 0
+
+
+static func from_def(d: Dictionary) -> Node3D:
+	var h := new()
+	match d["shape"]:
+		"lane":
+			h.commit_lane(d["id"], d["type"], d["from"], d["dir"], d["behind"], d["ahead"], d["half"], d["height"], d["warn"], d["live"])
+		"sector":
+			h.commit_sector(d["id"], d["type"], d["at"], d["band"], d["from_angle"], d["to_angle"], d["height"], d["warn"], d["live"])
+		"annulus":
+			h.commit_annulus(d["id"], d["type"], d["at"], d["band"], d["height"], d["warn"], d["live"])
+	return h
 
 
 func commit_sector(id: String, threat_type: int, at: Vector3, band: Vector2, from_angle: float, to_angle: float, height: float,
@@ -132,10 +145,10 @@ func step(delta: float) -> void:
 
 
 func draws(point: Vector3) -> bool:
-	var r := _flat(point - centre).length()
+	var r := BossAttacks.flat(point - centre).length()
 	if shape != Shape.ANNULUS or r < r_in or r > r_out:
 		return contains(point)
-	var d := _flat(point - centre)
+	var d := BossAttacks.flat(point - centre)
 	var i := int(floor(wrapf(atan2(d.z, d.x), 0.0, TAU) / TAU * RING_SEGMENTS)) % RING_SEGMENTS
 	return _open.size() != RING_SEGMENTS or not _open[i]
 
@@ -196,25 +209,25 @@ func contains(point: Vector3) -> bool:
 		return false
 	match shape:
 		Shape.SECTOR:
-			var r := _flat(point - centre).length()
+			var r := BossAttacks.flat(point - centre).length()
 			if r < r_in or r > r_out:
 				return false
 			var u := sweep_offset(point)
 			return u >= -_angle_margin(r) and u <= absf(a_to - a_from) + _angle_margin(r)
 		Shape.ANNULUS:
-			var r := _flat(point - centre).length()
+			var r := BossAttacks.flat(point - centre).length()
 			if r < r_in or r > r_out:
 				return false
 			return not (excluded.is_valid() and excluded.call(point))
 		Shape.LANE:
-			var local := _flat(point - centre)
+			var local := BossAttacks.flat(point - centre)
 			var along := local.dot(heading)
 			return along >= -back and along <= length and absf(local.dot(side())) <= half_width
 	return false
 
 
 func sweep_offset(point: Vector3) -> float:
-	var d := _flat(point - centre)
+	var d := BossAttacks.flat(point - centre)
 	var angle := atan2(d.z, d.x)
 	var dir := signf(a_to - a_from) if a_to != a_from else 1.0
 	return wrapf((angle - a_from) * dir, -PI, PI)
@@ -229,15 +242,11 @@ func side() -> Vector3:
 
 
 func lane_along(point: Vector3) -> float:
-	return _flat(point - centre).dot(heading)
+	return BossAttacks.flat(point - centre).dot(heading)
 
 
 func lane_lateral(point: Vector3) -> float:
-	return _flat(point - centre).dot(side())
-
-
-static func _flat(v: Vector3) -> Vector3:
-	return Vector3(v.x, 0.0, v.z)
+	return BossAttacks.flat(point - centre).dot(side())
 
 
 func descriptor() -> Dictionary:

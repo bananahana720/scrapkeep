@@ -19,7 +19,7 @@ const HOP := 4.0
 const TILT := 0.07
 const BARS := 3
 const POP_IN := 0.16
-const TAG_INKS := [Color("121514"), Palette.LEDGER_CREAM]
+const TAG_INKS := [UiTokens.TAG_INK, Palette.LEDGER_CREAM]
 const TAG_TILT := -0.035
 
 const CALLERS := {

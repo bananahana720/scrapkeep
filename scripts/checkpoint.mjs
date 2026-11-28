@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -13,7 +13,8 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { requireGodotBinary } from "./godot-home.mjs";
+import { requireGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { pool, runProcess as runChild } from "./lib/proc.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const root = path.resolve(here, "..");
@@ -449,31 +450,10 @@ function git(args) {
   return r.status === 0 ? r.stdout.trim() : null;
 }
 
-function runProcess(command, args, options = {}) {
-  return new Promise((resolve) => {
-    const child = spawn(command, args, {
-      ...options,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let output = "";
-    child.stdout.on("data", (d) => (output += d));
-    child.stderr.on("data", (d) => (output += d));
-    child.on("error", (e) => resolve({ code: -1, output: String(e) }));
-    child.on("close", (code) => resolve({ code, output }));
-  });
-}
-
-async function pool(jobs, width) {
-  const results = new Array(jobs.length);
-  let next = 0;
-  const workers = Array.from({ length: Math.min(width, jobs.length) }, async () => {
-    while (next < jobs.length) {
-      const i = next++;
-      results[i] = await jobs[i]();
-    }
-  });
-  await Promise.all(workers);
-  return results;
+async function runProcess(command, args, options = {}) {
+  const res = await runChild(command, args, options);
+  if (res.error) return { code: -1, output: String(res.error) };
+  return { code: res.exit, output: res.output };
 }
 
 function readNdjson(file) {
@@ -509,9 +489,7 @@ async function runBots(outDir, seedCount, godot) {
     for (let seed = 1; seed <= seedCount; seed++) {
       const dir = path.join(outDir, "bots", `${policy}-${seed}`);
       mkdirSync(dir, { recursive: true });
-      const env = { ...process.env };
-      for (const kind of ["DATA", "CONFIG", "CACHE"])
-        env[`XDG_${kind}_HOME`] = path.join(dir, "state", kind.toLowerCase());
+      const env = scratchGodotEnv(path.join(dir, "state"), { baseEnv: process.env });
       jobs.push(async () => {
         const args = [
           "--headless",

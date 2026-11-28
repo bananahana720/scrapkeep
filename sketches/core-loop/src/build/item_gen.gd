@@ -61,6 +61,7 @@ const TEMPLATES := {
 const SCALED := ["chance", "damage", "gain", "bonus", "share"]
 const CEILINGS := {"chance": 0.25, "gain": 0.2, "bonus": 1.0, "share": 1.0}
 const GEN_CAP := 3
+const ODDS_SEPARATOR := " / "
 
 
 static func is_generated(part_id: String) -> bool:
@@ -132,6 +133,24 @@ static func odds(allowed: Array) -> Array:
 	for r in ids:
 		out.append({"rarity": r, "weight": weight_of(r), "share": weight_of(r) / total if total > 0.0 else 0.0})
 	return out
+
+
+static func odds_rows(shares: Array) -> Array:
+	var out: Array = []
+	for row in shares:
+		if float(row["share"]) <= 0.0:
+			continue
+		var rarity: String = row["rarity"]
+		out.append({"rarity": rarity, "label": RARITY[rarity]["stamp"], "percent": roundi(float(row["share"]) * 100.0),
+			"color": RARITY[rarity]["color"]})
+	return out
+
+
+static func odds_text(shares: Array) -> String:
+	var bits: Array = []
+	for row in odds_rows(shares):
+		bits.append("%s %d%%" % [row["label"], row["percent"]])
+	return ODDS_SEPARATOR.join(bits)
 
 
 static func generated_row(part_id: String) -> Dictionary:

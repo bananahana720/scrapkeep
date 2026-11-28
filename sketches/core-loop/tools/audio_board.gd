@@ -166,7 +166,7 @@ static func render_demo(number: String) -> Take:
 static func _class_demo(id: String) -> Take:
 	var t := Take.new()
 	var row := Harmony.motif(id)
-	var bare := SfxBank._motif_score(id, 0, row["voice"], 0.8)
+	var bare := SfxBank.motif_score(id, 0, row["voice"], 0.8)
 	if row.get("roll", false):
 		for step in 4:
 			bare.append([step, 0, 1, "hat", 0.5])

@@ -1,3 +1,4 @@
+# smoke: solo (verdict reads wall time: 33 ms main-thread frame cap during park streaming)
 extends SceneTree
 
 # Rule (K-UNITS KB4, PARK.md sections 3 "Streaming" and 9): the next park stage's regions and

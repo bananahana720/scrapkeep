@@ -15,10 +15,6 @@ static func reset_for_tests() -> void:
 	_mat_cache.clear()
 
 
-static func _add_bevel_box(st: SurfaceTool, center: Vector3, size: Vector3, bevel: float, uv_scale: float, xf: Transform3D, c_flat: Color, c_edge: Color, c_bot: Color) -> void:
-	add_bevel_box(st, center, size, bevel, uv_scale, xf, c_flat, c_edge, c_bot)
-
-
 static func _add_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3, n: Vector3, c0: Color, c1: Color, c2: Color, c3: Color, uv_scale := 0.25) -> void:
 	HeroSculptor.add_planar_tri(st, a, b, c, n, c0, c1, c2, uv_scale)
 	HeroSculptor.add_planar_tri(st, a, c, d, n, c0, c2, c3, uv_scale)
@@ -196,7 +192,7 @@ static func perimeter_berm_mesh(ground_r: float, segments: int, height: float, d
 		var tall := height + stagger_m * float(i % 2)
 		var at := Vector3(sin(angle) * (ground_r - depth * 0.5), tall * 0.5, -cos(angle) * (ground_r - depth * 0.5))
 		var xf := Transform3D(Basis(Vector3.UP, -angle), at)
-		_add_bevel_box(st, Vector3.ZERO, Vector3(chord, tall, depth), 0.72, 0.12, xf, c_flat, c_edge, c_bot)
+		add_bevel_box(st, Vector3.ZERO, Vector3(chord, tall, depth), 0.72, 0.12, xf, c_flat, c_edge, c_bot)
 	var mesh := _commit_surfaces({"sandstone_berm": st}, ["sandstone_berm"])
 	_mesh_cache[key] = mesh
 	return mesh
@@ -255,7 +251,7 @@ static func signal_lantern_mesh(radius := 0.34) -> ArrayMesh:
 	for i in 4:
 		var a := TAU * float(i) / 4.0 + PI * 0.25
 		var xf := Transform3D(Basis(Vector3.UP, -a), Vector3(cos(a) * r * 0.86, 0.0, sin(a) * r * 0.86))
-		_add_bevel_box(st_cage, Vector3.ZERO, Vector3(r * 0.16, r * 1.62, r * 0.16), r * 0.03, 1.8, xf, c_flat, c_edge, c_bot)
+		add_bevel_box(st_cage, Vector3.ZERO, Vector3(r * 0.16, r * 1.62, r * 0.16), r * 0.03, 1.8, xf, c_flat, c_edge, c_bot)
 	var bulb_r := r * 0.82
 	var bulb_profile := [
 		[-bulb_r * 0.92, 0.0, CraftLookdev.encode_mask(0.10, 0.10, 1.0)],

@@ -29,10 +29,9 @@ const RARITY_COLORS := {
 	"relic": Palette.AMBER,
 	"evolved": Palette.ANCIENT,
 }
-const ICE := Color("c8f0ff")
 const PART_GLB := "res://assets/models/item_parts/part_%s_tripo.glb"
 const TAG_COLORS := {
-	"frost": ICE, "arc": Palette.ARC, "kinetic": Palette.COPPER, "split": Palette.SAND,
+	"frost": Palette.ICE, "arc": Palette.ARC, "kinetic": Palette.COPPER, "split": Palette.SAND,
 	"spiral": Palette.AMBER, "chain": Palette.ARC, "anchor": Palette.VERDIGRIS,
 	"speed": Palette.AMBER, "mass": Palette.RUST,
 }
@@ -352,7 +351,7 @@ func _build_halo(synergy_id: String) -> Node3D:
 	if synergy_id == "storm_lattice":
 		rings = [Vector3.ZERO, Vector3(PI * 0.5, 0.0, 0.0), Vector3(0.0, 0.0, PI * 0.5)]
 	elif synergy_id == "thermal_shock":
-		mat = Palette.solid(ICE, 2.0)
+		mat = Palette.solid(Palette.ICE, 2.0)
 		inner = 1.1
 		outer = 1.28
 	var ring_mesh := CraftedGear.synergy_ring_mesh(inner, outer)

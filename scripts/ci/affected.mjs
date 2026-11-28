@@ -8,14 +8,18 @@ import { fileURLToPath } from "node:url";
 const WEB_PATTERN =
   /^(index\.html|orchard\.html|vite\.config\.js|package\.json|package-lock\.json|public\/|src\/|server\/|scripts\/check-build\.mjs|scripts\/verify\.mjs)/;
 const GODOT_PATTERN = /^sketches\/core-loop\//;
+const GODOT_SHARD_THRESHOLD = 8;
+const GODOT_PARK_PATTERN = /^sketches\/core-loop\/(?:.*\/)?(?:parks?\/|park_[^/]*$)/;
+const GODOT_HUB_PATTERN =
+  /^sketches\/core-loop\/(?:src\/game\.gd|src\/movement\/(?:intent|tuning|augments)\.gd|src\/core\/(?:palette|class_def|event_kinds|game_events|run_state|ability_state|profile|park_defs|stage_defs|sim_clock)\.gd|src\/build\/parts\.gd|src\/combat\/(?:threat_grammar|warden|roster|weapons)\.gd|src\/world\/(?:terrain|director|world)\.gd|src\/presentation\/(?:sfx_bank|harmony|audio|hero_assets)\.gd|tests\/support\/t\.gd|tools\/bot_driver\.gd)$/;
 const NODE_PATTERN =
   /^(package\.json|package-lock\.json|scripts\/|tests\/|tools\/|src\/|server\/|project-guide\/handoff\/sitting-kit\/|\.github\/workflows\/)/;
 const DOCS_PATTERN =
-  /(\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.agents\/skills\/|^\.claude\/skills\/|^scripts\/(?:check-docs|check-project|check-skills|brief-check|wave-state|known-failing|gate\/weekly))/;
+  /(\.md$|^project-guide\/handoff\/(?:STATE\.md|DECISIONS\.md|KNOWN-FAILING\.tsv|WEEKLY\.tsv)|^\.(?:agents|claude|codex)\/|^scripts\/(?:check-docs|check-project|check-skills|check-agents\.mjs|brief-check|wave-state|known-failing|gate\/weekly))/;
 const WORKFLOW_PATTERN = /^(\.github\/workflows\/|scripts\/ci\/)/;
 
 export function classifyAffected(changedFiles, { full = false } = {}) {
-  const files = changedFiles.filter(Boolean);
+  const files = [...new Set(changedFiles.filter(Boolean))];
   if (full || files.length === 0) {
     return {
       full: true,
@@ -24,12 +28,21 @@ export function classifyAffected(changedFiles, { full = false } = {}) {
       node: true,
       web: true,
       godot: true,
+      godot_shards: 1,
+      godot_matrix: "[1]",
       changedCount: files.length,
     };
   }
   const workflowTouched = files.some((f) => WORKFLOW_PATTERN.test(f));
   const web = workflowTouched || files.some((f) => WEB_PATTERN.test(f));
-  const godot = files.some((f) => GODOT_PATTERN.test(f));
+  const godotFiles = files.filter((f) => GODOT_PATTERN.test(f));
+  const godot = godotFiles.length > 0;
+  const godotWide =
+    godot &&
+    (godotFiles.length >= GODOT_SHARD_THRESHOLD ||
+      godotFiles.some((f) => GODOT_PARK_PATTERN.test(f) || GODOT_HUB_PATTERN.test(f)));
+  const godot_shards = godotWide ? 2 : 1;
+  const godot_matrix = godot_shards > 1 ? "[1, 2]" : "[1]";
   const node = workflowTouched || godot || web || files.some((f) => NODE_PATTERN.test(f));
   const docs = workflowTouched || files.some((f) => DOCS_PATTERN.test(f));
   return {
@@ -39,6 +52,8 @@ export function classifyAffected(changedFiles, { full = false } = {}) {
     node,
     web,
     godot,
+    godot_shards,
+    godot_matrix,
     changedCount: files.length,
   };
 }

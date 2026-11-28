@@ -3,10 +3,14 @@ extends SceneTree
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
+const BuildSheet := preload("res://src/build/build_sheet.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Grip := preload("res://src/movement/grip.gd")
 const MathUtil := preload("res://src/core/math_util.gd")
+const Palette := preload("res://src/core/palette.gd")
+const Panels := preload("res://src/build/panels.gd")
+const RewardGates := preload("res://src/build/reward_gates.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const AbilityState := preload("res://src/core/ability_state.gd")
@@ -32,6 +36,7 @@ func _initialize() -> void:
 	_check_basis_up_owner()
 	_check_steep_face_owner()
 	_check_burst_owner()
+	_check_build_and_body_owners()
 	quit(_t.verdict())
 
 
@@ -164,3 +169,44 @@ func _check_burst_owner() -> void:
 	_t.check("active sprint is not ready again", Augments.burst_wait(rivet) == INF and not Augments.burst_ready(rivet))
 	_t.eq("Grip.grip flail band", Grip.grip(2.0, 1.4), Grip.FLAIL)
 	_t.check("Roster.heft_of null is INF", Roster.heft_of(null) == INF)
+
+
+func _check_build_and_body_owners() -> void:
+	var ball_src := FileAccess.get_file_as_string("res://src/movement/player_ball.gd")
+	_t.check("player_ball.gd removes active_body alias",
+		not ball_src.contains("func active_body(") and ball_src.contains("func body()"))
+	var stat_cache_src := FileAccess.get_file_as_string("res://src/build/stat_cache.gd")
+	_t.check("stat_cache.gd delegates counting and folding to BuildSheet",
+		not stat_cache_src.contains("func _counted(")
+		and not stat_cache_src.contains("func _refold(")
+		and not stat_cache_src.contains("func _fold_mods(")
+		and not stat_cache_src.contains("func _fold_patterns(")
+		and not stat_cache_src.contains("func _fold_elements(")
+		and stat_cache_src.contains("BuildSheet.counted_defs(")
+		and stat_cache_src.contains(".refold_category("))
+	_t.eq("BuildSheet.counted_defs resolves single held part", BuildSheet.counted_defs(["hot_rivets"]).size(), 1)
+	for path in [
+		"res://src/build/accretion.gd",
+		"res://src/build/element_field.gd",
+	]:
+		var text := FileAccess.get_file_as_string(path)
+		_t.check("%s uses Palette.ICE without redeclaring ICE" % path,
+			not text.contains("const ICE ") and not text.contains("const ICE:") and not text.contains('Color("c8f0ff")') and text.contains("Palette.ICE"))
+	for path in [
+		"res://src/build/build.gd",
+		"res://src/build/item_effects.gd",
+	]:
+		var text := FileAccess.get_file_as_string(path)
+		_t.check("%s uses Palette.ICE instead of ElementField.ICE" % path,
+			not text.contains("ElementField.ICE"))
+	var fab_src := FileAccess.get_file_as_string("res://src/build/fabricators.gd")
+	_t.check("fabricators.gd delegates rarity color to RewardGates.rarity_color",
+		not fab_src.contains("func _rarity_color(") and fab_src.contains("RewardGates.rarity_color("))
+	_t.eq("RewardGates.rarity_color common matches Palette.ARC", RewardGates.rarity_color("common"), Palette.ARC)
+	var panels_src := FileAccess.get_file_as_string("res://src/build/panels.gd")
+	_t.eq("panels.gd defines drop_row once", panels_src.count("func drop_row("), 1)
+	_t.eq("Panels.drop_row(1) reads world 1 table", Panels.drop_row(1), Panels.DROP_BY_WORLD[1])
+	_t.eq("Panels.drop_row(99) falls back to DROP", Panels.drop_row(99), Panels.DROP)
+	var cons_src := FileAccess.get_file_as_string("res://src/build/consumables.gd")
+	_t.check("consumables.gd inlines cache clear in reset_for_tests",
+		not cons_src.contains("func _reset(") and cons_src.contains("func reset_for_tests("))

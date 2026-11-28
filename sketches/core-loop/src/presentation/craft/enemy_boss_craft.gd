@@ -246,11 +246,8 @@ static func _bevel_ring(st: SurfaceTool, center: Vector3, r_in: float, r_out: fl
 			_add_quad(st, q0, q1, q2, q3, fn, c_edge if is_bevel else c_body, uv_scale)
 
 
-static func _bolt_ring(st: SurfaceTool, center: Vector3, ring_r: float, count: int, bolt_r: float, bolt_h: float, xf := Transform3D.IDENTITY) -> void:
-	for i in count:
-		var a := TAU * float(i) / float(count)
-		var pos := center + Vector3(cos(a) * ring_r, 0.0, sin(a) * ring_r)
-		_bevel_cyl(st, pos, bolt_r, bolt_r * 0.86, bolt_h, 6, bolt_r * 0.2, 1.2, xf, CraftLookdev.encode_mask(0.24, 0.64), CraftLookdev.encode_mask(0.92, 0.14), CraftLookdev.encode_mask(0.74, 0.18))
+static func _bolt_cyl() -> Callable:
+	return _bevel_cyl.bind(CraftLookdev.encode_mask(0.24, 0.64), CraftLookdev.encode_mask(0.92, 0.14), CraftLookdev.encode_mask(0.74, 0.18))
 
 
 static func _strut_xf(p0: Vector3, p1: Vector3) -> Transform3D:
@@ -381,7 +378,7 @@ static func brindle_vent_cap(radius: float, height: float) -> ArrayMesh:
 		_bevel_cyl(st, Vector3(0.0, -height * 0.28, 0.0), radius * 1.06, radius * 0.98, height * 0.44, 12, 0.06, 0.5, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.12, 0.52), CraftLookdev.encode_mask(0.88, 0.16), CraftLookdev.encode_mask(0.18, 0.42))
 		_bevel_cyl(st, Vector3(0.0, height * 0.10, 0.0), radius * 0.86, radius * 0.74, height * 0.58, 12, 0.07, 0.55, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.10, 0.22), CraftLookdev.encode_mask(0.90, 0.14), CraftLookdev.encode_mask(0.16, 0.30))
 		_bevel_ring(st, Vector3(0.0, height * 0.36, 0.0), radius * 0.42, radius * 0.72, height * 0.24, 12, 0.04, 0.7, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.14, 0.36), CraftLookdev.encode_mask(0.92, 0.12))
-		_bolt_ring(st, Vector3(0.0, -height * 0.04, 0.0), radius * 0.94, 6, minf(0.11, radius * 0.10), 0.12)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, -height * 0.04, 0.0), radius * 0.94, 6, minf(0.11, radius * 0.10), 0.12, 0.86, 1.2, _bolt_cyl())
 		for i in 3:
 			var a := PI * float(i) / 3.0
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(0.0, height * 0.36, 0.0))
@@ -398,7 +395,7 @@ static func brindle_crane_post(size: Vector3) -> ArrayMesh:
 		for yf in [-0.15, 0.22]:
 			_bevel_box(st, Vector3(0.0, size.y * yf, 0.0), Vector3(size.x * 1.24, 0.22, size.z * 1.24), 0.04, 0.7, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.38), CraftLookdev.encode_mask(0.92, 0.14), CraftLookdev.encode_mask(0.14, 0.74))
 		_bevel_cyl(st, Vector3(0.0, size.y * 0.48, 0.0), size.x * 0.72, size.x * 0.56, 0.34, 8, 0.04, 0.8, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.28), CraftLookdev.encode_mask(0.92, 0.14), CraftLookdev.encode_mask(0.22, 0.24))
-		_bolt_ring(st, Vector3(0.0, -size.y * 0.38, 0.0), size.x * 0.64, 4, 0.075, 0.08)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, -size.y * 0.38, 0.0), size.x * 0.64, 4, 0.075, 0.08, 0.86, 1.2, _bolt_cyl())
 	)
 
 
@@ -415,7 +412,7 @@ static func brindle_magnet_housing(radius: float, height: float) -> ArrayMesh:
 			var a := TAU * float(i) / 6.0
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * radius * 0.88, 0.02, sin(a) * radius * 0.88))
 			_bevel_box(st, Vector3.ZERO, Vector3(0.28, height * 0.62, 0.14), 0.03, 0.8, xf, CraftLookdev.encode_mask(0.16, 0.46), CraftLookdev.encode_mask(0.90, 0.14), CraftLookdev.encode_mask(0.16, 0.76))
-		_bolt_ring(st, Vector3(0.0, height * 0.32, 0.0), radius * 0.66, 8, 0.08, 0.07)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, height * 0.32, 0.0), radius * 0.66, 8, 0.08, 0.07, 0.86, 1.2, _bolt_cyl())
 	)
 
 
@@ -426,7 +423,7 @@ static func quench_vent_basin(radius: float) -> ArrayMesh:
 		_bevel_ring(st, Vector3(0.0, 0.0, 0.0), radius * 0.82, radius, 0.10, 20, 0.024, 0.4, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.14, 0.46), CraftLookdev.encode_mask(0.90, 0.14))
 		_bevel_ring(st, Vector3(0.0, -0.02, 0.0), radius * 0.72, radius * 0.86, 0.06, 20, 0.015, 0.45, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.10, 0.84), CraftLookdev.encode_mask(0.65, 0.42))
 		_bevel_cyl(st, Vector3(0.0, -0.018, 0.0), radius * 0.78, radius * 0.75, 0.055, 20, 0.014, 0.38, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.12, 0.18, 0.96), CraftLookdev.encode_mask(0.45, 0.12, 1.0), CraftLookdev.encode_mask(0.16, 0.12, 1.0))
-		_bolt_ring(st, Vector3(0.0, 0.05, 0.0), radius * 0.91, 8, minf(0.14, radius * 0.048), 0.032)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, 0.05, 0.0), radius * 0.91, 8, minf(0.14, radius * 0.048), 0.032, 0.86, 1.2, _bolt_cyl())
 		for i in 8:
 			var a := TAU * float(i) / 8.0 + PI / 8.0
 			var xf := Transform3D(Basis(Vector3.UP, a), Vector3(cos(a) * radius * 0.80, 0.01, sin(a) * radius * 0.80))
@@ -453,7 +450,7 @@ static func dispatch_mast_assembly(height: float, width: float, deck_size: Vecto
 				_bevel_box(st_iron, Vector3(lx, leg_center_y, lz), Vector3(0.20, leg_h, 0.20), 0.032, 0.6, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.12, 0.22), CraftLookdev.encode_mask(0.88, 0.14), CraftLookdev.encode_mask(0.12, 0.80))
 				_bevel_box(st_iron, Vector3(lx + sx * 0.06, leg_center_y, lz), Vector3(0.08, leg_h * 0.96, 0.10), 0.016, 0.8, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.34), CraftLookdev.encode_mask(0.90, 0.14), CraftLookdev.encode_mask(0.14, 0.76))
 				_bevel_box(st_iron, Vector3(lx, leg_center_y, lz + sz * 0.06), Vector3(0.10, leg_h * 0.96, 0.08), 0.016, 0.8, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.34), CraftLookdev.encode_mask(0.90, 0.14), CraftLookdev.encode_mask(0.14, 0.76))
-				_bolt_ring(st_iron, Vector3(lx, -height + 0.21, lz), 0.15, 4, 0.032, 0.035)
+				HeroSculptor.bolt_ring(st_iron, Vector3(lx, -height + 0.21, lz), 0.15, 4, 0.032, 0.035, 0.86, 1.2, _bolt_cyl())
 
 		var bays := maxi(2, int(height / 1.6))
 		var bay_h := (height - deck_size.y - 0.35) / float(bays)
@@ -527,7 +524,7 @@ static func dispatch_pod(radius: float, height: float) -> ArrayMesh:
 
 		_bevel_ring(st_brass, Vector3(0.0, height * 0.04, 0.0), radius * 0.86, radius * 1.07, height * 0.16, 12, 0.03, 0.85, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.24), CraftLookdev.encode_mask(0.94, 0.10))
 		_bevel_ring(st_brass, Vector3(0.0, -body_h * 0.42, 0.0), radius * 0.82, radius * 1.02, 0.09, 12, 0.02, 0.9, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.36), CraftLookdev.encode_mask(0.92, 0.12))
-		_bolt_ring(st_brass, Vector3(0.0, height * 0.12, 0.0), radius * 0.98, 6, 0.042, 0.04)
+		HeroSculptor.bolt_ring(st_brass, Vector3(0.0, height * 0.12, 0.0), radius * 0.98, 6, 0.042, 0.04, 0.86, 1.2, _bolt_cyl())
 
 		for i in 4:
 			var a := PI * 0.25 + PI * 0.5 * float(i)
@@ -670,7 +667,7 @@ static func reward_canister_band(radius: float, height: float) -> ArrayMesh:
 	return _cached(key, func(surfaces: Dictionary, order: Array[String]):
 		var st := _slot_st(surfaces, order, "hull_plating")
 		_bevel_ring(st, Vector3.ZERO, radius * 0.90, radius, height, 14, 0.018, 1.2, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.06), CraftLookdev.encode_mask(0.88, 0.04))
-		_bolt_ring(st, Vector3(0.0, 0.0, 0.0), radius * 0.99, 6, 0.022, 0.025)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, 0.0, 0.0), radius * 0.99, 6, 0.022, 0.025, 0.86, 1.2, _bolt_cyl())
 	)
 
 
@@ -737,7 +734,7 @@ static func admirals_crest_badge(radius: float, height: float) -> ArrayMesh:
 		_bevel_cyl(st, Vector3.ZERO, radius, radius * 0.94, height, 10, 0.024, 1.0, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.14, 0.24, 0.20), CraftLookdev.encode_mask(0.94, 0.10, 0.45), CraftLookdev.encode_mask(0.20, 0.18, 0.35))
 		_bevel_ring(st, Vector3(0.0, height * 0.32, 0.0), radius * 0.64, radius * 0.92, height * 0.42, 10, 0.018, 1.1, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.30, 0.30), CraftLookdev.encode_mask(0.94, 0.10, 0.60))
 		_bevel_cyl(st, Vector3(0.0, height * 0.38, 0.0), radius * 0.34, radius * 0.22, height * 0.45, 5, 0.018, 1.2, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.22, 0.16, 0.85), CraftLookdev.encode_mask(0.94, 0.10, 0.95), CraftLookdev.encode_mask(0.30, 0.12, 1.0))
-		_bolt_ring(st, Vector3(0.0, height * 0.48, 0.0), radius * 0.78, 5, 0.036, 0.028)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, height * 0.48, 0.0), radius * 0.78, 5, 0.036, 0.028, 0.86, 1.2, _bolt_cyl())
 	)
 
 
@@ -749,7 +746,7 @@ static func dig_cable_coupler(radius: float) -> ArrayMesh:
 		_bevel_ring(st, Vector3(0.0, radius * 0.34, 0.0), radius * 0.72, radius * 1.06, radius * 0.26, 8, radius * 0.06, 1.0, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.16, 0.44, 0.0), CraftLookdev.encode_mask(0.90, 0.14, 0.0))
 		_bevel_ring(st, Vector3(0.0, -radius * 0.34, 0.0), radius * 0.72, radius * 1.06, radius * 0.26, 8, radius * 0.06, 1.0, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.16, 0.56, 0.0), CraftLookdev.encode_mask(0.90, 0.16, 0.0))
 		_bevel_ring(st, Vector3.ZERO, radius * 0.84, radius * 1.02, radius * 0.30, 8, radius * 0.05, 1.0, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.18, 0.10, 0.96), CraftLookdev.encode_mask(0.42, 0.08, 1.0))
-		_bolt_ring(st, Vector3(0.0, radius * 0.58, 0.0), radius * 0.62, 4, radius * 0.12, radius * 0.12)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, radius * 0.58, 0.0), radius * 0.62, 4, radius * 0.12, radius * 0.12, 0.86, 1.2, _bolt_cyl())
 	)
 
 
@@ -958,7 +955,7 @@ static func burrow_marker_mesh(radius: float, height: float) -> ArrayMesh:
 		var st := _slot_st(surfaces, order, "part_state")
 		_bevel_cyl(st, Vector3.ZERO, radius, radius * 0.94, height, 20, minf(0.018, height * 0.35), 0.6, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.12, 0.56), CraftLookdev.encode_mask(0.88, 0.16), CraftLookdev.encode_mask(0.14, 0.52))
 		_bevel_ring(st, Vector3(0.0, height * 0.35, 0.0), radius * 0.72, radius * 0.96, height * 0.8, 20, 0.012, 0.7, Transform3D.IDENTITY, CraftLookdev.encode_mask(0.16, 0.44), CraftLookdev.encode_mask(0.90, 0.14))
-		_bolt_ring(st, Vector3(0.0, height * 0.55, 0.0), radius * 0.84, 6, 0.08, 0.03)
+		HeroSculptor.bolt_ring(st, Vector3(0.0, height * 0.55, 0.0), radius * 0.84, 6, 0.08, 0.03, 0.86, 1.2, _bolt_cyl())
 	)
 
 

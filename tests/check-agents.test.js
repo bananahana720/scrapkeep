@@ -279,3 +279,138 @@ test("enforces pstack@cursor-plugins registration when .claude/settings.json exi
     await rm(tmp, { recursive: true, force: true });
   }
 });
+
+test("checks .codex/agents/*.toml for core agent presence, retired model pins, and CLAUDE_EFFORT", async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-agents-"));
+  try {
+    const repo = await buildCleanRepo(tmp);
+    const codexDir = path.join(repo, ".codex/agents");
+    await mkdir(codexDir, { recursive: true });
+    const coreNames = [
+      "scrapkeep-explorer",
+      "scrapkeep-reviewer",
+      "scrapkeep-reviewer-medium",
+      "scrapkeep-verifier",
+      "scrapkeep-writer",
+      "scrapkeep-writer-low",
+    ];
+    for (const name of coreNames.slice(0, 5)) {
+      await writeFile(
+        path.join(codexDir, `${name}.toml`),
+        `name = "${name}"\ndescription = "Fallback tier."\n`,
+      );
+    }
+    await writeFile(
+      path.join(codexDir, "scrapkeep-writer-medium.toml"),
+      'name = "scrapkeep-writer-medium"\ndescription = "Uses Sonnet 5 and Fable 5.1 and Opus 5.5 medium."\ndeveloper_instructions = "run env | grep CLAUDE_EFFORT"\n',
+    );
+    await writeFile(
+      path.join(repo, ".claude/agents/demo-explorer.md"),
+      "---\nname: demo-explorer\n---\n\nReport CLAUDE_EFFORT.\n",
+    );
+
+    const failRun = runCheck(repo);
+    assert.equal(failRun.status, 1);
+    assert.ok(
+      failRun.findings.some(
+        (f) => f.check === "agents" && f.file === ".codex/agents/scrapkeep-writer-low.toml",
+      ),
+    );
+    assert.ok(
+      failRun.findings.some(
+        (f) =>
+          f.check === "agents" &&
+          f.file === ".codex/agents/scrapkeep-writer-medium.toml" &&
+          f.message.includes("Sonnet 5"),
+      ),
+    );
+    assert.ok(
+      failRun.findings.some(
+        (f) =>
+          f.check === "agents" &&
+          f.file === ".codex/agents/scrapkeep-writer-medium.toml" &&
+          f.message.includes("Fable 5.1"),
+      ),
+    );
+    assert.ok(
+      failRun.findings.some(
+        (f) =>
+          f.check === "agents" &&
+          f.file === ".codex/agents/scrapkeep-writer-medium.toml" &&
+          f.message.includes("Opus 5.5 medium"),
+      ),
+    );
+    assert.ok(
+      failRun.findings.some(
+        (f) =>
+          f.check === "agents" &&
+          f.file === ".codex/agents/scrapkeep-writer-medium.toml" &&
+          f.message.includes("CLAUDE_EFFORT"),
+      ),
+    );
+    assert.ok(
+      failRun.findings.some(
+        (f) =>
+          f.check === "agents" &&
+          f.file === ".claude/agents/demo-explorer.md" &&
+          f.message.includes("CLAUDE_EFFORT"),
+      ),
+    );
+
+    await writeFile(
+      path.join(codexDir, "scrapkeep-writer-low.toml"),
+      'name = "scrapkeep-writer-low"\ndescription = "Fast fallback tier."\n',
+    );
+    await writeFile(
+      path.join(codexDir, "scrapkeep-writer-medium.toml"),
+      'name = "scrapkeep-writer-medium"\ndescription = "Mid fallback tier."\n',
+    );
+    await writeFile(
+      path.join(repo, ".claude/agents/demo-explorer.md"),
+      "---\nname: demo-explorer\n---\n\nReport runtime metadata.\n",
+    );
+
+    const passRun = runCheck(repo);
+    assert.equal(passRun.status, 0, JSON.stringify(passRun.findings));
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});
+
+test("catches retired script tokens in live .agents/ markdown files while excluding lessons.md", async () => {
+  const tmp = await mkdtemp(path.join(os.tmpdir(), "scrapkeep-agents-"));
+  try {
+    const repo = await buildCleanRepo(tmp);
+    await mkdir(path.join(repo, ".agents/skills/demo/references"), { recursive: true });
+    await writeFile(
+      path.join(repo, ".agents/skills/demo/references/ref.md"),
+      "Old ref pin: gpt-6-astra and claude-opus-4-6.\n",
+    );
+    await writeFile(
+      path.join(repo, ".agents/skills/demo/references/lessons.md"),
+      "Historical note: gpt-6-astra and claude-opus-4-6.\n",
+    );
+
+    const { status, findings } = runCheck(repo);
+    assert.equal(status, 1);
+    assert.ok(
+      findings.some(
+        (f) =>
+          f.check === "tokens" &&
+          f.file === ".agents/skills/demo/references/ref.md" &&
+          f.message.includes("gpt-6-astra"),
+      ),
+    );
+    assert.ok(
+      findings.some(
+        (f) =>
+          f.check === "tokens" &&
+          f.file === ".agents/skills/demo/references/ref.md" &&
+          f.message.includes("claude-opus-4-6"),
+      ),
+    );
+    assert.ok(!findings.some((f) => f.file === ".agents/skills/demo/references/lessons.md"));
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+});

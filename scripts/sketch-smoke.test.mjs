@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { userDataEnv } from "./godot-home.mjs";
+import { scratchGodotEnv, userDataEnv } from "./godot-home.mjs";
 import { spawn, spawnSync } from "node:child_process";
 import { once } from "node:events";
 import {
@@ -16,6 +16,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
+import "./lib/proc.test.mjs";
 import * as smoke from "./sketch-smoke.mjs";
 
 process.env.SCRAPKEEP_QUIET_DIR = mkdtempSync(path.join(os.tmpdir(), "smoke-no-quiet-"));
@@ -100,19 +101,24 @@ test("parseArgs selects the bot tier with its own receipt label", () => {
   );
 });
 
+function copySmokeRuntime(dir) {
+  mkdirSync(path.join(dir, "scripts/lib"), { recursive: true });
+  for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
+    writeFileSync(
+      path.join(dir, "scripts", module),
+      readFileSync(new URL(`./${module}`, import.meta.url)),
+    );
+  for (const module of ["godot-test-runner.mjs", "machine-lock.mjs", "proc.mjs", "receipt.mjs"])
+    writeFileSync(
+      path.join(dir, "scripts/lib", module),
+      readFileSync(new URL(`./lib/${module}`, import.meta.url)),
+    );
+}
+
 function botTierFixture(args, check) {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-bot-tier-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    writeFileSync(
-      path.join(dir, "scripts/sketch-smoke.mjs"),
-      readFileSync(new URL("./sketch-smoke.mjs", import.meta.url)),
-    );
-    for (const module of ["import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     const tests = path.join(dir, "sketches/core-loop/tests");
     mkdirSync(tests, { recursive: true });
     writeFileSync(path.join(dir, "sketches/core-loop/project.godot"), "config_version=5\n");
@@ -275,6 +281,63 @@ test("a test's data home also moves HOME on macOS, where Godot ignores XDG_DATA_
   assert.deepEqual(userDataEnv("/t/a", "darwin"), { XDG_DATA_HOME: "/t/a", HOME: "/t/a" });
   assert.deepEqual(userDataEnv("/t/a", "linux"), { XDG_DATA_HOME: "/t/a" });
   assert.deepEqual(userDataEnv("/t/a", "win32"), { XDG_DATA_HOME: "/t/a" });
+  assert.deepEqual(scratchGodotEnv("/t/b", { platform: "linux" }), {
+    XDG_DATA_HOME: "/t/b/data",
+    XDG_CONFIG_HOME: "/t/b/config",
+    XDG_CACHE_HOME: "/t/b/cache",
+  });
+  assert.deepEqual(scratchGodotEnv("/t/b", { platform: "darwin" }), {
+    HOME: "/t/b/data",
+    XDG_DATA_HOME: "/t/b/data",
+    XDG_CONFIG_HOME: "/t/b/config",
+    XDG_CACHE_HOME: "/t/b/cache",
+  });
+});
+
+test("no non-test script outside scripts/godot-home.mjs sets scratch XDG dirs by hand", () => {
+  const scriptsDir = path.dirname(new URL(import.meta.url).pathname);
+  const repoRoot = path.resolve(scriptsDir, "..");
+  const walk = (dir) => {
+    const out = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) out.push(...walk(full));
+      else if (entry.isFile() && entry.name.endsWith(".mjs") && !entry.name.endsWith(".test.mjs"))
+        out.push(full);
+    }
+    return out;
+  };
+  const directXdgWrite =
+    /\bXDG_(?:DATA|CONFIG|CACHE)_HOME\s*:|(?:\.XDG_(?:DATA|CONFIG|CACHE)_HOME|\[\s*["'`]XDG_(?:DATA|CONFIG|CACHE)_HOME["'`]\s*\]|\[\s*`XDG_\$\{[^}]+\}_HOME`\s*\])\s*=(?!=)/g;
+  const allowlist = {
+    "scripts/sketch-appimage.mjs": 1,
+    "scripts/sketch-export.mjs": 1,
+  };
+  const bad = [];
+  const seen = new Set();
+  for (const file of walk(scriptsDir)) {
+    const rel = path.relative(repoRoot, file).split(path.sep).join("/");
+    if (rel === "scripts/godot-home.mjs") continue;
+    const matches = [...readFileSync(file, "utf8").matchAll(directXdgWrite)].map((m) => m[0]);
+    if (matches.length === 0) continue;
+    if (rel in allowlist && matches.length <= allowlist[rel]) {
+      seen.add(rel);
+      if (rel === "scripts/sketch-export.mjs")
+        assert.deepEqual(matches, ["XDG_DATA_HOME:"], "only templateDataHome override allowed");
+    } else {
+      bad.push(`${rel} (${matches.join(", ")})`);
+    }
+  }
+  assert.deepEqual(
+    bad,
+    [],
+    `manual XDG_*_HOME writes outside scripts/godot-home.mjs: ${bad.join("; ")}`,
+  );
+  assert.deepEqual(
+    Object.keys(allowlist).filter((rel) => !seen.has(rel)),
+    [],
+    "stale XDG write allowlist entries must be removed",
+  );
 });
 
 test("the engine's shutdown report is skipped on macOS only; on Linux it still fails the run", () => {
@@ -1702,6 +1765,10 @@ test("testFixedFps parses opt-in fixed-fps markers from the first five lines and
   assert.equal(smoke.batchable("# smoke: fixed-fps=90\nextends SceneTree\n"), true);
   assert.equal(smoke.batchable("# header\n\nextends SceneTree\n"), true);
   assert.equal(smoke.batchable("# smoke: solo fixed-fps=90\nextends SceneTree\n"), false);
+  assert.equal(
+    smoke.batchable('extends SceneTree\nfunc f():\n\tmesh.take_over_path("res://a.tres")\n'),
+    false,
+  );
 });
 
 test("splitBatch captures outside lines and batchHasOutsideError catches exit leaks", () => {
@@ -1731,12 +1798,7 @@ test("splitBatch captures outside lines and batchHasOutsideError catches exit le
 test("warm batching in sketch-smoke emits per-test logs and reruns failures or exit leaks solo", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-warm-batch-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     writeFileSync(
       path.join(dir, "scripts/sketch-fast.timings.json"),
       JSON.stringify({
@@ -1859,12 +1921,7 @@ console.log(stem + ": PASS (1 checks)");
 test("sketch-smoke forwards --fixed-fps and honors SMOKE_BATCH_SIZE in warm batches", () => {
   const dir = mkdtempSync(path.join(os.tmpdir(), "smoke-fps-batch-"));
   try {
-    mkdirSync(path.join(dir, "scripts"));
-    for (const module of ["sketch-smoke.mjs", "import-stamp.mjs", "godot-home.mjs"])
-      writeFileSync(
-        path.join(dir, "scripts", module),
-        readFileSync(new URL(`./${module}`, import.meta.url)),
-      );
+    copySmokeRuntime(dir);
     writeFileSync(
       path.join(dir, "scripts/sketch-fast.timings.json"),
       JSON.stringify({
