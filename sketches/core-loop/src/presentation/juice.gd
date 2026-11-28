@@ -16,7 +16,7 @@ const Harmony := preload("res://src/presentation/harmony.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Contact := preload("res://src/movement/contact.gd")
 const Augments := preload("res://src/movement/augments.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 
 
 const SettingsStore := preload("res://src/ui/settings_store.gd")

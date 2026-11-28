@@ -2,7 +2,7 @@ extends SceneTree
 
 const WearTrail := preload("res://src/combat/wear_trail.gd")
 const Effects := preload("res://src/combat/effects.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Run and Gun's wear trail obeys Reduce flashes (red team, wave 16 close, WEAR-TRAIL.md). It sits

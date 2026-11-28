@@ -12,13 +12,12 @@ const PICKUP_HULL_MARGIN := 0.25
 const CodexEntries := preload("res://src/boss/codex_entries.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
-const Worlds := preload("res://src/core/worlds.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 
@@ -1466,7 +1465,7 @@ func _offer_cobalt_pick() -> void:
 	_close_cobalt_gates()
 	brindle_cobalt_offers = []
 	brindle_cobalt_picked = ""
-	if not Worlds.BRINDLE_COBALT_PICK or ctx == null or ctx.flow == null or ctx.run == null:
+	if ctx == null or ctx.flow == null or ctx.run == null:
 		return
 	if ctx.flow.run_ends_after(ctx.run.stage):
 		return

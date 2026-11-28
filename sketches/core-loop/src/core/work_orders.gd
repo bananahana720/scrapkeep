@@ -782,9 +782,6 @@ static func _collect_objective_signals(obj: Dictionary, out: Array[String]) -> v
 static func _camp_box(profile) -> Dictionary:
 	if profile == null:
 		return {}
-	if profile.has_method("camp_get"):
-		var got = profile.camp_get(CAMP_KEY)
-		return (got as Dictionary).duplicate(true) if got is Dictionary else {}
 	var doc: Dictionary = profile.camp()
 	var got = doc.get(CAMP_KEY, {})
 	return (got as Dictionary).duplicate(true) if got is Dictionary else {}
@@ -792,9 +789,6 @@ static func _camp_box(profile) -> Dictionary:
 
 static func _save_camp_box(profile, box: Dictionary) -> void:
 	if profile == null:
-		return
-	if profile.has_method("camp_set"):
-		profile.camp_set(CAMP_KEY, box)
 		return
 	var doc: Dictionary = profile.camp()
 	doc[CAMP_KEY] = box

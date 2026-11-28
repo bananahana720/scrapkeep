@@ -1,7 +1,7 @@
 # smoke: solo timeout=90s
 extends SceneTree
 const Game=preload("res://src/game.gd")
-const Posture=preload("res://src/combat/boss_posture.gd")
+const Posture=preload("res://src/core/boss_posture.gd")
 const Warden=preload("res://src/combat/warden.gd")
 const Reactor=preload("res://src/combat/warden_reactor.gd")
 const Tuning=preload("res://src/movement/tuning.gd")

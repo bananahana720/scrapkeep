@@ -1,13 +1,13 @@
 extends SceneTree
 
 const Game := preload("res://src/game.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Rows := preload("res://src/presentation/rows.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
 
 # A posture Warden is heard (LEGIBILITY section 4), on the slice table and driven through

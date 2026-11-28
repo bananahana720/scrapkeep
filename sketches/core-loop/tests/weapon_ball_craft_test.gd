@@ -4,7 +4,7 @@ extends SceneTree
 const Accretion := preload("res://src/build/accretion.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")

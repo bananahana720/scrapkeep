@@ -208,18 +208,12 @@ static func validate(rows: Dictionary, grants: Dictionary) -> Array:
 static func _camp_get(profile, key: String, fallback: Variant) -> Variant:
 	if profile == null:
 		return fallback
-	if profile.has_method("camp_get"):
-		var got = profile.camp_get(key)
-		return got if got != null else fallback
 	var doc: Dictionary = profile.camp()
 	return doc.get(key, fallback)
 
 
 static func _camp_set(profile, key: String, value: Variant) -> void:
 	if profile == null:
-		return
-	if profile.has_method("camp_set"):
-		profile.camp_set(key, value)
 		return
 	var doc: Dictionary = profile.camp()
 	doc[key] = value

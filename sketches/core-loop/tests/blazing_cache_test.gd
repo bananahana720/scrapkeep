@@ -2,7 +2,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Activities := preload("res://src/world/activities.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
 const Augments := preload("res://src/movement/augments.gd")
 

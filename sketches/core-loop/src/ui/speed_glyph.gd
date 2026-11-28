@@ -1,6 +1,6 @@
 extends Control
 
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 

@@ -1,6 +1,6 @@
 extends Control
 
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Icons := preload("res://src/ui/icons.gd")

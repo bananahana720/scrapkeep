@@ -1,7 +1,7 @@
 extends Label3D
 
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 
 const LIFE := 0.75
 const LIFT_M := 2.6

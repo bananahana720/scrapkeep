@@ -3,7 +3,7 @@ extends SceneTree
 const PlayerBall := preload("res://src/movement/player_ball.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const GameEvents := preload("res://src/core/game_events.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The physics server may report simultaneous overlaps in any order. Record the
