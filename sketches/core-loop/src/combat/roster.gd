@@ -119,6 +119,13 @@ const BASE_ROWS := {
 const CHASSIS_CLASSES := ["crawler", "emplacement", "heavy", "hover", "swarm", "burrower", "cache"]
 const MOVE_CLASSES := ["fixed", "ground", "airborne"]
 
+const PER_THREAT := 0.4
+const ELITE := 0.5
+const CHASSIS_HEFT := {
+	"swarm": 0.6, "hover": 1.1, "crawler": 1.4, "burrower": 1.8, "emplacement": 2.6, "heavy": 4.0,
+}
+const NEVER_FLAIL := ["vault", "warden"]
+
 const RUN_TO_MEDIAN_RATIO := 2.35
 const FAST_ENEMY_RATIO := 1.2
 
@@ -275,3 +282,22 @@ static func mechanic_owners() -> Dictionary:
 			owners[mechanic] = []
 		owners[mechanic].append(id)
 	return owners
+
+
+static func heft_of(body) -> float:
+	if not is_instance_valid(body):
+		return INF
+	var rating = body.get("rating")
+	if rating != null:
+		return float(rating)
+	var kind := String(body.get("kind")) if body.get("kind") != null else ""
+	if kind in NEVER_FLAIL or not ROWS.has(kind):
+		return INF
+	var row: Dictionary = ROWS[kind]
+	var base: float = row.get("heft", CHASSIS_HEFT.get(String(row.get("chassis", "")), INF))
+	if base == INF:
+		return INF
+	var threat = body.get("threat_level")
+	var spec = body.get("spec")
+	var elite: bool = spec is Dictionary and String(spec.get("affix", "")) != ""
+	return base + PER_THREAT * maxf(0.0, (float(threat) if threat != null else 1.0) - 1.0) + (ELITE if elite else 0.0)

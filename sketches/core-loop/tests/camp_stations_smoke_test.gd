@@ -5,7 +5,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Companion := preload("res://src/core/companion.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Every station the hub prompts with a key (the pet pen has a zone but no key).

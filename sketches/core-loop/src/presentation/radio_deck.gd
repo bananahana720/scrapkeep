@@ -35,7 +35,7 @@ func setup(game_ref) -> void:
 		events.flow_changed.connect(_on_flow_changed)
 		events.stage_entered.connect(func(_stage: int, _retry: bool):
 			_place_caches.call_deferred()
-			_plan_now())
+			plan_now())
 		var bus_args := _signal_args(events)
 		for on in RadioTakes.by_signal():
 			if not bus_args.has(on):
@@ -87,7 +87,7 @@ func _on_tune_heard(tune: String) -> void:
 
 func cache_found(id: String) -> bool:
 	var t := RadioTakes.take(id)
-	if t.is_empty() or t["found"].get("on") != "cache" or not _live():
+	if t.is_empty() or t["found"].get("on") != "cache" or not live():
 		return false
 	find(id)
 	return game.ctx.profile.has_tune(id)
@@ -106,8 +106,8 @@ func find(id: String) -> bool:
 	if radio.premiere(id, context()) and radio.station != before and dial != null:
 		dial.swell()
 	game.events.radio_take_found.emit(id, String(t["tier"]), String(t["found"].get("on", "")))
-	_save()
-	_plan_now()
+	save()
+	plan_now()
 	return true
 
 
@@ -126,7 +126,7 @@ func _found(id: String) -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not _live() or event.is_echo():
+	if not live() or event.is_echo():
 		return
 	if event.is_action_pressed("cl_radio_next"):
 		turn(1)
@@ -180,7 +180,7 @@ func _changed() -> void:
 	_dirty = true
 	if dial != null:
 		dial.swell()
-	_plan_now()
+	plan_now()
 
 
 func _blip(step: int) -> void:
@@ -188,8 +188,17 @@ func _blip(step: int) -> void:
 		_audio.play("flow_changed", -4.0, pow(2.0, [0, 2, 4, 5, 7, 9, 11][posmod(step, 7)] / 12.0), "UI")
 
 
-func _live() -> bool:
+func live() -> bool:
 	return game != null and game.flow != null and game.flow.in_play()
+
+
+func meter_level(layer: int) -> float:
+	var engine = _audio.engine if _audio != null else null
+	if engine == null:
+		return 0.0
+	var want := clampf(float(engine.layer_gain(layer)), 0.0, 1.0)
+	var beat: int = maxi(1, engine.beat_len())
+	return want * (0.75 + 0.25 * (1.0 - float(engine.clock % beat) / beat))
 
 
 func _stage() -> int:
@@ -217,7 +226,7 @@ func context() -> Dictionary:
 
 
 func _process(delta: float) -> void:
-	if not _live():
+	if not live():
 		return
 	var ctx := context()
 	if radio.tick(delta, ctx):
@@ -227,9 +236,9 @@ func _process(delta: float) -> void:
 		_apply(radio.decide(ctx))
 
 
-func _plan_now() -> void:
+func plan_now() -> void:
 	_plan_left = 0.0
-	if _live():
+	if live():
 		_apply(radio.decide(context()))
 
 
@@ -256,16 +265,16 @@ func _on_flow_changed(state: String) -> void:
 	if not game.flow.in_play():
 		applied = {}
 		if _dirty:
-			_save()
+			save()
 	else:
-		_plan_now()
+		plan_now()
 
 
-func _save() -> void:
+func save() -> void:
 	_dirty = false
 	var profile = game.ctx.profile
 	profile.set_radio(radio.to_dict())
-	if profile.can_save and not profile.save():
+	if not profile.save_if_allowed():
 		push_warning("radio: not saved: %s" % profile.last_error)
 
 

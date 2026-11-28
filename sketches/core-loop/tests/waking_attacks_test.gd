@@ -1,7 +1,7 @@
 extends SceneTree
 
 const WakingAttacks := preload("res://src/boss/waking_attacks.gd")
-const MindAttacks := preload("res://src/boss/mind_attacks.gd")
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The Waking's attack families as pure rules (waking_attacks.gd): which floor exposes which
@@ -30,7 +30,7 @@ func _initialize() -> void:
 	var ball := center + Vector3(10.0, 0.0, 4.0)
 	var one := WakingAttacks.burrow(1, ball, center, 1, RADIUS)
 	_t.eq("Spoil burrow is one lane", one.size(), 1)
-	_t.check("the lane runs at the ball", MindAttacks.covers(one[0], ball), str(one[0]["dir"]))
+	_t.check("the lane runs at the ball", BossAttacks.covers(one[0], ball), str(one[0]["dir"]))
 	var two := WakingAttacks.burrow(1, ball, center, 2, RADIUS)
 	_t.eq("Seam burrow is two lanes", two.size(), 2)
 	_t.near("the second lane warns a gap later", float(two[1]["delay"]), WakingAttacks.GAP)
@@ -45,7 +45,7 @@ func _initialize() -> void:
 
 	var bore := WakingAttacks.bore(5, ball, center, 3, RADIUS)
 	_t.eq("Bedrock bore is one hole", bore.size(), 1)
-	_t.check("the bore opens under the ball", MindAttacks.covers(bore[0], ball))
+	_t.check("the bore opens under the ball", BossAttacks.covers(bore[0], ball))
 	var pit := WakingAttacks.bore(5, ball, center, 4, RADIUS)
 	_t.eq("pit bore sprays three lanes", pit.size(), 1 + WakingAttacks.PIT_SPRAY)
 	for d in pit.slice(1):
@@ -68,7 +68,7 @@ func _initialize() -> void:
 			var safe := WakingAttacks.commit_safe(family, i * 31 + 7, at, heading, center, phase, CRUISE, RADIUS)
 			paths[safe["path"]] = int(paths.get(safe["path"], 0)) + 1
 			var descs: Array = safe["descriptors"]
-			if not descs.is_empty() and WakingAttacks.escape_point(descs, at, CRUISE, center, RADIUS) == null:
+			if not descs.is_empty() and BossAttacks.escape_point(descs, at, CRUISE, center, RADIUS) == null:
 				no_escape += 1
 			for d in descs:
 				var steps := float(d["delay"]) / WakingAttacks.GAP

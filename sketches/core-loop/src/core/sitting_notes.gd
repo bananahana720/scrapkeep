@@ -3,6 +3,7 @@ extends Node
 
 const PlayWatch := preload("res://src/core/play_watch.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
+const CliFlags := preload("res://src/core/cli_flags.gd")
 
 const FLAG := "--sitting-notes"
 const HITCH_FLAG := "--sitting-notes-hitch="
@@ -31,15 +32,14 @@ var _sticks := {}
 
 
 static func wanted() -> bool:
-	return FLAG in OS.get_cmdline_user_args() or FLAG in OS.get_cmdline_args()
+	return CliFlags.has_flag(FLAG, true)
 
 
 func _ready() -> void:
 	name = "SittingNotes"
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with(HITCH_FLAG):
-			hitch_ms = maxf(float(arg.trim_prefix(HITCH_FLAG)), 1.0)
+	if CliFlags.has_prefix(HITCH_FLAG):
+		hitch_ms = maxf(float(CliFlags.value_of(HITCH_FLAG)), 1.0)
 	DirAccess.make_dir_recursive_absolute(dir)
 	var started := Time.get_datetime_string_from_system(true)
 	path = dir.path_join("notes-%s.ndjson" % started.replace("-", "").replace(":", ""))

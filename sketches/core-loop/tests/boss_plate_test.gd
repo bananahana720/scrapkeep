@@ -28,7 +28,8 @@ const SliceDefs := preload("res://src/core/slice_defs.gd")
 const PLATING: float = SliceDefs.DEFS[0]["warden_plating"]
 const ADDED_CODE := {
 	"res://src/combat/warden_look.gd": ["posture_fight", "_rest_core_color", "_update_open", "_update_body_glow", "_update_guard_seams", "_build_seams"],
-	"res://src/presentation/hero_assets.gd": ["_rig_warden_jaws", "_update_warden_open", "_warden_chunk_mark", "_update_warden_chunks", "_throw_warden_segment", "_paint_warden_inner"],
+	"res://src/presentation/warden_dress.gd": ["rig_warden_jaws"],
+	"res://src/presentation/hero_assets.gd": ["_update_warden_open", "_warden_chunk_mark", "_update_warden_chunks", "_throw_warden_segment", "_paint_warden_inner"],
 }
 # Existing functions with a posture branch inside them: only the posture arm is scanned,
 # because the plating arm keeps its amber.
@@ -132,6 +133,9 @@ func _body_of(source: String, name: String) -> String:
 	if at < 0:
 		return ""
 	var end := source.find("\nfunc ", at + 1)
+	var static_end := source.find("\nstatic func ", at + 1)
+	if static_end >= 0 and (end < 0 or static_end < end):
+		end = static_end
 	return source.substr(at, end - at if end >= 0 else -1)
 
 

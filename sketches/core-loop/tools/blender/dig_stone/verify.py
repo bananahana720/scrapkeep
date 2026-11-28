@@ -15,7 +15,7 @@ SKETCH = HERE.parents[2]
 ROOT = SKETCH.parents[1]
 MODELS = SKETCH / "assets/models/dig_stone"
 EVIDENCE = ROOT / "artifacts/local/dress-preview/MDS"
-GODOT = Path("/home/andrew/.local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64")
+GODOT = Path.home() / ".local/share/godot/4.7.2/Godot_v4.7.2-stable_linux.x86_64"
 TEST = "dress_mds_assets_test"
 
 

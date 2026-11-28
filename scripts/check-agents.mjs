@@ -1,9 +1,10 @@
 import { spawnSync } from "node:child_process";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkAsync } from "./lib/walk.mjs";
 
-const scriptRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const scriptRoot = REPO_ROOT;
 
 const VALID_MODELS = new Set(["flash_lite", "flash", "pro", "inherit"]);
 const VALID_NATIVE_TOOLS = new Set([
@@ -37,6 +38,32 @@ const RETIRED_SCRIPT_TOKENS = [
   {
     pattern: /\bclaude-opus-4-6\b/,
     message: "retired 'claude-opus-4-6' model pin; use AGENTS.md Rule 11 models",
+  },
+];
+const CORE_CODEX_AGENTS = [
+  "scrapkeep-explorer",
+  "scrapkeep-reviewer",
+  "scrapkeep-reviewer-medium",
+  "scrapkeep-verifier",
+  "scrapkeep-writer",
+  "scrapkeep-writer-low",
+];
+const RETIRED_AGENT_TOKENS = [
+  {
+    pattern: /\bFable 5\.1\b/,
+    message: "retired 'Fable 5.1' model pin; use tier / AGENTS.md Rule 11 wording",
+  },
+  {
+    pattern: /\bSonnet 5\b/,
+    message: "retired 'Sonnet 5' model pin; use tier / AGENTS.md Rule 11 wording",
+  },
+  {
+    pattern: /\bOpus 5\.5 medium\b/,
+    message: "retired 'Opus 5.5 medium' model pin; use tier / AGENTS.md Rule 11 wording",
+  },
+  {
+    pattern: /\bCLAUDE_EFFORT\b/,
+    message: "retired 'CLAUDE_EFFORT' instruction; use runtime effort metadata wording",
   },
 ];
 const HARDCODED_PY_MODEL_PIN = /\bmodel\s*=\s*["'](?:flash|flash_lite|pro)["']/;
@@ -137,9 +164,19 @@ class Findings {
   }
 }
 
+function scanLinesForTokens(findings, check, rel, content, rules) {
+  const lines = content.split("\n");
+  for (let i = 0; i < lines.length; i += 1) {
+    for (const { pattern, message } of rules) {
+      if (pattern.test(lines[i])) findings.fail(check, rel, i + 1, message);
+    }
+  }
+}
+
 async function checkAgentsDir(findings, root) {
   const agentsDir = path.join(root, ".agents/agents");
   const claudeDir = path.join(root, ".claude/agents");
+  const codexDir = path.join(root, ".codex/agents");
   const agyNames = new Set();
 
   if (await exists(agentsDir)) {
@@ -150,6 +187,7 @@ async function checkAgentsDir(findings, root) {
       agyNames.add(stem);
       const rel = `.agents/agents/${entry.name}`;
       const content = await readNormalized(path.join(agentsDir, entry.name));
+      scanLinesForTokens(findings, "agents", rel, content, RETIRED_AGENT_TOKENS);
       const fm = parseYamlFrontmatter(content);
       if (!fm) {
         findings.fail("agents", rel, 1, "missing YAML frontmatter");
@@ -220,10 +258,13 @@ async function checkAgentsDir(findings, root) {
       if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
       const stem = entry.name.slice(0, -3);
       claudeNames.add(stem);
+      const rel = `.claude/agents/${entry.name}`;
+      const content = await readNormalized(path.join(claudeDir, entry.name));
+      scanLinesForTokens(findings, "agents", rel, content, RETIRED_AGENT_TOKENS);
       if (!agyNames.has(stem)) {
         findings.fail(
           "agents",
-          `.claude/agents/${entry.name}`,
+          rel,
           0,
           `missing matching Antigravity subagent .agents/agents/${entry.name}`,
         );
@@ -236,6 +277,32 @@ async function checkAgentsDir(findings, root) {
           `.agents/agents/${stem}.md`,
           0,
           `missing matching Claude subagent .claude/agents/${stem}.md`,
+        );
+      }
+    }
+  }
+
+  if (await exists(codexDir)) {
+    const codexNames = new Set();
+    const entries = await readdir(codexDir, { withFileTypes: true });
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      if (!entry.isFile() || !entry.name.endsWith(".toml")) continue;
+      const stem = entry.name.slice(0, -5);
+      codexNames.add(stem);
+      const rel = `.codex/agents/${entry.name}`;
+      const content = await readNormalized(path.join(codexDir, entry.name));
+      scanLinesForTokens(findings, "agents", rel, content, [
+        ...RETIRED_AGENT_TOKENS,
+        ...RETIRED_SCRIPT_TOKENS,
+      ]);
+    }
+    for (const stem of CORE_CODEX_AGENTS) {
+      if (!codexNames.has(stem)) {
+        findings.fail(
+          "agents",
+          `.codex/agents/${stem}.toml`,
+          0,
+          `missing core Codex subagent .codex/agents/${stem}.toml`,
         );
       }
     }
@@ -454,30 +521,34 @@ async function checkEntrypointsAndAstack(findings, root) {
 }
 
 async function walkScriptFiles(root, dir, out = []) {
-  const absDir = path.join(root, dir);
-  if (!(await exists(absDir))) return out;
-  for (const e of await readdir(absDir, { withFileTypes: true })) {
-    const rel = `${dir}/${e.name}`;
-    if (e.isDirectory()) {
-      await walkScriptFiles(root, rel, out);
-    } else if (e.isFile() && SCRIPT_EXTS.has(path.extname(e.name))) {
-      if (rel.includes(".test.") || rel === "scripts/check-agents.mjs") continue;
-      out.push(rel);
-    }
+  const entries = await walkAsync(path.join(root, dir), {
+    filesOnly: true,
+    filter: (entry) => SCRIPT_EXTS.has(path.extname(entry.name)),
+  });
+  for (const entry of entries) {
+    const rel = `${dir}/${entry.rel}`;
+    if (rel.includes(".test.") || rel === "scripts/check-agents.mjs") continue;
+    out.push(rel);
   }
+  return out;
+}
+
+async function walkLiveAgentsMarkdown(root, dir, out = []) {
+  const entries = await walkAsync(path.join(root, dir), {
+    filesOnly: true,
+    filter: (entry) => entry.name.endsWith(".md") && entry.name !== "lessons.md",
+  });
+  for (const entry of entries) out.push(`${dir}/${entry.rel}`);
   return out;
 }
 
 async function checkScriptTokens(findings, root) {
   const files = [];
   for (const dir of ["scripts", "tools"]) await walkScriptFiles(root, dir, files);
+  await walkLiveAgentsMarkdown(root, ".agents", files);
   for (const rel of files.sort()) {
-    const lines = (await readNormalized(path.join(root, rel))).split("\n");
-    for (let i = 0; i < lines.length; i += 1) {
-      for (const { pattern, message } of RETIRED_SCRIPT_TOKENS) {
-        if (pattern.test(lines[i])) findings.fail("tokens", rel, i + 1, message);
-      }
-    }
+    const content = await readNormalized(path.join(root, rel));
+    scanLinesForTokens(findings, "tokens", rel, content, RETIRED_SCRIPT_TOKENS);
   }
 }
 

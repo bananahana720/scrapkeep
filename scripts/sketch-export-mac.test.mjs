@@ -226,3 +226,20 @@ test("swapFilesProblem refuses to start when a swapped file differs from git", (
   assert.match(problem, /sketches\/core-loop\/project\.godot differ from git/);
   assert.doesNotMatch(problem, /export_presets/);
 });
+
+test(
+  "sketch-export-mac states plainly that GODOT_BIN is not set when unset",
+  { skip: process.platform !== "darwin" },
+  () => {
+    const env = { ...process.env };
+    delete env.GODOT_BIN;
+    const result = spawnSync(process.execPath, ["scripts/sketch-export-mac.mjs"], {
+      cwd: root,
+      encoding: "utf8",
+      env,
+    });
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /GODOT_BIN is not set/);
+    assert.doesNotMatch(result.stderr, /: null\b/);
+  },
+);

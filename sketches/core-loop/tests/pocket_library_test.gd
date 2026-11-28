@@ -39,7 +39,7 @@ func _run() -> void:
 	game.world.set_physics_process(false)
 	game.flow.set_physics_process(false)
 	game.player.set_physics_process(false)
-	game.player.active_body().freeze = true
+	game.player.body().freeze = true
 	acts = game.world.activities
 	acts.set_physics_process(false)
 	acts.clear()

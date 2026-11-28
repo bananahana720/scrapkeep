@@ -11,6 +11,9 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Redline := preload("res://src/combat/redline.gd")
 const ChargeHalo := preload("res://src/presentation/charge_halo.gd")
 const Pattern := preload("res://src/combat/pattern.gd")
+const ImpactFrame := preload("res://src/presentation/impact_frame.gd")
+const PauseGuard := preload("res://src/presentation/pause_guard.gd")
+const Particles := preload("res://src/presentation/player_fx_particles.gd")
 
 
 const SOFT_CAP_MPS := 60.0
@@ -21,9 +24,8 @@ const CARVE_NORMAL_Y := 0.82
 const MOTES := 12
 const MOTE_RADIUS := 1.65
 const ELEMENT_COLORS := {"frost": Palette.ICE, "arc": Palette.ARC, "kinetic": Palette.SAND}
-const HEAT_COLOR := Color(1.0, 0.5, 0.12)
 const HEAT_SHARE := 0.85
-const INK := Color(0.07, 0.07, 0.08)
+const INK := Palette.INK_DEEP
 
 const RENDER_PRIORITY := -4
 
@@ -90,7 +92,6 @@ const WORD_STAMP_S := 0.1
 const WORD_EXIT_S := 0.2
 const SMASH_WORD_MPS := [22.0, 12.0]
 const SMASH_FRAME_MPS := [32.0, 18.0]
-const FRAME_FRAMES := 3
 const FRAME_GAP_S := 0.6
 const NEAR_EPSILON := 0.01
 
@@ -177,18 +178,18 @@ func setup(ctx_ref, vfx_ref = null) -> void:
 	_build_dunk_glow()
 	_build_rim()
 	_build_rivet_fire()
-	_flecks = _emitter(_flecks_material(), _box(Vector3(0.12, 0.12, 0.55)), FLECKS, 0.35, "add", false)
+	_flecks = _emitter(Particles.flecks_material(), Particles.box(Vector3(0.12, 0.12, 0.55)), FLECKS, 0.35, "add", false)
 	_flecks.name = "OverdriveFlecks"
-	_embers = _emitter(_embers_material(), _ball(0.16), EMBERS, 0.9, "add", false)
+	_embers = _emitter(Particles.embers_material(), Particles.ball(0.16), EMBERS, 0.9, "add", false)
 	_embers.name = "OverdriveEmbers"
-	_carve = _emitter(_carve_material(), _box(Vector3(0.05, 0.05, 0.4)), CARVE, 0.28, "add", false)
+	_carve = _emitter(Particles.carve_material(), Particles.box(Vector3(0.05, 0.05, 0.4)), CARVE, 0.28, "add", false)
 	_carve.name = "CarveSparks"
 	for i in COLUMN_POOL:
-		var c := _emitter(_column_material(), _box(Vector3(0.07, 0.6, 0.07)), COLUMN, 0.8, "add", true)
+		var c := _emitter(Particles.column_material(), Particles.box(Vector3(0.07, 0.6, 0.07)), COLUMN, 0.8, "add", true)
 		c.name = "PowerColumn_%d" % i
 		_columns.append(c)
 	for i in BOON_POOL:
-		var b := _emitter(_boon_material(), _box(Vector3.ONE * 0.16), BOON, 0.3, "add", true)
+		var b := _emitter(Particles.boon_material(), Particles.box(Vector3.ONE * 0.16), BOON, 0.3, "add", true)
 		b.name = "BoonSparks_%d" % i
 		_boons.append(b)
 	var layer := CanvasLayer.new()
@@ -374,7 +375,7 @@ static func heat_k(value: float) -> float:
 
 
 func heat_tint(color: Color) -> Color:
-	return color.lerp(HEAT_COLOR, HEAT_SHARE * heat_k(might))
+	return color.lerp(ImpactFrame.HEAT_COLOR, HEAT_SHARE * heat_k(might))
 
 
 func dominant_color() -> Color:
@@ -465,7 +466,7 @@ func _boon(at: Vector3) -> void:
 	var p: GPUParticles3D = _boons[_boon_next]
 	_boon_next = (_boon_next + 1) % _boons.size()
 	var pm := p.process_material as ParticleProcessMaterial
-	FxLibrary.fire(p, "", "", boon_count(might), at, _glow(heat_tint(dominant_color()), 1.1 + 0.7 * heat_k(might)))
+	FxLibrary.fire(p, "", "", boon_count(might), at, Particles.glow(heat_tint(dominant_color()), 1.1 + 0.7 * heat_k(might)))
 	spawned["boon"] = spawned.get("boon", 0) + 1
 
 
@@ -941,7 +942,7 @@ static func _word_rect(cam: Camera3D, at: Vector3, right: bool, width_px: float,
 func _word_color(id: String) -> Color:
 	match id:
 		"ignite":
-			return HEAT_COLOR
+			return ImpactFrame.HEAT_COLOR
 		"heft_up", "fused":
 			return Palette.BRASS
 	return player.class_color().lerp(Color.WHITE, FlashGuard.whiten(0.2))
@@ -1141,211 +1142,6 @@ static func _grow_span(span: Array, at: Vector2) -> void:
 	span[1] = span[1].max(at)
 
 
-class ImpactFrame:
-	extends Control
-
-	const LINES := 56
-	const BAND := 0.2
-	const WEDGE_WIDTH_MIN := 5.0
-	const WEDGE_WIDTH_MAX := 16.0
-	const YIELD_MARGIN_PX := WEDGE_WIDTH_MAX
-	const MAX_RECTS := 64
-	# Godot FRAGCOORD varies with window origin/scale under canvas_items; varying VERTEX stays in Control px.
-	const YIELD_SHADER := """
-shader_type canvas_item;
-uniform vec4 rects[64];
-uniform int rect_count = 0;
-uniform float margin = 0.0;
-varying vec2 local;
-
-void vertex() {
-	local = VERTEX;
-}
-
-void fragment() {
-	for (int i = 0; i < rect_count; i++) {
-		vec4 r = rects[i];
-		if (local.x > r.x - margin && local.x < r.x + r.z + margin && local.y > r.y - margin && local.y < r.y + r.w + margin) {
-			discard;
-		}
-	}
-}
-"""
-	var _focus := Vector2.ZERO
-	var _strength := 0.0
-	var _heat := 0.0
-	var _left := 0
-	var _seed := 0
-	var rect_source := Callable()
-	var _rects: Array[Rect2] = []
-	var _uniform_rects := PackedVector4Array()
-	var _material: ShaderMaterial
-	var drawn := 0
-	var overflow_hides := 0
-	var _overflowed := false
-	var rect_calls := 0
-	var rect_usec := 0
-	var rect_usec_max := 0
-	var shape_calls := 0
-	var shape_usec := 0
-	var shape_usec_max := 0
-	var _drawn_size := Vector2.ZERO
-
-	func _ready() -> void:
-		set_anchors_preset(Control.PRESET_FULL_RECT)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		visible = false
-		_ensure_material()
-
-	func _ensure_material() -> void:
-		if _material != null:
-			return
-		var shader := Shader.new()
-		shader.code = YIELD_SHADER
-		_uniform_rects.resize(MAX_RECTS)
-		_material = ShaderMaterial.new()
-		_material.shader = shader
-		_material.set_shader_parameter("margin", YIELD_MARGIN_PX)
-		_material.set_shader_parameter("rect_count", 0)
-		_material.set_shader_parameter("rects", _uniform_rects)
-		material = _material
-
-	func fire(focus: Vector2, strength: float, seed_value: int, heat_value := 0.0) -> void:
-		_focus = focus
-		_strength = strength
-		_heat = heat_value
-		_left = FRAME_FRAMES
-		_seed = seed_value
-		position = Vector2.ZERO
-		size = get_viewport_rect().size
-		visible = true
-		_refresh_rects()
-		queue_redraw()
-
-	func hide_now() -> void:
-		_left = 0
-		visible = false
-
-	func active() -> bool:
-		return _left > 0
-
-	func _process(_delta: float) -> void:
-		if _left <= 0:
-			return
-		_left -= 1
-		if _left <= 0:
-			visible = false
-		else:
-			_refresh_rects()
-			if get_viewport_rect().size != _drawn_size:
-				size = get_viewport_rect().size
-				queue_redraw()
-
-	func _refresh_rects() -> void:
-		var began := Time.get_ticks_usec()
-		apply_rects(rect_source.call() if rect_source.is_valid() and is_inside_tree() else ([] as Array[Rect2]))
-		var cost := Time.get_ticks_usec() - began
-		rect_calls += 1
-		rect_usec += cost
-		rect_usec_max = maxi(rect_usec_max, cost)
-
-	func apply_rects(found: Array) -> void:
-		_ensure_material()
-		var was_overflowed := _overflowed
-		_overflowed = found.size() > MAX_RECTS
-		if _overflowed:
-			overflow_hides += 1
-			_rects = []
-			_material.set_shader_parameter("rect_count", 0)
-			visible = false
-			return
-		if _left > 0:
-			visible = true
-			if was_overflowed:
-				queue_redraw()
-		_rects.assign(found)
-		for k in found.size():
-			var r: Rect2 = found[k]
-			_uniform_rects[k] = Vector4(r.position.x, r.position.y, r.size.x, r.size.y)
-		_material.set_shader_parameter("rects", _uniform_rects)
-		_material.set_shader_parameter("rect_count", found.size())
-
-	static func _yields(point: Vector2, rects: Array, count: int, margin: float) -> bool:
-		for k in mini(count, rects.size()):
-			var r: Rect2 = rects[k]
-			if point.x > r.position.x - margin and point.x < r.end.x + margin and point.y > r.position.y - margin and point.y < r.end.y + margin:
-				return true
-		return false
-
-	func _draw() -> void:
-		drawn = 0
-		if _overflowed:
-			return
-		var began := Time.get_ticks_usec()
-		_drawn_size = get_viewport_rect().size
-		for shape in _shapes(_drawn_size):
-			drawn += 1
-			if shape.has("colors"):
-				draw_polygon(shape["poly"], shape["colors"])
-			else:
-				draw_colored_polygon(shape["poly"], shape["color"])
-		var cost := Time.get_ticks_usec() - began
-		shape_calls += 1
-		shape_usec += cost
-		shape_usec_max = maxi(shape_usec_max, cost)
-
-	func _shapes(rect: Vector2) -> Array:
-		var out := []
-		var band := minf(rect.x, rect.y) * BAND
-		var focus := _focus.clamp(Vector2.ZERO, rect)
-		var rng := RandomNumberGenerator.new()
-		rng.seed = _seed
-		if _heat > 0.0:
-			_wash_shapes(out, rect, band)
-		for i in int(LINES * _strength):
-			var angle := TAU * (float(i) + rng.randf() * 0.8) / float(LINES * _strength)
-			var dir := Vector2(cos(angle), sin(angle))
-			var exit := INF
-			if dir.x > 0.001:
-				exit = minf(exit, (rect.x - focus.x) / dir.x)
-			elif dir.x < -0.001:
-				exit = minf(exit, -focus.x / dir.x)
-			if dir.y > 0.001:
-				exit = minf(exit, (rect.y - focus.y) / dir.y)
-			elif dir.y < -0.001:
-				exit = minf(exit, -focus.y / dir.y)
-			if exit == INF or exit < 1.0:
-				continue
-			var inner := maxf(0.0, exit - band * rng.randf_range(0.5, 1.0))
-			var width := rng.randf_range(WEDGE_WIDTH_MIN, WEDGE_WIDTH_MAX) * (0.6 + 0.4 * _strength)
-			var side := Vector2(-dir.y, dir.x) * width
-			var tip := focus + dir * inner
-			var outer := focus + dir * (exit + width * 2.0)
-			var accent := i % (3 if _heat > 0.0 else 7) == 0
-			var ink := INK
-			ink.a = 0.75 + 0.2 * _heat
-			if accent:
-				ink = Color(1, 1, 1, 0.5).lerp(Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, 0.9), _heat)
-				ink.a = FlashGuard.alpha(ink.a)
-			out.append({"poly": PackedVector2Array([tip, outer + side, outer - side]), "color": ink})
-		return out
-
-	func _wash_shapes(out: Array, rect: Vector2, band: float) -> void:
-		var dark := Color(INK.r, INK.g, INK.b, 0.8 * _heat)
-		var hot := Color(HEAT_COLOR.r, HEAT_COLOR.g, HEAT_COLOR.b, FlashGuard.alpha(0.4 * _heat))
-		var clear := Color(hot.r, hot.g, hot.b, 0.0)
-		_ring_shapes(out, rect, 0.0, band * 0.6, dark, hot)
-		_ring_shapes(out, rect, band * 0.6, band, hot, clear)
-
-	func _ring_shapes(out: Array, rect: Vector2, outer: float, inner: float, from: Color, to: Color) -> void:
-		var o := [Vector2(outer, outer), Vector2(rect.x - outer, outer), rect - Vector2(outer, outer), Vector2(outer, rect.y - outer)]
-		var i := [Vector2(inner, inner), Vector2(rect.x - inner, inner), rect - Vector2(inner, inner), Vector2(inner, rect.y - inner)]
-		var colors := PackedColorArray([from, from, to, to])
-		for k in 4:
-			var n := (k + 1) % 4
-			out.append({"poly": PackedVector2Array([o[k], o[n], i[n], i[k]]), "colors": colors})
-
-
 func _build_aura() -> void:
 	var mesh := SphereMesh.new()
 	mesh.radius = 0.11
@@ -1462,7 +1258,7 @@ func _draw_overdrive(delta: float) -> void:
 		word("ignite", _beside_ball())
 		impact_frame(player.shown_position(), 0.6)
 		if vfx != null:
-			vfx.glyph("overdrive", back, 0.8, 4.0, 0.3, v, "ring", HEAT_COLOR)
+			vfx.glyph("overdrive", back, 0.8, 4.0, 0.3, v, "ring", ImpactFrame.HEAT_COLOR)
 	var on := heat > 0.01
 	var shell := shell_heat() if _shell_band > 0 else 0.0
 	var lit := maxf(heat, shell)
@@ -1571,7 +1367,7 @@ func column(tint: Color, at := Vector3.INF) -> void:
 	_column_next = (_column_next + 1) % _columns.size()
 	var base: Vector3 = player.shown_position() - Vector3.UP * 0.8 if at == Vector3.INF else at
 	p.global_transform = Transform3D(Basis.IDENTITY, base)
-	p.set_instance_shader_parameter("tint", _glow(heat_tint(tint), 1.15))
+	p.set_instance_shader_parameter(FxLibrary.TINT, Particles.glow(heat_tint(tint), 1.15))
 	p.amount_ratio = clampf(0.5 + 0.5 * might, 0.0, 1.0)
 	FxLibrary.set_heat(p)
 	p.restart()
@@ -1601,129 +1397,9 @@ func _emitter(pm: ParticleProcessMaterial, shape: PrimitiveMesh, amount: int, li
 	p.seed = FxLibrary.SEED
 	p.visibility_aabb = AABB(Vector3(-10, -6, -10), Vector3(20, 14, 20))
 	p.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	p.set_instance_shader_parameter("tint", Color.WHITE)
+	p.set_instance_shader_parameter(FxLibrary.TINT, Color.WHITE)
 	root.add_child(p)
 	return p
-
-
-static func _glow(c: Color, k: float) -> Color:
-	return Color(c.r * k, c.g * k, c.b * k, 1.0)
-
-
-static func _box(size: Vector3) -> BoxMesh:
-	var b := BoxMesh.new()
-	b.size = size
-	return b
-
-
-static func _ball(d: float) -> SphereMesh:
-	var s := SphereMesh.new()
-	s.radius = d * 0.5
-	s.height = d
-	s.radial_segments = 6
-	s.rings = 3
-	return s
-
-
-static func _ramp(stops: Array) -> GradientTexture1D:
-	var g := Gradient.new()
-	g.offsets = PackedFloat32Array(stops.map(func(s): return s[0]))
-	g.colors = PackedColorArray(stops.map(func(s): return s[1]))
-	var tex := GradientTexture1D.new()
-	tex.gradient = g
-	return tex
-
-
-static func _fade(end: float) -> CurveTexture:
-	var c := Curve.new()
-	c.add_point(Vector2(0.0, 1.0))
-	c.add_point(Vector2(1.0, end))
-	var tex := CurveTexture.new()
-	tex.curve = c
-	return tex
-
-
-static func _flecks_material() -> ParticleProcessMaterial:
-	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3(0, 0, -1)
-	pm.spread = 16.0
-	pm.initial_velocity_min = 5.0
-	pm.initial_velocity_max = 11.0
-	pm.gravity = Vector3(0, 3.0, 0)
-	pm.particle_flag_align_y = true
-	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	pm.emission_sphere_radius = 0.7
-	pm.scale_min = 0.7
-	pm.scale_max = 1.4
-	pm.scale_curve = _fade(0.2)
-	pm.color_ramp = _ramp([[0.0, Color(1.0, 0.95, 0.75, 1.0)], [0.25, Color(1.0, 0.6, 0.18, 1.0)],
-		[0.65, Color(0.85, 0.24, 0.08, 0.85)], [1.0, Color(0.2, 0.08, 0.06, 0.0)]])
-	return pm
-
-
-static func _embers_material() -> ParticleProcessMaterial:
-	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3(0, 0, -1)
-	pm.spread = 40.0
-	pm.initial_velocity_min = 0.3
-	pm.initial_velocity_max = 1.5
-	pm.gravity = Vector3(0, 1.4, 0)
-	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_SPHERE
-	pm.emission_sphere_radius = 0.9
-	pm.scale_min = 0.6
-	pm.scale_max = 1.3
-	pm.scale_curve = _fade(0.0)
-	pm.color_ramp = _ramp([[0.0, Color(1.0, 0.7, 0.3, 1.0)], [0.5, Color(0.9, 0.35, 0.12, 0.9)], [1.0, Color(0.35, 0.1, 0.06, 0.0)]])
-	return pm
-
-
-static func _carve_material() -> ParticleProcessMaterial:
-	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3(0, 0.35, -1)
-	pm.spread = 22.0
-	pm.initial_velocity_min = 7.0
-	pm.initial_velocity_max = 14.0
-	pm.gravity = Vector3(0, -22.0, 0)
-	pm.particle_flag_align_y = true
-	pm.scale_min = 0.6
-	pm.scale_max = 1.2
-	pm.scale_curve = _fade(0.1)
-	pm.color_ramp = _ramp([[0.0, Color(1.0, 0.95, 0.7, 1.0)], [0.35, Color(1.0, 0.72, 0.25, 1.0)], [1.0, Color(0.8, 0.3, 0.1, 0.0)]])
-	return pm
-
-
-static func _column_material() -> ParticleProcessMaterial:
-	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3.UP
-	pm.spread = 6.0
-	pm.initial_velocity_min = 6.0
-	pm.initial_velocity_max = 11.0
-	pm.radial_velocity_min = -1.6
-	pm.radial_velocity_max = -1.0
-	pm.gravity = Vector3(0, -2.0, 0)
-	pm.particle_flag_align_y = true
-	pm.emission_shape = ParticleProcessMaterial.EMISSION_SHAPE_RING
-	pm.emission_ring_axis = Vector3.UP
-	pm.emission_ring_radius = 1.6
-	pm.emission_ring_inner_radius = 1.3
-	pm.emission_ring_height = 0.0
-	pm.scale_curve = _fade(0.0)
-	pm.alpha_curve = _fade(0.0)
-	return pm
-
-
-static func _boon_material() -> ParticleProcessMaterial:
-	var pm := ParticleProcessMaterial.new()
-	pm.direction = Vector3.UP
-	pm.spread = 180.0
-	pm.initial_velocity_min = 4.0
-	pm.initial_velocity_max = 9.0
-	pm.gravity = Vector3(0, -6.0, 0)
-	pm.angular_velocity_min = -540.0
-	pm.angular_velocity_max = 540.0
-	pm.scale_curve = _fade(0.0)
-	pm.alpha_curve = _fade(0.0)
-	return pm
 
 
 static func ceiling() -> int:
@@ -2103,14 +1779,3 @@ func _process(delta: float) -> void:
 	_draw_overdrive(delta)
 	_draw_carve()
 	_draw_weapon_fx(delta)
-
-
-class PauseGuard extends Node:
-	var root: Node3D
-
-	func _init() -> void:
-		process_mode = Node.PROCESS_MODE_ALWAYS
-
-	func _process(_delta: float) -> void:
-		if root != null and is_instance_valid(root):
-			root.visible = not get_tree().paused

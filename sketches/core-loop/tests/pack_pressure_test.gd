@@ -1,4 +1,4 @@
-# smoke: solo (the world 1 pack pressure experiments: presets, identity defaults, the curved lead, churned silt, silt boils)
+# the world 1 pack pressure experiments: presets, identity defaults, the curved lead, churned silt, silt boils
 extends SceneTree
 
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
@@ -166,12 +166,12 @@ func _identity() -> void:
 
 func _presets() -> void:
 	var unknown := []
-	var spec := PackPressure.tune_spec("a+d+Q", unknown)
+	var spec := ChallengeDials.pack_pressure_spec("a+d+Q", unknown)
 	_t.eq("04 an unknown letter is reported", unknown, ["Q"])
 	var parsed := ChallengeDials.parse(spec)
 	_t.eq("05 A+D names the lead and churn dials", parsed.keys(), ["pack.lead_by_stage", "ground.churn_by_stage"])
 	_t.eq("06 the lead fills world 1 only", parsed["pack.lead_by_stage"], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0])
-	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("B")))
+	ChallengeDials.set_overrides(ChallengeDials.parse(ChallengeDials.pack_pressure_spec("B")))
 	_t.eq("07 B adds one chaser on the dam", PackPressure.crew_extra(1), 1)
 	_t.eq("08 B adds none in the Dig", PackPressure.crew_extra(3), 0)
 	_t.near("09 B halves the re-engage gap on the flume", PackPressure.crew_row(2).rest, 0.5)
@@ -189,7 +189,7 @@ func _extras() -> void:
 		var n := d._place_pack(Vector2(40.0, 0.0), kinds, Vector2.ZERO, false, room)
 		return [n, d.extras_placed]
 	_t.eq("27 no dial: the crew as authored", queued.call(5, ["chaser", "lobber"]), [2, 0])
-	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("B")))
+	ChallengeDials.set_overrides(ChallengeDials.parse(ChallengeDials.pack_pressure_spec("B")))
 	_t.eq("28 B with room: one more chaser", queued.call(5, ["chaser", "lobber"]), [3, 1])
 	_t.eq("29 B with no spare room: none", queued.call(2, ["chaser", "lobber"]), [2, 0])
 	_t.eq("30 B never pads a lone spawn", queued.call(5, ["chaser"]), [1, 0])
@@ -225,7 +225,7 @@ func _churn() -> void:
 	ctx.player.v = Vector3(10.0, 0.0, 0.0)
 	churn.step(dt)
 	_t.eq("14 off with no dial: nothing churns", churn.churned_cells, 0)
-	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("D")))
+	ChallengeDials.set_overrides(ChallengeDials.parse(ChallengeDials.pack_pressure_spec("D")))
 	var a := Vector3(1.0, 0.0, 1.0)
 	var b := Vector3(20.0, 0.0, 1.0)
 	for pass_i in 2:
@@ -267,7 +267,7 @@ func _boils() -> void:
 	ChallengeDials.set_overrides(ChallengeDials.parse("hazard.boil_by_stage=0/0/0/0/0/0"))
 	boils.step(dt, [enemy])
 	_t.eq("19 off with the dial at 0: no boil", boils.boils, 0)
-	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("E")))
+	ChallengeDials.set_overrides(ChallengeDials.parse(ChallengeDials.pack_pressure_spec("E")))
 	var w := CRUISE / RING
 	var angle := 0.0
 	var steps := 0
@@ -354,7 +354,7 @@ const LOOP_TEST := {"hazard.boil_stall_by_stage": [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 func _stall(boils, ctx, enemy) -> void:
 	_t.eq("31 the stall test ships across all stages", ChallengeDials.DEFAULTS["hazard.boil_stall_by_stage"], [1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
-	var stall_on: Dictionary = ChallengeDials.parse(PackPressure.tune_spec("E"))
+	var stall_on: Dictionary = ChallengeDials.parse(ChallengeDials.pack_pressure_spec("E"))
 	stall_on["hazard.boil_stall_by_stage"] = [1.0, 1.0, 0.0, 0.0, 0.0, 0.0]
 	ChallengeDials.set_overrides(stall_on)
 	_t.check("31b a tight orbit ring is inside the stall reach, a wide kite ring outside", RING + 3.0 < SiltBoil.STALL_SPREAD and WIDE > SiltBoil.STALL_SPREAD,
@@ -377,7 +377,7 @@ func _stall(boils, ctx, enemy) -> void:
 	_t.eq("37 planted: the loop test never boiled a ball that stopped", _path_boils(boils, ctx, enemy, parked, false), 0)
 	_t.eq("38 planted: nor one that crawled", _path_boils(boils, ctx, enemy, crawl, false), 0)
 	_t.eq("39 planted: and it boiled the wide kite", _path_boils(boils, ctx, enemy, kite, false), 1)
-	ChallengeDials.set_overrides(ChallengeDials.parse(PackPressure.tune_spec("E")))
+	ChallengeDials.set_overrides(ChallengeDials.parse(ChallengeDials.pack_pressure_spec("E")))
 
 
 # Moves the ball along `path` (seconds to [position, velocity]) for up to 20 s from a fresh stage entry; the

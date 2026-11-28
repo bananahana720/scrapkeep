@@ -2,7 +2,7 @@ extends RefCounted
 # F6 2026-10-04: the lesson rows are gone; every Warden fights on posture.
 
 const Objectives := preload("res://src/core/objectives.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const Hud := preload("res://src/ui/hud.gd")
@@ -208,22 +208,37 @@ func _reached_once(t) -> void:
 	for id in CASES:
 		t.eq("reading reaches " + id, Objectives.choose(CASES[id]), id)
 	var reached := {}
+	var extras := MOUNTS + PHASES
+	var reading := {"state": "", "sealed": false, "fight": "", "engaged": false,
+		"staggered": false, "struggling": false, "lesson": "", "distance": 0.0,
+		"site_at_hand": false, "yard_locked": false, "clamp_shut": false}
 	for state in ["", "stage", "beacon", "gates", "launch", "boss"]:
+		reading["state"] = state
 		for sealed in [false, true]:
+			reading["sealed"] = sealed
 			for fight in ["plating", "posture"]:
+				reading["fight"] = fight
 				for engaged in [false, true]:
+					reading["engaged"] = engaged
 					for staggered in [false, true]:
+						reading["staggered"] = staggered
 						for struggling in [false, true]:
+							reading["struggling"] = struggling
 							for lesson in [""]:
+								reading["lesson"] = lesson
 								for distance in [5.0, 39.9, 40.0, 200.0]:
+									reading["distance"] = distance
 									for site_at_hand in [false, true]:
+										reading["site_at_hand"] = site_at_hand
 										for locks in 4:
-											for extra in MOUNTS + PHASES:
-												var reading := {"state": state, "sealed": sealed, "fight": fight, "engaged": engaged,
-													"staggered": staggered, "struggling": struggling, "lesson": lesson, "distance": distance,
-													"site_at_hand": site_at_hand, "yard_locked": bool(locks & 1), "clamp_shut": bool(locks & 2)}
-												reading.merge(extra, true)
+											reading["yard_locked"] = bool(locks & 1)
+											reading["clamp_shut"] = bool(locks & 2)
+											for extra: Dictionary in extras:
+												for k in extra:
+													reading[k] = extra[k]
 												reached[Objectives.choose(reading)] = true
+												for k in extra:
+													reading.erase(k)
 	var missing := Objectives.ROWS.keys().filter(func(id): return not reached.has(id))
 	var stray := reached.keys().filter(func(id): return id != "" and not Objectives.ROWS.has(id))
 	t.eq("the walk reaches every row", missing, [])
@@ -267,17 +282,30 @@ func _fights(t) -> void:
 # through a stagger (the mark on the relic says the core is open). Everything else keeps its row.
 func _mounts(t) -> void:
 	var changed := []
-	for mount in MOUNTS:
-		for state in ["stage", "beacon", "gates", "launch", "boss"]:
-			for mask in 256:
-				var reading := {"state": state, "sealed": bool(mask & 1), "fight": "posture" if mask & 2 else "plating",
-					"engaged": bool(mask & 4), "staggered": bool(mask & 8), "struggling": bool(mask & 16),
-					"site_at_hand": bool(mask & 32), "yard_locked": bool(mask & 64), "clamp_shut": bool(mask & 128)}
-				var plain := Objectives.choose(reading)
-				var mounted := Objectives.choose(reading.merged(mount, true))
+	var reading := {"state": "", "sealed": false, "fight": "", "engaged": false,
+		"staggered": false, "struggling": false, "site_at_hand": false,
+		"yard_locked": false, "clamp_shut": false}
+	for state in ["stage", "beacon", "gates", "launch", "boss"]:
+		reading["state"] = state
+		for mask in 256:
+			reading["sealed"] = bool(mask & 1)
+			reading["fight"] = "posture" if mask & 2 else "plating"
+			reading["engaged"] = bool(mask & 4)
+			reading["staggered"] = bool(mask & 8)
+			reading["struggling"] = bool(mask & 16)
+			reading["site_at_hand"] = bool(mask & 32)
+			reading["yard_locked"] = bool(mask & 64)
+			reading["clamp_shut"] = bool(mask & 128)
+			var plain := Objectives.choose(reading)
+			for mount: Dictionary in MOUNTS:
+				for k in mount:
+					reading[k] = mount[k]
+				var mounted := Objectives.choose(reading)
+				for k in mount:
+					reading.erase(k)
 				var flume_stagger: bool = plain == "smash_core" and mounted == "line_fight" and mount.get("mount", "") == "flume"
 				if mounted != plain and not (plain == "break_guard" and mounted in MOUNT_ROWS) and not flume_stagger:
-					changed.append([mount, reading, plain, mounted])
+					changed.append([mount, reading.duplicate(), plain, mounted])
 	t.eq("a mounting changes only the guard row, and the flume the stagger's", changed, [])
 	t.eq("an unknown mounting keeps the guard row", Objectives.choose(CASES["break_guard"].merged({"mount": "plain"}, true)), "break_guard")
 	t.eq("the dam's struggle still says to grow", Objectives.choose(CASES["ride_sheet"].merged({"struggling": true}, true)), "grow_return")

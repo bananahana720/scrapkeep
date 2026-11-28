@@ -33,7 +33,7 @@ const BakeLook := preload("res://src/presentation/bake_look.gd")
 const Palette := preload("res://src/core/palette.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const ParkProps := preload("res://src/presentation/park_props.gd")
-const Bars := preload("res://src/core/defence_bars.gd")
+const Bars := preload("res://tests/support/defence_bars.gd")
 const Probe := preload("res://tools/vertex_colour_probe.gd")
 const ShiftVariants := preload("res://src/core/shift_variants.gd")
 

@@ -50,7 +50,7 @@ func _run() -> void:
 		if old is Dictionary and old.get("spots") is Dictionary:
 			doc["spots"] = old["spots"]
 	var exclude := []
-	var ball = game.player.active_body() if game.player.has_method("active_body") else null
+	var ball = game.player.body() if game.player.has_method("body") else null
 	if ball is CollisionObject3D:
 		exclude.append(ball.get_rid())
 	var failed := 0

@@ -311,7 +311,7 @@ func catch_at(ball: Vector3) -> void:
 func on_landed(_impact: float, player: Node3D) -> void:
 	if frozen or not is_visible_in_tree() or not is_instance_valid(player):
 		return
-	var body: RigidBody3D = player.active_body()
+	var body: RigidBody3D = player.body()
 	var physics := PhysicsServer3D.body_get_direct_state(body.get_rid())
 	if physics != null:
 		catch_at(physics.transform.origin)

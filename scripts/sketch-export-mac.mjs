@@ -6,6 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
+import { GODOT_VERSION, TOOLCHAIN, resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { isMain } from "./lib/cli.mjs";
 import {
   bootFailures,
   defaultStemsFrom,
@@ -21,7 +23,7 @@ const stemRoot = path.join(project, "assets/music_ace");
 export const MAC_PRESET = "macOS";
 const SHIPPED_PRESET = "Linux x64";
 export const APP_NAME = "Scrapkeep.app";
-const TEMPLATE_VERSION = "4.7.2.stable";
+const TEMPLATE_VERSION = TOOLCHAIN.godotTemplateVersion;
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 
 export function parseArgs(argv) {
@@ -203,9 +205,11 @@ async function main() {
   }
   if (process.platform !== "darwin")
     fail("the Mac export runs on macOS; on Linux use npm run sketch:export");
-  const binary = process.env.GODOT_BIN;
-  if (!binary || !existsSync(binary))
-    fail("set GODOT_BIN to the Godot 4.7.2 editor binary: " + binary);
+  const binary = resolveGodotBinary({ requireExplicit: true });
+  if (!binary)
+    fail(`GODOT_BIN is not set; set GODOT_BIN to the Godot ${GODOT_VERSION} editor binary`);
+  if (!existsSync(binary))
+    fail(`set GODOT_BIN to the Godot ${GODOT_VERSION} editor binary: ${binary}`);
   const realTemplates = path.join(templatesDir(os.homedir()), TEMPLATE_VERSION);
   if (!existsSync(path.join(realTemplates, "macos.zip")))
     fail("export template missing: " + path.join(realTemplates, "macos.zip"));
@@ -233,7 +237,7 @@ async function main() {
   const home = path.join(outDir, "home");
   await mkdir(templatesDir(home), { recursive: true });
   await symlink(realTemplates, path.join(templatesDir(home), TEMPLATE_VERSION));
-  const env = { ...process.env, HOME: home, XDG_DATA_HOME: home };
+  const env = scratchGodotEnv(home, { baseEnv: process.env, dirs: null, forceHome: true });
 
   const projectPath = path.join(project, "project.godot");
   const projectText = await readFile(projectPath, "utf8");
@@ -296,7 +300,7 @@ async function main() {
   ];
   const boot = run(exe, bootArgs, {
     cwd: outDir,
-    env: { ...process.env, HOME: bootHome, XDG_DATA_HOME: bootHome },
+    env: scratchGodotEnv(bootHome, { baseEnv: process.env, dirs: null, forceHome: true }),
   });
   const bootText = boot.stdout + boot.stderr;
   await writeFile(path.join(outDir, "boot.log"), bootText);
@@ -320,5 +324,4 @@ async function main() {
   console.log("BUILD.txt: " + path.join(outDir, "BUILD.txt"));
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url))
-  await main();
+if (isMain(import.meta.url)) await main();

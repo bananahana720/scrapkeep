@@ -1,9 +1,11 @@
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { cueFindings } from "./audio-gate.mjs";
+import { isMain } from "./lib/cli.mjs";
+import { REPO_ROOT } from "./lib/git.mjs";
+import { walkSync } from "./lib/walk.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const root = REPO_ROOT;
 
 export const PARK_MAPS_FILE = "src/core/park_defs.gd";
 export const GREYBOX = "greybox:";
@@ -297,13 +299,10 @@ export function standInAbilities(source) {
   return found;
 }
 
-function walk(dir, ext, base = dir) {
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return walk(full, ext, base);
-    return ext.some((e) => entry.name.endsWith(e)) ? [path.relative(base, full)] : [];
-  });
+function walk(dir, ext) {
+  return walkSync(dir, {
+    filter: (entry) => ext.some((e) => entry.name.endsWith(e)),
+  }).map((entry) => entry.rel);
 }
 
 export function scan(project) {
@@ -469,4 +468,4 @@ function main() {
   process.exitCode = findings.length === 0 ? 0 : 1;
 }
 
-if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();
+if (isMain(import.meta.url)) main();

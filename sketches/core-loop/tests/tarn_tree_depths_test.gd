@@ -8,7 +8,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Cards := preload("res://src/core/trees/world_one_cards.gd")
 const PartDef := preload("res://src/build/part_def.gd")
 const Triggers := preload("res://src/build/triggers.gd")
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 const T := preload("res://tests/support/t.gd")
 
 # PC-TARN, 2026-10-11. Expected: 511 checks. Tree nodes are one-copy capped picks;

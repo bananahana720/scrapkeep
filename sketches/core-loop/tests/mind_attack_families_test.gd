@@ -1,5 +1,6 @@
 extends SceneTree
 
+const BossAttacks := preload("res://src/boss/boss_attacks.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const Arena := preload("res://src/boss/arena.gd")
@@ -57,7 +58,7 @@ func _initialize() -> void:
 					for verb in MindAttacks.VERBS:
 						if MindAttacks.hit_mult(d, verb) < 1.0 / MindAttacks.BRACE_MULT - 1e-6:
 							mult_low += 1
-			var escape = MindAttacks.escape_point(descs, ball, cruise, CENTER)
+			var escape = BossAttacks.escape_point(descs, ball, cruise, CENTER, Arena.FLOOR_R)
 			if escape == null:
 				nulls += 1
 				continue
@@ -69,7 +70,7 @@ func _initialize() -> void:
 				off_floor += 1
 			var any_hit := false
 			for d in descs:
-				var h := MindAttacks.build(d)
+				var h := Hazard.from_def(d)
 				root.add_child(h)
 				hazards += 1
 				h.step(h.warn_seconds + 0.01)

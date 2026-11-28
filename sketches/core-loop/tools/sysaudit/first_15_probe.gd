@@ -3,7 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 const SimClock := preload("res://src/core/sim_clock.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const FieldTips := preload("res://src/ui/field_tips.gd")
 
 const MINUTES := 15

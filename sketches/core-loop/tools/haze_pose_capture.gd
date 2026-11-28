@@ -4,8 +4,9 @@ const Intent := preload("res://src/movement/intent.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
-const DefenceBars := preload("res://src/core/defence_bars.gd")
+const DefenceBars := preload("res://tests/support/defence_bars.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 const PENDING_PROGRESS := 0.95
 const RING_RADIUS := 3.0
 const PLACES := [
@@ -45,7 +46,7 @@ func _initialize() -> void:
 			scorches = _floats(a.trim_prefix("--scorch="))
 		elif a.begins_with("--live-alpha="):
 			alphas = _floats(a.trim_prefix("--live-alpha="))
-	if DisplayServer.get_name() == "headless" or out == "":
+	if AppShell.headless() or out == "":
 		printerr("needs a display and --out")
 		quit(2)
 		return

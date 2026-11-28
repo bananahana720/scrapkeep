@@ -2,7 +2,7 @@ extends CanvasLayer
 
 const Palette := preload("res://src/core/palette.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
-const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const UiDraw := preload("res://src/ui/ui_draw.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const SettingsStore := preload("res://src/ui/settings_store.gd")
 const Harmony := preload("res://src/presentation/harmony.gd")
@@ -91,13 +91,8 @@ func setup(game_ref) -> void:
 	_content.add_theme_constant_override("separation", 12)
 	_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_content)
-	_note = Label.new()
+	_note = UiDraw.label(UiTokens.LABEL, Palette.SAND)
 	_note.visible = false
-	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_note.add_theme_font_override("font", UiFonts.bold())
-	_note.add_theme_font_size_override("font_size", UiTokens.LABEL)
-	_note.add_theme_color_override("font_color", Palette.SAND)
-	_note.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_content.add_child(_note)
 	for spec in ROWS:
 		var row: ChoiceButton = SettingRow.new(spec["id"], spec["key"], spec["words"]) if spec["id"] in VALUE_ROWS \

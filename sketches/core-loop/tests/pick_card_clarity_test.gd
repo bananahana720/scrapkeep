@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Cards := preload("res://src/core/trees/world_one_cards.gd")
 const WordFxWord := preload("res://src/presentation/world_fx/world_fx_word.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # The kit pick a first-timer can read (PF-01, PF-10, PF-30):
 #   - copy: no sentence appears on two world-one cards, none of the old jargon lines survives, and

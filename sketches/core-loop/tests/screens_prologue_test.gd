@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const PrologueRows := preload("res://src/core/prologue_rows.gd")
 const UiProfile := preload("res://src/ui/ui_profile.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 
 # ST5-1: the prologue on a fresh profile.
 #   - every row is a speaker and at most LINE_WORD_CAP words;

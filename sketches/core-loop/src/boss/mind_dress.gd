@@ -30,8 +30,8 @@ const WARN_SPEED_MAX := 2.0
 const CALL_IN_NODE := "ForemanCallIn"
 const HIRED_NODE := "HiredStamp"
 const TAKEOVER_NODE := "TakeoverPanel"
-const CARD_LAYER := 40
-const CARD_FADE_S := 0.45
+const CARD_LAYER := BossModel.CARD_LAYER
+const CARD_FADE_S := BossModel.CARD_FADE_S
 const STAMP_TILT_DEG := -8.0
 const STAMP_LAND_SCALE := 1.35
 const STAMP_LAND_S := 0.1
@@ -79,7 +79,7 @@ static func attach(owner_module):
 	var _read := [_take(base_path), _take(kit_path)]
 	var base_scene := BossModel.load_scene(base_path)
 	var kit_scene := BossModel.load_scene(kit_path)
-	if base_scene == null or kit_scene == null or not _has_parts(base_scene, BASE_PARTS) or not _has_parts(kit_scene, KIT_PARTS):
+	if base_scene == null or kit_scene == null or not BossModel.has_parts(base_scene, BASE_PARTS) or not BossModel.has_parts(kit_scene, KIT_PARTS):
 		if base_scene != null:
 			base_scene.free()
 		if kit_scene != null:
@@ -98,13 +98,6 @@ static func _take(path: String) -> Resource:
 	if ResourceLoader.load_threaded_get_status(path) != ResourceLoader.THREAD_LOAD_INVALID_RESOURCE:
 		return ResourceLoader.load_threaded_get(path)
 	return null
-
-
-static func _has_parts(scene: Node, parts: Array) -> bool:
-	for part in parts:
-		if scene.find_child(part, true, false) == null:
-			return false
-	return true
 
 
 func setup(base_scene: Node3D, kit_scene: Node3D) -> void:
@@ -267,42 +260,27 @@ func show_call_in() -> void:
 	dismiss_call_in()
 	var card := LoreRows.FOREMAN_CALL_IN
 	var words := UiFonts.face(UiTokens.Hand.OLD_WORKS)
-	_call_in = _card_layer(CALL_IN_NODE)
-	var panel := PanelContainer.new()
+	_call_in = BossModel.card_layer(self, CALL_IN_NODE)
+	var panel := BossModel.card_panel(Color(Palette.CHARCOAL, 0.9), Palette.SLATE_INK, 18.0)
 	panel.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	panel.offset_left = -378.0
 	panel.offset_right = -18.0
 	panel.offset_top = 132.0
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(Palette.CHARCOAL, 0.9)
-	style.border_color = Palette.SLATE_INK
-	style.border_width_left = 6
-	style.border_width_top = 2
-	style.border_width_right = 2
-	style.border_width_bottom = 2
-	style.content_margin_left = 18.0
-	style.content_margin_right = 18.0
-	style.content_margin_top = 12.0
-	style.content_margin_bottom = 12.0
-	panel.add_theme_stylebox_override("panel", style)
 	_call_in.get_child(0).add_child(panel)
-	var box := VBoxContainer.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(box)
-	box.add_child(_label(String(card["title"]), words, 26, Palette.LEDGER_CREAM))
-	var line := _label(String(card["line"]), words, 16, Palette.SAND)
+	var box: VBoxContainer = panel.get_child(0)
+	box.add_child(BossModel.card_label(String(card["title"]), 26, Palette.LEDGER_CREAM, words))
+	var line := BossModel.card_label(String(card["line"]), 16, Palette.SAND, words)
 	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(line)
 	for stat in card["stats"] + [card["likes"]]:
-		box.add_child(_label("%s: %s" % [stat[0], stat[1]], words, 15, Palette.SLATE_INK))
+		box.add_child(BossModel.card_label("%s: %s" % [stat[0], stat[1]], 15, Palette.SLATE_INK, words))
 	_call_in_left = float(card["duration_s"])
 
 
 func show_hired() -> void:
 	dismiss_hired()
 	var card := LoreRows.HIRED_CEREMONY
-	_hired = _card_layer(HIRED_NODE)
+	_hired = BossModel.card_layer(self, HIRED_NODE)
 	var root: Control = _hired.get_child(0)
 	var box := VBoxContainer.new()
 	box.set_anchors_preset(Control.PRESET_CENTER)
@@ -311,13 +289,13 @@ func show_hired() -> void:
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(box)
-	var stamp := _label(String(card["stamp"]), UiFonts.face(UiTokens.Hand.KEEPER), 132, Palette.RUST)
+	var stamp := BossModel.card_label(String(card["stamp"]), 132, Palette.RUST, UiFonts.face(UiTokens.Hand.KEEPER))
 	stamp.name = "Stamp"
 	stamp.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	stamp.add_theme_color_override("font_outline_color", Palette.LEDGER_CREAM)
 	stamp.add_theme_constant_override("outline_size", 6)
 	box.add_child(stamp)
-	var memo := _label(String(card["memo"]), UiFonts.face(UiTokens.Hand.OLD_WORKS), 18, Palette.LEDGER_CREAM)
+	var memo := BossModel.card_label(String(card["memo"]), 18, Palette.LEDGER_CREAM, UiFonts.face(UiTokens.Hand.OLD_WORKS))
 	memo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	memo.add_theme_color_override("font_outline_color", Palette.CHARCOAL)
 	memo.add_theme_constant_override("outline_size", 5)
@@ -332,15 +310,13 @@ func show_hired() -> void:
 
 func dismiss_call_in() -> void:
 	_call_in_left = 0.0
-	if is_instance_valid(_call_in):
-		_call_in.queue_free()
+	BossModel.dismiss_card(_call_in)
 	_call_in = null
 
 
 func dismiss_hired() -> void:
 	_hired_left = 0.0
-	if is_instance_valid(_hired):
-		_hired.queue_free()
+	BossModel.dismiss_card(_hired)
 	_hired = null
 
 
@@ -350,53 +326,17 @@ func _exit_tree() -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if _call_in_left <= 0.0 and _hired_left <= 0.0:
-		return
-	var accept := InputMap.has_action("ui_accept") and event.is_action_pressed("ui_accept")
-	var cancel := InputMap.has_action("ui_cancel") and event.is_action_pressed("ui_cancel")
-	var jump := InputMap.has_action("cl_jump") and event.is_action_pressed("cl_jump")
-	if accept or cancel or jump:
+	if (_call_in_left > 0.0 or _hired_left > 0.0) and BossModel.is_card_dismiss(event):
 		dismiss_call_in()
 		dismiss_hired()
 
 
 func _step_cards(delta: float) -> void:
 	if _call_in_left > 0.0:
-		_call_in_left -= delta
+		_call_in_left = BossModel.step_card(_call_in, _call_in_left, delta)
 		if _call_in_left <= 0.0:
-			dismiss_call_in()
-		else:
-			_fade(_call_in, _call_in_left)
+			_call_in = null
 	if _hired_left > 0.0:
-		_hired_left -= delta
+		_hired_left = BossModel.step_card(_hired, _hired_left, delta)
 		if _hired_left <= 0.0:
-			dismiss_hired()
-		else:
-			_fade(_hired, _hired_left)
-
-
-static func _fade(layer: CanvasLayer, left: float) -> void:
-	if is_instance_valid(layer) and left < CARD_FADE_S:
-		(layer.get_child(0) as Control).modulate.a = clampf(left / CARD_FADE_S, 0.0, 1.0)
-
-
-func _card_layer(node_name: String) -> CanvasLayer:
-	var layer := CanvasLayer.new()
-	layer.name = node_name
-	layer.layer = CARD_LAYER
-	add_child(layer)
-	var root := Control.new()
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.add_child(root)
-	return layer
-
-
-static func _label(text: String, font: Font, font_size: int, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_override("font", font)
-	label.add_theme_font_size_override("font_size", font_size)
-	label.add_theme_color_override("font_color", color)
-	return label
+			_hired = null

@@ -4,8 +4,8 @@ REPO=$(cd "$HERE/../../../.." && pwd)
 B=$1
 W=${BOARD_ROOT:-$REPO/artifacts/local/alpha/push/w13/concepts}
 Q=$REPO/sketches/core-loop/tools/coordinator/gpu_queue.sh
-V=/home/andrew/.local/share/genai-venv
-S=/home/andrew/.cache/huggingface/hub/models--black-forest-labs--FLUX.1-schnell/snapshots/741f7c3ce8b383c54771c7003378a50191e9efe9
+V="$HOME/.local/share/genai-venv"
+S="$HOME/.cache/huggingface/hub/models--black-forest-labs--FLUX.1-schnell/snapshots/741f7c3ce8b383c54771c7003378a50191e9efe9"
 if [ -z "$B" ] || [ ! -f "$W/boards/$B.json" ]; then
   echo "usage: run_board.sh <board_name>  ($W/boards/<board_name>.json must exist)"
   exit 2

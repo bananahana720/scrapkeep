@@ -113,10 +113,6 @@ var _live_site: Dictionary = {}
 var live_actors: Node3D = null
 
 
-static func _reset() -> void:
-	ExperimentalAudioBank._reset()
-
-
 static func is_enabled(args: Variant = null, env: Variant = null) -> bool:
 	var arg_list: PackedStringArray = PackedStringArray()
 	if args == null:
@@ -546,9 +542,9 @@ func _build_chunk_foundation_and_ramp(holder: Node3D, site: Dictionary) -> void:
 	holder.add_child(body)
 	var st_skirt := SurfaceTool.new()
 	st_skirt.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var c_flat := CampCraftMeshes.vc(0.18, 0.34)
-	var c_edge := CampCraftMeshes.vc(0.62, 0.16)
-	var c_bot := CampCraftMeshes.vc(0.08, 0.78)
+	var c_flat := CraftLookdev.encode_mask(0.18, 0.34)
+	var c_edge := CraftLookdev.encode_mask(0.62, 0.16)
+	var c_bot := CraftLookdev.encode_mask(0.08, 0.78)
 	var skirt_center := Vector3(0.0, -0.35 - skirt_h * 0.5, 0.0)
 	CampCraftMeshes.add_bevel_box(st_skirt, skirt_center, skirt_size, 0.45, 0.12, Transform3D.IDENTITY, c_flat, c_edge, c_bot)
 	st_skirt.generate_tangents()

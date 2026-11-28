@@ -14,6 +14,7 @@ import {
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { isMain } from "../lib/cli.mjs";
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const MUSIC_ACE_DIR = path.join(REPO_ROOT, "sketches", "core-loop", "assets", "music_ace");
@@ -1368,16 +1369,7 @@ export function runPipeline(opts, deps = {}) {
   return { results, totalStemHashes };
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const opts = parseArgs(process.argv.slice(2));
     if (opts.help) {

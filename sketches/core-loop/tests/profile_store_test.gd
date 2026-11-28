@@ -32,6 +32,7 @@ func _initialize() -> void:
 	_interrupted_save()
 	_earn_and_idempotence()
 	_save_needs_a_load()
+	_disable_saving()
 	_two_stores_one_path()
 	_merge_is_pure()
 	_second_backup_kept()
@@ -270,6 +271,22 @@ func _save_needs_a_load() -> void:
 		_t.check("F3-1 %s: nothing else written" % label, DirAccess.get_files_at(_dir).size() == files, str(DirAccess.get_files_at(_dir)))
 	var fresh := Profile.new(_fresh_path())
 	_t.check("F3-1 missing file: save before load refused", not fresh.save() and not FileAccess.file_exists(fresh.path))
+
+
+func _disable_saving() -> void:
+	var path := _fresh_path()
+	var p := Profile.new(path)
+	p.load_profile()
+	_t.check("disable_saving setup saves", p.save(), p.last_error)
+	var before := _bytes(path)
+	var reason := "sitting profile: this session does not save"
+	p.disable_saving(reason)
+	_t.check("disable_saving clears can_save", not p.can_save)
+	_t.eq("disable_saving records reason", p.last_error, reason)
+	p.unlock_pilot("runner_gunner")
+	_t.check("disable_saving blocks save", not p.save())
+	_t.eq("disable_saving sets refusal error on save", p.last_error, "not saving: " + reason)
+	_t.check("disable_saving leaves file untouched", _bytes(path) == before)
 
 
 func _two_stores_one_path() -> void:

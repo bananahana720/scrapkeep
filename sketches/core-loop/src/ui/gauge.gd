@@ -4,6 +4,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 
 const ICON := 26.0
@@ -72,7 +73,7 @@ func set_cap(share: float, edge := UiTokens.LINE) -> void:
 func extent() -> Vector2:
 	var w := ICON + GAP
 	if label != "":
-		w += UiDraw.width(label, FONT, true) + GAP
+		w += UiFonts.width(label, FONT, true) + GAP
 	if bar_width > 0.0:
 		w += bar_width
 	return Vector2(w, ICON + (CAPTION_LINE if caption != "" else 0.0))

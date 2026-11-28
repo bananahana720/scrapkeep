@@ -1,10 +1,11 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { readdirSync, readFileSync, realpathSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
+import { isMain } from "../lib/cli.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -57,16 +58,81 @@ export function parseShardSpec(shard) {
   return { index, total };
 }
 
-export function selectShardFiles(files, { shard = null, shuffle = false, seed = null } = {}) {
+export const DEFAULT_FILE_MS = 500;
+export const DURATION_HINTS_MS = {
+  "scripts/sketch-smoke.test.mjs": 5_700,
+  "sketch-smoke.test.mjs": 5_700,
+  "scripts/alpha-rc.test.mjs": 4_100,
+  "alpha-rc.test.mjs": 4_100,
+  "scripts/ci/selection-mutation.test.mjs": 2_100,
+  "selection-mutation.test.mjs": 2_100,
+  "scripts/sketch-lint.test.mjs": 2_000,
+  "sketch-lint.test.mjs": 2_000,
+  "scripts/gate/sound-receipts.test.mjs": 1_900,
+  "sound-receipts.test.mjs": 1_900,
+  "tests/check-docs.test.js": 1_700,
+  "check-docs.test.js": 1_700,
+  "tests/sprint-close.test.js": 1_500,
+  "sprint-close.test.js": 1_500,
+  "scripts/brief-check.test.mjs": 1_400,
+  "brief-check.test.mjs": 1_400,
+  "scripts/gate/look-receipts.test.mjs": 1_400,
+  "look-receipts.test.mjs": 1_400,
+  "scripts/gate/pc.test.mjs": 1_400,
+  "pc.test.mjs": 1_400,
+  "scripts/wave-state.test.mjs": 1_300,
+  "wave-state.test.mjs": 1_300,
+  "tests/check-agents.test.js": 1_300,
+  "check-agents.test.js": 1_300,
+  "scripts/play.resolve.test.mjs": 1_100,
+  "play.resolve.test.mjs": 1_100,
+  "tests/check-skills.test.js": 900,
+  "check-skills.test.js": 900,
+  "tests/check-scope.test.js": 700,
+  "check-scope.test.js": 700,
+  "tests/asset-inspect.test.js": 600,
+  "asset-inspect.test.js": 600,
+  "tests/antigravity-hooks.test.js": 600,
+  "antigravity-hooks.test.js": 600,
+};
+
+export function estimateFileMs(file, hints = DURATION_HINTS_MS) {
+  return hints[file] ?? hints[path.posix.basename(file)] ?? DEFAULT_FILE_MS;
+}
+
+export function partitionDurationShards(files, total, hints = DURATION_HINTS_MS) {
+  const shards = Array.from({ length: total }, () => ({ totalMs: 0, files: [] }));
+  const ranked = files
+    .map((file, order) => ({ file, order, ms: estimateFileMs(file, hints) }))
+    .sort((a, b) => b.ms - a.ms || a.order - b.order);
+  for (const item of ranked) {
+    let lightest = shards[0];
+    for (let i = 1; i < shards.length; i++) {
+      if (shards[i].totalMs < lightest.totalMs) lightest = shards[i];
+    }
+    lightest.files.push(item.file);
+    lightest.totalMs += item.ms;
+  }
+  return shards;
+}
+
+export function selectShardFiles(
+  files,
+  { shard = null, shuffle = false, seed = null, hints = DURATION_HINTS_MS } = {},
+) {
   if (shard && shuffle && seed === null) {
     throw new Error(
       "--shard with --shuffle requires an explicit --seed so all shards partition identically",
     );
   }
-  const ordered = shuffle ? shuffleFiles(files, seed ?? 1) : [...files];
-  if (!shard) return ordered;
+  if (!shard) {
+    return shuffle ? shuffleFiles(files, seed ?? 1) : [...files];
+  }
   const { index, total } = parseShardSpec(shard);
-  return ordered.filter((_, idx) => idx % total === index - 1);
+  const shardFiles = partitionDurationShards(files, total, hints)[index - 1].files;
+  if (!shuffle) return shardFiles;
+  const shardSeed = ((seed ?? 1) ^ Math.imul(index, 0x9e3779b1)) >>> 0;
+  return shuffleFiles(shardFiles, shardSeed);
 }
 
 export function buildNodeTestArgs(files, { shard = null, shuffle = false, seed = null } = {}) {
@@ -99,16 +165,7 @@ function parseArgs(argv) {
   return opts;
 }
 
-function isMain() {
-  if (!process.argv[1]) return false;
-  try {
-    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(process.argv[1]);
-  } catch {
-    return fileURLToPath(import.meta.url) === path.resolve(process.argv[1]);
-  }
-}
-
-if (isMain()) {
+if (isMain(import.meta.url)) {
   try {
     const opts = parseArgs(process.argv.slice(2));
     if (opts.shard && opts.shuffle && opts.seed === null) {

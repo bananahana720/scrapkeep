@@ -20,7 +20,7 @@ const ItemGen := preload("res://src/build/item_gen.gd")
 const ItemEffects := preload("res://src/build/item_effects.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("w45_weapon_items_test")
@@ -366,7 +366,7 @@ func _check_live_bits() -> void:
 	# Three non-pierce bits held ahead of the pike: the cap already left pierce out, so the fuse swaps it in.
 	var held := ["static_burr", "halo_rig", "tracer_round", "slag_pike"]
 	var weapon := _setup_player(held, [], 31)
-	var plain: int = _combat._shot_bits()
+	var plain: int = _combat.shot_bits()
 	_t.check("precondition: three non-pierce bits ride the shot", ShotBits.count(plain) == 3 and not ShotBits.has(plain, ShotBits.bit("pierce")),
 		str(ShotBits.names(plain)))
 	_combat._patterns[weapon] = Weapons.base(weapon)
@@ -382,7 +382,7 @@ func _check_live_bits() -> void:
 	_t.check("the fused bolt holds pierce inside three bits", ShotBits.has(bits, ShotBits.bit("pierce")) and ShotBits.count(bits) <= ShotBits.MAX_SHOT_BITS,
 		str(ShotBits.names(bits)))
 	_t.check("planted control: a plain union of the held bits would be four", ShotBits.count(plain | ShotBits.bit("pierce")) == 4, "")
-	_t.eq("the build's own bits are untouched after the fuse", _combat._shot_bits(), plain)
+	_t.eq("the build's own bits are untouched after the fuse", _combat.shot_bits(), plain)
 
 
 func _check_helix() -> void:

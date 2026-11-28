@@ -37,7 +37,7 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 const FightReach := preload("res://tests/support/fight_reach.gd")
 const Breath := preload("res://tests/park_breath_test.gd")
 const LaunchCard := preload("res://src/ui/launch_card.gd")
-const UiDraw := preload("res://src/ui/ui_draw.gd")
+const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 const SIZES := {"small": 24.0, "medium": 32.0, "large": 44.0}
 const SCALE := {1: 1.0, 5: 2.0, 10: 3.0}
@@ -155,7 +155,7 @@ func _check_pocket_builds() -> void:
 	game.world.set_physics_process(false)
 	game.flow.set_physics_process(false)
 	game.player.set_physics_process(false)
-	game.player.active_body().freeze = true
+	game.player.body().freeze = true
 	var acts = game.world.activities
 	acts.set_physics_process(false)
 	acts.clear()
@@ -506,7 +506,7 @@ func _check_stage_modifiers_new() -> void:
 		var words: int = String(row.line).split(" ", false).size()
 		_t.check("%s fits <= 8 words" % new_id, words <= 8, "%d words: %s" % [words, row.line])
 		var pair := StageModifier.caption(StageModifier.CURSE) + "  /  " + StageModifier.caption(row)
-		_t.check("%s fits card width beside curse" % new_id, UiDraw.width(pair, LaunchCard.LINE_FONT) <= 1600.0 * 0.85)
+		_t.check("%s fits card width beside curse" % new_id, UiFonts.width(pair, LaunchCard.LINE_FONT) <= 1600.0 * 0.85)
 		for stage in range(1, ParkDefs.COUNT + 1):
 			var n := StageModifier.slots(row, stage, 3)
 			_t.check("%s stage %d slots within cap" % [new_id, stage], n >= 1 and n + 3 <= StageModifier.CAP)

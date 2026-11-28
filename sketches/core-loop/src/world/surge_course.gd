@@ -4,6 +4,7 @@ const SurgeRun := preload("res://src/world/surge_run.gd")
 const EventView := preload("res://src/world/event_view.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 
@@ -38,7 +39,7 @@ static func path(park: Dictionary, route_id: String, start: Vector2) -> Dictiona
 			continue
 		var row: Dictionary = rows[id]
 		var at := Vector2(float(row.at[0]), float(row.at[1]))
-		var half := ParkMap._dir(float(row.yaw_deg)) * float(row.size[0]) * 0.5
+		var half := ParkMap.yaw_dir(float(row.yaw_deg)) * float(row.size[0]) * 0.5
 		var a := at - half
 		var b := at + half
 		if b.distance_to(last) < a.distance_to(last):
@@ -72,7 +73,7 @@ static func heights(model_ref, rows: PackedStringArray, park: Dictionary, ground
 		var id: String = rows[segment] if segment < rows.size() else ""
 		var y: float = tops[id] if tops.has(id) else (float(ground.call(g.x, g.y)) if ground.is_valid() else 0.0)
 		if space != null:
-			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(g.x, y + RAY_ABOVE_M, g.y), Vector3(g.x, y - RAY_BELOW_M, g.y), 1))
+			var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(g.x, y + RAY_ABOVE_M, g.y), Vector3(g.x, y - RAY_BELOW_M, g.y), PhysicsLayers.WORLD_MASK))
 			if not hit.is_empty():
 				y = hit.position.y
 		out.append(y)

@@ -1,4 +1,4 @@
-extends RefCounted
+extends "res://src/combat/actives/active_base.gd"
 
 const ActiveFx := preload("res://src/combat/actives/active_fx.gd")
 const Palette := preload("res://src/core/palette.gd")
@@ -23,17 +23,10 @@ const KIND := "lift_pulse"
 const IMPACT := "ram"
 const SOURCE := "special"
 
-var ctx
-var combat
 var echoes: Array = []
 var pulses := 0
 var chain_hits := 0
 var last_cone := {}
-
-
-func setup(context, owner_combat) -> void:
-	ctx = context
-	combat = owner_combat
 
 
 func clear() -> void:
@@ -41,10 +34,7 @@ func clear() -> void:
 
 
 func damage() -> float:
-	var punch := 0.0
-	if ctx.build != null and ctx.build.has_method("punch_bonus"):
-		punch = float(ctx.build.punch_bonus())
-	return (BASE_DAMAGE + punch) * ctx.tuning.mod("weapon_damage")
+	return scaled_damage(BASE_DAMAGE)
 
 
 func knock_for(bonus: int) -> float:
@@ -55,14 +45,11 @@ func knock_for(bonus: int) -> float:
 
 
 func half_angle() -> float:
-	return minf(HALF_ANGLE + SPREAD_PER_LEVEL * float(_pattern("spiral_wave")), MAX_HALF_ANGLE)
+	return minf(HALF_ANGLE + SPREAD_PER_LEVEL * float(pattern_level("spiral_wave")), MAX_HALF_ANGLE)
 
 
 func cone(bonus: int) -> Dictionary:
-	var forward: Vector3 = ctx.aim_forward()
-	forward.y = 0.0
-	forward = forward.normalized() if forward.length() > 0.01 else Vector3.FORWARD
-	return {"origin": ctx.player.ball_position(), "forward": forward, "range": RANGE,
+	return {"origin": ctx.player.ball_position(), "forward": flat_aim(), "range": RANGE,
 		"half_angle": half_angle(), "knock": knock_for(bonus), "damage": damage()}
 
 
@@ -81,11 +68,11 @@ static func inside(shape: Dictionary, at: Vector3) -> bool:
 func fire(_rack, _row: Dictionary, bonus: int) -> int:
 	var shape := cone(bonus)
 	last_cone = shape
-	var echo_count := _pattern("cross_split")
+	var echo_count := pattern_level("cross_split")
 	for i in echo_count:
 		echoes.append({"cone": shape, "at": ECHO_GAP * float(i + 1), "share": ECHO_SHARE})
 	var struck := _pulse(shape, 1.0)
-	var jumps := _pattern("chain_arc")
+	var jumps := pattern_level("chain_arc")
 	if jumps > 0:
 		for enemy in struck:
 			if is_instance_valid(enemy) and not enemy.is_dead():
@@ -101,7 +88,7 @@ func _chain(shape: Dictionary, first: Node3D, jumps: int) -> void:
 		dmg *= CHAIN_FALLOFF
 		var next: Node3D = null
 		var best := CHAIN_RANGE
-		for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+		for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 			if enemy in visited or enemy.is_dead() or not inside(shape, enemy.global_position):
 				continue
 			var distance: float = enemy.global_position.distance_to(at)
@@ -135,7 +122,7 @@ func _pulse(shape: Dictionary, share: float) -> Array:
 	_draw(shape)
 	var origin: Vector3 = shape["origin"]
 	var struck: Array = []
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not inside(shape, enemy.global_position):
 			continue
 		var away: Vector3 = enemy.global_position - origin
@@ -164,9 +151,3 @@ func _draw(shape: Dictionary) -> void:
 		var a := forward.rotated(Vector3.UP, lerpf(-half, half, float(i) / arc_steps))
 		var b := forward.rotated(Vector3.UP, lerpf(-half, half, float(i + 1) / arc_steps))
 		combat.effects.arc(origin + lift + a * reach, origin + lift + b * reach, ActiveFx.peak(COLOR))
-
-
-func _pattern(id: String) -> int:
-	if ctx.build != null and ctx.build.has_method("pattern_level"):
-		return int(ctx.build.pattern_level(id))
-	return ctx.run.parts.count(id) if ctx.run != null else 0

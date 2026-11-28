@@ -38,6 +38,7 @@ var _touching := {}
 var _paying := ""
 var _paid_frame := -1
 var _reel_frame := {}
+var attacks: Array = []
 
 
 func setup(ctx_ref) -> void:
@@ -417,6 +418,25 @@ func _on_warden_died(_at: Vector3, _scrap: int) -> void:
 func _discover(id: String, at: Vector3) -> void:
 	if ctx.codex != null and ctx.codex.has_method("mark_discovered"):
 		ctx.codex.mark_discovered(id, at)
+
+
+func _clear_attacks() -> void:
+	for attack in attacks:
+		_free_hazards(attack)
+	attacks.clear()
+
+
+func _free_hazards(attack: Dictionary) -> void:
+	for h in attack["hazards"]:
+		if is_instance_valid(h):
+			h.queue_free()
+
+
+func _is_reel_impact(target: Node3D, kind: String) -> bool:
+	var smash: bool = ctx.player.smash_landing == target
+	if ctx.spawner != null and ctx.spawner.has_method("is_reel_impact"):
+		return ctx.spawner.is_reel_impact(kind, smash)
+	return smash or (ctx.player.kit.hooked and ctx.player.kit.winching)
 
 
 func _top() -> float:

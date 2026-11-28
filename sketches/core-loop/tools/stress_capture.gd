@@ -6,13 +6,14 @@ const Parts := preload("res://src/build/parts.gd")
 const Telegraph := preload("res://src/combat/telegraph.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const Bolts := preload("res://src/combat/bolts.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Director := preload("res://src/world/director.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const PlayerFx := preload("res://src/presentation/player_fx.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 
 const PLAY_SECONDS := 4.0
@@ -77,7 +78,7 @@ func _initialize() -> void:
 		if arg.begins_with("--") and "=" in arg:
 			settings[arg.substr(2, arg.find("=") - 2)] = arg.substr(arg.find("=") + 1)
 	_dry = settings.get("dry", "0") == "1"
-	if (DisplayServer.get_name() == "headless" and not _dry) or not settings.has("out"):
+	if (AppShell.headless() and not _dry) or not settings.has("out"):
 		printerr("stress_capture: needs a rendered display and -- --out=<absolute dir>")
 		quit(2)
 		return

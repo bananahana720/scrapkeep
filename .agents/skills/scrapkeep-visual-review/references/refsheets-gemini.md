@@ -1,6 +1,6 @@
 # Art Reference Sheets with Gemini & Antigravity
 
-The legacy Codex batch script `tools/refsheets/draw.sh` (`gpt-6-astra`) is superseded in Antigravity by `image-generator` and `gemini-api-cli`, while keeping the repository's prompt-splitting and scale discipline intact.
+The legacy Codex batch script `tools/refsheets/draw.sh` (updated to `gpt-6.2-astra` per `AGENTS.md` Rule 11) is superseded in Antigravity by `image-generator` and `gemini-api-cli`, while keeping the repository's prompt-splitting and scale discipline intact.
 
 ## Procedure
 
@@ -11,4 +11,4 @@ The legacy Codex batch script `tools/refsheets/draw.sh` (`gpt-6-astra`) is super
    - Draw the 1.84 m player ball (see-through Hoberman-lattice sphere) on the ground line in **every** orthographic panel (front, side, back, three-quarter, top).
    - Specify "same scale as the front view" in every panel prompt so height stays locked to the ball.
    - Use plain machine-part words (`clamp arm`, `discharge chute`, `magnet coil`, `forward tube`) rather than weapon nouns that trigger image safety filters.
-5. Open every generated sheet via `read_file` and compare against `project-guide/handoff/ART-MISTAKES.md` and `project-guide/handoff/shared/tone/TONE-BIBLE.md` before promoting JPEG copies into `docs/art/reference/`.
+5. Open every generated sheet via `read_file` and compare against `project-guide/handoff/ART-MISTAKES.md` and `sketches/core-loop/design-v3/TONE-BIBLE.md` before promoting JPEG copies into `docs/art/reference/`.

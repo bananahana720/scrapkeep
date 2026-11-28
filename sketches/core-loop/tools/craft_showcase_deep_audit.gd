@@ -3,6 +3,7 @@ extends SceneTree
 
 const Assembly := preload("res://src/presentation/craft/craft_showcase_assembly.gd")
 const Palette := preload("res://src/core/palette.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const CAPTURE_SIZE := Vector2i(1920, 1080)
 const ORBIT_AZIMUTHS_DEG := [0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0]
@@ -15,7 +16,7 @@ func _initialize() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--out="):
 			_out = arg.trim_prefix("--out=")
-	if _out.is_empty() or DisplayServer.get_name() == "headless":
+	if _out.is_empty() or AppShell.headless():
 		printerr("craft_showcase_deep_audit: requires Metal/rendered display and -- --out=<abs_dir>")
 		quit(2)
 		return

@@ -41,7 +41,7 @@ sys.path.insert(0, str(HERE))
 from repage import PAGE_USEC
 SKETCH = HERE.parents[1]
 OUT = SKETCH / 'assets' / 'music_ace' / 'spillway'
-SLICE = Path('/home/andrew/Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0')
+SLICE = Path.home() / 'Projects/scrapkeep-worktrees/core-loop-v3-audio-3/artifacts/local/v3-audio/slice0'
 WARDEN_TAKES = {'s42': 'warden-F-085-s42', 's7': 'warden-F-085-s7'}
 CALM_TAKE = 'calm-F-085-s1001'
 LEVEL_DB = 4.0

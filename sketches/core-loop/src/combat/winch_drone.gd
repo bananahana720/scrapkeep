@@ -142,7 +142,7 @@ func strain() -> float:
 func pack_centre() -> Vector3:
 	var sum := Vector3.ZERO
 	var count := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(GROUP):
 		if enemy == self or not is_instance_valid(enemy) or enemy.is_dead():
 			continue
 		if enemy.global_position.distance_to(global_position) <= PACK_REACH:

@@ -132,6 +132,20 @@ func sample_perf(sample_count := PERF_DEFAULT_SAMPLES) -> Dictionary:
 	return _summarize_perf(samples)
 
 
+func frame_ms_ring() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_perf_ring.size())
+	for i in _perf_ring.size():
+		out[i] = float(_perf_ring[i].get("frame_ms", 0.0))
+	return out
+
+
+func latest_draws() -> int:
+	if _perf_ring.is_empty():
+		return int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+	return int(roundf(float(_perf_ring[-1].get("draws", 0.0))))
+
+
 func _topic_data(topic: String, extra: Array[String] = []) -> Variant:
 	match topic:
 		"state":
@@ -864,7 +878,7 @@ func _cmd_inspect(args: Array[String]):
 		if not pmode in ["default", "full", "greybox"]:
 			return {"ok": false, "text": "!unknown prims mode '%s' (default|full|greybox)" % pmode, "data": null}
 	var data: Variant = snapshot("all") if topic == "all" else _topic_data(topic, extra)
-	return {"ok": true, "text": _summarize(topic, data), "data": data}
+	return {"ok": true, "text": summarize(topic, data), "data": data}
 
 
 func _cmd_events(args: Array[String]):
@@ -1092,7 +1106,7 @@ func _push_event(sig_name: String, raw_args: Array) -> void:
 		_events.pop_front()
 
 
-static func _summarize(topic: String, data: Variant) -> String:
+static func summarize(topic: String, data: Variant) -> String:
 	match topic:
 		"state":
 			if data is Dictionary:

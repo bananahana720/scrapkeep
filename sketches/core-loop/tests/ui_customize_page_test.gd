@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Customize := preload("res://src/ui/customize_page.gd")
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Achievements := preload("res://src/core/achievements.gd")
-const Push := preload("res://tests/workshop/push.gd")
+const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
 
 var _t := T.new("ui_customize_page_test")

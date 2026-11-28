@@ -80,7 +80,7 @@ func _run() -> void:
 # Rolls the ball at the face from `degrees` off its normal. The ball's centre meets the face
 # plane a radius out, at the face point. Scores the 0.15 s after the first contact.
 func _strike(face: Vector3, normal: Vector3, degrees: float) -> Dictionary:
-	var ball = game.player.active_body()
+	var ball = game.player.body()
 	var along := normal.cross(Vector3.UP)
 	var direction := (-normal * cos(deg_to_rad(degrees)) + along * sin(deg_to_rad(degrees))).normalized()
 	var velocity := direction * SPEED

@@ -2,6 +2,7 @@ extends "res://src/combat/ultimate.gd"
 
 const Sticky := preload("res://src/combat/sticky.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Devices := preload("res://src/core/devices.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
@@ -99,7 +100,7 @@ static func minis_per_throw(heft_class: int) -> int:
 func volley_targets() -> int:
 	if _ult_id() not in IDS:
 		return super.volley_targets()
-	return targets_for_class(_heft_index() + 1) + int(_knob("ult_volley", 0))
+	return targets_for_class(heft_index() + 1) + int(knob("ult_volley", 0))
 
 
 func homecoming(world: int) -> void:
@@ -121,7 +122,7 @@ func flush_discoveries() -> void:
 		if frame <= int(row["frame"]) or (row["framework"] != "" and not ctx.codex.known(row["framework"])):
 			continue
 		_cards_pending.erase(id)
-		combat._discover(id, row["at"])
+		combat.discover(id, row["at"])
 		break
 
 
@@ -225,7 +226,7 @@ func plan(ball: Vector3, aim: Dictionary, paths: Array = []) -> Dictionary:
 		var seconds := round_flight(ball.distance_to(p["to"]), _beat_now())
 		var count := _beats_in(seconds, _beat_now())
 		var each := seconds / count
-		count += int(_knob("ult_beats", 0))
+		count += int(knob("ult_beats", 0))
 		p["beats"] = count
 		p["flight"] = count * each
 		p["seconds"] = windup_seconds() + p["flight"]
@@ -296,7 +297,7 @@ func _fly(delta: float) -> void:
 	if _id == "minelayer":
 		while _half_clock >= _beat_len * 0.5:
 			_half_clock -= _beat_len * 0.5
-			_drop_mines(ball, HEFT_MULT[_heft_index()])
+			_drop_mines(ball, HEFT_MULT[heft_index()])
 	while _beat_clock >= _beat_len and _beat < _beats:
 		_beat_clock -= _beat_len
 		_beat += 1
@@ -328,7 +329,7 @@ func _land(at: Vector3) -> void:
 	_leg += 1
 	if bool(leg.get("strike", true)):
 		_strike(at)
-		if _leg == legs.size() and not _encored and bool(_knob("ult_encore", false)):
+		if _leg == legs.size() and not _encored and bool(knob("ult_encore", false)):
 			var next = _encore_target(at)
 			if next != null:
 				_encored = true
@@ -372,7 +373,7 @@ func tech(_beat_number: int, ball: Vector3, aim: Vector3, heft_mult: float) -> i
 	if _id == "air_raid":
 		var spot := _throw_point(ball)
 		var group: Array = []
-		var count := minis_per_throw(_heft_index() + 1) + int(_knob("ult_volley", 0))
+		var count := minis_per_throw(heft_index() + 1) + int(knob("ult_volley", 0))
 		for i in count:
 			var angle := TAU * i / count
 			group.append(_drop(spot + Vector3(cos(angle), 0.0, sin(angle)) * 3.0, 12.0 * heft_mult, 2.5))
@@ -381,7 +382,7 @@ func tech(_beat_number: int, ball: Vector3, aim: Vector3, heft_mult: float) -> i
 		return 0
 	var picks: Array = []
 	var b: Vector3 = _plan["to"]
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or enemy.is_dead() or enemy.global_position.distance_to(b) > HOVER_RADIUS:
 			continue
 		var to: Vector3 = enemy.global_position - ball
@@ -407,13 +408,13 @@ func _shell(ball: Vector3, at: Vector3, mult: float) -> void:
 
 
 func _throw_point(ball: Vector3) -> Vector3:
-	var track: Vector3 = combat._floor_at(ball)
-	var aim = _ground_hit(_live_aim(), ARC_REACH[_heft_index()])
+	var track: Vector3 = combat.floor_at(ball)
+	var aim = _ground_hit(_live_aim(), ARC_REACH[heft_index()])
 	if aim == null:
 		return track
 	var flat: Vector3 = aim - track
 	flat.y = 0.0
-	return combat._floor_at(track + flat.limit_length(12.0))
+	return combat.floor_at(track + flat.limit_length(12.0))
 
 
 func _tag(charge: Dictionary) -> void:
@@ -447,9 +448,9 @@ func _drop(at: Vector3, damage: float, radius: float) -> Dictionary:
 
 
 func _drop_mines(ball: Vector3, mult: float) -> void:
-	var count := 2 if int(_knob("ult_volley", 0)) > 0 else 1
+	var count := 2 if int(knob("ult_volley", 0)) > 0 else 1
 	for i in count:
-		var at: Vector3 = combat._floor_at(ball) + Vector3(1.5 * (i - 0.5) if count == 2 else 0.0, 0.0, 0.0)
+		var at: Vector3 = combat.floor_at(ball) + Vector3(1.5 * (i - 0.5) if count == 2 else 0.0, 0.0, 0.0)
 		_mines.append(_drop(at, 10.0 * mult, 2.5))
 		_bound_mines()
 	_sound("raid_kest_tick")
@@ -467,7 +468,7 @@ func peak(at: Vector3) -> void:
 	_hold_cloak()
 	combat.effects.ring(at, 3.0, ClassDef.KEST_COLOR)
 	if _id != "windhover":
-		_heavy = _drop(_throw_point(at) if _id == "air_raid" else combat._floor_at(at), 30.0 * HEFT_MULT[_heft_index()], 5.0)
+		_heavy = _drop(_throw_point(at) if _id == "air_raid" else combat.floor_at(at), 30.0 * HEFT_MULT[heft_index()], 5.0)
 		if _id == "minelayer":
 			_mines.append(_heavy)
 			_bound_mines()
@@ -481,7 +482,7 @@ func landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	_cast["landed"] = true
 	combat.effects.ring(at, radius, ClassDef.KEST_COLOR)
 	ctx.break_props(at, radius, "ultimate")
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or enemy.is_dead() or enemy.global_position.distance_to(at) > radius:
 			continue
 		_note_target(enemy, _cast)
@@ -596,7 +597,7 @@ func _step_payloads(delta: float) -> void:
 			audio.kest_roll(NOTES[posmod(roll_log.size() - 1, NOTES.size())])
 		_rolls.erase(roll)
 	if not payloads.is_idle():
-		for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group("enemy")):
+		for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group(Groups.ENEMY)):
 			combat.devices.remove(int(c.get("device_id", 0)))
 			_detonate_payload(c)
 	if _id == "windhover" and _cast.get("landed", false):
@@ -630,7 +631,7 @@ func kest_cage_state() -> Dictionary:
 	var glow := 1.0 if riding else (0.8 + 0.2 * sin(_clock * TAU) if ready else (1.0 if FlashGuard.blink(posmod(int(_clock * 4.0), 2) == 0) else 0.0) if loaded else 0.2)
 	if ctx.player.kit.cloaked and not riding:
 		glow = 0.0
-	return {"heft_class": _heft_index() + 1, "vent_angle": PI * 0.5 if gliding or riding else (PI / 6.0 if ready else 0.0),
+	return {"heft_class": heft_index() + 1, "vent_angle": PI * 0.5 if gliding or riding else (PI / 6.0 if ready else 0.0),
 		"fuse_glow": glow, "fuse_boost": ready or riding,
 		"fuse_blink": loaded, "smoke": ctx.player.kit.cloaked,
 		"mortar_pitch": PI / 4.0 if riding else (PI / 9.0 if ready else 0.0),

@@ -3,6 +3,7 @@ extends RefCounted
 const EventGround := preload("res://src/world/events/event_ground.gd")
 
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
 const Spillway := preload("res://src/world/map_spillway.gd")
 const Gorge := preload("res://src/world/map_gorge.gd")
@@ -97,7 +98,7 @@ static func _read_parks_together(table) -> Dictionary:
 			if FileAccess.file_exists(pattern % id):
 				paths[id] = pattern % id
 				break
-	ParkSchema._registry()
+	ParkSchema.warm_registry()
 	ParkRecipes.origin("")
 	if paths.size() < 2:
 		return {}
@@ -156,7 +157,7 @@ func build(parent: Node3D, threaded_first := false) -> void:
 			_render_owner.append(-1)
 	for i in maps.size():
 		if _worlds[i] == _worlds[0] and (not _is_park[i] or i == 0):
-			if _is_park[i] and threaded_first and _worker_builds():
+			if _is_park[i] and threaded_first and worker_builds():
 				_build_park_stage(i, true)
 			else:
 				_build_stage(i)
@@ -183,10 +184,10 @@ func prepare(index: int) -> void:
 	var i := _index(index)
 	if not _is_park[i] or _roots[i] != null or _parent == null:
 		return
-	_build_park_stage(i, _worker_builds())
+	_build_park_stage(i, worker_builds())
 
 
-static func _worker_builds() -> bool:
+static func worker_builds() -> bool:
 	return threaded_in_bot_runs or not SimClock.ticks
 
 
@@ -271,7 +272,7 @@ func _on_park_built(i: int) -> void:
 	maps[i].build_props(_roots[i], ground_callable(i + 1))
 	if maps[i] is ParkMap:
 		ParkRecipes.build_placed(_roots[i], maps[i].park, _park_floor_at.bind(_heights[i], _placement_holes[i], _under[i]), publish, _threaded[i], maps[i].line_within)
-	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), _worker_builds())
+	Scatter.build_chunked(_roots[i], maps[i], ground_callable(i + 1), worker_builds())
 	_perch_read_ahead(i)
 	stage_built.emit(i + 1)
 
@@ -338,7 +339,7 @@ func _free_stage(i: int) -> void:
 		_render_owner[slot] = -1
 	if _grounds[i] != null:
 		_grounds[i].set_process(false)
-	if _worker_builds():
+	if worker_builds():
 		Reaper.take(_roots[i])
 	else:
 		_roots[i].queue_free()
@@ -435,7 +436,7 @@ func heights(points: PackedVector2Array) -> PackedFloat64Array:
 	for id in overlays:
 		if m is EventGround.OverlayMap and m.profiles.has(id):
 			var site: Dictionary = m.profiles[id].site
-			var centre := ParkMap._v2(site.at)
+			var centre := ParkMap.v2(site.at)
 			var nearest := centre.clamp(bounds.position, bounds.end)
 			if centre.distance_to(nearest) > ParkMap.footprint_half_extents(site).length() + 0.01:
 				continue
@@ -452,6 +453,33 @@ func heights(points: PackedVector2Array) -> PackedFloat64Array:
 
 func floor_height(x: float, z: float) -> float:
 	return _floor(_ensure(stage), x, z)
+
+
+func bare_grid_height(x: float, z: float) -> float:
+	return grid_height(_heights[_ensure(stage)], x, z)
+
+
+func hole_floor(x: float, z: float) -> float:
+	var i := _ensure(stage)
+	return ParkTerrain.hole_floor(_holes[i], _under[i], x, z)
+
+
+func park_stage_grid(index: int) -> Dictionary:
+	if index < 1 or index > maps.size():
+		return {}
+	var i := index - 1
+	if not _is_park[i] or _heights[i].is_empty():
+		return {}
+	return {"heights": _heights[i], "holes": _holes[i], "under": _under[i]}
+
+
+func stage_root_key(index: int) -> int:
+	if index < 1 or index > maps.size():
+		return 0
+	var i := index - 1
+	if not _is_park[i] or _roots[i] == null or _heights[i].is_empty():
+		return 0
+	return _roots[i].get_instance_id()
 
 
 func drop_point(x: float, z: float, clearance := 1.8) -> Vector3:
@@ -508,7 +536,7 @@ func _surface_hit(space: PhysicsDirectSpaceState3D, x: float, z: float) -> Dicti
 	var ground := height(x, z)
 	if space != null:
 		var top := Vector3(x, ground + SURFACE_REACH_M, z)
-		var query := PhysicsRayQueryParameters3D.create(top, Vector3(x, ground - SURFACE_BELOW_M, z), 1)
+		var query := PhysicsRayQueryParameters3D.create(top, Vector3(x, ground - SURFACE_BELOW_M, z), PhysicsLayers.WORLD_MASK)
 		for i in SURFACE_SKIPS:
 			var hit := space.intersect_ray(query)
 			if hit.is_empty():
@@ -744,18 +772,22 @@ func cave_roof(id: String) -> Dictionary:
 	return _cave_roofs.get(stage - 1, {}).get(id, {})
 
 
+func cave_roofs(index: int) -> Dictionary:
+	return _cave_roofs.get(index - 1, {})
+
+
 func _floor(i: int, x: float, z: float) -> float:
 	var roof_y := -INF
 	for roof in _cave_roofs.get(i, {}).values():
 		roof_y = maxf(roof_y, roof.surface.height(Vector2(x, z)))
 	if roof_y > -INF:
-		return maxf(roof_y, _retained_park_height(_heights[i], _holes[i], x, z))
+		return maxf(roof_y, retained_park_height(_heights[i], _holes[i], x, z))
 	if _is_park[i]:
-		return _park_height(_heights[i], _holes[i], _under[i], x, z)
-	return _grid_height(_heights[i], x, z)
+		return park_height(_heights[i], _holes[i], _under[i], x, z)
+	return grid_height(_heights[i], x, z)
 
 
-static func _retained_park_height(heights: PackedFloat32Array, holes: PackedByteArray, x: float, z: float) -> float:
+static func retained_park_height(heights: PackedFloat32Array, holes: PackedByteArray, x: float, z: float) -> float:
 	var grid := Vector2((x + ParkTerrain.HALF) / ParkTerrain.STEP, (z + ParkTerrain.HALF) / ParkTerrain.STEP)
 	var cell := Vector2i(floori(grid.x), floori(grid.y))
 	var result := -INF
@@ -778,17 +810,17 @@ static func _retained_park_height(heights: PackedFloat32Array, holes: PackedByte
 	return result
 
 
-static func _park_height(heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, x: float, z: float) -> float:
+static func park_height(heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array, x: float, z: float) -> float:
 	var floor_y := ParkTerrain.hole_floor(holes, under, x, z)
-	return _grid_height(heights, x, z) if is_nan(floor_y) else floor_y
+	return grid_height(heights, x, z) if is_nan(floor_y) else floor_y
 
 
 static func _park_ground_at(x: float, z: float, clearance: float, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array) -> Vector3:
-	return Vector3(x, _park_height(heights, holes, under, x, z) + clearance, z)
+	return Vector3(x, park_height(heights, holes, under, x, z) + clearance, z)
 
 
 static func _park_floor_at(x: float, z: float, heights: PackedFloat32Array, holes: PackedByteArray, under: PackedFloat32Array) -> float:
-	return _park_height(heights, holes, under, x, z)
+	return park_height(heights, holes, under, x, z)
 
 
 func vault_point(index: int) -> Vector3:
@@ -822,7 +854,7 @@ func _range_error(index: int) -> void:
 		push_error(text)
 
 
-static func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
+static func grid_height(heights: PackedFloat32Array, x: float, z: float) -> float:
 	var half := HALF
 	var cells := CELLS
 	var side := SIDE
@@ -846,7 +878,7 @@ static func _grid_height(heights: PackedFloat32Array, x: float, z: float) -> flo
 
 
 static func _ground_at(x: float, z: float, clearance: float, heights: PackedFloat32Array) -> Vector3:
-	return Vector3(x, _grid_height(heights, x, z) + clearance, z)
+	return Vector3(x, grid_height(heights, x, z) + clearance, z)
 
 
 static func _build_scatter(holder: Node3D, m: RefCounted, heights: PackedFloat32Array) -> void:
@@ -861,7 +893,7 @@ static func _build_scatter(holder: Node3D, m: RefCounted, heights: PackedFloat32
 
 
 static func _relief_at(x: float, z: float, clearance: float, heights: PackedFloat32Array, noise: FastNoiseLite, amp: float) -> Vector3:
-	return Vector3(x, _grid_height(heights, x, z) + noise.get_noise_2d(x, z) * amp + clearance, z)
+	return Vector3(x, grid_height(heights, x, z) + noise.get_noise_2d(x, z) * amp + clearance, z)
 
 
 static func _relief_noise(row: Dictionary) -> FastNoiseLite:
@@ -973,7 +1005,7 @@ static func _relief_mesh(row: Dictionary, heights: PackedFloat32Array, coarse: P
 			var x := -HALF + i * step
 			var idx := j * side + i
 			var n := noise.get_noise_2d(x, z)
-			fine[idx] = _grid_height(heights, x, z) + n * amp
+			fine[idx] = grid_height(heights, x, z) + n * amp
 			verts[idx] = Vector3(x, fine[idx], z)
 			uvs[idx] = Vector2(x, z) * 0.1
 			var ci := mini(i / sub, CELLS - 1)

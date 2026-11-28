@@ -15,6 +15,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ParkRecipes := preload("res://src/world/park/park_recipes.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -99,7 +100,7 @@ func _run() -> void:
 	step.name = "PlantedStep"
 	step.collision_layer = 0
 	step.collision_mask = 0
-	step.set_collision_layer_value(ParkRecipes.WORLD_LAYER, true)
+	step.set_collision_layer_value(PhysicsLayers.WORLD_LAYER, true)
 	var shape := CollisionShape3D.new()
 	var bs := BoxShape3D.new()
 	bs.size = Vector3(CONTROL_LEN_M, box.size.y, CONTROL_LEN_M)

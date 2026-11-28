@@ -4,7 +4,7 @@ const Game := preload("res://src/game.gd")
 const Objectives := preload("res://src/core/objectives.gd")
 const Interactables := preload("res://src/world/interactables.gd")
 const RescueSites := preload("res://src/world/rescue_site.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 # The plate's detour row on the park dam (gameplay critique finding 8, W1-69): from the drop the

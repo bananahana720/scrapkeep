@@ -321,8 +321,8 @@ func _exec_step(step: String, scripted: bool, shots: Array) -> Dictionary:
 		"quit":
 			return {"cmd": step, "ok": true, "text": "quitting", "tone": "ok", "data": {"quitting": true}, "quit": true}
 	var out: Dictionary = console.commands.run_one_detailed(step)
-	if is_instance_valid(console) and console.has_method("_refresh_rows"):
-		console._refresh_rows()
+	if is_instance_valid(console) and console.has_method("refresh_rows"):
+		console.refresh_rows()
 	return out
 
 
@@ -418,7 +418,7 @@ func _exec_perf_sample(step: String, raw_n: String) -> Dictionary:
 		data = await insp.sample_perf(15)
 	else:
 		data = insp.snapshot("perf")
-	return {"cmd": step, "ok": true, "text": DevInspect._summarize("perf", data), "tone": "ok", "data": data}
+	return {"cmd": step, "ok": true, "text": DevInspect.summarize("perf", data), "tone": "ok", "data": data}
 
 
 func _exec_sheet(step: String, words: Array[String], scripted: bool, shots: Array) -> Dictionary:

@@ -2,6 +2,7 @@ extends RefCounted
 
 
 const Cosmetics := preload("res://src/core/cosmetics.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 const FIELDS := ["name", "text", "on", "where", "at_least", "sum", "count", "need", "min", "max", "hidden", "beat", "pilot", "reward"]
 const SUMMARY_KEYS := ["class", "stages", "scrap", "mass", "heft", "parts", "kills", "events_won", "time", "retries", "save_used"]
@@ -284,99 +285,8 @@ static func bus_signals() -> Dictionary:
 	return out
 
 
-static func _words(s: String) -> int:
-	return s.split(" ", false).size()
-
-
 static func validate(rows: Dictionary, signals: Dictionary, pilots: Array, cosmetics: Array) -> Array:
-	var problems: Array = []
-	var pilot_rewards := {}
-	if rows.size() < MIN_ROWS:
-		problems.append("table: needs at least %d rows, has %d" % [MIN_ROWS, rows.size()])
-	for id in rows:
-		var r: Dictionary = rows[id]
-		for key in r:
-			if not FIELDS.has(key):
-				problems.append("%s: unknown field %s" % [id, key])
-		var title: String = str(r.get("name", ""))
-		if title == "" or _words(title) > NAME_WORDS:
-			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
-		var text: String = str(r.get("text", ""))
-		if text == "" or _words(text) > TEXT_WORDS:
-			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
-		var beat: String = str(r.get("beat", ""))
-		if _words(beat) > BEAT_WORDS:
-			problems.append("%s: beat must be %d words or fewer" % [id, BEAT_WORDS])
-		if r.get("reward") is Dictionary and r["reward"].has("pilot") and beat == "":
-			problems.append("%s: a pilot reward row needs a beat line" % id)
-		var on: String = str(r.get("on", ""))
-		var args: Array = signals.get(on, [])
-		if not signals.has(on):
-			problems.append("%s: on %s is not a declared signal" % [id, on])
-		var where = r.get("where", {})
-		if not (where is Dictionary):
-			problems.append("%s: where must be a dictionary of argument to value" % id)
-		else:
-			for key in where:
-				if signals.has(on) and not args.has(key):
-					problems.append("%s: where key %s is not an argument of %s" % [id, key, on])
-			if where.has("synergy_id") and where.has("first_time"):
-				problems.append("%s: a grant on one named discovery cannot filter first_time" % id)
-		var at_least = r.get("at_least", {})
-		if not (at_least is Dictionary):
-			problems.append("%s: at_least must be a dictionary of argument to number" % id)
-		else:
-			for key in at_least:
-				if signals.has(on) and not args.has(key):
-					problems.append("%s: at_least key %s is not an argument of %s" % [id, key, on])
-				if not (at_least[key] is int or at_least[key] is float):
-					problems.append("%s: at_least %s must be a number" % [id, key])
-		if r.has("sum") and signals.has(on) and not args.has(r["sum"]):
-			problems.append("%s: sum %s is not an argument of %s" % [id, r["sum"], on])
-		if not (r.get("count", 0) is int) or int(r.get("count", 0)) < 1:
-			problems.append("%s: count must be an integer of at least 1" % id)
-		if int(r.get("count", 0)) > 10 and not id in GRANDFATHERED:
-			problems.append("%s: new grants must have count at most 10" % id)
-		if r.has("need") and not (SUMMARY_KEYS.has(r["need"]) or EVALUATOR_KEYS.has(r["need"])):
-			problems.append("%s: need %s is not a summary key, class, won or world" % [id, r.get("need")])
-		for bound in ["min", "max"]:
-			if r.has(bound):
-				if not (r[bound] is int or r[bound] is float):
-					problems.append("%s: %s must be a number" % [id, bound])
-				elif not r.has("need"):
-					problems.append("%s: %s needs a need key to compare" % [id, bound])
-		if r.has("pilot") and not pilots.has(str(r["pilot"])):
-			problems.append("%s: pilot %s is not a ClassDef id" % [id, r["pilot"]])
-		if r.has("hidden") and not (r["hidden"] is bool):
-			problems.append("%s: hidden must be a bool" % id)
-		var reward = r.get("reward")
-		if not (reward is Dictionary):
-			problems.append("%s: reward must be a dictionary" % id)
-			continue
-		if reward.size() > 1:
-			problems.append("%s: reward must carry at most one kind" % id)
-		for kind in reward:
-			var target := str(reward[kind])
-			if not REWARD_KINDS.has(kind):
-				problems.append("%s: reward kind %s is unknown" % [id, kind])
-			elif kind == "pilot":
-				if not pilots.has(target) and not PENDING_PILOTS.has(target):
-					problems.append("%s: reward pilot %s does not resolve" % [id, target])
-				elif pilots.has(target) and PENDING_PILOTS.has(target):
-					problems.append("%s: reward pilot %s has a ClassDef row; remove it from PENDING_PILOTS" % [id, target])
-				elif pilot_rewards.has(target):
-					problems.append("%s: reward pilot %s is already the reward of %s" % [id, target, pilot_rewards[target]])
-				else:
-					pilot_rewards[target] = id
-			elif kind == "cosmetic" and not cosmetics.has(target):
-				problems.append("%s: reward cosmetic %s does not resolve" % [id, target])
-			elif kind == "world" and target == "":
-				problems.append("%s: reward world must name a world" % id)
-			elif kind == "option" and target == "":
-				problems.append("%s: reward option must name a meta_options node" % id)
-			elif kind == "item" and target == "":
-				problems.append("%s: reward item must name an items.gd row (shift_board.gd validate checks it)" % id)
-	return problems
+	return _validate_rows(rows, signals, pilots, cosmetics, false)
 
 
 static func recorded_sources(id: String) -> Array:
@@ -398,11 +308,19 @@ static func recorded_sources(id: String) -> Array:
 
 
 static func validate_mastery(signals: Dictionary, pilots: Array, cosmetics: Array = [], rows_to_check: Dictionary = MASTERY_ROWS) -> Array:
+	return _validate_rows(rows_to_check, signals, pilots, cosmetics, true)
+
+
+static func _validate_rows(rows: Dictionary, signals: Dictionary, pilots: Array, cosmetics: Array, mastery: bool) -> Array:
 	var problems: Array = []
-	for id in rows_to_check:
-		if ROWS.has(id):
+	var pilot_rewards := {}
+	if not mastery and rows.size() < MIN_ROWS:
+		problems.append("table: needs at least %d rows, has %d" % [MIN_ROWS, rows.size()])
+	var eval_keys := MASTERY_EVALUATOR_KEYS if mastery else EVALUATOR_KEYS
+	for id in rows:
+		if mastery and ROWS.has(id):
 			problems.append("%s: collides with ROWS" % id)
-		var r = rows_to_check[id]
+		var r = rows[id]
 		if not (r is Dictionary):
 			problems.append("%s: row must be a dictionary" % id)
 			continue
@@ -410,35 +328,51 @@ static func validate_mastery(signals: Dictionary, pilots: Array, cosmetics: Arra
 			if not FIELDS.has(key):
 				problems.append("%s: unknown field %s" % [id, key])
 		var title := str(r.get("name", ""))
-		if title == "" or _words(title) > NAME_WORDS:
+		if title == "" or WordBudget.words_in(title) > NAME_WORDS:
 			problems.append("%s: name must be 1 to %d words" % [id, NAME_WORDS])
 		var text := str(r.get("text", ""))
-		if text == "" or _words(text) > TEXT_WORDS:
+		if text == "" or WordBudget.words_in(text) > TEXT_WORDS:
 			problems.append("%s: text must be 1 to %d words" % [id, TEXT_WORDS])
+		if not mastery:
+			var beat := str(r.get("beat", ""))
+			if WordBudget.words_in(beat) > BEAT_WORDS:
+				problems.append("%s: beat must be %d words or fewer" % [id, BEAT_WORDS])
+			if r.get("reward") is Dictionary and r["reward"].has("pilot") and beat == "":
+				problems.append("%s: a pilot reward row needs a beat line" % id)
 		var on := str(r.get("on", ""))
 		var args: Array = signals.get(on, [])
 		if not signals.has(on):
 			problems.append("%s: on %s is not a declared signal" % [id, on])
 		var where = r.get("where", {})
 		if not (where is Dictionary):
-			problems.append("%s: where must be a dictionary" % id)
+			problems.append("%s: where must be a dictionary" % id if mastery else "%s: where must be a dictionary of argument to value" % id)
 		else:
 			for key in where:
 				if signals.has(on) and not args.has(key):
 					problems.append("%s: where key %s is not an argument of %s" % [id, key, on])
+			if not mastery and where.has("synergy_id") and where.has("first_time"):
+				problems.append("%s: a grant on one named discovery cannot filter first_time" % id)
 		var at_least = r.get("at_least", {})
 		if not (at_least is Dictionary):
-			problems.append("%s: at_least must be a dictionary" % id)
+			problems.append("%s: at_least must be a dictionary" % id if mastery else "%s: at_least must be a dictionary of argument to number" % id)
 		else:
 			for key in at_least:
 				if signals.has(on) and not args.has(key):
 					problems.append("%s: at_least key %s is not an argument of %s" % [id, key, on])
 				if not (at_least[key] is int or at_least[key] is float):
 					problems.append("%s: at_least %s must be a number" % [id, key])
-		if not (r.get("count", 0) is int) or int(r.get("count", 0)) < 1 or int(r.get("count", 0)) > 10:
-			problems.append("%s: count must be an integer from 1 to 10" % id)
-		if r.has("need") and not (SUMMARY_KEYS.has(r["need"]) or MASTERY_EVALUATOR_KEYS.has(r["need"])):
-			problems.append("%s: need %s is not valid" % [id, r.get("need")])
+		if not mastery and r.has("sum") and signals.has(on) and not args.has(r["sum"]):
+			problems.append("%s: sum %s is not an argument of %s" % [id, r["sum"], on])
+		if mastery:
+			if not (r.get("count", 0) is int) or int(r.get("count", 0)) < 1 or int(r.get("count", 0)) > 10:
+				problems.append("%s: count must be an integer from 1 to 10" % id)
+		else:
+			if not (r.get("count", 0) is int) or int(r.get("count", 0)) < 1:
+				problems.append("%s: count must be an integer of at least 1" % id)
+			if int(r.get("count", 0)) > 10 and not id in GRANDFATHERED:
+				problems.append("%s: new grants must have count at most 10" % id)
+		if r.has("need") and not (SUMMARY_KEYS.has(r["need"]) or eval_keys.has(r["need"])):
+			problems.append("%s: need %s is not valid" % [id, r.get("need")] if mastery else "%s: need %s is not a summary key, class, won or world" % [id, r.get("need")])
 		for bound in ["min", "max"]:
 			if r.has(bound):
 				if not (r[bound] is int or r[bound] is float):
@@ -459,8 +393,26 @@ static func validate_mastery(signals: Dictionary, pilots: Array, cosmetics: Arra
 			var target := str(reward[kind])
 			if not REWARD_KINDS.has(kind):
 				problems.append("%s: reward kind %s is unknown" % [id, kind])
-			elif kind == "cosmetic" and not cosmetics.is_empty() and not cosmetics.has(target):
+			elif mastery:
+				if kind == "cosmetic" and not cosmetics.is_empty() and not cosmetics.has(target):
+					problems.append("%s: reward cosmetic %s does not resolve" % [id, target])
+				elif kind == "pilot" and not pilots.has(target):
+					problems.append("%s: reward pilot %s does not resolve" % [id, target])
+			elif kind == "pilot":
+				if not pilots.has(target) and not PENDING_PILOTS.has(target):
+					problems.append("%s: reward pilot %s does not resolve" % [id, target])
+				elif pilots.has(target) and PENDING_PILOTS.has(target):
+					problems.append("%s: reward pilot %s has a ClassDef row; remove it from PENDING_PILOTS" % [id, target])
+				elif pilot_rewards.has(target):
+					problems.append("%s: reward pilot %s is already the reward of %s" % [id, target, pilot_rewards[target]])
+				else:
+					pilot_rewards[target] = id
+			elif kind == "cosmetic" and not cosmetics.has(target):
 				problems.append("%s: reward cosmetic %s does not resolve" % [id, target])
-			elif kind == "pilot" and not pilots.has(target):
-				problems.append("%s: reward pilot %s does not resolve" % [id, target])
+			elif kind == "world" and target == "":
+				problems.append("%s: reward world must name a world" % id)
+			elif kind == "option" and target == "":
+				problems.append("%s: reward option must name a meta_options node" % id)
+			elif kind == "item" and target == "":
+				problems.append("%s: reward item must name an items.gd row (shift_board.gd validate checks it)" % id)
 	return problems

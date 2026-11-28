@@ -191,13 +191,13 @@ func _run() -> void:
 	_t.eq("and the dial names it", deck.reading()["line"], "New signal: Top Shelf")
 	audio.knows_tune("roam-1-1")
 	profile.hear_tune("roam-1-1")
-	deck._plan_now()
+	deck.plan_now()
 	_t.eq("a heard tune keeps the air until the moment moves on", audio.radio_hold, "")
 	_t.eq("and is no longer news on the dial", deck.reading()["line"], "Live: Top Shelf")
 	_press("cl_radio_skip")
 	_t.check("a key press lets the radio back on air", audio.radio_hold != "" and audio.radio_hold in RadioTakes.on_station(station), audio.radio_hold)
 	deck.radio.track = a
-	deck._plan_now()
+	deck.plan_now()
 	_t.eq("then the radio holds the take", audio.radio_hold, a)
 	# A packaged take plays its own pack; one with no manifest plays its parent record.
 	var played := a if MusicRows.take_manifest(a) != "" else RadioTakes.record_of(a)
@@ -225,7 +225,7 @@ func _run() -> void:
 	audio.engine.render(44100 * 2)
 	_t.eq("its own music plays", audio.engine.track, "warden")
 	audio.engine.force_track("level", 0)
-	deck._plan_now()
+	deck.plan_now()
 	deck.toggle_pin()
 	_t.check("a pinned track", audio.radio_hold == a and audio.radio_pinned)
 	audio._begin_boss("warden_engaged", "warden")
@@ -241,7 +241,7 @@ func _run() -> void:
 	audio._on_boss_defeated()
 	_t.eq("the pin plays again after the fight", [audio.radio_finale, deck.radio.decide(deck.context().merged({"boss": false}, true))["id"], deck.radio.pinned], [false, a, true])
 	audio.engine.force_track("level", 0)
-	deck._plan_now()
+	deck.plan_now()
 	deck.toggle_pin()
 
 	var c := ""
@@ -319,12 +319,12 @@ func _run() -> void:
 
 	deck.tune(station)
 	deck.radio.mixtapes[0]["ids"] = [a]
-	deck._save()
+	deck.save()
 	var reread := Profile.new(profile.path)
 	reread.load_profile()
 	_t.eq("the dial and mixtapes save", [reread.radio().get("station", ""), reread.radio().get("mixtapes", [{}])[0].get("ids", [])], [station, [a]])
 
-	deck._plan_now()
+	deck.plan_now()
 	_t.eq("the radio holds before a death", audio.radio_hold, a)
 	audio._flow_queue.append(["dead"])
 	audio._flush_flow()

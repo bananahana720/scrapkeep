@@ -5,7 +5,7 @@ const Intent := preload("res://src/movement/intent.gd")
 const Icons := preload("res://src/ui/icons.gd")
 const Palette := preload("res://src/core/palette.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 
 # The armour gauge reads as mass and the wallet chip as money: a different icon and a
 # different colour each, and the split adds no word to the HUD (playtest entry 7).

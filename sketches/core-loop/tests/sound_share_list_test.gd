@@ -6,7 +6,7 @@ const Rows := preload("res://src/presentation/rows.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
 const Palette := preload("res://src/core/palette.gd")
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 
 # W1-41: every heard sound that two or more player facts share is named here, with its reason, so
 # no new share slips in unnoticed. W1-42: the five fight facts that had no sound of their own now

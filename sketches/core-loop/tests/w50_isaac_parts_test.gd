@@ -23,7 +23,7 @@ const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const SliceDefs := preload("res://src/core/slice_defs.gd")
 const Palette := preload("res://src/core/palette.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const WordBudget := preload("res://src/ui/word_budget.gd")
+const WordBudget := preload("res://src/core/word_budget.gd")
 const T := preload("res://tests/support/t.gd")
 
 const BANNED := ["tockpile", " stock", "Stock ", "ebound", "grapple", "scrap mass", "Pure cost", " evolved:", "; ", ": ",

@@ -88,6 +88,7 @@ static func synth_cue(id: String, context: Dictionary = {}) -> Dictionary:
 	return row
 
 
+const ACE_ROOT := "res://assets/music_ace/"
 const THEME_COUNT := 3
 const ROWS := {
 	"default": {"synth_theme": 0, "ace_manifest": ""},
@@ -181,8 +182,12 @@ static func resolve(stage = "default", sidecar_dir := "", stages = StageDefs) ->
 		and str(override.get("ace", "")) == "")
 	if override.has("ace") and not inherited:
 		var ace := str(override["ace"])
-		pack["ace_manifest"] = "" if ace == "" else "res://assets/music_ace/%s/manifest.json" % ace
+		pack["ace_manifest"] = "" if ace == "" else manifest_path(ace)
 	return resolve_pack(pack, sidecar_dir)
+
+
+static func manifest_path(dir: String) -> String:
+	return "%s%s/manifest.json" % [ACE_ROOT, dir]
 
 
 static func zone_id(stage: int, stages = StageDefs) -> String:
@@ -207,22 +212,21 @@ static func take_manifest(id: String) -> String:
 	if not id.begins_with("take-"):
 		return ""
 	for dir in [id.replace("-", "_"), id]:
-		var path := "res://assets/music_ace/%s/manifest.json" % dir
+		var path := manifest_path(dir)
 		if resolve_manifest(path) != "":
 			return path
 	return ""
 
 
-static func resolve_manifest(manifest_path: String, sidecar_dir := "") -> String:
-	if manifest_path == "":
+static func resolve_manifest(manifest: String, sidecar_dir := "") -> String:
+	if manifest == "":
 		return ""
-	var source := ProjectSettings.globalize_path(manifest_path)
+	var source := ProjectSettings.globalize_path(manifest)
 	if FileAccess.file_exists(source):
 		return source
-	var prefix := "res://assets/music_ace/"
-	if manifest_path.begins_with(prefix):
+	if manifest.begins_with(ACE_ROOT):
 		var base := sidecar_dir if sidecar_dir != "" else OS.get_executable_path().get_base_dir()
-		var sidecar := base.path_join("music_ace").path_join(manifest_path.trim_prefix(prefix))
+		var sidecar := base.path_join("music_ace").path_join(manifest.trim_prefix(ACE_ROOT))
 		if FileAccess.file_exists(sidecar):
 			return sidecar
 	return ""
@@ -237,8 +241,8 @@ static func stem_file(manifest_file: String, file: String) -> String:
 	return manifest_file.get_base_dir().path_join(file)
 
 
-static func pack_on_disk(manifest_path: String, sidecar_dir := "") -> bool:
-	var path := resolve_manifest(manifest_path, sidecar_dir)
+static func pack_on_disk(manifest: String, sidecar_dir := "") -> bool:
+	var path := resolve_manifest(manifest, sidecar_dir)
 	if path == "":
 		return false
 	var m = JSON.parse_string(FileAccess.get_file_as_string(path))

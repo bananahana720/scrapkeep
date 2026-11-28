@@ -10,7 +10,7 @@ const BossCodex := preload("res://src/boss/codex_entries.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
-const Registry := preload("res://src/core/content_registry.gd")
+const Registry := preload("res://tests/support/content_registry.gd")
 
 const WARNINGS := {
 	"burrower": "warn_burrow", "drill_crew": "warn_bore", "lamp_swarm": "warn_lure",

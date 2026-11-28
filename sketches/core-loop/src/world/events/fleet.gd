@@ -3,6 +3,7 @@ extends Node3D
 
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const EventGround := preload("res://src/world/events/event_ground.gd")
 const CaveIns := preload("res://src/world/events/cave_ins.gd")
 const HULL_HEIGHT_M := 2.0
@@ -338,7 +339,7 @@ func _impact(row: Dictionary, at: Vector3) -> int:
 	var footprint: Array = row.effect.footprint_m
 	var reach := maxf(float(footprint[0]), float(footprint[1])) * 0.5 + ZIP_IMPACT_EXTRA_M
 	var knocked := 0
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or not enemy.has_method("knock"):
 			continue
 		if enemy.has_method("is_dead") and enemy.is_dead():

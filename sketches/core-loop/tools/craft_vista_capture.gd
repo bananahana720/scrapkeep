@@ -3,6 +3,7 @@ extends SceneTree
 
 const SCENE_PATH := "res://src/presentation/craft/craft_showcase_arena.tscn"
 const Palette := preload("res://src/core/palette.gd")
+const AppShell := preload("res://src/core/app_shell.gd")
 
 const SIZE := Vector2i(1600, 900)
 
@@ -16,7 +17,7 @@ func _initialize() -> void:
 			_out = arg.trim_prefix("--out=")
 		elif arg.begins_with("--preset="):
 			_preset = arg.trim_prefix("--preset=")
-	if _out.is_empty() or DisplayServer.get_name() == "headless":
+	if _out.is_empty() or AppShell.headless():
 		printerr("craft_vista_capture: requires Metal/rendered display and -- --out=<abs_dir>")
 		quit(2)
 		return
