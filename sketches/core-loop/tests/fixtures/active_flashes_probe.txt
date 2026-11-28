@@ -4,6 +4,6 @@ func bad() -> void:
 	combat.effects.ring(at,
 		radius, COLOR)
 	var fx = combat.effects
-	combat._chain(enemy, at, {"damage": 1.0, "color": COLOR})
+	combat.chain_hit(enemy, at, {"damage": 1.0, "color": COLOR})
 	combat.effects.arc(a + Vector3(cos(t), 0.0, sin(t)),
 		b, ActiveFx.peak(COLOR))
