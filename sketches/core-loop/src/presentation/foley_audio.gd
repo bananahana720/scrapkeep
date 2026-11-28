@@ -1,6 +1,7 @@
 extends RefCounted
 
 const WavIo := preload("res://src/presentation/wav_io.gd")
+const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 const DIR := "res://assets/audio/foley/"
 const WHINE_LEAD := 2.0
@@ -42,7 +43,7 @@ static func player(id: String, host: Node3D) -> AudioStreamPlayer3D:
 	var p := AudioStreamPlayer3D.new()
 	p.name = "Foley_" + id
 	p.stream = s
-	p.bus = "SFX" if AudioServer.get_bus_index("SFX") >= 0 else "Master"
+	p.bus = MixRows.resolve_bus(MixRows.BUS_SFX)
 	p.volume_db = float(TRIM_DB.get(id, 0.0))
 	p.unit_size = UNIT_SIZE
 	p.max_distance = MAX_DISTANCE

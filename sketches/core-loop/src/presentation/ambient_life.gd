@@ -4,6 +4,7 @@ const AmbientKinds := preload("res://src/core/ambient_kinds.gd")
 const AmbientHomes := preload("res://src/presentation/ambient_homes.gd")
 const AmbientPool := preload("res://src/presentation/ambient_pool.gd")
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 const TICK_S := 0.1
 const VIEW_END_M := 140.0
@@ -51,7 +52,7 @@ func setup(context) -> void:
 	for i in AmbientKinds.MAX_VOICES:
 		var voice := AudioStreamPlayer3D.new()
 		voice.name = "Voice%d" % i
-		voice.bus = "Ambient" if AudioServer.get_bus_index("Ambient") != -1 else ("SFX" if AudioServer.get_bus_index("SFX") != -1 else "Master")
+		voice.bus = MixRows.resolve_bus(MixRows.BUS_AMBIENT, MixRows.resolve_bus(MixRows.BUS_SFX))
 		voice.attenuation_model = AudioStreamPlayer3D.ATTENUATION_INVERSE_DISTANCE
 		voice.unit_size = 2.0
 		voice.max_distance = AmbientKinds.FALLOFF_M

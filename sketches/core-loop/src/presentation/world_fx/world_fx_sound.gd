@@ -2,9 +2,9 @@ extends RefCounted
 
 const Specs := preload("res://src/presentation/world_fx/world_fx_specs.gd")
 const FoleyAudio := preload("res://src/presentation/foley_audio.gd")
+const MixRows := preload("res://src/presentation/mix_rows.gd")
 
 const DIR := "res://assets/audio/world/"
-const BUS := "Ambient"
 const SILENT_DB := -60.0
 
 static var audio = null
@@ -50,7 +50,7 @@ static func voice(key: String, host: Node3D) -> AudioStreamPlayer3D:
 	var p := AudioStreamPlayer3D.new()
 	p.name = "Sound_" + key
 	p.stream = s
-	p.bus = BUS
+	p.bus = MixRows.BUS_AMBIENT
 	p.attenuation_model = AudioStreamPlayer3D.ATTENUATION_DISABLED
 	p.max_distance = 0.0
 	p.unit_size = float(r["unit_m"])

@@ -82,3 +82,37 @@ func run(t) -> void:
 		"SfxBank promotes parse_said and motif_score without forwarding copies",
 		method_names.has("parse_said") and method_names.has("motif_score") and not method_names.has("_said") and not method_names.has("_motif_score"),
 	)
+
+	var bus_index_allowed := [
+		"res://src/presentation/mix_rows.gd",
+		"res://src/presentation/audio.gd",
+		"res://src/presentation/music_dsp.gd",
+		"res://src/presentation/craft/craft_audio_cues.gd",
+	]
+	var bus_const_allowed := ["res://src/presentation/mix_rows.gd"]
+	var ace_root_allowed := ["res://src/presentation/music_rows.gd"]
+	var bus_const_re := RegEx.new()
+	bus_const_re.compile("(?m)^[ \\t]*const\\s+[A-Za-z0-9_]+\\s*(?::\\s*(?:String|StringName)\\s*)?:?=\\s*&?\"(?:Master|Music|SFX|UI|Ambient|StingerMusic)\"")
+
+	var src_files: Array[String] = []
+	_gd_files("res://src", src_files)
+	src_files.sort()
+
+	var bus_index_hits: Array[String] = []
+	var bus_const_hits: Array[String] = []
+	var ace_root_hits: Array[String] = []
+	for path in src_files:
+		var text := FileAccess.get_file_as_string(path)
+		if text.contains("AudioServer.get_bus_index(") and not bus_index_allowed.has(path):
+			bus_index_hits.append(path)
+		if bus_const_re.search(text) != null and not bus_const_allowed.has(path):
+			bus_const_hits.append(path)
+		if text.contains("res://assets/music_ace/") and not ace_root_allowed.has(path):
+			ace_root_hits.append(path)
+
+	t.eq("src has no unapproved AudioServer.get_bus_index calls", bus_index_hits, [])
+	t.eq("src declares bus name constants only in mix_rows.gd", bus_const_hits, [])
+	t.eq("src writes res://assets/music_ace/ only in music_rows.gd", ace_root_hits, [])
+
+	var audio_src := FileAccess.get_file_as_string("res://src/presentation/audio.gd")
+	t.check("audio.gd does not preload unused park_graph.gd", not audio_src.contains("res://src/world/park/park_graph.gd"))

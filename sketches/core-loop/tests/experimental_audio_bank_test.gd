@@ -83,9 +83,9 @@ func _verify_player_configuration_and_cooldown() -> void:
 
 func _verify_pbr_masks() -> void:
 	var getters := {
-		"pitted_iron": Bank.pitted_iron_mask(),
-		"slag_crust": Bank.slag_crust_mask(),
-		"corrosive_brine": Bank.corrosive_brine_mask(),
+		"pitted_iron": Bank.load_pbr_mask("pitted_iron"),
+		"slag_crust": Bank.load_pbr_mask("slag_crust"),
+		"corrosive_brine": Bank.load_pbr_mask("corrosive_brine"),
 	}
 	_t.eq("mask id count", Bank.pbr_mask_ids().size(), EXPECTED_MASKS.size())
 	for mask_id in EXPECTED_MASKS:
