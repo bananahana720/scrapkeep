@@ -14,7 +14,7 @@ const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
-const PilotStory := preload("res://src/core/pilot_story.gd")
+const CampRecords := preload("res://src/core/camp_records.gd")
 const ScrapbookStore := preload("res://src/core/scrapbook_store.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
@@ -97,7 +97,7 @@ signal pilot_quipped(speaker: String, row_id: String, words: String)
 
 var game
 var ball
-var camp_store
+var camp_records := CampRecords.new()
 var root: Node3D
 var built := false
 var walking := false
@@ -933,7 +933,7 @@ func _quip_from(class_id: String) -> void:
 	var codex = game.get("codex") if game != null else null
 	var pair_blocked: bool = _pair_played_this_walk or (game != null and game.get("bot_driven") == true)
 	var pages := _journal_pages()
-	var beat := PilotStory.pick_camp_beat(flying_id, class_id, crew_standing(), camp_store, codex, pages, walks, pair_blocked)
+	var beat := camp_records.camp_beat(flying_id, class_id, crew_standing(), codex, pages, walks, pair_blocked)
 	if beat.is_empty():
 		return
 	_quipped[class_id] = true
@@ -943,8 +943,8 @@ func _quip_from(class_id: String) -> void:
 		if cid != "" and codex != null and codex.has_method("mark_known"):
 			codex.mark_known(cid)
 		var skey := String(beat.get("settle_key", ""))
-		if skey != "" and camp_store != null and camp_store.has_method("settle"):
-			camp_store.settle(skey)
+		if skey != "":
+			camp_records.settle(skey)
 	var lines: Array = beat.get("lines", [])
 	var speaker := String(beat.get("speaker", lines[0]["speaker"] if not lines.is_empty() else ""))
 	var words := String(beat.get("text", lines[0]["text"] if not lines.is_empty() else ""))
@@ -1096,7 +1096,7 @@ func _multi(node_name: String, mesh: Mesh, material: Material, parent: Node3D) -
 
 
 func found_b_sides() -> Array:
-	var ids: Array = camp_store.tune_ids() if camp_store != null and camp_store.has_method("tune_ids") else []
+	var ids: Array = camp_records.tune_ids()
 	return ids.filter(func(id): return String(RadioTakes.track(String(id)).get("tier", "")) == "b-side")
 
 

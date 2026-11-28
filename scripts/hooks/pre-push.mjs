@@ -1,7 +1,16 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {
@@ -15,7 +24,8 @@ import {
 import { filterFormatTargets } from "../ci/format-changed.mjs";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
-import { REPO_ROOT, cwdDecidesRepository, git } from "../lib/git.mjs";
+import { REPO_ROOT, cwdDecidesRepository, git, nulSeparated } from "../lib/git.mjs";
+import { processLive } from "../lib/proc.mjs";
 import { BASELINE_PATH, baselineGrowth, formatFinding, readBaselineAt } from "../sketch-lint.mjs";
 
 const root = REPO_ROOT;
@@ -57,11 +67,12 @@ export function changedFilesForRange(
   { cwd = root, spawn = spawnSync } = {},
 ) {
   const args = remoteSha
-    ? ["diff", "--no-renames", "--name-only", `${remoteSha}..${localSha}`]
+    ? ["diff", "--no-renames", "--name-only", "-z", `${remoteSha}..${localSha}`]
     : [
         "log",
         "--no-renames",
         "--name-only",
+        "-z",
         "--pretty=format:",
         "-m",
         "--first-parent",
@@ -69,14 +80,7 @@ export function changedFilesForRange(
         "--not",
         "--remotes",
       ];
-  return [
-    ...new Set(
-      git(args, { cwd, spawn })
-        .split("\n")
-        .map((line) => line.trim())
-        .filter(Boolean),
-    ),
-  ];
+  return [...new Set(nulSeparated(git(args, { cwd, spawn, trim: false })))];
 }
 
 export function rangeBase({ localSha, remoteSha }, { cwd = root, spawn = spawnSync } = {}) {
@@ -110,9 +114,11 @@ export function pushedChanges(ranges, { cwd = root, spawn = spawnSync } = {}) {
 export function workingTreeDrift(pushed, { cwd = root, spawn = spawnSync } = {}) {
   const differs = new Set();
   for (const { head, files, exists } of pushed) {
-    const tracked = git(["diff", "--no-renames", "--name-only", head], { cwd, spawn }).split("\n");
+    const tracked = nulSeparated(
+      git(["diff", "--no-renames", "--name-only", "-z", head], { cwd, spawn, trim: false }),
+    );
     const restored = files.filter((file) => !exists(file) && existsSync(path.join(cwd, file)));
-    for (const file of [...tracked, ...restored]) if (file) differs.add(file);
+    for (const file of [...tracked, ...restored]) differs.add(file);
   }
   return [...differs].sort();
 }
@@ -173,6 +179,51 @@ export function planHookChecks(changedFiles, exists) {
   return { jsFiles, hasSketch, hasDocsOrPkg, hasSkills, hasBriefs, hasKnownFailing, hasBaseline };
 }
 
+const COPY_NAME = /^copy-([1-9]\d*)-[A-Za-z0-9]{6}$/;
+export const STALE_COPY_MS = 60_000;
+
+export function copyFolder({ tmp = os.tmpdir(), uid = process.getuid?.() } = {}) {
+  const folder = path.join(
+    tmp,
+    uid === undefined ? "scrapkeep-pre-push" : `scrapkeep-pre-push-${uid}`,
+  );
+  try {
+    mkdirSync(folder, { mode: 0o700 });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  const stat = lstatSync(folder);
+  const wrong = !stat.isDirectory()
+    ? "is not a folder"
+    : uid !== undefined && stat.uid !== uid
+      ? `belongs to user ${stat.uid}, not to this user (${uid})`
+      : uid !== undefined && (stat.mode & 0o022) !== 0
+        ? `can be written by other users (mode ${(stat.mode & 0o777).toString(8)})`
+        : null;
+  if (wrong) {
+    throw new Error(
+      `${folder} ${wrong}; the hook keeps its copies of pushed files there. Remove it, or set TMPDIR to a folder only you can write`,
+    );
+  }
+  return folder;
+}
+
+export function removeStaleCopies({ errLog = console.error, ...where } = {}) {
+  const folder = copyFolder(where);
+  for (const name of readdirSync(folder)) {
+    const pid = COPY_NAME.exec(name)?.[1];
+    if (pid === undefined || processLive(pid) !== false) continue;
+    const dir = path.join(folder, name);
+    const stat = lstatSync(dir, { throwIfNoEntry: false });
+    if (!stat?.isDirectory() || Date.now() - stat.mtimeMs < STALE_COPY_MS) continue;
+    try {
+      rmSync(dir, { recursive: true, force: true });
+    } catch (error) {
+      errLog(`pre-push: left the stale copy ${dir}: ${error.message}`);
+    }
+  }
+}
+
 function runStep(label, cmd, args, { cwd = root, spawn = spawnSync } = {}) {
   const t0 = performance.now();
   const ran = spawn(cmd, args, { cwd, stdio: "inherit" });
@@ -223,7 +274,7 @@ export function executeHookPlan(
     } else {
       ranLabels.push(`oxfmt(${count})`, `oxlint(${count})`);
       for (const plan of scripted) {
-        const copy = mkdtempSync(path.join(os.tmpdir(), "pre-push-"));
+        const copy = mkdtempSync(path.join(copyFolder(), `copy-${process.pid}-`));
         try {
           const contents = readPushed(plan.head, plan.jsFiles, plan.modes);
           plan.jsFiles.forEach((file, i) => {
@@ -344,6 +395,7 @@ if (isMain(import.meta.url)) {
   const cpus = os.cpus().length;
   try {
     const opts = parseHookArgs(process.argv.slice(2));
+    removeStaleCopies();
     const ranges = opts.base
       ? [
           {

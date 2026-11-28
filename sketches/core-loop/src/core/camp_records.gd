@@ -1,5 +1,6 @@
 extends RefCounted
 
+const PilotStory := preload("res://src/core/pilot_story.gd")
 
 const SKEE_STAT := "camp_skee_best"
 const GHOST_HZ := 10
@@ -87,6 +88,19 @@ func submit_trial(ms: int, points: PackedVector3Array) -> bool:
 
 func ghost() -> PackedVector3Array:
 	return decode_ghost(_doc().get("trial", {}).get("ghost", {}))
+
+
+func camp_beat(flying_id: String, class_id: String, standing: Array, codex, pages: Array, walks: int, pair_blocked: bool) -> Dictionary:
+	return PilotStory.pick_camp_beat(flying_id, class_id, standing, profile, codex, pages, walks, pair_blocked)
+
+
+func settle(key: String) -> void:
+	if profile != null and profile.has_method("settle"):
+		profile.settle(key)
+
+
+func tune_ids() -> Array:
+	return profile.tune_ids() if profile != null and profile.has_method("tune_ids") else []
 
 
 static func encode_ghost(points: PackedVector3Array) -> Dictionary:

@@ -171,6 +171,13 @@ func _run() -> void:
 		var top: float = _hub.plaza_top(Vector2(holder.position.x, holder.position.z))
 		_t.near("%s stands on the plaza's top" % toy, foot, top, 0.01)
 	_t.check("the settings console has a socket", _hub.has_socket("camp_settings_console", "interact"), "")
+	for feature_name in ["CampSkee", "CampTrial", "CampRing"]:
+		var feature: Node = _hub.root.get_node_or_null(feature_name)
+		_t.check("%s keeps its bests in the game's profile" % feature_name, feature != null and feature.records.profile == _game.ctx.profile, "")
+	_t.check("the hub reads the game's profile through its camp records", _hub.camp_records.profile == _game.ctx.profile
+		and _hub.camp_records.tune_ids() == _game.ctx.profile.tune_ids(), "")
+	_hub.camp_records.settle("camp_hub_test.settled")
+	_t.check("a camp settle marks the game's profile", _game.ctx.profile.is_settled("camp_hub_test.settled"), "")
 	# Every socket a camp feature reads: socket() answers IDENTITY for a missing one, which puts the
 	# station or sensor at the world origin, about 4 km from the camp, without an error.
 	var wanted := {"camp_skee_lane": ["interact", "score", "start", "return_exit"],

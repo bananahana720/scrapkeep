@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
+import { processLive } from "./lib/proc.mjs";
 import { createHash } from "node:crypto";
 import {
   closeSync,
@@ -40,16 +41,6 @@ export const IMPORT_STAMP_FILENAME = "scrapkeep-sandbox-import.json";
 export const IMPORTED_ASSET = /\.(?:glb|gltf|png|jpe?g|webp|svg|hdr|exr|wav|ogg|mp3|ttf|otf)$/i;
 const SEAM_VERSION = "2";
 const MAX_AUTO_SLOTS = 32;
-
-export function isPidAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    return error?.code === "EPERM";
-  }
-}
 
 function safeRealpath(targetPath) {
   try {
@@ -163,7 +154,7 @@ export function slotLockPath(slotDir) {
 export function acquireSlotLock(
   slotDir,
   metadata = {},
-  { isAlive = isPidAlive, pid = process.pid } = {},
+  { isAlive = processLive, pid = process.pid } = {},
 ) {
   const lockPath = slotLockPath(slotDir);
   mkdirSync(path.dirname(lockPath), { recursive: true });
@@ -237,7 +228,7 @@ export function releaseSlotLock(slotDir, { expectedPid = null } = {}) {
     if (
       existing &&
       Number(existing.pid) !== Number(expectedPid) &&
-      isPidAlive(Number(existing.pid))
+      processLive(Number(existing.pid))
     ) {
       return false;
     }
@@ -732,7 +723,7 @@ export function materializeSandbox({
   skipImport = false,
   overlayMode = "auto",
   importHomeDir = null,
-  isAlive = isPidAlive,
+  isAlive = processLive,
 } = {}) {
   const resolved = resolveGitRef(ref, repoRoot);
   const baseDir = sandboxBaseDir(repoRoot);
@@ -849,7 +840,7 @@ export function materializeSandbox({
   }
 }
 
-export function listSandboxes(repoRoot = REPO_ROOT, { isAlive = isPidAlive } = {}) {
+export function listSandboxes(repoRoot = REPO_ROOT, { isAlive = processLive } = {}) {
   const baseDir = sandboxBaseDir(repoRoot);
   if (!existsSync(baseDir)) return [];
   const rows = [];

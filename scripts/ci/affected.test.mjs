@@ -7,7 +7,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { planHookChecks } from "../hooks/pre-push.mjs";
 import { cwdDecidesRepository, git } from "../lib/git.mjs";
-import { classifyAffected, treeFiles } from "./affected.mjs";
+import { classifyAffected, diffFiles, treeFiles } from "./affected.mjs";
 
 const affectedScript = path.join(path.dirname(fileURLToPath(import.meta.url)), "affected.mjs");
 
@@ -168,6 +168,87 @@ test("CLI --stdin selects the docs check when a change deletes a script a page l
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }
+});
+
+test("diffFiles reads a changed path git would quote as the path itself, and fails when git does", () => {
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "affected-quoted-"));
+  try {
+    const names = ['scripts/a b".mjs', "scripts/café.mjs"];
+    const commit = ["-c", "user.name=t", "-c", "user.email=t@example.invalid", "commit", "-qm"];
+    git(["init", "-q"], { cwd: tmp });
+    git([...commit, "base", "--allow-empty"], { cwd: tmp });
+    git(["branch", "base"], { cwd: tmp });
+    mkdirSync(path.join(tmp, "scripts"));
+    for (const name of names) writeFileSync(path.join(tmp, name), "\n");
+    git(["add", "."], { cwd: tmp });
+    git([...commit, "names git quotes"], { cwd: tmp });
+    assert.deepEqual(diffFiles("base", { cwd: tmp }), names);
+    assert.throws(() => diffFiles("no-such-ref", { cwd: tmp }), /git diff .* failed/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+function sparseListOfJob(workflow, job) {
+  const body = workflow.match(new RegExp(`\\n  ${job}:\\n((?:(?: {4}.*)?\\n)+?)(?=  \\S|$)`))?.[1];
+  if (body === undefined) throw new Error(`ci.yml has no job named ${job}`);
+  const block = body.match(/\n( +)sparse-checkout: \|\n((?:\1 {2}\S.*\n)+)/)?.[2];
+  if (block === undefined) throw new Error(`the ${job} job in ci.yml has no sparse-checkout list`);
+  return block
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+const RELATIVE_IMPORT =
+  /(?:^|[\s;(])(?:(?:import|export)\s[^;]*?\sfrom\s*|import\s*\(\s*|import\s+)(["'])(\.{1,2}\/[^"']+)\1/gm;
+
+const relativeImports = (text) => [...text.matchAll(RELATIVE_IMPORT)].map((match) => match[2]);
+
+test("the selector job's sparse checkout holds every module the selector imports", () => {
+  assert.deepEqual(
+    relativeImports(
+      [
+        'import { a } from "./a.mjs";',
+        "import {\n  b,\n  c,\n} from '../b.mjs';",
+        'export { d } from "./d.mjs";',
+        'export * from "./e.mjs";',
+        'import "./f.mjs";',
+        'const g = await import("./g.mjs");',
+        'import fs from "node:fs";',
+      ].join("\n"),
+    ),
+    ["./a.mjs", "../b.mjs", "./d.mjs", "./e.mjs", "./f.mjs", "./g.mjs"],
+  );
+  const shape =
+    "jobs:\n  other:\n    steps:\n      - uses: x\n        with:\n          sparse-checkout: |\n            scripts/x\n  changes:\n    runs-on: y\n";
+  assert.throws(
+    () => sparseListOfJob(shape, "changes"),
+    /changes job in ci.yml has no sparse-checkout list/,
+  );
+  assert.throws(() => sparseListOfJob(shape, "absent"), /no job named absent/);
+  assert.deepEqual(sparseListOfJob(shape, "other"), ["scripts/x"]);
+
+  const root = path.resolve(path.dirname(affectedScript), "..", "..");
+  const listed = sparseListOfJob(
+    readFileSync(path.join(root, ".github/workflows/ci.yml"), "utf8"),
+    "changes",
+  );
+  assert.ok(listed.includes("scripts/ci"), listed.join(", "));
+  const reached = new Set();
+  const visit = (file) => {
+    if (reached.has(file)) return;
+    reached.add(file);
+    const text = readFileSync(path.join(root, file), "utf8");
+    for (const spec of relativeImports(text))
+      visit(path.posix.normalize(path.posix.join(path.posix.dirname(file), spec)));
+  };
+  visit("scripts/ci/affected.mjs");
+  assert.ok(reached.has("scripts/lib/git.mjs"), [...reached].join(", "));
+  const missing = [...reached].filter(
+    (file) => !listed.some((entry) => file === entry || file.startsWith(`${entry}/`)),
+  );
+  assert.deepEqual(missing, []);
 });
 
 test("CLI --stdin fails when git cannot list the head tree or it lists nothing", () => {

@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { FACTS_HEADING, parseWaveFacts } from "./wave-state.mjs";
 import { isMain } from "./lib/cli.mjs";
-import { git, gitOptional } from "./lib/git.mjs";
+import { git, gitAsync, gitOptional } from "./lib/git.mjs";
 
 export const BACKLOG_FILE = "BACKLOG.md";
 export const STATE_FILE = "project-guide/handoff/STATE.md";
@@ -248,13 +248,18 @@ function sh(command, args, { cwd, timeoutMinutes, input } = {}) {
   return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
-function gitStep(args, { timeoutMinutes, ...options } = {}) {
+function gitStep(args) {
   try {
-    git(args, {
-      cwd: process.cwd(),
-      ...options,
-      timeout: timeoutMinutes && timeoutMinutes * 60_000,
-    });
+    git(args, { cwd: process.cwd() });
+    return { ok: true, stderr: "" };
+  } catch (error) {
+    return { ok: false, stderr: error.stderr || error.message };
+  }
+}
+
+async function remoteStep(args, { cwd = process.cwd() } = {}) {
+  try {
+    await gitAsync(args, { cwd, timeout: 5 * 60_000 });
     return { ok: true, stderr: "" };
   } catch (error) {
     return { ok: false, stderr: error.stderr || error.message };
@@ -291,7 +296,7 @@ export function reviewPrompt(card, diff) {
   ].join("\n");
 }
 
-function runCard(card, planned, { stage, cardsRoot, receipts }) {
+async function runCard(card, planned, { stage, cardsRoot, receipts }) {
   const worktree = path.resolve(cardsRoot, card.id.toLowerCase());
   const receipt = {
     id: card.id,
@@ -319,7 +324,7 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
     return receipt;
   };
 
-  const fetched = gitStep(["fetch", "-q", "origin", stage], { timeoutMinutes: 5 });
+  const fetched = await remoteStep(["fetch", "-q", "origin", stage]);
   if (!fetched.ok) {
     note("base", false, `fetch failed: ${fetched.stderr}`);
     return finish("stopped: could not fetch the stage");
@@ -416,15 +421,15 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
   note("review", verdict === "PASS", `${verdict}, $${reviewer.cost.toFixed(2)}`);
   if (verdict !== "PASS") return finish("review did not pass; branch kept local");
 
-  const push = gitStep(["push", "-q", "-u", "origin", `HEAD:refs/heads/${planned.branch}`], {
-    cwd: worktree,
-    timeoutMinutes: 5,
-  });
+  const push = await remoteStep(
+    ["push", "-q", "-u", "origin", `HEAD:refs/heads/${planned.branch}`],
+    { cwd: worktree },
+  );
   note("push", push.ok, push.stderr || planned.branch);
   return finish(push.ok ? "pushed; caller opens the draft PR and posts READY" : "push failed");
 }
 
-export function runQueue(
+export async function runQueue(
   result,
   cards,
   { cardsRoot = "../scrapkeep-cards", maxTotalUsd = 20 } = {},
@@ -443,7 +448,7 @@ export function runQueue(
       });
       continue;
     }
-    const receipt = runCard(
+    const receipt = await runCard(
       cards.find((card) => card.id === planned.id),
       planned,
       { stage: result.stage, cardsRoot, receipts },
@@ -477,13 +482,13 @@ function parseArgs(argv) {
   return options;
 }
 
-function main() {
+async function main() {
   const options = parseArgs(process.argv.slice(2));
   const backlog = readFileSync(BACKLOG_FILE, "utf8");
   const result = plan({ backlog, state: readFileSync(STATE_FILE, "utf8"), ...options });
   if (options.run) {
     process.stdout.write(`${render(result).replace("Nothing was run.", "Running.")}\n`);
-    const { spent } = runQueue(result, parseCards(backlog), options);
+    const { spent } = await runQueue(result, parseCards(backlog), options);
     process.stdout.write(`spent $${spent.toFixed(2)}; receipts in artifacts/local/card-runner/\n`);
     return;
   }
@@ -494,7 +499,7 @@ function main() {
 
 if (isMain(import.meta.url)) {
   try {
-    main();
+    await main();
   } catch (error) {
     process.stderr.write(`card-runner: ${error.message}\n`);
     process.exit(2);
