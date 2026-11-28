@@ -1,8 +1,14 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { isMain } from "../../scripts/lib/cli.mjs";
-import { gitOptional } from "../../scripts/lib/git.mjs";
+
+const helpers = {};
+try {
+  Object.assign(helpers, await import("../../scripts/lib/cli.mjs"));
+  Object.assign(helpers, await import("../../scripts/lib/git.mjs"));
+} catch (error) {
+  helpers.loadError = error;
+}
 
 const LIVE_SAVE_SEGMENT =
   /(?:\.local\/share\/godot\/app_userdata\/core-loop|Library\/Application Support\/godot\/app_userdata\/core-loop)(?:\b|\/|$)/i;
@@ -258,7 +264,7 @@ export function defaultInspectProjectGodot(
   let repoRoot = findRepoRoot(repoDir);
   if (!repoRoot) {
     repoRoot =
-      gitOptional(["-C", repoDir, "rev-parse", "--show-toplevel"], {
+      helpers.gitOptional(["-C", repoDir, "rev-parse", "--show-toplevel"], {
         spawn,
         timeout: GIT_TIMEOUT_MS,
       }) || repoDir;
@@ -269,15 +275,18 @@ export function defaultInspectProjectGodot(
     if (!wtText.includes("McpBridge")) return false;
     if (checkWorkingTree) return true;
   }
-  const staged = gitOptional(
+  const staged = helpers.gitOptional(
     ["-C", repoRoot, "diff", "--cached", "--name-only", "--", "sketches/core-loop/project.godot"],
     { spawn, timeout: GIT_TIMEOUT_MS },
   );
   if (staged) {
-    const show = gitOptional(["-C", repoRoot, "show", ":sketches/core-loop/project.godot"], {
-      spawn,
-      timeout: GIT_TIMEOUT_MS,
-    });
+    const show = helpers.gitOptional(
+      ["-C", repoRoot, "show", ":sketches/core-loop/project.godot"],
+      {
+        spawn,
+        timeout: GIT_TIMEOUT_MS,
+      },
+    );
     if (show?.includes("McpBridge")) return true;
   }
   return false;
@@ -473,22 +482,30 @@ export function evaluateHook(payload, { inspectProjectGodot = defaultInspectProj
   return allow();
 }
 
-function main() {
-  const raw = readFileSync(0, "utf8");
+function decide(raw) {
+  if (helpers.loadError) throw helpers.loadError;
   let payload;
   try {
     payload = JSON.parse(raw);
   } catch {
-    process.stdout.write(
-      JSON.stringify(ask("PreToolUse safety hook could not parse JSON stdin; confirm manually.")) +
-        "\n",
-    );
-    return;
+    return ask("PreToolUse safety hook could not parse JSON stdin; confirm manually.");
   }
-  const result = evaluateHook(payload);
+  return evaluateHook(payload);
+}
+
+function main() {
+  let result;
+  try {
+    result = decide(readFileSync(0, "utf8"));
+  } catch (error) {
+    const brief = String(error?.message ?? error)
+      .split("\n")[0]
+      .slice(0, 160);
+    result = ask(`PreToolUse safety hook could not run (${brief}); confirm manually.`);
+  }
   process.stdout.write(JSON.stringify(result) + "\n");
 }
 
-if (isMain(import.meta.url)) {
+if (helpers.isMain?.(import.meta.url) ?? true) {
   main();
 }
