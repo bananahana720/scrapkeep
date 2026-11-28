@@ -57,15 +57,6 @@ static func cues(special: String) -> Dictionary:
 		"death": (SPECIALS[special]["breaks"] as Array).map(func(m: String): return sound(special, m))}
 
 
-static func all_sounds() -> Array:
-	var out := []
-	for special in SPECIALS:
-		out.append(sound(special, SPAWN))
-		for cue in CUES:
-			out.append_array(cues(special)[cue])
-	return out
-
-
 static func attach(enemy: Node) -> bool:
 	if special_of(enemy) == "":
 		return false

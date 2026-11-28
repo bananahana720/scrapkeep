@@ -1389,11 +1389,6 @@ func transformer_ids() -> PackedStringArray:
 	return PackedStringArray(Pattern.TRANSFORMERS.keys())
 
 
-func transformer_info(id: String) -> Dictionary:
-	var row: Dictionary = Pattern.TRANSFORMERS.get(id, {})
-	return {"label": row.get("label", id), "text": row.get("text", "")}
-
-
 func active_transformers() -> Array:
 	var ids := []
 	if ctx == null or ctx.run == null:
@@ -5653,12 +5648,6 @@ func _has_cross_synergy(id: String, extra := {}) -> bool:
 	if ctx.run == null:
 		return false
 	return Synergies.cross_system_awake(id, ctx.run.parts, OrbitalSatellites.part_synergy_info, context)
-
-
-func active_cross_synergies(extra := {}) -> Array:
-	if ctx == null or ctx.run == null:
-		return []
-	return Synergies.cross_system_active(ctx.run.parts, OrbitalSatellites.part_synergy_info, synergy_context(extra))
 
 
 func micro_mutation_count(part_id: String) -> int:

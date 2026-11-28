@@ -680,14 +680,6 @@ func first_takeover_target(origin: Vector3, max_range := 26.0) -> HuskUnit:
 	return best
 
 
-func active_takeovers() -> Array:
-	var out: Array = []
-	for h in husks:
-		if is_instance_valid(h) and h.takeover_active:
-			out.append(h)
-	return out
-
-
 func begin_takeover(h: HuskUnit, source: Node, duration := TAKEOVER_WARN_SECONDS) -> bool:
 	assert(TAKEOVER_COLOR == Palette.HAZARD)
 	if h == null or not is_instance_valid(h) or h.takeover_active or not husks.has(h):

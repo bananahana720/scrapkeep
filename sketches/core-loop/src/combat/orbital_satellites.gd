@@ -312,17 +312,6 @@ func has_w50_cross_synergy(id: String, extra := {}) -> bool:
 	return Synergies.cross_system_awake(id, ctx.run.parts, Callable(self, "part_synergy_info"), context)
 
 
-func active_w50_cross_synergies(extra := {}) -> Array:
-	if ctx == null or ctx.run == null:
-		return []
-	var context := w50_synergy_context(extra)
-	var out: Array = []
-	for id in Synergies.CROSS_SYSTEM_W50:
-		if Synergies.cross_system_awake(id, ctx.run.parts, Callable(self, "part_synergy_info"), context):
-			out.append(id)
-	return out
-
-
 static func part_synergy_info(part_id: String) -> Dictionary:
 	var d: Resource = Parts.def(part_id)
 	if d == null:
