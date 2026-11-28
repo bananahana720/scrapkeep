@@ -443,10 +443,6 @@ func _build_crew() -> void:
 	_accent(tag, Palette.BRASS, 0.8, Vector3(0.0, 0.3, CREW_RADIUS + 0.02), _crew)
 
 
-func _tool_material(color := Palette.CHARCOAL, energy := 0.0) -> StandardMaterial3D:
-	return Palette.solid(color, energy)
-
-
 func _box(size: Vector3, color: Color, at: Vector3, energy := 0.0, parent: Node3D = self) -> MeshInstance3D:
 	var box := BoxMesh.new()
 	box.size = size
