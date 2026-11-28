@@ -96,7 +96,7 @@ jobs:
             !/sketches/core-loop/assets/concepts/
             !/sketches/core-loop/addons/
           sparse-checkout-cone-mode: false
-          persist-credentials: false
+          persist-credentials: true
 
       - name: Setup Node
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
