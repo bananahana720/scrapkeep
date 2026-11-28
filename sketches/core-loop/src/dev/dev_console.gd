@@ -243,7 +243,7 @@ func held_input() -> Array:
 func run(line: String, keep := true) -> void:
 	_echo(line)
 	commands.run(line, keep)
-	_refresh_rows()
+	refresh_rows()
 	_sweep_input.call_deferred()
 
 
@@ -254,7 +254,7 @@ func run_script(script: String, scripted := false) -> void:
 			if not text.is_empty():
 				_echo(text)
 		var receipt: Dictionary = await agent.run_scenario([script], {"scripted": scripted, "reset_assertions": false})
-		_refresh_rows()
+		refresh_rows()
 		_sync_dots()
 		_sweep_input.call_deferred()
 		for row in receipt.get("steps", []):
@@ -1268,7 +1268,7 @@ func _slider_row(key: String, span: Array, current: float, apply: Callable, echo
 	_page.add_child(row)
 
 
-func _refresh_rows() -> void:
+func refresh_rows() -> void:
 	for key in _rows:
 		var row: Dictionary = _rows[key]
 		if not is_instance_valid(row.slider):

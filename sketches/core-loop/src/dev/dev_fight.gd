@@ -668,7 +668,7 @@ func _cmd_warden(args: Array[String]):
 		if is_instance_valid(w) and w.has_method("take_damage") and "hp" in w:
 			w.take_damage(float(w.hp) + 1.0)
 		if game.flow.sealed:
-			game.flow._unseal()
+			game.flow.force_unseal()
 		return {"ok": true, "text": "warden broken; beacon unsealed", "data": {"sealed": game.flow.sealed}}
 	return "!warden [engage|stagger|break]"
 
@@ -690,7 +690,7 @@ func _cmd_beacon(args: Array[String]):
 		if is_instance_valid(game.flow.warden):
 			_cmd_warden(["break"])
 		else:
-			game.flow._unseal()
+			game.flow.force_unseal()
 		return {"ok": true, "text": "beacon unsealed (%s)" % game.flow.state_name(),
 			"data": {"state": game.flow.state_name(), "sealed": game.flow.sealed}}
 	return "!beacon [unseal]"
