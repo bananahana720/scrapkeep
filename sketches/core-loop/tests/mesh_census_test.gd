@@ -69,11 +69,42 @@ func _initialize() -> void:
 			out.close()
 			print("mesh_census: recorded %d meshes to %s" % [got.size(), PIN])
 	var errors := compare(got, read_pin(PIN))
+	var ref_file := FileAccess.open_compressed("res://tests/fixtures/pins/census_ref_tmp.bin", FileAccess.READ, FileAccess.COMPRESSION_ZSTD)
+	var ref: Dictionary = ref_file.get_var() if ref_file != null else {}
+	print("CENSUS_PLATFORM %s %s" % [OS.get_name(), Engine.get_architecture_name()])
 	for e in errors:
-		if e.begins_with("changed ") and _meshes.has(e.trim_prefix("changed ")):
-			var m: ArrayMesh = _meshes[e.trim_prefix("changed ")]
-			for s in m.get_surface_count():
-				print("CENSUS_DUMP\t%s\t%d\t%s" % [e.trim_prefix("changed "), s, Marshalls.raw_to_base64(var_to_bytes(m.surface_get_arrays(s)))])
+		var key := e.trim_prefix("changed ")
+		if not e.begins_with("changed ") or not _meshes.has(key):
+			continue
+		var m: ArrayMesh = _meshes[key]
+		if not ref.has(key):
+			print("CENSUS_DIFF %s no reference" % key)
+			continue
+		var want: Array = ref[key]
+		print("CENSUS_DIFF %s surfaces here %d mac %d" % [key, m.get_surface_count(), want.size()])
+		for s in mini(m.get_surface_count(), want.size()):
+			var here := m.surface_get_arrays(s)
+			for a in Mesh.ARRAY_MAX:
+				var x = here[a]
+				var y = want[s][a]
+				if x == null and y == null:
+					continue
+				if x == null or y == null:
+					print("CENSUS_DIFF %s s%d a%d present here %s mac %s" % [key, s, a, x != null, y != null])
+					continue
+				var fx := _flat(x)
+				var fy := _flat(y)
+				var n := 0
+				var worst := 0.0
+				var at := -1
+				for i in mini(fx.size(), fy.size()):
+					var d := absf(fx[i] - fy[i])
+					if d > 0.0:
+						n += 1
+						if d > worst:
+							worst = d
+							at = i
+				print("CENSUS_DIFF %s s%d a%d len here %d mac %d differing %d max %.12f at %d (here %.12f mac %.12f)" % [key, s, a, fx.size(), fy.size(), n, worst, at, fx[at] if at >= 0 else 0.0, fy[at] if at >= 0 else 0.0])
 	_t.check("every crafted mesh matches the census pin byte for byte", errors.is_empty(),
 		"%d differences: %s" % [errors.size(), ", ".join(errors.slice(0, 12))])
 	quit(_t.verdict())
@@ -91,6 +122,24 @@ func _check_compare_fails_closed() -> void:
 	_t.check("a mesh missing from the census fails", not compare({"b.gd:m()": "1\tx=aa"}, pinned).is_empty())
 	_t.check("a mesh missing from the pin fails", not compare({"a.gd:m()": "1\tx=aa", "b.gd:m()": "1\tx=aa"}, pinned).is_empty())
 	_t.check("a malformed pin line fails", not compare(one, "a.gd:m()\n").is_empty())
+
+
+static func _flat(v) -> PackedFloat64Array:
+	var out := PackedFloat64Array()
+	match typeof(v):
+		TYPE_PACKED_VECTOR3_ARRAY:
+			for p in v:
+				out.append_array([p.x, p.y, p.z])
+		TYPE_PACKED_VECTOR2_ARRAY:
+			for p in v:
+				out.append_array([p.x, p.y])
+		TYPE_PACKED_COLOR_ARRAY:
+			for p in v:
+				out.append_array([p.r, p.g, p.b, p.a])
+		TYPE_PACKED_FLOAT32_ARRAY, TYPE_PACKED_INT32_ARRAY, TYPE_PACKED_FLOAT64_ARRAY:
+			for p in v:
+				out.append(float(p))
+	return out
 
 
 static func read_pin(path: String) -> String:
