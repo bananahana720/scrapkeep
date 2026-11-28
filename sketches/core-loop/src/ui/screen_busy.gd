@@ -49,7 +49,7 @@ func fight_over() -> void:
 
 
 func fighting() -> bool:
-	return _combat or not _fights.is_empty() or WhyCallout.warden_fight_live(_flow)
+	return _combat or not _fights.is_empty() or (_flow != null and _flow.warden_fight_live())
 
 
 func busy() -> bool:

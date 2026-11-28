@@ -6,7 +6,7 @@ const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const RadioTakes := preload("res://src/core/radio_takes.gd")
 const Radio := preload("res://src/core/radio.gd")
-const Glyphs := preload("res://src/ui/glyphs.gd")
+const Glyphs := preload("res://src/core/glyphs.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 
 

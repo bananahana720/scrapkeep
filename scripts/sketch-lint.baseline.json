@@ -542,7 +542,6 @@
     "sketches/core-loop/src/presentation/world_fx/world_fx_kit.gd",
     "sketches/core-loop/src/presentation/world_look.gd",
     "sketches/core-loop/src/ui/ending_sequence.gd",
-    "sketches/core-loop/src/ui/why_callout.gd",
     "sketches/core-loop/src/world/activities.gd",
     "sketches/core-loop/src/world/activity_view.gd",
     "sketches/core-loop/src/world/bay.gd",

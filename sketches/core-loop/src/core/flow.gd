@@ -131,6 +131,12 @@ func engaged() -> bool:
 	return _engaged
 
 
+func warden_fight_live() -> bool:
+	if not sealed or not is_instance_valid(warden) or not engaged():
+		return false
+	return not (warden.has_method("is_dead") and warden.is_dead())
+
+
 func in_play() -> bool:
 	return state == STAGE or state == BEACON or state == GATES or state == LAUNCH or state == BOSS or state == LAP
 
