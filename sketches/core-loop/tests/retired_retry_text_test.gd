@@ -1,5 +1,6 @@
 extends SceneTree
 
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 # Wave 19, "No free retry": a death ends the run, so no player-facing line may promise a free
@@ -16,7 +17,8 @@ const T := preload("res://tests/support/t.gd")
 
 const DOCS := ["res://README.md", "res://CONTRACTS.md", "res://DESIGN-NOTES.md"]
 const CATALOGUE := "res://assets/radio/catalogue.json"
-const UI_DIR := "res://src/ui/"
+const UI_DIR := "res://src/ui"
+const LITERAL := "\"(?:[^\"\\\\]|\\\\.)*\""
 
 # Case-insensitive phrases.
 const PHRASES := [
@@ -80,32 +82,19 @@ const KNOWN_GOOD := [
 ]
 
 var _t := T.new("retired_retry_text_test")
-var _phrases: Array = []
-var _labels: Array = []
 
 
 func _initialize() -> void:
-	for p in PHRASES:
-		_phrases.append(_compile(p, true))
-	for p in LABELS:
-		_labels.append(_compile(p, false))
 	_run()
 	quit(_t.verdict())
 
 
-func _compile(pattern: String, ignore_case: bool) -> RegEx:
-	var re := RegEx.new()
-	var err := re.compile(("(?i)" if ignore_case else "") + pattern)
-	_t.eq("pattern compiles: %s" % pattern, err, OK)
-	return re
-
-
 func flagged(line: String) -> bool:
-	for re in _phrases:
-		if re.search(line) != null:
+	for p in PHRASES:
+		if not SourceScan.search(_t, line, "(?i)" + p).is_empty():
 			return true
-	for re in _labels:
-		if re.search(line) != null:
+	for p in LABELS:
+		if not SourceScan.search(_t, line, p).is_empty():
 			return true
 	return false
 
@@ -119,37 +108,25 @@ func _run() -> void:
 	for path in DOCS:
 		_scan_lines(path, _lines(path))
 	_scan_lines(CATALOGUE, _lines(CATALOGUE))
-	var dir := DirAccess.open(UI_DIR)
-	_t.check("src/ui opens", dir != null, UI_DIR)
-	if dir == null:
-		return
-	var files: Array = []
-	for f in dir.get_files():
-		if f.ends_with(".gd"):
-			files.append(f)
-	files.sort()
-	_t.check("src/ui holds field_notes.gd", files.has("field_notes.gd"), str(files))
-	for f in files:
-		_scan_lines(UI_DIR + f, _literals(UI_DIR + f))
+	var sources := SourceScan.sources(_t, [UI_DIR])
+	_t.check("src/ui holds field_notes.gd", sources.has(UI_DIR.path_join("field_notes.gd")), str(sources.keys()))
+	for path in sources:
+		_scan_lines(path, _literals(sources[path]))
 
 
 func _lines(path: String) -> Array:
-	var text := FileAccess.get_file_as_string(path)
-	_t.check("read %s" % path, text != "", "empty or missing")
-	return Array(text.split("\n"))
+	return Array(SourceScan.text(_t, path).split("\n"))
 
 
 # The string literals on each non-comment line of a script, with the line number kept.
-func _literals(path: String) -> Array:
+func _literals(text: String) -> Array:
 	var out: Array = []
-	var re := RegEx.new()
-	re.compile("\"(?:[^\"\\\\]|\\\\.)*\"")
-	for line in _lines(path):
+	for line in text.split("\n"):
 		if String(line).strip_edges().begins_with("#"):
 			out.append("")
 			continue
 		var parts := PackedStringArray()
-		for m in re.search_all(line):
+		for m in SourceScan.search(_t, line, LITERAL):
 			parts.append(m.get_string())
 		out.append(" ".join(parts))
 	return out

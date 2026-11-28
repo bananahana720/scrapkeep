@@ -1093,25 +1093,25 @@ func _run_live() -> void:
 
 	# 4. Spring, cloak, and Slag Pike rows post to BuffLedger with lawful tones and clear on attempt boundary.
 	combat._spring_until = combat._clock + combat.SPRING_WINDOW
-	combat._post_buff("spring", {"icon": "spring", "tone": Palette.AMBER, "kind": BuffLedger.KIND_TIMER,
+	combat.post_buff("spring", {"icon": "spring", "tone": Palette.AMBER, "kind": BuffLedger.KIND_TIMER,
 		"duration_s": combat.SPRING_WINDOW, "left_s": combat.SPRING_WINDOW})
 	var spring_row: Dictionary = _find_buff(_game.ctx.buffs.active_rows(), "spring")
 	_t.check("Spring posts visible timer row to BuffLedger with lawful tone",
 		not spring_row.is_empty() and _lawful_tone(spring_row["tone"]), str(spring_row))
 
 	# Cloak: Kest's 1.5 s cloak is filtered below the 3 s rail minimum, and becomes visible when >= 3 s.
-	combat._post_buff("cloak", {"icon": "cloak", "tone": Palette.STEEL, "kind": BuffLedger.KIND_TIMER,
+	combat.post_buff("cloak", {"icon": "cloak", "tone": Palette.STEEL, "kind": BuffLedger.KIND_TIMER,
 		"duration_s": Weapons.CLOAK_SECONDS, "left_s": Weapons.CLOAK_SECONDS})
 	_t.check("Cloak 1.5 s row is filtered below 3 s rail minimum",
 		_find_buff(_game.ctx.buffs.active_rows(), "cloak").is_empty(), "")
-	combat._post_buff("cloak", {"icon": "cloak", "tone": Palette.STEEL, "kind": BuffLedger.KIND_TIMER,
+	combat.post_buff("cloak", {"icon": "cloak", "tone": Palette.STEEL, "kind": BuffLedger.KIND_TIMER,
 		"duration_s": 4.0, "left_s": 4.0})
 	var cloak_row: Dictionary = _find_buff(_game.ctx.buffs.active_rows(), "cloak")
 	_t.check("Extended Cloak posts visible row with lawful tone",
 		not cloak_row.is_empty() and _lawful_tone(cloak_row["tone"]), str(cloak_row))
 
 	# Slag Pike counter row.
-	combat._post_buff("pike", {"icon": "pike", "tone": Palette.AMBER, "kind": BuffLedger.KIND_COUNT, "stacks": 3, "max_stacks": 5})
+	combat.post_buff("pike", {"icon": "pike", "tone": Palette.AMBER, "kind": BuffLedger.KIND_COUNT, "stacks": 3, "max_stacks": 5})
 	var pike_row: Dictionary = _find_buff(_game.ctx.buffs.active_rows(), "pike")
 	_t.check("Slag Pike posts counter row with stacks=3 and lawful tone",
 		not pike_row.is_empty() and int(pike_row["stacks"]) == 3 and _lawful_tone(pike_row["tone"]), str(pike_row))

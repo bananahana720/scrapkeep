@@ -39,8 +39,8 @@ var _t := T.new("sound_own_recipes_test")
 
 
 func _initialize() -> void:
-	var facts := TwinsTest.universe(Twins.RELAY)
-	var w1 := TwinsTest.world1(facts, TwinsTest.emit_index())
+	var facts := TwinsTest.universe(_t, Twins.RELAY)
+	var w1 := TwinsTest.world1(_t, facts, TwinsTest.emit_index(_t))
 	var named := named_cues(facts, w1)
 	_t.check("world 1 facts derived", w1.size() >= 50, str(w1.size()))
 	var cues := judge(named)

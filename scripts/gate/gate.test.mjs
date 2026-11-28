@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import { indexFromFiles } from "../sketch-fast.mjs";
-import { parseLedger } from "../known-failing.mjs";
+import { failedChecks, parseLedger, whatFailed } from "../known-failing.mjs";
 import { place, sortChanges, testsToRerun } from "./carry.mjs";
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
@@ -31,8 +31,6 @@ import {
   shardVerdict,
   soloEnvironment,
   soloTests,
-  failedChecks,
-  whatFailed,
 } from "./shard.mjs";
 import {
   WEEKLY_MAX_DAYS,

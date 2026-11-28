@@ -554,19 +554,21 @@ test("a dead pid slot is reclaimed without waiting", async () => {
   }
 });
 
+const FOREIGN_PID = 2147483646;
+
 test("a fresh unkillable-pid claim holds its slot", async (t) => {
   const kill = process.kill.bind(process);
   t.mock.method(process, "kill", (pid, signal) => {
-    if (pid === 1 && signal === 0)
+    if (pid === FOREIGN_PID && signal === 0)
       throw Object.assign(new Error("fixture EPERM"), { code: "EPERM" });
     return kill(pid, signal);
   });
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-young-"));
   try {
-    assert.throws(() => process.kill(1, 0), { code: "EPERM" });
+    assert.throws(() => process.kill(FOREIGN_PID, 0), { code: "EPERM" });
     const slot = path.join(directory, "slot-0");
     mkdirSync(slot);
-    writeFileSync(path.join(slot, "claim-foreign"), "1");
+    writeFileSync(path.join(slot, "claim-foreign"), String(FOREIGN_PID));
     assert.equal(await wouldWait({ directory, slots: 1 }), true);
     await assert.rejects(
       acquireSlot({
@@ -587,17 +589,17 @@ test("a fresh unkillable-pid claim holds its slot", async (t) => {
 test("a stale unkillable-pid claim is reclaimed at once", async (t) => {
   const kill = process.kill.bind(process);
   t.mock.method(process, "kill", (pid, signal) => {
-    if (pid === 1 && signal === 0)
+    if (pid === FOREIGN_PID && signal === 0)
       throw Object.assign(new Error("fixture EPERM"), { code: "EPERM" });
     return kill(pid, signal);
   });
   const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-foreign-slot-"));
   let lease;
   try {
-    assert.throws(() => process.kill(1, 0), { code: "EPERM" });
+    assert.throws(() => process.kill(FOREIGN_PID, 0), { code: "EPERM" });
     const slot = path.join(directory, "slot-0");
     mkdirSync(slot);
-    writeFileSync(path.join(slot, "claim-foreign"), "1");
+    writeFileSync(path.join(slot, "claim-foreign"), String(FOREIGN_PID));
     const old = (Date.now() - STALE_CLAIM_MS - 60_000) / 1000;
     utimesSync(path.join(slot, "claim-foreign"), old, old);
     lease = await acquireSlot({
@@ -609,6 +611,63 @@ test("a stale unkillable-pid claim is reclaimed at once", async (t) => {
     assert.equal(existsSync(path.join(slot, "claim-foreign")), false);
   } finally {
     lease?.release();
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("the machine lock never signals a claim's process id that wraps, has a leading zero or an exponent, or is 0 or 1", async (t) => {
+  const asked = [];
+  t.mock.method(process, "kill", (pid, signal) => {
+    asked.push([pid, signal]);
+    throw Object.assign(new Error("fixture ESRCH"), { code: "ESRCH" });
+  });
+  const bad = [
+    "4294967295",
+    "4294967294",
+    "4294967296",
+    "2147483648",
+    "012",
+    "1e3",
+    "1",
+    "0",
+    "-1",
+    " 42",
+    "42\n",
+    "",
+  ];
+  for (const text of bad) {
+    const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-bad-pid-"));
+    try {
+      const slot = path.join(directory, "slot-0");
+      mkdirSync(slot);
+      writeFileSync(path.join(slot, "claim-planted"), text);
+      await assert.rejects(
+        acquireSlot({
+          directory,
+          slots: 1,
+          quietDirectory: directory,
+          sleep: async () => assert.fail("a planted claim made the lock wait"),
+        }),
+        /invalid slot pid/,
+        JSON.stringify(text),
+      );
+      writeFileSync(path.join(directory, smoke.QUIET_HOLD), text);
+      assert.equal(smoke.quietHolder(directory), null, JSON.stringify(text));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  }
+  assert.deepEqual(asked, []);
+  const directory = mkdtempSync(path.join(os.tmpdir(), "smoke-good-pid-"));
+  try {
+    writeFileSync(path.join(directory, smoke.QUIET_HOLD), String(FOREIGN_PID));
+    assert.equal(smoke.quietHolder(directory), null);
+    assert.deepEqual(
+      asked,
+      [[FOREIGN_PID, 0]],
+      "a canonical id is still asked about, with signal 0",
+    );
+  } finally {
     rmSync(directory, { recursive: true, force: true });
   }
 });
@@ -1499,6 +1558,11 @@ test("a dead or stale quiet hold blocks nobody and is replaced", () => {
     writeFileSync(file, String(process.pid));
     hold.release();
     assert.equal(existsSync(file), true);
+    for (const text of [` ${process.ppid}`, `0${process.ppid}`, `${process.ppid}\n`]) {
+      writeFileSync(file, text);
+      hold.release();
+      assert.equal(readFileSync(file, "utf8"), text, `a release leaves ${JSON.stringify(text)}`);
+    }
   } finally {
     rmSync(at.directory, { recursive: true, force: true });
   }

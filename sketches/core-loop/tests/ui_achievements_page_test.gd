@@ -103,7 +103,7 @@ func _run() -> void:
 	# 2026-10-19 (w20 ACHIEVEMENTS-REFRESH): six reward-free content-family rows; was 44.
 	# 2026-10-24 merge of #406 (world 1 unit 16, shift board: six brindle_mark_* rows) onto #402's
 	# five ach_w19_* rows: 50 + 5 + 6.
-	_t.eq("P3-3 sixty-one rows today", PilotBlocks.shared(rows.keys(), "res://src/core/achievements.gd").size(), 61)
+	_t.eq("P3-3 sixty-one rows today", PilotBlocks.shared(_t, rows.keys(), "res://src/core/achievements.gd").size(), 61)
 	await _frames(2)
 	_t.check("Back stays visible during page entry", root.get_visible_rect().encloses(page.back.get_global_rect()))
 	await _reach_rows(page)

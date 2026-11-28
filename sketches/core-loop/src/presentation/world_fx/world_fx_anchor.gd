@@ -24,6 +24,7 @@ var reduced_motion := false
 var _clock := 0.0
 var sound: AudioStreamPlayer3D
 var voiced := false
+var _audio = null
 var _puffing := false
 var _loop_wait := 0.0
 
@@ -121,8 +122,9 @@ func has_voice() -> bool:
 	return sound != null
 
 
-func set_voiced(on: bool) -> void:
+func set_voiced(on: bool, heard_by) -> void:
 	voiced = on
+	_audio = heard_by
 	_tend_sound(0.0)
 
 
@@ -139,7 +141,7 @@ func _process(delta: float) -> void:
 				if on and not _puffing and voiced and p.emitting and is_visible_in_tree():
 					WorldSound.tend(sound, float(WorldSound.row(set_id)["db"]))
 					sound.play()
-					WorldSound.heard(set_id, sound)
+					WorldSound.heard(set_id, sound, _audio)
 				_puffing = on
 	_tend_sound(delta)
 
@@ -160,7 +162,7 @@ func _tend_sound(delta: float) -> void:
 		_loop_wait = 0.0
 	if _loop_wait <= 0.0:
 		_loop_wait = sound.stream.get_length()
-		WorldSound.heard(set_id, sound)
+		WorldSound.heard(set_id, sound, _audio)
 
 
 func _wants(p: GPUParticles3D) -> bool:

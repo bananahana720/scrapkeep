@@ -8,12 +8,10 @@ import { isMain } from "../lib/cli.mjs";
 import { git, nulSeparated } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
-const JS_FILE = /^(?:src|server|scripts|tests|tools)\/.*\.(?:js|mjs|cjs)$|^vite\.config\.js$/;
+const JS_FILE = /^(?:src|server|scripts|tests|tools)\/.*\.(?:js|mjs|cjs)$|^vite\.config\.js$/s;
 
 export function filterFormatTargets(files, exists = (file) => existsSync(path.join(root, file))) {
-  return [
-    ...new Set(files.map((f) => f.trim()).filter((f) => JS_FILE.test(f) && exists(f))),
-  ].sort();
+  return [...new Set(files.filter((f) => JS_FILE.test(f) && exists(f)))].sort();
 }
 
 export function changedFilesSince(baseRef, { cwd = root, spawn = spawnSync } = {}) {

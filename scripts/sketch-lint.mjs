@@ -1286,9 +1286,13 @@ function readScopes(text) {
     if (bound) (topLevel ? global : local).set(bound[1], joinList(raw, index, bound[2]));
     const loop = code.match(literalLoop);
     if (loop) {
+      const names = new Map([...global, ...local]);
       const value = loop[2].startsWith("[")
-        ? joinList(raw, index, loop[2])
-        : (local.get(loop[2]) ?? global.get(loop[2]));
+        ? joinList(raw, index, loop[2]).replace(
+            /"[^"]*"|\b[A-Za-z_]\w*\b/g,
+            (token) => names.get(token) ?? token,
+          )
+        : names.get(loop[2]);
       if (value) local.set(loop[1], value);
     }
     scopes.set(index + 1, { names: new Map([...global, ...local]), fn });
@@ -1317,7 +1321,7 @@ function handReads(file, rel, text) {
   for (const line of lines) {
     const fn = scopes.get(line.number).fn;
     for (const { bare } of args(line, textRead))
-      if (fn && fn.params.includes(bare))
+      if (fn && fn.params.includes(bare.split(",")[0].trim()) && !/\bWRITE\b/.test(bare))
         throughParam.set(fn.name, [...(throughParam.get(fn.name) ?? []), line]);
   }
   const reads = new Set();

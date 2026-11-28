@@ -539,8 +539,8 @@ func _cue_and_plate() -> void:
 	_t.check("two fitting: the seal tick repeats and its pitch rises with progress", climbs, str(ticks_log.slice(ticks_before)))
 	_t.check("the seal tick plays its own seal_ratchet cue, not the harpoon's lock_tick", mod.SEAL_SOUND == "seal_ratchet" and mod.SEAL_SOUND != "lock_tick", str(mod.SEAL_SOUND))
 	# A missing recipe still bakes (a 0.12 s fallback blip), so the real two-click ratchet is the shorter buffer.
-	var ratchet: PackedFloat32Array = SfxBank._bake("seal_ratchet")
-	_t.check("seal_ratchet has a recipe and bakes a non-empty buffer", SfxBank.has_recipe("seal_ratchet") and ratchet.size() > 0 and ratchet.size() < SfxBank._bake("no_such_recipe_probe").size(), str(ratchet.size()))
+	var ratchet: PackedFloat32Array = SfxBank.new()._bake("seal_ratchet")
+	_t.check("seal_ratchet has a recipe and bakes a non-empty buffer", SfxBank.has_recipe("seal_ratchet") and ratchet.size() > 0 and ratchet.size() < SfxBank.new()._bake("no_such_recipe_probe").size(), str(ratchet.size()))
 	var plate = mod._plates.get("hatch_1")
 	_t.check("the plate is held clear of the hatch, sized to its seat, inert",
 			plate != null and plate is MeshInstance3D and plate.find_children("*", "CollisionObject3D", true, false).is_empty()
