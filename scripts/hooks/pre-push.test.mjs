@@ -106,7 +106,7 @@ test("planHookChecks selects only matching checks and keeps doc/sketch deletions
     true,
   );
 
-  const nearMissLedger = planHookChecks(["docs/KNOWN-FAILING.tsv"], (f) => existing.has(f));
+  const nearMissLedger = planHookChecks(["docs/KNOWN-FAILING.tsv"], () => true);
   assert.deepEqual(nearMissLedger, {
     jsFiles: [],
     hasSketch: false,
