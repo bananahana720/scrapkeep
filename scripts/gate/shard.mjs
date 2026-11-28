@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -32,7 +32,8 @@ import {
   testTimeoutMs,
   timeScale,
   withoutTeardownNoise,
-} from "../sketch-smoke.mjs";
+} from "../lib/godot-test-runner.mjs";
+import { runProcess } from "../lib/proc.mjs";
 import {
   checkImportStamp,
   godotIdentity,
@@ -505,20 +506,15 @@ export function importOutcome(exit, output) {
   });
 }
 
-function runToFile(command, args, file, env, timeoutMs) {
-  return new Promise((resolve) => {
-    const started = Date.now();
-    const chunksOut = [];
-    const child = spawn(command, args, { cwd: root, env });
-    const timer = timeoutMs ? setTimeout(() => child.kill("SIGKILL"), timeoutMs) : null;
-    child.stdout.on("data", (data) => chunksOut.push(data));
-    child.stderr.on("data", (data) => chunksOut.push(data));
-    child.on("close", (status, signal) => {
-      if (timer) clearTimeout(timer);
-      writeFileSync(file, Buffer.concat(chunksOut));
-      resolve({ exit: status ?? signal, seconds: Math.round((Date.now() - started) / 1000) });
-    });
+async function runToFile(command, args, file, env, timeoutMs) {
+  const res = await runProcess(command, args, {
+    cwd: root,
+    env,
+    timeoutMs,
+    logFile: file,
+    binaryOutput: true,
   });
+  return { exit: res.exit ?? res.signal, seconds: Math.round(res.ms / 1000) };
 }
 
 export function soloEnvironment(env, out, logDir) {

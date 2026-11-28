@@ -1,4 +1,4 @@
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   cpSync,
   existsSync,
@@ -9,41 +9,59 @@ import {
   realpathSync,
   renameSync,
   rmSync,
-  statSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  BATCH_MAX_MS,
-  BATCH_MAX_TESTS,
-  BATCH_TEST_MAX_MS,
-  batchable,
-  countChecks,
-  acquireMachine,
-  IMPORT_TRIES,
-  importWithRetry,
-  spawnCollect,
-  scriptErrorCount,
-  isBot,
-  isSolo,
-  judge,
-  matchesGlob,
   expiredLine,
   expiredQuarantine,
   quarantineNote,
   quarantineRecord,
   readQuarantineEntries,
+  spawnCollect,
+} from "./sketch-smoke.mjs";
+import {
+  ROOT_FILES_ALLOWED,
+  SKILL_LINK,
+  bridgeFindings,
+  carriedPrs,
+  checkLabels,
+  checksRemoved,
+  hygieneFindings,
+  mergedBranch,
+  placeholderIncrease,
+  removedChecks,
+} from "./lib/fast-diff-checks.mjs";
+import {
+  BATCH_MAX_MS,
+  BATCH_MAX_TESTS,
+  BATCH_TEST_MAX_MS,
+  IMPORT_TRIES,
+  batchable,
+  countChecks,
+  evaluateBatchOutput,
+  globToRegExp,
+  importWithRetry,
+  isBot,
+  isSolo,
+  judge,
+  matchesGlob,
+  runGodotBatch,
+  scriptErrorCount,
   splitBatch,
   takeBatch,
   takeBatchPacked,
   testFixedFps,
   testTimeoutMs,
-} from "./sketch-smoke.mjs";
+} from "./lib/godot-test-runner.mjs";
+import { acquireMachine } from "./lib/machine-lock.mjs";
+import { killGroup, runProcess } from "./lib/proc.mjs";
+import { runnerReceiptBaseName, runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
 import { readLedger } from "./known-failing.mjs";
 import { checkImportStamp, godotIdentity, writeImportStamp } from "./import-stamp.mjs";
-import { resolveGodotBinary, userDataEnv, withScratchGodotEnv } from "./godot-home.mjs";
+import { resolveGodotBinary, withScratchGodotEnv } from "./godot-home.mjs";
 import { shuffleFiles } from "./ci/node-tests.mjs";
 
 const binary = resolveGodotBinary();
@@ -52,7 +70,17 @@ export {
   BATCH_MAX_MS,
   BATCH_MAX_TESTS,
   BATCH_TEST_MAX_MS,
+  ROOT_FILES_ALLOWED,
+  SKILL_LINK,
   batchable,
+  bridgeFindings,
+  carriedPrs,
+  checkLabels,
+  checksRemoved,
+  hygieneFindings,
+  mergedBranch,
+  placeholderIncrease,
+  removedChecks,
   splitBatch,
   takeBatch,
   takeBatchPacked,
@@ -276,18 +304,8 @@ function stemTests(index, rel) {
 }
 
 function expand(index, globs) {
-  return index.tests.filter((test) =>
-    globs.some((glob) =>
-      new RegExp(
-        "^" +
-          glob
-            .split("*")
-            .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, "\\$&"))
-            .join(".*") +
-          "$",
-      ).test(test),
-    ),
-  );
+  const patterns = globs.map(globToRegExp);
+  return index.tests.filter((test) => patterns.some((pattern) => pattern.test(test)));
 }
 
 export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
@@ -449,89 +467,6 @@ export function failingChecks(output) {
   ].sort();
 }
 
-export function checkLabels(source) {
-  const labels = new Set();
-  for (const raw of source.split("\n")) {
-    const line = raw.replace(/^\s*#.*$/, "");
-    for (const m of line.matchAll(
-      /(?<![\w])(?:\w+\.)?_?(?:check|eq|near|report)\w*\(\s*"((?:[^"\\]|\\.)*)"/g,
-    ))
-      labels.add(m[1]);
-  }
-  return labels;
-}
-
-export function removedChecks(baseSource, headSource) {
-  const head = checkLabels(headSource);
-  return [...checkLabels(baseSource)].filter((label) => !head.has(label)).sort();
-}
-
-export function checksRemoved(nameStatusLines, show, baseRef, headRef) {
-  const isTest = (file) => /^sketches\/core-loop\/tests\/(?:[^/]+\/)?[^/]+\.gd$/.test(file);
-  return nameStatusLines
-    .filter(Boolean)
-    .map((line) => {
-      const [status, from, to = from] = line.split("\t");
-      if (status.startsWith("A") || !isTest(from)) return null;
-      const before = show(baseRef, from);
-      const after = status.startsWith("D") ? "" : (show(headRef, to) ?? "");
-      return before === null
-        ? null
-        : { test: path.posix.basename(to), labels: removedChecks(before, after) };
-    })
-    .filter((row) => row && row.labels.length > 0);
-}
-
-export const ROOT_FILES_ALLOWED = new Set([".mcp.json", "GEMINI.md"]);
-export const SKILL_LINK = /^\.claude\/skills\/[a-z0-9-]+$/;
-export function hygieneFindings(rawLines, baseTopLevel) {
-  const findings = [];
-  for (const line of rawLines) {
-    const match = /^:(\d+) (\d+) \S+ \S+ A\t(.+)$/.exec(line);
-    if (!match) continue;
-    const [, , mode, file] = match;
-    if (mode === "120000" && SKILL_LINK.test(file)) continue;
-    else if (mode === "120000") findings.push(`symlink added: ${file}`);
-    else if (ROOT_FILES_ALLOWED.has(file)) continue;
-    else if (!file.includes("/")) findings.push(`root file added: ${file}`);
-    else if (!baseTopLevel.has(file.split("/")[0])) findings.push(`new top-level folder: ${file}`);
-  }
-  return findings;
-}
-
-export function bridgeFindings(projectGodot) {
-  return /McpBridge/.test(projectGodot)
-    ? ["project.godot carries the Godot MCP's McpBridge autoload: call stop_project, then commit"]
-    : [];
-}
-
-export function mergedBranch(subject) {
-  return (
-    /\bfrom [\w.-]+\/([\w./-]+)$/.exec(subject)?.[1] ??
-    /(?:remote-tracking branch '|branch ')(?:origin\/)?([\w./-]+)'/.exec(subject)?.[1] ??
-    null
-  );
-}
-
-export function carriedPrs(merges, { prHeads = new Map(), branchHeads = new Map() }, isAncestor) {
-  const prsAt = (sha) => [...prHeads].filter(([, head]) => head === sha).map(([pr]) => pr);
-  return merges.map(({ merge, carried, subject }) => {
-    const exact = prsAt(carried);
-    if (exact.length > 0) return { merge, carried, prs: exact, stale: false };
-    const named = /#(\d+)/.exec(subject)?.[1];
-    const branch = mergedBranch(subject);
-    const head =
-      named && prHeads.has(named)
-        ? prHeads.get(named)
-        : branch && branchHeads.has(branch)
-          ? branchHeads.get(branch)
-          : null;
-    if (!head) return { merge, carried, prs: [], branch, stale: false, subject };
-    const prs = named && prHeads.has(named) ? [named] : prsAt(head);
-    return { merge, carried, prs, branch, stale: head !== carried && !isAncestor(head), head };
-  });
-}
-
 export function nodeTestsFor(changedNode, allNodeTests, readText) {
   const picked = new Set();
   for (const file of changedNode) if (/\.test\.(mjs|js)$/.test(file)) picked.add(file);
@@ -545,20 +480,6 @@ export function nodeTestsFor(changedNode, allNodeTests, readText) {
       picked.add(test);
   }
   return [...picked].sort();
-}
-
-export function placeholderIncrease(baseRows, headRows) {
-  const key = (row) => `${row.kind} ${row.where}`;
-  const total = (rows) => {
-    const map = new Map();
-    for (const row of rows) map.set(key(row), (map.get(key(row)) ?? 0) + (row.count ?? 1));
-    return map;
-  };
-  const base = total(baseRows);
-  const grew = [];
-  for (const [group, count] of total(headRows))
-    if (count > (base.get(group) ?? 0)) grew.push(`${group}: ${base.get(group) ?? 0} -> ${count}`);
-  return grew;
 }
 
 function git(args, cwd = root) {
@@ -593,33 +514,13 @@ export function timingsFromReceipt(receipt) {
   return tests;
 }
 
-function spawnText(command, args, { cwd = root, timeoutMs = 120_000 } = {}) {
-  return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => (stdout += chunk));
-    child.stderr.on("data", (chunk) => (stderr += chunk));
-    let kill = null;
-    const timer = timeoutMs
-      ? setTimeout(() => {
-          child.kill("SIGTERM");
-          kill = setTimeout(() => child.kill("SIGKILL"), 5_000);
-        }, timeoutMs)
-      : null;
-    child.on("error", (error) => {
-      if (timer) clearTimeout(timer);
-      if (kill) clearTimeout(kill);
-      resolve({ status: null, stdout, stderr: stderr + String(error.message) });
-    });
-    child.on("close", (status) => {
-      if (timer) clearTimeout(timer);
-      if (kill) clearTimeout(kill);
-      resolve({ status, stdout, stderr });
-    });
-  });
+async function spawnText(command, args, { cwd = root, timeoutMs = 120_000 } = {}) {
+  const res = await runProcess(command, args, { cwd, timeoutMs, killGraceMs: 5_000 });
+  return {
+    status: res.exit,
+    stdout: res.stdout,
+    stderr: res.error ? res.stderr + String(res.error.message ?? res.error) : res.stderr,
+  };
 }
 
 async function placeholderRowsAsync(sketchDir) {
@@ -702,7 +603,7 @@ export function failedRunLogName(test, where, attempt) {
 }
 
 export function receiptBaseName(label, head, startedAt) {
-  return `${label}-${head.slice(0, 12)}-${startedAt.replace(/[:.]/g, "-")}`;
+  return runnerReceiptBaseName(label, head, startedAt);
 }
 
 export function signalReason(signal) {
@@ -721,106 +622,130 @@ function fixedFpsFor(sketchDir, test) {
   }
 }
 
-function runGodot(sketchDir, test, timeoutMs, onChild = () => {}, fixedFps = null) {
-  return new Promise((resolve) => {
-    const started = Date.now();
-    const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
-    const fps = fixedFps ?? fixedFpsFor(sketchDir, test);
-    const fpsArgs = fps ? ["--fixed-fps", String(fps)] : [];
-    const child = spawn(
-      binary,
-      ["--headless", ...fpsArgs, "--path", sketchDir, "--script", "res://" + test],
-      {
-        env: { ...process.env, ...userDataEnv(dataHome) },
-      },
+async function runGodot(sketchDir, test, timeoutMs, onChild = () => {}, fixedFps = null) {
+  const started = Date.now();
+  const fps = fixedFps ?? fixedFpsFor(sketchDir, test);
+  const fpsArgs = fps ? ["--fixed-fps", String(fps)] : [];
+  let spawned = null;
+  let res;
+  try {
+    res = await withScratchGodotEnv(
+      (env) =>
+        runProcess(
+          binary,
+          ["--headless", ...fpsArgs, "--path", sketchDir, "--script", "res://" + test],
+          {
+            env,
+            timeoutMs,
+            onChild: (child) => {
+              spawned = child;
+              running.add(child);
+              onChild(child);
+            },
+          },
+        ),
+      { prefix: "sketch-fast-", dirs: null },
     );
-    running.add(child);
-    onChild(child);
-    let output = "";
-    child.stdout.on("data", (chunk) => (output += chunk));
-    child.stderr.on("data", (chunk) => (output += chunk));
-    let timedOut = false;
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGKILL");
-    }, timeoutMs);
-    child.on("close", (code, signal) => {
-      clearTimeout(timer);
-      running.delete(child);
-      rmSync(dataHome, { recursive: true, force: true });
-      const verdict = judge({ test: "res://" + test, status: code, output });
-      const reason =
-        code === null && !timedOut && child.killedByLane !== true
-          ? signalReason(signal)
-          : verdict.reason;
-      resolve({
-        test,
-        ok: verdict.ok,
-        exit: code,
-        signal: signal ?? null,
-        ms: Date.now() - started,
-        reason,
-        checks: failingChecks(output),
-        passes: countChecks(output).passes,
-        tail: output.split("\n").slice(-30).join("\n"),
-        killed: child.killedByLane === true,
-        timedOut,
-        output,
-      });
-    });
-  });
+  } finally {
+    if (spawned) running.delete(spawned);
+  }
+  const killed = spawned?.killedByLane === true;
+  const verdict = judge({ test: "res://" + test, status: res.exit, output: res.output });
+  const reason =
+    res.exit === null && !res.timedOut && !killed ? signalReason(res.signal) : verdict.reason;
+  return {
+    test,
+    ok: verdict.ok,
+    exit: res.exit,
+    signal: res.signal ?? null,
+    ms: Date.now() - started,
+    reason,
+    checks: failingChecks(res.output),
+    passes: countChecks(res.output).passes,
+    tail: res.output.split("\n").slice(-30).join("\n"),
+    killed,
+    timedOut: res.timedOut,
+    output: res.output,
+  };
 }
 
-function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}, fixedFps = null) {
-  return new Promise((resolve) => {
-    const dataHome = mkdtempSync(path.join(os.tmpdir(), "sketch-fast-"));
-    const fpsArgs = fixedFps ? ["--fixed-fps", String(fixedFps)] : [];
-    const child = spawn(
-      binary,
-      ["--headless", ...fpsArgs, "--path", sketchDir, "--script", "res://tools/test_batch.gd"],
-      { env: { ...process.env, ...userDataEnv(dataHome), SCRAPKEEP_TEST_BATCH: tests.join(",") } },
-    );
-    running.add(child);
-    onChild(child);
-    let output = "";
-    child.stdout.on("data", (chunk) => (output += chunk));
-    child.stderr.on("data", (chunk) => (output += chunk));
-    const timer = setTimeout(() => child.kill("SIGKILL"), timeoutMs);
-    child.on("close", () => {
-      clearTimeout(timer);
-      running.delete(child);
-      rmSync(dataHome, { recursive: true, force: true });
-      const { done, cut, rest } = splitBatch(output, tests);
-      const runs = done.map((row) => {
-        const verdict = judge({ test: "res://" + row.test, status: row.exit, output: row.output });
-        return {
-          test: row.test,
-          ok: verdict.ok,
-          exit: row.exit,
-          signal: null,
-          ms: row.ms,
-          reason: verdict.reason,
-          checks: failingChecks(row.output),
-          passes: countChecks(row.output).passes,
-          tail: row.output.split("\n").slice(-30).join("\n"),
-          killed: false,
-          timedOut: false,
-          output: row.output,
-          batched: true,
-        };
-      });
-      resolve({
-        runs,
-        unfinished: cut ? [cut, ...rest] : rest,
-        killed: child.killedByLane === true,
-      });
+export function interpretBatchOutput(
+  output,
+  tests,
+  { code = 0, signal = null, killed = false, platform = process.platform } = {},
+) {
+  const parsed = evaluateBatchOutput(output, tests, { code, signal, platform });
+  if (parsed.tainted) {
+    return {
+      runs: [],
+      unfinished: [...tests],
+      killed,
+      outsideError: parsed.outsideError,
+      unexpectedExit: parsed.unexpectedExit,
+    };
+  }
+  const runs = parsed.done.map((row) => {
+    const verdict = judge({
+      test: "res://" + row.test,
+      status: row.exit,
+      output: row.output,
+      platform,
     });
+    return {
+      test: row.test,
+      ok: verdict.ok,
+      exit: row.exit,
+      signal: null,
+      ms: row.ms,
+      reason: verdict.reason,
+      checks: failingChecks(row.output),
+      passes: countChecks(row.output).passes,
+      tail: row.output.split("\n").slice(-30).join("\n"),
+      killed: false,
+      timedOut: false,
+      output: row.output,
+      batched: true,
+    };
+  });
+  return {
+    runs,
+    unfinished: parsed.cut ? [parsed.cut, ...parsed.rest] : parsed.rest,
+    killed,
+    outsideError: false,
+    unexpectedExit: false,
+  };
+}
+
+async function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}, fixedFps = null) {
+  let spawned = null;
+  let batch;
+  try {
+    batch = await runGodotBatch({
+      binary,
+      sketchDir,
+      tests,
+      timeoutMs,
+      fixedFps,
+      prefix: "sketch-fast-",
+      onChild: (child) => {
+        spawned = child;
+        running.add(child);
+        onChild(child);
+      },
+    });
+  } finally {
+    if (spawned) running.delete(spawned);
+  }
+  return interpretBatchOutput(batch.output, tests, {
+    code: batch.code,
+    signal: batch.signal,
+    killed: spawned?.killedByLane === true,
   });
 }
 
 function stopChild(child) {
   child.killedByLane = true;
-  child.kill("SIGKILL");
+  killGroup(child, "SIGKILL");
 }
 
 function stopRunning() {
@@ -885,22 +810,13 @@ export function usableBaseRun(rerun, baseRun) {
   return baseRun;
 }
 
-function importAsync(args) {
-  return withScratchGodotEnv(
+async function importAsync(args) {
+  const res = await withScratchGodotEnv(
     (env) =>
-      new Promise((resolve) => {
-        const child = spawn(binary, [...args, "--import"], {
-          stdio: "ignore",
-          env,
-        });
-        const timer = setTimeout(() => child.kill("SIGKILL"), 180_000);
-        child.on("close", (code) => {
-          clearTimeout(timer);
-          resolve(code);
-        });
-      }),
+      runProcess(binary, [...args, "--import"], { env, stdio: "ignore", timeoutMs: 180_000 }),
     { prefix: "sketch-fast-", homeOnly: true },
   );
+  return res.exit;
 }
 
 function sourceOf(sketchDir, test) {
@@ -981,9 +897,10 @@ async function main() {
   const finish = (code) => {
     receipt.wall_ms = Date.now() - started;
     if (baseTree) spawnSync("git", ["-C", root, "worktree", "remove", "--force", baseTree]);
-    mkdirSync(receiptDirectory, { recursive: true });
-    const file = path.join(receiptDirectory, `${receiptName}.json`);
-    writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
+    const file = writeJsonReceipt(
+      runnerReceiptPath(root, options.receipt, receipt.head, startedAt),
+      receipt,
+    );
     log(`receipt ${file}`);
     log(
       `sketch:fast ${receipt.ok ? "pass" : "fail"} in ${Math.round(receipt.wall_ms / 1000)}s on ${receipt.head.slice(0, 8)} (merge base ${mergeBase.slice(0, 8)}). Fast lane only: the staging full gate and red team still judge the wave.`,
@@ -1433,8 +1350,7 @@ async function main() {
     "sketch-fast",
     `base-runs-${baseTreeId.slice(0, 12)}.json`,
   );
-  const binaryStat = existsSync(binary) ? statSync(binary) : null;
-  const binaryId = `${binary} ${binaryStat?.size ?? 0} ${binaryStat?.mtimeMs ?? 0}`;
+  const binaryId = godotIdentity(binary) ?? "";
   const readBaseCache = () => {
     try {
       const stored = JSON.parse(readFileSync(baseCacheFile, "utf8"));
@@ -1619,6 +1535,11 @@ async function main() {
     );
     receipt.batch.batches++;
     receipt.batch.tests += batch.runs.length;
+    if (!batch.killed && (batch.outsideError || batch.unexpectedExit)) {
+      log(
+        `  warm batch hit ${batch.outsideError ? "an outside-batch error" : "an unexpected exit"}; rerunning ${batch.unfinished.length} test(s) alone`,
+      );
+    }
     for (const run of batch.runs) {
       if (prRed) return;
       if (run.ok) {

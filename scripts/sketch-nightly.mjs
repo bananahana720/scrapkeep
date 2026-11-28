@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { spawn, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -13,7 +13,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
-import * as smoke from "./sketch-smoke.mjs";
+import * as testRunner from "./lib/godot-test-runner.mjs";
+import { pool, runProcess as runChild } from "./lib/proc.mjs";
+import { runnerReceiptPath, writeJsonReceipt } from "./lib/receipt.mjs";
 import {
   BANDS,
   TABLE,
@@ -65,7 +67,7 @@ export function flakePasses(failures, runs) {
 }
 
 export function testEntry(script) {
-  return typeof smoke.testEntry === "function" ? smoke.testEntry(script) : script;
+  return script;
 }
 
 export function soloScripts(scripts, baseline, directory = sketch) {
@@ -76,7 +78,7 @@ export function soloScripts(scripts, baseline, directory = sketch) {
     allowed.add("res://tests/tree_play_test.gd");
   }
   return new Set(
-    scripts.filter((script) => allowed.has(script) || smoke.isSoloScript(directory, script)),
+    scripts.filter((script) => allowed.has(script) || testRunner.isSoloScript(directory, script)),
   );
 }
 
@@ -84,7 +86,7 @@ export function buildPlan(
   options,
   {
     directory = sketch,
-    scripts = smoke.testScripts(directory),
+    scripts = testRunner.testScripts(directory),
     baseline = JSON.parse(
       readFileSync(path.join(root, "scripts/sketch-lint.baseline.json"), "utf8"),
     ),
@@ -191,7 +193,7 @@ export function buildPlan(
         script,
         run,
         solo: solo.has(script),
-        timeout_ms: smoke.testTimeoutMs(
+        timeout_ms: testRunner.testTimeoutMs(
           readFileSync(path.join(directory, script.replace(/^res:\/\//, "")), "utf8"),
         ),
       });
@@ -280,50 +282,27 @@ export function artifacts(step, output = "") {
   return {};
 }
 
-export function runProcess(step, timeoutMs) {
-  return new Promise((resolve) => {
-    const launch = commandFor(step);
-    const state = path.join(step.state_dir, "state");
-    if (step.kind === "export") {
-      const realData = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
-      const godotData = path.join(state, "data", "godot");
-      mkdirSync(godotData, { recursive: true });
-      const templates = path.join(godotData, "export_templates");
-      if (!existsSync(templates))
-        symlinkSync(path.join(realData, "godot/export_templates"), templates);
-    }
-    const env = scratchGodotEnv(state, { baseEnv: process.env });
-    const child = spawn(launch.command, launch.args, {
-      cwd: root,
-      env,
-      detached: true,
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let output = "";
-    let timedOut = false;
-    child.stdout.on("data", (d) => (output += d));
-    child.stderr.on("data", (d) => (output += d));
-    const timer = setTimeout(() => {
-      timedOut = true;
-      try {
-        process.kill(-child.pid, "SIGKILL");
-      } catch {
-        child.kill("SIGKILL");
-      }
-    }, timeoutMs);
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({
-        code: -1,
-        output: `${output}\n${error.message}`,
-        timed_out: false,
-      });
-    });
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({ code, output, timed_out: timedOut });
-    });
-  });
+export async function runProcess(step, timeoutMs) {
+  const launch = commandFor(step);
+  const state = path.join(step.state_dir, "state");
+  if (step.kind === "export") {
+    const realData = process.env.XDG_DATA_HOME || path.join(os.homedir(), ".local/share");
+    const godotData = path.join(state, "data", "godot");
+    mkdirSync(godotData, { recursive: true });
+    const templates = path.join(godotData, "export_templates");
+    if (!existsSync(templates))
+      symlinkSync(path.join(realData, "godot/export_templates"), templates);
+  }
+  const env = scratchGodotEnv(state, { baseEnv: process.env });
+  const res = await runChild(launch.command, launch.args, { cwd: root, env, timeoutMs });
+  if (res.error) {
+    return {
+      code: -1,
+      output: `${res.output}\n${res.error.message}`,
+      timed_out: false,
+    };
+  }
+  return { code: res.exit, output: res.output, timed_out: res.timedOut };
 }
 
 export function buildReceipt({ options, plan, results, git, startedAt, wallMs, lockWaitMs = 0 }) {
@@ -469,7 +448,7 @@ export async function runNightly(
     let data = {};
     try {
       result = await runner({ ...step, state_dir: dir }, Math.min(step.timeout_ms, remaining));
-      const verdict = smoke.judge({
+      const verdict = testRunner.judge({
         test: step.kind === "test",
         status: result.code,
         output: result.output,
@@ -485,7 +464,7 @@ export async function runNightly(
       result ??= { code: -1, output: error.message };
     }
     const output = result.output ?? "";
-    const checks = smoke.countChecks(output);
+    const checks = testRunner.countChecks(output);
     const verdictLine =
       output
         .split(/\r?\n/)
@@ -519,11 +498,10 @@ export async function runNightly(
       )
         end++;
     }
-    let next = first;
-    await Promise.all(
-      Array.from({ length: Math.min(WIDTH, end - first) }, async () => {
-        while (next < end) await run(next++);
-      }),
+    const indices = Array.from({ length: end - first }, (_, i) => first + i);
+    await pool(
+      indices.map((idx) => () => run(idx)),
+      WIDTH,
     );
     first = end;
   }
@@ -581,11 +559,10 @@ async function acquireMachine(deadline) {
 }
 
 export function writeReceipt(receipt) {
-  const dir = path.join(root, "artifacts/local/receipts");
-  mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, smoke.receiptFileName("nightly", receipt.tree, receipt.started_at));
-  writeFileSync(file, JSON.stringify(receipt, null, 2) + "\n");
-  return file;
+  return writeJsonReceipt(
+    runnerReceiptPath(root, "nightly", receipt.tree, receipt.started_at),
+    receipt,
+  );
 }
 
 async function main() {

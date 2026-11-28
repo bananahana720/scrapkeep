@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { cleanHead } from "./sound-recipes-receipt.mjs";
-import { realpathSync, writeFileSync, existsSync } from "node:fs";
+import { realpathSync, existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { cleanHead, parseReceiptArgs, root, runReceiptCli } from "./receipt-cli.mjs";
 
 import {
   LUFS_TOL,
@@ -22,7 +23,6 @@ import {
   resolveJobs,
 } from "../audio-gate.mjs";
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 export const LEVEL_KINDS = ["loudness", "peak", "seam", "stale"];
 export const PLANT_RATE = 48000;
 export const PLANT_SECONDS = 20;
@@ -189,55 +189,33 @@ export async function measureAsync(project, { jobs } = {}) {
 }
 
 export function parseArgs(argv) {
-  const args = {};
-  for (let i = 0; i < argv.length; i++) {
-    const arg = argv[i];
-    const value = (flag) =>
-      arg === flag && i + 1 < argv.length
-        ? argv[++i]
-        : arg.startsWith(flag + "=")
-          ? arg.slice(flag.length + 1)
-          : null;
-    let v;
-    if ((v = value("--out")) !== null) {
-      if (!v) throw new Error("--out requires a path");
-      args.out = v;
-    } else if ((v = value("--jobs")) !== null) args.jobs = resolveJobs(v);
-    else throw new Error("unknown argument: " + arg);
-  }
-  return args;
+  return parseReceiptArgs(argv, {
+    valueFlags: {
+      "--out": { key: "out", emptyError: "--out requires a path", rejectEmptyEquals: true },
+      "--jobs": { key: "jobs", parse: resolveJobs },
+    },
+  });
 }
 
-async function main(argv) {
-  let args;
-  try {
-    args = parseArgs(argv);
-  } catch (e) {
-    console.error(String(e.message ?? e));
-    return 2;
-  }
-  args.project = path.join(root, "sketches/core-loop");
-  let head;
-  try {
-    head = cleanHead(root);
-  } catch (e) {
-    console.error(String(e.message ?? e));
-    return 2;
-  }
-  const receipt = {
-    ...(await measureAsync(path.resolve(args.project), { jobs: args.jobs })),
-    head,
-  };
-  const ordered = {
-    head: receipt.head,
-    pass: receipt.pass,
-    measured: receipt.measured,
-    plant_caught: receipt.plant_caught,
-  };
-  const text = JSON.stringify(ordered, null, 2) + "\n";
-  if (args.out) writeFileSync(args.out, text);
-  else process.stdout.write(text);
-  return receipt.pass ? 0 : 1;
+function main(argv) {
+  return runReceiptCli(async () => {
+    const args = parseArgs(argv);
+    const project = path.join(root, "sketches/core-loop");
+    const head = cleanHead(root);
+    const receipt = {
+      ...(await measureAsync(path.resolve(project), { jobs: args.jobs })),
+      head,
+    };
+    return {
+      receipt: {
+        head: receipt.head,
+        pass: receipt.pass,
+        measured: receipt.measured,
+        plant_caught: receipt.plant_caught,
+      },
+      out: args.out,
+    };
+  });
 }
 
 if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url))
