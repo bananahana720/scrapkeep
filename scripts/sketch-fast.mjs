@@ -86,6 +86,9 @@ const RECEIPT_SCHEMA = "scrapkeep-fast-receipt/1";
 export const DEFAULT_ESTIMATE_MS = 180_000;
 export const UNKNOWN_BOT_NAME = /^(bot_.*|.*_sweep_.*)\.gd$/;
 export const HUB_TESTS = 25;
+const SOURCE_READER = "res://tests/support/source_scan.gd";
+const FOLDER_SCAN = /\.(?:sources|matching|captures)\s*\(/;
+const SCANNED_SCRIPT = /^(?:src|tools)\/.+\.gd$/;
 export const CANARY_COUNT = 4;
 export const ALWAYS = [
   "tests/unit_suite_test.gd",
@@ -344,11 +347,24 @@ function expand(index, globs) {
   return index.tests.filter((test) => patterns.some((pattern) => pattern.test(test)));
 }
 
+export function folderGuards(index) {
+  const guards = index.tests.filter((test) => {
+    const text = index.files.get(test) ?? "";
+    return text.includes(SOURCE_READER) && FOLDER_SCAN.test(text);
+  });
+  if (guards.length === 0)
+    throw new Error(
+      `no top-level test scans folders through ${SOURCE_READER}, so a changed script would run no folder guard`,
+    );
+  return guards;
+}
+
 export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
   const picked = new Map();
   const hubs = [];
   const unmapped = [];
   const shards = new Map();
+  let guards = null;
   const add = (test, tier, why) => {
     const prior = picked.get(test);
     if (!prior || prior.tier > tier) picked.set(test, { tier, why });
@@ -359,6 +375,8 @@ export function selectTests(index, changed, { hub = HUB_TESTS } = {}) {
     for (const rule of PATH_RULES)
       if (rule.match.test(rel))
         for (const test of expand(index, rule.tests)) add(test, 0, `${rule.name}: ${rel}`);
+    if (SCANNED_SCRIPT.test(rel))
+      for (const test of (guards ??= folderGuards(index))) add(test, 1, `folder guard: ${rel}`);
     for (const rule of SHARD_RULES)
       if (rule.match.test(rel))
         for (const test of expand(index, rule.tests))

@@ -42,6 +42,13 @@ test("selection mutation proof: GDScript change reaches ALWAYS pins, direct test
   }
 });
 
+test("selection mutation proof: a changed world script runs the folder guards that scan src/world", () => {
+  const index = buildIndex(sketchDir);
+  const { picked } = selectTests(index, ["src/world/camp_sandbox.gd"]);
+  for (const guard of ["tests/profile_purity_test.gd", "tests/context_heading_test.gd"])
+    assert.ok(picked.has(guard), `expected ${guard} for src/world/camp_sandbox.gd`);
+});
+
 test("selection mutation proof: park data change triggers map-standard PATH_RULES", () => {
   const index = buildIndex(sketchDir);
   const parkSel = selectTests(index, ["src/world/parks/dam.gd"]);
