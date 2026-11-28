@@ -27,6 +27,17 @@ test("filterFormatTargets keeps only existing JS/MJS files in supported roots", 
   assert.deepEqual(res, ["scripts/ci/check-budget.mjs", "src/game.js", "vite.config.js"]);
 });
 
+test("filterFormatTargets keeps a name as git gave it and never turns one with outer spaces into another file", () => {
+  const every = () => true;
+  assert.deepEqual(
+    filterFormatTargets(["scripts/a.mjs ", " scripts/b.mjs", "\tscripts/c.mjs\n"], every),
+    [],
+  );
+  assert.deepEqual(filterFormatTargets(['scripts/ odd "q"\nname.mjs'], every), [
+    'scripts/ odd "q"\nname.mjs',
+  ]);
+});
+
 test("changedFilesSince uses --no-renames and surfaces spawn errors", () => {
   let seenArgs = null;
   const files = changedFilesSince("origin/main", {

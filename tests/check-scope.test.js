@@ -82,6 +82,33 @@ const contentCases = [
     status: 1,
   },
   {
+    name: "a path whose name holds a newline, a leading space and a quote as itself",
+    paths: ['docs/ odd "name"\nline.md'],
+    scope: "documentation-only",
+    commands: ["npm run check:docs", "npm run check:project"],
+    noBuild: true,
+    status: 0,
+    count: 1,
+  },
+  {
+    name: "a root file and a scripts file whose names hold a newline as tooling that needs no build",
+    paths: ["odd\nname.md", "scripts/odd\nname.mjs"],
+    scope: "tooling-no-build",
+    commands: ["npm test", "npm run check:docs", "npm run check:project"],
+    noBuild: true,
+    status: 0,
+    count: 2,
+  },
+  {
+    name: "a root file named only a newline as an unclassified path",
+    paths: ["\n"],
+    scope: "other",
+    commands: ["npm run verify"],
+    noBuild: true,
+    status: 1,
+    count: 1,
+  },
+  {
     name: "documentation-only",
     paths: ["docs/design/loops.md", "README.md"],
     scope: "documentation-only",
@@ -168,6 +195,8 @@ describe("check-scope", { concurrency: CONCURRENCY }, () => {
             "expected command " + command + "\n" + child.stdout,
           );
         for (const file of scenario.paths) assert.ok(child.stdout.includes(file));
+        if (scenario.count !== undefined)
+          assert.match(child.stdout, new RegExp(`\\(${scenario.count} changed paths\\)`));
         if (scenario.status === 1) assert.match(child.stdout, /refused: --no-build was given/);
         if (scenario.paths.length === 0) assert.match(child.stdout, /none \(no changed paths\)/);
       } finally {

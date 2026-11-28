@@ -10,6 +10,7 @@ const Warden := preload("res://src/combat/warden.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const SfxBank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 
 # Every telegraph and hazard is created with an explicit attack type: the source names
 # one at each creation site, no factory defaults it, and the live game tags each attack
@@ -18,6 +19,8 @@ const Synth := preload("res://src/presentation/synth.gd")
 
 const DT := 1.0 / 90.0
 const CREATION := "(Telegraph\\.(ring|lane|wedge|wave)|_commit_ring|_commit_lane|\\.commit_(sector|annulus|lane))\\("
+const NAMED := "Type\\.(INSTANT|WAVE|PROJECTILE|LANE)|\\bthreat_type\\b"
+const FOLDERS := ["res://src/combat", "res://src/boss"]
 # The audit: file -> the type each creation site in it passes, in source order.
 const AUDIT := {
 	"res://src/combat/enemy.gd": ["threat_type", "threat_type"],
@@ -106,7 +109,7 @@ func _initialize() -> void:
 	root.add_child(_game)
 
 
-func _report(label: String, ok: bool, detail: String) -> void:
+func check(label: String, ok: bool, detail: String) -> void:
 	if not ok:
 		_failures += 1
 	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
@@ -140,44 +143,45 @@ func _same(a: Dictionary, b: Dictionary) -> bool:
 
 
 func _check_sources() -> void:
-	var call := RegEx.create_from_string(CREATION)
-	var named := RegEx.create_from_string("Type\\.(INSTANT|WAVE|PROJECTILE|LANE)|\\bthreat_type\\b")
 	var found := {}
-	for folder in ["res://src/combat", "res://src/boss"]:
-		for file in DirAccess.get_files_at(folder):
-			if not file.ends_with(".gd"):
+	var sources := SourceScan.sources(self, FOLDERS)
+	for path in sources:
+		if not String(path).get_base_dir() in FOLDERS:
+			continue
+		var file := String(path).get_file()
+		var lines := String(sources[path]).split("\n")
+		for i in lines.size():
+			var line: String = lines[i].strip_edges()
+			if line.begins_with("func ") or line.begins_with("static func ") or line.begins_with("#"):
 				continue
-			var path: String = folder + "/" + file
-			var lines := FileAccess.get_file_as_string(path).split("\n")
-			for i in lines.size():
-				var line: String = lines[i].strip_edges()
-				if line.begins_with("func ") or line.begins_with("static func ") or line.begins_with("#"):
-					continue
-				var hit := call.search(line)
-				if hit == null:
-					continue
-				if hit.get_string(2) == "wave":
-					(found.get_or_add(path, []) as Array).append("WAVE")
-					continue
-				if line.contains("d[\"type\"]"):
-					(found.get_or_add(path, []) as Array).append("descriptor")
-					continue
-				var tag := named.search(line.substr(hit.get_end()))
-				(found.get_or_add(path, []) as Array).append(tag.get_string(1) if tag != null and tag.get_string(1) != "" else ("threat_type" if tag != null else "none (%s:%d)" % [file, i + 1]))
+			var calls := SourceScan.search(self, line, CREATION)
+			if calls.is_empty():
+				continue
+			var hit := calls[0]
+			if hit.get_string(2) == "wave":
+				(found.get_or_add(path, []) as Array).append("WAVE")
+				continue
+			if line.contains("d[\"type\"]"):
+				(found.get_or_add(path, []) as Array).append("descriptor")
+				continue
+			var tags := SourceScan.search(self, line.substr(hit.get_end()), NAMED)
+			var tag: RegExMatch = null if tags.is_empty() else tags[0]
+			(found.get_or_add(path, []) as Array).append(tag.get_string(1) if tag != null and tag.get_string(1) != "" else ("threat_type" if tag != null else "none (%s:%d)" % [file, i + 1]))
 	var sites := 0
 	for path in found:
 		sites += (found[path] as Array).size()
-	_report("explicit type at every site", _same(found, AUDIT),
+	check("explicit type at every site", _same(found, AUDIT),
 		"%d creation sites in combat and boss, each naming its type: %s" % [sites, found])
 	var described := {}
 	for path in DESCRIPTORS:
-		for line in FileAccess.get_file_as_string(path).split("\n"):
+		for line in SourceScan.text(self, path).split("\n"):
 			line = line.strip_edges()
 			if line.begins_with("static func ") or line.begins_with("func ") or not line.contains("_base("):
 				continue
-			var tag := named.search(line)
+			var tags := SourceScan.search(self, line, NAMED)
+			var tag: RegExMatch = null if tags.is_empty() else tags[0]
 			(described.get_or_add(path, []) as Array).append(tag.get_string(1) if tag != null and tag.get_string(1) != "" else "none")
-	_report("explicit type in every descriptor", _same(described, DESCRIPTORS),
+	check("explicit type in every descriptor", _same(described, DESCRIPTORS),
 		"each hazard descriptor names its type: %s" % [described])
 
 
@@ -192,7 +196,7 @@ func _check_factories() -> void:
 			var at := args.find("threat_type")
 			if at < 0 or at >= args.size() - (method["default_args"] as Array).size():
 				loose.append("%s.%s(%s)" % [path.get_file(), method["name"], ", ".join(args)])
-	_report("no default type", loose.is_empty(),
+	check("no default type", loose.is_empty(),
 		"every telegraph, hazard and enemy factory takes the attack type as a required argument; loose: %s" % [loose])
 
 
@@ -203,7 +207,7 @@ func _check_sounds() -> void:
 		var wav := SfxBank.stream(id)
 		if not SfxBank.has_recipe(id) or Synth.wav_peak(wav) < 0.1:
 			bad.append(id)
-	_report("warn sounds", bad.is_empty(), "each type's warn sound has its own non-silent recipe; failing %s" % [bad])
+	check("warn sounds", bad.is_empty(), "each type's warn sound has its own non-silent recipe; failing %s" % [bad])
 
 
 func _check_combat() -> void:
@@ -238,7 +242,7 @@ func _check_combat() -> void:
 		var node = tags.get(key)
 		got[key] = Threat.Type.keys()[node.type] if node != null and Threat.valid(node.type) else "missing"
 	var lift_harmless: bool = tags["warden pulse"] != null and not tags["warden pulse"].is_hostile() and tags["warden core"] != null and tags["warden core"].is_hostile()
-	_report("combat attacks tagged", _same(got, want) and slam_has_flight and lift_harmless,
+	check("combat attacks tagged", _same(got, want) and slam_has_flight and lift_harmless,
 		"live combat telegraphs carry their audited types %s; the leap slam draws the miniboss's flight: %s; the Warden's lift ring is a harmless field and its core ring a threat: %s"
 			% [got, slam_has_flight, lift_harmless])
 
@@ -269,5 +273,5 @@ func _check_boss() -> void:
 				for family in want:
 					if h.attack_id.begins_with(family):
 						got[family] = Threat.Type.keys()[h.type] if Threat.valid(h.type) else "unset"
-	_report("boss attacks tagged", _same(got, want) and grouped,
+	check("boss attacks tagged", _same(got, want) and grouped,
 		"Brindle's hazards carry their audited types %s, each attack in group %s and the amber drone pad out of it: %s" % [got, Threat.GROUP, grouped])

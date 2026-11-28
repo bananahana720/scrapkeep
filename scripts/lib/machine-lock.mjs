@@ -12,6 +12,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import path from "node:path";
+import { processId, processLive } from "./proc.mjs";
 
 function slotRoot() {
   return path.join(process.env.SCRAPKEEP_LOCK_DIR || "/tmp", "scrapkeep-sketch-smoke.slots");
@@ -31,14 +32,9 @@ function slotOwner(slot) {
   try {
     const owner = readdirSync(slot).find((name) => name.startsWith("claim-"));
     if (!owner) return null;
-    const pid = Number(readFileSync(path.join(slot, owner), "utf8"));
-    if (!Number.isSafeInteger(pid) || pid < 1) throw new Error(`invalid slot pid in ${slot}`);
-    try {
-      process.kill(pid, 0);
-    } catch (error) {
-      if (error.code === "ESRCH") return { owner, alive: false };
-      if (error.code !== "EPERM") throw error;
-    }
+    const live = processLive(readFileSync(path.join(slot, owner), "utf8"));
+    if (live === null) throw new Error(`invalid slot pid in ${slot}`);
+    if (!live) return { owner, alive: false };
     const age = Date.now() - statSync(path.join(slot, owner)).mtimeMs;
     return { owner, alive: age < STALE_CLAIM_MS };
   } catch (error) {
@@ -93,16 +89,10 @@ function quietRoot() {
 export function quietHolder(directory = quietRoot()) {
   const file = path.join(directory, QUIET_HOLD);
   try {
-    const pid = Number(readFileSync(file, "utf8"));
-    if (!Number.isSafeInteger(pid) || pid < 1) return null;
+    const pid = processId(readFileSync(file, "utf8"));
+    if (pid === null) return null;
     if (Date.now() - statSync(file).mtimeMs > QUIET_MAX_MS) return null;
-    try {
-      process.kill(pid, 0);
-    } catch (error) {
-      if (error.code === "ESRCH") return null;
-      if (error.code !== "EPERM") throw error;
-    }
-    return pid;
+    return processLive(pid) ? pid : null;
   } catch (error) {
     if (error.code === "ENOENT") return null;
     throw error;
@@ -126,7 +116,7 @@ export function holdQuietSync({
   const late = () => Date.now() - started > timeoutMs;
   const release = () => {
     try {
-      if (Number(readFileSync(file, "utf8")) === pid) unlinkSync(file);
+      if (processId(readFileSync(file, "utf8")) === pid) unlinkSync(file);
     } catch (error) {
       if (error.code !== "ENOENT") throw error;
     }

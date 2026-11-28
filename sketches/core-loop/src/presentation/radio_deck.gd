@@ -176,6 +176,39 @@ func tune(id: String) -> void:
 	_changed()
 
 
+func press(key: int, id: String, on_tape: bool) -> bool:
+	match key:
+		KEY_SPACE, KEY_ENTER, KEY_KP_ENTER:
+			if id == "":
+				return false
+			if on_tape:
+				radio.remove_from(radio.mixtape, id)
+			elif not radio.add_to(radio.mixtape, id):
+				radio.remove_from(radio.mixtape, id)
+			var audio = game.audio()
+			if audio != null:
+				audio.play("flow_changed", 0.0, 1.0, "UI")
+		KEY_COMMA, KEY_PERIOD:
+			if on_tape:
+				radio.nudge(radio.mixtape, id, -1 if key == KEY_COMMA else 1)
+		KEY_N:
+			var made: int = radio.new_mixtape()
+			if made >= 0:
+				radio.pick_mixtape(made)
+		KEY_X:
+			var rng := RandomNumberGenerator.new()
+			rng.randomize()
+			radio.shuffle_mixtape(radio.mixtape, rng)
+		KEY_T:
+			radio.tune(radio.MIXTAPE)
+		_:
+			if key >= KEY_1 and key < KEY_1 + radio.mixtapes.size():
+				radio.pick_mixtape(key - KEY_1)
+			else:
+				return false
+	return true
+
+
 func _changed() -> void:
 	_dirty = true
 	if dial != null:

@@ -20,6 +20,7 @@ extends SceneTree
 #   legacy_map_cmp  a legacy map id compared, or listed to compare: == "dig", in ["dig", "dig_deep"]
 #                   (these ids are also quest and key names, so only a comparison counts)
 
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 const ROOT := "res://src"
@@ -84,20 +85,16 @@ const PINS := {
 }
 
 var _t := T.new("new_world_cost_test")
-var _res := {}
 
 
 func _initialize() -> void:
-	for kind in PATTERNS:
-		var re := RegEx.new()
-		re.compile(PATTERNS[kind])
-		_res[kind] = re
 	var counts := {}
 	var kinds := {}
-	for path in _scripts(ROOT):
+	var sources := SourceScan.sources(_t, [ROOT])
+	for path in sources:
 		if path in HOMES:
 			continue
-		var found := _count(path)
+		var found := _count(sources[path])
 		var n := 0
 		for kind in found:
 			n += int(found[kind])
@@ -126,27 +123,12 @@ func _initialize() -> void:
 		"a file names a world, map or boss outright more often than its pin: %s" % [grew])
 	_t.check("every pin is current", shrank.is_empty(),
 		"a file lost a site, so lower its pin: %s" % [shrank])
-	_t.check("the scan finds the known sites", total > 0 and _res.size() == PATTERNS.size(), "%d sites" % total)
+	_t.check("the scan finds the known sites", total > 0, "%d sites" % total)
 	quit(_t.verdict())
 
 
-func _scripts(dir_path: String) -> Array:
-	var out: Array = []
-	var dir := DirAccess.open(dir_path)
-	if dir == null:
-		return out
-	for sub in dir.get_directories():
-		out.append_array(_scripts(dir_path.path_join(sub)))
-	for file in dir.get_files():
-		if file.ends_with(".gd"):
-			out.append(dir_path.path_join(file))
-	out.sort()
-	return out
-
-
-func _count(path: String) -> Dictionary:
+func _count(text: String) -> Dictionary:
 	var found := {}
-	var text := FileAccess.get_file_as_string(path)
 	for line in text.split("\n"):
 		var code := line
 		if code.strip_edges().begins_with("#"):
@@ -154,8 +136,8 @@ func _count(path: String) -> Dictionary:
 		var hash_at := code.find("#")
 		if hash_at >= 0:
 			code = code.substr(0, hash_at)
-		for kind in _res:
-			var n: int = (_res[kind] as RegEx).search_all(code).size()
+		for kind in PATTERNS:
+			var n := SourceScan.search(_t, code, PATTERNS[kind]).size()
 			if n > 0:
 				found[kind] = int(found.get(kind, 0)) + n
 	return found
