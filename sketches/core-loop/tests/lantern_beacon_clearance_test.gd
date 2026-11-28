@@ -10,6 +10,7 @@ const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Game := preload("res://src/game.gd")
 const Beacon := preload("res://src/core/beacon.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const T := preload("res://tests/support/t.gd")
 const FRAME := "res://assets/models/lantern_beacon_frame.glb"
 const LENS := "res://assets/models/lantern_beacon_lens.glb"
@@ -66,7 +67,7 @@ func _run_mast() -> void:
 	var mast_beacon := Beacon.new()
 	mast_beacon.authored = false
 	_game.add_child(mast_beacon)
-	mast_beacon.setup()
+	mast_beacon.setup(PaletteMaterials)
 	_t.check("an unauthored beacon builds the mast and no lantern", mast_beacon.clamp_seat() == null and mast_beacon.get_node_or_null("LanternFrame") == null)
 	mast_beacon.global_position = Vector3(500, 0, 500)
 	_game.flow.beacon = mast_beacon

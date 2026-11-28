@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 const ROUGH := {"device_metal": 0.68, "device_marks": 0.85}
 
@@ -89,7 +89,7 @@ static func _meshes(path: String, required: Array) -> Dictionary:
 static func _slot_material(slot: String) -> StandardMaterial3D:
 	if slot not in ["device_concrete", "device_metal", "device_marks"]:
 		return null
-	var mat := Palette.solid(Color.WHITE)
+	var mat := PaletteMaterials.solid(Color.WHITE)
 	mat.resource_name = slot
 	mat.vertex_color_use_as_albedo = true
 	mat.roughness = 0.95 if slot == "device_concrete" else 0.85

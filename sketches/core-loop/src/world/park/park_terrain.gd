@@ -6,7 +6,7 @@ signal built
 static var draw_regions := true
 
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const PylonBite := preload("res://src/world/pylon_bite.gd")
 const ParkStamps := preload("res://src/world/park/park_stamps.gd")
 const ThreadGuard := preload("res://src/core/thread_guard.gd")
@@ -292,7 +292,7 @@ static func ground_assets() -> Object:
 	for i in ids.size():
 		var asset: Object = ClassDB.instantiate("Terrain3DTextureAsset")
 		asset.name = ids[i]
-		asset.albedo_texture = Palette.look_texture(ids[i])
+		asset.albedo_texture = PaletteMaterials.look_texture(ids[i])
 		asset.uv_scale = 2.0 / float(metres[i])
 		assets.set_texture(i, asset)
 	return assets

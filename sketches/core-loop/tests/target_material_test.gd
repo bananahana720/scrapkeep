@@ -4,7 +4,7 @@ extends SceneTree
 
 const Game := preload("res://src/game.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Capture := preload("res://tools/target_capture.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Intent := preload("res://src/movement/intent.gd")
@@ -27,9 +27,9 @@ func _run() -> void:
 	for view: MeshInstance3D in kit.find_children("*", "MeshInstance3D", true, false):
 		for surface in view.mesh.get_surface_count():
 			var original := view.mesh.surface_get_material(surface)
-			var copy := Palette.target_clutter_material(original)
+			var copy := PaletteMaterials.target_clutter_material(original)
 			kit_surfaces += 1
-			kit_ok = kit_ok and copy != original and copy == Palette.target_clutter_material(original) \
+			kit_ok = kit_ok and copy != original and copy == PaletteMaterials.target_clutter_material(original) \
 				and copy.shader.resource_path == "res://src/presentation/clutter.gdshader" \
 				and copy.get_shader_parameter("albedo") == (original as StandardMaterial3D).albedo_color \
 				and copy.resource_name == original.resource_name \
@@ -83,7 +83,7 @@ func _run() -> void:
 			check(material != null and material.resource_name == expected_name, "target binds " + binding.role + " on " + str(view.name))
 			if material != null:
 				if slot_role:
-					check(material.shader.resource_path == "res://src/presentation/sandstone.gdshader" and material == Palette.slot_material(binding.role), "w12 VX-SURF: shipped " + binding.role + " is the sandstone slot material")
+					check(material.shader.resource_path == "res://src/presentation/sandstone.gdshader" and material == PaletteMaterials.slot_material(binding.role), "w12 VX-SURF: shipped " + binding.role + " is the sandstone slot material")
 					check(material.get_shader_parameter("cliff_only") == (binding.role == "rock") and material.get_shader_parameter("strata_map") != null, "w12 VX-SURF: " + binding.role + " slot carries its cliff flag and the strata map")
 				else:
 					check(material.get_shader_parameter("base_color") == binding.originals[i].albedo_color, "target base uniform matches high palette/source colour for " + binding.role)
@@ -111,7 +111,7 @@ func _run() -> void:
 	check(Preset.apply("low") and _matches(before), "high to low restores every original material resource and value")
 	check(Preset.apply("target") and Preset.apply("low") and _matches(before), "target to low restores every original material resource and value")
 	check(Preset.apply("target") and Preset.apply("target") and Preset.apply("high") and Preset.apply("low") and _matches(before), "repeated target preserves original material bindings")
-	check(Palette.ground_material().shader.resource_path == "res://src/presentation/sandstone.gdshader", "established ground construction remains original")
+	check(PaletteMaterials.ground_material().shader.resource_path == "res://src/presentation/sandstone.gdshader", "established ground construction remains original")
 	var layer := CanvasLayer.new()
 	var label := WorldPrompt.new()
 	var spatial := Label3D.new()

@@ -115,7 +115,7 @@ static func _parts() -> PackedScene:
 		return null
 	_shared = load(path) as PackedScene
 	if _shared != null:
-		_painted = Palette.solid(Color.WHITE)
+		_painted = PaletteMaterials.solid(Color.WHITE)
 		_painted.vertex_color_use_as_albedo = true
 	return _shared
 

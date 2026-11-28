@@ -31,11 +31,11 @@ func build() -> void:
 		if glow != null and _needle != null and not rings.has(null):
 			add_child(model)
 			for ring in rings:
-				var mat := Palette.solid(Palette.ARC, RING_LIT)
+				var mat := PaletteMaterials.solid(Palette.ARC, RING_LIT)
 				mat.albedo_color = Palette.ARC.darkened(0.6)
 				ring.material_override = mat
 				_ring_mats.append(mat)
-			_coil_mat = Palette.solid(Palette.ARC, 0.3)
+			_coil_mat = PaletteMaterials.solid(Palette.ARC, 0.3)
 			glow.material_override = _coil_mat
 			_show_stakes(0)
 			return
@@ -48,7 +48,7 @@ func build() -> void:
 	cyl.bottom_radius = 1.2
 	cyl.height = MAST_HEIGHT
 	mast.mesh = cyl
-	mast.material_override = Palette.solid(Palette.COPPER)
+	mast.material_override = PaletteMaterials.solid(Palette.COPPER)
 	mast.position = Vector3.UP * MAST_HEIGHT * 0.5
 	add_child(mast)
 	var coil := MeshInstance3D.new()
@@ -56,7 +56,7 @@ func build() -> void:
 	sphere.radius = COIL_RADIUS
 	sphere.height = COIL_RADIUS * 2.0
 	coil.mesh = sphere
-	_coil_mat = Palette.solid(Palette.ARC, 0.3)
+	_coil_mat = PaletteMaterials.solid(Palette.ARC, 0.3)
 	coil.material_override = _coil_mat
 	coil.position = Vector3.UP * (MAST_HEIGHT + 1.0)
 	add_child(coil)

@@ -8,7 +8,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
@@ -83,9 +83,9 @@ func _entry() -> void:
 	var env := Environment.new()
 	var ctx := StageCtx.new()
 	ctx.terrain = Terrain.new(env)
-	var material := Palette.hdri_sky().sky_material as ShaderMaterial
+	var material := PaletteMaterials.hdri_sky().sky_material as ShaderMaterial
 	_t.check("the HDRI sky is the time-of-day shader over the panorama", material != null
-		and (material.get_shader_parameter("panorama") as Texture2D).resource_path == Palette.HDRI_SKY)
+		and (material.get_shader_parameter("panorama") as Texture2D).resource_path == PaletteMaterials.HDRI_SKY)
 	var plain = material.get_shader_parameter("horizon_tint")
 	WorldLook._on_stage_entered(1, false, ctx)
 	_t.eq("stage 1 enters the dawn horizon", material.get_shader_parameter("horizon_tint"), WorldLook.TIME_ROWS.dawn.grade.horizon)

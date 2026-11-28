@@ -2,6 +2,7 @@ extends Node3D
 
 const DigScenery := preload("res://src/presentation/dig_scenery.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const WeakPoints := preload("res://src/boss/weak_points.gd")
@@ -159,7 +160,7 @@ func _prepare() -> bool:
 		material.vertex_color_use_as_albedo = slot != "ancient_light"
 		material.roughness = 0.62 if slot == "steel" else (0.50 if slot == "ancient_enamel" else 0.78)
 		material.metallic = 0.36 if slot == "steel" else (0.24 if slot == "ancient_enamel" else 0.08)
-		Palette.surface_grain(material)
+		PaletteMaterials.surface_grain(material)
 		if slot == "glass":
 			material.roughness = 0.28
 			material.metallic = 0.0

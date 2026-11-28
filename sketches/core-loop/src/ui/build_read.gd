@@ -4,6 +4,7 @@ const Panels := preload("res://src/build/panels.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const PanelShell := preload("res://src/build/panel_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 
 
@@ -125,7 +126,7 @@ func _stand_in(wanted: bool) -> void:
 	sphere.radius = 1.0
 	sphere.height = 2.0
 	_ball.mesh = sphere
-	_ball.material_override = Palette.solid(Palette.CHARCOAL.lerp(Palette.SLATE, 0.4), 0.0)
+	_ball.material_override = PaletteMaterials.solid(Palette.CHARCOAL.lerp(Palette.SLATE, 0.4), 0.0)
 	_pivot.add_child(_ball)
 	_pivot.move_child(_ball, 0)
 

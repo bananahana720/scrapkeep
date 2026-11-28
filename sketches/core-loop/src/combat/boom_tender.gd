@@ -100,7 +100,7 @@ func _build_tool() -> void:
 		cyl.top_radius = 0.3
 		cyl.bottom_radius = 0.3
 		cyl.height = 0.9
-		cyl.material = Palette.solid(Palette.RUST)
+		cyl.material = PaletteMaterials.solid(Palette.RUST)
 		_lay_boom(cyl, Vector3(0.0, 0.85, 0.0), Basis(Vector3.RIGHT, PI * 0.5))
 		return
 	_crew.free()

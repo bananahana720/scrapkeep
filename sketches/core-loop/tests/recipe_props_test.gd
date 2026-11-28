@@ -5,7 +5,7 @@ extends SceneTree
 # mesh node with every surface in its slot. The seven live alpha objects are rows, the valve as two frames.
 
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Beacon := preload("res://src/core/beacon.gd")
 const T := preload("res://tests/support/t.gd")
 const LIVE := ["ore_cart", "lantern_beacon", "valve_wheel", "valve_wheel_mount", "barge", "kicker_wedge", "moss_jukebox",
@@ -97,7 +97,7 @@ func _check_base(key: String, xform: Transform3D) -> void:
 func _check_beacon() -> void:
 	var beacon := Beacon.new()
 	root.add_child(beacon)
-	beacon.setup()
+	beacon.setup(PaletteMaterials)
 	_t.check("beacon carries the frame GLB", beacon.get_node_or_null("LanternFrame") != null)
 	_t.check("beacon carries the lens GLB", beacon.get_node_or_null("LanternLens") != null)
 	var wanted: Dictionary = {}
@@ -128,7 +128,7 @@ func _slots(view: GeometryInstance3D) -> int:
 	var slots := 0
 	for s in (view as MeshInstance3D).mesh.get_surface_count():
 		var material: Material = view.get_active_material(s)
-		if material != null and Palette.is_slot_resource(material):
+		if material != null and PaletteMaterials.is_slot_resource(material):
 			slots += 1
 	return slots
 

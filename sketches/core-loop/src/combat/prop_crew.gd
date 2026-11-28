@@ -121,7 +121,7 @@ static func _parts() -> Dictionary:
 				var slot := surface_material.resource_name if surface_material != null else ""
 				if slot == "fleet_paint":
 					flash = i
-				var painted := Palette.solid(Color.WHITE)
+				var painted := PaletteMaterials.solid(Color.WHITE)
 				painted.vertex_color_use_as_albedo = true
 				painted.metallic = 0.45 if slot == "working_tool" else 0.0
 				painted.roughness = 0.5 if slot == "working_tool" else (0.9 if slot == "part_state" else 0.82)

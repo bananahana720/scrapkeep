@@ -128,7 +128,7 @@ static func _parts() -> Dictionary:
 	if not _shared.is_empty():
 		return _shared
 	var scene := (load(ModelVariants.path("res://assets/models/world_one/enemy_netcaster.glb")) as PackedScene).instantiate()
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	var flash := 0
 	var mesh: Mesh = (scene.find_child("NetcasterBody", true, false) as MeshInstance3D).mesh.duplicate()

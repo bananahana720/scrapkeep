@@ -19,8 +19,6 @@ const ALLOWED := [
 	["res://src/core/flow.gd", "res://src/world/event_director.gd"],
 	["res://src/core/flow.gd", "res://src/world/park/park_map.gd"],
 	["res://src/core/flow.gd", "res://src/world/victory_lap.gd"],
-	["res://src/core/palette.gd", "res://src/presentation/material_slots.gd"],
-	["res://src/core/palette.gd", "res://src/presentation/time_sky.gdshader"],
 	["res://src/core/run_log.gd", "res://src/combat/boss_posture.gd"],
 	["res://src/core/run_log.gd", "res://src/movement/speed_tier.gd"],
 	["res://src/core/run_state.gd", "res://src/build/consumables.gd"],

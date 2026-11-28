@@ -280,14 +280,14 @@ const SOURCE_PINS := {
 	# 2026-11-12: re-pinned for the pedestal gem becoming its rung's TierMark shape (W1-26).
 	# 2026-11-24: re-pinned for fire() lid hinge tween, staggered pedestal rise and brass glint burst (W46-ANIM-VFX-FLAIR).
 	# 2026-11-25: re-pinned for _relic_offer() passing include_alt = true so all 12 W50 swap relics can drop in-run.
-	"cracked_cache": ["stand_down()", "4b213d39ca49bc8c5486cda33766e7e5395f44161f4726ef1b88a6a92c811144"],
+	"cracked_cache": ["stand_down()", "f135d813f01ee783184679cb7d09e0746142bfc2248bfd26904fb1656077da08"],
 	"bet_crate": ["reach_point()", "dc1b7b8203b6c2018894e88689885c366ed5edd5d928cae60f6370082acb2e16"],
 	"ambush_altar": ["reach_point()", "7a1a73f6c7f2d8fc8645eb7565f763f0fb95d0d7701598998f46905bc9aa6db3"],
 }
 const INHERITED_PINS := {
 	# 2026-11-19: device and interactables re-pinned for the prompt drawing Interact's bound key or
 	# button in place of a fixed E (Wave 44 audit).
-	"device": "9fb867d521205d036280e431b6c5fd2778709f0d375940b72e12438325c9eb03",
+	"device": "626fd14e0d047533e867e3efe45c686d88da25b5e9e68ae2c2865197aca28daa",
 	"interactables": "693003acc330eaffb583edf65056f45c13b09918795409fb3b2e7e7fa86b8713",
 	"interact": "4211c0ccb3631e6fd9dff62b929527f38a1bf1a99ae9dea7217e9f75470a0708",
 }

@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Anchor := preload("res://src/combat/anchor_crew.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const T := preload("res://tests/support/t.gd")
 
 func _initialize() -> void:
@@ -19,7 +19,7 @@ func _initialize() -> void:
 	var anchor := Anchor.new()
 	anchor._crew = MeshInstance3D.new()
 	anchor.add_child(anchor._crew)
-	anchor._material = Palette.solid(Color.WHITE)
+	anchor._material = PaletteMaterials.solid(Color.WHITE)
 	anchor._build_tool()
 	anchor._pose()
 	t.check("missing DeckReel keeps visible crew", anchor._crew != null)

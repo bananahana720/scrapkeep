@@ -6,7 +6,7 @@ const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const BallState := preload("res://src/movement/ball_state.gd")
 const RigidBall := preload("res://src/movement/rigid_ball.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const MathUtil := preload("res://src/core/math_util.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const AugmentKit := preload("res://src/movement/augment_kit.gd")
@@ -230,7 +230,7 @@ func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
 	sphere.radial_segments = 32
 	sphere.rings = 16
 	_mesh.mesh = sphere
-	_mesh.material_override = Palette.ball_material()
+	_mesh.material_override = PaletteMaterials.ball_material()
 	_juice.add_child(_mesh)
 	_roll_mount = Node3D.new()
 	_roll_mount.name = "RollMount"
@@ -481,7 +481,7 @@ func refit() -> void:
 func _paint_effects() -> void:
 	var color := class_color()
 	_wings_material.albedo_color = Color(color, 0.75)
-	_plate.material_override = Palette.solid(color, 1.2)
+	_plate.material_override = PaletteMaterials.solid(color, 1.2)
 
 
 func class_color() -> Color:
@@ -1221,7 +1221,7 @@ func _end_crush(id: int) -> void:
 
 func _build_augment_visuals() -> void:
 	_wings = Node3D.new()
-	var wing_material := Palette.unshaded(Color(class_color(), 0.75))
+	var wing_material := PaletteMaterials.unshaded(Color(class_color(), 0.75))
 	_wings_material = wing_material
 	for side in [-1.0, 1.0]:
 		var fin := MeshInstance3D.new()
@@ -1243,7 +1243,7 @@ func _build_augment_visuals() -> void:
 	cyl.bottom_radius = 0.26
 	cyl.height = Augments.MOUNT_OFFSET
 	post.mesh = cyl
-	post.material_override = Palette.solid(Color(0.58, 0.52, 0.44))
+	post.material_override = PaletteMaterials.solid(Color(0.58, 0.52, 0.44))
 	post.position = Vector3(0.0, Augments.MOUNT_OFFSET * 0.5, 0.0)
 	_pylon.add_child(post)
 	var plate := MeshInstance3D.new()
@@ -1252,7 +1252,7 @@ func _build_augment_visuals() -> void:
 	disc.bottom_radius = 0.7
 	disc.height = 0.12
 	plate.mesh = disc
-	plate.material_override = Palette.solid(class_color(), 1.2)
+	plate.material_override = PaletteMaterials.solid(class_color(), 1.2)
 	_plate = plate
 	_pylon.add_child(plate)
 	_pylon.visible = false

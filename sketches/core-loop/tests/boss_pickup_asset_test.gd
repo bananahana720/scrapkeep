@@ -8,7 +8,7 @@ const GLB := "res://assets/models/bosses/boss_pickup.glb"
 # The pickup's logic, _spawn_pickup outside its mesh construction, is pinned so a mesh change cannot move it.
 # Until wave 37 the pin covered all of boss.gd and was re-recorded 18 times for fight changes, each with the pickup
 # meshes unchanged (git log -p of this file has them); scoping it to the pickup keeps the guard and drops the tax.
-const BASE_LOGIC_SHA := "0831b15b9fdd4b857a9fc3cf77901b309d5af617dd8485a13ceb6414e2085845"
+const BASE_LOGIC_SHA := "5484caf73102cd9c3968cbb0be4a4f493859dadd9e3516406978f95238820e95"
 
 var failures := 0
 var game

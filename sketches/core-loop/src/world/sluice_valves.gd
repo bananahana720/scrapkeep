@@ -5,6 +5,7 @@ const Groups := preload("res://src/core/groups.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
@@ -308,7 +309,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 
 func _build_water_sheet(lane_from: Vector3, dir: Vector3, length: float, half_width: float) -> MeshInstance3D:
 	if _water_mat == null:
-		_water_mat = Palette.water(Palette.water_tone())
+		_water_mat = PaletteMaterials.water(Palette.water_tone())
 	var sheet := MeshInstance3D.new()
 	sheet.name = "FloodWashSheet"
 	var quad := PlaneMesh.new()
@@ -337,7 +338,7 @@ func _instantiate_glb(path: String, label: String, slot_name: String, fallback_c
 	root.name = label
 	var slot_mat: Material = RecipeProps.slot_material(slot_name) if RecipeProps.is_slot_role(slot_name) else null
 	if slot_mat == null:
-		slot_mat = Palette.solid(fallback_color)
+		slot_mat = PaletteMaterials.solid(fallback_color)
 	for node in root.find_children("*", "MeshInstance3D", true, false):
 		var mi := node as MeshInstance3D
 		if mi.mesh == null:

@@ -11,7 +11,7 @@ const Game := preload("res://src/game.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const T := preload("res://tests/support/t.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 
 const LIGHT_KEYS := ["ambient", "energy", "sun_color", "sun_energy", "sun_rotation", "fill", "fill_color"]
@@ -77,7 +77,7 @@ func _fight() -> void:
 	Harness.start_run(game)
 	await physics_frame
 	var env: Environment = game.ctx.terrain.environment
-	var material := Palette.hdri_sky().sky_material as ShaderMaterial
+	var material := PaletteMaterials.hdri_sky().sky_material as ShaderMaterial
 	var before_ambient := env.ambient_light_color
 	var before_horizon = material.get_shader_parameter("horizon_tint")
 	Harness.enter(game, Vector3(18, 0, 0))

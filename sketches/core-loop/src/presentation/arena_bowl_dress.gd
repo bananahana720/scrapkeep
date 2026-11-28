@@ -2,6 +2,7 @@ extends RefCounted
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Arena := preload("res://src/boss/arena.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
@@ -303,7 +304,7 @@ func _slot_material(slot: String) -> StandardMaterial3D:
 	material.metallic = SLOTS[slot].y
 	material.cull_mode = BaseMaterial3D.CULL_DISABLED
 	if slot in ["foundry_steel", "foundry_copper"]:
-		material.albedo_texture = Palette.look_texture("rusted-salvaged-plate-worn", true)
+		material.albedo_texture = PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 		material.uv1_triplanar = true
 		material.uv1_scale = Vector3.ONE / 4.0
 	elif slot == "slag_glow":
@@ -323,10 +324,10 @@ func _surfaces(arena: Node3D) -> void:
 	var floor_mat := _slot_material("foundry_steel")
 	floor_mat.resource_name = "bowl_cast_floor"
 	floor_mat.albedo_color = Color("56594f")
-	floor_mat.albedo_texture = Palette.look_texture("riveted-gyro-metal", true)
+	floor_mat.albedo_texture = PaletteMaterials.look_texture("riveted-gyro-metal", true)
 	floor_mat.roughness = 0.93
 	floor_mat.uv1_scale = Vector3.ONE / 9.0
-	var bank_mat := Palette.ground_material().duplicate() as ShaderMaterial
+	var bank_mat := PaletteMaterials.ground_material().duplicate() as ShaderMaterial
 	bank_mat.resource_name = "bowl_sandstone_bank"
 	bank_mat.set_shader_parameter("cliff_only", true)
 	bank_mat.set_shader_parameter("local_pattern", true)

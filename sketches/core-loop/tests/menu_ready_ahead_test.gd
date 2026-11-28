@@ -1,13 +1,13 @@
 extends SceneTree
 
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The setup work taken off the menu-ready path (MENU-READY, cloud exported build): the workshop sky
-# painted on a worker (Palette.workshop_sky_later) is the panorama a direct paint makes, and the park
+# painted on a worker (PaletteMaterials.workshop_sky_later) is the panorama a direct paint makes, and the park
 # table's files read on worker threads together (Terrain._read_parks_together) are the maps a read
 # one after another makes.
 
@@ -19,21 +19,21 @@ func _initialize() -> void:
 
 
 func _check_sky() -> void:
-	var later := Palette.workshop_sky_later()
-	var second := Palette.workshop_sky_later()
+	var later := PaletteMaterials.workshop_sky_later()
+	var second := PaletteMaterials.workshop_sky_later()
 	_t.check("the boot's sky comes back before its panorama is painted, on a 1 px horizon colour",
 		later.panorama != null and later.panorama.get_width() == 1)
-	_t.check("a second ask while painting shares the one paint", Palette._sky_waiting.size() == 2 and Palette._sky_task >= 0)
+	_t.check("a second ask while painting shares the one paint", PaletteMaterials._sky_waiting.size() == 2 and PaletteMaterials._sky_task >= 0)
 	for frame in 600:
 		await process_frame
 		if later.panorama.get_width() > 1:
 			break
 	_t.check("the worker's panorama fills the waiting skies", later.panorama.get_width() == 1024 and second.panorama == later.panorama)
-	var direct := Palette._paint_workshop_sky()
+	var direct := PaletteMaterials._paint_workshop_sky()
 	var painted: Image = later.panorama.get_image() if later.panorama != null else null
 	_t.check("the worker painted the same image a direct paint makes",
 		painted != null and painted.get_data() == direct.get_data(), "sizes %s / %s" % [painted.get_size() if painted != null else null, direct.get_size()])
-	_t.check("workshop_sky hands out the painted panorama", Palette.workshop_sky().panorama == later.panorama)
+	_t.check("workshop_sky hands out the painted panorama", PaletteMaterials.workshop_sky().panorama == later.panorama)
 	_check_parks()
 	quit(_t.verdict())
 

@@ -97,7 +97,7 @@ func _build_tool() -> void:
 	var discs := MeshInstance3D.new()
 	discs.name = "MagDiscs"
 	discs.mesh = parts["discs"]
-	_disc_material = Palette.solid(Color.WHITE)
+	_disc_material = PaletteMaterials.solid(Color.WHITE)
 	_disc_material.vertex_color_use_as_albedo = true
 	discs.set_surface_override_material(parts["disc_paint"], _disc_material)
 	_stack.add_child(discs)
@@ -117,7 +117,7 @@ func _build_tool() -> void:
 	_top_link = MeshInstance3D.new()
 	_top_link.name = "MagTopLink"
 	_top_link.mesh = mast
-	_top_link.material_override = Palette.solid(Palette.CHARCOAL)
+	_top_link.material_override = PaletteMaterials.solid(Palette.CHARCOAL)
 	_stack.add_child(_top_link)
 
 
@@ -125,10 +125,10 @@ static func _parts() -> Dictionary:
 	if not _shared.is_empty():
 		return _shared
 	var scene := (load("res://assets/models/world_one/enemy_mag_trapper.glb") as PackedScene).instantiate()
-	var charcoal := Palette.solid(Palette.CHARCOAL)
-	var painted := Palette.solid(Color.WHITE)
+	var charcoal := PaletteMaterials.solid(Palette.CHARCOAL)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
-	var core := Palette.solid(Palette.HAZARD, CORE_EMISSION)
+	var core := PaletteMaterials.solid(Palette.HAZARD, CORE_EMISSION)
 	var flash := 0
 	var disc_paint := 0
 	var top_paint := 0
@@ -255,7 +255,7 @@ class PuntedDisc extends Node3D:
 		_visual = MeshInstance3D.new()
 		_visual.name = "PuntedDiscMesh"
 		_visual.mesh = disc_mesh
-		_visual.material_override = Palette.solid(Palette.AMBER, 1.4)
+		_visual.material_override = PaletteMaterials.solid(Palette.AMBER, 1.4)
 		_visual.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		add_child(_visual)
 

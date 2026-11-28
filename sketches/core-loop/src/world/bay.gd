@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const LocalMesh := preload("res://src/world/local_mesh.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
@@ -375,7 +376,7 @@ func _build_deck() -> void:
 		var jet := Vector3(corner.x * (DECK_U - 6.0), -4.5, corner.y * (DECK_V - 5.0))
 		var steam := MeshInstance3D.new()
 		steam.mesh = PropMeshes.fluted_plume_column(4.0, 2.4, 6.0)
-		steam.material_override = Palette.unshaded(Color(Palette.SAND, 0.25))
+		steam.material_override = PaletteMaterials.unshaded(Color(Palette.SAND, 0.25))
 		steam.position = jet + Vector3.DOWN * 4.5
 		_barge.add_child(steam)
 	var line := MeshInstance3D.new()
@@ -599,7 +600,7 @@ func _visual(size: Vector3, at: Vector3, mat: Material) -> MeshInstance3D:
 
 
 func _bay_mat(color: Color, emit := 0.0) -> Material:
-	return Palette.solid(color, emit) if emit > 0.0 else _paint(color)
+	return PaletteMaterials.solid(color, emit) if emit > 0.0 else _paint(color)
 
 
 func _paint(color: Color, kind := 1, size := Vector3.ZERO, original: Material = null) -> Material:

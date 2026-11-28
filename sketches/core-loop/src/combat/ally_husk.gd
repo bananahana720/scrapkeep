@@ -1,6 +1,7 @@
 extends Node
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const EnemyBase := preload("res://src/combat/enemy.gd")
 const AttackBudget := preload("res://src/combat/attack_budget.gd")
@@ -741,7 +742,7 @@ func _build_takeover_visual(h: HuskUnit, source: Node) -> Node3D:
 	torus.inner_radius = maxf(1.2, h.body_radius * 1.4)
 	torus.outer_radius = torus.inner_radius + 0.22
 	ring.mesh = torus
-	ring.material_override = Palette.unshaded(TAKEOVER_COLOR)
+	ring.material_override = PaletteMaterials.unshaded(TAKEOVER_COLOR)
 	ring.position = Vector3(0.0, 0.2, 0.0)
 	root_vis.add_child(ring)
 
@@ -751,7 +752,7 @@ func _build_takeover_visual(h: HuskUnit, source: Node) -> Node3D:
 	sphere.radius = 0.55
 	sphere.height = 1.1
 	node_orb.mesh = sphere
-	node_orb.material_override = Palette.solid(TAKEOVER_COLOR, 2.2)
+	node_orb.material_override = PaletteMaterials.solid(TAKEOVER_COLOR, 2.2)
 	node_orb.position = Vector3(0.0, h.half_height + 1.4, 0.0)
 	root_vis.add_child(node_orb)
 
@@ -760,7 +761,7 @@ func _build_takeover_visual(h: HuskUnit, source: Node) -> Node3D:
 	var beam := BoxMesh.new()
 	beam.size = Vector3(0.14, 0.14, 1.0)
 	tether.mesh = beam
-	tether.material_override = Palette.unshaded(TAKEOVER_COLOR)
+	tether.material_override = PaletteMaterials.unshaded(TAKEOVER_COLOR)
 	tether.top_level = true
 	root_vis.add_child(tether)
 

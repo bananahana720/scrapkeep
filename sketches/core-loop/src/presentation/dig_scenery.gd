@@ -6,6 +6,7 @@ const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const ParkSites := preload("res://src/presentation/park_sites.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 
@@ -371,7 +372,7 @@ func _slot_material(slot: String) -> Material:
 		vc.vertex_color_use_as_albedo = true
 		vc.roughness = 0.84 if slot == "timber_strut" else 0.88
 		vc.metallic = 0.14 if slot == "timber_strut" else 0.0
-		Palette.surface_grain(vc)
+		PaletteMaterials.surface_grain(vc)
 		_dir_cache[slot] = vc
 		return vc
 	if not SLOTS.has(slot):

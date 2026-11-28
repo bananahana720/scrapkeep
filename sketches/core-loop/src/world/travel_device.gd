@@ -21,7 +21,7 @@ func setup_travel(ctx_ref, system_ref, device_id: String, roll_ref, fire_callabl
 func build() -> void:
 	_lane = Node3D.new()
 	add_child(_lane)
-	var mat := Palette.solid(Interactables.color(family), 1.2)
+	var mat := PaletteMaterials.solid(Interactables.color(family), 1.2)
 	var heading: Vector3 = roll.heading
 	var side := Vector3(-heading.z, 0.0, heading.x)
 	for k in 6:

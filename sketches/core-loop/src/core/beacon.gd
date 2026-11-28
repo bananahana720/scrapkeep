@@ -51,7 +51,7 @@ var _dig_drain_pending := false
 var _dispatcher_warmed := false
 
 
-func setup() -> void:
+func setup(materials: GDScript) -> void:
 	_last_tint = Color(-1.0, -1.0, -1.0, -1.0)
 	_last_f = -1.0
 	var tint := tint_color()
@@ -59,11 +59,11 @@ func setup() -> void:
 	if not lantern:
 		var mast := MeshInstance3D.new()
 		mast.mesh = _mast_mesh()
-		mast.material_override = _mast_material()
+		mast.material_override = _mast_material(materials)
 		mast.position = Vector3.UP * MAST_HEIGHT * 0.5
 		add_child(mast)
 
-	_core_material = Palette.solid(tint, 0.5)
+	_core_material = materials.solid(tint, 0.5)
 	_core = MeshInstance3D.new()
 	_core.mesh = _bulb_mesh(lantern)
 	_core.material_override = _core_material
@@ -71,7 +71,7 @@ func setup() -> void:
 	add_child(_core)
 	_paint_state(tint)
 
-	_ring_material = Palette.unshaded(Color(tint, 0.55))
+	_ring_material = materials.unshaded(Color(tint, 0.55))
 	_ring = MeshInstance3D.new()
 	_ring.mesh = _torus_mesh()
 	_ring.material_override = _ring_material
@@ -87,9 +87,9 @@ static func _mast_mesh() -> CylinderMesh:
 	return _shared_mast_cyl
 
 
-static func _mast_material() -> StandardMaterial3D:
+static func _mast_material(materials: GDScript) -> StandardMaterial3D:
 	if _shared_mast_mat == null:
-		_shared_mast_mat = Palette.solid(Palette.COPPER)
+		_shared_mast_mat = materials.solid(Palette.COPPER)
 	return _shared_mast_mat
 
 

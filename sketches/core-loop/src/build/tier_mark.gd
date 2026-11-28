@@ -2,6 +2,7 @@ extends RefCounted
 
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 const SHAPES := {"common": "bar", "rare": "diamond", "relic": "star", "evolved": "crown"}
 const CROWN_POINTS := 5
@@ -30,7 +31,7 @@ static func mark(rarity: String, mat: Material, size := 1.0) -> Node3D:
 			_add(root, _rhombus(0.24 * size, 1.5 * size), body)
 			_add(root, _rhombus(0.62 * size, 0.24 * size), body)
 			_add(root, _torus(0.32 * size, 0.045 * size), ink)
-			_add(root, _sphere(0.3 * size), Palette.solid(Palette.ARC, 1.0))
+			_add(root, _sphere(0.3 * size), PaletteMaterials.solid(Palette.ARC, 1.0))
 		"crown":
 			_crown(root, 0.42 * size, 0.6 * size, 0.07 * size, body, Vector3.UP * -0.2 * size)
 			_add(root, _torus(0.42 * size, 0.085 * size), ink, Vector3.UP * -0.28 * size)
@@ -57,7 +58,7 @@ static func foot(rarity: String, mat: Material, size := 1.0) -> Node3D:
 				var rim := _add(root, _plate(0.61 * size, 0.035 * size), ink, Vector3.DOWN * 0.02 * size)
 				rim.scale = Vector3(1.0, 1.0, 0.36)
 				rim.rotation.y = yaw
-			var bolt := Palette.solid(Palette.ARC, 1.35)
+			var bolt := PaletteMaterials.solid(Palette.ARC, 1.35)
 			for k in 4:
 				var a := PI * 0.25 + PI * 0.5 * k
 				_add(root, _sphere(0.07 * size), bolt, Vector3(cos(a), 0.4, sin(a)) * 0.24 * size)
@@ -84,7 +85,7 @@ static func _sculpted(mat: Material) -> Material:
 
 
 static func _bezel() -> StandardMaterial3D:
-	var ink := Palette.solid(Palette.CHARCOAL, 0.0, false)
+	var ink := PaletteMaterials.solid(Palette.CHARCOAL, 0.0, false)
 	ink.roughness = 0.65
 	ink.metallic = 0.25
 	return ink

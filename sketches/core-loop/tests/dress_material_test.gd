@@ -13,6 +13,7 @@ const Game := preload("res://src/game.gd")
 const Alpha := preload("res://src/core/alpha_defs.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const ActivityView := preload("res://src/world/activity_view.gd")
 const Device := preload("res://src/world/device.gd")
@@ -123,7 +124,7 @@ func _reasons(mesh: Mesh, surface: int, material: Material) -> Array[String]:
 		if vertex_colours and material.albedo_color.is_equal_approx(Color.WHITE) \
 				and not material.vertex_color_use_as_albedo and material.albedo_texture == null:
 			reasons.append("white")
-		# Palette.solid creates an opaque material with no albedo map and roughness 0.8,
+		# PaletteMaterials.solid creates an opaque material with no albedo map and roughness 0.8,
 		# marked palette_solid (its surface grain is not a texture of the prop). Treat a
 		# BoxMesh with that signature as a placeholder regardless of tint or emission.
 		# The meta survives duplicate(), so copies count too.
@@ -192,7 +193,7 @@ func _detector_checks() -> void:
 	white.vertex_color_use_as_albedo = true
 	_require(_reasons(mesh, 0, white).is_empty(), "enabled vertex colours must not count as white")
 	white.vertex_color_use_as_albedo = false
-	white.albedo_texture = Palette.checker_texture(Palette.RUST, Palette.COPPER, 2, 4)
+	white.albedo_texture = PaletteMaterials.checker_texture(Palette.RUST, Palette.COPPER, 2, 4)
 	_require(_reasons(mesh, 0, white).is_empty(), "textured white material must not count")
 	white.albedo_texture = null
 	white.albedo_color = Palette.RUST
@@ -200,14 +201,14 @@ func _detector_checks() -> void:
 	_require(_reasons(mesh, 0, null).is_empty(), "missing material must not crash")
 	var box := BoxMesh.new()
 	_require(_reasons(box, 0, StandardMaterial3D.new()).is_empty(), "uncoloured mesh must not count as white")
-	var checker := Palette.striped(Palette.RUST, Palette.CHARCOAL)
+	var checker := PaletteMaterials.striped(Palette.RUST, Palette.CHARCOAL)
 	_require(_reasons(box, 0, checker) == ["striped"], "striped material must carry its marker")
 	_require(_reasons(box, 0, checker.duplicate()) == ["striped"], "duplicated striped marker must survive")
-	_require(_reasons(box, 0, Palette.solid(Palette.HAZARD)) == ["solid_box"], "a flat HAZARD prop must count")
+	_require(_reasons(box, 0, PaletteMaterials.solid(Palette.HAZARD)) == ["solid_box"], "a flat HAZARD prop must count")
 	var view := MeshInstance3D.new()
 	mesh.surface_set_material(0, checker)
 	view.mesh = mesh
-	view.set_surface_override_material(0, Palette.solid(Palette.COPPER))
+	view.set_surface_override_material(0, PaletteMaterials.solid(Palette.COPPER))
 	_require(_material(view, mesh, 0) == view.get_surface_override_material(0), "surface override must win")
 	view.material_override = white
 	_require(_material(view, mesh, 0) == white, "node override must win")

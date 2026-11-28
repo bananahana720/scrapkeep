@@ -54,7 +54,7 @@ func _build_crew() -> void:
 	radius = BODY_RADIUS
 	half_height = BODY_HALF
 	_add_capsule(BODY_RADIUS, BODY_HALF * 2.0, Palette.RUST).free()
-	_glow = Palette.solid(Palette.AMBER, GLOW_IDLE)
+	_glow = PaletteMaterials.solid(Palette.AMBER, GLOW_IDLE)
 	_body = Node3D.new()
 	_body.name = "PodBody"
 	_visual_parent().add_child(_body)

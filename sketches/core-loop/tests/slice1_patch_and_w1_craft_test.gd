@@ -224,17 +224,17 @@ func _check_source_zero_greybox_invariants() -> void:
 		"res://src/world/bay.gd",
 		"res://src/world/activities.gd",
 	]
-	var prim_tokens := ["BoxMesh.new()", "CylinderMesh.new()", "SphereMesh.new()", "PrismMesh.new()", "TorusMesh.new()", "CapsuleMesh.new()", "Palette.striped("]
+	var prim_tokens := ["BoxMesh.new()", "CylinderMesh.new()", "SphereMesh.new()", "PrismMesh.new()", "TorusMesh.new()", "CapsuleMesh.new()", "PaletteMaterials.striped("]
 	for path in zero_prim_files:
 		var src := FileAccess.get_file_as_string(path)
 		var hits: Array[String] = []
 		for tok in prim_tokens:
 			if src.contains(tok):
 				hits.append(tok)
-		_t.check("%s has zero primitive Mesh.new() or Palette.striped calls" % path.get_file(), hits.is_empty(), str(hits))
+		_t.check("%s has zero primitive Mesh.new() or PaletteMaterials.striped calls" % path.get_file(), hits.is_empty(), str(hits))
 
 	var bay_src := FileAccess.get_file_as_string("res://src/world/bay.gd")
-	_t.check("bay.gd has zero flat Palette.solid calls", not bay_src.contains("Palette.solid("))
+	_t.check("bay.gd has zero flat PaletteMaterials.solid calls", not bay_src.contains("PaletteMaterials.solid("))
 
 	var spill_src := FileAccess.get_file_as_string("res://src/presentation/spillway_scenery.gd")
 	_t.check("spillway_scenery.gd has zero BoxMesh.new() or SphereMesh.new()",

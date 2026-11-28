@@ -129,8 +129,8 @@ static func _parts() -> Dictionary:
 	if not _shared.is_empty():
 		return _shared
 	var scene := (load("res://assets/models/world_one/enemy_plated_brute.glb") as PackedScene).instantiate()
-	var charcoal := Palette.solid(Palette.CHARCOAL)
-	var painted := Palette.solid(Color.WHITE)
+	var charcoal := PaletteMaterials.solid(Palette.CHARCOAL)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	var flash := -1
 	var meshes := {}
@@ -222,7 +222,7 @@ func is_bounty() -> bool:
 
 func carry_bounty(home: Vector3, color: Color) -> void:
 	bounty_home = home
-	var glow := Palette.solid(color, 1.6)
+	var glow := PaletteMaterials.solid(color, 1.6)
 	_crate = CrackedCache.model_part("CacheChest", self)
 	if _crate != null:
 		_crate.transform = Transform3D(Basis.from_scale(Vector3(0.7, 0.73, 0.95)), Vector3(0.0, 2.35, -0.5))

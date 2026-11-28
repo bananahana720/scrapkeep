@@ -204,11 +204,11 @@ func _build_body() -> void:
 	var parts := _parts()
 	if not parts.is_empty():
 		_base_color = Color.WHITE
-		_material = Palette.solid(Color.WHITE)
+		_material = PaletteMaterials.solid(Color.WHITE)
 		_material.vertex_color_use_as_albedo = true
 		_material.roughness = 0.42
 		_material.metallic = 0.14
-		Palette.surface_grain(_material)
+		PaletteMaterials.surface_grain(_material)
 		for part in parts:
 			var mi := MeshInstance3D.new()
 			mi.name = part.name
@@ -226,10 +226,10 @@ func _build_body() -> void:
 		return
 	var craft = load("res://src/presentation/craft/enemy_boss_craft.gd")
 	_base_color = Roster.ANCIENT_ENAMEL
-	_material = Palette.solid(Roster.ANCIENT_ENAMEL)
+	_material = PaletteMaterials.solid(Roster.ANCIENT_ENAMEL)
 	_material.roughness = 0.42
 	_material.metallic = 0.14
-	Palette.surface_grain(_material)
+	PaletteMaterials.surface_grain(_material)
 	_body = MeshInstance3D.new()
 	_body.name = "RemnantBody"
 	_body.mesh = craft.swarm_remnant_body(SIZE, 0.22)
@@ -238,7 +238,7 @@ func _build_body() -> void:
 	_seam = MeshInstance3D.new()
 	_seam.name = "RemnantSeam"
 	_seam.mesh = craft.swarm_remnant_seam(SIZE * 0.55, 0.24)
-	_seam_material = Palette.solid(Roster.ANCIENT_LIGHT, SEAM_LIT)
+	_seam_material = PaletteMaterials.solid(Roster.ANCIENT_LIGHT, SEAM_LIT)
 	_seam.material_override = _seam_material
 	_seam.position = Vector3.UP * 0.02
 	_slab.add_child(_seam)
@@ -276,7 +276,7 @@ static func _parts() -> Array:
 				slots.append(slot)
 				if slot == "ancient_enamel":
 					flash = i
-				var mat := Palette.solid(Roster.ANCIENT_LIGHT, SEAM_LIT) if slot == "ancient_light" else Palette.solid(Color.WHITE)
+				var mat := PaletteMaterials.solid(Roster.ANCIENT_LIGHT, SEAM_LIT) if slot == "ancient_light" else PaletteMaterials.solid(Color.WHITE)
 				mat.vertex_color_use_as_albedo = slot == "paint"
 				mesh.surface_set_material(i, mat)
 			valid = valid and ((mi.name == "RemnantBody" and slots.size() == 2 and "ancient_enamel" in slots and "paint" in slots)
@@ -328,11 +328,11 @@ static func _leading_split(mesh: Mesh, slots: Array) -> ArrayMesh:
 				tool.set_normal(ns[v])
 				tool.set_color(enamel if slots[i] == "ancient_enamel" or cs == null else cs[v])
 				tool.add_vertex(vs[v])
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	painted.roughness = 0.42
 	painted.metallic = 0.14
-	Palette.surface_grain(painted)
+	PaletteMaterials.surface_grain(painted)
 	hull.set_material(painted)
 	edge.set_material(Threat.Painter.hazard_stripe())
 	var out := hull.commit()

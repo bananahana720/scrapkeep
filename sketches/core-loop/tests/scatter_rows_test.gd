@@ -4,7 +4,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const ScatterRows := preload("res://src/world/scatter_rows.gd")
 const Scatter := preload("res://src/world/scatter.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 # The sanctioned clock: the wall clock unless a bot run sets SimClock.ticks; this test never sets it.
 const SimClock := preload("res://src/core/sim_clock.gd")
 const Terrain := preload("res://src/world/terrain.gd")
@@ -79,7 +79,7 @@ func _run() -> void:
 			if float(row["bury"]) < 0.0 or float(row["bury"]) >= 1.0: row_errors.append(tag + " bury")
 			if seeds.has(row["seed"]): row_errors.append(tag + " seed reused")
 			seeds[row["seed"]] = true
-			if Palette.slot_material(row["slot"]) == null: row_errors.append(tag + " slot")
+			if PaletteMaterials.slot_material(row["slot"]) == null: row_errors.append(tag + " slot")
 			if Scatter._source(row["mesh"]).is_empty(): row_errors.append(tag + " mesh source")
 		var relief: Dictionary = table["relief"]
 		if not relief.is_empty() and float(relief["amp"]) > 0.14:
@@ -269,7 +269,7 @@ func _park_chunks() -> void:
 	map.scatter["kit"] = fixture_kit
 	# Cold run: this section runs first, so the process holds none of what the build reads; the strut glb
 	# is also requested with the cache bypassed, so it is cold on every run.
-	var stone_path := String(Palette.SLOT_TABLE.row("stone").get("path", ""))
+	var stone_path := String(PaletteMaterials.SLOT_TABLE.row("stone").get("path", ""))
 	t.check("the cold run: neither the strut glb nor the stone material is in the resource cache yet", not ResourceLoader.has_cached(STRUT) and not ResourceLoader.has_cached(stone_path), "strut %s, stone %s" % [ResourceLoader.has_cached(STRUT), ResourceLoader.has_cached(stone_path)])
 	terrain.build(holder)
 	terrain.use(1)

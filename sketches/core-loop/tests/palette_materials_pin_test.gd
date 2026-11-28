@@ -5,6 +5,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Slots := preload("res://src/presentation/material_slots.gd")
 
 const PINS := {
@@ -94,82 +95,82 @@ func _initialize() -> void:
 
 func _cases() -> Dictionary:
 	var out := {}
-	out["checker_amber_charcoal_6_96"] = _resource(Palette.checker_texture(Palette.AMBER, Palette.CHARCOAL, 6, 96))
-	out["checker_sand_rust_default"] = _resource(Palette.checker_texture(Palette.SAND, Palette.RUST))
-	out["checker_arc_cable_4_64"] = _resource(Palette.checker_texture(Palette.ARC, Palette.CABLE, 4, 64))
-	out["painted_256"] = _resource(Palette.painted_texture())
-	out["painted_128"] = _resource(Palette.painted_texture(128))
-	out["painted_256_ground"] = _resource(Palette.painted_texture(256, true))
-	out["painted_64_ground"] = _resource(Palette.painted_texture(64, true))
-	out["look_sandstone_strata"] = _resource(Palette.look_texture("sandstone-strata"))
-	out["look_plate_worn_neutral"] = _resource(Palette.look_texture("rusted-salvaged-plate-worn", true))
-	out["look_plate_neutral"] = _resource(Palette.look_texture("rusted-salvaged-plate", true))
+	out["checker_amber_charcoal_6_96"] = _resource(PaletteMaterials.checker_texture(Palette.AMBER, Palette.CHARCOAL, 6, 96))
+	out["checker_sand_rust_default"] = _resource(PaletteMaterials.checker_texture(Palette.SAND, Palette.RUST))
+	out["checker_arc_cable_4_64"] = _resource(PaletteMaterials.checker_texture(Palette.ARC, Palette.CABLE, 4, 64))
+	out["painted_256"] = _resource(PaletteMaterials.painted_texture())
+	out["painted_128"] = _resource(PaletteMaterials.painted_texture(128))
+	out["painted_256_ground"] = _resource(PaletteMaterials.painted_texture(256, true))
+	out["painted_64_ground"] = _resource(PaletteMaterials.painted_texture(64, true))
+	out["look_sandstone_strata"] = _resource(PaletteMaterials.look_texture("sandstone-strata"))
+	out["look_plate_worn_neutral"] = _resource(PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true))
+	out["look_plate_neutral"] = _resource(PaletteMaterials.look_texture("rusted-salvaged-plate", true))
 	var warmed := false
 	for i in 4096:
-		if Palette.warm_look("riveted-gyro-metal"):
+		if PaletteMaterials.warm_look("riveted-gyro-metal"):
 			warmed = true
 			break
-	out["warm_look_gyro_" + str(warmed)] = _resource(Palette.look_texture("riveted-gyro-metal", true))
+	out["warm_look_gyro_" + str(warmed)] = _resource(PaletteMaterials.look_texture("riveted-gyro-metal", true))
 	var roles := Slots.SLOTS.keys()
 	roles.sort()
 	for role in roles:
-		out["slot_" + role] = _resource(Palette.slot_material(role))
-	out["ground_material"] = _resource(Palette.ground_material())
-	out["nosing_material"] = _resource(Palette.nosing_material())
-	out["rock_material"] = _resource(Palette.rock_material())
-	out["hazard_stripe"] = _resource(Palette.hazard_stripe())
-	out["ball_material"] = _resource(Palette.ball_material())
-	out["solid_sand"] = _resource(Palette.solid(Palette.SAND))
-	out["solid_brass"] = _resource(Palette.solid(Palette.BRASS))
-	out["solid_amber_emit_2"] = _resource(Palette.solid(Palette.AMBER, 2.0))
-	out["solid_rust_flat"] = _resource(Palette.solid(Palette.RUST, 0.0, false))
-	out["solid_brass_emit_flat"] = _resource(Palette.solid(Palette.BRASS, 1.5, false))
-	out["solid_hazard_alpha"] = _resource(Palette.solid(Color(Palette.HAZARD, 0.4), 0.5))
+		out["slot_" + role] = _resource(PaletteMaterials.slot_material(role))
+	out["ground_material"] = _resource(PaletteMaterials.ground_material())
+	out["nosing_material"] = _resource(PaletteMaterials.nosing_material())
+	out["rock_material"] = _resource(PaletteMaterials.rock_material())
+	out["hazard_stripe"] = _resource(PaletteMaterials.hazard_stripe())
+	out["ball_material"] = _resource(PaletteMaterials.ball_material())
+	out["solid_sand"] = _resource(PaletteMaterials.solid(Palette.SAND))
+	out["solid_brass"] = _resource(PaletteMaterials.solid(Palette.BRASS))
+	out["solid_amber_emit_2"] = _resource(PaletteMaterials.solid(Palette.AMBER, 2.0))
+	out["solid_rust_flat"] = _resource(PaletteMaterials.solid(Palette.RUST, 0.0, false))
+	out["solid_brass_emit_flat"] = _resource(PaletteMaterials.solid(Palette.BRASS, 1.5, false))
+	out["solid_hazard_alpha"] = _resource(PaletteMaterials.solid(Color(Palette.HAZARD, 0.4), 0.5))
 	var finished := StandardMaterial3D.new()
-	Palette.brass_finish(finished)
+	PaletteMaterials.brass_finish(finished)
 	out["brass_finish"] = _resource(finished)
-	out["striped_sand_charcoal"] = _resource(Palette.striped(Palette.SAND, Palette.CHARCOAL))
-	out["striped_hazard_ledger"] = _resource(Palette.striped(Palette.HAZARD, Palette.LEDGER))
-	out["stripe_texture_default"] = _resource(Palette.stripe_texture(Palette.HAZARD, Palette.CHARCOAL))
-	out["stripe_texture_32"] = _resource(Palette.stripe_texture(Palette.AMBER, Palette.SLATE, 32))
-	out["water_verdigris"] = _resource(Palette.water(Palette.VERDIGRIS))
-	out["water_cobalt"] = _resource(Palette.water(Palette.COBALT))
-	out["unshaded_arc"] = _resource(Palette.unshaded(Palette.ARC))
-	out["unshaded_amber_alpha"] = _resource(Palette.unshaded(Color(Palette.AMBER, 0.55)))
-	var later := Palette.workshop_sky_later()
+	out["striped_sand_charcoal"] = _resource(PaletteMaterials.striped(Palette.SAND, Palette.CHARCOAL))
+	out["striped_hazard_ledger"] = _resource(PaletteMaterials.striped(Palette.HAZARD, Palette.LEDGER))
+	out["stripe_texture_default"] = _resource(PaletteMaterials.stripe_texture(Palette.HAZARD, Palette.CHARCOAL))
+	out["stripe_texture_32"] = _resource(PaletteMaterials.stripe_texture(Palette.AMBER, Palette.SLATE, 32))
+	out["water_verdigris"] = _resource(PaletteMaterials.water(Palette.VERDIGRIS))
+	out["water_cobalt"] = _resource(PaletteMaterials.water(Palette.COBALT))
+	out["unshaded_arc"] = _resource(PaletteMaterials.unshaded(Palette.ARC))
+	out["unshaded_amber_alpha"] = _resource(PaletteMaterials.unshaded(Color(Palette.AMBER, 0.55)))
+	var later := PaletteMaterials.workshop_sky_later()
 	out["workshop_sky_later_first"] = _resource(later)
-	out["workshop_sky"] = _resource(Palette.workshop_sky())
-	out["workshop_sky_again"] = _resource(Palette.workshop_sky_later())
-	out["hdri_sky"] = _resource(Palette.hdri_sky())
-	out["time_sky_checker"] = _resource(Palette.time_sky_material(Palette.checker_texture(Palette.SAND, Palette.RUST)))
+	out["workshop_sky"] = _resource(PaletteMaterials.workshop_sky())
+	out["workshop_sky_again"] = _resource(PaletteMaterials.workshop_sky_later())
+	out["hdri_sky"] = _resource(PaletteMaterials.hdri_sky())
+	out["time_sky_checker"] = _resource(PaletteMaterials.time_sky_material(PaletteMaterials.checker_texture(Palette.SAND, Palette.RUST)))
 	var grained := StandardMaterial3D.new()
 	grained.albedo_color = Palette.COPPER
-	Palette.surface_grain(grained)
+	PaletteMaterials.surface_grain(grained)
 	out["surface_grain"] = _resource(grained)
-	var smoothed := Palette.solid(Palette.STEEL)
-	Palette.smooth(smoothed)
+	var smoothed := PaletteMaterials.solid(Palette.STEEL)
+	PaletteMaterials.smooth(smoothed)
 	out["smooth_solid"] = _resource(smoothed)
-	var worn := Palette.solid(Palette.VERDIGRIS)
-	Palette.enamel_wear(worn)
+	var worn := PaletteMaterials.solid(Palette.VERDIGRIS)
+	PaletteMaterials.enamel_wear(worn)
 	out["enamel_wear"] = _resource(worn)
 	var plain := StandardMaterial3D.new()
 	plain.albedo_color = Palette.SANDSTONE
 	plain.resource_name = "plain"
-	out["target_clutter"] = _resource(Palette.target_clutter_material(plain))
+	out["target_clutter"] = _resource(PaletteMaterials.target_clutter_material(plain))
 	var surface_roles := ["dam", "concrete", "stone", "steel", "ground"]
 	for role in surface_roles:
 		if Slots.SLOTS.has(role) and Slots.SLOTS[role].get("shader", "") != "":
-			out["target_surface_" + role] = _resource(Palette.target_surface_material(role, plain))
+			out["target_surface_" + role] = _resource(PaletteMaterials.target_surface_material(role, plain))
 	var mapped := StandardMaterial3D.new()
-	mapped.albedo_texture = Palette.checker_texture(Palette.AMBER, Palette.CHARCOAL, 6, 96)
+	mapped.albedo_texture = PaletteMaterials.checker_texture(Palette.AMBER, Palette.CHARCOAL, 6, 96)
 	mapped.roughness = 0.3
-	out["target_surface_dam_mapped"] = _resource(Palette.target_surface_material("dam", mapped))
+	out["target_surface_dam_mapped"] = _resource(PaletteMaterials.target_surface_material("dam", mapped))
 	var resource_roles := []
 	for role in roles:
 		if Slots.SLOTS[role].kind == "resource":
 			resource_roles.append(role)
-	var flags := resource_roles.map(func(role): return Palette.is_slot_resource(Palette.slot_material(role)))
-	out["is_slot_resource"] = [_hash(str(resource_roles) + str(flags) + str(Palette.is_slot_resource(plain))), _hash("")]
+	var flags := resource_roles.map(func(role): return PaletteMaterials.is_slot_resource(PaletteMaterials.slot_material(role)))
+	out["is_slot_resource"] = [_hash(str(resource_roles) + str(flags) + str(PaletteMaterials.is_slot_resource(plain))), _hash("")]
 	return out
 
 

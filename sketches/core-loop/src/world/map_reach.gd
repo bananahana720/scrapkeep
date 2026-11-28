@@ -201,11 +201,11 @@ func _reach_specs() -> void:
 
 
 func build_props(parent: Node3D, ground: Callable) -> void:
-	var rust := Palette.solid(Palette.RUST)
-	var copper := Palette.solid(Palette.COPPER)
-	var enamel := Palette.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.15))
-	var light := Palette.solid(ANCIENT, 2.4)
-	var concrete := Palette.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
+	var rust := PaletteMaterials.solid(Palette.RUST)
+	var copper := PaletteMaterials.solid(Palette.COPPER)
+	var enamel := PaletteMaterials.solid(Palette.VERDIGRIS.lerp(Palette.CHARCOAL, 0.15))
+	var light := PaletteMaterials.solid(ANCIENT, 2.4)
+	var concrete := PaletteMaterials.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
 	var spawn_deck: Vector3 = ground.call(spawn.x, spawn.y - 6.0, -0.3)
 	var spawn_pad_material := StandardMaterial3D.new()
 	spawn_pad_material.albedo_color = Palette.VERDIGRIS

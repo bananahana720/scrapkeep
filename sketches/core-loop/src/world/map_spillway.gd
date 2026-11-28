@@ -202,13 +202,13 @@ static func _chute(c: Dictionary, x: float, z: float) -> Array:
 
 
 func build_props(parent: Node3D, ground: Callable) -> void:
-	var concrete := Palette.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
-	var copper := Palette.solid(Palette.COPPER)
-	var rust := Palette.solid(Palette.RUST)
+	var concrete := PaletteMaterials.striped(Palette.CHARCOAL, Palette.VERDIGRIS)
+	var copper := PaletteMaterials.solid(Palette.COPPER)
+	var rust := PaletteMaterials.solid(Palette.RUST)
 
 	var house: Vector3 = ground.call(PUMP_HOUSE.x, PUMP_HOUSE.y, 0.0)
 	box(parent, Vector3(22.0, 11.0, 15.0), house + Vector3.UP * 5.0, concrete)
-	box(parent, Vector3(24.0, 1.2, 17.0), house + Vector3.UP * 11.2, Palette.solid(Palette.VERDIGRIS))
+	box(parent, Vector3(24.0, 1.2, 17.0), house + Vector3.UP * 11.2, PaletteMaterials.solid(Palette.VERDIGRIS))
 	for dx in [-7.0, 7.0]:
 		cylinder(parent, 1.9, 9.0, house + Vector3(dx, 16.0, -4.0), copper)
 

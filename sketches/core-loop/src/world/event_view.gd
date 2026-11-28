@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
@@ -48,7 +49,7 @@ func setup(terrain_ref, player_ref = null) -> void:
 	var quad := QuadMesh.new()
 	quad.size = Vector2(420.0, 60.0)
 	_dust_wall.mesh = quad
-	_dust_wall.material_override = Palette.unshaded(Color(FOG_COLOR.r, FOG_COLOR.g, FOG_COLOR.b, 0.45))
+	_dust_wall.material_override = PaletteMaterials.unshaded(Color(FOG_COLOR.r, FOG_COLOR.g, FOG_COLOR.b, 0.45))
 	_dust_wall.visible = false
 	add_child(_dust_wall)
 
@@ -92,7 +93,7 @@ func _build_offer(offer: Dictionary) -> Dictionary:
 	torus.inner_radius = model.ring_radius - 0.8
 	torus.outer_radius = model.ring_radius
 	ring.mesh = torus
-	var ring_mat := Palette.solid(hazard, 1.6)
+	var ring_mat := PaletteMaterials.solid(hazard, 1.6)
 	ring.material_override = ring_mat
 	ring.position = ground + Vector3.UP * 0.3
 	root.add_child(ring)
@@ -133,7 +134,7 @@ func _build_surge(entry: Dictionary, model) -> void:
 	var box := BoxMesh.new()
 	box.size = Vector3(34.0, 5.0, 3.0)
 	front.mesh = box
-	front.material_override = Palette.water(Palette.VERDIGRIS.lerp(Palette.ARC, 0.5))
+	front.material_override = PaletteMaterials.water(Palette.VERDIGRIS.lerp(Palette.ARC, 0.5))
 	front.visible = false
 	entry["root"].add_child(front)
 	entry["front"] = front
@@ -141,7 +142,7 @@ func _build_surge(entry: Dictionary, model) -> void:
 
 func _build_relay(entry: Dictionary, model) -> void:
 	var foot := _ground(model.relay)
-	var coil_mat := Palette.solid(Palette.ARC, 0.3)
+	var coil_mat := PaletteMaterials.solid(Palette.ARC, 0.3)
 	entry["coil_mat"] = coil_mat
 	if ResourceLoader.exists(RELAY_MAST):
 		var dressed := (load(RELAY_MAST) as PackedScene).instantiate() as Node3D
@@ -158,7 +159,7 @@ func _build_relay(entry: Dictionary, model) -> void:
 	cyl.bottom_radius = 1.2
 	cyl.height = 16.0
 	mast.mesh = cyl
-	mast.material_override = Palette.solid(Palette.COPPER)
+	mast.material_override = PaletteMaterials.solid(Palette.COPPER)
 	mast.position = foot + Vector3.UP * 8.0
 	entry["root"].add_child(mast)
 	var coil := MeshInstance3D.new()
@@ -177,14 +178,14 @@ func _build_hauler(entry: Dictionary) -> void:
 	var box := BoxMesh.new()
 	box.size = Vector3(3.2, 2.4, 5.4)
 	body.mesh = box
-	body.material_override = Palette.striped(Palette.COPPER, Palette.RUST)
+	body.material_override = PaletteMaterials.striped(Palette.COPPER, Palette.RUST)
 	hauler.add_child(body)
 	var lamp := MeshInstance3D.new()
 	var bulb := SphereMesh.new()
 	bulb.radius = 0.7
 	bulb.height = 1.4
 	lamp.mesh = bulb
-	lamp.material_override = Palette.solid(Palette.AMBER, 3.0)
+	lamp.material_override = PaletteMaterials.solid(Palette.AMBER, 3.0)
 	lamp.position = Vector3(0.0, 1.8, 0.0)
 	hauler.add_child(lamp)
 	hauler.visible = false
@@ -198,7 +199,7 @@ static func gate_ring(ground: Vector3, along: Vector2) -> MeshInstance3D:
 	torus.inner_radius = GATE_RADIUS - 0.5
 	torus.outer_radius = GATE_RADIUS
 	g.mesh = torus
-	g.material_override = Palette.solid(Palette.SAND, 0.6)
+	g.material_override = PaletteMaterials.solid(Palette.SAND, 0.6)
 	g.position = ground + Vector3.UP * (GATE_RADIUS - 1.0)
 	g.basis = Basis.looking_at(Vector3(along.x, 0.0, along.y), Vector3.UP) * Basis(Vector3.RIGHT, PI * 0.5)
 	return g
@@ -211,7 +212,7 @@ static func _pillar(color: Color) -> MeshInstance3D:
 	cyl.bottom_radius = 0.9
 	cyl.height = BEAM_HEIGHT
 	beam.mesh = cyl
-	beam.material_override = Palette.unshaded(Color(color.r, color.g, color.b, PILLAR_ALPHA))
+	beam.material_override = PaletteMaterials.unshaded(Color(color.r, color.g, color.b, PILLAR_ALPHA))
 	beam.add_to_group("sky_pillar")
 	return beam
 
@@ -223,7 +224,7 @@ func show_arrivals(arrivals: Array) -> void:
 		torus.inner_radius = ARRIVAL_RADIUS - 0.5
 		torus.outer_radius = ARRIVAL_RADIUS
 		ring.mesh = torus
-		ring.material_override = Palette.solid(EventKinds.color("enemy_spawned"), 2.0)
+		ring.material_override = PaletteMaterials.solid(EventKinds.color("enemy_spawned"), 2.0)
 		add_child(ring)
 		_arrival_rings.append(ring)
 	for i in _arrival_rings.size():

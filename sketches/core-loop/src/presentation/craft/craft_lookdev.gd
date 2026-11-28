@@ -3,7 +3,7 @@ extends RefCounted
 
 
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 const MASTER_SHADER_PATH := "res://assets/shaders/craft_master_weathering.gdshader"
 const FLOOR_SHADER_PATH := "res://assets/shaders/craft_combat_floor.gdshader"
@@ -306,9 +306,9 @@ static func make_weathered_pbr(
 ) -> StandardMaterial3D:
 	var mat := StandardMaterial3D.new()
 	mat.albedo_color = albedo
-	mat.albedo_texture = Palette.painted_texture(256)
+	mat.albedo_texture = PaletteMaterials.painted_texture(256)
 	mat.roughness = roughness
-	mat.roughness_texture = Palette.painted_texture(256)
+	mat.roughness_texture = PaletteMaterials.painted_texture(256)
 	mat.metallic = metallic
 	mat.normal_enabled = true
 	mat.normal_texture = micro_normal_texture()
@@ -326,9 +326,9 @@ static func enrich_standard_pbr(mat: StandardMaterial3D, normal_scale: float = 0
 	if mat == null:
 		return null
 	if mat.albedo_texture == null:
-		mat.albedo_texture = Palette.painted_texture(256)
+		mat.albedo_texture = PaletteMaterials.painted_texture(256)
 	if mat.roughness_texture == null:
-		mat.roughness_texture = Palette.painted_texture(256)
+		mat.roughness_texture = PaletteMaterials.painted_texture(256)
 	mat.normal_enabled = true
 	if mat.normal_texture == null:
 		mat.normal_texture = micro_normal_texture()

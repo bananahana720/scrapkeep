@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Enemy := preload("res://src/combat/enemy.gd")
@@ -68,7 +69,7 @@ func build(owner_warden, half_height: float) -> void:
 	warden = owner_warden
 	name = "WardenLook"
 	_ground = -half_height
-	body_material = Palette.solid(Palette.CHARCOAL)
+	body_material = PaletteMaterials.solid(Palette.CHARCOAL)
 	body_material.metallic = 0.5
 	body_material.roughness = 0.5
 	plate_material = warden._plate_material(Enemy.rim_frame_mask())
@@ -100,12 +101,12 @@ func _mesh(mesh: Mesh, material: Material, at: Vector3, parent: Node3D = self) -
 
 
 static func _glow(color: Color, energy: float) -> StandardMaterial3D:
-	var mat := Palette.solid(color, energy)
+	var mat := PaletteMaterials.solid(color, energy)
 	return mat
 
 
 static func _flat(color: Color, alpha: float) -> StandardMaterial3D:
-	var mat := Palette.unshaded(Color(color, alpha))
+	var mat := PaletteMaterials.unshaded(Color(color, alpha))
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	return mat

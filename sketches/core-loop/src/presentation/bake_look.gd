@@ -5,6 +5,7 @@ const AO_STRENGTH := 0.55
 const EDGE := 0.18
 const RAMP := 256
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 
 const LIFT_SLOTS := ["fleet_paint"]
@@ -58,7 +59,7 @@ static func finish(mat: StandardMaterial3D, kind: String) -> void:
 	if kind == "lift":
 		mat.next_pass = edge_lift()
 	elif kind == "brass":
-		Palette.brass_finish(mat)
+		PaletteMaterials.brass_finish(mat)
 
 
 # glTF flips V, so y=0 is convex wear and y=1 is deepest crease.
@@ -86,7 +87,7 @@ static func vertex_baked(mesh: Mesh, surface: int) -> bool:
 static func apply(mat: StandardMaterial3D) -> void:
 	if mat.get_meta("bake_look", false):
 		return
-	Palette.smooth(mat)
+	PaletteMaterials.smooth(mat)
 	mat.detail_enabled = true
 	mat.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
 	mat.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MUL
@@ -108,7 +109,7 @@ static func twin(mat: StandardMaterial3D, shade := true, kind := "") -> Standard
 		if shade:
 			apply(copy)
 		else:
-			Palette.smooth(copy)
+			PaletteMaterials.smooth(copy)
 			copy.set_meta("bake_smooth", true)
 		finish(copy, kind)
 		_twins[key] = copy
@@ -130,7 +131,7 @@ static func unbaked(mat: Material) -> Material:
 
 
 static func _warning(mat: StandardMaterial3D) -> bool:
-	return mat == Palette.hazard_stripe() or mat.get_meta("no_bake", false) \
+	return mat == PaletteMaterials.hazard_stripe() or mat.get_meta("no_bake", false) \
 		or (mat.albedo_texture != null and mat.albedo_texture == Threat.Painter.stripe_texture())
 
 
@@ -169,7 +170,7 @@ static func dress(root: Node, owned: Array = []) -> int:
 				if look == 1:
 					apply(mat)
 				else:
-					Palette.smooth(mat)
+					PaletteMaterials.smooth(mat)
 					mat.set_meta("bake_smooth", true)
 				if finishes[mat].size() == 1:
 					finish(mat, kind)

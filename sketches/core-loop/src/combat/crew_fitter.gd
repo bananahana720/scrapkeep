@@ -197,7 +197,7 @@ func _build_spark() -> void:
 	_spark = MeshInstance3D.new()
 	_spark.name = "WeldSpark"
 	_spark.mesh = mesh
-	_spark.material_override = Palette.solid(Roster.ANCIENT_LIGHT, SEAM_SEALING, false)
+	_spark.material_override = PaletteMaterials.solid(Roster.ANCIENT_LIGHT, SEAM_SEALING, false)
 	_spark.top_level = true
 	add_child(_spark)
 	_spark.visible = false
@@ -220,7 +220,7 @@ func _build_body() -> void:
 	var parts := SwarmRemnant._parts()
 	if not parts.is_empty():
 		_base_color = Color.WHITE
-		_material = Palette.solid(Color.WHITE)
+		_material = PaletteMaterials.solid(Color.WHITE)
 		_material.vertex_color_use_as_albedo = true
 		for part in parts:
 			var mi := MeshInstance3D.new()
@@ -238,7 +238,7 @@ func _build_body() -> void:
 				mi.set_surface_override_material(0, _seam_material)
 	else:
 		_base_color = Roster.ANCIENT_ENAMEL
-		_material = Palette.solid(Roster.ANCIENT_ENAMEL)
+		_material = PaletteMaterials.solid(Roster.ANCIENT_ENAMEL)
 		var prism := CylinderMesh.new()
 		prism.radial_segments = 3
 		prism.top_radius = SIZE
@@ -255,7 +255,7 @@ func _build_body() -> void:
 		edge.height = 0.24
 		_seam = MeshInstance3D.new()
 		_seam.mesh = edge
-		_seam_material = Palette.solid(Roster.ANCIENT_LIGHT, SEAM_LIT)
+		_seam_material = PaletteMaterials.solid(Roster.ANCIENT_LIGHT, SEAM_LIT)
 		_seam.material_override = _seam_material
 		_seam.position = Vector3.UP * 0.02
 		_slab.add_child(_seam)
@@ -264,6 +264,6 @@ func _build_body() -> void:
 	_plate = MeshInstance3D.new()
 	_plate.name = "SeamPlate"
 	_plate.mesh = plate
-	_plate.material_override = Palette.solid(PLATE_COLOR)
+	_plate.material_override = PaletteMaterials.solid(PLATE_COLOR)
 	_plate.position = Vector3(0.0, 0.5, 0.0)
 	_slab.add_child(_plate)

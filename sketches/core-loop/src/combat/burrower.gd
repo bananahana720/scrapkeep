@@ -81,7 +81,7 @@ func _build_marker() -> void:
 	marker_mat.albedo_color = Palette.CHARCOAL
 	marker_mat.roughness = 0.72
 	marker_mat.metallic = 0.24
-	Palette.surface_grain(marker_mat)
+	PaletteMaterials.surface_grain(marker_mat)
 	_marker.material_override = marker_mat
 	_marker.position.y = -half_height
 	_marker.top_level = false
@@ -99,7 +99,7 @@ func _build_tool() -> void:
 			_base_color = Color.WHITE
 			_material.albedo_color = _base_color
 			_material.vertex_color_use_as_albedo = true
-			Palette.surface_grain(_material)
+			PaletteMaterials.surface_grain(_material)
 			_crew.set_surface_override_material(part.flash, _material)
 			_visual_parent().add_child(_crew)
 			return

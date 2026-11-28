@@ -4,6 +4,7 @@ const Interactables := preload("res://src/world/interactables.gd")
 const Glyphs := preload("res://src/core/glyphs.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 # One interactable (LOOP-REDESIGN section 9). The interact system (interact.gd) picks
 # the device Interact reaches, runs its consent (roll, hold or press) and calls fire(); the
@@ -160,7 +161,7 @@ func cylinder(radius: float, height: float, at: Vector3, mat: Material, parent: 
 func ground_ring(radius: float, color: Color, parent: Node3D = self) -> Node3D:
 	var ring := Node3D.new()
 	parent.add_child(ring)
-	var mat := Palette.solid(color, 1.4)
+	var mat := PaletteMaterials.solid(color, 1.4)
 	for k in 20:
 		var a := TAU * k / 20.0
 		var dash := MeshInstance3D.new()

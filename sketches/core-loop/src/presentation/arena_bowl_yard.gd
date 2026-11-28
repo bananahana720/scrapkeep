@@ -1,7 +1,7 @@
 extends Node3D
 
 const FightPhases := preload("res://src/combat/fight_phases.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
 const FIGHT_ID := "brindle"
@@ -153,9 +153,9 @@ func _set_melt(row: Dictionary) -> void:
 
 func _weather_yard_surfaces() -> void:
 	if melt_material != null:
-		Palette.surface_grain(melt_material)
+		PaletteMaterials.surface_grain(melt_material)
 		if melt_material.albedo_texture == null:
-			var melt_tex := Palette.look_texture("rusted-salvaged-plate-worn", true)
+			var melt_tex := PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 			if melt_tex != null:
 				melt_material.albedo_texture = melt_tex
 				melt_material.uv1_triplanar = true

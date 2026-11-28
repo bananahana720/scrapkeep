@@ -353,7 +353,7 @@ func _first_environment() -> Environment:
 
 func _hashes() -> Dictionary:
 	var result := {}
-	for path in ["tools/asset_capture.gd", "tools/capture_cameras.gd", "src/presentation/hero_assets.gd", "src/presentation/recipe_props.gd", "src/presentation/material_slots.gd", "src/presentation/bake_look.gd", "src/presentation/spillway_scenery.gd", "src/world/terrain.gd", "src/core/palette.gd"]:
+	for path in ["tools/asset_capture.gd", "tools/capture_cameras.gd", "src/presentation/hero_assets.gd", "src/presentation/recipe_props.gd", "src/presentation/material_slots.gd", "src/presentation/bake_look.gd", "src/presentation/spillway_scenery.gd", "src/world/terrain.gd", "src/core/palette.gd", "src/presentation/palette_materials.gd"]:
 		result[path] = FileAccess.get_sha256("res://" + path)
 	return result
 

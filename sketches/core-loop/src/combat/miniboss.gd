@@ -308,7 +308,7 @@ func _build_model() -> bool:
 	_material.vertex_color_use_as_albedo = true
 	_model_plate_material = _plate_material()
 	_model_plate_material.next_pass = BakeLook.edge_lift()
-	_core_material = Palette.solid(Palette.VERDIGRIS)
+	_core_material = PaletteMaterials.solid(Palette.VERDIGRIS)
 	for part in parts.meshes:
 		var mi := MeshInstance3D.new()
 		mi.name = part.name
@@ -416,7 +416,7 @@ static func _parts() -> Dictionary:
 			arrays[Mesh.ARRAY_TEX_UV] = uvs
 			mesh = ArrayMesh.new()
 			mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
-		var painted := Palette.solid(Color.WHITE)
+		var painted := PaletteMaterials.solid(Color.WHITE)
 		painted.vertex_color_use_as_albedo = true
 		mesh.surface_set_material(0, painted)
 		meshes.append({"name": part_name, "mesh": mesh, "skin": mi.skin,
@@ -588,7 +588,7 @@ func _leap_clearance() -> float:
 
 
 func _build_armour() -> void:
-	_core_material = Palette.solid(Palette.SAND, 0.4)
+	_core_material = PaletteMaterials.solid(Palette.SAND, 0.4)
 	_core = MeshInstance3D.new()
 	_core.mesh = EnemyBossCraft.brindle_vent_cap(1.0, 2.0)
 	_core.material_override = _core_material
@@ -605,7 +605,7 @@ func _build_armour() -> void:
 		_plates.append({"node": plate, "side": side})
 	_halo = MeshInstance3D.new()
 	_halo.mesh = EnemyBossCraft.reward_canister_band(1.8, 0.4)
-	_halo.material_override = Palette.unshaded(Palette.SAND)
+	_halo.material_override = PaletteMaterials.unshaded(Palette.SAND)
 	_halo.position = Vector3.UP * (HALF_HEIGHT + 1.4)
 	_halo.visible = false
 	_visual_parent().add_child(_halo)

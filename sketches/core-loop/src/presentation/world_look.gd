@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 const ROWS := {
 	1: {"name": "spillway", "sky": "hdri", "background": Color("243b43"),
@@ -298,7 +299,7 @@ static func environment(look: Dictionary, air: bool) -> Dictionary:
 		values["background_mode"] = Environment.BG_SKY
 		values["fog_sky_affect"] = 0.25
 		if look.sky == "hdri":
-			values["sky"] = Palette.hdri_sky()
+			values["sky"] = PaletteMaterials.hdri_sky()
 	return values
 
 
@@ -318,7 +319,7 @@ static func sky_rows(look: Dictionary) -> Array:
 	var values := grade(look)
 	if values.is_empty() or look.get("sky") != "hdri":
 		return []
-	return [{"object": Palette.hdri_sky().sky_material, "values": values}]
+	return [{"object": PaletteMaterials.hdri_sky().sky_material, "values": values}]
 
 
 static func lights(look: Dictionary, sun: DirectionalLight3D) -> Array:

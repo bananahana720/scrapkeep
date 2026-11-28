@@ -2,6 +2,7 @@ extends Node3D
 
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Self := preload("res://src/world/wave_cross.gd")
 
 const KIND := "arena_wave"
@@ -32,7 +33,7 @@ static func mark(parent: Node, spots: Array, lead_s: float, hold_s := 0.0) -> No
 	parent.add_child(cross)
 	cross._tips = _mesh(INNER_M, ARM_WIDTH_M)
 	cross._distant_cross = _mesh(0.0, 0.5)
-	var material := Palette.unshaded(EventKinds.world_row(KIND).get("color", Palette.HAZARD))
+	var material := PaletteMaterials.unshaded(EventKinds.world_row(KIND).get("color", Palette.HAZARD))
 	material.billboard_mode = BaseMaterial3D.BILLBOARD_ENABLED
 	material.billboard_keep_scale = true
 	for spot in spots:

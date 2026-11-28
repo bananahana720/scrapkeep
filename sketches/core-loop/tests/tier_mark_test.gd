@@ -7,6 +7,7 @@ const Parts := preload("res://src/build/parts.gd")
 const Accretion := preload("res://src/build/accretion.gd")
 const ShopTile := preload("res://src/ui/shop_tile.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 
 # W1-26: an item tier reads by shape as well as colour (VISUAL-LANGUAGE sections 2 and 5).
 # Each rung has its own TierMark shape; a pedestal gem is the rung's upright mark, a ball part
@@ -58,7 +59,7 @@ func _mints(node: Node3D) -> int:
 
 func _check_marks() -> void:
 	var sigs := {}
-	var mat := Palette.solid(Palette.SAND)
+	var mat := PaletteMaterials.solid(Palette.SAND)
 	for id in ItemGen.RARITIES:
 		var mark := TierMark.mark(id, mat)
 		sigs[_signature(mark)] = id
@@ -74,7 +75,7 @@ func _check_marks() -> void:
 
 
 func _check_feet() -> void:
-	var mat := Palette.solid(Palette.SAND)
+	var mat := PaletteMaterials.solid(Palette.SAND)
 	_t.check("a common piece has no foot", TierMark.foot("common", mat) == null)
 	var sigs := {}
 	for id in ["rare", "relic", "evolved"]:

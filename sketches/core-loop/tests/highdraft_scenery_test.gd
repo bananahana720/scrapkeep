@@ -1,7 +1,7 @@
 extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Terrain := preload("res://src/world/terrain.gd")
 const Contraptions := preload("res://src/world/contraptions.gd")
 const Scenery := preload("res://src/presentation/highdraft_scenery.gd")
@@ -252,7 +252,7 @@ func _hook_and_environment() -> void:
 	terrain.build(scene)
 	var ctx := FakeCtx.new()
 	ctx.terrain = terrain
-	terrain.environment.sky = Palette.hdri_sky()
+	terrain.environment.sky = PaletteMaterials.hdri_sky()
 	var before: Sky = terrain.environment.sky
 	var ambient: Color = terrain.environment.ambient_light_color
 	Scenery.hook(ctx)
@@ -263,7 +263,7 @@ func _hook_and_environment() -> void:
 	_t.eq("hook: a retry does not build it twice", stage_root.find_children(Scenery.NODE_NAME, "Node3D", false, false).size(), 1)
 	var env: Environment = terrain.environment
 	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). World row 3 says sky "hdri", so
-	# apply_environment leaves the sky to the row (Palette.hdri_sky); the painted sky is used only
+	# apply_environment leaves the sky to the row (PaletteMaterials.hdri_sky); the painted sky is used only
 	# when the row says "own" (highdraft_scenery.gd apply_environment).
 	# 2026-10-17 (one day per run): the shared HDRI sky's material is the time-of-day sky shader.
 	_t.check("hook: the environment keeps the shared HDRI sky when the row says hdri", env.sky == before and env.sky.sky_material is ShaderMaterial)
@@ -309,12 +309,12 @@ func _game_integration() -> void:
 				skinned += 1
 	_t.eq("game: both barges wear the recipe", skinned, 2)
 	# 2026-10-09: re-pinned for the HDRI sky rows (VX-WIRE). Stages 5 and 1 (worlds 3 and 1) both
-	# say "hdri": the one cached Palette.hdri_sky() is set on entry and stays across the move.
-	_t.check("game: the cached HDRI sky is up", env.sky == Palette.hdri_sky())
+	# say "hdri": the one cached PaletteMaterials.hdri_sky() is set on entry and stays across the move.
+	_t.check("game: the cached HDRI sky is up", env.sky == PaletteMaterials.hdri_sky())
 	game.flow.enter_stage(1, Vector3.ZERO, false)
 	await physics_frame
-	_t.check("game: stage 1 keeps the same cached HDRI sky", env.sky == Palette.hdri_sky())
-	_t.check("game: the startup sky was replaced by the HDRI row", shared != Palette.hdri_sky())
+	_t.check("game: stage 1 keeps the same cached HDRI sky", env.sky == PaletteMaterials.hdri_sky())
+	_t.check("game: the startup sky was replaced by the HDRI row", shared != PaletteMaterials.hdri_sky())
 	game.free()
 
 

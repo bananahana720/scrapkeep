@@ -108,7 +108,7 @@ func _build_crew() -> void:
 	radius = BODY_RADIUS
 	half_height = BODY_HALF
 	_add_capsule(BODY_RADIUS, BODY_HALF * 2.0, Palette.RUST).free()
-	_seam_material = Palette.solid(SEAM_BRASS, SEAM_IDLE)
+	_seam_material = PaletteMaterials.solid(SEAM_BRASS, SEAM_IDLE)
 	var parts := body_parts()
 	var model := SpecialRig.seat(self, _visual_parent(), BODY_GLB, "splitter")
 	for part in parts["meshes"]:
@@ -140,7 +140,7 @@ static func parts(path: String) -> Dictionary:
 static func _read(path: String) -> Dictionary:
 	var out := {"meshes": [], "sockets": {}}
 	var scene := (load(path) as PackedScene).instantiate()
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	for node in scene.find_children("*", "", true, false):
 		if node is MeshInstance3D:
@@ -229,7 +229,7 @@ class Pop extends Node3D:
 		sphere.height = BODY_RADIUS * 2.2
 		_shell = MeshInstance3D.new()
 		_shell.mesh = sphere
-		_shell.material_override = Palette.solid(SEAM_WHITE, SEAM_FLARE * 2.0)
+		_shell.material_override = PaletteMaterials.solid(SEAM_WHITE, SEAM_FLARE * 2.0)
 		add_child(_shell)
 
 	func _on_cleared(_reason: String) -> void:

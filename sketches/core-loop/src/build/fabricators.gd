@@ -4,6 +4,7 @@ const Parts := preload("res://src/build/parts.gd")
 const PartOffers := preload("res://src/build/part_offers.gd")
 const Relics := preload("res://src/build/relics.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const RewardGates := preload("res://src/build/reward_gates.gd")
@@ -342,7 +343,7 @@ func _build_hoop(fab: Dictionary) -> void:
 		var prism := PrismMesh.new()
 		prism.size = Vector3(2.4, 1.6, 0.12)
 		chevron.mesh = prism
-		chevron.material_override = Palette.unshaded(Color(Palette.AMBER, 0.7))
+		chevron.material_override = PaletteMaterials.unshaded(Color(Palette.AMBER, 0.7))
 		chevron.rotation = Vector3(-PI * 0.5 * dir, 0.0, 0.0)
 		chevron.position = Vector3(0.0, 0.15, -3.5 * dir)
 		node.add_child(chevron)
@@ -369,7 +370,7 @@ func _refresh_glyph(fab: Dictionary) -> void:
 	var rarity: String = d.rarity if d != null else "common"
 	var color: Color = RewardGates.rarity_color(rarity)
 	var glyph: MeshInstance3D = fab["glyph"]
-	glyph.material_override = Palette.solid(color, 2.4)
+	glyph.material_override = PaletteMaterials.solid(color, 2.4)
 	glyph.visible = fab["restock"] <= 0.0
 	fab["text"] = ""
 

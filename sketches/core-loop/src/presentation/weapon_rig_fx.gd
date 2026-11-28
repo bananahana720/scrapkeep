@@ -6,6 +6,7 @@ const CraftedGear := preload("res://src/presentation/crafted_ball_gear.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Parts := preload("res://src/build/parts.gd")
 const ShotBits := preload("res://src/build/shot_bits.gd")
 
@@ -286,11 +287,11 @@ func _build_mod(mod_id: String) -> Node3D:
 
 
 func _mat(color: Color, metal := 0.36, rough := 0.64, emit := 0.0, heat_reactive := false) -> StandardMaterial3D:
-	var m := Palette.solid(color, emit)
+	var m := PaletteMaterials.solid(color, emit)
 	m.metallic = metal
 	m.roughness = rough
 	m.metallic_specular = 0.32
-	m.albedo_texture = Palette.painted_texture(128)
+	m.albedo_texture = PaletteMaterials.painted_texture(128)
 	m.uv1_triplanar = true
 	m.uv1_scale = Vector3.ONE * 3.2
 	m.vertex_color_use_as_albedo = true

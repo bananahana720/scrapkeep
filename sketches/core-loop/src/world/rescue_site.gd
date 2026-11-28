@@ -4,6 +4,7 @@ extends Node3D
 const Interactables := preload("res://src/world/interactables.gd")
 const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const HeroAssets := preload("res://src/presentation/hero_assets.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
@@ -323,7 +324,7 @@ static func _parts() -> Array:
 				valid = false
 				break
 			var mesh := view.mesh.duplicate() as Mesh
-			var mat := Palette.solid(Color.WHITE)
+			var mat := PaletteMaterials.solid(Color.WHITE)
 			mat.resource_name = source.resource_name
 			mat.vertex_color_use_as_albedo = true
 			mat.roughness = 0.72

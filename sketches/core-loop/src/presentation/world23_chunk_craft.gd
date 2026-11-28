@@ -5,6 +5,7 @@ extends Node3D
 const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const DECK_LOOK := {"bottom_grime": 0.56, "side_wear": 0.36}
 const ANNULUS_LOOK := {
@@ -200,13 +201,13 @@ static func detail_texture() -> Texture2D:
 	if ResourceLoader.exists(DETAIL_TEX_PATH):
 		_detail_tex = load(DETAIL_TEX_PATH) as Texture2D
 	if _detail_tex == null:
-		_detail_tex = Palette.painted_texture(256)
+		_detail_tex = PaletteMaterials.painted_texture(256)
 	return _detail_tex
 
 
 static func get_material(slot: String) -> Material:
 	if slot == "hazard_stripe" or slot == "dig_hazard_stripe":
-		return Palette.hazard_stripe()
+		return PaletteMaterials.hazard_stripe()
 	if _mat_cache.has(slot):
 		var cached := _mat_cache[slot] as ShaderMaterial
 		if cached != null and cached.shader != null and cached.shader.resource_path == Lookdev.MASTER_SHADER_PATH:

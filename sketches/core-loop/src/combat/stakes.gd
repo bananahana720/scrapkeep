@@ -2,6 +2,7 @@ extends Node3D
 
 const Augments := preload("res://src/movement/augments.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Devices := preload("res://src/core/devices.gd")
@@ -54,7 +55,7 @@ func setup(ctx_ref, combat_ref, ultimate_ref) -> void:
 	ultimate = ultimate_ref
 	name = "SableStakes"
 	_body_mesh = _dressed(PropMeshes.sable_stake_body(), PropMeshes.salvage_wear_material(Palette.COPPER, Palette.BRASS.lightened(0.18), Palette.ARC, 0.56, 0.48, 1.35, "sable_stake", 1.2))
-	_ring_mesh = _dressed(PropMeshes.sable_stake_ring(), Palette.unshaded(Palette.ARC))
+	_ring_mesh = _dressed(PropMeshes.sable_stake_ring(), PaletteMaterials.unshaded(Palette.ARC))
 	ctx.events.grapple_fired.connect(_on_hooked)
 	ctx.events.stage_entered.connect(func(_stage: int, _retry: bool): fold())
 	ctx.events.stage_content_cleared.connect(func(_reason: String): fold())

@@ -6,6 +6,7 @@ const OverlayMap := EventGround.OverlayMap
 
 const Kinds := preload("res://src/core/event_kinds.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const NaturalFootprint := preload("res://src/world/events/natural_footprint.gd")
 const EventDirector := preload("res://src/world/event_director.gd")
 const ParkMap := preload("res://src/world/park/park_map.gd")
@@ -65,7 +66,7 @@ class WaterView:
 		surface = projected
 		_plane = MeshInstance3D.new()
 		_plane.mesh = projected.mesh
-		_plane.material_override = Palette.water(Palette.water_tone())
+		_plane.material_override = PaletteMaterials.water(Palette.water_tone())
 		add_child(_plane)
 	func in_basin(point: Vector3) -> bool:
 		query_xz = Vector2(point.x, point.z)
@@ -684,10 +685,10 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 		var crack := MeshInstance3D.new()
 		crack.name = "CrawlingCrack"
 		crack.mesh = surfaces.CrawlingCrack.mesh
-		crack.material_override = Palette.unshaded(spec.color)
+		crack.material_override = PaletteMaterials.unshaded(spec.color)
 		mark.add_child(crack)
 	mesh.mesh = surfaces.Style.mesh
-	mesh.material_override = Palette.unshaded(spec.color)
+	mesh.material_override = PaletteMaterials.unshaded(spec.color)
 	mark.add_child(mesh)
 	if surfaces.has("Footprint"):
 		var boundary := Node3D.new()
@@ -695,7 +696,7 @@ func _mark(row: Dictionary, geometry: Dictionary, landed := false) -> Node3D:
 		mark.add_child(boundary)
 		var outline := MeshInstance3D.new()
 		outline.mesh = surfaces.Footprint.mesh
-		outline.material_override = Palette.unshaded(spec.color)
+		outline.material_override = PaletteMaterials.unshaded(spec.color)
 		boundary.add_child(outline)
 	return mark
 

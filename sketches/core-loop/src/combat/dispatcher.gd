@@ -137,7 +137,7 @@ static func _get_pod_mesh() -> CapsuleMesh:
 
 static func _get_pod_mat() -> StandardMaterial3D:
 	if _pod_mat == null:
-		_pod_mat = Palette.solid(Palette.BRASS, 0.6)
+		_pod_mat = PaletteMaterials.solid(Palette.BRASS, 0.6)
 	return _pod_mat
 
 
@@ -184,9 +184,9 @@ static func _get_mast_meshes(height: float) -> Dictionary:
 	if _mast_meshes.has(key):
 		return _mast_meshes[key]
 	if _mast_charcoal == null:
-		_mast_charcoal = Palette.solid(Palette.CHARCOAL)
+		_mast_charcoal = PaletteMaterials.solid(Palette.CHARCOAL)
 	if _mast_rust == null:
-		_mast_rust = Palette.solid(Palette.RUST)
+		_mast_rust = PaletteMaterials.solid(Palette.RUST)
 	var h := float(key) * 0.1
 	var leg_at := MAST_WIDTH * 0.5 - 0.1
 	var st_frame := SurfaceTool.new()
@@ -238,7 +238,7 @@ func _build_crew() -> void:
 	shape.shape = _get_body_shape()
 	add_child(shape)
 	_base_color = Color.WHITE
-	_material = Palette.solid(_base_color)
+	_material = PaletteMaterials.solid(_base_color)
 	_material.vertex_color_use_as_albedo = true
 	_crew = null
 
@@ -261,7 +261,7 @@ func _build_tool() -> void:
 			"DispatcherBody":
 				mi.material_override = _material
 			"DispatcherSignal":
-				_signal_material = Palette.solid(Palette.BRASS, 0.0)
+				_signal_material = PaletteMaterials.solid(Palette.BRASS, 0.0)
 				_signal_material.vertex_color_use_as_albedo = true
 				mi.material_override = _signal_material
 			"DispatcherRadar":
@@ -288,7 +288,7 @@ func _fallback_body() -> void:
 	var lamp := MeshInstance3D.new()
 	lamp.name = "DispatcherFallbackLamp"
 	lamp.mesh = EnemyBossCraft.brindle_cockpit_console(Vector3(0.5, 0.5, 0.5))
-	_signal_material = Palette.solid(Palette.BRASS, 0.0)
+	_signal_material = PaletteMaterials.solid(Palette.BRASS, 0.0)
 	lamp.material_override = _signal_material
 	lamp.position = Vector3(0.0, 1.6, 0.0)
 	pivot.add_child(lamp)
@@ -516,7 +516,7 @@ func _return_cargo_pod() -> void:
 	if moved_pod.get_parent() != null:
 		moved_pod.get_parent().remove_child(moved_pod)
 	moved_pod.position = Vector3.ZERO
-	moved_pod.material_override = Palette.solid(Palette.AMBER, 1.6)
+	moved_pod.material_override = PaletteMaterials.solid(Palette.AMBER, 1.6)
 	ret.add_child(moved_pod)
 	ret.pod_node = moved_pod
 	_return_pod = ret
@@ -658,7 +658,7 @@ func _pose() -> void:
 		_pod.mesh = EnemyBossCraft.dispatch_pod(POD_RADIUS, POD_RADIUS * 3.0)
 		if _flush_active:
 			_pod.scale = Vector3.ONE * 1.4
-			_pod.material_override = Palette.solid(Palette.HAZARD, 1.0)
+			_pod.material_override = PaletteMaterials.solid(Palette.HAZARD, 1.0)
 		else:
 			EnemyBossCraft.apply_dispatch_pod_materials(_pod)
 		world_root.add_child(_pod)

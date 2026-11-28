@@ -16,7 +16,7 @@ extends SceneTree
 
 const T := preload("res://tests/support/t.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const MaterialSlots := preload("res://src/presentation/material_slots.gd")
 
 const PARKS := ["park_pit", "park_sinkhole", "park_test"]
@@ -90,7 +90,7 @@ func _pin_floor_mean() -> void:
 	var row: Dictionary = MaterialSlots.row("ground")
 	# A copy: headless, get_image() hands back the texture's own image, and the decompress and
 	# convert below would change the format Terrain3D later reads from it.
-	var img: Image = Palette.look_texture(row.textures.floor_map).get_image().duplicate()
+	var img: Image = PaletteMaterials.look_texture(row.textures.floor_map).get_image().duplicate()
 	if img.is_compressed():
 		img.decompress()
 	img.clear_mipmaps()

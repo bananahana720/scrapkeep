@@ -1,6 +1,7 @@
 extends CharacterBody3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Groups := preload("res://src/core/groups.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
@@ -788,7 +789,7 @@ func _add_capsule(capsule_radius: float, capsule_height: float, color: Color) ->
 	shape.shape = capsule
 	add_child(shape)
 	_base_color = color
-	_material = Palette.solid(color)
+	_material = PaletteMaterials.solid(color)
 	var mesh := MeshInstance3D.new()
 	var capsule_mesh := CapsuleMesh.new()
 	capsule_mesh.radius = capsule_radius
@@ -802,7 +803,7 @@ func _add_capsule(capsule_radius: float, capsule_height: float, color: Color) ->
 func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3D = self) -> MeshInstance3D:
 	var instance := MeshInstance3D.new()
 	instance.mesh = mesh
-	instance.material_override = Palette.solid(color, energy)
+	instance.material_override = PaletteMaterials.solid(color, energy)
 	instance.position = at
 	(_visual_parent() if parent == self else parent).add_child(instance)
 	return instance
@@ -811,7 +812,7 @@ func _accent(mesh: Mesh, color: Color, energy: float, at: Vector3, parent: Node3
 func _plate_material(rim_mask: Texture2D = null) -> StandardMaterial3D:
 	if rim_mask == null and not _plates_are_round():
 		rim_mask = rim_frame_mask()
-	var mat := Palette.solid(PLATE_CLOSED, 0.0, false)
+	var mat := PaletteMaterials.solid(PLATE_CLOSED, 0.0, false)
 	mat.metallic = 0.6
 	mat.roughness = 0.4
 	mat.emission_texture = rim_mask if rim_mask != null else mask_texture([Color.BLACK], 1)
@@ -897,7 +898,7 @@ static func rim_frame_mask() -> ImageTexture:
 func _add_crack(parent: Node3D, at: Vector3, size := 0.9) -> Node3D:
 	var glyph := Node3D.new()
 	glyph.position = at
-	var mat := Palette.unshaded(EventKinds.state_color("will_break"))
+	var mat := PaletteMaterials.unshaded(EventKinds.state_color("will_break"))
 	for i in 3:
 		var stroke := MeshInstance3D.new()
 		var box := BoxMesh.new()

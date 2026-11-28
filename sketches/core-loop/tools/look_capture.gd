@@ -95,6 +95,6 @@ func _pose(at: Vector3) -> void:
 
 func _hashes() -> Dictionary:
 	var result := {}
-	for path in ["src/world/terrain.gd", "src/core/palette.gd", "src/presentation/hero_assets.gd", "src/presentation/spillway_scenery.gd", "src/presentation/graphics_preset.gd", "tools/look_capture.gd"]:
+	for path in ["src/world/terrain.gd", "src/core/palette.gd", "src/presentation/palette_materials.gd", "src/presentation/hero_assets.gd", "src/presentation/spillway_scenery.gd", "src/presentation/graphics_preset.gd", "tools/look_capture.gd"]:
 		result[path] = FileAccess.get_sha256("res://" + path)
 	return result

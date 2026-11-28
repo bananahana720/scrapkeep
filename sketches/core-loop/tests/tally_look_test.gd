@@ -36,6 +36,7 @@ const LEDGER_CREAM := "#e6d9b8"
 const BRASS := "#d9b44a"
 const CUES := ["tally_balance_due", "tally_ready", "tally_break", "mind_tally"]
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const MechaMotion := preload("res://src/presentation/mecha_motion.gd")
 # E2-05's shell budget: draws in play (registry exception 11; never past 13), triangles under the
 # Hoberman shell band's top (hero_six_pilot_budget_test SHELL_CAP), and the weapon reach Andrew
@@ -380,10 +381,10 @@ func _check_shell() -> void:
 		and brass > 0 and brass_out > 0, "%d brass vertices at alpha 0, %d on the rim, one paint surface" % [brass, brass_out])
 	var hero := HeroAssets.new()
 	var paint := hero.material("paint") as StandardMaterial3D
-	_t.check("satin, never glossy", paint != null and paint.roughness >= Palette.BRASS_FINISH.roughness
-		and paint.metallic <= Palette.BRASS_FINISH.metallic,
+	_t.check("satin, never glossy", paint != null and paint.roughness >= PaletteMaterials.BRASS_FINISH.roughness
+		and paint.metallic <= PaletteMaterials.BRASS_FINISH.metallic,
 		"paint roughness %.2f >= %.2f, metallic %.2f <= %.2f" % [paint.roughness if paint else -1.0,
-		Palette.BRASS_FINISH.roughness, paint.metallic if paint else -1.0, Palette.BRASS_FINISH.metallic])
+		PaletteMaterials.BRASS_FINISH.roughness, paint.metallic if paint else -1.0, PaletteMaterials.BRASS_FINISH.metallic])
 	hero.free()
 	# The index notch: the charcoal slot in it sits at NOTCH_AT on the right drum; the only other
 	# charcoal on the tape is the three timing bands, a quarter turn apart.

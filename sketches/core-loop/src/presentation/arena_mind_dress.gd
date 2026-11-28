@@ -2,7 +2,7 @@ extends Node3D
 
 const AppShell := preload("res://src/core/app_shell.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Finishes := preload("res://src/presentation/highdraft_finishes.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const DIR := "res://assets/models/highdraft/"
@@ -374,7 +374,7 @@ func _apply_environment(terrain, root: Node) -> void:
 			break
 	var look: Dictionary = WorldLook.ARENAS.mind
 	if _sky_material == null:
-		_sky_material = Palette.time_sky_material(_make_panorama())
+		_sky_material = PaletteMaterials.time_sky_material(_make_panorama())
 		var graded := WorldLook.grade(look)
 		for key in graded:
 			_sky_material.set(key, graded[key])

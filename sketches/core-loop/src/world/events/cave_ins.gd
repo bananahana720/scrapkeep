@@ -2,6 +2,7 @@ extends Node3D
 
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Groups := preload("res://src/core/groups.gd")
 const RubbleFall := preload("res://src/world/events/rubble_fall.gd")
 
@@ -95,7 +96,7 @@ func _debris(at: Vector3) -> Node3D:
 	var mesh := BoxMesh.new()
 	mesh.size = Vector3(RADIUS_M * 1.2, 1.0, RADIUS_M * 1.1)
 	rock.mesh = mesh
-	rock.material_override = Palette.solid(Palette.SANDSTONE.darkened(0.45))
+	rock.material_override = PaletteMaterials.solid(Palette.SANDSTONE.darkened(0.45))
 	rock.rotation = Vector3(0.2, 0.7, -0.15)
 	debris.add_child(rock)
 	debris.position = at

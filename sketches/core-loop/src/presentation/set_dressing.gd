@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Preset := preload("res://src/presentation/graphics_preset.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const Interactables := preload("res://src/world/interactables.gd")
@@ -282,7 +283,7 @@ func _kit_meshes() -> Dictionary:
 		for view: MeshInstance3D in scene.find_children("*", "MeshInstance3D", true, false):
 			var mesh := view.mesh.duplicate() as ArrayMesh
 			for surface in mesh.get_surface_count():
-				var material := Palette.target_clutter_material(view.mesh.surface_get_material(surface))
+				var material := PaletteMaterials.target_clutter_material(view.mesh.surface_get_material(surface))
 				if material not in _kit_materials:
 					_kit_materials.append(material)
 				mesh.surface_set_material(surface, material)

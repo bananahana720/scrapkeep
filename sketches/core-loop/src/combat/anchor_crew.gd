@@ -77,7 +77,7 @@ static func _parts() -> Dictionary:
 			_warned_asset = true
 			push_warning("anchor_crew: DeckReel missing; keeping greybox crew")
 		return _shared
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	var meshes := []
 	for node in scene.find_children("*", "MeshInstance3D", true, false):

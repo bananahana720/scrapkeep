@@ -2,6 +2,7 @@ class_name EnemyBossCraft
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
@@ -295,8 +296,8 @@ static func brindle_armour_material(base_color: Color) -> StandardMaterial3D:
 	mat.albedo_color = base_color
 	mat.roughness = 0.62
 	mat.metallic = 0.34
-	Palette.surface_grain(mat)
-	var plate := Palette.look_texture("rusted-salvaged-plate-worn", true)
+	PaletteMaterials.surface_grain(mat)
+	var plate := PaletteMaterials.look_texture("rusted-salvaged-plate-worn", true)
 	if plate != null:
 		mat.albedo_texture = plate
 		mat.uv1_triplanar = true
@@ -680,7 +681,7 @@ static func reward_bone_band_material() -> StandardMaterial3D:
 	mat.albedo_color = Palette.SAND
 	mat.roughness = 0.56
 	mat.metallic = 0.08
-	Palette.surface_grain(mat)
+	PaletteMaterials.surface_grain(mat)
 	mat.next_pass = BakeLook.edge_lift()
 	_mat_cache[cache_key] = mat
 	return mat
@@ -999,7 +1000,7 @@ static func waking_enamel_material(base_mat: StandardMaterial3D, is_brass_overri
 	else:
 		updated.roughness = 0.48
 		updated.metallic = maxf(updated.metallic, 0.14)
-	Palette.surface_grain(updated)
+	PaletteMaterials.surface_grain(updated)
 	if updated.next_pass == null:
 		updated.next_pass = BakeLook.edge_lift()
 	return updated

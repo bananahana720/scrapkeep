@@ -1,6 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Groups := preload("res://src/core/groups.gd")
 const SteamCycle := preload("res://src/world/steam_cycle.gd")
 const RideRail := preload("res://src/world/ride_rail.gd")
@@ -171,13 +172,13 @@ func begin(map_ref, ground_ref: Callable, cruise_speed: float, g: float) -> void
 	cruise = cruise_speed
 	gravity = g
 	name = "Contraptions"
-	_gauge_mat = Palette.solid(Palette.SAND)
-	_needle_mat = Palette.solid(Palette.CHARCOAL)
-	_rust_mat = Palette.solid(Palette.RUST)
-	_copper_mat = Palette.solid(Palette.COPPER)
-	_ring_mat = Palette.solid(Palette.AMBER, 0.8)
-	_hook_mat = Palette.solid(Palette.AMBER, 1.2)
-	_steam_mat = Palette.unshaded(Color(Palette.SAND, 0.55))
+	_gauge_mat = PaletteMaterials.solid(Palette.SAND)
+	_needle_mat = PaletteMaterials.solid(Palette.CHARCOAL)
+	_rust_mat = PaletteMaterials.solid(Palette.RUST)
+	_copper_mat = PaletteMaterials.solid(Palette.COPPER)
+	_ring_mat = PaletteMaterials.solid(Palette.AMBER, 0.8)
+	_hook_mat = PaletteMaterials.solid(Palette.AMBER, 1.2)
+	_steam_mat = PaletteMaterials.unshaded(Color(Palette.SAND, 0.55))
 	_unbuilt = map.contraptions.duplicate()
 
 
@@ -859,7 +860,7 @@ func _build_lift(spec: Dictionary) -> Dictionary:
 		st.begin(Mesh.PRIMITIVE_TRIANGLES)
 		_lathe(st, outline)
 		plate.mesh = st.commit()
-		plate.material_override = Palette.striped(Palette.COPPER, Palette.CHARCOAL)
+		plate.material_override = PaletteMaterials.striped(Palette.COPPER, Palette.CHARCOAL)
 		body.add_child(plate)
 	body.add_child(_drum_view(drum_r, drum_top, drum_len))
 	add_child(body)
@@ -1106,7 +1107,7 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 		var vfoot: Vector3 = ground.call(vat.x, vat.y, 0.0)
 		plume = MeshInstance3D.new()
 		plume.mesh = PropMeshes.fluted_plume_column(1.4, 3.0, 18.0)
-		plume.material_override = Palette.unshaded(Color(Palette.ANCIENT, 0.35))
+		plume.material_override = PaletteMaterials.unshaded(Color(Palette.ANCIENT, 0.35))
 		plume.position = vfoot + Vector3.UP * 9.0
 		plume.visible = false
 		add_child(plume)
@@ -1659,7 +1660,7 @@ func _build_thermal(spec: Dictionary) -> Dictionary:
 	var base: Vector3 = ground.call(at.x, at.y, 0.0)
 	var column := MeshInstance3D.new()
 	column.mesh = PropMeshes.fluted_plume_column(float(spec["radius"]) * 0.5, float(spec["radius"]) * 1.3, float(spec["height"]))
-	column.material_override = Palette.unshaded(Color(Palette.SAND, 0.12))
+	column.material_override = PaletteMaterials.unshaded(Color(Palette.SAND, 0.12))
 	column.position = base + Vector3.UP * float(spec["height"]) * 0.5
 	add_child(column)
 	var grate := MeshInstance3D.new()

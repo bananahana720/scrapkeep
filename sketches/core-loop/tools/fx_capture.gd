@@ -5,6 +5,7 @@ const Vfx := preload("res://src/presentation/vfx.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const EventJuice := preload("res://src/presentation/event_juice.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
 const AppShell := preload("res://src/core/app_shell.gd")
@@ -64,7 +65,7 @@ func _run() -> void:
 	var env := Environment.new()
 	if look.sky == "hdri":
 		env.background_mode = Environment.BG_SKY
-		env.sky = Palette.hdri_sky()
+		env.sky = PaletteMaterials.hdri_sky()
 	else:
 		env.background_mode = Environment.BG_COLOR
 		env.background_color = look.background
@@ -104,7 +105,7 @@ func _run() -> void:
 	var box := BoxMesh.new()
 	box.size = Vector3(1.0, 1.0, 1.0)
 	crate.mesh = box
-	crate.material_override = Palette.solid(Palette.VERDIGRIS)
+	crate.material_override = PaletteMaterials.solid(Palette.VERDIGRIS)
 	crate.position = Vector3(2.2, 0.5, -1.5)
 	stage.add_child(crate)
 	camera = Camera3D.new()

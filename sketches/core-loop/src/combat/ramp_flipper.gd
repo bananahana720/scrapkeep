@@ -73,7 +73,7 @@ func _build_tool() -> void:
 		var craft = load("res://src/presentation/craft/enemy_boss_craft.gd")
 		_plate.name = "RampPlate"
 		_plate.mesh = craft.ramp_flipper_plate(Vector3(PLATE_RADIUS * 1.6, 0.18, PLATE_RADIUS * 1.6))
-		_plate.material_override = Palette.hazard_stripe()
+		_plate.material_override = PaletteMaterials.hazard_stripe()
 	else:
 		_plate.name = "RampPlate"
 		_plate.mesh = parts["plate"]
@@ -99,10 +99,10 @@ static func _parts() -> Dictionary:
 	if packed == null:
 		return {}
 	var scene := packed.instantiate()
-	var painted := Palette.solid(Color.WHITE)
+	var painted := PaletteMaterials.solid(Color.WHITE)
 	painted.vertex_color_use_as_albedo = true
 	painted.metallic = 0.22
-	Palette.surface_grain(painted)
+	PaletteMaterials.surface_grain(painted)
 	var body: Mesh = (scene.find_child("RampBody", true, false) as MeshInstance3D).mesh.duplicate()
 	var plate: Mesh = (scene.find_child("RampPlate", true, false) as MeshInstance3D).mesh.duplicate()
 	var flash := -1

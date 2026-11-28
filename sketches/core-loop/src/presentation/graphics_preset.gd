@@ -403,7 +403,7 @@ static func _apply_material(binding: Dictionary) -> void:
 	if binding.has("target_override"):
 		view.material_override = binding.target_override
 		return
-	var palette := preload("res://src/core/palette.gd")
+	var palette := preload("res://src/presentation/palette_materials.gd")
 	for material in [view.material_override, binding.override]:
 		if material != null and palette.is_slot_resource(material):
 			view.material_override = material

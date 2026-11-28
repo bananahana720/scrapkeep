@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const BallLooks := preload("res://src/presentation/ball_looks.gd")
@@ -224,7 +224,7 @@ static func drawable(mesh: Mesh, surface: int, mat: Material) -> bool:
 			return false
 		if base.emission_enabled and base.emission.get_luminance() * base.emission_energy_multiplier > GLOW_LIMIT:
 			return false
-		return not (mat == Palette.hazard_stripe() or (base.albedo_texture != null and base.albedo_texture == Threat.Painter.stripe_texture()))
+		return not (mat == PaletteMaterials.hazard_stripe() or (base.albedo_texture != null and base.albedo_texture == Threat.Painter.stripe_texture()))
 	if mat is ShaderMaterial:
 		var shader := (mat as ShaderMaterial).shader
 		if shader == null:

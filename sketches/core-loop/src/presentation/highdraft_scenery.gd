@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Palette := preload("res://src/core/palette.gd")
+const PaletteMaterials := preload("res://src/presentation/palette_materials.gd")
 const GraphicsPreset := preload("res://src/presentation/graphics_preset.gd")
 const SetDressing := preload("res://src/presentation/set_dressing.gd")
 const Augments := preload("res://src/movement/augments.gd")
@@ -577,7 +577,7 @@ static func _relief(scenery: Node3D, stage_root: Node3D, map) -> void:
 static func _catch_material() -> ShaderMaterial:
 	var material := ShaderMaterial.new()
 	material.shader = preload("res://assets/materials/highdraft/catch_floor.gdshader")
-	material.set_shader_parameter("floor_map", Palette.painted_texture(256, true))
+	material.set_shader_parameter("floor_map", PaletteMaterials.painted_texture(256, true))
 	material.set_shader_parameter("stone_tint", LOOK["pillar"])
 	material.set_shader_parameter("cord_tint", LOOK["bone"])
 	material.set_shader_parameter("deck_tint", (LOOK["bone"] as Color).lerp(LOOK["charcoal"], 0.45))
@@ -587,7 +587,7 @@ static func _catch_material() -> ShaderMaterial:
 
 
 static func net_edge_material() -> StandardMaterial3D:
-	return Palette.nosing_material()
+	return PaletteMaterials.nosing_material()
 
 
 static func _net_deck(parent: Node3D, map) -> void:

@@ -42,20 +42,20 @@ static func _parts() -> Array:
 
 
 func _build_greybox() -> void:
-	box(Vector3(2.4, 1.8, 2.4), Vector3.UP * 0.9, Palette.solid(Palette.VERDIGRIS))
-	box(Vector3(2.5, 0.35, 2.5), Vector3.UP * 1.2, Palette.solid(Palette.SAND))
-	cylinder(0.15, 2.6, Vector3(0.0, 3.1, 0.0), Palette.solid(Palette.COPPER))
+	box(Vector3(2.4, 1.8, 2.4), Vector3.UP * 0.9, PaletteMaterials.solid(Palette.VERDIGRIS))
+	box(Vector3(2.5, 0.35, 2.5), Vector3.UP * 1.2, PaletteMaterials.solid(Palette.SAND))
+	cylinder(0.15, 2.6, Vector3(0.0, 3.1, 0.0), PaletteMaterials.solid(Palette.COPPER))
 	var dial := Node3D.new()
 	dial.position = Vector3(0.0, 4.6, 0.0)
 	add_child(dial)
-	var face := cylinder(1.2, 0.12, Vector3.ZERO, Palette.solid(Palette.SAND), dial)
+	var face := cylinder(1.2, 0.12, Vector3.ZERO, PaletteMaterials.solid(Palette.SAND), dial)
 	face.rotation.x = PI * 0.5
-	box(Vector3(1.1, 2.2, 0.06), Vector3(-0.56, 0.0, 0.08), Palette.solid(Palette.ARC, 0.8), false, dial)
-	box(Vector3(1.1, 2.2, 0.06), Vector3(0.56, 0.0, 0.08), Palette.solid(Palette.RUST), false, dial)
+	box(Vector3(1.1, 2.2, 0.06), Vector3(-0.56, 0.0, 0.08), PaletteMaterials.solid(Palette.ARC, 0.8), false, dial)
+	box(Vector3(1.1, 2.2, 0.06), Vector3(0.56, 0.0, 0.08), PaletteMaterials.solid(Palette.RUST), false, dial)
 	_needle = Node3D.new()
 	_needle.position = Vector3(0.0, 0.0, 0.16)
 	dial.add_child(_needle)
-	box(Vector3(0.14, 1.0, 0.05), Vector3(0.0, 0.45, 0.0), Palette.solid(Palette.CHARCOAL), false, _needle)
+	box(Vector3(0.14, 1.0, 0.05), Vector3(0.0, 0.45, 0.0), PaletteMaterials.solid(Palette.CHARCOAL), false, _needle)
 
 
 func reach_point() -> Vector3:
