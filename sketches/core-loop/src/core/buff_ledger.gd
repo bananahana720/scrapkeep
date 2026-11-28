@@ -35,11 +35,11 @@ func bind_events(events: Node) -> void:
 		_disconnect_if(_events, "run_ended", _on_run_ended)
 	_events = events
 	if _events != null and is_instance_valid(_events):
-		_connect_if(_events, "run_started", _on_run_started)
-		_connect_if(_events, "stage_entered", _on_stage_entered)
-		_connect_if(_events, "stage_content_cleared", _on_stage_content_cleared)
-		_connect_if(_events, "player_died", _on_player_died)
-		_connect_if(_events, "run_ended", _on_run_ended)
+		SignalWire.listen(_events, "run_started", _on_run_started)
+		SignalWire.listen(_events, "stage_entered", _on_stage_entered)
+		SignalWire.listen(_events, "stage_content_cleared", _on_stage_content_cleared)
+		SignalWire.listen(_events, "player_died", _on_player_died)
+		SignalWire.listen(_events, "run_ended", _on_run_ended)
 
 
 func post(id: String, spec: Dictionary) -> void:
@@ -232,11 +232,6 @@ static func _to_row(e: Dictionary) -> Dictionary:
 
 func _visible_snapshot() -> Array[Dictionary]:
 	return active_rows(DEFAULT_LIMIT)
-
-
-func _connect_if(obj: Node, sig: String, fn: Callable) -> void:
-	if obj.has_signal(sig) and not obj.is_connected(sig, fn):
-		obj.connect(sig, fn)
 
 
 func _disconnect_if(obj: Node, sig: String, fn: Callable) -> void:

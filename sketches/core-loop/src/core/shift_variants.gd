@@ -2,7 +2,6 @@ extends RefCounted
 
 
 const ShiftBoard := preload("res://src/core/shift_board.gd")
-const Panels := preload("res://src/build/panels.gd")
 const ParkDefs := preload("res://src/core/park_defs.gd")
 
 const OVERTIME := "overtime"
@@ -277,8 +276,8 @@ static func on_stage_retry(run) -> void:
 		run.extra.erase(OVERTIME_PAID_KEY)
 
 
-static func claim_overtime_panel(run) -> String:
-	if run == null or not has(run, OVERTIME):
+static func claim_overtime_panel(run, draw_panel := Callable()) -> String:
+	if run == null or not has(run, OVERTIME) or not draw_panel.is_valid():
 		return ""
 	if int(run.extra.get(OVERTIME_PAID_KEY, 0)) > 0:
 		return ""
@@ -286,7 +285,7 @@ static func claim_overtime_panel(run) -> String:
 	run.extra[OVERTIME_PAID_KEY] = stage_now
 	var rng := RandomNumberGenerator.new()
 	rng.seed = hash([int(run.run_seed), stage_now, "overtime_panel"])
-	return Panels.draw(rng, String(run.class_id()))
+	return String(draw_panel.call(rng, String(run.class_id())))
 
 
 static func dam_shop_open(run, stage := -1) -> bool:

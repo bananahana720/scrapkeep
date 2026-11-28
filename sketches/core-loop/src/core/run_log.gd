@@ -3,7 +3,7 @@ extends Node
 
 const LOG_FILE := "runs.ndjson"
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const EventDirector := preload("res://src/world/event_director.gd")
+const EventKinds := preload("res://src/core/event_kinds.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
 const LoopTally := preload("res://src/core/loop_tally.gd")
 const UNKNOWN_CAUSE := "unspecified"
@@ -272,7 +272,7 @@ func _physics_process(_delta: float) -> void:
 
 
 func _on_event_started(id: String) -> void:
-	if id in EventDirector.PARTICIPATORY:
+	if id in EventKinds.PARTICIPATORY:
 		_stage_list("events_joined").append(id)
 
 

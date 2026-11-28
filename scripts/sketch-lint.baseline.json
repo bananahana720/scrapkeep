@@ -491,7 +491,6 @@
     "sketches/core-loop/src/combat/warden_kit.gd",
     "sketches/core-loop/src/combat/warden_look.gd",
     "sketches/core-loop/src/combat/warning_bound.gd",
-    "sketches/core-loop/src/core/companion.gd",
     "sketches/core-loop/src/core/flow.gd",
     "sketches/core-loop/src/core/stage_beats.gd",
     "sketches/core-loop/src/core/worlds.gd",
