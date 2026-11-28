@@ -7,9 +7,9 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
 const BossContract := preload("res://src/boss/boss_contract.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const Intent := preload("res://src/movement/intent.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Warden := preload("res://src/combat/warden.gd")
 
 # The two world-one zone Wardens on the alpha table, through the real spawn path

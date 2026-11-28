@@ -29,7 +29,7 @@ const ShiftVariants := preload("res://src/core/shift_variants.gd")
 const RogueDirector := preload("res://src/world/rogue_director.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
 const ParkTerrain := preload("res://src/world/park/park_terrain.gd")
-const BossPosture := preload("res://src/combat/boss_posture.gd")
+const BossPosture := preload("res://src/core/boss_posture.gd")
 const WARDEN_FIGHT := "warden"
 
 

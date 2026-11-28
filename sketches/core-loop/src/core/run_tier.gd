@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const ChallengeDials := preload("res://src/core/challenge_dials.gd")
 const PAY_GAIN_CAP := 1.5
 const DAMAGE_DIAL_CAP := 1.3

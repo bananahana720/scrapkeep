@@ -7,7 +7,7 @@ const AbilityState := preload("res://src/core/ability_state.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const Bank := preload("res://src/presentation/sfx_bank.gd")
 const Synth := preload("res://src/presentation/synth.gd")
@@ -222,7 +222,7 @@ func _as_class(id: String) -> void:
 	_player.kit.rewind_left = 0.0
 	_player.chain.reset()
 	_player.abilities.refill()
-	_combat._reset_cards()
+	_combat.tally_kit.reset()
 	_combat._line_load = {}
 	_combat._bite_pending = false
 	_combat._cooldown = 0.0
@@ -408,13 +408,13 @@ func _gather_start() -> void:
 
 func _gather_planted() -> void:
 	_check_plate_cues("Gather Plate admits exactly one plate cue", 1)
-	_t.check("gather plants the plate", not _combat.plate.is_empty(), str(_combat.plate))
+	_t.check("gather plants the plate", not _combat.tally_kit.plate.is_empty(), str(_combat.tally_kit.plate))
 	_t.eq("gather costs no pressure", _charges(), 3)
 	_t.eq("gather spends slot 2's own charge", _player.abilities.ready(AbilityState.SPECIAL), false)
 	_t.eq("the gather tap snaps the pick home", _player.abilities.selected, AbilityState.WEAPON)
-	if _combat.plate.is_empty():
+	if _combat.tally_kit.plate.is_empty():
 		return
-	var at: Vector3 = _combat.plate["at"]
+	var at: Vector3 = _combat.tally_kit.plate["at"]
 	var side := _aim_flat().cross(Vector3.UP).normalized()
 	var a := _tough(_spawn("chaser", _planar(at) + side * 2.0))
 	var b := _tough(_spawn("chaser", _planar(at) - side * 3.5))
@@ -436,7 +436,7 @@ func _check_gather() -> void:
 	if not _record.has("a"):
 		_t.check("gather pulled", false, "no plate")
 		return
-	var at: Vector3 = _combat.plate["at"]
+	var at: Vector3 = _combat.tally_kit.plate["at"]
 	for key in ["a", "b"]:
 		var enemy: Node3D = _record[key]
 		var d := _planar(enemy.global_position - at).length()
@@ -453,7 +453,7 @@ func _check_gather() -> void:
 func _gather_again_press() -> void:
 	_record["cue_from"] = _game.presentation.audio.cue_log_total
 	_fails.clear()
-	_record["plate"] = _combat.plate.duplicate()
+	_record["plate"] = _combat.tally_kit.plate.duplicate()
 	_press_slot(1)
 
 
@@ -461,7 +461,7 @@ func _check_gather_again() -> void:
 	_check_plate_cues("a cooling Gather Plate pick admits no plate cue", 0)
 	# The pick is refused, so the click stays on slot 1 (Balance Due may fire there).
 	_t.eq("a gather pick inside its cooldown is refused (cooling) and keeps the plate",
-		[_fails.has(["select", "cooling"]), _combat.plate.get("until"), _player.abilities.selected],
+		[_fails.has(["select", "cooling"]), _combat.tally_kit.plate.get("until"), _player.abilities.selected],
 		[true, _record["plate"].get("until"), AbilityState.WEAPON])
 
 
@@ -499,7 +499,7 @@ func _invalid_tap_press() -> void:
 func _check_invalid_tap() -> void:
 	_check_plate_cues("an invalid Gather Plate aim admits no plate cue", 0)
 	_t.eq("a gather tap at the sky spends nothing and answers no_target",
-		[_charges(), _fails.has(["fire", "no_target"]), _player.abilities.selected, _combat.plate.is_empty(),
+		[_charges(), _fails.has(["fire", "no_target"]), _player.abilities.selected, _combat.tally_kit.plate.is_empty(),
 			_player.abilities.ready(AbilityState.SPECIAL)],
 		[3, true, AbilityState.SPECIAL, true, true])
 	_stage_pitch(0.0)
@@ -565,14 +565,14 @@ func _check_link() -> void:
 	_t.eq("the load spends slot 3's own charge", _record["line_ready"], false)
 	_t.eq("the bite fires line_skill_fired exactly once, on the body", _fired, [["link_clips", "body"]])
 	_player.release_grapple()
-	var ids: Array = _combat.link_group.get("ids", [])
-	_t.check("the ledger clip clips three", ids.size() == 3 and ids.has(_record["c0_id"]), "group %s" % [_combat.link_group])
+	var ids: Array = _combat.tally_kit.link_group.get("ids", [])
+	_t.check("the ledger clip clips three", ids.size() == 3 and ids.has(_record["c0_id"]), "group %s" % [_combat.tally_kit.link_group])
 	_t.eq("three clips pay three pressure", _charges(), 3)
 	var from := _struck.size()
 	_combat.strike(_record["c0"], "ram", 30.0)
 	var arcs := [_struck_by(_record["c1_id"], "ledger", from).size(), _struck_by(_record["c2_id"], "ledger", from).size()]
 	_t.eq("a direct hit arcs once to each other clip", arcs, [1, 1])
-	_t.check("the group is spent", bool(_combat.link_group.get("spent", false)), str(_combat.link_group))
+	_t.check("the group is spent", bool(_combat.tally_kit.link_group.get("spent", false)), str(_combat.tally_kit.link_group))
 	from = _struck.size()
 	_combat.strike(_record["c0"], "ram", 30.0)
 	_t.eq("a second hit arcs nothing", _struck.slice(from).filter(func(s): return s[1] == "ledger").size(), 0)
@@ -601,13 +601,13 @@ func _clip_once(combo: int, charges: int) -> float:
 func _check_clip_direct() -> void:
 	var plain := _clip_once(1, 2)
 	_t.eq("three clips from 2 pressure stop at the cap", _charges(), 3)
-	_t.near("the group stores the multiplier at the cast", float(_combat.link_group.get("mult", 0.0)), 1.0)
+	_t.near("the group stores the multiplier at the cast", float(_combat.tally_kit.link_group.get("mult", 0.0)), 1.0)
 	var linked := _clip_once(3, 0)
-	_t.near("a chain of 3 stores x1.6", float(_combat.link_group.get("mult", 0.0)), 1.6)
+	_t.near("a chain of 3 stores x1.6", float(_combat.tally_kit.link_group.get("mult", 0.0)), 1.6)
 	_t.check("the arc pays the stored multiplier", plain > 0.0 and absf(linked / plain - 1.6) < 0.01,
 		"plain %.2f linked %.2f" % [plain, linked])
 	_player.chain.combo = 1
-	_combat._link_from(_record["row"][0])
+	_combat.tally_kit._link_from(_record["row"][0])
 	_player.chain.reset()
 	var from := _struck.size()
 	_combat.strike(_record["row"][0], "ram", 30.0)
@@ -633,24 +633,24 @@ func _check_post() -> void:
 	_combat._fire_line_skill("link_clips", 1.0)
 	var burst := body.linear_velocity.dot((anchor - body.global_position).normalized())
 	_t.near("a world latch adds the reel burst toward the anchor", burst, _combat.REEL_BURST, 0.1)
-	_t.eq("a world latch plants the clip post", [_fired, _combat.clip_post.is_empty()], [[["link_clips", "world"]], false])
+	_t.eq("a world latch plants the clip post", [_fired, _combat.tally_kit.clip_post.is_empty()], [[["link_clips", "world"]], false])
 	var inside: Array = []
 	for offset in [side * 1.0, -side * 1.5, aim * 1.0, -aim * 2.0]:
 		inside.append(_still(_spawn("chaser", _planar(anchor) + offset)))
 	var outside := _still(_spawn("chaser", _planar(anchor) + side * 8.0))
-	_combat._step_clip_post()
-	var ids: Array = _combat.link_group.get("ids", [])
+	_combat.tally_kit._step_clip_post()
+	var ids: Array = _combat.tally_kit.link_group.get("ids", [])
 	_t.eq("the post clips the first three passers and pays three", [ids.size(), _charges()], [Weapons.CLIP_POST_MAX, 3])
 	_t.check("the post never clips outside its ring", not ids.has(outside.get_instance_id()))
-	_t.check("a full post closes", _combat.clip_post.is_empty(), str(_combat.clip_post))
+	_t.check("a full post closes", _combat.tally_kit.clip_post.is_empty(), str(_combat.tally_kit.clip_post))
 	# A fresh post that runs out its 4 s clips nothing after.
 	_clear_enemies()
-	_combat._link_clips_world(anchor, 1.0, 1.0)
+	_combat.tally_kit.link_clips_world(anchor, 1.0, 1.0)
 	_combat._clock += Weapons.CLIP_POST_SECONDS + 0.01
 	var late := _still(_spawn("chaser", _planar(anchor) + side * 1.0))
-	_combat._step_clip_post()
-	_t.check("a post past 4 s clips nothing", not (_combat.link_group.get("ids", []) as Array).has(late.get_instance_id())
-		and _combat.clip_post.is_empty())
+	_combat.tally_kit._step_clip_post()
+	_t.check("a post past 4 s clips nothing", not (_combat.tally_kit.link_group.get("ids", []) as Array).has(late.get_instance_id())
+		and _combat.tally_kit.clip_post.is_empty())
 	_player.kit.drop_line("reset")
 
 
@@ -673,7 +673,7 @@ func _check_load_timing() -> void:
 	var row: Array = _record["row"]
 	_player.grapple_to(row[0].global_position, Vector3.UP, row[0])
 	_combat._step_line(intent, 0.0)
-	_t.eq("a bite at 3.99 s clips", [_fired, (_combat.link_group.get("ids", []) as Array).size()], [[["link_clips", "body"]], 3])
+	_t.eq("a bite at 3.99 s clips", [_fired, (_combat.tally_kit.link_group.get("ids", []) as Array).size()], [[["link_clips", "body"]], 3])
 	_player.kit.drop_line("reset")
 	_player.abilities.refill()
 	_fired.clear()
@@ -693,7 +693,7 @@ func _warden_arc_start() -> void:
 
 
 func _group(enemies: Array) -> void:
-	_combat.link_group = {"ids": enemies.map(func(e): return e.get_instance_id()), "until": _combat._clock + 4.0,
+	_combat.tally_kit.link_group = {"ids": enemies.map(func(e): return e.get_instance_id()), "until": _combat._clock + 4.0,
 		"spent": false, "mult": 1.0}
 
 
@@ -734,8 +734,8 @@ func _check_warden_arc() -> void:
 	# Balance Due on a boss deals half of its plain damage (tally.md:377).
 	_set_charges(1)
 	hp_before = float(boss.hp)
-	var cast: bool = _combat._run_balance(boss.global_position, true)
-	var due: float = float(_combat.last_card.get("damage", 0.0))
+	var cast: bool = _combat.tally_kit.run_balance(boss.global_position, true)
+	var due: float = float(_combat.tally_kit.last_card.get("damage", 0.0))
 	boss_took = hp_before - float(boss.hp)
 	_t.check("Balance Due on a boss deals half", cast and due > 0.0 and absf(boss_took - due * 0.5) <= due * 0.05,
 		"due %.2f boss %.2f" % [due, boss_took])
@@ -828,7 +828,7 @@ func _check_contact_restores() -> void:
 	_combat.strike(target, "ram", 30.0)
 	_t.eq("a ram restores one pressure", _charges(), 1)
 	_set_charges(0)
-	_combat._restored_frame = {}
+	_combat.tally_kit._restored_frame = {}
 	_combat.strike(target, "ram", 30.0)
 	_combat.strike(target, "ram", 30.0)
 	_t.eq("two rams in one frame restore one", _charges(), 1)
@@ -840,7 +840,7 @@ func _check_contact_restores() -> void:
 func _roll_start() -> void:
 	_as_class("tally")
 	_set_charges(1)
-	_combat._roll_clock = 0.0
+	_combat.tally_kit._roll_clock = 0.0
 	_keep_rolling()
 
 
@@ -874,7 +874,7 @@ func _check_warden() -> void:
 	posture.stagger_left = 5.0
 	posture.staggers += 1
 	var before: int = warden.chunks_left()
-	_combat._run_balance(warden.global_position, true)
+	_combat.tally_kit.run_balance(warden.global_position, true)
 	_t.eq("balance due never shatters a chunk", warden.chunks_left(), before)
 	var cruise: float = _game.ctx.tuning.f("cruise")
 	_t.check("balance due reached the warden", not _struck_by(warden.get_instance_id(), "ledger", _record["from"]).is_empty(), "no ledger strike")
@@ -976,7 +976,7 @@ func _balance_aim_ready() -> bool:
 	var space: PhysicsDirectSpaceState3D = _game.get_world_3d().direct_space_state
 	var sight := Hitscan.aim(space, _game.ctx.aim_origin(), _game.ctx.aim_forward(),
 		_player.ball_position(), Weapons.CARD_REACH + _combat.AIM_SLACK)
-	var aim: Dictionary = _combat.card_aim()
+	var aim: Dictionary = _combat.tally_kit.card_aim()
 	if bool(sight["on_enemy"]) and bool(aim["valid"]) and _player.abilities.selected == AbilityState.WEAPON \
 			and _player.abilities.ready(AbilityState.WEAPON) and _combat._cooldown <= 0.0:
 		return true
@@ -990,7 +990,7 @@ func _balance_shot_arrived() -> bool:
 func _balance_state() -> String:
 	return str({"wait_start": _wait_start_frame, "physics_frame": Engine.get_physics_frames(),
 		"deadline": _wait_start_frame + 2 * Engine.physics_ticks_per_second,
-		"aim": _combat.card_aim(), "selected": _player.abilities.selected,
+		"aim": _combat.tally_kit.card_aim(), "selected": _player.abilities.selected,
 		"ready": _player.abilities.ready(AbilityState.WEAPON), "charges": _charges(),
 		"cooldown": _combat._cooldown, "forward": _game.ctx.aim_forward(),
 		"shots": _shots.slice(_record.get("shots_from", _shots.size())),

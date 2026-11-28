@@ -5,7 +5,7 @@ extends RefCounted
 const HeroSculptor := preload("res://src/presentation/craft/hero_kitbash_sculptor.gd")
 const Lookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
 
 const SHOWCASE_SCENE_PATH := "res://src/presentation/craft/craft_showcase_arena.tscn"

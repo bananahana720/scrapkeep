@@ -18,7 +18,7 @@ const Activities := preload("res://src/world/activities.gd")
 # (e) the islands' relay at k = 4, killing nothing, fills its budget and never passes it, and a
 #     loss with the ball still in the ring does not restart it inside retry_s.
 
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 
 const SEED := 23
 const STAKE := 3

@@ -94,7 +94,7 @@ func _fresh() -> void:
 		enemy.remove_from_group("enemy")
 		enemy.queue_free()
 	_husks._reset()
-	_combat._reset_cards()
+	_combat.tally_kit.reset()
 	_player.tree.world_one = false
 	_player.tree.max_depth = 4
 	_player.tree.reset("tally")
@@ -194,7 +194,7 @@ func _check_eligibility_and_no_spare_shift() -> void:
 	_t.eq("Ghost Shift unlocked after drafting tl_corner_plate", _combat.ghost_shift_unlocked(), true)
 
 	# Zero "Spare Shift" boss-room fallback husks: empty room beacon raises 0 husks.
-	_combat._run_gather(_player.ball_position() + Vector3(3.0, 0.0, 0.0), true)
+	_combat.tally_kit._run_gather(_player.ball_position() + Vector3(3.0, 0.0, 0.0), true)
 	_t.eq("ZERO Spare Shift fallback husks in empty/boss room", _husks.active_count(), 0)
 
 	# Non-eligible enemies never leave wrecks: Warden, boss piece, Rogue, ancient, spectator.
@@ -246,14 +246,14 @@ func _check_raise_caps_and_elites() -> void:
 	for offset in [Vector3(5.0, 0.0, 0.0), Vector3(6.0, 0.0, 1.0), Vector3(7.0, 0.0, -1.0)]:
 		_kill_enemy(_spawn("chaser", offset.x, offset.z))
 	_t.eq("3 wrecks recorded", _husks.wrecks.size(), 3)
-	_combat._run_gather(beacon_pt, true)
+	_combat.tally_kit._run_gather(beacon_pt, true)
 	_t.eq("Heft I cap clamps active seats to 2", [_husks.active_count(), _husks.seats_used()], [2, 2])
 	_t.near("raised husk lives 12.0 s", float(_husks.husks[0].shift_left), AllyHusk.SHIFT_SECONDS, 0.05)
 	_t.near("raised chaser deals 60% of base 9.0 = 5.4", float(_husks.husks[0].damage), 5.4, 0.01)
 
 	# Elite wreck costs 2 seats (evicts older husks cleanly at Heft I cap=2).
 	_kill_enemy(_spawn("plated_brute", 6.0, 0.0, true))
-	_combat._run_gather(beacon_pt, true)
+	_combat.tally_kit._run_gather(beacon_pt, true)
 	_t.eq("Elite brute occupies 2 seats within cap 2", [_husks.active_count(), _husks.seats_used(), _husks.husks[0].elite], [1, 2, true])
 
 	# Depth-3 tl_plate_rack adds +1 seat (Heft I -> 3, Heft III -> 4, Heft V -> 5).
@@ -261,7 +261,7 @@ func _check_raise_caps_and_elites() -> void:
 	_t.eq("tl_plate_rack gives +1 extra seat", _combat.ghost_shift_extra_seats(), 1)
 	_t.eq("Heft I with tl_plate_rack cap is 3", _husks.seat_cap(), 3)
 	_kill_enemy(_spawn("chaser", 6.0, 1.0))
-	_combat._run_gather(beacon_pt, true)
+	_combat.tally_kit._run_gather(beacon_pt, true)
 	_t.eq("Elite (2) + ordinary (1) fit in 3 seats", [_husks.active_count(), _husks.seats_used()], [2, 3])
 
 	# Heft III -> 3 base + 1 tl_plate_rack = 4 seats; Heft V -> 4 + 1 = 5 seats.
@@ -276,7 +276,7 @@ func _check_raise_caps_and_elites() -> void:
 	_husks._reset()
 	var anchor: Vector3 = _player.ball_position() + Vector3(10.0, 0.0, 0.0)
 	_kill_enemy(_spawn("chaser", 10.5, 0.0))
-	_combat._link_clips_world(anchor, 1.0, 1.0)
+	_combat.tally_kit.link_clips_world(anchor, 1.0, 1.0)
 	_t.eq("link_clips world latch drive-by raises husk", _husks.active_count(), 1)
 
 
@@ -287,7 +287,7 @@ func _check_kit_synergies() -> void:
 	_draft(["tl_steam_bank", "tl_corner_plate"])
 	var pt: Vector3 = _player.ball_position() + Vector3(3.0, 0.0, 0.0)
 	_kill_enemy(_spawn("chaser", 3.0, 0.0))
-	_combat._run_gather(pt, true)
+	_combat.tally_kit._run_gather(pt, true)
 	_t.eq("1 husk raised for kit synergy test", _husks.active_count(), 1)
 	var h = _husks.husks[0]
 
@@ -307,10 +307,10 @@ func _check_kit_synergies() -> void:
 
 	# plate_return flight beats raise passed wrecks & landing commands husks to charge landing.
 	_kill_enemy(_spawn("chaser", 4.0, 2.0))
-	_combat.tally_tech("plate_return", 1, _player.ball_position(), Vector3.RIGHT, 1.0)
+	_combat.tally_kit.tally_tech("plate_return", 1, _player.ball_position(), Vector3.RIGHT, 1.0)
 	_t.eq("plate_return flight beat auto-raises passed wreck", _husks.active_count(), 2)
 	var landing_pt: Vector3 = _player.ball_position() + Vector3(14.0, 0.0, 0.0)
-	_combat.tally_landing("plate_return", landing_pt, 1.0, 1.0)
+	_combat.tally_kit.tally_landing("plate_return", landing_pt, 1.0, 1.0)
 	_t.check("plate_return landing commands all active husks to charge landing",
 		_husks.husks.all(func(u): return u.charge_left > 3.0 and Vector2(u.charge_target.x - landing_pt.x, u.charge_target.z - landing_pt.z).length() < 0.2))
 
@@ -325,7 +325,7 @@ func _check_depth3_severance_and_shot_bits() -> void:
 
 	# Severance Blast on shift expiry deals AMBER damage to nearby enemy.
 	_kill_enemy(_spawn("chaser", 3.0, 0.0))
-	_combat._run_gather(_player.ball_position() + Vector3(3.0, 0.0, 0.0), true)
+	_combat.tally_kit._run_gather(_player.ball_position() + Vector3(3.0, 0.0, 0.0), true)
 	var target := _spawn("chaser", 4.5, 0.0)
 	target.hp = 500.0
 	target.max_hp = 500.0
@@ -341,7 +341,7 @@ func _check_depth3_severance_and_shot_bits() -> void:
 
 	# Severance Blast on Tally high-speed ram-through.
 	_kill_enemy(_spawn("chaser", 1.0, 0.0))
-	_combat._run_gather(_player.ball_position() + Vector3(1.0, 0.0, 0.0), true)
+	_combat.tally_kit._run_gather(_player.ball_position() + Vector3(1.0, 0.0, 0.0), true)
 	var h2 = _husks.husks[0]
 	h2.age = 0.5
 	_player.state.velocity = Vector3(18.0, 0.0, 0.0)
@@ -378,7 +378,7 @@ func _check_ally_attack_budget_and_b6() -> void:
 	var pt: Vector3 = _player.ball_position() + Vector3(4.0, 0.0, 0.0)
 	for dx in [3.0, 4.0, 5.0]:
 		_kill_enemy(_spawn("chaser", dx, 0.0))
-	_combat._run_gather(pt, true)
+	_combat.tally_kit._run_gather(pt, true)
 	_t.eq("3 raised husks active for budget test", _husks.active_count(), 3)
 
 	# B6 (c): W47-TALLY-B-3D overlays attached cleanly onto every raised husk.
@@ -445,7 +445,7 @@ func _check_clean_reset() -> void:
 	_draft(["tl_steam_bank", "tl_corner_plate"])
 	_kill_enemy(_spawn("chaser", 3.0, 0.0))
 	_kill_enemy(_spawn("chaser", 10.0, 0.0))
-	_combat._run_gather(_player.ball_position() + Vector3(3.0, 0.0, 0.0), true)
+	_combat.tally_kit._run_gather(_player.ball_position() + Vector3(3.0, 0.0, 0.0), true)
 	_t.check("setup has 1 active husk and 1 wreck", _husks.active_count() == 1 and _husks.wrecks.size() == 1)
 
 	_combat._on_player_died()
@@ -453,7 +453,7 @@ func _check_clean_reset() -> void:
 		[_husks.active_count(), _husks.wrecks.size(), AttackBudget.ally_attackers(_game.get_tree())], [0, 0, 0])
 
 	_kill_enemy(_spawn("chaser", 3.0, 0.0))
-	_combat._run_gather(_player.ball_position() + Vector3(3.0, 0.0, 0.0), true)
+	_combat.tally_kit._run_gather(_player.ball_position() + Vector3(3.0, 0.0, 0.0), true)
 	_combat._start_attempt()
 	_t.eq("attempt boundary clears all husks, wrecks, and ally budget",
 		[_husks.active_count(), _husks.wrecks.size(), AttackBudget.ally_attackers(_game.get_tree())], [0, 0, 0])

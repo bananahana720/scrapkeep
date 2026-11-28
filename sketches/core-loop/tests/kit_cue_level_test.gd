@@ -29,11 +29,15 @@ class Ctx:
 	var player: RefCounted
 	var spawner: RefCounted
 
-class TallyCombat:
+class TallyKit:
 	extends RefCounted
 	var tally_last_settle := {}
-	var ultimate = null
 	var tally_piece := ""
+
+class TallyCombat:
+	extends RefCounted
+	var tally_kit := TallyKit.new()
+	var ultimate = null
 
 class Player:
 	extends RefCounted
@@ -281,7 +285,7 @@ func _tally_settles(def: Resource) -> void:
 	var ids: Array = []
 	for step in Audio.TALLY_CUES["tally_settle"]["steps"].size():
 		ids.append(step + 1)
-	combat.tally_last_settle = {"at": Vector3.ZERO, "hits": 1, "settles": ids.size(), "ids": ids}
+	combat.tally_kit.tally_last_settle = {"at": Vector3.ZERO, "hits": 1, "settles": ids.size(), "ids": ids}
 	_audio.ctx.spawner = combat
 	_events.ultimate_landed.emit(def.ultimate_id, Vector3.ZERO, 1 + ids.size(), 60.0)
 	for note in _audio._tally_notes:

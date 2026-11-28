@@ -1,7 +1,7 @@
 # smoke: solo timeout=60s
 extends SceneTree
 const Reactor = preload("res://src/combat/warden_reactor.gd")
-const BossPosture = preload("res://src/combat/boss_posture.gd")
+const BossPosture = preload("res://src/core/boss_posture.gd")
 const T = preload("res://tests/support/t.gd")
 var t = T.new("park_reactor_phase_quarters_test")
 

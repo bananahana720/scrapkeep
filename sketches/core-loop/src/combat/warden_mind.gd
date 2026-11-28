@@ -117,7 +117,7 @@ func _read(warden) -> void:
 	if path is Array and path.size() >= 2:
 		var points: Array = []
 		for entry in path:
-			var point = warden.get_script().parse_point(entry)
+			var point = warden.parse_point(entry)
 			if point == null:
 				points.clear()
 				break

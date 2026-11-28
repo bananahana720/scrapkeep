@@ -6,7 +6,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const CodexEntries := preload("res://src/combat/codex_entries.gd")
 const PilotBlocks := preload("res://tests/support/pilot_blocks.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 # Combat's "enemy" codex entries: complete as data (id, category, name, hint, clue,
 # text, owner, participants), and each one detected by combat's own code when the

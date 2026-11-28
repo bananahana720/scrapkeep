@@ -248,7 +248,7 @@ func _proc_fires(p: Dictionary) -> String:
 			"air": return float(_player.state.air_actions)
 		return 0.0
 	# Tally's special pays from slot 1's pressure, which a smash also refills on its own
-	# (combat's _grant_pressure), so a pooled special primes two charges down and is judged
+	# (the Tally kit's grant_pressure), so a pooled special primes two charges down and is judged
 	# by the step: the first emit must gain more than the second, inside the gap.
 	var pooled: bool = p["do"] in ["grant_special", "refund_special"] and abilities.pool_of(AbilityState.SPECIAL) != AbilityState.SPECIAL
 	var prime := func() -> void:

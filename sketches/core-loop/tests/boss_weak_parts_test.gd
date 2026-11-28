@@ -14,7 +14,7 @@ const Waking := preload("res://src/boss/waking.gd")
 const Mind := preload("res://src/boss/mind.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const Augments := preload("res://src/movement/augments.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const BotDriver := preload("res://tools/bot_driver.gd")
 
 # The physical weak points of the Waking and the Mind's dial-1 judge (#241 step 2a). Hatch and override parts

@@ -335,7 +335,7 @@ static func _validate_row(name: String, id: String, row: Dictionary, kind: Strin
 			_ref(issues, name, id, "theme", row.synth_theme, range(Music.THEME_COUNT))
 			_ref(issues, name, id, "music id", id, ["default", "title", "title-a", "title-b", "title-c", "camp", "summary", "1-1", "1-2", "2-1", "2-2", "3-1", "3-2"] + Worlds.BOSSES.keys()
 				+ PhaseMusic.TRACKS + PhaseMusic.PICKED.values() + TuneMoments.TUNES.keys())
-			if row.ace_manifest != "" and not (row.ace_manifest.begins_with("res://assets/music_ace/") and row.ace_manifest.ends_with("/manifest.json") and not ".." in row.ace_manifest):
+			if row.ace_manifest != "" and not (row.ace_manifest.begins_with(Music.ACE_ROOT) and row.ace_manifest.ends_with("/manifest.json") and not ".." in row.ace_manifest):
 				_issue(issues, name, "references", id, "manifest outside optional ACE pack root")
 		"windup":
 			_ref(issues, name, id, "roster", id, Roster.ROWS.keys() + Rogue.ROWS.keys())

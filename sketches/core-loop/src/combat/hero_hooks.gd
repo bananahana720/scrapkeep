@@ -8,7 +8,7 @@ const Groups := preload("res://src/core/groups.gd")
 const HeroFx := preload("res://src/presentation/hero_fx.gd")
 const Hitscan := preload("res://src/combat/hitscan.gd")
 const Palette := preload("res://src/core/palette.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 
 var ctx

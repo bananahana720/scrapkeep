@@ -3,7 +3,7 @@ extends SceneTree
 # 2026-10-11 (PC-TARN ruling 2): contact gets a rate budget; 32 checks including the contact stream and the pinned cap and burst.
 
 const T := preload("res://tests/support/t.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 
 # The ultimate meter's rules (design-v3/SKILL-BAR.md section 4 and section 9), wave P-B unit
 # B3, 2026-10-10. Pure rules, no scene: the weights per source, the weapon rate limit, the cap

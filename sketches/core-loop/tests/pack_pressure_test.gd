@@ -4,7 +4,7 @@ extends SceneTree
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const ChurnGround := preload("res://src/combat/churn_ground.gd")
 const SiltBoil := preload("res://src/combat/silt_boil.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const Director := preload("res://src/world/director.gd")
 const Vfx := preload("res://src/presentation/vfx.gd")
 const Presentation := preload("res://src/presentation/presentation.gd")

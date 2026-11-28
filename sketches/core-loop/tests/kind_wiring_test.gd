@@ -14,7 +14,7 @@ extends SceneTree
 const T := preload("res://tests/support/t.gd")
 const Director := preload("res://src/world/director.gd")
 const Roster := preload("res://src/combat/roster.gd")
-const DirectorCards := preload("res://src/world/director_cards.gd")
+const DirectorCards := preload("res://src/core/director_cards.gd")
 const WindupRows := preload("res://src/presentation/windup_rows.gd")
 const TelegraphRecord := preload("res://src/combat/telegraph_record.gd")
 

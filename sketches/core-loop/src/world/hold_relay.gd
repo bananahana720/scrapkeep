@@ -1,7 +1,7 @@
 extends RefCounted
 
 const Parts := preload("res://src/build/parts.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 
 
 const RULE := {"T": 18.0, "s": 1.0, "discharge": 0.0, "radius": 24.0, "radius_floor": 3.0, "follower": 0.0}

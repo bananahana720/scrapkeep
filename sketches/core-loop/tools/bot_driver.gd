@@ -4495,9 +4495,9 @@ func _card_hands() -> void:
 
 func _tally_gather_hands() -> void:
 	var combat = game.get("combat")
-	if combat == null or _cast_phase != "" or _set_piece_up() or not combat.has_method("card_aim"):
+	if combat == null or _cast_phase != "" or _set_piece_up() or combat.get("tally_kit") == null:
 		return
-	var aim: Dictionary = combat.card_aim()
+	var aim: Dictionary = combat.tally_kit.card_aim()
 	if not aim["valid"]:
 		return
 	var ordinary := 0
@@ -4515,7 +4515,7 @@ func _tally_plate_hands() -> void:
 		return
 	if String(game.player.abilities.ultimate().get("state", "")) != AbilityState.READY:
 		return
-	var plate: Dictionary = combat.get("plate") if combat.get("plate") != null else {}
+	var plate: Dictionary = combat.tally_kit.plate if combat.get("tally_kit") != null else {}
 	if plate.is_empty() or game.player.ball_position().distance_to(plate["at"]) > TALLY_PLATE_REACH:
 		return
 	if _enemies_within(plate["at"], TALLY_PLATE_RADIUS) < TALLY_PLATE_CROWD:

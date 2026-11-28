@@ -1,7 +1,7 @@
 extends SceneTree
 
 const HoldRelay := preload("res://src/world/hold_relay.gd")
-const Cards := preload("res://src/world/director_cards.gd")
+const Cards := preload("res://src/core/director_cards.gd")
 const T := preload("res://tests/support/t.gd")
 
 # SR10 relay risk stack (W13-INTEGRATION-3.md, SR10; comps/ror2/events-and-objectives.md).

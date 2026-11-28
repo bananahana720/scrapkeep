@@ -4,6 +4,9 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Items := preload("res://src/build/items.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const Palette := preload("res://src/core/palette.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
+const FORBIDDEN := "\\bNode\\b|[Pp]rofile|res://src/(movement|combat|build|world|boss)"
+const CUT := "(?s:func %s\\(.*?)(?=^\\S)"
 
 # The cosmetics table is looks only: every row keeps to the allowed keys, none carries an
 # item stat key, no tint is a hostile hue, and each rule is shown able to fail.
@@ -121,11 +124,15 @@ func run(t) -> void:
 	_bad(t, "bad: a table without a starter paint is refused", _with({"starter": false}), "table", "starter paint")
 	_bad(t, "bad: a short table is refused", _good(), "table", "at least 6 rows")
 
-	_purity(t, "res://src/core/cosmetics.gd")
+	t.eq("fixture control: the purity pattern finds a planted Node", SourceScan.search(t, "var n: Node\n", FORBIDDEN).size(), 1)
+	t.eq("fixture control: the cut takes one whole function", SourceScan.search(t, "func a():\n\tvar n: Node\n\nconst B := 1\n", SourceScan.DECLARATION + CUT % "a").map(func(m: RegExMatch) -> String: return m.get_string()), ["func a():\n\tvar n: Node\n\n"])
+	_purity(t, "res://src/core/cosmetics.gd", "resolve")
 
 
-func _purity(t, path: String) -> void:
-	var source := FileAccess.get_file_as_string(path)
-	var forbidden := RegEx.create_from_string("\bNode\b|[Pp]rofile|res://src/(movement|combat|build|world|boss)")
-	var hit := forbidden.search(source)
-	t.check("%s references no node, profile or stat module" % path.get_file(), hit == null and source != "", "found %s" % [hit.get_string() if hit != null else "empty file"])
+func _purity(t, path: String, allowed: String) -> void:
+	var source := SourceScan.text(t, path)
+	var cut := SourceScan.search(t, source, SourceScan.DECLARATION + CUT % allowed)
+	t.eq("%s holds one %s" % [path.get_file(), allowed], cut.size(), 1)
+	var rest := source.replace(cut[0].get_string(), "") if cut.size() == 1 else source
+	var hits := SourceScan.search(t, rest, FORBIDDEN)
+	t.check("%s references no node, profile or stat module outside %s, which instantiates a delivered scene to check it" % [path.get_file(), allowed], hits.is_empty() and rest != "", "found %s" % [hits.map(func(m: RegExMatch) -> String: return m.get_string())])

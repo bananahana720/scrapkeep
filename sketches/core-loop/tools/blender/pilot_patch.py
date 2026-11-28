@@ -9,7 +9,7 @@ come from tools/build_patch_glbs.py.
 
 Colour discipline (pilots/patch.md §4):
   Patch's test-card pink (#ea7fa0, CVD-safe & distinct from HAZARD #ff5a3c and KINDNESS #d936b0)
-  with cold white (#e8f0f2) fallback accent, charcoal, bone, copper & verdigris Keeper hardware.
+  on a cold white (#e8f0f2) badge with a charcoal cable.
 
 Run headless:
   blender -b --factory-startup --python-exit-code 1 -P pilot_patch.py [-- --out DIR]
@@ -19,7 +19,6 @@ import os
 import sys
 
 import bmesh
-import bpy
 from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -31,8 +30,6 @@ import palette_gd
 import polish
 from common import Part
 
-BONE = palette_gd.HEX["SAND"]
-COPPER = palette_gd.HEX["COPPER"]
 CHARCOAL = palette_gd.HEX["CHARCOAL"]
 
 PATCH_PINK = "ea7fa0"
@@ -42,13 +39,8 @@ ALONG_Y = (math.pi / 2.0, 0.0, 0.0)
 
 
 def _setup_slots():
-    common.SLOTS["pilot"] = {"vc": True, "rough": 0.88, "metal": 0.0}
     common.SLOTS["paint"] = {"vc": True, "rough": 0.76, "metal": 0.0}
-    common.SLOTS["hydraulic"] = {"vc": True, "rough": 0.36, "metal": 0.54}
     common.SLOTS["class_accent"] = {"color": PATCH_PINK, "emit": 0.65, "rough": 0.42}
-    common.SLOTS["bare_metal"] = {"color": BONE, "lighten": 0.25, "metal": 0.6, "rough": 0.45}
-    common.SLOTS["rubber"] = {"color": CHARCOAL, "rough": 0.95}
-    common.SLOTS["copper"] = {"color": COPPER, "metal": 0.6, "rough": 0.4}
 
 
 def build_patch_husk_sticker(out_path):

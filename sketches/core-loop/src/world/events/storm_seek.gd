@@ -3,7 +3,7 @@ extends RefCounted
 const Hazard := preload("res://src/boss/hazard.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
 const SiltBoil := preload("res://src/combat/silt_boil.gd")
-const SpeedTier := preload("res://src/movement/speed_tier.gd")
+const SpeedTier := preload("res://src/core/speed_tier.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 
 

@@ -5,7 +5,7 @@ const Warden := preload("res://src/combat/warden.gd")
 const WardenKit := preload("res://src/combat/warden_kit.gd")
 const Floors := preload("res://src/boss/waking_floors.gd")
 const Waking := preload("res://src/boss/waking.gd")
-const Posture := preload("res://src/combat/boss_posture.gd")
+const Posture := preload("res://src/core/boss_posture.gd")
 const CLIPS := {
 	"sleeping": 3.0, "wake": 1.6, "pulse_warn": 2.0, "pulse": 0.5,
 	"floor_warn": 1.0, "floor_drop": 0.6,

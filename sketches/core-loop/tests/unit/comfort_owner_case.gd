@@ -8,7 +8,6 @@ const STATIC_COPY := "(?m)^\\s*(?:@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*static\\s+(?:
 const FIELD_COPY := "(?m)^\\s*(?:static\\s+|@[a-z0-9_]+(?:\\([^)]*\\))?\\s+)*var\\s+reduced_motion\\b"
 const FIELD_HOLDERS := [
 	OWNER,
-	"res://src/presentation/harpoon_physics_rig.gd",
 	"res://src/presentation/launch_take.gd",
 	"res://src/presentation/title_intro_player.gd",
 	"res://src/presentation/world_fx/world_fx.gd",

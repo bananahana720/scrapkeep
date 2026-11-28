@@ -1,7 +1,7 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
-const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const FlashGuard := preload("res://src/core/flash_guard.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
 const Comfort := preload("res://src/core/comfort.gd")
 

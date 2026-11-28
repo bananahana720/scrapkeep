@@ -9,7 +9,7 @@ const OWNERS := {
 	"arrive": "res://src/core/flow.gd",
 	"loot": "res://src/build/scrap_field.gd",
 	"find": "res://src/world/activities.gd",
-	"hold": "res://src/combat/boss_posture.gd",
+	"hold": "res://src/core/boss_posture.gd",
 	"fight": "res://src/combat/warden.gd",
 	"leave": "res://src/world/launch.gd",
 }
