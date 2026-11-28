@@ -260,6 +260,7 @@ export function collect(inputs) {
   const addFile = (p, explicit) => {
     const st = statSync(p, { throwIfNoEntry: false });
     if (!st) return skipped.push(`${p} (missing)`);
+    if (st.isDirectory()) return;
     if (LOG_FILE.test(path.basename(p)) || explicit) {
       if (st.size > MAX_BYTES) skipped.push(`${p} (over ${MAX_BYTES / 1024 / 1024} MB)`);
       else files.push(p);
@@ -274,6 +275,7 @@ export function collect(inputs) {
     if (st.isDirectory()) {
       for (const entry of walkSync(input, {
         sort: true,
+        followSymlinks: true,
         prune: (item) => SKIP_DIRS.has(item.name),
       })) {
         addFile(entry.full, false);

@@ -17,6 +17,7 @@ const required = [
   "docs/FIRST-BUILD-VERIFICATION.md",
   "scripts/toolchain.json",
   "tools/cloud/godot-version.env",
+  "tools/cloud/setup.sh",
   ".github/actions/setup-godot/action.yml",
 ];
 for (const file of required) await access(path.join(root, file));
@@ -102,6 +103,40 @@ assert.equal(
   toolchain.godotBinSha256,
   "ci.yml GODOT_BIN_SHA256 mismatch",
 );
+
+const setupSh = await readFile(path.join(root, "tools/cloud/setup.sh"), "utf8");
+const setupFallback = (name) => {
+  const m = new RegExp(`^${name}="\\$\\{${name}:-([^}]+)\\}"$`, "m").exec(setupSh);
+  assert.ok(m, `tools/cloud/setup.sh missing fallback ${name}`);
+  return m[1];
+};
+assert.equal(
+  setupFallback("GODOT_VERSION"),
+  toolchain.godotVersion,
+  "setup.sh GODOT_VERSION fallback mismatch",
+);
+assert.equal(
+  setupFallback("GODOT_TEMPLATE_VERSION"),
+  toolchain.godotTemplateVersion,
+  "setup.sh GODOT_TEMPLATE_VERSION fallback mismatch",
+);
+assert.equal(
+  setupFallback("GODOT_ZIP_SHA512"),
+  toolchain.godotZipSha512,
+  "setup.sh GODOT_ZIP_SHA512 fallback mismatch",
+);
+assert.equal(
+  setupFallback("GODOT_BIN_SHA256"),
+  toolchain.godotBinSha256,
+  "setup.sh GODOT_BIN_SHA256 fallback mismatch",
+);
+if (toolchain.godotTemplatesSha512) {
+  assert.equal(
+    setupFallback("GODOT_TEMPLATES_SHA512"),
+    toolchain.godotTemplatesSha512,
+    "setup.sh GODOT_TEMPLATES_SHA512 fallback mismatch",
+  );
+}
 
 console.log(
   "Project checks passed: " +

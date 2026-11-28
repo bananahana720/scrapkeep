@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -56,5 +56,53 @@ test("walkSync and walkAsync return POSIX paths, support prune/filter/includeDir
     assert.deepEqual(await walkAsync(missing), []);
   } finally {
     rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test("walkSync and walkAsync sort by code unit (B < _ < a) and follow symlinked directories only when followSymlinks is set", async () => {
+  const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-walk-order-"));
+  const target = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-walk-target-"));
+  try {
+    writeFileSync(path.join(dir, "a"), "a\n");
+    writeFileSync(path.join(dir, "B"), "B\n");
+    writeFileSync(path.join(dir, "_"), "_\n");
+    writeFileSync(path.join(target, "inner.log"), "ok\n");
+    symlinkSync(target, path.join(dir, "log"));
+
+    const noFollowSync = walkSync(dir, { sort: true });
+    const noFollowAsync = await walkAsync(dir, { sort: true });
+    assert.deepEqual(
+      noFollowSync.map((e) => e.rel),
+      ["B", "_", "a", "log"],
+    );
+    assert.deepEqual(
+      noFollowAsync.map((e) => e.rel),
+      ["B", "_", "a", "log"],
+    );
+
+    const followSync = walkSync(dir, { sort: true, followSymlinks: true });
+    const followAsync = await walkAsync(dir, { sort: true, followSymlinks: true });
+    assert.deepEqual(
+      followSync.map((e) => e.rel),
+      ["B", "_", "a", "log/inner.log"],
+    );
+    assert.deepEqual(
+      followAsync.map((e) => e.rel),
+      ["B", "_", "a", "log/inner.log"],
+    );
+    assert.ok(followSync.every((e) => !e.dir));
+
+    symlinkSync(dir, path.join(target, "loop"));
+    assert.deepEqual(
+      walkSync(dir, { sort: true, followSymlinks: true }).map((e) => e.rel),
+      ["B", "_", "a", "log/inner.log"],
+    );
+    assert.deepEqual(
+      (await walkAsync(dir, { sort: true, followSymlinks: true })).map((e) => e.rel),
+      ["B", "_", "a", "log/inner.log"],
+    );
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+    rmSync(target, { recursive: true, force: true });
   }
 });

@@ -2,16 +2,13 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:f
 import os from "node:os";
 import path from "node:path";
 
-const toolchainUrl = new URL("./toolchain.json", import.meta.url);
-export const TOOLCHAIN = existsSync(toolchainUrl)
-  ? JSON.parse(readFileSync(toolchainUrl, "utf8"))
-  : {
-      godotVersion: "4.7.2-stable",
-      godotNumericVersion: "4.7.2",
-      godotTemplateVersion: "4.7.2.stable",
-      sketchDir: "sketches/core-loop",
-    };
+export const TOOLCHAIN = JSON.parse(
+  readFileSync(new URL("./toolchain.json", import.meta.url), "utf8"),
+);
 
+// Godot on macOS ignores XDG_DATA_HOME and keeps user:// under $HOME/Library/Application Support
+// (platform/macos/os_macos.mm), so a scratch data home isolates a run there only when HOME moves
+// with it. Linux and Windows keep the caller's HOME.
 export function userDataEnv(dir, platform = process.platform) {
   return platform === "darwin" ? { XDG_DATA_HOME: dir, HOME: dir } : { XDG_DATA_HOME: dir };
 }

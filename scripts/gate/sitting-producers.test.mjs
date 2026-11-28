@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { test } from "node:test";
 
-import { root } from "./clean-head.mjs";
+import { REPO_ROOT as root } from "../lib/git.mjs";
 import {
   buildReceipt as installedBuildReceipt,
   defaultAppImage,

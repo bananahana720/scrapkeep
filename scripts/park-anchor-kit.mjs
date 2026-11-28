@@ -2,16 +2,9 @@ import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "./lib/cli.mjs";
+import { PARK_MAPS } from "./lib/game-defs.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-export const PARKS = [
-  "park_dam",
-  "park_flume",
-  "park_pit",
-  "park_sinkhole",
-  "park_islands",
-  "park_crown",
-];
 export const GREY = "greybox:anchor_field";
 
 const word = (alternatives) => new RegExp(`(^|_)(${alternatives})(?=_|\\d|$)`);
@@ -64,7 +57,7 @@ export function swap(text) {
 function main() {
   const check = process.argv.includes("--check");
   let left = 0;
-  for (const map of PARKS) {
+  for (const map of PARK_MAPS) {
     const file = path.join(root, "sketches/core-loop/src/world/park", `${map}.json`);
     const before = readFileSync(file, "utf8");
     const { text, counts } = swap(before);

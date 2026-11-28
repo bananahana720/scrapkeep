@@ -4,7 +4,6 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { DEFAULT_MAX_BUFFER, REPO_ROOT, cleanHead, git, gitOptional, gitState } from "./git.mjs";
-import { cleanHead as reexportedCleanHead, root as reexportedRoot } from "../gate/clean-head.mjs";
 
 function makeTempRepo() {
   const dir = mkdtempSync(path.join(os.tmpdir(), "scrapkeep-git-lib-"));
@@ -85,9 +84,4 @@ test("gitState and cleanHead report repository state and refuse dirty trees", ()
     rmSync(dir, { recursive: true, force: true });
     rmSync(nonRepo, { recursive: true, force: true });
   }
-});
-
-test("scripts/gate/clean-head.mjs re-exports REPO_ROOT as root and cleanHead", () => {
-  assert.equal(reexportedRoot, REPO_ROOT);
-  assert.equal(reexportedCleanHead, cleanHead);
 });

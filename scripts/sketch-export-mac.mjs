@@ -6,7 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkPreset } from "./export-include-check.mjs";
 import { STEM_HASHES, stemHashMismatches } from "./audio-gate.mjs";
-import { GODOT_VERSION, resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
+import { GODOT_VERSION, TOOLCHAIN, resolveGodotBinary, scratchGodotEnv } from "./godot-home.mjs";
 import { isMain } from "./lib/cli.mjs";
 import {
   bootFailures,
@@ -23,7 +23,7 @@ const stemRoot = path.join(project, "assets/music_ace");
 export const MAC_PRESET = "macOS";
 const SHIPPED_PRESET = "Linux x64";
 export const APP_NAME = "Scrapkeep.app";
-const TEMPLATE_VERSION = "4.7.2.stable";
+const TEMPLATE_VERSION = TOOLCHAIN.godotTemplateVersion;
 const errorLine = /^(SCRIPT ERROR|ERROR)\b/m;
 
 export function parseArgs(argv) {

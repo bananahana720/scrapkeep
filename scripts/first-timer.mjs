@@ -4,18 +4,11 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { requireGodotBinary } from "./godot-home.mjs";
 import { isMain } from "./lib/cli.mjs";
+import { PILOT_IDS } from "./lib/game-defs.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sketch = path.join(root, "sketches", "core-loop");
 
-export const PILOTS = [
-  "pylon_engineer",
-  "runner_gunner",
-  "demolitions_caster",
-  "tarn",
-  "tally",
-  "remembered_cannon",
-];
 export const PILOT_NAMES = {
   pylon_engineer: "Sable",
   runner_gunner: "Rivet",
@@ -271,9 +264,9 @@ export function parseArgs(argv) {
   }
   if (args["scrap-at"] !== null && !(args["scrap-at"] > 0))
     throw new Error("first-timer: --scrap-at takes seconds above zero");
-  args.pilots = args.pilots === "all" ? PILOTS : args.pilots.split(",");
+  args.pilots = args.pilots === "all" ? PILOT_IDS : args.pilots.split(",");
   for (const pilot of args.pilots)
-    if (!PILOTS.includes(pilot)) throw new Error(`first-timer: unknown pilot ${pilot}`);
+    if (!PILOT_IDS.includes(pilot)) throw new Error(`first-timer: unknown pilot ${pilot}`);
   return args;
 }
 
@@ -323,14 +316,14 @@ async function runProbes(args) {
     }
   };
   await Promise.all(Array.from({ length: Math.max(1, args.jobs) }, worker));
-  return probes.sort((a, b) => PILOTS.indexOf(a.pilot) - PILOTS.indexOf(b.pilot));
+  return probes.sort((a, b) => PILOT_IDS.indexOf(a.pilot) - PILOT_IDS.indexOf(b.pilot));
 }
 
 function readProbes(dir) {
   return readdirSync(dir)
     .filter((name) => /^probe-[^.]*\.json$/.test(name))
     .map((name) => JSON.parse(readFileSync(path.join(dir, name), "utf8")))
-    .sort((a, b) => PILOTS.indexOf(a.pilot) - PILOTS.indexOf(b.pilot));
+    .sort((a, b) => PILOT_IDS.indexOf(a.pilot) - PILOT_IDS.indexOf(b.pilot));
 }
 
 export async function main(argv = process.argv.slice(2)) {
