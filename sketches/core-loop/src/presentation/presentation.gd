@@ -124,7 +124,7 @@ func setup(ctx_ref) -> void:
 	var codex = ctx.get("codex")
 	if ctx.tuning != null and ctx.tuning.option(Tuning.DISCOVERY_KEY) == "cards" and codex != null:
 		banner.cards = true
-		banner.storage_dir = codex.storage_dir
+		banner.profile = ctx.ui_profile
 	ceremony = RewardCeremony.new()
 	add_child(ceremony)
 	ceremony.setup(ctx, audio, juice, vfx)

@@ -25,6 +25,7 @@ const WeaponDriver := preload("res://src/combat/weapon_driver.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Palette := preload("res://src/core/palette.gd")
 const Destructibles := preload("res://src/world/destructibles.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 const DT := 1.0 / 60.0
@@ -462,17 +463,17 @@ func _test_hygiene_and_resets() -> void:
 	]
 	var orb_hits: Array = []
 	for path in orb_files:
-		var src := FileAccess.get_file_as_string(path)
+		var src := SourceScan.text(_t, path)
 		if src == "" or src.findn(orb_word) != -1:
 			orb_hits.append(path)
-	var combat_src := FileAccess.get_file_as_string("res://src/combat/combat.gd")
+	var combat_src := SourceScan.text(_t, "res://src/combat/combat.gd")
 	for phrase in [orb_word + " strike", orb_word + " laser", orb_word + " beam", orb_word + " cannon"]:
 		if combat_src.findn(phrase) != -1:
 			orb_hits.append("res://src/combat/combat.gd:" + phrase)
 	_t.eq("Zero disallowed space-strike terminology in Tarn/Cannon/Combat/Destructibles source", orb_hits, [])
 
 	# Purely mechanical worn-steel articulated claw in Tarn's claw module (Call #4).
-	var tarn_src := FileAccess.get_file_as_string("res://src/combat/tarn_claw.gd")
+	var tarn_src := SourceScan.text(_t, "res://src/combat/tarn_claw.gd")
 	var em_word := "electro" + "magnet"
 	var has_em := tarn_src.findn(em_word) != -1
 	_t.eq("TarnClaw stays purely mechanical worn-steel articulated claw (Call #4)", has_em, false)
@@ -480,7 +481,7 @@ func _test_hygiene_and_resets() -> void:
 	# Cannon uses "its" (never she/her) in new W47-H2 Cannon code/comments.
 	var cannon_bad_pronoun := false
 	for path in ["res://src/combat/weapons.gd", "res://src/combat/ultimate.gd", "res://src/world/destructibles.gd"]:
-		for line in FileAccess.get_file_as_string(path).split("\n"):
+		for line in SourceScan.text(_t, path).split("\n"):
 			if line.findn("cannon") != -1 and (line.findn(" she ") != -1 or line.findn(" her ") != -1):
 				cannon_bad_pronoun = true
 	_t.eq("Cannon strictly uses its (never she/her)", cannon_bad_pronoun, false)

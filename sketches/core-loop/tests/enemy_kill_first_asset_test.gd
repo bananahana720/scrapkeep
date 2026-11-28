@@ -1,6 +1,6 @@
 extends SceneTree
 # Kill-first bodies (ENEMY-PRIORITY.md 4a): Splitter, its loose piece and Linker. Combat loads
-# them: src/combat/splitter.gd (BODY_GLB, PIECE_GLB), src/combat/splitter_pod.gd (BODY) and
+# them: src/combat/splitter.gd (BODY_GLB), src/combat/splitter_pod.gd (BODY) and
 # src/combat/linker.gd (MODEL). This checks the imported files those scripts read. Enemy budget, opaque vertex-colour surfaces with no
 # baked glow, the named meshes and sockets the behaviour is promised, and the floor and core
 # each recipe documents.

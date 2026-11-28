@@ -188,8 +188,6 @@ func leg_state() -> Dictionary:
 		total_remaining += float(legs[i]["seconds"])
 	return {
 		"has_leg": has_leg,
-		"index": _leg,
-		"count": legs.size(),
 		"is_last": has_leg and _leg == legs.size() - 1,
 		"elapsed": _leg_time,
 		"remaining": (float(leg["seconds"]) - float(_leg_time)) if has_leg else 0.0,

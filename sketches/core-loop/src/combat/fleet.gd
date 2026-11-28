@@ -202,8 +202,6 @@ func _physics_process(delta: float) -> void:
 	if ctx == null:
 		return
 	habits.tick(delta)
-	if ctx.run.class_def != null:
-		Enemy.rim_color = ctx.run.class_def.color
 
 
 func _flush() -> void:
