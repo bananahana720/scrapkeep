@@ -120,7 +120,7 @@ void fragment() {
 	mat.set_shader_parameter("brass_col", Palette.BRASS)
 	mat.set_shader_parameter("ink_col", Palette.CHARCOAL)
 	mat.set_shader_parameter("charge", 0.35)
-	mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or EnemyMotion.motion_scale <= 0.0 else 1.0)
+	mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or Comfort.reduced_motion else 1.0)
 	return mat
 
 
@@ -340,7 +340,7 @@ func _pose() -> void:
 				lean = 0.24 * (u * u * (3.0 - 2.0 * u))
 			elif phase == Phase.LIVE:
 				lean = 0.24
-			_body_node.transform = Transform3D(Basis(Vector3.RIGHT, lean * EnemyMotion.motion_scale), Vector3.ZERO)
+			_body_node.transform = Transform3D(Basis(Vector3.RIGHT, lean * Comfort.motion_scale()), Vector3.ZERO)
 		else:
 			_body_node.transform = Transform3D.IDENTITY
 	if _net_mat != null:
@@ -350,7 +350,7 @@ func _pose() -> void:
 		elif phase == Phase.WARN:
 			charge = lerpf(0.35, 1.0, clampf(_t / warn_seconds, 0.0, 1.0))
 		_net_mat.set_shader_parameter("charge", charge)
-		_net_mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or EnemyMotion.motion_scale <= 0.0 else 1.0)
+		_net_mat.set_shader_parameter("motion", 0.0 if FlashGuard.on or Comfort.reduced_motion else 1.0)
 
 
 func _exit_tree() -> void:

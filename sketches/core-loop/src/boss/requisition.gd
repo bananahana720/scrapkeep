@@ -8,11 +8,10 @@ const WorldPrompt := preload("res://src/ui/world_prompt.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const BakeLook := preload("res://src/presentation/bake_look.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const HULL := Vector3(9.0, 5.0, 14.0)
 const DECK := 5.0
@@ -224,7 +223,7 @@ func _bind_magnet_rigs() -> void:
 
 func step_magnet_motion(delta: float) -> void:
 	var dt := maxf(delta, 0.0001)
-	var calm := UiTokens.reduced_motion or EnemyMotion.motion_scale <= 0.0
+	var calm := Comfort.reduced_motion
 	for i in mini(magnets.size(), _magnet_rigs.size()):
 		var rig: PropMotionRig = _magnet_rigs[i]
 		rig.reduced_motion = calm
@@ -587,7 +586,7 @@ func _cue(clip: String, token: int, tag := "") -> void:
 
 
 func _resume_idle(clip: StringName) -> void:
-	if EnemyMotion.motion_scale <= 0.0 or clip in [&"idle_roll", &"eject"] or _anim.assigned_animation != clip:
+	if Comfort.reduced_motion or clip in [&"idle_roll", &"eject"] or _anim.assigned_animation != clip:
 		return
 	BossModel.play(_anim, "idle_roll")
 

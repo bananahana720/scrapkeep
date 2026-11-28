@@ -369,7 +369,7 @@ func _light_cable(on: bool) -> void:
 
 func _ease_clips() -> void:
 	for clip in IDLE_CLIPS:
-		if _anim.has_animation(clip) and EnemyMotion.motion_scale > 0.0:
+		if _anim.has_animation(clip) and not Comfort.reduced_motion:
 			_anim.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
 	for from in BLENDS:
 		for to in BLENDS[from]:

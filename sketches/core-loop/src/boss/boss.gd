@@ -17,10 +17,10 @@ const BossModel := preload("res://src/boss/boss_model.gd")
 const Field := preload("res://src/build/scrap_field.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const Worlds := preload("res://src/core/worlds.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 enum { IDLE, FIGHT, EJECT, DEFEATED }
 const STATE_NAMES := ["idle", "fight", "eject", "defeated"]
@@ -1406,7 +1406,7 @@ func _step_scooter(delta: float) -> void:
 	var at: Vector3 = arena.point_at(_eject["angle"], Rules.SCOOTER_RING, 0.7)
 	var ahead: Vector3 = Arena.tangent(_eject["angle"]) * _eject["dir"]
 	var slowed: bool = clock < float(_eject.get("slow_until", -1.0))
-	var roll := sin(clock * 24.0) * 0.14 * EnemyMotion.motion_scale if slowed else 0.0
+	var roll := sin(clock * 24.0) * 0.14 * Comfort.motion_scale() if slowed else 0.0
 	scooter.global_transform = Transform3D(Basis.looking_at(ahead, Vector3.UP) * Basis(Vector3.FORWARD, roll), at)
 	_eject["puff_t"] = float(_eject.get("puff_t", 0.0)) + delta
 	if float(_eject["puff_t"]) >= 0.22 and is_instance_valid(arena):

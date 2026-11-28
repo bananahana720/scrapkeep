@@ -5,8 +5,8 @@ const EnvTags := preload("res://src/experimental/env_tags.gd")
 const Ecology := preload("res://src/experimental/ecology_actors.gd")
 const AdversityDirector := preload("res://src/experimental/adversity_director.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const ActorCraft := preload("res://src/experimental/live_world_actor_craft.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 signal fact_emitted(fact: Dictionary)
 
@@ -659,7 +659,7 @@ func _sync_haulers() -> void:
 		if c.vel.length_squared() > 0.04:
 			node.rotation.y = atan2(c.vel.x, c.vel.z)
 		for rotor in t["rotors"]:
-			(rotor as Node3D).rotation.y += 0.0 if UiTokens.reduced_motion else 0.6
+			(rotor as Node3D).rotation.y += 0.0 if Comfort.reduced_motion else 0.6
 
 
 func _step_rams(ball_pos: Vector3, ball_vel: Vector3) -> void:
@@ -928,7 +928,7 @@ func _step_squall(ball_pos: Vector3) -> void:
 		return
 	var director = _bridge.director
 	var phase: int = director.hazard_phase if director != null else AdversityDirector.HazardPhase.IDLE
-	var active := (phase == AdversityDirector.HazardPhase.RAMP or phase == AdversityDirector.HazardPhase.PEAK) and not UiTokens.reduced_motion
+	var active := (phase == AdversityDirector.HazardPhase.RAMP or phase == AdversityDirector.HazardPhase.PEAK) and not Comfort.reduced_motion
 	_streaks.visible = active
 	if not active:
 		return
@@ -951,7 +951,7 @@ func _step_fx(delta: float) -> void:
 		if t["kind"] == KIND_APEX:
 			var pivot := t["pivot"] as Node3D
 			pivot.rotation.y += delta * 0.9
-			pivot.position.y = 2.6 + (0.0 if UiTokens.reduced_motion else sin(_clock * 2.2) * 0.3)
+			pivot.position.y = 2.6 + (0.0 if Comfort.reduced_motion else sin(_clock * 2.2) * 0.3)
 	var kept: Array[Dictionary] = []
 	for ring in _rings:
 		var node := ring["node"] as Node3D
@@ -959,7 +959,7 @@ func _step_fx(delta: float) -> void:
 			continue
 		ring["age"] = float(ring["age"]) + delta
 		var k := clampf(float(ring["age"]) / RING_LIFE_S, 0.0, 1.0)
-		var grow := 1.0 if UiTokens.reduced_motion else lerpf(0.35, 1.0, k)
+		var grow := 1.0 if Comfort.reduced_motion else lerpf(0.35, 1.0, k)
 		node.scale = Vector3.ONE * maxf(0.05, float(ring["radius"]) * grow)
 		if k >= 1.0:
 			remove_child(node)
@@ -983,7 +983,7 @@ func _spawn_ring(at: Vector3, tag: StringName, radius: float) -> void:
 	node.material_override = _craft.ring_material(tag)
 	add_child(node)
 	node.global_position = at
-	node.scale = Vector3.ONE * radius * (1.0 if UiTokens.reduced_motion else 0.35)
+	node.scale = Vector3.ONE * radius * (1.0 if Comfort.reduced_motion else 0.35)
 	_rings.append({"node": node, "age": 0.0, "radius": radius})
 	_rings_spawned += 1
 

@@ -3,7 +3,6 @@ extends "res://src/combat/enemy.gd"
 const PackPressure := preload("res://src/combat/pack_pressure.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 
 const HP := 600.0
@@ -471,7 +470,7 @@ func _model_pose(delta: float) -> void:
 			fists = Vector3(0.0, 0.2, -0.5) * t
 	var drop: float = lift if state == State.SLAM_LEAP else float(row.body) * HALF_HEIGHT * t + (lift if state == State.TURN else 0.0)
 	var body_basis := Basis(Vector3.RIGHT, float(row.lean) * t)
-	var calm := UiTokens.reduced_motion or EnemyMotion.motion_scale <= 0.0
+	var calm := Comfort.reduced_motion
 	var body_sec_pos := Vector3.ZERO
 	var body_sec_basis := Basis.IDENTITY
 	var fist_l_pos := Vector3.ZERO

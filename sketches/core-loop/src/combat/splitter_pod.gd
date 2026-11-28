@@ -135,11 +135,11 @@ func fuse_progress() -> float:
 func wind_basis() -> Basis:
 	var tele := telegraph()
 	var age: float = tele.age if tele != null and is_instance_valid(tele) else _t
-	return WindupPoses.windup(WIND_POSE, fuse_progress(), age, EnemyMotion.motion_scale)
+	return WindupPoses.windup(WIND_POSE, fuse_progress(), age, Comfort.motion_scale())
 
 
 func release_basis() -> Basis:
-	return WindupPoses.release(WIND_POSE, _husk_age, EnemyMotion.motion_scale)
+	return WindupPoses.release(WIND_POSE, _husk_age, Comfort.motion_scale())
 
 
 func _wind_up() -> void:

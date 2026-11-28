@@ -6,7 +6,7 @@ const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 enum Type { INSTANT, WAVE, PROJECTILE, LANE }
 
@@ -1613,6 +1613,6 @@ static func flash_life(fill: bool, crack: bool, dust: bool) -> float:
 
 static func dust_at(puffs: Array, age: float) -> Dictionary:
 	var t := clampf(age / DUST_SECONDS, 0.0, 1.0)
-	var throw := (1.0 - (1.0 - t) * (1.0 - t)) * EnemyMotion.motion_scale
+	var throw := (1.0 - (1.0 - t) * (1.0 - t)) * Comfort.motion_scale()
 	var grounded: bool = not puffs.is_empty() and (puffs[0] as Array).size() > 2
 	return _mark("dust", "dust", DUST_TONE, dust_tris(puffs, throw, t), {"alpha": DUST_ALPHA * (1.0 - t), "abs": grounded})

@@ -4,7 +4,6 @@ const FloorRule := preload("res://src/combat/floor_rule.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const EnemyBossCraft := preload("res://src/presentation/craft/enemy_boss_craft.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 
 const JAW_RADIUS := 2.4
 const LEAD := 0.7
@@ -247,7 +246,7 @@ func _pose() -> void:
 		return
 	if not _jaw.top_level:
 		if _jaw_rig != null:
-			_jaw_rig.reduced_motion = UiTokens.reduced_motion or EnemyMotion.motion_scale <= 0.0
+			_jaw_rig.reduced_motion = Comfort.reduced_motion
 			_jaw_rig.step(get_physics_process_delta_time(), Vector3.ZERO)
 		return
 	if _jaw_rig != null:
