@@ -189,6 +189,33 @@ test("diffFiles reads a changed path git would quote as the path itself, and fai
   }
 });
 
+test("the selector job's sparse checkout holds every module the selector imports", () => {
+  const root = path.resolve(path.dirname(affectedScript), "..", "..");
+  const workflow = readFileSync(path.join(root, ".github/workflows/ci.yml"), "utf8");
+  const block = workflow.match(
+    /- name: Checkout selector script only\n[^]*?sparse-checkout: \|\n((?: {12}\S.*\n)+)/,
+  );
+  assert.ok(block, "ci.yml has no sparse list under the selector's checkout step");
+  const listed = block[1]
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const reached = new Set();
+  const visit = (file) => {
+    if (reached.has(file)) return;
+    reached.add(file);
+    const text = readFileSync(path.join(root, file), "utf8");
+    for (const [, spec] of text.matchAll(/^import [^;]*?from "(\.{1,2}\/[^"]+)";$/gm))
+      visit(path.posix.normalize(path.posix.join(path.posix.dirname(file), spec)));
+  };
+  visit("scripts/ci/affected.mjs");
+  assert.ok(reached.has("scripts/lib/git.mjs"), [...reached].join(", "));
+  const missing = [...reached].filter(
+    (file) => !listed.some((entry) => file === entry || file.startsWith(`${entry}/`)),
+  );
+  assert.deepEqual(missing, []);
+});
+
 test("CLI --stdin fails when git cannot list the head tree or it lists nothing", () => {
   const plain = mkdtempSync(path.join(os.tmpdir(), "affected-plain-"));
   const empty = mkdtempSync(path.join(os.tmpdir(), "affected-empty-"));
