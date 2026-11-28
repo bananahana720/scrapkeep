@@ -5,7 +5,7 @@
    "path": "res://assets/models/world_one/enemy_miniboss.glb",
    "class": "enemy",
    "ships": true,
-   "loader": "src/combat/miniboss.gd:66",
+   "loader": "src/combat/miniboss.gd:_parts",
    "provenance": {
     "recipe": "tools/blender/world_one/enemy_miniboss.py",
     "design": "artifacts/local/dress-preview/PMB/DESIGN.md",

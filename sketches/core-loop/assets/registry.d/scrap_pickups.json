@@ -5,7 +5,7 @@
    "path": "res://assets/models/world_one/scrap_pickups.glb",
    "class": "chunk",
    "ships": true,
-   "loader": "src/build/scrap_field.gd:101",
+   "loader": "src/build/scrap_field.gd:_pickup_meshes",
    "provenance": {
     "recipe": "tools/blender/world_one/scrap_pickups.py",
     "note": "Four procedural salvage variants and the cog (the money, W1-21), one opaque vertex-colour surface each. Each part meets prop caps of 270 triangles, 610 imported vertices, one draw. Aggregate registered as a chunk kit. No external assets."
