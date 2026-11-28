@@ -94,7 +94,7 @@ func _switch_pilot(class_id: String, at: Vector3) -> void:
 	_game.run.mass = 0.0
 	_game.run._heft_class = 1
 	_player.fit_class(def)
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 	_combat.weapon_driver.reset(_combat.pattern(def.weapon_id))
 	_player.kit.drop_line("reset")
 	_player.abilities.refill()

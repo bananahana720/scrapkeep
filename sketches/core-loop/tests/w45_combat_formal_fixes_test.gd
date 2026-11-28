@@ -565,7 +565,7 @@ func _test_combat_polish_p1_p2() -> void:
 	game.run.class_def = sable_def
 	game.player.fit_class(sable_def)
 	game.run.parts.clear()
-	combat._rebuild_patterns()
+	combat.rebuild_patterns()
 	_t.eq("P1/P2: cached evolution flags start false", [combat._has_grapeshot, combat._has_hoar, combat._has_fault], [false, false, false])
 	game.run.add_part("cross_split", "test")
 	game.run.add_part("pin_setter", "test")

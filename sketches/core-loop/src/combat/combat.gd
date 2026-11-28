@@ -457,14 +457,14 @@ func setup(ctx_ref) -> void:
 	ctx.events.harpoon_smashed.connect(_on_reel_chain)
 	ctx.events.slammed.connect(_on_slam_crack)
 	ctx.events.dismounted.connect(_on_dismounted_sentry)
-	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): _rebuild_patterns())
+	ctx.events.tree_picked.connect(func(_c: String, _n: String, _d: int): rebuild_patterns())
 	ctx.player.heft_of = heft
 	ctx.player.enemy_heft_of = Roster.heft_of
 	ctx.player.strike_damage = STRIKE_DAMAGE
 	ctx.player.pressure_grant = _grant_pressure
 	ctx.player.hulk_launch = bowl_hulk
 	ctx.player.mass_of = func() -> float: return ctx.run.mass
-	_reset_ledger()
+	reset_ledger()
 	ctx.events.demo_slammed.connect(_on_demo_slammed)
 	ctx.events.arc_slammed.connect(func(at: Vector3, _faces: int): effects.ring(at, 12.0, ClassDef.SABLE_COLOR))
 	ctx.events.skid_smashed.connect(func(at: Vector3, _hits: int):
@@ -536,8 +536,8 @@ func setup(ctx_ref) -> void:
 		cloak_left = 0.0
 		_clear_combat_buffs()
 		weapon_driver.reset()
-		_reset_ledger()
-		_rebuild_patterns())
+		reset_ledger()
+		rebuild_patterns())
 	ctx.events.beacon_unsealed.connect(func(stage: int):
 		_ledger["warden_slam_hits"][str(stage)] = _warden_slam_hits
 		_warden_slam_hits = 0)
@@ -548,7 +548,7 @@ func setup(ctx_ref) -> void:
 		if v.length() > 0.1:
 			_since_slingshot = 0.0
 		_on_dismounted_kinetic_pylon(v))
-	ctx.events.part_gained.connect(func(_part: String, _source: String): _rebuild_patterns())
+	ctx.events.part_gained.connect(func(_part: String, _source: String): rebuild_patterns())
 	ctx.events.mounted.connect(func(_at: Vector3, _banked_speed: float):
 		_mounted_boost_left = Weapons.CHARGE_MOUNT_BOOST_S
 		weapon_driver.interrupt(WeaponDriver.INTERRUPT_MOUNT))
@@ -561,7 +561,7 @@ func setup(ctx_ref) -> void:
 		if wg != null and wg.cancel():
 			ctx.player.indicator.clear("weapon")
 			ctx.player.indicator.clear("landing"))
-	_rebuild_patterns()
+	rebuild_patterns()
 	_declare_codex()
 
 
@@ -1119,7 +1119,7 @@ func _hp_of(enemy: Node3D) -> float:
 
 func _record_delivered(enemy: Node3D, kind: String, removed: float, dealt: float, raw_source: String, known_class := "") -> void:
 	if _ledger.is_empty():
-		_reset_ledger()
+		reset_ledger()
 	var source := _classify_source(kind, raw_source)
 	var target_class := known_class if known_class != "" else target_class_of(enemy)
 	_ledger["hits"] = int(_ledger["hits"]) + 1
@@ -1142,7 +1142,7 @@ func trail_deal(enemy: Node3D, amount: float, action := "spark", source := "pers
 
 func _record_retirement(target_class: String) -> void:
 	if _ledger.is_empty():
-		_reset_ledger()
+		reset_ledger()
 	_ledger["retirements"][target_class] = int(_ledger["retirements"].get(target_class, 0)) + 1
 
 
@@ -1207,7 +1207,7 @@ func _range_bucket(enemy: Node3D) -> String:
 	return "far"
 
 
-func _reset_ledger() -> void:
+func reset_ledger() -> void:
 	_ledger = {
 		"total": 0.0, "overkill": 0.0, "hits": 0, "zero_damage_hits": 0,
 		"by_source": {}, "by_action": {}, "by_target_class": {}, "by_range": {"near": 0.0, "mid": 0.0, "far": 0.0},
@@ -1382,7 +1382,7 @@ func would_crush(enemy: Node3D, kind: String, force: float) -> bool:
 
 func register_part(part_id: String, transformer_ids: Array) -> void:
 	_part_map[part_id] = transformer_ids.duplicate()
-	_rebuild_patterns()
+	rebuild_patterns()
 
 
 func transformer_ids() -> PackedStringArray:
@@ -1408,6 +1408,14 @@ func active_transformers() -> Array:
 
 func pattern(weapon_id: String) -> Resource:
 	return (_patterns[weapon_id] as Resource).copy()
+
+
+func live_pattern(weapon_id: String) -> Resource:
+	return _patterns.get(weapon_id)
+
+
+func set_pattern(weapon_id: String, p: Resource) -> void:
+	_patterns[weapon_id] = p
 
 
 func line_skill(id: String) -> Dictionary:
@@ -1714,7 +1722,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 			if entry["centre"]:
 				centre = entry
 				break
-		var fused := pike_bolt(_bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
+		var fused := pike_bolt(bolt_record(weapon, p, {"dir": forward, "centre": true, "phase": centre["phase"]}, muzzle, reach, damage, source, shot),
 			layout.size(), _pike_row())
 		fused["knock"] = float(fused["knock"]) * knock_mult
 		if extra_pierce > 0:
@@ -1736,7 +1744,7 @@ func _fire(weapon: String, source := "weapon", shot_desc := {}) -> void:
 		_pike_cue()
 	else:
 		for entry in layout:
-			var rec := _bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot)
+			var rec := bolt_record(weapon, p, entry, muzzle, reach, damage, source, shot)
 			rec["knock"] = float(rec["knock"]) * knock_mult
 			if extra_pierce > 0:
 				rec["pierce"] = int(rec["pierce"]) + extra_pierce
@@ -2095,7 +2103,7 @@ func _draw_shape(shape: Dictionary, color: Color) -> void:
 				effects.beam(apex, apex + edge * float(shape["length"]), color, Effects.RING_LIFE)
 
 
-func _bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector3, reach: float, damage: float, source: String, bits := 0) -> Dictionary:
+func bolt_record(weapon: String, p: Resource, entry: Dictionary, muzzle: Vector3, reach: float, damage: float, source: String, bits := 0) -> Dictionary:
 	var record := {
 		"origin": muzzle, "fired_from": muzzle, "dir": entry["dir"], "speed": p.speed, "max_dist": reach,
 		"damage": damage, "kind": Weapons.strike_kind(weapon), "weapon_id": weapon, "radius": p.bolt_radius,
@@ -2255,7 +2263,7 @@ func _rake_return(rake: Dictionary) -> void:
 	for entry in p.layout(forward, int(rake.get("volley", volleys))):
 		var dir: Vector3 = entry["dir"]
 		var mirrored := (forward * dir.dot(forward) - right * dir.dot(right) + up * dir.dot(up)).normalized()
-		var bolt := _bolt_record(weapon, p, {"dir": mirrored, "centre": entry["centre"], "phase": PI - float(entry["phase"])},
+		var bolt := bolt_record(weapon, p, {"dir": mirrored, "centre": entry["centre"], "phase": PI - float(entry["phase"])},
 			muzzle, reach, damage, "item_proc")
 		bolt["wave_hz"] = -float(p.wave_hz)
 		bolt["bits"] = 0
@@ -5364,7 +5372,7 @@ func _on_stage_entered(_stage: int, _retry: bool) -> void:
 	last_shot = {}
 	last_burst = {}
 	_since_slingshot = INF
-	_rebuild_patterns()
+	rebuild_patterns()
 
 
 func _on_player_died() -> void:
@@ -5484,7 +5492,7 @@ func _on_build_recomputed(_categories: Array) -> void:
 	_sync_grapple_mutations()
 
 
-func _rebuild_patterns() -> void:
+func rebuild_patterns() -> void:
 	if ctx != null and ctx.build != null and ctx.build.get("stat_cache") != null \
 			and not ctx.build.stat_cache.recomputed.is_connected(_on_build_recomputed):
 		ctx.build.stat_cache.recomputed.connect(_on_build_recomputed)

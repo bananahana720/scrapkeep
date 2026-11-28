@@ -424,12 +424,12 @@ func _step_fan_queue(delta: float) -> void:
 			kept.append(item)
 			continue
 		var weapon: String = String(item["weapon"])
-		var p: Resource = combat._patterns.get(weapon)
+		var p: Resource = combat.live_pattern(weapon)
 		if p == null:
 			continue
 		var muzzle: Vector3 = ctx.player.ball_position() + (item["dir"] as Vector3) * combat.MUZZLE
 		var entry := {"dir": item["dir"], "centre": true, "phase": 0.0}
-		var rec: Dictionary = combat._bolt_record(weapon, p, entry, muzzle, float(item["reach"]), float(item["damage"]), "item_proc", 0)
+		var rec: Dictionary = combat.bolt_record(weapon, p, entry, muzzle, float(item["reach"]), float(item["damage"]), "item_proc", 0)
 		rec["color"] = item["color"]
 		if bool(item["ricochet"]):
 			var bounces := int(item.get("bounces", FAN_SIXTH_BOUNCES))
@@ -842,7 +842,7 @@ func _rail_vault_world(anchor: Vector3, fraction: float, mult: float) -> void:
 
 func _activate_rail_vault(dir: Vector3, mult: float) -> void:
 	var drv = combat.weapon_driver
-	var p: Resource = combat._patterns.get(Weapons.RAPID_LASER)
+	var p: Resource = combat.live_pattern(Weapons.RAPID_LASER)
 	var hot_rounds: int = drv.hot_reload_cylinder(Weapons.RAPID_LASER, p)
 	var flat := Vector3(dir.x, 0.0, dir.z)
 	var heading: Vector3 = flat.normalized() if flat.length_squared() > 0.0001 else combat.aim_heading()
@@ -861,7 +861,7 @@ func _activate_rail_vault(dir: Vector3, mult: float) -> void:
 func _step_rail_sparks(delta: float) -> void:
 	if _rail_sparks.is_empty():
 		return
-	var p: Resource = combat._patterns.get(Weapons.RAPID_LASER)
+	var p: Resource = combat.live_pattern(Weapons.RAPID_LASER)
 	var kept := []
 	for s in _rail_sparks:
 		s["left"] = float(s["left"]) - delta
@@ -874,7 +874,7 @@ func _step_rail_sparks(delta: float) -> void:
 		var side_vec := base_dir.cross(Vector3.UP).normalized()
 		var spark_dir := (base_dir + side_vec * (0.28 * float(s["side"]))).normalized()
 		var muzzle: Vector3 = ctx.player.ball_position() + spark_dir * combat.MUZZLE
-		var rec: Dictionary = combat._bolt_record(Weapons.RAPID_LASER, p, {"dir": spark_dir, "centre": true, "phase": 0.0},
+		var rec: Dictionary = combat.bolt_record(Weapons.RAPID_LASER, p, {"dir": spark_dir, "centre": true, "phase": 0.0},
 			muzzle, RAIL_SPARK_RANGE, float(s["damage"]), "item_proc", 0)
 		rec["color"] = ClassDef.RIVET_COLOR
 		combat.bolts.fire(rec)

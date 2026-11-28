@@ -55,7 +55,7 @@ func _physics_process(_delta: float) -> bool:
 				% [enabled["dps"], control["dps"], added, expected])
 	_game.run.parts.clear()
 	_game.ctx.build.recompute()
-	_game.ctx.spawner._rebuild_patterns()
+	_game.ctx.spawner.rebuild_patterns()
 	_game.run.add_part("load_dividend", "test")
 	_game.run.add_part("cross_split", "test")
 	_game.run.add_part("chain_arc", "test")

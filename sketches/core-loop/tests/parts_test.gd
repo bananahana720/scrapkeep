@@ -77,7 +77,7 @@ func _sim(ticks: int) -> void:
 func _set_parts(list: Array) -> void:
 	_game.ctx.run.parts.assign(list)
 	_build.effects.refresh(_game.ctx.run.parts)
-	_combat._rebuild_patterns()
+	_combat.rebuild_patterns()
 
 
 func _run() -> void:
