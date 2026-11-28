@@ -248,12 +248,16 @@ function sh(command, args, { cwd, timeoutMinutes, input } = {}) {
   return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
+export function failureText(error) {
+  return String(error?.stderr ?? "").trim() || String(error?.message ?? error);
+}
+
 function gitStep(args) {
   try {
     git(args, { cwd: process.cwd() });
     return { ok: true, stderr: "" };
   } catch (error) {
-    return { ok: false, stderr: error.stderr || error.message };
+    return { ok: false, stderr: failureText(error) };
   }
 }
 
@@ -262,7 +266,7 @@ async function remoteStep(args, { cwd = process.cwd() } = {}) {
     await gitAsync(args, { cwd, timeout: 5 * 60_000 });
     return { ok: true, stderr: "" };
   } catch (error) {
-    return { ok: false, stderr: error.stderr || error.message };
+    return { ok: false, stderr: failureText(error) };
   }
 }
 
