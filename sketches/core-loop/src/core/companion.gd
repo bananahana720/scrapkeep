@@ -542,7 +542,7 @@ static func on_salvage_kill(run, table: Dictionary = DRIVERS) -> Dictionary:
 	return {"dripped": drip, "stage_total": int(st["cogs_dripped"]), "cap": COG_SCOOP_STAGE_CAP, "cue": String(row["cue"])}
 
 
-static func on_yard_cleared(run, combat = null, at := Vector3.ZERO, rng: RandomNumberGenerator = null, table: Dictionary = DRIVERS) -> Dictionary:
+static func on_yard_cleared(run, combat = null, at := Vector3.ZERO, rng: RandomNumberGenerator = null, roll_consumable := Callable(), table: Dictionary = DRIVERS) -> Dictionary:
 	if run == null or not run.alive():
 		return {"printed": false, "consumable_id": ""}
 	var piece := seated(run.companion, SALVAGE_MAGNET)
@@ -552,14 +552,13 @@ static func on_yard_cleared(run, combat = null, at := Vector3.ZERO, rng: RandomN
 	st["yards"] = int(st.get("yards", 0)) + 1
 	var ready := (int(st["yards"]) % CADDY_EVERY_CLEARS == 0) and int(st.get("prints", 0)) < CADDY_STAGE_CAP
 	var row := pick({"piece": piece, "on": "yard_cleared", "print_ready": ready}, table)
-	if row.is_empty():
+	if row.is_empty() or not roll_consumable.is_valid():
 		return {"printed": false, "consumable_id": "", "yards": int(st["yards"]), "stage_prints": int(st.get("prints", 0)), "cap": CADDY_STAGE_CAP}
-	var ConsScript = load("res://src/build/consumables.gd")
 	var roll_rng := rng
 	if roll_rng == null:
 		roll_rng = RandomNumberGenerator.new()
 		roll_rng.seed = hash([run.run_seed, run.stage, "cartridge_caddy", int(st["yards"])])
-	var cid := String(ConsScript.roll_id(roll_rng))
+	var cid := String(roll_consumable.call(roll_rng))
 	st["prints"] = int(st.get("prints", 0)) + 1
 	var stored_in_belt := false
 	if run.has_method("add_consumable") and run.add_consumable(cid):

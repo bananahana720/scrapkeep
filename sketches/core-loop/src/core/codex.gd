@@ -3,7 +3,6 @@ extends Node
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const SafeStore := preload("res://src/core/safe_store.gd")
 const LoreRows := preload("res://src/core/lore_rows.gd")
-const Parts := preload("res://src/build/parts.gd")
 
 
 const CATEGORIES := ["build", "world", "enemy", "npc", "coop"]
@@ -38,14 +37,16 @@ var _zone := ""
 var _guard_open := false
 var _visibility_fn := Callable()
 var _margin_fn := Callable()
+var _is_relic_fn := Callable()
 
 
-func setup(events_ref, run_ref, flow_ref, dir: String) -> void:
+func setup(events_ref, run_ref, flow_ref, dir: String, is_relic_fn := Callable()) -> void:
 	name = "Codex"
 	events = events_ref
 	run = run_ref
 	flow = flow_ref
 	storage_dir = dir
+	_is_relic_fn = is_relic_fn
 	_load()
 	events.run_started.connect(_on_run_started)
 	events.stage_entered.connect(_on_stage_entered)
@@ -290,8 +291,7 @@ func _connect_lore() -> void:
 			_lore_moment())
 	events.rescue_completed.connect(func(_quest: String): _lore_moment())
 	events.part_gained.connect(func(part_id: String, _source: String):
-		var def: Resource = Parts.def(part_id)
-		if def != null and def.rarity == "relic":
+		if _is_relic_fn.is_valid() and bool(_is_relic_fn.call(part_id)):
 			_lore_moment())
 	events.posture_changed.connect(_on_lore_posture)
 	events.beacon_unsealed.connect(func(_stage: int): _lore_moment())

@@ -228,7 +228,7 @@ func setup(ctx_ref) -> void:
 	ctx.events.enemy_struck.connect(_on_tread_struck)
 	ctx.events.player_died.connect(func(): shop.note_death(ctx.run.cogs))
 	ctx.events.core_gained.connect(_on_core_gained)
-	ctx.events.activity_done.connect(func(_id: String, at: Vector3): Companion.on_yard_cleared(ctx.run, ctx.spawner, at))
+	ctx.events.activity_done.connect(func(_id: String, at: Vector3): Companion.on_yard_cleared(ctx.run, ctx.spawner, at, null, Consumables.roll_id))
 	ctx.events.stage_cleared.connect(_on_stage_cleared_contracts)
 	ctx.events.world_fact.connect(_on_world_fact_overrides)
 	makers.setup()
@@ -1019,7 +1019,7 @@ func yard_cleared(at: Vector3) -> void:
 	if kill_log.size() < KILL_LOG_CAP:
 		kill_log.append([ctx.flow.stage(), "yard_clear", false, 1.0, false, true, false])
 	scrap.drop_panel(at, Panels.draw(panel_rng, _class_id()))
-	Companion.on_yard_cleared(ctx.run, ctx.spawner, at)
+	Companion.on_yard_cleared(ctx.run, ctx.spawner, at, null, Consumables.roll_id)
 
 
 func overtime_paid(at: Vector3, rings: int) -> void:

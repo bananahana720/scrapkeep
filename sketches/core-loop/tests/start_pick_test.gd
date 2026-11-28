@@ -55,8 +55,9 @@ func _movement_knobs() -> Dictionary:
 func _lists() -> void:
 	var knobs := _movement_knobs()
 	t.check("movement knobs found in the catalogue", knobs.size() >= 8, "%s" % [knobs.keys()])
+	var part_info := func(id: String) -> Dictionary: return {"name": Parts.display_name(id), "icon": Parts.icon_of(id), "effect": String(Parts.row(id).get("verb", ""))}
 	for def in ClassDef.all():
-		var list: Array = StartPicks.list_for(def.id)
+		var list: Array = StartPicks.list_for(def.id, part_info)
 		t.check("%s has its own list of at least %d" % [def.id, StartPicks.OFFERED * (StartPicks.REROLLS + 1)],
 			list.size() >= StartPicks.OFFERED * (StartPicks.REROLLS + 1), "%d rows" % list.size())
 		var seen := {}

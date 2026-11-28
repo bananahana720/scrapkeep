@@ -1201,7 +1201,7 @@ func _on_enemy_killed(kind: String, at: Vector3, _scrap_value: int) -> void:
 	if not _is_this_warden(at):
 		return
 	if ctx.build == null or not ctx.build.scrapless():
-		var bonus_panel := ShiftVariants.claim_overtime_panel(ctx.run)
+		var bonus_panel := ShiftVariants.claim_overtime_panel(ctx.run, ctx.build.Panels.draw if ctx.build != null else Callable())
 		if bonus_panel != "":
 			ctx.run.add_panel(bonus_panel, _warden_at)
 	_unseal()

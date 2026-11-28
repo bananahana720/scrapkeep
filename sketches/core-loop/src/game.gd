@@ -238,7 +238,7 @@ func _ready() -> void:
 	camera.apply_look_settings(settings_store())
 	codex = Codex.new()
 	add_child(codex)
-	codex.setup(events, run, flow, storage_dir)
+	codex.setup(events, run, flow, storage_dir, func(id: String) -> bool: var d: Resource = Parts.def(id); return d != null and d.rarity == "relic")
 	codex.declare_story_entries(PilotStory.codex_declarations())
 	codex.set_story_hooks(PilotStory.entry_visible, PilotStory.synthesis_margin)
 	ctx.codex = codex
@@ -248,7 +248,7 @@ func _ready() -> void:
 	ctx.run_log = run_log
 	run_moments = RunMoments.new()
 	add_child(run_moments)
-	run_moments.setup(events, run, player, flow, ctx.stages, storage_dir)
+	run_moments.setup(events, run, player, flow, ctx.stages, storage_dir, func(id: String) -> Dictionary: var d: Resource = Parts.def(id); return {"tier": d.tier if d != null else 1, "name": Parts.display_name(id)}, preload("res://src/combat/roster.gd").warden_name)
 	ctx.profile = Profile.new(storage_dir.path_join("profile.json"))
 	if not ctx.profile.load_profile():
 		push_warning("profile: %s" % ctx.profile.last_error)
