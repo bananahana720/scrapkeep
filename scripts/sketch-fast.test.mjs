@@ -63,6 +63,8 @@ import {
   failedRunLog,
   failedRunLogName,
   redRunKeeper,
+  requeuedRows,
+  runsToSettle,
   receiptBaseName,
   signalReason,
   checkLabels,
@@ -2086,4 +2088,154 @@ test("a listed test is a known red only when every run of it qualifies, its firs
     assert.match(result.said, /counts as this change's red: run 1 of 3 \(in a warm batch\): /, why);
     assert.match(result.said, said, why);
   }
+});
+
+test("a warm-batch run that was cut short or thrown away reaches the known-red rule with the test's later runs, and never qualifies", () => {
+  const ledger = [
+    "test\tkind\tcause\towner\tadded\treview\tcheck",
+    "a_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
+    "b_test\tred\tred on main at 0d422144b on 2026-11-28: why\tcoordinator\t2026-11-28\t2026-12-05\tstage 1: draw matches",
+  ].join("\n");
+  const listed = "[stage 1: draw matches] got 1 -> FAIL\na_test: FAIL (1 of 9 checks)";
+  const green = (name) => `[ok] fine -> PASS\n${name}: PASS (1 checks)`;
+  const alone = (output = listed) =>
+    godotRun(
+      "tests/a_test.gd",
+      { exit: 1, signal: null, timedOut: false, output },
+      { started: Date.now(), killed: false, platform: "linux" },
+    );
+  const tests = ["tests/a_test.gd", "tests/b_test.gd", "tests/c_test.gd"];
+  const rows = tests.map((test) => ({ test, ms: 100 }));
+  const part = (test, body, exit) => [
+    `BATCH START ${test}`,
+    body,
+    ...(exit === undefined ? [] : [`BATCH END ${test} exit=${exit} ms=10`]),
+  ];
+  const interpret = (lines, options) =>
+    interpretBatchOutput(lines.join("\n"), tests, { platform: "linux", ...options });
+  const settleRequeued = (batch, test = "tests/a_test.gd") => {
+    const row = requeuedRows(rows, batch).find((entry) => entry.test === test);
+    assert.equal(row.alone, true);
+    const lines = [];
+    const first = alone();
+    const kind = mainRedLedger(parseLedger(ledger).rows, {
+      log: (line) => lines.push(line),
+      today: "2026-11-30",
+    }).settle(
+      test,
+      { kind: "pr-red", newChecks: [] },
+      runsToSettle(row.earlier, first, { reruns: [alone()] }),
+    ).kind;
+    return { kind, said: lines.at(-1), earlier: row.earlier };
+  };
+
+  const crashed = interpret(
+    [...part("tests/b_test.gd", green("b_test"), 0), ...part("tests/a_test.gd", listed)],
+    { code: null, signal: "SIGSEGV" },
+  );
+  assert.deepEqual(crashed.unfinished, tests, "a crash throws the whole batch away");
+  const cut = settleRequeued(crashed);
+  assert.equal(
+    cut.kind,
+    "pr-red",
+    "the listed test crashed the batch, then failed only its check twice",
+  );
+  assert.match(
+    cut.said,
+    /counts as this change's red: run 1 of 3 \(in a warm batch\): the warm batch ended while it ran, before its BATCH END line, so this run cannot speak for the test$/,
+  );
+  assert.equal(
+    requeuedRows(rows, crashed).find((row) => row.test === "tests/c_test.gd").earlier.length,
+    0,
+    "a test that had not started did not run, so it carries nothing",
+  );
+  const passedThenRed = settleRequeued(crashed, "tests/b_test.gd");
+  assert.equal(passedThenRed.kind, "pr-red", "green in a thrown-away batch, then red alone");
+  assert.match(
+    passedThenRed.said,
+    /run 1 of 3 \(in a warm batch\): its warm batch was discarded \(an unexpected exit\)/,
+  );
+
+  const outside = interpret(
+    [...part("tests/a_test.gd", listed, 1), "BATCH DONE 1 tests", "SCRIPT ERROR: leaked timer"],
+    { code: 1 },
+  );
+  assert.equal(outside.outsideError, true);
+  const tainted = settleRequeued(outside);
+  assert.equal(tainted.kind, "pr-red", "red in a batch tainted by an error outside every part");
+  assert.match(
+    tainted.said,
+    /run 1 of 3 \(in a warm batch\): its warm batch was discarded \(an error line outside every test's part\), so this run cannot speak for the test$/,
+  );
+  assert.equal(tainted.earlier[0].failure.errorLine, true);
+  assert.equal("output" in tainted.earlier[0], false);
+
+  const zeroes = interpret(
+    [...part("tests/a_test.gd", listed, 0), ...part("tests/b_test.gd", green("b_test"), 0)],
+    { code: 1 },
+  );
+  assert.equal(zeroes.unexpectedExit, true);
+  const unexpected = settleRequeued(zeroes);
+  assert.equal(unexpected.kind, "pr-red", "the batch exited 1 while every finished test exited 0");
+  assert.match(unexpected.said, /its warm batch was discarded \(an unexpected exit\)/);
+
+  const errorInCut = interpret(
+    [...part("tests/a_test.gd", listed, 1), ...part("tests/b_test.gd", "SCRIPT ERROR: y")],
+    { code: 1 },
+  );
+  assert.deepEqual([errorInCut.outsideError, errorInCut.unexpectedExit], [false, false]);
+  assert.equal(errorInCut.runs[0].failure.errorLine, true, "an error line in the cut part counts");
+  assert.deepEqual(errorInCut.unfinished, ["tests/b_test.gd", "tests/c_test.gd"]);
+  const inCut = mainRedLedger(parseLedger(ledger).rows, { today: "2026-11-30" }).settle(
+    "tests/a_test.gd",
+    { kind: "pr-red", newChecks: [] },
+    runsToSettle([errorInCut.runs[0]], alone(), { reruns: [alone()] }),
+  ).kind;
+  assert.equal(inCut, "pr-red");
+
+  const clean = interpret(
+    [
+      ...part("tests/a_test.gd", listed, 1),
+      ...part("tests/b_test.gd", green("b_test"), 0),
+      ...part("tests/c_test.gd", green("c_test"), 0),
+      "BATCH DONE 3 tests",
+    ],
+    { code: 1 },
+  );
+  assert.deepEqual([clean.unfinished, clean.earlier], [[], {}]);
+  assert.equal(
+    mainRedLedger(parseLedger(ledger).rows, { today: "2026-11-30" }).settle(
+      "tests/a_test.gd",
+      { kind: "pr-red", newChecks: [] },
+      runsToSettle([clean.runs[0]], alone(), { reruns: [alone()] }),
+    ).kind,
+    "main-red",
+    "a clean batch with the listed check only, then alone and rerun listed",
+  );
+
+  const twice = requeuedRows(
+    rows.map((row) => ({ ...row, earlier: [{ test: row.test, first: true }] })),
+    crashed,
+  ).find((row) => row.test === "tests/a_test.gd");
+  assert.deepEqual(
+    twice.earlier.map((run) => (run.first ? "first" : run.discarded ? "cut" : "?")),
+    ["first", "cut"],
+    "a test requeued again keeps every earlier run",
+  );
+  assert.throws(
+    () => requeuedRows([rows[0]], crashed),
+    /tests\/b_test\.gd came back from a batch it was not in/,
+  );
+  for (const bad of [
+    [undefined, { reruns: [] }],
+    [[], {}],
+    [[], undefined],
+  ])
+    assert.throws(() => runsToSettle(bad[0], alone(), bad[1]), TypeError);
+  assert.deepEqual(runsToSettle(["batch"], "first", { reruns: ["rerun", "more"] }), [
+    "batch",
+    "first",
+    "rerun",
+    "more",
+  ]);
 });

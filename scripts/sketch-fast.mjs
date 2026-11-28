@@ -879,18 +879,10 @@ export function interpretBatchOutput(
   { code = 0, signal = null, killed = false, platform = process.platform } = {},
 ) {
   const parsed = evaluateBatchOutput(output, tests, { code, signal, platform });
-  if (parsed.tainted) {
-    return {
-      runs: [],
-      unfinished: [...tests],
-      killed,
-      outsideError: parsed.outsideError,
-      unexpectedExit: parsed.unexpectedExit,
-    };
-  }
-  const errorInBatch = parsed.done.some(
-    (row) => runFailure(row.test, row.output, platform).errorLine,
-  );
+  const errorInBatch = [
+    ...parsed.done,
+    ...(parsed.cut === null ? [] : [{ test: parsed.cut, output: parsed.cutOutput }]),
+  ].some((row) => runFailure(row.test, row.output, platform).errorLine);
   const runs = parsed.done.map((row) => {
     const verdict = judge({
       test: "res://" + row.test,
@@ -917,14 +909,69 @@ export function interpretBatchOutput(
         : { ...runFailure(row.test, row.output, platform), errorLine: errorInBatch },
     };
   });
+  const earlier = {};
+  if (parsed.cut !== null)
+    earlier[parsed.cut] = [
+      {
+        test: parsed.cut,
+        ok: false,
+        exit: null,
+        signal,
+        reason: "the warm batch ended while it ran",
+        batched: true,
+        failure: null,
+        discarded:
+          "the warm batch ended while it ran, before its BATCH END line, so this run cannot speak for the test",
+      },
+    ];
+  if (parsed.tainted) {
+    const why = parsed.outsideError
+      ? "an error line outside every test's part"
+      : "an unexpected exit";
+    for (const { output: _output, ...run } of runs)
+      earlier[run.test] = [
+        {
+          ...run,
+          failure: run.failure && { ...run.failure, errorLine: true },
+          discarded: `its warm batch was discarded (${why}), so this run cannot speak for the test`,
+        },
+      ];
+    return {
+      runs: [],
+      unfinished: [...tests],
+      earlier,
+      killed,
+      outsideError: parsed.outsideError,
+      unexpectedExit: parsed.unexpectedExit,
+    };
+  }
   return {
     runs,
     unfinished: parsed.cut ? [parsed.cut, ...parsed.rest] : parsed.rest,
+    earlier,
     killed,
     outsideError: false,
     unexpectedExit: false,
     linuxLeak: parsed.linuxLeak,
   };
+}
+
+export function requeuedRows(rows, batch) {
+  return batch.unfinished.map((test) => {
+    const row = rows.find((candidate) => candidate.test === test);
+    if (!row) throw new Error(`requeuedRows: ${test} came back from a batch it was not in`);
+    return {
+      ...row,
+      alone: true,
+      earlier: [...(row.earlier ?? []), ...(batch.earlier[test] ?? [])],
+    };
+  });
+}
+
+export function runsToSettle(earlier, first, confirmed) {
+  if (!Array.isArray(earlier) || !Array.isArray(confirmed?.reruns))
+    throw new TypeError("runsToSettle needs the earlier runs and confirm's reruns as arrays");
+  return [...earlier, first, ...confirmed.reruns];
 }
 
 async function runBatch(sketchDir, tests, timeoutMs, onChild = () => {}, fixedFps = null) {
@@ -1784,11 +1831,11 @@ async function main() {
     if (result.ok) mainRed.passed(result.test);
     if (result.ok || result.killed) return;
     const confirmed = await confirm(result);
-    const { kind, newChecks, ledger, ledgerRuns } = mainRed.settle(result.test, confirmed, [
-      ...earlier,
-      result,
-      ...confirmed.reruns,
-    ]);
+    const { kind, newChecks, ledger, ledgerRuns } = mainRed.settle(
+      result.test,
+      confirmed,
+      runsToSettle(earlier, result, confirmed),
+    );
     log(
       `  ${result.test}: ${kind}${ledger ? " (a known-failing ledger flake: green on a later head run)" : ""}${newChecks.length ? ` (new failing checks: ${newChecks.join("; ")})` : ""}`,
     );
@@ -1856,11 +1903,9 @@ async function main() {
       log(`  ${run.test} red in a warm batch (${run.reason}); rerunning it alone`);
       const alone = await godot(sketchDir, run.test, testTimeoutMs(sourceOf(sketchDir, run.test)));
       receipt.batch.reruns.push({ test: run.test, batch_reason: run.reason, alone_ok: alone.ok });
-      await handle(alone, [batched]);
+      await handle(alone, [...(rows.find((row) => row.test === run.test)?.earlier ?? []), batched]);
     }
-    if (!batch.killed && !shouldStop())
-      for (const test of batch.unfinished.reverse())
-        queue.unshift({ ...rows.find((row) => row.test === test), alone: true });
+    if (!batch.killed && !shouldStop()) queue.unshift(...requeuedRows(rows, batch));
   }
   async function worker() {
     while (queue.length > 0 && !shouldStop()) {
@@ -1875,7 +1920,7 @@ async function main() {
       }
       const row = rows[0] ?? queue.shift();
       const result = await godot(sketchDir, row.test, testTimeoutMs(sourceOf(sketchDir, row.test)));
-      await handle(result);
+      await handle(result, row.earlier ?? []);
     }
   }
   const bootPromise = runBootHere

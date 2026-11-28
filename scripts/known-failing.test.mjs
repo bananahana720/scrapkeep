@@ -362,6 +362,8 @@ test("a row red on main may name no star, ERROR-LINE or TIME-OUT, and is told to
     ["a check ;; *x", /may not name "\*x": a star matches other checks/],
     ["a check ;; ERROR-LINE", /may not name "ERROR-LINE": ERROR-LINE lets any error line/],
     ["TIME-OUT ;; a check", /may not name "TIME-OUT": TIME-OUT can never apply/],
+    ["a check ;; error-line", /may not name "error-line": ERROR-LINE lets any error line/],
+    ["Time-Out", /may not name "Time-Out": TIME-OUT can never apply/],
   ]) {
     const { problems } = parseLedger(mainLedger(mainRow("a_test", ON_MAIN, check)));
     assert.equal(problems.length, 1, check);

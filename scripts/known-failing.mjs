@@ -78,9 +78,9 @@ export function parseLedger(text) {
     for (const part of onMain && kind === "red" ? (named ?? []) : []) {
       const why = part.includes("*")
         ? "a star matches other checks of the test that nobody saw fail"
-        : part === ERROR_LINE
+        : part.toUpperCase() === ERROR_LINE
           ? `${ERROR_LINE} lets any error line of the test through`
-          : part === TIME_OUT
+          : part.toUpperCase() === TIME_OUT
             ? `${TIME_OUT} can never apply, since a run killed at its limit is never marked`
             : null;
       if (why)
@@ -281,6 +281,7 @@ function whyNotKnown(row, runs, today) {
 }
 
 function whyRunNotKnown(row, run) {
+  if (typeof run?.discarded === "string") return run.discarded;
   const failure = run?.failure;
   if (!failure) return "the run left no failure record";
   if (run.killed === true || run.timedOut === true || (run.signal ?? null) !== null)
