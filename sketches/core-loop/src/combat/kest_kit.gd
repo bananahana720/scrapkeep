@@ -2,6 +2,7 @@ extends "res://src/combat/ultimate.gd"
 
 const Sticky := preload("res://src/combat/sticky.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Devices := preload("res://src/core/devices.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 
@@ -381,7 +382,7 @@ func tech(_beat_number: int, ball: Vector3, aim: Vector3, heft_mult: float) -> i
 		return 0
 	var picks: Array = []
 	var b: Vector3 = _plan["to"]
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or enemy.is_dead() or enemy.global_position.distance_to(b) > HOVER_RADIUS:
 			continue
 		var to: Vector3 = enemy.global_position - ball
@@ -481,7 +482,7 @@ func landing(at: Vector3, heft_mult: float, chain_mult: float) -> Array:
 	_cast["landed"] = true
 	combat.effects.ring(at, radius, ClassDef.KEST_COLOR)
 	ctx.break_props(at, radius, "ultimate")
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not is_instance_valid(enemy) or enemy.is_dead() or enemy.global_position.distance_to(at) > radius:
 			continue
 		_note_target(enemy, _cast)
@@ -596,7 +597,7 @@ func _step_payloads(delta: float) -> void:
 			audio.kest_roll(NOTES[posmod(roll_log.size() - 1, NOTES.size())])
 		_rolls.erase(roll)
 	if not payloads.is_idle():
-		for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group("enemy")):
+		for c in payloads.step(delta, _space(), get_tree().get_nodes_in_group(Groups.ENEMY)):
 			combat.devices.remove(int(c.get("device_id", 0)))
 			_detonate_payload(c)
 	if _id == "windhover" and _cast.get("landed", false):

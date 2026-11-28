@@ -5,6 +5,7 @@ const Recipes := preload("res://src/world/park/park_recipes.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const Layout := preload("res://src/world/camp_layout.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const Glyphs := preload("res://src/ui/glyphs.gd")
 const Bindings := preload("res://src/core/bindings.gd")
@@ -489,9 +490,9 @@ func _place(stem: String, xf: Transform3D, with_shells := false, key := "") -> N
 func _build_ground() -> void:
 	var ground := StaticBody3D.new()
 	ground.name = "CampGround"
-	ground.collision_layer = 0
-	ground.collision_mask = 0
-	ground.set_collision_layer_value(Recipes.WORLD_LAYER, true)
+	ground.collision_layer = PhysicsLayers.NONE
+	ground.collision_mask = PhysicsLayers.NONE
+	ground.set_collision_layer_value(PhysicsLayers.WORLD_LAYER, true)
 	root.add_child(ground)
 	var shape := CollisionShape3D.new()
 	var cylinder := CylinderShape3D.new()
@@ -680,9 +681,9 @@ func _station(id: String, stem: String, socket_name: String, label: String, key:
 func _make_zone(id: String, at: Vector3, radius: float) -> Area3D:
 	var area := Area3D.new()
 	area.name = "Zone_" + id
-	area.collision_layer = 0
-	area.collision_mask = 0
-	area.set_collision_mask_value(Recipes.BALL_LAYER, true)
+	area.collision_layer = PhysicsLayers.NONE
+	area.collision_mask = PhysicsLayers.NONE
+	area.set_collision_mask_value(PhysicsLayers.BALL_LAYER, true)
 	area.monitorable = false
 	area.monitoring = walking
 	var shape := CollisionShape3D.new()

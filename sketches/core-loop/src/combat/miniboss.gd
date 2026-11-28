@@ -22,7 +22,6 @@ const SLAM_RADIUS := 7.0
 const SLAM_HEIGHT := 9.0
 const SLAM_DAMAGE := 24.0
 const SLAM_SHOVE := 9.0
-const WORLD_LAYER := 1
 const LEAP_CLEAR := RADIUS + 0.5
 const LEAP_RAY_LIFT := 0.5
 const LEAP_GROUND_PROBE := 4.0
@@ -246,14 +245,14 @@ func _slam_spot(led: Vector3) -> Vector3:
 	var from := ball + Vector3.UP * LEAP_RAY_LIFT
 	var to := Vector3(led.x, terrain.height(led.x, led.z) + 1.0 + LEAP_RAY_LIFT, led.z)
 	var at := led
-	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, WORLD_LAYER))
+	var hit := space.intersect_ray(PhysicsRayQueryParameters3D.create(from, to, PhysicsLayers.WORLD_MASK))
 	if not hit.is_empty():
 		var room := Vector3(hit.position.x - ball.x, 0.0, hit.position.z - ball.z).length() - LEAP_CLEAR
 		if room <= 0.0:
 			return ball
 		at = ball + flat.normalized() * room
 	var top := Vector3(at.x, terrain.height(at.x, at.z) + LEAP_GROUND_PROBE, at.z)
-	if space.intersect_ray(PhysicsRayQueryParameters3D.create(top, top + Vector3.DOWN * LEAP_GROUND_PROBE * 2.0, WORLD_LAYER)).is_empty():
+	if space.intersect_ray(PhysicsRayQueryParameters3D.create(top, top + Vector3.DOWN * LEAP_GROUND_PROBE * 2.0, PhysicsLayers.WORLD_MASK)).is_empty():
 		return ball
 	return Vector3(at.x, ball.y, at.z)
 

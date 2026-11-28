@@ -119,9 +119,9 @@ func _pose() -> void:
 
 func _set_hidden(value: bool) -> void:
 	hidden = value
-	collision_layer = 0
+	collision_layer = PhysicsLayers.NONE
 	if not value:
-		set_collision_layer_value(3, true)
+		set_collision_layer_value(PhysicsLayers.ENEMY_LAYER, true)
 	if _crew != null:
 		_crew.position.y = -SINK if value else 0.0
 	if _marker != null:

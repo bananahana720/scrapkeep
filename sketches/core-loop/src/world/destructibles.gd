@@ -5,13 +5,14 @@ const PropKicks := preload("res://src/presentation/prop_kicks.gd")
 const Kit := preload("res://src/presentation/destructible_kit.gd")
 const Consumables := preload("res://src/build/consumables.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
+const Groups := preload("res://src/core/groups.gd")
 
 
 signal piece_shattered(bounds: AABB)
 
 const CELL_M := 12.0
 const BUILD_SLICE_USEC := 3000
-const WORLD_LAYER := 1
 const BALL_RADIUS := 1.0
 const WALL_REACH := 3.0
 const WALL_SPEED := 8.0
@@ -541,8 +542,8 @@ func _shatter(p: Piece, at: Vector3, dir: Vector3, speed: float, radial: bool, s
 	p.intact = false
 	_breaks.append(p.id)
 	if p.body != null and is_instance_valid(p.body):
-		p.body.collision_layer = 0
-		p.body.collision_mask = 0
+		p.body.collision_layer = PhysicsLayers.NONE
+		p.body.collision_mask = PhysicsLayers.NONE
 	if p.shape != null and is_instance_valid(p.shape):
 		p.shape.set_deferred("disabled", true)
 	if p.mesh != null and is_instance_valid(p.mesh):
@@ -758,8 +759,8 @@ func _register(row: Dictionary) -> Piece:
 func _build_collider(p: Piece) -> void:
 	var body := StaticBody3D.new()
 	body.name = "Destructible_" + p.id
-	body.collision_layer = 1 << (WORLD_LAYER - 1)
-	body.collision_mask = 0
+	body.collision_layer = PhysicsLayers.WORLD_MASK
+	body.collision_mask = PhysicsLayers.NONE
 	body.set_meta("destructible_id", p.id)
 	var shape := CollisionShape3D.new()
 	var box := BoxShape3D.new()
@@ -1031,7 +1032,7 @@ static func _chain(ctx: Variant, path: Array, fallback: Variant) -> Variant:
 func _enemy_list() -> Array:
 	if _enemies.is_valid():
 		return _enemies.call()
-	return get_tree().get_nodes_in_group("enemy") if is_inside_tree() else []
+	return get_tree().get_nodes_in_group(Groups.ENEMY) if is_inside_tree() else []
 
 
 static func _vec(v: Variant) -> Vector3:

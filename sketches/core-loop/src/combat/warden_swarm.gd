@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const SignalLifetime := preload("res://src/core/signal_lifetime.gd")
 const BossPosture := preload("res://src/combat/boss_posture.gd")
@@ -226,8 +227,8 @@ class _PostBreakPoolFlood extends Node:
 func _build_slab(warden) -> void:
 	var body := StaticBody3D.new()
 	body.name = "SwarmPoolFloor"
-	body.collision_layer = 1
-	body.collision_mask = 0
+	body.collision_layer = PhysicsLayers.WORLD_MASK
+	body.collision_mask = PhysicsLayers.NONE
 	var shape := CollisionShape3D.new()
 	var cylinder := CylinderShape3D.new()
 	cylinder.radius = pool_radius

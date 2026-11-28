@@ -1,9 +1,11 @@
 extends Node3D
 
 const Augments := preload("res://src/movement/augments.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const HazardHits := preload("res://src/world/events/hazard_hits.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const RecipeProps := preload("res://src/presentation/recipe_props.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Threat := preload("res://src/combat/threat_grammar.gd")
@@ -58,8 +60,8 @@ var _stage_root: Node3D = null
 
 func _ready() -> void:
 	name = "SluiceValves"
-	if not is_in_group("world_telegraphs"):
-		add_to_group("world_telegraphs")
+	if not is_in_group(Groups.WORLD_TELEGRAPHS):
+		add_to_group(Groups.WORLD_TELEGRAPHS)
 
 
 func _exit_tree() -> void:
@@ -99,8 +101,8 @@ func build_from_specs(specs: Array, ground_fn: Callable, cruise_speed := 14.0, c
 	cruise = maxf(1.0, cruise_speed)
 	_ground = ground_fn
 	_connect_events()
-	if not is_in_group("world_telegraphs"):
-		add_to_group("world_telegraphs")
+	if not is_in_group(Groups.WORLD_TELEGRAPHS):
+		add_to_group(Groups.WORLD_TELEGRAPHS)
 	_stage_root = Node3D.new()
 	_stage_root.name = "StageValves"
 	add_child(_stage_root)
@@ -247,8 +249,8 @@ func _build_valve(spec: Dictionary) -> Dictionary:
 
 	var bite_body := ValveBiteBody.new()
 	bite_body.name = id + "_bite"
-	bite_body.collision_layer = Augments.WORLD_MASK
-	bite_body.collision_mask = 0
+	bite_body.collision_layer = PhysicsLayers.WORLD_MASK
+	bite_body.collision_mask = PhysicsLayers.NONE
 	bite_body.add_to_group(Augments.ANCHOR_GROUP)
 	bite_body.add_to_group(Augments.WORLD_ANCHOR_GROUP)
 	bite_body.add_to_group(BITE_GROUP)

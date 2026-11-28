@@ -197,8 +197,8 @@ func _open_rubble_shortcuts() -> int:
 				else:
 					wall.visible = false
 					if wall is CollisionObject3D:
-						(wall as CollisionObject3D).collision_layer = 0
-						(wall as CollisionObject3D).collision_mask = 0
+						(wall as CollisionObject3D).collision_layer = PhysicsLayers.NONE
+						(wall as CollisionObject3D).collision_mask = PhysicsLayers.NONE
 				opened += 1
 	return opened
 

@@ -88,7 +88,7 @@ func _chain(shape: Dictionary, first: Node3D, jumps: int) -> void:
 		dmg *= CHAIN_FALLOFF
 		var next: Node3D = null
 		var best := CHAIN_RANGE
-		for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+		for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 			if enemy in visited or enemy.is_dead() or not inside(shape, enemy.global_position):
 				continue
 			var distance: float = enemy.global_position.distance_to(at)
@@ -122,7 +122,7 @@ func _pulse(shape: Dictionary, share: float) -> Array:
 	_draw(shape)
 	var origin: Vector3 = shape["origin"]
 	var struck: Array = []
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or not inside(shape, enemy.global_position):
 			continue
 		var away: Vector3 = enemy.global_position - origin

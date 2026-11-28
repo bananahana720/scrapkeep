@@ -2,6 +2,7 @@ extends Node3D
 
 const Augments := preload("res://src/movement/augments.gd")
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
 const Devices := preload("res://src/core/devices.gd")
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
@@ -95,8 +96,8 @@ func plant(at: Vector3) -> Stake:
 	_counter += 1
 	stake.serial = _counter
 	stake.name = "Stake%d" % _counter
-	stake.collision_layer = Augments.STAKE_MASK
-	stake.collision_mask = 0
+	stake.collision_layer = PhysicsLayers.STAKE_MASK
+	stake.collision_mask = PhysicsLayers.NONE
 	stake.add_to_group(Augments.STAKE_GROUP)
 	stake.add_to_group(Augments.ANCHOR_GROUP)
 	var shape := CollisionShape3D.new()
@@ -129,7 +130,7 @@ func _forget(stake: Stake) -> void:
 
 func _remove(stake: Stake) -> void:
 	_forget(stake)
-	stake.collision_layer = 0
+	stake.collision_layer = PhysicsLayers.NONE
 	stake.queue_free()
 
 

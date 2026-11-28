@@ -1,12 +1,12 @@
 extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const DamageDoor := preload("res://src/combat/damage_door.gd")
+const Tuning := preload("res://src/movement/tuning.gd")
 
-const GRAVITY := 26.0
 const CONTACT_REACH := 0.6
-const WORLD_MASK := 1
 const ARC_POINTS := 16
 const FLIGHT_SPEED := 22.0
 const FLIGHT_MIN := 0.35
@@ -29,11 +29,11 @@ static func flight_time(origin: Vector3, landing: Vector3) -> float:
 
 
 static func launch_velocity(origin: Vector3, landing: Vector3, flight: float) -> Vector3:
-	return (landing - origin) / flight + Vector3.UP * 0.5 * GRAVITY * flight
+	return (landing - origin) / flight + Vector3.UP * 0.5 * Tuning.GRAVITY * flight
 
 
 static func arc_point(origin: Vector3, velocity: Vector3, t: float) -> Vector3:
-	return origin + velocity * t + Vector3.DOWN * 0.5 * GRAVITY * t * t
+	return origin + velocity * t + Vector3.DOWN * 0.5 * Tuning.GRAVITY * t * t
 
 
 static func arc_points(origin: Vector3, landing: Vector3) -> PackedVector3Array:
@@ -192,7 +192,7 @@ func _fly(charge: Dictionary, delta: float, space: PhysicsDirectSpaceState3D) ->
 	var after := arc_point(charge["origin"], charge["velocity"], charge["t"])
 	var hit := {}
 	if space != null:
-		hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(before, after, WORLD_MASK))
+		hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(before, after, PhysicsLayers.WORLD_MASK))
 	if not hit.is_empty():
 		charge["pos"] = hit["position"]
 		charge["stuck"] = true

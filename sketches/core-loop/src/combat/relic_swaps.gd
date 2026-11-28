@@ -9,6 +9,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const Hazard := preload("res://src/boss/hazard.gd")
 const MindAttacks := preload("res://src/boss/mind_attacks.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const Relics := preload("res://src/build/relics.gd")
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Weapons := preload("res://src/combat/weapons.gd")
@@ -711,7 +712,7 @@ func _step_tape_echoes(delta: float) -> void:
 		var pt: Vector3 = e["point"]
 		var dmg: float = float(e["damage"])
 		var hits := 0
-		for enemy in get_tree().get_nodes_in_group("enemy"):
+		for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 			if not _alive(enemy) or not combat.in_ring(pt, Weapons.BALANCE_RADIUS, enemy):
 				continue
 			combat._ledger_hit(enemy, dmg, pt, Weapons.LEDGER_KNOCK * 0.6, "item_proc")
@@ -889,7 +890,7 @@ func _fire_snare_detonate(f: float, shape: Dictionary) -> void:
 	var ball_heft: float = ctx.player.heft()
 	var snared := 0
 	var dmg: float = SNARE_APEX_DAMAGE * combat._damage_mod(Weapons.STICKY_CHARGE)
-	for enemy in get_tree().get_nodes_in_group("enemy"):
+	for enemy in get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not _alive(enemy) or _protected(enemy):
 			continue
 		if Roster.heft_of(enemy) > ball_heft:

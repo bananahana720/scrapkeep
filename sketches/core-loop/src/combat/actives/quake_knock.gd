@@ -138,7 +138,7 @@ func _strike(ring: Node3D, dmg: float) -> void:
 	combat.effects.ring(ring.center, ring.radius, ActiveFx.peak(COLOR))
 	ctx.break_props(ring.center, ring.radius, "quake_knock")
 	var struck: Array = []
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if not enemy.is_dead() and ring.contains(enemy.global_position):
 			struck.append(enemy)
 	for enemy in struck:

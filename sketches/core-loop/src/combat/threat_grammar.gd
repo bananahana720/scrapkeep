@@ -1,6 +1,7 @@
 extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
+const Groups := preload("res://src/core/groups.gd")
 const EventKinds := preload("res://src/core/event_kinds.gd")
 const Density := preload("res://src/presentation/density.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
@@ -11,7 +12,7 @@ enum Type { INSTANT, WAVE, PROJECTILE, LANE }
 
 const UNSET := -1
 const KINDS := ["threat_instant", "threat_wave", "threat_projectile", "threat_lane"]
-const GROUP := "threat"
+const GROUP := Groups.THREAT
 
 const PRIORITY := 40
 const LIVE_PRIORITY := PRIORITY + 1

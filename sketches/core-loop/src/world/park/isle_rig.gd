@@ -2,6 +2,7 @@ extends Node
 
 
 const Augments := preload("res://src/movement/augments.gd")
+const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 
 const TETHER := "tether"
 const TETHER_LENGTH := 13.0
@@ -53,8 +54,8 @@ static func attach(node: Node3D, tip_shape: CollisionShape3D = null) -> Node:
 	if tip_shape != null:
 		var body := IsleTip.new()
 		body.name = "IsleTip"
-		body.collision_layer = Augments.WORLD_MASK
-		body.collision_mask = 0
+		body.collision_layer = PhysicsLayers.WORLD_MASK
+		body.collision_mask = PhysicsLayers.NONE
 		body.top_level = true
 		body.sync_to_physics = false
 		body.add_to_group(Augments.ANCHOR_GROUP)

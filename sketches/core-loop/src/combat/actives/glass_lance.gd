@@ -113,7 +113,7 @@ func _fly(lance: Dictionary, delta: float) -> bool:
 	var dir: Vector3 = lance["dir"]
 	combat.effects.beam(_point(lance, before), _point(lance, after), ActiveFx.peak(SHARD_COLOR), 0.08)
 	var generation := _generation
-	for enemy in combat.get_tree().get_nodes_in_group("enemy"):
+	for enemy in combat.get_tree().get_nodes_in_group(Groups.ENEMY):
 		if enemy.is_dead() or lance["hit"].has(enemy.get_instance_id()):
 			continue
 		var girth := enemy_girth(enemy, DEFAULT_GIRTH)
