@@ -1,6 +1,7 @@
 extends SceneTree
 
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 
 # The UI's tokens (src/ui/ui_tokens.gd): one spacing scale, five type sizes and five colours.
@@ -58,22 +59,16 @@ func _theme_matches() -> void:
 
 
 func _scans() -> void:
-	var fonts := RegEx.create_from_string(FONT_LITERAL)
-	var gaps := RegEx.create_from_string(GAP_LITERAL)
-	_t.eq("planted: a literal 13 px size is found", _font_misses(fonts, 'x.add_theme_font_size_override("font_size", 13)'), ["13"])
-	_t.eq("planted: a word label at 24 px is found", _font_misses(fonts, 'x.add_child(_label(read["name"], 24, c))'), ["24"])
-	_t.eq("planted: a gap of 10 is found", _gap_misses(gaps, 'x.add_theme_constant_override("separation", 10)'), ["10"])
+	_t.eq("planted: a literal 13 px size is found", _font_misses('x.add_theme_font_size_override("font_size", 13)'), ["13"])
+	_t.eq("planted: a word label at 24 px is found", _font_misses('x.add_child(_label(read["name"], 24, c))'), ["24"])
+	_t.eq("planted: a gap of 10 is found", _gap_misses(GAP_LITERAL, 'x.add_theme_constant_override("separation", 10)'), ["10"])
 	_t.check("planted: a Gradient is found", _gradient("var g := Gradient.new()"))
-	var radii := RegEx.create_from_string(RADIUS_LITERAL)
-	var plates := RegEx.create_from_string(PLATE_LITERAL)
-	var gap_consts := RegEx.create_from_string(GAP_CONST)
-	var marks := RegEx.create_from_string(MARK_COLOR)
-	_t.eq("planted: a radius of 8 is found", _radius_misses(radii, "box.set_corner_radius_all(8)"), ["8"])
-	_t.check("planted: a 0.94 charcoal plate is found", plates.search("x.bg_color = Color(Palette.CHARCOAL, 0.94)") != null)
-	_t.eq("planted: a 14 px gap const is found", _gap_misses(gap_consts, "const GAP := 14.0"), ["14.0"])
-	_t.eq("planted: a token gap const passes", _gap_misses(gap_consts, "const GAP := float(UiTokens.GAP_M)"), [])
-	_t.check("planted: a palette sand mark is found", marks.search("draw_circle(c, 3.0, Palette.SAND)") != null)
-	_t.check("planted: a literal colour mark is found", marks.search("Color(0.8, 0.82, 0.85, 0.22)") != null)
+	_t.eq("planted: a radius of 8 is found", _radius_misses("box.set_corner_radius_all(8)"), ["8"])
+	_t.check("planted: a 0.94 charcoal plate is found", not SourceScan.search(_t, "x.bg_color = Color(Palette.CHARCOAL, 0.94)", PLATE_LITERAL).is_empty())
+	_t.eq("planted: a 14 px gap const is found", _gap_misses(GAP_CONST, "const GAP := 14.0"), ["14.0"])
+	_t.eq("planted: a token gap const passes", _gap_misses(GAP_CONST, "const GAP := float(UiTokens.GAP_M)"), [])
+	_t.check("planted: a palette sand mark is found", not SourceScan.search(_t, "draw_circle(c, 3.0, Palette.SAND)", MARK_COLOR).is_empty())
+	_t.check("planted: a literal colour mark is found", not SourceScan.search(_t, "Color(0.8, 0.82, 0.85, 0.22)", MARK_COLOR).is_empty())
 	var radius_bad := []
 	var plate_bad := []
 	var hud_gap_bad := []
@@ -81,25 +76,25 @@ func _scans() -> void:
 	var font_bad := []
 	var gap_bad := []
 	var gradient_bad := []
-	for file in DirAccess.get_files_at("res://src/ui/"):
-		if not file.ends_with(".gd"):
-			continue
-		var text := FileAccess.get_file_as_string("res://src/ui/" + file)
-		for size in _font_misses(fonts, text):
+	var sources := SourceScan.sources(_t, ["res://src/ui"])
+	for path in sources:
+		var file := String(path).get_file()
+		var text: String = sources[path]
+		for size in _font_misses(text):
 			font_bad.append("%s %s" % [file, size])
-		for gap in _gap_misses(gaps, text):
+		for gap in _gap_misses(GAP_LITERAL, text):
 			gap_bad.append("%s %s" % [file, gap])
 		if _gradient(text):
 			gradient_bad.append(file)
-		for radius in _radius_misses(radii, text):
+		for radius in _radius_misses(text):
 			radius_bad.append("%s %s" % [file, radius])
-		for found in plates.search_all(text):
+		for found in SourceScan.search(_t, text, PLATE_LITERAL):
 			plate_bad.append("%s %s" % [file, found.get_string()])
 		if file in HUD_FILES:
-			for gap in _gap_misses(gap_consts, text):
+			for gap in _gap_misses(GAP_CONST, text):
 				hud_gap_bad.append("%s %s" % [file, gap])
 		if file in MARK_FILES:
-			for found in marks.search_all(text):
+			for found in SourceScan.search(_t, text, MARK_COLOR):
 				mark_bad.append("%s %s" % [file, found.get_string()])
 	_t.eq("every literal font size in src/ui is a type step", font_bad, [])
 	_t.eq("every literal gap in src/ui is a step of the spacing scale", gap_bad, [])
@@ -110,9 +105,9 @@ func _scans() -> void:
 	_t.eq("the HUD's marks name the token colours", mark_bad, [])
 
 
-func _font_misses(regex: RegEx, text: String) -> Array:
+func _font_misses(text: String) -> Array:
 	var out := []
-	for found in regex.search_all(text):
+	for found in SourceScan.search(_t, text, FONT_LITERAL):
 		for i in range(1, 5):
 			var size := found.get_string(i)
 			if size != "" and not int(size) in UiTokens.TYPE:
@@ -120,18 +115,18 @@ func _font_misses(regex: RegEx, text: String) -> Array:
 	return out
 
 
-func _gap_misses(regex: RegEx, text: String) -> Array:
+func _gap_misses(pattern: String, text: String) -> Array:
 	var out := []
-	for found in regex.search_all(text):
+	for found in SourceScan.search(_t, text, pattern):
 		var value := float(found.get_string(1))
 		if value != floorf(value) or not int(value) in UiTokens.SPACE:
 			out.append(found.get_string(1))
 	return out
 
 
-func _radius_misses(regex: RegEx, text: String) -> Array:
+func _radius_misses(text: String) -> Array:
 	var out := []
-	for found in regex.search_all(text):
+	for found in SourceScan.search(_t, text, RADIUS_LITERAL):
 		if int(found.get_string(1)) != UiTokens.RADIUS:
 			out.append(found.get_string(1))
 	return out

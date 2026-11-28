@@ -72,6 +72,11 @@ import { IMPORT_TRIES, importTry, importWithRetry, scriptErrorCount } from "./sk
 import { cwdDecidesRepository, git } from "./lib/git.mjs";
 
 const files = (entries) => indexFromFiles(new Map(Object.entries(entries)));
+const READER = 'const SourceScan := preload("res://tests/support/source_scan.gd")\n';
+const GUARD = {
+  "tests/support/source_scan.gd": "",
+  "tests/folder_guard_test.gd": READER + 'SourceScan.sources(_t, ["res://src"])',
+};
 
 test("classify splits sketch, node and docs paths and folds .uid onto its script", () => {
   const out = classify([
@@ -100,6 +105,7 @@ test("referrers match a whole res:// path, not a longer one", () => {
 
 test("selection takes changed tests, direct and stem-named tests, and one step through non-hub files", () => {
   const index = files({
+    ...GUARD,
     "src/core/leaf.gd": "",
     "src/core/mid.gd": 'preload("res://src/core/leaf.gd")',
     "tests/changed_test.gd": "",
@@ -124,18 +130,108 @@ test("selection takes changed tests, direct and stem-named tests, and one step t
 });
 
 test("a hub's own tests are selected but nothing is reached through a hub", () => {
-  const entries = { "src/leaf.gd": "", "src/hub.gd": 'preload("res://src/leaf.gd")' };
+  const entries = { ...GUARD, "src/leaf.gd": "", "src/hub.gd": 'preload("res://src/leaf.gd")' };
   for (let i = 0; i < 4; i++) entries[`tests/h${i}_test.gd`] = 'preload("res://src/hub.gd")';
   const index = files(entries);
   const throughHub = selectTests(index, ["src/leaf.gd"], { hub: 3 });
-  assert.equal(throughHub.picked.size, 0);
+  assert.deepEqual([...throughHub.picked.keys()], ["tests/folder_guard_test.gd"]);
   const hubChanged = selectTests(index, ["src/hub.gd"], { hub: 3 });
-  assert.equal(hubChanged.picked.size, 4);
+  assert.deepEqual([...hubChanged.picked.keys()].sort(), [
+    "tests/folder_guard_test.gd",
+    "tests/h0_test.gd",
+    "tests/h1_test.gd",
+    "tests/h2_test.gd",
+    "tests/h3_test.gd",
+  ]);
   assert.deepEqual(hubChanged.hubs, ["src/hub.gd"]);
+});
+
+test("a changed script under src/ or tools/ picks every top-level test that scans folders through the shared reader", () => {
+  const index = files({
+    ...GUARD,
+    "tests/ui_guard_test.gd": READER + 'SourceScan.matching(_t, ["res://src/ui"], PATTERN)',
+    "tests/rows_guard_test.gd": READER + 'SourceScan.captures(_t, ["res://src/core"], PATTERN)',
+    "tests/one_file_test.gd": READER + 'SourceScan.text(_t, "res://src/core/flow.gd")',
+    "tests/other_sources_test.gd": "var all := Library.sources(_t)",
+    "tests/unit/deep_case.gd": READER + 'SourceScan.sources(_t, ["res://src"])',
+    "src/world/anything.gd": "",
+    "tools/anything_tool.gd": "",
+  });
+  const guards = [
+    "tests/folder_guard_test.gd",
+    "tests/rows_guard_test.gd",
+    "tests/ui_guard_test.gd",
+  ];
+  for (const rel of [
+    "src/world/anything.gd",
+    "tools/anything_tool.gd",
+    "src/world/new_unreferenced.gd",
+  ]) {
+    const { picked } = selectTests(index, [rel]);
+    assert.deepEqual([...picked.keys()].sort(), guards, rel);
+    assert.equal(picked.get("tests/ui_guard_test.gd").why, `folder guard: ${rel}`, rel);
+  }
+  for (const rel of [
+    "assets/models/x.glb",
+    "src/world/park/park_dam.json",
+    "tests/one_file_test.gd",
+  ])
+    assert.equal(selectTests(index, [rel]).picked.has("tests/ui_guard_test.gd"), false, rel);
+});
+
+test("a top-level test that reaches a folder scan through one other test file is a folder guard", () => {
+  const index = files({
+    ...GUARD,
+    "tests/support/scanner.gd": READER + 'SourceScan.sources(t, ["res://src/world"])',
+    "tests/through_helper_test.gd": 'const Scanner := preload("res://tests/support/scanner.gd")',
+    "tests/through_guard_test.gd": 'const Guard := preload("res://tests/folder_guard_test.gd")',
+    "tests/support/one_file.gd": READER + 'SourceScan.text(t, "res://src/core/flow.gd")',
+    "tests/through_one_file_test.gd": 'const One := preload("res://tests/support/one_file.gd")',
+  });
+  const { picked } = selectTests(index, ["src/world/anything.gd"]);
+  assert.deepEqual([...picked.keys()].sort(), [
+    "tests/folder_guard_test.gd",
+    "tests/through_guard_test.gd",
+    "tests/through_helper_test.gd",
+  ]);
+  assert.equal(
+    picked.get("tests/through_helper_test.gd").why,
+    "folder guard: src/world/anything.gd",
+  );
+});
+
+test("a top-level test that reaches a folder scan through two other test files is a folder guard", () => {
+  const index = files({
+    ...GUARD,
+    "tests/support/scanner.gd": READER + 'SourceScan.captures(t, ["res://src"], PATTERN)',
+    "tests/support/rows.gd": 'const Scanner := preload("res://tests/support/scanner.gd")',
+    "tests/two_hops_test.gd": 'const Rows := preload("res://tests/support/rows.gd")',
+    "tests/unrelated_test.gd": "",
+  });
+  const { picked } = selectTests(index, ["tools/anything_tool.gd"]);
+  assert.deepEqual([...picked.keys()].sort(), [
+    "tests/folder_guard_test.gd",
+    "tests/two_hops_test.gd",
+  ]);
+});
+
+test("the folder-guard selection fails when no top-level test scans folders through the shared reader", () => {
+  const index = files({
+    "tests/support/source_scan.gd": "",
+    "tests/one_file_test.gd": READER + 'SourceScan.text(_t, "res://src/core/flow.gd")',
+    "tests/other_sources_test.gd": "var all := Library.sources(_t)",
+    "tests/unit/deep_case.gd": READER + 'SourceScan.sources(_t, ["res://src"])',
+    "src/core/flow.gd": "",
+  });
+  for (const rel of ["src/core/flow.gd", "tools/anything_tool.gd"])
+    assert.throws(() => selectTests(index, [rel]), /no top-level test scans folders/, rel);
+  assert.throws(() => selectTests(files({}), ["src/a.gd"]), /no top-level test scans folders/);
+  assert.equal(selectTests(index, ["assets/x.bin"]).picked.size, 0);
 });
 
 test("unit_suite always runs, park data pulls every park test, and movement changes name shard proofs", () => {
   const index = files({
+    ...GUARD,
     "src/movement/ball.gd": "",
     "assets/park/park_dam/bake.json": "",
     "tests/unit_suite_test.gd": "",

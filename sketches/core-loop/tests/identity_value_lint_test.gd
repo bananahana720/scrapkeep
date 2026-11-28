@@ -17,6 +17,7 @@ extends SceneTree
 # - the scrap catch side is a serial on the field (or the bot's sign), so two fields given the
 #   same catches swirl the same way, however many throwaway objects each run allocates.
 
+const SourceScan := preload("res://tests/support/source_scan.gd")
 const T := preload("res://tests/support/t.gd")
 const ScrapField := preload("res://src/build/scrap_field.gd")
 const GID := "get_instance_id()"
@@ -71,14 +72,13 @@ func _process(_delta: float) -> bool:
 
 func _run_checks() -> void:
 	var t := T.new("identity_value_lint_test")
-	var paths: Array[String] = []
-	_collect("res://src", paths)
-	t.check("the lint scans a full src tree (%d files)" % paths.size(), paths.size() >= MIN_SRC_FILES,
+	var sources := SourceScan.sources(t, ["res://src"])
+	t.check("the lint scans a full src tree (%d files)" % sources.size(), sources.size() >= MIN_SRC_FILES,
 		"at least %d .gd files under res://src" % MIN_SRC_FILES)
 	var found: Array = []
 	var matched := {}
-	for path in paths:
-		var text := FileAccess.get_file_as_string(path)
+	for path in sources:
+		var text: String = sources[path]
 		var raws := text.split("\n")
 		for hit in scan(text):
 			var line: String = raws[hit["line"] - 1].strip_edges()
@@ -87,7 +87,7 @@ func _run_checks() -> void:
 				matched[key] = true
 			else:
 				found.append("%s:%d" % [path, hit["line"]])
-	t.check("no identity value feeds gameplay arithmetic in src (%d files scanned)" % paths.size(),
+	t.check("no identity value feeds gameplay arithmetic in src (%d files scanned)" % sources.size(),
 		found.is_empty(), "offending: " + ", ".join(found))
 	t.check("each exempt out-of-scope use still matches its exact line (%d)" % EXEMPT.size(),
 		matched.size() == EXEMPT.size(), "matched %d of %d" % [matched.size(), EXEMPT.size()])
@@ -355,11 +355,3 @@ static func _code_of(line: String) -> String:
 			return line.substr(0, i)
 		i += 1
 	return line
-
-
-func _collect(folder: String, paths: Array[String]) -> void:
-	for file in DirAccess.get_files_at(folder):
-		if file.ends_with(".gd"):
-			paths.append(folder.path_join(file))
-	for child in DirAccess.get_directories_at(folder):
-		_collect(folder.path_join(child), paths)
