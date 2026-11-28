@@ -500,7 +500,7 @@ func _card() -> void:
 	# A fresh profile's card offers no mouse-only choice (picks are 1/2/3, the reroll V), so it keeps
 	# mouse look (w22 first-timer red team edge 3).
 	t.check("a fresh profile's start card keeps aim", not card.wants_pointer() and (game.capture_requests.is_empty() or game.capture_requests.back() == true)
-		and not game.get_meta("menu_held", false), "requests %s" % [game.capture_requests])
+		and not game.menu_held(), "requests %s" % [game.capture_requests])
 	# With no menu held the pause menu can open over the card; while it is open the card's keys and
 	# clicks take nothing.
 	var menu = game.get_node_or_null("PauseMenu")
@@ -535,7 +535,7 @@ func _card() -> void:
 	load("res://src/build/parts.gd").call("bind_run", game.run)
 	game.flow.show_start_card()
 	t.check("win offers tier 1", card.offered_tiers() == [0, 1])
-	t.check("a tier to choose releases the cursor", card.wants_pointer() and game.capture_requests.back() == false and game.get_meta("menu_held", false))
+	t.check("a tier to choose releases the cursor", card.wants_pointer() and game.capture_requests.back() == false and game.menu_held())
 	var hard: Dictionary = Cards.RUN_TIERS[1]
 	var expected_threat := "Threat: %d%% more crowd, %d%% shorter intervals, plated elite brutes" % [roundi(100.0 * (hard.cap_weight - 1.0)), roundi(100.0 * (1.0 - hard.interval_weight))]
 	var expected_pay := "Pay: %d%% more event cores and rare weight; gain cap %.1fx" % [roundi(100.0 * (hard.event_core_multiplier - 1.0)), RunTier.PAY_GAIN_CAP]
@@ -597,7 +597,7 @@ func _card() -> void:
 	t.check("scripted pick reaches RunState", game.run.start_pick.taken == game.run.start_pick_options()[0] and not card.showing())
 	t.check("the briefing lets go", not host.briefing() and not paused)
 	host.armed = false
-	t.check("pick returns aim control", game.capture_requests.back() == true and not game.get_meta("menu_held", false))
+	t.check("pick returns aim control", game.capture_requests.back() == true and not game.menu_held())
 	var doc: Dictionary = game.run.to_entrance_doc()
 	var loaded := RunState.new(GameEvents.new(), 4)
 	loaded.begin(ClassDef.all()[0])

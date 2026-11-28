@@ -250,11 +250,11 @@ func _physics_process(_delta: float) -> bool:
 		"short":
 			if _elapsed() > FIND_MS:
 				_ceremony.short = true
-				_game.presentation.juice.reset_stops()
-				var before: int = _game.presentation.juice.hit_stop_log.size()
+				_game.presentation.juice.hit_stops.reset()
+				var before: int = _game.presentation.juice.hit_stops.entries.size()
 				_game.run.add_part("tempest_core", "gate")
 				var last: Array = _ceremony.presented.back()
-				var stops: Array = _game.presentation.juice.hit_stop_log.slice(before).filter(func(s: Array): return s[2] == "reward_rare")
+				var stops: Array = _game.presentation.juice.hit_stops.entries.slice(before).filter(func(s: Array): return s[2] == "reward_rare")
 				var row := EventKinds.reward_row("rare")
 				_report("short is rare", last[1] == "rare" and _ceremony.queued() == 0 and not _ceremony.active() and not paused
 						and stops.size() == 1 and float(stops[0][1]) <= float(row["stop_ms"]) / 1000.0 + 0.0001,

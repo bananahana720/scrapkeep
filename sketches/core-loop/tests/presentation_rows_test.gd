@@ -147,7 +147,7 @@ func _process(_delta: float) -> bool:
 			_check("discovery moment", fanfare.size() == 1 and banner.shown == 1 and _game.presentation.vfx.ring_count() == 1,
 				"the fanfare on the beat, the banner '%s', and one ring on the ball" % banner.last_title)
 			var unseal: Array = _audio.cue_log.filter(func(c: Array): return c[0] == "beacon_unsealed" and c[1] == "stinger_unseal" and c[2] == "beat")
-			var stop: Array = _game.presentation.juice.hit_stop_log.filter(func(e: Array): return e[2] == "beacon_unsealed")
+			var stop: Array = _game.presentation.juice.hit_stops.entries.filter(func(e: Array): return e[2] == "beacon_unsealed")
 			_check("unseal", unseal.size() == 1 and stop.size() == 1 and _game.presentation.vfx.spawned.get("beacon_unsealed", 0) >= 2,
 				"the unseal stinger on the beat, a hit-stop request and a flash over the beacon")
 			# The shell is read at rest. The ball is live: the scrap lost above kicked the shell's

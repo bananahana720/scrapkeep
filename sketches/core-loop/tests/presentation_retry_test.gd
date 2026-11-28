@@ -86,16 +86,16 @@ func _process(_delta: float) -> bool:
 			var resolver: Callable = juice.resolve_of
 			var capped := Capped.new()
 			_game.add_child(capped)
-			juice.reset_stops()
+			juice.hit_stops.reset()
 			_game.events.enemy_struck.emit(capped, "stomp", 40.0)
 			juice.flush()
-			var cap_stop: float = juice.hit_stop_log.back()[0]
-			juice.reset_stops()
+			var cap_stop: float = juice.hit_stops.entries.back()[0]
+			juice.hit_stops.reset()
 			capped.part_hit = ""
 			var body: Dictionary = resolver.call(capped, "stomp", 40.0) if resolver.is_valid() else {}
 			_game.events.enemy_struck.emit(capped, "stomp", 40.0)
 			juice.flush()
-			var body_stop: float = juice.hit_stop_log.back()[0]
+			var body_stop: float = juice.hit_stops.entries.back()[0]
 			var ok: bool = resolver.is_valid() and bool(body.get("full", false)) and cap_stop > body_stop and body_stop > 0.0
 			_check("weak points freeze harder", ok, "a stomp on the cap (plating 0 where it landed, 50 on the body) asks for a %.0f ms stop; the body break-through (full %s) %.0f ms" % [cap_stop * 1000.0, body.get("full", "?"), body_stop * 1000.0])
 			_game.free()

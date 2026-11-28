@@ -120,5 +120,5 @@ func _check_voice() -> void:
 	sounds = log.map(func(row): return row[1])
 	_t.check("the crate's burst plays the coil", "rung_coil" in sounds and "ceremony_resolve" in sounds, str(sounds))
 	ceremony._close(int(ceremony.now_ms.call()))
-	ceremony._hold(false)
+	_game.hold_play("ceremony", false)
 	ceremony.pause_armed = false

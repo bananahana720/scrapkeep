@@ -201,9 +201,6 @@ func close() -> void:
 		_unpin_notes()
 	if game.pause_toggled():
 		game.toggle_pause()
-	var workshop = game.get_node_or_null("Workshop")
-	if workshop != null and workshop.pick.is_open():
-		get_tree().paused = true
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused != null and _root.is_ancestor_of(focused):
 		focused.release_focus()

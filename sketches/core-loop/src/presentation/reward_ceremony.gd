@@ -25,6 +25,7 @@ const PAYOFF_BY_MOD := {"weapon_rate": "shot_fired", "weapon_range": "shot_fired
 const MAX_HELD := 3
 const FIND_CARD := "part:"
 const CLOSE_SCREENS := ["title", "class_select", "summary", "dead"]
+const HOLD := ["pause", "input", "velocity"]
 
 var ctx
 var audio
@@ -48,9 +49,6 @@ var _active := {}
 var _calm_since := -1
 var _armed: Array = []
 var _paid := {}
-var _held_velocity := Vector3.ZERO
-var _held_state_velocity := Vector3.ZERO
-var _holding := false
 
 
 func setup(ctx_ref, audio_ref, juice_ref, vfx_ref) -> void:
@@ -460,7 +458,7 @@ func _begin(find: Dictionary) -> void:
 	var now := int(now_ms.call())
 	var burst := now + int((float(row["in_s"]) + float(row["build_s"])) * 1000.0)
 	_active = {"find": find, "phase": "build", "start": now, "burst": burst}
-	_hold(true)
+	ctx.root.hold_play("ceremony", true, HOLD)
 	var hull: Array = []
 	for part in (find["held"] as Array):
 		var icon := icon_of(part)
@@ -484,8 +482,6 @@ func _begin(find: Dictionary) -> void:
 
 
 func _step_ceremony(now: int) -> void:
-	if _holding and not get_tree().paused:
-		get_tree().paused = true
 	match String(_active["phase"]):
 		"build":
 			if now >= int(_active["burst"]):
@@ -524,7 +520,7 @@ func _close(now: int) -> void:
 	_active["phase"] = "out"
 	_active["close"] = now
 	view.ceremony["close_ms"] = now
-	_hold(false)
+	ctx.root.hold_play("ceremony", false)
 	_arm(_active["find"])
 
 
@@ -550,33 +546,6 @@ func _input(event: InputEvent) -> void:
 	if pressed:
 		skip()
 		get_viewport().set_input_as_handled()
-
-
-func _hold(on: bool) -> void:
-	var game = ctx.root
-	var body: RigidBody3D = ctx.player.body()
-	if on:
-		_holding = true
-		_held_velocity = body.linear_velocity
-		_held_state_velocity = ctx.player.state.velocity
-		get_tree().paused = true
-		if game != null:
-			game.set_menu_held(true)
-			if game.get("keyboard") != null:
-				game.keyboard.enabled = false
-		return
-	if not _holding:
-		return
-	_holding = false
-	if game != null:
-		game.set_menu_held(false)
-		get_tree().paused = game.pause_toggled() or game.notes_held() if game.has_method("pause_toggled") else false
-		if game.get("keyboard") != null:
-			game.keyboard.enabled = ctx.flow.in_play()
-	else:
-		get_tree().paused = false
-	if body.linear_velocity != _held_velocity or ctx.player.state.velocity != _held_state_velocity:
-		ctx.player.set_velocity_now(_held_velocity)
 
 
 func _arm(find: Dictionary) -> void:
@@ -689,7 +658,7 @@ func _reset(new_run: bool) -> void:
 	_calm_since = -1
 	if not _active.is_empty():
 		_release_crate(_active["find"])
-		_hold(false)
+		ctx.root.hold_play("ceremony", false)
 		_active = {}
 		audio.stop(String(EventKinds.reward_row("ceremony")["sound"]))
 	view.set_ceremony({})

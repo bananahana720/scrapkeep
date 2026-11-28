@@ -97,7 +97,7 @@ func _process(delta: float) -> bool:
 				_pending.append({"at": _clock + 0.5, "name": "notes-keys", "then": func(): _game.notes.show_page(1)})
 				_pending.append({"at": _clock + 1.2, "name": "notes-hurts", "then": func(): _game.notes.show_page(2)})
 				_pending.append({"at": _clock + 1.9, "name": "notes-grow", "then": func(): _game.hold_notes(false)})
-			if not _paused_once and _play_clock > 24.0 and _pending.is_empty() and _game.flow.in_play() and not _game.get_meta("menu_held", false):
+			if not _paused_once and _play_clock > 24.0 and _pending.is_empty() and _game.flow.in_play() and not _game.menu_held():
 				_paused_once = true
 				_press(KEY_P)
 				_pending.append({"at": _clock + 0.6, "name": "pause", "then": func(): _press(KEY_P)})

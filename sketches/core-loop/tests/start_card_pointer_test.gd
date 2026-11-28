@@ -126,7 +126,7 @@ func _fresh() -> void:
 	await _begin(false)
 	var card = game.flow.start_card
 	t.check("fresh: the card is up and wants no pointer", card.showing() and not card.wants_pointer())
-	t.check("fresh: the card holds no menu", not game.get_meta("menu_held", false))
+	t.check("fresh: the card holds no menu", not game.menu_held())
 	game.captured = false
 	await _send(_click())
 	t.check("fresh: a click takes the camera with the card up", game.captured)
@@ -238,7 +238,7 @@ func _rung() -> void:
 	await _begin(true)
 	var card = game.flow.start_card
 	t.check("rung: the open tier wants the pointer", card.showing() and card.wants_pointer())
-	t.check("rung: the cursor is free and the menu held", not game.captured and game.get_meta("menu_held", false))
+	t.check("rung: the cursor is free and the menu held", not game.captured and game.menu_held())
 	await _send(_click())
 	t.check("rung: a click does not take the cursor from the card", not game.captured)
 	var yaw: float = game.camera.yaw
@@ -256,7 +256,7 @@ func _rung() -> void:
 		await _send(toggle[1])
 		t.check("rung: %s closes the pause menu" % toggle[0], not menu.is_open() and not paused)
 		t.check("rung: closing the pause menu leaves the cursor free for the tier (%s)" % toggle[0],
-			not game.captured and game.get_meta("menu_held", false) and card.wants_pointer())
+			not game.captured and game.menu_held() and card.wants_pointer())
 		t.eq("rung: pause over the tier never grabs the cursor (%s)" % toggle[0], game.grabs, grabs)
 	t.eq("rung: pausing over the tier quits nothing", game.quits, 0)
 	# A click on a tier button with pause open: pause's root takes it, and the card's route refuses a press
@@ -285,7 +285,7 @@ func _rung() -> void:
 	game.flow._engage()
 	await _frames(2)
 	t.check("rung: engaging stage 1's Warden closes the tier, the card stays", not game.run.run_tier_open() and card.showing() and not card.wants_pointer())
-	t.check("rung: look comes back", game.captured and not game.get_meta("menu_held", false))
+	t.check("rung: look comes back", game.captured and not game.menu_held())
 	yaw = game.camera.yaw
 	await _send(_motion())
 	t.check("rung: mouse motion turns the camera again", not is_equal_approx(game.camera.yaw, yaw))
