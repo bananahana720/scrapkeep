@@ -11,10 +11,6 @@ const ALLOWED := [
 	["res://src/core/beacon.gd", "res://src/presentation/material_slots.gd"],
 	["res://src/core/beacon.gd", "res://src/presentation/recipe_props.gd"],
 	["res://src/core/death_cause.gd", "res://src/combat/rogue.gd"],
-	["res://src/core/event_kinds.gd", "res://src/combat/boss_posture.gd"],
-	["res://src/core/event_kinds.gd", "res://src/presentation/juice.gd"],
-	["res://src/core/event_kinds.gd", "res://src/presentation/rows.gd"],
-	["res://src/core/event_kinds.gd", "res://src/presentation/windup_rows.gd"],
 	["res://src/core/flow.gd", "res://src/boss/arena.gd"],
 	["res://src/core/flow.gd", "res://src/boss/boss.gd"],
 	["res://src/core/flow.gd", "res://src/movement/speed_tier.gd"],
@@ -61,24 +57,15 @@ func _pair_key(pair: Array) -> String:
 
 
 func run(t) -> void:
-	var re := RegEx.new()
-	var compiled := re.compile(UPWARD_PATTERN) == OK and re.is_valid()
-	t.check("upward pattern compiles", compiled, UPWARD_PATTERN)
-	if not compiled:
-		return
 	var allowed_set := {}
 	for pair in ALLOWED:
 		allowed_set[_pair_key(pair)] = true
 	var found_set := {}
 	var unexpected: Array[String] = []
-	for path in SourceScan.matching(t, [CORE_ROOT], UPWARD_PATTERN):
-		var src := FileAccess.get_file_as_string(path)
-		var err := FileAccess.get_open_error()
-		if err != OK:
-			t.check("reads " + path, false, "error %d" % err)
-			continue
-		for m in re.search_all(src):
-			var key := _pair_key([path, m.get_string(1)])
+	var hits: Dictionary = SourceScan.captures(t, [CORE_ROOT], UPWARD_PATTERN)
+	for path in hits:
+		for row in hits[path]:
+			var key := _pair_key([path, row[1]])
 			if found_set.has(key):
 				continue
 			found_set[key] = true
