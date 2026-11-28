@@ -54,6 +54,7 @@ func _pure() -> void:
 	_t.eq("a fresh save has met nothing", Picker.met_kinds(saved), [])
 	_t.check("marking a kind met is news once", Picker.mark_met(saved, "hooker") and not Picker.mark_met(saved, "hooker"), "mark_met")
 	_t.eq("the save now holds that kind", Picker.met_kinds(saved), ["hooker"])
+	_t.eq("the save keeps a met kind under met. and its id", saved.stat("met.hooker"), 1.0)
 	_t.check("a kind the box cannot call is not read back", Picker.met_kinds(saved).size() == 1 and saved.stat("met.warden") == 0.0, "met list")
 	_t.check("a null save has met nothing", Picker.met_kinds(null).is_empty() and not Picker.mark_met(null, "chaser"), "null")
 	var rows := Picker.reading(["chaser"])
