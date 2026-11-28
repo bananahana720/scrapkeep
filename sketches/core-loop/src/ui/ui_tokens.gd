@@ -2,6 +2,7 @@ extends RefCounted
 
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const GAP_XS := 4
@@ -42,7 +43,6 @@ const PLATE_ALPHA := 0.92
 const DISABLED_ALPHA := 0.45
 const TARGET := 56.0
 const RADIUS := 6
-static var reduced_motion := false
 const EDGE := 2
 const FOCUS_EDGE := 3
 
@@ -74,7 +74,7 @@ const HANDS := {
 
 static func hand(which: int) -> Dictionary:
 	var row: Dictionary = HANDS[which].duplicate()
-	if reduced_motion:
+	if Comfort.reduced_motion:
 		row.tilt = 0.0
 		row.trans = Tween.TRANS_LINEAR
 	return row

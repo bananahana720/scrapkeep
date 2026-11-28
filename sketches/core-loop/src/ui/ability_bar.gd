@@ -7,6 +7,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const Keycap := preload("res://src/ui/keycap.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const SLOT := UiTokens.TARGET
@@ -38,7 +39,6 @@ const POINT_GAP := float(UiTokens.GAP_S)
 const POINT_BOB := 4.0
 const POINT_HZ := 2.0
 
-static var reduced_motion := false
 var slots: Array = []
 var tint := Color.WHITE
 var motif := "ring"
@@ -304,7 +304,7 @@ func refuse(slot: String) -> void:
 
 
 func shake_offset(slot: String) -> Vector2:
-	if reduced_motion or _refusals.get(slot, 0.0) <= 0.0:
+	if Comfort.reduced_motion or _refusals.get(slot, 0.0) <= 0.0:
 		return Vector2.ZERO
 	return Vector2(sin(_clock * TAU * SHAKE_HZ) * SHAKE, 0.0)
 
@@ -371,7 +371,7 @@ func step(delta: float) -> void:
 		_glyph_t = minf(GLYPH_SLIDE, _glyph_t + delta)
 		glyph_x = lerpf(_glyph_from, _glyph_to, smoothstep(0.0, 1.0, _glyph_t / GLYPH_SLIDE))
 	if not _pulses.is_empty() or _was_pulsing or refusing or gliding or underline_share() > 0.0 \
-			or (_pointed != "" and not reduced_motion):
+			or (_pointed != "" and not Comfort.reduced_motion):
 		queue_redraw()
 	_was_pulsing = not _pulses.is_empty()
 
@@ -402,7 +402,7 @@ func _draw_pointer() -> void:
 	var rect := pointer_rect()
 	if not rect.has_area():
 		return
-	if not reduced_motion:
+	if not Comfort.reduced_motion:
 		rect.position.y -= POINT_BOB * 0.5 * (1.0 + sin(_clock * TAU * POINT_HZ))
 	var tip := Vector2(rect.get_center().x, rect.end.y)
 	var points := PackedVector2Array([rect.position, Vector2(rect.end.x, rect.position.y), tip])

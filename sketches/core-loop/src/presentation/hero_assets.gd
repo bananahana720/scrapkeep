@@ -17,7 +17,6 @@ const BallLooks := preload("res://src/presentation/ball_looks.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const PilotGlance := preload("res://src/presentation/pilot_glance.gd")
 const WeaponRigFx := preload("res://src/presentation/weapon_rig_fx.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const PilotGearKit := preload("res://src/presentation/pilot_gear_kit.gd")
 const COCKPIT_CONTROLS := {"yoke": "YokeRig", "gauges": "GaugeCluster", "throttle": "ThrottleLever", "pedal_l": "PedalL", "pedal_r": "PedalR"}
 const PropMeshes := preload("res://src/presentation/craft_prop_meshes.gd")
@@ -31,6 +30,7 @@ const MECHA_PEDAL_EVENTS := {"dashed": 1, "boosted": 1, "blink_used": 2, "sprint
 const Cosmetics := preload("res://src/core/cosmetics.gd")
 const CosmeticWear := preload("res://src/core/cosmetic_wear.gd")
 const CosmeticPresentation := preload("res://src/presentation/cosmetic_presentation.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const PILOTS := {
 	"runner_gunner": "res://assets/models/pilot_rivet_anim.glb",
 	"pylon_engineer": "res://assets/models/pilot_sable_anim.glb",
@@ -1435,7 +1435,7 @@ func _step_weapon_rig(rec: Dictionary, delta: float) -> void:
 		return
 	var driver = _live_weapon_driver()
 	var snap: Dictionary = driver.state_snapshot() if driver != null else {}
-	rig.step(delta, snap, UiTokens.reduced_motion)
+	rig.step(delta, snap, Comfort.reduced_motion)
 
 
 func _addon_path(id: String, slot: String) -> String:

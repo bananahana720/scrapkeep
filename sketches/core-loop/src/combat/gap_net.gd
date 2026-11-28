@@ -382,7 +382,7 @@ func _pose() -> void:
 	var t := clampf(_warn_progress(), 0.0, 1.0)
 	var beat := fmod(_t * FlashGuard.rate(CRACKLE_RATE + CRACKLE_RATE_GAIN * t), 1.0)
 	var lit := beat < 0.2 + 0.5 * t
-	var shake := sin(_t * 70.0) * CRACKLE_SHAKE * t * EnemyMotion.motion_scale
+	var shake := sin(_t * 70.0) * CRACKLE_SHAKE * t * Comfort.motion_scale()
 	for net in nets:
 		if not net["live"] or not is_instance_valid(net["mesh"]):
 			continue

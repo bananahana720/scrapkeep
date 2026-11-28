@@ -294,9 +294,6 @@ static func share(s: Dictionary, low: bool, reduced: bool) -> float:
 	return r
 
 
-static var reduced_motion := false
-
-
 static func low_preset() -> bool:
 	return String(load("res://src/presentation/graphics_preset.gd").current) == "low"
 

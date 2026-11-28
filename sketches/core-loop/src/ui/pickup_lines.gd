@@ -4,6 +4,7 @@ const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const FONT := UiTokens.HEADING
@@ -113,8 +114,8 @@ func _draw() -> void:
 		var t := clampf(age / life, 0.0, 1.0)
 		var leave := clampf((age - (life - FADE)) / FADE, 0.0, 1.0)
 		var alpha := 1.0 - leave
-		var scale_now := 1.0 if UiTokens.reduced_motion or age >= SLAM else lerpf(SWELL, 1.0, age / SLAM)
-		var lift := 0.0 if UiTokens.reduced_motion else RISE * t
+		var scale_now := 1.0 if Comfort.reduced_motion or age >= SLAM else lerpf(SWELL, 1.0, age / SLAM)
+		var lift := 0.0 if Comfort.reduced_motion else RISE * t
 		var base := size.y - ROW * int(line[2]) - lift - font.get_descent(FONT)
 		var px := int(round(FONT * scale_now))
 		var words := String(line[0])

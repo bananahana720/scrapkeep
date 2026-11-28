@@ -1,6 +1,7 @@
 extends Node
 
 const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const CLIPS := {
 	"foreman": {"loop": "idle", "tell": "tell", "break": "break"},
 	"dispatcher": {"loop": "idle", "tell": "tell", "break": "break"},
@@ -74,7 +75,7 @@ func _play(clip: String, loop: bool) -> void:
 	if loop:
 		_loop = clip
 		player.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
-		if EnemyMotion.motion_scale <= 0.0:
+		if Comfort.reduced_motion:
 			_ease_to_rest()
 			return
 	_ease_left = 0.0

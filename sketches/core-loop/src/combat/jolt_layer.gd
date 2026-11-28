@@ -316,10 +316,10 @@ func _pose() -> void:
 		var lead: float = field.lead_fraction() if field != null else (_warn_progress() if _whipping and phase == Phase.WARN else (1.0 if _whipping and phase == Phase.LIVE else 0.0))
 		_coil.scale = Vector3.ONE * (1.0 + 0.35 * clampf(lead, 0.0, 1.0))
 		var spin := 0.28 + 0.32 * lead if phase == Phase.LIVE else (0.24 if _whipping and phase == Phase.WARN else (0.14 if phase == Phase.WARN else 0.03))
-		_coil.rotation.y = wrapf(_coil.rotation.y + spin * EnemyMotion.motion_scale, -PI, PI)
+		_coil.rotation.y = wrapf(_coil.rotation.y + spin * Comfort.motion_scale(), -PI, PI)
 	if _spool != null:
 		var spool_spin := 0.55 if _whipping and phase != Phase.ROAM else (0.25 if phase == Phase.LIVE else 0.02)
-		_spool.rotation.x += spool_spin * EnemyMotion.motion_scale
+		_spool.rotation.x += spool_spin * Comfort.motion_scale()
 
 
 func _exit_tree() -> void:

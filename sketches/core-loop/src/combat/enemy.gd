@@ -18,6 +18,7 @@ const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const WindupPoses := preload("res://src/presentation/windup_poses.gd")
 const EnemyGait := preload("res://src/presentation/enemy_gait.gd")
 const _Roster := preload("res://src/combat/roster.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const GROUP := Groups.ENEMY
 const GRAVITY := _Tuning.GRAVITY
@@ -337,7 +338,7 @@ func _update_idle(delta: float) -> void:
 		if _ease_age >= POSE_EASE:
 			_ease_age = -1.0
 	if _release_age >= 0.0:
-		_idle_pose = WindupPoses.release(_posed, _release_age, EnemyMotion.motion_scale)
+		_idle_pose = WindupPoses.release(_posed, _release_age, Comfort.motion_scale())
 		_release_age += delta
 		if _release_age >= WindupPoses.RELEASE_SECONDS:
 			_release_age = -1.0
@@ -367,7 +368,7 @@ func _attack_pose() -> Basis:
 	var live := tele != null and is_instance_valid(tele)
 	var progress: float = tele.progress if live else float(_atk["progress"])
 	_posed_struck = _posed_struck or String(_atk["phase"]) != PHASE_WINDUP or progress >= 1.0
-	return WindupPoses.windup(pose, progress, tele.age if live else 0.0, EnemyMotion.motion_scale)
+	return WindupPoses.windup(pose, progress, tele.age if live else 0.0, Comfort.motion_scale())
 
 
 func winding_up() -> bool:

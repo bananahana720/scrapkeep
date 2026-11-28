@@ -2,6 +2,7 @@ extends Node3D
 
 const Palette := preload("res://src/core/palette.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const POOL := 4
@@ -176,7 +177,6 @@ void fragment() {
 }
 """
 
-var reduced_motion := false
 var spawned := {"burst": 0, "card": 0, "fusion": 0, "shockwave": 0, "shift_over": 0}
 
 var _slots: Array = []
@@ -330,7 +330,7 @@ static func cap(half_m: float, eye_m: float, fov_deg: float) -> float:
 func _draw(slot: Dictionary) -> void:
 	var t: float = slot["t"]
 	var mode: int = slot["mode"]
-	var look := shape_at(t, mode, reduced_motion)
+	var look := shape_at(t, mode, Comfort.reduced_motion)
 	var node: MeshInstance3D = slot["node"]
 	node.basis = Basis.IDENTITY.scaled(Vector3.ONE * slot["size"] * float(look["scale"]) * _cap_for(node, slot["size"] * float(look["scale"])))
 	var mat: ShaderMaterial = slot["mat"]

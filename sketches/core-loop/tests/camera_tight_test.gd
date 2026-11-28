@@ -7,6 +7,7 @@ const Requisition := preload("res://src/boss/requisition.gd")
 const RigidBall := preload("res://src/movement/rigid_ball.gd")
 const Warden := preload("res://src/combat/warden.gd")
 const RealTuning := preload("res://src/movement/tuning.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # W1-14 / PF-06: with a wall close behind the ball the arm shortens until the ball fills the lens.
 # The camera rises over the ball instead, keeps the player's aim, and goes back down when the wall
@@ -196,7 +197,7 @@ func _fight_floor() -> void:
 	_t.check("F3b the close subject lifts the arm before mounting", fight.arm.rotation.x < 0.5 - 0.3, "arm %.3f, pitch 0.500" % fight.arm.rotation.x)
 	for rig in [open, fight]:
 		rig.shoulder_target = 1.0
-		rig.reduced_motion = true
+		Comfort.reduced_motion = true
 	await _settle(fight, 120)
 	var target_at := open.aim_origin() + open.aim_forward() * 18.0
 	var struck := _box(Vector3.ONE, target_at)
@@ -212,6 +213,7 @@ func _fight_floor() -> void:
 	subject.free()
 	open.free()
 	fight.free()
+	Comfort.reduced_motion = false
 
 
 # The lift moves the arm only. A player who looks up at a high subject keeps that aim while the lift is on, and
@@ -222,7 +224,7 @@ func _aim_kept() -> void:
 	root.add_child(subject)
 	subject.position = Vector3(0, 22, -24)
 	var cam := _rig()
-	cam.reduced_motion = true
+	Comfort.reduced_motion = true
 	cam.set_contact_subject(subject)
 	var looked := 0.5
 	cam.snap(Vector3.FORWARD, looked)
@@ -241,6 +243,7 @@ func _aim_kept() -> void:
 	floor_body.free()
 	subject.free()
 	cam.free()
+	Comfort.reduced_motion = false
 
 
 # Pixels between the ball's centre and the bottom edge of the viewport; negative when it is below the frame or the
@@ -263,7 +266,7 @@ func _ball_stays_framed() -> void:
 			root.add_child(subject)
 			subject.position = Vector3(0, -1, -distance)
 			var cam := _rig()
-			cam.reduced_motion = true
+			Comfort.reduced_motion = true
 			cam.set_contact_subject(subject)
 			cam.snap(Vector3.FORWARD, looked)
 			await _settle(cam, 120)
@@ -277,6 +280,7 @@ func _ball_stays_framed() -> void:
 				await _settle(cam, 120)
 				_t.check("H2 a freed subject ends the lift", cam.pitch - cam.arm.rotation.x < LIFT_ON, "raised %.3f rad" % (cam.pitch - cam.arm.rotation.x))
 			cam.free()
+			Comfort.reduced_motion = false
 	floor_body.free()
 
 
@@ -291,7 +295,7 @@ func _two_owners() -> void:
 	mine.position = Vector3(0, -1, -6)
 	theirs.position = Vector3(0, -1, -30)
 	var cam := _rig()
-	cam.reduced_motion = true
+	Comfort.reduced_motion = true
 	cam.set_contact_subject(mine)
 	await _settle(cam, 120)
 	var lifted: float = cam.pitch - cam.arm.rotation.x
@@ -305,6 +309,7 @@ func _two_owners() -> void:
 	mine.free()
 	theirs.free()
 	cam.free()
+	Comfort.reduced_motion = false
 
 
 func _aim_pitch(cam) -> float:

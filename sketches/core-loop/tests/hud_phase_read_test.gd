@@ -12,6 +12,7 @@ const Objectives := preload("res://src/core/objectives.gd")
 const Panels := preload("res://src/build/panels.gd")
 const StageDefs := preload("res://src/core/stage_defs.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # Unit 20, the phase read and the panel read (world 1 plan, 23 Oct):
 #   P1  a plate bound without phases sets no diamonds and keeps its size, so a stage
@@ -121,9 +122,9 @@ func _unit_checks() -> void:
 	plate.advance(0.1)
 	_t.check("P3 mid-crack the spent diamond pops and the lit one grows in", plate.diamond_scale(0) > 1.05 and plate.diamond_scale(1) < 1.0 and plate.diamond_scale(2) == 1.0,
 		"%s %s %s" % [plate.diamond_scale(0), plate.diamond_scale(1), plate.diamond_scale(2)])
-	BossPlate.reduced_motion = true
+	Comfort.reduced_motion = true
 	_t.check("P3 reduced motion: no pop, no grow", plate.diamond_scale(0) == 1.0 and plate.diamond_scale(1) == 1.0)
-	BossPlate.reduced_motion = false
+	Comfort.reduced_motion = false
 	for i in int(ceil(BossPlate.CRACK_SECONDS / 0.1)) + 1:
 		plate.advance(0.1)
 	_t.check("P3 the crack ends after CRACK_SECONDS", plate.turn_age() < 0.0, "turn age %s" % plate.turn_age())

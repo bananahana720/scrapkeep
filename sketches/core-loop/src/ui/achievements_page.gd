@@ -10,6 +10,7 @@ const Icons := preload("res://src/ui/icons.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ChoiceButton := preload("res://src/ui/choice_button.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const COLUMNS := 2
@@ -264,7 +265,7 @@ func _settle(flaps: Array[Label]) -> void:
 	if _flaps != null:
 		_flaps.kill()
 		_flaps = null
-	if UiTokens.reduced_motion or not is_inside_tree():
+	if Comfort.reduced_motion or not is_inside_tree():
 		for flap in flaps:
 			flap.visible_ratio = 1.0
 		return

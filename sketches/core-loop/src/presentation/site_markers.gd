@@ -6,7 +6,7 @@ const Palette := preload("res://src/core/palette.gd")
 const Rogue := preload("res://src/combat/rogue.gd")
 const Yard := preload("res://src/presentation/arena_bowl_yard.gd")
 const CrackedCache := preload("res://src/world/cracked_cache.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const CREW_SMOKE := Color("ece6d8")
 const FLAG_OUT_M := 9.0
@@ -105,7 +105,7 @@ func _on_activity_done(id: String, at: Vector3) -> void:
 	if not mark_visited(key, "cache", at):
 		return
 	var terrain = ctx.get("terrain") if ctx != null else null
-	var raised := CrackedCache.raise_flag(self, pocket_flag_foot(at, terrain), UiTokens.reduced_motion)
+	var raised := CrackedCache.raise_flag(self, pocket_flag_foot(at, terrain), Comfort.reduced_motion)
 	if raised != null:
 		flags.append(raised)
 

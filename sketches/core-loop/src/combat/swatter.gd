@@ -258,7 +258,7 @@ func _springboard_vault() -> void:
 
 
 func _on_end() -> void:
-	_return_t = RETURN_S if EnemyMotion.motion_scale > 0.0 else 0.0
+	_return_t = RETURN_S if not Comfort.reduced_motion else 0.0
 	_sky_spank = false
 	_sky_vaulted = false
 	_sky_spiked = false
@@ -307,7 +307,7 @@ func _pose() -> void:
 	elif _return_t > 0.0:
 		_return_t = maxf(0.0, _return_t - get_physics_process_delta_time())
 		var r := _return_t / RETURN_S
-		swing = 1.25 * (r * r) * cos((1.0 - r) * PI * 0.65 * EnemyMotion.motion_scale)
+		swing = 1.25 * (r * r) * cos((1.0 - r) * PI * 0.65 * Comfort.motion_scale())
 	_paddle.rotation.y = swing * (1.0 if _strafe > 0.0 else -1.0)
 
 

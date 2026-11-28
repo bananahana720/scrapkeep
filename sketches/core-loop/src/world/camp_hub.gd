@@ -22,8 +22,8 @@ const CallerTile := preload("res://src/ui/caller_tile.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const WorldFxAnchor := preload("res://src/presentation/world_fx/world_fx_anchor.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
-const EnemyMotion := preload("res://src/presentation/enemy_motion.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const FEATURES: Array = [
 	preload("res://src/world/camp_skee.gd"),
@@ -404,9 +404,9 @@ func _process(delta: float) -> void:
 		if Glyphs.device != _prompt_device or now_interact != _prompt_interact:
 			_refresh_prompts()
 	if walking and is_instance_valid(_pet) and (_pet_tween == null or not _pet_tween.is_valid()):
-		if EnemyMotion.motion_scale > 0.0:
+		if not Comfort.reduced_motion:
 			_pet_idle += delta
-			var breath := sin(_pet_idle * 3.1) * 0.045 * EnemyMotion.motion_scale
+			var breath := sin(_pet_idle * 3.1) * 0.045 * Comfort.motion_scale()
 			_pet.scale = Vector3(1.0 - breath * 0.5, 1.0 + breath, 1.0 - breath * 0.5)
 		else:
 			_pet.scale = Vector3.ONE
@@ -826,7 +826,7 @@ func _pet_react() -> void:
 	_pet_tween.set_parallel(false)
 	var squashed := Vector3(1.16, 0.82, 1.16)
 	var stretched := Vector3(0.88, 1.18, 0.88)
-	var motion_on := EnemyMotion.motion_scale > 0.0
+	var motion_on := not Comfort.reduced_motion
 	_pet_tween.tween_property(_pet, "rotation:y", heading, 0.16)
 	if motion_on:
 		_pet_tween.parallel().tween_property(_pet, "scale", squashed, 0.08).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)

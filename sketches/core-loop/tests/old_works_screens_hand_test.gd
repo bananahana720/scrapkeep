@@ -21,6 +21,7 @@ const StartPicks := preload("res://src/core/start_picks.gd")
 const Roster := preload("res://src/combat/roster.gd")
 const Game := preload("res://src/game.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # The old works' hand on the screens it makes (LEGIBILITY.md section 14.3, ruling ek; unit E2-14):
 #   - a Warden's plate (a stage Warden's and a stub boss's) is the old works', with its frame built once and
@@ -131,7 +132,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	_planted()
 	await _wardens()
 	await _launch_card()
@@ -145,7 +146,7 @@ func _run() -> void:
 	if _game != null:
 		_game.queue_free()
 	await _frames(2)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	quit(_t.verdict())
 
 
@@ -351,7 +352,7 @@ func _shift_board() -> void:
 			profile.earn(String(rung.when.earned), 1700000000)
 	var page = AchievementsPage.new()
 	root.add_child(page)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	page.refresh(profile, null)
 	var frame: PanelContainer = page.get_node("ShiftBoardFrame")
 	_t.eq("the shift board's frame is a lawful old-works plate", _faults(frame.get_theme_stylebox("panel"), "shift board"), [])
@@ -376,11 +377,11 @@ func _shift_board() -> void:
 	_t.near("halfway through, the first flap row is half settled (a straight line)", flaps[0].visible_ratio, 0.5, 0.05)
 	page._flaps.custom_step(AchievementsPage.FLAP_SECONDS * 2.0)
 	_t.check("then every flap row stands settled", flaps.all(func(f): return f.visible_ratio == 1.0))
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	page.refresh(profile, null)
 	var settled := [frame.get_node("ShiftBoard/Count"), frame.get_node("ShiftBoard/Card")]
 	_t.check("with less motion the flaps stand settled at once", settled.all(func(f): return f.visible_ratio == 1.0) and page._flaps == null)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	var carded := []
 	var stamped := []
 	for id in page.rows:
@@ -422,13 +423,13 @@ func _chase_plate() -> void:
 	plate._settling.custom_step(ChasePlate.FLAP_SECONDS * 0.5)
 	_t.near("halfway through, the flap is half settled (a straight line)", flap.visible_ratio, 0.5, 0.05)
 	plate.queue_free()
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	var still = ChasePlate.new(read)
 	root.add_child(still)
 	var still_flap: Label = still.find_child("Flap", true, false)
 	_t.check("with less motion the flap stands settled at once", still_flap.visible_ratio == 1.0 and still._settling == null)
 	still.queue_free()
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	await _frames(1)
 
 

@@ -6,6 +6,7 @@ const Cosmetics := preload("res://src/core/cosmetics.gd")
 const Achievements := preload("res://src/core/achievements.gd")
 const Push := preload("res://tests/support/push.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var _t := T.new("ui_customize_page_test")
 var _game
@@ -273,7 +274,7 @@ func _page_checks(page, profile, screens) -> void:
 		_t.eq("a pinned pip sets the preview's heft class", int(rec.heft), 4)
 	page.pin_heft(1)
 	# Reduced motion drops the spin, the shake and the hop.
-	page.reduced_motion = true
+	Comfort.reduced_motion = true
 	var turn: float = page._pivot.rotation.y
 	page._spin_wait = 0.0
 	page._process(0.5)
@@ -285,22 +286,22 @@ func _page_checks(page, profile, screens) -> void:
 		var tweens := get_processed_tweens().size()
 		page.click_card(lock_card)
 		_t.eq("reduced motion: a locked click does not shake", get_processed_tweens().size(), tweens)
-		page.reduced_motion = false
+		Comfort.reduced_motion = false
 		lock_card = page.card_for(locked.id)
 		tweens = get_processed_tweens().size()
 		page.click_card(lock_card)
 		_t.check("full motion: a locked click shakes", get_processed_tweens().size() > tweens)
-	page.reduced_motion = false
+	Comfort.reduced_motion = false
 	page._process(0.5)
 	_t.check("full motion: the turntable spins", not is_equal_approx(page._pivot.rotation.y, turn))
 	if page._pilots.size() >= 2:
 		var a: String = page._pilots[0]
 		var b: String = page._pilots[1]
-		page.reduced_motion = true
+		Comfort.reduced_motion = true
 		page.pick_pilot(a)
 		page.pick_pilot(b)
 		var seat_y: float = page.preview_rec().pilot.position.y if page.preview_rec().get("pilot") != null else 0.0
-		page.reduced_motion = false
+		Comfort.reduced_motion = false
 		page.pick_pilot(a)
 		page.pick_pilot(b)
 		var hop_y: float = page.preview_rec().pilot.position.y if page.preview_rec().get("pilot") != null else 0.0

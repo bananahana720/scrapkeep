@@ -7,7 +7,7 @@ const EnvTags := preload("res://src/experimental/env_tags.gd")
 const ChunkSockets := preload("res://src/experimental/arena_chunk_socket.gd")
 const SetpieceCraft := preload("res://src/presentation/craft/experimental_setpiece_craft.gd")
 const PropMotionRig := preload("res://src/presentation/prop_motion_rig.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 signal env_tag_emitted(payload: Dictionary)
 signal cover_relocated(from_slot: String, to_slot: String, world_pos: Vector3)
@@ -725,7 +725,6 @@ func _build_crane(id: String, origin_local: Vector3, cover_slots: Array[Dictiona
 	root.add_child(hull_body)
 
 	var cargo_rig := PropMotionRig.new()
-	cargo_rig.reduced_motion = UiTokens.reduced_motion
 	cargo_rig.add_part("cargo_hull", hull_pivot, {
 		"sway": true,
 		"sway_stiffness": 18.0,
@@ -869,11 +868,10 @@ func _on_cargo_touchdown(impulse_strength: float) -> void:
 	if not (rig is PropMotionRig):
 		return
 	var pr := rig as PropMotionRig
-	pr.reduced_motion = UiTokens.reduced_motion
 	var part := pr.part("cargo_hull")
 	if part != null:
 		part.sway_ambient_amp = 0.0
-	if UiTokens.reduced_motion:
+	if Comfort.reduced_motion:
 		pr.reset()
 	else:
 		pr.apply_impulse(Vector3.DOWN, impulse_strength, "cargo_hull")
@@ -911,8 +909,6 @@ func _step_crane(delta: float, ball_local: Vector3, actors: Array, facts: Array[
 	var to_p: Vector3 = slots[next_idx]["position"]
 
 	var rig: PropMotionRig = _crane.get("motion_rig") as PropMotionRig
-	if rig != null:
-		rig.reduced_motion = UiTokens.reduced_motion
 
 	match String(_crane["state"]):
 		"idle":

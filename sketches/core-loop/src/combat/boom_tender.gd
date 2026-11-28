@@ -308,7 +308,7 @@ func _place_buoy_visual(world_at: Vector3, spin: float) -> void:
 	if _floats == null or _boom == null or not _boom.is_inside_tree():
 		return
 	var local_at := _boom.to_local(world_at)
-	var rot := Basis(Vector3.RIGHT, spin * EnemyMotion.motion_scale) * Basis.from_scale(Vector3.ONE * (BUOY_SCALE * BUOY_THROW_SCALE))
+	var rot := Basis(Vector3.RIGHT, spin * Comfort.motion_scale()) * Basis.from_scale(Vector3.ONE * (BUOY_SCALE * BUOY_THROW_SCALE))
 	_floats.multimesh.set_instance_transform(FLOAT_OUT.size(), Transform3D(rot, local_at))
 
 

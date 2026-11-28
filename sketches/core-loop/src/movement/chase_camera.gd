@@ -2,6 +2,7 @@ extends Node3D
 
 const SpeedTier := preload("res://src/movement/speed_tier.gd")
 const Tuning := preload("res://src/movement/tuning.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 const SENSITIVITY := 0.0022
 const STICK_YAW := 2.6
 const STICK_PITCH := 1.6
@@ -59,7 +60,6 @@ var aim_assist := 0.5
 var shoulder_target := 0.0
 var shoulder_blend := 0.0
 var motion_scale := 1.0
-var reduced_motion := false
 
 var arm: SpringArm3D
 var cam: Camera3D
@@ -330,7 +330,7 @@ func aim_forward() -> Vector3:
 
 
 func _comfort_scale() -> float:
-	return 0.0 if reduced_motion else motion_scale
+	return 0.0 if Comfort.reduced_motion else motion_scale
 
 
 func shake_amplitude() -> float:

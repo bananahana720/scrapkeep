@@ -12,8 +12,8 @@ const ChainCounter := preload("res://src/ui/chain_counter.gd")
 const FxBudget := preload("res://src/presentation/fx_budget.gd")
 const FlashGuard := preload("res://src/presentation/flash_guard.gd")
 const Density := preload("res://src/presentation/density.gd")
-const UiTokens := preload("res://src/ui/ui_tokens.gd")
 const WordBudget := preload("res://src/core/word_budget.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const FUSION_KEYS := ["arc+frost", "arc+kinetic", "frost+kinetic", "frost+heat", "arc+heat", "heat+kinetic"]
 
@@ -42,7 +42,7 @@ func _run() -> void:
 	_check_streak_and_chain_counter()
 	FlashGuard.on = false
 	Density.live().reset()
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	quit(_t.verdict())
 
 
@@ -245,9 +245,9 @@ func _check_streak_and_chain_counter() -> void:
 			tier_cie_ok = false
 	_t.check("chain counter tier colours stay CIE76 >= 35 from HAZARD", tier_cie_ok)
 
-	UiTokens.reduced_motion = true
+	Comfort.reduced_motion = true
 	_t.check("reduced motion clamps chain counter scale to 1.0", is_equal_approx(counter.draw_scale(), 1.0))
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 
 	counter.reset()
 	_t.check("chain counter reset clears all momentum state",

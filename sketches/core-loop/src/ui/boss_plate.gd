@@ -8,6 +8,7 @@ const Roster := preload("res://src/combat/roster.gd")
 const UiDraw := preload("res://src/ui/ui_draw.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const ScrapFrame := preload("res://src/ui/scrap_frame.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const SIZE := Vector2(420.0, 44.0)
@@ -32,7 +33,6 @@ const LIGHT_SECONDS := 0.4
 const NO_HAND := -1
 const SERIAL := 46
 const STENCIL := UiTokens.LABEL
-static var reduced_motion := false
 
 var _warden: Node3D
 var _events
@@ -370,7 +370,7 @@ static func phase_color() -> Color:
 
 
 func diamond_scale(i: int) -> float:
-	if reduced_motion or _turn_age < 0.0:
+	if Comfort.reduced_motion or _turn_age < 0.0:
 		return 1.0
 	if i == phase() - 2:
 		return 1.0 + CRACK_POP * sin(PI * clampf(_turn_age / CRACK_SECONDS * 3.0, 0.0, 1.0))
@@ -409,7 +409,7 @@ func _draw_phases() -> void:
 			_:
 				draw_colored_polygon(shape, crack_backing())
 				draw_polyline(ring, neutral, 2.0)
-		if just_spent and not reduced_motion:
+		if just_spent and not Comfort.reduced_motion:
 			var shard_color := _fade(phase_color(), 1.0 - t)
 			for side in [-1.0, 1.0]:
 				var at := c + Vector2(side * (half + 10.0 * t), -6.0 * t + 14.0 * t * t)

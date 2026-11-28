@@ -1,5 +1,7 @@
 extends RefCounted
 
+const Comfort := preload("res://src/core/comfort.gd")
+
 const LENGTH := 2.0 * 240.0 / 129.0
 const TOP := 0.98
 const GROUND := -0.98
@@ -25,7 +27,6 @@ const MOVES := {
 		"out": 0.5, "clips": [[0.0, "heave", 0.0], [0.78, "big_cheer", 0.6, 0.0]]},
 }
 
-static var reduced_motion := false
 
 var holder: Node3D
 var core: Node3D
@@ -369,7 +370,7 @@ static func pose_at(id: String, t: float) -> Dictionary:
 			var perch := Vector3(0.0, TOP + 0.12, 0.0)
 			pose.at = _hop(SEAT, perch, leave, 0.4).lerp(SEAT, _ease_in(back))
 			var growl := _span(t, 0.22, 0.56) * (1.0 - _span(t, 0.56, 0.6))
-			pose.shake = Vector3(sin(t * 160.0), sin(t * 210.0) * 0.5, cos(t * 140.0)) * 0.035 * growl * (0.0 if reduced_motion else 1.0)
+			pose.shake = Vector3(sin(t * 160.0), sin(t * 210.0) * 0.5, cos(t * 140.0)) * 0.035 * growl * (0.0 if Comfort.reduced_motion else 1.0)
 			pose.yaw = 0.15
 		"tally":
 			var side := Vector3(-1.35, GROUND + FEET, 0.3)

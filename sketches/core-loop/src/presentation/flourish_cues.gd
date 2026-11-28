@@ -4,6 +4,7 @@ const FlourishRows := preload("res://src/presentation/flourish_rows.gd")
 const Requisition := preload("res://src/boss/requisition.gd")
 const BossModel := preload("res://src/boss/boss_model.gd")
 const Palette := preload("res://src/core/palette.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const HOLD_CAP := 2.0
@@ -309,7 +310,7 @@ func _on_flow_changed(state: String) -> void:
 
 
 func _reduced_motion() -> bool:
-	return ctx.camera != null and bool(ctx.camera.get("reduced_motion"))
+	return Comfort.reduced_motion
 
 
 func _world_beat(id: String, beat: Dictionary) -> void:

@@ -7,6 +7,7 @@ const Word := preload("res://src/presentation/world_fx/world_fx_word.gd")
 const Grain := preload("res://src/presentation/world_fx/world_fx_grain.gd")
 const WorldSound := preload("res://src/presentation/world_fx/world_fx_sound.gd")
 const FxLibrary := preload("res://src/presentation/fx_library.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 const RANK_SECONDS := 0.25
 const BURST_POOL := 2
@@ -24,11 +25,6 @@ const VOICE_KEEP := 1.25
 const VOICE_KEEP_M := 5.0
 
 static var current: Node3D
-static var preferred: bool:
-	get:
-		return Kit.reduced_motion
-	set(on):
-		Kit.reduced_motion = on
 
 var world := -1
 var low := false
@@ -66,7 +62,7 @@ static func install(parent: Node, world_index: int, is_low := false, is_reduced 
 
 
 static func hook(ctx) -> Node3D:
-	var fx := install(ctx.root, -1, false, preferred)
+	var fx := install(ctx.root, -1, false, Comfort.reduced_motion)
 	ctx.events.stage_entered.connect(fx._on_stage_entered.bind(ctx))
 	ctx.events.flow_changed.connect(fx._on_flow_changed)
 	ctx.events.event_started.connect(fx._on_event_started.bind(ctx))

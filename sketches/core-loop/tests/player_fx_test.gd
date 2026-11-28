@@ -16,6 +16,7 @@ const Threat := preload("res://src/combat/threat_grammar.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const DamageNumbers := preload("res://src/presentation/damage_numbers.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 var t := T.new("player_fx_test")
 var _game
@@ -721,7 +722,7 @@ func _sable_halo(fx) -> void:
 	t.near("the tap floor is the casters' least charged bolt", ChargeHalo.TAP_FLOOR, float(Weapons.BASE[Weapons.ARC_CASTER]["charge_min"]))
 	t.check("frost is ice blue, never the old works' green", PlayerFx.ELEMENT_COLORS["frost"] == Palette.ICE and PlayerFx.ELEMENT_COLORS["frost"] != Palette.ANCIENT)
 	t.check("a frost part's mote is ice blue", PlayerFx.part_color("frost_vane") in [Palette.ICE, Palette.ICE.lerp(Color.WHITE, 0.25)], str(PlayerFx.part_color("frost_vane")))
-	fx.reduced_motion = false
+	Comfort.reduced_motion = false
 	_hold_charge(0.0)
 	await _settle(0.15)
 	t.check("no halo before a charge", fx.halo() == null or fx.halo().hoops_shown() == 0)
@@ -809,13 +810,13 @@ func _sable_halo(fx) -> void:
 	await _settle(0.3)
 
 	# Reduce motion: the hoops hold still and throw no sparks; Reduce flashes cuts the full-charge swell.
-	fx.reduced_motion = true
+	Comfort.reduced_motion = true
 	_hold_charge(0.5)
 	await _frames(2)
 	var spin: float = halo._spin
 	await _settle(0.2)
 	t.check("reduced motion: the hoops do not spin and no sparks fly", is_equal_approx(halo._spin, spin) and halo.spark_ratio() == 0.0 and halo.hoops_shown() == 3)
-	fx.reduced_motion = false
+	Comfort.reduced_motion = false
 	_hold_charge(0.0)
 	await _settle(0.2)
 	var FlashGuard := load("res://src/presentation/flash_guard.gd")
@@ -865,7 +866,7 @@ func _rivet_fire(fx) -> void:
 	_game.player.pod_mount().add_child(ring)
 	fx._marker_wait.clear()
 	fx._rivet_shots = 0
-	fx.reduced_motion = false
+	Comfort.reduced_motion = false
 	var from: Vector3 = _game.player.shown_position()
 	var dir := Vector3(0, 0, -1)
 	fx._rivet_shot(from, dir)
@@ -894,10 +895,10 @@ func _rivet_fire(fx) -> void:
 	await _settle(0.35)
 	t.eq("a casing lives 0.35 s", fx.casings_alive(), 0)
 	t.check("a casing falls under gravity", fx._casing_v[0].y < 0.0, str(fx._casing_v[0]))
-	fx.reduced_motion = true
+	Comfort.reduced_motion = true
 	fx._rivet_shot(from, dir)
 	t.check("reduced motion keeps the flash and throws no casing", fx.flashes_alive() == 1 and fx.casings_alive() == 0)
-	fx.reduced_motion = false
+	Comfort.reduced_motion = false
 	ring.free()
 	fx._marker_wait.clear()
 

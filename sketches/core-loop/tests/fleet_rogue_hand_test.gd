@@ -12,6 +12,7 @@ const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Harness := preload("res://tests/doubles/boss_harness.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # The Fleet's and the Rogues' hands on the boss plate (LEGIBILITY.md section 14.3, ruling ek):
 #   - Brindle's hull is drawn in the Fleet's hand: a brass bezel on iron oxide with one notched corner,
@@ -84,14 +85,14 @@ var _game
 
 
 func _initialize() -> void:
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	_fleet_plate()
 	_warden_plates()
 	_rogue_plate()
 	_colour_law()
 	_reduced_motion()
 	_keeper_stays_keeper()
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 	_run()
 
 
@@ -234,15 +235,15 @@ func _colour_law() -> void:
 func _reduced_motion() -> void:
 	for hand in [UiTokens.Hand.FLEET, UiTokens.Hand.ROGUE]:
 		var frame: StyleBox = ScrapFrame.hand_plate(hand, BossPlate.SERIAL)
-		UiTokens.reduced_motion = false
+		Comfort.reduced_motion = false
 		var moving: Array = frame.parts(RECT)
-		UiTokens.reduced_motion = true
+		Comfort.reduced_motion = true
 		var still: Array = frame.parts(RECT)
 		var same := moving.size() == still.size()
 		for i in mini(moving.size(), still.size()):
 			same = same and moving[i].points == still[i].points
 		_t.check("hand %d's plate draws the same with less motion: nothing leans" % hand, same)
-	UiTokens.reduced_motion = false
+	Comfort.reduced_motion = false
 
 
 func _keeper_stays_keeper() -> void:

@@ -10,6 +10,7 @@ const PickQuiet := preload("res://src/ui/pick_quiet.gd")
 const BuildReadout := preload("res://src/ui/build_readout.gd")
 const Parts := preload("res://src/build/parts.gd")
 const Icons := preload("res://src/ui/icons.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 signal chosen(index: int)
@@ -337,7 +338,7 @@ func _play_out(chosen_index: int) -> void:
 		var card: Control = list[i]
 		_nudge(card, 0.0)
 		if i == chosen_index:
-			var pop := 1.0 if UiTokens.reduced_motion else POP
+			var pop := 1.0 if Comfort.reduced_motion else POP
 			_tween.tween_property(card, "scale", Vector2.ONE * pop, FADE_OUT * 0.45).set_trans(UiTokens.hand(UiTokens.Hand.KEEPER).trans).set_ease(Tween.EASE_OUT)
 			_tween.tween_property(card, "modulate:a", 0.0, FADE_OUT).set_delay(FADE_OUT * 0.45).set_ease(Tween.EASE_IN)
 		else:

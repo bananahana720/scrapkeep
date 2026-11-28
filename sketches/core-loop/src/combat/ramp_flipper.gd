@@ -288,7 +288,7 @@ func _on_end() -> void:
 		_plate.position = Vector3(0.0, CREW_HALF + 0.4, -0.4)
 		_plate.rotation = Vector3.ZERO
 		_plate.scale = Vector3.ONE * 0.4
-		_fold_t = FOLD_S if EnemyMotion.motion_scale > 0.0 else 0.0
+		_fold_t = FOLD_S if not Comfort.reduced_motion else 0.0
 
 
 func _exit_tree() -> void:

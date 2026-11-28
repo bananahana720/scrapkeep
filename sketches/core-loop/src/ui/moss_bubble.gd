@@ -9,6 +9,7 @@ const LoreRows := preload("res://src/core/lore_rows.gd")
 const PilotStory := preload("res://src/core/pilot_story.gd")
 const CallerTile := preload("res://src/ui/caller_tile.gd")
 const ScreenRegions := preload("res://src/ui/screen_regions.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 
 const TEXT_WIDTH := 330.0
@@ -31,7 +32,6 @@ const PLATE_AT := Vector2(6.0, 4.0)
 const PLATE_LEAD := CallerTile.SIDE - 8.0
 const PLATE_HEAD := 10.0
 
-static var reduced_motion := false
 
 var text := ""
 var kind := "moss_beat"
@@ -567,7 +567,7 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 		_tween.kill()
 	_tween = create_tween().set_parallel(true)
 	_tween.tween_property(self, "modulate:a", 1.0, 0.12).set_ease(Tween.EASE_OUT)
-	var still := reduced_motion
+	var still := Comfort.reduced_motion
 	match mood_now:
 		"restart":
 			_spin = 0.0 if still else -0.35
@@ -589,7 +589,6 @@ func _say(line: String, fact: String, mood_now: String, level: float, grumbles: 
 
 func _seat_caller(who: String, line: String, voice_s: float) -> String:
 	var shown := String(LoreRows.SPEAKERS.get(who, ""))
-	CallerTile.reduced_motion = reduced_motion
 	if _game != null and _game.flow != null:
 		_tile.pilots = _game.flow.classes
 	var named := shown != "" and _tile.present(who, shown, voice_s)
@@ -715,7 +714,7 @@ func _draw() -> void:
 		return
 	var e := shown_exasperation
 	var shake := Vector2(sin(_clock * TAU * 13.0), cos(_clock * TAU * 11.0)) * (e * 0.8 + (3.0 if grumble else 0.0)) * exp(-_clock * 5.0)
-	if reduced_motion:
+	if Comfort.reduced_motion:
 		shake = Vector2.ZERO
 	var squash := Vector2(1.0 / _pop, _pop) if grumble and mood == "beat" else Vector2(_pop, _pop)
 	draw_set_transform(pivot_offset + shake, _spin, squash)
@@ -730,7 +729,7 @@ func _draw() -> void:
 	for p in body:
 		shifted.append(p + root)
 	var mid_y := _body.y * 0.5
-	var wag := 0.0 if reduced_motion else sin(_clock * TAU * 3.0) * e * 1.5
+	var wag := 0.0 if Comfort.reduced_motion else sin(_clock * TAU * 3.0) * e * 1.5
 	var tip := -4.0 if _lead == 0.0 else PLATE_AT.x + CallerTile.SIDE + 2.0
 	var tail := PackedVector2Array([root + Vector2(TAIL + _lead + 2.0, mid_y - 10.0), root + Vector2(tip, mid_y + 8.0 + wag), root + Vector2(TAIL + _lead + 2.0, mid_y + 10.0)])
 	draw_colored_polygon(tail, Color(Palette.CHARCOAL, 0.94))

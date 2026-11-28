@@ -6,8 +6,8 @@ const Harness := preload("res://tests/doubles/boss_harness.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Rows := preload("res://src/presentation/flourish_rows.gd")
 const Cues := preload("res://src/presentation/flourish_cues.gd")
-const Player := preload("res://src/presentation/flourish_player.gd")
 const T := preload("res://tests/support/t.gd")
+const Comfort := preload("res://src/core/comfort.gd")
 
 # Ruling cf: Brindle's entrance has a close-up. A comic panel beside his card shows the
 # Requisition from a low camera as it comes over the rim (flourish_inset.gd), and the world
@@ -144,14 +144,12 @@ func _physics_process(_delta: float) -> bool:
 	_t.check("B1 a bot's arrival shows the panel and never slows the world", player.id == "brindle_arrival" and not player.short and _inset() != null
 			and is_equal_approx(Engine.time_scale, 1.0), "playing %s, panel %s, scale %.2f" % [player.id, _inset() != null, Engine.time_scale])
 
-	_game.camera.reduced_motion = true
-	Player.reduced_motion = true
+	Comfort.reduced_motion = true
 	_arrive(true)
 	_to(mid)
 	_t.check("M1 reduced motion: the panel shows, the world does not slow", not player.short and _inset() != null and is_equal_approx(Engine.time_scale, 1.0),
 		"panel %s, scale %.2f" % [_inset() != null, Engine.time_scale])
-	_game.camera.reduced_motion = false
-	Player.reduced_motion = false
+	Comfort.reduced_motion = false
 
 	var bubble = _game.get_node("Workshop").bubble
 	var press := InputEventKey.new()
