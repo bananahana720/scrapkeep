@@ -4,6 +4,7 @@ const Warden := preload("res://src/combat/warden.gd")
 const Reactor := preload("res://src/combat/warden_reactor.gd")
 const BossPosture := preload("res://src/core/boss_posture.gd")
 const T := preload("res://tests/support/t.gd")
+const FxLibrary := preload("res://src/presentation/fx_library.gd")
 
 # W1-67, the Wardens escalate (gameplay critique finding 5). The pulse cycle shrinks by the stage's
 # ratchet (challenge dial warden.pulse_ratchet_by_stage) for each chunk lost, the tell never shrinks,
@@ -47,6 +48,8 @@ class Mount extends Node3D:
 		return home + Vector3.UP * 5.0
 	func flat_to_ball() -> Vector3:
 		return Vector3.FORWARD
+	func burst(parent: Node, id: String, at: Vector3, count := -1, tint := Color.TRANSPARENT, toward := Vector3.ZERO, isolate := false) -> void:
+		FxLibrary.burst(parent, id, at, count, tint, toward, isolate)
 
 
 var _t := T.new("warden_ratchet_test")
