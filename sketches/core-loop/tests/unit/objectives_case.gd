@@ -61,6 +61,18 @@ class FakeBall extends RefCounted:
 	var kit := FakeKit.new()
 
 
+class FakeSite extends RefCounted:
+	var started := false
+	var failed := false
+	var done := false
+	var surge_live := false
+	var rule := {"finishes": "break"}
+	var global_position := Vector3.ZERO
+
+	func _init(at: Vector3) -> void:
+		global_position = at
+
+
 class FakeWarden extends RefCounted:
 	var spec := {"park_landmark": true}
 	var family := "reactor"
@@ -83,6 +95,7 @@ func run(t) -> void:
 	_mount_reading(t)
 	_struggle(t)
 	_detour(t)
+	_detour_pick(t)
 
 
 # What the mounting hands the plate (WardenReactor.plate_reading): the dam and the flume by
@@ -448,3 +461,41 @@ func _detour(t) -> void:
 	t.eq("already-ticked named cache rejects a duplicate done event", Objectives.detour_site_matches(site_a, "cracked_cache", true, site_a), false)
 	t.eq("different id never matches", Objectives.detour_site_matches(site_a, "enemy_camp", true), false)
 	site_a.free()
+
+
+func _detour_pick(t) -> void:
+	var d := Objectives.Detour.new()
+	var ball := Vector3.ZERO
+	var near := FakeSite.new(Vector3(0.0, 0.0, 10.0))
+	var far := FakeSite.new(Vector3(0.0, 0.0, 30.0))
+	var behind := FakeSite.new(Vector3(0.0, 0.0, -5.0))
+	var sites := [far, near, behind]
+	var cage := {"quest": "rivet", "at": Vector3(3.0, 0.0, 4.0)}
+	t.eq("a waiting cage outranks every site", d.pick(ball, [cage], sites, null, 100.0), {"cage": cage, "metres": 5})
+	t.eq("and holds no site", d.site, null)
+	t.eq("the nearest site on offer takes the row", d.pick(ball, [], sites, null, 100.0), {"site": behind, "metres": 5})
+	t.eq("and is held", d.site, behind)
+	t.eq("a site behind the ball on its way to the Warden is passed over", d.pick(ball, [], sites, Vector3(0.0, 0.0, 50.0), 100.0), {"site": near, "metres": 10})
+	t.eq("the one ahead is held instead", d.site, near)
+	far.failed = true
+	t.eq("a failed site is never offered", d.pick(Vector3(0.0, 0.0, 29.0), [], [far], null, 100.0), {})
+	t.eq("and nothing on offer holds nothing", d.site, null)
+	far.failed = false
+	d.pick(ball, [], sites, Vector3(0.0, 0.0, 50.0), 100.0)
+	near.started = true
+	t.eq("a started held site keeps the row over a nearer one", d.pick(Vector3(0.0, 0.0, 25.0), [], sites, Vector3(0.0, 0.0, 50.0), 100.0), {"site": near, "metres": 15})
+	t.eq("out to the let-go distance across the ground", d.pick(Vector3(0.0, 90.0, 110.0), [], sites, null, 100.0), {"site": near, "metres": 134})
+	near.surge_live = true
+	t.eq("a surging held site keeps the row past it", d.pick(Vector3(0.0, 0.0, 200.0), [], sites, null, 100.0), {"site": near, "metres": 190})
+	near.surge_live = false
+	t.eq("past it the row lets go to the nearest on offer", d.pick(Vector3(0.0, 0.0, 200.0), [], sites, null, 100.0), {"site": far, "metres": 170})
+	t.eq("which is held next", d.site, far)
+	far.started = true
+	far.rule = {"finishes": "trade"}
+	t.eq("a started trade is never held", d.pick(Vector3(0.0, 0.0, 31.0), [], sites, null, 100.0), {"site": behind, "metres": 36})
+	behind.started = true
+	behind.done = true
+	t.eq("nor a done one", d.pick(Vector3(0.0, 0.0, -4.0), [], sites, null, 100.0), {})
+	d.site = near
+	d.clear()
+	t.eq("clear drops the held site", d.site, null)

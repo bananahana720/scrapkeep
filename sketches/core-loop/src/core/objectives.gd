@@ -275,3 +275,41 @@ class Struggle:
 			tally = 0.0
 		if tally >= TRYING_SECONDS:
 			struggling = true
+
+
+class Detour:
+	extends RefCounted
+
+	var site = null
+
+	func pick(ball: Vector3, waiting: Array, sites: Array, warden_at, let_go_m: float) -> Dictionary:
+		if not waiting.is_empty():
+			return {"cage": waiting[0], "metres": int(ball.distance_to(waiting[0]["at"]))}
+		var best = null
+		var best_m := INF
+		for s in sites:
+			if s.started or s.failed:
+				continue
+			if warden_at != null and not _ahead_of(ball, s.global_position, warden_at):
+				continue
+			var m := ball.distance_to(s.global_position)
+			if m < best_m:
+				best = s
+				best_m = m
+		if is_instance_valid(site) and site.started and not site.done and not site.failed \
+				and site.rule.finishes != "trade":
+			var to_kept: Vector3 = site.global_position - ball
+			if site.surge_live or Vector2(to_kept.x, to_kept.z).length() <= let_go_m:
+				return {"site": site, "metres": int(to_kept.length())}
+		site = best
+		if best == null:
+			return {}
+		return {"site": best, "metres": int(best_m)}
+
+	func clear() -> void:
+		site = null
+
+	static func _ahead_of(ball: Vector3, point: Vector3, goal: Vector3) -> bool:
+		var to_point := Vector2(point.x - ball.x, point.z - ball.z)
+		var to_goal := Vector2(goal.x - ball.x, goal.z - ball.z)
+		return to_point.dot(to_goal) > 0.0

@@ -25,9 +25,9 @@ func _frames(count: int) -> void:
 		await physics_frame
 
 
-# The site the row last named, where the HUD keeps it (null on a build that keeps none).
+# The site the row last named, where the HUD's Objectives.Detour keeps it.
 func _named():
-	return _hud.get("_detour_site")
+	return _hud._detour.site
 
 
 func _row() -> Dictionary:
@@ -234,7 +234,7 @@ func _run() -> void:
 		s.done = false
 		s.failed = false
 	_hud._detour_done.clear()
-	_hud._detour_site = null
+	_hud._detour.clear()
 	_hud._detour_ticked = null
 	var caches: Array = _acts.sites.filter(func(s): return String(s.id) == "cracked_cache")
 	if _t.check("the dam has two cracked_cache sites for W1-113", caches.size() >= 2, "%d" % caches.size()):
@@ -245,7 +245,7 @@ func _run() -> void:
 		var behind_cache: Vector3 = named_cache.global_position - to_warden.normalized() * 15.0
 		_game.player.reset_to(Vector3(behind_cache.x, named_cache.global_position.y + 1.0, behind_cache.z))
 		await _frames(2)
-		_hud._detour_site = named_cache
+		_hud._detour.site = named_cache
 		other_cache.done = true
 		_game.events.activity_done.emit("cracked_cache", other_cache.global_position)
 		_t.check("cracking a non-named cache does not tick the named detour cache", not _hud._detour_done.showing(), _hud._detour_done.words)
