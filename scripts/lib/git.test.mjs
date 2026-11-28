@@ -190,18 +190,19 @@ test("gitState and cleanHead report repository state and refuse dirty trees", ()
   }
 });
 
-const STARTS_GIT = /\b[\w$.]+\(\s*["'`]git["'`]\s*,|\bexec(?:Sync|Async)?\(\s*["'`]git\s/;
+const GIT_COMMAND = String.raw`(?:[^"'\`]*?(?:&&|\|\||[;|]|-l?c\s+['"]?))?\s*git\s`;
+const STARTS_GIT = new RegExp(
+  [
+    String.raw`\b[\w$.]+\(\s*["'\`]git["'\`]\s*,`,
+    String.raw`\bexec(?:Sync|Async)?\(\s*["'\`]` + GIT_COMMAND,
+    String.raw`["'\`]-l?c["'\`]\s*,\s*["'\`]` + GIT_COMMAND,
+  ].join("|"),
+);
 
 const STARTS_GIT_BY_HAND = {
   "scripts/lib/git.mjs": "the helper itself",
   "scripts/ci/affected.mjs":
     "the CI changes job checks out only scripts/ci and scripts/lib/cli.mjs, so scripts/lib/git.mjs is not on disk when it runs",
-  "scripts/card-runner.mjs":
-    "its sh runner starts git under the timeout program with a kill grace and keeps the exit status and stderr for the card receipt",
-  "scripts/sketch-export.mjs":
-    "git goes through the injectable runCmd that also starts Godot; its tests fake that runner and pin the git command in the call list",
-  "scripts/sketch-export-mac.mjs":
-    "git goes through the run helper that also starts Godot and codesign, and each failure prints git's stderr in the FAIL line",
   "scripts/sketch-lint.test.mjs": "pull request 1332 holds this file",
 };
 
@@ -230,10 +231,30 @@ test("the direct-git listing names a file that starts git by hand and fails on a
     writeFileSync(path.join(dir, "b.js"), "execSync(`" + "git rev-parse HEAD`);\n");
     writeFileSync(
       path.join(dir, "c.mjs"),
-      'git(["status"]);\nthrow new Error(`git status failed`);\n',
+      [
+        'git(["status"]);',
+        "throw new Error(`git status failed`);",
+        'spawnSync("python3", ["-c", "import git"]);',
+        'git(["-c", "user.name=t", "commit"]);',
+        'spawnSync("sh", ["-c", "digit status"]);',
+        "",
+      ].join("\n"),
     );
-    git(["add", "a.mjs", "b.js", "c.mjs"], { cwd: dir });
-    assert.deepEqual(filesStartingGit(dir), ["a.mjs", "b.js"]);
+    const cases = {
+      "d.mjs": ["runCmd(", '"git", ["-C", root, "status"]);'],
+      "e.mjs": ['spawnSync("sh", ["-c", "', 'git status"]);'],
+      "f.mjs": ['spawn("bash", [\n  "-lc",\n  `cd ${dir} && ', "git fetch origin`,\n]);"],
+      "g.js": ["execSync(\"bash -lc '", "git status'\");"],
+      "h.mjs": ["execSync(`npm ci; ", "git log -1`);"],
+    };
+    for (const [file, parts] of Object.entries(cases))
+      writeFileSync(path.join(dir, file), parts.join("") + "\n");
+    const files = ["a.mjs", "b.js", "c.mjs", "d.mjs", "e.mjs", "f.mjs", "g.js", "h.mjs"];
+    git(["add", ...files], { cwd: dir });
+    assert.deepEqual(
+      filesStartingGit(dir),
+      files.filter((file) => file !== "c.mjs"),
+    );
     assert.throws(() => filesStartingGit(empty), /lists no \.mjs or \.js file/);
     assert.throws(() => filesStartingGit(outside), /not a git repository/i);
   } finally {

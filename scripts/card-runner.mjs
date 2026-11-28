@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { FACTS_HEADING, parseWaveFacts } from "./wave-state.mjs";
 import { isMain } from "./lib/cli.mjs";
+import { git, gitOptional } from "./lib/git.mjs";
 
 export const BACKLOG_FILE = "BACKLOG.md";
 export const STATE_FILE = "project-guide/handoff/STATE.md";
@@ -247,6 +248,19 @@ function sh(command, args, { cwd, timeoutMinutes, input } = {}) {
   return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 }
 
+function gitStep(args, { timeoutMinutes, ...options } = {}) {
+  try {
+    git(args, {
+      cwd: process.cwd(),
+      ...options,
+      timeout: timeoutMinutes && timeoutMinutes * 60_000,
+    });
+    return { ok: true, stderr: "" };
+  } catch (error) {
+    return { ok: false, stderr: error.stderr || error.message };
+  }
+}
+
 export function claudeJson(stdout, capUsd) {
   try {
     const parsed = JSON.parse(stdout.trim().split("\n").pop());
@@ -305,12 +319,12 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
     return receipt;
   };
 
-  const fetched = sh("git", ["fetch", "-q", "origin", stage], { timeoutMinutes: 5 });
-  if (fetched.status !== 0) {
+  const fetched = gitStep(["fetch", "-q", "origin", stage], { timeoutMinutes: 5 });
+  if (!fetched.ok) {
     note("base", false, `fetch failed: ${fetched.stderr}`);
     return finish("stopped: could not fetch the stage");
   }
-  const base = sh("git", [
+  const base = gitStep([
     "worktree",
     "add",
     "-q",
@@ -319,13 +333,10 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
     worktree,
     `origin/${stage}`,
   ]);
-  note(
-    "base",
-    base.status === 0,
-    base.stderr || sh("git", ["-C", worktree, "rev-parse", "HEAD"]).stdout.trim(),
-  );
-  if (base.status !== 0) return finish("stopped at base");
-  const baseHead = sh("git", ["-C", worktree, "rev-parse", "HEAD"]).stdout.trim();
+  const headOf = () => gitOptional(["rev-parse", "HEAD"], { cwd: worktree }) ?? "";
+  note("base", base.ok, base.stderr || headOf());
+  if (!base.ok) return finish("stopped at base");
+  const baseHead = headOf();
 
   const write = sh(
     "claude",
@@ -349,9 +360,9 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
   const writer = claudeJson(write.stdout, planned.budget.usd);
   receipt.cost += writer.cost;
   receipt.writer = writer.text;
-  const head = sh("git", ["-C", worktree, "rev-parse", "HEAD"]).stdout.trim();
+  const head = headOf();
   const onBranch =
-    sh("git", ["-C", worktree, "branch", "--show-current"]).stdout.trim() === planned.branch;
+    (gitOptional(["branch", "--show-current"], { cwd: worktree }) ?? "") === planned.branch;
   note(
     "write",
     write.status === 0 && head !== baseHead,
@@ -378,7 +389,12 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
   note("gate", gate.status === 0, gateLine);
   if (gate.status !== 0) return finish("fast lane red; branch kept local");
 
-  const diff = sh("git", ["-C", worktree, "diff", `origin/${stage}...HEAD`]).stdout;
+  const diff =
+    gitOptional(["diff", `origin/${stage}...HEAD`], {
+      cwd: worktree,
+      trim: false,
+      maxBuffer: 256 * 1024 * 1024,
+    }) ?? "";
   const review = sh(
     "claude",
     [
@@ -400,15 +416,12 @@ function runCard(card, planned, { stage, cardsRoot, receipts }) {
   note("review", verdict === "PASS", `${verdict}, $${reviewer.cost.toFixed(2)}`);
   if (verdict !== "PASS") return finish("review did not pass; branch kept local");
 
-  const push = sh(
-    "git",
-    ["-C", worktree, "push", "-q", "-u", "origin", `HEAD:refs/heads/${planned.branch}`],
-    { timeoutMinutes: 5 },
-  );
-  note("push", push.status === 0, push.stderr || planned.branch);
-  return finish(
-    push.status === 0 ? "pushed; caller opens the draft PR and posts READY" : "push failed",
-  );
+  const push = gitStep(["push", "-q", "-u", "origin", `HEAD:refs/heads/${planned.branch}`], {
+    cwd: worktree,
+    timeoutMinutes: 5,
+  });
+  note("push", push.ok, push.stderr || planned.branch);
+  return finish(push.ok ? "pushed; caller opens the draft PR and posts READY" : "push failed");
 }
 
 export function runQueue(
