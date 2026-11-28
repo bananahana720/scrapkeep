@@ -263,7 +263,7 @@ On 27 November 2026 Andrew wrote to the coordinator: "proceed with recommendatio
 9. **DOC-06.** The newer of the two ADR files numbered `TADR-011` takes the next free number, and every link to it follows.
 10. **S2's one-line edit of `package.json`** (pull request 1293) is approved. No other unit may edit that file.
 11. **X1, C4 and F1 were pushed by the coordinator** and are pull requests 1323, 1324 and 1325.
-12. **The go-ahead list in [AGENTS.md](../../AGENTS.md) is reworded** in a reviewed docs unit: it names the macOS save folder beside the Linux one, the root `package.json` in place of a path that does not exist, and this page's delete list in place of `/mnt/project-files/`, a folder the Mac Studio does not have.
+12. **The go-ahead list in [AGENTS.md](../../AGENTS.md) is reworded** in pull request 1290, with this page: it now names the macOS save folder beside the Linux one, the root `package.json` in place of a path that does not exist, and this page's delete list in place of `/mnt/project-files/`, a folder the Mac Studio does not have.
 13. **The bead's outline keeps the grey it shows on screen**, and the code gets a name that says what the colour is (LEAD-31). Nothing visible changes.
 14. **A finding that cannot be fixed without changing behaviour is not fixed.** It is listed under [Waiting on Andrew](#waiting-on-andrew).
 15. **UI-05 is closed.** The survey proposed moving `hud.objective_reading()` into `core/objectives.gd`. Four of its eleven inputs are state the HUD holds, so the move would drag HUD state into `core`. The two callers in `core` (`play_watch.gd` and `sitting_notes.gd`) record what the player sees on screen, which is a reason for them to ask the HUD. Left as it is.
