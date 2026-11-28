@@ -130,7 +130,7 @@ func _check_tread_plating() -> void:
 	var dt := 1.0 / float(Engine.physics_ticks_per_second)
 	_player.state.carving = true
 	_player.state.boost_cooldown = 2.0
-	_combat._step_micro_mutations(dt * 10.0)
+	_combat.micro_mutations.step_micro_mutations(dt * 10.0)
 	var ctrl_cd: float = _player.state.boost_cooldown
 	_t.check("tread_control_no_extra_refund", is_equal_approx(ctrl_cd, 2.0), "ctrl_cd=%.4f" % ctrl_cd)
 
@@ -140,7 +140,7 @@ func _check_tread_plating() -> void:
 	_player.state.boost_cooldown = 2.0
 	_player.abilities.spend(AbilityState.MOVEMENT)
 	var mv_before: float = _player.abilities.slot(AbilityState.MOVEMENT).recharge
-	_combat._step_micro_mutations(0.4)
+	_combat.micro_mutations.step_micro_mutations(0.4)
 	var mv_after: float = _player.abilities.slot(AbilityState.MOVEMENT).recharge
 	_t.check("tread_boost_cd_25pct", is_equal_approx(_player.state.boost_cooldown, 1.9),
 		"boost_cd=%.4f expected=1.9" % _player.state.boost_cooldown)
@@ -149,7 +149,7 @@ func _check_tread_plating() -> void:
 	# Not carving: no bonus refund.
 	_player.state.carving = false
 	_player.state.boost_cooldown = 2.0
-	_combat._step_micro_mutations(0.4)
+	_combat.micro_mutations.step_micro_mutations(0.4)
 	_t.check("tread_no_carve_no_refund", is_equal_approx(_player.state.boost_cooldown, 2.0),
 		"cd=%.4f" % _player.state.boost_cooldown)
 
@@ -157,25 +157,25 @@ func _check_tread_plating() -> void:
 func _check_long_spool() -> void:
 	# Control without long_spool: grapple_released grants no air-steer surge.
 	_set_parts([])
-	_combat._reset_w47_c2_state(true)
+	_combat.micro_mutations.reset(true)
 	_game.ctx.events.grapple_released.emit()
-	_t.check("spool_control_no_surge", is_equal_approx(_combat.air_steer_surge_left(), 0.0),
-		"surge=%.3f" % _combat.air_steer_surge_left())
+	_t.check("spool_control_no_surge", is_equal_approx(_combat.micro_mutations.air_steer_surge_left(), 0.0),
+		"surge=%.3f" % _combat.micro_mutations.air_steer_surge_left())
 
 	# With long_spool: grapple_released grants 0.4 s air-steer surge.
 	_set_parts(["long_spool"])
 	_game.ctx.events.grapple_released.emit()
-	_t.check("spool_surge_04s", is_equal_approx(_combat.air_steer_surge_left(), 0.4),
-		"surge=%.3f" % _combat.air_steer_surge_left())
+	_t.check("spool_surge_04s", is_equal_approx(_combat.micro_mutations.air_steer_surge_left(), 0.4),
+		"surge=%.3f" % _combat.micro_mutations.air_steer_surge_left())
 	# Surge counts down and expires cleanly after 0.4 s.
 	_player.state.grounded = false
 	_player.intent.move = Vector2(1.0, 0.0)
-	_combat._step_micro_mutations(0.2)
-	_t.check("spool_surge_midway", _combat.air_steer_surge_left() > 0.15 and _combat.air_steer_surge_left() < 0.25,
-		"mid=%.3f" % _combat.air_steer_surge_left())
-	_combat._step_micro_mutations(0.25)
-	_t.check("spool_surge_expired", is_equal_approx(_combat.air_steer_surge_left(), 0.0),
-		"after=%.3f" % _combat.air_steer_surge_left())
+	_combat.micro_mutations.step_micro_mutations(0.2)
+	_t.check("spool_surge_midway", _combat.micro_mutations.air_steer_surge_left() > 0.15 and _combat.micro_mutations.air_steer_surge_left() < 0.25,
+		"mid=%.3f" % _combat.micro_mutations.air_steer_surge_left())
+	_combat.micro_mutations.step_micro_mutations(0.25)
+	_t.check("spool_surge_expired", is_equal_approx(_combat.micro_mutations.air_steer_surge_left(), 0.0),
+		"after=%.3f" % _combat.micro_mutations.air_steer_surge_left())
 	_player.intent.move = Vector2.ZERO
 
 
@@ -189,7 +189,7 @@ func _check_dash_vane() -> void:
 
 	# Control without dash_vane: air-dashing below CRUISE does not bat shell.
 	_set_parts([])
-	_combat._reset_w47_c2_state(true)
+	_combat.micro_mutations.reset(true)
 	var shell_ctrl := Projectile.new()
 	_game.ctx.root.add_child(shell_ctrl)
 	shell_ctrl.setup(_player, _combat.ground, _game.ctx.root, Callable(_game.ctx.flow, "in_play"),
@@ -217,7 +217,7 @@ func _check_dash_vane() -> void:
 func _check_loose_trigger() -> void:
 	# Pure math check for +25% window extension.
 	var base_w := Vector2(0.40, 0.60)
-	var ext_w: Vector2 = _combat.extended_window(base_w, 0.25)
+	var ext_w: Vector2 = _combat.micro_mutations.extended_window(base_w, 0.25)
 	_t.check("loose_trigger_math",
 		is_equal_approx(ext_w.x, 0.40) and is_equal_approx(ext_w.y, 0.65),
 		"base=%s ext=%s" % [base_w, ext_w])
@@ -231,22 +231,22 @@ func _check_loose_trigger() -> void:
 
 	# Control without loose_trigger: hitting a Skilled window keeps base window span.
 	_set_parts([])
-	_combat._reset_w47_c2_state(true)
-	_combat._step_cadence_micro(weapon, pat, [{"kind": WeaponDriver.SHOT_BEAT_3}])
+	_combat.micro_mutations.reset(true)
+	_combat.micro_mutations.step_cadence_micro(weapon, pat, [{"kind": WeaponDriver.SHOT_BEAT_3}])
 	var ctrl_w: Vector2 = _combat.active_window_range()
 	_t.check("loose_trigger_control_unextended",
-		not _combat.cadence_window_extended() and is_equal_approx(ctrl_w.y - ctrl_w.x, orig_span),
-		"ext=%s ctrl_w=%s" % [_combat.cadence_window_extended(), ctrl_w])
+		not _combat.micro_mutations.cadence_window_extended() and is_equal_approx(ctrl_w.y - ctrl_w.x, orig_span),
+		"ext=%s ctrl_w=%s" % [_combat.micro_mutations.cadence_window_extended(), ctrl_w])
 
 	# With loose_trigger: landing a Skilled cadence window extends next window by +25%.
 	_set_parts(["loose_trigger"])
-	_combat._step_cadence_micro(weapon, pat, [{"kind": WeaponDriver.SHOT_BEAT_3}])
+	_combat.micro_mutations.step_cadence_micro(weapon, pat, [{"kind": WeaponDriver.SHOT_BEAT_3}])
 	var widened_w: Vector2 = _combat.active_window_range()
 	_t.check("loose_trigger_extends_25pct",
-		_combat.cadence_window_extended() and is_equal_approx(widened_w.y - widened_w.x, orig_span * 1.25),
-		"ext=%s widened_w=%s expected_span=%.4f" % [_combat.cadence_window_extended(), widened_w, orig_span * 1.25])
+		_combat.micro_mutations.cadence_window_extended() and is_equal_approx(widened_w.y - widened_w.x, orig_span * 1.25),
+		"ext=%s widened_w=%s expected_span=%.4f" % [_combat.micro_mutations.cadence_window_extended(), widened_w, orig_span * 1.25])
 	# Consecutive skilled hit stays at +25% (never compounds exponentially).
-	_combat._step_cadence_micro(weapon, pat, [{"kind": WeaponDriver.SHOT_BEAT_3}])
+	_combat.micro_mutations.step_cadence_micro(weapon, pat, [{"kind": WeaponDriver.SHOT_BEAT_3}])
 	var second_w: Vector2 = _combat.active_window_range()
 	_t.check("loose_trigger_no_compound", is_equal_approx(second_w.y - second_w.x, orig_span * 1.25),
 		"second_w=%s" % second_w)
@@ -301,7 +301,7 @@ func _check_long_barrel() -> void:
 func _check_boost_coil() -> void:
 	# Control without boost_coil: shattering a heft prop while boosting leaves boost_cooldown intact.
 	_set_parts([])
-	_combat._reset_w47_c2_state(true)
+	_combat.micro_mutations.reset(true)
 	var full_cd: float = _player.tuning.boost_cooldown()
 	_player.state.boost_cooldown = full_cd
 	_game.ctx.events.boosted.emit(Vector3.FORWARD)
@@ -327,10 +327,10 @@ func _check_reset_hygiene() -> void:
 	_set_parts(["long_spool", "loose_trigger", "dash_vane", "boost_coil"])
 	_game.ctx.events.grapple_released.emit()
 	_game.ctx.events.dashed.emit(Vector3.RIGHT)
-	_combat._step_cadence_micro(_combat.active_weapon(), _combat._patterns[_combat.active_weapon()],
+	_combat.micro_mutations.step_cadence_micro(_combat.active_weapon(), _combat._patterns[_combat.active_weapon()],
 		[{"kind": WeaponDriver.SHOT_BEAT_3}])
 	_combat._start_attempt()
-	_t.check("reset_clears_surge", is_equal_approx(_combat.air_steer_surge_left(), 0.0), "surge=0")
-	_t.check("reset_clears_cadence", not _combat.cadence_window_extended(), "cadence=false")
-	_t.check("reset_clears_dash_bat", is_equal_approx(_combat._air_dash_bat_left, 0.0), "dash_bat=0")
-	_t.check("reset_clears_boost_window", is_equal_approx(_combat._boost_active_left, 0.0), "boost_win=0")
+	_t.check("reset_clears_surge", is_equal_approx(_combat.micro_mutations.air_steer_surge_left(), 0.0), "surge=0")
+	_t.check("reset_clears_cadence", not _combat.micro_mutations.cadence_window_extended(), "cadence=false")
+	_t.check("reset_clears_dash_bat", is_equal_approx(_combat.micro_mutations.air_dash_bat_left, 0.0), "dash_bat=0")
+	_t.check("reset_clears_boost_window", is_equal_approx(_combat.micro_mutations._boost_active_left, 0.0), "boost_win=0")

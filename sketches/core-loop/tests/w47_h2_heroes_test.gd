@@ -467,10 +467,11 @@ func _test_hygiene_and_resets() -> void:
 		var src := SourceScan.text(_t, path)
 		if src == "" or src.findn(orb_word) != -1:
 			orb_hits.append(path)
-	var combat_src := SourceScan.text(_t, "res://src/combat/combat.gd")
-	for phrase in [orb_word + " strike", orb_word + " laser", orb_word + " beam", orb_word + " cannon"]:
-		if combat_src.findn(phrase) != -1:
-			orb_hits.append("res://src/combat/combat.gd:" + phrase)
+	for path in ["res://src/combat/combat.gd", "res://src/combat/micro_mutations.gd"]:
+		var phrase_src := SourceScan.text(_t, path)
+		for phrase in [orb_word + " strike", orb_word + " laser", orb_word + " beam", orb_word + " cannon"]:
+			if phrase_src == "" or phrase_src.findn(phrase) != -1:
+				orb_hits.append(path + ":" + phrase)
 	_t.eq("Zero disallowed space-strike terminology in Tarn/Cannon/Combat/Destructibles source", orb_hits, [])
 
 	# Purely mechanical worn-steel articulated claw in Tarn's claw module (Call #4).

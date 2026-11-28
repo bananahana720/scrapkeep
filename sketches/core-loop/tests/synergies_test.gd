@@ -169,7 +169,7 @@ func _check_pendulum_tesla() -> void:
 	_set_parts(["long_spool"])
 	_player.kit.hooked = true
 	_player.kit.anchor = origin + Vector3(10.0, 0.0, 0.0)
-	_combat._step_pendulum_tesla([mid_e])
+	_combat.micro_mutations._step_pendulum_tesla([mid_e])
 	_t.check("tesla_control_no_zap", is_equal_approx(mid_e.hp, hp0), "hp=%.1f" % mid_e.hp)
 
 	# With Pendulum Tesla (Anchor + Arc): cable zaps swept enemy once & charges Special +15%.
@@ -177,14 +177,14 @@ func _check_pendulum_tesla() -> void:
 	_player.abilities.spend(AbilityState.SPECIAL)
 	var sp_before: float = _player.abilities.slot(AbilityState.SPECIAL).recharge
 	var sp_full: float = _player.abilities.cooldown_of(AbilityState.SPECIAL)
-	_combat._step_pendulum_tesla([mid_e])
+	_combat.micro_mutations._step_pendulum_tesla([mid_e])
 	var hp1: float = mid_e.hp
 	var sp_after: float = _player.abilities.slot(AbilityState.SPECIAL).recharge
 	_t.check("tesla_zaps_swept_enemy", hp1 < hp0, "hp %.1f -> %.1f" % [hp0, hp1])
 	_t.check("tesla_charges_special_15pct", is_equal_approx(sp_after - sp_before, sp_full * 0.15),
 		"sp_before=%.3f sp_after=%.3f full=%.3f" % [sp_before, sp_after, sp_full])
 	# Second tick on same swing does NOT zap same enemy again or double-charge Special.
-	_combat._step_pendulum_tesla([mid_e])
+	_combat.micro_mutations._step_pendulum_tesla([mid_e])
 	_t.check("tesla_once_per_swing", is_equal_approx(mid_e.hp, hp1) and is_equal_approx(_player.abilities.slot(AbilityState.SPECIAL).recharge, sp_after),
 		"hp=%.1f sp=%.3f" % [mid_e.hp, _player.abilities.slot(AbilityState.SPECIAL).recharge])
 	_player.kit.hooked = false
@@ -258,24 +258,24 @@ func _check_thermobaric_dunk() -> void:
 	_set_parts(["arc_coil", "hot_rivets"])
 	_slams_seen = 0
 	_game.ctx.events.slammed.emit(origin + Vector3(3.0, 0.0, 0.0), 1.0, 1.0)
-	_t.check("thermobaric_control_unheated", _combat._thermobaric_pins.is_empty(),
-		"pins=%d" % _combat._thermobaric_pins.size())
+	_t.check("thermobaric_control_unheated", _combat.micro_mutations._thermobaric_pins.is_empty(),
+		"pins=%d" % _combat.micro_mutations._thermobaric_pins.size())
 
 	# Heat e1, then slam: launches nearby enemies skyward as flaming pins.
 	_combat.apply_heat(e1, e1.global_position)
 	_t.check("thermobaric_enemy_heated", _combat.heated(e1), "heated=%s" % _combat.heated(e1))
 	_slams_seen = 0
 	_game.ctx.events.slammed.emit(origin + Vector3(3.0, 0.0, 0.0), 1.0, 1.0)
-	_t.check("thermobaric_launches_pins", _combat._thermobaric_pins.size() >= 2,
-		"pins=%d" % _combat._thermobaric_pins.size())
+	_t.check("thermobaric_launches_pins", _combat.micro_mutations._thermobaric_pins.size() >= 2,
+		"pins=%d" % _combat.micro_mutations._thermobaric_pins.size())
 
 	# Advance past pin impact timeout so pins detonate once without emitting recursive slams.
 	var hp2_before: float = e2.hp
 	_combat._clock += 2.0
-	_combat._step_thermobaric_pins([e1, e2])
+	_combat.micro_mutations._step_thermobaric_pins([e1, e2])
 	_t.check("thermobaric_detonates_once",
-		_combat._thermobaric_pins.is_empty() and e2.hp < hp2_before and _slams_seen == 1,
-		"pins_left=%d hp2 %.1f->%.1f slams=%d" % [_combat._thermobaric_pins.size(), hp2_before, e2.hp, _slams_seen])
+		_combat.micro_mutations._thermobaric_pins.is_empty() and e2.hp < hp2_before and _slams_seen == 1,
+		"pins_left=%d hp2 %.1f->%.1f slams=%d" % [_combat.micro_mutations._thermobaric_pins.size(), hp2_before, e2.hp, _slams_seen])
 
 
 func _check_gravity_ledger() -> void:
@@ -288,14 +288,14 @@ func _check_gravity_ledger() -> void:
 	_set_parts(["long_spool", "rivet_plating"])
 	var cogs0: int = _build.scrap.cog_count()
 	var hp1_0: float = e1.hp
-	_combat._check_gravity_ledger(origin + Vector3(4.0, 0.0, 0.0), [e1])
+	_combat.micro_mutations.check_gravity_ledger(origin + Vector3(4.0, 0.0, 0.0), [e1])
 	_t.check("gravity_control_single_enemy",
 		is_equal_approx(e1.hp, hp1_0) and _build.scrap.cog_count() == cogs0,
 		"hp=%.1f cogs=%d" % [e1.hp, _build.scrap.cog_count()])
 
 	# Pulling 2+ enemies together crushes them for bonus damage and drops a guaranteed cog shower.
 	var hp2_0: float = e2.hp
-	_combat._check_gravity_ledger(origin + Vector3(4.5, 0.0, 0.0), [e1, e2])
+	_combat.micro_mutations.check_gravity_ledger(origin + Vector3(4.5, 0.0, 0.0), [e1, e2])
 	var cogs1: int = _build.scrap.cog_count()
 	_t.check("gravity_crushes_pair", e1.hp < hp1_0 and e2.hp < hp2_0,
 		"e1 %.1f->%.1f e2 %.1f->%.1f" % [hp1_0, e1.hp, hp2_0, e2.hp])
@@ -306,7 +306,7 @@ func _check_catalyst_cartridge() -> void:
 	_combat._start_attempt()
 	# Control: no active racked returns {}.
 	_combat.actives.reset()
-	var ctrl_res: Dictionary = _combat.on_consumable_used("oil_can")
+	var ctrl_res: Dictionary = _combat.micro_mutations.on_consumable_used("oil_can")
 	_t.check("catalyst_control_no_active", ctrl_res.is_empty(), "res=%s" % [ctrl_res])
 
 	# With an active racked at 0 charges, 0.0 progress: popping consumable grants +40% charge & free visual ring.
@@ -315,7 +315,7 @@ func _check_catalyst_cartridge() -> void:
 	_combat.actives.charges = 0
 	_combat.actives.progress = 0.0
 	_active_fires_seen = 0
-	var res: Dictionary = _combat.on_consumable_used("oil_can", _player.ball_position())
+	var res: Dictionary = _combat.micro_mutations.on_consumable_used("oil_can", _player.ball_position())
 	_t.check("catalyst_grants_40pct_charge",
 		bool(res.get("fired", false)) and is_equal_approx(_combat.actives.progress, 0.40),
 		"res=%s progress=%.3f" % [res, _combat.actives.progress])
@@ -324,7 +324,7 @@ func _check_catalyst_cartridge() -> void:
 		"fires=%d active_fired_events=%d" % [_combat.actives.fires, _active_fires_seen])
 	# Popping again at 0.70 wraps cleanly into +1 charge + 0.10 progress.
 	_combat.actives.progress = 0.70
-	_combat.on_consumable_used("oil_can", _player.ball_position())
+	_combat.micro_mutations.on_consumable_used("oil_can", _player.ball_position())
 	_t.check("catalyst_wraps_into_charge",
 		_combat.actives.charges == 1 and is_equal_approx(_combat.actives.progress, 0.10),
 		"charges=%d progress=%.3f" % [_combat.actives.charges, _combat.actives.progress])
@@ -337,12 +337,12 @@ func _check_attempt_and_death_cleanup() -> void:
 	_set_parts(["arc_coil", "hot_rivets", "long_spool", "rivet_plating"])
 	_combat.apply_heat(e, e.global_position)
 	_game.ctx.events.slammed.emit(origin + Vector3(3.0, 0.0, 0.0), 1.0, 1.0)
-	_t.check("cleanup_had_pin", not _combat._thermobaric_pins.is_empty(), "pins=%d" % _combat._thermobaric_pins.size())
+	_t.check("cleanup_had_pin", not _combat.micro_mutations._thermobaric_pins.is_empty(), "pins=%d" % _combat.micro_mutations._thermobaric_pins.size())
 	_combat._on_player_died()
-	_t.check("death_clears_pins", _combat._thermobaric_pins.is_empty(), "pins=%d" % _combat._thermobaric_pins.size())
-	_combat._pendulum_zapped[123] = true
-	_combat._pulled_recent[123] = _combat._clock
+	_t.check("death_clears_pins", _combat.micro_mutations._thermobaric_pins.is_empty(), "pins=%d" % _combat.micro_mutations._thermobaric_pins.size())
+	_combat.micro_mutations._pendulum_zapped[123] = true
+	_combat.micro_mutations._pulled_recent[123] = _combat._clock
 	_combat._start_attempt()
 	_t.check("attempt_clears_cross_state",
-		_combat._pendulum_zapped.is_empty() and _combat._pulled_recent.is_empty(),
-		"zapped=%d pulled=%d" % [_combat._pendulum_zapped.size(), _combat._pulled_recent.size()])
+		_combat.micro_mutations._pendulum_zapped.is_empty() and _combat.micro_mutations._pulled_recent.is_empty(),
+		"zapped=%d pulled=%d" % [_combat.micro_mutations._pendulum_zapped.size(), _combat.micro_mutations._pulled_recent.size()])
