@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { ensureNodeModules } from "../ensure-node-modules.mjs";
 import { isMain } from "../lib/cli.mjs";
-import { git } from "../lib/git.mjs";
+import { git, nulSeparated } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -41,12 +41,12 @@ export function discoverTestFiles(
   { scopes = TEST_SCOPES, excluded = EXCLUDED_TESTS, log = console.error } = {},
 ) {
   const list = (...args) =>
-    git(["ls-files", "-z", ...args, "--", ...scopes.map((scope) => scope.dir)], {
-      cwd: baseDir,
-      trim: false,
-    })
-      .split("\0")
-      .filter(Boolean);
+    nulSeparated(
+      git(["ls-files", "-z", ...args, "--", ...scopes.map((scope) => scope.dir)], {
+        cwd: baseDir,
+        trim: false,
+      }),
+    );
   const tracked = list();
   if (tracked.length === 0) throw new Error(`git ls-files lists no tracked files in ${baseDir}`);
   const untracked = new Set(list("--others", "--exclude-standard"));

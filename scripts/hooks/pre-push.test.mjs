@@ -1,23 +1,32 @@
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   chmodSync,
+  existsSync,
+  lutimesSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
+  realpathSync,
   rmSync,
+  statSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { treeFiles } from "../ci/affected.mjs";
 import { REPO_ROOT, git } from "../lib/git.mjs";
 import {
   HIGH_LOAD_RATIO,
   HOOK_BUDGET_S,
+  STALE_COPY_MS,
   changedFilesForRange,
+  copyFolder,
   evaluateHookOutcome,
   executeHookPlan,
   isHighLoad,
@@ -27,6 +36,7 @@ import {
   pushedChanges,
   rangeBase,
   readPushedFiles,
+  removeStaleCopies,
   workingTreeDrift,
 } from "./pre-push.mjs";
 
@@ -55,7 +65,7 @@ test("changedFilesForRange walks all unpushed commits on new branches and preser
     {
       spawn: (_cmd, args) => {
         newBranchArgs = args;
-        return { status: 0, stdout: "README.md\nscripts/ci/affected.mjs\nREADME.md\n" };
+        return { status: 0, stdout: "README.md\0scripts/ci/affected.mjs\0\0README.md\0\0" };
       },
     },
   );
@@ -71,11 +81,11 @@ test("changedFilesForRange walks all unpushed commits on new branches and preser
     {
       spawn: (_cmd, args) => {
         updateArgs = args;
-        return { status: 0, stdout: "docs/deleted.md\n" };
+        return { status: 0, stdout: "docs/deleted.md\0" };
       },
     },
   );
-  assert.deepEqual(updateArgs, ["diff", "--no-renames", "--name-only", "abc123..def456"]);
+  assert.deepEqual(updateArgs, ["diff", "--no-renames", "--name-only", "-z", "abc123..def456"]);
 });
 
 test("planHookChecks selects only matching checks and keeps doc/sketch deletions active", () => {
@@ -586,3 +596,199 @@ test("a pushed link at a script path stops the hook, naming the path and its mod
     ),
   );
 });
+
+test("a pushed script whose name git would quote is checked like any other, on a new branch and an update", () => {
+  const { work, g, write, base } = pushRepo();
+  const names = ['scripts/a b".mjs', "scripts/café.mjs"];
+  const pushAs = (contents, message) => {
+    names.forEach((name, i) => write(name, contents[i]));
+    g("add", ...names);
+    g("commit", "-qm", message);
+    return g("rev-parse", "HEAD");
+  };
+  const good = "export const kept = 1;\n";
+  const heads = [
+    [pushAs([good, good], "both formatted"), true],
+    [pushAs([BADLY_FORMATTED, good], "the quoted name is not formatted"), false],
+    [pushAs([good, BADLY_FORMATTED], "the accented name is not formatted"), false],
+  ];
+  for (const [head, ok] of heads)
+    for (const remoteSha of [base, null]) {
+      const pushed = pushedChanges([{ localSha: head, remoteSha }], { cwd: work });
+      assert.deepEqual(pushed[0].jsFiles, names);
+      assert.equal(pushed[0].hasDocsOrPkg, false);
+      const ran = runPushed(work, pushed);
+      assert.equal(ran.ok, ok, `${head} from ${remoteSha}`);
+      assert.deepEqual(ran.ranLabels, ["oxfmt(2)", "oxlint(2)"]);
+    }
+  write(names[1], "export const kept = 2;\n");
+  const [pushed] = pushedChanges([{ localSha: heads[2][0], remoteSha: base }], { cwd: work });
+  assert.deepEqual(workingTreeDrift([pushed], { cwd: work }), [names[1]]);
+});
+
+const HOOK = path.join(REPO_ROOT, "scripts/hooks/pre-push.mjs");
+const OWN_FOLDER = `scrapkeep-pre-push-${process.getuid()}`;
+const runHook = (tmp) =>
+  spawnSync(process.execPath, [HOOK], {
+    env: { ...process.env, TMPDIR: tmp },
+    input: "",
+    encoding: "utf8",
+  });
+
+test(
+  "a hook stopped by SIGTERM in a child call leaves a copy that the next start removes, and nothing else",
+  { timeout: 60_000 },
+  async () => {
+    const tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), "pre-push-stop-")));
+    scratchDirs.push(tmp);
+    const stopped = spawn(
+      process.execPath,
+      [
+        "--input-type=module",
+        "-e",
+        [
+          'import { spawnSync } from "node:child_process";',
+          `import { executeHookPlan } from ${JSON.stringify(pathToFileURL(HOOK).href)};`,
+          'executeHookPlan([{ jsFiles: ["scripts/a.mjs"], head: "HEAD", modes: new Map() }], {',
+          "  exists: () => true,",
+          "  ensureModules: () => {},",
+          '  readPushed: (_head, files) => files.map(() => "export {};\\n"),',
+          "  spawn: () =>",
+          '    spawnSync("/bin/sh", ["-c", "echo in a child call; exec sleep 30"], {',
+          '      stdio: ["ignore", "inherit", "inherit"],',
+          "    }),",
+          "});",
+        ].join("\n"),
+      ],
+      {
+        env: { ...process.env, TMPDIR: tmp },
+        detached: true,
+        stdio: ["ignore", "pipe", "inherit"],
+      },
+    );
+    const exited = new Promise((resolve) =>
+      stopped.once("exit", (_code, signal) => resolve(signal)),
+    );
+    const ready = await Promise.race([
+      new Promise((resolve) => stopped.stdout.once("data", () => resolve(true))),
+      exited.then(() => false),
+    ]);
+    assert.ok(ready, "the stand-in hook ended before it reached a child call");
+    process.kill(stopped.pid, "SIGTERM");
+    assert.equal(await exited, "SIGTERM");
+    try {
+      process.kill(-stopped.pid, "SIGKILL");
+    } catch {}
+
+    const folder = path.join(tmp, OWN_FOLDER);
+    const [left, ...more] = readdirSync(folder);
+    assert.deepEqual(more, []);
+    assert.match(left, new RegExp(`^copy-${stopped.pid}-[A-Za-z0-9]{6}$`));
+    assert.ok(existsSync(path.join(folder, left, "scripts/a.mjs")), "the stop skipped the cleanup");
+
+    const outside = path.join(tmp, `copy-${stopped.pid}-aaaaaa`);
+    const kept = {
+      [`other-${stopped.pid}-bbbbbb`]: "dir",
+      [`copy-${process.pid}-cccccc`]: "dir",
+      [`copy-${stopped.pid}-dddddd`]: "fresh",
+      [`copy-${stopped.pid}-eeeeee`]: "link",
+      [`copy-${stopped.pid}-ffffff`]: "file",
+      [`copy-${stopped.pid}-ggggggg`]: "dir",
+      "copy-0-hhhhhh": "dir",
+      "copy-1-iiiiii": "dir",
+      "copy-012345-jjjjjj": "dir",
+      "copy-2147483648-kkkkkk": "dir",
+      "copy-4294967294-llllll": "dir",
+      "copy-4294967295-mmmmmm": "dir",
+      "copy-4294967296-nnnnnn": "dir",
+    };
+    mkdirSync(path.join(outside, "inner"), { recursive: true });
+    for (const [name, kind] of Object.entries(kept)) {
+      const at = path.join(folder, name);
+      if (kind === "link") symlinkSync(outside, at);
+      else if (kind === "file") writeFileSync(at, "");
+      else mkdirSync(at);
+    }
+    const old = new Date(Date.now() - 2 * STALE_COPY_MS);
+    for (const name of [left, ...Object.keys(kept)].filter((name) => kept[name] !== "fresh"))
+      lutimesSync(path.join(folder, name), old, old);
+    utimesSync(outside, old, old);
+
+    const next = runHook(tmp);
+    assert.equal(next.status, 0, next.stderr);
+    assert.match(next.stdout, /^pre-push: PASS in /);
+    assert.deepEqual(readdirSync(folder).sort(), Object.keys(kept).sort());
+    assert.ok(existsSync(path.join(outside, "inner")), "a folder outside the hook's own is kept");
+  },
+);
+
+test("the hook stops when the folder for its copies is not a plain folder of this user's that only this user can write", () => {
+  for (const [make, wrong] of [
+    [(at) => writeFileSync(at, ""), /is not a folder/],
+    [(at) => symlinkSync(os.tmpdir(), at), /is not a folder/],
+    [
+      (at) => {
+        mkdirSync(at);
+        chmodSync(at, 0o777);
+      },
+      /can be written by other users \(mode 777\)/,
+    ],
+    [
+      (at) => {
+        mkdirSync(at);
+        chmodSync(at, 0o720);
+      },
+      /can be written by other users \(mode 720\)/,
+    ],
+  ]) {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-folder-"));
+    scratchDirs.push(tmp);
+    const folder = path.join(tmp, OWN_FOLDER);
+    make(folder);
+    const ran = runHook(tmp);
+    assert.equal(ran.status, 2, ran.stdout);
+    assert.ok(ran.stderr.startsWith(`pre-push: ${folder} `), ran.stderr);
+    assert.match(ran.stderr, wrong);
+  }
+  const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-folder-"));
+  scratchDirs.push(tmp);
+  const someoneElse = process.getuid() + 1;
+  assert.throws(
+    () => removeStaleCopies({ tmp, uid: someoneElse, errLog: assert.fail }),
+    new RegExp(
+      `scrapkeep-pre-push-${someoneElse} belongs to user ${process.getuid()}, not to this user \\(${someoneElse}\\)`,
+    ),
+  );
+  assert.equal(copyFolder({ tmp }), path.join(tmp, OWN_FOLDER));
+  assert.equal(statSync(path.join(tmp, OWN_FOLDER)).mode & 0o077, 0, "made for this user only");
+});
+
+test(
+  "a stale copy that cannot be removed is named in one line and the push goes on",
+  {
+    skip: process.getuid() === 0 ? "root can remove a file in a folder it may not write" : false,
+  },
+  () => {
+    const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-stuck-"));
+    scratchDirs.push(tmp);
+    const folder = copyFolder({ tmp });
+    const dead = spawnSync(process.execPath, ["-e", ""]).pid;
+    const stuck = path.join(folder, `copy-${dead}-aaaaaa`);
+    mkdirSync(path.join(stuck, "locked"), { recursive: true });
+    writeFileSync(path.join(stuck, "locked/kept.mjs"), "");
+    chmodSync(path.join(stuck, "locked"), 0o500);
+    try {
+      const old = new Date(Date.now() - 2 * STALE_COPY_MS);
+      utimesSync(stuck, old, old);
+      const ran = runHook(tmp);
+      assert.equal(ran.status, 0, ran.stderr);
+      assert.match(ran.stdout, /^pre-push: PASS in /);
+      const said = ran.stderr.split("\n").filter(Boolean);
+      assert.equal(said.length, 1, ran.stderr);
+      assert.ok(said[0].startsWith(`pre-push: left the stale copy ${stuck}: `), said[0]);
+      assert.ok(existsSync(path.join(stuck, "locked/kept.mjs")));
+    } finally {
+      chmodSync(path.join(stuck, "locked"), 0o700);
+    }
+  },
+);

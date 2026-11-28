@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { isMain } from "../lib/cli.mjs";
-import { git } from "../lib/git.mjs";
+import { git, nulSeparated } from "../lib/git.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const JS_FILE = /^(?:src|server|scripts|tests|tools)\/.*\.(?:js|mjs|cjs)$|^vite\.config\.js$/;
@@ -17,13 +17,13 @@ export function filterFormatTargets(files, exists = (file) => existsSync(path.jo
 }
 
 export function changedFilesSince(baseRef, { cwd = root, spawn = spawnSync } = {}) {
-  return git(["diff", "--no-renames", "--name-only", "--diff-filter=ACM", `${baseRef}...HEAD`], {
-    cwd,
-    spawn,
-  })
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  return nulSeparated(
+    git(["diff", "--no-renames", "--name-only", "-z", "--diff-filter=ACM", `${baseRef}...HEAD`], {
+      cwd,
+      spawn,
+      trim: false,
+    }),
+  );
 }
 
 export function parseFormatArgs(argv) {

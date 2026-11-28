@@ -1,7 +1,6 @@
 extends RefCounted
 
 const ShiftVariants := preload("res://src/core/shift_variants.gd")
-const PilotStory := preload("res://src/core/pilot_story.gd")
 
 
 const MIN_DRAWN := 1
@@ -122,7 +121,7 @@ static func memo(run_seed: int, stage: int, row: Dictionary) -> String:
 const CURSE := {"id": "curse", "word": "Cursed Run", "line": "You shook on it. Nobody made you."}
 
 
-static func card_line(run, terrain, stage: int, profile = null, pages: Array = []) -> String:
+static func card_line(run, terrain, stage: int, foreman_memo := "") -> String:
 	var lines := []
 	if run != null and run.cursed():
 		lines.append(caption(CURSE))
@@ -130,8 +129,7 @@ static func card_line(run, terrain, stage: int, profile = null, pages: Array = [
 		lines.append(caption(row))
 	if run != null and _park_map(terrain, stage) != null:
 		var row := for_stage(run, terrain, stage)
-		var adaptive := PilotStory.foreman_stage_memo(int(run.run_seed), stage, profile, pages, run) if row.is_empty() and profile != null else ""
-		lines.append(adaptive if adaptive != "" else memo(int(run.run_seed), stage, row))
+		lines.append(foreman_memo if row.is_empty() and foreman_memo != "" else memo(int(run.run_seed), stage, row))
 	return "  /  ".join(lines)
 
 

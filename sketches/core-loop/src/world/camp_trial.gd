@@ -4,7 +4,7 @@ extends Node3D
 const Palette := preload("res://src/core/palette.gd")
 const PhysicsLayers := preload("res://src/core/physics_layers.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const Records := preload("res://src/world/camp_records.gd")
+const Records := preload("res://src/core/camp_records.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 
 const TRACK := "camp_trial_track"
@@ -168,7 +168,7 @@ static func crossed(prev: Vector3, cur: Vector3, line: Vector3) -> float:
 
 func setup(hub_ref, records_ref = null) -> void:
 	hub = hub_ref
-	records = records_ref if records_ref != null else Records.new(_profile())
+	records = records_ref if records_ref != null else hub.camp_records
 	var track: Node3D = hub.piece(TRACK)
 	_inv = track.global_transform.affine_inverse()
 	_line = _inv * hub.socket(TRACK, "start").origin
@@ -182,10 +182,6 @@ func setup(hub_ref, records_ref = null) -> void:
 	hub.add_station("camp_trial", hub.socket(TRACK, "start").origin, "Time trial: arm the clock", "interact", 5.0, Callable(self, "arm"))
 	if hub.has_signal("walk_left"):
 		hub.walk_left.connect(_on_walk_left)
-
-
-func _profile():
-	return hub.get("camp_store") if hub != null else null
 
 
 func _sensor(socket: String) -> Area3D:

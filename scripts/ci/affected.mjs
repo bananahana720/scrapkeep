@@ -3,6 +3,7 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync, readFileSync } from "node:fs";
 import { isMain } from "../lib/cli.mjs";
+import { git, nulSeparated } from "../lib/git.mjs";
 
 export const KNOWN_FAILING_LEDGER = "project-guide/handoff/KNOWN-FAILING.tsv";
 const WEB_PATTERN =
@@ -78,19 +79,13 @@ export function classifyAffected(changedFiles, { full = false, exists } = {}) {
 }
 
 export function diffFiles(baseRef, { cwd = process.cwd(), spawn = spawnSync } = {}) {
-  const ran = spawn("git", ["diff", "--no-renames", "--name-only", `${baseRef}...HEAD`], {
-    cwd,
-    encoding: "utf8",
-  });
-  if (ran.status !== 0) {
-    throw new Error(
-      `git diff against ${baseRef} failed: ${(ran.stderr || ran.stdout || "").trim()}`,
-    );
-  }
-  return ran.stdout
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  return nulSeparated(
+    git(["diff", "--no-renames", "--name-only", "-z", `${baseRef}...HEAD`], {
+      cwd,
+      spawn,
+      trim: false,
+    }),
+  );
 }
 
 export function treeFiles(ref, { cwd = process.cwd(), spawn = spawnSync, env = process.env } = {}) {
@@ -107,7 +102,7 @@ export function treeFiles(ref, { cwd = process.cwd(), spawn = spawnSync, env = p
     );
   }
   const files = new Map();
-  for (const entry of ran.stdout.split("\0").filter(Boolean)) {
+  for (const entry of nulSeparated(ran.stdout)) {
     const [, mode, file] =
       entry.match(/^(\d{6}) [a-z]+ (?:[0-9a-f]{40}|[0-9a-f]{64})\t([^]+)$/) ?? [];
     if (mode === undefined)

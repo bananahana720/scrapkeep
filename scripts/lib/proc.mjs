@@ -14,6 +14,28 @@ export function killGroup(child, signal = "SIGKILL") {
   } catch {}
 }
 
+const MAX_PROCESS_ID = 2 ** 31 - 1;
+
+export function processId(value) {
+  const text = typeof value === "number" ? String(value) : value;
+  if (typeof text !== "string" || !/^[1-9]\d*$/.test(text)) return null;
+  const id = Number(text);
+  return Number.isSafeInteger(id) && id > 1 && id <= MAX_PROCESS_ID ? id : null;
+}
+
+export function processLive(value, { kill = process.kill } = {}) {
+  const id = processId(value);
+  if (id === null) return null;
+  try {
+    kill(id, 0);
+    return true;
+  } catch (error) {
+    if (error?.code === "ESRCH") return false;
+    if (error?.code === "EPERM") return true;
+    throw error;
+  }
+}
+
 export function groupLive(pgid) {
   if (!Number.isInteger(pgid) || pgid <= 0) return false;
   try {

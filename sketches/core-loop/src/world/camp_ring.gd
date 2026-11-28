@@ -3,7 +3,6 @@ extends Node
 const ModelKit := preload("res://src/world/model_kit.gd")
 const Palette := preload("res://src/core/palette.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
-const Records := preload("res://src/world/camp_records.gd")
 const SurvivalCount := preload("res://src/world/survival_count.gd")
 const CampCraftMeshes := preload("res://src/presentation/craft/camp_craft_meshes.gd")
 
@@ -50,7 +49,7 @@ static func attach(camp_hub) -> void:
 func bind(camp_hub, yard: Node, records_ref = null) -> void:
 	hub = camp_hub
 	sandbox = yard
-	records = records_ref if records_ref != null else Records.new(hub.get("camp_store"))
+	records = records_ref if records_ref != null else hub.camp_records
 	_centre = hub.piece("camp_sandbox_yard").global_position
 	var box: Vector3 = hub.socket("camp_call_box", "interact").origin
 	var away := Vector3(_centre.x - box.x, 0.0, _centre.z - box.z)

@@ -15,7 +15,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { scratchGodotEnv } from "./godot-home.mjs";
-import { runProcess as runChild, stopGroup as stopChildGroup } from "./lib/proc.mjs";
+import { processLive, runProcess as runChild, stopGroup as stopChildGroup } from "./lib/proc.mjs";
 import { gitOptional } from "./lib/git.mjs";
 import { isMain } from "./lib/cli.mjs";
 
@@ -330,12 +330,7 @@ export function launchEnv(env, profileEnv) {
 }
 
 export function processAlive(pid) {
-  if (!Number.isInteger(pid) || pid <= 0) return false;
-  try {
-    process.kill(pid, 0);
-  } catch (error) {
-    if (error.code === "ESRCH") return false;
-  }
+  if (!processLive(pid)) return false;
   if (existsSync(`/proc/${pid}/stat`)) {
     try {
       return !/^\d+ \(.*\) Z/.test(readFileSync(`/proc/${pid}/stat`, "utf8"));

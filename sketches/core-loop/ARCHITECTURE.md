@@ -8,7 +8,7 @@ Behavioral contracts for module seams (Warden handshake, `event_kinds`, Spawner/
 
 | Path | Role |
 | --- | --- |
-| `src/game.gd` | Root `Node3D` bootstrapper: creates spine objects (`GameEvents`, `RunState`, `Tuning`, `PlayerBall`, `ChaseCamera`, `Beacon`, `Context`, `Flow`, persistence/log stores), mounts core modules (`world`, `combat`, `build`, `boss`, `presentation`), wires UI (`Hud`, `Screens`, `RadioDeck`, `LaunchTake`, `FieldNotes`, `TuningPanel`), attaches optional `--dev` console and `--experimental-depth` bridge, and lazily loads `MENU_PATHS` (`camp_hub.gd`, `camp_enemy_picker.gd`, `workshop.gd`, `pause_menu.gd`). |
+| `src/game.gd` | Root `Node3D` bootstrapper: creates spine objects (`GameEvents`, `RunState`, `Tuning`, `PlayerBall`, `ChaseCamera`, `Beacon`, `Context`, `Flow`, persistence/log stores), mounts core modules (`world`, `combat`, `build`, `boss`, `presentation`), wires UI (`Hud`, `Screens`, `RadioDeck`, `LaunchTake`, `FieldNotes`, `TuningPanel`), attaches optional `--dev` console and `--experimental-depth` bridge, and lazily runs the four menu steps: `camp_hub.gd` (which loads `camp_enemy_picker.gd`), the met-enemy watch (`MetRecord.watch`, no load), `workshop.gd` and `pause_menu.gd` (`MENU_PATHS`). |
 | `src/boot/` | `boot.gd`: lightweight 2D boot card that threaded-loads `main.tscn` (`src/game.gd`) on graphical launches and falls back to synchronous load for headless runs and tests. |
 | `src/core/` | Spine, run/meta state, event bus (`game_events.gd`, `event_kinds.gd`), state machine (`flow.gd`), `Context`, `BuffLedger`, persistence stores (`profile.gd`, `progress.gd`, `codex.gd`, `run_log.gd`, `run_moments.gd`, `run_store.gd`, `safe_store.gd`, `scrapbook_store.gd`), stage/world tables (`park_defs.gd`, `alpha_defs.gd`, `slice_defs.gd`, `stage_defs.gd`, `worlds.gd`), pilots (`class_def.gd`, `upgrade_tree.gd`, `pilot_story.gd`), companion, radio, achievements, and shell/stamp utilities. |
 | `src/movement/` | Rigid-body gyrosphere (`rigid_ball.gd`, `player_ball.gd`, `ball_rules.gd`, `ball_state.gd`), tuning (`tuning.gd`), chase camera (`chase_camera.gd`), input (`intent.gd`), and mobility augments (`harpoon.gd`, `grip.gd`, `augments.gd`, `augment_kit.gd`, `contact.gd`, `speed_tier.gd`, `aim_style.gd`, `exception_hold.gd`, `indicator.gd`). |
@@ -31,7 +31,7 @@ To count tracked `.gd` scripts, run `git ls-tree -r --name-only HEAD sketches/co
 4. `build` (`src/build/build.gd`) -> sets `ctx.build`.
 5. `boss` (`src/boss/boss.gd`, loaded if present) -> sets `ctx.boss`.
 6. `ctx.screen_busy` (`ScreenBusy`), then `presentation` (`src/presentation/presentation.gd`).
-7. `flow.setup(ctx, beacon, Build.Panels.draw)`, optional `RunStore`, HUD/screens/radio/notes/tuning UI, optional `--dev` console, optional `--experimental-depth` bridge, and deferred `MENU_PATHS` (`camp_hub`, `camp_enemy_picker`, `workshop`, `pause_menu`).
+7. `flow.setup(ctx, beacon, Build.Panels.draw)`, optional `RunStore`, HUD/screens/radio/notes/tuning UI, optional `--dev` console, optional `--experimental-depth` bridge, and the deferred menu steps (`camp_hub`, the met-enemy watch, `workshop`, `pause_menu`).
 
 ## Primary runtime state owners
 

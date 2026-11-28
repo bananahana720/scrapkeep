@@ -6,7 +6,7 @@ import path from "node:path";
 import test from "node:test";
 import { pathToFileURL } from "node:url";
 import { isMain, parseCliArgs } from "./cli.mjs";
-import { git, REPO_ROOT } from "./git.mjs";
+import { git, nulSeparated, REPO_ROOT } from "./git.mjs";
 
 const READS_ARGV1 = [
   "scripts/gate/display-run.test.mjs",
@@ -17,10 +17,9 @@ const READS_ARGV1 = [
 ];
 
 function filesReadingArgv1(root) {
-  const listed = git(["ls-files", "-z", "--", "*.mjs", "*.cjs", "*.js"], { cwd: root, trim: false })
-    .split("\0")
-    .filter(Boolean)
-    .sort();
+  const listed = nulSeparated(
+    git(["ls-files", "-z", "--", "*.mjs", "*.cjs", "*.js"], { cwd: root, trim: false }),
+  ).sort();
   assert.ok(listed.length > 0, `git ls-files listed no .mjs, .cjs or .js file in ${root}`);
   const found = [];
   for (const rel of listed) {
