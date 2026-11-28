@@ -8,6 +8,7 @@ This folder is `ctx.spawner`. Originally structured around two class kits in v2,
 | --- | --- |
 | `combat.gd` | the entry script: the spawner API, the pattern API for parts, the fire and special loop, the shoulder hook, the stage reset |
 | `weapon_driver.gd` | the weapon trigger, cadence, magazine/reload, charge/beat/window state machine and read-only reticle snapshot owned by `combat.gd` |
+| `hero_hooks.gd` | Sable's kinetic orbit pylon and vault-kick charge, Rivet's sixth hot round ricochet and Kest's fuse-spark trace, owned by `combat.gd` as `hero_hooks` |
 | `pattern.gd` | the emission pattern Resource and the transformer catalogue |
 | `weapons.gd` | the base pattern per weapon, strike kinds, colours, overdrive and the pylon discharge |
 | `hitscan.gd` | the shared aim query every weapon reads |
