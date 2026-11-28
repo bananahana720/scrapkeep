@@ -7,6 +7,7 @@ const Tuning := preload("res://src/movement/tuning.gd")
 const Augments := preload("res://src/movement/augments.gd")
 const UiFonts := preload("res://src/ui/ui_fonts.gd")
 const UiTokens := preload("res://src/ui/ui_tokens.gd")
+const DevInspect := preload("res://src/dev/dev_inspect.gd")
 
 const LAYERS := ["bounds", "telegraphs", "vel"]
 const PERF_MODES := ["auto", "on", "off"]
@@ -32,7 +33,6 @@ const OUT_PX := 2.0
 const IN_PX := 4.0
 const UNDER_PX := 1.0
 const PERF_LAYER := 89
-const PERF_FRAMES := 60
 const SPARK_SIZE := Vector2(120.0, 18.0)
 const SPARK_TOP_MS := 50.0
 const BUDGET_MS := 16.7
@@ -54,9 +54,7 @@ var _perf_layer: CanvasLayer
 var _perf_plate: PanelContainer
 var _perf_text: Label
 var _spark: Control
-var _frame_ms := PackedFloat32Array()
-var _last_frame := -1
-var _last_usec := 0
+var _standalone_inspect: DevInspect
 var _reads: Array = []
 var _solid_v := PackedVector3Array()
 var _solid_c := PackedColorArray()
@@ -87,6 +85,8 @@ func setup(game_ref, console_ref) -> void:
 	_view.visible = false
 	add_child(_view)
 	_build_perf()
+	if console == null:
+		_perf_source()
 	_sync_perf()
 
 
@@ -599,26 +599,28 @@ func _sync_perf() -> void:
 	_perf_plate.visible = wanted and not _hide_perf
 
 
+func _perf_source() -> DevInspect:
+	if is_instance_valid(console) and "inspect" in console and is_instance_valid(console.inspect):
+		return console.inspect
+	if not is_instance_valid(_standalone_inspect):
+		_standalone_inspect = DevInspect.new()
+		add_child(_standalone_inspect)
+		_standalone_inspect.setup(game, null)
+	return _standalone_inspect
+
+
 func _sample_frame() -> void:
-	var frame := Engine.get_frames_drawn()
-	if frame == _last_frame:
-		return
-	var now := Time.get_ticks_usec()
-	if _last_frame >= 0 and _last_usec > 0:
-		_frame_ms.append(float(now - _last_usec) / 1000.0 / maxf(float(frame - _last_frame), 1.0))
-		while _frame_ms.size() > PERF_FRAMES:
-			_frame_ms.remove_at(0)
-	_last_frame = frame
-	_last_usec = now
 	if not perf_visible():
 		return
+	var src := _perf_source()
+	var ring := src.frame_ms_ring()
 	var worst := 0.0
-	for ms in _frame_ms:
+	for ms in ring:
 		worst = maxf(worst, ms)
 	var tele := get_tree().get_nodes_in_group("telegraph").size()
 	var foes := get_tree().get_nodes_in_group("enemy").size()
 	_perf_text.text = "%d fps | %.1f ms | %d draws | %d/%d" % [Engine.get_frames_per_second(), worst,
-		int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)), foes, tele]
+		src.latest_draws(), foes, tele]
 	_spark.queue_redraw()
 
 
@@ -627,12 +629,14 @@ func _draw_spark() -> void:
 	for pair in [[BUDGET_MS, Palette.AMBER], [SLOW_MS, Palette.HAZARD]]:
 		var y := size.y * (1.0 - float(pair[0]) / SPARK_TOP_MS)
 		_spark.draw_line(Vector2(0.0, y), Vector2(size.x, y), pair[1], 1.0)
-	if _frame_ms.size() < 2:
+	var ring := _perf_source().frame_ms_ring()
+	if ring.size() < 2:
 		return
+	var cap := DevInspect.PERF_RING_CAP
 	var points := PackedVector2Array()
-	var step := size.x / float(PERF_FRAMES - 1)
-	var start := PERF_FRAMES - _frame_ms.size()
-	for i in _frame_ms.size():
-		var y := size.y * (1.0 - clampf(_frame_ms[i] / SPARK_TOP_MS, 0.0, 1.0))
+	var step := size.x / float(cap - 1)
+	var start := cap - ring.size()
+	for i in ring.size():
+		var y := size.y * (1.0 - clampf(ring[i] / SPARK_TOP_MS, 0.0, 1.0))
 		points.append(Vector2((start + i) * step, y))
 	_spark.draw_polyline(points, Palette.LEDGER_CREAM, 1.0)

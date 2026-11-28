@@ -132,6 +132,20 @@ func sample_perf(sample_count := PERF_DEFAULT_SAMPLES) -> Dictionary:
 	return _summarize_perf(samples)
 
 
+func frame_ms_ring() -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(_perf_ring.size())
+	for i in _perf_ring.size():
+		out[i] = float(_perf_ring[i].get("frame_ms", 0.0))
+	return out
+
+
+func latest_draws() -> int:
+	if _perf_ring.is_empty():
+		return int(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))
+	return int(roundf(float(_perf_ring[-1].get("draws", 0.0))))
+
+
 func _topic_data(topic: String, extra: Array[String] = []) -> Variant:
 	match topic:
 		"state":
