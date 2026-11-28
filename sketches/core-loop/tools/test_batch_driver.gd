@@ -83,6 +83,10 @@ const ModelKit := preload("res://src/world/model_kit.gd")
 const World23ChunkCraft := preload("res://src/presentation/world23_chunk_craft.gd")
 const CraftShowcaseAssembly := preload("res://src/presentation/craft/craft_showcase_assembly.gd")
 const CraftLookdev := preload("res://src/presentation/craft/craft_lookdev.gd")
+const BotProfile := preload("res://tools/bot_profile.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
+const TraversalLine := preload("res://tools/traversal_line.gd")
+const BotFairness := preload("res://tools/bot_fairness.gd")
 const SHIM_EXTENDS := 'extends "res://tools/test_batch_shim.gd"'
 
 var tree: SceneTree
@@ -249,6 +253,10 @@ func _reset() -> void:
 	World23ChunkCraft._reset()
 	CraftShowcaseAssembly.reset_for_tests()
 	CraftLookdev.reset_for_tests()
+	BotProfile.reset_for_tests()
+	SkillBand.reset_for_tests()
+	TraversalLine.reset_for_tests()
+	BotFairness.reset_for_tests()
 	_clear_dir("user://test-%d" % OS.get_process_id())
 	SimClock.ticks = false
 	Glyphs.device = "kbm"

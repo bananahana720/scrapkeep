@@ -37,6 +37,7 @@ import {
   parseBatchDriverRefs,
   parseBatchDriverVars,
   parseTuning,
+  preloadedTestSupportFiles,
   stronglyConnectedComponents,
 } from "./sketch-lint.mjs";
 import {
@@ -1130,6 +1131,111 @@ test("L14 blocks a new unwired static var and fails when a registered file adds 
     lintL14(file, rel, "# static var _commented := {}\nvar ok := 1\n", emptyRefs, new Set()),
     [],
   );
+});
+
+test("L14 covers tools/ and tests/support/ libraries preloaded by tests (clean, failing, and live tree)", () => {
+  const testFiles = [
+    {
+      path: "sketches/core-loop/tests/sample_test.gd",
+      text: [
+        'extends "res://tools/runner.gd"',
+        'const Helper := preload("res://tests/support/helper.gd")',
+        '# const Ignored := preload("res://tools/commented.gd")',
+        "",
+      ].join("\n"),
+    },
+    {
+      path: "sketches/core-loop/tests/support/helper.gd",
+      text: [
+        "extends RefCounted",
+        "static var _cached := {}",
+        "static func reset_for_tests() -> void:",
+        "\t_cached.clear()",
+        "",
+      ].join("\n"),
+    },
+  ];
+  const toolFiles = [
+    {
+      path: "sketches/core-loop/tools/runner.gd",
+      text: 'const Shared := preload("res://tools/shared_state.gd")\n',
+    },
+    {
+      path: "sketches/core-loop/tools/shared_state.gd",
+      text: [
+        "extends RefCounted",
+        "static var flag := false",
+        "static func reset_for_tests() -> void:",
+        "\tflag = false",
+        "",
+      ].join("\n"),
+    },
+    {
+      path: "sketches/core-loop/tools/unused_tool.gd",
+      text: "extends RefCounted\nstatic var unreached := 0\n",
+    },
+    {
+      path: "sketches/core-loop/tools/commented.gd",
+      text: "extends RefCounted\nstatic var commented_only := 0\n",
+    },
+  ];
+  const reached = preloadedTestSupportFiles(testFiles, toolFiles, "sketches/core-loop");
+  assert.deepEqual(
+    reached.map((file) => file.rel),
+    ["tests/support/helper.gd", "tools/runner.gd", "tools/shared_state.gd"],
+  );
+
+  const emptyRefs = parseBatchDriverRefs("extends RefCounted\n");
+  const failing = reached.flatMap((file) =>
+    lintL14(file.path, file.rel, file.text, emptyRefs, new Set()),
+  );
+  assert.deepEqual(
+    failing.map((item) => item.key),
+    [
+      "sketches/core-loop/tests/support/helper.gd:_cached",
+      "sketches/core-loop/tools/shared_state.gd:flag",
+    ],
+  );
+
+  const driver = [
+    'const Helper := preload("res://tests/support/helper.gd")',
+    'const Shared := preload("res://tools/shared_state.gd")',
+    "",
+  ].join("\n");
+  const wiredRefs = parseBatchDriverRefs(driver);
+  const wiredVars = parseBatchDriverVars(driver);
+  assert.deepEqual(
+    reached.flatMap((file) =>
+      lintL14(file.path, file.rel, file.text, wiredRefs, new Set(), wiredVars),
+    ),
+    [],
+  );
+
+  const liveDriver = readFileSync(path.join(sketchDir, "tools", "test_batch_driver.gd"), "utf8");
+  const liveRefs = parseBatchDriverRefs(liveDriver);
+  for (const rel of [
+    "tools/bot_profile.gd",
+    "tools/skill_band.gd",
+    "tools/traversal_line.gd",
+    "tools/bot_fairness.gd",
+  ]) {
+    assert.ok(liveRefs.has(rel), `expected ${rel} in driver refs`);
+  }
+  const raw = lintSketch("core-loop").filter((item) => item.rule === "L14");
+  const toolOrSupport = raw
+    .map((item) => item.key)
+    .filter(
+      (key) =>
+        key.startsWith("sketches/core-loop/tools/") ||
+        key.startsWith("sketches/core-loop/tests/support/"),
+    )
+    .sort();
+  assert.deepEqual(toolOrSupport, [
+    "sketches/core-loop/tests/support/content_registry.gd:_pass",
+    "sketches/core-loop/tests/support/content_registry.gd:_pass_depth",
+    "sketches/core-loop/tests/support/cosmetic_art.gd:_shipping",
+    "sketches/core-loop/tests/support/teardown_noise.gd:_line",
+  ]);
 });
 
 test("L15 passes the checked-out core-loop tests tree against baseline and blocks a second 60 Hz literal in find_in_fight_test.gd", () => {

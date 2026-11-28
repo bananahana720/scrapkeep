@@ -786,13 +786,17 @@ const gdFuncDecl = /^(?:static\s+)?func\s+([A-Za-z_]\w*)\s*\(/;
 const resetFuncName = /^_?reset/i;
 
 export function parseBatchDriverRefs(text) {
-  return new Set([...text.matchAll(/res:\/\/(src\/[^"']+\.gd)/g)].map((match) => match[1]));
+  return new Set(
+    [...text.matchAll(/res:\/\/((?:src|tools|tests\/support)\/[^"']+\.gd)/g)].map(
+      (match) => match[1],
+    ),
+  );
 }
 
 export function parseBatchDriverVars(text) {
   const aliases = new Map();
   for (const match of text.matchAll(
-    /\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/(src\/[^"']+\.gd)"\s*\)/g,
+    /\bconst\s+([A-Za-z_]\w*)\s*:?=\s*preload\(\s*"res:\/\/((?:src|tools|tests\/support)\/[^"']+\.gd)"\s*\)/g,
   )) {
     aliases.set(match[1], match[2]);
   }
@@ -803,6 +807,44 @@ export function parseBatchDriverVars(text) {
     }
   }
   return direct;
+}
+
+const testSupportLoad =
+  /(?:preload|load)\(\s*["']res:\/\/((?:tools|tests\/support)\/[^"']+\.gd)["']\s*\)|^extends\s+["']res:\/\/((?:tools|tests\/support)\/[^"']+\.gd)["']/g;
+
+export function preloadedTestSupportFiles(testFiles, toolFiles, relative) {
+  const prefix = `${relative}/`;
+  const relOf = (file) =>
+    file.path.startsWith(prefix) ? file.path.slice(prefix.length) : file.path;
+  const byRel = new Map();
+  for (const file of [...testFiles, ...toolFiles]) {
+    if (!file.path.endsWith(".gd")) continue;
+    const rel = relOf(file);
+    if (rel.startsWith("tools/") || rel.startsWith("tests/support/")) {
+      byRel.set(rel, { ...file, rel });
+    }
+  }
+  const seen = new Set();
+  const queue = [];
+  const collect = (text) => {
+    if (!text.includes("res://tools/") && !text.includes("res://tests/support/")) return;
+    for (const line of codeLines(text)) {
+      for (const match of line.code.matchAll(testSupportLoad)) {
+        const rel = match[1] ?? match[2];
+        if (byRel.has(rel) && !seen.has(rel)) {
+          seen.add(rel);
+          queue.push(rel);
+        }
+      }
+    }
+  };
+  for (const file of testFiles) {
+    if (!relOf(file).startsWith("tests/support/")) collect(file.text);
+  }
+  while (queue.length > 0) {
+    collect(byRel.get(queue.shift()).text);
+  }
+  return [...seen].sort().map((rel) => byRel.get(rel));
 }
 
 function resetMethodText(text) {
@@ -1155,6 +1197,11 @@ export function lintSketch(sketch) {
     }
     if (sketch === "core-loop" && file.path.endsWith(".gd")) {
       findings.push(...lintL13(file.path, file.path.slice(relative.length + 1), file.text));
+    }
+  }
+  if (sketch === "core-loop") {
+    for (const file of preloadedTestSupportFiles(testFiles, toolFiles, relative)) {
+      findings.push(...lintL14(file.path, file.rel, file.text, driverRefs, null, driverVars));
     }
   }
   const flagFiles = [

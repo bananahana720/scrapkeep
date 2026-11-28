@@ -75,6 +75,10 @@ const ModelVariants := preload("res://src/presentation/model_variants.gd")
 const Audio := preload("res://src/presentation/audio.gd")
 const InkOutline := preload("res://src/presentation/ink_outline.gd")
 const WorldLook := preload("res://src/presentation/world_look.gd")
+const BotProfile := preload("res://tools/bot_profile.gd")
+const SkillBand := preload("res://tools/skill_band.gd")
+const TraversalLine := preload("res://tools/traversal_line.gd")
+const BotFairness := preload("res://tools/bot_fairness.gd")
 const T := preload("res://tests/support/t.gd")
 
 # W46-T1: tools/test_batch_driver.gd _reset() clears reduced-motion and other process-wide
@@ -473,6 +477,34 @@ func _run() -> void:
 	driver._reset()
 	t.check("BossModel.reset_for_tests clears _scenes and _coloured", BossModel._scenes.is_empty() and BossModel._coloured.is_empty())
 	t.check("CampCraftMeshes.reset_for_tests clears cached meshes", CampCraftMeshes._mesh_cache.is_empty())
+
+	BotProfile.enabled = true
+	BotProfile._stack.append({"children": 1})
+	BotProfile._totals["probe"] = 1
+	BotProfile._samples["probe"] = {"ticks": [1], "usec": [1]}
+	BotProfile._tick_start = 10
+	BotProfile._tick_count = 2
+	BotProfile._physics_end = 5
+	BotProfile._pending = true
+	BotProfile._monitors["probe"] = [1.0]
+	SkillBand.quiet = true
+	SkillBand.last_refusal = "probe"
+	TraversalLine.graph_notes = 3
+	TraversalLine._graphs["__probe__"] = true
+	var fairness_before := BotFairness.config()
+	t.check("BotFairness.config loads before reset", not fairness_before.is_empty())
+	driver._reset()
+	t.check("BotProfile.reset_for_tests clears profiler statics",
+		not BotProfile.enabled and BotProfile._stack.is_empty() and BotProfile._totals.is_empty()
+		and BotProfile._samples.is_empty() and BotProfile._tick_start == 0 and BotProfile._tick_count == 0
+		and BotProfile._physics_end == 0 and not BotProfile._pending and BotProfile._monitors.is_empty())
+	t.check("SkillBand.reset_for_tests clears quiet and last_refusal",
+		not SkillBand.quiet and SkillBand.last_refusal == "")
+	t.check("TraversalLine.reset_for_tests clears graph_notes, _park_defs_source, and _graphs",
+		TraversalLine.graph_notes == 0 and TraversalLine._park_defs_source == "" and TraversalLine._graphs.is_empty())
+	var fairness_after := BotFairness.config()
+	t.check("BotFairness.reset_for_tests reloads config cleanly",
+		not fairness_after.is_empty() and not is_same(fairness_before, fairness_after))
 
 	quit(t.verdict())
 

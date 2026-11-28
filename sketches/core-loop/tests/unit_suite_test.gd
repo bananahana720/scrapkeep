@@ -35,7 +35,7 @@ func _check_bot_fairness_config(t: T) -> void:
 		BotFairness.resolve_config_path("", "", win_proof_cwd),
 		want,
 	)
-	BotFairness._config = {}
+	BotFairness.reset_for_tests()
 	var cfg := BotFairness.config()
 	t.check(
 		"bot_fairness config loads cleanly",

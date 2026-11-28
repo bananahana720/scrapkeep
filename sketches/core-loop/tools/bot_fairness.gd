@@ -9,6 +9,10 @@ const CONFIG_FILE := "scripts/challenge/fairness.json"
 
 static var _config := {}
 
+
+static func reset_for_tests() -> void:
+	_config = {}
+
 var game
 var boss_hazards := Callable()
 var _clock := 0.0
