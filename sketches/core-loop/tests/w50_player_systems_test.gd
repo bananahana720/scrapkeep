@@ -114,7 +114,7 @@ func _p1_static_integrity() -> void:
 	_t.eq("P1 Achievements.MASTERY_ROWS validates clean",
 		Achievements.validate_mastery(bus, pilots, Cosmetics.ids()), [])
 	_t.eq("P1 Achievements.ROWS shared count stays 67",
-		PilotBlocks.shared(Achievements.ids(), "res://src/core/achievements.gd").size(), 67)
+		PilotBlocks.shared(_t, Achievements.ids(), "res://src/core/achievements.gd").size(), 67)
 
 	_t.eq("P1 ShiftBoard W1 validate clean",
 		ShiftBoard.validate(ShiftBoard.RUNGS, Achievements.ROWS, TuneRows.ids(), Items.TABLE), [])

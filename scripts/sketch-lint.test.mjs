@@ -1772,8 +1772,41 @@ test("L19 flags a test that reads a script by hand and names the shared reader a
   );
 });
 
+test("L19 flags a loop over an inline list of constants", () => {
+  const consts =
+    'const MODULE := "res://src/combat/combat.gd"\nconst BOLTS := "res://src/build/bolts.gd"\n\nfunc _initialize() -> void:\n';
+  assert.deepEqual(
+    l19(
+      "tests/i_test.gd",
+      consts +
+        "\tfor path in [MODULE, BOLTS]:\n\t\tvar text := FileAccess.get_file_as_string(path)\n",
+    ),
+    [`L19 ${l19Root}/tests/i_test.gd:6 ${l19Message}`],
+  );
+  assert.deepEqual(
+    l19(
+      "tests/j_test.gd",
+      consts +
+        "\tfor path in [\n\t\tMODULE,\n\t\tBOLTS,\n\t]:\n\t\tvar text := FileAccess.get_file_as_string(path)\n",
+    ),
+    [`L19 ${l19Root}/tests/j_test.gd:9 ${l19Message}`],
+  );
+});
+
+test("L19 flags a helper that opens its parameter for reading", () => {
+  assert.deepEqual(
+    l19(
+      "tests/k_test.gd",
+      'func _initialize() -> void:\n\t_read("res://src/core/flow.gd")\n\n\nfunc _read(path: String) -> String:\n\tvar file := FileAccess.open(path, FileAccess.READ)\n\treturn file.get_as_text()\n',
+    ),
+    [`L19 ${l19Root}/tests/k_test.gd:6 ${l19Message}`],
+  );
+});
+
 test("L19 passes data reads, writes, other roots, comments, the reader itself and files outside tests/", () => {
   for (const text of [
+    'const README := "res://README.md"\nconst NOTES := "res://DESIGN-NOTES.md"\n\nfunc _initialize() -> void:\n\tfor path in [README, NOTES]:\n\t\tvar text := FileAccess.get_file_as_string(path)\n',
+    'func _initialize() -> void:\n\t_write("res://src/core/flow.gd")\n\n\nfunc _write(path: String) -> void:\n\tvar file := FileAccess.open(path, FileAccess.WRITE)\n',
     'func _initialize() -> void:\n\tvar park = JSON.parse_string(FileAccess.get_file_as_string("res://src/world/park/park_flume.json"))\n',
     'func _initialize() -> void:\n\tvar f := FileAccess.open("res://tests/fixtures/x.gd", FileAccess.WRITE)\n',
     'func _initialize() -> void:\n\tvar text := FileAccess.get_file_as_string("res://assets/x.gd")\n',

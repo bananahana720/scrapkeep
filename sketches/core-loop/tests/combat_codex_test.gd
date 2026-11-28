@@ -56,8 +56,8 @@ func _initialize() -> void:
 	root.add_child(_game)
 
 
-func _report(check: String, ok: bool, detail: String) -> void:
-	print("[%s] %s -> %s" % [check, detail, "PASS" if ok else "FAIL"])
+func check(label: String, ok: bool, detail: String) -> void:
+	print("[%s] %s -> %s" % [label, detail, "PASS" if ok else "FAIL"])
 	if not ok:
 		_failures += 1
 
@@ -90,9 +90,9 @@ func _physics_process(delta: float) -> bool:
 			_clock += delta
 			var roof_done: bool = not is_instance_valid(_roof_fall) or _combat.discovered.has("roof_drop")
 			if (_combat.discovered.has("shell_return") and roof_done) or _clock > 4.0:
-				_report("roof_drop", _combat.discovered.has("roof_drop"),
+				check("roof_drop", _combat.discovered.has("roof_drop"),
 					"a rammed prop's roof crushed the drill crew under it")
-				_report("shell_return", _combat.discovered.has("shell_return"),
+				check("shell_return", _combat.discovered.has("shell_return"),
 					"a batted shell landed on its own lobber and killed it (%.2f s after the bat)" % _clock)
 				_warden_tricks()
 				return _finish()
@@ -119,7 +119,7 @@ func _data() -> void:
 			complete = complete and not empty
 		complete = complete and entry["category"] == "enemy"
 		ids[entry["id"]] = true
-	_report("data", complete and ids.size() == CodexEntries.ENTRIES.size() and ids.size() >= 5,
+	check("data", complete and ids.size() == CodexEntries.ENTRIES.size() and ids.size() >= 5,
 		"%d enemy entries, unique ids, every field filled: %s" % [ids.size(), ids.keys()])
 
 
@@ -136,15 +136,15 @@ func _instant_tricks() -> void:
 	var lunging := _chaser(0.0, 500.0)
 	lunging.state = lunging.State.WINDUP
 	_combat.strike(lunging, "ram", 14.0)
-	_report("counter_ram", _combat.discovered.has("counter_ram"), "a ram on a chaser mid wind-up")
+	check("counter_ram", _combat.discovered.has("counter_ram"), "a ram on a chaser mid wind-up")
 
 	for i in 3:
 		_combat.strike(_chaser(4.0 * (i + 1), 10.0), "ram", 14.0)
-	_report("crush_chain", _combat.discovered.has("crush_chain"), "three unplated one-hit ram kills in the same second")
+	check("crush_chain", _combat.discovered.has("crush_chain"), "three unplated one-hit ram kills in the same second")
 
 	_game.events.dismounted.emit(Vector3(12.0, 4.0, 0.0))
 	_combat.strike(_chaser(-8.0, 5.0), "runner", 10.0)
-	_report("parting_shot", _combat.discovered.has("parting_shot"), "a laser kill right after a slingshot dismount")
+	check("parting_shot", _combat.discovered.has("parting_shot"), "a laser kill right after a slingshot dismount")
 
 
 # v2 W7: each counter's opportunity, found through the unit's own code path.
@@ -155,7 +155,7 @@ func _w7_tricks() -> void:
 	var hooker: Node3D = ctx.spawner.spawn_enemy("hooker", ctx.terrain.drop_point(base.x, base.z, 1.6))
 	hooker._catch(0.0, Vector3.ZERO, hooker.anchor())
 	fleet.holds.snap(hooker, "speed")
-	_report("tether_snap", _combat.discovered.has("tether_snap"), "a tether held, then snapped by speed")
+	check("tether_snap", _combat.discovered.has("tether_snap"), "a tether held, then snapped by speed")
 
 	var dish: Node3D = ctx.spawner.spawn_enemy("deflector", ctx.terrain.drop_point(base.x + 8.0, base.z, 1.6))
 	dish.phase = dish.Phase.LIVE
@@ -164,7 +164,7 @@ func _w7_tricks() -> void:
 	dish._rebound_v = Vector3(-9.0, 0.0, 0.0)
 	dish._window = 0.3
 	_game.events.jumped.emit(false)
-	_report("shield_vault", _combat.discovered.has("shield_vault") and dish.vaults == 1,
+	check("shield_vault", _combat.discovered.has("shield_vault") and dish.vaults == 1,
 		"a jump in a deflector's rebound window vaulted at %.1f m/s" % dish.last_vault_speed)
 
 	var at: Vector3 = base + Vector3(-12.0, 0.0, 0.0)
@@ -173,13 +173,13 @@ func _w7_tricks() -> void:
 	lead.swarm.state = lead.swarm.State.SCATTERED
 	lead._lead_into_pin()
 	_combat._pin_step(_game.get_tree().get_nodes_in_group("enemy"))
-	_report("awaiting_operator", _combat.discovered.has("awaiting_operator"),
+	check("awaiting_operator", _combat.discovered.has("awaiting_operator"),
 		"a scattered drone led into a chaser pinned it (%d pins)" % _combat.pins)
 
 	var hand: Node3D = ctx.spawner.spawn_enemy("mind_hand", ctx.terrain.drop_point(base.x, base.z - 10.0, 1.8))
 	fleet.habits.add("ram", 5.0)
 	hand._commit(Vector3(0.0, 0.0, 5.0))
-	_report("what_it_learned", _combat.discovered.has("what_it_learned") and fleet.mind_memory.size() == 1,
+	check("what_it_learned", _combat.discovered.has("what_it_learned") and fleet.mind_memory.size() == 1,
 		"a Mind's hand read the ram habit and quoted it: %s" % [fleet.mind_memory])
 	for node in [hooker, dish, victim, hand]:
 		if is_instance_valid(node):
@@ -207,11 +207,11 @@ func _w9_tricks() -> void:
 	var rig: Node3D = _w9_spawn("drill_crew", home + Vector3(10.0, 0.0, 6.0))
 	rig._warn(_w9_to(rig))
 	_combat.strike(rig, "slam", 14.0)
-	_report("bore_breach", _combat.discovered.has("bore_breach") and rig.stopped == 1,
+	check("bore_breach", _combat.discovered.has("bore_breach") and rig.stopped == 1,
 		"a slam on a drill crew mid-bore stopped it (stopped %d)" % rig.stopped)
 	# 2026-10-17 (damage families, PR #65): a hit past the rig's plating reads its armour.
 	_combat.strike(rig, "test_bolt", 40.0, "", "weapon")
-	_report("armour_plated", _combat.discovered.has("armour_plated"), "a full hit on a plated drill crew reads it")
+	check("armour_plated", _combat.discovered.has("armour_plated"), "a full hit on a plated drill crew reads it")
 
 	var cutter: Node3D = _w9_spawn("line_cutter", home + Vector3(-10.0, 0.0, 8.0))
 	cutter._warn(_w9_to(cutter))
@@ -219,7 +219,7 @@ func _w9_tricks() -> void:
 	cutter._go_live()
 	cutter._t = cutter.FLIGHT + 0.01
 	cutter._live(0.0)
-	_report("line_cut", _combat.discovered.has("line_cut") and cutter.dodged == 1,
+	check("line_cut", _combat.discovered.has("line_cut") and cutter.dodged == 1,
 		"an unhooked ball in the landing ring dodged the cutter (dodged %d)" % cutter.dodged)
 
 	var crew: Node3D = _w9_spawn("anchor_crew", home + Vector3(0.0, 0.0, 10.0))
@@ -228,7 +228,7 @@ func _w9_tricks() -> void:
 	crew._go_live()
 	var hooked: bool = fleet.holds.held(crew)
 	fleet.holds.snap(crew, "jump")
-	_report("deck_winch", _combat.discovered.has("deck_winch") and hooked and crew.broken_by == "jump",
+	check("deck_winch", _combat.discovered.has("deck_winch") and hooked and crew.broken_by == "jump",
 		"an anchor crew hooked the ball (%s), then a jump slipped it (%s)" % [hooked, crew.broken_by])
 	# A Foreman knocked out while its crew stands clocks them out.
 	var foreman: Node3D = _w9_spawn("foreman", home + Vector3(-8.0, 0.0, -14.0))
@@ -236,12 +236,12 @@ func _w9_tricks() -> void:
 	foreman._claimed = true
 	foreman._hire(hand)
 	foreman.take_damage(1.0e6)
-	_report("shift_over", _combat.discovered.has("shift_over") and AttackBudget.clocked_out(hand),
+	check("shift_over", _combat.discovered.has("shift_over") and AttackBudget.clocked_out(hand),
 		"a Foreman fell with its crew standing (crew clocked out %s)" % AttackBudget.clocked_out(hand))
 	var splitter: Node3D = _w9_spawn("splitter", home + Vector3(-8.0, 0.0, -6.0))
 	splitter.hp = 1.0
 	_combat.strike(splitter, "stomp", 30.0)
-	_report("split_pop", _combat.discovered.has("split_pop") and splitter.get_meta("split", true) == false,
+	check("split_pop", _combat.discovered.has("split_pop") and splitter.get_meta("split", true) == false,
 		"a stomp killed a Splitter clean (split %s)" % splitter.get_meta("split", null))
 	# A pod whose ring held the ball at its fuse blows up on an empty ring.
 	var pod: Node3D = _w9_spawn("splitter_pod", home + Vector3(-12.0, 0.0, 6.0))
@@ -249,7 +249,7 @@ func _w9_tricks() -> void:
 	pod._ring_had_ball = true
 	pod.phase = pod.Phase.LIVE
 	pod._go_live()
-	_report("fuse_pod", _combat.discovered.has("fuse_pod") and pod.blasts == 1,
+	check("fuse_pod", _combat.discovered.has("fuse_pod") and pod.blasts == 1,
 		"a ball out of a pod's ring when it blew (blasts %d)" % pod.blasts)
 	for node in [rig, cutter, crew, hand]:
 		if is_instance_valid(node):
@@ -286,7 +286,7 @@ func _w9_after_move() -> void:
 	_game.player.state.grounded = false
 	burrower.phase = burrower.Phase.LIVE
 	burrower._go_live()
-	_report("burrow_lane", _combat.discovered.has("burrow_lane") and _w9_units["lane_had_ball"] and burrower.bursts == 1,
+	check("burrow_lane", _combat.discovered.has("burrow_lane") and _w9_units["lane_had_ball"] and burrower.bursts == 1,
 		"the ring held the ball at commit (%s) and the burst came up empty" % _w9_units["lane_had_ball"])
 
 	var kite: Node3D = _w9_units["kite"]
@@ -294,13 +294,13 @@ func _w9_after_move() -> void:
 	kite._go_live()
 	kite._t = kite.DIVE + 0.01
 	kite._live(0.0)
-	_report("thermal_dive", _combat.discovered.has("thermal_dive") and _w9_units["mark_had_ball"] and kite.dives == 1,
+	check("thermal_dive", _combat.discovered.has("thermal_dive") and _w9_units["mark_had_ball"] and kite.dives == 1,
 		"the mark held the ball (%s) and the dive landed after it left" % _w9_units["mark_had_ball"])
 
 	var lamps: Node3D = _w9_units["lamps"]
 	if lamps.phase == lamps.Phase.LIVE:
 		lamps._live(1.0 / 90.0)
-	_report("lure_bloom", _combat.discovered.has("lure_bloom"),
+	check("lure_bloom", _combat.discovered.has("lure_bloom"),
 		"a ball at cruise inside the bloom went through the light (tier %d)" % _game.player.speed_tier())
 	for key in ["burrower", "kite", "lamps"]:
 		if is_instance_valid(_w9_units[key]):
@@ -318,14 +318,14 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	_combat.heft_override = trap.rating + 0.5
 	trap._live(0.0)
 	_combat.heft_override = 1.0
-	_report("heavy_roll", _combat.discovered.has("heavy_roll") and not fleet.holds.held(trap),
+	check("heavy_roll", _combat.discovered.has("heavy_roll") and not fleet.holds.held(trap),
 		"a ball past the disc's rating %.1f rolled through its pit unheld" % trap.rating)
 
 	var brute: Node3D = _w9_spawn("plated_brute", home + Vector3(-8.0, 0.0, -6.0))
 	_combat.strike(brute, "slam", 80.0)
 	var popped: int = brute.plates_popped
 	_combat.strike(brute, "slam", 80.0)
-	_report("plate_peel", _combat.discovered.has("plate_peel") and popped == 1,
+	check("plate_peel", _combat.discovered.has("plate_peel") and popped == 1,
 		"the first breaking hit popped the plate (%d), the second reached the body" % popped)
 
 	fleet.holds.immune_left = 0.0
@@ -335,37 +335,37 @@ func _w10_pack_tricks(home: Vector3) -> void:
 	drone._go_live()
 	var winched: bool = fleet.holds.held(drone)
 	fleet.holds.snap(drone, "jump")
-	_report("cable_snap", _combat.discovered.has("cable_snap") and winched and drone.broken_by == "jump",
+	check("cable_snap", _combat.discovered.has("cable_snap") and winched and drone.broken_by == "jump",
 		"a winch drone hooked the ball (%s), then a jump snapped the cable (%s)" % [winched, drone.broken_by])
 
 	# 2026-10-17 (world rosters): a slam on a pit jaw's open jaw shuts it.
 	var jaw: Node3D = _w9_spawn("pit_jaw", home + Vector3(10.0, 0.0, -2.0))
 	jaw._warn(_w9_to(jaw))
 	_game.events.slammed.emit(jaw.telegraph().center, 1.0, 1.0)
-	_report("jaw_slam", _combat.discovered.has("jaw_slam") and jaw.slam_kills == 1,
+	check("jaw_slam", _combat.discovered.has("jaw_slam") and jaw.slam_kills == 1,
 		"a slam on the open jaw shut it (slam_kills %d)" % jaw.slam_kills)
 	# 2026-10-18 (w17 fix): 8cdcd49 gave the Linker its codex row; a bolt on its cable cuts it.
 	var linker: Node3D = _w9_spawn("linker", home + Vector3(12.0, 0.0, 10.0))
 	_combat.strike(linker, "bolt", 5.0, "cable")
-	_report("cable_cut", _combat.discovered.has("cable_cut") and linker.cut and linker.cut_by == "struck",
+	check("cable_cut", _combat.discovered.has("cable_cut") and linker.cut and linker.cut_by == "struck",
 		"a bolt on a Linker's cable cut it (cut %s by %s)" % [linker.cut, linker.cut_by])
 	# 2026-10-21 (Systems B, wave 18): the catch trap and Dispatcher are reachable now, so their rows open here.
 	# A player break of the cup (a boost, a smash, a hook out) opens cup_break.
 	var cup: Node3D = _w9_spawn("catch_trap", home + Vector3(-12.0, 0.0, 10.0))
 	cup._on_hold_released(cup.get_instance_id(), "cup", "boost")
-	_report("cup_break", _combat.discovered.has("cup_break") and cup.broken_by == "boost",
+	check("cup_break", _combat.discovered.has("cup_break") and cup.broken_by == "boost",
 		"a boost out of a catch trap's cup broke its hold (broken_by %s)" % cup.broken_by)
 	# 2026-10-21: the swatter is reachable (plate_press packs); a boost out of its bat opens paddle_ride.
 	var swatter: Node3D = _w9_spawn("swatter", home + Vector3(-14.0, 0.0, 10.0))
 	swatter._on_hold_released(swatter.get_instance_id(), "paddle_bat", "boost")
-	_report("paddle_ride", _combat.discovered.has("paddle_ride") and swatter.broken_by == "boost",
+	check("paddle_ride", _combat.discovered.has("paddle_ride") and swatter.broken_by == "boost",
 		"a boost out of a swatter's bat broke its hold (broken_by %s)" % swatter.broken_by)
 	# A Dispatcher killed after at least one drop cuts its stream.
 	var dispatcher: Node3D = _w9_spawn("dispatcher", home + Vector3(14.0, 0.0, 10.0))
 	dispatcher._go_live()
 	var dropped: int = dispatcher.drops
 	_combat.strike(dispatcher, "slam", 100000.0)
-	_report("stream_cut", _combat.discovered.has("stream_cut") and dropped > 0,
+	check("stream_cut", _combat.discovered.has("stream_cut") and dropped > 0,
 		"a Dispatcher that dropped %d chaser(s) was killed" % dropped)
 	for node in [trap, brute, drone, jaw, linker, cup, swatter, dispatcher]:
 		if is_instance_valid(node):
@@ -387,7 +387,7 @@ func _spillway_tricks(home: Vector3) -> void:
 	player.state.tier = SpeedTier.FAST
 	layer._live(layer.field.until_pulse() + 0.01)
 	player.state.tier = tier
-	_report("mat_slip", _combat.discovered.has("mat_slip") and layer.field.outcomes == ["speed"] and layer.jolts == 0,
+	check("mat_slip", _combat.discovered.has("mat_slip") and layer.field.outcomes == ["speed"] and layer.jolts == 0,
 		"a FAST ball on a jolt layer's mat slipped its pulse by speed (outcomes %s, jolts %d)" % [layer.field.outcomes, layer.jolts])
 
 	fleet.holds.clear()
@@ -399,7 +399,7 @@ func _spillway_tricks(home: Vector3) -> void:
 	flap._t = 0.0
 	flap._go_live()
 	player.state.tier = tier
-	_report("flap_ride", _combat.discovered.has("flap_ride") and flap.rides == 1 and flap.broken_by == "speed" and not fleet.holds.held(flap),
+	check("flap_ride", _combat.discovered.has("flap_ride") and flap.rides == 1 and flap.broken_by == "speed" and not fleet.holds.held(flap),
 		"a FAST ball rode a sluice flap, never held (rides %d, broken by %s)" % [flap.rides, flap.broken_by])
 
 	fleet.holds.clear()
@@ -409,7 +409,7 @@ func _spillway_tricks(home: Vector3) -> void:
 	var tethered: bool = fleet.holds.held(hooker)
 	player.kit.anchor_body = null
 	_game.events.grapple_fired.emit(player.ball_position() + Vector3(0.0, 4.0, 6.0))
-	_report("hook_out", _combat.discovered.has("hook_out") and tethered and hooker.broken_by == "hook",
+	check("hook_out", _combat.discovered.has("hook_out") and tethered and hooker.broken_by == "hook",
 		"a harpoon bite on a post snapped a hooker's tether (held %s, broken by %s)" % [tethered, hooker.broken_by])
 
 	fleet.holds.clear()
@@ -422,18 +422,18 @@ func _spillway_tricks(home: Vector3) -> void:
 	boom._live(1.0 / 60.0)
 	player.state.tier = tier
 	var touched: int = boom.pops
-	_report("boom_pop", _combat.discovered.has("boom_pop") and touched >= 1 and boom.pinned == 0,
+	check("boom_pop", _combat.discovered.has("boom_pop") and touched >= 1 and boom.pinned == 0,
 		"a FAST ball in a boom tender's lane burst %d float(s), never pinned" % touched)
 	# The ball stands in at each float in turn, the pass a full FAST sweep down the lane makes;
 	# the lane, tier and SWEEP gates are the boom_pop row's above.
 	for i in boom.FLOAT_OUT.size():
 		boom._bowl_through(boom.float_position(i))
-	_report("boom_strike", _combat.discovered.has("boom_strike") and boom.strikes == 1,
+	check("boom_strike", _combat.discovered.has("boom_strike") and boom.strikes == 1,
 		"the ball went through all five floats in one sweep (strikes %d)" % boom.strikes)
 
 	var soaked := _chaser(-14.0, 500.0)
 	_combat.strike(soaked, "arc", 20.0, "", "weapon")
-	_report("armour_wet", _combat.discovered.has("armour_wet"), "a full arc hit on a soaked chaser reads it")
+	check("armour_wet", _combat.discovered.has("armour_wet"), "a full arc hit on a soaked chaser reads it")
 	fleet.holds.clear()
 	for node in [layer, flap, hooker, boom, soaked]:
 		if is_instance_valid(node):
@@ -461,7 +461,7 @@ func _start_shell() -> void:
 	var batted := false
 	for shell in shells:
 		batted = batted or _combat._bat(shell)
-	_report("bat", batted, "a shell in flight was batted back toward its lobber")
+	check("bat", batted, "a shell in flight was batted back toward its lobber")
 	_clock = 0.0
 
 
@@ -470,15 +470,15 @@ func _warden_tricks() -> void:
 	_game.run.set_max_hp(99999.0)
 	var ctx = _game.ctx
 	var warden: Node3D = ctx.spawner.spawn_enemy("warden", ctx.terrain.beacon_point(2))
-	_report("posture warden", warden.fight() == "posture", "the stage 2 Warden fights on posture; caps and the magnet are gone")
+	check("posture warden", warden.fight() == "posture", "the stage 2 Warden fights on posture; caps and the magnet are gone")
 	_w10_warden_tricks(warden)
 	_game.player.chain.combo = 3
 	_game.events.line_state_changed.emit("chain_link", null, Vector3.ZERO, "")
-	_report("chain", _combat.discovered.has("chain"), "a third link in one chain")
+	check("chain", _combat.discovered.has("chain"), "a third link in one chain")
 	_game.player.chain.combo = 0
 	var all_found := true
 	var pending_ok := true
-	var pilot_rows := PilotBlocks.ids("res://src/combat/codex_entries.gd")
+	var pilot_rows := PilotBlocks.ids(self, "res://src/combat/codex_entries.gd")
 	for id in CodexEntries.ids():
 		# 2026-10-12 (W13 coordinator): P-C kit rows (marked blocks in codex_entries.gd) need a
 		# pilot's kit, which this staging does not equip; each pilot's kit tests open its own.
@@ -501,8 +501,8 @@ func _warden_tricks() -> void:
 			pending_ok = pending_ok and not _combat.discovered.has(id)
 			continue
 		all_found = all_found and _combat.discovered.has(id)
-	_report("all", all_found, "discovered this run: %s" % [_combat.discovery_log])
-	_report("pending stay undiscovered", pending_ok, "detector-pending: %s" % [CodexEntries.DETECTOR_PENDING])
+	check("all", all_found, "discovered this run: %s" % [_combat.discovery_log])
+	check("pending stay undiscovered", pending_ok, "detector-pending: %s" % [CodexEntries.DETECTOR_PENDING])
 	_last_case_ran = true
 
 
@@ -523,7 +523,7 @@ func _w10_warden_tricks(warden: Node3D) -> void:
 	hop.state.grounded = false
 	warden._step_slag(0.0)
 	warden.target = player
-	_report("slag_hop", _combat.discovered.has("slag_hop") and not rolled,
+	check("slag_hop", _combat.discovered.has("slag_hop") and not rolled,
 		"a ball 3 m over a burning slag lane, not one rolling in it (rolled fired %s)" % rolled)
 
 	warden.variant = "choir"
@@ -537,9 +537,9 @@ func _w10_warden_tricks(warden: Node3D) -> void:
 	# A core hit lands the frame after the stagger opens; this stands in for that next frame.
 	warden._posture.stagger_frame = -1
 	warden.on_struck("slam", "", warden.judge_hit("slam", 200.0, true, 2))
-	_report("choir_switch", _combat.discovered.has("choir_switch") and braced == ["ram"],
+	check("choir_switch", _combat.discovered.has("choir_switch") and braced == ["ram"],
 		"a slam on a choir Warden braced against %s" % [braced])
-	_report("warden_shatter", _combat.discovered.has("warden_shatter") and warden.chunks_left() == chunks - 1,
+	check("warden_shatter", _combat.discovered.has("warden_shatter") and warden.chunks_left() == chunks - 1,
 		"a smash on the open core took a chunk (%d to %d)" % [chunks, warden.chunks_left()])
 
 	warden.variant = "brood"
@@ -551,13 +551,13 @@ func _w10_warden_tricks(warden: Node3D) -> void:
 		lamp.hp = 1.0
 		_combat.strike(lamp, "slam", 80.0)
 	warden._step_guard(0.0)
-	_report("brood_dark", _combat.discovered.has("brood_dark") and lamps == 1 and warden.guard.alive().is_empty(),
+	check("brood_dark", _combat.discovered.has("brood_dark") and lamps == 1 and warden.guard.alive().is_empty(),
 		"a brood Warden's lamp guard (%d) was put out and went dark" % lamps)
 
 
 func _finish() -> bool:
 	if not _last_case_ran:
-		_report("ran to the end", false, "the Warden cases aborted before the last check")
+		check("ran to the end", false, "the Warden cases aborted before the last check")
 	var ok := _failures == 0
 	print("combat_codex_test: %s" % ("PASS" if ok else "FAIL"))
 	_game.free()
