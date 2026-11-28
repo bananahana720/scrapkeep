@@ -14,6 +14,7 @@ import {
   selectShardFiles,
   shuffleFiles,
 } from "./node-tests.mjs";
+import { selectStage1NodeTests } from "../sketch-fast.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -155,6 +156,11 @@ test("every tracked *.test.mjs and tests/*.test.js is either discovered or liste
   const excludedSet = new Set(Object.keys(EXCLUDED_TESTS));
   const trackedSet = new Set(trackedScriptTests);
 
+  assert.deepEqual(Object.keys(EXCLUDED_TESTS).sort(), [
+    "scripts/budget-audit.test.mjs",
+    "scripts/far-faults.test.mjs",
+  ]);
+
   for (const [file, reason] of excludedEntries) {
     assert.equal(typeof reason, "string", `${file} exclusion reason must be a string`);
     assert.ok(reason.trim().length > 0, `${file} exclusion reason must be non-empty`);
@@ -175,4 +181,21 @@ test("every tracked *.test.mjs and tests/*.test.js is either discovered or liste
 
   const pkg = JSON.parse(readFileSync(path.join(repoRoot, "package.json"), "utf8"));
   assert.equal(pkg.scripts?.test, "node scripts/ci/node-tests.mjs");
+});
+
+test("far-faults stays out of node-tests and is what sketch-fast --ci-godot-only runs for a park prop change", () => {
+  const discovered = discoverTestFiles(repoRoot);
+  assert.ok(!discovered.includes("scripts/far-faults.test.mjs"));
+  assert.deepEqual(
+    selectStage1NodeTests({
+      changedNode: [],
+      changedGodot: ["assets/models/park/props/dam/barrel.glb"],
+      allNodeTests: discovered,
+      readText: () => "",
+      ciGodotOnly: true,
+      coveredByCi: discovered,
+      isPrimaryShard: true,
+    }),
+    ["scripts/far-faults.test.mjs"],
+  );
 });
