@@ -85,7 +85,7 @@ func _run() -> void:
 	var warned := false
 	for i in int(ceil((Foreman.WIPE_EVERY + 0.5) * Engine.physics_ticks_per_second)):
 		if wipes.is_empty():
-			game.combat._add_shred(brute, 200.0)
+			game.combat.add_shred(brute, 200.0)
 			shred_before = game.combat.shred_of(brute)
 		frame[0] += 1
 		await physics_frame

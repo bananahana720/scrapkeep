@@ -455,11 +455,13 @@ func _test_hygiene_and_resets() -> void:
 		"res://src/combat/weapon_driver.gd",
 		"res://src/combat/ultimate.gd",
 		"res://src/world/destructibles.gd",
+		"res://src/combat/hero_hooks.gd",
+		"res://src/combat/consumable_runtime.gd",
 	]
 	var orb_hits: Array = []
 	for path in orb_files:
 		var src := FileAccess.get_file_as_string(path)
-		if src.findn(orb_word) != -1:
+		if src == "" or src.findn(orb_word) != -1:
 			orb_hits.append(path)
 	var combat_src := FileAccess.get_file_as_string("res://src/combat/combat.gd")
 	for phrase in [orb_word + " strike", orb_word + " laser", orb_word + " beam", orb_word + " cannon"]:
