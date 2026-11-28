@@ -627,7 +627,10 @@ test("a pushed script whose name git would quote is checked like any other, on a
 });
 
 const HOOK = path.join(REPO_ROOT, "scripts/hooks/pre-push.mjs");
-const OWN_FOLDER = `scrapkeep-pre-push-${process.getuid()}`;
+const UID = process.getuid?.();
+const NO_UID =
+  UID === undefined ? "this system has no user ids, so the hook keeps no folder per user" : false;
+const OWN_FOLDER = `scrapkeep-pre-push-${UID}`;
 const runHook = (tmp) =>
   spawnSync(process.execPath, [HOOK], {
     env: { ...process.env, TMPDIR: tmp },
@@ -637,7 +640,7 @@ const runHook = (tmp) =>
 
 test(
   "a hook stopped by SIGTERM in a child call leaves a copy that the next start removes, and nothing else",
-  { timeout: 60_000 },
+  { timeout: 60_000, skip: NO_UID },
   async () => {
     const tmp = realpathSync(mkdtempSync(path.join(os.tmpdir(), "pre-push-stop-")));
     scratchDirs.push(tmp);
@@ -722,51 +725,55 @@ test(
   },
 );
 
-test("the hook stops when the folder for its copies is not a plain folder of this user's that only this user can write", () => {
-  for (const [make, wrong] of [
-    [(at) => writeFileSync(at, ""), /is not a folder/],
-    [(at) => symlinkSync(os.tmpdir(), at), /is not a folder/],
-    [
-      (at) => {
-        mkdirSync(at);
-        chmodSync(at, 0o777);
-      },
-      /can be written by other users \(mode 777\)/,
-    ],
-    [
-      (at) => {
-        mkdirSync(at);
-        chmodSync(at, 0o720);
-      },
-      /can be written by other users \(mode 720\)/,
-    ],
-  ]) {
+test(
+  "the hook stops when the folder for its copies is not a plain folder of this user's that only this user can write",
+  { skip: NO_UID },
+  () => {
+    for (const [make, wrong] of [
+      [(at) => writeFileSync(at, ""), /is not a folder/],
+      [(at) => symlinkSync(os.tmpdir(), at), /is not a folder/],
+      [
+        (at) => {
+          mkdirSync(at);
+          chmodSync(at, 0o777);
+        },
+        /can be written by other users \(mode 777\)/,
+      ],
+      [
+        (at) => {
+          mkdirSync(at);
+          chmodSync(at, 0o720);
+        },
+        /can be written by other users \(mode 720\)/,
+      ],
+    ]) {
+      const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-folder-"));
+      scratchDirs.push(tmp);
+      const folder = path.join(tmp, OWN_FOLDER);
+      make(folder);
+      const ran = runHook(tmp);
+      assert.equal(ran.status, 2, ran.stdout);
+      assert.ok(ran.stderr.startsWith(`pre-push: ${folder} `), ran.stderr);
+      assert.match(ran.stderr, wrong);
+    }
     const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-folder-"));
     scratchDirs.push(tmp);
-    const folder = path.join(tmp, OWN_FOLDER);
-    make(folder);
-    const ran = runHook(tmp);
-    assert.equal(ran.status, 2, ran.stdout);
-    assert.ok(ran.stderr.startsWith(`pre-push: ${folder} `), ran.stderr);
-    assert.match(ran.stderr, wrong);
-  }
-  const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-folder-"));
-  scratchDirs.push(tmp);
-  const someoneElse = process.getuid() + 1;
-  assert.throws(
-    () => removeStaleCopies({ tmp, uid: someoneElse, errLog: assert.fail }),
-    new RegExp(
-      `scrapkeep-pre-push-${someoneElse} belongs to user ${process.getuid()}, not to this user \\(${someoneElse}\\)`,
-    ),
-  );
-  assert.equal(copyFolder({ tmp }), path.join(tmp, OWN_FOLDER));
-  assert.equal(statSync(path.join(tmp, OWN_FOLDER)).mode & 0o077, 0, "made for this user only");
-});
+    const someoneElse = UID + 1;
+    assert.throws(
+      () => removeStaleCopies({ tmp, uid: someoneElse, errLog: assert.fail }),
+      new RegExp(
+        `scrapkeep-pre-push-${someoneElse} belongs to user ${UID}, not to this user \\(${someoneElse}\\)`,
+      ),
+    );
+    assert.equal(copyFolder({ tmp }), path.join(tmp, OWN_FOLDER));
+    assert.equal(statSync(path.join(tmp, OWN_FOLDER)).mode & 0o077, 0, "made for this user only");
+  },
+);
 
 test(
   "a stale copy that cannot be removed is named in one line and the push goes on",
   {
-    skip: process.getuid() === 0 ? "root can remove a file in a folder it may not write" : false,
+    skip: NO_UID || (UID === 0 ? "root can remove a file in a folder it may not write" : false),
   },
   () => {
     const tmp = mkdtempSync(path.join(os.tmpdir(), "pre-push-stuck-"));
