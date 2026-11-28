@@ -180,8 +180,8 @@ func _draws(level: int) -> Dictionary:
 		for shape in SHAPES:
 			for i in DRAWS:
 				var cores := rng.randi_range(0, 2)
-				var offer: Array = Parts.roll_gate(rng, Parts.gate_rarities(cores), pilot, held, shape[1], 1 + i % 3) \
-					if shape[0] == "gate" else Parts.roll(rng, Parts.gate_rarities(cores), pilot, held, shape[1])
+				var offer: Array = Parts.roll_gate(rng, PartOffers.gate_rarities(cores), pilot, held, shape[1], 1 + i % 3) \
+					if shape[0] == "gate" else Parts.roll(rng, PartOffers.gate_rarities(cores), pilot, held, shape[1])
 				total += 1
 				for key in offer:
 					if Parts.level_of(key, held) > 0:

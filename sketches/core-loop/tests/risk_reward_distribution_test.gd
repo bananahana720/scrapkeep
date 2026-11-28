@@ -76,10 +76,10 @@ func _check_world_escalation_and_verb_parts() -> void:
 	_t.check("rare multiplier climbs W1 < W2 < W3",
 		PartOffers.stage_rare_mult(1) < PartOffers.stage_rare_mult(3) and PartOffers.stage_rare_mult(3) < PartOffers.stage_rare_mult(5),
 		"%.2f / %.2f / %.2f" % [PartOffers.stage_rare_mult(1), PartOffers.stage_rare_mult(3), PartOffers.stage_rare_mult(5)])
-	_t.eq("gate_rarities W1 0 cores stays common", Parts.gate_rarities(0, 1), ["common"])
-	_t.eq("gate_rarities W2 0 cores mixes common+rare", Parts.gate_rarities(0, 3), ["common", "rare"])
-	_t.eq("gate_rarities W2 1 core lifts to rare", Parts.gate_rarities(1, 3), ["rare"])
-	_t.eq("gate_rarities W3 1 core lifts to rare+relic", Parts.gate_rarities(1, 5), ["rare", "relic"])
+	_t.eq("gate_rarities W1 0 cores stays common", PartOffers.gate_rarities(0, 1), ["common"])
+	_t.eq("gate_rarities W2 0 cores mixes common+rare", PartOffers.gate_rarities(0, 3), ["common", "rare"])
+	_t.eq("gate_rarities W2 1 core lifts to rare", PartOffers.gate_rarities(1, 3), ["rare"])
+	_t.eq("gate_rarities W3 1 core lifts to rare+relic", PartOffers.gate_rarities(1, 5), ["rare", "relic"])
 
 	var verb_parts := ["slag_pike", "halo_rig", "backwash", "barbed_reel", "faultline_cap", "second_bell",
 		"long_leash", "fan_spread", "helix_drill", "basalt_ram", "storm_capacitor", "boomerang_spool",

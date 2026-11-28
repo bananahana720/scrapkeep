@@ -115,7 +115,7 @@ func _check_table() -> void:
 		_t.check("tier1_common_%s" % pid,
 			String(cat.get("rarity", "")) == "common" and int(cat.get("tier", 0)) == 1,
 			"rarity=%s tier=%s" % [cat.get("rarity", ""), cat.get("tier", "")])
-		_t.check("has_micro_row_%s" % pid, not Parts.micro_mutation(pid).is_empty(), pid)
+		_t.check("has_micro_row_%s" % pid, not PartMutations.micro_mutation(pid).is_empty(), pid)
 	_t.check("budget_tread", is_equal_approx(float(Parts.CATALOGUE["tread_plating"]["mods"]["cruise"]), 1.08), "cruise 1.08")
 	_t.check("budget_spool", is_equal_approx(float(Parts.CATALOGUE["long_spool"]["mods"]["rope_range"]), 1.3), "rope_range 1.3")
 	_t.check("budget_vane", is_equal_approx(float(Parts.CATALOGUE["dash_vane"]["mods"]["dash_impulse"]), 1.15), "dash_impulse 1.15")

@@ -152,7 +152,6 @@ const CATALOGUE := {
 		"punch": 8.0, "magnet": 2.5, "kill_scrap": 2.0},
 }
 
-const SOURCE_RARITIES := PartOffers.SOURCE_RARITIES
 const GRAPPLE_SWAP_SLOTS := PartMutations.GRAPPLE_SWAP_SLOTS
 const GRAPPLE_MUTATIONS := PartMutations.GRAPPLE_MUTATIONS
 
@@ -316,14 +315,6 @@ static func active_tier() -> int:
 	var run = _run_ref.get_ref() if _run_ref != null else null
 	return run.selected_run_tier() if run != null else 0
 
-
-static func _pick_rarity(rng: RandomNumberGenerator, allowed: Array) -> String:
-	return _pick_rarity_scaled(rng, allowed, 1.0)
-
-
-static func _pick_rarity_scaled(rng: RandomNumberGenerator, allowed: Array, rare_mult := 1.0) -> String:
-	return PartOffers.pick_rarity_scaled(rng, allowed, rare_mult, active_tier())
-
 static var _rows := {}
 static var _all_rows := {}
 static var seams := {}
@@ -419,7 +410,7 @@ static func _base_row(part_id: String) -> Dictionary:
 	if HOTWIRED.has(part_id):
 		return _hotwired_spec(part_id)
 	if PartMutations.is_grapple_mutation_part(part_id):
-		return _grapple_mut_spec(part_id)
+		return PartMutations.grapple_mut_spec(part_id)
 	var generated := ItemGen.generated_row(part_id)
 	return _settled(generated) if not generated.is_empty() else generated
 
@@ -588,10 +579,6 @@ static func _hotwired_spec(part_id: String) -> Dictionary:
 		"cap": 1, "stack": "capped"}
 
 
-static func _grapple_mut_spec(part_id: String) -> Dictionary:
-	return PartMutations.grapple_mut_spec(part_id)
-
-
 static func hotwire_recycle(part_id: String) -> int:
 	return int(hotwired(part_id).get("recycle_commons", 0)) * RECYCLE_COMMON
 
@@ -744,10 +731,6 @@ static func rung_of(part_id: String) -> int:
 	return PartOffers.rung_of(part_id, def)
 
 
-static func gate_rarities(bonus_cores: int, stage := 1) -> Array:
-	return PartOffers.gate_rarities(bonus_cores, stage)
-
-
 static func offer_pool(class_id: String, rarities: Array) -> Array:
 	return PartOffers.offer_pool(class_id, rarities, _offer_ops())
 
@@ -767,10 +750,6 @@ static func in_kit(class_id: String, part_id: String) -> bool:
 static func slot_weights(rarity: String, class_id: String, pool: Array, offered: Dictionary,
 		nudge: Dictionary = {}) -> Dictionary:
 	return PartOffers.slot_weights(rarity, class_id, pool, offered, nudge, _offer_ops())
-
-
-static func milestone_for(event_id: String, held: Array) -> String:
-	return PartOffers.milestone_for(event_id, held)
 
 
 static func roll(rng: RandomNumberGenerator, rarities: Array, class_id: String, held: Array, count: int,

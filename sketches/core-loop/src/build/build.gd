@@ -1250,7 +1250,7 @@ func _on_gate_chosen(part_id: String) -> void:
 
 func _on_milestone_won(event_id: String) -> void:
 	if not scrapless():
-		ctx.run.add_part(Parts.milestone_for(event_id, ctx.run.parts), "milestone")
+		ctx.run.add_part(PartOffers.milestone_for(event_id, ctx.run.parts), "milestone")
 
 
 func _on_scrap_lost(_amount: int, at: Vector3, _total: int, _cause: String) -> void:

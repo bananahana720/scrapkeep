@@ -68,9 +68,9 @@ func _run() -> void:
 func _tables() -> Dictionary:
 	return {
 		"shelf": Shop.SHELF_RARITIES, "shelf floor": Shop.FLOOR_RARITIES, "top shelf": Shop.TOP_RARITIES, "pocket pay": Activities.PAY_RARITIES,
-		"cache pick": CrackedCache.PICK_RARITIES, "fabricator": Parts.SOURCE_RARITIES["fabricator"],
-		"vault": Parts.SOURCE_RARITIES["vault"], "milestone": Parts.SOURCE_RARITIES["milestone"],
-		"gate 0 cores": Parts.gate_rarities(0), "gate 1 core": Parts.gate_rarities(1), "gate 2 cores": Parts.gate_rarities(2),
+		"cache pick": CrackedCache.PICK_RARITIES, "fabricator": PartOffers.SOURCE_RARITIES["fabricator"],
+		"vault": PartOffers.SOURCE_RARITIES["vault"], "milestone": PartOffers.SOURCE_RARITIES["milestone"],
+		"gate 0 cores": PartOffers.gate_rarities(0), "gate 1 core": PartOffers.gate_rarities(1), "gate 2 cores": PartOffers.gate_rarities(2),
 	}
 
 

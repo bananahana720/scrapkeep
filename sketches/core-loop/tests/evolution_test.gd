@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const ItemGen := preload("res://src/build/item_gen.gd")
 const Synergies := preload("res://src/build/synergies.gd")
 
@@ -173,7 +174,7 @@ func _check_case(c: Dictionary) -> void:
 
 
 func _check_never_rolls() -> void:
-	var lists: Array = [["common"], ["rare"], ["relic"], ["evolved"], ["evolution"], ItemGen.RARITIES, Parts.gate_rarities(0), Parts.gate_rarities(1), Parts.gate_rarities(2)]
+	var lists: Array = [["common"], ["rare"], ["relic"], ["evolved"], ["evolution"], ItemGen.RARITIES, PartOffers.gate_rarities(0), PartOffers.gate_rarities(1), PartOffers.gate_rarities(2)]
 	var evolved_ids: Array = CASES.map(func(c): return c["into"])
 	var leaked: Array = []
 	var draws := 0

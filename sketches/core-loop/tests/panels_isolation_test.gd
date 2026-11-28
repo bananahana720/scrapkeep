@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const Panels := preload("res://src/build/panels.gd")
 const RunState := preload("res://src/core/run_state.gd")
 const T := preload("res://tests/support/t.gd")
@@ -56,7 +57,7 @@ func _snapshot() -> Dictionary:
 	rng.seed = 41
 	var offers := []
 	for i in 40:
-		offers.append(Parts.roll_gate(rng, Parts.gate_rarities(0), _game.run.class_id(), _game.run.parts, 2, 1, {}))
+		offers.append(Parts.roll_gate(rng, PartOffers.gate_rarities(0), _game.run.class_id(), _game.run.parts, 2, 1, {}))
 	var world = _game.ctx.root.get_node("World")
 	var spawned: Node3D = _game.ctx.spawner.spawn_enemy("chaser", _game.player.ball_position() + Vector3(30.0, 0.0, 30.0))
 	var enemy := {"max_hp": spawned.get("max_hp"), "damage": spawned.get("damage"), "contact_damage": spawned.get("contact_damage")}

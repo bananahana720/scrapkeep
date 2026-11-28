@@ -348,8 +348,8 @@ func _component(seed_value: int, tier_value: int) -> Dictionary:
 			# Ruling al: no tier raises enemy health.
 			t.near("health untouched seed %d tier %d stage %d" % [seed_value, tier_value, row.stage], d.hp_scale(), row.threat)
 			t.eq("interval mode retained", d.mode, "interval")
-		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": Parts.SOURCE_RARITIES,
-			"gate_rarities": [Parts.gate_rarities(0), Parts.gate_rarities(1), Parts.gate_rarities(2)],
+		var pay := {"kill_scrap": row.kill_scrap, "source_rarities": PartOffers.SOURCE_RARITIES,
+			"gate_rarities": [PartOffers.gate_rarities(0), PartOffers.gate_rarities(1), PartOffers.gate_rarities(2)],
 			"milestones": PartOffers.MILESTONE_FOR_EVENT}
 		if d._park_map != null:
 			pay["park_rows"] = _director_rows(d._park_map.park.park_rows)

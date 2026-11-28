@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const StageModifier := preload("res://src/world/events/stage_modifier.gd")
 const T := preload("res://tests/support/t.gd")
 
@@ -156,7 +157,7 @@ func _test_stacked_debuffs_low_hull() -> void:
 	var class_id := String(game.run.class_id())
 	var parts: Array = []
 	for i in 10:
-		var picks: Array = Parts.roll(rng, Parts.SOURCE_RARITIES["fabricator"], class_id, parts, 1)
+		var picks: Array = Parts.roll(rng, PartOffers.SOURCE_RARITIES["fabricator"], class_id, parts, 1)
 		if not picks.is_empty():
 			var pid := String(picks[0])
 			parts.append(pid)

@@ -67,13 +67,13 @@ func decay_wall_kick(delta: float) -> void:
 	wall_aim = {}
 
 
-func step_wall_kick(player) -> void:
+func step_wall_kick(player) -> Dictionary:
 	var face := Augments.steepest_face_at(player.body().get_world_3d().direct_space_state, player.ball_position())
 	if face.is_empty():
-		return
+		return {}
 	var key := Augments.face_key(face["point"], face["normal"])
 	if float(_wall_kick_faces.get(key, 0.0)) > 0.0:
-		return
+		return {}
 	var n: Vector3 = (face["normal"] as Vector3).normalized()
 	var look: Vector3 = -player.drive_basis.z
 	var along := look - n * look.dot(n)
@@ -85,7 +85,7 @@ func step_wall_kick(player) -> void:
 	launch.y = maxf(launch.y, jump_spd * Augments.KEST_WALL_KICK_UP_MULT)
 	wall_aim = {"point": face["point"], "normal": n, "dir": launch.normalized(), "speed": launch.length()}
 	if player.state.jump_buffer <= 0.0 and not player.intent.jump_pressed:
-		return
+		return {}
 	player.state.jump_buffer = 0.0
 	player.state.coyote = 0.0
 	player.intent.jump_pressed = false
@@ -93,5 +93,4 @@ func step_wall_kick(player) -> void:
 	air_draw_left = Augments.KEST_AIR_DRAW_MAX_S
 	player.body().set_velocity_now(launch)
 	last_wall_kick = {"point": face["point"], "normal": n, "velocity": launch}
-	player.emit_kit_fact("vault_kicked", [face["point"], launch.length()])
-	player.events.jumped.emit(true)
+	return last_wall_kick

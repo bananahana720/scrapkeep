@@ -113,7 +113,7 @@ func _check_gate_pairs() -> void:
 	for seed_value in 50:
 		rng.seed = 1000 + seed_value
 		var cores := seed_value % 3
-		var pair: Array = Parts.roll(rng, Parts.gate_rarities(cores), "runner_gunner", [], 2)
+		var pair: Array = Parts.roll(rng, PartOffers.gate_rarities(cores), "runner_gunner", [], 2)
 		if pair.size() != 2 or not pair.any(func(key): return Parts.def(key).hits_harder()):
 			soft.append(pair)
 	_report("gate pairs hit harder", soft.is_empty(),
@@ -126,14 +126,14 @@ func _check_sources() -> void:
 	var wrong: Array = []
 	var expect := {0: ["common"], 1: ["common", "rare"], 2: ["rare", "relic"], 3: ["rare", "relic"]}
 	for cores in expect:
-		if Parts.gate_rarities(cores) != expect[cores]:
-			wrong.append("gate %d cores %s" % [cores, Parts.gate_rarities(cores)])
+		if PartOffers.gate_rarities(cores) != expect[cores]:
+			wrong.append("gate %d cores %s" % [cores, PartOffers.gate_rarities(cores)])
 	for source in ["fabricator", "vault", "milestone"]:
 		for i in 60:
-			var picks: Array = Parts.roll(rng, Parts.SOURCE_RARITIES.get(source, []), "pylon_engineer", [], 1)
+			var picks: Array = Parts.roll(rng, PartOffers.SOURCE_RARITIES.get(source, []), "pylon_engineer", [], 1)
 			if source == "milestone":
-				picks = [Parts.milestone_for("event_%d" % i, [])]
-			if picks.is_empty() or Parts.def(picks[0]).rarity != Parts.SOURCE_RARITIES[source][0]:
+				picks = [PartOffers.milestone_for("event_%d" % i, [])]
+			if picks.is_empty() or Parts.def(picks[0]).rarity != PartOffers.SOURCE_RARITIES[source][0]:
 				wrong.append("%s gave %s" % [source, picks])
 				break
 	_report("rarity by source", wrong.is_empty(),
@@ -358,7 +358,7 @@ func _check_pattern_guarantee() -> void:
 	var fired := 0
 	for seed_value in 50:
 		var cores := seed_value % 3
-		var rarities: Array = Parts.gate_rarities(cores)
+		var rarities: Array = PartOffers.gate_rarities(cores)
 		var class_id: String = ["runner_gunner", "pylon_engineer"][seed_value % 2]
 		# A pattern-less build on stage 2 always sees a pattern part, and the first slot
 		# (where the synergy bait sits) and the rarity rule outside the pattern slot hold.

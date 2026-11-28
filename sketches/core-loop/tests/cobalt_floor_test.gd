@@ -42,7 +42,7 @@ func _pairs() -> void:
 				for s in SEEDS:
 					var rng := RandomNumberGenerator.new()
 					rng.seed = hash([pilot, cores, stage, s])
-					var picks: Array = Parts.roll_gate(rng, Parts.gate_rarities(cores), pilot, [], 2, stage)
+					var picks: Array = Parts.roll_gate(rng, PartOffers.gate_rarities(cores), pilot, [], 2, stage)
 					var had_pattern: bool = picks.any(func(key): return key in PartOffers.PATTERN_PARTS)
 					var floored: Array = Parts.floor_gate(rng, picks, pilot, [])
 					rows += 1

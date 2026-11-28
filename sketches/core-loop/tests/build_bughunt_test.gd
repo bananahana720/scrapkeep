@@ -108,7 +108,7 @@ func _check_f003_rare_base_stat() -> void:
 
 
 func _check_f004_one_slot_bait() -> void:
-	var rarities: Array = Parts.gate_rarities(0)
+	var rarities: Array = PartOffers.gate_rarities(0)
 	var class_id := "runner_gunner"
 	var pool: Array = Parts.offer_pool(class_id, rarities)
 	var plain: Array = Parts.ids().filter(func(key): return Parts.def(key).patterns.is_empty())

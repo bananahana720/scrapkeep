@@ -129,7 +129,7 @@ func refresh(held: Array) -> void:
 	var index := 0
 	for part_id in order:
 		if PartMutations.MICRO_MUTATIONS.has(part_id) or PartMutations.FLAT_MICRO_MUTATIONS.has(part_id):
-			micro_mutations[part_id] = Parts.micro_mutation(part_id)
+			micro_mutations[part_id] = PartMutations.micro_mutation(part_id)
 		var d: Resource = Parts.def(part_id)
 		if d == null:
 			continue
@@ -199,11 +199,11 @@ func active_grapple_mutations() -> Dictionary:
 
 
 func has_grapple_mutation(mut_id: String) -> bool:
-	return grapple_mutation_ids.has(Parts.grapple_mutation_id_of(mut_id))
+	return grapple_mutation_ids.has(PartMutations.grapple_mutation_id_of(mut_id))
 
 
 func grapple_mutation(mut_id: String) -> Dictionary:
-	var mid := Parts.grapple_mutation_id_of(mut_id)
+	var mid := PartMutations.grapple_mutation_id_of(mut_id)
 	return (grapple_mutation_ids.get(mid, {}) as Dictionary).duplicate(true)
 
 

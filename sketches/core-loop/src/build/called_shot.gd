@@ -76,7 +76,7 @@ func gate_rarities() -> Array:
 	settle()
 	var stage: int = int(ctx.run.stage) if ctx != null and ctx.run != null else 1
 	var bonus: int = ctx.run.gate_tier_bonus() if ctx != null and ctx.run != null else 0
-	var rarities: Array = Parts.gate_rarities(bonus, stage)
+	var rarities: Array = PartOffers.gate_rarities(bonus, stage)
 	if verdict != "met":
 		return rarities
 	if bonus >= 1 or stage >= PartOffers.WORLD_ESCALATION_STAGE_W2:

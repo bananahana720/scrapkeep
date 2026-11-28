@@ -424,17 +424,6 @@ static func active_grapple_mutations(held: Array, maker_muts: Array, maker_count
 	return by_slot
 
 
-static func has_grapple_mutation(held: Array, mut_id: String, maker_muts: Array, maker_counts_fn: Callable) -> bool:
-	var mid := grapple_mutation_id_of(mut_id)
-	if mid == "":
-		return false
-	var active := active_grapple_mutations(held, maker_muts, maker_counts_fn)
-	for slot in active:
-		if String(active[slot]["id"]) == mid:
-			return true
-	return false
-
-
 static func grapple_mutation_problems() -> Array:
 	var found: Array = []
 	var allowed := [Palette.AMBER, Palette.COPPER, Palette.STEEL, Palette.SAND, Palette.VERDIGRIS]

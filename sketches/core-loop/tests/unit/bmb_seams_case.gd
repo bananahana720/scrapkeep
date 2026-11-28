@@ -21,12 +21,16 @@ const PlayerBall := preload("res://src/movement/player_ball.gd")
 
 func run(t) -> void:
 	var src_files := _walk_gd("res://src")
+	var all_files: Array[String] = []
+	all_files.append_array(src_files)
+	all_files.append_array(_walk_gd("res://tests"))
+	all_files.append_array(_walk_gd("res://tools"))
 	_check_single_sources(t, src_files)
 	_check_grapple_head_precedence(t)
 	_check_closed_reach_ins(t, src_files)
 	_check_seeded_roll_determinism(t)
 	_check_preload_and_seams_hygiene(t)
-	_check_explicit_setters(t, src_files)
+	_check_explicit_setters(t, all_files)
 
 
 func _read_src(path: String) -> String:
@@ -120,6 +124,12 @@ func _check_grapple_head_precedence(t) -> void:
 	var active_all: Dictionary = Parts.active_grapple_mutations(all_three)
 	t.eq("moss + mind + fleet head winner is wrecking_flail",
 		String(active_all.get("head", {}).get("id", "")), "wrecking_flail")
+	var explicit_live: Dictionary = Parts.active_grapple_mutations(all_three, MakerSets.live_grapple_mutations(all_three))
+	t.eq("explicit maker_muts caller preserves MakerDefs.SETS order (dragnet_siphon)",
+		String(explicit_live.get("head", {}).get("id", "")), "dragnet_siphon")
+	var explicit_pair: Dictionary = Parts.active_grapple_mutations([], ["dragnet_siphon", "live_bus"])
+	t.eq("explicit maker_muts order wins last entry (live_bus)",
+		String(explicit_pair.get("head", {}).get("id", "")), "live_bus")
 
 
 func _check_closed_reach_ins(t, src_files: Array[String]) -> void:
@@ -181,6 +191,15 @@ func _check_closed_reach_ins(t, src_files: Array[String]) -> void:
 		player.has_method("refit") and player.has_method("shove_planar")
 		and player.has_method("body_planar_speed") and player.has_method("speed_bank_move"))
 	t.check("PlayerBall deletes _refit alias", not player.has_method("_refit"))
+	t.check("PlayerBall deletes emit_kit_fact", not player.has_method("emit_kit_fact"))
+	t.check("PlayerBall deletes last_spire_vault forwarder", not ("last_spire_vault" in player))
+	var parts_methods: Array = (Parts as Script).get_script_method_list().map(func(m): return String(m["name"]))
+	var mut_methods: Array = (PartMutations as Script).get_script_method_list().map(func(m): return String(m["name"]))
+	t.check("Parts deletes SOURCE_RARITIES, gate_rarities, milestone_for and dead helpers",
+		not ("SOURCE_RARITIES" in Parts) and not ("gate_rarities" in parts_methods)
+		and not ("milestone_for" in parts_methods) and not ("_pick_rarity" in parts_methods)
+		and not ("_pick_rarity_scaled" in parts_methods) and not ("_grapple_mut_spec" in parts_methods))
+	t.check("PartMutations deletes dead has_grapple_mutation", not ("has_grapple_mutation" in mut_methods))
 	player.free()
 
 
@@ -216,11 +235,11 @@ func _check_preload_and_seams_hygiene(t) -> void:
 	t.check("part_offers reads PartDef.RARITIES directly", offers_src.contains("PartDef.RARITIES"))
 
 
-func _check_explicit_setters(t, src_files: Array[String]) -> void:
+func _check_explicit_setters(t, all_files: Array[String]) -> void:
 	var direct_writes: Array = []
 	var assign_re := RegEx.new()
 	assign_re.compile("(Parts\\.(seams|opened_items)|Synergies\\.table)(\\[[^\\]]+\\])?\\s*=(?!=)")
-	for path in src_files:
+	for path in all_files:
 		if path in ["res://src/build/parts.gd", "res://src/build/synergies.gd"]:
 			continue
 		var lines := _read_src(path).split("\n")
@@ -228,7 +247,7 @@ func _check_explicit_setters(t, src_files: Array[String]) -> void:
 			var code := _strip_comment(lines[i])
 			if assign_re.search(code) != null:
 				direct_writes.append("%s:%d" % [path, i + 1])
-	t.eq("no file under src assigns Parts.seams, Parts.opened_items or Synergies.table", direct_writes, [])
+	t.eq("no file under src/tests/tools assigns Parts.seams, Parts.opened_items or Synergies.table", direct_writes, [])
 	var prev_seams: Dictionary = Parts.seams.duplicate(true)
 	var prev_opened: Dictionary = Parts.opened_items.duplicate(true)
 	var prev_table = Synergies.table

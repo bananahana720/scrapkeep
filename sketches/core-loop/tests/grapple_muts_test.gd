@@ -113,7 +113,7 @@ func _check_tables_and_palette_contracts() -> void:
 	var all_glbs := true
 	var swap_ok := true
 	for mid in expected_swaps:
-		var row := Parts.grapple_mutation(mid)
+		var row := PartMutations.grapple_mutation(mid)
 		if String(row.get("swaps", "")) != String(expected_swaps[mid]):
 			swap_ok = false
 		if not ResourceLoader.exists(String(row.get("glb_path", ""))):

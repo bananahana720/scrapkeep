@@ -149,11 +149,6 @@ var last_kest_wall_kick: Dictionary:
 		return _kest_air.last_wall_kick
 	set(v):
 		_kest_air.last_wall_kick = v
-var last_spire_vault: Dictionary:
-	get:
-		return _kest_air.last_spire_vault
-	set(v):
-		_kest_air.last_spire_vault = v
 
 
 func setup(tuning_ref, events_ref, spawn: Vector3) -> void:
@@ -1458,10 +1453,6 @@ func _update_aim_cones(at: Vector3) -> void:
 		indicator.set_shape("faces", yours({"kind": "marks", "points": face_tags.map(func(tag): return tag["point"])}))
 
 
-func emit_kit_fact(kind: String, args: Array) -> void:
-	_on_kit_fact(kind, args)
-
-
 func _on_kit_fact(kind: String, args: Array) -> void:
 	if kind == "gauge_cancelled":
 		indicator.collapse("slingshot")
@@ -1629,4 +1620,7 @@ func _step_kest_wall_kick(delta: float) -> void:
 	if class_def == null or class_def.id != "demolitions_caster" or _frozen or state.grounded \
 			or kit.hooked or Augments.holding(kit) or in_set_piece() or not is_inside_tree():
 		return
-	_kest_air.step_wall_kick(self)
+	var kicked := _kest_air.step_wall_kick(self)
+	if not kicked.is_empty():
+		_on_kit_fact("vault_kicked", [kicked["point"], (kicked["velocity"] as Vector3).length()])
+		events.jumped.emit(true)

@@ -147,8 +147,8 @@ func _check_catalogue_and_words() -> void:
 	var expected_flat := ["rivet_plating", "magnet_spool", "grip_tread", "live_line", "vent_baffle",
 		"winch_pawl", "spring_shims", "gatling_heart", "horizon_optic", "ram_plow"]
 	for fid in expected_flat:
-		_t.check("flat micro-mutation exists: %s" % fid, Parts.has_micro_mutation([fid], fid), fid)
-		var row := Parts.micro_mutation(fid)
+		_t.check("flat micro-mutation exists: %s" % fid, PartMutations.has_micro_mutation([fid], fid), fid)
+		var row := PartMutations.micro_mutation(fid)
 		_t.check("flat micro-mutation has id/text: %s" % fid,
 			not row.is_empty() and String(row.get("id", "")) != "" and String(row.get("text", "")) != "", str(row))
 

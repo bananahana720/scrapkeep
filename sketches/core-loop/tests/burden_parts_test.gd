@@ -3,6 +3,7 @@ extends SceneTree
 const Game := preload("res://src/game.gd")
 const Intent := preload("res://src/movement/intent.gd")
 const Parts := preload("res://src/build/parts.gd")
+const PartOffers := preload("res://src/build/part_offers.gd")
 const BuildSheet := preload("res://src/build/build_sheet.gd")
 const ClassDef := preload("res://src/core/class_def.gd")
 const AlphaDefs := preload("res://src/core/alpha_defs.gd")
@@ -93,7 +94,7 @@ func _pool() -> void:
 		var rng := RandomNumberGenerator.new()
 		for seed_value in 50:
 			rng.seed = 5000 + seed_value
-			for id in Parts.roll(rng, Parts.gate_rarities(seed_value % 3), pilot, [], 3):
+			for id in Parts.roll(rng, PartOffers.gate_rarities(seed_value % 3), pilot, [], 3):
 				if Parts.is_burden(id):
 					seen += 1
 	_t.eq("offer_pool and roll return zero burdens for six pilots", seen, 0)
